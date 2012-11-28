@@ -447,7 +447,7 @@ int git__bsearch(
 
 /**
  * A strcmp wrapper
- * 
+ *
  * We don't want direct pointers to the CRT on Windows, we may
  * get stdcall conflicts.
  */

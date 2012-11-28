@@ -56,12 +56,12 @@ struct delta_info {
 	git_off_t delta_off;
 };
 
-const git_oid *git_indexer_hash(git_indexer *idx)
+const git_oid *git_indexer_hash(const git_indexer *idx)
 {
 	return &idx->hash;
 }
 
-const git_oid *git_indexer_stream_hash(git_indexer_stream *idx)
+const git_oid *git_indexer_stream_hash(const git_indexer_stream *idx)
 {
 	return &idx->hash;
 }

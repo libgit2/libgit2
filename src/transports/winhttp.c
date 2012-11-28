@@ -376,7 +376,7 @@ replay:
 
 	if (!WinHttpReadData(s->request,
 		(LPVOID)buffer,
-		buf_size,
+		(DWORD)buf_size,
 		&dw_bytes_read))
 	{
 		giterr_set(GITERR_OS, "Failed to read data");

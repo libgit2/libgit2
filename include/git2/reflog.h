@@ -30,11 +30,11 @@ GIT_BEGIN_DECL
  * The reflog must be freed manually by using
  * git_reflog_free().
  *
- * @param reflog pointer to reflog
+ * @param out pointer to reflog
  * @param ref reference to read the reflog for
  * @return 0 or an error code
  */
-GIT_EXTERN(int) git_reflog_read(git_reflog **reflog, git_reference *ref);
+GIT_EXTERN(int) git_reflog_read(git_reflog **out, const git_reference *ref);
 
 /**
  * Write an existing in-memory reflog object back to disk
@@ -51,12 +51,12 @@ GIT_EXTERN(int) git_reflog_write(git_reflog *reflog);
  * `msg` is optional and can be NULL.
  *
  * @param reflog an existing reflog object
- * @param new_oid the OID the reference is now pointing to
+ * @param id the OID the reference is now pointing to
  * @param committer the signature of the committer
  * @param msg the reflog message
  * @return 0 or an error code
  */
-GIT_EXTERN(int) git_reflog_append(git_reflog *reflog, const git_oid *new_oid, const git_signature *committer, const char *msg);
+GIT_EXTERN(int) git_reflog_append(git_reflog *reflog, const git_oid *id, const git_signature *committer, const char *msg);
 
 /**
  * Rename the reflog for the given reference
@@ -64,10 +64,10 @@ GIT_EXTERN(int) git_reflog_append(git_reflog *reflog, const git_oid *new_oid, co
  * The reflog to be renamed is expected to already exist
  *
  * @param ref the reference
- * @param new_name the new name of the reference
+ * @param name the new name of the reference
  * @return 0 or an error code
  */
-GIT_EXTERN(int) git_reflog_rename(git_reference *ref, const char *new_name);
+GIT_EXTERN(int) git_reflog_rename(git_reference *ref, const char *name);
 
 /**
  * Delete the reflog for the given reference
@@ -83,7 +83,7 @@ GIT_EXTERN(int) git_reflog_delete(git_reference *ref);
  * @param reflog the previously loaded reflog
  * @return the number of log entries
  */
-GIT_EXTERN(unsigned int) git_reflog_entrycount(git_reflog *reflog);
+GIT_EXTERN(size_t) git_reflog_entrycount(git_reflog *reflog);
 
 /**
  * Lookup an entry by its index
@@ -126,7 +126,7 @@ GIT_EXTERN(int) git_reflog_drop(
  * @param entry a reflog entry
  * @return the old oid
  */
-GIT_EXTERN(const git_oid *) git_reflog_entry_oidold(const git_reflog_entry *entry);
+GIT_EXTERN(const git_oid *) git_reflog_entry_id_old(const git_reflog_entry *entry);
 
 /**
  * Get the new oid
@@ -134,7 +134,7 @@ GIT_EXTERN(const git_oid *) git_reflog_entry_oidold(const git_reflog_entry *entr
  * @param entry a reflog entry
  * @return the new oid at this time
  */
-GIT_EXTERN(const git_oid *) git_reflog_entry_oidnew(const git_reflog_entry *entry);
+GIT_EXTERN(const git_oid *) git_reflog_entry_id_new(const git_reflog_entry *entry);
 
 /**
  * Get the committer of this entry
@@ -142,15 +142,15 @@ GIT_EXTERN(const git_oid *) git_reflog_entry_oidnew(const git_reflog_entry *entr
  * @param entry a reflog entry
  * @return the committer
  */
-GIT_EXTERN(git_signature *) git_reflog_entry_committer(const git_reflog_entry *entry);
+GIT_EXTERN(const git_signature *) git_reflog_entry_committer(const git_reflog_entry *entry);
 
 /**
- * Get the log msg
+ * Get the log message
  *
  * @param entry a reflog entry
  * @return the log msg
  */
-GIT_EXTERN(char *) git_reflog_entry_msg(const git_reflog_entry *entry);
+GIT_EXTERN(const char *) git_reflog_entry_message(const git_reflog_entry *entry);
 
 /**
  * Free the reflog

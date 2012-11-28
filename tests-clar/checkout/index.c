@@ -247,7 +247,7 @@ void test_checkout_index__options_dir_modes(void)
 	git_oid oid;
 	git_commit *commit;
 
-	cl_git_pass(git_reference_name_to_oid(&oid, g_repo, "refs/heads/dir"));
+	cl_git_pass(git_reference_name_to_id(&oid, g_repo, "refs/heads/dir"));
 	cl_git_pass(git_commit_lookup(&commit, g_repo, &oid));
 
 	reset_index_to_treeish((git_object *)commit);

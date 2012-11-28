@@ -26,7 +26,7 @@ void test_repo_head__head_detached(void)
 	cl_assert_equal_i(true, git_repository_head_detached(repo));
 
 	/* take the reop back to it's original state */
-	cl_git_pass(git_reference_create_symbolic(&ref, repo, "HEAD", "refs/heads/master", 1));
+	cl_git_pass(git_reference_symbolic_create(&ref, repo, "HEAD", "refs/heads/master", 1));
 	git_reference_free(ref);
 
 	cl_assert_equal_i(false, git_repository_head_detached(repo));
@@ -44,7 +44,7 @@ void test_repo_head__head_orphan(void)
 
 
 	/* take the repo back to it's original state */
-	cl_git_pass(git_reference_create_symbolic(&ref, repo, "HEAD", "refs/heads/master", 1));
+	cl_git_pass(git_reference_symbolic_create(&ref, repo, "HEAD", "refs/heads/master", 1));
 	cl_assert(git_repository_head_orphan(repo) == 0);
 
 	git_reference_free(ref);
@@ -94,7 +94,7 @@ static void assert_head_is_correctly_detached(void)
 
 	cl_git_pass(git_repository_head(&head, repo));
 
-	cl_git_pass(git_object_lookup(&commit, repo, git_reference_oid(head), GIT_OBJ_COMMIT));
+	cl_git_pass(git_object_lookup(&commit, repo, git_reference_target(head), GIT_OBJ_COMMIT));
 
 	git_object_free(commit);
 	git_reference_free(head);
@@ -156,7 +156,7 @@ void test_repo_head__detach_head_Fails_if_HEAD_and_point_to_a_non_commitish(void
 {
 	git_reference *head;
 
-	cl_git_pass(git_reference_create_symbolic(&head, repo, GIT_HEAD_FILE, "refs/tags/point_to_blob", 1));
+	cl_git_pass(git_reference_symbolic_create(&head, repo, GIT_HEAD_FILE, "refs/tags/point_to_blob", 1));
 
 	cl_git_fail(git_repository_detach_head(repo));
 

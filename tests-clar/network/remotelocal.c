@@ -51,7 +51,7 @@ static void connect_to_local_repository(const char *local_repository)
 	git_buf_sets(&file_path_buf, cl_git_path_url(local_repository));
 
 	cl_git_pass(git_remote_new(&remote, repo, NULL, git_buf_cstr(&file_path_buf), NULL));
-	cl_git_pass(git_remote_connect(remote, GIT_DIR_FETCH));
+	cl_git_pass(git_remote_connect(remote, GIT_DIRECTION_FETCH));
 
 }
 

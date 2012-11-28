@@ -28,18 +28,18 @@ static int create_branch(
 	const git_oid *target,
 	const char *name)
 {
-	git_object *head_obj = NULL;
+	git_commit *head_obj = NULL;
 	git_reference *branch_ref;
 	int error;
 
 	/* Find the target commit */
-	if ((error = git_object_lookup(&head_obj, repo, target, GIT_OBJ_ANY)) < 0)
+	if ((error = git_commit_lookup(&head_obj, repo, target)) < 0)
 		return error;
 
 	/* Create the new branch */
 	error = git_branch_create(&branch_ref, repo, name, head_obj, 0);
 
-	git_object_free(head_obj);
+	git_commit_free(head_obj);
 
 	if (!error)
 		*branch = branch_ref;
@@ -122,7 +122,7 @@ static int reference_matches_remote_head(
 	if (git_buf_len(&head_info->branchname) > 0)
 		return 0;
 
-	if (git_reference_name_to_oid(
+	if (git_reference_name_to_id(
 		&oid,
 		head_info->repo,
 		reference_name) < 0) {
@@ -278,7 +278,7 @@ static int setup_remotes_and_fetch(
 		git_remote_set_update_fetchhead(origin, 0);
 
 		/* Connect and download everything */
-		if (!git_remote_connect(origin, GIT_DIR_FETCH)) {
+		if (!git_remote_connect(origin, GIT_DIRECTION_FETCH)) {
 			if (!git_remote_download(origin, progress_cb, progress_payload)) {
 				/* Create "origin/foo" branches for all remote branches */
 				if (!git_remote_update_tips(origin)) {
@@ -381,9 +381,9 @@ int git_clone(
 		git_repository **out,
 		const char *origin_url,
 		const char *workdir_path,
+		git_checkout_opts *checkout_opts,
 		git_transfer_progress_callback fetch_progress_cb,
-		void *fetch_progress_payload,
-		git_checkout_opts *checkout_opts)
+		void *fetch_progress_payload)
 {
 	assert(out && origin_url && workdir_path);
 

@@ -19,11 +19,11 @@ static int find_subtree_in_current_level(
 	const char *annotated_object_sha,
 	int fanout)
 {
-	unsigned int i;
+	size_t i;
 	const git_tree_entry *entry;
 
 	*out = NULL;
-	
+
 	if (parent == NULL)
 		return GIT_ENOTFOUND;
 
@@ -34,12 +34,12 @@ static int find_subtree_in_current_level(
 			continue;
 
 		if (S_ISDIR(git_tree_entry_filemode(entry))
-			&& strlen(git_tree_entry_name(entry)) == 2 
+			&& strlen(git_tree_entry_name(entry)) == 2
 			&& !strncmp(git_tree_entry_name(entry), annotated_object_sha + fanout, 2))
 			return git_tree_lookup(out, repo, git_tree_entry_id(entry));
 
 		/* Not a DIR, so do we have an already existing blob? */
-		if (!strcmp(git_tree_entry_name(entry), annotated_object_sha + fanout))				
+		if (!strcmp(git_tree_entry_name(entry), annotated_object_sha + fanout))
 			return GIT_EEXISTS;
 	}
 
@@ -71,7 +71,7 @@ static int find_subtree_r(git_tree **out, git_tree *root,
 
 static int find_blob(git_oid *blob, git_tree *tree, const char *target)
 {
-	unsigned int i;
+	size_t i;
 	const git_tree_entry *entry;
 
 	for (i=0; i<git_tree_entrycount(tree); i++) {
@@ -263,8 +263,8 @@ static int insert_note_in_tree_enotfound_cb(git_tree **out,
 
 static int note_write(git_oid *out,
 	git_repository *repo,
-	git_signature *author,
-	git_signature *committer,
+	const git_signature *author,
+	const git_signature *committer,
 	const char *notes_ref,
 	const char *note,
 	git_tree *commit_tree,
@@ -343,9 +343,9 @@ cleanup:
 }
 
 static int note_remove(git_repository *repo,
-		       git_signature *author, git_signature *committer,
-		       const char *notes_ref, git_tree *tree,
-		       const char *target, git_commit **parents)
+		const git_signature *author, const git_signature *committer,
+		const char *notes_ref, git_tree *tree,
+		const char *target, git_commit **parents)
 {
 	int error;
 	git_tree *tree_after_removal = NULL;
@@ -406,7 +406,7 @@ static int retrieve_note_tree_and_commit(
 	if ((error = normalize_namespace(notes_ref, repo)) < 0)
 		return error;
 
-	if ((error = git_reference_name_to_oid(&oid, repo, *notes_ref)) < 0)
+	if ((error = git_reference_name_to_id(&oid, repo, *notes_ref)) < 0)
 		return error;
 
 	if (git_commit_lookup(commit_out, repo, &oid) < 0)
@@ -442,9 +442,12 @@ cleanup:
 }
 
 int git_note_create(
-	git_oid *out, git_repository *repo,
-	git_signature *author, git_signature *committer,
-	const char *notes_ref, const git_oid *oid,
+	git_oid *out,
+	git_repository *repo,
+	const git_signature *author,
+	const git_signature *committer,
+	const char *notes_ref,
+	const git_oid *oid,
 	const char *note)
 {
 	int error;
@@ -461,7 +464,7 @@ int git_note_create(
 		goto cleanup;
 
 	error = note_write(out, repo, author, committer, notes_ref,
-			   note, tree, target, &commit);
+			note, tree, target, &commit);
 
 cleanup:
 	git__free(target);
@@ -471,8 +474,8 @@ cleanup:
 }
 
 int git_note_remove(git_repository *repo, const char *notes_ref,
-		    git_signature *author, git_signature *committer,
-		    const git_oid *oid)
+		const git_signature *author, const git_signature *committer,
+		const git_oid *oid)
 {
 	int error;
 	char *target = NULL;
@@ -501,13 +504,13 @@ int git_note_default_ref(const char **out, git_repository *repo)
 	return note_get_default_ref(out, repo);
 }
 
-const char * git_note_message(git_note *note)
+const char * git_note_message(const git_note *note)
 {
 	assert(note);
 	return note->message;
 }
 
-const git_oid * git_note_oid(git_note *note)
+const git_oid * git_note_oid(const git_note *note)
 {
 	assert(note);
 	return &note->oid;
@@ -525,13 +528,13 @@ void git_note_free(git_note *note)
 static int process_entry_path(
 	const char* entry_path,
 	const git_oid *note_oid,
-	int (*note_cb)(git_note_data *note_data, void *payload),
+	git_note_foreach_cb note_cb,
 	void *payload)
 {
 	int error = -1;
 	size_t i = 0, j = 0, len;
 	git_buf buf = GIT_BUF_INIT;
-	git_note_data note_data;
+	git_oid annotated_object_id;
 
 	if ((error = git_buf_puts(&buf, entry_path)) < 0)
 		goto cleanup;
@@ -564,13 +567,10 @@ static int process_entry_path(
 		goto cleanup;
 	}
 
-	if ((error = git_oid_fromstr(
-			&note_data.annotated_object_oid, buf.ptr)) < 0)
+	if ((error = git_oid_fromstr(&annotated_object_id, buf.ptr)) < 0)
 		goto cleanup;
 
-	git_oid_cpy(&note_data.blob_oid, note_oid);
-
-	if (note_cb(&note_data, payload))
+	if (note_cb(note_oid, &annotated_object_id, payload))
 		error = GIT_EUSER;
 
 cleanup:
@@ -581,7 +581,7 @@ cleanup:
 int git_note_foreach(
 	git_repository *repo,
 	const char *notes_ref,
-	int (*note_cb)(git_note_data *note_data, void *payload),
+	git_note_foreach_cb note_cb,
 	void *payload)
 {
 	int error;

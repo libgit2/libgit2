@@ -14,7 +14,7 @@ static const char *g_raw[NUM_TEST_OBJECTS] = {
 	"foo\nbar\rboth\r\nreversed\n\ragain\nproblems\r",
 	"123\n\000\001\002\003\004abc\255\254\253\r\n"
 };
-static int g_len[NUM_TEST_OBJECTS] = { -1, -1, -1, -1, -1, 17 };
+static git_off_t g_len[NUM_TEST_OBJECTS] = { -1, -1, -1, -1, -1, 17 };
 static git_text_stats g_stats[NUM_TEST_OBJECTS] = {
 	{ 0, 0, 0, 0, 0, 0 },
 	{ 0, 0, 2, 0, 6, 0 },
@@ -43,7 +43,7 @@ void test_object_blob_filter__initialize(void)
 
 	for (i = 0; i < NUM_TEST_OBJECTS; i++) {
 		size_t len = (g_len[i] < 0) ? strlen(g_raw[i]) : (size_t)g_len[i];
-		g_len[i] = (int)len;
+		g_len[i] = (git_off_t)len;
 
 		cl_git_pass(
 			git_blob_create_frombuffer(&g_oids[i], g_repo, g_raw[i], len)
@@ -65,8 +65,8 @@ void test_object_blob_filter__unfiltered(void)
 
 	for (i = 0; i < NUM_TEST_OBJECTS; i++) {
 		cl_git_pass(git_blob_lookup(&blob, g_repo, &g_oids[i]));
-		cl_assert((size_t)g_len[i] == git_blob_rawsize(blob));
-		cl_assert(memcmp(git_blob_rawcontent(blob), g_raw[i], g_len[i]) == 0);
+		cl_assert(g_len[i] == git_blob_rawsize(blob));
+		cl_assert(memcmp(git_blob_rawcontent(blob), g_raw[i], (size_t)g_len[i]) == 0);
 		git_blob_free(blob);
 	}
 }

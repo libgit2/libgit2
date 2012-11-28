@@ -94,7 +94,7 @@ typedef struct transport_smart_caps {
 		include_tag:1;
 } transport_smart_caps;
 
-typedef void (*packetsize_cb)(int received, void *payload);
+typedef void (*packetsize_cb)(size_t received, void *payload);
 
 typedef struct {
 	git_transport parent;

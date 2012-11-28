@@ -72,7 +72,7 @@ int do_clone(git_repository *repo, int argc, char **argv)
 	checkout_opts.progress_payload = &pd;
 
 	// Do the clone
-	error = git_clone(&cloned_repo, url, path, &fetch_progress, &pd, &checkout_opts);
+	error = git_clone(&cloned_repo, url, path, &checkout_opts, &fetch_progress, &pd);
 	printf("\n");
 	if (error != 0) {
 		const git_error *err = giterr_last();

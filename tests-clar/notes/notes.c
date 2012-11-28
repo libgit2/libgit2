@@ -50,7 +50,8 @@ static struct {
 
 #define EXPECTATIONS_COUNT (sizeof(list_expectations)/sizeof(list_expectations[0])) - 1
 
-static int note_list_cb(git_note_data *note_data, void *payload)
+static int note_list_cb(
+	const git_oid *blob_id, const git_oid *annotated_obj_id, void *payload)
 {
 	git_oid expected_note_oid, expected_target_oid;
 
@@ -59,10 +60,10 @@ static int note_list_cb(git_note_data *note_data, void *payload)
 	cl_assert(*count < EXPECTATIONS_COUNT);
 
 	cl_git_pass(git_oid_fromstr(&expected_note_oid, list_expectations[*count].note_sha));
-	cl_assert(git_oid_cmp(&expected_note_oid, &note_data->blob_oid) == 0);
+	cl_assert(git_oid_cmp(&expected_note_oid, blob_id) == 0);
 
 	cl_git_pass(git_oid_fromstr(&expected_target_oid, list_expectations[*count].annotated_object_sha));
-	cl_assert(git_oid_cmp(&expected_target_oid, &note_data->annotated_object_oid) == 0);
+	cl_assert(git_oid_cmp(&expected_target_oid, annotated_obj_id) == 0);
 
 	(*count)++;
 
@@ -103,11 +104,13 @@ void test_notes_notes__can_retrieve_a_list_of_notes_for_a_given_namespace(void)
 	cl_assert_equal_i(4, retrieved_notes);
 }
 
-static int note_cancel_cb(git_note_data *note_data, void *payload)
+static int note_cancel_cb(
+	const git_oid *blob_id, const git_oid *annotated_obj_id, void *payload)
 {
 	unsigned int *count = (unsigned int *)payload;
 
-	GIT_UNUSED(note_data);
+	GIT_UNUSED(blob_id);
+	GIT_UNUSED(annotated_obj_id);
 
 	(*count)++;
 

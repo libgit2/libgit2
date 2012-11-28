@@ -76,7 +76,7 @@ void test_submodule_modify__add(void)
 static int delete_one_config(const git_config_entry *entry, void *payload)
 {
 	git_config *cfg = payload;
-	return git_config_delete(cfg, entry->name);
+	return git_config_delete_entry(cfg, entry->name);
 }
 
 static int init_one_submodule(

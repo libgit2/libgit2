@@ -33,9 +33,9 @@ void test_network_remotes__parsing(void)
 	cl_assert_equal_s(git_remote_url(_remote), "git://github.com/libgit2/libgit2");
 	cl_assert(git_remote_pushurl(_remote) == NULL);
 
-	cl_assert_equal_s(git_remote__urlfordirection(_remote, GIT_DIR_FETCH),
+	cl_assert_equal_s(git_remote__urlfordirection(_remote, GIT_DIRECTION_FETCH),
 					  "git://github.com/libgit2/libgit2");
-	cl_assert_equal_s(git_remote__urlfordirection(_remote, GIT_DIR_PUSH),
+	cl_assert_equal_s(git_remote__urlfordirection(_remote, GIT_DIRECTION_PUSH),
 					  "git://github.com/libgit2/libgit2");
 
 	cl_git_pass(git_remote_load(&_remote2, _repo, "test_with_pushurl"));
@@ -43,9 +43,9 @@ void test_network_remotes__parsing(void)
 	cl_assert_equal_s(git_remote_url(_remote2), "git://github.com/libgit2/fetchlibgit2");
 	cl_assert_equal_s(git_remote_pushurl(_remote2), "git://github.com/libgit2/pushlibgit2");
 
-	cl_assert_equal_s(git_remote__urlfordirection(_remote2, GIT_DIR_FETCH),
+	cl_assert_equal_s(git_remote__urlfordirection(_remote2, GIT_DIRECTION_FETCH),
 					  "git://github.com/libgit2/fetchlibgit2");
-	cl_assert_equal_s(git_remote__urlfordirection(_remote2, GIT_DIR_PUSH),
+	cl_assert_equal_s(git_remote__urlfordirection(_remote2, GIT_DIRECTION_PUSH),
 					  "git://github.com/libgit2/pushlibgit2");
 
 	git_remote_free(_remote2);

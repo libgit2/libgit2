@@ -56,7 +56,7 @@ static int append_abbreviated_oid(git_buf *out, const git_oid *b_commit)
 static int append_commit_description(git_buf *out, git_commit* commit)
 {
 	const char *message;
-	int pos = 0, len;
+	size_t pos = 0, len;
 
 	if (append_abbreviated_oid(out, git_commit_id(commit)) < 0)
 		return -1;
@@ -98,7 +98,7 @@ static int retrieve_base_commit_and_message(
 			"%s: ",
 			git_reference_name(head) + strlen(GIT_REFS_HEADS_DIR));
 
-	if (git_commit_lookup(b_commit, repo, git_reference_oid(head)) < 0)
+	if (git_commit_lookup(b_commit, repo, git_reference_target(head)) < 0)
 		goto cleanup;
 
 	if (append_commit_description(stash_message, *b_commit) < 0)
@@ -169,12 +169,12 @@ struct cb_data {
 };
 
 static int update_index_cb(
-	void *cb_data,
 	const git_diff_delta *delta,
-	float progress)
+	float progress,
+	void *payload)
 {
 	int pos;
-	struct cb_data *data = (struct cb_data *)cb_data;
+	struct cb_data *data = (struct cb_data *)payload;
 
 	GIT_UNUSED(progress);
 
@@ -253,7 +253,7 @@ static int build_untracked_tree(
 	if (git_diff_workdir_to_tree(&diff, git_index_owner(index), i_tree, &opts) < 0)
 		goto cleanup;
 
-	if (git_diff_foreach(diff, &data, update_index_cb, NULL, NULL) < 0)
+	if (git_diff_foreach(diff, update_index_cb, NULL, NULL, &data) < 0)
 		goto cleanup;
 
 	if (build_tree_from_index(tree_out, index) < 0)
@@ -334,7 +334,7 @@ static int build_workdir_tree(
 	data.index = index;
 	data.include_changed = true;
 
-	if (git_diff_foreach(diff, &data, update_index_cb, NULL, NULL) < 0)
+	if (git_diff_foreach(diff, update_index_cb, NULL, NULL, &data) < 0)
 		goto cleanup;
 
 	if (build_tree_from_index(tree_out, index) < 0)
@@ -436,7 +436,7 @@ static int update_reflog(
 	git_reflog *reflog = NULL;
 	int error;
 
-	if ((error = git_reference_create_oid(&stash, repo, GIT_REFS_STASH_FILE, w_commit_oid, 1)) < 0)
+	if ((error = git_reference_create(&stash, repo, GIT_REFS_STASH_FILE, w_commit_oid, 1)) < 0)
 		goto cleanup;
 
 	if ((error = git_reflog_read(&reflog, stash)) < 0)
@@ -579,7 +579,7 @@ cleanup:
 
 int git_stash_foreach(
 	git_repository *repo,
-	stash_cb callback,
+	git_stash_cb callback,
 	void *payload)
 {
 	git_reference *stash;
@@ -603,8 +603,8 @@ int git_stash_foreach(
 		entry = git_reflog_entry_byindex(reflog, i);
 		
 		if (callback(i,
-			git_reflog_entry_msg(entry),
-			git_reflog_entry_oidnew(entry),
+			git_reflog_entry_message(entry),
+			git_reflog_entry_id_new(entry),
 			payload)) {
 				error = GIT_EUSER;
 				goto cleanup;

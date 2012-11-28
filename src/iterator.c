@@ -85,7 +85,7 @@ struct tree_iterator_frame {
 	tree_iterator_frame *next, *prev;
 	git_tree *tree;
 	char *start;
-	unsigned int index;
+	size_t index;
 };
 
 typedef struct {
@@ -329,7 +329,7 @@ int git_iterator_for_tree_range(
 typedef struct {
 	git_iterator base;
 	git_index *index;
-	unsigned int current;
+	size_t current;
 	bool free_index;
 } index_iterator;
 
@@ -337,7 +337,7 @@ static int index_iterator__current(
 	git_iterator *self, const git_index_entry **entry)
 {
 	index_iterator *ii = (index_iterator *)self;
-	git_index_entry *ie = git_index_get_byindex(ii->index, ii->current);
+	const git_index_entry *ie = git_index_get_byindex(ii->index, ii->current);
 
 	if (ie != NULL &&
 		ii->base.end != NULL &&
@@ -434,7 +434,7 @@ typedef struct workdir_iterator_frame workdir_iterator_frame;
 struct workdir_iterator_frame {
 	workdir_iterator_frame *next;
 	git_vector entries;
-	unsigned int index;
+	size_t index;
 	char *start;
 };
 
@@ -761,7 +761,8 @@ static int spoolandsort_iterator__current(
 	spoolandsort_iterator *si = (spoolandsort_iterator *)self;
 
 	if (si->position < si->entries.length)
-		*entry = (const git_index_entry *)git_vector_get_const(&si->entries, si->position);
+		*entry = (const git_index_entry *)git_vector_get(
+			&si->entries, si->position);
 	else
 		*entry = NULL;
 
@@ -781,7 +782,8 @@ static int spoolandsort_iterator__advance(
 	spoolandsort_iterator *si = (spoolandsort_iterator *)self;
 
 	if (si->position < si->entries.length)
-		*entry = (const git_index_entry *)git_vector_get_const(&si->entries, ++si->position);
+		*entry = (const git_index_entry *)git_vector_get(
+			&si->entries, ++si->position);
 	else
 		*entry = NULL;
 

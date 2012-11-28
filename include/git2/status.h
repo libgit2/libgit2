@@ -47,6 +47,18 @@ typedef enum {
 } git_status_t;
 
 /**
+ * Function pointer to receive status on individual files
+ *
+ * `path` is the relative path to the file from the root of the repository.
+ *
+ * `status_flags` is a combination of `git_status_t` values that apply.
+ *
+ * `payload` is the value you passed to the foreach function as payload.
+ */
+typedef int (*git_status_cb)(
+	const char *path, unsigned int status_flags, void *payload);
+
+/**
  * Gather file statuses and run a callback for each one.
  *
  * The callback is passed the path of the file, the status (a combination of
@@ -63,7 +75,7 @@ typedef enum {
  */
 GIT_EXTERN(int) git_status_foreach(
 	git_repository *repo,
-	int (*callback)(const char *, unsigned int, void *),
+	git_status_cb callback,
 	void *payload);
 
 /**
@@ -146,9 +158,10 @@ typedef enum {
  * `GIT_STATUS_OPT_DISABLE_PATHSPEC_MATCH` is specified in the flags.
  */
 typedef struct {
+	unsigned int      version;
 	git_status_show_t show;
-	unsigned int flags;
-	git_strarray pathspec;
+	unsigned int      flags;
+	git_strarray      pathspec;
 } git_status_options;
 
 /**
@@ -168,7 +181,7 @@ typedef struct {
 GIT_EXTERN(int) git_status_foreach_ext(
 	git_repository *repo,
 	const git_status_options *opts,
-	int (*callback)(const char *, unsigned int, void *),
+	git_status_cb callback,
 	void *payload);
 
 /**

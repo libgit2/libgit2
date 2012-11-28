@@ -25,7 +25,7 @@ static void *download(void *ptr)
 
 	// Connect to the remote end specifying that we want to fetch
 	// information from it.
-	if (git_remote_connect(data->remote, GIT_DIR_FETCH) < 0) {
+	if (git_remote_connect(data->remote, GIT_DIRECTION_FETCH) < 0) {
 		data->ret = -1;
 		goto exit;
 	}

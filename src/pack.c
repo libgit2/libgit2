@@ -698,7 +698,7 @@ static int git__memcmp4(const void *a, const void *b) {
 
 int git_pack_foreach_entry(
 	struct git_pack_file *p,
-	int (*cb)(git_oid *oid, void *data),
+	git_odb_foreach_cb cb,
 	void *data)
 {
 	const unsigned char *index = p->index_map.data, *current;

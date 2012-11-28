@@ -8,149 +8,16 @@
 #include "common.h"
 #include "commit.h"
 #include "odb.h"
-#include "pqueue.h"
 #include "pool.h"
-#include "oidmap.h"
 
-#include "git2/revwalk.h"
-#include "git2/merge.h"
+#include "revwalk.h"
+#include "merge.h"
 
 #include <regex.h>
 
-GIT__USE_OIDMAP;
-
-#define PARENT1  (1 << 0)
-#define PARENT2  (1 << 1)
-#define RESULT   (1 << 2)
-#define STALE    (1 << 3)
-
-typedef struct commit_object {
-	git_oid oid;
-	uint32_t time;
-	unsigned int seen:1,
-			 uninteresting:1,
-			 topo_delay:1,
-			 parsed:1,
-			 flags : 4;
-
-	unsigned short in_degree;
-	unsigned short out_degree;
-
-	struct commit_object **parents;
-} commit_object;
-
-typedef struct commit_list {
-	commit_object *item;
-	struct commit_list *next;
-} commit_list;
-
-struct git_revwalk {
-	git_repository *repo;
-	git_odb *odb;
-
-	git_oidmap *commits;
-	git_pool commit_pool;
-
-	commit_list *iterator_topo;
-	commit_list *iterator_rand;
-	commit_list *iterator_reverse;
-	git_pqueue iterator_time;
-
-	int (*get_next)(commit_object **, git_revwalk *);
-	int (*enqueue)(git_revwalk *, commit_object *);
-
-	unsigned walking:1;
-	unsigned int sorting;
-
-	/* merge base calculation */
-	commit_object *one;
-	git_vector twos;
-};
-
-static int commit_time_cmp(void *a, void *b)
+git_commit_list_node *commit_lookup(git_revwalk *walk, const git_oid *oid)
 {
-	commit_object *commit_a = (commit_object *)a;
-	commit_object *commit_b = (commit_object *)b;
-
-	return (commit_a->time < commit_b->time);
-}
-
-static commit_list *commit_list_insert(commit_object *item, commit_list **list_p)
-{
-	commit_list *new_list = git__malloc(sizeof(commit_list));
-	if (new_list != NULL) {
-		new_list->item = item;
-		new_list->next = *list_p;
-	}
-	*list_p = new_list;
-	return new_list;
-}
-
-static commit_list *commit_list_insert_by_date(commit_object *item, commit_list **list_p)
-{
-	commit_list **pp = list_p;
-	commit_list *p;
-
-	while ((p = *pp) != NULL) {
-		if (commit_time_cmp(p->item, item) < 0)
-			break;
-
-		pp = &p->next;
-	}
-
-	return commit_list_insert(item, pp);
-}
-static void commit_list_free(commit_list **list_p)
-{
-	commit_list *list = *list_p;
-
-	if (list == NULL)
-		return;
-
-	while (list) {
-		commit_list *temp = list;
-		list = temp->next;
-		git__free(temp);
-	}
-
-	*list_p = NULL;
-}
-
-static commit_object *commit_list_pop(commit_list **stack)
-{
-	commit_list *top = *stack;
-	commit_object *item = top ? top->item : NULL;
-
-	if (top) {
-		*stack = top->next;
-		git__free(top);
-	}
-	return item;
-}
-
-#define PARENTS_PER_COMMIT	2
-#define COMMIT_ALLOC \
-	(sizeof(commit_object) + PARENTS_PER_COMMIT * sizeof(commit_object *))
-
-static commit_object *alloc_commit(git_revwalk *walk)
-{
-	return (commit_object *)git_pool_malloc(&walk->commit_pool, COMMIT_ALLOC);
-}
-
-static commit_object **alloc_parents(
-	git_revwalk *walk, commit_object *commit, size_t n_parents)
-{
-	if (n_parents <= PARENTS_PER_COMMIT)
-		return (commit_object **)((char *)commit + sizeof(commit_object));
-
-	return (commit_object **)git_pool_malloc(
-		&walk->commit_pool, (uint32_t)(n_parents * sizeof(commit_object *)));
-}
-
-
-static commit_object *commit_lookup(git_revwalk *walk, const git_oid *oid)
-{
-	commit_object *commit;
+	git_commit_list_node *commit;
 	khiter_t pos;
 	int ret;
 
@@ -159,7 +26,7 @@ static commit_object *commit_lookup(git_revwalk *walk, const git_oid *oid)
 	if (pos != kh_end(walk->commits))
 		return kh_value(walk->commits, pos);
 
-	commit = alloc_commit(walk);
+	commit = git_commit_list_alloc_node(walk);
 	if (commit == NULL)
 		return NULL;
 
@@ -172,300 +39,7 @@ static commit_object *commit_lookup(git_revwalk *walk, const git_oid *oid)
 	return commit;
 }
 
-static int commit_error(commit_object *commit, const char *msg)
-{
-	char commit_oid[GIT_OID_HEXSZ + 1];
-	git_oid_fmt(commit_oid, &commit->oid);
-	commit_oid[GIT_OID_HEXSZ] = '\0';
-
-	giterr_set(GITERR_ODB, "Failed to parse commit %s - %s", commit_oid, msg);
-
-	return -1;
-}
-
-static int commit_quick_parse(git_revwalk *walk, commit_object *commit, git_rawobj *raw)
-{
-	const size_t parent_len = strlen("parent ") + GIT_OID_HEXSZ + 1;
-	unsigned char *buffer = raw->data;
-	unsigned char *buffer_end = buffer + raw->len;
-	unsigned char *parents_start, *committer_start;
-	int i, parents = 0;
-	int commit_time;
-
-	buffer += strlen("tree ") + GIT_OID_HEXSZ + 1;
-
-	parents_start = buffer;
-	while (buffer + parent_len < buffer_end && memcmp(buffer, "parent ", strlen("parent ")) == 0) {
-		parents++;
-		buffer += parent_len;
-	}
-
-	commit->parents = alloc_parents(walk, commit, parents);
-	GITERR_CHECK_ALLOC(commit->parents);
-
-	buffer = parents_start;
-	for (i = 0; i < parents; ++i) {
-		git_oid oid;
-
-		if (git_oid_fromstr(&oid, (char *)buffer + strlen("parent ")) < 0)
-			return -1;
-
-		commit->parents[i] = commit_lookup(walk, &oid);
-		if (commit->parents[i] == NULL)
-			return -1;
-
-		buffer += parent_len;
-	}
-
-	commit->out_degree = (unsigned short)parents;
-
-	if ((committer_start = buffer = memchr(buffer, '\n', buffer_end - buffer)) == NULL)
-		return commit_error(commit, "object is corrupted");
-
-	buffer++;
-
-	if ((buffer = memchr(buffer, '\n', buffer_end - buffer)) == NULL)
-		return commit_error(commit, "object is corrupted");
-
-	/* Skip trailing spaces */
-	while (buffer > committer_start && git__isspace(*buffer))
-		buffer--;
-
-	/* Seek for the begining of the pack of digits */
-	while (buffer > committer_start && git__isdigit(*buffer))
-		buffer--;
-
-	/* Skip potential timezone offset */
-	if ((buffer > committer_start) && (*buffer == '+' || *buffer == '-')) {
-		buffer--;
-
-		while (buffer > committer_start && git__isspace(*buffer))
-			buffer--;
-
-		while (buffer > committer_start && git__isdigit(*buffer))
-			buffer--;
-	}
-
-	if ((buffer == committer_start) || (git__strtol32(&commit_time, (char *)(buffer + 1), NULL, 10) < 0))
-		return commit_error(commit, "cannot parse commit time");
-
-	commit->time = (time_t)commit_time;
-	commit->parsed = 1;
-	return 0;
-}
-
-static int commit_parse(git_revwalk *walk, commit_object *commit)
-{
-	git_odb_object *obj;
-	int error;
-
-	if (commit->parsed)
-		return 0;
-
-	if ((error = git_odb_read(&obj, walk->odb, &commit->oid)) < 0)
-		return error;
-	assert(obj->raw.type == GIT_OBJ_COMMIT);
-
-	error = commit_quick_parse(walk, commit, &obj->raw);
-	git_odb_object_free(obj);
-	return error;
-}
-
-static int interesting(git_pqueue *list)
-{
-	unsigned int i;
-	/* element 0 isn't used - we need to start at 1 */
-	for (i = 1; i < list->size; i++) {
-		commit_object *commit = list->d[i];
-		if ((commit->flags & STALE) == 0)
-			return 1;
-	}
-
-	return 0;
-}
-
-static int merge_bases_many(commit_list **out, git_revwalk *walk, commit_object *one, git_vector *twos)
-{
-	int error;
-	unsigned int i;
-	commit_object *two;
-	commit_list *result = NULL, *tmp = NULL;
-	git_pqueue list;
-
-	/* if the commit is repeated, we have a our merge base already */
-	git_vector_foreach(twos, i, two) {
-		if (one == two)
-			return commit_list_insert(one, out) ? 0 : -1;
-	}
-
-	if (git_pqueue_init(&list, twos->length * 2, commit_time_cmp) < 0)
-		return -1;
-
-	if (commit_parse(walk, one) < 0)
-	    return -1;
-
-	one->flags |= PARENT1;
-	if (git_pqueue_insert(&list, one) < 0)
-		return -1;
-
-	git_vector_foreach(twos, i, two) {
-		commit_parse(walk, two);
-		two->flags |= PARENT2;
-		if (git_pqueue_insert(&list, two) < 0)
-			return -1;
-	}
-
-	/* as long as there are non-STALE commits */
-	while (interesting(&list)) {
-		commit_object *commit;
-		int flags;
-
-		commit = git_pqueue_pop(&list);
-
-		flags = commit->flags & (PARENT1 | PARENT2 | STALE);
-		if (flags == (PARENT1 | PARENT2)) {
-			if (!(commit->flags & RESULT)) {
-				commit->flags |= RESULT;
-				if (commit_list_insert(commit, &result) == NULL)
-					return -1;
-			}
-			/* we mark the parents of a merge stale */
-			flags |= STALE;
-		}
-
-		for (i = 0; i < commit->out_degree; i++) {
-			commit_object *p = commit->parents[i];
-			if ((p->flags & flags) == flags)
-				continue;
-
-			if ((error = commit_parse(walk, p)) < 0)
-				return error;
-
-			p->flags |= flags;
-			if (git_pqueue_insert(&list, p) < 0)
-				return -1;
-		}
-	}
-
-	git_pqueue_free(&list);
-
-	/* filter out any stale commits in the results */
-	tmp = result;
-	result = NULL;
-
-	while (tmp) {
-		struct commit_list *next = tmp->next;
-		if (!(tmp->item->flags & STALE))
-			if (commit_list_insert_by_date(tmp->item, &result) == NULL)
-				return -1;
-
-		git__free(tmp);
-		tmp = next;
-	}
-
-	*out = result;
-	return 0;
-}
-
-int git_merge_base_many(git_oid *out, git_repository *repo, const git_oid input_array[], size_t length)
-{
-	git_revwalk *walk;
-	git_vector list;
-	commit_list *result = NULL;
-	int error = -1;
-	unsigned int i;
-	commit_object *commit;
-
-	assert(out && repo && input_array);
-
-	if (length < 2) {
-		giterr_set(GITERR_INVALID, "At least two commits are required to find an ancestor. Provided 'length' was %u.", length);
-		return -1;
-	}
-
-	if (git_vector_init(&list, length - 1, NULL) < 0)
-		return -1;
-
-	if (git_revwalk_new(&walk, repo) < 0)
-		goto cleanup;
-
-	for (i = 1; i < length; i++) {
-		commit = commit_lookup(walk, &input_array[i]);
-		if (commit == NULL)
-			goto cleanup;
-
-		git_vector_insert(&list, commit);
-	}
-
-	commit = commit_lookup(walk, &input_array[0]);
-	if (commit == NULL)
-		goto cleanup;
-
-	if (merge_bases_many(&result, walk, commit, &list) < 0)
-		goto cleanup;
-
-	if (!result) {
-		error = GIT_ENOTFOUND;
-		goto cleanup;
-	}
-
-	git_oid_cpy(out, &result->item->oid);
-
-	error = 0;
-
-cleanup:
-	commit_list_free(&result);
-	git_revwalk_free(walk);
-	git_vector_free(&list);
-	return error;
-}
-
-int git_merge_base(git_oid *out, git_repository *repo, const git_oid *one, const git_oid *two)
-{
-	git_revwalk *walk;
-	git_vector list;
-	commit_list *result = NULL;
-	commit_object *commit;
-	void *contents[1];
-
-	if (git_revwalk_new(&walk, repo) < 0)
-		return -1;
-
-	commit = commit_lookup(walk, two);
-	if (commit == NULL)
-		goto on_error;
-
-	/* This is just one value, so we can do it on the stack */
-	memset(&list, 0x0, sizeof(git_vector));
-	contents[0] = commit;
-	list.length = 1;
-	list.contents = contents;
-
-	commit = commit_lookup(walk, one);
-	if (commit == NULL)
-		goto on_error;
-
-	if (merge_bases_many(&result, walk, commit, &list) < 0)
-		goto on_error;
-
-	if (!result) {
-		git_revwalk_free(walk);
-		giterr_clear();
-		return GIT_ENOTFOUND;
-	}
-
-	git_oid_cpy(out, &result->item->oid);
-	commit_list_free(&result);
-	git_revwalk_free(walk);
-
-	return 0;
-
-on_error:
-	git_revwalk_free(walk);
-	return -1;
-}
-
-static void mark_uninteresting(commit_object *commit)
+static void mark_uninteresting(git_commit_list_node *commit)
 {
 	unsigned short i;
 	assert(commit);
@@ -481,7 +55,7 @@ static void mark_uninteresting(commit_object *commit)
 			mark_uninteresting(commit->parents[i]);
 }
 
-static int process_commit(git_revwalk *walk, commit_object *commit, int hide)
+static int process_commit(git_revwalk *walk, git_commit_list_node *commit, int hide)
 {
 	int error;
 
@@ -493,13 +67,13 @@ static int process_commit(git_revwalk *walk, commit_object *commit, int hide)
 
 	commit->seen = 1;
 
-	if ((error = commit_parse(walk, commit)) < 0)
+	if ((error = git_commit_list_parse(walk, commit)) < 0)
 		return error;
 
 	return walk->enqueue(walk, commit);
 }
 
-static int process_commit_parents(git_revwalk *walk, commit_object *commit)
+static int process_commit_parents(git_revwalk *walk, git_commit_list_node *commit)
 {
 	unsigned short i;
 	int error = 0;
@@ -514,7 +88,7 @@ static int push_commit(git_revwalk *walk, const git_oid *oid, int uninteresting)
 {
 	git_object *obj;
 	git_otype type;
-	commit_object *commit;
+	git_commit_list_node *commit;
 
 	if (git_object_lookup(&obj, walk->repo, oid, GIT_OBJ_ANY) < 0)
 		return -1;
@@ -559,7 +133,7 @@ static int push_ref(git_revwalk *walk, const char *refname, int hide)
 {
 	git_oid oid;
 
-	if (git_reference_name_to_oid(&oid, walk->repo, refname) < 0)
+	if (git_reference_name_to_id(&oid, walk->repo, refname) < 0)
 		return -1;
 
 	return push_commit(walk, &oid, hide);
@@ -659,20 +233,20 @@ int git_revwalk_hide_ref(git_revwalk *walk, const char *refname)
 	return push_ref(walk, refname, 1);
 }
 
-static int revwalk_enqueue_timesort(git_revwalk *walk, commit_object *commit)
+static int revwalk_enqueue_timesort(git_revwalk *walk, git_commit_list_node *commit)
 {
 	return git_pqueue_insert(&walk->iterator_time, commit);
 }
 
-static int revwalk_enqueue_unsorted(git_revwalk *walk, commit_object *commit)
+static int revwalk_enqueue_unsorted(git_revwalk *walk, git_commit_list_node *commit)
 {
-	return commit_list_insert(commit, &walk->iterator_rand) ? 0 : -1;
+	return git_commit_list_insert(commit, &walk->iterator_rand) ? 0 : -1;
 }
 
-static int revwalk_next_timesort(commit_object **object_out, git_revwalk *walk)
+static int revwalk_next_timesort(git_commit_list_node **object_out, git_revwalk *walk)
 {
 	int error;
-	commit_object *next;
+	git_commit_list_node *next;
 
 	while ((next = git_pqueue_pop(&walk->iterator_time)) != NULL) {
 		if ((error = process_commit_parents(walk, next)) < 0)
@@ -688,12 +262,12 @@ static int revwalk_next_timesort(commit_object **object_out, git_revwalk *walk)
 	return GIT_ITEROVER;
 }
 
-static int revwalk_next_unsorted(commit_object **object_out, git_revwalk *walk)
+static int revwalk_next_unsorted(git_commit_list_node **object_out, git_revwalk *walk)
 {
 	int error;
-	commit_object *next;
+	git_commit_list_node *next;
 
-	while ((next = commit_list_pop(&walk->iterator_rand)) != NULL) {
+	while ((next = git_commit_list_pop(&walk->iterator_rand)) != NULL) {
 		if ((error = process_commit_parents(walk, next)) < 0)
 			return error;
 
@@ -707,13 +281,13 @@ static int revwalk_next_unsorted(commit_object **object_out, git_revwalk *walk)
 	return GIT_ITEROVER;
 }
 
-static int revwalk_next_toposort(commit_object **object_out, git_revwalk *walk)
+static int revwalk_next_toposort(git_commit_list_node **object_out, git_revwalk *walk)
 {
-	commit_object *next;
+	git_commit_list_node *next;
 	unsigned short i;
 
 	for (;;) {
-		next = commit_list_pop(&walk->iterator_topo);
+		next = git_commit_list_pop(&walk->iterator_topo);
 		if (next == NULL) {
 			giterr_clear();
 			return GIT_ITEROVER;
@@ -725,11 +299,11 @@ static int revwalk_next_toposort(commit_object **object_out, git_revwalk *walk)
 		}
 
 		for (i = 0; i < next->out_degree; ++i) {
-			commit_object *parent = next->parents[i];
+			git_commit_list_node *parent = next->parents[i];
 
 			if (--parent->in_degree == 0 && parent->topo_delay) {
 				parent->topo_delay = 0;
-				if (commit_list_insert(parent, &walk->iterator_topo) == NULL)
+				if (git_commit_list_insert(parent, &walk->iterator_topo) == NULL)
 					return -1;
 			}
 		}
@@ -739,9 +313,9 @@ static int revwalk_next_toposort(commit_object **object_out, git_revwalk *walk)
 	}
 }
 
-static int revwalk_next_reverse(commit_object **object_out, git_revwalk *walk)
+static int revwalk_next_reverse(git_commit_list_node **object_out, git_revwalk *walk)
 {
-	*object_out = commit_list_pop(&walk->iterator_reverse);
+	*object_out = git_commit_list_pop(&walk->iterator_reverse);
 	return *object_out ? 0 : GIT_ITEROVER;
 }
 
@@ -750,8 +324,8 @@ static int prepare_walk(git_revwalk *walk)
 {
 	int error;
 	unsigned int i;
-	commit_object *next, *two;
-	commit_list *bases = NULL;
+	git_commit_list_node *next, *two;
+	git_commit_list *bases = NULL;
 
 	/*
 	 * If walk->one is NULL, there were no positive references,
@@ -763,10 +337,10 @@ static int prepare_walk(git_revwalk *walk)
 	}
 
 	/* first figure out what the merge bases are */
-	if (merge_bases_many(&bases, walk, walk->one, &walk->twos) < 0)
+	if (git_merge__bases_many(&bases, walk, walk->one, &walk->twos) < 0)
 		return -1;
 
-	commit_list_free(&bases);
+	git_commit_list_free(&bases);
 	if (process_commit(walk, walk->one, walk->one->uninteresting) < 0)
 		return -1;
 
@@ -780,11 +354,11 @@ static int prepare_walk(git_revwalk *walk)
 
 		while ((error = walk->get_next(&next, walk)) == 0) {
 			for (i = 0; i < next->out_degree; ++i) {
-				commit_object *parent = next->parents[i];
+				git_commit_list_node *parent = next->parents[i];
 				parent->in_degree++;
 			}
 
-			if (commit_list_insert(next, &walk->iterator_topo) == NULL)
+			if (git_commit_list_insert(next, &walk->iterator_topo) == NULL)
 				return -1;
 		}
 
@@ -797,7 +371,7 @@ static int prepare_walk(git_revwalk *walk)
 	if (walk->sorting & GIT_SORT_REVERSE) {
 
 		while ((error = walk->get_next(&next, walk)) == 0)
-			if (commit_list_insert(next, &walk->iterator_reverse) == NULL)
+			if (git_commit_list_insert(next, &walk->iterator_reverse) == NULL)
 				return -1;
 
 		if (error != GIT_ITEROVER)
@@ -809,9 +383,6 @@ static int prepare_walk(git_revwalk *walk)
 	walk->walking = 1;
 	return 0;
 }
-
-
-
 
 
 int git_revwalk_new(git_revwalk **revwalk_out, git_repository *repo)
@@ -826,7 +397,7 @@ int git_revwalk_new(git_revwalk **revwalk_out, git_repository *repo)
 	walk->commits = git_oidmap_alloc();
 	GITERR_CHECK_ALLOC(walk->commits);
 
-	if (git_pqueue_init(&walk->iterator_time, 8, commit_time_cmp) < 0 ||
+	if (git_pqueue_init(&walk->iterator_time, 8, git_commit_list_time_cmp) < 0 ||
 		git_vector_init(&walk->twos, 4, NULL) < 0 ||
 		git_pool_init(&walk->commit_pool, 1,
 			git_pool__suggest_items_per_page(COMMIT_ALLOC) * COMMIT_ALLOC) < 0)
@@ -888,7 +459,7 @@ void git_revwalk_sorting(git_revwalk *walk, unsigned int sort_mode)
 int git_revwalk_next(git_oid *oid, git_revwalk *walk)
 {
 	int error;
-	commit_object *next;
+	git_commit_list_node *next;
 
 	assert(walk && oid);
 
@@ -913,7 +484,7 @@ int git_revwalk_next(git_oid *oid, git_revwalk *walk)
 
 void git_revwalk_reset(git_revwalk *walk)
 {
-	commit_object *commit;
+	git_commit_list_node *commit;
 
 	assert(walk);
 
@@ -925,9 +496,9 @@ void git_revwalk_reset(git_revwalk *walk)
 		});
 
 	git_pqueue_clear(&walk->iterator_time);
-	commit_list_free(&walk->iterator_topo);
-	commit_list_free(&walk->iterator_rand);
-	commit_list_free(&walk->iterator_reverse);
+	git_commit_list_free(&walk->iterator_topo);
+	git_commit_list_free(&walk->iterator_rand);
+	git_commit_list_free(&walk->iterator_reverse);
 	walk->walking = 0;
 
 	walk->one = NULL;

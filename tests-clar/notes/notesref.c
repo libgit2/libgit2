@@ -57,7 +57,7 @@ void test_notes_notesref__config_corenotesref(void)
 	cl_git_pass(git_note_default_ref(&default_ref, _repo));
 	cl_assert(!strcmp(default_ref, "refs/notes/mydefaultnotesref"));
 
-	cl_git_pass(git_config_delete(_cfg, "core.notesRef"));
+	cl_git_pass(git_config_delete_entry(_cfg, "core.notesRef"));
 
 	cl_git_pass(git_note_default_ref(&default_ref, _repo));
 	cl_assert(!strcmp(default_ref, GIT_NOTES_DEFAULT_REF));
