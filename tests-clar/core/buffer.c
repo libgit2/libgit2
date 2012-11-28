@@ -1,5 +1,6 @@
 #include "clar_libgit2.h"
 #include "buffer.h"
+#include "buf_text.h"
 
 #define TESTSTR "Have you seen that? Have you seeeen that??"
 const char *test_string = TESTSTR;
@@ -576,37 +577,37 @@ void test_core_buffer__11(void)
 
 	t.strings = t1;
 	t.count = 3;
-	cl_git_pass(git_buf_common_prefix(&a, &t));
+	cl_git_pass(git_buf_text_common_prefix(&a, &t));
 	cl_assert_equal_s(a.ptr, "");
 
 	t.strings = t2;
 	t.count = 3;
-	cl_git_pass(git_buf_common_prefix(&a, &t));
+	cl_git_pass(git_buf_text_common_prefix(&a, &t));
 	cl_assert_equal_s(a.ptr, "some");
 
 	t.strings = t3;
 	t.count = 3;
-	cl_git_pass(git_buf_common_prefix(&a, &t));
+	cl_git_pass(git_buf_text_common_prefix(&a, &t));
 	cl_assert_equal_s(a.ptr, "");
 
 	t.strings = t4;
 	t.count = 3;
-	cl_git_pass(git_buf_common_prefix(&a, &t));
+	cl_git_pass(git_buf_text_common_prefix(&a, &t));
 	cl_assert_equal_s(a.ptr, "happ");
 
 	t.strings = t5;
 	t.count = 3;
-	cl_git_pass(git_buf_common_prefix(&a, &t));
+	cl_git_pass(git_buf_text_common_prefix(&a, &t));
 	cl_assert_equal_s(a.ptr, "happ");
 
 	t.strings = t6;
 	t.count = 3;
-	cl_git_pass(git_buf_common_prefix(&a, &t));
+	cl_git_pass(git_buf_text_common_prefix(&a, &t));
 	cl_assert_equal_s(a.ptr, "");
 
 	t.strings = t7;
 	t.count = 3;
-	cl_git_pass(git_buf_common_prefix(&a, &t));
+	cl_git_pass(git_buf_text_common_prefix(&a, &t));
 	cl_assert_equal_s(a.ptr, "");
 
 	git_buf_free(&a);
@@ -641,19 +642,19 @@ void test_core_buffer__puts_escaped(void)
 	git_buf a = GIT_BUF_INIT;
 
 	git_buf_clear(&a);
-	cl_git_pass(git_buf_puts_escaped(&a, "this is a test", "", ""));
+	cl_git_pass(git_buf_text_puts_escaped(&a, "this is a test", "", ""));
 	cl_assert_equal_s("this is a test", a.ptr);
 
 	git_buf_clear(&a);
-	cl_git_pass(git_buf_puts_escaped(&a, "this is a test", "t", "\\"));
+	cl_git_pass(git_buf_text_puts_escaped(&a, "this is a test", "t", "\\"));
 	cl_assert_equal_s("\\this is a \\tes\\t", a.ptr);
 
 	git_buf_clear(&a);
-	cl_git_pass(git_buf_puts_escaped(&a, "this is a test", "i ", "__"));
+	cl_git_pass(git_buf_text_puts_escaped(&a, "this is a test", "i ", "__"));
 	cl_assert_equal_s("th__is__ __is__ a__ test", a.ptr);
 
 	git_buf_clear(&a);
-	cl_git_pass(git_buf_puts_escape_regex(&a, "^match\\s*[A-Z]+.*"));
+	cl_git_pass(git_buf_text_puts_escape_regex(&a, "^match\\s*[A-Z]+.*"));
 	cl_assert_equal_s("\\^match\\\\s\\*\\[A-Z\\]\\+\\.\\*", a.ptr);
 
 	git_buf_free(&a);
@@ -663,7 +664,7 @@ static void assert_unescape(char *expected, char *to_unescape) {
 	git_buf buf = GIT_BUF_INIT;
 
 	cl_git_pass(git_buf_sets(&buf, to_unescape));
-	git_buf_unescape(&buf);
+	git_buf_text_unescape(&buf);
 	cl_assert_equal_s(expected, buf.ptr);
 	cl_assert_equal_sz(strlen(expected), buf.size);
 

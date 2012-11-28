@@ -10,6 +10,7 @@
 #include "fileops.h"
 #include "filebuf.h"
 #include "buffer.h"
+#include "buf_text.h"
 #include "git2/config.h"
 #include "git2/types.h"
 #include "strmap.h"
@@ -854,17 +855,14 @@ fail_parse:
 
 static int skip_bom(diskfile_backend *cfg)
 {
-	static const char utf8_bom[] = { '\xef', '\xbb', '\xbf' };
+	git_bom_t bom;
+	int bom_offset = git_buf_text_detect_bom(&bom,
+		&cfg->reader.buffer, cfg->reader.read_ptr - cfg->reader.buffer.ptr);
 
-	if (cfg->reader.buffer.size < sizeof(utf8_bom))
-		return 0;
+	if (bom == GIT_BOM_UTF8)
+		cfg->reader.read_ptr += bom_offset;
 
-	if (memcmp(cfg->reader.read_ptr, utf8_bom, sizeof(utf8_bom)) == 0)
-		cfg->reader.read_ptr += sizeof(utf8_bom);
-
-	/* TODO: the reference implementation does pretty stupid
-		stuff with the BoM
-	*/
+	/* TODO: reference implementation is pretty stupid with BoM */
 
 	return 0;
 }
