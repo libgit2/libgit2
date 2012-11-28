@@ -18,6 +18,7 @@ void test_revwalk_mergebase__cleanup(void)
 void test_revwalk_mergebase__single1(void)
 {
 	git_oid result, one, two, expected;
+	int ahead, behind;
 
 	cl_git_pass(git_oid_fromstr(&one, "c47800c7266a2be04c571c04d5a6614691ea99bd "));
 	cl_git_pass(git_oid_fromstr(&two, "9fd738e8f7967c078dceed8190330fc8648ee56a"));
@@ -25,11 +26,20 @@ void test_revwalk_mergebase__single1(void)
 
 	cl_git_pass(git_merge_base(&result, _repo, &one, &two));
 	cl_assert(git_oid_cmp(&result, &expected) == 0);
+
+	cl_git_pass(git_count_ahead_behind(&ahead, &behind, _repo, &one, &two));
+	cl_assert(ahead == 2);
+	cl_assert(behind == 1);
+
+	cl_git_pass(git_count_ahead_behind(&ahead, &behind, _repo, &two, &one));
+	cl_assert(ahead == 1);
+	cl_assert(behind == 2);
 }
 
 void test_revwalk_mergebase__single2(void)
 {
 	git_oid result, one, two, expected;
+	int ahead, behind;
 
 	cl_git_pass(git_oid_fromstr(&one, "763d71aadf09a7951596c9746c024e7eece7c7af"));
 	cl_git_pass(git_oid_fromstr(&two, "a65fedf39aefe402d3bb6e24df4d4f5fe4547750"));
@@ -37,11 +47,20 @@ void test_revwalk_mergebase__single2(void)
 
 	cl_git_pass(git_merge_base(&result, _repo, &one, &two));
 	cl_assert(git_oid_cmp(&result, &expected) == 0);
+
+	cl_git_pass(git_count_ahead_behind( &ahead, &behind, _repo, &one, &two));
+	cl_assert(ahead == 4);
+	cl_assert(behind == 1);
+
+	cl_git_pass(git_count_ahead_behind( &ahead, &behind, _repo, &two, &one));
+	cl_assert(ahead == 1);
+	cl_assert(behind == 4);
 }
 
 void test_revwalk_mergebase__merged_branch(void)
 {
 	git_oid result, one, two, expected;
+	int ahead, behind;
 
 	cl_git_pass(git_oid_fromstr(&one, "a65fedf39aefe402d3bb6e24df4d4f5fe4547750"));
 	cl_git_pass(git_oid_fromstr(&two, "9fd738e8f7967c078dceed8190330fc8648ee56a"));
@@ -52,17 +71,31 @@ void test_revwalk_mergebase__merged_branch(void)
 
 	cl_git_pass(git_merge_base(&result, _repo, &two, &one));
 	cl_assert(git_oid_cmp(&result, &expected) == 0);
+
+	cl_git_pass(git_count_ahead_behind(&ahead, &behind, _repo, &one, &two));
+	cl_assert(ahead == 0);
+	cl_assert(behind == 3);
+
+	cl_git_pass(git_count_ahead_behind(&ahead, &behind, _repo, &two, &one));
+	cl_assert(ahead == 3);
+	cl_assert(behind == 0);
 }
 
 void test_revwalk_mergebase__no_common_ancestor_returns_ENOTFOUND(void)
 {
 	git_oid result, one, two;
+	int ahead, behind;
 	int error;
 
 	cl_git_pass(git_oid_fromstr(&one, "763d71aadf09a7951596c9746c024e7eece7c7af"));
 	cl_git_pass(git_oid_fromstr(&two, "e90810b8df3e80c413d903f631643c716887138d"));
 
 	error = git_merge_base(&result, _repo, &one, &two);
+	cl_git_fail(error);
+
+	cl_assert_equal_i(GIT_ENOTFOUND, error);
+
+	cl_git_fail(git_count_ahead_behind(&ahead, &behind, _repo, &one, &two));
 	cl_git_fail(error);
 
 	cl_assert_equal_i(GIT_ENOTFOUND, error);
