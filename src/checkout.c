@@ -225,10 +225,12 @@ static int retrieve_symlink_caps(git_repository *repo, bool *can_symlink)
 static void normalize_options(
 	git_checkout_opts *normalized, git_checkout_opts *proposed)
 {
+	git_checkout_opts init_opts = GIT_CHECKOUT_OPTS_INIT;
+
 	assert(normalized);
 
 	if (!proposed)
-		memset(normalized, 0, sizeof(git_checkout_opts));
+		memmove(normalized, &init_opts, sizeof(git_checkout_opts));
 	else
 		memmove(normalized, proposed, sizeof(git_checkout_opts));
 
@@ -601,6 +603,19 @@ static int checkout_create_submodules(
 	return 0;
 }
 
+static bool opts_is_valid_version(git_checkout_opts *opts)
+{
+	if (!opts)
+		return true;
+
+	if (opts->version > 0 &&  opts->version <= GIT_CHECKOUT_OPTS_VERSION)
+		return true;
+
+	giterr_set(GITERR_INVALID, "Invalid version %d on git_checkout_opts structure",
+			opts->version);
+	return false;
+}
+
 int git_checkout_index(
 	git_repository *repo,
 	git_index *index,
@@ -623,6 +638,11 @@ int git_checkout_index(
 	diff_opts.flags =
 		GIT_DIFF_INCLUDE_UNMODIFIED | GIT_DIFF_INCLUDE_UNTRACKED |
 		GIT_DIFF_INCLUDE_TYPECHANGE | GIT_DIFF_SKIP_BINARY_CHECK;
+
+	if (!opts_is_valid_version(opts)) {
+      error = -1;
+		goto cleanup;
+   }
 
 	if (opts && opts->paths.count > 0)
 		diff_opts.pathspec = opts->paths;

@@ -498,9 +498,7 @@ static int reset_index_and_workdir(
 	git_commit *commit,
 	bool remove_untracked)
 {
-	git_checkout_opts opts;
-
-	memset(&opts, 0, sizeof(git_checkout_opts));
+	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
 
 	opts.checkout_strategy =
 		GIT_CHECKOUT_UPDATE_MODIFIED | GIT_CHECKOUT_UPDATE_UNTRACKED;
