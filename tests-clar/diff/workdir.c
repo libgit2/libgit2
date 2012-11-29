@@ -838,3 +838,26 @@ void test_diff_workdir__cannot_diff_against_a_bare_repository(void)
 
 	git_tree_free(tree);
 }
+
+void test_diff_workdir__to_null_tree(void)
+{
+	git_diff_list *diff;
+	diff_expects exp;
+	git_diff_options opts = {0};
+
+	opts.flags = GIT_DIFF_INCLUDE_UNTRACKED |
+		GIT_DIFF_RECURSE_UNTRACKED_DIRS;
+
+	g_repo = cl_git_sandbox_init("status");
+
+	cl_git_pass(git_diff_workdir_to_tree(&diff, g_repo, NULL, &opts));
+
+	memset(&exp, 0, sizeof(exp));
+
+	cl_git_pass(git_diff_foreach(
+		diff, diff_file_cb, diff_hunk_cb, diff_line_cb, &exp));
+
+	cl_assert_equal_i(exp.files, exp.file_status[GIT_DELTA_UNTRACKED]);
+
+	git_diff_list_free(diff);
+}
