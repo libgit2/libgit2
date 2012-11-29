@@ -168,6 +168,18 @@ int git_diff_merge(
 	return error;
 }
 
+static bool find_opts_has_valid_version(const git_diff_find_options *opts)
+{
+	if (!opts)
+		return true;
+
+	if (opts->version > 0 && opts->version <= GIT_DIFF_FIND_OPTIONS_VERSION)
+		return true;
+
+	giterr_set(GITERR_INVALID, "Invalid version %d on git_diff_find_options", opts->version);
+	return false;
+}
+
 #define DEFAULT_THRESHOLD 50
 #define DEFAULT_BREAK_REWRITE_THRESHOLD 60
 #define DEFAULT_TARGET_LIMIT 200
@@ -187,7 +199,8 @@ static int normalize_find_opts(
 	if (given != NULL)
 		memcpy(opts, given, sizeof(*opts));
 	else {
-		memset(opts, 0, sizeof(*opts));
+		git_diff_find_options init = GIT_DIFF_FIND_OPTIONS_INIT;
+		memmove(opts, &init, sizeof(init));
 
 		opts->flags = GIT_DIFF_FIND_RENAMES;
 
@@ -197,6 +210,9 @@ static int normalize_find_opts(
 			(!strcasecmp(val, "copies") || !strcasecmp(val, "copy")))
 			opts->flags = GIT_DIFF_FIND_RENAMES | GIT_DIFF_FIND_COPIES;
 	}
+
+	if (!find_opts_has_valid_version(opts))
+		return -1;
 
 	/* some flags imply others */
 
