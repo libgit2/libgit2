@@ -340,14 +340,6 @@ static int index_iterator__current(
 	index_iterator *ii = (index_iterator *)self;
 	const git_index_entry *ie = git_index_get_byindex(ii->index, ii->current);
 
-	if (ie != NULL &&
-		ii->base.end != NULL &&
-		ITERATOR_PREFIXCMP(ii->base, ie->path, ii->base.end) > 0)
-	{
-		ii->current = git_index_entrycount(ii->index);
-		ie = NULL;
-	}
-
 	if (entry)
 		*entry = ie;
 
@@ -360,6 +352,29 @@ static int index_iterator__at_end(git_iterator *self)
 	return (ii->current >= git_index_entrycount(ii->index));
 }
 
+static void index_iterator__skip_conflicts(
+	index_iterator *ii)
+{
+	size_t entrycount = git_index_entrycount(ii->index);
+	const git_index_entry *ie;
+
+	while (ii->current < entrycount) {
+		ie = git_index_get_byindex(ii->index, ii->current);
+
+		if (ie == NULL ||
+			(ii->base.end != NULL &&
+			ITERATOR_PREFIXCMP(ii->base, ie->path, ii->base.end) > 0)) {
+			ii->current = entrycount;
+			break;
+		}
+
+		if (git_index_entry_stage(ie) == 0)
+			break;
+
+		ii->current++;
+	}
+}
+
 static int index_iterator__advance(
 	git_iterator *self, const git_index_entry **entry)
 {
@@ -367,6 +382,8 @@ static int index_iterator__advance(
 
 	if (ii->current < git_index_entrycount(ii->index))
 		ii->current++;
+
+	index_iterator__skip_conflicts(ii);
 
 	return index_iterator__current(self, entry);
 }
@@ -382,7 +399,9 @@ static int index_iterator__seek(git_iterator *self, const char *prefix)
 static int index_iterator__reset(git_iterator *self)
 {
 	index_iterator *ii = (index_iterator *)self;
-	ii->current = 0;
+	ii->current = ii->base.start ?
+		git_index__prefix_position(ii->index, ii->base.start) : 0;
+	index_iterator__skip_conflicts(ii);
 	return 0;
 }
 
@@ -406,7 +425,8 @@ int git_iterator_for_index_range(
 
 	ii->index = index;
 	ii->base.ignore_case = ii->index->ignore_case;
-	ii->current = start ? git_index__prefix_position(ii->index, start) : 0;
+
+	index_iterator__reset((git_iterator *)ii);
 
 	*iter = (git_iterator *)ii;
 
