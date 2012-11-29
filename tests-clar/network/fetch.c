@@ -48,8 +48,8 @@ static void do_fetch(const char *url, git_remote_autotag_option_t flag, int n)
 	git_remote_set_autotag(remote, flag);
 	cl_git_pass(git_remote_connect(remote, GIT_DIRECTION_FETCH));
 	cl_git_pass(git_remote_download(remote, progress, &bytes_received));
-	git_remote_disconnect(remote);
 	cl_git_pass(git_remote_update_tips(remote));
+	git_remote_disconnect(remote);
 	cl_assert_equal_i(counter, n);
 	cl_assert(bytes_received > 0);
 

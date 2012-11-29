@@ -13,6 +13,7 @@
 
 static const char prefix_git[] = "git://";
 static const char cmd_uploadpack[] = "git-upload-pack";
+static const char cmd_receivepack[] = "git-receive-pack";
 
 typedef struct {
 	git_smart_subtransport_stream parent;
@@ -153,7 +154,7 @@ static int git_stream_alloc(
 	if (!stream)
 		return -1;
 
-	s = (git_stream *)git__calloc(sizeof(git_stream), 1);
+	s = git__calloc(sizeof(git_stream), 1);
 	GITERR_CHECK_ALLOC(s);
 
 	s->parent.subtransport = &t->parent;
@@ -173,7 +174,7 @@ static int git_stream_alloc(
 	return 0;
 }
 
-static int git_git_uploadpack_ls(
+static int _git_uploadpack_ls(
 	git_subtransport *t,
 	const char *url,
 	git_smart_subtransport_stream **stream)
@@ -211,7 +212,7 @@ on_error:
 	return -1;
 }
 
-static int git_git_uploadpack(
+static int _git_uploadpack(
 	git_subtransport *t,
 	const char *url,
 	git_smart_subtransport_stream **stream)
@@ -227,29 +228,100 @@ static int git_git_uploadpack(
 	return -1;
 }
 
+static int _git_receivepack_ls(
+	git_subtransport *t,
+	const char *url,
+	git_smart_subtransport_stream **stream)
+{
+	char *host, *port;
+	git_stream *s;
+
+	*stream = NULL;
+
+	if (!git__prefixcmp(url, prefix_git))
+		url += strlen(prefix_git);
+
+	if (git_stream_alloc(t, url, cmd_receivepack, stream) < 0)
+		return -1;
+
+	s = (git_stream *)*stream;
+
+	if (gitno_extract_host_and_port(&host, &port, url, GIT_DEFAULT_PORT) < 0)
+		goto on_error;
+
+	if (gitno_connect(&s->socket, host, port, 0) < 0)
+		goto on_error;
+
+	t->current_stream = s;
+	git__free(host);
+	git__free(port);
+	return 0;
+
+on_error:
+	if (*stream)
+		git_stream_free(*stream);
+
+	git__free(host);
+	git__free(port);
+	return -1;
+}
+
+static int _git_receivepack(
+	git_subtransport *t,
+	const char *url,
+	git_smart_subtransport_stream **stream)
+{
+	GIT_UNUSED(url);
+
+	if (t->current_stream) {
+		*stream = &t->current_stream->parent;
+		return 0;
+	}
+
+	giterr_set(GITERR_NET, "Must call RECEIVEPACK_LS before RECEIVEPACK");
+	return -1;
+}
+
 static int _git_action(
 	git_smart_subtransport_stream **stream,
-	git_smart_subtransport *smart_transport,
+	git_smart_subtransport *subtransport,
 	const char *url,
 	git_smart_service_t action)
 {
-	git_subtransport *t = (git_subtransport *) smart_transport;
+	git_subtransport *t = (git_subtransport *) subtransport;
 
 	switch (action) {
 		case GIT_SERVICE_UPLOADPACK_LS:
-			return git_git_uploadpack_ls(t, url, stream);
+			return _git_uploadpack_ls(t, url, stream);
 
 		case GIT_SERVICE_UPLOADPACK:
-			return git_git_uploadpack(t, url, stream);
+			return _git_uploadpack(t, url, stream);
+
+		case GIT_SERVICE_RECEIVEPACK_LS:
+			return _git_receivepack_ls(t, url, stream);
+
+		case GIT_SERVICE_RECEIVEPACK:
+			return _git_receivepack(t, url, stream);
 	}
 
 	*stream = NULL;
 	return -1;
 }
 
-static void _git_free(git_smart_subtransport *smart_transport)
+static int _git_close(git_smart_subtransport *subtransport)
 {
-	git_subtransport *t = (git_subtransport *) smart_transport;
+	git_subtransport *t = (git_subtransport *) subtransport;
+
+	assert(!t->current_stream);
+
+	GIT_UNUSED(t);
+
+	return 0;
+}
+
+static void _git_free(git_smart_subtransport *subtransport)
+{
+	git_subtransport *t = (git_subtransport *) subtransport;
 
 	assert(!t->current_stream);
 
@@ -263,11 +335,12 @@ int git_smart_subtransport_git(git_smart_subtransport **out, git_transport *owne
 	if (!out)
 		return -1;
 
-	t = (git_subtransport *)git__calloc(sizeof(git_subtransport), 1);
+	t = git__calloc(sizeof(git_subtransport), 1);
 	GITERR_CHECK_ALLOC(t);
 
 	t->owner = owner;
 	t->parent.action = _git_action;
+	t->parent.close = _git_close;
 	t->parent.free = _git_free;
 
 	*out = (git_smart_subtransport *) t;

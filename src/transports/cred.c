@@ -34,7 +34,7 @@ int git_cred_userpass_plaintext_new(
 	if (!cred)
 		return -1;
 
-	c = (git_cred_userpass_plaintext *)git__malloc(sizeof(git_cred_userpass_plaintext));
+	c = git__malloc(sizeof(git_cred_userpass_plaintext));
 	GITERR_CHECK_ALLOC(c);
 
 	c->parent.credtype = GIT_CREDTYPE_USERPASS_PLAINTEXT;

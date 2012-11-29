@@ -373,3 +373,4 @@ int git_object_peel(
 	git_object_free(deref);
 	return -1;
 }
+

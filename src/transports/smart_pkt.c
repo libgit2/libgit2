@@ -214,6 +214,83 @@ error_out:
 	return error;
 }
 
+static int ok_pkt(git_pkt **out, const char *line, size_t len)
+{
+	git_pkt_ok *pkt;
+	const char *ptr;
+
+	pkt = git__malloc(sizeof(*pkt));
+	GITERR_CHECK_ALLOC(pkt);
+
+	pkt->type = GIT_PKT_OK;
+
+	line += 3; /* skip "ok " */
+	ptr = strchr(line, '\n');
+	len = ptr - line;
+
+	pkt->ref = git__malloc(len + 1);
+	GITERR_CHECK_ALLOC(pkt->ref);
+
+	memcpy(pkt->ref, line, len);
+	pkt->ref[len] = '\0';
+
+	*out = (git_pkt *)pkt;
+	return 0;
+}
+
+static int ng_pkt(git_pkt **out, const char *line, size_t len)
+{
+	git_pkt_ng *pkt;
+	const char *ptr;
+
+	pkt = git__malloc(sizeof(*pkt));
+	GITERR_CHECK_ALLOC(pkt);
+
+	pkt->type = GIT_PKT_NG;
+
+	line += 3; /* skip "ng " */
+	ptr = strchr(line, ' ');
+	len = ptr - line;
+
+	pkt->ref = git__malloc(len + 1);
+	GITERR_CHECK_ALLOC(pkt->ref);
+
+	memcpy(pkt->ref, line, len);
+	pkt->ref[len] = '\0';
+
+	line = ptr + 1;
+	ptr = strchr(line, '\n');
+	len = ptr - line;
+
+	pkt->msg = git__malloc(len + 1);
+	GITERR_CHECK_ALLOC(pkt->msg);
+
+	memcpy(pkt->msg, line, len);
+	pkt->msg[len] = '\0';
+
+	*out = (git_pkt *)pkt;
+	return 0;
+}
+
+static int unpack_pkt(git_pkt **out, const char *line, size_t len)
+{
+	git_pkt_unpack *pkt;
+
+	GIT_UNUSED(len);
+
+	pkt = git__malloc(sizeof(*pkt));
+	GITERR_CHECK_ALLOC(pkt);
+
+	pkt->type = GIT_PKT_UNPACK;
+	if (!git__prefixcmp(line, "unpack ok"))
+		pkt->unpack_ok = 1;
+	else
+		pkt->unpack_ok = 0;
+
+	*out = (git_pkt *)pkt;
+	return 0;
+}
+
 static int32_t parse_len(const char *line)
 {
 	char num[PKT_LEN_SIZE + 1];
@@ -311,6 +388,12 @@ int git_pkt_parse_line(
 		ret = err_pkt(head, line, len);
 	else if (*line == '#')
 		ret = comment_pkt(head, line, len);
+	else if (!git__prefixcmp(line, "ok"))
+		ret = ok_pkt(head, line, len);
+	else if (!git__prefixcmp(line, "ng"))
+		ret = ng_pkt(head, line, len);
+	else if (!git__prefixcmp(line, "unpack"))
+		ret = unpack_pkt(head, line, len);
 	else
 		ret = ref_pkt(head, line, len);
 
@@ -324,6 +407,17 @@ void git_pkt_free(git_pkt *pkt)
 	if (pkt->type == GIT_PKT_REF) {
 		git_pkt_ref *p = (git_pkt_ref *) pkt;
 		git__free(p->head.name);
+	}
+
+	if (pkt->type == GIT_PKT_OK) {
+		git_pkt_ok *p = (git_pkt_ok *) pkt;
+		git__free(p->ref);
+	}
+
+	if (pkt->type == GIT_PKT_NG) {
+		git_pkt_ng *p = (git_pkt_ng *) pkt;
+		git__free(p->ref);
+		git__free(p->msg);
 	}
 
 	git__free(pkt);
