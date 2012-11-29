@@ -381,7 +381,7 @@ GIT_EXTERN(int) git_reference_foreach_glob(
 	git_repository *repo,
 	const char *glob,
 	unsigned int list_flags,
-	int (*callback)(const char *reference_name, void *payload),
+	git_reference_foreach_cb callback,
 	void *payload);
 
 /**

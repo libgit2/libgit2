@@ -19,11 +19,10 @@
 GIT_BEGIN_DECL
 
 /** Array of strings */
-typedef struct _git_strarray git_strarray;
-struct _git_strarray {
+typedef struct git_strarray {
     char **strings;
     size_t count;
-};
+} git_strarray;
 
 /**
  * Close a string array object

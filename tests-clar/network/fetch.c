@@ -78,6 +78,7 @@ void test_network_fetch__no_tags_http(void)
 
 static void transferProgressCallback(const git_transfer_progress *stats, void *payload)
 {
+	GIT_UNUSED(stats);
 	bool *invoked = (bool *)payload;
 	*invoked = true;
 }
