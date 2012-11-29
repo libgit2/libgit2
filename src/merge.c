@@ -258,7 +258,7 @@ static int count_ahead_behind(git_commit_list_node *one, git_commit_list_node *t
 	if (git_pqueue_insert(&pq, two) < 0)
 		return -1;
 
-	while((commit = git_pqueue_pop(&pq)) != NULL) {
+	while ((commit = git_pqueue_pop(&pq)) != NULL) {
 		if (commit->flags & RESULT ||
 			(commit->flags & (PARENT1 | PARENT2)) == (PARENT1 | PARENT2))
 			continue;
