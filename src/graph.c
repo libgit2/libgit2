@@ -6,15 +6,8 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include "repository.h"
 #include "revwalk.h"
-#include "buffer.h"
 #include "merge.h"
-#include "refs.h"
-#include "git2/repository.h"
-#include "git2/merge.h"
-#include "git2/reset.h"
-#include "commit_list.h"
 #include "git2/graph.h"
 
 static int ahead_behind(git_commit_list_node *one, git_commit_list_node *two,
