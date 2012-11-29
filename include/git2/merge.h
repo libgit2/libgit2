@@ -50,17 +50,6 @@ GIT_EXTERN(int) git_merge_base_many(
 	const git_oid input_array[],
 	size_t length);
 
-/**
- * Count the number of unique commits between two commit objects
- *
- * @param ahead number of commits, starting at `one`, unique from commits in `two` 
- * @param behind number of commits, starting at `two`, unique from commits in `one`
- * @param repo the repository where the commits exist
- * @param one one of the commits
- * @param two the other commit
- */
-GIT_EXTERN(int) git_count_ahead_behind(int *ahead, int *behind, git_repository *repo, git_oid *one, git_oid *two);
-
 /** @} */
 GIT_END_DECL
 #endif
