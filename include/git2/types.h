@@ -151,10 +151,14 @@ typedef struct git_time {
 
 /** An action signature (e.g. for committers, taggers, etc) */
 typedef struct git_signature {
+	unsigned int version;
 	char *name; /** full name of the author */
 	char *email; /** email of the author */
 	git_time when; /** time when the action happened */
 } git_signature;
+
+#define GIT_SIGNATURE_VERSION 1
+#define GIT_SIGNATURE_INIT {GIT_SIGNATURE_VERSION, 0}
 
 /** In-memory representation of a reference. */
 typedef struct git_reference git_reference;

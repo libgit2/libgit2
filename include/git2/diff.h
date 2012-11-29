@@ -106,15 +106,18 @@ typedef enum {
  * - max_size: maximum blob size to diff, above this treated as binary
  */
 typedef struct {
-	unsigned int version;		/**< version for the struct */
-	uint32_t flags;				/**< defaults to GIT_DIFF_NORMAL */
-	uint16_t context_lines;		/**< defaults to 3 */
-	uint16_t interhunk_lines;	/**< defaults to 0 */
-	char *old_prefix;			/**< defaults to "a" */
-	char *new_prefix;			/**< defaults to "b" */
-	git_strarray pathspec;		/**< defaults to show all paths */
-	git_off_t max_size;			/**< defaults to 512Mb */
+	unsigned int version;      /**< version for the struct */
+	uint32_t flags;            /**< defaults to git_diff_normal */
+	uint16_t context_lines;    /**< defaults to 3 */
+	uint16_t interhunk_lines;  /**< defaults to 0 */
+	char *old_prefix;          /**< defaults to "a" */
+	char *new_prefix;          /**< defaults to "b" */
+	git_strarray pathspec;     /**< defaults to show all paths */
+	git_off_t max_size;        /**< defaults to 512mb */
 } git_diff_options;
+
+#define GIT_DIFF_OPTIONS_VERSION 1
+#define GIT_DIFF_OPTIONS_INIT = {GIT_DIFF_OPTIONS_VERSION, 0}
 
 /**
  * The diff list object that contains all individual file deltas.
@@ -304,6 +307,8 @@ typedef struct {
 	unsigned int target_limit;
 } git_diff_find_options;
 
+#define GIT_DIFF_FIND_OPTIONS_VERSION 1
+#define GIT_DIFF_FIND_OPTIONS_INIT {GIT_DIFF_FIND_OPTIONS_VERSION, 0}
 
 /** @name Diff List Generator Functions
  *
