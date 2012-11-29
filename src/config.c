@@ -248,6 +248,18 @@ int git_config_open_level(
 	return 0;
 }
 
+static bool config_backend_has_valid_version(git_config_backend *backend)
+{
+	if (!backend)
+		return true;
+
+	if (backend->version > 0 && backend->version <= GIT_CONFIG_BACKEND_VERSION)
+		return true;
+
+	giterr_set(GITERR_INVALID, "Invalid version %d for git_config_backend", backend->version);
+	return false;
+}
+
 int git_config_add_backend(
 	git_config *cfg,
 	git_config_backend *file,
@@ -258,6 +270,9 @@ int git_config_add_backend(
 	int result;
 
 	assert(cfg && file);
+
+	if (!config_backend_has_valid_version(file))
+		return -1;
 
 	if ((result = file->open(file, level)) < 0)
 		return result;

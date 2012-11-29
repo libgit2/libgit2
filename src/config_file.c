@@ -545,10 +545,10 @@ int git_config_file__ondisk(git_config_backend **out, const char *path)
 {
 	diskfile_backend *backend;
 
-	backend = git__malloc(sizeof(diskfile_backend));
+	backend = git__calloc(1, sizeof(diskfile_backend));
 	GITERR_CHECK_ALLOC(backend);
 
-	memset(backend, 0x0, sizeof(diskfile_backend));
+	backend->parent.version = GIT_CONFIG_BACKEND_VERSION;
 
 	backend->file_path = git__strdup(path);
 	GITERR_CHECK_ALLOC(backend->file_path);
