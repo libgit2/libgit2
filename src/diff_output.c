@@ -142,7 +142,7 @@ static int diff_delta_is_binary_by_content(
 		search.ptr  = map->data;
 		search.size = min(map->len, 4000);
 
-		if (git_buf_is_binary(&search))
+		if (git_buf_text_is_binary(&search))
 			file->flags |= GIT_DIFF_FILE_BINARY;
 		else
 			file->flags |= GIT_DIFF_FILE_NOT_BINARY;

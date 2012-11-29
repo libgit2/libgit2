@@ -31,15 +31,7 @@ void git_buf_init(git_buf *buf, size_t initial_size)
 		git_buf_grow(buf, initial_size);
 }
 
-int git_buf_grow(git_buf *buf, size_t target_size)
-{
-	int error = git_buf_try_grow(buf, target_size);
-	if (error != 0)
-		buf->ptr = git_buf__oom;
-	return error;
-}
-
-int git_buf_try_grow(git_buf *buf, size_t target_size)
+int git_buf_try_grow(git_buf *buf, size_t target_size, bool mark_oom)
 {
 	char *new_ptr;
 	size_t new_size;
@@ -67,8 +59,12 @@ int git_buf_try_grow(git_buf *buf, size_t target_size)
 	new_size = (new_size + 7) & ~7;
 
 	new_ptr = git__realloc(new_ptr, new_size);
-	if (!new_ptr)
+
+	if (!new_ptr) {
+		if (mark_oom)
+			buf->ptr = git_buf__oom;
 		return -1;
+	}
 
 	buf->asize = new_size;
 	buf->ptr   = new_ptr;
@@ -139,51 +135,6 @@ int git_buf_puts(git_buf *buf, const char *string)
 {
 	assert(string);
 	return git_buf_put(buf, string, strlen(string));
-}
-
-int git_buf_puts_escaped(
-	git_buf *buf, const char *string, const char *esc_chars, const char *esc_with)
-{
-	const char *scan;
-	size_t total = 0, esc_len = strlen(esc_with), count;
-
-	if (!string)
-		return 0;
-
-	for (scan = string; *scan; ) {
-		/* count run of non-escaped characters */
-		count = strcspn(scan, esc_chars);
-		total += count;
-		scan += count;
-		/* count run of escaped characters */
-		count = strspn(scan, esc_chars);
-		total += count * (esc_len + 1);
-		scan += count;
-	}
-
-	ENSURE_SIZE(buf, buf->size + total + 1);
-
-	for (scan = string; *scan; ) {
-		count = strcspn(scan, esc_chars);
-
-		memmove(buf->ptr + buf->size, scan, count);
-		scan += count;
-		buf->size += count;
-
-		for (count = strspn(scan, esc_chars); count > 0; --count) {
-			/* copy escape sequence */
-			memmove(buf->ptr + buf->size, esc_with, esc_len);
-			buf->size += esc_len;
-			/* copy character to be escaped */
-			buf->ptr[buf->size] = *scan;
-			buf->size++;
-			scan++;
-		}
-	}
-
-	buf->ptr[buf->size] = '\0';
-
-	return 0;
 }
 
 static const char b64str[64] =
@@ -495,59 +446,6 @@ int git_buf_cmp(const git_buf *a, const git_buf *b)
 	int result = memcmp(a->ptr, b->ptr, min(a->size, b->size));
 	return (result != 0) ? result :
 		(a->size < b->size) ? -1 : (a->size > b->size) ? 1 : 0;
-}
-
-int git_buf_common_prefix(git_buf *buf, const git_strarray *strings)
-{
-	size_t i;
-	const char *str, *pfx;
-
-	git_buf_clear(buf);
-
-	if (!strings || !strings->count)
-		return 0;
-
-	/* initialize common prefix to first string */
-	if (git_buf_sets(buf, strings->strings[0]) < 0)
-		return -1;
-
-	/* go through the rest of the strings, truncating to shared prefix */
-	for (i = 1; i < strings->count; ++i) {
-
-		for (str = strings->strings[i], pfx = buf->ptr;
-			 *str && *str == *pfx; str++, pfx++)
-			/* scanning */;
-
-		git_buf_truncate(buf, pfx - buf->ptr);
-
-		if (!buf->size)
-			break;
-	}
-
-	return 0;
-}
-
-bool git_buf_is_binary(const git_buf *buf)
-{
-	size_t i;
-	int printable = 0, nonprintable = 0;
-
-	for (i = 0; i < buf->size; i++) {
-		unsigned char c = buf->ptr[i];
-		if (c > 0x1F && c < 0x7F)
-			printable++;
-		else if (c == '\0')
-			return true;
-		else if (!git__isspace(c))
-			nonprintable++;
-	}
-
-	return ((printable >> 7) < nonprintable);
-}
-
-void git_buf_unescape(git_buf *buf)
-{
-	buf->size = git__unescape(buf->ptr);
 }
 
 int git_buf_splice(
