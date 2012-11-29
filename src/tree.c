@@ -26,9 +26,12 @@ static bool valid_filemode(const int filemode)
 
 static int valid_entry_name(const char *filename)
 {
-	return *filename != '\0' && strchr(filename, '/') == NULL &&
-		strcmp(filename, "..") != 0 && strcmp(filename, ".") != 0 &&
-		strcmp(filename, ".git") != 0;
+	return *filename != '\0' &&
+		strchr(filename, '/') == NULL &&
+		(*filename != '.' ||
+		 (strcmp(filename, ".") != 0 &&
+		  strcmp(filename, "..") != 0 &&
+		  strcmp(filename, DOT_GIT) != 0));
 }
 
 static int entry_sort_cmp(const void *a, const void *b)
@@ -299,9 +302,12 @@ size_t git_tree_entrycount(const git_tree *tree)
 	return tree->entries.length;
 }
 
-static int tree_error(const char *str)
+static int tree_error(const char *str, const char *path)
 {
-	giterr_set(GITERR_TREE, "%s", str);
+	if (path)
+		giterr_set(GITERR_TREE, "%s - %s", str, path);
+	else
+		giterr_set(GITERR_TREE, "%s", str);
 	return -1;
 }
 
@@ -316,13 +322,13 @@ static int tree_parse_buffer(git_tree *tree, const char *buffer, const char *buf
 
 		if (git__strtol32(&attr, buffer, &buffer, 8) < 0 ||
 			!buffer || !valid_filemode(attr))
-			return tree_error("Failed to parse tree. Can't parse filemode");
+			return tree_error("Failed to parse tree. Can't parse filemode", NULL);
 
 		if (*buffer++ != ' ')
-			return tree_error("Failed to parse tree. Object is corrupted");
+			return tree_error("Failed to parse tree. Object is corrupted", NULL);
 
 		if (memchr(buffer, 0, buffer_end - buffer) == NULL)
-			return tree_error("Failed to parse tree. Object is corrupted");
+			return tree_error("Failed to parse tree. Object is corrupted", NULL);
 
 		/** Allocate the entry and store it in the entries vector */
 		{
@@ -379,7 +385,7 @@ static int append_entry(
 	git_tree_entry *entry;
 
 	if (!valid_entry_name(filename))
-		return tree_error("Failed to insert entry. Invalid name for a tree entry");
+		return tree_error("Failed to insert entry. Invalid name for a tree entry", filename);
 
 	entry = alloc_entry(filename);
 	GITERR_CHECK_ALLOC(entry);
@@ -453,7 +459,8 @@ static int write_tree(
 			/* Write out the subtree */
 			written = write_tree(&sub_oid, repo, index, subdir, i);
 			if (written < 0) {
-				tree_error("Failed to write subtree");
+				tree_error("Failed to write subtree", subdir);
+				git__free(subdir);
 				goto on_error;
 			} else {
 				i = written - 1; /* -1 because of the loop increment */
@@ -471,18 +478,15 @@ static int write_tree(
 			} else {
 				last_comp = subdir;
 			}
+
 			error = append_entry(bld, last_comp, &sub_oid, S_IFDIR);
 			git__free(subdir);
-			if (error < 0) {
-				tree_error("Failed to insert dir");
+			if (error < 0)
 				goto on_error;
-			}
 		} else {
 			error = append_entry(bld, filename, &entry->oid, entry->mode);
-			if (error < 0) {
-				tree_error("Failed to insert file");
+			if (error < 0)
 				goto on_error;
-			}
 		}
 	}
 
@@ -587,12 +591,12 @@ int git_treebuilder_insert(
 	assert(bld && id && filename);
 
 	if (!valid_filemode(filemode))
-		return tree_error("Failed to insert entry. Invalid filemode");
+		return tree_error("Failed to insert entry. Invalid filemode for file", filename);
 
 	filemode = normalize_filemode(filemode);
 
 	if (!valid_entry_name(filename))
-		return tree_error("Failed to insert entry. Invalid name for a tree entry");
+		return tree_error("Failed to insert entry. Invalid name for a tree entry", filename);
 
 	pos = tree_key_search(&bld->entries, filename, strlen(filename));
 
@@ -648,7 +652,7 @@ int git_treebuilder_remove(git_treebuilder *bld, const char *filename)
 	git_tree_entry *remove_ptr = treebuilder_get(bld, filename);
 
 	if (remove_ptr == NULL || remove_ptr->removed)
-		return tree_error("Failed to remove entry. File isn't in the tree");
+		return tree_error("Failed to remove entry. File isn't in the tree", filename);
 
 	remove_ptr->removed = 1;
 	return 0;
