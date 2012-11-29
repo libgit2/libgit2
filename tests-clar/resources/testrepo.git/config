@@ -25,3 +25,12 @@
 [branch "cannot-fetch"]
    remote = joshaber
    merge = refs/heads/cannot-fetch
+[branch "remoteless"]
+   remote =
+   merge = refs/heads/master
+[branch "mergeless"]
+   remote = test
+   merge = 
+[branch "mergeandremoteless"]
+   remote = 
+   merge = 
