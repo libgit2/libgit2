@@ -10,6 +10,7 @@
 #include "ignore.h"
 #include "buffer.h"
 #include "git2/submodule.h"
+#include <ctype.h>
 
 #define ITERATOR_BASE_INIT(P,NAME_LC,NAME_UC) do { \
 	(P) = git__calloc(1, sizeof(NAME_LC ## _iterator)); \
@@ -465,6 +466,23 @@ static int git_path_with_stat_cmp_icase(const void *a, const void *b)
 	return strcasecmp(path_with_stat_a->path, path_with_stat_b->path);
 }
 
+GIT_INLINE(bool) path_is_dotgit(const git_path_with_stat *ps)
+{
+	if (!ps)
+		return false;
+	else {
+		const char *path = ps->path;
+		size_t len  = ps->path_len;
+
+		return len >= 4 &&
+			tolower(path[len - 1]) == 't' &&
+			tolower(path[len - 2]) == 'i' &&
+			tolower(path[len - 3]) == 'g' &&
+			path[len - 4] == '.' &&
+			(len == 4 || path[len - 5] == '/');
+	}
+}
+
 static workdir_iterator_frame *workdir_iterator__alloc_frame(workdir_iterator *wi)
 {
 	workdir_iterator_frame *wf = git__calloc(1, sizeof(workdir_iterator_frame));
@@ -531,6 +549,9 @@ static int workdir_iterator__expand_dir(workdir_iterator *wi)
 			CASESELECT(wi->base.ignore_case, workdir_iterator__entry_cmp_icase, workdir_iterator__entry_cmp_case),
 			wf->start);
 
+	if (path_is_dotgit(git_vector_get(&wf->entries, wf->index)))
+		wf->index++;
+
 	wf->next  = wi->stack;
 	wi->stack = wf;
 
@@ -574,8 +595,7 @@ static int workdir_iterator__advance(
 		next = git_vector_get(&wf->entries, ++wf->index);
 		if (next != NULL) {
 			/* match git's behavior of ignoring anything named ".git" */
-			if (STRCMP_CASESELECT(wi->base.ignore_case, next->path, DOT_GIT "/") == 0 ||
-				STRCMP_CASESELECT(wi->base.ignore_case, next->path, DOT_GIT) == 0)
+			if (path_is_dotgit(next))
 				continue;
 			/* else found a good entry */
 			break;
@@ -658,8 +678,7 @@ static int workdir_iterator__update_entry(workdir_iterator *wi)
 	wi->entry.path = ps->path;
 
 	/* skip over .git entries */
-	if (STRCMP_CASESELECT(wi->base.ignore_case, ps->path, DOT_GIT "/") == 0 ||
-		STRCMP_CASESELECT(wi->base.ignore_case, ps->path, DOT_GIT) == 0)
+	if (path_is_dotgit(ps))
 		return workdir_iterator__advance((git_iterator *)wi, NULL);
 
 	wi->is_ignored = -1;
