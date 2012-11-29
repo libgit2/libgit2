@@ -43,7 +43,7 @@ static int add_ref(transport_local *t, const char *name)
 	git_object *obj = NULL, *target = NULL;
 	git_buf buf = GIT_BUF_INIT;
 
-	head = (git_remote_head *)git__calloc(1, sizeof(git_remote_head));
+	head = git__calloc(1, sizeof(git_remote_head));
 	GITERR_CHECK_ALLOC(head);
 
 	head->name = git__strdup(name);
@@ -78,7 +78,7 @@ static int add_ref(transport_local *t, const char *name)
 	}
 
 	/* And if it's a tag, peel it, and add it to the list */
-	head = (git_remote_head *)git__calloc(1, sizeof(git_remote_head));
+	head = git__calloc(1, sizeof(git_remote_head));
 	GITERR_CHECK_ALLOC(head);
 	if (git_buf_join(&buf, 0, name, peeled) < 0)
 		return -1;

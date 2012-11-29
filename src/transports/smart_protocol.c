@@ -597,7 +597,7 @@ static int parse_report(gitno_buffer *buf, git_push *push)
 		gitno_consume(buf, line_end);
 
 		if (pkt->type == GIT_PKT_OK) {
-			push_status *status = (push_status *) git__malloc(sizeof(push_status));
+			push_status *status = git__malloc(sizeof(push_status));
 			GITERR_CHECK_ALLOC(status);
 			status->ref = git__strdup(((git_pkt_ok *)pkt)->ref);
 			status->msg = NULL;
@@ -610,7 +610,7 @@ static int parse_report(gitno_buffer *buf, git_push *push)
 		}
 
 		if (pkt->type == GIT_PKT_NG) {
-			push_status *status = (push_status *) git__malloc(sizeof(push_status));
+			push_status *status = git__malloc(sizeof(push_status));
 			GITERR_CHECK_ALLOC(status);
 			status->ref = git__strdup(((git_pkt_ng *)pkt)->ref);
 			status->msg = git__strdup(((git_pkt_ng *)pkt)->msg);

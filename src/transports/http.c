@@ -545,7 +545,7 @@ static int http_stream_write_chunked(
 		int count = MIN(CHUNK_SIZE - s->chunk_buffer_len, len);
 
 		if (!s->chunk_buffer)
-			s->chunk_buffer = (char *)git__malloc(CHUNK_SIZE);
+			s->chunk_buffer = git__malloc(CHUNK_SIZE);
 
 		memcpy(s->chunk_buffer + s->chunk_buffer_len, buffer, count);
 		s->chunk_buffer_len += count;
@@ -626,7 +626,7 @@ static int http_stream_alloc(http_subtransport *t,
 	if (!stream)
 		return -1;
 
-	s = (http_stream *)git__calloc(sizeof(http_stream), 1);
+	s = git__calloc(sizeof(http_stream), 1);
 	GITERR_CHECK_ALLOC(s);
 
 	s->parent.subtransport = &t->parent;
@@ -838,7 +838,7 @@ int git_smart_subtransport_http(git_smart_subtransport **out, git_transport *own
 	if (!out)
 		return -1;
 
-	t = (http_subtransport *)git__calloc(sizeof(http_subtransport), 1);
+	t = git__calloc(sizeof(http_subtransport), 1);
 	GITERR_CHECK_ALLOC(t);
 
 	t->owner = (transport_smart *)owner;

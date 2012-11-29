@@ -154,7 +154,7 @@ static int git_stream_alloc(
 	if (!stream)
 		return -1;
 
-	s = (git_stream *)git__calloc(sizeof(git_stream), 1);
+	s = git__calloc(sizeof(git_stream), 1);
 	GITERR_CHECK_ALLOC(s);
 
 	s->parent.subtransport = &t->parent;
@@ -335,7 +335,7 @@ int git_smart_subtransport_git(git_smart_subtransport **out, git_transport *owne
 	if (!out)
 		return -1;
 
-	t = (git_subtransport *)git__calloc(sizeof(git_subtransport), 1);
+	t = git__calloc(sizeof(git_subtransport), 1);
 	GITERR_CHECK_ALLOC(t);
 
 	t->owner = owner;

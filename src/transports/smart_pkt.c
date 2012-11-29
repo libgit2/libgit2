@@ -30,7 +30,7 @@ static int flush_pkt(git_pkt **out)
 {
 	git_pkt *pkt;
 
-	pkt = (git_pkt *) git__malloc(sizeof(git_pkt));
+	pkt = git__malloc(sizeof(git_pkt));
 	GITERR_CHECK_ALLOC(pkt);
 
 	pkt->type = GIT_PKT_FLUSH;
@@ -46,7 +46,7 @@ static int ack_pkt(git_pkt **out, const char *line, size_t len)
 	GIT_UNUSED(line);
 	GIT_UNUSED(len);
 
-	pkt = (git_pkt_ack *) git__calloc(1, sizeof(git_pkt_ack));
+	pkt = git__calloc(1, sizeof(git_pkt_ack));
 	GITERR_CHECK_ALLOC(pkt);
 
 	pkt->type = GIT_PKT_ACK;
@@ -73,7 +73,7 @@ static int nak_pkt(git_pkt **out)
 {
 	git_pkt *pkt;
 
-	pkt = (git_pkt *) git__malloc(sizeof(git_pkt));
+	pkt = git__malloc(sizeof(git_pkt));
 	GITERR_CHECK_ALLOC(pkt);
 
 	pkt->type = GIT_PKT_NAK;
@@ -86,7 +86,7 @@ static int pack_pkt(git_pkt **out)
 {
 	git_pkt *pkt;
 
-	pkt = (git_pkt *) git__malloc(sizeof(git_pkt));
+	pkt = git__malloc(sizeof(git_pkt));
 	GITERR_CHECK_ALLOC(pkt);
 
 	pkt->type = GIT_PKT_PACK;
@@ -99,7 +99,7 @@ static int comment_pkt(git_pkt **out, const char *line, size_t len)
 {
 	git_pkt_comment *pkt;
 
-	pkt = (git_pkt_comment *) git__malloc(sizeof(git_pkt_comment) + len + 1);
+	pkt = git__malloc(sizeof(git_pkt_comment) + len + 1);
 	GITERR_CHECK_ALLOC(pkt);
 
 	pkt->type = GIT_PKT_COMMENT;
@@ -118,7 +118,7 @@ static int err_pkt(git_pkt **out, const char *line, size_t len)
 	/* Remove "ERR " from the line */
 	line += 4;
 	len -= 4;
-	pkt = (git_pkt_err *) git__malloc(sizeof(git_pkt_err) + len + 1);
+	pkt = git__malloc(sizeof(git_pkt_err) + len + 1);
 	GITERR_CHECK_ALLOC(pkt);
 
 	pkt->type = GIT_PKT_ERR;
@@ -136,7 +136,7 @@ static int data_pkt(git_pkt **out, const char *line, size_t len)
 
 	line++;
 	len--;
-	pkt = (git_pkt_data *) git__malloc(sizeof(git_pkt_data) + len);
+	pkt = git__malloc(sizeof(git_pkt_data) + len);
 	GITERR_CHECK_ALLOC(pkt);
 
 	pkt->type = GIT_PKT_DATA;
@@ -154,7 +154,7 @@ static int progress_pkt(git_pkt **out, const char *line, size_t len)
 
 	line++;
 	len--;
-	pkt = (git_pkt_progress *) git__malloc(sizeof(git_pkt_progress) + len);
+	pkt = git__malloc(sizeof(git_pkt_progress) + len);
 	GITERR_CHECK_ALLOC(pkt);
 
 	pkt->type = GIT_PKT_PROGRESS;
@@ -174,7 +174,7 @@ static int ref_pkt(git_pkt **out, const char *line, size_t len)
 	int error;
 	git_pkt_ref *pkt;
 
-	pkt = (git_pkt_ref *) git__malloc(sizeof(git_pkt_ref));
+	pkt = git__malloc(sizeof(git_pkt_ref));
 	GITERR_CHECK_ALLOC(pkt);
 
 	memset(pkt, 0x0, sizeof(git_pkt_ref));
@@ -196,7 +196,7 @@ static int ref_pkt(git_pkt **out, const char *line, size_t len)
 	if (line[len - 1] == '\n')
 		--len;
 
-	pkt->head.name = (char *) git__malloc(len + 1);
+	pkt->head.name = git__malloc(len + 1);
 	GITERR_CHECK_ALLOC(pkt->head.name);
 
 	memcpy(pkt->head.name, line, len);
@@ -219,7 +219,7 @@ static int ok_pkt(git_pkt **out, const char *line, size_t len)
 	git_pkt_ok *pkt;
 	const char *ptr;
 
-	pkt = (git_pkt_ok *) git__malloc(sizeof(*pkt));
+	pkt = git__malloc(sizeof(*pkt));
 	GITERR_CHECK_ALLOC(pkt);
 
 	pkt->type = GIT_PKT_OK;
@@ -228,7 +228,7 @@ static int ok_pkt(git_pkt **out, const char *line, size_t len)
 	ptr = strchr(line, '\n');
 	len = ptr - line;
 
-	pkt->ref = (char *) git__malloc(len + 1);
+	pkt->ref = git__malloc(len + 1);
 	GITERR_CHECK_ALLOC(pkt->ref);
 
 	memcpy(pkt->ref, line, len);
@@ -243,7 +243,7 @@ static int ng_pkt(git_pkt **out, const char *line, size_t len)
 	git_pkt_ng *pkt;
 	const char *ptr;
 
-	pkt = (git_pkt_ng *) git__malloc(sizeof(*pkt));
+	pkt = git__malloc(sizeof(*pkt));
 	GITERR_CHECK_ALLOC(pkt);
 
 	pkt->type = GIT_PKT_NG;
@@ -252,7 +252,7 @@ static int ng_pkt(git_pkt **out, const char *line, size_t len)
 	ptr = strchr(line, ' ');
 	len = ptr - line;
 
-	pkt->ref = (char *) git__malloc(len + 1);
+	pkt->ref = git__malloc(len + 1);
 	GITERR_CHECK_ALLOC(pkt->ref);
 
 	memcpy(pkt->ref, line, len);
@@ -262,7 +262,7 @@ static int ng_pkt(git_pkt **out, const char *line, size_t len)
 	ptr = strchr(line, '\n');
 	len = ptr - line;
 
-	pkt->msg = (char *) git__malloc(len + 1);
+	pkt->msg = git__malloc(len + 1);
 	GITERR_CHECK_ALLOC(pkt->msg);
 
 	memcpy(pkt->msg, line, len);
@@ -278,7 +278,7 @@ static int unpack_pkt(git_pkt **out, const char *line, size_t len)
 
 	GIT_UNUSED(len);
 
-	pkt = (git_pkt_unpack *) git__malloc(sizeof(*pkt));
+	pkt = git__malloc(sizeof(*pkt));
 	GITERR_CHECK_ALLOC(pkt);
 
 	pkt->type = GIT_PKT_UNPACK;

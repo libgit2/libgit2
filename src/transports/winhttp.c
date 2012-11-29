@@ -104,7 +104,7 @@ static int apply_basic_credential(HINTERNET request, git_cred *cred)
 		goto on_error;
 	}
 
-	wide = (wchar_t *)git__malloc(wide_len * sizeof(wchar_t));
+	wide = git__malloc(wide_len * sizeof(wchar_t));
 
 	if (!wide)
 		goto on_error;
@@ -389,7 +389,7 @@ replay:
 				return -1;
 			}
 
-			buffer = (char *)git__malloc(CACHED_POST_BODY_BUF_SIZE);
+			buffer = git__malloc(CACHED_POST_BODY_BUF_SIZE);
 
 			while (len > 0) {
 				DWORD bytes_written;
@@ -702,7 +702,7 @@ static int winhttp_stream_write_chunked(
 		int count = MIN(CACHED_POST_BODY_BUF_SIZE - s->chunk_buffer_len, len);
 
 		if (!s->chunk_buffer)
-			s->chunk_buffer = (char *)git__malloc(CACHED_POST_BODY_BUF_SIZE);
+			s->chunk_buffer = git__malloc(CACHED_POST_BODY_BUF_SIZE);
 
 		memcpy(s->chunk_buffer + s->chunk_buffer_len, buffer, count);
 		s->chunk_buffer_len += count;
@@ -756,7 +756,7 @@ static int winhttp_stream_alloc(winhttp_subtransport *t, winhttp_stream **stream
 	if (!stream)
 		return -1;
 
-	s = (winhttp_stream *)git__calloc(sizeof(winhttp_stream), 1);
+	s = git__calloc(sizeof(winhttp_stream), 1);
 	GITERR_CHECK_ALLOC(s);
 
 	s->parent.subtransport = &t->parent;
@@ -988,7 +988,7 @@ int git_smart_subtransport_http(git_smart_subtransport **out, git_transport *own
 	if (!out)
 		return -1;
 
-	t = (winhttp_subtransport *)git__calloc(sizeof(winhttp_subtransport), 1);
+	t = git__calloc(sizeof(winhttp_subtransport), 1);
 	GITERR_CHECK_ALLOC(t);
 
 	t->owner = (transport_smart *)owner;
