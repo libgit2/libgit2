@@ -30,7 +30,6 @@ static const char *basic_authtype = "Basic";
 #define PARSE_ERROR_REPLAY	-2
 
 #define CHUNK_SIZE	4096
-#define MIN(a, b)	(((a) < (b)) ? (a) : (b))
 
 enum last_cb {
 	NONE,
@@ -542,7 +541,7 @@ static int http_stream_write_chunked(
 	}
 	else {
 		/* Append as much to the buffer as we can */
-		int count = MIN(CHUNK_SIZE - s->chunk_buffer_len, len);
+		int count = min(CHUNK_SIZE - s->chunk_buffer_len, len);
 
 		if (!s->chunk_buffer)
 			s->chunk_buffer = git__malloc(CHUNK_SIZE);

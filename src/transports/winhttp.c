@@ -30,8 +30,6 @@
 #define CACHED_POST_BODY_BUF_SIZE	4096
 #define UUID_LENGTH_CCH	32
 
-#define MIN(a, b) (((a) < (b)) ? (a) : (b))
-
 static const char *prefix_http = "http://";
 static const char *prefix_https = "https://";
 static const char *upload_pack_service = "upload-pack";
@@ -395,7 +393,7 @@ replay:
 				DWORD bytes_written;
 
 				if (!ReadFile(s->post_body, buffer,
-					MIN(CACHED_POST_BODY_BUF_SIZE, len),
+					min(CACHED_POST_BODY_BUF_SIZE, len),
 					&bytes_read, NULL) ||
 					!bytes_read) {
 					git__free(buffer);
@@ -699,7 +697,7 @@ static int winhttp_stream_write_chunked(
 	}
 	else {
 		/* Append as much to the buffer as we can */
-		int count = MIN(CACHED_POST_BODY_BUF_SIZE - s->chunk_buffer_len, len);
+		int count = min(CACHED_POST_BODY_BUF_SIZE - s->chunk_buffer_len, len);
 
 		if (!s->chunk_buffer)
 			s->chunk_buffer = git__malloc(CACHED_POST_BODY_BUF_SIZE);
