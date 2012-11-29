@@ -108,7 +108,7 @@ int git_status_foreach_ext(
 	void *payload)
 {
 	int err = 0;
-	git_diff_options diffopt;
+	git_diff_options diffopt = GIT_DIFF_OPTIONS_INIT;
 	git_diff_list *idx2head = NULL, *wd2idx = NULL;
 	git_tree *head = NULL;
 	git_status_show_t show =
@@ -126,7 +126,6 @@ int git_status_foreach_ext(
 		!(err == GIT_ENOTFOUND || err == GIT_EORPHANEDHEAD))
 			return err;
 
-	memset(&diffopt, 0, sizeof(diffopt));
 	memcpy(&diffopt.pathspec, &opts->pathspec, sizeof(diffopt.pathspec));
 
 	diffopt.flags = GIT_DIFF_INCLUDE_TYPECHANGE;

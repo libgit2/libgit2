@@ -622,7 +622,7 @@ int git_checkout_index(
 	git_checkout_opts *opts)
 {
 	git_diff_list *diff = NULL;
-	git_diff_options diff_opts = {0};
+	git_diff_options diff_opts = GIT_DIFF_OPTIONS_INIT;
 	git_checkout_opts checkout_opts;
 	checkout_diff_data data;
 	git_buf workdir = GIT_BUF_INIT;

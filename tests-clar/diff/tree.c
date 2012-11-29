@@ -19,7 +19,7 @@ void test_diff_tree__0(void)
 	const char *b_commit = "370fe9ec22";
 	const char *c_commit = "f5b0af1fb4f5c";
 	git_tree *a, *b, *c;
-	git_diff_options opts = {0};
+	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
 	git_diff_list *diff = NULL;
 	diff_expects exp;
 
@@ -175,7 +175,7 @@ void test_diff_tree__bare(void)
 	const char *a_commit = "8496071c1b46c85";
 	const char *b_commit = "be3563ae3f79";
 	git_tree *a, *b;
-	git_diff_options opts = {0};
+	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
 	git_diff_list *diff = NULL;
 	diff_expects exp;
 
@@ -264,7 +264,7 @@ void test_diff_tree__larger_hunks(void)
 	const char *a_commit = "d70d245ed97ed2aa596dd1af6536e4bfdb047b69";
 	const char *b_commit = "7a9e0b02e63179929fed24f0a3e0f19168114d10";
 	git_tree *a, *b;
-	git_diff_options opts = {0};
+	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
 	git_diff_list *diff = NULL;
 	size_t d, num_d, h, num_h, l, num_l, header_len, line_len;
 	const git_diff_delta *delta;
@@ -315,6 +315,34 @@ void test_diff_tree__larger_hunks(void)
 
 	git_diff_list_free(diff);
 	diff = NULL;
+
+	git_tree_free(a);
+	git_tree_free(b);
+}
+
+void test_diff_tree__checks_options_version(void)
+{
+	const char *a_commit = "8496071c1b46c85";
+	const char *b_commit = "be3563ae3f79";
+	git_tree *a, *b;
+	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
+	git_diff_list *diff = NULL;
+	const git_error *err;
+
+	g_repo = cl_git_sandbox_init("testrepo.git");
+
+	cl_assert((a = resolve_commit_oid_to_tree(g_repo, a_commit)) != NULL);
+	cl_assert((b = resolve_commit_oid_to_tree(g_repo, b_commit)) != NULL);
+
+	opts.version = 0;
+	cl_git_fail(git_diff_tree_to_tree(&diff, g_repo, a, b, &opts));
+	err = giterr_last();
+	cl_assert_equal_i(GITERR_INVALID, err->klass);
+
+	giterr_clear();
+	opts.version = 1024;
+	cl_git_fail(git_diff_tree_to_tree(&diff, g_repo, a, b, &opts));
+	err = giterr_last();
 
 	git_tree_free(a);
 	git_tree_free(b);

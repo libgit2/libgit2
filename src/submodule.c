@@ -1439,7 +1439,7 @@ static int submodule_wd_status(unsigned int *status, git_submodule *sm)
 
 	if (sm_repo != NULL) {
 		git_tree *sm_head;
-		git_diff_options opt;
+		git_diff_options opt = GIT_DIFF_OPTIONS_INIT;
 		git_diff_list *diff;
 
 		/* the diffs below could be optimized with an early termination
@@ -1452,7 +1452,6 @@ static int submodule_wd_status(unsigned int *status, git_submodule *sm)
 		if ((error = git_repository_head_tree(&sm_head, sm_repo)) < 0)
 			return error;
 
-		memset(&opt, 0, sizeof(opt));
 		if (sm->ignore == GIT_SUBMODULE_IGNORE_NONE)
 			opt.flags |= GIT_DIFF_INCLUDE_UNTRACKED;
 

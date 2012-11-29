@@ -229,7 +229,7 @@ static int build_untracked_tree(
 {
 	git_tree *i_tree = NULL;
 	git_diff_list *diff = NULL;
-	git_diff_options opts = {0};
+	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
 	struct cb_data data = {0};
 	int error = -1;
 
@@ -315,7 +315,7 @@ static int build_workdir_tree(
 	git_repository *repo = git_index_owner(index);
 	git_tree *b_tree = NULL;
 	git_diff_list *diff = NULL, *diff2 = NULL;
-	git_diff_options opts = {0};
+	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
 	struct cb_data data = {0};
 	int error = -1;
 

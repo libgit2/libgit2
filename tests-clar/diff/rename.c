@@ -33,7 +33,7 @@ void test_diff_rename__match_oid(void)
 	const char *new_sha = "2bc7f351d20b53f1c72c16c4b036e491c478c49a";
 	git_tree *old_tree, *new_tree;
 	git_diff_list *diff;
-	git_diff_options diffopts = {0};
+	git_diff_options diffopts = GIT_DIFF_OPTIONS_INIT;
 	git_diff_find_options opts;
 	diff_expects exp;
 
@@ -43,7 +43,6 @@ void test_diff_rename__match_oid(void)
 	/* Must pass GIT_DIFF_INCLUDE_UNMODIFIED if you expect to emulate
 	 * --find-copies-harder during rename transformion...
 	 */
-	memset(&diffopts, 0, sizeof(diffopts));
 	diffopts.flags |= GIT_DIFF_INCLUDE_UNMODIFIED;
 
 	cl_git_pass(git_diff_tree_to_tree(

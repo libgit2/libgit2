@@ -48,3 +48,10 @@ extern int diff_foreach_via_iterator(
 	void *data);
 
 extern void diff_print(FILE *fp, git_diff_list *diff);
+
+
+GIT_INLINE(void) reset_diff_opts(git_diff_options *opts)
+{
+	git_diff_options init = GIT_DIFF_OPTIONS_INIT;
+	memmove(opts, &init, sizeof(init));
+}
