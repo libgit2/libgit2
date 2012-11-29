@@ -9,6 +9,7 @@
 
 #include "indexer.h"
 #include "net.h"
+#include "types.h"
 
 /**
  * @file git2/transport.h
@@ -102,8 +103,8 @@ typedef struct git_transport {
 		git_headlist_cb list_cb,
 		void *payload);
 
-	/* Reserved until push is implemented. */
-	int (*push)(struct git_transport *transport);
+	/* Executes the push whose context is in the git_push object. */
+	int (*push)(struct git_transport *transport, git_push *push);
 
 	/* This function may be called after a successful call to connect(), when
 	 * the direction is FETCH. The function performs a negotiation to calculate
@@ -123,7 +124,7 @@ typedef struct git_transport {
 		void *progress_payload);
 
 	/* Checks to see if the transport is connected */
-	int (*is_connected)(struct git_transport *transport, int *connected);
+	int (*is_connected)(struct git_transport *transport);
 
 	/* Reads the flags value previously passed into connect() */
 	int (*read_flags)(struct git_transport *transport, int *flags);
@@ -145,10 +146,11 @@ typedef struct git_transport {
  * git:// or http://) and a transport object is returned to the caller.
  *
  * @param out The newly created transport (out)
+ * @param owner The git_remote which will own this transport
  * @param url The URL to connect to
  * @return 0 or an error code
  */
-GIT_EXTERN(int) git_transport_new(git_transport **out, const char *url);
+GIT_EXTERN(int) git_transport_new(git_transport **out, git_remote *owner, const char *url);
 
 /**
  * Function which checks to see if a transport could be created for the
@@ -161,7 +163,7 @@ GIT_EXTERN(int) git_transport_new(git_transport **out, const char *url);
 GIT_EXTERN(int) git_transport_valid_url(const char *url);
 
 /* Signature of a function which creates a transport */
-typedef int (*git_transport_cb)(git_transport **out, void *payload);
+typedef int (*git_transport_cb)(git_transport **out, git_remote *owner, void *param);
 
 /* Transports which come with libgit2 (match git_transport_cb). The expected
  * value for "param" is listed in-line below. */
@@ -169,34 +171,40 @@ typedef int (*git_transport_cb)(git_transport **out, void *payload);
 /**
  * Create an instance of the dummy transport.
  *
- * @param transport The newly created transport (out)
+ * @param out The newly created transport (out)
+ * @param owner The git_remote which will own this transport
  * @param payload You must pass NULL for this parameter.
  * @return 0 or an error code
  */
 GIT_EXTERN(int) git_transport_dummy(
-	git_transport **transport,
+	git_transport **out,
+	git_remote *owner,
 	/* NULL */ void *payload);
 
 /**
  * Create an instance of the local transport.
  *
- * @param transport The newly created transport (out)
+ * @param out The newly created transport (out)
+ * @param owner The git_remote which will own this transport
  * @param payload You must pass NULL for this parameter.
  * @return 0 or an error code
  */
 GIT_EXTERN(int) git_transport_local(
-	git_transport **transport,
+	git_transport **out,
+	git_remote *owner,
 	/* NULL */ void *payload);
 
 /**
  * Create an instance of the smart transport.
  *
- * @param transport The newly created transport (out)
+ * @param out The newly created transport (out)
+ * @param owner The git_remote which will own this transport
  * @param payload A pointer to a git_smart_subtransport_definition
  * @return 0 or an error code
  */
 GIT_EXTERN(int) git_transport_smart(
-	git_transport **transport,
+	git_transport **out,
+	git_remote *owner,
 	/* (git_smart_subtransport_definition *) */ void *payload);
 
 /*
@@ -221,6 +229,8 @@ GIT_EXTERN(int) git_transport_smart(
 typedef enum {
 	GIT_SERVICE_UPLOADPACK_LS = 1,
 	GIT_SERVICE_UPLOADPACK = 2,
+	GIT_SERVICE_RECEIVEPACK_LS = 3,
+	GIT_SERVICE_RECEIVEPACK = 4,
 } git_smart_service_t;
 
 struct git_smart_subtransport;
@@ -254,6 +264,14 @@ typedef struct git_smart_subtransport {
 			struct git_smart_subtransport *transport,
 			const char *url,
 			git_smart_service_t action);
+
+	/* Subtransports are guaranteed a call to close() between
+	 * calls to action(), except for the following two "natural" progressions
+	 * of actions against a constant URL.
+	 *
+	 * 1. UPLOADPACK_LS -> UPLOADPACK
+	 * 2. RECEIVEPACK_LS -> RECEIVEPACK */
+	int (* close)(struct git_smart_subtransport *transport);
 
 	void (* free)(struct git_smart_subtransport *transport);
 } git_smart_subtransport;

@@ -62,3 +62,4 @@ void test_object_lookup__lookup_wrong_type_eventually_returns_enotfound(void)
 	cl_assert_equal_i(
 		GIT_ENOTFOUND, git_object_lookup(&object, g_repo, &oid, GIT_OBJ_TAG));
 }
+

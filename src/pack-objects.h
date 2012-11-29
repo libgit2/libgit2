@@ -82,7 +82,6 @@ struct git_packbuilder {
 	bool done;
 };
 
-int git_packbuilder_send(git_packbuilder *pb, gitno_socket *s);
 int git_packbuilder_write_buf(git_buf *buf, git_packbuilder *pb);
 
 #endif /* INCLUDE_pack_objects_h__ */
