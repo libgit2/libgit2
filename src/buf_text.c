@@ -114,6 +114,7 @@ int git_buf_text_detect_bom(git_bom_t *bom, const git_buf *buf, size_t offset)
 	const char *ptr;
 	size_t len;
 
+	*bom = GIT_BOM_NONE;
 	/* need at least 2 bytes after offset to look for any BOM */
 	if (buf->size < offset + 2)
 		return 0;
