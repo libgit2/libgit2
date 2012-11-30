@@ -10,3 +10,13 @@
         ...
         fun:giterr_set
 }
+
+{
+	...
+	obj:*libssl.so*
+}
+
+{
+	...
+	obj:*libcrypto.so*
+}
