@@ -985,9 +985,24 @@ void git_remote_check_cert(git_remote *remote, int check)
 	remote->check_cert = check;
 }
 
-void git_remote_set_callbacks(git_remote *remote, git_remote_callbacks *callbacks)
+static bool callbacks_have_valid_version(git_remote_callbacks *callbacks)
+{
+	if (!callbacks)
+		return true;
+
+	if (callbacks->version > 0 && callbacks->version <= GIT_REMOTE_CALLBACKS_VERSION)
+		return true;
+
+	giterr_set(GITERR_INVALID, "Invalid version %d for git_remote_callbacks", callbacks->version);
+	return false;
+}
+
+int git_remote_set_callbacks(git_remote *remote, git_remote_callbacks *callbacks)
 {
 	assert(remote && callbacks);
+
+	if (!callbacks_have_valid_version(callbacks))
+		return -1;
 
 	memcpy(&remote->callbacks, callbacks, sizeof(git_remote_callbacks));
 
@@ -996,6 +1011,8 @@ void git_remote_set_callbacks(git_remote *remote, git_remote_callbacks *callback
 			remote->callbacks.progress,
 			NULL,
 			remote->callbacks.payload);
+
+	return 0;
 }
 
 void git_remote_set_cred_acquire_cb(

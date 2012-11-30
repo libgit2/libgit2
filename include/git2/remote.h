@@ -356,8 +356,9 @@ struct git_remote_callbacks {
  *
  * @param remote the remote to configure
  * @param callbacks a pointer to the user's callback settings
+ * @return 0 or an error code
  */
-GIT_EXTERN(void) git_remote_set_callbacks(git_remote *remote, git_remote_callbacks *callbacks);
+GIT_EXTERN(int) git_remote_set_callbacks(git_remote *remote, git_remote_callbacks *callbacks);
 
 /**
  * Get the statistics structure that is filled in by the fetch operation.

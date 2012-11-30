@@ -36,10 +36,9 @@ static void progress(const git_transfer_progress *stats, void *payload)
 static void do_fetch(const char *url, git_remote_autotag_option_t flag, int n)
 {
 	git_remote *remote;
-	git_remote_callbacks callbacks;
+	git_remote_callbacks callbacks = GIT_REMOTE_CALLBACKS_INIT;
 	size_t bytes_received = 0;
 
-	memset(&callbacks, 0, sizeof(git_remote_callbacks));
 	callbacks.update_tips = update_tips;
 	counter = 0;
 
