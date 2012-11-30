@@ -71,14 +71,14 @@ int git_merge_base_many(git_oid *out, git_repository *repo, const git_oid input_
 		goto cleanup;
 
 	for (i = 1; i < length; i++) {
-		commit = commit_lookup(walk, &input_array[i]);
+		commit = git_revwalk__commit_lookup(walk, &input_array[i]);
 		if (commit == NULL)
 			goto cleanup;
 
 		git_vector_insert(&list, commit);
 	}
 
-	commit = commit_lookup(walk, &input_array[0]);
+	commit = git_revwalk__commit_lookup(walk, &input_array[0]);
 	if (commit == NULL)
 		goto cleanup;
 
@@ -112,7 +112,7 @@ int git_merge_base(git_oid *out, git_repository *repo, const git_oid *one, const
 	if (git_revwalk_new(&walk, repo) < 0)
 		return -1;
 
-	commit = commit_lookup(walk, two);
+	commit = git_revwalk__commit_lookup(walk, two);
 	if (commit == NULL)
 		goto on_error;
 
@@ -122,7 +122,7 @@ int git_merge_base(git_oid *out, git_repository *repo, const git_oid *one, const
 	list.length = 1;
 	list.contents = contents;
 
-	commit = commit_lookup(walk, one);
+	commit = git_revwalk__commit_lookup(walk, one);
 	if (commit == NULL)
 		goto on_error;
 

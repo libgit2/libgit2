@@ -15,7 +15,8 @@
 
 #include <regex.h>
 
-git_commit_list_node *commit_lookup(git_revwalk *walk, const git_oid *oid)
+git_commit_list_node *git_revwalk__commit_lookup(
+	git_revwalk *walk, const git_oid *oid)
 {
 	git_commit_list_node *commit;
 	khiter_t pos;
@@ -101,7 +102,7 @@ static int push_commit(git_revwalk *walk, const git_oid *oid, int uninteresting)
 		return -1;
 	}
 
-	commit = commit_lookup(walk, oid);
+	commit = git_revwalk__commit_lookup(walk, oid);
 	if (commit == NULL)
 		return -1; /* error already reported by failed lookup */
 

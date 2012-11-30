@@ -83,7 +83,7 @@ void test_revwalk_mergebase__merged_branch(void)
 	cl_assert(behind == 0);
 }
 
-void test_revwalk_meregebase__two_way_merge(void)
+void test_revwalk_mergebase__two_way_merge(void)
 {
 	git_oid one, two;
 	size_t ahead, behind;

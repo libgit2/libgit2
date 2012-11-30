@@ -58,7 +58,7 @@ int git_graph_ahead_behind(size_t *ahead, size_t *behind, git_repository *repo,
 	if (git_revwalk_new(&walk, repo) < 0)
 		return -1;
 
-	commit2 = commit_lookup(walk, two);
+	commit2 = git_revwalk__commit_lookup(walk, two);
 	if (commit2 == NULL)
 		goto on_error;
 
@@ -68,7 +68,7 @@ int git_graph_ahead_behind(size_t *ahead, size_t *behind, git_repository *repo,
 	list.length = 1;
 	list.contents = contents;
 
-	commit1 = commit_lookup(walk, one);
+	commit1 = git_revwalk__commit_lookup(walk, one);
 	if (commit1 == NULL)
 		goto on_error;
 
