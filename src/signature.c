@@ -90,6 +90,7 @@ int git_signature_new(git_signature **sig_out, const char *name, const char *ema
 
 	p = git__calloc(1, sizeof(git_signature));
 	GITERR_CHECK_ALLOC(p);
+	p->version = GIT_SIGNATURE_VERSION;
 
 	if (process_trimming(name, &p->name, name + strlen(name), 1) < 0 ||
 		process_trimming(email, &p->email, email + strlen(email), 1) < 0)
@@ -263,8 +264,9 @@ int git_signature__parse(git_signature *sig, const char **buffer_out,
 	const char *buffer = *buffer_out;
 	const char *line_end, *name_end, *email_end, *tz_start, *time_start;
 	int error = 0;
+	git_signature initsig = GIT_SIGNATURE_INIT;
 
-	memset(sig, 0x0, sizeof(git_signature));
+	memmove(sig, &initsig, sizeof(git_signature));
 
 	if ((line_end = memchr(buffer, ender, buffer_end - buffer)) == NULL)
 		return signature_error("no newline given");

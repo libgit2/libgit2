@@ -11,6 +11,7 @@
 #include "refs.h"
 #include "config.h"
 #include "iterator.h"
+#include "signature.h"
 
 static int find_subtree_in_current_level(
 	git_tree **out,
@@ -455,6 +456,10 @@ int git_note_create(
 	git_commit *commit = NULL;
 	git_tree *tree = NULL;
 
+	if (!git_signature__has_valid_version(author) ||
+		 !git_signature__has_valid_version(committer))
+		return -1;
+
 	target = git_oid_allocfmt(oid);
 	GITERR_CHECK_ALLOC(target);
 
@@ -481,6 +486,10 @@ int git_note_remove(git_repository *repo, const char *notes_ref,
 	char *target = NULL;
 	git_commit *commit = NULL;
 	git_tree *tree = NULL;
+
+	if (!git_signature__has_valid_version(author) ||
+		 !git_signature__has_valid_version(committer))
+		return -1;
 
 	target = git_oid_allocfmt(oid);
 	GITERR_CHECK_ALLOC(target);

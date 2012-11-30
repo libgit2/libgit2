@@ -14,6 +14,7 @@
 #include "git2/stash.h"
 #include "git2/status.h"
 #include "git2/checkout.h"
+#include "signature.h"
 
 static int create_error(int error, const char *msg)
 {
@@ -521,6 +522,9 @@ int git_stash_save(
 	int error;
 
 	assert(out && repo && stasher);
+
+	if (!git_signature__has_valid_version(stasher))
+		return -1;
 
 	if ((error = ensure_non_bare_repository(repo)) < 0)
 		return error;
