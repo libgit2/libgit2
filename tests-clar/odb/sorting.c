@@ -11,11 +11,11 @@ static git_odb_backend *new_backend(int position)
 {
 	fake_backend *b;
 
-	b = git__malloc(sizeof(fake_backend));
+	b = git__calloc(1, sizeof(fake_backend));
 	if (b == NULL)
 		return NULL;
 
-	memset(b, 0x0, sizeof(fake_backend));
+	b->base.version = GIT_ODB_BACKEND_VERSION;
 	b->position = position;
 	return (git_odb_backend *)b;
 }
