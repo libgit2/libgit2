@@ -205,7 +205,7 @@ int git_submodule_add_setup(
 	git_config_backend *mods = NULL;
 	git_submodule *sm;
 	git_buf name = GIT_BUF_INIT, real_url = GIT_BUF_INIT;
-	git_repository_init_options initopt;
+	git_repository_init_options initopt = GIT_REPOSITORY_INIT_OPTIONS_INIT;
 	git_repository *subrepo = NULL;
 
 	assert(repo && url && path);
@@ -275,7 +275,6 @@ int git_submodule_add_setup(
 	 * Old style: sub-repo goes directly into repo/<name>/.git/
 	 */
 
-	memset(&initopt, 0, sizeof(initopt));
 	initopt.flags = GIT_REPOSITORY_INIT_MKPATH |
 		GIT_REPOSITORY_INIT_NO_REINIT;
 	initopt.origin_url = real_url.ptr;

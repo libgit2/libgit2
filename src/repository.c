@@ -1151,14 +1151,25 @@ static int repo_init_create_origin(git_repository *repo, const char *url)
 int git_repository_init(
 	git_repository **repo_out, const char *path, unsigned is_bare)
 {
-	git_repository_init_options opts;
+	git_repository_init_options opts = GIT_REPOSITORY_INIT_OPTIONS_INIT;
 
-	memset(&opts, 0, sizeof(opts));
 	opts.flags = GIT_REPOSITORY_INIT_MKPATH; /* don't love this default */
 	if (is_bare)
 		opts.flags |= GIT_REPOSITORY_INIT_BARE;
 
 	return git_repository_init_ext(repo_out, path, &opts);
+}
+
+static bool options_have_valid_version(git_repository_init_options *opts)
+{
+	if (!opts)
+		return true;
+
+	if (opts->version > 0 && opts->version <= GIT_REMOTE_CALLBACKS_VERSION)
+		return true;
+
+	giterr_set(GITERR_INVALID, "Invalid version %d for git_repository_init_options", opts->version);
+	return false;
 }
 
 int git_repository_init_ext(
@@ -1170,6 +1181,9 @@ int git_repository_init_ext(
 	git_buf repo_path = GIT_BUF_INIT, wd_path = GIT_BUF_INIT;
 
 	assert(out && given_repo && opts);
+
+	if (!options_have_valid_version(opts))
+		return -1;
 
 	error = repo_init_directories(&repo_path, &wd_path, given_repo, opts);
 	if (error < 0)
