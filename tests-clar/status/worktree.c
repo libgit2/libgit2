@@ -111,7 +111,7 @@ void test_status_worktree__swap_subdir_and_file(void)
 	status_entry_counts counts;
 	git_repository *repo = cl_git_sandbox_init("status");
 	git_index *index;
-	git_status_options opts;
+	git_status_options opts = GIT_STATUS_OPTIONS_INIT;
 	bool ignore_case;
 
 	cl_git_pass(git_repository_index(&index, repo));
@@ -133,7 +133,6 @@ void test_status_worktree__swap_subdir_and_file(void)
 	counts.expected_paths = ignore_case ? entry_paths3_icase : entry_paths3;
 	counts.expected_statuses = ignore_case ? entry_statuses3_icase : entry_statuses3;
 
-	memset(&opts, 0, sizeof(opts));
 	opts.flags = GIT_STATUS_OPT_INCLUDE_UNTRACKED |
 		GIT_STATUS_OPT_INCLUDE_IGNORED;
 
@@ -150,7 +149,7 @@ void test_status_worktree__swap_subdir_with_recurse_and_pathspec(void)
 {
 	status_entry_counts counts;
 	git_repository *repo = cl_git_sandbox_init("status");
-	git_status_options opts;
+	git_status_options opts = GIT_STATUS_OPTIONS_INIT;
 
 	/* first alter the contents of the worktree */
 	cl_git_pass(p_rename("status/current_file", "status/swap"));
@@ -167,7 +166,6 @@ void test_status_worktree__swap_subdir_with_recurse_and_pathspec(void)
 	counts.expected_paths = entry_paths4;
 	counts.expected_statuses = entry_statuses4;
 
-	memset(&opts, 0, sizeof(opts));
 	opts.flags = GIT_STATUS_OPT_INCLUDE_UNTRACKED |
 		GIT_STATUS_OPT_RECURSE_UNTRACKED_DIRS;
 	/* TODO: set pathspec to "current_file" eventually */
@@ -691,7 +689,7 @@ void test_status_worktree__filemode_changes(void)
 {
 	git_repository *repo = cl_git_sandbox_init("filemodes");
 	status_entry_counts counts;
-	git_status_options opts;
+	git_status_options opts = GIT_STATUS_OPTIONS_INIT;
 	git_config *cfg;
 
 	/* overwrite stored filemode with platform appropriate value */
@@ -708,7 +706,6 @@ void test_status_worktree__filemode_changes(void)
 				filemode_statuses[i] = GIT_STATUS_CURRENT;
 	}
 
-	memset(&opts, 0, sizeof(opts));
 	opts.flags = GIT_STATUS_OPT_INCLUDE_UNTRACKED |
 		GIT_STATUS_OPT_INCLUDE_IGNORED |
 		GIT_STATUS_OPT_INCLUDE_UNMODIFIED;
@@ -746,7 +743,7 @@ static int cb_status__expected_path(const char *p, unsigned int s, void *payload
 void test_status_worktree__disable_pathspec_match(void)
 {
 	git_repository *repo;
-	git_status_options opts;
+	git_status_options opts = GIT_STATUS_OPTIONS_INIT;
 	char *file_with_bracket = "LICENSE[1].md", 
 		*imaginary_file_with_bracket = "LICENSE[1-2].md";
 
@@ -754,7 +751,6 @@ void test_status_worktree__disable_pathspec_match(void)
 	cl_git_mkfile("pathspec/LICENSE[1].md", "screaming bracket\n");
 	cl_git_mkfile("pathspec/LICENSE1.md", "no bracket\n");
 
-	memset(&opts, 0, sizeof(opts));
 	opts.flags = GIT_STATUS_OPT_INCLUDE_UNTRACKED | 
 		GIT_STATUS_OPT_DISABLE_PATHSPEC_MATCH;
 	opts.pathspec.count = 1;

@@ -101,6 +101,18 @@ static int status_invoke_cb(
 	return usercb->cb(path, status, usercb->payload);
 }
 
+static bool options_have_valid_version(const git_status_options *opts)
+{
+	if (!opts)
+		return true;
+
+	if (opts->version > 0 && opts->version <= GIT_REMOTE_CALLBACKS_VERSION)
+		return true;
+
+	giterr_set(GITERR_INVALID, "Invalid version %d for git_repository_init_options", opts->version);
+	return false;
+}
+
 int git_status_foreach_ext(
 	git_repository *repo,
 	const git_status_options *opts,
@@ -116,6 +128,9 @@ int git_status_foreach_ext(
 	status_user_callback usercb;
 
 	assert(show <= GIT_STATUS_SHOW_INDEX_THEN_WORKDIR);
+
+	if (!options_have_valid_version(opts))
+		return -1;
 
 	if (show != GIT_STATUS_SHOW_INDEX_ONLY &&
 		(err = git_repository__ensure_not_bare(repo, "status")) < 0)
@@ -180,9 +195,8 @@ int git_status_foreach(
 	git_status_cb callback,
 	void *payload)
 {
-	git_status_options opts;
+	git_status_options opts = GIT_STATUS_OPTIONS_INIT;
 
-	memset(&opts, 0, sizeof(opts));
 	opts.show  = GIT_STATUS_SHOW_INDEX_AND_WORKDIR;
 	opts.flags = GIT_STATUS_OPT_INCLUDE_IGNORED |
 		GIT_STATUS_OPT_INCLUDE_UNTRACKED |
@@ -223,16 +237,14 @@ int git_status_file(
 	const char *path)
 {
 	int error;
-	git_status_options opts;
-	struct status_file_info sfi;
+	git_status_options opts = GIT_STATUS_OPTIONS_INIT;
+	struct status_file_info sfi = {0};
 
 	assert(status_flags && repo && path);
 
-	memset(&sfi, 0, sizeof(sfi));
 	if ((sfi.expected = git__strdup(path)) == NULL)
 		return -1;
 
-	memset(&opts, 0, sizeof(opts));
 	opts.show  = GIT_STATUS_SHOW_INDEX_AND_WORKDIR;
 	opts.flags = GIT_STATUS_OPT_INCLUDE_IGNORED |
 		GIT_STATUS_OPT_INCLUDE_UNTRACKED |

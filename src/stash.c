@@ -471,9 +471,8 @@ static int ensure_there_are_changes_to_stash(
 	bool include_ignored_files)
 {
 	int error;
-	git_status_options opts;
+	git_status_options opts = GIT_STATUS_OPTIONS_INIT;
 
-	memset(&opts, 0, sizeof(opts));
 	opts.show  = GIT_STATUS_SHOW_INDEX_AND_WORKDIR;
 	if (include_untracked_files)
 		opts.flags = GIT_STATUS_OPT_INCLUDE_UNTRACKED |
