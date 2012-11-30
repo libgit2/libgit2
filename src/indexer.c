@@ -261,18 +261,38 @@ static int read_object_stream(git_packfile_stream *stream)
 	return 0;
 }
 
+static int crc_object(uint32_t *crc_out, git_mwindow_file *mwf, git_off_t start, git_off_t size)
+{
+	void *ptr;
+	uint32_t crc;
+	unsigned int left, len;
+	git_mwindow *w = NULL;
+
+	crc = crc32(0L, Z_NULL, 0);
+	while (size) {
+		ptr = git_mwindow_open(mwf, &w, start, size, &left);
+		if (ptr == NULL)
+			return -1;
+
+		len = min(left, size);
+		crc = crc32(crc, ptr, len);
+		size -= len;
+		start += len;
+		git_mwindow_close(&w);
+	}
+
+	*crc_out = htonl(crc);
+	return 0;
+}
+
 static int store_object(git_indexer_stream *idx)
 {
 	int i;
 	git_oid oid;
-	void *packed;
-	unsigned int left;
 	struct entry *entry;
 	git_off_t entry_size;
-	git_mwindow *w = NULL;
 	struct git_pack_entry *pentry;
 	git_hash_ctx *ctx = &idx->hash_ctx;
-	git_mwindow_file *mwf = &idx->pack->mwf;
 	git_off_t entry_start = idx->entry_start;
 
 	entry = git__calloc(1, sizeof(*entry));
@@ -298,14 +318,9 @@ static int store_object(git_indexer_stream *idx)
 	}
 
 	git_oid_cpy(&entry->oid, &oid);
-	entry->crc = crc32(0L, Z_NULL, 0);
 
-	packed = git_mwindow_open(mwf, &w, entry_start, entry_size, &left);
-	if (packed == NULL)
+	if (crc_object(&entry->crc, &idx->pack->mwf, entry_start, entry_size) < 0)
 		goto on_error;
-
-	entry->crc = htonl(crc32(entry->crc, packed, (uInt)entry_size));
-	git_mwindow_close(&w);
 
 	/* Add the object to the list */
 	if (git_vector_insert(&idx->objects, entry) < 0)
@@ -327,12 +342,8 @@ static int hash_and_save(git_indexer_stream *idx, git_rawobj *obj, git_off_t ent
 {
 	int i;
 	git_oid oid;
-	void *packed;
 	size_t entry_size;
-	unsigned int left;
 	struct entry *entry;
-	git_mwindow *w = NULL;
-	git_mwindow_file *mwf = &idx->pack->mwf;
 	struct git_pack_entry *pentry;
 
 	entry = git__calloc(1, sizeof(*entry));
@@ -365,12 +376,8 @@ static int hash_and_save(git_indexer_stream *idx, git_rawobj *obj, git_off_t ent
 	entry->crc = crc32(0L, Z_NULL, 0);
 
 	entry_size = (size_t)(idx->off - entry_start);
-	packed = git_mwindow_open(mwf, &w, entry_start, entry_size, &left);
-	if (packed == NULL)
+	if (crc_object(&entry->crc, &idx->pack->mwf, entry_start, entry_size) < 0)
 		goto on_error;
-
-	entry->crc = htonl(crc32(entry->crc, packed, (uInt)entry_size));
-	git_mwindow_close(&w);
 
 	/* Add the object to the list */
 	if (git_vector_insert(&idx->objects, entry) < 0)
