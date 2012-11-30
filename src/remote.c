@@ -1024,9 +1024,24 @@ void git_remote_set_cred_acquire_cb(
 	remote->cred_acquire_cb = cred_acquire_cb;
 }
 
+static bool transport_has_valid_version(const git_transport *transport)
+{
+	if (!transport)
+		return true;
+
+	if (transport->version > 0 && transport->version <= GIT_TRANSPORT_VERSION)
+		return true;
+
+	giterr_set(GITERR_INVALID, "Invalid version %d on git_transport", transport->version);
+	return false;
+}
+
 int git_remote_set_transport(git_remote *remote, git_transport *transport)
 {
 	assert(remote && transport);
+
+	if (!transport_has_valid_version(transport))
+		return -1;
 
 	if (remote->transport) {
 		giterr_set(GITERR_NET, "A transport is already bound to this remote");
