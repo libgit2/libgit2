@@ -182,7 +182,7 @@ int git_commit_list_parse(git_revwalk *walk, git_commit_list_node *commit)
 	if ((error = git_odb_read(&obj, walk->odb, &commit->oid)) < 0)
 		return error;
 
-	if (obj->raw.type == GIT_OBJ_COMMIT) {
+	if (obj->raw.type != GIT_OBJ_COMMIT) {
 		giterr_set(GITERR_INVALID, "Object is no commit object");
 		error = -1;
 	} else
