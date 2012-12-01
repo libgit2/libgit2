@@ -107,7 +107,7 @@ typedef enum {
  */
 typedef struct {
 	unsigned int version;      /**< version for the struct */
-	uint32_t flags;            /**< defaults to git_diff_normal */
+	uint32_t flags;            /**< defaults to GIT_DIFF_NORMAL */
 	uint16_t context_lines;    /**< defaults to 3 */
 	uint16_t interhunk_lines;  /**< defaults to 0 */
 	char *old_prefix;          /**< defaults to "a" */
