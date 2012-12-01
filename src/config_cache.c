@@ -1,4 +1,4 @@
-/*
+﻿/*
  * Copyright (C) 2009-2012 the libgit2 contributors
  *
  * This file is part of libgit2, distributed under the GNU GPL v2 with
