@@ -456,9 +456,8 @@ int git_note_create(
 	git_commit *commit = NULL;
 	git_tree *tree = NULL;
 
-	if (!git_signature__has_valid_version(author) ||
-		 !git_signature__has_valid_version(committer))
-		return -1;
+	GITERR_CHECK_VERSION(author, GIT_SIGNATURE_VERSION, "git_signature");
+	GITERR_CHECK_VERSION(committer, GIT_SIGNATURE_VERSION, "git_signature");
 
 	target = git_oid_allocfmt(oid);
 	GITERR_CHECK_ALLOC(target);
@@ -487,9 +486,8 @@ int git_note_remove(git_repository *repo, const char *notes_ref,
 	git_commit *commit = NULL;
 	git_tree *tree = NULL;
 
-	if (!git_signature__has_valid_version(author) ||
-		 !git_signature__has_valid_version(committer))
-		return -1;
+	GITERR_CHECK_VERSION(author, GIT_SIGNATURE_VERSION, "git_signature");
+	GITERR_CHECK_VERSION(committer, GIT_SIGNATURE_VERSION, "git_signature");
 
 	target = git_oid_allocfmt(oid);
 	GITERR_CHECK_ALLOC(target);

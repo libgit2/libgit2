@@ -15,16 +15,4 @@
 int git_signature__parse(git_signature *sig, const char **buffer_out, const char *buffer_end, const char *header, char ender);
 void git_signature__writebuf(git_buf *buf, const char *header, const git_signature *sig);
 
-GIT_INLINE(bool) git_signature__has_valid_version(const git_signature *sig)
-{
-	if (!sig)
-		return true;
-
-	if (sig->version > 0 && sig->version <= GIT_SIGNATURE_VERSION)
-		return true;
-
-	giterr_set(GITERR_INVALID, "Invalid version %d on git_signature", sig->version);
-	return false;
-}
-
 #endif

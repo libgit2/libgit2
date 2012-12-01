@@ -1160,18 +1160,6 @@ int git_repository_init(
 	return git_repository_init_ext(repo_out, path, &opts);
 }
 
-static bool options_have_valid_version(git_repository_init_options *opts)
-{
-	if (!opts)
-		return true;
-
-	if (opts->version > 0 && opts->version <= GIT_REMOTE_CALLBACKS_VERSION)
-		return true;
-
-	giterr_set(GITERR_INVALID, "Invalid version %d for git_repository_init_options", opts->version);
-	return false;
-}
-
 int git_repository_init_ext(
 	git_repository **out,
 	const char *given_repo,
@@ -1182,8 +1170,7 @@ int git_repository_init_ext(
 
 	assert(out && given_repo && opts);
 
-	if (!options_have_valid_version(opts))
-		return -1;
+	GITERR_CHECK_VERSION(opts, GIT_REPOSITORY_INIT_OPTIONS_VERSION, "git_repository_init_options");
 
 	error = repo_init_directories(&repo_path, &wd_path, given_repo, opts);
 	if (error < 0)

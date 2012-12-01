@@ -363,26 +363,13 @@ int git_odb_new(git_odb **out)
 	return 0;
 }
 
-static bool backend_has_valid_version(git_odb_backend *backend)
-{
-	if (!backend)
-		return true;
-
-	if (backend->version > 0 && backend->version <= GIT_ODB_BACKEND_VERSION)
-		return true;
-
-	giterr_set(GITERR_INVALID, "Invalid version %d on git_odb_backend", backend->version);
-	return false;
-}
-
 static int add_backend_internal(git_odb *odb, git_odb_backend *backend, int priority, int is_alternate)
 {
 	backend_internal *internal;
 
 	assert(odb && backend);
 
-	if (!backend_has_valid_version(backend))
-		return -1;
+	GITERR_CHECK_VERSION(backend, GIT_ODB_BACKEND_VERSION, "git_odb_backend");
 
 	/* Check if the backend is already owned by another ODB */
 	assert(!backend->odb || backend->odb == odb);

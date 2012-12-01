@@ -1266,8 +1266,7 @@ int git_diff_blobs(
 	git_diff_delta delta;
 	git_diff_patch patch;
 
-   if (!git_diff__opts_has_valid_version(options))
-		return -1;
+	GITERR_CHECK_VERSION(options, GIT_DIFF_OPTIONS_VERSION, "git_diff_options");
 
 	if (options && (options->flags & GIT_DIFF_REVERSE)) {
 		git_blob *swap = old_blob;

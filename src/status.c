@@ -101,18 +101,6 @@ static int status_invoke_cb(
 	return usercb->cb(path, status, usercb->payload);
 }
 
-static bool options_have_valid_version(const git_status_options *opts)
-{
-	if (!opts)
-		return true;
-
-	if (opts->version > 0 && opts->version <= GIT_REMOTE_CALLBACKS_VERSION)
-		return true;
-
-	giterr_set(GITERR_INVALID, "Invalid version %d for git_repository_init_options", opts->version);
-	return false;
-}
-
 int git_status_foreach_ext(
 	git_repository *repo,
 	const git_status_options *opts,
@@ -129,8 +117,7 @@ int git_status_foreach_ext(
 
 	assert(show <= GIT_STATUS_SHOW_INDEX_THEN_WORKDIR);
 
-	if (!options_have_valid_version(opts))
-		return -1;
+	GITERR_CHECK_VERSION(opts, GIT_STATUS_OPTIONS_VERSION, "git_status_options");
 
 	if (show != GIT_STATUS_SHOW_INDEX_ONLY &&
 		(err = git_repository__ensure_not_bare(repo, "status")) < 0)

@@ -758,9 +758,8 @@ fail:
 #define DIFF_FROM_ITERATORS(MAKE_FIRST, MAKE_SECOND) do { \
 	git_iterator *a = NULL, *b = NULL; \
 	char *pfx = opts ? git_pathspec_prefix(&opts->pathspec) : NULL; \
-	if (!git_diff__opts_has_valid_version(opts)) \
-		error = -1; \
-	else if (!(error = MAKE_FIRST) && !(error = MAKE_SECOND)) \
+	GITERR_CHECK_VERSION(opts, GIT_DIFF_OPTIONS_VERSION, "git_diff_options"); \
+	if (!(error = MAKE_FIRST) && !(error = MAKE_SECOND)) \
 		error = diff_from_iterators(diff, repo, a, b, opts); \
 	git__free(pfx); git_iterator_free(a); git_iterator_free(b); \
 } while (0)

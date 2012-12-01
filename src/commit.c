@@ -93,9 +93,8 @@ int git_commit_create(
 	git_odb *odb;
 
 	assert(git_object_owner((const git_object *)tree) == repo);
-	if (!git_signature__has_valid_version(author) ||
-		 !git_signature__has_valid_version(committer))
-		return -1;
+	GITERR_CHECK_VERSION(author, GIT_SIGNATURE_VERSION, "git_signature");
+	GITERR_CHECK_VERSION(committer, GIT_SIGNATURE_VERSION, "git_signature");
 
 	git_oid__writebuf(&commit, "tree ", git_object_id((const git_object *)tree));
 

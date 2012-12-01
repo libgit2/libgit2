@@ -523,8 +523,7 @@ int git_stash_save(
 
 	assert(out && repo && stasher);
 
-	if (!git_signature__has_valid_version(stasher))
-		return -1;
+	GITERR_CHECK_VERSION(stasher, GIT_SIGNATURE_VERSION, "git_signature");
 
 	if ((error = ensure_non_bare_repository(repo)) < 0)
 		return error;

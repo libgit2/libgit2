@@ -62,18 +62,5 @@ extern int git_diff__oid_for_file(
 	git_repository *, const char *, uint16_t, git_off_t, git_oid *);
 
 
-GIT_INLINE(bool) git_diff__opts_has_valid_version(const git_diff_options *opts)
-{
-	if (!opts)
-		return true;
-
-	if (opts->version > 0 && opts->version <= GIT_DIFF_OPTIONS_VERSION)
-		return true;
-
-	giterr_set(GITERR_INVALID, "Invalid version %d in git_diff_options", opts->version);
-	return false;
-}
-
-
 #endif
 

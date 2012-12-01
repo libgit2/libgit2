@@ -298,8 +298,7 @@ int git_reflog_append(git_reflog *reflog, const git_oid *new_oid,
 
 	assert(reflog && new_oid && committer);
 
-	if (!git_signature__has_valid_version(committer))
-		return -1;
+	GITERR_CHECK_VERSION(committer, GIT_SIGNATURE_VERSION, "git_signature");
 
 	if (reflog_entry_new(&entry) < 0)
 		return -1;

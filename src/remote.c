@@ -985,24 +985,11 @@ void git_remote_check_cert(git_remote *remote, int check)
 	remote->check_cert = check;
 }
 
-static bool callbacks_have_valid_version(git_remote_callbacks *callbacks)
-{
-	if (!callbacks)
-		return true;
-
-	if (callbacks->version > 0 && callbacks->version <= GIT_REMOTE_CALLBACKS_VERSION)
-		return true;
-
-	giterr_set(GITERR_INVALID, "Invalid version %d for git_remote_callbacks", callbacks->version);
-	return false;
-}
-
 int git_remote_set_callbacks(git_remote *remote, git_remote_callbacks *callbacks)
 {
 	assert(remote && callbacks);
 
-	if (!callbacks_have_valid_version(callbacks))
-		return -1;
+	GITERR_CHECK_VERSION(callbacks, GIT_REMOTE_CALLBACKS_VERSION, "git_remote_callbacks");
 
 	memcpy(&remote->callbacks, callbacks, sizeof(git_remote_callbacks));
 
@@ -1024,24 +1011,11 @@ void git_remote_set_cred_acquire_cb(
 	remote->cred_acquire_cb = cred_acquire_cb;
 }
 
-static bool transport_has_valid_version(const git_transport *transport)
-{
-	if (!transport)
-		return true;
-
-	if (transport->version > 0 && transport->version <= GIT_TRANSPORT_VERSION)
-		return true;
-
-	giterr_set(GITERR_INVALID, "Invalid version %d on git_transport", transport->version);
-	return false;
-}
-
 int git_remote_set_transport(git_remote *remote, git_transport *transport)
 {
 	assert(remote && transport);
 
-	if (!transport_has_valid_version(transport))
-		return -1;
+	GITERR_CHECK_VERSION(transport, GIT_TRANSPORT_VERSION, "git_transport");
 
 	if (remote->transport) {
 		giterr_set(GITERR_NET, "A transport is already bound to this remote");
