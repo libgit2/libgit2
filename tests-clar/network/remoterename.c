@@ -121,7 +121,9 @@ void test_network_remoterename__new_name_can_contain_dots(void)
 
 void test_network_remoterename__new_name_must_conform_to_reference_naming_conventions(void)
 {
-	cl_git_fail(git_remote_rename(_remote, "new@{name", dont_call_me_cb, NULL));
+	cl_assert_equal_i(
+		GIT_EINVALIDSPEC,
+		git_remote_rename(_remote, "new@{name", dont_call_me_cb, NULL));
 }
 
 void test_network_remoterename__renamed_name_is_persisted(void)

@@ -93,11 +93,18 @@ void giterr_set_str(int error_class, const char *string)
 		set_error(error_class, message);
 }
 
-void giterr_set_regex(const regex_t *regex, int error_code)
+int giterr_set_regex(const regex_t *regex, int error_code)
 {
 	char error_buf[1024];
 	regerror(error_code, regex, error_buf, sizeof(error_buf));
 	giterr_set_str(GITERR_REGEX, error_buf);
+
+	if (error_code == REG_NOMATCH)
+		return GIT_ENOTFOUND;
+	else if (error_code > REG_BADPAT)
+		return GIT_EINVALIDSPEC;
+	else
+		return -1;
 }
 
 void giterr_clear(void)

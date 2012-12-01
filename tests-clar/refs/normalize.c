@@ -21,7 +21,9 @@ static void ensure_refname_invalid(unsigned int flags, const char *input_refname
 {
 	char buffer_out[GIT_REFNAME_MAX];
 
-	cl_git_fail(git_reference_normalize_name(buffer_out, sizeof(buffer_out), input_refname, flags));
+	cl_assert_equal_i(
+		GIT_EINVALIDSPEC,
+		git_reference_normalize_name(buffer_out, sizeof(buffer_out), input_refname, flags));
 }
 
 void test_refs_normalize__can_normalize_a_direct_reference_name(void)

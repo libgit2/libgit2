@@ -144,6 +144,10 @@ GIT_EXTERN(const char *) git_tag_message(const git_tag *tag);
  * The message will not be cleaned up. This can be achieved
  * through `git_message_prettify()`.
  *
+ * The tag name will be checked for validity. You must avoid
+ * the characters '~', '^', ':', '\\', '?', '[', and '*', and the
+ * sequences ".." and "@{" which have special meaning to revparse.
+ *
  * @param oid Pointer where to store the OID of the
  * newly created tag. If the tag already exists, this parameter
  * will be the oid of the existing tag, and the function will
@@ -165,7 +169,7 @@ GIT_EXTERN(const char *) git_tag_message(const git_tag *tag);
  *
  * @param force Overwrite existing references
  *
- * @return 0 or an error code
+ * @return 0 on success, GIT_EINVALIDSPEC or an error code
  *	A tag object is written to the ODB, and a proper reference
  *	is written in the /refs/tags folder, pointing to it
  */
@@ -200,6 +204,9 @@ GIT_EXTERN(int) git_tag_create_frombuffer(
  * this target object. If `force` is true and a reference
  * already exists with the given name, it'll be replaced.
  *
+ * The tag name will be checked for validity.
+ * See `git_tag_create()` for rules about valid names.
+ *
  * @param oid Pointer where to store the OID of the provided
  * target object. If the tag already exists, this parameter
  * will be filled with the oid of the existing pointed object
@@ -216,7 +223,7 @@ GIT_EXTERN(int) git_tag_create_frombuffer(
  *
  * @param force Overwrite existing references
  *
- * @return 0 or an error code
+ * @return 0 on success, GIT_EINVALIDSPEC or an error code
  *	A proper reference is written in the /refs/tags folder,
  * pointing to the provided target object
  */
@@ -230,12 +237,15 @@ GIT_EXTERN(int) git_tag_create_lightweight(
 /**
  * Delete an existing tag reference.
  *
+ * The tag name will be checked for validity.
+ * See `git_tag_create()` for rules about valid names.
+ *
  * @param repo Repository where lives the tag
  *
  * @param tag_name Name of the tag to be deleted;
  * this name is validated for consistency.
  *
- * @return 0 or an error code
+ * @return 0 on success, GIT_EINVALIDSPEC or an error code
  */
 GIT_EXTERN(int) git_tag_delete(
 	git_repository *repo,

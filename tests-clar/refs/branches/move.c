@@ -51,6 +51,11 @@ void test_refs_branches_move__can_not_move_a_branch_if_its_destination_name_coll
 	cl_assert_equal_i(GIT_EEXISTS, git_branch_move(ref, "master", 0));
 }
 
+void test_refs_branches_move__moving_a_branch_with_an_invalid_name_returns_EINVALIDSPEC(void)
+{
+	cl_assert_equal_i(GIT_EINVALIDSPEC, git_branch_move(ref, "Inv@{id", 0));
+}
+
 void test_refs_branches_move__can_not_move_a_non_branch(void)
 {
 	git_reference *tag;

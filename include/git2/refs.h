@@ -26,13 +26,13 @@ GIT_BEGIN_DECL
  *
  * The returned reference must be freed by the user.
  *
- * See `git_reference_create_symbolic()` for documentation about valid
- * reference names.
+ * The name will be checked for validity.
+ * See `git_reference_create_symbolic()` for rules about valid names.
  *
  * @param out pointer to the looked-up reference
  * @param repo the repository to look up the reference
  * @param name the long name for the reference (e.g. HEAD, refs/heads/master, refs/tags/v0.1.0, ...)
- * @return 0 or an error code (ENOTFOUND, EINVALIDSPEC)
+ * @return 0 on success, ENOTFOUND, EINVALIDSPEC or an error code.
  */
 GIT_EXTERN(int) git_reference_lookup(git_reference **out, git_repository *repo, const char *name);
 
@@ -43,11 +43,13 @@ GIT_EXTERN(int) git_reference_lookup(git_reference **out, git_repository *repo, 
  * through to the object id that it refers to.  This avoids having to
  * allocate or free any `git_reference` objects for simple situations.
  *
+ * The name will be checked for validity.
+ * See `git_reference_create_symbolic()` for rules about valid names.
+ *
  * @param out Pointer to oid to be filled in
  * @param repo The repository in which to look up the reference
  * @param name The long name for the reference
- * @return 0 on success, -1 if name could not be resolved (EINVALIDSPEC,
- * ENOTFOUND, etc)
+ * @return 0 on success, ENOTFOUND, EINVALIDSPEC or an error code.
  */
 GIT_EXTERN(int) git_reference_name_to_id(
 	git_oid *out, git_repository *repo, const char *name);
@@ -79,7 +81,7 @@ GIT_EXTERN(int) git_reference_name_to_id(
  * @param name The name of the reference
  * @param target The target of the reference
  * @param force Overwrite existing references
- * @return 0 or an error code (EEXISTS, EINVALIDSPEC)
+ * @return 0 on success, EEXISTS, EINVALIDSPEC or an error code
  */
 GIT_EXTERN(int) git_reference_symbolic_create(git_reference **out, git_repository *repo, const char *name, const char *target, int force);
 
@@ -111,7 +113,7 @@ GIT_EXTERN(int) git_reference_symbolic_create(git_reference **out, git_repositor
  * @param name The name of the reference
  * @param id The object id pointed to by the reference.
  * @param force Overwrite existing references
- * @return 0 or an error code (EINVALIDSPEC, EEXISTS)
+ * @return 0 on success, EEXISTS, EINVALIDSPEC or an error code
  */
 GIT_EXTERN(int) git_reference_create(git_reference **out, git_repository *repo, const char *name, const git_oid *id, int force);
 
@@ -193,9 +195,12 @@ GIT_EXTERN(git_repository *) git_reference_owner(const git_reference *ref);
  *
  * The reference will be automatically updated in memory and on disk.
  *
+ * The target name will be checked for validity.
+ * See `git_reference_create_symbolic()` for rules about valid names.
+ *
  * @param ref The reference
  * @param target The new target for the reference
- * @return 0 or an error code (EINVALIDSPEC)
+ * @return 0 on success, EINVALIDSPEC or an error code
  */
 GIT_EXTERN(int) git_reference_symbolic_set_target(git_reference *ref, const char *target);
 
@@ -216,8 +221,9 @@ GIT_EXTERN(int) git_reference_set_target(git_reference *ref, const git_oid *id);
  * Rename an existing reference.
  *
  * This method works for both direct and symbolic references.
- * The new name will be checked for validity and may be
- * modified into a normalized form.
+ *
+ * The new name will be checked for validity.
+ * See `git_reference_create_symbolic()` for rules about valid names.
  *
  * The given git_reference will be updated in place.
  *
@@ -234,7 +240,7 @@ GIT_EXTERN(int) git_reference_set_target(git_reference *ref, const git_oid *id);
  * @param ref The reference to rename
  * @param name The new name for the reference
  * @param force Overwrite an existing reference
- * @return 0 or an error code (EINVALIDSPEC, EEXISTS)
+ * @return 0 on success, EINVALIDSPEC, EEXISTS or an error code
  *
  */
 GIT_EXTERN(int) git_reference_rename(git_reference *ref, const char *name, int force);
@@ -446,13 +452,15 @@ typedef enum {
  * Once normalized, if the reference name is valid, it will be returned in
  * the user allocated buffer.
  *
+ * See `git_reference_create_symbolic()` for rules about valid names.
+ *
  * @param buffer_out User allocated buffer to store normalized name
  * @param buffer_size Size of buffer_out
  * @param name Reference name to be checked.
  * @param flags Flags to constrain name validation rules - see the
  *              GIT_REF_FORMAT constants above.
- * @return 0 on success or error code (GIT_EBUFS if buffer is too small, -1
- *         if reference is invalid)
+ * @return 0 on success, GIT_EBUFS if buffer is too small, EINVALIDSPEC
+ * or an error code.
  */
 GIT_EXTERN(int) git_reference_normalize_name(
 	char *buffer_out,
@@ -471,8 +479,9 @@ GIT_EXTERN(int) git_reference_normalize_name(
  *
  * @param peeled Pointer to the peeled git_object
  * @param ref The reference to be processed
- * @param target_type The type of the requested object
- * @return 0 or an error code
+ * @param target_type The type of the requested object (GIT_OBJ_COMMIT,
+ * GIT_OBJ_TAG, GIT_OBJ_TREE, GIT_OBJ_BLOB or GIT_OBJ_ANY).
+ * @return 0 on success, GIT_EAMBIGUOUS, GIT_ENOTFOUND or an error code
  */
 GIT_EXTERN(int) git_reference_peel(
 	git_object **out,

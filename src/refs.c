@@ -1215,11 +1215,11 @@ int git_reference_symbolic_create(
 	git_reference *ref = NULL;
 	int error;
 
-	if (git_reference__normalize_name_lax(
+	if ((error = git_reference__normalize_name_lax(
 		normalized,
 		sizeof(normalized),
-		name) < 0)
-			return -1;
+		name)) < 0)
+			return error;
 
 	if ((error = reference_can_write(repo, normalized, NULL, force)) < 0)
 		return error;
@@ -1255,11 +1255,11 @@ int git_reference_create(
 	git_reference *ref = NULL;
 	char normalized[GIT_REFNAME_MAX];
 
-	if (git_reference__normalize_name_lax(
+	if ((error = git_reference__normalize_name_lax(
 		normalized,
 		sizeof(normalized),
-		name) < 0)
-			return -1;
+		name)) < 0)
+			return error;
 
 	if ((error = reference_can_write(repo, normalized, NULL, force)) < 0)
 		return error;
@@ -1330,6 +1330,7 @@ int git_reference_set_target(git_reference *ref, const git_oid *id)
  */
 int git_reference_symbolic_set_target(git_reference *ref, const char *target)
 {
+	int error;
 	char normalized[GIT_REFNAME_MAX];
 
 	if ((ref->flags & GIT_REF_SYMBOLIC) == 0) {
@@ -1338,11 +1339,11 @@ int git_reference_symbolic_set_target(git_reference *ref, const char *target)
 		return -1;
 	}
 
-	if (git_reference__normalize_name_lax(
+	if ((error = git_reference__normalize_name_lax(
 		normalized,
 		sizeof(normalized),
-		target))
-			return -1;
+		target)) < 0)
+			return error;
 
 	git__free(ref->target.symbolic);
 	ref->target.symbolic = git__strdup(normalized);
@@ -1363,12 +1364,12 @@ int git_reference_rename(git_reference *ref, const char *new_name, int force)
 		GIT_REF_FORMAT_ALLOW_ONELEVEL
 		: GIT_REF_FORMAT_NORMAL;
 
-	if (git_reference_normalize_name(
+	if ((result = git_reference_normalize_name(
 		normalized,
 		sizeof(normalized),
 		new_name,
-		normalization_flags) < 0)
-			return -1;
+		normalization_flags)) < 0)
+			return result;
 
 	if ((result = reference_can_write(ref->owner, normalized, ref->name, force)) < 0)
 		return result;
@@ -1645,7 +1646,7 @@ int git_reference__normalize_name(
 	// Inspired from https://github.com/git/git/blob/f06d47e7e0d9db709ee204ed13a8a7486149f494/refs.c#L36-100
 
 	char *current;
-	int segment_len, segments_count = 0, error = -1;
+	int segment_len, segments_count = 0, error = GIT_EINVALIDSPEC;
 	unsigned int process_flags;
 	bool normalize = (buf != NULL);
 	assert(name);
@@ -1677,8 +1678,10 @@ int git_reference__normalize_name(
 				git_buf_truncate(buf,
 					cur_len + segment_len + (segments_count ? 1 : 0));
 
-				if (git_buf_oom(buf))
+				if (git_buf_oom(buf)) {
+					error = -1;
 					goto cleanup;
+				}
 			}
 
 			segments_count++;
@@ -1721,7 +1724,7 @@ int git_reference__normalize_name(
 	error = 0;
 
 cleanup:
-	if (error)
+	if (error == GIT_EINVALIDSPEC)
 		giterr_set(
 			GITERR_REFERENCE,
 			"The given reference name '%s' is not valid", name);
@@ -1962,8 +1965,12 @@ int git_reference__is_valid_name(
 	const char *refname,
 	unsigned int flags)
 {
+	int error;
+
+	error = git_reference__normalize_name(NULL, refname, flags) == 0;
 	giterr_clear();
-	return git_reference__normalize_name(NULL, refname, flags) == 0;
+
+	return error;
 }
 
 int git_reference_is_valid_name(
