@@ -82,6 +82,16 @@ GIT_INLINE(bool) giterr__check_version(const void *structure, unsigned int expec
 }
 #define GITERR_CHECK_VERSION(S,V,N) if (!giterr__check_version(S,V,N)) return -1
 
+/**
+ * Initialize a structure with a version.
+ */
+GIT_INLINE(void) git__init_structure(void *structure, size_t len, unsigned int version)
+{
+	memset(structure, 0, len);
+	*((int*)structure) = version;
+}
+#define GIT_INIT_STRUCTURE(S,V) git__init_structure(S, sizeof(*S), V)
+
 /* NOTE: other giterr functions are in the public errors.h header file */
 
 #include "util.h"

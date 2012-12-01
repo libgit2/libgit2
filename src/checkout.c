@@ -225,12 +225,10 @@ static int retrieve_symlink_caps(git_repository *repo, bool *can_symlink)
 static void normalize_options(
 	git_checkout_opts *normalized, git_checkout_opts *proposed)
 {
-	git_checkout_opts init_opts = GIT_CHECKOUT_OPTS_INIT;
-
 	assert(normalized);
 
 	if (!proposed)
-		memmove(normalized, &init_opts, sizeof(git_checkout_opts));
+		GIT_INIT_STRUCTURE(normalized, GIT_CHECKOUT_OPTS_VERSION);
 	else
 		memmove(normalized, proposed, sizeof(git_checkout_opts));
 

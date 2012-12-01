@@ -2,7 +2,6 @@
 
 #include "git2/checkout.h"
 #include "repository.h"
-#include "checkout_util.h"
 
 static git_repository *g_repo;
 static git_checkout_opts g_opts;
@@ -26,7 +25,7 @@ void test_checkout_index__initialize(void)
 {
 	git_tree *tree;
 
-	reset_checkout_opts(&g_opts);
+	GIT_INIT_STRUCTURE(&g_opts, GIT_CHECKOUT_OPTS_VERSION);
 	g_opts.checkout_strategy = GIT_CHECKOUT_SAFE;
 
 	g_repo = cl_git_sandbox_init("testrepo");
@@ -67,7 +66,7 @@ void test_checkout_index__cannot_checkout_a_bare_repository(void)
 {
 	test_checkout_index__cleanup();
 
-	reset_checkout_opts(&g_opts);
+	GIT_INIT_STRUCTURE(&g_opts, GIT_CHECKOUT_OPTS_VERSION);
 	g_repo = cl_git_sandbox_init("testrepo.git");
 
 	cl_git_fail(git_checkout_index(g_repo, NULL, NULL));
