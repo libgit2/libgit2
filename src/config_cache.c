@@ -24,7 +24,7 @@ struct map_data {
  *	core.eol
  *		Sets the line ending type to use in the working directory for
  *	files that have the text property set. Alternatives are lf, crlf
- *	and native, which uses the platform’s native line ending. The default
+ *	and native, which uses the platform's native line ending. The default
  *	value is native. See gitattributes(5) for more information on
  *	end-of-line conversion. 
  */
