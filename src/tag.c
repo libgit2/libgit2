@@ -244,8 +244,6 @@ static int git_tag_create__internal(
 	assert(repo && tag_name && target);
 	assert(!create_tag_annotation || (tagger && message));
 
-	GITERR_CHECK_VERSION(tagger, GIT_SIGNATURE_VERSION, "git_signature");
-
 	if (git_object_owner(target) != repo) {
 		giterr_set(GITERR_INVALID, "The given target does not belong to this repository");
 		return -1;

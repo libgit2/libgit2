@@ -112,7 +112,6 @@ static int reflog_parse(git_reflog *log, const char *buf, size_t buf_size)
 
 		entry->committer = git__malloc(sizeof(git_signature));
 		GITERR_CHECK_ALLOC(entry->committer);
-		entry->committer->version = GIT_SIGNATURE_VERSION;
 
 		if (git_oid_fromstrn(&entry->oid_old, buf, GIT_OID_HEXSZ) < 0)
 			goto fail;
@@ -297,8 +296,6 @@ int git_reflog_append(git_reflog *reflog, const git_oid *new_oid,
 	const char *newline;
 
 	assert(reflog && new_oid && committer);
-
-	GITERR_CHECK_VERSION(committer, GIT_SIGNATURE_VERSION, "git_signature");
 
 	if (reflog_entry_new(&entry) < 0)
 		return -1;
