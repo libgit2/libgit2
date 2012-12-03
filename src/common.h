@@ -73,7 +73,7 @@ GIT_INLINE(bool) giterr__check_version(const void *structure, unsigned int expec
 	if (!structure)
 		return true;
 
-	unsigned int actual = *(unsigned int*)structure;
+	unsigned int actual = *(const unsigned int*)structure;
 	if (actual > 0 && actual <= expected_max)
 		return true;
 
