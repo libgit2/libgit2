@@ -843,3 +843,79 @@ void test_status_worktree__line_endings_dont_count_as_changes_with_autocrlf(void
 
 	cl_assert_equal_i(GIT_STATUS_CURRENT, status);
 }
+
+void test_status_worktree__conflicted_item(void)
+{
+	git_repository *repo = cl_git_sandbox_init("status");
+	git_index *index;
+	unsigned int status;
+	git_index_entry ancestor_entry, our_entry, their_entry;
+
+	memset(&ancestor_entry, 0x0, sizeof(git_index_entry));
+	memset(&our_entry, 0x0, sizeof(git_index_entry));
+	memset(&their_entry, 0x0, sizeof(git_index_entry));
+
+	ancestor_entry.path = "modified_file";
+	git_oid_fromstr(&ancestor_entry.oid,
+		"452e4244b5d083ddf0460acf1ecc74db9dcfa11a");
+
+	our_entry.path = "modified_file";
+	git_oid_fromstr(&our_entry.oid,
+		"452e4244b5d083ddf0460acf1ecc74db9dcfa11a");
+
+	their_entry.path = "modified_file";
+	git_oid_fromstr(&their_entry.oid,
+		"452e4244b5d083ddf0460acf1ecc74db9dcfa11a");
+
+	cl_git_pass(git_status_file(&status, repo, "modified_file"));
+	cl_assert_equal_i(GIT_STATUS_WT_MODIFIED, status);
+
+	cl_git_pass(git_repository_index(&index, repo));
+	cl_git_pass(git_index_conflict_add(index, &ancestor_entry,
+		&our_entry, &their_entry));
+
+	cl_git_pass(git_status_file(&status, repo, "modified_file"));
+	cl_assert_equal_i(GIT_STATUS_WT_MODIFIED, status);
+
+	git_index_free(index);
+}
+
+void test_status_worktree__conflict_with_diff3(void)
+{
+	git_repository *repo = cl_git_sandbox_init("status");
+	git_index *index;
+	unsigned int status;
+	git_index_entry ancestor_entry, our_entry, their_entry;
+
+	memset(&ancestor_entry, 0x0, sizeof(git_index_entry));
+	memset(&our_entry, 0x0, sizeof(git_index_entry));
+	memset(&their_entry, 0x0, sizeof(git_index_entry));
+
+	ancestor_entry.path = "modified_file";
+	git_oid_fromstr(&ancestor_entry.oid,
+		"452e4244b5d083ddf0460acf1ecc74db9dcfa11a");
+
+	our_entry.path = "modified_file";
+	git_oid_fromstr(&our_entry.oid,
+		"452e4244b5d083ddf0460acf1ecc74db9dcfa11a");
+
+	their_entry.path = "modified_file";
+	git_oid_fromstr(&their_entry.oid,
+		"452e4244b5d083ddf0460acf1ecc74db9dcfa11a");
+
+	cl_git_pass(git_status_file(&status, repo, "modified_file"));
+	cl_assert_equal_i(GIT_STATUS_WT_MODIFIED, status);
+
+	cl_git_pass(git_repository_index(&index, repo));
+
+	cl_git_pass(git_index_remove(index, "modified_file", 0));
+	cl_git_pass(git_index_conflict_add(index, &ancestor_entry,
+		&our_entry, &their_entry));
+
+	cl_git_pass(git_status_file(&status, repo, "modified_file"));
+
+	cl_assert_equal_i(GIT_STATUS_INDEX_DELETED | GIT_STATUS_WT_NEW, status);
+
+	git_index_free(index);
+}
+
