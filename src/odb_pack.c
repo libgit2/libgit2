@@ -384,19 +384,18 @@ cleanup:
  *
  ***********************************************************/
 
-/*
-int pack_backend__read_header(git_rawobj *obj, git_odb_backend *backend, const git_oid *oid)
+static int pack_backend__read_header(size_t *len_p, git_otype *type_p, struct git_odb_backend *backend, const git_oid *oid)
 {
-	pack_location location;
+	struct git_pack_entry e;
+	int error;
 
-	assert(obj && backend && oid);
+	assert(len_p && type_p && backend && oid);
 
-	if (locate_packfile(&location, (struct pack_backend *)backend, oid) < 0)
-		return GIT_ENOTFOUND;
+	if ((error = pack_entry_find(&e, (struct pack_backend *)backend, oid)) < 0)
+		return error;
 
-	return read_header_packed(obj, &location);
+	return git_packfile_resolve_header(len_p, type_p, e.p, e.offset);
 }
-*/
 
 static int pack_backend__read(void **buffer_p, size_t *len_p, git_otype *type_p, git_odb_backend *backend, const git_oid *oid)
 {
@@ -579,7 +578,7 @@ int git_odb_backend_one_pack(git_odb_backend **backend_out, const char *idx)
 
 	backend->parent.read = &pack_backend__read;
 	backend->parent.read_prefix = &pack_backend__read_prefix;
-	backend->parent.read_header = NULL;
+	backend->parent.read_header = &pack_backend__read_header;
 	backend->parent.exists = &pack_backend__exists;
 	backend->parent.foreach = &pack_backend__foreach;
 	backend->parent.free = &pack_backend__free;
@@ -616,7 +615,7 @@ int git_odb_backend_pack(git_odb_backend **backend_out, const char *objects_dir)
 
 	backend->parent.read = &pack_backend__read;
 	backend->parent.read_prefix = &pack_backend__read_prefix;
-	backend->parent.read_header = NULL;
+	backend->parent.read_header = &pack_backend__read_header;
 	backend->parent.exists = &pack_backend__exists;
 	backend->parent.foreach = &pack_backend__foreach;
 	backend->parent.writepack = &pack_backend__writepack;

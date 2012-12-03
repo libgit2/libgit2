@@ -83,6 +83,12 @@ int git_packfile_unpack_header(
 		git_mwindow **w_curs,
 		git_off_t *curpos);
 
+int git_packfile_resolve_header(
+		size_t *size_p,
+		git_otype *type_p,
+		struct git_pack_file *p,
+		git_off_t offset);
+
 int git_packfile_unpack(git_rawobj *obj, struct git_pack_file *p, git_off_t *obj_offset);
 int packfile_unpack_compressed(
 	git_rawobj *obj,
