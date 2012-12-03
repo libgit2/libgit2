@@ -61,9 +61,9 @@ void giterr_set(int error_class, const char *string, ...);
 
 /**
  * Set the error message for a regex failure, using the internal regex
- * error code lookup.
+ * error code lookup and return a libgit error code.
  */
-void giterr_set_regex(const regex_t *regex, int error_code);
+int giterr_set_regex(const regex_t *regex, int error_code);
 
 /* NOTE: other giterr functions are in the public errors.h header file */
 

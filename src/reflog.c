@@ -340,12 +340,19 @@ cleanup:
 
 int git_reflog_rename(git_reference *ref, const char *new_name)
 {
-	int error = -1, fd;
+	int error, fd;
 	git_buf old_path = GIT_BUF_INIT;
 	git_buf new_path = GIT_BUF_INIT;
 	git_buf temp_path = GIT_BUF_INIT;
+	git_buf normalized = GIT_BUF_INIT;
 
 	assert(ref && new_name);
+
+	if ((error = git_reference__normalize_name(
+		&normalized, new_name, GIT_REF_FORMAT_ALLOW_ONELEVEL)) < 0)
+			goto cleanup;
+
+	error = -1;
 
 	if (git_buf_joinpath(&temp_path, git_reference_owner(ref)->path_repository, GIT_REFLOG_DIR) < 0)
 		return -1;
@@ -353,8 +360,9 @@ int git_reflog_rename(git_reference *ref, const char *new_name)
 	if (git_buf_joinpath(&old_path, git_buf_cstr(&temp_path), ref->name) < 0)
 		goto cleanup;
 
-	if (git_buf_joinpath(&new_path, git_buf_cstr(&temp_path), new_name) < 0)
-		goto cleanup;
+	if (git_buf_joinpath(&new_path,
+		git_buf_cstr(&temp_path), git_buf_cstr(&normalized)) < 0)
+			goto cleanup;
 
 	/*
 	 * Move the reflog to a temporary place. This two-phase renaming is required
@@ -386,6 +394,7 @@ cleanup:
 	git_buf_free(&temp_path);
 	git_buf_free(&old_path);
 	git_buf_free(&new_path);
+	git_buf_free(&normalized);
 
 	return error;
 }

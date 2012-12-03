@@ -88,7 +88,6 @@ void test_object_tag_write__overwrite(void)
 
 	git_object_free(target);
 	git_signature_free(tagger);
-
 }
 
 void test_object_tag_write__replace(void)
@@ -189,4 +188,34 @@ void test_object_tag_write__delete(void)
 	cl_git_fail(git_reference_lookup(&ref_tag, g_repo, "refs/tags/e90810b"));
 
 	git_reference_free(ref_tag);
+}
+
+void test_object_tag_write__creating_with_an_invalid_name_returns_EINVALIDSPEC(void)
+{
+	git_oid target_id, tag_id;
+	git_signature *tagger;
+	git_object *target;
+
+	git_oid_fromstr(&target_id, tagged_commit);
+	cl_git_pass(git_object_lookup(&target, g_repo, &target_id, GIT_OBJ_COMMIT));
+
+	cl_git_pass(git_signature_new(&tagger, tagger_name, tagger_email, 123456789, 60));
+
+	cl_assert_equal_i(GIT_EINVALIDSPEC,
+		git_tag_create(&tag_id, g_repo,
+		  "Inv@{id", target, tagger, tagger_message, 0)
+	);
+
+	cl_assert_equal_i(GIT_EINVALIDSPEC,
+		git_tag_create_lightweight(&tag_id, g_repo,
+		  "Inv@{id", target, 0)
+	);
+
+	git_object_free(target);
+	git_signature_free(tagger);
+}
+
+void test_object_tag_write__deleting_with_an_invalid_name_returns_EINVALIDSPEC(void)
+{
+	cl_assert_equal_i(GIT_EINVALIDSPEC, git_tag_delete(g_repo, "Inv@{id"));
 }

@@ -180,10 +180,14 @@ void test_refs_rename__invalid_name(void)
 	cl_git_pass(git_reference_lookup(&looked_up_ref, g_repo, packed_test_head_name));
 
 	/* Can not be renamed with an invalid name. */
-	cl_git_fail(git_reference_rename(looked_up_ref, "Hello! I'm a very invalid name.", 0));
+	cl_assert_equal_i(
+		GIT_EINVALIDSPEC,
+		git_reference_rename(looked_up_ref, "Hello! I'm a very invalid name.", 0));
 
-	/* Can not be renamed outside of the refs hierarchy. */
-	cl_git_fail(git_reference_rename(looked_up_ref, "i-will-sudo-you", 0));
+	/* Can not be renamed outside of the refs hierarchy
+	 * unless it's ALL_CAPS_AND_UNDERSCORES.
+	 */
+	cl_assert_equal_i(GIT_EINVALIDSPEC, git_reference_rename(looked_up_ref, "i-will-sudo-you", 0));
 
 	/* Failure to rename it hasn't corrupted its state */
 	git_reference_free(looked_up_ref);

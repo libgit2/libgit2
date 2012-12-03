@@ -63,9 +63,12 @@ GIT_EXTERN(int) git_reflog_append(git_reflog *reflog, const git_oid *id, const g
  *
  * The reflog to be renamed is expected to already exist
  *
+ * The new name will be checked for validity.
+ * See `git_reference_create_symbolic()` for rules about valid names.
+ *
  * @param ref the reference
  * @param name the new name of the reference
- * @return 0 or an error code
+ * @return 0 on success, GIT_EINVALIDSPEC or an error code
  */
 GIT_EXTERN(int) git_reflog_rename(git_reference *ref, const char *name);
 

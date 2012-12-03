@@ -223,11 +223,19 @@ void test_refs_read__trailing(void)
 void test_refs_read__unfound_return_ENOTFOUND(void)
 {
 	git_reference *reference;
+	git_oid id;
 
-	cl_assert_equal_i(GIT_ENOTFOUND, git_reference_lookup(&reference, g_repo, "TEST_MASTER"));
-	cl_assert_equal_i(GIT_ENOTFOUND, git_reference_lookup(&reference, g_repo, "refs/test/master"));
-	cl_assert_equal_i(GIT_ENOTFOUND, git_reference_lookup(&reference, g_repo, "refs/tags/test/master"));
-	cl_assert_equal_i(GIT_ENOTFOUND, git_reference_lookup(&reference, g_repo, "refs/tags/test/farther/master"));
+	cl_assert_equal_i(GIT_ENOTFOUND,
+		git_reference_lookup(&reference, g_repo, "TEST_MASTER"));
+	cl_assert_equal_i(GIT_ENOTFOUND,
+		git_reference_lookup(&reference, g_repo, "refs/test/master"));
+	cl_assert_equal_i(GIT_ENOTFOUND,
+		git_reference_lookup(&reference, g_repo, "refs/tags/test/master"));
+	cl_assert_equal_i(GIT_ENOTFOUND,
+		git_reference_lookup(&reference, g_repo, "refs/tags/test/farther/master"));
+
+	cl_assert_equal_i(GIT_ENOTFOUND,
+		git_reference_name_to_id(&id, g_repo, "refs/tags/test/farther/master"));
 }
 
 static void assert_is_branch(const char *name, bool expected_branchness)
@@ -244,4 +252,16 @@ void test_refs_read__can_determine_if_a_reference_is_a_local_branch(void)
 	assert_is_branch("refs/heads/packed", true);
 	assert_is_branch("refs/remotes/test/master", false);
 	assert_is_branch("refs/tags/e90810b", false);
+}
+
+void test_refs_read__invalid_name_returns_EINVALIDSPEC(void)
+{
+	git_reference *reference;
+	git_oid id;
+
+	cl_assert_equal_i(GIT_EINVALIDSPEC,
+		git_reference_lookup(&reference, g_repo, "refs/heads/Inv@{id"));
+
+	cl_assert_equal_i(GIT_EINVALIDSPEC,
+		git_reference_name_to_id(&id, g_repo, "refs/heads/Inv@{id"));
 }

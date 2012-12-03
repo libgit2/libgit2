@@ -304,12 +304,6 @@ size_t git_object__size(git_otype type)
 	return git_objects_table[type].size;
 }
 
-static int peel_error(int error, const char* msg)
-{
-	giterr_set(GITERR_INVALID, "The given object cannot be peeled - %s", msg);
-	return error;
-}
-
 static int dereference_object(git_object **dereferenced, git_object *obj)
 {
 	git_otype type = git_object_type(obj);
@@ -322,14 +316,30 @@ static int dereference_object(git_object **dereferenced, git_object *obj)
 		return git_tag_target(dereferenced, (git_tag*)obj);
 
 	case GIT_OBJ_BLOB:
-		return peel_error(GIT_ERROR, "cannot dereference blob");
+		return GIT_ENOTFOUND;
 
 	case GIT_OBJ_TREE:
-		return peel_error(GIT_ERROR, "cannot dereference tree");
+		return GIT_EAMBIGUOUS;
 
 	default:
-		return peel_error(GIT_ENOTFOUND, "unexpected object type encountered");
+		return GIT_EINVALIDSPEC;
 	}
+}
+
+static int peel_error(int error, const git_oid *oid, git_otype type)
+{
+	const char *type_name;
+	char hex_oid[GIT_OID_HEXSZ + 1];
+
+	type_name = git_object_type2string(type);
+
+	git_oid_fmt(hex_oid, oid);
+	hex_oid[GIT_OID_HEXSZ] = '\0';
+
+	giterr_set(GITERR_OBJECT, "The git_object of id '%s' can not be "
+		"successfully peeled into a %s (git_otype=%i).", hex_oid, type_name, type);
+
+	return error;
 }
 
 int git_object_peel(
@@ -338,6 +348,14 @@ int git_object_peel(
 	git_otype target_type)
 {
 	git_object *source, *deref = NULL;
+	int error;
+
+	if (target_type != GIT_OBJ_TAG && 
+		target_type != GIT_OBJ_COMMIT && 
+		target_type != GIT_OBJ_TREE && 
+		target_type != GIT_OBJ_BLOB && 
+		target_type != GIT_OBJ_ANY)
+			return GIT_EINVALIDSPEC;
 
 	assert(object && peeled);
 
@@ -346,7 +364,7 @@ int git_object_peel(
 
 	source = (git_object *)object;
 
-	while (!dereference_object(&deref, source)) {
+	while (!(error = dereference_object(&deref, source))) {
 
 		if (source != object)
 			git_object_free(source);
@@ -371,6 +389,10 @@ int git_object_peel(
 		git_object_free(source);
 
 	git_object_free(deref);
-	return -1;
+
+	if (error)
+		error = peel_error(error, git_object_id(object), target_type);
+
+	return error;
 }
 
