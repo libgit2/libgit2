@@ -40,6 +40,11 @@ static int pack_entry_find_offset(
 		const git_oid *short_oid,
 		size_t len);
 
+static int pack_entry_find_oid(
+	git_oid *found_oid,
+	struct git_pack_file *p,
+	git_off_t offset);
+
 static int packfile_error(const char *message)
 {
 	giterr_set(GITERR_ODB, "Invalid pack file - %s", message);
@@ -327,6 +332,17 @@ int git_packfile_resolve_header(
 	return error;
 }
 
+static git_odb_object *new_odb_object(const git_oid *oid, git_rawobj *source)
+{
+	git_odb_object *object = git__malloc(sizeof(git_odb_object));
+	memset(object, 0x0, sizeof(git_odb_object));
+
+	git_oid_cpy(&object->cached.oid, oid);
+	memcpy(&object->raw, source, sizeof(git_rawobj));
+
+	return object;
+}
+
 static int packfile_unpack_delta(
 		git_rawobj *obj,
 		struct git_pack_file *p,
@@ -338,7 +354,9 @@ static int packfile_unpack_delta(
 {
 	git_off_t base_offset;
 	git_rawobj base, delta;
-	int error;
+	int error = 0;
+	git_cache *cache = p->odb_cache;
+	int base_cached = 0;
 
 	base_offset = get_delta_base(p, w_curs, curpos, delta_type, obj_offset);
 	git_mwindow_close(w_curs);
@@ -347,28 +365,37 @@ static int packfile_unpack_delta(
 	if (base_offset < 0) /* must actually be an error code */
 		return (int)base_offset;
 
-	error = git_packfile_unpack(&base, p, &base_offset);
+	{
+		git_odb_object *object;
+		git_oid id;
+		pack_entry_find_oid(&id, p, base_offset);
+		error = pack_entry_find_oid(&id, p, base_offset);
+		if (error < 0)
+			error = git_packfile_unpack(&base, p, &base_offset);
+		else if (cache && (object = git_cache_get(cache, &id)) != NULL)
+			base = object->raw, base_cached = 1;
+		else {
+			error = git_packfile_unpack(&base, p, &base_offset);
+			git_cache_try_store(cache, new_odb_object(&id, &base));
+		}
+	}
 
-	/*
-	 * TODO: git.git tries to load the base from other packfiles
-	 * or loose objects.
-	 *
-	 * We'll need to do this in order to support thin packs.
-	 */
 	if (error < 0)
 		return error;
 
 	error = packfile_unpack_compressed(&delta, p, w_curs, curpos, delta_size, delta_type);
 	git_mwindow_close(w_curs);
 	if (error < 0) {
-		git__free(base.data);
+		if (!base_cached)
+			git__free(base.data);
 		return error;
 	}
 
 	obj->type = base.type;
 	error = git__delta_apply(obj, base.data, base.len, delta.data, delta.len);
 
-	git__free(base.data);
+	if (!base_cached)
+		git__free(base.data);
 	git__free(delta.data);
 
 	/* TODO: we might want to cache this. eventually */
@@ -746,12 +773,47 @@ static int git__memcmp4(const void *a, const void *b) {
 	return memcmp(a, b, 4);
 }
 
+static int pack_init_oids(
+	struct git_pack_file *p,
+	const unsigned char *index)
+{
+	const unsigned char *current;
+	git_vector offsets, oids;
+	int error;
+	uint32_t i;
+
+	if ((error = git_vector_init(&oids, p->num_objects, NULL)))
+	return error;
+
+	if ((error = git_vector_init(&offsets, p->num_objects, git__memcmp4)))
+	return error;
+
+	if (p->index_version > 1) {
+	const unsigned char *off = index + 24 * p->num_objects;
+	for (i = 0; i < p->num_objects; i++)
+		git_vector_insert(&offsets, (void*)&off[4 * i]);
+	git_vector_sort(&offsets);
+	git_vector_foreach(&offsets, i, current)
+		git_vector_insert(&oids, (void*)&index[5 * (current - off)]);
+	} else {
+	for (i = 0; i < p->num_objects; i++)
+		git_vector_insert(&offsets, (void*)&index[24 * i]);
+	git_vector_sort(&offsets);
+	git_vector_foreach(&offsets, i, current)
+		git_vector_insert(&oids, (void*)&current[4]);
+	}
+	git_vector_free(&offsets);
+	p->oids = (git_oid **)oids.contents;
+
+	return 0;
+}
+
 int git_pack_foreach_entry(
 	struct git_pack_file *p,
 	git_odb_foreach_cb cb,
 	void *data)
 {
-	const unsigned char *index = p->index_map.data, *current;
+	const unsigned char *index = p->index_map.data;
 	uint32_t i;
 
 	if (index == NULL) {
@@ -772,31 +834,10 @@ int git_pack_foreach_entry(
 	index += 4 * 256;
 
 	if (p->oids == NULL) {
-		git_vector offsets, oids;
-		int error;
-
-		if ((error = git_vector_init(&oids, p->num_objects, NULL)))
+		int error = pack_init_oids(p, index);
+		if (error < 0)
 			return error;
-
-		if ((error = git_vector_init(&offsets, p->num_objects, git__memcmp4)))
-			return error;
-
-		if (p->index_version > 1) {
-			const unsigned char *off = index + 24 * p->num_objects;
-			for (i = 0; i < p->num_objects; i++)
-				git_vector_insert(&offsets, (void*)&off[4 * i]);
-			git_vector_sort(&offsets);
-			git_vector_foreach(&offsets, i, current)
-				git_vector_insert(&oids, (void*)&index[5 * (current - off)]);
-		} else {
-			for (i = 0; i < p->num_objects; i++)
-				git_vector_insert(&offsets, (void*)&index[24 * i]);
-			git_vector_sort(&offsets);
-			git_vector_foreach(&offsets, i, current)
-				git_vector_insert(&oids, (void*)&current[4]);
-		}
-		git_vector_free(&offsets);
-		p->oids = (git_oid **)oids.contents;
+		assert(p->oids);
 	}
 
 	for (i = 0; i < p->num_objects; i++)
@@ -804,6 +845,52 @@ int git_pack_foreach_entry(
 			return GIT_EUSER;
 
 	return 0;
+}
+
+static int pack_entry_find_oid(
+	git_oid *found_oid,
+	struct git_pack_file *p,
+	git_off_t offset)
+{
+	int lo = 0, hi = p->num_objects;
+
+	if (p->oids == NULL) {
+		const unsigned char *index = p->index_map.data;
+		int error;
+		if (index == NULL) {
+			int error;
+
+			if ((error = pack_index_open(p)) < 0)
+				return error;
+
+			assert(p->index_map.data);
+
+			index = p->index_map.data;
+		}
+		if (p->index_version > 1)
+			index += 8;
+		index += 4 * 256;
+		if ((error = pack_init_oids(p, index)) < 0)
+			return error;
+		assert(p->oids);
+	}
+
+	while (lo < hi) {
+		git_off_t found_offset;
+		int error;
+		int mid = (lo + hi) / 2;
+		error = pack_entry_find_offset(&found_offset, found_oid, p, p->oids[mid], GIT_OID_RAWSZ);
+		if (error < 0)
+			return error;
+		if (found_offset == offset)
+			return 0;
+		if (found_offset < offset)
+			hi = mid;
+		else
+			lo = mid + 1;
+	}
+
+	return -1;
 }
 
 static int pack_entry_find_offset(

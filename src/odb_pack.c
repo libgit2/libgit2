@@ -403,8 +403,12 @@ static int pack_backend__read(void **buffer_p, size_t *len_p, git_otype *type_p,
 	git_rawobj raw;
 	int error;
 
-	if ((error = pack_entry_find(&e, (struct pack_backend *)backend, oid)) < 0 ||
-		(error = git_packfile_unpack(&raw, e.p, &e.offset)) < 0)
+	if ((error = pack_entry_find(&e, (struct pack_backend *)backend, oid)) < 0)
+		return error;
+
+	e.p->odb_cache = &backend->odb->cache;
+
+	if ((error = git_packfile_unpack(&raw, e.p, &e.offset)) < 0)
 		return error;
 
 	*buffer_p = raw.data;
