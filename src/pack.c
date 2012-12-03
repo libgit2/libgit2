@@ -277,6 +277,56 @@ int git_packfile_unpack_header(
 	return 0;
 }
 
+int git_packfile_resolve_header(
+		size_t *size_p,
+		git_otype *type_p,
+		struct git_pack_file *p,
+		git_off_t offset)
+{
+	git_mwindow *w_curs = NULL;
+	git_off_t curpos = offset;
+	size_t size;
+	git_otype type;
+	git_off_t base_offset;
+	int error;
+
+	error = git_packfile_unpack_header(&size, &type, &p->mwf, &w_curs, &curpos);
+	git_mwindow_close(&w_curs);
+	if (error < 0)
+		return error;
+
+	if (type == GIT_OBJ_OFS_DELTA || type == GIT_OBJ_REF_DELTA) {
+		size_t base_size;
+		git_rawobj delta;
+		base_offset = get_delta_base(p, &w_curs, &curpos, type, offset);
+		git_mwindow_close(&w_curs);
+		error = packfile_unpack_compressed(&delta, p, &w_curs, &curpos, size, type);
+		git_mwindow_close(&w_curs);
+		if (error < 0)
+			return error;
+		error = git__delta_read_header(delta.data, delta.len, &base_size, size_p);
+		git__free(delta.data);
+		if (error < 0)
+			return error;
+	} else
+		*size_p = size;
+
+	while (type == GIT_OBJ_OFS_DELTA || type == GIT_OBJ_REF_DELTA) {
+		curpos = base_offset;
+		error = git_packfile_unpack_header(&size, &type, &p->mwf, &w_curs, &curpos);
+		git_mwindow_close(&w_curs);
+		if (error < 0)
+			return error;
+		if (type != GIT_OBJ_OFS_DELTA && type != GIT_OBJ_REF_DELTA)
+			break;
+		base_offset = get_delta_base(p, &w_curs, &curpos, type, base_offset);
+		git_mwindow_close(&w_curs);
+	}
+	*type_p = type;
+
+	return error;
+}
+
 static int packfile_unpack_delta(
 		git_rawobj *obj,
 		struct git_pack_file *p,

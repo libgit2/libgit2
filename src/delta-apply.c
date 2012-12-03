@@ -36,6 +36,19 @@ static int hdr_sz(
 	return 0;
 }
 
+int git__delta_read_header(
+	const unsigned char *delta,
+	size_t delta_len,
+	size_t *base_sz,
+	size_t *res_sz)
+{
+	const unsigned char *delta_end = delta + delta_len;
+	if ((hdr_sz(base_sz, &delta, delta_end) < 0) ||
+	    (hdr_sz(res_sz, &delta, delta_end) < 0))
+		return -1;
+	return 0;
+}
+
 int git__delta_apply(
 	git_rawobj *out,
 	const unsigned char *base,

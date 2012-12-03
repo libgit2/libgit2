@@ -30,4 +30,21 @@ extern int git__delta_apply(
 	const unsigned char *delta,
 	size_t delta_len);
 
+/**
+ * Read the header of a git binary delta.
+ *
+ * @param delta the delta to execute copy/insert instructions from.
+ * @param delta_len total number of bytes in the delta.
+ * @param base_sz pointer to store the base size field.
+ * @param res_sz pointer to store the result size field.
+ * @return
+ * - 0 on a successful decoding the header.
+ * - GIT_ERROR if the delta is corrupt.
+ */
+extern int git__delta_read_header(
+	const unsigned char *delta,
+	size_t delta_len,
+	size_t *base_sz,
+	size_t *res_sz);
+
 #endif
