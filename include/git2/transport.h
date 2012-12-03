@@ -31,14 +31,10 @@ typedef enum {
 
 /* The base structure for all credential types */
 typedef struct git_cred {
-	unsigned int version;       /* This should update if subtypes are extended */
 	git_credtype_t credtype;
 	void (*free)(
 		struct git_cred *cred);
 } git_cred;
-
-#define GIT_CRED_VERSION 1
-#define GIT_CRED_INIT {GIT_CRED_VERSION, 0}
 
 /* A plaintext username and password */
 typedef struct git_cred_userpass_plaintext {
