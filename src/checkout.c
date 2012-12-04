@@ -206,7 +206,7 @@ static int checkout_blob(
 static int retrieve_symlink_caps(git_repository *repo, bool *out)
 {
 	git_config *cfg;
-    int can_symlink = 0;
+	int can_symlink = 0;
 	int error;
 
 	if (git_repository_config__weakptr(&cfg, repo) < 0)
@@ -220,8 +220,8 @@ static int retrieve_symlink_caps(git_repository *repo, bool *out)
 		error = 0;
 	}
         
-    if (error >= 0)
-        *out = can_symlink;
+	if (error >= 0)
+		*out = can_symlink;
 
 	return error;
 }
