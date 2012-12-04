@@ -63,6 +63,10 @@ static void pack_index_free(struct git_pack_file *p)
 		git__free(p->oids);
 		p->oids = NULL;
 	}
+	if (p->offsets) {
+		git__free(p->offsets);
+		p->offsets = NULL;
+	}
 	if (p->index_map.data) {
 		git_futils_mmap_free(&p->index_map);
 		p->index_map.data = NULL;
@@ -782,6 +786,7 @@ static int pack_init_oids(
 	git_vector offsets, oids;
 	int error;
 	uint32_t i;
+	git_off_t *real_offsets = git__malloc(sizeof(git_off_t) * p->num_objects);
 
 	if ((error = git_vector_init(&oids, p->num_objects, NULL)))
 	return error;
@@ -794,17 +799,22 @@ static int pack_init_oids(
 	for (i = 0; i < p->num_objects; i++)
 		git_vector_insert(&offsets, (void*)&off[4 * i]);
 	git_vector_sort(&offsets);
-	git_vector_foreach(&offsets, i, current)
+	git_vector_foreach(&offsets, i, current) {
 		git_vector_insert(&oids, (void*)&index[5 * (current - off)]);
+		real_offsets[i] = nth_packed_object_offset(p, (current - off) / 4);
+	}
 	} else {
 	for (i = 0; i < p->num_objects; i++)
 		git_vector_insert(&offsets, (void*)&index[24 * i]);
 	git_vector_sort(&offsets);
-	git_vector_foreach(&offsets, i, current)
+	git_vector_foreach(&offsets, i, current) {
 		git_vector_insert(&oids, (void*)&current[4]);
+		real_offsets[i] = ntohl(*(uint32_t*)current);
+	}
 	}
 	git_vector_free(&offsets);
 	p->oids = (git_oid **)oids.contents;
+	p->offsets = real_offsets;
 
 	return 0;
 }
@@ -859,7 +869,7 @@ static int pack_entry_find_oid(
 	if (p->has_cache)
 		return -1;
 
-	if (p->oids == NULL) {
+	if (p->oids == NULL || p->offsets == NULL) {
 		const unsigned char *index = p->index_map.data;
 		int error;
 		if (index == NULL) {
@@ -877,18 +887,17 @@ static int pack_entry_find_oid(
 		index += 4 * 256;
 		if ((error = pack_init_oids(p, index)) < 0)
 			return error;
-		assert(p->oids);
+		assert(p->oids && p->offsets);
 	}
 
 	while (lo < hi) {
 		git_off_t found_offset;
-		int error;
 		int mid = (lo + hi) / 2;
-		error = pack_entry_find_offset(&found_offset, found_oid, p, p->oids[mid], GIT_OID_RAWSZ);
-		if (error < 0)
-			return error;
-		if (found_offset == offset)
+		found_offset = p->offsets[mid];
+		if (found_offset == offset) {
+			git_oid_cpy(found_oid, p->oids[mid]);
 			return 0;
+		}
 		if (found_offset < offset)
 			hi = mid;
 		else
