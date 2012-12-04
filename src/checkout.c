@@ -203,21 +203,25 @@ static int checkout_blob(
 	return error;
 }
 
-static int retrieve_symlink_caps(git_repository *repo, bool *can_symlink)
+static int retrieve_symlink_caps(git_repository *repo, bool *out)
 {
 	git_config *cfg;
+    int can_symlink = 0;
 	int error;
 
 	if (git_repository_config__weakptr(&cfg, repo) < 0)
 		return -1;
 
-	error = git_config_get_bool((int *)can_symlink, cfg, "core.symlinks");
+	error = git_config_get_bool(&can_symlink, cfg, "core.symlinks");
 
 	/* If "core.symlinks" is not found anywhere, default to true. */
 	if (error == GIT_ENOTFOUND) {
-		*can_symlink = true;
+		can_symlink = true;
 		error = 0;
 	}
+        
+    if (error >= 0)
+        *out = can_symlink;
 
 	return error;
 }
