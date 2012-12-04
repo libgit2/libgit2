@@ -376,7 +376,8 @@ static int packfile_unpack_delta(
 			base = object->raw, base_cached = 1;
 		else {
 			error = git_packfile_unpack(&base, p, &base_offset);
-			git_cache_try_store(cache, new_odb_object(&id, &base));
+			if (cache)
+				git_cache_try_store(cache, new_odb_object(&id, &base));
 		}
 	}
 
@@ -853,6 +854,10 @@ static int pack_entry_find_oid(
 	git_off_t offset)
 {
 	int lo = 0, hi = p->num_objects;
+
+	/* The indexer doesn't have access to the odb cache */
+	if (p->has_cache)
+		return -1;
 
 	if (p->oids == NULL) {
 		const unsigned char *index = p->index_map.data;
