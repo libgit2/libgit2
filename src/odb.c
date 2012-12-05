@@ -369,6 +369,8 @@ static int add_backend_internal(git_odb *odb, git_odb_backend *backend, int prio
 
 	assert(odb && backend);
 
+	GITERR_CHECK_VERSION(backend, GIT_ODB_BACKEND_VERSION, "git_odb_backend");
+
 	/* Check if the backend is already owned by another ODB */
 	assert(!backend->odb || backend->odb == odb);
 

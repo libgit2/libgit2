@@ -915,6 +915,7 @@ int git_odb_backend_loose(
 	backend = git__calloc(1, sizeof(loose_backend));
 	GITERR_CHECK_ALLOC(backend);
 
+	backend->parent.version = GIT_ODB_BACKEND_VERSION;
 	backend->objects_dir = git__strdup(objects_dir);
 	GITERR_CHECK_ALLOC(backend->objects_dir);
 

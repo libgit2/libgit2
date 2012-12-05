@@ -12,7 +12,7 @@ void test_diff_blob__initialize(void)
 
 	g_repo = cl_git_sandbox_init("attr");
 
-	memset(&opts, 0, sizeof(opts));
+	GIT_INIT_STRUCTURE(&opts, GIT_DIFF_OPTIONS_VERSION);
 	opts.context_lines = 1;
 	opts.interhunk_lines = 0;
 
@@ -312,4 +312,26 @@ void test_diff_blob__comparing_two_text_blobs_honors_interhunkcontext(void)
 	cl_assert_equal_i(1, expected.hunks);
 
 	git_blob_free(old_d);
+}
+
+void test_diff_blob__checks_options_version_too_low(void)
+{
+	const git_error *err;
+
+	opts.version = 0;
+	cl_git_fail(git_diff_blobs(
+		d, alien, &opts, diff_file_cb, diff_hunk_cb, diff_line_cb, &expected));
+	err = giterr_last();
+	cl_assert_equal_i(GITERR_INVALID, err->klass);
+}
+
+void test_diff_blob__checks_options_version_too_high(void)
+{
+	const git_error *err;
+
+	opts.version = 1024;
+	cl_git_fail(git_diff_blobs(
+		d, alien, &opts, diff_file_cb, diff_hunk_cb, diff_line_cb, &expected));
+	err = giterr_last();
+	cl_assert_equal_i(GITERR_INVALID, err->klass);
 }

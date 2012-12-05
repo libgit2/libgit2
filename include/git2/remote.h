@@ -347,11 +347,15 @@ typedef enum git_remote_completion_type {
  * Set the calbacks to be called by the remote.
  */
 struct git_remote_callbacks {
+	unsigned int version;
 	void (*progress)(const char *str, int len, void *data);
 	int (*completion)(git_remote_completion_type type, void *data);
 	int (*update_tips)(const char *refname, const git_oid *a, const git_oid *b, void *data);
 	void *payload;
 };
+
+#define GIT_REMOTE_CALLBACKS_VERSION 1
+#define GIT_REMOTE_CALLBACKS_INIT {GIT_REMOTE_CALLBACKS_VERSION, 0}
 
 /**
  * Set the callbacks for a remote
@@ -361,8 +365,9 @@ struct git_remote_callbacks {
  *
  * @param remote the remote to configure
  * @param callbacks a pointer to the user's callback settings
+ * @return 0 or an error code
  */
-GIT_EXTERN(void) git_remote_set_callbacks(git_remote *remote, git_remote_callbacks *callbacks);
+GIT_EXTERN(int) git_remote_set_callbacks(git_remote *remote, git_remote_callbacks *callbacks);
 
 /**
  * Get the statistics structure that is filled in by the fetch operation.

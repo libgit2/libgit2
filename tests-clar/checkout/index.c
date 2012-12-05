@@ -25,7 +25,7 @@ void test_checkout_index__initialize(void)
 {
 	git_tree *tree;
 
-	memset(&g_opts, 0, sizeof(g_opts));
+	GIT_INIT_STRUCTURE(&g_opts, GIT_CHECKOUT_OPTS_VERSION);
 	g_opts.checkout_strategy = GIT_CHECKOUT_SAFE;
 
 	g_repo = cl_git_sandbox_init("testrepo");
@@ -66,7 +66,7 @@ void test_checkout_index__cannot_checkout_a_bare_repository(void)
 {
 	test_checkout_index__cleanup();
 
-	memset(&g_opts, 0, sizeof(g_opts));
+	GIT_INIT_STRUCTURE(&g_opts, GIT_CHECKOUT_OPTS_VERSION);
 	g_repo = cl_git_sandbox_init("testrepo.git");
 
 	cl_git_fail(git_checkout_index(g_repo, NULL, NULL));
@@ -425,4 +425,22 @@ void test_checkout_index__can_overcome_name_clashes(void)
 	cl_assert(git_path_isfile("./testrepo/path1/file1"));
 
 	git_index_free(index);
+}
+
+void test_checkout_index__validates_struct_version(void)
+{
+	const git_error *err;
+
+	g_opts.version = 1024;
+	cl_git_fail(git_checkout_index(g_repo, NULL, &g_opts));
+
+	err = giterr_last();
+	cl_assert_equal_i(err->klass, GITERR_INVALID);
+
+	g_opts.version = 0;
+	giterr_clear();
+	cl_git_fail(git_checkout_index(g_repo, NULL, &g_opts));
+
+	err = giterr_last();
+	cl_assert_equal_i(err->klass, GITERR_INVALID);
 }

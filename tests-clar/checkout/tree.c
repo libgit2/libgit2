@@ -11,7 +11,7 @@ void test_checkout_tree__initialize(void)
 {
 	g_repo = cl_git_sandbox_init("testrepo");
 
-	memset(&g_opts, 0, sizeof(g_opts));
+	GIT_INIT_STRUCTURE(&g_opts, GIT_CHECKOUT_OPTS_VERSION);
 	g_opts.checkout_strategy = GIT_CHECKOUT_SAFE;
 }
 

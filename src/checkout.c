@@ -232,7 +232,7 @@ static void normalize_options(
 	assert(normalized);
 
 	if (!proposed)
-		memset(normalized, 0, sizeof(git_checkout_opts));
+		GIT_INIT_STRUCTURE(normalized, GIT_CHECKOUT_OPTS_VERSION);
 	else
 		memmove(normalized, proposed, sizeof(git_checkout_opts));
 
@@ -611,7 +611,7 @@ int git_checkout_index(
 	git_checkout_opts *opts)
 {
 	git_diff_list *diff = NULL;
-	git_diff_options diff_opts = {0};
+	git_diff_options diff_opts = GIT_DIFF_OPTIONS_INIT;
 	git_checkout_opts checkout_opts;
 	checkout_diff_data data;
 	git_buf workdir = GIT_BUF_INIT;
@@ -620,6 +620,8 @@ int git_checkout_index(
 	int error;
 
 	assert(repo);
+
+	GITERR_CHECK_VERSION(opts, GIT_CHECKOUT_OPTS_VERSION, "git_checkout_opts");
 
 	if ((error = git_repository__ensure_not_bare(repo, "checkout")) < 0)
 		return error;

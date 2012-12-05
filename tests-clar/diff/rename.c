@@ -33,8 +33,8 @@ void test_diff_rename__match_oid(void)
 	const char *new_sha = "2bc7f351d20b53f1c72c16c4b036e491c478c49a";
 	git_tree *old_tree, *new_tree;
 	git_diff_list *diff;
-	git_diff_options diffopts = {0};
-	git_diff_find_options opts;
+	git_diff_options diffopts = GIT_DIFF_OPTIONS_INIT;
+	git_diff_find_options opts = GIT_DIFF_FIND_OPTIONS_INIT;
 	diff_expects exp;
 
 	old_tree = resolve_commit_oid_to_tree(g_repo, old_sha);
@@ -43,7 +43,6 @@ void test_diff_rename__match_oid(void)
 	/* Must pass GIT_DIFF_INCLUDE_UNMODIFIED if you expect to emulate
 	 * --find-copies-harder during rename transformion...
 	 */
-	memset(&diffopts, 0, sizeof(diffopts));
 	diffopts.flags |= GIT_DIFF_INCLUDE_UNMODIFIED;
 
 	cl_git_pass(git_diff_tree_to_tree(
@@ -85,7 +84,6 @@ void test_diff_rename__match_oid(void)
 	 *          31e47d8c1fa36d7f8d537b96158e3f024de0a9f2 \
 	 *          2bc7f351d20b53f1c72c16c4b036e491c478c49a
 	 */
-	memset(&opts, 0, sizeof(opts));
 	opts.flags = GIT_DIFF_FIND_COPIES_FROM_UNMODIFIED;
 	cl_git_pass(git_diff_find_similar(diff, &opts));
 
@@ -100,6 +98,38 @@ void test_diff_rename__match_oid(void)
 
 	git_diff_list_free(diff);
 
+	git_tree_free(old_tree);
+	git_tree_free(new_tree);
+}
+
+void test_diff_rename__checks_options_version(void)
+{
+	const char *old_sha = "31e47d8c1fa36d7f8d537b96158e3f024de0a9f2";
+	const char *new_sha = "2bc7f351d20b53f1c72c16c4b036e491c478c49a";
+	git_tree *old_tree, *new_tree;
+	git_diff_list *diff;
+	git_diff_options diffopts = GIT_DIFF_OPTIONS_INIT;
+	git_diff_find_options opts = GIT_DIFF_FIND_OPTIONS_INIT;
+	const git_error *err;
+
+	old_tree = resolve_commit_oid_to_tree(g_repo, old_sha);
+	new_tree = resolve_commit_oid_to_tree(g_repo, new_sha);
+	diffopts.flags |= GIT_DIFF_INCLUDE_UNMODIFIED;
+	cl_git_pass(git_diff_tree_to_tree(
+		&diff, g_repo, old_tree, new_tree, &diffopts));
+
+	opts.version = 0;
+	cl_git_fail(git_diff_find_similar(diff, &opts));
+	err = giterr_last();
+	cl_assert_equal_i(GITERR_INVALID, err->klass);
+
+	giterr_clear();
+	opts.version = 1024;
+	cl_git_fail(git_diff_find_similar(diff, &opts));
+	err = giterr_last();
+	cl_assert_equal_i(GITERR_INVALID, err->klass);
+
+	git_diff_list_free(diff);
 	git_tree_free(old_tree);
 	git_tree_free(new_tree);
 }

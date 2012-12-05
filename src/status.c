@@ -108,7 +108,7 @@ int git_status_foreach_ext(
 	void *payload)
 {
 	int err = 0;
-	git_diff_options diffopt;
+	git_diff_options diffopt = GIT_DIFF_OPTIONS_INIT;
 	git_diff_list *idx2head = NULL, *wd2idx = NULL;
 	git_tree *head = NULL;
 	git_status_show_t show =
@@ -116,6 +116,8 @@ int git_status_foreach_ext(
 	status_user_callback usercb;
 
 	assert(show <= GIT_STATUS_SHOW_INDEX_THEN_WORKDIR);
+
+	GITERR_CHECK_VERSION(opts, GIT_STATUS_OPTIONS_VERSION, "git_status_options");
 
 	if (show != GIT_STATUS_SHOW_INDEX_ONLY &&
 		(err = git_repository__ensure_not_bare(repo, "status")) < 0)
@@ -126,7 +128,6 @@ int git_status_foreach_ext(
 		!(err == GIT_ENOTFOUND || err == GIT_EORPHANEDHEAD))
 			return err;
 
-	memset(&diffopt, 0, sizeof(diffopt));
 	memcpy(&diffopt.pathspec, &opts->pathspec, sizeof(diffopt.pathspec));
 
 	diffopt.flags = GIT_DIFF_INCLUDE_TYPECHANGE;
@@ -181,9 +182,8 @@ int git_status_foreach(
 	git_status_cb callback,
 	void *payload)
 {
-	git_status_options opts;
+	git_status_options opts = GIT_STATUS_OPTIONS_INIT;
 
-	memset(&opts, 0, sizeof(opts));
 	opts.show  = GIT_STATUS_SHOW_INDEX_AND_WORKDIR;
 	opts.flags = GIT_STATUS_OPT_INCLUDE_IGNORED |
 		GIT_STATUS_OPT_INCLUDE_UNTRACKED |
@@ -224,16 +224,14 @@ int git_status_file(
 	const char *path)
 {
 	int error;
-	git_status_options opts;
-	struct status_file_info sfi;
+	git_status_options opts = GIT_STATUS_OPTIONS_INIT;
+	struct status_file_info sfi = {0};
 
 	assert(status_flags && repo && path);
 
-	memset(&sfi, 0, sizeof(sfi));
 	if ((sfi.expected = git__strdup(path)) == NULL)
 		return -1;
 
-	memset(&opts, 0, sizeof(opts));
 	opts.show  = GIT_STATUS_SHOW_INDEX_AND_WORKDIR;
 	opts.flags = GIT_STATUS_OPT_INCLUDE_IGNORED |
 		GIT_STATUS_OPT_INCLUDE_UNTRACKED |

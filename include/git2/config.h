@@ -49,6 +49,7 @@ typedef int  (*git_config_foreach_cb)(const git_config_entry *, void *);
  * access a configuration file
  */
 struct git_config_backend {
+	unsigned int version;
 	struct git_config *cfg;
 
 	/* Open means open the file/database and parse if necessary */
@@ -62,6 +63,8 @@ struct git_config_backend {
 	int (*refresh)(struct git_config_backend *);
 	void (*free)(struct git_config_backend *);
 };
+#define GIT_CONFIG_BACKEND_VERSION 1
+#define GIT_CONFIG_BACKEND_INIT {GIT_CONFIG_BACKEND_VERSION, 0}
 
 typedef enum {
 	GIT_CVAR_FALSE = 0,

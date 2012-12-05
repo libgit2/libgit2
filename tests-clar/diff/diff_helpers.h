@@ -48,3 +48,4 @@ extern int diff_foreach_via_iterator(
 	void *data);
 
 extern void diff_print(FILE *fp, git_diff_list *diff);
+

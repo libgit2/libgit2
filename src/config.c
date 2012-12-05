@@ -259,6 +259,8 @@ int git_config_add_backend(
 
 	assert(cfg && file);
 
+	GITERR_CHECK_VERSION(file, GIT_CONFIG_BACKEND_VERSION, "git_config_backend");
+
 	if ((result = file->open(file, level)) < 0)
 		return result;
 

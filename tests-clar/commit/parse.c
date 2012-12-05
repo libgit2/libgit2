@@ -149,7 +149,7 @@ void test_commit_parse__signature(void)
    {
       const char *str = passcase->string;
       size_t len = strlen(passcase->string);
-      struct git_signature person = {NULL, NULL, {0, 0}};
+      struct git_signature person = {0};
       cl_git_pass(git_signature__parse(&person, &str, str + len, passcase->header, '\n'));
       cl_assert(strcmp(passcase->name, person.name) == 0);
       cl_assert(strcmp(passcase->email, person.email) == 0);
@@ -162,7 +162,7 @@ void test_commit_parse__signature(void)
    {
       const char *str = failcase->string;
       size_t len = strlen(failcase->string);
-      git_signature person = {NULL, NULL, {0, 0}};
+      git_signature person = {0};
       cl_git_fail(git_signature__parse(&person, &str, str + len, failcase->header, '\n'));
       git__free(person.name); git__free(person.email);
    }

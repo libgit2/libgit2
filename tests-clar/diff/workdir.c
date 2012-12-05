@@ -15,7 +15,7 @@ void test_diff_workdir__cleanup(void)
 
 void test_diff_workdir__to_index(void)
 {
-	git_diff_options opts = {0};
+	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
 	git_diff_list *diff = NULL;
 	diff_expects exp;
 	int use_iterator;
@@ -69,7 +69,7 @@ void test_diff_workdir__to_tree(void)
 	const char *a_commit = "26a125ee1bf"; /* the current HEAD */
 	const char *b_commit = "0017bd4ab1ec3"; /* the start */
 	git_tree *a, *b;
-	git_diff_options opts = {0};
+	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
 	git_diff_list *diff = NULL;
 	git_diff_list *diff2 = NULL;
 	diff_expects exp;
@@ -202,7 +202,7 @@ void test_diff_workdir__to_tree(void)
 
 void test_diff_workdir__to_index_with_pathspec(void)
 {
-	git_diff_options opts = {0};
+	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
 	git_diff_list *diff = NULL;
 	diff_expects exp;
 	char *pathspec = NULL;
@@ -420,7 +420,7 @@ void test_diff_workdir__filemode_changes_with_filemode_false(void)
 
 void test_diff_workdir__head_index_and_workdir_all_differ(void)
 {
-	git_diff_options opts = {0};
+	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
 	git_diff_list *diff_i2t = NULL, *diff_w2i = NULL;
 	diff_expects exp;
 	char *pathspec = "staged_changes_modified_file";
@@ -518,7 +518,7 @@ void test_diff_workdir__head_index_and_workdir_all_differ(void)
 
 void test_diff_workdir__eof_newline_changes(void)
 {
-	git_diff_options opts = {0};
+	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
 	git_diff_list *diff = NULL;
 	diff_expects exp;
 	char *pathspec = "current_file";
@@ -678,7 +678,7 @@ void test_diff_workdir__larger_hunks(void)
 	const char *a_commit = "d70d245ed97ed2aa596dd1af6536e4bfdb047b69";
 	const char *b_commit = "7a9e0b02e63179929fed24f0a3e0f19168114d10";
 	git_tree *a, *b;
-	git_diff_options opts = {0};
+	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
 	size_t i, d, num_d, h, num_h, l, num_l, header_len, line_len;
 
 	g_repo = cl_git_sandbox_init("diff");
@@ -763,7 +763,7 @@ void test_diff_workdir__submodules(void)
 {
 	const char *a_commit = "873585b94bdeabccea991ea5e3ec1a277895b698";
 	git_tree *a;
-	git_diff_options opts = {0};
+	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
 	git_diff_list *diff = NULL;
 	diff_expects exp;
 
@@ -822,7 +822,7 @@ void test_diff_workdir__submodules(void)
 
 void test_diff_workdir__cannot_diff_against_a_bare_repository(void)
 {
-	git_diff_options opts = {0};
+	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
 	git_diff_list *diff = NULL;
 	git_tree *tree;
 
@@ -843,7 +843,7 @@ void test_diff_workdir__to_null_tree(void)
 {
 	git_diff_list *diff;
 	diff_expects exp;
-	git_diff_options opts = {0};
+	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
 
 	opts.flags = GIT_DIFF_INCLUDE_UNTRACKED |
 		GIT_DIFF_RECURSE_UNTRACKED_DIRS;
@@ -860,4 +860,24 @@ void test_diff_workdir__to_null_tree(void)
 	cl_assert_equal_i(exp.files, exp.file_status[GIT_DELTA_UNTRACKED]);
 
 	git_diff_list_free(diff);
+}
+
+void test_diff_workdir__checks_options_version(void)
+{
+	git_diff_list *diff;
+	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
+	const git_error *err;
+
+	g_repo = cl_git_sandbox_init("status");
+
+	opts.version = 0;
+	cl_git_fail(git_diff_workdir_to_tree(&diff, g_repo, NULL, &opts));
+	err = giterr_last();
+	cl_assert_equal_i(GITERR_INVALID, err->klass);
+
+	giterr_clear();
+	opts.version = 1024;
+	cl_git_fail(git_diff_workdir_to_tree(&diff, g_repo, NULL, &opts));
+	err = giterr_last();
+	cl_assert_equal_i(GITERR_INVALID, err->klass);
 }

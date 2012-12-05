@@ -33,6 +33,7 @@ typedef int (*git_odb_foreach_cb)(const git_oid *id, void *payload);
  * An instance for a custom backend
  */
 struct git_odb_backend {
+	unsigned int version;
 	git_odb *odb;
 
 	/* read and read_prefix each return to libgit2 a buffer which
@@ -97,6 +98,9 @@ struct git_odb_backend {
 
 	void (* free)(struct git_odb_backend *);
 };
+
+#define GIT_ODB_BACKEND_VERSION 1
+#define GIT_ODB_BACKEND_INIT {GIT_ODB_BACKEND_VERSION, 0}
 
 /** Streaming mode */
 enum {
