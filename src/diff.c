@@ -285,7 +285,7 @@ static git_diff_list *git_diff_list_alloc(
 		goto fail;
 
 	if (diff->opts.flags & GIT_DIFF_REVERSE) {
-		char *swap = diff->opts.old_prefix;
+		const char *swap = diff->opts.old_prefix;
 		diff->opts.old_prefix = diff->opts.new_prefix;
 		diff->opts.new_prefix = swap;
 	}
