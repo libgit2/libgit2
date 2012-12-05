@@ -123,8 +123,7 @@ GIT_EXTERN(int) git_foo_id(
    int b);
 ```
 
-Public headers are indented with spaces, three to a tab.  Internal code is
-indented with tabs; set your editor's tab width to 3 for best effect.
+Indentation is done with tabs; set your editor's tab width to 3 for best effect.
 
 
 ## Documentation
