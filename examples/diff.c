@@ -133,7 +133,7 @@ int main(int argc, char *argv[])
 {
 	git_repository *repo = NULL;
 	git_tree *t1 = NULL, *t2 = NULL;
-	git_diff_options opts;
+	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
 	git_diff_list *diff;
 	int i, color = -1, compact = 0, cached = 0;
 	char *a, *dir = ".", *treeish1 = NULL, *treeish2 = NULL;

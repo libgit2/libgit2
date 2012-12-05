@@ -205,7 +205,7 @@ int git_submodule_add_setup(
 	git_config_backend *mods = NULL;
 	git_submodule *sm;
 	git_buf name = GIT_BUF_INIT, real_url = GIT_BUF_INIT;
-	git_repository_init_options initopt;
+	git_repository_init_options initopt = GIT_REPOSITORY_INIT_OPTIONS_INIT;
 	git_repository *subrepo = NULL;
 
 	assert(repo && url && path);
@@ -275,7 +275,6 @@ int git_submodule_add_setup(
 	 * Old style: sub-repo goes directly into repo/<name>/.git/
 	 */
 
-	memset(&initopt, 0, sizeof(initopt));
 	initopt.flags = GIT_REPOSITORY_INIT_MKPATH |
 		GIT_REPOSITORY_INIT_NO_REINIT;
 	initopt.origin_url = real_url.ptr;
@@ -1439,7 +1438,7 @@ static int submodule_wd_status(unsigned int *status, git_submodule *sm)
 
 	if (sm_repo != NULL) {
 		git_tree *sm_head;
-		git_diff_options opt;
+		git_diff_options opt = GIT_DIFF_OPTIONS_INIT;
 		git_diff_list *diff;
 
 		/* the diffs below could be optimized with an early termination
@@ -1452,7 +1451,6 @@ static int submodule_wd_status(unsigned int *status, git_submodule *sm)
 		if ((error = git_repository_head_tree(&sm_head, sm_repo)) < 0)
 			return error;
 
-		memset(&opt, 0, sizeof(opt));
 		if (sm->ignore == GIT_SUBMODULE_IGNORE_NONE)
 			opt.flags |= GIT_DIFF_INCLUDE_UNTRACKED;
 

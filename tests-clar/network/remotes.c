@@ -306,3 +306,23 @@ void test_network_remotes__cannot_load_with_an_empty_url(void)
 	cl_git_fail(git_remote_load(&remote, _repo, "empty-remote-url"));
 	cl_assert(giterr_last()->klass == GITERR_INVALID);
 }
+
+void test_network_remotes__check_structure_version(void)
+{
+	git_transport transport = GIT_TRANSPORT_INIT;
+	const git_error *err;
+
+	git_remote_free(_remote);
+	cl_git_pass(git_remote_new(&_remote, _repo, NULL, "test-protocol://localhost", NULL));
+
+	transport.version = 0;
+	cl_git_fail(git_remote_set_transport(_remote, &transport));
+	err = giterr_last();
+	cl_assert_equal_i(GITERR_INVALID, err->klass);
+
+	giterr_clear();
+	transport.version = 1024;
+	cl_git_fail(git_remote_set_transport(_remote, &transport));
+	err = giterr_last();
+	cl_assert_equal_i(GITERR_INVALID, err->klass);
+}

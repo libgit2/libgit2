@@ -11,6 +11,7 @@
 #include "refs.h"
 #include "config.h"
 #include "iterator.h"
+#include "signature.h"
 
 static int find_subtree_in_current_level(
 	git_tree **out,

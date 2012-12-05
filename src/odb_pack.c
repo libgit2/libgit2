@@ -569,6 +569,7 @@ int git_odb_backend_one_pack(git_odb_backend **backend_out, const char *idx)
 
 	backend = git__calloc(1, sizeof(struct pack_backend));
 	GITERR_CHECK_ALLOC(backend);
+	backend->parent.version = GIT_ODB_BACKEND_VERSION;
 
 	if (git_vector_init(&backend->packs, 1, NULL) < 0)
 		goto on_error;
@@ -601,6 +602,7 @@ int git_odb_backend_pack(git_odb_backend **backend_out, const char *objects_dir)
 
 	backend = git__calloc(1, sizeof(struct pack_backend));
 	GITERR_CHECK_ALLOC(backend);
+	backend->parent.version = GIT_ODB_BACKEND_VERSION;
 
 	if (git_vector_init(&backend->packs, 8, packfile_sort__cb) < 0 ||
 		git_buf_joinpath(&path, objects_dir, "pack") < 0)

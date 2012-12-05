@@ -76,7 +76,7 @@ void test_diff_diffiter__iterate_files_2(void)
 void test_diff_diffiter__iterate_files_and_hunks(void)
 {
 	git_repository *repo = cl_git_sandbox_init("status");
-	git_diff_options opts = {0};
+	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
 	git_diff_list *diff = NULL;
 	size_t d, num_d;
 	int file_count = 0, hunk_count = 0;
@@ -129,7 +129,7 @@ void test_diff_diffiter__iterate_files_and_hunks(void)
 void test_diff_diffiter__max_size_threshold(void)
 {
 	git_repository *repo = cl_git_sandbox_init("status");
-	git_diff_options opts = {0};
+	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
 	git_diff_list *diff = NULL;
 	int file_count = 0, binary_count = 0, hunk_count = 0;
 	size_t d, num_d;
@@ -207,7 +207,7 @@ void test_diff_diffiter__max_size_threshold(void)
 void test_diff_diffiter__iterate_all(void)
 {
 	git_repository *repo = cl_git_sandbox_init("status");
-	git_diff_options opts = {0};
+	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
 	git_diff_list *diff = NULL;
 	diff_expects exp = {0};
 	size_t d, num_d;
@@ -280,7 +280,7 @@ static void iterate_over_patch(git_diff_patch *patch, diff_expects *exp)
 void test_diff_diffiter__iterate_randomly_while_saving_state(void)
 {
 	git_repository *repo = cl_git_sandbox_init("status");
-	git_diff_options opts = {0};
+	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
 	git_diff_list *diff = NULL;
 	diff_expects exp = {0};
 	git_diff_patch *patches[PATCH_CACHE];
@@ -441,3 +441,25 @@ void test_diff_diffiter__iterate_and_generate_patch_text(void)
 
 	git_diff_list_free(diff);
 }
+
+void test_diff_diffiter__checks_options_version(void)
+{
+	git_repository *repo = cl_git_sandbox_init("status");
+	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
+	git_diff_list *diff = NULL;
+	const git_error *err;
+
+	opts.version = 0;
+	opts.flags |= GIT_DIFF_INCLUDE_IGNORED | GIT_DIFF_INCLUDE_UNTRACKED;
+
+	cl_git_fail(git_diff_workdir_to_index(&diff, repo, NULL, &opts));
+	err = giterr_last();
+	cl_assert_equal_i(GITERR_INVALID, err->klass);
+
+	giterr_clear();
+	opts.version = 1024;
+	cl_git_fail(git_diff_workdir_to_index(&diff, repo, NULL, &opts));
+	err = giterr_last();
+	cl_assert_equal_i(GITERR_INVALID, err->klass);
+}
+

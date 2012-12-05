@@ -239,6 +239,7 @@ typedef enum {
  *        will be added pointing to this URL.
  */
 typedef struct {
+	unsigned int version;
 	uint32_t    flags;
 	uint32_t    mode;
 	const char *workdir_path;
@@ -247,6 +248,9 @@ typedef struct {
 	const char *initial_head;
 	const char *origin_url;
 } git_repository_init_options;
+
+#define GIT_REPOSITORY_INIT_OPTIONS_VERSION 1
+#define GIT_REPOSITORY_INIT_OPTIONS_INIT {GIT_REPOSITORY_INIT_OPTIONS_VERSION, 0}
 
 /**
  * Create a new Git repository in the given folder with extended controls.

@@ -82,6 +82,7 @@ typedef enum {
 typedef void (*git_transport_message_cb)(const char *str, int len, void *data);
 
 typedef struct git_transport {
+	unsigned int version;
 	/* Set progress and error callbacks */
 	int (*set_callbacks)(struct git_transport *transport,
 		git_transport_message_cb progress_cb,
@@ -139,6 +140,9 @@ typedef struct git_transport {
 	/* Frees/destructs the git_transport object. */
 	void (*free)(struct git_transport *transport);
 } git_transport;
+
+#define GIT_TRANSPORT_VERSION 1
+#define GIT_TRANSPORT_INIT {GIT_TRANSPORT_VERSION, 0}
 
 /**
  * Function to use to create a transport from a URL. The transport database
@@ -284,6 +288,7 @@ typedef int (*git_smart_subtransport_cb)(
 typedef struct git_smart_subtransport_definition {
 	/* The function to use to create the git_smart_subtransport */
 	git_smart_subtransport_cb callback;
+
 	/* True if the protocol is stateless; false otherwise. For example,
 	 * http:// is stateless, but git:// is not. */
 	unsigned rpc : 1;

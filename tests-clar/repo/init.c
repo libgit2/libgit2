@@ -304,8 +304,7 @@ void test_repo_init__sets_logAllRefUpdates_according_to_type_of_repository(void)
 
 void test_repo_init__extended_0(void)
 {
-	git_repository_init_options opts;
-	memset(&opts, 0, sizeof(opts));
+	git_repository_init_options opts = GIT_REPOSITORY_INIT_OPTIONS_INIT;
 
 	/* without MKDIR this should fail */
 	cl_git_fail(git_repository_init_ext(&_repo, "extended", &opts));
@@ -327,8 +326,7 @@ void test_repo_init__extended_1(void)
 	git_reference *ref;
 	git_remote *remote;
 	struct stat st;
-	git_repository_init_options opts;
-	memset(&opts, 0, sizeof(opts));
+	git_repository_init_options opts = GIT_REPOSITORY_INIT_OPTIONS_INIT;
 
 	opts.flags = GIT_REPOSITORY_INIT_MKPATH |
 		GIT_REPOSITORY_INIT_NO_DOTGIT_DIR;
@@ -367,8 +365,7 @@ void test_repo_init__extended_1(void)
 
 void test_repo_init__extended_with_template(void)
 {
-	git_repository_init_options opts;
-	memset(&opts, 0, sizeof(opts));
+	git_repository_init_options opts = GIT_REPOSITORY_INIT_OPTIONS_INIT;
 
 	opts.flags = GIT_REPOSITORY_INIT_MKPATH | GIT_REPOSITORY_INIT_BARE;
 	opts.template_path = cl_fixture("template");

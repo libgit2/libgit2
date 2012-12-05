@@ -69,7 +69,7 @@ int git_reset(
 	git_index *index = NULL;
 	git_tree *tree = NULL;
 	int error = -1;
-	git_checkout_opts opts;
+	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
 
 	assert(repo && target);
 	assert(reset_type == GIT_RESET_SOFT
@@ -136,7 +136,6 @@ int git_reset(
 		goto cleanup;
 	}
 
-	memset(&opts, 0, sizeof(opts));
 	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
 
 	if (git_checkout_index(repo, NULL, &opts) < 0) {

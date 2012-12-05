@@ -187,7 +187,8 @@ static int normalize_find_opts(
 	if (given != NULL)
 		memcpy(opts, given, sizeof(*opts));
 	else {
-		memset(opts, 0, sizeof(*opts));
+		git_diff_find_options init = GIT_DIFF_FIND_OPTIONS_INIT;
+		memmove(opts, &init, sizeof(init));
 
 		opts->flags = GIT_DIFF_FIND_RENAMES;
 
@@ -197,6 +198,8 @@ static int normalize_find_opts(
 			(!strcasecmp(val, "copies") || !strcasecmp(val, "copy")))
 			opts->flags = GIT_DIFF_FIND_RENAMES | GIT_DIFF_FIND_COPIES;
 	}
+
+	GITERR_CHECK_VERSION(opts, GIT_DIFF_FIND_OPTIONS_VERSION, "git_diff_find_options");
 
 	/* some flags imply others */
 

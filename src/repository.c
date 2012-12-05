@@ -1151,9 +1151,8 @@ static int repo_init_create_origin(git_repository *repo, const char *url)
 int git_repository_init(
 	git_repository **repo_out, const char *path, unsigned is_bare)
 {
-	git_repository_init_options opts;
+	git_repository_init_options opts = GIT_REPOSITORY_INIT_OPTIONS_INIT;
 
-	memset(&opts, 0, sizeof(opts));
 	opts.flags = GIT_REPOSITORY_INIT_MKPATH; /* don't love this default */
 	if (is_bare)
 		opts.flags |= GIT_REPOSITORY_INIT_BARE;
@@ -1170,6 +1169,8 @@ int git_repository_init_ext(
 	git_buf repo_path = GIT_BUF_INIT, wd_path = GIT_BUF_INIT;
 
 	assert(out && given_repo && opts);
+
+	GITERR_CHECK_VERSION(opts, GIT_REPOSITORY_INIT_OPTIONS_VERSION, "git_repository_init_options");
 
 	error = repo_init_directories(&repo_path, &wd_path, given_repo, opts);
 	if (error < 0)

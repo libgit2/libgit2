@@ -14,6 +14,7 @@
 #include "git2/stash.h"
 #include "git2/status.h"
 #include "git2/checkout.h"
+#include "signature.h"
 
 static int create_error(int error, const char *msg)
 {
@@ -229,7 +230,7 @@ static int build_untracked_tree(
 {
 	git_tree *i_tree = NULL;
 	git_diff_list *diff = NULL;
-	git_diff_options opts = {0};
+	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
 	struct cb_data data = {0};
 	int error = -1;
 
@@ -315,7 +316,7 @@ static int build_workdir_tree(
 	git_repository *repo = git_index_owner(index);
 	git_tree *b_tree = NULL;
 	git_diff_list *diff = NULL, *diff2 = NULL;
-	git_diff_options opts = {0};
+	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
 	struct cb_data data = {0};
 	int error = -1;
 
@@ -471,9 +472,8 @@ static int ensure_there_are_changes_to_stash(
 	bool include_ignored_files)
 {
 	int error;
-	git_status_options opts;
+	git_status_options opts = GIT_STATUS_OPTIONS_INIT;
 
-	memset(&opts, 0, sizeof(opts));
 	opts.show  = GIT_STATUS_SHOW_INDEX_AND_WORKDIR;
 	if (include_untracked_files)
 		opts.flags = GIT_STATUS_OPT_INCLUDE_UNTRACKED |
@@ -498,9 +498,7 @@ static int reset_index_and_workdir(
 	git_commit *commit,
 	bool remove_untracked)
 {
-	git_checkout_opts opts;
-
-	memset(&opts, 0, sizeof(git_checkout_opts));
+	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
 
 	opts.checkout_strategy =
 		GIT_CHECKOUT_UPDATE_MODIFIED | GIT_CHECKOUT_UPDATE_UNTRACKED;

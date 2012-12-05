@@ -20,7 +20,7 @@ void test_diff_index__0(void)
 	const char *b_commit = "0017bd4ab1ec3"; /* the start */
 	git_tree *a = resolve_commit_oid_to_tree(g_repo, a_commit);
 	git_tree *b = resolve_commit_oid_to_tree(g_repo, b_commit);
-	git_diff_options opts = {0};
+	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
 	git_diff_list *diff = NULL;
 	diff_expects exp;
 
@@ -113,7 +113,7 @@ void test_diff_index__1(void)
 	const char *b_commit = "0017bd4ab1ec3"; /* the start */
 	git_tree *a = resolve_commit_oid_to_tree(g_repo, a_commit);
 	git_tree *b = resolve_commit_oid_to_tree(g_repo, b_commit);
-	git_diff_options opts = {0};
+	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
 	git_diff_list *diff = NULL;
 	diff_expects exp;
 
@@ -140,3 +140,24 @@ void test_diff_index__1(void)
 	git_tree_free(a);
 	git_tree_free(b);
 }
+
+void test_diff_index__checks_options_version(void)
+{
+	const char *a_commit = "26a125ee1bf";
+	git_tree *a = resolve_commit_oid_to_tree(g_repo, a_commit);
+	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
+	git_diff_list *diff;
+	const git_error *err;
+
+	opts.version = 0;
+	cl_git_fail(git_diff_index_to_tree(&diff, g_repo, a, NULL, &opts));
+	err = giterr_last();
+	cl_assert_equal_i(GITERR_INVALID, err->klass);
+
+	giterr_clear();
+	opts.version = 1024;
+	cl_git_fail(git_diff_index_to_tree(&diff, g_repo, a, NULL, &opts));
+	err = giterr_last();
+	cl_assert_equal_i(GITERR_INVALID, err->klass);
+}
+

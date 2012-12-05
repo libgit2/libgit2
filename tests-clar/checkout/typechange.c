@@ -38,7 +38,7 @@ void test_checkout_typechange__checkout_typechanges(void)
 {
 	int i;
 	git_object *obj;
-	git_checkout_opts opts = {0};
+	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
 
 	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
 
