@@ -70,11 +70,12 @@ int giterr_set_regex(const regex_t *regex, int error_code);
  */
 GIT_INLINE(bool) giterr__check_version(const void *structure, unsigned int expected_max, const char *name)
 {
-	unsigned int actual = *(const unsigned int*)structure;
+	unsigned int actual;
 
 	if (!structure)
 		return true;
 
+	actual = *(const unsigned int*)structure;
 	if (actual > 0 && actual <= expected_max)
 		return true;
 
