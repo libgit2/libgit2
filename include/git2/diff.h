@@ -17,12 +17,44 @@
  * @file git2/diff.h
  * @brief Git tree and file differencing routines.
  *
+ * Overview
+ * --------
+ *
  * Calculating diffs is generally done in two phases: building a diff list
  * then traversing the diff list.  This makes is easier to share logic
  * across the various types of diffs (tree vs tree, workdir vs index, etc.),
  * and also allows you to insert optional diff list post-processing phases,
  * such as rename detected, in between the steps.  When you are done with a
  * diff list object, it must be freed.
+ *
+ * Terminology
+ * -----------
+ *
+ * To understand the diff APIs, you should know the following terms:
+ *
+ * - A `diff` or `diff list` represents the cumulative list of differences
+ *   between two snapshots of a repository (possibly filtered by a set of
+ *   file name patterns).  This is the `git_diff_list` object.
+ * - A `delta` is a file pair with an old and new revision.  The old version
+ *   may be absent if the file was just created and the new version may be
+ *   absent if the file was deleted.  A diff is mostly just a list of deltas.
+ * - A `binary` file / delta is a file (or pair) for which no text diffs
+ *   should be generated.  A diff list can contain delta entries that are
+ *   binary, but no diff content will be output for those files.  There is
+ *   a base heuristic for binary detection and you can further tune the
+ *   behavior with git attributes or diff flags and option settings.
+ * - A `hunk` is a span of modified lines in a delta along with some stable
+ *   surrounding context.  You can configure the amount of context and other
+ *   properties of how hunks are generated.  Each hunk also comes with a
+ *   header that described where it starts and ends in both the old and new
+ *   versions in the delta.
+ * - A `line` is a range of characters inside a hunk.  It could be a context
+ *   line (i.e. in both old and new versions), an added line (i.e. only in
+ *   the new version), or a removed line (i.e. only in the old version).
+ *   Unfortunately, we don't know anything about the encoding of data in the
+ *   file being diffed, so we cannot tell you much about the line content.
+ *   Line data will not be NUL-byte terminated, however, because it will be
+ *   just a span of bytes inside the larger file.
  *
  * @ingroup Git
  * @{
@@ -97,21 +129,25 @@ typedef enum {
  * values.  Similarly, passing NULL for the options structure will
  * give the defaults.  The default values are marked below.
  *
- * - flags: a combination of the git_diff_option_t values above
- * - context_lines: number of lines of context to show around diffs
- * - interhunk_lines: min lines between diff hunks to merge them
- * - old_prefix: "directory" to prefix to old file names (default "a")
- * - new_prefix: "directory" to prefix to new file names (default "b")
- * - pathspec: array of paths / patterns to constrain diff
- * - max_size: maximum blob size to diff, above this treated as binary
+ * - `flags` is a combination of the `git_diff_option_t` values above
+ * - `context_lines` is the number of unchanged lines that define the
+ *    boundary of a hunk (and to display before and after)
+ * - `interhunk_lines` is the maximum number of unchanged lines between
+ *    hunk boundaries before the hunks will be merged into a one.
+ * - `old_prefix` is the virtual "directory" to prefix to old file names
+ *   in hunk headers (default "a")
+ * - `new_prefix` is the virtual "directory" to prefix to new file names
+ *   in hunk headers (default "b")
+ * - `pathspec` is an array of paths / fnmatch patterns to constrain diff
+ * - `max_size` is a file size above which a blob will be marked as binary
  */
 typedef struct {
 	unsigned int version;      /**< version for the struct */
 	uint32_t flags;            /**< defaults to GIT_DIFF_NORMAL */
 	uint16_t context_lines;    /**< defaults to 3 */
 	uint16_t interhunk_lines;  /**< defaults to 0 */
-	char *old_prefix;          /**< defaults to "a" */
-	char *new_prefix;          /**< defaults to "b" */
+	const char *old_prefix;    /**< defaults to "a" */
+	const char *new_prefix;    /**< defaults to "b" */
 	git_strarray pathspec;     /**< defaults to show all paths */
 	git_off_t max_size;        /**< defaults to 512mb */
 } git_diff_options;
@@ -142,6 +178,13 @@ typedef enum {
 
 /**
  * What type of change is described by a git_diff_delta?
+ *
+ * `GIT_DELTA_RENAMED` and `GIT_DELTA_COPIED` will only show up if you run
+ * `git_diff_find_similar()` on the diff list object.
+ *
+ * `GIT_DELTA_TYPECHANGE` only shows up given `GIT_DIFF_INCLUDE_TYPECHANGE`
+ * in the option flags (otherwise type changes will be split into ADDED /
+ * DELETED pairs).
  */
 typedef enum {
 	GIT_DELTA_UNMODIFIED = 0,
@@ -157,6 +200,21 @@ typedef enum {
 
 /**
  * Description of one side of a diff.
+ *
+ * The `oid` is the `git_oid` of the item.  If it represents an absent side
+ * of a diff (e.g. the `old_file` of a `GIT_DELTA_ADDED` delta), then the
+ * oid will be zeroes.
+ *
+ * `path` is the NUL-terminated path to the file relative to the working
+ * directory of the repository.
+ *
+ * `size` is the size of the file in bytes.
+ *
+ * `flags` is a combination of the `git_diff_file_flag_t` types, but those
+ * are largely internal values.
+ *
+ * `mode` is, roughly, the stat() st_mode value for the item.  This will be
+ * restricted to one of the `git_filemode_t` values.
  */
 typedef struct {
 	git_oid oid;
