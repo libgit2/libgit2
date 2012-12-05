@@ -372,7 +372,6 @@ static int packfile_unpack_delta(
 	{
 		git_odb_object *object;
 		git_oid id;
-		pack_entry_find_oid(&id, p, base_offset);
 		error = pack_entry_find_oid(&id, p, base_offset);
 		if (error < 0)
 			error = git_packfile_unpack(&base, p, &base_offset);
@@ -898,7 +897,7 @@ static int pack_entry_find_oid(
 			git_oid_cpy(found_oid, p->oids[mid]);
 			return 0;
 		}
-		if (found_offset < offset)
+		if (found_offset > offset)
 			hi = mid;
 		else
 			lo = mid + 1;
