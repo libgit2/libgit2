@@ -68,21 +68,21 @@ int giterr_set_regex(const regex_t *regex, int error_code);
 /**
  * Check a versioned structure for validity
  */
-GIT_INLINE(bool) giterr__check_version(const void *structure, unsigned int expected_max, const char *name)
+GIT_INLINE(int) giterr__check_version(const void *structure, unsigned int expected_max, const char *name)
 {
 	unsigned int actual;
 
 	if (!structure)
-		return true;
+		return 0;
 
 	actual = *(const unsigned int*)structure;
 	if (actual > 0 && actual <= expected_max)
-		return true;
+		return 0;
 
 	giterr_set(GITERR_INVALID, "Invalid version %d on %s", actual, name);
-	return false;
+	return -1;
 }
-#define GITERR_CHECK_VERSION(S,V,N) if (!giterr__check_version(S,V,N)) return -1
+#define GITERR_CHECK_VERSION(S,V,N) if (giterr__check_version(S,V,N) < 0) return -1
 
 /**
  * Initialize a structure with a version.
