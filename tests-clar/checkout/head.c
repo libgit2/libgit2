@@ -14,7 +14,7 @@ void test_checkout_head__cleanup(void)
 	cl_git_sandbox_cleanup();
 }
 
-void test_checkout_head__checking_out_an_orphaned_head_returns_GIT_EORPHANEDHEAD(void)
+void test_checkout_head__orphaned_head_returns_GIT_EORPHANEDHEAD(void)
 {
 	make_head_orphaned(g_repo, NON_EXISTING_HEAD);
 

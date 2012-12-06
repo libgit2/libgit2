@@ -54,9 +54,7 @@ void test_reset_hard__resetting_reverts_modified_files(void)
 	static const char *after[4] = {
 		"current_file\n",
 		"modified_file\n",
-		/* wrong value because reset is still slightly incorrect */
-		"staged_new_file\n",
-		/* right value: NULL, */
+		NULL,
 		"staged_changes_modified_file\n"
 	};
 	const char *wd = git_repository_workdir(repo);

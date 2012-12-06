@@ -500,8 +500,7 @@ static int reset_index_and_workdir(
 {
 	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
 
-	opts.checkout_strategy =
-		GIT_CHECKOUT_UPDATE_MODIFIED | GIT_CHECKOUT_UPDATE_UNTRACKED;
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
 
 	if (remove_untracked)
 		opts.checkout_strategy |= GIT_CHECKOUT_REMOVE_UNTRACKED;

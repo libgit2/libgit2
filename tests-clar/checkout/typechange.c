@@ -42,11 +42,6 @@ void test_checkout_typechange__checkout_typechanges(void)
 
 	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
 
-	/* if you don't include GIT_CHECKOUT_REMOVE_UNTRACKED then on the final
-	 * checkout which is supposed to remove all the files, we will not
-	 * actually remove them!
-	 */
-
 	for (i = 0; g_typechange_oids[i] != NULL; ++i) {
 		cl_git_pass(git_revparse_single(&obj, g_repo, g_typechange_oids[i]));
 		/* fprintf(stderr, "checking out '%s'\n", g_typechange_oids[i]); */
