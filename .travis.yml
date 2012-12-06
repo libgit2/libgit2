@@ -47,4 +47,7 @@ notifications:
   on_success: change
   on_failure: always
  campfire:
-  secure: "vYg2VryQK0aXSvS+ui3UT6cHQvE7bzj7Pvdx+hTMM8S5iSkP+VhM+ePMKorm\nh3+4W+fB2oqUdGdqERpemhRN+zklBsxYJoI5f2gvSWZlhR/gfNHlb8Vvsiir\nPV3BrwPMU+fVYuKdroOx9DmrEQy1Qp2/GSbFGUDaj/o1lypZ7zQ="
+  on_success: always
+  on_failure: always
+  rooms:
+   - secure: "vYg2VryQK0aXSvS+ui3UT6cHQvE7bzj7Pvdx+hTMM8S5iSkP+VhM+ePMKorm\nh3+4W+fB2oqUdGdqERpemhRN+zklBsxYJoI5f2gvSWZlhR/gfNHlb8Vvsiir\nPV3BrwPMU+fVYuKdroOx9DmrEQy1Qp2/GSbFGUDaj/o1lypZ7zQ="
