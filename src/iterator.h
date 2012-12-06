@@ -28,32 +28,33 @@ typedef enum {
 
 struct git_iterator {
 	git_iterator_type_t type;
+	git_repository *repo;
 	char *start;
 	char *end;
+	bool ignore_case;
+
 	int (*current)(git_iterator *, const git_index_entry **);
 	int (*at_end)(git_iterator *);
 	int (*advance)(git_iterator *, const git_index_entry **);
 	int (*seek)(git_iterator *, const char *prefix);
 	int (*reset)(git_iterator *);
 	void (*free)(git_iterator *);
-	unsigned int ignore_case:1;
 };
 
 extern int git_iterator_for_nothing(git_iterator **iter);
 
 extern int git_iterator_for_tree_range(
-	git_iterator **iter, git_repository *repo, git_tree *tree,
+	git_iterator **iter, git_tree *tree,
 	const char *start, const char *end);
 
 GIT_INLINE(int) git_iterator_for_tree(
-	git_iterator **iter, git_repository *repo, git_tree *tree)
+	git_iterator **iter, git_tree *tree)
 {
-	return git_iterator_for_tree_range(iter, repo, tree, NULL, NULL);
+	return git_iterator_for_tree_range(iter, tree, NULL, NULL);
 }
 
 extern int git_iterator_for_index_range(
-	git_iterator **iter, git_index *index,
-	const char *start, const char *end);
+	git_iterator **iter, git_index *index, const char *start, const char *end);
 
 GIT_INLINE(int) git_iterator_for_index(
 	git_iterator **iter, git_index *index)
@@ -90,7 +91,8 @@ GIT_INLINE(int) git_iterator_spoolandsort(
 	git_iterator **iter, git_iterator *towrap,
 	git_vector_cmp comparer, bool ignore_case)
 {
-	return git_iterator_spoolandsort_range(iter, towrap, comparer, ignore_case, NULL, NULL);
+	return git_iterator_spoolandsort_range(
+		iter, towrap, comparer, ignore_case, NULL, NULL);
 }
 
 /* Entry is not guaranteed to be fully populated.  For a tree iterator,
@@ -147,6 +149,11 @@ GIT_INLINE(void) git_iterator_free(git_iterator *iter)
 GIT_INLINE(git_iterator_type_t) git_iterator_type(git_iterator *iter)
 {
 	return iter->type;
+}
+
+GIT_INLINE(git_repository *) git_iterator_owner(git_iterator *iter)
+{
+	return iter->repo;
 }
 
 extern int git_iterator_current_tree_entry(

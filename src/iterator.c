@@ -18,7 +18,7 @@
 	(P)->base.type    = GIT_ITERATOR_ ## NAME_UC; \
 	(P)->base.start   = start ? git__strdup(start) : NULL; \
 	(P)->base.end     = end ? git__strdup(end) : NULL; \
-	(P)->base.ignore_case = 0; \
+	(P)->base.ignore_case = false; \
 	(P)->base.current = NAME_LC ## _iterator__current; \
 	(P)->base.at_end  = NAME_LC ## _iterator__at_end; \
 	(P)->base.advance = NAME_LC ## _iterator__advance; \
@@ -91,7 +91,6 @@ struct tree_iterator_frame {
 
 typedef struct {
 	git_iterator base;
-	git_repository *repo;
 	tree_iterator_frame *stack, *tail;
 	git_index_entry entry;
 	git_buf path;
@@ -205,7 +204,7 @@ static int tree_iterator__expand_tree(tree_iterator *ti)
 			git__prefixcmp(ti->path.ptr, ti->base.end) > 0)
 			return tree_iterator__to_end(ti);
 
-		if ((error = git_tree_lookup(&subtree, ti->repo, &te->oid)) < 0)
+		if ((error = git_tree_lookup(&subtree, ti->base.repo, &te->oid)) < 0)
 			return error;
 
 		relpath = NULL;
@@ -302,7 +301,6 @@ static int tree_iterator__reset(git_iterator *self)
 
 int git_iterator_for_tree_range(
 	git_iterator **iter,
-	git_repository *repo,
 	git_tree *tree,
 	const char *start,
 	const char *end)
@@ -315,7 +313,7 @@ int git_iterator_for_tree_range(
 
 	ITERATOR_BASE_INIT(ti, tree, TREE);
 
-	ti->repo  = repo;
+	ti->base.repo = git_tree_owner(tree);
 	ti->stack = ti->tail = tree_iterator__alloc_frame(tree, ti->base.start);
 
 	if ((error = tree_iterator__expand_tree(ti)) < 0)
@@ -424,6 +422,7 @@ int git_iterator_for_index_range(
 	ITERATOR_BASE_INIT(ii, index, INDEX);
 
 	ii->index = index;
+	ii->base.repo = git_index_owner(index);
 	ii->base.ignore_case = ii->index->ignore_case;
 
 	index_iterator__reset((git_iterator *)ii);
@@ -461,7 +460,6 @@ struct workdir_iterator_frame {
 
 typedef struct {
 	git_iterator base;
-	git_repository *repo;
 	size_t root_len;
 	workdir_iterator_frame *stack;
 	git_ignores ignores;
@@ -716,7 +714,7 @@ static int workdir_iterator__update_entry(workdir_iterator *wi)
 
 	/* detect submodules */
 	if (S_ISDIR(wi->entry.mode)) {
-		int res = git_submodule_lookup(NULL, wi->repo, wi->entry.path);
+		int res = git_submodule_lookup(NULL, wi->base.repo, wi->entry.path);
 		bool is_submodule = (res == 0);
 		if (res == GIT_ENOTFOUND)
 			giterr_clear();
@@ -750,7 +748,7 @@ int git_iterator_for_workdir_range(
 		return error;
 
 	ITERATOR_BASE_INIT(wi, workdir, WORKDIR);
-	wi->repo = repo;
+	wi->base.repo = repo;
 
 	if ((error = git_repository_index__weakptr(&index, repo)) < 0) {
 		git__free(wi);

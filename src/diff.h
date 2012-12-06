@@ -61,6 +61,12 @@ extern bool git_diff_delta__should_skip(
 extern int git_diff__oid_for_file(
 	git_repository *, const char *, uint16_t, git_off_t, git_oid *);
 
+extern int git_diff__from_iterators(
+	git_diff_list **diff_ptr,
+	git_repository *repo,
+	git_iterator *old_iter,
+	git_iterator *new_iter,
+	const git_diff_options *opts);
 
 #endif
 
