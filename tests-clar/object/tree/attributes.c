@@ -34,14 +34,14 @@ void test_object_tree_attributes__group_writable_tree_entries_created_with_an_an
 
 	entry = git_tree_entry_byname(tree, "old_mode.txt");
 	cl_assert_equal_i(
-		GIT_FILEMODE_BLOB_GROUP_WRITABLE,
+		GIT_FILEMODE_BLOB,
 		git_tree_entry_filemode(entry));
 
 	git_tree_free(tree);
 	git_repository_free(repo);
 }
 
-void test_object_tree_attributes__normalize_attributes_when_inserting_in_a_new_tree(void)
+void test_object_tree_attributes__treebuilder_reject_invalid_filemode(void)
 {
 	git_repository *repo;
 	git_treebuilder *builder;
@@ -55,28 +55,14 @@ void test_object_tree_attributes__normalize_attributes_when_inserting_in_a_new_t
 
 	cl_git_pass(git_treebuilder_create(&builder, NULL));
 
-	cl_git_pass(git_treebuilder_insert(
+	cl_git_fail(git_treebuilder_insert(
 		&entry,
 		builder,
 		"normalized.txt",
 		&bid,
 		GIT_FILEMODE_BLOB_GROUP_WRITABLE));
 
-	cl_assert_equal_i(
-		GIT_FILEMODE_BLOB,
-		git_tree_entry_filemode(entry));
-	
-	cl_git_pass(git_treebuilder_write(&tid, repo, builder));
 	git_treebuilder_free(builder);
-
-	cl_git_pass(git_tree_lookup(&tree, repo, &tid));
-
-	entry = git_tree_entry_byname(tree, "normalized.txt");
-	cl_assert_equal_i(
-		GIT_FILEMODE_BLOB,
-		git_tree_entry_filemode(entry));
-
-	git_tree_free(tree);
 	cl_git_sandbox_cleanup();
 }
 
@@ -109,6 +95,25 @@ void test_object_tree_attributes__normalize_attributes_when_creating_a_tree_from
 	cl_assert_equal_i(
 		GIT_FILEMODE_BLOB,
 		git_tree_entry_filemode(entry));
+
+	git_tree_free(tree);
+	cl_git_sandbox_cleanup();
+}
+
+void test_object_tree_attributes__normalize_600(void)
+{
+	git_oid id;
+	git_tree *tree;
+	git_repository *repo;
+	const git_tree_entry *entry;
+
+	repo = cl_git_sandbox_init("deprecated-mode.git");
+
+	git_oid_fromstr(&id, "0810fb7818088ff5ac41ee49199b51473b1bd6c7");
+	cl_git_pass(git_tree_lookup(&tree, repo, &id));
+
+	entry = git_tree_entry_byname(tree, "ListaTeste.xml");
+	cl_assert_equal_i(entry->attr, GIT_FILEMODE_BLOB);
 
 	git_tree_free(tree);
 	cl_git_sandbox_cleanup();
