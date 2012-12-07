@@ -165,7 +165,7 @@ typedef struct {
 } git_status_options;
 
 #define GIT_STATUS_OPTIONS_VERSION 1
-#define GIT_STATUS_OPTIONS_INIT {GIT_STATUS_OPTIONS_VERSION, 0}
+#define GIT_STATUS_OPTIONS_INIT {GIT_STATUS_OPTIONS_VERSION}
 
 /**
  * Gather file status information and run callbacks as requested.

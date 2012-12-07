@@ -64,7 +64,7 @@ struct git_config_backend {
 	void (*free)(struct git_config_backend *);
 };
 #define GIT_CONFIG_BACKEND_VERSION 1
-#define GIT_CONFIG_BACKEND_INIT {GIT_CONFIG_BACKEND_VERSION, 0}
+#define GIT_CONFIG_BACKEND_INIT {GIT_CONFIG_BACKEND_VERSION}
 
 typedef enum {
 	GIT_CVAR_FALSE = 0,

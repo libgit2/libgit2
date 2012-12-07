@@ -187,7 +187,7 @@ typedef struct git_checkout_opts {
 } git_checkout_opts;
 
 #define GIT_CHECKOUT_OPTS_VERSION 1
-#define GIT_CHECKOUT_OPTS_INIT {GIT_CHECKOUT_OPTS_VERSION, 0}
+#define GIT_CHECKOUT_OPTS_INIT {GIT_CHECKOUT_OPTS_VERSION}
 
 /**
  * Updates files in the index and the working tree to match the content of the

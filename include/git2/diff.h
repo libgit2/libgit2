@@ -153,7 +153,7 @@ typedef struct {
 } git_diff_options;
 
 #define GIT_DIFF_OPTIONS_VERSION 1
-#define GIT_DIFF_OPTIONS_INIT {GIT_DIFF_OPTIONS_VERSION, 0}
+#define GIT_DIFF_OPTIONS_INIT {GIT_DIFF_OPTIONS_VERSION}
 
 /**
  * The diff list object that contains all individual file deltas.
@@ -366,7 +366,7 @@ typedef struct {
 } git_diff_find_options;
 
 #define GIT_DIFF_FIND_OPTIONS_VERSION 1
-#define GIT_DIFF_FIND_OPTIONS_INIT {GIT_DIFF_FIND_OPTIONS_VERSION, 0}
+#define GIT_DIFF_FIND_OPTIONS_INIT {GIT_DIFF_FIND_OPTIONS_VERSION}
 
 /** @name Diff List Generator Functions
  *

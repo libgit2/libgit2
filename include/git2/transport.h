@@ -142,7 +142,7 @@ typedef struct git_transport {
 } git_transport;
 
 #define GIT_TRANSPORT_VERSION 1
-#define GIT_TRANSPORT_INIT {GIT_TRANSPORT_VERSION, 0}
+#define GIT_TRANSPORT_INIT {GIT_TRANSPORT_VERSION}
 
 /**
  * Function to use to create a transport from a URL. The transport database

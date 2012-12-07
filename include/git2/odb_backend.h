@@ -100,7 +100,7 @@ struct git_odb_backend {
 };
 
 #define GIT_ODB_BACKEND_VERSION 1
-#define GIT_ODB_BACKEND_INIT {GIT_ODB_BACKEND_VERSION, 0}
+#define GIT_ODB_BACKEND_INIT {GIT_ODB_BACKEND_VERSION}
 
 /** Streaming mode */
 enum {

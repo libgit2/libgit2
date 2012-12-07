@@ -355,7 +355,7 @@ struct git_remote_callbacks {
 };
 
 #define GIT_REMOTE_CALLBACKS_VERSION 1
-#define GIT_REMOTE_CALLBACKS_INIT {GIT_REMOTE_CALLBACKS_VERSION, 0}
+#define GIT_REMOTE_CALLBACKS_INIT {GIT_REMOTE_CALLBACKS_VERSION}
 
 /**
  * Set the callbacks for a remote
