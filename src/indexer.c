@@ -38,15 +38,20 @@ struct git_indexer {
 
 struct git_indexer_stream {
 	unsigned int parsed_header :1,
-		opened_pack;
+		opened_pack :1,
+		have_stream :1,
+		have_delta :1;
 	struct git_pack_file *pack;
 	git_filebuf pack_file;
 	git_filebuf index_file;
 	git_off_t off;
+	git_off_t entry_start;
+	git_packfile_stream stream;
 	size_t nr_objects;
 	git_vector objects;
 	git_vector deltas;
 	unsigned int fanout[256];
+	git_hash_ctx hash_ctx;
 	git_oid hash;
 	git_transfer_progress_callback progress_cb;
 	void *progress_payload;
@@ -176,39 +181,13 @@ cleanup:
 }
 
 /* Try to store the delta so we can try to resolve it later */
-static int store_delta(git_indexer_stream *idx, git_off_t entry_start, size_t entry_size, git_otype type)
+static int store_delta(git_indexer_stream *idx)
 {
-	git_mwindow *w = NULL;
 	struct delta_info *delta;
-	git_rawobj obj;
-	int error;
-
-	assert(type == GIT_OBJ_REF_DELTA || type == GIT_OBJ_OFS_DELTA);
-
-	if (type == GIT_OBJ_REF_DELTA) {
-		idx->off += GIT_OID_RAWSZ;
-	} else {
-		git_off_t base_off;
-
-		base_off = get_delta_base(idx->pack, &w, &idx->off, type, entry_start);
-		git_mwindow_close(&w);
-		if (base_off < 0)
-			return (int)base_off;
-	}
-
-	error = packfile_unpack_compressed(&obj, idx->pack, &w, &idx->off, entry_size, type);
-	if (error == GIT_EBUFS) {
-		idx->off = entry_start;
-		return GIT_EBUFS;
-	} else if (error < 0){
-		return -1;
-	}
 
 	delta = git__calloc(1, sizeof(struct delta_info));
 	GITERR_CHECK_ALLOC(delta);
-	delta->delta_off = entry_start;
-
-	git__free(obj.data);
+	delta->delta_off = idx->entry_start;
 
 	if (git_vector_insert(&idx->deltas, delta) < 0)
 		return -1;
@@ -216,16 +195,155 @@ static int store_delta(git_indexer_stream *idx, git_off_t entry_start, size_t en
 	return 0;
 }
 
+static void hash_header(git_hash_ctx *ctx, git_off_t len, git_otype type)
+{
+	char buffer[64];
+	size_t hdrlen;
+
+	hdrlen = git_odb__format_object_header(buffer, sizeof(buffer), len, type);
+	git_hash_update(ctx, buffer, hdrlen);
+}
+
+static int hash_object_stream(git_hash_ctx *ctx, git_packfile_stream *stream)
+{
+	char buffer[8*1024];
+	ssize_t read;
+
+	assert(ctx && stream);
+
+	do {
+		if ((read = git_packfile_stream_read(stream, buffer, sizeof(buffer))) < 0)
+			break;
+
+		git_hash_update(ctx, buffer, read);
+	} while (read > 0);
+
+	if (read < 0)
+		return (int)read;
+
+	return 0;
+}
+
+/* In order to create the packfile stream, we need to skip over the delta base description */
+static int advance_delta_offset(git_indexer_stream *idx, git_otype type)
+{
+	git_mwindow *w = NULL;
+
+	assert(type == GIT_OBJ_REF_DELTA || type == GIT_OBJ_OFS_DELTA);
+
+	if (type == GIT_OBJ_REF_DELTA) {
+		idx->off += GIT_OID_RAWSZ;
+	} else {
+		git_off_t base_off = get_delta_base(idx->pack, &w, &idx->off, type, idx->entry_start);
+		git_mwindow_close(&w);
+		if (base_off < 0)
+			return (int)base_off;
+	}
+
+	return 0;
+}
+
+/* Read from the stream and discard any output */
+static int read_object_stream(git_packfile_stream *stream)
+{
+	char buffer[4*1024];
+	ssize_t read;
+
+	assert(stream);
+
+	do {
+		read = git_packfile_stream_read(stream, buffer, sizeof(buffer));
+	} while (read > 0);
+
+	if (read < 0)
+		return (int)read;
+
+	return 0;
+}
+
+static int crc_object(uint32_t *crc_out, git_mwindow_file *mwf, git_off_t start, git_off_t size)
+{
+	void *ptr;
+	uint32_t crc;
+	unsigned int left, len;
+	git_mwindow *w = NULL;
+
+	crc = crc32(0L, Z_NULL, 0);
+	while (size) {
+		ptr = git_mwindow_open(mwf, &w, start, size, &left);
+		if (ptr == NULL)
+			return -1;
+
+		len = min(left, size);
+		crc = crc32(crc, ptr, len);
+		size -= len;
+		start += len;
+		git_mwindow_close(&w);
+	}
+
+	*crc_out = htonl(crc);
+	return 0;
+}
+
+static int store_object(git_indexer_stream *idx)
+{
+	int i;
+	git_oid oid;
+	struct entry *entry;
+	git_off_t entry_size;
+	struct git_pack_entry *pentry;
+	git_hash_ctx *ctx = &idx->hash_ctx;
+	git_off_t entry_start = idx->entry_start;
+
+	entry = git__calloc(1, sizeof(*entry));
+	GITERR_CHECK_ALLOC(entry);
+
+	pentry = git__malloc(sizeof(struct git_pack_entry));
+	GITERR_CHECK_ALLOC(pentry);
+
+	git_hash_final(&oid, ctx);
+	entry_size = idx->off - entry_start;
+	if (entry_start > UINT31_MAX) {
+		entry->offset = UINT32_MAX;
+		entry->offset_long = entry_start;
+	} else {
+		entry->offset = (uint32_t)entry_start;
+	}
+
+	git_oid_cpy(&pentry->sha1, &oid);
+	pentry->offset = entry_start;
+	if (git_vector_insert(&idx->pack->cache, pentry) < 0) {
+		git__free(pentry);
+		goto on_error;
+	}
+
+	git_oid_cpy(&entry->oid, &oid);
+
+	if (crc_object(&entry->crc, &idx->pack->mwf, entry_start, entry_size) < 0)
+		goto on_error;
+
+	/* Add the object to the list */
+	if (git_vector_insert(&idx->objects, entry) < 0)
+		goto on_error;
+
+	for (i = oid.id[0]; i < 256; ++i) {
+		idx->fanout[i]++;
+	}
+
+	return 0;
+
+on_error:
+	git__free(entry);
+
+	return -1;
+}
+
 static int hash_and_save(git_indexer_stream *idx, git_rawobj *obj, git_off_t entry_start)
 {
 	int i;
 	git_oid oid;
-	void *packed;
 	size_t entry_size;
-	unsigned int left;
 	struct entry *entry;
-	git_mwindow *w = NULL;
-	git_mwindow_file *mwf = &idx->pack->mwf;
 	struct git_pack_entry *pentry;
 
 	entry = git__calloc(1, sizeof(*entry));
@@ -258,12 +376,8 @@ static int hash_and_save(git_indexer_stream *idx, git_rawobj *obj, git_off_t ent
 	entry->crc = crc32(0L, Z_NULL, 0);
 
 	entry_size = (size_t)(idx->off - entry_start);
-	packed = git_mwindow_open(mwf, &w, entry_start, entry_size, &left);
-	if (packed == NULL)
+	if (crc_object(&entry->crc, &idx->pack->mwf, entry_start, entry_size) < 0)
 		goto on_error;
-
-	entry->crc = htonl(crc32(entry->crc, packed, (uInt)entry_size));
-	git_mwindow_close(&w);
 
 	/* Add the object to the list */
 	if (git_vector_insert(&idx->objects, entry) < 0)
@@ -349,7 +463,7 @@ int git_indexer_stream_add(git_indexer_stream *idx, const void *data, size_t siz
 	/* As the file grows any windows we try to use will be out of date */
 	git_mwindow_free_all(mwf);
 	while (processed < idx->nr_objects) {
-		git_rawobj obj;
+		git_packfile_stream *stream = &idx->stream;
 		git_off_t entry_start = idx->off;
 		size_t entry_size;
 		git_otype type;
@@ -358,46 +472,71 @@ int git_indexer_stream_add(git_indexer_stream *idx, const void *data, size_t siz
 		if (idx->pack->mwf.size <= idx->off + 20)
 			return 0;
 
-		error = git_packfile_unpack_header(&entry_size, &type, mwf, &w, &idx->off);
-		if (error == GIT_EBUFS) {
-			idx->off = entry_start;
-			return 0;
-		}
-		if (error < 0)
-			return -1;
-
-		git_mwindow_close(&w);
-
-		if (type == GIT_OBJ_REF_DELTA || type == GIT_OBJ_OFS_DELTA) {
-			error = store_delta(idx, entry_start, entry_size, type);
+		if (!idx->have_stream) {
+			error = git_packfile_unpack_header(&entry_size, &type, mwf, &w, &idx->off);
 			if (error == GIT_EBUFS) {
 				idx->off = entry_start;
 				return 0;
 			}
 			if (error < 0)
-				return error;
+				return -1;
 
-			stats->received_objects++;
-			do_progress_callback(idx, stats);
-			continue;
+			git_mwindow_close(&w);
+			idx->entry_start = entry_start;
+			git_hash_ctx_init(&idx->hash_ctx);
+
+			if (type == GIT_OBJ_REF_DELTA || type == GIT_OBJ_OFS_DELTA) {
+				error = advance_delta_offset(idx, type);
+				if (error == GIT_EBUFS) {
+					idx->off = entry_start;
+					return 0;
+				}
+				if (error < 0)
+					return -1;
+
+				idx->have_delta = 1;
+			} else {
+				idx->have_delta = 0;
+				hash_header(&idx->hash_ctx, entry_size, type);
+			}
+
+			idx->have_stream = 1;
+			if (git_packfile_stream_open(stream, idx->pack, idx->off) < 0)
+				goto on_error;
+
 		}
 
-		idx->off = entry_start;
-		error = git_packfile_unpack(&obj, idx->pack, &idx->off);
-		if (error == GIT_EBUFS) {
-			idx->off = entry_start;
+		if (idx->have_delta) {
+			error = read_object_stream(stream);
+		} else {
+			error = hash_object_stream(&idx->hash_ctx, stream);
+		}
+
+		idx->off = stream->curpos;
+		if (error == GIT_EBUFS)
 			return 0;
-		}
-		if (error < 0)
-			return -1;
 
-		if (hash_and_save(idx, &obj, entry_start) < 0)
+		/* We want to free the stream reasorces no matter what here */
+		idx->have_stream = 0;
+		git_packfile_stream_free(stream);
+
+		if (error < 0)
 			goto on_error;
 
-		git__free(obj.data);
+		if (idx->have_delta) {
+			error = store_delta(idx);
+		} else {
+			error = store_object(idx);
+		}
 
-		stats->indexed_objects = (unsigned int)++processed;
+		if (error < 0)
+			goto on_error;
+
+		if (!idx->have_delta) {
+			stats->indexed_objects = (unsigned int)++processed;
+		}
 		stats->received_objects++;
+
 		do_progress_callback(idx, stats);
 	}
 
