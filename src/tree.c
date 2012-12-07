@@ -18,10 +18,31 @@ static bool valid_filemode(const int filemode)
 {
 	return (filemode == GIT_FILEMODE_TREE
 		|| filemode == GIT_FILEMODE_BLOB
-		|| filemode == GIT_FILEMODE_BLOB_GROUP_WRITABLE
 		|| filemode == GIT_FILEMODE_BLOB_EXECUTABLE
 		|| filemode == GIT_FILEMODE_LINK
 		|| filemode == GIT_FILEMODE_COMMIT);
+}
+
+GIT_INLINE(git_filemode_t) normalize_filemode(git_filemode_t filemode)
+{
+	/* Tree bits set, but it's not a commit */
+	if (filemode & GIT_FILEMODE_TREE && !(filemode & 0100000))
+		return GIT_FILEMODE_TREE;
+
+	/* If any of the x bits is set */
+	if (filemode & 0111)
+		return GIT_FILEMODE_BLOB_EXECUTABLE;
+
+	/* 16XXXX means commit */
+	if ((filemode & GIT_FILEMODE_COMMIT) == GIT_FILEMODE_COMMIT)
+		return GIT_FILEMODE_COMMIT;
+
+	/* 12XXXX means commit */
+	if ((filemode & GIT_FILEMODE_LINK) == GIT_FILEMODE_LINK)
+		return GIT_FILEMODE_LINK;
+
+	/* Otherwise, return a blob */
+	return GIT_FILEMODE_BLOB;
 }
 
 static int valid_entry_name(const char *filename)
@@ -320,9 +341,10 @@ static int tree_parse_buffer(git_tree *tree, const char *buffer, const char *buf
 		git_tree_entry *entry;
 		int attr;
 
-		if (git__strtol32(&attr, buffer, &buffer, 8) < 0 ||
-			!buffer || !valid_filemode(attr))
+		if (git__strtol32(&attr, buffer, &buffer, 8) < 0 || !buffer)
 			return tree_error("Failed to parse tree. Can't parse filemode", NULL);
+
+		attr = normalize_filemode(attr); /* make sure to normalize the filemode */
 
 		if (*buffer++ != ' ')
 			return tree_error("Failed to parse tree. Object is corrupted", NULL);
@@ -529,19 +551,6 @@ static void sort_entries(git_treebuilder *bld)
 	git_vector_sort(&bld->entries);
 }
 
-GIT_INLINE(git_filemode_t) normalize_filemode(git_filemode_t filemode)
-{
-	/* 100664 mode is an early design mistake. Tree entries may bear
-	 * this mode in some old git repositories, but it's now deprecated.
-	 * We silently normalize while inserting new entries in a tree 
-	 * being built.
-	 */
-	if (filemode == GIT_FILEMODE_BLOB_GROUP_WRITABLE)
-		return GIT_FILEMODE_BLOB;
-
-	return filemode;
-}
-
 int git_treebuilder_create(git_treebuilder **builder_p, const git_tree *source)
 {
 	git_treebuilder *bld;
@@ -565,7 +574,7 @@ int git_treebuilder_create(git_treebuilder **builder_p, const git_tree *source)
 			if (append_entry(
 				bld, entry_src->filename,
 				&entry_src->oid,
-				normalize_filemode((git_filemode_t)entry_src->attr)) < 0)
+				entry_src->attr) < 0)
 				goto on_error;
 		}
 	}
@@ -592,8 +601,6 @@ int git_treebuilder_insert(
 
 	if (!valid_filemode(filemode))
 		return tree_error("Failed to insert entry. Invalid filemode for file", filename);
-
-	filemode = normalize_filemode(filemode);
 
 	if (!valid_entry_name(filename))
 		return tree_error("Failed to insert entry. Invalid name for a tree entry", filename);
