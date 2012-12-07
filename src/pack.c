@@ -441,6 +441,72 @@ static void use_git_free(void *opaq, void *ptr)
 	git__free(ptr);
 }
 
+int git_packfile_stream_open(git_packfile_stream *obj, struct git_pack_file *p, git_off_t curpos)
+{
+	int st;
+
+	memset(obj, 0, sizeof(git_packfile_stream));
+	obj->curpos = curpos;
+	obj->p = p;
+	obj->zstream.zalloc = use_git_alloc;
+	obj->zstream.zfree = use_git_free;
+	obj->zstream.next_in = Z_NULL;
+	obj->zstream.next_out = Z_NULL;
+	st = inflateInit(&obj->zstream);
+	if (st != Z_OK) {
+		git__free(obj);
+		giterr_set(GITERR_ZLIB, "Failed to inflate packfile");
+		return -1;
+	}
+
+	return 0;
+}
+
+ssize_t git_packfile_stream_read(git_packfile_stream *obj, void *buffer, size_t len)
+{
+	unsigned char *in;
+	size_t written;
+	int st;
+
+	if (obj->done)
+		return 0;
+
+	in = pack_window_open(obj->p, &obj->mw, obj->curpos, &obj->zstream.avail_in);
+	if (in == NULL)
+		return GIT_EBUFS;
+
+	obj->zstream.next_out = buffer;
+	obj->zstream.avail_out = len;
+	obj->zstream.next_in = in;
+
+	st = inflate(&obj->zstream, Z_SYNC_FLUSH);
+	git_mwindow_close(&obj->mw);
+
+	obj->curpos += obj->zstream.next_in - in;
+	written = len - obj->zstream.avail_out;
+
+	if (st != Z_OK && st != Z_STREAM_END) {
+		giterr_set(GITERR_ZLIB, "Failed to inflate packfile");
+		return -1;
+	}
+
+	if (st == Z_STREAM_END)
+		obj->done = 1;
+
+
+	/* If we didn't write anything out but we're not done, we need more data */
+	if (!written && st != Z_STREAM_END)
+		return GIT_EBUFS;
+
+	return written;
+
+}
+
+void git_packfile_stream_free(git_packfile_stream *obj)
+{
+	inflateEnd(&obj->zstream);
+}
+
 int packfile_unpack_compressed(
 	git_rawobj *obj,
 	struct git_pack_file *p,
