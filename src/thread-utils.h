@@ -79,7 +79,7 @@ GIT_INLINE(int) git_atomic_dec(git_atomic *a)
 /* Pthreads Mutex */
 #define git_mutex unsigned int
 #define git_mutex_init(a) (void)0
-#define git_mutex_lock(a) (void)0
+#define git_mutex_lock(a) 0
 #define git_mutex_unlock(a) (void)0
 #define git_mutex_free(a) (void)0
 

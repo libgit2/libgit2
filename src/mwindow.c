@@ -44,7 +44,10 @@ void git_mwindow_free_all(git_mwindow_file *mwf)
 	git_mwindow_ctl *ctl = &mem_ctl;
 	unsigned int i;
 
-	git_mutex_lock(&git__mwindow_mutex);
+	if (git_mutex_lock(&git__mwindow_mutex)) {
+		giterr_set(GITERR_THREAD, "unable to lock mwindow mutex");
+		return;
+	}
 
 	/*
 	 * Remove these windows from the global list
@@ -221,7 +224,11 @@ unsigned char *git_mwindow_open(
 	git_mwindow_ctl *ctl = &mem_ctl;
 	git_mwindow *w = *cursor;
 
-	git_mutex_lock(&git__mwindow_mutex);
+	if (git_mutex_lock(&git__mwindow_mutex)) {
+		giterr_set(GITERR_THREAD, "unable to lock mwindow mutex");
+		return NULL;
+	}
+
 	if (!w || !(git_mwindow_contains(w, offset) && git_mwindow_contains(w, offset + extra))) {
 		if (w) {
 			w->inuse_cnt--;
@@ -269,7 +276,11 @@ int git_mwindow_file_register(git_mwindow_file *mwf)
 	git_mwindow_ctl *ctl = &mem_ctl;
 	int ret;
 
-	git_mutex_lock(&git__mwindow_mutex);
+	if (git_mutex_lock(&git__mwindow_mutex)) {
+		giterr_set(GITERR_THREAD, "unable to lock mwindow mutex");
+		return -1;
+	}
+
 	if (ctl->windowfiles.length == 0 &&
 	    git_vector_init(&ctl->windowfiles, 8, NULL) < 0) {
 		git_mutex_unlock(&git__mwindow_mutex);
@@ -288,7 +299,11 @@ int git_mwindow_file_deregister(git_mwindow_file *mwf)
 	git_mwindow_file *cur;
 	unsigned int i;
 
-	git_mutex_lock(&git__mwindow_mutex);
+	if (git_mutex_lock(&git__mwindow_mutex)) {
+		giterr_set(GITERR_THREAD, "unable to lock mwindow mutex");
+		return -1;
+	}
+
 	git_vector_foreach(&ctl->windowfiles, i, cur) {
 		if (cur == mwf) {
 			git_vector_remove(&ctl->windowfiles, i);
@@ -306,7 +321,11 @@ void git_mwindow_close(git_mwindow **window)
 {
 	git_mwindow *w = *window;
 	if (w) {
-		git_mutex_lock(&git__mwindow_mutex);
+		if (git_mutex_lock(&git__mwindow_mutex)) {
+			giterr_set(GITERR_THREAD, "unable to lock mwindow mutex");
+			return;
+		}
+
 		w->inuse_cnt--;
 		git_mutex_unlock(&git__mwindow_mutex);
 		*window = NULL;

@@ -1025,6 +1025,14 @@ static void *threaded_find_deltas(void *arg)
 		git_cond_signal(&me->pb->progress_cond);
 		git_packbuilder__progress_unlock(me->pb);
 
+		if (git_mutex_lock(&me->mutex)) {
+			giterr_set(GITERR_THREAD, "unable to lock packfile condition mutex");
+			return NULL;
+		}
+
+		while (!me->data_ready)
+			git_cond_wait(&me->cond, &me->mutex);
+
 		/*
 		 * We must not set ->data_ready before we wait on the
 		 * condition because the main thread may have set it to 1
@@ -1033,9 +1041,6 @@ static void *threaded_find_deltas(void *arg)
 		 * was initialized to 0 before this thread was spawned
 		 * and we reset it to 0 right away.
 		 */
-		git_mutex_lock(&me->mutex);
-		while (!me->data_ready)
-			git_cond_wait(&me->cond, &me->mutex);
 		me->data_ready = 0;
 		git_mutex_unlock(&me->mutex);
 	}
@@ -1168,7 +1173,12 @@ static int ll_find_deltas(git_packbuilder *pb, git_pobject **list,
 		target->working = 1;
 		git_packbuilder__progress_unlock(pb);
 
-		git_mutex_lock(&target->mutex);
+		if (git_mutex_lock(&target->mutex)) {
+			giterr_set(GITERR_THREAD, "unable to lock packfile condition mutex");
+			git__free(p);
+			return -1;
+		}
+
 		target->data_ready = 1;
 		git_cond_signal(&target->cond);
 		git_mutex_unlock(&target->mutex);

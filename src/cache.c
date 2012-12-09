@@ -52,7 +52,11 @@ void *git_cache_get(git_cache *cache, const git_oid *oid)
 
 	memcpy(&hash, oid->id, sizeof(hash));
 
-	git_mutex_lock(&cache->lock);
+	if (git_mutex_lock(&cache->lock)) {
+		giterr_set(GITERR_THREAD, "unable to lock cache mutex");
+		return NULL;
+	}
+
 	{
 		node = cache->nodes[hash & cache->size_mask];
 
@@ -73,13 +77,17 @@ void *git_cache_try_store(git_cache *cache, void *_entry)
 
 	memcpy(&hash, &entry->oid, sizeof(uint32_t));
 
-	/* increase the refcount on this object, because
-	 * the cache now owns it */
-	git_cached_obj_incref(entry);
+	if (git_mutex_lock(&cache->lock)) {
+		giterr_set(GITERR_THREAD, "unable to lock cache mutex");
+		return NULL;
+	}
 
-	git_mutex_lock(&cache->lock);
 	{
 		git_cached_obj *node = cache->nodes[hash & cache->size_mask];
+
+		/* increase the refcount on this object, because
+		 * the cache now owns it */
+		git_cached_obj_incref(entry);
 
 		if (node == NULL) {
 			cache->nodes[hash & cache->size_mask] = entry;
