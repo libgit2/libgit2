@@ -83,11 +83,11 @@ void *git_cache_try_store(git_cache *cache, void *_entry)
 	}
 
 	{
+		git_cached_obj *node = cache->nodes[hash & cache->size_mask];
+
 		/* increase the refcount on this object, because
 		 * the cache now owns it */
 		git_cached_obj_incref(entry);
-
-		git_cached_obj *node = cache->nodes[hash & cache->size_mask];
 
 		if (node == NULL) {
 			cache->nodes[hash & cache->size_mask] = entry;
