@@ -81,6 +81,14 @@ GIT_INLINE(void) git_tree_free(git_tree *tree)
 GIT_EXTERN(const git_oid *) git_tree_id(const git_tree *tree);
 
 /**
+ * Get the repository that contains the tree.
+ *
+ * @param tree A previously loaded tree.
+ * @return Repository that contains this tree.
+ */
+GIT_EXTERN(git_repository *) git_tree_owner(const git_tree *tree);
+
+/**
  * Get the number of entries listed in a tree
  *
  * @param tree a previously loaded tree.

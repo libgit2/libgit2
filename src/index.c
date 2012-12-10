@@ -1641,8 +1641,7 @@ int git_index_read_tree_match(
 
 	pfx = git_pathspec_prefix(strspec);
 
-	if ((error = git_iterator_for_tree_range(
-			 &iter, INDEX_OWNER(index), tree, pfx, pfx)) < 0 ||
+	if ((error = git_iterator_for_tree_range(&iter, tree, pfx, pfx)) < 0 ||
 		(error = git_iterator_current(iter, &entry)) < 0)
 		goto cleanup;
 

@@ -29,6 +29,10 @@ struct git_treebuilder {
 	git_vector entries;
 };
 
+GIT_INLINE(int) git_tree__dup(git_tree **dest, git_tree *source)
+{
+	return git_object__dup((git_object **)dest, (git_object *)source);
+}
 
 GIT_INLINE(bool) git_tree_entry__is_tree(const struct git_tree_entry *e)
 {

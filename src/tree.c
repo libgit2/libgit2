@@ -207,9 +207,14 @@ void git_tree__free(git_tree *tree)
 	git__free(tree);
 }
 
-const git_oid *git_tree_id(const git_tree *c)
+const git_oid *git_tree_id(const git_tree *t)
 {
-	return git_object_id((const git_object *)c);
+	return git_object_id((const git_object *)t);
+}
+
+git_repository *git_tree_owner(const git_tree *t)
+{
+	return git_object_owner((const git_object *)t);
 }
 
 git_filemode_t git_tree_entry_filemode(const git_tree_entry *entry)
@@ -295,6 +300,9 @@ int git_tree__prefix_position(git_tree *tree, const char *path)
 	git_vector *entries = &tree->entries;
 	struct tree_key_search ksearch;
 	size_t at_pos;
+
+	if (!path)
+		return 0;
 
 	ksearch.filename = path;
 	ksearch.filename_len = strlen(path);
