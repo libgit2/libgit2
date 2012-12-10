@@ -32,7 +32,6 @@ static int interesting(git_pqueue *list, git_commit_list *roots)
 static int mark_parents(git_revwalk *walk, git_commit_list_node *one,
 	git_commit_list_node *two)
 {
-	int error;
 	unsigned int i;
 	git_commit_list *roots = NULL;
 	git_pqueue list;
@@ -47,16 +46,16 @@ static int mark_parents(git_revwalk *walk, git_commit_list_node *one,
 		return -1;
 
 	if (git_commit_list_parse(walk, one) < 0)
-		return -1;
+		goto on_error;
 	one->flags |= PARENT1;
 	if (git_pqueue_insert(&list, one) < 0)
-		return -1;
+		goto on_error;
 
 	if (git_commit_list_parse(walk, two) < 0)
-	    return -1;
+		goto on_error;
 	two->flags |= PARENT2;
 	if (git_pqueue_insert(&list, two) < 0)
-		return -1;
+		goto on_error;
 
 	/* as long as there are non-STALE commits */
 	while (interesting(&list, roots)) {
@@ -80,25 +79,29 @@ static int mark_parents(git_revwalk *walk, git_commit_list_node *one,
 			if ((p->flags & flags) == flags)
 				continue;
 
-			if ((error = git_commit_list_parse(walk, p)) < 0)
-				return error;
+			if (git_commit_list_parse(walk, p) < 0)
+				goto on_error;
 
 			p->flags |= flags;
 			if (git_pqueue_insert(&list, p) < 0)
-				return -1;
+				goto on_error;
 		}
 
+		/* Keep track of root commits, to make sure the path gets marked */
 		if (commit->out_degree == 0) {
 			if (git_commit_list_insert(commit, &roots) == NULL)
-				return -1;
+				goto on_error;
 		}
 	}
 
-	if (roots)
-		git_commit_list_free(&roots);
+	git_commit_list_free(&roots);
 	git_pqueue_free(&list);
-
 	return 0;
+
+on_error:
+	git_commit_list_free(&roots);
+	git_pqueue_free(&list);
+	return -1;
 }
 
 
