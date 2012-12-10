@@ -55,6 +55,7 @@ struct git_indexer_stream {
 	git_oid hash;
 	git_transfer_progress_callback progress_cb;
 	void *progress_payload;
+	char objbuf[8*1024];
 };
 
 struct delta_info {
@@ -204,18 +205,17 @@ static void hash_header(git_hash_ctx *ctx, git_off_t len, git_otype type)
 	git_hash_update(ctx, buffer, hdrlen);
 }
 
-static int hash_object_stream(git_hash_ctx *ctx, git_packfile_stream *stream)
+static int hash_object_stream(git_indexer_stream *idx, git_packfile_stream *stream)
 {
-	char buffer[8*1024];
 	ssize_t read;
 
-	assert(ctx && stream);
+	assert(idx && stream);
 
 	do {
-		if ((read = git_packfile_stream_read(stream, buffer, sizeof(buffer))) < 0)
+		if ((read = git_packfile_stream_read(stream, idx->objbuf, sizeof(idx->objbuf))) < 0)
 			break;
 
-		git_hash_update(ctx, buffer, read);
+		git_hash_update(&idx->hash_ctx, idx->objbuf, read);
 	} while (read > 0);
 
 	if (read < 0)
@@ -244,15 +244,14 @@ static int advance_delta_offset(git_indexer_stream *idx, git_otype type)
 }
 
 /* Read from the stream and discard any output */
-static int read_object_stream(git_packfile_stream *stream)
+static int read_object_stream(git_indexer_stream *idx, git_packfile_stream *stream)
 {
-	char buffer[4*1024];
 	ssize_t read;
 
 	assert(stream);
 
 	do {
-		read = git_packfile_stream_read(stream, buffer, sizeof(buffer));
+		read = git_packfile_stream_read(stream, idx->objbuf, sizeof(idx->objbuf));
 	} while (read > 0);
 
 	if (read < 0)
@@ -507,9 +506,9 @@ int git_indexer_stream_add(git_indexer_stream *idx, const void *data, size_t siz
 		}
 
 		if (idx->have_delta) {
-			error = read_object_stream(stream);
+			error = read_object_stream(idx, stream);
 		} else {
-			error = hash_object_stream(&idx->hash_ctx, stream);
+			error = hash_object_stream(idx, stream);
 		}
 
 		idx->off = stream->curpos;
