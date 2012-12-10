@@ -125,6 +125,7 @@ typedef struct {
 	git_remote *owner;
 	char *url;
 	git_cred_acquire_cb cred_acquire_cb;
+	void *cred_acquire_payload;
 	int direction;
 	int flags;
 	git_transport_message_cb progress_cb;

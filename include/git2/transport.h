@@ -65,7 +65,8 @@ GIT_EXTERN(int) git_cred_userpass_plaintext_new(
 typedef int (*git_cred_acquire_cb)(
 	git_cred **cred,
 	const char *url,
-	unsigned int allowed_types);
+	unsigned int allowed_types,
+	void *payload);
 
 /*
  *** End interface for credentials acquisition ***
@@ -94,6 +95,7 @@ typedef struct git_transport {
 	int (*connect)(struct git_transport *transport,
 		const char *url,
 		git_cred_acquire_cb cred_acquire_cb,
+		void *cred_acquire_payload,
 		int direction,
 		int flags);
 

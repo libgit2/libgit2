@@ -62,6 +62,7 @@ static int git_smart__connect(
 	git_transport *transport,
 	const char *url,
 	git_cred_acquire_cb cred_acquire_cb,
+	void *cred_acquire_payload,
 	int direction,
 	int flags)
 {
@@ -81,6 +82,7 @@ static int git_smart__connect(
 	t->direction = direction;
 	t->flags = flags;
 	t->cred_acquire_cb = cred_acquire_cb;
+	t->cred_acquire_payload = cred_acquire_payload;
 
 	if (GIT_DIRECTION_FETCH == t->direction)
 		service = GIT_SERVICE_UPLOADPACK_LS;

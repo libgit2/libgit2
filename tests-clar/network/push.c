@@ -27,9 +27,11 @@ static git_oid _oid_b1;
 /* git_oid *oid, git_repository *repo, (string literal) blob */
 #define CREATE_BLOB(oid, repo, blob) git_blob_create_frombuffer(oid, repo, blob, sizeof(blob) - 1)
 
-static int cred_acquire_cb(git_cred **cred, const char *url, unsigned int allowed_types) 
+static int cred_acquire_cb(git_cred **cred, const char *url, unsigned int allowed_types, void *payload)
 {
 	GIT_UNUSED(url);
+
+	*((bool*)payload) = true;
 
 	if ((GIT_CREDTYPE_USERPASS_PLAINTEXT & allowed_types) == 0 ||
 		git_cred_userpass_plaintext_new(cred, _remote_user, _remote_pass) < 0)
@@ -130,6 +132,7 @@ void test_network_push__initialize(void)
 	git_vector delete_specs = GIT_VECTOR_INIT;
 	size_t i;
 	char *curr_del_spec;
+	bool cred_acquire_called = false;
 
 	_repo = cl_git_sandbox_init("push_src");
 
@@ -165,7 +168,7 @@ void test_network_push__initialize(void)
 	if (_remote_url) {
 		cl_git_pass(git_remote_add(&_remote, _repo, "test", _remote_url));
 
-		git_remote_set_cred_acquire_cb(_remote, cred_acquire_cb);
+		git_remote_set_cred_acquire_cb(_remote, cred_acquire_cb, &cred_acquire_called);
 		record_callbacks_data_clear(&_record_cbs_data);
 		git_remote_set_callbacks(_remote, &_record_cbs);
 
