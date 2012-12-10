@@ -45,8 +45,7 @@ void test_object_tree_attributes__treebuilder_reject_invalid_filemode(void)
 {
 	git_repository *repo;
 	git_treebuilder *builder;
-	git_oid bid, tid;
-	git_tree *tree;
+	git_oid bid;
 	const git_tree_entry *entry;
 
 	repo = cl_git_sandbox_init("deprecated-mode.git");
