@@ -448,8 +448,7 @@ static int checkout_get_actions(
 		!(error == GIT_ENOTFOUND || error == GIT_EORPHANEDHEAD))
 			return -1;
 
-	if ((error = git_iterator_for_tree_range(
-			 &hiter, data->repo, head, pfx, pfx)) < 0)
+	if ((error = git_iterator_for_tree_range(&hiter, head, pfx, pfx)) < 0)
 		goto fail;
 
 	if ((diff->opts.flags & GIT_DIFF_DELTAS_ARE_ICASE) != 0 &&

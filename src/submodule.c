@@ -1156,7 +1156,7 @@ static int load_submodule_config_from_head(
 	if ((error = git_repository_head_tree(&head, repo)) < 0)
 		return error;
 
-	if ((error = git_iterator_for_tree(&i, repo, head)) < 0) {
+	if ((error = git_iterator_for_tree(&i, head)) < 0) {
 		git_tree_free(head);
 		return error;
 	}

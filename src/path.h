@@ -321,18 +321,33 @@ typedef struct {
 } git_path_with_stat;
 
 extern int git_path_with_stat_cmp(const void *a, const void *b);
+extern int git_path_with_stat_cmp_icase(const void *a, const void *b);
 
 /**
  * Load all directory entries along with stat info into a vector.
  *
- * This is just like git_path_dirload except that each entry in the
- * vector is a git_path_with_stat structure that contains both the
- * path and the stat info, plus directories will have a / suffixed
- * to their path name.
+ * This adds four things on top of plain `git_path_dirload`:
+ *
+ * 1. Each entry in the vector is a `git_path_with_stat` struct that
+ *    contains both the path and the stat info
+ * 2. The entries will be sorted alphabetically
+ * 3. Entries that are directories will be suffixed with a '/'
+ * 4. Optionally, you can be a start and end prefix and only elements
+ *    after the start and before the end (inclusively) will be stat'ed.
+ *
+ * @param path The directory to read from
+ * @param prefix_len The trailing part of path to prefix to entry paths
+ * @param ignore_case How to sort and compare paths with start/end limits
+ * @param start_stat As optimization, only stat values after this prefix
+ * @param end_stat As optimization, only stat values before this prefix
+ * @param contents Vector to fill with git_path_with_stat structures
  */
 extern int git_path_dirload_with_stat(
 	const char *path,
 	size_t prefix_len,
+	bool ignore_case,
+	const char *start_stat,
+	const char *end_stat,
 	git_vector *contents);
 
 #endif

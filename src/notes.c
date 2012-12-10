@@ -593,7 +593,7 @@ int git_note_foreach(
 
 	if (!(error = retrieve_note_tree_and_commit(
 			&tree, &commit, repo, &notes_ref)) &&
-		!(error = git_iterator_for_tree(&iter, repo, tree)))
+		!(error = git_iterator_for_tree(&iter, tree)))
 		error = git_iterator_current(iter, &item);
 
 	while (!error && item) {
