@@ -10,7 +10,7 @@
 #include "merge.h"
 #include "git2/graph.h"
 
-static int interesting(git_pqueue *list)
+static int interesting(git_pqueue *list, git_commit_list *roots)
 {
 	unsigned int i;
 	/* element 0 isn't used - we need to start at 1 */
@@ -18,6 +18,12 @@ static int interesting(git_pqueue *list)
 		git_commit_list_node *commit = list->d[i];
 		if ((commit->flags & STALE) == 0)
 			return 1;
+	}
+
+	while(roots) {
+		if ((roots->item->flags & STALE) == 0)
+			return 1;
+		roots = roots->next;
 	}
 
 	return 0;
@@ -28,6 +34,7 @@ static int mark_parents(git_revwalk *walk, git_commit_list_node *one,
 {
 	int error;
 	unsigned int i;
+	git_commit_list *roots = NULL;
 	git_pqueue list;
 
 	/* if the commit is repeated, we have a our merge base already */
@@ -52,11 +59,13 @@ static int mark_parents(git_revwalk *walk, git_commit_list_node *one,
 		return -1;
 
 	/* as long as there are non-STALE commits */
-	while (interesting(&list)) {
+	while (interesting(&list, roots)) {
 		git_commit_list_node *commit;
 		int flags;
 
 		commit = git_pqueue_pop(&list);
+		if (commit == NULL)
+			break;
 
 		flags = commit->flags & (PARENT1 | PARENT2 | STALE);
 		if (flags == (PARENT1 | PARENT2)) {
@@ -78,8 +87,15 @@ static int mark_parents(git_revwalk *walk, git_commit_list_node *one,
 			if (git_pqueue_insert(&list, p) < 0)
 				return -1;
 		}
+
+		if (commit->out_degree == 0) {
+			if (git_commit_list_insert(commit, &roots) == NULL)
+				return -1;
+		}
 	}
 
+	if (roots)
+		git_commit_list_free(&roots);
 	git_pqueue_free(&list);
 
 	return 0;
