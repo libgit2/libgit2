@@ -9,8 +9,7 @@
 
 #include "common.h"
 #include "types.h"
-#include "indexer.h"
-#include "strarray.h"
+#include "diff.h"
 
 /**
  * @file git2/checkout.h
@@ -25,27 +24,28 @@ GIT_BEGIN_DECL
  * Checkout behavior flags
  *
  * In libgit2, the function of checkout is to update the working directory
- * to match a target tree given an expected baseline tree.  It does not move
- * the HEAD commit - you do that separately.  Typically the expected tree is
- * the (to-be-moved) HEAD commit.
+ * to match a target tree.  It does not move the HEAD commit - you do that
+ * separately.  To safely perform the update, checkout relies on a baseline
+ * tree (generally the current HEAD) as a reference for the unmodified
+ * content expected in the working directory.
  *
- * Checkout examines the differences between the target and expected trees
- * plus the current working directory and groups files into five categories:
+ * Checkout examines the differences between the target tree, the baseline
+ * tree and the working directory, and groups files into five categories:
  *
  * 1. UNMODIFIED - Files that match in all places.
- * 2. SAFE - Files where the working directory and the expect content match
- *    that can be safely updated to the target.
+ * 2. SAFE - Files where the working directory and the baseline content
+ *    match that can be safely updated to the target.
  * 3. DIRTY/MISSING - Files where the working directory differs from the
- *    expected content but there is no conflicting change with the target
- *    tree.  An example is a file that doesn't exist in the working
- *    directory - no data would be lost as a result of writing this file.
- *    The action to take with these files depends on the options you elect.
- * 4. CONFLICTS - Files where changes in the working directory conflicts
+ *    baseline but there is no conflicting change with the target.  One
+ *    example is a file that doesn't exist in the working directory - no
+ *    data would be lost as a result of writing this file.  Which action
+ *    will be taken with these files depends on the options you use.
+ * 4. CONFLICTS - Files where changes in the working directory conflict
  *    with changes to be applied by the target.  If conflicts are found,
  *    they prevent any other modifications from being made (although there
  *    are options to override that and force the update, of course).
  * 5. UNTRACKED/IGNORED - Files in the working directory that are untracked
- *    or ignored.
+ *    or ignored (i.e. only in the working directory, not the other places).
  *
  *
  * You control the actions checkout takes with one of four base strategies:
@@ -54,11 +54,11 @@ GIT_BEGIN_DECL
  *   run that you can use to find conflicts, etc. if you wish.
  *
  * - `GIT_CHECKOUT_SAFE` is like `git checkout` and only applies changes
- *   between the expected and target trees to files in category 2.
+ *   between the baseline and target trees to files in category 2.
  *
  * - `GIT_CHECKOUT_SAFE_CREATE` also creates files that are missing from the
  *   working directory (category 3), even if there is no change between the
- *   expected and target trees for those files.  See notes below on
+ *   baseline and target trees for those files.  See notes below on
  *   emulating `git checkout-index` for some of the subtleties of this.
  *
  * - `GIT_CHECKOUT_FORCE` is like `git checkout -f` and will update the
@@ -97,7 +97,7 @@ GIT_BEGIN_DECL
  * To emulate `git checkout`, use `GIT_CHECKOUT_SAFE` with a checkout
  * notification callback (see below) that displays information about dirty
  * files (i.e. files that don't need an update but that no longer match the
- * expected content).  The default behavior will cancel on conflicts.
+ * baseline content).  The default behavior will cancel on conflicts.
  *
  * To emulate `git checkout-index`, use `GIT_CHECKOUT_SAFE_CREATE` with a
  * notification callback that cancels the operation if a dirty-but-existing
@@ -140,6 +140,9 @@ typedef enum {
 	/** Only update existing files, don't create new ones */
 	GIT_CHECKOUT_UPDATE_ONLY = (1u << 7),
 
+	/** Don't refresh index/config/etc before doing checkout */
+	GIT_CHECKOUT_NO_REFRESH = (1u << 8),
+
 	/**
 	 * THE FOLLOWING OPTIONS ARE NOT YET IMPLEMENTED
 	 */
@@ -166,14 +169,14 @@ typedef enum {
  * receive a callback depend on the `notify_flags` value which is a
  * combination of these flags.
  *
- * - GIT_CHECKOUT_NOTIFY_CONFLICTS means that conflicting files that would
+ * - GIT_CHECKOUT_NOTIFY_CONFLICT means that conflicting files that would
  *   prevent the checkout from occurring will receive callbacks.  If you
  *   used GIT_CHECKOUT_ALLOW_CONFLICTS, the callbacks are still done, but
  *   the checkout will not be blocked.  The callback `status_flags` will
  *   have both index and work tree change bits set (see `git_status_t`).
  *
  * - GIT_CHECKOUT_NOTIFY_DIRTY means to notify about "dirty" files, i.e.
- *   those that do not need to be updated but no longer match the expected
+ *   those that do not need to be updated but no longer match the baseline
  *   content.  Core git displays these files when checkout runs, but does
  *   not stop the checkout.  For these,  `status_flags` will have only work
  *   tree bits set (i.e. GIT_STATUS_WT_MODIFIED, etc).
@@ -202,11 +205,12 @@ typedef enum {
  * Dirty files will only have work tree flags set.
  */
 typedef enum {
-	GIT_CHECKOUT_NOTIFY_CONFLICTS = (1u << 0),
-	GIT_CHECKOUT_NOTIFY_DIRTY = (1u << 1),
-	GIT_CHECKOUT_NOTIFY_UPDATED = (1u << 2),
+	GIT_CHECKOUT_NOTIFY_NONE      = 0,
+	GIT_CHECKOUT_NOTIFY_CONFLICT  = (1u << 0),
+	GIT_CHECKOUT_NOTIFY_DIRTY     = (1u << 1),
+	GIT_CHECKOUT_NOTIFY_UPDATED   = (1u << 2),
 	GIT_CHECKOUT_NOTIFY_UNTRACKED = (1u << 3),
-	GIT_CHECKOUT_NOTIFY_IGNORED = (1u << 4),
+	GIT_CHECKOUT_NOTIFY_IGNORED   = (1u << 4),
 } git_checkout_notify_t;
 
 /**
@@ -231,11 +235,11 @@ typedef struct git_checkout_opts {
 
 	unsigned int notify_flags; /** see `git_checkout_notify_t` above */
 	int (*notify_cb)(
+		git_checkout_notify_t why,
 		const char *path,
-		unsigned int status_flags, /** combo of git_status_t values */
-		const git_oid *index_oid,
-		unsigned int checkout_mode,
-		unsigned int workdir_mode,
+		const git_diff_file *baseline,
+		const git_diff_file *target,
+		const git_diff_file *workdir,
 		void *payload);
 	void *notify_payload;
 

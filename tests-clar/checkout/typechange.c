@@ -44,7 +44,8 @@ void test_checkout_typechange__checkout_typechanges(void)
 
 	for (i = 0; g_typechange_oids[i] != NULL; ++i) {
 		cl_git_pass(git_revparse_single(&obj, g_repo, g_typechange_oids[i]));
-		/* fprintf(stderr, "checking out '%s'\n", g_typechange_oids[i]); */
+
+		/* fprintf(stderr, "---- checking out '%s' ----\n", g_typechange_oids[i]); */
 
 		cl_git_pass(git_checkout_tree(g_repo, obj, &opts));
 

@@ -352,6 +352,7 @@ int git_futils_mkdir_r(const char *path, const char *base, const mode_t mode)
 
 typedef struct {
 	const char *base;
+	size_t baselen;
 	uint32_t flags;
 	int error;
 } futils__rmdir_data;
@@ -443,9 +444,13 @@ static int futils__rmdir_recurs_foreach(void *opaque, git_buf *path)
 
 static int futils__rmdir_empty_parent(void *opaque, git_buf *path)
 {
-	int error = p_rmdir(path->ptr);
+	futils__rmdir_data *data = opaque;
+	int error;
 
-	GIT_UNUSED(opaque);
+	if (git_buf_len(path) <= data->baselen)
+		return GIT_ITEROVER;
+
+	error = p_rmdir(git_buf_cstr(path));
 
 	if (error) {
 		int en = errno;
@@ -457,7 +462,7 @@ static int futils__rmdir_empty_parent(void *opaque, git_buf *path)
 			giterr_clear();
 			error = GIT_ITEROVER;
 		} else {
-			futils__error_cannot_rmdir(path->ptr, NULL);
+			futils__error_cannot_rmdir(git_buf_cstr(path), NULL);
 		}
 	}
 
@@ -475,9 +480,10 @@ int git_futils_rmdir_r(
 	if (git_path_join_unrooted(&fullpath, path, base, NULL) < 0)
 		return -1;
 
-	data.base  = base ? base : "";
-	data.flags = flags;
-	data.error = 0;
+	data.base    = base ? base : "";
+	data.baselen = base ? strlen(base) : 0;
+	data.flags   = flags;
+	data.error   = 0;
 
 	error = futils__rmdir_recurs_foreach(&data, &fullpath);
 

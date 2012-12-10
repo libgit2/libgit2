@@ -10,22 +10,15 @@
 #include "git2/checkout.h"
 #include "iterator.h"
 
-#define GIT_CHECKOUT__FREE_BASELINE (1u << 24)
+#define GIT_CHECKOUT__NOTIFY_CONFLICT_TREE (1u << 12)
 
 /**
- * Given a working directory which is expected to match the contents
- * of iterator "expected", this will make the directory match the
- * contents of "desired" according to the rules in the checkout "opts".
- *
- * Because the iterators for the desired and expected values were already
- * created when this is invoked, if the checkout opts `paths` is in play,
- * then presumably the pathspec_pfx was already computed, so it should be
- * passed in to prevent reallocation.
+ * Update the working directory to match the target iterator.  The
+ * expected baseline value can be passed in via the checkout options
+ * or else will default to the HEAD commit.
  */
-extern int git_checkout__from_iterators(
-	git_iterator *desired,
-	git_iterator *expected,
-	git_checkout_opts *opts,
-	const char *pathspec_pfx);
+extern int git_checkout_iterator(
+	git_iterator *target,
+	git_checkout_opts *opts);
 
 #endif

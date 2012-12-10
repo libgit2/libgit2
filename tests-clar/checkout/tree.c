@@ -126,9 +126,10 @@ void test_checkout_tree__doesnt_write_unrequested_files_to_worktree(void)
   cl_git_pass(git_commit_lookup(&p_master_commit, g_repo, &master_oid));
   cl_git_pass(git_commit_lookup(&p_chomped_commit, g_repo, &chomped_oid));
 
-  /* A GIT_CHECKOUT_DEFAULT checkout is not allowed to add any file to the
-   * working tree from the index as it is supposed to be a dry run. */
-  opts.checkout_strategy = GIT_CHECKOUT_DEFAULT;
+  /* GIT_CHECKOUT_NONE should not add any file to the working tree from the
+   * index as it is supposed to be a dry run.
+   */
+  opts.checkout_strategy = GIT_CHECKOUT_NONE;
   git_checkout_tree(g_repo, (git_object*)p_chomped_commit, &opts);
   cl_assert_equal_i(false, git_path_isfile("testrepo/readme.txt"));
 }
