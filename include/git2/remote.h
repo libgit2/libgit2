@@ -313,7 +313,8 @@ GIT_EXTERN(void) git_remote_check_cert(git_remote *remote, int check);
  */
 GIT_EXTERN(void) git_remote_set_cred_acquire_cb(
 	git_remote *remote,
-	git_cred_acquire_cb cred_acquire_cb);
+	git_cred_acquire_cb cred_acquire_cb,
+	void *payload);
 
 /**
  * Sets a custom transport for the remote. The caller can use this function

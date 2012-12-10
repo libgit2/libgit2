@@ -694,12 +694,13 @@ int git_smart__push(git_transport *transport, git_push *push)
 	 * the data from the push report to do this without another network call */
 	if (push->specs.length) {
 		git_cred_acquire_cb cred_cb = t->cred_acquire_cb;
+		void *cred_payload = t->cred_acquire_payload;
 		int flags = t->flags;
 
 		url = git__strdup(t->url);
 
 		if (!url || t->parent.close(&t->parent) < 0 ||
-			t->parent.connect(&t->parent, url, cred_cb, GIT_DIRECTION_PUSH, flags))
+			t->parent.connect(&t->parent, url, cred_cb, cred_payload, GIT_DIRECTION_PUSH, flags))
 			goto on_error;
 	}
 
