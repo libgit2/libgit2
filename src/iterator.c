@@ -29,6 +29,25 @@
 		return -1; \
 	} while (0)
 
+static int iterator__reset_range(
+	git_iterator *iter, const char *start, const char *end)
+{
+	if (start) {
+		if (iter->start)
+			git__free(iter->start);
+		iter->start = git__strdup(start);
+		GITERR_CHECK_ALLOC(iter->start);
+	}
+
+	if (end) {
+		if (iter->end)
+			git__free(iter->end);
+		iter->end = git__strdup(end);
+		GITERR_CHECK_ALLOC(iter->end);
+	}
+
+	return 0;
+}
 
 static int empty_iterator__no_item(
 	git_iterator *iter, const git_index_entry **entry)
@@ -44,16 +63,16 @@ static int empty_iterator__at_end(git_iterator *iter)
 	return 1;
 }
 
-static int empty_iterator__noop(git_iterator *iter)
+static int empty_iterator__reset(
+	git_iterator *iter, const char *start, const char *end)
 {
-	GIT_UNUSED(iter);
+	GIT_UNUSED(iter); GIT_UNUSED(start); GIT_UNUSED(end);
 	return 0;
 }
 
 static int empty_iterator__seek(git_iterator *iter, const char *prefix)
 {
-	GIT_UNUSED(iter);
-	GIT_UNUSED(prefix);
+	GIT_UNUSED(iter); GIT_UNUSED(prefix);
 	return -1;
 }
 
@@ -72,7 +91,7 @@ int git_iterator_for_nothing(git_iterator **iter)
 	i->at_end  = empty_iterator__at_end;
 	i->advance = empty_iterator__no_item;
 	i->seek    = empty_iterator__seek;
-	i->reset   = empty_iterator__noop;
+	i->reset   = empty_iterator__reset;
 	i->free    = empty_iterator__free;
 
 	*iter = i;
@@ -97,10 +116,9 @@ typedef struct {
 	bool path_has_filename;
 } tree_iterator;
 
-static const git_tree_entry *tree_iterator__tree_entry(tree_iterator *ti)
+GIT_INLINE(const git_tree_entry *)tree_iterator__tree_entry(tree_iterator *ti)
 {
-	return (ti->stack == NULL) ? NULL :
-		git_tree_entry_byindex(ti->stack->tree, ti->stack->index);
+	return git_tree_entry_byindex(ti->stack->tree, ti->stack->index);
 }
 
 static char *tree_iterator__current_filename(
@@ -115,25 +133,34 @@ static char *tree_iterator__current_filename(
 	return ti->path.ptr;
 }
 
-static void tree_iterator__pop_frame(tree_iterator *ti)
+static void tree_iterator__free_frame(tree_iterator_frame *tf)
+{
+	if (!tf)
+		return;
+	git_tree_free(tf->tree);
+	git__free(tf);
+}
+
+static bool tree_iterator__pop_frame(tree_iterator *ti)
 {
 	tree_iterator_frame *tf = ti->stack;
+
+	/* don't free the initial tree/frame */
+	if (!tf->next)
+		return false;
+
 	ti->stack = tf->next;
-	if (ti->stack != NULL) {
-		git_tree_free(tf->tree); /* don't free the initial tree */
-		ti->stack->prev = NULL;  /* disconnect prev */
-	}
-	git__free(tf);
+	ti->stack->prev = NULL;
+
+	tree_iterator__free_frame(tf);
+
+	return true;
 }
 
 static int tree_iterator__to_end(tree_iterator *ti)
 {
-	while (ti->stack && ti->stack->next)
-		tree_iterator__pop_frame(ti);
-
-	if (ti->stack)
-		ti->stack->index = git_tree_entrycount(ti->stack->tree);
-
+	while (tree_iterator__pop_frame(ti)) /* pop all */;
+	ti->stack->index = git_tree_entrycount(ti->stack->tree);
 	return 0;
 }
 
@@ -246,12 +273,13 @@ static int tree_iterator__advance(
 		ti->path_has_filename = false;
 	}
 
-	while (ti->stack != NULL) {
+	while (1) {
 		te = git_tree_entry_byindex(ti->stack->tree, ++ti->stack->index);
 		if (te != NULL)
 			break;
 
-		tree_iterator__pop_frame(ti);
+		if (!tree_iterator__pop_frame(ti))
+			break; /* no frames left to pop */
 
 		git_buf_rtruncate_at_char(&ti->path, '/');
 	}
@@ -278,23 +306,30 @@ static int tree_iterator__seek(git_iterator *self, const char *prefix)
 static void tree_iterator__free(git_iterator *self)
 {
 	tree_iterator *ti = (tree_iterator *)self;
-	while (ti->stack != NULL)
-		tree_iterator__pop_frame(ti);
+
+	while (tree_iterator__pop_frame(ti)) /* pop all */;
+
+	tree_iterator__free_frame(ti->stack);
+	ti->stack = ti->tail = NULL;
+
 	git_buf_free(&ti->path);
 }
 
-static int tree_iterator__reset(git_iterator *self)
+static int tree_iterator__reset(
+	git_iterator *self, const char *start, const char *end)
 {
 	tree_iterator *ti = (tree_iterator *)self;
 
-	while (ti->stack && ti->stack->next)
-		tree_iterator__pop_frame(ti);
+	while (tree_iterator__pop_frame(ti)) /* pop all */;
 
-	if (ti->stack)
-		ti->stack->index =
-			git_tree__prefix_position(ti->stack->tree, ti->base.start);
+	if (iterator__reset_range(self, start, end) < 0)
+		return -1;
+
+	ti->stack->index =
+		git_tree__prefix_position(ti->stack->tree, ti->base.start);
 
 	git_buf_clear(&ti->path);
+	ti->path_has_filename = false;
 
 	return tree_iterator__expand_tree(ti);
 }
@@ -310,6 +345,9 @@ int git_iterator_for_tree_range(
 
 	if (tree == NULL)
 		return git_iterator_for_nothing(iter);
+
+	if ((error = git_tree__dup(&tree, tree)) < 0)
+		return error;
 
 	ITERATOR_BASE_INIT(ti, tree, TREE);
 
@@ -394,9 +432,12 @@ static int index_iterator__seek(git_iterator *self, const char *prefix)
 	return -1;
 }
 
-static int index_iterator__reset(git_iterator *self)
+static int index_iterator__reset(
+	git_iterator *self, const char *start, const char *end)
 {
 	index_iterator *ii = (index_iterator *)self;
+	if (iterator__reset_range(self, start, end) < 0)
+		return -1;
 	ii->current = ii->base.start ?
 		git_index__prefix_position(ii->index, ii->base.start) : 0;
 	index_iterator__skip_conflicts(ii);
@@ -425,7 +466,7 @@ int git_iterator_for_index_range(
 	ii->base.repo = git_index_owner(index);
 	ii->base.ignore_case = ii->index->ignore_case;
 
-	index_iterator__reset((git_iterator *)ii);
+	index_iterator__reset((git_iterator *)ii, NULL, NULL);
 
 	*iter = (git_iterator *)ii;
 
@@ -455,34 +496,18 @@ struct workdir_iterator_frame {
 	workdir_iterator_frame *next;
 	git_vector entries;
 	size_t index;
-	char *start;
 };
 
 typedef struct {
 	git_iterator base;
-	size_t root_len;
 	workdir_iterator_frame *stack;
+	int (*entrycmp)(const void *pfx, const void *item);
 	git_ignores ignores;
 	git_index_entry entry;
 	git_buf path;
+	size_t root_len;
 	int is_ignored;
 } workdir_iterator;
-
-static int git_path_with_stat_cmp_case(const void *a, const void *b)
-{
-	const git_path_with_stat *path_with_stat_a = a;
-	const git_path_with_stat *path_with_stat_b = b;
-
-	return strcmp(path_with_stat_a->path, path_with_stat_b->path);
-}
-
-static int git_path_with_stat_cmp_icase(const void *a, const void *b)
-{
-	const git_path_with_stat *path_with_stat_a = a;
-	const git_path_with_stat *path_with_stat_b = b;
-
-	return strcasecmp(path_with_stat_a->path, path_with_stat_b->path);
-}
 
 GIT_INLINE(bool) path_is_dotgit(const git_path_with_stat *ps)
 {
@@ -492,26 +517,34 @@ GIT_INLINE(bool) path_is_dotgit(const git_path_with_stat *ps)
 		const char *path = ps->path;
 		size_t len  = ps->path_len;
 
-		return len >= 4 &&
-			tolower(path[len - 1]) == 't' &&
-			tolower(path[len - 2]) == 'i' &&
-			tolower(path[len - 3]) == 'g' &&
-			path[len - 4] == '.' &&
-			(len == 4 || path[len - 5] == '/');
+		if (len < 4)
+			return false;
+		if (path[len - 1] == '/')
+			len--;
+		if (tolower(path[len - 1]) != 't' ||
+			tolower(path[len - 2]) != 'i' ||
+			tolower(path[len - 3]) != 'g' ||
+			tolower(path[len - 4]) != '.')
+			return false;
+		return (len == 4 || path[len - 5] == '/');
 	}
 }
 
-static workdir_iterator_frame *workdir_iterator__alloc_frame(workdir_iterator *wi)
+static workdir_iterator_frame *workdir_iterator__alloc_frame(
+	workdir_iterator *wi)
 {
 	workdir_iterator_frame *wf = git__calloc(1, sizeof(workdir_iterator_frame));
-	git_vector_cmp entry_compare = CASESELECT(wi->base.ignore_case, git_path_with_stat_cmp_icase, git_path_with_stat_cmp_case);
+	git_vector_cmp entry_compare = CASESELECT(wi->base.ignore_case,
+		git_path_with_stat_cmp_icase, git_path_with_stat_cmp);
 
 	if (wf == NULL)
 		return NULL;
+
 	if (git_vector_init(&wf->entries, 0, entry_compare) != 0) {
 		git__free(wf);
 		return NULL;
 	}
+
 	return wf;
 }
 
@@ -528,16 +561,32 @@ static void workdir_iterator__free_frame(workdir_iterator_frame *wf)
 
 static int workdir_iterator__update_entry(workdir_iterator *wi);
 
-static int workdir_iterator__entry_cmp_case(const void *prefix, const void *item)
+static int workdir_iterator__entry_cmp_case(const void *pfx, const void *item)
 {
 	const git_path_with_stat *ps = item;
-	return git__prefixcmp((const char *)prefix, ps->path);
+	return git__prefixcmp((const char *)pfx, ps->path);
 }
 
-static int workdir_iterator__entry_cmp_icase(const void *prefix, const void *item)
+static int workdir_iterator__entry_cmp_icase(const void *pfx, const void *item)
 {
 	const git_path_with_stat *ps = item;
-	return git__prefixcmp_icase((const char *)prefix, ps->path);
+	return git__prefixcmp_icase((const char *)pfx, ps->path);
+}
+
+static void workdir_iterator__seek_frame_start(
+	workdir_iterator *wi, workdir_iterator_frame *wf)
+{
+	if (!wf)
+		return;
+
+	if (wi->base.start)
+		git_vector_bsearch3(
+			&wf->index, &wf->entries, wi->entrycmp, wi->base.start);
+	else
+		wf->index = 0;
+
+	if (path_is_dotgit(git_vector_get(&wf->entries, wf->index)))
+		wf->index++;
 }
 
 static int workdir_iterator__expand_dir(workdir_iterator *wi)
@@ -546,38 +595,25 @@ static int workdir_iterator__expand_dir(workdir_iterator *wi)
 	workdir_iterator_frame *wf = workdir_iterator__alloc_frame(wi);
 	GITERR_CHECK_ALLOC(wf);
 
-	error = git_path_dirload_with_stat(wi->path.ptr, wi->root_len, &wf->entries);
+	error = git_path_dirload_with_stat(
+		wi->path.ptr, wi->root_len, wi->base.ignore_case,
+		wi->base.start, wi->base.end, &wf->entries);
+
 	if (error < 0 || wf->entries.length == 0) {
 		workdir_iterator__free_frame(wf);
 		return GIT_ENOTFOUND;
 	}
 
-	git_vector_sort(&wf->entries);
-
-	if (!wi->stack)
-		wf->start = wi->base.start;
-	else if (wi->stack->start &&
-		ITERATOR_PREFIXCMP(wi->base, wi->stack->start, wi->path.ptr + wi->root_len) == 0)
-		wf->start = wi->stack->start;
-
-	if (wf->start)
-		git_vector_bsearch3(
-			&wf->index,
-			&wf->entries,
-			CASESELECT(wi->base.ignore_case, workdir_iterator__entry_cmp_icase, workdir_iterator__entry_cmp_case),
-			wf->start);
-
-	if (path_is_dotgit(git_vector_get(&wf->entries, wf->index)))
-		wf->index++;
-
-	wf->next  = wi->stack;
-	wi->stack = wf;
+	workdir_iterator__seek_frame_start(wi, wf);
 
 	/* only push new ignores if this is not top level directory */
-	if (wi->stack->next != NULL) {
+	if (wi->stack != NULL) {
 		ssize_t slash_pos = git_buf_rfind_next(&wi->path, '/');
 		(void)git_ignore__push_dir(&wi->ignores, &wi->path.ptr[slash_pos + 1]);
 	}
+
+	wf->next  = wi->stack;
+	wi->stack = wf;
 
 	return workdir_iterator__update_entry(wi);
 }
@@ -609,8 +645,10 @@ static int workdir_iterator__advance(
 	if (wi->entry.path == NULL)
 		return 0;
 
-	while ((wf = wi->stack) != NULL) {
+	while (1) {
+		wf   = wi->stack;
 		next = git_vector_get(&wf->entries, ++wf->index);
+
 		if (next != NULL) {
 			/* match git's behavior of ignoring anything named ".git" */
 			if (path_is_dotgit(next))
@@ -619,15 +657,15 @@ static int workdir_iterator__advance(
 			break;
 		}
 
-		/* pop workdir directory stack */
-		wi->stack = wf->next;
-		workdir_iterator__free_frame(wf);
-		git_ignore__pop_dir(&wi->ignores);
-
-		if (wi->stack == NULL) {
+		/* pop stack if anything is left to pop */
+		if (!wf->next) {
 			memset(&wi->entry, 0, sizeof(wi->entry));
 			return 0;
 		}
+
+		wi->stack = wf->next;
+		workdir_iterator__free_frame(wf);
+		git_ignore__pop_dir(&wi->ignores);
 	}
 
 	error = workdir_iterator__update_entry(wi);
@@ -648,18 +686,24 @@ static int workdir_iterator__seek(git_iterator *self, const char *prefix)
 	return 0;
 }
 
-static int workdir_iterator__reset(git_iterator *self)
+static int workdir_iterator__reset(
+	git_iterator *self, const char *start, const char *end)
 {
 	workdir_iterator *wi = (workdir_iterator *)self;
+
 	while (wi->stack != NULL && wi->stack->next != NULL) {
 		workdir_iterator_frame *wf = wi->stack;
 		wi->stack = wf->next;
 		workdir_iterator__free_frame(wf);
 		git_ignore__pop_dir(&wi->ignores);
 	}
-	if (wi->stack)
-		wi->stack->index = 0;
-	return 0;
+
+	if (iterator__reset_range(self, start, end) < 0)
+		return -1;
+
+	workdir_iterator__seek_frame_start(wi, wi->stack);
+
+	return workdir_iterator__update_entry(wi);
 }
 
 static void workdir_iterator__free(git_iterator *self)
@@ -678,7 +722,8 @@ static void workdir_iterator__free(git_iterator *self)
 
 static int workdir_iterator__update_entry(workdir_iterator *wi)
 {
-	git_path_with_stat *ps = git_vector_get(&wi->stack->entries, wi->stack->index);
+	git_path_with_stat *ps =
+		git_vector_get(&wi->stack->entries, wi->stack->index);
 
 	git_buf_truncate(&wi->path, wi->root_len);
 	memset(&wi->entry, 0, sizeof(wi->entry));
@@ -689,8 +734,8 @@ static int workdir_iterator__update_entry(workdir_iterator *wi)
 	if (git_buf_put(&wi->path, ps->path, ps->path_len) < 0)
 		return -1;
 
-	if (wi->base.end &&
-		ITERATOR_PREFIXCMP(wi->base, wi->path.ptr + wi->root_len, wi->base.end) > 0)
+	if (wi->base.end && ITERATOR_PREFIXCMP(
+			wi->base, wi->path.ptr + wi->root_len, wi->base.end) > 0)
 		return 0;
 
 	wi->entry.path = ps->path;
@@ -751,7 +796,7 @@ int git_iterator_for_workdir_range(
 	wi->base.repo = repo;
 
 	if ((error = git_repository_index__weakptr(&index, repo)) < 0) {
-		git__free(wi);
+		git_iterator_free((git_iterator *)wi);
 		return error;
 	}
 
@@ -767,6 +812,8 @@ int git_iterator_for_workdir_range(
 	}
 
 	wi->root_len = wi->path.size;
+	wi->entrycmp = wi->base.ignore_case ?
+		workdir_iterator__entry_cmp_icase : workdir_iterator__entry_cmp_case;
 
 	if ((error = workdir_iterator__expand_dir(wi)) < 0) {
 		if (error == GIT_ENOTFOUND)
@@ -835,9 +882,12 @@ static int spoolandsort_iterator__seek(git_iterator *self, const char *prefix)
 	return -1;
 }
 
-static int spoolandsort_iterator__reset(git_iterator *self)
+static int spoolandsort_iterator__reset(
+	git_iterator *self, const char *start, const char *end)
 {
 	spoolandsort_iterator *si = (spoolandsort_iterator *)self;
+
+	GIT_UNUSED(start); GIT_UNUSED(end);
 
 	si->position = 0;
 

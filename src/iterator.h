@@ -37,7 +37,7 @@ struct git_iterator {
 	int (*at_end)(git_iterator *);
 	int (*advance)(git_iterator *, const git_index_entry **);
 	int (*seek)(git_iterator *, const char *prefix);
-	int (*reset)(git_iterator *);
+	int (*reset)(git_iterator *, const char *start, const char *end);
 	void (*free)(git_iterator *);
 };
 
@@ -126,9 +126,10 @@ GIT_INLINE(int) git_iterator_seek(
 	return iter->seek(iter, prefix);
 }
 
-GIT_INLINE(int) git_iterator_reset(git_iterator *iter)
+GIT_INLINE(int) git_iterator_reset(
+	git_iterator *iter, const char *start, const char *end)
 {
-	return iter->reset(iter);
+	return iter->reset(iter, start, end);
 }
 
 GIT_INLINE(void) git_iterator_free(git_iterator *iter)

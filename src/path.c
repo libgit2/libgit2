@@ -770,18 +770,30 @@ int git_path_dirload(
 int git_path_with_stat_cmp(const void *a, const void *b)
 {
 	const git_path_with_stat *psa = a, *psb = b;
-	return git__strcmp_cb(psa->path, psb->path);
+	return strcmp(psa->path, psb->path);
+}
+
+int git_path_with_stat_cmp_icase(const void *a, const void *b)
+{
+	const git_path_with_stat *psa = a, *psb = b;
+	return strcasecmp(psa->path, psb->path);
 }
 
 int git_path_dirload_with_stat(
 	const char *path,
 	size_t prefix_len,
+	bool ignore_case,
+	const char *start_stat,
+	const char *end_stat,
 	git_vector *contents)
 {
 	int error;
 	unsigned int i;
 	git_path_with_stat *ps;
 	git_buf full = GIT_BUF_INIT;
+	int (*strncomp)(const char *a, const char *b, size_t sz);
+	size_t start_len = start_stat ? strlen(start_stat) : 0;
+	size_t end_len = end_stat ? strlen(end_stat) : 0, cmp_len;
 
 	if (git_buf_set(&full, path, prefix_len) < 0)
 		return -1;
@@ -793,11 +805,23 @@ int git_path_dirload_with_stat(
 		return error;
 	}
 
+	strncomp = ignore_case ? git__strncasecmp : git__strncmp;
+
+	/* stat struct at start of git_path_with_stat, so shift path text */
 	git_vector_foreach(contents, i, ps) {
 		size_t path_len = strlen((char *)ps);
-
 		memmove(ps->path, ps, path_len + 1);
 		ps->path_len = path_len;
+	}
+
+	git_vector_foreach(contents, i, ps) {
+		/* skip if before start_stat or after end_stat */
+		cmp_len = min(start_len, ps->path_len);
+		if (cmp_len && strncomp(ps->path, start_stat, cmp_len) < 0)
+			continue;
+		cmp_len = min(end_len, ps->path_len);
+		if (cmp_len && strncomp(ps->path, end_stat, cmp_len) > 0)
+			continue;
 
 		if ((error = git_buf_joinpath(&full, full.ptr, ps->path)) < 0 ||
 			(error = git_path_lstat(full.ptr, &ps->st)) < 0)
@@ -806,10 +830,13 @@ int git_path_dirload_with_stat(
 		git_buf_truncate(&full, prefix_len);
 
 		if (S_ISDIR(ps->st.st_mode)) {
-			ps->path[path_len] = '/';
-			ps->path[path_len + 1] = '\0';
+			ps->path[ps->path_len++] = '/';
+			ps->path[ps->path_len] = '\0';
 		}
 	}
+
+	/* sort now that directory suffix is added */
+	git_vector_sort(contents);
 
 	git_buf_free(&full);
 

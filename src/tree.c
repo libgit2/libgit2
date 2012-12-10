@@ -301,6 +301,9 @@ int git_tree__prefix_position(git_tree *tree, const char *path)
 	struct tree_key_search ksearch;
 	size_t at_pos;
 
+	if (!path)
+		return 0;
+
 	ksearch.filename = path;
 	ksearch.filename_len = strlen(path);
 

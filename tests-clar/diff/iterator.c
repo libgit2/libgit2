@@ -31,25 +31,35 @@ static void tree_iterator_test(
 	git_tree *t;
 	git_iterator *i;
 	const git_index_entry *entry;
-	int count = 0;
+	int count = 0, count_post_reset = 0;
 	git_repository *repo = cl_git_sandbox_init(sandbox);
 
 	cl_assert(t = resolve_commit_oid_to_tree(repo, treeish));
 	cl_git_pass(git_iterator_for_tree_range(&i, t, start, end));
-	cl_git_pass(git_iterator_current(i, &entry));
 
+	/* test loop */
+	cl_git_pass(git_iterator_current(i, &entry));
 	while (entry != NULL) {
 		if (expected_values != NULL)
 			cl_assert_equal_s(expected_values[count], entry->path);
-
 		count++;
+		cl_git_pass(git_iterator_advance(i, &entry));
+	}
 
+	/* test reset */
+	cl_git_pass(git_iterator_reset(i, NULL, NULL));
+	cl_git_pass(git_iterator_current(i, &entry));
+	while (entry != NULL) {
+		if (expected_values != NULL)
+			cl_assert_equal_s(expected_values[count_post_reset], entry->path);
+		count_post_reset++;
 		cl_git_pass(git_iterator_advance(i, &entry));
 	}
 
 	git_iterator_free(i);
 
-	cl_assert(expected_count == count);
+	cl_assert_equal_i(expected_count, count);
+	cl_assert_equal_i(count, count_post_reset);
 
 	git_tree_free(t);
 }
@@ -520,7 +530,7 @@ static void workdir_iterator_test(
 {
 	git_iterator *i;
 	const git_index_entry *entry;
-	int count = 0, count_all = 0;
+	int count = 0, count_all = 0, count_all_post_reset = 0;
 	git_repository *repo = cl_git_sandbox_init(sandbox);
 
 	cl_git_pass(git_iterator_for_workdir_range(&i, repo, start, end));
@@ -547,10 +557,26 @@ static void workdir_iterator_test(
 		cl_git_pass(git_iterator_advance(i, &entry));
 	}
 
+	cl_git_pass(git_iterator_reset(i, NULL, NULL));
+	cl_git_pass(git_iterator_current(i, &entry));
+
+	while (entry != NULL) {
+		if (S_ISDIR(entry->mode)) {
+			cl_git_pass(git_iterator_advance_into_directory(i, &entry));
+			continue;
+		}
+		if (expected_names != NULL)
+			cl_assert_equal_s(
+				expected_names[count_all_post_reset], entry->path);
+		count_all_post_reset++;
+		cl_git_pass(git_iterator_advance(i, &entry));
+	}
+
 	git_iterator_free(i);
 
-	cl_assert_equal_i(expected_count,count);
+	cl_assert_equal_i(expected_count, count);
 	cl_assert_equal_i(expected_count + expected_ignores, count_all);
+	cl_assert_equal_i(count_all, count_all_post_reset);
 }
 
 void test_diff_iterator__workdir_0(void)
