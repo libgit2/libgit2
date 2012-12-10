@@ -447,7 +447,7 @@ replay:
 			if (allowed_types &&
 				(!t->cred || 0 == (t->cred->credtype & allowed_types))) {
 
-				if (t->owner->cred_acquire_cb(&t->cred, t->owner->url, allowed_types) < 0)
+				if (t->owner->cred_acquire_cb(&t->cred, t->owner->url, allowed_types, t->owner->cred_acquire_payload) < 0)
 					return -1;
 
 				assert(t->cred);
