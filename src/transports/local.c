@@ -143,6 +143,7 @@ static int local_connect(
 	git_transport *transport,
 	const char *url,
 	git_cred_acquire_cb cred_acquire_cb,
+	void *cred_acquire_payload,
 	int direction, int flags)
 {
 	git_repository *repo;
@@ -152,6 +153,7 @@ static int local_connect(
 	git_buf buf = GIT_BUF_INIT;
 
 	GIT_UNUSED(cred_acquire_cb);
+	GIT_UNUSED(cred_acquire_payload);
 
 	t->url = git__strdup(url);
 	GITERR_CHECK_ALLOC(t->url);

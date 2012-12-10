@@ -90,10 +90,9 @@ int git_remote_new(git_remote **out, git_repository *repo, const char *name, con
 	/* name is optional */
 	assert(out && repo && url);
 
-	remote = git__malloc(sizeof(git_remote));
+	remote = git__calloc(1, sizeof(git_remote));
 	GITERR_CHECK_ALLOC(remote);
 
-	memset(remote, 0x0, sizeof(git_remote));
 	remote->repo = repo;
 	remote->check_cert = 1;
 	remote->update_fetchhead = 1;
@@ -509,7 +508,7 @@ int git_remote_connect(git_remote *remote, git_direction direction)
 	if (!remote->check_cert)
 		flags |= GIT_TRANSPORTFLAGS_NO_CHECK_CERT;
 
-	if (t->connect(t, url, remote->cred_acquire_cb, direction, flags) < 0)
+	if (t->connect(t, url, remote->cred_acquire_cb, remote->cred_acquire_payload, direction, flags) < 0)
 		goto on_error;
 
 	remote->transport = t;
@@ -1019,11 +1018,13 @@ int git_remote_set_callbacks(git_remote *remote, git_remote_callbacks *callbacks
 
 void git_remote_set_cred_acquire_cb(
 	git_remote *remote,
-	git_cred_acquire_cb cred_acquire_cb)
+	git_cred_acquire_cb cred_acquire_cb,
+	void *payload)
 {
 	assert(remote);
 
 	remote->cred_acquire_cb = cred_acquire_cb;
+	remote->cred_acquire_payload = payload;
 }
 
 int git_remote_set_transport(git_remote *remote, git_transport *transport)
