@@ -115,10 +115,9 @@ void test_revwalk_mergebase__no_common_ancestor_returns_ENOTFOUND(void)
 
 	cl_assert_equal_i(GIT_ENOTFOUND, error);
 
-	cl_git_fail(git_graph_ahead_behind(&ahead, &behind, _repo, &one, &two));
-	cl_git_fail(error);
-
-	cl_assert_equal_i(GIT_ENOTFOUND, error);
+	cl_git_pass(git_graph_ahead_behind(&ahead, &behind, _repo, &one, &two));
+	cl_assert_equal_i(2, ahead);
+	cl_assert_equal_i(4, behind);
 }
 
 void test_revwalk_mergebase__no_off_by_one_missing(void)
