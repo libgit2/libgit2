@@ -119,6 +119,7 @@ int git_threads_init(void)
 	if (_tls_init)
 		return 0;
 
+	git_mutex_init(&git__mwindow_mutex);
 	pthread_key_create(&_tls_key, &cb__free_status);
 
 	/* Initialize any other subsystems that have global state */
@@ -134,6 +135,7 @@ void git_threads_shutdown(void)
 {
 	pthread_key_delete(_tls_key);
 	_tls_init = 0;
+	git_mutex_free(&git__mwindow_mutex);
 
 	/* Shut down any subsystems that have global state */
 	git_hash_global_shutdown();
