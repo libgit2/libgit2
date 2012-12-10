@@ -23,36 +23,33 @@ static int interesting(git_pqueue *list)
 	return 0;
 }
 
-int git_merge__bases_many(git_commit_list **out, git_revwalk *walk, git_commit_list_node *one, git_vector *twos)
+static int mark_parents(git_revwalk *walk, git_commit_list_node *one,
+	git_commit_list_node *two)
 {
 	int error;
 	unsigned int i;
-	git_commit_list_node *two;
-	git_commit_list *result = NULL, *tmp = NULL;
 	git_pqueue list;
 
 	/* if the commit is repeated, we have a our merge base already */
-	git_vector_foreach(twos, i, two) {
-		if (one == two)
-			return git_commit_list_insert(one, out) ? 0 : -1;
+	if (one == two) {
+		one->flags |= PARENT1 | PARENT2 | RESULT;
+		return 0;
 	}
 
-	if (git_pqueue_init(&list, twos->length * 2, git_commit_list_time_cmp) < 0)
+	if (git_pqueue_init(&list, 2, git_commit_list_time_cmp) < 0)
 		return -1;
 
 	if (git_commit_list_parse(walk, one) < 0)
-	    return -1;
-
+		return -1;
 	one->flags |= PARENT1;
 	if (git_pqueue_insert(&list, one) < 0)
 		return -1;
 
-	git_vector_foreach(twos, i, two) {
-		git_commit_list_parse(walk, two);
-		two->flags |= PARENT2;
-		if (git_pqueue_insert(&list, two) < 0)
-			return -1;
-	}
+	if (git_commit_list_parse(walk, two) < 0)
+	    return -1;
+	two->flags |= PARENT2;
+	if (git_pqueue_insert(&list, two) < 0)
+		return -1;
 
 	/* as long as there are non-STALE commits */
 	while (interesting(&list)) {
@@ -63,11 +60,8 @@ int git_merge__bases_many(git_commit_list **out, git_revwalk *walk, git_commit_l
 
 		flags = commit->flags & (PARENT1 | PARENT2 | STALE);
 		if (flags == (PARENT1 | PARENT2)) {
-			if (!(commit->flags & RESULT)) {
+			if (!(commit->flags & RESULT))
 				commit->flags |= RESULT;
-				if (git_commit_list_insert(commit, &result) == NULL)
-					return -1;
-			}
 			/* we mark the parents of a merge stale */
 			flags |= STALE;
 		}
@@ -88,23 +82,9 @@ int git_merge__bases_many(git_commit_list **out, git_revwalk *walk, git_commit_l
 
 	git_pqueue_free(&list);
 
-	/* filter out any stale commits in the results */
-	tmp = result;
-	result = NULL;
-
-	while (tmp) {
-		struct git_commit_list *next = tmp->next;
-		if (!(tmp->item->flags & STALE))
-			if (git_commit_list_insert_by_date(tmp->item, &result) == NULL)
-				return -1;
-
-		git__free(tmp);
-		tmp = next;
-	}
-
-	*out = result;
 	return 0;
 }
+
 
 static int ahead_behind(git_commit_list_node *one, git_commit_list_node *two,
 	size_t *ahead, size_t *behind)
@@ -151,10 +131,7 @@ int git_graph_ahead_behind(size_t *ahead, size_t *behind, git_repository *repo,
 	const git_oid *one, const git_oid *two)
 {
 	git_revwalk *walk;
-	git_vector list;
-	struct git_commit_list *result = NULL;
 	git_commit_list_node *commit1, *commit2;
-	void *contents[1];
 
 	if (git_revwalk_new(&walk, repo) < 0)
 		return -1;
@@ -163,27 +140,15 @@ int git_graph_ahead_behind(size_t *ahead, size_t *behind, git_repository *repo,
 	if (commit2 == NULL)
 		goto on_error;
 
-	/* This is just one value, so we can do it on the stack */
-	memset(&list, 0x0, sizeof(git_vector));
-	contents[0] = commit2;
-	list.length = 1;
-	list.contents = contents;
-
 	commit1 = git_revwalk__commit_lookup(walk, one);
 	if (commit1 == NULL)
 		goto on_error;
 
-	if (git_merge__bases_many(&result, walk, commit1, &list) < 0)
+	if (mark_parents(walk, commit1, commit2) < 0)
 		goto on_error;
 	if (ahead_behind(commit1, commit2, ahead, behind) < 0)
 		goto on_error;
 
-	if (!result) {
-		git_revwalk_free(walk);
-		return GIT_ENOTFOUND;
-	}
-
-	git_commit_list_free(&result);
 	git_revwalk_free(walk);
 
 	return 0;
