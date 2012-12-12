@@ -43,10 +43,10 @@ typedef int (*git_remote_rename_problem_cb)(const char *problematic_refspec, voi
  * See `git_tag_create()` for rules about valid names.
  *
  * @param out pointer to the new remote object
- * @param repo the associated repository
- * @param name the optional remote's name
+ * @param repo the associated repository. May be NULL for a "dangling" remote.
+ * @param name the optional remote's name. May be NULL.
  * @param url the remote repository's URL
- * @param fetch the fetch refspec to use for this remote
+ * @param fetch the fetch refspec to use for this remote. May be NULL for defaults.
  * @return 0, GIT_EINVALIDSPEC or an error code
  */
 GIT_EXTERN(int) git_remote_new(git_remote **out, git_repository *repo, const char *name, const char *url, const char *fetch);
