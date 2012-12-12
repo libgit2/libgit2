@@ -104,7 +104,7 @@ static int read_tree_internal(git_tree_cache **out,
 	tree->name[name_len] = '\0';
 
 	/* Blank-terminated ASCII decimal number of entries in this tree */
-	if (git__strtol32(&count, buffer, &buffer, 10) < 0 || count < -1)
+	if (git__strtol32(&count, buffer, &buffer, 10) < 0)
 		goto corrupted;
 
 	tree->entries = count;
