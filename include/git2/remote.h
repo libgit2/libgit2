@@ -52,6 +52,16 @@ typedef int (*git_remote_rename_problem_cb)(const char *problematic_refspec, voi
 GIT_EXTERN(int) git_remote_new(git_remote **out, git_repository *repo, const char *name, const char *url, const char *fetch);
 
 /**
+ * Sets the owning repository for the remote.  This is only allowed on
+ * dangling remotes.
+ *
+ * @param remote the remote to configure
+ * @param repo the repository that will own the remote
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_remote_set_repository(git_remote *remote, git_repository *repo);
+
+/**
  * Get the information for a particular remote
  *
  * The name will be checked for validity.

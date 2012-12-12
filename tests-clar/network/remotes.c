@@ -330,9 +330,13 @@ void test_network_remotes__check_structure_version(void)
 void test_network_remotes__dangling(void)
 {
 	cl_git_pass(git_remote_new(&_remote, NULL, "upstream", "git://github.com/libgit2/libgit2", NULL));
-	cl_git_fail(git_remote_save(_remote));
-	cl_git_fail(git_remote_update_tips(_remote));
 
 	cl_git_pass(git_remote_rename(_remote, "newname", NULL, NULL));
 	cl_assert_equal_s(git_remote_name(_remote), "newname");
+
+	cl_git_fail(git_remote_save(_remote));
+	cl_git_fail(git_remote_update_tips(_remote));
+
+	cl_git_pass(git_remote_set_repository(_remote, _repo));
+	cl_git_pass(git_remote_save(_remote));
 }
