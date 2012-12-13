@@ -27,7 +27,7 @@ GIT_BEGIN_DECL
  * HEAD.
  *
  * @param out pointer that will receive the resulting repository object
- * @param origin_url repository to clone from
+ * @param origin_remote a remote which will act as the initial fetch source
  * @param workdir_path local directory to clone to
  * @param fetch_progress_cb optional callback for fetch progress. Be aware that
  * this is called inline with network and indexing operations, so performance
@@ -40,7 +40,7 @@ GIT_BEGIN_DECL
  */
 GIT_EXTERN(int) git_clone(
 		git_repository **out,
-		const char *origin_url,
+		git_remote *origin_remote,
 		const char *workdir_path,
 		git_checkout_opts *checkout_opts,
 		git_transfer_progress_callback fetch_progress_cb,
@@ -50,7 +50,7 @@ GIT_EXTERN(int) git_clone(
  * Create a bare clone of a remote repository.
  *
  * @param out pointer that will receive the resulting repository object
- * @param origin_url repository to clone from
+ * @param origin_remote a remote which will act as the initial fetch source
  * @param dest_path local directory to clone to
  * @param fetch_progress_cb optional callback for fetch progress. Be aware that
  * this is called inline with network and indexing operations, so performance
@@ -60,7 +60,7 @@ GIT_EXTERN(int) git_clone(
  */
 GIT_EXTERN(int) git_clone_bare(
 		git_repository **out,
-		const char *origin_url,
+		git_remote *origin_remote,
 		const char *dest_path,
 		git_transfer_progress_callback fetch_progress_cb,
 		void *fetch_progress_payload);
