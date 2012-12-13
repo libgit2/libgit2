@@ -115,7 +115,7 @@ int git_remote_new(git_remote **out, git_repository *repo, const char *name, con
 		GITERR_CHECK_ALLOC(remote->name);
 
 		/* An empty name indicates to use a sensible default for the fetchspec. */
-		if (fetch && strlen(fetch) == 0) {
+		if (fetch && !(*fetch)) {
 			if (git_buf_printf(&fetchbuf, "+refs/heads/*:refs/remotes/%s/*", remote->name) < 0)
 				goto on_error;
 			fetch = git_buf_cstr(&fetchbuf);

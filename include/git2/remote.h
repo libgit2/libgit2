@@ -24,6 +24,14 @@
  */
 GIT_BEGIN_DECL
 
+/**
+ * Use this when creating a remote with git_remote_new to get the default fetch
+ * behavior produced by git_remote_add.  It corresponds to this fetchspec (note
+ * the spaces between '/' and '*' to avoid C compiler errors):
+ * "+refs/heads/ *:refs/remotes/<remote_name>/ *"
+ */
+#define GIT_REMOTE_DEFAULT_FETCH ""
+
 typedef int (*git_remote_rename_problem_cb)(const char *problematic_refspec, void *payload);
 /*
  * TODO: This functions still need to be implemented:

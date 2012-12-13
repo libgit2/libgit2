@@ -89,7 +89,7 @@ void test_network_fetch__doesnt_retrieve_a_pack_when_the_repository_is_up_to_dat
 	git_remote *remote;
 	bool invoked = false;
 
-	cl_git_pass(git_remote_new(&remote, NULL, "origin", "https://github.com/libgit2/TestGitRepository.git", ""));
+	cl_git_pass(git_remote_new(&remote, NULL, "origin", "https://github.com/libgit2/TestGitRepository.git", GIT_REMOTE_DEFAULT_FETCH));
 	cl_git_pass(git_clone_bare(&_repository, remote, "./fetch/lg2", NULL, NULL));
 	git_repository_free(_repository);
 

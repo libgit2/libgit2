@@ -11,7 +11,7 @@ static git_remote *g_origin = NULL;
 void test_clone_nonetwork__initialize(void)
 {
 	g_repo = NULL;
-	cl_git_pass(git_remote_new(&g_origin, NULL, "origin", cl_git_fixture_url("testrepo.git"), ""));
+	cl_git_pass(git_remote_new(&g_origin, NULL, "origin", cl_git_fixture_url("testrepo.git"), GIT_REMOTE_DEFAULT_FETCH));
 }
 
 static void cleanup_repository(void *path)
@@ -28,7 +28,7 @@ void test_clone_nonetwork__bad_url(void)
 {
 	/* Clone should clean up the mess if the URL isn't a git repository */
 	git_remote_free(g_origin);
-	cl_git_pass(git_remote_new(&g_origin, NULL, "origin", "not_a_repo", NULL));
+	cl_git_pass(git_remote_new(&g_origin, NULL, "origin", "not_a_repo", GIT_REMOTE_DEFAULT_FETCH));
 
 	cl_git_fail(git_clone(&g_repo, g_origin, "./foo", NULL, NULL, NULL));
 	cl_assert(!git_path_exists("./foo"));

@@ -15,7 +15,7 @@ static git_remote *g_origin;
 void test_fetchhead_network__initialize(void)
 {
 	g_repo = NULL;
-	cl_git_pass(git_remote_new(&g_origin, NULL, "origin", LIVE_REPO_URL, ""));
+	cl_git_pass(git_remote_new(&g_origin, NULL, "origin", LIVE_REPO_URL, GIT_REMOTE_DEFAULT_FETCH));
 }
 
 void test_fetchhead_network__cleanup(void)
