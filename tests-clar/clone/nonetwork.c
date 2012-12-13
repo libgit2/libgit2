@@ -14,6 +14,12 @@ void test_clone_nonetwork__initialize(void)
 	cl_git_pass(git_remote_new(&g_origin, NULL, "origin", cl_git_fixture_url("testrepo.git"), GIT_REMOTE_DEFAULT_FETCH));
 }
 
+void test_clone_nonetwork__cleanup(void)
+{
+	git_remote_free(g_origin);
+	g_origin = NULL;
+}
+
 static void cleanup_repository(void *path)
 {
 	if (g_repo) {
@@ -56,7 +62,6 @@ void test_clone_nonetwork__fail_when_the_target_is_a_file(void)
 
 	cl_git_mkfile("./foo", "Bar!");
 	cl_git_fail(git_clone(&g_repo, g_origin, "./foo", NULL, NULL, NULL));
-	git_remote_free(g_origin);
 }
 
 void test_clone_nonetwork__fail_with_already_existing_but_non_empty_directory(void)
@@ -66,5 +71,4 @@ void test_clone_nonetwork__fail_with_already_existing_but_non_empty_directory(vo
 	p_mkdir("./foo", GIT_DIR_MODE);
 	cl_git_mkfile("./foo/bar", "Baz!");
 	cl_git_fail(git_clone(&g_repo, g_origin, "./foo", NULL, NULL, NULL));
-	git_remote_free(g_origin);
 }

@@ -289,7 +289,6 @@ static int setup_remotes_and_fetch(
 			}
 			git_remote_disconnect(origin);
 		}
-		git_remote_free(origin);
 	}
 
 	return retcode;

@@ -17,6 +17,12 @@ void test_clone_network__initialize(void)
 	cl_git_pass(git_remote_new(&g_origin, NULL, "origin", LIVE_REPO_URL, GIT_REMOTE_DEFAULT_FETCH));
 }
 
+void test_clone_network__cleanup(void)
+{
+	git_remote_free(g_origin);
+	g_origin = NULL;
+}
+
 static void cleanup_repository(void *path)
 {
 	if (g_repo) {

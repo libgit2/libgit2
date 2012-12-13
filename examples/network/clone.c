@@ -82,6 +82,7 @@ int do_clone(git_repository *repo, int argc, char **argv)
 
 	// Do the clone
 	error = git_clone(&cloned_repo, origin, path, &checkout_opts, &fetch_progress, &pd);
+	git_remote_free(origin);
 	printf("\n");
 	if (error != 0) {
 		const git_error *err = giterr_last();
