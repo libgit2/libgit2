@@ -50,6 +50,7 @@ static void checkout_progress(const char *path, size_t cur, size_t tot, void *pa
 int do_clone(git_repository *repo, int argc, char **argv)
 {
 	progress_data pd;
+	git_remote *origin = NULL;
 	git_repository *cloned_repo = NULL;
 	git_checkout_opts checkout_opts = GIT_CHECKOUT_OPTS_INIT;
 	const char *url = argv[1];
@@ -65,14 +66,22 @@ int do_clone(git_repository *repo, int argc, char **argv)
 	}
 
 	// Set up options
-	memset(&checkout_opts, 0, sizeof(checkout_opts));
 	checkout_opts.checkout_strategy = GIT_CHECKOUT_SAFE;
 	checkout_opts.progress_cb = checkout_progress;
 	memset(&pd, 0, sizeof(pd));
 	checkout_opts.progress_payload = &pd;
 
+	// Create the origin remote
+	error = git_remote_new(&origin, NULL, "origin", url, GIT_REMOTE_DEFAULT_FETCH);
+	if (error != 0) {
+		const git_error *err = giterr_last();
+		if (err) printf("ERROR %d: %s\n", err->klass, err->message);
+		else printf("ERROR %d: no detailed info\n", error);
+		return error;
+	}
+
 	// Do the clone
-	error = git_clone(&cloned_repo, url, path, &checkout_opts, &fetch_progress, &pd);
+	error = git_clone(&cloned_repo, origin, path, &checkout_opts, &fetch_progress, &pd);
 	printf("\n");
 	if (error != 0) {
 		const git_error *err = giterr_last();
