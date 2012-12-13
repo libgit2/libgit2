@@ -50,9 +50,11 @@ static int add_ref(transport_local *t, const char *name)
 	GITERR_CHECK_ALLOC(head->name);
 
 	if (git_reference_name_to_id(&head->oid, t->repo, name) < 0) {
+		/* This is actually okay.  Empty repos often have a HEAD that points to
+		 * a nonexistant "refs/haeds/master". */
 		git__free(head->name);
 		git__free(head);
-		return -1;
+		return 0;
 	}
 
 	if (git_vector_insert(&t->refs, head) < 0)
