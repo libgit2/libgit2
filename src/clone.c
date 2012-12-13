@@ -262,15 +262,14 @@ cleanup:
 
 static int setup_remotes_and_fetch(
 		git_repository *repo,
-		const char *origin_url,
+		git_remote *origin,
 		git_transfer_progress_callback progress_cb,
 		void *progress_payload)
 {
 	int retcode = GIT_ERROR;
-	git_remote *origin = NULL;
 
-	/* Create the "origin" remote */
-	if (!git_remote_add(&origin, repo, GIT_REMOTE_ORIGIN, origin_url)) {
+	/* Add the origin remote */
+	if (!git_remote_set_repository(origin, repo) && !git_remote_save(origin)) {
 		/*
 		 * Don't write FETCH_HEAD, we'll check out the remote tracking
 		 * branch ourselves based on the server's default.
@@ -325,7 +324,7 @@ static bool should_checkout(
 
 static int clone_internal(
 	git_repository **out,
-	const char *origin_url,
+	git_remote *origin_remote,
 	const char *path,
 	git_transfer_progress_callback fetch_progress_cb,
 	void *fetch_progress_payload,
@@ -340,7 +339,7 @@ static int clone_internal(
 	}
 
 	if (!(retcode = git_repository_init(&repo, path, is_bare))) {
-		if ((retcode = setup_remotes_and_fetch(repo, origin_url,
+		if ((retcode = setup_remotes_and_fetch(repo, origin_remote,
 						fetch_progress_cb, fetch_progress_payload)) < 0) {
 			/* Failed to fetch; clean up */
 			git_repository_free(repo);
@@ -359,16 +358,16 @@ static int clone_internal(
 
 int git_clone_bare(
 		git_repository **out,
-		const char *origin_url,
+		git_remote *origin_remote,
 		const char *dest_path,
 		git_transfer_progress_callback fetch_progress_cb,
 		void *fetch_progress_payload)
 {
-	assert(out && origin_url && dest_path);
+	assert(out && origin_remote && dest_path);
 
 	return clone_internal(
 		out,
-		origin_url,
+		origin_remote,
 		dest_path,
 		fetch_progress_cb,
 		fetch_progress_payload,
@@ -379,17 +378,17 @@ int git_clone_bare(
 
 int git_clone(
 		git_repository **out,
-		const char *origin_url,
+		git_remote *origin_remote,
 		const char *workdir_path,
 		git_checkout_opts *checkout_opts,
 		git_transfer_progress_callback fetch_progress_cb,
 		void *fetch_progress_payload)
 {
-	assert(out && origin_url && workdir_path);
+	assert(out && origin_remote && workdir_path);
 
 	return clone_internal(
 		out,
-		origin_url,
+		origin_remote,
 		workdir_path,
 		fetch_progress_cb,
 		fetch_progress_payload,

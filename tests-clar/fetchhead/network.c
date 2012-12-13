@@ -10,10 +10,17 @@ CL_IN_CATEGORY("network")
 #define LIVE_REPO_URL "git://github.com/libgit2/TestGitRepository"
 
 static git_repository *g_repo;
+static git_remote *g_origin;
 
 void test_fetchhead_network__initialize(void)
 {
 	g_repo = NULL;
+	cl_git_pass(git_remote_new(&g_origin, NULL, "origin", LIVE_REPO_URL, ""));
+}
+
+void test_fetchhead_network__cleanup(void)
+{
+	g_origin = NULL;
 }
 
 static void cleanup_repository(void *path)
@@ -31,7 +38,7 @@ static void fetchhead_test_clone(void)
 {
 	cl_set_cleanup(&cleanup_repository, "./test1");
 
-	cl_git_pass(git_clone(&g_repo, LIVE_REPO_URL, "./test1", NULL, NULL, NULL));
+	cl_git_pass(git_clone(&g_repo, g_origin, "./test1", NULL, NULL, NULL));
 }
 
 static void fetchhead_test_fetch(const char *fetchspec, const char *expected_fetchhead)

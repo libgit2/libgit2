@@ -86,6 +86,8 @@ cleanup:
 int git_remote_new(git_remote **out, git_repository *repo, const char *name, const char *url, const char *fetch)
 {
 	git_remote *remote;
+	git_buf fetchbuf = GIT_BUF_INIT;
+	int error = -1;
 
 	/* name is optional */
 	assert(out && url);
@@ -98,20 +100,26 @@ int git_remote_new(git_remote **out, git_repository *repo, const char *name, con
 	remote->update_fetchhead = 1;
 
 	if (git_vector_init(&remote->refs, 32, NULL) < 0)
-		return -1;
+		goto on_error;
 
 	remote->url = git__strdup(url);
 	GITERR_CHECK_ALLOC(remote->url);
 
 	if (name != NULL) {
-		int error;
 		if ((error = ensure_remote_name_is_valid(name)) < 0) {
-			git_remote_free(remote);
-			return error;
+			error = GIT_EINVALIDSPEC;
+			goto on_error;
 		}
 
 		remote->name = git__strdup(name);
 		GITERR_CHECK_ALLOC(remote->name);
+
+		/* An empty name indicates to use a sensible default for the fetchspec. */
+		if (fetch && strlen(fetch) == 0) {
+			if (git_buf_printf(&fetchbuf, "+refs/heads/*:refs/remotes/%s/*", remote->name) < 0)
+				goto on_error;
+			fetch = git_buf_cstr(&fetchbuf);
+		}
 	}
 
 	if (fetch != NULL) {
@@ -125,11 +133,13 @@ int git_remote_new(git_remote **out, git_repository *repo, const char *name, con
 	}
 
 	*out = remote;
+	git_buf_free(&fetchbuf);
 	return 0;
 
 on_error:
 	git_remote_free(remote);
-	return -1;
+	git_buf_free(&fetchbuf);
+	return error;
 }
 
 int git_remote_set_repository(git_remote *remote, git_repository *repo)
