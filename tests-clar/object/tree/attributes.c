@@ -43,15 +43,11 @@ void test_object_tree_attributes__group_writable_tree_entries_created_with_an_an
 
 void test_object_tree_attributes__treebuilder_reject_invalid_filemode(void)
 {
-	git_repository *repo;
 	git_treebuilder *builder;
 	git_oid bid;
 	const git_tree_entry *entry;
 
-	repo = cl_git_sandbox_init("deprecated-mode.git");
-
 	cl_git_pass(git_oid_fromstr(&bid, blob_oid));
-
 	cl_git_pass(git_treebuilder_create(&builder, NULL));
 
 	cl_git_fail(git_treebuilder_insert(
@@ -62,7 +58,6 @@ void test_object_tree_attributes__treebuilder_reject_invalid_filemode(void)
 		GIT_FILEMODE_BLOB_GROUP_WRITABLE));
 
 	git_treebuilder_free(builder);
-	cl_git_sandbox_cleanup();
 }
 
 void test_object_tree_attributes__normalize_attributes_when_creating_a_tree_from_an_existing_one(void)
