@@ -86,9 +86,11 @@ cleanup:
 int git_remote_new(git_remote **out, git_repository *repo, const char *name, const char *url, const char *fetch)
 {
 	git_remote *remote;
+	git_buf fetchbuf = GIT_BUF_INIT;
+	int error = -1;
 
 	/* name is optional */
-	assert(out && repo && url);
+	assert(out && url);
 
 	remote = git__calloc(1, sizeof(git_remote));
 	GITERR_CHECK_ALLOC(remote);
@@ -98,20 +100,26 @@ int git_remote_new(git_remote **out, git_repository *repo, const char *name, con
 	remote->update_fetchhead = 1;
 
 	if (git_vector_init(&remote->refs, 32, NULL) < 0)
-		return -1;
+		goto on_error;
 
 	remote->url = git__strdup(url);
 	GITERR_CHECK_ALLOC(remote->url);
 
 	if (name != NULL) {
-		int error;
 		if ((error = ensure_remote_name_is_valid(name)) < 0) {
-			git_remote_free(remote);
-			return error;
+			error = GIT_EINVALIDSPEC;
+			goto on_error;
 		}
 
 		remote->name = git__strdup(name);
 		GITERR_CHECK_ALLOC(remote->name);
+
+		/* An empty name indicates to use a sensible default for the fetchspec. */
+		if (fetch && !(*fetch)) {
+			if (git_buf_printf(&fetchbuf, "+refs/heads/*:refs/remotes/%s/*", remote->name) < 0)
+				goto on_error;
+			fetch = git_buf_cstr(&fetchbuf);
+		}
 	}
 
 	if (fetch != NULL) {
@@ -125,11 +133,26 @@ int git_remote_new(git_remote **out, git_repository *repo, const char *name, con
 	}
 
 	*out = remote;
+	git_buf_free(&fetchbuf);
 	return 0;
 
 on_error:
 	git_remote_free(remote);
-	return -1;
+	git_buf_free(&fetchbuf);
+	return error;
+}
+
+int git_remote_set_repository(git_remote *remote, git_repository *repo)
+{
+	assert(repo);
+
+	if (remote->repo) {
+		giterr_set(GITERR_INVALID, "Remotes can't change repositiories.");
+		return GIT_ERROR;
+	}
+
+	remote->repo = repo;
+	return 0;
 }
 
 int git_remote_load(git_remote **out, git_repository *repo, const char *name)
@@ -288,6 +311,11 @@ int git_remote_save(const git_remote *remote)
 	git_buf buf = GIT_BUF_INIT;
 
 	assert(remote);
+
+	if (!remote->repo) {
+		giterr_set(GITERR_INVALID, "Can't save a dangling remote.");
+		return GIT_ERROR;
+	}
 
 	if ((error = ensure_remote_name_is_valid(remote->name)) < 0)
 		return error;
@@ -543,7 +571,7 @@ int git_remote__get_http_proxy(git_remote *remote, bool use_ssl, char **proxy_ur
 
 	assert(remote);
 
-	if (!proxy_url)
+	if (!proxy_url || !remote->repo)
 		return -1;
 
 	*proxy_url = NULL;
@@ -744,6 +772,11 @@ int git_remote_update_tips(git_remote *remote)
 	git_vector refs, update_heads;
 
 	assert(remote);
+
+	if (!remote->repo) {
+		giterr_set(GITERR_INVALID, "Can't update tips on a dangling remote.");
+		return GIT_ERROR;
+	}
 
 	spec = &remote->fetch;
 	
@@ -1293,49 +1326,51 @@ int git_remote_rename(
 
 	assert(remote && new_name);
 
-	if ((error = ensure_remote_doesnot_exist(remote->repo, new_name)) < 0)
-		return error;
-
 	if ((error = ensure_remote_name_is_valid(new_name)) < 0)
 		return error;
 
-	if (!remote->name) {
+	if (remote->repo) {
+		if ((error = ensure_remote_doesnot_exist(remote->repo, new_name)) < 0)
+			return error;
+
+		if (!remote->name) {
+			if ((error = rename_fetch_refspecs(
+				remote,
+				new_name,
+				callback,
+				payload)) < 0)
+				return error;
+
+			remote->name = git__strdup(new_name);
+
+			return git_remote_save(remote);
+		}
+
+		if ((error = rename_remote_config_section(
+			remote->repo,
+			remote->name,
+			new_name)) < 0)
+				return error;
+
+		if ((error = update_branch_remote_config_entry(
+			remote->repo,
+			remote->name,
+			new_name)) < 0)
+				return error;
+
+		if ((error = rename_remote_references(
+			remote->repo,
+			remote->name,
+			new_name)) < 0)
+				return error;
+
 		if ((error = rename_fetch_refspecs(
 			remote,
 			new_name,
 			callback,
 			payload)) < 0)
 			return error;
-
-		remote->name = git__strdup(new_name);
-
-		return git_remote_save(remote);
 	}
-
-	if ((error = rename_remote_config_section(
-		remote->repo,
-		remote->name,
-		new_name)) < 0)
-			return error;
-
-	if ((error = update_branch_remote_config_entry(
-		remote->repo,
-		remote->name,
-		new_name)) < 0)
-			return error;
-
-	if ((error = rename_remote_references(
-		remote->repo,
-		remote->name,
-		new_name)) < 0)
-			return error;
-
-	if ((error = rename_fetch_refspecs(
-		remote,
-		new_name,
-		callback,
-		payload)) < 0)
-		return error;
 
 	git__free(remote->name);
 	remote->name = git__strdup(new_name);
