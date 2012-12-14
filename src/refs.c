@@ -177,7 +177,7 @@ static int loose_parse_oid(git_oid *oid, git_buf *file_content)
 
 corrupted:
 	giterr_set(GITERR_REFERENCE, "Corrupted loose reference file");
-	return -1;
+	return GIT_ENOTFOUND;
 }
 
 static git_ref_t loose_guess_rtype(const git_buf *full_path)
