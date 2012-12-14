@@ -86,11 +86,16 @@ static void transferProgressCallback(const git_transfer_progress *stats, void *p
 void test_network_fetch__doesnt_retrieve_a_pack_when_the_repository_is_up_to_date(void)
 {
 	git_repository *_repository;
-	git_remote *remote;
 	bool invoked = false;
+	git_remote *remote;
+	git_clone_options opts = GIT_CLONE_OPTIONS_INIT;
 
-	cl_git_pass(git_remote_new(&remote, NULL, "origin", "https://github.com/libgit2/TestGitRepository.git", GIT_REMOTE_DEFAULT_FETCH));
-	cl_git_pass(git_clone_bare(&_repository, remote, "./fetch/lg2", NULL, NULL));
+	opts.out = &_repository;
+	opts.local_path = "./fetch/lg2";
+	opts.bare = true;
+	cl_git_pass(git_remote_new(&opts.origin_remote, NULL, "origin", "https://github.com/libgit2/TestGitRepository.git", GIT_REMOTE_DEFAULT_FETCH));
+
+	cl_git_pass(git_clone(&opts));
 	git_repository_free(_repository);
 
 	cl_git_pass(git_repository_open(&_repository, "./fetch/lg2"));
@@ -108,5 +113,6 @@ void test_network_fetch__doesnt_retrieve_a_pack_when_the_repository_is_up_to_dat
 	git_remote_disconnect(remote);
 
 	git_remote_free(remote);
+	git_remote_free(opts.origin_remote);
 	git_repository_free(_repository);
 }

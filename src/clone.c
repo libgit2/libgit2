@@ -355,42 +355,18 @@ static int clone_internal(
 	return retcode;
 }
 
-int git_clone_bare(
-		git_repository **out,
-		git_remote *origin_remote,
-		const char *dest_path,
-		git_transfer_progress_callback fetch_progress_cb,
-		void *fetch_progress_payload)
+int git_clone(git_clone_options *options)
 {
-	assert(out && origin_remote && dest_path);
+	assert(options && options->out && options->origin_remote && options->local_path);
+
+	GITERR_CHECK_VERSION(options, GIT_CLONE_OPTIONS_VERSION, "git_clone_options");
 
 	return clone_internal(
-		out,
-		origin_remote,
-		dest_path,
-		fetch_progress_cb,
-		fetch_progress_payload,
-		NULL,
-		1);
-}
-
-
-int git_clone(
-		git_repository **out,
-		git_remote *origin_remote,
-		const char *workdir_path,
-		git_checkout_opts *checkout_opts,
-		git_transfer_progress_callback fetch_progress_cb,
-		void *fetch_progress_payload)
-{
-	assert(out && origin_remote && workdir_path);
-
-	return clone_internal(
-		out,
-		origin_remote,
-		workdir_path,
-		fetch_progress_cb,
-		fetch_progress_payload,
-		checkout_opts,
-		0);
+		options->out,
+		options->origin_remote,
+		options->local_path,
+		options->fetch_progress_cb,
+		options->fetch_progress_payload,
+		options->checkout_opts,
+		options->bare ? 1 : 0);
 }

@@ -9,18 +9,22 @@ CL_IN_CATEGORY("network")
 #define LIVE_EMPTYREPO_URL "http://github.com/libgit2/TestEmptyRepository"
 
 static git_repository *g_repo;
-static git_remote *g_origin;
+static git_clone_options g_options;
 
 void test_clone_network__initialize(void)
 {
 	g_repo = NULL;
-	cl_git_pass(git_remote_new(&g_origin, NULL, "origin", LIVE_REPO_URL, GIT_REMOTE_DEFAULT_FETCH));
+
+	memset(&g_options, 0, sizeof(git_clone_options));
+	g_options.version = GIT_CLONE_OPTIONS_VERSION;
+	g_options.out = &g_repo;
+	g_options.local_path = "./foo";
+	cl_git_pass(git_remote_new(&g_options.origin_remote, NULL, "origin", LIVE_REPO_URL, GIT_REMOTE_DEFAULT_FETCH));
 }
 
 void test_clone_network__cleanup(void)
 {
-	git_remote_free(g_origin);
-	g_origin = NULL;
+	git_remote_free(g_options.origin_remote);
 }
 
 static void cleanup_repository(void *path)
@@ -37,9 +41,9 @@ void test_clone_network__network_full(void)
 {
 	git_remote *origin;
 
-	cl_set_cleanup(&cleanup_repository, "./test2");
+	cl_set_cleanup(&cleanup_repository, "./foo");
 
-	cl_git_pass(git_clone(&g_repo, g_origin, "./test2", NULL, NULL, NULL));
+	cl_git_pass(git_clone(&g_options));
 	cl_assert(!git_repository_is_bare(g_repo));
 	cl_git_pass(git_remote_load(&origin, g_repo, "origin"));
 
@@ -51,9 +55,10 @@ void test_clone_network__network_bare(void)
 {
 	git_remote *origin;
 
-	cl_set_cleanup(&cleanup_repository, "./test");
+	cl_set_cleanup(&cleanup_repository, "./foo");
+	g_options.bare = true;
 
-	cl_git_pass(git_clone_bare(&g_repo, g_origin, "./test", NULL, NULL));
+	cl_git_pass(git_clone(&g_options));
 	cl_assert(git_repository_is_bare(g_repo));
 	cl_git_pass(git_remote_load(&origin, g_repo, "origin"));
 
@@ -65,7 +70,7 @@ void test_clone_network__cope_with_already_existing_directory(void)
 	cl_set_cleanup(&cleanup_repository, "./foo");
 
 	p_mkdir("./foo", GIT_DIR_MODE);
-	cl_git_pass(git_clone(&g_repo, g_origin, "./foo", NULL, NULL, NULL));
+	cl_git_pass(git_clone(&g_options));
 	git_repository_free(g_repo); g_repo = NULL;
 }
 
@@ -73,12 +78,12 @@ void test_clone_network__empty_repository(void)
 {
 	git_reference *head;
 
-	cl_set_cleanup(&cleanup_repository, "./empty");
+	cl_set_cleanup(&cleanup_repository, "./foo");
 
-	git_remote_free(g_origin);
-	cl_git_pass(git_remote_new(&g_origin, NULL, "origin", LIVE_EMPTYREPO_URL, GIT_REMOTE_DEFAULT_FETCH));
+	git_remote_free(g_options.origin_remote);
+	cl_git_pass(git_remote_new(&g_options.origin_remote, NULL, "origin", LIVE_EMPTYREPO_URL, GIT_REMOTE_DEFAULT_FETCH));
 
-	cl_git_pass(git_clone(&g_repo, g_origin, "./empty", NULL, NULL, NULL));
+	cl_git_pass(git_clone(&g_options));
 
 	cl_assert_equal_i(true, git_repository_is_empty(g_repo));
 	cl_assert_equal_i(true, git_repository_head_orphan(g_repo));
@@ -93,10 +98,9 @@ void test_clone_network__empty_repository(void)
 void test_clone_network__can_prevent_the_checkout_of_a_standard_repo(void)
 {
 	git_buf path = GIT_BUF_INIT;
+	cl_set_cleanup(&cleanup_repository, "./foo");
 
-	cl_set_cleanup(&cleanup_repository, "./no-checkout");
-
-	cl_git_pass(git_clone(&g_repo, g_origin, "./no-checkout", NULL, NULL, NULL));
+	cl_git_pass(git_clone(&g_options));
 
 	cl_git_pass(git_buf_joinpath(&path, git_repository_workdir(g_repo), "master.txt"));
 	cl_assert_equal_i(false, git_path_isfile(git_buf_cstr(&path)));
@@ -129,11 +133,13 @@ void test_clone_network__can_checkout_a_cloned_repo(void)
 	opts.checkout_strategy = GIT_CHECKOUT_SAFE;
 	opts.progress_cb = &checkout_progress;
 	opts.progress_payload = &checkout_progress_cb_was_called;
+	g_options.checkout_opts = &opts;
+	g_options.fetch_progress_cb = &fetch_progress;
+	g_options.fetch_progress_payload = &fetch_progress_cb_was_called;
 
-	cl_set_cleanup(&cleanup_repository, "./default-checkout");
+	cl_set_cleanup(&cleanup_repository, "./foo");
 
-	cl_git_pass(git_clone(&g_repo, g_origin, "./default-checkout", &opts,
-				&fetch_progress, &fetch_progress_cb_was_called));
+	cl_git_pass(git_clone(&g_options));
 
 	cl_git_pass(git_buf_joinpath(&path, git_repository_workdir(g_repo), "master.txt"));
 	cl_assert_equal_i(true, git_path_isfile(git_buf_cstr(&path)));

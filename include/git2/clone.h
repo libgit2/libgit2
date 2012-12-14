@@ -32,7 +32,9 @@ GIT_BEGIN_DECL
  *
  * - `out` is a pointer that receives the resulting repository object
  * - `origin_remote` is a remote which will act as the initial fetch source
- * - `workdir_path` is local directory to clone to
+ * - `local_path` is local directory to clone into
+ * - `bare` should be set to zero to create a standard repo, non-zero for
+ *   a bare repo
  * - `fetch_progress_cb` is optional callback for fetch progress. Be aware that
  *   this is called inline with network and indexing operations, so performance
  *   may be affected.
@@ -46,10 +48,11 @@ typedef struct git_clone_options {
 
 	git_repository **out;
 	git_remote *origin_remote;
-	const char *workdir_path;
-	git_checkout_opts *checkout_opts;
+	const char *local_path;
+	int bare;
 	git_transfer_progress_callback fetch_progress_cb;
 	void *fetch_progress_payload;
+	git_checkout_opts *checkout_opts;
 } git_clone_options;
 
 #define GIT_CLONE_OPTIONS_VERSION 1
@@ -59,44 +62,11 @@ typedef struct git_clone_options {
  * Clone a remote repository, and checkout the branch pointed to by the remote
  * HEAD.
  *
- * @param out pointer that will receive the resulting repository object
- * @param origin_remote a remote which will act as the initial fetch source
- * @param workdir_path local directory to clone to
- * @param fetch_progress_cb optional callback for fetch progress. Be aware that
- * this is called inline with network and indexing operations, so performance
- * may be affected.
- * @param fetch_progress_payload payload for fetch_progress_cb
- * @param checkout_opts options for the checkout step. If NULL, no checkout
- * is performed
+ * @param options configuration options for the clone
  * @return 0 on success, GIT_ERROR otherwise (use giterr_last for information
  * about the error)
  */
-GIT_EXTERN(int) git_clone(
-		git_repository **out,
-		git_remote *origin_remote,
-		const char *workdir_path,
-		git_checkout_opts *checkout_opts,
-		git_transfer_progress_callback fetch_progress_cb,
-		void *fetch_progress_payload);
-
-/**
- * Create a bare clone of a remote repository.
- *
- * @param out pointer that will receive the resulting repository object
- * @param origin_remote a remote which will act as the initial fetch source
- * @param dest_path local directory to clone to
- * @param fetch_progress_cb optional callback for fetch progress. Be aware that
- * this is called inline with network and indexing operations, so performance
- * may be affected.
- * @param fetch_progress_payload payload for fetch_progress_cb
- * @return 0 on success, GIT_ERROR otherwise (use giterr_last for information about the error)
- */
-GIT_EXTERN(int) git_clone_bare(
-		git_repository **out,
-		git_remote *origin_remote,
-		const char *dest_path,
-		git_transfer_progress_callback fetch_progress_cb,
-		void *fetch_progress_payload);
+GIT_EXTERN(int) git_clone(git_clone_options *options);
 
 /** @} */
 GIT_END_DECL
