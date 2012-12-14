@@ -65,8 +65,9 @@ static int cred_acquire(git_cred **out, const char *url, unsigned int allowed_ty
 int do_clone(git_repository *repo, int argc, char **argv)
 {
 	progress_data pd;
-	git_remote *origin = NULL;
 	git_repository *cloned_repo = NULL;
+	git_remote *origin;
+	git_clone_options clone_opts = GIT_CLONE_OPTIONS_INIT;
 	git_checkout_opts checkout_opts = GIT_CHECKOUT_OPTS_INIT;
 	const char *url = argv[1];
 	const char *path = argv[2];
@@ -97,7 +98,10 @@ int do_clone(git_repository *repo, int argc, char **argv)
 	git_remote_set_cred_acquire_cb(origin, cred_acquire, NULL);
 
 	// Do the clone
-	error = git_clone(&cloned_repo, origin, path, &checkout_opts, &fetch_progress, &pd);
+	clone_opts.checkout_opts = &checkout_opts;
+	clone_opts.fetch_progress_cb = &fetch_progress;
+	clone_opts.fetch_progress_payload = &pd;
+	error = git_clone(&cloned_repo, origin, path, &clone_opts);
 	git_remote_free(origin);
 	printf("\n");
 	if (error != 0) {
