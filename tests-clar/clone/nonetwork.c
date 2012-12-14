@@ -95,7 +95,8 @@ void test_clone_nonetwork__can_clone_an_empty_local_repo_barely(void)
 	git_remote_free(g_origin);
 	cl_git_pass(git_remote_new(&g_origin, NULL, "origin", src, GIT_REMOTE_DEFAULT_FETCH));
 
-	cl_git_pass(git_clone_bare(&g_repo, g_origin, "./empty", NULL, NULL));
+	g_options.bare = true;
+	cl_git_pass(git_clone(&g_repo, g_origin, "./empty", &g_options));
 }
 
 void test_clone_nonetwork__can_clone_an_empty_local_repo(void)
@@ -106,7 +107,7 @@ void test_clone_nonetwork__can_clone_an_empty_local_repo(void)
 	git_remote_free(g_origin);
 	cl_git_pass(git_remote_new(&g_origin, NULL, "origin", src, GIT_REMOTE_DEFAULT_FETCH));
 
-	cl_git_pass(git_clone(&g_repo, g_origin, "./empty", NULL, NULL, NULL));
+	cl_git_pass(git_clone(&g_repo, g_origin, "./empty", &g_options));
 }
 
 void test_clone_nonetwork__can_clone_an_empty_standard_repo(void)
@@ -121,7 +122,7 @@ void test_clone_nonetwork__can_clone_an_empty_standard_repo(void)
 
 	cl_set_cleanup(&cleanup_repository, "./empty");
 
-	cl_git_pass(git_clone(&g_repo, g_origin, "./empty", NULL, NULL, NULL));
+	cl_git_pass(git_clone(&g_repo, g_origin, "./empty", &g_options));
 
 	cl_git_sandbox_cleanup();
 }
