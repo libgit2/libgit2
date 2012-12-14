@@ -20,7 +20,8 @@ matrix:
 
 # Make sure CMake is installed
 install:
- - sudo apt-get install cmake valgrind
+ - sudo apt-get update >/dev/null
+ - sudo apt-get -q install cmake valgrind
 
 # Run the Build script
 script:
