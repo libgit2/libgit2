@@ -355,16 +355,23 @@ static int clone_internal(
 	return retcode;
 }
 
-int git_clone(git_clone_options *options)
+int git_clone(
+	git_repository **out,
+	git_remote *origin,
+	const char *local_path,
+	const git_clone_options *options)
 {
-	assert(options && options->out && options->origin_remote && options->local_path);
+	git_clone_options dummy_options = GIT_CLONE_OPTIONS_INIT;
+
+	assert(out && origin && local_path);
+	if (!options) options = &dummy_options;
 
 	GITERR_CHECK_VERSION(options, GIT_CLONE_OPTIONS_VERSION, "git_clone_options");
 
 	return clone_internal(
-		options->out,
-		options->origin_remote,
-		options->local_path,
+		out,
+		origin,
+		local_path,
 		options->fetch_progress_cb,
 		options->fetch_progress_payload,
 		options->checkout_opts,

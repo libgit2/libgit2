@@ -30,9 +30,6 @@ GIT_BEGIN_DECL
  *
  *		git_clone_options opts = GIT_CLONE_OPTIONS_INIT;
  *
- * - `out` is a pointer that receives the resulting repository object
- * - `origin_remote` is a remote which will act as the initial fetch source
- * - `local_path` is local directory to clone into
  * - `bare` should be set to zero to create a standard repo, non-zero for
  *   a bare repo
  * - `fetch_progress_cb` is optional callback for fetch progress. Be aware that
@@ -46,9 +43,6 @@ GIT_BEGIN_DECL
 typedef struct git_clone_options {
 	unsigned int version;
 
-	git_repository **out;
-	git_remote *origin_remote;
-	const char *local_path;
 	int bare;
 	git_transfer_progress_callback fetch_progress_cb;
 	void *fetch_progress_payload;
@@ -62,11 +56,19 @@ typedef struct git_clone_options {
  * Clone a remote repository, and checkout the branch pointed to by the remote
  * HEAD.
  *
- * @param options configuration options for the clone
+ * @param out pointer that will receive the resulting repository object
+ * @param origin_remote a remote which will act as the initial fetch source
+ * @param local_path local directory to clone to
+ * @param options configuration options for the clone.  If NULL, the function
+ * works as though GIT_OPTIONS_INIT were passed.
  * @return 0 on success, GIT_ERROR otherwise (use giterr_last for information
  * about the error)
  */
-GIT_EXTERN(int) git_clone(git_clone_options *options);
+GIT_EXTERN(int) git_clone(
+		git_repository **out,
+		git_remote *origin,
+		const char *local_path,
+		const git_clone_options *options);
 
 /** @} */
 GIT_END_DECL
