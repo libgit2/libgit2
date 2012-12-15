@@ -54,9 +54,9 @@ static int add_ref(transport_local *t, const char *name)
 	if (error < 0) {
 		git__free(head->name);
 		git__free(head);
-		if (error == GIT_ENOTFOUND) {
+		if (!strcmp(name, GIT_HEAD_FILE) && error == GIT_ENOTFOUND) {
 			/* This is actually okay.  Empty repos often have a HEAD that points to
-			 * a nonexistant "refs/haeds/master". */
+			 * a nonexistent "refs/heads/master". */
 			giterr_clear();
 			return 0;
 		}
