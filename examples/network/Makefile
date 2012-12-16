@@ -14,3 +14,7 @@ OBJECTS = \
 
 all: $(OBJECTS)
 	$(CC) $(CFLAGS) $(LDFLAGS) -o git2 $(OBJECTS)
+
+clean:
+	$(RM) $(OBJECTS)
+	$(RM) git2
