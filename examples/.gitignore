@@ -1,2 +1,4 @@
 general
 showindex
+diff
+*.dSYM

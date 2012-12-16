@@ -42,6 +42,7 @@ static int add_ref(transport_local *t, const char *name)
 	git_remote_head *head;
 	git_object *obj = NULL, *target = NULL;
 	git_buf buf = GIT_BUF_INIT;
+	int error;
 
 	head = git__calloc(1, sizeof(git_remote_head));
 	GITERR_CHECK_ALLOC(head);
@@ -49,10 +50,17 @@ static int add_ref(transport_local *t, const char *name)
 	head->name = git__strdup(name);
 	GITERR_CHECK_ALLOC(head->name);
 
-	if (git_reference_name_to_id(&head->oid, t->repo, name) < 0) {
+	error = git_reference_name_to_id(&head->oid, t->repo, name);
+	if (error < 0) {
 		git__free(head->name);
 		git__free(head);
-		return -1;
+		if (!strcmp(name, GIT_HEAD_FILE) && error == GIT_ENOTFOUND) {
+			/* This is actually okay.  Empty repos often have a HEAD that points to
+			 * a nonexistent "refs/heads/master". */
+			giterr_clear();
+			return 0;
+		}
+		return error;
 	}
 
 	if (git_vector_insert(&t->refs, head) < 0)
