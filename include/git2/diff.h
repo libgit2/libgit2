@@ -139,7 +139,8 @@ typedef enum {
  * - `new_prefix` is the virtual "directory" to prefix to new file names
  *   in hunk headers (default "b")
  * - `pathspec` is an array of paths / fnmatch patterns to constrain diff
- * - `max_size` is a file size above which a blob will be marked as binary
+ * - `max_size` is a file size (in bytes) above which a blob will be marked
+ *   as binary automatically; pass a negative value to disable.
  */
 typedef struct {
 	unsigned int version;      /**< version for the struct */
@@ -148,8 +149,8 @@ typedef struct {
 	uint16_t interhunk_lines;  /**< defaults to 0 */
 	const char *old_prefix;    /**< defaults to "a" */
 	const char *new_prefix;    /**< defaults to "b" */
-	git_strarray pathspec;     /**< defaults to show all paths */
-	git_off_t max_size;        /**< defaults to 512mb */
+	git_strarray pathspec;     /**< defaults to include all paths */
+	git_off_t max_size;        /**< defaults to 512MB */
 } git_diff_options;
 
 #define GIT_DIFF_OPTIONS_VERSION 1
@@ -157,14 +158,19 @@ typedef struct {
 
 /**
  * The diff list object that contains all individual file deltas.
+ *
+ * This is an opaque structure which will be allocated by one of the diff
+ * generator functions below (such as `git_diff_tree_to_tree`).  You are
+ * responsible for releasing the object memory when done, using the
+ * `git_diff_list_free()` function.
  */
 typedef struct git_diff_list git_diff_list;
 
 /**
- * Flags that can be set for the file on side of a diff.
+ * Flags for the file object on each side of a diff.
  *
- * Most of the flags are just for internal consumption by libgit2,
- * but some of them may be interesting to external users.
+ * Note: most of these flags are just for **internal** consumption by
+ * libgit2, but some of them may be interesting to external users.
  */
 typedef enum {
 	GIT_DIFF_FILE_VALID_OID  = (1 << 0), /** `oid` value is known correct */
@@ -187,34 +193,38 @@ typedef enum {
  * DELETED pairs).
  */
 typedef enum {
-	GIT_DELTA_UNMODIFIED = 0,
-	GIT_DELTA_ADDED = 1,
-	GIT_DELTA_DELETED = 2,
-	GIT_DELTA_MODIFIED = 3,
-	GIT_DELTA_RENAMED = 4,
-	GIT_DELTA_COPIED = 5,
-	GIT_DELTA_IGNORED = 6,
-	GIT_DELTA_UNTRACKED = 7,
-	GIT_DELTA_TYPECHANGE = 8,
+	GIT_DELTA_UNMODIFIED = 0, /** no changes */
+	GIT_DELTA_ADDED = 1,	  /** entry does not exist in old version */
+	GIT_DELTA_DELETED = 2,	  /** entry does not exist in new version */
+	GIT_DELTA_MODIFIED = 3,   /** entry content changed between old and new */
+	GIT_DELTA_RENAMED = 4,    /** entry was renamed between old and new */
+	GIT_DELTA_COPIED = 5,     /** entry was copied from another old entry */
+	GIT_DELTA_IGNORED = 6,    /** entry is ignored item in workdir */
+	GIT_DELTA_UNTRACKED = 7,  /** entry is untracked item in workdir */
+	GIT_DELTA_TYPECHANGE = 8, /** type of entry changed between old and new */
 } git_delta_t;
 
 /**
- * Description of one side of a diff.
+ * Description of one side of a diff entry.
  *
- * The `oid` is the `git_oid` of the item.  If it represents an absent side
- * of a diff (e.g. the `old_file` of a `GIT_DELTA_ADDED` delta), then the
- * oid will be zeroes.
+ * Although this is called a "file", it may actually represent a file, a
+ * symbolic link, a submodule commit id, or even a tree (although that only
+ * if you are tracking type changes or ignored/untracked directories).
  *
- * `path` is the NUL-terminated path to the file relative to the working
+ * The `oid` is the `git_oid` of the item.  If the entry represents an
+ * absent side of a diff (e.g. the `old_file` of a `GIT_DELTA_ADDED` delta),
+ * then the oid will be zeroes.
+ *
+ * `path` is the NUL-terminated path to the entry relative to the working
  * directory of the repository.
  *
- * `size` is the size of the file in bytes.
+ * `size` is the size of the entry in bytes.
  *
  * `flags` is a combination of the `git_diff_file_flag_t` types, but those
  * are largely internal values.
  *
- * `mode` is, roughly, the stat() st_mode value for the item.  This will be
- * restricted to one of the `git_filemode_t` values.
+ * `mode` is, roughly, the stat() `st_mode` value for the item.  This will
+ * be restricted to one of the `git_filemode_t` values.
  */
 typedef struct {
 	git_oid oid;
@@ -225,7 +235,11 @@ typedef struct {
 } git_diff_file;
 
 /**
- * Description of changes to one file.
+ * Description of changes to one entry.
+ *
+ * When iterating over a diff list object, this will be passed to most
+ * callback functions and you can use the contents to understand exactly
+ * what has changed.
  *
  * The `old_file` repesents the "from" side of the diff and the `new_file`
  * repesents to "to" side of the diff.  What those means depend on the
@@ -253,6 +267,10 @@ typedef struct {
 
 /**
  * When iterating over a diff, callback that will be made per file.
+ *
+ * @param delta A pointer to the delta data for the file
+ * @param progress Goes from 0 to 1 over the diff list
+ * @param payload User-specified pointer from foreach function
  */
 typedef int (*git_diff_file_cb)(
 	const git_diff_delta *delta,
@@ -263,10 +281,10 @@ typedef int (*git_diff_file_cb)(
  * Structure describing a hunk of a diff.
  */
 typedef struct {
-	int old_start;
-	int old_lines;
-	int new_start;
-	int new_lines;
+	int old_start; /** Starting line number in old_file */
+	int old_lines; /** Number of lines in old_file */
+	int new_start; /** Starting line number in new_file */
+	int new_lines; /** Number of lines in new_file */
 } git_diff_range;
 
 /**
@@ -314,12 +332,12 @@ typedef enum {
  * of lines of file and hunk headers.
  */
 typedef int (*git_diff_data_cb)(
-	const git_diff_delta *delta,
-	const git_diff_range *range,
-	char line_origin, /**< GIT_DIFF_LINE_... value from above */
-	const char *content,
-	size_t content_len,
-	void *payload);
+	const git_diff_delta *delta, /** delta that contains this data */
+	const git_diff_range *range, /** range of lines containing this data */
+	char line_origin,            /** git_diff_list_t value from above */
+	const char *content,         /** diff data - not NUL terminated */
+	size_t content_len,          /** number of bytes of diff data */
+	void *payload);              /** user reference data */
 
 /**
  * The diff patch is used to store all the text diffs for a delta.
