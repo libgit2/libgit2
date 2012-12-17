@@ -335,3 +335,15 @@ void test_diff_blob__checks_options_version_too_high(void)
 	err = giterr_last();
 	cl_assert_equal_i(GITERR_INVALID, err->klass);
 }
+
+void test_diff_blob__can_correctly_detect_a_binary_blob_as_binary(void)
+{
+	/* alien.png */
+	cl_assert_equal_i(true, git_blob_is_binary(alien));
+}
+
+void test_diff_blob__can_correctly_detect_a_textual_blob_as_non_binary(void)
+{
+	/* tests/resources/attr/root_test4.txt */
+	cl_assert_equal_i(false, git_blob_is_binary(d));
+}
