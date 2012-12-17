@@ -201,7 +201,7 @@ static void hash_header(git_hash_ctx *ctx, git_off_t len, git_otype type)
 	char buffer[64];
 	size_t hdrlen;
 
-	hdrlen = git_odb__format_object_header(buffer, sizeof(buffer), len, type);
+	hdrlen = git_odb__format_object_header(buffer, sizeof(buffer), (size_t)len, type);
 	git_hash_update(ctx, buffer, hdrlen);
 }
 
@@ -269,11 +269,11 @@ static int crc_object(uint32_t *crc_out, git_mwindow_file *mwf, git_off_t start,
 
 	crc = crc32(0L, Z_NULL, 0);
 	while (size) {
-		ptr = git_mwindow_open(mwf, &w, start, size, &left);
+		ptr = git_mwindow_open(mwf, &w, start, (size_t)size, &left);
 		if (ptr == NULL)
 			return -1;
 
-		len = min(left, size);
+		len = min(left, (size_t)size);
 		crc = crc32(crc, ptr, len);
 		size -= len;
 		start += len;
