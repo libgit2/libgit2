@@ -632,7 +632,7 @@ int git_checkout_index(
 	if (opts && opts->paths.count > 0)
 		diff_opts.pathspec = opts->paths;
 
-	if ((error = git_diff_workdir_to_index(&diff, repo, index, &diff_opts)) < 0)
+	if ((error = git_diff_index_to_workdir(&diff, repo, index, &diff_opts)) < 0)
 		goto cleanup;
 
 	if ((error = git_buf_puts(&workdir, git_repository_workdir(repo))) < 0)

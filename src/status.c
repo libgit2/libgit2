@@ -145,11 +145,11 @@ int git_status_foreach_ext(
 	/* TODO: support EXCLUDE_SUBMODULES flag */
 
 	if (show != GIT_STATUS_SHOW_WORKDIR_ONLY &&
-		(err = git_diff_index_to_tree(&idx2head, repo, head, NULL, &diffopt)) < 0)
+		(err = git_diff_tree_to_index(&idx2head, repo, head, NULL, &diffopt)) < 0)
 		goto cleanup;
 
 	if (show != GIT_STATUS_SHOW_INDEX_ONLY &&
-		(err = git_diff_workdir_to_index(&wd2idx, repo, NULL, &diffopt)) < 0)
+		(err = git_diff_index_to_workdir(&wd2idx, repo, NULL, &diffopt)) < 0)
 		goto cleanup;
 
 	usercb.cb = cb;
