@@ -198,10 +198,7 @@ static int gitno_ssl_teardown(gitno_ssl *ssl)
 {
 	int ret;
 
-	do {
-		ret = SSL_shutdown(ssl->ssl);
-	} while (ret == 0);
-
+	ret = SSL_shutdown(ssl->ssl);
 	if (ret < 0)
 		ret = ssl_set_error(ssl, ret);
 	else
