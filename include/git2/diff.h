@@ -227,15 +227,21 @@ typedef struct {
 /**
  * Description of changes to one file.
  *
- * When iterating over a diff list object, this will generally be passed to
- * most callback functions and you can use the contents to understand
- * exactly what has changed.
+ * The `old_file` repesents the "from" side of the diff and the `new_file`
+ * repesents to "to" side of the diff.  What those means depend on the
+ * function that was used to generate the diff and will be documented below.
+ * You can also use the `GIT_DIFF_REVERSE` flag to flip it around.
  *
- * Under some circumstances, not all fields will be filled in, but the code
- * generally tries to fill in as much as possible.  One example is that the
- * "binary" field will not actually look at file contents if you do not
- * pass in hunk and/or line callbacks to the diff foreach iteration function.
- * It will just use the git attributes for those files.
+ * Although the two sides of the delta are named "old_file" and "new_file",
+ * they actually may correspond to entries that represent a file, a symbolic
+ * link, a submodule commit id, or even a tree (if you are tracking type
+ * changes or ignored/untracked directories).
+ *
+ * Under some circumstances, in the name of efficiency, not all fields will
+ * be filled in, but we generally try to fill in as much as possible.  One
+ * example is that the "binary" field will not examine file contents if you
+ * do not pass in hunk and/or line callbacks to the diff foreach iteration
+ * function.  It will just use the git attributes for those files.
  */
 typedef struct {
 	git_diff_file old_file;
@@ -381,9 +387,12 @@ typedef struct {
 GIT_EXTERN(void) git_diff_list_free(git_diff_list *diff);
 
 /**
- * Compute a difference between two tree objects.
+ * Create a diff list with the difference between two tree objects.
  *
- * This is equivalent to `git diff <treeish> <treeish>`
+ * This is equivalent to `git diff <old-tree> <new-tree>`
+ *
+ * The first tree will be used for the "old_file" side of the delta and the
+ * second tree will be used for the "new_file" side of the delta.
  *
  * @param diff Output pointer to a git_diff_list pointer to be allocated.
  * @param repo The repository containing the trees.
@@ -399,10 +408,13 @@ GIT_EXTERN(int) git_diff_tree_to_tree(
 	const git_diff_options *opts); /**< can be NULL for defaults */
 
 /**
- * Compute a difference between a tree and the repository index.
+ * Create a diff list between a tree and repository index.
  *
  * This is equivalent to `git diff --cached <treeish>` or if you pass
  * the HEAD tree, then like `git diff --cached`.
+ *
+ * The tree you pass will be used for the "old_file" side of the delta, and
+ * the index will be used for the "new_file" side of the delta.
  *
  * @param diff Output pointer to a git_diff_list pointer to be allocated.
  * @param repo The repository containing the tree and index.
@@ -410,7 +422,7 @@ GIT_EXTERN(int) git_diff_tree_to_tree(
  * @param index The index to diff with; repo index used if NULL.
  * @param opts Structure with options to influence diff or NULL for defaults.
  */
-GIT_EXTERN(int) git_diff_index_to_tree(
+GIT_EXTERN(int) git_diff_tree_to_index(
 	git_diff_list **diff,
 	git_repository *repo,
 	git_tree *old_tree,
@@ -418,40 +430,45 @@ GIT_EXTERN(int) git_diff_index_to_tree(
 	const git_diff_options *opts); /**< can be NULL for defaults */
 
 /**
- * Compute a difference between the working directory and the repository index.
+ * Create a diff list between the repository index and the workdir directory.
  *
  * This matches the `git diff` command.  See the note below on
- * `git_diff_workdir_to_tree` for a discussion of the difference between
+ * `git_diff_tree_to_workdir` for a discussion of the difference between
  * `git diff` and `git diff HEAD` and how to emulate a `git diff <treeish>`
  * using libgit2.
+ *
+ * The index will be used for the "old_file" side of the delta, and the
+ * working directory will be used for the "new_file" side of the delta.
  *
  * @param diff Output pointer to a git_diff_list pointer to be allocated.
  * @param repo The repository.
  * @param index The index to diff from; repo index used if NULL.
  * @param opts Structure with options to influence diff or NULL for defaults.
  */
-GIT_EXTERN(int) git_diff_workdir_to_index(
+GIT_EXTERN(int) git_diff_index_to_workdir(
 	git_diff_list **diff,
 	git_repository *repo,
 	git_index *index,
 	const git_diff_options *opts); /**< can be NULL for defaults */
 
 /**
- * Compute a difference between the working directory and a tree.
+ * Create a diff list between a tree and the working directory.
  *
- * This is *NOT* the same as `git diff <treeish>`.  Running `git diff HEAD`
- * or the like actually uses information from the index, along with the tree
- * and workdir dir info.
+ * The tree you provide will be used for the "old_file" side of the delta,
+ * and the working directory will be used for the "new_file" side.
+ *
+ * Please note: this is *NOT* the same as `git diff <treeish>`.  Running
+ * `git diff HEAD` or the like actually uses information from the index,
+ * along with the tree and working directory info.
  *
  * This function returns strictly the differences between the tree and the
  * files contained in the working directory, regardless of the state of
  * files in the index.  It may come as a surprise, but there is no direct
  * equivalent in core git.
  *
- * To emulate `git diff <treeish>`, you should call both
- * `git_diff_index_to_tree` and `git_diff_workdir_to_index`, then call
- * `git_diff_merge` on the results.  That will yield a `git_diff_list` that
- * matches the git output.
+ * To emulate `git diff <treeish>`, call both `git_diff_tree_to_index` and
+ * `git_diff_index_to_workdir`, then call `git_diff_merge` on the results.
+ * That will yield a `git_diff_list` that matches the git output.
  *
  * If this seems confusing, take the case of a file with a staged deletion
  * where the file has then been put back into the working dir and modified.
@@ -463,7 +480,7 @@ GIT_EXTERN(int) git_diff_workdir_to_index(
  * @param old_tree A git_tree object to diff from.
  * @param opts Structure with options to influence diff or NULL for defaults.
  */
-GIT_EXTERN(int) git_diff_workdir_to_tree(
+GIT_EXTERN(int) git_diff_tree_to_workdir(
 	git_diff_list **diff,
 	git_repository *repo,
 	git_tree *old_tree,

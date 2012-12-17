@@ -32,7 +32,7 @@ void test_diff_index__0(void)
 
 	memset(&exp, 0, sizeof(exp));
 
-	cl_git_pass(git_diff_index_to_tree(&diff, g_repo, a, NULL, &opts));
+	cl_git_pass(git_diff_tree_to_index(&diff, g_repo, a, NULL, &opts));
 
 	cl_git_pass(git_diff_foreach(
 		diff, diff_file_cb, diff_hunk_cb, diff_line_cb, &exp));
@@ -60,7 +60,7 @@ void test_diff_index__0(void)
 	diff = NULL;
 	memset(&exp, 0, sizeof(exp));
 
-	cl_git_pass(git_diff_index_to_tree(&diff, g_repo, b, NULL, &opts));
+	cl_git_pass(git_diff_tree_to_index(&diff, g_repo, b, NULL, &opts));
 
 	cl_git_pass(git_diff_foreach(
 		diff, diff_file_cb, diff_hunk_cb, diff_line_cb, &exp));
@@ -125,7 +125,7 @@ void test_diff_index__1(void)
 
 	memset(&exp, 0, sizeof(exp));
 
-	cl_git_pass(git_diff_index_to_tree(&diff, g_repo, a, NULL, &opts));
+	cl_git_pass(git_diff_tree_to_index(&diff, g_repo, a, NULL, &opts));
 
 	cl_assert_equal_i(
 		GIT_EUSER,
@@ -150,13 +150,13 @@ void test_diff_index__checks_options_version(void)
 	const git_error *err;
 
 	opts.version = 0;
-	cl_git_fail(git_diff_index_to_tree(&diff, g_repo, a, NULL, &opts));
+	cl_git_fail(git_diff_tree_to_index(&diff, g_repo, a, NULL, &opts));
 	err = giterr_last();
 	cl_assert_equal_i(GITERR_INVALID, err->klass);
 
 	giterr_clear();
 	opts.version = 1024;
-	cl_git_fail(git_diff_index_to_tree(&diff, g_repo, a, NULL, &opts));
+	cl_git_fail(git_diff_tree_to_index(&diff, g_repo, a, NULL, &opts));
 	err = giterr_last();
 	cl_assert_equal_i(GITERR_INVALID, err->klass);
 }

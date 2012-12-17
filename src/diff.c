@@ -784,7 +784,7 @@ int git_diff_tree_to_tree(
 	return error;
 }
 
-int git_diff_index_to_tree(
+int git_diff_tree_to_index(
 	git_diff_list **diff,
 	git_repository *repo,
 	git_tree *old_tree,
@@ -806,7 +806,7 @@ int git_diff_index_to_tree(
 	return error;
 }
 
-int git_diff_workdir_to_index(
+int git_diff_index_to_workdir(
 	git_diff_list **diff,
 	git_repository *repo,
 	git_index *index,
@@ -828,7 +828,7 @@ int git_diff_workdir_to_index(
 }
 
 
-int git_diff_workdir_to_tree(
+int git_diff_tree_to_workdir(
 	git_diff_list **diff,
 	git_repository *repo,
 	git_tree *old_tree,
