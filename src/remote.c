@@ -673,7 +673,7 @@ static int update_tips_callback(git_remote_head *head, void *payload)
 	git_vector *refs = (git_vector *)payload;
 	git_vector_insert(refs, head);
 
-        return 0;
+	return 0;
 }
 
 static int remote_head_for_fetchspec_src(git_remote_head **out, git_vector *update_heads, const char *fetchspec_src)
@@ -684,11 +684,11 @@ static int remote_head_for_fetchspec_src(git_remote_head **out, git_vector *upda
 	assert(update_heads && fetchspec_src);
 
 	*out = NULL;
-    
-    git_vector_foreach(update_heads, i, remote_ref) {
-        if (strcmp(remote_ref->name, fetchspec_src) == 0) {
-            *out = remote_ref;
-            break;
+
+	git_vector_foreach(update_heads, i, remote_ref) {
+		if (strcmp(remote_ref->name, fetchspec_src) == 0) {
+			*out = remote_ref;
+			break;
 		}
 	}
 
@@ -759,7 +759,7 @@ static int git_remote_write_fetchhead(git_remote *remote, git_vector *update_hea
 	}
 
 	/* Create the FETCH_HEAD file */
-    git_vector_foreach(update_heads, i, remote_ref) {
+	git_vector_foreach(update_heads, i, remote_ref) {
 		int merge_this_fetchhead = (merge_remote_ref == remote_ref);
 
 		if (!include_all_fetchheads &&
@@ -815,7 +815,7 @@ int git_remote_update_tips(git_remote *remote)
 
 	/* Make a copy of the transport's refs */
 	if (git_vector_init(&refs, 16, NULL) < 0 ||
-        git_vector_init(&update_heads, 16, NULL) < 0)
+		git_vector_init(&update_heads, 16, NULL) < 0)
 		return -1;
 
 	if (git_remote_ls(remote, update_tips_callback, &refs) < 0)
