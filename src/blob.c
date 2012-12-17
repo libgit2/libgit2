@@ -296,3 +296,15 @@ cleanup:
 	git__free(content);
 	return error;
 }
+
+int git_blob_is_binary(git_blob *blob)
+{
+	git_buf content;
+
+	assert(blob);
+
+	content.ptr = blob->odb_object->raw.data;
+	content.size = min(blob->odb_object->raw.len, 4000);
+
+	return git_buf_text_is_binary(&content);
+}

@@ -59,7 +59,6 @@ static int do_lstat(
 {
 	WIN32_FILE_ATTRIBUTE_DATA fdata;
 	wchar_t fbuf[GIT_WIN_PATH], lastch;
-	DWORD last_error;
 	int flen;
 
 	flen = git__utf8_to_16(fbuf, GIT_WIN_PATH, file_name);
