@@ -409,10 +409,10 @@ static int ssl_setup(gitno_socket *socket, const char *host, int flags)
 	if ((ret = SSL_connect(socket->ssl.ssl)) <= 0)
 		return ssl_set_error(&socket->ssl, ret);
 
-	if ((GITNO_CONNECT_SSL_NO_CHECK_CERT & flags) || verify_server_cert(&socket->ssl, host) < 0)
-		return -1;
+	if (GITNO_CONNECT_SSL_NO_CHECK_CERT & flags)
+		return 0;
 
-	return 0;
+	return verify_server_cert(&socket->ssl, host);
 }
 #endif
 
