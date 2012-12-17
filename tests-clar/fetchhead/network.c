@@ -63,8 +63,7 @@ static void fetchhead_test_fetch(const char *fetchspec, const char *expected_fet
 	git_remote_disconnect(remote);
 	git_remote_free(remote);
 
-	cl_git_pass(git_futils_readbuffer(&fetchhead_buf,
-		"./test1/.git/FETCH_HEAD"));
+	cl_git_pass(git_futils_readbuffer(&fetchhead_buf, "./foo/.git/FETCH_HEAD"));
 
 	equals = (strcmp(fetchhead_buf.ptr, expected_fetchhead) == 0);
 

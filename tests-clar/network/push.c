@@ -211,6 +211,10 @@ void test_network_push__cleanup(void)
 {
 	if (_remote)
 		git_remote_free(_remote);
+	_remote = NULL;
+
+	/* Freed by cl_git_sandbox_cleanup */
+	_repo = NULL;
 
 	record_callbacks_data_clear(&_record_cbs_data);
 
