@@ -68,18 +68,37 @@ static void free_status(push_status *status)
 	git__free(status);
 }
 
-static int check_ref(char *ref)
+static int check_rref(char *ref)
 {
-	if (strcmp(ref, "HEAD") &&
-	    git__prefixcmp(ref, "refs/heads/") &&
-	    git__prefixcmp(ref, "refs/tags/")) {
-		giterr_set(GITERR_INVALID, "No valid reference '%s'", ref);
+	if (git__prefixcmp(ref, "refs/")) {
+		giterr_set(GITERR_INVALID, "Not a valid reference '%s'", ref);
 		return -1;
 	}
+
 	return 0;
 }
 
-static int parse_refspec(push_spec **spec, const char *str)
+static int check_lref(git_push *push, char *ref)
+{
+	/* lref must be resolvable to an existing object */
+	git_object *obj;
+	int error = git_revparse_single(&obj, push->repo, ref);
+
+	if (error) {
+		if(error == GIT_ENOTFOUND)
+			giterr_set(GITERR_REFERENCE, "src refspec '%s' does not match any existing object", ref);
+		else
+			giterr_set(GITERR_INVALID, "Not a valid reference '%s'", ref);
+
+		return -1;
+	} else {
+		git_object_free(obj);
+	}
+
+	return 0;
+}
+
+static int parse_refspec(git_push *push, push_spec **spec, const char *str)
 {
 	push_spec *s;
 	char *delim;
@@ -94,22 +113,22 @@ static int parse_refspec(push_spec **spec, const char *str)
 		str++;
 	}
 
-#define check(ref) \
-	if (!ref || check_ref(ref) < 0) goto on_error
-
 	delim = strchr(str, ':');
 	if (delim == NULL) {
 		s->lref = git__strdup(str);
-		check(s->lref);
+		if (!s->lref || check_lref(push, s->lref) < 0)
+			goto on_error;
 	} else {
 		if (delim - str) {
 			s->lref = git__strndup(str, delim - str);
-			check(s->lref);
+			if (!s->lref || check_lref(push, s->lref) < 0)
+				goto on_error;
 		}
 
 		if (strlen(delim + 1)) {
 			s->rref = git__strdup(delim + 1);
-			check(s->rref);
+			if (!s->rref || check_rref(s->rref) < 0)
+				goto on_error;
 		}
 	}
 
@@ -121,8 +140,6 @@ static int parse_refspec(push_spec **spec, const char *str)
 		s->rref = git__strdup(s->lref);
 		check(s->rref);
 	}
-
-#undef check
 
 	*spec = s;
 	return 0;
@@ -136,7 +153,7 @@ int git_push_add_refspec(git_push *push, const char *refspec)
 {
 	push_spec *spec;
 
-	if (parse_refspec(&spec, refspec) < 0 ||
+	if (parse_refspec(push, &spec, refspec) < 0 ||
 	    git_vector_insert(&push->specs, spec) < 0)
 		return -1;
 

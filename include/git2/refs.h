@@ -44,7 +44,7 @@ GIT_EXTERN(int) git_reference_lookup(git_reference **out, git_repository *repo, 
  * allocate or free any `git_reference` objects for simple situations.
  *
  * The name will be checked for validity.
- * See `git_reference_create_symbolic()` for rules about valid names.
+ * See `git_reference_symbolic_create()` for rules about valid names.
  *
  * @param out Pointer to oid to be filled in
  * @param repo The repository in which to look up the reference

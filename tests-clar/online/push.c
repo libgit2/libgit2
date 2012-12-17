@@ -525,3 +525,25 @@ void test_online_push__expressions(void)
 		exp_stats_right_expr, ARRAY_SIZE(exp_stats_right_expr),
 		NULL, 0, 0);
 }
+
+void test_network_push__notes(void)
+{
+	git_oid note_oid, *target_oid, expected_oid;
+	git_signature *signature;
+	const char *specs[] = { "refs/notes/commits:refs/notes/commits" };
+	push_status exp_stats[] = { { "refs/notes/commits", NULL } };
+	expected_ref exp_refs[] = { { "refs/notes/commits", &expected_oid } };
+	git_oid_fromstr(&expected_oid, "8461a99b27b7043e58ff6e1f5d2cf07d282534fb");
+
+	target_oid = &_oid_b6;
+
+	/* Create note to push */
+	cl_git_pass(git_signature_new(&signature, "nulltoken", "emeric.fermas@gmail.com", 1323847743, 60)); /* Wed Dec 14 08:29:03 2011 +0100 */
+	cl_git_pass(git_note_create(&note_oid, _repo, signature, signature, NULL, target_oid, "hello world\n"));
+
+	do_push(specs, ARRAY_SIZE(specs),
+		exp_stats, ARRAY_SIZE(exp_stats),
+		exp_refs, ARRAY_SIZE(exp_refs), 0);
+
+	git_signature_free(signature);
+}
