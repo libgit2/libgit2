@@ -50,20 +50,22 @@ ELSE()
 	FILE(GLOB SRC_SHA1 src/hash/hash_generic.c)
 ENDIF()
 
-IF (NOT WIN32)
-	FIND_PACKAGE(ZLIB)
-ENDIF()
-
 # Include POSIX regex when it is required
 IF(WIN32 OR CMAKE_SYSTEM_NAME STREQUAL "AmigaOS")
 	INCLUDE_DIRECTORIES(deps/regex)
 	SET(SRC_REGEX deps/regex/regex.c)
 ENDIF()
 
+# Optional external dependency: zlib
+IF(NOT ZLIB_LIBRARY)
+	# It's optional, but FIND_PACKAGE gives a warning that looks more like an error.
+	FIND_PACKAGE(ZLIB QUIET)
+ENDIF()
 IF (ZLIB_FOUND)
 	INCLUDE_DIRECTORIES(${ZLIB_INCLUDE_DIRS})
 	LINK_LIBRARIES(${ZLIB_LIBRARIES})
-ELSE (ZLIB_FOUND)
+ELSE()
+	MESSAGE( "zlib was not found; using bundled 3rd-party sources." )
 	INCLUDE_DIRECTORIES(deps/zlib)
 	ADD_DEFINITIONS(-DNO_VIZ -DSTDC -DNO_GZIP)
 	FILE(GLOB SRC_ZLIB deps/zlib/*.c)
