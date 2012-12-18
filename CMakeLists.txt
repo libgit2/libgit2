@@ -14,6 +14,33 @@
 PROJECT(libgit2 C)
 CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
 
+# Build options
+#
+OPTION( BUILD_SHARED_LIBS	"Build Shared Library (OFF for Static)"	ON  )
+OPTION( THREADSAFE			"Build libgit2 as threadsafe"			OFF )
+OPTION( BUILD_CLAR			"Build Tests using the Clar suite"		ON  )
+OPTION( BUILD_EXAMPLES		"Build library usage example apps"		OFF )
+OPTION( TAGS				"Generate tags"							OFF )
+OPTION( PROFILE				"Generate profiling information"		OFF )
+IF(MSVC)
+	# This option is only availalbe when building with MSVC. By default, libgit2 is
+	# build using the stdcall calling convention, as that's what the CLR expects by
+	# default and how the Windows API is built.
+	#
+	# If you are writing a C or C++ program and want to link to libgit2, you have to
+	# either:
+	# - Add /Gz to the compiler options of _your_ program / library.
+	# - Turn this option off by invoking CMake with the "-DSTDCALL=Off" argument.
+	#
+	OPTION( STDCALL			"Build libgit2 with the __stdcall convention"	ON  )
+ENDIF()
+
+# Installation paths
+#
+SET(BIN_INSTALL_DIR bin CACHE PATH "Where to install binaries to.")
+SET(LIB_INSTALL_DIR lib CACHE PATH "Where to install libraries to.")
+SET(INCLUDE_INSTALL_DIR include CACHE PATH "Where to install headers to.")
+
 FILE(STRINGS "include/git2/version.h" GIT2_HEADER REGEX "^#define LIBGIT2_VERSION \"[^\"]*\"$")
 
 STRING(REGEX REPLACE "^.*LIBGIT2_VERSION \"([0-9]+).*$" "\\1" LIBGIT2_VERSION_MAJOR "${GIT2_HEADER}")
@@ -71,23 +98,8 @@ ELSE()
 	FILE(GLOB SRC_ZLIB deps/zlib/*.c)
 ENDIF()
 
-# Installation paths
-SET(BIN_INSTALL_DIR bin CACHE PATH "Where to install binaries to.")
-SET(LIB_INSTALL_DIR lib CACHE PATH "Where to install libraries to.")
-SET(INCLUDE_INSTALL_DIR include CACHE PATH "Where to install headers to.")
-
-# Build options
-OPTION (BUILD_SHARED_LIBS "Build Shared Library (OFF for Static)" ON)
-OPTION (THREADSAFE "Build libgit2 as threadsafe" OFF)
-OPTION (BUILD_CLAR "Build Tests using the Clar suite" ON)
-OPTION (BUILD_EXAMPLES "Build library usage example apps" OFF)
-OPTION (TAGS "Generate tags" OFF)
-OPTION (PROFILE "Generate profiling information" OFF)
-
 # Platform specific compilation flags
 IF (MSVC)
-	# Default to stdcall, as that's what the CLR expects and how the Windows API is built
-	OPTION (STDCALL "Buildl libgit2 with the __stdcall convention" ON)
 
     STRING(REPLACE "/Zm1000" " " CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
 
