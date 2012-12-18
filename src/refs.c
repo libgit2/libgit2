@@ -166,7 +166,7 @@ static int loose_parse_oid(git_oid *oid, git_buf *file_content)
 	/* str is guranteed to be zero-terminated */
 	str = git_buf_cstr(file_content);
 
-    /* we need to get 40 OID characters from the file */
+	/* we need to get 40 OID characters from the file */
 	if (git_oid_fromstr(oid, git_buf_cstr(file_content)) < 0)
 		goto corrupted;
 
