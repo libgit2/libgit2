@@ -52,12 +52,10 @@ ENDIF()
 
 IF (NOT WIN32)
 	FIND_PACKAGE(ZLIB)
-	IF (CMAKE_SYSTEM_NAME STREQUAL "AmigaOS")
-		INCLUDE_DIRECTORIES(deps/regex)
-		SET(SRC_REGEX deps/regex/regex.c)
-	ENDIF()
-ELSE()
-	# Windows doesn't understand POSIX regex on its own
+ENDIF()
+
+# Include POSIX regex when it is required
+IF(WIN32 OR CMAKE_SYSTEM_NAME STREQUAL "AmigaOS")
 	INCLUDE_DIRECTORIES(deps/regex)
 	SET(SRC_REGEX deps/regex/regex.c)
 ENDIF()
