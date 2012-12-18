@@ -814,7 +814,10 @@ int git_index_find(git_index *index, const char *path)
 
 	if ((pos = git_vector_bsearch2(
 			&index->entries, index->entries_search_path, path)) < 0)
+	{
+		giterr_set(GITERR_INDEX, "Index does not contain %s", path);
 		return pos;
+	}
 
 	/* Since our binary search only looked at path, we may be in the
 	 * middle of a list of stages.
