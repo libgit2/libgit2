@@ -149,16 +149,17 @@ FILE(GLOB SRC_H include/git2/*.h)
 # On Windows use specific platform sources
 IF (WIN32 AND NOT CYGWIN)
 	ADD_DEFINITIONS(-DWIN32 -D_DEBUG -D_WIN32_WINNT=0x0501)
-	FILE(GLOB SRC src/*.c src/transports/*.c src/xdiff/*.c src/win32/*.c)
+	FILE(GLOB SRC_OS src/win32/*.c)
 ELSEIF (AMIGA)
 	ADD_DEFINITIONS(-DNO_ADDRINFO -DNO_READDIR_R)
-	FILE(GLOB SRC src/*.c src/transports/*.c src/xdiff/*.c src/amiga/*.c)
+	FILE(GLOB SRC_OS src/amiga/*.c)
 ELSE()
-	FILE(GLOB SRC src/*.c src/transports/*.c src/xdiff/*.c src/unix/*.c)
-ENDIF ()
+	FILE(GLOB SRC_OS src/unix/*.c)
+ENDIF()
+FILE(GLOB SRC_GIT2 src/*.c src/transports/*.c src/xdiff/*.c)
 
 # Compile and link libgit2
-ADD_LIBRARY(git2 ${SRC} ${SRC_ZLIB} ${SRC_HTTP} ${SRC_REGEX} ${SRC_SHA1} ${WIN_RC})
+ADD_LIBRARY(git2 ${SRC_GIT2} ${SRC_OS} ${SRC_ZLIB} ${SRC_HTTP} ${SRC_REGEX} ${SRC_SHA1} ${WIN_RC})
 
 IF (WIN32)
 	TARGET_LINK_LIBRARIES(git2 ws2_32)
@@ -207,7 +208,7 @@ IF (BUILD_CLAR)
 		DEPENDS ${CLAR_PATH}/clar ${SRC_TEST}
 		WORKING_DIRECTORY ${CLAR_PATH}
 	)
-	ADD_EXECUTABLE(libgit2_clar ${SRC} ${CLAR_PATH}/clar_main.c ${SRC_TEST} ${SRC_ZLIB} ${SRC_HTTP} ${SRC_REGEX} ${SRC_SHA1})
+	ADD_EXECUTABLE(libgit2_clar ${SRC_GIT2} ${SRC_OS} ${CLAR_PATH}/clar_main.c ${SRC_TEST} ${SRC_ZLIB} ${SRC_HTTP} ${SRC_REGEX} ${SRC_SHA1})
 	TARGET_LINK_LIBRARIES(libgit2_clar ${CMAKE_THREAD_LIBS_INIT} ${SSL_LIBRARIES})
 
         IF (MSVC_IDE)
