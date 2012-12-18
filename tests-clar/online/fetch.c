@@ -1,7 +1,5 @@
 #include "clar_libgit2.h"
 
-CL_IN_CATEGORY("network")
-
 static git_repository *_repo;
 static int counter;
 

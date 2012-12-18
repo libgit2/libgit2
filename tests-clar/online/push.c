@@ -5,8 +5,6 @@
 #include "../submodule/submodule_helpers.h"
 #include "push_util.h"
 
-CL_IN_CATEGORY("network")
-
 static git_repository *_repo;
 
 static char *_remote_url;
@@ -112,7 +110,7 @@ static void do_verify_push_status(git_push *push, const push_status expected[], 
 /**
  * Verifies that after git_push_finish(), refs on a remote have the expected
  * names, oids, and order.
- * 
+ *
  * @param remote remote to verify
  * @param expected_refs expected remote refs after push
  * @param expected_refs_len length of expected_refs
@@ -224,7 +222,7 @@ void test_network_push__cleanup(void)
 
 /**
  * Calls push and relists refs on remote to verify success.
- * 
+ *
  * @param refspecs refspecs to push
  * @param refspecs_len length of refspecs
  * @param expected_refs expected remote refs after push

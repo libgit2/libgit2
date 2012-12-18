@@ -2,10 +2,8 @@
 
 #include "repository.h"
 #include "fetchhead.h"
-#include "fetchhead_data.h"
+#include "../fetchhead/fetchhead_data.h"
 #include "git2/clone.h"
-
-CL_IN_CATEGORY("network")
 
 #define LIVE_REPO_URL "git://github.com/libgit2/TestGitRepository"
 

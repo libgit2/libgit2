@@ -1,7 +1,7 @@
 #ifndef __CLAR_LIBGIT2__
 #define __CLAR_LIBGIT2__
 
-#include "clar.h"
+#include "clar/clar.h"
 #include <git2.h>
 #include "common.h"
 

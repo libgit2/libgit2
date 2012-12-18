@@ -3,8 +3,6 @@
 #include "git2/clone.h"
 #include "repository.h"
 
-CL_IN_CATEGORY("network")
-
 #define LIVE_REPO_URL "http://github.com/libgit2/TestGitRepository"
 #define LIVE_EMPTYREPO_URL "http://github.com/libgit2/TestEmptyRepository"
 
