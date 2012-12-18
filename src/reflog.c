@@ -208,9 +208,9 @@ int git_reflog_read(git_reflog **reflog, const git_reference *ref)
 	git_buf log_file = GIT_BUF_INIT;
 	git_reflog *log = NULL;
 
-	*reflog = NULL;
-
 	assert(reflog && ref);
+
+	*reflog = NULL;
 
 	if (reflog_init(&log, ref) < 0)
 		return -1;
