@@ -140,8 +140,11 @@ typedef enum {
 	/** Only update existing files, don't create new ones */
 	GIT_CHECKOUT_UPDATE_ONLY = (1u << 7),
 
+	/** Normally checkout updates index entries as it goes; this stops that */
+	GIT_CHECKOUT_DONT_UPDATE_INDEX = (1u << 8),
+
 	/** Don't refresh index/config/etc before doing checkout */
-	GIT_CHECKOUT_NO_REFRESH = (1u << 8),
+	GIT_CHECKOUT_NO_REFRESH = (1u << 9),
 
 	/**
 	 * THE FOLLOWING OPTIONS ARE NOT YET IMPLEMENTED

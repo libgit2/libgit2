@@ -50,28 +50,29 @@ void test_checkout_tree__can_checkout_a_subdirectory_from_a_commit(void)
 
 void test_checkout_tree__can_checkout_and_remove_directory(void)
 {
-	git_reference *head;
 	cl_assert_equal_i(false, git_path_isdir("./testrepo/ab/"));
 
-	// Checkout brach "subtrees" and update HEAD, so that HEAD matches the current working tree
+	/* Checkout brach "subtrees" and update HEAD, so that HEAD matches the
+	 * current working tree
+	 */
 	cl_git_pass(git_revparse_single(&g_object, g_repo, "subtrees"));
 	cl_git_pass(git_checkout_tree(g_repo, g_object, &g_opts));
-	cl_git_pass(git_reference_lookup(&head, g_repo, "HEAD"));
-	cl_git_pass(git_reference_symbolic_set_target(head, "refs/heads/subtrees"));
-	git_reference_free(head);
-	
+
+	cl_git_pass(git_repository_set_head(g_repo, "refs/heads/subtrees"));
+
 	cl_assert_equal_i(true, git_path_isdir("./testrepo/ab/"));
 	cl_assert_equal_i(true, git_path_isfile("./testrepo/ab/de/2.txt"));
 	cl_assert_equal_i(true, git_path_isfile("./testrepo/ab/de/fgh/1.txt"));
 
-	// Checkout brach "master" and update HEAD, so that HEAD matches the current working tree
+	/* Checkout brach "master" and update HEAD, so that HEAD matches the
+	 * current working tree
+	 */
 	cl_git_pass(git_revparse_single(&g_object, g_repo, "master"));
 	cl_git_pass(git_checkout_tree(g_repo, g_object, &g_opts));
-	cl_git_pass(git_reference_lookup(&head, g_repo, "HEAD"));
-	cl_git_pass(git_reference_symbolic_set_target(head, "refs/heads/master"));
-	git_reference_free(head);
 
-	// This directory should no longer exist
+	cl_git_pass(git_repository_set_head(g_repo, "refs/heads/master"));
+
+	/* This directory should no longer exist */
 	cl_assert_equal_i(false, git_path_isdir("./testrepo/ab/"));
 }
 

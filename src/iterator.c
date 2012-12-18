@@ -988,6 +988,33 @@ fail:
 	return -1;
 }
 
+git_index *git_iterator_index_get_index(git_iterator *iter)
+{
+	if (iter->type == GIT_ITERATOR_SPOOLANDSORT)
+		iter = ((spoolandsort_iterator *)iter)->wrapped;
+
+	if (iter->type == GIT_ITERATOR_INDEX)
+		return ((index_iterator *)iter)->index;
+
+	return NULL;
+}
+
+git_iterator_type_t git_iterator_inner_type(git_iterator *iter)
+{
+	if (iter->type == GIT_ITERATOR_SPOOLANDSORT)
+		iter = ((spoolandsort_iterator *)iter)->wrapped;
+
+	return iter->type;
+}
+
+git_iterator *git_iterator_spoolandsort_inner_iterator(git_iterator *iter)
+{
+	if (iter->type == GIT_ITERATOR_SPOOLANDSORT)
+		return ((spoolandsort_iterator *)iter)->wrapped;
+
+	return NULL;
+}
+
 int git_iterator_current_tree_entry(
 	git_iterator *iter, const git_tree_entry **tree_entry)
 {

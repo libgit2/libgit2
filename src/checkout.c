@@ -194,6 +194,7 @@ typedef struct {
 	bool opts_free_baseline;
 	char *pfx;
 	git_iterator *baseline;
+	git_index *index;
 	git_pool pool;
 	git_vector removes;
 	git_buf path;
@@ -261,16 +262,20 @@ static int checkout_notify(
 
 static bool checkout_is_workdir_modified(
 	checkout_data *data,
-	const git_diff_file *wditem,
-	const git_index_entry *baseitem)
+	const git_diff_file *baseitem,
+	const git_index_entry *wditem)
 {
 	git_oid oid;
 
-	if (wditem->size != baseitem->file_size)
+	/* depending on where base is coming from, we may or may not know
+	 * the actual size of the data, so we can't rely on this shortcut.
+	 */
+	if (baseitem->size && wditem->file_size != baseitem->size)
 		return true;
 
 	if (git_diff__oid_for_file(
-			data->repo, wditem->path, wditem->mode, wditem->size, &oid) < 0)
+			data->repo, wditem->path, wditem->mode,
+			wditem->file_size, &oid) < 0)
 		return false;
 
 	return (git_oid_cmp(&baseitem->oid, &oid) != 0);
@@ -278,33 +283,6 @@ static bool checkout_is_workdir_modified(
 
 #define CHECKOUT_ACTION_IF(FLAG,YES,NO) \
 	((data->strategy & GIT_CHECKOUT_##FLAG) ? CHECKOUT_ACTION__##YES : CHECKOUT_ACTION__##NO)
-
-static const char *checkout_action_name_debug(int act)
-{
-	if (act & CHECKOUT_ACTION__CONFLICT)
-		return "CONFLICT";
-
-	if (act & CHECKOUT_ACTION__REMOVE) {
-		if (act & CHECKOUT_ACTION__UPDATE_BLOB)
-			return "REMOVE+UPDATE";
-		if (act & CHECKOUT_ACTION__UPDATE_SUBMODULE)
-			return "REMOVE+UPDATE SUB";
-		return "REMOVE";
-	}
-	if (act & CHECKOUT_ACTION__DEFER_REMOVE) {
-		if (act & CHECKOUT_ACTION__UPDATE_BLOB)
-			return "UPDATE (WITH REMOVE)";
-		if (act & CHECKOUT_ACTION__UPDATE_SUBMODULE)
-			return "UPDATE SUB (WITH REMOVE)";
-		return "DEFERRED REMOVE";
-	}
-	if (act & CHECKOUT_ACTION__UPDATE_BLOB)
-		return "UPDATE";
-	if (act & CHECKOUT_ACTION__UPDATE_SUBMODULE)
-		return "UPDATE SUB";
-	assert(act == 0);
-	return "NONE";
-}
 
 static int checkout_action_common(
 	checkout_data *data,
@@ -372,19 +350,26 @@ static int checkout_action_wd_only(
 	const git_index_entry *wd,
 	git_vector *pathspec)
 {
-	bool ignored, remove;
+	bool remove = false;
 	git_checkout_notify_t notify = GIT_CHECKOUT_NOTIFY_NONE;
+	const git_index_entry *entry;
 
 	if (!git_pathspec_match_path(
 			pathspec, wd->path, false, workdir->ignore_case))
 		return 0;
 
-	ignored = git_iterator_current_is_ignored(workdir);
-
-	if (ignored) {
+	/* check if item is tracked in the index but not in the checkout diff */
+	if (data->index != NULL &&
+		(entry = git_index_get_bypath(data->index, wd->path, 0)) != NULL)
+	{
+		notify = GIT_CHECKOUT_NOTIFY_DIRTY;
+		remove = ((data->strategy & GIT_CHECKOUT_FORCE) != 0);
+	}
+	else if (git_iterator_current_is_ignored(workdir)) {
 		notify = GIT_CHECKOUT_NOTIFY_IGNORED;
 		remove = ((data->strategy & GIT_CHECKOUT_REMOVE_IGNORED) != 0);
-	} else {
+	}
+	else {
 		notify = GIT_CHECKOUT_NOTIFY_UNTRACKED;
 		remove = ((data->strategy & GIT_CHECKOUT_REMOVE_UNTRACKED) != 0);
 	}
@@ -697,6 +682,7 @@ fail:
 }
 
 static int buffer_to_file(
+	struct stat *st,
 	git_buf *buffer,
 	const char *path,
 	mode_t dir_mode,
@@ -717,6 +703,9 @@ static int buffer_to_file(
 		giterr_set(GITERR_OS, "Could not write to '%s'", path);
 		(void)p_close(fd);
 	} else {
+		if ((error = p_fstat(fd, st)) < 0)
+			giterr_set(GITERR_OS, "Error while statting '%s'", path);
+
 		if ((error = p_close(fd)) < 0)
 			giterr_set(GITERR_OS, "Error while closing '%s'", path);
 	}
@@ -730,6 +719,7 @@ static int buffer_to_file(
 }
 
 static int blob_content_to_file(
+	struct stat *st,
 	git_blob *blob,
 	const char *path,
 	mode_t entry_filemode,
@@ -772,7 +762,12 @@ static int blob_content_to_file(
 		file_mode = entry_filemode;
 
 	error = buffer_to_file(
-		&filtered, path, opts->dir_mode, opts->file_open_flags, file_mode);
+		st, &filtered, path, opts->dir_mode, opts->file_open_flags, file_mode);
+
+	if (!error) {
+		st->st_size = blob->odb_object->raw.len;
+		st->st_mode = entry_filemode;
+	}
 
 cleanup:
 	git_filters_free(&filters);
@@ -784,7 +779,7 @@ cleanup:
 }
 
 static int blob_content_to_link(
-	git_blob *blob, const char *path, int can_symlink)
+	struct stat *st, git_blob *blob, const char *path, int can_symlink)
 {
 	git_buf linktarget = GIT_BUF_INIT;
 	int error;
@@ -792,28 +787,57 @@ static int blob_content_to_link(
 	if ((error = git_blob__getbuf(&linktarget, blob)) < 0)
 		return error;
 
-	if (can_symlink)
-		error = p_symlink(git_buf_cstr(&linktarget), path);
-	else
+	if (can_symlink) {
+		if ((error = p_symlink(git_buf_cstr(&linktarget), path)) < 0)
+			giterr_set(GITERR_CHECKOUT, "Could not create symlink %s\n", path);
+	} else {
 		error = git_futils_fake_symlink(git_buf_cstr(&linktarget), path);
+	}
+
+	if (!error) {
+		if ((error = p_lstat(path, st)) < 0)
+			giterr_set(GITERR_CHECKOUT, "Could not stat symlink %s", path);
+
+		st->st_mode = GIT_FILEMODE_LINK;
+	}
 
 	git_buf_free(&linktarget);
 
 	return error;
 }
 
+static int checkout_update_index(
+	checkout_data *data,
+	const git_diff_file *file,
+	struct stat *st)
+{
+	git_index_entry entry;
+
+	if (!data->index)
+		return 0;
+
+	memset(&entry, 0, sizeof(entry));
+	entry.path = (char *)file->path; /* cast to prevent warning */
+	git_index_entry__init_from_stat(&entry, st);
+	git_oid_cpy(&entry.oid, &file->oid);
+
+	return git_index_add(data->index, &entry);
+}
+
 static int checkout_submodule(
 	checkout_data *data,
 	const git_diff_file *file)
 {
+	int error = 0;
+
 	/* Until submodules are supported, UPDATE_ONLY means do nothing here */
 	if ((data->strategy & GIT_CHECKOUT_UPDATE_ONLY) != 0)
 		return 0;
 
-	if (git_futils_mkdir(
+	if ((error = git_futils_mkdir(
 			file->path, git_repository_workdir(data->repo),
-			data->opts.dir_mode, GIT_MKDIR_PATH) < 0)
-		return -1;
+			data->opts.dir_mode, GIT_MKDIR_PATH)) < 0)
+		return error;
 
 	/* TODO: Support checkout_strategy options.  Two circumstances:
 	 * 1 - submodule already checked out, but we need to move the HEAD
@@ -824,7 +848,26 @@ static int checkout_submodule(
 	 * command should probably be able to.  Do we need a submodule callback?
 	 */
 
-	return 0;
+	/* update the index unless prevented */
+	if ((data->strategy & GIT_CHECKOUT_DONT_UPDATE_INDEX) == 0) {
+		struct stat st;
+
+		git_buf_truncate(&data->path, data->workdir_len);
+		if (git_buf_puts(&data->path, file->path) < 0)
+			return -1;
+
+		if ((error = p_stat(git_buf_cstr(&data->path), &st)) < 0) {
+			giterr_set(
+				GITERR_CHECKOUT, "Could not stat submodule %s\n", file->path);
+			return error;
+		}
+
+		st.st_mode = GIT_FILEMODE_COMMIT;
+
+		error = checkout_update_index(data, file, &st);
+	}
+
+	return error;
 }
 
 static void report_progress(
@@ -843,6 +886,7 @@ static int checkout_blob(
 {
 	int error = 0;
 	git_blob *blob;
+	struct stat st;
 
 	git_buf_truncate(&data->path, data->workdir_len);
 	if (git_buf_puts(&data->path, file->path) < 0)
@@ -853,10 +897,10 @@ static int checkout_blob(
 
 	if (S_ISLNK(file->mode))
 		error = blob_content_to_link(
-			blob, git_buf_cstr(&data->path), data->can_symlink);
+			&st, blob, git_buf_cstr(&data->path), data->can_symlink);
 	else
 		error = blob_content_to_file(
-			blob, git_buf_cstr(&data->path), file->mode, &data->opts);
+			&st, blob, git_buf_cstr(&data->path), file->mode, &data->opts);
 
 	git_blob_free(blob);
 
@@ -870,6 +914,10 @@ static int checkout_blob(
 		giterr_clear();
 		error = 0;
 	}
+
+	/* update the index unless prevented */
+	if (!error && (data->strategy & GIT_CHECKOUT_DONT_UPDATE_INDEX) == 0)
+		error = checkout_update_index(data, file, &st);
 
 	return error;
 }
@@ -896,6 +944,13 @@ static int checkout_remove_the_old(
 
 			data->completed_steps++;
 			report_progress(data, delta->old_file.path);
+
+			if ((actions[i] & CHECKOUT_ACTION__UPDATE_BLOB) == 0 &&
+				(data->strategy & GIT_CHECKOUT_DONT_UPDATE_INDEX) == 0 &&
+				data->index != NULL)
+			{
+				(void)git_index_remove(data->index, delta->old_file.path, 0);
+			}
 		}
 	}
 
@@ -906,6 +961,12 @@ static int checkout_remove_the_old(
 
 		data->completed_steps++;
 		report_progress(data, str);
+
+		if ((data->strategy & GIT_CHECKOUT_DONT_UPDATE_INDEX) == 0 &&
+			data->index != NULL)
+		{
+			(void)git_index_remove(data->index, str, 0);
+		}
 	}
 
 	return 0;
@@ -926,6 +987,7 @@ static int checkout_deferred_remove(git_repository *repo, const char *path)
 #else
 	GIT_UNUSED(repo);
 	GIT_UNUSED(path);
+	assert(false);
 	return 0;
 #endif
 }
@@ -1021,15 +1083,19 @@ static void checkout_data_clear(checkout_data *data)
 	data->pfx = NULL;
 
 	git_buf_free(&data->path);
+
+	git_index_free(data->index);
+	data->index = NULL;
 }
 
 static int checkout_data_init(
 	checkout_data *data,
-	git_repository *repo,
+	git_iterator *target,
 	git_checkout_opts *proposed)
 {
 	int error = 0;
 	git_config *cfg;
+	git_repository *repo = git_iterator_owner(target);
 
 	memset(data, 0, sizeof(*data));
 
@@ -1054,8 +1120,24 @@ static int checkout_data_init(
 	else
 		memmove(&data->opts, proposed, sizeof(git_checkout_opts));
 
-	/* if you are forcing, definitely allow safe updates */
+	/* refresh config and index content unless NO_REFRESH is given */
+	if ((data->opts.checkout_strategy & GIT_CHECKOUT_NO_REFRESH) == 0) {
+		if ((error = git_config_refresh(cfg)) < 0)
+			goto cleanup;
 
+		if (git_iterator_inner_type(target) == GIT_ITERATOR_INDEX) {
+			/* if we are iterating over the index, don't reload */
+			data->index = git_iterator_index_get_index(target);
+			GIT_REFCOUNT_INC(data->index);
+		} else {
+			/* otherwise, grab and reload the index */
+			if ((error = git_repository_index(&data->index, data->repo)) < 0 ||
+				(error = git_index_read(data->index)) < 0)
+				goto cleanup;
+		}
+	}
+
+	/* if you are forcing, definitely allow safe updates */
 	if ((data->opts.checkout_strategy & GIT_CHECKOUT_FORCE) != 0)
 		data->opts.checkout_strategy |= GIT_CHECKOUT_SAFE_CREATE;
 	if ((data->opts.checkout_strategy & GIT_CHECKOUT_SAFE_CREATE) != 0)
@@ -1116,7 +1198,7 @@ int git_checkout_iterator(
 	size_t *counts = NULL;
 
 	/* initialize structures and options */
-	error = checkout_data_init(&data, git_iterator_owner(target), opts);
+	error = checkout_data_init(&data, target, opts);
 	if (error < 0)
 		return error;
 
@@ -1203,6 +1285,10 @@ int git_checkout_iterator(
 cleanup:
 	if (error == GIT_EUSER)
 		giterr_clear();
+
+	if (!error && data.index != NULL &&
+		(data.strategy & GIT_CHECKOUT_DONT_UPDATE_INDEX) == 0)
+		error = git_index_write(data.index);
 
 	git_diff_list_free(data.diff);
 	git_iterator_free(workdir);
