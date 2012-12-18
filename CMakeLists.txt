@@ -27,13 +27,14 @@ IF (AMIGA)
 ENDIF()
 
 # Find required dependencies
-INCLUDE_DIRECTORIES(src include deps/http-parser)
+INCLUDE_DIRECTORIES(src include)
 
 IF (WIN32 AND NOT MINGW)
 	ADD_DEFINITIONS(-DGIT_WINHTTP)
 ELSE ()
 	FIND_PACKAGE(OpenSSL)
 	FILE(GLOB SRC_HTTP deps/http-parser/*.c)
+	INCLUDE_DIRECTORIES(deps/http-parser)
 ENDIF()
 
 # Specify sha1 implementation
