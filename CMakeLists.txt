@@ -52,6 +52,29 @@ FUNCTION(TARGET_OS_LIBRARIES target)
 	ENDIF()
 ENDFUNCTION()
 
+# For the MSVC IDE, this function splits up the source files like windows explorer does.
+# This is esp. useful with the libgit2_clar project, were usually 2 or more files share
+# the same name.
+# Sadly, this file grouping is a per-directory option in cmake and not per-target, resulting
+# in empty virtual folders "tests-clar" for the git2.dll
+FUNCTION(MSVC_SPLIT_SOURCES target)
+	IF(MSVC_IDE)
+		GET_TARGET_PROPERTY(sources ${target} SOURCES)
+		FOREACH(source ${sources})
+			IF(source MATCHES ".*/")
+				STRING(REPLACE ${CMAKE_CURRENT_SOURCE_DIR}/ "" rel ${source})
+				IF(rel)
+					STRING(REGEX REPLACE "/([^/]*)$" "" rel ${rel})
+					IF(rel)
+						STRING(REPLACE "/" "\\\\" rel ${rel})
+						SOURCE_GROUP(${rel} FILES ${source})
+					ENDIF()
+				ENDIF()
+			ENDIF()
+		ENDFOREACH()
+	ENDIF()
+ENDFUNCTION()
+
 FILE(STRINGS "include/git2/version.h" GIT2_HEADER REGEX "^#define LIBGIT2_VERSION \"[^\"]*\"$")
 
 STRING(REGEX REPLACE "^.*LIBGIT2_VERSION \"([0-9]+).*$" "\\1" LIBGIT2_VERSION_MAJOR "${GIT2_HEADER}")
@@ -186,6 +209,8 @@ ADD_LIBRARY(git2 ${SRC_GIT2} ${SRC_OS} ${SRC_ZLIB} ${SRC_HTTP} ${SRC_REGEX} ${SR
 TARGET_LINK_LIBRARIES(git2 ${SSL_LIBRARIES})
 TARGET_OS_LIBRARIES(git2)
 
+MSVC_SPLIT_SOURCES(git2)
+
 SET_TARGET_PROPERTIES(git2 PROPERTIES VERSION ${LIBGIT2_VERSION_STRING})
 SET_TARGET_PROPERTIES(git2 PROPERTIES SOVERSION ${LIBGIT2_VERSION_MAJOR})
 CONFIGURE_FILE(${CMAKE_CURRENT_SOURCE_DIR}/libgit2.pc.in ${CMAKE_CURRENT_BINARY_DIR}/libgit2.pc @ONLY)
@@ -229,6 +254,7 @@ IF (BUILD_CLAR)
 	ADD_EXECUTABLE(libgit2_clar ${SRC_GIT2} ${SRC_OS} ${CLAR_PATH}/clar_main.c ${SRC_TEST} ${SRC_ZLIB} ${SRC_HTTP} ${SRC_REGEX} ${SRC_SHA1})
 	TARGET_LINK_LIBRARIES(libgit2_clar ${SSL_LIBRARIES})
 	TARGET_OS_LIBRARIES(libgit2_clar)
+	MSVC_SPLIT_SOURCES(libgit2_clar)
 
         IF (MSVC_IDE)
            # Precompiled headers
