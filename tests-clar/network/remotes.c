@@ -105,6 +105,7 @@ void test_network_remotes__set_pushspec(void)
 void test_network_remotes__save(void)
 {
 	git_remote_free(_remote);
+	_remote = NULL;
 
 	/* Set up the remote and save it to config */
 	cl_git_pass(git_remote_new(&_remote, _repo, "upstream", "git://github.com/libgit2/libgit2", NULL));
