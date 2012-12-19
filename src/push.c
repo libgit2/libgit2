@@ -82,6 +82,8 @@ static int check_lref(git_push *push, char *ref)
 {
 	/* lref must be resolvable to an existing object */
 	git_object *obj;
+	int result;
+
 	int error = git_revparse_single(&obj, push->repo, ref);
 
 	if (error) {
@@ -89,13 +91,22 @@ static int check_lref(git_push *push, char *ref)
 			giterr_set(GITERR_REFERENCE, "src refspec '%s' does not match any existing object", ref);
 		else
 			giterr_set(GITERR_INVALID, "Not a valid reference '%s'", ref);
-
-		return -1;
+		result = -1;
 	} else {
+		/* Library only supports pushing commits at the moment */
+		if (obj->type == GIT_OBJ_COMMIT) {
+			result = 0;
+		}
+		else
+		{
+			giterr_set(GITERR_INVALID, "Push is currently only supported for commit objects.");
+			result = -1;
+		}
+
 		git_object_free(obj);
 	}
 
-	return 0;
+	return result;
 }
 
 static int parse_refspec(git_push *push, push_spec **spec, const char *str)
