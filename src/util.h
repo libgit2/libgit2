@@ -107,6 +107,7 @@ GIT_INLINE(int) git__is_sizet(git_off_t p)
 #endif
 
 extern char *git__strtok(char **end, const char *sep);
+extern char *git__strsep(char **end, const char *sep);
 
 extern void git__strntolower(char *str, size_t len);
 extern void git__strtolower(char *str);
