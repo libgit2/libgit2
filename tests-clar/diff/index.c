@@ -146,18 +146,22 @@ void test_diff_index__checks_options_version(void)
 	const char *a_commit = "26a125ee1bf";
 	git_tree *a = resolve_commit_oid_to_tree(g_repo, a_commit);
 	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
-	git_diff_list *diff;
+	git_diff_list *diff = NULL;
 	const git_error *err;
 
 	opts.version = 0;
 	cl_git_fail(git_diff_tree_to_index(&diff, g_repo, a, NULL, &opts));
 	err = giterr_last();
 	cl_assert_equal_i(GITERR_INVALID, err->klass);
+	cl_assert_equal_p(diff, NULL);
 
 	giterr_clear();
 	opts.version = 1024;
 	cl_git_fail(git_diff_tree_to_index(&diff, g_repo, a, NULL, &opts));
 	err = giterr_last();
 	cl_assert_equal_i(GITERR_INVALID, err->klass);
+	cl_assert_equal_p(diff, NULL);
+
+	git_tree_free(a);
 }
 
