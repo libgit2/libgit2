@@ -64,8 +64,8 @@ extern int git_diff__oid_for_file(
 extern int git_diff__from_iterators(
 	git_diff_list **diff_ptr,
 	git_repository *repo,
-	git_iterator *old_iter,
-	git_iterator *new_iter,
+	git_iterator **_old_iter,
+	git_iterator **_new_iter,
 	const git_diff_options *opts);
 
 #endif
