@@ -339,7 +339,7 @@ cleanup:
 
 int git_reflog_rename(git_reference *ref, const char *new_name)
 {
-	int error, fd;
+	int error = 0, fd;
 	git_buf old_path = GIT_BUF_INIT;
 	git_buf new_path = GIT_BUF_INIT;
 	git_buf temp_path = GIT_BUF_INIT;
@@ -370,25 +370,33 @@ int git_reflog_rename(git_reference *ref, const char *new_name)
 	if (git_buf_joinpath(&temp_path, git_buf_cstr(&temp_path), "temp_reflog") < 0)
 		return -1;
 
-	if ((fd = git_futils_mktmp(&temp_path, git_buf_cstr(&temp_path))) < 0)
+	if ((fd = git_futils_mktmp(&temp_path, git_buf_cstr(&temp_path))) < 0) {
+		error = -1;
 		goto cleanup;
+	}
 
 	p_close(fd);
 
 	if (p_rename(git_buf_cstr(&old_path), git_buf_cstr(&temp_path)) < 0) {
 		giterr_set(GITERR_OS, "Failed to rename reflog for %s", new_name);
+		error = -1;
 		goto cleanup;
 	}
 
 	if (git_path_isdir(git_buf_cstr(&new_path)) && 
-		(git_futils_rmdir_r(git_buf_cstr(&new_path), NULL, GIT_RMDIR_SKIP_NONEMPTY) < 0))
+		(git_futils_rmdir_r(git_buf_cstr(&new_path), NULL, GIT_RMDIR_SKIP_NONEMPTY) < 0)) {
+		error = -1;
 		goto cleanup;
+	}
 
-	if (git_futils_mkpath2file(git_buf_cstr(&new_path), GIT_REFLOG_DIR_MODE) < 0)
+	if (git_futils_mkpath2file(git_buf_cstr(&new_path), GIT_REFLOG_DIR_MODE) < 0) {
+		error = -1;
 		goto cleanup;
+	}
 
 	if (p_rename(git_buf_cstr(&temp_path), git_buf_cstr(&new_path)) < 0) {
 		giterr_set(GITERR_OS, "Failed to rename reflog for %s", new_name);
+		error = -1;
 	}
 
 cleanup:
@@ -397,7 +405,7 @@ cleanup:
 	git_buf_free(&new_path);
 	git_buf_free(&normalized);
 
-	return -1;
+	return error;
 }
 
 int git_reflog_delete(git_reference *ref)
