@@ -258,27 +258,68 @@ cleanup:
  * submodules?
  */
 
+static int create_and_configure_origin(
+		git_remote **out,
+		git_repository *repo,
+		const char *url,
+		const git_clone_options *options)
+{
+	int error;
+	git_remote *origin;
+
+	if ((error = git_remote_add(&origin, repo, options->remote_name, url)) < 0)
+		goto on_error;
+
+	git_remote_set_cred_acquire_cb(origin, options->cred_acquire_cb,
+			options->cred_acquire_payload);
+	git_remote_set_autotag(origin, options->remote_autotag);
+	/*
+	 * Don't write FETCH_HEAD, we'll check out the remote tracking
+	 * branch ourselves based on the server's default.
+	 */
+	git_remote_set_update_fetchhead(origin, 0);
+
+	if (options->remote_callbacks &&
+	    (error = git_remote_set_callbacks(origin, options->remote_callbacks)) < 0)
+		goto on_error;
+
+	if (options->fetch_spec &&
+	    (error = git_remote_set_fetchspec(origin, options->fetch_spec)) < 0)
+		goto on_error;
+
+	if (options->push_spec &&
+	    (error = git_remote_set_pushspec(origin, options->push_spec)) < 0)
+		goto on_error;
+
+	if (options->pushurl &&
+	    (error = git_remote_set_pushurl(origin, options->pushurl)) < 0)
+		goto on_error;
+
+	*out = origin;
+	return 0;
+
+on_error:
+	if (origin) git_remote_free(origin);
+	return error;
+}
 
 
 static int setup_remotes_and_fetch(
 		git_repository *repo,
-		git_remote *origin,
-		git_transfer_progress_callback progress_cb,
-		void *progress_payload)
+		const char *url,
+		const git_clone_options *options)
 {
 	int retcode = GIT_ERROR;
+	git_remote *origin;
 
-	/* Add the origin remote */
-	if (!git_remote_set_repository(origin, repo) && !git_remote_save(origin)) {
-		/*
-		 * Don't write FETCH_HEAD, we'll check out the remote tracking
-		 * branch ourselves based on the server's default.
-		 */
+	/* Construct an origin remote */
+	if (!create_and_configure_origin(&origin, repo, url, options)) {
 		git_remote_set_update_fetchhead(origin, 0);
 
 		/* Connect and download everything */
 		if (!git_remote_connect(origin, GIT_DIRECTION_FETCH)) {
-			if (!git_remote_download(origin, progress_cb, progress_payload)) {
+			if (!git_remote_download(origin, options->fetch_progress_cb,
+						options->fetch_progress_payload)) {
 				/* Create "origin/foo" branches for all remote branches */
 				if (!git_remote_update_tips(origin)) {
 					/* Point HEAD to the same ref as the remote's head */
@@ -321,59 +362,49 @@ static bool should_checkout(
 	return !git_repository_head_orphan(repo);
 }
 
-static int clone_internal(
+static void normalize_options(git_clone_options *dst, const git_clone_options *src)
+{
+	git_clone_options default_options = GIT_CLONE_OPTIONS_INIT;
+	if (!src) src = &default_options;
+
+	*dst = *src;
+
+	/* Provide defaults for null pointers */
+	if (!dst->remote_name) dst->remote_name = "origin";
+}
+
+int git_clone(
 	git_repository **out,
-	git_remote *origin_remote,
-	const char *path,
-	git_transfer_progress_callback fetch_progress_cb,
-	void *fetch_progress_payload,
-	git_checkout_opts *checkout_opts,
-	bool is_bare)
+	const char *url,
+	const char *local_path,
+	const git_clone_options *options)
 {
 	int retcode = GIT_ERROR;
 	git_repository *repo = NULL;
+	git_clone_options normOptions;
 
-	if (!path_is_okay(path)) {
+	assert(out && url && local_path);
+
+	normalize_options(&normOptions, options);
+	GITERR_CHECK_VERSION(&normOptions, GIT_CLONE_OPTIONS_VERSION, "git_clone_options");
+
+	if (!path_is_okay(local_path)) {
 		return GIT_ERROR;
 	}
 
-	if (!(retcode = git_repository_init(&repo, path, is_bare))) {
-		if ((retcode = setup_remotes_and_fetch(repo, origin_remote,
-						fetch_progress_cb, fetch_progress_payload)) < 0) {
+	if (!(retcode = git_repository_init(&repo, local_path, normOptions.bare))) {
+		if ((retcode = setup_remotes_and_fetch(repo, url, &normOptions)) < 0) {
 			/* Failed to fetch; clean up */
 			git_repository_free(repo);
-			git_futils_rmdir_r(path, NULL, GIT_RMDIR_REMOVE_FILES);
+			git_futils_rmdir_r(local_path, NULL, GIT_RMDIR_REMOVE_FILES);
 		} else {
 			*out = repo;
 			retcode = 0;
 		}
 	}
 
-	if (!retcode && should_checkout(repo, is_bare, checkout_opts))
-		retcode = git_checkout_head(*out, checkout_opts);
+	if (!retcode && should_checkout(repo, normOptions.bare, normOptions.checkout_opts))
+		retcode = git_checkout_head(*out, normOptions.checkout_opts);
 
 	return retcode;
-}
-
-int git_clone(
-	git_repository **out,
-	git_remote *origin,
-	const char *local_path,
-	const git_clone_options *options)
-{
-	git_clone_options dummy_options = GIT_CLONE_OPTIONS_INIT;
-
-	assert(out && origin && local_path);
-	if (!options) options = &dummy_options;
-
-	GITERR_CHECK_VERSION(options, GIT_CLONE_OPTIONS_VERSION, "git_clone_options");
-
-	return clone_internal(
-		out,
-		origin,
-		local_path,
-		options->fetch_progress_cb,
-		options->fetch_progress_payload,
-		options->checkout_opts,
-		options->bare ? 1 : 0);
 }

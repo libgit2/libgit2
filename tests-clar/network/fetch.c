@@ -87,13 +87,12 @@ void test_network_fetch__doesnt_retrieve_a_pack_when_the_repository_is_up_to_dat
 {
 	git_repository *_repository;
 	bool invoked = false;
-	git_remote *remote, *origin;
+	git_remote *remote;
 	git_clone_options opts = GIT_CLONE_OPTIONS_INIT;
-
 	opts.bare = true;
-	cl_git_pass(git_remote_new(&origin, NULL, "origin", "https://github.com/libgit2/TestGitRepository.git", GIT_REMOTE_DEFAULT_FETCH));
 
-	cl_git_pass(git_clone(&_repository, origin, "./fetch/lg2", &opts));
+	cl_git_pass(git_clone(&_repository, "https://github.com/libgit2/TestGitRepository.git",
+				"./fetch/lg2", &opts));
 	git_repository_free(_repository);
 
 	cl_git_pass(git_repository_open(&_repository, "./fetch/lg2"));
@@ -111,6 +110,5 @@ void test_network_fetch__doesnt_retrieve_a_pack_when_the_repository_is_up_to_dat
 	git_remote_disconnect(remote);
 
 	git_remote_free(remote);
-	git_remote_free(origin);
 	git_repository_free(_repository);
 }

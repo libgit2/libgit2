@@ -496,7 +496,7 @@ void test_network_push__bad_refspecs(void)
 	git_push *push;
 
 	if (_remote) {
-		cl_git_pass(git_remote_connect(_remote, GIT_DIRECTION_PUSH));
+//		cl_git_pass(git_remote_connect(_remote, GIT_DIRECTION_PUSH));
 		cl_git_pass(git_push_new(&push, _remote));
 
 		/* Unexpanded branch names not supported */
