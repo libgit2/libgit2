@@ -2,6 +2,7 @@
 
 #include "repository.h"
 #include "fetchhead.h"
+
 #include "fetchhead_data.h"
 
 #define DO_LOCAL_TEST 0
@@ -23,77 +24,286 @@ static void cleanup_repository(void *path)
 	cl_fixture_cleanup((const char *)path);
 }
 
+static void populate_fetchhead(git_vector *out, git_repository *repo)
+{
+	git_fetchhead_ref *fetchhead_ref;
+	git_oid oid;
+
+	cl_git_pass(git_oid_fromstr(&oid,
+		"49322bb17d3acc9146f98c97d078513228bbf3c0"));
+	cl_git_pass(git_fetchhead_ref_create(&fetchhead_ref, &oid, 1,
+		"refs/heads/master",
+		"git://github.com/libgit2/TestGitRepository"));
+	cl_git_pass(git_vector_insert(out, fetchhead_ref));
+
+	cl_git_pass(git_oid_fromstr(&oid,
+		"0966a434eb1a025db6b71485ab63a3bfbea520b6"));
+	cl_git_pass(git_fetchhead_ref_create(&fetchhead_ref, &oid, 0,
+		"refs/heads/first-merge",
+		"git://github.com/libgit2/TestGitRepository"));
+	cl_git_pass(git_vector_insert(out, fetchhead_ref));
+
+	cl_git_pass(git_oid_fromstr(&oid,
+		"42e4e7c5e507e113ebbb7801b16b52cf867b7ce1"));
+	cl_git_pass(git_fetchhead_ref_create(&fetchhead_ref, &oid, 0,
+		"refs/heads/no-parent",
+		"git://github.com/libgit2/TestGitRepository"));
+	cl_git_pass(git_vector_insert(out, fetchhead_ref));
+
+	cl_git_pass(git_oid_fromstr(&oid,
+		"d96c4e80345534eccee5ac7b07fc7603b56124cb"));
+	cl_git_pass(git_fetchhead_ref_create(&fetchhead_ref, &oid, 0,
+		"refs/tags/annotated_tag",
+		"git://github.com/libgit2/TestGitRepository"));
+	cl_git_pass(git_vector_insert(out, fetchhead_ref));
+
+	cl_git_pass(git_oid_fromstr(&oid,
+		"55a1a760df4b86a02094a904dfa511deb5655905"));
+	cl_git_pass(git_fetchhead_ref_create(&fetchhead_ref, &oid, 0,
+		"refs/tags/blob",
+		"git://github.com/libgit2/TestGitRepository"));
+	cl_git_pass(git_vector_insert(out, fetchhead_ref));
+
+	cl_git_pass(git_oid_fromstr(&oid,
+		"8f50ba15d49353813cc6e20298002c0d17b0a9ee"));
+	cl_git_pass(git_fetchhead_ref_create(&fetchhead_ref, &oid, 0,
+		"refs/tags/commit_tree",
+		"git://github.com/libgit2/TestGitRepository"));
+	cl_git_pass(git_vector_insert(out, fetchhead_ref));
+
+	cl_git_pass(git_fetchhead_write(repo, out));
+}
+
 void test_fetchhead_nonetwork__write(void)
 {
-	git_vector fetchhead_vector;
-	git_fetchhead_ref *fetchhead[6];
-	git_oid oid[6];
+	git_vector fetchhead_vector = GIT_VECTOR_INIT;
+	git_fetchhead_ref *fetchhead_ref;
 	git_buf fetchhead_buf = GIT_BUF_INIT;
-	size_t i;
 	int equals = 0;
+	size_t i;
 
 	git_vector_init(&fetchhead_vector, 6, NULL);
 
 	cl_set_cleanup(&cleanup_repository, "./test1");
-
 	cl_git_pass(git_repository_init(&g_repo, "./test1", 0));
 
-	cl_git_pass(git_oid_fromstr(&oid[0],
-		"49322bb17d3acc9146f98c97d078513228bbf3c0"));
-	cl_git_pass(git_fetchhead_ref_create(&fetchhead[0], &oid[0], 1,
-		"refs/heads/master",
-		"git://github.com/libgit2/TestGitRepository"));
-	cl_git_pass(git_vector_insert(&fetchhead_vector, fetchhead[0]));
-
-	cl_git_pass(git_oid_fromstr(&oid[1],
-		"0966a434eb1a025db6b71485ab63a3bfbea520b6"));
-	cl_git_pass(git_fetchhead_ref_create(&fetchhead[1], &oid[1], 0,
-		"refs/heads/first-merge",
-		"git://github.com/libgit2/TestGitRepository"));
-	cl_git_pass(git_vector_insert(&fetchhead_vector, fetchhead[1]));
-
-	cl_git_pass(git_oid_fromstr(&oid[2],
-		"42e4e7c5e507e113ebbb7801b16b52cf867b7ce1"));
-	cl_git_pass(git_fetchhead_ref_create(&fetchhead[2], &oid[2], 0,
-		"refs/heads/no-parent",
-		"git://github.com/libgit2/TestGitRepository"));
-	cl_git_pass(git_vector_insert(&fetchhead_vector, fetchhead[2]));
-
-	cl_git_pass(git_oid_fromstr(&oid[3],
-		"d96c4e80345534eccee5ac7b07fc7603b56124cb"));
-	cl_git_pass(git_fetchhead_ref_create(&fetchhead[3], &oid[3], 0,
-		"refs/tags/annotated_tag",
-		"git://github.com/libgit2/TestGitRepository"));
-	cl_git_pass(git_vector_insert(&fetchhead_vector, fetchhead[3]));
-
-	cl_git_pass(git_oid_fromstr(&oid[4],
-		"55a1a760df4b86a02094a904dfa511deb5655905"));
-	cl_git_pass(git_fetchhead_ref_create(&fetchhead[4], &oid[4], 0,
-		"refs/tags/blob",
-		"git://github.com/libgit2/TestGitRepository"));
-	cl_git_pass(git_vector_insert(&fetchhead_vector, fetchhead[4]));
-
-	cl_git_pass(git_oid_fromstr(&oid[5],
-		"8f50ba15d49353813cc6e20298002c0d17b0a9ee"));
-	cl_git_pass(git_fetchhead_ref_create(&fetchhead[5], &oid[5], 0,
-		"refs/tags/commit_tree",
-		"git://github.com/libgit2/TestGitRepository"));
-	cl_git_pass(git_vector_insert(&fetchhead_vector, fetchhead[5]));
-
-	git_fetchhead_write(g_repo, &fetchhead_vector);
+	populate_fetchhead(&fetchhead_vector, g_repo);
 
 	cl_git_pass(git_futils_readbuffer(&fetchhead_buf,
 		"./test1/.git/FETCH_HEAD"));
 
 	equals = (strcmp(fetchhead_buf.ptr, FETCH_HEAD_WILDCARD_DATA) == 0);
 
-	for (i=0; i < 6; i++)
-		git_fetchhead_ref_free(fetchhead[i]);
-
 	git_buf_free(&fetchhead_buf);
+
+	git_vector_foreach(&fetchhead_vector, i, fetchhead_ref) {
+		git_fetchhead_ref_free(fetchhead_ref);
+	}
 
 	git_vector_free(&fetchhead_vector);
 
 	cl_assert(equals);
+}
+
+typedef struct {
+	git_vector *fetchhead_vector;
+	size_t idx;
+} fetchhead_ref_cb_data; 
+
+static int fetchhead_ref_cb(const char *name, const char *url,
+	const git_oid *oid, unsigned int is_merge, void *payload)
+{
+	fetchhead_ref_cb_data *cb_data = payload;
+	git_fetchhead_ref *expected;
+
+	cl_assert(payload);
+
+	expected = git_vector_get(cb_data->fetchhead_vector, cb_data->idx);
+
+	cl_assert(git_oid_cmp(&expected->oid, oid) == 0);
+	cl_assert(expected->is_merge == is_merge);
+
+	if (expected->ref_name)
+		cl_assert(strcmp(expected->ref_name, name) == 0);
+	else
+		cl_assert(name == NULL);
+
+	if (expected->remote_url)
+		cl_assert(strcmp(expected->remote_url, url) == 0);
+	else
+		cl_assert(url == NULL);
+
+	cb_data->idx++;
+
+	return 0;
+}
+
+void test_fetchhead_nonetwork__read(void)
+{
+	git_vector fetchhead_vector = GIT_VECTOR_INIT;
+	git_fetchhead_ref *fetchhead_ref;
+	fetchhead_ref_cb_data cb_data;
+	size_t i;
+
+	memset(&cb_data, 0x0, sizeof(fetchhead_ref_cb_data));
+
+	cl_set_cleanup(&cleanup_repository, "./test1");
+	cl_git_pass(git_repository_init(&g_repo, "./test1", 0));
+
+	populate_fetchhead(&fetchhead_vector, g_repo);
+
+	cb_data.fetchhead_vector = &fetchhead_vector;
+
+	cl_git_pass(git_repository_fetchhead_foreach(g_repo, fetchhead_ref_cb, &cb_data));
+
+	git_vector_foreach(&fetchhead_vector, i, fetchhead_ref) {
+		git_fetchhead_ref_free(fetchhead_ref);
+	}
+
+	git_vector_free(&fetchhead_vector);
+}
+
+static int read_old_style_cb(const char *name, const char *url,
+	const git_oid *oid, unsigned int is_merge, void *payload)
+{
+	git_oid expected;
+
+	GIT_UNUSED(payload);
+
+	git_oid_fromstr(&expected, "49322bb17d3acc9146f98c97d078513228bbf3c0");
+
+	cl_assert(name == NULL);
+	cl_assert(url == NULL);
+	cl_assert(git_oid_cmp(&expected, oid) == 0);
+	cl_assert(is_merge == 1);
+
+	return 0;
+}
+
+void test_fetchhead_nonetwork__read_old_style(void)
+{
+	cl_set_cleanup(&cleanup_repository, "./test1");
+	cl_git_pass(git_repository_init(&g_repo, "./test1", 0));
+
+	cl_git_rewritefile("./test1/.git/FETCH_HEAD", "49322bb17d3acc9146f98c97d078513228bbf3c0\n");
+
+	cl_git_pass(git_repository_fetchhead_foreach(g_repo, read_old_style_cb, NULL));
+}
+
+static int read_type_missing(const char *ref_name, const char *remote_url,
+	const git_oid *oid, unsigned int is_merge, void *payload)
+{
+	git_oid expected;
+
+	GIT_UNUSED(payload);
+
+	git_oid_fromstr(&expected, "49322bb17d3acc9146f98c97d078513228bbf3c0");
+
+	cl_assert(strcmp(ref_name, "name") == 0);
+	cl_assert(strcmp(remote_url, "remote_url") == 0);
+	cl_assert(git_oid_cmp(&expected, oid) == 0);
+	cl_assert(is_merge == 0);
+
+	return 0;
+}
+
+void test_fetchhead_nonetwork__type_missing(void)
+{
+	cl_set_cleanup(&cleanup_repository, "./test1");
+	cl_git_pass(git_repository_init(&g_repo, "./test1", 0));
+
+	cl_git_rewritefile("./test1/.git/FETCH_HEAD", "49322bb17d3acc9146f98c97d078513228bbf3c0\tnot-for-merge\t'name' of remote_url\n");
+
+	cl_git_pass(git_repository_fetchhead_foreach(g_repo, read_type_missing, NULL));
+}
+
+static int read_name_missing(const char *ref_name, const char *remote_url,
+	const git_oid *oid, unsigned int is_merge, void *payload)
+{
+	git_oid expected;
+
+	GIT_UNUSED(payload);
+
+	git_oid_fromstr(&expected, "49322bb17d3acc9146f98c97d078513228bbf3c0");
+
+	cl_assert(ref_name == NULL);
+	cl_assert(strcmp(remote_url, "remote_url") == 0);
+	cl_assert(git_oid_cmp(&expected, oid) == 0);
+	cl_assert(is_merge == 0);
+
+	return 0;
+}
+
+void test_fetchhead_nonetwork__name_missing(void)
+{
+	cl_set_cleanup(&cleanup_repository, "./test1");
+	cl_git_pass(git_repository_init(&g_repo, "./test1", 0));
+
+	cl_git_rewritefile("./test1/.git/FETCH_HEAD", "49322bb17d3acc9146f98c97d078513228bbf3c0\tnot-for-merge\tremote_url\n");
+
+	cl_git_pass(git_repository_fetchhead_foreach(g_repo, read_name_missing, NULL));
+}
+
+static int read_noop(const char *ref_name, const char *remote_url,
+	const git_oid *oid, unsigned int is_merge, void *payload)
+{
+	GIT_UNUSED(ref_name);
+	GIT_UNUSED(remote_url);
+	GIT_UNUSED(oid);
+	GIT_UNUSED(is_merge);
+	GIT_UNUSED(payload);
+
+	return 0;
+}
+
+void test_fetchhead_nonetwork__nonexistent(void)
+{
+	int error;
+
+	cl_set_cleanup(&cleanup_repository, "./test1");
+	cl_git_pass(git_repository_init(&g_repo, "./test1", 0));
+
+	cl_git_fail((error = git_repository_fetchhead_foreach(g_repo, read_noop, NULL)));
+	cl_assert(error == GIT_ENOTFOUND);
+}
+
+void test_fetchhead_nonetwork__invalid_unterminated_last_line(void)
+{
+	cl_set_cleanup(&cleanup_repository, "./test1");
+	cl_git_pass(git_repository_init(&g_repo, "./test1", 0));
+
+	cl_git_rewritefile("./test1/.git/FETCH_HEAD", "unterminated");
+	cl_git_fail(git_repository_fetchhead_foreach(g_repo, read_noop, NULL));
+}
+
+void test_fetchhead_nonetwork__invalid_oid(void)
+{
+	cl_set_cleanup(&cleanup_repository, "./test1");
+	cl_git_pass(git_repository_init(&g_repo, "./test1", 0));
+
+	cl_git_rewritefile("./test1/.git/FETCH_HEAD", "shortoid\n");
+	cl_git_fail(git_repository_fetchhead_foreach(g_repo, read_noop, NULL));
+}
+
+void test_fetchhead_nonetwork__invalid_for_merge(void)
+{
+	cl_set_cleanup(&cleanup_repository, "./test1");
+	cl_git_pass(git_repository_init(&g_repo, "./test1", 0));
+
+	cl_git_rewritefile("./test1/.git/FETCH_HEAD", "49322bb17d3acc9146f98c97d078513228bbf3c0\tinvalid-merge\t\n");
+	cl_git_fail(git_repository_fetchhead_foreach(g_repo, read_noop, NULL));
+
+	cl_assert(git__prefixcmp(giterr_last()->message, "Invalid for-merge") == 0);
+}
+
+void test_fetchhead_nonetwork__invalid_description(void)
+{
+	cl_set_cleanup(&cleanup_repository, "./test1");
+	cl_git_pass(git_repository_init(&g_repo, "./test1", 0));
+
+	cl_git_rewritefile("./test1/.git/FETCH_HEAD", "49322bb17d3acc9146f98c97d078513228bbf3c0\tnot-for-merge\n");
+	cl_git_fail(git_repository_fetchhead_foreach(g_repo, read_noop, NULL));
+
+	cl_assert(git__prefixcmp(giterr_last()->message, "Invalid description") == 0);
 }
 

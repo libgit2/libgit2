@@ -276,6 +276,24 @@ char *git__strtok(char **end, const char *sep)
 	return NULL;
 }
 
+/* Similar to strtok, but does not collapse repeated tokens. */
+char *git__strsep(char **end, const char *sep)
+{
+	char *start = *end, *ptr = *end;
+
+	while (*ptr && !strchr(sep, *ptr))
+		++ptr;
+
+	if (*ptr) {
+		*end = ptr + 1;
+		*ptr = '\0';
+
+		return start;
+	}
+
+	return NULL;
+}
+
 void git__hexdump(const char *buffer, size_t len)
 {
 	static const size_t LINE_WIDTH = 16;

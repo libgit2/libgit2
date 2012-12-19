@@ -490,6 +490,24 @@ GIT_EXTERN(int) git_repository_message(char *out, size_t len, git_repository *re
  */
 GIT_EXTERN(int) git_repository_message_remove(git_repository *repo);
 
+typedef int (*git_repository_fetchhead_foreach_cb)(const char *ref_name,
+	const char *remote_url,
+	const git_oid *oid,
+	unsigned int is_merge,
+	void *payload);
+
+/**
+ * Call callback 'callback' for each entry in the given FETCH_HEAD file.
+ *
+ * @param repo A repository object
+ * @param callback Callback function
+ * @param payload Pointer to callback data (optional)
+ * @return 0 on success, GIT_ENOTFOUND, GIT_EUSER or error
+ */
+GIT_EXTERN(int) git_repository_fetchhead_foreach(git_repository *repo,
+	git_repository_fetchhead_foreach_cb callback,
+	void *payload);
+
 /**
  * Calculate hash of file using repository filtering rules.
  *
