@@ -348,14 +348,14 @@ int git_reflog_rename(git_reference *ref, const char *new_name)
 
 	assert(ref && new_name);
 
-	if ((error = git_reference__normalize_name(
+	if ((git_reference__normalize_name(
 		&normalized, new_name, GIT_REF_FORMAT_ALLOW_ONELEVEL)) < 0)
-			goto cleanup;
+			return -1;
 
 	error = -1;
 
 	if (git_buf_joinpath(&temp_path, git_reference_owner(ref)->path_repository, GIT_REFLOG_DIR) < 0)
-		return -1;
+		goto cleanup;
 
 	if (git_buf_joinpath(&old_path, git_buf_cstr(&temp_path), ref->name) < 0)
 		goto cleanup;
