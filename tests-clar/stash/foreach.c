@@ -38,10 +38,10 @@ void test_stash_foreach__cleanup(void)
 }
 
 static int callback_cb(
-		size_t index,
-		const char* message,
-		const git_oid *stash_oid,
-		void *payload)
+	size_t index,
+	const char* message,
+	const git_oid *stash_oid,
+	void *payload)
 {
 	struct callback_data *data = (struct callback_data *)payload;
 
