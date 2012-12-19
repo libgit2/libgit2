@@ -53,6 +53,15 @@ struct git_pack_idx_header {
 	uint32_t idx_version;
 };
 
+typedef struct git_pack_cache_entry {
+	git_off_t off;
+	git_rawobj raw;
+} git_pack_cache_entry;
+
+#include "offmap.h"
+
+GIT__USE_OFFMAP;
+
 struct git_pack_file {
 	git_mwindow_file mwf;
 	git_map index_map;
@@ -67,6 +76,8 @@ struct git_pack_file {
 	git_oid sha1;
 	git_vector cache;
 	git_oid **oids;
+
+	git_offmap *bases; /* delta base cache */
 
 	/* something like ".git/objects/pack/xxxxx.pack" */
 	char pack_name[GIT_FLEX_ARRAY]; /* more */
