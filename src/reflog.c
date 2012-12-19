@@ -254,7 +254,6 @@ int git_reflog_write(git_reflog *reflog)
 
 	assert(reflog);
 
-
 	if (git_buf_join_n(&log_path, '/', 3,
 		git_repository_path(reflog->owner), GIT_REFLOG_DIR, reflog->ref_name) < 0)
 		return -1;
@@ -348,21 +347,18 @@ int git_reflog_rename(git_reference *ref, const char *new_name)
 
 	assert(ref && new_name);
 
-	if ((git_reference__normalize_name(
+	if ((error = git_reference__normalize_name(
 		&normalized, new_name, GIT_REF_FORMAT_ALLOW_ONELEVEL)) < 0)
-			return -1;
-
-	error = -1;
+			return error;
 
 	if (git_buf_joinpath(&temp_path, git_reference_owner(ref)->path_repository, GIT_REFLOG_DIR) < 0)
-		goto cleanup;
+		return -1;
 
 	if (git_buf_joinpath(&old_path, git_buf_cstr(&temp_path), ref->name) < 0)
-		goto cleanup;
+		return -1;
 
-	if (git_buf_joinpath(&new_path,
-		git_buf_cstr(&temp_path), git_buf_cstr(&normalized)) < 0)
-			goto cleanup;
+	if (git_buf_joinpath(&new_path, git_buf_cstr(&temp_path), git_buf_cstr(&normalized)) < 0)
+		return -1;
 
 	/*
 	 * Move the reflog to a temporary place. This two-phase renaming is required
@@ -372,14 +368,17 @@ int git_reflog_rename(git_reference *ref, const char *new_name)
 	 *  - a/b/c/d -> a/b/c
 	 */
 	if (git_buf_joinpath(&temp_path, git_buf_cstr(&temp_path), "temp_reflog") < 0)
-		goto cleanup;
+		return -1;
 
 	if ((fd = git_futils_mktmp(&temp_path, git_buf_cstr(&temp_path))) < 0)
 		goto cleanup;
+
 	p_close(fd);
 
-	if (p_rename(git_buf_cstr(&old_path), git_buf_cstr(&temp_path)) < 0)
+	if (p_rename(git_buf_cstr(&old_path), git_buf_cstr(&temp_path)) < 0) {
+		giterr_set(GITERR_OS, "Failed to rename reflog for %s", new_name);
 		goto cleanup;
+	}
 
 	if (git_path_isdir(git_buf_cstr(&new_path)) && 
 		(git_futils_rmdir_r(git_buf_cstr(&new_path), NULL, GIT_RMDIR_SKIP_NONEMPTY) < 0))
@@ -388,7 +387,9 @@ int git_reflog_rename(git_reference *ref, const char *new_name)
 	if (git_futils_mkpath2file(git_buf_cstr(&new_path), GIT_REFLOG_DIR_MODE) < 0)
 		goto cleanup;
 
-	error = p_rename(git_buf_cstr(&temp_path), git_buf_cstr(&new_path));
+	if (p_rename(git_buf_cstr(&temp_path), git_buf_cstr(&new_path)) < 0) {
+		giterr_set(GITERR_OS, "Failed to rename reflog for %s", new_name);
+	}
 
 cleanup:
 	git_buf_free(&temp_path);
@@ -396,7 +397,7 @@ cleanup:
 	git_buf_free(&new_path);
 	git_buf_free(&normalized);
 
-	return error;
+	return -1;
 }
 
 int git_reflog_delete(git_reference *ref)
