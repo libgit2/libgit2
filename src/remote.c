@@ -83,7 +83,7 @@ cleanup:
 	return error;
 }
 
-int git_remote_new(git_remote **out, git_repository *repo, const char *name, const char *url, const char *fetch)
+int git_remote_create_inmemory(git_remote **out, git_repository *repo, const char *name, const char *url, const char *fetch)
 {
 	git_remote *remote;
 	git_buf fetchbuf = GIT_BUF_INIT;
@@ -998,7 +998,7 @@ int git_remote_list(git_strarray *remotes_list, git_repository *repo)
 	return 0;
 }
 
-int git_remote_add(git_remote **out, git_repository *repo, const char *name, const char *url)
+int git_remote_create(git_remote **out, git_repository *repo, const char *name, const char *url)
 {
 	git_buf buf = GIT_BUF_INIT;
 	int error;
@@ -1009,7 +1009,7 @@ int git_remote_add(git_remote **out, git_repository *repo, const char *name, con
 	if (git_buf_printf(&buf, "+refs/heads/*:refs/remotes/%s/*", name) < 0)
 		return -1;
 
-	if (git_remote_new(out, repo, name, url, git_buf_cstr(&buf)) < 0)
+	if (git_remote_create_inmemory(out, repo, name, url, git_buf_cstr(&buf)) < 0)
 		goto on_error;
 
 	git_buf_free(&buf);

@@ -154,7 +154,7 @@ void test_network_remoterename__renaming_an_inmemory_remote_persists_it(void)
 
 	assert_config_entry_existence(_repo, "remote.durable.url", false);
 
-	cl_git_pass(git_remote_new(&remote, _repo, NULL, "git://github.com/libgit2/durable.git", NULL));
+	cl_git_pass(git_remote_create_inmemory(&remote, _repo, NULL, "git://github.com/libgit2/durable.git", NULL));
 
 	assert_config_entry_existence(_repo, "remote.durable.url", false);
 
@@ -176,7 +176,7 @@ void test_network_remoterename__renaming_an_inmemory_nameless_remote_notifies_th
 
 	assert_config_entry_existence(_repo, "remote.volatile.url", false);
 
-	cl_git_pass(git_remote_new(
+	cl_git_pass(git_remote_create_inmemory(
 		&remote,
 		_repo,
 		NULL,

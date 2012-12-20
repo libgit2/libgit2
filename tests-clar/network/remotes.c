@@ -108,7 +108,7 @@ void test_network_remotes__save(void)
 	_remote = NULL;
 
 	/* Set up the remote and save it to config */
-	cl_git_pass(git_remote_new(&_remote, _repo, "upstream", "git://github.com/libgit2/libgit2", NULL));
+	cl_git_pass(git_remote_create_inmemory(&_remote, _repo, "upstream", "git://github.com/libgit2/libgit2", NULL));
 	cl_git_pass(git_remote_set_fetchspec(_remote, "refs/heads/*:refs/remotes/upstream/*"));
 	cl_git_pass(git_remote_set_pushspec(_remote, "refs/heads/*:refs/heads/*"));
 	cl_git_pass(git_remote_set_pushurl(_remote, "git://github.com/libgit2/libgit2_push"));
@@ -229,7 +229,7 @@ void test_network_remotes__add(void)
 	git_remote_free(_remote);
 	_remote = NULL;
 
-	cl_git_pass(git_remote_add(&_remote, _repo, "addtest", "http://github.com/libgit2/libgit2"));
+	cl_git_pass(git_remote_create(&_remote, _repo, "addtest", "http://github.com/libgit2/libgit2"));
 
 	git_remote_free(_remote);
 	_remote = NULL;
@@ -248,14 +248,14 @@ void test_network_remotes__cannot_add_a_nameless_remote(void)
 
 	cl_assert_equal_i(
 		GIT_EINVALIDSPEC,
-		git_remote_add(&remote, _repo, NULL, "git://github.com/libgit2/libgit2"));
+		git_remote_create(&remote, _repo, NULL, "git://github.com/libgit2/libgit2"));
 }
 
 void test_network_remotes__cannot_save_a_nameless_remote(void)
 {
 	git_remote *remote;
 
-	cl_git_pass(git_remote_new(&remote, _repo, NULL, "git://github.com/libgit2/libgit2", NULL));
+	cl_git_pass(git_remote_create_inmemory(&remote, _repo, NULL, "git://github.com/libgit2/libgit2", NULL));
 
 	cl_assert_equal_i(GIT_EINVALIDSPEC, git_remote_save(remote));
 	git_remote_free(remote);
@@ -267,12 +267,12 @@ void test_network_remotes__cannot_add_a_remote_with_an_invalid_name(void)
 
 	cl_assert_equal_i(
 		GIT_EINVALIDSPEC,
-		git_remote_add(&remote, _repo, "Inv@{id", "git://github.com/libgit2/libgit2"));
+		git_remote_create(&remote, _repo, "Inv@{id", "git://github.com/libgit2/libgit2"));
 	cl_assert_equal_p(remote, NULL);
 
 	cl_assert_equal_i(
 		GIT_EINVALIDSPEC,
-		git_remote_add(&remote, _repo, "", "git://github.com/libgit2/libgit2"));
+		git_remote_create(&remote, _repo, "", "git://github.com/libgit2/libgit2"));
 	cl_assert_equal_p(remote, NULL);
 }
 
@@ -282,12 +282,12 @@ void test_network_remotes__cannot_initialize_a_remote_with_an_invalid_name(void)
 
 	cl_assert_equal_i(
 		GIT_EINVALIDSPEC,
-		git_remote_new(&remote, _repo, "Inv@{id", "git://github.com/libgit2/libgit2", NULL));
+		git_remote_create_inmemory(&remote, _repo, "Inv@{id", "git://github.com/libgit2/libgit2", NULL));
 	cl_assert_equal_p(remote, NULL);
 
 	cl_assert_equal_i(
 		GIT_EINVALIDSPEC,
-		git_remote_new(&remote, _repo, "", "git://github.com/libgit2/libgit2", NULL));
+		git_remote_create_inmemory(&remote, _repo, "", "git://github.com/libgit2/libgit2", NULL));
 	cl_assert_equal_p(remote, NULL);
 }
 
@@ -331,7 +331,7 @@ void test_network_remotes__check_structure_version(void)
 
 	git_remote_free(_remote);
 	_remote = NULL;
-	cl_git_pass(git_remote_new(&_remote, _repo, NULL, "test-protocol://localhost", NULL));
+	cl_git_pass(git_remote_create_inmemory(&_remote, _repo, NULL, "test-protocol://localhost", NULL));
 
 	transport.version = 0;
 	cl_git_fail(git_remote_set_transport(_remote, &transport));
@@ -350,7 +350,7 @@ void test_network_remotes__dangling(void)
 	git_remote_free(_remote);
 	_remote = NULL;
 
-	cl_git_pass(git_remote_new(&_remote, NULL, "upstream", "git://github.com/libgit2/libgit2", NULL));
+	cl_git_pass(git_remote_create_inmemory(&_remote, NULL, "upstream", "git://github.com/libgit2/libgit2", NULL));
 
 	cl_git_pass(git_remote_rename(_remote, "newname", NULL, NULL));
 	cl_assert_equal_s(git_remote_name(_remote), "newname");

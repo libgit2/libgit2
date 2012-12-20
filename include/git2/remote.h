@@ -42,9 +42,24 @@ typedef int (*git_remote_rename_problem_cb)(const char *problematic_refspec, voi
  */
 
 /**
+ * Add a remote with the default fetch refspec to the repository's configuration
+ *
+ * @param out the resulting remote
+ * @param repo the repository in which to create the remote
+ * @param name the remote's name
+ * @param url the remote's url
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_remote_create(
+		git_remote **out,
+		git_repository *repo,
+		const char *name,
+		const char *url);
+
+/**
  * Create a remote in memory
  *
- * Create a remote with the default refspecs in memory. You can use
+ * Create a remote with the given refspec in memory. You can use
  * this when you have a URL instead of a remote's name.
  *
  * The name, when provided, will be checked for validity.
@@ -57,7 +72,12 @@ typedef int (*git_remote_rename_problem_cb)(const char *problematic_refspec, voi
  * @param fetch the fetch refspec to use for this remote. May be NULL for defaults.
  * @return 0, GIT_EINVALIDSPEC or an error code
  */
-GIT_EXTERN(int) git_remote_new(git_remote **out, git_repository *repo, const char *name, const char *url, const char *fetch);
+GIT_EXTERN(int) git_remote_create_inmemory(
+		git_remote **out,
+		git_repository *repo,
+		const char *name,
+		const char *url,
+		const char *fetch);
 
 /**
  * Sets the owning repository for the remote.  This is only allowed on
@@ -299,17 +319,6 @@ GIT_EXTERN(int) git_remote_supported_url(const char* url);
  * @return 0 or an error code
  */
 GIT_EXTERN(int) git_remote_list(git_strarray *out, git_repository *repo);
-
-/**
- * Add a remote with the default fetch refspec to the repository's configuration
- *
- * @param out the resulting remote
- * @param repo the repository in which to create the remote
- * @param name the remote's name
- * @param url the remote's url
- * @return 0 or an error code
- */
-GIT_EXTERN(int) git_remote_add(git_remote **out, git_repository *repo, const char *name, const char *url);
 
 /**
  * Choose whether to check the server's certificate (applies to HTTPS only)

@@ -267,7 +267,7 @@ static int create_and_configure_origin(
 	int error;
 	git_remote *origin = NULL;
 
-	if ((error = git_remote_add(&origin, repo, options->remote_name, url)) < 0)
+	if ((error = git_remote_create(&origin, repo, options->remote_name, url)) < 0)
 		goto on_error;
 
 	git_remote_set_cred_acquire_cb(origin, options->cred_acquire_cb,

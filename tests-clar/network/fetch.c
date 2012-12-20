@@ -42,7 +42,7 @@ static void do_fetch(const char *url, git_remote_autotag_option_t flag, int n)
 	callbacks.update_tips = update_tips;
 	counter = 0;
 
-	cl_git_pass(git_remote_add(&remote, _repo, "test", url));
+	cl_git_pass(git_remote_create(&remote, _repo, "test", url));
 	git_remote_set_callbacks(remote, &callbacks);
 	git_remote_set_autotag(remote, flag);
 	cl_git_pass(git_remote_connect(remote, GIT_DIRECTION_FETCH));
