@@ -295,6 +295,9 @@ static int create_and_configure_origin(
 	    (error = git_remote_set_pushurl(origin, options->pushurl)) < 0)
 		goto on_error;
 
+	if ((error = git_remote_save(origin)) < 0)
+		goto on_error;
+
 	*out = origin;
 	return 0;
 
