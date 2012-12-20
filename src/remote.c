@@ -83,14 +83,14 @@ cleanup:
 	return error;
 }
 
-int git_remote_create_inmemory(git_remote **out, git_repository *repo, const char *name, const char *url, const char *fetch)
+static int create_internal(git_remote **out, git_repository *repo, const char *name, const char *url, const char *fetch)
 {
 	git_remote *remote;
 	git_buf fetchbuf = GIT_BUF_INIT;
 	int error = -1;
 
 	/* name is optional */
-	assert(out && url);
+	assert(out && repo && url);
 
 	remote = git__calloc(1, sizeof(git_remote));
 	GITERR_CHECK_ALLOC(remote);
@@ -113,13 +113,6 @@ int git_remote_create_inmemory(git_remote **out, git_repository *repo, const cha
 
 		remote->name = git__strdup(name);
 		GITERR_CHECK_ALLOC(remote->name);
-
-		/* An empty name indicates to use a sensible default for the fetchspec. */
-		if (fetch && !(*fetch)) {
-			if (git_buf_printf(&fetchbuf, "+refs/heads/*:refs/remotes/%s/*", remote->name) < 0)
-				goto on_error;
-			fetch = git_buf_cstr(&fetchbuf);
-		}
 	}
 
 	if (fetch != NULL) {
@@ -140,6 +133,46 @@ on_error:
 	git_remote_free(remote);
 	git_buf_free(&fetchbuf);
 	return error;
+}
+
+int git_remote_create(git_remote **out, git_repository *repo, const char *name, const char *url)
+{
+	git_buf buf = GIT_BUF_INIT;
+	int error;
+
+	if ((error = ensure_remote_name_is_valid(name)) < 0)
+		return error;
+
+	if (git_buf_printf(&buf, "+refs/heads/*:refs/remotes/%s/*", name) < 0)
+		return -1;
+
+	if (create_internal(out, repo, name, url, git_buf_cstr(&buf)) < 0)
+		goto on_error;
+
+	git_buf_free(&buf);
+
+	if (git_remote_save(*out) < 0)
+		goto on_error;
+
+	return 0;
+
+on_error:
+	git_buf_free(&buf);
+	git_remote_free(*out);
+	return -1;
+}
+
+int git_remote_create_inmemory(git_remote **out, git_repository *repo, const char *name, const char *url, const char *fetch)
+{
+	int error;
+	git_remote *remote;
+
+	if ((error = create_internal(&remote, repo, name, url, fetch)) < 0)
+		return error;
+
+	remote->inmem = true;
+	*out = remote;
+	return 0;
 }
 
 int git_remote_set_repository(git_remote *remote, git_repository *repo)
@@ -312,9 +345,9 @@ int git_remote_save(const git_remote *remote)
 
 	assert(remote);
 
-	if (!remote->repo) {
-		giterr_set(GITERR_INVALID, "Can't save a dangling remote.");
-		return GIT_ERROR;
+	if (remote->inmem) {
+		giterr_set(GITERR_INVALID, "Can't save an in-memory remote.");
+		return GIT_EINVALIDSPEC;
 	}
 
 	if ((error = ensure_remote_name_is_valid(remote->name)) < 0)
@@ -461,8 +494,7 @@ int git_remote_set_fetchspec(git_remote *remote, const char *spec)
 		return -1;
 
 	git_refspec__free(&remote->fetch);
-	remote->fetch.src = refspec.src;
-	remote->fetch.dst = refspec.dst;
+	memcpy(&remote->fetch, &refspec, sizeof(git_refspec));
 
 	return 0;
 }
@@ -773,11 +805,6 @@ int git_remote_update_tips(git_remote *remote)
 
 	assert(remote);
 
-	if (!remote->repo) {
-		giterr_set(GITERR_INVALID, "Can't update tips on a dangling remote.");
-		return GIT_ERROR;
-	}
-
 	spec = &remote->fetch;
 	
 	if (git_repository_odb__weakptr(&odb, remote->repo) < 0)
@@ -996,33 +1023,6 @@ int git_remote_list(git_strarray *remotes_list, git_repository *repo)
 	remotes_list->count = list.length;
 
 	return 0;
-}
-
-int git_remote_create(git_remote **out, git_repository *repo, const char *name, const char *url)
-{
-	git_buf buf = GIT_BUF_INIT;
-	int error;
-
-	if ((error = ensure_remote_name_is_valid(name)) < 0)
-		return error;
-
-	if (git_buf_printf(&buf, "+refs/heads/*:refs/remotes/%s/*", name) < 0)
-		return -1;
-
-	if (git_remote_create_inmemory(out, repo, name, url, git_buf_cstr(&buf)) < 0)
-		goto on_error;
-
-	git_buf_free(&buf);
-
-	if (git_remote_save(*out) < 0)
-		goto on_error;
-
-	return 0;
-
-on_error:
-	git_buf_free(&buf);
-	git_remote_free(*out);
-	return -1;
 }
 
 void git_remote_check_cert(git_remote *remote, int check)
@@ -1343,6 +1343,7 @@ int git_remote_rename(
 
 			remote->name = git__strdup(new_name);
 
+			if (remote->inmem) return 0;
 			return git_remote_save(remote);
 		}
 

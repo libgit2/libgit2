@@ -148,23 +148,6 @@ void test_network_remoterename__cannot_overwrite_an_existing_remote(void)
 	cl_assert_equal_i(GIT_EEXISTS, git_remote_rename(_remote, "test_with_pushurl", dont_call_me_cb, NULL));
 }
 
-void test_network_remoterename__renaming_an_inmemory_remote_persists_it(void)
-{
-	git_remote *remote;
-
-	assert_config_entry_existence(_repo, "remote.durable.url", false);
-
-	cl_git_pass(git_remote_create_inmemory(&remote, _repo, NULL, "git://github.com/libgit2/durable.git", NULL));
-
-	assert_config_entry_existence(_repo, "remote.durable.url", false);
-
-	cl_git_pass(git_remote_rename(remote, "durable", dont_call_me_cb, NULL));
-
-	assert_config_entry_value(_repo, "remote.durable.url", "git://github.com/libgit2/durable.git");
-
-	git_remote_free(remote);
-}
-
 void test_network_remoterename__renaming_an_inmemory_nameless_remote_notifies_the_inability_to_update_the_fetch_refspec(void)
 {
 	git_remote *remote;
