@@ -268,11 +268,41 @@ static int loose_lookup_to_packfile(
 	return 0;
 }
 
+static int update_reflog(
+	git_reference *ref,
+	git_oid *oid,
+	git_signature *signature,
+	const char *message)
+{
+
+	git_reflog *reflog = NULL;
+	int error = -1;
+
+	if ((error = git_reflog_read(&reflog, ref)) < 0) {
+		git_reflog_free(reflog);
+		return -1;
+	}
+
+	if ((error = git_reflog_append(reflog, oid, signature, message)) < 0) {
+		git_reflog_free(reflog);
+		return -1;
+	}
+
+	if ((error = git_reflog_write(reflog)) < 0) {
+		git_reflog_free(reflog);
+		return -1;
+	}
+
+	git_reflog_free(reflog);
+	return 0;
+}
+
 static int loose_write(git_reference *ref)
 {
 	git_filebuf file = GIT_FILEBUF_INIT;
 	git_buf ref_path = GIT_BUF_INIT;
 	struct stat st;
+	int error;
 
 	/* Remove a possibly existing empty directory hierarchy
 	 * which name would collide with the reference name
@@ -300,6 +330,7 @@ static int loose_write(git_reference *ref)
 		git_filebuf_printf(&file, "%s\n", oid);
 
 	} else if (ref->flags & GIT_REF_SYMBOLIC) {
+		/* TODO: what to do with reflog for a symbolic ref? -- is it just some OID version of ref->target.symbolic? */
 		git_filebuf_printf(&file, GIT_SYMREF "%s\n", ref->target.symbolic);
 	} else {
 		assert(0); /* don't let this happen */
@@ -308,7 +339,10 @@ static int loose_write(git_reference *ref)
 	if (p_stat(ref_path.ptr, &st) == 0)
 		ref->mtime = st.st_mtime;
 
-	return git_filebuf_commit(&file, GIT_REFS_FILE_MODE);
+	if ((error = git_filebuf_commit(&file, GIT_REFS_FILE_MODE)) < 0)
+		return error;
+
+	return update_reflog(ref, &ref->target.oid, NULL, "THIS WOULD BE THE MESSAGE"); /* TODO: signature, and message ??? */
 }
 
 static int packed_parse_peel(
@@ -1411,7 +1445,7 @@ int git_reference_rename(git_reference *ref, const char *new_name, int force)
 	/*
 	 * Update HEAD it was poiting to the reference being renamed.
 	 */
-	if (should_head_be_updated && 
+	if (should_head_be_updated &&
 		git_repository_set_head(ref->owner, new_name) < 0) {
 			giterr_set(GITERR_REFERENCE,
 				"Failed to update HEAD after renaming reference");
