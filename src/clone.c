@@ -265,7 +265,7 @@ static int create_and_configure_origin(
 		const git_clone_options *options)
 {
 	int error;
-	git_remote *origin;
+	git_remote *origin = NULL;
 
 	if ((error = git_remote_add(&origin, repo, options->remote_name, url)) < 0)
 		goto on_error;
@@ -302,7 +302,7 @@ static int create_and_configure_origin(
 	return 0;
 
 on_error:
-	if (origin) git_remote_free(origin);
+	git_remote_free(origin);
 	return error;
 }
 
