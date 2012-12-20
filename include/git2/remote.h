@@ -34,7 +34,8 @@ typedef int (*git_remote_rename_problem_cb)(const char *problematic_refspec, voi
  */
 
 /**
- * Add a remote with the default fetch refspec to the repository's configuration
+ * Add a remote with the default fetch refspec to the repository's configuration.  This
+ * calls git_remote_save before returning.
  *
  * @param out the resulting remote
  * @param repo the repository in which to create the remote
@@ -52,7 +53,8 @@ GIT_EXTERN(int) git_remote_create(
  * Create a remote in memory
  *
  * Create a remote with the given refspec in memory. You can use
- * this when you have a URL instead of a remote's name.
+ * this when you have a URL instead of a remote's name.  Note that in-memory
+ * remotes cannot be converted to persisted remotes.
  *
  * The name, when provided, will be checked for validity.
  * See `git_tag_create()` for rules about valid names.
