@@ -47,13 +47,13 @@ static int packfile_error(const char *message)
 }
 
 
-static git_pack_cache_entry *new_cache_object(git_off_t off, git_rawobj *source)
+static git_pack_cache_entry *new_cache_object(git_rawobj *source)
 {
 	git_pack_cache_entry *e = git__malloc(sizeof(git_pack_cache_entry));
 	if (!e)
 		return NULL;
 
-	e->off = off;
+	e->refcount.val = 0;
 	memcpy(&e->raw, source, sizeof(git_rawobj));
 
 	return e;
@@ -63,6 +63,7 @@ static void free_cache_object(void *o)
 {
 	git_pack_cache_entry *e = (git_pack_cache_entry *)o;
 
+	assert(e->refcount.val == 0);
 	if (e != NULL) {
 		git__free(e->raw.data);
 		git__free(e);
@@ -361,7 +362,7 @@ static int packfile_unpack_delta(
 {
 	git_off_t base_offset, base_key;
 	git_rawobj base, delta;
-	git_pack_cache_entry *cached;
+	git_pack_cache_entry *cached = NULL;
 	int error, found_base = 0;
 	khiter_t k;
 
@@ -375,15 +376,21 @@ static int packfile_unpack_delta(
 	if (!p->bases) {
 		p->bases = git_offmap_alloc();
 		GITERR_CHECK_ALLOC(p->bases);
+		git_mutex_init(&p->bases_lock);
 	}
 
 	base_key = base_offset; /* git_packfile_unpack modifies base_offset */
+	git_mutex_lock(&p->bases_lock);
 	k = kh_get(off, p->bases, base_offset);
 	if (k != kh_end(p->bases)) { /* found it */
 		cached = kh_value(p->bases, k);
+		git_atomic_inc(&cached->refcount);
 		found_base = 1;
 		memcpy(&base, &cached->raw, sizeof(git_rawobj));
-	} else { /* have to inflate it */
+	}
+	git_mutex_unlock(&p->bases_lock);
+
+	if (!cached) { /* have to inflate it */
 		error = git_packfile_unpack(&base, p, &base_offset);
 
 		/*
@@ -410,12 +417,27 @@ static int packfile_unpack_delta(
 	if (error < 0)
 		goto on_error;
 
-	if (!found_base) {
-		cached = new_cache_object(base_key, &base);
+	if (found_base) {
+		git_atomic_dec(&cached->refcount);
+	} else {
+		cached = new_cache_object(&base);
 		if (cached) {
-			k = kh_put(off, p->bases, base_key, &error);
-			assert(error != 0);
-			kh_value(p->bases, k) = cached;
+			int exists;
+
+			git_mutex_lock(&p->bases_lock);
+			/* Add it to the cache if nobody else has */
+			exists = kh_exist(p->bases, kh_get(off, p->bases, base_key));
+			if (!exists) {
+				k = kh_put(off, p->bases, base_key, &error);
+				assert(error != 0);
+				kh_value(p->bases, k) = cached;
+			}
+			git_mutex_unlock(&p->bases_lock);
+			/* Somebody beat us to adding it into the cache */
+			if (exists) {
+				free_cache_object(cached);
+				git__free(base.data);
+			}
 		}
 	}
 
@@ -738,6 +760,8 @@ static int packfile_open(struct git_pack_file *p)
 
 	p->bases = git_offmap_alloc();
 	GITERR_CHECK_ALLOC(p->bases);
+	git_mutex_init(&p->bases_lock);
+
 
 	/* TODO: open with noatime */
 	p->mwf.fd = git_futils_open_ro(p->pack_name);

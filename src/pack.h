@@ -54,7 +54,7 @@ struct git_pack_idx_header {
 };
 
 typedef struct git_pack_cache_entry {
-	git_off_t off;
+	git_atomic refcount;
 	git_rawobj raw;
 } git_pack_cache_entry;
 
@@ -77,6 +77,7 @@ struct git_pack_file {
 	git_vector cache;
 	git_oid **oids;
 
+	git_mutex bases_lock;
 	git_offmap *bases; /* delta base cache */
 
 	/* something like ".git/objects/pack/xxxxx.pack" */
