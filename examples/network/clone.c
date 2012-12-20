@@ -64,7 +64,7 @@ static int cred_acquire(git_cred **out, const char *url, unsigned int allowed_ty
 
 int do_clone(git_repository *repo, int argc, char **argv)
 {
-	progress_data pd;
+	progress_data pd = {0};
 	git_repository *cloned_repo = NULL;
 	git_remote *origin;
 	git_clone_options clone_opts = GIT_CLONE_OPTIONS_INIT;
@@ -82,27 +82,16 @@ int do_clone(git_repository *repo, int argc, char **argv)
 	}
 
 	// Set up options
+	clone_opts.checkout_opts = &checkout_opts;
 	checkout_opts.checkout_strategy = GIT_CHECKOUT_SAFE;
 	checkout_opts.progress_cb = checkout_progress;
-	memset(&pd, 0, sizeof(pd));
 	checkout_opts.progress_payload = &pd;
-
-	// Create the origin remote, and set up for auth
-	error = git_remote_new(&origin, NULL, "origin", url, GIT_REMOTE_DEFAULT_FETCH);
-	if (error != 0) {
-		const git_error *err = giterr_last();
-		if (err) printf("ERROR %d: %s\n", err->klass, err->message);
-		else printf("ERROR %d: no detailed info\n", error);
-		return error;
-	}
-	git_remote_set_cred_acquire_cb(origin, cred_acquire, NULL);
-
-	// Do the clone
-	clone_opts.checkout_opts = &checkout_opts;
 	clone_opts.fetch_progress_cb = &fetch_progress;
 	clone_opts.fetch_progress_payload = &pd;
-	error = git_clone(&cloned_repo, origin, path, &clone_opts);
-	git_remote_free(origin);
+	clone_opts.cred_acquire_cb = cred_acquire;
+
+	// Do the clone
+	error = git_clone(&cloned_repo, url, path, &clone_opts);
 	printf("\n");
 	if (error != 0) {
 		const git_error *err = giterr_last();
