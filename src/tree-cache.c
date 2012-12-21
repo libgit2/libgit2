@@ -169,6 +169,20 @@ int git_tree_cache_read(git_tree_cache **tree, const char *buffer, size_t buffer
 	return 0;
 }
 
+int git_tree_cache_new(git_tree_cache **tree_p, const char *name_start, size_t name_len)
+{
+	git_tree_cache *tree = git__malloc(sizeof(git_tree_cache) + name_len + 1);
+	GITERR_CHECK_ALLOC(tree);
+
+	assert(tree_p && name_start);
+	memset(tree, 0x0, sizeof(git_tree_cache));
+	memcpy(tree->name, name_start, name_len);
+	tree->name[name_len] = '\0';
+	*tree_p = tree;
+
+	return 0;
+}
+
 void git_tree_cache_free(git_tree_cache *tree)
 {
 	unsigned int i;

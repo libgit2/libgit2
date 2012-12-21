@@ -27,5 +27,6 @@ int git_tree_cache_read(git_tree_cache **tree, const char *buffer, size_t buffer
 void git_tree_cache_invalidate_path(git_tree_cache *tree, const char *path);
 const git_tree_cache *git_tree_cache_get(const git_tree_cache *tree, const char *path);
 void git_tree_cache_free(git_tree_cache *tree);
+int git_tree_cache_new(git_tree_cache **tree, const char *name_start, size_t name_len);
 
 #endif
