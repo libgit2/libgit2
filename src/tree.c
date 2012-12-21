@@ -430,7 +430,7 @@ static int append_entry(
 }
 
 static int write_tree(
-	git_oid *oid,
+	git_tree_cache **tree_p,
 	git_repository *repo,
 	git_index *index,
 	const char *dirname,
@@ -440,16 +440,29 @@ static int write_tree(
 	size_t i, entries = git_index_entrycount(index);
 	int error;
 	size_t dirname_len = strlen(dirname);
-	const git_tree_cache *cache;
+	git_tree_cache *tree = NULL;
+	git_vector children = GIT_VECTOR_INIT;
 
-	cache = git_tree_cache_get(index->tree, dirname);
-	if (cache != NULL && cache->entries >= 0){
-		git_oid_cpy(oid, &cache->oid);
+	tree = !dirname_len ? index->tree : (git_tree_cache *)git_tree_cache_get(index->tree, dirname);
+	if (tree != NULL && tree->entries >= 0){
+		*tree_p = tree;
 		return (int)find_next_dir(dirname, index, start);
+	} else if (tree == NULL) {
+		const char *name_start;
+		size_t name_len;
+		name_start = strrchr(dirname, '/');
+		if (name_start) {
+			name_start++; /* Get rid of the '/' */
+		} else {
+			name_start = dirname;
+		}
+		name_len = dirname + dirname_len - name_start;
+		if (git_tree_cache_new(&tree, name_start, name_len) < 0)
+			goto on_error;
 	}
 
 	if ((error = git_treebuilder_create(&bld, NULL)) < 0 || bld == NULL)
-		return -1;
+		goto on_error;
 
 	/*
 	 * This loop is unfortunate, but necessary. The index doesn't have
@@ -479,15 +492,15 @@ static int write_tree(
 			filename++;
 		next_slash = strchr(filename, '/');
 		if (next_slash) {
-			git_oid sub_oid;
 			int written;
-			char *subdir, *last_comp;
+			char *subdir;
+			git_tree_cache *subtree;
 
 			subdir = git__strndup(entry->path, next_slash - entry->path);
 			GITERR_CHECK_ALLOC(subdir);
 
 			/* Write out the subtree */
-			written = write_tree(&sub_oid, repo, index, subdir, i);
+			written = write_tree(&subtree, repo, index, subdir, i);
 			if (written < 0) {
 				tree_error("Failed to write subtree", subdir);
 				git__free(subdir);
@@ -495,21 +508,9 @@ static int write_tree(
 			} else {
 				i = written - 1; /* -1 because of the loop increment */
 			}
+			git_vector_insert(&children, subtree);
 
-			/*
-			 * We need to figure out what we want toinsert
-			 * into this tree. If we're traversing
-			 * deps/zlib/, then we only want to write
-			 * 'zlib' into the tree.
-			 */
-			last_comp = strrchr(subdir, '/');
-			if (last_comp) {
-				last_comp++; /* Get rid of the '/' */
-			} else {
-				last_comp = subdir;
-			}
-
-			error = append_entry(bld, last_comp, &sub_oid, S_IFDIR);
+			error = append_entry(bld, subtree->name, &subtree->oid, S_IFDIR);
 			git__free(subdir);
 			if (error < 0)
 				goto on_error;
@@ -520,14 +521,24 @@ static int write_tree(
 		}
 	}
 
-	if (git_treebuilder_write(oid, repo, bld) < 0)
+	if (git_treebuilder_write(&tree->oid, repo, bld) < 0)
 		goto on_error;
 
+	if (git_tree_cache_merge(tree, (git_tree_cache **)children.contents, children.length, bld->entries.length) < 0)
+		goto on_error;
+
+	*tree_p = tree;
+
 	git_treebuilder_free(bld);
+
 	return (int)i;
 
 on_error:
-	git_treebuilder_free(bld);
+	git_vector_free(&children);
+	if (tree)
+		git_tree_cache_free(tree);
+	if (bld)
+		git_treebuilder_free(bld);
 	return -1;
 }
 
@@ -550,7 +561,9 @@ int git_tree__write_index(
 	}
 
 	/* The tree cache didn't help us */
-	ret = write_tree(oid, repo, index, "", 0);
+	ret = write_tree(&index->tree, repo, index, "", 0);
+	if (ret >= 0)
+		git_oid_cpy(oid, &index->tree->oid);
 	return ret < 0 ? ret : 0;
 }
 
