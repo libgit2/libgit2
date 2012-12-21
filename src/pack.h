@@ -54,7 +54,7 @@ struct git_pack_idx_header {
 };
 
 typedef struct git_pack_cache_entry {
-	int uses; /* enough? */
+	size_t last_usage; /* enough? */
 	git_atomic refcount;
 	git_rawobj raw;
 } git_pack_cache_entry;
@@ -63,11 +63,13 @@ typedef struct git_pack_cache_entry {
 
 GIT__USE_OFFMAP;
 
-#define GIT_PACK_CACHE_MEMORY_LIMIT 2 * 1024 * 1024;
+#define GIT_PACK_CACHE_MEMORY_LIMIT 16 * 1024 * 1024
+#define GIT_PACK_CACHE_SIZE_LIMIT 1024 * 1024 /* don't bother caching anything over 1MB */
 
 typedef struct {
 	size_t memory_used;
 	size_t memory_limit;
+	size_t use_ctr;
 	git_mutex lock;
 	git_offmap *entries;
 } git_pack_cache;

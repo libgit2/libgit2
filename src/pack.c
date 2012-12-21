@@ -65,8 +65,8 @@ static void free_cache_object(void *o)
 {
 	git_pack_cache_entry *e = (git_pack_cache_entry *)o;
 
-	assert(e->refcount.val == 0);
 	if (e != NULL) {
+		assert(e->refcount.val == 0);
 		git__free(e->raw.data);
 		git__free(e);
 	}
@@ -107,11 +107,36 @@ static git_pack_cache_entry *cache_get(git_pack_cache *cache, size_t offset)
 	if (k != kh_end(cache->entries)) { /* found it */
 		entry = kh_value(cache->entries, k);
 		git_atomic_inc(&entry->refcount);
-		entry->uses++;
+		entry->last_usage = cache->use_ctr++;
 	}
 	git_mutex_unlock(&cache->lock);
 
 	return entry;
+}
+
+/* Run with the cache lock held */
+static void free_lowest_entry(git_pack_cache *cache)
+{
+	git_pack_cache_entry *lowest = NULL, *entry;
+	khiter_t k, lowest_k;
+
+	for (k = kh_begin(cache->entries); k != kh_end(cache->entries); k++) {
+		if (!kh_exist(cache->entries, k))
+			continue;
+
+		entry = kh_value(cache->entries, k);
+		if (lowest == NULL || entry->last_usage < lowest->last_usage) {
+			lowest_k = k;
+			lowest = entry;
+		}
+	}
+
+	if (!lowest) /* there's nothing to free */
+		return;
+
+	cache->memory_used -= lowest->raw.len;
+	kh_del(off, cache->entries, lowest_k);
+	free_cache_object(lowest);
 }
 
 static int cache_add(git_pack_cache *cache, git_rawobj *base, git_off_t offset)
@@ -120,15 +145,22 @@ static int cache_add(git_pack_cache *cache, git_rawobj *base, git_off_t offset)
 	int error, exists = 0;
 	khiter_t k;
 
+	if (base->len > GIT_PACK_CACHE_SIZE_LIMIT)
+		return -1;
+
 	entry = new_cache_object(base);
 	if (entry) {
 		git_mutex_lock(&cache->lock);
 		/* Add it to the cache if nobody else has */
 		exists = kh_get(off, cache->entries, offset) != kh_end(cache->entries);
 		if (!exists) {
+			while (cache->memory_used + base->len > cache->memory_limit)
+				free_lowest_entry(cache);
+
 			k = kh_put(off, cache->entries, offset, &error);
 			assert(error != 0);
 			kh_value(cache->entries, k) = entry;
+			cache->memory_used += entry->raw.len;
 		}
 		git_mutex_unlock(&cache->lock);
 		/* Somebody beat us to adding it into the cache */
