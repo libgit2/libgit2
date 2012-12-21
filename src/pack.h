@@ -54,6 +54,7 @@ struct git_pack_idx_header {
 };
 
 typedef struct git_pack_cache_entry {
+	int uses; /* enough? */
 	git_atomic refcount;
 	git_rawobj raw;
 } git_pack_cache_entry;
@@ -61,6 +62,15 @@ typedef struct git_pack_cache_entry {
 #include "offmap.h"
 
 GIT__USE_OFFMAP;
+
+#define GIT_PACK_CACHE_MEMORY_LIMIT 2 * 1024 * 1024;
+
+typedef struct {
+	size_t memory_used;
+	size_t memory_limit;
+	git_mutex lock;
+	git_offmap *entries;
+} git_pack_cache;
 
 struct git_pack_file {
 	git_mwindow_file mwf;
@@ -77,8 +87,7 @@ struct git_pack_file {
 	git_vector cache;
 	git_oid **oids;
 
-	git_mutex bases_lock;
-	git_offmap *bases; /* delta base cache */
+	git_pack_cache bases; /* delta base cache */
 
 	/* something like ".git/objects/pack/xxxxx.pack" */
 	char pack_name[GIT_FLEX_ARRAY]; /* more */
