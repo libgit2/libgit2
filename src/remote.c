@@ -162,12 +162,12 @@ on_error:
 	return -1;
 }
 
-int git_remote_create_inmemory(git_remote **out, git_repository *repo, const char *name, const char *url, const char *fetch)
+int git_remote_create_inmemory(git_remote **out, git_repository *repo, const char *url, const char *fetch)
 {
 	int error;
 	git_remote *remote;
 
-	if ((error = create_internal(&remote, repo, name, url, fetch)) < 0)
+	if ((error = create_internal(&remote, repo, NULL, url, fetch)) < 0)
 		return error;
 
 	remote->inmem = true;
@@ -1325,6 +1325,11 @@ int git_remote_rename(
 	int error;
 
 	assert(remote && new_name);
+
+	if (remote->inmem) {
+		giterr_set(GITERR_INVALID, "Can't rename an in-memory remote.");
+		return GIT_EINVALIDSPEC;
+	}
 
 	if ((error = ensure_remote_name_is_valid(new_name)) < 0)
 		return error;

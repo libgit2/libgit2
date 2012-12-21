@@ -148,29 +148,6 @@ void test_network_remoterename__cannot_overwrite_an_existing_remote(void)
 	cl_assert_equal_i(GIT_EEXISTS, git_remote_rename(_remote, "test_with_pushurl", dont_call_me_cb, NULL));
 }
 
-void test_network_remoterename__renaming_an_inmemory_nameless_remote_notifies_the_inability_to_update_the_fetch_refspec(void)
-{
-	git_remote *remote;
-
-	char *expected_refspecs[] = {
-		"+refs/heads/*:refs/remotes/volatile/*",
-		NULL
-	};
-
-	assert_config_entry_existence(_repo, "remote.volatile.url", false);
-
-	cl_git_pass(git_remote_create_inmemory(
-		&remote,
-		_repo,
-		NULL,
-		"git://github.com/libgit2/volatile.git",
-		"+refs/heads/*:refs/remotes/volatile/*"));
-
-	cl_git_pass(git_remote_rename(remote, "durable", ensure_refspecs, &expected_refspecs));
-
-	git_remote_free(remote);
-}
-
 void test_network_remoterename__renaming_a_remote_moves_the_underlying_reference(void)
 {
 	git_reference *underlying;
@@ -184,4 +161,14 @@ void test_network_remoterename__renaming_a_remote_moves_the_underlying_reference
 	cl_assert_equal_i(GIT_ENOTFOUND, git_reference_lookup(&underlying, _repo, "refs/remotes/test/master"));
 	cl_git_pass(git_reference_lookup(&underlying, _repo, "refs/remotes/just/renamed/master"));
 	git_reference_free(underlying);
+}
+
+void test_network_remoterename__cannot_rename_an_inmemory_remote(void)
+{
+	git_remote *remote;
+
+	cl_git_pass(git_remote_create_inmemory(&remote, _repo, "file:///blah", NULL));
+	cl_git_fail(git_remote_rename(remote, "newname", NULL, NULL));
+
+	git_remote_free(remote);
 }
