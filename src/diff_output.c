@@ -1231,7 +1231,6 @@ int git_diff_print_patch(
 	return error;
 }
 
-
 static void set_data_from_blob(
 	git_blob *blob, git_map *map, git_diff_file *file)
 {
@@ -1296,6 +1295,91 @@ int git_diff_blobs(
 	set_data_from_blob(new_blob, &patch.new_data, &delta.new_file);
 
 	delta.status = new_blob ?
+		(old_blob ? GIT_DELTA_MODIFIED : GIT_DELTA_ADDED) :
+		(old_blob ? GIT_DELTA_DELETED : GIT_DELTA_UNTRACKED);
+
+	if (git_oid_cmp(&delta.new_file.oid, &delta.old_file.oid) == 0)
+		delta.status = GIT_DELTA_UNMODIFIED;
+
+	patch.delta = &delta;
+
+	if ((error = diff_delta_is_binary_by_content(
+			 &ctxt, &delta, &delta.old_file, &patch.old_data)) < 0 ||
+		(error = diff_delta_is_binary_by_content(
+			&ctxt, &delta, &delta.new_file, &patch.new_data)) < 0)
+		goto cleanup;
+
+	patch.flags |= GIT_DIFF_PATCH_LOADED;
+	if (delta.binary != 1 && delta.status != GIT_DELTA_UNMODIFIED)
+		patch.flags |= GIT_DIFF_PATCH_DIFFABLE;
+
+	/* do diffs */
+
+	if (!(error = diff_delta_file_callback(&ctxt, patch.delta, 1)))
+		error = diff_patch_generate(&ctxt, &patch);
+
+cleanup:
+	diff_patch_unload(&patch);
+
+	if (error == GIT_EUSER)
+		giterr_clear();
+
+	return error;
+}
+
+static void set_data_from_buffer(
+	char *buffer, size_t buffer_len, git_map *map, git_diff_file *file)
+{
+	file->size = buffer_len;
+	file->mode = 0644;
+
+	map->len   = (size_t)file->size;
+	map->data  = (char *)buffer;
+}
+
+int git_diff_blob_to_buffer(
+	git_blob *old_blob,
+	char *buffer,
+	size_t buffer_len,
+	const git_diff_options *options,
+	git_diff_file_cb file_cb,
+	git_diff_hunk_cb hunk_cb,
+	git_diff_data_cb data_cb,
+	void *payload)
+{
+	int error;
+	git_repository *repo;
+	diff_context ctxt;
+	git_diff_delta delta;
+	git_diff_patch patch;
+
+	GITERR_CHECK_VERSION(options, GIT_DIFF_OPTIONS_VERSION, "git_diff_options");
+
+	if (old_blob)
+		repo = git_object_owner((git_object *)old_blob);
+	else
+		repo = NULL;
+
+	diff_context_init(
+		&ctxt, NULL, repo, options,
+		file_cb, hunk_cb, data_cb, payload);
+
+	diff_patch_init(&ctxt, &patch);
+
+	/* create a fake delta record and simulate diff_patch_load */
+
+	memset(&delta, 0, sizeof(delta));
+	delta.binary = -1;
+
+	if (options && (options->flags & GIT_DIFF_REVERSE)) {
+		set_data_from_blob(old_blob, &patch.new_data, &delta.new_file);
+		set_data_from_buffer(buffer, buffer_len, &patch.old_data, &delta.old_file);
+	} else {
+		set_data_from_blob(old_blob, &patch.old_data, &delta.old_file);
+		set_data_from_buffer(buffer, buffer_len, &patch.new_data, &delta.new_file);
+	}
+
+	delta.status = buffer ?
 		(old_blob ? GIT_DELTA_MODIFIED : GIT_DELTA_ADDED) :
 		(old_blob ? GIT_DELTA_DELETED : GIT_DELTA_UNTRACKED);
 
