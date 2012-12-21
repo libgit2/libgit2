@@ -251,7 +251,7 @@ void test_network_remotes__cannot_add_a_nameless_remote(void)
 		git_remote_create(&remote, _repo, NULL, "git://github.com/libgit2/libgit2"));
 }
 
-void test_network_remotes__cant_save_inmem_remote(void)
+void test_network_remotes__cannot_save_an_inmemory_remote(void)
 {
 	git_remote *remote;
 
