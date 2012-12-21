@@ -401,8 +401,8 @@ static int prepare_worktree_commit_message(
 	git_buf buf = GIT_BUF_INIT;
 	int error;
 
-	if (git_buf_set(&buf, git_buf_cstr(msg), git_buf_len(msg)) < 0)
-		return -1;
+	if ((error = git_buf_set(&buf, git_buf_cstr(msg), git_buf_len(msg))) < 0)
+		return error;
 
 	git_buf_clear(msg);
 
@@ -419,7 +419,7 @@ static int prepare_worktree_commit_message(
 		git_buf_printf(msg, ": %s\n", user_message);
 	}
 
-	error = git_buf_oom(msg) || git_buf_oom(&buf) ? -1 : 0;
+	error = (git_buf_oom(msg) || git_buf_oom(&buf)) ? -1 : 0;
 
 cleanup:
 	git_buf_free(&buf);
