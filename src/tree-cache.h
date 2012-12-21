@@ -28,5 +28,6 @@ void git_tree_cache_invalidate_path(git_tree_cache *tree, const char *path);
 const git_tree_cache *git_tree_cache_get(const git_tree_cache *tree, const char *path);
 void git_tree_cache_free(git_tree_cache *tree);
 int git_tree_cache_new(git_tree_cache **tree, const char *name_start, size_t name_len);
+int git_tree_cache_merge(git_tree_cache *tree, git_tree_cache **children, size_t children_count, ssize_t entries);
 
 #endif
