@@ -63,6 +63,10 @@ struct git_odb_backend {
 			struct git_odb_backend *,
 			const git_oid *);
 
+	/* The writer may assume that the object
+	 * has already been hashed and is passed
+	 * in the first parameter.
+	 */
 	int (* write)(
 			git_oid *,
 			struct git_odb_backend *,

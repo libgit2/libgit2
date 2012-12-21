@@ -713,6 +713,10 @@ int git_odb_write(
 
 	assert(oid && db);
 
+	git_odb_hash(oid, data, len, type);
+	if (git_odb_exists(db, oid))
+		return 0;
+
 	for (i = 0; i < db->backends.length && error < 0; ++i) {
 		backend_internal *internal = git_vector_get(&db->backends, i);
 		git_odb_backend *b = internal->backend;
