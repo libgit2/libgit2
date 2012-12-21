@@ -67,6 +67,9 @@ struct git_pack_file {
 	git_oid sha1;
 	git_vector cache;
 	git_oid **oids;
+	git_off_t *offsets;
+
+	git_cache *odb_cache;
 
 	/* something like ".git/objects/pack/xxxxx.pack" */
 	char pack_name[GIT_FLEX_ARRAY]; /* more */
