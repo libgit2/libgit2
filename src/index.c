@@ -513,16 +513,20 @@ const git_index_entry *git_index_get_byindex(
 const git_index_entry *git_index_get_bypath(
 	git_index *index, const char *path, int stage)
 {
-	int pos;
+	khiter_t pos;
+	git_index_entry key;
 
 	assert(index);
 
-	git_vector_sort(&index->entries);
+	key.path = (char*)path;
+	key.flags = (stage << GIT_IDXENTRY_STAGESHIFT) & GIT_IDXENTRY_STAGEMASK;
 
-	if((pos = index_find(index, path, stage)) < 0)
+	pos = kh_get(index_entry, index->entry_map, &key);
+
+	if (pos == kh_end(index->entry_map))
 		return NULL;
 
-	return git_index_get_byindex(index, pos);
+	return kh_key(index->entry_map, pos);
 }
 
 void git_index_entry__init_from_stat(git_index_entry *entry, struct stat *st)
