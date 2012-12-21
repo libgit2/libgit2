@@ -21,7 +21,7 @@ static int use_unnamed(git_repository *repo, const char *url)
 
 	// Create an instance of a remote from the URL. The transport to use
 	// is detected from the URL
-	error = git_remote_create_inmemory(&remote, repo, NULL, url, NULL);
+	error = git_remote_create_inmemory(&remote, repo, url, NULL);
 	if (error < 0)
 		goto cleanup;
 
