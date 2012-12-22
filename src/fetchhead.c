@@ -237,7 +237,7 @@ int git_repository_fetchhead_foreach(git_repository *repo,
 	const char *ref_name;
 	git_oid oid;
 	const char *remote_url;
-	unsigned int is_merge;
+	unsigned int is_merge = 0;
 	char *buffer, *line;
 	size_t line_num = 0;
 	int error = 0;
