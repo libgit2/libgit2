@@ -278,21 +278,6 @@ void test_network_remotes__cannot_add_a_remote_with_an_invalid_name(void)
 	cl_assert_equal_p(remote, NULL);
 }
 
-void test_network_remotes__cannot_initialize_a_remote_with_an_invalid_name(void)
-{
-	git_remote *remote = NULL;
-
-	cl_assert_equal_i(
-		GIT_EINVALIDSPEC,
-		git_remote_create(&remote, _repo, "Inv@{id", "git://github.com/libgit2/libgit2"));
-	cl_assert_equal_p(remote, NULL);
-
-	cl_assert_equal_i(
-		GIT_EINVALIDSPEC,
-		git_remote_create(&remote, _repo, "", "git://github.com/libgit2/libgit2"));
-	cl_assert_equal_p(remote, NULL);
-}
-
 void test_network_remotes__tagopt(void)
 {
 	const char *opt;
