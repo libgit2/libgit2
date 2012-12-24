@@ -41,7 +41,7 @@ typedef int (*git_remote_rename_problem_cb)(const char *problematic_refspec, voi
  * @param repo the repository in which to create the remote
  * @param name the remote's name
  * @param url the remote's url
- * @return 0 or an error code
+ * @return 0, GIT_EINVALIDSPEC or an error code
  */
 GIT_EXTERN(int) git_remote_create(
 		git_remote **out,
@@ -63,7 +63,7 @@ GIT_EXTERN(int) git_remote_create(
  * @param repo the associated repository. May be NULL for a "dangling" remote.
  * @param url the remote repository's URL
  * @param fetch the fetch refspec to use for this remote. May be NULL for defaults.
- * @return 0, GIT_EINVALIDSPEC or an error code
+ * @return 0 or an error code
  */
 GIT_EXTERN(int) git_remote_create_inmemory(
 		git_remote **out,
@@ -97,7 +97,7 @@ GIT_EXTERN(int) git_remote_load(git_remote **out, git_repository *repo, const ch
 /**
  * Save a remote to its repository's configuration
  *
- * One can't save a nameless inmemory remote. Doing so will
+ * One can't save a in-memory remote. Doing so will
  * result in a GIT_EINVALIDSPEC being returned.
  *
  * @param remote the remote to save to config
@@ -428,12 +428,14 @@ GIT_EXTERN(void) git_remote_set_autotag(
  * The new name will be checked for validity.
  * See `git_tag_create()` for rules about valid names.
  *
+ * A temporary in-memory remote cannot be given a name with this method.
+ *
  * @param remote the remote to rename
  * @param new_name the new name the remote should bear
  * @param callback Optional callback to notify the consumer of fetch refspecs
  * that haven't been automatically updated and need potential manual tweaking.
  * @param payload Additional data to pass to the callback
- * @return 0, GIT_EINVALIDSPEC or an error code
+ * @return 0, GIT_EINVALIDSPEC, GIT_EEXISTS or an error code
  */
 GIT_EXTERN(int) git_remote_rename(
 	git_remote *remote,
