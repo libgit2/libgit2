@@ -257,6 +257,8 @@ void test_network_remotes__cannot_save_an_inmemory_remote(void)
 
 	cl_git_pass(git_remote_create_inmemory(&remote, _repo, "git://github.com/libgit2/libgit2", NULL));
 
+	cl_assert_equal_p(NULL, git_remote_name(remote));
+
 	cl_git_fail(git_remote_save(remote));
 	git_remote_free(remote);
 }

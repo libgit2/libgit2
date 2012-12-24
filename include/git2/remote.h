@@ -109,7 +109,7 @@ GIT_EXTERN(int) git_remote_save(const git_remote *remote);
  * Get the remote's name
  *
  * @param remote the remote
- * @return a pointer to the name
+ * @return a pointer to the name or NULL for in-memory remotes
  */
 GIT_EXTERN(const char *) git_remote_name(const git_remote *remote);
 
