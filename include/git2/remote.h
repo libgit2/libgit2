@@ -41,7 +41,7 @@ typedef int (*git_remote_rename_problem_cb)(const char *problematic_refspec, voi
  * @param repo the repository in which to create the remote
  * @param name the remote's name
  * @param url the remote's url
- * @return 0, GIT_EINVALIDSPEC or an error code
+ * @return 0, GIT_EINVALIDSPEC, GIT_EEXISTS or an error code
  */
 GIT_EXTERN(int) git_remote_create(
 		git_remote **out,

@@ -106,11 +106,6 @@ static int create_internal(git_remote **out, git_repository *repo, const char *n
 	GITERR_CHECK_ALLOC(remote->url);
 
 	if (name != NULL) {
-		if ((error = ensure_remote_name_is_valid(name)) < 0) {
-			error = GIT_EINVALIDSPEC;
-			goto on_error;
-		}
-
 		remote->name = git__strdup(name);
 		GITERR_CHECK_ALLOC(remote->name);
 	}
@@ -135,12 +130,17 @@ on_error:
 	return error;
 }
 
+extern int ensure_remote_doesnot_exist(git_repository *repo, const char *name);
+
 int git_remote_create(git_remote **out, git_repository *repo, const char *name, const char *url)
 {
 	git_buf buf = GIT_BUF_INIT;
 	int error;
 
 	if ((error = ensure_remote_name_is_valid(name)) < 0)
+		return error;
+
+	if ((error = ensure_remote_doesnot_exist(repo, name)) < 0)
 		return error;
 
 	if (git_buf_printf(&buf, "+refs/heads/*:refs/remotes/%s/*", name) < 0)

@@ -346,3 +346,14 @@ void test_network_remotes__check_structure_version(void)
 	err = giterr_last();
 	cl_assert_equal_i(GITERR_INVALID, err->klass);
 }
+
+void test_network_remotes__cannot_create_a_remote_which_name_conflicts_with_an_existing_remote(void)
+{
+	git_remote *remote = NULL;
+
+	cl_assert_equal_i(
+		GIT_EEXISTS,
+		git_remote_create(&remote, _repo, "test", "git://github.com/libgit2/libgit2"));
+
+	cl_assert_equal_p(remote, NULL);
+}
