@@ -22,9 +22,6 @@ static git_oid _oid_b3;
 static git_oid _oid_b2;
 static git_oid _oid_b1;
 
-/* git_oid *oid, git_repository *repo, (string literal) blob */
-#define CREATE_BLOB(oid, repo, blob) git_blob_create_frombuffer(oid, repo, blob, sizeof(blob) - 1)
-
 static int cred_acquire_cb(git_cred **cred, const char *url, unsigned int allowed_types, void *payload)
 {
 	GIT_UNUSED(url);
