@@ -124,7 +124,7 @@ GIT_EXTERN(int) git_reference_create(git_reference **out, git_repository *repo, 
  * not a symbolic one).
  *
  * To find the OID of a symbolic ref, call `git_reference_resolve()` and
- * then this function (or maybe use `git_reference_name_to_oid()` to
+ * then this function (or maybe use `git_reference_name_to_id()` to
  * directly resolve a reference name all the way through to an OID).
  *
  * @param ref The reference
