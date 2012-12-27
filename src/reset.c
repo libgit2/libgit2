@@ -15,12 +15,6 @@
 
 #define ERROR_MSG "Cannot perform reset"
 
-static int reset_error_invalid(const char *msg)
-{
-	giterr_set(GITERR_INVALID, "%s - %s", ERROR_MSG, msg);
-	return -1;
-}
-
 static int update_head(git_repository *repo, git_object *commit)
 {
 	int error;
@@ -68,7 +62,7 @@ int git_reset(
 	git_object *commit = NULL;
 	git_index *index = NULL;
 	git_tree *tree = NULL;
-	int error = -1;
+	int error;
 	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
 
 	assert(repo && target);
@@ -76,29 +70,33 @@ int git_reset(
 		|| reset_type == GIT_RESET_MIXED
 		|| reset_type == GIT_RESET_HARD);
 
-	if (git_object_owner(target) != repo)
-		return reset_error_invalid("The given target does not belong to this repository.");
+	if (git_object_owner(target) != repo) {
+		giterr_set(GITERR_OBJECT,
+			"%s - The given target does not belong to this repository.", ERROR_MSG);
+		return -1;
+	}
 
 	if (reset_type != GIT_RESET_SOFT
-		&& git_repository__ensure_not_bare(
+		&& (error = git_repository__ensure_not_bare(
 			repo,
-			reset_type == GIT_RESET_MIXED ? "reset mixed" : "reset hard") < 0)
-				return GIT_EBAREREPO;
+			reset_type == GIT_RESET_MIXED ? "reset mixed" : "reset hard")) < 0)
+				return error;
 
-	if (git_object_peel(&commit, target, GIT_OBJ_COMMIT) < 0) {
-		reset_error_invalid("The given target does not resolve to a commit");
+	if ((error = git_object_peel(&commit, target, GIT_OBJ_COMMIT)) < 0)
 		goto cleanup;
+
+	if ((error = git_repository_index(&index, repo)) < 0)
+		goto cleanup;
+
+	if (reset_type == GIT_RESET_SOFT && 
+		(git_repository_state(repo) == GIT_REPOSITORY_STATE_MERGE ||
+		git_index_has_conflicts(index))) {
+			giterr_set(GITERR_OBJECT, "%s (soft) while in the middle of a merge.", ERROR_MSG);
+			error = GIT_EUNMERGED;
+			goto cleanup;
 	}
 
-	if (reset_type == GIT_RESET_SOFT && (git_repository_state(repo) == GIT_REPOSITORY_STATE_MERGE)) {
-		giterr_set(GITERR_OBJECT, "%s (soft) while in the middle of a merge.", ERROR_MSG);
-		error = GIT_EUNMERGED;
-		goto cleanup;
-	}
-
-	//TODO: Check for unmerged entries
-
-	if (update_head(repo, commit) < 0)
+	if ((error = update_head(repo, commit)) < 0)
 		goto cleanup;
 
 	if (reset_type == GIT_RESET_SOFT) {
@@ -106,28 +104,17 @@ int git_reset(
 		goto cleanup;
 	}
 
-	if (git_commit_tree(&tree, (git_commit *)commit) < 0) {
-		giterr_set(GITERR_OBJECT, "%s - Failed to retrieve the commit tree.", ERROR_MSG);
+	if ((error = git_commit_tree(&tree, (git_commit *)commit)) < 0)
 		goto cleanup;
-	}
 
-	if (git_repository_index(&index, repo) < 0) {
-		giterr_set(GITERR_OBJECT, "%s - Failed to retrieve the index.", ERROR_MSG);
+	if ((error = git_index_read_tree(index, tree)) < 0)
 		goto cleanup;
-	}
 
-	if (git_index_read_tree(index, tree) < 0) {
-		giterr_set(GITERR_INDEX, "%s - Failed to update the index.", ERROR_MSG);
+	if ((error = git_index_write(index)) < 0)
 		goto cleanup;
-	}
-
-	if (git_index_write(index) < 0) {
-		giterr_set(GITERR_INDEX, "%s - Failed to write the index.", ERROR_MSG);
-		goto cleanup;
-	}
 
 	if ((error = git_repository_merge_cleanup(repo)) < 0) {
-		giterr_set(GITERR_INDEX, "%s - Failed to clean up merge data.", ERROR_MSG);
+		giterr_set(GITERR_REPOSITORY, "%s - Failed to clean up merge data.", ERROR_MSG);
 		goto cleanup;
 	}
 
@@ -138,12 +125,7 @@ int git_reset(
 
 	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
 
-	if (git_checkout_index(repo, NULL, &opts) < 0) {
-		giterr_set(GITERR_INDEX, "%s - Failed to checkout the index.", ERROR_MSG);
-		goto cleanup;
-	}
-
-	error = 0;
+	error = git_checkout_index(repo, NULL, &opts);
 
 cleanup:
 	git_object_free(commit);
