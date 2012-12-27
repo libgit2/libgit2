@@ -130,7 +130,28 @@ on_error:
 	return error;
 }
 
-extern int ensure_remote_doesnot_exist(git_repository *repo, const char *name);
+static int ensure_remote_doesnot_exist(git_repository *repo, const char *name)
+{
+	int error;
+	git_remote *remote;
+
+	error = git_remote_load(&remote, repo, name);
+
+	if (error == GIT_ENOTFOUND)
+		return 0;
+
+	if (error < 0)
+		return error;
+
+	git_remote_free(remote);
+
+	giterr_set(
+		GITERR_CONFIG,
+		"Remote '%s' already exists.", name);
+
+	return GIT_EEXISTS;
+}
+
 
 int git_remote_create(git_remote **out, git_repository *repo, const char *name, const char *url)
 {
@@ -1089,28 +1110,6 @@ git_remote_autotag_option_t git_remote_autotag(git_remote *remote)
 void git_remote_set_autotag(git_remote *remote, git_remote_autotag_option_t value)
 {
 	remote->download_tags = value;
-}
-
-static int ensure_remote_doesnot_exist(git_repository *repo, const char *name)
-{
-	int error;
-	git_remote *remote;
-
-	error = git_remote_load(&remote, repo, name);
-
-	if (error == GIT_ENOTFOUND)
-		return 0;
-
-	if (error < 0)
-		return error;
-
-	git_remote_free(remote);
-
-	giterr_set(
-		GITERR_CONFIG,
-		"Remote '%s' already exists.", name);
-
-	return GIT_EEXISTS;
 }
 
 static int rename_remote_config_section(
