@@ -19,6 +19,22 @@
 
 #define LOOKS_LIKE_DRIVE_PREFIX(S) (git__isalpha((S)[0]) && (S)[1] == ':')
 
+static bool looks_like_network_computer_name(const char *path, int pos)
+{
+	if (pos < 3)
+		return false;
+
+	if (path[0] != '/' || path[1] != '/')
+		return false;
+
+	while (pos-- > 2) {
+		if (path[pos] == '/')
+			return false;
+	}
+
+	return true;
+}
+
 /*
  * Based on the Android implementation, BSD licensed.
  * Check http://android.git.kernel.org/
@@ -111,6 +127,15 @@ int git_path_dirname_r(git_buf *buffer, const char *path)
 		len = 3;
 		goto Exit;
 	}
+
+	/* Similarly checks if we're dealing with a network computer name
+		'//computername/.git' will return '//computername/' */
+
+	if (looks_like_network_computer_name(path, len)) {
+		len++;
+		goto Exit;
+	}
+
 #endif
 
 Exit:
