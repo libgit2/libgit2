@@ -7,6 +7,16 @@
 #include <pthread.h>
 #include <unistd.h>
 
+/* Shamelessly borrowed from http://stackoverflow.com/questions/3417837/ */
+#ifdef UNUSED
+#elif defined(__GNUC__)
+# define UNUSED(x) UNUSED_ ## x __attribute__((unused))
+#elif defined(__LCLINT__)
+# define UNUSED(x) /*@unused@*/ x
+#else
+# define UNUSED(x) x
+#endif
+
 typedef struct progress_data {
 	git_transfer_progress fetch_progress;
 	size_t completed_steps;
@@ -47,7 +57,10 @@ static void checkout_progress(const char *path, size_t cur, size_t tot, void *pa
 	print_progress(pd);
 }
 
-static int cred_acquire(git_cred **out, const char *url, unsigned int allowed_types, void *payload)
+static int cred_acquire(git_cred **out,
+		const char * UNUSED(url),
+		unsigned int UNUSED(allowed_types),
+		void * UNUSED(payload))
 {
 	char username[128] = {0};
 	char password[128] = {0};
@@ -64,9 +77,8 @@ static int cred_acquire(git_cred **out, const char *url, unsigned int allowed_ty
 
 int do_clone(git_repository *repo, int argc, char **argv)
 {
-	progress_data pd = {0};
+	progress_data pd = {{0}};
 	git_repository *cloned_repo = NULL;
-	git_remote *origin;
 	git_clone_options clone_opts = GIT_CLONE_OPTIONS_INIT;
 	git_checkout_opts checkout_opts = GIT_CHECKOUT_OPTS_INIT;
 	const char *url = argv[1];
