@@ -452,9 +452,7 @@ static int checkout_get_actions(
 		goto fail;
 
 	if ((diff->opts.flags & GIT_DIFF_DELTAS_ARE_ICASE) != 0 &&
-		!hiter->ignore_case &&
-		(error = git_iterator_spoolandsort(
-			&hiter, hiter, diff->entrycomp, true)) < 0)
+		(error = git_iterator_spoolandsort_push(hiter, true)) < 0)
 		goto fail;
 
 	if ((error = git_iterator_current(hiter, &he)) < 0)
