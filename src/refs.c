@@ -1729,6 +1729,9 @@ cleanup:
 			GITERR_REFERENCE,
 			"The given reference name '%s' is not valid", name);
 
+	if (error && normalize)
+		git_buf_free(buf);
+
 	return error;
 }
 
