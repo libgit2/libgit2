@@ -573,10 +573,12 @@ static int diff_list_init_from_iterators(
 int git_diff__from_iterators(
 	git_diff_list **diff_ptr,
 	git_repository *repo,
-	git_iterator *old_iter,
-	git_iterator *new_iter,
+	git_iterator **_old_iter,
+	git_iterator **_new_iter,
 	const git_diff_options *opts)
 {
+	git_iterator *old_iter = *_old_iter;
+	git_iterator *new_iter = *_new_iter;
 	int error = 0;
 	const git_index_entry *oitem, *nitem;
 	git_buf ignore_prefix = GIT_BUF_INIT;
@@ -593,15 +595,19 @@ int git_diff__from_iterators(
 		 * then that's unfortunate because we'll have to spool
 		 * its data, sort it icase, and then use that for our
 		 * merge join to the other iterator that is icase sorted */
-		if (!old_iter->ignore_case &&
-			git_iterator_spoolandsort(
+		if (!old_iter->ignore_case) {
+			if (git_iterator_spoolandsort(
 				&old_iter, old_iter, diff->entrycomp, true) < 0)
-			goto fail;
+				goto fail;
+			*_old_iter = old_iter;
+		}
 
-		if (!new_iter->ignore_case &&
-			git_iterator_spoolandsort(
+		if (!new_iter->ignore_case) {
+			if (git_iterator_spoolandsort(
 				&new_iter, new_iter, diff->entrycomp, true) < 0)
-			goto fail;
+				goto fail;
+			*_new_iter = new_iter;
+		}
 	}
 
 	if (git_iterator_current(old_iter, &oitem) < 0 ||
@@ -761,7 +767,7 @@ fail:
 	char *pfx = opts ? git_pathspec_prefix(&opts->pathspec) : NULL; \
 	GITERR_CHECK_VERSION(opts, GIT_DIFF_OPTIONS_VERSION, "git_diff_options"); \
     if (!(error = MAKE_FIRST) && !(error = MAKE_SECOND)) \
-		error = git_diff__from_iterators(diff, repo, a, b, opts); \
+		error = git_diff__from_iterators(diff, repo, &a, &b, opts); \
 	git__free(pfx); git_iterator_free(a); git_iterator_free(b); \
 } while (0)
 
