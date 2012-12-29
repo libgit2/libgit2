@@ -523,3 +523,60 @@ void test_network_push__expressions(void)
 		exp_stats_right_expr, ARRAY_SIZE(exp_stats_right_expr),
 		NULL, 0, 0);
 }
+
+void test_network_push__notes(void)
+{
+	git_oid note_oid, *target_oid, expected_oid;
+	git_signature *signature;
+	char *specs[] = { "refs/notes/commits:refs/notes/commits" };
+	push_status exp_stats[] = { { "refs/notes/commits", NULL } };
+	expected_ref exp_refs[] = { { "refs/notes/commits", &expected_oid } };
+	git_oid_fromstr(&expected_oid, "8461a99b27b7043e58ff6e1f5d2cf07d282534fb");
+
+	target_oid = &_oid_b6;
+
+	/* Create note to push */
+	cl_git_pass(git_signature_new(&signature, "nulltoken", "emeric.fermas@gmail.com", 1323847743, 60)); /* Wed Dec 14 08:29:03 2011 +0100 */
+	cl_git_pass(git_note_create(&note_oid, _repo, signature, signature, NULL, target_oid, "hello world\n"));
+
+	do_push(specs, ARRAY_SIZE(specs),
+		exp_stats, ARRAY_SIZE(exp_stats),
+		exp_refs, ARRAY_SIZE(exp_refs), 0);
+
+	git_signature_free(signature);
+}
+
+/* Push is not currently supported for object types other than commits.
+ * This verifies that adding a refspec whose lref points to a non-commit
+ * will fail when adding the refspec. */
+void test_network_push__tag(void)
+{
+	git_oid *target_oid = &_oid_b6, tag_oid, expected_oid;
+	git_signature *tagger;
+	git_object *target;
+	const char* tagger_message = "This is my tag.\n\nThere are many tags, but this one is mine\n";
+	char *specs = "refs/tags/the-tag:refs/tags/the-tag";
+	git_push *push;
+
+	git_oid_fromstr(&expected_oid, "f55c8f6feedeb3f45dcc1b0bf01882f031f9d535");
+
+	cl_git_pass(git_object_lookup(&target, _repo, target_oid, GIT_OBJ_COMMIT));
+
+	/* Create signature */
+	cl_git_pass(git_signature_new(&tagger, "nulltoken", "emeric.fermas@gmail.com", 1323847743, 60)); /* Wed Dec 14 08:29:03 2011 +0100 */
+
+	/* Create tag */
+	cl_git_pass(git_tag_create(&tag_oid, _repo, "the-tag", target, tagger, tagger_message, 0));
+
+	git_object_free(target);
+	git_signature_free(tagger);
+
+	if (_remote) {
+		cl_git_pass(git_remote_connect(_remote, GIT_DIRECTION_PUSH));
+		cl_git_pass(git_push_new(&push, _remote));
+		cl_git_fail(git_push_add_refspec(push, specs));
+
+		git_push_free(push);
+		git_remote_disconnect(_remote);
+	}
+}
