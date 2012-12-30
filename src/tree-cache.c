@@ -6,6 +6,7 @@
  */
 
 #include "tree-cache.h"
+#include "vector.h"
 
 static git_tree_cache *find_child(const git_tree_cache *tree, const char *path)
 {
@@ -169,6 +170,20 @@ int git_tree_cache_read(git_tree_cache **tree, const char *buffer, size_t buffer
 	return 0;
 }
 
+int git_tree_cache_new(git_tree_cache **tree_p, const char *name_start, size_t name_len)
+{
+	git_tree_cache *tree = git__malloc(sizeof(git_tree_cache) + name_len + 1);
+	GITERR_CHECK_ALLOC(tree);
+
+	assert(tree_p && name_start);
+	memset(tree, 0x0, sizeof(git_tree_cache));
+	memcpy(tree->name, name_start, name_len);
+	tree->name[name_len] = '\0';
+	*tree_p = tree;
+
+	return 0;
+}
+
 void git_tree_cache_free(git_tree_cache *tree)
 {
 	unsigned int i;
@@ -181,4 +196,25 @@ void git_tree_cache_free(git_tree_cache *tree)
 
 	git__free(tree->children);
 	git__free(tree);
+}
+
+int git_tree_cache_merge(git_tree_cache *tree, git_tree_cache **children, size_t children_count, ssize_t entries)
+{
+	git_vector siblings = { children_count, NULL, (void**)children, children_count, 1 };
+
+	if (tree->children) {
+		size_t n = tree->children_count;
+		while (n--) {
+			int idx = children ? git_vector_search(&siblings, tree->children[n]) : -1;
+			if (idx < 0)
+				git_tree_cache_free(tree->children[n]);
+		}
+		git__free(tree->children);
+	}
+
+	tree->children = children;
+	tree->children_count = children_count;
+	tree->entries = entries;
+
+	return 0;
 }
