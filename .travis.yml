@@ -1,5 +1,7 @@
 # Travis-CI Build for libgit2
 # see travis-ci.org for details
+
+# As CMake is not officially supported we use erlang VMs
 language: c
 
 compiler:
@@ -26,8 +28,8 @@ script:
  - mkdir _build
  - cd _build
  - cmake .. -DCMAKE_INSTALL_PREFIX=../_install $OPTIONS
- - make submodules all
- - ./libgit2_clar
+ - cmake --build . --target install
+ - ctest -V .
 
 # Run Tests
 after_script:

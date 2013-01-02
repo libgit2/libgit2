@@ -231,13 +231,6 @@ INSTALL(FILES ${CMAKE_CURRENT_BINARY_DIR}/libgit2.pc DESTINATION ${LIB_INSTALL_D
 INSTALL(DIRECTORY include/git2 DESTINATION ${INCLUDE_INSTALL_DIR} )
 INSTALL(FILES include/git2.h DESTINATION ${INCLUDE_INSTALL_DIR} )
 
-
-ADD_CUSTOM_TARGET(
-	submodules
-	COMMAND git submodule update --init tests-clar/clar
-	WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-)
-
 # Tests
 IF (BUILD_CLAR)
 	FIND_PACKAGE(PythonInterp REQUIRED)
@@ -252,6 +245,11 @@ IF (BUILD_CLAR)
 	FILE(GLOB_RECURSE SRC_TEST ${CLAR_PATH}/*/*.c)
 	SET(SRC_CLAR "${CLAR_PATH}/main.c" "${CLAR_PATH}/clar_helpers.c" "${CLAR_PATH}/clar/clar.c")
 	SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-missing-prototypes")
+
+	ADD_CUSTOM_COMMAND(
+		OUTPUT ${CLAR_PATH}/clar/clar.c
+		COMMAND git submodule update --init tests-clar/clar
+	)
 
 	ADD_CUSTOM_COMMAND(
 		OUTPUT ${CLAR_PATH}/clar.suite
