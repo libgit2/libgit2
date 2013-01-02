@@ -235,6 +235,7 @@ INSTALL(FILES include/git2.h DESTINATION ${INCLUDE_INSTALL_DIR} )
 ADD_CUSTOM_TARGET(
 	submodules
 	COMMAND git submodule update --init tests-clar/clar
+	WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
 # Tests

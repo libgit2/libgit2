@@ -26,8 +26,8 @@ script:
  - mkdir _build
  - cd _build
  - cmake .. -DCMAKE_INSTALL_PREFIX=../_install $OPTIONS
- - cmake --build . --target submodules install
- - ctest -V .
+ - make submodules all
+ - ./libgit2_clar
 
 # Run Tests
 after_script:
