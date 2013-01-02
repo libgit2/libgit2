@@ -247,6 +247,12 @@ IF (BUILD_CLAR)
 	SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-missing-prototypes")
 
 	ADD_CUSTOM_COMMAND(
+		COMMAND echo "###### testing this stuff"
+		WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+		DEPENDS "${CLAR_PATH}/clar/clar.c"
+	)
+
+	ADD_CUSTOM_COMMAND(
 		OUTPUT ${CLAR_PATH}/clar.suite
 		COMMAND ${PYTHON_EXECUTABLE} clar/generate.py .
 		DEPENDS ${SRC_TEST}
