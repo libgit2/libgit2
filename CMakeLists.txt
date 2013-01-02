@@ -254,7 +254,7 @@ IF (BUILD_CLAR)
 
 	ADD_CUSTOM_COMMAND(
 		OUTPUT ${CLAR_PATH}/clar.suite
-		COMMAND ${PYTHON_EXECUTABLE} clar/generate.py .
+		COMMAND ${PYTHON_EXECUTABLE} clar/generate.py . -xonline
 		DEPENDS ${SRC_TEST}
 		WORKING_DIRECTORY ${CLAR_PATH}
 	)

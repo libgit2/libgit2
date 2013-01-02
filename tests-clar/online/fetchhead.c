@@ -11,7 +11,7 @@ static git_repository *g_repo;
 static git_remote *g_origin;
 static git_clone_options g_options;
 
-void test_fetchhead_network__initialize(void)
+void test_online_fetchhead__initialize(void)
 {
 	g_repo = NULL;
 
@@ -20,7 +20,7 @@ void test_fetchhead_network__initialize(void)
 	cl_git_pass(git_remote_new(&g_origin, NULL, "origin", LIVE_REPO_URL, GIT_REMOTE_DEFAULT_FETCH));
 }
 
-void test_fetchhead_network__cleanup(void)
+void test_online_fetchhead__cleanup(void)
 {
 	git_remote_free(g_origin);
 }
@@ -70,19 +70,19 @@ static void fetchhead_test_fetch(const char *fetchspec, const char *expected_fet
 	cl_assert(equals);
 }
 
-void test_fetchhead_network__wildcard_spec(void)
+void test_online_fetchhead__wildcard_spec(void)
 {
 	fetchhead_test_clone();
 	fetchhead_test_fetch(NULL, FETCH_HEAD_WILDCARD_DATA);
 }
 
-void test_fetchhead_network__explicit_spec(void)
+void test_online_fetchhead__explicit_spec(void)
 {
 	fetchhead_test_clone();
 	fetchhead_test_fetch("refs/heads/first-merge:refs/remotes/origin/first-merge", FETCH_HEAD_EXPLICIT_DATA);
 }
 
-void test_fetchhead_network__no_merges(void)
+void test_online_fetchhead__no_merges(void)
 {
 	git_config *config;
 

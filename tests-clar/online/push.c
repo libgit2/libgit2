@@ -125,7 +125,7 @@ static void verify_refs(git_remote *remote, expected_ref expected_refs[], size_t
 	git_vector_free(&actual_refs);
 }
 
-void test_network_push__initialize(void)
+void test_online_push__initialize(void)
 {
 	git_vector delete_specs = GIT_VECTOR_INIT;
 	size_t i;
@@ -205,7 +205,7 @@ void test_network_push__initialize(void)
 		printf("GITTEST_REMOTE_URL unset; skipping push test\n");
 }
 
-void test_network_push__cleanup(void)
+void test_online_push__cleanup(void)
 {
 	if (_remote)
 		git_remote_free(_remote);
@@ -269,12 +269,12 @@ static void do_push(const char *refspecs[], size_t refspecs_len,
 }
 
 /* Call push_finish() without ever calling git_push_add_refspec() */
-void test_network_push__noop(void)
+void test_online_push__noop(void)
 {
 	do_push(NULL, 0, NULL, 0, NULL, 0, 0);
 }
 
-void test_network_push__b1(void)
+void test_online_push__b1(void)
 {
 	const char *specs[] = { "refs/heads/b1:refs/heads/b1" };
 	push_status exp_stats[] = { { "refs/heads/b1", NULL } };
@@ -284,7 +284,7 @@ void test_network_push__b1(void)
 		exp_refs, ARRAY_SIZE(exp_refs), 0);
 }
 
-void test_network_push__b2(void)
+void test_online_push__b2(void)
 {
 	const char *specs[] = { "refs/heads/b2:refs/heads/b2" };
 	push_status exp_stats[] = { { "refs/heads/b2", NULL } };
@@ -294,7 +294,7 @@ void test_network_push__b2(void)
 		exp_refs, ARRAY_SIZE(exp_refs), 0);
 }
 
-void test_network_push__b3(void)
+void test_online_push__b3(void)
 {
 	const char *specs[] = { "refs/heads/b3:refs/heads/b3" };
 	push_status exp_stats[] = { { "refs/heads/b3", NULL } };
@@ -304,7 +304,7 @@ void test_network_push__b3(void)
 		exp_refs, ARRAY_SIZE(exp_refs), 0);
 }
 
-void test_network_push__b4(void)
+void test_online_push__b4(void)
 {
 	const char *specs[] = { "refs/heads/b4:refs/heads/b4" };
 	push_status exp_stats[] = { { "refs/heads/b4", NULL } };
@@ -314,7 +314,7 @@ void test_network_push__b4(void)
 		exp_refs, ARRAY_SIZE(exp_refs), 0);
 }
 
-void test_network_push__b5(void)
+void test_online_push__b5(void)
 {
 	const char *specs[] = { "refs/heads/b5:refs/heads/b5" };
 	push_status exp_stats[] = { { "refs/heads/b5", NULL } };
@@ -324,7 +324,7 @@ void test_network_push__b5(void)
 		exp_refs, ARRAY_SIZE(exp_refs), 0);
 }
 
-void test_network_push__multi(void)
+void test_online_push__multi(void)
 {
 	const char *specs[] = {
 		"refs/heads/b1:refs/heads/b1",
@@ -352,7 +352,7 @@ void test_network_push__multi(void)
 		exp_refs, ARRAY_SIZE(exp_refs), 0);
 }
 
-void test_network_push__implicit_tgt(void)
+void test_online_push__implicit_tgt(void)
 {
 	const char *specs1[] = { "refs/heads/b1:" };
 	push_status exp_stats1[] = { { "refs/heads/b1", NULL } };
@@ -373,7 +373,7 @@ void test_network_push__implicit_tgt(void)
 		exp_refs2, ARRAY_SIZE(exp_refs2), 0);
 }
 
-void test_network_push__fast_fwd(void)
+void test_online_push__fast_fwd(void)
 {
 	/* Fast forward b1 in tgt from _oid_b1 to _oid_b6. */
 
@@ -407,7 +407,7 @@ void test_network_push__fast_fwd(void)
 		exp_refs_ff, ARRAY_SIZE(exp_refs_ff), 0);
 }
 
-void test_network_push__force(void)
+void test_online_push__force(void)
 {
 	const char *specs1[] = {"refs/heads/b3:refs/heads/tgt"};
 	push_status exp_stats1[] = { { "refs/heads/tgt", NULL } };
@@ -433,7 +433,7 @@ void test_network_push__force(void)
 		exp_refs2_force, ARRAY_SIZE(exp_refs2_force), 0);
 }
 
-void test_network_push__delete(void)
+void test_online_push__delete(void)
 {
 	const char *specs1[] = {
 		"refs/heads/b1:refs/heads/tgt1",
@@ -486,7 +486,7 @@ void test_network_push__delete(void)
 		exp_refs_delete, ARRAY_SIZE(exp_refs_delete), 0);
 }
 
-void test_network_push__bad_refspecs(void)
+void test_online_push__bad_refspecs(void)
 {
 	/* All classes of refspecs that should be rejected by
 	 * git_push_add_refspec() should go in this test.
@@ -504,7 +504,7 @@ void test_network_push__bad_refspecs(void)
 	}
 }
 
-void test_network_push__expressions(void)
+void test_online_push__expressions(void)
 {
 	/* TODO: Expressions in refspecs doesn't actually work yet */
 	const char *specs_left_expr[] = { "refs/heads/b2~1:refs/heads/b2" };

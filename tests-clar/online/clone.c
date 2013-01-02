@@ -10,7 +10,7 @@ static git_repository *g_repo;
 static git_remote *g_origin;
 static git_clone_options g_options;
 
-void test_clone_network__initialize(void)
+void test_online_clone__initialize(void)
 {
 	g_repo = NULL;
 
@@ -19,7 +19,7 @@ void test_clone_network__initialize(void)
 	cl_git_pass(git_remote_new(&g_origin, NULL, "origin", LIVE_REPO_URL, GIT_REMOTE_DEFAULT_FETCH));
 }
 
-void test_clone_network__cleanup(void)
+void test_online_clone__cleanup(void)
 {
 	git_remote_free(g_origin);
 }
@@ -34,7 +34,7 @@ static void cleanup_repository(void *path)
 }
 
 
-void test_clone_network__network_full(void)
+void test_online_clone__network_full(void)
 {
 	git_remote *origin;
 
@@ -48,7 +48,7 @@ void test_clone_network__network_full(void)
 }
 
 
-void test_clone_network__network_bare(void)
+void test_online_clone__network_bare(void)
 {
 	git_remote *origin;
 
@@ -62,7 +62,7 @@ void test_clone_network__network_bare(void)
 	git_remote_free(origin);
 }
 
-void test_clone_network__cope_with_already_existing_directory(void)
+void test_online_clone__cope_with_already_existing_directory(void)
 {
 	cl_set_cleanup(&cleanup_repository, "./foo");
 
@@ -70,7 +70,7 @@ void test_clone_network__cope_with_already_existing_directory(void)
 	cl_git_pass(git_clone(&g_repo, g_origin, "./foo", &g_options));
 }
 
-void test_clone_network__empty_repository(void)
+void test_online_clone__empty_repository(void)
 {
 	git_reference *head;
 
@@ -91,7 +91,7 @@ void test_clone_network__empty_repository(void)
 	git_reference_free(head);
 }
 
-void test_clone_network__can_prevent_the_checkout_of_a_standard_repo(void)
+void test_online_clone__can_prevent_the_checkout_of_a_standard_repo(void)
 {
 	git_buf path = GIT_BUF_INIT;
 	cl_set_cleanup(&cleanup_repository, "./foo");
@@ -118,7 +118,7 @@ static void fetch_progress(const git_transfer_progress *stats, void *payload)
 	(*was_called) = true;
 }
 
-void test_clone_network__can_checkout_a_cloned_repo(void)
+void test_online_clone__can_checkout_a_cloned_repo(void)
 {
 	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
 	git_buf path = GIT_BUF_INIT;
