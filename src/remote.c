@@ -191,7 +191,6 @@ int git_remote_create_inmemory(git_remote **out, git_repository *repo, const cha
 	if ((error = create_internal(&remote, repo, NULL, url, fetch)) < 0)
 		return error;
 
-	remote->inmem = true;
 	*out = remote;
 	return 0;
 }
@@ -366,7 +365,7 @@ int git_remote_save(const git_remote *remote)
 
 	assert(remote);
 
-	if (remote->inmem) {
+	if (!remote->name) {
 		giterr_set(GITERR_INVALID, "Can't save an in-memory remote.");
 		return GIT_EINVALIDSPEC;
 	}
@@ -1325,7 +1324,7 @@ int git_remote_rename(
 
 	assert(remote && new_name);
 
-	if (remote->inmem) {
+	if (!remote->name) {
 		giterr_set(GITERR_INVALID, "Can't rename an in-memory remote.");
 		return GIT_EINVALIDSPEC;
 	}
@@ -1347,7 +1346,7 @@ int git_remote_rename(
 
 			remote->name = git__strdup(new_name);
 
-			if (remote->inmem) return 0;
+			if (!remote->name) return 0;
 			return git_remote_save(remote);
 		}
 
