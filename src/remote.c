@@ -183,7 +183,7 @@ on_error:
 	return -1;
 }
 
-int git_remote_create_inmemory(git_remote **out, git_repository *repo, const char *url, const char *fetch)
+int git_remote_create_inmemory(git_remote **out, git_repository *repo, const char *fetch, const char *url)
 {
 	int error;
 	git_remote *remote;
