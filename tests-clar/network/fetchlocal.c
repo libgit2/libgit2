@@ -21,7 +21,7 @@ void test_network_fetchlocal__complete(void)
 	const char *url = cl_git_fixture_url("testrepo.git");
 	cl_git_pass(git_repository_init(&repo, "foo", true));
 
-	cl_git_pass(git_remote_add(&origin, repo, GIT_REMOTE_ORIGIN, url));
+	cl_git_pass(git_remote_create(&origin, repo, GIT_REMOTE_ORIGIN, url));
 	cl_git_pass(git_remote_connect(origin, GIT_DIRECTION_FETCH));
 	cl_git_pass(git_remote_download(origin, transfer_cb, &callcount));
 	cl_git_pass(git_remote_update_tips(origin));
@@ -47,7 +47,7 @@ void test_network_fetchlocal__partial(void)
 	cl_assert_equal_i(1, (int)refnames.count);
 
 	url = cl_git_fixture_url("testrepo.git");
-	cl_git_pass(git_remote_add(&origin, repo, GIT_REMOTE_ORIGIN, url));
+	cl_git_pass(git_remote_create(&origin, repo, GIT_REMOTE_ORIGIN, url));
 	cl_git_pass(git_remote_connect(origin, GIT_DIRECTION_FETCH));
 	cl_git_pass(git_remote_download(origin, transfer_cb, &callcount));
 	cl_git_pass(git_remote_update_tips(origin));
