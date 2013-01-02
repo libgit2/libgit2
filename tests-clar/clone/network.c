@@ -9,21 +9,18 @@ CL_IN_CATEGORY("network")
 #define LIVE_EMPTYREPO_URL "http://github.com/libgit2/TestEmptyRepository"
 
 static git_repository *g_repo;
-static git_remote *g_origin;
 static git_clone_options g_options;
 
 void test_clone_network__initialize(void)
 {
+	git_checkout_opts dummy_opts = GIT_CHECKOUT_OPTS_INIT;
+
 	g_repo = NULL;
 
 	memset(&g_options, 0, sizeof(git_clone_options));
 	g_options.version = GIT_CLONE_OPTIONS_VERSION;
-	cl_git_pass(git_remote_new(&g_origin, NULL, "origin", LIVE_REPO_URL, GIT_REMOTE_DEFAULT_FETCH));
-}
-
-void test_clone_network__cleanup(void)
-{
-	git_remote_free(g_origin);
+	g_options.checkout_opts = dummy_opts;
+	g_options.checkout_opts.checkout_strategy = GIT_CHECKOUT_SAFE;
 }
 
 static void cleanup_repository(void *path)
@@ -42,7 +39,7 @@ void test_clone_network__network_full(void)
 
 	cl_set_cleanup(&cleanup_repository, "./foo");
 
-	cl_git_pass(git_clone(&g_repo, g_origin, "./foo", &g_options));
+	cl_git_pass(git_clone(&g_repo, LIVE_REPO_URL, "./foo", &g_options));
 	cl_assert(!git_repository_is_bare(g_repo));
 	cl_git_pass(git_remote_load(&origin, g_repo, "origin"));
 
@@ -57,7 +54,7 @@ void test_clone_network__network_bare(void)
 	cl_set_cleanup(&cleanup_repository, "./foo");
 	g_options.bare = true;
 
-	cl_git_pass(git_clone(&g_repo, g_origin, "./foo", &g_options));
+	cl_git_pass(git_clone(&g_repo, LIVE_REPO_URL, "./foo", &g_options));
 	cl_assert(git_repository_is_bare(g_repo));
 	cl_git_pass(git_remote_load(&origin, g_repo, "origin"));
 
@@ -69,7 +66,7 @@ void test_clone_network__cope_with_already_existing_directory(void)
 	cl_set_cleanup(&cleanup_repository, "./foo");
 
 	p_mkdir("./foo", GIT_DIR_MODE);
-	cl_git_pass(git_clone(&g_repo, g_origin, "./foo", &g_options));
+	cl_git_pass(git_clone(&g_repo, LIVE_REPO_URL, "./foo", &g_options));
 }
 
 void test_clone_network__empty_repository(void)
@@ -78,10 +75,7 @@ void test_clone_network__empty_repository(void)
 
 	cl_set_cleanup(&cleanup_repository, "./foo");
 
-	git_remote_free(g_origin);
-	cl_git_pass(git_remote_new(&g_origin, NULL, "origin", LIVE_EMPTYREPO_URL, GIT_REMOTE_DEFAULT_FETCH));
-
-	cl_git_pass(git_clone(&g_repo, g_origin, "./foo", &g_options));
+	cl_git_pass(git_clone(&g_repo, LIVE_EMPTYREPO_URL, "./foo", &g_options));
 
 	cl_assert_equal_i(true, git_repository_is_empty(g_repo));
 	cl_assert_equal_i(true, git_repository_head_orphan(g_repo));
@@ -98,7 +92,8 @@ void test_clone_network__can_prevent_the_checkout_of_a_standard_repo(void)
 	git_buf path = GIT_BUF_INIT;
 	cl_set_cleanup(&cleanup_repository, "./foo");
 
-	cl_git_pass(git_clone(&g_repo, g_origin, "./foo", &g_options));
+	g_options.checkout_opts.checkout_strategy = 0;
+	cl_git_pass(git_clone(&g_repo, LIVE_REPO_URL, "./foo", &g_options));
 
 	cl_git_pass(git_buf_joinpath(&path, git_repository_workdir(g_repo), "master.txt"));
 	cl_assert_equal_i(false, git_path_isfile(git_buf_cstr(&path)));
@@ -122,22 +117,20 @@ static void fetch_progress(const git_transfer_progress *stats, void *payload)
 
 void test_clone_network__can_checkout_a_cloned_repo(void)
 {
-	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
 	git_buf path = GIT_BUF_INIT;
 	git_reference *head;
 	bool checkout_progress_cb_was_called = false,
 		  fetch_progress_cb_was_called = false;
 
-	opts.checkout_strategy = GIT_CHECKOUT_SAFE;
-	opts.progress_cb = &checkout_progress;
-	opts.progress_payload = &checkout_progress_cb_was_called;
-	g_options.checkout_opts = &opts;
+	g_options.checkout_opts.checkout_strategy = GIT_CHECKOUT_SAFE;
+	g_options.checkout_opts.progress_cb = &checkout_progress;
+	g_options.checkout_opts.progress_payload = &checkout_progress_cb_was_called;
 	g_options.fetch_progress_cb = &fetch_progress;
 	g_options.fetch_progress_payload = &fetch_progress_cb_was_called;
 
 	cl_set_cleanup(&cleanup_repository, "./foo");
 
-	cl_git_pass(git_clone(&g_repo, g_origin, "./foo", &g_options));
+	cl_git_pass(git_clone(&g_repo, LIVE_REPO_URL, "./foo", &g_options));
 
 	cl_git_pass(git_buf_joinpath(&path, git_repository_workdir(g_repo), "master.txt"));
 	cl_assert_equal_i(true, git_path_isfile(git_buf_cstr(&path)));
@@ -151,4 +144,67 @@ void test_clone_network__can_checkout_a_cloned_repo(void)
 
 	git_reference_free(head);
 	git_buf_free(&path);
+}
+
+static int update_tips(const char *refname, const git_oid *a, const git_oid *b, void *payload)
+{
+	int *callcount = (int*)payload;
+	GIT_UNUSED(refname); GIT_UNUSED(a); GIT_UNUSED(b);
+	*callcount = *callcount + 1;
+	return 0;
+}
+
+void test_clone_network__custom_remote_callbacks(void)
+{
+	git_remote_callbacks remote_callbacks = GIT_REMOTE_CALLBACKS_INIT;
+	int callcount = 0;
+
+	cl_set_cleanup(&cleanup_repository, "./foo");
+
+	g_options.remote_callbacks = &remote_callbacks;
+	remote_callbacks.update_tips = update_tips;
+	remote_callbacks.payload = &callcount;
+
+	cl_git_pass(git_clone(&g_repo, LIVE_REPO_URL, "./foo", &g_options));
+	cl_assert(callcount > 0);
+}
+
+struct cred_user_pass {
+	const char *user;
+	const char *pass;
+};
+
+static int cred_acquire(
+	git_cred **cred,
+	const char *url,
+	unsigned int allowed_types,
+	void *payload)
+{
+	struct cred_user_pass *user_pass = (struct cred_user_pass*)payload;
+
+	GIT_UNUSED(url);
+	if ((GIT_CREDTYPE_USERPASS_PLAINTEXT & allowed_types) == 0 ||
+			git_cred_userpass_plaintext_new(cred, user_pass->user, user_pass->pass) < 0)
+		return -1;
+
+	return 0;
+}
+
+void test_clone_network__credentials(void)
+{
+	/* Remote URL environment variable must be set.  User and password are optional.  */
+	const char *remote_url = cl_getenv("GITTEST_REMOTE_URL");
+	struct cred_user_pass user_pass = {
+		cl_getenv("GITTEST_REMOTE_USER"),
+		cl_getenv("GITTEST_REMOTE_PASS")
+	};
+
+	if (!remote_url) return;
+
+	cl_set_cleanup(&cleanup_repository, "./foo");
+
+	g_options.cred_acquire_cb = cred_acquire;
+	g_options.cred_acquire_payload = &user_pass;
+
+	cl_git_pass(git_clone(&g_repo, remote_url, "./foo", &g_options));
 }

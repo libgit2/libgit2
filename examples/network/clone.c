@@ -7,6 +7,16 @@
 #include <pthread.h>
 #include <unistd.h>
 
+/* Shamelessly borrowed from http://stackoverflow.com/questions/3417837/ */
+#ifdef UNUSED
+#elif defined(__GNUC__)
+# define UNUSED(x) UNUSED_ ## x __attribute__((unused))
+#elif defined(__LCLINT__)
+# define UNUSED(x) /*@unused@*/ x
+#else
+# define UNUSED(x) x
+#endif
+
 typedef struct progress_data {
 	git_transfer_progress fetch_progress;
 	size_t completed_steps;
@@ -47,7 +57,10 @@ static void checkout_progress(const char *path, size_t cur, size_t tot, void *pa
 	print_progress(pd);
 }
 
-static int cred_acquire(git_cred **out, const char *url, unsigned int allowed_types, void *payload)
+static int cred_acquire(git_cred **out,
+		const char * UNUSED(url),
+		unsigned int UNUSED(allowed_types),
+		void * UNUSED(payload))
 {
 	char username[128] = {0};
 	char password[128] = {0};
@@ -64,9 +77,8 @@ static int cred_acquire(git_cred **out, const char *url, unsigned int allowed_ty
 
 int do_clone(git_repository *repo, int argc, char **argv)
 {
-	progress_data pd;
+	progress_data pd = {{0}};
 	git_repository *cloned_repo = NULL;
-	git_remote *origin;
 	git_clone_options clone_opts = GIT_CLONE_OPTIONS_INIT;
 	git_checkout_opts checkout_opts = GIT_CHECKOUT_OPTS_INIT;
 	const char *url = argv[1];
@@ -84,25 +96,14 @@ int do_clone(git_repository *repo, int argc, char **argv)
 	// Set up options
 	checkout_opts.checkout_strategy = GIT_CHECKOUT_SAFE;
 	checkout_opts.progress_cb = checkout_progress;
-	memset(&pd, 0, sizeof(pd));
 	checkout_opts.progress_payload = &pd;
-
-	// Create the origin remote, and set up for auth
-	error = git_remote_new(&origin, NULL, "origin", url, GIT_REMOTE_DEFAULT_FETCH);
-	if (error != 0) {
-		const git_error *err = giterr_last();
-		if (err) printf("ERROR %d: %s\n", err->klass, err->message);
-		else printf("ERROR %d: no detailed info\n", error);
-		return error;
-	}
-	git_remote_set_cred_acquire_cb(origin, cred_acquire, NULL);
-
-	// Do the clone
-	clone_opts.checkout_opts = &checkout_opts;
+	clone_opts.checkout_opts = checkout_opts;
 	clone_opts.fetch_progress_cb = &fetch_progress;
 	clone_opts.fetch_progress_payload = &pd;
-	error = git_clone(&cloned_repo, origin, path, &clone_opts);
-	git_remote_free(origin);
+	clone_opts.cred_acquire_cb = cred_acquire;
+
+	// Do the clone
+	error = git_clone(&cloned_repo, url, path, &clone_opts);
 	printf("\n");
 	if (error != 0) {
 		const git_error *err = giterr_last();

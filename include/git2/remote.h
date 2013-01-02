@@ -24,14 +24,6 @@
  */
 GIT_BEGIN_DECL
 
-/**
- * Use this when creating a remote with git_remote_new to get the default fetch
- * behavior produced by git_remote_add.  It corresponds to this fetchspec (note
- * the spaces between '/' and '*' to avoid C compiler errors):
- * "+refs/heads/ *:refs/remotes/<remote_name>/ *"
- */
-#define GIT_REMOTE_DEFAULT_FETCH ""
-
 typedef int (*git_remote_rename_problem_cb)(const char *problematic_refspec, void *payload);
 /*
  * TODO: This functions still need to be implemented:
@@ -42,22 +34,42 @@ typedef int (*git_remote_rename_problem_cb)(const char *problematic_refspec, voi
  */
 
 /**
+ * Add a remote with the default fetch refspec to the repository's configuration.  This
+ * calls git_remote_save before returning.
+ *
+ * @param out the resulting remote
+ * @param repo the repository in which to create the remote
+ * @param name the remote's name
+ * @param url the remote's url
+ * @return 0, GIT_EINVALIDSPEC, GIT_EEXISTS or an error code
+ */
+GIT_EXTERN(int) git_remote_create(
+		git_remote **out,
+		git_repository *repo,
+		const char *name,
+		const char *url);
+
+/**
  * Create a remote in memory
  *
- * Create a remote with the default refspecs in memory. You can use
- * this when you have a URL instead of a remote's name.
+ * Create a remote with the given refspec in memory. You can use
+ * this when you have a URL instead of a remote's name.  Note that in-memory
+ * remotes cannot be converted to persisted remotes.
  *
  * The name, when provided, will be checked for validity.
  * See `git_tag_create()` for rules about valid names.
  *
  * @param out pointer to the new remote object
  * @param repo the associated repository. May be NULL for a "dangling" remote.
- * @param name the optional remote's name. May be NULL.
- * @param url the remote repository's URL
  * @param fetch the fetch refspec to use for this remote. May be NULL for defaults.
- * @return 0, GIT_EINVALIDSPEC or an error code
+ * @param url the remote repository's URL
+ * @return 0 or an error code
  */
-GIT_EXTERN(int) git_remote_new(git_remote **out, git_repository *repo, const char *name, const char *url, const char *fetch);
+GIT_EXTERN(int) git_remote_create_inmemory(
+		git_remote **out,
+		git_repository *repo,
+		const char *fetch,
+		const char *url);
 
 /**
  * Sets the owning repository for the remote.  This is only allowed on
@@ -85,7 +97,7 @@ GIT_EXTERN(int) git_remote_load(git_remote **out, git_repository *repo, const ch
 /**
  * Save a remote to its repository's configuration
  *
- * One can't save a nameless inmemory remote. Doing so will
+ * One can't save a in-memory remote. Doing so will
  * result in a GIT_EINVALIDSPEC being returned.
  *
  * @param remote the remote to save to config
@@ -97,7 +109,7 @@ GIT_EXTERN(int) git_remote_save(const git_remote *remote);
  * Get the remote's name
  *
  * @param remote the remote
- * @return a pointer to the name
+ * @return a pointer to the name or NULL for in-memory remotes
  */
 GIT_EXTERN(const char *) git_remote_name(const git_remote *remote);
 
@@ -301,17 +313,6 @@ GIT_EXTERN(int) git_remote_supported_url(const char* url);
 GIT_EXTERN(int) git_remote_list(git_strarray *out, git_repository *repo);
 
 /**
- * Add a remote with the default fetch refspec to the repository's configuration
- *
- * @param out the resulting remote
- * @param repo the repository in which to create the remote
- * @param name the remote's name
- * @param url the remote's url
- * @return 0 or an error code
- */
-GIT_EXTERN(int) git_remote_add(git_remote **out, git_repository *repo, const char *name, const char *url);
-
-/**
  * Choose whether to check the server's certificate (applies to HTTPS only)
  *
  * @param remote the remote to configure
@@ -427,12 +428,14 @@ GIT_EXTERN(void) git_remote_set_autotag(
  * The new name will be checked for validity.
  * See `git_tag_create()` for rules about valid names.
  *
+ * A temporary in-memory remote cannot be given a name with this method.
+ *
  * @param remote the remote to rename
  * @param new_name the new name the remote should bear
  * @param callback Optional callback to notify the consumer of fetch refspecs
  * that haven't been automatically updated and need potential manual tweaking.
  * @param payload Additional data to pass to the callback
- * @return 0, GIT_EINVALIDSPEC or an error code
+ * @return 0, GIT_EINVALIDSPEC, GIT_EEXISTS or an error code
  */
 GIT_EXTERN(int) git_remote_rename(
 	git_remote *remote,
