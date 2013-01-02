@@ -13,10 +13,14 @@ static git_clone_options g_options;
 
 void test_clone_network__initialize(void)
 {
+	git_checkout_opts dummy_opts = GIT_CHECKOUT_OPTS_INIT;
+
 	g_repo = NULL;
 
 	memset(&g_options, 0, sizeof(git_clone_options));
 	g_options.version = GIT_CLONE_OPTIONS_VERSION;
+	g_options.checkout_opts = dummy_opts;
+	g_options.checkout_opts.checkout_strategy = GIT_CHECKOUT_SAFE;
 }
 
 static void cleanup_repository(void *path)
@@ -88,6 +92,7 @@ void test_clone_network__can_prevent_the_checkout_of_a_standard_repo(void)
 	git_buf path = GIT_BUF_INIT;
 	cl_set_cleanup(&cleanup_repository, "./foo");
 
+	g_options.checkout_opts.checkout_strategy = 0;
 	cl_git_pass(git_clone(&g_repo, LIVE_REPO_URL, "./foo", &g_options));
 
 	cl_git_pass(git_buf_joinpath(&path, git_repository_workdir(g_repo), "master.txt"));
@@ -112,16 +117,14 @@ static void fetch_progress(const git_transfer_progress *stats, void *payload)
 
 void test_clone_network__can_checkout_a_cloned_repo(void)
 {
-	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
 	git_buf path = GIT_BUF_INIT;
 	git_reference *head;
 	bool checkout_progress_cb_was_called = false,
 		  fetch_progress_cb_was_called = false;
 
-	opts.checkout_strategy = GIT_CHECKOUT_SAFE;
-	opts.progress_cb = &checkout_progress;
-	opts.progress_payload = &checkout_progress_cb_was_called;
-	g_options.checkout_opts = &opts;
+	g_options.checkout_opts.checkout_strategy = GIT_CHECKOUT_SAFE;
+	g_options.checkout_opts.progress_cb = &checkout_progress;
+	g_options.checkout_opts.progress_payload = &checkout_progress_cb_was_called;
 	g_options.fetch_progress_cb = &fetch_progress;
 	g_options.fetch_progress_payload = &fetch_progress_cb_was_called;
 

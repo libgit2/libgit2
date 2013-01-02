@@ -31,14 +31,14 @@ GIT_BEGIN_DECL
  *
  *		git_clone_options opts = GIT_CLONE_OPTIONS_INIT;
  *
+ * - `checkout_opts` is options for the checkout step.  To disable checkout,
+ *   set the `checkout_strategy` to GIT_CHECKOUT_DEFAULT.
  * - `bare` should be set to zero to create a standard repo, non-zero for
  *   a bare repo
  * - `fetch_progress_cb` is optional callback for fetch progress. Be aware that
  *   this is called inline with network and indexing operations, so performance
  *   may be affected.
  * - `fetch_progress_payload` is payload for fetch_progress_cb
- * - `checkout_opts` is options for the checkout step. If NULL, no checkout is
- *   performed
  *
  *   ** "origin" remote options: **
  * - `remote_name` is the name given to the "origin" remote.  The default is
@@ -62,10 +62,10 @@ GIT_BEGIN_DECL
 typedef struct git_clone_options {
 	unsigned int version;
 
+	git_checkout_opts checkout_opts;
 	int bare;
 	git_transfer_progress_callback fetch_progress_cb;
 	void *fetch_progress_payload;
-	git_checkout_opts *checkout_opts;
 
 	const char *remote_name;
 	const char *pushurl;
@@ -79,7 +79,7 @@ typedef struct git_clone_options {
 } git_clone_options;
 
 #define GIT_CLONE_OPTIONS_VERSION 1
-#define GIT_CLONE_OPTIONS_INIT {GIT_CLONE_OPTIONS_VERSION}
+#define GIT_CLONE_OPTIONS_INIT {GIT_CLONE_OPTIONS_VERSION, {GIT_CHECKOUT_OPTS_VERSION, GIT_CHECKOUT_SAFE}}
 
 /**
  * Clone a remote repository, and checkout the branch pointed to by the remote

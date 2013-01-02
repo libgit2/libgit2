@@ -362,6 +362,9 @@ static bool should_checkout(
 	if (!opts)
 		return false;
 
+	if (opts->checkout_strategy == GIT_CHECKOUT_DEFAULT)
+		return false;
+
 	return !git_repository_head_orphan(repo);
 }
 
@@ -406,8 +409,8 @@ int git_clone(
 		}
 	}
 
-	if (!retcode && should_checkout(repo, normOptions.bare, normOptions.checkout_opts))
-		retcode = git_checkout_head(*out, normOptions.checkout_opts);
+	if (!retcode && should_checkout(repo, normOptions.bare, &normOptions.checkout_opts))
+		retcode = git_checkout_head(*out, &normOptions.checkout_opts);
 
 	return retcode;
 }

@@ -94,10 +94,10 @@ int do_clone(git_repository *repo, int argc, char **argv)
 	}
 
 	// Set up options
-	clone_opts.checkout_opts = &checkout_opts;
 	checkout_opts.checkout_strategy = GIT_CHECKOUT_SAFE;
 	checkout_opts.progress_cb = checkout_progress;
 	checkout_opts.progress_payload = &pd;
+	clone_opts.checkout_opts = checkout_opts;
 	clone_opts.fetch_progress_cb = &fetch_progress;
 	clone_opts.fetch_progress_payload = &pd;
 	clone_opts.cred_acquire_cb = cred_acquire;
