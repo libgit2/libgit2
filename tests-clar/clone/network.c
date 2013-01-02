@@ -61,14 +61,6 @@ void test_clone_network__network_bare(void)
 	git_remote_free(origin);
 }
 
-void test_clone_network__cope_with_already_existing_directory(void)
-{
-	cl_set_cleanup(&cleanup_repository, "./foo");
-
-	p_mkdir("./foo", GIT_DIR_MODE);
-	cl_git_pass(git_clone(&g_repo, LIVE_REPO_URL, "./foo", &g_options));
-}
-
 void test_clone_network__empty_repository(void)
 {
 	git_reference *head;
@@ -85,20 +77,6 @@ void test_clone_network__empty_repository(void)
 	cl_assert_equal_s("refs/heads/master", git_reference_symbolic_target(head));
 
 	git_reference_free(head);
-}
-
-void test_clone_network__can_prevent_the_checkout_of_a_standard_repo(void)
-{
-	git_buf path = GIT_BUF_INIT;
-	cl_set_cleanup(&cleanup_repository, "./foo");
-
-	g_options.checkout_opts.checkout_strategy = 0;
-	cl_git_pass(git_clone(&g_repo, LIVE_REPO_URL, "./foo", &g_options));
-
-	cl_git_pass(git_buf_joinpath(&path, git_repository_workdir(g_repo), "master.txt"));
-	cl_assert_equal_i(false, git_path_isfile(git_buf_cstr(&path)));
-
-	git_buf_free(&path);
 }
 
 static void checkout_progress(const char *path, size_t cur, size_t tot, void *payload)
