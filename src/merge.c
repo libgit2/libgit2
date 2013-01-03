@@ -15,7 +15,7 @@
 #include "git2/reset.h"
 #include "commit_list.h"
 
-int git_merge__cleanup(git_repository *repo)
+int git_repository_merge_cleanup(git_repository *repo)
 {
 	int error = 0;
 	git_buf merge_head_path = GIT_BUF_INIT,
