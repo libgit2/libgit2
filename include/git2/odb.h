@@ -192,6 +192,26 @@ GIT_EXTERN(int) git_odb_read_header(size_t *len_out, git_otype *type_out, git_od
 GIT_EXTERN(int) git_odb_exists(git_odb *db, const git_oid *id);
 
 /**
+ * Refresh the object database to load newly added files.
+ *
+ * If the object databases have changed on disk while the library
+ * is running, this function will force a reload of the underlying
+ * indexes.
+ *
+ * Use this function when you're confident that an external
+ * application has tampered with the ODB.
+ *
+ * NOTE that it is not necessary to call this function at all. The
+ * library will automatically attempt to refresh the ODB
+ * when a lookup fails, to see if the looked up object exists
+ * on disk but hasn't been loaded yet.
+ *
+ * @param db database to refresh
+ * @return 0 on success, error code otherwise
+ */
+GIT_EXTERN(int) git_odb_refresh(struct git_odb *db);
+
+/**
  * List all objects available in the database
  *
  * The callback will be called for each object available in the

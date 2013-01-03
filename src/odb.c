@@ -609,13 +609,21 @@ int git_odb_read(git_odb_object **out, git_odb *db, const git_oid *id)
 {
 	unsigned int i;
 	int error = GIT_ENOTFOUND;
+	bool refreshed = false;
 	git_rawobj raw;
 
 	assert(out && db && id);
 
+	if (db->backends.length == 0) {
+		giterr_set(GITERR_ODB, "Failed to lookup object: no backends loaded");
+		return GIT_ENOTFOUND;
+	}
+
 	*out = git_cache_get(&db->cache, id);
 	if (*out != NULL)
 		return 0;
+
+attempt_lookup:
 
 	for (i = 0; i < db->backends.length && error < 0; ++i) {
 		backend_internal *internal = git_vector_get(&db->backends, i);
@@ -625,9 +633,13 @@ int git_odb_read(git_odb_object **out, git_odb *db, const git_oid *id)
 			error = b->read(&raw.data, &raw.len, &raw.type, b, id);
 	}
 
-	/* TODO: If no backends are configured, this returns GIT_ENOTFOUND but
-	 * will never have called giterr_set().
-	 */
+	if (error == GIT_ENOTFOUND && !refreshed) {
+		if ((error = git_odb_refresh(db)) < 0)
+			return error;
+
+		refreshed = true;
+		goto attempt_lookup;
+	}
 
 	if (error && error != GIT_PASSTHROUGH)
 		return error;
@@ -644,7 +656,7 @@ int git_odb_read_prefix(
 	git_oid found_full_oid = {{0}};
 	git_rawobj raw;
 	void *data = NULL;
-	bool found = false;
+	bool found = false, refreshed = false;
 
 	assert(out && db);
 
@@ -660,11 +672,13 @@ int git_odb_read_prefix(
 			return 0;
 	}
 
+attempt_lookup:
+
 	for (i = 0; i < db->backends.length; ++i) {
 		backend_internal *internal = git_vector_get(&db->backends, i);
 		git_odb_backend *b = internal->backend;
 
-		if (b->read != NULL) {
+		if (b->read_prefix != NULL) {
 			git_oid full_oid;
 			error = b->read_prefix(&full_oid, &raw.data, &raw.len, &raw.type, b, short_id, len);
 			if (error == GIT_ENOTFOUND || error == GIT_PASSTHROUGH)
@@ -675,11 +689,21 @@ int git_odb_read_prefix(
 
 			git__free(data);
 			data = raw.data;
+
 			if (found && git_oid_cmp(&full_oid, &found_full_oid))
 				return git_odb__error_ambiguous("multiple matches for prefix");
+
 			found_full_oid = full_oid;
 			found = true;
 		}
+	}
+
+	if (!found && !refreshed) {
+		if ((error = git_odb_refresh(db)) < 0)
+			return error;
+
+		refreshed = true;
+		goto attempt_lookup;
 	}
 
 	if (!found)
@@ -820,10 +844,29 @@ int git_odb_write_pack(struct git_odb_writepack **out, git_odb *db, git_transfer
 	return error;
 }
 
-void * git_odb_backend_malloc(git_odb_backend *backend, size_t len)
+void *git_odb_backend_malloc(git_odb_backend *backend, size_t len)
 {
 	GIT_UNUSED(backend);
 	return git__malloc(len);
+}
+
+int git_odb_refresh(struct git_odb *db)
+{
+	unsigned int i;
+	assert(db);
+
+	for (i = 0; i < db->backends.length; ++i) {
+		backend_internal *internal = git_vector_get(&db->backends, i);
+		git_odb_backend *b = internal->backend;
+
+		if (b->refresh != NULL) {
+			int error = b->refresh(b);
+			if (error < 0)
+				return error;
+		}
+	}
+
+	return 0;
 }
 
 int git_odb__error_notfound(const char *message, const git_oid *oid)
