@@ -418,6 +418,8 @@ static int checkout_action_with_wd_dir(
 	return checkout_action_common(data, action, delta, wd);
 }
 
+#define EXPAND_DIRS_FOR_STRATEGY (GIT_CHECKOUT_FORCE | GIT_CHECKOUT_REMOVE_UNTRACKED | GIT_CHECKOUT_REMOVE_IGNORED)
+
 static int checkout_action(
 	checkout_data *data,
 	git_diff_delta *delta,
@@ -429,6 +431,7 @@ static int checkout_action(
 	int cmp = -1, act;
 	int (*strcomp)(const char *, const char *) = data->diff->strcomp;
 	int (*pfxcomp)(const char *str, const char *pfx) = data->diff->pfxcomp;
+	bool expand_dirs = (data->strategy & EXPAND_DIRS_FOR_STRATEGY) != 0;
 
 	/* move workdir iterator to follow along with deltas */
 
@@ -449,14 +452,14 @@ static int checkout_action(
 		if (cmp < 0) {
 			cmp = pfxcomp(delta->old_file.path, wd->path);
 
-			if (cmp == 0) {
-				if (wd->mode == GIT_FILEMODE_TREE) {
-					/* case 2 - descend in wd */
-					if (git_iterator_advance_into_directory(workdir, &wd) < 0)
-						goto fail;
-					continue;
-				}
+			if (wd->mode == GIT_FILEMODE_TREE && (cmp == 0 || expand_dirs)) {
+				/* case 2 or untracked wd item that might need removal */
+				if (git_iterator_advance_into_directory(workdir, &wd) < 0)
+					goto fail;
+				continue;
+			}
 
+			if (cmp == 0) {
 				/* case 3 -  wd contains non-dir where dir expected */
 				act = checkout_action_with_wd_blocker(data, delta, wd);
 				*wditem_ptr = git_iterator_advance(workdir, &wd) ? NULL : wd;
@@ -519,6 +522,26 @@ fail:
 	return -1;
 }
 
+static int checkout_remaining_wd_items(
+	checkout_data *data,
+	git_iterator *workdir,
+	const git_index_entry *wd,
+	git_vector *spec)
+{
+	int error = 0;
+	bool expand_dirs = (data->strategy & EXPAND_DIRS_FOR_STRATEGY) != 0;
+
+	while (wd && !error) {
+		if (wd->mode == GIT_FILEMODE_TREE && expand_dirs)
+			error = git_iterator_advance_into_directory(workdir, &wd);
+
+		else if (!(error = checkout_action_wd_only(data, workdir, wd, spec)))
+			error = git_iterator_advance(workdir, &wd);
+	}
+
+	return error;
+}
+
 static int checkout_get_actions(
 	uint32_t **actions_ptr,
 	size_t **counts_ptr,
@@ -570,13 +593,9 @@ static int checkout_get_actions(
 			counts[CHECKOUT_ACTION__CONFLICT]++;
 	}
 
-	while (wditem != NULL) {
-		error = checkout_action_wd_only(data, workdir, wditem, &pathspec);
-		if (!error)
-			error = git_iterator_advance(workdir, &wditem);
-		if (error < 0)
-			goto fail;
-	}
+	error = checkout_remaining_wd_items(data, workdir, wditem, &pathspec);
+	if (error < 0)
+		goto fail;
 
 	counts[CHECKOUT_ACTION__REMOVE] += data->removes.length;
 
