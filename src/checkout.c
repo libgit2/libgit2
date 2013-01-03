@@ -15,6 +15,7 @@
 #include "git2/blob.h"
 #include "git2/config.h"
 #include "git2/diff.h"
+#include "git2/submodule.h"
 
 #include "refs.h"
 #include "repository.h"
@@ -201,6 +202,7 @@ typedef struct {
 	size_t workdir_len;
 	unsigned int strategy;
 	int can_symlink;
+	bool reload_submodules;
 	size_t total_steps;
 	size_t completed_steps;
 } checkout_data;
@@ -263,6 +265,26 @@ static bool checkout_is_workdir_modified(
 	const git_index_entry *wditem)
 {
 	git_oid oid;
+
+	/* handle "modified" submodule */
+	if (wditem->mode == GIT_FILEMODE_COMMIT) {
+		git_submodule *sm;
+		unsigned int sm_status = 0;
+		const git_oid *sm_oid = NULL;
+
+		if (git_submodule_lookup(&sm, data->repo, wditem->path) < 0 ||
+			git_submodule_status(&sm_status, sm) < 0)
+			return true;
+
+		if (GIT_SUBMODULE_STATUS_IS_WD_DIRTY(sm_status))
+			return true;
+
+		sm_oid = git_submodule_wd_id(sm);
+		if (!sm_oid)
+			return false;
+
+		return (git_oid_cmp(&baseitem->oid, sm_oid) != 0);
+	}
 
 	/* depending on where base is coming from, we may or may not know
 	 * the actual size of the data, so we can't rely on this shortcut.
@@ -385,6 +407,21 @@ static int checkout_action_wd_only(
 	return 0;
 }
 
+static bool submodule_is_config_only(
+	checkout_data *data,
+	const char *path)
+{
+	git_submodule *sm = NULL;
+	unsigned int sm_loc = 0;
+
+	if (git_submodule_lookup(&sm, data->repo, path) < 0 ||
+		git_submodule_location(&sm_loc, sm) < 0 ||
+		sm_loc == GIT_SUBMODULE_STATUS_IN_CONFIG)
+		return true;
+
+	return false;
+}
+
 static int checkout_action_with_wd(
 	checkout_data *data,
 	const git_diff_delta *delta,
@@ -394,9 +431,7 @@ static int checkout_action_with_wd(
 
 	switch (delta->status) {
 	case GIT_DELTA_UNMODIFIED: /* case 14/15 or 33 */
-		if (S_ISDIR(delta->old_file.mode) ||
-			checkout_is_workdir_modified(data, &delta->old_file, wd))
-		{
+		if (checkout_is_workdir_modified(data, &delta->old_file, wd)) {
 			if (checkout_notify(
 					data, GIT_CHECKOUT_NOTIFY_DIRTY, delta, wd))
 				return GIT_EUSER;
@@ -419,12 +454,31 @@ static int checkout_action_with_wd(
 			action = CHECKOUT_ACTION_IF(SAFE, UPDATE_BLOB, NONE);
 		break;
 	case GIT_DELTA_TYPECHANGE: /* case 22, 23, 29, 30 */
-		if (delta->new_file.mode == GIT_FILEMODE_TREE)
-			action = CHECKOUT_ACTION_IF(FORCE, REMOVE, CONFLICT);
+		if (delta->old_file.mode == GIT_FILEMODE_TREE) {
+			if (wd->mode == GIT_FILEMODE_TREE)
+				/* either deleting items in old tree will delete the wd dir,
+				 * or we'll get a conflict when we attempt blob update...
+				 */
+				action = CHECKOUT_ACTION_IF(SAFE, UPDATE_BLOB, NONE);
+			else if (wd->mode == GIT_FILEMODE_COMMIT) {
+				/* workdir is possibly a "phantom" submodule - treat as a
+				 * tree if the only submodule info came from the config
+				 */
+				if (submodule_is_config_only(data, wd->path))
+					action = CHECKOUT_ACTION_IF(SAFE, UPDATE_BLOB, NONE);
+				else
+					action = CHECKOUT_ACTION_IF(FORCE, REMOVE_AND_UPDATE, CONFLICT);
+			} else
+				action = CHECKOUT_ACTION_IF(FORCE, REMOVE, CONFLICT);
+		}
 		else if (checkout_is_workdir_modified(data, &delta->old_file, wd))
 			action = CHECKOUT_ACTION_IF(FORCE, REMOVE_AND_UPDATE, CONFLICT);
 		else
 			action = CHECKOUT_ACTION_IF(SAFE, REMOVE_AND_UPDATE, NONE);
+
+		/* don't update if the typechange is to a tree */
+		if (delta->new_file.mode == GIT_FILEMODE_TREE)
+			action = (action & ~CHECKOUT_ACTION__UPDATE_BLOB);
 		break;
 	default: /* impossible */
 		break;
@@ -481,7 +535,9 @@ static int checkout_action_with_wd_dir(
 		break;
 	case GIT_DELTA_ADDED:/* case 4 (and 7 for dir) */
 	case GIT_DELTA_MODIFIED: /* case 20 (or 37 but not really) */
-		if (delta->new_file.mode != GIT_FILEMODE_TREE)
+		if (delta->old_file.mode == GIT_FILEMODE_COMMIT)
+			/* expected submodule (and maybe found one) */;
+		else if (delta->new_file.mode != GIT_FILEMODE_TREE)
 			action = CHECKOUT_ACTION_IF(FORCE, REMOVE_AND_UPDATE, CONFLICT);
 		break;
 	case GIT_DELTA_DELETED: /* case 11 (and 27 for dir) */
@@ -491,19 +547,20 @@ static int checkout_action_with_wd_dir(
 			return GIT_EUSER;
 		break;
 	case GIT_DELTA_TYPECHANGE: /* case 24 or 31 */
-		/* For typechange to dir, dir is already created so no action */
-
-		/* For typechange to blob, remove dir and add blob, but it is
-		 * not safe to remove dir if it contains modified files.
-		 * However, safely removing child files will remove the parent
-		 * directory if is it left empty, so we can defer removing the
-		 * dir and it will succeed if no children are left.
-		 */
 		if (delta->old_file.mode == GIT_FILEMODE_TREE) {
+			/* For typechange from dir, remove dir and add blob, but it is
+			 * not safe to remove dir if it contains modified files.
+			 * However, safely removing child files will remove the parent
+			 * directory if is it left empty, so we can defer removing the
+			 * dir and it will succeed if no children are left.
+			 */
 			action = CHECKOUT_ACTION_IF(SAFE, UPDATE_BLOB, NONE);
 			if (action != CHECKOUT_ACTION__NONE)
 				action |= CHECKOUT_ACTION__DEFER_REMOVE;
 		}
+		else if (delta->new_file.mode != GIT_FILEMODE_TREE)
+			/* For typechange to dir, dir is already created so no action */
+			action = CHECKOUT_ACTION_IF(FORCE, REMOVE_AND_UPDATE, CONFLICT);
 		break;
 	default: /* impossible */
 		break;
@@ -576,15 +633,29 @@ static int checkout_action(
 		cmp = pfxcomp(wd->path, delta->old_file.path);
 
 		if (cmp == 0) { /* case 5 */
-			if (delta->status == GIT_DELTA_TYPECHANGE &&
-				(delta->new_file.mode == GIT_FILEMODE_TREE ||
-				 delta->new_file.mode == GIT_FILEMODE_COMMIT ||
-				 delta->old_file.mode == GIT_FILEMODE_TREE ||
-				 delta->old_file.mode == GIT_FILEMODE_COMMIT))
-			{
-				act = checkout_action_with_wd(data, delta, wd);
-				*wditem_ptr = git_iterator_advance(workdir, &wd) ? NULL : wd;
-				return act;
+			size_t pathlen = strlen(delta->old_file.path);
+			if (wd->path[pathlen] != '/')
+				return checkout_action_no_wd(data, delta);
+
+			if (delta->status == GIT_DELTA_TYPECHANGE) {
+				if (delta->old_file.mode == GIT_FILEMODE_TREE) {
+					act = checkout_action_with_wd(data, delta, wd);
+					if (git_iterator_advance_into_directory(workdir, &wd) < 0)
+						wd = NULL;
+					*wditem_ptr = wd;
+					return act;
+				}
+
+				if (delta->new_file.mode == GIT_FILEMODE_TREE ||
+					delta->new_file.mode == GIT_FILEMODE_COMMIT ||
+					delta->old_file.mode == GIT_FILEMODE_COMMIT)
+				{
+					act = checkout_action_with_wd(data, delta, wd);
+					if (git_iterator_advance(workdir, &wd) < 0)
+						wd = NULL;
+					*wditem_ptr = wd;
+					return act;
+				}
 			}
 
 			return checkout_action_with_wd_dir(data, delta, wd);
@@ -834,6 +905,7 @@ static int checkout_submodule(
 	const git_diff_file *file)
 {
 	int error = 0;
+	git_submodule *sm;
 
 	/* Until submodules are supported, UPDATE_ONLY means do nothing here */
 	if ((data->strategy & GIT_CHECKOUT_UPDATE_ONLY) != 0)
@@ -842,6 +914,9 @@ static int checkout_submodule(
 	if ((error = git_futils_mkdir(
 			file->path, git_repository_workdir(data->repo),
 			data->opts.dir_mode, GIT_MKDIR_PATH)) < 0)
+		return error;
+
+	if ((error = git_submodule_lookup(&sm, data->repo, file->path)) < 0)
 		return error;
 
 	/* TODO: Support checkout_strategy options.  Two circumstances:
@@ -923,6 +998,10 @@ static int checkout_blob(
 	/* update the index unless prevented */
 	if (!error && (data->strategy & GIT_CHECKOUT_DONT_UPDATE_INDEX) == 0)
 		error = checkout_update_index(data, file, &st);
+
+	/* update the submodule data if this was a new .gitmodules file */
+	if (!error && strcmp(file->path, ".gitmodules") == 0)
+		data->reload_submodules = true;
 
 	return error;
 }
@@ -1036,6 +1115,11 @@ static int checkout_create_submodules(
 	git_diff_delta *delta;
 	size_t i;
 
+	/* initial reload of submodules if .gitmodules was changed */
+	if (data->reload_submodules &&
+		(error = git_submodule_reload_all(data->repo)) < 0)
+		return error;
+
 	git_vector_foreach(&data->diff->deltas, i, delta) {
 		if (actions[i] & CHECKOUT_ACTION__DEFER_REMOVE) {
 			/* this has a blocker directory that should only be removed iff
@@ -1056,7 +1140,8 @@ static int checkout_create_submodules(
 		}
 	}
 
-	return 0;
+	/* final reload once submodules have been updated */
+	return git_submodule_reload_all(data->repo);
 }
 
 static int checkout_lookup_head_tree(git_tree **out, git_repository *repo)
