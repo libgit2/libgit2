@@ -451,6 +451,7 @@ void test_online_push__delete(void)
 	const char *specs_del_fake[] = { ":refs/heads/fake" };
 	/* Force has no effect for delete. */
 	const char *specs_del_fake_force[] = { "+:refs/heads/fake" };
+	push_status exp_stats_fake[] = { { "refs/heads/fake", NULL } };
 
 	const char *specs_delete[] = { ":refs/heads/tgt1" };
 	push_status exp_stats_delete[] = { { "refs/heads/tgt1", NULL } };
@@ -462,15 +463,18 @@ void test_online_push__delete(void)
 		exp_stats1, ARRAY_SIZE(exp_stats1),
 		exp_refs1, ARRAY_SIZE(exp_refs1), 0);
 
-	/* Deleting a non-existent branch should fail before the request is sent to
-	 * the server because the client cannot find the old oid for the ref.
+	/* When deleting a non-existent branch, the git client sends zero for both
+	 * the old and new commit id.  This should succeed on the server with the
+	 * same status report as if the branch were actually deleted.  The server
+	 * returns a warning on the side-band iff the side-band is supported.
+	 *  Since libgit2 doesn't support the side-band yet, there are no warnings.
 	 */
 	do_push(specs_del_fake, ARRAY_SIZE(specs_del_fake),
-		NULL, 0,
-		exp_refs1, ARRAY_SIZE(exp_refs1), -1);
+		exp_stats_fake, 1,
+		exp_refs1, ARRAY_SIZE(exp_refs1), 0);
 	do_push(specs_del_fake_force, ARRAY_SIZE(specs_del_fake_force),
-		NULL, 0,
-		exp_refs1, ARRAY_SIZE(exp_refs1), -1);
+		exp_stats_fake, 1,
+		exp_refs1, ARRAY_SIZE(exp_refs1), 0);
 
 	/* Delete one of the pushed branches. */
 	do_push(specs_delete, ARRAY_SIZE(specs_delete),
