@@ -246,12 +246,6 @@ IF (BUILD_CLAR)
 	SET(SRC_CLAR "${CLAR_PATH}/main.c" "${CLAR_PATH}/clar_libgit2.c" "${CLAR_PATH}/clar/clar.c")
 	SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-missing-prototypes")
 
-	ADD_CUSTOM_TARGET(
-		clar_submodule ALL
-		COMMAND git submodule update --init tests-clar/clar
-		WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-	)
-
 	ADD_CUSTOM_COMMAND(
 		OUTPUT ${CLAR_PATH}/clar.suite
 		COMMAND ${PYTHON_EXECUTABLE} clar/generate.py . -xonline

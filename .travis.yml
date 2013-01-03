@@ -25,6 +25,7 @@ install:
 
 # Run the Build script
 script:
+ - git submodule update --init tests-clar/clar
  - mkdir _build
  - cd _build
  - cmake .. -DCMAKE_INSTALL_PREFIX=../_install $OPTIONS
