@@ -164,7 +164,7 @@ void test_online_push__initialize(void)
 	_remote = NULL;
 
 	if (_remote_url) {
-		cl_git_pass(git_remote_add(&_remote, _repo, "test", _remote_url));
+		cl_git_pass(git_remote_create(&_remote, _repo, "test", _remote_url));
 
 		git_remote_set_cred_acquire_cb(_remote, cred_acquire_cb, &cred_acquire_called);
 		record_callbacks_data_clear(&_record_cbs_data);
@@ -494,7 +494,7 @@ void test_online_push__bad_refspecs(void)
 	git_push *push;
 
 	if (_remote) {
-		cl_git_pass(git_remote_connect(_remote, GIT_DIRECTION_PUSH));
+//		cl_git_pass(git_remote_connect(_remote, GIT_DIRECTION_PUSH));
 		cl_git_pass(git_push_new(&push, _remote));
 
 		/* Unexpanded branch names not supported */

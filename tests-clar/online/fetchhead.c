@@ -8,7 +8,6 @@
 #define LIVE_REPO_URL "git://github.com/libgit2/TestGitRepository"
 
 static git_repository *g_repo;
-static git_remote *g_origin;
 static git_clone_options g_options;
 
 void test_online_fetchhead__initialize(void)
@@ -17,30 +16,21 @@ void test_online_fetchhead__initialize(void)
 
 	memset(&g_options, 0, sizeof(git_clone_options));
 	g_options.version = GIT_CLONE_OPTIONS_VERSION;
-	cl_git_pass(git_remote_new(&g_origin, NULL, "origin", LIVE_REPO_URL, GIT_REMOTE_DEFAULT_FETCH));
 }
 
 void test_online_fetchhead__cleanup(void)
-{
-	git_remote_free(g_origin);
-}
-
-static void cleanup_repository(void *path)
 {
 	if (g_repo) {
 		git_repository_free(g_repo);
 		g_repo = NULL;
 	}
 
-	cl_fixture_cleanup((const char *)path);
+	cl_fixture_cleanup("./foo");
 }
-
 
 static void fetchhead_test_clone(void)
 {
-	cl_set_cleanup(&cleanup_repository, "./foo");
-
-	cl_git_pass(git_clone(&g_repo, g_origin, "./foo", &g_options));
+	cl_git_pass(git_clone(&g_repo, LIVE_REPO_URL, "./foo", &g_options));
 }
 
 static void fetchhead_test_fetch(const char *fetchspec, const char *expected_fetchhead)

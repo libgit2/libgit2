@@ -19,6 +19,7 @@
 
 #define LOOKS_LIKE_DRIVE_PREFIX(S) (git__isalpha((S)[0]) && (S)[1] == ':')
 
+#ifdef GIT_WIN32
 static bool looks_like_network_computer_name(const char *path, int pos)
 {
 	if (pos < 3)
@@ -34,6 +35,7 @@ static bool looks_like_network_computer_name(const char *path, int pos)
 
 	return true;
 }
+#endif
 
 /*
  * Based on the Android implementation, BSD licensed.
