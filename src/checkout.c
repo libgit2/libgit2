@@ -209,9 +209,9 @@ static int checkout_notify(
 	checkout_data *data,
 	git_checkout_notify_t why,
 	const git_diff_delta *delta,
-	const git_index_entry *baseitem)
+	const git_index_entry *wditem)
 {
-	git_diff_file basefile;
+	git_diff_file wdfile;
 	const git_diff_file *baseline = NULL, *target = NULL, *workdir = NULL;
 
 	if (!data->opts.notify_cb)
@@ -220,44 +220,41 @@ static int checkout_notify(
 	if ((why & data->opts.notify_flags) == 0)
 		return 0;
 
-	if (baseitem) {
-		memset(&basefile, 0, sizeof(basefile));
+	if (wditem) {
+		memset(&wdfile, 0, sizeof(wdfile));
 
-		git_oid_cpy(&basefile.oid, &baseitem->oid);
-		basefile.path = baseitem->path;
-		basefile.size = baseitem->file_size;
-		basefile.flags = GIT_DIFF_FILE_VALID_OID;
-		basefile.mode = baseitem->mode;
+		git_oid_cpy(&wdfile.oid, &wditem->oid);
+		wdfile.path = wditem->path;
+		wdfile.size = wditem->file_size;
+		wdfile.flags = GIT_DIFF_FILE_VALID_OID;
+		wdfile.mode = wditem->mode;
 
-		baseline = &basefile;
+		workdir = &wdfile;
 	}
 
-	if ((why & GIT_CHECKOUT__NOTIFY_CONFLICT_TREE) != 0) {
-		/* baseitem is a blob that conflicts with a tree in the workdir */
-	} else {
+	if (delta) {
 		switch (delta->status) {
 		case GIT_DELTA_UNMODIFIED:
 		case GIT_DELTA_MODIFIED:
 		case GIT_DELTA_TYPECHANGE:
 		default:
-			target = &delta->old_file;
-			workdir = &delta->new_file;
+			baseline = &delta->old_file;
+			target = &delta->new_file;
 			break;
 		case GIT_DELTA_ADDED:
 		case GIT_DELTA_IGNORED:
 		case GIT_DELTA_UNTRACKED:
-			workdir = &delta->new_file;
+			target = &delta->new_file;
 			break;
 		case GIT_DELTA_DELETED:
-			target = &delta->old_file;
+			baseline = &delta->old_file;
 			break;
 		}
 	}
 
 	return data->opts.notify_cb(
-		why, delta->old_file.path,
-		baseline, target, workdir,
-		data->opts.notify_payload);
+		why, delta ? delta->old_file.path : wditem->path,
+		baseline, target, workdir, data->opts.notify_payload);
 }
 
 static bool checkout_is_workdir_modified(
@@ -651,6 +648,14 @@ static int checkout_get_actions(
 			counts[CHECKOUT_ACTION__UPDATE_SUBMODULE]++;
 		if (act & CHECKOUT_ACTION__CONFLICT)
 			counts[CHECKOUT_ACTION__CONFLICT]++;
+	}
+
+	while (wditem != NULL) {
+		error = checkout_action_wd_only(data, workdir, wditem, &pathspec);
+		if (!error)
+			error = git_iterator_advance(workdir, &wditem);
+		if (error < 0)
+			goto fail;
 	}
 
 	counts[CHECKOUT_ACTION__REMOVE] += data->removes.length;
