@@ -810,6 +810,27 @@ static void report_progress(
 			data->opts.progress_payload);
 }
 
+static int checkout_safe_for_update_only(const char *path, mode_t expected_mode)
+{
+	struct stat st;
+
+	if (p_lstat(path, &st) < 0) {
+		/* if doesn't exist, then no error and no update */
+		if (errno == ENOENT || errno == ENOTDIR)
+			return 0;
+
+		/* otherwise, stat error and no update */
+		giterr_set(GITERR_OS, "Failed to stat file '%s'", path);
+		return -1;
+	}
+
+	/* only safe for update if this is the same type of file */
+	if ((st.st_mode & ~0777) == (expected_mode & ~0777))
+		return 1;
+
+	return 0;
+}
+
 static int checkout_blob(
 	checkout_data *data,
 	const git_diff_file *file)
@@ -821,6 +842,13 @@ static int checkout_blob(
 	git_buf_truncate(&data->path, data->workdir_len);
 	if (git_buf_puts(&data->path, file->path) < 0)
 		return -1;
+
+	if ((data->strategy & GIT_CHECKOUT_UPDATE_ONLY) != 0) {
+		int rval = checkout_safe_for_update_only(
+			git_buf_cstr(&data->path), file->mode);
+		if (rval <= 0)
+			return rval;
+	}
 
 	if ((error = git_blob_lookup(&blob, data->repo, &file->oid)) < 0)
 		return error;

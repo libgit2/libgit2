@@ -2,6 +2,8 @@
 
 #include "git2/checkout.h"
 #include "repository.h"
+#include "buffer.h"
+#include "fileops.h"
 
 static git_repository *g_repo;
 static git_checkout_opts g_opts;
@@ -133,4 +135,173 @@ void test_checkout_tree__doesnt_write_unrequested_files_to_worktree(void)
   opts.checkout_strategy = GIT_CHECKOUT_NONE;
   git_checkout_tree(g_repo, (git_object*)p_chomped_commit, &opts);
   cl_assert_equal_i(false, git_path_isfile("testrepo/readme.txt"));
+}
+
+static void assert_on_branch(git_repository *repo, const char *branch)
+{
+	git_reference *head;
+	git_buf bname = GIT_BUF_INIT;
+
+	cl_git_pass(git_reference_lookup(&head, repo, GIT_HEAD_FILE));
+	cl_assert_(git_reference_type(head) == GIT_REF_SYMBOLIC, branch);
+
+	cl_git_pass(git_buf_joinpath(&bname, "refs/heads", branch));
+	cl_assert_equal_s(bname.ptr, git_reference_symbolic_target(head));
+
+	git_reference_free(head);
+	git_buf_free(&bname);
+}
+
+void test_checkout_tree__can_switch_branches(void)
+{
+	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
+	git_oid oid;
+	git_object *obj = NULL;
+
+	assert_on_branch(g_repo, "master");
+
+	/* do first checkout with FORCE because we don't know if testrepo
+	 * base data is clean for a checkout or not
+	 */
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+
+	cl_git_pass(git_reference_name_to_id(&oid, g_repo, "refs/heads/dir"));
+	cl_git_pass(git_object_lookup(&obj, g_repo, &oid, GIT_OBJ_ANY));
+
+	cl_git_pass(git_checkout_tree(g_repo, obj, &opts));
+	cl_git_pass(git_repository_set_head(g_repo, "refs/heads/dir"));
+
+	cl_assert(git_path_isfile("testrepo/README"));
+	cl_assert(git_path_isfile("testrepo/branch_file.txt"));
+	cl_assert(git_path_isfile("testrepo/new.txt"));
+	cl_assert(git_path_isfile("testrepo/a/b.txt"));
+
+	cl_assert(!git_path_isdir("testrepo/ab"));
+
+	assert_on_branch(g_repo, "dir");
+
+	git_object_free(obj);
+
+	/* do second checkout safe because we should be clean after first */
+	opts.checkout_strategy = GIT_CHECKOUT_SAFE;
+
+	cl_git_pass(git_reference_name_to_id(&oid, g_repo, "refs/heads/subtrees"));
+	cl_git_pass(git_object_lookup(&obj, g_repo, &oid, GIT_OBJ_ANY));
+
+	cl_git_pass(git_checkout_tree(g_repo, obj, &opts));
+	cl_git_pass(git_repository_set_head(g_repo, "refs/heads/subtrees"));
+
+	cl_assert(git_path_isfile("testrepo/README"));
+	cl_assert(git_path_isfile("testrepo/branch_file.txt"));
+	cl_assert(git_path_isfile("testrepo/new.txt"));
+	cl_assert(git_path_isfile("testrepo/ab/4.txt"));
+	cl_assert(git_path_isfile("testrepo/ab/c/3.txt"));
+	cl_assert(git_path_isfile("testrepo/ab/de/2.txt"));
+	cl_assert(git_path_isfile("testrepo/ab/de/fgh/1.txt"));
+
+	cl_assert(!git_path_isdir("testrepo/a"));
+
+	assert_on_branch(g_repo, "subtrees");
+
+	git_object_free(obj);
+}
+
+void test_checkout_tree__can_remove_untracked(void)
+{
+	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
+
+	opts.checkout_strategy = GIT_CHECKOUT_SAFE | GIT_CHECKOUT_REMOVE_UNTRACKED;
+
+	cl_git_mkfile("testrepo/untracked_file", "as you wish");
+	cl_assert(git_path_isfile("testrepo/untracked_file"));
+
+	cl_git_pass(git_checkout_head(g_repo, &opts));
+
+	cl_assert(!git_path_isfile("testrepo/untracked_file"));
+}
+
+void test_checkout_tree__can_remove_ignored(void)
+{
+	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
+	int ignored = 0;
+
+	opts.checkout_strategy = GIT_CHECKOUT_SAFE | GIT_CHECKOUT_REMOVE_IGNORED;
+
+	cl_git_mkfile("testrepo/ignored_file", "as you wish");
+
+	cl_git_pass(git_ignore_add_rule(g_repo, "ignored_file\n"));
+
+	cl_git_pass(git_ignore_path_is_ignored(&ignored, g_repo, "ignored_file"));
+	cl_assert_equal_i(1, ignored);
+
+	cl_assert(git_path_isfile("testrepo/ignored_file"));
+
+	cl_git_pass(git_checkout_head(g_repo, &opts));
+
+	cl_assert(!git_path_isfile("testrepo/ignored_file"));
+}
+
+/* this is essentially the code from git__unescape modified slightly */
+static void strip_cr_from_buf(git_buf *buf)
+{
+	char *scan, *pos = buf->ptr;
+
+	for (scan = pos; *scan; pos++, scan++) {
+		if (*scan == '\r')
+			scan++; /* skip '\r' */
+		if (pos != scan)
+			*pos = *scan;
+	}
+
+	*pos = '\0';
+	buf->size = (pos - buf->ptr);
+}
+
+void test_checkout_tree__can_update_only(void)
+{
+	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
+	git_oid oid;
+	git_object *obj = NULL;
+	git_buf buf = GIT_BUF_INIT;
+
+	/* first let's get things into a known state - by checkout out the HEAD */
+
+	assert_on_branch(g_repo, "master");
+
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+	cl_git_pass(git_checkout_head(g_repo, &opts));
+
+	cl_assert(!git_path_isdir("testrepo/a"));
+
+	cl_git_pass(git_futils_readbuffer(&buf, "testrepo/branch_file.txt"));
+	strip_cr_from_buf(&buf);
+	cl_assert_equal_s("hi\nbye!\n", buf.ptr);
+	git_buf_free(&buf);
+
+	/* now checkout branch but with update only */
+
+	opts.checkout_strategy = GIT_CHECKOUT_SAFE | GIT_CHECKOUT_UPDATE_ONLY;
+
+	cl_git_pass(git_reference_name_to_id(&oid, g_repo, "refs/heads/dir"));
+	cl_git_pass(git_object_lookup(&obj, g_repo, &oid, GIT_OBJ_ANY));
+
+	cl_git_pass(git_checkout_tree(g_repo, obj, &opts));
+	cl_git_pass(git_repository_set_head(g_repo, "refs/heads/dir"));
+
+	assert_on_branch(g_repo, "dir");
+
+	/* this normally would have been created (which was tested separately in
+	 * the test_checkout_tree__can_switch_branches test), but with
+	 * UPDATE_ONLY it will not have been created.
+	 */
+	cl_assert(!git_path_isdir("testrepo/a"));
+
+	/* but this file still should have been updated */
+	cl_git_pass(git_futils_readbuffer(&buf, "testrepo/branch_file.txt"));
+	strip_cr_from_buf(&buf);
+	cl_assert_equal_s("hi\n", buf.ptr);
+
+	git_buf_free(&buf);
+
+	git_object_free(obj);
 }
