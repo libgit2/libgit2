@@ -270,7 +270,8 @@ static int note_write(git_oid *out,
 	const char *note,
 	git_tree *commit_tree,
 	const char *target,
-	git_commit **parents)
+	git_commit **parents,
+	int allow_note_overwrite)
 {
 	int error;
 	git_oid oid;
@@ -283,7 +284,8 @@ static int note_write(git_oid *out,
 
 	if ((error = manipulate_note_in_tree_r(
 		&tree, repo, commit_tree, &oid, target, 0,
-		insert_note_in_tree_eexists_cb, insert_note_in_tree_enotfound_cb)) < 0)
+		allow_note_overwrite ? insert_note_in_tree_enotfound_cb : insert_note_in_tree_eexists_cb,
+		insert_note_in_tree_enotfound_cb)) < 0)
 		goto cleanup;
 
 	if (out)
@@ -449,7 +451,8 @@ int git_note_create(
 	const git_signature *committer,
 	const char *notes_ref,
 	const git_oid *oid,
-	const char *note)
+	const char *note,
+	int allow_note_overwrite)
 {
 	int error;
 	char *target = NULL;
@@ -465,7 +468,7 @@ int git_note_create(
 		goto cleanup;
 
 	error = note_write(out, repo, author, committer, notes_ref,
-			note, tree, target, &commit);
+			note, tree, target, &commit, allow_note_overwrite);
 
 cleanup:
 	git__free(target);
