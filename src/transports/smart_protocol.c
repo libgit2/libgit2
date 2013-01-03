@@ -499,61 +499,25 @@ on_error:
 
 static int gen_pktline(git_buf *buf, git_push *push)
 {
-	git_remote_head *head;
 	push_spec *spec;
-	unsigned int i, j, len;
-	char hex[41]; hex[40] = '\0';
+	size_t i, len;
+	char old_id[41], new_id[41];
+
+	old_id[40] = '\0'; new_id[40] = '\0';
 
 	git_vector_foreach(&push->specs, i, spec) {
-		len = 2*GIT_OID_HEXSZ + 7;
+		len = 2*GIT_OID_HEXSZ + 7 + strlen(spec->rref);
 
 		if (i == 0) {
-			len +=1; /* '\0' */
+			++len; /* '\0' */
 			if (push->report_status)
 				len += strlen(GIT_CAP_REPORT_STATUS);
 		}
 
-		if (spec->lref) {
-			len += spec->rref ? strlen(spec->rref) : strlen(spec->lref);
+		git_oid_fmt(old_id, &spec->roid);
+		git_oid_fmt(new_id, &spec->loid);
 
-			if (git_oid_iszero(&spec->roid)) {
-
-				/*
-				 * Create remote reference
-				 */
-				git_oid_fmt(hex, &spec->loid);
-				git_buf_printf(buf, "%04x%s %s %s", len,
-					GIT_OID_HEX_ZERO, hex,
-					spec->rref ? spec->rref : spec->lref);
-
-			} else {
-
-				/*
-				 * Update remote reference
-				 */
-				git_oid_fmt(hex, &spec->roid);
-				git_buf_printf(buf, "%04x%s ", len, hex);
-
-				git_oid_fmt(hex, &spec->loid);
-				git_buf_printf(buf, "%s %s", hex,
-					spec->rref ? spec->rref : spec->lref);
-			}
-		} else {
-			/*
-			 * Delete remote reference
-			 */
-			git_vector_foreach(&push->remote->refs, j, head) {
-				if (!strcmp(spec->rref, head->name)) {
-					len += strlen(spec->rref);
-
-					git_oid_fmt(hex, &head->oid);
-					git_buf_printf(buf, "%04x%s %s %s", len,
-						       hex, GIT_OID_HEX_ZERO, head->name);
-
-					break;
-				}
-			}
-		}
+		git_buf_printf(buf, "%04x%s %s %s", len, old_id, new_id, spec->rref);
 
 		if (i == 0) {
 			git_buf_putc(buf, '\0');
@@ -563,6 +527,7 @@ static int gen_pktline(git_buf *buf, git_push *push)
 
 		git_buf_putc(buf, '\n');
 	}
+
 	git_buf_puts(buf, "0000");
 	return git_buf_oom(buf) ? -1 : 0;
 }
