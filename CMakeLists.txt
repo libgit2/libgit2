@@ -243,18 +243,18 @@ IF (BUILD_CLAR)
 
 	INCLUDE_DIRECTORIES(${CLAR_PATH})
 	FILE(GLOB_RECURSE SRC_TEST ${CLAR_PATH}/*/*.c)
-	SET(SRC_CLAR "${CLAR_PATH}/main.c" "${CLAR_PATH}/clar_libgit2.c" "${CLAR_PATH}/clar/clar.c")
+	SET(SRC_CLAR "${CLAR_PATH}/main.c" "${CLAR_PATH}/clar_libgit2.c" "${CLAR_PATH}/clar.c")
 	SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-missing-prototypes")
 
 	ADD_CUSTOM_COMMAND(
 		OUTPUT ${CLAR_PATH}/clar.suite
-		COMMAND ${PYTHON_EXECUTABLE} clar/generate.py . -xonline
+		COMMAND ${PYTHON_EXECUTABLE} generate.py -xonline .
 		DEPENDS ${SRC_TEST}
 		WORKING_DIRECTORY ${CLAR_PATH}
 	)
 
 	SET_SOURCE_FILES_PROPERTIES(
-		${CLAR_PATH}/clar/clar.c
+		${CLAR_PATH}/clar.c
 		PROPERTIES OBJECT_DEPENDS ${CLAR_PATH}/clar.suite)
 
 	ADD_EXECUTABLE(libgit2_clar ${SRC_GIT2} ${SRC_OS} ${SRC_CLAR} ${SRC_TEST} ${SRC_ZLIB} ${SRC_HTTP} ${SRC_REGEX} ${SRC_SHA1})
