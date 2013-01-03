@@ -247,7 +247,7 @@ IF (BUILD_CLAR)
 	SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-missing-prototypes")
 
 	ADD_CUSTOM_TARGET(
-		clar_submodule
+		clar_submodule ALL
 		COMMAND git submodule update --init tests-clar/clar
 		WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 	)
@@ -255,7 +255,7 @@ IF (BUILD_CLAR)
 	ADD_CUSTOM_COMMAND(
 		OUTPUT ${CLAR_PATH}/clar.suite
 		COMMAND ${PYTHON_EXECUTABLE} clar/generate.py . -xonline
-		DEPENDS clar_submodule ${SRC_TEST}
+		DEPENDS ${SRC_TEST}
 		WORKING_DIRECTORY ${CLAR_PATH}
 	)
 
