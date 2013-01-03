@@ -46,8 +46,12 @@ void test_core_env__cleanup(void)
 		env_save[i] = NULL;
 	}
 
+	/* these will probably have already been cleaned up, but if a test
+	 * fails, then it's probably good to try and clear out these dirs
+	 */
 	for (val = home_values; *val != NULL; val++) {
-		cl_fixture_cleanup(*val);
+		if (**val != '\0')
+			(void)p_rmdir(*val);
 	}
 }
 
@@ -79,8 +83,10 @@ void test_core_env__0(void)
 		 * we are on a filesystem that doesn't support the
 		 * characters in question and skip this test...
 		 */
-		if (p_mkdir(*val, 0777) != 0)
+		if (p_mkdir(*val, 0777) != 0) {
+			*val = ""; /* mark as not created */
 			continue;
+		}
 
 		cl_git_pass(git_path_prettify(&path, *val, NULL));
 
@@ -130,6 +136,8 @@ void test_core_env__0(void)
 			}
 		}
 #endif
+
+		(void)p_rmdir(*val);
 	}
 
 	git_buf_free(&path);
