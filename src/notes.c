@@ -129,10 +129,10 @@ static int manipulate_note_in_tree_r(
 	git_tree *parent,
 	git_oid *note_oid,
 	const char *annotated_object_sha,
-	int fanout, 
+	int fanout,
 	int (*note_exists_cb)(
-		git_tree **out, 
-		git_repository *repo, 
+		git_tree **out,
+		git_repository *repo,
 		git_tree *parent,
 		git_oid *note_oid,
 		const char *annotated_object_sha,
@@ -147,7 +147,7 @@ static int manipulate_note_in_tree_r(
 		int fanout,
 		int current_error))
 {
-	int error = -1;	
+	int error = -1;
 	git_tree *subtree = NULL, *new = NULL;
 	char subtree_name[3];
 
@@ -275,7 +275,7 @@ static int note_write(git_oid *out,
 	int error;
 	git_oid oid;
 	git_tree *tree = NULL;
-	
+
 	// TODO: should we apply filters?
 	/* create note object */
 	if ((error = git_blob_create_frombuffer(&oid, repo, note, strlen(note))) < 0)
@@ -351,7 +351,7 @@ static int note_remove(git_repository *repo,
 	int error;
 	git_tree *tree_after_removal = NULL;
 	git_oid oid;
-		
+
 	if ((error = manipulate_note_in_tree_r(
 		&tree_after_removal, repo, tree, NULL, target, 0,
 		remove_note_in_tree_eexists_cb, remove_note_in_tree_enotfound_cb)) < 0)
