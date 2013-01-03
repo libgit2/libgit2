@@ -100,7 +100,10 @@ char *git_oid_tostr(char *out, size_t n, const git_oid *oid)
 
 	n--; /* allow room for terminating NUL */
 
-	if (n > 0 && oid != NULL) {
+	if (oid == NULL)
+		n = 0;
+
+	if (n > 0) {
 		git_oid_fmt(str, oid);
 		if (n > GIT_OID_HEXSZ)
 			n = GIT_OID_HEXSZ;
