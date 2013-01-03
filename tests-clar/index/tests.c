@@ -24,6 +24,7 @@ static struct test_entry test_entries[] = {
    {48, "src/revobject.h", 1448, 0x4C3F7FE2}
 };
 
+static char *path_to_cleanup = NULL;
 
 // Helpers
 static void copy_file(const char *src, const char *dst)
@@ -74,6 +75,9 @@ void test_index_tests__initialize(void)
 
 void test_index_tests__cleanup(void)
 {
+	if (path_to_cleanup)
+		cl_fixture_cleanup(path_to_cleanup);
+	path_to_cleanup = NULL;
 }
 
 
@@ -246,7 +250,7 @@ void test_index_tests__add(void)
 
    git_index_free(index);
    git_repository_free(repo);
-	cl_fixture_cleanup("myrepo");
+	path_to_cleanup = "myrepo";
 }
 
 void test_index_tests__add_from_workdir_to_a_bare_repository_returns_EBAREPO(void)

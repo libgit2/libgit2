@@ -14,6 +14,18 @@ static const char *env_vars[NUM_VARS] = { "HOME" };
 
 static char *env_save[NUM_VARS];
 
+static char *home_values[] = {
+	"fake_home",
+	"fáke_hõme", /* all in latin-1 supplement */
+	"fĀke_Ĥome", /* latin extended */
+	"fακε_hοmέ",  /* having fun with greek */
+	"faงe_นome", /* now I have no idea, but thai characters */
+	"f\xe1\x9cx80ke_\xe1\x9c\x91ome", /* tagalog characters */
+	"\xe1\xb8\x9fẢke_hoṁe", /* latin extended additional */
+	"\xf0\x9f\x98\x98\xf0\x9f\x98\x82", /* emoticons */
+	NULL
+};
+
 void test_core_env__initialize(void)
 {
 	int i;
@@ -24,6 +36,8 @@ void test_core_env__initialize(void)
 void test_core_env__cleanup(void)
 {
 	int i;
+	char **val;
+
 	for (i = 0; i < NUM_VARS; ++i) {
 		cl_setenv(env_vars[i], env_save[i]);
 #ifdef GIT_WIN32
@@ -31,11 +45,16 @@ void test_core_env__cleanup(void)
 #endif
 		env_save[i] = NULL;
 	}
+
+	for (val = home_values; *val != NULL; val++) {
+		cl_fixture_cleanup(*val);
+	}
 }
 
 static void setenv_and_check(const char *name, const char *value)
 {
 	char *check;
+
 	cl_git_pass(cl_setenv(name, value));
 	check = cl_getenv(name);
 	cl_assert_equal_s(value, check);
@@ -46,17 +65,6 @@ static void setenv_and_check(const char *name, const char *value)
 
 void test_core_env__0(void)
 {
-	static char *home_values[] = {
-		"fake_home",
-		"fáke_hõme", /* all in latin-1 supplement */
-		"fĀke_Ĥome", /* latin extended */
-		"fακε_hοmέ",  /* having fun with greek */
-		"faงe_นome", /* now I have no idea, but thai characters */
-		"f\xe1\x9cx80ke_\xe1\x9c\x91ome", /* tagalog characters */
-		"\xe1\xb8\x9fẢke_hoṁe", /* latin extended additional */
-		"\xf0\x9f\x98\x98\xf0\x9f\x98\x82", /* emoticons */
-		NULL
-	};
 	git_buf path = GIT_BUF_INIT, found = GIT_BUF_INIT;
 	char testfile[16], tidx = '0';
 	char **val;
@@ -122,8 +130,6 @@ void test_core_env__0(void)
 			}
 		}
 #endif
-
-		cl_fixture_cleanup(*val);
 	}
 
 	git_buf_free(&path);

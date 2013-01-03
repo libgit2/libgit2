@@ -9,6 +9,26 @@ static git_packbuilder *_packbuilder;
 static git_indexer *_indexer;
 static git_vector _commits;
 static int _commits_is_initialized;
+static char *path_to_cleanup = NULL;
+static git_oid oid_to_cleanup = {{0}};
+
+static void cleanup_pack(const git_oid *oid)
+{
+	char *hash, path[1024] = {0};
+
+	if (git_oid_iszero(&oid_to_cleanup)) return;
+
+	hash = git_oid_allocfmt(oid);
+
+	sprintf(path, "pack-%s.idx", hash);
+	p_unlink(path);
+
+	sprintf(path, "pack-%s.pack", hash);
+	p_unlink(path);
+
+	git__free(hash);
+	git_oid_fromstrn(&oid_to_cleanup, "", 0);
+}
 
 void test_pack_packbuilder__initialize(void)
 {
@@ -43,6 +63,12 @@ void test_pack_packbuilder__cleanup(void)
 
 	git_repository_free(_repo);
 	_repo = NULL;
+
+	if (path_to_cleanup)
+		cl_fixture_cleanup(path_to_cleanup);
+	path_to_cleanup = NULL;
+
+	cleanup_pack(&oid_to_cleanup);
 }
 
 static void seed_packbuilder(void)
@@ -73,24 +99,10 @@ static void seed_packbuilder(void)
 	}
 }
 
-static void cleanup_pack(const git_oid *oid)
-{
-	char *hash, path[1024] = {0};
-
-	hash = git_oid_allocfmt(oid);
-
-	sprintf(path, "pack-%s.idx", hash);
-	p_unlink(path);
-
-	sprintf(path, "pack-%s.pack", hash);
-	p_unlink(path);
-
-	git__free(hash);
-}
-
 void test_pack_packbuilder__create_pack(void)
 {
 	git_transfer_progress stats;
+	path_to_cleanup = "testpack.pack";
 
 	seed_packbuilder();
 	cl_git_pass(git_packbuilder_write(_packbuilder, "testpack.pack"));
@@ -98,9 +110,8 @@ void test_pack_packbuilder__create_pack(void)
 	cl_git_pass(git_indexer_new(&_indexer, "testpack.pack"));
 	cl_git_pass(git_indexer_run(_indexer, &stats));
 	cl_git_pass(git_indexer_write(_indexer));
+	git_oid_cpy(&oid_to_cleanup, git_indexer_hash(_indexer));
 
-	cl_fixture_cleanup("testpack.pack");
-	cleanup_pack(git_indexer_hash(_indexer));
 }
 
 static git_transfer_progress stats;
@@ -116,13 +127,11 @@ static int foreach_cb(void *buf, size_t len, void *payload)
 void test_pack_packbuilder__foreach(void)
 {
 	git_indexer_stream *idx;
-	git_oid oid;
 
 	seed_packbuilder();
 	cl_git_pass(git_indexer_stream_new(&idx, ".", NULL, NULL));
 	cl_git_pass(git_packbuilder_foreach(_packbuilder, foreach_cb, idx));
 	cl_git_pass(git_indexer_stream_finalize(idx, &stats));
-	git_oid_cpy(&oid, git_indexer_stream_hash(idx));
+	git_oid_cpy(&oid_to_cleanup, git_indexer_stream_hash(idx));
 	git_indexer_stream_free(idx);
-	cleanup_pack(&oid);
 }

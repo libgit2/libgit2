@@ -11,6 +11,11 @@ static void transfer_cb(const git_transfer_progress *stats, void *payload)
 	(*callcount)++;
 }
 
+void test_network_fetchlocal__cleanup(void)
+{
+	cl_fixture_cleanup("foo");
+}
+
 void test_network_fetchlocal__complete(void)
 {
 	git_repository *repo;
@@ -33,7 +38,6 @@ void test_network_fetchlocal__complete(void)
 	git_strarray_free(&refnames);
 	git_remote_free(origin);
 	git_repository_free(repo);
-	cl_fixture_cleanup("foo");
 }
 
 void test_network_fetchlocal__partial(void)

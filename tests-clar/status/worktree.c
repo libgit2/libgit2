@@ -6,6 +6,8 @@
 #include "util.h"
 #include "path.h"
 
+static char *path_to_cleanup = NULL;
+
 /**
  * Initializer
  *
@@ -25,6 +27,10 @@ void test_status_worktree__initialize(void)
 void test_status_worktree__cleanup(void)
 {
 	cl_git_sandbox_cleanup();
+
+	if (path_to_cleanup)
+		cl_fixture_cleanup(path_to_cleanup);
+	path_to_cleanup = NULL;
 }
 
 /**
@@ -446,7 +452,7 @@ void test_status_worktree__first_commit_in_progress(void)
 
 	git_index_free(index);
 	git_repository_free(repo);
-	cl_fixture_cleanup("getting_started");
+	path_to_cleanup = "getting_started";
 }
 
 
@@ -596,7 +602,7 @@ void test_status_worktree__bracket_in_filename(void)
 
 	git_index_free(index);
 	git_repository_free(repo);
-	cl_fixture_cleanup("with_bracket");
+	path_to_cleanup = "with_bracket";
 }
 
 void test_status_worktree__space_in_filename(void)
@@ -661,7 +667,7 @@ void test_status_worktree__space_in_filename(void)
 
 	git_index_free(index);
 	git_repository_free(repo);
-	cl_fixture_cleanup("with_space");
+	path_to_cleanup = "with_space";
 }
 
 static const char *filemode_paths[] = {
@@ -772,7 +778,7 @@ void test_status_worktree__disable_pathspec_match(void)
 	);
 
 	git_repository_free(repo);
-	cl_fixture_cleanup("pathspec");
+	path_to_cleanup = "pathspec";
 }
 
 
@@ -825,7 +831,7 @@ void test_status_worktree__new_staged_file_must_handle_crlf(void)
 	git_config_free(config);
 	git_index_free(index);
 	git_repository_free(repo);
-	cl_fixture_cleanup("getting_started");
+	path_to_cleanup = "getting_started";
 }
 
 void test_status_worktree__line_endings_dont_count_as_changes_with_autocrlf(void)
