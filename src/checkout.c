@@ -1223,8 +1223,7 @@ int git_checkout_iterator(
 
 	/* Handle case insensitivity for baseline if necessary */
 	if (workdir->ignore_case && !baseline->ignore_case) {
-		if ((error = git_iterator_spoolandsort(
-				&baseline, baseline, git_index_entry__cmp_icase, true)) < 0)
+		if ((error = git_iterator_spoolandsort_push(baseline, true)) < 0)
 			goto cleanup;
 	}
 

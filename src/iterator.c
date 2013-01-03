@@ -30,8 +30,8 @@
 	(P)->base.start   = start ? git__strdup(start) : NULL; \
 	(P)->base.end     = end ? git__strdup(end) : NULL; \
 	(P)->base.ignore_case = false; \
-	if ((start && !(P)->base.start) || (end && !(P)->base.end)) \
-		return -1; \
+	if ((start && !(P)->base.start) || (end && !(P)->base.end)) { \
+		git__free(P); return -1; } \
 	} while (0)
 
 static int iterator__reset_range(
@@ -990,10 +990,11 @@ fail:
 
 git_index *git_iterator_index_get_index(git_iterator *iter)
 {
-	if (iter->type == GIT_ITERATOR_SPOOLANDSORT)
-		iter = ((spoolandsort_iterator *)iter)->wrapped;
-
 	if (iter->type == GIT_ITERATOR_INDEX)
+		return ((index_iterator *)iter)->index;
+
+	if (iter->type == GIT_ITERATOR_SPOOLANDSORT &&
+		((spoolandsort_callbacks *)iter->cb)->orig_type == GIT_ITERATOR_INDEX)
 		return ((index_iterator *)iter)->index;
 
 	return NULL;
@@ -1002,17 +1003,9 @@ git_index *git_iterator_index_get_index(git_iterator *iter)
 git_iterator_type_t git_iterator_inner_type(git_iterator *iter)
 {
 	if (iter->type == GIT_ITERATOR_SPOOLANDSORT)
-		iter = ((spoolandsort_iterator *)iter)->wrapped;
+		return ((spoolandsort_callbacks *)iter->cb)->orig_type;
 
 	return iter->type;
-}
-
-git_iterator *git_iterator_spoolandsort_inner_iterator(git_iterator *iter)
-{
-	if (iter->type == GIT_ITERATOR_SPOOLANDSORT)
-		return ((spoolandsort_iterator *)iter)->wrapped;
-
-	return NULL;
 }
 
 int git_iterator_current_tree_entry(
@@ -1085,8 +1078,8 @@ int git_iterator_advance_into_directory(
 
 	if (iter->type == GIT_ITERATOR_WORKDIR &&
 		wi->entry.path &&
-		S_ISDIR(wi->entry.mode) &&
-		!S_ISGITLINK(wi->entry.mode))
+		(wi->entry.mode == GIT_FILEMODE_TREE ||
+		 wi->entry.mode == GIT_FILEMODE_COMMIT))
 	{
 		if (workdir_iterator__expand_dir(wi) < 0)
 			/* if error loading or if empty, skip the directory. */

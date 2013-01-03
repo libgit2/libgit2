@@ -198,7 +198,4 @@ extern git_index *git_iterator_index_get_index(git_iterator *iter);
 
 extern git_iterator_type_t git_iterator_inner_type(git_iterator *iter);
 
-extern git_iterator *git_iterator_spoolandsort_inner_iterator(
-	git_iterator *iter);
-
 #endif

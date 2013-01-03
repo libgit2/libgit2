@@ -589,8 +589,7 @@ int git_diff__from_iterators(
 
 	*diff_ptr = NULL;
 
-	if (!diff ||
-		diff_list_init_from_iterators(diff, old_iter, new_iter) < 0)
+	if (!diff || diff_list_init_from_iterators(diff, old_iter, new_iter) < 0)
 		goto fail;
 
 	if (diff->opts.flags & GIT_DIFF_DELTAS_ARE_ICASE) {
