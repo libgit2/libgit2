@@ -441,6 +441,7 @@ void test_config_read__can_load_and_parse_an_empty_config_file(void)
 	cl_assert_equal_i(GIT_ENOTFOUND, git_config_get_int32(&i, cfg, "nope.neither"));
 
 	git_config_free(cfg);
+	cl_fixture_cleanup("./empty");
 }
 
 void test_config_read__cannot_load_a_non_existing_config_file(void)

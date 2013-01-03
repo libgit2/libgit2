@@ -211,6 +211,7 @@ void test_stash_save__cannot_stash_against_a_bare_repository(void)
 		git_stash_save(&stash_tip_oid, local, signature, NULL, GIT_STASH_DEFAULT));
 
 	git_repository_free(local);
+	cl_fixture_cleanup("sorry-it-is-a-non-bare-only-party");
 }
 
 void test_stash_save__can_stash_against_a_detached_head(void)
