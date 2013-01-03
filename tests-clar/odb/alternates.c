@@ -6,7 +6,7 @@ static git_buf destpath, filepath;
 static const char *paths[] = {
 	"A.git", "B.git", "C.git", "D.git", "E.git", "F.git", "G.git"
 };
-static 	git_filebuf file;
+static git_filebuf file;
 static git_repository *repo;
 
 void test_odb_alternates__cleanup(void)
@@ -16,7 +16,7 @@ void test_odb_alternates__cleanup(void)
 	git_buf_free(&destpath);
 	git_buf_free(&filepath);
 
-	for (i=0; i<ARRAY_SIZE(paths); i++)
+	for (i = 0; i < ARRAY_SIZE(paths); i++)
 		cl_fixture_cleanup(paths[i]);
 }
 
