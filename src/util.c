@@ -199,17 +199,15 @@ int git__strncmp(const char *a, const char *b, size_t sz)
 
 int git__strncasecmp(const char *a, const char *b, size_t sz)
 {
-	int al = 0, bl = 0;
+	int al, bl;
 
-	while (sz && *a && *b) {
+	do {
 		al = (unsigned char)tolower(*a);
 		bl = (unsigned char)tolower(*b);
-		if (al != bl)
-			break;
-		--sz, ++a, ++b;
-	}
+		++a, ++b;
+	} while (--sz && al && al == bl);
 
-	return !sz ? 0 : al - bl;
+	return al - bl;
 }
 
 void git__strntolower(char *str, size_t len)
