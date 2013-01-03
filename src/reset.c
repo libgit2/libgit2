@@ -126,7 +126,7 @@ int git_reset(
 		goto cleanup;
 	}
 
-	if ((error = git_merge__cleanup(repo)) < 0) {
+	if ((error = git_repository_merge_cleanup(repo)) < 0) {
 		giterr_set(GITERR_INDEX, "%s - Failed to clean up merge data.", ERROR_MSG);
 		goto cleanup;
 	}

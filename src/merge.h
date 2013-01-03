@@ -16,7 +16,6 @@
 
 #define MERGE_CONFIG_FILE_MODE	0666
 
-int git_merge__cleanup(git_repository *repo);
 int git_merge__bases_many(git_commit_list **out, git_revwalk *walk, git_commit_list_node *one, git_vector *twos);
 
 #endif
