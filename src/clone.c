@@ -362,7 +362,7 @@ static bool should_checkout(
 	if (!opts)
 		return false;
 
-	if (opts->checkout_strategy == GIT_CHECKOUT_DEFAULT)
+	if (opts->checkout_strategy == GIT_CHECKOUT_NONE)
 		return false;
 
 	return !git_repository_head_orphan(repo);
