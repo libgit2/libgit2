@@ -1,6 +1,7 @@
 #include "clar_libgit2.h"
 #include "iterator.h"
 #include "vector.h"
+#include "posix.h"
 
 static git_repository *_repo;
 static git_revwalk *_revwalker;
@@ -11,7 +12,7 @@ static int _commits_is_initialized;
 
 void test_pack_packbuilder__initialize(void)
 {
-	cl_git_pass(git_repository_open(&_repo, cl_fixture("testrepo.git")));
+	_repo = cl_git_sandbox_init("testrepo.git");
 	cl_git_pass(git_revwalk_new(&_revwalker, _repo));
 	cl_git_pass(git_packbuilder_new(&_packbuilder, _repo));
 	cl_git_pass(git_vector_init(&_commits, 0, NULL));
@@ -40,7 +41,7 @@ void test_pack_packbuilder__cleanup(void)
 	git_indexer_free(_indexer);
 	_indexer = NULL;
 
-	git_repository_free(_repo);
+	cl_git_sandbox_cleanup();
 	_repo = NULL;
 }
 
@@ -88,9 +89,7 @@ static git_transfer_progress stats;
 static int foreach_cb(void *buf, size_t len, void *payload)
 {
 	git_indexer_stream *idx = (git_indexer_stream *) payload;
-
 	cl_git_pass(git_indexer_stream_add(idx, buf, len, &stats));
-
 	return 0;
 }
 

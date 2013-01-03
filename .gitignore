@@ -1,6 +1,5 @@
-/tests-clar/clar.h
-/tests-clar/clar_main.c
-/tests-clar/clar_main.c.rule
+/tests-clar/clar.suite
+/tests-clar/.clarcache
 /apidocs
 /trash-*.exe
 /libgit2.pc

@@ -2,17 +2,15 @@
 
 #include "repository.h"
 #include "fetchhead.h"
-#include "fetchhead_data.h"
+#include "../fetchhead/fetchhead_data.h"
 #include "git2/clone.h"
-
-CL_IN_CATEGORY("network")
 
 #define LIVE_REPO_URL "git://github.com/libgit2/TestGitRepository"
 
 static git_repository *g_repo;
 static git_clone_options g_options;
 
-void test_fetchhead_network__initialize(void)
+void test_online_fetchhead__initialize(void)
 {
 	g_repo = NULL;
 
@@ -20,21 +18,18 @@ void test_fetchhead_network__initialize(void)
 	g_options.version = GIT_CLONE_OPTIONS_VERSION;
 }
 
-static void cleanup_repository(void *path)
+void test_online_fetchhead__cleanup(void)
 {
 	if (g_repo) {
 		git_repository_free(g_repo);
 		g_repo = NULL;
 	}
 
-	cl_fixture_cleanup((const char *)path);
+	cl_fixture_cleanup("./foo");
 }
-
 
 static void fetchhead_test_clone(void)
 {
-	cl_set_cleanup(&cleanup_repository, "./foo");
-
 	cl_git_pass(git_clone(&g_repo, LIVE_REPO_URL, "./foo", &g_options));
 }
 
@@ -65,19 +60,19 @@ static void fetchhead_test_fetch(const char *fetchspec, const char *expected_fet
 	cl_assert(equals);
 }
 
-void test_fetchhead_network__wildcard_spec(void)
+void test_online_fetchhead__wildcard_spec(void)
 {
 	fetchhead_test_clone();
 	fetchhead_test_fetch(NULL, FETCH_HEAD_WILDCARD_DATA);
 }
 
-void test_fetchhead_network__explicit_spec(void)
+void test_online_fetchhead__explicit_spec(void)
 {
 	fetchhead_test_clone();
 	fetchhead_test_fetch("refs/heads/first-merge:refs/remotes/origin/first-merge", FETCH_HEAD_EXPLICIT_DATA);
 }
 
-void test_fetchhead_network__no_merges(void)
+void test_online_fetchhead__no_merges(void)
 {
 	git_config *config;
 

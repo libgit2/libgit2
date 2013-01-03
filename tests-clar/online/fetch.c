@@ -1,16 +1,14 @@
 #include "clar_libgit2.h"
 
-CL_IN_CATEGORY("network")
-
 static git_repository *_repo;
 static int counter;
 
-void test_network_fetch__initialize(void)
+void test_online_fetch__initialize(void)
 {
 	cl_git_pass(git_repository_init(&_repo, "./fetch", 0));
 }
 
-void test_network_fetch__cleanup(void)
+void test_online_fetch__cleanup(void)
 {
 	git_repository_free(_repo);
 	_repo = NULL;
@@ -55,22 +53,22 @@ static void do_fetch(const char *url, git_remote_autotag_option_t flag, int n)
 	git_remote_free(remote);
 }
 
-void test_network_fetch__default_git(void)
+void test_online_fetch__default_git(void)
 {
 	do_fetch("git://github.com/libgit2/TestGitRepository.git", GIT_REMOTE_DOWNLOAD_TAGS_AUTO, 6);
 }
 
-void test_network_fetch__default_http(void)
+void test_online_fetch__default_http(void)
 {
 	do_fetch("http://github.com/libgit2/TestGitRepository.git", GIT_REMOTE_DOWNLOAD_TAGS_AUTO, 6);
 }
 
-void test_network_fetch__no_tags_git(void)
+void test_online_fetch__no_tags_git(void)
 {
 	do_fetch("git://github.com/libgit2/TestGitRepository.git", GIT_REMOTE_DOWNLOAD_TAGS_NONE, 3);
 }
 
-void test_network_fetch__no_tags_http(void)
+void test_online_fetch__no_tags_http(void)
 {
 	do_fetch("http://github.com/libgit2/TestGitRepository.git", GIT_REMOTE_DOWNLOAD_TAGS_NONE, 3);
 }
@@ -83,7 +81,7 @@ static void transferProgressCallback(const git_transfer_progress *stats, void *p
 	*invoked = true;
 }
 
-void test_network_fetch__doesnt_retrieve_a_pack_when_the_repository_is_up_to_date(void)
+void test_online_fetch__doesnt_retrieve_a_pack_when_the_repository_is_up_to_date(void)
 {
 	git_repository *_repository;
 	bool invoked = false;
