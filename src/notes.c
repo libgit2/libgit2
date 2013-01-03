@@ -129,10 +129,10 @@ static int manipulate_note_in_tree_r(
 	git_tree *parent,
 	git_oid *note_oid,
 	const char *annotated_object_sha,
-	int fanout, 
+	int fanout,
 	int (*note_exists_cb)(
-		git_tree **out, 
-		git_repository *repo, 
+		git_tree **out,
+		git_repository *repo,
 		git_tree *parent,
 		git_oid *note_oid,
 		const char *annotated_object_sha,
@@ -147,7 +147,7 @@ static int manipulate_note_in_tree_r(
 		int fanout,
 		int current_error))
 {
-	int error = -1;	
+	int error = -1;
 	git_tree *subtree = NULL, *new = NULL;
 	char subtree_name[3];
 
@@ -270,12 +270,13 @@ static int note_write(git_oid *out,
 	const char *note,
 	git_tree *commit_tree,
 	const char *target,
-	git_commit **parents)
+	git_commit **parents,
+	int allow_note_overwrite)
 {
 	int error;
 	git_oid oid;
 	git_tree *tree = NULL;
-	
+
 	// TODO: should we apply filters?
 	/* create note object */
 	if ((error = git_blob_create_frombuffer(&oid, repo, note, strlen(note))) < 0)
@@ -283,7 +284,8 @@ static int note_write(git_oid *out,
 
 	if ((error = manipulate_note_in_tree_r(
 		&tree, repo, commit_tree, &oid, target, 0,
-		insert_note_in_tree_eexists_cb, insert_note_in_tree_enotfound_cb)) < 0)
+		allow_note_overwrite ? insert_note_in_tree_enotfound_cb : insert_note_in_tree_eexists_cb,
+		insert_note_in_tree_enotfound_cb)) < 0)
 		goto cleanup;
 
 	if (out)
@@ -351,7 +353,7 @@ static int note_remove(git_repository *repo,
 	int error;
 	git_tree *tree_after_removal = NULL;
 	git_oid oid;
-		
+
 	if ((error = manipulate_note_in_tree_r(
 		&tree_after_removal, repo, tree, NULL, target, 0,
 		remove_note_in_tree_eexists_cb, remove_note_in_tree_enotfound_cb)) < 0)
@@ -449,7 +451,8 @@ int git_note_create(
 	const git_signature *committer,
 	const char *notes_ref,
 	const git_oid *oid,
-	const char *note)
+	const char *note,
+	int allow_note_overwrite)
 {
 	int error;
 	char *target = NULL;
@@ -465,7 +468,7 @@ int git_note_create(
 		goto cleanup;
 
 	error = note_write(out, repo, author, committer, notes_ref,
-			note, tree, target, &commit);
+			note, tree, target, &commit, allow_note_overwrite);
 
 cleanup:
 	git__free(target);
