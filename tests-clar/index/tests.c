@@ -246,6 +246,7 @@ void test_index_tests__add(void)
 
    git_index_free(index);
    git_repository_free(repo);
+	cl_fixture_cleanup("myrepo");
 }
 
 void test_index_tests__add_from_workdir_to_a_bare_repository_returns_EBAREPO(void)

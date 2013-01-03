@@ -33,6 +33,7 @@ void test_network_fetchlocal__complete(void)
 	git_strarray_free(&refnames);
 	git_remote_free(origin);
 	git_repository_free(repo);
+	cl_fixture_cleanup("foo");
 }
 
 void test_network_fetchlocal__partial(void)

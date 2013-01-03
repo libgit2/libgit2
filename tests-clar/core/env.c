@@ -122,6 +122,8 @@ void test_core_env__0(void)
 			}
 		}
 #endif
+
+		cl_fixture_cleanup(*val);
 	}
 
 	git_buf_free(&path);

@@ -11,8 +11,13 @@ static git_repository *repo;
 
 void test_odb_alternates__cleanup(void)
 {
+	size_t i;
+
 	git_buf_free(&destpath);
 	git_buf_free(&filepath);
+
+	for (i=0; i<ARRAY_SIZE(paths); i++)
+		cl_fixture_cleanup(paths[i]);
 }
 
 static void init_linked_repo(const char *path, const char *alternate)
