@@ -148,7 +148,7 @@ IF (MSVC)
    # Precompiled headers
 
 ELSE ()
-	SET(CMAKE_C_FLAGS "-D_GNU_SOURCE -Wall -Wextra -Wno-missing-field-initializers -Wstrict-aliasing=2 -Wstrict-prototypes -Wmissing-prototypes ${CMAKE_C_FLAGS}")
+	SET(CMAKE_C_FLAGS "-D_GNU_SOURCE -Wall -Wextra -Wno-missing-field-initializers -Wstrict-aliasing=2 -Wstrict-prototypes ${CMAKE_C_FLAGS}")
 	IF (MINGW) # MinGW always does PIC and complains if we tell it to
 		STRING(REGEX REPLACE "-fPIC" "" CMAKE_SHARED_LIBRARY_C_FLAGS "${CMAKE_SHARED_LIBRARY_C_FLAGS}")
 	ELSE ()
@@ -244,7 +244,6 @@ IF (BUILD_CLAR)
 	INCLUDE_DIRECTORIES(${CLAR_PATH})
 	FILE(GLOB_RECURSE SRC_TEST ${CLAR_PATH}/*/*.c)
 	SET(SRC_CLAR "${CLAR_PATH}/main.c" "${CLAR_PATH}/clar_libgit2.c" "${CLAR_PATH}/clar.c")
-	SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-missing-prototypes")
 
 	ADD_CUSTOM_COMMAND(
 		OUTPUT ${CLAR_PATH}/clar.suite
