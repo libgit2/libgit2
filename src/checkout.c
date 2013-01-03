@@ -44,7 +44,6 @@ typedef struct {
 	git_checkout_opts opts;
 	bool opts_free_baseline;
 	char *pfx;
-	git_iterator *baseline;
 	git_index *index;
 	git_pool pool;
 	git_vector removes;
@@ -1241,7 +1240,7 @@ cleanup:
 
 	git_diff_list_free(data.diff);
 	git_iterator_free(workdir);
-	git_iterator_free(data.baseline);
+	git_iterator_free(baseline);
 	git__free(actions);
 	git__free(counts);
 	checkout_data_clear(&data);
