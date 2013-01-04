@@ -2,17 +2,6 @@
 #include "posix.h"
 #include "path.h"
 
-void clar_on_init(void)
-{
-	git_threads_init();
-}
-
-void clar_on_shutdown(void)
-{
-	giterr_clear();
-	git_threads_shutdown();
-}
-
 void cl_git_mkfile(const char *filename, const char *content)
 {
 	int fd;

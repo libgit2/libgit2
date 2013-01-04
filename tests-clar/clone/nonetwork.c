@@ -20,14 +20,14 @@ void test_clone_nonetwork__initialize(void)
 	g_options.checkout_opts.checkout_strategy = GIT_CHECKOUT_SAFE;
 }
 
-static void cleanup_repository(void *path)
+void test_clone_nonetwork__cleanup(void)
 {
 	if (g_repo) {
 		git_repository_free(g_repo);
 		g_repo = NULL;
 	}
 
-	cl_fixture_cleanup((const char *)path);
+	cl_fixture_cleanup("./foo");
 }
 
 void test_clone_nonetwork__bad_url(void)
@@ -42,39 +42,30 @@ void test_clone_nonetwork__bad_url(void)
 
 void test_clone_nonetwork__local(void)
 {
-	cl_set_cleanup(&cleanup_repository, "./foo");
 	cl_git_pass(git_clone(&g_repo, cl_git_fixture_url("testrepo.git"), "./foo", &g_options));
 }
 
 void test_clone_nonetwork__local_absolute_path(void)
 {
 	const char *local_src;
-	cl_set_cleanup(&cleanup_repository, "./foo");
-
 	local_src = cl_fixture("testrepo.git");
 	cl_git_pass(git_clone(&g_repo, local_src, "./foo", &g_options));
 }
 
 void test_clone_nonetwork__local_bare(void)
 {
-	cl_set_cleanup(&cleanup_repository, "./foo");
-
 	g_options.bare = true;
 	cl_git_pass(git_clone(&g_repo, cl_git_fixture_url("testrepo.git"), "./foo", &g_options));
 }
 
 void test_clone_nonetwork__fail_when_the_target_is_a_file(void)
 {
-	cl_set_cleanup(&cleanup_repository, "./foo");
-
 	cl_git_mkfile("./foo", "Bar!");
 	cl_git_fail(git_clone(&g_repo, cl_git_fixture_url("testrepo.git"), "./foo", &g_options));
 }
 
 void test_clone_nonetwork__fail_with_already_existing_but_non_empty_directory(void)
 {
-	cl_set_cleanup(&cleanup_repository, "./foo");
-
 	p_mkdir("./foo", GIT_DIR_MODE);
 	cl_git_mkfile("./foo/bar", "Baz!");
 	cl_git_fail(git_clone(&g_repo, cl_git_fixture_url("testrepo.git"), "./foo", &g_options));
@@ -84,7 +75,6 @@ void test_clone_nonetwork__custom_origin_name(void)
 {
 	git_remote *remote;
 
-	cl_set_cleanup(&cleanup_repository, "./foo");
 	g_options.remote_name = "my_origin";
 	cl_git_pass(git_clone(&g_repo, cl_git_fixture_url("testrepo.git"), "./foo", &g_options));
 
@@ -98,7 +88,6 @@ void test_clone_nonetwork__custom_push_url(void)
 	git_remote *remote;
 	const char *url = "http://example.com";
 
-	cl_set_cleanup(&cleanup_repository, "./foo");
 	g_options.pushurl = url;
 	cl_git_pass(git_clone(&g_repo, cl_git_fixture_url("testrepo.git"), "./foo", &g_options));
 
@@ -115,7 +104,6 @@ void test_clone_nonetwork__custom_fetch_spec(void)
 	const git_refspec *actual_fs;
 	const char *spec = "+refs/heads/master:refs/heads/foo";
 
-	cl_set_cleanup(&cleanup_repository, "./foo");
 	g_options.fetch_spec = spec;
 	cl_git_pass(git_clone(&g_repo, cl_git_fixture_url("testrepo.git"), "./foo", &g_options));
 
@@ -136,7 +124,6 @@ void test_clone_nonetwork__custom_push_spec(void)
 	const git_refspec *actual_fs;
 	const char *spec = "+refs/heads/master:refs/heads/foo";
 
-	cl_set_cleanup(&cleanup_repository, "./foo");
 	g_options.push_spec = spec;
 	cl_git_pass(git_clone(&g_repo, cl_git_fixture_url("testrepo.git"), "./foo", &g_options));
 
@@ -152,7 +139,6 @@ void test_clone_nonetwork__custom_autotag(void)
 {
 	git_strarray tags = {0};
 
-	cl_set_cleanup(&cleanup_repository, "./foo");
 	g_options.remote_autotag = GIT_REMOTE_DOWNLOAD_TAGS_NONE;
 	cl_git_pass(git_clone(&g_repo, cl_git_fixture_url("testrepo.git"), "./foo", &g_options));
 
@@ -162,8 +148,6 @@ void test_clone_nonetwork__custom_autotag(void)
 
 void test_clone_nonetwork__cope_with_already_existing_directory(void)
 {
-	cl_set_cleanup(&cleanup_repository, "./foo");
-
 	p_mkdir("./foo", GIT_DIR_MODE);
 	cl_git_pass(git_clone(&g_repo, cl_git_fixture_url("testrepo.git"), "./foo", &g_options));
 }
@@ -171,7 +155,6 @@ void test_clone_nonetwork__cope_with_already_existing_directory(void)
 void test_clone_nonetwork__can_prevent_the_checkout_of_a_standard_repo(void)
 {
 	git_buf path = GIT_BUF_INIT;
-	cl_set_cleanup(&cleanup_repository, "./foo");
 
 	g_options.checkout_opts.checkout_strategy = 0;
 	cl_git_pass(git_clone(&g_repo, cl_git_fixture_url("testrepo.git"), "./foo", &g_options));

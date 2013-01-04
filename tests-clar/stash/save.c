@@ -32,6 +32,7 @@ void test_stash_save__cleanup(void)
 	repo = NULL;
 
 	cl_git_pass(git_futils_rmdir_r("stash", NULL, GIT_RMDIR_REMOVE_FILES));
+	cl_fixture_cleanup("sorry-it-is-a-non-bare-only-party");
 }
 
 static void assert_object_oid(const char* revision, const char* expected_oid, git_otype type)

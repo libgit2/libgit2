@@ -431,11 +431,18 @@ void test_config_read__simple_read_from_specific_level(void)
 	git_config_free(cfg);
 }
 
+static void clean_empty_config(void *unused)
+{
+	GIT_UNUSED(unused);
+	cl_fixture_cleanup("./empty");
+}
+
 void test_config_read__can_load_and_parse_an_empty_config_file(void)
 {
 	git_config *cfg;
 	int i;
 
+	cl_set_cleanup(&clean_empty_config, NULL);
 	cl_git_mkfile("./empty", "");
 	cl_git_pass(git_config_open_ondisk(&cfg, "./empty"));
 	cl_assert_equal_i(GIT_ENOTFOUND, git_config_get_int32(&i, cfg, "nope.neither"));

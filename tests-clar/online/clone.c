@@ -3,15 +3,13 @@
 #include "git2/clone.h"
 #include "repository.h"
 
-CL_IN_CATEGORY("network")
-
 #define LIVE_REPO_URL "http://github.com/libgit2/TestGitRepository"
 #define LIVE_EMPTYREPO_URL "http://github.com/libgit2/TestEmptyRepository"
 
 static git_repository *g_repo;
 static git_clone_options g_options;
 
-void test_clone_network__initialize(void)
+void test_online_clone__initialize(void)
 {
 	git_checkout_opts dummy_opts = GIT_CHECKOUT_OPTS_INIT;
 
@@ -23,21 +21,18 @@ void test_clone_network__initialize(void)
 	g_options.checkout_opts.checkout_strategy = GIT_CHECKOUT_SAFE;
 }
 
-static void cleanup_repository(void *path)
+void test_online_clone__cleanup(void)
 {
 	if (g_repo) {
 		git_repository_free(g_repo);
 		g_repo = NULL;
 	}
-	cl_fixture_cleanup((const char *)path);
+	cl_fixture_cleanup("./foo");
 }
 
-
-void test_clone_network__network_full(void)
+void test_online_clone__network_full(void)
 {
 	git_remote *origin;
-
-	cl_set_cleanup(&cleanup_repository, "./foo");
 
 	cl_git_pass(git_clone(&g_repo, LIVE_REPO_URL, "./foo", &g_options));
 	cl_assert(!git_repository_is_bare(g_repo));
@@ -46,12 +41,10 @@ void test_clone_network__network_full(void)
 	git_remote_free(origin);
 }
 
-
-void test_clone_network__network_bare(void)
+void test_online_clone__network_bare(void)
 {
 	git_remote *origin;
 
-	cl_set_cleanup(&cleanup_repository, "./foo");
 	g_options.bare = true;
 
 	cl_git_pass(git_clone(&g_repo, LIVE_REPO_URL, "./foo", &g_options));
@@ -61,11 +54,9 @@ void test_clone_network__network_bare(void)
 	git_remote_free(origin);
 }
 
-void test_clone_network__empty_repository(void)
+void test_online_clone__empty_repository(void)
 {
 	git_reference *head;
-
-	cl_set_cleanup(&cleanup_repository, "./foo");
 
 	cl_git_pass(git_clone(&g_repo, LIVE_EMPTYREPO_URL, "./foo", &g_options));
 
@@ -93,7 +84,7 @@ static void fetch_progress(const git_transfer_progress *stats, void *payload)
 	(*was_called) = true;
 }
 
-void test_clone_network__can_checkout_a_cloned_repo(void)
+void test_online_clone__can_checkout_a_cloned_repo(void)
 {
 	git_buf path = GIT_BUF_INIT;
 	git_reference *head;
@@ -105,8 +96,6 @@ void test_clone_network__can_checkout_a_cloned_repo(void)
 	g_options.checkout_opts.progress_payload = &checkout_progress_cb_was_called;
 	g_options.fetch_progress_cb = &fetch_progress;
 	g_options.fetch_progress_payload = &fetch_progress_cb_was_called;
-
-	cl_set_cleanup(&cleanup_repository, "./foo");
 
 	cl_git_pass(git_clone(&g_repo, LIVE_REPO_URL, "./foo", &g_options));
 
@@ -136,8 +125,6 @@ void test_clone_network__custom_remote_callbacks(void)
 {
 	git_remote_callbacks remote_callbacks = GIT_REMOTE_CALLBACKS_INIT;
 	int callcount = 0;
-
-	cl_set_cleanup(&cleanup_repository, "./foo");
 
 	g_options.remote_callbacks = &remote_callbacks;
 	remote_callbacks.update_tips = update_tips;
@@ -178,8 +165,6 @@ void test_clone_network__credentials(void)
 	};
 
 	if (!remote_url) return;
-
-	cl_set_cleanup(&cleanup_repository, "./foo");
 
 	g_options.cred_acquire_cb = cred_acquire;
 	g_options.cred_acquire_payload = &user_pass;

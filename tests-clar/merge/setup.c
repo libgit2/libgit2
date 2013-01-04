@@ -44,22 +44,6 @@ void test_merge_setup__cleanup(void)
 	cl_git_sandbox_cleanup();
 }
 
-static bool test_file_contents(const char *filename, const char *expected)
-{
-    git_buf file_path_buf = GIT_BUF_INIT, file_buf = GIT_BUF_INIT;
-    bool equals;
-    
-    git_buf_printf(&file_path_buf, "%s/%s", git_repository_path(repo), filename);
-    
-    cl_git_pass(git_futils_readbuffer(&file_buf, file_path_buf.ptr));
-    equals = (strcmp(file_buf.ptr, expected) == 0);
-
-    git_buf_free(&file_path_buf);
-    git_buf_free(&file_buf);
-    
-    return equals;
-}
-
 static void write_file_contents(const char *filename, const char *output)
 {
 	git_buf file_path_buf = GIT_BUF_INIT;
@@ -77,18 +61,14 @@ struct merge_head_cb_data {
 	unsigned int i;
 };
 
-int merge_head_foreach_cb(git_oid *oid, void *payload)
+static int merge_head_foreach_cb(const git_oid *oid, void *payload)
 {
 	git_oid expected_oid;
-
 	struct merge_head_cb_data *cb_data = payload;
 
 	git_oid_fromstr(&expected_oid, cb_data->oid_str[cb_data->i]);
-
 	cl_assert(git_oid_cmp(&expected_oid, oid) == 0);
-
 	cb_data->i++;
-
 	return 0;
 }
 

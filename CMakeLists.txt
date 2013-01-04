@@ -148,7 +148,7 @@ IF (MSVC)
    # Precompiled headers
 
 ELSE ()
-	SET(CMAKE_C_FLAGS "-D_GNU_SOURCE -Wall -Wextra -Wno-missing-field-initializers -Wstrict-aliasing=2 -Wstrict-prototypes -Wmissing-prototypes ${CMAKE_C_FLAGS}")
+	SET(CMAKE_C_FLAGS "-D_GNU_SOURCE -Wall -Wextra -Wno-missing-field-initializers -Wstrict-aliasing=2 -Wstrict-prototypes ${CMAKE_C_FLAGS}")
 	IF (MINGW) # MinGW always does PIC and complains if we tell it to
 		STRING(REGEX REPLACE "-fPIC" "" CMAKE_SHARED_LIBRARY_C_FLAGS "${CMAKE_SHARED_LIBRARY_C_FLAGS}")
 	ELSE ()
@@ -233,7 +233,6 @@ INSTALL(FILES include/git2.h DESTINATION ${INCLUDE_INSTALL_DIR} )
 
 # Tests
 IF (BUILD_CLAR)
-
 	FIND_PACKAGE(PythonInterp REQUIRED)
 
 	SET(CLAR_FIXTURES "${CMAKE_CURRENT_SOURCE_DIR}/tests-clar/resources/")
@@ -243,26 +242,33 @@ IF (BUILD_CLAR)
 	ADD_DEFINITIONS(-DCLAR_RESOURCES=\"${TEST_RESOURCES}\")
 
 	INCLUDE_DIRECTORIES(${CLAR_PATH})
-	FILE(GLOB_RECURSE SRC_TEST ${CLAR_PATH}/*/*.c ${CLAR_PATH}/clar_helpers.c ${CLAR_PATH}/testlib.c)
+	FILE(GLOB_RECURSE SRC_TEST ${CLAR_PATH}/*/*.c)
+	SET(SRC_CLAR "${CLAR_PATH}/main.c" "${CLAR_PATH}/clar_libgit2.c" "${CLAR_PATH}/clar.c")
 
 	ADD_CUSTOM_COMMAND(
-		OUTPUT ${CLAR_PATH}/clar_main.c ${CLAR_PATH}/clar.h
-		COMMAND ${PYTHON_EXECUTABLE} clar .
-		DEPENDS ${CLAR_PATH}/clar ${SRC_TEST}
+		OUTPUT ${CLAR_PATH}/clar.suite
+		COMMAND ${PYTHON_EXECUTABLE} generate.py -xonline .
+		DEPENDS ${SRC_TEST}
 		WORKING_DIRECTORY ${CLAR_PATH}
 	)
-	ADD_EXECUTABLE(libgit2_clar ${SRC_GIT2} ${SRC_OS} ${CLAR_PATH}/clar_main.c ${SRC_TEST} ${SRC_ZLIB} ${SRC_HTTP} ${SRC_REGEX} ${SRC_SHA1})
+
+	SET_SOURCE_FILES_PROPERTIES(
+		${CLAR_PATH}/clar.c
+		PROPERTIES OBJECT_DEPENDS ${CLAR_PATH}/clar.suite)
+
+	ADD_EXECUTABLE(libgit2_clar ${SRC_GIT2} ${SRC_OS} ${SRC_CLAR} ${SRC_TEST} ${SRC_ZLIB} ${SRC_HTTP} ${SRC_REGEX} ${SRC_SHA1})
+
 	TARGET_LINK_LIBRARIES(libgit2_clar ${SSL_LIBRARIES})
 	TARGET_OS_LIBRARIES(libgit2_clar)
 	MSVC_SPLIT_SOURCES(libgit2_clar)
 
-        IF (MSVC_IDE)
-           # Precompiled headers
-           SET_TARGET_PROPERTIES(libgit2_clar PROPERTIES COMPILE_FLAGS "/Yuprecompiled.h /FIprecompiled.h")
-        ENDIF ()
+	IF (MSVC_IDE)
+		# Precompiled headers
+		SET_TARGET_PROPERTIES(libgit2_clar PROPERTIES COMPILE_FLAGS "/Yuprecompiled.h /FIprecompiled.h")
+	ENDIF ()
 
 	ENABLE_TESTING()
-	ADD_TEST(libgit2_clar libgit2_clar -iall)
+	ADD_TEST(libgit2_clar libgit2_clar)
 ENDIF ()
 
 IF (TAGS)

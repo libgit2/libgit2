@@ -14,6 +14,18 @@ static const char *env_vars[NUM_VARS] = { "HOME" };
 
 static char *env_save[NUM_VARS];
 
+static char *home_values[] = {
+	"fake_home",
+	"fáke_hõme", /* all in latin-1 supplement */
+	"fĀke_Ĥome", /* latin extended */
+	"fακε_hοmέ",  /* having fun with greek */
+	"faงe_นome", /* now I have no idea, but thai characters */
+	"f\xe1\x9cx80ke_\xe1\x9c\x91ome", /* tagalog characters */
+	"\xe1\xb8\x9fẢke_hoṁe", /* latin extended additional */
+	"\xf0\x9f\x98\x98\xf0\x9f\x98\x82", /* emoticons */
+	NULL
+};
+
 void test_core_env__initialize(void)
 {
 	int i;
@@ -24,6 +36,8 @@ void test_core_env__initialize(void)
 void test_core_env__cleanup(void)
 {
 	int i;
+	char **val;
+
 	for (i = 0; i < NUM_VARS; ++i) {
 		cl_setenv(env_vars[i], env_save[i]);
 #ifdef GIT_WIN32
@@ -31,11 +45,20 @@ void test_core_env__cleanup(void)
 #endif
 		env_save[i] = NULL;
 	}
+
+	/* these will probably have already been cleaned up, but if a test
+	 * fails, then it's probably good to try and clear out these dirs
+	 */
+	for (val = home_values; *val != NULL; val++) {
+		if (**val != '\0')
+			(void)p_rmdir(*val);
+	}
 }
 
 static void setenv_and_check(const char *name, const char *value)
 {
 	char *check;
+
 	cl_git_pass(cl_setenv(name, value));
 	check = cl_getenv(name);
 	cl_assert_equal_s(value, check);
@@ -46,17 +69,6 @@ static void setenv_and_check(const char *name, const char *value)
 
 void test_core_env__0(void)
 {
-	static char *home_values[] = {
-		"fake_home",
-		"fáke_hõme", /* all in latin-1 supplement */
-		"fĀke_Ĥome", /* latin extended */
-		"fακε_hοmέ",  /* having fun with greek */
-		"faงe_นome", /* now I have no idea, but thai characters */
-		"f\xe1\x9cx80ke_\xe1\x9c\x91ome", /* tagalog characters */
-		"\xe1\xb8\x9fẢke_hoṁe", /* latin extended additional */
-		"\xf0\x9f\x98\x98\xf0\x9f\x98\x82", /* emoticons */
-		NULL
-	};
 	git_buf path = GIT_BUF_INIT, found = GIT_BUF_INIT;
 	char testfile[16], tidx = '0';
 	char **val;
@@ -71,8 +83,10 @@ void test_core_env__0(void)
 		 * we are on a filesystem that doesn't support the
 		 * characters in question and skip this test...
 		 */
-		if (p_mkdir(*val, 0777) != 0)
+		if (p_mkdir(*val, 0777) != 0) {
+			*val = ""; /* mark as not created */
 			continue;
+		}
 
 		cl_git_pass(git_path_prettify(&path, *val, NULL));
 
@@ -122,6 +136,8 @@ void test_core_env__0(void)
 			}
 		}
 #endif
+
+		(void)p_rmdir(*val);
 	}
 
 	git_buf_free(&path);
