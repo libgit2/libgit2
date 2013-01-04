@@ -193,4 +193,9 @@ extern int git_iterator_cmp(
 extern int git_iterator_current_workdir_path(
 	git_iterator *iter, git_buf **path);
 
+
+extern git_index *git_iterator_index_get_index(git_iterator *iter);
+
+extern git_iterator_type_t git_iterator_inner_type(git_iterator *iter);
+
 #endif

@@ -290,3 +290,86 @@ void test_index_tests__write_invalid_filename(void)
 
 	cl_fixture_cleanup("read_tree");
 }
+
+void test_index_tests__remove_entry(void)
+{
+	git_repository *repo;
+	git_index *index;
+
+	p_mkdir("index_test", 0770);
+
+	cl_git_pass(git_repository_init(&repo, "index_test", 0));
+	cl_git_pass(git_repository_index(&index, repo));
+	cl_assert(git_index_entrycount(index) == 0);
+
+	cl_git_mkfile("index_test/hello", NULL);
+	cl_git_pass(git_index_add_from_workdir(index, "hello"));
+	cl_git_pass(git_index_write(index));
+
+	cl_git_pass(git_index_read(index)); /* reload */
+	cl_assert(git_index_entrycount(index) == 1);
+	cl_assert(git_index_get_bypath(index, "hello", 0) != NULL);
+
+	cl_git_pass(git_index_remove(index, "hello", 0));
+	cl_git_pass(git_index_write(index));
+
+	cl_git_pass(git_index_read(index)); /* reload */
+	cl_assert(git_index_entrycount(index) == 0);
+	cl_assert(git_index_get_bypath(index, "hello", 0) == NULL);
+
+	git_index_free(index);
+	git_repository_free(repo);
+	cl_fixture_cleanup("index_test");
+}
+
+void test_index_tests__remove_directory(void)
+{
+	git_repository *repo;
+	git_index *index;
+
+	p_mkdir("index_test", 0770);
+
+	cl_git_pass(git_repository_init(&repo, "index_test", 0));
+	cl_git_pass(git_repository_index(&index, repo));
+	cl_assert_equal_i(0, (int)git_index_entrycount(index));
+
+	p_mkdir("index_test/a", 0770);
+	cl_git_mkfile("index_test/a/1.txt", NULL);
+	cl_git_mkfile("index_test/a/2.txt", NULL);
+	cl_git_mkfile("index_test/a/3.txt", NULL);
+	cl_git_mkfile("index_test/b.txt", NULL);
+
+	cl_git_pass(git_index_add_from_workdir(index, "a/1.txt"));
+	cl_git_pass(git_index_add_from_workdir(index, "a/2.txt"));
+	cl_git_pass(git_index_add_from_workdir(index, "a/3.txt"));
+	cl_git_pass(git_index_add_from_workdir(index, "b.txt"));
+	cl_git_pass(git_index_write(index));
+
+	cl_git_pass(git_index_read(index)); /* reload */
+	cl_assert_equal_i(4, (int)git_index_entrycount(index));
+	cl_assert(git_index_get_bypath(index, "a/1.txt", 0) != NULL);
+	cl_assert(git_index_get_bypath(index, "a/2.txt", 0) != NULL);
+	cl_assert(git_index_get_bypath(index, "b.txt", 0) != NULL);
+
+	cl_git_pass(git_index_remove(index, "a/1.txt", 0));
+	cl_git_pass(git_index_write(index));
+
+	cl_git_pass(git_index_read(index)); /* reload */
+	cl_assert_equal_i(3, (int)git_index_entrycount(index));
+	cl_assert(git_index_get_bypath(index, "a/1.txt", 0) == NULL);
+	cl_assert(git_index_get_bypath(index, "a/2.txt", 0) != NULL);
+	cl_assert(git_index_get_bypath(index, "b.txt", 0) != NULL);
+
+	cl_git_pass(git_index_remove_directory(index, "a", 0));
+	cl_git_pass(git_index_write(index));
+
+	cl_git_pass(git_index_read(index)); /* reload */
+	cl_assert_equal_i(1, (int)git_index_entrycount(index));
+	cl_assert(git_index_get_bypath(index, "a/1.txt", 0) == NULL);
+	cl_assert(git_index_get_bypath(index, "a/2.txt", 0) == NULL);
+	cl_assert(git_index_get_bypath(index, "b.txt", 0) != NULL);
+
+	git_index_free(index);
+	git_repository_free(repo);
+	cl_fixture_cleanup("index_test");
+}

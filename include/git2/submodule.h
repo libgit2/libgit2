@@ -504,6 +504,24 @@ GIT_EXTERN(int) git_submodule_status(
 	unsigned int *status,
 	git_submodule *submodule);
 
+/**
+ * Get the locations of submodule information.
+ *
+ * This is a bit like a very lightweight version of `git_submodule_status`.
+ * It just returns a made of the first four submodule status values (i.e.
+ * the ones like GIT_SUBMODULE_STATUS_IN_HEAD, etc) that tell you where the
+ * submodule data comes from (i.e. the HEAD commit, gitmodules file, etc.).
+ * This can be useful if you want to know if the submodule is present in the
+ * working directory at this point in time, etc.
+ *
+ * @param status Combination of first four `GIT_SUBMODULE_STATUS` flags
+ * @param submodule Submodule for which to get status
+ * @return 0 on success, <0 on error
+ */
+GIT_EXTERN(int) git_submodule_location(
+	unsigned int *location_status,
+	git_submodule *submodule);
+
 /** @} */
 GIT_END_DECL
 #endif
