@@ -157,7 +157,7 @@ class TestSuite(object):
             fp = open(path, 'rb')
             cache = pickle.load(fp)
             fp.close()
-        except IOError:
+        except IOError, ValueError:
             pass
 
         return cache
