@@ -1,11 +1,10 @@
 #include "clar_libgit2.h"
 
 #ifdef _WIN32
-__cdecl int
+int __cdecl main(int argc, char *argv[])
 #else
-int
+int main(int argc, char *argv[])
 #endif
-main(int argc, char *argv[])
 {
 	int res;
 
