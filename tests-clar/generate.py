@@ -154,7 +154,7 @@ class TestSuite(object):
         cache = {}
 
         try:
-            fp = open(path)
+            fp = open(path, 'rb')
             cache = pickle.load(fp)
             fp.close()
         except IOError:
@@ -164,7 +164,7 @@ class TestSuite(object):
 
     def save_cache(self):
         path = os.path.join(self.path, '.clarcache')
-        with open(path, 'w') as cache:
+        with open(path, 'wb') as cache:
             pickle.dump(self.modules, cache)
 
     def load(self, force = False):
@@ -233,5 +233,5 @@ if __name__ == '__main__':
         suite.load(options.force)
         suite.disable(options.excluded)
         if suite.write():
-            print "Written `clar.suite` (%d suites)" % len(suite.modules)
+            print("Written `clar.suite` (%d suites)" % len(suite.modules))
 
