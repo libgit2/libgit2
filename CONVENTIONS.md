@@ -167,6 +167,3 @@ All inlined functions must be declared as:
 GIT_INLINE(result_type) git_modulename_functionname(arg_list);
 ```
 
-
-
-
