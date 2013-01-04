@@ -64,6 +64,7 @@ typedef enum {
 	GITERR_STASH,
 	GITERR_CHECKOUT,
 	GITERR_FETCHHEAD,
+	GITERR_MERGE,
 } git_error_t;
 
 /**

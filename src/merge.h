@@ -10,6 +10,7 @@
 #include "git2/types.h"
 #include "git2/merge.h"
 #include "commit_list.h"
+#include "vector.h"
 
 #define GIT_MERGE_MSG_FILE		"MERGE_MSG"
 #define GIT_MERGE_MODE_FILE		"MERGE_MODE"
