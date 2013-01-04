@@ -1,4 +1,5 @@
 /tests-clar/clar.suite
+/tests-clar/clar.suite.rule
 /tests-clar/.clarcache
 /apidocs
 /trash-*.exe
