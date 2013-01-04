@@ -146,7 +146,7 @@ ELSE ()
 	SET(CMAKE_C_FLAGS "-D_GNU_SOURCE -Wall -Wextra -Wno-missing-field-initializers -Wstrict-aliasing=2 -Wstrict-prototypes ${CMAKE_C_FLAGS}")
 	IF (MINGW) # MinGW always does PIC and complains if we tell it to
 		STRING(REGEX REPLACE "-fPIC" "" CMAKE_SHARED_LIBRARY_C_FLAGS "${CMAKE_SHARED_LIBRARY_C_FLAGS}")
-	ELSE ()
+	ELSEIF (BUILD_SHARED_LIBS)
 		SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fvisibility=hidden -fPIC")
 	ENDIF ()
 	IF (APPLE) # Apple deprecated OpenSSL
