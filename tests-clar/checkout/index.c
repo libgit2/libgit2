@@ -496,3 +496,28 @@ void test_checkout_index__validates_struct_version(void)
 	err = giterr_last();
 	cl_assert_equal_i(err->klass, GITERR_INVALID);
 }
+
+void test_checkout_index__can_update_prefixed_files(void)
+{
+	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
+
+	cl_git_mkfile("./testrepo/READ", "content\n");
+	cl_git_mkfile("./testrepo/README.after", "content\n");
+	cl_git_pass(p_mkdir("./testrepo/branch_file", 0777));
+	cl_git_pass(p_mkdir("./testrepo/branch_file/contained_dir", 0777));
+	cl_git_mkfile("./testrepo/branch_file/contained_file", "content\n");
+	cl_git_pass(p_mkdir("./testrepo/branch_file.txt.after", 0777));
+
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE | GIT_CHECKOUT_REMOVE_UNTRACKED;
+
+	cl_git_pass(git_checkout_index(g_repo, NULL, &opts));
+
+	test_file_contents("./testrepo/README", "hey there\n");
+	test_file_contents("./testrepo/branch_file.txt", "hi\nbye!\n");
+	test_file_contents("./testrepo/new.txt", "my new file\n");
+
+	cl_assert(!git_path_exists("testrepo/READ"));
+	cl_assert(!git_path_exists("testrepo/README.after"));
+	cl_assert(!git_path_exists("testrepo/branch_file"));
+	cl_assert(!git_path_exists("testrepo/branch_file.txt.after"));
+}

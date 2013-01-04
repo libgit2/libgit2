@@ -220,19 +220,34 @@ static int checkout_action_wd_only(
 {
 	bool remove = false;
 	git_checkout_notify_t notify = GIT_CHECKOUT_NOTIFY_NONE;
-	const git_index_entry *entry;
 
 	if (!git_pathspec_match_path(
 			pathspec, wd->path, false, workdir->ignore_case))
 		return 0;
 
 	/* check if item is tracked in the index but not in the checkout diff */
-	if (data->index != NULL &&
-		(entry = git_index_get_bypath(data->index, wd->path, 0)) != NULL)
-	{
-		notify = GIT_CHECKOUT_NOTIFY_DIRTY;
-		remove = ((data->strategy & GIT_CHECKOUT_FORCE) != 0);
+	if (data->index != NULL) {
+		if (wd->mode != GIT_FILEMODE_TREE) {
+			if (git_index_get_bypath(data->index, wd->path, 0) != NULL) {
+				notify = GIT_CHECKOUT_NOTIFY_DIRTY;
+				remove = ((data->strategy & GIT_CHECKOUT_FORCE) != 0);
+			}
+		} else {
+			/* for tree entries, we have to see if there are any index
+			 * entries that are contained inside that tree
+			 */
+			size_t pos = git_index__prefix_position(data->index, wd->path);
+			const git_index_entry *e = git_index_get_byindex(data->index, pos);
+
+			if (e != NULL && data->diff->pfxcomp(e->path, wd->path) == 0) {
+				notify = GIT_CHECKOUT_NOTIFY_DIRTY;
+				remove = ((data->strategy & GIT_CHECKOUT_FORCE) != 0);
+			}
+		}
 	}
+
+	if (notify != GIT_CHECKOUT_NOTIFY_NONE)
+		/* found in index */;
 	else if (git_iterator_current_is_ignored(workdir)) {
 		notify = GIT_CHECKOUT_NOTIFY_IGNORED;
 		remove = ((data->strategy & GIT_CHECKOUT_REMOVE_IGNORED) != 0);
@@ -418,8 +433,6 @@ static int checkout_action_with_wd_dir(
 	return checkout_action_common(data, action, delta, wd);
 }
 
-#define EXPAND_DIRS_FOR_STRATEGY (GIT_CHECKOUT_FORCE | GIT_CHECKOUT_REMOVE_UNTRACKED | GIT_CHECKOUT_REMOVE_IGNORED)
-
 static int checkout_action(
 	checkout_data *data,
 	git_diff_delta *delta,
@@ -431,7 +444,6 @@ static int checkout_action(
 	int cmp = -1, act;
 	int (*strcomp)(const char *, const char *) = data->diff->strcomp;
 	int (*pfxcomp)(const char *str, const char *pfx) = data->diff->pfxcomp;
-	bool expand_dirs = (data->strategy & EXPAND_DIRS_FOR_STRATEGY) != 0;
 
 	/* move workdir iterator to follow along with deltas */
 
@@ -452,18 +464,21 @@ static int checkout_action(
 		if (cmp < 0) {
 			cmp = pfxcomp(delta->old_file.path, wd->path);
 
-			if (wd->mode == GIT_FILEMODE_TREE && (cmp == 0 || expand_dirs)) {
-				/* case 2 or untracked wd item that might need removal */
-				if (git_iterator_advance_into_directory(workdir, &wd) < 0)
-					goto fail;
-				continue;
-			}
-
 			if (cmp == 0) {
-				/* case 3 -  wd contains non-dir where dir expected */
-				act = checkout_action_with_wd_blocker(data, delta, wd);
-				*wditem_ptr = git_iterator_advance(workdir, &wd) ? NULL : wd;
-				return act;
+				if (wd->mode == GIT_FILEMODE_TREE) {
+					/* case 2 - entry prefixed by workdir tree */
+					if (git_iterator_advance_into_directory(workdir, &wd) < 0)
+						goto fail;
+					continue;
+				}
+
+				/* case 3 maybe - wd contains non-dir where dir expected */
+				if (delta->old_file.path[strlen(wd->path)] == '/') {
+					act = checkout_action_with_wd_blocker(data, delta, wd);
+					*wditem_ptr =
+						git_iterator_advance(workdir, &wd) ? NULL : wd;
+					return act;
+				}
 			}
 
 			/* case 1 - handle wd item (if it matches pathspec) */
@@ -485,8 +500,7 @@ static int checkout_action(
 		cmp = pfxcomp(wd->path, delta->old_file.path);
 
 		if (cmp == 0) { /* case 5 */
-			size_t pathlen = strlen(delta->old_file.path);
-			if (wd->path[pathlen] != '/')
+			if (wd->path[strlen(delta->old_file.path)] != '/')
 				return checkout_action_no_wd(data, delta);
 
 			if (delta->status == GIT_DELTA_TYPECHANGE) {
@@ -529,13 +543,9 @@ static int checkout_remaining_wd_items(
 	git_vector *spec)
 {
 	int error = 0;
-	bool expand_dirs = (data->strategy & EXPAND_DIRS_FOR_STRATEGY) != 0;
 
 	while (wd && !error) {
-		if (wd->mode == GIT_FILEMODE_TREE && expand_dirs)
-			error = git_iterator_advance_into_directory(workdir, &wd);
-
-		else if (!(error = checkout_action_wd_only(data, workdir, wd, spec)))
+		if (!(error = checkout_action_wd_only(data, workdir, wd, spec)))
 			error = git_iterator_advance(workdir, &wd);
 	}
 
@@ -945,7 +955,10 @@ static int checkout_remove_the_old(
 		if ((data->strategy & GIT_CHECKOUT_DONT_UPDATE_INDEX) == 0 &&
 			data->index != NULL)
 		{
-			(void)git_index_remove(data->index, str, 0);
+			if (str[strlen(str) - 1] == '/')
+				(void)git_index_remove_directory(data->index, str, 0);
+			else
+				(void)git_index_remove(data->index, str, 0);
 		}
 	}
 
