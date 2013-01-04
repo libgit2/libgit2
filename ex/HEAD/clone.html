@@ -53,6 +53,16 @@
 <span class="cp">#include &lt;pthread.h&gt;</span>
 <span class="cp">#include &lt;unistd.h&gt;</span>
 
+<span class="cm">/* Shamelessly borrowed from http://stackoverflow.com/questions/3417837/ */</span>
+<span class="cp">#ifdef UNUSED</span>
+<span class="cp">#elif defined(__GNUC__)</span>
+<span class="cp"># define UNUSED(x) UNUSED_ ## x __attribute__((unused))</span>
+<span class="cp">#elif defined(__LCLINT__)</span>
+<span class="cp"># define UNUSED(x) </span><span class="cm">/*@unused@*/</span><span class="cp"> x</span>
+<span class="cp">#else</span>
+<span class="cp"># define UNUSED(x) x</span>
+<span class="cp">#endif</span>
+
 <span class="k">typedef</span> <span class="k">struct</span> <span class="n">progress_data</span> <span class="p">{</span>
   <span class="n">git_transfer_progress</span> <span class="n">fetch_progress</span><span class="p">;</span>
   <span class="kt">size_t</span> <span class="n">completed_steps</span><span class="p">;</span>
@@ -93,7 +103,10 @@
   <span class="n">print_progress</span><span class="p">(</span><span class="n">pd</span><span class="p">);</span>
 <span class="p">}</span>
 
-<span class="k">static</span> <span class="kt">int</span> <span class="nf">cred_acquire</span><span class="p">(</span><span class="n">git_cred</span> <span class="o">**</span><span class="n">out</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">url</span><span class="p">,</span> <span class="kt">unsigned</span> <span class="kt">int</span> <span class="n">allowed_types</span><span class="p">,</span> <span class="kt">void</span> <span class="o">*</span><span class="n">payload</span><span class="p">)</span>
+<span class="k">static</span> <span class="kt">int</span> <span class="nf">cred_acquire</span><span class="p">(</span><span class="n">git_cred</span> <span class="o">**</span><span class="n">out</span><span class="p">,</span>
+    <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span> <span class="n">UNUSED</span><span class="p">(</span><span class="n">url</span><span class="p">),</span>
+    <span class="kt">unsigned</span> <span class="kt">int</span> <span class="n">UNUSED</span><span class="p">(</span><span class="n">allowed_types</span><span class="p">),</span>
+    <span class="kt">void</span> <span class="o">*</span> <span class="n">UNUSED</span><span class="p">(</span><span class="n">payload</span><span class="p">))</span>
 <span class="p">{</span>
   <span class="kt">char</span> <span class="n">username</span><span class="p">[</span><span class="mi">128</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">};</span>
   <span class="kt">char</span> <span class="n">password</span><span class="p">[</span><span class="mi">128</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">};</span>
@@ -110,9 +123,8 @@
 
 <span class="kt">int</span> <span class="nf">do_clone</span><span class="p">(</span><span class="n">git_repository</span> <span class="o">*</span><span class="n">repo</span><span class="p">,</span> <span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">**</span><span class="n">argv</span><span class="p">)</span>
 <span class="p">{</span>
-  <span class="n">progress_data</span> <span class="n">pd</span><span class="p">;</span>
+  <span class="n">progress_data</span> <span class="n">pd</span> <span class="o">=</span> <span class="p">{{</span><span class="mi">0</span><span class="p">}};</span>
   <span class="n">git_repository</span> <span class="o">*</span><span class="n">cloned_repo</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
-  <span class="n">git_remote</span> <span class="o">*</span><span class="n">origin</span><span class="p">;</span>
   <span class="n">git_clone_options</span> <span class="n">clone_opts</span> <span class="o">=</span> <span class="n">GIT_CLONE_OPTIONS_INIT</span><span class="p">;</span>
   <span class="n">git_checkout_opts</span> <span class="n">checkout_opts</span> <span class="o">=</span> <span class="n">GIT_CHECKOUT_OPTS_INIT</span><span class="p">;</span>
   <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">url</span> <span class="o">=</span> <span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">];</span>
@@ -146,8 +158,11 @@
       <td class=code>
         <div class='highlight'><pre>  <span class="n">checkout_opts</span><span class="p">.</span><span class="n">checkout_strategy</span> <span class="o">=</span> <span class="n">GIT_CHECKOUT_SAFE</span><span class="p">;</span>
   <span class="n">checkout_opts</span><span class="p">.</span><span class="n">progress_cb</span> <span class="o">=</span> <span class="n">checkout_progress</span><span class="p">;</span>
-  <span class="n">memset</span><span class="p">(</span><span class="o">&amp;</span><span class="n">pd</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">pd</span><span class="p">));</span>
-  <span class="n">checkout_opts</span><span class="p">.</span><span class="n">progress_payload</span> <span class="o">=</span> <span class="o">&amp;</span><span class="n">pd</span><span class="p">;</span></pre></div>
+  <span class="n">checkout_opts</span><span class="p">.</span><span class="n">progress_payload</span> <span class="o">=</span> <span class="o">&amp;</span><span class="n">pd</span><span class="p">;</span>
+  <span class="n">clone_opts</span><span class="p">.</span><span class="n">checkout_opts</span> <span class="o">=</span> <span class="n">checkout_opts</span><span class="p">;</span>
+  <span class="n">clone_opts</span><span class="p">.</span><span class="n">fetch_progress_cb</span> <span class="o">=</span> <span class="o">&amp;</span><span class="n">fetch_progress</span><span class="p">;</span>
+  <span class="n">clone_opts</span><span class="p">.</span><span class="n">fetch_progress_payload</span> <span class="o">=</span> <span class="o">&amp;</span><span class="n">pd</span><span class="p">;</span>
+  <span class="n">clone_opts</span><span class="p">.</span><span class="n">cred_acquire_cb</span> <span class="o">=</span> <span class="n">cred_acquire</span><span class="p">;</span></pre></div>
       </td>
     </tr>
     <tr id='section-4'>
@@ -155,36 +170,14 @@
         <div class="pilwrap">
           <a class="pilcrow" href="#section-4">&#182;</a>
         </div>
-        <p>Create the origin remote, and set up for auth</p>
-      </td>
-      <td class=code>
-        <div class='highlight'><pre>  <span class="n">error</span> <span class="o">=</span> <span class="n"><a name="git_remote_new-3" class="fnlink" href="../../#HEAD/group/remote/git_remote_new">git_remote_new</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">origin</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">,</span> <span class="s">&quot;origin&quot;</span><span class="p">,</span> <span class="n">url</span><span class="p">,</span> <span class="n">GIT_REMOTE_DEFAULT_FETCH</span><span class="p">);</span>
-  <span class="k">if</span> <span class="p">(</span><span class="n">error</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
-    <span class="k">const</span> <span class="n">git_error</span> <span class="o">*</span><span class="n">err</span> <span class="o">=</span> <span class="n"><a name="giterr_last-6" class="fnlink" href="../../#HEAD/group/giterr/giterr_last">giterr_last</a></span><span class="p">();</span>
-    <span class="k">if</span> <span class="p">(</span><span class="n">err</span><span class="p">)</span> <span class="n">printf</span><span class="p">(</span><span class="s">&quot;ERROR %d: %s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">err</span><span class="o">-&gt;</span><span class="n">klass</span><span class="p">,</span> <span class="n">err</span><span class="o">-&gt;</span><span class="n">message</span><span class="p">);</span>
-    <span class="k">else</span> <span class="n">printf</span><span class="p">(</span><span class="s">&quot;ERROR %d: no detailed info</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">error</span><span class="p">);</span>
-    <span class="k">return</span> <span class="n">error</span><span class="p">;</span>
-  <span class="p">}</span>
-  <span class="n"><a name="git_remote_set_cred_acquire_cb-5" class="fnlink" href="../../#HEAD/group/remote/git_remote_set_cred_acquire_cb">git_remote_set_cred_acquire_cb</a></span><span class="p">(</span><span class="n">origin</span><span class="p">,</span> <span class="n">cred_acquire</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span></pre></div>
-      </td>
-    </tr>
-    <tr id='section-5'>
-      <td class=docs>
-        <div class="pilwrap">
-          <a class="pilcrow" href="#section-5">&#182;</a>
-        </div>
         <p>Do the clone</p>
 
       </td>
       <td class=code>
-        <div class='highlight'><pre>  <span class="n">clone_opts</span><span class="p">.</span><span class="n">checkout_opts</span> <span class="o">=</span> <span class="o">&amp;</span><span class="n">checkout_opts</span><span class="p">;</span>
-  <span class="n">clone_opts</span><span class="p">.</span><span class="n">fetch_progress_cb</span> <span class="o">=</span> <span class="o">&amp;</span><span class="n">fetch_progress</span><span class="p">;</span>
-  <span class="n">clone_opts</span><span class="p">.</span><span class="n">fetch_progress_payload</span> <span class="o">=</span> <span class="o">&amp;</span><span class="n">pd</span><span class="p">;</span>
-  <span class="n">error</span> <span class="o">=</span> <span class="n"><a name="git_clone-8" class="fnlink" href="../../#HEAD/group/clone/git_clone">git_clone</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">cloned_repo</span><span class="p">,</span> <span class="n">origin</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">clone_opts</span><span class="p">);</span>
-  <span class="n"><a name="git_remote_free-4" class="fnlink" href="../../#HEAD/group/remote/git_remote_free">git_remote_free</a></span><span class="p">(</span><span class="n">origin</span><span class="p">);</span>
+        <div class='highlight'><pre>  <span class="n">error</span> <span class="o">=</span> <span class="n"><a name="git_clone-4" class="fnlink" href="../../#HEAD/group/clone/git_clone">git_clone</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">cloned_repo</span><span class="p">,</span> <span class="n">url</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">clone_opts</span><span class="p">);</span>
   <span class="n">printf</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
   <span class="k">if</span> <span class="p">(</span><span class="n">error</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
-    <span class="k">const</span> <span class="n">git_error</span> <span class="o">*</span><span class="n">err</span> <span class="o">=</span> <span class="n"><a name="giterr_last-7" class="fnlink" href="../../#HEAD/group/giterr/giterr_last">giterr_last</a></span><span class="p">();</span>
+    <span class="k">const</span> <span class="n">git_error</span> <span class="o">*</span><span class="n">err</span> <span class="o">=</span> <span class="n"><a name="giterr_last-3" class="fnlink" href="../../#HEAD/group/giterr/giterr_last">giterr_last</a></span><span class="p">();</span>
     <span class="k">if</span> <span class="p">(</span><span class="n">err</span><span class="p">)</span> <span class="n">printf</span><span class="p">(</span><span class="s">&quot;ERROR %d: %s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">err</span><span class="o">-&gt;</span><span class="n">klass</span><span class="p">,</span> <span class="n">err</span><span class="o">-&gt;</span><span class="n">message</span><span class="p">);</span>
     <span class="k">else</span> <span class="n">printf</span><span class="p">(</span><span class="s">&quot;ERROR %d: no detailed info</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">error</span><span class="p">);</span>
   <span class="p">}</span>
