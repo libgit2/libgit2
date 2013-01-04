@@ -106,7 +106,7 @@ ELSE()
 ENDIF()
 
 # Include POSIX regex when it is required
-IF(WIN32 OR CMAKE_SYSTEM_NAME STREQUAL "AmigaOS")
+IF(WIN32 OR AMIGA)
 	INCLUDE_DIRECTORIES(deps/regex)
 	SET(SRC_REGEX deps/regex/regex.c)
 ENDIF()
