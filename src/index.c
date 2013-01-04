@@ -1359,9 +1359,10 @@ static int parse_index(git_index *index, const char *buffer, size_t buffer_size)
 
 #undef seek_forward
 
-	/* force sorting in the vector: the entries are
-	 * assured to be sorted on the index */
-	index->entries.sorted = 1;
+	/* Entries are stored case-sensitively on disk. */
+	index->entries.sorted = !index->ignore_case;
+	git_vector_sort(&index->entries);
+
 	return 0;
 }
 
