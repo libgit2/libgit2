@@ -101,23 +101,26 @@ static int parse_refspec(push_spec **spec, const char *str)
 	if (delim == NULL) {
 		s->lref = git__strdup(str);
 		check(s->lref);
-		s->rref = NULL;
 	} else {
 		if (delim - str) {
 			s->lref = git__strndup(str, delim - str);
 			check(s->lref);
-		} else
-			s->lref = NULL;
+		}
 
 		if (strlen(delim + 1)) {
 			s->rref = git__strdup(delim + 1);
 			check(s->rref);
-		} else
-			s->rref = NULL;
+		}
 	}
 
 	if (!s->lref && !s->rref)
 		goto on_error;
+
+	/* If rref is ommitted, use the same ref name as lref */
+	if (!s->rref) {
+		s->rref = git__strdup(s->lref);
+		check(s->rref);
+	}
 
 #undef check
 
@@ -282,44 +285,24 @@ static int calculate_work(git_push *push)
 	push_spec *spec;
 	unsigned int i, j;
 
+	/* Update local and remote oids*/
+
 	git_vector_foreach(&push->specs, i, spec) {
 		if (spec->lref) {
+			/* This is a create or update.  Local ref must exist. */
 			if (git_reference_name_to_id(
 					&spec->loid, push->repo, spec->lref) < 0) {
 				giterr_set(GIT_ENOTFOUND, "No such reference '%s'", spec->lref);
 				return -1;
 			}
+		}
 
-			if (!spec->rref) {
-				/*
-				 * No remote reference given; if we find a remote
-				 * reference with the same name we will update it,
-				 * otherwise a new reference will be created.
-				 */
-				git_vector_foreach(&push->remote->refs, j, head) {
-					if (!strcmp(spec->lref, head->name)) {
-						/*
-						 * Update remote reference
-						 */
-						git_oid_cpy(&spec->roid, &head->oid);
-
-						break;
-					}
-				}
-			} else {
-				/*
-				 * Remote reference given; update the given
-				 * reference or create it.
-				 */
-				git_vector_foreach(&push->remote->refs, j, head) {
-					if (!strcmp(spec->rref, head->name)) {
-						/*
-						 * Update remote reference
-						 */
-						git_oid_cpy(&spec->roid, &head->oid);
-
-						break;
-					}
+		if (spec->rref) {
+			/* Remote ref may or may not (e.g. during create) already exist. */
+			git_vector_foreach(&push->remote->refs, j, head) {
+				if (!strcmp(spec->rref, head->name)) {
+					git_oid_cpy(&spec->roid, &head->oid);
+					break;
 				}
 			}
 		}
