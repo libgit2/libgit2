@@ -159,4 +159,11 @@ GIT_END_DECL
 #endif
 ```
 
+## Inlined functions
+
+All inlined functions must be declared as:
+
+```C
+GIT_INLINE(result_type) git_modulename_functionname(arg_list);
+```
 
