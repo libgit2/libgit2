@@ -608,7 +608,7 @@ int git_odb__read_header_or_object(
 int git_odb_read(git_odb_object **out, git_odb *db, const git_oid *id)
 {
 	unsigned int i;
-	int error = GIT_ENOTFOUND;
+	int error;
 	bool refreshed = false;
 	git_rawobj raw;
 
@@ -624,6 +624,7 @@ int git_odb_read(git_odb_object **out, git_odb *db, const git_oid *id)
 		return 0;
 
 attempt_lookup:
+	error = GIT_ENOTFOUND;
 
 	for (i = 0; i < db->backends.length && error < 0; ++i) {
 		backend_internal *internal = git_vector_get(&db->backends, i);

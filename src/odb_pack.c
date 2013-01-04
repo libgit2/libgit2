@@ -600,7 +600,12 @@ int git_odb_backend_pack(git_odb_backend **backend_out, const char *objects_dir)
 	}
 
 	if (git_path_isdir(git_buf_cstr(&path)) == true) {
+		int error;
+
 		backend->pack_folder = git_buf_detach(&path);
+		error = pack_backend__refresh((git_odb_backend *)backend);
+		if (error < 0)
+			return error;
 	}
 
 	backend->parent.read = &pack_backend__read;
