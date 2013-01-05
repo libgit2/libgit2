@@ -470,6 +470,10 @@ void test_checkout_index__can_update_prefixed_files(void)
 {
 	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
 
+	cl_assert_equal_i(false, git_path_isfile("./testrepo/README"));
+	cl_assert_equal_i(false, git_path_isfile("./testrepo/branch_file.txt"));
+	cl_assert_equal_i(false, git_path_isfile("./testrepo/new.txt"));
+
 	cl_git_mkfile("./testrepo/READ", "content\n");
 	cl_git_mkfile("./testrepo/README.after", "content\n");
 	cl_git_pass(p_mkdir("./testrepo/branch_file", 0777));
@@ -477,13 +481,17 @@ void test_checkout_index__can_update_prefixed_files(void)
 	cl_git_mkfile("./testrepo/branch_file/contained_file", "content\n");
 	cl_git_pass(p_mkdir("./testrepo/branch_file.txt.after", 0777));
 
-	opts.checkout_strategy = GIT_CHECKOUT_FORCE | GIT_CHECKOUT_REMOVE_UNTRACKED;
+	opts.checkout_strategy =
+		GIT_CHECKOUT_SAFE_CREATE | GIT_CHECKOUT_REMOVE_UNTRACKED;
 
 	cl_git_pass(git_checkout_index(g_repo, NULL, &opts));
 
-	test_file_contents("./testrepo/README", "hey there\n");
-	test_file_contents("./testrepo/branch_file.txt", "hi\nbye!\n");
-	test_file_contents("./testrepo/new.txt", "my new file\n");
+	/* remove untracked will remove the .gitattributes file before the blobs
+	 * were created, so they will have had crlf filtering applied on Windows
+	 */
+	test_file_contents_nocr("./testrepo/README", "hey there\n");
+	test_file_contents_nocr("./testrepo/branch_file.txt", "hi\nbye!\n");
+	test_file_contents_nocr("./testrepo/new.txt", "my new file\n");
 
 	cl_assert(!git_path_exists("testrepo/READ"));
 	cl_assert(!git_path_exists("testrepo/README.after"));
