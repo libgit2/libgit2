@@ -1,4 +1,5 @@
 #include "clar_libgit2.h"
+#include "checkout_helpers.h"
 
 #include "git2/checkout.h"
 #include "repository.h"
@@ -137,21 +138,6 @@ void test_checkout_tree__doesnt_write_unrequested_files_to_worktree(void)
   cl_assert_equal_i(false, git_path_isfile("testrepo/readme.txt"));
 }
 
-static void assert_on_branch(git_repository *repo, const char *branch)
-{
-	git_reference *head;
-	git_buf bname = GIT_BUF_INIT;
-
-	cl_git_pass(git_reference_lookup(&head, repo, GIT_HEAD_FILE));
-	cl_assert_(git_reference_type(head) == GIT_REF_SYMBOLIC, branch);
-
-	cl_git_pass(git_buf_joinpath(&bname, "refs/heads", branch));
-	cl_assert_equal_s(bname.ptr, git_reference_symbolic_target(head));
-
-	git_reference_free(head);
-	git_buf_free(&bname);
-}
-
 void test_checkout_tree__can_switch_branches(void)
 {
 	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
@@ -241,28 +227,11 @@ void test_checkout_tree__can_remove_ignored(void)
 	cl_assert(!git_path_isfile("testrepo/ignored_file"));
 }
 
-/* this is essentially the code from git__unescape modified slightly */
-static void strip_cr_from_buf(git_buf *buf)
-{
-	char *scan, *pos = buf->ptr;
-
-	for (scan = pos; *scan; pos++, scan++) {
-		if (*scan == '\r')
-			scan++; /* skip '\r' */
-		if (pos != scan)
-			*pos = *scan;
-	}
-
-	*pos = '\0';
-	buf->size = (pos - buf->ptr);
-}
-
 void test_checkout_tree__can_update_only(void)
 {
 	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
 	git_oid oid;
 	git_object *obj = NULL;
-	git_buf buf = GIT_BUF_INIT;
 
 	/* first let's get things into a known state - by checkout out the HEAD */
 
@@ -273,10 +242,7 @@ void test_checkout_tree__can_update_only(void)
 
 	cl_assert(!git_path_isdir("testrepo/a"));
 
-	cl_git_pass(git_futils_readbuffer(&buf, "testrepo/branch_file.txt"));
-	strip_cr_from_buf(&buf);
-	cl_assert_equal_s("hi\nbye!\n", buf.ptr);
-	git_buf_free(&buf);
+	test_file_contents_nocr("testrepo/branch_file.txt", "hi\nbye!\n");
 
 	/* now checkout branch but with update only */
 
@@ -297,11 +263,7 @@ void test_checkout_tree__can_update_only(void)
 	cl_assert(!git_path_isdir("testrepo/a"));
 
 	/* but this file still should have been updated */
-	cl_git_pass(git_futils_readbuffer(&buf, "testrepo/branch_file.txt"));
-	strip_cr_from_buf(&buf);
-	cl_assert_equal_s("hi\n", buf.ptr);
-
-	git_buf_free(&buf);
+	test_file_contents_nocr("testrepo/branch_file.txt", "hi\n");
 
 	git_object_free(obj);
 }
