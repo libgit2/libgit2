@@ -2,6 +2,16 @@
 #include "posix.h"
 #include "path.h"
 
+void cl_git_report_failure(
+	int error, const char *file, int line, const char *fncall)
+{
+	char msg[4096];
+	const git_error *last = giterr_last();
+	p_snprintf(msg, 4096, "error %d - %s",
+		error, last ? last->message : "<no message>");
+	clar__assert(0, file, line, fncall, msg, 1);
+}
+
 void cl_git_mkfile(const char *filename, const char *content)
 {
 	int fd;

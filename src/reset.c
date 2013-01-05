@@ -62,13 +62,10 @@ int git_reset(
 	git_object *commit = NULL;
 	git_index *index = NULL;
 	git_tree *tree = NULL;
-	int error;
+	int error = 0;
 	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
 
 	assert(repo && target);
-	assert(reset_type == GIT_RESET_SOFT
-		|| reset_type == GIT_RESET_MIXED
-		|| reset_type == GIT_RESET_HARD);
 
 	if (git_object_owner(target) != repo) {
 		giterr_set(GITERR_OBJECT,
@@ -76,56 +73,50 @@ int git_reset(
 		return -1;
 	}
 
-	if (reset_type != GIT_RESET_SOFT
-		&& (error = git_repository__ensure_not_bare(
-			repo,
+	if (reset_type != GIT_RESET_SOFT &&
+		(error = git_repository__ensure_not_bare(repo,
 			reset_type == GIT_RESET_MIXED ? "reset mixed" : "reset hard")) < 0)
-				return error;
+		return error;
 
-	if ((error = git_object_peel(&commit, target, GIT_OBJ_COMMIT)) < 0)
+	if ((error = git_object_peel(&commit, target, GIT_OBJ_COMMIT)) < 0 ||
+		(error = git_repository_index(&index, repo)) < 0 ||
+		(error = git_commit_tree(&tree, (git_commit *)commit)) < 0)
 		goto cleanup;
 
-	if ((error = git_repository_index(&index, repo)) < 0)
-		goto cleanup;
-
-	if (reset_type == GIT_RESET_SOFT && 
+	if (reset_type == GIT_RESET_SOFT &&
 		(git_repository_state(repo) == GIT_REPOSITORY_STATE_MERGE ||
-		git_index_has_conflicts(index))) {
-			giterr_set(GITERR_OBJECT, "%s (soft) while in the middle of a merge.", ERROR_MSG);
-			error = GIT_EUNMERGED;
-			goto cleanup;
+		 git_index_has_conflicts(index)))
+	{
+		giterr_set(GITERR_OBJECT, "%s (soft) in the middle of a merge.", ERROR_MSG);
+		error = GIT_EUNMERGED;
+		goto cleanup;
 	}
 
+	/* move HEAD to the new target */
 	if ((error = update_head(repo, commit)) < 0)
 		goto cleanup;
 
-	if (reset_type == GIT_RESET_SOFT) {
-		error = 0;
-		goto cleanup;
+	if (reset_type == GIT_RESET_HARD) {
+		/* overwrite working directory with HEAD */
+		opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+
+		if ((error = git_checkout_tree(repo, (git_object *)tree, &opts)) < 0)
+			goto cleanup;
 	}
 
-	if ((error = git_commit_tree(&tree, (git_commit *)commit)) < 0)
-		goto cleanup;
+	if (reset_type > GIT_RESET_SOFT) {
+		/* reset index to the target content */
 
-	if ((error = git_index_read_tree(index, tree)) < 0)
-		goto cleanup;
+		if ((error = git_repository_index(&index, repo)) < 0 ||
+			(error = git_index_read_tree(index, tree)) < 0 ||
+			(error = git_index_write(index)) < 0)
+			goto cleanup;
 
-	if ((error = git_index_write(index)) < 0)
-		goto cleanup;
-
-	if ((error = git_repository_merge_cleanup(repo)) < 0) {
-		giterr_set(GITERR_REPOSITORY, "%s - Failed to clean up merge data.", ERROR_MSG);
-		goto cleanup;
+		if ((error = git_repository_merge_cleanup(repo)) < 0) {
+			giterr_set(GITERR_INDEX, "%s - failed to clean up merge data", ERROR_MSG);
+			goto cleanup;
+		}
 	}
-
-	if (reset_type == GIT_RESET_MIXED) {
-		error = 0;
-		goto cleanup;
-	}
-
-	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
-
-	error = git_checkout_index(repo, NULL, &opts);
 
 cleanup:
 	git_object_free(commit);

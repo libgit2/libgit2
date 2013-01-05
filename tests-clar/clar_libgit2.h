@@ -6,17 +6,17 @@
 #include "common.h"
 
 /**
- * Special wrapper for `clar_must_pass` that passes
- * the last library error as the test failure message.
+ * Replace for `clar_must_pass` that passes the last library error as the
+ * test failure message.
  *
- * Use this wrapper around all `git_` library calls that
- * return error codes!
+ * Use this wrapper around all `git_` library calls that return error codes!
  */
 #define cl_git_pass(expr) do { \
+	int _lg2_error; \
 	giterr_clear(); \
-	if ((expr) != 0) \
-		clar__assert(0, __FILE__, __LINE__, "Function call failed: " #expr, giterr_last() ? giterr_last()->message : NULL, 1); \
-	} while(0)
+	if ((_lg2_error = (expr)) != 0) \
+		cl_git_report_failure(_lg2_error, __FILE__, __LINE__, "Function call failed: " #expr); \
+	} while (0)
 
 /**
  * Wrapper for `clar_must_fail` -- this one is
@@ -24,6 +24,10 @@
  * calls that are supposed to fail!
  */
 #define cl_git_fail(expr) cl_must_fail(expr)
+
+#define cl_git_fail_with(expr, error) cl_assert_equal_i(error,expr)
+
+void cl_git_report_failure(int, const char *, int, const char *);
 
 #define cl_assert_equal_sz(sz1,sz2) cl_assert((sz1) == (sz2))
 
