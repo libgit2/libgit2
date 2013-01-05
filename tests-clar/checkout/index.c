@@ -1,24 +1,10 @@
 #include "clar_libgit2.h"
+#include "checkout_helpers.h"
 
 #include "git2/checkout.h"
 #include "repository.h"
 
 static git_repository *g_repo;
-
-static void reset_index_to_treeish(git_object *treeish)
-{
-	git_object *tree;
-	git_index *index;
-
-	cl_git_pass(git_object_peel(&tree, treeish, GIT_OBJ_TREE));
-
-	cl_git_pass(git_repository_index(&index, g_repo));
-	cl_git_pass(git_index_read_tree(index, (git_tree *)tree));
-	cl_git_pass(git_index_write(index));
-
-	git_object_free(tree);
-	git_index_free(index);
-}
 
 void test_checkout_index__initialize(void)
 {
@@ -39,23 +25,6 @@ void test_checkout_index__initialize(void)
 void test_checkout_index__cleanup(void)
 {
 	cl_git_sandbox_cleanup();
-}
-
-static void test_file_contents(const char *path, const char *expectedcontents)
-{
-	int fd;
-	char buffer[1024] = {0};
-	size_t expectedlen, actuallen;
-
-	fd = p_open(path, O_RDONLY);
-	cl_assert(fd >= 0);
-
-	expectedlen = strlen(expectedcontents);
-	actuallen = p_read(fd, buffer, 1024);
-	cl_git_pass(p_close(fd));
-
-	cl_assert_equal_sz(actuallen, expectedlen);
-	cl_assert_equal_s(buffer, expectedcontents);
 }
 
 void test_checkout_index__cannot_checkout_a_bare_repository(void)
@@ -501,6 +470,10 @@ void test_checkout_index__can_update_prefixed_files(void)
 {
 	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
 
+	cl_assert_equal_i(false, git_path_isfile("./testrepo/README"));
+	cl_assert_equal_i(false, git_path_isfile("./testrepo/branch_file.txt"));
+	cl_assert_equal_i(false, git_path_isfile("./testrepo/new.txt"));
+
 	cl_git_mkfile("./testrepo/READ", "content\n");
 	cl_git_mkfile("./testrepo/README.after", "content\n");
 	cl_git_pass(p_mkdir("./testrepo/branch_file", 0777));
@@ -508,13 +481,17 @@ void test_checkout_index__can_update_prefixed_files(void)
 	cl_git_mkfile("./testrepo/branch_file/contained_file", "content\n");
 	cl_git_pass(p_mkdir("./testrepo/branch_file.txt.after", 0777));
 
-	opts.checkout_strategy = GIT_CHECKOUT_FORCE | GIT_CHECKOUT_REMOVE_UNTRACKED;
+	opts.checkout_strategy =
+		GIT_CHECKOUT_SAFE_CREATE | GIT_CHECKOUT_REMOVE_UNTRACKED;
 
 	cl_git_pass(git_checkout_index(g_repo, NULL, &opts));
 
-	test_file_contents("./testrepo/README", "hey there\n");
-	test_file_contents("./testrepo/branch_file.txt", "hi\nbye!\n");
-	test_file_contents("./testrepo/new.txt", "my new file\n");
+	/* remove untracked will remove the .gitattributes file before the blobs
+	 * were created, so they will have had crlf filtering applied on Windows
+	 */
+	test_file_contents_nocr("./testrepo/README", "hey there\n");
+	test_file_contents_nocr("./testrepo/branch_file.txt", "hi\nbye!\n");
+	test_file_contents_nocr("./testrepo/new.txt", "my new file\n");
 
 	cl_assert(!git_path_exists("testrepo/READ"));
 	cl_assert(!git_path_exists("testrepo/README.after"));
