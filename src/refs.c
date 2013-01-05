@@ -373,7 +373,7 @@ static int packed_parse_oid(
 
 	refname_end = memchr(refname_begin, '\n', buffer_end - refname_begin);
 	if (refname_end == NULL)
-		goto corrupt;
+		refname_end = buffer_end;
 
 	if (refname_end[-1] == '\r')
 		refname_end--;
