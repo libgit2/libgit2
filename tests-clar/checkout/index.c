@@ -1,24 +1,10 @@
 #include "clar_libgit2.h"
+#include "checkout_helpers.h"
 
 #include "git2/checkout.h"
 #include "repository.h"
 
 static git_repository *g_repo;
-
-static void reset_index_to_treeish(git_object *treeish)
-{
-	git_object *tree;
-	git_index *index;
-
-	cl_git_pass(git_object_peel(&tree, treeish, GIT_OBJ_TREE));
-
-	cl_git_pass(git_repository_index(&index, g_repo));
-	cl_git_pass(git_index_read_tree(index, (git_tree *)tree));
-	cl_git_pass(git_index_write(index));
-
-	git_object_free(tree);
-	git_index_free(index);
-}
 
 void test_checkout_index__initialize(void)
 {
@@ -39,23 +25,6 @@ void test_checkout_index__initialize(void)
 void test_checkout_index__cleanup(void)
 {
 	cl_git_sandbox_cleanup();
-}
-
-static void test_file_contents(const char *path, const char *expectedcontents)
-{
-	int fd;
-	char buffer[1024] = {0};
-	size_t expectedlen, actuallen;
-
-	fd = p_open(path, O_RDONLY);
-	cl_assert(fd >= 0);
-
-	expectedlen = strlen(expectedcontents);
-	actuallen = p_read(fd, buffer, 1024);
-	cl_git_pass(p_close(fd));
-
-	cl_assert_equal_sz(actuallen, expectedlen);
-	cl_assert_equal_s(buffer, expectedcontents);
 }
 
 void test_checkout_index__cannot_checkout_a_bare_repository(void)
