@@ -297,7 +297,7 @@ GIT_EXTERN(int) git_config_get_int32(int32_t *out, const git_config *cfg, const 
  *
  * All config files will be looked into, in the order of their
  * defined level. A higher level means a higher priority. The
- * first occurence of the variable will be returned here.
+ * first occurrence of the variable will be returned here.
  *
  * @param out pointer to the variable where the value should be stored
  * @param cfg where to look for the variable
@@ -314,7 +314,7 @@ GIT_EXTERN(int) git_config_get_int64(int64_t *out, const git_config *cfg, const 
  *
  * All config files will be looked into, in the order of their
  * defined level. A higher level means a higher priority. The
- * first occurence of the variable will be returned here.
+ * first occurrence of the variable will be returned here.
  *
  * @param out pointer to the variable where the value should be stored
  * @param cfg where to look for the variable
@@ -331,7 +331,7 @@ GIT_EXTERN(int) git_config_get_bool(int *out, const git_config *cfg, const char 
  *
  * All config files will be looked into, in the order of their
  * defined level. A higher level means a higher priority. The
- * first occurence of the variable will be returned here.
+ * first occurrence of the variable will be returned here.
  *
  * @param out pointer to the variable's value
  * @param cfg where to look for the variable

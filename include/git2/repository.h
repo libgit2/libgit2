@@ -609,7 +609,7 @@ GIT_EXTERN(int) git_repository_set_head_detached(
  * updated into making it point to the peeled Commit, and 0 is returned.
  *
  * If the HEAD is already detached and points to a non commitish, the HEAD is 
- * unaletered, and -1 is returned.
+ * unaltered, and -1 is returned.
  *
  * Otherwise, the HEAD will be detached and point to the peeled Commit.
  *

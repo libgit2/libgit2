@@ -241,8 +241,8 @@ typedef struct {
  * callback functions and you can use the contents to understand exactly
  * what has changed.
  *
- * The `old_file` repesents the "from" side of the diff and the `new_file`
- * repesents to "to" side of the diff.  What those means depend on the
+ * The `old_file` represents the "from" side of the diff and the `new_file`
+ * represents to "to" side of the diff.  What those means depend on the
  * function that was used to generate the diff and will be documented below.
  * You can also use the `GIT_DIFF_REVERSE` flag to flip it around.
  *

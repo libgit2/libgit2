@@ -83,7 +83,7 @@ GIT_BEGIN_DECL
  *   in target, baseline, or index, and not ignored) from the working dir.
  *
  * - GIT_CHECKOUT_REMOVE_IGNORED means remove ignored files (that are also
- *   unrtacked) from the working directory as well.
+ *   untracked) from the working directory as well.
  *
  * - GIT_CHECKOUT_UPDATE_ONLY means to only update the content of files that
  *   already exist.  Files will not be created nor deleted.  This just skips
@@ -97,13 +97,13 @@ GIT_BEGIN_DECL
  *
  * - Unmerged index entries are conflicts.  GIT_CHECKOUT_SKIP_UNMERGED skips
  *   files with unmerged index entries instead.  GIT_CHECKOUT_USE_OURS and
- *   GIT_CHECKOUT_USE_THEIRS to proceeed with the checkout using either the
+ *   GIT_CHECKOUT_USE_THEIRS to proceed with the checkout using either the
  *   stage 2 ("ours") or stage 3 ("theirs") version of files in the index.
  */
 typedef enum {
 	GIT_CHECKOUT_NONE = 0, /** default is a dry run, no actual updates */
 
-	/** Allow safe updates that cannot overwrite uncommited data */
+	/** Allow safe updates that cannot overwrite uncommitted data */
 	GIT_CHECKOUT_SAFE = (1u << 0),
 
 	/** Allow safe updates plus creation of missing files */

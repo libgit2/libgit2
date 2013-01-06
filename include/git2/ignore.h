@@ -57,7 +57,7 @@ GIT_EXTERN(int) git_ignore_clear_internal_rules(
  *
  * This function checks the ignore rules to see if they would apply to the
  * given file.  This indicates if the file would be ignored regardless of
- * whether the file is already in the index or commited to the repository.
+ * whether the file is already in the index or committed to the repository.
  *
  * One way to think of this is if you were to do "git add ." on the
  * directory containing the file, would it be added or not?

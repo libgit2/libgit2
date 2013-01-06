@@ -56,7 +56,7 @@ GIT_EXTERN(int) git_refspec_src_matches(const git_refspec *refspec, const char *
  * Transform a reference to its target following the refspec's rules
  *
  * @param out where to store the target name
- * @param outlen the size ouf the `out` buffer
+ * @param outlen the size of the `out` buffer
  * @param spec the refspec
  * @param name the name of the reference to transform
  * @return 0, GIT_EBUFS or another error
