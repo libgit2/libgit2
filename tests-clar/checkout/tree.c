@@ -67,6 +67,9 @@ void test_checkout_tree__can_checkout_and_remove_directory(void)
 	cl_assert_equal_i(true, git_path_isfile("./testrepo/ab/de/2.txt"));
 	cl_assert_equal_i(true, git_path_isfile("./testrepo/ab/de/fgh/1.txt"));
 
+	git_object_free(g_object);
+	g_object = NULL;
+
 	/* Checkout brach "master" and update HEAD, so that HEAD matches the
 	 * current working tree
 	 */
@@ -136,6 +139,9 @@ void test_checkout_tree__doesnt_write_unrequested_files_to_worktree(void)
   opts.checkout_strategy = GIT_CHECKOUT_NONE;
   git_checkout_tree(g_repo, (git_object*)p_chomped_commit, &opts);
   cl_assert_equal_i(false, git_path_isfile("testrepo/readme.txt"));
+
+  git_commit_free(p_master_commit);
+  git_commit_free(p_chomped_commit);
 }
 
 void test_checkout_tree__can_switch_branches(void)

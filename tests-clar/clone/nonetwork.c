@@ -144,6 +144,8 @@ void test_clone_nonetwork__custom_autotag(void)
 
 	cl_git_pass(git_tag_list(&tags, g_repo));
 	cl_assert_equal_i(0, tags.count);
+
+	git_strarray_free(&tags);
 }
 
 void test_clone_nonetwork__cope_with_already_existing_directory(void)
