@@ -105,6 +105,7 @@ struct head_info {
 	git_oid remote_head_oid;
 	git_buf branchname;
 	const git_refspec *refspec;
+	bool found;
 };
 
 static int reference_matches_remote_head(
@@ -119,16 +120,16 @@ static int reference_matches_remote_head(
 	 */
 
 	/* Stop looking if we've already found a match */
-	if (git_buf_len(&head_info->branchname) > 0)
+	if (head_info->found)
 		return 0;
 
 	if (git_reference_name_to_id(
 		&oid,
 		head_info->repo,
 		reference_name) < 0) {
-			/* TODO: How to handle not found references?
-			 */
-			return -1;
+			/* If the reference doesn't exists, it obviously cannot match the expected oid. */
+			giterr_clear();
+			return 0;
 	}
 
 	if (git_oid_cmp(&head_info->remote_head_oid, &oid) == 0) {
@@ -139,10 +140,14 @@ static int reference_matches_remote_head(
 			reference_name) < 0)
 				return -1;
 		
-		if (git_buf_sets(
-			&head_info->branchname,
-			git_buf_cstr(&head_info->branchname) + strlen(GIT_REFS_HEADS_DIR)) < 0)
-				return -1;
+		if (git_buf_len(&head_info->branchname) > 0) {
+			if (git_buf_sets(
+				&head_info->branchname,
+				git_buf_cstr(&head_info->branchname) + strlen(GIT_REFS_HEADS_DIR)) < 0)
+					return -1;
+
+			head_info->found = 1;
+		}
 	}
 
 	return 0;
@@ -207,6 +212,7 @@ static int update_head_to_remote(git_repository *repo, git_remote *remote)
 	git_buf_init(&head_info.branchname, 16);
 	head_info.repo = repo;
 	head_info.refspec = git_remote_fetchspec(remote);
+	head_info.found = 0;
 	
 	/* Determine the remote tracking reference name from the local master */
 	if (git_refspec_transform_r(
@@ -219,7 +225,7 @@ static int update_head_to_remote(git_repository *repo, git_remote *remote)
 	if (reference_matches_remote_head(git_buf_cstr(&remote_master_name), &head_info) < 0)
 		goto cleanup;
 
-	if (git_buf_len(&head_info.branchname) > 0) {
+	if (head_info.found) {
 		retcode = update_head_to_new_branch(
 			repo,
 			&head_info.remote_head_oid,
@@ -236,7 +242,7 @@ static int update_head_to_remote(git_repository *repo, git_remote *remote)
 		&head_info) < 0)
 			goto cleanup;
 
-	if (git_buf_len(&head_info.branchname) > 0) {
+	if (head_info.found) {
 		retcode = update_head_to_new_branch(
 			repo,
 			&head_info.remote_head_oid,
