@@ -107,8 +107,7 @@ int git_reset(
 	if (reset_type > GIT_RESET_SOFT) {
 		/* reset index to the target content */
 
-		if ((error = git_repository_index(&index, repo)) < 0 ||
-			(error = git_index_read_tree(index, tree)) < 0 ||
+		if ((error = git_index_read_tree(index, tree)) < 0 ||
 			(error = git_index_write(index)) < 0)
 			goto cleanup;
 
