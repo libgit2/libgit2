@@ -132,16 +132,16 @@ static int diff_delta_is_binary_by_attr(
 }
 
 static int diff_delta_is_binary_by_content(
-	diff_context *ctxt, git_diff_delta *delta, git_diff_file *file, git_map *map)
+	diff_context *ctxt,
+	git_diff_delta *delta,
+	git_diff_file *file,
+	const git_map *map)
 {
-	git_buf search;
+	const git_buf search = { map->data, 0, min(map->len, 4000) };
 
 	GIT_UNUSED(ctxt);
 
 	if ((file->flags & KNOWN_BINARY_FLAGS) == 0) {
-		search.ptr  = map->data;
-		search.size = min(map->len, 4000);
-
 		if (git_buf_text_is_binary(&search))
 			file->flags |= GIT_DIFF_FILE_BINARY;
 		else
@@ -1231,9 +1231,8 @@ int git_diff_print_patch(
 	return error;
 }
 
-
 static void set_data_from_blob(
-	git_blob *blob, git_map *map, git_diff_file *file)
+	const git_blob *blob, git_map *map, git_diff_file *file)
 {
 	if (blob) {
 		file->size = git_blob_rawsize(blob);
@@ -1251,9 +1250,95 @@ static void set_data_from_blob(
 	}
 }
 
+static void set_data_from_buffer(
+	const char *buffer, size_t buffer_len, git_map *map, git_diff_file *file)
+{
+	file->size = (git_off_t)buffer_len;
+	file->mode = 0644;
+
+	if (!buffer)
+		file->flags |= GIT_DIFF_FILE_NO_DATA;
+	else
+		git_odb_hash(&file->oid, buffer, buffer_len, GIT_OBJ_BLOB);
+
+	map->len   = buffer_len;
+	map->data  = (char *)buffer;
+}
+
+typedef struct {
+	diff_context   ctxt;
+	git_diff_delta delta;
+	git_diff_patch patch;
+} diff_single_data;
+
+static int diff_single_init(
+	diff_single_data *data,
+	git_repository *repo,
+	const git_diff_options *opts,
+	git_diff_file_cb file_cb,
+	git_diff_hunk_cb hunk_cb,
+	git_diff_data_cb data_cb,
+	void *payload)
+{
+	GITERR_CHECK_VERSION(opts, GIT_DIFF_OPTIONS_VERSION, "git_diff_options");
+
+	memset(data, 0, sizeof(*data));
+
+	diff_context_init(
+		&data->ctxt, NULL, repo, opts, file_cb, hunk_cb, data_cb, payload);
+
+	diff_patch_init(&data->ctxt, &data->patch);
+
+	return 0;
+}
+
+static int diff_single_apply(diff_single_data *data)
+{
+	int error;
+	git_diff_delta *delta = &data->delta;
+	bool has_old = ((delta->old_file.flags & GIT_DIFF_FILE_NO_DATA) == 0);
+	bool has_new = ((delta->new_file.flags & GIT_DIFF_FILE_NO_DATA) == 0);
+
+	/* finish setting up fake git_diff_delta record and loaded data */
+
+	data->patch.delta = delta;
+	delta->binary = -1;
+
+	delta->status = has_new ?
+		(has_old ? GIT_DELTA_MODIFIED : GIT_DELTA_ADDED) :
+		(has_old ? GIT_DELTA_DELETED : GIT_DELTA_UNTRACKED);
+
+	if (git_oid_cmp(&delta->new_file.oid, &delta->old_file.oid) == 0)
+		delta->status = GIT_DELTA_UNMODIFIED;
+
+	if ((error = diff_delta_is_binary_by_content(
+			&data->ctxt, delta, &delta->old_file, &data->patch.old_data)) < 0 ||
+		(error = diff_delta_is_binary_by_content(
+			&data->ctxt, delta, &delta->new_file, &data->patch.new_data)) < 0)
+		goto cleanup;
+
+	data->patch.flags |= GIT_DIFF_PATCH_LOADED;
+
+	if (delta->binary != 1 && delta->status != GIT_DELTA_UNMODIFIED)
+		data->patch.flags |= GIT_DIFF_PATCH_DIFFABLE;
+
+	/* do diffs */
+
+	if (!(error = diff_delta_file_callback(&data->ctxt, delta, 1)))
+		error = diff_patch_generate(&data->ctxt, &data->patch);
+
+cleanup:
+	if (error == GIT_EUSER)
+		giterr_clear();
+
+	diff_patch_unload(&data->patch);
+
+	return error;
+}
+
 int git_diff_blobs(
-	git_blob *old_blob,
-	git_blob *new_blob,
+	const git_blob *old_blob,
+	const git_blob *new_blob,
 	const git_diff_options *options,
 	git_diff_file_cb file_cb,
 	git_diff_hunk_cb hunk_cb,
@@ -1261,73 +1346,56 @@ int git_diff_blobs(
 	void *payload)
 {
 	int error;
-	git_repository *repo;
-	diff_context ctxt;
-	git_diff_delta delta;
-	git_diff_patch patch;
+	diff_single_data d;
+	git_repository *repo =
+		new_blob ? git_object_owner((const git_object *)new_blob) :
+		old_blob ? git_object_owner((const git_object *)old_blob) : NULL;
 
-	GITERR_CHECK_VERSION(options, GIT_DIFF_OPTIONS_VERSION, "git_diff_options");
+	if ((error = diff_single_init(
+			&d, repo, options, file_cb, hunk_cb, data_cb, payload)) < 0)
+		return error;
 
-	if (options && (options->flags & GIT_DIFF_REVERSE)) {
-		git_blob *swap = old_blob;
+	if (options && (options->flags & GIT_DIFF_REVERSE) != 0) {
+		const git_blob *swap = old_blob;
 		old_blob = new_blob;
 		new_blob = swap;
 	}
 
-	if (new_blob)
-		repo = git_object_owner((git_object *)new_blob);
-	else if (old_blob)
-		repo = git_object_owner((git_object *)old_blob);
-	else
-		repo = NULL;
+	set_data_from_blob(old_blob, &d.patch.old_data, &d.delta.old_file);
+	set_data_from_blob(new_blob, &d.patch.new_data, &d.delta.new_file);
 
-	diff_context_init(
-		&ctxt, NULL, repo, options,
-		file_cb, hunk_cb, data_cb, payload);
-
-	diff_patch_init(&ctxt, &patch);
-
-	/* create a fake delta record and simulate diff_patch_load */
-
-	memset(&delta, 0, sizeof(delta));
-	delta.binary = -1;
-
-	set_data_from_blob(old_blob, &patch.old_data, &delta.old_file);
-	set_data_from_blob(new_blob, &patch.new_data, &delta.new_file);
-
-	delta.status = new_blob ?
-		(old_blob ? GIT_DELTA_MODIFIED : GIT_DELTA_ADDED) :
-		(old_blob ? GIT_DELTA_DELETED : GIT_DELTA_UNTRACKED);
-
-	if (git_oid_cmp(&delta.new_file.oid, &delta.old_file.oid) == 0)
-		delta.status = GIT_DELTA_UNMODIFIED;
-
-	patch.delta = &delta;
-
-	if ((error = diff_delta_is_binary_by_content(
-			 &ctxt, &delta, &delta.old_file, &patch.old_data)) < 0 ||
-		(error = diff_delta_is_binary_by_content(
-			&ctxt, &delta, &delta.new_file, &patch.new_data)) < 0)
-		goto cleanup;
-
-	patch.flags |= GIT_DIFF_PATCH_LOADED;
-	if (delta.binary != 1 && delta.status != GIT_DELTA_UNMODIFIED)
-		patch.flags |= GIT_DIFF_PATCH_DIFFABLE;
-
-	/* do diffs */
-
-	if (!(error = diff_delta_file_callback(&ctxt, patch.delta, 1)))
-		error = diff_patch_generate(&ctxt, &patch);
-
-cleanup:
-	diff_patch_unload(&patch);
-
-	if (error == GIT_EUSER)
-		giterr_clear();
-
-	return error;
+	return diff_single_apply(&d);
 }
 
+int git_diff_blob_to_buffer(
+	const git_blob *old_blob,
+	const char *buf,
+	size_t buflen,
+	const git_diff_options *options,
+	git_diff_file_cb file_cb,
+	git_diff_hunk_cb hunk_cb,
+	git_diff_data_cb data_cb,
+	void *payload)
+{
+	int error;
+	diff_single_data d;
+	git_repository *repo =
+		old_blob ? git_object_owner((const git_object *)old_blob) : NULL;
+
+	if ((error = diff_single_init(
+			&d, repo, options, file_cb, hunk_cb, data_cb, payload)) < 0)
+		return error;
+
+	if (options && (options->flags & GIT_DIFF_REVERSE) != 0) {
+		set_data_from_buffer(buf, buflen, &d.patch.old_data, &d.delta.old_file);
+		set_data_from_blob(old_blob, &d.patch.new_data, &d.delta.new_file);
+	} else {
+		set_data_from_blob(old_blob, &d.patch.old_data, &d.delta.old_file);
+		set_data_from_buffer(buf, buflen, &d.patch.new_data, &d.delta.new_file);
+	}
+
+	return diff_single_apply(&d);
+}
 
 size_t git_diff_num_deltas(git_diff_list *diff)
 {
