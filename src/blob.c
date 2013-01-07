@@ -13,13 +13,13 @@
 #include "blob.h"
 #include "filter.h"
 
-const void *git_blob_rawcontent(git_blob *blob)
+const void *git_blob_rawcontent(const git_blob *blob)
 {
 	assert(blob);
 	return blob->odb_object->raw.data;
 }
 
-git_off_t git_blob_rawsize(git_blob *blob)
+git_off_t git_blob_rawsize(const git_blob *blob)
 {
 	assert(blob);
 	return (git_off_t)blob->odb_object->raw.len;
