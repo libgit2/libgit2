@@ -824,6 +824,30 @@ GIT_EXTERN(int) git_diff_blobs(
 	git_diff_data_cb line_cb,
 	void *payload);
 
+/**
+ * Directly run a text diff between a blob and a buffer.
+ *
+ * Compared to a file, a blob and a buffer lack some contextual information. As such,
+ * the `git_diff_file` parameters of the callbacks will be filled
+ * accordingly to the following: `mode` will be set to 0, `path` will be set
+ * to NULL. When dealing with a NULL blob, `oid` will be set to 0.
+ *
+ * When at least the blob or the buffer are binary, the
+ * `git_diff_delta` binary attribute will be set to 1 and no call to the
+ * hunk_cb nor line_cb will be made.
+ *
+ * @return 0 on success, GIT_EUSER on non-zero callback, or error code
+ */
+GIT_EXTERN(int) git_diff_blob_to_buffer(
+	git_blob *old_blob,
+	char *buffer,
+	size_t buffer_len,
+	const git_diff_options *options,
+	git_diff_file_cb file_cb,
+	git_diff_hunk_cb hunk_cb,
+	git_diff_data_cb data_cb,
+	void *payload);
+
 GIT_END_DECL
 
 /** @} */
