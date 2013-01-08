@@ -23,14 +23,14 @@ OPTION( BUILD_EXAMPLES		"Build library usage example apps"		OFF )
 OPTION( TAGS				"Generate tags"							OFF )
 OPTION( PROFILE				"Generate profiling information"		OFF )
 IF(MSVC)
-	# This option is only availalbe when building with MSVC. By default, libgit2 is
-	# build using the stdcall calling convention, as that's what the CLR expects by
-	# default and how the Windows API is built.
+	# This option is only availalbe when building with MSVC. By default,
+	# libgit2 is build using the stdcall calling convention, as that's what
+	# the CLR expects by default and how the Windows API is built.
 	#
-	# If you are writing a C or C++ program and want to link to libgit2, you have to
-	# either:
+	# If you are writing a C or C++ program and want to link to libgit2, you
+	# have to either:
 	# - Add /Gz to the compiler options of _your_ program / library.
-	# - Turn this option off by invoking CMake with the "-DSTDCALL=Off" argument.
+	# - Turn this off by invoking CMake with the "-DSTDCALL=Off" argument.
 	#
 	OPTION( STDCALL			"Build libgit2 with the __stdcall convention"	ON  )
 ENDIF()
@@ -52,11 +52,11 @@ FUNCTION(TARGET_OS_LIBRARIES target)
 	ENDIF()
 ENDFUNCTION()
 
-# For the MSVC IDE, this function splits up the source files like windows explorer does.
-# This is esp. useful with the libgit2_clar project, were usually 2 or more files share
-# the same name.
-# Sadly, this file grouping is a per-directory option in cmake and not per-target, resulting
-# in empty virtual folders "tests-clar" for the git2.dll
+# For the MSVC IDE, this function splits up the source files like windows
+# explorer does. This is esp. useful with the libgit2_clar project, were
+# usually 2 or more files share the same name.  Sadly, this file grouping
+# is a per-directory option in cmake and not per-target, resulting in
+# empty virtual folders "tests-clar" for the git2.dll
 FUNCTION(MSVC_SPLIT_SOURCES target)
 	IF(MSVC_IDE)
 		GET_TARGET_PROPERTY(sources ${target} SOURCES)
@@ -119,7 +119,8 @@ ENDIF()
 
 # Optional external dependency: zlib
 IF(NOT ZLIB_LIBRARY)
-	# It's optional, but FIND_PACKAGE gives a warning that looks more like an error.
+	# It's optional, but FIND_PACKAGE gives a warning that looks more like an
+	# error.
 	FIND_PACKAGE(ZLIB QUIET)
 ENDIF()
 IF (ZLIB_FOUND)
