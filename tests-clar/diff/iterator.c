@@ -355,12 +355,14 @@ static void index_iterator_test(
 	const char **expected_names,
 	const char **expected_oids)
 {
+	git_index *index;
 	git_iterator *i;
 	const git_index_entry *entry;
 	int count = 0;
 	git_repository *repo = cl_git_sandbox_init(sandbox);
 
-	cl_git_pass(git_iterator_for_repo_index_range(&i, repo, start, end));
+	cl_git_pass(git_repository_index(&index, repo));
+	cl_git_pass(git_iterator_for_index_range(&i, index, start, end));
 	cl_git_pass(git_iterator_current(i, &entry));
 
 	while (entry != NULL) {
@@ -378,6 +380,7 @@ static void index_iterator_test(
 	}
 
 	git_iterator_free(i);
+	git_index_free(index);
 
 	cl_assert_equal_i(expected_count, count);
 }

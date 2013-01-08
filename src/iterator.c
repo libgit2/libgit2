@@ -485,20 +485,6 @@ int git_iterator_for_index_range(
 	return 0;
 }
 
-int git_iterator_for_repo_index_range(
-	git_iterator **iter,
-	git_repository *repo,
-	const char *start,
-	const char *end)
-{
-	int error;
-	git_index *index;
-
-	if ((error = git_repository_index__weakptr(&index, repo)) < 0)
-		return error;
-
-	return git_iterator_for_index_range(iter, index, start, end);
-}
 
 typedef struct workdir_iterator_frame workdir_iterator_frame;
 struct workdir_iterator_frame {
@@ -986,6 +972,22 @@ int git_iterator_spoolandsort_push(git_iterator *iter, bool ignore_case)
 fail:
 	spoolandsort_iterator__free_callbacks(scb);
 	return -1;
+}
+
+
+void git_iterator_free(git_iterator *iter)
+{
+	if (iter == NULL)
+		return;
+
+	iter->cb->free(iter);
+
+	git__free(iter->start);
+	git__free(iter->end);
+
+	memset(iter, 0, sizeof(*iter));
+
+	git__free(iter);
 }
 
 git_index *git_iterator_index_get_index(git_iterator *iter)

@@ -620,11 +620,9 @@ static void assert_ignore_case(
 {
 	git_config *config;
 	unsigned int status;
-	git_buf lower_case_path = GIT_BUF_INIT,
-		camel_case_path = GIT_BUF_INIT;
-
+	git_buf lower_case_path = GIT_BUF_INIT, camel_case_path = GIT_BUF_INIT;
 	git_repository *repo, *repo2;
-	
+
 	repo = cl_git_sandbox_init("empty_standard_repo");
 	cl_git_remove_placeholders(git_repository_path(repo), "dummy-marker.txt");
 
@@ -641,11 +639,11 @@ static void assert_ignore_case(
 
 	cl_git_pass(git_repository_open(&repo2, "./empty_standard_repo"));
 
-	cl_git_pass(git_buf_joinpath(&camel_case_path,
-		git_repository_workdir(repo), "Plop"));
-
 	cl_git_pass(git_status_file(&status, repo2, "plop"));
 	cl_assert_equal_i(GIT_STATUS_CURRENT, status);
+
+	cl_git_pass(git_buf_joinpath(&camel_case_path,
+		git_repository_workdir(repo), "Plop"));
 
 	cl_git_pass(p_rename(git_buf_cstr(&lower_case_path), git_buf_cstr(&camel_case_path)));
 
@@ -660,12 +658,12 @@ static void assert_ignore_case(
 	git_buf_free(&camel_case_path);
 }
 
-void test_status_worktree__file_status_honors_ignorecase_conf_setting_set_to_true(void)
+void test_status_worktree__file_status_honors_core_ignorecase_true(void)
 {
 	assert_ignore_case(true, GIT_STATUS_CURRENT, GIT_STATUS_CURRENT);
 }
 
-void test_status_worktree__file_status_honors_ignorecase_conf_setting_set_to_false(void)
+void test_status_worktree__file_status_honors_core_ignorecase_false(void)
 {
 	assert_ignore_case(false, GIT_STATUS_WT_DELETED, GIT_STATUS_WT_NEW);
 }

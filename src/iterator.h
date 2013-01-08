@@ -44,46 +44,33 @@ struct git_iterator {
 	bool ignore_case;
 };
 
-extern int git_iterator_for_nothing(git_iterator **iter);
+extern int git_iterator_for_nothing(git_iterator **out);
 
 extern int git_iterator_for_tree_range(
-	git_iterator **iter, git_tree *tree,
-	const char *start, const char *end);
+	git_iterator **out, git_tree *tree, const char *start, const char *end);
 
-GIT_INLINE(int) git_iterator_for_tree(
-	git_iterator **iter, git_tree *tree)
+GIT_INLINE(int) git_iterator_for_tree(git_iterator **out, git_tree *tree)
 {
-	return git_iterator_for_tree_range(iter, tree, NULL, NULL);
+	return git_iterator_for_tree_range(out, tree, NULL, NULL);
 }
 
 extern int git_iterator_for_index_range(
-	git_iterator **iter, git_index *index, const char *start, const char *end);
+	git_iterator **out, git_index *index, const char *start, const char *end);
 
-GIT_INLINE(int) git_iterator_for_index(
-	git_iterator **iter, git_index *index)
+GIT_INLINE(int) git_iterator_for_index(git_iterator **out, git_index *index)
 {
-	return git_iterator_for_index_range(iter, index, NULL, NULL);
-}
-
-extern int git_iterator_for_repo_index_range(
-	git_iterator **iter, git_repository *repo,
-	const char *start, const char *end);
-
-GIT_INLINE(int) git_iterator_for_repo_index(
-	git_iterator **iter, git_repository *repo)
-{
-	return git_iterator_for_repo_index_range(iter, repo, NULL, NULL);
+	return git_iterator_for_index_range(out, index, NULL, NULL);
 }
 
 extern int git_iterator_for_workdir_range(
-	git_iterator **iter, git_repository *repo,
-	const char *start, const char *end);
+	git_iterator **out, git_repository *repo, const char *start, const char *end);
 
-GIT_INLINE(int) git_iterator_for_workdir(
-	git_iterator **iter, git_repository *repo)
+GIT_INLINE(int) git_iterator_for_workdir(git_iterator **out, git_repository *repo)
 {
-	return git_iterator_for_workdir_range(iter, repo, NULL, NULL);
+	return git_iterator_for_workdir_range(out, repo, NULL, NULL);
 }
+
+extern void git_iterator_free(git_iterator *iter);
 
 /* Spool all iterator values, resort with alternative ignore_case value
  * and replace callbacks with spoolandsort alternates.
@@ -128,21 +115,6 @@ GIT_INLINE(int) git_iterator_reset(
 	git_iterator *iter, const char *start, const char *end)
 {
 	return iter->cb->reset(iter, start, end);
-}
-
-GIT_INLINE(void) git_iterator_free(git_iterator *iter)
-{
-	if (iter == NULL)
-		return;
-
-	iter->cb->free(iter);
-
-	git__free(iter->start);
-	git__free(iter->end);
-
-	memset(iter, 0, sizeof(*iter));
-
-	git__free(iter);
 }
 
 GIT_INLINE(git_iterator_type_t) git_iterator_type(git_iterator *iter)
