@@ -68,6 +68,26 @@ typedef int (*git_cred_acquire_cb)(
 	unsigned int allowed_types,
 	void *payload);
 
+/**
+ * Payload for git_cred_stock_userpass_plaintext.
+ */
+typedef struct git_cred_stock_userpass_plaintext_payload {
+	char *username;
+	char *password;
+} git_cred_stock_userpass_plaintext_payload;
+
+
+/**
+ * Stock callback usable as a git_cred_acquire_cb.  This calls
+ * git_cred_userpass_plaintext_new unless the protocol has not specified
+ * GIT_CREDTYPE_USERPASS_PLAINTEXT as an allowed type.
+ */
+GIT_EXTERN(int) git_cred_stock_userpass_plaintext(
+		git_cred **cred,
+		const char *url,
+		unsigned int allowed_types,
+		void *payload);
+
 /*
  *** End interface for credentials acquisition ***
  *** Begin base transport interface ***

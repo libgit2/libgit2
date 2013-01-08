@@ -121,7 +121,7 @@ static int update_tips(const char *refname, const git_oid *a, const git_oid *b, 
 	return 0;
 }
 
-void test_clone_network__custom_remote_callbacks(void)
+void test_online_clone__custom_remote_callbacks(void)
 {
 	git_remote_callbacks remote_callbacks = GIT_REMOTE_CALLBACKS_INIT;
 	int callcount = 0;
@@ -134,39 +134,18 @@ void test_clone_network__custom_remote_callbacks(void)
 	cl_assert(callcount > 0);
 }
 
-struct cred_user_pass {
-	const char *user;
-	const char *pass;
-};
-
-static int cred_acquire(
-	git_cred **cred,
-	const char *url,
-	unsigned int allowed_types,
-	void *payload)
-{
-	struct cred_user_pass *user_pass = (struct cred_user_pass*)payload;
-
-	GIT_UNUSED(url);
-	if ((GIT_CREDTYPE_USERPASS_PLAINTEXT & allowed_types) == 0 ||
-			git_cred_userpass_plaintext_new(cred, user_pass->user, user_pass->pass) < 0)
-		return -1;
-
-	return 0;
-}
-
-void test_clone_network__credentials(void)
+void test_online_clone__credentials(void)
 {
 	/* Remote URL environment variable must be set.  User and password are optional.  */
 	const char *remote_url = cl_getenv("GITTEST_REMOTE_URL");
-	struct cred_user_pass user_pass = {
+	git_cred_stock_userpass_plaintext_payload user_pass = {
 		cl_getenv("GITTEST_REMOTE_USER"),
 		cl_getenv("GITTEST_REMOTE_PASS")
 	};
 
 	if (!remote_url) return;
 
-	g_options.cred_acquire_cb = cred_acquire;
+	g_options.cred_acquire_cb = git_cred_stock_userpass_plaintext;
 	g_options.cred_acquire_payload = &user_pass;
 
 	cl_git_pass(git_clone(&g_repo, remote_url, "./foo", &g_options));
