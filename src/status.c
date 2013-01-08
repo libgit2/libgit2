@@ -208,9 +208,8 @@ static int get_one_status(const char *path, unsigned int status, void *data)
 
 	if (sfi->count > 1 ||
 		(strcmp(sfi->expected, path) != 0 &&
-		p_fnmatch(sfi->expected, path, 0) != 0)) {
-		giterr_set(GITERR_INVALID,
-			"Ambiguous path '%s' given to git_status_file", sfi->expected);
+		p_fnmatch(sfi->expected, path, 0) != 0))
+	{
 		sfi->ambiguous = true;
 		return GIT_EAMBIGUOUS;
 	}
@@ -242,8 +241,11 @@ int git_status_file(
 
 	error = git_status_foreach_ext(repo, &opts, get_one_status, &sfi);
 
-	if (error < 0 && sfi.ambiguous)
+	if (error < 0 && sfi.ambiguous) {
+		giterr_set(GITERR_INVALID,
+			"Ambiguous path '%s' given to git_status_file", sfi.expected);
 		error = GIT_EAMBIGUOUS;
+	}
 
 	if (!error && !sfi.count) {
 		git_buf full = GIT_BUF_INIT;
