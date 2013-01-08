@@ -1666,32 +1666,28 @@ int git_diff__paired_foreach(
 	int cmp;
 	git_diff_delta *i2h, *w2i;
 	size_t i, j, i_max, j_max;
-	bool icase = false;
+	int (*strcomp)(const char *, const char *);
 
 	i_max = idx2head ? idx2head->deltas.length : 0;
 	j_max = wd2idx   ? wd2idx->deltas.length   : 0;
 
-	if (idx2head && wd2idx &&
-		(0 != (idx2head->opts.flags & GIT_DIFF_DELTAS_ARE_ICASE) ||
-		 0 != (wd2idx->opts.flags & GIT_DIFF_DELTAS_ARE_ICASE)))
-	{
-		/* Then use the ignore-case sorter... */
-		icase = true;
+   /* Get appropriate strcmp function */
+   strcomp = idx2head ? idx2head->strcomp : wd2idx ? wd2idx->strcomp : NULL;
 
-		/* and assert that both are ignore-case sorted. If this function
-		 * ever needs to support merge joining result sets that are not sorted
-		 * by the same function, then it will need to be extended to do a spool
-		 * and sort on one of the results before merge joining */
-		assert(0 != (idx2head->opts.flags & GIT_DIFF_DELTAS_ARE_ICASE) &&
-			0 != (wd2idx->opts.flags & GIT_DIFF_DELTAS_ARE_ICASE));
-	}
+   /* Assert both iterators use matching ignore-case. If this function ever
+    * supports merging diffs that are not sorted by the same function, then
+    * it will need to spool and sort on one of the results before merging
+    */
+   if (idx2head && wd2idx) {
+       assert(idx2head->strcomp == wd2idx->strcomp);
+   }
 
 	for (i = 0, j = 0; i < i_max || j < j_max; ) {
 		i2h = idx2head ? GIT_VECTOR_GET(&idx2head->deltas,i) : NULL;
 		w2i = wd2idx   ? GIT_VECTOR_GET(&wd2idx->deltas,j)   : NULL;
 
 		cmp = !w2i ? -1 : !i2h ? 1 :
-			STRCMP_CASESELECT(icase, i2h->old_file.path, w2i->old_file.path);
+			strcomp(i2h->old_file.path, w2i->old_file.path);
 
 		if (cmp < 0) {
 			if (cb(i2h, NULL, payload))
