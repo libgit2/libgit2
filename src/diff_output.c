@@ -495,7 +495,7 @@ static void diff_patch_init(
 		patch->old_src = patch->diff->old_src;
 		patch->new_src = patch->diff->new_src;
 	} else {
-		patch->old_src = patch->new_src = GIT_ITERATOR_TREE;
+		patch->old_src = patch->new_src = GIT_ITERATOR_TYPE_TREE;
 	}
 }
 
@@ -578,7 +578,7 @@ static int diff_patch_load(
 	 */
 
 	if ((delta->old_file.flags & GIT_DIFF_FILE_NO_DATA) == 0 &&
-		patch->old_src == GIT_ITERATOR_WORKDIR) {
+		patch->old_src == GIT_ITERATOR_TYPE_WORKDIR) {
 		if ((error = get_workdir_content(
 				ctxt, delta, &delta->old_file, &patch->old_data)) < 0)
 			goto cleanup;
@@ -587,7 +587,7 @@ static int diff_patch_load(
 	}
 
 	if ((delta->new_file.flags & GIT_DIFF_FILE_NO_DATA) == 0 &&
-		patch->new_src == GIT_ITERATOR_WORKDIR) {
+		patch->new_src == GIT_ITERATOR_TYPE_WORKDIR) {
 		if ((error = get_workdir_content(
 				ctxt, delta, &delta->new_file, &patch->new_data)) < 0)
 			goto cleanup;
@@ -596,7 +596,7 @@ static int diff_patch_load(
 	}
 
 	if ((delta->old_file.flags & GIT_DIFF_FILE_NO_DATA) == 0 &&
-		patch->old_src != GIT_ITERATOR_WORKDIR) {
+		patch->old_src != GIT_ITERATOR_TYPE_WORKDIR) {
 		if ((error = get_blob_content(
 				ctxt, delta, &delta->old_file,
 				&patch->old_data, &patch->old_blob)) < 0)
@@ -606,7 +606,7 @@ static int diff_patch_load(
 	}
 
 	if ((delta->new_file.flags & GIT_DIFF_FILE_NO_DATA) == 0 &&
-		patch->new_src != GIT_ITERATOR_WORKDIR) {
+		patch->new_src != GIT_ITERATOR_TYPE_WORKDIR) {
 		if ((error = get_blob_content(
 				ctxt, delta, &delta->new_file,
 				&patch->new_data, &patch->new_blob)) < 0)

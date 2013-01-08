@@ -35,7 +35,8 @@ static void tree_iterator_test(
 	git_repository *repo = cl_git_sandbox_init(sandbox);
 
 	cl_assert(t = resolve_commit_oid_to_tree(repo, treeish));
-	cl_git_pass(git_iterator_for_tree_range(&i, t, start, end));
+	cl_git_pass(git_iterator_for_tree_range(
+		&i, t, GIT_ITERATOR_DONT_IGNORE_CASE, start, end));
 
 	/* test loop */
 	cl_git_pass(git_iterator_current(i, &entry));
@@ -304,7 +305,8 @@ void test_diff_iterator__tree_special_functions(void)
 		repo, "24fa9a9fc4e202313e24b648087495441dab432b");
 	cl_assert(t != NULL);
 
-	cl_git_pass(git_iterator_for_tree_range(&i, t, NULL, NULL));
+	cl_git_pass(git_iterator_for_tree_range(
+		&i, t, GIT_ITERATOR_DONT_IGNORE_CASE, NULL, NULL));
 	cl_git_pass(git_iterator_current(i, &entry));
 
 	while (entry != NULL) {
@@ -362,7 +364,7 @@ static void index_iterator_test(
 	git_repository *repo = cl_git_sandbox_init(sandbox);
 
 	cl_git_pass(git_repository_index(&index, repo));
-	cl_git_pass(git_iterator_for_index_range(&i, index, start, end));
+	cl_git_pass(git_iterator_for_index_range(&i, index, 0, start, end));
 	cl_git_pass(git_iterator_current(i, &entry));
 
 	while (entry != NULL) {
@@ -536,7 +538,7 @@ static void workdir_iterator_test(
 	int count = 0, count_all = 0, count_all_post_reset = 0;
 	git_repository *repo = cl_git_sandbox_init(sandbox);
 
-	cl_git_pass(git_iterator_for_workdir_range(&i, repo, start, end));
+	cl_git_pass(git_iterator_for_workdir_range(&i, repo, 0, start, end));
 	cl_git_pass(git_iterator_current(i, &entry));
 
 	while (entry != NULL) {
@@ -734,7 +736,7 @@ void test_diff_iterator__workdir_builtin_ignores(void)
 	cl_git_mkfile("attr/sub/.git", "whatever");
 
 	cl_git_pass(
-		git_iterator_for_workdir_range(&i, repo, "dir", "sub/sub/file"));
+		git_iterator_for_workdir_range(&i, repo, 0, "dir", "sub/sub/file"));
 	cl_git_pass(git_iterator_current(i, &entry));
 
 	for (idx = 0; entry != NULL; ++idx) {
