@@ -755,3 +755,52 @@ void test_diff_iterator__workdir_builtin_ignores(void)
 
 	git_iterator_free(i);
 }
+
+static void check_first_through_third_range(
+	git_repository *repo, const char *start, const char *end)
+{
+	git_iterator *i;
+	const git_index_entry *entry;
+	int idx;
+	static const char *expected[] = {
+		"FIRST", "second", "THIRD", NULL
+	};
+
+	cl_git_pass(git_iterator_for_workdir_range(
+		&i, repo, GIT_IGNORE_CASE, start, end));
+	cl_git_pass(git_iterator_current(i, &entry));
+
+	for (idx = 0; entry != NULL; ++idx) {
+		cl_assert_equal_s(expected[idx], entry->path);
+
+		if (S_ISDIR(entry->mode))
+			cl_git_pass(git_iterator_advance_into_directory(i, &entry));
+		else
+			cl_git_pass(git_iterator_advance(i, &entry));
+	}
+
+	cl_assert(expected[idx] == NULL);
+
+	git_iterator_free(i);
+}
+
+void test_diff_iterator__workdir_handles_icase_range(void)
+{
+	git_repository *repo;
+
+	repo = cl_git_sandbox_init("empty_standard_repo");
+	cl_git_remove_placeholders(git_repository_path(repo), "dummy-marker.txt");
+
+	cl_git_mkfile("empty_standard_repo/before", "whatever\n");
+	cl_git_mkfile("empty_standard_repo/FIRST", "whatever\n");
+	cl_git_mkfile("empty_standard_repo/second", "whatever\n");
+	cl_git_mkfile("empty_standard_repo/THIRD", "whatever\n");
+	cl_git_mkfile("empty_standard_repo/zafter", "whatever\n");
+	cl_git_mkfile("empty_standard_repo/Zlast", "whatever\n");
+
+	check_first_through_third_range(repo, "first", "third");
+	check_first_through_third_range(repo, "FIRST", "THIRD");
+	check_first_through_third_range(repo, "first", "THIRD");
+	check_first_through_third_range(repo, "FIRST", "third");
+	check_first_through_third_range(repo, "FirSt", "tHiRd");
+}
