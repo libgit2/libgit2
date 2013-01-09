@@ -881,3 +881,46 @@ void test_diff_workdir__checks_options_version(void)
 	err = giterr_last();
 	cl_assert_equal_i(GITERR_INVALID, err->klass);
 }
+
+void test_diff_workdir__can_diff_empty_file(void)
+{
+	git_diff_list *diff;
+	git_tree *tree;
+	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
+	struct stat st;
+	git_diff_patch *patch;
+
+	g_repo = cl_git_sandbox_init("attr_index");
+
+	tree = resolve_commit_oid_to_tree(g_repo, "3812cfef3661"); /* HEAD */
+
+	/* baseline - make sure there are no outstanding diffs */
+
+	cl_git_pass(git_diff_tree_to_workdir(&diff, g_repo, tree, &opts));
+	cl_assert_equal_i(2, (int)git_diff_num_deltas(diff));
+	git_diff_list_free(diff);
+
+	/* empty contents of file */
+
+	cl_git_rewritefile("attr_index/README.txt", "");
+	cl_git_pass(git_path_lstat("attr_index/README.txt", &st));
+	cl_assert_equal_i(0, (int)st.st_size);
+
+	cl_git_pass(git_diff_tree_to_workdir(&diff, g_repo, tree, &opts));
+	cl_assert_equal_i(3, (int)git_diff_num_deltas(diff));
+	/* diffs are: .gitattributes, README.txt, sub/sub/.gitattributes */
+	cl_git_pass(git_diff_get_patch(&patch, NULL, diff, 1));
+	git_diff_patch_free(patch);
+	git_diff_list_free(diff);
+
+	/* remove a file altogether */
+
+	cl_git_pass(p_unlink("attr_index/README.txt"));
+	cl_assert(!git_path_exists("attr_index/README.txt"));
+
+	cl_git_pass(git_diff_tree_to_workdir(&diff, g_repo, tree, &opts));
+	cl_assert_equal_i(3, (int)git_diff_num_deltas(diff));
+	cl_git_pass(git_diff_get_patch(&patch, NULL, diff, 1));
+	git_diff_patch_free(patch);
+	git_diff_list_free(diff);
+}

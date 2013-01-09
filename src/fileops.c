@@ -121,7 +121,7 @@ mode_t git_futils_canonical_mode(mode_t raw_mode)
 
 int git_futils_readbuffer_fd(git_buf *buf, git_file fd, size_t len)
 {
-	ssize_t read_size;
+	ssize_t read_size = 0;
 
 	git_buf_clear(buf);
 

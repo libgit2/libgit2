@@ -376,6 +376,9 @@ static int get_workdir_content(
 			goto close_and_cleanup;
 
 		if (error == 0) { /* note: git_filters_load returns filter count */
+			if (!file->size)
+				goto close_and_cleanup;
+
 			error = git_futils_mmap_ro(map, fd, 0, (size_t)file->size);
 			file->flags |= GIT_DIFF_FILE_UNMAP_DATA;
 		} else {
