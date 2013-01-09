@@ -22,8 +22,10 @@ static git_oid _oid_b3;
 static git_oid _oid_b2;
 static git_oid _oid_b1;
 
-/* git_oid *oid, git_repository *repo, (string literal) blob */
-#define CREATE_BLOB(oid, repo, blob) git_blob_create_frombuffer(oid, repo, blob, sizeof(blob) - 1)
+static git_oid _tag_commit;
+static git_oid _tag_tree;
+static git_oid _tag_blob;
+static git_oid _tag_lightweight;
 
 static int cred_acquire_cb(git_cred **cred, const char *url, unsigned int allowed_types, void *payload)
 {
@@ -156,6 +158,11 @@ void test_online_push__initialize(void)
 	git_oid_fromstr(&_oid_b3, "d9b63a88223d8367516f50bd131a5f7349b7f3e4");
 	git_oid_fromstr(&_oid_b2, "a78705c3b2725f931d3ee05348d83cc26700f247");
 	git_oid_fromstr(&_oid_b1, "a78705c3b2725f931d3ee05348d83cc26700f247");
+
+	git_oid_fromstr(&_tag_commit, "805c54522e614f29f70d2413a0470247d8b424ac");
+	git_oid_fromstr(&_tag_tree, "ff83aa4c5e5d28e3bcba2f5c6e2adc61286a4e5e");
+	git_oid_fromstr(&_tag_blob, "b483ae7ba66decee9aee971f501221dea84b1498");
+	git_oid_fromstr(&_tag_lightweight, "951bbbb90e2259a4c8950db78946784fb53fcbce");
 
 	/* Remote URL environment variable must be set.  User and password are optional.  */
 	_remote_url = cl_getenv("GITTEST_REMOTE_URL");
@@ -407,6 +414,46 @@ void test_online_push__fast_fwd(void)
 		exp_refs_ff, ARRAY_SIZE(exp_refs_ff), 0);
 }
 
+void test_online_push__tag_commit(void)
+{
+	const char *specs[] = { "refs/tags/tag-commit:refs/tags/tag-commit" };
+	push_status exp_stats[] = { { "refs/tags/tag-commit", NULL } };
+	expected_ref exp_refs[] = { { "refs/tags/tag-commit", &_tag_commit } };
+	do_push(specs, ARRAY_SIZE(specs),
+		exp_stats, ARRAY_SIZE(exp_stats),
+		exp_refs, ARRAY_SIZE(exp_refs), 0);
+}
+
+void test_online_push__tag_tree(void)
+{
+	const char *specs[] = { "refs/tags/tag-tree:refs/tags/tag-tree" };
+	push_status exp_stats[] = { { "refs/tags/tag-tree", NULL } };
+	expected_ref exp_refs[] = { { "refs/tags/tag-tree", &_tag_tree } };
+	do_push(specs, ARRAY_SIZE(specs),
+		exp_stats, ARRAY_SIZE(exp_stats),
+		exp_refs, ARRAY_SIZE(exp_refs), 0);
+}
+
+void test_online_push__tag_blob(void)
+{
+	const char *specs[] = { "refs/tags/tag-blob:refs/tags/tag-blob" };
+	push_status exp_stats[] = { { "refs/tags/tag-blob", NULL } };
+	expected_ref exp_refs[] = { { "refs/tags/tag-blob", &_tag_blob } };
+	do_push(specs, ARRAY_SIZE(specs),
+		exp_stats, ARRAY_SIZE(exp_stats),
+		exp_refs, ARRAY_SIZE(exp_refs), 0);
+}
+
+void test_online_push__tag_lightweight(void)
+{
+	const char *specs[] = { "refs/tags/tag-lightweight:refs/tags/tag-lightweight" };
+	push_status exp_stats[] = { { "refs/tags/tag-lightweight", NULL } };
+	expected_ref exp_refs[] = { { "refs/tags/tag-lightweight", &_tag_lightweight } };
+	do_push(specs, ARRAY_SIZE(specs),
+		exp_stats, ARRAY_SIZE(exp_stats),
+		exp_refs, ARRAY_SIZE(exp_refs), 0);
+}
+
 void test_online_push__force(void)
 {
 	const char *specs1[] = {"refs/heads/b3:refs/heads/tgt"};
@@ -524,4 +571,26 @@ void test_online_push__expressions(void)
 	do_push(specs_right_expr, ARRAY_SIZE(specs_right_expr),
 		exp_stats_right_expr, ARRAY_SIZE(exp_stats_right_expr),
 		NULL, 0, 0);
+}
+
+void test_online_push__notes(void)
+{
+	git_oid note_oid, *target_oid, expected_oid;
+	git_signature *signature;
+	const char *specs[] = { "refs/notes/commits:refs/notes/commits" };
+	push_status exp_stats[] = { { "refs/notes/commits", NULL } };
+	expected_ref exp_refs[] = { { "refs/notes/commits", &expected_oid } };
+	git_oid_fromstr(&expected_oid, "8461a99b27b7043e58ff6e1f5d2cf07d282534fb");
+
+	target_oid = &_oid_b6;
+
+	/* Create note to push */
+	cl_git_pass(git_signature_new(&signature, "nulltoken", "emeric.fermas@gmail.com", 1323847743, 60)); /* Wed Dec 14 08:29:03 2011 +0100 */
+	cl_git_pass(git_note_create(&note_oid, _repo, signature, signature, NULL, target_oid, "hello world\n", 0));
+
+	do_push(specs, ARRAY_SIZE(specs),
+		exp_stats, ARRAY_SIZE(exp_stats),
+		exp_refs, ARRAY_SIZE(exp_refs), 0);
+
+	git_signature_free(signature);
 }
