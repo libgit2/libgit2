@@ -61,32 +61,13 @@ GIT_EXTERN(int) git_cred_userpass_plaintext_new(
  * @param cred The newly created credential object.
  * @param url The resource for which we are demanding a credential.
  * @param allowed_types A bitmask stating which cred types are OK to return.
+ * @param payload The payload provided when specifying this callback.
  */
 typedef int (*git_cred_acquire_cb)(
 	git_cred **cred,
 	const char *url,
 	unsigned int allowed_types,
 	void *payload);
-
-/**
- * Payload for git_cred_stock_userpass_plaintext.
- */
-typedef struct git_cred_stock_userpass_plaintext_payload {
-	char *username;
-	char *password;
-} git_cred_stock_userpass_plaintext_payload;
-
-
-/**
- * Stock callback usable as a git_cred_acquire_cb.  This calls
- * git_cred_userpass_plaintext_new unless the protocol has not specified
- * GIT_CREDTYPE_USERPASS_PLAINTEXT as an allowed type.
- */
-GIT_EXTERN(int) git_cred_stock_userpass_plaintext(
-		git_cred **cred,
-		const char *url,
-		unsigned int allowed_types,
-		void *payload);
 
 /*
  *** End interface for credentials acquisition ***

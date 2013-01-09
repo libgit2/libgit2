@@ -1,6 +1,7 @@
 #include "clar_libgit2.h"
 
 #include "git2/clone.h"
+#include "git2/cred_helpers.h"
 #include "repository.h"
 
 #define LIVE_REPO_URL "http://github.com/libgit2/TestGitRepository"
@@ -138,14 +139,14 @@ void test_online_clone__credentials(void)
 {
 	/* Remote URL environment variable must be set.  User and password are optional.  */
 	const char *remote_url = cl_getenv("GITTEST_REMOTE_URL");
-	git_cred_stock_userpass_plaintext_payload user_pass = {
+	git_cred_userpass_payload user_pass = {
 		cl_getenv("GITTEST_REMOTE_USER"),
 		cl_getenv("GITTEST_REMOTE_PASS")
 	};
 
 	if (!remote_url) return;
 
-	g_options.cred_acquire_cb = git_cred_stock_userpass_plaintext;
+	g_options.cred_acquire_cb = git_cred_userpass;
 	g_options.cred_acquire_payload = &user_pass;
 
 	cl_git_pass(git_clone(&g_repo, remote_url, "./foo", &g_options));

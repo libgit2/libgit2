@@ -7,6 +7,7 @@
 
 #include "git2.h"
 #include "smart.h"
+#include "git2/cred_helpers.h"
 
 static void plaintext_free(struct git_cred *cred)
 {
@@ -55,25 +56,5 @@ int git_cred_userpass_plaintext_new(
 	}
 
 	*cred = &c->parent;
-	return 0;
-}
-
-int git_cred_stock_userpass_plaintext(
-		git_cred **cred,
-		const char *url,
-		unsigned int allowed_types,
-		void *payload)
-{
-	git_cred_stock_userpass_plaintext_payload *userpass = 
-		(git_cred_stock_userpass_plaintext_payload*)payload;
-
-	GIT_UNUSED(url);
-
-	if (!userpass || !userpass->username || !userpass->password) return -1;
-
-	if ((GIT_CREDTYPE_USERPASS_PLAINTEXT & allowed_types) == 0 ||
-			git_cred_userpass_plaintext_new(cred, userpass->username, userpass->password) < 0)
-		return -1;
-
 	return 0;
 }
