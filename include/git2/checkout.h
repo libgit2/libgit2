@@ -131,6 +131,9 @@ typedef enum {
 	/** Don't refresh index/config/etc before doing checkout */
 	GIT_CHECKOUT_NO_REFRESH = (1u << 9),
 
+	/** Treat pathspec as simple list of exact match file paths */
+	GIT_CHECKOUT_DISABLE_PATHSPEC_MATCH = (1u << 13),
+
 	/**
 	 * THE FOLLOWING OPTIONS ARE NOT YET IMPLEMENTED
 	 */
@@ -222,7 +225,8 @@ typedef struct git_checkout_opts {
 	void *progress_payload;
 
 	/** When not zeroed out, array of fnmatch patterns specifying which
-	 *  paths should be taken into account, otherwise all files.
+	 *  paths should be taken into account, otherwise all files.  Use
+	 *  GIT_CHECKOUT_DISABLE_PATHSPEC_MATCH to treat as simple list.
 	 */
 	git_strarray paths;
 

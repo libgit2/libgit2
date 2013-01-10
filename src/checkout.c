@@ -222,7 +222,9 @@ static int checkout_action_wd_only(
 	git_checkout_notify_t notify = GIT_CHECKOUT_NOTIFY_NONE;
 
 	if (!git_pathspec_match_path(
-			pathspec, wd->path, false, workdir->ignore_case))
+			pathspec, wd->path,
+			(data->strategy & GIT_CHECKOUT_DISABLE_PATHSPEC_MATCH) != 0,
+			workdir->ignore_case))
 		return 0;
 
 	/* check if item is tracked in the index but not in the checkout diff */
@@ -1209,6 +1211,8 @@ int git_checkout_iterator(
 		GIT_DIFF_INCLUDE_TYPECHANGE |
 		GIT_DIFF_INCLUDE_TYPECHANGE_TREES |
 		GIT_DIFF_SKIP_BINARY_CHECK;
+	if (data.opts.checkout_strategy & GIT_CHECKOUT_DISABLE_PATHSPEC_MATCH)
+		diff_opts.flags |= GIT_DIFF_DISABLE_PATHSPEC_MATCH;
 	if (data.opts.paths.count > 0)
 		diff_opts.pathspec = data.opts.paths;
 
