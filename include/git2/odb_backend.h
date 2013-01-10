@@ -89,6 +89,8 @@ struct git_odb_backend {
 			struct git_odb_backend *,
 			const git_oid *);
 
+	int (* refresh)(struct git_odb_backend *);
+
 	int (* foreach)(
 			struct git_odb_backend *,
 			git_odb_foreach_cb cb,
