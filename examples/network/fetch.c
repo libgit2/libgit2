@@ -42,7 +42,7 @@ static void *download(void *ptr)
 
 exit:
 	data->finished = 1;
-	pthread_exit(&data->ret);
+	return &data->ret;
 }
 
 static int update_cb(const char *refname, const git_oid *a, const git_oid *b, void *data)
