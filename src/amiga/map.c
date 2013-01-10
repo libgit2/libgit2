@@ -27,7 +27,7 @@ int p_mmap(git_map *out, size_t len, int prot, int flags, int fd, git_off_t offs
 	out->data = malloc(len);
 	GITERR_CHECK_ALLOC(out->data);
 
-	if (p_lseek(fd, offset, SEEK_SET) < 0 || p_read(fd, out->data, len) != len)
+	if ((p_lseek(fd, offset, SEEK_SET) < 0) || ((size_t)p_read(fd, out->data, len) != len)) {
 		giterr_set(GITERR_OS, "mmap emulation failed");
 		return -1;
 	}
