@@ -529,6 +529,7 @@ int git_odb_exists(git_odb *db, const git_oid *id)
 	git_odb_object *object;
 	unsigned int i;
 	bool found = false;
+	bool refreshed = false;
 
 	assert(db && id);
 
@@ -537,12 +538,23 @@ int git_odb_exists(git_odb *db, const git_oid *id)
 		return (int)true;
 	}
 
+attempt_lookup:
 	for (i = 0; i < db->backends.length && !found; ++i) {
 		backend_internal *internal = git_vector_get(&db->backends, i);
 		git_odb_backend *b = internal->backend;
 
 		if (b->exists != NULL)
 			found = b->exists(b, id);
+	}
+
+	if (!found && !refreshed) {
+		if (git_odb_refresh(db) < 0) {
+			giterr_clear();
+			return (int)false;
+		}
+
+		refreshed = true;
+		goto attempt_lookup;
 	}
 
 	return (int)found;
@@ -674,7 +686,6 @@ int git_odb_read_prefix(
 	}
 
 attempt_lookup:
-
 	for (i = 0; i < db->backends.length; ++i) {
 		backend_internal *internal = git_vector_get(&db->backends, i);
 		git_odb_backend *b = internal->backend;
