@@ -118,6 +118,39 @@ void test_refs_create__oid(void)
 	git_reference_free(looked_up_ref);
 }
 
+void test_refs_create__updates_reflog(void)
+{
+	git_reference *new_reference, *looked_up_ref;
+	git_repository *repo2;
+	git_oid id, oid_old, oid_new;
+	git_reflog *reflog;
+	const git_reflog_entry *entry;
+	const char *new_head = "refs/heads/new-head";
+	char oid_zero[GIT_OID_HEXSZ+1];
+
+   // create a new OID reference
+	git_oid_fromstr(&id, current_master_tip);
+
+	/* Create and write the new object id reference */
+	cl_git_pass(git_reference_create(&new_reference, g_repo, new_head, &id, 0));
+
+	/* look up reflog */
+	cl_git_pass(git_reflog_read(&reflog, new_reference));
+
+	/* find first entry */
+	entry = git_reflog_entry_byindex(reflog, 0);
+	git_oid_cpy(&oid_old, git_reflog_entry_id_old(entry));  /* boom */
+	git_oid_cpy(&oid_new, git_reflog_entry_id_new(entry));
+
+	/* should be initial entry for this ref */
+	memset(oid_zero, 0, sizeof(git_reflog_entry));
+	cl_assert_equal_i(0, git_oid_cmp(&oid_old, oid_zero));
+	cl_assert_equal_i(0, git_oid_cmp(&oid_new, &id));
+
+	git_reflog_free(reflog);
+	git_reference_free(new_reference);
+}
+
 void test_refs_create__oid_unknown(void)
 {
    // Can not create a new OID reference which targets at an unknown id
