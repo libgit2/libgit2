@@ -1032,6 +1032,11 @@ int git_iterator_spoolandsort_push(git_iterator *iter, bool ignore_case)
 	if (((iter->flags & GIT_ITERATOR_IGNORE_CASE) != 0) == (ignore_case != 0))
 		return 0;
 
+	if (iter->type == GIT_ITERATOR_TYPE_EMPTY) {
+		iter->flags = (iter->flags ^ GIT_ITERATOR_IGNORE_CASE);
+		return 0;
+	}
+
 	scb = git__calloc(1, sizeof(spoolandsort_callbacks));
 	GITERR_CHECK_ALLOC(scb);
 
