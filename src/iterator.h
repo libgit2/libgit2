@@ -47,6 +47,7 @@ struct git_iterator {
 	git_repository *repo;
 	char *start;
 	char *end;
+	int (*prefixcomp)(const char *str, const char *prefix);
 	unsigned int flags;
 };
 

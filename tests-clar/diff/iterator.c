@@ -756,18 +756,16 @@ void test_diff_iterator__workdir_builtin_ignores(void)
 	git_iterator_free(i);
 }
 
-static void check_first_through_third_range(
+static void check_wd_first_through_third_range(
 	git_repository *repo, const char *start, const char *end)
 {
 	git_iterator *i;
 	const git_index_entry *entry;
 	int idx;
-	static const char *expected[] = {
-		"FIRST", "second", "THIRD", NULL
-	};
+	static const char *expected[] = { "FIRST", "second", "THIRD", NULL };
 
 	cl_git_pass(git_iterator_for_workdir_range(
-		&i, repo, GIT_IGNORE_CASE, start, end));
+		&i, repo, GIT_ITERATOR_IGNORE_CASE, start, end));
 	cl_git_pass(git_iterator_current(i, &entry));
 
 	for (idx = 0; entry != NULL; ++idx) {
@@ -798,9 +796,114 @@ void test_diff_iterator__workdir_handles_icase_range(void)
 	cl_git_mkfile("empty_standard_repo/zafter", "whatever\n");
 	cl_git_mkfile("empty_standard_repo/Zlast", "whatever\n");
 
-	check_first_through_third_range(repo, "first", "third");
-	check_first_through_third_range(repo, "FIRST", "THIRD");
-	check_first_through_third_range(repo, "first", "THIRD");
-	check_first_through_third_range(repo, "FIRST", "third");
-	check_first_through_third_range(repo, "FirSt", "tHiRd");
+	check_wd_first_through_third_range(repo, "first", "third");
+	check_wd_first_through_third_range(repo, "FIRST", "THIRD");
+	check_wd_first_through_third_range(repo, "first", "THIRD");
+	check_wd_first_through_third_range(repo, "FIRST", "third");
+	check_wd_first_through_third_range(repo, "FirSt", "tHiRd");
+}
+
+static void check_tree_range(
+	git_repository *repo,
+	const char *start,
+	const char *end,
+	bool ignore_case,
+	int expected_count)
+{
+	git_tree *head;
+	git_iterator *i;
+	const git_index_entry *entry;
+	int count;
+
+	cl_git_pass(git_repository_head_tree(&head, repo));
+
+	cl_git_pass(git_iterator_for_tree_range(
+		&i, head,
+		ignore_case ? GIT_ITERATOR_IGNORE_CASE : GIT_ITERATOR_DONT_IGNORE_CASE,
+		start, end));
+
+	cl_git_pass(git_iterator_current(i, &entry));
+
+	for (count = 0; entry != NULL; ) {
+		++count;
+		cl_git_pass(git_iterator_advance(i, &entry));
+	}
+
+	cl_assert_equal_i(expected_count, count);
+
+	git_iterator_free(i);
+	git_tree_free(head);
+}
+
+void test_diff_iterator__tree_handles_icase_range(void)
+{
+	git_repository *repo;
+
+	repo = cl_git_sandbox_init("testrepo");
+
+	check_tree_range(repo, "B", "C", false, 0);
+	check_tree_range(repo, "B", "C", true, 1);
+	check_tree_range(repo, "a", "z", false, 3);
+	check_tree_range(repo, "a", "z", true, 4);
+}
+
+static void check_index_range(
+	git_repository *repo,
+	const char *start,
+	const char *end,
+	bool ignore_case,
+	int expected_count)
+{
+	git_index *index;
+	git_iterator *i;
+	const git_index_entry *entry;
+	int count, caps;
+	bool is_ignoring_case;
+
+	cl_git_pass(git_repository_index(&index, repo));
+
+	caps = git_index_caps(index);
+	is_ignoring_case = ((caps & GIT_INDEXCAP_IGNORE_CASE) != 0);
+
+	if (ignore_case != is_ignoring_case)
+		cl_git_pass(git_index_set_caps(index, caps ^ GIT_INDEXCAP_IGNORE_CASE));
+
+	cl_git_pass(git_iterator_for_index_range(&i, index, 0, start, end));
+
+	cl_assert(git_iterator_ignore_case(i) == ignore_case);
+
+	cl_git_pass(git_iterator_current(i, &entry));
+
+	for (count = 0; entry != NULL; ) {
+		++count;
+		cl_git_pass(git_iterator_advance(i, &entry));
+	}
+
+	cl_assert_equal_i(expected_count, count);
+
+	git_iterator_free(i);
+	git_index_free(index);
+}
+
+void test_diff_iterator__index_handles_icase_range(void)
+{
+	git_repository *repo;
+	git_index *index;
+	git_tree *head;
+
+	repo = cl_git_sandbox_init("testrepo");
+
+	/* reset index to match HEAD */
+	cl_git_pass(git_repository_head_tree(&head, repo));
+	cl_git_pass(git_repository_index(&index, repo));
+	cl_git_pass(git_index_read_tree(index, head));
+	cl_git_pass(git_index_write(index));
+	git_tree_free(head);
+	git_index_free(index);
+
+	/* do some ranged iterator checks toggling case sensitivity */
+	check_index_range(repo, "B", "C", false, 0);
+	check_index_range(repo, "B", "C", true, 1);
+	check_index_range(repo, "a", "z", false, 3);
+	check_index_range(repo, "a", "z", true, 4);
 }

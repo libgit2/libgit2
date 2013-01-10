@@ -31,6 +31,7 @@
 	(P)->base.end     = end ? git__strdup(end) : NULL; \
 	if ((start && !(P)->base.start) || (end && !(P)->base.end)) { \
 		git__free(P); return -1; } \
+	(P)->base.prefixcomp = git__prefixcmp; \
 	} while (0)
 
 static int iterator__reset_range(
@@ -74,6 +75,9 @@ static int iterator_update_ignore_case(
 		iter->flags = (iter->flags | GIT_ITERATOR_IGNORE_CASE);
 	else if (ignore_case == 0)
 		iter->flags = (iter->flags & ~GIT_ITERATOR_IGNORE_CASE);
+
+	iter->prefixcomp = ((iter->flags & GIT_ITERATOR_IGNORE_CASE) != 0) ?
+		git__prefixcmp_icase : git__prefixcmp;
 
 	return error;
 }
@@ -141,7 +145,10 @@ struct tree_iterator_frame {
 	tree_iterator_frame *next, *prev;
 	git_tree *tree;
 	char *start;
+	size_t startlen;
 	size_t index;
+	void **icase_map;
+	void *icase_data[GIT_FLEX_ARRAY];
 };
 
 typedef struct {
@@ -155,7 +162,13 @@ typedef struct {
 
 GIT_INLINE(const git_tree_entry *)tree_iterator__tree_entry(tree_iterator *ti)
 {
-	return git_tree_entry_byindex(ti->stack->tree, ti->stack->index);
+	tree_iterator_frame *tf = ti->stack;
+
+	if (tf->index >= git_tree_entrycount(tf->tree))
+		return NULL;
+
+	return git_tree_entry_byindex(
+		tf->tree, tf->icase_map ? (size_t)tf->icase_map[tf->index] : tf->index);
 }
 
 static char *tree_iterator__current_filename(
@@ -174,7 +187,10 @@ static void tree_iterator__free_frame(tree_iterator_frame *tf)
 {
 	if (!tf)
 		return;
+
 	git_tree_free(tf->tree);
+	tf->tree = NULL;
+
 	git__free(tf);
 }
 
@@ -220,7 +236,7 @@ static int tree_iterator__current(
 	if (ti->entry.path == NULL)
 		return -1;
 
-	if (ti->base.end && git__prefixcmp(ti->entry.path, ti->base.end) > 0)
+	if (ti->base.end && ti->base.prefixcomp(ti->entry.path, ti->base.end) > 0)
 		return tree_iterator__to_end(ti);
 
 	if (entry)
@@ -234,10 +250,50 @@ static int tree_iterator__at_end(git_iterator *self)
 	return (tree_iterator__tree_entry((tree_iterator *)self) == NULL);
 }
 
-static tree_iterator_frame *tree_iterator__alloc_frame(
-	git_tree *tree, char *start)
+static int tree_iterator__icase_map_cmp(const void *a, const void *b, void *data)
 {
-	tree_iterator_frame *tf = git__calloc(1, sizeof(tree_iterator_frame));
+	git_tree *tree = data;
+	const git_tree_entry *te1 = git_tree_entry_byindex(tree, (size_t)a);
+	const git_tree_entry *te2 = git_tree_entry_byindex(tree, (size_t)b);
+	return te1 ? (te2 ? git_tree_entry_icmp(te1, te2) : 1) : -1;
+}
+
+static int tree_iterator__frame_start_icmp(const void *key, const void *element)
+{
+	const tree_iterator_frame *tf = (const tree_iterator_frame *)key;
+	const git_tree_entry *te = git_tree_entry_byindex(tf->tree, (size_t)element);
+
+	return memcmp(tf->start, te->filename, min(tf->startlen, te->filename_len));
+}
+
+static void tree_iterator__frame_seek_start(tree_iterator_frame *tf)
+{
+	if (!tf->start)
+		tf->index = 0;
+	else if (!tf->icase_map)
+		tf->index = git_tree__prefix_position(tf->tree, tf->start);
+	else {
+		if (!git__bsearch(
+				tf->icase_map, git_tree_entrycount(tf->tree),
+				tf, tree_iterator__frame_start_icmp, &tf->index))
+		{
+			while (tf->index > 0) {
+				/* move back while previous entry is still prefixed */
+				if (tree_iterator__frame_start_icmp(
+						tf, (const void *)(tf->index - 1)))
+					break;
+				tf->index--;
+			}
+		}
+	}
+}
+
+static tree_iterator_frame *tree_iterator__alloc_frame(
+	tree_iterator *ti, git_tree *tree, char *start)
+{
+	size_t i, max_i = git_tree_entrycount(tree);
+	tree_iterator_frame *tf =
+		git__calloc(1, sizeof(tree_iterator_frame) + max_i * sizeof(void *));
 	if (!tf)
 		return NULL;
 
@@ -245,8 +301,23 @@ static tree_iterator_frame *tree_iterator__alloc_frame(
 
 	if (start && *start) {
 		tf->start = start;
-		tf->index = git_tree__prefix_position(tree, start);
+		tf->startlen = strlen(start);
 	}
+
+	if (!max_i)
+		return tf;
+
+	if ((ti->base.flags & GIT_ITERATOR_IGNORE_CASE) != 0) {
+		tf->icase_map = tf->icase_data;
+
+		for (i = 0; i < max_i; ++i)
+			tf->icase_map[i] = (void *)i;
+
+		git__tsort_r(
+			tf->icase_map, max_i, tree_iterator__icase_map_cmp, tf->tree);
+	}
+
+	tree_iterator__frame_seek_start(tf);
 
 	return tf;
 }
@@ -265,7 +336,7 @@ static int tree_iterator__expand_tree(tree_iterator *ti)
 
 		/* check that we have not passed the range end */
 		if (ti->base.end != NULL &&
-			git__prefixcmp(ti->path.ptr, ti->base.end) > 0)
+			ti->base.prefixcomp(ti->path.ptr, ti->base.end) > 0)
 			return tree_iterator__to_end(ti);
 
 		if ((error = git_tree_lookup(&subtree, ti->base.repo, &te->oid)) < 0)
@@ -275,14 +346,13 @@ static int tree_iterator__expand_tree(tree_iterator *ti)
 
 		/* apply range start to new frame if relevant */
 		if (ti->stack->start &&
-			git__prefixcmp(ti->stack->start, te->filename) == 0)
+			ti->base.prefixcomp(ti->stack->start, te->filename) == 0)
 		{
-			size_t namelen = strlen(te->filename);
-			if (ti->stack->start[namelen] == '/')
-				relpath = ti->stack->start + namelen + 1;
+			if (ti->stack->start[te->filename_len] == '/')
+				relpath = ti->stack->start + te->filename_len + 1;
 		}
 
-		if ((tf = tree_iterator__alloc_frame(subtree, relpath)) == NULL)
+		if ((tf = tree_iterator__alloc_frame(ti, subtree, relpath)) == NULL)
 			return -1;
 
 		tf->next  = ti->stack;
@@ -311,8 +381,9 @@ static int tree_iterator__advance(
 	}
 
 	while (1) {
-		te = git_tree_entry_byindex(ti->stack->tree, ++ti->stack->index);
-		if (te != NULL)
+		++ti->stack->index;
+
+		if ((te = tree_iterator__tree_entry(ti)) != NULL)
 			break;
 
 		if (!tree_iterator__pop_frame(ti))
@@ -362,8 +433,8 @@ static int tree_iterator__reset(
 	if (iterator__reset_range(self, start, end) < 0)
 		return -1;
 
-	ti->stack->index =
-		git_tree__prefix_position(ti->stack->tree, ti->base.start);
+	/* reset start position */
+	tree_iterator__frame_seek_start(ti->stack);
 
 	git_buf_clear(&ti->path);
 	ti->path_has_filename = false;
@@ -394,10 +465,7 @@ int git_iterator_for_tree_range(
 	if ((error = iterator_update_ignore_case((git_iterator *)ti, flags)) < 0)
 		goto fail;
 
-	/* TODO: implement icase support natively in tree iterators */
-	ti->base.flags = (ti->base.flags & ~GIT_ITERATOR_IGNORE_CASE);
-
-	ti->stack = ti->tail = tree_iterator__alloc_frame(tree, ti->base.start);
+	ti->stack = ti->tail = tree_iterator__alloc_frame(ti, tree, ti->base.start);
 
 	if ((error = tree_iterator__expand_tree(ti)) < 0)
 		goto fail;
@@ -447,7 +515,7 @@ static void index_iterator__skip_conflicts(
 
 		if (ie == NULL ||
 			(ii->base.end != NULL &&
-			ITERATOR_PREFIXCMP(ii->base, ie->path, ii->base.end) > 0)) {
+			 ii->base.prefixcomp(ie->path, ii->base.end) > 0)) {
 			ii->current = entrycount;
 			break;
 		}
@@ -513,8 +581,10 @@ int git_iterator_for_index_range(
 	ITERATOR_BASE_INIT(ii, index, INDEX);
 
 	ii->base.repo = git_index_owner(index);
-	if (index->ignore_case)
+	if (index->ignore_case) {
 		ii->base.flags |= GIT_ITERATOR_IGNORE_CASE;
+		ii->base.prefixcomp = git__prefixcmp_icase;
+	}
 	ii->index = index;
 	GIT_REFCOUNT_INC(index);
 
@@ -772,8 +842,8 @@ static int workdir_iterator__update_entry(workdir_iterator *wi)
 	if (git_buf_put(&wi->path, ps->path, ps->path_len) < 0)
 		return -1;
 
-	if (wi->base.end && ITERATOR_PREFIXCMP(
-			wi->base, wi->path.ptr + wi->root_len, wi->base.end) > 0)
+	if (wi->base.end &&
+		wi->base.prefixcomp(wi->path.ptr + wi->root_len, wi->base.end) > 0)
 		return 0;
 
 	wi->entry.path = ps->path;
@@ -1064,9 +1134,13 @@ int git_iterator_current_parent_tree(
 	tree_iterator *ti = (tree_iterator *)iter;
 	tree_iterator_frame *tf;
 	const char *scan = parent_path;
+	int (*strncomp)(const char *a, const char *b, size_t sz);
 
 	if (iter->type != GIT_ITERATOR_TYPE_TREE || ti->stack == NULL)
 		goto notfound;
+
+	strncomp = ((iter->flags & GIT_ITERATOR_IGNORE_CASE) != 0) ?
+		git__strncasecmp : git__strncmp;
 
 	for (tf = ti->tail; tf != NULL; tf = tf->prev) {
 		const git_tree_entry *te;
@@ -1076,9 +1150,10 @@ int git_iterator_current_parent_tree(
 			return 0;
 		}
 
-		te = git_tree_entry_byindex(tf->tree, tf->index);
+		te = git_tree_entry_byindex(tf->tree,
+			tf->icase_map ? (size_t)tf->icase_map[tf->index] : tf->index);
 
-		if (strncmp(scan, te->filename, te->filename_len) != 0)
+		if (strncomp(scan, te->filename, te->filename_len) != 0)
 			goto notfound;
 
 		scan += te->filename_len;
@@ -1129,8 +1204,7 @@ int git_iterator_advance_into_directory(
 	return entry ? git_iterator_current(iter, entry) : 0;
 }
 
-int git_iterator_cmp(
-	git_iterator *iter, const char *path_prefix)
+int git_iterator_cmp(git_iterator *iter, const char *path_prefix)
 {
 	const git_index_entry *entry;
 
@@ -1143,7 +1217,7 @@ int git_iterator_cmp(
 	if (!path_prefix)
 		return -1;
 
-	return ITERATOR_PREFIXCMP(*iter, entry->path, path_prefix);
+	return iter->prefixcomp(entry->path, path_prefix);
 }
 
 int git_iterator_current_workdir_path(git_iterator *iter, git_buf **path)
