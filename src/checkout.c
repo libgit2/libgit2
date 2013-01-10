@@ -616,7 +616,7 @@ static int checkout_get_actions(
 	{
 		giterr_set(GITERR_CHECKOUT, "%d conflicts prevent checkout",
 			(int)counts[CHECKOUT_ACTION__CONFLICT]);
-		error = -1;
+		error = GIT_EMERGECONFLICT;
 		goto fail;
 	}
 
