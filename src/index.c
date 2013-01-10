@@ -616,14 +616,14 @@ static int index_entry_reuc_init(git_index_reuc_entry **reuc_out,
 	if (reuc->path == NULL)
 		return -1;
 
-	reuc->mode[0] = ancestor_mode;
-	git_oid_cpy(&reuc->oid[0], ancestor_oid);
+	if ((reuc->mode[0] = ancestor_mode) > 0)
+		git_oid_cpy(&reuc->oid[0], ancestor_oid);
 
-	reuc->mode[1] = our_mode;
-	git_oid_cpy(&reuc->oid[1], our_oid);
+	if ((reuc->mode[1] = our_mode) > 0)
+		git_oid_cpy(&reuc->oid[1], our_oid);
 
-	reuc->mode[2] = their_mode;
-	git_oid_cpy(&reuc->oid[2], their_oid);
+	if ((reuc->mode[2] = their_mode) > 0)
+		git_oid_cpy(&reuc->oid[2], their_oid);
 
 	*reuc_out = reuc;
 	return 0;

@@ -31,6 +31,56 @@ void test_index_reuc__cleanup(void)
 	cl_git_sandbox_cleanup();
 }
 
+void test_index_reuc__add(void)
+{
+	git_oid ancestor_oid, our_oid, their_oid;
+	const git_index_reuc_entry *reuc;
+
+	git_oid_fromstr(&ancestor_oid, ONE_ANCESTOR_OID);
+	git_oid_fromstr(&our_oid, ONE_OUR_OID);
+	git_oid_fromstr(&their_oid, ONE_THEIR_OID);
+
+	cl_git_pass(git_index_reuc_add(repo_index, "newfile.txt",
+		0100644, &ancestor_oid,
+		0100644, &our_oid,
+		0100644, &their_oid));
+
+	cl_assert(reuc = git_index_reuc_get_bypath(repo_index, "newfile.txt"));
+
+	cl_assert(strcmp(reuc->path, "newfile.txt") == 0);
+	cl_assert(reuc->mode[0] == 0100644);
+	cl_assert(reuc->mode[1] == 0100644);
+	cl_assert(reuc->mode[2] == 0100644);
+	cl_assert(git_oid_cmp(&reuc->oid[0], &ancestor_oid) == 0);
+	cl_assert(git_oid_cmp(&reuc->oid[1], &our_oid) == 0);
+	cl_assert(git_oid_cmp(&reuc->oid[2], &their_oid) == 0);
+}
+
+void test_index_reuc__add_no_ancestor(void)
+{
+	git_oid ancestor_oid, our_oid, their_oid;
+	const git_index_reuc_entry *reuc;
+
+	memset(&ancestor_oid, 0x0, sizeof(git_oid));
+	git_oid_fromstr(&our_oid, ONE_OUR_OID);
+	git_oid_fromstr(&their_oid, ONE_THEIR_OID);
+
+	cl_git_pass(git_index_reuc_add(repo_index, "newfile.txt",
+		0, NULL,
+		0100644, &our_oid,
+		0100644, &their_oid));
+
+	cl_assert(reuc = git_index_reuc_get_bypath(repo_index, "newfile.txt"));
+
+	cl_assert(strcmp(reuc->path, "newfile.txt") == 0);
+	cl_assert(reuc->mode[0] == 0);
+	cl_assert(reuc->mode[1] == 0100644);
+	cl_assert(reuc->mode[2] == 0100644);
+	cl_assert(git_oid_cmp(&reuc->oid[0], &ancestor_oid) == 0);
+	cl_assert(git_oid_cmp(&reuc->oid[1], &our_oid) == 0);
+	cl_assert(git_oid_cmp(&reuc->oid[2], &their_oid) == 0);
+}
+
 void test_index_reuc__read_bypath(void)
 {
 	const git_index_reuc_entry *reuc;
