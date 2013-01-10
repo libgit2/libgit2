@@ -122,26 +122,26 @@ void test_checkout_tree__calls_progress_callback(void)
 
 void test_checkout_tree__doesnt_write_unrequested_files_to_worktree(void)
 {
-  git_oid master_oid;
-  git_oid chomped_oid;
-  git_commit* p_master_commit;
-  git_commit* p_chomped_commit;
-  git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
+	git_oid master_oid;
+	git_oid chomped_oid;
+	git_commit* p_master_commit;
+	git_commit* p_chomped_commit;
+	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
 
-  git_oid_fromstr(&master_oid, "a65fedf39aefe402d3bb6e24df4d4f5fe4547750");
-  git_oid_fromstr(&chomped_oid, "e90810b8df3e80c413d903f631643c716887138d");
-  cl_git_pass(git_commit_lookup(&p_master_commit, g_repo, &master_oid));
-  cl_git_pass(git_commit_lookup(&p_chomped_commit, g_repo, &chomped_oid));
+	git_oid_fromstr(&master_oid, "a65fedf39aefe402d3bb6e24df4d4f5fe4547750");
+	git_oid_fromstr(&chomped_oid, "e90810b8df3e80c413d903f631643c716887138d");
+	cl_git_pass(git_commit_lookup(&p_master_commit, g_repo, &master_oid));
+	cl_git_pass(git_commit_lookup(&p_chomped_commit, g_repo, &chomped_oid));
 
-  /* GIT_CHECKOUT_NONE should not add any file to the working tree from the
-   * index as it is supposed to be a dry run.
-   */
-  opts.checkout_strategy = GIT_CHECKOUT_NONE;
-  git_checkout_tree(g_repo, (git_object*)p_chomped_commit, &opts);
-  cl_assert_equal_i(false, git_path_isfile("testrepo/readme.txt"));
+	/* GIT_CHECKOUT_NONE should not add any file to the working tree from the
+	 * index as it is supposed to be a dry run.
+	 */
+	opts.checkout_strategy = GIT_CHECKOUT_NONE;
+	git_checkout_tree(g_repo, (git_object*)p_chomped_commit, &opts);
+	cl_assert_equal_i(false, git_path_isfile("testrepo/readme.txt"));
 
-  git_commit_free(p_master_commit);
-  git_commit_free(p_chomped_commit);
+	git_commit_free(p_master_commit);
+	git_commit_free(p_chomped_commit);
 }
 
 void test_checkout_tree__can_switch_branches(void)
