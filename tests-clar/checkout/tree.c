@@ -273,3 +273,86 @@ void test_checkout_tree__can_update_only(void)
 
 	git_object_free(obj);
 }
+
+void test_checkout_tree__can_checkout_with_pattern(void)
+{
+	char *entries[] = { "[l-z]*.txt" };
+
+	/* reset to beginning of history (i.e. just a README file) */
+
+	g_opts.checkout_strategy =
+		GIT_CHECKOUT_FORCE | GIT_CHECKOUT_REMOVE_UNTRACKED;
+
+	cl_git_pass(git_revparse_single(&g_object, g_repo,
+		"8496071c1b46c854b31185ea97743be6a8774479"));
+
+	cl_git_pass(git_checkout_tree(g_repo, g_object, &g_opts));
+	cl_git_pass(
+		git_repository_set_head_detached(g_repo, git_object_id(g_object)));
+
+	git_object_free(g_object);
+	g_object = NULL;
+
+	cl_assert(git_path_exists("testrepo/README"));
+	cl_assert(!git_path_exists("testrepo/branch_file.txt"));
+	cl_assert(!git_path_exists("testrepo/link_to_new.txt"));
+	cl_assert(!git_path_exists("testrepo/new.txt"));
+
+	/* now to a narrow patterned checkout */
+
+	g_opts.checkout_strategy = GIT_CHECKOUT_SAFE_CREATE;
+	g_opts.paths.strings = entries;
+	g_opts.paths.count = 1;
+
+	cl_git_pass(git_revparse_single(&g_object, g_repo, "refs/heads/master"));
+
+	cl_git_pass(git_checkout_tree(g_repo, g_object, &g_opts));
+
+	cl_assert(git_path_exists("testrepo/README"));
+	cl_assert(!git_path_exists("testrepo/branch_file.txt"));
+	cl_assert(git_path_exists("testrepo/link_to_new.txt"));
+	cl_assert(git_path_exists("testrepo/new.txt"));
+}
+
+void test_checkout_tree__can_disable_pattern_match(void)
+{
+	char *entries[] = { "b*.txt" };
+
+	/* reset to beginning of history (i.e. just a README file) */
+
+	g_opts.checkout_strategy =
+		GIT_CHECKOUT_FORCE | GIT_CHECKOUT_REMOVE_UNTRACKED;
+
+	cl_git_pass(git_revparse_single(&g_object, g_repo,
+		"8496071c1b46c854b31185ea97743be6a8774479"));
+
+	cl_git_pass(git_checkout_tree(g_repo, g_object, &g_opts));
+	cl_git_pass(
+		git_repository_set_head_detached(g_repo, git_object_id(g_object)));
+
+	git_object_free(g_object);
+	g_object = NULL;
+
+	cl_assert(!git_path_isfile("testrepo/branch_file.txt"));
+
+	/* now to a narrow patterned checkout, but disable pattern */
+
+	g_opts.checkout_strategy =
+		GIT_CHECKOUT_SAFE_CREATE | GIT_CHECKOUT_DISABLE_PATHSPEC_MATCH;
+	g_opts.paths.strings = entries;
+	g_opts.paths.count = 1;
+
+	cl_git_pass(git_revparse_single(&g_object, g_repo, "refs/heads/master"));
+
+	cl_git_pass(git_checkout_tree(g_repo, g_object, &g_opts));
+
+	cl_assert(!git_path_isfile("testrepo/branch_file.txt"));
+
+	/* let's try that again, but allow the pattern match */
+
+	g_opts.checkout_strategy = GIT_CHECKOUT_SAFE_CREATE;
+
+	cl_git_pass(git_checkout_tree(g_repo, g_object, &g_opts));
+
+	cl_assert(git_path_isfile("testrepo/branch_file.txt"));
+}
