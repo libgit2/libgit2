@@ -7,6 +7,7 @@
 
 #include "git2.h"
 #include "smart.h"
+#include "git2/cred_helpers.h"
 
 static void plaintext_free(struct git_cred *cred)
 {
