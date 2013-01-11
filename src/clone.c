@@ -29,7 +29,7 @@ static int create_branch(
 	const char *name)
 {
 	git_commit *head_obj = NULL;
-	git_reference *branch_ref;
+	git_reference *branch_ref = NULL;
 	int error;
 
 	/* Find the target commit */
