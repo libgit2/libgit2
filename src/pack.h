@@ -53,6 +53,27 @@ struct git_pack_idx_header {
 	uint32_t idx_version;
 };
 
+typedef struct git_pack_cache_entry {
+	size_t last_usage; /* enough? */
+	git_atomic refcount;
+	git_rawobj raw;
+} git_pack_cache_entry;
+
+#include "offmap.h"
+
+GIT__USE_OFFMAP;
+
+#define GIT_PACK_CACHE_MEMORY_LIMIT 16 * 1024 * 1024
+#define GIT_PACK_CACHE_SIZE_LIMIT 1024 * 1024 /* don't bother caching anything over 1MB */
+
+typedef struct {
+	size_t memory_used;
+	size_t memory_limit;
+	size_t use_ctr;
+	git_mutex lock;
+	git_offmap *entries;
+} git_pack_cache;
+
 struct git_pack_file {
 	git_mwindow_file mwf;
 	git_map index_map;
@@ -67,6 +88,8 @@ struct git_pack_file {
 	git_oid sha1;
 	git_vector cache;
 	git_oid **oids;
+
+	git_pack_cache bases; /* delta base cache */
 
 	/* something like ".git/objects/pack/xxxxx.pack" */
 	char pack_name[GIT_FLEX_ARRAY]; /* more */
