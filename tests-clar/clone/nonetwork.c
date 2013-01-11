@@ -164,3 +164,14 @@ void test_clone_nonetwork__can_prevent_the_checkout_of_a_standard_repo(void)
 	git_buf_free(&path);
 }
 
+void test_clone_nonetwork__can_checkout_given_branch(void)
+{
+	g_options.checkout_branch = "test";
+	cl_git_pass(git_clone(&g_repo, cl_git_fixture_url("testrepo.git"), "./foo", &g_options));
+
+	cl_assert_equal_i(0, git_repository_head_orphan(g_repo));
+
+	cl_git_pass(git_repository_head(&g_ref, g_repo));
+	cl_assert_equal_s(git_reference_name(g_ref), "refs/heads/test");
+}
+
