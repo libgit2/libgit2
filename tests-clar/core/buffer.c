@@ -704,3 +704,26 @@ void test_core_buffer__base64(void)
 
 	git_buf_free(&buf);
 }
+
+void test_core_buffer__classify_with_utf8(void)
+{
+	char *data0 = "Simple text\n";
+	size_t data0len = 12;
+	char *data1 = "Is that UTF-8 data I see…\nYep!\n";
+	size_t data1len = 31;
+	char *data2 = "Internal NUL!!!\000\n\nI see you!\n";
+	size_t data2len = 29;
+	git_buf b;
+
+	b.ptr = data0; b.size = b.asize = data0len;
+	cl_assert(!git_buf_text_is_binary(&b));
+	cl_assert(!git_buf_text_contains_nul(&b));
+
+	b.ptr = data1; b.size = b.asize = data1len;
+	cl_assert(git_buf_text_is_binary(&b));
+	cl_assert(!git_buf_text_contains_nul(&b));
+
+	b.ptr = data2; b.size = b.asize = data2len;
+	cl_assert(git_buf_text_is_binary(&b));
+	cl_assert(git_buf_text_contains_nul(&b));
+}

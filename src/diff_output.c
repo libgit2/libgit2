@@ -142,7 +142,12 @@ static int diff_delta_is_binary_by_content(
 	GIT_UNUSED(ctxt);
 
 	if ((file->flags & KNOWN_BINARY_FLAGS) == 0) {
-		if (git_buf_text_is_binary(&search))
+		/* TODO: provide encoding / binary detection callbacks that can
+		 * be UTF-8 aware, etc.  For now, instead of trying to be smart,
+		 * let's just use the simple NUL-byte detection that core git uses.
+		 */
+		/* previously was: if (git_buf_text_is_binary(&search)) */
+		if (git_buf_text_contains_nul(&search))
 			file->flags |= GIT_DIFF_FILE_BINARY;
 		else
 			file->flags |= GIT_DIFF_FILE_NOT_BINARY;
