@@ -143,7 +143,7 @@ void test_clone_nonetwork__custom_autotag(void)
 	cl_git_pass(git_clone(&g_repo, cl_git_fixture_url("testrepo.git"), "./foo", &g_options));
 
 	cl_git_pass(git_tag_list(&tags, g_repo));
-	cl_assert_equal_i(0, tags.count);
+	cl_assert_equal_sz(0, tags.count);
 
 	git_strarray_free(&tags);
 }

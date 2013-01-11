@@ -298,7 +298,7 @@ static int write_chunk(HINTERNET request, const char *buffer, size_t len)
 		return -1;
 
 	if (!WinHttpWriteData(request,
-		git_buf_cstr(&buf),	git_buf_len(&buf),
+		git_buf_cstr(&buf),	(DWORD)git_buf_len(&buf),
 		&bytes_written)) {
 		git_buf_free(&buf);
 		giterr_set(GITERR_OS, "Failed to write chunk header");
@@ -309,7 +309,7 @@ static int write_chunk(HINTERNET request, const char *buffer, size_t len)
 
 	/* Chunk body */
 	if (!WinHttpWriteData(request,
-		buffer, len,
+		buffer, (DWORD)len,
 		&bytes_written)) {
 		giterr_set(GITERR_OS, "Failed to write chunk");
 		return -1;
@@ -494,7 +494,7 @@ replay:
 
 	if (!WinHttpReadData(s->request,
 		(LPVOID)buffer,
-		buf_size,
+		(DWORD)buf_size,
 		&dw_bytes_read))
 	{
 		giterr_set(GITERR_OS, "Failed to read data");
@@ -580,7 +580,7 @@ static int put_uuid_string(LPWSTR buffer, DWORD buffer_len_cch)
 
 static int get_temp_file(LPWSTR buffer, DWORD buffer_len_cch)
 {
-	int len;
+	size_t len;
 
 	if (!GetTempPathW(buffer_len_cch, buffer)) {
 		giterr_set(GITERR_OS, "Failed to get temp path");
@@ -639,7 +639,7 @@ static int winhttp_stream_write_buffered(
 		}
 	}
 
-	if (!WriteFile(s->post_body, buffer, len, &bytes_written, NULL)) {
+	if (!WriteFile(s->post_body, buffer, (DWORD)len, &bytes_written, NULL)) {
 		giterr_set(GITERR_OS, "Failed to write to temporary file");
 		return -1;
 	}
@@ -697,7 +697,7 @@ static int winhttp_stream_write_chunked(
 	}
 	else {
 		/* Append as much to the buffer as we can */
-		int count = min(CACHED_POST_BODY_BUF_SIZE - s->chunk_buffer_len, len);
+		int count = min(CACHED_POST_BODY_BUF_SIZE - s->chunk_buffer_len, (int)len);
 
 		if (!s->chunk_buffer)
 			s->chunk_buffer = git__malloc(CACHED_POST_BODY_BUF_SIZE);
@@ -717,7 +717,7 @@ static int winhttp_stream_write_chunked(
 			/* Is there any remaining data from the source? */
 			if (len > 0) {
 				memcpy(s->chunk_buffer, buffer, len);
-				s->chunk_buffer_len = len;
+				s->chunk_buffer_len = (unsigned int)len;
 			}
 		}
 	}
