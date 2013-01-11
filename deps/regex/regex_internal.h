@@ -28,11 +28,11 @@
 #include <string.h>
 
 #ifndef UNUSED
-#ifdef __GNUC__
-#define UNUSED __attribute__((unused))
-#endif
-#else
-#define UNUSED
+#	ifdef __GNUC__
+#		define UNUSED __attribute__((unused))
+#	else
+#		define UNUSED
+#	endif
 #endif
 
 #if defined HAVE_LANGINFO_H || defined HAVE_LANGINFO_CODESET || defined _LIBC
