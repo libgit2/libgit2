@@ -27,6 +27,14 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifndef UNUSED
+#ifdef __GNUC__
+#define UNUSED __attribute__((unused))
+#endif
+#else
+#define UNUSED
+#endif
+
 #if defined HAVE_LANGINFO_H || defined HAVE_LANGINFO_CODESET || defined _LIBC
 # include <langinfo.h>
 #endif
