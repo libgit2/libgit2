@@ -109,6 +109,11 @@ bool git_buf_text_is_binary(const git_buf *buf)
 	return ((printable >> 7) < nonprintable);
 }
 
+bool git_buf_text_contains_nul(const git_buf *buf)
+{
+	return (strnlen(buf->ptr, buf->size) != buf->size);
+}
+
 int git_buf_text_detect_bom(git_bom_t *bom, const git_buf *buf, size_t offset)
 {
 	const char *ptr;

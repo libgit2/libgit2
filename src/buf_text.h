@@ -71,6 +71,14 @@ extern int git_buf_text_common_prefix(git_buf *buf, const git_strarray *strs);
 extern bool git_buf_text_is_binary(const git_buf *buf);
 
 /**
+ * Check quickly if buffer contains a NUL byte
+ *
+ * @param buf Buffer to check
+ * @return true if buffer contains a NUL byte
+ */
+extern bool git_buf_text_contains_nul(const git_buf *buf);
+
+/**
  * Check if a buffer begins with a UTF BOM
  *
  * @param bom Set to the type of BOM detected or GIT_BOM_NONE
