@@ -897,6 +897,7 @@ void test_diff_workdir__can_diff_empty_file(void)
 	/* baseline - make sure there are no outstanding diffs */
 
 	cl_git_pass(git_diff_tree_to_workdir(&diff, g_repo, tree, &opts));
+	git_tree_free(tree);
 	cl_assert_equal_i(2, (int)git_diff_num_deltas(diff));
 	git_diff_list_free(diff);
 

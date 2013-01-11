@@ -23,5 +23,5 @@ void test_network_cred__stock_userpass_validates_that_method_is_allowed(void)
 
 	cl_git_fail(git_cred_userpass(&cred, NULL, 0, &payload));
 	cl_git_pass(git_cred_userpass(&cred, NULL, GIT_CREDTYPE_USERPASS_PLAINTEXT, &payload));
-	git__free(cred);
+	cred->free(cred);
 }
