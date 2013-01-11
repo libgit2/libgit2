@@ -122,26 +122,26 @@ void test_checkout_tree__calls_progress_callback(void)
 
 void test_checkout_tree__doesnt_write_unrequested_files_to_worktree(void)
 {
-  git_oid master_oid;
-  git_oid chomped_oid;
-  git_commit* p_master_commit;
-  git_commit* p_chomped_commit;
-  git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
+	git_oid master_oid;
+	git_oid chomped_oid;
+	git_commit* p_master_commit;
+	git_commit* p_chomped_commit;
+	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
 
-  git_oid_fromstr(&master_oid, "a65fedf39aefe402d3bb6e24df4d4f5fe4547750");
-  git_oid_fromstr(&chomped_oid, "e90810b8df3e80c413d903f631643c716887138d");
-  cl_git_pass(git_commit_lookup(&p_master_commit, g_repo, &master_oid));
-  cl_git_pass(git_commit_lookup(&p_chomped_commit, g_repo, &chomped_oid));
+	git_oid_fromstr(&master_oid, "a65fedf39aefe402d3bb6e24df4d4f5fe4547750");
+	git_oid_fromstr(&chomped_oid, "e90810b8df3e80c413d903f631643c716887138d");
+	cl_git_pass(git_commit_lookup(&p_master_commit, g_repo, &master_oid));
+	cl_git_pass(git_commit_lookup(&p_chomped_commit, g_repo, &chomped_oid));
 
-  /* GIT_CHECKOUT_NONE should not add any file to the working tree from the
-   * index as it is supposed to be a dry run.
-   */
-  opts.checkout_strategy = GIT_CHECKOUT_NONE;
-  git_checkout_tree(g_repo, (git_object*)p_chomped_commit, &opts);
-  cl_assert_equal_i(false, git_path_isfile("testrepo/readme.txt"));
+	/* GIT_CHECKOUT_NONE should not add any file to the working tree from the
+	 * index as it is supposed to be a dry run.
+	 */
+	opts.checkout_strategy = GIT_CHECKOUT_NONE;
+	git_checkout_tree(g_repo, (git_object*)p_chomped_commit, &opts);
+	cl_assert_equal_i(false, git_path_isfile("testrepo/readme.txt"));
 
-  git_commit_free(p_master_commit);
-  git_commit_free(p_chomped_commit);
+	git_commit_free(p_master_commit);
+	git_commit_free(p_chomped_commit);
 }
 
 void test_checkout_tree__can_switch_branches(void)
@@ -355,4 +355,90 @@ void test_checkout_tree__can_disable_pattern_match(void)
 	cl_git_pass(git_checkout_tree(g_repo, g_object, &g_opts));
 
 	cl_assert(git_path_isfile("testrepo/branch_file.txt"));
+}
+
+void assert_conflict(
+	const char *entry_path,
+	const char *new_content,
+	const char *parent_sha,
+	const char *commit_sha)
+{
+	git_index *index;
+	git_object *hack_tree;
+	git_reference *branch, *head;
+	git_buf file_path = GIT_BUF_INIT; 
+	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
+
+	cl_git_pass(git_repository_index(&index, g_repo));
+
+	/* Create a branch pointing at the parent */
+	cl_git_pass(git_revparse_single(&g_object, g_repo, parent_sha));
+	cl_git_pass(git_branch_create(&branch, g_repo,
+		"potential_conflict", (git_commit *)g_object, 0));
+
+	/* Make HEAD point to this branch */
+	cl_git_pass(git_reference_symbolic_create(
+		&head, g_repo, "HEAD", git_reference_name(branch), 1));
+
+	/* Checkout the parent */
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+	cl_git_pass(git_checkout_tree(g_repo, g_object, &g_opts));
+
+	/* Hack-ishy workaound to ensure *all* the index entries
+	 * match the content of the tree
+	 */
+	cl_git_pass(git_object_peel(&hack_tree, g_object, GIT_OBJ_TREE));
+	cl_git_pass(git_index_read_tree(index, (git_tree *)hack_tree));
+	git_object_free(hack_tree);
+	git_object_free(g_object);
+	g_object = NULL;
+
+	/* Create a conflicting file */
+	cl_git_pass(git_buf_joinpath(&file_path, "./testrepo", entry_path));
+	cl_git_mkfile(git_buf_cstr(&file_path), new_content);
+	git_buf_free(&file_path);
+
+	/* Trying to checkout the original commit */
+	cl_git_pass(git_revparse_single(&g_object, g_repo, commit_sha));
+
+	opts.checkout_strategy = GIT_CHECKOUT_SAFE;
+	cl_assert_equal_i(
+		GIT_EMERGECONFLICT, git_checkout_tree(g_repo, g_object, &g_opts));
+
+	/* Stage the conflicting change */
+	cl_git_pass(git_index_add_from_workdir(index, entry_path));
+	cl_git_pass(git_index_write(index));
+
+	cl_assert_equal_i(
+		GIT_EMERGECONFLICT, git_checkout_tree(g_repo, g_object, &g_opts));
+}
+
+void test_checkout_tree__checking_out_a_conflicting_type_change_returns_EMERGECONFLICT(void)
+{
+	/*
+	 * 099faba adds a symlink named 'link_to_new.txt'
+	 * a65fedf is the parent of 099faba
+	 */
+
+	assert_conflict("link_to_new.txt", "old.txt", "a65fedf", "099faba");
+}
+
+void test_checkout_tree__checking_out_a_conflicting_type_change_returns_EMERGECONFLICT_2(void)
+{
+	/*
+	 * cf80f8d adds a directory named 'a/'
+	 * a4a7dce is the parent of cf80f8d
+	 */
+
+	assert_conflict("a", "hello\n", "a4a7dce", "cf80f8d");
+}
+
+void test_checkout_tree__checking_out_a_conflicting_content_change_returns_EMERGECONFLICT(void)
+{
+	/*
+	 * c47800c adds a symlink named 'branch_file.txt'
+	 * 5b5b025 is the parent of 763d71a
+	 */
+
+	assert_conflict("branch_file.txt", "hello\n", "5b5b025", "c47800c");
 }

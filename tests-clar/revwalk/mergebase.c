@@ -33,12 +33,12 @@ void test_revwalk_mergebase__single1(void)
 	cl_assert(git_oid_cmp(&result, &expected) == 0);
 
 	cl_git_pass(git_graph_ahead_behind(&ahead, &behind, _repo, &one, &two));
-	cl_assert_equal_i(ahead, 2);
-	cl_assert_equal_i(behind, 1);
+	cl_assert_equal_sz(ahead, 2);
+	cl_assert_equal_sz(behind, 1);
 
 	cl_git_pass(git_graph_ahead_behind(&ahead, &behind, _repo, &two, &one));
-	cl_assert_equal_i(ahead,  1);
-	cl_assert_equal_i(behind,  2);
+	cl_assert_equal_sz(ahead,  1);
+	cl_assert_equal_sz(behind,  2);
 }
 
 void test_revwalk_mergebase__single2(void)
@@ -54,12 +54,12 @@ void test_revwalk_mergebase__single2(void)
 	cl_assert(git_oid_cmp(&result, &expected) == 0);
 
 	cl_git_pass(git_graph_ahead_behind( &ahead, &behind, _repo, &one, &two));
-	cl_assert_equal_i(ahead,  4);
-	cl_assert_equal_i(behind,  1);
+	cl_assert_equal_sz(ahead,  4);
+	cl_assert_equal_sz(behind,  1);
 
 	cl_git_pass(git_graph_ahead_behind( &ahead, &behind, _repo, &two, &one));
-	cl_assert_equal_i(ahead,  1);
-	cl_assert_equal_i(behind,  4);
+	cl_assert_equal_sz(ahead,  1);
+	cl_assert_equal_sz(behind,  4);
 }
 
 void test_revwalk_mergebase__merged_branch(void)
@@ -78,12 +78,12 @@ void test_revwalk_mergebase__merged_branch(void)
 	cl_assert(git_oid_cmp(&result, &expected) == 0);
 
 	cl_git_pass(git_graph_ahead_behind(&ahead, &behind, _repo, &one, &two));
-	cl_assert_equal_i(ahead,  0);
-	cl_assert_equal_i(behind,  3);
+	cl_assert_equal_sz(ahead,  0);
+	cl_assert_equal_sz(behind,  3);
 
 	cl_git_pass(git_graph_ahead_behind(&ahead, &behind, _repo, &two, &one));
-	cl_assert_equal_i(ahead,  3);
-	cl_assert_equal_i(behind,  0);
+	cl_assert_equal_sz(ahead,  3);
+	cl_assert_equal_sz(behind,  0);
 }
 
 void test_revwalk_mergebase__two_way_merge(void)
@@ -95,13 +95,13 @@ void test_revwalk_mergebase__two_way_merge(void)
 	cl_git_pass(git_oid_fromstr(&two, "a953a018c5b10b20c86e69fef55ebc8ad4c5a417"));
 	cl_git_pass(git_graph_ahead_behind(&ahead, &behind, _repo2, &one, &two));
 
-	cl_assert_equal_i(ahead,  2);
-	cl_assert_equal_i(behind,  8);
+	cl_assert_equal_sz(ahead,  2);
+	cl_assert_equal_sz(behind,  8);
 
 	cl_git_pass(git_graph_ahead_behind(&ahead, &behind, _repo2, &two, &one));
 
-	cl_assert_equal_i(ahead,  8);
-	cl_assert_equal_i(behind,  2);
+	cl_assert_equal_sz(ahead,  8);
+	cl_assert_equal_sz(behind,  2);
 }
 
 void test_revwalk_mergebase__no_common_ancestor_returns_ENOTFOUND(void)
@@ -119,8 +119,8 @@ void test_revwalk_mergebase__no_common_ancestor_returns_ENOTFOUND(void)
 	cl_assert_equal_i(GIT_ENOTFOUND, error);
 
 	cl_git_pass(git_graph_ahead_behind(&ahead, &behind, _repo, &one, &two));
-	cl_assert_equal_i(2, ahead);
-	cl_assert_equal_i(4, behind);
+	cl_assert_equal_sz(2, ahead);
+	cl_assert_equal_sz(4, behind);
 }
 
 void test_revwalk_mergebase__no_off_by_one_missing(void)

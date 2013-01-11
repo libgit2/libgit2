@@ -273,7 +273,7 @@ static int crc_object(uint32_t *crc_out, git_mwindow_file *mwf, git_off_t start,
 		if (ptr == NULL)
 			return -1;
 
-		len = min(left, (size_t)size);
+		len = min(left, (unsigned int)size);
 		crc = crc32(crc, ptr, len);
 		size -= len;
 		start += len;

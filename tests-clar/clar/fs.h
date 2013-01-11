@@ -46,7 +46,7 @@ fs_rmdir_helper(WCHAR *_wsource)
 	WCHAR buffer[MAX_PATH];
 	HANDLE find_handle;
 	WIN32_FIND_DATAW find_data;
-	int buffer_prefix_len;
+	size_t buffer_prefix_len;
 
 	/* Set up the buffer and capture the length */
 	wcscpy_s(buffer, MAX_PATH, _wsource);
@@ -153,7 +153,7 @@ fs_copydir_helper(WCHAR *_wsource, WCHAR *_wdest)
 	WCHAR buf_source[MAX_PATH], buf_dest[MAX_PATH];
 	HANDLE find_handle;
 	WIN32_FIND_DATAW find_data;
-	int buf_source_prefix_len, buf_dest_prefix_len;
+	size_t buf_source_prefix_len, buf_dest_prefix_len;
 
 	wcscpy_s(buf_source, MAX_PATH, _wsource);
 	wcscat_s(buf_source, MAX_PATH, L"\\");
