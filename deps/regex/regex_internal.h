@@ -171,8 +171,9 @@ extern const size_t __re_error_msgid_idx[] attribute_hidden;
 typedef unsigned long int bitset_word_t;
 /* All bits set in a bitset_word_t.  */
 #define BITSET_WORD_MAX ULONG_MAX
-/* Number of bits in a bitset_word_t.  */
-#define BITSET_WORD_BITS (sizeof (bitset_word_t) * CHAR_BIT)
+/* Number of bits in a bitset_word_t. Cast to int as most code use it
+ * like that for counting */
+#define BITSET_WORD_BITS ((int)(sizeof (bitset_word_t) * CHAR_BIT))
 /* Number of bitset_word_t in a bit_set.  */
 #define BITSET_WORDS (SBC_MAX / BITSET_WORD_BITS)
 typedef bitset_word_t bitset_t[BITSET_WORDS];

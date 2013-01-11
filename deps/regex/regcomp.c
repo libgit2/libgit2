@@ -1140,7 +1140,7 @@ analyze (regex_t *preg)
 	dfa->subexp_map[i] = i;
       preorder (dfa->str_tree, optimize_subexps, dfa);
       for (i = 0; i < preg->re_nsub; i++)
-	if (dfa->subexp_map[i] != i)
+	if (dfa->subexp_map[i] != (int)i)
 	  break;
       if (i == preg->re_nsub)
 	{
@@ -1609,7 +1609,8 @@ calc_inveclosure (re_dfa_t *dfa)
 static reg_errcode_t
 calc_eclosure (re_dfa_t *dfa)
 {
-  int node_idx, incomplete;
+  size_t node_idx;
+  int incomplete;
 #ifdef DEBUG
   assert (dfa->nodes_len > 0);
 #endif
