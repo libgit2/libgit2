@@ -542,7 +542,7 @@ weak_alias (__regcomp, regcomp)
    from either regcomp or regexec.   We don't use PREG here.  */
 
 size_t
-regerror(int errcode, const regex_t *__restrict preg,
+regerror(int errcode, UNUSED const regex_t *__restrict preg,
 	 char *__restrict errbuf, size_t errbuf_size)
 {
   const char *msg;
@@ -1140,7 +1140,7 @@ analyze (regex_t *preg)
 	dfa->subexp_map[i] = i;
       preorder (dfa->str_tree, optimize_subexps, dfa);
       for (i = 0; i < preg->re_nsub; i++)
-	if (dfa->subexp_map[i] != i)
+	if (dfa->subexp_map[i] != (int)i)
 	  break;
       if (i == preg->re_nsub)
 	{
@@ -1358,7 +1358,7 @@ calc_first (void *extra, bin_tree_t *node)
 
 /* Pass 2: compute NEXT on the tree.  Preorder visit.  */
 static reg_errcode_t
-calc_next (void *extra, bin_tree_t *node)
+calc_next (UNUSED void *extra, bin_tree_t *node)
 {
   switch (node->token.type)
     {
@@ -1609,7 +1609,8 @@ calc_inveclosure (re_dfa_t *dfa)
 static reg_errcode_t
 calc_eclosure (re_dfa_t *dfa)
 {
-  int node_idx, incomplete;
+  size_t node_idx;
+  int incomplete;
 #ifdef DEBUG
   assert (dfa->nodes_len > 0);
 #endif
@@ -3308,7 +3309,7 @@ parse_bracket_exp (re_string_t *regexp, re_dfa_t *dfa, re_token_t *token,
 
 static reg_errcode_t
 parse_bracket_element (bracket_elem_t *elem, re_string_t *regexp,
-		       re_token_t *token, int token_len, re_dfa_t *dfa,
+		       re_token_t *token, int token_len, UNUSED re_dfa_t *dfa,
 		       reg_syntax_t syntax, int accept_hyphen)
 {
 #ifdef RE_ENABLE_I18N
@@ -3803,7 +3804,7 @@ free_token (re_token_t *node)
    and its children. */
 
 static reg_errcode_t
-free_tree (void *extra, bin_tree_t *node)
+free_tree (UNUSED void *extra, bin_tree_t *node)
 {
   free_token (&node->token);
   return REG_NOERROR;
