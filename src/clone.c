@@ -282,6 +282,7 @@ static int update_head_to_branch(
 
 cleanup:
 	git_reference_free(remote_ref);
+	git_buf_free(&remote_branch_name);
 	return retcode;
 }
 
