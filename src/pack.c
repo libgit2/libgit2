@@ -621,7 +621,7 @@ ssize_t git_packfile_stream_read(git_packfile_stream *obj, void *buffer, size_t 
 		return GIT_EBUFS;
 
 	obj->zstream.next_out = buffer;
-	obj->zstream.avail_out = len;
+	obj->zstream.avail_out = (unsigned int)len;
 	obj->zstream.next_in = in;
 
 	st = inflate(&obj->zstream, Z_SYNC_FLUSH);
