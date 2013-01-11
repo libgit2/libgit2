@@ -127,6 +127,9 @@ int git_refspec__parse(git_refspec *refspec, const char *input, bool is_fetch)
 
 void git_refspec__free(git_refspec *refspec)
 {
+	if (refspec == NULL)
+		return;
+
 	git__free(refspec->src);
 	git__free(refspec->dst);
 }
