@@ -538,7 +538,7 @@ static void pack_backend__free(git_odb_backend *_backend)
 
 	for (i = 0; i < backend->packs.length; ++i) {
 		struct git_pack_file *p = git_vector_get(&backend->packs, i);
-		git_packfile_free(p);
+		packfile_free(p);
 	}
 
 	git_vector_free(&backend->packs);

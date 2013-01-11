@@ -747,7 +747,7 @@ void git_indexer_stream_free(git_indexer_stream *idx)
 	git_vector_foreach(&idx->deltas, i, delta)
 		git__free(delta);
 	git_vector_free(&idx->deltas);
-	git_packfile_free(idx->pack);
+	git__free(idx->pack);
 	git__free(idx);
 }
 
@@ -1059,7 +1059,7 @@ void git_indexer_free(git_indexer *idx)
 	git_vector_foreach(&idx->pack->cache, i, pe)
 		git__free(pe);
 	git_vector_free(&idx->pack->cache);
-	git_packfile_free(idx->pack);
+	git__free(idx->pack);
 	git__free(idx);
 }
 

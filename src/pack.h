@@ -139,7 +139,7 @@ git_off_t get_delta_base(struct git_pack_file *p, git_mwindow **w_curs,
 		git_off_t *curpos, git_otype type,
 		git_off_t delta_obj_offset);
 
-void git_packfile_free(struct git_pack_file *p);
+void packfile_free(struct git_pack_file *p);
 int git_packfile_check(struct git_pack_file **pack_out, const char *path);
 int git_pack_entry_find(
 		struct git_pack_entry *e,
