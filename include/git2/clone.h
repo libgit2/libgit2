@@ -57,6 +57,8 @@ GIT_BEGIN_DECL
  *   the origin remote before the fetch is initiated.
  * - `remote_autotag` may be used to specify the autotag setting before the
  *   initial fetch.
+ * - `checkout_branch` gives the name of the branch to checkout. NULL means
+ *   use the remote's HEAD.
  */
 
 typedef struct git_clone_options {
@@ -76,6 +78,7 @@ typedef struct git_clone_options {
 	git_transport *transport;
 	git_remote_callbacks *remote_callbacks;
 	git_remote_autotag_option_t remote_autotag;
+	const char* checkout_branch;
 } git_clone_options;
 
 #define GIT_CLONE_OPTIONS_VERSION 1
