@@ -46,6 +46,133 @@ static int packfile_error(const char *message)
 	return -1;
 }
 
+/********************
+ * Delta base cache
+ ********************/
+
+static git_pack_cache_entry *new_cache_object(git_rawobj *source)
+{
+	git_pack_cache_entry *e = git__calloc(1, sizeof(git_pack_cache_entry));
+	if (!e)
+		return NULL;
+
+	memcpy(&e->raw, source, sizeof(git_rawobj));
+
+	return e;
+}
+
+static void free_cache_object(void *o)
+{
+	git_pack_cache_entry *e = (git_pack_cache_entry *)o;
+
+	if (e != NULL) {
+		assert(e->refcount.val == 0);
+		git__free(e->raw.data);
+		git__free(e);
+	}
+}
+
+static void cache_free(git_pack_cache *cache)
+{
+	khiter_t k;
+
+	if (cache->entries) {
+		for (k = kh_begin(cache->entries); k != kh_end(cache->entries); k++) {
+			if (kh_exist(cache->entries, k))
+				free_cache_object(kh_value(cache->entries, k));
+		}
+
+		git_offmap_free(cache->entries);
+	}
+}
+
+static int cache_init(git_pack_cache *cache)
+{
+	memset(cache, 0, sizeof(git_pack_cache));
+	cache->entries = git_offmap_alloc();
+	GITERR_CHECK_ALLOC(cache->entries);
+	cache->memory_limit = GIT_PACK_CACHE_MEMORY_LIMIT;
+	git_mutex_init(&cache->lock);
+
+	return 0;
+}
+
+static git_pack_cache_entry *cache_get(git_pack_cache *cache, size_t offset)
+{
+	khiter_t k;
+	git_pack_cache_entry *entry = NULL;
+
+	git_mutex_lock(&cache->lock);
+	k = kh_get(off, cache->entries, offset);
+	if (k != kh_end(cache->entries)) { /* found it */
+		entry = kh_value(cache->entries, k);
+		git_atomic_inc(&entry->refcount);
+		entry->last_usage = cache->use_ctr++;
+	}
+	git_mutex_unlock(&cache->lock);
+
+	return entry;
+}
+
+/* Run with the cache lock held */
+static void free_lowest_entry(git_pack_cache *cache)
+{
+	git_pack_cache_entry *lowest = NULL, *entry;
+	khiter_t k, lowest_k;
+
+	for (k = kh_begin(cache->entries); k != kh_end(cache->entries); k++) {
+		if (!kh_exist(cache->entries, k))
+			continue;
+
+		entry = kh_value(cache->entries, k);
+		if (lowest == NULL || entry->last_usage < lowest->last_usage) {
+			lowest_k = k;
+			lowest = entry;
+		}
+	}
+
+	if (!lowest) /* there's nothing to free */
+		return;
+
+	cache->memory_used -= lowest->raw.len;
+	kh_del(off, cache->entries, lowest_k);
+	free_cache_object(lowest);
+}
+
+static int cache_add(git_pack_cache *cache, git_rawobj *base, git_off_t offset)
+{
+	git_pack_cache_entry *entry;
+	int error, exists = 0;
+	khiter_t k;
+
+	if (base->len > GIT_PACK_CACHE_SIZE_LIMIT)
+		return -1;
+
+	entry = new_cache_object(base);
+	if (entry) {
+		git_mutex_lock(&cache->lock);
+		/* Add it to the cache if nobody else has */
+		exists = kh_get(off, cache->entries, offset) != kh_end(cache->entries);
+		if (!exists) {
+			while (cache->memory_used + base->len > cache->memory_limit)
+				free_lowest_entry(cache);
+
+			k = kh_put(off, cache->entries, offset, &error);
+			assert(error != 0);
+			kh_value(cache->entries, k) = entry;
+			cache->memory_used += entry->raw.len;
+		}
+		git_mutex_unlock(&cache->lock);
+		/* Somebody beat us to adding it into the cache */
+		if (exists) {
+			git__free(entry);
+			return -1;
+		}
+	}
+
+	return 0;
+}
+
 /***********************************************************
  *
  * PACK INDEX METHODS
@@ -336,9 +463,10 @@ static int packfile_unpack_delta(
 		git_otype delta_type,
 		git_off_t obj_offset)
 {
-	git_off_t base_offset;
+	git_off_t base_offset, base_key;
 	git_rawobj base, delta;
-	int error;
+	git_pack_cache_entry *cached = NULL;
+	int error, found_base = 0;
 
 	base_offset = get_delta_base(p, w_curs, curpos, delta_type, obj_offset);
 	git_mwindow_close(w_curs);
@@ -347,32 +475,49 @@ static int packfile_unpack_delta(
 	if (base_offset < 0) /* must actually be an error code */
 		return (int)base_offset;
 
-	error = git_packfile_unpack(&base, p, &base_offset);
+	if (!p->bases.entries && (cache_init(&p->bases) < 0))
+		return -1;
 
-	/*
-	 * TODO: git.git tries to load the base from other packfiles
-	 * or loose objects.
-	 *
-	 * We'll need to do this in order to support thin packs.
-	 */
-	if (error < 0)
-		return error;
+	base_key = base_offset; /* git_packfile_unpack modifies base_offset */
+	if ((cached = cache_get(&p->bases, base_offset)) != NULL) {
+		memcpy(&base, &cached->raw, sizeof(git_rawobj));
+		found_base = 1;
+	}
+
+	if (!cached) { /* have to inflate it */
+		error = git_packfile_unpack(&base, p, &base_offset);
+
+		/*
+		 * TODO: git.git tries to load the base from other packfiles
+		 * or loose objects.
+		 *
+		 * We'll need to do this in order to support thin packs.
+		 */
+		if (error < 0)
+			return error;
+	}
 
 	error = packfile_unpack_compressed(&delta, p, w_curs, curpos, delta_size, delta_type);
 	git_mwindow_close(w_curs);
+
 	if (error < 0) {
-		git__free(base.data);
+		if (!found_base)
+			git__free(base.data);
 		return error;
 	}
 
 	obj->type = base.type;
 	error = git__delta_apply(obj, base.data, base.len, delta.data, delta.len);
+	if (error < 0)
+		goto on_error;
 
-	git__free(base.data);
+	if (found_base)
+		git_atomic_dec(&cached->refcount);
+	else if (cache_add(&p->bases, &base, base_key) < 0)
+		git__free(base.data);
+
+on_error:
 	git__free(delta.data);
-
-	/* TODO: we might want to cache this. eventually */
-	//add_delta_base_cache(p, base_offset, base, base_size, *type);
 
 	return error; /* error set by git__delta_apply */
 }
@@ -649,11 +794,12 @@ static struct git_pack_file *packfile_alloc(size_t extra)
 }
 
 
-void packfile_free(struct git_pack_file *p)
+void git_packfile_free(struct git_pack_file *p)
 {
 	assert(p);
 
-	/* clear_delta_base_cache(); */
+	cache_free(&p->bases);
+
 	git_mwindow_free_all(&p->mwf);
 	git_mwindow_file_deregister(&p->mwf);
 
