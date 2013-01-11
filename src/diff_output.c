@@ -821,6 +821,9 @@ static int diff_patch_hunk_cb(
 	hunk->line_start = patch->lines_size;
 	hunk->line_count = 0;
 
+	patch->oldno = range->old_start;
+	patch->newno = range->new_start;
+
 	return 0;
 }
 
@@ -879,24 +882,23 @@ static int diff_patch_line_cb(
 			++line->lines;
 	}
 
-	if (!last) {
-		line->oldno = hunk->range.old_start;
-		line->newno = hunk->range.new_start;
-	} else {
-		switch (last->origin) {
-		case GIT_DIFF_LINE_ADDITION:
-			line->oldno = last->oldno;
-			line->newno = last->newno + last->lines;
-			break;
-		case GIT_DIFF_LINE_DELETION:
-			line->oldno = last->oldno + last->lines;
-			line->newno = last->newno;
-			break;
-		default:
-			line->oldno = last->oldno + last->lines;
-			line->newno = last->newno + last->lines;
-			break;
-		}
+	switch (line_origin) {
+	case GIT_DIFF_LINE_ADDITION:
+		line->oldno = -1;
+		line->newno = patch->newno;
+		patch->newno += line->lines;
+		break;
+	case GIT_DIFF_LINE_DELETION:
+		line->oldno = patch->oldno;
+		line->newno = -1;
+		patch->oldno += line->lines;
+		break;
+	default:
+		line->oldno = patch->oldno;
+		line->newno = patch->newno;
+		patch->oldno += line->lines;
+		patch->newno += line->lines;
+		break;
 	}
 
 	hunk->line_count++;

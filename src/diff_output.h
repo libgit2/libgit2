@@ -72,6 +72,7 @@ struct git_diff_patch {
 	size_t hunks_asize, hunks_size;
 	diff_patch_line *lines;
 	size_t lines_asize, lines_size;
+	size_t oldno, newno;
 };
 
 /* context for performing diff on a single delta */
