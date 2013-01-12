@@ -29,7 +29,7 @@ static int create_branch(
 	const char *name)
 {
 	git_commit *head_obj = NULL;
-	git_reference *branch_ref;
+	git_reference *branch_ref = NULL;
 	int error;
 
 	/* Find the target commit */
@@ -260,6 +260,32 @@ cleanup:
 	return retcode;
 }
 
+static int update_head_to_branch(
+		git_repository *repo,
+		const git_clone_options *options)
+{
+	int retcode;
+	git_buf remote_branch_name = GIT_BUF_INIT;
+	git_reference* remote_ref = NULL;
+	
+	assert(options->checkout_branch);
+
+	if ((retcode = git_buf_printf(&remote_branch_name, GIT_REFS_REMOTES_DIR "%s/%s",
+		options->remote_name, options->checkout_branch)) < 0 )
+		goto cleanup;
+
+	if ((retcode = git_reference_lookup(&remote_ref, repo, git_buf_cstr(&remote_branch_name))) < 0)
+		goto cleanup;
+
+	retcode = update_head_to_new_branch(repo, git_reference_target(remote_ref),
+		options->checkout_branch);
+
+cleanup:
+	git_reference_free(remote_ref);
+	git_buf_free(&remote_branch_name);
+	return retcode;
+}
+
 /*
  * submodules?
  */
@@ -331,8 +357,13 @@ static int setup_remotes_and_fetch(
 						options->fetch_progress_payload)) {
 				/* Create "origin/foo" branches for all remote branches */
 				if (!git_remote_update_tips(origin)) {
+					/* Point HEAD to the requested branch */
+					if (options->checkout_branch) {
+						if (!update_head_to_branch(repo, options))
+							retcode = 0;
+					}
 					/* Point HEAD to the same ref as the remote's head */
-					if (!update_head_to_remote(repo, origin)) {
+					else if (!update_head_to_remote(repo, origin)) {
 						retcode = 0;
 					}
 				}
