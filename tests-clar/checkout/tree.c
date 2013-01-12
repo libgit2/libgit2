@@ -406,7 +406,7 @@ void assert_conflict(
 		GIT_EMERGECONFLICT, git_checkout_tree(g_repo, g_object, &g_opts));
 
 	/* Stage the conflicting change */
-	cl_git_pass(git_index_add_from_workdir(index, entry_path));
+	cl_git_pass(git_index_add_bypath(index, entry_path));
 	cl_git_pass(git_index_write(index));
 
 	cl_assert_equal_i(

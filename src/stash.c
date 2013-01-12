@@ -208,7 +208,7 @@ static int update_index_cb(
 	}
 
 	if (add_path != NULL)
-		data->error = git_index_add_from_workdir(data->index, add_path);
+		data->error = git_index_add_bypath(data->index, add_path);
 
 	return data->error;
 }

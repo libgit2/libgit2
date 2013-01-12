@@ -332,7 +332,7 @@ int git_submodule_add_finalize(git_submodule *sm)
 	assert(sm);
 
 	if ((error = git_repository_index__weakptr(&index, sm->owner)) < 0 ||
-		(error = git_index_add_from_workdir(index, GIT_MODULES_FILE)) < 0)
+		(error = git_index_add_bypath(index, GIT_MODULES_FILE)) < 0)
 		return error;
 
 	return git_submodule_add_to_index(sm, true);

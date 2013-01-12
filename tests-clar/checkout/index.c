@@ -417,8 +417,8 @@ void test_checkout_index__can_overcome_name_clashes(void)
 	cl_git_pass(p_mkdir("./testrepo/path1", 0777));
 	cl_git_mkfile("./testrepo/path1/file1", "content\r\n");
 
-	cl_git_pass(git_index_add_from_workdir(index, "path0"));
-	cl_git_pass(git_index_add_from_workdir(index, "path1/file1"));
+	cl_git_pass(git_index_add_bypath(index, "path0"));
+	cl_git_pass(git_index_add_bypath(index, "path1/file1"));
 
 	cl_git_pass(p_unlink("./testrepo/path0"));
 	cl_git_pass(git_futils_rmdir_r(

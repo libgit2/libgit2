@@ -56,7 +56,7 @@ static void add_and_check_mode(
 	int pos;
 	const git_index_entry *entry;
 
-	cl_git_pass(git_index_add_from_workdir(index, filename));
+	cl_git_pass(git_index_add_bypath(index, filename));
 
 	pos = git_index_find(index, filename);
 	cl_assert(pos >= 0);
