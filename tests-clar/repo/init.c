@@ -367,7 +367,7 @@ void test_repo_init__extended_with_template(void)
 {
 	git_repository_init_options opts = GIT_REPOSITORY_INIT_OPTIONS_INIT;
 
-	opts.flags = GIT_REPOSITORY_INIT_MKPATH | GIT_REPOSITORY_INIT_BARE;
+	opts.flags = GIT_REPOSITORY_INIT_MKPATH | GIT_REPOSITORY_INIT_BARE | GIT_REPOSITORY_INIT_EXTERNAL_TEMPLATE;
 	opts.template_path = cl_fixture("template");
 
 	cl_git_pass(git_repository_init_ext(&_repo, "templated.git", &opts));
