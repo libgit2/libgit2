@@ -195,19 +195,6 @@ int git_remote_create_inmemory(git_remote **out, git_repository *repo, const cha
 	return 0;
 }
 
-int git_remote_set_repository(git_remote *remote, git_repository *repo)
-{
-	assert(repo);
-
-	if (remote->repo) {
-		giterr_set(GITERR_INVALID, "Remotes can't change repositiories.");
-		return GIT_ERROR;
-	}
-
-	remote->repo = repo;
-	return 0;
-}
-
 int git_remote_load(git_remote **out, git_repository *repo, const char *name)
 {
 	git_remote *remote;

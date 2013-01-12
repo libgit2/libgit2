@@ -60,7 +60,7 @@ GIT_EXTERN(int) git_remote_create(
  * See `git_tag_create()` for rules about valid names.
  *
  * @param out pointer to the new remote object
- * @param repo the associated repository. May be NULL for a "dangling" remote.
+ * @param repo the associated repository
  * @param fetch the fetch refspec to use for this remote. May be NULL for defaults.
  * @param url the remote repository's URL
  * @return 0 or an error code
@@ -70,16 +70,6 @@ GIT_EXTERN(int) git_remote_create_inmemory(
 		git_repository *repo,
 		const char *fetch,
 		const char *url);
-
-/**
- * Sets the owning repository for the remote.  This is only allowed on
- * dangling remotes.
- *
- * @param remote the remote to configure
- * @param repo the repository that will own the remote
- * @return 0 or an error code
- */
-GIT_EXTERN(int) git_remote_set_repository(git_remote *remote, git_repository *repo);
 
 /**
  * Get the information for a particular remote
