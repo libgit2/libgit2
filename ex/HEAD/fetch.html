@@ -104,7 +104,7 @@ inform the user about progress.</p>
 
 <span class="nl">exit:</span>
   <span class="n">data</span><span class="o">-&gt;</span><span class="n">finished</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
-  <span class="n">pthread_exit</span><span class="p">(</span><span class="o">&amp;</span><span class="n">data</span><span class="o">-&gt;</span><span class="n">ret</span><span class="p">);</span>
+  <span class="k">return</span> <span class="o">&amp;</span><span class="n">data</span><span class="o">-&gt;</span><span class="n">ret</span><span class="p">;</span>
 <span class="p">}</span>
 
 <span class="k">static</span> <span class="kt">int</span> <span class="nf">update_cb</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">refname</span><span class="p">,</span> <span class="k">const</span> <span class="n">git_oid</span> <span class="o">*</span><span class="n">a</span><span class="p">,</span> <span class="k">const</span> <span class="n">git_oid</span> <span class="o">*</span><span class="n">b</span><span class="p">,</span> <span class="kt">void</span> <span class="o">*</span><span class="n">data</span><span class="p">)</span>
