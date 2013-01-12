@@ -1015,6 +1015,7 @@ static int repo_init_structure(
 			/* if template was default, ignore error and use internal */
 			giterr_clear();
 			external_tpl = false;
+			error = 0;
 		}
 	}
 
