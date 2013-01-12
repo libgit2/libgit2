@@ -5,6 +5,7 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 #include "buf_text.h"
+#include "posix.h"
 
 int git_buf_text_puts_escaped(
 	git_buf *buf,
@@ -111,7 +112,7 @@ bool git_buf_text_is_binary(const git_buf *buf)
 
 bool git_buf_text_contains_nul(const git_buf *buf)
 {
-	return (strnlen(buf->ptr, buf->size) != buf->size);
+	return (p_strnlen(buf->ptr, buf->size) != buf->size);
 }
 
 int git_buf_text_detect_bom(git_bom_t *bom, const git_buf *buf, size_t offset)
