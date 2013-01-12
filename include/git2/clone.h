@@ -82,7 +82,7 @@ typedef struct git_clone_options {
 } git_clone_options;
 
 #define GIT_CLONE_OPTIONS_VERSION 1
-#define GIT_CLONE_OPTIONS_INIT {GIT_CLONE_OPTIONS_VERSION, {GIT_CHECKOUT_OPTS_VERSION, GIT_CHECKOUT_SAFE}}
+#define GIT_CLONE_OPTIONS_INIT {GIT_CLONE_OPTIONS_VERSION, {GIT_CHECKOUT_OPTS_VERSION, GIT_CHECKOUT_SAFE_CREATE}}
 
 /**
  * Clone a remote repository, and checkout the branch pointed to by the remote
