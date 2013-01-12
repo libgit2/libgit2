@@ -1,6 +1,7 @@
 #include "clar_libgit2.h"
 #include "buffer.h"
 #include "buf_text.h"
+#include "fileops.h"
 
 #define TESTSTR "Have you seen that? Have you seeeen that??"
 const char *test_string = TESTSTR;
@@ -729,4 +730,92 @@ void test_core_buffer__classify_with_utf8(void)
 	b.ptr = data2; b.size = b.asize = data2len;
 	cl_assert(git_buf_text_is_binary(&b));
 	cl_assert(git_buf_text_contains_nul(&b));
+}
+
+void test_core_buffer__similarity_metric(void)
+{
+	git_buf_text_hashsig *a, *b;
+	git_buf buf = GIT_BUF_INIT;
+	int sim;
+
+	/* in the first case, we compare data to itself and expect 100% match */
+
+	cl_git_pass(git_buf_sets(&buf, "test data\nright here\ninline\ntada"));
+	cl_git_pass(git_buf_text_hashsig_create(&a, &buf, true));
+	cl_git_pass(git_buf_text_hashsig_create(&b, &buf, true));
+
+	cl_assert_equal_i(100, git_buf_text_hashsig_compare(a, b, 100));
+
+	git_buf_text_hashsig_free(a);
+	git_buf_text_hashsig_free(b);
+
+	/* in the second case, half of a is matched and all of b is matched, so
+	 * we'll expect a score of around 66% to be the similarity score
+	 */
+
+	cl_git_pass(
+		git_buf_sets(&buf, "a\nb\nc\nd\ne\nf\ng\nh\ni\nj\nk\nl\nm\nn\no\np\n"));
+	cl_git_pass(git_buf_text_hashsig_create(&a, &buf, true));
+
+	cl_git_pass(git_buf_sets(&buf, "a\nb\nc\nd\ne\nf\ng\nh"));
+	cl_git_pass(git_buf_text_hashsig_create(&b, &buf, true));
+
+	sim = git_buf_text_hashsig_compare(a, b, 100);
+	cl_assert(sim > 60 && sim < 70);
+
+	git_buf_text_hashsig_free(a);
+	git_buf_text_hashsig_free(b);
+
+	/* in the reversed case, 100% of line hashes match, but no pairwise hashes
+	 * match, so we'll expect about a 50% match for a reversed file
+	 */
+
+	cl_git_pass(
+		git_buf_sets(&buf, "a\nb\nc\nd\ne\nf\ng\nh\ni\nj\nk\nl\nm\nn\no\np\n"));
+	cl_git_pass(git_buf_text_hashsig_create(&a, &buf, true));
+	cl_git_pass(
+		git_buf_sets(&buf, "p\no\nn\nm\nl\nk\nj\ni\nh\ng\nf\ne\nd\nc\nb\na\n"));
+	cl_git_pass(git_buf_text_hashsig_create(&b, &buf, true));
+
+	sim = git_buf_text_hashsig_compare(a, b, 100);
+	cl_assert(sim > 45 && sim < 55);
+
+	git_buf_text_hashsig_free(a);
+	git_buf_text_hashsig_free(b);
+
+	/* if we don't use pairwise signatures, then a reversed file should
+	 * match 100%
+	 */
+
+	cl_git_pass(
+		git_buf_sets(&buf, "a\nb\nc\nd\ne\nf\ng\nh\ni\nj\nk\nl\nm\nn\no\np\n"));
+	cl_git_pass(git_buf_text_hashsig_create(&a, &buf, false));
+	cl_git_pass(
+		git_buf_sets(&buf, "p\no\nn\nm\nl\nk\nj\ni\nh\ng\nf\ne\nd\nc\nb\na\n"));
+	cl_git_pass(git_buf_text_hashsig_create(&b, &buf, false));
+
+	sim = git_buf_text_hashsig_compare(a, b, 100);
+	cl_assert_equal_i(100, sim);
+
+	git_buf_text_hashsig_free(a);
+	git_buf_text_hashsig_free(b);
+
+	/* lastly, let's check that we can hash file content as well */
+
+	cl_git_pass(
+		git_buf_sets(&buf, "a\nb\nc\nd\ne\nf\ng\nh\ni\nj\nk\nl\nm\nn\no\np\n"));
+	cl_git_pass(git_buf_text_hashsig_create(&a, &buf, true));
+
+	cl_git_pass(git_futils_mkdir("scratch", NULL, 0755, GIT_MKDIR_PATH));
+	cl_git_mkfile("scratch/testdata",
+		"a\nb\nc\nd\ne\nf\ng\nh\ni\nj\nk\nl\nm\nn\no\np\n");
+	cl_git_pass(git_buf_text_hashsig_create_fromfile(&b, "scratch/testdata", true));
+
+	cl_assert_equal_i(100, git_buf_text_hashsig_compare(a, b, 100));
+
+	git_buf_text_hashsig_free(a);
+	git_buf_text_hashsig_free(b);
+
+	git_buf_free(&buf);
+	git_futils_rmdir_r("scratch", NULL, GIT_RMDIR_REMOVE_FILES);
 }

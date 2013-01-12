@@ -105,4 +105,52 @@ extern int git_buf_text_detect_bom(
 extern bool git_buf_text_gather_stats(
 	git_buf_text_stats *stats, const git_buf *buf, bool skip_bom);
 
+/**
+ * Similarity signature of line hashes for a buffer
+ */
+typedef struct git_buf_text_hashsig git_buf_text_hashsig;
+
+/**
+ * Build a similarity signature for a buffer
+ *
+ * This can either generate a simple array of hashed lines/runs in the
+ * file, or it can also keep hashes of pairs of runs in sequence.  Adding
+ * the pairwise runs means the final score will be sensitive to line
+ * ordering changes as well as individual line contents.
+ *
+ * @param out The array of hashed runs representing the file content
+ * @param buf The contents of the file to hash
+ * @param generate_pairwise_hashes Should pairwise runs be hashed
+ */
+extern int git_buf_text_hashsig_create(
+	git_buf_text_hashsig **out,
+	const git_buf *buf,
+	bool generate_pairwise_hashes);
+
+/**
+ * Build a similarity signature from a file
+ *
+ * This walks through the file, only loading a maximum of 4K of file data at
+ * a time.  Otherwise, it acts just like `git_buf_text_hashsig_create`.
+ */
+extern int git_buf_text_hashsig_create_fromfile(
+	git_buf_text_hashsig **out,
+	const char *path,
+	bool generate_pairwise_hashes);
+
+/**
+ * Release memory for a content similarity signature
+ */
+extern void git_buf_text_hashsig_free(git_buf_text_hashsig *sig);
+
+/**
+ * Measure similarity between two files
+ *
+ * @return <0 for error, [0 to scale] as similarity score
+ */
+extern int git_buf_text_hashsig_compare(
+	const git_buf_text_hashsig *a,
+	const git_buf_text_hashsig *b,
+	int scale);
+
 #endif
