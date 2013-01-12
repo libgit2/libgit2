@@ -379,6 +379,8 @@ void assert_conflict(
 	/* Make HEAD point to this branch */
 	cl_git_pass(git_reference_symbolic_create(
 		&head, g_repo, "HEAD", git_reference_name(branch), 1));
+	git_reference_free(head);
+	git_reference_free(branch);
 
 	/* Checkout the parent */
 	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
@@ -408,6 +410,7 @@ void assert_conflict(
 	/* Stage the conflicting change */
 	cl_git_pass(git_index_add_from_workdir(index, entry_path));
 	cl_git_pass(git_index_write(index));
+	git_index_free(index);
 
 	cl_assert_equal_i(
 		GIT_EMERGECONFLICT, git_checkout_tree(g_repo, g_object, &g_opts));
