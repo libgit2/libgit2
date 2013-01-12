@@ -97,12 +97,14 @@ static int cache_init(git_pack_cache *cache)
 	return 0;
 }
 
-static git_pack_cache_entry *cache_get(git_pack_cache *cache, size_t offset)
+static git_pack_cache_entry *cache_get(git_pack_cache *cache, git_off_t offset)
 {
 	khiter_t k;
 	git_pack_cache_entry *entry = NULL;
 
-	git_mutex_lock(&cache->lock);
+	if (git_mutex_lock(&cache->lock) < 0)
+		return NULL;
+
 	k = kh_get(off, cache->entries, offset);
 	if (k != kh_end(cache->entries)) { /* found it */
 		entry = kh_value(cache->entries, k);
@@ -150,7 +152,10 @@ static int cache_add(git_pack_cache *cache, git_rawobj *base, git_off_t offset)
 
 	entry = new_cache_object(base);
 	if (entry) {
-		git_mutex_lock(&cache->lock);
+		if (git_mutex_lock(&cache->lock) < 0) {
+			giterr_set(GITERR_OS, "failed to lock cache");
+			return -1;
+		}
 		/* Add it to the cache if nobody else has */
 		exists = kh_get(off, cache->entries, offset) != kh_end(cache->entries);
 		if (!exists) {
