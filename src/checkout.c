@@ -687,19 +687,23 @@ static int blob_content_to_file(
 	git_buf unfiltered = GIT_BUF_INIT, filtered = GIT_BUF_INIT;
 	git_vector filters = GIT_VECTOR_INIT;
 
-	if (opts->disable_filters ||
+	/* Create a fake git_buf from the blob raw data... */
+	filtered.ptr = blob->odb_object->raw.data;
+	filtered.size = blob->odb_object->raw.len;
+	/* ... and make sure it doesn't get unexpectedly freed */
+	dont_free_filtered = true;
+
+	if (!opts->disable_filters &&
+		!git_buf_text_is_binary(&filtered) &&
 		(nb_filters = git_filters_load(
 			&filters,
 			git_object_owner((git_object *)blob),
 			path,
-			GIT_FILTER_TO_WORKTREE)) == 0) {
-
-		/* Create a fake git_buf from the blob raw data... */
-		filtered.ptr = blob->odb_object->raw.data;
-		filtered.size = blob->odb_object->raw.len;
-
-		/* ... and make sure it doesn't get unexpectedly freed */
-		dont_free_filtered = true;
+			GIT_FILTER_TO_WORKTREE)) > 0)
+	{
+		/* reset 'filtered' so it can be a filter target */
+		git_buf_init(&filtered, 0);
+		dont_free_filtered = false;
 	}
 
 	if (nb_filters < 0)
