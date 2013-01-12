@@ -794,7 +794,7 @@ static struct git_pack_file *packfile_alloc(size_t extra)
 }
 
 
-void packfile_free(struct git_pack_file *p)
+void git_packfile_free(struct git_pack_file *p)
 {
 	assert(p);
 
