@@ -19,6 +19,13 @@
 # define S_IFLNK _S_IFLNK
 # define S_ISLNK(m) (((m) & _S_IFMT) == _S_IFLNK)
 
+GIT_INLINE(size_t) p_strnlen(const char *s, size_t maxlen)
+{
+	size_t ct;
+	for (ct = 0; ct < maxlen && *s; ++s) ++ct;
+	return ct;
+}
+
 #endif
 
 #endif /* INCLUDE_mingw_compat__ */
