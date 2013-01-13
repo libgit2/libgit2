@@ -232,7 +232,7 @@ struct git_buf_text_hashsig {
 	unsigned int pairs : 1;
 };
 
-static int similarity_advance(git_buf_text_hashsig *sig, uint32_t hash)
+static int similarity_record_hash(git_buf_text_hashsig *sig, uint32_t hash)
 {
 	if (sig->size >= sig->asize) {
 		size_t new_asize = sig->asize + 512;
@@ -248,6 +248,80 @@ static int similarity_advance(git_buf_text_hashsig *sig, uint32_t hash)
 	return 0;
 }
 
+static int similarity_add_hashes_text(
+	git_buf_text_hashsig *sig,
+	uint32_t *hash_start,
+	size_t *hashlen_start,
+	const char *ptr,
+	size_t len)
+{
+	int error;
+	const char *scan = ptr, *scan_end = ptr + len;
+	uint32_t hash = *hash_start;
+	size_t hashlen = *hashlen_start;
+
+	while (scan < scan_end) {
+		char ch = *scan++;
+
+		if (ch == '\r' || ch == '\n' || hashlen >= SIMILARITY_MAXRUN) {
+			if ((error = similarity_record_hash(sig, hash)) < 0)
+				break;
+
+			hash = SIMILARITY_HASH_START;
+			hashlen = 0;
+
+			/* skip all whitespace immediately after line ending */
+			while (scan < scan_end && git__isspace(*scan))
+				scan++;
+		} else {
+			hash = SIMILARITY_HASH_UPDATE(hash, ch);
+			hashlen++;
+		}
+	}
+
+	*hash_start = hash;
+	*hashlen_start = hashlen;
+
+	return error;
+}
+
+static int similarity_add_hashes_binary(
+	git_buf_text_hashsig *sig,
+	uint32_t *hash_start,
+	size_t *hashlen_start,
+	const char *ptr,
+	size_t len)
+{
+	int error;
+	const char *scan = ptr, *scan_end = ptr + len;
+	uint32_t hash = *hash_start;
+	size_t hashlen = *hashlen_start;
+
+	while (scan < scan_end) {
+		char ch = *scan++;
+
+		if (!ch || hashlen >= SIMILARITY_MAXRUN) {
+			if ((error = similarity_record_hash(sig, hash)) < 0)
+				break;
+
+			hash = SIMILARITY_HASH_START;
+			hashlen = 0;
+
+			/* skip run of terminators */
+			while (scan < scan_end && !*scan)
+				scan++;
+		} else {
+			hash = SIMILARITY_HASH_UPDATE(hash, ch);
+			hashlen++;
+		}
+	}
+
+	*hash_start = hash;
+	*hashlen_start = hashlen;
+
+	return error;
+}
+
 static int similarity_add_hashes(
 	git_buf_text_hashsig *sig,
 	uint32_t *hash_start,
@@ -256,29 +330,13 @@ static int similarity_add_hashes(
 	size_t len)
 {
 	int error = 0;
-	const char *scan = ptr, *scan_end = ptr + len;
-	char term = (sig->format == SIMILARITY_FORMAT_TEXT) ? '\n' : '\0';
 	uint32_t hash = hash_start ? *hash_start : SIMILARITY_HASH_START;
 	size_t hashlen = hashlen_start ? *hashlen_start : 0;
 
-	while (scan < scan_end) {
-		char ch = *scan++;
-
-		if (ch == term || hashlen >= SIMILARITY_MAXRUN) {
-			if ((error = similarity_advance(sig, hash)) < 0)
-				break;
-
-			hash = SIMILARITY_HASH_START;
-			hashlen = 0;
-
-			/* skip run of terminators */
-			while (scan < scan_end && *scan == term)
-				scan++;
-		} else {
-			hash = SIMILARITY_HASH_UPDATE(hash, ch);
-			hashlen++;
-		}
-	}
+	if (sig->format == SIMILARITY_FORMAT_TEXT)
+		error = similarity_add_hashes_text(sig, &hash, &hashlen, ptr, len);
+	else
+		error = similarity_add_hashes_binary(sig, &hash, &hashlen, ptr, len);
 
 	if (hash_start)
 		*hash_start = hash;
@@ -287,7 +345,7 @@ static int similarity_add_hashes(
 
 	/* if we're not saving intermediate state, add final hash as needed */
 	if (!error && !hash_start && hashlen > 0)
-		error = similarity_advance(sig, hash);
+		error = similarity_record_hash(sig, hash);
 
 	return error;
 }
@@ -436,7 +494,7 @@ int git_buf_text_hashsig_create_fromfile(
 	p_close(fd);
 
 	if (!error && hashlen > 0)
-		error = similarity_advance(sig, hash);
+		error = similarity_record_hash(sig, hash);
 
 	if (!error)
 		error = similarity_finalize_hashes(sig, generate_pairs);
