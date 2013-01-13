@@ -365,6 +365,9 @@ void test_repo_init__extended_1(void)
 
 void test_repo_init__extended_with_template(void)
 {
+	git_buf expected = GIT_BUF_INIT;
+	git_buf actual = GIT_BUF_INIT;
+
 	git_repository_init_options opts = GIT_REPOSITORY_INIT_OPTIONS_INIT;
 
 	opts.flags = GIT_REPOSITORY_INIT_MKPATH | GIT_REPOSITORY_INIT_BARE | GIT_REPOSITORY_INIT_EXTERNAL_TEMPLATE;
@@ -374,6 +377,14 @@ void test_repo_init__extended_with_template(void)
 
 	cl_assert(git_repository_is_bare(_repo));
 	cl_assert(!git__suffixcmp(git_repository_path(_repo), "/templated.git/"));
+
+	cl_assert(git_futils_readbuffer(&expected,cl_fixture("template/description")) == GIT_OK);
+	cl_assert(git_futils_readbuffer(&actual,"templated.git/description") == GIT_OK);
+
+	cl_assert(!git_buf_cmp(&expected,&actual));
+
+	git_buf_free(&expected);
+	git_buf_free(&actual);
 
 	cleanup_repository("templated.git");
 }
