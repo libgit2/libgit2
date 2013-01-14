@@ -1005,8 +1005,17 @@ static int repo_init_structure(
 			tdir = GIT_TEMPLATE_DIR;
 		}
 
+		/* FIXME: GIT_CPDIR_CHMOD cannot applied here as an attempt
+		 * would be made to chmod() all directories up to the last
+		 * component of repo_dir, e.g., also /home etc. Recall that
+		 * repo_dir is prettified at this point.
+		 *
+		 * Best probably would be to have the same logic as in
+		 * git_futils_mkdir(), i.e., to separate the base from
+		 * the path.
+		 */
 		error = git_futils_cp_r(tdir, repo_dir,
-			GIT_CPDIR_COPY_SYMLINKS | GIT_CPDIR_CHMOD, dmode);
+			GIT_CPDIR_COPY_SYMLINKS /*| GIT_CPDIR_CHMOD*/, dmode);
 
 		if (error < 0) {
 			if (strcmp(tdir, GIT_TEMPLATE_DIR) != 0)
@@ -1015,6 +1024,7 @@ static int repo_init_structure(
 			/* if template was default, ignore error and use internal */
 			giterr_clear();
 			external_tpl = false;
+			error = 0;
 		}
 	}
 
