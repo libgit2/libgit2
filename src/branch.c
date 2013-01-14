@@ -10,6 +10,7 @@
 #include "tag.h"
 #include "config.h"
 #include "refspec.h"
+#include "refs.h"
 
 #include "git2/branch.h"
 
@@ -44,9 +45,11 @@ cleanup:
 	return error;
 }
 
-static int not_a_local_branch(git_reference *ref)
+static int not_a_local_branch(const char *reference_name)
 {
-	giterr_set(GITERR_INVALID, "Reference '%s' is not a local branch.", git_reference_name(ref));
+	giterr_set(
+		GITERR_INVALID,
+		"Reference '%s' is not a local branch.", reference_name);
 	return -1;
 }
 
@@ -176,7 +179,7 @@ int git_branch_move(
 	assert(branch && new_branch_name);
 
 	if (!git_reference_is_branch(branch))
-		return not_a_local_branch(branch);
+		return not_a_local_branch(git_reference_name(branch));
 
 	if ((error = git_buf_joinpath(&new_reference_name, GIT_REFS_HEADS_DIR, new_branch_name)) < 0)
 		goto cleanup;
@@ -219,17 +222,20 @@ int git_branch_lookup(
 }
 
 static int retrieve_tracking_configuration(
-	const char **out, git_reference *branch, const char *format)
+	const char **out,
+	git_repository *repo,
+	const char *canonical_branch_name,
+	const char *format)
 {
 	git_config *config;
 	git_buf buf = GIT_BUF_INIT;
 	int error;
 
-	if (git_repository_config__weakptr(&config, git_reference_owner(branch)) < 0)
+	if (git_repository_config__weakptr(&config, repo) < 0)
 		return -1;
 
 	if (git_buf_printf(&buf, format,
-		git_reference_name(branch) + strlen(GIT_REFS_HEADS_DIR)) < 0)
+		canonical_branch_name + strlen(GIT_REFS_HEADS_DIR)) < 0)
 			return -1;
 
 	error = git_config_get_string(out, config, git_buf_cstr(&buf));
@@ -237,9 +243,10 @@ static int retrieve_tracking_configuration(
 	return error;
 }
 
-int git_branch_tracking(
-		git_reference **tracking_out,
-		git_reference *branch)
+int git_branch_tracking__name(
+	git_buf *tracking_name,
+	git_repository *repo,
+	const char *canonical_branch_name)
 {
 	const char *remote_name, *merge_name;
 	git_buf buf = GIT_BUF_INIT;
@@ -247,16 +254,18 @@ int git_branch_tracking(
 	git_remote *remote = NULL;
 	const git_refspec *refspec;
 
-	assert(tracking_out && branch);
+	assert(tracking_name && canonical_branch_name);
 
-	if (!git_reference_is_branch(branch))
-		return not_a_local_branch(branch);
+	if (!git_reference__is_branch(canonical_branch_name))
+		return not_a_local_branch(canonical_branch_name);
 
-	if ((error = retrieve_tracking_configuration(&remote_name, branch, "branch.%s.remote")) < 0)
-		goto cleanup;
+	if ((error = retrieve_tracking_configuration(
+		&remote_name, repo, canonical_branch_name, "branch.%s.remote")) < 0)
+			goto cleanup;
 
-	if ((error = retrieve_tracking_configuration(&merge_name, branch, "branch.%s.merge")) < 0)
-		goto cleanup;
+	if ((error = retrieve_tracking_configuration(
+		&merge_name, repo, canonical_branch_name, "branch.%s.merge")) < 0)
+			goto cleanup;
 
 	if (!*remote_name || !*merge_name) {
 		error = GIT_ENOTFOUND;
@@ -264,7 +273,7 @@ int git_branch_tracking(
 	}
 
 	if (strcmp(".", remote_name) != 0) {
-		if ((error = git_remote_load(&remote, git_reference_owner(branch), remote_name)) < 0)
+		if ((error = git_remote_load(&remote, repo, remote_name)) < 0)
 			goto cleanup;
 
 		refspec = git_remote_fetchspec(remote);
@@ -281,14 +290,67 @@ int git_branch_tracking(
 		if (git_buf_sets(&buf, merge_name) < 0)
 			goto cleanup;
 
-	error = git_reference_lookup(
-		tracking_out,
-		git_reference_owner(branch),
-		git_buf_cstr(&buf));
+	error = git_buf_set(tracking_name, git_buf_cstr(&buf), git_buf_len(&buf));
 
 cleanup:
 	git_remote_free(remote);
 	git_buf_free(&buf);
+	return error;
+}
+
+int git_branch_tracking_name(
+	char *tracking_branch_name_out,
+	size_t buffer_size,
+	git_repository *repo,
+	const char *canonical_branch_name)
+{
+	git_buf buf = GIT_BUF_INIT;
+	int error;
+
+	assert(canonical_branch_name);
+
+	if (tracking_branch_name_out && buffer_size)
+		*tracking_branch_name_out = '\0';
+
+	if ((error = git_branch_tracking__name(
+		&buf, repo, canonical_branch_name)) < 0)
+			goto cleanup;
+
+	if (tracking_branch_name_out && buf.size + 1 > buffer_size) { /* +1 for NUL byte */
+		giterr_set(
+			GITERR_INVALID,
+			"Buffer too short to hold the tracked reference name.");
+		error = -1;
+		goto cleanup;
+	}
+
+	if (tracking_branch_name_out)
+		git_buf_copy_cstr(tracking_branch_name_out, buffer_size, &buf);
+
+	error = buf.size + 1;
+
+cleanup:
+	git_buf_free(&buf);
+	return (int)error;
+}
+
+int git_branch_tracking(
+		git_reference **tracking_out,
+		git_reference *branch)
+{
+	int error;
+	git_buf tracking_name = GIT_BUF_INIT;
+
+	if ((error = git_branch_tracking__name(&tracking_name,
+		git_reference_owner(branch), git_reference_name(branch))) < 0)
+			return error;
+
+	error = git_reference_lookup(
+		tracking_out,
+		git_reference_owner(branch),
+		git_buf_cstr(&tracking_name));
+
+	git_buf_free(&tracking_name);
 	return error;
 }
 
