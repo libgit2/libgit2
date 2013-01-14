@@ -116,17 +116,11 @@ static git_pack_cache_entry *cache_get(git_pack_cache *cache, git_off_t offset)
 	return entry;
 }
 
-#define BASE_DELTA_EVICT_NR 8
-
 /* Run with the cache lock held */
 static void free_lowest_entry(git_pack_cache *cache)
 {
 	git_pack_cache_entry *entry;
 	khiter_t k;
-
-	git_pack_cache_entry *lru[BASE_DELTA_EVICT_NR] = {NULL};
-	khiter_t lru_k[BASE_DELTA_EVICT_NR];
-	int i;
 
 	for (k = kh_begin(cache->entries); k != kh_end(cache->entries); k++) {
 		if (!kh_exist(cache->entries, k))
@@ -134,31 +128,10 @@ static void free_lowest_entry(git_pack_cache *cache)
 
 		entry = kh_value(cache->entries, k);
 
-		for (i = 0; i < BASE_DELTA_EVICT_NR; i++) {
-			if (lru[i] == NULL ||
-			    (entry->last_usage < lru[i]->last_usage &&
-			     entry->refcount.val == 0)) {
-				int j;
-
-				for (j = 0; j < i; j++) {
-					lru[j] = lru[j+1];
-					lru_k[j] = lru_k[j+1];
-				}
-
-				lru[i] = entry;
-				lru_k[i] = k;
-
-				/* jump out and try with the next entry */
-				break;
-			}
-		}
-	}
-
-	for (i = 0; i < BASE_DELTA_EVICT_NR; i++) {
-		if (lru[i]) {
-			cache->memory_used -= lru[i]->raw.len;
-			kh_del(off, cache->entries, lru_k[i]);
-			free_cache_object(lru[i]);
+		if (entry && entry->refcount.val == 0) {
+			cache->memory_used -= entry->raw.len;
+			kh_del(off, cache->entries, k);
+			free_cache_object(entry);
 		}
 	}
 }
