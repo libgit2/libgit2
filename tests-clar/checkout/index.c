@@ -498,3 +498,13 @@ void test_checkout_index__can_update_prefixed_files(void)
 	cl_assert(!git_path_exists("testrepo/branch_file"));
 	cl_assert(!git_path_exists("testrepo/branch_file.txt.after"));
 }
+
+void test_checkout_index__can_checkout_a_newly_initialized_repository(void)
+{
+	test_checkout_index__cleanup();
+
+	g_repo = cl_git_sandbox_init("empty_standard_repo");
+	cl_git_remove_placeholders(git_repository_path(g_repo), "dummy-marker.txt");
+
+	cl_git_pass(git_checkout_index(g_repo, NULL, NULL));
+}

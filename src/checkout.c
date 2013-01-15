@@ -1173,7 +1173,14 @@ static int checkout_data_init(
 
 	if (!data->opts.baseline) {
 		data->opts_free_baseline = true;
-		if ((error = checkout_lookup_head_tree(&data->opts.baseline, repo)) < 0)
+		error = checkout_lookup_head_tree(&data->opts.baseline, repo);
+
+		if (error == GIT_EORPHANEDHEAD) {
+			error = 0;
+			giterr_clear();
+		}
+
+		if (error < 0)
 			goto cleanup;
 	}
 
