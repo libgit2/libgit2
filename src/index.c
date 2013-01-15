@@ -929,7 +929,7 @@ int git_index_conflict_add(git_index *index,
 			goto on_error;
 	}
 
-    return 0;
+	return 0;
 
 on_error:
 	for (i = 0; i < 3; i++) {
