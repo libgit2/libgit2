@@ -580,3 +580,92 @@ void test_status_worktree__conflicted_item(void)
 	git_index_free(index);
 }
 
+static void stage_and_commit(git_repository *repo, const char *path)
+{
+	git_oid tree_oid, commit_oid;
+	git_tree *tree;
+	git_signature *signature;
+	git_index *index;
+
+	cl_git_pass(git_repository_index(&index, repo));
+	cl_git_pass(git_index_add_from_workdir(index, path));
+	cl_git_pass(git_index_write(index));
+
+	cl_git_pass(git_index_write_tree(&tree_oid, index));
+	git_index_free(index);
+
+	cl_git_pass(git_tree_lookup(&tree, repo, &tree_oid));
+
+	cl_git_pass(git_signature_new(&signature, "nulltoken", "emeric.fermas@gmail.com", 1323847743, 60));
+
+	cl_git_pass(git_commit_create_v(
+		&commit_oid,
+		repo,
+		"HEAD",
+		signature,
+		signature,
+		NULL,
+		"Initial commit\n\0",
+		tree,
+		0));
+
+	git_tree_free(tree);
+	git_signature_free(signature);
+}
+
+static void assert_ignore_case(
+	bool should_ignore_case,
+	int expected_lower_cased_file_status,
+	int expected_camel_cased_file_status)
+{
+	git_config *config;
+	unsigned int status;
+	git_buf lower_case_path = GIT_BUF_INIT,
+		camel_case_path = GIT_BUF_INIT;
+
+	git_repository *repo, *repo2;
+	
+	repo = cl_git_sandbox_init("empty_standard_repo");
+	cl_git_remove_placeholders(git_repository_path(repo), "dummy-marker.txt");
+
+	cl_git_pass(git_repository_config(&config, repo));
+	cl_git_pass(git_config_set_bool(config, "core.ignorecase", should_ignore_case));
+	git_config_free(config);
+
+	cl_git_pass(git_buf_joinpath(&lower_case_path,
+		git_repository_workdir(repo), "plop"));
+
+	cl_git_mkfile(git_buf_cstr(&lower_case_path), "");
+
+	stage_and_commit(repo, "plop");
+
+	cl_git_pass(git_repository_open(&repo2, "./empty_standard_repo"));
+
+	cl_git_pass(git_buf_joinpath(&camel_case_path,
+		git_repository_workdir(repo), "Plop"));
+
+	cl_git_pass(git_status_file(&status, repo2, "plop"));
+	cl_assert_equal_i(GIT_STATUS_CURRENT, status);
+
+	cl_git_pass(p_rename(git_buf_cstr(&lower_case_path), git_buf_cstr(&camel_case_path)));
+
+	cl_git_pass(git_status_file(&status, repo2, "plop"));
+	cl_assert_equal_i(expected_lower_cased_file_status, status);
+
+	cl_git_pass(git_status_file(&status, repo2, "Plop"));
+	cl_assert_equal_i(expected_camel_cased_file_status, status);
+
+	git_repository_free(repo2);
+	git_buf_free(&lower_case_path);
+	git_buf_free(&camel_case_path);
+}
+
+void test_status_worktree__file_status_honors_ignorecase_conf_setting_set_to_true(void)
+{
+	assert_ignore_case(true, GIT_STATUS_CURRENT, GIT_STATUS_CURRENT);
+}
+
+void test_status_worktree__file_status_honors_ignorecase_conf_setting_set_to_false(void)
+{
+	assert_ignore_case(false, GIT_STATUS_WT_DELETED, GIT_STATUS_WT_NEW);
+}
