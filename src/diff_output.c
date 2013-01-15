@@ -137,15 +137,22 @@ static int diff_delta_is_binary_by_content(
 	git_diff_file *file,
 	const git_map *map)
 {
-	const git_buf search = { map->data, 0, min(map->len, 4000) };
-
-	GIT_UNUSED(ctxt);
+	/* check if user is forcing us to text diff these files */
+	if (ctxt->opts && (ctxt->opts->flags & GIT_DIFF_FORCE_TEXT) != 0) {
+		delta->old_file.flags |= GIT_DIFF_FILE_NOT_BINARY;
+		delta->new_file.flags |= GIT_DIFF_FILE_NOT_BINARY;
+		delta->binary = 0;
+		return 0;
+	}
 
 	if ((file->flags & KNOWN_BINARY_FLAGS) == 0) {
+		const git_buf search = { map->data, 0, min(map->len, 4000) };
+
 		/* TODO: provide encoding / binary detection callbacks that can
 		 * be UTF-8 aware, etc.  For now, instead of trying to be smart,
 		 * let's just use the simple NUL-byte detection that core git uses.
 		 */
+
 		/* previously was: if (git_buf_text_is_binary(&search)) */
 		if (git_buf_text_contains_nul(&search))
 			file->flags |= GIT_DIFF_FILE_BINARY;
