@@ -367,7 +367,6 @@ void assert_conflict(
 	git_object *hack_tree;
 	git_reference *branch, *head;
 	git_buf file_path = GIT_BUF_INIT; 
-	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
 
 	cl_git_pass(git_repository_index(&index, g_repo));
 
@@ -383,7 +382,7 @@ void assert_conflict(
 	git_reference_free(branch);
 
 	/* Checkout the parent */
-	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+	g_opts.checkout_strategy = GIT_CHECKOUT_FORCE;
 	cl_git_pass(git_checkout_tree(g_repo, g_object, &g_opts));
 
 	/* Hack-ishy workaound to ensure *all* the index entries
@@ -403,7 +402,7 @@ void assert_conflict(
 	/* Trying to checkout the original commit */
 	cl_git_pass(git_revparse_single(&g_object, g_repo, commit_sha));
 
-	opts.checkout_strategy = GIT_CHECKOUT_SAFE;
+	g_opts.checkout_strategy = GIT_CHECKOUT_SAFE;
 	cl_assert_equal_i(
 		GIT_EMERGECONFLICT, git_checkout_tree(g_repo, g_object, &g_opts));
 

@@ -842,7 +842,7 @@ static int diff_patch_line_cb(
 {
 	git_diff_patch *patch = payload;
 	diff_patch_hunk *hunk;
-	diff_patch_line *last, *line;
+	diff_patch_line *line;
 
 	GIT_UNUSED(delta);
 	GIT_UNUSED(range);
@@ -872,8 +872,6 @@ static int diff_patch_line_cb(
 		patch->lines_asize = new_size;
 	}
 
-	last = (patch->lines_size > 0) ?
-		&patch->lines[patch->lines_size - 1] : NULL;
 	line = &patch->lines[patch->lines_size++];
 
 	line->ptr = content;
