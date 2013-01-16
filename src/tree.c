@@ -55,14 +55,23 @@ static int valid_entry_name(const char *filename)
 		  strcmp(filename, DOT_GIT) != 0));
 }
 
+int git_tree_entry_cmp(const git_tree_entry *e1, const git_tree_entry *e2)
+{
+	return git_path_cmp(
+		e1->filename, e1->filename_len, git_tree_entry__is_tree(e1),
+		e2->filename, e2->filename_len, git_tree_entry__is_tree(e2));
+}
+
+int git_tree_entry_icmp(const git_tree_entry *e1, const git_tree_entry *e2)
+{
+	return git_path_icmp(
+		e1->filename, e1->filename_len, git_tree_entry__is_tree(e1),
+		e2->filename, e2->filename_len, git_tree_entry__is_tree(e2));
+}
+
 static int entry_sort_cmp(const void *a, const void *b)
 {
-	const git_tree_entry *entry_a = (const git_tree_entry *)(a);
-	const git_tree_entry *entry_b = (const git_tree_entry *)(b);
-
-	return git_path_cmp(
-		entry_a->filename, entry_a->filename_len, git_tree_entry__is_tree(entry_a),
-		entry_b->filename, entry_b->filename_len, git_tree_entry__is_tree(entry_b));
+	return git_tree_entry_cmp((const git_tree_entry *)a, (const git_tree_entry *)b);
 }
 
 static git_tree_entry *alloc_entry(const char *filename)

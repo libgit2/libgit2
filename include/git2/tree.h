@@ -209,6 +209,15 @@ GIT_EXTERN(git_otype) git_tree_entry_type(const git_tree_entry *entry);
 GIT_EXTERN(git_filemode_t) git_tree_entry_filemode(const git_tree_entry *entry);
 
 /**
+ * Compare two tree entries
+ *
+ * @param e1 first tree entry
+ * @param e2 second tree entry
+ * @return <0 if e1 is before e2, 0 if e1 == e2, >0 if e1 is after e2
+ */
+GIT_EXTERN(int) git_tree_entry_cmp(const git_tree_entry *e1, const git_tree_entry *e2);
+
+/**
  * Convert a tree entry to the git_object it points too.
  *
  * You must call `git_object_free()` on the object when you are done with it.

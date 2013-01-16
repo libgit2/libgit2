@@ -39,6 +39,8 @@ GIT_INLINE(bool) git_tree_entry__is_tree(const struct git_tree_entry *e)
 	return (S_ISDIR(e->attr) && !S_ISGITLINK(e->attr));
 }
 
+extern int git_tree_entry_icmp(const git_tree_entry *e1, const git_tree_entry *e2);
+
 void git_tree__free(git_tree *tree);
 int git_tree__parse(git_tree *tree, git_odb_object *obj);
 

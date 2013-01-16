@@ -196,21 +196,24 @@ struct status_file_info {
 	char *expected;
 	unsigned int count;
 	unsigned int status;
+	int fnm_flags;
 	int ambiguous;
 };
 
 static int get_one_status(const char *path, unsigned int status, void *data)
 {
 	struct status_file_info *sfi = data;
+	int (*strcomp)(const char *a, const char *b);
 
 	sfi->count++;
 	sfi->status = status;
 
+	strcomp = (sfi->fnm_flags & FNM_CASEFOLD) ? git__strcasecmp : git__strcmp;
+
 	if (sfi->count > 1 ||
-		(strcmp(sfi->expected, path) != 0 &&
-		p_fnmatch(sfi->expected, path, 0) != 0)) {
-		giterr_set(GITERR_INVALID,
-			"Ambiguous path '%s' given to git_status_file", sfi->expected);
+		(strcomp(sfi->expected, path) != 0 &&
+		 p_fnmatch(sfi->expected, path, sfi->fnm_flags) != 0))
+	{
 		sfi->ambiguous = true;
 		return GIT_EAMBIGUOUS;
 	}
@@ -226,11 +229,17 @@ int git_status_file(
 	int error;
 	git_status_options opts = GIT_STATUS_OPTIONS_INIT;
 	struct status_file_info sfi = {0};
+	git_index *index;
 
 	assert(status_flags && repo && path);
 
+	if ((error = git_repository_index__weakptr(&index, repo)) < 0)
+		return error;
+
 	if ((sfi.expected = git__strdup(path)) == NULL)
 		return -1;
+	if (index->ignore_case)
+		sfi.fnm_flags = FNM_CASEFOLD;
 
 	opts.show  = GIT_STATUS_SHOW_INDEX_AND_WORKDIR;
 	opts.flags = GIT_STATUS_OPT_INCLUDE_IGNORED |
@@ -242,8 +251,11 @@ int git_status_file(
 
 	error = git_status_foreach_ext(repo, &opts, get_one_status, &sfi);
 
-	if (error < 0 && sfi.ambiguous)
+	if (error < 0 && sfi.ambiguous) {
+		giterr_set(GITERR_INVALID,
+			"Ambiguous path '%s' given to git_status_file", sfi.expected);
 		error = GIT_EAMBIGUOUS;
+	}
 
 	if (!error && !sfi.count) {
 		git_buf full = GIT_BUF_INIT;

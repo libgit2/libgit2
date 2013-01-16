@@ -261,9 +261,14 @@ extern int git_path_direach(
 	void *state);
 
 /**
- * Sort function to order two paths.
+ * Sort function to order two paths
  */
 extern int git_path_cmp(
+	const char *name1, size_t len1, int isdir1,
+	const char *name2, size_t len2, int isdir2);
+
+/** Path sort function that is case insensitive */
+extern int git_path_icmp(
 	const char *name1, size_t len1, int isdir1,
 	const char *name2, size_t len2, int isdir2);
 
