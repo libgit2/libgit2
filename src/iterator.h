@@ -12,19 +12,25 @@
 #include "vector.h"
 #include "buffer.h"
 
-#define ITERATOR_PREFIXCMP(ITER, STR, PREFIX)	(((ITER).ignore_case) ? \
+#define ITERATOR_PREFIXCMP(ITER, STR, PREFIX)	\
+	(((ITER).flags & GIT_ITERATOR_IGNORE_CASE) != 0 ? \
 	git__prefixcmp_icase((STR), (PREFIX)) : \
 	git__prefixcmp((STR), (PREFIX)))
 
 typedef struct git_iterator git_iterator;
 
 typedef enum {
-	GIT_ITERATOR_EMPTY = 0,
-	GIT_ITERATOR_TREE = 1,
-	GIT_ITERATOR_INDEX = 2,
-	GIT_ITERATOR_WORKDIR = 3,
-	GIT_ITERATOR_SPOOLANDSORT = 4
+	GIT_ITERATOR_TYPE_EMPTY = 0,
+	GIT_ITERATOR_TYPE_TREE = 1,
+	GIT_ITERATOR_TYPE_INDEX = 2,
+	GIT_ITERATOR_TYPE_WORKDIR = 3,
+	GIT_ITERATOR_TYPE_SPOOLANDSORT = 4
 } git_iterator_type_t;
+
+typedef enum {
+	GIT_ITERATOR_IGNORE_CASE = (1 << 0), /* ignore_case */
+	GIT_ITERATOR_DONT_IGNORE_CASE = (1 << 1), /* force ignore_case off */
+} git_iterator_flag_t;
 
 typedef struct {
 	int (*current)(git_iterator *, const git_index_entry **);
@@ -41,49 +47,59 @@ struct git_iterator {
 	git_repository *repo;
 	char *start;
 	char *end;
-	bool ignore_case;
+	int (*prefixcomp)(const char *str, const char *prefix);
+	unsigned int flags;
 };
 
-extern int git_iterator_for_nothing(git_iterator **iter);
+extern int git_iterator_for_nothing(
+	git_iterator **out, git_iterator_flag_t flags);
 
+/* tree iterators will match the ignore_case value from the index of the
+ * repository, unless you override with a non-zero flag value
+ */
 extern int git_iterator_for_tree_range(
-	git_iterator **iter, git_tree *tree,
-	const char *start, const char *end);
+	git_iterator **out,
+	git_tree *tree,
+	git_iterator_flag_t flags,
+	const char *start,
+	const char *end);
 
-GIT_INLINE(int) git_iterator_for_tree(
-	git_iterator **iter, git_tree *tree)
+GIT_INLINE(int) git_iterator_for_tree(git_iterator **out, git_tree *tree)
 {
-	return git_iterator_for_tree_range(iter, tree, NULL, NULL);
+	return git_iterator_for_tree_range(out, tree, 0, NULL, NULL);
 }
 
+/* index iterators will take the ignore_case value from the index; the
+ * ignore_case flags are not used
+ */
 extern int git_iterator_for_index_range(
-	git_iterator **iter, git_index *index, const char *start, const char *end);
+	git_iterator **out,
+	git_index *index,
+	git_iterator_flag_t flags,
+	const char *start,
+	const char *end);
 
-GIT_INLINE(int) git_iterator_for_index(
-	git_iterator **iter, git_index *index)
+GIT_INLINE(int) git_iterator_for_index(git_iterator **out, git_index *index)
 {
-	return git_iterator_for_index_range(iter, index, NULL, NULL);
+	return git_iterator_for_index_range(out, index, 0, NULL, NULL);
 }
 
-extern int git_iterator_for_repo_index_range(
-	git_iterator **iter, git_repository *repo,
-	const char *start, const char *end);
-
-GIT_INLINE(int) git_iterator_for_repo_index(
-	git_iterator **iter, git_repository *repo)
-{
-	return git_iterator_for_repo_index_range(iter, repo, NULL, NULL);
-}
-
+/* workdir iterators will match the ignore_case value from the index of the
+ * repository, unless you override with a non-zero flag value
+ */
 extern int git_iterator_for_workdir_range(
-	git_iterator **iter, git_repository *repo,
-	const char *start, const char *end);
+	git_iterator **out,
+	git_repository *repo,
+	git_iterator_flag_t flags,
+	const char *start,
+	const char *end);
 
-GIT_INLINE(int) git_iterator_for_workdir(
-	git_iterator **iter, git_repository *repo)
+GIT_INLINE(int) git_iterator_for_workdir(git_iterator **out, git_repository *repo)
 {
-	return git_iterator_for_workdir_range(iter, repo, NULL, NULL);
+	return git_iterator_for_workdir_range(out, repo, 0, NULL, NULL);
 }
+
+extern void git_iterator_free(git_iterator *iter);
 
 /* Spool all iterator values, resort with alternative ignore_case value
  * and replace callbacks with spoolandsort alternates.
@@ -130,21 +146,6 @@ GIT_INLINE(int) git_iterator_reset(
 	return iter->cb->reset(iter, start, end);
 }
 
-GIT_INLINE(void) git_iterator_free(git_iterator *iter)
-{
-	if (iter == NULL)
-		return;
-
-	iter->cb->free(iter);
-
-	git__free(iter->start);
-	git__free(iter->end);
-
-	memset(iter, 0, sizeof(*iter));
-
-	git__free(iter);
-}
-
 GIT_INLINE(git_iterator_type_t) git_iterator_type(git_iterator *iter)
 {
 	return iter->type;
@@ -153,6 +154,16 @@ GIT_INLINE(git_iterator_type_t) git_iterator_type(git_iterator *iter)
 GIT_INLINE(git_repository *) git_iterator_owner(git_iterator *iter)
 {
 	return iter->repo;
+}
+
+GIT_INLINE(git_iterator_flag_t) git_iterator_flags(git_iterator *iter)
+{
+	return iter->flags;
+}
+
+GIT_INLINE(bool) git_iterator_ignore_case(git_iterator *iter)
+{
+	return ((iter->flags & GIT_ITERATOR_IGNORE_CASE) != 0);
 }
 
 extern int git_iterator_current_tree_entry(

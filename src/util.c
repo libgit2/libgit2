@@ -462,7 +462,7 @@ uint32_t git__hash(const void *key, int len, uint32_t seed)
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- */ 
+ */
 int git__bsearch(
 	void **array,
 	size_t array_len,
@@ -477,6 +477,37 @@ int git__bsearch(
 	for (lim = (unsigned int)array_len; lim != 0; lim >>= 1) {
 		part = base + (lim >> 1);
 		cmp = (*compare)(key, *part);
+		if (cmp == 0) {
+			base = part;
+			break;
+		}
+		if (cmp > 0) { /* key > p; take right partition */
+			base = part + 1;
+			lim--;
+		} /* else take left partition */
+	}
+
+	if (position)
+		*position = (base - array);
+
+	return (cmp == 0) ? 0 : -1;
+}
+
+int git__bsearch_r(
+	void **array,
+	size_t array_len,
+	const void *key,
+	int (*compare_r)(const void *, const void *, void *),
+	void *payload,
+	size_t *position)
+{
+	unsigned int lim;
+	int cmp = -1;
+	void **part, **base = array;
+
+	for (lim = (unsigned int)array_len; lim != 0; lim >>= 1) {
+		part = base + (lim >> 1);
+		cmp = (*compare_r)(key, *part, payload);
 		if (cmp == 0) {
 			base = part;
 			break;

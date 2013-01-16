@@ -418,7 +418,7 @@ static int maybe_modified(
 	git_delta_t status = GIT_DELTA_MODIFIED;
 	unsigned int omode = oitem->mode;
 	unsigned int nmode = nitem->mode;
-	bool new_is_workdir = (new_iter->type == GIT_ITERATOR_WORKDIR);
+	bool new_is_workdir = (new_iter->type == GIT_ITERATOR_TYPE_WORKDIR);
 
 	GIT_UNUSED(old_iter);
 
@@ -556,7 +556,9 @@ static int diff_list_init_from_iterators(
 
 	/* Use case-insensitive compare if either iterator has
 	 * the ignore_case bit set */
-	if (!old_iter->ignore_case && !new_iter->ignore_case) {
+	if (!git_iterator_ignore_case(old_iter) &&
+		!git_iterator_ignore_case(new_iter))
+	{
 		diff->opts.flags &= ~GIT_DIFF_DELTAS_ARE_ICASE;
 
 		diff->strcomp    = git__strcmp;
@@ -714,7 +716,7 @@ int git_diff__from_iterators(
 			else if (git_iterator_current_is_ignored(new_iter))
 				delta_type = GIT_DELTA_IGNORED;
 
-			else if (new_iter->type != GIT_ITERATOR_WORKDIR)
+			else if (new_iter->type != GIT_ITERATOR_TYPE_WORKDIR)
 				delta_type = GIT_DELTA_ADDED;
 
 			if (diff_delta__from_one(diff, delta_type, nitem) < 0)
@@ -786,8 +788,8 @@ int git_diff_tree_to_tree(
 	assert(diff && repo);
 
 	DIFF_FROM_ITERATORS(
-		git_iterator_for_tree_range(&a, old_tree, pfx, pfx),
-		git_iterator_for_tree_range(&b, new_tree, pfx, pfx)
+		git_iterator_for_tree_range(&a, old_tree, 0, pfx, pfx),
+		git_iterator_for_tree_range(&b, new_tree, 0, pfx, pfx)
 	);
 
 	return error;
@@ -808,8 +810,8 @@ int git_diff_tree_to_index(
 		return error;
 
 	DIFF_FROM_ITERATORS(
-		git_iterator_for_tree_range(&a, old_tree, pfx, pfx),
-	    git_iterator_for_index_range(&b, index, pfx, pfx)
+		git_iterator_for_tree_range(&a, old_tree, 0, pfx, pfx),
+	    git_iterator_for_index_range(&b, index, 0, pfx, pfx)
 	);
 
 	return error;
@@ -829,8 +831,8 @@ int git_diff_index_to_workdir(
 		return error;
 
 	DIFF_FROM_ITERATORS(
-		git_iterator_for_index_range(&a, index, pfx, pfx),
-	    git_iterator_for_workdir_range(&b, repo, pfx, pfx)
+		git_iterator_for_index_range(&a, index, 0, pfx, pfx),
+	    git_iterator_for_workdir_range(&b, repo, 0, pfx, pfx)
 	);
 
 	return error;
@@ -848,8 +850,8 @@ int git_diff_tree_to_workdir(
 	assert(diff && repo);
 
 	DIFF_FROM_ITERATORS(
-		git_iterator_for_tree_range(&a, old_tree, pfx, pfx),
-	    git_iterator_for_workdir_range(&b, repo, pfx, pfx)
+		git_iterator_for_tree_range(&a, old_tree, 0, pfx, pfx),
+	    git_iterator_for_workdir_range(&b, repo, 0, pfx, pfx)
 	);
 
 	return error;
