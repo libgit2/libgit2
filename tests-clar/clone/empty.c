@@ -33,10 +33,21 @@ static void cleanup_repository(void *path)
 
 void test_clone_empty__can_clone_an_empty_local_repo_barely(void)
 {
+	char *local_name = "refs/heads/master";
+	char tracking_name[1024];
+	git_reference *ref;
+
 	cl_set_cleanup(&cleanup_repository, "./empty");
 
 	g_options.bare = true;
 	cl_git_pass(git_clone(&g_repo_cloned, "./empty_bare.git", "./empty", &g_options));
+
+	/* Although the HEAD is orphaned... */
+	cl_assert_equal_i(GIT_ENOTFOUND, git_reference_lookup(&ref, g_repo_cloned, local_name));
+
+	/* ...one can still retrieve the name of the remote tracking reference */
+	cl_assert_equal_i(strlen("refs/remotes/origin/master") + 1, 
+		git_branch_tracking_name(tracking_name, 1024, g_repo_cloned, local_name));
 }
 
 void test_clone_empty__can_clone_an_empty_local_repo(void)
