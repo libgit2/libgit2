@@ -771,7 +771,7 @@ fail:
 	git_iterator *a = NULL, *b = NULL; \
 	char *pfx = opts ? git_pathspec_prefix(&opts->pathspec) : NULL; \
 	GITERR_CHECK_VERSION(opts, GIT_DIFF_OPTIONS_VERSION, "git_diff_options"); \
-    if (!(error = MAKE_FIRST) && !(error = MAKE_SECOND)) \
+	if (!(error = MAKE_FIRST) && !(error = MAKE_SECOND)) \
 		error = git_diff__from_iterators(diff, repo, a, b, opts); \
 	git__free(pfx); git_iterator_free(a); git_iterator_free(b); \
 } while (0)
@@ -811,7 +811,7 @@ int git_diff_tree_to_index(
 
 	DIFF_FROM_ITERATORS(
 		git_iterator_for_tree_range(&a, old_tree, 0, pfx, pfx),
-	    git_iterator_for_index_range(&b, index, 0, pfx, pfx)
+		git_iterator_for_index_range(&b, index, 0, pfx, pfx)
 	);
 
 	return error;
@@ -832,7 +832,7 @@ int git_diff_index_to_workdir(
 
 	DIFF_FROM_ITERATORS(
 		git_iterator_for_index_range(&a, index, 0, pfx, pfx),
-	    git_iterator_for_workdir_range(&b, repo, 0, pfx, pfx)
+		git_iterator_for_workdir_range(&b, repo, 0, pfx, pfx)
 	);
 
 	return error;
@@ -851,7 +851,7 @@ int git_diff_tree_to_workdir(
 
 	DIFF_FROM_ITERATORS(
 		git_iterator_for_tree_range(&a, old_tree, 0, pfx, pfx),
-	    git_iterator_for_workdir_range(&b, repo, 0, pfx, pfx)
+		git_iterator_for_workdir_range(&b, repo, 0, pfx, pfx)
 	);
 
 	return error;
