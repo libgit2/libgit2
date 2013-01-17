@@ -60,6 +60,27 @@ void test_network_remotes__pushurl(void)
 	cl_assert(git_remote_pushurl(_remote) == NULL);
 }
 
+void test_network_remotes__error_when_no_push_available(void)
+{
+	git_remote *r;
+	git_transport *t;
+	git_push *p;
+
+	cl_git_pass(git_remote_create_inmemory(&r, _repo, NULL, cl_fixture("testrepo.git")));
+
+	cl_git_pass(git_transport_local(&t,r,NULL));
+
+	/* Make sure that push is really not available */
+	t->push = NULL;
+	cl_git_pass(git_remote_connect(r, GIT_DIRECTION_PUSH));
+	cl_git_pass(git_push_new(&p, r));
+	cl_git_pass(git_push_add_refspec(p, "refs/heads/master"));
+	cl_git_fail_with(git_push_finish(p), GIT_ERROR);
+
+	git_push_free(p);
+	git_remote_free(r);
+}
+
 void test_network_remotes__parsing_ssh_remote(void)
 {
 	cl_assert( git_remote_valid_url("git@github.com:libgit2/libgit2.git") );
