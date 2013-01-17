@@ -724,10 +724,8 @@ static int blob_content_to_file(
 	error = buffer_to_file(
 		st, &filtered, path, opts->dir_mode, opts->file_open_flags, file_mode);
 
-	if (!error) {
-		st->st_size = blob->odb_object->raw.len;
+	if (!error)
 		st->st_mode = entry_filemode;
-	}
 
 cleanup:
 	git_filters_free(&filters);
