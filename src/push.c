@@ -369,6 +369,12 @@ static int do_push(git_push *push)
 	int error;
 	git_transport *transport = push->remote->transport;
 
+	if (!transport->push) {
+		giterr_set(GITERR_NET, "Remote transport doesn't support push");
+		error = -1;
+		goto on_error;
+	}
+
 	/*
 	 * A pack-file MUST be sent if either create or update command
 	 * is used, even if the server already has all the necessary
