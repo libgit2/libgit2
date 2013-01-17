@@ -252,6 +252,46 @@ void test_status_ignore__untracked_file_in_ignored_subdirectory(void)
 	cl_assert(ignored);
 }
 
+void test_status_ignore__unignored_file_file_in_ignored_subdirectory(void)
+{
+	status_entry_single st;
+	int ignored;
+
+	g_repo = cl_git_sandbox_init("empty_standard_repo");
+
+	cl_git_rewritefile("empty_standard_repo/.gitignore", "bin");
+
+	memset(&st, 0, sizeof(st));
+
+	cl_git_pass(
+		git_futils_mkdir_r("empty_standard_repo/bin", NULL, 0775));
+	cl_git_mkfile(
+		"empty_standard_repo/bin/.gitignore", "!*dad*");
+
+	cl_git_mkfile(
+		"empty_standard_repo/bin/look-ma.txt", "I'm going to be ignored!");
+	cl_git_mkfile(
+		"empty_standard_repo/bin/you-too-dad.txt", "I won't be ignored!");
+
+	memset(&st, 0, sizeof(st));
+	cl_git_pass(git_status_foreach(g_repo, cb_status__single, &st));
+	cl_assert_equal_i(4, st.count);
+
+	cl_git_pass(git_status_file(&st.status, g_repo, "bin/look-ma.txt"));
+	cl_assert(st.status == GIT_STATUS_IGNORED);
+
+	cl_git_pass(git_status_file(&st.status, g_repo, "bin/you-too-dad.txt"));
+	cl_assert(st.status == GIT_STATUS_INDEX_NEW);
+
+	cl_git_pass(
+		git_status_should_ignore(&ignored, g_repo, "bin/look-ma.txt"));
+	cl_assert(ignored);
+
+	cl_git_pass(
+		git_status_should_ignore(&ignored, g_repo, "bin/you-too-dad.txt"));
+	cl_assert(!ignored);
+}
+
 void test_status_ignore__adding_internal_ignores(void)
 {
 	int ignored;
