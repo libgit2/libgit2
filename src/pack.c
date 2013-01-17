@@ -119,26 +119,21 @@ static git_pack_cache_entry *cache_get(git_pack_cache *cache, git_off_t offset)
 /* Run with the cache lock held */
 static void free_lowest_entry(git_pack_cache *cache)
 {
-	git_pack_cache_entry *lowest = NULL, *entry;
-	khiter_t k, lowest_k;
+	git_pack_cache_entry *entry;
+	khiter_t k;
 
 	for (k = kh_begin(cache->entries); k != kh_end(cache->entries); k++) {
 		if (!kh_exist(cache->entries, k))
 			continue;
 
 		entry = kh_value(cache->entries, k);
-		if (lowest == NULL || entry->last_usage < lowest->last_usage) {
-			lowest_k = k;
-			lowest = entry;
+
+		if (entry && entry->refcount.val == 0) {
+			cache->memory_used -= entry->raw.len;
+			kh_del(off, cache->entries, k);
+			free_cache_object(entry);
 		}
 	}
-
-	if (!lowest) /* there's nothing to free */
-		return;
-
-	cache->memory_used -= lowest->raw.len;
-	kh_del(off, cache->entries, lowest_k);
-	free_cache_object(lowest);
 }
 
 static int cache_add(git_pack_cache *cache, git_rawobj *base, git_off_t offset)
