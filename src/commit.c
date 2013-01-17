@@ -135,7 +135,6 @@ int git_commit__parse_buffer(git_commit *commit, const void *data, size_t len)
 {
 	const char *buffer = data;
 	const char *buffer_end = (const char *)data + len;
-
 	git_oid parent_id;
 
 	git_vector_init(&commit->parent_ids, 4, NULL);
@@ -148,9 +147,7 @@ int git_commit__parse_buffer(git_commit *commit, const void *data, size_t len)
 	 */
 
 	while (git_oid__parse(&parent_id, &buffer, buffer_end, "parent ") == 0) {
-		git_oid *new_id;
-
-		new_id = git__malloc(sizeof(git_oid));
+		git_oid *new_id = git__malloc(sizeof(git_oid));
 		GITERR_CHECK_ALLOC(new_id);
 
 		git_oid_cpy(new_id, &parent_id);
@@ -172,24 +169,29 @@ int git_commit__parse_buffer(git_commit *commit, const void *data, size_t len)
 	if (git_signature__parse(commit->committer, &buffer, buffer_end, "committer ", '\n') < 0)
 		return -1;
 
-	if (git__prefixcmp(buffer, "encoding ") == 0) {
-		const char *encoding_end;
-		buffer += strlen("encoding ");
+	/* Parse add'l header entries until blank line found */
+	while (buffer < buffer_end && *buffer != '\n') {
+		const char *eoln = buffer;
+		while (eoln < buffer_end && *eoln != '\n')
+			++eoln;
+		if (eoln < buffer_end && *eoln == '\n')
+			++eoln;
 
-		encoding_end = buffer;
-		while (encoding_end < buffer_end && *encoding_end != '\n')
-			encoding_end++;
+		if (git__prefixcmp(buffer, "encoding ") == 0) {
+			buffer += strlen("encoding ");
 
-		commit->message_encoding = git__strndup(buffer, encoding_end - buffer);
-		GITERR_CHECK_ALLOC(commit->message_encoding);
+			commit->message_encoding = git__strndup(buffer, eoln - buffer);
+			GITERR_CHECK_ALLOC(commit->message_encoding);
+		}
 
-		buffer = encoding_end;
+		buffer = eoln;
 	}
 
-	/* parse commit message */
+	/* skip blank lines */
 	while (buffer < buffer_end - 1 && *buffer == '\n')
 		buffer++;
 
+	/* parse commit message */
 	if (buffer <= buffer_end) {
 		commit->message = git__strndup(buffer, buffer_end - buffer);
 		GITERR_CHECK_ALLOC(commit->message);
