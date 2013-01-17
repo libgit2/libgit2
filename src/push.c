@@ -161,6 +161,60 @@ int git_push_add_refspec(git_push *push, const char *refspec)
 	return 0;
 }
 
+int git_push_update_tips(git_push *push)
+{
+	git_refspec *fetch_spec = &push->remote->fetch;
+	git_buf remote_ref_name = GIT_BUF_INIT;
+	size_t i, j;
+	push_spec *push_spec;
+	git_reference *remote_ref;
+	push_status *status;
+	int error = 0;
+
+	git_vector_foreach(&push->status, i, status) {
+		/* If this ref update was successful (ok, not ng), it will have an empty message */
+		if (status->msg)
+			continue;
+
+		/* Find the corresponding remote ref */
+		if (!git_refspec_src_matches(fetch_spec, status->ref))
+			continue;
+
+		if ((error = git_refspec_transform_r(&remote_ref_name, fetch_spec, status->ref)) < 0)
+			goto on_error;
+
+		/* Find matching  push ref spec */
+		git_vector_foreach(&push->specs, j, push_spec) {
+			if (!strcmp(push_spec->rref, status->ref))
+				break;
+		}
+
+		/* Could not find the corresponding push ref spec for this push update */
+		if (j == push->specs.length)
+			continue;
+
+		/* Update the remote ref */
+		if (git_oid_iszero(&push_spec->loid)) {
+			error = git_reference_lookup(&remote_ref, push->remote->repo, git_buf_cstr(&remote_ref_name));
+
+			if (!error) {
+				if ((error = git_reference_delete(remote_ref)) < 0)
+					goto on_error;
+			} else if (error == GIT_ENOTFOUND)
+				giterr_clear();
+			else
+				goto on_error;
+		} else if ((error = git_reference_create(NULL, push->remote->repo, git_buf_cstr(&remote_ref_name), &push_spec->loid, 1)) < 0)
+			goto on_error;
+	}
+
+	error = 0;
+
+on_error:
+	git_buf_free(&remote_ref_name);
+	return error;
+}
+
 static int revwalk(git_vector *commits, git_push *push)
 {
 	git_remote_head *head;
