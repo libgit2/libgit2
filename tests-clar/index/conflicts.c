@@ -154,7 +154,7 @@ void test_index_conflicts__remove(void)
 	}
 }
 
-void test_index_conflicts__moved_to_reuc(void)
+void test_index_conflicts__moved_to_reuc_on_add(void)
 {
 	const git_index_entry *entry;
 	size_t i;
@@ -163,7 +163,7 @@ void test_index_conflicts__moved_to_reuc(void)
 
 	cl_git_mkfile("./mergedrepo/conflicts-one.txt", "new-file\n");
 
-	cl_git_pass(git_index_add_from_workdir(repo_index, "conflicts-one.txt"));
+	cl_git_pass(git_index_add_bypath(repo_index, "conflicts-one.txt"));
 
 	cl_assert(git_index_entrycount(repo_index) == 6);
 
@@ -172,6 +172,25 @@ void test_index_conflicts__moved_to_reuc(void)
 
 		if (strcmp(entry->path, "conflicts-one.txt") == 0)
 			cl_assert(git_index_entry_stage(entry) == 0);
+	}
+}
+
+void test_index_conflicts__moved_to_reuc_on_remove(void)
+{
+	const git_index_entry *entry;
+	size_t i;
+
+	cl_assert(git_index_entrycount(repo_index) == 8);
+
+	cl_git_pass(p_unlink("./mergedrepo/conflicts-one.txt"));
+
+	cl_git_pass(git_index_remove_bypath(repo_index, "conflicts-one.txt"));
+
+	cl_assert(git_index_entrycount(repo_index) == 5);
+
+	for (i = 0; i < git_index_entrycount(repo_index); i++) {
+		cl_assert(entry = git_index_get_byindex(repo_index, i));
+		cl_assert(strcmp(entry->path, "conflicts-one.txt") != 0);
 	}
 }
 

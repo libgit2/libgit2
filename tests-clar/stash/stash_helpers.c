@@ -46,10 +46,10 @@ void setup_stash(git_repository *repo, git_signature *signature)
 
 	cl_git_mkfile("stash/.gitignore", "*.ignore\n");
 
-	cl_git_pass(git_index_add_from_workdir(index, "what"));
-	cl_git_pass(git_index_add_from_workdir(index, "how"));
-	cl_git_pass(git_index_add_from_workdir(index, "who"));
-	cl_git_pass(git_index_add_from_workdir(index, ".gitignore"));
+	cl_git_pass(git_index_add_bypath(index, "what"));
+	cl_git_pass(git_index_add_bypath(index, "how"));
+	cl_git_pass(git_index_add_bypath(index, "who"));
+	cl_git_pass(git_index_add_bypath(index, ".gitignore"));
 	cl_git_pass(git_index_write(index));
 
 	commit_staged_files(&commit_oid, index, signature);
@@ -58,8 +58,8 @@ void setup_stash(git_repository *repo, git_signature *signature)
 	cl_git_rewritefile("stash/how", "not so small and\n");	/* e6d64adb2c7f3eb8feb493b556cc8070dca379a3 */
 	cl_git_rewritefile("stash/who", "funky world\n");		/* a0400d4954659306a976567af43125a0b1aa8595 */
 
-	cl_git_pass(git_index_add_from_workdir(index, "what"));
-	cl_git_pass(git_index_add_from_workdir(index, "how"));
+	cl_git_pass(git_index_add_bypath(index, "what"));
+	cl_git_pass(git_index_add_bypath(index, "how"));
 	cl_git_pass(git_index_write(index));
 
 	cl_git_rewritefile("stash/what", "see you later\n");	/* bc99dc98b3eba0e9157e94769cd4d49cb49de449 */

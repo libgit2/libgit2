@@ -730,7 +730,7 @@ static int index_conflict_to_reuc(git_index *index, const char *path)
 	return ret;
 }
 
-int git_index_add_from_workdir(git_index *index, const char *path)
+int git_index_add_bypath(git_index *index, const char *path)
 {
 	git_index_entry *entry = NULL;
 	int ret;
@@ -751,6 +751,21 @@ int git_index_add_from_workdir(git_index *index, const char *path)
 on_error:
 	index_entry_free(entry);
 	return ret;
+}
+
+int git_index_remove_bypath(git_index *index, const char *path)
+{
+	int ret;
+
+	assert(index && path);
+
+	if (((ret = git_index_remove(index, path, 0)) < 0 &&
+		ret != GIT_ENOTFOUND) ||
+		((ret = index_conflict_to_reuc(index, path)) < 0 &&
+		ret != GIT_ENOTFOUND))
+		return ret;
+
+	return 0;
 }
 
 int git_index_add(git_index *index, const git_index_entry *source_entry)

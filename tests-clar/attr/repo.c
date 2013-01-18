@@ -270,7 +270,7 @@ static void assert_proper_normalization(git_index *index, const char *filename, 
 	const git_index_entry *entry;
 
 	add_to_workdir(filename, CONTENT);
-	cl_git_pass(git_index_add_from_workdir(index, filename));
+	cl_git_pass(git_index_add_bypath(index, filename));
 
 	index_pos = git_index_find(index, filename);
 	cl_assert(index_pos >= 0);

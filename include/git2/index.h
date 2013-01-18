@@ -362,7 +362,7 @@ GIT_EXTERN(int) git_index_entry_stage(const git_index_entry *entry);
 /**@{*/
 
 /**
- * Add or update an index entry from a file in disk
+ * Add or update an index entry from a file on disk
  *
  * The file `path` must be relative to the repository's
  * working folder and must be readable.
@@ -381,7 +381,23 @@ GIT_EXTERN(int) git_index_entry_stage(const git_index_entry *entry);
  * @param path filename to add
  * @return 0 or an error code
  */
-GIT_EXTERN(int) git_index_add_from_workdir(git_index *index, const char *path);
+GIT_EXTERN(int) git_index_add_bypath(git_index *index, const char *path);
+
+/**
+ * Remove an index entry corresponding to a file on disk
+ *
+ * The file `path` must be relative to the repository's
+ * working folder.  It may exist.
+ *
+ * If this file currently is the result of a merge conflict, this
+ * file will no longer be marked as conflicting.  The data about
+ * the conflict will be moved to the "resolve undo" (REUC) section.
+ *
+ * @param index an existing index object
+ * @param path filename to remove
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_index_remove_bypath(git_index *index, const char *path);
 
 /**
  * Find the first index of any entries which point to given
