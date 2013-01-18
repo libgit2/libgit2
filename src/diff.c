@@ -47,6 +47,7 @@ static int diff_delta__from_one(
 	const git_index_entry *entry)
 {
 	git_diff_delta *delta;
+	const char *matched_pathspec;
 
 	if (status == GIT_DELTA_IGNORED &&
 		(diff->opts.flags & GIT_DIFF_INCLUDE_IGNORED) == 0)
@@ -59,7 +60,7 @@ static int diff_delta__from_one(
 	if (!git_pathspec_match_path(
 			&diff->pathspec, entry->path,
 			(diff->opts.flags & GIT_DIFF_DISABLE_PATHSPEC_MATCH) != 0,
-			(diff->opts.flags & GIT_DIFF_DELTAS_ARE_ICASE) != 0))
+			(diff->opts.flags & GIT_DIFF_DELTAS_ARE_ICASE) != 0, &matched_pathspec))
 		return 0;
 
 	delta = diff_delta__alloc(diff, status, entry->path);
@@ -419,13 +420,14 @@ static int maybe_modified(
 	unsigned int omode = oitem->mode;
 	unsigned int nmode = nitem->mode;
 	bool new_is_workdir = (new_iter->type == GIT_ITERATOR_TYPE_WORKDIR);
+	const char *matched_pathspec;
 
 	GIT_UNUSED(old_iter);
 
 	if (!git_pathspec_match_path(
 			&diff->pathspec, oitem->path,
 			(diff->opts.flags & GIT_DIFF_DISABLE_PATHSPEC_MATCH) != 0,
-			(diff->opts.flags & GIT_DIFF_DELTAS_ARE_ICASE) != 0))
+			(diff->opts.flags & GIT_DIFF_DELTAS_ARE_ICASE) != 0, &matched_pathspec))
 		return 0;
 
 	/* on platforms with no symlinks, preserve mode of existing symlinks */
