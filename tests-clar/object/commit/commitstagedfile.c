@@ -73,7 +73,7 @@ void test_object_commit_commitstagedfile__generate_predictable_object_ids(void)
 	 */
 	cl_git_mkfile("treebuilder/test.txt", "test\n");
 	cl_git_pass(git_repository_index(&index, repo));
-	cl_git_pass(git_index_add_from_workdir(index, "test.txt"));
+	cl_git_pass(git_index_add_bypath(index, "test.txt"));
 
 	entry = git_index_get_byindex(index, 0);
 

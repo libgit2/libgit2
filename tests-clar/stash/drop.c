@@ -34,7 +34,7 @@ static void push_three_states(void)
 
 	cl_git_mkfile("stash/zero.txt", "content\n");
 	cl_git_pass(git_repository_index(&index, repo));
-	cl_git_pass(git_index_add_from_workdir(index, "zero.txt"));
+	cl_git_pass(git_index_add_bypath(index, "zero.txt"));
 	commit_staged_files(&oid, index, signature);
 	cl_assert(git_path_exists("stash/zero.txt"));
 

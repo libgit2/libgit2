@@ -31,7 +31,7 @@ void test_index_stage__add_always_adds_stage_0(void)
 
     cl_git_mkfile("./mergedrepo/new-file.txt", "new-file\n");
 
-	cl_git_pass(git_index_add_from_workdir(repo_index, "new-file.txt"));
+	cl_git_pass(git_index_add_bypath(repo_index, "new-file.txt"));
 
 	cl_assert((entry_idx = git_index_find(repo_index, "new-file.txt")) >= 0);
 	cl_assert((entry = git_index_get_byindex(repo_index, entry_idx)) != NULL);
