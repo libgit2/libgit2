@@ -21,7 +21,7 @@ static char *home_values[] = {
 	"fακε_hοmέ",  /* having fun with greek */
 	"faงe_นome", /* now I have no idea, but thai characters */
 	"f\xe1\x9cx80ke_\xe1\x9c\x91ome", /* tagalog characters */
-	"\xe1\xb8\x9fẢke_hoṁe", /* latin extended additional */
+	"\xe1\xb8\x9fẢke_ho�\x81" "e", /* latin extended additional */
 	"\xf0\x9f\x98\x98\xf0\x9f\x98\x82", /* emoticons */
 	NULL
 };
