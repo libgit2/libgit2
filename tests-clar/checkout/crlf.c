@@ -45,6 +45,7 @@ static void set_core_autocrlf_to(bool value)
 
 void test_checkout_crlf__detect_crlf_autocrlf_false(void)
 {
+#ifdef GIT_WIN32
 	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
 	opts.checkout_strategy = GIT_CHECKOUT_SAFE_CREATE;
 
@@ -53,10 +54,12 @@ void test_checkout_crlf__detect_crlf_autocrlf_false(void)
 	git_checkout_head(g_repo, &opts);
 
 	test_file_contents("./crlf/all-lf", ALL_LF_TEXT_RAW);
+#endif
 }
 
 void test_checkout_crlf__autocrlf_false_index_size_is_unfiltered_size(void)
 {
+#ifdef GIT_WIN32
 	git_index *index;
 	const git_index_entry *entry;
 	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
@@ -72,10 +75,12 @@ void test_checkout_crlf__autocrlf_false_index_size_is_unfiltered_size(void)
 	cl_assert(entry->file_size == strlen(ALL_LF_TEXT_RAW));
 
 	git_index_free(index);
+#endif
 }
 
 void test_checkout_crlf__detect_crlf_autocrlf_true(void)
 {
+#ifdef GIT_WIN32
 	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
 	opts.checkout_strategy = GIT_CHECKOUT_SAFE_CREATE;
 
@@ -84,10 +89,12 @@ void test_checkout_crlf__detect_crlf_autocrlf_true(void)
 	git_checkout_head(g_repo, &opts);
 
 	test_file_contents("./crlf/all-lf", ALL_LF_TEXT_AS_CRLF);
+#endif
 }
 
 void test_checkout_crlf__autocrlf_true_index_size_is_filtered_size(void)
 {
+#ifdef GIT_WIN32
 	git_index *index;
 	const git_index_entry *entry;
 	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
@@ -103,4 +110,5 @@ void test_checkout_crlf__autocrlf_true_index_size_is_filtered_size(void)
 	cl_assert(entry->file_size == strlen(ALL_LF_TEXT_AS_CRLF));
 
 	git_index_free(index);
+#endif
 }
