@@ -106,11 +106,13 @@ on_error:
 
 
 static int ahead_behind(git_commit_list_node *one, git_commit_list_node *two,
-	size_t *ahead, size_t *behind)
+	size_t *ahead, size_t *behind, git_oid *common_ancestor)
 {
 	git_commit_list_node *commit;
 	git_pqueue pq;
-	int i;
+	int i, common_ancestor_found = 0;
+	git_oid ancestor = { 0 };
+
 	*ahead = 0;
 	*behind = 0;
 
@@ -123,8 +125,13 @@ static int ahead_behind(git_commit_list_node *one, git_commit_list_node *two,
 
 	while ((commit = git_pqueue_pop(&pq)) != NULL) {
 		if (commit->flags & RESULT ||
-			(commit->flags & (PARENT1 | PARENT2)) == (PARENT1 | PARENT2))
-			continue;
+			(commit->flags & (PARENT1 | PARENT2)) == (PARENT1 | PARENT2)) {
+				if (!common_ancestor_found) {
+					git_oid_cpy(&ancestor, &commit->oid);
+					common_ancestor_found = true;
+				}
+				continue;
+		}
 		else if (commit->flags & PARENT1)
 			(*behind)++;
 		else if (commit->flags & PARENT2)
@@ -139,6 +146,8 @@ static int ahead_behind(git_commit_list_node *one, git_commit_list_node *two,
 	}
 
 	git_pqueue_free(&pq);
+
+	git_oid_cpy(common_ancestor, &ancestor);
 	return 0;
 
 on_error:
@@ -146,8 +155,13 @@ on_error:
 	return -1;
 }
 
-int git_graph_ahead_behind(size_t *ahead, size_t *behind, git_repository *repo,
-	const git_oid *one, const git_oid *two)
+int git_graph_ahead_behind(
+	size_t *ahead,
+	size_t *behind,
+	git_oid *common_ancestor,
+	git_repository *repo,
+	const git_oid *one,
+	const git_oid *two)
 {
 	git_revwalk *walk;
 	git_commit_list_node *commit1, *commit2;
@@ -165,7 +179,7 @@ int git_graph_ahead_behind(size_t *ahead, size_t *behind, git_repository *repo,
 
 	if (mark_parents(walk, commit1, commit2) < 0)
 		goto on_error;
-	if (ahead_behind(commit1, commit2, ahead, behind) < 0)
+	if (ahead_behind(commit1, commit2, ahead, behind, common_ancestor) < 0)
 		goto on_error;
 
 	git_revwalk_free(walk);
