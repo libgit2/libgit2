@@ -231,10 +231,10 @@ int git_smart__negotiate_fetch(git_transport *transport, git_repository *repo, c
 	git_oid oid;
 
 	/* No own logic, do our thing */
-	if (git_pkt_buffer_wants(refs, count, &t->caps, &data) < 0)
-		return -1;
+	if ((error = git_pkt_buffer_wants(refs, count, &t->caps, &data)) < 0)
+		return error;
 
-	if (fetch_setup_walk(&walk, repo) < 0)
+	if ((error = fetch_setup_walk(&walk, repo)) < 0)
 		goto on_error;
 	/*
 	 * We don't support any kind of ACK extensions, so the negotiation
@@ -242,7 +242,16 @@ int git_smart__negotiate_fetch(git_transport *transport, git_repository *repo, c
 	 * every once in a while.
 	 */
 	i = 0;
-	while ((error = git_revwalk_next(&oid, walk)) == 0) {
+	while (true) {
+		error = git_revwalk_next(&oid, walk);
+
+		if (error < 0) {
+			if (GIT_ITEROVER == error)
+				break;
+
+			goto on_error;
+		}
+
 		git_pkt_buffer_have(&oid, &data);
 		i++;
 		if (i % 20 == 0) {
@@ -253,15 +262,17 @@ int git_smart__negotiate_fetch(git_transport *transport, git_repository *repo, c
 			}
 
 			git_pkt_buffer_flush(&data);
-			if (git_buf_oom(&data))
+			if (git_buf_oom(&data)) {
+				error = -1;
 				goto on_error;
+			}
 
-			if (git_smart__negotiation_step(&t->parent, data.ptr, data.size) < 0)
+			if ((error = git_smart__negotiation_step(&t->parent, data.ptr, data.size)) < 0)
 				goto on_error;
 
 			git_buf_clear(&data);
 			if (t->caps.multi_ack) {
-				if (store_common(t) < 0)
+				if ((error = store_common(t)) < 0)
 					goto on_error;
 			} else {
 				pkt_type = recv_pkt(NULL, buf);
@@ -270,8 +281,13 @@ int git_smart__negotiate_fetch(git_transport *transport, git_repository *repo, c
 					break;
 				} else if (pkt_type == GIT_PKT_NAK) {
 					continue;
+				} else if (pkt_type < 0) {
+					/* recv_pkt returned an error */
+					error = pkt_type;
+					goto on_error;
 				} else {
 					giterr_set(GITERR_NET, "Unexpected pkt type");
+					error = -1;
 					goto on_error;
 				}
 			}
@@ -284,44 +300,49 @@ int git_smart__negotiate_fetch(git_transport *transport, git_repository *repo, c
 			git_pkt_ack *pkt;
 			unsigned int i;
 
-			if (git_pkt_buffer_wants(refs, count, &t->caps, &data) < 0)
+			if ((error = git_pkt_buffer_wants(refs, count, &t->caps, &data)) < 0)
 				goto on_error;
 
 			git_vector_foreach(&t->common, i, pkt) {
-				git_pkt_buffer_have(&pkt->oid, &data);
+				if ((error = git_pkt_buffer_have(&pkt->oid, &data)) < 0)
+					goto on_error;
 			}
 
-			if (git_buf_oom(&data))
+			if (git_buf_oom(&data)) {
+				error = -1;
 				goto on_error;
+			}
 		}
 	}
-
-	if (error < 0 && error != GIT_ITEROVER)
-		goto on_error;
 
 	/* Tell the other end that we're done negotiating */
 	if (t->rpc && t->common.length > 0) {
 		git_pkt_ack *pkt;
 		unsigned int i;
 
-		if (git_pkt_buffer_wants(refs, count, &t->caps, &data) < 0)
+		if ((error = git_pkt_buffer_wants(refs, count, &t->caps, &data)) < 0)
 			goto on_error;
 
 		git_vector_foreach(&t->common, i, pkt) {
-			git_pkt_buffer_have(&pkt->oid, &data);
+			if ((error = git_pkt_buffer_have(&pkt->oid, &data)) < 0)
+				goto on_error;
 		}
 
-		if (git_buf_oom(&data))
+		if (git_buf_oom(&data)) {
+			error = -1;
 			goto on_error;
+		}
 	}
 
-	git_pkt_buffer_done(&data);
+	if ((error = git_pkt_buffer_done(&data)) < 0)
+		goto on_error;
+
 	if (t->cancelled.val) {
 		giterr_set(GITERR_NET, "The fetch was cancelled by the user");
 		error = GIT_EUSER;
 		goto on_error;
 	}
-	if (git_smart__negotiation_step(&t->parent, data.ptr, data.size) < 0)
+	if ((error = git_smart__negotiation_step(&t->parent, data.ptr, data.size)) < 0)
 		goto on_error;
 
 	git_buf_free(&data);
@@ -330,15 +351,18 @@ int git_smart__negotiate_fetch(git_transport *transport, git_repository *repo, c
 	/* Now let's eat up whatever the server gives us */
 	if (!t->caps.multi_ack) {
 		pkt_type = recv_pkt(NULL, buf);
-		if (pkt_type != GIT_PKT_ACK && pkt_type != GIT_PKT_NAK) {
+
+		if (pkt_type < 0) {
+			return pkt_type;
+		} else if (pkt_type != GIT_PKT_ACK && pkt_type != GIT_PKT_NAK) {
 			giterr_set(GITERR_NET, "Unexpected pkt type");
 			return -1;
 		}
 	} else {
 		git_pkt_ack *pkt;
 		do {
-			if (recv_pkt((git_pkt **)&pkt, buf) < 0)
-				return -1;
+			if ((error = recv_pkt((git_pkt **)&pkt, buf)) < 0)
+				return error;
 
 			if (pkt->type == GIT_PKT_NAK ||
 			    (pkt->type == GIT_PKT_ACK && pkt->status != GIT_ACK_CONTINUE)) {
