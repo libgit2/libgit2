@@ -588,7 +588,7 @@ static void stage_and_commit(git_repository *repo, const char *path)
 	git_index *index;
 
 	cl_git_pass(git_repository_index(&index, repo));
-	cl_git_pass(git_index_add_from_workdir(index, path));
+	cl_git_pass(git_index_add_bypath(index, path));
 	cl_git_pass(git_index_write(index));
 
 	cl_git_pass(git_index_write_tree(&tree_oid, index));
