@@ -174,8 +174,6 @@ int git_commit__parse_buffer(git_commit *commit, const void *data, size_t len)
 		const char *eoln = buffer;
 		while (eoln < buffer_end && *eoln != '\n')
 			++eoln;
-		if (eoln < buffer_end && *eoln == '\n')
-			++eoln;
 
 		if (git__prefixcmp(buffer, "encoding ") == 0) {
 			buffer += strlen("encoding ");
@@ -183,6 +181,9 @@ int git_commit__parse_buffer(git_commit *commit, const void *data, size_t len)
 			commit->message_encoding = git__strndup(buffer, eoln - buffer);
 			GITERR_CHECK_ALLOC(commit->message_encoding);
 		}
+
+		if (eoln < buffer_end && *eoln == '\n')
+			++eoln;
 
 		buffer = eoln;
 	}
