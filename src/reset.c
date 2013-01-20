@@ -9,6 +9,7 @@
 #include "commit.h"
 #include "tag.h"
 #include "merge.h"
+#include "diff.h"
 #include "git2/reset.h"
 #include "git2/checkout.h"
 #include "git2/merge.h"
@@ -51,6 +52,79 @@ static int update_head(git_repository *repo, git_object *commit)
 cleanup:
 	git_reference_free(head);
 	git_reference_free(target);
+	return error;
+}
+
+int git_reset_default(
+	git_repository *repo,
+	git_object *target,
+	git_strarray* pathspecs)
+{
+	git_object *commit = NULL;
+	git_tree *tree = NULL;
+	git_diff_list *diff = NULL;
+	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
+	size_t i;
+	git_diff_delta *delta;
+	git_index_entry entry;
+	int error;
+	git_index *index = NULL;
+
+	assert(pathspecs != NULL && pathspecs->count > 0); 
+
+	memset(&entry, 0, sizeof(git_index_entry));
+
+	if ((error = git_repository_index(&index, repo)) < 0)
+		goto cleanup;
+
+	if (target) {
+		if (git_object_owner(target) != repo) {
+			giterr_set(GITERR_OBJECT,
+				"%s_default - The given target does not belong to this repository.", ERROR_MSG);
+			return -1;
+		}
+
+		if ((error = git_object_peel(&commit, target, GIT_OBJ_COMMIT)) < 0 ||
+			(error = git_commit_tree(&tree, (git_commit *)commit)) < 0)
+			goto cleanup;
+	}
+
+	opts.pathspec = *pathspecs;
+	opts.flags = GIT_DIFF_REVERSE;
+
+	if ((error = git_diff_tree_to_index(
+		&diff, repo, tree, index, &opts)) < 0)
+			goto cleanup;
+
+	git_vector_foreach(&diff->deltas, i, delta) {
+		if ((error = git_index_conflict_remove(index, delta->old_file.path)) < 0)
+			goto cleanup;
+
+		assert(delta->status == GIT_DELTA_ADDED ||
+			delta->status == GIT_DELTA_MODIFIED ||
+			delta->status == GIT_DELTA_DELETED);
+
+		if (delta->status == GIT_DELTA_DELETED) {
+			if ((error = git_index_remove(index, delta->old_file.path, 0)) < 0)
+				goto cleanup;
+		} else {
+			entry.mode = delta->new_file.mode;
+			git_oid_cpy(&entry.oid, &delta->new_file.oid);
+			entry.path = (char *)delta->new_file.path;
+
+			if ((error = git_index_add(index, &entry)) < 0)
+				goto cleanup;
+		}
+	}
+
+	error = git_index_write(index);
+
+cleanup:
+	git_object_free(commit);
+	git_tree_free(tree);
+	git_index_free(index);
+	git_diff_list_free(diff);
+
 	return error;
 }
 

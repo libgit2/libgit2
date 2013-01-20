@@ -53,6 +53,29 @@ typedef enum {
 GIT_EXTERN(int) git_reset(
 	git_repository *repo, git_object *target, git_reset_t reset_type);
 
+/**
+ * Updates some entries in the index from the target commit tree.
+ *
+ * The scope of the updated entries is determined by the paths
+ * being passed in the `pathspec` parameters.
+ *
+ * Passing a NULL `target` will result in removing
+ * entries in the index matching the provided pathspecs.
+ *
+ * @param repo Repository where to perform the reset operation.
+ *
+ * @param target The committish which content will be used to reset the content
+ * of the index.
+ *
+ * @param pathspecs List of pathspecs to operate on.
+ *
+ * @return 0 on success or an error code < 0
+ */
+GIT_EXTERN(int) git_reset_default(
+    git_repository *repo,
+    git_object *target,
+    git_strarray* pathspecs);
+
 /** @} */
 GIT_END_DECL
 #endif
