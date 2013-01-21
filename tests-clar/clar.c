@@ -1,3 +1,9 @@
+/*
+ * Copyright (c) Vicent Marti. All rights reserved.
+ *
+ * This file is part of clar, distributed under the ISC license.
+ * For full terms see the included COPYING file.
+ */
 #include <assert.h>
 #include <setjmp.h>
 #include <stdlib.h>
@@ -75,6 +81,7 @@ static struct {
 
 	int report_errors_only;
 	int exit_on_error;
+	int report_suite_names;
 
 	struct clar_error *errors;
 	struct clar_error *last_error;
@@ -207,12 +214,12 @@ clar_usage(const char *arg)
 {
 	printf("Usage: %s [options]\n\n", arg);
 	printf("Options:\n");
-	printf("  -sname\t\tRun only the suite with `name`\n");
-	printf("  -iname\t\tInclude the suite with `name`\n");
-	printf("  -xname\t\tExclude the suite with `name`\n");
-	printf("  -q  \t\tOnly report tests that had an error\n");
-	printf("  -Q  \t\tQuit as soon as a test fails\n");
-	printf("  -l  \t\tPrint suite names\n");
+	printf("  -sname\tRun only the suite with `name`\n");
+	printf("  -iname\tInclude the suite with `name`\n");
+	printf("  -xname\tExclude the suite with `name`\n");
+	printf("  -q    \tOnly report tests that had an error\n");
+	printf("  -Q    \tQuit as soon as a test fails\n");
+	printf("  -l    \tPrint suite names\n");
 	exit(-1);
 }
 
@@ -231,7 +238,7 @@ clar_parse_args(int argc, char **argv)
 		case 's':
 		case 'i':
 		case 'x': { /* given suite name */
-			int offset = (argument[2] == '=') ? 3 : 2;
+			int offset = (argument[2] == '=') ? 3 : 2, found = 0;
 			char action = argument[1];
 			size_t j, len;
 
@@ -243,16 +250,25 @@ clar_parse_args(int argc, char **argv)
 
 			for (j = 0; j < _clar_suite_count; ++j) {
 				if (strncmp(argument, _clar_suites[j].name, len) == 0) {
+					int exact = !strcmp(argument, _clar_suites[j].name);
+
+					++found;
+
+					if (!exact)
+						_clar.report_suite_names = 1;
+
 					switch (action) {
 						case 's': clar_run_suite(&_clar_suites[j]); break;
 						case 'i': _clar_suites[j].enabled = 1; break;
 						case 'x': _clar_suites[j].enabled = 0; break;
 					}
-					break;
+
+					if (exact)
+						break;
 				}
 			}
 
-			if (j == _clar_suite_count) {
+			if (!found) {
 				clar_print_onabort("No suite matching '%s' found.\n", argument);
 				exit(-1);
 			}
