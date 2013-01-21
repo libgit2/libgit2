@@ -241,15 +241,15 @@ static const char *scan_for_previous_token(const char *buffer, const char *left_
 
 static int parse_time(git_time_t *time_out, const char *buffer)
 {
-	int time;
 	int error;
+	int64_t time;
 
 	if (*buffer == '+' || *buffer == '-') {
 		giterr_set(GITERR_INVALID, "Failed while parsing time. '%s' actually looks like a timezone offset.", buffer);
 		return -1;
 	}
 
-	error = git__strtol32(&time, buffer, &buffer, 10);
+	error = git__strtol64(&time, buffer, &buffer, 10);
 
 	if (!error)
 		*time_out = (git_time_t)time;
