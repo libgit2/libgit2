@@ -121,6 +121,14 @@ passing_signature_test_case passing_signature_cases[] = {
 	{"author A U Thor <author@example.com> and others 1234567890 -0700\n", "author ", "A U Thor", "author@example.com", 1234567890, -420},
 	{"author A U Thor <author@example.com> and others 1234567890\n", "author ", "A U Thor", "author@example.com", 1234567890, 0},
 	{"author A U Thor> <author@example.com> and others 1234567890\n", "author ", "A U Thor>", "author@example.com", 1234567890, 0},
+	/* a variety of dates */
+	{"author Vicent Marti <tanoku@gmail.com> 0 \n", "author ", "Vicent Marti", "tanoku@gmail.com", 0, 0},
+	{"author Vicent Marti <tanoku@gmail.com> 1234567890 \n", "author ", "Vicent Marti", "tanoku@gmail.com", 1234567890, 0},
+	{"author Vicent Marti <tanoku@gmail.com> 2147483647 \n", "author ", "Vicent Marti", "tanoku@gmail.com", 0x7fffffff, 0},
+	{"author Vicent Marti <tanoku@gmail.com> 4294967295 \n", "author ", "Vicent Marti", "tanoku@gmail.com", 0xffffffff, 0},
+	{"author Vicent Marti <tanoku@gmail.com> 4294967296 \n", "author ", "Vicent Marti", "tanoku@gmail.com", 4294967296, 0},
+	{"author Vicent Marti <tanoku@gmail.com> 8589934592 \n", "author ", "Vicent Marti", "tanoku@gmail.com", 8589934592, 0},
+
    {NULL,NULL,NULL,NULL,0,0}
 };
 
