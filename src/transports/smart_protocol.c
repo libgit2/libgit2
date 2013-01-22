@@ -541,7 +541,7 @@ static int gen_pktline(git_buf *buf, git_push *push)
 		git_oid_fmt(old_id, &spec->roid);
 		git_oid_fmt(new_id, &spec->loid);
 
-		git_buf_printf(buf, "%04zx%s %s %s", len, old_id, new_id, spec->rref);
+		git_buf_printf(buf, "%04"PRIxZ"%s %s %s", len, old_id, new_id, spec->rref);
 
 		if (i == 0) {
 			git_buf_putc(buf, '\0');
