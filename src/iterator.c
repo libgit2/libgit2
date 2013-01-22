@@ -255,15 +255,17 @@ static int tree_iterator__icase_map_cmp(const void *a, const void *b, void *data
 	git_tree *tree = data;
 	const git_tree_entry *te1 = git_tree_entry_byindex(tree, (size_t)a);
 	const git_tree_entry *te2 = git_tree_entry_byindex(tree, (size_t)b);
+
 	return te1 ? (te2 ? git_tree_entry_icmp(te1, te2) : 1) : -1;
 }
 
-static int tree_iterator__frame_start_icmp(const void *key, const void *element)
+static int tree_iterator__frame_start_icmp(const void *key, const void *el)
 {
 	const tree_iterator_frame *tf = (const tree_iterator_frame *)key;
-	const git_tree_entry *te = git_tree_entry_byindex(tf->tree, (size_t)element);
+	const git_tree_entry *te = git_tree_entry_byindex(tf->tree, (size_t)el);
+	size_t minlen = min(tf->startlen, te->filename_len);
 
-	return memcmp(tf->start, te->filename, min(tf->startlen, te->filename_len));
+	return git__strncasecmp(tf->start, te->filename, minlen);
 }
 
 static void tree_iterator__frame_seek_start(tree_iterator_frame *tf)
