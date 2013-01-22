@@ -62,6 +62,7 @@ void test_object_tag_read__parse_without_tagger(void)
    git_tag *bad_tag;
    git_commit *commit;
    git_oid id, id_commit;
+   git_strarray ref_list;
 
    // TODO: This is a little messy
    cl_git_pass(git_repository_open(&bad_tag_repo, cl_fixture("bad_tag.git")));
@@ -81,6 +82,9 @@ void test_object_tag_read__parse_without_tagger(void)
 
    cl_assert(git_oid_cmp(&id_commit, git_commit_id(commit)) == 0);
 
+   cl_git_pass(git_reference_list(&ref_list, bad_tag_repo, GIT_REF_LISTALL));
+
+   git_strarray_free(&ref_list);
    git_tag_free(bad_tag);
    git_commit_free(commit);
    git_repository_free(bad_tag_repo);
