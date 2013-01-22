@@ -30,6 +30,11 @@ struct unpacked {
 	unsigned int depth;
 };
 
+struct tree_walk_context {
+	git_packbuilder *pb;
+	git_buf buf;
+};
+
 #ifdef GIT_THREADS
 
 #define GIT_PACKBUILDER__MUTEX_OP(pb, mtx, op) do { \
@@ -1259,40 +1264,38 @@ int git_packbuilder_write(git_packbuilder *pb, const char *path)
 
 static int cb_tree_walk(const char *root, const git_tree_entry *entry, void *payload)
 {
-	git_packbuilder *pb = payload;
-	git_buf buf = GIT_BUF_INIT;
+	struct tree_walk_context *ctx = payload;
 
 	/* A commit inside a tree represents a submodule commit and should be skipped. */
-	if(git_tree_entry_type(entry) == GIT_OBJ_COMMIT)
+	if (git_tree_entry_type(entry) == GIT_OBJ_COMMIT)
 		return 0;
 
-	git_buf_puts(&buf, root);
-	git_buf_puts(&buf, git_tree_entry_name(entry));
-
-	if (git_packbuilder_insert(pb, git_tree_entry_id(entry),
-				   git_buf_cstr(&buf)) < 0) {
-		git_buf_free(&buf);
+	if (git_buf_sets(&ctx->buf, root) < 0 ||
+		git_buf_puts(&ctx->buf, git_tree_entry_name(entry)) < 0)
 		return -1;
-	}
 
-	git_buf_free(&buf);
-	return 0;
+	return git_packbuilder_insert(ctx->pb,
+		git_tree_entry_id(entry),
+		git_buf_cstr(&ctx->buf));
 }
 
 int git_packbuilder_insert_tree(git_packbuilder *pb, const git_oid *oid)
 {
 	git_tree *tree;
+	struct tree_walk_context context = { pb, GIT_BUF_INIT };
 
 	if (git_tree_lookup(&tree, pb->repo, oid) < 0 ||
 	    git_packbuilder_insert(pb, oid, NULL) < 0)
 		return -1;
 
-	if (git_tree_walk(tree, GIT_TREEWALK_PRE, cb_tree_walk, pb) < 0) {
+	if (git_tree_walk(tree, GIT_TREEWALK_PRE, cb_tree_walk, &context) < 0) {
 		git_tree_free(tree);
+		git_buf_free(&context.buf);
 		return -1;
 	}
 
 	git_tree_free(tree);
+	git_buf_free(&context.buf);
 	return 0;
 }
 
