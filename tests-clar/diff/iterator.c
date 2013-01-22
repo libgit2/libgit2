@@ -843,8 +843,22 @@ void test_diff_iterator__tree_handles_icase_range(void)
 
 	check_tree_range(repo, "B", "C", false, 0);
 	check_tree_range(repo, "B", "C", true, 1);
+	check_tree_range(repo, "b", "c", false, 1);
+	check_tree_range(repo, "b", "c", true, 1);
+
 	check_tree_range(repo, "a", "z", false, 3);
 	check_tree_range(repo, "a", "z", true, 4);
+	check_tree_range(repo, "A", "Z", false, 1);
+	check_tree_range(repo, "A", "Z", true, 4);
+	check_tree_range(repo, "a", "Z", false, 0);
+	check_tree_range(repo, "a", "Z", true, 4);
+	check_tree_range(repo, "A", "z", false, 4);
+	check_tree_range(repo, "A", "z", true, 4);
+
+	check_tree_range(repo, "new.txt", "new.txt", true, 1);
+	check_tree_range(repo, "new.txt", "new.txt", false, 1);
+	check_tree_range(repo, "README", "README", true, 1);
+	check_tree_range(repo, "README", "README", false, 1);
 }
 
 static void check_index_range(
