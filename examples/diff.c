@@ -138,8 +138,6 @@ int main(int argc, char *argv[])
 	int i, color = -1, compact = 0, cached = 0;
 	char *a, *dir = ".", *treeish1 = NULL, *treeish2 = NULL;
 
-	memset(&opts, 0, sizeof(opts));
-
 	/* parse arguments as copied from git-diff */
 
 	for (i = 1; i < argc; ++i) {
