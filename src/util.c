@@ -34,6 +34,29 @@ int git_libgit2_capabilities()
 	;
 }
 
+/* Declarations for tuneable settings */
+extern size_t git_mwindow__window_size;
+extern size_t git_mwindow__mapped_limit;
+
+void git_libgit2_opts(int key, ...)
+{
+	va_list ap;
+
+	va_start(ap, key);
+
+	switch(key) {
+	case GIT_OPT_MWINDOW_SIZE:
+		git_mwindow__window_size = va_arg(ap, size_t);
+		break;
+
+	case GIT_OPT_MWINDOW_MAPPED_LIMIT:
+		git_mwindow__mapped_limit = va_arg(ap, size_t);
+		break;
+	}
+
+	va_end(ap);
+}
+
 void git_strarray_free(git_strarray *array)
 {
 	size_t i;
