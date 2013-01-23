@@ -5,7 +5,18 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#include <unistd.h>
+#ifdef _WIN32
+# include <io.h>
+# include <Windows.h>
+
+# define open _open
+# define read _read
+# define close _close
+
+#define ssize_t unsigned int
+#else
+# include <unistd.h>
+#endif
 #include "common.h"
 
 // This could be run in the main loop whilst the application waits for
@@ -22,8 +33,9 @@ int index_pack(git_repository *repo, int argc, char **argv)
 {
 	git_indexer_stream *idx;
 	git_transfer_progress stats = {0, 0};
-	int error, fd;
+	int error;
 	char hash[GIT_OID_HEXSZ + 1] = {0};
+	int fd;
 	ssize_t read_bytes;
 	char buf[512];
 

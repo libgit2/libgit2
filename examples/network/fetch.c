@@ -3,8 +3,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <pthread.h>
-#include <unistd.h>
+#ifndef _WIN32
+# include <pthread.h>
+# include <unistd.h>
+#endif
 
 struct dl_data {
 	git_remote *remote;
@@ -68,9 +70,11 @@ int fetch(git_repository *repo, int argc, char **argv)
 {
 	git_remote *remote = NULL;
 	const git_transfer_progress *stats;
-	pthread_t worker;
 	struct dl_data data;
 	git_remote_callbacks callbacks = GIT_REMOTE_CALLBACKS_INIT;
+#ifndef _WIN32
+	pthread_t worker;
+#endif
 
 	argc = argc;
 	// Figure out whether it's a named remote or a URL
@@ -92,6 +96,9 @@ int fetch(git_repository *repo, int argc, char **argv)
 
 	stats = git_remote_stats(remote);
 
+#ifdef _WIN32
+	download(&data);
+#else
 	pthread_create(&worker, NULL, download, &data);
 
 	// Loop while the worker thread is still running. Here we show processed
@@ -111,6 +118,8 @@ int fetch(git_repository *repo, int argc, char **argv)
 		goto on_error;
 
 	pthread_join(worker, NULL);
+#endif
+
 	printf("\rReceived %d/%d objects in %zu bytes\n",
 			stats->indexed_objects, stats->total_objects, stats->received_bytes);
 
