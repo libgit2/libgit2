@@ -45,12 +45,20 @@ void git_libgit2_opts(int key, ...)
 	va_start(ap, key);
 
 	switch(key) {
-	case GIT_OPT_MWINDOW_SIZE:
+	case GIT_OPT_SET_MWINDOW_SIZE:
 		git_mwindow__window_size = va_arg(ap, size_t);
 		break;
 
-	case GIT_OPT_MWINDOW_MAPPED_LIMIT:
+	case GIT_OPT_GET_MWINDOW_SIZE:
+		*(va_arg(ap, size_t *)) = git_mwindow__window_size;
+		break;
+
+	case GIT_OPT_SET_MWINDOW_MAPPED_LIMIT:
 		git_mwindow__mapped_limit = va_arg(ap, size_t);
+		break;
+
+	case GIT_OPT_GET_MWINDOW_MAPPED_LIMIT:
+		*(va_arg(ap, size_t *)) = git_mwindow__mapped_limit;
 		break;
 	}
 
