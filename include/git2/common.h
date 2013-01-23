@@ -123,6 +123,29 @@ enum {
  */
 GIT_EXTERN(int) git_libgit2_capabilities(void);
 
+
+enum {
+	GIT_OPT_MWINDOW_SIZE,
+	GIT_OPT_MWINDOW_MAPPED_LIMIT
+};
+
+/**
+ * Set or query a library global option
+ *
+ * Available options:
+ *
+ *	opts(GIT_OPT_MWINDOW_SIZE, size_t):
+ *		set the maximum mmap window size
+ *
+ *	opts(GIT_OPT_MWINDOW_MAPPED_LIMIT, size_t):
+ *		set the maximum amount of memory that can be mapped at any time
+ *		by the library
+ *
+ *	@param option Option key
+ *	@param ... value to set the option
+ */
+GIT_EXTERN(void) git_libgit2_opts(int option, ...);
+
 /** @} */
 GIT_END_DECL
 
