@@ -81,6 +81,7 @@ void test_object_tag_read__parse_without_tagger(void)
 
    cl_assert(git_oid_cmp(&id_commit, git_commit_id(commit)) == 0);
 
+
    git_tag_free(bad_tag);
    git_commit_free(commit);
    git_repository_free(bad_tag_repo);

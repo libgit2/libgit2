@@ -328,7 +328,7 @@ static int packed_parse_peel(
 	if (git__prefixcmp(tag_ref->name, GIT_REFS_TAGS_DIR) != 0)
 		goto corrupt;
 
-	if (buffer + GIT_OID_HEXSZ >= buffer_end)
+	if (buffer + GIT_OID_HEXSZ > buffer_end)
 		goto corrupt;
 
 	/* Is this a valid object id? */
@@ -339,10 +339,14 @@ static int packed_parse_peel(
 	if (*buffer == '\r')
 		buffer++;
 
-	if (*buffer != '\n')
-		goto corrupt;
+	if (buffer != buffer_end) {
+		if (*buffer == '\n')
+			buffer++;
+		else
+			goto corrupt;
+	}
 
-	*buffer_out = buffer + 1;
+	*buffer_out = buffer;
 	return 0;
 
 corrupt:
