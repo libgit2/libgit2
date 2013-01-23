@@ -4,8 +4,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <pthread.h>
-#include <unistd.h>
+#ifndef _WIN32
+# include <pthread.h>
+# include <unistd.h>
+#endif
 
 /* Shamelessly borrowed from http://stackoverflow.com/questions/3417837/ */
 #ifdef UNUSED
@@ -94,7 +96,7 @@ int do_clone(git_repository *repo, int argc, char **argv)
 	}
 
 	// Set up options
-	checkout_opts.checkout_strategy = GIT_CHECKOUT_SAFE;
+	checkout_opts.checkout_strategy = GIT_CHECKOUT_SAFE_CREATE;
 	checkout_opts.progress_cb = checkout_progress;
 	checkout_opts.progress_payload = &pd;
 	clone_opts.checkout_opts = checkout_opts;
