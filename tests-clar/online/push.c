@@ -200,6 +200,7 @@ static void verify_tracking_branches(git_remote *remote, expected_ref expected_r
 			goto failed;
 		}
 
+		git__free(actual_ref);
 		cl_git_pass(git_vector_remove(&actual_refs, j));
 	}
 
@@ -220,6 +221,8 @@ failed:
 
 	git_vector_free(&actual_refs);
 	git_buf_free(&msg);
+	git_buf_free(&canonical_ref_name);
+	git_buf_free(&ref_name);
 	return;
 }
 
