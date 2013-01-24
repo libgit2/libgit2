@@ -39,6 +39,15 @@ GIT_EXTERN(int) git_push_new(git_push **out, git_remote *remote);
 GIT_EXTERN(int) git_push_add_refspec(git_push *push, const char *refspec);
 
 /**
+ * Update remote tips after a push
+ *
+ * @param push The push object
+ *
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_push_update_tips(git_push *push);
+
+/**
  * Actually push all given refspecs
  *
  * @param push The push object
