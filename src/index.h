@@ -13,6 +13,7 @@
 #include "tree-cache.h"
 #include "git2/odb.h"
 #include "git2/index.h"
+#include "index_map.h"
 
 #define GIT_INDEX_FILE "index"
 #define GIT_INDEX_FILE_MODE 0666
@@ -24,6 +25,8 @@ struct git_index {
 
 	git_futils_filestamp stamp;
 	git_vector entries;
+
+	git_index_entry_map *entry_map;
 
 	unsigned int on_disk:1;
 
