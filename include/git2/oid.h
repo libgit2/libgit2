@@ -137,16 +137,7 @@ GIT_EXTERN(void) git_oid_cpy(git_oid *out, const git_oid *src);
  */
 GIT_INLINE(int) git_oid_cmp(const git_oid *a, const git_oid *b)
 {
-	const unsigned char *sha1 = a->id;
-	const unsigned char *sha2 = b->id;
-	int i;
-
-	for (i = 0; i < GIT_OID_RAWSZ; i++, sha1++, sha2++) {
-		if (*sha1 != *sha2)
-			return *sha1 - *sha2;
-	}
-
-	return 0;
+	return memcmp(a->id,b->id,GIT_OID_RAWSZ);
 }
 
 /**
