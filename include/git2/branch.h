@@ -142,6 +142,24 @@ GIT_EXTERN(int) git_branch_lookup(
 		git_branch_t branch_type);
 
 /**
+ * Return the name of the given local or remote branch.
+ *
+ * The name of the branch matches the definition of the name
+ * for git_branch_lookup. That is, if the returned name is given
+ * to git_branch_lookup() then the reference is returned that
+ * was given to this function.
+ *
+ * @param out where the pointer of branch name is stored;
+ * this is valid as long as the ref is not freed.
+ * @param ref the reference ideally pointing to a branch
+ *
+ * @return 0 on success; otherwise an error code (e.g., if the
+ *  ref is no local or remote branch).
+ */
+GIT_EXTERN(int) git_branch_name(const char **out,
+		git_reference *ref);
+
+/**
  * Return the reference supporting the remote tracking branch,
  * given a local branch reference.
  *
