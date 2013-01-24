@@ -28,6 +28,7 @@ void test_checkout_crlf__cleanup(void)
 	cl_git_sandbox_cleanup();
 }
 
+#ifdef GIT_WIN32
 static void set_config_entry_to(const char *entry_name, bool value)
 {
 	git_config *cfg;
@@ -42,6 +43,7 @@ static void set_core_autocrlf_to(bool value)
 {
 	set_config_entry_to("core.autocrlf", value);
 }
+#endif
 
 void test_checkout_crlf__detect_crlf_autocrlf_false(void)
 {
