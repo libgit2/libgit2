@@ -73,3 +73,20 @@ void test_config_stress__escape_subsection_names(void)
 	cl_assert(!strcmp("foo", str));
 	git_config_free(config);
 }
+
+void test_config_stress__trailing_backslash(void)
+{
+	git_config *config;
+	const char *str;
+	const char *path =  "C:\\iam\\some\\windows\\path\\";
+
+	cl_assert(git_path_exists("git-test-config"));
+	cl_git_pass(git_config_open_ondisk(&config, TEST_CONFIG));
+	cl_git_pass(git_config_set_string(config, "windows.path", path));
+	git_config_free(config);
+
+	cl_git_pass(git_config_open_ondisk(&config, TEST_CONFIG));
+	cl_git_pass(git_config_get_string(&str, config, "windows.path"));
+	cl_assert_equal_s(path, str);
+	git_config_free(config);
+}

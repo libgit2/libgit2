@@ -1319,8 +1319,15 @@ out:
 
 static int is_multiline_var(const char *str)
 {
+	int count = 0;
 	const char *end = str + strlen(str);
-	return (end > str) && (end[-1] == '\\');
+	while (end > str && end[-1] == '\\') {
+		count++;
+		end--;
+	}
+
+	/* An odd number means last backslash wasn't escaped, so it's multiline */
+	return (end > str) && (count & 1);
 }
 
 static int parse_multiline_variable(diskfile_backend *cfg, git_buf *value, int in_quotes)
