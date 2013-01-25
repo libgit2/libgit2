@@ -386,8 +386,7 @@ int git_index_set_caps(git_index *index, unsigned int caps)
 		index->no_symlinks = ((caps & GIT_INDEXCAP_NO_SYMLINKS) != 0);
 	}
 
-	if (old_ignore_case != index->ignore_case)
-	{
+	if (old_ignore_case != index->ignore_case) {
 		index_set_ignore_case(index, index->ignore_case);
 	}
 
@@ -1649,10 +1648,16 @@ static int read_tree_cb(const char *root, const git_tree_entry *tentry, void *da
 
 	entry->mode = tentry->attr;
 	entry->oid = tentry->oid;
+
+	if (path.size < GIT_IDXENTRY_NAMEMASK)
+		entry->flags = path.size & GIT_IDXENTRY_NAMEMASK;
+	else
+		entry->flags = GIT_IDXENTRY_NAMEMASK;
+
 	entry->path = git_buf_detach(&path);
 	git_buf_free(&path);
 
-	if (index_insert(index, entry, 0) < 0) {
+	if (git_vector_insert(&index->entries, entry) < 0) {
 		index_entry_free(entry);
 		return -1;
 	}
