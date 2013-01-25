@@ -41,6 +41,18 @@ static git_diff_delta *diff_delta__alloc(
 	return delta;
 }
 
+static int diff_notify(
+	const git_diff_list *diff,
+	const git_diff_delta *delta,
+	const char *matched_pathspec)
+{
+	if (!diff->opts.notify_cb)
+		return 0;
+
+	return diff->opts.notify_cb(
+		diff, delta, matched_pathspec, diff->opts.notify_payload);
+}
+
 static int diff_delta__from_one(
 	git_diff_list *diff,
 	git_delta_t   status,
@@ -48,6 +60,7 @@ static int diff_delta__from_one(
 {
 	git_diff_delta *delta;
 	const char *matched_pathspec;
+	int notify_res;
 
 	if (status == GIT_DELTA_IGNORED &&
 		(diff->opts.flags & GIT_DIFF_INCLUDE_IGNORED) == 0)
@@ -85,12 +98,16 @@ static int diff_delta__from_one(
 		!git_oid_iszero(&delta->new_file.oid))
 		delta->new_file.flags |= GIT_DIFF_FILE_VALID_OID;
 
-	if (git_vector_insert(&diff->deltas, delta) < 0) {
+	notify_res = diff_notify(diff, delta, matched_pathspec);
+
+	if (notify_res)
+		git__free(delta);
+	else if (git_vector_insert(&diff->deltas, delta) < 0) {
 		git__free(delta);
 		return -1;
 	}
 
-	return 0;
+	return notify_res < 0 ? GIT_EUSER : 0;
 }
 
 static int diff_delta__from_two(
@@ -100,9 +117,11 @@ static int diff_delta__from_two(
 	uint32_t old_mode,
 	const git_index_entry *new_entry,
 	uint32_t new_mode,
-	git_oid *new_oid)
+	git_oid *new_oid,
+	const char *matched_pathspec)
 {
 	git_diff_delta *delta;
+	int notify_res;
 
 	if (status == GIT_DELTA_UNMODIFIED &&
 		(diff->opts.flags & GIT_DIFF_INCLUDE_UNMODIFIED) == 0)
@@ -139,12 +158,16 @@ static int diff_delta__from_two(
 	if (new_oid || !git_oid_iszero(&new_entry->oid))
 		delta->new_file.flags |= GIT_DIFF_FILE_VALID_OID;
 
-	if (git_vector_insert(&diff->deltas, delta) < 0) {
+	notify_res = diff_notify(diff, delta, matched_pathspec);
+
+	if (notify_res)
+		git__free(delta);
+	else if (git_vector_insert(&diff->deltas, delta) < 0) {
 		git__free(delta);
 		return -1;
 	}
 
-	return 0;
+	return notify_res < 0 ? GIT_EUSER : 0;
 }
 
 static git_diff_delta *diff_delta__last_for_item(
@@ -528,7 +551,7 @@ static int maybe_modified(
 	}
 
 	return diff_delta__from_two(
-		diff, status, oitem, omode, nitem, nmode, use_noid);
+		diff, status, oitem, omode, nitem, nmode, use_noid, matched_pathspec);
 }
 
 static bool entry_is_prefixed(
@@ -749,10 +772,11 @@ int git_diff__from_iterators(
 		else {
 			assert(oitem && nitem && cmp == 0);
 
-			if (maybe_modified(old_iter, oitem, new_iter, nitem, diff) < 0 ||
-				git_iterator_advance(old_iter, &oitem) < 0 ||
-				git_iterator_advance(new_iter, &nitem) < 0)
-				goto fail;
+			if (maybe_modified(
+				old_iter, oitem, new_iter, nitem, diff) < 0 ||
+					git_iterator_advance(old_iter, &oitem) < 0 ||
+					git_iterator_advance(new_iter, &nitem) < 0)
+					goto fail;
 		}
 	}
 
