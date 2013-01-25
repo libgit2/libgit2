@@ -26,6 +26,7 @@
     'libgit2_system_zlib%': 'false',
     'libgit2_use_openssl%': 'true',
     'libgit2_profile%': 'flase',
+    'libgit2_stdcall%': 'true',
   },
 
   'targets': [
@@ -212,7 +213,6 @@
         'src/xdiff/xtypes.h',
         'src/xdiff/xutils.c',
         'src/xdiff/xutils.h',
-        'common.gypi',
       ],
 
       'msvs_settings': {
@@ -234,6 +234,16 @@
         [ 'libgit2_profile=="true"', {
           'cflags': [ '-pg' ],
           'ldflags': [ '-pg' ]
+        }],
+
+        [ 'libgit2_stdcall=="true"', {
+          'msvs_settings': {
+            'VCCLCompilerTool': {
+              'AdditionalOptions': [
+                '/Gz',
+              ],
+            }
+          }
         }],
 
         [ 'libgit2_system_zlib=="false"', {
@@ -311,16 +321,11 @@
             'src/win32/git2.rc',
           ]
         },{ # POSIX
-          'include_dirs': [ 'deps/http-parser' ],
-          'sources': [
-            'deps/http-parser/http_parser.c',
-            'deps/http-parser/http_parser.h',
-          ]
+          'dependencies': [ 'deps/http-parser/http_parser.gyp:http_parser' ]
         }],
 
         [ 'OS=="win" or OS=="amiga"', {
-          'include_dirs': [ 'deps/regex' ],
-          'sources': [ 'deps/regex/regex.c' ]
+          'dependencies': [ 'deps/regex/regex.gyp:gnu_regex' ]
         }],
 
         [ 'OS=="amiga"', {
