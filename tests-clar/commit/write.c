@@ -78,19 +78,19 @@ void test_commit_write__from_memory(void)
    /* Check attributes were set correctly */
    author1 = git_commit_author(commit);
    cl_assert(author1 != NULL);
-   cl_assert(strcmp(author1->name, committer_name) == 0);
-   cl_assert(strcmp(author1->email, committer_email) == 0);
+   cl_assert_equal_s(committer_name, author1->name);
+   cl_assert_equal_s(committer_email, author1->email);
    cl_assert(author1->when.time == 987654321);
    cl_assert(author1->when.offset == 90);
 
    committer1 = git_commit_committer(commit);
    cl_assert(committer1 != NULL);
-   cl_assert(strcmp(committer1->name, committer_name) == 0);
-   cl_assert(strcmp(committer1->email, committer_email) == 0);
+   cl_assert_equal_s(committer_name, committer1->name);
+   cl_assert_equal_s(committer_email, committer1->email);
    cl_assert(committer1->when.time == 123456789);
    cl_assert(committer1->when.offset == 60);
 
-   cl_assert(strcmp(git_commit_message(commit), commit_message) == 0);
+   cl_assert_equal_s(commit_message, git_commit_message(commit));
 }
 
 // create a root commit
@@ -142,5 +142,5 @@ void test_commit_write__root(void)
 	cl_git_pass(git_reference_lookup(&branch, g_repo, branch_name));
 	branch_oid = git_reference_target(branch);
 	cl_git_pass(git_oid_cmp(branch_oid, &commit_id));
-	cl_assert(!strcmp(git_commit_message(commit), root_commit_message));
+	cl_assert_equal_s(root_commit_message, git_commit_message(commit));
 }
