@@ -265,14 +265,6 @@
             [ 'OS=="linux" or OS=="freebsd" or OS=="openbsd" or OS=="solaris"', {
               'ldflags': [ '-pthread', ],
               'conditions': [
-                [ 'target_arch=="ia32"', {
-                  'cflags': [ '-m32' ],
-                  'ldflags': [ '-m32' ],
-                }],
-                [ 'target_arch=="x64"', {
-                  'cflags': [ '-m64' ],
-                  'ldflags': [ '-m64' ],
-                }],
                 [ 'OS=="solaris"', {
                   'cflags': [ '-pthreads' ],
                   'ldflags': [ '-pthreads' ],
