@@ -221,6 +221,27 @@ int git_branch_lookup(
 	return retrieve_branch_reference(ref_out, repo, branch_name, branch_type == GIT_BRANCH_REMOTE);
 }
 
+int git_branch_name(const char **out, git_reference *ref)
+{
+	const char *branch_name;
+
+	assert(out && ref);
+
+	branch_name = ref->name;
+
+	if (git_reference_is_branch(ref)) {
+		branch_name += strlen(GIT_REFS_HEADS_DIR);
+	} else if (git_reference_is_remote(ref)) {
+		branch_name += strlen(GIT_REFS_REMOTES_DIR);
+	} else {
+		giterr_set(GITERR_INVALID,
+				"Reference '%s' is neither a local nor a remote branch.", ref->name);
+		return -1;
+	}
+	*out = branch_name;
+	return 0;
+}
+
 static int retrieve_tracking_configuration(
 	const char **out,
 	git_repository *repo,
