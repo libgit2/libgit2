@@ -83,6 +83,7 @@ static void cache_free(git_pack_cache *cache)
 		}
 
 		git_offmap_free(cache->entries);
+		git_mutex_free(&cache->lock);
 	}
 }
 
