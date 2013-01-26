@@ -258,9 +258,9 @@ void test_network_remotes__add(void)
 
 	cl_git_pass(git_remote_load(&_remote, _repo, "addtest"));
 	_refspec = git_remote_fetchspec(_remote);
-	cl_assert(!strcmp(git_refspec_src(_refspec), "refs/heads/*"));
+	cl_assert_equal_s("refs/heads/*", git_refspec_src(_refspec));
 	cl_assert(git_refspec_force(_refspec) == 1);
-	cl_assert(!strcmp(git_refspec_dst(_refspec), "refs/remotes/addtest/*"));
+	cl_assert_equal_s("refs/remotes/addtest/*", git_refspec_dst(_refspec));
 	cl_assert_equal_s(git_remote_url(_remote), "http://github.com/libgit2/libgit2");
 }
 
@@ -310,12 +310,12 @@ void test_network_remotes__tagopt(void)
 	git_remote_set_autotag(_remote, GIT_REMOTE_DOWNLOAD_TAGS_ALL);
 	cl_git_pass(git_remote_save(_remote));
 	cl_git_pass(git_config_get_string(&opt, cfg, "remote.test.tagopt"));
-	cl_assert(!strcmp(opt, "--tags"));
+	cl_assert_equal_s("--tags", opt);
 
 	git_remote_set_autotag(_remote, GIT_REMOTE_DOWNLOAD_TAGS_NONE);
 	cl_git_pass(git_remote_save(_remote));
 	cl_git_pass(git_config_get_string(&opt, cfg, "remote.test.tagopt"));
-	cl_assert(!strcmp(opt, "--no-tags"));
+	cl_assert_equal_s("--no-tags", opt);
 
 	git_remote_set_autotag(_remote, GIT_REMOTE_DOWNLOAD_TAGS_AUTO);
 	cl_git_pass(git_remote_save(_remote));

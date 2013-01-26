@@ -35,7 +35,7 @@ void test_refs_branches_delete__can_not_delete_a_branch_pointed_at_by_HEAD(void)
 
 	/* Ensure HEAD targets the local master branch */
 	cl_git_pass(git_reference_lookup(&head, repo, GIT_HEAD_FILE));
-	cl_assert(strcmp("refs/heads/master", git_reference_symbolic_target(head)) == 0);
+	cl_assert_equal_s("refs/heads/master", git_reference_symbolic_target(head));
 	git_reference_free(head);
 
 	cl_git_pass(git_branch_lookup(&branch, repo, "master", GIT_BRANCH_LOCAL));

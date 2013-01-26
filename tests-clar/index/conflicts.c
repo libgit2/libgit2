@@ -104,7 +104,7 @@ void test_index_conflicts__get(void)
 	cl_git_pass(git_index_conflict_get(&conflict_entry[0], &conflict_entry[1],
 		&conflict_entry[2], repo_index, "conflicts-one.txt"));
 
-	cl_assert(strcmp(conflict_entry[0]->path, "conflicts-one.txt") == 0);
+	cl_assert_equal_s("conflicts-one.txt", conflict_entry[0]->path);
 
 	git_oid_fromstr(&oid, CONFLICTS_ONE_ANCESTOR_OID);
 	cl_assert(git_oid_cmp(&conflict_entry[0]->oid, &oid) == 0);
@@ -118,7 +118,7 @@ void test_index_conflicts__get(void)
 	cl_git_pass(git_index_conflict_get(&conflict_entry[0], &conflict_entry[1],
 		&conflict_entry[2], repo_index, "conflicts-two.txt"));
 
-	cl_assert(strcmp(conflict_entry[0]->path, "conflicts-two.txt") == 0);
+	cl_assert_equal_s("conflicts-two.txt", conflict_entry[0]->path);
 
 	git_oid_fromstr(&oid, CONFLICTS_TWO_ANCESTOR_OID);
 	cl_assert(git_oid_cmp(&conflict_entry[0]->oid, &oid) == 0);

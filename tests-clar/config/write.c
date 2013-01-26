@@ -116,7 +116,7 @@ void test_config_write__write_subsection(void)
 
 	cl_git_pass(git_config_open_ondisk(&cfg, "config9"));
 	cl_git_pass(git_config_get_string(&str, cfg, "my.own.var"));
-	cl_git_pass(strcmp(str, "works"));
+	cl_assert_equal_s("works", str);
 	git_config_free(cfg);
 }
 

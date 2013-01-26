@@ -45,20 +45,20 @@ void test_notes_notesref__config_corenotesref(void)
 	cl_git_pass(git_note_create(&note_oid, _repo, _sig, _sig, NULL, &oid, "test123test\n", 0));
 
 	cl_git_pass(git_note_read(&_note, _repo, NULL, &oid));
-	cl_assert(!strcmp(git_note_message(_note), "test123test\n"));
+	cl_assert_equal_s("test123test\n", git_note_message(_note));
 	cl_assert(!git_oid_cmp(git_note_oid(_note), &note_oid));
 
 	git_note_free(_note);
 
 	cl_git_pass(git_note_read(&_note, _repo, "refs/notes/mydefaultnotesref", &oid));
-	cl_assert(!strcmp(git_note_message(_note), "test123test\n"));
+	cl_assert_equal_s("test123test\n", git_note_message(_note));
 	cl_assert(!git_oid_cmp(git_note_oid(_note), &note_oid));
 
 	cl_git_pass(git_note_default_ref(&default_ref, _repo));
-	cl_assert(!strcmp(default_ref, "refs/notes/mydefaultnotesref"));
+	cl_assert_equal_s("refs/notes/mydefaultnotesref", default_ref);
 
 	cl_git_pass(git_config_delete_entry(_cfg, "core.notesRef"));
 
 	cl_git_pass(git_note_default_ref(&default_ref, _repo));
-	cl_assert(!strcmp(default_ref, GIT_NOTES_DEFAULT_REF));
+	cl_assert_equal_s(GIT_NOTES_DEFAULT_REF, default_ref);
 }

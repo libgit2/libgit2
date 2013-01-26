@@ -159,8 +159,8 @@ void test_commit_parse__signature(void)
       size_t len = strlen(passcase->string);
       struct git_signature person = {0};
       cl_git_pass(git_signature__parse(&person, &str, str + len, passcase->header, '\n'));
-      cl_assert(strcmp(passcase->name, person.name) == 0);
-      cl_assert(strcmp(passcase->email, person.email) == 0);
+      cl_assert_equal_s(passcase->name, person.name);
+      cl_assert_equal_s(passcase->email, person.email);
       cl_assert(passcase->time == person.when.time);
       cl_assert(passcase->offset == person.when.offset);
       git__free(person.name); git__free(person.email);
@@ -347,10 +347,10 @@ void test_commit_parse__details0(void) {
 		commit_time = git_commit_time(commit);
 		parents = git_commit_parentcount(commit);
 
-		cl_assert(strcmp(author->name, "Scott Chacon") == 0);
-		cl_assert(strcmp(author->email, "schacon@gmail.com") == 0);
-		cl_assert(strcmp(committer->name, "Scott Chacon") == 0);
-		cl_assert(strcmp(committer->email, "schacon@gmail.com") == 0);
+		cl_assert_equal_s("Scott Chacon", author->name);
+		cl_assert_equal_s("schacon@gmail.com", author->email);
+		cl_assert_equal_s("Scott Chacon", committer->name);
+		cl_assert_equal_s("schacon@gmail.com", committer->email);
 		cl_assert(message != NULL);
 		cl_assert(strchr(message, '\n') != NULL);
 		cl_assert(commit_time > 0);
