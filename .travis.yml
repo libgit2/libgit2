@@ -33,13 +33,13 @@ script:
 
 # Run Tests
 after_success:
- - valgrind --leak-check=full --show-reachable=yes --suppressions=../libgit2_clar.supp ./libgit2_clar -ionline
+ - valgrind --num-callers=30 --leak-check=full --show-reachable=yes --suppressions=../libgit2_clar.supp ./libgit2_clar -ionline
 
 # Only watch the development branch
 branches:
  only:
    - development
-   
+
 # Notify development list when needed
 notifications:
  irc:
