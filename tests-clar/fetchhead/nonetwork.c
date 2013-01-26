@@ -124,12 +124,12 @@ static int fetchhead_ref_cb(const char *name, const char *url,
 	cl_assert(expected->is_merge == is_merge);
 
 	if (expected->ref_name)
-		cl_assert(strcmp(expected->ref_name, name) == 0);
+		cl_assert_equal_s(expected->ref_name, name);
 	else
 		cl_assert(name == NULL);
 
 	if (expected->remote_url)
-		cl_assert(strcmp(expected->remote_url, url) == 0);
+		cl_assert_equal_s(expected->remote_url, url);
 	else
 		cl_assert(url == NULL);
 
@@ -199,8 +199,8 @@ static int read_type_missing(const char *ref_name, const char *remote_url,
 
 	git_oid_fromstr(&expected, "49322bb17d3acc9146f98c97d078513228bbf3c0");
 
-	cl_assert(strcmp(ref_name, "name") == 0);
-	cl_assert(strcmp(remote_url, "remote_url") == 0);
+	cl_assert_equal_s("name", ref_name);
+	cl_assert_equal_s("remote_url", remote_url);
 	cl_assert(git_oid_cmp(&expected, oid) == 0);
 	cl_assert(is_merge == 0);
 
@@ -227,7 +227,7 @@ static int read_name_missing(const char *ref_name, const char *remote_url,
 	git_oid_fromstr(&expected, "49322bb17d3acc9146f98c97d078513228bbf3c0");
 
 	cl_assert(ref_name == NULL);
-	cl_assert(strcmp(remote_url, "remote_url") == 0);
+	cl_assert_equal_s("remote_url", remote_url);
 	cl_assert(git_oid_cmp(&expected, oid) == 0);
 	cl_assert(is_merge == 0);
 
