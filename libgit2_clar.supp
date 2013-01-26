@@ -24,7 +24,6 @@
 	...
 	obj:*libssl.so*
 	...
-	fun:ssl_setup
 }
 
 {
@@ -33,7 +32,6 @@
 	...
 	obj:*libcrypto.so*
 	...
-	fun:ssl_setup
 }
 
 {
