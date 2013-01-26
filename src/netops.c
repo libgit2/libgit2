@@ -487,6 +487,7 @@ int gitno_connect(gitno_socket *s_out, const char *host, const char *port, int f
 	/* Oops, we couldn't connect to any address */
 	if (s == INVALID_SOCKET && p == NULL) {
 		giterr_set(GITERR_OS, "Failed to connect to %s", host);
+		p_freeaddrinfo(info);
 		return -1;
 	}
 

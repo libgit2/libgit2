@@ -78,6 +78,7 @@ void test_network_remotes__error_when_no_push_available(void)
 	cl_git_fail_with(git_push_finish(p), GIT_ERROR);
 
 	git_push_free(p);
+	t->free(t);
 	git_remote_free(r);
 }
 
