@@ -25,7 +25,9 @@
     'libgit2_thread_safe%': 'false',
     'libgit2_system_zlib%': 'false',
     'libgit2_use_openssl%': 'true',
-    'libgit2_profile%': 'flase',
+    'libgit2_profile%': 'false',
+    'libgit2_mingw%': 'false',
+    'libgit2_cygwin%': 'false',
     'libgit2_stdcall%': 'true',
   },
 
@@ -213,6 +215,54 @@
         'src/xdiff/xtypes.h',
         'src/xdiff/xutils.c',
         'src/xdiff/xutils.h',
+        # Add headers in IDE.
+        'include/git2.h',
+        'include/git2/attr.h',
+        'include/git2/blob.h',
+        'include/git2/branch.h',
+        'include/git2/checkout.h',
+        'include/git2/clone.h',
+        'include/git2/commit.h',
+        'include/git2/common.h',
+        'include/git2/config.h',
+        'include/git2/cred_helpers.h',
+        'include/git2/diff.h',
+        'include/git2/errors.h',
+        'include/git2/graph.h',
+        'include/git2/ignore.h',
+        'include/git2/indexer.h',
+        'include/git2/index.h',
+        'include/git2/inttypes.h',
+        'include/git2/merge.h',
+        'include/git2/message.h',
+        'include/git2/net.h',
+        'include/git2/notes.h',
+        'include/git2/object.h',
+        'include/git2/odb_backend.h',
+        'include/git2/odb.h',
+        'include/git2/oid.h',
+        'include/git2/pack.h',
+        'include/git2/push.h',
+        'include/git2/reflog.h',
+        'include/git2/refs.h',
+        'include/git2/refspec.h',
+        'include/git2/remote.h',
+        'include/git2/repository.h',
+        'include/git2/reset.h',
+        'include/git2/revparse.h',
+        'include/git2/revwalk.h',
+        'include/git2/signature.h',
+        'include/git2/stash.h',
+        'include/git2/status.h',
+        'include/git2/stdint.h',
+        'include/git2/strarray.h',
+        'include/git2/submodule.h',
+        'include/git2/tag.h',
+        'include/git2/threads.h',
+        'include/git2/transport.h',
+        'include/git2/tree.h',
+        'include/git2/types.h',
+        'include/git2/version.h',
       ],
 
       'msvs_settings': {
@@ -224,18 +274,50 @@
       },
 
       'conditions': [
+        [ 'OS=="win" and libgit2_mingw=="false"', {
+          'defines': [ 'GIT_WINHTTP' ],
+        },{ # POSIX
+          'dependencies': [ 'deps/http-parser/http_parser.gyp:http_parser' ]
+        }],
+
+        # Specify sha1 implementation.
+        [ 'OS=="win" and libgit2_mingw=="false"', {
+          'defines': [ 'WIN32_SHA1' ],
+          'sources': [ 'src/hash/hash_win32.c' ]
+        }],
+        [ '(OS!="win" or libgit2_mingw=="true") and libgit2_use_openssl=="true"', {
+          'defines': [ 'OPENSSL_SHA1' ]
+        }],
+        [ '(OS!="win" or libgit2_mingw=="true") and libgit2_use_openssl=="false"', {
+          'sources': [ 'src/hash/hash_generic.c' ]
+        }],
+
+        # Include POSIX regex when it is required.
+        [ 'OS=="win" or OS=="amiga"', {
+          'dependencies': [ 'deps/regex/regex.gyp:gnu_regex' ]
+        }],
+
+        # Optional external dependency: zlib.
+        [ 'libgit2_system_zlib=="false"', {
+          'defines': [
+	          'NO_VIZ',
+            'STDC',
+            'NO_GZIP',
+          ],
+          'dependencies': [ 'deps/zlib/zlib.gyp:zlib' ],
+        }],
+
+        # Platform specific compilation flags.
         [ 'libgit2_build_type=="shared_library"', {
           'cflags': [
             '-fvisibility=hidden',
             '-fPIC',
           ]
         }],
-
         [ 'libgit2_profile=="true"', {
           'cflags': [ '-pg' ],
           'ldflags': [ '-pg' ]
         }],
-
         [ 'libgit2_stdcall=="true"', {
           'msvs_settings': {
             'VCCLCompilerTool': {
@@ -246,19 +328,20 @@
           }
         }],
 
-        [ 'libgit2_system_zlib=="false"', {
-          'defines': [
-	          'NO_VIZ',
-            'STDC',
-            'NO_GZIP',
-          ],
-          'dependencies': [ 'deps/zlib/zlib.gyp:zlib' ],
+        [ 'libgit2_use_openssl=="true"', {
+          'defines': [ 'GIT_SSL' ],
+          'link_settings': {
+            'ldflags': [
+              '<!@(pkg-config --libs-only-L --libs-only-other openssl)',
+            ],
+            'libraries': [
+              '<!@(pkg-config --libs-only-l openssl)',
+            ]
+          }
         }],
 
         [ 'libgit2_thread_safe=="true"', {
-          'defines': [
-            'GIT_THREADS'
-          ],
+          'defines': [ 'GIT_THREADS' ],
           'conditions': [
             [ 'OS=="win"', {
             }],
@@ -276,19 +359,9 @@
           ]
         }],
 
-        [ 'OS=="solaris"', {
-          'link_settings': {
-            'libraries': [
-              '-lsocket',
-              '-lnsl',
-            ]
-          }
-        }],
-
-        [ 'OS=="win"', {
+        # On Windows use specific platform sources.
+        [ 'OS=="win" and libgit2_cygwin=="false"', {
           'defines': [
-            'GIT_WINHTTP',
-            'WIN32_SHA1',
             'WIN32',
             '_DEBUG',
             '_WIN32_WINNT=0x0501',
@@ -309,17 +382,9 @@
             'src/win32/pthread.h',
             'src/win32/utf-conv.c',
             'src/win32/utf-conv.h',
-            'src/hash/hash_win32.c',
             'src/win32/git2.rc',
           ]
-        },{ # POSIX
-          'dependencies': [ 'deps/http-parser/http_parser.gyp:http_parser' ]
         }],
-
-        [ 'OS=="win" or OS=="amiga"', {
-          'dependencies': [ 'deps/regex/regex.gyp:gnu_regex' ]
-        }],
-
         [ 'OS=="amiga"', {
           'defines': [
             'NO_ADDRINFO',
@@ -327,25 +392,19 @@
           ],
           'sources': [
             'src/amiga/map.c',
-            'src/hash/hash_generic.c',
           ]
         }],
-
-        [ 'OS!="win" and OS!="amiga"', { # UNIX
+        [ '(OS!="win" or libgit2_cygwin=="true") and OS!="amiga"', { # UNIX
           'sources': [ 'src/unix/map.c' ],
+        }],
 
-          'defines': [
-            'OPENSSL_SHA1',
-            'GIT_SSL',
-          ],
+        [ 'OS=="solaris"', {
           'link_settings': {
-            'ldflags': [
-              '<!@(pkg-config --libs-only-L --libs-only-other openssl)',
-            ],
             'libraries': [
-              '<!@(pkg-config --libs-only-l openssl)',
+              '-lsocket',
+              '-lnsl',
             ]
-          },
+          }
         }],
       ]
     },
