@@ -760,12 +760,11 @@ git_off_t get_delta_base(
 	} else if (type == GIT_OBJ_REF_DELTA) {
 		/* If we have the cooperative cache, search in it first */
 		if (p->has_cache) {
-			int pos;
+			size_t pos;
 			struct git_pack_entry key;
 
 			git_oid_fromraw(&key.sha1, base_info);
-			pos = git_vector_bsearch(&p->cache, &key);
-			if (pos >= 0) {
+			if (!git_vector_bsearch(&pos, &p->cache, &key)) {
 				*curpos += 20;
 				return ((struct git_pack_entry *)git_vector_get(&p->cache, pos))->offset;
 			}

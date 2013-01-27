@@ -266,14 +266,13 @@ static void add_to_workdir(const char *filename, const char *content)
 
 static void assert_proper_normalization(git_index *index, const char *filename, const char *expected_sha)
 {
-	int index_pos;
+	size_t index_pos;
 	const git_index_entry *entry;
 
 	add_to_workdir(filename, CONTENT);
 	cl_git_pass(git_index_add_bypath(index, filename));
 
-	index_pos = git_index_find(index, filename);
-	cl_assert(index_pos >= 0);
+	cl_assert(!git_index_find(&index_pos, index, filename));
 
 	entry = git_index_get_byindex(index, index_pos);
 	cl_assert_equal_i(0, git_oid_streq(&entry->oid, expected_sha));

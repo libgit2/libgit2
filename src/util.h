@@ -13,6 +13,9 @@
 #ifndef min
 # define min(a,b) ((a) < (b) ? (a) : (b))
 #endif
+#ifndef max
+# define max(a,b) ((a) > (b) ? (a) : (b))
+#endif
 
 /*
  * Custom memory allocation wrappers
@@ -132,7 +135,7 @@ extern void git__tsort_r(
 /**
  * @param position If non-NULL, this will be set to the position where the
  * 		element is or would be inserted if not found.
- * @return pos (>=0) if found or -1 if not found
+ * @return 0 if found; GIT_ENOTFOUND if not found
  */
 extern int git__bsearch(
 	void **array,

@@ -191,9 +191,9 @@ int git_attr_file__lookup_one(
 	name.name_hash = git_attr_file__name_hash(attr);
 
 	git_attr_file__foreach_matching_rule(file, path, i, rule) {
-		int pos = git_vector_bsearch(&rule->assigns, &name);
+		size_t pos;
 
-		if (pos >= 0) {
+		if (!git_vector_bsearch(&pos, &rule->assigns, &name)) {
 			*value = ((git_attr_assignment *)
 					  git_vector_get(&rule->assigns, pos))->value;
 			break;
@@ -240,14 +240,15 @@ bool git_attr_rule__match(
 git_attr_assignment *git_attr_rule__lookup_assignment(
 	git_attr_rule *rule, const char *name)
 {
-	int pos;
+	size_t pos;
 	git_attr_name key;
 	key.name = name;
 	key.name_hash = git_attr_file__name_hash(name);
 
-	pos = git_vector_bsearch(&rule->assigns, &key);
+	if (git_vector_bsearch(&pos, &rule->assigns, &key))
+		return NULL;
 
-	return (pos >= 0) ? git_vector_get(&rule->assigns, pos) : NULL;
+	return git_vector_get(&rule->assigns, pos);
 }
 
 int git_attr_path__init(

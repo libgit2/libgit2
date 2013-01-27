@@ -137,7 +137,8 @@ int git_commit__parse_buffer(git_commit *commit, const void *data, size_t len)
 	const char *buffer_end = (const char *)data + len;
 	git_oid parent_id;
 
-	git_vector_init(&commit->parent_ids, 4, NULL);
+	if (git_vector_init(&commit->parent_ids, 4, NULL) < 0)
+		return -1;
 
 	if (git_oid__parse(&commit->tree_id, &buffer, buffer_end, "tree ") < 0)
 		goto bad_buffer;

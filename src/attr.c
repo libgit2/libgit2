@@ -61,8 +61,9 @@ int git_attr_get(
 	git_vector_foreach(&files, i, file) {
 
 		git_attr_file__foreach_matching_rule(file, &path, j, rule) {
-			int pos = git_vector_bsearch(&rule->assigns, &attr);
-			if (pos >= 0) {
+			size_t pos;
+
+			if (!git_vector_bsearch(&pos, &rule->assigns, &attr)) {
 				*value = ((git_attr_assignment *)git_vector_get(
 							  &rule->assigns, pos))->value;
 				goto cleanup;
@@ -116,7 +117,7 @@ int git_attr_get_many(
 		git_attr_file__foreach_matching_rule(file, &path, j, rule) {
 
 			for (k = 0; k < num_attr; k++) {
-				int pos;
+				size_t pos;
 
 				if (info[k].found != NULL) /* already found assignment */
 					continue;
@@ -126,8 +127,7 @@ int git_attr_get_many(
 					info[k].name.name_hash = git_attr_file__name_hash(names[k]);
 				}
 
-				pos = git_vector_bsearch(&rule->assigns, &info[k].name);
-				if (pos >= 0) {
+				if (!git_vector_bsearch(&pos, &rule->assigns, &info[k].name)) {
 					info[k].found = (git_attr_assignment *)
 						git_vector_get(&rule->assigns, pos);
 					values[k] = info[k].found->value;
@@ -294,14 +294,15 @@ static int load_attr_blob_from_index(
 	const char *relfile)
 {
 	int error;
+	size_t pos;
 	git_index *index;
 	const git_index_entry *entry;
 
 	if ((error = git_repository_index__weakptr(&index, repo)) < 0 ||
-		(error = git_index_find(index, relfile)) < 0)
+		(error = git_index_find(&pos, index, relfile)) < 0)
 		return error;
 
-	entry = git_index_get_byindex(index, error);
+	entry = git_index_get_byindex(index, pos);
 
 	if (old_oid && git_oid_cmp(old_oid, &entry->oid) == 0)
 		return GIT_ENOTFOUND;

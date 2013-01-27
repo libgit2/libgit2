@@ -30,29 +30,22 @@ void git_vector_swap(git_vector *a, git_vector *b);
 void git_vector_sort(git_vector *v);
 
 /** Linear search for matching entry using internal comparison function */
-int git_vector_search(const git_vector *v, const void *entry);
+int git_vector_search(size_t *at_pos, const git_vector *v, const void *entry);
 
 /** Linear search for matching entry using explicit comparison function */
-int git_vector_search2(const git_vector *v, git_vector_cmp cmp, const void *key);
+int git_vector_search2(size_t *at_pos, const git_vector *v, git_vector_cmp cmp, const void *key);
 
 /**
  * Binary search for matching entry using explicit comparison function that
  * returns position where item would go if not found.
  */
-int git_vector_bsearch3(
+int git_vector_bsearch2(
 	size_t *at_pos, git_vector *v, git_vector_cmp cmp, const void *key);
 
 /** Binary search for matching entry using internal comparison function */
-GIT_INLINE(int) git_vector_bsearch(git_vector *v, const void *key)
+GIT_INLINE(int) git_vector_bsearch(size_t *at_pos, git_vector *v, const void *key)
 {
-	return git_vector_bsearch3(NULL, v, v->_cmp, key);
-}
-
-/** Binary search for matching entry using explicit comparison function */
-GIT_INLINE(int) git_vector_bsearch2(
-	git_vector *v, git_vector_cmp cmp, const void *key)
-{
-	return git_vector_bsearch3(NULL, v, cmp, key);
+	return git_vector_bsearch2(at_pos, v, v->_cmp, key);
 }
 
 GIT_INLINE(void *) git_vector_get(const git_vector *v, size_t position)

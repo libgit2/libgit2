@@ -403,11 +403,12 @@ GIT_EXTERN(int) git_index_remove_bypath(git_index *index, const char *path);
  * Find the first index of any entries which point to given
  * path in the Git index.
  *
+ * @param at_pos the address to which the position of the index entry is written (optional)
  * @param index an existing index object
  * @param path path to search
- * @return an index >= 0 if found, -1 otherwise
+ * @return 0 if found, < 0 otherwise (GIT_ENOTFOUND)
  */
-GIT_EXTERN(int) git_index_find(git_index *index, const char *path);
+GIT_EXTERN(int) git_index_find(size_t *at_pos, git_index *index, const char *path);
 
 /**@}*/
 
@@ -495,11 +496,12 @@ GIT_EXTERN(unsigned int) git_index_reuc_entrycount(git_index *index);
  * Finds the resolve undo entry that points to the given path in the Git
  * index.
  *
+ * @param at_pos the address to which the position of the reuc entry is written (optional)
  * @param index an existing index object
  * @param path path to search
- * @return an index >= 0 if found, -1 otherwise
+ * @return 0 if found, < 0 otherwise (GIT_ENOTFOUND)
  */
-GIT_EXTERN(int) git_index_reuc_find(git_index *index, const char *path);
+GIT_EXTERN(int) git_index_reuc_find(size_t *at_pos, git_index *index, const char *path);
 
 /**
  * Get a resolve undo entry from the index.
