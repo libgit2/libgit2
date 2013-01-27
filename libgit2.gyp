@@ -18,7 +18,6 @@
 # * [POSIX] detect openssl (always assume its existence now)
 # * [ALL] detect zlib (always assume it doesn't exist now)
 # * [ALL] install
-# * [ALL] build libgit2_clar
 {
   'variables': {
     'libgit2_build_type%': 'static_library',
@@ -265,14 +264,6 @@
         'include/git2/version.h',
       ],
 
-      'msvs_settings': {
-        'VCLinkerTool': {
-          'AdditionalDependencies': [
-            'ws2_32.lib',
-          ],
-        }
-      },
-
       'conditions': [
         [ 'OS=="win" and libgit2_mingw=="false"', {
           'defines': [ 'GIT_WINHTTP' ],
@@ -328,37 +319,6 @@
           }
         }],
 
-        [ 'libgit2_use_openssl=="true"', {
-          'defines': [ 'GIT_SSL' ],
-          'link_settings': {
-            'ldflags': [
-              '<!@(pkg-config --libs-only-L --libs-only-other openssl)',
-            ],
-            'libraries': [
-              '<!@(pkg-config --libs-only-l openssl)',
-            ]
-          }
-        }],
-
-        [ 'libgit2_thread_safe=="true"', {
-          'defines': [ 'GIT_THREADS' ],
-          'conditions': [
-            [ 'OS=="win"', {
-            }],
-            [ 'OS=="linux" or OS=="freebsd" or OS=="openbsd" or OS=="solaris"', {
-              'ldflags': [ '-pthread', ],
-              'conditions': [
-                [ 'OS=="solaris"', {
-                  'cflags': [ '-pthreads' ],
-                  'ldflags': [ '-pthreads' ],
-                  'cflags!': [ '-pthread' ],
-                  'ldflags!': [ '-pthread' ],
-                }],
-              ],
-            }],
-          ]
-        }],
-
         # On Windows use specific platform sources.
         [ 'OS=="win" and libgit2_cygwin=="false"', {
           'defines': [
@@ -390,21 +350,10 @@
             'NO_ADDRINFO',
             'NO_READDIR_R',
           ],
-          'sources': [
-            'src/amiga/map.c',
-          ]
+          'sources': [ 'src/amiga/map.c' ]
         }],
         [ '(OS!="win" or libgit2_cygwin=="true") and OS!="amiga"', { # UNIX
-          'sources': [ 'src/unix/map.c' ],
-        }],
-
-        [ 'OS=="solaris"', {
-          'link_settings': {
-            'libraries': [
-              '-lsocket',
-              '-lnsl',
-            ]
-          }
+          'sources': [ 'src/unix/map.c' ]
         }],
       ]
     },
@@ -417,22 +366,17 @@
         'tests-clar',
         'src',
       ],
-      'msvs_settings': {
-        'VCLinkerTool': {
-          'AdditionalDependencies': [
-            'ws2_32.lib',
-          ],
-        }
-      },
       'conditions': [
-        [ 'OS=="solaris"', {
-          'link_settings': {
-            'libraries': [
-              '-lsocket',
-              '-lnsl',
-            ]
-          }
+        [ 'OS=="win" and libgit2_mingw=="false"', {
+          'defines': [ 'WIN32_SHA1' ]
         }],
+        [ '(OS!="win" or libgit2_mingw=="true") and libgit2_use_openssl=="true"', {
+          'defines': [ 'OPENSSL_SHA1' ]
+        }],
+      ],
+      'defines': [
+        # TODO should use script to generate pwd instead of using shell command.
+        'CLAR_FIXTURE_PATH="<!@(pwd)/tests-clar/resources/"'
       ],
       'sources': [
         'tests-clar/clar_libgit2.c',
@@ -684,5 +628,54 @@
       'sources': [ 'examples/showindex.c' ],
       'dependencies': [ 'libgit2' ]
     },
-  ] # end targets
+  ], # end targets
+
+  'target_defaults': {
+    'target_conditions': [
+      ['_target_name=="libgit2" or _target_name=="libgit2_clar"', {
+        'msvs_settings': {
+          'VCLinkerTool': {
+            'AdditionalDependencies': [
+              'ws2_32.lib',
+            ],
+          }
+        },
+
+        'conditions': [
+          [ 'libgit2_use_openssl=="true"', {
+            'defines': [ 'GIT_SSL' ],
+            'ldflags': [ '<!@(pkg-config --libs openssl)' ],
+          }],
+
+          [ 'libgit2_thread_safe=="true"', {
+            'defines': [ 'GIT_THREADS' ],
+            'conditions': [
+              [ 'OS=="win"', {
+              }],
+              [ 'OS=="linux" or OS=="freebsd" or OS=="openbsd" or OS=="solaris"', {
+                'ldflags': [ '-pthread', ],
+                'conditions': [
+                  [ 'OS=="solaris"', {
+                    'cflags': [ '-pthreads' ],
+                    'ldflags': [ '-pthreads' ],
+                    'cflags!': [ '-pthread' ],
+                    'ldflags!': [ '-pthread' ],
+                  }],
+                ],
+              }],
+            ]
+          }],
+
+          [ 'OS=="solaris"', {
+            'link_settings': {
+              'libraries': [
+                '-lsocket',
+                '-lnsl',
+              ]
+            }
+          }],
+        ]
+      }]
+    ]
+  }
 }
