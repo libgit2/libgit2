@@ -250,8 +250,10 @@ static int update_head_to_remote(git_repository *repo, git_remote *remote)
 
 		goto cleanup;
 	} else {
-		/* TODO: What should we do if nothing has been found?
-		 */
+		retcode = git_repository_set_head_detached(
+			repo,
+			&head_info.remote_head_oid);
+		goto cleanup;
 	}
 
 cleanup:
