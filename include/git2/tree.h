@@ -259,6 +259,14 @@ GIT_EXTERN(int) git_treebuilder_create(
 GIT_EXTERN(void) git_treebuilder_clear(git_treebuilder *bld);
 
 /**
+ * Get the number of entries listed in a treebuilder
+ *
+ * @param tree a previously loaded treebuilder.
+ * @return the number of entries in the treebuilder
+ */
+GIT_EXTERN(unsigned int) git_treebuilder_entrycount(git_treebuilder *bld);
+
+/**
  * Free a tree builder
  *
  * This will clear all the entries and free to builder.
