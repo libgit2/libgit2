@@ -244,6 +244,11 @@ GIT_INLINE(bool) git__isdigit(int c)
     return (c >= '0' && c <= '9');
 }
 
+GIT_INLINE(bool) git__isalnum(int c)
+{
+	return git__isalpha(c) || git__isdigit(c);
+}
+
 GIT_INLINE(bool) git__isspace(int c)
 {
     return (c == ' ' || c == '\t' || c == '\n' || c == '\f' || c == '\r' || c == '\v' || c == 0x85 /* Unicode CR+LF */);

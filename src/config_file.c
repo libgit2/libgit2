@@ -105,32 +105,78 @@ static void cvar_free(cvar_t *var)
 	git__free(var);
 }
 
-/* Take something the user gave us and make it nice for our hash function */
-static int normalize_name(const char *in, char **out)
+ /*
+  * Ported from
+  * https://github.com/git/git/blob/bf2b1cd2153c4f1c63e4b7f49ef5cdd7c98fd537/config.c#L256-259
+  */
+GIT_INLINE(int) iskeychar(int c)
 {
-	char *name, *fdot, *ldot;
+	return isalnum(c) || c == '-';
+}
 
-	assert(in && out);
+ /* Take something the user gave us and make it nice for our hash function
+  *
+  * Ported from
+  * https://github.com/git/git/blob/bf2b1cd2153c4f1c63e4b7f49ef5cdd7c98fd537/config.c#L1230-1286
+  */
+static int normalize_name(char **out, const char *key)
+{
+	int i, dot, baselen;
+	const char *last_dot = strrchr(key, '.');
+	char *store_key = NULL;
 
-	name = git__strdup(in);
-	GITERR_CHECK_ALLOC(name);
+	/*
+	 * Since "key" actually contains the section name and the real
+	 * key name separated by a dot, we have to know where the dot is.
+	 */
 
-	fdot = strchr(name, '.');
-	ldot = strrchr(name, '.');
-
-	if (fdot == NULL || ldot == NULL) {
-		git__free(name);
+	if (last_dot == NULL || last_dot == key) {
 		giterr_set(GITERR_CONFIG,
-			"Invalid variable name: '%s'", in);
-		return -1;
+			"Key '%s' does not contain a section.", key);
+		goto error;
 	}
 
-	/* Downcase up to the first dot and after the last one */
-	git__strntolower(name, fdot - name);
-	git__strtolower(ldot);
+	if (!last_dot[1]) {
+		giterr_set(GITERR_CONFIG,
+			"Key '%s' does not contain variable name.", key);
+		goto error;
+	}
 
-	*out = name;
+	baselen = last_dot - key;
+
+	/*
+	 * Validate the key and while at it, lower case it for matching.
+	 */
+	store_key = git__malloc(strlen(key) + 1);
+	GITERR_CHECK_ALLOC(store_key);
+
+	dot = 0;
+	for (i = 0; key[i]; i++) {
+		unsigned char c = key[i];
+		if (c == '.')
+			dot = 1;
+		/* Leave the extended basename untouched.. */
+		if (!dot || i > baselen) {
+			if (!iskeychar(c) || (i == baselen + 1 && !isalpha(c))) {
+				giterr_set(GITERR_CONFIG, "Invalid key '%s'.", key);
+				goto error;
+			}
+			c = tolower(c);
+		} else if (c == '\n') {
+			giterr_set(GITERR_CONFIG, "Invalid key (newline) '%s'.", key);
+				goto error;
+		}
+		store_key[i] = c;
+	}
+
+	store_key[i] = 0;
+	*out = store_key;
+
 	return 0;
+
+error:
+	git__free(store_key);
+	return GIT_EINVALIDSPEC;
 }
 
 static void free_vars(git_strmap *values)
@@ -271,8 +317,8 @@ static int config_set(git_config_backend *cfg, const char *name, const char *val
 	khiter_t pos;
 	int rval, ret;
 
-	if (normalize_name(name, &key) < 0)
-		return -1;
+	if ((ret = normalize_name(&key, name)) < 0)
+		return ret;
 
 	/*
 	 * Try to find it in the existing values and update it if it
@@ -352,9 +398,10 @@ static int config_get(const git_config_backend *cfg, const char *name, const git
 	diskfile_backend *b = (diskfile_backend *)cfg;
 	char *key;
 	khiter_t pos;
+	int error;
 
-	if (normalize_name(name, &key) < 0)
-		return -1;
+	if ((error = normalize_name(&key, name)) < 0)
+		return error;
 
 	pos = git_strmap_lookup_index(b->values, key);
 	git__free(key);
@@ -379,9 +426,10 @@ static int config_get_multivar(
 	diskfile_backend *b = (diskfile_backend *)cfg;
 	char *key;
 	khiter_t pos;
+	int error;
 
-	if (normalize_name(name, &key) < 0)
-		return -1;
+	if ((error = normalize_name(&key, name)) < 0)
+		return error;
 
 	pos = git_strmap_lookup_index(b->values, key);
 	git__free(key);
@@ -444,8 +492,8 @@ static int config_set_multivar(
 
 	assert(regexp);
 
-	if (normalize_name(name, &key) < 0)
-		return -1;
+	if ((result = normalize_name(&key, name)) < 0)
+		return result;
 
 	pos = git_strmap_lookup_index(b->values, key);
 	if (!git_strmap_valid_index(b->values, pos)) {
@@ -515,8 +563,8 @@ static int config_delete(git_config_backend *cfg, const char *name)
 	int result;
 	khiter_t pos;
 
-	if (normalize_name(name, &key) < 0)
-		return -1;
+	if ((result = normalize_name(&key, name)) < 0)
+		return result;
 
 	pos = git_strmap_lookup_index(b->values, key);
 	git__free(key);
