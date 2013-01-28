@@ -796,6 +796,27 @@ static int rename_config_entries_cb(
 	return git_config_delete_entry(data->config, entry->name);
 }
 
+ /*
+  * Ported from
+  * https://github.com/git/git/blob/bf2b1cd2153c4f1c63e4b7f49ef5cdd7c98fd537/config.c#L1553-1567
+  */
+
+static int section_name_is_ok(const char *name)
+{
+	/* Empty section names are bogus. */
+	if (!*name)
+		return 0;
+
+	/*
+	 * Before a dot, we must be alphanumeric or dash. After the first dot,
+	 * anything goes, so we can stop checking.
+	 */
+	for (; *name && *name != '.'; name++)
+		if (*name != '-' && !isalnum(*name))
+			return 0;
+	return 1;
+}
+
 int git_config_rename_section(
 	git_repository *repo,
 	const char *old_section_name,
@@ -805,6 +826,13 @@ int git_config_rename_section(
 	git_buf pattern = GIT_BUF_INIT;
 	int error = -1;
 	struct rename_data data;
+
+	assert(repo && old_section_name);
+
+	if (new_section_name && !section_name_is_ok(new_section_name)) {
+		giterr_set(GITERR_CONFIG, "Invalid section name '%s'.", new_section_name);
+		return GIT_EINVALIDSPEC;
+	}
 
 	git_buf_text_puts_escape_regex(&pattern,  old_section_name);
 	git_buf_puts(&pattern, "\\..+");
