@@ -340,6 +340,12 @@ size_t git_tree_entrycount(const git_tree *tree)
 	return tree->entries.length;
 }
 
+unsigned int git_treebuilder_entrycount(git_treebuilder *bld)
+{
+	assert(bld);
+	return bld->entries.length;
+}
+
 static int tree_error(const char *str, const char *path)
 {
 	if (path)
