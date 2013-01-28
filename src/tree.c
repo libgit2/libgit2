@@ -231,6 +231,12 @@ unsigned int git_tree_entrycount(git_tree *tree)
 	return tree->entries.length;
 }
 
+unsigned int git_treebuilder_entrycount(git_treebuilder *bld)
+{
+	assert(bld);
+	return bld->entries.length;
+}
+
 static int tree_error(const char *str)
 {
 	giterr_set(GITERR_TREE, "%s", str);
