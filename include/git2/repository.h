@@ -124,6 +124,14 @@ GIT_EXTERN(int) git_repository_open_ext(
 	const char *ceiling_dirs);
 
 /**
+ * Create a new repository with neither backends nor config object
+ *
+ * Note that this is only useful if you wish to associate the repository
+ * with a non-filesystem-backed object database and config store.
+ */
+GIT_EXTERN(int) git_repository_new(git_repository **out);
+
+/**
  * Free a previously allocated repository
  *
  * Note that after a repository is free'd, all the objects it has spawned
