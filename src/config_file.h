@@ -54,5 +54,7 @@ GIT_INLINE(int) git_config_file_foreach_match(
 	return cfg->foreach(cfg, regexp, fn, data);
 }
 
+extern int git_config_file_normalize_section(char *start, char *end);
+
 #endif
 

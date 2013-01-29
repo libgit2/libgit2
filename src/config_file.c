@@ -105,6 +105,29 @@ static void cvar_free(cvar_t *var)
 	git__free(var);
 }
 
+int git_config_file_normalize_section(char *start, char *end)
+{
+	char *scan;
+
+	if (start == end)
+		return GIT_EINVALIDSPEC;
+
+	/* Validate and downcase range */
+	for (scan = start; *scan; ++scan) {
+		if (end && scan >= end)
+			break;
+		if (isalnum(*scan))
+			*scan = tolower(*scan);
+		else if (*scan != '-' || scan == start)
+			return GIT_EINVALIDSPEC;
+	}
+
+	if (scan == start)
+		return GIT_EINVALIDSPEC;
+
+	return 0;
+}
+
 /* Take something the user gave us and make it nice for our hash function */
 static int normalize_name(const char *in, char **out)
 {
@@ -118,19 +141,26 @@ static int normalize_name(const char *in, char **out)
 	fdot = strchr(name, '.');
 	ldot = strrchr(name, '.');
 
-	if (fdot == NULL || ldot == NULL) {
-		git__free(name);
-		giterr_set(GITERR_CONFIG,
-			"Invalid variable name: '%s'", in);
-		return -1;
-	}
+	if (fdot == NULL || fdot == name || ldot == NULL || !ldot[1])
+		goto invalid;
 
-	/* Downcase up to the first dot and after the last one */
-	git__strntolower(name, fdot - name);
-	git__strtolower(ldot);
+	/* Validate and downcase up to first dot and after last dot */
+	if (git_config_file_normalize_section(name, fdot) < 0 ||
+		git_config_file_normalize_section(ldot + 1, NULL) < 0)
+		goto invalid;
+
+	/* If there is a middle range, make sure it doesn't have newlines */
+	while (fdot < ldot)
+		if (*fdot++ == '\n')
+			goto invalid;
 
 	*out = name;
 	return 0;
+
+invalid:
+	git__free(name);
+	giterr_set(GITERR_CONFIG, "Invalid config item name '%s'", in);
+	return GIT_EINVALIDSPEC;
 }
 
 static void free_vars(git_strmap *values)
@@ -271,8 +301,8 @@ static int config_set(git_config_backend *cfg, const char *name, const char *val
 	khiter_t pos;
 	int rval, ret;
 
-	if (normalize_name(name, &key) < 0)
-		return -1;
+	if ((rval = normalize_name(name, &key)) < 0)
+		return rval;
 
 	/*
 	 * Try to find it in the existing values and update it if it
@@ -352,9 +382,10 @@ static int config_get(const git_config_backend *cfg, const char *name, const git
 	diskfile_backend *b = (diskfile_backend *)cfg;
 	char *key;
 	khiter_t pos;
+	int error;
 
-	if (normalize_name(name, &key) < 0)
-		return -1;
+	if ((error = normalize_name(name, &key)) < 0)
+		return error;
 
 	pos = git_strmap_lookup_index(b->values, key);
 	git__free(key);
@@ -379,9 +410,10 @@ static int config_get_multivar(
 	diskfile_backend *b = (diskfile_backend *)cfg;
 	char *key;
 	khiter_t pos;
+	int error;
 
-	if (normalize_name(name, &key) < 0)
-		return -1;
+	if ((error = normalize_name(name, &key)) < 0)
+		return error;
 
 	pos = git_strmap_lookup_index(b->values, key);
 	git__free(key);
@@ -444,8 +476,8 @@ static int config_set_multivar(
 
 	assert(regexp);
 
-	if (normalize_name(name, &key) < 0)
-		return -1;
+	if ((result = normalize_name(name, &key)) < 0)
+		return result;
 
 	pos = git_strmap_lookup_index(b->values, key);
 	if (!git_strmap_valid_index(b->values, pos)) {
@@ -515,8 +547,8 @@ static int config_delete(git_config_backend *cfg, const char *name)
 	int result;
 	khiter_t pos;
 
-	if (normalize_name(name, &key) < 0)
-		return -1;
+	if ((result = normalize_name(name, &key)) < 0)
+		return result;
 
 	pos = git_strmap_lookup_index(b->values, key);
 	git__free(key);
