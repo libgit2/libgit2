@@ -250,22 +250,21 @@ static int apply_splits_and_deletes(git_diff_list *diff, size_t expected_size)
 
 	/* build new delta list without TO_DELETE and splitting TO_SPLIT */
 	git_vector_foreach(&diff->deltas, i, delta) {
-		if (delta->status == GIT_DELTA__TO_DELETE) {
-			git__free(delta);
+		if (delta->status == GIT_DELTA__TO_DELETE)
 			continue;
-		}
 
 		if (delta->status == GIT_DELTA__TO_SPLIT) {
 			git_diff_delta *deleted = diff_delta__dup(delta, &diff->pool);
 			if (!deleted)
-				return -1;
+				goto on_error;
 
 			deleted->status = GIT_DELTA_DELETED;
 			memset(&deleted->new_file, 0, sizeof(deleted->new_file));
 			deleted->new_file.path = deleted->old_file.path;
 			deleted->new_file.flags |= GIT_DIFF_FILE_VALID_OID;
 
-			git_vector_insert(&onto, deleted);
+			if (git_vector_insert(&onto, deleted) < 0)
+				goto on_error;
 
 			delta->status = GIT_DELTA_ADDED;
 			memset(&delta->old_file, 0, sizeof(delta->old_file));
@@ -273,8 +272,14 @@ static int apply_splits_and_deletes(git_diff_list *diff, size_t expected_size)
 			delta->old_file.flags |= GIT_DIFF_FILE_VALID_OID;
 		}
 
-		git_vector_insert(&onto, delta);
+		if (git_vector_insert(&onto, delta) < 0)
+			goto on_error;
 	}
+
+	/* cannot return an error past this point */
+	git_vector_foreach(&diff->deltas, i, delta)
+		if (delta->status == GIT_DELTA__TO_DELETE)
+			git__free(delta);
 
 	/* swap new delta list into place */
 	git_vector_sort(&onto);
@@ -282,6 +287,14 @@ static int apply_splits_and_deletes(git_diff_list *diff, size_t expected_size)
 	git_vector_free(&onto);
 
 	return 0;
+
+on_error:
+	git_vector_foreach(&onto, i, delta)
+		git__free(delta);
+
+	git_vector_free(&onto);
+
+	return -1;
 }
 
 static unsigned int calc_similarity(

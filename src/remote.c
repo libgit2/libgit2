@@ -681,9 +681,8 @@ int git_remote_download(
 static int update_tips_callback(git_remote_head *head, void *payload)
 {
 	git_vector *refs = (git_vector *)payload;
-	git_vector_insert(refs, head);
 
-	return 0;
+	return git_vector_insert(refs, head);
 }
 
 static int remote_head_for_fetchspec_src(git_remote_head **out, git_vector *update_heads, const char *fetchspec_src)

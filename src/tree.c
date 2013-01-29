@@ -132,45 +132,56 @@ static int homing_search_cmp(const void *key, const void *array_member)
  * around the area for our target file.
  */
 static int tree_key_search(
-	git_vector *entries, const char *filename, size_t filename_len)
+	size_t *at_pos, git_vector *entries, const char *filename, size_t filename_len)
 {
 	struct tree_key_search ksearch;
 	const git_tree_entry *entry;
-	int homing, i;
+	size_t homing, i;
 
 	ksearch.filename = filename;
 	ksearch.filename_len = filename_len;
 
 	/* Initial homing search; find an entry on the tree with
 	 * the same prefix as the filename we're looking for */
-	homing = git_vector_bsearch2(entries, &homing_search_cmp, &ksearch);
-	if (homing < 0)
-		return homing;
+	if (git_vector_bsearch2(&homing, entries, &homing_search_cmp, &ksearch) < 0)
+		return GIT_ENOTFOUND;
 
 	/* We found a common prefix. Look forward as long as
 	 * there are entries that share the common prefix */
-	for (i = homing; i < (int)entries->length; ++i) {
+	for (i = homing; i < entries->length; ++i) {
 		entry = entries->contents[i];
 
 		if (homing_search_cmp(&ksearch, entry) < 0)
 			break;
 
 		if (entry->filename_len == filename_len &&
-			memcmp(filename, entry->filename, filename_len) == 0)
-			return i;
+			memcmp(filename, entry->filename, filename_len) == 0) {
+			if (at_pos)
+				*at_pos = i;
+
+			return 0;
+		}
 	}
 
 	/* If we haven't found our filename yet, look backwards
 	 * too as long as we have entries with the same prefix */
-	for (i = homing - 1; i >= 0; --i) {
-		entry = entries->contents[i];
+	if (homing > 0) {
+		i = homing - 1;
 
-		if (homing_search_cmp(&ksearch, entry) > 0)
-			break;
+		do {
+			entry = entries->contents[i];
 
-		if (entry->filename_len == filename_len &&
-			memcmp(filename, entry->filename, filename_len) == 0)
-			return i;
+			if (homing_search_cmp(&ksearch, entry) > 0)
+				break;
+
+			if (entry->filename_len == filename_len &&
+				memcmp(filename, entry->filename, filename_len) == 0) {
+				if (at_pos)
+					*at_pos = i;
+
+				return 0;
+			}
+		} while (i-- > 0);
 	}
 
 	/* The filename doesn't exist at all */
@@ -267,8 +278,9 @@ int git_tree_entry_to_object(
 static const git_tree_entry *entry_fromname(
 	git_tree *tree, const char *name, size_t name_len)
 {
-	int idx = tree_key_search(&tree->entries, name, name_len);
-	if (idx < 0)
+	size_t idx;
+
+	if (tree_key_search(&idx, &tree->entries, name, name_len) < 0)
 		return NULL;
 
 	return git_vector_get(&tree->entries, idx);
@@ -317,7 +329,7 @@ int git_tree__prefix_position(git_tree *tree, const char *path)
 	ksearch.filename_len = strlen(path);
 
 	/* Find tree entry with appropriate prefix */
-	git_vector_bsearch3(&at_pos, entries, &homing_search_cmp, &ksearch);
+	git_vector_bsearch2(&at_pos, entries, &homing_search_cmp, &ksearch);
 
 	for (; at_pos < entries->length; ++at_pos) {
 		const git_tree_entry *entry = entries->contents[at_pos];
@@ -618,7 +630,7 @@ int git_treebuilder_insert(
 	git_filemode_t filemode)
 {
 	git_tree_entry *entry;
-	int pos;
+	size_t pos;
 
 	assert(bld && id && filename);
 
@@ -628,41 +640,35 @@ int git_treebuilder_insert(
 	if (!valid_entry_name(filename))
 		return tree_error("Failed to insert entry. Invalid name for a tree entry", filename);
 
-	pos = tree_key_search(&bld->entries, filename, strlen(filename));
-
-	if (pos >= 0) {
+	if (!tree_key_search(&pos, &bld->entries, filename, strlen(filename))) {
 		entry = git_vector_get(&bld->entries, pos);
 		if (entry->removed)
 			entry->removed = 0;
 	} else {
 		entry = alloc_entry(filename);
 		GITERR_CHECK_ALLOC(entry);
+
+		if (git_vector_insert(&bld->entries, entry) < 0)
+			return -1;
 	}
 
 	git_oid_cpy(&entry->oid, id);
 	entry->attr = filemode;
 
-	if (pos < 0) {
-		if (git_vector_insert(&bld->entries, entry) < 0)
-			return -1;
-	}
-
-	if (entry_out != NULL) {
+	if (entry_out)
 		*entry_out = entry;
-	}
 
 	return 0;
 }
 
 static git_tree_entry *treebuilder_get(git_treebuilder *bld, const char *filename)
 {
-	int idx;
+	size_t idx;
 	git_tree_entry *entry;
 
 	assert(bld && filename);
 
-	idx = tree_key_search(&bld->entries, filename, strlen(filename));
-	if (idx < 0)
+	if (tree_key_search(&idx, &bld->entries, filename, strlen(filename)) < 0)
 		return NULL;
 
 	entry = git_vector_get(&bld->entries, idx);

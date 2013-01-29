@@ -501,11 +501,11 @@ int git__bsearch(
 	int (*compare)(const void *, const void *),
 	size_t *position)
 {
-	unsigned int lim;
+	size_t lim;
 	int cmp = -1;
 	void **part, **base = array;
 
-	for (lim = (unsigned int)array_len; lim != 0; lim >>= 1) {
+	for (lim = array_len; lim != 0; lim >>= 1) {
 		part = base + (lim >> 1);
 		cmp = (*compare)(key, *part);
 		if (cmp == 0) {
@@ -521,7 +521,7 @@ int git__bsearch(
 	if (position)
 		*position = (base - array);
 
-	return (cmp == 0) ? 0 : -1;
+	return (cmp == 0) ? 0 : GIT_ENOTFOUND;
 }
 
 int git__bsearch_r(
@@ -532,11 +532,11 @@ int git__bsearch_r(
 	void *payload,
 	size_t *position)
 {
-	unsigned int lim;
+	size_t lim;
 	int cmp = -1;
 	void **part, **base = array;
 
-	for (lim = (unsigned int)array_len; lim != 0; lim >>= 1) {
+	for (lim = array_len; lim != 0; lim >>= 1) {
 		part = base + (lim >> 1);
 		cmp = (*compare_r)(key, *part, payload);
 		if (cmp == 0) {
@@ -552,7 +552,7 @@ int git__bsearch_r(
 	if (position)
 		*position = (base - array);
 
-	return (cmp == 0) ? 0 : -1;
+	return (cmp == 0) ? 0 : GIT_ENOTFOUND;
 }
 
 /**
