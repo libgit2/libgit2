@@ -9,6 +9,7 @@
 
 #include "common.h"
 #include "types.h"
+#include "strarray.h"
 
 /**
  * @file git2/status.h
@@ -165,7 +166,7 @@ typedef struct {
 } git_status_options;
 
 #define GIT_STATUS_OPTIONS_VERSION 1
-#define GIT_STATUS_OPTIONS_INIT {GIT_STATUS_OPTIONS_VERSION}
+#define GIT_STATUS_OPTIONS_INIT {GIT_STATUS_OPTIONS_VERSION, 0, 0, {NULL, 0}}
 
 /**
  * Gather file status information and run callbacks as requested.

@@ -31,7 +31,7 @@ static transport_definition transports[] = {
 	{"file://", 1, git_transport_local, NULL},
 	{"git+ssh://", 1, git_transport_dummy, NULL},
 	{"ssh+git://", 1, git_transport_dummy, NULL},
-	{NULL, 0, 0}
+	{NULL, 0, NULL, NULL}
 };
 
 #define GIT_TRANSPORT_COUNT (sizeof(transports)/sizeof(transports[0])) - 1
