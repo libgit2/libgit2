@@ -671,7 +671,8 @@ int git_config_open_default(git_config **out)
 	git_config *cfg = NULL;
 	git_buf buf = GIT_BUF_INIT;
 
-	error = git_config_new(&cfg);
+	if ((error = git_config_new(&cfg)))
+		goto out;
 
 	if (!error && !git_config_find_global_r(&buf))
 		error = git_config_add_file_ondisk(cfg, buf.ptr,
@@ -687,13 +688,18 @@ int git_config_open_default(git_config **out)
 
 	git_buf_free(&buf);
 
-	if (error && cfg) {
+	if (cfg->files.length == 0) {
+		giterr_set(GITERR_OS,"No config file found");
+		error = -1;
+	}
+
+	if (error) {
 		git_config_free(cfg);
 		cfg = NULL;
 	}
 
 	*out = cfg;
-
+out:
 	return error;
 }
 
