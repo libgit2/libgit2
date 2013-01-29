@@ -2,6 +2,7 @@
 #include "fileops.h"
 #include "repository.h"
 #include "config.h"
+#include "common.h"
 #include "path.h"
 
 enum repo_mode {
@@ -10,16 +11,31 @@ enum repo_mode {
 };
 
 static git_repository *_repo;
+static char *global_opts_path;
+static char *xdg_opts_path;
+static char *system_opts_path;
 
 void test_repo_init__initialize(void)
 {
 	_repo = NULL;
+
+	git_libgit2_opts(GIT_OPT_GET_CONFIG_PATH, GIT_CONFIG_LEVEL_GLOBAL, &global_opts_path);
+	git_libgit2_opts(GIT_OPT_GET_CONFIG_PATH, GIT_CONFIG_LEVEL_XDG, &xdg_opts_path);
+	git_libgit2_opts(GIT_OPT_GET_CONFIG_PATH, GIT_CONFIG_LEVEL_SYSTEM, &system_opts_path);
+
+	git_libgit2_opts(GIT_OPT_SET_CONFIG_PATH, GIT_CONFIG_LEVEL_GLOBAL,"non-existent-global-file");
+	git_libgit2_opts(GIT_OPT_SET_CONFIG_PATH, GIT_CONFIG_LEVEL_XDG, "non-existent-xdg-file");
+	git_libgit2_opts(GIT_OPT_SET_CONFIG_PATH, GIT_CONFIG_LEVEL_SYSTEM, "non-existent-system-file");
 }
 
 static void cleanup_repository(void *path)
 {
 	git_repository_free(_repo);
 	_repo = NULL;
+
+	git_libgit2_opts(GIT_OPT_SET_CONFIG_PATH, GIT_CONFIG_LEVEL_SYSTEM, system_opts_path);
+	git_libgit2_opts(GIT_OPT_SET_CONFIG_PATH, GIT_CONFIG_LEVEL_XDG, xdg_opts_path);
+	git_libgit2_opts(GIT_OPT_SET_CONFIG_PATH, GIT_CONFIG_LEVEL_GLOBAL, global_opts_path);
 
 	cl_fixture_cleanup((const char *)path);
 }
@@ -388,6 +404,18 @@ void test_repo_init__extended_with_template(void)
 
 	cleanup_repository("templated.git");
 }
+
+void test_repo_init__extended_with_no_template(void)
+{
+	git_repository_init_options opts = GIT_REPOSITORY_INIT_OPTIONS_INIT;
+
+	opts.flags = GIT_REPOSITORY_INIT_MKPATH | GIT_REPOSITORY_INIT_BARE | GIT_REPOSITORY_INIT_EXTERNAL_TEMPLATE;
+
+	cl_git_fail(git_repository_init_ext(&_repo, "no-templated.git", &opts));
+
+	cleanup_repository("no-templated.git");
+}
+
 
 void test_repo_init__can_reinit_an_initialized_repository(void)
 {
