@@ -11,6 +11,7 @@
 #include "git2/config.h"
 #include "vector.h"
 #include "buf_text.h"
+#include "config_file.h"
 #if GIT_WIN32
 # include <windows.h>
 #endif
@@ -758,42 +759,36 @@ fail_parse:
 	return -1;
 }
 
-struct rename_data
-{
+struct rename_data {
 	git_config *config;
-	const char *old_name;
-	const char *new_name;
+	git_buf *name;
+	size_t old_len;
+	int actual_error;
 };
 
 static int rename_config_entries_cb(
 	const git_config_entry *entry,
 	void *payload)
 {
+	int error = 0;
 	struct rename_data *data = (struct rename_data *)payload;
+	size_t base_len = git_buf_len(data->name);
 
-	if (data->new_name != NULL) {
-		git_buf name = GIT_BUF_INIT;
-		int error;
-
-		if (git_buf_printf(
-			&name,
-			"%s.%s",
-			data->new_name,
-			entry->name + strlen(data->old_name) + 1) < 0)
-				return -1;
-
+	if (base_len > 0 &&
+		!(error = git_buf_puts(data->name, entry->name + data->old_len)))
+	{
 		error = git_config_set_string(
-			data->config,
-			git_buf_cstr(&name),
-			entry->value);
+			data->config, git_buf_cstr(data->name), entry->value);
 
-		git_buf_free(&name);
-
-		if (error)
-			return error;
+		git_buf_truncate(data->name, base_len);
 	}
 
-	return git_config_delete_entry(data->config, entry->name);
+	if (!error)
+		error = git_config_delete_entry(data->config, entry->name);
+
+	data->actual_error = error; /* preserve actual error code */
+
+	return error;
 }
 
 int git_config_rename_section(
@@ -802,36 +797,44 @@ int git_config_rename_section(
 	const char *new_section_name)
 {
 	git_config *config;
-	git_buf pattern = GIT_BUF_INIT;
-	int error = -1;
+	git_buf pattern = GIT_BUF_INIT, replace = GIT_BUF_INIT;
+	int error = 0;
 	struct rename_data data;
 
-	git_buf_text_puts_escape_regex(&pattern,  old_section_name);
-	git_buf_puts(&pattern, "\\..+");
-	if (git_buf_oom(&pattern))
+	git_buf_text_puts_escape_regex(&pattern, old_section_name);
+
+	if ((error = git_buf_puts(&pattern, "\\..+")) < 0)
 		goto cleanup;
 
-	if (git_repository_config__weakptr(&config, repo) < 0)
+	if ((error = git_repository_config__weakptr(&config, repo)) < 0)
 		goto cleanup;
 
-	data.config = config;
-	data.old_name = old_section_name;
-	data.new_name = new_section_name;
+	data.config  = config;
+	data.name    = &replace;
+	data.old_len = strlen(old_section_name) + 1;
+	data.actual_error = 0;
 
-	if ((error = git_config_foreach_match(
-			config,
-			git_buf_cstr(&pattern),
-			rename_config_entries_cb, &data)) < 0) {
-				giterr_set(GITERR_CONFIG,
-					"Cannot rename config section '%s' to '%s'",
-					old_section_name,
-					new_section_name);
-				goto cleanup;
+	if ((error = git_buf_join(&replace, '.', new_section_name, "")) < 0)
+		goto cleanup;
+
+	if (new_section_name != NULL &&
+		(error = git_config_file_normalize_section(
+			replace.ptr, strchr(replace.ptr, '.'))) < 0)
+	{
+		giterr_set(
+			GITERR_CONFIG, "Invalid config section '%s'", new_section_name);
+		goto cleanup;
 	}
 
-	error = 0;
+	error = git_config_foreach_match(
+		config, git_buf_cstr(&pattern), rename_config_entries_cb, &data);
+
+	if (error == GIT_EUSER)
+		error = data.actual_error;
 
 cleanup:
 	git_buf_free(&pattern);
+	git_buf_free(&replace);
+
 	return error;
 }

@@ -457,6 +457,9 @@ void test_core_buffer__8(void)
 
 	git_buf_free(&a);
 
+	check_joinbuf_2(NULL, "", "");
+	check_joinbuf_2(NULL, "a", "a");
+	check_joinbuf_2(NULL, "/a", "/a");
 	check_joinbuf_2("", "", "");
 	check_joinbuf_2("", "a", "a");
 	check_joinbuf_2("", "/a", "/a");
