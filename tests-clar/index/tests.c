@@ -10,7 +10,7 @@ static const size_t index_entry_count_2 = 1437;
 
 // Suite data
 struct test_entry {
-   int index;
+   size_t index;
    char path[128];
    git_off_t file_size;
    git_time_t mtime;
@@ -131,8 +131,10 @@ void test_index_tests__find_in_existing(void)
    cl_git_pass(git_index_open(&index, TEST_INDEX_PATH));
 
    for (i = 0; i < ARRAY_SIZE(test_entries); ++i) {
-      int idx = git_index_find(index, test_entries[i].path);
-      cl_assert(idx == test_entries[i].index);
+	  size_t idx;
+
+	  cl_assert(!git_index_find(&idx, index, test_entries[i].path));
+	  cl_assert(idx == test_entries[i].index);
    }
 
    git_index_free(index);
@@ -146,8 +148,7 @@ void test_index_tests__find_in_empty(void)
    cl_git_pass(git_index_open(&index, "fake-index"));
 
    for (i = 0; i < ARRAY_SIZE(test_entries); ++i) {
-      int idx = git_index_find(index, test_entries[i].path);
-      cl_assert(idx == GIT_ENOTFOUND);
+      cl_assert(GIT_ENOTFOUND == git_index_find(NULL, index, test_entries[i].path));
    }
 
    git_index_free(index);

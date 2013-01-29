@@ -689,7 +689,7 @@ static void workdir_iterator__seek_frame_start(
 		return;
 
 	if (wi->base.start)
-		git_vector_bsearch3(
+		git_vector_bsearch2(
 			&wf->index, &wf->entries, wi->entrycmp, wi->base.start);
 	else
 		wf->index = 0;

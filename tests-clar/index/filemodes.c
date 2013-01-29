@@ -53,13 +53,12 @@ static void replace_file_with_mode(
 static void add_and_check_mode(
 	git_index *index, const char *filename, unsigned int expect_mode)
 {
-	int pos;
+	size_t pos;
 	const git_index_entry *entry;
 
 	cl_git_pass(git_index_add_bypath(index, filename));
 
-	pos = git_index_find(index, filename);
-	cl_assert(pos >= 0);
+	cl_assert(!git_index_find(&pos, index, filename));
 
 	entry = git_index_get_byindex(index, pos);
 	cl_assert(entry->mode == expect_mode);

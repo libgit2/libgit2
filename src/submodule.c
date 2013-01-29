@@ -157,7 +157,7 @@ int git_submodule_foreach(
 		 * and path are not the same.
 		 */
 		if (sm->refcount > 1) {
-			if (git_vector_bsearch(&seen, sm) != GIT_ENOTFOUND)
+			if (git_vector_bsearch(NULL, &seen, sm) != GIT_ENOTFOUND)
 				continue;
 			if ((error = git_vector_insert(&seen, sm)) < 0)
 				break;
@@ -716,7 +716,8 @@ int git_submodule_reload(git_submodule *submodule)
 {
 	git_repository *repo;
 	git_index *index;
-	int pos, error;
+	int error;
+	size_t pos;
 	git_tree *head;
 	git_config_backend *mods;
 
@@ -732,8 +733,7 @@ int git_submodule_reload(git_submodule *submodule)
 		~(GIT_SUBMODULE_STATUS_IN_INDEX |
 		  GIT_SUBMODULE_STATUS__INDEX_OID_VALID);
 
-	pos = git_index_find(index, submodule->path);
-	if (pos >= 0) {
+	if (!git_index_find(&pos, index, submodule->path)) {
 		const git_index_entry *entry = git_index_get_byindex(index, pos);
 
 		if (S_ISGITLINK(entry->mode)) {
