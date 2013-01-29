@@ -20,8 +20,8 @@ GIT_INLINE(size_t) compute_new_size(git_vector *v)
 	 * instructions and less than the golden ratio (1.618...) */
 	if (new_size < MIN_ALLOCSIZE)
 		new_size = MIN_ALLOCSIZE;
-	else if (new_size <= SIZE_MAX / 3)
-		new_size = new_size * 3 / 2 + 1;
+	else if (new_size <= (SIZE_MAX / 3) * 2)
+		new_size += new_size / 2;
 	else
 		new_size = SIZE_MAX;
 
