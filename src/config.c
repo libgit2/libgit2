@@ -516,18 +516,81 @@ int git_config_set_multivar(git_config *cfg, const char *name, const char *regex
 	return file->set_multivar(file, name, regexp, value);
 }
 
+#define GIT_CONFIG_DEFAULT_PATHS_MAX (GIT_CONFIG_LEVEL_GLOBAL - GIT_CONFIG_LEVEL_SYSTEM + 1)
+
+/** User-changeable paths that overwrite internal ones */
+static const char *git_config_default_paths[GIT_CONFIG_DEFAULT_PATHS_MAX];
+
+void git_config_set_path(int type, const char *path)
+{
+	int pos;
+
+	pos = type - GIT_CONFIG_LEVEL_SYSTEM;
+
+	if (pos < 0 || pos >= GIT_CONFIG_DEFAULT_PATHS_MAX)
+		return;
+
+	git_config_default_paths[pos] = path;
+}
+
+void git_config_get_path(const char **path, int type)
+{
+	int pos;
+
+	pos = type - GIT_CONFIG_LEVEL_SYSTEM;
+
+	if (pos < 0 || pos >= GIT_CONFIG_DEFAULT_PATHS_MAX) {
+		*path = NULL;
+		return;
+	}
+	*path = git_config_default_paths[pos];
+}
+
+/**
+ * Get the path of the given type. Attempt to get the built-in path
+ * if the user did not set a path via git_config_set_path().
+ *
+ * @param path where the path is stored
+ * @param config_path_type the type of the path
+ * @param find_file function to be called if user-set path is NULL
+ * @param default_file_name the argument for the function to be called
+ *  if the user-set path is NULL.
+ * @return 0 for success or an error code.
+ */
+static int git_config_get_user_honored_path(git_buf *path, int config_path_type,
+		int (*find_file)(git_buf *, const char *), char *default_filename)
+{
+	int error;
+	const char *p;
+
+	git_config_get_path(&p,config_path_type);
+
+	if (p) {
+		if (!git_path_exists(p)) {
+			giterr_set(GITERR_OS, "The file '%s' doesn't exist", p);
+			error = GIT_ENOTFOUND;
+			goto out;
+		}
+
+		if ((error = git_buf_sets(path,p)))
+			goto out;
+	} else {
+		error = find_file(path, default_filename);
+	}
+out:
+	return error;
+}
+
 int git_config_find_global_r(git_buf *path)
 {
-	int error = git_futils_find_global_file(path, GIT_CONFIG_FILENAME);
-
-	return error;
+	return git_config_get_user_honored_path(path, GIT_CONFIG_LEVEL_SYSTEM,
+			git_futils_find_global_file,GIT_CONFIG_FILENAME);
 }
 
 int git_config_find_xdg_r(git_buf *path)
 {
-	int error = git_futils_find_global_file(path, GIT_CONFIG_FILENAME_ALT);
-
-	return error;
+	return git_config_get_user_honored_path(path, GIT_CONFIG_LEVEL_XDG,
+			git_futils_find_global_file,GIT_CONFIG_FILENAME_ALT);
 }
 
 int git_config_find_global(char *global_config_path, size_t length)
@@ -576,7 +639,8 @@ int git_config_find_xdg(char *xdg_config_path, size_t length)
 
 int git_config_find_system_r(git_buf *path)
 {
-	return git_futils_find_system_file(path, GIT_CONFIG_FILENAME_SYSTEM);
+	return git_config_get_user_honored_path(path, GIT_CONFIG_LEVEL_SYSTEM,
+			git_futils_find_system_file,GIT_CONFIG_FILENAME_SYSTEM);
 }
 
 int git_config_find_system(char *system_config_path, size_t length)

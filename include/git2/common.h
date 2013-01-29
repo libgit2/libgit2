@@ -128,7 +128,9 @@ enum {
 	GIT_OPT_GET_MWINDOW_SIZE,
 	GIT_OPT_SET_MWINDOW_SIZE,
 	GIT_OPT_GET_MWINDOW_MAPPED_LIMIT,
-	GIT_OPT_SET_MWINDOW_MAPPED_LIMIT
+	GIT_OPT_SET_MWINDOW_MAPPED_LIMIT,
+	GIT_OPT_GET_CONFIG_PATH,
+	GIT_OPT_SET_CONFIG_PATH
 };
 
 /**
@@ -142,6 +144,19 @@ enum {
  *	opts(GIT_OPT_MWINDOW_MAPPED_LIMIT, size_t):
  *		set the maximum amount of memory that can be mapped at any time
  *		by the library
+ *
+ *	opts(GIT_OPT_GET_CONFIG_PATH, int type, const char **out)
+ *	    get in out the path of the specific configuration file type.
+ *	    Parameter type can be any of GIT_CONFIG_LEVEL_SYSTEM,
+ *	    GIT_CONFIG_LEVEL_XDG, or GIT_CONFIG_LEVEL_GLOBAL. The pointer
+ *	    is valid as long as the pointer supplied to
+ *	    GIT_OPT_SET_CONFIG_PATH is valid.
+ *
+ *	opts(GIT_OPT_SET_CONFIG_PATH, int, const char *path)
+ *	    set the path of the specific configuration file type.
+ *	    Parameter type can be any of GIT_CONFIG_LEVEL_SYSTEM,
+ *	    GIT_CONFIG_LEVEL_XDG, or GIT_CONFIG_LEVEL_GLOBAL. The given
+ *	    pointer must be valid until this option is set again.
  *
  *	@param option Option key
  *	@param ... value to set the option
