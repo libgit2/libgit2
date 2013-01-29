@@ -287,6 +287,26 @@ GIT_EXTERN(int) git_commit_create_v(
 		int parent_count,
 		...);
 
+/**
+ * Create a new commit in the repository, as with `git_commit_create`,
+ * using `git_oid` instances as parameters instead of `git_object`.
+ *
+ * See documentation for `git_commit_create` for information about the
+ * parameters, as the meaning is identical excepting that `tree` and
+ * `parents` now take `git_oid`.
+ */
+GIT_EXTERN(int) git_commit_create_oid(
+		git_oid *oid,
+		git_repository *repo,
+		const char *update_ref,
+		const git_signature *author,
+		const git_signature *committer,
+		const char *message_encoding,
+		const char *message,
+		const git_oid *tree,
+		int parent_count,
+		const git_oid *parents[]);
+
 /** @} */
 GIT_END_DECL
 #endif
