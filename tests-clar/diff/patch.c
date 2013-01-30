@@ -299,4 +299,6 @@ void test_diff_patch__line_counts_with_eofnl(void)
 	cl_git_rewritefile("renames/songofseven.txt", content.ptr);
 
 	check_single_patch_stats(g_repo, 1, 1, 1);
+
+	git_buf_free(&content);
 }
