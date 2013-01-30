@@ -704,6 +704,28 @@ GIT_EXTERN(size_t) git_diff_patch_num_hunks(
 	git_diff_patch *patch);
 
 /**
+ * Get line counts of each type in a patch.
+ *
+ * This helps imitate a diff --numstat type of output.  For that purpose,
+ * you only need the `total_additions` and `total_deletions` values, but we
+ * include the `total_context` line count in case you want the total number
+ * of lines of diff output that will be generated.
+ *
+ * All outputs are optional. Pass NULL if you don't need a particular count.
+ *
+ * @param total_context Count of context lines in output, can be NULL.
+ * @param total_additions Count of addition lines in output, can be NULL.
+ * @param total_deletions Count of deletion lines in output, can be NULL.
+ * @param patch The git_diff_patch object
+ * @return Number of lines in hunk or -1 if invalid hunk index
+ */
+GIT_EXTERN(int) git_diff_patch_line_stats(
+	size_t *total_context,
+	size_t *total_additions,
+	size_t *total_deletions,
+	const git_diff_patch *patch);
+
+/**
  * Get the information about a hunk in a patch
  *
  * Given a patch and a hunk index into the patch, this returns detailed
