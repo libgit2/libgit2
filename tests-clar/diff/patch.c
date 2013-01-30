@@ -235,3 +235,70 @@ void test_diff_patch__hunks_have_correct_line_numbers(void)
 	git_diff_list_free(diff);
 	git_tree_free(head);
 }
+
+static void check_single_patch_stats(
+	git_repository *repo, size_t hunks, size_t adds, size_t dels)
+{
+	git_diff_list *diff;
+	git_diff_patch *patch;
+	const git_diff_delta *delta;
+	size_t actual_adds, actual_dels;
+
+	cl_git_pass(git_diff_index_to_workdir(&diff, repo, NULL, NULL));
+
+	cl_assert_equal_i(1, (int)git_diff_num_deltas(diff));
+
+	cl_git_pass(git_diff_get_patch(&patch, &delta, diff, 0));
+	cl_assert_equal_i(GIT_DELTA_MODIFIED, (int)delta->status);
+
+	cl_assert_equal_i(hunks, (int)git_diff_patch_num_hunks(patch));
+
+	cl_git_pass(
+		git_diff_patch_line_stats(NULL, &actual_adds, &actual_dels, patch));
+
+	cl_assert_equal_i(adds, actual_adds);
+	cl_assert_equal_i(dels, actual_dels);
+
+	git_diff_patch_free(patch);
+	git_diff_list_free(diff);
+}
+
+void test_diff_patch__line_counts_with_eofnl(void)
+{
+	git_buf content = GIT_BUF_INIT;
+	const char *end;
+	git_index *index;
+
+	g_repo = cl_git_sandbox_init("renames");
+
+	cl_git_pass(git_futils_readbuffer(&content, "renames/songofseven.txt"));
+
+	/* remove first line */
+
+	end = git_buf_cstr(&content) + git_buf_find(&content, '\n') + 1;
+	git_buf_consume(&content, end);
+	cl_git_rewritefile("renames/songofseven.txt", content.ptr);
+
+	check_single_patch_stats(g_repo, 1, 0, 1);
+
+	/* remove trailing whitespace */
+
+	git_buf_rtrim(&content);
+	cl_git_rewritefile("renames/songofseven.txt", content.ptr);
+
+	check_single_patch_stats(g_repo, 2, 1, 2);
+
+	/* add trailing whitespace */
+
+	cl_git_pass(git_repository_index(&index, g_repo));
+	cl_git_pass(git_index_add_bypath(index, "songofseven.txt"));
+	cl_git_pass(git_index_write(index));
+	git_index_free(index);
+
+	cl_git_pass(git_buf_putc(&content, '\n'));
+	cl_git_rewritefile("renames/songofseven.txt", content.ptr);
+
+	check_single_patch_stats(g_repo, 1, 1, 1);
+
+	git_buf_free(&content);
+}
