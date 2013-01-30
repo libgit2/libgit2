@@ -1501,6 +1501,39 @@ size_t git_diff_patch_num_hunks(git_diff_patch *patch)
 	return patch->hunks_size;
 }
 
+int git_diff_patch_line_stats(
+	size_t *total_ctxt,
+	size_t *total_adds,
+	size_t *total_dels,
+	const git_diff_patch *patch)
+{
+	size_t totals[3], idx;
+
+	memset(totals, 0, sizeof(totals));
+
+	for (idx = 0; idx < patch->lines_size; ++idx) {
+		switch (patch->lines[idx].origin) {
+		case GIT_DIFF_LINE_CONTEXT:  totals[0]++; break;
+		case GIT_DIFF_LINE_ADDITION: totals[1]++; break;
+		case GIT_DIFF_LINE_DELETION: totals[2]++; break;
+		default:
+			/* diff --stat and --numstat don't count EOFNL marks because
+			 * they will always be paired with a ADDITION or DELETION line.
+			 */
+			break;
+		}
+	}
+
+	if (total_ctxt)
+		*total_ctxt = totals[0];
+	if (total_adds)
+		*total_adds = totals[1];
+	if (total_dels)
+		*total_dels = totals[2];
+
+	return 0;
+}
+
 int git_diff_patch_get_hunk(
 	const git_diff_range **range,
 	const char **header,
@@ -1706,4 +1739,3 @@ int git_diff__paired_foreach(
 
 	return 0;
 }
-

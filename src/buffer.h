@@ -134,6 +134,13 @@ GIT_INLINE(ssize_t) git_buf_rfind(git_buf *buf, char ch)
 	return idx;
 }
 
+GIT_INLINE(ssize_t) git_buf_find(git_buf *buf, char ch)
+{
+	size_t idx = 0;
+	while (idx < buf->size && buf->ptr[idx] != ch) idx++;
+	return (idx == buf->size) ? -1 : (ssize_t)idx;
+}
+
 /* Remove whitespace from the end of the buffer */
 void git_buf_rtrim(git_buf *buf);
 
