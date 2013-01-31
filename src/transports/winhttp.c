@@ -960,6 +960,11 @@ static int winhttp_close(git_smart_subtransport *subtransport)
 		t->cred = NULL;
 	}
 
+	if (t->url_cred) {
+		t->url_cred->free(t->url_cred);
+		t->url_cred = NULL;
+	}
+
 	if (t->connection) {
 		if (!WinHttpCloseHandle(t->connection)) {
 			giterr_set(GITERR_OS, "Unable to close connection");

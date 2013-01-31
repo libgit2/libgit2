@@ -63,6 +63,7 @@ typedef struct {
 	char *user_from_url;
 	char *pass_from_url;
 	git_cred *cred;
+	git_cred *url_cred;
 	http_authmechanism_t auth_mechanism;
 	unsigned connected : 1,
 		use_ssl : 1;
@@ -145,6 +146,14 @@ static int gen_request(
 		t->auth_mechanism == GIT_HTTP_AUTH_BASIC &&
 		apply_basic_credential(buf, t->cred) < 0)
 		return -1;
+
+	/* Use url-parsed basic auth if username and password are both provided */
+	if (!t->cred && t->user_from_url && t->pass_from_url) {
+		if (!t->url_cred &&
+			 git_cred_userpass_plaintext_new(&t->url_cred, t->user_from_url, t->pass_from_url) < 0)
+			return -1;
+		if (apply_basic_credential(buf, t->url_cred) < 0) return -1;
+	}
 
 	git_buf_puts(buf, "\r\n");
 
@@ -810,6 +819,11 @@ static int http_close(git_smart_subtransport *subtransport)
 	if (t->cred) {
 		t->cred->free(t->cred);
 		t->cred = NULL;
+	}
+
+	if (t->url_cred) {
+		t->url_cred->free(t->url_cred);
+		t->url_cred = NULL;
 	}
 
 	if (t->host) {
