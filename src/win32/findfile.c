@@ -113,28 +113,7 @@ int win32_find_system_file_using_registry(git_buf *path, const char *filename)
 {
 	struct win32_path root;
 
-	HKEY hKey;
-	DWORD dwType = REG_SZ;
-	DWORD dwSize = MAX_PATH;
-
-	root.len = 0;
-	if (RegOpenKeyExW(HKEY_LOCAL_MACHINE, REG_MSYSGIT_INSTALL, 0, KEY_ALL_ACCESS, &hKey) == ERROR_SUCCESS)
-	{
-		if (RegQueryValueExW(hKey, L"InstallLocation", NULL, &dwType,(LPBYTE)&root.path, &dwSize) == ERROR_SUCCESS)
-		{
-			// InstallLocation points to the root of the msysgit directory
-			if (dwSize + 4 > MAX_PATH) // 4 = wcslen(L"etc\\")
-			{
-				giterr_set(GITERR_OS, "Cannot locate the system's msysgit directory - path too long");
-				return -1;
-			}
-			wcscat(root.path, L"etc\\");
-			root.len = (DWORD)wcslen(root.path) + 1;
-		}
-	}
-	RegCloseKey(hKey);
-
-	if (!root.len) {
+	if (win32_find_msysgit_in_registry(&root, HKEY_LOCAL_MACHINE, REG_MSYSGIT_INSTALL)) {
 		giterr_set(GITERR_OS, "Cannot locate the system's msysgit directory");
 		return -1;
 	}
@@ -146,4 +125,32 @@ int win32_find_system_file_using_registry(git_buf *path, const char *filename)
 	}
 
 	return 0;
+}
+
+int win32_find_msysgit_in_registry(struct win32_path *root, const HKEY hieve, const wchar_t *key)
+{
+	HKEY hKey;
+	DWORD dwType = REG_SZ;
+	DWORD dwSize = MAX_PATH;
+
+	assert(root);
+
+	root->len = 0;
+	if (RegOpenKeyExW(hieve, key, 0, KEY_ALL_ACCESS, &hKey) == ERROR_SUCCESS)
+	{
+		if (RegQueryValueExW(hKey, L"InstallLocation", NULL, &dwType, (LPBYTE)&root->path, &dwSize) == ERROR_SUCCESS)
+		{
+			// InstallLocation points to the root of the msysgit directory
+			if (dwSize + 4 > MAX_PATH) // 4 = wcslen(L"etc\\")
+			{
+				giterr_set(GITERR_OS, "Cannot locate the system's msysgit directory - path too long");
+				return -1;
+			}
+			wcscat(root->path, L"etc\\");
+			root->len = (DWORD)wcslen(root->path) + 1;
+		}
+	}
+	RegCloseKey(hKey);
+
+	return root->len ? 0 : GIT_ENOTFOUND;
 }

@@ -18,6 +18,7 @@ int win32_expand_path(struct win32_path *s_root, const wchar_t *templ);
 int win32_find_file(git_buf *path, const struct win32_path *root, const char *filename);
 int win32_find_system_file_using_path(git_buf *path, const char *filename);
 int win32_find_system_file_using_registry(git_buf *path, const char *filename);
+int win32_find_msysgit_in_registry(struct win32_path *root, const HKEY hieve, const wchar_t *key);
 
 #endif
 
