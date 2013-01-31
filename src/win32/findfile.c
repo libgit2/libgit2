@@ -9,8 +9,9 @@
 #include "path.h"
 #include "findfile.h"
 
+#define REG_MSYSGIT_INSTALL_LOCAL L"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Git_is1"
 #ifndef _WIN64
-#define REG_MSYSGIT_INSTALL L"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Git_is1"
+#define REG_MSYSGIT_INSTALL REG_MSYSGIT_INSTALL_LOCAL
 #else
 #define REG_MSYSGIT_INSTALL L"SOFTWARE\\Wow6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Git_is1"
 #endif
@@ -113,9 +114,11 @@ int win32_find_system_file_using_registry(git_buf *path, const char *filename)
 {
 	struct win32_path root;
 
-	if (win32_find_msysgit_in_registry(&root, HKEY_LOCAL_MACHINE, REG_MSYSGIT_INSTALL)) {
-		giterr_set(GITERR_OS, "Cannot locate the system's msysgit directory");
-		return -1;
+	if (win32_find_msysgit_in_registry(&root, HKEY_CURRENT_USER, REG_MSYSGIT_INSTALL_LOCAL)) {
+		if (win32_find_msysgit_in_registry(&root, HKEY_LOCAL_MACHINE, REG_MSYSGIT_INSTALL)) {
+			giterr_set(GITERR_OS, "Cannot locate the system's msysgit directory");
+			return -1;
+		}
 	}
 
 	if (win32_find_file(path, &root, filename) < 0) {
