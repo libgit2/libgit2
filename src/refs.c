@@ -1691,6 +1691,11 @@ int git_reference__normalize_name(
 			segments_count++;
 		}
 
+		/* This means that there's a leading slash in the refname */
+		if (segment_len == 0 && segments_count == 0) {
+			goto cleanup;
+		}
+
 		if (current[segment_len] == '\0')
 			break;
 

@@ -10,6 +10,8 @@ void test_refs_isvalidname__can_detect_invalid_formats(void)
 	cl_assert_equal_i(false, git_reference_is_valid_name("_NO_LEADING_UNDERSCORE"));
 	cl_assert_equal_i(false, git_reference_is_valid_name("HEAD/aa"));
 	cl_assert_equal_i(false, git_reference_is_valid_name("lower_case"));
+	cl_assert_equal_i(false, git_reference_is_valid_name("/stupid/name/master"));
+	cl_assert_equal_i(false, git_reference_is_valid_name("/"));
 	cl_assert_equal_i(false, git_reference_is_valid_name(""));
 }
 
