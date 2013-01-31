@@ -257,6 +257,7 @@ static int on_headers_complete(http_parser *parser)
 
 			if (t->owner->cred_acquire_cb(&t->cred,
 					t->owner->url,
+					t->user_from_url,
 					allowed_types,
 					t->owner->cred_acquire_payload) < 0)
 				return PARSE_ERROR_GENERIC;
