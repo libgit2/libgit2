@@ -578,10 +578,21 @@ int gitno_select_in(gitno_buffer *buf, long int sec, long int usec)
 	return select((int)buf->socket->socket + 1, &fds, NULL, NULL, &tv);
 }
 
-int gitno_extract_host_and_port(char **host, char **port, char **username, const char *url, const char *default_port)
+int gitno_extract_url_parts(
+		char **host,
+		char **port,
+		char **username,
+		char **password,
+		const char *url,
+		const char *default_port)
 {
-	char *colon, *slash, *at, *delim;
+	char *colon, *slash, *at, *end;
 	const char *start;
+
+	/*
+	 *
+	 * ==> [user[:pass]@]hostname.tld[:port]/resource
+	 */
 
 	colon = strchr(url, ':');
 	slash = strchr(url, '/');
@@ -592,6 +603,19 @@ int gitno_extract_host_and_port(char **host, char **port, char **username, const
 		return -1;
 	}
 
+	start = url;
+	if (at && at < slash) {
+		start = at+1;
+		*username = git__strndup(url, at - url);
+	}
+
+	if (colon && colon < at) {
+		git__free(*username);
+		*username = git__strndup(url, colon-url);
+		*password = git__strndup(colon+1, at-colon-1);
+		colon = strchr(at, ':');
+	}
+
 	if (colon == NULL) {
 		*port = git__strdup(default_port);
 	} else {
@@ -599,15 +623,9 @@ int gitno_extract_host_and_port(char **host, char **port, char **username, const
 	}
 	GITERR_CHECK_ALLOC(*port);
 
-	delim = colon == NULL ? slash : colon;
+	end = colon == NULL ? slash : colon;
 
-	start = url;
-	if (at && at < slash) {
-		start = at+1;
-		*username = git__strndup(url, at - url);
-	}
-
-	*host = git__strndup(start, delim - start);
+	*host = git__strndup(start, end - start);
 	GITERR_CHECK_ALLOC(*host);
 
 	return 0;

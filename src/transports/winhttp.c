@@ -788,7 +788,8 @@ static int winhttp_connect(
 		t->use_ssl = 1;
 	}
 
-	if ((ret = gitno_extract_host_and_port(&t->host, &t->port, &t->parent.user_from_url, url, default_port)) < 0)
+	if ((ret = gitno_extract_url_parts(&t->host, &t->port, &t->parent.user_from_url,
+					&t->parent.pass_from_url, url, default_port)) < 0)
 		return ret;
 
 	t->path = strchr(url, '/');
@@ -942,6 +943,16 @@ static int winhttp_close(git_smart_subtransport *subtransport)
 	if (t->port) {
 		git__free(t->port);
 		t->port = NULL;
+	}
+
+	if (t->user_from_url) {
+		git__free(t->user_from_url);
+		t->user_from_url = NULL;
+	}
+
+	if (t->pass_from_url) {
+		git__free(t->pass_from_url);
+		t->pass_from_url = NULL;
 	}
 
 	if (t->cred) {

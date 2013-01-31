@@ -61,6 +61,7 @@ typedef struct {
 	char *host;
 	char *port;
 	char *user_from_url;
+	char *pass_from_url;
 	git_cred *cred;
 	http_authmechanism_t auth_mechanism;
 	unsigned connected : 1,
@@ -744,8 +745,8 @@ static int http_action(
 		if (!default_port)
 			return -1;
 
-		if ((ret = gitno_extract_host_and_port(&t->host, &t->port, &t->user_from_url,
-				url, default_port)) < 0)
+		if ((ret = gitno_extract_url_parts(&t->host, &t->port,
+						&t->user_from_url, &t->pass_from_url, url, default_port)) < 0)
 			return ret;
 
 		t->path = strchr(url, '/');
@@ -819,6 +820,16 @@ static int http_close(git_smart_subtransport *subtransport)
 	if (t->port) {
 		git__free(t->port);
 		t->port = NULL;
+	}
+
+	if (t->user_from_url) {
+		git__free(t->user_from_url);
+		t->user_from_url = NULL;
+	}
+
+	if (t->pass_from_url) {
+		git__free(t->pass_from_url);
+		t->pass_from_url = NULL;
 	}
 
 	return 0;

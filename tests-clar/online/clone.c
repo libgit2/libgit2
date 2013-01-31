@@ -7,6 +7,7 @@
 #define LIVE_REPO_URL "http://github.com/libgit2/TestGitRepository"
 #define LIVE_EMPTYREPO_URL "http://github.com/libgit2/TestEmptyRepository"
 #define BB_REPO_URL "https://libgit2@bitbucket.org/libgit2/testgitrepository.git"
+#define BB_REPO_URL_WITH_PASS "https://libgit2:libgit2@bitbucket.org/libgit2/testgitrepository.git"
 
 static git_repository *g_repo;
 static git_clone_options g_options;
@@ -165,6 +166,10 @@ void test_online_clone__bitbucket_style(void)
 	g_options.cred_acquire_payload = &user_pass;
 
 	cl_git_pass(git_clone(&g_repo, BB_REPO_URL, "./foo", &g_options));
+	git_repository_free(g_repo); g_repo = NULL;
+	cl_fixture_cleanup("./foo");
+
+	cl_git_pass(git_clone(&g_repo, BB_REPO_URL_WITH_PASS, "./foo", &g_options));
 	git_repository_free(g_repo); g_repo = NULL;
 	cl_fixture_cleanup("./foo");
 }
