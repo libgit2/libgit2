@@ -788,7 +788,7 @@ static int winhttp_connect(
 		t->use_ssl = 1;
 	}
 
-	if ((ret = gitno_extract_host_and_port(&t->host, &t->port, url, default_port)) < 0)
+	if ((ret = gitno_extract_host_and_port(&t->host, &t->port, &t->parent.user_from_url, url, default_port)) < 0)
 		return ret;
 
 	t->path = strchr(url, '/');

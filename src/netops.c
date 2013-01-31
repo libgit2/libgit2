@@ -578,7 +578,7 @@ int gitno_select_in(gitno_buffer *buf, long int sec, long int usec)
 	return select((int)buf->socket->socket + 1, &fds, NULL, NULL, &tv);
 }
 
-int gitno_extract_host_and_port(char **host, char **port, const char *url, const char *default_port)
+int gitno_extract_host_and_port(char **host, char **port, char **username, const char *url, const char *default_port)
 {
 	char *colon, *slash, *at, *delim;
 	const char *start;
@@ -600,7 +600,12 @@ int gitno_extract_host_and_port(char **host, char **port, const char *url, const
 	GITERR_CHECK_ALLOC(*port);
 
 	delim = colon == NULL ? slash : colon;
-	start = at == NULL && at < slash ? url : at+1;
+
+	start = url;
+	if (at && at < slash) {
+		start = at+1;
+		*username = git__strndup(url, at - url);
+	}
 
 	*host = git__strndup(start, delim - start);
 	GITERR_CHECK_ALLOC(*host);

@@ -60,6 +60,7 @@ typedef struct {
 	const char *path;
 	char *host;
 	char *port;
+	char *user_from_url;
 	git_cred *cred;
 	http_authmechanism_t auth_mechanism;
 	unsigned connected : 1,
@@ -742,7 +743,7 @@ static int http_action(
 		if (!default_port)
 			return -1;
 
-		if ((ret = gitno_extract_host_and_port(&t->host, &t->port,
+		if ((ret = gitno_extract_host_and_port(&t->host, &t->port, &t->user_from_url,
 				url, default_port)) < 0)
 			return ret;
 
