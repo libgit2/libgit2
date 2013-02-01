@@ -51,18 +51,11 @@ void giterr_set(int error_class, const char *string, ...)
 
 	if (error_class == GITERR_OS) {
 #ifdef GIT_WIN32
-		if (win32_error_code) {
-			char *lpMsgBuf;
-
-			if (FormatMessageA(
-					FORMAT_MESSAGE_ALLOCATE_BUFFER |
-					FORMAT_MESSAGE_FROM_SYSTEM |
-					FORMAT_MESSAGE_IGNORE_INSERTS,
-					NULL, win32_error_code, 0, (LPSTR)&lpMsgBuf, 0, NULL)) {
-				git_buf_PUTS(&buf, ": ");
-				git_buf_puts(&buf, lpMsgBuf);
-				LocalFree(lpMsgBuf);
-			}
+		char * win32_error = git_win32_get_error_message(win32_error_code);
+		if (win32_error) {
+			git_buf_PUTS(&buf, ": ");
+			git_buf_puts(&buf, win32_error);
+			git__free(win32_error);
 
 			SetLastError(0);
 		}
