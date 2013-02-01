@@ -175,3 +175,27 @@ void test_clone_nonetwork__can_checkout_given_branch(void)
 	cl_assert_equal_s(git_reference_name(g_ref), "refs/heads/test");
 }
 
+void test_clone_nonetwork__can_detached_head(void)
+{
+	git_object *commit;
+	git_repository *cloned;
+	git_reference *cloned_head;
+
+	cl_git_pass(git_clone(&g_repo, cl_git_fixture_url("testrepo.git"), "./foo", &g_options));
+
+	cl_git_pass(git_revparse_single(&commit, g_repo, "master~1"));
+	cl_git_pass(git_repository_set_head_detached(g_repo, git_object_id(commit)));
+
+	cl_git_pass(git_clone(&cloned, "./foo", "./foo1", &g_options));
+
+	cl_assert(git_repository_head_detached(cloned));
+
+	cl_git_pass(git_repository_head(&cloned_head, cloned));
+	cl_assert(!git_oid_cmp(git_object_id(commit), git_reference_target(cloned_head)));
+
+	git_commit_free((git_commit*)commit);
+	git_reference_free(cloned_head);
+	git_repository_free(cloned);
+
+	cl_fixture_cleanup("./foo1");
+}
