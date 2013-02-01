@@ -41,27 +41,14 @@
 static void net_set_error(const char *str)
 {
 	int error = WSAGetLastError();
-	LPWSTR err_str = NULL;
+	char * win32_error = git_win32_get_error_message(error);
 
-	int size = FormatMessageW(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM,
-							  0, error, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPWSTR)&err_str, 0, 0);
-
-	int utf8_size = WideCharToMultiByte(CP_UTF8, 0, err_str, -1, NULL, 0, NULL, NULL);
-	char * err_str_utf8 = git__malloc(utf8_size * sizeof(char));
-	if (err_str_utf8 == NULL) {
-		LocalFree(err_str);
-		return;
+	if (win32_error) {
+		giterr_set(GITERR_NET, "%s: %s", str, win32_error);
+		git__free(win32_error);
+	} else {
+		giterr_set(GITERR_NET, str);
 	}
-
-	if (!WideCharToMultiByte(CP_UTF8, 0, err_str, -1, err_str_utf8, utf8_size, NULL, NULL)) {
-		LocalFree(err_str);
-		git__free(err_str_utf8);
-		return;
-	}
-
-	giterr_set(GITERR_NET, "%s: %s", str, err_str_utf8);
-	LocalFree(err_str);
-	git__free(err_str_utf8);
 }
 #else
 static void net_set_error(const char *str)
