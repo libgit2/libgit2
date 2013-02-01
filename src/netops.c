@@ -606,26 +606,26 @@ int gitno_extract_url_parts(
 	start = url;
 	if (at && at < slash) {
 		start = at+1;
-		*username = git__strndup(url, at - url);
+		*username = git__substrdup(url, at - url);
 	}
 
 	if (colon && colon < at) {
 		git__free(*username);
-		*username = git__strndup(url, colon-url);
-		*password = git__strndup(colon+1, at-colon-1);
+		*username = git__substrdup(url, colon-url);
+		*password = git__substrdup(colon+1, at-colon-1);
 		colon = strchr(at, ':');
 	}
 
 	if (colon == NULL) {
 		*port = git__strdup(default_port);
 	} else {
-		*port = git__strndup(colon + 1, slash - colon - 1);
+		*port = git__substrdup(colon + 1, slash - colon - 1);
 	}
 	GITERR_CHECK_ALLOC(*port);
 
 	end = colon == NULL ? slash : colon;
 
-	*host = git__strndup(start, end - start);
+	*host = git__substrdup(start, end - start);
 	GITERR_CHECK_ALLOC(*host);
 
 	return 0;
