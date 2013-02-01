@@ -139,13 +139,10 @@ int win32_find_msysgit_in_registry(struct win32_path *root, const HKEY hieve, co
 	assert(root);
 
 	root->len = 0;
-	if (RegOpenKeyExW(hieve, key, 0, KEY_ALL_ACCESS, &hKey) == ERROR_SUCCESS)
-	{
-		if (RegQueryValueExW(hKey, L"InstallLocation", NULL, &dwType, (LPBYTE)&root->path, &dwSize) == ERROR_SUCCESS)
-		{
+	if (RegOpenKeyExW(hieve, key, 0, KEY_ALL_ACCESS, &hKey) == ERROR_SUCCESS) {
+		if (RegQueryValueExW(hKey, L"InstallLocation", NULL, &dwType, (LPBYTE)&root->path, &dwSize) == ERROR_SUCCESS) {
 			// InstallLocation points to the root of the msysgit directory
-			if (dwSize + 4 > MAX_PATH) // 4 = wcslen(L"etc\\")
-			{
+			if (dwSize + 4 > MAX_PATH) {// 4 = wcslen(L"etc\\")
 				giterr_set(GITERR_OS, "Cannot locate the system's msysgit directory - path too long");
 				return -1;
 			}
