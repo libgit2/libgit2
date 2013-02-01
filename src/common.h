@@ -28,6 +28,7 @@
 # include <windows.h>
 # include "win32/msvc-compat.h"
 # include "win32/mingw-compat.h"
+# include "win32/error.h"
 # ifdef GIT_THREADS
 #	include "win32/pthread.h"
 #endif

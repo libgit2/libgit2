@@ -40,16 +40,15 @@
 #ifdef GIT_WIN32
 static void net_set_error(const char *str)
 {
-	int size, error = WSAGetLastError();
-	LPSTR err_str = NULL;
+	int error = WSAGetLastError();
+	char * win32_error = git_win32_get_error_message(error);
 
-	size = FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM,
-			     0, error, 0, (LPSTR)&err_str, 0, 0);
-
-	GIT_UNUSED(size);
-
-	giterr_set(GITERR_NET, "%s: %s", str, err_str);
-	LocalFree(err_str);
+	if (win32_error) {
+		giterr_set(GITERR_NET, "%s: %s", str, win32_error);
+		git__free(win32_error);
+	} else {
+		giterr_set(GITERR_NET, str);
+	}
 }
 #else
 static void net_set_error(const char *str)
