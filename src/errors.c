@@ -52,16 +52,25 @@ void giterr_set(int error_class, const char *string, ...)
 	if (error_class == GITERR_OS) {
 #ifdef GIT_WIN32
 		if (win32_error_code) {
-			char *lpMsgBuf;
-
-			if (FormatMessageA(
+			LPWSTR lpMsgBuf = NULL;
+			int size = FormatMessageW(
 					FORMAT_MESSAGE_ALLOCATE_BUFFER |
 					FORMAT_MESSAGE_FROM_SYSTEM |
 					FORMAT_MESSAGE_IGNORE_INSERTS,
-					NULL, win32_error_code, 0, (LPSTR)&lpMsgBuf, 0, NULL)) {
+					NULL, win32_error_code, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+					(LPWSTR)&lpMsgBuf, 0, NULL);
+
+			if (size) {
+				int utf8_size = size * 4 + 1;
+
+				char *lpMsgBuf_utf8 = git__calloc(utf8_size, sizeof(char));
+				GITERR_CHECK_ALLOC(lpMsgBuf_utf8);
+				WideCharToMultiByte(CP_UTF8, 0, lpMsgBuf, size, lpMsgBuf_utf8, utf8_size, NULL, NULL);
+
 				git_buf_PUTS(&buf, ": ");
-				git_buf_puts(&buf, lpMsgBuf);
+				git_buf_puts(&buf, lpMsgBuf_utf8);
 				LocalFree(lpMsgBuf);
+				git__free(lpMsgBuf_utf8);
 			}
 
 			SetLastError(0);

@@ -40,16 +40,20 @@
 #ifdef GIT_WIN32
 static void net_set_error(const char *str)
 {
-	int size, error = WSAGetLastError();
-	LPSTR err_str = NULL;
+	int error = WSAGetLastError();
+	LPWSTR err_str = NULL;
 
-	size = FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM,
-			     0, error, 0, (LPSTR)&err_str, 0, 0);
+	int size = FormatMessageW(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM,
+							  0, error, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPWSTR)&err_str, 0, 0);
 
-	GIT_UNUSED(size);
+	int utf8_size = size * 4 + 1;
+	char * err_str_utf8 = git__calloc(utf8_size, sizeof(char));
+	GITERR_CHECK_ALLOC(err_str_utf8);
+	WideCharToMultiByte(CP_UTF8, 0, err_str, size, err_str_utf8, utf8_size, NULL, NULL);
 
-	giterr_set(GITERR_NET, "%s: %s", str, err_str);
+	giterr_set(GITERR_NET, "%s: %s", str, err_str_utf8);
 	LocalFree(err_str);
+	git__free(err_str_utf8);
 }
 #else
 static void net_set_error(const char *str)
