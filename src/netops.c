@@ -48,8 +48,16 @@ static void net_set_error(const char *str)
 
 	int utf8_size = WideCharToMultiByte(CP_UTF8, 0, err_str, -1, NULL, 0, NULL, NULL);
 	char * err_str_utf8 = git__malloc(utf8_size * sizeof(char));
-	GITERR_CHECK_ALLOC(err_str_utf8);
-	WideCharToMultiByte(CP_UTF8, 0, err_str, -1, err_str_utf8, utf8_size, NULL, NULL);
+	if (err_str_utf8 == NULL) {
+		LocalFree(err_str);
+		return;
+	}
+
+	if (!WideCharToMultiByte(CP_UTF8, 0, err_str, -1, err_str_utf8, utf8_size, NULL, NULL)) {
+		LocalFree(err_str);
+		git__free(err_str_utf8);
+		return;
+	}
 
 	giterr_set(GITERR_NET, "%s: %s", str, err_str_utf8);
 	LocalFree(err_str);
