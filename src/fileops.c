@@ -544,12 +544,6 @@ int git_futils_find_global_file(git_buf *path, const char *filename)
 		/* try to look up file under path */
 		if (!win32_find_file(path, &root, filename))
 			return 0;
-
-		/* No error if file not found under %HOME%, b/c we don't trust it,
-		 * but do error if another var is set and yet file is not found.
-		 */
-		if (tmpl != tmpls)
-			break;
 	}
 
 	giterr_set(GITERR_OS, "The global file '%s' doesn't exist", filename);
