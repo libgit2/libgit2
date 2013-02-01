@@ -61,11 +61,11 @@ void giterr_set(int error_class, const char *string, ...)
 					(LPWSTR)&lpMsgBuf, 0, NULL);
 
 			if (size) {
-				int utf8_size = size * 4 + 1;
+				int utf8_size = WideCharToMultiByte(CP_UTF8, 0, lpMsgBuf, -1, NULL, 0, NULL, NULL);
 
-				char *lpMsgBuf_utf8 = git__calloc(utf8_size, sizeof(char));
+				char *lpMsgBuf_utf8 = git__malloc(utf8_size * sizeof(char));
 				GITERR_CHECK_ALLOC(lpMsgBuf_utf8);
-				WideCharToMultiByte(CP_UTF8, 0, lpMsgBuf, size, lpMsgBuf_utf8, utf8_size, NULL, NULL);
+				WideCharToMultiByte(CP_UTF8, 0, lpMsgBuf, -1, lpMsgBuf_utf8, utf8_size, NULL, NULL);
 
 				git_buf_PUTS(&buf, ": ");
 				git_buf_puts(&buf, lpMsgBuf_utf8);
