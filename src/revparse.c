@@ -126,19 +126,19 @@ static int revparse_lookup_object(git_object **out, git_repository *repo, const 
 	int error;
 	git_reference *ref;
 
-	error = maybe_describe(out, repo, spec);
-	if (!error)
-		return 0;
-
-	if (error < 0 && error != GIT_ENOTFOUND)
-		return error;
-
 	error = disambiguate_refname(&ref, repo, spec);
 	if (!error) {
 		error = git_object_lookup(out, repo, git_reference_target(ref), GIT_OBJ_ANY);
 		git_reference_free(ref);
 		return error;
 	}
+
+	if (error < 0 && error != GIT_ENOTFOUND)
+		return error;
+
+	error = maybe_describe(out, repo, spec);
+	if (!error)
+		return 0;
 
 	if (error < 0 && error != GIT_ENOTFOUND)
 		return error;
