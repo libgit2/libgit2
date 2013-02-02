@@ -12,11 +12,6 @@
 #include "vector.h"
 #include "buffer.h"
 
-#define ITERATOR_PREFIXCMP(ITER, STR, PREFIX)	\
-	(((ITER).flags & GIT_ITERATOR_IGNORE_CASE) != 0 ? \
-	git__prefixcmp_icase((STR), (PREFIX)) : \
-	git__prefixcmp((STR), (PREFIX)))
-
 typedef struct git_iterator git_iterator;
 
 typedef enum {
@@ -28,16 +23,23 @@ typedef enum {
 } git_iterator_type_t;
 
 typedef enum {
-	GIT_ITERATOR_IGNORE_CASE = (1 << 0), /* ignore_case */
-	GIT_ITERATOR_DONT_IGNORE_CASE = (1 << 1), /* force ignore_case off */
+	/** Ignore case for entry sort order */
+	GIT_ITERATOR_IGNORE_CASE      = (1 << 0),
+	/** Force case sensitivity in entry sort order */
+	GIT_ITERATOR_DONT_IGNORE_CASE = (1 << 1),
+	/** Return tree items in addition to blob items */
+	GIT_ITERATOR_INCLUDE_TREES    = (1 << 2),
+	/** Don't flatten trees, requiring advance_into (implies INCLUDE_TREES) */
+	GIT_ITERATOR_DONT_AUTOEXPAND  = (1 << 3),
 } git_iterator_flag_t;
 
 typedef struct {
-	int (*current)(git_iterator *, const git_index_entry **);
-	int (*at_end)(git_iterator *);
-	int (*advance)(git_iterator *, const git_index_entry **);
+	int (*current)(const git_index_entry **, git_iterator *);
+	int (*advance)(const git_index_entry **, git_iterator *);
+	int (*advance_into)(const git_index_entry **, git_iterator *);
 	int (*seek)(git_iterator *, const char *prefix);
 	int (*reset)(git_iterator *, const char *start, const char *end);
+	int (*at_end)(git_iterator *);
 	void (*free)(git_iterator *);
 } git_iterator_callbacks;
 
@@ -52,161 +54,150 @@ struct git_iterator {
 };
 
 extern int git_iterator_for_nothing(
-	git_iterator **out, git_iterator_flag_t flags);
+	git_iterator **out,
+	git_iterator_flag_t flags,
+	const char *start,
+	const char *end);
 
 /* tree iterators will match the ignore_case value from the index of the
  * repository, unless you override with a non-zero flag value
  */
-extern int git_iterator_for_tree_range(
+extern int git_iterator_for_tree(
 	git_iterator **out,
 	git_tree *tree,
 	git_iterator_flag_t flags,
 	const char *start,
 	const char *end);
 
-GIT_INLINE(int) git_iterator_for_tree(git_iterator **out, git_tree *tree)
-{
-	return git_iterator_for_tree_range(out, tree, 0, NULL, NULL);
-}
-
 /* index iterators will take the ignore_case value from the index; the
  * ignore_case flags are not used
  */
-extern int git_iterator_for_index_range(
+extern int git_iterator_for_index(
 	git_iterator **out,
 	git_index *index,
 	git_iterator_flag_t flags,
 	const char *start,
 	const char *end);
 
-GIT_INLINE(int) git_iterator_for_index(git_iterator **out, git_index *index)
-{
-	return git_iterator_for_index_range(out, index, 0, NULL, NULL);
-}
-
 /* workdir iterators will match the ignore_case value from the index of the
  * repository, unless you override with a non-zero flag value
  */
-extern int git_iterator_for_workdir_range(
+extern int git_iterator_for_workdir(
 	git_iterator **out,
 	git_repository *repo,
 	git_iterator_flag_t flags,
 	const char *start,
 	const char *end);
 
-GIT_INLINE(int) git_iterator_for_workdir(git_iterator **out, git_repository *repo)
-{
-	return git_iterator_for_workdir_range(out, repo, 0, NULL, NULL);
-}
-
 extern void git_iterator_free(git_iterator *iter);
 
-/* Spool all iterator values, resort with alternative ignore_case value
- * and replace callbacks with spoolandsort alternates.
- */
-extern int git_iterator_spoolandsort_push(git_iterator *iter, bool ignore_case);
-
-/* Restore original callbacks - not required in most circumstances */
-extern void git_iterator_spoolandsort_pop(git_iterator *iter);
-
-/* Entry is not guaranteed to be fully populated.  For a tree iterator,
- * we will only populate the mode, oid and path, for example.  For a workdir
- * iterator, we will not populate the oid.
+/* Return a git_index_entry structure for the current value the iterator
+ * is looking at or NULL if the iterator is at the end.
+ *
+ * The entry may noy be fully populated.  Tree iterators will only have a
+ * value mode, OID, and path.  Workdir iterators will not have an OID (but
+ * you can use `git_iterator_current_oid()` to calculate it on demand).
  *
  * You do not need to free the entry.  It is still "owned" by the iterator.
- * Once you call `git_iterator_advance`, then content of the old entry is
- * no longer guaranteed to be valid.
+ * Once you call `git_iterator_advance()` then the old entry is no longer
+ * guaranteed to be valid - it may be freed or just overwritten in place.
  */
-GIT_INLINE(int) git_iterator_current(
-	git_iterator *iter, const git_index_entry **entry)
+GIT_INLINE(int) git_iterator_current(const git_index_entry **e, git_iterator *i)
 {
-	return iter->cb->current(iter, entry);
+	return i->cb->current(e, i);
 }
 
-GIT_INLINE(int) git_iterator_at_end(git_iterator *iter)
+GIT_INLINE(int) git_iterator_at_end(git_iterator *i)
 {
-	return iter->cb->at_end(iter);
+	return i->cb->at_end(i);
 }
 
-GIT_INLINE(int) git_iterator_advance(
-	git_iterator *iter, const git_index_entry **entry)
+GIT_INLINE(int) git_iterator_advance(const git_index_entry **e, git_iterator *i)
 {
-	return iter->cb->advance(iter, entry);
+	return i->cb->advance(e, i);
 }
 
-GIT_INLINE(int) git_iterator_seek(
-	git_iterator *iter, const char *prefix)
+/**
+ * Iterate into a directory when GIT_ITERATOR_DONT_AUTOEXPAND is set.
+ *
+ * Normally, git_iterator_advance() will allow you to step through all
+ * the items being iterated over (either including or excluding trees,
+ * depending on use of GIT_ITERATOR_INCLUDE_TREES).
+ *
+ * When you use the GIT_ITERATOR_DONT_AUTOEXPAND flag, however, advance will
+ * skip to the next sibling entry when you are pointing at a tree instead of
+ * going to the first child of the tree.  Use this function to advance to
+ * the first child of the tree.
+ *
+ * If the current item is not a tree, this is a no-op.
+ *
+ * For working directory iterators, if the tree (i.e. directory) is empty,
+ * this returns GIT_ENOTFOUND and does not advance.  For tree and index
+ * iterators, that cannot happen since empty trees are not stored by git.
+ */
+GIT_INLINE(int) git_iterator_advance_into(
+	const git_index_entry **e, git_iterator *i)
 {
-	return iter->cb->seek(iter, prefix);
+	return i->cb->advance_into(e, i);
+}
+
+GIT_INLINE(int) git_iterator_seek(git_iterator *i, const char *pfx)
+{
+	return i->cb->seek(i, pfx);
 }
 
 GIT_INLINE(int) git_iterator_reset(
-	git_iterator *iter, const char *start, const char *end)
+	git_iterator *i, const char *start, const char *end)
 {
-	return iter->cb->reset(iter, start, end);
+	return i->cb->reset(i, start, end);
 }
 
-GIT_INLINE(git_iterator_type_t) git_iterator_type(git_iterator *iter)
+GIT_INLINE(git_iterator_type_t) git_iterator_type(git_iterator *i)
 {
-	return iter->type;
+	return i->type;
 }
 
-GIT_INLINE(git_repository *) git_iterator_owner(git_iterator *iter)
+GIT_INLINE(git_repository *) git_iterator_owner(git_iterator *i)
 {
-	return iter->repo;
+	return i->repo;
 }
 
-GIT_INLINE(git_iterator_flag_t) git_iterator_flags(git_iterator *iter)
+GIT_INLINE(git_iterator_flag_t) git_iterator_flags(git_iterator *i)
 {
-	return iter->flags;
+	return i->flags;
 }
 
-GIT_INLINE(bool) git_iterator_ignore_case(git_iterator *iter)
+GIT_INLINE(bool) git_iterator_ignore_case(git_iterator *i)
 {
-	return ((iter->flags & GIT_ITERATOR_IGNORE_CASE) != 0);
+	return ((i->flags & GIT_ITERATOR_IGNORE_CASE) != 0);
 }
+
+extern int git_iterator_set_ignore_case(git_iterator *i, bool ignore_case);
+
 
 extern int git_iterator_current_tree_entry(
-	git_iterator *iter, const git_tree_entry **tree_entry);
+	const git_tree_entry **entry_out, git_iterator *iter);
 
 extern int git_iterator_current_parent_tree(
-	git_iterator *iter, const char *parent_path, const git_tree **tree_ptr);
+	const git_tree **tree_out, git_iterator *iter, const char *parent_path);
 
-extern int git_iterator_current_is_ignored(git_iterator *iter);
+extern bool git_iterator_current_is_ignored(git_iterator *iter);
+
+extern int git_iterator_current_oid(git_oid *oid_out, git_iterator *iter);
 
 /**
- * Iterate into a workdir directory.
- *
- * Workdir iterators do not automatically descend into directories (so that
- * when comparing two iterator entries you can detect a newly created
- * directory in the workdir).  As a result, you may get S_ISDIR items from
- * a workdir iterator.  If you wish to iterate over the contents of the
- * directories you encounter, then call this function when you encounter
- * a directory.
- *
- * If there are no files in the directory, this will end up acting like a
- * regular advance and will skip past the directory, so you should be
- * prepared for that case.
- *
- * On non-workdir iterators or if not pointing at a directory, this is a
- * no-op and will not advance the iterator.
+ * Get full path of the current item from a workdir iterator.  This will
+ * return NULL for a non-workdir iterator.  The git_buf is still owned by
+ * the iterator; this is exposed just for efficiency.
  */
-extern int git_iterator_advance_into_directory(
-	git_iterator *iter, const git_index_entry **entry);
+extern int git_iterator_current_workdir_path(
+	git_buf **path, git_iterator *iter);
+
 
 extern int git_iterator_cmp(
 	git_iterator *iter, const char *path_prefix);
 
-/**
- * Get the full path of the current item from a workdir iterator.
- * This will return NULL for a non-workdir iterator.
- */
-extern int git_iterator_current_workdir_path(
-	git_iterator *iter, git_buf **path);
-
-
-extern git_index *git_iterator_index_get_index(git_iterator *iter);
-
-extern git_iterator_type_t git_iterator_inner_type(git_iterator *iter);
+/* returns index pointer if index iterator, else NULL */
+extern git_index *git_iterator_get_index(git_iterator *iter);
 
 #endif

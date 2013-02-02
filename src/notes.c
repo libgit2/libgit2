@@ -596,14 +596,14 @@ int git_note_foreach(
 
 	if (!(error = retrieve_note_tree_and_commit(
 			&tree, &commit, repo, &notes_ref)) &&
-		!(error = git_iterator_for_tree(&iter, tree)))
-		error = git_iterator_current(iter, &item);
+		!(error = git_iterator_for_tree(&iter, tree, 0, NULL, NULL)))
+		error = git_iterator_current(&item, iter);
 
 	while (!error && item) {
 		error = process_entry_path(item->path, &item->oid, note_cb, payload);
 
 		if (!error)
-			error = git_iterator_advance(iter, &item);
+			error = git_iterator_advance(&item, iter);
 	}
 
 	git_iterator_free(iter);
