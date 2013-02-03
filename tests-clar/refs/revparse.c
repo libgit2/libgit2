@@ -486,3 +486,112 @@ void test_refs_revparse__issue_994(void)
 	git_reference_free(head);
 	cl_git_sandbox_cleanup();
 }
+
+/**
+ * $ git rev-parse blah-7-gc47800c
+ * c47800c7266a2be04c571c04d5a6614691ea99bd
+ * 
+ * $ git rev-parse HEAD~3
+ * 4a202b346bb0fb0db7eff3cffeb3c70babbd2045
+ * 
+ * $ git branch blah-7-gc47800c HEAD~3
+ * 
+ * $ git rev-parse blah-7-gc47800c
+ * 4a202b346bb0fb0db7eff3cffeb3c70babbd2045
+ */
+void test_refs_revparse__try_to_retrieve_branch_before_described_tag(void)
+{
+	git_repository *repo;
+	git_reference *branch;
+	git_object *target;
+	char sha[GIT_OID_HEXSZ + 1];
+
+	repo = cl_git_sandbox_init("testrepo.git");
+
+	test_object_inrepo("blah-7-gc47800c", "c47800c7266a2be04c571c04d5a6614691ea99bd", repo);
+
+	cl_git_pass(git_revparse_single(&target, repo, "HEAD~3"));
+	cl_git_pass(git_branch_create(&branch, repo, "blah-7-gc47800c", (git_commit *)target, 0));
+
+	git_oid_tostr(sha, GIT_OID_HEXSZ + 1, git_object_id(target));
+
+	test_object_inrepo("blah-7-gc47800c", sha, repo);
+
+	git_reference_free(branch);
+	git_object_free(target);
+	cl_git_sandbox_cleanup();
+}
+
+/**
+ * $ git rev-parse a65fedf39aefe402d3bb6e24df4d4f5fe4547750
+ * a65fedf39aefe402d3bb6e24df4d4f5fe4547750
+ * 
+ * $ git rev-parse HEAD~3
+ * 4a202b346bb0fb0db7eff3cffeb3c70babbd2045
+ * 
+ * $ git branch a65fedf39aefe402d3bb6e24df4d4f5fe4547750 HEAD~3
+ * 
+ * $ git rev-parse a65fedf39aefe402d3bb6e24df4d4f5fe4547750
+ * a65fedf39aefe402d3bb6e24df4d4f5fe4547750
+ * 
+ * $ git rev-parse heads/a65fedf39aefe402d3bb6e24df4d4f5fe4547750
+ * 4a202b346bb0fb0db7eff3cffeb3c70babbd2045
+ */
+void test_refs_revparse__try_to_retrieve_sha_before_branch(void)
+{
+	git_repository *repo;
+	git_reference *branch;
+	git_object *target;
+	char sha[GIT_OID_HEXSZ + 1];
+
+	repo = cl_git_sandbox_init("testrepo.git");
+
+	test_object_inrepo("a65fedf39aefe402d3bb6e24df4d4f5fe4547750", "a65fedf39aefe402d3bb6e24df4d4f5fe4547750", repo);
+
+	cl_git_pass(git_revparse_single(&target, repo, "HEAD~3"));
+	cl_git_pass(git_branch_create(&branch, repo, "a65fedf39aefe402d3bb6e24df4d4f5fe4547750", (git_commit *)target, 0));
+
+	git_oid_tostr(sha, GIT_OID_HEXSZ + 1, git_object_id(target));
+
+	test_object_inrepo("a65fedf39aefe402d3bb6e24df4d4f5fe4547750", "a65fedf39aefe402d3bb6e24df4d4f5fe4547750", repo);
+	test_object_inrepo("heads/a65fedf39aefe402d3bb6e24df4d4f5fe4547750", sha, repo);
+
+	git_reference_free(branch);
+	git_object_free(target);
+	cl_git_sandbox_cleanup();
+}
+
+/**
+ * $ git rev-parse c47800
+ * c47800c7266a2be04c571c04d5a6614691ea99bd
+ * 
+ * $ git rev-parse HEAD~3
+ * 4a202b346bb0fb0db7eff3cffeb3c70babbd2045
+ * 
+ * $ git branch c47800 HEAD~3
+ * 
+ * $ git rev-parse c47800
+ * 4a202b346bb0fb0db7eff3cffeb3c70babbd2045
+ */
+void test_refs_revparse__try_to_retrieve_branch_before_abbrev_sha(void)
+{
+	git_repository *repo;
+	git_reference *branch;
+	git_object *target;
+	char sha[GIT_OID_HEXSZ + 1];
+
+	repo = cl_git_sandbox_init("testrepo.git");
+
+	test_object_inrepo("c47800", "c47800c7266a2be04c571c04d5a6614691ea99bd", repo);
+
+	cl_git_pass(git_revparse_single(&target, repo, "HEAD~3"));
+	cl_git_pass(git_branch_create(&branch, repo, "c47800", (git_commit *)target, 0));
+
+	git_oid_tostr(sha, GIT_OID_HEXSZ + 1, git_object_id(target));
+
+	test_object_inrepo("c47800", sha, repo);
+
+	git_reference_free(branch);
+	git_object_free(target);
+	cl_git_sandbox_cleanup();
+}
