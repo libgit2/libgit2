@@ -67,15 +67,31 @@ cleanup:
 	return error;
 }
 
-static int maybe_sha_or_abbrev(git_object**out, git_repository *repo, const char *spec)
+static int maybe_sha_or_abbrev(git_object** out, git_repository *repo, const char *spec, size_t speclen)
 {
 	git_oid oid;
-	size_t speclen = strlen(spec);
 
 	if (git_oid_fromstrn(&oid, spec, speclen) < 0)
 		return GIT_ENOTFOUND;
 
 	return git_object_lookup_prefix(out, repo, &oid, speclen, GIT_OBJ_ANY);
+}
+
+static int maybe_sha(git_object** out, git_repository *repo, const char *spec)
+{
+	size_t speclen = strlen(spec);
+
+	if (speclen != GIT_OID_HEXSZ)
+		return GIT_ENOTFOUND;
+
+	return maybe_sha_or_abbrev(out, repo, spec, speclen);
+}
+
+static int maybe_abbrev(git_object** out, git_repository *repo, const char *spec)
+{
+	size_t speclen = strlen(spec);
+
+	return maybe_sha_or_abbrev(out, repo, spec, speclen);
 }
 
 static int build_regex(regex_t *regex, const char *pattern)
@@ -118,13 +134,20 @@ static int maybe_describe(git_object**out, git_repository *repo, const char *spe
 	if (error)
 		return GIT_ENOTFOUND;
 
-	return maybe_sha_or_abbrev(out, repo, substr+2);
+	return maybe_abbrev(out, repo, substr+2);
 }
 
 static int revparse_lookup_object(git_object **out, git_repository *repo, const char *spec)
 {
 	int error;
 	git_reference *ref;
+
+	error = maybe_sha(out, repo, spec);
+	if (!error)
+		return 0;
+
+	if (error < 0 && error != GIT_ENOTFOUND)
+		return error;
 
 	error = disambiguate_refname(&ref, repo, spec);
 	if (!error) {
@@ -136,14 +159,14 @@ static int revparse_lookup_object(git_object **out, git_repository *repo, const 
 	if (error < 0 && error != GIT_ENOTFOUND)
 		return error;
 
-	error = maybe_describe(out, repo, spec);
+	error = maybe_abbrev(out, repo, spec);
 	if (!error)
 		return 0;
 
 	if (error < 0 && error != GIT_ENOTFOUND)
 		return error;
 
-	error = maybe_sha_or_abbrev(out, repo, spec);
+	error = maybe_describe(out, repo, spec);
 	if (!error)
 		return 0;
 
@@ -217,7 +240,7 @@ static int retrieve_previously_checked_out_branch_or_revision(git_object **out, 
 		if (error < 0 && error != GIT_ENOTFOUND)
 			goto cleanup;
 
-		error = maybe_sha_or_abbrev(out, repo, git_buf_cstr(&buf));
+		error = maybe_abbrev(out, repo, git_buf_cstr(&buf));
 
 		goto cleanup;
 	}
