@@ -185,12 +185,15 @@ typedef struct {
 GIT_INLINE(const git_tree_entry *)tree_iterator__tree_entry(tree_iterator *ti)
 {
 	tree_iterator_frame *tf = ti->stack;
+	size_t entries = git_tree_entrycount(tf->tree), idx = tf->index;
 
-	if (tf->index >= git_tree_entrycount(tf->tree))
+	if (idx >= entries)
 		return NULL;
 
-	return git_tree_entry_byindex(
-		tf->tree, tf->icase_map ? (size_t)tf->icase_map[tf->index] : tf->index);
+	if (tf->icase_map)
+		idx = (size_t)tf->icase_map[tf->index];
+
+	return git_tree_entry_byindex(tf->tree, idx);
 }
 
 static char *tree_iterator__current_filename(
