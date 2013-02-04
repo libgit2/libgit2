@@ -179,7 +179,7 @@ static int _git_uploadpack_ls(
 	const char *url,
 	git_smart_subtransport_stream **stream)
 {
-	char *host, *port;
+	char *host, *port, *user=NULL, *pass=NULL;
 	git_stream *s;
 
 	*stream = NULL;
@@ -192,7 +192,7 @@ static int _git_uploadpack_ls(
 
 	s = (git_stream *)*stream;
 
-	if (gitno_extract_host_and_port(&host, &port, url, GIT_DEFAULT_PORT) < 0)
+	if (gitno_extract_url_parts(&host, &port, &user, &pass, url, GIT_DEFAULT_PORT) < 0)
 		goto on_error;
 
 	if (gitno_connect(&s->socket, host, port, 0) < 0)
@@ -201,6 +201,8 @@ static int _git_uploadpack_ls(
 	t->current_stream = s;
 	git__free(host);
 	git__free(port);
+	git__free(user);
+	git__free(pass);
 	return 0;
 
 on_error:
@@ -233,7 +235,7 @@ static int _git_receivepack_ls(
 	const char *url,
 	git_smart_subtransport_stream **stream)
 {
-	char *host, *port;
+	char *host, *port, *user=NULL, *pass=NULL;
 	git_stream *s;
 
 	*stream = NULL;
@@ -246,7 +248,7 @@ static int _git_receivepack_ls(
 
 	s = (git_stream *)*stream;
 
-	if (gitno_extract_host_and_port(&host, &port, url, GIT_DEFAULT_PORT) < 0)
+	if (gitno_extract_url_parts(&host, &port, &user, &pass, url, GIT_DEFAULT_PORT) < 0)
 		goto on_error;
 
 	if (gitno_connect(&s->socket, host, port, 0) < 0)
@@ -255,6 +257,8 @@ static int _git_receivepack_ls(
 	t->current_stream = s;
 	git__free(host);
 	git__free(port);
+	git__free(user);
+	git__free(pass);
 	return 0;
 
 on_error:

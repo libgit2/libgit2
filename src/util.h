@@ -51,17 +51,22 @@ GIT_INLINE(char *) git__strndup(const char *str, size_t n)
 	while (length < n && str[length])
 		++length;
 
-	ptr = (char*)malloc(length + 1);
-	if (!ptr) {
-		giterr_set_oom();
-		return NULL;
-	}
+	ptr = (char*)git__malloc(length + 1);
 
 	if (length)
 		memcpy(ptr, str, length);
 
 	ptr[length] = '\0';
 
+	return ptr;
+}
+
+/* NOTE: This doesn't do null or '\0' checking.  Watch those boundaries! */
+GIT_INLINE(char *) git__substrdup(const char *start, size_t n)
+{
+	char *ptr = (char*)git__malloc(n+1);
+	memcpy(ptr, start, n);
+	ptr[n] = '\0';
 	return ptr;
 }
 

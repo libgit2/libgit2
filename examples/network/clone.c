@@ -61,6 +61,7 @@ static void checkout_progress(const char *path, size_t cur, size_t tot, void *pa
 
 static int cred_acquire(git_cred **out,
 		const char * UNUSED(url),
+		const char * UNUSED(username_from_url),
 		unsigned int UNUSED(allowed_types),
 		void * UNUSED(payload))
 {
