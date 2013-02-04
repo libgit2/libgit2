@@ -30,9 +30,15 @@ static git_oid _tag_tree;
 static git_oid _tag_blob;
 static git_oid _tag_lightweight;
 
-static int cred_acquire_cb(git_cred **cred, const char *url, unsigned int allowed_types, void *payload)
+static int cred_acquire_cb(
+		git_cred **cred,
+		const char *url,
+		const char *user_from_url,
+		unsigned int allowed_types,
+		void *payload)
 {
 	GIT_UNUSED(url);
+	GIT_UNUSED(user_from_url);
 
 	*((bool*)payload) = true;
 

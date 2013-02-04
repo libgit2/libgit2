@@ -62,6 +62,8 @@ GIT_EXTERN(int) git_cred_userpass_plaintext_new(
  *
  * @param cred The newly created credential object.
  * @param url The resource for which we are demanding a credential.
+ * @param username_from_url The username that was embedded in a "user@host"
+ *                          remote url, or NULL if not included.
  * @param allowed_types A bitmask stating which cred types are OK to return.
  * @param payload The payload provided when specifying this callback.
  * @return 0 for success or an error code for failure
@@ -69,6 +71,7 @@ GIT_EXTERN(int) git_cred_userpass_plaintext_new(
 typedef int (*git_cred_acquire_cb)(
 	git_cred **cred,
 	const char *url,
+	const char *username_from_url,
 	unsigned int allowed_types,
 	void *payload);
 

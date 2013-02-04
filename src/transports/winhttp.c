@@ -73,7 +73,10 @@ typedef struct {
 	const char *path;
 	char *host;
 	char *port;
+	char *user_from_url;
+	char *pass_from_url;
 	git_cred *cred;
+	git_cred *url_cred;
 	int auth_mechanism;
 	HINTERNET session;
 	HINTERNET connection;
@@ -249,6 +252,16 @@ static int winhttp_stream_connect(winhttp_stream *s)
 		t->auth_mechanism == GIT_WINHTTP_AUTH_BASIC &&
 		apply_basic_credential(s->request, t->cred) < 0)
 		goto on_error;
+
+	/* If no other credentials have been applied and the URL has username and
+	 * password, use those */
+	if (!t->cred && t->user_from_url && t->pass_from_url) {
+		if (!t->url_cred &&
+			 git_cred_userpass_plaintext_new(&t->url_cred, t->user_from_url, t->pass_from_url) < 0)
+			goto on_error;
+		if (apply_basic_credential(s->request, t->url_cred) < 0)
+			goto on_error;
+	}
 
 	/* We've done everything up to calling WinHttpSendRequest. */
 
@@ -447,7 +460,7 @@ replay:
 			if (allowed_types &&
 				(!t->cred || 0 == (t->cred->credtype & allowed_types))) {
 
-				if (t->owner->cred_acquire_cb(&t->cred, t->owner->url, allowed_types, t->owner->cred_acquire_payload) < 0)
+				if (t->owner->cred_acquire_cb(&t->cred, t->owner->url, t->user_from_url, allowed_types, t->owner->cred_acquire_payload) < 0)
 					return -1;
 
 				assert(t->cred);
@@ -788,7 +801,8 @@ static int winhttp_connect(
 		t->use_ssl = 1;
 	}
 
-	if ((ret = gitno_extract_host_and_port(&t->host, &t->port, url, default_port)) < 0)
+	if ((ret = gitno_extract_url_parts(&t->host, &t->port, &t->user_from_url,
+					&t->pass_from_url, url, default_port)) < 0)
 		return ret;
 
 	t->path = strchr(url, '/');
@@ -944,9 +958,24 @@ static int winhttp_close(git_smart_subtransport *subtransport)
 		t->port = NULL;
 	}
 
+	if (t->user_from_url) {
+		git__free(t->user_from_url);
+		t->user_from_url = NULL;
+	}
+
+	if (t->pass_from_url) {
+		git__free(t->pass_from_url);
+		t->pass_from_url = NULL;
+	}
+
 	if (t->cred) {
 		t->cred->free(t->cred);
 		t->cred = NULL;
+	}
+
+	if (t->url_cred) {
+		t->url_cred->free(t->url_cred);
+		t->url_cred = NULL;
 	}
 
 	if (t->connection) {
