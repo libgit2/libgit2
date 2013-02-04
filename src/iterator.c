@@ -333,6 +333,8 @@ static int tree_iterator__push_frame(
 	ti->stack = tf;
 	if (tf->next)
 		tf->next->prev = tf;
+	else
+		ti->tail = tf;
 
 	if (start && *start) {
 		tf->start    = start;
@@ -494,7 +496,7 @@ static int tree_iterator__reset(
 	git_buf_clear(&ti->path);
 	ti->path_has_filename = false;
 
-	if (iterator__do_autoexpand(ti))
+	if (iterator__do_autoexpand(ti) && !iterator__include_trees(ti))
 		return tree_iterator__expand_tree(ti);
 
 	return 0;
@@ -524,7 +526,7 @@ int git_iterator_for_tree(
 		(error = tree_iterator__push_frame(ti, tree, ti->base.start)) < 0)
 		goto fail;
 
-	if (iterator__do_autoexpand(ti))
+	if (iterator__do_autoexpand(ti) && !iterator__include_trees(ti))
 		error = tree_iterator__expand_tree(ti);
 
 	*iter = (git_iterator *)ti;
