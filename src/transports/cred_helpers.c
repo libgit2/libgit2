@@ -23,7 +23,9 @@ int git_cred_userpass(
 	if (!userpass || !userpass->password) return -1;
 
 	/* Username resolution: a username can be passed with the URL, the
-	 * credentials payload, or both. Here's what we do.
+	 * credentials payload, or both. Here's what we do.  Note that if we get
+	 * this far, we know that any password the url may contain has already
+	 * failed at least once, so we ignore it.
 	 *
 	 * |  Payload    |   URL    |   Used    |
 	 * +-------------+----------+-----------+
@@ -32,10 +34,12 @@ int git_cred_userpass(
 	 * |    no       |   yes    |  url      |
 	 * |    no       |   no     |  FAIL     |
 	 */
-	effective_username = userpass->username;
-	if (!userpass->username && user_from_url)
+	if (userpass->username)
+		effective_username = userpass->username;
+	else if (user_from_url)
 		effective_username = user_from_url;
-	if (!effective_username) return -1;
+	else
+		return -1;
 
 	if ((GIT_CREDTYPE_USERPASS_PLAINTEXT & allowed_types) == 0 ||
 			git_cred_userpass_plaintext_new(cred, effective_username, userpass->password) < 0)
