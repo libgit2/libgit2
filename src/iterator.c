@@ -562,13 +562,15 @@ static const git_index_entry *index_iterator__index_entry(index_iterator *ii)
 	return ie;
 }
 
-static void index_iterator__skip_conflicts(index_iterator *ii)
+static const git_index_entry *index_iterator__skip_conflicts(index_iterator *ii)
 {
 	const git_index_entry *ie;
 
 	while ((ie = index_iterator__index_entry(ii)) != NULL &&
 		   git_index_entry_stage(ie) != 0)
 		ii->current++;
+
+	return ie;
 }
 
 static void index_iterator__next_prefix_tree(index_iterator *ii)
@@ -594,7 +596,7 @@ static void index_iterator__next_prefix_tree(index_iterator *ii)
 
 static int index_iterator__first_prefix_tree(index_iterator *ii)
 {
-	const git_index_entry *ie = index_iterator__index_entry(ii);
+	const git_index_entry *ie = index_iterator__skip_conflicts(ii);
 	const char *scan, *prior, *slash;
 
 	if (!ie || !iterator__include_trees(ii))
@@ -718,9 +720,7 @@ static int index_iterator__reset(
 	ii->current = ii->base.start ?
 		git_index__prefix_position(ii->index, ii->base.start) : 0;
 
-	index_iterator__skip_conflicts(ii);
-
-	if ((ie = git_index_get_byindex(ii->index, ii->current)) == NULL)
+	if ((ie = index_iterator__skip_conflicts(ii)) == NULL)
 		return 0;
 
 	if (git_buf_sets(&ii->partial, ie->path) < 0)
