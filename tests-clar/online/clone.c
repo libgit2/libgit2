@@ -189,7 +189,7 @@ static int cancel_at_half(const git_transfer_progress *stats, void *payload)
 	GIT_UNUSED(payload);
 
 	if (stats->received_objects > (stats->total_objects/2))
-		return -1;
+		return 1;
 	return 0;
 }
 

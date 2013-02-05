@@ -493,7 +493,7 @@ int git_smart__download_pack(
 			git__free(pkt);
 		} else if (pkt->type == GIT_PKT_DATA) {
 			git_pkt_data *p = (git_pkt_data *) pkt;
-			if ((error = writepack->add(writepack, p->data, p->len, stats)) < 0)
+			if ((error = writepack->add(writepack, p->data, p->len, stats)) != 0)
 				goto on_error;
 
 			git__free(pkt);

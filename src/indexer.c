@@ -536,7 +536,7 @@ int git_indexer_stream_add(git_indexer_stream *idx, const void *data, size_t siz
 		}
 		stats->received_objects++;
 
-		if (do_progress_callback(idx, stats) < 0) {
+		if (do_progress_callback(idx, stats) != 0) {
 			error = GIT_EUSER;
 			goto on_error;
 		}
