@@ -37,6 +37,6 @@ void test_refs_branches_trackingname__can_retrieve_the_local_tracking_reference_
 
 void test_refs_branches_trackingname__can_return_the_size_of_thelocal_tracking_reference_name_of_a_local_branch(void)
 {
-	cl_assert_equal_i(strlen("refs/heads/master") + 1,
+	cl_assert_equal_i((int)strlen("refs/heads/master") + 1,
 		git_branch_tracking_name(NULL, 0, repo, "refs/heads/track-local"));
 }

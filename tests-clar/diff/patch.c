@@ -251,13 +251,13 @@ static void check_single_patch_stats(
 	cl_git_pass(git_diff_get_patch(&patch, &delta, diff, 0));
 	cl_assert_equal_i(GIT_DELTA_MODIFIED, (int)delta->status);
 
-	cl_assert_equal_i(hunks, (int)git_diff_patch_num_hunks(patch));
+	cl_assert_equal_sz(hunks, git_diff_patch_num_hunks(patch));
 
 	cl_git_pass(
 		git_diff_patch_line_stats(NULL, &actual_adds, &actual_dels, patch));
 
-	cl_assert_equal_i(adds, actual_adds);
-	cl_assert_equal_i(dels, actual_dels);
+	cl_assert_equal_sz(adds, actual_adds);
+	cl_assert_equal_sz(dels, actual_dels);
 
 	git_diff_patch_free(patch);
 	git_diff_list_free(diff);

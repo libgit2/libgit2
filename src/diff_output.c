@@ -1603,8 +1603,8 @@ int git_diff_patch_get_line_in_hunk(
 	if (line_origin) *line_origin = line->origin;
 	if (content) *content = line->ptr;
 	if (content_len) *content_len = line->len;
-	if (old_lineno) *old_lineno = line->oldno;
-	if (new_lineno) *new_lineno = line->newno;
+	if (old_lineno) *old_lineno = (int)line->oldno;
+	if (new_lineno) *new_lineno = (int)line->newno;
 
 	return 0;
 
