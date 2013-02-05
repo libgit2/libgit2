@@ -27,7 +27,7 @@ typedef struct git_transfer_progress {
 /**
  * Type for progress callbacks during indexing
  */
-typedef void (*git_transfer_progress_callback)(const git_transfer_progress *stats, void *payload);
+typedef int (*git_transfer_progress_callback)(const git_transfer_progress *stats, void *payload);
 
 typedef struct git_indexer git_indexer;
 typedef struct git_indexer_stream git_indexer_stream;

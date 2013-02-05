@@ -394,15 +394,15 @@ on_error:
 	return -1;
 }
 
-static void do_progress_callback(git_indexer_stream *idx, git_transfer_progress *stats)
+static int do_progress_callback(git_indexer_stream *idx, git_transfer_progress *stats)
 {
-	if (!idx->progress_cb) return;
-	idx->progress_cb(stats, idx->progress_payload);
+	if (!idx->progress_cb) return 0;
+	return idx->progress_cb(stats, idx->progress_payload);
 }
 
 int git_indexer_stream_add(git_indexer_stream *idx, const void *data, size_t size, git_transfer_progress *stats)
 {
-	int error;
+	int error = -1;
 	struct git_pack_header hdr;
 	size_t processed; 
 	git_mwindow_file *mwf = &idx->pack->mwf;
@@ -536,14 +536,17 @@ int git_indexer_stream_add(git_indexer_stream *idx, const void *data, size_t siz
 		}
 		stats->received_objects++;
 
-		do_progress_callback(idx, stats);
+		if (do_progress_callback(idx, stats) < 0) {
+			error = GIT_EUSER;
+			goto on_error;
+		}
 	}
 
 	return 0;
 
 on_error:
 	git_mwindow_free_all(mwf);
-	return -1;
+	return error;
 }
 
 static int index_path_stream(git_buf *path, git_indexer_stream *idx, const char *suffix)

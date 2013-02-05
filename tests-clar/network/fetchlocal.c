@@ -4,11 +4,12 @@
 #include "path.h"
 #include "remote.h"
 
-static void transfer_cb(const git_transfer_progress *stats, void *payload)
+static int transfer_cb(const git_transfer_progress *stats, void *payload)
 {
 	int *callcount = (int*)payload;
 	GIT_UNUSED(stats);
 	(*callcount)++;
+	return 0;
 }
 
 static void cleanup_local_repo(void *path)
