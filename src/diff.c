@@ -681,7 +681,23 @@ int git_diff__from_iterators(
 						git_iterator_current_is_ignored(new_iter))
 						git_buf_sets(&ignore_prefix, nitem->path);
 
-					if (git_iterator_advance_into(&nitem, new_iter) < 0)
+					/* advance into directory */
+					error = git_iterator_advance_into(&nitem, new_iter);
+
+					/* if the directory was empty, we can't advance into it */
+					if (error == GIT_ENOTFOUND) {
+						giterr_clear();
+						error = 0;
+						git_buf_clear(&ignore_prefix);
+
+						/* so skip it */
+						if (git_iterator_advance(&nitem, new_iter) < 0)
+							goto fail;
+
+						continue;
+					}
+
+					if (error < 0)
 						goto fail;
 
 					continue;
