@@ -271,21 +271,21 @@ static void check_tree_entry(
 	if (oid_p) {
 		git_buf_rtruncate_at_char(&path, '/');
 		cl_git_pass(git_iterator_current_parent_tree(&tree, i, path.ptr));
-		cl_assert(tree);
+		cl_assert_(tree, path.ptr);
 		cl_assert(git_oid_streq(git_tree_id(tree), oid_p) == 0);
 	}
 
 	if (oid_pp) {
 		git_buf_rtruncate_at_char(&path, '/');
 		cl_git_pass(git_iterator_current_parent_tree(&tree, i, path.ptr));
-		cl_assert(tree);
+		cl_assert_(tree, path.ptr);
 		cl_assert(git_oid_streq(git_tree_id(tree), oid_pp) == 0);
 	}
 
 	if (oid_ppp) {
 		git_buf_rtruncate_at_char(&path, '/');
 		cl_git_pass(git_iterator_current_parent_tree(&tree, i, path.ptr));
-		cl_assert(tree);
+		cl_assert_(tree, path.ptr);
 		cl_assert(git_oid_streq(git_tree_id(tree), oid_ppp) == 0);
 	}
 
