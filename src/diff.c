@@ -692,25 +692,22 @@ int git_diff__from_iterators(
 				}
 			}
 
-			/* In core git, the next two "else if" clauses are effectively
-			 * reversed -- i.e. when an untracked file contained in an
-			 * ignored directory is individually ignored, it shows up as an
-			 * ignored file in the diff list, even though other untracked
-			 * files in the same directory are skipped completely.
+			/* In core git when an untracked or ignored file is contained in
+			 * an ignored directory, it doesn't show up as an ignored file in
+			 * the diff list (git 1.8.0). It is completely skipped when using
+			 * the --ignored option.
 			 *
-			 * To me, this is odd.  If the directory is ignored and the file
-			 * is untracked, we should skip it consistently, regardless of
-			 * whether it happens to match a pattern in the ignore file.
-			 *
-			 * To match the core git behavior, just reverse the following
-			 * two "else if" cases so that individual file ignores are
-			 * checked before container directory exclusions are used to
-			 * skip the file.
+			 * When passing the flag GIT_DIFF_INCLUDE_IGNORED, I would expect
+			 * all files (whether they are in an ignored directory, and whether
+			 * they are ignored or untracked themselves) to be reported as
+			 * ignored.
 			 */
-			else if (delta_type == GIT_DELTA_IGNORED) {
-				if (git_iterator_advance(new_iter, &nitem) < 0)
-					goto fail;
-				continue; /* ignored parent directory, so skip completely */
+			else if ((delta_type == GIT_DELTA_IGNORED) &&
+				((diff->opts.flags & GIT_DIFF_INCLUDE_IGNORED) == 0)) {
+					if (git_iterator_advance(new_iter, &nitem) < 0)
+						goto fail;
+
+					continue; /* ignored parent directory, so skip completely */
 			}
 
 			else if (git_iterator_current_is_ignored(new_iter))
@@ -771,7 +768,7 @@ fail:
 	git_iterator *a = NULL, *b = NULL; \
 	char *pfx = opts ? git_pathspec_prefix(&opts->pathspec) : NULL; \
 	GITERR_CHECK_VERSION(opts, GIT_DIFF_OPTIONS_VERSION, "git_diff_options"); \
-    if (!(error = MAKE_FIRST) && !(error = MAKE_SECOND)) \
+	if (!(error = MAKE_FIRST) && !(error = MAKE_SECOND)) \
 		error = git_diff__from_iterators(diff, repo, a, b, opts); \
 	git__free(pfx); git_iterator_free(a); git_iterator_free(b); \
 } while (0)
@@ -811,7 +808,7 @@ int git_diff_tree_to_index(
 
 	DIFF_FROM_ITERATORS(
 		git_iterator_for_tree_range(&a, old_tree, 0, pfx, pfx),
-	    git_iterator_for_index_range(&b, index, 0, pfx, pfx)
+		git_iterator_for_index_range(&b, index, 0, pfx, pfx)
 	);
 
 	return error;
@@ -832,7 +829,7 @@ int git_diff_index_to_workdir(
 
 	DIFF_FROM_ITERATORS(
 		git_iterator_for_index_range(&a, index, 0, pfx, pfx),
-	    git_iterator_for_workdir_range(&b, repo, 0, pfx, pfx)
+		git_iterator_for_workdir_range(&b, repo, 0, pfx, pfx)
 	);
 
 	return error;
@@ -851,7 +848,7 @@ int git_diff_tree_to_workdir(
 
 	DIFF_FROM_ITERATORS(
 		git_iterator_for_tree_range(&a, old_tree, 0, pfx, pfx),
-	    git_iterator_for_workdir_range(&b, repo, 0, pfx, pfx)
+		git_iterator_for_workdir_range(&b, repo, 0, pfx, pfx)
 	);
 
 	return error;

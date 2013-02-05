@@ -190,7 +190,7 @@ void test_status_ignore__subdirectories(void)
 
 	memset(&st, 0, sizeof(st));
 	cl_git_pass(git_status_foreach(g_repo, cb_status__single, &st));
-	cl_assert_equal_i(2, st.count);
+	cl_assert_equal_i(2, st.count); /* .gitignore, ignore_me */
 	cl_assert(st.status == GIT_STATUS_IGNORED);
 
 	cl_git_pass(git_status_file(&st.status, g_repo, "ignore_me"));
@@ -199,15 +199,6 @@ void test_status_ignore__subdirectories(void)
 	cl_git_pass(git_status_should_ignore(&ignored, g_repo, "ignore_me"));
 	cl_assert(ignored);
 
-
-	/* So, interestingly, as per the comment in diff_from_iterators() the
-	 * following file is ignored, but in a way so that it does not show up
-	 * in status even if INCLUDE_IGNORED is used.  This actually matches
-	 * core git's behavior - if you follow these steps and try running "git
-	 * status -uall --ignored" then the following file and directory will
-	 * not show up in the output at all.
-	 */
-
 	cl_git_pass(
 		git_futils_mkdir_r("empty_standard_repo/test/ignore_me", NULL, 0775));
 	cl_git_mkfile(
@@ -215,7 +206,15 @@ void test_status_ignore__subdirectories(void)
 
 	memset(&st, 0, sizeof(st));
 	cl_git_pass(git_status_foreach(g_repo, cb_status__single, &st));
-	cl_assert_equal_i(2, st.count);
+
+	/* This actually differs from core git's behavior - if you follow these
+	 * steps and try running "git status -uall --ignored" then the following 
+	 * file and directory will not show up in the output at all.
+	 *
+	 * Beside .gitignore and ignore_me, test/ignore_me/file will also be
+	 * reported.
+	 */
+	cl_assert_equal_i(3, st.count); /*  */
 
 	cl_git_pass(git_status_file(&st.status, g_repo, "test/ignore_me/file"));
 	cl_assert(st.status == GIT_STATUS_IGNORED);
@@ -223,6 +222,74 @@ void test_status_ignore__subdirectories(void)
 	cl_git_pass(
 		git_status_should_ignore(&ignored, g_repo, "test/ignore_me/file"));
 	cl_assert(ignored);
+}
+
+void test_status_ignore__untracked_file_in_ignored_subdirectory(void)
+{
+	status_entry_single st;
+	int ignored;
+
+	g_repo = cl_git_sandbox_init("empty_standard_repo");
+
+	cl_git_rewritefile("empty_standard_repo/.gitignore", "bin");
+
+	memset(&st, 0, sizeof(st));
+
+	cl_git_pass(
+		git_futils_mkdir_r("empty_standard_repo/bin", NULL, 0775));
+	cl_git_mkfile(
+		"empty_standard_repo/bin/look-ma.txt", "I'm going to be ignored!");
+
+	memset(&st, 0, sizeof(st));
+	cl_git_pass(git_status_foreach(g_repo, cb_status__single, &st));
+	cl_assert_equal_i(2, st.count);
+
+	cl_git_pass(git_status_file(&st.status, g_repo, "bin/look-ma.txt"));
+	cl_assert(st.status == GIT_STATUS_IGNORED);
+
+	cl_git_pass(
+		git_status_should_ignore(&ignored, g_repo, "bin/look-ma.txt"));
+	cl_assert(ignored);
+}
+
+void test_status_ignore__unignored_file_file_in_ignored_subdirectory(void)
+{
+	status_entry_single st;
+	int ignored;
+
+	g_repo = cl_git_sandbox_init("empty_standard_repo");
+
+	cl_git_rewritefile("empty_standard_repo/.gitignore", "bin");
+
+	memset(&st, 0, sizeof(st));
+
+	cl_git_pass(
+		git_futils_mkdir_r("empty_standard_repo/bin", NULL, 0775));
+	cl_git_mkfile(
+		"empty_standard_repo/bin/.gitignore", "!*dad*");
+
+	cl_git_mkfile(
+		"empty_standard_repo/bin/look-ma.txt", "I'm going to be ignored!");
+	cl_git_mkfile(
+		"empty_standard_repo/bin/you-too-dad.txt", "I won't be ignored!");
+
+	memset(&st, 0, sizeof(st));
+	cl_git_pass(git_status_foreach(g_repo, cb_status__single, &st));
+	cl_assert_equal_i(4, st.count);
+
+	cl_git_pass(git_status_file(&st.status, g_repo, "bin/look-ma.txt"));
+	cl_assert(st.status == GIT_STATUS_IGNORED);
+
+	cl_git_pass(git_status_file(&st.status, g_repo, "bin/you-too-dad.txt"));
+	cl_assert(st.status == GIT_STATUS_INDEX_NEW);
+
+	cl_git_pass(
+		git_status_should_ignore(&ignored, g_repo, "bin/look-ma.txt"));
+	cl_assert(ignored);
+
+	cl_git_pass(
+		git_status_should_ignore(&ignored, g_repo, "bin/you-too-dad.txt"));
+	cl_assert(!ignored);
 }
 
 void test_status_ignore__adding_internal_ignores(void)
