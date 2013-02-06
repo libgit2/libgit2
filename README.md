@@ -19,7 +19,6 @@ release its source code.
     * Archives: <http://librelist.com/browser/libgit2/>
 * Website: <http://libgit2.github.com>
 * API documentation: <http://libgit2.github.com/libgit2>
-* Usage guide: <http://libgit2.github.com/api.html>
 
 What It Can Do
 ==================================
