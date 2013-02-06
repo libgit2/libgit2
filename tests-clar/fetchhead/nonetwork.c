@@ -92,7 +92,7 @@ void test_fetchhead_nonetwork__write(void)
 	cl_git_pass(git_futils_readbuffer(&fetchhead_buf,
 		"./test1/.git/FETCH_HEAD"));
 
-	equals = (strcmp(fetchhead_buf.ptr, FETCH_HEAD_WILDCARD_DATA) == 0);
+	equals = (strcmp(fetchhead_buf.ptr, FETCH_HEAD_WILDCARD_DATA_LOCAL) == 0);
 
 	git_buf_free(&fetchhead_buf);
 
