@@ -51,11 +51,11 @@ typedef enum {
  *   associate those lines with the parent commit. The default value is 20.
  *   This value only takes effect if any of the `GIT_BLAME_TRACK_COPIES_*`
  *   flags are specified.
- * - `newest_commitish` is a rev-parse spec that resolves to the most recent
+ * - `newest_commit` is a rev-parse spec that resolves to the most recent
  *   commit to consider.  The default is HEAD.
- * - `oldest_commitish` is a rev-parse spec that resolves to the oldest commit
- *   to consider.  The default is the first commit encountered with a NULL
- *   parent.
+ * - `newest_commit` is the newest commit to consider.  The default is HEAD.
+ * - `oldest_commit` is the oldest commit to consider.  The default is the
+ *   first commit encountered with a NULL parent.
  *	- `min_line` is the first line in the file to blame.  The default is 1 (line
  *	  numbers start with 1).
  *	- `max_line` is the last line in the file to blame.  The default is the last
@@ -67,8 +67,8 @@ typedef struct git_blame_options {
 
 	uint32_t flags;
 	uint16_t min_match_characters;
-	const char *newest_commitish;
-	const char *oldest_commitish;
+	const git_commit *newest_commit;
+	const git_commit *oldest_commit;
 	uint32_t min_line;
 	uint32_t max_line;
 } git_blame_options;
@@ -105,21 +105,40 @@ typedef struct git_blame_hunk {
 } git_blame_hunk;
 
 
+typedef struct git_blame_results git_blame_results;
+
 /**
- * Results structure for git_blame.
- *
- * - `hunks` is an array of hunks.
- * - `hunk_count` is the number of hunk structures in `hunks`.
+ * Gets the number of hunks that exist in the results structure.
  */
-typedef struct git_blame_results {
-	const git_blame_hunk * const hunks;
-	uint32_t hunk_count;
-} git_blame_results;
+GIT_EXTERN(uint32_t) git_blame_results_hunk_count(git_blame_results *results);
+
+/**
+ * Gets the blame hunk at the given index.
+ *
+ * @param results the results structure to query
+ * @param index index of the hunk to retrieve
+ * @return the hunk at the given index, or NULL on error
+ */
+GIT_EXTERN(const git_blame_hunk*) git_blame_results_hunk_byindex(
+		git_blame_results *results,
+		uint32_t index);
+
+/**
+ * Gets the hunk that relates to the given line number in the newest commit.
+ *
+ * @param results the results structure to query
+ * @param lineno the (1-based) line number to find a hunk for
+ * @return the hunk that contains the given line, or NULL on error
+ */
+GIT_EXTERN(const git_blame_hunk*) git_blame_results_hunk_byline(
+		git_blame_results *results,
+		uint32_t lineno);
 
 /**
  * Get the blame for a single file.
  *
  * @param out pointer that will receive the results object
+ * @param repo repository whose history is to be walked
  * @param path path to file to consider
  * @param options options for the blame operation.  If NULL, this is treated as
  *                though GIT_BLAME_OPTIONS_INIT were passed.
@@ -128,6 +147,7 @@ typedef struct git_blame_results {
  */
 GIT_EXTERN(int) git_blame_file(
 		git_blame_results **out,
+		git_repository *repo,
 		const char *path,
 		git_blame_options *options);
 
