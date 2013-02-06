@@ -56,7 +56,7 @@ GIT_BEGIN_DECL
  * - `remote_callbacks` may be used to specify custom progress callbacks for
  *   the origin remote before the fetch is initiated.
  * - `remote_autotag` may be used to specify the autotag setting before the
- *   initial fetch.
+ *   initial fetch.  The default is GIT_REMOTE_DOWNLOAD_TAGS_ALL.
  * - `checkout_branch` gives the name of the branch to checkout. NULL means
  *   use the remote's HEAD.
  */
