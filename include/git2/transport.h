@@ -300,7 +300,7 @@ typedef struct git_smart_subtransport_definition {
 
 	/* True if the protocol is stateless; false otherwise. For example,
 	 * http:// is stateless, but git:// is not. */
-	unsigned rpc : 1;
+	unsigned rpc;
 } git_smart_subtransport_definition;
 
 /* Smart transport subtransports that come with libgit2 */
