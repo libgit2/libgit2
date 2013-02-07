@@ -7,7 +7,7 @@ static git_remote *_remote;
 static git_repository *_repo;
 static const git_refspec *_refspec;
 
-void test_network_remotes__initialize(void)
+void test_network_remote_remotes__initialize(void)
 {
 	_repo = cl_git_sandbox_init("testrepo.git");
 
@@ -17,7 +17,7 @@ void test_network_remotes__initialize(void)
 	cl_assert(_refspec != NULL);
 }
 
-void test_network_remotes__cleanup(void)
+void test_network_remote_remotes__cleanup(void)
 {
 	git_remote_free(_remote);
 	_remote = NULL;
@@ -25,7 +25,7 @@ void test_network_remotes__cleanup(void)
 	cl_git_sandbox_cleanup();
 }
 
-void test_network_remotes__parsing(void)
+void test_network_remote_remotes__parsing(void)
 {
 	git_remote *_remote2 = NULL;
 
@@ -51,7 +51,7 @@ void test_network_remotes__parsing(void)
 	git_remote_free(_remote2);
 }
 
-void test_network_remotes__pushurl(void)
+void test_network_remote_remotes__pushurl(void)
 {
 	cl_git_pass(git_remote_set_pushurl(_remote, "git://github.com/libgit2/notlibgit2"));
 	cl_assert_equal_s(git_remote_pushurl(_remote), "git://github.com/libgit2/notlibgit2");
@@ -60,7 +60,7 @@ void test_network_remotes__pushurl(void)
 	cl_assert(git_remote_pushurl(_remote) == NULL);
 }
 
-void test_network_remotes__error_when_no_push_available(void)
+void test_network_remote_remotes__error_when_no_push_available(void)
 {
 	git_remote *r;
 	git_transport *t;
@@ -82,33 +82,33 @@ void test_network_remotes__error_when_no_push_available(void)
 	git_remote_free(r);
 }
 
-void test_network_remotes__parsing_ssh_remote(void)
+void test_network_remote_remotes__parsing_ssh_remote(void)
 {
 	cl_assert( git_remote_valid_url("git@github.com:libgit2/libgit2.git") );
 }
 
-void test_network_remotes__parsing_local_path_fails_if_path_not_found(void)
+void test_network_remote_remotes__parsing_local_path_fails_if_path_not_found(void)
 {
 	cl_assert( !git_remote_valid_url("/home/git/repos/libgit2.git") );
 }
 
-void test_network_remotes__supported_transport_methods_are_supported(void)
+void test_network_remote_remotes__supported_transport_methods_are_supported(void)
 {
 	cl_assert( git_remote_supported_url("git://github.com/libgit2/libgit2") );
 }
 
-void test_network_remotes__unsupported_transport_methods_are_unsupported(void)
+void test_network_remote_remotes__unsupported_transport_methods_are_unsupported(void)
 {
 	cl_assert( !git_remote_supported_url("git@github.com:libgit2/libgit2.git") );
 }
 
-void test_network_remotes__refspec_parsing(void)
+void test_network_remote_remotes__refspec_parsing(void)
 {
 	cl_assert_equal_s(git_refspec_src(_refspec), "refs/heads/*");
 	cl_assert_equal_s(git_refspec_dst(_refspec), "refs/remotes/test/*");
 }
 
-void test_network_remotes__set_fetchspec(void)
+void test_network_remote_remotes__set_fetchspec(void)
 {
 	cl_git_pass(git_remote_set_fetchspec(_remote, "refs/*:refs/*"));
 	_refspec = git_remote_fetchspec(_remote);
@@ -116,7 +116,7 @@ void test_network_remotes__set_fetchspec(void)
 	cl_assert_equal_s(git_refspec_dst(_refspec), "refs/*");
 }
 
-void test_network_remotes__set_pushspec(void)
+void test_network_remote_remotes__set_pushspec(void)
 {
 	cl_git_pass(git_remote_set_pushspec(_remote, "refs/*:refs/*"));
 	_refspec = git_remote_pushspec(_remote);
@@ -124,7 +124,7 @@ void test_network_remotes__set_pushspec(void)
 	cl_assert_equal_s(git_refspec_dst(_refspec), "refs/*");
 }
 
-void test_network_remotes__save(void)
+void test_network_remote_remotes__save(void)
 {
 	git_remote_free(_remote);
 	_remote = NULL;
@@ -165,13 +165,13 @@ void test_network_remotes__save(void)
 	cl_assert(git_remote_pushurl(_remote) == NULL);
 }
 
-void test_network_remotes__fnmatch(void)
+void test_network_remote_remotes__fnmatch(void)
 {
 	cl_assert(git_refspec_src_matches(_refspec, "refs/heads/master"));
 	cl_assert(git_refspec_src_matches(_refspec, "refs/heads/multi/level/branch"));
 }
 
-void test_network_remotes__transform(void)
+void test_network_remote_remotes__transform(void)
 {
 	char ref[1024] = {0};
 
@@ -179,7 +179,7 @@ void test_network_remotes__transform(void)
 	cl_assert_equal_s(ref, "refs/remotes/test/master");
 }
 
-void test_network_remotes__transform_destination_to_source(void)
+void test_network_remote_remotes__transform_destination_to_source(void)
 {
 	char ref[1024] = {0};
 
@@ -187,7 +187,7 @@ void test_network_remotes__transform_destination_to_source(void)
 	cl_assert_equal_s(ref, "refs/heads/master");
 }
 
-void test_network_remotes__transform_r(void)
+void test_network_remote_remotes__transform_r(void)
 {
 	git_buf buf = GIT_BUF_INIT;
 
@@ -196,7 +196,7 @@ void test_network_remotes__transform_r(void)
 	git_buf_free(&buf);
 }
 
-void test_network_remotes__missing_refspecs(void)
+void test_network_remote_remotes__missing_refspecs(void)
 {
 	git_config *cfg;
 
@@ -210,7 +210,7 @@ void test_network_remotes__missing_refspecs(void)
 	git_config_free(cfg);
 }
 
-void test_network_remotes__list(void)
+void test_network_remote_remotes__list(void)
 {
 	git_strarray list;
 	git_config *cfg;
@@ -228,7 +228,7 @@ void test_network_remotes__list(void)
 	git_config_free(cfg);
 }
 
-void test_network_remotes__loading_a_missing_remote_returns_ENOTFOUND(void)
+void test_network_remote_remotes__loading_a_missing_remote_returns_ENOTFOUND(void)
 {
 	git_remote_free(_remote);
 	_remote = NULL;
@@ -236,7 +236,7 @@ void test_network_remotes__loading_a_missing_remote_returns_ENOTFOUND(void)
 	cl_assert_equal_i(GIT_ENOTFOUND, git_remote_load(&_remote, _repo, "just-left-few-minutes-ago"));
 }
 
-void test_network_remotes__loading_with_an_invalid_name_returns_EINVALIDSPEC(void)
+void test_network_remote_remotes__loading_with_an_invalid_name_returns_EINVALIDSPEC(void)
 {
 	git_remote_free(_remote);
 	_remote = NULL;
@@ -253,7 +253,7 @@ void test_network_remotes__loading_with_an_invalid_name_returns_EINVALIDSPEC(voi
  *         url = http://github.com/libgit2/libgit2
  *         fetch = +refs/heads/\*:refs/remotes/addtest/\*
  */
-void test_network_remotes__add(void)
+void test_network_remote_remotes__add(void)
 {
 	git_remote_free(_remote);
 	_remote = NULL;
@@ -271,7 +271,7 @@ void test_network_remotes__add(void)
 	cl_assert_equal_s(git_remote_url(_remote), "http://github.com/libgit2/libgit2");
 }
 
-void test_network_remotes__cannot_add_a_nameless_remote(void)
+void test_network_remote_remotes__cannot_add_a_nameless_remote(void)
 {
 	git_remote *remote;
 
@@ -280,7 +280,7 @@ void test_network_remotes__cannot_add_a_nameless_remote(void)
 		git_remote_create(&remote, _repo, NULL, "git://github.com/libgit2/libgit2"));
 }
 
-void test_network_remotes__cannot_save_an_inmemory_remote(void)
+void test_network_remote_remotes__cannot_save_an_inmemory_remote(void)
 {
 	git_remote *remote;
 
@@ -292,7 +292,7 @@ void test_network_remotes__cannot_save_an_inmemory_remote(void)
 	git_remote_free(remote);
 }
 
-void test_network_remotes__cannot_add_a_remote_with_an_invalid_name(void)
+void test_network_remote_remotes__cannot_add_a_remote_with_an_invalid_name(void)
 {
 	git_remote *remote = NULL;
 
@@ -307,7 +307,7 @@ void test_network_remotes__cannot_add_a_remote_with_an_invalid_name(void)
 	cl_assert_equal_p(remote, NULL);
 }
 
-void test_network_remotes__tagopt(void)
+void test_network_remote_remotes__tagopt(void)
 {
 	const char *opt;
 	git_config *cfg;
@@ -331,7 +331,7 @@ void test_network_remotes__tagopt(void)
 	git_config_free(cfg);
 }
 
-void test_network_remotes__cannot_load_with_an_empty_url(void)
+void test_network_remote_remotes__cannot_load_with_an_empty_url(void)
 {
 	git_remote *remote = NULL;
 
@@ -340,7 +340,7 @@ void test_network_remotes__cannot_load_with_an_empty_url(void)
 	cl_assert_equal_p(remote, NULL);
 }
 
-void test_network_remotes__check_structure_version(void)
+void test_network_remote_remotes__check_structure_version(void)
 {
 	git_transport transport = GIT_TRANSPORT_INIT;
 	const git_error *err;
@@ -361,7 +361,7 @@ void test_network_remotes__check_structure_version(void)
 	cl_assert_equal_i(GITERR_INVALID, err->klass);
 }
 
-void test_network_remotes__cannot_create_a_remote_which_name_conflicts_with_an_existing_remote(void)
+void test_network_remote_remotes__cannot_create_a_remote_which_name_conflicts_with_an_existing_remote(void)
 {
 	git_remote *remote = NULL;
 
