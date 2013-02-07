@@ -153,6 +153,20 @@ GIT_EXTERN(int) git_blame_file(
 
 
 /**
+ * Get blame data for a file that has been modified.
+ *
+ * @param out pointer that will receive the results object
+ * @param reference output from git_blame_file for the file in question
+ * @param buffer the (possibly) modified contents of the file
+ * @return 0 on success, or an error code. (use giterr_last for information
+ *         about the error)
+ */
+GIT_EXTERN(int) git_blame_buffer(
+		git_blame_results **out,
+		git_blame_results *reference,
+		const char *buffer);
+
+/**
  * Free memory allocated by git_blame.
  *
  * @param results results structure to free
