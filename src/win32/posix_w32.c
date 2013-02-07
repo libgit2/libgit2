@@ -99,6 +99,19 @@ static int do_lstat(
 		buf->st_atime = filetime_to_time_t(&(fdata.ftLastAccessTime));
 		buf->st_mtime = filetime_to_time_t(&(fdata.ftLastWriteTime));
 		buf->st_ctime = filetime_to_time_t(&(fdata.ftCreationTime));
+		
+		if (fMode & S_IFLNK)
+		{
+			char target[GIT_WIN_PATH];
+			int readlink_result;
+			
+			readlink_result = p_readlink(file_name, target, GIT_WIN_PATH);
+			
+			if (readlink_result)
+				return -1;
+				
+			buf->st_size = strnlen(target, GIT_WIN_PATH);
+		}
 
 		return 0;
 	}
