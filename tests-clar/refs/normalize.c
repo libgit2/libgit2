@@ -89,6 +89,8 @@ void test_refs_normalize__symbolic(void)
 	ensure_refname_invalid(
 		GIT_REF_FORMAT_ALLOW_ONELEVEL, "heads\foo");
 	ensure_refname_invalid(
+		GIT_REF_FORMAT_ALLOW_ONELEVEL, "/");
+	ensure_refname_invalid(
 		GIT_REF_FORMAT_ALLOW_ONELEVEL, "///");
 
 	ensure_refname_normalized(

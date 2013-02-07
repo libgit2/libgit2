@@ -361,13 +361,27 @@ void test_network_remote_remotes__check_structure_version(void)
 	cl_assert_equal_i(GITERR_INVALID, err->klass);
 }
 
-void test_network_remote_remotes__cannot_create_a_remote_which_name_conflicts_with_an_existing_remote(void)
+void assert_cannot_create_remote(const char *name, int expected_error)
 {
 	git_remote *remote = NULL;
 
-	cl_assert_equal_i(
-		GIT_EEXISTS,
-		git_remote_create(&remote, _repo, "test", "git://github.com/libgit2/libgit2"));
+	cl_git_fail_with(
+		git_remote_create(&remote, _repo, name, "git://github.com/libgit2/libgit2"),
+		expected_error);
 
 	cl_assert_equal_p(remote, NULL);
+}
+
+void test_network_remote_remotes__cannot_create_a_remote_which_name_conflicts_with_an_existing_remote(void)
+{
+	assert_cannot_create_remote("test", GIT_EEXISTS);
+}
+
+
+void test_network_remote_remotes__cannot_create_a_remote_which_name_is_invalid(void)
+{
+	assert_cannot_create_remote("/", GIT_EINVALIDSPEC);
+	assert_cannot_create_remote("//", GIT_EINVALIDSPEC);
+	assert_cannot_create_remote(".lock", GIT_EINVALIDSPEC);
+	assert_cannot_create_remote("a.lock", GIT_EINVALIDSPEC);
 }

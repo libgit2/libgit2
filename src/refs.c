@@ -1622,7 +1622,7 @@ static int ensure_segment_validity(const char *name)
 
 	/* A refname component can not end with ".lock" */
 	if (current - name >= lock_len &&
-		!git__strncmp(current - lock_len, GIT_FILELOCK_EXTENSION, lock_len))
+		!memcmp(current - lock_len, GIT_FILELOCK_EXTENSION, lock_len))
 			return -1;
 
 	return (int)(current - name);
@@ -1697,11 +1697,10 @@ int git_reference__normalize_name(
 			segments_count++;
 		}
 
-		/* This means that there's a leading slash in the refname */
-		if (segment_len == 0 && segments_count == 0) {
+		/* No empty segment is allowed when not normalizing */
+		if (segment_len == 0 && !normalize)
 			goto cleanup;
-		}
-
+		
 		if (current[segment_len] == '\0')
 			break;
 
