@@ -1599,6 +1599,7 @@ static int ensure_segment_validity(const char *name)
 {
 	const char *current = name;
 	char prev = '\0';
+	int lock_len = strlen(GIT_FILELOCK_EXTENSION);
 
 	if (*current == '.')
 		return -1; /* Refname starts with "." */
@@ -1618,6 +1619,11 @@ static int ensure_segment_validity(const char *name)
 
 		prev = *current;
 	}
+
+	/* A refname component can not end with ".lock" */
+	if (current - name >= lock_len &&
+		!git__strncmp(current - lock_len, GIT_FILELOCK_EXTENSION, lock_len))
+			return -1;
 
 	return (int)(current - name);
 }
@@ -1712,10 +1718,6 @@ int git_reference__normalize_name(
 
 	/* A refname can not end with "/" */
 	if (current[segment_len - 1] == '/')
-		goto cleanup;
-
-	/* A refname can not end with ".lock" */
-	if (!git__suffixcmp(name, GIT_FILELOCK_EXTENSION))
 		goto cleanup;
 
 	if ((segments_count == 1 ) && !(flags & GIT_REF_FORMAT_ALLOW_ONELEVEL))
