@@ -100,6 +100,9 @@ static int do_lstat(
 		buf->st_mtime = filetime_to_time_t(&(fdata.ftLastWriteTime));
 		buf->st_ctime = filetime_to_time_t(&(fdata.ftCreationTime));
 		
+		/* Windows symlinks have zero file size, call readlink to determine
+		 * the length of the path pointed to, which we expect everywhere else
+		 */
 		if (fMode & S_IFLNK)
 		{
 			char target[GIT_WIN_PATH];
@@ -107,7 +110,7 @@ static int do_lstat(
 			
 			readlink_result = p_readlink(file_name, target, GIT_WIN_PATH);
 			
-			if (readlink_result)
+			if (readlink_result == -1)
 				return -1;
 				
 			buf->st_size = strnlen(target, GIT_WIN_PATH);
