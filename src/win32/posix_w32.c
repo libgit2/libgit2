@@ -103,8 +103,7 @@ static int do_lstat(
 		/* Windows symlinks have zero file size, call readlink to determine
 		 * the length of the path pointed to, which we expect everywhere else
 		 */
-		if (fMode & S_IFLNK)
-		{
+		if (fMode & S_IFLNK) {
 			char target[GIT_WIN_PATH];
 			int readlink_result;
 
