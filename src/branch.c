@@ -319,6 +319,87 @@ cleanup:
 	return error;
 }
 
+int git_branch_remote_name(
+	char *remote_name_out,
+	size_t buffer_size,
+	git_repository *repo,
+	git_reference *branch)
+{
+	git_strarray remote_list = {0};
+	size_t i, remote_name_size;
+	git_remote *remote;
+	const git_refspec *fetchspec;
+	int error = 0;
+	char *remote_name = NULL;
+
+	assert(branch);
+
+	if (remote_name_out && buffer_size)
+		*remote_name_out = '\0';
+
+	/* Verify that this is a remote branch */
+	if (!git_reference_is_remote(branch)) {
+		giterr_set(GITERR_INVALID,
+				   "Reference '%s' is not a remote branch.", branch->name);
+		error = GIT_ERROR;
+		goto cleanup;
+	}
+
+	/* Get the remotes */
+	if ((error = git_remote_list(&remote_list, repo)) < 0)
+		goto cleanup;
+
+	/* Find matching remotes */
+	for (i = 0; i < remote_list.count; i++) {
+		if ((error = git_remote_load(&remote, repo, remote_list.strings[i])) < 0)
+			goto cleanup;
+
+		fetchspec = git_remote_fetchspec(remote);
+
+		/* Defensivly check that we have a fetchspec */
+		if (fetchspec &&
+			git_refspec_dst_matches(fetchspec, branch->name)) {
+			/* If we have not already set out yet, then set
+			 * it to the matching remote name. Otherwise
+			 * multiple remotes match this reference, and it
+			 * is ambiguous. */
+			if (!remote_name) {
+				remote_name = remote_list.strings[i];
+			} else {
+				git_remote_free(remote);
+				error = GIT_EAMBIGUOUS;
+				goto cleanup;
+			}
+		}
+
+		git_remote_free(remote);
+	}
+
+	if (remote_name) {
+		remote_name_size = strlen(remote_name) + 1;
+		error = (int) remote_name_size;
+
+		if (remote_name_out) {
+			if(remote_name_size > buffer_size) {
+				giterr_set(
+					GITERR_INVALID,
+					"Buffer too short to hold the remote name.");
+				error = GIT_ERROR;
+				goto cleanup;
+			}
+
+			memcpy(remote_name_out, remote_name, remote_name_size);
+		}
+	} else {
+		error = GIT_ENOTFOUND;
+		goto cleanup;
+	}
+
+cleanup:
+	git_strarray_free(&remote_list);
+	return error;
+}
+
 int git_branch_tracking_name(
 	char *tracking_branch_name_out,
 	size_t buffer_size,

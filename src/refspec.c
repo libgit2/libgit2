@@ -159,6 +159,14 @@ int git_refspec_src_matches(const git_refspec *refspec, const char *refname)
 	return (p_fnmatch(refspec->src, refname, 0) == 0);
 }
 
+int git_refspec_dst_matches(const git_refspec *refspec, const char *refname)
+{
+	if (refspec == NULL || refspec->dst == NULL)
+		return false;
+    
+	return (p_fnmatch(refspec->dst, refname, 0) == 0);
+}
+
 int git_refspec_transform(char *out, size_t outlen, const git_refspec *spec, const char *name)
 {
 	size_t baselen, namelen;

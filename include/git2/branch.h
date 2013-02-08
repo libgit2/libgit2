@@ -210,6 +210,31 @@ GIT_EXTERN(int) git_branch_tracking_name(
 GIT_EXTERN(int) git_branch_is_head(
 		git_reference *branch);
 
+/**
+ * Return the name of remote that the remote tracking branch belongs to.
+ *
+ * @param remote_name_out The user-allocated buffer which will be
+ *     filled with the name of the remote. Pass NULL if you just want to
+ *     get the needed size of the name of the remote as the output value.
+ *
+ * @param buffer_size Size of the `out` buffer in bytes.
+ *
+ * @param repo The repository where the branch lives.
+ *
+ * @param branch The reference to the remote tracking branch.
+ *
+ * @return Number of characters in the reference name
+ *     including the trailing NUL byte; GIT_ENOTFOUND
+ *     when no remote matching remote was gound,
+ *     GIT_EAMBIGUOUS when the branch maps to several remotes,
+ *     otherwise an error code.
+ */
+GIT_EXTERN(int) git_branch_remote_name(
+	char *remote_name_out,
+	size_t buffer_size,
+	git_repository *repo,
+	git_reference *branch);
+
 /** @} */
 GIT_END_DECL
 #endif
