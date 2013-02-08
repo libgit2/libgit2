@@ -100,6 +100,21 @@ static int do_lstat(
 		buf->st_mtime = filetime_to_time_t(&(fdata.ftLastWriteTime));
 		buf->st_ctime = filetime_to_time_t(&(fdata.ftCreationTime));
 
+		/* Windows symlinks have zero file size, call readlink to determine
+		 * the length of the path pointed to, which we expect everywhere else
+		 */
+		if (fMode & S_IFLNK) {
+			char target[GIT_WIN_PATH];
+			int readlink_result;
+
+			readlink_result = p_readlink(file_name, target, GIT_WIN_PATH);
+
+			if (readlink_result == -1)
+				return -1;
+
+			buf->st_size = strlen(target);
+		}
+
 		return 0;
 	}
 
@@ -157,10 +172,10 @@ int p_readlink(const char *link, char *target, size_t target_len)
 	 * it is not available in platforms older than Vista
 	 */
 	if (pGetFinalPath == NULL) {
-		HINSTANCE library = LoadLibrary("kernel32");
+		HMODULE module = GetModuleHandle("kernel32");
 
-		if (library != NULL)
-			pGetFinalPath = (fpath_func)GetProcAddress(library, "GetFinalPathNameByHandleW");
+		if (module != NULL)
+			pGetFinalPath = (fpath_func)GetProcAddress(module, "GetFinalPathNameByHandleW");
 
 		if (pGetFinalPath == NULL) {
 			giterr_set(GITERR_OS,
