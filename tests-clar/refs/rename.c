@@ -19,19 +19,19 @@ static git_repository *g_repo;
 
 void test_refs_rename__initialize(void)
 {
-   g_repo = cl_git_sandbox_init("testrepo");
+	g_repo = cl_git_sandbox_init("testrepo");
 }
 
 void test_refs_rename__cleanup(void)
 {
-   cl_git_sandbox_cleanup();
+	cl_git_sandbox_cleanup();
 }
 
 
 
 void test_refs_rename__loose(void)
 {
-   // rename a loose reference
+	// rename a loose reference
 	git_reference *looked_up_ref, *another_looked_up_ref;
 	git_buf temp_path = GIT_BUF_INIT;
 	const char *new_name = "refs/tags/Nemo/knows/refs.kung-fu";
@@ -72,7 +72,7 @@ void test_refs_rename__loose(void)
 
 void test_refs_rename__packed(void)
 {
-   // rename a packed reference (should make it loose)
+	// rename a packed reference (should make it loose)
 	git_reference *looked_up_ref, *another_looked_up_ref;
 	git_buf temp_path = GIT_BUF_INIT;
 	const char *brand_new_name = "refs/heads/brand_new_name";
@@ -113,7 +113,7 @@ void test_refs_rename__packed(void)
 
 void test_refs_rename__packed_doesnt_pack_others(void)
 {
-   // renaming a packed reference does not pack another reference which happens to be in both loose and pack state
+	// renaming a packed reference does not pack another reference which happens to be in both loose and pack state
 	git_reference *looked_up_ref, *another_looked_up_ref;
 	git_buf temp_path = GIT_BUF_INIT;
 	const char *brand_new_name = "refs/heads/brand_new_name";
@@ -154,7 +154,7 @@ void test_refs_rename__packed_doesnt_pack_others(void)
 
 void test_refs_rename__name_collision(void)
 {
-   // can not rename a reference with the name of an existing reference
+	// can not rename a reference with the name of an existing reference
 	git_reference *looked_up_ref;
 
 	/* An existing reference... */
@@ -173,7 +173,7 @@ void test_refs_rename__name_collision(void)
 
 void test_refs_rename__invalid_name(void)
 {
-   // can not rename a reference with an invalid name
+	// can not rename a reference with an invalid name
 	git_reference *looked_up_ref;
 
 	/* An existing oid reference... */
@@ -199,7 +199,7 @@ void test_refs_rename__invalid_name(void)
 
 void test_refs_rename__force_loose_packed(void)
 {
-   // can force-rename a packed reference with the name of an existing loose and packed reference
+	// can force-rename a packed reference with the name of an existing loose and packed reference
 	git_reference *looked_up_ref;
 	git_oid oid;
 
@@ -223,7 +223,7 @@ void test_refs_rename__force_loose_packed(void)
 
 void test_refs_rename__force_loose(void)
 {
-   // can force-rename a loose reference with the name of an existing loose reference
+	// can force-rename a loose reference with the name of an existing loose reference
 	git_reference *looked_up_ref;
 	git_oid oid;
 
@@ -232,7 +232,7 @@ void test_refs_rename__force_loose(void)
 	git_oid_cpy(&oid, git_reference_target(looked_up_ref));
 
 	/* Can be force-renamed to the name of another existing reference. */
-   cl_git_pass(git_reference_rename(looked_up_ref, "refs/heads/test", 1));
+	cl_git_pass(git_reference_rename(looked_up_ref, "refs/heads/test", 1));
 	git_reference_free(looked_up_ref);
 
 	/* Check we actually renamed it */
@@ -250,7 +250,7 @@ void test_refs_rename__force_loose(void)
 
 void test_refs_rename__overwrite(void)
 {
-   // can not overwrite name of existing reference
+	// can not overwrite name of existing reference
 	git_reference *ref, *ref_one, *ref_one_new, *ref_two;
 	git_oid id;
 
@@ -281,7 +281,7 @@ void test_refs_rename__overwrite(void)
 
 void test_refs_rename__prefix(void)
 {
-   // can be renamed to a new name prefixed with the old name
+	// can be renamed to a new name prefixed with the old name
 	git_reference *ref, *ref_two, *looked_up_ref;
 	git_oid id;
 
@@ -313,33 +313,33 @@ void test_refs_rename__prefix(void)
 
 void test_refs_rename__move_up(void)
 {
-   // can move a reference to a upper reference hierarchy
-    git_reference *ref, *ref_two, *looked_up_ref;
-    git_oid id;
+	// can move a reference to a upper reference hierarchy
+	git_reference *ref, *ref_two, *looked_up_ref;
+	git_oid id;
 
-    cl_git_pass(git_reference_lookup(&ref, g_repo, ref_master_name));
-    cl_assert(git_reference_type(ref) & GIT_REF_OID);
+	cl_git_pass(git_reference_lookup(&ref, g_repo, ref_master_name));
+	cl_assert(git_reference_type(ref) & GIT_REF_OID);
 
-    git_oid_cpy(&id, git_reference_target(ref));
+	git_oid_cpy(&id, git_reference_target(ref));
 
-    /* Create loose references */
-    cl_git_pass(git_reference_create(&ref_two, g_repo, ref_two_name_new, &id, 0));
-    git_reference_free(ref_two);
+	/* Create loose references */
+	cl_git_pass(git_reference_create(&ref_two, g_repo, ref_two_name_new, &id, 0));
+	git_reference_free(ref_two);
 
-    /* An existing reference... */
-    cl_git_pass(git_reference_lookup(&looked_up_ref, g_repo, ref_two_name_new));
+	/* An existing reference... */
+	cl_git_pass(git_reference_lookup(&looked_up_ref, g_repo, ref_two_name_new));
 
-    /* Can be renamed upward the reference tree. */
-    cl_git_pass(git_reference_rename(looked_up_ref, ref_two_name, 0));
-    git_reference_free(looked_up_ref);
+	/* Can be renamed upward the reference tree. */
+	cl_git_pass(git_reference_rename(looked_up_ref, ref_two_name, 0));
+	git_reference_free(looked_up_ref);
 
-    /* Check we actually renamed it */
-    cl_git_pass(git_reference_lookup(&looked_up_ref, g_repo, ref_two_name));
-    cl_assert_equal_s(looked_up_ref->name, ref_two_name);
-    git_reference_free(looked_up_ref);
-    cl_git_fail(git_reference_lookup(&looked_up_ref, g_repo, ref_two_name_new));
-    git_reference_free(ref);
-    git_reference_free(looked_up_ref);
+	/* Check we actually renamed it */
+	cl_git_pass(git_reference_lookup(&looked_up_ref, g_repo, ref_two_name));
+	cl_assert_equal_s(looked_up_ref->name, ref_two_name);
+	git_reference_free(looked_up_ref);
+	cl_git_fail(git_reference_lookup(&looked_up_ref, g_repo, ref_two_name_new));
+	git_reference_free(ref);
+	git_reference_free(looked_up_ref);
 }
 
 void test_refs_rename__propagate_eexists(void)
