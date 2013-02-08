@@ -224,7 +224,7 @@ static int checkout_action_wd_only(
 	if (!git_pathspec_match_path(
 			pathspec, wd->path,
 			(data->strategy & GIT_CHECKOUT_DISABLE_PATHSPEC_MATCH) != 0,
-			git_iterator_ignore_case(workdir)))
+			git_iterator_ignore_case(workdir), NULL))
 		return 0;
 
 	/* check if item is tracked in the index but not in the checkout diff */
