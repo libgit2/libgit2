@@ -45,7 +45,7 @@ typedef enum {
  * `GIT_BLAME_OPTIONS_INIT` macro:
  *     git_blame_options opts = GIT_BLAME_OPTIONS_INIT;
  *
- * - `flags` is a combination fo teh `git_blame_flag_t` values above.
+ * - `flags` is a combination of the `git_blame_flag_t` values above.
  * - `min_match_characters` is the lower bound on the number of alphanumeric
  *   characters that must be detected as moving/copying within a file for it to
  *   associate those lines with the parent commit. The default value is 20.
@@ -67,8 +67,8 @@ typedef struct git_blame_options {
 
 	uint32_t flags;
 	uint16_t min_match_characters;
-	const git_commit *newest_commit;
-	const git_commit *oldest_commit;
+	git_commit *newest_commit;
+	git_commit *oldest_commit;
 	uint32_t min_line;
 	uint32_t max_line;
 } git_blame_options;
