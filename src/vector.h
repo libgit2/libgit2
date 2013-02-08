@@ -64,7 +64,7 @@ GIT_INLINE(void *) git_vector_last(const git_vector *v)
 	for ((iter) = 0; (iter) < (v)->length && ((elem) = (v)->contents[(iter)], 1); (iter)++ )
 
 #define git_vector_rforeach(v, iter, elem)	\
-	for ((iter) = (v)->length; (iter) > 0 && ((elem) = (v)->contents[(iter)-1], 1); (iter)-- )
+	for ((iter) = (v)->length - 1; (iter) < SIZE_MAX && ((elem) = (v)->contents[(iter)], 1); (iter)-- )
 
 int git_vector_insert(git_vector *v, void *element);
 int git_vector_insert_sorted(git_vector *v, void *element,
