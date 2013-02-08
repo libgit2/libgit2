@@ -12,7 +12,6 @@
 #include <io.h>
 #include <fcntl.h>
 #include <ws2tcpip.h>
-#include <string.h>
 
 int p_unlink(const char *path)
 {
@@ -100,7 +99,7 @@ static int do_lstat(
 		buf->st_atime = filetime_to_time_t(&(fdata.ftLastAccessTime));
 		buf->st_mtime = filetime_to_time_t(&(fdata.ftLastWriteTime));
 		buf->st_ctime = filetime_to_time_t(&(fdata.ftCreationTime));
-		
+
 		/* Windows symlinks have zero file size, call readlink to determine
 		 * the length of the path pointed to, which we expect everywhere else
 		 */
@@ -108,13 +107,13 @@ static int do_lstat(
 		{
 			char target[GIT_WIN_PATH];
 			int readlink_result;
-			
+
 			readlink_result = p_readlink(file_name, target, GIT_WIN_PATH);
-			
+
 			if (readlink_result == -1)
 				return -1;
-				
-			buf->st_size = strnlen(target, GIT_WIN_PATH);
+
+			buf->st_size = strlen(target);
 		}
 
 		return 0;
