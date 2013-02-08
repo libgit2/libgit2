@@ -173,10 +173,10 @@ int p_readlink(const char *link, char *target, size_t target_len)
 	 * it is not available in platforms older than Vista
 	 */
 	if (pGetFinalPath == NULL) {
-		HINSTANCE library = LoadLibrary("kernel32");
+		HMODULE module = GetModuleHandle("kernel32");
 
-		if (library != NULL)
-			pGetFinalPath = (fpath_func)GetProcAddress(library, "GetFinalPathNameByHandleW");
+		if (module != NULL)
+			pGetFinalPath = (fpath_func)GetProcAddress(module, "GetFinalPathNameByHandleW");
 
 		if (pGetFinalPath == NULL) {
 			giterr_set(GITERR_OS,
