@@ -78,7 +78,7 @@ static int checkout_notify(
 		git_oid_cpy(&wdfile.oid, &wditem->oid);
 		wdfile.path = wditem->path;
 		wdfile.size = wditem->file_size;
-		wdfile.flags = GIT_DIFF_FILE_VALID_OID;
+		wdfile.flags = GIT_DIFF_FLAG_VALID_OID;
 		wdfile.mode = wditem->mode;
 
 		workdir = &wdfile;

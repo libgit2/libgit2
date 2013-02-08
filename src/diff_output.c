@@ -52,8 +52,8 @@ static int parse_hunk_header(git_diff_range *range, const char *header)
 	return 0;
 }
 
-#define KNOWN_BINARY_FLAGS (GIT_DIFF_FILE_BINARY|GIT_DIFF_FILE_NOT_BINARY)
-#define NOT_BINARY_FLAGS   (GIT_DIFF_FILE_NOT_BINARY|GIT_DIFF_FILE_NO_DATA)
+#define KNOWN_BINARY_FLAGS (GIT_DIFF_FLAG_BINARY|GIT_DIFF_FLAG_NOT_BINARY)
+#define NOT_BINARY_FLAGS   (GIT_DIFF_FLAG_NOT_BINARY|GIT_DIFF_FLAG__NO_DATA)
 
 static int update_file_is_binary_by_attr(
 	git_repository *repo, git_diff_file *file)
@@ -68,9 +68,9 @@ static int update_file_is_binary_by_attr(
 		return -1;
 
 	if (GIT_ATTR_FALSE(value))
-		file->flags |= GIT_DIFF_FILE_BINARY;
+		file->flags |= GIT_DIFF_FLAG_BINARY;
 	else if (GIT_ATTR_TRUE(value))
-		file->flags |= GIT_DIFF_FILE_NOT_BINARY;
+		file->flags |= GIT_DIFF_FLAG_NOT_BINARY;
 	/* otherwise leave file->flags alone */
 
 	return 0;
@@ -78,15 +78,15 @@ static int update_file_is_binary_by_attr(
 
 static void update_delta_is_binary(git_diff_delta *delta)
 {
-	if ((delta->old_file.flags & GIT_DIFF_FILE_BINARY) != 0 ||
-		(delta->new_file.flags & GIT_DIFF_FILE_BINARY) != 0)
-		delta->binary = 1;
+	if ((delta->old_file.flags & GIT_DIFF_FLAG_BINARY) != 0 ||
+		(delta->new_file.flags & GIT_DIFF_FLAG_BINARY) != 0)
+		delta->flags |= GIT_DIFF_FLAG_BINARY;
 
 	else if ((delta->old_file.flags & NOT_BINARY_FLAGS) != 0 &&
 			 (delta->new_file.flags & NOT_BINARY_FLAGS) != 0)
-		delta->binary = 0;
+		delta->flags |= GIT_DIFF_FLAG_NOT_BINARY;
 
-	/* otherwise leave delta->binary value untouched */
+	/* otherwise leave delta->flags binary value untouched */
 }
 
 /* returns if we forced binary setting (and no further checks needed) */
@@ -95,24 +95,24 @@ static bool diff_delta_is_binary_forced(
 	git_diff_delta *delta)
 {
 	/* return true if binary-ness has already been settled */
-	if (delta->binary != -1)
+	if ((delta->flags & KNOWN_BINARY_FLAGS) != 0)
 		return true;
 
 	/* make sure files are conceivably mmap-able */
 	if ((git_off_t)((size_t)delta->old_file.size) != delta->old_file.size ||
 		(git_off_t)((size_t)delta->new_file.size) != delta->new_file.size)
 	{
-		delta->old_file.flags |= GIT_DIFF_FILE_BINARY;
-		delta->new_file.flags |= GIT_DIFF_FILE_BINARY;
-		delta->binary = 1;
+		delta->old_file.flags |= GIT_DIFF_FLAG_BINARY;
+		delta->new_file.flags |= GIT_DIFF_FLAG_BINARY;
+		delta->flags |= GIT_DIFF_FLAG_BINARY;
 		return true;
 	}
 
 	/* check if user is forcing us to text diff these files */
 	if (ctxt->opts && (ctxt->opts->flags & GIT_DIFF_FORCE_TEXT) != 0) {
-		delta->old_file.flags |= GIT_DIFF_FILE_NOT_BINARY;
-		delta->new_file.flags |= GIT_DIFF_FILE_NOT_BINARY;
-		delta->binary = 0;
+		delta->old_file.flags |= GIT_DIFF_FLAG_NOT_BINARY;
+		delta->new_file.flags |= GIT_DIFF_FLAG_NOT_BINARY;
+		delta->flags |= GIT_DIFF_FLAG_NOT_BINARY;
 		return true;
 	}
 
@@ -124,8 +124,6 @@ static int diff_delta_is_binary_by_attr(
 {
 	int error = 0, mirror_new;
 	git_diff_delta *delta = patch->delta;
-
-	delta->binary = -1;
 
 	if (diff_delta_is_binary_forced(ctxt, delta))
 		return 0;
@@ -152,23 +150,21 @@ static int diff_delta_is_binary_by_content(
 	git_diff_file *file,
 	const git_map *map)
 {
+	const git_buf search = { map->data, 0, min(map->len, 4000) };
+
 	if (diff_delta_is_binary_forced(ctxt, delta))
 		return 0;
 
-	if ((file->flags & KNOWN_BINARY_FLAGS) == 0) {
-		const git_buf search = { map->data, 0, min(map->len, 4000) };
+	/* TODO: provide encoding / binary detection callbacks that can
+	 * be UTF-8 aware, etc.  For now, instead of trying to be smart,
+	 * let's just use the simple NUL-byte detection that core git uses.
+	 */
 
-		/* TODO: provide encoding / binary detection callbacks that can
-		 * be UTF-8 aware, etc.  For now, instead of trying to be smart,
-		 * let's just use the simple NUL-byte detection that core git uses.
-		 */
-
-		/* previously was: if (git_buf_text_is_binary(&search)) */
-		if (git_buf_text_contains_nul(&search))
-			file->flags |= GIT_DIFF_FILE_BINARY;
-		else
-			file->flags |= GIT_DIFF_FILE_NOT_BINARY;
-	}
+	/* previously was: if (git_buf_text_is_binary(&search)) */
+	if (git_buf_text_contains_nul(&search))
+		file->flags |= GIT_DIFF_FLAG_BINARY;
+	else
+		file->flags |= GIT_DIFF_FLAG_NOT_BINARY;
 
 	update_delta_is_binary(delta);
 
@@ -192,7 +188,7 @@ static int diff_delta_is_binary_by_size(
 	}
 
 	if (file->size > threshold)
-		file->flags |= GIT_DIFF_FILE_BINARY;
+		file->flags |= GIT_DIFF_FLAG_BINARY;
 
 	update_delta_is_binary(delta);
 
@@ -247,7 +243,7 @@ static int get_blob_content(
 		map->data = git_buf_detach(&content);
 		map->len = strlen(map->data);
 
-		file->flags |= GIT_DIFF_FILE_FREE_DATA;
+		file->flags |= GIT_DIFF_FLAG__FREE_DATA;
 		return 0;
 	}
 
@@ -270,7 +266,7 @@ static int get_blob_content(
 	/* if blob is too large to diff, mark as binary */
 	if ((error = diff_delta_is_binary_by_size(ctxt, delta, file)) < 0)
 		return error;
-	if (delta->binary == 1)
+	if ((delta->flags & GIT_DIFF_FLAG_BINARY) != 0)
 		return 0;
 
 	if (odb_obj != NULL) {
@@ -306,14 +302,14 @@ static int get_workdir_sm_content(
 		return error;
 
 	/* update OID if we didn't have it previously */
-	if ((file->flags & GIT_DIFF_FILE_VALID_OID) == 0) {
+	if ((file->flags & GIT_DIFF_FLAG_VALID_OID) == 0) {
 		const git_oid* sm_head;
 
 		if ((sm_head = git_submodule_wd_id(sm)) != NULL ||
 			(sm_head = git_submodule_head_id(sm)) != NULL)
 		{
 			git_oid_cpy(&file->oid, sm_head);
-			file->flags |= GIT_DIFF_FILE_VALID_OID;
+			file->flags |= GIT_DIFF_FLAG_VALID_OID;
 		}
 	}
 
@@ -329,7 +325,7 @@ static int get_workdir_sm_content(
 	map->data = git_buf_detach(&content);
 	map->len = strlen(map->data);
 
-	file->flags |= GIT_DIFF_FILE_FREE_DATA;
+	file->flags |= GIT_DIFF_FLAG__FREE_DATA;
 
 	return 0;
 }
@@ -356,8 +352,8 @@ static int get_workdir_content(
 	if (S_ISLNK(file->mode)) {
 		ssize_t alloc_len, read_len;
 
-		file->flags |= GIT_DIFF_FILE_FREE_DATA;
-		file->flags |= GIT_DIFF_FILE_BINARY;
+		file->flags |= GIT_DIFF_FLAG__FREE_DATA;
+		file->flags |= GIT_DIFF_FLAG_BINARY;
 
 		/* link path on disk could be UTF-16, so prepare a buffer that is
 		 * big enough to handle some UTF-8 data expansion
@@ -389,7 +385,7 @@ static int get_workdir_content(
 			file->size = git_futils_filesize(fd);
 
 		if ((error = diff_delta_is_binary_by_size(ctxt, delta, file)) < 0 ||
-			delta->binary == 1)
+			(delta->flags & GIT_DIFF_FLAG_BINARY) != 0)
 			goto close_and_cleanup;
 
 		error = git_filters_load(
@@ -402,7 +398,7 @@ static int get_workdir_content(
 				goto close_and_cleanup;
 
 			error = git_futils_mmap_ro(map, fd, 0, (size_t)file->size);
-			file->flags |= GIT_DIFF_FILE_UNMAP_DATA;
+			file->flags |= GIT_DIFF_FLAG__UNMAP_DATA;
 		} else {
 			git_buf raw = GIT_BUF_INIT, filtered = GIT_BUF_INIT;
 
@@ -412,7 +408,7 @@ static int get_workdir_content(
 				map->len  = git_buf_len(&filtered);
 				map->data = git_buf_detach(&filtered);
 
-				file->flags |= GIT_DIFF_FILE_FREE_DATA;
+				file->flags |= GIT_DIFF_FLAG__FREE_DATA;
 			}
 
 			git_buf_free(&raw);
@@ -425,11 +421,11 @@ close_and_cleanup:
 	}
 
 	/* once data is loaded, update OID if we didn't have it previously */
-	if (!error && (file->flags & GIT_DIFF_FILE_VALID_OID) == 0) {
+	if (!error && (file->flags & GIT_DIFF_FLAG_VALID_OID) == 0) {
 		error = git_odb_hash(
 			&file->oid, map->data, map->len, GIT_OBJ_BLOB);
 		if (!error)
-			file->flags |= GIT_DIFF_FILE_VALID_OID;
+			file->flags |= GIT_DIFF_FLAG_VALID_OID;
 	}
 
 	if (!error)
@@ -445,17 +441,17 @@ static void release_content(git_diff_file *file, git_map *map, git_blob *blob)
 	if (blob != NULL)
 		git_blob_free(blob);
 
-	if (file->flags & GIT_DIFF_FILE_FREE_DATA) {
+	if (file->flags & GIT_DIFF_FLAG__FREE_DATA) {
 		git__free(map->data);
 		map->data = "";
 		map->len  = 0;
-		file->flags &= ~GIT_DIFF_FILE_FREE_DATA;
+		file->flags &= ~GIT_DIFF_FLAG__FREE_DATA;
 	}
-	else if (file->flags & GIT_DIFF_FILE_UNMAP_DATA) {
+	else if (file->flags & GIT_DIFF_FLAG__UNMAP_DATA) {
 		git_futils_mmap_free(map);
 		map->data = "";
 		map->len  = 0;
-		file->flags &= ~GIT_DIFF_FILE_UNMAP_DATA;
+		file->flags &= ~GIT_DIFF_FLAG__UNMAP_DATA;
 	}
 }
 
@@ -555,7 +551,7 @@ static int diff_patch_load(
 	patch->new_data.len  = 0;
 	patch->new_blob      = NULL;
 
-	if (delta->binary == 1)
+	if ((delta->flags & GIT_DIFF_FLAG_BINARY) != 0)
 		goto cleanup;
 
 	if (!ctxt->hunk_cb &&
@@ -565,25 +561,25 @@ static int diff_patch_load(
 
 	switch (delta->status) {
 	case GIT_DELTA_ADDED:
-		delta->old_file.flags |= GIT_DIFF_FILE_NO_DATA;
+		delta->old_file.flags |= GIT_DIFF_FLAG__NO_DATA;
 		break;
 	case GIT_DELTA_DELETED:
-		delta->new_file.flags |= GIT_DIFF_FILE_NO_DATA;
+		delta->new_file.flags |= GIT_DIFF_FLAG__NO_DATA;
 		break;
 	case GIT_DELTA_MODIFIED:
 		break;
 	case GIT_DELTA_UNTRACKED:
-		delta->old_file.flags |= GIT_DIFF_FILE_NO_DATA;
+		delta->old_file.flags |= GIT_DIFF_FLAG__NO_DATA;
 		if ((ctxt->opts->flags & GIT_DIFF_INCLUDE_UNTRACKED_CONTENT) == 0)
-			delta->new_file.flags |= GIT_DIFF_FILE_NO_DATA;
+			delta->new_file.flags |= GIT_DIFF_FLAG__NO_DATA;
 		break;
 	default:
-		delta->new_file.flags |= GIT_DIFF_FILE_NO_DATA;
-		delta->old_file.flags |= GIT_DIFF_FILE_NO_DATA;
+		delta->new_file.flags |= GIT_DIFF_FLAG__NO_DATA;
+		delta->old_file.flags |= GIT_DIFF_FLAG__NO_DATA;
 		break;
 	}
 
-#define CHECK_UNMODIFIED (GIT_DIFF_FILE_NO_DATA | GIT_DIFF_FILE_VALID_OID)
+#define CHECK_UNMODIFIED (GIT_DIFF_FLAG__NO_DATA | GIT_DIFF_FLAG_VALID_OID)
 
 	check_if_unmodified =
 		(delta->old_file.flags & CHECK_UNMODIFIED) == 0 &&
@@ -594,41 +590,41 @@ static int diff_patch_load(
 	 * memory footprint during diff.
 	 */
 
-	if ((delta->old_file.flags & GIT_DIFF_FILE_NO_DATA) == 0 &&
+	if ((delta->old_file.flags & GIT_DIFF_FLAG__NO_DATA) == 0 &&
 		patch->old_src == GIT_ITERATOR_TYPE_WORKDIR) {
 		if ((error = get_workdir_content(
 				ctxt, delta, &delta->old_file, &patch->old_data)) < 0)
 			goto cleanup;
-		if (delta->binary == 1)
+		if ((delta->flags & GIT_DIFF_FLAG_BINARY) != 0)
 			goto cleanup;
 	}
 
-	if ((delta->new_file.flags & GIT_DIFF_FILE_NO_DATA) == 0 &&
+	if ((delta->new_file.flags & GIT_DIFF_FLAG__NO_DATA) == 0 &&
 		patch->new_src == GIT_ITERATOR_TYPE_WORKDIR) {
 		if ((error = get_workdir_content(
 				ctxt, delta, &delta->new_file, &patch->new_data)) < 0)
 			goto cleanup;
-		if (delta->binary == 1)
+		if ((delta->flags & GIT_DIFF_FLAG_BINARY) != 0)
 			goto cleanup;
 	}
 
-	if ((delta->old_file.flags & GIT_DIFF_FILE_NO_DATA) == 0 &&
+	if ((delta->old_file.flags & GIT_DIFF_FLAG__NO_DATA) == 0 &&
 		patch->old_src != GIT_ITERATOR_TYPE_WORKDIR) {
 		if ((error = get_blob_content(
 				ctxt, delta, &delta->old_file,
 				&patch->old_data, &patch->old_blob)) < 0)
 			goto cleanup;
-		if (delta->binary == 1)
+		if ((delta->flags & GIT_DIFF_FLAG_BINARY) != 0)
 			goto cleanup;
 	}
 
-	if ((delta->new_file.flags & GIT_DIFF_FILE_NO_DATA) == 0 &&
+	if ((delta->new_file.flags & GIT_DIFF_FLAG__NO_DATA) == 0 &&
 		patch->new_src != GIT_ITERATOR_TYPE_WORKDIR) {
 		if ((error = get_blob_content(
 				ctxt, delta, &delta->new_file,
 				&patch->new_data, &patch->new_blob)) < 0)
 			goto cleanup;
-		if (delta->binary == 1)
+		if ((delta->flags & GIT_DIFF_FLAG_BINARY) != 0)
 			goto cleanup;
 	}
 
@@ -646,13 +642,13 @@ static int diff_patch_load(
 	}
 
 cleanup:
-	if (delta->binary == -1)
+	if ((delta->flags & KNOWN_BINARY_FLAGS) == 0)
 		update_delta_is_binary(delta);
 
 	if (!error) {
 		patch->flags |= GIT_DIFF_PATCH_LOADED;
 
-		if (delta->binary != 1 &&
+		if ((delta->flags & GIT_DIFF_FLAG_BINARY) == 0 &&
 			delta->status != GIT_DELTA_UNMODIFIED &&
 			(patch->old_data.len || patch->new_data.len) &&
 			!git_oid_equal(&delta->old_file.oid, &delta->new_file.oid))
@@ -1138,7 +1134,7 @@ static int print_patch_file(
 		newpath = "/dev/null";
 	}
 
-	if (delta->binary != 1) {
+	if ((delta->flags & GIT_DIFF_FLAG_BINARY) == 0) {
 		git_buf_printf(pi->buf, "--- %s%s\n", oldpfx, oldpath);
 		git_buf_printf(pi->buf, "+++ %s%s\n", newpfx, newpath);
 	}
@@ -1153,7 +1149,7 @@ static int print_patch_file(
 		return GIT_EUSER;
 	}
 
-	if (delta->binary != 1)
+	if ((delta->flags & GIT_DIFF_FLAG_BINARY) == 0)
 		return 0;
 
 	git_buf_clear(pi->buf);
@@ -1268,7 +1264,7 @@ static void set_data_from_blob(
 		map->data  = (char *)git_blob_rawcontent(blob);
 	} else {
 		file->size = 0;
-		file->flags |= GIT_DIFF_FILE_NO_DATA;
+		file->flags |= GIT_DIFF_FLAG__NO_DATA;
 
 		map->len   = 0;
 		map->data  = "";
@@ -1283,7 +1279,7 @@ static void set_data_from_buffer(
 	map->len   = buffer_len;
 
 	if (!buffer) {
-		file->flags |= GIT_DIFF_FILE_NO_DATA;
+		file->flags |= GIT_DIFF_FLAG__NO_DATA;
 		map->data = NULL;
 	} else {
 		map->data = (char *)buffer;
@@ -1322,13 +1318,13 @@ static int diff_single_apply(diff_single_data *data)
 {
 	int error;
 	git_diff_delta *delta = &data->delta;
-	bool has_old = ((delta->old_file.flags & GIT_DIFF_FILE_NO_DATA) == 0);
-	bool has_new = ((delta->new_file.flags & GIT_DIFF_FILE_NO_DATA) == 0);
+	bool has_old = ((delta->old_file.flags & GIT_DIFF_FLAG__NO_DATA) == 0);
+	bool has_new = ((delta->new_file.flags & GIT_DIFF_FLAG__NO_DATA) == 0);
 
 	/* finish setting up fake git_diff_delta record and loaded data */
 
 	data->patch.delta = delta;
-	delta->binary = -1;
+	delta->flags = delta->flags & ~KNOWN_BINARY_FLAGS;
 
 	delta->status = has_new ?
 		(has_old ? GIT_DELTA_MODIFIED : GIT_DELTA_ADDED) :
@@ -1345,7 +1341,8 @@ static int diff_single_apply(diff_single_data *data)
 
 	data->patch.flags |= GIT_DIFF_PATCH_LOADED;
 
-	if (delta->binary != 1 && delta->status != GIT_DELTA_UNMODIFIED)
+	if ((delta->flags & GIT_DIFF_FLAG_BINARY) == 0 &&
+		delta->status != GIT_DELTA_UNMODIFIED)
 		data->patch.flags |= GIT_DIFF_PATCH_DIFFABLE;
 
 	/* do diffs */
@@ -1469,7 +1466,7 @@ int git_diff_get_patch(
 		*delta_ptr = delta;
 
 	if (!patch_ptr &&
-		(delta->binary != -1 ||
+		((delta->flags & KNOWN_BINARY_FLAGS) != 0 ||
 		 (diff->opts.flags & GIT_DIFF_SKIP_BINARY_CHECK) != 0))
 		return 0;
 

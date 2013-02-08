@@ -315,10 +315,10 @@ static int apply_splits_and_deletes(git_diff_list *diff, size_t expected_size)
 
 	/* build new delta list without TO_DELETE and splitting TO_SPLIT */
 	git_vector_foreach(&diff->deltas, i, delta) {
-		if (delta->status == GIT_DELTA__TO_DELETE)
+		if ((delta->flags & GIT_DIFF_FLAG__TO_DELETE) != 0)
 			continue;
 
-		if (delta->status == GIT_DELTA__TO_SPLIT) {
+		if ((delta->flags & GIT_DIFF_FLAG__TO_SPLIT) != 0) {
 			git_diff_delta *deleted = diff_delta__dup(delta, &diff->pool);
 			if (!deleted)
 				goto on_error;
@@ -326,7 +326,7 @@ static int apply_splits_and_deletes(git_diff_list *diff, size_t expected_size)
 			deleted->status = GIT_DELTA_DELETED;
 			memset(&deleted->new_file, 0, sizeof(deleted->new_file));
 			deleted->new_file.path = deleted->old_file.path;
-			deleted->new_file.flags |= GIT_DIFF_FILE_VALID_OID;
+			deleted->new_file.flags |= GIT_DIFF_FLAG_VALID_OID;
 
 			if (git_vector_insert(&onto, deleted) < 0)
 				goto on_error;
@@ -334,7 +334,7 @@ static int apply_splits_and_deletes(git_diff_list *diff, size_t expected_size)
 			delta->status = GIT_DELTA_ADDED;
 			memset(&delta->old_file, 0, sizeof(delta->old_file));
 			delta->old_file.path = delta->new_file.path;
-			delta->old_file.flags |= GIT_DIFF_FILE_VALID_OID;
+			delta->old_file.flags |= GIT_DIFF_FLAG_VALID_OID;
 		}
 
 		if (git_vector_insert(&onto, delta) < 0)
@@ -343,7 +343,7 @@ static int apply_splits_and_deletes(git_diff_list *diff, size_t expected_size)
 
 	/* cannot return an error past this point */
 	git_vector_foreach(&diff->deltas, i, delta)
-		if (delta->status == GIT_DELTA__TO_DELETE)
+		if ((delta->flags & GIT_DIFF_FLAG__TO_DELETE) != 0)
 			git__free(delta);
 
 	/* swap new delta list into place */
@@ -411,7 +411,7 @@ int git_diff_find_similar(
 			/* calc_similarity(NULL, &from->old_file, from->new_file); */
 
 			if (similarity < opts.break_rewrite_threshold) {
-				from->status = GIT_DELTA__TO_SPLIT;
+				from->flags |= GIT_DIFF_FLAG__TO_SPLIT;
 				num_changes++;
 			}
 		}
@@ -502,7 +502,7 @@ int git_diff_find_similar(
 			to->status = GIT_DELTA_RENAMED;
 			memcpy(&to->old_file, &from->old_file, sizeof(to->old_file));
 
-			from->status = GIT_DELTA__TO_DELETE;
+			from->flags |= GIT_DIFF_FLAG__TO_DELETE;
 			num_changes++;
 
 			continue;
@@ -522,7 +522,7 @@ int git_diff_find_similar(
 				from->status = GIT_DELTA_ADDED;
 				memset(&from->old_file, 0, sizeof(from->old_file));
 				from->old_file.path = to->old_file.path;
-				from->old_file.flags |= GIT_DIFF_FILE_VALID_OID;
+				from->old_file.flags |= GIT_DIFF_FLAG_VALID_OID;
 
 				continue;
 			}
