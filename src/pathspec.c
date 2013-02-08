@@ -106,13 +106,20 @@ void git_pathspec_free(git_vector *vspec)
 
 /* match a path against the vectorized pathspec */
 bool git_pathspec_match_path(
-	git_vector *vspec, const char *path, bool disable_fnmatch, bool casefold)
+	git_vector *vspec,
+	const char *path,
+	bool disable_fnmatch,
+	bool casefold,
+	const char **matched_pathspec)
 {
-	unsigned int i;
+	size_t i;
 	git_attr_fnmatch *match;
 	int fnmatch_flags = 0;
 	int (*use_strcmp)(const char *, const char *);
 	int (*use_strncmp)(const char *, const char *, size_t);
+
+	if (matched_pathspec)
+		*matched_pathspec = NULL;
 
 	if (!vspec || !vspec->length)
 		return true;
@@ -143,8 +150,12 @@ bool git_pathspec_match_path(
 			path[match->length] == '/')
 			result = 0;
 
-		if (result == 0)
+		if (result == 0) {
+			if (matched_pathspec)
+				*matched_pathspec = match->pattern;
+
 			return (match->flags & GIT_ATTR_FNMATCH_NEGATIVE) ? false : true;
+		}
 	}
 
 	return false;

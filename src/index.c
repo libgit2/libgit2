@@ -1710,7 +1710,8 @@ int git_index_read_tree_match(
 		goto cleanup;
 
 	while (entry != NULL) {
-		if (git_pathspec_match_path(&pathspec, entry->path, false, false) &&
+		if (git_pathspec_match_path(
+				&pathspec, entry->path, false, false, NULL) &&
 			(error = git_index_add(index, entry)) < 0)
 			goto cleanup;
 

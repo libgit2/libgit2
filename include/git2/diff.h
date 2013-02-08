@@ -123,40 +123,6 @@ typedef enum {
 } git_diff_option_t;
 
 /**
- * Structure describing options about how the diff should be executed.
- *
- * Setting all values of the structure to zero will yield the default
- * values.  Similarly, passing NULL for the options structure will
- * give the defaults.  The default values are marked below.
- *
- * - `flags` is a combination of the `git_diff_option_t` values above
- * - `context_lines` is the number of unchanged lines that define the
- *    boundary of a hunk (and to display before and after)
- * - `interhunk_lines` is the maximum number of unchanged lines between
- *    hunk boundaries before the hunks will be merged into a one.
- * - `old_prefix` is the virtual "directory" to prefix to old file names
- *   in hunk headers (default "a")
- * - `new_prefix` is the virtual "directory" to prefix to new file names
- *   in hunk headers (default "b")
- * - `pathspec` is an array of paths / fnmatch patterns to constrain diff
- * - `max_size` is a file size (in bytes) above which a blob will be marked
- *   as binary automatically; pass a negative value to disable.
- */
-typedef struct {
-	unsigned int version;      /**< version for the struct */
-	uint32_t flags;            /**< defaults to GIT_DIFF_NORMAL */
-	uint16_t context_lines;    /**< defaults to 3 */
-	uint16_t interhunk_lines;  /**< defaults to 0 */
-	const char *old_prefix;    /**< defaults to "a" */
-	const char *new_prefix;    /**< defaults to "b" */
-	git_strarray pathspec;     /**< defaults to include all paths */
-	git_off_t max_size;        /**< defaults to 512MB */
-} git_diff_options;
-
-#define GIT_DIFF_OPTIONS_VERSION 1
-#define GIT_DIFF_OPTIONS_INIT {GIT_DIFF_OPTIONS_VERSION}
-
-/**
  * The diff list object that contains all individual file deltas.
  *
  * This is an opaque structure which will be allocated by one of the diff
@@ -264,6 +230,64 @@ typedef struct {
 	unsigned int  similarity; /**< for RENAMED and COPIED, value 0-100 */
 	int           binary;
 } git_diff_delta;
+
+/**
+ * Diff notification callback function.
+ *
+ * The callback will be called for each file, just before the `git_delta_t`
+ * gets inserted into the diff list.
+ *
+ * When the callback:
+ * - returns < 0, the diff process will be aborted.
+ * - returns > 0, the delta will not be inserted into the diff list, but the
+ *		diff process continues.
+ * - returns 0, the delta is inserted into the diff list, and the diff process
+ *		continues.
+ */
+typedef int (*git_diff_notify_cb)(
+	const git_diff_list *diff_so_far,
+	const git_diff_delta *delta_to_add,
+	const char *matched_pathspec,
+	void *payload);
+
+/**
+ * Structure describing options about how the diff should be executed.
+ *
+ * Setting all values of the structure to zero will yield the default
+ * values.  Similarly, passing NULL for the options structure will
+ * give the defaults.  The default values are marked below.
+ *
+ * - `flags` is a combination of the `git_diff_option_t` values above
+ * - `context_lines` is the number of unchanged lines that define the
+ *    boundary of a hunk (and to display before and after)
+ * - `interhunk_lines` is the maximum number of unchanged lines between
+ *    hunk boundaries before the hunks will be merged into a one.
+ * - `old_prefix` is the virtual "directory" to prefix to old file names
+ *   in hunk headers (default "a")
+ * - `new_prefix` is the virtual "directory" to prefix to new file names
+ *   in hunk headers (default "b")
+ * - `pathspec` is an array of paths / fnmatch patterns to constrain diff
+ * - `max_size` is a file size (in bytes) above which a blob will be marked
+ *   as binary automatically; pass a negative value to disable.
+ * - `notify_cb` is an optional callback function, notifying the consumer of
+ *   which files are being examined as the diff is generated
+ * - `notify_payload` is the payload data to pass to the `notify_cb` function
+ */
+typedef struct {
+	unsigned int version;      /**< version for the struct */
+	uint32_t flags;            /**< defaults to GIT_DIFF_NORMAL */
+	uint16_t context_lines;    /**< defaults to 3 */
+	uint16_t interhunk_lines;  /**< defaults to 0 */
+	const char *old_prefix;    /**< defaults to "a" */
+	const char *new_prefix;    /**< defaults to "b" */
+	git_strarray pathspec;     /**< defaults to include all paths */
+	git_off_t max_size;        /**< defaults to 512MB */
+	git_diff_notify_cb notify_cb;
+	void *notify_payload;
+} git_diff_options;
+
+#define GIT_DIFF_OPTIONS_VERSION 1
+#define GIT_DIFF_OPTIONS_INIT {GIT_DIFF_OPTIONS_VERSION}
 
 /**
  * When iterating over a diff, callback that will be made per file.

@@ -20,6 +20,11 @@ typedef struct {
 	int line_dels;
 } diff_expects;
 
+typedef struct {
+	const char *path;
+	const char *matched_pathspec;
+} notify_expected;
+
 extern int diff_file_cb(
 	const git_diff_delta *delta,
 	float progress,
