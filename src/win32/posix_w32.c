@@ -12,6 +12,7 @@
 #include <io.h>
 #include <fcntl.h>
 #include <ws2tcpip.h>
+#include <string.h>
 
 int p_unlink(const char *path)
 {
