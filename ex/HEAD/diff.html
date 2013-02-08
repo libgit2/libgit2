@@ -185,8 +185,6 @@
   <span class="kt">int</span> <span class="n">i</span><span class="p">,</span> <span class="n">color</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">compact</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">cached</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
   <span class="kt">char</span> <span class="o">*</span><span class="n">a</span><span class="p">,</span> <span class="o">*</span><span class="n">dir</span> <span class="o">=</span> <span class="s">&quot;.&quot;</span><span class="p">,</span> <span class="o">*</span><span class="n">treeish1</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">,</span> <span class="o">*</span><span class="n">treeish2</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
 
-  <span class="n">memset</span><span class="p">(</span><span class="o">&amp;</span><span class="n">opts</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">opts</span><span class="p">));</span>
-
   <span class="cm">/* parse arguments as copied from git-diff */</span>
 
   <span class="k">for</span> <span class="p">(</span><span class="n">i</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">argc</span><span class="p">;</span> <span class="o">++</span><span class="n">i</span><span class="p">)</span> <span class="p">{</span>

@@ -50,8 +50,10 @@
 <span class="cp">#include &lt;stdio.h&gt;</span>
 <span class="cp">#include &lt;stdlib.h&gt;</span>
 <span class="cp">#include &lt;string.h&gt;</span>
-<span class="cp">#include &lt;pthread.h&gt;</span>
-<span class="cp">#include &lt;unistd.h&gt;</span>
+<span class="cp">#ifndef _WIN32</span>
+<span class="cp"># include &lt;pthread.h&gt;</span>
+<span class="cp"># include &lt;unistd.h&gt;</span>
+<span class="cp">#endif</span>
 
 <span class="cm">/* Shamelessly borrowed from http://stackoverflow.com/questions/3417837/ */</span>
 <span class="cp">#ifdef UNUSED</span>
@@ -156,7 +158,7 @@
         <p>Set up options</p>
       </td>
       <td class=code>
-        <div class='highlight'><pre>  <span class="n">checkout_opts</span><span class="p">.</span><span class="n">checkout_strategy</span> <span class="o">=</span> <span class="n">GIT_CHECKOUT_SAFE</span><span class="p">;</span>
+        <div class='highlight'><pre>  <span class="n">checkout_opts</span><span class="p">.</span><span class="n">checkout_strategy</span> <span class="o">=</span> <span class="n">GIT_CHECKOUT_SAFE_CREATE</span><span class="p">;</span>
   <span class="n">checkout_opts</span><span class="p">.</span><span class="n">progress_cb</span> <span class="o">=</span> <span class="n">checkout_progress</span><span class="p">;</span>
   <span class="n">checkout_opts</span><span class="p">.</span><span class="n">progress_payload</span> <span class="o">=</span> <span class="o">&amp;</span><span class="n">pd</span><span class="p">;</span>
   <span class="n">clone_opts</span><span class="p">.</span><span class="n">checkout_opts</span> <span class="o">=</span> <span class="n">checkout_opts</span><span class="p">;</span>

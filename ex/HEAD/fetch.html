@@ -49,8 +49,10 @@
 <span class="cp">#include &lt;stdio.h&gt;</span>
 <span class="cp">#include &lt;stdlib.h&gt;</span>
 <span class="cp">#include &lt;string.h&gt;</span>
-<span class="cp">#include &lt;pthread.h&gt;</span>
-<span class="cp">#include &lt;unistd.h&gt;</span>
+<span class="cp">#ifndef _WIN32</span>
+<span class="cp"># include &lt;pthread.h&gt;</span>
+<span class="cp"># include &lt;unistd.h&gt;</span>
+<span class="cp">#endif</span>
 
 <span class="k">struct</span> <span class="n">dl_data</span> <span class="p">{</span>
   <span class="n">git_remote</span> <span class="o">*</span><span class="n">remote</span><span class="p">;</span>
@@ -130,9 +132,11 @@ inform the user about progress.</p>
 <span class="p">{</span>
   <span class="n">git_remote</span> <span class="o">*</span><span class="n">remote</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
   <span class="k">const</span> <span class="n">git_transfer_progress</span> <span class="o">*</span><span class="n">stats</span><span class="p">;</span>
-  <span class="n">pthread_t</span> <span class="n">worker</span><span class="p">;</span>
   <span class="k">struct</span> <span class="n">dl_data</span> <span class="n">data</span><span class="p">;</span>
   <span class="n">git_remote_callbacks</span> <span class="n">callbacks</span> <span class="o">=</span> <span class="n">GIT_REMOTE_CALLBACKS_INIT</span><span class="p">;</span>
+<span class="cp">#ifndef _WIN32</span>
+  <span class="n">pthread_t</span> <span class="n">worker</span><span class="p">;</span>
+<span class="cp">#endif</span>
 
   <span class="n">argc</span> <span class="o">=</span> <span class="n">argc</span><span class="p">;</span></pre></div>
       </td>
@@ -179,6 +183,9 @@ inform the user about progress.</p>
 
   <span class="n">stats</span> <span class="o">=</span> <span class="n"><a name="git_remote_stats-10" class="fnlink" href="../../#HEAD/group/remote/git_remote_stats">git_remote_stats</a></span><span class="p">(</span><span class="n">remote</span><span class="p">);</span>
 
+<span class="cp">#ifdef _WIN32</span>
+  <span class="n">download</span><span class="p">(</span><span class="o">&amp;</span><span class="n">data</span><span class="p">);</span>
+<span class="cp">#else</span>
   <span class="n">pthread_create</span><span class="p">(</span><span class="o">&amp;</span><span class="n">worker</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">,</span> <span class="n">download</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">data</span><span class="p">);</span></pre></div>
       </td>
     </tr>
@@ -206,6 +213,8 @@ the download rate.</p>
     <span class="k">goto</span> <span class="n">on_error</span><span class="p">;</span>
 
   <span class="n">pthread_join</span><span class="p">(</span><span class="n">worker</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+<span class="cp">#endif</span>
+
   <span class="n">printf</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\r</span><span class="s">Received %d/%d objects in %zu bytes</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span>
       <span class="n">stats</span><span class="o">-&gt;</span><span class="n">indexed_objects</span><span class="p">,</span> <span class="n">stats</span><span class="o">-&gt;</span><span class="n">total_objects</span><span class="p">,</span> <span class="n">stats</span><span class="o">-&gt;</span><span class="n">received_bytes</span><span class="p">);</span></pre></div>
       </td>
