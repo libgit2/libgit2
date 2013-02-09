@@ -8,7 +8,7 @@
 // new functionality.
 //
 // If you're trying to write something in C using [libgit2][lg], you will also want
-// to check out the generated [API documentation][ap] and the [Usage Guide][ug]. We've
+// to check out the generated [API documentation][ap]. We've
 // tried to link to the relevant sections of the API docs in each section in this file.
 //
 // **libgit2** only implements the core plumbing functions, not really the higher
@@ -17,7 +17,6 @@
 //
 // [lg]: http://libgit2.github.com
 // [ap]: http://libgit2.github.com/libgit2
-// [ug]: http://libgit2.github.com/api.html
 // [pg]: http://progit.org/book/ch9-0.html
 
 // ### Includes
