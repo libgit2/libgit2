@@ -14,6 +14,20 @@
 #include "vector.h"
 #include "push.h"
 
+static int push_spec_rref_cmp(const void *a, const void *b)
+{
+	const push_spec *push_spec_a = a, *push_spec_b = b;
+
+	return strcmp(push_spec_a->rref, push_spec_b->rref);
+}
+
+static int push_status_ref_cmp(const void *a, const void *b)
+{
+	const push_status *push_status_a = a, *push_status_b = b;
+
+	return strcmp(push_status_a->ref, push_status_b->ref);
+}
+
 int git_push_new(git_push **out, git_remote *remote)
 {
 	git_push *p;
@@ -27,12 +41,12 @@ int git_push_new(git_push **out, git_remote *remote)
 	p->remote = remote;
 	p->report_status = 1;
 
-	if (git_vector_init(&p->specs, 0, NULL) < 0) {
+	if (git_vector_init(&p->specs, 0, push_spec_rref_cmp) < 0) {
 		git__free(p);
 		return -1;
 	}
 
-	if (git_vector_init(&p->status, 0, NULL) < 0) {
+	if (git_vector_init(&p->status, 0, push_status_ref_cmp) < 0) {
 		git_vector_free(&p->specs);
 		git__free(p);
 		return -1;

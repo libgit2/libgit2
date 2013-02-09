@@ -294,6 +294,13 @@ static void git_smart__free(git_transport *transport)
 	git__free(t);
 }
 
+static int ref_name_cmp(const void *a, const void *b)
+{
+	const git_pkt_ref *ref_a = a, *ref_b = b;
+
+	return strcmp(ref_a->head.name, ref_b->head.name);
+}
+
 int git_transport_smart(git_transport **out, git_remote *owner, void *param)
 {
 	transport_smart *t;
@@ -321,7 +328,7 @@ int git_transport_smart(git_transport **out, git_remote *owner, void *param)
 	t->owner = owner;
 	t->rpc = definition->rpc;
 
-	if (git_vector_init(&t->refs, 16, NULL) < 0) {
+	if (git_vector_init(&t->refs, 16, ref_name_cmp) < 0) {
 		git__free(t);
 		return -1;
 	}

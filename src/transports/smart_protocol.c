@@ -628,6 +628,108 @@ static int parse_report(gitno_buffer *buf, git_push *push)
 	}
 }
 
+static int add_ref_from_push_spec(git_vector *refs, push_spec *push_spec)
+{
+	git_pkt_ref *added = git__calloc(1, sizeof(git_pkt_ref));
+	GITERR_CHECK_ALLOC(added);
+
+	added->type = GIT_PKT_REF;
+	git_oid_cpy(&added->head.oid, &push_spec->loid);
+	added->head.name = git__strdup(push_spec->rref);
+
+	if (!added->head.name ||
+		git_vector_insert(refs, added) < 0) {
+		git_pkt_free((git_pkt *)added);
+		return -1;
+	}
+
+	return 0;
+}
+
+static int update_refs_from_report(
+	git_vector *refs,
+	git_vector *push_specs,
+	git_vector *push_report)
+{
+	git_pkt_ref *ref;
+	push_spec *push_spec;
+	push_status *push_status;
+	size_t i, j, refs_len;
+	int cmp;
+
+	/* For each push spec we sent to the server, we should have
+	 * gotten back a status packet in the push report */
+	if (push_specs->length != push_report->length) {
+		giterr_set(GITERR_NET, "report-status: protocol error");
+		return -1;
+	}
+
+	/* We require that push_specs be sorted with push_spec_rref_cmp,
+	 * and that push_report be sorted with push_status_ref_cmp */
+	git_vector_sort(push_specs);
+	git_vector_sort(push_report);
+
+	git_vector_foreach(push_specs, i, push_spec) {
+		push_status = git_vector_get(push_report, i);
+
+		/* For each push spec we sent to the server, we should have
+		 * gotten back a status packet in the push report which matches */
+		if (strcmp(push_spec->rref, push_status->ref)) {
+			giterr_set(GITERR_NET, "report-status: protocol error");
+			return -1;
+		}
+	}
+
+	/* We require that refs be sorted with ref_name_cmp */
+	git_vector_sort(refs);
+	i = j = 0;
+	refs_len = refs->length;
+
+	/* Merge join push_specs with refs */
+	while (i < push_specs->length && j < refs_len) {
+		push_spec = git_vector_get(push_specs, i);
+		ref = git_vector_get(refs, j);
+
+		cmp = strcmp(push_spec->rref, ref->head.name);
+
+		/* Iterate appropriately */
+		if (cmp <= 0) i++;
+		if (cmp >= 0) j++;
+
+		/* Add case */
+		if (cmp < 0 &&
+			!push_status->msg &&
+			add_ref_from_push_spec(refs, push_spec) < 0)
+			return -1;
+
+		/* Update case, delete case */
+		if (cmp == 0 &&
+			!push_status->msg)
+			git_oid_cpy(&ref->head.oid, &push_spec->loid);
+	}
+
+	for (; i < push_specs->length; i++) {
+		push_spec = git_vector_get(push_specs, i);
+
+		/* Add case */
+		if (!push_status->msg &&
+			add_ref_from_push_spec(refs, push_spec) < 0)
+			return -1;
+	}
+
+	/* Remove any refs which we updated to have a zero OID. */
+	git_vector_rforeach(refs, i, ref) {
+		if (git_oid_iszero(&ref->head.oid)) {
+			git_vector_remove(refs, i);
+			git_pkt_free((git_pkt *)ref);
+		}
+	}
+
+	git_vector_sort(refs);
+
+	return 0;
+}
+
 static int stream_thunk(void *buf, size_t size, void *data)
 {
 	git_smart_subtransport_stream *s = (git_smart_subtransport_stream *)data;
@@ -640,7 +742,6 @@ int git_smart__push(git_transport *transport, git_push *push)
 	transport_smart *t = (transport_smart *)transport;
 	git_smart_subtransport_stream *s;
 	git_buf pktline = GIT_BUF_INIT;
-	char *url = NULL;
 	int error = -1;
 
 #ifdef PUSH_DEBUG
@@ -678,25 +779,13 @@ int git_smart__push(git_transport *transport, git_push *push)
 	else if (parse_report(&t->buffer, push) < 0)
 		goto on_error;
 
-	/* If we updated at least one ref, then we need to re-acquire the list of 
-	 * refs so the caller can call git_remote_update_tips afterward. TODO: Use
-	 * the data from the push report to do this without another network call */
-	if (push->specs.length) {
-		git_cred_acquire_cb cred_cb = t->cred_acquire_cb;
-		void *cred_payload = t->cred_acquire_payload;
-		int flags = t->flags;
-
-		url = git__strdup(t->url);
-
-		if (!url || t->parent.close(&t->parent) < 0 ||
-			t->parent.connect(&t->parent, url, cred_cb, cred_payload, GIT_DIRECTION_PUSH, flags))
-			goto on_error;
-	}
+	if (push->status.length &&
+		update_refs_from_report(&t->refs, &push->specs, &push->status) < 0)
+		goto on_error;
 
 	error = 0;
 
 on_error:
-	git__free(url);
 	git_buf_free(&pktline);
 
 	return error;
