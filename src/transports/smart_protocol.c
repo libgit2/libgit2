@@ -653,7 +653,7 @@ static int update_refs_from_report(
 {
 	git_pkt_ref *ref;
 	push_spec *push_spec;
-	push_status *push_status = NULL;
+	push_status *push_status;
 	size_t i, j, refs_len;
 	int cmp;
 
@@ -688,6 +688,7 @@ static int update_refs_from_report(
 	/* Merge join push_specs with refs */
 	while (i < push_specs->length && j < refs_len) {
 		push_spec = git_vector_get(push_specs, i);
+		push_status = git_vector_get(push_report, i);
 		ref = git_vector_get(refs, j);
 
 		cmp = strcmp(push_spec->rref, ref->head.name);
@@ -710,6 +711,7 @@ static int update_refs_from_report(
 
 	for (; i < push_specs->length; i++) {
 		push_spec = git_vector_get(push_specs, i);
+		push_status = git_vector_get(push_report, i);
 
 		/* Add case */
 		if (!push_status->msg &&
