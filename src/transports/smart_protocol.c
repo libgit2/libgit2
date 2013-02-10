@@ -653,7 +653,7 @@ static int update_refs_from_report(
 {
 	git_pkt_ref *ref;
 	push_spec *push_spec;
-	push_status *push_status;
+	push_status *push_status = NULL;
 	size_t i, j, refs_len;
 	int cmp;
 
