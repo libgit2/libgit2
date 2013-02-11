@@ -36,6 +36,9 @@ struct git_push {
 	/* report-status */
 	bool unpack_ok;
 	git_vector status;
+
+	/* options */
+	unsigned pb_parallelism;
 };
 
 #endif
