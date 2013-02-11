@@ -12,7 +12,9 @@ void test_refs_isvalidname__can_detect_invalid_formats(void)
 	cl_assert_equal_i(false, git_reference_is_valid_name("lower_case"));
 	cl_assert_equal_i(false, git_reference_is_valid_name("/stupid/name/master"));
 	cl_assert_equal_i(false, git_reference_is_valid_name("/"));
+	cl_assert_equal_i(false, git_reference_is_valid_name("//"));
 	cl_assert_equal_i(false, git_reference_is_valid_name(""));
+	cl_assert_equal_i(false, git_reference_is_valid_name("refs/heads/sub.lock/webmatrix"));
 }
 
 void test_refs_isvalidname__wont_hopefully_choke_on_valid_formats(void)

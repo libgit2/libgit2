@@ -7,13 +7,13 @@ static git_repository *repo;
 static git_buf file_path_buf = GIT_BUF_INIT;
 static git_remote *remote;
 
-void test_network_remotelocal__initialize(void)
+void test_network_remote_local__initialize(void)
 {
 	cl_git_pass(git_repository_init(&repo, "remotelocal/", 0));
 	cl_assert(repo != NULL);
 }
 
-void test_network_remotelocal__cleanup(void)
+void test_network_remote_local__cleanup(void)
 {
 	git_buf_free(&file_path_buf);
 
@@ -55,7 +55,7 @@ static void connect_to_local_repository(const char *local_repository)
 
 }
 
-void test_network_remotelocal__connected(void)
+void test_network_remote_local__connected(void)
 {
 	connect_to_local_repository(cl_fixture("testrepo.git"));
 	cl_assert(git_remote_connected(remote));
@@ -64,7 +64,7 @@ void test_network_remotelocal__connected(void)
 	cl_assert(!git_remote_connected(remote));
 }
 
-void test_network_remotelocal__retrieve_advertised_references(void)
+void test_network_remote_local__retrieve_advertised_references(void)
 {
 	int how_many_refs = 0;
 
@@ -75,7 +75,7 @@ void test_network_remotelocal__retrieve_advertised_references(void)
 	cl_assert_equal_i(how_many_refs, 26);
 }
 
-void test_network_remotelocal__retrieve_advertised_references_from_spaced_repository(void)
+void test_network_remote_local__retrieve_advertised_references_from_spaced_repository(void)
 {
 	int how_many_refs = 0;
 
@@ -94,7 +94,7 @@ void test_network_remotelocal__retrieve_advertised_references_from_spaced_reposi
 	cl_fixture_cleanup("spaced testrepo.git");
 }
 
-void test_network_remotelocal__nested_tags_are_completely_peeled(void)
+void test_network_remote_local__nested_tags_are_completely_peeled(void)
 {
 	connect_to_local_repository(cl_fixture("testrepo.git"));
 
