@@ -429,7 +429,7 @@ int git_branch_tracking_name(
 	if (tracking_branch_name_out)
 		git_buf_copy_cstr(tracking_branch_name_out, buffer_size, &buf);
 
-	error = buf.size + 1;
+	error = (int)buf.size + 1;
 
 cleanup:
 	git_buf_free(&buf);

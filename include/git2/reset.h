@@ -28,7 +28,7 @@ typedef enum {
  * Sets the current head to the specified commit oid and optionally
  * resets the index and working tree to match.
  *
- * SOFT reset means the head will be moved to the commit.
+ * SOFT reset means the Head will be moved to the commit.
  *
  * MIXED reset will trigger a SOFT reset, plus the index will be replaced
  * with the content of the commit tree.
@@ -41,17 +41,40 @@ typedef enum {
  *
  * @param repo Repository where to perform the reset operation.
  *
- * @param target Object to which the Head should be moved to. This object
+ * @param target Committish to which the Head should be moved to. This object
  * must belong to the given `repo` and can either be a git_commit or a
  * git_tag. When a git_tag is being passed, it should be dereferencable
  * to a git_commit which oid will be used as the target of the branch.
  *
  * @param reset_type Kind of reset operation to perform.
  *
- * @return 0 on success or an error code < 0
+ * @return 0 on success or an error code
  */
 GIT_EXTERN(int) git_reset(
 	git_repository *repo, git_object *target, git_reset_t reset_type);
+
+/**
+ * Updates some entries in the index from the target commit tree.
+ *
+ * The scope of the updated entries is determined by the paths
+ * being passed in the `pathspec` parameters.
+ *
+ * Passing a NULL `target` will result in removing
+ * entries in the index matching the provided pathspecs.
+ *
+ * @param repo Repository where to perform the reset operation.
+ *
+ * @param target The committish which content will be used to reset the content
+ * of the index.
+ *
+ * @param pathspecs List of pathspecs to operate on.
+ *
+ * @return 0 on success or an error code < 0
+ */
+GIT_EXTERN(int) git_reset_default(
+    git_repository *repo,
+    git_object *target,
+    git_strarray* pathspecs);
 
 /** @} */
 GIT_END_DECL

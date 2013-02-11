@@ -42,7 +42,7 @@ typedef struct diff_patch_line diff_patch_line;
 struct diff_patch_line {
 	const char *ptr;
 	size_t len;
-	int lines, oldno, newno;
+	size_t lines, oldno, newno;
 	char origin;
 };
 
