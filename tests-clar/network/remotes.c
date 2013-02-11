@@ -173,11 +173,18 @@ void test_network_remotes__fnmatch(void)
 
 void test_network_remotes__transform(void)
 {
-	char ref[1024];
+	char ref[1024] = {0};
 
-	memset(ref, 0x0, sizeof(ref));
 	cl_git_pass(git_refspec_transform(ref, sizeof(ref), _refspec, "refs/heads/master"));
 	cl_assert_equal_s(ref, "refs/remotes/test/master");
+}
+
+void test_network_remotes__transform_destination_to_source(void)
+{
+	char ref[1024] = {0};
+
+	cl_git_pass(git_refspec_rtransform(ref, sizeof(ref), _refspec, "refs/remotes/test/master"));
+	cl_assert_equal_s(ref, "refs/heads/master");
 }
 
 void test_network_remotes__transform_r(void)
