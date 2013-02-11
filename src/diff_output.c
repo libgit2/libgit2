@@ -89,13 +89,14 @@ static void update_delta_is_binary(git_diff_delta *delta)
 	/* otherwise leave delta->binary value untouched */
 }
 
-static int diff_delta_is_binary_by_attr(
-	diff_context *ctxt, git_diff_patch *patch)
+/* returns if we forced binary setting (and no further checks needed) */
+static bool diff_delta_is_binary_forced(
+	diff_context *ctxt,
+	git_diff_delta *delta)
 {
-	int error = 0, mirror_new;
-	git_diff_delta *delta = patch->delta;
-
-	delta->binary = -1;
+	/* return true if binary-ness has already been settled */
+	if (delta->binary != -1)
+		return true;
 
 	/* make sure files are conceivably mmap-able */
 	if ((git_off_t)((size_t)delta->old_file.size) != delta->old_file.size ||
@@ -104,7 +105,7 @@ static int diff_delta_is_binary_by_attr(
 		delta->old_file.flags |= GIT_DIFF_FILE_BINARY;
 		delta->new_file.flags |= GIT_DIFF_FILE_BINARY;
 		delta->binary = 1;
-		return 0;
+		return true;
 	}
 
 	/* check if user is forcing us to text diff these files */
@@ -112,8 +113,22 @@ static int diff_delta_is_binary_by_attr(
 		delta->old_file.flags |= GIT_DIFF_FILE_NOT_BINARY;
 		delta->new_file.flags |= GIT_DIFF_FILE_NOT_BINARY;
 		delta->binary = 0;
-		return 0;
+		return true;
 	}
+
+	return false;
+}
+
+static int diff_delta_is_binary_by_attr(
+	diff_context *ctxt, git_diff_patch *patch)
+{
+	int error = 0, mirror_new;
+	git_diff_delta *delta = patch->delta;
+
+	delta->binary = -1;
+
+	if (diff_delta_is_binary_forced(ctxt, delta))
+		return 0;
 
 	/* check diff attribute +, -, or 0 */
 	if (update_file_is_binary_by_attr(ctxt->repo, &delta->old_file) < 0)
@@ -137,13 +152,8 @@ static int diff_delta_is_binary_by_content(
 	git_diff_file *file,
 	const git_map *map)
 {
-	/* check if user is forcing us to text diff these files */
-	if (ctxt->opts && (ctxt->opts->flags & GIT_DIFF_FORCE_TEXT) != 0) {
-		delta->old_file.flags |= GIT_DIFF_FILE_NOT_BINARY;
-		delta->new_file.flags |= GIT_DIFF_FILE_NOT_BINARY;
-		delta->binary = 0;
+	if (diff_delta_is_binary_forced(ctxt, delta))
 		return 0;
-	}
 
 	if ((file->flags & KNOWN_BINARY_FLAGS) == 0) {
 		const git_buf search = { map->data, 0, min(map->len, 4000) };
