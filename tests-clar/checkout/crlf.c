@@ -16,12 +16,7 @@ static git_repository *g_repo;
 
 void test_checkout_crlf__initialize(void)
 {
-	git_tree *tree;
-
 	g_repo = cl_git_sandbox_init("crlf");
-
-	cl_git_pass(git_repository_head_tree(&tree, g_repo));
-	git_tree_free(tree);
 }
 
 void test_checkout_crlf__cleanup(void)

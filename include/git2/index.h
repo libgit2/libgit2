@@ -400,13 +400,14 @@ GIT_EXTERN(int) git_index_add_bypath(git_index *index, const char *path);
 GIT_EXTERN(int) git_index_remove_bypath(git_index *index, const char *path);
 
 /**
- * Find the first index of any entries which point to given
+ * Find the first position of any entries which point to given
  * path in the Git index.
  *
  * @param at_pos the address to which the position of the index entry is written (optional)
  * @param index an existing index object
  * @param path path to search
- * @return 0 if found, < 0 otherwise (GIT_ENOTFOUND)
+ * @return a zero-based position in the index if found;
+ * GIT_ENOTFOUND otherwise
  */
 GIT_EXTERN(int) git_index_find(size_t *at_pos, git_index *index, const char *path);
 

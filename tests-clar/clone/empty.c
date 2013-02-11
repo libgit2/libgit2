@@ -46,7 +46,7 @@ void test_clone_empty__can_clone_an_empty_local_repo_barely(void)
 	cl_assert_equal_i(GIT_ENOTFOUND, git_reference_lookup(&ref, g_repo_cloned, local_name));
 
 	/* ...one can still retrieve the name of the remote tracking reference */
-	cl_assert_equal_i(strlen("refs/remotes/origin/master") + 1, 
+	cl_assert_equal_i((int)strlen("refs/remotes/origin/master") + 1U, 
 		git_branch_tracking_name(tracking_name, 1024, g_repo_cloned, local_name));
 }
 
