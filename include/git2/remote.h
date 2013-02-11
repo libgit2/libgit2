@@ -450,6 +450,14 @@ GIT_EXTERN(int) git_remote_update_fetchhead(git_remote *remote);
  */
 GIT_EXTERN(void) git_remote_set_update_fetchhead(git_remote *remote, int value);
 
+/**
+ * Ensure the remote name is well-formed.
+ *
+ * @param remote_name name to be checked.
+ * @return 1 if the reference name is acceptable; 0 if it isn't
+ */
+GIT_EXTERN(int) git_remote_is_valid_name(const char *remote_name);
+
 /** @} */
 GIT_END_DECL
 #endif

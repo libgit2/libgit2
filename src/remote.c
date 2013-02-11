@@ -59,21 +59,9 @@ static int download_tags_value(git_remote *remote, git_config *cfg)
 
 static int ensure_remote_name_is_valid(const char *name)
 {
-	git_buf buf = GIT_BUF_INIT;
-	git_refspec refspec;
-	int error = -1;
+	int error = 0;
 
-	if (!name || *name == '\0')
-		goto cleanup;
-
-	git_buf_printf(&buf, "refs/heads/test:refs/remotes/%s/test", name);
-	error = git_refspec__parse(&refspec, git_buf_cstr(&buf), true);
-
-	git_buf_free(&buf);
-	git_refspec__free(&refspec);
-
-cleanup:
-	if (error) {
+	if (!git_remote_is_valid_name(name)) {
 		giterr_set(
 			GITERR_CONFIG,
 			"'%s' is not a valid remote name.", name);
@@ -1379,4 +1367,24 @@ int git_remote_update_fetchhead(git_remote *remote)
 void git_remote_set_update_fetchhead(git_remote *remote, int value)
 {
 	remote->update_fetchhead = value;
+}
+
+int git_remote_is_valid_name(
+	const char *remote_name)
+{
+	git_buf buf = GIT_BUF_INIT;
+	git_refspec refspec;
+	int error = -1;
+
+	if (!remote_name || *remote_name == '\0')
+		return 0;
+
+	git_buf_printf(&buf, "refs/heads/test:refs/remotes/%s/test", remote_name);
+	error = git_refspec__parse(&refspec, git_buf_cstr(&buf), true);
+
+	git_buf_free(&buf);
+	git_refspec__free(&refspec);
+
+	giterr_clear();
+	return error == 0;
 }
