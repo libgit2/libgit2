@@ -324,7 +324,7 @@ static void check_fromurl(const char *expected_result, const char *input, int sh
 	git_buf_free(&buf);
 }
 
-#ifdef _MSC_VER
+#ifdef GIT_WIN32
 #define ABS_PATH_MARKER ""
 #else
 #define ABS_PATH_MARKER "/"

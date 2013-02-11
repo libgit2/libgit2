@@ -400,7 +400,7 @@ int git_path_fromurl(git_buf *local_path_out, const char *file_url)
 	if (offset >= len || file_url[offset] == '/')
 		return error_invalid_local_file_uri(file_url);
 
-#ifndef _MSC_VER
+#ifndef GIT_WIN32
 	offset--;	/* A *nix absolute path starts with a forward slash */
 #endif
 

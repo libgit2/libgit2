@@ -238,7 +238,7 @@ const char* cl_git_path_url(const char *path)
 	cl_git_pass(git_path_prettify_dir(&path_buf, path, NULL));
 	cl_git_pass(git_buf_puts(&url_buf, "file://"));
 
-#ifdef _MSC_VER
+#ifdef GIT_WIN32
 	/*
 	 * A FILE uri matches the following format: file://[host]/path
 	 * where "host" can be empty and "path" is an absolute path to the resource.
