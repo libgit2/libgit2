@@ -44,11 +44,12 @@ static void print_progress(const progress_data *pd)
 		   pd->path);
 }
 
-static void fetch_progress(const git_transfer_progress *stats, void *payload)
+static int fetch_progress(const git_transfer_progress *stats, void *payload)
 {
 	progress_data *pd = (progress_data*)payload;
 	pd->fetch_progress = *stats;
 	print_progress(pd);
+	return 0;
 }
 static void checkout_progress(const char *path, size_t cur, size_t tot, void *payload)
 {
