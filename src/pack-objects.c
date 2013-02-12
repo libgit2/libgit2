@@ -144,7 +144,14 @@ on_error:
 unsigned int git_packbuilder_set_threads(git_packbuilder *pb, unsigned int n)
 {
 	assert(pb);
+
+#ifdef GIT_THREADS
 	pb->nr_threads = n;
+#else
+	GIT_UNUSED(n);
+	assert(1 == pb->nr_threads);
+#endif
+
 	return pb->nr_threads;
 }
 
