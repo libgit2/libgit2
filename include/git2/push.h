@@ -19,6 +19,26 @@
 GIT_BEGIN_DECL
 
 /**
+ * Controls the behavior of a git_push object.
+ */
+typedef struct {
+	unsigned int version;
+
+	/**
+	 * If the transport being used to push to the remote requires the creation
+	 * of a pack file, this controls the number of worker threads used by
+	 * the packbuilder when creating that pack file to be sent to the remote.
+	 *
+	 * If set to 0, the packbuilder will auto-detect the number of threads
+	 * to create. The default value is 1.
+	 */
+	unsigned int pb_parallelism;
+} git_push_options;
+
+#define GIT_PUSH_OPTIONS_VERSION 1
+#define GIT_PUSH_OPTIONS_INIT { GIT_PUSH_OPTIONS_VERSION }
+
+/**
  * Create a new push object
  *
  * @param out New push object
@@ -27,6 +47,18 @@ GIT_BEGIN_DECL
  * @return 0 or an error code
  */
 GIT_EXTERN(int) git_push_new(git_push **out, git_remote *remote);
+
+/**
+ * Set options on a push object
+ *
+ * @param push The push object
+ * @param opts The options to set on the push object
+ *
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_push_set_options(
+	git_push *push,
+	const git_push_options *opts);
 
 /**
  * Add a refspec to be pushed

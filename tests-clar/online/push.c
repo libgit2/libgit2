@@ -349,13 +349,18 @@ static void do_push(const char *refspecs[], size_t refspecs_len,
 	expected_ref expected_refs[], size_t expected_refs_len, int expected_ret)
 {
 	git_push *push;
+	git_push_options opts = GIT_PUSH_OPTIONS_INIT;
 	size_t i;
 	int ret;
 
 	if (_remote) {
+		/* Auto-detect the number of threads to use */
+		opts.pb_parallelism = 0;
+
 		cl_git_pass(git_remote_connect(_remote, GIT_DIRECTION_PUSH));
 
 		cl_git_pass(git_push_new(&push, _remote));
+		cl_git_pass(git_push_set_options(push, &opts));
 
 		for (i = 0; i < refspecs_len; i++)
 			cl_git_pass(git_push_add_refspec(push, refspecs[i]));

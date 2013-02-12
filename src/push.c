@@ -40,6 +40,7 @@ int git_push_new(git_push **out, git_remote *remote)
 	p->repo = remote->repo;
 	p->remote = remote;
 	p->report_status = 1;
+	p->pb_parallelism = 1;
 
 	if (git_vector_init(&p->specs, 0, push_spec_rref_cmp) < 0) {
 		git__free(p);
@@ -53,6 +54,18 @@ int git_push_new(git_push **out, git_remote *remote)
 	}
 
 	*out = p;
+	return 0;
+}
+
+int git_push_set_options(git_push *push, const git_push_options *opts)
+{
+	if (!push || !opts)
+		return -1;
+
+	GITERR_CHECK_VERSION(opts, GIT_PUSH_OPTIONS_VERSION, "git_push_options");
+
+	push->pb_parallelism = opts->pb_parallelism;
+
 	return 0;
 }
 
@@ -449,8 +462,12 @@ static int do_push(git_push *push)
 	 * objects.  In this case the client MUST send an empty pack-file.
 	 */
 
-	if ((error = git_packbuilder_new(&push->pb, push->repo)) < 0 ||
-		(error = calculate_work(push)) < 0 ||
+	if ((error = git_packbuilder_new(&push->pb, push->repo)) < 0)
+		goto on_error;
+
+	git_packbuilder_set_threads(push->pb, push->pb_parallelism);
+
+	if ((error = calculate_work(push)) < 0 ||
 		(error = queue_objects(push)) < 0 ||
 		(error = transport->push(transport, push)) < 0)
 		goto on_error;
