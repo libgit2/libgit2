@@ -132,20 +132,69 @@ IF (MSVC)
 
     STRING(REPLACE "/Zm1000" " " CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
 
-	SET(CMAKE_C_FLAGS "/MP /nologo /Zi ${CMAKE_C_FLAGS}")
+	# /GF - String pooling
+	# /MP - Parallel build
+	SET(CMAKE_C_FLAGS "/GF /MP /nologo ${CMAKE_C_FLAGS}")
+
 	IF (STDCALL)
-	  SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /Gz")
+		# /Gz - stdcall calling convention
+		SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /Gz")
 	ENDIF ()
-	SET(CMAKE_C_FLAGS_DEBUG "/Od /DEBUG /MTd /RTC1 /RTCs /RTCu")
-	SET(CMAKE_C_FLAGS_RELEASE "/MT /O2")
-	SET(CMAKE_C_FLAGS_RELWITHDEBINFO "/MT /O2")
-	SET(CMAKE_C_FLAGS_MINSIZEREL "/MT")
+
+	# /Zi - Create debugging information
+	# /Od - Disable optimization
+	# /D_DEBUG - #define _DEBUG
+	# /MTd - Statically link the multithreaded debug version of the CRT
+	# /RTC1 - Run time checks
+	SET(CMAKE_C_FLAGS_DEBUG "/Zi /Od /D_DEBUG /MTd /RTC1")
+
+	# /MT - Statically link the multithreaded release version of the CRT
+	# /O2 - Optimize for speed
+	# /Oy - Enable frame pointer omission (FPO) (otherwise CMake will automatically turn it off)
+	# /GL - Link time code generation (whole program optimization)
+	# /Gy - Function-level linking
+	SET(CMAKE_C_FLAGS_RELEASE "/MT /O2 /Oy /GL /Gy")
+
+	# /Oy- - Disable frame pointer omission (FPO)
+	SET(CMAKE_C_FLAGS_RELWITHDEBINFO "/Zi /MT /O2 /Oy- /GL /Gy")
+
+	# /O1 - Optimize for size
+	SET(CMAKE_C_FLAGS_MINSIZEREL "/MT /O1 /Oy /GL /Gy")
+
+	# /DYNAMICBASE - Address space load randomization (ASLR)
+	# /NXCOMPAT - Data execution prevention (DEP)
+	# /LARGEADDRESSAWARE - >2GB user address space on x86
+	# /VERSION - Embed version information in PE header
+	SET(CMAKE_EXE_LINKER_FLAGS "/DYNAMICBASE /NXCOMPAT /LARGEADDRESSAWARE /VERSION:${LIBGIT2_VERSION_MAJOR}.${LIBGIT2_VERSION_MINOR}")
+
+	# /DEBUG - Create a PDB
+	# /LTCG - Link time code generation (whole program optimization)
+	# /OPT:REF /OPT:ICF - Fold out duplicate code at link step
+	# /INCREMENTAL:NO - Required to use /LTCG
+	# /DEBUGTYPE:cv,fixup - Additional data embedded in the PDB (requires /INCREMENTAL:NO, so not on for Debug)
+	SET(CMAKE_EXE_LINKER_FLAGS_DEBUG "/DEBUG")
+	SET(CMAKE_EXE_LINKER_FLAGS_RELEASE "/RELEASE /LTCG /OPT:REF /OPT:ICF /INCREMENTAL:NO")
+	SET(CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO "/DEBUG /RELEASE /LTCG /OPT:REF /OPT:ICF /INCREMENTAL:NO /DEBUGTYPE:cv,fixup")
+	SET(CMAKE_EXE_LINKER_FLAGS_MINSIZEREL "/RELEASE /LTCG /OPT:REF /OPT:ICF /INCREMENTAL:NO")
+
+	# Same linker settings for DLL as EXE
+	SET(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS}")
+	SET(CMAKE_SHARED_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG}")
+	SET(CMAKE_SHARED_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE}")
+	SET(CMAKE_SHARED_LINKER_FLAGS_RELWITHDEBINFO "${CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO}")
+	SET(CMAKE_SHARED_LINKER_FLAGS_MINSIZEREL "${CMAKE_EXE_LINKER_FLAGS_MINSIZEREL}")
+
 	SET(WIN_RC "src/win32/git2.rc")
 
    # Precompiled headers
 
 ELSE ()
 	SET(CMAKE_C_FLAGS "-D_GNU_SOURCE -Wall -Wextra -Wno-missing-field-initializers -Wstrict-aliasing=2 -Wstrict-prototypes ${CMAKE_C_FLAGS}")
+
+	IF (WIN32 AND NOT CYGWIN)
+		SET(CMAKE_C_FLAGS_DEBUG "-D_DEBUG")
+	ENDIF ()
+
 	IF (MINGW) # MinGW always does PIC and complains if we tell it to
 		STRING(REGEX REPLACE "-fPIC" "" CMAKE_SHARED_LIBRARY_C_FLAGS "${CMAKE_SHARED_LIBRARY_C_FLAGS}")
 	ELSEIF (BUILD_SHARED_LIBS)
@@ -191,7 +240,7 @@ FILE(GLOB SRC_H include/git2/*.h)
 
 # On Windows use specific platform sources
 IF (WIN32 AND NOT CYGWIN)
-	ADD_DEFINITIONS(-DWIN32 -D_DEBUG -D_WIN32_WINNT=0x0501)
+	ADD_DEFINITIONS(-DWIN32 -D_WIN32_WINNT=0x0501)
 	FILE(GLOB SRC_OS src/win32/*.c)
 ELSEIF (AMIGA)
 	ADD_DEFINITIONS(-DNO_ADDRINFO -DNO_READDIR_R)
