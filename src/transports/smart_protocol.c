@@ -493,10 +493,11 @@ int git_smart__download_pack(
 			git__free(pkt);
 		} else if (pkt->type == GIT_PKT_DATA) {
 			git_pkt_data *p = (git_pkt_data *) pkt;
-			if ((error = writepack->add(writepack, p->data, p->len, stats)) < 0)
-				goto on_error;
+			error = writepack->add(writepack, p->data, p->len, stats);
 
 			git__free(pkt);
+			if (error < 0)
+				goto on_error;
 		} else if (pkt->type == GIT_PKT_FLUSH) {
 			/* A flush indicates the end of the packfile */
 			git__free(pkt);
