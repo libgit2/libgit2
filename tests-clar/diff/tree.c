@@ -2,14 +2,30 @@
 #include "diff_helpers.h"
 
 static git_repository *g_repo = NULL;
+static git_diff_options opts;
+static git_diff_list *diff;
+static git_tree *a, *b;
+static diff_expects exp;
 
 void test_diff_tree__initialize(void)
 {
+	GIT_INIT_STRUCTURE(&opts, GIT_DIFF_OPTIONS_VERSION);
+
+	memset(&exp, 0, sizeof(exp));
+
+	diff = NULL;
+	a = NULL;
+	b = NULL;
 }
 
 void test_diff_tree__cleanup(void)
 {
+	git_diff_list_free(diff);
+	git_tree_free(a);
+	git_tree_free(b);
+
 	cl_git_sandbox_cleanup();
+
 }
 
 void test_diff_tree__0(void)
@@ -18,10 +34,7 @@ void test_diff_tree__0(void)
 	const char *a_commit = "605812a";
 	const char *b_commit = "370fe9ec22";
 	const char *c_commit = "f5b0af1fb4f5c";
-	git_tree *a, *b, *c;
-	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
-	git_diff_list *diff = NULL;
-	diff_expects exp;
+	git_tree *c;
 
 	g_repo = cl_git_sandbox_init("attr");
 
@@ -32,7 +45,6 @@ void test_diff_tree__0(void)
 	opts.context_lines = 1;
 	opts.interhunk_lines = 1;
 
-	memset(&exp, 0, sizeof(exp));
 
 	cl_git_pass(git_diff_tree_to_tree(&diff, g_repo, a, b, &opts));
 
@@ -73,10 +85,6 @@ void test_diff_tree__0(void)
 	cl_assert_equal_i(1, exp.line_adds);
 	cl_assert_equal_i(7 + 14, exp.line_dels);
 
-	git_diff_list_free(diff);
-
-	git_tree_free(a);
-	git_tree_free(b);
 	git_tree_free(c);
 }
 
@@ -87,9 +95,7 @@ void test_diff_tree__options(void)
 	const char *b_commit = "605812ab7fe421fdd";
 	const char *c_commit = "f5b0af1fb4f5";
 	const char *d_commit = "a97cc019851";
-	git_tree *a, *b, *c, *d;
-	git_diff_options opts = {0};
-	git_diff_list *diff = NULL;
+	git_tree *c, *d;
 	diff_expects actual;
 	int test_ab_or_cd[] = { 0, 0, 0, 0, 1, 1, 1, 1, 1 };
 	git_diff_options test_options[] = {
@@ -164,8 +170,6 @@ void test_diff_tree__options(void)
 		diff = NULL;
 	}
 
-	git_tree_free(a);
-	git_tree_free(b);
 	git_tree_free(c);
 	git_tree_free(d);
 }
@@ -174,10 +178,6 @@ void test_diff_tree__bare(void)
 {
 	const char *a_commit = "8496071c1b46c85";
 	const char *b_commit = "be3563ae3f79";
-	git_tree *a, *b;
-	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
-	git_diff_list *diff = NULL;
-	diff_expects exp;
 
 	g_repo = cl_git_sandbox_init("testrepo.git");
 
@@ -186,8 +186,6 @@ void test_diff_tree__bare(void)
 
 	opts.context_lines = 1;
 	opts.interhunk_lines = 1;
-
-	memset(&exp, 0, sizeof(exp));
 
 	cl_git_pass(git_diff_tree_to_tree(&diff, g_repo, a, b, &opts));
 
@@ -205,10 +203,6 @@ void test_diff_tree__bare(void)
 	cl_assert_equal_i(0, exp.line_ctxt);
 	cl_assert_equal_i(3, exp.line_adds);
 	cl_assert_equal_i(1, exp.line_dels);
-
-	git_diff_list_free(diff);
-	git_tree_free(a);
-	git_tree_free(b);
 }
 
 void test_diff_tree__merge(void)
@@ -217,9 +211,8 @@ void test_diff_tree__merge(void)
 	const char *a_commit = "605812a";
 	const char *b_commit = "370fe9ec22";
 	const char *c_commit = "f5b0af1fb4f5c";
-	git_tree *a, *b, *c;
+	git_tree *c;
 	git_diff_list *diff1 = NULL, *diff2 = NULL;
-	diff_expects exp;
 
 	g_repo = cl_git_sandbox_init("attr");
 
@@ -231,15 +224,11 @@ void test_diff_tree__merge(void)
 
 	cl_git_pass(git_diff_tree_to_tree(&diff2, g_repo, c, b, NULL));
 
-	git_tree_free(a);
-	git_tree_free(b);
 	git_tree_free(c);
 
 	cl_git_pass(git_diff_merge(diff1, diff2));
 
 	git_diff_list_free(diff2);
-
-	memset(&exp, 0, sizeof(exp));
 
 	cl_git_pass(git_diff_foreach(
 		diff1, diff_file_cb, diff_hunk_cb, diff_line_cb, &exp));
@@ -263,9 +252,6 @@ void test_diff_tree__larger_hunks(void)
 {
 	const char *a_commit = "d70d245ed97ed2aa596dd1af6536e4bfdb047b69";
 	const char *b_commit = "7a9e0b02e63179929fed24f0a3e0f19168114d10";
-	git_tree *a, *b;
-	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
-	git_diff_list *diff = NULL;
 	size_t d, num_d, h, num_h, l, num_l, header_len, line_len;
 	const git_diff_delta *delta;
 	git_diff_patch *patch;
@@ -312,21 +298,12 @@ void test_diff_tree__larger_hunks(void)
 	cl_git_fail(git_diff_get_patch(&patch, &delta, diff, num_d));
 
 	cl_assert_equal_i(2, (int)num_d);
-
-	git_diff_list_free(diff);
-	diff = NULL;
-
-	git_tree_free(a);
-	git_tree_free(b);
 }
 
 void test_diff_tree__checks_options_version(void)
 {
 	const char *a_commit = "8496071c1b46c85";
 	const char *b_commit = "be3563ae3f79";
-	git_tree *a, *b;
-	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
-	git_diff_list *diff = NULL;
 	const git_error *err;
 
 	g_repo = cl_git_sandbox_init("testrepo.git");
@@ -343,7 +320,112 @@ void test_diff_tree__checks_options_version(void)
 	opts.version = 1024;
 	cl_git_fail(git_diff_tree_to_tree(&diff, g_repo, a, b, &opts));
 	err = giterr_last();
+}
 
-	git_tree_free(a);
-	git_tree_free(b);
+void process_tree_to_tree_diffing(
+	const char *old_commit,
+	const char *new_commit)
+{
+	g_repo = cl_git_sandbox_init("unsymlinked.git");
+
+	cl_assert((a = resolve_commit_oid_to_tree(g_repo, old_commit)) != NULL);
+	cl_assert((b = resolve_commit_oid_to_tree(g_repo, new_commit)) != NULL);
+
+	cl_git_pass(git_diff_tree_to_tree(&diff, g_repo, a, b, &opts));
+
+	cl_git_pass(git_diff_foreach(
+		diff, diff_file_cb, NULL, NULL, &exp));
+}
+
+void test_diff_tree__symlink_blob_mode_changed_to_regular_file(void)
+{
+	/*
+	* $ git diff  7fccd7..806999
+	* diff --git a/include/Nu/Nu.h b/include/Nu/Nu.h
+	* deleted file mode 120000
+	* index 19bf568..0000000
+	* --- a/include/Nu/Nu.h
+	* +++ /dev/null
+	* @@ -1 +0,0 @@
+	* -../../objc/Nu.h
+	* \ No newline at end of file
+	* diff --git a/include/Nu/Nu.h b/include/Nu/Nu.h
+	* new file mode 100644
+	* index 0000000..f9e6561
+	* --- /dev/null
+	* +++ b/include/Nu/Nu.h
+	* @@ -0,0 +1 @@
+	* +awesome content
+	* diff --git a/objc/Nu.h b/objc/Nu.h
+	* deleted file mode 100644
+	* index f9e6561..0000000
+	* --- a/objc/Nu.h
+	* +++ /dev/null
+	* @@ -1 +0,0 @@
+	* -awesome content
+	*/
+
+	process_tree_to_tree_diffing("7fccd7", "806999");
+
+	cl_assert_equal_i(3, exp.files);
+	cl_assert_equal_i(2, exp.file_status[GIT_DELTA_DELETED]);
+	cl_assert_equal_i(0, exp.file_status[GIT_DELTA_MODIFIED]);
+	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_ADDED]);
+	cl_assert_equal_i(0, exp.file_status[GIT_DELTA_TYPECHANGE]);
+}
+
+void test_diff_tree__symlink_blob_mode_changed_to_regular_file_as_typechange(void)
+{
+	/*
+	 * $ git diff  7fccd7..a8595c
+	 * diff --git a/include/Nu/Nu.h b/include/Nu/Nu.h
+	 * deleted file mode 120000
+	 * index 19bf568..0000000
+	 * --- a/include/Nu/Nu.h
+	 * +++ /dev/null
+	 * @@ -1 +0,0 @@
+	 * -../../objc/Nu.h
+	 * \ No newline at end of file
+	 * diff --git a/include/Nu/Nu.h b/include/Nu/Nu.h
+	 * new file mode 100755
+	 * index 0000000..f9e6561
+	 * --- /dev/null
+	 * +++ b/include/Nu/Nu.h
+	 * @@ -0,0 +1 @@
+	 * +awesome content
+	 * diff --git a/objc/Nu.h b/objc/Nu.h
+	 * deleted file mode 100644
+	 * index f9e6561..0000000
+	 * --- a/objc/Nu.h
+	 * +++ /dev/null
+	 * @@ -1 +0,0 @@
+	 * -awesome content
+	*/
+
+	opts.flags = GIT_DIFF_INCLUDE_TYPECHANGE;
+	process_tree_to_tree_diffing("7fccd7", "a8595c");
+
+	cl_assert_equal_i(2, exp.files);
+	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_DELETED]);
+	cl_assert_equal_i(0, exp.file_status[GIT_DELTA_MODIFIED]);
+	cl_assert_equal_i(0, exp.file_status[GIT_DELTA_ADDED]);
+	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_TYPECHANGE]);
+}
+
+void test_diff_tree__regular_blob_mode_changed_to_executable_file(void)
+{
+	/*
+	 * $ git diff 806999..a8595c
+	 * diff --git a/include/Nu/Nu.h b/include/Nu/Nu.h
+	 * old mode 100644
+	 * new mode 100755
+	 */
+
+	process_tree_to_tree_diffing("806999", "a8595c");
+
+	cl_assert_equal_i(1, exp.files);
+	cl_assert_equal_i(0, exp.file_status[GIT_DELTA_DELETED]);
+	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_MODIFIED]);
+	cl_assert_equal_i(0, exp.file_status[GIT_DELTA_ADDED]);
+	cl_assert_equal_i(0, exp.file_status[GIT_DELTA_TYPECHANGE]);
 }
