@@ -82,6 +82,11 @@ GIT_EXTERN(int) git_push_update_tips(git_push *push);
 /**
  * Actually push all given refspecs
  *
+ * Note: To check if the push was successful (i.e. all remote references
+ * have been updated as requested), you need to call both
+ * `git_push_unpack_ok` and `git_push_status_foreach`. The remote
+ * repository might refused to update some or all of the references.
+ *
  * @param push The push object
  *
  * @return 0 or an error code
@@ -99,6 +104,11 @@ GIT_EXTERN(int) git_push_unpack_ok(git_push *push);
 
 /**
  * Call callback `cb' on each status
+ *
+ * For each of the updated references, we receive a status report in the
+ * form of `ok refs/heads/master` or `ng refs/heads/master <msg>`.
+ * `msg != NULL` means the reference has not been updated for the given
+ * reason.
  *
  * @param push The push object
  * @param cb The callback to call on each object
