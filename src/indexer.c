@@ -43,7 +43,6 @@ struct git_indexer_stream {
 		have_delta :1;
 	struct git_pack_file *pack;
 	git_filebuf pack_file;
-	git_filebuf index_file;
 	git_off_t off;
 	git_off_t entry_start;
 	git_packfile_stream stream;
@@ -604,6 +603,7 @@ int git_indexer_stream_finalize(git_indexer_stream *idx, git_transfer_progress *
 	void *packfile_hash;
 	git_oid file_hash;
 	git_hash_ctx ctx;
+	git_filebuf index_file = {0};
 
 	if (git_hash_ctx_init(&ctx) < 0)
 		return -1;
@@ -631,30 +631,30 @@ int git_indexer_stream_finalize(git_indexer_stream *idx, git_transfer_progress *
 	if (git_buf_oom(&filename))
 		return -1;
 
-	if (git_filebuf_open(&idx->index_file, filename.ptr, GIT_FILEBUF_HASH_CONTENTS) < 0)
+	if (git_filebuf_open(&index_file, filename.ptr, GIT_FILEBUF_HASH_CONTENTS) < 0)
 		goto on_error;
 
 	/* Write out the header */
 	hdr.idx_signature = htonl(PACK_IDX_SIGNATURE);
 	hdr.idx_version = htonl(2);
-	git_filebuf_write(&idx->index_file, &hdr, sizeof(hdr));
+	git_filebuf_write(&index_file, &hdr, sizeof(hdr));
 
 	/* Write out the fanout table */
 	for (i = 0; i < 256; ++i) {
 		uint32_t n = htonl(idx->fanout[i]);
-		git_filebuf_write(&idx->index_file, &n, sizeof(n));
+		git_filebuf_write(&index_file, &n, sizeof(n));
 	}
 
 	/* Write out the object names (SHA-1 hashes) */
 	git_vector_foreach(&idx->objects, i, entry) {
-		git_filebuf_write(&idx->index_file, &entry->oid, sizeof(git_oid));
+		git_filebuf_write(&index_file, &entry->oid, sizeof(git_oid));
 		git_hash_update(&ctx, &entry->oid, GIT_OID_RAWSZ);
 	}
 	git_hash_final(&idx->hash, &ctx);
 
 	/* Write out the CRC32 values */
 	git_vector_foreach(&idx->objects, i, entry) {
-		git_filebuf_write(&idx->index_file, &entry->crc, sizeof(uint32_t));
+		git_filebuf_write(&index_file, &entry->crc, sizeof(uint32_t));
 	}
 
 	/* Write out the offsets */
@@ -666,7 +666,7 @@ int git_indexer_stream_finalize(git_indexer_stream *idx, git_transfer_progress *
 		else
 			n = htonl(entry->offset);
 
-		git_filebuf_write(&idx->index_file, &n, sizeof(uint32_t));
+		git_filebuf_write(&index_file, &n, sizeof(uint32_t));
 	}
 
 	/* Write out the long offsets */
@@ -679,7 +679,7 @@ int git_indexer_stream_finalize(git_indexer_stream *idx, git_transfer_progress *
 		split[0] = htonl(entry->offset_long >> 32);
 		split[1] = htonl(entry->offset_long & 0xffffffff);
 
-		git_filebuf_write(&idx->index_file, &split, sizeof(uint32_t) * 2);
+		git_filebuf_write(&index_file, &split, sizeof(uint32_t) * 2);
 	}
 
 	/* Write out the packfile trailer */
@@ -692,20 +692,20 @@ int git_indexer_stream_finalize(git_indexer_stream *idx, git_transfer_progress *
 	memcpy(&file_hash, packfile_hash, GIT_OID_RAWSZ);
 	git_mwindow_close(&w);
 
-	git_filebuf_write(&idx->index_file, &file_hash, sizeof(git_oid));
+	git_filebuf_write(&index_file, &file_hash, sizeof(git_oid));
 
 	/* Write out the packfile trailer to the idx file as well */
-	if (git_filebuf_hash(&file_hash, &idx->index_file) < 0)
+	if (git_filebuf_hash(&file_hash, &index_file) < 0)
 		goto on_error;
 
-	git_filebuf_write(&idx->index_file, &file_hash, sizeof(git_oid));
+	git_filebuf_write(&index_file, &file_hash, sizeof(git_oid));
 
 	/* Figure out what the final name should be */
 	if (index_path_stream(&filename, idx, ".idx") < 0)
 		goto on_error;
 
 	/* Commit file */
-	if (git_filebuf_commit_at(&idx->index_file, filename.ptr, GIT_PACK_FILE_MODE) < 0)
+	if (git_filebuf_commit_at(&index_file, filename.ptr, GIT_PACK_FILE_MODE) < 0)
 		goto on_error;
 
 	git_mwindow_free_all(&idx->pack->mwf);
@@ -724,7 +724,7 @@ int git_indexer_stream_finalize(git_indexer_stream *idx, git_transfer_progress *
 
 on_error:
 	git_mwindow_free_all(&idx->pack->mwf);
-	git_filebuf_cleanup(&idx->index_file);
+	git_filebuf_cleanup(&index_file);
 	git_buf_free(&filename);
 	git_hash_ctx_cleanup(&ctx);
 	return -1;
@@ -752,6 +752,7 @@ void git_indexer_stream_free(git_indexer_stream *idx)
 		git__free(delta);
 	git_vector_free(&idx->deltas);
 	git_packfile_free(idx->pack);
+	git_filebuf_cleanup(&idx->pack_file);
 	git__free(idx);
 }
 
