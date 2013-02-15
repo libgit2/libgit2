@@ -825,3 +825,82 @@ void test_core_buffer__similarity_metric(void)
 	git_buf_free(&buf);
 	git_futils_rmdir_r("scratch", NULL, GIT_RMDIR_REMOVE_FILES);
 }
+
+
+void test_core_buffer__similarity_metric_whitespace(void)
+{
+	git_hashsig *a, *b;
+	git_buf buf = GIT_BUF_INIT;
+	int sim, i, j;
+	git_hashsig_option_t opt;
+	const char *tabbed =
+		"	for (s = 0; s < sizeof(sep) / sizeof(char); ++s) {\n"
+		"		separator = sep[s];\n"
+		"		expect = expect_values[s];\n"
+		"\n"
+		"		for (j = 0; j < sizeof(b) / sizeof(char*); ++j) {\n"
+		"			for (i = 0; i < sizeof(a) / sizeof(char*); ++i) {\n"
+		"				git_buf_join(&buf, separator, a[i], b[j]);\n"
+		"				cl_assert_equal_s(*expect, buf.ptr);\n"
+		"				expect++;\n"
+		"			}\n"
+		"		}\n"
+		"	}\n";
+	const char *spaced =
+		"   for (s = 0; s < sizeof(sep) / sizeof(char); ++s) {\n"
+		"       separator = sep[s];\n"
+		"       expect = expect_values[s];\n"
+		"\n"
+		"       for (j = 0; j < sizeof(b) / sizeof(char*); ++j) {\n"
+		"           for (i = 0; i < sizeof(a) / sizeof(char*); ++i) {\n"
+		"               git_buf_join(&buf, separator, a[i], b[j]);\n"
+		"               cl_assert_equal_s(*expect, buf.ptr);\n"
+		"               expect++;\n"
+		"           }\n"
+		"       }\n"
+		"   }\n";
+	const char *crlf_spaced2 =
+		"  for (s = 0; s < sizeof(sep) / sizeof(char); ++s) {\r\n"
+		"    separator = sep[s];\r\n"
+		"    expect = expect_values[s];\r\n"
+		"\r\n"
+		"    for (j = 0; j < sizeof(b) / sizeof(char*); ++j) {\r\n"
+		"      for (i = 0; i < sizeof(a) / sizeof(char*); ++i) {\r\n"
+		"        git_buf_join(&buf, separator, a[i], b[j]);\r\n"
+		"        cl_assert_equal_s(*expect, buf.ptr);\r\n"
+		"        expect++;\r\n"
+		"      }\r\n"
+		"    }\r\n"
+		"  }\r\n";
+	const char *text[3] = { tabbed, spaced, crlf_spaced2 };
+
+	/* let's try variations of our own code with whitespace changes */
+
+	for (opt = GIT_HASHSIG_NORMAL; opt <= GIT_HASHSIG_SMART_WHITESPACE; ++opt) {
+		for (i = 0; i < 3; ++i) {
+			for (j = 0; j < 3; ++j) {
+				cl_git_pass(git_buf_sets(&buf, text[i]));
+				cl_git_pass(git_hashsig_create(&a, &buf, opt));
+
+				cl_git_pass(git_buf_sets(&buf, text[j]));
+				cl_git_pass(git_hashsig_create(&b, &buf, opt));
+
+				sim = git_hashsig_compare(a, b);
+
+				if (opt == GIT_HASHSIG_NORMAL) {
+					if (i == j)
+						cl_assert_equal_i(100, sim);
+					else
+						cl_assert(sim < 30); /* expect pretty different */
+				} else {
+					cl_assert_equal_i(100, sim);
+				}
+
+				git_hashsig_free(a);
+				git_hashsig_free(b);
+			}
+		}
+	}
+
+	git_buf_free(&buf);
+}
