@@ -1,6 +1,7 @@
 #include "clar_libgit2.h"
 #include "buffer.h"
 #include "buf_text.h"
+#include "hashsig.h"
 #include "fileops.h"
 
 #define TESTSTR "Have you seen that? Have you seeeen that??"
@@ -732,89 +733,94 @@ void test_core_buffer__classify_with_utf8(void)
 	cl_assert(git_buf_text_contains_nul(&b));
 }
 
+#define SIMILARITY_TEST_DATA_1 \
+	"test data\nright here\ninline\ntada\nneeds more data\nlots of data\n" \
+	"is this enough?\nthere has to be enough data to fill the hash array!\n" \
+	"Apparently 191 bytes is the minimum amount of data needed.\nHere goes!\n" \
+	"Let's make sure we've got plenty to go with here.\n   smile   \n"
+
 void test_core_buffer__similarity_metric(void)
 {
-	git_buf_text_hashsig *a, *b;
+	git_hashsig *a, *b;
 	git_buf buf = GIT_BUF_INIT;
 	int sim;
 
 	/* in the first case, we compare data to itself and expect 100% match */
 
-	cl_git_pass(git_buf_sets(&buf, "test data\nright here\ninline\ntada"));
-	cl_git_pass(git_buf_text_hashsig_create(&a, &buf, true));
-	cl_git_pass(git_buf_text_hashsig_create(&b, &buf, true));
+	cl_git_pass(git_buf_sets(&buf, SIMILARITY_TEST_DATA_1));
+	cl_git_pass(git_hashsig_create(&a, &buf, GIT_HASHSIG_NORMAL));
+	cl_git_pass(git_hashsig_create(&b, &buf, GIT_HASHSIG_NORMAL));
 
-	cl_assert_equal_i(100, git_buf_text_hashsig_compare(a, b, 100));
+	cl_assert_equal_i(100, git_hashsig_compare(a, b));
 
-	git_buf_text_hashsig_free(a);
-	git_buf_text_hashsig_free(b);
+	git_hashsig_free(a);
+	git_hashsig_free(b);
 
-	/* in the second case, half of a is matched and all of b is matched, so
-	 * we'll expect a score of around 66% to be the similarity score
-	 */
+	/* if we change just a single byte, how much does that change magnify? */
 
-	cl_git_pass(
-		git_buf_sets(&buf, "a\nb\nc\nd\ne\nf\ng\nh\ni\nj\nk\nl\nm\nn\no\np\n"));
-	cl_git_pass(git_buf_text_hashsig_create(&a, &buf, true));
+	cl_git_pass(git_buf_sets(&buf, SIMILARITY_TEST_DATA_1));
+	cl_git_pass(git_hashsig_create(&a, &buf, GIT_HASHSIG_NORMAL));
+	cl_git_pass(git_buf_sets(&buf,
+		"Test data\nright here\ninline\ntada\nneeds more data\nlots of data\n"
+		"is this enough?\nthere has to be enough data to fill the hash array!\n"
+		"Apparently 191 bytes is the minimum amount of data needed.\nHere goes!\n"
+		 "Let's make sure we've got plenty to go with here.\n   smile   \n"));
+	cl_git_pass(git_hashsig_create(&b, &buf, GIT_HASHSIG_NORMAL));
 
-	cl_git_pass(git_buf_sets(&buf, "a\nb\nc\nd\ne\nf\ng\nh"));
-	cl_git_pass(git_buf_text_hashsig_create(&b, &buf, true));
+	sim = git_hashsig_compare(a, b);
 
-	sim = git_buf_text_hashsig_compare(a, b, 100);
-	cl_assert(sim > 60 && sim < 70);
+	cl_assert(95 < sim && sim < 100); /* expect >95% similarity */
 
-	git_buf_text_hashsig_free(a);
-	git_buf_text_hashsig_free(b);
+	git_hashsig_free(a);
+	git_hashsig_free(b);
 
-	/* in the reversed case, 100% of line hashes match, but no pairwise hashes
-	 * match, so we'll expect about a 50% match for a reversed file
-	 */
+	/* let's try comparing data to a superset of itself */
 
-	cl_git_pass(
-		git_buf_sets(&buf, "a\nb\nc\nd\ne\nf\ng\nh\ni\nj\nk\nl\nm\nn\no\np\n"));
-	cl_git_pass(git_buf_text_hashsig_create(&a, &buf, true));
-	cl_git_pass(
-		git_buf_sets(&buf, "p\no\nn\nm\nl\nk\nj\ni\nh\ng\nf\ne\nd\nc\nb\na\n"));
-	cl_git_pass(git_buf_text_hashsig_create(&b, &buf, true));
+	cl_git_pass(git_buf_sets(&buf, SIMILARITY_TEST_DATA_1));
+	cl_git_pass(git_hashsig_create(&a, &buf, GIT_HASHSIG_NORMAL));
+	cl_git_pass(git_buf_sets(&buf, SIMILARITY_TEST_DATA_1
+		"and if I add some more, it should still be pretty similar, yes?\n"));
+	cl_git_pass(git_hashsig_create(&b, &buf, GIT_HASHSIG_NORMAL));
 
-	sim = git_buf_text_hashsig_compare(a, b, 100);
-	cl_assert(sim > 45 && sim < 55);
+	sim = git_hashsig_compare(a, b);
 
-	git_buf_text_hashsig_free(a);
-	git_buf_text_hashsig_free(b);
+	cl_assert(70 < sim && sim < 80); /* expect in the 70-80% similarity range */
 
-	/* if we don't use pairwise signatures, then a reversed file should
-	 * match 100%
-	 */
+	git_hashsig_free(a);
+	git_hashsig_free(b);
 
-	cl_git_pass(
-		git_buf_sets(&buf, "a\nb\nc\nd\ne\nf\ng\nh\ni\nj\nk\nl\nm\nn\no\np\n"));
-	cl_git_pass(git_buf_text_hashsig_create(&a, &buf, false));
-	cl_git_pass(
-		git_buf_sets(&buf, "p\no\nn\nm\nl\nk\nj\ni\nh\ng\nf\ne\nd\nc\nb\na\n"));
-	cl_git_pass(git_buf_text_hashsig_create(&b, &buf, false));
+	/* what if we keep about half the original data and add half new */
 
-	sim = git_buf_text_hashsig_compare(a, b, 100);
-	cl_assert_equal_i(100, sim);
+	cl_git_pass(git_buf_sets(&buf, SIMILARITY_TEST_DATA_1));
+	cl_git_pass(git_hashsig_create(&a, &buf, GIT_HASHSIG_NORMAL));
+	cl_git_pass(git_buf_sets(&buf,
+		"test data\nright here\ninline\ntada\nneeds more data\nlots of data\n"
+		"is this enough?\nthere has to be enough data to fill the hash array!\n"
+		"okay, that's half the original\nwhat else can we add?\nmore data\n"
+		 "one more line will complete this\nshort\nlines\ndon't\nmatter\n"));
+	cl_git_pass(git_hashsig_create(&b, &buf, GIT_HASHSIG_NORMAL));
 
-	git_buf_text_hashsig_free(a);
-	git_buf_text_hashsig_free(b);
+	sim = git_hashsig_compare(a, b);
+
+	cl_assert(40 < sim && sim < 60); /* expect in the 40-60% similarity range */
+
+	git_hashsig_free(a);
+	git_hashsig_free(b);
 
 	/* lastly, let's check that we can hash file content as well */
 
-	cl_git_pass(
-		git_buf_sets(&buf, "a\nb\nc\nd\ne\nf\ng\nh\ni\nj\nk\nl\nm\nn\no\np\n"));
-	cl_git_pass(git_buf_text_hashsig_create(&a, &buf, true));
+	cl_git_pass(git_buf_sets(&buf, SIMILARITY_TEST_DATA_1));
+	cl_git_pass(git_hashsig_create(&a, &buf, GIT_HASHSIG_NORMAL));
 
 	cl_git_pass(git_futils_mkdir("scratch", NULL, 0755, GIT_MKDIR_PATH));
-	cl_git_mkfile("scratch/testdata",
-		"a\nb\nc\nd\ne\nf\ng\nh\ni\nj\nk\nl\nm\nn\no\np\n");
-	cl_git_pass(git_buf_text_hashsig_create_fromfile(&b, "scratch/testdata", true));
+	cl_git_mkfile("scratch/testdata", SIMILARITY_TEST_DATA_1);
+	cl_git_pass(git_hashsig_create_fromfile(
+		&b, "scratch/testdata", GIT_HASHSIG_NORMAL));
 
-	cl_assert_equal_i(100, git_buf_text_hashsig_compare(a, b, 100));
+	cl_assert_equal_i(100, git_hashsig_compare(a, b));
 
-	git_buf_text_hashsig_free(a);
-	git_buf_text_hashsig_free(b);
+	git_hashsig_free(a);
+	git_hashsig_free(b);
 
 	git_buf_free(&buf);
 	git_futils_rmdir_r("scratch", NULL, GIT_RMDIR_REMOVE_FILES);

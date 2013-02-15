@@ -7,7 +7,7 @@
 #include "common.h"
 #include "diff.h"
 #include "git2/config.h"
-#include "buf_text.h"
+#include "hashsig.h"
 
 static git_diff_delta *diff_delta__dup(
 	const git_diff_delta *d, git_pool *pool)
@@ -300,13 +300,15 @@ on_error:
 
 typedef struct {
 	/* array of delta index * 2 + (old_file/new_file) -> file hashes */
-	git_buf_text_hashsig *sigs;
+	git_hashsig *sigs;
 } diff_similarity_cache;
 
 static unsigned int calc_similarity(
 	void *ref, git_diff_file *old_file, git_diff_file *new_file)
 {
 	diff_similarity_cache *cache = ref;
+
+	GIT_UNUSED(cache);
 
 	if (git_oid_cmp(&old_file->oid, &new_file->oid) == 0)
 		return 100;
