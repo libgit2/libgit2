@@ -390,6 +390,16 @@ typedef enum {
 } git_diff_find_t;
 
 /**
+ * Pluggable similarity metric
+ */
+typedef struct {
+	int (*calc_signature)(void **out, const git_diff_file *file, void *payload);
+	void (*free_signature)(void *sig, void *payload);
+	int (*calc_similarity)(int *score, void *siga, void *sigb, void *payload);
+	void *payload;
+} git_diff_similarity_metric;
+
+/**
  * Control behavior of rename and copy detection
  */
 typedef struct {
@@ -411,6 +421,9 @@ typedef struct {
 	 *  the `diff.renameLimit` config) (default 200)
 	 */
 	unsigned int target_limit;
+
+	/** Pluggable similarity metric; pass NULL to use internal metric */
+	git_diff_similarity_metric *metric;
 } git_diff_find_options;
 
 #define GIT_DIFF_FIND_OPTIONS_VERSION 1
