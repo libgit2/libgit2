@@ -35,9 +35,9 @@ void test_refs_branches_remote__can_get_remote_for_branch(void)
 	cl_assert_equal_s("test/master", name);
 
 	cl_assert_equal_i(expectedRemoteNameLength,
-		git_branch_remote_name(NULL, 0, g_repo, ref));
+		git_branch_remote_name(NULL, 0, g_repo, git_reference_name(ref)));
 	cl_assert_equal_i(expectedRemoteNameLength,
-		git_branch_remote_name(remotename, expectedRemoteNameLength, g_repo, ref));
+		git_branch_remote_name(remotename, expectedRemoteNameLength, g_repo, git_reference_name(ref)));
 	cl_assert_equal_s("test", remotename);
 
 	git_reference_free(ref);
@@ -56,9 +56,9 @@ void test_refs_branches_remote__insufficient_buffer_returns_error(void)
 	cl_assert_equal_s("test/master", name);
 
 	cl_assert_equal_i(expectedRemoteNameLength,
-		git_branch_remote_name(NULL, 0, g_repo, ref));
+		git_branch_remote_name(NULL, 0, g_repo, git_reference_name(ref)));
 	cl_git_fail_with(GIT_ERROR,
-		git_branch_remote_name(remotename, expectedRemoteNameLength - 1, g_repo, ref));
+		git_branch_remote_name(remotename, expectedRemoteNameLength - 1, g_repo, git_reference_name(ref)));
 
 	git_reference_free(ref);
 }
@@ -78,7 +78,7 @@ void test_refs_branches_remote__no_matching_remote_returns_error(void)
 	cl_git_pass(git_branch_name(&name, ref));
 	cl_assert_equal_s("nonexistent/master", name);
 
-	cl_git_fail_with(git_branch_remote_name(NULL, 0, g_repo, ref), GIT_ENOTFOUND);
+	cl_git_fail_with(git_branch_remote_name(NULL, 0, g_repo, git_reference_name(ref)), GIT_ENOTFOUND);
 	git_reference_free(ref);
 }
 
@@ -91,7 +91,7 @@ void test_refs_branches_remote__local_remote_returns_error(void)
 	cl_git_pass(git_branch_name(&name, ref));
 	cl_assert_equal_s("master",name);
 
-	cl_git_fail_with(git_branch_remote_name(NULL, 0, g_repo, ref), GIT_ERROR);
+	cl_git_fail_with(git_branch_remote_name(NULL, 0, g_repo, git_reference_name(ref)), GIT_ERROR);
 	git_reference_free(ref);
 }
 
@@ -114,6 +114,6 @@ void test_refs_branches_remote__ambiguous_remote_returns_error(void)
 	cl_git_pass(git_branch_name(&name, ref));
 	cl_assert_equal_s("test/master", name);
 
-	cl_git_fail_with(git_branch_remote_name(NULL, 0, g_repo, ref), GIT_EAMBIGUOUS);
+	cl_git_fail_with(git_branch_remote_name(NULL, 0, g_repo, git_reference_name(ref)), GIT_EAMBIGUOUS);
 	git_reference_free(ref);
 }

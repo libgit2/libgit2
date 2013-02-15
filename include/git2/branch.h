@@ -221,7 +221,7 @@ GIT_EXTERN(int) git_branch_is_head(
  *
  * @param repo The repository where the branch lives.
  *
- * @param branch The reference to the remote tracking branch.
+ * @param canonical_branch_name name of the remote tracking branch.
  *
  * @return Number of characters in the reference name
  *     including the trailing NUL byte; GIT_ENOTFOUND
@@ -233,7 +233,7 @@ GIT_EXTERN(int) git_branch_remote_name(
 	char *remote_name_out,
 	size_t buffer_size,
 	git_repository *repo,
-	git_reference *branch);
+	const char *canonical_branch_name);
 
 /** @} */
 GIT_END_DECL
