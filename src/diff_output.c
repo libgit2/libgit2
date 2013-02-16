@@ -1280,14 +1280,15 @@ static void set_data_from_buffer(
 {
 	file->size = (git_off_t)buffer_len;
 	file->mode = 0644;
-
-	if (!buffer)
-		file->flags |= GIT_DIFF_FILE_NO_DATA;
-	else
-		git_odb_hash(&file->oid, buffer, buffer_len, GIT_OBJ_BLOB);
-
 	map->len   = buffer_len;
-	map->data  = (char *)buffer;
+
+	if (!buffer) {
+		file->flags |= GIT_DIFF_FILE_NO_DATA;
+		map->data = NULL;
+	} else {
+		map->data = (char *)buffer;
+		git_odb_hash(&file->oid, buffer, buffer_len, GIT_OBJ_BLOB);
+	}
 }
 
 typedef struct {

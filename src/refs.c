@@ -1493,7 +1493,7 @@ int git_reference_foreach(
 	/* list all the packed references first */
 	if (list_flags & GIT_REF_PACKED) {
 		const char *ref_name;
-		void *ref;
+		void *ref = NULL;
 		GIT_UNUSED(ref);
 
 		if (packed_load(repo) < 0)
