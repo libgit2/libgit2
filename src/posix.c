@@ -13,25 +13,28 @@
 #ifndef GIT_WIN32
 
 #ifdef NO_ADDRINFO
+
 int p_getaddrinfo(
 	const char *host,
 	const char *port,
 	struct addrinfo *hints,
 	struct addrinfo **info)
 {
-	GIT_UNUSED(hints);
-	
 	struct addrinfo *ainfo, *ai;
 	int p = 0;
-	
+
+	GIT_UNUSED(hints);
+
 	if ((ainfo = malloc(sizeof(struct addrinfo))) == NULL)
 		return -1;
-		
-	if ((ainfo->ai_hostent = gethostbyname(host)) == NULL)
+
+	if ((ainfo->ai_hostent = gethostbyname(host)) == NULL) {
+		free(ainfo);
 		return -2;
-		
+	}
+
 	ainfo->ai_servent = getservbyname(port, 0);
-	
+
 	if (ainfo->ai_servent)
 		ainfo->ai_port = ainfo->ai_servent->s_port;
 	else
@@ -50,14 +53,14 @@ int p_getaddrinfo(
 	ainfo->ai_addrlen = sizeof(struct sockaddr_in);
 
 	*info = ainfo;
-	
+
 	if (ainfo->ai_hostent->h_addr_list[1] == NULL) {
 		ainfo->ai_next = NULL;
 		return 0;
 	}
-	
+
 	ai = ainfo;
-	
+
 	for (p = 1; ainfo->ai_hostent->h_addr_list[p] != NULL; p++) {
 		ai->ai_next = malloc(sizeof(struct addrinfo));
 		memcpy(&ai->ai_next, ainfo, sizeof(struct addrinfo));
@@ -67,7 +70,7 @@ int p_getaddrinfo(
 		ai->ai_next->ai_addr = (struct addrinfo *)&ai->ai_next->ai_addr_in;
 		ai = ai->ai_next;
 	}
-	
+
 	ai->ai_next = NULL;
 	return 0;
 }
@@ -75,9 +78,9 @@ int p_getaddrinfo(
 void p_freeaddrinfo(struct addrinfo *info)
 {
 	struct addrinfo *p, *next;
-	
+
 	p = info;
-	
+
 	while(p != NULL) {
 		next = p->ai_next;
 		free(p);
@@ -88,27 +91,19 @@ void p_freeaddrinfo(struct addrinfo *info)
 const char *p_gai_strerror(int ret)
 {
 	switch(ret) {
-		case -1:
-			return "Out of memory";
-		break;
-		
-		case -2:
-			return "Address lookup failed";
-		break;
-		
-		default:
-			return "Unknown error";
-		break;
+	case -1: return "Out of memory"; break;
+	case -2: return "Address lookup failed"; break;
+	default: return "Unknown error"; break;
 	}
 }
+
 #endif /* NO_ADDRINFO */
 
 int p_open(const char *path, int flags, ...)
 {
 	mode_t mode = 0;
 
-	if (flags & O_CREAT)
-	{
+	if (flags & O_CREAT) {
 		va_list arg_list;
 
 		va_start(arg_list, flags);
@@ -159,6 +154,7 @@ int p_rename(const char *from, const char *to)
 int p_read(git_file fd, void *buf, size_t cnt)
 {
 	char *b = buf;
+
 	while (cnt) {
 		ssize_t r;
 #ifdef GIT_WIN32
@@ -183,6 +179,7 @@ int p_read(git_file fd, void *buf, size_t cnt)
 int p_write(git_file fd, const void *buf, size_t cnt)
 {
 	const char *b = buf;
+
 	while (cnt) {
 		ssize_t r;
 #ifdef GIT_WIN32

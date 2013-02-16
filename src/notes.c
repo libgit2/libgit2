@@ -147,7 +147,7 @@ static int manipulate_note_in_tree_r(
 		int fanout,
 		int current_error))
 {
-	int error = -1;
+	int error;
 	git_tree *subtree = NULL, *new = NULL;
 	char subtree_name[3];
 
