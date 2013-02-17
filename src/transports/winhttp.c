@@ -88,7 +88,7 @@ static int apply_basic_credential(HINTERNET request, git_cred *cred)
 	git_cred_userpass_plaintext *c = (git_cred_userpass_plaintext *)cred;
 	git_buf buf = GIT_BUF_INIT, raw = GIT_BUF_INIT;
 	wchar_t *wide = NULL;
-	int error = -1, wide_len;
+	int error = -1, wide_len = 0;
 
 	git_buf_printf(&raw, "%s:%s", c->username, c->password);
 

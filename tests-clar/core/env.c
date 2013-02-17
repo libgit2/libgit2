@@ -74,6 +74,8 @@ void test_core_env__0(void)
 	char **val;
 
 	memset(testfile, 0, sizeof(testfile));
+	cl_assert_equal_s("", testfile);
+
 	memcpy(testfile, "testfile", 8);
 	cl_assert_equal_s("testfile", testfile);
 
