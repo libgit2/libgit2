@@ -41,4 +41,11 @@ struct git_push {
 	unsigned pb_parallelism;
 };
 
+/**
+ * Free the given push status object
+ *
+ * @param status The push status object
+ */
+void git_push_status_free(push_status *status);
+
 #endif
