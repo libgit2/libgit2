@@ -7,7 +7,7 @@
 #ifndef INCLUDE_hashsig_h__
 #define INCLUDE_hashsig_h__
 
-#include "buffer.h"
+#include "common.h"
 
 /**
  * Similarity signature of line hashes for a buffer
@@ -32,11 +32,13 @@ typedef enum {
  *
  * @param out The array of hashed runs representing the file content
  * @param buf The contents of the file to hash
+ * @param buflen The length of the data at `buf`
  * @param generate_pairwise_hashes Should pairwise runs be hashed
  */
 extern int git_hashsig_create(
 	git_hashsig **out,
-	const git_buf *buf,
+	const char *buf,
+	size_t buflen,
 	git_hashsig_option_t opts);
 
 /**

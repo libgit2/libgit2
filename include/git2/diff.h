@@ -387,20 +387,46 @@ typedef enum {
 
 	/** split large rewrites into delete/add pairs (`--break-rewrites=/M`) */
 	GIT_DIFF_FIND_AND_BREAK_REWRITES = (1 << 4),
+
+	/** measure similarity ignoring leading whitespace (default) */
+	GIT_DIFF_FIND_IGNORE_LEADING_WHITESPACE = 0,
+	/** measure similarity ignoring all whitespace */
+	GIT_DIFF_FIND_IGNORE_WHITESPACE = (1 << 6),
+	/** measure similarity including all data */
+	GIT_DIFF_FIND_DONT_IGNORE_WHITESPACE = (1 << 7),
 } git_diff_find_t;
 
 /**
  * Pluggable similarity metric
  */
 typedef struct {
-	int (*calc_signature)(void **out, const git_diff_file *file, void *payload);
+	int (*file_signature)(
+		void **out, const git_diff_file *file,
+		const char *fullpath, void *payload);
+	int (*buffer_signature)(
+		void **out, const git_diff_file *file,
+		const char *buf, size_t buflen, void *payload);
 	void (*free_signature)(void *sig, void *payload);
-	int (*calc_similarity)(int *score, void *siga, void *sigb, void *payload);
+	int (*similarity)(int *score, void *siga, void *sigb, void *payload);
 	void *payload;
 } git_diff_similarity_metric;
 
 /**
  * Control behavior of rename and copy detection
+ *
+ * These options mostly mimic parameters that can be passed to git-diff.
+ *
+ * - `rename_threshold` is the same as the -M option with a value
+ * - `copy_threshold` is the same as the -C option with a value
+ * - `rename_from_rewrite_threshold` matches the top of the -B option
+ * - `break_rewrite_threshold` matches the bottom of the -B option
+ * - `target_limit` matches the -l option
+ *
+ * The `metric` option allows you to plug in a custom similarity metric.
+ * Set it to NULL for the default internal metric which is based on sampling
+ * hashes of ranges of data in the file.  The default metric is a pretty
+ * good similarity approximation that should work fairly well for both text
+ * and binary data, and is pretty fast with fixed memory overhead.
  */
 typedef struct {
 	unsigned int version;

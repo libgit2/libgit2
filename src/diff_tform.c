@@ -169,6 +169,60 @@ int git_diff_merge(
 	return error;
 }
 
+#define FIND_SIMILAR_HASHSIG(NAME,OPT) \
+	static int find_similar__hashsig_for_file ## NAME( \
+		void **out, const git_diff_file *f, const char *path, void *p) { \
+		GIT_UNUSED(f); GIT_UNUSED(p); \
+		return git_hashsig_create_fromfile((git_hashsig **)out, path, OPT); \
+	} \
+	static int find_similar__hashsig_for_buf ## NAME( \
+		void **out, const git_diff_file *f, const char *buf, size_t len, void *p) { \
+		GIT_UNUSED(f); GIT_UNUSED(p); \
+		return git_hashsig_create((git_hashsig **)out, buf, len, OPT); \
+	}
+
+FIND_SIMILAR_HASHSIG(_default, GIT_HASHSIG_SMART_WHITESPACE);
+FIND_SIMILAR_HASHSIG(_ignore_whitespace, GIT_HASHSIG_IGNORE_WHITESPACE);
+FIND_SIMILAR_HASHSIG(_include_whitespace, GIT_HASHSIG_NORMAL);
+
+static void find_similar__hashsig_free(void *sig, void *payload)
+{
+	GIT_UNUSED(payload);
+	git_hashsig_free(sig);
+}
+
+static int find_similar__calc_similarity(
+	int *score, void *siga, void *sigb, void *payload)
+{
+	GIT_UNUSED(payload);
+	*score = git_hashsig_compare(siga, sigb);
+	return 0;
+}
+
+static git_diff_similarity_metric find_similar__internal_metrics[3] = {
+	{
+		find_similar__hashsig_for_file_default,
+		find_similar__hashsig_for_buf_default,
+		find_similar__hashsig_free,
+		find_similar__calc_similarity,
+		NULL
+	},
+	{
+		find_similar__hashsig_for_file_ignore_whitespace,
+		find_similar__hashsig_for_buf_ignore_whitespace,
+		find_similar__hashsig_free,
+		find_similar__calc_similarity,
+		NULL
+	},
+	{
+		find_similar__hashsig_for_file_include_whitespace,
+		find_similar__hashsig_for_buf_include_whitespace,
+		find_similar__hashsig_free,
+		find_similar__calc_similarity,
+		NULL
+	}
+};
+
 #define DEFAULT_THRESHOLD 50
 #define DEFAULT_BREAK_REWRITE_THRESHOLD 60
 #define DEFAULT_TARGET_LIMIT 200
@@ -235,6 +289,16 @@ static int normalize_find_opts(
 			giterr_clear();
 		else if (limit > 0)
 			opts->target_limit = limit;
+	}
+
+	/* for now, always assign the same internal metric */
+	if (!opts->metric) {
+		if (opts->flags & GIT_DIFF_FIND_IGNORE_WHITESPACE)
+			opts->metric = &find_similar__internal_metrics[1];
+		else if (opts->flags & GIT_DIFF_FIND_DONT_IGNORE_WHITESPACE)
+			opts->metric = &find_similar__internal_metrics[2];
+		else
+			opts->metric = &find_similar__internal_metrics[0];
 	}
 
 	return 0;

@@ -748,8 +748,8 @@ void test_core_buffer__similarity_metric(void)
 	/* in the first case, we compare data to itself and expect 100% match */
 
 	cl_git_pass(git_buf_sets(&buf, SIMILARITY_TEST_DATA_1));
-	cl_git_pass(git_hashsig_create(&a, &buf, GIT_HASHSIG_NORMAL));
-	cl_git_pass(git_hashsig_create(&b, &buf, GIT_HASHSIG_NORMAL));
+	cl_git_pass(git_hashsig_create(&a, buf.ptr, buf.size, GIT_HASHSIG_NORMAL));
+	cl_git_pass(git_hashsig_create(&b, buf.ptr, buf.size, GIT_HASHSIG_NORMAL));
 
 	cl_assert_equal_i(100, git_hashsig_compare(a, b));
 
@@ -759,13 +759,13 @@ void test_core_buffer__similarity_metric(void)
 	/* if we change just a single byte, how much does that change magnify? */
 
 	cl_git_pass(git_buf_sets(&buf, SIMILARITY_TEST_DATA_1));
-	cl_git_pass(git_hashsig_create(&a, &buf, GIT_HASHSIG_NORMAL));
+	cl_git_pass(git_hashsig_create(&a, buf.ptr, buf.size, GIT_HASHSIG_NORMAL));
 	cl_git_pass(git_buf_sets(&buf,
 		"Test data\nright here\ninline\ntada\nneeds more data\nlots of data\n"
 		"is this enough?\nthere has to be enough data to fill the hash array!\n"
 		"Apparently 191 bytes is the minimum amount of data needed.\nHere goes!\n"
 		 "Let's make sure we've got plenty to go with here.\n   smile   \n"));
-	cl_git_pass(git_hashsig_create(&b, &buf, GIT_HASHSIG_NORMAL));
+	cl_git_pass(git_hashsig_create(&b, buf.ptr, buf.size, GIT_HASHSIG_NORMAL));
 
 	sim = git_hashsig_compare(a, b);
 
@@ -777,10 +777,10 @@ void test_core_buffer__similarity_metric(void)
 	/* let's try comparing data to a superset of itself */
 
 	cl_git_pass(git_buf_sets(&buf, SIMILARITY_TEST_DATA_1));
-	cl_git_pass(git_hashsig_create(&a, &buf, GIT_HASHSIG_NORMAL));
+	cl_git_pass(git_hashsig_create(&a, buf.ptr, buf.size, GIT_HASHSIG_NORMAL));
 	cl_git_pass(git_buf_sets(&buf, SIMILARITY_TEST_DATA_1
 		"and if I add some more, it should still be pretty similar, yes?\n"));
-	cl_git_pass(git_hashsig_create(&b, &buf, GIT_HASHSIG_NORMAL));
+	cl_git_pass(git_hashsig_create(&b, buf.ptr, buf.size, GIT_HASHSIG_NORMAL));
 
 	sim = git_hashsig_compare(a, b);
 
@@ -792,13 +792,13 @@ void test_core_buffer__similarity_metric(void)
 	/* what if we keep about half the original data and add half new */
 
 	cl_git_pass(git_buf_sets(&buf, SIMILARITY_TEST_DATA_1));
-	cl_git_pass(git_hashsig_create(&a, &buf, GIT_HASHSIG_NORMAL));
+	cl_git_pass(git_hashsig_create(&a, buf.ptr, buf.size, GIT_HASHSIG_NORMAL));
 	cl_git_pass(git_buf_sets(&buf,
 		"test data\nright here\ninline\ntada\nneeds more data\nlots of data\n"
 		"is this enough?\nthere has to be enough data to fill the hash array!\n"
 		"okay, that's half the original\nwhat else can we add?\nmore data\n"
 		 "one more line will complete this\nshort\nlines\ndon't\nmatter\n"));
-	cl_git_pass(git_hashsig_create(&b, &buf, GIT_HASHSIG_NORMAL));
+	cl_git_pass(git_hashsig_create(&b, buf.ptr, buf.size, GIT_HASHSIG_NORMAL));
 
 	sim = git_hashsig_compare(a, b);
 
@@ -810,7 +810,7 @@ void test_core_buffer__similarity_metric(void)
 	/* lastly, let's check that we can hash file content as well */
 
 	cl_git_pass(git_buf_sets(&buf, SIMILARITY_TEST_DATA_1));
-	cl_git_pass(git_hashsig_create(&a, &buf, GIT_HASHSIG_NORMAL));
+	cl_git_pass(git_hashsig_create(&a, buf.ptr, buf.size, GIT_HASHSIG_NORMAL));
 
 	cl_git_pass(git_futils_mkdir("scratch", NULL, 0755, GIT_MKDIR_PATH));
 	cl_git_mkfile("scratch/testdata", SIMILARITY_TEST_DATA_1);
@@ -880,10 +880,10 @@ void test_core_buffer__similarity_metric_whitespace(void)
 		for (i = 0; i < 3; ++i) {
 			for (j = 0; j < 3; ++j) {
 				cl_git_pass(git_buf_sets(&buf, text[i]));
-				cl_git_pass(git_hashsig_create(&a, &buf, opt));
+				cl_git_pass(git_hashsig_create(&a, buf.ptr, buf.size, opt));
 
 				cl_git_pass(git_buf_sets(&buf, text[j]));
-				cl_git_pass(git_hashsig_create(&b, &buf, opt));
+				cl_git_pass(git_hashsig_create(&b, buf.ptr, buf.size, opt));
 
 				sim = git_hashsig_compare(a, b);
 
