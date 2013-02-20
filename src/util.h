@@ -127,6 +127,21 @@ GIT_INLINE(const char *) git__next_line(const char *s)
 	return s;
 }
 
+GIT_INLINE(const void *) git__memrchr(const void *s, int c, size_t n)
+{
+	const unsigned char *cp;
+
+	if (n != 0) {
+		cp = (unsigned char *)s + n;
+		do {
+			if (*(--cp) == (unsigned char)c)
+				return cp;
+		} while (--n != 0);
+	}
+
+	return NULL;
+}
+
 typedef int (*git__tsort_cmp)(const void *a, const void *b);
 
 extern void git__tsort(void **dst, size_t size, git__tsort_cmp cmp);
