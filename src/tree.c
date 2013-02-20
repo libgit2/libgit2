@@ -355,7 +355,7 @@ size_t git_tree_entrycount(const git_tree *tree)
 unsigned int git_treebuilder_entrycount(git_treebuilder *bld)
 {
 	assert(bld);
-	return (int)bld->entries.length;
+	return (unsigned int)bld->entrycount;
 }
 
 static int tree_error(const char *str, const char *path)
@@ -453,6 +453,7 @@ static int append_entry(
 	if (git_vector_insert(&bld->entries, entry) < 0)
 		return -1;
 
+	bld->entrycount++;
 	return 0;
 }
 
@@ -642,14 +643,18 @@ int git_treebuilder_insert(
 
 	if (!tree_key_search(&pos, &bld->entries, filename, strlen(filename))) {
 		entry = git_vector_get(&bld->entries, pos);
-		if (entry->removed)
+		if (entry->removed) {
 			entry->removed = 0;
+			bld->entrycount++;
+		}
 	} else {
 		entry = alloc_entry(filename);
 		GITERR_CHECK_ALLOC(entry);
 
 		if (git_vector_insert(&bld->entries, entry) < 0)
 			return -1;
+
+		bld->entrycount++;
 	}
 
 	git_oid_cpy(&entry->oid, id);
@@ -691,6 +696,7 @@ int git_treebuilder_remove(git_treebuilder *bld, const char *filename)
 		return tree_error("Failed to remove entry. File isn't in the tree", filename);
 
 	remove_ptr->removed = 1;
+	bld->entrycount--;
 	return 0;
 }
 
@@ -747,8 +753,10 @@ void git_treebuilder_filter(
 
 	for (i = 0; i < bld->entries.length; ++i) {
 		git_tree_entry *entry = bld->entries.contents[i];
-		if (!entry->removed && filter(entry, payload))
+		if (!entry->removed && filter(entry, payload)) {
 			entry->removed = 1;
+			bld->entrycount--;
+		}
 	}
 }
 
@@ -763,6 +771,7 @@ void git_treebuilder_clear(git_treebuilder *bld)
 	}
 
 	git_vector_clear(&bld->entries);
+	bld->entrycount = 0;
 }
 
 void git_treebuilder_free(git_treebuilder *bld)
