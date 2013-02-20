@@ -133,17 +133,14 @@ int git_signature__parse(git_signature *sig, const char **buffer_out,
 	if (header) {
 		const size_t header_len = strlen(header);
 
-		if (buffer_end - buffer < header_len || memcmp(buffer, header, header_len) != 0)
+		if (buffer + header_len >= buffer_end || memcmp(buffer, header, header_len) != 0)
 			return signature_error("expected prefix doesn't match actual");
 
 		buffer += header_len;
 	}
 
-	if (buffer >= buffer_end)
-		return signature_error("signature too short");
-
-	email_start = memrchr(buffer, '<', buffer_end - buffer);
-	email_end = memrchr(buffer, '>', buffer_end - buffer);
+	email_start = git__memrchr(buffer, '<', buffer_end - buffer);
+	email_end = git__memrchr(buffer, '>', buffer_end - buffer);
 
 	if (!email_start || !email_end || email_end <= email_start)
 		return signature_error("malformed e-mail");
