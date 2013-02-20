@@ -27,6 +27,7 @@ struct git_tree {
 
 struct git_treebuilder {
 	git_vector entries;
+	size_t entrycount; /* vector may contain "removed" entries */
 };
 
 GIT_INLINE(int) git_tree__dup(git_tree **dest, git_tree *source)
