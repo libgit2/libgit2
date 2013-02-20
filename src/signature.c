@@ -145,9 +145,8 @@ int git_signature__parse(git_signature *sig, const char **buffer_out,
 	if (!email_start || !email_end || email_end <= email_start)
 		return signature_error("malformed e-mail");
 
-	sig->name = extract_trimmed(buffer, email_start - buffer);
-
 	email_start += 1;
+	sig->name = extract_trimmed(buffer, email_start - buffer - 1);
 	sig->email = extract_trimmed(email_start, email_end - email_start);
 
 	/* Do we even have a time at the end of the signature? */
@@ -158,7 +157,7 @@ int git_signature__parse(git_signature *sig, const char **buffer_out,
 		if (git__strtol64(&sig->when.time, time_start, &time_end, 10) < 0)
 			return signature_error("invalid Unix timestamp");
 
-		/* no timezone at all */
+		/* do we have a timezone? */
 		if (time_end + 1 < buffer_end) {
 			int offset, hours, mins;
 			const char *tz_start, *tz_end;
