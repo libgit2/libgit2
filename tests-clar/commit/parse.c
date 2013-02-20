@@ -108,19 +108,12 @@ passing_signature_test_case passing_signature_cases[] = {
 	// Parse an obviously invalid signature
 	{"committer foo<@bar> 123456 -0100 \n", "committer ", "foo", "@bar", 123456, -60},
 	// Parse an obviously invalid signature
-	{"committer    foo<@bar>123456 -0100 \n", "committer ", "foo", "@bar", 123456, -60},
+	{"committer    foo<@bar> 123456 -0100 \n", "committer ", "foo", "@bar", 123456, -60},
 	// Parse an obviously invalid signature
 	{"committer <>\n", "committer ", "", "", 0, 0},
-	{"committer Vicent Marti <tanoku@gmail.com> 123456 -1500 \n", "committer ", "Vicent Marti", "tanoku@gmail.com", 0, 0},
-	{"committer Vicent Marti <tanoku@gmail.com> 123456 +0163 \n", "committer ", "Vicent Marti", "tanoku@gmail.com", 0, 0},
-	{"author Vicent Marti <tanoku@gmail.com> notime \n", "author ", "Vicent Marti", "tanoku@gmail.com", 0, 0},
-	{"author Vicent Marti <tanoku@gmail.com> 123456 notimezone \n", "author ", "Vicent Marti", "tanoku@gmail.com", 0, 0},
-	{"author Vicent Marti <tanoku@gmail.com> notime +0100\n", "author ", "Vicent Marti", "tanoku@gmail.com", 0, 0},
+	{"committer Vicent Marti <tanoku@gmail.com> 123456 -1500 \n", "committer ", "Vicent Marti", "tanoku@gmail.com", 123456, 0},
+	{"committer Vicent Marti <tanoku@gmail.com> 123456 +0163 \n", "committer ", "Vicent Marti", "tanoku@gmail.com", 123456, 0},
 	{"author Vicent Marti <tanoku@gmail.com>\n", "author ", "Vicent Marti", "tanoku@gmail.com", 0, 0},
-	{"author A U Thor <author@example.com>,  C O. Miter <comiter@example.com> 1234567890 -0700\n", "author ", "A U Thor", "author@example.com", 1234567890, -420},
-	{"author A U Thor <author@example.com> and others 1234567890 -0700\n", "author ", "A U Thor", "author@example.com", 1234567890, -420},
-	{"author A U Thor <author@example.com> and others 1234567890\n", "author ", "A U Thor", "author@example.com", 1234567890, 0},
-	{"author A U Thor> <author@example.com> and others 1234567890\n", "author ", "A U Thor>", "author@example.com", 1234567890, 0},
 	/* a variety of dates */
 	{"author Vicent Marti <tanoku@gmail.com> 0 \n", "author ", "Vicent Marti", "tanoku@gmail.com", 0, 0},
 	{"author Vicent Marti <tanoku@gmail.com> 1234567890 \n", "author ", "Vicent Marti", "tanoku@gmail.com", 1234567890, 0},
@@ -145,7 +138,7 @@ failing_signature_test_case failing_signature_cases[] = {
 	{"author Vicent Marti <broken@email 12345 \n", "author "},
 	{"committer Vicent Marti ><\n", "committer "},
 	{"author ", "author "},
-   {NULL,NULL,}
+	{NULL, NULL,}
 };
 
 void test_commit_parse__signature(void)
@@ -158,11 +151,12 @@ void test_commit_parse__signature(void)
       const char *str = passcase->string;
       size_t len = strlen(passcase->string);
       struct git_signature person = {0};
+
       cl_git_pass(git_signature__parse(&person, &str, str + len, passcase->header, '\n'));
       cl_assert_equal_s(passcase->name, person.name);
       cl_assert_equal_s(passcase->email, person.email);
-      cl_assert(passcase->time == person.when.time);
-      cl_assert(passcase->offset == person.when.offset);
+      cl_assert_equal_i(passcase->time, person.when.time);
+      cl_assert_equal_i(passcase->offset, person.when.offset);
       git__free(person.name); git__free(person.email);
    }
 
