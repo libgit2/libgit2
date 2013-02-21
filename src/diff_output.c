@@ -456,7 +456,7 @@ static void release_content(git_diff_file *file, git_map *map, git_blob *blob)
 }
 
 
-static void diff_context_init(
+static int diff_context_init(
 	diff_context *ctxt,
 	git_diff_list *diff,
 	git_repository *repo,
@@ -468,6 +468,12 @@ static void diff_context_init(
 {
 	memset(ctxt, 0, sizeof(diff_context));
 
+	if (!repo && diff)
+		repo = diff->repo;
+
+	if (!opts && diff)
+		opts = &diff->opts;
+
 	ctxt->repo = repo;
 	ctxt->diff = diff;
 	ctxt->opts = opts;
@@ -478,6 +484,8 @@ static void diff_context_init(
 	ctxt->error = 0;
 
 	setup_xdiff_options(ctxt->opts, &ctxt->xdiff_config, &ctxt->xdiff_params);
+
+	return 0;
 }
 
 static int diff_delta_file_callback(
@@ -922,6 +930,15 @@ static int diff_patch_line_cb(
 	return 0;
 }
 
+static int diff_required(git_diff_list *diff, const char *action)
+{
+	if (!diff) {
+		giterr_set(GITERR_INVALID, "Must provide valid diff to %s", action);
+		return -1;
+	}
+
+	return 0;
+}
 
 int git_diff_foreach(
 	git_diff_list *diff,
@@ -935,9 +952,12 @@ int git_diff_foreach(
 	size_t idx;
 	git_diff_patch patch;
 
-	diff_context_init(
-		&ctxt, diff, diff->repo, &diff->opts,
-		file_cb, hunk_cb, data_cb, payload);
+	if (diff_required(diff, "git_diff_foreach") < 0)
+		return -1;
+
+	if (diff_context_init(
+			&ctxt, diff, NULL, NULL, file_cb, hunk_cb, data_cb, payload) < 0)
+		return -1;
 
 	diff_patch_init(&ctxt, &patch);
 
@@ -1306,8 +1326,10 @@ static int diff_single_init(
 
 	memset(data, 0, sizeof(*data));
 
-	diff_context_init(
-		&data->ctxt, NULL, repo, opts, file_cb, hunk_cb, data_cb, payload);
+	if (diff_context_init(
+			&data->ctxt, NULL, repo, opts,
+			file_cb, hunk_cb, data_cb, payload) < 0)
+		return -1;
 
 	diff_patch_init(&data->ctxt, &data->patch);
 
@@ -1374,6 +1396,9 @@ int git_diff_blobs(
 		new_blob ? git_object_owner((const git_object *)new_blob) :
 		old_blob ? git_object_owner((const git_object *)old_blob) : NULL;
 
+	if (!repo) /* Hmm, given two NULL blobs, silently do no callbacks? */
+		return 0;
+
 	if ((error = diff_single_init(
 			&d, repo, options, file_cb, hunk_cb, data_cb, payload)) < 0)
 		return error;
@@ -1404,6 +1429,9 @@ int git_diff_blob_to_buffer(
 	diff_single_data d;
 	git_repository *repo =
 		old_blob ? git_object_owner((const git_object *)old_blob) : NULL;
+
+	if (!repo && !buf) /* Hmm, given NULLs, silently do no callbacks? */
+		return 0;
 
 	if ((error = diff_single_init(
 			&d, repo, options, file_cb, hunk_cb, data_cb, payload)) < 0)
@@ -1453,11 +1481,19 @@ int git_diff_get_patch(
 
 	if (patch_ptr)
 		*patch_ptr = NULL;
+	if (delta_ptr)
+		*delta_ptr = NULL;
+
+	if (diff_required(diff, "git_diff_get_patch") < 0)
+		return -1;
+
+	if (diff_context_init(
+			&ctxt, diff, NULL, NULL,
+			NULL, diff_patch_hunk_cb, diff_patch_line_cb, NULL) < 0)
+		return -1;
 
 	delta = git_vector_get(&diff->deltas, idx);
 	if (!delta) {
-		if (delta_ptr)
-			*delta_ptr = NULL;
 		giterr_set(GITERR_INVALID, "Index out of range for delta in diff");
 		return GIT_ENOTFOUND;
 	}
@@ -1469,10 +1505,6 @@ int git_diff_get_patch(
 		((delta->flags & KNOWN_BINARY_FLAGS) != 0 ||
 		 (diff->opts.flags & GIT_DIFF_SKIP_BINARY_CHECK) != 0))
 		return 0;
-
-	diff_context_init(
-		&ctxt, diff, diff->repo, &diff->opts,
-		NULL, diff_patch_hunk_cb, diff_patch_line_cb, NULL);
 
 	if (git_diff_delta__should_skip(ctxt.opts, delta))
 		return 0;

@@ -379,7 +379,7 @@ typedef struct git_diff_patch git_diff_patch;
 typedef enum {
 	/** look for renames? (`--find-renames`) */
 	GIT_DIFF_FIND_RENAMES = (1 << 0),
-	/** consider old size of modified for renames? (`--break-rewrites=N`) */
+	/** consider old side of modified for renames? (`--break-rewrites=N`) */
 	GIT_DIFF_FIND_RENAMES_FROM_REWRITES = (1 << 1),
 
 	/** look for copies? (a la `--find-copies`) */
@@ -897,11 +897,12 @@ GIT_EXTERN(int) git_diff_patch_to_str(
  *
  * NULL is allowed for either `old_blob` or `new_blob` and will be treated
  * as an empty blob, with the `oid` set to NULL in the `git_diff_file` data.
+ * Passing NULL for both blobs is a noop; no callbacks will be made at all.
  *
- * We do run a binary content check on the two blobs and if either of the
- * blobs looks like binary data, the `git_diff_delta` binary attribute will
- * be set to 1 and no call to the hunk_cb nor line_cb will be made (unless
- * you pass `GIT_DIFF_FORCE_TEXT` of course).
+ * We do run a binary content check on the blob content and if either blob
+ * looks like binary data, the `git_diff_delta` binary attribute will be set
+ * to 1 and no call to the hunk_cb nor line_cb will be made (unless you pass
+ * `GIT_DIFF_FORCE_TEXT` of course).
  *
  * @return 0 on success, GIT_EUSER on non-zero callback, or error code
  */
@@ -920,6 +921,11 @@ GIT_EXTERN(int) git_diff_blobs(
  * As with `git_diff_blobs`, comparing a blob and buffer lacks some context,
  * so the `git_diff_file` parameters to the callbacks will be faked a la the
  * rules for `git_diff_blobs()`.
+ *
+ * Passing NULL for `old_blob` will be treated as an empty blob (i.e. the
+ * `file_cb` will be invoked with GIT_DELTA_ADDED and the diff will be the
+ * entire content of the buffer added).  Passing NULL to the buffer will do
+ * the reverse, with GIT_DELTA_REMOVED and blob content removed.
  *
  * @return 0 on success, GIT_EUSER on non-zero callback, or error code
  */
