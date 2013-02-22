@@ -1,6 +1,7 @@
 #include "clar_libgit2.h"
 #include "fileops.h"
 #include "stash_helpers.h"
+#include "refs.h"
 
 static git_repository *repo;
 static git_signature *signature;
@@ -24,7 +25,7 @@ void test_stash_drop__cleanup(void)
 
 void test_stash_drop__cannot_drop_from_an_empty_stash(void)
 {
-	cl_assert_equal_i(GIT_ENOTFOUND, git_stash_drop(repo, 0));
+	cl_git_fail_with(git_stash_drop(repo, 0), GIT_ENOTFOUND);
 }
 
 static void push_three_states(void)
@@ -60,9 +61,9 @@ void test_stash_drop__cannot_drop_a_non_existing_stashed_state(void)
 {
 	push_three_states();
 
-	cl_assert_equal_i(GIT_ENOTFOUND, git_stash_drop(repo, 666));
-	cl_assert_equal_i(GIT_ENOTFOUND, git_stash_drop(repo, 42));
-	cl_assert_equal_i(GIT_ENOTFOUND, git_stash_drop(repo, 3));
+	cl_git_fail_with(git_stash_drop(repo, 666), GIT_ENOTFOUND);
+	cl_git_fail_with(git_stash_drop(repo, 42), GIT_ENOTFOUND);
+	cl_git_fail_with(git_stash_drop(repo, 3), GIT_ENOTFOUND);
 }
 
 void test_stash_drop__can_purge_the_stash_from_the_top(void)
@@ -73,7 +74,7 @@ void test_stash_drop__can_purge_the_stash_from_the_top(void)
 	cl_git_pass(git_stash_drop(repo, 0));
 	cl_git_pass(git_stash_drop(repo, 0));
 
-	cl_assert_equal_i(GIT_ENOTFOUND, git_stash_drop(repo, 0));
+	cl_git_fail_with(git_stash_drop(repo, 0), GIT_ENOTFOUND);
 }
 
 void test_stash_drop__can_purge_the_stash_from_the_bottom(void)
@@ -84,7 +85,7 @@ void test_stash_drop__can_purge_the_stash_from_the_bottom(void)
 	cl_git_pass(git_stash_drop(repo, 1));
 	cl_git_pass(git_stash_drop(repo, 0));
 
-	cl_assert_equal_i(GIT_ENOTFOUND, git_stash_drop(repo, 0));
+	cl_git_fail_with(git_stash_drop(repo, 0), GIT_ENOTFOUND);
 }
 
 void test_stash_drop__dropping_an_entry_rewrites_reflog_history(void)
@@ -97,7 +98,7 @@ void test_stash_drop__dropping_an_entry_rewrites_reflog_history(void)
 
 	push_three_states();
 
-	cl_git_pass(git_reference_lookup(&stash, repo, "refs/stash"));
+	cl_git_pass(git_reference_lookup(&stash, repo, GIT_REFS_STASH_FILE));
 
 	cl_git_pass(git_reflog_read(&reflog, stash));
 	entry = git_reflog_entry_byindex(reflog, 1);
@@ -126,12 +127,13 @@ void test_stash_drop__dropping_the_last_entry_removes_the_stash(void)
 
 	push_three_states();
 
-	cl_git_pass(git_reference_lookup(&stash, repo, "refs/stash"));
+	cl_git_pass(git_reference_lookup(&stash, repo, GIT_REFS_STASH_FILE));
 	git_reference_free(stash);
 
 	cl_git_pass(git_stash_drop(repo, 0));
 	cl_git_pass(git_stash_drop(repo, 0));
 	cl_git_pass(git_stash_drop(repo, 0));
 
-	cl_assert_equal_i(GIT_ENOTFOUND, git_reference_lookup(&stash, repo, "refs/stash"));
+	cl_git_fail_with(
+		git_reference_lookup(&stash, repo, GIT_REFS_STASH_FILE), GIT_ENOTFOUND);
 }
