@@ -300,25 +300,43 @@ int git_futils_mkdir(
 
 		/* make directory */
 		if (p_mkdir(make_path.ptr, mode) < 0) {
-			if (errno == EEXIST) {
-				if (!lastch && (flags & GIT_MKDIR_VERIFY_DIR) != 0) {
-					if (!git_path_isdir(make_path.ptr)) {
+			int already_exists = 0;
+
+			switch (errno) {
+				case EEXIST:
+					if (!lastch && (flags & GIT_MKDIR_VERIFY_DIR) != 0 &&
+						!git_path_isdir(make_path.ptr)) {
 						giterr_set(
 							GITERR_OS, "Existing path is not a directory '%s'",
 							make_path.ptr);
 						error = GIT_ENOTFOUND;
 						goto fail;
 					}
-				}
-				if ((flags & GIT_MKDIR_EXCL) != 0) {
-					giterr_set(GITERR_OS, "Directory already exists '%s'",
+
+					already_exists = 1;
+					break;
+				case ENOSYS:
+					/* Solaris can generate this error if you try to mkdir
+					 * a path which is already a mount point. In that case,
+					 * the path does already exist; but it's not implied by
+					 * the definition of the error, so let's recheck */
+					if (git_path_isdir(make_path.ptr)) {
+						already_exists = 1;
+						break;
+					}
+
+					/* Fall through */
+					errno = ENOSYS;
+				default:
+					giterr_set(GITERR_OS, "Failed to make directory '%s'",
 						make_path.ptr);
-					error = GIT_EEXISTS;
 					goto fail;
-				}
-			} else {
-				giterr_set(GITERR_OS, "Failed to make directory '%s'",
+			}
+
+			if (already_exists && (flags & GIT_MKDIR_EXCL) != 0) {
+				giterr_set(GITERR_OS, "Directory already exists '%s'",
 					make_path.ptr);
+				error = GIT_EEXISTS;
 				goto fail;
 			}
 		}
