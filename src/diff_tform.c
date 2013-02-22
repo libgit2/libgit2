@@ -210,7 +210,6 @@ static int normalize_find_opts(
 	git_diff_find_options *given)
 {
 	git_config *cfg = NULL;
-	const char *val;
 
 	if (diff->repo != NULL &&
 		git_repository_config__weakptr(&cfg, diff->repo) < 0)
@@ -219,8 +218,9 @@ static int normalize_find_opts(
 	if (given != NULL)
 		memcpy(opts, given, sizeof(*opts));
 	else {
-		git_diff_find_options init = GIT_DIFF_FIND_OPTIONS_INIT;
-		memmove(opts, &init, sizeof(init));
+		const char *val = NULL;
+
+		GIT_INIT_STRUCTURE(opts, GIT_DIFF_FIND_OPTIONS_VERSION);
 
 		opts->flags = GIT_DIFF_FIND_RENAMES;
 
@@ -486,6 +486,17 @@ int git_diff_find_similar(
 			GIT_MODE_TYPE(GIT_FILEMODE_BLOB))
 			continue;
 
+		/* don't check UNMODIFIED files as source unless given option */
+		if (from->status == GIT_DELTA_UNMODIFIED &&
+			!FLAG_SET(opts, GIT_DIFF_FIND_COPIES_FROM_UNMODIFIED))
+			continue;
+
+		/* skip all but DELETED files unless copy detection is on */
+		if (!FLAG_SET(opts, GIT_DIFF_FIND_COPIES) &&
+			from->status != GIT_DELTA_DELETED &&
+			(from->flags & GIT_DIFF_FLAG__TO_SPLIT) == 0)
+			continue;
+
 		git_vector_foreach(&diff->deltas, j, to) {
 			if (i == j)
 				continue;
@@ -510,18 +521,7 @@ int git_diff_find_similar(
 				continue;
 			}
 
-			/* skip all but DELETED files unless copy detection is on */
-			if (!FLAG_SET(opts, GIT_DIFF_FIND_COPIES) &&
-				from->status != GIT_DELTA_DELETED &&
-				(from->flags & GIT_DIFF_FLAG__TO_SPLIT) == 0)
-				continue;
-
-			/* don't check UNMODIFIED files as source unless given option */
-			if (from->status == GIT_DELTA_UNMODIFIED &&
-				!FLAG_SET(opts, GIT_DIFF_FIND_COPIES_FROM_UNMODIFIED))
-				continue;
-
-			/* cap on maximum files we'll examine */
+			/* cap on maximum files we'll examine (per "from" file) */
 			if (++tried_targets > opts.target_limit)
 				break;
 
