@@ -561,8 +561,6 @@ int git_diff_find_similar(
 
 	/* next rewrite the diffs with renames / copies */
 
-	num_rewrites = 0;
-
 	git_vector_foreach(&diff->deltas, j, to) {
 		if (!matches[j]) {
 			assert(to->similarity == 0);

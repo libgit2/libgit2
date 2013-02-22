@@ -390,6 +390,9 @@ typedef enum {
 	/** split large rewrites into delete/add pairs (`--break-rewrites=/M`) */
 	GIT_DIFF_FIND_AND_BREAK_REWRITES = (1 << 4),
 
+	/** turn on all finding features */
+	GIT_DIFF_FIND_ALL = (0x1f),
+
 	/** measure similarity ignoring leading whitespace (default) */
 	GIT_DIFF_FIND_IGNORE_LEADING_WHITESPACE = 0,
 	/** measure similarity ignoring all whitespace */

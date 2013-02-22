@@ -23,8 +23,16 @@ void test_diff_rename__cleanup(void)
  *   serving.txt     -> sixserving.txt  (rename, no change, 100% match)
  *   sevencities.txt -> sevencities.txt (no change)
  *   sevencities.txt -> songofseven.txt (copy, no change, 100% match)
- *
- * TODO: add commits with various % changes of copy / rename
+ * commit 1c068dee5790ef1580cfc4cd670915b48d790084
+ *   songofseven.txt -> songofseven.txt (major rewrite, <20% match - split)
+ *   sixserving.txt  -> sixserving.txt  (indentation change)
+ *   sixserving.txt  -> ikeepsix.txt    (copy, add title, >80% match)
+ *   sevencities.txt                    (no change)
+ * commit 19dd32dfb1520a64e5bbaae8dce6ef423dfa2f13
+ *   songofseven.txt -> untimely.txt    (rename, convert to crlf)
+ *   ikeepsix.txt    -> ikeepsix.txt    (reorder sections in file)
+ *   sixserving.txt  -> sixserving.txt  (whitespace change - not just indent)
+ *   sevencities.txt -> songof7cities.txt (rename, small text changes)
  */
 
 void test_diff_rename__match_oid(void)
@@ -132,4 +140,109 @@ void test_diff_rename__checks_options_version(void)
 	git_diff_list_free(diff);
 	git_tree_free(old_tree);
 	git_tree_free(new_tree);
+}
+
+void test_diff_rename__not_exact_match(void)
+{
+	const char *sha0 = "2bc7f351d20b53f1c72c16c4b036e491c478c49a";
+	const char *sha1 = "1c068dee5790ef1580cfc4cd670915b48d790084";
+	const char *sha2 = "19dd32dfb1520a64e5bbaae8dce6ef423dfa2f13";
+	git_tree *old_tree, *new_tree;
+	git_diff_list *diff;
+	git_diff_options diffopts = GIT_DIFF_OPTIONS_INIT;
+	git_diff_find_options opts = GIT_DIFF_FIND_OPTIONS_INIT;
+	diff_expects exp;
+
+	/* Changes:
+	 *   songofseven.txt -> songofseven.txt (major rewrite, <20% match - split)
+	 *   sixserving.txt  -> sixserving.txt  (indentation change)
+	 *   sixserving.txt  -> ikeepsix.txt    (copy, add title, >80% match)
+	 *   sevencities.txt                    (no change)
+	 */
+
+	old_tree = resolve_commit_oid_to_tree(g_repo, sha0);
+	new_tree = resolve_commit_oid_to_tree(g_repo, sha1);
+
+	/* Must pass GIT_DIFF_INCLUDE_UNMODIFIED if you expect to emulate
+	 * --find-copies-harder during rename transformion...
+	 */
+	diffopts.flags |= GIT_DIFF_INCLUDE_UNMODIFIED;
+
+	cl_git_pass(git_diff_tree_to_tree(
+		&diff, g_repo, old_tree, new_tree, &diffopts));
+
+	/* git diff --no-renames \
+	 *          2bc7f351d20b53f1c72c16c4b036e491c478c49a \
+	 *          1c068dee5790ef1580cfc4cd670915b48d790084
+	 */
+	memset(&exp, 0, sizeof(exp));
+	cl_git_pass(git_diff_foreach(
+		diff, diff_file_cb, diff_hunk_cb, diff_line_cb, &exp));
+
+	cl_assert_equal_i(4, exp.files);
+	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_UNMODIFIED]);
+	cl_assert_equal_i(2, exp.file_status[GIT_DELTA_MODIFIED]);
+	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_ADDED]);
+
+	/* git diff 31e47d8c1fa36d7f8d537b96158e3f024de0a9f2 \
+	 *          2bc7f351d20b53f1c72c16c4b036e491c478c49a
+	 */
+	cl_git_pass(git_diff_find_similar(diff, NULL));
+
+	memset(&exp, 0, sizeof(exp));
+	cl_git_pass(git_diff_foreach(
+		diff, diff_file_cb, diff_hunk_cb, diff_line_cb, &exp));
+
+	cl_assert_equal_i(4, exp.files);
+	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_UNMODIFIED]);
+	cl_assert_equal_i(2, exp.file_status[GIT_DELTA_MODIFIED]);
+	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_COPIED]);
+
+	git_diff_list_free(diff);
+
+	cl_git_pass(git_diff_tree_to_tree(
+		&diff, g_repo, old_tree, new_tree, &diffopts));
+
+	/* git diff --find-copies-harder --break-rewrites \
+	 *          2bc7f351d20b53f1c72c16c4b036e491c478c49a \
+	 *          1c068dee5790ef1580cfc4cd670915b48d790084
+	 */
+	opts.flags = GIT_DIFF_FIND_ALL;
+	cl_git_pass(git_diff_find_similar(diff, &opts));
+
+	memset(&exp, 0, sizeof(exp));
+	cl_git_pass(git_diff_foreach(
+		diff, diff_file_cb, diff_hunk_cb, diff_line_cb, &exp));
+
+	cl_assert_equal_i(5, exp.files);
+	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_UNMODIFIED]);
+	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_MODIFIED]);
+	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_DELETED]);
+	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_ADDED]);
+	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_COPIED]);
+
+	git_diff_list_free(diff);
+
+	/* Changes:
+	 *   songofseven.txt -> untimely.txt    (rename, convert to crlf)
+	 *   ikeepsix.txt    -> ikeepsix.txt    (reorder sections in file)
+	 *   sixserving.txt  -> sixserving.txt  (whitespace - not just indent)
+	 *   sevencities.txt -> songof7cities.txt (rename, small text changes)
+	 */
+
+	git_tree_free(old_tree);
+	old_tree = new_tree;
+	new_tree = resolve_commit_oid_to_tree(g_repo, sha2);
+
+	/* moar tests needed */
+
+	git_tree_free(old_tree);
+	git_tree_free(new_tree);
+}
+
+void test_diff_rename__working_directory_changes(void)
+{
+	/* let's rewrite some files in the working directory on demand */
+
+	/* and with / without CRLF changes */
 }
