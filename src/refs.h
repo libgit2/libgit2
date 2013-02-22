@@ -70,6 +70,7 @@ int git_reference__normalize_name(git_buf *buf, const char *name, unsigned int f
 int git_reference__is_valid_name(const char *refname, unsigned int flags);
 int git_reference__update(git_repository *repo, const git_oid *oid, const char *ref_name);
 int git_reference__is_branch(const char *ref_name);
+int git_reference__is_remote(const char *ref_name);
 
 /**
  * Lookup a reference by name and try to resolve to an OID.

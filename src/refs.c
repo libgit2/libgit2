@@ -1926,10 +1926,15 @@ int git_reference_is_branch(git_reference *ref)
 	return git_reference__is_branch(ref->name);
 }
 
+int git_reference__is_remote(const char *ref_name)
+{
+	return git__prefixcmp(ref_name, GIT_REFS_REMOTES_DIR) == 0;
+}
+
 int git_reference_is_remote(git_reference *ref)
 {
 	assert(ref);
-	return git__prefixcmp(ref->name, GIT_REFS_REMOTES_DIR) == 0;
+	return git_reference__is_remote(ref->name);
 }
 
 static int peel_error(int error, git_reference *ref, const char* msg)
