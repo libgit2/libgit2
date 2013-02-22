@@ -278,8 +278,14 @@ static int load_attr_file(
 		return GIT_ENOTFOUND;
 
 	error = git_futils_readbuffer(&content, filename);
-	if (error < 0)
-		return error;
+	if (error < 0) {
+		/* convert error into ENOTFOUND so failed permissions / invalid
+		 * file type don't actually stop the operation in progress.
+		 */
+		return GIT_ENOTFOUND;
+
+		/* TODO: once warnings are available, issue a warning callback */
+	}
 
 	*data = git_buf_detach(&content);
 
