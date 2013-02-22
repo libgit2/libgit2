@@ -34,7 +34,9 @@ static void cleanup_repository(void *path)
 void test_clone_empty__can_clone_an_empty_local_repo_barely(void)
 {
 	char *local_name = "refs/heads/master";
-	char tracking_name[1024];
+	const char *expected_tracked_branch_name = "refs/remotes/origin/master";
+	const char *expected_remote_name = "origin";
+	char buffer[1024];
 	git_reference *ref;
 
 	cl_set_cleanup(&cleanup_repository, "./empty");
@@ -46,8 +48,20 @@ void test_clone_empty__can_clone_an_empty_local_repo_barely(void)
 	cl_assert_equal_i(GIT_ENOTFOUND, git_reference_lookup(&ref, g_repo_cloned, local_name));
 
 	/* ...one can still retrieve the name of the remote tracking reference */
-	cl_assert_equal_i((int)strlen("refs/remotes/origin/master") + 1U, 
-		git_branch_tracking_name(tracking_name, 1024, g_repo_cloned, local_name));
+	cl_assert_equal_i((int)strlen(expected_tracked_branch_name) + 1, 
+		git_branch_tracking_name(buffer, 1024, g_repo_cloned, local_name));
+
+	cl_assert_equal_s(expected_tracked_branch_name, buffer);
+
+	/* ...and the name of the remote... */
+	cl_assert_equal_i((int)strlen(expected_remote_name) + 1, 
+		git_branch_remote_name(buffer, 1024, g_repo_cloned, expected_tracked_branch_name));
+
+	cl_assert_equal_s(expected_remote_name, buffer);
+
+	/* ...even when the remote HEAD is orphaned as well */
+	cl_assert_equal_i(GIT_ENOTFOUND, git_reference_lookup(&ref, g_repo_cloned,
+		expected_tracked_branch_name));
 }
 
 void test_clone_empty__can_clone_an_empty_local_repo(void)

@@ -323,7 +323,7 @@ int git_branch_remote_name(
 	char *remote_name_out,
 	size_t buffer_size,
 	git_repository *repo,
-	git_reference *branch)
+	const char *canonical_branch_name)
 {
 	git_strarray remote_list = {0};
 	size_t i, remote_name_size;
@@ -332,15 +332,15 @@ int git_branch_remote_name(
 	int error = 0;
 	char *remote_name = NULL;
 
-	assert(branch);
+	assert(repo && canonical_branch_name);
 
 	if (remote_name_out && buffer_size)
 		*remote_name_out = '\0';
 
 	/* Verify that this is a remote branch */
-	if (!git_reference_is_remote(branch)) {
-		giterr_set(GITERR_INVALID,
-				   "Reference '%s' is not a remote branch.", branch->name);
+	if (!git_reference__is_remote(canonical_branch_name)) {
+		giterr_set(GITERR_INVALID, "Reference '%s' is not a remote branch.",
+			canonical_branch_name);
 		error = GIT_ERROR;
 		goto cleanup;
 	}
@@ -358,7 +358,7 @@ int git_branch_remote_name(
 
 		/* Defensivly check that we have a fetchspec */
 		if (fetchspec &&
-			git_refspec_dst_matches(fetchspec, branch->name)) {
+			git_refspec_dst_matches(fetchspec, canonical_branch_name)) {
 			/* If we have not already set out yet, then set
 			 * it to the matching remote name. Otherwise
 			 * multiple remotes match this reference, and it

@@ -3,18 +3,15 @@
 #include "remote.h"
 
 static git_repository *g_repo;
-
-static const char *current_master_tip = "099fabac3a9ea935598528c27f866e34089c2eff";
+static const char *remote_tracking_branch_name = "refs/remotes/test/master";
+static const char *expected_remote_name = "test";
+static int expected_remote_name_length;
 
 void test_refs_branches_remote__initialize(void)
 {
-	git_oid id;
-
 	g_repo = cl_git_sandbox_init("testrepo");
-	git_oid_fromstr(&id, current_master_tip);
 
-	/* Create test/master */
-	git_reference_create(NULL, g_repo, "refs/remotes/test/master", &id, 1);
+	expected_remote_name_length = strlen(expected_remote_name) + 1;
 }
 
 void test_refs_branches_remote__cleanup(void)
@@ -24,81 +21,48 @@ void test_refs_branches_remote__cleanup(void)
 
 void test_refs_branches_remote__can_get_remote_for_branch(void)
 {
-	git_reference *ref;
-	const char *name;
-	char *expectedRemoteName = "test";
-	int expectedRemoteNameLength = strlen(expectedRemoteName) + 1;
 	char remotename[1024] = {0};
 
-	cl_git_pass(git_branch_lookup(&ref, g_repo, "test/master", GIT_BRANCH_REMOTE));
-	cl_git_pass(git_branch_name(&name, ref));
-	cl_assert_equal_s("test/master", name);
+	cl_assert_equal_i(expected_remote_name_length,
+		git_branch_remote_name(NULL, 0, g_repo, remote_tracking_branch_name));
 
-	cl_assert_equal_i(expectedRemoteNameLength,
-		git_branch_remote_name(NULL, 0, g_repo, ref));
-	cl_assert_equal_i(expectedRemoteNameLength,
-		git_branch_remote_name(remotename, expectedRemoteNameLength, g_repo, ref));
+	cl_assert_equal_i(expected_remote_name_length,
+		git_branch_remote_name(remotename, expected_remote_name_length, g_repo,
+			remote_tracking_branch_name));
+
 	cl_assert_equal_s("test", remotename);
-
-	git_reference_free(ref);
 }
 
 void test_refs_branches_remote__insufficient_buffer_returns_error(void)
 {
-	git_reference *ref;
-	const char *name;
-	char *expectedRemoteName = "test";
-	int expectedRemoteNameLength = strlen(expectedRemoteName) + 1;
 	char remotename[1024] = {0};
 
-	cl_git_pass(git_branch_lookup(&ref, g_repo, "test/master", GIT_BRANCH_REMOTE));
-	cl_git_pass(git_branch_name(&name, ref));
-	cl_assert_equal_s("test/master", name);
+	cl_assert_equal_i(expected_remote_name_length,
+		git_branch_remote_name(NULL, 0, g_repo, remote_tracking_branch_name));
 
-	cl_assert_equal_i(expectedRemoteNameLength,
-		git_branch_remote_name(NULL, 0, g_repo, ref));
-	cl_git_fail_with(GIT_ERROR,
-		git_branch_remote_name(remotename, expectedRemoteNameLength - 1, g_repo, ref));
-
-	git_reference_free(ref);
+	cl_git_fail_with(git_branch_remote_name(remotename,
+		expected_remote_name_length - 1, g_repo, remote_tracking_branch_name),
+			GIT_ERROR);
 }
 
 void test_refs_branches_remote__no_matching_remote_returns_error(void)
 {
-	git_reference *ref;
-	const char *name;
-	git_oid id;
+	const char *unknown = "refs/remotes/nonexistent/master";
 
-	git_oid_fromstr(&id, current_master_tip);
-
-	/* Create nonexistent/master */
-	git_reference_create(NULL, g_repo, "refs/remotes/nonexistent/master", &id, 1);
-
-	cl_git_pass(git_branch_lookup(&ref, g_repo,"nonexistent/master", GIT_BRANCH_REMOTE));
-	cl_git_pass(git_branch_name(&name, ref));
-	cl_assert_equal_s("nonexistent/master", name);
-
-	cl_git_fail_with(git_branch_remote_name(NULL, 0, g_repo, ref), GIT_ENOTFOUND);
-	git_reference_free(ref);
+	cl_git_fail_with(git_branch_remote_name(
+		NULL, 0, g_repo, unknown), GIT_ENOTFOUND);
 }
 
 void test_refs_branches_remote__local_remote_returns_error(void)
 {
-	git_reference *ref;
-	const char *name;
+	const char *local = "refs/heads/master";
 
-	cl_git_pass(git_branch_lookup(&ref,g_repo, "master", GIT_BRANCH_LOCAL));
-	cl_git_pass(git_branch_name(&name, ref));
-	cl_assert_equal_s("master",name);
-
-	cl_git_fail_with(git_branch_remote_name(NULL, 0, g_repo, ref), GIT_ERROR);
-	git_reference_free(ref);
+	cl_git_fail_with(git_branch_remote_name(
+		NULL, 0, g_repo, local), GIT_ERROR);
 }
 
 void test_refs_branches_remote__ambiguous_remote_returns_error(void)
 {
-	git_reference *ref;
-	const char *name;
 	git_remote *remote;
 
 	/* Create the remote */
@@ -110,10 +74,6 @@ void test_refs_branches_remote__ambiguous_remote_returns_error(void)
 
 	git_remote_free(remote);
 
-	cl_git_pass(git_branch_lookup(&ref,g_repo, "test/master", GIT_BRANCH_REMOTE));
-	cl_git_pass(git_branch_name(&name, ref));
-	cl_assert_equal_s("test/master", name);
-
-	cl_git_fail_with(git_branch_remote_name(NULL, 0, g_repo, ref), GIT_EAMBIGUOUS);
-	git_reference_free(ref);
+	cl_git_fail_with(git_branch_remote_name(NULL, 0, g_repo,
+		remote_tracking_branch_name), GIT_EAMBIGUOUS);
 }
