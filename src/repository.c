@@ -1314,11 +1314,6 @@ int git_repository_is_empty(git_repository *repo)
 	if (!(error = git_reference_type(head) == GIT_REF_SYMBOLIC))
 		goto cleanup;
 
-	if (!(error = strcmp(
-		git_reference_symbolic_target(head),
-		GIT_REFS_HEADS_DIR "master") == 0))
-			goto cleanup;
-
 	error = repo_contains_no_reference(repo);
 
 cleanup:
