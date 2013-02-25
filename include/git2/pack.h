@@ -13,7 +13,33 @@
 /**
  * @file git2/pack.h
  * @brief Git pack management routines
- * @defgroup git_pack Git pack management routines
+ *
+ * Packing objects
+ * ---------------
+ *
+ * Creation of packfiles requires two steps:
+ *
+ * - First, insert all the objects you want to put into the packfile
+ *   using `git_packbuilder_insert` and `git_packbuilder_insert_tree`.
+ *   It's important to add the objects in recency order ("in the order
+ *   that they are 'reachable' from head").
+ *
+ *   "ANY order will give you a working pack, ... [but it is] the thing
+ *   that gives packs good locality. It keeps the objects close to the
+ *   head (whether they are old or new, but they are _reachable_ from the
+ *   head) at the head of the pack. So packs actually have absolutely
+ *   _wonderful_ IO patterns." - Linus Torvalds
+ *   git.git/Documentation/technical/pack-heuristics.txt
+ *
+ * - Second, use `git_packbuilder_write` or `git_packbuilder_foreach` to
+ *   write the resulting packfile.
+ *
+ *   libgit2 will take care of the delta ordering and generation.
+ *   `git_packbuilder_set_threads` can be used to adjust the number of
+ *   threads used for the process.
+ *
+ * See tests-clar/pack/packbuilder.c for an example.
+ *
  * @ingroup Git
  * @{
  */
