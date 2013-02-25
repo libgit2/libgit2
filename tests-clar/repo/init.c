@@ -342,8 +342,7 @@ void test_repo_init__extended_1(void)
 	cl_assert(!git__suffixcmp(git_repository_path(_repo), "/c.git/"));
 	cl_assert(git_path_isfile("root/b/c_wd/.git"));
 	cl_assert(!git_repository_is_bare(_repo));
-	/* repo will not be counted as empty because we set head to "development" */
-	cl_assert(!git_repository_is_empty(_repo));
+	cl_assert(git_repository_is_empty(_repo));
 
 	cl_git_pass(git_path_lstat(git_repository_path(_repo), &st));
 	cl_assert(S_ISDIR(st.st_mode));
