@@ -31,7 +31,6 @@ typedef struct {
 	size_t len;
 } git_buf_vec;
 
-int git_hash_init(git_hash_ctx *c);
 int git_hash_update(git_hash_ctx *c, const void *data, size_t len);
 int git_hash_final(git_oid *out, git_hash_ctx *c);
 
