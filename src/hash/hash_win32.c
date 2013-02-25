@@ -134,7 +134,7 @@ GIT_INLINE(int) hash_ctx_cryptoapi_init(git_hash_ctx *ctx)
 	ctx->type = CRYPTOAPI;
 	ctx->prov = &hash_prov;
 
-	return git_hash_init(ctx);
+	return git_hash_ctx_init(ctx);
 }
 
 GIT_INLINE(int) hash_cryptoapi_init(git_hash_ctx *ctx)
@@ -262,7 +262,7 @@ int git_hash_ctx_init(git_hash_ctx *ctx)
 	return (hash_prov.type == CNG) ? hash_ctx_cng_init(ctx) : hash_ctx_cryptoapi_init(ctx);
 }
 
-int git_hash_init(git_hash_ctx *ctx)
+int git_hash_ctx_init(git_hash_ctx *ctx)
 {
 	assert(ctx && ctx->type);
 	return (ctx->type == CNG) ? hash_cng_init(ctx) : hash_cryptoapi_init(ctx);
