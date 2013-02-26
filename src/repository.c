@@ -1043,8 +1043,11 @@ static int repo_init_structure(
 
 static int mkdir_parent(git_buf *buf, uint32_t mode, bool skip2)
 {
+	/* When making parent directories during repository initialization
+	 * don't try to set gid or grant world write access
+	 */
 	return git_futils_mkdir(
-		buf->ptr, NULL, mode & ~(S_ISGID | S_IWOTH),
+		buf->ptr, NULL, mode & ~(S_ISGID | 0002),
 		GIT_MKDIR_PATH | GIT_MKDIR_VERIFY_DIR |
 		(skip2 ? GIT_MKDIR_SKIP_LAST2 : GIT_MKDIR_SKIP_LAST));
 }

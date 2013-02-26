@@ -363,10 +363,23 @@ void test_repo_init__extended_1(void)
 	cl_fixture_cleanup("root");
 }
 
+static uint32_t normalize_filemode(uint32_t mode, bool core_filemode)
+{
+	/* if no filemode support, strip SETGID, exec, and low-order bits */
+
+	/* cannot use constants because on platform without SETGID, that
+	 * will have been defined to zero - must use hardcoded value to
+	 * clear it effectively from the expected value
+	 */
+
+	return core_filemode ? mode : (mode & ~02177);
+}
+
 static void assert_hooks_match(
 	const char *template_dir,
 	const char *repo_dir,
 	const char *hook_path,
+	bool core_filemode,
 	uint32_t expected_mode)
 {
 	git_buf expected = GIT_BUF_INIT;
@@ -384,6 +397,8 @@ static void assert_hooks_match(
 	if (!expected_mode)
 		expected_mode = (uint32_t)expected_st.st_mode;
 
+	expected_mode = normalize_filemode(expected_mode, core_filemode);
+
 	cl_assert_equal_i((int)expected_mode, (int)st.st_mode);
 
 	git_buf_free(&expected);
@@ -391,7 +406,7 @@ static void assert_hooks_match(
 }
 
 static void assert_has_mode(
-	const char *base, const char *path, uint32_t expected)
+	const char *base, const char *path, bool core_filemode, uint32_t expected)
 {
 	git_buf full = GIT_BUF_INIT;
 	struct stat st;
@@ -399,6 +414,8 @@ static void assert_has_mode(
 	cl_git_pass(git_buf_joinpath(&full, base, path));
 	cl_git_pass(git_path_lstat(full.ptr, &st));
 	git_buf_free(&full);
+
+	expected = normalize_filemode(expected, core_filemode);
 
 	cl_assert_equal_i((int)expected, (int)st.st_mode);
 }
@@ -433,11 +450,11 @@ void test_repo_init__extended_with_template(void)
 
 	assert_hooks_match(
 		cl_fixture("template"), git_repository_path(_repo),
-		"hooks/update.sample", 0);
+		"hooks/update.sample", true, 0);
 
 	assert_hooks_match(
 		cl_fixture("template"), git_repository_path(_repo),
-		"hooks/link.sample", 0);
+		"hooks/link.sample", true, 0);
 }
 
 void test_repo_init__extended_with_template_and_shared_mode(void)
@@ -445,6 +462,8 @@ void test_repo_init__extended_with_template_and_shared_mode(void)
 	git_buf expected = GIT_BUF_INIT;
 	git_buf actual = GIT_BUF_INIT;
 	git_repository_init_options opts = GIT_REPOSITORY_INIT_OPTIONS_INIT;
+	git_config *config;
+	int filemode = true;
 
 	cl_set_cleanup(&cleanup_repository, "init_shared_from_tpl");
 
@@ -458,6 +477,10 @@ void test_repo_init__extended_with_template_and_shared_mode(void)
 	cl_assert(!git_repository_is_bare(_repo));
 	cl_assert(!git__suffixcmp(git_repository_path(_repo), "/init_shared_from_tpl/.git/"));
 
+	cl_git_pass(git_repository_config(&config, _repo));
+	cl_git_pass(git_config_get_bool(&filemode, config, "core.filemode"));
+	git_config_free(config);
+
 	cl_git_pass(git_futils_readbuffer(
 		&expected, cl_fixture("template/description")));
 	cl_git_pass(git_futils_readbuffer(
@@ -468,17 +491,17 @@ void test_repo_init__extended_with_template_and_shared_mode(void)
 	git_buf_free(&expected);
 	git_buf_free(&actual);
 
-	assert_has_mode(git_repository_path(_repo), "hooks",
+	assert_has_mode(git_repository_path(_repo), "hooks", filemode,
 		GIT_REPOSITORY_INIT_SHARED_GROUP | S_IFDIR);
-	assert_has_mode(git_repository_path(_repo), "info",
+	assert_has_mode(git_repository_path(_repo), "info", filemode,
 		GIT_REPOSITORY_INIT_SHARED_GROUP | S_IFDIR);
-	assert_has_mode(git_repository_path(_repo), "description",
+	assert_has_mode(git_repository_path(_repo), "description", filemode,
 		(GIT_REPOSITORY_INIT_SHARED_GROUP | S_IFREG) & ~(S_ISGID | 0111));
 
 	/* for a non-symlinked hook, it should have shared permissions now */
 	assert_hooks_match(
 		cl_fixture("template"), git_repository_path(_repo),
-		"hooks/update.sample",
+		"hooks/update.sample", filemode,
 		(GIT_REPOSITORY_INIT_SHARED_GROUP | S_IFREG) & ~S_ISGID);
 
 	/* for a symlinked hook, the permissions still should match the
@@ -486,7 +509,7 @@ void test_repo_init__extended_with_template_and_shared_mode(void)
 	 */
 	assert_hooks_match(
 		cl_fixture("template"), git_repository_path(_repo),
-		"hooks/link.sample", 0);
+		"hooks/link.sample", filemode, 0);
 }
 
 void test_repo_init__can_reinit_an_initialized_repository(void)
