@@ -553,6 +553,7 @@ void git_repository_set_config(git_repository *repo, git_config *config)
 
 	repo->_config = config;
 	GIT_REFCOUNT_OWN(repo->_config, repo);
+	GIT_REFCOUNT_INC(repo->_config);
 }
 
 int git_repository_odb__weakptr(git_odb **out, git_repository *repo)
