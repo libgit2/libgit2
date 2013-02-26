@@ -221,7 +221,7 @@ static void hash__block(git_hash_ctx *ctx, const unsigned int *data)
 	ctx->H[4] += E;
 }
 
-int git_hash_ctx_init(git_hash_ctx *ctx)
+int git_hash_init(git_hash_ctx *ctx)
 {
 	ctx->size = 0;
 

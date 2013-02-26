@@ -35,7 +35,7 @@ void test_object_raw_hash__hash_by_blocks(void)
 	cl_assert(git_oid_cmp(&id1, &id2) == 0);
 
 	/* reinit should permit reuse */
-	cl_git_pass(git_hash_ctx_init(&ctx));
+	cl_git_pass(git_hash_init(&ctx));
 	cl_git_pass(git_hash_update(&ctx, bye_text, strlen(bye_text)));
 	cl_git_pass(git_hash_final(&id2, &ctx));
 	cl_git_pass(git_oid_fromstr(&id1, bye_id));
