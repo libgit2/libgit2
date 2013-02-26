@@ -24,7 +24,8 @@ typedef enum {
 	GIT_ITERATOR_TYPE_TREE = 1,
 	GIT_ITERATOR_TYPE_INDEX = 2,
 	GIT_ITERATOR_TYPE_WORKDIR = 3,
-	GIT_ITERATOR_TYPE_SPOOLANDSORT = 4
+	GIT_ITERATOR_TYPE_SPOOLANDSORT = 4,
+	GIT_ITERATOR_TYPE_MULTISUBTREE = 5
 } git_iterator_type_t;
 
 typedef enum {
@@ -170,7 +171,7 @@ extern int git_iterator_current_tree_entry(
 	git_iterator *iter, const git_tree_entry **tree_entry);
 
 extern int git_iterator_current_parent_tree(
-	git_iterator *iter, const char *parent_path, const git_tree **tree_ptr);
+	git_iterator *iter, size_t frame_skip, const git_tree **tree_ptr);
 
 extern int git_iterator_current_is_ignored(git_iterator *iter);
 

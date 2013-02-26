@@ -256,40 +256,30 @@ static void check_tree_entry(
 	const char *oid_pp,
 	const char *oid_ppp)
 {
-	const git_index_entry *ie;
 	const git_tree_entry *te;
 	const git_tree *tree;
-	git_buf path = GIT_BUF_INIT;
 
 	cl_git_pass(git_iterator_current_tree_entry(i, &te));
 	cl_assert(te);
 	cl_assert(git_oid_streq(&te->oid, oid) == 0);
 
-	cl_git_pass(git_iterator_current(i, &ie));
-	cl_git_pass(git_buf_sets(&path, ie->path));
-
 	if (oid_p) {
-		git_buf_rtruncate_at_char(&path, '/');
-		cl_git_pass(git_iterator_current_parent_tree(i, path.ptr, &tree));
+		cl_git_pass(git_iterator_current_parent_tree(i, 0, &tree));
 		cl_assert(tree);
 		cl_assert(git_oid_streq(git_tree_id(tree), oid_p) == 0);
 	}
 
 	if (oid_pp) {
-		git_buf_rtruncate_at_char(&path, '/');
-		cl_git_pass(git_iterator_current_parent_tree(i, path.ptr, &tree));
+		cl_git_pass(git_iterator_current_parent_tree(i, 1, &tree));
 		cl_assert(tree);
 		cl_assert(git_oid_streq(git_tree_id(tree), oid_pp) == 0);
 	}
 
 	if (oid_ppp) {
-		git_buf_rtruncate_at_char(&path, '/');
-		cl_git_pass(git_iterator_current_parent_tree(i, path.ptr, &tree));
+		cl_git_pass(git_iterator_current_parent_tree(i, 2, &tree));
 		cl_assert(tree);
 		cl_assert(git_oid_streq(git_tree_id(tree), oid_ppp) == 0);
 	}
-
-	git_buf_free(&path);
 }
 
 void test_diff_iterator__tree_special_functions(void)
@@ -344,6 +334,109 @@ void test_diff_iterator__tree_special_functions(void)
 
 	cl_assert_equal_i(4, cases);
 	git_iterator_free(i);
+	git_tree_free(t);
+}
+
+static void check_iterator_output(
+	git_iterator *i,
+	int (GIT_STDLIB_CALL *strcomp)(const char *a, const char *b),
+	int expected_count)
+{
+	const git_index_entry *entry;
+	git_buf path = GIT_BUF_INIT;
+	int count = 0;
+
+	cl_git_pass(git_iterator_current(i, &entry));
+
+	while (entry) {
+		if (count++ > 0)
+			cl_assert(strcomp(entry->path, path.ptr) > 0);
+
+		git_buf_sets(&path, entry->path);
+		cl_git_pass(git_iterator_advance(i, &entry));
+	}
+
+	cl_assert_equal_i(expected_count, count);
+	git_iterator_free(i);
+	git_buf_free(&path);
+}
+
+void test_diff_iterator__tree_icase(void)
+{
+	git_repository *repo = cl_git_sandbox_init("icase.git");
+	git_tree *t = resolve_commit_oid_to_tree(repo,
+		"f47b662b93fa2ac35b55ae878a7e56bee34b08f4");
+	git_iterator *i;
+
+	cl_git_pass(git_iterator_for_tree_range(
+		&i, t, GIT_ITERATOR_IGNORE_CASE, NULL, NULL));
+	check_iterator_output(i, strcasecmp, 17);
+
+	cl_git_pass(git_iterator_for_tree_range(
+		&i, t, GIT_ITERATOR_DONT_IGNORE_CASE, NULL, NULL));
+	check_iterator_output(i, strcmp, 20);
+
+	git_tree_free(t);
+}
+
+void test_diff_iterator__tree_icase_seek(void)
+{
+	git_repository *repo = cl_git_sandbox_init("icase.git");
+	git_tree *t = resolve_commit_oid_to_tree(repo,
+		"f47b662b93fa2ac35b55ae878a7e56bee34b08f4");
+	git_iterator *i;
+
+	cl_git_pass(git_iterator_for_tree_range(
+		&i, t, GIT_ITERATOR_IGNORE_CASE,
+		"a/sub/subCHILd2",
+		"B/sUb/D.tXt"));
+	check_iterator_output(i, strcasecmp, 7);
+
+	cl_git_pass(git_iterator_for_tree_range(
+		&i, t, GIT_ITERATOR_DONT_IGNORE_CASE,
+		"a/sub/SuBCHilD2",
+		"b/sub/d.txt"));
+	check_iterator_output(i, strcmp, 13);
+
+	cl_git_pass(git_iterator_for_tree_range(
+		&i, t, GIT_ITERATOR_IGNORE_CASE,
+		"b/Sub",
+		"b/sub"));
+	check_iterator_output(i, strcasecmp, 8);
+
+	cl_git_pass(git_iterator_for_tree_range(
+		&i, t, GIT_ITERATOR_DONT_IGNORE_CASE,
+		"b/Sub",
+		"b/sub"));
+	/* Note that this is a different set of 8 items than
+	 * the icase test above it. The count being the same
+	 * is a coincidence */
+	check_iterator_output(i, strcmp, 8);
+
+	cl_git_pass(git_iterator_for_tree_range(
+		&i, t, GIT_ITERATOR_IGNORE_CASE,
+		"b/sub/",
+		"b/sub/"));
+	check_iterator_output(i, strcasecmp, 7);
+
+	cl_git_pass(git_iterator_for_tree_range(
+		&i, t, GIT_ITERATOR_DONT_IGNORE_CASE,
+		"b/SUB/",
+		"b/sub/"));
+	check_iterator_output(i, strcmp, 11);
+
+	cl_git_pass(git_iterator_for_tree_range(
+		&i, t, GIT_ITERATOR_IGNORE_CASE,
+		"c_/2.txt",
+		"C_/1.txt"));
+	check_iterator_output(i, strcasecmp, 0);
+
+	cl_git_pass(git_iterator_for_tree_range(
+		&i, t, GIT_ITERATOR_DONT_IGNORE_CASE,
+		"C_/4.txt",
+		"C_/2.txt"));
+	check_iterator_output(i, strcmp, 0);
+
 	git_tree_free(t);
 }
 
