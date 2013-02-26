@@ -9,7 +9,10 @@
 # include <unistd.h>
 #endif
 
-/* Shamelessly borrowed from http://stackoverflow.com/questions/3417837/ */
+/* Shamelessly borrowed from http://stackoverflow.com/questions/3417837/
+ * with permission of the original author, Martin Pool.
+ * http://sourcefrog.net/weblog/software/languages/C/unused.html
+ */
 #ifdef UNUSED
 #elif defined(__GNUC__)
 # define UNUSED(x) UNUSED_ ## x __attribute__((unused))
