@@ -272,6 +272,10 @@ int git_futils_mkdir(
 	}
 
 	/* if we are not supposed to made the last element, truncate it */
+	if ((flags & GIT_MKDIR_SKIP_LAST2) != 0) {
+		git_buf_rtruncate_at_char(&make_path, '/');
+		flags |= GIT_MKDIR_SKIP_LAST;
+	}
 	if ((flags & GIT_MKDIR_SKIP_LAST) != 0)
 		git_buf_rtruncate_at_char(&make_path, '/');
 
@@ -303,34 +307,34 @@ int git_futils_mkdir(
 			int already_exists = 0;
 
 			switch (errno) {
-				case EEXIST:
-					if (!lastch && (flags & GIT_MKDIR_VERIFY_DIR) != 0 &&
-						!git_path_isdir(make_path.ptr)) {
-						giterr_set(
-							GITERR_OS, "Existing path is not a directory '%s'",
-							make_path.ptr);
-						error = GIT_ENOTFOUND;
-						goto fail;
-					}
+			case EEXIST:
+				if (!lastch && (flags & GIT_MKDIR_VERIFY_DIR) != 0 &&
+					!git_path_isdir(make_path.ptr)) {
+					giterr_set(
+						GITERR_OS, "Existing path is not a directory '%s'",
+						make_path.ptr);
+					error = GIT_ENOTFOUND;
+					goto fail;
+				}
 
+				already_exists = 1;
+				break;
+			case ENOSYS:
+				/* Solaris can generate this error if you try to mkdir
+				 * a path which is already a mount point. In that case,
+				 * the path does already exist; but it's not implied by
+				 * the definition of the error, so let's recheck */
+				if (git_path_isdir(make_path.ptr)) {
 					already_exists = 1;
 					break;
-				case ENOSYS:
-					/* Solaris can generate this error if you try to mkdir
-					 * a path which is already a mount point. In that case,
-					 * the path does already exist; but it's not implied by
-					 * the definition of the error, so let's recheck */
-					if (git_path_isdir(make_path.ptr)) {
-						already_exists = 1;
-						break;
-					}
+				}
 
-					/* Fall through */
-					errno = ENOSYS;
-				default:
-					giterr_set(GITERR_OS, "Failed to make directory '%s'",
-						make_path.ptr);
-					goto fail;
+				/* Fall through */
+				errno = ENOSYS;
+			default:
+				giterr_set(GITERR_OS, "Failed to make directory '%s'",
+					make_path.ptr);
+				goto fail;
 			}
 
 			if (already_exists && (flags & GIT_MKDIR_EXCL) != 0) {
@@ -679,8 +683,33 @@ typedef struct {
 	mode_t dirmode;
 } cp_r_info;
 
+#define GIT_CPDIR__MKDIR_DONE_FOR_TO_ROOT (1u << 10)
+
+static int _cp_r_mkdir(cp_r_info *info, git_buf *from)
+{
+	int error = 0;
+
+	/* create root directory the first time we need to create a directory */
+	if ((info->flags & GIT_CPDIR__MKDIR_DONE_FOR_TO_ROOT) == 0) {
+		error = git_futils_mkdir(
+			info->to_root, NULL, info->dirmode,
+			((info->flags & GIT_CPDIR_CHMOD) != 0) ? GIT_MKDIR_CHMOD : 0);
+
+		info->flags |= GIT_CPDIR__MKDIR_DONE_FOR_TO_ROOT;
+	}
+
+	/* create directory with root as base to prevent excess chmods */
+	if (!error)
+		error = git_futils_mkdir(
+			from->ptr + info->from_prefix, info->to_root,
+			info->dirmode, info->mkdir_flags);
+
+	return error;
+}
+
 static int _cp_r_callback(void *ref, git_buf *from)
 {
+	int error = 0;
 	cp_r_info *info = ref;
 	struct stat from_st, to_st;
 	bool exists = false;
@@ -702,11 +731,10 @@ static int _cp_r_callback(void *ref, git_buf *from)
 	} else
 		exists = true;
 
-	if (git_path_lstat(from->ptr, &from_st) < 0)
-		return -1;
+	if ((error = git_path_lstat(from->ptr, &from_st)) < 0)
+		return error;
 
 	if (S_ISDIR(from_st.st_mode)) {
-		int error = 0;
 		mode_t oldmode = info->dirmode;
 
 		/* if we are not chmod'ing, then overwrite dirmode */
@@ -715,11 +743,10 @@ static int _cp_r_callback(void *ref, git_buf *from)
 
 		/* make directory now if CREATE_EMPTY_DIRS is requested and needed */
 		if (!exists && (info->flags & GIT_CPDIR_CREATE_EMPTY_DIRS) != 0)
-			error = git_futils_mkdir(
-				info->to.ptr, NULL, info->dirmode, info->mkdir_flags);
+			error = _cp_r_mkdir(info, from);
 
 		/* recurse onto target directory */
-		if (!exists || S_ISDIR(to_st.st_mode))
+		if (!error && (!exists || S_ISDIR(to_st.st_mode)))
 			error = git_path_direach(from, _cp_r_callback, info);
 
 		if (oldmode != 0)
@@ -747,15 +774,29 @@ static int _cp_r_callback(void *ref, git_buf *from)
 
 	/* Make container directory on demand if needed */
 	if ((info->flags & GIT_CPDIR_CREATE_EMPTY_DIRS) == 0 &&
-		git_futils_mkdir(
-			info->to.ptr, NULL, info->dirmode, info->mkdir_flags) < 0)
-		return -1;
+		(error = _cp_r_mkdir(info, from)) < 0)
+		return error;
 
 	/* make symlink or regular file */
 	if (S_ISLNK(from_st.st_mode))
-		return cp_link(from->ptr, info->to.ptr, (size_t)from_st.st_size);
-	else
-		return git_futils_cp(from->ptr, info->to.ptr, from_st.st_mode);
+		error = cp_link(from->ptr, info->to.ptr, (size_t)from_st.st_size);
+	else {
+		mode_t usemode = from_st.st_mode;
+
+		/* if chmod'ing, then blend dirmode & from_st bits */
+		if ((info->flags & GIT_CPDIR_CHMOD) != 0)
+			usemode = (info->dirmode & 0666) | (usemode & ~0666);
+
+		error = git_futils_cp(from->ptr, info->to.ptr, usemode);
+
+		if (!error &&
+			(info->flags & GIT_CPDIR_CHMOD) != 0 &&
+			(error = p_chmod(info->to.ptr, usemode)) < 0)
+			giterr_set(GITERR_OS, "Failed to set permissions on '%s'",
+				info->to.ptr);
+	}
+
+	return error;
 }
 
 int git_futils_cp_r(
@@ -768,7 +809,7 @@ int git_futils_cp_r(
 	git_buf path = GIT_BUF_INIT;
 	cp_r_info info;
 
-	if (git_buf_sets(&path, from) < 0)
+	if (git_buf_joinpath(&path, from, "") < 0) /* ensure trailing slash */
 		return -1;
 
 	info.to_root = to;
@@ -779,10 +820,14 @@ int git_futils_cp_r(
 
 	/* precalculate mkdir flags */
 	if ((flags & GIT_CPDIR_CREATE_EMPTY_DIRS) == 0) {
+		/* if not creating empty dirs, then use mkdir to create the path on
+		 * demand right before files are copied.
+		 */
 		info.mkdir_flags = GIT_MKDIR_PATH | GIT_MKDIR_SKIP_LAST;
 		if ((flags & GIT_CPDIR_CHMOD) != 0)
 			info.mkdir_flags |= GIT_MKDIR_CHMOD_PATH;
 	} else {
+		/* otherwise, we will do simple mkdir as directories are encountered */
 		info.mkdir_flags =
 			((flags & GIT_CPDIR_CHMOD) != 0) ? GIT_MKDIR_CHMOD : 0;
 	}

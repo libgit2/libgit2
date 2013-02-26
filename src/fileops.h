@@ -65,6 +65,7 @@ extern int git_futils_mkdir_r(const char *path, const char *base, const mode_t m
  * * GIT_MKDIR_CHMOD says to chmod the final directory entry after creation
  * * GIT_MKDIR_CHMOD_PATH says to chmod each directory component in the path
  * * GIT_MKDIR_SKIP_LAST says to leave off the last element of the path
+ * * GIT_MKDIR_SKIP_LAST2 says to leave off the last 2 elements of the path
  * * GIT_MKDIR_VERIFY_DIR says confirm final item is a dir, not just EEXIST
  *
  * Note that the chmod options will be executed even if the directory already
@@ -76,7 +77,8 @@ typedef enum {
 	GIT_MKDIR_CHMOD = 4,
 	GIT_MKDIR_CHMOD_PATH = 8,
 	GIT_MKDIR_SKIP_LAST = 16,
-	GIT_MKDIR_VERIFY_DIR = 32,
+	GIT_MKDIR_SKIP_LAST2 = 32,
+	GIT_MKDIR_VERIFY_DIR = 64,
 } git_futils_mkdir_flags;
 
 /**
@@ -162,11 +164,11 @@ extern int git_futils_cp(
  * Flags that can be passed to `git_futils_cp_r`.
  */
 typedef enum {
-	GIT_CPDIR_CREATE_EMPTY_DIRS = 1,
-	GIT_CPDIR_COPY_SYMLINKS = 2,
-	GIT_CPDIR_COPY_DOTFILES = 4,
-	GIT_CPDIR_OVERWRITE = 8,
-	GIT_CPDIR_CHMOD = 16
+	GIT_CPDIR_CREATE_EMPTY_DIRS = (1u << 0),
+	GIT_CPDIR_COPY_SYMLINKS     = (1u << 1),
+	GIT_CPDIR_COPY_DOTFILES     = (1u << 2),
+	GIT_CPDIR_OVERWRITE         = (1u << 3),
+	GIT_CPDIR_CHMOD             = (1u << 4),
 } git_futils_cpdir_flags;
 
 /**
