@@ -190,8 +190,8 @@ static void hashsig_initial_window(
 	/* insert initial hash if we just finished */
 
 	if (win_len == HASHSIG_HASH_WINDOW) {
-		hashsig_heap_insert(&sig->mins, state);
-		hashsig_heap_insert(&sig->maxs, state);
+		hashsig_heap_insert(&sig->mins, (hashsig_t)state);
+		hashsig_heap_insert(&sig->maxs, (hashsig_t)state);
 		sig->considered = 1;
 	}
 
@@ -231,8 +231,8 @@ static int hashsig_add_hashes(
 		state = (state * HASHSIG_HASH_SHIFT) & HASHSIG_HASH_MASK;
 		state = (state + ch) & HASHSIG_HASH_MASK;
 
-		hashsig_heap_insert(&sig->mins, state);
-		hashsig_heap_insert(&sig->maxs, state);
+		hashsig_heap_insert(&sig->mins, (hashsig_t)state);
+		hashsig_heap_insert(&sig->maxs, (hashsig_t)state);
 		sig->considered++;
 
 		prog->window[prog->win_pos] = ch;
@@ -314,7 +314,7 @@ int git_hashsig_create_fromfile(
 
 	while (!error) {
 		if ((buflen = p_read(fd, buf, sizeof(buf))) <= 0) {
-			if ((error = buflen) < 0)
+			if ((error = (int)buflen) < 0)
 				giterr_set(GITERR_OS,
 					"Read error on '%s' calculating similarity hashes", path);
 			break;
