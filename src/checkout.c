@@ -456,7 +456,7 @@ static int checkout_action(
 	while (1) {
 		if (!wd)
 			return checkout_action_no_wd(data, delta);
-
+		
 		cmp = strcomp(wd->path, delta->old_file.path);
 
 		/* 1. wd before delta ("a/a" before "a/b")
@@ -475,6 +475,8 @@ static int checkout_action(
 					/* case 2 - entry prefixed by workdir tree */
 					if (git_iterator_advance_into_directory(workdir, &wd) < 0)
 						goto fail;
+					
+					*wditem_ptr = wd;
 					continue;
 				}
 
@@ -608,7 +610,7 @@ static int checkout_get_actions(
 		if (act & CHECKOUT_ACTION__CONFLICT)
 			counts[CHECKOUT_ACTION__CONFLICT]++;
 	}
-
+	
 	error = checkout_remaining_wd_items(data, workdir, wditem, &pathspec);
 	if (error < 0)
 		goto fail;
