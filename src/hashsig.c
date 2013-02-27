@@ -19,7 +19,14 @@ typedef uint64_t hashsig_state;
 
 #define HASHSIG_HEAP_SIZE ((1 << 7) - 1)
 
-typedef int (*hashsig_cmp)(const void *a, const void *b);
+/* going to use qsort so jump through some Windows hoops */
+#ifdef GIT_WIN32
+#define GIT_CDECL __cdecl
+#else
+#define GIT_CDECL
+#endif
+
+typedef int (GIT_CDECL *hashsig_cmp)(const void *a, const void *b);
 
 typedef struct {
 	int size, asize;
@@ -53,13 +60,13 @@ static void hashsig_heap_init(hashsig_heap *h, hashsig_cmp cmp)
 	h->cmp   = cmp;
 }
 
-static int hashsig_cmp_max(const void *a, const void *b)
+static int GIT_CDECL hashsig_cmp_max(const void *a, const void *b)
 {
 	hashsig_t av = *(const hashsig_t *)a, bv = *(const hashsig_t *)b;
 	return (av < bv) ? -1 : (av > bv) ? 1 : 0;
 }
 
-static int hashsig_cmp_min(const void *a, const void *b)
+static int GIT_CDECL hashsig_cmp_min(const void *a, const void *b)
 {
 	hashsig_t av = *(const hashsig_t *)a, bv = *(const hashsig_t *)b;
 	return (av > bv) ? -1 : (av < bv) ? 1 : 0;
