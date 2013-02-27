@@ -152,8 +152,8 @@ void test_diff_diffiter__max_size_threshold(void)
 		file_count++;
 		hunk_count += (int)git_diff_patch_num_hunks(patch);
 
-		assert(delta->binary == 0 || delta->binary == 1);
-		binary_count += delta->binary;
+		assert((delta->flags & (GIT_DIFF_FLAG_BINARY|GIT_DIFF_FLAG_NOT_BINARY)) != 0);
+		binary_count += ((delta->flags & GIT_DIFF_FLAG_BINARY) != 0);
 
 		git_diff_patch_free(patch);
 	}
@@ -185,8 +185,8 @@ void test_diff_diffiter__max_size_threshold(void)
 		file_count++;
 		hunk_count += (int)git_diff_patch_num_hunks(patch);
 
-		assert(delta->binary == 0 || delta->binary == 1);
-		binary_count += delta->binary;
+		assert((delta->flags & (GIT_DIFF_FLAG_BINARY|GIT_DIFF_FLAG_NOT_BINARY)) != 0);
+		binary_count += ((delta->flags & GIT_DIFF_FLAG_BINARY) != 0);
 
 		git_diff_patch_free(patch);
 	}

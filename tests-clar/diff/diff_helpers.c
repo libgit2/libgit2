@@ -32,7 +32,7 @@ int diff_file_cb(
 
 	e->files++;
 
-	if (delta->binary)
+	if ((delta->flags & GIT_DIFF_FLAG_BINARY) != 0)
 		e->files_binary++;
 
 	cl_assert(delta->status <= GIT_DELTA_TYPECHANGE);
@@ -126,7 +126,8 @@ int diff_foreach_via_iterator(
 
 		/* if there are no changes, then the patch will be NULL */
 		if (!patch) {
-			cl_assert(delta->status == GIT_DELTA_UNMODIFIED || delta->binary == 1);
+			cl_assert(delta->status == GIT_DELTA_UNMODIFIED ||
+					  (delta->flags & GIT_DIFF_FLAG_BINARY) != 0);
 			continue;
 		}
 

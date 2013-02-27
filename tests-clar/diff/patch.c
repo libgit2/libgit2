@@ -144,11 +144,11 @@ void test_diff_patch__hunks_have_correct_line_numbers(void)
 	size_t hdrlen, hunklen, textlen;
 	char origin;
 	int oldno, newno;
-	const char *new_content = "The Song of Seven Cities\n========================\n\nI WAS Lord of Cities very sumptuously builded.\nSeven roaring Cities paid me tribute from afar.\nIvory their outposts were—the guardrooms of them gilded,\nAnd garrisoned with Amazons invincible in war.\n\nThis is some new text;\nNot as good as the old text;\nBut here it is.\n\nSo they warred and trafficked only yesterday, my Cities.\nTo-day there is no mark or mound of where my Cities stood.\nFor the River rose at midnight and it washed away my Cities.\nThey are evened with Atlantis and the towns before the Flood.\n\nRain on rain-gorged channels raised the water-levels round them,\nFreshet backed on freshet swelled and swept their world from sight,\nTill the emboldened floods linked arms and, flashing forward, drowned them—\nDrowned my Seven Cities and their peoples in one night!\n\nLow among the alders lie their derelict foundations,\nThe beams wherein they trusted and the plinths whereon they built—\nMy rulers and their treasure and their unborn populations,\nDead, destroyed, aborted, and defiled with mud and silt!\n\nAnother replacement;\nBreaking up the poem;\nGenerating some hunks.\n\nTo the sound of trumpets shall their seed restore my Cities\nWealthy and well-weaponed, that once more may I behold\nAll the world go softly when it walks before my Cities,\nAnd the horses and the chariots fleeing from them as of old!\n\n                -- Rudyard Kipling\n";
+	const char *new_content = "The Song of Seven Cities\n------------------------\n\nI WAS Lord of Cities very sumptuously builded.\nSeven roaring Cities paid me tribute from afar.\nIvory their outposts were--the guardrooms of them gilded,\nAnd garrisoned with Amazons invincible in war.\n\nThis is some new text;\nNot as good as the old text;\nBut here it is.\n\nSo they warred and trafficked only yesterday, my Cities.\nTo-day there is no mark or mound of where my Cities stood.\nFor the River rose at midnight and it washed away my Cities.\nThey are evened with Atlantis and the towns before the Flood.\n\nRain on rain-gorged channels raised the water-levels round them,\nFreshet backed on freshet swelled and swept their world from sight,\nTill the emboldened floods linked arms and, flashing forward, drowned them--\nDrowned my Seven Cities and their peoples in one night!\n\nLow among the alders lie their derelict foundations,\nThe beams wherein they trusted and the plinths whereon they built--\nMy rulers and their treasure and their unborn populations,\nDead, destroyed, aborted, and defiled with mud and silt!\n\nAnother replacement;\nBreaking up the poem;\nGenerating some hunks.\n\nTo the sound of trumpets shall their seed restore my Cities\nWealthy and well-weaponed, that once more may I behold\nAll the world go softly when it walks before my Cities,\nAnd the horses and the chariots fleeing from them as of old!\n\n  -- Rudyard Kipling\n";
 
 	g_repo = cl_git_sandbox_init("renames");
 
-	cl_git_rewritefile("renames/songofseven.txt", new_content);
+	cl_git_rewritefile("renames/songof7cities.txt", new_content);
 
 	cl_git_pass(git_repository_head_tree(&head, g_repo));
 
@@ -178,14 +178,14 @@ void test_diff_patch__hunks_have_correct_line_numbers(void)
 	cl_git_pass(git_diff_patch_get_line_in_hunk(
 		&origin, &text, &textlen, &oldno, &newno, patch, 0, 0));
 	cl_assert_equal_i(GIT_DIFF_LINE_CONTEXT, (int)origin);
-	cl_assert(strncmp("Ivory their outposts were—the guardrooms of them gilded,\n", text, textlen) == 0);
+	cl_assert(strncmp("Ivory their outposts were--the guardrooms of them gilded,\n", text, textlen) == 0);
 	cl_assert_equal_i(6, oldno);
 	cl_assert_equal_i(6, newno);
 
 	cl_git_pass(git_diff_patch_get_line_in_hunk(
 		&origin, &text, &textlen, &oldno, &newno, patch, 0, 3));
 	cl_assert_equal_i(GIT_DIFF_LINE_DELETION, (int)origin);
-	cl_assert(strncmp("All the world went softly when it walked before my Cities—\n", text, textlen) == 0);
+	cl_assert(strncmp("All the world went softly when it walked before my Cities--\n", text, textlen) == 0);
 	cl_assert_equal_i(9, oldno);
 	cl_assert_equal_i(-1, newno);
 
@@ -271,32 +271,32 @@ void test_diff_patch__line_counts_with_eofnl(void)
 
 	g_repo = cl_git_sandbox_init("renames");
 
-	cl_git_pass(git_futils_readbuffer(&content, "renames/songofseven.txt"));
+	cl_git_pass(git_futils_readbuffer(&content, "renames/songof7cities.txt"));
 
 	/* remove first line */
 
 	end = git_buf_cstr(&content) + git_buf_find(&content, '\n') + 1;
 	git_buf_consume(&content, end);
-	cl_git_rewritefile("renames/songofseven.txt", content.ptr);
+	cl_git_rewritefile("renames/songof7cities.txt", content.ptr);
 
 	check_single_patch_stats(g_repo, 1, 0, 1);
 
 	/* remove trailing whitespace */
 
 	git_buf_rtrim(&content);
-	cl_git_rewritefile("renames/songofseven.txt", content.ptr);
+	cl_git_rewritefile("renames/songof7cities.txt", content.ptr);
 
 	check_single_patch_stats(g_repo, 2, 1, 2);
 
 	/* add trailing whitespace */
 
 	cl_git_pass(git_repository_index(&index, g_repo));
-	cl_git_pass(git_index_add_bypath(index, "songofseven.txt"));
+	cl_git_pass(git_index_add_bypath(index, "songof7cities.txt"));
 	cl_git_pass(git_index_write(index));
 	git_index_free(index);
 
 	cl_git_pass(git_buf_putc(&content, '\n'));
-	cl_git_rewritefile("renames/songofseven.txt", content.ptr);
+	cl_git_rewritefile("renames/songof7cities.txt", content.ptr);
 
 	check_single_patch_stats(g_repo, 1, 1, 1);
 

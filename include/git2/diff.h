@@ -88,10 +88,9 @@ typedef enum {
 	GIT_DIFF_INCLUDE_UNTRACKED = (1 << 8),
 	/** Include unmodified files in the diff list */
 	GIT_DIFF_INCLUDE_UNMODIFIED = (1 << 9),
-	/** Even with the GIT_DIFF_INCLUDE_UNTRACKED flag, when an untracked
-	 *  directory is found, only a single entry for the directory is added
-	 *  to the diff list; with this flag, all files under the directory will
-	 *  be included, too.
+	/** Even with GIT_DIFF_INCLUDE_UNTRACKED, an entire untracked directory
+	 *  will be marked with only a single entry in the diff list; this flag
+	 *  adds all files under the directory as UNTRACKED entries, too.
 	 */
 	GIT_DIFF_RECURSE_UNTRACKED_DIRS = (1 << 10),
 	/** If the pathspec is set in the diff options, this flags means to
@@ -120,6 +119,11 @@ typedef enum {
 	GIT_DIFF_INCLUDE_TYPECHANGE_TREES  = (1 << 16),
 	/** Ignore file mode changes */
 	GIT_DIFF_IGNORE_FILEMODE = (1 << 17),
+	/** Even with GIT_DIFF_INCLUDE_IGNORED, an entire ignored directory
+	 *  will be marked with only a single entry in the diff list; this flag
+	 *  adds all files under the directory as IGNORED entries, too.
+	 */
+	GIT_DIFF_RECURSE_IGNORED_DIRS = (1 << 10),
 } git_diff_option_t;
 
 /**
@@ -133,20 +137,18 @@ typedef enum {
 typedef struct git_diff_list git_diff_list;
 
 /**
- * Flags for the file object on each side of a diff.
+ * Flags for the delta object and the file objects on each side.
  *
- * Note: most of these flags are just for **internal** consumption by
- * libgit2, but some of them may be interesting to external users.
+ * These flags are used for both the `flags` value of the `git_diff_delta`
+ * and the flags for the `git_diff_file` objects representing the old and
+ * new sides of the delta.  Values outside of this public range should be
+ * considered reserved for internal or future use.
  */
 typedef enum {
-	GIT_DIFF_FILE_VALID_OID  = (1 << 0), /** `oid` value is known correct */
-	GIT_DIFF_FILE_FREE_PATH  = (1 << 1), /** `path` is allocated memory */
-	GIT_DIFF_FILE_BINARY     = (1 << 2), /** should be considered binary data */
-	GIT_DIFF_FILE_NOT_BINARY = (1 << 3), /** should be considered text data */
-	GIT_DIFF_FILE_FREE_DATA  = (1 << 4), /** internal file data is allocated */
-	GIT_DIFF_FILE_UNMAP_DATA = (1 << 5), /** internal file data is mmap'ed */
-	GIT_DIFF_FILE_NO_DATA    = (1 << 6), /** file data should not be loaded */
-} git_diff_file_flag_t;
+	GIT_DIFF_FLAG_BINARY     = (1 << 0), /** file(s) treated as binary data */
+	GIT_DIFF_FLAG_NOT_BINARY = (1 << 1), /** file(s) treated as text data */
+	GIT_DIFF_FLAG_VALID_OID  = (1 << 2), /** `oid` value is known correct */
+} git_diff_flag_t;
 
 /**
  * What type of change is described by a git_diff_delta?
@@ -186,18 +188,17 @@ typedef enum {
  *
  * `size` is the size of the entry in bytes.
  *
- * `flags` is a combination of the `git_diff_file_flag_t` types, but those
- * are largely internal values.
+ * `flags` is a combination of the `git_diff_flag_t` types
  *
  * `mode` is, roughly, the stat() `st_mode` value for the item.  This will
  * be restricted to one of the `git_filemode_t` values.
  */
 typedef struct {
-	git_oid oid;
+	git_oid     oid;
 	const char *path;
-	git_off_t size;
-	unsigned int flags;
-	uint16_t mode;
+	git_off_t   size;
+	uint32_t    flags;
+	uint16_t    mode;
 } git_diff_file;
 
 /**
@@ -219,16 +220,17 @@ typedef struct {
  *
  * Under some circumstances, in the name of efficiency, not all fields will
  * be filled in, but we generally try to fill in as much as possible.  One
- * example is that the "binary" field will not examine file contents if you
- * do not pass in hunk and/or line callbacks to the diff foreach iteration
- * function.  It will just use the git attributes for those files.
+ * example is that the "flags" field may not have either the `BINARY` or the
+ * `NOT_BINARY` flag set to avoid examining file contents if you do not pass
+ * in hunk and/or line callbacks to the diff foreach iteration function.  It
+ * will just use the git attributes for those files.
  */
 typedef struct {
 	git_diff_file old_file;
 	git_diff_file new_file;
 	git_delta_t   status;
-	unsigned int  similarity; /**< for RENAMED and COPIED, value 0-100 */
-	int           binary;
+	uint32_t      similarity; /**< for RENAMED and COPIED, value 0-100 */
+	uint32_t      flags;
 } git_diff_delta;
 
 /**
@@ -377,7 +379,7 @@ typedef struct git_diff_patch git_diff_patch;
 typedef enum {
 	/** look for renames? (`--find-renames`) */
 	GIT_DIFF_FIND_RENAMES = (1 << 0),
-	/** consider old size of modified for renames? (`--break-rewrites=N`) */
+	/** consider old side of modified for renames? (`--break-rewrites=N`) */
 	GIT_DIFF_FIND_RENAMES_FROM_REWRITES = (1 << 1),
 
 	/** look for copies? (a la `--find-copies`) */
@@ -387,10 +389,49 @@ typedef enum {
 
 	/** split large rewrites into delete/add pairs (`--break-rewrites=/M`) */
 	GIT_DIFF_FIND_AND_BREAK_REWRITES = (1 << 4),
+
+	/** turn on all finding features */
+	GIT_DIFF_FIND_ALL = (0x1f),
+
+	/** measure similarity ignoring leading whitespace (default) */
+	GIT_DIFF_FIND_IGNORE_LEADING_WHITESPACE = 0,
+	/** measure similarity ignoring all whitespace */
+	GIT_DIFF_FIND_IGNORE_WHITESPACE = (1 << 6),
+	/** measure similarity including all data */
+	GIT_DIFF_FIND_DONT_IGNORE_WHITESPACE = (1 << 7),
 } git_diff_find_t;
 
 /**
+ * Pluggable similarity metric
+ */
+typedef struct {
+	int (*file_signature)(
+		void **out, const git_diff_file *file,
+		const char *fullpath, void *payload);
+	int (*buffer_signature)(
+		void **out, const git_diff_file *file,
+		const char *buf, size_t buflen, void *payload);
+	void (*free_signature)(void *sig, void *payload);
+	int (*similarity)(int *score, void *siga, void *sigb, void *payload);
+	void *payload;
+} git_diff_similarity_metric;
+
+/**
  * Control behavior of rename and copy detection
+ *
+ * These options mostly mimic parameters that can be passed to git-diff.
+ *
+ * - `rename_threshold` is the same as the -M option with a value
+ * - `copy_threshold` is the same as the -C option with a value
+ * - `rename_from_rewrite_threshold` matches the top of the -B option
+ * - `break_rewrite_threshold` matches the bottom of the -B option
+ * - `target_limit` matches the -l option
+ *
+ * The `metric` option allows you to plug in a custom similarity metric.
+ * Set it to NULL for the default internal metric which is based on sampling
+ * hashes of ranges of data in the file.  The default metric is a pretty
+ * good similarity approximation that should work fairly well for both text
+ * and binary data, and is pretty fast with fixed memory overhead.
  */
 typedef struct {
 	unsigned int version;
@@ -411,6 +452,9 @@ typedef struct {
 	 *  the `diff.renameLimit` config) (default 200)
 	 */
 	unsigned int target_limit;
+
+	/** Pluggable similarity metric; pass NULL to use internal metric */
+	git_diff_similarity_metric *metric;
 } git_diff_find_options;
 
 #define GIT_DIFF_FIND_OPTIONS_VERSION 1
@@ -856,11 +900,12 @@ GIT_EXTERN(int) git_diff_patch_to_str(
  *
  * NULL is allowed for either `old_blob` or `new_blob` and will be treated
  * as an empty blob, with the `oid` set to NULL in the `git_diff_file` data.
+ * Passing NULL for both blobs is a noop; no callbacks will be made at all.
  *
- * We do run a binary content check on the two blobs and if either of the
- * blobs looks like binary data, the `git_diff_delta` binary attribute will
- * be set to 1 and no call to the hunk_cb nor line_cb will be made (unless
- * you pass `GIT_DIFF_FORCE_TEXT` of course).
+ * We do run a binary content check on the blob content and if either blob
+ * looks like binary data, the `git_diff_delta` binary attribute will be set
+ * to 1 and no call to the hunk_cb nor line_cb will be made (unless you pass
+ * `GIT_DIFF_FORCE_TEXT` of course).
  *
  * @return 0 on success, GIT_EUSER on non-zero callback, or error code
  */
@@ -879,6 +924,11 @@ GIT_EXTERN(int) git_diff_blobs(
  * As with `git_diff_blobs`, comparing a blob and buffer lacks some context,
  * so the `git_diff_file` parameters to the callbacks will be faked a la the
  * rules for `git_diff_blobs()`.
+ *
+ * Passing NULL for `old_blob` will be treated as an empty blob (i.e. the
+ * `file_cb` will be invoked with GIT_DELTA_ADDED and the diff will be the
+ * entire content of the buffer added).  Passing NULL to the buffer will do
+ * the reverse, with GIT_DELTA_REMOVED and blob content removed.
  *
  * @return 0 on success, GIT_EUSER on non-zero callback, or error code
  */
