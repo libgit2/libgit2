@@ -363,24 +363,11 @@ void test_repo_init__extended_1(void)
 	cl_fixture_cleanup("root");
 }
 
-static uint32_t normalize_filemode(uint32_t mode, bool core_filemode)
-{
-	/* if no filemode support, strip SETGID, exec, and low-order bits */
-
-	/* cannot use constants because on platform without SETGID, that
-	 * will have been defined to zero - must use hardcoded value to
-	 * clear it effectively from the expected value
-	 */
-
-	return core_filemode ? mode : (mode & ~02177);
-}
-
 static void assert_hooks_match(
 	const char *template_dir,
 	const char *repo_dir,
 	const char *hook_path,
-	bool core_filemode,
-	uint32_t expected_mode)
+	bool core_filemode)
 {
 	git_buf expected = GIT_BUF_INIT;
 	git_buf actual = GIT_BUF_INIT;
@@ -394,19 +381,20 @@ static void assert_hooks_match(
 
 	cl_assert(expected_st.st_size == st.st_size);
 
-	if (!expected_mode)
-		expected_mode = (uint32_t)expected_st.st_mode;
+	if (!core_filemode) {
+		expected_st.st_mode = expected_st.st_mode & ~0111;
+		st.st_mode = st.st_mode & ~0111;
+	}
 
-	expected_mode = normalize_filemode(expected_mode, core_filemode);
-
-	cl_assert_equal_i((int)expected_mode, (int)st.st_mode);
+	cl_assert_equal_i((int)expected_st.st_mode, (int)st.st_mode);
 
 	git_buf_free(&expected);
 	git_buf_free(&actual);
 }
 
-static void assert_has_mode(
-	const char *base, const char *path, bool core_filemode, uint32_t expected)
+static void assert_mode_seems_okay(
+	const char *base, const char *path,
+	git_filemode_t expect_mode, bool expect_setgid, bool core_filemode)
 {
 	git_buf full = GIT_BUF_INIT;
 	struct stat st;
@@ -415,9 +403,25 @@ static void assert_has_mode(
 	cl_git_pass(git_path_lstat(full.ptr, &st));
 	git_buf_free(&full);
 
-	expected = normalize_filemode(expected, core_filemode);
+	if (!core_filemode) {
+		expect_mode = expect_mode & ~0111;
+		st.st_mode = st.st_mode & ~0111;
+		expect_setgid = false;
+	}
 
-	cl_assert_equal_i((int)expected, (int)st.st_mode);
+	if (S_ISGID != 0) {
+		if (expect_setgid)
+			cl_assert((st.st_mode & S_ISGID) != 0);
+		else
+			cl_assert((st.st_mode & S_ISGID) == 0);
+	}
+
+	if ((expect_mode & 0111) != 0)
+		cl_assert((st.st_mode & 0111) != 0);
+	else
+		cl_assert((st.st_mode & 0111) == 0);
+
+	cl_assert((expect_mode & 0170000) == (st.st_mode & 0170000));
 }
 
 void test_repo_init__extended_with_template(void)
@@ -450,11 +454,11 @@ void test_repo_init__extended_with_template(void)
 
 	assert_hooks_match(
 		cl_fixture("template"), git_repository_path(_repo),
-		"hooks/update.sample", true, 0);
+		"hooks/update.sample", true);
 
 	assert_hooks_match(
 		cl_fixture("template"), git_repository_path(_repo),
-		"hooks/link.sample", true, 0);
+		"hooks/link.sample", true);
 }
 
 void test_repo_init__extended_with_template_and_shared_mode(void)
@@ -464,6 +468,7 @@ void test_repo_init__extended_with_template_and_shared_mode(void)
 	git_repository_init_options opts = GIT_REPOSITORY_INIT_OPTIONS_INIT;
 	git_config *config;
 	int filemode = true;
+	const char *repo_path = NULL;
 
 	cl_set_cleanup(&cleanup_repository, "init_shared_from_tpl");
 
@@ -491,25 +496,25 @@ void test_repo_init__extended_with_template_and_shared_mode(void)
 	git_buf_free(&expected);
 	git_buf_free(&actual);
 
-	assert_has_mode(git_repository_path(_repo), "hooks", filemode,
-		GIT_REPOSITORY_INIT_SHARED_GROUP | S_IFDIR);
-	assert_has_mode(git_repository_path(_repo), "info", filemode,
-		GIT_REPOSITORY_INIT_SHARED_GROUP | S_IFDIR);
-	assert_has_mode(git_repository_path(_repo), "description", filemode,
-		(GIT_REPOSITORY_INIT_SHARED_GROUP | S_IFREG) & ~(S_ISGID | 0111));
+	repo_path = git_repository_path(_repo);
+	assert_mode_seems_okay(repo_path, "hooks",
+		GIT_FILEMODE_TREE | GIT_REPOSITORY_INIT_SHARED_GROUP, true, filemode);
+	assert_mode_seems_okay(repo_path, "info",
+		GIT_FILEMODE_TREE | GIT_REPOSITORY_INIT_SHARED_GROUP, true, filemode);
+	assert_mode_seems_okay(repo_path, "description",
+		GIT_FILEMODE_BLOB, false, filemode);
 
 	/* for a non-symlinked hook, it should have shared permissions now */
 	assert_hooks_match(
 		cl_fixture("template"), git_repository_path(_repo),
-		"hooks/update.sample", filemode,
-		(GIT_REPOSITORY_INIT_SHARED_GROUP | S_IFREG) & ~S_ISGID);
+		"hooks/update.sample", filemode);
 
 	/* for a symlinked hook, the permissions still should match the
 	 * source link, not the GIT_REPOSITORY_INIT_SHARED_GROUP value
 	 */
 	assert_hooks_match(
 		cl_fixture("template"), git_repository_path(_repo),
-		"hooks/link.sample", filemode, 0);
+		"hooks/link.sample", filemode);
 }
 
 void test_repo_init__can_reinit_an_initialized_repository(void)

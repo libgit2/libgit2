@@ -934,7 +934,7 @@ static int repo_write_gitlink(
 	error = git_buf_printf(&buf, "%s %s", GIT_FILE_CONTENT_PREFIX, to_repo);
 
 	if (!error)
-		error = repo_write_template(in_dir, true, DOT_GIT, 0644, true, buf.ptr);
+		error = repo_write_template(in_dir, true, DOT_GIT, 0666, true, buf.ptr);
 
 cleanup:
 	git_buf_free(&buf);
@@ -944,7 +944,7 @@ cleanup:
 static mode_t pick_dir_mode(git_repository_init_options *opts)
 {
 	if (opts->mode == GIT_REPOSITORY_INIT_SHARED_UMASK)
-		return 0755;
+		return 0777;
 	if (opts->mode == GIT_REPOSITORY_INIT_SHARED_GROUP)
 		return (0775 | S_ISGID);
 	if (opts->mode == GIT_REPOSITORY_INIT_SHARED_ALL)
@@ -1006,7 +1006,8 @@ static int repo_init_structure(
 		}
 
 		error = git_futils_cp_r(tdir, repo_dir,
-			GIT_CPDIR_COPY_SYMLINKS | GIT_CPDIR_CHMOD, dmode);
+			GIT_CPDIR_COPY_SYMLINKS | GIT_CPDIR_CHMOD_DIRS |
+			GIT_CPDIR_SIMPLE_TO_MODE, dmode);
 
 		if (error < 0) {
 			if (strcmp(tdir, GIT_TEMPLATE_DIR) != 0)
@@ -1168,10 +1169,8 @@ static int repo_init_directories(
 		has_dotgit)
 	{
 		/* create path #1 */
-		if ((error = git_futils_mkdir(
-				repo_path->ptr, NULL, dirmode,
-				GIT_MKDIR_VERIFY_DIR | GIT_MKDIR_CHMOD)) < 0)
-			return error;
+		error = git_futils_mkdir(repo_path->ptr, NULL, dirmode,
+			GIT_MKDIR_VERIFY_DIR | ((dirmode & S_ISGID) ? GIT_MKDIR_CHMOD : 0));
 	}
 
 	/* prettify both directories now that they are created */

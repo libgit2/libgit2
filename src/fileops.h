@@ -162,13 +162,26 @@ extern int git_futils_cp(
 
 /**
  * Flags that can be passed to `git_futils_cp_r`.
+ *
+ * - GIT_CPDIR_CREATE_EMPTY_DIRS: create directories even if there are no
+ *   files under them (otherwise directories will only be created lazily
+ *   when a file inside them is copied).
+ * - GIT_CPDIR_COPY_SYMLINKS: copy symlinks, otherwise they are ignored.
+ * - GIT_CPDIR_COPY_DOTFILES: copy files with leading '.', otherwise ignored.
+ * - GIT_CPDIR_OVERWRITE: overwrite pre-existing files with source content,
+ *   otherwise they are silently skipped.
+ * - GIT_CPDIR_CHMOD_DIRS: explicitly chmod directories to `dirmode`
+ * - GIT_CPDIR_SIMPLE_TO_MODE: default tries to replicate the mode of the
+ *   source file to the target; with this flag, always use 0666 (or 0777 if
+ *   source has exec bits set) for target.
  */
 typedef enum {
 	GIT_CPDIR_CREATE_EMPTY_DIRS = (1u << 0),
 	GIT_CPDIR_COPY_SYMLINKS     = (1u << 1),
 	GIT_CPDIR_COPY_DOTFILES     = (1u << 2),
 	GIT_CPDIR_OVERWRITE         = (1u << 3),
-	GIT_CPDIR_CHMOD             = (1u << 4),
+	GIT_CPDIR_CHMOD_DIRS        = (1u << 4),
+	GIT_CPDIR_SIMPLE_TO_MODE    = (1u << 5),
 } git_futils_cpdir_flags;
 
 /**

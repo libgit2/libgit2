@@ -693,7 +693,7 @@ static int _cp_r_mkdir(cp_r_info *info, git_buf *from)
 	if ((info->flags & GIT_CPDIR__MKDIR_DONE_FOR_TO_ROOT) == 0) {
 		error = git_futils_mkdir(
 			info->to_root, NULL, info->dirmode,
-			((info->flags & GIT_CPDIR_CHMOD) != 0) ? GIT_MKDIR_CHMOD : 0);
+			(info->flags & GIT_CPDIR_CHMOD_DIRS) ? GIT_MKDIR_CHMOD : 0);
 
 		info->flags |= GIT_CPDIR__MKDIR_DONE_FOR_TO_ROOT;
 	}
@@ -738,7 +738,7 @@ static int _cp_r_callback(void *ref, git_buf *from)
 		mode_t oldmode = info->dirmode;
 
 		/* if we are not chmod'ing, then overwrite dirmode */
-		if ((info->flags & GIT_CPDIR_CHMOD) == 0)
+		if ((info->flags & GIT_CPDIR_CHMOD_DIRS) == 0)
 			info->dirmode = from_st.st_mode;
 
 		/* make directory now if CREATE_EMPTY_DIRS is requested and needed */
@@ -783,17 +783,10 @@ static int _cp_r_callback(void *ref, git_buf *from)
 	else {
 		mode_t usemode = from_st.st_mode;
 
-		/* if chmod'ing, then blend dirmode & from_st bits */
-		if ((info->flags & GIT_CPDIR_CHMOD) != 0)
-			usemode = (info->dirmode & 0666) | (usemode & ~0666);
+		if ((info->flags & GIT_CPDIR_SIMPLE_TO_MODE) != 0)
+			usemode = (usemode & 0111) ? 0777 : 0666;
 
 		error = git_futils_cp(from->ptr, info->to.ptr, usemode);
-
-		if (!error &&
-			(info->flags & GIT_CPDIR_CHMOD) != 0 &&
-			(error = p_chmod(info->to.ptr, usemode)) < 0)
-			giterr_set(GITERR_OS, "Failed to set permissions on '%s'",
-				info->to.ptr);
 	}
 
 	return error;
@@ -824,12 +817,12 @@ int git_futils_cp_r(
 		 * demand right before files are copied.
 		 */
 		info.mkdir_flags = GIT_MKDIR_PATH | GIT_MKDIR_SKIP_LAST;
-		if ((flags & GIT_CPDIR_CHMOD) != 0)
+		if ((flags & GIT_CPDIR_CHMOD_DIRS) != 0)
 			info.mkdir_flags |= GIT_MKDIR_CHMOD_PATH;
 	} else {
 		/* otherwise, we will do simple mkdir as directories are encountered */
 		info.mkdir_flags =
-			((flags & GIT_CPDIR_CHMOD) != 0) ? GIT_MKDIR_CHMOD : 0;
+			((flags & GIT_CPDIR_CHMOD_DIRS) != 0) ? GIT_MKDIR_CHMOD : 0;
 	}
 
 	error = _cp_r_callback(&info, &path);
