@@ -28,8 +28,14 @@ enum {
 	GIT_DIFFCAPS_USE_DEV          = (1 << 4), /* use st_dev? */
 };
 
-#define GIT_DELTA__TO_DELETE 10
-#define GIT_DELTA__TO_SPLIT  11
+enum {
+	GIT_DIFF_FLAG__FREE_PATH  = (1 << 7),  /* `path` is allocated memory */
+	GIT_DIFF_FLAG__FREE_DATA  = (1 << 8),  /* internal file data is allocated */
+	GIT_DIFF_FLAG__UNMAP_DATA = (1 << 9),  /* internal file data is mmap'ed */
+	GIT_DIFF_FLAG__NO_DATA    = (1 << 10), /* file data should not be loaded */
+	GIT_DIFF_FLAG__TO_DELETE  = (1 << 11), /* delete entry during rename det. */
+	GIT_DIFF_FLAG__TO_SPLIT   = (1 << 12), /* split entry during rename det. */
+};
 
 struct git_diff_list {
 	git_refcount     rc;

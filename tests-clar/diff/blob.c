@@ -196,7 +196,7 @@ void test_diff_blob__can_compare_identical_blobs(void)
 		NULL, NULL, &opts, diff_file_cb, diff_hunk_cb, diff_line_cb, &expected));
 
 	cl_assert_equal_i(0, expected.files_binary);
-	assert_identical_blobs_comparison(&expected);
+	cl_assert_equal_i(0, expected.files); /* NULLs mean no callbacks, period */
 
 	memset(&expected, 0, sizeof(expected));
 	cl_git_pass(git_diff_blobs(
@@ -399,7 +399,7 @@ void test_diff_blob__can_compare_blob_to_buffer(void)
 
 	assert_identical_blobs_comparison(&expected);
 
-	/* diff from NULL blob to content of b */
+	/* diff from NULL blob to content of a */
 	memset(&expected, 0, sizeof(expected));
 	cl_git_pass(git_diff_blob_to_buffer(
 		NULL, a_content, strlen(a_content),

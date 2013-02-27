@@ -92,11 +92,11 @@ static int diff_delta__from_one(
 		git_oid_cpy(&delta->new_file.oid, &entry->oid);
 	}
 
-	delta->old_file.flags |= GIT_DIFF_FILE_VALID_OID;
+	delta->old_file.flags |= GIT_DIFF_FLAG_VALID_OID;
 
 	if (delta->status == GIT_DELTA_DELETED ||
 		!git_oid_iszero(&delta->new_file.oid))
-		delta->new_file.flags |= GIT_DIFF_FILE_VALID_OID;
+		delta->new_file.flags |= GIT_DIFF_FLAG_VALID_OID;
 
 	notify_res = diff_notify(diff, delta, matched_pathspec);
 
@@ -142,7 +142,7 @@ static int diff_delta__from_two(
 	git_oid_cpy(&delta->old_file.oid, &old_entry->oid);
 	delta->old_file.size = old_entry->file_size;
 	delta->old_file.mode = old_mode;
-	delta->old_file.flags |= GIT_DIFF_FILE_VALID_OID;
+	delta->old_file.flags |= GIT_DIFF_FLAG_VALID_OID;
 
 	git_oid_cpy(&delta->new_file.oid, &new_entry->oid);
 	delta->new_file.size = new_entry->file_size;
@@ -156,7 +156,7 @@ static int diff_delta__from_two(
 	}
 
 	if (new_oid || !git_oid_iszero(&new_entry->oid))
-		delta->new_file.flags |= GIT_DIFF_FILE_VALID_OID;
+		delta->new_file.flags |= GIT_DIFF_FLAG_VALID_OID;
 
 	notify_res = diff_notify(diff, delta, matched_pathspec);
 
