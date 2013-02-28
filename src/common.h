@@ -33,11 +33,9 @@
 #	include "win32/pthread.h"
 #endif
 
-# define snprintf _snprintf
-
 #else
-# include <unistd.h>
 
+# include <unistd.h>
 # ifdef GIT_THREADS
 #	include <pthread.h>
 # endif
