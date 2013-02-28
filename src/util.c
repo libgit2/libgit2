@@ -6,6 +6,7 @@
  */
 #include <git2.h>
 #include "common.h"
+#include "config.h"
 #include <stdarg.h>
 #include <stdio.h>
 #include <ctype.h>
@@ -59,6 +60,18 @@ void git_libgit2_opts(int key, ...)
 
 	case GIT_OPT_GET_MWINDOW_MAPPED_LIMIT:
 		*(va_arg(ap, size_t *)) = git_mwindow__mapped_limit;
+		break;
+
+	case GIT_OPT_SET_CONFIG_PATH: {
+			int type = va_arg(ap, int);
+			git_config_set_path(type, va_arg(ap, const char*));
+		}
+		break;
+
+	case GIT_OPT_GET_CONFIG_PATH: {
+			int type = va_arg(ap, int);
+			git_config_get_path(va_arg(ap, const char**),type);
+		}
 		break;
 	}
 

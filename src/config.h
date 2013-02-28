@@ -45,4 +45,24 @@ extern int git_config_rename_section(
  */
 extern int git_config_file__ondisk(struct git_config_backend **out, const char *path);
 
+/**
+ * Set the preferred config path.
+ *
+ * @param type any of GIT_CONFIG_LEVEL_SYSTEM, GIT_CONFIG_LEVEL_XDG,
+ *  or GIT_CONFIG_LEVEL_GLOBAL.
+ * @param path the new preferred config path. The pointer must be valid
+ *  until a new path is set.
+ * @return
+ */
+extern void git_config_set_path(int type, const char *path);
+
+/**
+ * Determine the preferred config path.
+ *
+ * @param path where to store the pointer to the path
+ * @param type any of GIT_CONFIG_LEVEL_SYSTEM, GIT_CONFIG_LEVEL_XDG,
+ *  or GIT_CONFIG_LEVEL_GLOBAL.
+ */
+extern void git_config_get_path(const char **path, int type);
+
 #endif
