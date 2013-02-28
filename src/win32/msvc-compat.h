@@ -39,4 +39,6 @@ typedef SSIZE_T ssize_t;
 
 #endif
 
+#define GIT_STDLIB_CALL __cdecl
+
 #endif /* INCLUDE_msvc_compat__ */

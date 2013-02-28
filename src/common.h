@@ -41,6 +41,8 @@
 # ifdef GIT_THREADS
 #	include <pthread.h>
 # endif
+#define GIT_STDLIB_CALL
+
 #endif
 
 #include "git2/types.h"
