@@ -33,14 +33,14 @@
 #	include "win32/pthread.h"
 #endif
 
-# define snprintf _snprintf
-
 #else
-# include <unistd.h>
 
+# include <unistd.h>
 # ifdef GIT_THREADS
 #	include <pthread.h>
 # endif
+#define GIT_STDLIB_CALL
+
 #endif
 
 #include "git2/types.h"
