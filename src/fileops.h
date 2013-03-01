@@ -128,12 +128,20 @@ typedef enum {
 /**
  * Remove path and any files and directories beneath it.
  *
- * @param path Path to to top level directory to process.
+ * @param path Path to the top level directory to process.
  * @param base Root for relative path.
  * @param flags Combination of git_futils_rmdir_flags values
  * @return 0 on success; -1 on error.
  */
 extern int git_futils_rmdir_r(const char *path, const char *base, uint32_t flags);
+
+/**
+ * Remove all files and directories beneath the specified path.
+ *
+ * @param path Path to the top level directory to process.
+ * @return 0 on success; -1 on error.
+ */
+extern int git_futils_cleanupdir_r(const char *path);
 
 /**
  * Create and open a temporary file with a `_git2_` suffix.
