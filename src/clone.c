@@ -429,6 +429,7 @@ int git_clone(
 	int retcode = GIT_ERROR;
 	git_repository *repo = NULL;
 	git_clone_options normOptions;
+	int remove_directory_on_failure = 0;
 
 	assert(out && url && local_path);
 
@@ -439,11 +440,19 @@ int git_clone(
 		return GIT_ERROR;
 	}
 
+	/* Only remove the directory on failure if we create it */
+	remove_directory_on_failure = !git_path_exists(local_path);
+
 	if (!(retcode = git_repository_init(&repo, local_path, normOptions.bare))) {
 		if ((retcode = setup_remotes_and_fetch(repo, url, &normOptions)) < 0) {
 			/* Failed to fetch; clean up */
 			git_repository_free(repo);
-			git_futils_rmdir_r(local_path, NULL, GIT_RMDIR_REMOVE_FILES);
+
+			if (remove_directory_on_failure)
+				git_futils_rmdir_r(local_path, NULL, GIT_RMDIR_REMOVE_FILES);
+			else
+				git_futils_cleanupdir_r(local_path);
+
 		} else {
 			*out = repo;
 			retcode = 0;
