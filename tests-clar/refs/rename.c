@@ -3,6 +3,7 @@
 #include "repository.h"
 #include "git2/reflog.h"
 #include "reflog.h"
+#include "ref_helpers.h"
 
 static const char *loose_tag_ref_name = "refs/tags/e90810b";
 static const char *packed_head_name = "refs/heads/packed";
@@ -44,7 +45,7 @@ void test_refs_rename__loose(void)
 	cl_git_pass(git_reference_lookup(&looked_up_ref, g_repo, loose_tag_ref_name));
 
 	/* ... which is indeed loose */
-	cl_assert(git_reference_is_packed(looked_up_ref) == 0);
+	cl_assert(reference_is_packed(looked_up_ref) == 0);
 
 	/* Now that the reference is renamed... */
 	cl_git_pass(git_reference_rename(looked_up_ref, new_name, 0));
@@ -58,8 +59,8 @@ void test_refs_rename__loose(void)
 	cl_assert_equal_s(another_looked_up_ref->name, new_name);
 
 	/* .. the ref is still loose... */
-	cl_assert(git_reference_is_packed(another_looked_up_ref) == 0);
-	cl_assert(git_reference_is_packed(looked_up_ref) == 0);
+	cl_assert(reference_is_packed(another_looked_up_ref) == 0);
+	cl_assert(reference_is_packed(looked_up_ref) == 0);
 
 	/* ...and the ref can be found in the file system */
 	cl_git_pass(git_buf_joinpath(&temp_path, g_repo->path_repository, new_name));
@@ -85,7 +86,7 @@ void test_refs_rename__packed(void)
 	cl_git_pass(git_reference_lookup(&looked_up_ref, g_repo, packed_head_name));
 
 	/* .. and it's packed */
-	cl_assert(git_reference_is_packed(looked_up_ref) != 0);
+	cl_assert(reference_is_packed(looked_up_ref) != 0);
 
 	/* Now that the reference is renamed... */
 	cl_git_pass(git_reference_rename(looked_up_ref, brand_new_name, 0));
@@ -99,8 +100,8 @@ void test_refs_rename__packed(void)
 	cl_assert_equal_s(another_looked_up_ref->name, brand_new_name);
 
 	/* .. the ref is no longer packed... */
-	cl_assert(git_reference_is_packed(another_looked_up_ref) == 0);
-	cl_assert(git_reference_is_packed(looked_up_ref) == 0);
+	cl_assert(reference_is_packed(another_looked_up_ref) == 0);
+	cl_assert(reference_is_packed(looked_up_ref) == 0);
 
 	/* ...and the ref now happily lives in the file system */
 	cl_git_pass(git_buf_joinpath(&temp_path, g_repo->path_repository, brand_new_name));
@@ -126,14 +127,14 @@ void test_refs_rename__packed_doesnt_pack_others(void)
 	cl_git_pass(git_reference_lookup(&another_looked_up_ref, g_repo, packed_test_head_name));
 
 	/* Ensure it's loose */
-	cl_assert(git_reference_is_packed(another_looked_up_ref) == 0);
+	cl_assert(reference_is_packed(another_looked_up_ref) == 0);
 	git_reference_free(another_looked_up_ref);
 
 	/* Lookup the reference to rename */
 	cl_git_pass(git_reference_lookup(&looked_up_ref, g_repo, packed_head_name));
 
 	/* Ensure it's packed */
-	cl_assert(git_reference_is_packed(looked_up_ref) != 0);
+	cl_assert(reference_is_packed(looked_up_ref) != 0);
 
 	/* Now that the reference is renamed... */
 	cl_git_pass(git_reference_rename(looked_up_ref, brand_new_name, 0));
@@ -142,7 +143,7 @@ void test_refs_rename__packed_doesnt_pack_others(void)
 	cl_git_pass(git_reference_lookup(&another_looked_up_ref, g_repo, packed_test_head_name));
 
 	/* Ensure it's loose */
-	cl_assert(git_reference_is_packed(another_looked_up_ref) == 0);
+	cl_assert(reference_is_packed(another_looked_up_ref) == 0);
 
 	/* Ensure the other ref still exists on the file system */
 	cl_assert(git_path_exists(temp_path.ptr));
@@ -264,7 +265,7 @@ void test_refs_rename__overwrite(void)
 	cl_git_pass(git_reference_create(&ref_two, g_repo, ref_two_name, &id, 0));
 
 	/* Pack everything */
-	cl_git_pass(git_reference_packall(g_repo));
+	cl_git_pass(git_reference_compress_all(g_repo));
 
 	/* Attempt to create illegal reference */
 	cl_git_fail(git_reference_create(&ref_one_new, g_repo, ref_one_name_new, &id, 0));

@@ -3,6 +3,7 @@
 #include "repository.h"
 #include "git2/reflog.h"
 #include "reflog.h"
+#include "ref_helpers.h"
 
 static const char *current_master_tip = "099fabac3a9ea935598528c27f866e34089c2eff";
 static const char *current_head_target = "refs/heads/master";
@@ -36,7 +37,7 @@ void test_refs_create__symbolic(void)
 	/* Ensure the reference can be looked-up... */
 	cl_git_pass(git_reference_lookup(&looked_up_ref, g_repo, new_head_tracker));
 	cl_assert(git_reference_type(looked_up_ref) & GIT_REF_SYMBOLIC);
-	cl_assert(git_reference_is_packed(looked_up_ref) == 0);
+	cl_assert(reference_is_packed(looked_up_ref) == 0);
 	cl_assert_equal_s(looked_up_ref->name, new_head_tracker);
 
 	/* ...peeled.. */
@@ -99,7 +100,7 @@ void test_refs_create__oid(void)
 	/* Ensure the reference can be looked-up... */
 	cl_git_pass(git_reference_lookup(&looked_up_ref, g_repo, new_head));
 	cl_assert(git_reference_type(looked_up_ref) & GIT_REF_OID);
-	cl_assert(git_reference_is_packed(looked_up_ref) == 0);
+	cl_assert(reference_is_packed(looked_up_ref) == 0);
 	cl_assert_equal_s(looked_up_ref->name, new_head);
 
 	/* ...and that it points to the current master tip */

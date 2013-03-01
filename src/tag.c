@@ -426,8 +426,7 @@ int git_tag_foreach(git_repository *repo, git_tag_foreach_cb cb, void *cb_data)
 	data.cb_data = cb_data;
 	data.repo = repo;
 
-	return git_reference_foreach(
-		repo, GIT_REF_OID | GIT_REF_PACKED, &tags_cb, &data);
+	return git_reference_foreach(repo, GIT_REF_OID, &tags_cb, &data);
 }
 
 typedef struct {

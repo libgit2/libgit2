@@ -259,19 +259,15 @@ GIT_EXTERN(int) git_reference_rename(git_reference *ref, const char *name, int f
 GIT_EXTERN(int) git_reference_delete(git_reference *ref);
 
 /**
- * Pack all the loose references in the repository.
+ * Compress or optimize the references in the repository.
+ * For on-disk repositories, all the loose references
+ * in the repository will be packed into the `packed-refs`
+ * file and subsequently removed from disk.
  *
- * This method will load into the cache all the loose
- * references on the repository and update the
- * `packed-refs` file with them.
- *
- * Once the `packed-refs` file has been written properly,
- * the loose references will be removed from disk.
- *
- * @param repo Repository where the loose refs will be packed
+ * @param repo Repository where the loose refs will be compressed
  * @return 0 or an error code
  */
-GIT_EXTERN(int) git_reference_packall(git_repository *repo);
+GIT_EXTERN(int) git_reference_compress_all(git_repository *repo);
 
 /**
  * Fill a list with all the references that can be found in a repository.
@@ -321,14 +317,6 @@ GIT_EXTERN(int) git_reference_foreach(
 	unsigned int list_flags,
 	git_reference_foreach_cb callback,
 	void *payload);
-
-/**
- * Check if a reference has been loaded from a packfile.
- *
- * @param ref A git reference
- * @return 0 in case it's not packed; 1 otherwise
- */
-GIT_EXTERN(int) git_reference_is_packed(git_reference *ref);
 
 /**
  * Reload a reference from disk.
