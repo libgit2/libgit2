@@ -121,7 +121,7 @@ int git_commit_create(
 	git_buf_free(&commit);
 
 	if (update_ref != NULL)
-		return git_reference__update(repo, oid, update_ref);
+		return git_reference__update_terminal(repo, update_ref, oid);
 
 	return 0;
 

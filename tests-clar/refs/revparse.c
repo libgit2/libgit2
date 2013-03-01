@@ -227,7 +227,7 @@ void test_refs_revparse__previous_head(void)
 
 static void create_fake_stash_reference_and_reflog(git_repository *repo)
 {
-	git_reference *master;
+	git_reference *master, *new_master;
 	git_buf log_path = GIT_BUF_INIT;
 
 	git_buf_joinpath(&log_path, git_repository_path(repo), "logs/refs/fakestash");
@@ -235,12 +235,13 @@ static void create_fake_stash_reference_and_reflog(git_repository *repo)
 	cl_assert_equal_i(false, git_path_isfile(git_buf_cstr(&log_path)));
 
 	cl_git_pass(git_reference_lookup(&master, repo, "refs/heads/master"));
-	cl_git_pass(git_reference_rename(master, "refs/fakestash", 0));
+	cl_git_pass(git_reference_rename(&new_master, master, "refs/fakestash", 0));
+	git_reference_free(master);
 
 	cl_assert_equal_i(true, git_path_isfile(git_buf_cstr(&log_path)));
 
 	git_buf_free(&log_path);
-	git_reference_free(master);
+	git_reference_free(new_master);
 }
 
 void test_refs_revparse__reflog_of_a_ref_under_refs(void)

@@ -92,6 +92,12 @@ typedef struct git_odb_stream git_odb_stream;
 /** A stream to write a packfile to the ODB */
 typedef struct git_odb_writepack git_odb_writepack;
 
+/** An open refs database handle. */
+typedef struct git_refdb git_refdb;
+
+/** A custom backend for refs */
+typedef struct git_refdb_backend git_refdb_backend;
+
 /**
  * Representation of an existing git repository,
  * including all its object contents
@@ -164,9 +170,7 @@ typedef enum {
 	GIT_REF_INVALID = 0, /** Invalid reference */
 	GIT_REF_OID = 1, /** A reference which points at an object id */
 	GIT_REF_SYMBOLIC = 2, /** A reference which points at another reference */
-	GIT_REF_PACKED = 4,
-	GIT_REF_HAS_PEEL = 8,
-	GIT_REF_LISTALL = GIT_REF_OID|GIT_REF_SYMBOLIC|GIT_REF_PACKED,
+	GIT_REF_LISTALL = GIT_REF_OID|GIT_REF_SYMBOLIC,
 } git_ref_t;
 
 /** Basic type of any Git branch. */

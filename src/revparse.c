@@ -10,6 +10,7 @@
 #include "common.h"
 #include "buffer.h"
 #include "tree.h"
+#include "refdb.h"
 
 #include "git2.h"
 
@@ -656,7 +657,7 @@ static int object_from_reference(git_object **object, git_reference *reference)
 	if (git_reference_resolve(&resolved, reference) < 0)
 		return -1;
 
-	error = git_object_lookup(object, reference->owner, git_reference_target(resolved), GIT_OBJ_ANY);
+	error = git_object_lookup(object, reference->db->repo, git_reference_target(resolved), GIT_OBJ_ANY);
 	git_reference_free(resolved);
 
 	return error;

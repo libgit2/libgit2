@@ -8,6 +8,7 @@
 #include <ctype.h>
 
 #include "git2/object.h"
+#include "git2/refdb.h"
 
 #include "common.h"
 #include "repository.h"
@@ -39,6 +40,15 @@ static void drop_odb(git_repository *repo)
 	}
 }
 
+static void drop_refdb(git_repository *repo)
+{
+	if (repo->_refdb != NULL) {
+		GIT_REFCOUNT_OWN(repo->_refdb, NULL);
+		git_refdb_free(repo->_refdb);
+		repo->_refdb = NULL;
+	}
+}
+
 static void drop_config(git_repository *repo)
 {
 	if (repo->_config != NULL) {
@@ -65,7 +75,6 @@ void git_repository_free(git_repository *repo)
 		return;
 
 	git_cache_free(&repo->objects);
-	git_repository__refcache_free(&repo->references);
 	git_attr_cache_flush(repo);
 	git_submodule_config_free(repo);
 
@@ -75,6 +84,7 @@ void git_repository_free(git_repository *repo)
 	drop_config(repo);
 	drop_index(repo);
 	drop_odb(repo);
+	drop_refdb(repo);
 
 	git__free(repo);
 }
@@ -598,6 +608,45 @@ void git_repository_set_odb(git_repository *repo, git_odb *odb)
 	repo->_odb = odb;
 	GIT_REFCOUNT_OWN(repo->_odb, repo);
 	GIT_REFCOUNT_INC(odb);
+}
+
+int git_repository_refdb__weakptr(git_refdb **out, git_repository *repo)
+{
+	assert(out && repo);
+
+	if (repo->_refdb == NULL) {
+		int res;
+
+		res = git_refdb_open(&repo->_refdb, repo);
+
+		if (res < 0)
+			return -1;
+
+		GIT_REFCOUNT_OWN(repo->_refdb, repo);
+	}
+
+	*out = repo->_refdb;
+	return 0;
+}
+
+int git_repository_refdb(git_refdb **out, git_repository *repo)
+{
+	if (git_repository_refdb__weakptr(out, repo) < 0)
+		return -1;
+
+	GIT_REFCOUNT_INC(*out);
+	return 0;
+}
+
+void git_repository_set_refdb(git_repository *repo, git_refdb *refdb)
+{
+	assert (repo && refdb);
+
+	drop_refdb(repo);
+
+	repo->_refdb = refdb;
+	GIT_REFCOUNT_OWN(repo->_refdb, repo);
+	GIT_REFCOUNT_INC(refdb);
 }
 
 int git_repository_index__weakptr(git_index **out, git_repository *repo)
