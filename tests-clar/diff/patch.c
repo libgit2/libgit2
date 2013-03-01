@@ -150,9 +150,8 @@ void test_diff_patch__hunks_have_correct_line_numbers(void)
 
 	g_repo = cl_git_sandbox_init("renames");
 
-	cl_git_pass(git_repository_config(&cfg, g_repo));
-	cl_git_pass(git_config_set_bool(cfg, "core.autocrlf", false));
-	git_config_free(cfg);
+	cl_git_pass(git_config_new(&cfg));
+	git_repository_set_config(g_repo, cfg);
 
 	cl_git_rewritefile("renames/songof7cities.txt", new_content);
 
@@ -278,9 +277,8 @@ void test_diff_patch__line_counts_with_eofnl(void)
 
 	g_repo = cl_git_sandbox_init("renames");
 
-	cl_git_pass(git_repository_config(&cfg, g_repo));
-	cl_git_pass(git_config_set_bool(cfg, "core.autocrlf", false));
-	git_config_free(cfg);
+	cl_git_pass(git_config_new(&cfg));
+	git_repository_set_config(g_repo, cfg);
 
 	cl_git_pass(git_futils_readbuffer(&content, "renames/songof7cities.txt"));
 
