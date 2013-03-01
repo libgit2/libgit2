@@ -437,6 +437,18 @@ void test_diff_iterator__tree_icase_seek(void)
 		"C_/2.txt"));
 	check_iterator_output(i, strcmp, 0);
 
+	cl_git_pass(git_iterator_for_tree_range(
+		&i, t, GIT_ITERATOR_IGNORE_CASE,
+		"A",
+		"a"));
+	check_iterator_output(i, strcasecmp, 3);
+
+	cl_git_pass(git_iterator_for_tree_range(
+		&i, t, GIT_ITERATOR_DONT_IGNORE_CASE,
+		"A",
+		"a"));
+	check_iterator_output(i, strcmp, 6);
+
 	git_tree_free(t);
 }
 

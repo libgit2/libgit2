@@ -564,8 +564,9 @@ start:
 				tf->icase_map ? (size_t)tf->icase_map[cur_pos] : cur_pos);
 
 			if (tf->end && SIZE_MAX == tf->pastend_pos &&
-				ti->base.prefixcomp(te->filename, tf->end) > 0)
-				break;
+				ti->base.prefixcomp(te->filename, tf->end) > 0) {
+				tf->pos--; break;
+			}
 
 			if (!tf->icase_map)
 				tree_iterator__enumerate(cur_pos);
