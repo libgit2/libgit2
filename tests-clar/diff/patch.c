@@ -135,7 +135,9 @@ void test_diff_patch__to_string(void)
 
 void test_diff_patch__hunks_have_correct_line_numbers(void)
 {
+	git_config *cfg;
 	git_tree *head;
+	git_diff_options opt = GIT_DIFF_OPTIONS_INIT;
 	git_diff_list *diff;
 	git_diff_patch *patch;
 	const git_diff_delta *delta;
@@ -148,11 +150,15 @@ void test_diff_patch__hunks_have_correct_line_numbers(void)
 
 	g_repo = cl_git_sandbox_init("renames");
 
+	cl_git_pass(git_repository_config(&cfg, g_repo));
+	cl_git_pass(git_config_set_bool(cfg, "core.autocrlf", false));
+	git_config_free(cfg);
+
 	cl_git_rewritefile("renames/songof7cities.txt", new_content);
 
 	cl_git_pass(git_repository_head_tree(&head, g_repo));
 
-	cl_git_pass(git_diff_tree_to_workdir(&diff, g_repo, head, NULL));
+	cl_git_pass(git_diff_tree_to_workdir(&diff, g_repo, head, &opt));
 
 	cl_assert_equal_i(1, (int)git_diff_num_deltas(diff));
 
@@ -251,7 +257,7 @@ static void check_single_patch_stats(
 	cl_git_pass(git_diff_get_patch(&patch, &delta, diff, 0));
 	cl_assert_equal_i(GIT_DELTA_MODIFIED, (int)delta->status);
 
-	cl_assert_equal_sz(hunks, git_diff_patch_num_hunks(patch));
+	cl_assert_equal_i((int)hunks, (int)git_diff_patch_num_hunks(patch));
 
 	cl_git_pass(
 		git_diff_patch_line_stats(NULL, &actual_adds, &actual_dels, patch));
@@ -265,11 +271,16 @@ static void check_single_patch_stats(
 
 void test_diff_patch__line_counts_with_eofnl(void)
 {
+	git_config *cfg;
 	git_buf content = GIT_BUF_INIT;
 	const char *end;
 	git_index *index;
 
 	g_repo = cl_git_sandbox_init("renames");
+
+	cl_git_pass(git_repository_config(&cfg, g_repo));
+	cl_git_pass(git_config_set_bool(cfg, "core.autocrlf", false));
+	git_config_free(cfg);
 
 	cl_git_pass(git_futils_readbuffer(&content, "renames/songof7cities.txt"));
 
