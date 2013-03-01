@@ -426,8 +426,6 @@ static int get_string(const char **out, const git_config *cfg, const char *name)
 	file_internal *internal;
 	unsigned int i;
 
-	assert(cfg->files.length);
-
 	git_vector_foreach(&cfg->files, i, internal) {
 		int res = get_string_at_file(out, internal->file, name);
 
@@ -466,8 +464,6 @@ int git_config_get_entry(const git_config_entry **out, const git_config *cfg, co
 	file_internal *internal;
 	unsigned int i;
 
-	assert(cfg->files.length);
-
 	*out = NULL;
 
 	git_vector_foreach(&cfg->files, i, internal) {
@@ -487,8 +483,6 @@ int git_config_get_multivar(const git_config *cfg, const char *name, const char 
 	git_config_backend *file;
 	int ret = GIT_ENOTFOUND;
 	size_t i;
-
-	assert(cfg->files.length);
 
 	/*
 	 * This loop runs the "wrong" way 'round because we need to
