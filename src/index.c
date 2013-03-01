@@ -242,7 +242,7 @@ static unsigned int index_merge_mode(
 	return index_create_mode(mode);
 }
 
-void git_index_set_ignore_case(git_index *index, bool ignore_case)
+void git_index__set_ignore_case(git_index *index, bool ignore_case)
 {
 	index->ignore_case = ignore_case;
 
@@ -390,7 +390,7 @@ int git_index_set_caps(git_index *index, unsigned int caps)
 	}
 
 	if (old_ignore_case != index->ignore_case) {
-		git_index_set_ignore_case(index, index->ignore_case);
+		git_index__set_ignore_case(index, index->ignore_case);
 	}
 
 	return 0;

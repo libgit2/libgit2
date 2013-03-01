@@ -582,19 +582,19 @@ int git_tree__write_index(
 	}
 
 	/* The tree cache didn't help us; we'll have to write
-	 * out a tree. If the index is ignore_case, we'll must
+	 * out a tree. If the index is ignore_case, we must
 	 * make it case-sensitive for the duration of the tree-write
 	 * operation. */
 
 	if (index->ignore_case) {
 		old_ignore_case = true;
-		git_index_set_ignore_case(index, false);
+		git_index__set_ignore_case(index, false);
 	}
 
 	ret = write_tree(oid, repo, index, "", 0);
 
 	if (old_ignore_case)
-		git_index_set_ignore_case(index, true);
+		git_index__set_ignore_case(index, true);
 
 	return ret < 0 ? ret : 0;
 }
