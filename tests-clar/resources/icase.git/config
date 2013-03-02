@@ -2,4 +2,5 @@
 	repositoryformatversion = 0
 	filemode = true
 	bare = true
-	logallrefupdates = true
+[remote "origin"]
+	url = /home/phkelley/icase

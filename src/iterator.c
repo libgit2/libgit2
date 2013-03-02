@@ -22,8 +22,6 @@
 	} while (0)
 
 #define ITERATOR_BASE_INIT(P,NAME_LC,NAME_UC) do { \
-	(P) = git__calloc(1, sizeof(NAME_LC ## _iterator)); \
-	GITERR_CHECK_ALLOC(P); \
 	(P)->base.type    = GIT_ITERATOR_TYPE_ ## NAME_UC; \
 	(P)->base.cb    = &(P)->cb; \
 	ITERATOR_SET_CB(P,NAME_LC); \
@@ -143,14 +141,15 @@ typedef struct {
 	git_iterator base;
 	git_iterator_callbacks cb;
 	git_tree *root;
-	void **icase_map;
-	size_t start_pos;
-	size_t length;
+	size_t pos, length;
 	git_iterator *current_iter;
-	size_t pos;
-	bool current_valid;
 	git_index_entry current;
 	git_buf path;
+	size_t path_revert_len;
+	unsigned current_valid : 1,
+		enumerated_file : 1,
+		enumerated_folder : 1;
+	void *strcasecmp_map[GIT_FLEX_ARRAY];
 } multisubtree_iterator;
 
 static int multisubtree_iterator__new(
@@ -488,7 +487,7 @@ static int tree_iterator__advance(
 
 #define tree_iterator__finish_batch(BATCH_POS) do { \
 	te = git_tree_entry_byindex(tf->tree, (size_t)tf->icase_map[(BATCH_POS)]); \
-	if (1 == batch_size || !git_tree_entry__is_tree(te)) \
+	if (1 == batch_size) \
 		tree_iterator__enumerate((BATCH_POS)); \
 	else { \
 		if ((error = multisubtree_iterator__new(&ti->spool, tf->tree, \
@@ -572,7 +571,7 @@ start:
 				tree_iterator__enumerate(cur_pos);
 			else if (!tf->batch)
 				tree_iterator__new_batch();
-			else if (strcasecmp(tf->batch, te->filename)) {
+			else if (ti->base.prefixcomp(te->filename, tf->batch)) {
 				size_t batch_pos = tf->batch_pos;
 				size_t batch_size = cur_pos - batch_pos;
 
@@ -702,6 +701,9 @@ int git_iterator_for_tree_range(
 	if ((error = git_tree__dup(&tree, tree)) < 0)
 		return error;
 
+	ti = git__calloc(1, sizeof(tree_iterator));
+	GITERR_CHECK_ALLOC(ti);
+
 	ITERATOR_BASE_INIT(ti, tree, TREE);
 
 	ti->base.repo = git_tree_owner(tree);
@@ -725,10 +727,7 @@ static int multisubtree_iterator__build_current(
 	multisubtree_iterator *msti,
 	const git_index_entry *ie)
 {
-	if (msti->current_valid) {
-		git_buf_rtruncate_at_char(&msti->path, '/');
-		msti->current_valid = false;
-	}
+	git_buf_truncate(&msti->path, msti->path_revert_len);
 
 	msti->current.mode = ie->mode;
 	git_oid_cpy(&msti->current.oid, &ie->oid);
@@ -737,7 +736,7 @@ static int multisubtree_iterator__build_current(
 		return -1;
 
 	msti->current.path = msti->path.ptr;
-	msti->current_valid = true;
+	msti->current_valid = 1;
 
 	return 0;
 }
@@ -778,29 +777,39 @@ static int multisubtree_iterator__at_end(
 {
 	multisubtree_iterator *msti = (multisubtree_iterator *)self;
 
-	return !msti->current_iter;
+	return msti->pos >= msti->length;
 }
 
 static int multisubtree_iterator__next_subtree(
 	multisubtree_iterator *msti)
 {
-	const git_tree_entry *te;
+	const git_tree_entry *te, *te_prev;
 
 	git_buf_clear(&msti->path);
-	msti->current_valid = false;
 
-	while (!msti->current_iter) {
-		if (msti->pos >= msti->start_pos + msti->length)
-			break;
-
+	while (msti->pos < msti->length) {
 		te = git_tree_entry_byindex(msti->root,
-			msti->icase_map ? (size_t)msti->icase_map[msti->pos] : msti->pos);
+			(size_t)msti->strcasecmp_map[msti->pos]);
 
 		assert(te);
 
+		if (msti->pos) {
+			te_prev = git_tree_entry_byindex(msti->root,
+				(size_t)msti->strcasecmp_map[msti->pos - 1]);
+
+			if (te_prev->filename_len != te->filename_len ||
+				strcasecmp(te_prev->filename, te->filename)) {
+				msti->enumerated_folder = 0;
+				msti->enumerated_file = 0;
+			}
+		}
+
 		msti->pos++;
 
-		if (te && git_tree_entry__is_tree(te)) {
+		if (msti->enumerated_file)
+			continue;
+
+		if (git_tree_entry__is_tree(te)) {
 			git_tree *subtree;
 
 			if (git_tree_lookup(&subtree, msti->base.repo, &te->oid) < 0)
@@ -815,8 +824,28 @@ static int multisubtree_iterator__next_subtree(
 				return -1;
 			}
 
+			msti->path_revert_len = te->filename_len;
 			git_buf_puts(&msti->path, te->filename);
 			git_tree_free(subtree);
+
+			if (git_buf_oom(&msti->path))
+				return -1;
+
+			msti->enumerated_folder = 1;
+			break;
+		} else if (!msti->enumerated_folder) {
+			msti->current.mode = te->attr;
+			git_oid_cpy(&msti->current.oid, &te->oid);
+
+			msti->path_revert_len = 0;
+			if (git_buf_puts(&msti->path, te->filename) < 0)
+				return -1;
+
+			msti->current.path = msti->path.ptr;
+			msti->current_valid = 1;
+
+			msti->enumerated_file = 1;
+			break;
 		}
 	}
 
@@ -828,37 +857,44 @@ static int multisubtree_iterator__advance(
 	const git_index_entry **entry)
 {
 	multisubtree_iterator *msti = (multisubtree_iterator *)self;
-	const git_index_entry *ie;
+	const git_index_entry *ie = NULL;
 	int error;
 
-	if (msti->current_iter &&
-		(error = git_iterator_advance(msti->current_iter, NULL)) < 0)
-		return error;
+	msti->current_valid = 0;
 
-	while (msti->current_iter) {
-		if ((error = git_iterator_current(msti->current_iter, &ie)) < 0)
-			return error;
-
-		if (ie) {
-			if ((error = multisubtree_iterator__build_current(msti, ie)) < 0)
+	do {
+		if (msti->current_iter) {
+			if ((error = git_iterator_advance(msti->current_iter, &ie)) < 0)
 				return error;
 
-			*entry = &msti->current;
+		iterator_acquire:
+			if (ie) {
+				if ((error = multisubtree_iterator__build_current(msti, ie)) < 0)
+					return error;
 
-			return 0;
+				continue;
+			}
+
+			assert(git_iterator_at_end(msti->current_iter));
+
+			git_iterator_free(msti->current_iter);
+			msti->current_iter = NULL;
 		}
-
-		assert(git_iterator_at_end(msti->current_iter));
-
-		git_iterator_free(msti->current_iter);
-		msti->current_iter = NULL;
 
 		if ((error = multisubtree_iterator__next_subtree(msti)) < 0)
 			return error;
-	}
+
+		if (msti->current_iter) {
+			if ((error = git_iterator_current(msti->current_iter, &ie)) < 0)
+				return error;
+
+			goto iterator_acquire;
+		} else if (!msti->current_valid)
+			break;
+	} while (!msti->current_valid);
 
 	if (entry)
-		*entry = NULL;
+		*entry = msti->current_valid ? &msti->current : NULL;
 
 	return 0;
 }
@@ -888,7 +924,9 @@ static int multisubtree_iterator__reset(
 		msti->current_iter = NULL;
 	}
 
-	msti->pos = msti->start_pos;
+	msti->pos = 0;
+	msti->current_valid = 0;
+	msti->enumerated_file = 0;
 
 	return multisubtree_iterator__next_subtree(msti);
 }
@@ -905,6 +943,16 @@ static void multisubtree_iterator__free(
 	git_buf_free(&msti->path);
 }
 
+static int multisubtree_iterator__strcasecmp_map_cmp(
+	const void *a, const void *b, void *data)
+{
+	git_tree *tree = data;
+	const git_tree_entry *te1 = git_tree_entry_byindex(tree, (size_t)a);
+	const git_tree_entry *te2 = git_tree_entry_byindex(tree, (size_t)b);
+
+	return te1 ? (te2 ? strcasecmp(te1->filename, te2->filename) : 1) : -1;
+}
+
 static int multisubtree_iterator__new(
 	git_iterator **iter,
 	git_tree *tree,
@@ -915,6 +963,7 @@ static int multisubtree_iterator__new(
 	int error;
 	multisubtree_iterator *msti;
 	char *start = NULL, *end = NULL;
+	size_t i;
 
 	if (!tree)
 		return git_iterator_for_nothing(iter, GIT_ITERATOR_IGNORE_CASE);
@@ -922,14 +971,21 @@ static int multisubtree_iterator__new(
 	if ((error = git_tree__dup(&tree, tree)) < 0)
 		return error;
 
+	msti = git__calloc(1, sizeof(multisubtree_iterator) + length * sizeof(void *));
+	GITERR_CHECK_ALLOC(msti);
+
 	ITERATOR_BASE_INIT(msti, multisubtree, MULTISUBTREE);
 
 	git_buf_init(&msti->path, 16);
 	msti->base.repo = git_tree_owner(tree);
 	msti->root = tree;
-	msti->icase_map = icase_map;
-	msti->start_pos = start_pos;
 	msti->length = length;
+
+	for (i = 0; i < length; ++i)
+		msti->strcasecmp_map[i] = icase_map[start_pos + i];
+
+	git__tsort_r(msti->strcasecmp_map, length,
+		multisubtree_iterator__strcasecmp_map_cmp, msti->root);
 
 	if ((error = iterator_update_ignore_case(&msti->base,
 			GIT_ITERATOR_DONT_IGNORE_CASE)) < 0)
@@ -1044,6 +1100,9 @@ int git_iterator_for_index_range(
 	index_iterator *ii;
 
 	GIT_UNUSED(flags);
+
+	ii = git__calloc(1, sizeof(index_iterator));
+	GITERR_CHECK_ALLOC(ii);
 
 	ITERATOR_BASE_INIT(ii, index, INDEX);
 
@@ -1366,6 +1425,9 @@ int git_iterator_for_workdir_range(
 	if ((error = git_repository__ensure_not_bare(
 			repo, "scan working directory")) < 0)
 		return error;
+
+	wi = git__calloc(1, sizeof(workdir_iterator));
+	GITERR_CHECK_ALLOC(wi);
 
 	ITERATOR_BASE_INIT(wi, workdir, WORKDIR);
 	wi->base.repo = repo;

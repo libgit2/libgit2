@@ -379,6 +379,24 @@ void test_diff_iterator__tree_icase(void)
 	git_tree_free(t);
 }
 
+void test_diff_iterator__tree_icase2(void)
+{
+	git_repository *repo = cl_git_sandbox_init("icase.git");
+	git_tree *t = resolve_commit_oid_to_tree(repo,
+		"96fbb4ecc72cb06fd8a837cddb2dbdc1983489fa");
+	git_iterator *i;
+
+	cl_git_pass(git_iterator_for_tree_range(
+		&i, t, GIT_ITERATOR_IGNORE_CASE, NULL, NULL));
+	check_iterator_output(i, strcasecmp, 12);
+
+	cl_git_pass(git_iterator_for_tree_range(
+		&i, t, GIT_ITERATOR_DONT_IGNORE_CASE, NULL, NULL));
+	check_iterator_output(i, strcmp, 23);
+
+	git_tree_free(t);
+}
+
 void test_diff_iterator__tree_icase_seek(void)
 {
 	git_repository *repo = cl_git_sandbox_init("icase.git");
