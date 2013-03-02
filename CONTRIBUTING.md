@@ -97,4 +97,3 @@ base and make a nice first step:
 * Submit a PR to clarify documentation! While we do try to document all of
   the APIs, your fresh eyes on the documentation will find areas that are
   confusing much more easily.
-  

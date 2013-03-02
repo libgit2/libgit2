@@ -211,7 +211,7 @@ GIT_INLINE(result_type) git_modulename_functionname(arg_list);
 
 ## Tests
 
-`libgit2` uses the (clar)[https://github.com/vmg/clar] testing framework.
+`libgit2` uses the [clar](https://github.com/vmg/clar) testing framework.
 
 All PRs should have corresponding tests.
 
