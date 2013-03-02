@@ -15,28 +15,9 @@ static int resolve_to_tree(
 	git_repository *repo, const char *identifier, git_tree **tree)
 {
 	int err = 0;
-	size_t len = strlen(identifier);
-	git_oid oid;
 	git_object *obj = NULL;
 
-	/* try to resolve as OID */
-	if (git_oid_fromstrn(&oid, identifier, len) == 0)
-		git_object_lookup_prefix(&obj, repo, &oid, len, GIT_OBJ_ANY);
-
-	/* try to resolve as reference */
-	if (obj == NULL) {
-		git_reference *ref, *resolved;
-		if (git_reference_lookup(&ref, repo, identifier) == 0) {
-			git_reference_resolve(&resolved, ref);
-			git_reference_free(ref);
-			if (resolved) {
-				git_object_lookup(&obj, repo, git_reference_target(resolved), GIT_OBJ_ANY);
-				git_reference_free(resolved);
-			}
-		}
-	}
-
-	if (obj == NULL)
+	if (git_revparse_single(&obj, repo, identifier) < 0)
 		return GIT_ENOTFOUND;
 
 	switch (git_object_type(obj)) {
