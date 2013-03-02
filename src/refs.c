@@ -568,6 +568,26 @@ int git_reference_foreach(
 	return git_refdb_foreach(refdb, list_flags, callback, payload);
 }
 
+int git_reference_iterator_new(git_reference_iterator **out, git_repository *repo)
+{
+	git_refdb *refdb;
+
+	if (git_repository_refdb__weakptr(&refdb, repo) < 0)
+		return -1;
+
+	return git_refdb_iterator(out, refdb);
+}
+
+int git_reference_next(const char **out, git_reference_iterator *iter)
+{
+	return git_refdb_next(out, iter);
+}
+
+void git_reference_iterator_free(git_reference_iterator *iter)
+{
+	git_refdb_iterator_free(iter);
+}
+
 static int cb__reflist_add(const char *ref, void *data)
 {
 	return git_vector_insert((git_vector *)data, git__strdup(ref));

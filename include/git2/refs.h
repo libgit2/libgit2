@@ -347,6 +347,31 @@ GIT_EXTERN(void) git_reference_free(git_reference *ref);
 GIT_EXTERN(int) git_reference_cmp(git_reference *ref1, git_reference *ref2);
 
 /**
+ * Create an iterator for the repo's references
+ *
+ * @param out pointer in which to store the iterator
+ * @param repo the repository
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_reference_iterator_new(git_reference_iterator **out, git_repository *repo);
+
+/**
+ * Get the next reference name
+ *
+ * @param out pointer in which to store the string
+ * @param iter the iterator
+ * @param 0, GIT_ITEROVER if there are no more; or an error code
+ */
+GIT_EXTERN(int) git_reference_next(const char **out, git_reference_iterator *iter);
+
+/**
+ * Free the iterator and its associated resources
+ *
+ * @param iter the iterator to free
+ */
+GIT_EXTERN(void) git_reference_iterator_free(git_reference_iterator *iter);
+
+/**
  * Perform a callback on each reference in the repository whose name
  * matches the given pattern.
  *

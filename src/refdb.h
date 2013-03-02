@@ -39,6 +39,10 @@ int git_refdb_foreach_glob(
 	git_reference_foreach_cb callback,
 	void *payload);
 
+int git_refdb_iterator(git_reference_iterator **out, git_refdb *db);
+int git_refdb_next(const char **out, git_reference_iterator *iter);
+void git_refdb_iterator_free(git_reference_iterator *iter);
+
 int git_refdb_write(git_refdb *refdb, const git_reference *ref);
 
 int git_refdb_delete(git_refdb *refdb, const git_reference *ref);

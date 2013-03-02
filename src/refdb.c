@@ -124,6 +124,30 @@ int git_refdb_lookup(git_reference **out, git_refdb *db, const char *ref_name)
 	return error;
 }
 
+int git_refdb_iterator(git_reference_iterator **out, git_refdb *db)
+{
+	git_reference_iterator *iter;
+
+	/* FIXME: don't segfault when there is no backends */
+	if (db->backend->iterator(&iter, db->backend) < 0) {
+		git__free(iter);
+		return -1;
+	}
+
+	*out = iter;
+	return 0;
+}
+
+int git_refdb_next(const char **out, git_reference_iterator *iter)
+{
+	return iter->backend->next(out, iter);
+}
+
+void git_refdb_iterator_free(git_reference_iterator *iter)
+{
+	iter->backend->iterator_free(iter);
+}
+
 int git_refdb_foreach(
 	git_refdb *db,
 	unsigned int list_flags,

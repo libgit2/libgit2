@@ -20,6 +20,22 @@
  */
 GIT_BEGIN_DECL
 
+
+/**
+ * Every backend's iterator must have a pointer to itself as the first
+ * element, so the API can talk to it. You'd define your iterator as
+ *
+ *     struct my_iterator {
+ *             git_reference_iterator parent;
+ *             ...
+ *     }
+ *
+ * and assing `iter->parent.backend` to your `git_refdb_backend`.
+ */
+struct git_reference_iterator {
+	git_refdb_backend *backend;
+};
+
 /** An instance for a custom backend */
 struct git_refdb_backend {
     unsigned int version;
@@ -66,6 +82,25 @@ struct git_refdb_backend {
 		void *payload);
 
 	/**
+	 * Allocate an iterator object for the backend
+	 */
+	int (*iterator)(
+		git_reference_iterator **iter,
+		struct git_refdb_backend *backend);
+
+	/**
+	 * Return the current value and advance the iterator.
+	 */
+	int (*next)(
+		const char **name,
+		git_reference_iterator *iter);
+
+	/**
+	 * Free the iterator
+	 */
+	void (*iterator_free)(
+		git_reference_iterator *iter);
+	/*
 	 * Writes the given reference to the refdb.  A refdb implementation
 	 * must provide this function.
 	 */
