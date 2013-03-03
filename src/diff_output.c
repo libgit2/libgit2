@@ -1509,6 +1509,10 @@ int git_diff_get_patch(
 	if (git_diff_delta__should_skip(ctxt.opts, delta))
 		return 0;
 
+	/* Don't load the patch if the user doesn't want it */
+	if (!patch_ptr)
+		return 0;
+
 	patch = diff_patch_alloc(&ctxt, delta);
 	if (!patch)
 		return -1;

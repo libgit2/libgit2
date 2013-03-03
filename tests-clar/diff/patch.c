@@ -239,6 +239,7 @@ void test_diff_patch__hunks_have_correct_line_numbers(void)
 	git_diff_patch_free(patch);
 	git_diff_list_free(diff);
 	git_tree_free(head);
+	git_config_free(cfg);
 }
 
 static void check_single_patch_stats(
@@ -310,4 +311,5 @@ void test_diff_patch__line_counts_with_eofnl(void)
 	check_single_patch_stats(g_repo, 1, 1, 1);
 
 	git_buf_free(&content);
+	git_config_free(cfg);
 }

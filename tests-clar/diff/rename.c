@@ -274,6 +274,7 @@ void test_diff_rename__not_exact_match(void)
 	cl_assert_equal_i(2, exp.file_status[GIT_DELTA_MODIFIED]);
 	cl_assert_equal_i(2, exp.file_status[GIT_DELTA_ADDED]);
 	cl_assert_equal_i(2, exp.file_status[GIT_DELTA_DELETED]);
+	git_diff_list_free(diff);
 
 	/* git diff -M -C \
 	 *          1c068dee5790ef1580cfc4cd670915b48d790084 \

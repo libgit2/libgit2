@@ -169,4 +169,6 @@ void test_stash_drop__dropping_the_top_stash_updates_the_stash_reference(void)
 
 	cl_assert_equal_i(
 		true, git_oid_cmp(&oid, git_object_id(next_top_stash)) == 0);
+
+	git_object_free(next_top_stash);
 }
