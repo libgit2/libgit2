@@ -21,8 +21,6 @@
 #include "git2/indexer.h"
 #include "git2/config.h"
 
-GIT__USE_OIDMAP;
-
 struct unpacked {
 	git_pobject *object;
 	void *data;

@@ -17,6 +17,7 @@
 #include "posix.h"
 #include "pack.h"
 #include "filebuf.h"
+#include "oidmap.h"
 
 #define UINT31_MAX (0x7FFFFFFF)
 
@@ -120,14 +121,6 @@ static int objects_cmp(const void *a, const void *b)
 	const struct entry *entryb = b;
 
 	return git_oid_cmp(&entrya->oid, &entryb->oid);
-}
-
-static int cache_cmp(const void *a, const void *b)
-{
-	const struct git_pack_entry *ea = a;
-	const struct git_pack_entry *eb = b;
-
-	return git_oid_cmp(&ea->sha1, &eb->sha1);
 }
 
 int git_indexer_stream_new(
@@ -271,7 +264,8 @@ static int crc_object(uint32_t *crc_out, git_mwindow_file *mwf, git_off_t start,
 
 static int store_object(git_indexer_stream *idx)
 {
-	int i;
+	int i, error;
+	khiter_t k;
 	git_oid oid;
 	struct entry *entry;
 	git_off_t entry_size;
@@ -296,10 +290,14 @@ static int store_object(git_indexer_stream *idx)
 
 	git_oid_cpy(&pentry->sha1, &oid);
 	pentry->offset = entry_start;
-	if (git_vector_insert(&idx->pack->cache, pentry) < 0) {
+
+	k = kh_put(oid, idx->pack->idx_cache, &pentry->sha1, &error);
+	if (!error) {
 		git__free(pentry);
 		goto on_error;
 	}
+
+	kh_value(idx->pack->idx_cache, k) = pentry;
 
 	git_oid_cpy(&entry->oid, &oid);
 
@@ -324,7 +322,8 @@ on_error:
 
 static int hash_and_save(git_indexer_stream *idx, git_rawobj *obj, git_off_t entry_start)
 {
-	int i;
+	int i, error;
+	khiter_t k;
 	git_oid oid;
 	size_t entry_size;
 	struct entry *entry;
@@ -351,10 +350,13 @@ static int hash_and_save(git_indexer_stream *idx, git_rawobj *obj, git_off_t ent
 
 	git_oid_cpy(&pentry->sha1, &oid);
 	pentry->offset = entry_start;
-	if (git_vector_insert(&idx->pack->cache, pentry) < 0) {
+	k = kh_put(oid, idx->pack->idx_cache, &pentry->sha1, &error);
+	if (!error) {
 		git__free(pentry);
 		goto on_error;
 	}
+
+	kh_value(idx->pack->idx_cache, k) = pentry;
 
 	git_oid_cpy(&entry->oid, &oid);
 	entry->crc = crc32(0L, Z_NULL, 0);
@@ -426,8 +428,8 @@ int git_indexer_stream_add(git_indexer_stream *idx, const void *data, size_t siz
 		/* for now, limit to 2^32 objects */
 		assert(idx->nr_objects == (size_t)((unsigned int)idx->nr_objects));
 
-		if (git_vector_init(&idx->pack->cache, (unsigned int)idx->nr_objects, cache_cmp) < 0)
-			return -1;
+		idx->pack->idx_cache = git_oidmap_alloc();
+		GITERR_CHECK_ALLOC(idx->pack->idx_cache);
 
 		idx->pack->has_cache = 1;
 		if (git_vector_init(&idx->objects, (unsigned int)idx->nr_objects, objects_cmp) < 0)
@@ -718,9 +720,9 @@ on_error:
 
 void git_indexer_stream_free(git_indexer_stream *idx)
 {
+	khiter_t k;
 	unsigned int i;
 	struct entry *e;
-	struct git_pack_entry *pe;
 	struct delta_info *delta;
 
 	if (idx == NULL)
@@ -729,11 +731,16 @@ void git_indexer_stream_free(git_indexer_stream *idx)
 	git_vector_foreach(&idx->objects, i, e)
 		git__free(e);
 	git_vector_free(&idx->objects);
+
 	if (idx->pack) {
-		git_vector_foreach(&idx->pack->cache, i, pe)
-			git__free(pe);
-		git_vector_free(&idx->pack->cache);
+		for (k = kh_begin(idx->pack->idx_cache); k != kh_end(idx->pack->idx_cache); k++) {
+			if (kh_exist(idx->pack->idx_cache, k))
+				git__free(kh_value(idx->pack->idx_cache, k));
+		}
+
+		git_oidmap_free(idx->pack->idx_cache);
 	}
+
 	git_vector_foreach(&idx->deltas, i, delta)
 		git__free(delta);
 	git_vector_free(&idx->deltas);

@@ -760,13 +760,14 @@ git_off_t get_delta_base(
 	} else if (type == GIT_OBJ_REF_DELTA) {
 		/* If we have the cooperative cache, search in it first */
 		if (p->has_cache) {
-			size_t pos;
-			struct git_pack_entry key;
+			khiter_t k;
+			git_oid oid;
 
-			git_oid_fromraw(&key.sha1, base_info);
-			if (!git_vector_bsearch(&pos, &p->cache, &key)) {
+			git_oid_fromraw(&oid, base_info);
+			k = kh_get(oid, p->idx_cache, &oid);
+			if (k != kh_end(p->idx_cache)) {
 				*curpos += 20;
-				return ((struct git_pack_entry *)git_vector_get(&p->cache, pos))->offset;
+				return ((struct git_pack_entry *)kh_value(p->idx_cache, k))->offset;
 			}
 		}
 		/* The base entry _must_ be in the same pack */
