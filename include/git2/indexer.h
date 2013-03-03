@@ -33,7 +33,6 @@ typedef struct git_transfer_progress {
  */
 typedef int (*git_transfer_progress_callback)(const git_transfer_progress *stats, void *payload);
 
-typedef struct git_indexer git_indexer;
 typedef struct git_indexer_stream git_indexer_stream;
 
 /**
@@ -85,53 +84,6 @@ GIT_EXTERN(const git_oid *) git_indexer_stream_hash(const git_indexer_stream *id
  * @param idx the indexer to free
  */
 GIT_EXTERN(void) git_indexer_stream_free(git_indexer_stream *idx);
-
-/**
- * Create a new indexer instance
- *
- * @param out where to store the indexer instance
- * @param packname the absolute filename of the packfile to index
- */
-GIT_EXTERN(int) git_indexer_new(git_indexer **out, const char *packname);
-
-/**
- * Iterate over the objects in the packfile and extract the information
- *
- * Indexing a packfile can be very expensive so this function is
- * expected to be run in a worker thread and the stats used to provide
- * feedback the user.
- *
- * @param idx the indexer instance
- * @param stats storage for the running state
- */
-GIT_EXTERN(int) git_indexer_run(git_indexer *idx, git_transfer_progress *stats);
-
-/**
- * Write the index file to disk.
- *
- * The file will be stored as pack-$hash.idx in the same directory as
- * the packfile.
- *
- * @param idx the indexer instance
- */
-GIT_EXTERN(int) git_indexer_write(git_indexer *idx);
-
-/**
- * Get the packfile's hash
- *
- * A packfile's name is derived from the sorted hashing of all object
- * names. This is only correct after the index has been written to disk.
- *
- * @param idx the indexer instance
- */
-GIT_EXTERN(const git_oid *) git_indexer_hash(const git_indexer *idx);
-
-/**
- * Free the indexer and its resources
- *
- * @param idx the indexer to free
- */
-GIT_EXTERN(void) git_indexer_free(git_indexer *idx);
 
 GIT_END_DECL
 
