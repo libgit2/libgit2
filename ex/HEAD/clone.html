@@ -55,7 +55,10 @@
 <span class="cp"># include &lt;unistd.h&gt;</span>
 <span class="cp">#endif</span>
 
-<span class="cm">/* Shamelessly borrowed from http://stackoverflow.com/questions/3417837/ */</span>
+<span class="cm">/* Shamelessly borrowed from http://stackoverflow.com/questions/3417837/</span>
+<span class="cm"> * with permission of the original author, Martin Pool.</span>
+<span class="cm"> * http://sourcefrog.net/weblog/software/languages/C/unused.html</span>
+<span class="cm"> */</span>
 <span class="cp">#ifdef UNUSED</span>
 <span class="cp">#elif defined(__GNUC__)</span>
 <span class="cp"># define UNUSED(x) UNUSED_ ## x __attribute__((unused))</span>
@@ -90,11 +93,12 @@
        <span class="n">pd</span><span class="o">-&gt;</span><span class="n">path</span><span class="p">);</span>
 <span class="p">}</span>
 
-<span class="k">static</span> <span class="kt">void</span> <span class="nf">fetch_progress</span><span class="p">(</span><span class="k">const</span> <span class="n">git_transfer_progress</span> <span class="o">*</span><span class="n">stats</span><span class="p">,</span> <span class="kt">void</span> <span class="o">*</span><span class="n">payload</span><span class="p">)</span>
+<span class="k">static</span> <span class="kt">int</span> <span class="nf">fetch_progress</span><span class="p">(</span><span class="k">const</span> <span class="n">git_transfer_progress</span> <span class="o">*</span><span class="n">stats</span><span class="p">,</span> <span class="kt">void</span> <span class="o">*</span><span class="n">payload</span><span class="p">)</span>
 <span class="p">{</span>
   <span class="n">progress_data</span> <span class="o">*</span><span class="n">pd</span> <span class="o">=</span> <span class="p">(</span><span class="n">progress_data</span><span class="o">*</span><span class="p">)</span><span class="n">payload</span><span class="p">;</span>
   <span class="n">pd</span><span class="o">-&gt;</span><span class="n">fetch_progress</span> <span class="o">=</span> <span class="o">*</span><span class="n">stats</span><span class="p">;</span>
   <span class="n">print_progress</span><span class="p">(</span><span class="n">pd</span><span class="p">);</span>
+  <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
 <span class="p">}</span>
 <span class="k">static</span> <span class="kt">void</span> <span class="nf">checkout_progress</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">path</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">cur</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">tot</span><span class="p">,</span> <span class="kt">void</span> <span class="o">*</span><span class="n">payload</span><span class="p">)</span>
 <span class="p">{</span>
