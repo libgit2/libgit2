@@ -1143,6 +1143,9 @@ static int checkout_data_init(
 			if ((error = git_repository_index(&data->index, data->repo)) < 0 ||
 				(error = git_index_read(data->index)) < 0)
 				goto cleanup;
+			
+			/* clear the REUC when doing a tree or commit checkout */
+			git_index_reuc_clear(data->index);
 		}
 	}
 
