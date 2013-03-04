@@ -92,7 +92,7 @@ GIT_EXTERN(void) git_revwalk_reset(git_revwalk *walker);
  *
  * The given commit will be used as one of the roots
  * when starting the revision walk. At least one commit
- * must be pushed the repository before a walk can
+ * must be pushed onto the walker before a walk can
  * be started.
  *
  * @param walk the walker being used for the traversal.
