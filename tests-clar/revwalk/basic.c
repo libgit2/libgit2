@@ -56,22 +56,17 @@ static int get_commit_index(git_oid *raw_oid)
 	return -1;
 }
 
-static int test_walk(git_revwalk *walk, const git_oid *root,
-		int flags, const int possible_results[][6], int results_count)
+static int test_walk_only(git_revwalk *walk,
+		const int possible_results[][commit_count], int results_count)
 {
 	git_oid oid;
-
 	int i;
 	int result_array[commit_count];
-
-	git_revwalk_sorting(walk, flags);
-	git_revwalk_push(walk, root);
 
 	for (i = 0; i < commit_count; ++i)
 		result_array[i] = -1;
 
 	i = 0;
-
 	while (git_revwalk_next(&oid, walk) == 0) {
 		result_array[i++] = get_commit_index(&oid);
 		/*{
@@ -88,6 +83,15 @@ static int test_walk(git_revwalk *walk, const git_oid *root,
 			return 0;
 
 	return GIT_ERROR;
+}
+
+static int test_walk(git_revwalk *walk, const git_oid *root,
+		int flags, const int possible_results[][6], int results_count)
+{
+	git_revwalk_sorting(walk, flags);
+	git_revwalk_push(walk, root);
+
+	return test_walk_only(walk, possible_results, results_count);
 }
 
 static git_repository *_repo;
