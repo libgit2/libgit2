@@ -38,6 +38,10 @@ static const int commit_sorting_time_reverse[][6] = {
 	{4, 5, 2, 1, 3, 0}
 };
 
+static const int commit_sorting_segment[][6] = {
+	{1, 2, -1, -1, -1, -1}
+};
+
 #define commit_count 6
 static const int result_bytes = 24;
 
@@ -191,4 +195,12 @@ void test_revwalk_basic__disallow_non_commit(void)
 
 	cl_git_pass(git_oid_fromstr(&oid, "521d87c1ec3aef9824daf6d96cc0ae3710766d91"));
 	cl_git_fail(git_revwalk_push(_walk, &oid));
+}
+
+void test_revwalk_basic__push_range(void)
+{
+	git_revwalk_reset(_walk);
+	git_revwalk_sorting(_walk, 0);
+	cl_git_pass(git_revwalk_push_range(_walk, "9fd738e~2..9fd738e"));
+	cl_git_pass(test_walk_only(_walk, commit_sorting_segment, 1));
 }
