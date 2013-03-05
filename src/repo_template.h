@@ -11,10 +11,10 @@
 #define GIT_OBJECTS_PACK_DIR GIT_OBJECTS_DIR "pack/"
 
 #define GIT_HOOKS_DIR "hooks/"
-#define GIT_HOOKS_DIR_MODE 0755
+#define GIT_HOOKS_DIR_MODE 0777
 
 #define GIT_HOOKS_README_FILE GIT_HOOKS_DIR "README.sample"
-#define GIT_HOOKS_README_MODE 0755
+#define GIT_HOOKS_README_MODE 0777
 #define GIT_HOOKS_README_CONTENT \
 "#!/bin/sh\n"\
 "#\n"\
@@ -23,16 +23,16 @@
 "# more information.\n"
 
 #define GIT_INFO_DIR "info/"
-#define GIT_INFO_DIR_MODE 0755
+#define GIT_INFO_DIR_MODE 0777
 
 #define GIT_INFO_EXCLUDE_FILE GIT_INFO_DIR "exclude"
-#define GIT_INFO_EXCLUDE_MODE 0644
+#define GIT_INFO_EXCLUDE_MODE 0666
 #define GIT_INFO_EXCLUDE_CONTENT \
 "# File patterns to ignore; see `git help ignore` for more information.\n"\
 "# Lines that start with '#' are comments.\n"
 
 #define GIT_DESC_FILE "description"
-#define GIT_DESC_MODE 0644
+#define GIT_DESC_MODE 0666
 #define GIT_DESC_CONTENT \
 "Unnamed repository; edit this file 'description' to name the repository.\n"
 

@@ -1599,7 +1599,8 @@ static int ensure_segment_validity(const char *name)
 {
 	const char *current = name;
 	char prev = '\0';
-	int lock_len = strlen(GIT_FILELOCK_EXTENSION);
+	const int lock_len = (int)strlen(GIT_FILELOCK_EXTENSION);
+	int segment_len;
 
 	if (*current == '.')
 		return -1; /* Refname starts with "." */
@@ -1620,12 +1621,14 @@ static int ensure_segment_validity(const char *name)
 		prev = *current;
 	}
 
+	segment_len = (int)(current - name);
+
 	/* A refname component can not end with ".lock" */
-	if (current - name >= lock_len &&
+	if (segment_len >= lock_len &&
 		!memcmp(current - lock_len, GIT_FILELOCK_EXTENSION, lock_len))
 			return -1;
 
-	return (int)(current - name);
+	return segment_len;
 }
 
 static bool is_all_caps_and_underscore(const char *name, size_t len)
@@ -1700,7 +1703,7 @@ int git_reference__normalize_name(
 		/* No empty segment is allowed when not normalizing */
 		if (segment_len == 0 && !normalize)
 			goto cleanup;
-		
+
 		if (current[segment_len] == '\0')
 			break;
 
