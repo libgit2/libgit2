@@ -104,6 +104,7 @@ GIT_EXTERN(int) git_packbuilder_insert_tree(git_packbuilder *pb, const git_oid *
  */
 GIT_EXTERN(int) git_packbuilder_write(git_packbuilder *pb, const char *file);
 
+typedef int (*git_packbuilder_foreach_cb)(void *buf, size_t size, void *payload);
 /**
  * Create the new pack and pass each object to the callback
  *
@@ -112,7 +113,6 @@ GIT_EXTERN(int) git_packbuilder_write(git_packbuilder *pb, const char *file);
  * @param payload the callback's data
  * @return 0 or an error code
  */
-typedef int (*git_packbuilder_foreach_cb)(void *buf, size_t size, void *payload);
 GIT_EXTERN(int) git_packbuilder_foreach(git_packbuilder *pb, git_packbuilder_foreach_cb cb, void *payload);
 
 /**
