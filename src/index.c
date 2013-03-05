@@ -297,18 +297,8 @@ int git_index_new(git_index **out)
 
 static void index_free(git_index *index)
 {
-	git_index_entry *e;
-	git_index_reuc_entry *reuc;
-	size_t i;
-
 	git_index_clear(index);
-	git_vector_foreach(&index->entries, i, e) {
-		index_entry_free(e);
-	}
 	git_vector_free(&index->entries);
-	git_vector_foreach(&index->reuc, i, reuc) {
-		index_entry_reuc_free(reuc);
-	}
 	git_vector_free(&index->reuc);
 
 	git__free(index->index_file_path);
@@ -335,16 +325,10 @@ void git_index_clear(git_index *index)
 		git__free(e->path);
 		git__free(e);
 	}
-
-	for (i = 0; i < index->reuc.length; ++i) {
-		git_index_reuc_entry *e;
-		e = git_vector_get(&index->reuc, i);
-		git__free(e->path);
-		git__free(e);
-	}
-
 	git_vector_clear(&index->entries);
-	git_vector_clear(&index->reuc);
+
+	git_index_reuc_clear(index);
+	
 	git_futils_filestamp_set(&index->stamp, NULL);
 
 	git_tree_cache_free(index->tree);
@@ -1149,6 +1133,21 @@ int git_index_reuc_remove(git_index *index, size_t position)
 		index_entry_reuc_free(reuc);
 
 	return error;
+}
+
+void git_index_reuc_clear(git_index *index)
+{
+	size_t i;
+	git_index_reuc_entry *reuc;
+
+	assert(index);
+
+	git_vector_foreach(&index->reuc, i, reuc) {
+		git__free(reuc->path);
+		git__free(reuc);
+	}
+
+	git_vector_clear(&index->reuc);
 }
 
 static int index_error_invalid(const char *message)
