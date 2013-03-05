@@ -935,7 +935,7 @@ static int repo_write_gitlink(
 	error = git_buf_printf(&buf, "%s %s", GIT_FILE_CONTENT_PREFIX, to_repo);
 
 	if (!error)
-		error = repo_write_template(in_dir, true, DOT_GIT, 0644, true, buf.ptr);
+		error = repo_write_template(in_dir, true, DOT_GIT, 0666, true, buf.ptr);
 
 cleanup:
 	git_buf_free(&buf);
@@ -945,7 +945,7 @@ cleanup:
 static mode_t pick_dir_mode(git_repository_init_options *opts)
 {
 	if (opts->mode == GIT_REPOSITORY_INIT_SHARED_UMASK)
-		return 0755;
+		return 0777;
 	if (opts->mode == GIT_REPOSITORY_INIT_SHARED_GROUP)
 		return (0775 | S_ISGID);
 	if (opts->mode == GIT_REPOSITORY_INIT_SHARED_ALL)
@@ -1006,17 +1006,9 @@ static int repo_init_structure(
 			tdir = GIT_TEMPLATE_DIR;
 		}
 
-		/* FIXME: GIT_CPDIR_CHMOD cannot applied here as an attempt
-		 * would be made to chmod() all directories up to the last
-		 * component of repo_dir, e.g., also /home etc. Recall that
-		 * repo_dir is prettified at this point.
-		 *
-		 * Best probably would be to have the same logic as in
-		 * git_futils_mkdir(), i.e., to separate the base from
-		 * the path.
-		 */
 		error = git_futils_cp_r(tdir, repo_dir,
-			GIT_CPDIR_COPY_SYMLINKS /*| GIT_CPDIR_CHMOD*/, dmode);
+			GIT_CPDIR_COPY_SYMLINKS | GIT_CPDIR_CHMOD_DIRS |
+			GIT_CPDIR_SIMPLE_TO_MODE, dmode);
 
 		if (error < 0) {
 			if (strcmp(tdir, GIT_TEMPLATE_DIR) != 0)
@@ -1051,6 +1043,17 @@ static int repo_init_structure(
 	return error;
 }
 
+static int mkdir_parent(git_buf *buf, uint32_t mode, bool skip2)
+{
+	/* When making parent directories during repository initialization
+	 * don't try to set gid or grant world write access
+	 */
+	return git_futils_mkdir(
+		buf->ptr, NULL, mode & ~(S_ISGID | 0002),
+		GIT_MKDIR_PATH | GIT_MKDIR_VERIFY_DIR |
+		(skip2 ? GIT_MKDIR_SKIP_LAST2 : GIT_MKDIR_SKIP_LAST));
+}
+
 static int repo_init_directories(
 	git_buf *repo_path,
 	git_buf *wd_path,
@@ -1058,14 +1061,36 @@ static int repo_init_directories(
 	git_repository_init_options *opts)
 {
 	int error = 0;
-	bool add_dotgit, has_dotgit, natural_wd;
+	bool is_bare, add_dotgit, has_dotgit, natural_wd;
 	mode_t dirmode;
+
+	/* There are three possible rules for what we are allowed to create:
+	 * - MKPATH means anything we need
+	 * - MKDIR means just the .git directory and its parent and the workdir
+	 * - Neither means only the .git directory can be created
+	 *
+	 * There are 5 "segments" of path that we might need to deal with:
+	 * 1. The .git directory
+	 * 2. The parent of the .git directory
+	 * 3. Everything above the parent of the .git directory
+	 * 4. The working directory (often the same as #2)
+	 * 5. Everything above the working directory (often the same as #3)
+	 *
+	 * For all directories created, we start with the init_mode value for
+	 * permissions and then strip off bits in some cases:
+	 *
+	 * For MKPATH, we create #3 (and #5) paths without S_ISGID or S_IWOTH
+	 * For MKPATH and MKDIR, we create #2 (and #4) without S_ISGID
+	 * For all rules, we create #1 using the untouched init_mode
+	 */
 
 	/* set up repo path */
 
+	is_bare = ((opts->flags & GIT_REPOSITORY_INIT_BARE) != 0);
+
 	add_dotgit =
 		(opts->flags & GIT_REPOSITORY_INIT_NO_DOTGIT_DIR) == 0 &&
-		(opts->flags & GIT_REPOSITORY_INIT_BARE) == 0 &&
+		!is_bare &&
 		git__suffixcmp(given_repo, "/" DOT_GIT) != 0 &&
 		git__suffixcmp(given_repo, "/" GIT_DIR) != 0;
 
@@ -1078,7 +1103,7 @@ static int repo_init_directories(
 
 	/* set up workdir path */
 
-	if ((opts->flags & GIT_REPOSITORY_INIT_BARE) == 0) {
+	if (!is_bare) {
 		if (opts->workdir_path) {
 			if (git_path_join_unrooted(
 					wd_path, opts->workdir_path, repo_path->ptr, NULL) < 0)
@@ -1110,29 +1135,44 @@ static int repo_init_directories(
 
 	dirmode = pick_dir_mode(opts);
 
-	if ((opts->flags & GIT_REPOSITORY_INIT_MKDIR) != 0 && has_dotgit) {
-		git_buf p = GIT_BUF_INIT;
-		if ((error = git_path_dirname_r(&p, repo_path->ptr)) >= 0)
-			error = git_futils_mkdir(p.ptr, NULL, dirmode, 0);
-		git_buf_free(&p);
+	if ((opts->flags & GIT_REPOSITORY_INIT_MKPATH) != 0) {
+		/* create path #5 */
+		if (wd_path->size > 0 &&
+			(error = mkdir_parent(wd_path, dirmode, false)) < 0)
+			return error;
+
+		/* create path #3 (if not the same as #5) */
+		if (!natural_wd &&
+			(error = mkdir_parent(repo_path, dirmode, has_dotgit)) < 0)
+			return error;
+	}
+
+	if ((opts->flags & GIT_REPOSITORY_INIT_MKDIR) != 0 ||
+		(opts->flags & GIT_REPOSITORY_INIT_MKPATH) != 0)
+	{
+		/* create path #4 */
+		if (wd_path->size > 0 &&
+			(error = git_futils_mkdir(
+				wd_path->ptr, NULL, dirmode & ~S_ISGID,
+				GIT_MKDIR_VERIFY_DIR)) < 0)
+			return error;
+
+		/* create path #2 (if not the same as #4) */
+		if (!natural_wd &&
+			(error = git_futils_mkdir(
+				repo_path->ptr, NULL, dirmode & ~S_ISGID,
+				GIT_MKDIR_VERIFY_DIR | GIT_MKDIR_SKIP_LAST)) < 0)
+			return error;
 	}
 
 	if ((opts->flags & GIT_REPOSITORY_INIT_MKDIR) != 0 ||
 		(opts->flags & GIT_REPOSITORY_INIT_MKPATH) != 0 ||
 		has_dotgit)
 	{
-		uint32_t mkflag = GIT_MKDIR_CHMOD;
-		if ((opts->flags & GIT_REPOSITORY_INIT_MKPATH) != 0)
-			mkflag |= GIT_MKDIR_PATH;
-		error = git_futils_mkdir(repo_path->ptr, NULL, dirmode, mkflag);
+		/* create path #1 */
+		error = git_futils_mkdir(repo_path->ptr, NULL, dirmode,
+			GIT_MKDIR_VERIFY_DIR | ((dirmode & S_ISGID) ? GIT_MKDIR_CHMOD : 0));
 	}
-
-	if (wd_path->size > 0 &&
-		!natural_wd &&
-		((opts->flags & GIT_REPOSITORY_INIT_MKDIR) != 0 ||
-		 (opts->flags & GIT_REPOSITORY_INIT_MKPATH) != 0))
-		error = git_futils_mkdir(wd_path->ptr, NULL, dirmode & ~S_ISGID,
-			(opts->flags & GIT_REPOSITORY_INIT_MKPATH) ? GIT_MKDIR_PATH : 0);
 
 	/* prettify both directories now that they are created */
 

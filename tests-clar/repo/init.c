@@ -9,7 +9,7 @@ enum repo_mode {
 	BARE_REPOSITORY = 1
 };
 
-static git_repository *_repo;
+static git_repository *_repo = NULL;
 
 void test_repo_init__initialize(void)
 {
@@ -363,35 +363,165 @@ void test_repo_init__extended_1(void)
 	cl_fixture_cleanup("root");
 }
 
+static void assert_hooks_match(
+	const char *template_dir,
+	const char *repo_dir,
+	const char *hook_path,
+	bool core_filemode)
+{
+	git_buf expected = GIT_BUF_INIT;
+	git_buf actual = GIT_BUF_INIT;
+	struct stat expected_st, st;
+
+	cl_git_pass(git_buf_joinpath(&expected, template_dir, hook_path));
+	cl_git_pass(git_path_lstat(expected.ptr, &expected_st));
+
+	cl_git_pass(git_buf_joinpath(&actual, repo_dir, hook_path));
+	cl_git_pass(git_path_lstat(actual.ptr, &st));
+
+	cl_assert(expected_st.st_size == st.st_size);
+
+	if (!core_filemode) {
+		expected_st.st_mode = expected_st.st_mode & ~0111;
+		st.st_mode = st.st_mode & ~0111;
+	}
+
+	cl_assert_equal_i((int)expected_st.st_mode, (int)st.st_mode);
+
+	git_buf_free(&expected);
+	git_buf_free(&actual);
+}
+
+static void assert_mode_seems_okay(
+	const char *base, const char *path,
+	git_filemode_t expect_mode, bool expect_setgid, bool core_filemode)
+{
+	git_buf full = GIT_BUF_INIT;
+	struct stat st;
+
+	cl_git_pass(git_buf_joinpath(&full, base, path));
+	cl_git_pass(git_path_lstat(full.ptr, &st));
+	git_buf_free(&full);
+
+	if (!core_filemode) {
+		expect_mode = expect_mode & ~0111;
+		st.st_mode = st.st_mode & ~0111;
+		expect_setgid = false;
+	}
+
+	if (S_ISGID != 0) {
+		if (expect_setgid)
+			cl_assert((st.st_mode & S_ISGID) != 0);
+		else
+			cl_assert((st.st_mode & S_ISGID) == 0);
+	}
+
+	if ((expect_mode & 0111) != 0)
+		cl_assert((st.st_mode & 0111) != 0);
+	else
+		cl_assert((st.st_mode & 0111) == 0);
+
+	cl_assert((expect_mode & 0170000) == (st.st_mode & 0170000));
+}
+
 void test_repo_init__extended_with_template(void)
 {
 	git_buf expected = GIT_BUF_INIT;
 	git_buf actual = GIT_BUF_INIT;
-
 	git_repository_init_options opts = GIT_REPOSITORY_INIT_OPTIONS_INIT;
 
-	opts.flags = GIT_REPOSITORY_INIT_MKPATH | GIT_REPOSITORY_INIT_BARE | GIT_REPOSITORY_INIT_EXTERNAL_TEMPLATE;
+	cl_set_cleanup(&cleanup_repository, "templated.git");
+
+	opts.flags = GIT_REPOSITORY_INIT_MKPATH | GIT_REPOSITORY_INIT_BARE |
+		GIT_REPOSITORY_INIT_EXTERNAL_TEMPLATE;
 	opts.template_path = cl_fixture("template");
 
 	cl_git_pass(git_repository_init_ext(&_repo, "templated.git", &opts));
 
 	cl_assert(git_repository_is_bare(_repo));
+
 	cl_assert(!git__suffixcmp(git_repository_path(_repo), "/templated.git/"));
 
-	cl_assert(git_futils_readbuffer(&expected,cl_fixture("template/description")) == GIT_OK);
-	cl_assert(git_futils_readbuffer(&actual,"templated.git/description") == GIT_OK);
+	cl_git_pass(git_futils_readbuffer(
+		&expected, cl_fixture("template/description")));
+	cl_git_pass(git_futils_readbuffer(
+		&actual, "templated.git/description"));
 
-	cl_assert(!git_buf_cmp(&expected,&actual));
+	cl_assert_equal_s(expected.ptr, actual.ptr);
 
 	git_buf_free(&expected);
 	git_buf_free(&actual);
 
-	cleanup_repository("templated.git");
+	assert_hooks_match(
+		cl_fixture("template"), git_repository_path(_repo),
+		"hooks/update.sample", true);
+
+	assert_hooks_match(
+		cl_fixture("template"), git_repository_path(_repo),
+		"hooks/link.sample", true);
+}
+
+void test_repo_init__extended_with_template_and_shared_mode(void)
+{
+	git_buf expected = GIT_BUF_INIT;
+	git_buf actual = GIT_BUF_INIT;
+	git_repository_init_options opts = GIT_REPOSITORY_INIT_OPTIONS_INIT;
+	git_config *config;
+	int filemode = true;
+	const char *repo_path = NULL;
+
+	cl_set_cleanup(&cleanup_repository, "init_shared_from_tpl");
+
+	opts.flags = GIT_REPOSITORY_INIT_MKPATH |
+		GIT_REPOSITORY_INIT_EXTERNAL_TEMPLATE;
+	opts.template_path = cl_fixture("template");
+	opts.mode = GIT_REPOSITORY_INIT_SHARED_GROUP;
+
+	cl_git_pass(git_repository_init_ext(&_repo, "init_shared_from_tpl", &opts));
+
+	cl_assert(!git_repository_is_bare(_repo));
+	cl_assert(!git__suffixcmp(git_repository_path(_repo), "/init_shared_from_tpl/.git/"));
+
+	cl_git_pass(git_repository_config(&config, _repo));
+	cl_git_pass(git_config_get_bool(&filemode, config, "core.filemode"));
+	git_config_free(config);
+
+	cl_git_pass(git_futils_readbuffer(
+		&expected, cl_fixture("template/description")));
+	cl_git_pass(git_futils_readbuffer(
+		&actual, "init_shared_from_tpl/.git/description"));
+
+	cl_assert_equal_s(expected.ptr, actual.ptr);
+
+	git_buf_free(&expected);
+	git_buf_free(&actual);
+
+	repo_path = git_repository_path(_repo);
+	assert_mode_seems_okay(repo_path, "hooks",
+		GIT_FILEMODE_TREE | GIT_REPOSITORY_INIT_SHARED_GROUP, true, filemode);
+	assert_mode_seems_okay(repo_path, "info",
+		GIT_FILEMODE_TREE | GIT_REPOSITORY_INIT_SHARED_GROUP, true, filemode);
+	assert_mode_seems_okay(repo_path, "description",
+		GIT_FILEMODE_BLOB, false, filemode);
+
+	/* for a non-symlinked hook, it should have shared permissions now */
+	assert_hooks_match(
+		cl_fixture("template"), git_repository_path(_repo),
+		"hooks/update.sample", filemode);
+
+	/* for a symlinked hook, the permissions still should match the
+	 * source link, not the GIT_REPOSITORY_INIT_SHARED_GROUP value
+	 */
+	assert_hooks_match(
+		cl_fixture("template"), git_repository_path(_repo),
+		"hooks/link.sample", filemode);
 }
 
 void test_repo_init__can_reinit_an_initialized_repository(void)
 {
 	git_repository *reinit;
+
+	cl_set_cleanup(&cleanup_repository, "extended");
 
 	cl_git_pass(git_futils_mkdir("extended", NULL, 0775, 0));
 	cl_git_pass(git_repository_init(&_repo, "extended", false));
@@ -401,5 +531,4 @@ void test_repo_init__can_reinit_an_initialized_repository(void)
 	cl_assert_equal_s(git_repository_path(_repo), git_repository_path(reinit));
 
 	git_repository_free(reinit);
-	cleanup_repository("extended");
 }

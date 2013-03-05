@@ -11,7 +11,7 @@ void test_refs_branches_remote__initialize(void)
 {
 	g_repo = cl_git_sandbox_init("testrepo");
 
-	expected_remote_name_length = strlen(expected_remote_name) + 1;
+	expected_remote_name_length = (int)strlen(expected_remote_name) + 1;
 }
 
 void test_refs_branches_remote__cleanup(void)
