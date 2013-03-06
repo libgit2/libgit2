@@ -584,7 +584,7 @@ int git_note_foreach(
 	void *payload)
 {
 	int error;
-	git_iterator *iter = NULL;
+	git_note_iterator *iter = NULL;
 	git_tree *tree = NULL;
 	git_commit *commit = NULL;
 	git_oid annotated_object_id;
@@ -612,8 +612,17 @@ int git_note_foreach(
 	return error;
 }
 
+void git_note_iterator_free(git_note_iterator *it)
+{
+	if (it == NULL)
+		return;
+
+	git_iterator_free(it);
+}
+
+
 int git_note_iterator_new(
-	git_iterator **it,
+	git_note_iterator **it,
 	git_repository *repo,
 	const char *notes_ref
 )
@@ -624,7 +633,7 @@ int git_note_iterator_new(
 
 	error = retrieve_note_tree_and_commit(&tree, &commit, repo, &notes_ref);
 	if (!error) {
-		*it = (git_iterator *)git__malloc(sizeof(git_iterator));
+		*it = (git_note_iterator *)git__malloc(sizeof(git_iterator));
 		GITERR_CHECK_ALLOC(*it);
 
 		error = git_iterator_for_tree(it, tree);
@@ -641,7 +650,7 @@ int git_note_iterator_new(
 int git_note_next(
 	git_oid* note_id,
 	git_oid* annotated_id,
-	git_iterator *it
+	git_note_iterator *it
 )
 {
 	int error;

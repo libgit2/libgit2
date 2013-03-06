@@ -32,7 +32,7 @@ typedef int (*git_note_foreach_cb)(
 /**
  * note iterator
  */
-typedef struct git_iterator git_iterator;
+typedef struct git_iterator git_note_iterator;
 
 /**
  * Creates a new iterator for notes
@@ -47,9 +47,16 @@ typedef struct git_iterator git_iterator;
  * @return 0 or an error code
  */
 GIT_EXTERN(int) git_note_iterator_new(
-	git_iterator **out,
+	git_note_iterator **out,
 	git_repository *repo,
 	const char *notes_ref);
+
+/**
+ * Frees an git_note_iterator
+ *
+ * @param it pointer to the iterator
+ */
+GIT_EXTERN(void) git_note_iterator_free(git_note_iterator *it);
 
 /**
  * Next iteration step for note iteration
@@ -65,7 +72,7 @@ GIT_EXTERN(int) git_note_iterator_new(
 GIT_EXTERN(int) git_note_next(
 	git_oid* note_id,
 	git_oid* annotated_id,
-	git_iterator *it);
+	git_note_iterator *it);
 
 
 /**

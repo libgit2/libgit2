@@ -322,7 +322,7 @@ void test_notes_notes__removing_a_note_which_doesnt_exists_returns_ENOTFOUND(voi
 
 void test_notes_notes__can_iterate_default_namespace(void)
 {
-	git_iterator *iter;
+	git_note_iterator *iter;
 	git_note *note;
 	git_oid note_id, annotated_id;
 	git_oid note_created[2];
@@ -346,11 +346,12 @@ void test_notes_notes__can_iterate_default_namespace(void)
 	}
 
 	cl_assert(i == 2);
+	git_note_iterator_free(iter);
 }
 
 void test_notes_notes__can_iterate_custom_namespace(void)
 {
-	git_iterator *iter;
+	git_note_iterator *iter;
 	git_note *note;
 	git_oid note_id, annotated_id;
 	git_oid note_created[2];
@@ -374,11 +375,12 @@ void test_notes_notes__can_iterate_custom_namespace(void)
 	}
 
 	cl_assert(i == 2);
+	git_note_iterator_free(iter);
 }
 
 void test_notes_notes__empty_iterate(void)
 {
-	git_iterator *iter;
+	git_note_iterator *iter;
 
 	cl_git_fail(git_note_iterator_new(&iter, _repo, "refs/notes/commits"));
 }
