@@ -1243,7 +1243,8 @@ int git_checkout_iterator(
 
 	if ((error = git_iterator_reset(target, data.pfx, data.pfx)) < 0 ||
 		(error = git_iterator_for_workdir(
-			&workdir, data.repo, iterflags, data.pfx, data.pfx)) < 0 ||
+			&workdir, data.repo, iterflags | GIT_ITERATOR_DONT_AUTOEXPAND,
+			data.pfx, data.pfx)) < 0 ||
 		(error = git_iterator_for_tree(
 			&baseline, data.opts.baseline, iterflags, data.pfx, data.pfx)) < 0)
 		goto cleanup;

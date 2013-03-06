@@ -705,9 +705,19 @@ int git_diff__from_iterators(
 						git_iterator_current_is_ignored(new_iter))
 						git_buf_sets(&ignore_prefix, nitem->path);
 
-					if (git_iterator_advance_into(&nitem, new_iter) < 0)
-						goto fail;
+					/* advance into directory */
+					error = git_iterator_advance_into(&nitem, new_iter);
 
+					/* if directory is empty, can't advance into it, so skip */
+					if (error == GIT_ENOTFOUND) {
+						giterr_clear();
+						error = git_iterator_advance(&nitem, new_iter);
+
+						git_buf_clear(&ignore_prefix);
+					}
+
+					if (error < 0)
+						goto fail;
 					continue;
 				}
 			}
@@ -791,7 +801,7 @@ fail:
 	git_iterator *a = NULL, *b = NULL; \
 	char *pfx = opts ? git_pathspec_prefix(&opts->pathspec) : NULL; \
 	GITERR_CHECK_VERSION(opts, GIT_DIFF_OPTIONS_VERSION, "git_diff_options"); \
-    if (!(error = MAKE_FIRST) && !(error = MAKE_SECOND)) \
+	if (!(error = MAKE_FIRST) && !(error = MAKE_SECOND)) \
 		error = git_diff__from_iterators(diff, repo, a, b, opts); \
 	git__free(pfx); git_iterator_free(a); git_iterator_free(b); \
 } while (0)
@@ -831,7 +841,7 @@ int git_diff_tree_to_index(
 
 	DIFF_FROM_ITERATORS(
 		git_iterator_for_tree(&a, old_tree, 0, pfx, pfx),
-	    git_iterator_for_index(&b, index, 0, pfx, pfx)
+		git_iterator_for_index(&b, index, 0, pfx, pfx)
 	);
 
 	return error;
@@ -852,7 +862,8 @@ int git_diff_index_to_workdir(
 
 	DIFF_FROM_ITERATORS(
 		git_iterator_for_index(&a, index, 0, pfx, pfx),
-	    git_iterator_for_workdir(&b, repo, 0, pfx, pfx)
+		git_iterator_for_workdir(
+			&b, repo, GIT_ITERATOR_DONT_AUTOEXPAND, pfx, pfx)
 	);
 
 	return error;
@@ -871,7 +882,8 @@ int git_diff_tree_to_workdir(
 
 	DIFF_FROM_ITERATORS(
 		git_iterator_for_tree(&a, old_tree, 0, pfx, pfx),
-	    git_iterator_for_workdir(&b, repo, 0, pfx, pfx)
+		git_iterator_for_workdir(
+			&b, repo, GIT_ITERATOR_DONT_AUTOEXPAND, pfx, pfx)
 	);
 
 	return error;

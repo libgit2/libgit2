@@ -26,11 +26,16 @@ typedef enum {
 	GIT_ITERATOR_IGNORE_CASE = (1 << 0),
 	/** force case sensitivity for entry sort order */
 	GIT_ITERATOR_DONT_IGNORE_CASE = (1 << 1),
+	/** return tree items in addition to blob items */
+	GIT_ITERATOR_INCLUDE_TREES    = (1 << 2),
+	/** don't flatten trees, requiring advance_into (implies INCLUDE_TREES) */
+	GIT_ITERATOR_DONT_AUTOEXPAND  = (1 << 3),
 } git_iterator_flag_t;
 
 typedef struct {
 	int (*current)(const git_index_entry **, git_iterator *);
 	int (*advance)(const git_index_entry **, git_iterator *);
+	int (*advance_into)(const git_index_entry **, git_iterator *);
 	int (*seek)(git_iterator *, const char *prefix);
 	int (*reset)(git_iterator *, const char *start, const char *end);
 	int (*at_end)(git_iterator *);
@@ -102,10 +107,38 @@ GIT_INLINE(int) git_iterator_current(
 	return iter->cb->current(entry, iter);
 }
 
+/**
+ * Advance to the next item for the iterator.
+ *
+ * If GIT_ITERATOR_INCLUDE_TREES is set, this may be a tree item.  If
+ * GIT_ITERATOR_DONT_AUTOEXPAND is set, calling this again when on a tree
+ * item will skip over all the items under that tree.
+ */
 GIT_INLINE(int) git_iterator_advance(
 	const git_index_entry **entry, git_iterator *iter)
 {
 	return iter->cb->advance(entry, iter);
+}
+
+/**
+ * Iterate into a tree item (when GIT_ITERATOR_DONT_AUTOEXPAND is set).
+ *
+ * git_iterator_advance() steps through all items being iterated over
+ * (either with or without trees, depending on GIT_ITERATOR_INCLUDE_TREES),
+ * but if GIT_ITERATOR_DONT_AUTOEXPAND is set, it will skip to the next
+ * sibling of a tree instead of going to the first child of the tree.  In
+ * that case, use this function to advance to the first child of the tree.
+ *
+ * If the current item is not a tree, this is a no-op.
+ *
+ * For working directory iterators only, a tree (i.e. directory) can be
+ * empty.  In that case, this function returns GIT_ENOTFOUND and does not
+ * advance.  That can't happen for tree and index iterators.
+ */
+GIT_INLINE(int) git_iterator_advance_into(
+	const git_index_entry **entry, git_iterator *iter)
+{
+	return iter->cb->advance_into(entry, iter);
 }
 
 GIT_INLINE(int) git_iterator_seek(
@@ -148,32 +181,12 @@ GIT_INLINE(bool) git_iterator_ignore_case(git_iterator *iter)
 extern int git_iterator_set_ignore_case(git_iterator *iter, bool ignore_case);
 
 extern int git_iterator_current_tree_entry(
-	const git_tree_entry **tree_entry, git_iterator *iter);
+	const git_tree_entry **entry_out, git_iterator *iter);
 
 extern int git_iterator_current_parent_tree(
-	const git_tree **tree_ptr, git_iterator *iter, const char *parent_path);
+	const git_tree **tree_out, git_iterator *iter, const char *parent_path);
 
 extern bool git_iterator_current_is_ignored(git_iterator *iter);
-
-/**
- * Iterate into a directory.
- *
- * Workdir iterators do not automatically descend into directories (so that
- * when comparing two iterator entries you can detect a newly created
- * directory in the workdir).  As a result, you may get S_ISDIR items from
- * a workdir iterator.  If you wish to iterate over the contents of the
- * directories you encounter, then call this function when you encounter
- * a directory.
- *
- * If there are no files in the directory, this will end up acting like a
- * regular advance and will skip past the directory, so you should be
- * prepared for that case.
- *
- * On non-workdir iterators or if not pointing at a directory, this is a
- * no-op and will not advance the iterator.
- */
-extern int git_iterator_advance_into(
-	const git_index_entry **entry, git_iterator *iter);
 
 extern int git_iterator_cmp(
 	git_iterator *iter, const char *path_prefix);

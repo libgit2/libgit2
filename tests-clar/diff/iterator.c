@@ -538,7 +538,8 @@ static void workdir_iterator_test(
 	int count = 0, count_all = 0, count_all_post_reset = 0;
 	git_repository *repo = cl_git_sandbox_init(sandbox);
 
-	cl_git_pass(git_iterator_for_workdir(&i, repo, 0, start, end));
+	cl_git_pass(git_iterator_for_workdir(
+		&i, repo, GIT_ITERATOR_DONT_AUTOEXPAND, start, end));
 	cl_git_pass(git_iterator_current(&entry, i));
 
 	while (entry != NULL) {
@@ -735,8 +736,8 @@ void test_diff_iterator__workdir_builtin_ignores(void)
 	cl_git_pass(p_mkdir("attr/sub/sub/.git", 0777));
 	cl_git_mkfile("attr/sub/.git", "whatever");
 
-	cl_git_pass(
-		git_iterator_for_workdir(&i, repo, 0, "dir", "sub/sub/file"));
+	cl_git_pass(git_iterator_for_workdir(
+		&i, repo, GIT_ITERATOR_DONT_AUTOEXPAND, "dir", "sub/sub/file"));
 	cl_git_pass(git_iterator_current(&entry, i));
 
 	for (idx = 0; entry != NULL; ++idx) {
@@ -771,10 +772,7 @@ static void check_wd_first_through_third_range(
 	for (idx = 0; entry != NULL; ++idx) {
 		cl_assert_equal_s(expected[idx], entry->path);
 
-		if (S_ISDIR(entry->mode))
-			cl_git_pass(git_iterator_advance_into(&entry, i));
-		else
-			cl_git_pass(git_iterator_advance(&entry, i));
+		cl_git_pass(git_iterator_advance(&entry, i));
 	}
 
 	cl_assert(expected[idx] == NULL);
