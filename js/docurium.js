@@ -155,7 +155,8 @@ $(function() {
 
       // Show Non-Parsed Function Comments
       if (fdata[fname]['comments']) {
-        content.append($('<pre>').append(fdata[fname]['comments']))
+	html = $('<div>').text(fdata[fname]['comments']).html()
+        content.append($('<pre>').append(html))
       }
 
       // Show Function Signature
@@ -385,7 +386,9 @@ $(function() {
         description = fdata[f]['description']
 	if(fdata[f]['comments'])
 		description += "\n\n" + fdata[f]['comments']
-	$('.content').append($('<pre>').append(description))
+
+	html = $('<div>').text(description).html()
+	$('.content').append($('<pre>').append(html))
       }
       return false
     },
