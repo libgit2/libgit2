@@ -72,13 +72,14 @@ void test_network_remote_remotes__error_when_no_push_available(void)
 
 	/* Make sure that push is really not available */
 	t->push = NULL;
+	cl_git_pass(git_remote_set_transport(r, t));
+
 	cl_git_pass(git_remote_connect(r, GIT_DIRECTION_PUSH));
 	cl_git_pass(git_push_new(&p, r));
 	cl_git_pass(git_push_add_refspec(p, "refs/heads/master"));
 	cl_git_fail_with(git_push_finish(p), GIT_ERROR);
 
 	git_push_free(p);
-	t->free(t);
 	git_remote_free(r);
 }
 
