@@ -643,7 +643,7 @@ int git_note_next(
 	int error;
 	const git_index_entry *item;
 
-	if (error = git_iterator_current(it, &item) < 0)
+	if ((error = git_iterator_current(it, &item)) < 0)
 		goto exit;
 
 	if (item != NULL) {

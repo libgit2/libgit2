@@ -341,6 +341,7 @@ void test_notes_notes__can_iterate_default_namespace(void)
 	for (i = 0; (err = git_note_next(&note_id, &annotated_id, iter)) >= 0; ++i) {
 		cl_git_pass(git_note_read(&note, _repo, NULL, &annotated_id));
 		cl_assert_equal_s(git_note_message(note), note_message[i]);
+		git_note_free(note);
 	}
 
 	cl_assert_equal_i(GIT_ITEROVER, err);
@@ -370,6 +371,7 @@ void test_notes_notes__can_iterate_custom_namespace(void)
 	for (i = 0; (err = git_note_next(&note_id, &annotated_id, iter)) >= 0; ++i) {
 		cl_git_pass(git_note_read(&note, _repo, "refs/notes/beer", &annotated_id));
 		cl_assert_equal_s(git_note_message(note), note_message[i]);
+		git_note_free(note);
 	}
 
 	cl_assert_equal_i(GIT_ITEROVER, err);
