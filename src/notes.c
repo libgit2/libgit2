@@ -531,8 +531,7 @@ void git_note_free(git_note *note)
 
 static int process_entry_path(
 	const char* entry_path,
-	git_oid *annotated_object_id
-)
+	git_oid *annotated_object_id)
 {
 	int error = -1;
 	size_t i = 0, j = 0, len;
@@ -569,8 +568,7 @@ static int process_entry_path(
 		goto cleanup;
 	}
 
-	if ((error = git_oid_fromstr(annotated_object_id, buf.ptr)) < 0)
-		goto cleanup;
+	error = git_oid_fromstr(annotated_object_id, buf.ptr);
 
 cleanup:
 	git_buf_free(&buf);
@@ -578,39 +576,32 @@ cleanup:
 }
 
 int git_note_foreach(
-	git_repository *repo,
-	const char *notes_ref,
-	git_note_foreach_cb note_cb,
-	void *payload)
+    git_repository *repo,
+    const char *notes_ref,
+    git_note_foreach_cb note_cb,
+    void *payload)
 {
-	int error;
-	git_note_iterator *iter = NULL;
-	git_tree *tree = NULL;
-	git_commit *commit = NULL;
-	git_oid annotated_object_id;
-	const git_index_entry *item;
+    int error;
+    git_note_iterator *iter = NULL;
+    git_oid note_id, annotated_id;
 
-	if (!(error = retrieve_note_tree_and_commit(
-			&tree, &commit, repo, &notes_ref)) &&
-		!(error = git_iterator_for_tree(&iter, tree)))
-		error = git_iterator_current(iter, &item);
+    if ((error = git_note_iterator_new(&iter, repo, notes_ref)) < 0)
+        return error;
 
-	while (!error && item) {
-		error = process_entry_path(item->path, &annotated_object_id);
+    while (!(error = git_note_next(&note_id, &annotated_id, iter))) {
+        if (note_cb(&note_id, &annotated_id, payload)) {
+            error = GIT_EUSER;
+            break;
+        }
+    }
 
-		if (note_cb(&item->oid, &annotated_object_id, payload))
-			error = GIT_EUSER;
+    if (error == GIT_ITEROVER)
+        error = 0;
 
-		if (!error)
-			error = git_iterator_advance(iter, &item);
-	}
-
-	git_iterator_free(iter);
-	git_tree_free(tree);
-	git_commit_free(commit);
-
-	return error;
+    git_note_iterator_free(iter);
+    return error;
 }
+
 
 void git_note_iterator_free(git_note_iterator *it)
 {
@@ -624,23 +615,20 @@ void git_note_iterator_free(git_note_iterator *it)
 int git_note_iterator_new(
 	git_note_iterator **it,
 	git_repository *repo,
-	const char *notes_ref
-)
+	const char *notes_ref)
 {
 	int error;
 	git_commit *commit = NULL;
 	git_tree *tree = NULL;
 
 	error = retrieve_note_tree_and_commit(&tree, &commit, repo, &notes_ref);
-	if (!error) {
-		*it = (git_note_iterator *)git__malloc(sizeof(git_iterator));
-		GITERR_CHECK_ALLOC(*it);
+	if (error < 0)
+		goto cleanup;
 
-		error = git_iterator_for_tree(it, tree);
-		if (error)
-			git_iterator_free(*it);
-	}
+	if ((error = git_iterator_for_tree(it, tree)) < 0)
+		git_iterator_free(*it);
 
+cleanup:
 	git_tree_free(tree);
 	git_commit_free(commit);
 
@@ -650,24 +638,24 @@ int git_note_iterator_new(
 int git_note_next(
 	git_oid* note_id,
 	git_oid* annotated_id,
-	git_note_iterator *it
-)
+	git_note_iterator *it)
 {
 	int error;
 	const git_index_entry *item;
 
-	error = git_iterator_current(it, &item);
-	if (!error && item) {
-		git_oid_cpy(note_id, &item->oid);
+	if (error = git_iterator_current(it, &item) < 0)
+		goto exit;
 
+	if (item != NULL) {
+		git_oid_cpy(note_id, &item->oid);
 		error = process_entry_path(item->path, annotated_id);
 
-		if (!error)
+		if (error >= 0)
 			error = git_iterator_advance(it, NULL);
+	} else {
+		error = GIT_ITEROVER;
 	}
 
-	if (!error && !item)
-		error = GIT_ITEROVER;
-
+exit:
 	return error;
 }

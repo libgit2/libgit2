@@ -41,7 +41,6 @@ static struct {
 	const char *note_sha;
 	const char *annotated_object_sha;
 }
-
 list_expectations[] = {
 	{ "1c73b1f51762155d357bcd1fd4f2c409ef80065b", "4a202b346bb0fb0db7eff3cffeb3c70babbd2045" },
 	{ "1c73b1f51762155d357bcd1fd4f2c409ef80065b", "9fd738e8f7967c078dceed8190330fc8648ee56a" },
@@ -330,7 +329,7 @@ void test_notes_notes__can_iterate_default_namespace(void)
 		"I decorate a65f\n",
 		"I decorate c478\n"
 	};
-	int i;
+	int i, err;
 
 	create_note(&note_created[0], "refs/notes/commits",
 		"a65fedf39aefe402d3bb6e24df4d4f5fe4547750", note_message[0]);
@@ -339,13 +338,13 @@ void test_notes_notes__can_iterate_default_namespace(void)
 
 	cl_git_pass(git_note_iterator_new(&iter, _repo, NULL));
 
-	for (i = 0; git_note_next(&note_id, &annotated_id, iter) != GIT_ITEROVER; ++i)
-	{
+	for (i = 0; (err = git_note_next(&note_id, &annotated_id, iter)) >= 0; ++i) {
 		cl_git_pass(git_note_read(&note, _repo, NULL, &annotated_id));
 		cl_assert_equal_s(git_note_message(note), note_message[i]);
 	}
 
-	cl_assert(i == 2);
+	cl_assert_equal_i(GIT_ITEROVER, err);
+	cl_assert_equal_i(2, i);
 	git_note_iterator_free(iter);
 }
 
@@ -359,7 +358,7 @@ void test_notes_notes__can_iterate_custom_namespace(void)
 		"I decorate a65f\n",
 		"I decorate c478\n"
 	};
-	int i;
+	int i, err;
 
 	create_note(&note_created[0], "refs/notes/beer",
 		"a65fedf39aefe402d3bb6e24df4d4f5fe4547750", note_message[0]);
@@ -368,13 +367,13 @@ void test_notes_notes__can_iterate_custom_namespace(void)
 
 	cl_git_pass(git_note_iterator_new(&iter, _repo, "refs/notes/beer"));
 
-	for (i = 0; git_note_next(&note_id, &annotated_id, iter) != GIT_ITEROVER; ++i)
-	{
+	for (i = 0; (err = git_note_next(&note_id, &annotated_id, iter)) >= 0; ++i) {
 		cl_git_pass(git_note_read(&note, _repo, "refs/notes/beer", &annotated_id));
 		cl_assert_equal_s(git_note_message(note), note_message[i]);
 	}
 
-	cl_assert(i == 2);
+	cl_assert_equal_i(GIT_ITEROVER, err);
+	cl_assert_equal_i(2, i);
 	git_note_iterator_free(iter);
 }
 
