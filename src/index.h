@@ -50,7 +50,4 @@ extern int git_index_entry__cmp_icase(const void *a, const void *b);
 
 extern void git_index__set_ignore_case(git_index *index, bool ignore_case);
 
-extern int git_index_read_tree_match(
-	git_index *index, git_tree *tree, git_strarray *strspec);
-
 #endif

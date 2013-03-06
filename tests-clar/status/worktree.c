@@ -274,6 +274,7 @@ void test_status_worktree__issue_592(void)
 	repo = cl_git_sandbox_init("issue_592");
 	cl_git_pass(git_buf_joinpath(&path, git_repository_workdir(repo), "l.txt"));
 	cl_git_pass(p_unlink(git_buf_cstr(&path)));
+	cl_assert(!git_path_exists("issue_592/l.txt"));
 
 	cl_git_pass(git_status_foreach(repo, cb_status__check_592, "l.txt"));
 
@@ -288,6 +289,7 @@ void test_status_worktree__issue_592_2(void)
 	repo = cl_git_sandbox_init("issue_592");
 	cl_git_pass(git_buf_joinpath(&path, git_repository_workdir(repo), "c/a.txt"));
 	cl_git_pass(p_unlink(git_buf_cstr(&path)));
+	cl_assert(!git_path_exists("issue_592/c/a.txt"));
 
 	cl_git_pass(git_status_foreach(repo, cb_status__check_592, "c/a.txt"));
 
@@ -303,6 +305,7 @@ void test_status_worktree__issue_592_3(void)
 
 	cl_git_pass(git_buf_joinpath(&path, git_repository_workdir(repo), "c"));
 	cl_git_pass(git_futils_rmdir_r(git_buf_cstr(&path), NULL, GIT_RMDIR_REMOVE_FILES));
+	cl_assert(!git_path_exists("issue_592/c/a.txt"));
 
 	cl_git_pass(git_status_foreach(repo, cb_status__check_592, "c/a.txt"));
 
