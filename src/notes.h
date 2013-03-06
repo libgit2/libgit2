@@ -10,6 +10,9 @@
 #include "common.h"
 
 #include "git2/oid.h"
+#include "git2/types.h"
+
+#include "iterator.h"
 
 #define GIT_NOTES_DEFAULT_REF "refs/notes/commits"
 
