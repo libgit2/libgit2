@@ -3,6 +3,7 @@
 #include "repository.h"
 #include "git2/reflog.h"
 #include "reflog.h"
+#include "ref_helpers.h"
 
 static const char *packed_test_head_name = "refs/heads/packed-test";
 static const char *current_master_tip = "a65fedf39aefe402d3bb6e24df4d4f5fe4547750";
@@ -37,7 +38,7 @@ void test_refs_delete__packed_loose(void)
 	cl_git_pass(git_reference_lookup(&looked_up_ref, g_repo, packed_test_head_name));
 
 	/* Ensure it's the loose version that has been found */
-	cl_assert(git_reference_is_packed(looked_up_ref) == 0);
+	cl_assert(reference_is_packed(looked_up_ref) == 0);
 
 	/* Now that the reference is deleted... */
 	cl_git_pass(git_reference_delete(looked_up_ref));
@@ -69,16 +70,16 @@ void test_refs_delete__packed_only(void)
 	cl_git_pass(git_reference_lookup(&ref, g_repo, new_ref));
 
 	/* Ensure it's a loose reference */
-	cl_assert(git_reference_is_packed(ref) == 0);
+	cl_assert(reference_is_packed(ref) == 0);
 
 	/* Pack all existing references */
-	cl_git_pass(git_reference_packall(g_repo));
+	cl_git_pass(git_reference_compress_all(g_repo));
 
 	/* Reload the reference from disk */
 	cl_git_pass(git_reference_reload(ref));
 
 	/* Ensure it's a packed reference */
-	cl_assert(git_reference_is_packed(ref) == 1);
+	cl_assert(reference_is_packed(ref) == 1);
 
 	/* This should pass */
 	cl_git_pass(git_reference_delete(ref));

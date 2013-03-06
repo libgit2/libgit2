@@ -10,6 +10,7 @@
 #include "common.h"
 #include "git2/oid.h"
 #include "git2/refs.h"
+#include "git2/refdb.h"
 #include "strmap.h"
 #include "buffer.h"
 
@@ -47,10 +48,10 @@
 #define GIT_REFNAME_MAX 1024
 
 struct git_reference {
-	unsigned int flags;
-	git_repository *owner;
+	git_refdb *db;
+
 	char *name;
-	time_t mtime;
+	git_ref_t type;
 
 	union {
 		git_oid oid;

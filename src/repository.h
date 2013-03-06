@@ -21,6 +21,7 @@
 #include "object.h"
 #include "attr.h"
 #include "strmap.h"
+#include "refdb.h"
 
 #define DOT_GIT ".git"
 #define GIT_DIR DOT_GIT "/"
@@ -79,11 +80,11 @@ enum {
 /** Internal structure for repository object */
 struct git_repository {
 	git_odb *_odb;
+	git_refdb *_refdb;
 	git_config *_config;
 	git_index *_index;
 
 	git_cache objects;
-	git_refcache references;
 	git_attr_cache attrcache;
 	git_strmap *submodules;
 
@@ -112,6 +113,7 @@ int git_repository_head_tree(git_tree **tree, git_repository *repo);
  */
 int git_repository_config__weakptr(git_config **out, git_repository *repo);
 int git_repository_odb__weakptr(git_odb **out, git_repository *repo);
+int git_repository_refdb__weakptr(git_refdb **out, git_repository *repo);
 int git_repository_index__weakptr(git_index **out, git_repository *repo);
 
 /*

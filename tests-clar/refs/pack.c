@@ -3,6 +3,7 @@
 #include "repository.h"
 #include "git2/reflog.h"
 #include "reflog.h"
+#include "ref_helpers.h"
 
 static const char *loose_tag_ref_name = "refs/tags/e90810b";
 
@@ -27,7 +28,7 @@ void test_refs_pack__empty(void)
 	cl_git_pass(git_futils_mkdir_r(temp_path.ptr, NULL, GIT_REFS_DIR_MODE));
 	git_buf_free(&temp_path);
 
-	cl_git_pass(git_reference_packall(g_repo));
+	cl_git_pass(git_reference_compress_all(g_repo));
 }
 
 void test_refs_pack__loose(void)
@@ -38,7 +39,7 @@ void test_refs_pack__loose(void)
 
 	/* Ensure a known loose ref can be looked up */
 	cl_git_pass(git_reference_lookup(&reference, g_repo, loose_tag_ref_name));
-	cl_assert(git_reference_is_packed(reference) == 0);
+	cl_assert(reference_is_packed(reference) == 0);
 	cl_assert_equal_s(reference->name, loose_tag_ref_name);
 	git_reference_free(reference);
 
@@ -47,7 +48,7 @@ void test_refs_pack__loose(void)
 	 * called `points_to_blob`, to make sure we can properly
 	 * pack weak tags
 	 */
-	cl_git_pass(git_reference_packall(g_repo));
+	cl_git_pass(git_reference_compress_all(g_repo));
 
 	/* Ensure the packed-refs file exists */
 	cl_git_pass(git_buf_joinpath(&temp_path, g_repo->path_repository, GIT_PACKEDREFS_FILE));
@@ -55,7 +56,7 @@ void test_refs_pack__loose(void)
 
 	/* Ensure the known ref can still be looked up but is now packed */
 	cl_git_pass(git_reference_lookup(&reference, g_repo, loose_tag_ref_name));
-	cl_assert(git_reference_is_packed(reference));
+	cl_assert(reference_is_packed(reference));
 	cl_assert_equal_s(reference->name, loose_tag_ref_name);
 
 	/* Ensure the known ref has been removed from the loose folder structure */

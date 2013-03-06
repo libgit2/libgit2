@@ -434,6 +434,39 @@ GIT_EXTERN(int) git_repository_odb(git_odb **out, git_repository *repo);
 GIT_EXTERN(void) git_repository_set_odb(git_repository *repo, git_odb *odb);
 
 /**
+ * Get the Reference Database Backend for this repository.
+ *
+ * If a custom refsdb has not been set, the default database for
+ * the repository will be returned (the one that manipulates loose
+ * and packed references in the `.git` directory).
+ *
+ * The refdb must be freed once it's no longer being used by
+ * the user.
+ *
+ * @param out Pointer to store the loaded refdb
+ * @param repo A repository object
+ * @return 0, or an error code
+ */
+GIT_EXTERN(int) git_repository_refdb(git_refdb **out, git_repository *repo);
+
+/**
+ * Set the Reference Database Backend for this repository
+ *
+ * The refdb will be used for all reference related operations
+ * involving this repository.
+ *
+ * The repository will keep a reference to the refdb; the user
+ * must still free the refdb object after setting it to the
+ * repository, or it will leak.
+ *
+ * @param repo A repository object
+ * @param refdb An refdb object
+ */
+GIT_EXTERN(void) git_repository_set_refdb(
+	git_repository *repo,
+	git_refdb *refdb);
+
+/**
  * Get the Index file for this repository.
  *
  * If a custom index has not been set, the default
