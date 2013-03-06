@@ -148,18 +148,19 @@ IF (MSVC)
 	# /RTC1 - Run time checks
 	SET(CMAKE_C_FLAGS_DEBUG "/Zi /Od /D_DEBUG /MTd /RTC1")
 
+	# /DNDEBUG - Disables asserts
 	# /MT - Statically link the multithreaded release version of the CRT
 	# /O2 - Optimize for speed
 	# /Oy - Enable frame pointer omission (FPO) (otherwise CMake will automatically turn it off)
 	# /GL - Link time code generation (whole program optimization)
 	# /Gy - Function-level linking
-	SET(CMAKE_C_FLAGS_RELEASE "/MT /O2 /Oy /GL /Gy")
+	SET(CMAKE_C_FLAGS_RELEASE "/DNDEBUG /MT /O2 /Oy /GL /Gy")
 
 	# /Oy- - Disable frame pointer omission (FPO)
-	SET(CMAKE_C_FLAGS_RELWITHDEBINFO "/Zi /MT /O2 /Oy- /GL /Gy")
+	SET(CMAKE_C_FLAGS_RELWITHDEBINFO "/DNDEBUG /Zi /MT /O2 /Oy- /GL /Gy")
 
 	# /O1 - Optimize for size
-	SET(CMAKE_C_FLAGS_MINSIZEREL "/MT /O1 /Oy /GL /Gy")
+	SET(CMAKE_C_FLAGS_MINSIZEREL "/DNDEBUG /MT /O1 /Oy /GL /Gy")
 
 	# /DYNAMICBASE - Address space load randomization (ASLR)
 	# /NXCOMPAT - Data execution prevention (DEP)
