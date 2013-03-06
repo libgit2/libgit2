@@ -40,7 +40,8 @@ static void create_note(git_oid *note_oid, const char *canonical_namespace, cons
 static struct {
 	const char *note_sha;
 	const char *annotated_object_sha;
-} list_expectations[] = {
+}
+list_expectations[] = {
 	{ "1c73b1f51762155d357bcd1fd4f2c409ef80065b", "4a202b346bb0fb0db7eff3cffeb3c70babbd2045" },
 	{ "1c73b1f51762155d357bcd1fd4f2c409ef80065b", "9fd738e8f7967c078dceed8190330fc8648ee56a" },
 	{ "257b43746b6b46caa4aa788376c647cce0a33e2b", "a65fedf39aefe402d3bb6e24df4d4f5fe4547750" },
@@ -316,4 +317,71 @@ void test_notes_notes__removing_a_note_which_doesnt_exists_returns_ENOTFOUND(voi
 	error = git_note_remove(_repo, "refs/notes/fanout", _sig, _sig, &target_oid);
 	cl_git_fail(error);
 	cl_assert_equal_i(GIT_ENOTFOUND, error);
+}
+
+void test_notes_notes__can_iterate_default_namespace(void)
+{
+	git_note_iterator *iter;
+	git_note *note;
+	git_oid note_id, annotated_id;
+	git_oid note_created[2];
+	const char* note_message[] = {
+		"I decorate a65f\n",
+		"I decorate c478\n"
+	};
+	int i, err;
+
+	create_note(&note_created[0], "refs/notes/commits",
+		"a65fedf39aefe402d3bb6e24df4d4f5fe4547750", note_message[0]);
+	create_note(&note_created[1], "refs/notes/commits",
+		"c47800c7266a2be04c571c04d5a6614691ea99bd", note_message[1]);
+
+	cl_git_pass(git_note_iterator_new(&iter, _repo, NULL));
+
+	for (i = 0; (err = git_note_next(&note_id, &annotated_id, iter)) >= 0; ++i) {
+		cl_git_pass(git_note_read(&note, _repo, NULL, &annotated_id));
+		cl_assert_equal_s(git_note_message(note), note_message[i]);
+		git_note_free(note);
+	}
+
+	cl_assert_equal_i(GIT_ITEROVER, err);
+	cl_assert_equal_i(2, i);
+	git_note_iterator_free(iter);
+}
+
+void test_notes_notes__can_iterate_custom_namespace(void)
+{
+	git_note_iterator *iter;
+	git_note *note;
+	git_oid note_id, annotated_id;
+	git_oid note_created[2];
+	const char* note_message[] = {
+		"I decorate a65f\n",
+		"I decorate c478\n"
+	};
+	int i, err;
+
+	create_note(&note_created[0], "refs/notes/beer",
+		"a65fedf39aefe402d3bb6e24df4d4f5fe4547750", note_message[0]);
+	create_note(&note_created[1], "refs/notes/beer",
+		"c47800c7266a2be04c571c04d5a6614691ea99bd", note_message[1]);
+
+	cl_git_pass(git_note_iterator_new(&iter, _repo, "refs/notes/beer"));
+
+	for (i = 0; (err = git_note_next(&note_id, &annotated_id, iter)) >= 0; ++i) {
+		cl_git_pass(git_note_read(&note, _repo, "refs/notes/beer", &annotated_id));
+		cl_assert_equal_s(git_note_message(note), note_message[i]);
+		git_note_free(note);
+	}
+
+	cl_assert_equal_i(GIT_ITEROVER, err);
+	cl_assert_equal_i(2, i);
+	git_note_iterator_free(iter);
+}
+
+void test_notes_notes__empty_iterate(void)
+{
+	git_note_iterator *iter;
+
+	cl_git_fail(git_note_iterator_new(&iter, _repo, "refs/notes/commits"));
 }

@@ -30,6 +30,54 @@ typedef int (*git_note_foreach_cb)(
 	const git_oid *blob_id, const git_oid *annotated_object_id, void *payload);
 
 /**
+ * note iterator
+ */
+typedef struct git_iterator git_note_iterator;
+
+/**
+ * Creates a new iterator for notes
+ *
+ * The iterator must be freed manually by the user.
+ *
+ * @param out pointer to the iterator
+ * @param repo repository where to look up the note
+ * @param notes_ref canonical name of the reference to use (optional); defaults to
+ *                  "refs/notes/commits"
+ *
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_note_iterator_new(
+	git_note_iterator **out,
+	git_repository *repo,
+	const char *notes_ref);
+
+/**
+ * Frees an git_note_iterator
+ *
+ * @param it pointer to the iterator
+ */
+GIT_EXTERN(void) git_note_iterator_free(git_note_iterator *it);
+
+/**
+ * Returns the current item (note_id and annotated_id) and advance the iterator
+ * internally to the next value
+ *
+ * The notes must not be freed manually by the user.
+ *
+ * @param it pointer to the iterator
+ * @param note_id id of blob containing the message
+ * @param annotated_id id of the git object being annotated
+ *
+ * @return 0 (no error), GIT_ITEROVER (iteration is done) or an error code
+ *         (negative value)
+ */
+GIT_EXTERN(int) git_note_next(
+	git_oid* note_id,
+	git_oid* annotated_id,
+	git_note_iterator *it);
+
+
+/**
  * Read the note for an object
  *
  * The note must be freed manually by the user.
