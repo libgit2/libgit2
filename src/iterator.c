@@ -960,161 +960,6 @@ fail:
 }
 
 
-typedef struct {
-	/* replacement callbacks */
-	git_iterator_callbacks cb;
-	/* original iterator values */
-	git_iterator_callbacks *orig;
-	git_iterator_type_t orig_type;
-	/* spoolandsort data */
-	git_vector entries;
-	git_pool entry_pool;
-	git_pool string_pool;
-	size_t position;
-} spoolandsort_callbacks;
-
-static int spoolandsort_iterator__current(
-	const git_index_entry **entry, git_iterator *self)
-{
-	spoolandsort_callbacks *scb = (spoolandsort_callbacks *)self->cb;
-
-	*entry = (const git_index_entry *)
-		git_vector_get(&scb->entries, scb->position);
-
-	return 0;
-}
-
-static int spoolandsort_iterator__at_end(git_iterator *self)
-{
-	spoolandsort_callbacks *scb = (spoolandsort_callbacks *)self->cb;
-
-	return 0 == scb->entries.length || scb->entries.length - 1 <= scb->position;
-}
-
-static int spoolandsort_iterator__advance(
-	const git_index_entry **entry, git_iterator *self)
-{
-	spoolandsort_callbacks *scb = (spoolandsort_callbacks *)self->cb;
-
-	*entry = (const git_index_entry *)
-		git_vector_get(&scb->entries, ++scb->position);
-
-	return 0;
-}
-
-static int spoolandsort_iterator__seek(git_iterator *self, const char *prefix)
-{
-	GIT_UNUSED(self);
-	GIT_UNUSED(prefix);
-
-	return -1;
-}
-
-static int spoolandsort_iterator__reset(
-	git_iterator *self, const char *start, const char *end)
-{
-	spoolandsort_callbacks *scb = (spoolandsort_callbacks *)self->cb;
-
-	GIT_UNUSED(start); GIT_UNUSED(end);
-
-	scb->position = 0;
-
-	return 0;
-}
-
-static void spoolandsort_iterator__free_callbacks(spoolandsort_callbacks *scb)
-{
-	git_pool_clear(&scb->string_pool);
-	git_pool_clear(&scb->entry_pool);
-	git_vector_free(&scb->entries);
-	git__free(scb);
-}
-
-void git_iterator_spoolandsort_pop(git_iterator *self)
-{
-	spoolandsort_callbacks *scb = (spoolandsort_callbacks *)self->cb;
-
-	if (self->type != GIT_ITERATOR_TYPE_SPOOLANDSORT)
-		return;
-
-	self->cb   = scb->orig;
-	self->type = scb->orig_type;
-	self->flags ^= GIT_ITERATOR_IGNORE_CASE;
-
-	spoolandsort_iterator__free_callbacks(scb);
-}
-
-static void spoolandsort_iterator__free(git_iterator *self)
-{
-	git_iterator_spoolandsort_pop(self);
-	self->cb->free(self);
-}
-
-int git_iterator_spoolandsort_push(git_iterator *iter, bool ignore_case)
-{
-	const git_index_entry *item;
-	spoolandsort_callbacks *scb;
-	int (*entrycomp)(const void *a, const void *b);
-
-	if (((iter->flags & GIT_ITERATOR_IGNORE_CASE) != 0) == (ignore_case != 0))
-		return 0;
-
-	if (iter->type == GIT_ITERATOR_TYPE_EMPTY) {
-		iter->flags = (iter->flags ^ GIT_ITERATOR_IGNORE_CASE);
-		return 0;
-	}
-
-	scb = git__calloc(1, sizeof(spoolandsort_callbacks));
-	GITERR_CHECK_ALLOC(scb);
-
-	ITERATOR_SET_CB(scb,spoolandsort);
-
-	scb->orig      = iter->cb;
-	scb->orig_type = iter->type;
-	scb->position  = 0;
-
-	entrycomp = ignore_case ? git_index_entry__cmp_icase : git_index_entry__cmp;
-
-	if (git_vector_init(&scb->entries, 16, entrycomp) < 0 ||
-		git_pool_init(&scb->entry_pool, sizeof(git_index_entry), 0) < 0 ||
-		git_pool_init(&scb->string_pool, 1, 0) < 0 ||
-		git_iterator_current(&item, iter) < 0)
-		goto fail;
-
-	while (item) {
-		git_index_entry *clone = git_pool_malloc(&scb->entry_pool, 1);
-		if (!clone)
-			goto fail;
-
-		memcpy(clone, item, sizeof(git_index_entry));
-
-		if (item->path) {
-			clone->path = git_pool_strdup(&scb->string_pool, item->path);
-			if (!clone->path)
-				goto fail;
-		}
-
-		if (git_vector_insert(&scb->entries, clone) < 0)
-			goto fail;
-
-		if (git_iterator_advance(&item, iter) < 0)
-			goto fail;
-	}
-
-	git_vector_sort(&scb->entries);
-
-	iter->cb   = (git_iterator_callbacks *)scb;
-	iter->type = GIT_ITERATOR_TYPE_SPOOLANDSORT;
-	iter->flags ^= GIT_ITERATOR_IGNORE_CASE;
-
-	return 0;
-
-fail:
-	spoolandsort_iterator__free_callbacks(scb);
-	return -1;
-}
-
-
 void git_iterator_free(git_iterator *iter)
 {
 	if (iter == NULL)
@@ -1130,24 +975,33 @@ void git_iterator_free(git_iterator *iter)
 	git__free(iter);
 }
 
+int git_iterator_set_ignore_case(git_iterator *iter, bool ignore_case)
+{
+	bool desire_ignore_case  = (ignore_case != 0);
+
+	if (iterator__ignore_case(iter) == desire_ignore_case)
+		return 0;
+
+	if (iter->type == GIT_ITERATOR_TYPE_EMPTY) {
+		if (desire_ignore_case)
+			iter->flags |= GIT_ITERATOR_IGNORE_CASE;
+		else
+			iter->flags &= ~GIT_ITERATOR_IGNORE_CASE;
+	} else {
+		giterr_set(GITERR_INVALID,
+			"Cannot currently set ignore case on non-empty iterators");
+		return -1;
+	}
+
+	return 0;
+}
+
 git_index *git_iterator_get_index(git_iterator *iter)
 {
 	if (iter->type == GIT_ITERATOR_TYPE_INDEX)
 		return ((index_iterator *)iter)->index;
 
-	if (iter->type == GIT_ITERATOR_TYPE_SPOOLANDSORT &&
-		((spoolandsort_callbacks *)iter->cb)->orig_type == GIT_ITERATOR_TYPE_INDEX)
-		return ((index_iterator *)iter)->index;
-
 	return NULL;
-}
-
-git_iterator_type_t git_iterator_inner_type(git_iterator *iter)
-{
-	if (iter->type == GIT_ITERATOR_TYPE_SPOOLANDSORT)
-		return ((spoolandsort_callbacks *)iter->cb)->orig_type;
-
-	return iter->type;
 }
 
 int git_iterator_current_tree_entry(
@@ -1263,4 +1117,3 @@ int git_iterator_current_workdir_path(git_buf **path, git_iterator *iter)
 
 	return 0;
 }
-

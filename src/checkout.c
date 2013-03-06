@@ -1248,10 +1248,8 @@ int git_checkout_iterator(
 			&baseline, data.opts.baseline, iterflags, data.pfx, data.pfx)) < 0)
 		goto cleanup;
 
-	/* Handle case insensitivity for baseline if necessary */
-	if (git_iterator_ignore_case(workdir) != git_iterator_ignore_case(baseline))
-		if ((error = git_iterator_spoolandsort_push(baseline, true)) < 0)
-			goto cleanup;
+	/* Should not have case insensitivity mismatch */
+	assert(git_iterator_ignore_case(workdir) == git_iterator_ignore_case(baseline));
 
 	/* Generate baseline-to-target diff which will include an entry for
 	 * every possible update that might need to be made.

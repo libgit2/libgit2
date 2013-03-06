@@ -620,13 +620,8 @@ int git_diff__from_iterators(
 		goto fail;
 
 	if (diff->opts.flags & GIT_DIFF_DELTAS_ARE_ICASE) {
-		/* If either iterator does not have ignore_case set, then we will
-		 * spool its data, sort it icase, and use that for the merge join
-		 * with the other iterator which was icase sorted.  This call is
-		 * a no-op on an iterator that already matches "ignore_case".
-		 */
-		if (git_iterator_spoolandsort_push(old_iter, true) < 0 ||
-			git_iterator_spoolandsort_push(new_iter, true) < 0)
+		if (git_iterator_set_ignore_case(old_iter, true) < 0 ||
+			git_iterator_set_ignore_case(new_iter, true) < 0)
 			goto fail;
 	}
 

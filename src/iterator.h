@@ -19,7 +19,6 @@ typedef enum {
 	GIT_ITERATOR_TYPE_TREE = 1,
 	GIT_ITERATOR_TYPE_INDEX = 2,
 	GIT_ITERATOR_TYPE_WORKDIR = 3,
-	GIT_ITERATOR_TYPE_SPOOLANDSORT = 4
 } git_iterator_type_t;
 
 typedef enum {
@@ -86,14 +85,6 @@ extern int git_iterator_for_workdir(
 
 extern void git_iterator_free(git_iterator *iter);
 
-/* Spool all iterator values, resort with alternative ignore_case value
- * and replace callbacks with spoolandsort alternates.
- */
-extern int git_iterator_spoolandsort_push(git_iterator *iter, bool ignore_case);
-
-/* Restore original callbacks - not required in most circumstances */
-extern void git_iterator_spoolandsort_pop(git_iterator *iter);
-
 /* Return a git_index_entry structure for the current value the iterator
  * is looking at or NULL if the iterator is at the end.
  *
@@ -154,6 +145,8 @@ GIT_INLINE(bool) git_iterator_ignore_case(git_iterator *iter)
 	return ((iter->flags & GIT_ITERATOR_IGNORE_CASE) != 0);
 }
 
+extern int git_iterator_set_ignore_case(git_iterator *iter, bool ignore_case);
+
 extern int git_iterator_current_tree_entry(
 	const git_tree_entry **tree_entry, git_iterator *iter);
 
@@ -195,7 +188,5 @@ extern int git_iterator_current_workdir_path(
 
 /* Return index pointer if index iterator, else NULL */
 extern git_index *git_iterator_get_index(git_iterator *iter);
-
-extern git_iterator_type_t git_iterator_inner_type(git_iterator *iter);
 
 #endif
