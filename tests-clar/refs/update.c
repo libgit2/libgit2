@@ -19,11 +19,8 @@ void test_refs_update__updating_the_target_of_a_symref_with_an_invalid_name_retu
 	git_reference *head;
 
 	cl_git_pass(git_reference_lookup(&head, g_repo, GIT_HEAD_FILE));
-
 	cl_assert_equal_i(GIT_REF_SYMBOLIC, git_reference_type(head));
-
-	cl_assert_equal_i(GIT_EINVALIDSPEC, git_reference_symbolic_set_target(
-		head, "refs/heads/inv@{id"));
-
 	git_reference_free(head);
+
+	cl_assert_equal_i(GIT_EINVALIDSPEC, git_reference_symbolic_create(&head, g_repo, GIT_HEAD_FILE, "refs/heads/inv@{id", 1));
 }

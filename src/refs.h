@@ -10,6 +10,7 @@
 #include "common.h"
 #include "git2/oid.h"
 #include "git2/refs.h"
+#include "git2/refdb.h"
 #include "strmap.h"
 #include "buffer.h"
 
@@ -47,28 +48,22 @@
 #define GIT_REFNAME_MAX 1024
 
 struct git_reference {
-	unsigned int flags;
-	git_repository *owner;
-	char *name;
-	time_t mtime;
+	git_refdb *db;
+
+	git_ref_t type;
 
 	union {
 		git_oid oid;
 		char *symbolic;
 	} target;
+	
+	char name[0];
 };
-
-typedef struct {
-	git_strmap *packfile;
-	time_t packfile_time;
-} git_refcache;
-
-void git_repository__refcache_free(git_refcache *refs);
 
 int git_reference__normalize_name_lax(char *buffer_out, size_t out_size, const char *name);
 int git_reference__normalize_name(git_buf *buf, const char *name, unsigned int flags);
+int git_reference__update_terminal(git_repository *repo, const char *ref_name, const git_oid *oid);
 int git_reference__is_valid_name(const char *refname, unsigned int flags);
-int git_reference__update(git_repository *repo, const git_oid *oid, const char *ref_name);
 int git_reference__is_branch(const char *ref_name);
 int git_reference__is_remote(const char *ref_name);
 

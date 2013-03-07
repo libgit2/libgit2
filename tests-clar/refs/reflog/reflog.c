@@ -90,7 +90,7 @@ void test_refs_reflog_reflog__append_then_read(void)
 
 void test_refs_reflog_reflog__renaming_the_reference_moves_the_reflog(void)
 {
-	git_reference *master;
+	git_reference *master, *new_master;
 	git_buf master_log_path = GIT_BUF_INIT, moved_log_path = GIT_BUF_INIT;
 
 	git_buf_joinpath(&master_log_path, git_repository_path(g_repo), GIT_REFLOG_DIR);
@@ -102,12 +102,13 @@ void test_refs_reflog_reflog__renaming_the_reference_moves_the_reflog(void)
 	cl_assert_equal_i(false, git_path_isfile(git_buf_cstr(&moved_log_path)));
 
 	cl_git_pass(git_reference_lookup(&master, g_repo, "refs/heads/master"));
-	cl_git_pass(git_reference_rename(master, "refs/moved", 0));
+	cl_git_pass(git_reference_rename(&new_master, master, "refs/moved", 0));
+	git_reference_free(master);
 
 	cl_assert_equal_i(false, git_path_isfile(git_buf_cstr(&master_log_path)));
 	cl_assert_equal_i(true, git_path_isfile(git_buf_cstr(&moved_log_path)));
 
-	git_reference_free(master);
+	git_reference_free(new_master);
 	git_buf_free(&moved_log_path);
 	git_buf_free(&master_log_path);
 }
@@ -152,7 +153,7 @@ void test_refs_reflog_reflog__reading_the_reflog_from_a_reference_with_no_log_re
 
 void test_refs_reflog_reflog__cannot_write_a_moved_reflog(void)
 {
-	git_reference *master;
+	git_reference *master, *new_master;
 	git_buf master_log_path = GIT_BUF_INIT, moved_log_path = GIT_BUF_INIT;
 	git_reflog *reflog;
 
@@ -161,12 +162,13 @@ void test_refs_reflog_reflog__cannot_write_a_moved_reflog(void)
 
 	cl_git_pass(git_reflog_write(reflog));
 
-	cl_git_pass(git_reference_rename(master, "refs/moved", 0));
+	cl_git_pass(git_reference_rename(&new_master, master, "refs/moved", 0));
+	git_reference_free(master);
 
 	cl_git_fail(git_reflog_write(reflog));
 
 	git_reflog_free(reflog);
-	git_reference_free(master);
+	git_reference_free(new_master);
 	git_buf_free(&moved_log_path);
 	git_buf_free(&master_log_path);
 }

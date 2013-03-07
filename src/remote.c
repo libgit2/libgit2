@@ -1175,6 +1175,7 @@ static int rename_one_remote_reference(
 	int error = -1;
 	git_buf new_name = GIT_BUF_INIT;
 	git_reference *reference = NULL;
+	git_reference *newref = NULL;
 
 	if (git_buf_printf(
 		&new_name,
@@ -1186,10 +1187,11 @@ static int rename_one_remote_reference(
 	if (git_reference_lookup(&reference, repo, reference_name) < 0)
 		goto cleanup;
 
-	error = git_reference_rename(reference, git_buf_cstr(&new_name), 0);
+	error = git_reference_rename(&newref, reference, git_buf_cstr(&new_name), 0);
+	git_reference_free(reference);
 
 cleanup:
-	git_reference_free(reference);
+	git_reference_free(newref);
 	git_buf_free(&new_name);
 	return error;
 }

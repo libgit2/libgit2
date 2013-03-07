@@ -16,7 +16,6 @@
 #include "refs.h"
 #include "repository.h"
 
-
 int git_fetchhead_ref_cmp(const void *a, const void *b)
 {
 	const git_fetchhead_ref *one = (const git_fetchhead_ref *)a;

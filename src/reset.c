@@ -13,47 +13,9 @@
 #include "git2/reset.h"
 #include "git2/checkout.h"
 #include "git2/merge.h"
+#include "git2/refs.h"
 
 #define ERROR_MSG "Cannot perform reset"
-
-static int update_head(git_repository *repo, git_object *commit)
-{
-	int error;
-	git_reference *head = NULL, *target = NULL;
-
-	error = git_repository_head(&head, repo);
-
-	if (error < 0 && error != GIT_EORPHANEDHEAD)
-		return error;
-
-	if (error == GIT_EORPHANEDHEAD) {
-		giterr_clear();
-
-		/*
-		 * TODO: This is a bit weak as this doesn't support chained
-		 * symbolic references. yet.
-		 */
-		if ((error = git_reference_lookup(&head, repo, GIT_HEAD_FILE)) < 0)
-			goto cleanup;
-
-		if ((error = git_reference_create(
-			&target,
-			repo,
-			git_reference_symbolic_target(head),
-			git_object_id(commit), 0)) < 0)
-				goto cleanup;
-	} else {
-		if ((error = git_reference_set_target(head, git_object_id(commit))) < 0)
-			goto cleanup;
-	}
-
-	error = 0;
-
-cleanup:
-	git_reference_free(head);
-	git_reference_free(target);
-	return error;
-}
 
 int git_reset_default(
 	git_repository *repo,
@@ -167,7 +129,8 @@ int git_reset(
 	}
 
 	/* move HEAD to the new target */
-	if ((error = update_head(repo, commit)) < 0)
+	if ((error = git_reference__update_terminal(repo, GIT_HEAD_FILE,
+		git_object_id(commit))) < 0)
 		goto cleanup;
 
 	if (reset_type == GIT_RESET_HARD) {

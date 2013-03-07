@@ -645,13 +645,15 @@ int git_stash_drop(
 
 	if (max == 1) {
 		error = git_reference_delete(stash);
+		git_reference_free(stash);
 		stash = NULL;
 	} else if (index == 0) {
 		const git_reflog_entry *entry;
 
 		entry = git_reflog_entry_byindex(reflog, 0);
-
-		error = git_reference_set_target(stash, &entry->oid_cur);
+		
+		git_reference_free(stash);
+		error = git_reference_create(&stash, repo, GIT_REFS_STASH_FILE, &entry->oid_cur, 1);
 	}
 
 cleanup:
