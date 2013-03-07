@@ -1667,6 +1667,9 @@ int git_reference__normalize_name(
 	process_flags = flags;
 	current = (char *)name;
 
+	if (*current == '/')
+		goto cleanup;
+
 	if (normalize)
 		git_buf_clear(buf);
 

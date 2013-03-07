@@ -32,6 +32,12 @@ void test_refs_lookup__with_resolve(void)
 	git_reference_free(a);
 }
 
+void test_refs_lookup__invalid_name(void)
+{
+	git_oid oid;
+	cl_git_fail(git_reference_name_to_id(&oid, g_repo, "/refs/tags/point_to_blob"));
+}
+
 void test_refs_lookup__oid(void)
 {
 	git_oid tag, expected;
