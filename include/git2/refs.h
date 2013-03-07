@@ -189,33 +189,41 @@ GIT_EXTERN(int) git_reference_resolve(git_reference **out, const git_reference *
 GIT_EXTERN(git_repository *) git_reference_owner(const git_reference *ref);
 
 /**
- * Set the symbolic target of a reference.
+ * Create a new reference with the same name as the given reference but a
+ * different symbolic target. The reference must be a symbolic reference,
+ * otherwise this will fail.
  *
- * The reference must be a symbolic reference, otherwise this will fail.
- *
- * The reference will be automatically updated in memory and on disk.
+ * The new reference will be written to disk, overwriting the given reference.
  *
  * The target name will be checked for validity.
  * See `git_reference_create_symbolic()` for rules about valid names.
  *
+ * @param out Pointer to the newly created reference
  * @param ref The reference
  * @param target The new target for the reference
  * @return 0 on success, EINVALIDSPEC or an error code
  */
-GIT_EXTERN(int) git_reference_symbolic_set_target(git_reference *ref, const char *target);
+GIT_EXTERN(int) git_reference_symbolic_set_target(
+	git_reference **out,
+	git_reference *ref,
+	const char *target);
 
 /**
- * Set the OID target of a reference.
+ * Create a new reference with the same name as the given reference but a
+ * different OID target. The reference must be a direct reference, otherwise
+ * this will fail.
  *
- * The reference must be a direct reference, otherwise this will fail.
+ * The new reference will be written to disk, overwriting the given reference.
  *
- * The reference will be automatically updated in memory and on disk.
- *
+ * @param out Pointer to the newly created reference
  * @param ref The reference
  * @param id The new target OID for the reference
  * @return 0 or an error code
  */
-GIT_EXTERN(int) git_reference_set_target(git_reference *ref, const git_oid *id);
+GIT_EXTERN(int) git_reference_set_target(
+	git_reference **out,
+	git_reference *ref,
+	const git_oid *id);
 
 /**
  * Rename an existing reference.
@@ -225,7 +233,8 @@ GIT_EXTERN(int) git_reference_set_target(git_reference *ref, const git_oid *id);
  * The new name will be checked for validity.
  * See `git_reference_create_symbolic()` for rules about valid names.
  *
- * The given git_reference will be updated in place.
+ * On success, the given git_reference will be deleted from disk and a
+ * new `git_reference` will be returned.
  *
  * The reference will be immediately renamed in-memory and on disk.
  *
@@ -243,35 +252,23 @@ GIT_EXTERN(int) git_reference_set_target(git_reference *ref, const git_oid *id);
  * @return 0 on success, EINVALIDSPEC, EEXISTS or an error code
  *
  */
-GIT_EXTERN(int) git_reference_rename(git_reference *ref, const char *name, int force);
+GIT_EXTERN(int) git_reference_rename(
+	git_reference **out,
+	git_reference *ref,
+	const char *new_name,
+	int force);
 
 /**
  * Delete an existing reference.
  *
- * This method works for both direct and symbolic references.
- *
- * The reference will be immediately removed on disk and from memory
- * (i.e. freed). The given reference pointer will no longer be valid.
+ * This method works for both direct and symbolic references.  The reference
+ * will be immediately removed on disk but the memory will not be freed.
+ * Callers must call `git_reference_free`.
  *
  * @param ref The reference to remove
  * @return 0 or an error code
  */
 GIT_EXTERN(int) git_reference_delete(git_reference *ref);
-
-/**
- * Pack all the loose references in the repository.
- *
- * This method will load into the cache all the loose
- * references on the repository and update the
- * `packed-refs` file with them.
- *
- * Once the `packed-refs` file has been written properly,
- * the loose references will be removed from disk.
- *
- * @param repo Repository where the loose refs will be packed
- * @return 0 or an error code
- */
-GIT_EXTERN(int) git_reference_packall(git_repository *repo);
 
 /**
  * Fill a list with all the references that can be found in a repository.
@@ -321,14 +318,6 @@ GIT_EXTERN(int) git_reference_foreach(
 	unsigned int list_flags,
 	git_reference_foreach_cb callback,
 	void *payload);
-
-/**
- * Check if a reference has been loaded from a packfile.
- *
- * @param ref A git reference
- * @return 0 in case it's not packed; 1 otherwise
- */
-GIT_EXTERN(int) git_reference_is_packed(git_reference *ref);
 
 /**
  * Reload a reference from disk.

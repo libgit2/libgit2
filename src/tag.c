@@ -376,9 +376,9 @@ on_error:
 
 int git_tag_delete(git_repository *repo, const char *tag_name)
 {
-	int error;
 	git_reference *tag_ref;
 	git_buf ref_name = GIT_BUF_INIT;
+	int error;
 
 	error = retrieve_tag_reference(&tag_ref, &ref_name, repo, tag_name);
 
@@ -387,7 +387,10 @@ int git_tag_delete(git_repository *repo, const char *tag_name)
 	if (error < 0)
 		return error;
 
-	return git_reference_delete(tag_ref);
+	if ((error = git_reference_delete(tag_ref)) == 0)
+		git_reference_free(tag_ref);
+	
+	return error;
 }
 
 int git_tag__parse(git_tag *tag, git_odb_object *obj)
@@ -426,8 +429,7 @@ int git_tag_foreach(git_repository *repo, git_tag_foreach_cb cb, void *cb_data)
 	data.cb_data = cb_data;
 	data.repo = repo;
 
-	return git_reference_foreach(
-		repo, GIT_REF_OID | GIT_REF_PACKED, &tags_cb, &data);
+	return git_reference_foreach(repo, GIT_REF_OID, &tags_cb, &data);
 }
 
 typedef struct {

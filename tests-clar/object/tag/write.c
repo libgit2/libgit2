@@ -60,6 +60,7 @@ void test_object_tag_write__basic(void)
 	cl_git_pass(git_reference_lookup(&ref_tag, g_repo, "refs/tags/the-tag"));
 	cl_assert(git_oid_cmp(git_reference_target(ref_tag), &tag_id) == 0);
 	cl_git_pass(git_reference_delete(ref_tag));
+	git_reference_free(ref_tag);
 
 	git_tag_free(tag);
 }

@@ -50,9 +50,11 @@ void test_refs_branches_delete__can_delete_a_branch_even_if_HEAD_is_missing(void
 
 	cl_git_pass(git_reference_lookup(&head, repo, GIT_HEAD_FILE));
 	git_reference_delete(head);
+	git_reference_free(head);
 
 	cl_git_pass(git_branch_lookup(&branch, repo, "br2", GIT_BRANCH_LOCAL));
 	cl_git_pass(git_branch_delete(branch));
+	git_reference_free(branch);
 }
 
 void test_refs_branches_delete__can_delete_a_branch_when_HEAD_is_orphaned(void)
@@ -63,6 +65,7 @@ void test_refs_branches_delete__can_delete_a_branch_when_HEAD_is_orphaned(void)
 
 	cl_git_pass(git_branch_lookup(&branch, repo, "br2", GIT_BRANCH_LOCAL));
 	cl_git_pass(git_branch_delete(branch));
+	git_reference_free(branch);
 }
 
 void test_refs_branches_delete__can_delete_a_branch_pointed_at_by_detached_HEAD(void)
@@ -79,6 +82,7 @@ void test_refs_branches_delete__can_delete_a_branch_pointed_at_by_detached_HEAD(
 
 	cl_git_pass(git_branch_lookup(&branch, repo, "master", GIT_BRANCH_LOCAL));
 	cl_git_pass(git_branch_delete(branch));
+	git_reference_free(branch);
 }
 
 void test_refs_branches_delete__can_delete_a_local_branch(void)
@@ -86,6 +90,7 @@ void test_refs_branches_delete__can_delete_a_local_branch(void)
 	git_reference *branch;
 	cl_git_pass(git_branch_lookup(&branch, repo, "br2", GIT_BRANCH_LOCAL));
 	cl_git_pass(git_branch_delete(branch));
+	git_reference_free(branch);
 }
 
 void test_refs_branches_delete__can_delete_a_remote_branch(void)
@@ -93,6 +98,7 @@ void test_refs_branches_delete__can_delete_a_remote_branch(void)
 	git_reference *branch;
 	cl_git_pass(git_branch_lookup(&branch, repo, "nulltoken/master", GIT_BRANCH_REMOTE));
 	cl_git_pass(git_branch_delete(branch));
+	git_reference_free(branch);
 }
 
 void test_refs_branches_delete__deleting_a_branch_removes_related_configuration_data(void)
@@ -104,6 +110,7 @@ void test_refs_branches_delete__deleting_a_branch_removes_related_configuration_
 
 	cl_git_pass(git_branch_lookup(&branch, repo, "track-local", GIT_BRANCH_LOCAL));
 	cl_git_pass(git_branch_delete(branch));
+	git_reference_free(branch);
 
 	assert_config_entry_existence(repo, "branch.track-local.remote", false);
 	assert_config_entry_existence(repo, "branch.track-local.merge", false);
