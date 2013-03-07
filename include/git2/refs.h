@@ -320,24 +320,6 @@ GIT_EXTERN(int) git_reference_foreach(
 	void *payload);
 
 /**
- * Reload a reference from disk.
- *
- * Reference pointers can become outdated if the Git repository is
- * accessed simultaneously by other clients while the library is open.
- *
- * This method forces a reload of the reference from disk, to ensure that
- * the provided information is still reliable.
- *
- * If the reload fails (e.g. the reference no longer exists on disk, or
- * has become corrupted), an error code will be returned and the reference
- * pointer will be invalidated and freed.
- *
- * @param ref The reference to reload
- * @return 0 on success, or an error code
- */
-GIT_EXTERN(int) git_reference_reload(git_reference *ref);
-
-/**
  * Free the given reference.
  *
  * @param ref git_reference
