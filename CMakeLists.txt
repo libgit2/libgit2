@@ -22,6 +22,7 @@ OPTION( BUILD_CLAR			"Build Tests using the Clar suite"		ON  )
 OPTION( BUILD_EXAMPLES		"Build library usage example apps"		OFF )
 OPTION( TAGS				"Generate tags"							OFF )
 OPTION( PROFILE				"Generate profiling information"		OFF )
+OPTION( ENABLE_TRACE		"Enables tracing support"				OFF )
 IF(MSVC)
 	# This option is only availalbe when building with MSVC. By default,
 	# libgit2 is build using the stdcall calling convention, as that's what
@@ -103,6 +104,11 @@ ELSEIF (OPENSSL_FOUND AND NOT SHA1_TYPE STREQUAL "builtin")
 	ADD_DEFINITIONS(-DOPENSSL_SHA1)
 ELSE()
 	FILE(GLOB SRC_SHA1 src/hash/hash_generic.c)
+ENDIF()
+
+# Enable tracing
+IF (ENABLE_TRACE STREQUAL "ON")
+	ADD_DEFINITIONS(-DGIT_TRACE)
 ENDIF()
 
 # Include POSIX regex when it is required
