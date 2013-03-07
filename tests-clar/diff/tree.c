@@ -431,3 +431,28 @@ void test_diff_tree__regular_blob_mode_changed_to_executable_file(void)
 	cl_assert_equal_i(0, expect.file_status[GIT_DELTA_ADDED]);
 	cl_assert_equal_i(0, expect.file_status[GIT_DELTA_TYPECHANGE]);
 }
+
+void test_diff_tree__issue_1397(void)
+{
+	// this test shows, that it is not needed
+	git_config *cfg;
+	g_repo = cl_git_sandbox_init("issue_1397");
+
+	cl_git_pass(git_repository_config(&cfg, g_repo));
+	cl_git_pass(git_config_set_bool(cfg, "core.autocrlf", true));
+	git_config_free(cfg);
+
+	cl_assert((a = resolve_commit_oid_to_tree(g_repo, "8a7ef04")) != NULL);
+	cl_assert((b = resolve_commit_oid_to_tree(g_repo, "7f483a7")) != NULL);
+
+	cl_git_pass(git_diff_tree_to_tree(&diff, g_repo, a, b, &opts));
+
+	cl_git_pass(git_diff_foreach(
+		diff, diff_file_cb, diff_hunk_cb, diff_line_cb, &expect));
+
+	cl_assert_equal_i(1, expect.files);
+	cl_assert_equal_i(0, expect.file_status[GIT_DELTA_DELETED]);
+	cl_assert_equal_i(1, expect.file_status[GIT_DELTA_MODIFIED]);
+	cl_assert_equal_i(0, expect.file_status[GIT_DELTA_ADDED]);
+	cl_assert_equal_i(0, expect.file_status[GIT_DELTA_TYPECHANGE]);
+}

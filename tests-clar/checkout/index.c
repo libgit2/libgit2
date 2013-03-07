@@ -488,3 +488,20 @@ void test_checkout_index__can_checkout_a_newly_initialized_repository(void)
 
 	cl_git_pass(git_checkout_index(g_repo, NULL, NULL));
 }
+
+void test_checkout_index__issue_1397(void)
+{
+	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
+
+	test_checkout_index__cleanup();
+
+	g_repo = cl_git_sandbox_init("issue_1397");
+
+	set_core_autocrlf_to(true);
+
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+
+	cl_git_pass(git_checkout_index(g_repo, NULL, &opts));
+
+	test_file_contents("./issue_1397/crlf_file.txt", "first line\r\nsecond line\r\nboth with crlf");
+}
