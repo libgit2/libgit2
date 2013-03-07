@@ -16,6 +16,7 @@ CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
 
 # Build options
 #
+OPTION( SONAME				"Set the (SO)VERSION of the target"		ON  )
 OPTION( BUILD_SHARED_LIBS	"Build Shared Library (OFF for Static)"	ON  )
 OPTION( THREADSAFE			"Build libgit2 as threadsafe"			OFF )
 OPTION( BUILD_CLAR			"Build Tests using the Clar suite"		ON  )
@@ -148,19 +149,18 @@ IF (MSVC)
 	# /RTC1 - Run time checks
 	SET(CMAKE_C_FLAGS_DEBUG "/Zi /Od /D_DEBUG /MTd /RTC1")
 
-	# /DNDEBUG - Disables asserts
 	# /MT - Statically link the multithreaded release version of the CRT
 	# /O2 - Optimize for speed
 	# /Oy - Enable frame pointer omission (FPO) (otherwise CMake will automatically turn it off)
 	# /GL - Link time code generation (whole program optimization)
 	# /Gy - Function-level linking
-	SET(CMAKE_C_FLAGS_RELEASE "/DNDEBUG /MT /O2 /Oy /GL /Gy")
+	SET(CMAKE_C_FLAGS_RELEASE "/MT /O2 /Oy /GL /Gy")
 
 	# /Oy- - Disable frame pointer omission (FPO)
-	SET(CMAKE_C_FLAGS_RELWITHDEBINFO "/DNDEBUG /Zi /MT /O2 /Oy- /GL /Gy")
+	SET(CMAKE_C_FLAGS_RELWITHDEBINFO "/Zi /MT /O2 /Oy- /GL /Gy")
 
 	# /O1 - Optimize for size
-	SET(CMAKE_C_FLAGS_MINSIZEREL "/DNDEBUG /MT /O1 /Oy /GL /Gy")
+	SET(CMAKE_C_FLAGS_MINSIZEREL "/MT /O1 /Oy /GL /Gy")
 
 	# /DYNAMICBASE - Address space load randomization (ASLR)
 	# /NXCOMPAT - Data execution prevention (DEP)
@@ -258,8 +258,10 @@ TARGET_OS_LIBRARIES(git2)
 
 MSVC_SPLIT_SOURCES(git2)
 
-SET_TARGET_PROPERTIES(git2 PROPERTIES VERSION ${LIBGIT2_VERSION_STRING})
-SET_TARGET_PROPERTIES(git2 PROPERTIES SOVERSION ${LIBGIT2_VERSION_MAJOR})
+IF (SONAME)
+	SET_TARGET_PROPERTIES(git2 PROPERTIES VERSION ${LIBGIT2_VERSION_STRING})
+	SET_TARGET_PROPERTIES(git2 PROPERTIES SOVERSION ${LIBGIT2_VERSION_MAJOR})
+ENDIF()
 CONFIGURE_FILE(${CMAKE_CURRENT_SOURCE_DIR}/libgit2.pc.in ${CMAKE_CURRENT_BINARY_DIR}/libgit2.pc @ONLY)
 
 IF (MSVC_IDE)
