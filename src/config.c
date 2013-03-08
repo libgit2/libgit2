@@ -362,6 +362,11 @@ int git_config_set_string(git_config *cfg, const char *name, const char *value)
 	git_config_backend *file;
 	file_internal *internal;
 
+	if (!value) {
+		giterr_set(GITERR_CONFIG, "The value to set cannot be NULL");
+		return -1;
+	}
+
 	internal = git_vector_get(&cfg->files, 0);
 	file = internal->file;
 
