@@ -205,6 +205,11 @@ ELSE ()
 
 	IF (MINGW) # MinGW always does PIC and complains if we tell it to
 		STRING(REGEX REPLACE "-fPIC" "" CMAKE_SHARED_LIBRARY_C_FLAGS "${CMAKE_SHARED_LIBRARY_C_FLAGS}")
+		# MinGW >= 3.14 uses the C99-style stdio functions
+		# automatically, but forks like mingw-w64 still want
+		# us to define this in order to use them
+		ADD_DEFINITIONS(-D__USE_MINGW_ANSI_STDIO=1)
+
 	ELSEIF (BUILD_SHARED_LIBS)
 		SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fvisibility=hidden -fPIC")
 	ENDIF ()
