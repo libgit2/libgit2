@@ -291,8 +291,11 @@ static git_diff_list *git_diff_list_alloc(
 	 * - diff.noprefix
 	 */
 
-	if (opts == NULL)
+	if (opts == NULL) {
+		/* Make sure we default to 3 lines */
+		diff->opts.context_lines = 3;
 		return diff;
+	}
 
 	memcpy(&diff->opts, opts, sizeof(git_diff_options));
 

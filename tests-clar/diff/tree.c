@@ -10,6 +10,8 @@ static diff_expects expect;
 void test_diff_tree__initialize(void)
 {
 	GIT_INIT_STRUCTURE(&opts, GIT_DIFF_OPTIONS_VERSION);
+	/* The default context lines is set by _INIT which we can't use here */
+	opts.context_lines = 3;
 
 	memset(&expect, 0, sizeof(expect));
 
