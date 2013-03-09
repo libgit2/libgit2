@@ -289,7 +289,7 @@ typedef struct {
 } git_diff_options;
 
 #define GIT_DIFF_OPTIONS_VERSION 1
-#define GIT_DIFF_OPTIONS_INIT {GIT_DIFF_OPTIONS_VERSION}
+#define GIT_DIFF_OPTIONS_INIT {GIT_DIFF_OPTIONS_VERSION, GIT_DIFF_NORMAL, 3}
 
 /**
  * When iterating over a diff, callback that will be made per file.
