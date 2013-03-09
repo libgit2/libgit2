@@ -6,6 +6,7 @@
  */
 #include "hashsig.h"
 #include "fileops.h"
+#include "util.h"
 
 typedef uint32_t hashsig_t;
 typedef uint64_t hashsig_state;
@@ -19,7 +20,7 @@ typedef uint64_t hashsig_state;
 
 #define HASHSIG_HEAP_SIZE ((1 << 7) - 1)
 
-typedef int (GIT_STDLIB_CALL *hashsig_cmp)(const void *a, const void *b);
+typedef int (*hashsig_cmp)(const void *a, const void *b, void *);
 
 typedef struct {
 	int size, asize;
@@ -53,15 +54,17 @@ static void hashsig_heap_init(hashsig_heap *h, hashsig_cmp cmp)
 	h->cmp   = cmp;
 }
 
-static int GIT_STDLIB_CALL hashsig_cmp_max(const void *a, const void *b)
+static int hashsig_cmp_max(const void *a, const void *b, void *payload)
 {
 	hashsig_t av = *(const hashsig_t *)a, bv = *(const hashsig_t *)b;
+	GIT_UNUSED(payload);
 	return (av < bv) ? -1 : (av > bv) ? 1 : 0;
 }
 
-static int GIT_STDLIB_CALL hashsig_cmp_min(const void *a, const void *b)
+static int hashsig_cmp_min(const void *a, const void *b, void *payload)
 {
 	hashsig_t av = *(const hashsig_t *)a, bv = *(const hashsig_t *)b;
+	GIT_UNUSED(payload);
 	return (av > bv) ? -1 : (av < bv) ? 1 : 0;
 }
 
@@ -69,7 +72,7 @@ static void hashsig_heap_up(hashsig_heap *h, int el)
 {
 	int parent_el = HEAP_PARENT_OF(el);
 
-	while (el > 0 && h->cmp(&h->values[parent_el], &h->values[el]) > 0) {
+	while (el > 0 && h->cmp(&h->values[parent_el], &h->values[el], NULL) > 0) {
 		hashsig_t t = h->values[el];
 		h->values[el] = h->values[parent_el];
 		h->values[parent_el] = t;
@@ -92,10 +95,10 @@ static void hashsig_heap_down(hashsig_heap *h, int el)
 		lv = h->values[lel];
 		rv = h->values[rel];
 
-		if (h->cmp(&v, &lv) < 0 && h->cmp(&v, &rv) < 0)
+		if (h->cmp(&v, &lv, NULL) < 0 && h->cmp(&v, &rv, NULL) < 0)
 			break;
 
-		swapel = (h->cmp(&lv, &rv) < 0) ? lel : rel;
+		swapel = (h->cmp(&lv, &rv, NULL) < 0) ? lel : rel;
 
 		h->values[el] = h->values[swapel];
 		h->values[swapel] = v;
@@ -107,13 +110,13 @@ static void hashsig_heap_down(hashsig_heap *h, int el)
 static void hashsig_heap_sort(hashsig_heap *h)
 {
 	/* only need to do this at the end for signature comparison */
-	qsort(h->values, h->size, sizeof(hashsig_t), h->cmp);
+	git__qsort_r(h->values, h->size, sizeof(hashsig_t), h->cmp, NULL);
 }
 
 static void hashsig_heap_insert(hashsig_heap *h, hashsig_t val)
 {
 	/* if heap is full, pop top if new element should replace it */
-	if (h->size == h->asize && h->cmp(&val, &h->values[0]) > 0) {
+	if (h->size == h->asize && h->cmp(&val, &h->values[0], NULL) > 0) {
 		h->size--;
 		h->values[0] = h->values[h->size];
 		hashsig_heap_down(h, 0);
@@ -343,7 +346,7 @@ static int hashsig_heap_compare(const hashsig_heap *a, const hashsig_heap *b)
 	/* hash heaps are sorted - just look for overlap vs total */
 
 	for (i = 0, j = 0; i < a->size && j < b->size; ) {
-		cmp = a->cmp(&a->values[i], &b->values[j]);
+		cmp = a->cmp(&a->values[i], &b->values[j], NULL);
 
 		if (cmp < 0)
 			++i;

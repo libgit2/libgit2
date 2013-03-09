@@ -151,6 +151,10 @@ typedef int (*git__tsort_r_cmp)(const void *a, const void *b, void *payload);
 extern void git__tsort_r(
 	void **dst, size_t size, git__tsort_r_cmp cmp, void *payload);
 
+typedef int (*git__qsort_r_cmp)(const void *a, const void *b, void *payload);
+
+extern void git__qsort_r(
+	void *els, size_t nel, size_t elsize, git__qsort_r_cmp cmp, void *payload);
 
 /**
  * @param position If non-NULL, this will be set to the position where the

@@ -607,3 +607,33 @@ size_t git__unescape(char *str)
 
 	return (pos - str);
 }
+
+#if defined(GIT_WIN32) || defined(BSD)
+typedef struct {
+	git__qsort_r_cmp cmp;
+	void *payload;
+} git__qsort_r_glue;
+
+static int GIT_STDLIB_CALL git__qsort_r_glue_cmp(
+	void *payload, const void *a, const void *b)
+{
+	git__qsort_r_glue *glue = payload;
+	return glue->cmp(a, b, glue->payload);
+}
+#endif
+
+void git__qsort_r(
+	void *els, size_t nel, size_t elsize, git__qsort_r_cmp cmp, void *payload)
+{
+#if defined(GIT_WIN32)
+	git__qsort_r_glue glue = { cmp, payload };
+	qsort_s(els, nel, elsize, git__qsort_r_glue_cmp, &glue);
+#else
+#if defined(BSD)
+	git__qsort_r_glue glue = { cmp, payload };
+	qsort_r(els, nel, elsize, &glue, git__qsort_r_glue_cmp);
+#else
+	qsort_r(els, nel, elsize, cmp, payload);
+#endif
+#endif
+}

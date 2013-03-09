@@ -8,6 +8,7 @@
 #define INCLUDE_posix__w32_h__
 
 #include <stdio.h>
+#include <sys/param.h>
 
 #define p_lstat(p,b) lstat(p,b)
 #define p_readlink(a, b, c) readlink(a, b, c)
