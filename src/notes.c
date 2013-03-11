@@ -625,7 +625,7 @@ int git_note_iterator_new(
 	if (error < 0)
 		goto cleanup;
 
-	if ((error = git_iterator_for_tree(it, tree)) < 0)
+	if ((error = git_iterator_for_tree(it, tree, 0, NULL, NULL)) < 0)
 		git_iterator_free(*it);
 
 cleanup:
@@ -643,7 +643,7 @@ int git_note_next(
 	int error;
 	const git_index_entry *item;
 
-	if ((error = git_iterator_current(it, &item)) < 0)
+	if ((error = git_iterator_current(&item, it)) < 0)
 		goto exit;
 
 	if (item != NULL) {
@@ -651,7 +651,7 @@ int git_note_next(
 		error = process_entry_path(item->path, annotated_id);
 
 		if (error >= 0)
-			error = git_iterator_advance(it, NULL);
+			error = git_iterator_advance(NULL, it);
 	} else {
 		error = GIT_ITEROVER;
 	}

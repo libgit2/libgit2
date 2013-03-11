@@ -35,26 +35,26 @@ static void tree_iterator_test(
 	git_repository *repo = cl_git_sandbox_init(sandbox);
 
 	cl_assert(t = resolve_commit_oid_to_tree(repo, treeish));
-	cl_git_pass(git_iterator_for_tree_range(
+	cl_git_pass(git_iterator_for_tree(
 		&i, t, GIT_ITERATOR_DONT_IGNORE_CASE, start, end));
 
 	/* test loop */
-	cl_git_pass(git_iterator_current(i, &entry));
+	cl_git_pass(git_iterator_current(&entry, i));
 	while (entry != NULL) {
 		if (expected_values != NULL)
 			cl_assert_equal_s(expected_values[count], entry->path);
 		count++;
-		cl_git_pass(git_iterator_advance(i, &entry));
+		cl_git_pass(git_iterator_advance(&entry, i));
 	}
 
 	/* test reset */
 	cl_git_pass(git_iterator_reset(i, NULL, NULL));
-	cl_git_pass(git_iterator_current(i, &entry));
+	cl_git_pass(git_iterator_current(&entry, i));
 	while (entry != NULL) {
 		if (expected_values != NULL)
 			cl_assert_equal_s(expected_values[count_post_reset], entry->path);
 		count_post_reset++;
-		cl_git_pass(git_iterator_advance(i, &entry));
+		cl_git_pass(git_iterator_advance(&entry, i));
 	}
 
 	git_iterator_free(i);
@@ -261,30 +261,30 @@ static void check_tree_entry(
 	const git_tree *tree;
 	git_buf path = GIT_BUF_INIT;
 
-	cl_git_pass(git_iterator_current_tree_entry(i, &te));
+	cl_git_pass(git_iterator_current_tree_entry(&te, i));
 	cl_assert(te);
 	cl_assert(git_oid_streq(&te->oid, oid) == 0);
 
-	cl_git_pass(git_iterator_current(i, &ie));
+	cl_git_pass(git_iterator_current(&ie, i));
 	cl_git_pass(git_buf_sets(&path, ie->path));
 
 	if (oid_p) {
 		git_buf_rtruncate_at_char(&path, '/');
-		cl_git_pass(git_iterator_current_parent_tree(i, path.ptr, &tree));
+		cl_git_pass(git_iterator_current_parent_tree(&tree, i, path.ptr));
 		cl_assert(tree);
 		cl_assert(git_oid_streq(git_tree_id(tree), oid_p) == 0);
 	}
 
 	if (oid_pp) {
 		git_buf_rtruncate_at_char(&path, '/');
-		cl_git_pass(git_iterator_current_parent_tree(i, path.ptr, &tree));
+		cl_git_pass(git_iterator_current_parent_tree(&tree, i, path.ptr));
 		cl_assert(tree);
 		cl_assert(git_oid_streq(git_tree_id(tree), oid_pp) == 0);
 	}
 
 	if (oid_ppp) {
 		git_buf_rtruncate_at_char(&path, '/');
-		cl_git_pass(git_iterator_current_parent_tree(i, path.ptr, &tree));
+		cl_git_pass(git_iterator_current_parent_tree(&tree, i, path.ptr));
 		cl_assert(tree);
 		cl_assert(git_oid_streq(git_tree_id(tree), oid_ppp) == 0);
 	}
@@ -305,9 +305,9 @@ void test_diff_iterator__tree_special_functions(void)
 		repo, "24fa9a9fc4e202313e24b648087495441dab432b");
 	cl_assert(t != NULL);
 
-	cl_git_pass(git_iterator_for_tree_range(
+	cl_git_pass(git_iterator_for_tree(
 		&i, t, GIT_ITERATOR_DONT_IGNORE_CASE, NULL, NULL));
-	cl_git_pass(git_iterator_current(i, &entry));
+	cl_git_pass(git_iterator_current(&entry, i));
 
 	while (entry != NULL) {
 		if (strcmp(entry->path, "sub/file") == 0) {
@@ -339,7 +339,7 @@ void test_diff_iterator__tree_special_functions(void)
 				rootoid, NULL);
 		}
 
-		cl_git_pass(git_iterator_advance(i, &entry));
+		cl_git_pass(git_iterator_advance(&entry, i));
 	}
 
 	cl_assert_equal_i(4, cases);
@@ -364,8 +364,8 @@ static void index_iterator_test(
 	git_repository *repo = cl_git_sandbox_init(sandbox);
 
 	cl_git_pass(git_repository_index(&index, repo));
-	cl_git_pass(git_iterator_for_index_range(&i, index, 0, start, end));
-	cl_git_pass(git_iterator_current(i, &entry));
+	cl_git_pass(git_iterator_for_index(&i, index, 0, start, end));
+	cl_git_pass(git_iterator_current(&entry, i));
 
 	while (entry != NULL) {
 		if (expected_names != NULL)
@@ -378,7 +378,7 @@ static void index_iterator_test(
 		}
 
 		count++;
-		cl_git_pass(git_iterator_advance(i, &entry));
+		cl_git_pass(git_iterator_advance(&entry, i));
 	}
 
 	git_iterator_free(i);
@@ -538,14 +538,15 @@ static void workdir_iterator_test(
 	int count = 0, count_all = 0, count_all_post_reset = 0;
 	git_repository *repo = cl_git_sandbox_init(sandbox);
 
-	cl_git_pass(git_iterator_for_workdir_range(&i, repo, 0, start, end));
-	cl_git_pass(git_iterator_current(i, &entry));
+	cl_git_pass(git_iterator_for_workdir(
+		&i, repo, GIT_ITERATOR_DONT_AUTOEXPAND, start, end));
+	cl_git_pass(git_iterator_current(&entry, i));
 
 	while (entry != NULL) {
 		int ignored = git_iterator_current_is_ignored(i);
 
 		if (S_ISDIR(entry->mode)) {
-			cl_git_pass(git_iterator_advance_into_directory(i, &entry));
+			cl_git_pass(git_iterator_advance_into(&entry, i));
 			continue;
 		}
 
@@ -559,22 +560,22 @@ static void workdir_iterator_test(
 			count++;
 		count_all++;
 
-		cl_git_pass(git_iterator_advance(i, &entry));
+		cl_git_pass(git_iterator_advance(&entry, i));
 	}
 
 	cl_git_pass(git_iterator_reset(i, NULL, NULL));
-	cl_git_pass(git_iterator_current(i, &entry));
+	cl_git_pass(git_iterator_current(&entry, i));
 
 	while (entry != NULL) {
 		if (S_ISDIR(entry->mode)) {
-			cl_git_pass(git_iterator_advance_into_directory(i, &entry));
+			cl_git_pass(git_iterator_advance_into(&entry, i));
 			continue;
 		}
 		if (expected_names != NULL)
 			cl_assert_equal_s(
 				expected_names[count_all_post_reset], entry->path);
 		count_all_post_reset++;
-		cl_git_pass(git_iterator_advance(i, &entry));
+		cl_git_pass(git_iterator_advance(&entry, i));
 	}
 
 	git_iterator_free(i);
@@ -735,9 +736,9 @@ void test_diff_iterator__workdir_builtin_ignores(void)
 	cl_git_pass(p_mkdir("attr/sub/sub/.git", 0777));
 	cl_git_mkfile("attr/sub/.git", "whatever");
 
-	cl_git_pass(
-		git_iterator_for_workdir_range(&i, repo, 0, "dir", "sub/sub/file"));
-	cl_git_pass(git_iterator_current(i, &entry));
+	cl_git_pass(git_iterator_for_workdir(
+		&i, repo, GIT_ITERATOR_DONT_AUTOEXPAND, "dir", "sub/sub/file"));
+	cl_git_pass(git_iterator_current(&entry, i));
 
 	for (idx = 0; entry != NULL; ++idx) {
 		int ignored = git_iterator_current_is_ignored(i);
@@ -746,9 +747,9 @@ void test_diff_iterator__workdir_builtin_ignores(void)
 		cl_assert_(ignored == expected[idx].ignored, expected[idx].path);
 
 		if (!ignored && S_ISDIR(entry->mode))
-			cl_git_pass(git_iterator_advance_into_directory(i, &entry));
+			cl_git_pass(git_iterator_advance_into(&entry, i));
 		else
-			cl_git_pass(git_iterator_advance(i, &entry));
+			cl_git_pass(git_iterator_advance(&entry, i));
 	}
 
 	cl_assert(expected[idx].path == NULL);
@@ -764,17 +765,14 @@ static void check_wd_first_through_third_range(
 	int idx;
 	static const char *expected[] = { "FIRST", "second", "THIRD", NULL };
 
-	cl_git_pass(git_iterator_for_workdir_range(
+	cl_git_pass(git_iterator_for_workdir(
 		&i, repo, GIT_ITERATOR_IGNORE_CASE, start, end));
-	cl_git_pass(git_iterator_current(i, &entry));
+	cl_git_pass(git_iterator_current(&entry, i));
 
 	for (idx = 0; entry != NULL; ++idx) {
 		cl_assert_equal_s(expected[idx], entry->path);
 
-		if (S_ISDIR(entry->mode))
-			cl_git_pass(git_iterator_advance_into_directory(i, &entry));
-		else
-			cl_git_pass(git_iterator_advance(i, &entry));
+		cl_git_pass(git_iterator_advance(&entry, i));
 	}
 
 	cl_assert(expected[idx] == NULL);
@@ -817,16 +815,16 @@ static void check_tree_range(
 
 	cl_git_pass(git_repository_head_tree(&head, repo));
 
-	cl_git_pass(git_iterator_for_tree_range(
+	cl_git_pass(git_iterator_for_tree(
 		&i, head,
 		ignore_case ? GIT_ITERATOR_IGNORE_CASE : GIT_ITERATOR_DONT_IGNORE_CASE,
 		start, end));
 
-	cl_git_pass(git_iterator_current(i, &entry));
+	cl_git_pass(git_iterator_current(&entry, i));
 
 	for (count = 0; entry != NULL; ) {
 		++count;
-		cl_git_pass(git_iterator_advance(i, &entry));
+		cl_git_pass(git_iterator_advance(&entry, i));
 	}
 
 	cl_assert_equal_i(expected_count, count);
@@ -882,15 +880,15 @@ static void check_index_range(
 	if (ignore_case != is_ignoring_case)
 		cl_git_pass(git_index_set_caps(index, caps ^ GIT_INDEXCAP_IGNORE_CASE));
 
-	cl_git_pass(git_iterator_for_index_range(&i, index, 0, start, end));
+	cl_git_pass(git_iterator_for_index(&i, index, 0, start, end));
 
 	cl_assert(git_iterator_ignore_case(i) == ignore_case);
 
-	cl_git_pass(git_iterator_current(i, &entry));
+	cl_git_pass(git_iterator_current(&entry, i));
 
 	for (count = 0; entry != NULL; ) {
 		++count;
-		cl_git_pass(git_iterator_advance(i, &entry));
+		cl_git_pass(git_iterator_advance(&entry, i));
 	}
 
 	cl_assert_equal_i(expected_count, count);

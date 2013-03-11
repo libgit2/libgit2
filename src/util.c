@@ -607,3 +607,55 @@ size_t git__unescape(char *str)
 
 	return (pos - str);
 }
+
+#if defined(GIT_WIN32) || defined(BSD)
+typedef struct {
+	git__sort_r_cmp cmp;
+	void *payload;
+} git__qsort_r_glue;
+
+static int GIT_STDLIB_CALL git__qsort_r_glue_cmp(
+	void *payload, const void *a, const void *b)
+{
+	git__qsort_r_glue *glue = payload;
+	return glue->cmp(a, b, glue->payload);
+}
+#endif
+
+void git__qsort_r(
+	void *els, size_t nel, size_t elsize, git__sort_r_cmp cmp, void *payload)
+{
+#if defined(__MINGW32__)
+	git__insertsort_r(els, nel, elsize, NULL, cmp, payload);
+#elif defined(GIT_WIN32)
+	git__qsort_r_glue glue = { cmp, payload };
+	qsort_s(els, nel, elsize, git__qsort_r_glue_cmp, &glue);
+#elif defined(BSD)
+	git__qsort_r_glue glue = { cmp, payload };
+	qsort_r(els, nel, elsize, &glue, git__qsort_r_glue_cmp);
+#else
+	qsort_r(els, nel, elsize, cmp, payload);
+#endif
+}
+
+void git__insertsort_r(
+	void *els, size_t nel, size_t elsize, void *swapel,
+	git__sort_r_cmp cmp, void *payload)
+{
+	uint8_t *base = els, *end = els + nel * elsize;
+	uint8_t *i, *j;
+	bool freeswap = !swapel;
+
+	if (freeswap)
+		swapel = git__malloc(elsize);
+
+	for (i = base + elsize; i < end; i += elsize)
+		for (j = i; j > base && cmp(j, j - elsize, payload) < 0; j -= elsize) {
+			memcpy(swapel, j, elsize);
+			memcpy(j, j - elsize, elsize);
+			memcpy(j - elsize, swapel, elsize);
+		}
+
+	if (freeswap)
+		git__free(swapel);
+}

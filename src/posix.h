@@ -32,14 +32,13 @@ typedef int git_file;
  * Standard POSIX Methods
  *
  * All the methods starting with the `p_` prefix are
- * direct ports of the standard POSIX methods. 
+ * direct ports of the standard POSIX methods.
  *
  * Some of the methods are slightly wrapped to provide
  * saner defaults. Some of these methods are emulated
  * in Windows platforns.
  *
  * Use your manpages to check the docs on these.
- * Straightforward 
  */
 
 extern int p_read(git_file fd, void *buf, size_t cnt);

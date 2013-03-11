@@ -146,11 +146,17 @@ typedef int (*git__tsort_cmp)(const void *a, const void *b);
 
 extern void git__tsort(void **dst, size_t size, git__tsort_cmp cmp);
 
-typedef int (*git__tsort_r_cmp)(const void *a, const void *b, void *payload);
+typedef int (*git__sort_r_cmp)(const void *a, const void *b, void *payload);
 
 extern void git__tsort_r(
-	void **dst, size_t size, git__tsort_r_cmp cmp, void *payload);
+	void **dst, size_t size, git__sort_r_cmp cmp, void *payload);
 
+extern void git__qsort_r(
+	void *els, size_t nel, size_t elsize, git__sort_r_cmp cmp, void *payload);
+
+extern void git__insertsort_r(
+	void *els, size_t nel, size_t elsize, void *swapel,
+	git__sort_r_cmp cmp, void *payload);
 
 /**
  * @param position If non-NULL, this will be set to the position where the
