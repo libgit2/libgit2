@@ -45,6 +45,43 @@ GIT_EXTERN(int) git_revparse_single(git_object **out, git_repository *repo, cons
  */
 GIT_EXTERN(int) git_revparse_rangelike(git_object **left, git_object **right, int *threedots, git_repository *repo, const char *rangelike);
 
+
+/**
+ * Revparse flags.  These indicate the intended behavior of the spec passed to
+ * git_revparse.
+ */
+typedef enum {
+  /** The spec targeted a single object. */
+  GIT_REVPARSE_SINGLE         = 1 << 0,
+  /** The spec targeted a range of commits. */
+  GIT_REVPARSE_RANGE          = 1 << 1,
+  /** The spec used the '...' operator, which invokes special semantics. */
+  GIT_REVPARSE_MERGE_BASE     = 1 << 2,
+} git_revparse_flag_t;
+
+
+/**
+ * Find an object or range of commits as specified by a revision string.
+ * See `man gitrevisions` or http://git-scm.com/docs/git-rev-parse.html#_specifying_revisions
+ * for information on the syntax accepted.
+ *
+ * @param left buffer that receives the target of the left side of a range operator. If
+ *             there is no range operator, this buffer receives the single target.
+ * @param right buffer that receives the target of the right side of a range operator.
+ *              This is only filled in if `spec` specifies a range of commits
+ * @param flags buffer that receives a bitwise combination of `git_revparse_flag_t` values
+ * @param repo the repository to search in
+ * @param spec the rev-parse spec to parse
+ * @return 0 on success, GIT_INVALIDSPEC, GIT_ENOTFOUND, GIT_EAMBIGUOUS or an error code
+ */
+GIT_EXTERN(int) git_revparse(
+  git_oid *left,
+  git_oid *right,
+  unsigned int *flags,
+  git_repository *repo,
+  const char *spec);
+
+
 /** @} */
 GIT_END_DECL
 #endif
