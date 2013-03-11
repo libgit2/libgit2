@@ -1,6 +1,7 @@
 #include "clar_libgit2.h"
 #include "iterator.h"
 #include "repository.h"
+#include <stdarg.h>
 
 static git_repository *g_repo;
 
@@ -24,11 +25,19 @@ static void expect_iterator_items(
 	const git_index_entry *entry;
 	int count;
 	int no_trees = !(git_iterator_flags(i) & GIT_ITERATOR_INCLUDE_TREES);
+	bool v = false;
+
+	if (expected_flat < 0) { v = true; expected_flat = -expected_flat; }
+	if (expected_total < 0) { v = true; expected_total = -expected_total; }
 
 	count = 0;
 	cl_git_pass(git_iterator_current(&entry, i));
 
+	if (v) fprintf(stderr, "== %s ==\n", no_trees ? "notrees" : "trees");
+
 	while (entry != NULL) {
+		if (v) fprintf(stderr, "  %s %07o\n", entry->path, (int)entry->mode);
+
 		if (no_trees)
 			cl_assert(entry->mode != GIT_FILEMODE_TREE);
 
@@ -57,7 +66,11 @@ static void expect_iterator_items(
 	count = 0;
 	cl_git_pass(git_iterator_current(&entry, i));
 
+	if (v) fprintf(stderr, "-- %s --\n", no_trees ? "notrees" : "trees");
+
 	while (entry != NULL) {
+		if (v) fprintf(stderr, "  %s %07o\n", entry->path, (int)entry->mode);
+
 		if (no_trees)
 			cl_assert(entry->mode != GIT_FILEMODE_TREE);
 
@@ -390,6 +403,86 @@ void test_repo_iterator__tree_more(void)
 	git_iterator_free(i);
 
 	git_tree_free(head);
+}
+
+/* "b=name,t=name", blob_id, tree_id */
+static void build_test_tree(
+	git_oid *out, git_repository *repo, const char *fmt, ...)
+{
+	git_oid *id;
+	git_treebuilder *builder;
+	const char *scan = fmt, *next;
+	char type, delimiter;
+	git_filemode_t mode;
+	git_buf name = GIT_BUF_INIT;
+	va_list arglist;
+
+	cl_git_pass(git_treebuilder_create(&builder, NULL)); /* start builder */
+
+	va_start(arglist, fmt);
+	while (*scan) {
+		switch (type = *scan++) {
+		case 't': case 'T': mode = GIT_FILEMODE_TREE; break;
+		case 'b': case 'B': mode = GIT_FILEMODE_BLOB; break;
+		default:
+			cl_assert(type == 't' || type == 'T' || type == 'b' || type == 'B');
+		}
+
+		delimiter = *scan++; /* read and skip delimiter */
+		for (next = scan; *next && *next != delimiter; ++next)
+			/* seek end */;
+		cl_git_pass(git_buf_set(&name, scan, (size_t)(next - scan)));
+		for (scan = next; *scan && (*scan == delimiter || *scan == ','); ++scan)
+			/* skip delimiter and optional comma */;
+
+		id = va_arg(arglist, git_oid *);
+
+		cl_git_pass(git_treebuilder_insert(NULL, builder, name.ptr, id, mode));
+	}
+	va_end(arglist);
+
+	cl_git_pass(git_treebuilder_write(out, repo, builder));
+
+	git_treebuilder_free(builder);
+	git_buf_free(&name);
+}
+
+void test_repo_iterator__tree_case_conflicts(void)
+{
+	const char *blob_sha = "d44e18fb93b7107b5cd1b95d601591d77869a1b6";
+	git_tree *tree;
+	git_oid blob_id, biga_id, littlea_id, tree_id;
+	git_iterator *i;
+	const char *expect_cs[] = {
+		"A/1.file", "A/3.file", "a/2.file", "a/4.file" };
+	const char *expect_ci[] = {
+		"a/1.file", "a/2.file", "a/3.file", "a/4.file" };
+
+	g_repo = cl_git_sandbox_init("icase");
+
+	cl_git_pass(git_oid_fromstr(&blob_id, blob_sha)); /* lookup blob */
+
+	/* create tree with: A/1.file, A/3.file, a/2.file, a/4.file */
+	build_test_tree(
+		&biga_id, g_repo, "b/1.file/,b/3.file/", &blob_id, &blob_id);
+	build_test_tree(
+		&littlea_id, g_repo, "b/2.file/,b/4.file/", &blob_id, &blob_id);
+	build_test_tree(
+		&tree_id, g_repo, "t/A/,t/a/", &biga_id, &littlea_id);
+
+	cl_git_pass(git_tree_lookup(&tree, g_repo, &tree_id));
+
+	cl_git_pass(git_iterator_for_tree(
+		&i, tree, GIT_ITERATOR_DONT_IGNORE_CASE, NULL, NULL));
+	expect_iterator_items(i, 4, expect_cs, 4, expect_cs);
+	git_iterator_free(i);
+
+	cl_git_pass(git_iterator_for_tree(
+		&i, tree, GIT_ITERATOR_IGNORE_CASE, NULL, NULL));
+	expect_iterator_items(i, 4, expect_ci, -4, expect_ci);
+	git_iterator_free(i);
+
+	git_tree_free(tree);
 }
 
 void test_repo_iterator__workdir(void)
