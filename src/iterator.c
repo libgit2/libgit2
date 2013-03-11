@@ -189,43 +189,11 @@ typedef struct {
 	tree_iterator_frame *head, *top;
 	git_index_entry entry;
 	git_buf path;
+	int path_ambiguities;
 	bool path_has_filename;
 	int (*strcomp)(const char *a, const char *b);
 	int (*strncomp)(const char *a, const char *b, size_t sz);
 } tree_iterator;
-
-static char *tree_iterator__current_filename(
-	tree_iterator *ti, const git_tree_entry *te)
-{
-	if (!ti->path_has_filename) {
-		if (git_buf_joinpath(&ti->path, ti->path.ptr, te->filename) < 0)
-			return NULL;
-
-		if (git_tree_entry__is_tree(te) && git_buf_putc(&ti->path, '/') < 0)
-			return NULL;
-
-		ti->path_has_filename = true;
-	}
-
-	return ti->path.ptr;
-}
-
-static int tree_iterator__create_top_frame(tree_iterator *ti, git_tree *tree)
-{
-	size_t sz = sizeof(tree_iterator_frame) + sizeof(tree_iterator_entry);
-	tree_iterator_frame *top = git__calloc(sz, sizeof(char));
-	GITERR_CHECK_ALLOC(top);
-
-	top->n_entries = 1;
-	top->next = 1;
-	top->start = ti->base.start;
-	top->startlen = top->start ? strlen(top->start) : 0;
-	top->entries[0].tree = tree;
-
-	ti->head = ti->top = top;
-
-	return 0;
-}
 
 static const git_tree_entry *tree_iterator__get_tree_entry(
 	tree_iterator_frame *tf, const tree_iterator_entry *entry, size_t i)
@@ -243,6 +211,45 @@ static const git_tree_entry *tree_iterator__get_tree_entry(
 		return NULL;
 
 	return git_tree_entry_byindex(tree, entry->parent_tree_index);
+}
+
+static char *tree_iterator__current_filename(
+	tree_iterator *ti, const git_tree_entry *te)
+{
+	if (!ti->path_has_filename) {
+		if (git_buf_joinpath(&ti->path, ti->path.ptr, te->filename) < 0)
+			return NULL;
+
+		if (git_tree_entry__is_tree(te) && git_buf_putc(&ti->path, '/') < 0)
+			return NULL;
+
+		ti->path_has_filename = true;
+	}
+
+	return ti->path.ptr;
+}
+
+static void tree_iterator__rewrite_filename(tree_iterator *ti)
+{
+	tree_iterator_frame *scan = ti->head;
+	size_t current = scan->current;
+	ssize_t strpos = ti->path.size;
+	const git_tree_entry *te;
+
+	while (scan && scan->parent) {
+		tree_iterator_entry *entry = &scan->entries[current];
+
+		te = tree_iterator__get_tree_entry(scan, entry, 0);
+		if (!te)
+			break;
+
+		strpos -= te->filename_len;
+		memcpy(&ti->path.ptr[strpos], te->filename, te->filename_len);
+		strpos -= 1; /* separator */
+
+		current = entry->parent_entry_index;
+		scan = scan->parent;
+	}
 }
 
 static int tree_iterator__entry_cmp(const void *a, const void *b, void *p)
@@ -289,6 +296,9 @@ static int tree_iterator__set_next(tree_iterator *ti, tree_iterator_frame *tf)
 		tf->next++;
 		last_te = te;
 	}
+
+	if (tf->next > tf->current + 1)
+		ti->path_ambiguities++;
 
 	if (last_te && !tree_iterator__current_filename(ti, last_te))
 		return -1;
@@ -376,8 +386,12 @@ static int tree_iterator__push_frame(tree_iterator *ti)
 	return 0;
 }
 
-static bool tree_iterator__move_to_next(tree_iterator_frame *tf)
+static bool tree_iterator__move_to_next(
+	tree_iterator *ti, tree_iterator_frame *tf)
 {
+	if (tf->next > tf->current + 1)
+		ti->path_ambiguities--;
+
 	while (tf->current < tf->next) {
 		if (tf->parent && tf->entries[tf->current].tree) {
 			git_tree_free(tf->entries[tf->current].tree);
@@ -396,7 +410,7 @@ static bool tree_iterator__pop_frame(tree_iterator *ti)
 	if (!tf->parent)
 		return false;
 
-	tree_iterator__move_to_next(tf);
+	tree_iterator__move_to_next(ti, tf);
 
 	ti->head = tf->parent;
 	ti->head->child = NULL;
@@ -426,6 +440,9 @@ static int tree_iterator__current(
 	ti->entry.path = tree_iterator__current_filename(ti, te);
 	if (ti->entry.path == NULL)
 		return -1;
+
+	if (ti->path_ambiguities > 0)
+		tree_iterator__rewrite_filename(ti);
 
 	if (iterator__past_end(ti, ti->entry.path)) {
 		while (tree_iterator__pop_frame(ti)) /* pop to top */;
@@ -478,7 +495,7 @@ static int tree_iterator__advance(
 	}
 
 	/* scan forward and up, advancing in frame or popping frame when done */
-	while (!tree_iterator__move_to_next(tf) && tree_iterator__pop_frame(ti))
+	while (!tree_iterator__move_to_next(ti, tf) && tree_iterator__pop_frame(ti))
 		tf = ti->head;
 
 	/* find next and load trees */
@@ -510,6 +527,7 @@ static int tree_iterator__reset(
 	if (iterator__reset_range(self, start, end) < 0)
 		return -1;
 	git_buf_clear(&ti->path);
+	ti->path_ambiguities = 0;
 
 	return tree_iterator__push_frame(ti); /* re-expand top tree */
 }
@@ -535,6 +553,23 @@ static void tree_iterator__free(git_iterator *self)
 	ti->head = ti->top = NULL;
 
 	git_buf_free(&ti->path);
+}
+
+static int tree_iterator__create_top_frame(tree_iterator *ti, git_tree *tree)
+{
+	size_t sz = sizeof(tree_iterator_frame) + sizeof(tree_iterator_entry);
+	tree_iterator_frame *top = git__calloc(sz, sizeof(char));
+	GITERR_CHECK_ALLOC(top);
+
+	top->n_entries = 1;
+	top->next = 1;
+	top->start = ti->base.start;
+	top->startlen = top->start ? strlen(top->start) : 0;
+	top->entries[0].tree = tree;
+
+	ti->head = ti->top = top;
+
+	return 0;
 }
 
 int git_iterator_for_tree(
