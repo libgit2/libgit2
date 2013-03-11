@@ -25,12 +25,13 @@
 #define ITERATOR_CASE_FLAGS \
 	(GIT_ITERATOR_IGNORE_CASE | GIT_ITERATOR_DONT_IGNORE_CASE)
 
-#define ITERATOR_BASE_INIT(P,NAME_LC,NAME_UC) do { \
+#define ITERATOR_BASE_INIT(P,NAME_LC,NAME_UC,REPO) do { \
 	(P) = git__calloc(1, sizeof(NAME_LC ## _iterator)); \
 	GITERR_CHECK_ALLOC(P); \
 	(P)->base.type    = GIT_ITERATOR_TYPE_ ## NAME_UC; \
-	(P)->base.cb    = &(P)->cb; \
+	(P)->base.cb      = &(P)->cb; \
 	ITERATOR_SET_CB(P,NAME_LC); \
+	(P)->base.repo    = (REPO); \
 	(P)->base.start   = start ? git__strdup(start) : NULL; \
 	(P)->base.end     = end ? git__strdup(end) : NULL; \
 	if ((start && !(P)->base.start) || (end && !(P)->base.end)) { \
@@ -72,7 +73,7 @@ static int iterator__reset_range(
 	return 0;
 }
 
-static int iterator_update_ignore_case(
+static int iterator__update_ignore_case(
 	git_iterator *iter,
 	git_iterator_flag_t flags)
 {
@@ -100,37 +101,40 @@ static int iterator_update_ignore_case(
 	return error;
 }
 
-
-static int empty_iterator__noop(
-	const git_index_entry **entry, git_iterator *iter)
+GIT_INLINE(void) iterator__clear_entry(const git_index_entry **entry)
 {
-	GIT_UNUSED(iter);
 	if (entry) *entry = NULL;
+}
+
+
+static int empty_iterator__noop(const git_index_entry **e, git_iterator *i)
+{
+	GIT_UNUSED(i);
+	iterator__clear_entry(e);
 	return 0;
 }
 
-static int empty_iterator__seek(git_iterator *iter, const char *prefix)
+static int empty_iterator__seek(git_iterator *i, const char *p)
 {
-	GIT_UNUSED(iter); GIT_UNUSED(prefix);
+	GIT_UNUSED(i); GIT_UNUSED(p);
 	return -1;
 }
 
-static int empty_iterator__reset(
-	git_iterator *iter, const char *start, const char *end)
+static int empty_iterator__reset(git_iterator *i, const char *s, const char *e)
 {
-	GIT_UNUSED(iter); GIT_UNUSED(start); GIT_UNUSED(end);
+	GIT_UNUSED(i); GIT_UNUSED(s); GIT_UNUSED(e);
 	return 0;
 }
 
-static int empty_iterator__at_end(git_iterator *iter)
+static int empty_iterator__at_end(git_iterator *i)
 {
-	GIT_UNUSED(iter);
+	GIT_UNUSED(i);
 	return 1;
 }
 
-static void empty_iterator__free(git_iterator *iter)
+static void empty_iterator__free(git_iterator *i)
 {
-	GIT_UNUSED(iter);
+	GIT_UNUSED(i);
 }
 
 typedef struct {
@@ -151,16 +155,14 @@ int git_iterator_for_nothing(
 #define empty_iterator__advance empty_iterator__noop
 #define empty_iterator__advance_into empty_iterator__noop
 
-	ITERATOR_BASE_INIT(i, empty, EMPTY);
+	ITERATOR_BASE_INIT(i, empty, EMPTY, NULL);
 
 	if ((flags & GIT_ITERATOR_IGNORE_CASE) != 0)
 		i->base.flags |= GIT_ITERATOR_IGNORE_CASE;
 
 	*iter = (git_iterator *)i;
-
 	return 0;
 }
-
 
 
 typedef struct {
@@ -235,6 +237,9 @@ static void tree_iterator__rewrite_filename(tree_iterator *ti)
 	size_t current = scan->current;
 	ssize_t strpos = ti->path.size;
 	const git_tree_entry *te;
+
+	if (strpos && ti->path.ptr[strpos - 1] == '/')
+		strpos--;
 
 	while (scan && scan->parent) {
 		tree_iterator_entry *entry = &scan->entries[current];
@@ -386,18 +391,23 @@ static int tree_iterator__push_frame(tree_iterator *ti)
 	return 0;
 }
 
+GIT_INLINE(void) tree_iterator__free_tree(tree_iterator_entry *entry)
+{
+	if (entry->tree) {
+		git_tree_free(entry->tree);
+		entry->tree = NULL;
+	}
+}
+
 static bool tree_iterator__move_to_next(
 	tree_iterator *ti, tree_iterator_frame *tf)
 {
 	if (tf->next > tf->current + 1)
 		ti->path_ambiguities--;
 
-	while (tf->current < tf->next) {
-		if (tf->parent && tf->entries[tf->current].tree) {
-			git_tree_free(tf->entries[tf->current].tree);
-			tf->entries[tf->current].tree = NULL;
-		}
-		tf->current++;
+	for (; tf->current < tf->next; tf->current++) {
+		if (tf->parent)
+			tree_iterator__free_tree(&tf->entries[tf->current]);
 	}
 
 	return (tf->current < tf->n_entries);
@@ -428,8 +438,7 @@ static int tree_iterator__current(
 	tree_iterator_frame *tf = ti->head;
 	const git_tree_entry *te;
 
-	if (entry)
-		*entry = NULL;
+	iterator__clear_entry(entry);
 
 	if (!(te = tree_iterator__get_tree_entry(tf, NULL, tf->current)))
 		return 0;
@@ -462,8 +471,7 @@ static int tree_iterator__advance_into(
 	int error = 0;
 	tree_iterator *ti = (tree_iterator *)self;
 
-	if (entry)
-		*entry = NULL;
+	iterator__clear_entry(entry);
 
 	if (tree_iterator__at_tree(ti) &&
 		!(error = tree_iterator__push_frame(ti)))
@@ -479,8 +487,7 @@ static int tree_iterator__advance(
 	tree_iterator *ti = (tree_iterator *)self;
 	tree_iterator_frame *tf = ti->head;
 
-	if (entry)
-		*entry = NULL;
+	iterator__clear_entry(entry);
 
 	if (tf->current > tf->n_entries)
 		return 0;
@@ -511,8 +518,7 @@ static int tree_iterator__advance(
 
 static int tree_iterator__seek(git_iterator *self, const char *prefix)
 {
-	GIT_UNUSED(self);
-	GIT_UNUSED(prefix);
+	GIT_UNUSED(self); GIT_UNUSED(prefix);
 	return -1;
 }
 
@@ -544,10 +550,8 @@ static void tree_iterator__free(git_iterator *self)
 
 	while (tree_iterator__pop_frame(ti)) /* pop to top */;
 
-	/* free base frame */
 	if (ti->head) {
-		git_tree_free(ti->head->entries[0].tree);
-		ti->head->entries[0].tree = NULL;
+		tree_iterator__free_tree(&ti->head->entries[0]);
 		git__free(ti->head);
 	}
 	ti->head = ti->top = NULL;
@@ -588,10 +592,9 @@ int git_iterator_for_tree(
 	if ((error = git_tree__dup(&tree, tree)) < 0)
 		return error;
 
-	ITERATOR_BASE_INIT(ti, tree, TREE);
-	ti->base.repo = git_tree_owner(tree);
+	ITERATOR_BASE_INIT(ti, tree, TREE, git_tree_owner(tree));
 
-	if ((error = iterator_update_ignore_case((git_iterator *)ti, flags)) < 0)
+	if ((error = iterator__update_ignore_case((git_iterator *)ti, flags)) < 0)
 		goto fail;
 
 	if (iterator__ignore_case(ti)) {
@@ -678,7 +681,6 @@ static int index_iterator__first_prefix_tree(index_iterator *ii)
 		return 0;
 
 	/* find longest common prefix with prior index entry */
-
 	for (scan = slash = ie->path, prior = ii->partial.ptr;
 		 *scan && *scan == *prior; ++scan, ++prior)
 		if (*scan == '/')
@@ -731,9 +733,7 @@ static int index_iterator__advance(
 			ii->partial.ptr[ii->partial_pos] = ii->restore_terminator;
 			index_iterator__next_prefix_tree(ii);
 		} else {
-			/* advance to sibling tree (i.e. until we find entry that does
-			 * not share this prefix)
-			 */
+			/* advance to sibling tree (i.e. find entry with new prefix) */
 			while (ii->current < entrycount) {
 				ii->current++;
 
@@ -773,9 +773,7 @@ static int index_iterator__advance_into(
 
 static int index_iterator__seek(git_iterator *self, const char *prefix)
 {
-	GIT_UNUSED(self);
-	GIT_UNUSED(prefix);
-	/* find last item before prefix */
+	GIT_UNUSED(self); GIT_UNUSED(prefix);
 	return -1;
 }
 
@@ -829,9 +827,7 @@ int git_iterator_for_index(
 {
 	index_iterator *ii;
 
-	ITERATOR_BASE_INIT(ii, index, INDEX);
-
-	ii->base.repo = git_index_owner(index);
+	ITERATOR_BASE_INIT(ii, index, INDEX, git_index_owner(index));
 
 	if (index->ignore_case) {
 		ii->base.flags |= GIT_ITERATOR_IGNORE_CASE;
@@ -969,8 +965,7 @@ static int workdir_iterator__expand_dir(workdir_iterator *wi)
 	GITERR_CHECK_ALLOC(wf);
 
 	error = git_path_dirload_with_stat(
-		wi->path.ptr, wi->root_len,
-		iterator__ignore_case(wi),
+		wi->path.ptr, wi->root_len, iterator__ignore_case(wi),
 		wi->base.start, wi->base.end, &wf->entries);
 
 	if (error < 0 || wf->entries.length == 0) {
@@ -1012,8 +1007,7 @@ static int workdir_iterator__advance_into(
 	int error = 0;
 	workdir_iterator *wi = (workdir_iterator *)iter;
 
-	if (entry)
-		*entry = NULL;
+	iterator__clear_entry(entry);
 
 	/* workdir iterator will allow you to explicitly advance into a
 	 * commit/submodule (as well as a tree) to avoid some cases where an
@@ -1206,13 +1200,12 @@ int git_iterator_for_workdir(
 	assert(iter && repo);
 
 	if ((error = git_repository__ensure_not_bare(
-			repo, "scan working directory")) < 0)
+			 repo, "scan working directory")) < 0)
 		return error;
 
-	ITERATOR_BASE_INIT(wi, workdir, WORKDIR);
-	wi->base.repo = repo;
+	ITERATOR_BASE_INIT(wi, workdir, WORKDIR, repo);
 
-	if ((error = iterator_update_ignore_case((git_iterator *)wi, flags)) < 0)
+	if ((error = iterator__update_ignore_case((git_iterator *)wi, flags)) < 0)
 		goto fail;
 
 	if (git_buf_sets(&wi->path, git_repository_workdir(repo)) < 0 ||
@@ -1282,7 +1275,6 @@ git_index *git_iterator_get_index(git_iterator *iter)
 {
 	if (iter->type == GIT_ITERATOR_TYPE_INDEX)
 		return ((index_iterator *)iter)->index;
-
 	return NULL;
 }
 
@@ -1354,8 +1346,7 @@ int git_iterator_cmp(git_iterator *iter, const char *path_prefix)
 	const git_index_entry *entry;
 
 	/* a "done" iterator is after every prefix */
-	if (git_iterator_current(&entry, iter) < 0 ||
-		entry == NULL)
+	if (git_iterator_current(&entry, iter) < 0 || entry == NULL)
 		return 1;
 
 	/* a NULL prefix is after any valid iterator */

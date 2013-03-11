@@ -457,6 +457,10 @@ void test_repo_iterator__tree_case_conflicts(void)
 		"A/1.file", "A/3.file", "a/2.file", "a/4.file" };
 	const char *expect_ci[] = {
 		"A/1.file", "a/2.file", "A/3.file", "a/4.file" };
+	const char *expect_cs_trees[] = {
+		"A/", "A/1.file", "A/3.file", "a/", "a/2.file", "a/4.file" };
+	const char *expect_ci_trees[] = {
+		"A/", "A/1.file", "a/2.file", "A/3.file", "a/4.file" };
 
 	g_repo = cl_git_sandbox_init("icase");
 
@@ -480,6 +484,18 @@ void test_repo_iterator__tree_case_conflicts(void)
 	cl_git_pass(git_iterator_for_tree(
 		&i, tree, GIT_ITERATOR_IGNORE_CASE, NULL, NULL));
 	expect_iterator_items(i, 4, expect_ci, 4, expect_ci);
+	git_iterator_free(i);
+
+	cl_git_pass(git_iterator_for_tree(
+		&i, tree, GIT_ITERATOR_DONT_IGNORE_CASE |
+		GIT_ITERATOR_INCLUDE_TREES, NULL, NULL));
+	expect_iterator_items(i, 6, expect_cs_trees, 6, expect_cs_trees);
+	git_iterator_free(i);
+
+	cl_git_pass(git_iterator_for_tree(
+		&i, tree, GIT_ITERATOR_IGNORE_CASE |
+		GIT_ITERATOR_INCLUDE_TREES, NULL, NULL));
+	expect_iterator_items(i, 5, expect_ci_trees, 5, expect_ci_trees);
 	git_iterator_free(i);
 
 	git_tree_free(tree);
