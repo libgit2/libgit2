@@ -193,26 +193,31 @@ typedef struct {
 	git_buf path;
 	int path_ambiguities;
 	bool path_has_filename;
-	int (*strcomp)(const char *a, const char *b);
 	int (*strncomp)(const char *a, const char *b, size_t sz);
 } tree_iterator;
 
-static const git_tree_entry *tree_iterator__get_tree_entry(
-	tree_iterator_frame *tf, const tree_iterator_entry *entry, size_t i)
+static const git_tree_entry *tree_iterator__tree_entry(
+	tree_iterator_frame *tf, const tree_iterator_entry *entry)
+{
+	git_tree *tree = tf->parent->entries[entry->parent_entry_index].tree;
+	if (!tree)
+		return NULL;
+	return git_tree_entry_byindex(tree, entry->parent_tree_index);
+}
+
+static const git_tree_entry *tree_iterator__tree_entry_by_index(
+	tree_iterator_frame *tf, size_t i)
 {
 	git_tree *tree;
 
-	if (!entry) {
-		if (i >= tf->n_entries)
-			return NULL;
-		entry = &tf->entries[i];
-	}
+	if (i >= tf->n_entries)
+		return NULL;
 
-	tree = tf->parent->entries[entry->parent_entry_index].tree;
+	tree = tf->parent->entries[tf->entries[i].parent_entry_index].tree;
 	if (!tree)
 		return NULL;
 
-	return git_tree_entry_byindex(tree, entry->parent_tree_index);
+	return git_tree_entry_byindex(tree, tf->entries[i].parent_tree_index);
 }
 
 static char *tree_iterator__current_filename(
@@ -244,8 +249,7 @@ static void tree_iterator__rewrite_filename(tree_iterator *ti)
 	while (scan && scan->parent) {
 		tree_iterator_entry *entry = &scan->entries[current];
 
-		te = tree_iterator__get_tree_entry(scan, entry, 0);
-		if (!te)
+		if (!(te = tree_iterator__tree_entry(scan, entry)))
 			break;
 
 		strpos -= te->filename_len;
@@ -257,21 +261,20 @@ static void tree_iterator__rewrite_filename(tree_iterator *ti)
 	}
 }
 
-static int tree_iterator__entry_cmp(const void *a, const void *b, void *p)
+static int tree_iterator__tree_entry_cmp(
+	const git_tree_entry *a,
+	const git_tree_entry *b,
+	int (*strncomp)(const char *, const char *, size_t))
 {
-	tree_iterator_frame *tf = p;
-	const git_tree_entry *ae = tree_iterator__get_tree_entry(tf, a, 0);
-	const git_tree_entry *be = tree_iterator__get_tree_entry(tf, b, 0);
-	size_t common_len = min(ae->filename_len, be->filename_len);
-	int cmp = git__strncasecmp(ae->filename, be->filename, common_len);
+	size_t common = min(a->filename_len, b->filename_len);
+	int cmp = strncomp(a->filename, b->filename, common);
 
 	if (!cmp) {
-		char a_next = ae->filename[common_len];
-		char b_next = be->filename[common_len];
+		char a_next = a->filename[common], b_next = b->filename[common];
 
-		if (!a_next && ae->attr == GIT_FILEMODE_TREE)
+		if (!a_next && a->attr == GIT_FILEMODE_TREE)
 			a_next = '/';
-		if (!b_next && be->attr == GIT_FILEMODE_TREE)
+		if (!b_next && b->attr == GIT_FILEMODE_TREE)
 			b_next = '/';
 
 		cmp = (int)a_next - (int)b_next;
@@ -280,17 +283,24 @@ static int tree_iterator__entry_cmp(const void *a, const void *b, void *p)
 	return cmp;
 }
 
+static int tree_iterator__entry_cmp(const void *a, const void *b, void *p)
+{
+	return tree_iterator__tree_entry_cmp(
+		tree_iterator__tree_entry(p, a), tree_iterator__tree_entry(p, b),
+		git__strncasecmp);
+}
+
 static int tree_iterator__set_next(tree_iterator *ti, tree_iterator_frame *tf)
 {
 	/* find next and load trees for current range */
 	int error = 0;
-	const git_tree_entry *te, *last_te = NULL;
+	const git_tree_entry *te, *last = NULL;
 
 	tf->next = tf->current;
 
 	while (tf->next < tf->n_entries) {
-		if (!(te = tree_iterator__get_tree_entry(tf, 0, tf->next)) ||
-			(last_te && ti->strcomp(last_te->filename, te->filename) != 0))
+		if (!(te = tree_iterator__tree_entry_by_index(tf, tf->next)) ||
+			(last && tree_iterator__tree_entry_cmp(last, te, ti->strncomp)))
 			break;
 
 		if (git_tree_entry__is_tree(te) &&
@@ -299,13 +309,13 @@ static int tree_iterator__set_next(tree_iterator *ti, tree_iterator_frame *tf)
 			break;
 
 		tf->next++;
-		last_te = te;
+		last = te;
 	}
 
 	if (tf->next > tf->current + 1)
 		ti->path_ambiguities++;
 
-	if (last_te && !tree_iterator__current_filename(ti, last_te))
+	if (last && !tree_iterator__current_filename(ti, last))
 		return -1;
 
 	return error;
@@ -360,7 +370,7 @@ static int tree_iterator__push_frame(tree_iterator *ti)
 	if (tf->startlen > 0) {
 		/* find first item >= start */
 		for (i = 0; i < new_tf->n_entries; ++i) {
-			if (!(te = tree_iterator__get_tree_entry(new_tf, NULL, i)))
+			if (!(te = tree_iterator__tree_entry_by_index(new_tf, i)))
 				break;
 			sz = min(tf->startlen, te->filename_len);
 			if (ti->strncomp(tf->start, te->filename, sz) <= 0 &&
@@ -440,7 +450,7 @@ static int tree_iterator__current(
 
 	iterator__clear_entry(entry);
 
-	if (!(te = tree_iterator__get_tree_entry(tf, NULL, tf->current)))
+	if (!(te = tree_iterator__tree_entry_by_index(tf, tf->current)))
 		return 0;
 
 	ti->entry.mode = te->attr;
@@ -596,12 +606,7 @@ int git_iterator_for_tree(
 
 	if ((error = iterator__update_ignore_case((git_iterator *)ti, flags)) < 0)
 		goto fail;
-
-	if (iterator__ignore_case(ti)) {
-		ti->strcomp = git__strcasecmp; ti->strncomp = git__strncasecmp;
-	} else {
-		ti->strcomp = git__strcmp; ti->strncomp = git__strncmp;
-	}
+	ti->strncomp = iterator__ignore_case(ti) ? git__strncasecmp : git__strncmp;
 
 	if ((error = tree_iterator__create_top_frame(ti, tree)) < 0 ||
 		(error = tree_iterator__push_frame(ti)) < 0) /* expand top right now */
@@ -1284,9 +1289,8 @@ int git_iterator_current_tree_entry(
 	if (iter->type != GIT_ITERATOR_TYPE_TREE)
 		*tree_entry = NULL;
 	else {
-		tree_iterator *ti = (tree_iterator *)iter;
-		*tree_entry =
-			tree_iterator__get_tree_entry(ti->head, NULL, ti->head->current);
+		tree_iterator_frame *tf = ((tree_iterator *)iter)->head;
+		*tree_entry = tree_iterator__tree_entry_by_index(tf, tf->current);
 	}
 
 	return 0;
@@ -1312,7 +1316,7 @@ int git_iterator_current_parent_tree(
 	while (*scan) {
 		/* get entry of this parent that child is currently on */
 		if (!(tf = tf->child) ||
-			!(te = tree_iterator__get_tree_entry(tf, NULL, tf->current)) ||
+			!(te = tree_iterator__tree_entry_by_index(tf, tf->current)) ||
 			ti->strncomp(scan, te->filename, te->filename_len) != 0)
 			return 0;
 

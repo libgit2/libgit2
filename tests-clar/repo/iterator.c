@@ -501,6 +501,61 @@ void test_repo_iterator__tree_case_conflicts(void)
 	git_tree_free(tree);
 }
 
+void test_repo_iterator__tree_case_conflicts_2(void)
+{
+	const char *blob_sha = "d44e18fb93b7107b5cd1b95d601591d77869a1b6";
+	git_tree *tree;
+	git_oid blob_id, Ab_id, biga_id, littlea_id, tree_id;
+	git_iterator *i;
+	const char *expect_cs[] = {
+		"A/a", "A/b/1", "A/c", "a/C", "a/a", "a/b" };
+	const char *expect_ci[] = {
+		"A/a", "a/b", "A/b/1", "A/c" };
+	const char *expect_cs_trees[] = {
+		"A/", "A/a", "A/b/", "A/b/1", "A/c", "a/", "a/C", "a/a", "a/b" };
+	const char *expect_ci_trees[] = {
+		"A/", "A/a", "a/b", "A/b/", "A/b/1", "A/c" };
+
+	g_repo = cl_git_sandbox_init("icase");
+
+	cl_git_pass(git_oid_fromstr(&blob_id, blob_sha)); /* lookup blob */
+
+	/* create: A/a A/b/1 A/c a/a a/b a/C */
+	build_test_tree(&Ab_id, g_repo, "b/1/", &blob_id);
+	build_test_tree(
+		&biga_id, g_repo, "b/a/,t/b/,b/c/", &blob_id, &Ab_id, &blob_id);
+	build_test_tree(
+		&littlea_id, g_repo, "b/a/,b/b/,b/C/", &blob_id, &blob_id, &blob_id);
+	build_test_tree(
+		&tree_id, g_repo, "t/A/,t/a/", &biga_id, &littlea_id);
+
+	cl_git_pass(git_tree_lookup(&tree, g_repo, &tree_id));
+
+	cl_git_pass(git_iterator_for_tree(
+		&i, tree, GIT_ITERATOR_DONT_IGNORE_CASE, NULL, NULL));
+	expect_iterator_items(i, 6, expect_cs, 6, expect_cs);
+	git_iterator_free(i);
+
+	cl_git_pass(git_iterator_for_tree(
+		&i, tree, GIT_ITERATOR_IGNORE_CASE, NULL, NULL));
+	expect_iterator_items(i, 4, expect_ci, 4, expect_ci);
+	git_iterator_free(i);
+
+	cl_git_pass(git_iterator_for_tree(
+		&i, tree, GIT_ITERATOR_DONT_IGNORE_CASE |
+		GIT_ITERATOR_INCLUDE_TREES, NULL, NULL));
+	expect_iterator_items(i, 9, expect_cs_trees, 9, expect_cs_trees);
+	git_iterator_free(i);
+
+	cl_git_pass(git_iterator_for_tree(
+		&i, tree, GIT_ITERATOR_IGNORE_CASE |
+		GIT_ITERATOR_INCLUDE_TREES, NULL, NULL));
+	expect_iterator_items(i, 6, expect_ci_trees, 6, expect_ci_trees);
+	git_iterator_free(i);
+
+	git_tree_free(tree);
+}
+
 void test_repo_iterator__workdir(void)
 {
 	git_iterator *i;
