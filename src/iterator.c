@@ -285,9 +285,21 @@ static int tree_iterator__tree_entry_cmp(
 
 static int tree_iterator__entry_cmp(const void *a, const void *b, void *p)
 {
-	return tree_iterator__tree_entry_cmp(
-		tree_iterator__tree_entry(p, a), tree_iterator__tree_entry(p, b),
-		git__strncasecmp);
+	const tree_iterator_entry *ae = a, *be = b;
+	const git_tree_entry *ate = tree_iterator__tree_entry(p, ae);
+	const git_tree_entry *bte = tree_iterator__tree_entry(p, be);
+	int cmp = tree_iterator__tree_entry_cmp(ate, bte, git__strncasecmp);
+
+	/* stabilize sort order among equivalent names */
+	if (!cmp) {
+		cmp = (ae->parent_entry_index < be->parent_entry_index) ? -1 :
+			(ae->parent_entry_index > be->parent_entry_index) ? 1 : 0;
+		if (!cmp)
+			cmp = (ae->parent_tree_index < be->parent_tree_index) ? -1 :
+				(ae->parent_tree_index > be->parent_tree_index) ? 1 : 0;
+	}
+
+	return cmp;
 }
 
 static int tree_iterator__set_next(tree_iterator *ti, tree_iterator_frame *tf)

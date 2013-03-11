@@ -447,7 +447,7 @@ static void build_test_tree(
 	git_buf_free(&name);
 }
 
-void test_repo_iterator__tree_case_conflicts(void)
+void test_repo_iterator__tree_case_conflicts_0(void)
 {
 	const char *blob_sha = "d44e18fb93b7107b5cd1b95d601591d77869a1b6";
 	git_tree *tree;
@@ -468,11 +468,11 @@ void test_repo_iterator__tree_case_conflicts(void)
 
 	/* create tree with: A/1.file, A/3.file, a/2.file, a/4.file */
 	build_test_tree(
-		&biga_id, g_repo, "b/1.file/,b/3.file/", &blob_id, &blob_id);
+		&biga_id, g_repo, "b|1.file|,b|3.file|", &blob_id, &blob_id);
 	build_test_tree(
-		&littlea_id, g_repo, "b/2.file/,b/4.file/", &blob_id, &blob_id);
+		&littlea_id, g_repo, "b|2.file|,b|4.file|", &blob_id, &blob_id);
 	build_test_tree(
-		&tree_id, g_repo, "t/A/,t/a/", &biga_id, &littlea_id);
+		&tree_id, g_repo, "t|A|,t|a|", &biga_id, &littlea_id);
 
 	cl_git_pass(git_tree_lookup(&tree, g_repo, &tree_id));
 
@@ -501,7 +501,7 @@ void test_repo_iterator__tree_case_conflicts(void)
 	git_tree_free(tree);
 }
 
-void test_repo_iterator__tree_case_conflicts_2(void)
+void test_repo_iterator__tree_case_conflicts_1(void)
 {
 	const char *blob_sha = "d44e18fb93b7107b5cd1b95d601591d77869a1b6";
 	git_tree *tree;
@@ -521,13 +521,13 @@ void test_repo_iterator__tree_case_conflicts_2(void)
 	cl_git_pass(git_oid_fromstr(&blob_id, blob_sha)); /* lookup blob */
 
 	/* create: A/a A/b/1 A/c a/a a/b a/C */
-	build_test_tree(&Ab_id, g_repo, "b/1/", &blob_id);
+	build_test_tree(&Ab_id, g_repo, "b|1|", &blob_id);
 	build_test_tree(
-		&biga_id, g_repo, "b/a/,t/b/,b/c/", &blob_id, &Ab_id, &blob_id);
+		&biga_id, g_repo, "b|a|,t|b|,b|c|", &blob_id, &Ab_id, &blob_id);
 	build_test_tree(
-		&littlea_id, g_repo, "b/a/,b/b/,b/C/", &blob_id, &blob_id, &blob_id);
+		&littlea_id, g_repo, "b|a|,b|b|,b|C|", &blob_id, &blob_id, &blob_id);
 	build_test_tree(
-		&tree_id, g_repo, "t/A/,t/a/", &biga_id, &littlea_id);
+		&tree_id, g_repo, "t|A|,t|a|", &biga_id, &littlea_id);
 
 	cl_git_pass(git_tree_lookup(&tree, g_repo, &tree_id));
 
@@ -551,6 +551,98 @@ void test_repo_iterator__tree_case_conflicts_2(void)
 		&i, tree, GIT_ITERATOR_IGNORE_CASE |
 		GIT_ITERATOR_INCLUDE_TREES, NULL, NULL));
 	expect_iterator_items(i, 6, expect_ci_trees, 6, expect_ci_trees);
+	git_iterator_free(i);
+
+	git_tree_free(tree);
+}
+
+void test_repo_iterator__tree_case_conflicts_2(void)
+{
+	const char *blob_sha = "d44e18fb93b7107b5cd1b95d601591d77869a1b6";
+	git_tree *tree;
+	git_oid blob_id, d1, d2, c1, c2, b1, b2, a1, a2, tree_id;
+	git_iterator *i;
+	const char *expect_cs[] = {
+		"A/B/C/D/16", "A/B/C/D/foo", "A/B/C/d/15",  "A/B/C/d/FOO",
+		"A/B/c/D/14", "A/B/c/D/foo", "A/B/c/d/13",  "A/B/c/d/FOO",
+		"A/b/C/D/12", "A/b/C/D/foo", "A/b/C/d/11",  "A/b/C/d/FOO",
+		"A/b/c/D/10", "A/b/c/D/foo", "A/b/c/d/09",  "A/b/c/d/FOO",
+		"a/B/C/D/08", "a/B/C/D/foo", "a/B/C/d/07", "a/B/C/d/FOO",
+		"a/B/c/D/06", "a/B/c/D/foo", "a/B/c/d/05", "a/B/c/d/FOO",
+		"a/b/C/D/04", "a/b/C/D/foo", "a/b/C/d/03", "a/b/C/d/FOO",
+		"a/b/c/D/02", "a/b/c/D/foo", "a/b/c/d/01", "a/b/c/d/FOO", };
+	const char *expect_ci[] = {
+		"a/b/c/d/01", "a/b/c/D/02", "a/b/C/d/03", "a/b/C/D/04",
+		"a/B/c/d/05", "a/B/c/D/06", "a/B/C/d/07", "a/B/C/D/08",
+		"A/b/c/d/09", "A/b/c/D/10", "A/b/C/d/11", "A/b/C/D/12",
+		"A/B/c/d/13", "A/B/c/D/14", "A/B/C/d/15", "A/B/C/D/16",
+		"A/B/C/D/foo", };
+	const char *expect_ci_trees[] = {
+		"A/", "A/B/", "A/B/C/", "A/B/C/D/",
+		"a/b/c/d/01", "a/b/c/D/02", "a/b/C/d/03", "a/b/C/D/04",
+		"a/B/c/d/05", "a/B/c/D/06", "a/B/C/d/07", "a/B/C/D/08",
+		"A/b/c/d/09", "A/b/c/D/10", "A/b/C/d/11", "A/b/C/D/12",
+		"A/B/c/d/13", "A/B/c/D/14", "A/B/C/d/15", "A/B/C/D/16",
+		"A/B/C/D/foo", };
+
+	g_repo = cl_git_sandbox_init("icase");
+
+	cl_git_pass(git_oid_fromstr(&blob_id, blob_sha)); /* lookup blob */
+
+	build_test_tree(&d1, g_repo, "b|16|,b|foo|", &blob_id, &blob_id);
+	build_test_tree(&d2, g_repo, "b|15|,b|FOO|", &blob_id, &blob_id);
+	build_test_tree(&c1, g_repo, "t|D|,t|d|", &d1, &d2);
+	build_test_tree(&d1, g_repo, "b|14|,b|foo|", &blob_id, &blob_id);
+	build_test_tree(&d2, g_repo, "b|13|,b|FOO|", &blob_id, &blob_id);
+	build_test_tree(&c2, g_repo, "t|D|,t|d|", &d1, &d2);
+	build_test_tree(&b1, g_repo, "t|C|,t|c|", &c1, &c2);
+
+	build_test_tree(&d1, g_repo, "b|12|,b|foo|", &blob_id, &blob_id);
+	build_test_tree(&d2, g_repo, "b|11|,b|FOO|", &blob_id, &blob_id);
+	build_test_tree(&c1, g_repo, "t|D|,t|d|", &d1, &d2);
+	build_test_tree(&d1, g_repo, "b|10|,b|foo|", &blob_id, &blob_id);
+	build_test_tree(&d2, g_repo, "b|09|,b|FOO|", &blob_id, &blob_id);
+	build_test_tree(&c2, g_repo, "t|D|,t|d|", &d1, &d2);
+	build_test_tree(&b2, g_repo, "t|C|,t|c|", &c1, &c2);
+
+	build_test_tree(&a1, g_repo, "t|B|,t|b|", &b1, &b2);
+
+	build_test_tree(&d1, g_repo, "b|08|,b|foo|", &blob_id, &blob_id);
+	build_test_tree(&d2, g_repo, "b|07|,b|FOO|", &blob_id, &blob_id);
+	build_test_tree(&c1, g_repo, "t|D|,t|d|", &d1, &d2);
+	build_test_tree(&d1, g_repo, "b|06|,b|foo|", &blob_id, &blob_id);
+	build_test_tree(&d2, g_repo, "b|05|,b|FOO|", &blob_id, &blob_id);
+	build_test_tree(&c2, g_repo, "t|D|,t|d|", &d1, &d2);
+	build_test_tree(&b1, g_repo, "t|C|,t|c|", &c1, &c2);
+
+	build_test_tree(&d1, g_repo, "b|04|,b|foo|", &blob_id, &blob_id);
+	build_test_tree(&d2, g_repo, "b|03|,b|FOO|", &blob_id, &blob_id);
+	build_test_tree(&c1, g_repo, "t|D|,t|d|", &d1, &d2);
+	build_test_tree(&d1, g_repo, "b|02|,b|foo|", &blob_id, &blob_id);
+	build_test_tree(&d2, g_repo, "b|01|,b|FOO|", &blob_id, &blob_id);
+	build_test_tree(&c2, g_repo, "t|D|,t|d|", &d1, &d2);
+	build_test_tree(&b2, g_repo, "t|C|,t|c|", &c1, &c2);
+
+	build_test_tree(&a2, g_repo, "t|B|,t|b|", &b1, &b2);
+
+	build_test_tree(&tree_id, g_repo, "t/A/,t/a/", &a1, &a2);
+
+	cl_git_pass(git_tree_lookup(&tree, g_repo, &tree_id));
+
+	cl_git_pass(git_iterator_for_tree(
+		&i, tree, GIT_ITERATOR_DONT_IGNORE_CASE, NULL, NULL));
+	expect_iterator_items(i, 32, expect_cs, 32, expect_cs);
+	git_iterator_free(i);
+
+	cl_git_pass(git_iterator_for_tree(
+		&i, tree, GIT_ITERATOR_IGNORE_CASE, NULL, NULL));
+	expect_iterator_items(i, 17, expect_ci, 17, expect_ci);
+	git_iterator_free(i);
+
+	cl_git_pass(git_iterator_for_tree(
+		&i, tree, GIT_ITERATOR_IGNORE_CASE |
+		GIT_ITERATOR_INCLUDE_TREES, NULL, NULL));
+	expect_iterator_items(i, 21, expect_ci_trees, 21, expect_ci_trees);
 	git_iterator_free(i);
 
 	git_tree_free(tree);
