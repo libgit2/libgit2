@@ -174,16 +174,34 @@ static int find_similar__hashsig_for_file(
 	void **out, const git_diff_file *f, const char *path, void *p)
 {
 	git_hashsig_option_t opt = (git_hashsig_option_t)p;
+	int error = 0;
+
 	GIT_UNUSED(f);
-	return git_hashsig_create_fromfile((git_hashsig **)out, path, opt);
+	error = git_hashsig_create_fromfile((git_hashsig **)out, path, opt);
+	
+	if (error == GIT_EBUFS) {
+		error = 0;
+		giterr_clear();
+	}
+
+	return error;
 }
 
 static int find_similar__hashsig_for_buf(
 	void **out, const git_diff_file *f, const char *buf, size_t len, void *p)
 {
 	git_hashsig_option_t opt = (git_hashsig_option_t)p;
+	int error = 0;
+	
 	GIT_UNUSED(f);
-	return git_hashsig_create((git_hashsig **)out, buf, len, opt);
+	error = git_hashsig_create((git_hashsig **)out, buf, len, opt);
+	
+	if (error == GIT_EBUFS) {
+		error = 0;
+		giterr_clear();
+	}
+
+	return error;
 }
 
 static void find_similar__hashsig_free(void *sig, void *payload)
@@ -414,6 +432,10 @@ static int similarity_measure(
 		return -1;
 	if (!cache[b_idx] && similarity_calc(diff, opts, b_idx, cache) < 0)
 		return -1;
+	
+	/* some metrics may not wish to process this file (too big / too small) */
+	if (!cache[a_idx] || !cache[b_idx])
+		return 0;
 
 	/* compare signatures */
 	if (opts->metric->similarity(
