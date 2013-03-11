@@ -16,6 +16,7 @@
 #include "git2/pack.h"
 #include "git2/commit.h"
 #include "git2/revparse.h"
+#include "git2/push.h"
 #include "pack-objects.h"
 #include "refs.h"
 #include "posix.h"
@@ -23,6 +24,8 @@
 #include "buffer.h"
 #include "repository.h"
 #include "odb.h"
+#include "push.h"
+#include "remote.h"
 
 typedef struct {
 	git_transport parent;
@@ -79,8 +82,10 @@ static int add_ref(transport_local *t, const char *name)
 
 	head = NULL;
 
-	/* If it's not an annotated tag, just get out */
-	if (git_object_type(obj) != GIT_OBJ_TAG) {
+	/* If it's not an annotated tag, or if we're mocking
+	 * git-receive-pack, just get out */
+	if (git_object_type(obj) != GIT_OBJ_TAG ||
+		t->direction != GIT_DIRECTION_FETCH) {
 		git_object_free(obj);
 		return 0;
 	}
@@ -125,8 +130,8 @@ static int store_refs(transport_local *t)
 	/* Sort the references first */
 	git__tsort((void **)ref_names.strings, ref_names.count, &git__strcmp_cb);
 
-	/* Add HEAD */
-	if (add_ref(t, GIT_HEAD_FILE) < 0)
+	/* Add HEAD iff direction is fetch */
+	if (t->direction == GIT_DIRECTION_FETCH && add_ref(t, GIT_HEAD_FILE) < 0)
 		goto on_error;
 
 	for (i = 0; i < ref_names.count; ++i) {
@@ -243,6 +248,191 @@ static int local_negotiate_fetch(
 	}
 
 	return 0;
+}
+
+static int local_push_copy_object(
+	git_odb *local_odb,
+	git_odb *remote_odb,
+	git_pobject *obj)
+{
+	int error = 0;
+	git_odb_object *odb_obj = NULL;
+	git_odb_stream *odb_stream;
+	size_t odb_obj_size;
+	git_otype odb_obj_type;
+	git_oid remote_odb_obj_oid;
+
+	/* Object already exists in the remote ODB; do nothing and return 0*/
+	if (git_odb_exists(remote_odb, &obj->id))
+		return 0;
+
+	if ((error = git_odb_read(&odb_obj, local_odb, &obj->id)) < 0)
+		return error;
+
+	odb_obj_size = git_odb_object_size(odb_obj);
+	odb_obj_type = git_odb_object_type(odb_obj);
+
+	if ((error = git_odb_open_wstream(&odb_stream, remote_odb,
+		odb_obj_size, odb_obj_type)) < 0)
+		goto on_error;
+
+	if (odb_stream->write(odb_stream, (char *)git_odb_object_data(odb_obj),
+		odb_obj_size) < 0 ||
+		odb_stream->finalize_write(&remote_odb_obj_oid, odb_stream) < 0) {
+		error = -1;
+	} else if (git_oid_cmp(&obj->id, &remote_odb_obj_oid) != 0) {
+		giterr_set(GITERR_ODB, "Error when writing object to remote odb "
+			"during local push operation. Remote odb object oid does not "
+			"match local oid.");
+		error = -1;
+	}
+
+	odb_stream->free(odb_stream);
+
+on_error:
+	git_odb_object_free(odb_obj);
+	return error;
+}
+
+static int local_push_update_remote_ref(
+	git_repository *remote_repo,
+	const char *lref,
+	const char *rref,
+	git_oid *loid,
+	git_oid *roid)
+{
+	int error;
+	git_reference *remote_ref = NULL;
+
+	/* rref will be NULL if it is implicit in the pushspec (e.g. 'b1:') */
+	rref = rref ? rref : lref;
+
+	if (lref) {
+		/* Create or update a ref */
+		if ((error = git_reference_create(NULL, remote_repo, rref, loid,
+				!git_oid_iszero(roid))) < 0)
+			return error;
+	} else {
+		/* Delete a ref */
+		if ((error = git_reference_lookup(&remote_ref, remote_repo, rref)) < 0) {
+			if (error == GIT_ENOTFOUND)
+				error = 0;
+			return error;
+		}
+
+		if ((error = git_reference_delete(remote_ref)) < 0)
+			return error;
+
+		git_reference_free(remote_ref);
+	}
+
+	return 0;
+}
+
+static int local_push(
+	git_transport *transport,
+	git_push *push)
+{
+	transport_local *t = (transport_local *)transport;
+	git_odb *remote_odb = NULL;
+	git_odb *local_odb = NULL;
+	git_repository *remote_repo = NULL;
+	push_spec *spec;
+	char *url = NULL;
+	int error;
+	unsigned int i;
+	size_t j;
+
+	if ((error = git_repository_open(&remote_repo, push->remote->url)) < 0)
+		return error;
+
+	/* We don't currently support pushing locally to non-bare repos. Proper 
+	   non-bare repo push support would require checking configs to see if
+	   we should override the default 'don't let this happen' behavior */
+	if (!remote_repo->is_bare) {
+		error = -1;
+		goto on_error;
+	}
+
+	if ((error = git_repository_odb__weakptr(&remote_odb, remote_repo)) < 0 ||
+		(error = git_repository_odb__weakptr(&local_odb, push->repo)) < 0)
+		goto on_error;
+
+	for (i = 0; i < push->pb->nr_objects; i++) {
+		if ((error = local_push_copy_object(local_odb, remote_odb,
+			&push->pb->object_list[i])) < 0)
+			goto on_error;
+	}
+
+	push->unpack_ok = 1;
+
+	git_vector_foreach(&push->specs, j, spec) {
+		push_status *status;
+		const git_error *last;
+		char *ref = spec->rref ? spec->rref : spec->lref;
+
+		status = git__calloc(sizeof(push_status), 1);
+		if (!status)
+			goto on_error;
+
+		status->ref = git__strdup(ref);
+		if (!status->ref) {
+			git_push_status_free(status);
+			goto on_error;
+		}
+
+		error = local_push_update_remote_ref(remote_repo, spec->lref, spec->rref,
+			&spec->loid, &spec->roid);
+
+		switch (error) {
+			case GIT_OK:
+				break;
+			case GIT_EINVALIDSPEC:
+				status->msg = git__strdup("funny refname");
+				break;
+			case GIT_ENOTFOUND:
+				status->msg = git__strdup("Remote branch not found to delete");
+				break;
+			default:
+				last = giterr_last();
+
+				if (last && last->message)
+					status->msg = git__strdup(last->message);
+				else
+					status->msg = git__strdup("Unspecified error encountered");
+				break;
+		}
+
+		/* failed to allocate memory for a status message */
+		if (error < 0 && !status->msg) {
+			git_push_status_free(status);
+			goto on_error;
+		}
+
+		/* failed to insert the ref update status */
+		if ((error = git_vector_insert(&push->status, status)) < 0) {
+			git_push_status_free(status);
+			goto on_error;
+		}
+	}
+
+	if (push->specs.length) {
+		int flags = t->flags;
+		url = git__strdup(t->url);
+
+		if (!url || t->parent.close(&t->parent) < 0 ||
+			t->parent.connect(&t->parent, url,
+			push->remote->cred_acquire_cb, NULL, GIT_DIRECTION_PUSH, flags))
+			goto on_error;
+	}
+
+	error = 0;
+
+on_error:
+	git_repository_free(remote_repo);
+	git__free(url);
+
+	return error;
 }
 
 typedef struct foreach_data {
@@ -379,30 +569,39 @@ static void local_cancel(git_transport *transport)
 static int local_close(git_transport *transport)
 {
 	transport_local *t = (transport_local *)transport;
+	size_t i;
+	git_remote_head *head;
 
 	t->connected = 0;
-	git_repository_free(t->repo);
-	t->repo = NULL;
+
+	if (t->repo) {
+		git_repository_free(t->repo);
+		t->repo = NULL;
+	}
+
+	git_vector_foreach(&t->refs, i, head) {
+		git__free(head->name);
+		git__free(head);
+	}
+
+	git_vector_free(&t->refs);
+
+	if (t->url) {
+		git__free(t->url);
+		t->url = NULL;
+	}
 
 	return 0;
 }
 
 static void local_free(git_transport *transport)
 {
-	unsigned int i;
-	transport_local *t = (transport_local *) transport;
-	git_vector *vec = &t->refs;
-	git_remote_head *head;
+	transport_local *t = (transport_local *)transport;
 
-	assert(transport);
+	/* Close the transport, if it's still open. */
+	local_close(transport);
 
-	git_vector_foreach (vec, i, head) {
-		git__free(head->name);
-		git__free(head);
-	}
-	git_vector_free(vec);
-
-	git__free(t->url);
+	/* Free the transport */
 	git__free(t);
 }
 
@@ -423,6 +622,7 @@ int git_transport_local(git_transport **out, git_remote *owner, void *param)
 	t->parent.connect = local_connect;
 	t->parent.negotiate_fetch = local_negotiate_fetch;
 	t->parent.download_pack = local_download_pack;
+	t->parent.push = local_push;
 	t->parent.close = local_close;
 	t->parent.free = local_free;
 	t->parent.ls = local_ls;

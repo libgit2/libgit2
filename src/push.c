@@ -83,18 +83,6 @@ static void free_refspec(push_spec *spec)
 	git__free(spec);
 }
 
-static void free_status(push_status *status)
-{
-	if (status == NULL)
-		return;
-
-	if (status->msg)
-		git__free(status->msg);
-
-	git__free(status->ref);
-	git__free(status);
-}
-
 static int check_rref(char *ref)
 {
 	if (git__prefixcmp(ref, "refs/")) {
@@ -225,8 +213,11 @@ int git_push_update_tips(git_push *push)
 			error = git_reference_lookup(&remote_ref, push->remote->repo, git_buf_cstr(&remote_ref_name));
 
 			if (!error) {
-				if ((error = git_reference_delete(remote_ref)) < 0)
+				if ((error = git_reference_delete(remote_ref)) < 0) {
+					git_reference_free(remote_ref);
 					goto on_error;
+				}
+				git_reference_free(remote_ref);
 			} else if (error == GIT_ENOTFOUND)
 				giterr_clear();
 			else
@@ -526,6 +517,18 @@ int git_push_status_foreach(git_push *push,
 	return 0;
 }
 
+void git_push_status_free(push_status *status)
+{
+	if (status == NULL)
+		return;
+
+	if (status->msg)
+		git__free(status->msg);
+
+	git__free(status->ref);
+	git__free(status);
+}
+
 void git_push_free(git_push *push)
 {
 	push_spec *spec;
@@ -541,7 +544,7 @@ void git_push_free(git_push *push)
 	git_vector_free(&push->specs);
 
 	git_vector_foreach(&push->status, i, status) {
-		free_status(status);
+		git_push_status_free(status);
 	}
 	git_vector_free(&push->status);
 
