@@ -536,7 +536,8 @@ static int gen_pktline(git_buf *buf, git_push *push)
 		if (i == 0) {
 			++len; /* '\0' */
 			if (push->report_status)
-				len += strlen(GIT_CAP_REPORT_STATUS);
+				len += strlen(GIT_CAP_REPORT_STATUS) + 1;
+			len += strlen(GIT_CAP_SIDE_BAND_64K) + 1;
 		}
 
 		git_oid_fmt(old_id, &spec->roid);
@@ -546,8 +547,13 @@ static int gen_pktline(git_buf *buf, git_push *push)
 
 		if (i == 0) {
 			git_buf_putc(buf, '\0');
-			if (push->report_status)
+			/* Core git always starts their capabilities string with a space */
+			if (push->report_status) {
+				git_buf_putc(buf, ' ');
 				git_buf_printf(buf, GIT_CAP_REPORT_STATUS);
+			}
+			git_buf_putc(buf, ' ');
+			git_buf_printf(buf, GIT_CAP_SIDE_BAND_64K);
 		}
 
 		git_buf_putc(buf, '\n');
@@ -555,6 +561,74 @@ static int gen_pktline(git_buf *buf, git_push *push)
 
 	git_buf_puts(buf, "0000");
 	return git_buf_oom(buf) ? -1 : 0;
+}
+
+static int add_push_report_pkt(git_push *push, git_pkt *pkt)
+{
+	push_status *status;
+
+	switch (pkt->type) {
+		case GIT_PKT_OK:
+			status = git__malloc(sizeof(push_status));
+			GITERR_CHECK_ALLOC(status);
+			status->msg = NULL;
+			status->ref = git__strdup(((git_pkt_ok *)pkt)->ref);
+			if (!status->ref ||
+				git_vector_insert(&push->status, status) < 0) {
+				git_push_status_free(status);
+				return -1;
+			}
+			break;
+		case GIT_PKT_NG:
+			status = git__calloc(sizeof(push_status), 1);
+			GITERR_CHECK_ALLOC(status);
+			status->ref = git__strdup(((git_pkt_ng *)pkt)->ref);
+			status->msg = git__strdup(((git_pkt_ng *)pkt)->msg);
+			if (!status->ref || !status->msg ||
+				git_vector_insert(&push->status, status) < 0) {
+				git_push_status_free(status);
+				return -1;
+			}
+			break;
+		case GIT_PKT_UNPACK:
+			push->unpack_ok = ((git_pkt_unpack *)pkt)->unpack_ok;
+			break;
+		case GIT_PKT_FLUSH:
+			return GIT_ITEROVER;
+		default:
+			giterr_set(GITERR_NET, "report-status: protocol error");
+			return -1;
+	}
+
+	return 0;
+}
+
+static int add_push_report_sideband_pkt(git_push *push, git_pkt_data *data_pkt)
+{
+	git_pkt *pkt;
+	const char *line = data_pkt->data, *line_end;
+	size_t line_len = data_pkt->len;
+	int error;
+
+	while (line_len > 0) {
+		error = git_pkt_parse_line(&pkt, line, &line_end, line_len);
+
+		if (error < 0)
+			return error;
+
+		/* Advance in the buffer */
+		line_len -= (line_end - line);
+		line = line_end;
+
+		error = add_push_report_pkt(push, pkt);
+
+		git_pkt_free(pkt);
+
+		if (error < 0 && error != GIT_ITEROVER)
+			return error;
+	}
+
+	return 0;
 }
 
 static int parse_report(gitno_buffer *buf, git_push *push)
@@ -586,46 +660,33 @@ static int parse_report(gitno_buffer *buf, git_push *push)
 
 		gitno_consume(buf, line_end);
 
-		if (pkt->type == GIT_PKT_OK) {
-			push_status *status = git__malloc(sizeof(push_status));
-			GITERR_CHECK_ALLOC(status);
-			status->ref = git__strdup(((git_pkt_ok *)pkt)->ref);
-			status->msg = NULL;
-			git_pkt_free(pkt);
-			if (git_vector_insert(&push->status, status) < 0) {
-				git__free(status);
-				return -1;
-			}
-			continue;
-		}
+		error = 0;
 
-		if (pkt->type == GIT_PKT_NG) {
-			push_status *status = git__malloc(sizeof(push_status));
-			GITERR_CHECK_ALLOC(status);
-			status->ref = git__strdup(((git_pkt_ng *)pkt)->ref);
-			status->msg = git__strdup(((git_pkt_ng *)pkt)->msg);
-			git_pkt_free(pkt);
-			if (git_vector_insert(&push->status, status) < 0) {
-				git__free(status);
-				return -1;
-			}
-			continue;
-		}
-
-		if (pkt->type == GIT_PKT_UNPACK) {
-			push->unpack_ok = ((git_pkt_unpack *)pkt)->unpack_ok;
-			git_pkt_free(pkt);
-			continue;
-		}
-
-		if (pkt->type == GIT_PKT_FLUSH) {
-			git_pkt_free(pkt);
-			return 0;
+		switch (pkt->type) {
+			case GIT_PKT_DATA:
+				/* This is a sideband packet which contains other packets */
+				error = add_push_report_sideband_pkt(push, (git_pkt_data *)pkt);
+				break;
+			case GIT_PKT_ERR:
+				giterr_set(GITERR_NET, "report-status: Error reported: %s",
+					((git_pkt_err *)pkt)->error);
+				error = -1;
+				break;
+			case GIT_PKT_PROGRESS:
+				break;
+			default:
+				error = add_push_report_pkt(push, pkt);
+				break;
 		}
 
 		git_pkt_free(pkt);
-		giterr_set(GITERR_NET, "report-status: protocol error");
-		return -1;
+
+		/* add_push_report_pkt returns GIT_ITEROVER when it receives a flush */
+		if (error == GIT_ITEROVER)
+			return 0;
+
+		if (error < 0)
+			return error;
 	}
 }
 
