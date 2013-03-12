@@ -88,6 +88,7 @@ typedef git_pkt_data git_pkt_progress;
 
 typedef struct {
 	enum git_pkt_type type;
+	int len;
 	char error[GIT_FLEX_ARRAY];
 } git_pkt_err;
 
