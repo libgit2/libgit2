@@ -624,7 +624,7 @@ static int add_push_report_sideband_pkt(git_push *push, git_pkt_data *data_pkt)
 
 		git_pkt_free(pkt);
 
-		if (error < 0 && GIT_ITEROVER != error)
+		if (error < 0 && error != GIT_ITEROVER)
 			return error;
 	}
 
@@ -682,7 +682,7 @@ static int parse_report(gitno_buffer *buf, git_push *push)
 		git_pkt_free(pkt);
 
 		/* add_push_report_pkt returns GIT_ITEROVER when it receives a flush */
-		if (GIT_ITEROVER == error)
+		if (error == GIT_ITEROVER)
 			return 0;
 
 		if (error < 0)
