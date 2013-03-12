@@ -24,7 +24,7 @@
 #endif
 
 static int binsearch(
-	void **dst, const void *x, size_t size, git__tsort_r_cmp cmp, void *payload)
+	void **dst, const void *x, size_t size, git__sort_r_cmp cmp, void *payload)
 {
 	int l, c, r;
 	void *lx, *cx;
@@ -71,7 +71,7 @@ static int binsearch(
 
 /* Binary insertion sort, but knowing that the first "start" entries are sorted. Used in timsort. */
 static void bisort(
-	void **dst, size_t start, size_t size, git__tsort_r_cmp cmp, void *payload)
+	void **dst, size_t start, size_t size, git__sort_r_cmp cmp, void *payload)
 {
 	size_t i;
 	void *x;
@@ -102,7 +102,7 @@ struct tsort_run {
 
 struct tsort_store {
 	size_t alloc;
-	git__tsort_r_cmp cmp;
+	git__sort_r_cmp cmp;
 	void *payload;
 	void **storage;
 };
@@ -334,7 +334,7 @@ static ssize_t collapse(void **dst, struct tsort_run *stack, ssize_t stack_curr,
 while (0)
 
 void git__tsort_r(
-	void **dst, size_t size, git__tsort_r_cmp cmp, void *payload)
+	void **dst, size_t size, git__sort_r_cmp cmp, void *payload)
 {
 	struct tsort_store _store, *store = &_store;
 	struct tsort_run run_stack[128];

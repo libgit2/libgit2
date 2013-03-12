@@ -119,7 +119,7 @@ void git_buf_copy_cstr(char *data, size_t datasize, const git_buf *buf);
 
 #define git_buf_PUTS(buf, str) git_buf_put(buf, str, sizeof(str) - 1)
 
-GIT_INLINE(ssize_t) git_buf_rfind_next(git_buf *buf, char ch)
+GIT_INLINE(ssize_t) git_buf_rfind_next(const git_buf *buf, char ch)
 {
 	ssize_t idx = (ssize_t)buf->size - 1;
 	while (idx >= 0 && buf->ptr[idx] == ch) idx--;
@@ -127,18 +127,17 @@ GIT_INLINE(ssize_t) git_buf_rfind_next(git_buf *buf, char ch)
 	return idx;
 }
 
-GIT_INLINE(ssize_t) git_buf_rfind(git_buf *buf, char ch)
+GIT_INLINE(ssize_t) git_buf_rfind(const git_buf *buf, char ch)
 {
 	ssize_t idx = (ssize_t)buf->size - 1;
 	while (idx >= 0 && buf->ptr[idx] != ch) idx--;
 	return idx;
 }
 
-GIT_INLINE(ssize_t) git_buf_find(git_buf *buf, char ch)
+GIT_INLINE(ssize_t) git_buf_find(const git_buf *buf, char ch)
 {
-	size_t idx = 0;
-	while (idx < buf->size && buf->ptr[idx] != ch) idx++;
-	return (idx == buf->size) ? -1 : (ssize_t)idx;
+	void *found = memchr(buf->ptr, ch, buf->size);
+	return found ? (ssize_t)((const char *)found - buf->ptr) : -1;
 }
 
 /* Remove whitespace from the end of the buffer */
