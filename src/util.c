@@ -642,7 +642,8 @@ void git__insertsort_r(
 	void *els, size_t nel, size_t elsize, void *swapel,
 	git__sort_r_cmp cmp, void *payload)
 {
-	uint8_t *base = els, *end = els + nel * elsize;
+	uint8_t *base = els;
+	uint8_t *end = base + nel * elsize;
 	uint8_t *i, *j;
 	bool freeswap = !swapel;
 
