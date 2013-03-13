@@ -973,11 +973,6 @@ static int workdir_iterator__expand_dir(workdir_iterator *wi)
 	int error;
 	workdir_iterator_frame *wf;
 
-	if (++(wi->depth) > WORKDIR_MAX_DEPTH) {
-		giterr_set(GITERR_REPOSITORY, "Working directory is too deep");
-		return -1;
-	}
-
 	wf = workdir_iterator__alloc_frame(wi);
 	GITERR_CHECK_ALLOC(wf);
 
@@ -988,6 +983,13 @@ static int workdir_iterator__expand_dir(workdir_iterator *wi)
 	if (error < 0 || wf->entries.length == 0) {
 		workdir_iterator__free_frame(wf);
 		return GIT_ENOTFOUND;
+	}
+
+	if (++(wi->depth) > WORKDIR_MAX_DEPTH) {
+		giterr_set(GITERR_REPOSITORY,
+			"Working directory is too deep (%d)", wi->depth);
+		workdir_iterator__free_frame(wf);
+		return -1;
 	}
 
 	workdir_iterator__seek_frame_start(wi, wf);
@@ -1086,6 +1088,7 @@ static int workdir_iterator__advance(
 		}
 
 		wi->stack = wf->next;
+		wi->depth--;
 		workdir_iterator__free_frame(wf);
 		git_ignore__pop_dir(&wi->ignores);
 	}
@@ -1119,6 +1122,7 @@ static int workdir_iterator__reset(
 		workdir_iterator__free_frame(wf);
 		git_ignore__pop_dir(&wi->ignores);
 	}
+	wi->depth = 0;
 
 	if (iterator__reset_range(self, start, end) < 0)
 		return -1;
@@ -1201,7 +1205,7 @@ static int workdir_iterator__update_entry(workdir_iterator *wi)
 	if (iterator__include_trees(wi))
 		return 0;
 
-	return workdir_iterator__advance_into(NULL, (git_iterator *)wi);
+	return workdir_iterator__advance(NULL, (git_iterator *)wi);
 }
 
 int git_iterator_for_workdir(
