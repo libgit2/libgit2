@@ -1,6 +1,7 @@
 #include "clar_libgit2.h"
 #include "iterator.h"
 #include "repository.h"
+#include "fileops.h"
 #include <stdarg.h>
 
 static git_repository *g_repo;
@@ -23,7 +24,7 @@ static void expect_iterator_items(
 	const char **expected_total_paths)
 {
 	const git_index_entry *entry;
-	int count;
+	int count, error;
 	int no_trees = !(git_iterator_flags(i) & GIT_ITERATOR_INCLUDE_TREES);
 	bool v = false;
 
@@ -86,9 +87,15 @@ static void expect_iterator_items(
 				cl_assert(entry->mode != GIT_FILEMODE_TREE);
 		}
 
-		if (entry->mode == GIT_FILEMODE_TREE)
-			cl_git_pass(git_iterator_advance_into(&entry, i));
-		else
+		if (entry->mode == GIT_FILEMODE_TREE) {
+			error = git_iterator_advance_into(&entry, i);
+
+			/* could return NOTFOUND if directory is empty */
+			cl_assert(!error || error == GIT_ENOTFOUND);
+
+			if (error == GIT_ENOTFOUND)
+				cl_git_pass(git_iterator_advance(&entry, i));
+		} else
 			cl_git_pass(git_iterator_advance(&entry, i));
 
 		if (++count > expected_total)
@@ -744,4 +751,58 @@ void test_repo_iterator__workdir_icase(void)
 		&i, g_repo, flag | GIT_ITERATOR_DONT_AUTOEXPAND, "k", "k/Z"));
 	expect_iterator_items(i, 1, NULL, 6, NULL);
 	git_iterator_free(i);
+}
+
+void test_repo_iterator__workdir_depth(void)
+{
+	int i, j;
+	git_iterator *iter;
+	char buf[64];
+
+	g_repo = cl_git_sandbox_init("icase");
+
+	for (i = 0; i < 10; ++i) {
+		p_snprintf(buf, sizeof(buf), "icase/dir%02d", i);
+		cl_git_pass(git_futils_mkdir(buf, NULL, 0775, GIT_MKDIR_PATH));
+
+		if (i % 2 == 0) {
+			p_snprintf(buf, sizeof(buf), "icase/dir%02d/file", i);
+			cl_git_mkfile(buf, buf);
+		}
+
+		for (j = 0; j < 10; ++j) {
+			p_snprintf(buf, sizeof(buf), "icase/dir%02d/sub%02d", i, j);
+			cl_git_pass(git_futils_mkdir(buf, NULL, 0775, GIT_MKDIR_PATH));
+
+			if (j % 2 == 0) {
+				p_snprintf(
+					buf, sizeof(buf), "icase/dir%02d/sub%02d/file", i, j);
+				cl_git_mkfile(buf, buf);
+			}
+		}
+	}
+
+	for (i = 1; i < 3; ++i) {
+		for (j = 0; j < 50; ++j) {
+			p_snprintf(buf, sizeof(buf), "icase/dir%02d/sub01/moar%02d", i, j);
+			cl_git_pass(git_futils_mkdir(buf, NULL, 0775, GIT_MKDIR_PATH));
+
+			if (j % 2 == 0) {
+				p_snprintf(buf, sizeof(buf),
+					"icase/dir%02d/sub01/moar%02d/file", i, j);
+				cl_git_mkfile(buf, buf);
+			}
+		}
+	}
+
+	/* auto expand with no tree entries */
+	cl_git_pass(git_iterator_for_workdir(&iter, g_repo, 0, NULL, NULL));
+	expect_iterator_items(iter, 125, NULL, 125, NULL);
+	git_iterator_free(iter);
+
+	/* auto expand with tree entries (empty dirs silently skipped) */
+	cl_git_pass(git_iterator_for_workdir(
+		&iter, g_repo, GIT_ITERATOR_INCLUDE_TREES, NULL, NULL));
+	expect_iterator_items(iter, 337, NULL, 337, NULL);
+	git_iterator_free(iter);
 }
