@@ -337,6 +337,8 @@ void test_repo_iterator__tree_icase(void)
 		&i, head, flag | GIT_ITERATOR_DONT_AUTOEXPAND, "k", "k/Z"));
 	expect_iterator_items(i, 1, NULL, 6, NULL);
 	git_iterator_free(i);
+
+	git_tree_free(head);
 }
 
 void test_repo_iterator__tree_more(void)

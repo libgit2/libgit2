@@ -103,6 +103,7 @@ int giterr_set_regex(const regex_t *regex, int error_code)
 
 void giterr_clear(void)
 {
+	set_error(0, NULL);
 	GIT_GLOBAL->last_error = NULL;
 
 	errno = 0;
