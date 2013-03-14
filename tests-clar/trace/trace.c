@@ -5,6 +5,8 @@ static int written = 0;
 
 static void trace_callback(git_trace_level_t level, const char *message)
 {
+	GIT_UNUSED(level);
+
 	cl_assert(strcmp(message, "Hello world!") == 0);
 
 	written = 1;
