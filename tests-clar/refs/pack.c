@@ -19,10 +19,10 @@ void test_refs_pack__cleanup(void)
    cl_git_sandbox_cleanup();
 }
 
-void packall()
+static void packall(void)
 {
 	git_refdb *refdb;
-	
+
 	cl_git_pass(git_repository_refdb(&refdb, g_repo));
 	cl_git_pass(git_refdb_compress(refdb));
 }
