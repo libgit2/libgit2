@@ -126,6 +126,13 @@ extern char *git_pool_strcat(git_pool *pool, const char *a, const char *b);
  */
 extern void git_pool_free(git_pool *pool, void *ptr);
 
+/**
+ * Push an array of pool allocated blocks efficiently onto the free list.
+ *
+ * This has the same constraints as `git_pool_free()` above.
+ */
+extern void git_pool_free_array(git_pool *pool, size_t count, void **ptrs);
+
 /*
  * Misc utilities
  */

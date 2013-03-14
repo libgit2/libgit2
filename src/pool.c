@@ -235,10 +235,28 @@ char *git_pool_strcat(git_pool *pool, const char *a, const char *b)
 
 void git_pool_free(git_pool *pool, void *ptr)
 {
-	assert(pool && ptr && pool->item_size >= sizeof(void*));
+	assert(pool && pool->item_size >= sizeof(void*));
 
-	*((void **)ptr) = pool->free_list;
-	pool->free_list = ptr;
+	if (ptr) {
+		*((void **)ptr) = pool->free_list;
+		pool->free_list = ptr;
+	}
+}
+
+void git_pool_free_array(git_pool *pool, size_t count, void **ptrs)
+{
+	size_t i;
+
+	assert(pool && ptrs && pool->item_size >= sizeof(void*));
+
+	if (!count)
+		return;
+
+	for (i = count - 1; i > 0; --i)
+		*((void **)ptrs[i]) = ptrs[i - 1];
+
+	*((void **)ptrs[0]) = pool->free_list;
+	pool->free_list = ptrs[count - 1];
 }
 
 uint32_t git_pool__open_pages(git_pool *pool)
