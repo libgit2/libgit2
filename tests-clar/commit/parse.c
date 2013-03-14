@@ -155,7 +155,7 @@ void test_commit_parse__signature(void)
       cl_git_pass(git_signature__parse(&person, &str, str + len, passcase->header, '\n'));
       cl_assert_equal_s(passcase->name, person.name);
       cl_assert_equal_s(passcase->email, person.email);
-      cl_assert_equal_i(passcase->time, person.when.time);
+      cl_assert_equal_i((int)passcase->time, (int)person.when.time);
       cl_assert_equal_i(passcase->offset, person.when.offset);
       git__free(person.name); git__free(person.email);
    }

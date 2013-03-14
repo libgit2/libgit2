@@ -39,10 +39,13 @@ git_reference *git_reference__alloc(
 	const char *symbolic)
 {
 	git_reference *ref;
+	size_t namelen;
 
 	assert(refdb && name && ((oid && !symbolic) || (!oid && symbolic)));
-	
-	if ((ref = git__calloc(1, sizeof(git_reference) + strlen(name) + 1)) == NULL)
+
+	namelen = strlen(name);
+
+	if ((ref = git__calloc(1, sizeof(git_reference) + namelen + 1)) == NULL)
 		return NULL;
 
 	if (oid) {
@@ -51,13 +54,15 @@ git_reference *git_reference__alloc(
 	} else {
 		ref->type = GIT_REF_SYMBOLIC;
 
-		if ((ref->target.symbolic = git__strdup(symbolic)) == NULL)
+		if ((ref->target.symbolic = git__strdup(symbolic)) == NULL) {
+			git__free(ref);
 			return NULL;
+		}
 	}
-	
+
 	ref->db = refdb;
-	strcpy(ref->name, name);
-	
+	memcpy(ref->name, name, namelen + 1);
+
 	return ref;
 }
 
@@ -70,7 +75,7 @@ void git_reference_free(git_reference *reference)
 		git__free(reference->target.symbolic);
 		reference->target.symbolic = NULL;
 	}
-	
+
 	reference->db = NULL;
 	reference->type = GIT_REF_INVALID;
 

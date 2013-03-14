@@ -560,11 +560,11 @@ static int winhttp_stream_write_single(
 	return 0;
 }
 
-static int put_uuid_string(LPWSTR buffer, DWORD buffer_len_cch)
+static int put_uuid_string(LPWSTR buffer, size_t buffer_len_cch)
 {
 	UUID uuid;
 	RPC_STATUS status = UuidCreate(&uuid);
-	int result;
+	HRESULT result;
 
 	if (RPC_S_OK != status &&
 		RPC_S_UUID_LOCAL_ONLY != status &&
@@ -573,17 +573,19 @@ static int put_uuid_string(LPWSTR buffer, DWORD buffer_len_cch)
 		return -1;
 	}
 
-	if (buffer_len_cch < (UUID_LENGTH_CCH + 1)) {
-		giterr_set(GITERR_NET, "Buffer insufficient to generate temp file name");
+	if (buffer_len_cch < UUID_LENGTH_CCH + 1) {
+		giterr_set(GITERR_NET, "Buffer too small for name of temp file");
 		return -1;
 	}
 
-	result = wsprintfW(buffer, L"%08x%04x%04x%02x%02x%02x%02x%02x%02x%02x%02x",
+	result = StringCbPrintfW(
+		buffer, buffer_len_cch,
+		L"%08x%04x%04x%02x%02x%02x%02x%02x%02x%02x%02x",
 		uuid.Data1, uuid.Data2, uuid.Data3,
 		uuid.Data4[0], uuid.Data4[1], uuid.Data4[2], uuid.Data4[3],
 		uuid.Data4[4], uuid.Data4[5], uuid.Data4[6], uuid.Data4[7]);
 
-	if (result != UUID_LENGTH_CCH) {
+	if (FAILED(result)) {
 		giterr_set(GITERR_OS, "Unable to generate name for temp file");
 		return -1;
 	}
@@ -602,17 +604,10 @@ static int get_temp_file(LPWSTR buffer, DWORD buffer_len_cch)
 
 	len = wcslen(buffer);
 
-	/* 1 prefix character for the backslash, 1 postfix for
-	 * the null terminator */
-	if (buffer_len_cch - len < 1 + UUID_LENGTH_CCH + 1) {
-		giterr_set(GITERR_NET, "Buffer insufficient to generate temp file name");
-		return -1;
-	}
-
-	if (buffer[len - 1] != '\\')
+	if (buffer[len - 1] != '\\' && len < buffer_len_cch)
 		buffer[len++] = '\\';
 
-	if (put_uuid_string(&buffer[len], UUID_LENGTH_CCH + 1) < 0)
+	if (put_uuid_string(&buffer[len], (size_t)buffer_len_cch - len) < 0)
 		return -1;
 
 	return 0;
