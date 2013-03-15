@@ -132,9 +132,6 @@ struct pack_writepack {
  *
  ***********************************************************/
 
-static void pack_window_free_all(struct pack_backend *backend, struct git_pack_file *p);
-static int pack_window_contains(git_mwindow *win, off_t offset);
-
 static int packfile_sort__cb(const void *a_, const void *b_);
 
 static int packfile_load__cb(void *_data, git_buf *path);
@@ -161,23 +158,6 @@ static int pack_entry_find_prefix(
  * PACK WINDOW MANAGEMENT
  *
  ***********************************************************/
-
-GIT_INLINE(void) pack_window_free_all(struct pack_backend *backend, struct git_pack_file *p)
-{
-	GIT_UNUSED(backend);
-	git_mwindow_free_all(&p->mwf);
-}
-
-GIT_INLINE(int) pack_window_contains(git_mwindow *win, off_t offset)
-{
-	/* We must promise at least 20 bytes (one hash) after the
-	 * offset is available from this window, otherwise the offset
-	 * is not actually in this window and a different window (which
-	 * has that one hash excess) must be used. This is to support
-	 * the object header and delta base parsing routines below.
-	 */
-	return git_mwindow_contains(win, offset + 20);
-}
 
 static int packfile_sort__cb(const void *a_, const void *b_)
 {
