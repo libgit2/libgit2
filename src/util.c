@@ -10,6 +10,7 @@
 #include <stdio.h>
 #include <ctype.h>
 #include "posix.h"
+#include "fileops.h"
 
 #ifdef _MSC_VER
 # include <Shlwapi.h>
@@ -38,13 +39,30 @@ int git_libgit2_capabilities()
 extern size_t git_mwindow__window_size;
 extern size_t git_mwindow__mapped_limit;
 
-void git_libgit2_opts(int key, ...)
+static int convert_config_level_to_futils_dir(int config_level)
 {
+	int val = -1;
+
+	switch (config_level) {
+	case GIT_CONFIG_LEVEL_SYSTEM: val = GIT_FUTILS_DIR_SYSTEM; break;
+	case GIT_CONFIG_LEVEL_XDG:    val = GIT_FUTILS_DIR_XDG; break;
+	case GIT_CONFIG_LEVEL_GLOBAL: val = GIT_FUTILS_DIR_GLOBAL; break;
+	default:
+		giterr_set(
+			GITERR_INVALID, "Invalid config path selector %d", config_level);
+	}
+
+	return val;
+}
+
+int git_libgit2_opts(int key, ...)
+{
+	int error = 0;
 	va_list ap;
 
 	va_start(ap, key);
 
-	switch(key) {
+	switch (key) {
 	case GIT_OPT_SET_MWINDOW_SIZE:
 		git_mwindow__window_size = va_arg(ap, size_t);
 		break;
@@ -60,9 +78,31 @@ void git_libgit2_opts(int key, ...)
 	case GIT_OPT_GET_MWINDOW_MAPPED_LIMIT:
 		*(va_arg(ap, size_t *)) = git_mwindow__mapped_limit;
 		break;
+
+	case GIT_OPT_GET_SEARCH_PATH:
+		{
+			const git_strarray **out = va_arg(ap, const git_strarray **);
+			int which = convert_config_level_to_futils_dir(va_arg(ap, int));
+
+			error = (which < 0) ? which : git_futils_dirs_get(out, which);
+			break;
+		}
+
+	case GIT_OPT_SET_SEARCH_PATH:
+	case GIT_OPT_PREPEND_SEARCH_PATH:
+		{
+			int which = convert_config_level_to_futils_dir(va_arg(ap, int));
+			const git_strarray *dirs = va_arg(ap, git_strarray *);
+
+			error = (which < 0) ? which : git_futils_dirs_set(
+				which, dirs, key == GIT_OPT_SET_SEARCH_PATH);
+			break;
+		}
 	}
 
 	va_end(ap);
+
+	return error;
 }
 
 void git_strarray_free(git_strarray *array)
@@ -72,34 +112,84 @@ void git_strarray_free(git_strarray *array)
 		git__free(array->strings[i]);
 
 	git__free(array->strings);
+
+	memset(array, 0, sizeof(*array));
 }
 
 int git_strarray_copy(git_strarray *tgt, const git_strarray *src)
 {
-	size_t i;
-
 	assert(tgt && src);
 
 	memset(tgt, 0, sizeof(*tgt));
+	return git_strarray_prepend(tgt, src);
+}
 
-	if (!src->count)
+int git_strarray_set(git_strarray *tgt, size_t count, ...)
+{
+	size_t i;
+	va_list ap;
+
+	assert(tgt);
+
+	memset(tgt, 0, sizeof(*tgt));
+
+	if (!count)
 		return 0;
 
-	tgt->strings = git__calloc(src->count, sizeof(char *));
+	tgt->strings = git__calloc(count, sizeof(char *));
 	GITERR_CHECK_ALLOC(tgt->strings);
 
-	for (i = 0; i < src->count; ++i) {
-		tgt->strings[tgt->count] = git__strdup(src->strings[i]);
+	va_start(ap, count);
+	for (i = 0; i < count; ++i) {
+		const char *str = va_arg(ap, const char *);
+		if (!str)
+			continue;
 
+		tgt->strings[tgt->count] = git__strdup(str);
 		if (!tgt->strings[tgt->count]) {
 			git_strarray_free(tgt);
-			memset(tgt, 0, sizeof(*tgt));
+			va_end(ap);
 			return -1;
 		}
 
 		tgt->count++;
 	}
+	va_end(ap);
 
+	return 0;
+}
+
+int git_strarray_prepend(git_strarray *tgt, const git_strarray *src)
+{
+	size_t i;
+	git_strarray merge;
+
+	if (!src || !src->count)
+		return 0;
+
+	merge.count = 0;
+	merge.strings = git__calloc(tgt->count + src->count, sizeof(char *));
+	GITERR_CHECK_ALLOC(merge.strings);
+
+	for (i = 0; i < src->count; ++i) {
+		if (!src->strings[i])
+			continue;
+
+		merge.strings[merge.count] = git__strdup(src->strings[i]);
+		if (!merge.strings[merge.count]) {
+			git_strarray_free(&merge);
+			return -1;
+		}
+
+		merge.count++;
+	}
+
+	for (i = 0; i < tgt->count; ++i)
+		if (tgt->strings[i])
+			merge.strings[merge.count++] = tgt->strings[i];
+
+	git__free(tgt->strings);
+	memcpy(tgt, &merge, sizeof(merge));
 	return 0;
 }
 

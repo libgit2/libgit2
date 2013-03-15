@@ -1,11 +1,10 @@
 #include "git2/ignore.h"
 #include "ignore.h"
+#include "attr.h"
 #include "path.h"
 #include "config.h"
 
 #define GIT_IGNORE_INTERNAL		"[internal]exclude"
-#define GIT_IGNORE_FILE_INREPO	"info/exclude"
-#define GIT_IGNORE_FILE			".gitignore"
 
 #define GIT_IGNORE_DEFAULT_RULES ".\n..\n.git\n"
 

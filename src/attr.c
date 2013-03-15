@@ -1,6 +1,8 @@
 #include "repository.h"
 #include "fileops.h"
 #include "config.h"
+#include "attr.h"
+#include "ignore.h"
 #include "git2/oid.h"
 #include <ctype.h>
 
@@ -593,17 +595,28 @@ static int collect_attr_files(
 	return error;
 }
 
-static char *try_global_default(const char *relpath)
+static int attr_cache__lookup_path(
+	const char **out, git_config *cfg, const char *key, const char *fallback)
 {
-	git_buf dflt = GIT_BUF_INIT;
-	char *rval = NULL;
+	git_buf buf = GIT_BUF_INIT;
+	int error;
 
-	if (!git_futils_find_global_file(&dflt, relpath))
-		rval = git_buf_detach(&dflt);
+	if (!(error = git_config_get_string(out, cfg, key)))
+		return 0;
 
-	git_buf_free(&dflt);
+	if (error == GIT_ENOTFOUND) {
+		giterr_clear();
+		error = 0;
 
-	return rval;
+		if (!git_futils_find_xdg_file(&buf, fallback))
+			*out = git_buf_detach(&buf);
+		else
+			*out = NULL;
+
+		git_buf_free(&buf);
+	}
+
+	return error;
 }
 
 int git_attr_cache__init(git_repository *repo)
@@ -619,19 +632,15 @@ int git_attr_cache__init(git_repository *repo)
 	if (git_repository_config__weakptr(&cfg, repo) < 0)
 		return -1;
 
-	ret = git_config_get_string(&cache->cfg_attr_file, cfg, GIT_ATTR_CONFIG);
-	if (ret < 0 && ret != GIT_ENOTFOUND)
+	ret = attr_cache__lookup_path(
+		&cache->cfg_attr_file, cfg, GIT_ATTR_CONFIG, GIT_ATTR_FILE_XDG);
+	if (ret < 0)
 		return ret;
-	if (ret == GIT_ENOTFOUND)
-		cache->cfg_attr_file = try_global_default(GIT_ATTR_CONFIG_DEFAULT);
 
-	ret = git_config_get_string(&cache->cfg_excl_file, cfg, GIT_IGNORE_CONFIG);
-	if (ret < 0 && ret != GIT_ENOTFOUND)
+	ret = attr_cache__lookup_path(
+		&cache->cfg_excl_file, cfg, GIT_IGNORE_CONFIG, GIT_IGNORE_FILE_XDG);
+	if (ret < 0)
 		return ret;
-	if (ret == GIT_ENOTFOUND)
-		cache->cfg_excl_file = try_global_default(GIT_IGNORE_CONFIG_DEFAULT);
-
-	giterr_clear();
 
 	/* allocate hashtable for attribute and ignore file contents */
 	if (cache->files == NULL) {

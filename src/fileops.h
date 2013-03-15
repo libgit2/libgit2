@@ -276,25 +276,55 @@ extern void git_futils_mmap_free(git_map *map);
  *
  * @param pathbuf buffer to write the full path into
  * @param filename name of file to find in the home directory
- * @return
- * - 0 if found;
- * - GIT_ENOTFOUND if not found;
- * - -1 on an unspecified OS related error.
+ * @return 0 if found, GIT_ENOTFOUND if not found, or -1 on other OS error
  */
 extern int git_futils_find_global_file(git_buf *path, const char *filename);
+
+/**
+ * Find an "XDG" file (i.e. one in user's XDG config path).
+ *
+ * @param pathbuf buffer to write the full path into
+ * @param filename name of file to find in the home directory
+ * @return 0 if found, GIT_ENOTFOUND if not found, or -1 on other OS error
+ */
+extern int git_futils_find_xdg_file(git_buf *path, const char *filename);
 
 /**
  * Find a "system" file (i.e. one shared for all users of the system).
  *
  * @param pathbuf buffer to write the full path into
  * @param filename name of file to find in the home directory
- * @return
- * - 0 if found;
- * - GIT_ENOTFOUND if not found;
- * - -1 on an unspecified OS related error.
+ * @return 0 if found, GIT_ENOTFOUND if not found, or -1 on other OS error
  */
 extern int git_futils_find_system_file(git_buf *path, const char *filename);
 
+typedef enum {
+	GIT_FUTILS_DIR_SYSTEM = 0,
+	GIT_FUTILS_DIR_GLOBAL = 1,
+	GIT_FUTILS_DIR_XDG    = 2,
+	GIT_FUTILS_DIR__MAX   = 3,
+} git_futils_dir_t;
+
+/**
+ * Get the strarray of search paths for global/system files
+ *
+ * @param out git_strarray of search paths
+ * @param which which list of paths to return
+ * @return 0 on success, <0 on failure (allocation error)
+ */
+extern int git_futils_dirs_get(
+	const git_strarray **out, git_futils_dir_t which);
+
+/**
+ * Set or prepend strarray of search paths for global/system files
+ *
+ * @param which which list of paths to modify
+ * @param dirs new list of search paths
+ * @param replace true to replace old, false to prepend to old
+ * @return 0 on success, <0 on failure (allocation error)
+ */
+extern int git_futils_dirs_set(
+	git_futils_dir_t which, const git_strarray *dirs, bool replace);
 
 /**
  * Create a "fake" symlink (text file containing the target path).

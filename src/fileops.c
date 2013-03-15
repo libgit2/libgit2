@@ -558,75 +558,136 @@ clean_up:
 	return error;
 }
 
-int git_futils_find_system_file(git_buf *path, const char *filename)
+
+static int git_futils_guess_system_dirs(git_strarray *out)
 {
 #ifdef GIT_WIN32
-	// try to find git.exe/git.cmd on path
-	if (!win32_find_system_file_using_path(path, filename))
-		return 0;
-
-	// try to find msysgit installation path using registry
-	if (!win32_find_system_file_using_registry(path, filename))
-		return 0;
+	return win32_find_system_dirs(out);
 #else
-	if (git_buf_joinpath(path, "/etc", filename) < 0)
-		return -1;
-
-	if (git_path_exists(path->ptr) == true)
-		return 0;
+	return git_strarray_set(out, 1, "/etc");
 #endif
+}
+
+static int git_futils_guess_global_dirs(git_strarray *out)
+{
+#ifdef GIT_WIN32
+	return win32_find_global_dirs(out);
+#else
+	return git_strarray_set(out, 1, getenv("HOME"));
+#endif
+}
+
+static int git_futils_guess_xdg_dirs(git_strarray *out)
+{
+#ifdef GIT_WIN32
+	return win32_find_xdg_dirs(out);
+#else
+	int error = 0;
+	git_buf xdg = GIT_BUF_INIT;
+	const char *env = NULL;
+
+	if ((env = getenv("XDG_CONFIG_HOME")) != NULL)
+		git_buf_joinpath(&xdg, env, "git");
+	else if ((env = getenv("HOME")) != NULL)
+		git_buf_joinpath(&xdg, env, ".config/git");
+
+	error = git_strarray_set(out, 1, xdg.ptr);
+	git_buf_free(&xdg);
+
+	return error;
+#endif
+}
+
+typedef int (*git_futils_dirs_guess_cb)(git_strarray *out);
+
+static git_strarray git_futils__dirs[GIT_FUTILS_DIR__MAX];
+static git_futils_dirs_guess_cb git_futils__dir_guess[GIT_FUTILS_DIR__MAX] = {
+	git_futils_guess_system_dirs,
+	git_futils_guess_global_dirs,
+	git_futils_guess_xdg_dirs,
+};
+
+static int git_futils_check_selector(git_futils_dir_t which)
+{
+	if (which < GIT_FUTILS_DIR__MAX)
+		return 0;
+	giterr_set(GITERR_INVALID, "config directory selector out of range");
+	return -1;
+}
+
+int git_futils_dirs_get(const git_strarray **out, git_futils_dir_t which)
+{
+	if (!out) {
+		giterr_set(GITERR_INVALID, "Output git_strarray not provided");
+		return -1;
+	}
+
+	*out = NULL;
+
+	GITERR_CHECK_ERROR(git_futils_check_selector(which));
+
+	if (!git_futils__dirs[which].count) {
+		int error = git_futils__dir_guess[which](&git_futils__dirs[which]);
+		if (error < 0)
+			return error;
+	}
+
+	*out = &git_futils__dirs[which];
+	return 0;
+}
+
+int git_futils_dirs_set(
+	git_futils_dir_t which, const git_strarray *dirs, bool replace)
+{
+	GITERR_CHECK_ERROR(git_futils_check_selector(which));
+
+	if (replace)
+		git_strarray_free(&git_futils__dirs[which]);
+
+	/* init with defaults if it hasn't been done yet, but ignore error */
+	else if (!git_futils__dirs[which].count)
+		git_futils__dir_guess[which](&git_futils__dirs[which]);
+
+	return git_strarray_prepend(&git_futils__dirs[which], dirs);
+}
+
+static int git_futils_find_in_dirlist(
+	git_buf *path, const char *name, git_futils_dir_t which, const char *label)
+{
+	size_t i;
+	const git_strarray *syspaths;
+
+	GITERR_CHECK_ERROR(git_futils_dirs_get(&syspaths, which));
+
+	for (i = 0; i < syspaths->count; ++i) {
+		GITERR_CHECK_ERROR(
+			git_buf_joinpath(path, syspaths->strings[i], name));
+
+		if (git_path_exists(path->ptr))
+			return 0;
+	}
 
 	git_buf_clear(path);
-	giterr_set(GITERR_OS, "The system file '%s' doesn't exist", filename);
+	giterr_set(GITERR_OS, "The %s file '%s' doesn't exist", label, name);
 	return GIT_ENOTFOUND;
+}
+
+int git_futils_find_system_file(git_buf *path, const char *filename)
+{
+	return git_futils_find_in_dirlist(
+		path, filename, GIT_FUTILS_DIR_SYSTEM, "system");
 }
 
 int git_futils_find_global_file(git_buf *path, const char *filename)
 {
-#ifdef GIT_WIN32
-	struct win32_path root;
-	static const wchar_t *tmpls[4] = {
-		L"%HOME%\\",
-		L"%HOMEDRIVE%%HOMEPATH%\\",
-		L"%USERPROFILE%\\",
-		NULL,
-	};
-	const wchar_t **tmpl;
+	return git_futils_find_in_dirlist(
+		path, filename, GIT_FUTILS_DIR_GLOBAL, "global");
+}
 
-	for (tmpl = tmpls; *tmpl != NULL; tmpl++) {
-		/* try to expand environment variable, skipping if not set */
-		if (win32_expand_path(&root, *tmpl) != 0 || root.path[0] == L'%')
-			continue;
-
-		/* try to look up file under path */
-		if (!win32_find_file(path, &root, filename))
-			return 0;
-	}
-
-	giterr_set(GITERR_OS, "The global file '%s' doesn't exist", filename);
-	git_buf_clear(path);
-
-	return GIT_ENOTFOUND;
-#else
-	const char *home = getenv("HOME");
-
-	if (home == NULL) {
-		giterr_set(GITERR_OS, "Global file lookup failed. "
-			"Cannot locate the user's home directory");
-		return GIT_ENOTFOUND;
-	}
-
-	if (git_buf_joinpath(path, home, filename) < 0)
-		return -1;
-
-	if (git_path_exists(path->ptr) == false) {
-		giterr_set(GITERR_OS, "The global file '%s' doesn't exist", filename);
-		git_buf_clear(path);
-		return GIT_ENOTFOUND;
-	}
-
-	return 0;
-#endif
+int git_futils_find_xdg_file(git_buf *path, const char *filename)
+{
+	return git_futils_find_in_dirlist(
+		path, filename, GIT_FUTILS_DIR_XDG, "global/xdg");
 }
 
 int git_futils_fake_symlink(const char *old, const char *new)

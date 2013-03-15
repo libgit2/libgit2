@@ -43,14 +43,40 @@ GIT_EXTERN(void) git_strarray_free(git_strarray *array);
 /**
  * Copy a string array object from source to target.
  *
- * Note: target is overwritten and hence should be empty,
- * otherwise its contents are leaked.
+ * Note: target is overwritten and hence should be empty, otherwise its
+ * contents are leaked.  Call git_strarray_free() if necessary.
  *
  * @param tgt target
  * @param src source
  * @return 0 on success, < 0 on allocation failure
  */
 GIT_EXTERN(int) git_strarray_copy(git_strarray *tgt, const git_strarray *src);
+
+/**
+ * Initialize a string array from a list of strings
+ *
+ * Note: target is overwritten and hence should be empty, otherwise its
+ * contents are leaked.  Call git_strarray_free() if necessary.
+ *
+ * @param tgt target
+ * @param count number of strings to follow
+ * @return 0 on success, <0 on allocation failure
+ */
+GIT_EXTERN(int) git_strarray_set(git_strarray *tgt, size_t count, ...);
+
+/**
+ * Insert a strarray into the beginning of another
+ *
+ * In this case, tgt is an existing (initialized) strarray and the result
+ * will be reallocated with all the strings in src inserted before all of
+ * the existing strings in tgt.  Strings in src will be strdup'ed, so
+ * you should still `git_strarray_free()` src when you are done with it.
+ *
+ * @param tgt strarray to update
+ * @param src strarray to copy from
+ * @return 0 on success, <0 on allocation failure (tgt will be unchanged)
+ */
+GIT_EXTERN(int) git_strarray_prepend(git_strarray *tgt, const git_strarray *src);
 
 
 /** @} */
