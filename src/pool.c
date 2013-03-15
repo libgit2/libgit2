@@ -10,9 +10,8 @@ struct git_pool_page {
 	char data[GIT_FLEX_ARRAY];
 };
 
-typedef struct git_pool_freelist_item git_pool_freelist_item;
-struct git_pool_freelist_item {
-	git_pool_freelist_item *next;
+struct pool_freelist {
+	struct pool_freelist *next;
 };
 
 #define GIT_POOL_MIN_USABLE	4
@@ -155,7 +154,7 @@ void *git_pool_malloc(git_pool *pool, uint32_t items)
 		pool->has_multi_item_alloc = 1;
 	else if (pool->free_list != NULL) {
 		ptr = pool->free_list;
-		pool->free_list = ((git_pool_freelist_item *)pool->free_list)->next;
+		pool->free_list = ((struct pool_freelist *)pool->free_list)->next;
 		return ptr;
 	}
 
@@ -240,7 +239,7 @@ char *git_pool_strcat(git_pool *pool, const char *a, const char *b)
 
 void git_pool_free(git_pool *pool, void *ptr)
 {
-	git_pool_freelist_item *item = ptr;
+	struct pool_freelist *item = ptr;
 
 	assert(pool && pool->item_size >= sizeof(void*));
 
@@ -252,7 +251,7 @@ void git_pool_free(git_pool *pool, void *ptr)
 
 void git_pool_free_array(git_pool *pool, size_t count, void **ptrs)
 {
-	git_pool_freelist_item **items = (git_pool_freelist_item **)ptrs;
+	struct pool_freelist **items = (struct pool_freelist **)ptrs;
 	size_t i;
 
 	assert(pool && ptrs && pool->item_size >= sizeof(void*));
