@@ -83,3 +83,53 @@ void test_core_pool__2(void)
 
 	git_pool_clear(&p);
 }
+
+void test_core_pool__free_list(void)
+{
+	int i;
+	git_pool p;
+	void *ptr, *ptrs[50];
+
+	cl_git_pass(git_pool_init(&p, 100, 100));
+
+	for (i = 0; i < 10; ++i) {
+		ptr = git_pool_malloc(&p, 1);
+		cl_assert(ptr != NULL);
+	}
+	cl_assert_equal_i(10, (int)p.items);
+
+	for (i = 0; i < 50; ++i) {
+		ptrs[i] = git_pool_malloc(&p, 1);
+		cl_assert(ptrs[i] != NULL);
+	}
+	cl_assert_equal_i(60, (int)p.items);
+
+	git_pool_free(&p, ptr);
+	cl_assert_equal_i(60, (int)p.items);
+
+	git_pool_free_array(&p, 50, ptrs);
+	cl_assert_equal_i(60, (int)p.items);
+
+	for (i = 0; i < 50; ++i) {
+		ptrs[i] = git_pool_malloc(&p, 1);
+		cl_assert(ptrs[i] != NULL);
+	}
+	cl_assert_equal_i(60, (int)p.items);
+
+	for (i = 0; i < 111; ++i) {
+		ptr = git_pool_malloc(&p, 1);
+		cl_assert(ptr != NULL);
+	}
+	cl_assert_equal_i(170, (int)p.items);
+
+	git_pool_free_array(&p, 50, ptrs);
+	cl_assert_equal_i(170, (int)p.items);
+
+	for (i = 0; i < 50; ++i) {
+		ptrs[i] = git_pool_malloc(&p, 1);
+		cl_assert(ptrs[i] != NULL);
+	}
+	cl_assert_equal_i(170, (int)p.items);
+
+	git_pool_clear(&p);
+}
