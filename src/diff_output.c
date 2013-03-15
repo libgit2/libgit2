@@ -330,6 +330,33 @@ static int get_workdir_sm_content(
 	return 0;
 }
 
+static int get_filtered(
+	git_map *map, git_file fd, git_diff_file *file, git_vector *filters)
+{
+	int error;
+	git_buf raw = GIT_BUF_INIT, filtered = GIT_BUF_INIT;
+
+	if ((error = git_futils_readbuffer_fd(&raw, fd, (size_t)file->size)) < 0)
+		return error;
+
+	if (!filters->length)
+		git_buf_swap(&filtered, &raw);
+	else
+		error = git_filters_apply(&filtered, &raw, filters);
+
+	if (!error) {
+		map->len  = git_buf_len(&filtered);
+		map->data = git_buf_detach(&filtered);
+
+		file->flags |= GIT_DIFF_FLAG__FREE_DATA;
+	}
+
+	git_buf_free(&raw);
+	git_buf_free(&filtered);
+
+	return error;
+}
+
 static int get_workdir_content(
 	diff_context *ctxt,
 	git_diff_delta *delta,
@@ -381,8 +408,8 @@ static int get_workdir_content(
 			goto cleanup;
 		}
 
-		if (!file->size)
-			file->size = git_futils_filesize(fd);
+		if (!file->size && !(file->size = git_futils_filesize(fd)))
+			goto close_and_cleanup;
 
 		if ((error = diff_delta_is_binary_by_size(ctxt, delta, file)) < 0 ||
 			(delta->flags & GIT_DIFF_FLAG_BINARY) != 0)
@@ -394,26 +421,12 @@ static int get_workdir_content(
 			goto close_and_cleanup;
 
 		if (error == 0) { /* note: git_filters_load returns filter count */
-			if (!file->size)
-				goto close_and_cleanup;
-
 			error = git_futils_mmap_ro(map, fd, 0, (size_t)file->size);
-			file->flags |= GIT_DIFF_FLAG__UNMAP_DATA;
-		} else {
-			git_buf raw = GIT_BUF_INIT, filtered = GIT_BUF_INIT;
-
-			if (!(error = git_futils_readbuffer_fd(&raw, fd, (size_t)file->size)) &&
-				!(error = git_filters_apply(&filtered, &raw, &filters)))
-			{
-				map->len  = git_buf_len(&filtered);
-				map->data = git_buf_detach(&filtered);
-
-				file->flags |= GIT_DIFF_FLAG__FREE_DATA;
-			}
-
-			git_buf_free(&raw);
-			git_buf_free(&filtered);
+			if (!error)
+				file->flags |= GIT_DIFF_FLAG__UNMAP_DATA;
 		}
+		if (error != 0)
+			error = get_filtered(map, fd, file, &filters);
 
 close_and_cleanup:
 		git_filters_free(&filters);

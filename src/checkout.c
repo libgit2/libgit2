@@ -610,7 +610,7 @@ static int checkout_get_actions(
 		if (act & CHECKOUT_ACTION__CONFLICT)
 			counts[CHECKOUT_ACTION__CONFLICT]++;
 	}
-	
+
 	error = checkout_remaining_wd_items(data, workdir, wditem, &pathspec);
 	if (error < 0)
 		goto fail;
