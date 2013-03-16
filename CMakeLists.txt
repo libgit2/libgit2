@@ -35,6 +35,10 @@ IF(MSVC)
 	# - Turn this off by invoking CMake with the "-DSTDCALL=Off" argument.
 	#
 	OPTION( STDCALL			"Build libgit2 with the __stdcall convention"	ON  )
+
+	# This option must match the settings used in your program, in particular if you
+	# are linking statically
+	OPTION( STATIC_CRT		"Link the static CRT libraries"	ON  )
 ENDIF()
 
 # Installation paths
@@ -148,26 +152,36 @@ IF (MSVC)
 		SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /Gz")
 	ENDIF ()
 
+	IF (STATIC_CRT)
+		SET(CRT_FLAG_DEBUG "/MTd")
+		SET(CRT_FLAG_RELEASE "/MT")
+	ELSE()
+	    SET(CRT_FLAG_DEBUG "/MDd")
+		SET(CRT_FLAG_RELEASE "/MD")
+	ENDIF()
+
 	# /Zi - Create debugging information
 	# /Od - Disable optimization
 	# /D_DEBUG - #define _DEBUG
 	# /MTd - Statically link the multithreaded debug version of the CRT
+	# /MDd - Dynamically link the multithreaded debug version of the CRT
 	# /RTC1 - Run time checks
-	SET(CMAKE_C_FLAGS_DEBUG "/Zi /Od /D_DEBUG /MTd /RTC1")
+	SET(CMAKE_C_FLAGS_DEBUG "/Zi /Od /D_DEBUG /RTC1 ${CRT_FLAG_DEBUG}")
 
 	# /DNDEBUG - Disables asserts
 	# /MT - Statically link the multithreaded release version of the CRT
+	# /MD - Dynamically link the multithreaded release version of the CRT
 	# /O2 - Optimize for speed
 	# /Oy - Enable frame pointer omission (FPO) (otherwise CMake will automatically turn it off)
 	# /GL - Link time code generation (whole program optimization)
 	# /Gy - Function-level linking
-	SET(CMAKE_C_FLAGS_RELEASE "/DNDEBUG /MT /O2 /Oy /GL /Gy")
+	SET(CMAKE_C_FLAGS_RELEASE "/DNDEBUG /O2 /Oy /GL /Gy ${CRT_FLAG_RELEASE}")
 
 	# /Oy- - Disable frame pointer omission (FPO)
-	SET(CMAKE_C_FLAGS_RELWITHDEBINFO "/DNDEBUG /Zi /MT /O2 /Oy- /GL /Gy")
+	SET(CMAKE_C_FLAGS_RELWITHDEBINFO "/DNDEBUG /Zi /O2 /Oy- /GL /Gy ${CRT_FLAG_RELEASE}")
 
 	# /O1 - Optimize for size
-	SET(CMAKE_C_FLAGS_MINSIZEREL "/DNDEBUG /MT /O1 /Oy /GL /Gy")
+	SET(CMAKE_C_FLAGS_MINSIZEREL "/DNDEBUG /O1 /Oy /GL /Gy ${CRT_FLAG_RELEASE}")
 
 	# /DYNAMICBASE - Address space load randomization (ASLR)
 	# /NXCOMPAT - Data execution prevention (DEP)
