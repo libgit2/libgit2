@@ -270,7 +270,8 @@ static int file_foreach(
 		}
 	}
 
-	git_strmap_foreach(b->values, key, var,
+	git_strmap_iter iter = git_strmap_begin(b->values);
+	while (!(git_strmap_next(&key, (void**) &var, &iter, b->values) < 0)) {
 		for (; var != NULL; var = next_var) {
 			next_var = CVAR_LIST_NEXT(var);
 
@@ -285,7 +286,7 @@ static int file_foreach(
 				goto cleanup;
 			}
 		}
-	);
+	}
 
 cleanup:
 	if (regexp != NULL)
