@@ -769,7 +769,7 @@ static int packed_remove_loose(
 	refdb_fs_backend *backend,
 	git_vector *packing_list)
 {
-	unsigned int i;
+	size_t i;
 	git_buf full_path = GIT_BUF_INIT;
 	int failed = 0;
 
@@ -811,7 +811,7 @@ static int packed_remove_loose(
 static int packed_write(refdb_fs_backend *backend)
 {
 	git_filebuf pack_file = GIT_FILEBUF_INIT;
-	unsigned int i;
+	size_t i;
 	git_buf pack_file_path = GIT_BUF_INIT;
 	git_vector packing_list;
 	unsigned int total_refs;

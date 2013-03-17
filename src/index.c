@@ -317,7 +317,7 @@ void git_index_free(git_index *index)
 
 void git_index_clear(git_index *index)
 {
-	unsigned int i;
+	size_t i;
 
 	assert(index);
 
@@ -786,7 +786,7 @@ int git_index_remove(git_index *index, const char *path, int stage)
 	if (entry != NULL)
 		git_tree_cache_invalidate_path(index->tree, entry->path);
 
-	error = git_vector_remove(&index->entries, (unsigned int)position);
+	error = git_vector_remove(&index->entries, position);
 
 	if (!error)
 		index_entry_free(entry);
@@ -1129,7 +1129,7 @@ int git_index_reuc_remove(git_index *index, size_t position)
 	git_vector_sort(&index->reuc);
 
 	reuc = git_vector_get(&index->reuc, position);
-	error = git_vector_remove(&index->reuc, (unsigned int)position);
+	error = git_vector_remove(&index->reuc, position);
 
 	if (!error)
 		index_entry_reuc_free(reuc);
