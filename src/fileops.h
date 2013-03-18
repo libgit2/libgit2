@@ -306,25 +306,42 @@ typedef enum {
 } git_futils_dir_t;
 
 /**
- * Get the strarray of search paths for global/system files
+ * Get the search path for global/system/xdg files
  *
- * @param out git_strarray of search paths
+ * @param out pointer to git_buf containing search path
  * @param which which list of paths to return
- * @return 0 on success, <0 on failure (allocation error)
+ * @return 0 on success, <0 on failure
  */
-extern int git_futils_dirs_get(
-	const git_strarray **out, git_futils_dir_t which);
+extern int git_futils_dirs_get(const git_buf **out, git_futils_dir_t which);
 
 /**
- * Set or prepend strarray of search paths for global/system files
+ * Get search path into a preallocated buffer
  *
- * @param which which list of paths to modify
- * @param dirs new list of search paths
- * @param replace true to replace old, false to prepend to old
+ * @param out String buffer to write into
+ * @param outlen Size of string buffer
+ * @param which Which search path to return
+ * @return 0 on success, GIT_EBUFS if out is too small, <0 on other failure
+ */
+
+extern int git_futils_dirs_get_str(
+	char *out, size_t outlen, git_futils_dir_t which);
+
+/**
+ * Set search paths for global/system/xdg files
+ *
+ * The first occurrence of the magic string "$PATH" in the new value will
+ * be replaced with the old value of the search path.
+ *
+ * @param which Which search path to modify
+ * @param paths New search path (separated by GIT_PATH_LIST_SEPARATOR)
  * @return 0 on success, <0 on failure (allocation error)
  */
-extern int git_futils_dirs_set(
-	git_futils_dir_t which, const git_strarray *dirs, bool replace);
+extern int git_futils_dirs_set(git_futils_dir_t which, const char *paths);
+
+/**
+ * Release / reset all search paths
+ */
+extern void git_futils_dirs_free(void);
 
 /**
  * Create a "fake" symlink (text file containing the target path).

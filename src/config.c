@@ -521,7 +521,7 @@ static int git_config__find_file_to_path(
 
 	if (path.size >= outlen) {
 		giterr_set(GITERR_NOMEMORY, "Buffer is too short for the path");
-		error = -1;
+		error = GIT_EBUFS;
 		goto done;
 	}
 

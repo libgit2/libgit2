@@ -29,8 +29,24 @@ static char *home_values[] = {
 void test_core_env__initialize(void)
 {
 	int i;
-	for (i = 0; i < NUM_VARS; ++i)
-		env_save[i] = cl_getenv(env_vars[i]);
+	for (i = 0; i < NUM_VARS; ++i) {
+		const char *original = cl_getenv(env_vars[i]);
+#ifdef GIT_WIN32
+		env_save[i] = original;
+#else
+		env_save[i] = original ? git__strdup(original) : NULL;
+#endif
+	}
+}
+
+static void reset_global_search_path(void)
+{
+	cl_git_pass(git_futils_dirs_set(GIT_FUTILS_DIR_GLOBAL, NULL));
+}
+
+static void reset_system_search_path(void)
+{
+	cl_git_pass(git_futils_dirs_set(GIT_FUTILS_DIR_SYSTEM, NULL));
 }
 
 void test_core_env__cleanup(void)
@@ -40,9 +56,7 @@ void test_core_env__cleanup(void)
 
 	for (i = 0; i < NUM_VARS; ++i) {
 		cl_setenv(env_vars[i], env_save[i]);
-#ifdef GIT_WIN32
 		git__free(env_save[i]);
-#endif
 		env_save[i] = NULL;
 	}
 
@@ -55,8 +69,8 @@ void test_core_env__cleanup(void)
 	}
 
 	/* reset search paths to default */
-	git_futils_dirs_set(GIT_FUTILS_DIR_GLOBAL, NULL, true);
-	git_futils_dirs_set(GIT_FUTILS_DIR_SYSTEM, NULL, true);
+	reset_global_search_path();
+	reset_system_search_path();
 }
 
 static void setenv_and_check(const char *name, const char *value)
@@ -64,21 +78,10 @@ static void setenv_and_check(const char *name, const char *value)
 	char *check;
 
 	cl_git_pass(cl_setenv(name, value));
+
 	check = cl_getenv(name);
 	cl_assert_equal_s(value, check);
-#ifdef GIT_WIN32
 	git__free(check);
-#endif
-}
-
-static void reset_global_search_path(void)
-{
-	cl_git_pass(git_futils_dirs_set(GIT_FUTILS_DIR_GLOBAL, NULL, true));
-}
-
-static void reset_system_search_path(void)
-{
-	cl_git_pass(git_futils_dirs_set(GIT_FUTILS_DIR_SYSTEM, NULL, true));
 }
 
 void test_core_env__0(void)
@@ -216,7 +219,7 @@ void test_core_env__2(void)
 	char **val;
 	const char *testname = "alternate";
 	size_t testlen = strlen(testname);
-	git_strarray arr;
+	char out[GIT_PATH_MAX];
 
 	strncpy(testfile, testname, sizeof(testfile));
 	cl_assert_equal_s(testname, testfile);
@@ -227,7 +230,7 @@ void test_core_env__2(void)
 		 * we are on a filesystem that doesn't support the
 		 * characters in question and skip this test...
 		 */
-		if (p_mkdir(*val, 0777) != 0) {
+		if (p_mkdir(*val, 0777) != 0 && errno != EEXIST) {
 			*val = ""; /* mark as not created */
 			continue;
 		}
@@ -243,30 +246,66 @@ void test_core_env__2(void)
 		cl_git_mkfile(path.ptr, "find me");
 		git_buf_rtruncate_at_char(&path, '/');
 
-		arr.count = 1;
-		arr.strings = &path.ptr;
-
+		/* default should be NOTFOUND */
 		cl_assert_equal_i(
 			GIT_ENOTFOUND, git_futils_find_global_file(&found, testfile));
 
+		/* set search path */
 		cl_git_pass(git_libgit2_opts(
-			GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL, &arr));
+			GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL, path.ptr));
+
+		cl_git_pass(git_libgit2_opts(
+			GIT_OPT_GET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL, out, sizeof(out)));
+		cl_assert_equal_s(out, path.ptr);
 
 		cl_git_pass(git_futils_find_global_file(&found, testfile));
 
+		/* reset */
 		cl_git_pass(git_libgit2_opts(
 			GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL, NULL));
-
 		cl_assert_equal_i(
 			GIT_ENOTFOUND, git_futils_find_global_file(&found, testfile));
 
+		/* try prepend behavior */
+		cl_git_pass(git_buf_putc(&path, GIT_PATH_LIST_SEPARATOR));
+		cl_git_pass(git_buf_puts(&path, "$PATH"));
+
 		cl_git_pass(git_libgit2_opts(
-			GIT_OPT_PREPEND_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL, &arr));
+			GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL, path.ptr));
+
+		git_buf_rtruncate_at_char(&path, GIT_PATH_LIST_SEPARATOR);
+
+		cl_git_pass(git_libgit2_opts(
+			GIT_OPT_GET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL, out, sizeof(out)));
+		cl_assert(git__prefixcmp(out, path.ptr) == 0);
 
 		cl_git_pass(git_futils_find_global_file(&found, testfile));
 
+		/* reset */
 		cl_git_pass(git_libgit2_opts(
 			GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL, NULL));
+		cl_assert_equal_i(
+			GIT_ENOTFOUND, git_futils_find_global_file(&found, testfile));
+
+		/* try append behavior */
+		cl_git_pass(git_buf_join(
+			&found, GIT_PATH_LIST_SEPARATOR, "$PATH", path.ptr));
+
+		cl_git_pass(git_libgit2_opts(
+			GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL, found.ptr));
+
+		cl_git_pass(git_libgit2_opts(
+			GIT_OPT_GET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL, out, sizeof(out)));
+		cl_assert(git__suffixcmp(out, path.ptr) == 0);
+
+		cl_git_pass(git_futils_find_global_file(&found, testfile));
+
+		/* reset */
+		cl_git_pass(git_libgit2_opts(
+			GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL, NULL));
+
+		cl_git_pass(git_buf_joinpath(&path, path.ptr, testfile));
+		(void)p_unlink(path.ptr);
 
 		(void)p_rmdir(*val);
 	}

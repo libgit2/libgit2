@@ -559,48 +559,46 @@ clean_up:
 }
 
 
-static int git_futils_guess_system_dirs(git_strarray *out)
+static int git_futils_guess_system_dirs(git_buf *out)
 {
 #ifdef GIT_WIN32
 	return win32_find_system_dirs(out);
 #else
-	return git_strarray_set(out, 1, "/etc");
+	return git_buf_sets(out, "/etc");
 #endif
 }
 
-static int git_futils_guess_global_dirs(git_strarray *out)
+static int git_futils_guess_global_dirs(git_buf *out)
 {
 #ifdef GIT_WIN32
 	return win32_find_global_dirs(out);
 #else
-	return git_strarray_set(out, 1, getenv("HOME"));
+	return git_buf_sets(out, getenv("HOME"));
 #endif
 }
 
-static int git_futils_guess_xdg_dirs(git_strarray *out)
+static int git_futils_guess_xdg_dirs(git_buf *out)
 {
 #ifdef GIT_WIN32
 	return win32_find_xdg_dirs(out);
 #else
-	int error = 0;
-	git_buf xdg = GIT_BUF_INIT;
 	const char *env = NULL;
 
 	if ((env = getenv("XDG_CONFIG_HOME")) != NULL)
-		git_buf_joinpath(&xdg, env, "git");
+		return git_buf_joinpath(out, env, "git");
 	else if ((env = getenv("HOME")) != NULL)
-		git_buf_joinpath(&xdg, env, ".config/git");
+		return git_buf_joinpath(out, env, ".config/git");
 
-	error = git_strarray_set(out, 1, xdg.ptr);
-	git_buf_free(&xdg);
-
-	return error;
+	git_buf_clear(out);
+	return 0;
 #endif
 }
 
-typedef int (*git_futils_dirs_guess_cb)(git_strarray *out);
+typedef int (*git_futils_dirs_guess_cb)(git_buf *out);
 
-static git_strarray git_futils__dirs[GIT_FUTILS_DIR__MAX];
+static git_buf git_futils__dirs[GIT_FUTILS_DIR__MAX] =
+	{ GIT_BUF_INIT, GIT_BUF_INIT, GIT_BUF_INIT };
+
 static git_futils_dirs_guess_cb git_futils__dir_guess[GIT_FUTILS_DIR__MAX] = {
 	git_futils_guess_system_dirs,
 	git_futils_guess_global_dirs,
@@ -615,53 +613,105 @@ static int git_futils_check_selector(git_futils_dir_t which)
 	return -1;
 }
 
-int git_futils_dirs_get(const git_strarray **out, git_futils_dir_t which)
+int git_futils_dirs_get(const git_buf **out, git_futils_dir_t which)
 {
-	if (!out) {
-		giterr_set(GITERR_INVALID, "Output git_strarray not provided");
-		return -1;
-	}
+	assert(out);
 
 	*out = NULL;
 
 	GITERR_CHECK_ERROR(git_futils_check_selector(which));
 
-	if (!git_futils__dirs[which].count) {
-		int error = git_futils__dir_guess[which](&git_futils__dirs[which]);
-		if (error < 0)
-			return error;
-	}
+	if (!git_buf_len(&git_futils__dirs[which]))
+		GITERR_CHECK_ERROR(
+			git_futils__dir_guess[which](&git_futils__dirs[which]));
 
 	*out = &git_futils__dirs[which];
 	return 0;
 }
 
-int git_futils_dirs_set(
-	git_futils_dir_t which, const git_strarray *dirs, bool replace)
+int git_futils_dirs_get_str(char *out, size_t outlen, git_futils_dir_t which)
 {
+	const git_buf *path = NULL;
+
+	GITERR_CHECK_ERROR(git_futils_check_selector(which));
+	GITERR_CHECK_ERROR(git_futils_dirs_get(&path, which));
+
+	if (!out || path->size >= outlen) {
+		giterr_set(GITERR_NOMEMORY, "Buffer is too short for the path");
+		return GIT_EBUFS;
+	}
+
+	git_buf_copy_cstr(out, outlen, path);
+	return 0;
+}
+
+#define PATH_MAGIC "$PATH"
+
+int git_futils_dirs_set(git_futils_dir_t which, const char *search_path)
+{
+	const char *expand_path = NULL;
+	git_buf merge = GIT_BUF_INIT;
+
 	GITERR_CHECK_ERROR(git_futils_check_selector(which));
 
-	if (replace)
-		git_strarray_free(&git_futils__dirs[which]);
+	if (search_path != NULL)
+		expand_path = strstr(search_path, PATH_MAGIC);
 
-	/* init with defaults if it hasn't been done yet, but ignore error */
-	else if (!git_futils__dirs[which].count)
+	/* init with default if not yet done and needed (ignoring error) */
+	if ((!search_path || expand_path) &&
+		!git_buf_len(&git_futils__dirs[which]))
 		git_futils__dir_guess[which](&git_futils__dirs[which]);
 
-	return git_strarray_prepend(&git_futils__dirs[which], dirs);
+	/* if $PATH is not referenced, then just set the path */
+	if (!expand_path)
+		return git_buf_sets(&git_futils__dirs[which], search_path);
+
+	/* otherwise set to join(before $PATH, old value, after $PATH) */
+	if (expand_path > search_path)
+		git_buf_set(&merge, search_path, expand_path - search_path);
+
+	if (git_buf_len(&git_futils__dirs[which]))
+		git_buf_join(&merge, GIT_PATH_LIST_SEPARATOR,
+			merge.ptr, git_futils__dirs[which].ptr);
+
+	expand_path += strlen(PATH_MAGIC);
+	if (*expand_path)
+		git_buf_join(&merge, GIT_PATH_LIST_SEPARATOR, merge.ptr, expand_path);
+
+	git_buf_swap(&git_futils__dirs[which], &merge);
+	git_buf_free(&merge);
+
+	return git_buf_oom(&git_futils__dirs[which]) ? -1 : 0;
+}
+
+void git_futils_dirs_free(void)
+{
+	int i;
+	for (i = 0; i < GIT_FUTILS_DIR__MAX; ++i)
+		git_buf_free(&git_futils__dirs[i]);
 }
 
 static int git_futils_find_in_dirlist(
 	git_buf *path, const char *name, git_futils_dir_t which, const char *label)
 {
-	size_t i;
-	const git_strarray *syspaths;
+	size_t len;
+	const char *scan, *next = NULL;
+	const git_buf *syspath;
 
-	GITERR_CHECK_ERROR(git_futils_dirs_get(&syspaths, which));
+	GITERR_CHECK_ERROR(git_futils_dirs_get(&syspath, which));
 
-	for (i = 0; i < syspaths->count; ++i) {
-		GITERR_CHECK_ERROR(
-			git_buf_joinpath(path, syspaths->strings[i], name));
+	for (scan = git_buf_cstr(syspath); scan; scan = next) {
+		for (next = strchr(scan, GIT_PATH_LIST_SEPARATOR);
+			 next && next > scan && next[-1] == '\\';
+			 next = strchr(next + 1, GIT_PATH_LIST_SEPARATOR))
+			/* find unescaped separator or end of string */;
+
+		len = next ? (size_t)(next++ - scan) : strlen(scan);
+		if (!len)
+			continue;
+
+		GITERR_CHECK_ERROR(git_buf_set(path, scan, len));
+		GITERR_CHECK_ERROR(git_buf_joinpath(path, path->ptr, name));
 
 		if (git_path_exists(path->ptr))
 			return 0;

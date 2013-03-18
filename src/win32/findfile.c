@@ -155,75 +155,59 @@ static int win32_find_git_in_registry(
 	return path16.len ? 0 : GIT_ENOTFOUND;
 }
 
-static int win32_copy_to_strarray(
-	git_strarray *out, size_t count, char **strings)
-{
-	size_t i, realcount;
-
-	if (!count)
-		return 0;
-
-	for (i = 0, realcount = 0; i < count; ++i)
-		if (strings[i]) realcount++;
-
-	out->strings = git__calloc(realcount, sizeof(char *));
-	GITERR_CHECK_ALLOC(out->strings);
-
-	for (i = 0, out->count = 0; i < count; ++i)
-		if (strings[i])
-			out->strings[out->count++] = strings[i];
-
-	return 0;
-}
-
 static int win32_find_existing_dirs(
-	git_strarray *out, const wchar_t *tmpl[], char *temp[])
+	git_buf *out, const wchar_t *tmpl[], char *temp[])
 {
 	struct win32_path path16;
 	git_buf buf = GIT_BUF_INIT;
-	size_t count;
 
-	for (count = 0; *tmpl != NULL; tmpl++) {
+	git_buf_clear(out);
+
+	for (; *tmpl != NULL; tmpl++) {
 		if (!win32_expand_path(&path16, *tmpl) &&
 			path16.path[0] != L'%' &&
 			!_waccess(path16.path, F_OK))
 		{
 			win32_path_utf16_to_8(&buf, path16.path);
-			temp[count++] = git_buf_detach(&buf);
+
+			if (buf.size)
+				git_buf_join(out, GIT_PATH_LIST_SEPARATOR, out->ptr, buf.ptr);
 		}
 	}
 
-	return win32_copy_to_strarray(out, count, temp);
+	git_buf_free(&buf);
+
+	return (git_buf_oom(out) ? -1 : 0);
 }
 
-int win32_find_system_dirs(git_strarray *out)
+int win32_find_system_dirs(git_buf *out)
 {
-	char *strings[4];
-	size_t count = 0;
 	git_buf buf = GIT_BUF_INIT;
 
-	memset(out, 0, sizeof(*out));
-
 	/* directories where git.exe & git.cmd are found */
-	if (!win32_find_git_in_path(&buf, L"git.exe"))
-		strings[count++] = git_buf_detach(&buf);
+	if (!win32_find_git_in_path(&buf, L"git.exe") && buf.size)
+		git_buf_set(out, buf.ptr, buf.size);
+	else
+		git_buf_clear(out);
 
-	if (!win32_find_git_in_path(&buf, L"git.cmd"))
-		strings[count++] = git_buf_detach(&buf);
+	if (!win32_find_git_in_path(&buf, L"git.cmd") && buf.size)
+		git_buf_join(out, GIT_PATH_LIST_SEPARATOR, out->ptr, buf.ptr);
 
 	/* directories where git is installed according to registry */
 	if (!win32_find_git_in_registry(
-			&buf, HKEY_CURRENT_USER, REG_MSYSGIT_INSTALL_LOCAL))
-		strings[count++] = git_buf_detach(&buf);
+			&buf, HKEY_CURRENT_USER, REG_MSYSGIT_INSTALL_LOCAL) && buf.size)
+		git_buf_join(out, GIT_PATH_LIST_SEPARATOR, out->ptr, buf.ptr);
 
 	if (!win32_find_git_in_registry(
-			&buf, HKEY_LOCAL_MACHINE, REG_MSYSGIT_INSTALL))
-		strings[count++] = git_buf_detach(&buf);
+			&buf, HKEY_LOCAL_MACHINE, REG_MSYSGIT_INSTALL) && buf.size)
+		git_buf_join(out, GIT_PATH_LIST_SEPARATOR, out->ptr, buf.ptr);
 
-	return win32_copy_to_strarray(out, count, strings);
+	git_buf_free(&buf);
+
+	return (git_buf_oom(out) ? -1 : 0);
 }
 
-int win32_find_global_dirs(git_strarray *out)
+int win32_find_global_dirs(git_buf *out)
 {
 	char *temp[3];
 	static const wchar_t *global_tmpls[4] = {
@@ -236,7 +220,7 @@ int win32_find_global_dirs(git_strarray *out)
 	return win32_find_existing_dirs(out, global_tmpls, temp);
 }
 
-int win32_find_xdg_dirs(git_strarray *out)
+int win32_find_xdg_dirs(git_buf *out)
 {
 	char *temp[6];
 	static const wchar_t *global_tmpls[7] = {

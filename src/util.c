@@ -39,7 +39,7 @@ int git_libgit2_capabilities()
 extern size_t git_mwindow__window_size;
 extern size_t git_mwindow__mapped_limit;
 
-static int convert_config_level_to_futils_dir(int config_level)
+static int config_level_to_futils_dir(int config_level)
 {
 	int val = -1;
 
@@ -80,24 +80,18 @@ int git_libgit2_opts(int key, ...)
 		break;
 
 	case GIT_OPT_GET_SEARCH_PATH:
-		{
-			const git_strarray **out = va_arg(ap, const git_strarray **);
-			int which = convert_config_level_to_futils_dir(va_arg(ap, int));
+		if ((error = config_level_to_futils_dir(va_arg(ap, int))) >= 0) {
+			char *out = va_arg(ap, char *);
+			size_t outlen = va_arg(ap, size_t);
 
-			error = (which < 0) ? which : git_futils_dirs_get(out, which);
-			break;
+			error = git_futils_dirs_get_str(out, outlen, error);
 		}
+		break;
 
 	case GIT_OPT_SET_SEARCH_PATH:
-	case GIT_OPT_PREPEND_SEARCH_PATH:
-		{
-			int which = convert_config_level_to_futils_dir(va_arg(ap, int));
-			const git_strarray *dirs = va_arg(ap, git_strarray *);
-
-			error = (which < 0) ? which : git_futils_dirs_set(
-				which, dirs, key == GIT_OPT_SET_SEARCH_PATH);
-			break;
-		}
+		if ((error = config_level_to_futils_dir(va_arg(ap, int))) >= 0)
+			error = git_futils_dirs_set(error, va_arg(ap, const char *));
+		break;
 	}
 
 	va_end(ap);

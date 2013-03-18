@@ -18,9 +18,9 @@ extern int win32_expand_path(struct win32_path *s_root, const wchar_t *templ);
 extern int win32_find_file(
 	git_buf *path, const struct win32_path *root, const char *filename);
 
-extern int win32_find_system_dirs(git_strarray *out);
-extern int win32_find_global_dirs(git_strarray *out);
-extern int win32_find_xdg_dirs(git_strarray *out);
+extern int win32_find_system_dirs(git_buf *out);
+extern int win32_find_global_dirs(git_buf *out);
+extern int win32_find_xdg_dirs(git_buf *out);
 
 #endif
 

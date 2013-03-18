@@ -131,7 +131,6 @@ enum {
 	GIT_OPT_SET_MWINDOW_MAPPED_LIMIT,
 	GIT_OPT_GET_SEARCH_PATH,
 	GIT_OPT_SET_SEARCH_PATH,
-	GIT_OPT_PREPEND_SEARCH_PATH,
 };
 
 /**
@@ -152,25 +151,21 @@ enum {
  *		Set the maximum amount of memory that can be mapped at any time
  *		by the library
  *
- *	opts(GIT_OPT_GET_SEARCH_PATH, const git_strarray **, int level)
- *		Get a strarray of the search path for a given level of config
- *		data.  "level" must be one of GIT_CONFIG_LEVEL_SYSTEM,
- *		GIT_CONFIG_LEVEL_GLOBAL, or GIT_CONFIG_LEVEL_XDG.  The search
- *		path applies to shared attributes and ignore files, too.
+ *	opts(GIT_OPT_GET_SEARCH_PATH, int level, char *out, size_t len)
+ *		Get the search path for a given level of config data.  "level" must
+ *		be one of GIT_CONFIG_LEVEL_SYSTEM, GIT_CONFIG_LEVEL_GLOBAL, or
+ *		GIT_CONFIG_LEVEL_XDG.  The search path is written to the `out`
+ *		buffer up to size `len`.  Returns GIT_EBUFS if buffer is too small.
  *
- *	opts(GIT_OPT_SET_SEARCH_PATH, int level, const git_strarray *)
- *		Set the search path for a given level of config data.  Passing
- *		NULL for the git_strarray pointer resets the search path to the
- *		default (which is generally based on environment variables).
- *		"level" must be one of GIT_CONFIG_LEVEL_SYSTEM,
- *		GIT_CONFIG_LEVEL_GLOBAL, or GIT_CONFIG_LEVEL_XDG.  The search
- *		path applies to shared attributes and ignore files, too.
- *
- *	opts(GIT_OPT_PREPEND_SEARCH_PATH, int level, const git_strarray *)
- *		Prepend new directories to the search path for a given level of
- *		config data.  "level" must be one of GIT_CONFIG_LEVEL_SYSTEM,
- *		GIT_CONFIG_LEVEL_GLOBAL, or GIT_CONFIG_LEVEL_XDG.  The search
- *		path applies to shared attributes and ignore files, too.
+ *	opts(GIT_OPT_SET_SEARCH_PATH, int level, const char *path)
+ *		Set the search path for a level of config data.  The search path
+ *		applied to shared attributes and ignore files, too.
+ *      - `path` lists directories delimited by GIT_PATH_LIST_SEPARATOR.
+ *		  Pass NULL to reset to the default (generally based on environment
+ *		  variables).  Use magic path `$PATH` to include the old value
+ *		  of the path (if you want to prepend or append, for instance).
+ *		- `level` must be GIT_CONFIG_LEVEL_SYSTEM, GIT_CONFIG_LEVEL_GLOBAL,
+ *		  or GIT_CONFIG_LEVEL_XDG.
  *
  * @param option Option key
  * @param ... value to set the option
