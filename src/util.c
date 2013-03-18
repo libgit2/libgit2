@@ -112,78 +112,32 @@ void git_strarray_free(git_strarray *array)
 
 int git_strarray_copy(git_strarray *tgt, const git_strarray *src)
 {
+	size_t i;
+
 	assert(tgt && src);
 
 	memset(tgt, 0, sizeof(*tgt));
-	return git_strarray_prepend(tgt, src);
-}
 
-int git_strarray_set(git_strarray *tgt, size_t count, ...)
-{
-	size_t i;
-	va_list ap;
-
-	assert(tgt);
-
-	memset(tgt, 0, sizeof(*tgt));
-
-	if (!count)
+	if (!src->count)
 		return 0;
 
-	tgt->strings = git__calloc(count, sizeof(char *));
+	tgt->strings = git__calloc(src->count, sizeof(char *));
 	GITERR_CHECK_ALLOC(tgt->strings);
-
-	va_start(ap, count);
-	for (i = 0; i < count; ++i) {
-		const char *str = va_arg(ap, const char *);
-		if (!str)
-			continue;
-
-		tgt->strings[tgt->count] = git__strdup(str);
-		if (!tgt->strings[tgt->count]) {
-			git_strarray_free(tgt);
-			va_end(ap);
-			return -1;
-		}
-
-		tgt->count++;
-	}
-	va_end(ap);
-
-	return 0;
-}
-
-int git_strarray_prepend(git_strarray *tgt, const git_strarray *src)
-{
-	size_t i;
-	git_strarray merge;
-
-	if (!src || !src->count)
-		return 0;
-
-	merge.count = 0;
-	merge.strings = git__calloc(tgt->count + src->count, sizeof(char *));
-	GITERR_CHECK_ALLOC(merge.strings);
 
 	for (i = 0; i < src->count; ++i) {
 		if (!src->strings[i])
 			continue;
 
-		merge.strings[merge.count] = git__strdup(src->strings[i]);
-		if (!merge.strings[merge.count]) {
-			git_strarray_free(&merge);
+		tgt->strings[tgt->count] = git__strdup(src->strings[i]);
+		if (!tgt->strings[tgt->count]) {
+			git_strarray_free(tgt);
+			memset(tgt, 0, sizeof(*tgt));
 			return -1;
 		}
 
-		merge.count++;
+		tgt->count++;
 	}
 
-	for (i = 0; i < tgt->count; ++i)
-		if (tgt->strings[i])
-			merge.strings[merge.count++] = tgt->strings[i];
-
-	git__free(tgt->strings);
-	memcpy(tgt, &merge, sizeof(merge));
 	return 0;
 }
 

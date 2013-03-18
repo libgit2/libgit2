@@ -17,7 +17,7 @@
 #define REG_MSYSGIT_INSTALL L"SOFTWARE\\Wow6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Git_is1"
 #endif
 
-int win32_expand_path(struct win32_path *s_root, const wchar_t *templ)
+int git_win32__expand_path(struct git_win32__path *s_root, const wchar_t *templ)
 {
 	s_root->len = ExpandEnvironmentStringsW(templ, s_root->path, MAX_PATH);
 	return s_root->len ? 0 : -1;
@@ -33,8 +33,8 @@ static int win32_path_utf16_to_8(git_buf *path_utf8, const wchar_t *path_utf16)
 	return git_buf_sets(path_utf8, temp_utf8);
 }
 
-int win32_find_file(
-	git_buf *path, const struct win32_path *root, const char *filename)
+int git_win32__find_file(
+	git_buf *path, const struct git_win32__path *root, const char *filename)
 {
 	size_t len, alloc_len;
 	wchar_t *file_utf16 = NULL;
@@ -89,7 +89,7 @@ static wchar_t* win32_walkpath(wchar_t *path, wchar_t *buf, size_t buflen)
 static int win32_find_git_in_path(git_buf *buf, const wchar_t *gitexe)
 {
 	wchar_t *env = _wgetenv(L"PATH"), lastch;
-	struct win32_path root;
+	struct git_win32__path root;
 	size_t gitexe_len = wcslen(gitexe);
 
 	if (!env)
@@ -126,7 +126,7 @@ static int win32_find_git_in_registry(
 {
 	HKEY hKey;
 	DWORD dwType = REG_SZ;
-	struct win32_path path16;
+	struct git_win32__path path16;
 
 	assert(buf);
 
@@ -158,13 +158,13 @@ static int win32_find_git_in_registry(
 static int win32_find_existing_dirs(
 	git_buf *out, const wchar_t *tmpl[], char *temp[])
 {
-	struct win32_path path16;
+	struct git_win32__path path16;
 	git_buf buf = GIT_BUF_INIT;
 
 	git_buf_clear(out);
 
 	for (; *tmpl != NULL; tmpl++) {
-		if (!win32_expand_path(&path16, *tmpl) &&
+		if (!git_win32__expand_path(&path16, *tmpl) &&
 			path16.path[0] != L'%' &&
 			!_waccess(path16.path, F_OK))
 		{
@@ -180,7 +180,7 @@ static int win32_find_existing_dirs(
 	return (git_buf_oom(out) ? -1 : 0);
 }
 
-int win32_find_system_dirs(git_buf *out)
+int git_win32__find_system_dirs(git_buf *out)
 {
 	git_buf buf = GIT_BUF_INIT;
 
@@ -207,7 +207,7 @@ int win32_find_system_dirs(git_buf *out)
 	return (git_buf_oom(out) ? -1 : 0);
 }
 
-int win32_find_global_dirs(git_buf *out)
+int git_win32__find_global_dirs(git_buf *out)
 {
 	char *temp[3];
 	static const wchar_t *global_tmpls[4] = {
@@ -220,7 +220,7 @@ int win32_find_global_dirs(git_buf *out)
 	return win32_find_existing_dirs(out, global_tmpls, temp);
 }
 
-int win32_find_xdg_dirs(git_buf *out)
+int git_win32__find_xdg_dirs(git_buf *out)
 {
 	char *temp[6];
 	static const wchar_t *global_tmpls[7] = {

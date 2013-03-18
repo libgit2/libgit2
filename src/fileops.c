@@ -562,7 +562,7 @@ clean_up:
 static int git_futils_guess_system_dirs(git_buf *out)
 {
 #ifdef GIT_WIN32
-	return win32_find_system_dirs(out);
+	return git_win32__find_system_dirs(out);
 #else
 	return git_buf_sets(out, "/etc");
 #endif
@@ -571,7 +571,7 @@ static int git_futils_guess_system_dirs(git_buf *out)
 static int git_futils_guess_global_dirs(git_buf *out)
 {
 #ifdef GIT_WIN32
-	return win32_find_global_dirs(out);
+	return git_win32__find_global_dirs(out);
 #else
 	return git_buf_sets(out, getenv("HOME"));
 #endif
@@ -580,7 +580,7 @@ static int git_futils_guess_global_dirs(git_buf *out)
 static int git_futils_guess_xdg_dirs(git_buf *out)
 {
 #ifdef GIT_WIN32
-	return win32_find_xdg_dirs(out);
+	return git_win32__find_xdg_dirs(out);
 #else
 	const char *env = NULL;
 
