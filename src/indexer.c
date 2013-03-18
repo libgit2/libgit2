@@ -415,6 +415,8 @@ int git_indexer_stream_add(git_indexer_stream *idx, const void *data, size_t siz
 	}
 
 	if (!idx->parsed_header) {
+		unsigned int total_objects;
+
 		if ((unsigned)idx->pack->mwf.size < sizeof(hdr))
 			return 0;
 
@@ -427,20 +429,24 @@ int git_indexer_stream_add(git_indexer_stream *idx, const void *data, size_t siz
 
 		/* for now, limit to 2^32 objects */
 		assert(idx->nr_objects == (size_t)((unsigned int)idx->nr_objects));
+		if (idx->nr_objects == (size_t)((unsigned int)idx->nr_objects))
+			total_objects = (unsigned int)idx->nr_objects;
+		else
+			total_objects = UINT_MAX;
 
 		idx->pack->idx_cache = git_oidmap_alloc();
 		GITERR_CHECK_ALLOC(idx->pack->idx_cache);
 
 		idx->pack->has_cache = 1;
-		if (git_vector_init(&idx->objects, (unsigned int)idx->nr_objects, objects_cmp) < 0)
+		if (git_vector_init(&idx->objects, total_objects, objects_cmp) < 0)
 			return -1;
 
-		if (git_vector_init(&idx->deltas, (unsigned int)(idx->nr_objects / 2), NULL) < 0)
+		if (git_vector_init(&idx->deltas, total_objects / 2, NULL) < 0)
 			return -1;
 
 		stats->received_objects = 0;
 		processed = stats->indexed_objects = 0;
-		stats->total_objects = (unsigned int)idx->nr_objects;
+		stats->total_objects = total_objects;
 		do_progress_callback(idx, stats);
 	}
 

@@ -440,6 +440,7 @@ int git_reference_rename(
 	git_oid *oid;
 	const char *symbolic;
 	int error = 0;
+	int reference_has_log;
 	
 	*out = NULL;
 
@@ -465,11 +466,13 @@ int git_reference_rename(
 		return -1;
 
 	/* Check if we have to update HEAD. */
-	if ((should_head_be_updated = git_branch_is_head(ref)) < 0)
+	if ((error = git_branch_is_head(ref)) < 0)
 		goto on_error;
 
+	should_head_be_updated = (error > 0);
+
 	/* Now delete the old ref and save the new one. */
-	if (git_refdb_delete(ref->db, ref) < 0)
+	if ((error = git_refdb_delete(ref->db, ref)) < 0)
 		goto on_error;
 	
 	/* Save the new reference. */
@@ -477,14 +480,18 @@ int git_reference_rename(
 		goto rollback;
 	
 	/* Update HEAD it was poiting to the reference being renamed. */
-	if (should_head_be_updated && git_repository_set_head(ref->db->repo, new_name) < 0) {
+	if (should_head_be_updated && (error = git_repository_set_head(ref->db->repo, new_name)) < 0) {
 		giterr_set(GITERR_REFERENCE, "Failed to update HEAD after renaming reference");
 		goto on_error;
 	}
 
 	/* Rename the reflog file, if it exists. */
-	if (git_reference_has_log(ref) &&
-		(error = git_reflog_rename(ref, new_name)) < 0)
+	reference_has_log = git_reference_has_log(ref);
+	if (reference_has_log < 0) {
+		error = reference_has_log;
+		goto on_error;
+	}
+	if (reference_has_log && (error = git_reflog_rename(ref, new_name)) < 0)
 		goto on_error;
 
 	*out = result;

@@ -1254,7 +1254,7 @@ static int rename_fetch_refspecs(
 		goto cleanup;
 
 	/* Is it an in-memory remote? */
-	if (remote->name == '\0') {
+	if (!remote->name) {
 		error = (callback(git_buf_cstr(&serialized), payload) < 0) ? GIT_EUSER : 0;
 		goto cleanup;
 	}

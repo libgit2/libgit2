@@ -33,7 +33,7 @@ static git_mwindow_ctl mem_ctl;
 void git_mwindow_free_all(git_mwindow_file *mwf)
 {
 	git_mwindow_ctl *ctl = &mem_ctl;
-	unsigned int i;
+	size_t i;
 
 	if (git_mutex_lock(&git__mwindow_mutex)) {
 		giterr_set(GITERR_THREAD, "unable to lock mwindow mutex");
@@ -115,7 +115,7 @@ static void git_mwindow_scan_lru(
 static int git_mwindow_close_lru(git_mwindow_file *mwf)
 {
 	git_mwindow_ctl *ctl = &mem_ctl;
-	unsigned int i;
+	size_t i;
 	git_mwindow *lru_w = NULL, *lru_l = NULL, **list = &mwf->windows;
 
 	/* FIXME: Does this give us any advantage? */
@@ -288,7 +288,7 @@ void git_mwindow_file_deregister(git_mwindow_file *mwf)
 {
 	git_mwindow_ctl *ctl = &mem_ctl;
 	git_mwindow_file *cur;
-	unsigned int i;
+	size_t i;
 
 	if (git_mutex_lock(&git__mwindow_mutex))
 		return;

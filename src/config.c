@@ -36,7 +36,7 @@ static void file_internal_free(file_internal *internal)
 
 static void config_free(git_config *cfg)
 {
-	unsigned int i;
+	size_t i;
 	file_internal *internal;
 
 	for(i = 0; i < cfg->files.length; ++i){
@@ -284,7 +284,7 @@ int git_config_add_backend(
 int git_config_refresh(git_config *cfg)
 {
 	int error = 0;
-	unsigned int i;
+	size_t i;
 
 	for (i = 0; i < cfg->files.length && !error; ++i) {
 		file_internal *internal = git_vector_get(&cfg->files, i);
@@ -312,7 +312,7 @@ int git_config_foreach_match(
 	void *payload)
 {
 	int ret = 0;
-	unsigned int i;
+	size_t i;
 	file_internal *internal;
 	git_config_backend *file;
 
