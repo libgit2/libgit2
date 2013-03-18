@@ -321,6 +321,50 @@ int git_config_foreach(
 	return git_config_foreach_match(cfg, NULL, cb, payload);
 }
 
+int git_config_backend_foreach_match(
+	git_config_backend *backend,
+	const char *regexp,
+	int (*fn)(const git_config_entry *, void *),
+	void *data)
+{
+	git_config_entry entry;
+	git_config_backend_iter iter;
+	regex_t regex;
+	int result = 0;
+
+	if (regexp != NULL) {
+		if ((result = regcomp(&regex, regexp, REG_EXTENDED)) < 0) {
+			giterr_set_regex(&regex, result);
+			regfree(&regex);
+			return -1;
+		}
+	}
+
+	if (backend->iterator_new(&iter, backend) < 0)
+		return 0;
+
+	while(!(backend->next(&iter, &entry, backend) < 0)) {
+		/* skip non-matching keys if regexp was provided */
+		if (regexp && regexec(&regex, entry.name, 0, NULL, 0) != 0)
+			continue;
+
+		/* abort iterator on non-zero return value */
+		if (fn(&entry, data)) {
+			giterr_clear();
+			result = GIT_EUSER;
+			goto cleanup;
+		}
+	}
+
+cleanup:
+	if (regexp != NULL)
+		regfree(&regex);
+
+	backend->iterator_free(iter);
+
+	return result;
+}
+
 int git_config_foreach_match(
 	const git_config *cfg,
 	const char *regexp,
@@ -335,7 +379,7 @@ int git_config_foreach_match(
 	for (i = 0; i < cfg->files.length && ret == 0; ++i) {
 		internal = git_vector_get(&cfg->files, i);
 		file = internal->file;
-		ret = file->foreach(file, regexp, cb, payload);
+		ret = git_config_backend_foreach_match(file, regexp, cb, payload);
 	}
 
 	return ret;

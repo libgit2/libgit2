@@ -35,7 +35,9 @@ struct git_config_backend {
 	int (*set)(struct git_config_backend *, const char *key, const char *value);
 	int (*set_multivar)(git_config_backend *cfg, const char *name, const char *regexp, const char *value);
 	int (*del)(struct git_config_backend *, const char *key);
-	int (*foreach)(struct git_config_backend *, const char *, git_config_foreach_cb callback, void *payload);
+	int (*iterator_new)(git_config_backend_iter **, struct git_config_backend *);
+	void (*iterator_free)(git_config_backend_iter *);
+	int (*next)(git_config_backend_iter *, git_config_entry *, struct git_config_backend *);
 	int (*refresh)(struct git_config_backend *);
 	void (*free)(struct git_config_backend *);
 };

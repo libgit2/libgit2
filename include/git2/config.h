@@ -61,6 +61,7 @@ typedef struct {
 } git_config_entry;
 
 typedef int  (*git_config_foreach_cb)(const git_config_entry *, void *);
+typedef struct git_config_backend_iter* git_config_backend_iter;
 
 typedef enum {
 	GIT_CVAR_FALSE = 0,
@@ -533,6 +534,25 @@ GIT_EXTERN(int) git_config_parse_int32(int32_t *out, const char *value);
  * @param value value to parse
  */
 GIT_EXTERN(int) git_config_parse_int64(int64_t *out, const char *value);
+
+
+/**
+ * Perform an operation on each config variable in given config backend
+ * matching a regular expression.
+ *
+ * This behaviors like `git_config_foreach_match` except instead of all config
+ * entries it just enumerates through the given backend entry.
+ *
+ * @param backend where to get the variables from
+ * @param regexp regular expression to match against config names (can be NULL)
+ * @param callback the function to call on each variable
+ * @param payload the data to pass to the callback
+ */
+GIT_EXTERN(int) git_config_backend_foreach_match(
+	git_config_backend *backend,
+	const char *regexp,
+	int (*fn)(const git_config_entry *, void *),
+	void *data);
 
 
 /** @} */

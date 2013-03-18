@@ -27,6 +27,12 @@ typedef struct cvar_t {
 	git_config_entry *entry;
 } cvar_t;
 
+typedef struct git_config_file_iter {
+	git_strmap_iter iter;
+	cvar_t* next;
+} git_config_file_iter;
+
+
 #define CVAR_LIST_HEAD(list) ((list)->head)
 
 #define CVAR_LIST_TAIL(list) ((list)->tail)
@@ -247,52 +253,60 @@ static void backend_free(git_config_backend *_backend)
 	git__free(backend);
 }
 
-static int file_foreach(
-	git_config_backend *backend,
-	const char *regexp,
-	int (*fn)(const git_config_entry *, void *),
-	void *data)
+static int config_iterator_new(
+	git_config_backend_iter *iter,
+	struct git_config_backend* backend)
 {
 	diskfile_backend *b = (diskfile_backend *)backend;
-	cvar_t *var, *next_var;
-	const char *key;
-	regex_t regex;
-	int result = 0;
+	git_config_file_iter **it= ((git_config_file_iter**) iter);
 
-	if (!b->values)
-		return 0;
+	if (!b->values || git_strmap_num_entries(b->values) < 1)
+		return -1;
 
-	if (regexp != NULL) {
-		if ((result = regcomp(&regex, regexp, REG_EXTENDED)) < 0) {
-			giterr_set_regex(&regex, result);
-			regfree(&regex);
-			return -1;
-		}
+	*it = git__calloc(1, sizeof(git_config_file_iter));
+	GITERR_CHECK_ALLOC(it);
+
+	(*it)->iter = git_strmap_begin(b->values);
+	(*it)->next = NULL;
+
+	return 0;
+}
+
+static void config_iterator_free(
+	git_config_backend_iter iter)
+{
+	git__free(iter);
+}
+
+static int config_next(
+	git_config_backend_iter *iter,
+	git_config_entry* entry,
+	struct git_config_backend* backend)
+{
+	diskfile_backend *b = (diskfile_backend *)backend;
+	git_config_file_iter *it = *((git_config_file_iter**) iter);
+	int err;
+	cvar_t * var;
+	const char* key;
+
+	if (it->next == NULL) {
+		err = git_strmap_next(&key, (void**) &var, &(it->iter), b->values);
+	} else {
+		key = it->next->entry->name;
+		var = it->next;
 	}
 
-	git_strmap_iter iter = git_strmap_begin(b->values);
-	while (!(git_strmap_next(&key, (void**) &var, &iter, b->values) < 0)) {
-		for (; var != NULL; var = next_var) {
-			next_var = CVAR_LIST_NEXT(var);
-
-			/* skip non-matching keys if regexp was provided */
-			if (regexp && regexec(&regex, key, 0, NULL, 0) != 0)
-				continue;
-
-			/* abort iterator on non-zero return value */
-			if (fn(var->entry, data)) {
-				giterr_clear();
-				result = GIT_EUSER;
-				goto cleanup;
-			}
-		}
+	if (err < 0) {
+		it->next = NULL;
+		return -1;
 	}
 
-cleanup:
-	if (regexp != NULL)
-		regfree(&regex);
+	entry->name = key;
+	entry->value = var->entry->value;
+	entry->level = var->entry->level;
+	it->next = CVAR_LIST_NEXT(var);
 
-	return result;
+	return 0;
 }
 
 static int config_set(git_config_backend *cfg, const char *name, const char *value)
@@ -595,7 +609,9 @@ int git_config_file__ondisk(git_config_backend **out, const char *path)
 	backend->parent.set = config_set;
 	backend->parent.set_multivar = config_set_multivar;
 	backend->parent.del = config_delete;
-	backend->parent.foreach = file_foreach;
+	backend->parent.iterator_new = config_iterator_new;
+	backend->parent.iterator_free = config_iterator_free;
+	backend->parent.next = config_next;
 	backend->parent.refresh = config_refresh;
 	backend->parent.free = backend_free;
 
