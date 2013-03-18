@@ -43,8 +43,8 @@ GIT_EXTERN(void) git_strarray_free(git_strarray *array);
 /**
  * Copy a string array object from source to target.
  *
- * Note: target is overwritten and hence should be empty,
- * otherwise its contents are leaked.
+ * Note: target is overwritten and hence should be empty, otherwise its
+ * contents are leaked.  Call git_strarray_free() if necessary.
  *
  * @param tgt target
  * @param src source

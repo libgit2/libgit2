@@ -19,7 +19,7 @@
 #include "buffer.h"
 #include "odb.h"
 #include "object.h"
-#include "attr.h"
+#include "attrcache.h"
 #include "strmap.h"
 #include "refdb.h"
 

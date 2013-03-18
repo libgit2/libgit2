@@ -56,6 +56,12 @@
 #define GITERR_CHECK_ALLOC(ptr) if (ptr == NULL) { return -1; }
 
 /**
+ * Check a return value and propogate result if non-zero.
+ */
+#define GITERR_CHECK_ERROR(code) \
+	do { int _err = (code); if (_err < 0) return _err; } while (0)
+
+/**
  * Set the error message for this thread, formatting as needed.
  */
 void giterr_set(int error_class, const char *string, ...);

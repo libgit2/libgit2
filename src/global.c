@@ -7,7 +7,8 @@
 #include "common.h"
 #include "global.h"
 #include "hash.h"
-#include "git2/threads.h" 
+#include "fileops.h"
+#include "git2/threads.h"
 #include "thread-utils.h"
 
 
@@ -82,6 +83,7 @@ void git_threads_shutdown(void)
 
 	/* Shut down any subsystems that have global state */
 	git_hash_global_shutdown();
+	git_futils_dirs_free();
 }
 
 git_global_st *git__global_state(void)
@@ -139,6 +141,7 @@ void git_threads_shutdown(void)
 
 	/* Shut down any subsystems that have global state */
 	git_hash_global_shutdown();
+	git_futils_dirs_free();
 }
 
 git_global_st *git__global_state(void)
@@ -171,7 +174,9 @@ int git_threads_init(void)
 
 void git_threads_shutdown(void)
 {
-	/* noop */
+	/* Shut down any subsystems that have global state */
+	git_hash_global_shutdown();
+	git_futils_dirs_free();
 }
 
 git_global_st *git__global_state(void)
