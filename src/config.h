@@ -12,10 +12,11 @@
 #include "vector.h"
 #include "repository.h"
 
-#define GIT_CONFIG_FILENAME ".gitconfig"
-#define GIT_CONFIG_FILENAME_ALT ".config/git/config"
-#define GIT_CONFIG_FILENAME_INREPO "config"
 #define GIT_CONFIG_FILENAME_SYSTEM "gitconfig"
+#define GIT_CONFIG_FILENAME_GLOBAL ".gitconfig"
+#define GIT_CONFIG_FILENAME_XDG    "config"
+
+#define GIT_CONFIG_FILENAME_INREPO "config"
 #define GIT_CONFIG_FILE_MODE 0666
 
 struct git_config {

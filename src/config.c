@@ -515,62 +515,48 @@ int git_config_set_multivar(git_config *cfg, const char *name, const char *regex
 	return file->set_multivar(file, name, regexp, value);
 }
 
-int git_config_find_global_r(git_buf *path)
+static int git_config__find_file_to_path(
+	char *out, size_t outlen, int (*find)(git_buf *buf))
 {
-	int error = git_futils_find_global_file(path, GIT_CONFIG_FILENAME);
+	int error = 0;
+	git_buf path = GIT_BUF_INIT;
 
+	if ((error = find(&path)) < 0)
+		goto done;
+
+	if (path.size >= outlen) {
+		giterr_set(GITERR_NOMEMORY, "Buffer is too short for the path");
+		error = GIT_EBUFS;
+		goto done;
+	}
+
+	git_buf_copy_cstr(out, outlen, &path);
+
+done:
+	git_buf_free(&path);
 	return error;
 }
 
-int git_config_find_xdg_r(git_buf *path)
+int git_config_find_global_r(git_buf *path)
 {
-	int error = git_futils_find_global_file(path, GIT_CONFIG_FILENAME_ALT);
-
-	return error;
+	return git_futils_find_global_file(path, GIT_CONFIG_FILENAME_GLOBAL);
 }
 
 int git_config_find_global(char *global_config_path, size_t length)
 {
-	git_buf path  = GIT_BUF_INIT;
-	int     ret = git_config_find_global_r(&path);
+	return git_config__find_file_to_path(
+		global_config_path, length, git_config_find_global_r);
+}
 
-	if (ret < 0) {
-		git_buf_free(&path);
-		return ret;
-	}
-
-	if (path.size >= length) {
-		git_buf_free(&path);
-		giterr_set(GITERR_NOMEMORY,
-			"Path is to long to fit on the given buffer");
-		return -1;
-	}
-
-	git_buf_copy_cstr(global_config_path, length, &path);
-	git_buf_free(&path);
-	return 0;
+int git_config_find_xdg_r(git_buf *path)
+{
+	return git_futils_find_xdg_file(path, GIT_CONFIG_FILENAME_XDG);
 }
 
 int git_config_find_xdg(char *xdg_config_path, size_t length)
 {
-	git_buf path  = GIT_BUF_INIT;
-	int ret = git_config_find_xdg_r(&path);
-
-	if (ret < 0) {
-		git_buf_free(&path);
-		return ret;
-	}
-
-	if (path.size >= length) {
-		git_buf_free(&path);
-		giterr_set(GITERR_NOMEMORY,
-			"Path is to long to fit on the given buffer");
-		return -1;
-	}
-
-	git_buf_copy_cstr(xdg_config_path, length, &path);
-	git_buf_free(&path);
-	return 0;
+	return git_config__find_file_to_path(
+		xdg_config_path, length, git_config_find_xdg_r);
 }
 
 int git_config_find_system_r(git_buf *path)
@@ -580,24 +566,8 @@ int git_config_find_system_r(git_buf *path)
 
 int git_config_find_system(char *system_config_path, size_t length)
 {
-	git_buf path  = GIT_BUF_INIT;
-	int     ret = git_config_find_system_r(&path);
-
-	if (ret < 0) {
-		git_buf_free(&path);
-		return ret;
-	}
-
-	if (path.size >= length) {
-		git_buf_free(&path);
-		giterr_set(GITERR_NOMEMORY,
-			"Path is to long to fit on the given buffer");
-		return -1;
-	}
-
-	git_buf_copy_cstr(system_config_path, length, &path);
-	git_buf_free(&path);
-	return 0;
+	return git_config__find_file_to_path(
+		system_config_path, length, git_config_find_system_r);
 }
 
 int git_config_open_default(git_config **out)

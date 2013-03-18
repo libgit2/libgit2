@@ -10,6 +10,7 @@
 #include <stdio.h>
 #include <ctype.h>
 #include "posix.h"
+#include "fileops.h"
 
 #ifdef _MSC_VER
 # include <Shlwapi.h>
@@ -38,13 +39,30 @@ int git_libgit2_capabilities()
 extern size_t git_mwindow__window_size;
 extern size_t git_mwindow__mapped_limit;
 
-void git_libgit2_opts(int key, ...)
+static int config_level_to_futils_dir(int config_level)
 {
+	int val = -1;
+
+	switch (config_level) {
+	case GIT_CONFIG_LEVEL_SYSTEM: val = GIT_FUTILS_DIR_SYSTEM; break;
+	case GIT_CONFIG_LEVEL_XDG:    val = GIT_FUTILS_DIR_XDG; break;
+	case GIT_CONFIG_LEVEL_GLOBAL: val = GIT_FUTILS_DIR_GLOBAL; break;
+	default:
+		giterr_set(
+			GITERR_INVALID, "Invalid config path selector %d", config_level);
+	}
+
+	return val;
+}
+
+int git_libgit2_opts(int key, ...)
+{
+	int error = 0;
 	va_list ap;
 
 	va_start(ap, key);
 
-	switch(key) {
+	switch (key) {
 	case GIT_OPT_SET_MWINDOW_SIZE:
 		git_mwindow__window_size = va_arg(ap, size_t);
 		break;
@@ -60,9 +78,25 @@ void git_libgit2_opts(int key, ...)
 	case GIT_OPT_GET_MWINDOW_MAPPED_LIMIT:
 		*(va_arg(ap, size_t *)) = git_mwindow__mapped_limit;
 		break;
+
+	case GIT_OPT_GET_SEARCH_PATH:
+		if ((error = config_level_to_futils_dir(va_arg(ap, int))) >= 0) {
+			char *out = va_arg(ap, char *);
+			size_t outlen = va_arg(ap, size_t);
+
+			error = git_futils_dirs_get_str(out, outlen, error);
+		}
+		break;
+
+	case GIT_OPT_SET_SEARCH_PATH:
+		if ((error = config_level_to_futils_dir(va_arg(ap, int))) >= 0)
+			error = git_futils_dirs_set(error, va_arg(ap, const char *));
+		break;
 	}
 
 	va_end(ap);
+
+	return error;
 }
 
 void git_strarray_free(git_strarray *array)
@@ -72,6 +106,8 @@ void git_strarray_free(git_strarray *array)
 		git__free(array->strings[i]);
 
 	git__free(array->strings);
+
+	memset(array, 0, sizeof(*array));
 }
 
 int git_strarray_copy(git_strarray *tgt, const git_strarray *src)
@@ -89,8 +125,10 @@ int git_strarray_copy(git_strarray *tgt, const git_strarray *src)
 	GITERR_CHECK_ALLOC(tgt->strings);
 
 	for (i = 0; i < src->count; ++i) {
-		tgt->strings[tgt->count] = git__strdup(src->strings[i]);
+		if (!src->strings[i])
+			continue;
 
+		tgt->strings[tgt->count] = git__strdup(src->strings[i]);
 		if (!tgt->strings[tgt->count]) {
 			git_strarray_free(tgt);
 			memset(tgt, 0, sizeof(*tgt));

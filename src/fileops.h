@@ -276,25 +276,72 @@ extern void git_futils_mmap_free(git_map *map);
  *
  * @param pathbuf buffer to write the full path into
  * @param filename name of file to find in the home directory
- * @return
- * - 0 if found;
- * - GIT_ENOTFOUND if not found;
- * - -1 on an unspecified OS related error.
+ * @return 0 if found, GIT_ENOTFOUND if not found, or -1 on other OS error
  */
 extern int git_futils_find_global_file(git_buf *path, const char *filename);
+
+/**
+ * Find an "XDG" file (i.e. one in user's XDG config path).
+ *
+ * @param pathbuf buffer to write the full path into
+ * @param filename name of file to find in the home directory
+ * @return 0 if found, GIT_ENOTFOUND if not found, or -1 on other OS error
+ */
+extern int git_futils_find_xdg_file(git_buf *path, const char *filename);
 
 /**
  * Find a "system" file (i.e. one shared for all users of the system).
  *
  * @param pathbuf buffer to write the full path into
  * @param filename name of file to find in the home directory
- * @return
- * - 0 if found;
- * - GIT_ENOTFOUND if not found;
- * - -1 on an unspecified OS related error.
+ * @return 0 if found, GIT_ENOTFOUND if not found, or -1 on other OS error
  */
 extern int git_futils_find_system_file(git_buf *path, const char *filename);
 
+typedef enum {
+	GIT_FUTILS_DIR_SYSTEM = 0,
+	GIT_FUTILS_DIR_GLOBAL = 1,
+	GIT_FUTILS_DIR_XDG    = 2,
+	GIT_FUTILS_DIR__MAX   = 3,
+} git_futils_dir_t;
+
+/**
+ * Get the search path for global/system/xdg files
+ *
+ * @param out pointer to git_buf containing search path
+ * @param which which list of paths to return
+ * @return 0 on success, <0 on failure
+ */
+extern int git_futils_dirs_get(const git_buf **out, git_futils_dir_t which);
+
+/**
+ * Get search path into a preallocated buffer
+ *
+ * @param out String buffer to write into
+ * @param outlen Size of string buffer
+ * @param which Which search path to return
+ * @return 0 on success, GIT_EBUFS if out is too small, <0 on other failure
+ */
+
+extern int git_futils_dirs_get_str(
+	char *out, size_t outlen, git_futils_dir_t which);
+
+/**
+ * Set search paths for global/system/xdg files
+ *
+ * The first occurrence of the magic string "$PATH" in the new value will
+ * be replaced with the old value of the search path.
+ *
+ * @param which Which search path to modify
+ * @param paths New search path (separated by GIT_PATH_LIST_SEPARATOR)
+ * @return 0 on success, <0 on failure (allocation error)
+ */
+extern int git_futils_dirs_set(git_futils_dir_t which, const char *paths);
+
+/**
+ * Release / reset all search paths
+ */
+extern void git_futils_dirs_free(void);
 
 /**
  * Create a "fake" symlink (text file containing the target path).

@@ -1,6 +1,7 @@
 #include "common.h"
 #include "repository.h"
 #include "filebuf.h"
+#include "attr.h"
 #include "git2/blob.h"
 #include "git2/tree.h"
 #include <ctype.h>

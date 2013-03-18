@@ -8,26 +8,12 @@
 #define INCLUDE_attr_h__
 
 #include "attr_file.h"
-#include "strmap.h"
 
-#define GIT_ATTR_CONFIG   "core.attributesfile"
-#define GIT_ATTR_CONFIG_DEFAULT ".config/git/attributes"
-#define GIT_IGNORE_CONFIG "core.excludesfile"
-#define GIT_IGNORE_CONFIG_DEFAULT ".config/git/ignore"
-
-typedef struct {
-	int initialized;
-	git_pool pool;
-	git_strmap *files;	/* hash path to git_attr_file of rules */
-	git_strmap *macros;	/* hash name to vector<git_attr_assignment> */
-	const char *cfg_attr_file; /* cached value of core.attributesfile */
-	const char *cfg_excl_file; /* cached value of core.excludesfile */
-} git_attr_cache;
+#define GIT_ATTR_CONFIG       "core.attributesfile"
+#define GIT_IGNORE_CONFIG     "core.excludesfile"
 
 typedef int (*git_attr_file_parser)(
 	git_repository *, void *, const char *, git_attr_file *);
-
-extern int git_attr_cache__init(git_repository *repo);
 
 extern int git_attr_cache__insert_macro(
 	git_repository *repo, git_attr_rule *macro);
