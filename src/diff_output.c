@@ -390,7 +390,7 @@ static int get_workdir_content(
 		map->data = git__malloc(alloc_len);
 		GITERR_CHECK_ALLOC(map->data);
 
-		read_len = p_readlink(path.ptr, map->data, (int)alloc_len);
+		read_len = p_readlink(path.ptr, map->data, alloc_len);
 		if (read_len < 0) {
 			giterr_set(GITERR_OS, "Failed to read symlink '%s'", file->path);
 			error = -1;

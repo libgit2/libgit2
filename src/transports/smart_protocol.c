@@ -454,7 +454,7 @@ int git_smart__download_pack(
 
 		/* We might have something in the buffer already from negotiate_fetch */
 		if (t->buffer.offset > 0)
-			t->packetsize_cb((int)t->buffer.offset, t->packetsize_payload);
+			t->packetsize_cb(t->buffer.offset, t->packetsize_payload);
 	}
 
 	if ((error = git_repository_odb__weakptr(&odb, repo)) < 0 ||

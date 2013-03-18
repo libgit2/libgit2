@@ -529,7 +529,7 @@ int git_futils_cleanupdir_r(const char *path)
 	git_buf fullpath = GIT_BUF_INIT;
 	futils__rmdir_data data;
 
-	if ((error = git_buf_put(&fullpath, path, strlen(path)) < 0))
+	if ((error = git_buf_put(&fullpath, path, strlen(path))) < 0)
 		goto clean_up;
 
 	data.base    = "";

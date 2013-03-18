@@ -1497,7 +1497,7 @@ static int submodule_wd_status(unsigned int *status, git_submodule *sm)
 			if (untracked > 0)
 				*status |= GIT_SUBMODULE_STATUS_WD_UNTRACKED;
 
-			if ((git_diff_num_deltas(diff) - untracked) > 0)
+			if (git_diff_num_deltas(diff) != untracked)
 				*status |= GIT_SUBMODULE_STATUS_WD_WD_MODIFIED;
 
 			git_diff_list_free(diff);

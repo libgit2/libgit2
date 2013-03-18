@@ -499,7 +499,7 @@ int git_odb_open(git_odb **out, const char *objects_dir)
 
 static void odb_free(git_odb *db)
 {
-	unsigned int i;
+	size_t i;
 
 	for (i = 0; i < db->backends.length; ++i) {
 		backend_internal *internal = git_vector_get(&db->backends, i);
@@ -527,7 +527,7 @@ void git_odb_free(git_odb *db)
 int git_odb_exists(git_odb *db, const git_oid *id)
 {
 	git_odb_object *object;
-	unsigned int i;
+	size_t i;
 	bool found = false;
 	bool refreshed = false;
 
@@ -577,7 +577,7 @@ int git_odb__read_header_or_object(
 	git_odb_object **out, size_t *len_p, git_otype *type_p,
 	git_odb *db, const git_oid *id)
 {
-	unsigned int i;
+	size_t i;
 	int error = GIT_ENOTFOUND;
 	git_odb_object *object;
 
@@ -619,7 +619,7 @@ int git_odb__read_header_or_object(
 
 int git_odb_read(git_odb_object **out, git_odb *db, const git_oid *id)
 {
-	unsigned int i;
+	size_t i;
 	int error;
 	bool refreshed = false;
 	git_rawobj raw;
@@ -664,7 +664,7 @@ attempt_lookup:
 int git_odb_read_prefix(
 	git_odb_object **out, git_odb *db, const git_oid *short_id, size_t len)
 {
-	unsigned int i;
+	size_t i;
 	int error = GIT_ENOTFOUND;
 	git_oid found_full_oid = {{0}};
 	git_rawobj raw;
@@ -743,7 +743,7 @@ int git_odb_foreach(git_odb *db, git_odb_foreach_cb cb, void *payload)
 int git_odb_write(
 	git_oid *oid, git_odb *db, const void *data, size_t len, git_otype type)
 {
-	unsigned int i;
+	size_t i;
 	int error = GIT_ERROR;
 	git_odb_stream *stream;
 
@@ -785,7 +785,7 @@ int git_odb_write(
 int git_odb_open_wstream(
 	git_odb_stream **stream, git_odb *db, size_t size, git_otype type)
 {
-	unsigned int i;
+	size_t i;
 	int error = GIT_ERROR;
 
 	assert(stream && db);
@@ -812,7 +812,7 @@ int git_odb_open_wstream(
 
 int git_odb_open_rstream(git_odb_stream **stream, git_odb *db, const git_oid *oid)
 {
-	unsigned int i;
+	size_t i;
 	int error = GIT_ERROR;
 
 	assert(stream && db);
@@ -833,7 +833,7 @@ int git_odb_open_rstream(git_odb_stream **stream, git_odb *db, const git_oid *oi
 
 int git_odb_write_pack(struct git_odb_writepack **out, git_odb *db, git_transfer_progress_callback progress_cb, void *progress_payload)
 {
-	unsigned int i;
+	size_t i;
 	int error = GIT_ERROR;
 
 	assert(out && db);
@@ -864,7 +864,7 @@ void *git_odb_backend_malloc(git_odb_backend *backend, size_t len)
 
 int git_odb_refresh(struct git_odb *db)
 {
-	unsigned int i;
+	size_t i;
 	assert(db);
 
 	for (i = 0; i < db->backends.length; ++i) {

@@ -48,7 +48,8 @@ void git_filters_free(git_vector *filters)
 
 int git_filters_apply(git_buf *dest, git_buf *source, git_vector *filters)
 {
-	unsigned int i, src;
+	size_t i;
+	unsigned int src;
 	git_buf *dbuffer[2];
 
 	dbuffer[0] = source;

@@ -176,7 +176,7 @@ int git_branch_move(
 		return not_a_local_branch(git_reference_name(branch));
 
 	if ((error = git_buf_joinpath(&new_reference_name, GIT_REFS_HEADS_DIR, new_branch_name)) < 0 ||
-		(error = git_buf_printf(&old_config_section, "branch.%s", git_reference_name(branch) + strlen(GIT_REFS_HEADS_DIR)) < 0) ||
+		(error = git_buf_printf(&old_config_section, "branch.%s", git_reference_name(branch) + strlen(GIT_REFS_HEADS_DIR))) < 0 ||
 		(error = git_buf_printf(&new_config_section, "branch.%s", new_branch_name)) < 0)
 		goto done;
 

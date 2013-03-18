@@ -163,7 +163,7 @@ fail:
 
 void git_reflog_free(git_reflog *reflog)
 {
-	unsigned int i;
+	size_t i;
 	git_reflog_entry *entry;
 
 	if (reflog == NULL)
