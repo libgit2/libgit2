@@ -936,7 +936,8 @@ void test_diff_workdir__submodules(void)
 	p_rename("submod2_target/.gitted", "submod2_target/.git");
 
 	rewrite_gitmodules(git_repository_workdir(g_repo));
-	p_rename("submod2/not_submodule/.gitted", "submod2/not_submodule/.git");
+	p_rename("submod2/not-submodule/.gitted", "submod2/not-submodule/.git");
+	p_rename("submod2/not/.gitted", "submod2/not/.git");
 
 	cl_fixture_cleanup("submod2_target");
 
@@ -954,21 +955,22 @@ void test_diff_workdir__submodules(void)
 	/* essentially doing: git diff 873585b94bdeabccea991ea5e3ec1a277895b698 */
 
 	memset(&exp, 0, sizeof(exp));
+
 	cl_git_pass(git_diff_foreach(
 		diff, diff_file_cb, diff_hunk_cb, diff_line_cb, &exp));
 
-	/* the following differs from "git diff 873585" by one "untracked" file
-	 * because the diff list includes the "not_submodule/" directory which
-	 * is not displayed in the text diff.
+	/* the following differs from "git diff 873585" by two "untracked" file
+	 * because the diff list includes the "not" and "not-submodule" dirs which
+	 * are not displayed in the text diff.
 	 */
 
-	cl_assert_equal_i(10, exp.files);
+	cl_assert_equal_i(11, exp.files);
 
 	cl_assert_equal_i(0, exp.file_status[GIT_DELTA_ADDED]);
 	cl_assert_equal_i(0, exp.file_status[GIT_DELTA_DELETED]);
 	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_MODIFIED]);
 	cl_assert_equal_i(0, exp.file_status[GIT_DELTA_IGNORED]);
-	cl_assert_equal_i(9, exp.file_status[GIT_DELTA_UNTRACKED]);
+	cl_assert_equal_i(10, exp.file_status[GIT_DELTA_UNTRACKED]);
 
 	/* the following numbers match "git diff 873585" exactly */
 
