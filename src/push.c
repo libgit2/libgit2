@@ -380,9 +380,7 @@ static int queue_differences(
 		if (!git_oid_cmp(&b_entry->oid, &d_entry->oid))
 			goto loop;
 
-		cmp = memcmp(b_entry->filename,
-			d_entry->filename,
-			b_entry->filename_len);
+		cmp = strcmp(b_entry->filename, d_entry->filename);
 
 		/* If the entries are both trees and they have the same name but are
 		 * different, then we'll recurse after adding the right-hand entry */
