@@ -13,7 +13,7 @@ void test_submodule_lookup__initialize(void)
 
 	/* must create submod2_target before rewrite so prettify will work */
 	rewrite_gitmodules(git_repository_workdir(g_repo));
-	p_rename("submod2/not_submodule/.gitted", "submod2/not_submodule/.git");
+	p_rename("submod2/not-submodule/.gitted", "submod2/not-submodule/.git");
 }
 
 void test_submodule_lookup__cleanup(void)
@@ -39,7 +39,7 @@ void test_submodule_lookup__simple_lookup(void)
 	cl_assert(sm);
 
 	/* lookup git repo subdir that is not added as submodule */
-	cl_assert(git_submodule_lookup(&sm, g_repo, "not_submodule") == GIT_EEXISTS);
+	cl_assert(git_submodule_lookup(&sm, g_repo, "not-submodule") == GIT_EEXISTS);
 
 	/* lookup existing directory that is not a submodule */
 	cl_assert(git_submodule_lookup(&sm, g_repo, "just_a_dir") == GIT_ENOTFOUND);

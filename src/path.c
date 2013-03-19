@@ -877,15 +877,22 @@ int git_path_dirload_with_stat(
 		if (cmp_len && strncomp(ps->path, end_stat, cmp_len) > 0)
 			continue;
 
+		git_buf_truncate(&full, prefix_len);
+
 		if ((error = git_buf_joinpath(&full, full.ptr, ps->path)) < 0 ||
 			(error = git_path_lstat(full.ptr, &ps->st)) < 0)
 			break;
 
-		git_buf_truncate(&full, prefix_len);
-
 		if (S_ISDIR(ps->st.st_mode)) {
-			ps->path[ps->path_len++] = '/';
-			ps->path[ps->path_len] = '\0';
+			if ((error = git_buf_joinpath(&full, full.ptr, ".git")) < 0)
+				break;
+
+			if (p_access(full.ptr, F_OK) == 0) {
+				ps->st.st_mode = GIT_FILEMODE_COMMIT;
+			} else {
+				ps->path[ps->path_len++] = '/';
+				ps->path[ps->path_len] = '\0';
+			}
 		}
 	}
 

@@ -1150,10 +1150,12 @@ static int workdir_iterator__update_entry(workdir_iterator *wi)
 		return 0;
 
 	/* detect submodules */
-
 	error = git_submodule_lookup(NULL, wi->base.repo, wi->entry.path);
 	if (error == GIT_ENOTFOUND)
 		giterr_clear();
+
+	if (error == GIT_EEXISTS) /* if contains .git, treat as untracked submod */
+		error = 0;
 
 	/* if submodule, mark as GITLINK and remove trailing slash */
 	if (!error) {

@@ -3,6 +3,7 @@
 #include "path.h"
 #include "submodule_helpers.h"
 #include "fileops.h"
+#include "iterator.h"
 
 static git_repository *g_repo = NULL;
 
@@ -15,7 +16,8 @@ void test_submodule_status__initialize(void)
 
 	/* must create submod2_target before rewrite so prettify will work */
 	rewrite_gitmodules(git_repository_workdir(g_repo));
-	p_rename("submod2/not_submodule/.gitted", "submod2/not_submodule/.git");
+	p_rename("submod2/not-submodule/.gitted", "submod2/not-submodule/.git");
+	p_rename("submod2/not/.gitted", "submod2/not/.git");
 }
 
 void test_submodule_status__cleanup(void)
@@ -52,7 +54,12 @@ void test_submodule_status__ignore_none(void)
 	cl_git_pass(git_buf_joinpath(&path, git_repository_workdir(g_repo), "sm_unchanged"));
 	cl_git_pass(git_futils_rmdir_r(git_buf_cstr(&path), NULL, GIT_RMDIR_REMOVE_FILES));
 
-	cl_git_fail(git_submodule_lookup(&sm, g_repo, "not_submodule"));
+	cl_assert_equal_i(GIT_ENOTFOUND,
+		git_submodule_lookup(&sm, g_repo, "just_a_dir"));
+	cl_assert_equal_i(GIT_EEXISTS,
+		git_submodule_lookup(&sm, g_repo, "not-submodule"));
+	cl_assert_equal_i(GIT_EEXISTS,
+		git_submodule_lookup(&sm, g_repo, "not"));
 
 	cl_git_pass(git_submodule_lookup(&sm, g_repo, "sm_changed_index"));
 	cl_git_pass(git_submodule_status(&status, sm));
@@ -138,7 +145,7 @@ void test_submodule_status__ignore_untracked(void)
 
 	cl_git_pass(git_submodule_foreach(g_repo, set_sm_ignore, &ign));
 
-	cl_git_fail(git_submodule_lookup(&sm, g_repo, "not_submodule"));
+	cl_git_fail(git_submodule_lookup(&sm, g_repo, "not-submodule"));
 
 	cl_git_pass(git_submodule_lookup(&sm, g_repo, "sm_changed_index"));
 	cl_git_pass(git_submodule_status(&status, sm));
@@ -198,7 +205,12 @@ void test_submodule_status__ignore_dirty(void)
 
 	cl_git_pass(git_submodule_foreach(g_repo, set_sm_ignore, &ign));
 
-	cl_git_fail(git_submodule_lookup(&sm, g_repo, "not_submodule"));
+	cl_assert_equal_i(GIT_ENOTFOUND,
+		git_submodule_lookup(&sm, g_repo, "just_a_dir"));
+	cl_assert_equal_i(GIT_EEXISTS,
+		git_submodule_lookup(&sm, g_repo, "not-submodule"));
+	cl_assert_equal_i(GIT_EEXISTS,
+		git_submodule_lookup(&sm, g_repo, "not"));
 
 	cl_git_pass(git_submodule_lookup(&sm, g_repo, "sm_changed_index"));
 	cl_git_pass(git_submodule_status(&status, sm));
@@ -258,7 +270,12 @@ void test_submodule_status__ignore_all(void)
 
 	cl_git_pass(git_submodule_foreach(g_repo, set_sm_ignore, &ign));
 
-	cl_git_fail(git_submodule_lookup(&sm, g_repo, "not_submodule"));
+	cl_assert_equal_i(GIT_ENOTFOUND,
+		git_submodule_lookup(&sm, g_repo, "just_a_dir"));
+	cl_assert_equal_i(GIT_EEXISTS,
+		git_submodule_lookup(&sm, g_repo, "not-submodule"));
+	cl_assert_equal_i(GIT_EEXISTS,
+		git_submodule_lookup(&sm, g_repo, "not"));
 
 	cl_git_pass(git_submodule_lookup(&sm, g_repo, "sm_changed_index"));
 	cl_git_pass(git_submodule_status(&status, sm));
@@ -304,4 +321,65 @@ void test_submodule_status__ignore_all(void)
 	cl_assert(GIT_SUBMODULE_STATUS_IS_UNMODIFIED(status));
 
 	git_buf_free(&path);
+}
+
+typedef struct {
+	size_t counter;
+	const char **paths;
+} submodule_expectations;
+
+static int confirm_submodule_status(
+	const char *path, unsigned int status_flags, void *payload)
+{
+	submodule_expectations *exp = payload;
+
+	while (git__suffixcmp(exp->paths[exp->counter], "/") == 0)
+		exp->counter++;
+
+	cl_assert_equal_s(exp->paths[exp->counter++], path);
+
+	GIT_UNUSED(status_flags);
+
+	return 0;
+}
+
+void test_submodule_status__iterator(void)
+{
+	git_iterator *iter;
+	const git_index_entry *entry;
+	size_t i;
+	static const char *expected[] = {
+		".gitmodules",
+		"just_a_dir/",
+		"just_a_dir/contents",
+		"just_a_file",
+		"not",
+		"not-submodule",
+		"README.txt",
+		"sm_added_and_uncommited",
+		"sm_changed_file",
+		"sm_changed_head",
+		"sm_changed_index",
+		"sm_changed_untracked_file",
+		"sm_missing_commits",
+		"sm_unchanged",
+		NULL
+	};
+	submodule_expectations exp = { 0, expected };
+	git_status_options opts = GIT_STATUS_OPTIONS_INIT;
+
+	cl_git_pass(git_iterator_for_workdir(&iter, g_repo,
+		GIT_ITERATOR_IGNORE_CASE | GIT_ITERATOR_INCLUDE_TREES, NULL, NULL));
+	cl_git_pass(git_iterator_current(&entry, iter));
+
+	for (i = 0; entry; ++i) {
+		cl_assert_equal_s(expected[i], entry->path);
+		cl_git_pass(git_iterator_advance(&entry, iter));
+	}
+
+	git_iterator_free(iter);
+
+	opts.flags = GIT_STATUS_OPT_INCLUDE_UNTRACKED | GIT_STATUS_OPT_INCLUDE_UNMODIFIED | GIT_STATUS_OPT_RECURSE_UNTRACKED_DIRS;
+
+	cl_git_pass(git_status_foreach_ext(g_repo, &opts, confirm_submodule_status, &exp));
 }

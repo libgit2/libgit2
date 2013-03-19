@@ -720,13 +720,13 @@ void test_diff_iterator__workdir_builtin_ignores(void)
 		{ "root_test2", false },
 		{ "root_test3", false },
 		{ "root_test4.txt", false },
-		{ "sub/", false },
+		{ "sub", false },
 		{ "sub/.gitattributes", false },
 		{ "sub/abc", false },
 		{ "sub/dir/", true },
 		{ "sub/file", false },
 		{ "sub/ign/", true },
-		{ "sub/sub/", false },
+		{ "sub/sub", false },
 		{ "sub/sub/.gitattributes", false },
 		{ "sub/sub/dir", false }, /* file is not actually a dir */
 		{ "sub/sub/file", false },
@@ -746,9 +746,13 @@ void test_diff_iterator__workdir_builtin_ignores(void)
 		cl_assert_equal_s(expected[idx].path, entry->path);
 		cl_assert_(ignored == expected[idx].ignored, expected[idx].path);
 
-		if (!ignored && S_ISDIR(entry->mode))
+		if (!ignored &&
+			(entry->mode == GIT_FILEMODE_TREE ||
+			 entry->mode == GIT_FILEMODE_COMMIT))
+		{
+			/* it is possible to advance "into" a submodule */
 			cl_git_pass(git_iterator_advance_into(&entry, i));
-		else
+		} else
 			cl_git_pass(git_iterator_advance(&entry, i));
 	}
 

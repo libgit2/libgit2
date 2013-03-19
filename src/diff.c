@@ -512,13 +512,17 @@ static int maybe_modified(
 			status = GIT_DELTA_UNMODIFIED;
 
 		else if (S_ISGITLINK(nmode)) {
+			int err;
 			git_submodule *sub;
 
 			if ((diff->opts.flags & GIT_DIFF_IGNORE_SUBMODULES) != 0)
 				status = GIT_DELTA_UNMODIFIED;
-			else if (git_submodule_lookup(&sub, diff->repo, nitem->path) < 0)
-				return -1;
-			else if (git_submodule_ignore(sub) == GIT_SUBMODULE_IGNORE_ALL)
+			else if ((err = git_submodule_lookup(&sub, diff->repo, nitem->path)) < 0) {
+				if (err == GIT_EEXISTS)
+					status = GIT_DELTA_UNMODIFIED;
+				else
+					return err;
+			} else if (git_submodule_ignore(sub) == GIT_SUBMODULE_IGNORE_ALL)
 				status = GIT_DELTA_UNMODIFIED;
 			else {
 				unsigned int sm_status = 0;
