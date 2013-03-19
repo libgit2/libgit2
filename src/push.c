@@ -347,6 +347,20 @@ on_error:
 	return error == GIT_ITEROVER ? 0 : error;
 }
 
+static int enqueue_object(
+	const git_tree_entry *entry,
+	git_packbuilder *pb)
+{
+	switch (git_tree_entry_type(entry)) {
+		case GIT_OBJ_COMMIT:
+			return 0;
+		case GIT_OBJ_TREE:
+			return git_packbuilder_insert_tree(pb, &entry->oid);
+		default:
+			return git_packbuilder_insert(pb, &entry->oid, entry->filename);
+	}
+}
+
 static int queue_differences(
 	git_tree *base,
 	git_tree *delta,
@@ -357,22 +371,6 @@ static int queue_differences(
 	size_t d_length = git_tree_entrycount(delta);
 	size_t i = 0, j = 0;
 	int error;
-
-#define _enqueue_object(ENTRY) do { \
-	switch (git_tree_entry_type((ENTRY))) { \
-		case GIT_OBJ_COMMIT: \
-			break; \
-		case GIT_OBJ_TREE: \
-			if ((error = git_packbuilder_insert_tree(pb, &(ENTRY)->oid)) < 0) \
-				goto on_error; \
-			break; \
-		default: \
-			if ((error = git_packbuilder_insert(pb, &(ENTRY)->oid, \
-				(ENTRY)->filename)) < 0) \
-				goto on_error; \
-			break; \
-	} \
-} while (0)
 
 	while (i < b_length && j < d_length) {
 		const git_tree_entry *b_entry = git_tree_entry_byindex(base, i);
@@ -409,8 +407,9 @@ static int queue_differences(
 		}
 		/* If the object is new or different in the right-hand tree,
 		 * then enumerate it */
-		else if (cmp >= 0)
-			_enqueue_object(d_entry);
+		else if (cmp >= 0 &&
+			(error = enqueue_object(d_entry, pb)) < 0)
+			goto on_error;
 
 	loop:
 		if (cmp <= 0) i++;
@@ -419,9 +418,8 @@ static int queue_differences(
 
 	/* Drain the right-hand tree of entries */
 	for (; j < d_length; j++)
-		_enqueue_object(git_tree_entry_byindex(delta, j));
-
-#undef _enqueue_object
+		if ((error = enqueue_object(git_tree_entry_byindex(delta, j), pb)) < 0)
+			goto on_error;
 
 	error = 0;
 
