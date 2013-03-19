@@ -42,7 +42,11 @@ typedef struct {
 } git_config_entry;
 
 typedef int  (*git_config_foreach_cb)(const git_config_entry *, void *);
-typedef struct git_config_backend_iter* git_config_backend_iter;
+
+typedef struct {
+	git_config_backend *backend;
+	unsigned int flags;
+} git_config_backend_iter;
 
 
 /**
@@ -60,9 +64,9 @@ struct git_config_backend {
 	int (*set)(struct git_config_backend *, const char *key, const char *value);
 	int (*set_multivar)(git_config_backend *cfg, const char *name, const char *regexp, const char *value);
 	int (*del)(struct git_config_backend *, const char *key);
-	int (*iterator_new)(git_config_backend_iter*, struct git_config_backend*);
-	void (*iterator_free)(git_config_backend_iter);
-	int (*next)(git_config_backend_iter*, git_config_entry*, struct git_config_backend*);
+	int (*iterator_new)(git_config_backend_iter**, struct git_config_backend*);
+	void (*iterator_free)(git_config_backend_iter*);
+	int (*iterator_next)(git_config_backend_iter**, git_config_entry*);
 	int (*refresh)(struct git_config_backend *);
 	void (*free)(struct git_config_backend *);
 };
