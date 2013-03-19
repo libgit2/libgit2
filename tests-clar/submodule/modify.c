@@ -18,7 +18,7 @@ void test_submodule_modify__initialize(void)
 
 	/* must create submod2_target before rewrite so prettify will work */
 	rewrite_gitmodules(git_repository_workdir(g_repo));
-	p_rename("submod2/not_submodule/.gitted", "submod2/not_submodule/.git");
+	p_rename("submod2/not-submodule/.gitted", "submod2/not-submodule/.git");
 }
 
 void test_submodule_modify__cleanup(void)

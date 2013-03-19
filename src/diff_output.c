@@ -299,7 +299,12 @@ static int get_workdir_sm_content(
 
 	if ((error = git_submodule_lookup(&sm, ctxt->repo, file->path)) < 0 ||
 		(error = git_submodule_status(&sm_status, sm)) < 0)
+	{
+		/* GIT_EEXISTS means a "submodule" that has not been git added */
+		if (error == GIT_EEXISTS)
+			error = 0;
 		return error;
+	}
 
 	/* update OID if we didn't have it previously */
 	if ((file->flags & GIT_DIFF_FLAG_VALID_OID) == 0) {
