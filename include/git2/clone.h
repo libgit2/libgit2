@@ -89,7 +89,7 @@ typedef struct git_clone_options {
  * HEAD.
  *
  * @param out pointer that will receive the resulting repository object
- * @param origin_remote a remote which will act as the initial fetch source
+ * @param url the remote repository to clone
  * @param local_path local directory to clone to
  * @param options configuration options for the clone.  If NULL, the function
  * works as though GIT_OPTIONS_INIT were passed.
