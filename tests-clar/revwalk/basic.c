@@ -1,15 +1,14 @@
 #include "clar_libgit2.h"
 
 /*
-	$ git log --oneline --graph --decorate
-	*   a4a7dce (HEAD, br2) Merge branch 'master' into br2
+	*   a4a7dce [0] Merge branch 'master' into br2
 	|\
-	| * 9fd738e (master) a fourth commit
-	| * 4a202b3 a third commit
-	* | c47800c branch commit one
+	| * 9fd738e [1] a fourth commit
+	| * 4a202b3 [2] a third commit
+	* | c47800c [3] branch commit one
 	|/
-	* 5b5b025 another commit
-	* 8496071 testing
+	* 5b5b025 [5] another commit
+	* 8496071 [4] testing
 */
 static const char *commit_head = "a4a7dce85cf63874e984719f4fdd239f5145052f";
 
