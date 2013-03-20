@@ -3,7 +3,8 @@ default: all
 CC = gcc
 CFLAGS += -g
 CFLAGS += -I../../include
-LDFLAGS += -L../../build -L../.. -lgit2 -lpthread
+LDFLAGS += -L../../build -L../..
+LIBRARIES += -lgit2 -lpthread
 
 OBJECTS = \
   git2.o \
@@ -13,7 +14,7 @@ OBJECTS = \
   index-pack.o
 
 all: $(OBJECTS)
-	$(CC) $(CFLAGS) $(LDFLAGS) -o git2 $(OBJECTS)
+	$(CC) $(CFLAGS) $(LDFLAGS) -o git2 $(OBJECTS) $(LIBRARIES)
 
 clean:
 	$(RM) $(OBJECTS)
