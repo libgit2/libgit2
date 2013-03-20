@@ -51,16 +51,28 @@ void cl_fixture_cleanup(const char *fixture_name);
 /**
  * Forced failure/warning
  */
-#define cl_fail(desc) clar__assert(0, __FILE__, __LINE__, "Test failed.", desc, 1)
-#define cl_warning(desc) clar__assert(0, __FILE__, __LINE__, "Warning during test execution:", desc, 0)
+#define cl_fail(desc) clar__fail(__FILE__, __LINE__, "Test failed.", desc, 1)
+#define cl_warning(desc) clar__fail(__FILE__, __LINE__, "Warning during test execution:", desc, 0)
 
 /**
  * Typed assertion macros
  */
 #define cl_assert_equal_s(s1,s2) clar__assert_equal_s((s1),(s2),__FILE__,__LINE__,"String mismatch: " #s1 " != " #s2, 1)
+#define cl_assert_equal_s_(s1,s2,note) clar__assert_equal_s((s1),(s2),__FILE__,__LINE__,"String mismatch: " #s1 " != " #s2 " (" #note ")", 1)
+
 #define cl_assert_equal_i(i1,i2) clar__assert_equal_i((i1),(i2),__FILE__,__LINE__,#i1 " != " #i2, 1)
+#define cl_assert_equal_i_(i1,i2,note) clar__assert_equal_i((i1),(i2),__FILE__,__LINE__,#i1 " != " #i2 " (" #note ")", 1)
+
 #define cl_assert_equal_b(b1,b2) clar__assert_equal_i(!!(b1),!!(b2),__FILE__,__LINE__,#b1 " != " #b2, 1)
+
 #define cl_assert_equal_p(p1,p2) cl_assert((p1) == (p2))
+
+void clar__fail(
+	const char *file,
+	int line,
+	const char *error,
+	const char *description,
+	int should_abort);
 
 void clar__assert(
 	int condition,
