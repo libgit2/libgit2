@@ -223,12 +223,17 @@ static int crlf_apply_to_odb(
 static int convert_line_endings(git_buf *dest, const git_buf *source, const char *ending)
 {
 	const char *scan = git_buf_cstr(source),
-				  *next,
-				  *scan_end = git_buf_cstr(source) + git_buf_len(source);
+		*next,
+		*line_end,
+		*scan_end = git_buf_cstr(source) + git_buf_len(source);
 
 	while ((next = memchr(scan, '\n', scan_end - scan)) != NULL) {
-		if (next > scan)
-			git_buf_put(dest, scan, next-scan);
+		if (next > scan) {
+			line_end = *(next - 1) == '\r' ? next - 1 : next;
+			git_buf_put(dest, scan, line_end - scan);
+			scan = next + 1;
+		}
+
 		git_buf_puts(dest, ending);
 		scan = next + 1;
 	}
