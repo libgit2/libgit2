@@ -5,7 +5,7 @@ static git_oid idp;
 static git_oid idm;
 const char *str_oid = "ae90f12eea699729ed24555e40b9fd669da12a12";
 const char *str_oid_p = "ae90f12eea699729ed";
-const char *str_oid_m = "ae90f12eea699729ed24555e40b9fd669da12a12oiahs";
+const char *str_oid_m = "ae90f12eea699729ed24555e40b9fd669da12a12THIS IS EXTRA TEXT THAT SHOULD GET IGNORED";
 
 void test_core_oid__initialize(void)
 {
