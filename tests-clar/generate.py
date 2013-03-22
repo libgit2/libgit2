@@ -60,7 +60,10 @@ class Module(object):
 
     def __init__(self, name):
         self.name = name
+
+        self.mtime = 0
         self.enabled = True
+        self.modified = False
 
     def clean_name(self):
         return self.name.replace("_", "::")
@@ -102,16 +105,40 @@ class Module(object):
 
         return self.callbacks != []
 
-    def load(self, path):
+    def refresh(self, path):
+        self.modified = False
+
         try:
+            st = os.stat(path)
+
+            # Not modified
+            if st.st_mtime == self.mtime:
+                return True
+
+            self.modified = True
+            self.mtime = st.st_mtime
+
             with open(path) as fp:
-                return self.parse(fp.read())
+                raw_content = fp.read()
+
         except IOError:
             return False
 
+        return self.parse(raw_content)
+
 class TestSuite(object):
+
     def __init__(self, path):
         self.path = path
+
+    def should_generate(self, path):
+        if not os.path.isfile(path):
+            return True
+
+        if any(module.modified for module in self.modules.values()):
+            return True
+
+        return False
 
     def find_modules(self):
         modules = []
@@ -129,15 +156,33 @@ class TestSuite(object):
 
         return modules
 
+    def load_cache(self):
+        path = os.path.join(self.path, '.clarcache')
+        cache = {}
+
+        try:
+            fp = open(path, 'rb')
+            cache = pickle.load(fp)
+            fp.close()
+        except (IOError, ValueError):
+            pass
+
+        return cache
+
+    def save_cache(self):
+        path = os.path.join(self.path, '.clarcache')
+        with open(path, 'wb') as cache:
+            pickle.dump(self.modules, cache)
+
     def load(self, force = False):
         module_data = self.find_modules()
-        self.modules = {}
+        self.modules = {} if force else self.load_cache()
 
         for path, name in module_data:
             if name not in self.modules:
                 self.modules[name] = Module(name)
 
-            if not self.modules[name].load(path):
+            if not self.modules[name].refresh(path):
                 del self.modules[name]
 
     def disable(self, excluded):
@@ -157,6 +202,9 @@ class TestSuite(object):
     def write(self):
         output = os.path.join(self.path, 'clar.suite')
 
+        if not self.should_generate(output):
+            return False
+
         with open(output, 'w') as data:
             for module in self.modules.values():
                 t = Module.DeclarationTemplate(module)
@@ -175,19 +223,22 @@ class TestSuite(object):
             data.write("static const size_t _clar_suite_count = %d;\n" % self.suite_count())
             data.write("static const size_t _clar_callback_count = %d;\n" % self.callback_count())
 
+        suite.save_cache()
+        return True
+
 if __name__ == '__main__':
     from optparse import OptionParser
 
     parser = OptionParser()
+    parser.add_option('-f', '--force', dest='force', default=False)
     parser.add_option('-x', '--exclude', dest='excluded', action='append', default=[])
 
     options, args = parser.parse_args()
 
     for path in args or ['.']:
         suite = TestSuite(path)
-        suite.load()
+        suite.load(options.force)
         suite.disable(options.excluded)
-        suite.write()
-
-        print("Written `clar.suite` (%d suites)" % len(suite.modules))
+        if suite.write():
+            print("Written `clar.suite` (%d tests in %d suites)" % (suite.callback_count(), suite.suite_count()))
 

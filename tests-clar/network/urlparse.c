@@ -23,8 +23,8 @@ void test_network_urlparse__trivial(void)
 				"example.com/resource", "8080"));
 	cl_assert_equal_s(host, "example.com");
 	cl_assert_equal_s(port, "8080");
-	cl_assert_equal_sz(user, NULL);
-	cl_assert_equal_sz(pass, NULL);
+	cl_assert_equal_p(user, NULL);
+	cl_assert_equal_p(pass, NULL);
 }
 
 void test_network_urlparse__user(void)
@@ -34,7 +34,7 @@ void test_network_urlparse__user(void)
 	cl_assert_equal_s(host, "example.com");
 	cl_assert_equal_s(port, "8080");
 	cl_assert_equal_s(user, "user");
-	cl_assert_equal_sz(pass, NULL);
+	cl_assert_equal_p(pass, NULL);
 }
 
 void test_network_urlparse__user_pass(void)
@@ -55,8 +55,8 @@ void test_network_urlparse__port(void)
 				"example.com:9191/resource", "8080"));
 	cl_assert_equal_s(host, "example.com");
 	cl_assert_equal_s(port, "9191");
-	cl_assert_equal_sz(user, NULL);
-	cl_assert_equal_sz(pass, NULL);
+	cl_assert_equal_p(user, NULL);
+	cl_assert_equal_p(pass, NULL);
 }
 
 void test_network_urlparse__user_port(void)
@@ -67,7 +67,7 @@ void test_network_urlparse__user_port(void)
 	cl_assert_equal_s(host, "example.com");
 	cl_assert_equal_s(port, "9191");
 	cl_assert_equal_s(user, "user");
-	cl_assert_equal_sz(pass, NULL);
+	cl_assert_equal_p(pass, NULL);
 }
 
 void test_network_urlparse__user_pass_port(void)
