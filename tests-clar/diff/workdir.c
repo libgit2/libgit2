@@ -472,7 +472,6 @@ void test_diff_workdir__to_index_notify_can_be_used_as_filtering_function(void)
 
 void test_diff_workdir__filemode_changes(void)
 {
-	git_config *cfg;
 	git_diff_list *diff = NULL;
 	diff_expects exp;
 	int use_iterator;
@@ -482,8 +481,7 @@ void test_diff_workdir__filemode_changes(void)
 
 	g_repo = cl_git_sandbox_init("issue_592");
 
-	cl_git_pass(git_repository_config(&cfg, g_repo));
-	cl_git_pass(git_config_set_bool(cfg, "core.filemode", true));
+	cl_repo_set_bool(g_repo, "core.filemode", true);
 
 	/* test once with no mods */
 
@@ -530,12 +528,10 @@ void test_diff_workdir__filemode_changes(void)
 	git_diff_list_free(diff);
 
 	cl_assert(cl_toggle_filemode("issue_592/a.txt"));
-	git_config_free(cfg);
 }
 
 void test_diff_workdir__filemode_changes_with_filemode_false(void)
 {
-	git_config *cfg;
 	git_diff_list *diff = NULL;
 	diff_expects exp;
 
@@ -544,8 +540,7 @@ void test_diff_workdir__filemode_changes_with_filemode_false(void)
 
 	g_repo = cl_git_sandbox_init("issue_592");
 
-	cl_git_pass(git_repository_config(&cfg, g_repo));
-	cl_git_pass(git_config_set_bool(cfg, "core.filemode", false));
+	cl_repo_set_bool(g_repo, "core.filemode", false);
 
 	/* test once with no mods */
 
@@ -578,7 +573,6 @@ void test_diff_workdir__filemode_changes_with_filemode_false(void)
 	git_diff_list_free(diff);
 
 	cl_assert(cl_toggle_filemode("issue_592/a.txt"));
-	git_config_free(cfg);
 }
 
 void test_diff_workdir__head_index_and_workdir_all_differ(void)

@@ -316,15 +316,13 @@ void test_status_worktree_init__new_staged_file_must_handle_crlf(void)
 {
 	git_repository *repo;
 	git_index *index;
-	git_config *config;
 	unsigned int status;
 
 	cl_set_cleanup(&cleanup_new_repo, "getting_started");
 	cl_git_pass(git_repository_init(&repo, "getting_started", 0));
 
 	// Ensure that repo has core.autocrlf=true
-	cl_git_pass(git_repository_config(&config, repo));
-	cl_git_pass(git_config_set_bool(config, "core.autocrlf", true));
+	cl_repo_set_bool(repo, "core.autocrlf", true);
 
 	cl_git_mkfile("getting_started/testfile.txt", "content\r\n");	// Content with CRLF
 
@@ -335,7 +333,6 @@ void test_status_worktree_init__new_staged_file_must_handle_crlf(void)
 	cl_git_pass(git_status_file(&status, repo, "testfile.txt"));
 	cl_assert_equal_i(GIT_STATUS_INDEX_NEW, status);
 
-	git_config_free(config);
 	git_index_free(index);
 	git_repository_free(repo);
 }

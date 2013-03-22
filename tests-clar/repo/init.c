@@ -276,11 +276,9 @@ void test_repo_init__reinit_overwrites_filemode(void)
 	cl_set_cleanup(&cleanup_repository, "overwrite.git");
 	cl_git_pass(git_repository_init(&_repo, "overwrite.git", 1));
 
-
 	/* Change the "core.filemode" config value to something unlikely */
-	git_repository_config(&config, _repo);
-	git_config_set_bool(config, "core.filemode", !expected);
-	git_config_free(config);
+	cl_repo_set_bool(_repo, "core.filemode", !expected);
+
 	git_repository_free(_repo);
 	_repo = NULL;
 
