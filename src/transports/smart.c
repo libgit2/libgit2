@@ -324,7 +324,7 @@ int git_transport_smart(git_transport **out, git_remote *owner, void *param)
 	t->parent.is_connected = git_smart__is_connected;
 	t->parent.read_flags = git_smart__read_flags;
 	t->parent.cancel = git_smart__cancel;
-	
+
 	t->owner = owner;
 	t->rpc = definition->rpc;
 
@@ -336,7 +336,7 @@ int git_transport_smart(git_transport **out, git_remote *owner, void *param)
 	if (definition->callback(&t->wrapped, &t->parent) < 0) {
 		git__free(t);
 		return -1;
-	}	
+	}
 
 	*out = (git_transport *) t;
 	return 0;

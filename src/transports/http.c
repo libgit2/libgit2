@@ -76,6 +76,8 @@ typedef struct {
 	git_buf parse_header_value;
 	char parse_buffer_data[2048];
 	char *content_type;
+	char *location;
+	const char *restore_location;
 	git_vector www_authenticate;
 	enum last_cb last_cb;
 	int parse_error;
@@ -182,19 +184,58 @@ static int parse_unauthorized_response(
 	return 0;
 }
 
+static int reconnect_subtransport(http_subtransport *t)
+{
+	int flags = 0;
+
+	if (t->connected &&
+		http_should_keep_alive(&t->parser) &&
+		http_body_is_final(&t->parser))
+		return 0;
+
+	if (t->socket.socket)
+		gitno_close(&t->socket);
+
+	if (t->use_ssl) {
+		int transport_flags;
+
+		if (t->owner->parent.read_flags(&t->owner->parent, &transport_flags) < 0)
+			return -1;
+
+		flags |= GITNO_CONNECT_SSL;
+
+		if (GIT_TRANSPORTFLAGS_NO_CHECK_CERT & transport_flags)
+			flags |= GITNO_CONNECT_SSL_NO_CHECK_CERT;
+	}
+
+	if (gitno_connect(&t->socket, t->host, t->port, flags) < 0)
+		return -1;
+
+	t->connected = 1;
+	return 0;
+}
+
 static int on_header_ready(http_subtransport *t)
 {
 	git_buf *name = &t->parse_header_name;
 	git_buf *value = &t->parse_header_value;
-	char *dup;
 
-	if (!t->content_type && !strcasecmp("Content-Type", git_buf_cstr(name))) {
-		t->content_type = git__strdup(git_buf_cstr(value));
-		GITERR_CHECK_ALLOC(t->content_type);
+	if (!strcasecmp("Content-Type", git_buf_cstr(name))) {
+		if (!t->content_type) {
+			t->content_type = git__strdup(git_buf_cstr(value));
+			GITERR_CHECK_ALLOC(t->content_type);
+		}
+	}
+	else if (!strcasecmp("Location", git_buf_cstr(name))) {
+		if (!t->location) {
+			t->location = git__strdup(git_buf_cstr(value));
+			GITERR_CHECK_ALLOC(t->location);
+		}
 	}
 	else if (!strcmp("WWW-Authenticate", git_buf_cstr(name))) {
-		dup = git__strdup(git_buf_cstr(value));
+		char *dup = git__strdup(git_buf_cstr(value));
 		GITERR_CHECK_ALLOC(dup);
+
 		git_vector_insert(&t->www_authenticate, dup);
 	}
 
@@ -276,6 +317,38 @@ static int on_headers_complete(http_parser *parser)
 
 			/* Successfully acquired a credential. */
 			return t->parse_error = PARSE_ERROR_REPLAY;
+		}
+	}
+
+	/* Handle redirect */
+	if (parser->status_code >= 300 &&
+		parser->status_code < 400 &&
+		t->location != NULL)
+	{
+		/* right now, only deal with redirects on the same host */
+		if (t->location[0] == '/') {
+			size_t loclen = strlen(t->location);
+			size_t srvlen = strlen(s->service_url);
+
+			/* right now, only deal with redirects to same service_url */
+			if (loclen >= srvlen &&
+				!memcmp(t->location + loclen - srvlen, s->service_url, srvlen))
+			{
+				if (loclen > srvlen) {
+					if (!t->restore_location)
+						t->restore_location = t->path;
+					t->path = t->location;
+					t->location[loclen - srvlen] = '\0';
+				}
+
+				if (t->connected) {
+					t->connected = 0;
+					if (reconnect_subtransport(t) < 0)
+						return t->parse_error = PARSE_ERROR_GENERIC;
+				}
+
+				return t->parse_error = PARSE_ERROR_REPLAY;
+			}
 		}
 	}
 
@@ -370,6 +443,13 @@ static void clear_parser_state(http_subtransport *t)
 
 	git__free(t->content_type);
 	t->content_type = NULL;
+
+	if (t->path == t->location) {
+		t->path = t->restore_location;
+		t->restore_location = NULL;
+	}
+	git__free(t->location);
+	t->location = NULL;
 
 	git_vector_foreach(&t->www_authenticate, i, entry)
 		git__free(entry);
@@ -491,6 +571,7 @@ replay:
 		 * will have signaled us that we should replay the request. */
 		if (PARSE_ERROR_REPLAY == t->parse_error) {
 			s->sent_request = 0;
+			t->parse_buffer.offset = 0;
 			goto replay;
 		}
 
@@ -498,9 +579,9 @@ replay:
 			return -1;
 
 		if (bytes_parsed != t->parse_buffer.offset) {
-			giterr_set(GITERR_NET,
-				"HTTP parser error: %s",
-				http_errno_description((enum http_errno)t->parser.http_errno));
+			const char *desc =
+				http_errno_description((enum http_errno)t->parser.http_errno);
+			giterr_set(GITERR_NET, "HTTP parser error: %s", desc);
 			return -1;
 		}
 	}
@@ -734,7 +815,7 @@ static int http_action(
 {
 	http_subtransport *t = (http_subtransport *)subtransport;
 	const char *default_port = NULL;
-	int flags = 0, ret;
+	int ret;
 
 	if (!stream)
 		return -1;
@@ -755,54 +836,35 @@ static int http_action(
 			return -1;
 
 		if ((ret = gitno_extract_url_parts(&t->host, &t->port,
-						&t->user_from_url, &t->pass_from_url, url, default_port)) < 0)
+				&t->user_from_url, &t->pass_from_url, url, default_port)) < 0)
 			return ret;
 
 		t->path = strchr(url, '/');
 	}
 
-	if (!t->connected ||
-		!http_should_keep_alive(&t->parser) ||
-		!http_body_is_final(&t->parser)) {
+	if ((ret = reconnect_subtransport(t)) < 0)
+		return ret;
 
-		if (t->socket.socket)
-			gitno_close(&t->socket);
-
-		if (t->use_ssl) {
-			int transport_flags;
-
-			if (t->owner->parent.read_flags(&t->owner->parent, &transport_flags) < 0)
-				return -1;
-
-			flags |= GITNO_CONNECT_SSL;
-
-			if (GIT_TRANSPORTFLAGS_NO_CHECK_CERT & transport_flags)
-				flags |= GITNO_CONNECT_SSL_NO_CHECK_CERT;
-		}
-
-		if (gitno_connect(&t->socket, t->host, t->port, flags) < 0)
-			return -1;
-
-		t->connected = 1;
+	switch (action) {
+	case GIT_SERVICE_UPLOADPACK_LS:
+		ret = http_uploadpack_ls(t, stream);
+		break;
+	case GIT_SERVICE_UPLOADPACK:
+		ret = http_uploadpack(t, stream);
+		break;
+	case GIT_SERVICE_RECEIVEPACK_LS:
+		ret = http_receivepack_ls(t, stream);
+		break;
+	case GIT_SERVICE_RECEIVEPACK:
+		ret = http_receivepack(t, stream);
+		break;
+	default:
+		*stream = NULL;
+		ret = -1;
+		break;
 	}
 
-	switch (action)
-	{
-		case GIT_SERVICE_UPLOADPACK_LS:
-			return http_uploadpack_ls(t, stream);
-
-		case GIT_SERVICE_UPLOADPACK:
-			return http_uploadpack(t, stream);
-
-		case GIT_SERVICE_RECEIVEPACK_LS:
-			return http_receivepack_ls(t, stream);
-
-		case GIT_SERVICE_RECEIVEPACK:
-			return http_receivepack(t, stream);
-	}
-
-	*stream = NULL;
-	return -1;
+	return ret;
 }
 
 static int http_close(git_smart_subtransport *subtransport)
