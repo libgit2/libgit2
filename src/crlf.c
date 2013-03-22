@@ -10,8 +10,8 @@
 #include "hash.h"
 #include "filter.h"
 #include "repository.h"
-
 #include "git2/attr.h"
+#include "git2/blob.h"
 
 struct crlf_attrs {
 	int crlf_action;
@@ -21,6 +21,8 @@ struct crlf_attrs {
 struct crlf_filter {
 	git_filter f;
 	struct crlf_attrs attrs;
+	git_repository *repo;
+	char path[GIT_FLEX_ARRAY];
 };
 
 static int check_crlf(const char *value)
@@ -132,7 +134,46 @@ static int drop_crlf(git_buf *dest, const git_buf *source)
 	return 0;
 }
 
-static int crlf_apply_to_odb(git_filter *self, git_buf *dest, const git_buf *source)
+static int has_cr_in_index(git_filter *self)
+{
+	struct crlf_filter *filter = (struct crlf_filter *)self;
+	git_index *index;
+	const git_index_entry *entry;
+	git_blob *blob;
+	const void *blobcontent;
+	git_off_t blobsize;
+	bool found_cr;
+
+	if (git_repository_index__weakptr(&index, filter->repo) < 0) {
+		giterr_clear();
+		return false;
+	}
+
+	if (!(entry = git_index_get_bypath(index, filter->path, 0)) &&
+		!(entry = git_index_get_bypath(index, filter->path, 1)))
+		return false;
+
+	if (!S_ISREG(entry->mode)) /* don't crlf filter non-blobs */
+		return true;
+
+	if (git_blob_lookup(&blob, filter->repo, &entry->oid) < 0)
+		return false;
+
+	blobcontent = git_blob_rawcontent(blob);
+	blobsize    = git_blob_rawsize(blob);
+	if (!git__is_sizet(blobsize))
+		blobsize = (size_t)-1;
+
+	found_cr = (blobcontent != NULL &&
+		blobsize > 0 &&
+		memchr(blobcontent, '\r', (size_t)blobsize) != NULL);
+
+	git_blob_free(blob);
+	return found_cr;
+}
+
+static int crlf_apply_to_odb(
+	git_filter *self, git_buf *dest, const git_buf *source)
 {
 	struct crlf_filter *filter = (struct crlf_filter *)self;
 
@@ -162,16 +203,14 @@ static int crlf_apply_to_odb(git_filter *self, git_buf *dest, const git_buf *sou
 		if (stats.cr != stats.crlf)
 			return -1;
 
-#if 0
-		if (crlf_action == CRLF_GUESS) {
+		if (filter->attrs.crlf_action == GIT_CRLF_GUESS) {
 			/*
 			 * If the file in the index has any CR in it, do not convert.
 			 * This is the new safer autocrlf handling.
 			 */
-			if (has_cr_in_index(path))
-				return 0;
+			if (has_cr_in_index(self))
+				return -1;
 		}
-#endif
 
 		if (!stats.cr)
 			return -1;
@@ -266,6 +305,7 @@ static int find_and_add_filter(
 {
 	struct crlf_attrs ca;
 	struct crlf_filter *filter;
+	size_t pathlen;
 	int error;
 
 	/* Load gitattributes for the path */
@@ -293,12 +333,15 @@ static int find_and_add_filter(
 
 	/* If we're good, we create a new filter object and push it
 	 * into the filters array */
-	filter = git__malloc(sizeof(struct crlf_filter));
+	pathlen = strlen(path);
+	filter = git__malloc(sizeof(struct crlf_filter) + pathlen + 1);
 	GITERR_CHECK_ALLOC(filter);
 
 	filter->f.apply = apply;
 	filter->f.do_free = NULL;
 	memcpy(&filter->attrs, &ca, sizeof(struct crlf_attrs));
+	filter->repo = repo;
+	memcpy(filter->path, path, pathlen + 1);
 
 	return git_vector_insert(filters, filter);
 }
