@@ -147,25 +147,25 @@ on_error:
 }
 
 int git_graph_ahead_behind(size_t *ahead, size_t *behind, git_repository *repo,
-	const git_oid *one, const git_oid *two)
+	const git_oid *local, const git_oid *upstream)
 {
 	git_revwalk *walk;
-	git_commit_list_node *commit1, *commit2;
+	git_commit_list_node *commit_u, *commit_l;
 
 	if (git_revwalk_new(&walk, repo) < 0)
 		return -1;
 
-	commit2 = git_revwalk__commit_lookup(walk, two);
-	if (commit2 == NULL)
+	commit_u = git_revwalk__commit_lookup(walk, upstream);
+	if (commit_u == NULL)
 		goto on_error;
 
-	commit1 = git_revwalk__commit_lookup(walk, one);
-	if (commit1 == NULL)
+	commit_l = git_revwalk__commit_lookup(walk, local);
+	if (commit_l == NULL)
 		goto on_error;
 
-	if (mark_parents(walk, commit1, commit2) < 0)
+	if (mark_parents(walk, commit_l, commit_u) < 0)
 		goto on_error;
-	if (ahead_behind(commit1, commit2, ahead, behind) < 0)
+	if (ahead_behind(commit_l, commit_u, ahead, behind) < 0)
 		goto on_error;
 
 	git_revwalk_free(walk);

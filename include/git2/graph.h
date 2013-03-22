@@ -23,13 +23,18 @@ GIT_BEGIN_DECL
 /**
  * Count the number of unique commits between two commit objects
  *
- * @param ahead number of commits, starting at `one`, unique from commits in `two`
- * @param behind number of commits, starting at `two`, unique from commits in `one`
+ * There is no need for branches containing the commits to have any
+ * upstream relationship, but it helps to think of one as a branch and
+ * the other as its upstream, the `ahead` and `behind` values will be
+ * what git would report for the branches.
+ *
+ * @param ahead number of unique from commits in `upstream`
+ * @param behind number of unique from commits in `local`
  * @param repo the repository where the commits exist
- * @param one one of the commits
- * @param two the other commit
+ * @param local the commit for local
+ * @param upstream the commit for upstream
  */
-GIT_EXTERN(int) git_graph_ahead_behind(size_t *ahead, size_t *behind, git_repository *repo, const git_oid *one, const git_oid *two);
+GIT_EXTERN(int) git_graph_ahead_behind(size_t *ahead, size_t *behind, git_repository *repo, const git_oid *local, const git_oid *upstream);
 
 /** @} */
 GIT_END_DECL
