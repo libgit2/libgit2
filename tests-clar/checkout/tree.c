@@ -485,33 +485,22 @@ void test_checkout_tree__can_checkout_with_last_workdir_item_missing(void)
 void test_checkout_tree__issue_1397(void)
 {
 	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
-	git_config *cfg;
 	const char *partial_oid = "8a7ef04";
-	size_t len = strlen(partial_oid);
-	git_oid oid;
-	git_object *obj = NULL;
-	git_tree *tree = NULL;
+	git_object *tree = NULL;
+
+	test_checkout_tree__cleanup(); /* cleanup default checkout */
 
 	g_repo = cl_git_sandbox_init("issue_1397");
 
-	cl_git_pass(git_repository_config(&cfg, g_repo));
-	cl_git_pass(git_config_set_bool(cfg, "core.autocrlf", true));
-	git_config_free(cfg);
+	cl_repo_set_bool(g_repo, "core.autocrlf", true);
 
-	if (git_oid_fromstrn(&oid, partial_oid, len) == 0)
-		git_object_lookup_prefix(&obj, g_repo, &oid, len, GIT_OBJ_ANY);
-	cl_assert(obj);
-	cl_assert(git_object_type(obj) == GIT_OBJ_COMMIT);
-	cl_git_pass(git_commit_tree(&tree, (git_commit *)obj));
-	git_object_free(obj);
+	cl_git_pass(git_revparse_single(&tree, g_repo, partial_oid));
 
 	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
 
-	cl_assert(tree != NULL);
-
-	git_checkout_tree(g_repo, (git_object *)tree, &opts);
+	cl_git_pass(git_checkout_tree(g_repo, tree, &opts));
 
 	test_file_contents("./issue_1397/crlf_file.txt", "first line\r\nsecond line\r\nboth with crlf");
 
-	git_tree_free(tree);
+	git_object_free(tree);
 }

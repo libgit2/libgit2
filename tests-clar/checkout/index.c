@@ -497,7 +497,7 @@ void test_checkout_index__issue_1397(void)
 
 	g_repo = cl_git_sandbox_init("issue_1397");
 
-	set_core_autocrlf_to(true);
+	cl_repo_set_bool(g_repo, "core.autocrlf", true);
 
 	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
 

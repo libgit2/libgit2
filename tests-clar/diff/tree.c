@@ -434,13 +434,11 @@ void test_diff_tree__regular_blob_mode_changed_to_executable_file(void)
 
 void test_diff_tree__issue_1397(void)
 {
-	// this test shows, that it is not needed
-	git_config *cfg;
+	/* this test shows that it is not needed */
+
 	g_repo = cl_git_sandbox_init("issue_1397");
 
-	cl_git_pass(git_repository_config(&cfg, g_repo));
-	cl_git_pass(git_config_set_bool(cfg, "core.autocrlf", true));
-	git_config_free(cfg);
+	cl_repo_set_bool(g_repo, "core.autocrlf", true);
 
 	cl_assert((a = resolve_commit_oid_to_tree(g_repo, "8a7ef04")) != NULL);
 	cl_assert((b = resolve_commit_oid_to_tree(g_repo, "7f483a7")) != NULL);

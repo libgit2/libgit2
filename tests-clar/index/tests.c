@@ -251,21 +251,24 @@ void test_index_tests__add(void)
 	git_repository_free(repo);
 }
 
+static void cleanup_1397(void *opaque)
+{
+	GIT_UNUSED(opaque);
+	cl_git_sandbox_cleanup();
+}
+
 void test_index_tests__add_issue_1397(void)
 {
 	git_index *index;
-	git_config *cfg;
 	git_repository *repo;
 	const git_index_entry *entry;
 	git_oid id1;
 
-	cl_set_cleanup(&cleanup_myrepo, NULL);
+	cl_set_cleanup(&cleanup_1397, NULL);
 
 	repo = cl_git_sandbox_init("issue_1397");
 
-	cl_git_pass(git_repository_config(&cfg, repo));
-	cl_git_pass(git_config_set_bool(cfg, "core.autocrlf", true));
-	git_config_free(cfg);
+	cl_repo_set_bool(repo, "core.autocrlf", true);
 
 	/* Ensure we're the only guy in the room */
 	cl_git_pass(git_repository_index(&index, repo));
@@ -278,17 +281,16 @@ void test_index_tests__add_issue_1397(void)
 
 	/* Make sure the initial SHA-1 is correct */
 	cl_assert((entry = git_index_get_bypath(index, "crlf_file.txt", 0)) != NULL);
-	cl_assert(git_oid_cmp(&id1, &entry->oid) == 0);
+	cl_assert_(git_oid_cmp(&id1, &entry->oid) == 0, "first oid check");
 
 	/* Update the index */
 	cl_git_pass(git_index_add_bypath(index, "crlf_file.txt"));
 
 	/* Check the new SHA-1 */
 	cl_assert((entry = git_index_get_bypath(index, "crlf_file.txt", 0)) != NULL);
-	cl_assert(git_oid_cmp(&id1, &entry->oid) == 0);
+	cl_assert_(git_oid_cmp(&id1, &entry->oid) == 0, "second oid check");
 
 	git_index_free(index);
-	git_repository_free(repo);
 }
 
 void test_index_tests__add_bypath_to_a_bare_repository_returns_EBAREPO(void)
