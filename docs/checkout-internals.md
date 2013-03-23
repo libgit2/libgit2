@@ -6,7 +6,7 @@ differences between the target tree, the baseline tree and the working
 directory, plus the contents of the index, and groups files into five
 categories:
 
-1. UNMODIFIED - Files that match in all places.
+1. UNMODIFIED - Files that match in all places. 
 2. SAFE - Files where the working directory and the baseline content
    match that can be safely updated to the target.
 3. DIRTY/MISSING - Files where the working directory differs from the
