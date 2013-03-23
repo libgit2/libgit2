@@ -470,15 +470,14 @@ void test_status_worktree__filemode_changes(void)
 	git_repository *repo = cl_git_sandbox_init("filemodes");
 	status_entry_counts counts;
 	git_status_options opts = GIT_STATUS_OPTIONS_INIT;
-	git_config *cfg;
 
 	/* overwrite stored filemode with platform appropriate value */
-	cl_git_pass(git_repository_config(&cfg, repo));
 	if (cl_is_chmod_supported())
-		cl_git_pass(git_config_set_bool(cfg, "core.filemode", true));
+		cl_repo_set_bool(repo, "core.filemode", true);
 	else {
 		int i;
-		cl_git_pass(git_config_set_bool(cfg, "core.filemode", false));
+
+		cl_repo_set_bool(repo, "core.filemode", false);
 
 		/* won't trust filesystem mode diffs, so these will appear unchanged */
 		for (i = 0; i < filemode_count; ++i)
@@ -502,8 +501,6 @@ void test_status_worktree__filemode_changes(void)
 	cl_assert_equal_i(counts.expected_entry_count, counts.entry_count);
 	cl_assert_equal_i(0, counts.wrong_status_flags_count);
 	cl_assert_equal_i(0, counts.wrong_sorted_path);
-
-	git_config_free(cfg);
 }
 
 static int cb_status__interrupt(const char *p, unsigned int s, void *payload)
@@ -533,12 +530,9 @@ void test_status_worktree__interruptable_foreach(void)
 void test_status_worktree__line_endings_dont_count_as_changes_with_autocrlf(void)
 {
 	git_repository *repo = cl_git_sandbox_init("status");
-	git_config *config;
 	unsigned int status;
 
-	cl_git_pass(git_repository_config(&config, repo));
-	cl_git_pass(git_config_set_bool(config, "core.autocrlf", true));
-	git_config_free(config);
+	cl_repo_set_bool(repo, "core.autocrlf", true);
 
 	cl_git_rewritefile("status/current_file", "current_file\r\n");
 
@@ -621,7 +615,6 @@ static void assert_ignore_case(
 	int expected_lower_cased_file_status,
 	int expected_camel_cased_file_status)
 {
-	git_config *config;
 	unsigned int status;
 	git_buf lower_case_path = GIT_BUF_INIT, camel_case_path = GIT_BUF_INIT;
 	git_repository *repo, *repo2;
@@ -629,9 +622,7 @@ static void assert_ignore_case(
 	repo = cl_git_sandbox_init("empty_standard_repo");
 	cl_git_remove_placeholders(git_repository_path(repo), "dummy-marker.txt");
 
-	cl_git_pass(git_repository_config(&config, repo));
-	cl_git_pass(git_config_set_bool(config, "core.ignorecase", should_ignore_case));
-	git_config_free(config);
+	cl_repo_set_bool(repo, "core.ignorecase", should_ignore_case);
 
 	cl_git_pass(git_buf_joinpath(&lower_case_path,
 		git_repository_workdir(repo), "plop"));

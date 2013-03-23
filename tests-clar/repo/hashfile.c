@@ -41,11 +41,8 @@ void test_repo_hashfile__simple(void)
 void test_repo_hashfile__filtered(void)
 {
 	git_oid a, b;
-	git_config *config;
 
-	cl_git_pass(git_repository_config(&config, _repo));
-	cl_git_pass(git_config_set_bool(config, "core.autocrlf", true));
-	git_config_free(config);
+	cl_repo_set_bool(_repo, "core.autocrlf", true);
 
 	cl_git_append2file("status/.gitattributes", "*.txt text\n*.bin binary\n\n");
 

@@ -24,30 +24,13 @@ void test_checkout_crlf__cleanup(void)
 	cl_git_sandbox_cleanup();
 }
 
-#ifdef GIT_WIN32
-static void set_config_entry_to(const char *entry_name, bool value)
-{
-	git_config *cfg;
-
-	cl_git_pass(git_repository_config(&cfg, g_repo));
-	cl_git_pass(git_config_set_bool(cfg, entry_name, value));
-
-	git_config_free(cfg);
-}
-
-static void set_core_autocrlf_to(bool value)
-{
-	set_config_entry_to("core.autocrlf", value);
-}
-#endif
-
 void test_checkout_crlf__detect_crlf_autocrlf_false(void)
 {
 #ifdef GIT_WIN32
 	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
 	opts.checkout_strategy = GIT_CHECKOUT_SAFE_CREATE;
 
-	set_core_autocrlf_to(false);
+	cl_repo_set_bool(g_repo, "core.autocrlf", false);
 
 	git_checkout_head(g_repo, &opts);
 
@@ -63,7 +46,7 @@ void test_checkout_crlf__autocrlf_false_index_size_is_unfiltered_size(void)
 	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
 	opts.checkout_strategy = GIT_CHECKOUT_SAFE_CREATE;
 
-	set_core_autocrlf_to(false);
+	cl_repo_set_bool(g_repo, "core.autocrlf", false);
 
 	git_checkout_head(g_repo, &opts);
 
@@ -82,7 +65,7 @@ void test_checkout_crlf__detect_crlf_autocrlf_true(void)
 	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
 	opts.checkout_strategy = GIT_CHECKOUT_SAFE_CREATE;
 
-	set_core_autocrlf_to(true);
+	cl_repo_set_bool(g_repo, "core.autocrlf", true);
 
 	git_checkout_head(g_repo, &opts);
 
@@ -98,7 +81,7 @@ void test_checkout_crlf__autocrlf_true_index_size_is_filtered_size(void)
 	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
 	opts.checkout_strategy = GIT_CHECKOUT_SAFE_CREATE;
 
-	set_core_autocrlf_to(true);
+	cl_repo_set_bool(g_repo, "core.autocrlf", true);
 
 	git_checkout_head(g_repo, &opts);
 

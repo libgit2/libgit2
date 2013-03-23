@@ -47,22 +47,12 @@ static void execute_test(void)
 
 void test_checkout_binaryunicode__noautocrlf(void)
 {
-	git_config *config;
-
-	cl_git_pass(git_repository_config(&config, g_repo));
-	cl_git_pass(git_config_set_bool(config, "core.autocrlf", false));
-	git_config_free(config);
-
+	cl_repo_set_bool(g_repo, "core.autocrlf", false);
 	execute_test();
 }
 
 void test_checkout_binaryunicode__autocrlf(void)
 {
-	git_config *config;
-
-	cl_git_pass(git_repository_config(&config, g_repo));
-	cl_git_pass(git_config_set_bool(config, "core.autocrlf", true));
-	git_config_free(config);
-
+	cl_repo_set_bool(g_repo, "core.autocrlf", true);
 	execute_test();
 }

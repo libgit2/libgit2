@@ -331,21 +331,14 @@ clar_test(int argc, char **argv)
 	return _clar.total_errors;
 }
 
-void
-clar__assert(
-	int condition,
+void clar__fail(
 	const char *file,
 	int line,
 	const char *error_msg,
 	const char *description,
 	int should_abort)
 {
-	struct clar_error *error;
-
-	if (condition)
-		return;
-
-	error = calloc(1, sizeof(struct clar_error));
+	struct clar_error *error = calloc(1, sizeof(struct clar_error));
 
 	if (_clar.errors == NULL)
 		_clar.errors = error;
@@ -380,6 +373,20 @@ clar__assert(
 	}
 }
 
+void clar__assert(
+	int condition,
+	const char *file,
+	int line,
+	const char *error_msg,
+	const char *description,
+	int should_abort)
+{
+	if (condition)
+		return;
+
+	clar__fail(file, line, error_msg, description, should_abort);
+}
+
 void clar__assert_equal_s(
 	const char *s1,
 	const char *s2,
@@ -392,8 +399,8 @@ void clar__assert_equal_s(
 
 	if (!match) {
 		char buf[4096];
-		snprint_eq(buf, 4096, "'%s' != '%s'", s1, s2);
-		clar__assert(0, file, line, err, buf, should_abort);
+		snprint_eq(buf, sizeof(buf), "'%s' != '%s'", s1, s2);
+		clar__fail(file, line, err, buf, should_abort);
 	}
 }
 
@@ -407,8 +414,8 @@ void clar__assert_equal_i(
 {
 	if (i1 != i2) {
 		char buf[128];
-		snprint_eq(buf, 128, "%d != %d", i1, i2);
-		clar__assert(0, file, line, err, buf, should_abort);
+		snprint_eq(buf, sizeof(buf), "%d != %d", i1, i2);
+		clar__fail(file, line, err, buf, should_abort);
 	}
 }
 

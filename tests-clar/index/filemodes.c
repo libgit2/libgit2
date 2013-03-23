@@ -66,13 +66,10 @@ static void add_and_check_mode(
 
 void test_index_filemodes__untrusted(void)
 {
-	git_config *cfg;
 	git_index *index;
 	bool can_filemode = cl_is_chmod_supported();
 
-	cl_git_pass(git_repository_config(&cfg, g_repo));
-	cl_git_pass(git_config_set_bool(cfg, "core.filemode", false));
-	git_config_free(cfg);
+	cl_repo_set_bool(g_repo, "core.filemode", false);
 
 	cl_git_pass(git_repository_index(&index, g_repo));
 	cl_assert((git_index_caps(index) & GIT_INDEXCAP_NO_FILEMODE) != 0);
@@ -113,7 +110,6 @@ void test_index_filemodes__untrusted(void)
 
 void test_index_filemodes__trusted(void)
 {
-	git_config *cfg;
 	git_index *index;
 
 	/* Only run these tests on platforms where I can actually
@@ -122,9 +118,7 @@ void test_index_filemodes__trusted(void)
 	if (!cl_is_chmod_supported())
 		return;
 
-	cl_git_pass(git_repository_config(&cfg, g_repo));
-	cl_git_pass(git_config_set_bool(cfg, "core.filemode", true));
-	git_config_free(cfg);
+	cl_repo_set_bool(g_repo, "core.filemode", true);
 
 	cl_git_pass(git_repository_index(&index, g_repo));
 	cl_assert((git_index_caps(index) & GIT_INDEXCAP_NO_FILEMODE) == 0);

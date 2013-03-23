@@ -92,21 +92,6 @@ void test_checkout_index__honor_the_specified_pathspecs(void)
 	test_file_contents("./testrepo/new.txt", "my new file\n");
 }
 
-static void set_config_entry_to(const char *entry_name, bool value)
-{
-	git_config *cfg;
-
-	cl_git_pass(git_repository_config(&cfg, g_repo));
-	cl_git_pass(git_config_set_bool(cfg, entry_name, value));
-
-	git_config_free(cfg);
-}
-
-static void set_core_autocrlf_to(bool value)
-{
-	set_config_entry_to("core.autocrlf", value);
-}
-
 void test_checkout_index__honor_the_gitattributes_directives(void)
 {
 	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
@@ -115,7 +100,7 @@ void test_checkout_index__honor_the_gitattributes_directives(void)
 		"new.txt text eol=lf\n";
 
 	cl_git_mkfile("./testrepo/.gitattributes", attributes);
-	set_core_autocrlf_to(false);
+	cl_repo_set_bool(g_repo, "core.autocrlf", false);
 
 	opts.checkout_strategy = GIT_CHECKOUT_SAFE_CREATE;
 
@@ -133,7 +118,7 @@ void test_checkout_index__honor_coreautocrlf_setting_set_to_true(void)
 	const char *expected_readme_text = "hey there\r\n";
 
 	cl_git_pass(p_unlink("./testrepo/.gitattributes"));
-	set_core_autocrlf_to(true);
+	cl_repo_set_bool(g_repo, "core.autocrlf", true);
 
 	opts.checkout_strategy = GIT_CHECKOUT_SAFE_CREATE;
 
@@ -143,16 +128,11 @@ void test_checkout_index__honor_coreautocrlf_setting_set_to_true(void)
 #endif
 }
 
-static void set_repo_symlink_handling_cap_to(bool value)
-{
-	set_config_entry_to("core.symlinks", value);
-}
-
 void test_checkout_index__honor_coresymlinks_setting_set_to_true(void)
 {
 	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
 
-	set_repo_symlink_handling_cap_to(true);
+	cl_repo_set_bool(g_repo, "core.symlinks", true);
 
 	opts.checkout_strategy = GIT_CHECKOUT_SAFE_CREATE;
 
@@ -178,7 +158,7 @@ void test_checkout_index__honor_coresymlinks_setting_set_to_false(void)
 {
 	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
 
-	set_repo_symlink_handling_cap_to(false);
+	cl_repo_set_bool(g_repo, "core.symlinks", false);
 
 	opts.checkout_strategy = GIT_CHECKOUT_SAFE_CREATE;
 
@@ -372,7 +352,7 @@ void test_checkout_index__wont_notify_of_expected_line_ending_changes(void)
 	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
 
 	cl_git_pass(p_unlink("./testrepo/.gitattributes"));
-	set_core_autocrlf_to(true);
+	cl_repo_set_bool(g_repo, "core.autocrlf", true);
 
 	cl_git_mkfile("./testrepo/new.txt", "my new file\r\n");
 
