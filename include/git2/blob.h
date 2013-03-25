@@ -163,7 +163,7 @@ typedef int (*git_blob_chunk_cb)(char *content, size_t max_length, void *payload
  * @param hintpath if not NULL, will help selecting the filters
  * to apply onto the content of the blob to be created.
  *
- * @return GIT_SUCCESS or an error code
+ * @return 0 or an error code
  */
 GIT_EXTERN(int) git_blob_create_fromchunks(
 	git_oid *id,
