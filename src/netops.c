@@ -507,10 +507,12 @@ int gitno_connect(gitno_socket *s_out, const char *host, const char *port, int f
 	return 0;
 }
 
+#define GITNO_MAX_STALLS	256
+
 #ifdef GIT_SSL
 static int gitno_send_ssl(gitno_ssl *ssl, const char *msg, size_t len, int flags)
 {
-	int ret;
+	int ret, stalls = 0;
 	size_t off = 0;
 
 	GIT_UNUSED(flags);
@@ -520,8 +522,14 @@ static int gitno_send_ssl(gitno_ssl *ssl, const char *msg, size_t len, int flags
 		if (ret <= 0 && ret != SSL_ERROR_WANT_WRITE)
 			return ssl_set_error(ssl, ret);
 
-		off += ret;
-	}	
+		if (!ret) {
+			if (++stalls > GITNO_MAX_STALLS) {
+				net_set_error("Too many network stalls sending data");
+				return -1;
+			}
+		} else
+			off += ret;
+	}
 
 	return off;
 }
@@ -529,7 +537,7 @@ static int gitno_send_ssl(gitno_ssl *ssl, const char *msg, size_t len, int flags
 
 int gitno_send(gitno_socket *socket, const char *msg, size_t len, int flags)
 {
-	int ret;
+	int ret, stalls = 0;
 	size_t off = 0;
 
 #ifdef GIT_SSL
@@ -545,7 +553,13 @@ int gitno_send(gitno_socket *socket, const char *msg, size_t len, int flags)
 			return -1;
 		}
 
-		off += ret;
+		if (!ret) {
+			if (++stalls > GITNO_MAX_STALLS) {
+				net_set_error("Too many network stalls sending data");
+				return -1;
+			}
+		} else
+			off += ret;
 	}
 
 	return (int)off;
@@ -578,12 +592,12 @@ int gitno_select_in(gitno_buffer *buf, long int sec, long int usec)
 }
 
 int gitno_extract_url_parts(
-		char **host,
-		char **port,
-		char **username,
-		char **password,
-		const char *url,
-		const char *default_port)
+	char **host,
+	char **port,
+	char **username,
+	char **password,
+	const char *url,
+	const char *default_port)
 {
 	char *colon, *slash, *at, *end;
 	const char *start;
