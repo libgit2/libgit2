@@ -9,6 +9,7 @@
 #include "fileops.h"
 #include "hash.h"
 #include "filter.h"
+#include "buf_text.h"
 #include "repository.h"
 #include "git2/attr.h"
 #include "git2/blob.h"
@@ -105,35 +106,6 @@ static int crlf_load_attributes(struct crlf_attrs *ca, git_repository *repo, con
 	return -1;
 }
 
-static int drop_crlf(git_buf *dest, const git_buf *source)
-{
-	const char *scan = source->ptr, *next;
-	const char *scan_end = git_buf_cstr(source) + git_buf_len(source);
-
-	/* Main scan loop.  Find the next carriage return and copy the
-	 * whole chunk up to that point to the destination buffer.
-	 */
-	while ((next = memchr(scan, '\r', scan_end - scan)) != NULL) {
-		/* copy input up to \r */
-		if (next > scan)
-			git_buf_put(dest, scan, next - scan);
-
-		/* Do not drop \r unless it is followed by \n */
-		if (*(next + 1) != '\n')
-			git_buf_putc(dest, '\r');
-
-		scan = next + 1;
-	}
-
-	/* If there was no \r, then tell the library to skip this filter */
-	if (scan == source->ptr)
-		return -1;
-
-	/* Copy remaining input into dest */
-	git_buf_put(dest, scan, scan_end - scan);
-	return 0;
-}
-
 static int has_cr_in_index(git_filter *self)
 {
 	struct crlf_filter *filter = (struct crlf_filter *)self;
@@ -217,29 +189,7 @@ static int crlf_apply_to_odb(
 	}
 
 	/* Actually drop the carriage returns */
-	return drop_crlf(dest, source);
-}
-
-static int convert_line_endings(git_buf *dest, const git_buf *source, const char *ending)
-{
-	const char *scan = git_buf_cstr(source),
-		*next,
-		*line_end,
-		*scan_end = git_buf_cstr(source) + git_buf_len(source);
-
-	while ((next = memchr(scan, '\n', scan_end - scan)) != NULL) {
-		if (next > scan) {
-			line_end = *(next - 1) == '\r' ? next - 1 : next;
-			git_buf_put(dest, scan, line_end - scan);
-			scan = next + 1;
-		}
-
-		git_buf_puts(dest, ending);
-		scan = next + 1;
-	}
-
-	git_buf_put(dest, scan, scan_end - scan);
-	return 0;
+	return git_buf_text_crlf_to_lf(dest, source);
 }
 
 static const char *line_ending(struct crlf_filter *filter)
@@ -282,26 +232,28 @@ line_ending_error:
 	return NULL;
 }
 
-static int crlf_apply_to_workdir(git_filter *self, git_buf *dest, const git_buf *source)
+static int crlf_apply_to_workdir(
+	git_filter *self, git_buf *dest, const git_buf *source)
 {
 	struct crlf_filter *filter = (struct crlf_filter *)self;
 	const char *workdir_ending = NULL;
 
-	assert (self && dest && source);
+	assert(self && dest && source);
 
 	/* Empty file? Nothing to do. */
 	if (git_buf_len(source) == 0)
-		return 0;
+		return -1;
 
 	/* Determine proper line ending */
 	workdir_ending = line_ending(filter);
-	if (!workdir_ending) return -1;
+	if (!workdir_ending)
+		return -1;
+	if (!strcmp("\n", workdir_ending)) /* do nothing for \n ending */
+		return -1;
 
-	/* If the line ending is '\n', just copy the input */
-	if (!strcmp(workdir_ending, "\n"))
-		return git_buf_puts(dest, git_buf_cstr(source));
-
-	return convert_line_endings(dest, source, workdir_ending);
+	/* for now, only lf->crlf conversion is supported here */
+	assert(!strcmp("\r\n", workdir_ending));
+	return git_buf_text_lf_to_crlf(dest, source);
 }
 
 static int find_and_add_filter(
@@ -351,12 +303,14 @@ static int find_and_add_filter(
 	return git_vector_insert(filters, filter);
 }
 
-int git_filter_add__crlf_to_odb(git_vector *filters, git_repository *repo, const char *path)
+int git_filter_add__crlf_to_odb(
+	git_vector *filters, git_repository *repo, const char *path)
 {
 	return find_and_add_filter(filters, repo, path, &crlf_apply_to_odb);
 }
 
-int git_filter_add__crlf_to_workdir(git_vector *filters, git_repository *repo, const char *path)
+int git_filter_add__crlf_to_workdir(
+	git_vector *filters, git_repository *repo, const char *path)
 {
 	return find_and_add_filter(filters, repo, path, &crlf_apply_to_workdir);
 }

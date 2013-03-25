@@ -2,6 +2,7 @@
 #include "posix.h"
 #include "blob.h"
 #include "filter.h"
+#include "buf_text.h"
 
 static git_repository *g_repo = NULL;
 #define NUM_TEST_OBJECTS 8

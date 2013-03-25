@@ -12,6 +12,7 @@
 #include "common.h"
 #include "blob.h"
 #include "filter.h"
+#include "buf_text.h"
 
 const void *git_blob_rawcontent(const git_blob *blob)
 {
