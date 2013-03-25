@@ -295,9 +295,12 @@ static int on_headers_complete(http_parser *parser)
 		}
 	}
 
-	/* Check for a 302 Found (redirect).
+	/* Check for a redirect.
 	 * Right now we only permit a redirect to the same hostname. */
-	if (parser->status_code == 302 &&
+	if ((parser->status_code == 301 ||
+		 parser->status_code == 302 ||
+		 (parser->status_code == 303 && get_verb == s->verb) ||
+		 parser->status_code == 307) &&
 		t->location) {
 
 		if (s->redirect_count >= 7) {
