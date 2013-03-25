@@ -60,6 +60,83 @@ void git_buf_text_unescape(git_buf *buf)
 	buf->size = git__unescape(buf->ptr);
 }
 
+int git_buf_text_crlf_to_lf(git_buf *tgt, const git_buf *src)
+{
+	const char *scan = src->ptr;
+	const char *scan_end = src->ptr + src->size;
+	const char *next = memchr(scan, '\r', src->size);
+	char *out;
+
+	assert(tgt != src);
+
+	if (!next)
+		return GIT_ENOTFOUND;
+
+	/* reduce reallocs while in the loop */
+	if (git_buf_grow(tgt, src->size) < 0)
+		return -1;
+	out = tgt->ptr;
+	tgt->size = 0;
+
+	/* Find the next \r and copy whole chunk up to there to tgt */
+	for (; next; scan = next + 1, next = memchr(scan, '\r', scan_end - scan)) {
+		if (next > scan) {
+			size_t copylen = next - scan;
+			memcpy(out, scan, copylen);
+			out += copylen;
+		}
+
+		/* Do not drop \r unless it is followed by \n */
+		if (next[1] != '\n')
+			*out++ = '\r';
+	}
+
+	/* Copy remaining input into dest */
+	memcpy(out, scan, scan_end - scan + 1); /* +1 for NUL byte */
+	out += (scan_end - scan);
+	tgt->size = out - tgt->ptr;
+
+	return 0;
+}
+
+int git_buf_text_lf_to_crlf(git_buf *tgt, const git_buf *src)
+{
+	const char *start = src->ptr;
+	const char *end = start + src->size;
+	const char *scan = start;
+	const char *next = memchr(scan, '\n', src->size);
+
+	assert(tgt != src);
+
+	if (!next)
+		return GIT_ENOTFOUND;
+
+	/* attempt to reduce reallocs while in the loop */
+	if (git_buf_grow(tgt, src->size + (src->size >> 4) + 1) < 0)
+		return -1;
+	tgt->size = 0;
+
+	for (; next; scan = next + 1, next = memchr(scan, '\n', end - scan)) {
+		size_t copylen = next - scan;
+		/* don't convert existing \r\n to \r\r\n */
+		size_t extralen = (next > start && next[-1] == '\r') ? 1 : 2;
+		size_t needsize = tgt->size + copylen + extralen + 1;
+
+		if (tgt->asize < needsize && git_buf_grow(tgt, needsize) < 0)
+			return -1;
+
+		if (next > scan) {
+			memcpy(tgt->ptr + tgt->size, scan, copylen);
+			tgt->size += copylen;
+		}
+		if (extralen == 2)
+			tgt->ptr[tgt->size++] = '\r';
+		tgt->ptr[tgt->size++] = '\n';
+	}
+
+	return git_buf_put(tgt, scan, end - scan);
+}
+
 int git_buf_text_common_prefix(git_buf *buf, const git_strarray *strings)
 {
 	size_t i;

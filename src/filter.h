@@ -9,7 +9,6 @@
 
 #include "common.h"
 #include "buffer.h"
-#include "buf_text.h"
 #include "git2/odb.h"
 #include "git2/repository.h"
 

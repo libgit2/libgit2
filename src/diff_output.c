@@ -12,6 +12,7 @@
 #include <ctype.h>
 #include "fileops.h"
 #include "filter.h"
+#include "buf_text.h"
 
 static int read_next_int(const char **str, int *value)
 {

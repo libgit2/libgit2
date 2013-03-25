@@ -541,6 +541,18 @@ void test_status_worktree__line_endings_dont_count_as_changes_with_autocrlf(void
 	cl_assert_equal_i(GIT_STATUS_CURRENT, status);
 }
 
+void test_status_worktree__line_endings_dont_count_as_changes_with_autocrlf_issue_1397(void)
+{
+	git_repository *repo = cl_git_sandbox_init("issue_1397");
+	unsigned int status;
+
+	cl_repo_set_bool(repo, "core.autocrlf", true);
+
+	cl_git_pass(git_status_file(&status, repo, "crlf_file.txt"));
+
+	cl_assert_equal_i(GIT_STATUS_CURRENT, status);
+}
+
 void test_status_worktree__conflicted_item(void)
 {
 	git_repository *repo = cl_git_sandbox_init("status");

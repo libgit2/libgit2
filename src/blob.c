@@ -12,6 +12,7 @@
 #include "common.h"
 #include "blob.h"
 #include "filter.h"
+#include "buf_text.h"
 
 const void *git_blob_rawcontent(const git_blob *blob)
 {
@@ -221,7 +222,9 @@ int git_blob_create_fromworkdir(git_oid *oid, git_repository *repo, const char *
 		return -1;
 	}
 
-	error = blob_create_internal(oid, repo, git_buf_cstr(&full_path), git_buf_cstr(&full_path), true);
+	error = blob_create_internal(
+		oid, repo, git_buf_cstr(&full_path),
+		git_buf_cstr(&full_path) + strlen(workdir), true);
 
 	git_buf_free(&full_path);
 	return error;
@@ -231,13 +234,21 @@ int git_blob_create_fromdisk(git_oid *oid, git_repository *repo, const char *pat
 {
 	int error;
 	git_buf full_path = GIT_BUF_INIT;
+	const char *workdir, *hintpath;
 
 	if ((error = git_path_prettify(&full_path, path, NULL)) < 0) {
 		git_buf_free(&full_path);
 		return error;
 	}
 
-	error = blob_create_internal(oid, repo, git_buf_cstr(&full_path), git_buf_cstr(&full_path), true);
+	hintpath = git_buf_cstr(&full_path);
+	workdir  = git_repository_workdir(repo);
+
+	if (workdir && !git__prefixcmp(hintpath, workdir))
+		hintpath += strlen(workdir);
+
+	error = blob_create_internal(
+		oid, repo, git_buf_cstr(&full_path), hintpath, true);
 
 	git_buf_free(&full_path);
 	return error;
