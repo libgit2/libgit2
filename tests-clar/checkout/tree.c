@@ -248,7 +248,7 @@ void test_checkout_tree__can_update_only(void)
 
 	cl_assert(!git_path_isdir("testrepo/a"));
 
-	test_file_contents_nocr("testrepo/branch_file.txt", "hi\nbye!\n");
+	check_file_contents_nocr("testrepo/branch_file.txt", "hi\nbye!\n");
 
 	/* now checkout branch but with update only */
 
@@ -269,7 +269,7 @@ void test_checkout_tree__can_update_only(void)
 	cl_assert(!git_path_isdir("testrepo/a"));
 
 	/* but this file still should have been updated */
-	test_file_contents_nocr("testrepo/branch_file.txt", "hi\n");
+	check_file_contents_nocr("testrepo/branch_file.txt", "hi\n");
 
 	git_object_free(obj);
 }
@@ -500,7 +500,7 @@ void test_checkout_tree__issue_1397(void)
 
 	cl_git_pass(git_checkout_tree(g_repo, tree, &opts));
 
-	test_file_contents("./issue_1397/crlf_file.txt", "first line\r\nsecond line\r\nboth with crlf");
+	check_file_contents("./issue_1397/crlf_file.txt", "first line\r\nsecond line\r\nboth with crlf");
 
 	git_object_free(tree);
 }

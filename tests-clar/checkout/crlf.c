@@ -28,7 +28,6 @@ void test_checkout_crlf__cleanup(void)
 
 void test_checkout_crlf__detect_crlf_autocrlf_false(void)
 {
-#ifdef GIT_WIN32
 	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
 	opts.checkout_strategy = GIT_CHECKOUT_SAFE_CREATE;
 
@@ -36,14 +35,12 @@ void test_checkout_crlf__detect_crlf_autocrlf_false(void)
 
 	git_checkout_head(g_repo, &opts);
 
-	test_file_contents("./crlf/all-lf", ALL_LF_TEXT_RAW);
-	test_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_RAW);
-#endif
+	check_file_contents("./crlf/all-lf", ALL_LF_TEXT_RAW);
+	check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_RAW);
 }
 
 void test_checkout_crlf__autocrlf_false_index_size_is_unfiltered_size(void)
 {
-#ifdef GIT_WIN32
 	git_index *index;
 	const git_index_entry *entry;
 	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
@@ -62,12 +59,10 @@ void test_checkout_crlf__autocrlf_false_index_size_is_unfiltered_size(void)
 	cl_assert(entry->file_size == strlen(ALL_CRLF_TEXT_RAW));
 
 	git_index_free(index);
-#endif
 }
 
 void test_checkout_crlf__detect_crlf_autocrlf_true(void)
 {
-#ifdef GIT_WIN32
 	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
 	opts.checkout_strategy = GIT_CHECKOUT_SAFE_CREATE;
 
@@ -75,14 +70,16 @@ void test_checkout_crlf__detect_crlf_autocrlf_true(void)
 
 	git_checkout_head(g_repo, &opts);
 
-	test_file_contents("./crlf/all-lf", ALL_LF_TEXT_AS_CRLF);
-	test_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_RAW);
-#endif
+	if (GIT_EOL_NATIVE == GIT_EOL_LF)
+		check_file_contents("./crlf/all-lf", ALL_LF_TEXT_RAW);
+	else
+		check_file_contents("./crlf/all-lf", ALL_LF_TEXT_AS_CRLF);
+
+	check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_RAW);
 }
 
 void test_checkout_crlf__more_lf_autocrlf_true(void)
 {
-#ifdef GIT_WIN32
 	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
 	opts.checkout_strategy = GIT_CHECKOUT_SAFE_CREATE;
 
@@ -90,13 +87,14 @@ void test_checkout_crlf__more_lf_autocrlf_true(void)
 
 	git_checkout_head(g_repo, &opts);
 
-	test_file_contents("./crlf/more-lf", MORE_LF_TEXT_AS_CRLF);
-#endif
+	if (GIT_EOL_NATIVE == GIT_EOL_LF)
+		check_file_contents("./crlf/more-lf", MORE_LF_TEXT_RAW);
+	else
+		check_file_contents("./crlf/more-lf", MORE_LF_TEXT_AS_CRLF);
 }
 
 void test_checkout_crlf__more_crlf_autocrlf_true(void)
 {
-#ifdef GIT_WIN32
 	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
 	opts.checkout_strategy = GIT_CHECKOUT_SAFE_CREATE;
 
@@ -104,13 +102,14 @@ void test_checkout_crlf__more_crlf_autocrlf_true(void)
 
 	git_checkout_head(g_repo, &opts);
 
-	test_file_contents("./crlf/more-crlf", MORE_CRLF_TEXT_AS_CRLF);
-#endif
+	if (GIT_EOL_NATIVE == GIT_EOL_LF)
+		check_file_contents("./crlf/more-crlf", MORE_CRLF_TEXT_RAW);
+	else
+		check_file_contents("./crlf/more-crlf", MORE_CRLF_TEXT_AS_CRLF);
 }
 
 void test_checkout_crlf__all_crlf_autocrlf_true(void)
 {
-#ifdef GIT_WIN32
 	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
 	opts.checkout_strategy = GIT_CHECKOUT_SAFE_CREATE;
 
@@ -118,13 +117,11 @@ void test_checkout_crlf__all_crlf_autocrlf_true(void)
 
 	git_checkout_head(g_repo, &opts);
 
-	test_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_RAW);
-#endif
+	check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_RAW);
 }
 
 void test_checkout_crlf__autocrlf_true_index_size_is_filtered_size(void)
 {
-#ifdef GIT_WIN32
 	git_index *index;
 	const git_index_entry *entry;
 	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
@@ -137,11 +134,14 @@ void test_checkout_crlf__autocrlf_true_index_size_is_filtered_size(void)
 	git_repository_index(&index, g_repo);
 
 	cl_assert((entry = git_index_get_bypath(index, "all-lf", 0)) != NULL);
-	cl_assert(entry->file_size == strlen(ALL_LF_TEXT_AS_CRLF));
+
+	if (GIT_EOL_NATIVE == GIT_EOL_LF)
+		cl_assert_equal_sz(strlen(ALL_LF_TEXT_RAW), entry->file_size);
+	else
+		cl_assert_equal_sz(strlen(ALL_LF_TEXT_AS_CRLF), entry->file_size);
 
 	cl_assert((entry = git_index_get_bypath(index, "all-crlf", 0)) != NULL);
-	cl_assert(entry->file_size == strlen(ALL_CRLF_TEXT_RAW));
+	cl_assert_equal_sz(strlen(ALL_CRLF_TEXT_RAW), entry->file_size);
 
 	git_index_free(index);
-#endif
 }
