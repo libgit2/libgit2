@@ -40,3 +40,10 @@
 	obj:*libcrypto.so*
 	...
 }
+
+{
+	ignore-glibc-getaddrinfo-cache
+	Memcheck:Leak
+	...
+	fun:__check_pf
+}

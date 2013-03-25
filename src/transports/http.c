@@ -45,12 +45,14 @@ typedef struct {
 	git_smart_subtransport_stream parent;
 	const char *service;
 	const char *service_url;
+	char *redirect_url;
 	const char *verb;
 	char *chunk_buffer;
 	unsigned chunk_buffer_len;
 	unsigned sent_request : 1,
 		received_response : 1,
-		chunked : 1;
+		chunked : 1,
+		redirect_count : 3;
 } http_stream;
 
 typedef struct {
@@ -76,6 +78,7 @@ typedef struct {
 	git_buf parse_header_value;
 	char parse_buffer_data[2048];
 	char *content_type;
+	char *location;
 	git_vector www_authenticate;
 	enum last_cb last_cb;
 	int parse_error;
@@ -126,7 +129,12 @@ static int gen_request(
 	if (!t->path)
 		t->path = "/";
 
-	git_buf_printf(buf, "%s %s%s HTTP/1.1\r\n", s->verb, t->path, s->service_url);
+	/* If we were redirected, make sure to respect that here */
+	if (s->redirect_url)
+		git_buf_printf(buf, "%s %s HTTP/1.1\r\n", s->verb, s->redirect_url);
+	else
+		git_buf_printf(buf, "%s %s%s HTTP/1.1\r\n", s->verb, t->path, s->service_url);
+
 	git_buf_puts(buf, "User-Agent: git/1.0 (libgit2 " LIBGIT2_VERSION ")\r\n");
 	git_buf_printf(buf, "Host: %s\r\n", t->host);
 
@@ -186,16 +194,24 @@ static int on_header_ready(http_subtransport *t)
 {
 	git_buf *name = &t->parse_header_name;
 	git_buf *value = &t->parse_header_value;
-	char *dup;
 
-	if (!t->content_type && !strcasecmp("Content-Type", git_buf_cstr(name))) {
-		t->content_type = git__strdup(git_buf_cstr(value));
-		GITERR_CHECK_ALLOC(t->content_type);
+	if (!strcasecmp("Content-Type", git_buf_cstr(name))) {
+		if (!t->content_type) {
+			t->content_type = git__strdup(git_buf_cstr(value));
+			GITERR_CHECK_ALLOC(t->content_type);
+		}
 	}
 	else if (!strcmp("WWW-Authenticate", git_buf_cstr(name))) {
-		dup = git__strdup(git_buf_cstr(value));
+		char *dup = git__strdup(git_buf_cstr(value));
 		GITERR_CHECK_ALLOC(dup);
+
 		git_vector_insert(&t->www_authenticate, dup);
+	}
+	else if (!strcasecmp("Location", git_buf_cstr(name))) {
+		if (!t->location) {
+			t->location= git__strdup(git_buf_cstr(value));
+			GITERR_CHECK_ALLOC(t->location);
+		}
 	}
 
 	return 0;
@@ -277,6 +293,38 @@ static int on_headers_complete(http_parser *parser)
 			/* Successfully acquired a credential. */
 			return t->parse_error = PARSE_ERROR_REPLAY;
 		}
+	}
+
+	/* Check for a redirect.
+	 * Right now we only permit a redirect to the same hostname. */
+	if ((parser->status_code == 301 ||
+		 parser->status_code == 302 ||
+		 (parser->status_code == 303 && get_verb == s->verb) ||
+		 parser->status_code == 307) &&
+		t->location) {
+
+		if (s->redirect_count >= 7) {
+			giterr_set(GITERR_NET, "Too many redirects");
+			return t->parse_error = PARSE_ERROR_GENERIC;
+		}
+
+		if (t->location[0] != '/') {
+			giterr_set(GITERR_NET, "Only relative redirects are supported");
+			return t->parse_error = PARSE_ERROR_GENERIC;
+		}
+
+		/* Set the redirect URL on the stream. This is a transfer of
+		 * ownership of the memory. */
+		if (s->redirect_url)
+			git__free(s->redirect_url);
+
+		s->redirect_url = t->location;
+		t->location = NULL;
+
+		t->connected = 0;
+		s->redirect_count++;
+
+		return t->parse_error = PARSE_ERROR_REPLAY;
 	}
 
 	/* Check for a 200 HTTP status code. */
@@ -371,6 +419,9 @@ static void clear_parser_state(http_subtransport *t)
 	git__free(t->content_type);
 	t->content_type = NULL;
 
+	git__free(t->location);
+	t->location = NULL;
+
 	git_vector_foreach(&t->www_authenticate, i, entry)
 		git__free(entry);
 
@@ -402,6 +453,37 @@ static int write_chunk(gitno_socket *socket, const char *buffer, size_t len)
 	if (gitno_send(socket, "\r\n", 2, 0) < 0)
 		return -1;
 
+	return 0;
+}
+
+static int http_connect(http_subtransport *t)
+{
+	int flags = 0;
+
+	if (t->connected &&
+		http_should_keep_alive(&t->parser) &&
+		http_body_is_final(&t->parser))
+		return 0;
+
+	if (t->socket.socket)
+		gitno_close(&t->socket);
+
+	if (t->use_ssl) {
+		int tflags;
+
+		if (t->owner->parent.read_flags(&t->owner->parent, &tflags) < 0)
+			return -1;
+
+		flags |= GITNO_CONNECT_SSL;
+
+		if (GIT_TRANSPORTFLAGS_NO_CHECK_CERT & tflags)
+			flags |= GITNO_CONNECT_SSL_NO_CHECK_CERT;
+	}
+
+	if (gitno_connect(&t->socket, t->host, t->port, flags) < 0)
+		return -1;
+
+	t->connected = 1;
 	return 0;
 }
 
@@ -491,6 +573,10 @@ replay:
 		 * will have signaled us that we should replay the request. */
 		if (PARSE_ERROR_REPLAY == t->parse_error) {
 			s->sent_request = 0;
+
+			if (http_connect(t) < 0)
+				return -1;
+
 			goto replay;
 		}
 
@@ -627,6 +713,9 @@ static void http_stream_free(git_smart_subtransport_stream *stream)
 	if (s->chunk_buffer)
 		git__free(s->chunk_buffer);
 
+	if (s->redirect_url)
+		git__free(s->redirect_url);
+
 	git__free(s);
 }
 
@@ -734,7 +823,7 @@ static int http_action(
 {
 	http_subtransport *t = (http_subtransport *)subtransport;
 	const char *default_port = NULL;
-	int flags = 0, ret;
+	int ret;
 
 	if (!stream)
 		return -1;
@@ -761,30 +850,8 @@ static int http_action(
 		t->path = strchr(url, '/');
 	}
 
-	if (!t->connected ||
-		!http_should_keep_alive(&t->parser) ||
-		!http_body_is_final(&t->parser)) {
-
-		if (t->socket.socket)
-			gitno_close(&t->socket);
-
-		if (t->use_ssl) {
-			int transport_flags;
-
-			if (t->owner->parent.read_flags(&t->owner->parent, &transport_flags) < 0)
-				return -1;
-
-			flags |= GITNO_CONNECT_SSL;
-
-			if (GIT_TRANSPORTFLAGS_NO_CHECK_CERT & transport_flags)
-				flags |= GITNO_CONNECT_SSL_NO_CHECK_CERT;
-		}
-
-		if (gitno_connect(&t->socket, t->host, t->port, flags) < 0)
-			return -1;
-
-		t->connected = 1;
-	}
+	if (http_connect(t) < 0)
+		return -1;
 
 	switch (action)
 	{
