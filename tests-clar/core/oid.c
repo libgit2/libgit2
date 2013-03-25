@@ -11,7 +11,7 @@ void test_core_oid__initialize(void)
 {
 	cl_git_pass(git_oid_fromstr(&id, str_oid));
 	cl_git_pass(git_oid_fromstrp(&idp, str_oid_p));
-	cl_git_pass(git_oid_fromstrp(&idm, str_oid_m));
+	cl_git_fail(git_oid_fromstrp(&idm, str_oid_m));
 }
 
 void test_core_oid__streq(void)
@@ -27,6 +27,4 @@ void test_core_oid__streq(void)
 
 	cl_assert(git_oid_streq(&idp, "deadbeef") == -1);
 	cl_assert(git_oid_streq(&idp, "I'm not an oid.... :)") == -1);
-	
-	cl_assert(git_oid_cmp(&id, &idm) == 0);
 }

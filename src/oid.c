@@ -25,7 +25,7 @@ int git_oid_fromstrn(git_oid *out, const char *str, size_t length)
 	int v;
 
 	if (length > GIT_OID_HEXSZ)
-		length = GIT_OID_HEXSZ;
+		return oid_error_invalid("too long");
 
 	for (p = 0; p < length - 1; p += 2) {
 		v = (git__fromhex(str[p + 0]) << 4)
