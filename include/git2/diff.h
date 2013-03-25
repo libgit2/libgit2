@@ -123,7 +123,7 @@ typedef enum {
 	 *  will be marked with only a single entry in the diff list; this flag
 	 *  adds all files under the directory as IGNORED entries, too.
 	 */
-	GIT_DIFF_RECURSE_IGNORED_DIRS = (1 << 10),
+	GIT_DIFF_RECURSE_IGNORED_DIRS = (1 << 18),
 } git_diff_option_t;
 
 /**

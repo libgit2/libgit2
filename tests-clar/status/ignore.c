@@ -199,7 +199,6 @@ void test_status_ignore__subdirectories(void)
 	cl_git_pass(git_status_should_ignore(&ignored, g_repo, "ignore_me"));
 	cl_assert(ignored);
 
-
 	/* So, interestingly, as per the comment in diff_from_iterators() the
 	 * following file is ignored, but in a way so that it does not show up
 	 * in status even if INCLUDE_IGNORED is used.  This actually matches
@@ -207,11 +206,12 @@ void test_status_ignore__subdirectories(void)
 	 * status -uall --ignored" then the following file and directory will
 	 * not show up in the output at all.
 	 */
-
-	cl_git_pass(
-		git_futils_mkdir_r("empty_standard_repo/test/ignore_me", NULL, 0775));
+	cl_git_pass(git_futils_mkdir_r(
+		"empty_standard_repo/test/ignore_me", NULL, 0775));
 	cl_git_mkfile(
 		"empty_standard_repo/test/ignore_me/file", "I'm going to be ignored!");
+	cl_git_mkfile(
+		"empty_standard_repo/test/ignore_me/file2", "Me, too!");
 
 	memset(&st, 0, sizeof(st));
 	cl_git_pass(git_status_foreach(g_repo, cb_status__single, &st));
@@ -223,6 +223,61 @@ void test_status_ignore__subdirectories(void)
 	cl_git_pass(
 		git_status_should_ignore(&ignored, g_repo, "test/ignore_me/file"));
 	cl_assert(ignored);
+}
+
+void test_status_ignore__subdirectories_recursion(void)
+{
+	/* Let's try again with recursing into ignored dirs turned on */
+	git_status_options opts = GIT_STATUS_OPTIONS_INIT;
+	status_entry_counts counts;
+	static const char *paths[] = {
+		".gitignore",
+		"ignore_me",
+		"test/ignore_me/and_me/file",
+		"test/ignore_me/file",
+		"test/ignore_me/file2",
+	};
+	static const unsigned int statuses[] = {
+		GIT_STATUS_WT_NEW,
+		GIT_STATUS_IGNORED,
+		GIT_STATUS_IGNORED,
+		GIT_STATUS_IGNORED,
+		GIT_STATUS_IGNORED,
+	};
+
+	opts.flags = GIT_STATUS_OPT_INCLUDE_IGNORED |
+		GIT_STATUS_OPT_RECURSE_IGNORED_DIRS |
+		GIT_STATUS_OPT_INCLUDE_UNTRACKED |
+		GIT_STATUS_OPT_RECURSE_UNTRACKED_DIRS;
+
+	g_repo = cl_git_sandbox_init("empty_standard_repo");
+
+	cl_git_rewritefile("empty_standard_repo/.gitignore", "ignore_me\n");
+
+	cl_git_mkfile(
+		"empty_standard_repo/ignore_me", "I'm going to be ignored!");
+	cl_git_pass(git_futils_mkdir_r(
+		"empty_standard_repo/test/ignore_me", NULL, 0775));
+	cl_git_mkfile(
+		"empty_standard_repo/test/ignore_me/file", "I'm going to be ignored!");
+	cl_git_mkfile(
+		"empty_standard_repo/test/ignore_me/file2", "Me, too!");
+	cl_git_pass(git_futils_mkdir_r(
+		"empty_standard_repo/test/ignore_me/and_me", NULL, 0775));
+	cl_git_mkfile(
+		"empty_standard_repo/test/ignore_me/and_me/file", "Deeply ignored");
+
+	memset(&counts, 0x0, sizeof(status_entry_counts));
+	counts.expected_entry_count = 5;
+	counts.expected_paths = paths;
+	counts.expected_statuses = statuses;
+
+	cl_git_pass(git_status_foreach_ext(
+		g_repo, &opts, cb_status__normal, &counts));
+
+	cl_assert_equal_i(counts.expected_entry_count, counts.entry_count);
+	cl_assert_equal_i(0, counts.wrong_status_flags_count);
+	cl_assert_equal_i(0, counts.wrong_sorted_path);
 }
 
 void test_status_ignore__adding_internal_ignores(void)
