@@ -33,7 +33,7 @@ script:
 
 # Run Tests
 after_success:
- - valgrind --leak-check=full --show-reachable=yes --suppressions=../libgit2_clar.supp ./libgit2_clar -ionline
+ - valgrind --leak-check=full --show-reachable=yes --suppressions=../libgit2_clar.supp ./libgit2_clar
 
 # Only watch the development branch
 branches:
