@@ -23,6 +23,7 @@
 #include "blob.h"
 #include "diff.h"
 #include "pathspec.h"
+#include "buf_text.h"
 
 /* See docs/checkout-internals.md for more information */
 

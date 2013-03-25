@@ -50,35 +50,44 @@ void reset_index_to_treeish(git_object *treeish)
 	git_index_free(index);
 }
 
-static void test_file_contents_internal(
-	const char *path, const char *expectedcontents, bool strip_cr)
+static void check_file_contents_internal(
+	const char *path,
+	const char *expected_content,
+	bool strip_cr,
+	const char *file,
+	int line,
+	const char *msg)
 {
 	int fd;
 	char data[1024] = {0};
 	git_buf buf = GIT_BUF_INIT;
-	size_t expectedlen = strlen(expectedcontents);
+	size_t expected_len = expected_content ? strlen(expected_content) : 0;
 
 	fd = p_open(path, O_RDONLY);
 	cl_assert(fd >= 0);
 
 	buf.ptr = data;
-	buf.size = p_read(fd, buf.ptr, 1024);
+	buf.size = p_read(fd, buf.ptr, sizeof(data));
 
 	cl_git_pass(p_close(fd));
 
 	if (strip_cr)
 		strip_cr_from_buf(&buf);
 
-	cl_assert_equal_i((int)expectedlen, (int)buf.size);
-	cl_assert_equal_s(expectedcontents, buf.ptr);
+	clar__assert_equal_i((int)expected_len, (int)buf.size, file, line, "strlen(expected_content) != strlen(actual_content)", 1);
+	clar__assert_equal_s(expected_content, buf.ptr, file, line, msg, 1);
 }
 
-void test_file_contents(const char *path, const char *expected)
+void check_file_contents_at_line(
+	const char *path, const char *expected,
+	const char *file, int line, const char *msg)
 {
-	test_file_contents_internal(path, expected, false);
+	check_file_contents_internal(path, expected, false, file, line, msg);
 }
 
-void test_file_contents_nocr(const char *path, const char *expected)
+void check_file_contents_nocr_at_line(
+	const char *path, const char *expected,
+	const char *file, int line, const char *msg)
 {
-	test_file_contents_internal(path, expected, true);
+	check_file_contents_internal(path, expected, true, file, line, msg);
 }

@@ -9,9 +9,10 @@
 #include "fileops.h"
 #include "hash.h"
 #include "filter.h"
+#include "buf_text.h"
 #include "repository.h"
-
 #include "git2/attr.h"
+#include "git2/blob.h"
 
 struct crlf_attrs {
 	int crlf_action;
@@ -21,6 +22,8 @@ struct crlf_attrs {
 struct crlf_filter {
 	git_filter f;
 	struct crlf_attrs attrs;
+	git_repository *repo;
+	char path[GIT_FLEX_ARRAY];
 };
 
 static int check_crlf(const char *value)
@@ -103,36 +106,46 @@ static int crlf_load_attributes(struct crlf_attrs *ca, git_repository *repo, con
 	return -1;
 }
 
-static int drop_crlf(git_buf *dest, const git_buf *source)
+static int has_cr_in_index(git_filter *self)
 {
-	const char *scan = source->ptr, *next;
-	const char *scan_end = git_buf_cstr(source) + git_buf_len(source);
+	struct crlf_filter *filter = (struct crlf_filter *)self;
+	git_index *index;
+	const git_index_entry *entry;
+	git_blob *blob;
+	const void *blobcontent;
+	git_off_t blobsize;
+	bool found_cr;
 
-	/* Main scan loop.  Find the next carriage return and copy the
-	 * whole chunk up to that point to the destination buffer.
-	 */
-	while ((next = memchr(scan, '\r', scan_end - scan)) != NULL) {
-		/* copy input up to \r */
-		if (next > scan)
-			git_buf_put(dest, scan, next - scan);
-
-		/* Do not drop \r unless it is followed by \n */
-		if (*(next + 1) != '\n')
-			git_buf_putc(dest, '\r');
-
-		scan = next + 1;
+	if (git_repository_index__weakptr(&index, filter->repo) < 0) {
+		giterr_clear();
+		return false;
 	}
 
-	/* If there was no \r, then tell the library to skip this filter */
-	if (scan == source->ptr)
-		return -1;
+	if (!(entry = git_index_get_bypath(index, filter->path, 0)) &&
+		!(entry = git_index_get_bypath(index, filter->path, 1)))
+		return false;
 
-	/* Copy remaining input into dest */
-	git_buf_put(dest, scan, scan_end - scan);
-	return 0;
+	if (!S_ISREG(entry->mode)) /* don't crlf filter non-blobs */
+		return true;
+
+	if (git_blob_lookup(&blob, filter->repo, &entry->oid) < 0)
+		return false;
+
+	blobcontent = git_blob_rawcontent(blob);
+	blobsize    = git_blob_rawsize(blob);
+	if (!git__is_sizet(blobsize))
+		blobsize = (size_t)-1;
+
+	found_cr = (blobcontent != NULL &&
+		blobsize > 0 &&
+		memchr(blobcontent, '\r', (size_t)blobsize) != NULL);
+
+	git_blob_free(blob);
+	return found_cr;
 }
 
-static int crlf_apply_to_odb(git_filter *self, git_buf *dest, const git_buf *source)
+static int crlf_apply_to_odb(
+	git_filter *self, git_buf *dest, const git_buf *source)
 {
 	struct crlf_filter *filter = (struct crlf_filter *)self;
 
@@ -162,40 +175,21 @@ static int crlf_apply_to_odb(git_filter *self, git_buf *dest, const git_buf *sou
 		if (stats.cr != stats.crlf)
 			return -1;
 
-#if 0
-		if (crlf_action == CRLF_GUESS) {
+		if (filter->attrs.crlf_action == GIT_CRLF_GUESS) {
 			/*
 			 * If the file in the index has any CR in it, do not convert.
 			 * This is the new safer autocrlf handling.
 			 */
-			if (has_cr_in_index(path))
-				return 0;
+			if (has_cr_in_index(self))
+				return -1;
 		}
-#endif
 
 		if (!stats.cr)
 			return -1;
 	}
 
 	/* Actually drop the carriage returns */
-	return drop_crlf(dest, source);
-}
-
-static int convert_line_endings(git_buf *dest, const git_buf *source, const char *ending)
-{
-	const char *scan = git_buf_cstr(source),
-				  *next,
-				  *scan_end = git_buf_cstr(source) + git_buf_len(source);
-
-	while ((next = memchr(scan, '\n', scan_end - scan)) != NULL) {
-		if (next > scan)
-			git_buf_put(dest, scan, next-scan);
-		git_buf_puts(dest, ending);
-		scan = next + 1;
-	}
-
-	git_buf_put(dest, scan, scan_end - scan);
-	return 0;
+	return git_buf_text_crlf_to_lf(dest, source);
 }
 
 static const char *line_ending(struct crlf_filter *filter)
@@ -238,26 +232,28 @@ line_ending_error:
 	return NULL;
 }
 
-static int crlf_apply_to_workdir(git_filter *self, git_buf *dest, const git_buf *source)
+static int crlf_apply_to_workdir(
+	git_filter *self, git_buf *dest, const git_buf *source)
 {
 	struct crlf_filter *filter = (struct crlf_filter *)self;
 	const char *workdir_ending = NULL;
 
-	assert (self && dest && source);
+	assert(self && dest && source);
 
 	/* Empty file? Nothing to do. */
 	if (git_buf_len(source) == 0)
-		return 0;
+		return -1;
 
 	/* Determine proper line ending */
 	workdir_ending = line_ending(filter);
-	if (!workdir_ending) return -1;
+	if (!workdir_ending)
+		return -1;
+	if (!strcmp("\n", workdir_ending)) /* do nothing for \n ending */
+		return -1;
 
-	/* If the line ending is '\n', just copy the input */
-	if (!strcmp(workdir_ending, "\n"))
-		return git_buf_puts(dest, git_buf_cstr(source));
-
-	return convert_line_endings(dest, source, workdir_ending);
+	/* for now, only lf->crlf conversion is supported here */
+	assert(!strcmp("\r\n", workdir_ending));
+	return git_buf_text_lf_to_crlf(dest, source);
 }
 
 static int find_and_add_filter(
@@ -266,6 +262,7 @@ static int find_and_add_filter(
 {
 	struct crlf_attrs ca;
 	struct crlf_filter *filter;
+	size_t pathlen;
 	int error;
 
 	/* Load gitattributes for the path */
@@ -293,22 +290,27 @@ static int find_and_add_filter(
 
 	/* If we're good, we create a new filter object and push it
 	 * into the filters array */
-	filter = git__malloc(sizeof(struct crlf_filter));
+	pathlen = strlen(path);
+	filter = git__malloc(sizeof(struct crlf_filter) + pathlen + 1);
 	GITERR_CHECK_ALLOC(filter);
 
 	filter->f.apply = apply;
 	filter->f.do_free = NULL;
 	memcpy(&filter->attrs, &ca, sizeof(struct crlf_attrs));
+	filter->repo = repo;
+	memcpy(filter->path, path, pathlen + 1);
 
 	return git_vector_insert(filters, filter);
 }
 
-int git_filter_add__crlf_to_odb(git_vector *filters, git_repository *repo, const char *path)
+int git_filter_add__crlf_to_odb(
+	git_vector *filters, git_repository *repo, const char *path)
 {
 	return find_and_add_filter(filters, repo, path, &crlf_apply_to_odb);
 }
 
-int git_filter_add__crlf_to_workdir(git_vector *filters, git_repository *repo, const char *path)
+int git_filter_add__crlf_to_workdir(
+	git_vector *filters, git_repository *repo, const char *path)
 {
 	return find_and_add_filter(filters, repo, path, &crlf_apply_to_workdir);
 }
