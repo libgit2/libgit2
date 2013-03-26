@@ -394,15 +394,20 @@ static int similarity_calc(
 		git_buf_free(&path);
 	} else { /* compute hashsig from blob buffer */
 		git_blob *blob = NULL;
+		git_off_t blobsize;
 
 		/* TODO: add max size threshold a la diff? */
 
 		if ((error = git_blob_lookup(&blob, diff->repo, &file->oid)) < 0)
 			return error;
 
+		blobsize = git_blob_rawsize(blob);
+		if (!git__is_sizet(blobsize)) /* ? what to do ? */
+			blobsize = (size_t)-1;
+
 		error = opts->metric->buffer_signature(
 			&cache[file_idx], file, git_blob_rawcontent(blob),
-			git_blob_rawsize(blob), opts->metric->payload);
+			(size_t)blobsize, opts->metric->payload);
 
 		git_blob_free(blob);
 	}
