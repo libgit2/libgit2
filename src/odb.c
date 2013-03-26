@@ -32,6 +32,8 @@ typedef struct
 	int is_alternate;
 } backend_internal;
 
+size_t git_odb__cache_size = GIT_DEFAULT_CACHE_SIZE;
+
 static int load_alternates(git_odb *odb, const char *objects_dir, int alternate_depth);
 
 int git_odb__format_object_header(char *hdr, size_t n, size_t obj_len, git_otype obj_type)
@@ -351,7 +353,7 @@ int git_odb_new(git_odb **out)
 	git_odb *db = git__calloc(1, sizeof(*db));
 	GITERR_CHECK_ALLOC(db);
 
-	if (git_cache_init(&db->cache, GIT_DEFAULT_CACHE_SIZE, &free_odb_object) < 0 ||
+	if (git_cache_init(&db->cache, git_odb__cache_size, &free_odb_object) < 0 ||
 		git_vector_init(&db->backends, 4, backend_sort_cmp) < 0)
 	{
 		git__free(db);
