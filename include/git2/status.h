@@ -133,7 +133,8 @@ typedef enum {
  *
  * Calling `git_status_foreach()` is like calling the extended version
  * with: GIT_STATUS_OPT_INCLUDE_IGNORED, GIT_STATUS_OPT_INCLUDE_UNTRACKED,
- * and GIT_STATUS_OPT_RECURSE_UNTRACKED_DIRS.
+ * and GIT_STATUS_OPT_RECURSE_UNTRACKED_DIRS.  Those options are bundled
+ * together as `GIT_STATUS_OPT_DEFAULTS` if you want them as a baseline.
  */
 typedef enum {
 	GIT_STATUS_OPT_INCLUDE_UNTRACKED      = (1u << 0),
@@ -144,6 +145,11 @@ typedef enum {
 	GIT_STATUS_OPT_DISABLE_PATHSPEC_MATCH = (1u << 5),
 	GIT_STATUS_OPT_RECURSE_IGNORED_DIRS   = (1u << 6),
 } git_status_opt_t;
+
+#define GIT_STATUS_OPT_DEFAULTS \
+	(GIT_STATUS_OPT_INCLUDE_IGNORED | \
+	GIT_STATUS_OPT_INCLUDE_UNTRACKED | \
+	GIT_STATUS_OPT_RECURSE_UNTRACKED_DIRS)
 
 /**
  * Options to control how `git_status_foreach_ext()` will issue callbacks.

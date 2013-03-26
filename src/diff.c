@@ -73,6 +73,10 @@ static int diff_delta__from_one(
 		DIFF_FLAG_ISNT_SET(diff, GIT_DIFF_INCLUDE_UNTRACKED))
 		return 0;
 
+	if (entry->mode == GIT_FILEMODE_COMMIT &&
+		DIFF_FLAG_IS_SET(diff, GIT_DIFF_IGNORE_SUBMODULES))
+		return 0;
+
 	if (!git_pathspec_match_path(
 			&diff->pathspec, entry->path,
 			DIFF_FLAG_IS_SET(diff, GIT_DIFF_DISABLE_PATHSPEC_MATCH),
@@ -129,6 +133,11 @@ static int diff_delta__from_two(
 
 	if (status == GIT_DELTA_UNMODIFIED &&
 		DIFF_FLAG_ISNT_SET(diff, GIT_DIFF_INCLUDE_UNMODIFIED))
+		return 0;
+
+	if (old_entry->mode == GIT_FILEMODE_COMMIT &&
+		new_entry->mode == GIT_FILEMODE_COMMIT &&
+		DIFF_FLAG_IS_SET(diff, GIT_DIFF_IGNORE_SUBMODULES))
 		return 0;
 
 	if (DIFF_FLAG_IS_SET(diff, GIT_DIFF_REVERSE)) {
@@ -547,6 +556,11 @@ static int maybe_modified(
 			}
 		}
 	}
+
+	/* if mode is GITLINK and submodules are ignored, then skip */
+	else if (S_ISGITLINK(nmode) &&
+			 DIFF_FLAG_IS_SET(diff, GIT_DIFF_IGNORE_SUBMODULES))
+		status = GIT_DELTA_UNMODIFIED;
 
 	/* if we got here and decided that the files are modified, but we
 	 * haven't calculated the OID of the new item, then calculate it now

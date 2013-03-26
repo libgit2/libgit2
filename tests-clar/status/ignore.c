@@ -245,10 +245,7 @@ void test_status_ignore__subdirectories_recursion(void)
 		GIT_STATUS_IGNORED,
 	};
 
-	opts.flags = GIT_STATUS_OPT_INCLUDE_IGNORED |
-		GIT_STATUS_OPT_RECURSE_IGNORED_DIRS |
-		GIT_STATUS_OPT_INCLUDE_UNTRACKED |
-		GIT_STATUS_OPT_RECURSE_UNTRACKED_DIRS;
+	opts.flags = GIT_STATUS_OPT_DEFAULTS | GIT_STATUS_OPT_RECURSE_IGNORED_DIRS;
 
 	g_repo = cl_git_sandbox_init("empty_standard_repo");
 
