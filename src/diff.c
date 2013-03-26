@@ -12,6 +12,9 @@
 #include "filter.h"
 #include "pathspec.h"
 
+#define DIFF_FLAG_IS_SET(DIFF,FLAG) (((DIFF)->opts.flags & (FLAG)) != 0)
+#define DIFF_FLAG_ISNT_SET(DIFF,FLAG) (((DIFF)->opts.flags & (FLAG)) == 0)
+
 static git_diff_delta *diff_delta__alloc(
 	git_diff_list *diff,
 	git_delta_t status,
@@ -29,7 +32,7 @@ static git_diff_delta *diff_delta__alloc(
 
 	delta->new_file.path = delta->old_file.path;
 
-	if (diff->opts.flags & GIT_DIFF_REVERSE) {
+	if (DIFF_FLAG_IS_SET(diff, GIT_DIFF_REVERSE)) {
 		switch (status) {
 		case GIT_DELTA_ADDED:   status = GIT_DELTA_DELETED; break;
 		case GIT_DELTA_DELETED: status = GIT_DELTA_ADDED; break;
@@ -63,17 +66,22 @@ static int diff_delta__from_one(
 	int notify_res;
 
 	if (status == GIT_DELTA_IGNORED &&
-		(diff->opts.flags & GIT_DIFF_INCLUDE_IGNORED) == 0)
+		DIFF_FLAG_ISNT_SET(diff, GIT_DIFF_INCLUDE_IGNORED))
 		return 0;
 
 	if (status == GIT_DELTA_UNTRACKED &&
-		(diff->opts.flags & GIT_DIFF_INCLUDE_UNTRACKED) == 0)
+		DIFF_FLAG_ISNT_SET(diff, GIT_DIFF_INCLUDE_UNTRACKED))
+		return 0;
+
+	if (entry->mode == GIT_FILEMODE_COMMIT &&
+		DIFF_FLAG_IS_SET(diff, GIT_DIFF_IGNORE_SUBMODULES))
 		return 0;
 
 	if (!git_pathspec_match_path(
 			&diff->pathspec, entry->path,
-			(diff->opts.flags & GIT_DIFF_DISABLE_PATHSPEC_MATCH) != 0,
-			(diff->opts.flags & GIT_DIFF_DELTAS_ARE_ICASE) != 0, &matched_pathspec))
+			DIFF_FLAG_IS_SET(diff, GIT_DIFF_DISABLE_PATHSPEC_MATCH),
+			DIFF_FLAG_IS_SET(diff, GIT_DIFF_DELTAS_ARE_ICASE),
+			&matched_pathspec))
 		return 0;
 
 	delta = diff_delta__alloc(diff, status, entry->path);
@@ -124,10 +132,15 @@ static int diff_delta__from_two(
 	int notify_res;
 
 	if (status == GIT_DELTA_UNMODIFIED &&
-		(diff->opts.flags & GIT_DIFF_INCLUDE_UNMODIFIED) == 0)
+		DIFF_FLAG_ISNT_SET(diff, GIT_DIFF_INCLUDE_UNMODIFIED))
 		return 0;
 
-	if ((diff->opts.flags & GIT_DIFF_REVERSE) != 0) {
+	if (old_entry->mode == GIT_FILEMODE_COMMIT &&
+		new_entry->mode == GIT_FILEMODE_COMMIT &&
+		DIFF_FLAG_IS_SET(diff, GIT_DIFF_IGNORE_SUBMODULES))
+		return 0;
+
+	if (DIFF_FLAG_IS_SET(diff, GIT_DIFF_REVERSE)) {
 		uint32_t temp_mode = old_mode;
 		const git_index_entry *temp_entry = old_entry;
 		old_entry = new_entry;
@@ -149,7 +162,7 @@ static int diff_delta__from_two(
 	delta->new_file.mode = new_mode;
 
 	if (new_oid) {
-		if ((diff->opts.flags & GIT_DIFF_REVERSE) != 0)
+		if (DIFF_FLAG_IS_SET(diff, GIT_DIFF_REVERSE))
 			git_oid_cpy(&delta->old_file.oid, new_oid);
 		else
 			git_oid_cpy(&delta->new_file.oid, new_oid);
@@ -316,14 +329,14 @@ static git_diff_list *git_diff_list_alloc(
 	if (!diff->opts.old_prefix || !diff->opts.new_prefix)
 		goto fail;
 
-	if (diff->opts.flags & GIT_DIFF_REVERSE) {
+	if (DIFF_FLAG_IS_SET(diff, GIT_DIFF_REVERSE)) {
 		const char *swap = diff->opts.old_prefix;
 		diff->opts.old_prefix = diff->opts.new_prefix;
 		diff->opts.new_prefix = swap;
 	}
 
 	/* INCLUDE_TYPECHANGE_TREES implies INCLUDE_TYPECHANGE */
-	if (diff->opts.flags & GIT_DIFF_INCLUDE_TYPECHANGE_TREES)
+	if (DIFF_FLAG_IS_SET(diff, GIT_DIFF_INCLUDE_TYPECHANGE_TREES))
 		diff->opts.flags |= GIT_DIFF_INCLUDE_TYPECHANGE;
 
 	return diff;
@@ -452,8 +465,9 @@ static int maybe_modified(
 
 	if (!git_pathspec_match_path(
 			&diff->pathspec, oitem->path,
-			(diff->opts.flags & GIT_DIFF_DISABLE_PATHSPEC_MATCH) != 0,
-			(diff->opts.flags & GIT_DIFF_DELTAS_ARE_ICASE) != 0, &matched_pathspec))
+			DIFF_FLAG_IS_SET(diff, GIT_DIFF_DISABLE_PATHSPEC_MATCH),
+			DIFF_FLAG_IS_SET(diff, GIT_DIFF_DELTAS_ARE_ICASE),
+			&matched_pathspec))
 		return 0;
 
 	/* on platforms with no symlinks, preserve mode of existing symlinks */
@@ -478,7 +492,7 @@ static int maybe_modified(
 
 	/* if basic type of file changed, then split into delete and add */
 	else if (GIT_MODE_TYPE(omode) != GIT_MODE_TYPE(nmode)) {
-		if ((diff->opts.flags & GIT_DIFF_INCLUDE_TYPECHANGE) != 0)
+		if (DIFF_FLAG_IS_SET(diff, GIT_DIFF_INCLUDE_TYPECHANGE))
 			status = GIT_DELTA_TYPECHANGE;
 		else {
 			if (diff_delta__from_one(diff, GIT_DELTA_DELETED, oitem) < 0 ||
@@ -515,7 +529,7 @@ static int maybe_modified(
 			int err;
 			git_submodule *sub;
 
-			if ((diff->opts.flags & GIT_DIFF_IGNORE_SUBMODULES) != 0)
+			if (DIFF_FLAG_IS_SET(diff, GIT_DIFF_IGNORE_SUBMODULES))
 				status = GIT_DELTA_UNMODIFIED;
 			else if ((err = git_submodule_lookup(&sub, diff->repo, nitem->path)) < 0) {
 				if (err == GIT_EEXISTS)
@@ -543,6 +557,11 @@ static int maybe_modified(
 		}
 	}
 
+	/* if mode is GITLINK and submodules are ignored, then skip */
+	else if (S_ISGITLINK(nmode) &&
+			 DIFF_FLAG_IS_SET(diff, GIT_DIFF_IGNORE_SUBMODULES))
+		status = GIT_DELTA_UNMODIFIED;
+
 	/* if we got here and decided that the files are modified, but we
 	 * haven't calculated the OID of the new item, then calculate it now
 	 */
@@ -553,7 +572,13 @@ static int maybe_modified(
 				return -1;
 			use_noid = &noid;
 		}
-		if (omode == nmode && git_oid_equal(&oitem->oid, use_noid))
+
+		/* if oid matches, then mark unmodified (except submodules, where
+		 * the filesystem content may be modified even if the oid still
+		 * matches between the index and the workdir HEAD)
+		 */
+		if (omode == nmode && !S_ISGITLINK(omode) &&
+			git_oid_equal(&oitem->oid, use_noid))
 			status = GIT_DELTA_UNMODIFIED;
 	}
 
@@ -626,7 +651,7 @@ int git_diff__from_iterators(
 	if (!diff || diff_list_init_from_iterators(diff, old_iter, new_iter) < 0)
 		goto fail;
 
-	if (diff->opts.flags & GIT_DIFF_DELTAS_ARE_ICASE) {
+	if (DIFF_FLAG_IS_SET(diff, GIT_DIFF_DELTAS_ARE_ICASE)) {
 		if (git_iterator_set_ignore_case(old_iter, true) < 0 ||
 			git_iterator_set_ignore_case(new_iter, true) < 0)
 			goto fail;
@@ -648,7 +673,7 @@ int git_diff__from_iterators(
 			/* if we are generating TYPECHANGE records then check for that
 			 * instead of just generating a DELETE record
 			 */
-			if ((diff->opts.flags & GIT_DIFF_INCLUDE_TYPECHANGE_TREES) != 0 &&
+			if (DIFF_FLAG_IS_SET(diff, GIT_DIFF_INCLUDE_TYPECHANGE_TREES) &&
 				entry_is_prefixed(diff, nitem, oitem))
 			{
 				/* this entry has become a tree! convert to TYPECHANGE */
@@ -663,7 +688,7 @@ int git_diff__from_iterators(
 				 * Unless RECURSE_UNTRACKED_DIRS is set, skip over them...
 				 */
 				if (S_ISDIR(nitem->mode) &&
-					!(diff->opts.flags & GIT_DIFF_RECURSE_UNTRACKED_DIRS))
+					DIFF_FLAG_ISNT_SET(diff, GIT_DIFF_RECURSE_UNTRACKED_DIRS))
 				{
 					if (git_iterator_advance(&nitem, new_iter) < 0)
 						goto fail;
@@ -691,27 +716,35 @@ int git_diff__from_iterators(
 				 * it or if the user requested the contents of untracked
 				 * directories and it is not under an ignored directory.
 				 */
-				bool recurse_untracked =
+				bool recurse_into_dir =
 					(delta_type == GIT_DELTA_UNTRACKED &&
-					 (diff->opts.flags & GIT_DIFF_RECURSE_UNTRACKED_DIRS) != 0);
+					 DIFF_FLAG_IS_SET(diff, GIT_DIFF_RECURSE_UNTRACKED_DIRS)) ||
+					(delta_type == GIT_DELTA_IGNORED &&
+					 DIFF_FLAG_IS_SET(diff, GIT_DIFF_RECURSE_IGNORED_DIRS));
 
 				/* do not advance into directories that contain a .git file */
-				if (!contains_oitem && recurse_untracked) {
+				if (!contains_oitem && recurse_into_dir) {
 					git_buf *full = NULL;
 					if (git_iterator_current_workdir_path(&full, new_iter) < 0)
 						goto fail;
 					if (git_path_contains_dir(full, DOT_GIT))
-						recurse_untracked = false;
+						recurse_into_dir = false;
 				}
 
-				if (contains_oitem || recurse_untracked) {
-					/* if this directory is ignored, remember it as the
-					 * "ignore_prefix" for processing contained items
-					 */
-					if (delta_type == GIT_DELTA_UNTRACKED &&
-						git_iterator_current_is_ignored(new_iter))
-						git_buf_sets(&ignore_prefix, nitem->path);
+				/* if directory is ignored, remember ignore_prefix */
+				if ((contains_oitem || recurse_into_dir) &&
+					delta_type == GIT_DELTA_UNTRACKED &&
+					git_iterator_current_is_ignored(new_iter))
+				{
+					git_buf_sets(&ignore_prefix, nitem->path);
+					delta_type = GIT_DELTA_IGNORED;
 
+					/* skip recursion if we've just learned this is ignored */
+					if (DIFF_FLAG_ISNT_SET(diff, GIT_DIFF_RECURSE_IGNORED_DIRS))
+						recurse_into_dir = false;
+				}
+
+				if (contains_oitem || recurse_into_dir) {
 					/* advance into directory */
 					error = git_iterator_advance_into(&nitem, new_iter);
 
@@ -744,7 +777,8 @@ int git_diff__from_iterators(
 			 * checked before container directory exclusions are used to
 			 * skip the file.
 			 */
-			else if (delta_type == GIT_DELTA_IGNORED) {
+			else if (delta_type == GIT_DELTA_IGNORED &&
+					 DIFF_FLAG_ISNT_SET(diff, GIT_DIFF_RECURSE_IGNORED_DIRS)) {
 				if (git_iterator_advance(&nitem, new_iter) < 0)
 					goto fail;
 				continue; /* ignored parent directory, so skip completely */
@@ -763,7 +797,7 @@ int git_diff__from_iterators(
 			 * instead of just generating an ADDED/UNTRACKED record
 			 */
 			if (delta_type != GIT_DELTA_IGNORED &&
-				(diff->opts.flags & GIT_DIFF_INCLUDE_TYPECHANGE_TREES) != 0 &&
+				DIFF_FLAG_IS_SET(diff, GIT_DIFF_INCLUDE_TYPECHANGE_TREES) &&
 				contains_oitem)
 			{
 				/* this entry was prefixed with a tree - make TYPECHANGE */

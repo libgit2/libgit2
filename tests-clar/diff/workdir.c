@@ -953,16 +953,31 @@ void test_diff_workdir__submodules(void)
 	cl_git_pass(git_diff_foreach(
 		diff, diff_file_cb, diff_hunk_cb, diff_line_cb, &exp));
 
-	/* the following differs from "git diff 873585" by two "untracked" file
-	 * because the diff list includes the "not" and "not-submodule" dirs which
-	 * are not displayed in the text diff.
+	/* so "git diff 873585" returns:
+	 *  M   .gitmodules
+	 *  A   just_a_dir/contents
+	 *  A   just_a_file
+	 *  A   sm_added_and_uncommited
+	 *  A   sm_changed_file
+	 *  A   sm_changed_head
+	 *  A   sm_changed_index
+	 *  A   sm_changed_untracked_file
+	 *  M   sm_missing_commits
+	 *  A   sm_unchanged
+	 * which is a little deceptive because of the difference between the
+	 * "git diff <treeish>" results from "git_diff_tree_to_workdir".  The
+	 * only significant difference is that those Added items will show up
+	 * as Untracked items in the pure libgit2 diff.
+	 *
+	 * Then add in the two extra untracked items "not" and "not-submodule"
+	 * to get the 12 files reported here.
 	 */
 
-	cl_assert_equal_i(11, exp.files);
+	cl_assert_equal_i(12, exp.files);
 
 	cl_assert_equal_i(0, exp.file_status[GIT_DELTA_ADDED]);
 	cl_assert_equal_i(0, exp.file_status[GIT_DELTA_DELETED]);
-	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_MODIFIED]);
+	cl_assert_equal_i(2, exp.file_status[GIT_DELTA_MODIFIED]);
 	cl_assert_equal_i(0, exp.file_status[GIT_DELTA_IGNORED]);
 	cl_assert_equal_i(10, exp.file_status[GIT_DELTA_UNTRACKED]);
 

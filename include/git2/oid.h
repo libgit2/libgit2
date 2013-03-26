@@ -51,7 +51,7 @@ GIT_EXTERN(int) git_oid_fromstr(git_oid *out, const char *str);
  *
  * @param out oid structure the result is written into.
  * @param str input hex string; must be at least 4 characters
- *      long and null-terminated. 
+ *      long and null-terminated.
  * @return 0 or an error code
  */
 GIT_EXTERN(int) git_oid_fromstrp(git_oid *out, const char *str);

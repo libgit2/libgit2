@@ -30,4 +30,8 @@ typedef struct {
 
 extern int cb_status__single(const char *p, unsigned int s, void *payload);
 
+/* cb_status__print takes optional payload of "int *" */
+
+extern int cb_status__print(const char *p, unsigned int s, void *payload);
+
 #endif

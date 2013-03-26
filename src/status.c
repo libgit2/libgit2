@@ -80,22 +80,37 @@ static unsigned int workdir_delta2status(git_delta_t workdir_status)
 typedef struct {
 	git_status_cb cb;
 	void *payload;
+	const git_status_options *opts;
 } status_user_callback;
 
 static int status_invoke_cb(
-	git_diff_delta *i2h, git_diff_delta *w2i, void *payload)
+	git_diff_delta *h2i, git_diff_delta *i2w, void *payload)
 {
 	status_user_callback *usercb = payload;
 	const char *path = NULL;
 	unsigned int status = 0;
 
-	if (w2i) {
-		path = w2i->old_file.path;
-		status |= workdir_delta2status(w2i->status);
+	if (i2w) {
+		path = i2w->old_file.path;
+		status |= workdir_delta2status(i2w->status);
 	}
-	if (i2h) {
-		path = i2h->old_file.path;
-		status |= index_delta2status(i2h->status);
+	if (h2i) {
+		path = h2i->old_file.path;
+		status |= index_delta2status(h2i->status);
+	}
+
+	/* if excluding submodules and this is a submodule everywhere */
+	if (usercb->opts &&
+		(usercb->opts->flags & GIT_STATUS_OPT_EXCLUDE_SUBMODULES) != 0)
+	{
+		bool in_tree  = (h2i && h2i->status != GIT_DELTA_ADDED);
+		bool in_index = (h2i && h2i->status != GIT_DELTA_DELETED);
+		bool in_wd    = (i2w && i2w->status != GIT_DELTA_DELETED);
+
+		if ((!in_tree || h2i->old_file.mode == GIT_FILEMODE_COMMIT) &&
+			(!in_index || h2i->new_file.mode == GIT_FILEMODE_COMMIT) &&
+			(!in_wd || i2w->new_file.mode == GIT_FILEMODE_COMMIT))
+			return 0;
 	}
 
 	return usercb->cb(path, status, usercb->payload);
@@ -109,7 +124,7 @@ int git_status_foreach_ext(
 {
 	int err = 0;
 	git_diff_options diffopt = GIT_DIFF_OPTIONS_INIT;
-	git_diff_list *idx2head = NULL, *wd2idx = NULL;
+	git_diff_list *head2idx = NULL, *idx2wd = NULL;
 	git_tree *head = NULL;
 	git_status_show_t show =
 		opts ? opts->show : GIT_STATUS_SHOW_INDEX_AND_WORKDIR;
@@ -142,34 +157,42 @@ int git_status_foreach_ext(
 		diffopt.flags = diffopt.flags | GIT_DIFF_RECURSE_UNTRACKED_DIRS;
 	if ((opts->flags & GIT_STATUS_OPT_DISABLE_PATHSPEC_MATCH) != 0)
 		diffopt.flags = diffopt.flags | GIT_DIFF_DISABLE_PATHSPEC_MATCH;
-	/* TODO: support EXCLUDE_SUBMODULES flag */
+	if ((opts->flags & GIT_STATUS_OPT_RECURSE_IGNORED_DIRS) != 0)
+		diffopt.flags = diffopt.flags | GIT_DIFF_RECURSE_IGNORED_DIRS;
+	if ((opts->flags & GIT_STATUS_OPT_EXCLUDE_SUBMODULES) != 0)
+		diffopt.flags = diffopt.flags | GIT_DIFF_IGNORE_SUBMODULES;
 
-	if (show != GIT_STATUS_SHOW_WORKDIR_ONLY &&
-		(err = git_diff_tree_to_index(&idx2head, repo, head, NULL, &diffopt)) < 0)
-		goto cleanup;
+	if (show != GIT_STATUS_SHOW_WORKDIR_ONLY) {
+		err = git_diff_tree_to_index(&head2idx, repo, head, NULL, &diffopt);
+		if (err < 0)
+			goto cleanup;
+	}
 
-	if (show != GIT_STATUS_SHOW_INDEX_ONLY &&
-		(err = git_diff_index_to_workdir(&wd2idx, repo, NULL, &diffopt)) < 0)
-		goto cleanup;
+	if (show != GIT_STATUS_SHOW_INDEX_ONLY) {
+		err = git_diff_index_to_workdir(&idx2wd, repo, NULL, &diffopt);
+		if (err < 0)
+			goto cleanup;
+	}
 
 	usercb.cb = cb;
 	usercb.payload = payload;
+	usercb.opts = opts;
 
 	if (show == GIT_STATUS_SHOW_INDEX_THEN_WORKDIR) {
 		if ((err = git_diff__paired_foreach(
-				 idx2head, NULL, status_invoke_cb, &usercb)) < 0)
+				 head2idx, NULL, status_invoke_cb, &usercb)) < 0)
 			goto cleanup;
 
-		git_diff_list_free(idx2head);
-		idx2head = NULL;
+		git_diff_list_free(head2idx);
+		head2idx = NULL;
 	}
 
-	err = git_diff__paired_foreach(idx2head, wd2idx, status_invoke_cb, &usercb);
+	err = git_diff__paired_foreach(head2idx, idx2wd, status_invoke_cb, &usercb);
 
 cleanup:
 	git_tree_free(head);
-	git_diff_list_free(idx2head);
-	git_diff_list_free(wd2idx);
+	git_diff_list_free(head2idx);
+	git_diff_list_free(idx2wd);
 
 	if (err == GIT_EUSER)
 		giterr_clear();
