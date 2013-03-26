@@ -572,7 +572,13 @@ static int maybe_modified(
 				return -1;
 			use_noid = &noid;
 		}
-		if (omode == nmode && git_oid_equal(&oitem->oid, use_noid))
+
+		/* if oid matches, then mark unmodified (except submodules, where
+		 * the filesystem content may be modified even if the oid still
+		 * matches between the index and the workdir HEAD)
+		 */
+		if (omode == nmode && !S_ISGITLINK(omode) &&
+			git_oid_equal(&oitem->oid, use_noid))
 			status = GIT_DELTA_UNMODIFIED;
 	}
 
@@ -725,14 +731,20 @@ int git_diff__from_iterators(
 						recurse_into_dir = false;
 				}
 
-				if (contains_oitem || recurse_into_dir) {
-					/* if this directory is ignored, remember it as the
-					 * "ignore_prefix" for processing contained items
-					 */
-					if (delta_type == GIT_DELTA_UNTRACKED &&
-						git_iterator_current_is_ignored(new_iter))
-						git_buf_sets(&ignore_prefix, nitem->path);
+				/* if directory is ignored, remember ignore_prefix */
+				if ((contains_oitem || recurse_into_dir) &&
+					delta_type == GIT_DELTA_UNTRACKED &&
+					git_iterator_current_is_ignored(new_iter))
+				{
+					git_buf_sets(&ignore_prefix, nitem->path);
+					delta_type = GIT_DELTA_IGNORED;
 
+					/* skip recursion if we've just learned this is ignored */
+					if (DIFF_FLAG_ISNT_SET(diff, GIT_DIFF_RECURSE_IGNORED_DIRS))
+						recurse_into_dir = false;
+				}
+
+				if (contains_oitem || recurse_into_dir) {
 					/* advance into directory */
 					error = git_iterator_advance_into(&nitem, new_iter);
 

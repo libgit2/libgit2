@@ -42,6 +42,16 @@ int diff_file_cb(
 	return 0;
 }
 
+int diff_print_file_cb(
+	const git_diff_delta *delta,
+	float progress,
+	void *payload)
+{
+	fprintf(stderr, "%c %s\n",
+		git_diff_status_char(delta->status), delta->old_file.path);
+	return diff_file_cb(delta, progress, payload);
+}
+
 int diff_hunk_cb(
 	const git_diff_delta *delta,
 	const git_diff_range *range,
