@@ -127,19 +127,29 @@ typedef enum {
  *   will.
  * - GIT_STATUS_OPT_DISABLE_PATHSPEC_MATCH indicates that the given path
  *   will be treated as a literal path, and not as a pathspec.
+ * - GIT_STATUS_OPT_RECURSE_IGNORED_DIRS indicates that the contents of
+ *   ignored directories should be included in the status.  This is like
+ *   doing `git ls-files -o -i --exclude-standard` with core git.
  *
  * Calling `git_status_foreach()` is like calling the extended version
  * with: GIT_STATUS_OPT_INCLUDE_IGNORED, GIT_STATUS_OPT_INCLUDE_UNTRACKED,
- * and GIT_STATUS_OPT_RECURSE_UNTRACKED_DIRS.
+ * and GIT_STATUS_OPT_RECURSE_UNTRACKED_DIRS.  Those options are bundled
+ * together as `GIT_STATUS_OPT_DEFAULTS` if you want them as a baseline.
  */
 typedef enum {
-	GIT_STATUS_OPT_INCLUDE_UNTRACKED = (1 << 0),
-	GIT_STATUS_OPT_INCLUDE_IGNORED = (1 << 1),
-	GIT_STATUS_OPT_INCLUDE_UNMODIFIED = (1 << 2),
-	GIT_STATUS_OPT_EXCLUDE_SUBMODULES = (1 << 3),
-	GIT_STATUS_OPT_RECURSE_UNTRACKED_DIRS = (1 << 4),
-	GIT_STATUS_OPT_DISABLE_PATHSPEC_MATCH = (1 << 5),
+	GIT_STATUS_OPT_INCLUDE_UNTRACKED      = (1u << 0),
+	GIT_STATUS_OPT_INCLUDE_IGNORED        = (1u << 1),
+	GIT_STATUS_OPT_INCLUDE_UNMODIFIED     = (1u << 2),
+	GIT_STATUS_OPT_EXCLUDE_SUBMODULES     = (1u << 3),
+	GIT_STATUS_OPT_RECURSE_UNTRACKED_DIRS = (1u << 4),
+	GIT_STATUS_OPT_DISABLE_PATHSPEC_MATCH = (1u << 5),
+	GIT_STATUS_OPT_RECURSE_IGNORED_DIRS   = (1u << 6),
 } git_status_opt_t;
+
+#define GIT_STATUS_OPT_DEFAULTS \
+	(GIT_STATUS_OPT_INCLUDE_IGNORED | \
+	GIT_STATUS_OPT_INCLUDE_UNTRACKED | \
+	GIT_STATUS_OPT_RECURSE_UNTRACKED_DIRS)
 
 /**
  * Options to control how `git_status_foreach_ext()` will issue callbacks.

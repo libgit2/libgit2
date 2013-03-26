@@ -30,6 +30,11 @@ extern int diff_file_cb(
 	float progress,
 	void *cb_data);
 
+extern int diff_print_file_cb(
+	const git_diff_delta *delta,
+	float progress,
+	void *cb_data);
+
 extern int diff_hunk_cb(
 	const git_diff_delta *delta,
 	const git_diff_range *range,

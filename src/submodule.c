@@ -694,7 +694,7 @@ int git_submodule_open(
 	git_buf_free(&path);
 
 	/* if we have opened the submodule successfully, let's grab the HEAD OID */
-	if (!error && !(submodule->flags & GIT_SUBMODULE_STATUS__WD_OID_VALID)) {
+	if (!error) {
 		if (!git_reference_name_to_id(
 				&submodule->wd_oid, *subrepo, GIT_HEAD_FILE))
 			submodule->flags |= GIT_SUBMODULE_STATUS__WD_OID_VALID;
