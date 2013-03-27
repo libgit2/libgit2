@@ -9,6 +9,7 @@
 #include "revwalk.h"
 #include "merge.h"
 #include "git2/graph.h"
+#include "graph.h"
 
 static int interesting(git_pqueue *list, git_commit_list *roots)
 {
@@ -27,6 +28,14 @@ static int interesting(git_pqueue *list, git_commit_list *roots)
 	}
 
 	return 0;
+}
+
+static int graph_commit_time_cmp(const void *a, const void *b)
+{
+	const git_graph_commit *ca = (const git_graph_commit *)(a);
+	const git_graph_commit *cb = (const git_graph_commit *)(b);
+
+	return cb->time - ca->time;
 }
 
 static int mark_parents(git_revwalk *walk, git_commit_list_node *one,
@@ -104,15 +113,42 @@ on_error:
 	return -1;
 }
 
+static int insert_graph_commit(git_graph_commit_list *list,
+	git_commit_list_node *node)
+{
+	git_graph_commit *commit = git__calloc(1, sizeof(git_graph_commit));
+	GITERR_CHECK_ALLOC(commit);
+	
+	commit->oid = node->oid;
+	commit->time = node->time;
+
+	git_vector_insert(&list->commits, commit);
+
+	return 0;
+}
 
 static int ahead_behind(git_commit_list_node *one, git_commit_list_node *two,
-	size_t *ahead, size_t *behind)
+	git_graph_commit_list **ahead_out, git_graph_commit_list **behind_out)
 {
 	git_commit_list_node *commit;
 	git_pqueue pq;
 	int i;
-	*ahead = 0;
-	*behind = 0;
+	git_graph_commit_list *ahead = NULL, *behind = NULL;
+
+	assert(ahead_out);
+	assert(behind_out);
+	memset(&pq, 0, sizeof(git_pqueue));
+
+	ahead = git__calloc(1, sizeof(git_graph_commit_list));
+	if (ahead == NULL)
+		goto on_error;
+	behind = git__calloc(1, sizeof(git_graph_commit_list));
+	if (behind == NULL)
+		goto on_error;
+
+	if (git_vector_init(&ahead->commits, 8, graph_commit_time_cmp) < 0 ||
+		git_vector_init(&behind->commits, 8, graph_commit_time_cmp) < 0)
+		goto on_error;
 
 	if (git_pqueue_init(&pq, 2, git_commit_list_time_cmp) < 0)
 		return -1;
@@ -125,10 +161,14 @@ static int ahead_behind(git_commit_list_node *one, git_commit_list_node *two,
 		if (commit->flags & RESULT ||
 			(commit->flags & (PARENT1 | PARENT2)) == (PARENT1 | PARENT2))
 			continue;
-		else if (commit->flags & PARENT1)
-			(*behind)++;
-		else if (commit->flags & PARENT2)
-			(*ahead)++;
+		else if (commit->flags & PARENT1) {
+			if (insert_graph_commit(behind, commit) < 0)
+				goto on_error;
+		}
+		else if (commit->flags & PARENT2) {
+			if (insert_graph_commit(ahead, commit) < 0)
+				goto on_error;
+		}
 
 		for (i = 0; i < commit->out_degree; i++) {
 			git_commit_list_node *p = commit->parents[i];
@@ -138,16 +178,59 @@ static int ahead_behind(git_commit_list_node *one, git_commit_list_node *two,
 		commit->flags |= RESULT;
 	}
 
+	git_vector_sort(&ahead->commits);
+	git_vector_sort(&behind->commits);
+
+	*ahead_out = ahead;
+	*behind_out = behind;
+
 	git_pqueue_free(&pq);
 	return 0;
 
 on_error:
 	git_pqueue_free(&pq);
+	git_graph_commit_list_free(ahead);
+	git_graph_commit_list_free(behind);
 	return -1;
 }
 
-int git_graph_ahead_behind(size_t *ahead, size_t *behind, git_repository *repo,
-	const git_oid *local, const git_oid *upstream)
+const git_oid *git_graph_commit_list_get_byindex(
+	git_graph_commit_list *list,
+	size_t pos)
+{
+	assert(list);
+	return git_vector_get(&list->commits, pos);
+}
+
+int git_graph_commit_list_count(git_graph_commit_list *list)
+{
+	assert(list);
+	return list->commits.length;
+}
+
+void git_graph_commit_list_free(git_graph_commit_list *list)
+{
+	size_t i;
+	git_graph_commit *commit;
+
+	if (list == NULL)
+		return;
+
+	for(i = 0; i < list->commits.length; ++i){
+		commit = git_vector_get(&list->commits, i);
+		git__free(commit);
+	}
+
+	git_vector_free(&list->commits);
+	git__free(list);
+}
+
+int git_graph_ahead_behind(
+	git_graph_commit_list **ahead,
+	git_graph_commit_list **behind,
+	git_repository *repo,
+	const git_oid *local,
+	const git_oid *upstream)
 {
 	git_revwalk *walk;
 	git_commit_list_node *commit_u, *commit_l;

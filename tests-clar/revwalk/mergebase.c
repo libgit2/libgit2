@@ -24,18 +24,18 @@ static void assert_graph_ahead_behind(
 	git_repository *repo,
 	git_oid *one,
 	git_oid *two,
-	size_t expected_ahead,
-	size_t expected_behind)
+	size_t exp_ahead_count,
+	size_t exp_behind_count)
 {
-	size_t ahead, behind;
+	git_graph_commit_list *ahead, *behind;
 
 	cl_git_pass(git_graph_ahead_behind(&ahead, &behind, repo, one, two));
-	cl_assert_equal_sz(ahead, expected_ahead);
-	cl_assert_equal_sz(behind, expected_behind);
+	cl_assert_equal_sz(exp_ahead_count, git_graph_commit_list_count(ahead));
+	cl_assert_equal_sz(exp_behind_count, git_graph_commit_list_count(behind));
 
 	cl_git_pass(git_graph_ahead_behind(&ahead, &behind, repo, two, one));
-	cl_assert_equal_sz(ahead, expected_behind);
-	cl_assert_equal_sz(behind, expected_ahead);
+	cl_assert_equal_sz(exp_behind_count, git_graph_commit_list_count(ahead));
+	cl_assert_equal_sz(exp_ahead_count, git_graph_commit_list_count(behind));
 }
 
 static void assert_mergebase(
@@ -43,8 +43,8 @@ static void assert_mergebase(
 	char *first_commit_sha,
 	char *second_commit_sha,
 	char *expected_mergebase_sha,
-	size_t expected_ahead,
-	size_t expected_behind)
+	size_t exp_ahead_count,
+	size_t exp_behind_count)
 {
 	git_oid result, one, two, expected;
 
@@ -58,7 +58,8 @@ static void assert_mergebase(
 	cl_git_pass(git_merge_base(&result, repo, &two, &one));
 	cl_assert(git_oid_cmp(&result, &expected) == 0);
 
-	assert_graph_ahead_behind(repo, &one, &two, expected_ahead, expected_behind);
+	assert_graph_ahead_behind(repo, &one, &two,
+		exp_ahead_count, exp_behind_count);
 }
 
 void test_revwalk_mergebase__single1(void)
@@ -95,6 +96,47 @@ void test_revwalk_mergebase__two_way_merge(void)
 		*expected = "cdf97fd3bb48eb3827638bb33d208f5fd32d0aa6";
 
 	assert_mergebase(_repo2, one, two, expected, 2, 8);
+}
+
+static void assert_expected_oid(git_graph_commit_list *list, char *expected_oid, size_t n)
+{
+	git_oid expected;
+
+	git_oid_fromstr(&expected, expected_oid);
+	cl_assert(
+		git_oid_cmp(git_graph_commit_list_get_byindex(list, n),
+		&expected)== 0);
+}
+
+void test_revwalk_mergebase__can_get_ahead_behind_commits_by_index(void)
+{
+	git_oid one, two;
+	git_graph_commit_list *ahead, *behind;
+
+	cl_git_pass(git_oid_fromstr(&one, "9b219343610c88a1187c996d0dc58330b55cee28"));
+	cl_git_pass(git_oid_fromstr(&two, "a953a018c5b10b20c86e69fef55ebc8ad4c5a417"));
+	
+	cl_git_pass(git_graph_ahead_behind(&ahead, &behind, _repo2, &one, &two));
+	cl_assert_equal_sz(2, git_graph_commit_list_count(ahead));
+	cl_assert_equal_sz(8, git_graph_commit_list_count(behind));
+
+	assert_expected_oid(ahead, "a953a018c5b10b20c86e69fef55ebc8ad4c5a417", 0);
+	assert_expected_oid(ahead, "bd1732c43c68d712ad09e1d872b9be6d4b9efdc4", 1);
+
+	assert_expected_oid(behind, "9b219343610c88a1187c996d0dc58330b55cee28", 0);
+	assert_expected_oid(behind, "c37a783c20d92ac92362a78a32860f7eebf938ef", 1);
+	assert_expected_oid(behind, "8b82fb1794cb1c8c7f172ec730a4c2db0ae3e650", 2);
+	assert_expected_oid(behind, "6ab5d28acbf3c3bdff276f7ccfdf29c1520e542f", 3);
+	assert_expected_oid(behind, "7b8c336c45fc6895c1c60827260fe5d798e5d247", 4);
+	assert_expected_oid(behind, "2224e191514cb4bd8c566d80dac22dfcb1e9bb83", 5);
+	assert_expected_oid(behind, "a41a49f8f5cd9b6cb14a076bf8394881ed0b4d19", 6);
+	assert_expected_oid(behind, "82bf9a1a10a4b25c1f14c9607b60970705e92545", 7);
+	
+	cl_assert(git_graph_commit_list_get_byindex(ahead, 2) == NULL);
+	cl_assert(git_graph_commit_list_get_byindex(behind, 8) == NULL);
+
+	git_graph_commit_list_free(ahead);
+	git_graph_commit_list_free(behind);
 }
 
 void test_revwalk_mergebase__no_common_ancestor_returns_ENOTFOUND(void)

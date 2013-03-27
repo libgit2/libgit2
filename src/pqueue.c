@@ -52,6 +52,9 @@ int git_pqueue_init(git_pqueue *q, size_t n, git_pqueue_cmp cmppri)
 
 void git_pqueue_free(git_pqueue *q)
 {
+	if (q->d == NULL)
+		return;
+
 	git__free(q->d);
 	q->d = NULL;
 }
