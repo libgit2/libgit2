@@ -235,10 +235,13 @@ static int checkout_action_wd_only(
 	/* check if item is tracked in the index but not in the checkout diff */
 	if (data->index != NULL) {
 		if (wd->mode != GIT_FILEMODE_TREE) {
-			if (git_index_get_bypath(data->index, wd->path, 0) != NULL) {
+			int error;
+
+			if ((error = git_index_find(NULL, data->index, wd->path)) == 0) {
 				notify = GIT_CHECKOUT_NOTIFY_DIRTY;
 				remove = ((data->strategy & GIT_CHECKOUT_FORCE) != 0);
-			}
+			} else if (error != GIT_ENOTFOUND)
+				return error;
 		} else {
 			/* for tree entries, we have to see if there are any index
 			 * entries that are contained inside that tree
