@@ -15,8 +15,10 @@ void test_reset_hard__initialize(void)
 
 void test_reset_hard__cleanup(void)
 {
-	git_object_free(target);
-	target = NULL;
+	if (target != NULL) {
+		git_object_free(target);
+		target = NULL;
+	}
 
 	cl_git_sandbox_cleanup();
 }
@@ -98,6 +100,68 @@ void test_reset_hard__cannot_reset_in_a_bare_repository(void)
 	cl_assert_equal_i(GIT_EBAREREPO, git_reset(bare, target, GIT_RESET_HARD));
 
 	git_repository_free(bare);
+}
+
+static void index_entry_init(git_index *index, int side, git_oid *oid)
+{
+	git_index_entry entry;
+	
+	memset(&entry, 0x0, sizeof(git_index_entry));
+	
+	entry.path = "conflicting_file";
+	entry.flags = (side << GIT_IDXENTRY_STAGESHIFT);
+	entry.mode = 0100644;
+	git_oid_cpy(&entry.oid, oid);
+	
+	cl_git_pass(git_index_add(index, &entry));
+}
+
+static void unmerged_index_init(git_index *index, int entries)
+{
+	int write_ancestor = 1;
+	int write_ours = 2;
+	int write_theirs = 4;
+	git_oid ancestor, ours, theirs;
+	
+	git_oid_fromstr(&ancestor, "6bb0d9f700543ba3d318ba7075fc3bd696b4287b");
+	git_oid_fromstr(&ours, "b19a1e93bec1317dc6097229e12afaffbfa74dc2");
+	git_oid_fromstr(&theirs, "950b81b7eee953d050aa05a641f8e056c85dd1bd");
+	
+	cl_git_rewritefile("status/conflicting_file", "conflicting file\n");
+	
+	if (entries & write_ancestor)
+		index_entry_init(index, 1, &ancestor);
+	
+	if (entries & write_ours)
+		index_entry_init(index, 2, &ours);
+	
+	if (entries & write_theirs)
+		index_entry_init(index, 3, &theirs);
+}
+
+void test_reset_hard__resetting_reverts_unmerged(void)
+{
+	git_index *index;
+	int entries;
+	
+	/* Ensure every permutation of non-zero stage entries results in the
+	 * path being cleaned up. */
+	for (entries = 1; entries < 8; entries++) {
+		cl_git_pass(git_repository_index(&index, repo));
+		
+		unmerged_index_init(index, entries);
+		cl_git_pass(git_index_write(index));
+		
+		retrieve_target_from_oid(&target, repo, "26a125ee1bfc5df1e1b2e9441bbe63c8a7ae989f");
+		cl_git_pass(git_reset(repo, target, GIT_RESET_HARD));
+		
+		cl_assert(git_path_exists("status/conflicting_file") == 0);
+		
+		git_object_free(target);
+		target = NULL;
+		
+		git_index_free(index);	
+	}
 }
 
 void test_reset_hard__cleans_up_merge(void)
