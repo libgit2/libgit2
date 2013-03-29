@@ -678,7 +678,8 @@ cleanup:
 		if ((delta->flags & GIT_DIFF_FLAG_BINARY) == 0 &&
 			delta->status != GIT_DELTA_UNMODIFIED &&
 			(patch->old_data.len || patch->new_data.len) &&
-			!git_oid_equal(&delta->old_file.oid, &delta->new_file.oid))
+			((patch->old_data.len != patch->new_data.len) ||
+				!git_oid_equal(&delta->old_file.oid, &delta->new_file.oid)))
 			patch->flags |= GIT_DIFF_PATCH_DIFFABLE;
 	}
 
