@@ -165,6 +165,8 @@ void test_status_submodules__moved_head(void)
 	cl_git_pass(
 		git_status_foreach_ext(g_repo, &opts, cb_status__match, &counts));
 	cl_assert_equal_i(6, counts.entry_count);
+	
+	git_repository_free(smrepo);
 }
 
 void test_status_submodules__dirty_workdir_only(void)
