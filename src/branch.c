@@ -305,23 +305,16 @@ cleanup:
 	return error;
 }
 
-int git_branch_remote_name(
-	char *remote_name_out,
-	size_t buffer_size,
-	git_repository *repo,
-	const char *canonical_branch_name)
+static int remote_name(git_buf *buf, git_repository *repo, const char *canonical_branch_name)
 {
 	git_strarray remote_list = {0};
-	size_t i, remote_name_size;
+	size_t i;
 	git_remote *remote;
 	const git_refspec *fetchspec;
 	int error = 0;
 	char *remote_name = NULL;
 
-	assert(repo && canonical_branch_name);
-
-	if (remote_name_out && buffer_size)
-		*remote_name_out = '\0';
+	assert(buf && repo && canonical_branch_name);
 
 	/* Verify that this is a remote branch */
 	if (!git_reference__is_remote(canonical_branch_name)) {
@@ -362,28 +355,32 @@ int git_branch_remote_name(
 	}
 
 	if (remote_name) {
-		remote_name_size = strlen(remote_name) + 1;
-		error = (int) remote_name_size;
-
-		if (remote_name_out) {
-			if(remote_name_size > buffer_size) {
-				giterr_set(
-					GITERR_INVALID,
-					"Buffer too short to hold the remote name.");
-				error = GIT_ERROR;
-				goto cleanup;
-			}
-
-			memcpy(remote_name_out, remote_name, remote_name_size);
-		}
+		git_buf_clear(buf);
+		error = git_buf_puts(buf, remote_name);
 	} else {
 		error = GIT_ENOTFOUND;
-		goto cleanup;
 	}
 
 cleanup:
 	git_strarray_free(&remote_list);
 	return error;
+}
+
+int git_branch_remote_name(char *buffer, size_t buffer_len, git_repository *repo, const char *refname)
+{
+	int ret;
+	git_buf buf = GIT_BUF_INIT;
+
+	if ((ret = remote_name(&buf, repo, refname)) < 0)
+		return ret;
+
+	if (buffer)
+		git_buf_copy_cstr(buffer, buffer_len, &buf);
+
+	ret = git_buf_len(&buf) + 1;
+	git_buf_free(&buf);
+
+	return ret;
 }
 
 int git_branch_upstream_name(
