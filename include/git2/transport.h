@@ -165,16 +165,6 @@ typedef struct git_transport {
  */
 GIT_EXTERN(int) git_transport_new(git_transport **out, git_remote *owner, const char *url);
 
-/**
- * Function which checks to see if a transport could be created for the
- * given URL (i.e. checks to see if libgit2 has a transport that supports
- * the given URL's scheme)
- *
- * @param url The URL to check
- * @return Zero if the URL is not valid; nonzero otherwise
- */
-GIT_EXTERN(int) git_transport_valid_url(const char *url);
-
 /* Signature of a function which creates a transport */
 typedef int (*git_transport_cb)(git_transport **out, git_remote *owner, void *param);
 
