@@ -2,19 +2,19 @@
 #include "refs.h"
 
 static git_repository *repo;
-static git_reference *branch, *tracking;
+static git_reference *branch, *upstream;
 
-void test_refs_branches_tracking__initialize(void)
+void test_refs_branches_upstream__initialize(void)
 {
 	cl_git_pass(git_repository_open(&repo, cl_fixture("testrepo.git")));
 
 	branch = NULL;
-	tracking = NULL;
+	upstream = NULL;
 }
 
-void test_refs_branches_tracking__cleanup(void)
+void test_refs_branches_upstream__cleanup(void)
 {
-	git_reference_free(tracking);
+	git_reference_free(upstream);
 	git_reference_free(branch);
 	branch = NULL;
 
@@ -22,43 +22,43 @@ void test_refs_branches_tracking__cleanup(void)
 	repo = NULL;
 }
 
-void test_refs_branches_tracking__can_retrieve_the_remote_tracking_reference_of_a_local_branch(void)
+void test_refs_branches_upstream__can_retrieve_the_remote_tracking_reference_of_a_local_branch(void)
 {
 	cl_git_pass(git_reference_lookup(&branch, repo, "refs/heads/master"));
 
-	cl_git_pass(git_branch_tracking(&tracking, branch));
+	cl_git_pass(git_branch_upstream(&upstream, branch));
 
-	cl_assert_equal_s("refs/remotes/test/master", git_reference_name(tracking));
+	cl_assert_equal_s("refs/remotes/test/master", git_reference_name(upstream));
 }
 
-void test_refs_branches_tracking__can_retrieve_the_local_tracking_reference_of_a_local_branch(void)
+void test_refs_branches_upstream__can_retrieve_the_local_upstream_reference_of_a_local_branch(void)
 {
 	cl_git_pass(git_reference_lookup(&branch, repo, "refs/heads/track-local"));
 
-	cl_git_pass(git_branch_tracking(&tracking, branch));
+	cl_git_pass(git_branch_upstream(&upstream, branch));
 
-	cl_assert_equal_s("refs/heads/master", git_reference_name(tracking));
+	cl_assert_equal_s("refs/heads/master", git_reference_name(upstream));
 }
 
-void test_refs_branches_tracking__cannot_retrieve_a_remote_tracking_reference_from_a_non_branch(void)
+void test_refs_branches_upstream__cannot_retrieve_a_remote_upstream_reference_from_a_non_branch(void)
 {
 	cl_git_pass(git_reference_lookup(&branch, repo, "refs/tags/e90810b"));
 
-	cl_git_fail(git_branch_tracking(&tracking, branch));
+	cl_git_fail(git_branch_upstream(&upstream, branch));
 }
 
-void test_refs_branches_tracking__trying_to_retrieve_a_remote_tracking_reference_from_a_plain_local_branch_returns_GIT_ENOTFOUND(void)
+void test_refs_branches_upstream__trying_to_retrieve_a_remote_tracking_reference_from_a_plain_local_branch_returns_GIT_ENOTFOUND(void)
 {
 	cl_git_pass(git_reference_lookup(&branch, repo, "refs/heads/subtrees"));
 
-	cl_assert_equal_i(GIT_ENOTFOUND, git_branch_tracking(&tracking, branch));
+	cl_assert_equal_i(GIT_ENOTFOUND, git_branch_upstream(&upstream, branch));
 }
 
-void test_refs_branches_tracking__trying_to_retrieve_a_remote_tracking_reference_from_a_branch_with_no_fetchspec_returns_GIT_ENOTFOUND(void)
+void test_refs_branches_upstream__trying_to_retrieve_a_remote_tracking_reference_from_a_branch_with_no_fetchspec_returns_GIT_ENOTFOUND(void)
 {
 	cl_git_pass(git_reference_lookup(&branch, repo, "refs/heads/cannot-fetch"));
 
-	cl_assert_equal_i(GIT_ENOTFOUND, git_branch_tracking(&tracking, branch));
+	cl_assert_equal_i(GIT_ENOTFOUND, git_branch_upstream(&upstream, branch));
 }
 
 static void assert_merge_and_or_remote_key_missing(git_repository *repository, const git_commit *target, const char *entry_name)
@@ -68,12 +68,12 @@ static void assert_merge_and_or_remote_key_missing(git_repository *repository, c
 	cl_assert_equal_i(GIT_OBJ_COMMIT, git_object_type((git_object*)target));
 	cl_git_pass(git_branch_create(&branch, repository, entry_name, (git_commit*)target, 0));
 
-	cl_assert_equal_i(GIT_ENOTFOUND, git_branch_tracking(&tracking, branch));
+	cl_assert_equal_i(GIT_ENOTFOUND, git_branch_upstream(&upstream, branch));
 
 	git_reference_free(branch);
 }
 
-void test_refs_branches_tracking__retrieve_a_remote_tracking_reference_from_a_branch_with_no_remote_returns_GIT_ENOTFOUND(void)
+void test_refs_branches_upstream__retrieve_a_remote_tracking_reference_from_a_branch_with_no_remote_returns_GIT_ENOTFOUND(void)
 {
 	git_reference *head;
 	git_repository *repository;

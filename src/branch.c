@@ -228,7 +228,7 @@ int git_branch_name(const char **out, git_reference *ref)
 	return 0;
 }
 
-static int retrieve_tracking_configuration(
+static int retrieve_upstream_configuration(
 	const char **out,
 	git_repository *repo,
 	const char *canonical_branch_name,
@@ -250,7 +250,7 @@ static int retrieve_tracking_configuration(
 	return error;
 }
 
-int git_branch_tracking__name(
+int git_branch_upstream__name(
 	git_buf *tracking_name,
 	git_repository *repo,
 	const char *canonical_branch_name)
@@ -266,11 +266,11 @@ int git_branch_tracking__name(
 	if (!git_reference__is_branch(canonical_branch_name))
 		return not_a_local_branch(canonical_branch_name);
 
-	if ((error = retrieve_tracking_configuration(
+	if ((error = retrieve_upstream_configuration(
 		&remote_name, repo, canonical_branch_name, "branch.%s.remote")) < 0)
 			goto cleanup;
 
-	if ((error = retrieve_tracking_configuration(
+	if ((error = retrieve_upstream_configuration(
 		&merge_name, repo, canonical_branch_name, "branch.%s.merge")) < 0)
 			goto cleanup;
 
@@ -386,7 +386,7 @@ cleanup:
 	return error;
 }
 
-int git_branch_tracking_name(
+int git_branch_upstream_name(
 	char *tracking_branch_name_out,
 	size_t buffer_size,
 	git_repository *repo,
@@ -400,7 +400,7 @@ int git_branch_tracking_name(
 	if (tracking_branch_name_out && buffer_size)
 		*tracking_branch_name_out = '\0';
 
-	if ((error = git_branch_tracking__name(
+	if ((error = git_branch_upstream__name(
 		&buf, repo, canonical_branch_name)) < 0)
 			goto cleanup;
 
@@ -422,14 +422,14 @@ cleanup:
 	return (int)error;
 }
 
-int git_branch_tracking(
+int git_branch_upstream(
 		git_reference **tracking_out,
 		git_reference *branch)
 {
 	int error;
 	git_buf tracking_name = GIT_BUF_INIT;
 
-	if ((error = git_branch_tracking__name(&tracking_name,
+	if ((error = git_branch_upstream__name(&tracking_name,
 		git_reference_owner(branch), git_reference_name(branch))) < 0)
 			return error;
 
