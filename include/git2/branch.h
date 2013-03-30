@@ -178,6 +178,18 @@ GIT_EXTERN(int) git_branch_upstream(
 	git_reference *branch);
 
 /**
+ * Set the upstream configuration for a given local branch
+ *
+ * @param branch the branch to configure
+ *
+ * @param upstream_name remote-tracking or local branch to set as
+ * upstream. Pass NULL to unset.
+ *
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_branch_set_upstream(git_reference *branch, const char *upstream_name);
+
+/**
  * Return the name of the reference supporting the remote tracking branch,
  * given the name of a local branch reference.
  *

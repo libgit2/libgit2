@@ -93,3 +93,38 @@ void test_refs_branches_upstream__retrieve_a_remote_tracking_reference_from_a_br
 
 	cl_git_sandbox_cleanup();
 }
+
+void test_refs_branches_upstream__set_unset_upstream(void)
+{
+	git_reference *branch;
+	git_repository *repository;
+	const char *value;
+	git_config *config;
+
+	repository = cl_git_sandbox_init("testrepo.git");
+
+	cl_git_pass(git_reference_lookup(&branch, repository, "refs/heads/test"));
+	cl_git_pass(git_branch_set_upstream(branch, "test/master"));
+
+	cl_git_pass(git_repository_config(&config, repository));
+	cl_git_pass(git_config_get_string(&value, config, "branch.test.remote"));
+	cl_assert_equal_s(value, "test");
+	cl_git_pass(git_config_get_string(&value, config, "branch.test.merge"));
+	cl_assert_equal_s(value, "refs/heads/master");
+
+	cl_git_pass(git_branch_set_upstream(branch, NULL));
+	cl_git_fail_with(git_config_get_string(&value, config, "branch.test.merge"), GIT_ENOTFOUND);
+	cl_git_fail_with(git_config_get_string(&value, config, "branch.test.remote"), GIT_ENOTFOUND);
+
+	git_reference_free(branch);
+
+	cl_git_pass(git_reference_lookup(&branch, repository, "refs/heads/master"));
+	cl_git_pass(git_branch_set_upstream(branch, NULL));
+	cl_git_fail_with(git_config_get_string(&value, config, "branch.master.merge"), GIT_ENOTFOUND);
+	cl_git_fail_with(git_config_get_string(&value, config, "branch.master.remote"), GIT_ENOTFOUND);
+
+	git_reference_free(branch);
+
+	git_config_free(config);
+	cl_git_sandbox_cleanup();
+}
