@@ -121,7 +121,7 @@ GIT_EXTERN(const char *) git_tag_name(const git_tag *tag);
  * Get the tagger (author) of a tag
  *
  * @param tag a previously loaded tag.
- * @return reference to the tag's author
+ * @return reference to the tag's author or NULL when unspecified
  */
 GIT_EXTERN(const git_signature *) git_tag_tagger(const git_tag *tag);
 
@@ -129,7 +129,7 @@ GIT_EXTERN(const git_signature *) git_tag_tagger(const git_tag *tag);
  * Get the message of a tag
  *
  * @param tag a previously loaded tag.
- * @return message of the tag
+ * @return message of the tag or NULL when unspecified
  */
 GIT_EXTERN(const char *) git_tag_message(const git_tag *tag);
 

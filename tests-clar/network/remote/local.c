@@ -72,7 +72,7 @@ void test_network_remote_local__retrieve_advertised_references(void)
 
 	cl_git_pass(git_remote_ls(remote, &count_ref__cb, &how_many_refs));
 
-	cl_assert_equal_i(how_many_refs, 26);
+	cl_assert_equal_i(how_many_refs, 28);
 }
 
 void test_network_remote_local__retrieve_advertised_references_from_spaced_repository(void)
@@ -86,7 +86,7 @@ void test_network_remote_local__retrieve_advertised_references_from_spaced_repos
 
 	cl_git_pass(git_remote_ls(remote, &count_ref__cb, &how_many_refs));
 
-	cl_assert_equal_i(how_many_refs, 26);
+	cl_assert_equal_i(how_many_refs, 28);
 
 	git_remote_free(remote);	/* Disconnect from the "spaced repo" before the cleanup */
 	remote = NULL;

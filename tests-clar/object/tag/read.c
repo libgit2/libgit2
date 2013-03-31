@@ -9,6 +9,7 @@ static const char *bad_tag_id = "eda9f45a2a98d4c17a09d681d88569fa4ea91755";
 static const char *badly_tagged_commit = "e90810b8df3e80c413d903f631643c716887138d";
 static const char *short_tag_id = "5da7760512a953e3c7c4e47e4392c7a4338fb729";
 static const char *short_tagged_commit = "4a5ed60bafcf4638b7c8356bd4ce1916bfede93c";
+static const char *taggerless = "4a23e2e65ad4e31c4c9db7dc746650bfad082679";
 
 static git_repository *g_repo;
 
@@ -116,4 +117,26 @@ void test_object_tag_read__parse_without_message(void)
 	git_tag_free(short_tag);
 	git_commit_free(commit);
 	git_repository_free(short_tag_repo);
+}
+
+void test_object_tag_read__without_tagger_nor_message(void)
+{
+	git_tag *tag;
+	git_oid id;
+	git_repository *repo;
+
+	cl_git_pass(git_repository_open(&repo, cl_fixture("testrepo.git")));
+
+	cl_git_pass(git_oid_fromstr(&id, taggerless));
+
+	cl_git_pass(git_tag_lookup(&tag, repo, &id));
+
+	cl_assert_equal_s(git_tag_name(tag), "taggerless");
+	cl_assert(git_tag_target_type(tag) == GIT_OBJ_COMMIT);
+
+	cl_assert(tag->message == NULL);
+	cl_assert(tag->tagger == NULL);
+
+	git_tag_free(tag);
+	git_repository_free(repo);
 }
