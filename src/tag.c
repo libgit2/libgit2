@@ -131,7 +131,7 @@ int git_tag__parse_buffer(git_tag *tag, const char *buffer, size_t length)
 	buffer = search + 1;
 
 	tag->tagger = NULL;
-	if (*buffer != '\n') {
+	if (buffer < buffer_end && *buffer != '\n') {
 		tag->tagger = git__malloc(sizeof(git_signature));
 		GITERR_CHECK_ALLOC(tag->tagger);
 

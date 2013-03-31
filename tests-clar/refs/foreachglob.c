@@ -48,8 +48,8 @@ static void assert_retrieval(const char *glob, unsigned int flags, int expected_
 
 void test_refs_foreachglob__retrieve_all_refs(void)
 {
-	/* 8 heads (including one packed head) + 1 note + 2 remotes + 6 tags */
-	assert_retrieval("*", GIT_REF_LISTALL, 21);
+	/* 12 heads (including one packed head) + 1 note + 2 remotes + 7 tags */
+	assert_retrieval("*", GIT_REF_LISTALL, 22);
 }
 
 void test_refs_foreachglob__retrieve_remote_branches(void)

@@ -28,8 +28,8 @@ static int foreach_cb(const git_oid *oid, void *data)
 
 /*
  * $ git --git-dir tests-clar/resources/testrepo.git count-objects --verbose
- * count: 43
- * size: 3
+ * count: 47
+ * size: 4
  * in-pack: 1640
  * packs: 3
  * size-pack: 425
@@ -42,7 +42,7 @@ void test_odb_foreach__foreach(void)
 	git_repository_odb(&_odb, _repo);
 
 	cl_git_pass(git_odb_foreach(_odb, foreach_cb, NULL));
-	cl_assert_equal_i(46 + 1640, nobj); /* count + in-pack */
+	cl_assert_equal_i(47 + 1640, nobj); /* count + in-pack */
 }
 
 void test_odb_foreach__one_pack(void)
