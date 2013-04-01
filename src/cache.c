@@ -17,8 +17,22 @@
 
 GIT__USE_OIDMAP
 
+bool git_cache__store_types[8] = {
+	false, /* GIT_OBJ__EXT1 */
+	true,  /* GIT_OBJ_COMMIT */
+	true,  /* GIT_OBJ_TREE */
+	false, /* GIT_OBJ_BLOB */
+	true,  /* GIT_OBJ_TAG */
+	false, /* GIT_OBJ__EXT2 */
+	false, /* GIT_OBJ_OFS_DELTA */
+	false /* GIT_OBJ_REF_DELTA */
+};
+
+size_t git_cache__max_object_size = 4096;
+
 int git_cache_init(git_cache *cache)
 {
+	cache->lru_count = 0;
 	cache->map = git_oidmap_alloc();
 	git_mutex_init(&cache->lock);
 	return 0;
@@ -30,8 +44,14 @@ void git_cache_free(git_cache *cache)
 	git_mutex_free(&cache->lock);
 }
 
-static bool cache_should_store(git_cached_obj *entry)
+static bool cache_should_store(git_otype object_type, size_t object_size)
 {
+	if (!git_cache__store_types[object_type])
+		return false;
+
+	if (object_size > git_cache__max_object_size)
+		return false;
+
 	return true;
 }
 
@@ -62,11 +82,6 @@ static void *cache_get(git_cache *cache, const git_oid *oid, unsigned int flags)
 static void *cache_store(git_cache *cache, git_cached_obj *entry)
 {
 	khiter_t pos;
-
-	git_cached_obj_incref(entry);
-
-	if (!cache_should_store(entry))
-		return entry;
 
 	if (git_mutex_lock(&cache->lock) < 0)
 		return entry;
@@ -110,12 +125,22 @@ static void *cache_store(git_cache *cache, git_cached_obj *entry)
 
 void *git_cache_store_raw(git_cache *cache, git_odb_object *entry)
 {
+	git_cached_obj_incref(entry);
+
+	if (!cache_should_store(entry->raw.type, entry->raw.len))
+		return entry;
+
 	entry->cached.flags = GIT_CACHE_STORE_RAW;
 	return cache_store(cache, (git_cached_obj *)entry);
 }
 
 void *git_cache_store_parsed(git_cache *cache, git_object *entry)
 {
+	git_cached_obj_incref(entry);
+
+	if (!cache_should_store(entry->type, 0 /* TODO */))
+		return entry;
+
 	entry->cached.flags = GIT_CACHE_STORE_PARSED;
 	return cache_store(cache, (git_cached_obj *)entry);
 }
