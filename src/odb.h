@@ -36,8 +36,10 @@ struct git_odb_object {
 struct git_odb {
 	git_refcount rc;
 	git_vector backends;
-	git_cache cache;
+	git_cache own_cache;
 };
+
+void git_odb_object__free(git_odb_object *object);
 
 /*
  * Hash a git_rawobj internally.

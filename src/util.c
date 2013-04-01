@@ -93,14 +93,6 @@ int git_libgit2_opts(int key, ...)
 		if ((error = config_level_to_futils_dir(va_arg(ap, int))) >= 0)
 			error = git_futils_dirs_set(error, va_arg(ap, const char *));
 		break;
-
-	case GIT_OPT_GET_ODB_CACHE_SIZE:
-		*(va_arg(ap, size_t *)) = git_odb__cache_size;
-		break;
-
-	case GIT_OPT_SET_ODB_CACHE_SIZE:
-		git_odb__cache_size = va_arg(ap, size_t);
-		break;
 	}
 
 	va_end(ap);

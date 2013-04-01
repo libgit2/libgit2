@@ -11,100 +11,147 @@
 #include "thread-utils.h"
 #include "util.h"
 #include "cache.h"
+#include "odb.h"
+#include "object.h"
 #include "git2/oid.h"
 
-int git_cache_init(git_cache *cache, size_t size, git_cached_obj_freeptr free_ptr)
+GIT__USE_OIDMAP
+
+int git_cache_init(git_cache *cache)
 {
-	if (size < 8)
-		size = 8;
-	size = git__size_t_powerof2(size);
-
-	cache->size_mask = size - 1;
-	cache->lru_count = 0;
-	cache->free_obj = free_ptr;
-
+	cache->map = git_oidmap_alloc();
 	git_mutex_init(&cache->lock);
-
-	cache->nodes = git__malloc(size * sizeof(git_cached_obj *));
-	GITERR_CHECK_ALLOC(cache->nodes);
-
-	memset(cache->nodes, 0x0, size * sizeof(git_cached_obj *));
 	return 0;
 }
 
 void git_cache_free(git_cache *cache)
 {
-	size_t i;
-
-	for (i = 0; i < (cache->size_mask + 1); ++i) {
-		if (cache->nodes[i] != NULL)
-			git_cached_obj_decref(cache->nodes[i], cache->free_obj);
-	}
-
+	git_oidmap_free(cache->map);
 	git_mutex_free(&cache->lock);
-	git__free(cache->nodes);
 }
 
-void *git_cache_get(git_cache *cache, const git_oid *oid)
+static bool cache_should_store(git_cached_obj *entry)
 {
-	uint32_t hash;
-	git_cached_obj *node = NULL, *result = NULL;
-
-	memcpy(&hash, oid->id, sizeof(hash));
-
-	if (git_mutex_lock(&cache->lock)) {
-		giterr_set(GITERR_THREAD, "unable to lock cache mutex");
-		return NULL;
-	}
-
-	{
-		node = cache->nodes[hash & cache->size_mask];
-
-		if (node != NULL && git_oid_cmp(&node->oid, oid) == 0) {
-			git_cached_obj_incref(node);
-			result = node;
-		}
-	}
-	git_mutex_unlock(&cache->lock);
-
-	return result;
+	return true;
 }
 
-void *git_cache_try_store(git_cache *cache, void *_entry)
+static void *cache_get(git_cache *cache, const git_oid *oid, unsigned int flags)
 {
-	git_cached_obj *entry = _entry;
-	uint32_t hash;
+	khiter_t pos;
+	git_cached_obj *entry = NULL;
 
-	memcpy(&hash, &entry->oid, sizeof(uint32_t));
-
-	if (git_mutex_lock(&cache->lock)) {
-		giterr_set(GITERR_THREAD, "unable to lock cache mutex");
+	if (git_mutex_lock(&cache->lock) < 0)
 		return NULL;
-	}
 
-	{
-		git_cached_obj *node = cache->nodes[hash & cache->size_mask];
+	pos = kh_get(oid, cache->map, oid);
+	if (pos != kh_end(cache->map)) {
+		entry = kh_val(cache->map, pos);
 
-		/* increase the refcount on this object, because
-		 * the cache now owns it */
-		git_cached_obj_incref(entry);
-
-		if (node == NULL) {
-			cache->nodes[hash & cache->size_mask] = entry;
-		} else if (git_oid_cmp(&node->oid, &entry->oid) == 0) {
-			git_cached_obj_decref(entry, cache->free_obj);
-			entry = node;
+		if (flags && entry->flags != flags) {
+			entry = NULL;
 		} else {
-			git_cached_obj_decref(node, cache->free_obj);
-			cache->nodes[hash & cache->size_mask] = entry;
+			git_cached_obj_incref(entry);
 		}
-
-		/* increase the refcount again, because we are
-		 * returning it to the user */
-		git_cached_obj_incref(entry);
-
 	}
+
 	git_mutex_unlock(&cache->lock);
 
 	return entry;
+}
+
+static void *cache_store(git_cache *cache, git_cached_obj *entry)
+{
+	khiter_t pos;
+
+	git_cached_obj_incref(entry);
+
+	if (!cache_should_store(entry))
+		return entry;
+
+	if (git_mutex_lock(&cache->lock) < 0)
+		return entry;
+
+	pos = kh_get(oid, cache->map, &entry->oid);
+
+	/* not found */
+	if (pos == kh_end(cache->map)) {
+		int rval;
+
+		pos = kh_put(oid, cache->map, &entry->oid, &rval);
+		if (rval >= 0) {
+			kh_key(cache->map, pos) = &entry->oid;
+			kh_val(cache->map, pos) = entry;
+			git_cached_obj_incref(entry);
+		}
+	}
+	/* found */
+	else {
+		git_cached_obj *stored_entry = kh_val(cache->map, pos);
+
+		if (stored_entry->flags == entry->flags) {
+			git_cached_obj_decref(entry);
+			git_cached_obj_incref(stored_entry);
+			entry = stored_entry;
+		} else if (stored_entry->flags == GIT_CACHE_STORE_RAW &&
+			entry->flags == GIT_CACHE_STORE_PARSED) {
+			git_cached_obj_decref(stored_entry);
+			git_cached_obj_incref(entry);
+
+			kh_key(cache->map, pos) = &entry->oid;
+			kh_val(cache->map, pos) = entry;
+		} else {
+			/* NO OP */
+		}
+	}
+
+	git_mutex_unlock(&cache->lock);
+	return entry;
+}
+
+void *git_cache_store_raw(git_cache *cache, git_odb_object *entry)
+{
+	entry->cached.flags = GIT_CACHE_STORE_RAW;
+	return cache_store(cache, (git_cached_obj *)entry);
+}
+
+void *git_cache_store_parsed(git_cache *cache, git_object *entry)
+{
+	entry->cached.flags = GIT_CACHE_STORE_PARSED;
+	return cache_store(cache, (git_cached_obj *)entry);
+}
+
+git_odb_object *git_cache_get_raw(git_cache *cache, const git_oid *oid)
+{
+	return cache_get(cache, oid, GIT_CACHE_STORE_RAW);
+}
+
+git_object *git_cache_get_parsed(git_cache *cache, const git_oid *oid)
+{
+	return cache_get(cache, oid, GIT_CACHE_STORE_PARSED);
+}
+
+void *git_cache_get_any(git_cache *cache, const git_oid *oid)
+{
+	return cache_get(cache, oid, GIT_CACHE_STORE_ANY);
+}
+
+void git_cached_obj_decref(void *_obj)
+{
+	git_cached_obj *obj = _obj;
+
+	if (git_atomic_dec(&obj->refcount) == 0) {
+		switch (obj->flags) {
+		case GIT_CACHE_STORE_RAW:
+			git_odb_object__free(_obj);
+			break;
+
+		case GIT_CACHE_STORE_PARSED:
+			git_object__free(_obj);
+			break;
+
+		default:
+			git__free(_obj);
+			break;
+		}
+	}
 }
