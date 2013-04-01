@@ -9,7 +9,7 @@
 
 #include <windows.h>
 
-GIT_INLINE(int)	git_has_win32_version(int major, int minor)
+GIT_INLINE(int) git_has_win32_version(int major, int minor)
 {
 	WORD wVersion = LOWORD(GetVersion());
 
