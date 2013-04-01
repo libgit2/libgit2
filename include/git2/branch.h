@@ -38,10 +38,8 @@ GIT_BEGIN_DECL
  * validated for consistency. It should also not conflict with
  * an already existing branch name.
  *
- * @param target Object to which this branch should point. This object
- * must belong to the given `repo` and can either be a git_commit or a
- * git_tag. When a git_tag is being passed, it should be dereferencable
- * to a git_commit which oid will be used as the target of the branch.
+ * @param target Commit to which this branch should point. This object
+ * must belong to the given `repo`.
  *
  * @param force Overwrite existing branch.
  *
