@@ -45,7 +45,7 @@ char *git_win32_get_error_message(DWORD error_code)
 		(LPWSTR)&lpMsgBuf, 0, NULL)) {
 
 		/* Invalid code point check supported on Vista+ only */
-		if (LOBYTE(LOWORD(GetVersion())) >= 6)
+		if (git_has_win32_version(6, 0))
 			dwFlags = WC_ERR_INVALID_CHARS;
 		else
 			dwFlags = 0;
