@@ -58,6 +58,7 @@ typedef struct {
 	const char *service_url;
 	const wchar_t *verb;
 	HINTERNET request;
+	wchar_t *request_uri;
 	char *chunk_buffer;
 	unsigned chunk_buffer_len;
 	HANDLE post_body;
@@ -145,10 +146,10 @@ static int winhttp_stream_connect(winhttp_stream *s)
 	winhttp_subtransport *t = OWNING_SUBTRANSPORT(s);
 	git_buf buf = GIT_BUF_INIT;
 	char *proxy_url = NULL;
-	wchar_t url[GIT_WIN_PATH], ct[MAX_CONTENT_TYPE_LEN];
+	wchar_t ct[MAX_CONTENT_TYPE_LEN];
 	wchar_t *types[] = { L"*/*", NULL };
 	BOOL peerdist = FALSE;
-	int error = -1;
+	int error = -1, wide_len;
 
 	/* Prepare URL */
 	git_buf_printf(&buf, "%s%s", t->path, s->service_url);
@@ -156,13 +157,31 @@ static int winhttp_stream_connect(winhttp_stream *s)
 	if (git_buf_oom(&buf))
 		return -1;
 
-	git__utf8_to_16(url, GIT_WIN_PATH, git_buf_cstr(&buf));
+	/* Convert URL to wide characters */
+	wide_len = MultiByteToWideChar(CP_UTF8,	MB_ERR_INVALID_CHARS,
+		git_buf_cstr(&buf),	-1, NULL, 0);
+
+	if (!wide_len) {
+		giterr_set(GITERR_OS, "Failed to measure string for wide conversion");
+		goto on_error;
+	}
+
+	s->request_uri = git__malloc(wide_len * sizeof(wchar_t));
+
+	if (!s->request_uri)
+		goto on_error;
+
+	if (!MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS,
+		git_buf_cstr(&buf), -1, s->request_uri, wide_len)) {
+		giterr_set(GITERR_OS, "Failed to convert string to wide form");
+		goto on_error;
+	}
 
 	/* Establish request */
 	s->request = WinHttpOpenRequest(
 			t->connection,
 			s->verb,
-			url,
+			s->request_uri,
 			NULL,
 			WINHTTP_NO_REFERER,
 			types,
@@ -179,19 +198,36 @@ static int winhttp_stream_connect(winhttp_stream *s)
 
 	if (proxy_url) {
 		WINHTTP_PROXY_INFO proxy_info;
-		size_t wide_len;
+		wchar_t *proxy_wide;
 
-		git__utf8_to_16(url, GIT_WIN_PATH, proxy_url);
+		/* Convert URL to wide characters */
+		wide_len = MultiByteToWideChar(CP_UTF8,	MB_ERR_INVALID_CHARS,
+			proxy_url, -1, NULL, 0);
 
-		wide_len = wcslen(url);
+		if (!wide_len) {
+			giterr_set(GITERR_OS, "Failed to measure string for wide conversion");
+			goto on_error;
+		}
+
+		proxy_wide = git__malloc(wide_len * sizeof(wchar_t));
+
+		if (!proxy_wide)
+			goto on_error;
+
+		if (!MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS,
+			proxy_url, -1, proxy_wide, wide_len)) {
+			giterr_set(GITERR_OS, "Failed to convert string to wide form");
+			git__free(proxy_wide);
+			goto on_error;
+		}
 
 		/* Strip any trailing forward slash on the proxy URL;
 		 * WinHTTP doesn't like it if one is present */
-		if (L'/' == url[wide_len - 1])
-			url[wide_len - 1] = L'\0';
+		if (wide_len > 1 && L'/' == proxy_wide[wide_len - 2])
+			proxy_wide[wide_len - 2] = L'\0';
 
 		proxy_info.dwAccessType = WINHTTP_ACCESS_TYPE_NAMED_PROXY;
-		proxy_info.lpszProxy = url;
+		proxy_info.lpszProxy = proxy_wide;
 		proxy_info.lpszProxyBypass = NULL;
 
 		if (!WinHttpSetOption(s->request,
@@ -199,8 +235,11 @@ static int winhttp_stream_connect(winhttp_stream *s)
 			&proxy_info,
 			sizeof(WINHTTP_PROXY_INFO))) {
 			giterr_set(GITERR_OS, "Failed to set proxy");
+			git__free(proxy_wide);
 			goto on_error;
 		}
+
+		git__free(proxy_wide);
 	}
 
 	/* Strip unwanted headers (X-P2P-PeerDist, X-P2P-PeerDistEx) that WinHTTP
@@ -348,8 +387,15 @@ static int winhttp_stream_read(
 	winhttp_stream *s = (winhttp_stream *)stream;
 	winhttp_subtransport *t = OWNING_SUBTRANSPORT(s);
 	DWORD dw_bytes_read;
+	char replay_count = 0;
 
 replay:
+	/* Enforce a reasonable cap on the number of replays */
+	if (++replay_count >= 7) {
+		giterr_set(GITERR_NET, "Too many redirects or authentication replays");
+		return -1;
+	}
+
 	/* Connect if necessary */
 	if (!s->request && winhttp_stream_connect(s) < 0)
 		return -1;
@@ -445,8 +491,68 @@ replay:
 			WINHTTP_HEADER_NAME_BY_INDEX,
 			&status_code, &status_code_length,
 			WINHTTP_NO_HEADER_INDEX)) {
-				giterr_set(GITERR_OS, "Failed to retreive status code");
+				giterr_set(GITERR_OS, "Failed to retrieve status code");
 				return -1;
+		}
+
+		/* The implementation of WinHTTP prior to Windows 7 will not
+		 * redirect to an identical URI. Some Git hosters use self-redirects
+		 * as part of their DoS mitigation strategy. Check first to see if we
+		 * have a redirect status code, and that we haven't already streamed
+		 * a post body. (We can't replay a streamed POST.) */
+		if (!s->chunked &&
+			(HTTP_STATUS_MOVED == status_code ||
+			 HTTP_STATUS_REDIRECT == status_code ||
+			 (HTTP_STATUS_REDIRECT_METHOD == status_code &&
+			  get_verb == s->verb) ||
+			 HTTP_STATUS_REDIRECT_KEEP_VERB == status_code)) {
+
+			/* Check for Windows 7. This workaround is only necessary on
+			 * Windows Vista and earlier. Windows 7 is version 6.1. */
+			if (!git_has_win32_version(6, 1)) {
+				wchar_t *location;
+				DWORD location_length;
+				int redirect_cmp;
+
+				/* OK, fetch the Location header from the redirect. */
+				if (WinHttpQueryHeaders(s->request,
+					WINHTTP_QUERY_LOCATION,
+					WINHTTP_HEADER_NAME_BY_INDEX,
+					WINHTTP_NO_OUTPUT_BUFFER,
+					&location_length,
+					WINHTTP_NO_HEADER_INDEX) ||
+					GetLastError() != ERROR_INSUFFICIENT_BUFFER) {
+					giterr_set(GITERR_OS, "Failed to read Location header");
+					return -1;
+				}
+
+				location = git__malloc(location_length);
+				GITERR_CHECK_ALLOC(location);
+
+				if (!WinHttpQueryHeaders(s->request,
+					WINHTTP_QUERY_LOCATION,
+					WINHTTP_HEADER_NAME_BY_INDEX,
+					location,
+					&location_length,
+					WINHTTP_NO_HEADER_INDEX)) {
+					giterr_set(GITERR_OS, "Failed to read Location header");
+					git__free(location);
+					return -1;
+				}
+
+				/* Compare the Location header with the request URI */
+				redirect_cmp = wcscmp(location, s->request_uri);
+				git__free(location);
+
+				if (!redirect_cmp) {
+					/* Replay the request */
+					WinHttpCloseHandle(s->request);
+					s->request = NULL;
+					s->sent_request = 0;
+
+					goto replay;
+				}
+			}
 		}
 
 		/* Handle authentication failures */
@@ -747,6 +853,11 @@ static void winhttp_stream_free(git_smart_subtransport_stream *stream)
 		s->post_body = NULL;
 	}
 
+	if (s->request_uri) {
+		git__free(s->request_uri);
+		s->request_uri = NULL;
+	}
+
 	if (s->request) {
 		WinHttpCloseHandle(s->request);
 		s->request = NULL;
@@ -876,7 +987,7 @@ static int winhttp_receivepack(
 {
 	/* WinHTTP only supports Transfer-Encoding: chunked
 	 * on Windows Vista (NT 6.0) and higher. */
-	s->chunked = LOBYTE(LOWORD(GetVersion())) >= 6;
+	s->chunked = git_has_win32_version(6, 0);
 
 	if (s->chunked)
 		s->parent.write = winhttp_stream_write_chunked;
