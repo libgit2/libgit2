@@ -119,7 +119,7 @@ static git_repository *repository_alloc(void)
 
 	memset(repo, 0x0, sizeof(git_repository));
 
-	if (git_cache_init(&repo->objects, GIT_DEFAULT_CACHE_SIZE, &git_object__free) < 0) {
+	if (git_cache_init(&repo->objects) < 0) {
 		git__free(repo);
 		return NULL;
 	}

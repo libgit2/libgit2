@@ -121,12 +121,13 @@ int git_object__from_odb_object(
 		break;
 	}
 
-	if (error < 0)
+	if (error < 0) {
 		git_object__free(object);
-	else
-		*object_out = git_cache_try_store(&repo->objects, object);
+		return error;
+	}
 
-	return error;
+	*object_out = git_cache_store_parsed(&repo->objects, object);
+	return 0;
 }
 
 int git_object_lookup_prefix(
@@ -154,27 +155,38 @@ int git_object_lookup_prefix(
 		len = GIT_OID_HEXSZ;
 
 	if (len == GIT_OID_HEXSZ) {
+		git_cached_obj *cached = NULL;
+
 		/* We want to match the full id : we can first look up in the cache,
 		 * since there is no need to check for non ambiguousity
 		 */
-		object = git_cache_get(&repo->objects, id);
-		if (object != NULL) {
-			if (type != GIT_OBJ_ANY && type != object->type) {
-				git_object_free(object);
-				giterr_set(GITERR_INVALID, "The requested type does not match the type in ODB");
-				return GIT_ENOTFOUND;
+		cached = git_cache_get_any(&repo->objects, id);
+		if (cached != NULL) {
+			if (cached->flags == GIT_CACHE_STORE_PARSED) {
+				object = (git_object *)cached;
+
+				if (type != GIT_OBJ_ANY && type != object->type) {
+					git_object_free(object);
+					giterr_set(GITERR_INVALID,
+						"The requested type does not match the type in ODB");
+					return GIT_ENOTFOUND;
+				}
+
+				*object_out = object;
+				return 0;
+			} else if (cached->flags == GIT_CACHE_STORE_RAW) {
+				odb_obj = (git_odb_object *)cached;
+			} else {
+				assert(!"Wrong caching type in the global object cache");
 			}
-
-			*object_out = object;
-			return 0;
+		} else {
+			/* Object was not found in the cache, let's explore the backends.
+			 * We could just use git_odb_read_unique_short_oid,
+			 * it is the same cost for packed and loose object backends,
+			 * but it may be much more costly for sqlite and hiredis.
+			 */
+			error = git_odb_read(&odb_obj, odb, id);
 		}
-
-		/* Object was not found in the cache, let's explore the backends.
-		 * We could just use git_odb_read_unique_short_oid,
-		 * it is the same cost for packed and loose object backends,
-		 * but it may be much more costly for sqlite and hiredis.
-		 */
-		error = git_odb_read(&odb_obj, odb, id);
 	} else {
 		git_oid short_oid;
 
@@ -245,7 +257,7 @@ void git_object_free(git_object *object)
 	if (object == NULL)
 		return;
 
-	git_cached_obj_decref((git_cached_obj *)object, git_object__free);
+	git_cached_obj_decref(object);
 }
 
 const git_oid *git_object_id(const git_object *obj)

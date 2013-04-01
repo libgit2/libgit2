@@ -21,10 +21,8 @@ typedef khash_t(oid) git_oidmap;
 
 GIT_INLINE(khint_t) hash_git_oid(const git_oid *oid)
 {
-	int i;
-	khint_t h = 0;
-	for (i = 0; i < 20; ++i)
-		h = (h << 5) - h + oid->id[i];
+	khint_t h;
+	memcpy(&h, oid, sizeof(khint_t));
 	return h;
 }
 
