@@ -31,7 +31,7 @@ GIT_BEGIN_DECL
  * @param symbolic the target for a symbolic reference
  * @return the created git_reference or NULL on error
  */
-git_reference *git_reference__alloc(
+GIT_EXTERN(git_reference *) git_reference__alloc(
 	git_refdb *refdb,
 	const char *name,
 	const git_oid *oid,
