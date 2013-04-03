@@ -11,7 +11,6 @@
 struct git_object {
 	git_cached_obj cached;
 	git_repository *repo;
-	git_otype type;
 };
 
 /* fully free the object; internal method, DO NOT EXPORT */

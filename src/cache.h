@@ -22,9 +22,9 @@ enum {
 
 typedef struct {
 	git_oid oid;
-	int32_t type;
+	int16_t type;
+	uint16_t flags;
 	size_t size;
-	uint32_t flags;
 	git_atomic refcount;
 } git_cached_obj;
 
