@@ -71,8 +71,6 @@ static int create_object(git_object **object_out, git_otype type)
 		return -1;
 	}
 
-	object->type = type;
-
 	*object_out = object;
 	return 0;
 }
@@ -92,17 +90,16 @@ int git_object__from_odb_object(
 		return GIT_ENOTFOUND;
 	}
 
-	type = odb_obj->cached.type;
-
-	if ((error = create_object(&object, type)) < 0)
+	if ((error = create_object(&object, odb_obj->cached.type)) < 0)
 		return error;
 
 	/* Initialize parent object */
 	git_oid_cpy(&object->cached.oid, &odb_obj->cached.oid);
 	object->cached.size = odb_obj->cached.size;
+	object->cached.type = odb_obj->cached.type;
 	object->repo = repo;
 
-	switch (type) {
+	switch (object->cached.type) {
 	case GIT_OBJ_COMMIT:
 		error = git_commit__parse((git_commit *)object, odb_obj);
 		break;
@@ -167,7 +164,7 @@ int git_object_lookup_prefix(
 			if (cached->flags == GIT_CACHE_STORE_PARSED) {
 				object = (git_object *)cached;
 
-				if (type != GIT_OBJ_ANY && type != object->type) {
+				if (type != GIT_OBJ_ANY && type != object->cached.type) {
 					git_object_free(object);
 					giterr_set(GITERR_INVALID,
 						"The requested type does not match the type in ODB");
@@ -231,7 +228,7 @@ void git_object__free(void *_obj)
 
 	assert(object);
 
-	switch (object->type) {
+	switch (object->cached.type) {
 	case GIT_OBJ_COMMIT:
 		git_commit__free((git_commit *)object);
 		break;
@@ -271,7 +268,7 @@ const git_oid *git_object_id(const git_object *obj)
 git_otype git_object_type(const git_object *obj)
 {
 	assert(obj);
-	return obj->type;
+	return obj->cached.type;
 }
 
 git_repository *git_object_owner(const git_object *obj)
