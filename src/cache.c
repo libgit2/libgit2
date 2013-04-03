@@ -28,6 +28,27 @@ size_t git_cache__max_object_size[8] = {
 	0 /* GIT_OBJ_REF_DELTA */
 };
 
+void git_cache_dump_stats(git_cache *cache)
+{
+	git_cached_obj *object;
+
+	if (kh_size(cache->map) == 0)
+		return;
+
+	printf("Cache %p: %d items cached, %d bytes\n",
+		cache, kh_size(cache->map), (int)cache->used_memory);
+
+	kh_foreach_value(cache->map, object, {
+		char oid_str[9];
+		printf(" %s%c %s (%d)\n",
+			git_object_type2string(object->type),
+			object->flags == GIT_CACHE_STORE_PARSED ? '*' : ' ',
+			git_oid_tostr(oid_str, sizeof(oid_str), &object->oid),
+			(int)object->size
+		);
+	});
+}
+
 int git_cache_init(git_cache *cache)
 {
 	cache->used_memory = 0;
