@@ -32,7 +32,6 @@ size_t git_cache__max_object_size = 4096;
 
 int git_cache_init(git_cache *cache)
 {
-	cache->lru_count = 0;
 	cache->map = git_oidmap_alloc();
 	git_mutex_init(&cache->lock);
 	return 0;
@@ -42,6 +41,24 @@ void git_cache_free(git_cache *cache)
 {
 	git_oidmap_free(cache->map);
 	git_mutex_free(&cache->lock);
+}
+
+static void cache_evict_entries(git_cache *cache, size_t evict)
+{
+	uint32_t seed = rand();
+
+	/* do not infinite loop if there's not enough entries to evict  */
+	if (evict > kh_size(cache->map))
+		return;
+
+	while (evict > 0) {
+		khiter_t pos = seed++ % kh_end(cache->map);
+
+		if (kh_exist(cache->map, pos)) {
+			kh_del(oid, cache->map, pos);
+			evict--;
+		}
+	}
 }
 
 static bool cache_should_store(git_otype object_type, size_t object_size)

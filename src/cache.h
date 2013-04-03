@@ -23,14 +23,13 @@ enum {
 typedef struct {
 	git_oid oid;
 	git_atomic refcount;
-	uint16_t flags;
-	uint16_t lru;
+	uint32_t cache_size;
+	uint32_t flags;
 } git_cached_obj;
 
 typedef struct {
 	git_oidmap *map;
 	git_mutex lock;
-	unsigned int lru_count;
 } git_cache;
 
 int git_cache_init(git_cache *cache);
