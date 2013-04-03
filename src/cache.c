@@ -144,7 +144,7 @@ void *git_cache_store_raw(git_cache *cache, git_odb_object *entry)
 {
 	git_cached_obj_incref(entry);
 
-	if (!cache_should_store(entry->raw.type, entry->raw.len))
+	if (!cache_should_store(entry->cached.type, entry->cached.size))
 		return entry;
 
 	entry->cached.flags = GIT_CACHE_STORE_RAW;
@@ -155,7 +155,7 @@ void *git_cache_store_parsed(git_cache *cache, git_object *entry)
 {
 	git_cached_obj_incref(entry);
 
-	if (!cache_should_store(entry->type, 0 /* TODO */))
+	if (!cache_should_store(entry->cached.type, entry->cached.size))
 		return entry;
 
 	entry->cached.flags = GIT_CACHE_STORE_PARSED;

@@ -419,7 +419,9 @@ static int tree_parse_buffer(git_tree *tree, const char *buffer, const char *buf
 int git_tree__parse(git_tree *tree, git_odb_object *obj)
 {
 	assert(tree);
-	return tree_parse_buffer(tree, (char *)obj->raw.data, (char *)obj->raw.data + obj->raw.len);
+	return tree_parse_buffer(tree,
+		(char *)obj->buffer,
+		(char *)obj->buffer + obj->cached.size);
 }
 
 static size_t find_next_dir(const char *dirname, git_index *index, size_t start)
