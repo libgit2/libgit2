@@ -98,6 +98,7 @@ int git_object__from_odb_object(
 
 	/* Initialize parent object */
 	git_oid_cpy(&object->cached.oid, &odb_obj->cached.oid);
+	object->cached.cache_size = (uint32_t)odb_obj->raw.len;
 	object->repo = repo;
 
 	switch (type) {
