@@ -244,7 +244,7 @@ bad_buffer:
 int git_commit__parse(git_commit *commit, git_odb_object *obj)
 {
 	assert(commit);
-	return git_commit__parse_buffer(commit, obj->raw.data, obj->raw.len);
+	return git_commit__parse_buffer(commit, obj->buffer, obj->cached.size);
 }
 
 #define GIT_COMMIT_GETTER(_rvalue, _name, _return) \

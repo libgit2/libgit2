@@ -46,8 +46,8 @@ void test_odb_packed__read_header_0(void)
 		cl_git_pass(git_odb_read(&obj, _odb, &id));
 		cl_git_pass(git_odb_read_header(&len, &type, _odb, &id));
 
-		cl_assert(obj->raw.len == len);
-		cl_assert(obj->raw.type == type);
+		cl_assert(obj->cached.size == len);
+		cl_assert(obj->cached.type == type);
 
 		git_odb_object_free(obj);
 	}
@@ -70,8 +70,8 @@ void test_odb_packed__read_header_1(void)
 		cl_git_pass(git_odb_read(&obj, _odb, &id));
 		cl_git_pass(git_odb_read_header(&len, &type, _odb, &id));
 
-		cl_assert(obj->raw.len == len);
-		cl_assert(obj->raw.type == type);
+		cl_assert(obj->cached.size == len);
+		cl_assert(obj->cached.type == type);
 
 		git_odb_object_free(obj);
 	}

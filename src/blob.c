@@ -18,19 +18,19 @@
 const void *git_blob_rawcontent(const git_blob *blob)
 {
 	assert(blob);
-	return blob->odb_object->raw.data;
+	return blob->odb_object->buffer;
 }
 
 git_off_t git_blob_rawsize(const git_blob *blob)
 {
 	assert(blob);
-	return (git_off_t)blob->odb_object->raw.len;
+	return (git_off_t)blob->odb_object->cached.size;
 }
 
 int git_blob__getbuf(git_buf *buffer, git_blob *blob)
 {
 	return git_buf_set(
-		buffer, blob->odb_object->raw.data, blob->odb_object->raw.len);
+		buffer, blob->odb_object->buffer, blob->odb_object->cached.size);
 }
 
 void git_blob__free(git_blob *blob)
@@ -315,8 +315,8 @@ int git_blob_is_binary(git_blob *blob)
 
 	assert(blob);
 
-	content.ptr = blob->odb_object->raw.data;
-	content.size = min(blob->odb_object->raw.len, 4000);
+	content.ptr = blob->odb_object->buffer;
+	content.size = min(blob->odb_object->cached.size, 4000);
 
 	return git_buf_text_is_binary(&content);
 }

@@ -324,7 +324,7 @@ int git_tag_create_frombuffer(git_oid *oid, git_repository *repo, const char *bu
 	if (git_odb_read(&target_obj, odb, &tag.target) < 0)
 		goto on_error;
 
-	if (tag.type != target_obj->raw.type) {
+	if (tag.type != target_obj->cached.type) {
 		giterr_set(GITERR_TAG, "The type for the given target is invalid");
 		goto on_error;
 	}
@@ -397,7 +397,7 @@ int git_tag_delete(git_repository *repo, const char *tag_name)
 int git_tag__parse(git_tag *tag, git_odb_object *obj)
 {
 	assert(tag);
-	return git_tag__parse_buffer(tag, obj->raw.data, obj->raw.len);
+	return git_tag__parse_buffer(tag, obj->buffer, obj->cached.size);
 }
 
 typedef struct {

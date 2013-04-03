@@ -710,8 +710,8 @@ static int blob_content_to_file(
 	git_vector filters = GIT_VECTOR_INIT;
 
 	/* Create a fake git_buf from the blob raw data... */
-	filtered.ptr = blob->odb_object->raw.data;
-	filtered.size = blob->odb_object->raw.len;
+	filtered.ptr = blob->odb_object->buffer;
+	filtered.size = blob->odb_object->cached.size;
 	/* ... and make sure it doesn't get unexpectedly freed */
 	dont_free_filtered = true;
 

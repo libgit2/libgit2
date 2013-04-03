@@ -65,6 +65,7 @@ int git_odb__hashobj(git_oid *id, git_rawobj *obj)
 
 	if (!git_object_typeisloose(obj->type))
 		return -1;
+
 	if (!obj->data && obj->len != 0)
 		return -1;
 
@@ -87,7 +88,9 @@ static git_odb_object *new_odb_object(const git_oid *oid, git_rawobj *source)
 	memset(object, 0x0, sizeof(git_odb_object));
 
 	git_oid_cpy(&object->cached.oid, oid);
-	memcpy(&object->raw, source, sizeof(git_rawobj));
+	object->cached.size = source->len;
+	object->cached.type = source->type;
+	object->buffer = source->data;
 
 	return object;
 }
@@ -95,7 +98,7 @@ static git_odb_object *new_odb_object(const git_oid *oid, git_rawobj *source)
 void git_odb_object__free(git_odb_object *object)
 {
 	if (object != NULL) {
-		git__free(object->raw.data);
+		git__free(object->buffer);
 		git__free(object);
 	}
 }
@@ -107,17 +110,17 @@ const git_oid *git_odb_object_id(git_odb_object *object)
 
 const void *git_odb_object_data(git_odb_object *object)
 {
-	return object->raw.data;
+	return object->buffer;
 }
 
 size_t git_odb_object_size(git_odb_object *object)
 {
-	return object->raw.len;
+	return object->cached.size;
 }
 
 git_otype git_odb_object_type(git_odb_object *object)
 {
-	return object->raw.type;
+	return object->cached.type;
 }
 
 void git_odb_object_free(git_odb_object *object)
@@ -637,8 +640,8 @@ int git_odb__read_header_or_object(
 	assert(db && id && out && len_p && type_p);
 
 	if ((object = git_cache_get_raw(odb_cache(db), id)) != NULL) {
-		*len_p = object->raw.len;
-		*type_p = object->raw.type;
+		*len_p = object->cached.size;
+		*type_p = object->cached.type;
 		*out = object;
 		return 0;
 	}
@@ -663,8 +666,8 @@ int git_odb__read_header_or_object(
 	if ((error = git_odb_read(&object, db, id)) < 0)
 		return error; /* error already set - pass along */
 
-	*len_p = object->raw.len;
-	*type_p = object->raw.type;
+	*len_p = object->cached.size;
+	*type_p = object->cached.type;
 	*out = object;
 
 	return 0;

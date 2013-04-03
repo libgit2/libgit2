@@ -86,19 +86,20 @@ int git_object__from_odb_object(
 	int error;
 	git_object *object = NULL;
 
-	if (type != GIT_OBJ_ANY && type != odb_obj->raw.type) {
-		giterr_set(GITERR_INVALID, "The requested type does not match the type in the ODB");
+	if (type != GIT_OBJ_ANY && type != odb_obj->cached.type) {
+		giterr_set(GITERR_INVALID,
+			"The requested type does not match the type in the ODB");
 		return GIT_ENOTFOUND;
 	}
 
-	type = odb_obj->raw.type;
+	type = odb_obj->cached.type;
 
 	if ((error = create_object(&object, type)) < 0)
 		return error;
 
 	/* Initialize parent object */
 	git_oid_cpy(&object->cached.oid, &odb_obj->cached.oid);
-	object->cached.cache_size = (uint32_t)odb_obj->raw.len;
+	object->cached.size = odb_obj->cached.size;
 	object->repo = repo;
 
 	switch (type) {

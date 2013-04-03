@@ -29,7 +29,7 @@ typedef struct {
 /* EXPORT */
 struct git_odb_object {
 	git_cached_obj cached;
-	git_rawobj raw;
+	void *buffer;
 };
 
 /* EXPORT */
