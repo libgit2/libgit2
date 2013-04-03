@@ -17,21 +17,20 @@
 
 GIT__USE_OIDMAP
 
-bool git_cache__store_types[8] = {
-	false, /* GIT_OBJ__EXT1 */
-	true,  /* GIT_OBJ_COMMIT */
-	true,  /* GIT_OBJ_TREE */
-	false, /* GIT_OBJ_BLOB */
-	true,  /* GIT_OBJ_TAG */
-	false, /* GIT_OBJ__EXT2 */
-	false, /* GIT_OBJ_OFS_DELTA */
-	false /* GIT_OBJ_REF_DELTA */
+size_t git_cache__max_object_size[8] = {
+	0, /* GIT_OBJ__EXT1 */
+	4096,  /* GIT_OBJ_COMMIT */
+	4096,  /* GIT_OBJ_TREE */
+	0, /* GIT_OBJ_BLOB */
+	4096,  /* GIT_OBJ_TAG */
+	0, /* GIT_OBJ__EXT2 */
+	0, /* GIT_OBJ_OFS_DELTA */
+	0 /* GIT_OBJ_REF_DELTA */
 };
-
-size_t git_cache__max_object_size = 4096;
 
 int git_cache_init(git_cache *cache)
 {
+	cache->used_memory = 0;
 	cache->map = git_oidmap_alloc();
 	git_mutex_init(&cache->lock);
 	return 0;
@@ -43,30 +42,35 @@ void git_cache_free(git_cache *cache)
 	git_mutex_free(&cache->lock);
 }
 
-static void cache_evict_entries(git_cache *cache, size_t evict)
+/* Call with lock, yo */
+static void cache_evict_entries(git_cache *cache, size_t evict_count)
 {
 	uint32_t seed = rand();
 
 	/* do not infinite loop if there's not enough entries to evict  */
-	if (evict > kh_size(cache->map))
+	if (evict_count > kh_size(cache->map))
 		return;
 
-	while (evict > 0) {
+	while (evict_count > 0) {
 		khiter_t pos = seed++ % kh_end(cache->map);
 
 		if (kh_exist(cache->map, pos)) {
+			git_cached_obj *evict = kh_val(cache->map, pos);
+
+			evict_count--;
+			cache->used_memory -= evict->size;
+			git_cached_obj_decref(evict);
+
 			kh_del(oid, cache->map, pos);
-			evict--;
 		}
 	}
 }
 
 static bool cache_should_store(git_otype object_type, size_t object_size)
 {
-	if (!git_cache__store_types[object_type])
-		return false;
+	size_t max_size = git_cache__max_object_size[object_type];
 
-	if (object_size > git_cache__max_object_size)
+	if (max_size == 0 || object_size > max_size)
 		return false;
 
 	return true;
@@ -100,6 +104,11 @@ static void *cache_store(git_cache *cache, git_cached_obj *entry)
 {
 	khiter_t pos;
 
+	git_cached_obj_incref(entry);
+
+	if (!cache_should_store(entry->type, entry->size))
+		return entry;
+
 	if (git_mutex_lock(&cache->lock) < 0)
 		return entry;
 
@@ -114,6 +123,7 @@ static void *cache_store(git_cache *cache, git_cached_obj *entry)
 			kh_key(cache->map, pos) = &entry->oid;
 			kh_val(cache->map, pos) = entry;
 			git_cached_obj_incref(entry);
+			cache->used_memory += entry->size;
 		}
 	}
 	/* found */
@@ -142,22 +152,12 @@ static void *cache_store(git_cache *cache, git_cached_obj *entry)
 
 void *git_cache_store_raw(git_cache *cache, git_odb_object *entry)
 {
-	git_cached_obj_incref(entry);
-
-	if (!cache_should_store(entry->cached.type, entry->cached.size))
-		return entry;
-
 	entry->cached.flags = GIT_CACHE_STORE_RAW;
 	return cache_store(cache, (git_cached_obj *)entry);
 }
 
 void *git_cache_store_parsed(git_cache *cache, git_object *entry)
 {
-	git_cached_obj_incref(entry);
-
-	if (!cache_should_store(entry->cached.type, entry->cached.size))
-		return entry;
-
 	entry->cached.flags = GIT_CACHE_STORE_PARSED;
 	return cache_store(cache, (git_cached_obj *)entry);
 }

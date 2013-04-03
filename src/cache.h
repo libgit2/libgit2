@@ -31,6 +31,7 @@ typedef struct {
 typedef struct {
 	git_oidmap *map;
 	git_mutex lock;
+	size_t used_memory;
 } git_cache;
 
 int git_cache_init(git_cache *cache);
