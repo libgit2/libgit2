@@ -51,6 +51,8 @@ int main (int argc, char** argv)
   // There are a couple of methods for opening a repository, this being the
   // simplest.  There are also [methods][me] for specifying the index file
   // and work tree locations, here we assume they are in the normal places.
+	//
+	// (Try running this program against tests-clar/resources/testrepo.git.)
   //
   // [me]: http://libgit2.github.com/libgit2/#HEAD/group/repository
   int error;
@@ -65,7 +67,7 @@ int main (int argc, char** argv)
   // For our first example, we will convert a 40 character hex value to the
   // 20 byte raw SHA1 value.
   printf("*Hex to Raw*\n");
-  char hex[] = "fd6e612585290339ea8bf39c692a7ff6a29cb7c3";
+  char hex[] = "4a202b346bb0fb0db7eff3cffeb3c70babbd2045";
 
   // The `git_oid` is the structure that keeps the SHA value. We will use
   // this throughout the example for storing the value of the current SHA
@@ -164,7 +166,7 @@ int main (int argc, char** argv)
   printf("\n*Commit Parsing*\n");
 
   git_commit *commit;
-  git_oid_fromstr(&oid, "f0877d0b841d75172ec404fc9370173dfffc20d1");
+  git_oid_fromstr(&oid, "8496071c1b46c854b31185ea97743be6a8774479");
 
   error = git_commit_lookup(&commit, repo, &oid);
   check_error(error, "looking up commit");
@@ -232,9 +234,9 @@ int main (int argc, char** argv)
   // Commit objects need a tree to point to and optionally one or more
   // parents.  Here we're creating oid objects to create the commit with,
   // but you can also use
-  git_oid_fromstr(&tree_id, "28873d96b4e8f4e33ea30f4c682fd325f7ba56ac");
+  git_oid_fromstr(&tree_id, "f60079018b664e4e79329a7ef9559c8d9e0378d1");
   git_tree_lookup(&tree, repo, &tree_id);
-  git_oid_fromstr(&parent_id, "f0877d0b841d75172ec404fc9370173dfffc20d1");
+  git_oid_fromstr(&parent_id, "5b5b025afb0b4c913b4c338a42934a3863bf3644");
   git_commit_lookup(&parent, repo, &parent_id);
 
   // Here we actually create the commit object with a single call with all
@@ -269,7 +271,7 @@ int main (int argc, char** argv)
 
   // We create an oid for the tag object if we know the SHA and look it up
   // the same way that we would a commit (or any other object).
-  git_oid_fromstr(&oid, "bc422d45275aca289c51d79830b45cecebff7c3a");
+  git_oid_fromstr(&oid, "b25fa35b38051e4ae45d4222e795f9df2e43f1d1");
 
   error = git_tag_lookup(&tag, repo, &oid);
   check_error(error, "looking up tag");
@@ -313,7 +315,7 @@ int main (int argc, char** argv)
 
   // You can also access tree entries by name if you know the name of the
   // entry you're looking for.
-  entry = git_tree_entry_byname(tree, "hello.c");
+  entry = git_tree_entry_byname(tree, "README");
   git_tree_entry_name(entry); // "hello.c"
 
   // Once you have the entry object, you can access the content or subtree
@@ -339,7 +341,7 @@ int main (int argc, char** argv)
   printf("\n*Blob Parsing*\n");
   git_blob *blob;
 
-  git_oid_fromstr(&oid, "af7574ea73f7b166f869ef1a39be126d9a186ae0");
+  git_oid_fromstr(&oid, "1385f264afb75a56a5bec74243be9b367ba4ca08");
   git_blob_lookup(&blob, repo, &oid);
 
   // You can access a buffer with the raw contents of the blob directly.
@@ -365,7 +367,7 @@ int main (int argc, char** argv)
   git_revwalk *walk;
   git_commit *wcommit;
 
-  git_oid_fromstr(&oid, "f0877d0b841d75172ec404fc9370173dfffc20d1");
+  git_oid_fromstr(&oid, "5b5b025afb0b4c913b4c338a42934a3863bf3644");
 
   // To use the revwalker, create a new walker, tell it how you want to sort
   // the output and then push one or more starting points onto the walker.
@@ -495,7 +497,9 @@ int main (int argc, char** argv)
   git_config *cfg;
 
   // Open a config object so we can read global values from it.
-  git_config_open_ondisk(&cfg, "~/.gitconfig");
+  char config_path[256];
+  sprintf(config_path, "%s/config", repo_path);
+  check_error(git_config_open_ondisk(&cfg, config_path), "opening config");
 
   git_config_get_int32(&j, cfg, "help.autocorrect");
   printf("Autocorrect: %d\n", j);
