@@ -82,7 +82,7 @@ int git_refdb_compress(git_refdb *db)
 	return 0;
 }
 
-void git_refdb_free(git_refdb *db)
+static void refdb_free(git_refdb *db)
 {
 	if (db->backend) {
 		if(db->backend->free)
@@ -92,6 +92,14 @@ void git_refdb_free(git_refdb *db)
 	}
 
 	git__free(db);
+}
+
+void git_refdb_free(git_refdb *db)
+{
+	if (db == NULL)
+		return;
+
+	GIT_REFCOUNT_DEC(db, refdb_free);
 }
 
 int git_refdb_exists(int *exists, git_refdb *refdb, const char *ref_name)
