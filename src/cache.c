@@ -17,6 +17,8 @@
 
 GIT__USE_OIDMAP
 
+bool git_cache__enabled = true;
+
 size_t git_cache__max_object_size[8] = {
 	0, /* GIT_OBJ__EXT1 */
 	4096,  /* GIT_OBJ_COMMIT */
@@ -109,11 +111,7 @@ static void cache_evict_entries(git_cache *cache, size_t evict_count)
 static bool cache_should_store(git_otype object_type, size_t object_size)
 {
 	size_t max_size = git_cache__max_object_size[object_type];
-
-	if (max_size == 0 || object_size > max_size)
-		return false;
-
-	return true;
+	return git_cache__enabled && object_size < max_size;
 }
 
 static void *cache_get(git_cache *cache, const git_oid *oid, unsigned int flags)
@@ -121,7 +119,7 @@ static void *cache_get(git_cache *cache, const git_oid *oid, unsigned int flags)
 	khiter_t pos;
 	git_cached_obj *entry = NULL;
 
-	if (git_mutex_lock(&cache->lock) < 0)
+	if (!git_cache__enabled || git_mutex_lock(&cache->lock) < 0)
 		return NULL;
 
 	pos = kh_get(oid, cache->map, oid);

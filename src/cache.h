@@ -20,6 +20,9 @@ enum {
 	GIT_CACHE_STORE_PARSED = 2
 };
 
+extern bool git_cache__enabled;
+extern size_t git_cache__max_object_size[8];
+
 typedef struct {
 	git_oid oid;
 	int16_t type;
