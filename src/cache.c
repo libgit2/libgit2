@@ -63,14 +63,33 @@ void git_cache_free(git_cache *cache)
 	git_mutex_free(&cache->lock);
 }
 
+void git_cache_clear(git_cache *cache)
+{
+	git_cached_obj *evict = NULL;
+
+	if (git_mutex_lock(&cache->lock) < 0)
+		return;
+
+	kh_foreach_value(cache->map, evict, {
+		git_cached_obj_decref(evict);
+	});
+
+	kh_clear(oid, cache->map);
+	cache->used_memory = 0;
+
+	git_mutex_unlock(&cache->lock);
+}
+
 /* Call with lock, yo */
 static void cache_evict_entries(git_cache *cache, size_t evict_count)
 {
 	uint32_t seed = rand();
 
 	/* do not infinite loop if there's not enough entries to evict  */
-	if (evict_count > kh_size(cache->map))
+	if (evict_count > kh_size(cache->map)) {
+		git_cache_clear(cache);
 		return;
+	}
 
 	while (evict_count > 0) {
 		khiter_t pos = seed++ % kh_end(cache->map);
