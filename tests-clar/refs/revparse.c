@@ -38,7 +38,7 @@ static void test_rangelike(const char *rangelike,
 						   int expected_threedots)
 {
 	char objstr[64] = {0};
-	git_object *left, *right;
+	git_object *left = NULL, *right = NULL;
 	int threedots;
 	int error;
 
