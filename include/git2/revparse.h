@@ -32,6 +32,19 @@ GIT_BEGIN_DECL
  */
 GIT_EXTERN(int) git_revparse_single(git_object **out, git_repository *repo, const char *spec);
 
+/**
+ * Parse a string with the form of a revision range, as accepted by
+ * `git rev-list`, `git diff`, and others.
+ *
+ * @param left (output) the left-hand commit
+ * @param right (output) the right-hand commit
+ * @param threedots (output) 0 if the endpoints are separated by two dots, 1 if by three
+ * @param repo the repository to find the commits in
+ * @param rangelike the rangelike string to be parsed
+ * @return 0 on success, or any error `git_revparse_single` can return
+ */
+GIT_EXTERN(int) git_revparse_rangelike(git_object **left, git_object **right, int *threedots, git_repository *repo, const char *rangelike);
+
 /** @} */
 GIT_END_DECL
 #endif

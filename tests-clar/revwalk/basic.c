@@ -1,15 +1,14 @@
 #include "clar_libgit2.h"
 
 /*
-	$ git log --oneline --graph --decorate
-	*   a4a7dce (HEAD, br2) Merge branch 'master' into br2
+	*   a4a7dce [0] Merge branch 'master' into br2
 	|\
-	| * 9fd738e (master) a fourth commit
-	| * 4a202b3 a third commit
-	* | c47800c branch commit one
+	| * 9fd738e [1] a fourth commit
+	| * 4a202b3 [2] a third commit
+	* | c47800c [3] branch commit one
 	|/
-	* 5b5b025 another commit
-	* 8496071 testing
+	* 5b5b025 [5] another commit
+	* 8496071 [4] testing
 */
 static const char *commit_head = "a4a7dce85cf63874e984719f4fdd239f5145052f";
 
@@ -39,6 +38,10 @@ static const int commit_sorting_time_reverse[][6] = {
 	{4, 5, 2, 1, 3, 0}
 };
 
+static const int commit_sorting_segment[][6] = {
+	{1, 2, -1, -1, -1, -1}
+};
+
 #define commit_count 6
 static const int result_bytes = 24;
 
@@ -57,22 +60,17 @@ static int get_commit_index(git_oid *raw_oid)
 	return -1;
 }
 
-static int test_walk(git_revwalk *walk, const git_oid *root,
-		int flags, const int possible_results[][6], int results_count)
+static int test_walk_only(git_revwalk *walk,
+		const int possible_results[][commit_count], int results_count)
 {
 	git_oid oid;
-
 	int i;
 	int result_array[commit_count];
-
-	git_revwalk_sorting(walk, flags);
-	git_revwalk_push(walk, root);
 
 	for (i = 0; i < commit_count; ++i)
 		result_array[i] = -1;
 
 	i = 0;
-
 	while (git_revwalk_next(&oid, walk) == 0) {
 		result_array[i++] = get_commit_index(&oid);
 		/*{
@@ -89,6 +87,15 @@ static int test_walk(git_revwalk *walk, const git_oid *root,
 			return 0;
 
 	return GIT_ERROR;
+}
+
+static int test_walk(git_revwalk *walk, const git_oid *root,
+		int flags, const int possible_results[][6], int results_count)
+{
+	git_revwalk_sorting(walk, flags);
+	git_revwalk_push(walk, root);
+
+	return test_walk_only(walk, possible_results, results_count);
 }
 
 static git_repository *_repo;
@@ -188,4 +195,12 @@ void test_revwalk_basic__disallow_non_commit(void)
 
 	cl_git_pass(git_oid_fromstr(&oid, "521d87c1ec3aef9824daf6d96cc0ae3710766d91"));
 	cl_git_fail(git_revwalk_push(_walk, &oid));
+}
+
+void test_revwalk_basic__push_range(void)
+{
+	git_revwalk_reset(_walk);
+	git_revwalk_sorting(_walk, 0);
+	cl_git_pass(git_revwalk_push_range(_walk, "9fd738e~2..9fd738e"));
+	cl_git_pass(test_walk_only(_walk, commit_sorting_segment, 1));
 }
