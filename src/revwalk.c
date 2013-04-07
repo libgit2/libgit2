@@ -11,6 +11,7 @@
 #include "pool.h"
 
 #include "revwalk.h"
+#include "git2/revparse.h"
 #include "merge.h"
 
 #include <regex.h>
@@ -226,6 +227,30 @@ int git_revwalk_push_ref(git_revwalk *walk, const char *refname)
 {
 	assert(walk && refname);
 	return push_ref(walk, refname, 0);
+}
+
+int git_revwalk_push_range(git_revwalk *walk, const char *range)
+{
+	git_object *left, *right;
+	int threedots;
+	int error = 0;
+
+	if ((error = git_revparse_rangelike(&left, &right, &threedots, walk->repo, range)))
+		return error;
+	if (threedots) {
+		/* TODO: support "<commit>...<commit>" */
+		giterr_set(GITERR_INVALID, "Symmetric differences not implemented in revwalk");
+		return GIT_EINVALIDSPEC;
+	}
+
+	if ((error = push_commit(walk, git_object_id(left), 1)))
+		goto out;
+	error = push_commit(walk, git_object_id(right), 0);
+
+  out:
+	git_object_free(left);
+	git_object_free(right);
+	return error;
 }
 
 int git_revwalk_hide_ref(git_revwalk *walk, const char *refname)

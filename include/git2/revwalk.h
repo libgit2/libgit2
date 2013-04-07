@@ -92,7 +92,7 @@ GIT_EXTERN(void) git_revwalk_reset(git_revwalk *walker);
  *
  * The given commit will be used as one of the roots
  * when starting the revision walk. At least one commit
- * must be pushed the repository before a walk can
+ * must be pushed onto the walker before a walk can
  * be started.
  *
  * @param walk the walker being used for the traversal.
@@ -215,6 +215,21 @@ GIT_EXTERN(int) git_revwalk_next(git_oid *out, git_revwalk *walk);
  * @param sort_mode combination of GIT_SORT_XXX flags
  */
 GIT_EXTERN(void) git_revwalk_sorting(git_revwalk *walk, unsigned int sort_mode);
+
+/**
+ * Push and hide the respective endpoints of the given range.
+ *
+ * The range should be of the form
+ *   <commit>..<commit>
+ * where each <commit> is in the form accepted by 'git_revparse_single'.
+ * The left-hand commit will be hidden and the right-hand commit pushed.
+ *
+ * @param walk the walker being used for the traversal
+ * @param range the range
+ * @return 0 or an error code
+ *
+ */
+GIT_EXTERN(int) git_revwalk_push_range(git_revwalk *walk, const char *range);
 
 /**
  * Free a revision walker previously allocated.

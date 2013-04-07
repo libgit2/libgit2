@@ -1,4 +1,5 @@
 general
 showindex
 diff
+rev-list
 *.dSYM
