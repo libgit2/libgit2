@@ -123,7 +123,7 @@ Here are the bindings to libgit2 that are currently available:
 * GObject
     * libgit2-glib <https://live.gnome.org/Libgit2-glib>
 * Haskell
-    * hgit2 <https://github.com/norm2782/hgit2>
+    * hgit2 <https://github.com/fpco/gitlib>
 * Lua
     * luagit2 <https://github.com/libgit2/luagit2>
 * .NET
