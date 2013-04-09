@@ -23,7 +23,7 @@
 // the indexing to finish in a worker thread
 static int index_cb(const git_transfer_progress *stats, void *data)
 {
-	data = data;
+	(void)data;
 	printf("\rProcessing %d of %d", stats->indexed_objects, stats->total_objects);
 
 	return 0;
@@ -39,9 +39,10 @@ int index_pack(git_repository *repo, int argc, char **argv)
 	ssize_t read_bytes;
 	char buf[512];
 
-	repo = repo;
+	(void)repo;
+
 	if (argc < 2) {
-		fprintf(stderr, "I need a packfile\n");
+		fprintf(stderr, "usage: %s index-pack <packfile>\n", argv[-1]);
 		return EXIT_FAILURE;
 	}
 
