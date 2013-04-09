@@ -388,4 +388,7 @@ IF (BUILD_EXAMPLES)
 
 	ADD_EXECUTABLE(git-showindex examples/showindex.c)
 	TARGET_LINK_LIBRARIES(git-showindex git2)
+
+	ADD_EXECUTABLE(git-rev-list examples/rev-list.c)
+	TARGET_LINK_LIBRARIES(git-rev-list git2)
 ENDIF ()
