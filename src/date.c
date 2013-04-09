@@ -681,8 +681,8 @@ static const char *approxidate_alpha(const char *date, struct tm *tm, struct tm 
 	const char *end = date;
 	int i;
 
-	while (isalpha(*++end));
-		;
+	while (isalpha(*++end))
+		/* scan to non-alpha */;
 
 	for (i = 0; i < 12; i++) {
 		size_t match = match_string(date, month_names[i]);

@@ -8,7 +8,7 @@ static int show_ref__cb(git_remote_head *head, void *payload)
 {
 	char oid[GIT_OID_HEXSZ + 1] = {0};
 
-	payload = payload;
+	(void)payload;
 	git_oid_fmt(oid, &head->oid);
 	printf("%s\t%s\n", oid, head->name);
 	return 0;
@@ -67,7 +67,11 @@ int ls_remote(git_repository *repo, int argc, char **argv)
 {
 	int error;
 
-	argc = argc;
+	if (argc < 2) {
+		fprintf(stderr, "usage: %s ls-remote <remote>\n", argv[-1]);
+		return EXIT_FAILURE;
+	}
+
 	/* If there's a ':' in the name, assume it's an URL */
 	if (strchr(argv[1], ':') != NULL) {
 		error = use_unnamed(repo, argv[1]);

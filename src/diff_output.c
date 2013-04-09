@@ -675,10 +675,14 @@ cleanup:
 	if (!error) {
 		patch->flags |= GIT_DIFF_PATCH_LOADED;
 
+		/* patch is diffable only for non-binary, modified files where at
+		 * least one side has data and there is actual change in the data
+		 */
 		if ((delta->flags & GIT_DIFF_FLAG_BINARY) == 0 &&
 			delta->status != GIT_DELTA_UNMODIFIED &&
 			(patch->old_data.len || patch->new_data.len) &&
-			!git_oid_equal(&delta->old_file.oid, &delta->new_file.oid))
+			(patch->old_data.len != patch->new_data.len ||
+			 !git_oid_equal(&delta->old_file.oid, &delta->new_file.oid)))
 			patch->flags |= GIT_DIFF_PATCH_DIFFABLE;
 	}
 
@@ -1149,7 +1153,11 @@ static int print_patch_file(
 
 	GIT_UNUSED(progress);
 
-	if (S_ISDIR(delta->new_file.mode))
+	if (S_ISDIR(delta->new_file.mode) ||
+		delta->status == GIT_DELTA_UNMODIFIED ||
+		delta->status == GIT_DELTA_IGNORED ||
+		(delta->status == GIT_DELTA_UNTRACKED &&
+		 (pi->diff->opts.flags & GIT_DIFF_INCLUDE_UNTRACKED_CONTENT) == 0))
 		return 0;
 
 	if (!oldpfx)
