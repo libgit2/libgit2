@@ -15,9 +15,11 @@ static int resolve_to_tree(
 	git_repository *repo, const char *identifier, git_tree **tree)
 {
 	int err = 0;
+	git_oid oid;
 	git_object *obj = NULL;
 
-	if (git_revparse_single(&obj, repo, identifier) < 0)
+	if (git_revparse(&oid, NULL, NULL, repo, identifier) < 0 ||
+	    git_object_lookup(&obj, repo, &oid, GIT_OBJ_ANY) < 0)
 		return GIT_ENOTFOUND;
 
 	switch (git_object_type(obj)) {

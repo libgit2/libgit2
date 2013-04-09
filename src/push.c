@@ -96,21 +96,18 @@ static int check_rref(char *ref)
 static int check_lref(git_push *push, char *ref)
 {
 	/* lref must be resolvable to an existing object */
-	git_object *obj;
-	int error = git_revparse_single(&obj, push->repo, ref);
+	git_oid oid;
+	int error = git_revparse(&oid, NULL, NULL, push->repo, ref);
 
-	if (error) {
-		if (error == GIT_ENOTFOUND)
-			giterr_set(GITERR_REFERENCE,
-				"src refspec '%s' does not match any existing object", ref);
-		else
-			giterr_set(GITERR_INVALID, "Not a valid reference '%s'", ref);
+	if (!error)
+		return 0;
 
-		return -1;
-	} else
-		git_object_free(obj);
-
-	return 0;
+	if (error == GIT_ENOTFOUND)
+		giterr_set(GITERR_REFERENCE,
+			"src refspec '%s' does not match any existing object", ref);
+	else
+		giterr_set(GITERR_INVALID, "Not a valid reference '%s'", ref);
+	return -1;
 }
 
 static int parse_refspec(git_push *push, push_spec **spec, const char *str)

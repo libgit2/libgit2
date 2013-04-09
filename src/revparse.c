@@ -722,7 +722,7 @@ static int ensure_left_hand_identifier_is_not_known_yet(git_object *object, git_
 	return GIT_EINVALIDSPEC;
 }
 
-int git_revparse_single(git_object **out, git_repository *repo, const char *spec)
+static int git_revparse_single(git_object **out, git_repository *repo, const char *spec)
 {
 	size_t pos = 0, identifier_len = 0;
 	int error = -1, n;
@@ -865,31 +865,6 @@ cleanup:
 	}
 	git_reference_free(reference);
 	git_buf_free(&buf);
-	return error;
-}
-
-int git_revparse_rangelike(git_object **left, git_object **right, int *threedots, git_repository *repo, const char *rangelike)
-{
-	int error = 0;
-	const char *p, *q;
-	char *revspec;
-
-	p = strstr(rangelike, "..");
-	if (!p) {
-		giterr_set(GITERR_INVALID, "Malformed range (or rangelike syntax): %s", rangelike);
-		return GIT_EINVALIDSPEC;
-	} else if (p[2] == '.') {
-		*threedots = 1;
-		q = p + 3;
-	} else {
-		*threedots = 0;
-		q = p + 2;
-	}
-
-	revspec = git__substrdup(rangelike, p - rangelike);
-	error = (git_revparse_single(left, repo, revspec)
-	      || git_revparse_single(right, repo, q));
-	git__free(revspec);
 	return error;
 }
 

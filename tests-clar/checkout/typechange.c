@@ -107,10 +107,12 @@ void test_checkout_typechange__checkout_typechanges_safe(void)
 {
 	int i;
 	git_object *obj;
+	git_oid oid;
 	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
 
 	for (i = 0; g_typechange_oids[i] != NULL; ++i) {
-		cl_git_pass(git_revparse_single(&obj, g_repo, g_typechange_oids[i]));
+		cl_git_pass(git_revparse(&oid, NULL, NULL, g_repo, g_typechange_oids[i]));
+		cl_git_pass(git_object_lookup(&obj, g_repo, &oid, GIT_OBJ_ANY));
 
 		opts.checkout_strategy = GIT_CHECKOUT_FORCE;
 
@@ -194,6 +196,7 @@ void test_checkout_typechange__checkout_with_conflicts(void)
 {
 	int i;
 	git_object *obj;
+	git_oid oid;
 	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
 	notify_counts cts = {0};
 
@@ -203,7 +206,8 @@ void test_checkout_typechange__checkout_with_conflicts(void)
 	opts.notify_payload = &cts;
 
 	for (i = 0; g_typechange_oids[i] != NULL; ++i) {
-		cl_git_pass(git_revparse_single(&obj, g_repo, g_typechange_oids[i]));
+		cl_git_pass(git_revparse(&oid, NULL, NULL, g_repo, g_typechange_oids[i]));
+		cl_git_pass(git_object_lookup(&obj, g_repo, &oid, GIT_OBJ_ANY));
 
 		force_create_file("typechanges/a/blocker");
 		force_create_file("typechanges/b");

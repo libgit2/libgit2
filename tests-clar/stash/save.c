@@ -37,10 +37,11 @@ void test_stash_save__cleanup(void)
 
 static void assert_object_oid(const char* revision, const char* expected_oid, git_otype type)
 {
-	git_object *object;
+	git_oid oid;
 	int result;
+	git_object *obj;
 
-	result = git_revparse_single(&object, repo, revision);
+	result = git_revparse(&oid, NULL, NULL, repo, revision);
 
 	if (!expected_oid) {
 		cl_assert_equal_i(GIT_ENOTFOUND, result);
@@ -48,10 +49,11 @@ static void assert_object_oid(const char* revision, const char* expected_oid, gi
 	} else
 		cl_assert_equal_i(0, result);
 
-	cl_assert_equal_i(type, git_object_type(object));
-	cl_git_pass(git_oid_streq(git_object_id(object), expected_oid));
+	cl_git_pass(git_oid_streq(&oid, expected_oid));
 
-	git_object_free(object);
+	cl_git_pass(git_object_lookup(&obj, repo, &oid, GIT_OBJ_ANY));
+	cl_assert_equal_i(type, git_object_type(obj));
+	git_object_free(obj);
 }
 
 static void assert_blob_oid(const char* revision, const char* expected_oid)
@@ -145,9 +147,11 @@ void test_stash_save__can_keep_index(void)
 
 static void assert_commit_message_contains(const char *revision, const char *fragment)
 {
+	git_oid oid;
 	git_commit *commit;
 
-	cl_git_pass(git_revparse_single(((git_object **)&commit), repo, revision));
+	cl_git_pass(git_revparse(&oid, NULL, NULL, repo, revision));
+	cl_git_pass(git_commit_lookup(&commit, repo, &oid));
 
 	cl_assert(strstr(git_commit_message(commit), fragment) != NULL);
 

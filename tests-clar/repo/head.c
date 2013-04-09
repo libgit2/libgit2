@@ -120,9 +120,11 @@ void test_repo_head__set_head_detached_Return_ENOTFOUND_when_the_object_doesnt_e
 
 void test_repo_head__set_head_detached_Fails_when_the_object_isnt_a_commitish(void)
 {
+	git_oid oid;
 	git_object *blob;
 
-	cl_git_pass(git_revparse_single(&blob, repo, "point_to_blob"));
+	cl_git_pass(git_revparse(&oid, NULL, NULL, repo, "point_to_blob"));
+	cl_git_pass(git_object_lookup(&blob, repo, &oid, GIT_OBJ_ANY));
 
 	cl_git_fail(git_repository_set_head_detached(repo, git_object_id(blob)));
 
@@ -131,9 +133,11 @@ void test_repo_head__set_head_detached_Fails_when_the_object_isnt_a_commitish(vo
 
 void test_repo_head__set_head_detached_Detaches_HEAD_and_make_it_point_to_the_peeled_commit(void)
 {
+	git_oid oid;
 	git_object *tag;
 
-	cl_git_pass(git_revparse_single(&tag, repo, "tags/test"));
+	cl_git_pass(git_revparse(&oid, NULL, NULL, repo, "tags/test"));
+	cl_git_pass(git_object_lookup(&tag, repo, &oid, GIT_OBJ_ANY));
 	cl_assert_equal_i(GIT_OBJ_TAG, git_object_type(tag));
 
 	cl_git_pass(git_repository_set_head_detached(repo, git_object_id(tag)));

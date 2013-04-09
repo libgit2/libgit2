@@ -14,48 +14,46 @@ static void check_error(int error_code, const char *action)
 	exit(1);
 }
 
-static int push_commit(git_revwalk *walk, git_object *obj, int hide)
+static int push_commit(git_revwalk *walk, git_oid *oid, int hide)
 {
 	if (hide)
-		return git_revwalk_hide(walk, git_object_id(obj));
+		return git_revwalk_hide(walk, oid);
 	else
-		return git_revwalk_push(walk, git_object_id(obj));
+		return git_revwalk_push(walk, oid);
 }
 
 static int push_spec(git_repository *repo, git_revwalk *walk, const char *spec, int hide)
 {
 	int error;
-	git_object *obj;
+	git_oid oid;
 
-	if ((error = git_revparse_single(&obj, repo, spec)))
+	if ((error = git_revparse(&oid, NULL, NULL, repo, spec)))
 		return error;
-	return push_commit(walk, obj, hide);
+	return push_commit(walk, &oid, hide);
 }
 
 static int push_range(git_repository *repo, git_revwalk *walk, const char *range, int hide)
 {
-	git_object *left, *right;
-	int threedots;
+	git_oid left, right;
+	git_revparse_flag_t flags;
 	int error = 0;
 
-	if ((error = git_revparse_rangelike(&left, &right, &threedots, repo, range)))
+	if ((error = git_revparse(&left, &right, &flags, repo, range)))
 		return error;
-	if (threedots) {
+	if (flags & GIT_REVPARSE_MERGE_BASE) {
 		/* TODO: support "<commit>...<commit>" */
 		return GIT_EINVALIDSPEC;
 	}
 
-	if ((error = push_commit(walk, left, !hide)))
+	if ((error = push_commit(walk, &left, !hide)))
 		goto out;
-	error = push_commit(walk, right, hide);
+	error = push_commit(walk, &right, hide);
 
   out:
-	git_object_free(left);
-	git_object_free(right);
 	return error;
 }
 
-static int revwalk_parseopts(git_repository *repo, git_revwalk *walk, int nopts, const char *const *opts)
+static int revwalk_parseopts(git_repository *repo, git_revwalk *walk, int nopts, char **opts)
 {
 	int hide, i, error;
 	unsigned int sorting = GIT_SORT_NONE;
