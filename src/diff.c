@@ -542,7 +542,11 @@ static int maybe_modified(
 				unsigned int sm_status = 0;
 				if (git_submodule_status(&sm_status, sub) < 0)
 					return -1;
-				status = GIT_SUBMODULE_STATUS_IS_UNMODIFIED(sm_status)
+
+				/* check IS_WD_UNMODIFIED because this case is only used
+				 * when the new side of the diff is the working directory
+				 */
+				status = GIT_SUBMODULE_STATUS_IS_WD_UNMODIFIED(sm_status)
 						 ? GIT_DELTA_UNMODIFIED : GIT_DELTA_MODIFIED;
 
 				/* grab OID while we are here */
