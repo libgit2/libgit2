@@ -13,6 +13,7 @@
 #include "remote.h"
 #include "vector.h"
 #include "push.h"
+#include "tree.h"
 
 static int push_spec_rref_cmp(const void *a, const void *b)
 {
@@ -346,60 +347,162 @@ on_error:
 	return error == GIT_ITEROVER ? 0 : error;
 }
 
-static int queue_objects(git_push *push)
+static int enqueue_object(
+	const git_tree_entry *entry,
+	git_packbuilder *pb)
 {
-	git_vector commits;
-	git_oid *o;
-	unsigned int i;
+	switch (git_tree_entry_type(entry)) {
+		case GIT_OBJ_COMMIT:
+			return 0;
+		case GIT_OBJ_TREE:
+			return git_packbuilder_insert_tree(pb, &entry->oid);
+		default:
+			return git_packbuilder_insert(pb, &entry->oid, entry->filename);
+	}
+}
+
+static int queue_differences(
+	git_tree *base,
+	git_tree *delta,
+	git_packbuilder *pb)
+{
+	git_tree *b_child = NULL, *d_child = NULL;
+	size_t b_length = git_tree_entrycount(base);
+	size_t d_length = git_tree_entrycount(delta);
+	size_t i = 0, j = 0;
 	int error;
 
-	if (git_vector_init(&commits, 0, NULL) < 0)
-		return -1;
+	while (i < b_length && j < d_length) {
+		const git_tree_entry *b_entry = git_tree_entry_byindex(base, i);
+		const git_tree_entry *d_entry = git_tree_entry_byindex(delta, j);
+		int cmp = 0;
+
+		if (!git_oid_cmp(&b_entry->oid, &d_entry->oid))
+			goto loop;
+
+		cmp = strcmp(b_entry->filename, d_entry->filename);
+
+		/* If the entries are both trees and they have the same name but are
+		 * different, then we'll recurse after adding the right-hand entry */
+		if (!cmp &&
+			git_tree_entry__is_tree(b_entry) &&
+			git_tree_entry__is_tree(d_entry)) {
+			/* Add the right-hand entry */
+			if ((error = git_packbuilder_insert(pb, &d_entry->oid,
+				d_entry->filename)) < 0)
+				goto on_error;
+
+			/* Acquire the subtrees and recurse */
+			if ((error = git_tree_lookup(&b_child,
+					git_tree_owner(base), &b_entry->oid)) < 0 ||
+				(error = git_tree_lookup(&d_child,
+					git_tree_owner(delta), &d_entry->oid)) < 0 ||
+				(error = queue_differences(b_child, d_child, pb)) < 0)
+				goto on_error;
+
+			git_tree_free(b_child); b_child = NULL;
+			git_tree_free(d_child); d_child = NULL;
+		}
+		/* If the object is new or different in the right-hand tree,
+		 * then enumerate it */
+		else if (cmp >= 0 &&
+			(error = enqueue_object(d_entry, pb)) < 0)
+			goto on_error;
+
+	loop:
+		if (cmp <= 0) i++;
+		if (cmp >= 0) j++;
+	}
+
+	/* Drain the right-hand tree of entries */
+	for (; j < d_length; j++)
+		if ((error = enqueue_object(git_tree_entry_byindex(delta, j), pb)) < 0)
+			goto on_error;
+
+	error = 0;
+
+on_error:
+	if (b_child)
+		git_tree_free(b_child);
+
+	if (d_child)
+		git_tree_free(d_child);
+
+	return error;
+}
+
+static int queue_objects(git_push *push)
+{
+	git_vector commits = GIT_VECTOR_INIT;
+	git_oid *oid;
+	size_t i;
+	unsigned j;
+	int error;
 
 	if ((error = revwalk(&commits, push)) < 0)
 		goto on_error;
 
-	if (!commits.length) {
-		git_vector_free(&commits);
-		return 0; /* nothing to do */
-	}
+	git_vector_foreach(&commits, i, oid) {
+		git_commit *parent = NULL, *commit;
+		git_tree *tree = NULL, *ptree = NULL;
+		size_t parentcount;
 
-	git_vector_foreach(&commits, i, o) {
-		if ((error = git_packbuilder_insert(push->pb, o, NULL)) < 0)
-			goto on_error;
-	}
-
-	git_vector_foreach(&commits, i, o) {
-		git_object *obj;
-
-		if ((error = git_object_lookup(&obj, push->repo, o, GIT_OBJ_ANY)) < 0)
+		if ((error = git_commit_lookup(&commit,	push->repo, oid)) < 0)
 			goto on_error;
 
-		switch (git_object_type(obj)) {
-		case GIT_OBJ_TAG: /* TODO: expect tags */
-		case GIT_OBJ_COMMIT:
+		/* Insert the commit */
+		if ((error = git_packbuilder_insert(push->pb, oid, NULL)) < 0)
+			goto loop_error;
+
+		parentcount = git_commit_parentcount(commit);
+
+		if (!parentcount) {
 			if ((error = git_packbuilder_insert_tree(push->pb,
-					git_commit_tree_id((git_commit *)obj))) < 0) {
-				git_object_free(obj);
-				goto on_error;
+				git_commit_tree_id(commit))) < 0)
+				goto loop_error;
+		} else {
+			if ((error = git_tree_lookup(&tree, push->repo,
+					git_commit_tree_id(commit))) < 0 ||
+				(error = git_packbuilder_insert(push->pb,
+					git_commit_tree_id(commit), NULL)) < 0)
+				goto loop_error;
+
+			/* For each parent, add the items which are different */
+			for (j = 0; j < parentcount; j++) {
+				if ((error = git_commit_parent(&parent, commit, j)) < 0 ||
+					(error = git_commit_tree(&ptree, parent)) < 0 ||
+					(error = queue_differences(ptree, tree, push->pb)) < 0)
+					goto loop_error;
+
+				git_tree_free(ptree); ptree = NULL;
+				git_commit_free(parent); parent = NULL;
 			}
-			break;
-		case GIT_OBJ_TREE:
-		case GIT_OBJ_BLOB:
-		default:
-			git_object_free(obj);
-			giterr_set(GITERR_INVALID, "Given object type invalid");
-			error = -1;
-			goto on_error;
 		}
-		git_object_free(obj);
+
+		error = 0;
+
+	loop_error:
+		if (tree)
+			git_tree_free(tree);
+
+		if (ptree)
+			git_tree_free(ptree);
+
+		if (parent)
+			git_commit_free(parent);
+
+		git_commit_free(commit);
+
+		if (error < 0)
+			goto on_error;
 	}
+
 	error = 0;
 
 on_error:
-	git_vector_foreach(&commits, i, o) {
-		git__free(o);
-	}
+	git_vector_foreach(&commits, i, oid)
+		git__free(oid);
+
 	git_vector_free(&commits);
 	return error;
 }
