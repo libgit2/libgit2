@@ -934,7 +934,7 @@ int git_reference_peel(
 	}
 
 	if (target_type == GIT_OBJ_ANY && git_object_type(target) != GIT_OBJ_TAG)
-		error = git_object__dup(peeled, target);
+		error = git_object_dup(peeled, target);
 	else
 		error = git_object_peel(peeled, target, target_type);
 

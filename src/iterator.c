@@ -578,7 +578,7 @@ int git_iterator_for_tree(
 	if (tree == NULL)
 		return git_iterator_for_nothing(iter, flags, start, end);
 
-	if ((error = git_tree__dup(&tree, tree)) < 0)
+	if ((error = git_object_dup((git_object **)&tree, (git_object *)tree)) < 0)
 		return error;
 
 	ITERATOR_BASE_INIT(ti, tree, TREE, git_tree_owner(tree));

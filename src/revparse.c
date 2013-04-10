@@ -432,7 +432,7 @@ static int dereference_to_non_tag(git_object **out, git_object *obj)
 	if (git_object_type(obj) == GIT_OBJ_TAG)
 		return git_tag_peel(out, (git_tag *)obj);
 
-	return git_object__dup(out, obj);
+	return git_object_dup(out, obj);
 }
 
 static int handle_caret_parent_syntax(git_object **out, git_object *obj, int n)

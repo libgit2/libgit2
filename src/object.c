@@ -360,7 +360,7 @@ int git_object_peel(
 	assert(object && peeled);
 
 	if (git_object_type(object) == target_type)
-		return git_object__dup(peeled, (git_object *)object);
+		return git_object_dup(peeled, (git_object *)object);
 
 	source = (git_object *)object;
 
@@ -396,3 +396,9 @@ int git_object_peel(
 	return error;
 }
 
+int git_object_dup(git_object **dest, git_object *source)
+{
+	git_cached_obj_incref(source);
+	*dest = source;
+	return 0;
+}

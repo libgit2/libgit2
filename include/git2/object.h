@@ -188,6 +188,15 @@ GIT_EXTERN(int) git_object_peel(
 	const git_object *object,
 	git_otype target_type);
 
+/**
+ * Create an in-memory copy of a Git object. The copy must be
+ * explicitly free'd or it will leak.
+ *
+ * @param dest Pointer to store the copy of the object
+ * @param source Original object to copy
+ */
+GIT_EXTERN(int) git_object_dup(git_object **dest, git_object *source);
+
 /** @} */
 GIT_END_DECL
 

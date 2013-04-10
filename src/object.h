@@ -17,13 +17,6 @@ struct git_object {
 /* fully free the object; internal method, DO NOT EXPORT */
 void git_object__free(void *object);
 
-GIT_INLINE(int) git_object__dup(git_object **dest, git_object *source)
-{
-	git_cached_obj_incref(source);
-	*dest = source;
-	return 0;
-}
-
 int git_object__from_odb_object(
 	git_object **object_out,
 	git_repository *repo,
