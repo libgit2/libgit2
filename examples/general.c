@@ -77,7 +77,13 @@ int main (int argc, char** argv)
 
   // Once we've converted the string into the oid value, we can get the raw
   // value of the SHA.
-  printf("Raw 20 bytes: [%.20s]\n", (&oid)->id);
+  unsigned char *rid = (&oid)->id;
+  int rpos = 0;
+  printf("Raw 20 bytes: [%d(%x)", rid[rpos], rid[rpos]);
+  for (rpos = 1; rpos < 20; rpos++) {
+    printf(",%d(%x)", rid[rpos], rid[rpos]);
+  }
+  printf("]\n");
 
   // Next we will convert the 20 byte raw SHA1 value to a human readable 40
   // char hex value.
