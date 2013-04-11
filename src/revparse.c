@@ -356,7 +356,7 @@ static int retrieve_remote_tracking_reference(git_reference **base_ref, const ch
 		goto cleanup;
 	}
 
-	if ((error = git_branch_tracking(&tracking, ref)) < 0)
+	if ((error = git_branch_upstream(&tracking, ref)) < 0)
 		goto cleanup;
 	
 	*base_ref = tracking;

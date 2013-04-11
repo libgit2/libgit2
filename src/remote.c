@@ -705,7 +705,7 @@ static int remote_head_for_ref(git_remote_head **out, git_remote *remote, git_ve
 
 	if ((error = git_reference_resolve(&resolved_ref, ref)) < 0 ||
 		(!git_reference_is_branch(resolved_ref)) ||
-		(error = git_branch_tracking(&tracking_ref, resolved_ref)) < 0 ||
+		(error = git_branch_upstream(&tracking_ref, resolved_ref)) < 0 ||
 		(error = git_refspec_transform_l(&remote_name, &remote->fetch, git_reference_name(tracking_ref))) < 0) {
 		/* Not an error if HEAD is orphaned or no tracking branch */
 		if (error == GIT_ENOTFOUND)
