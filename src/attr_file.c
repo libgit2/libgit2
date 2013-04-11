@@ -8,6 +8,10 @@
 
 static int sort_by_hash_and_name(const void *a_raw, const void *b_raw);
 static void git_attr_rule__clear(git_attr_rule *rule);
+static bool parse_optimized_patterns(
+	git_attr_fnmatch *spec,
+	git_pool *pool,
+	const char *pattern);
 
 int git_attr_file__new(
 	git_attr_file **attrs_ptr,
@@ -296,7 +300,6 @@ void git_attr_path__free(git_attr_path *info)
 	info->basename = NULL;
 }
 
-
 /*
  * From gitattributes(5):
  *
@@ -344,6 +347,9 @@ int git_attr_fnmatch__parse(
 	int slash_count, allow_space;
 
 	assert(spec && base && *base);
+
+	if (parse_optimized_patterns(spec, pool, *base))
+		return 0;
 
 	spec->flags = (spec->flags & GIT_ATTR_FNMATCH_ALLOWSPACE);
 	allow_space = (spec->flags != 0);
@@ -428,6 +434,22 @@ int git_attr_fnmatch__parse(
 	}
 
 	return 0;
+}
+
+static bool parse_optimized_patterns(
+	git_attr_fnmatch *spec,
+	git_pool *pool,
+	const char *pattern)
+{
+	if (!pattern[1] && (pattern[0] == '*' || pattern[0] == '.')) {
+		spec->flags = GIT_ATTR_FNMATCH_MATCH_ALL;
+		spec->pattern = git_pool_strndup(pool, pattern, 1);
+		spec->length = 1;
+
+		return true;
+	}
+
+	return false;
 }
 
 static int sort_by_hash_and_name(const void *a_raw, const void *b_raw)

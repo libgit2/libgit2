@@ -27,6 +27,7 @@
 #define GIT_ATTR_FNMATCH_HASWILD	(1U << 5)
 #define GIT_ATTR_FNMATCH_ALLOWSPACE	(1U << 6)
 #define GIT_ATTR_FNMATCH_ICASE		(1U << 7)
+#define GIT_ATTR_FNMATCH_MATCH_ALL	(1U << 8)
 
 extern const char *git_attr__true;
 extern const char *git_attr__false;

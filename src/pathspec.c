@@ -38,18 +38,20 @@ char *git_pathspec_prefix(const git_strarray *pathspec)
 }
 
 /* is there anything in the spec that needs to be filtered on */
-bool git_pathspec_is_interesting(const git_strarray *pathspec)
+bool git_pathspec_is_empty(const git_strarray *pathspec)
 {
-	const char *str;
+	size_t i;
 
-	if (pathspec == NULL || pathspec->count == 0)
-		return false;
-	if (pathspec->count > 1)
+	if (pathspec == NULL)
 		return true;
 
-	str = pathspec->strings[0];
-	if (!str || !str[0] || (!str[1] && (str[0] == '*' || str[0] == '.')))
-		return false;
+	for (i = 0; i < pathspec->count; ++i) {
+		const char *str = pathspec->strings[i];
+
+		if (str && str[0])
+			return false;
+	}
+
 	return true;
 }
 
@@ -61,7 +63,7 @@ int git_pathspec_init(
 
 	memset(vspec, 0, sizeof(*vspec));
 
-	if (!git_pathspec_is_interesting(strspec))
+	if (git_pathspec_is_empty(strspec))
 		return 0;
 
 	if (git_vector_init(vspec, strspec->count, NULL) < 0)
@@ -138,7 +140,10 @@ bool git_pathspec_match_path(
 	}
 
 	git_vector_foreach(vspec, i, match) {
-		int result = use_strcmp(match->pattern, path) ? FNM_NOMATCH : 0;
+		int result = (match->flags & GIT_ATTR_FNMATCH_MATCH_ALL) ? 0 : FNM_NOMATCH;
+			
+		if (result == FNM_NOMATCH)
+			result = use_strcmp(match->pattern, path) ? FNM_NOMATCH : 0;
 
 		if (fnmatch_flags >= 0 && result == FNM_NOMATCH)
 			result = p_fnmatch(match->pattern, path, fnmatch_flags);
