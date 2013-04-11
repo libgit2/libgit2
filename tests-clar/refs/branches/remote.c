@@ -42,7 +42,7 @@ void test_refs_branches_remote__insufficient_buffer_returns_error(void)
 
 	cl_git_fail_with(git_branch_remote_name(remotename,
 		expected_remote_name_length - 1, g_repo, remote_tracking_branch_name),
-			GIT_ERROR);
+			expected_remote_name_length);
 }
 
 void test_refs_branches_remote__no_matching_remote_returns_error(void)

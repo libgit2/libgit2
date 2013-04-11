@@ -228,7 +228,7 @@ int git_branch_name(const char **out, git_reference *ref)
 	return 0;
 }
 
-static int retrieve_tracking_configuration(
+static int retrieve_upstream_configuration(
 	const char **out,
 	git_repository *repo,
 	const char *canonical_branch_name,
@@ -250,7 +250,7 @@ static int retrieve_tracking_configuration(
 	return error;
 }
 
-int git_branch_tracking__name(
+int git_branch_upstream__name(
 	git_buf *tracking_name,
 	git_repository *repo,
 	const char *canonical_branch_name)
@@ -266,11 +266,11 @@ int git_branch_tracking__name(
 	if (!git_reference__is_branch(canonical_branch_name))
 		return not_a_local_branch(canonical_branch_name);
 
-	if ((error = retrieve_tracking_configuration(
+	if ((error = retrieve_upstream_configuration(
 		&remote_name, repo, canonical_branch_name, "branch.%s.remote")) < 0)
 			goto cleanup;
 
-	if ((error = retrieve_tracking_configuration(
+	if ((error = retrieve_upstream_configuration(
 		&merge_name, repo, canonical_branch_name, "branch.%s.merge")) < 0)
 			goto cleanup;
 
@@ -305,23 +305,16 @@ cleanup:
 	return error;
 }
 
-int git_branch_remote_name(
-	char *remote_name_out,
-	size_t buffer_size,
-	git_repository *repo,
-	const char *canonical_branch_name)
+static int remote_name(git_buf *buf, git_repository *repo, const char *canonical_branch_name)
 {
 	git_strarray remote_list = {0};
-	size_t i, remote_name_size;
+	size_t i;
 	git_remote *remote;
 	const git_refspec *fetchspec;
 	int error = 0;
 	char *remote_name = NULL;
 
-	assert(repo && canonical_branch_name);
-
-	if (remote_name_out && buffer_size)
-		*remote_name_out = '\0';
+	assert(buf && repo && canonical_branch_name);
 
 	/* Verify that this is a remote branch */
 	if (!git_reference__is_remote(canonical_branch_name)) {
@@ -338,7 +331,7 @@ int git_branch_remote_name(
 	/* Find matching remotes */
 	for (i = 0; i < remote_list.count; i++) {
 		if ((error = git_remote_load(&remote, repo, remote_list.strings[i])) < 0)
-			goto cleanup;
+			continue;
 
 		fetchspec = git_remote_fetchspec(remote);
 
@@ -362,23 +355,10 @@ int git_branch_remote_name(
 	}
 
 	if (remote_name) {
-		remote_name_size = strlen(remote_name) + 1;
-		error = (int) remote_name_size;
-
-		if (remote_name_out) {
-			if(remote_name_size > buffer_size) {
-				giterr_set(
-					GITERR_INVALID,
-					"Buffer too short to hold the remote name.");
-				error = GIT_ERROR;
-				goto cleanup;
-			}
-
-			memcpy(remote_name_out, remote_name, remote_name_size);
-		}
+		git_buf_clear(buf);
+		error = git_buf_puts(buf, remote_name);
 	} else {
 		error = GIT_ENOTFOUND;
-		goto cleanup;
 	}
 
 cleanup:
@@ -386,7 +366,24 @@ cleanup:
 	return error;
 }
 
-int git_branch_tracking_name(
+int git_branch_remote_name(char *buffer, size_t buffer_len, git_repository *repo, const char *refname)
+{
+	int ret;
+	git_buf buf = GIT_BUF_INIT;
+
+	if ((ret = remote_name(&buf, repo, refname)) < 0)
+		return ret;
+
+	if (buffer)
+		git_buf_copy_cstr(buffer, buffer_len, &buf);
+
+	ret = git_buf_len(&buf) + 1;
+	git_buf_free(&buf);
+
+	return ret;
+}
+
+int git_branch_upstream_name(
 	char *tracking_branch_name_out,
 	size_t buffer_size,
 	git_repository *repo,
@@ -400,7 +397,7 @@ int git_branch_tracking_name(
 	if (tracking_branch_name_out && buffer_size)
 		*tracking_branch_name_out = '\0';
 
-	if ((error = git_branch_tracking__name(
+	if ((error = git_branch_upstream__name(
 		&buf, repo, canonical_branch_name)) < 0)
 			goto cleanup;
 
@@ -422,14 +419,14 @@ cleanup:
 	return (int)error;
 }
 
-int git_branch_tracking(
+int git_branch_upstream(
 		git_reference **tracking_out,
 		git_reference *branch)
 {
 	int error;
 	git_buf tracking_name = GIT_BUF_INIT;
 
-	if ((error = git_branch_tracking__name(&tracking_name,
+	if ((error = git_branch_upstream__name(&tracking_name,
 		git_reference_owner(branch), git_reference_name(branch))) < 0)
 			return error;
 
@@ -440,6 +437,120 @@ int git_branch_tracking(
 
 	git_buf_free(&tracking_name);
 	return error;
+}
+
+static int unset_upstream(git_config *config, const char *shortname)
+{
+	git_buf buf = GIT_BUF_INIT;
+
+	if (git_buf_printf(&buf, "branch.%s.remote", shortname) < 0)
+		return -1;
+
+	if (git_config_delete_entry(config, git_buf_cstr(&buf)) < 0)
+		goto on_error;
+
+	git_buf_clear(&buf);
+	if (git_buf_printf(&buf, "branch.%s.merge", shortname) < 0)
+		goto on_error;
+
+	if (git_config_delete_entry(config, git_buf_cstr(&buf)) < 0)
+		goto on_error;
+
+	git_buf_free(&buf);
+	return 0;
+
+on_error:
+	git_buf_free(&buf);
+	return -1;
+}
+
+int git_branch_set_upstream(git_reference *branch, const char *upstream_name)
+{
+	git_buf key = GIT_BUF_INIT, value = GIT_BUF_INIT;
+	git_reference *upstream;
+	git_repository *repo;
+	git_remote *remote = NULL;
+	git_config *config;
+	const char *name, *shortname;
+	int local;
+	const git_refspec *fetchspec;
+
+	name = git_reference_name(branch);
+	if (!git_reference__is_branch(name))
+		return not_a_local_branch(name);
+
+	if (git_repository_config__weakptr(&config, git_reference_owner(branch)) < 0)
+		return -1;
+
+	shortname = name + strlen(GIT_REFS_HEADS_DIR);
+
+	if (upstream_name == NULL)
+		return unset_upstream(config, shortname);
+
+	repo = git_reference_owner(branch);
+
+	/* First we need to figure out whether it's a branch or remote-tracking */
+	if (git_branch_lookup(&upstream, repo, upstream_name, GIT_BRANCH_LOCAL) == 0)
+		local = 1;
+	else if (git_branch_lookup(&upstream, repo, upstream_name, GIT_BRANCH_REMOTE) == 0)
+		local = 0;
+	else
+		return GIT_ENOTFOUND;
+
+	/*
+	 * If it's local, the remote is "." and the branch name is
+	 * simply the refname. Otherwise we need to figure out what
+	 * the remote-tracking branch's name on the remote is and use
+	 * that.
+	 */
+	if (local)
+		git_buf_puts(&value, ".");
+	else
+		remote_name(&value, repo, git_reference_name(upstream));
+
+	if (git_buf_printf(&key, "branch.%s.remote", shortname) < 0)
+		goto on_error;
+
+	if (git_config_set_string(config, git_buf_cstr(&key), git_buf_cstr(&value)) < 0)
+		goto on_error;
+
+	if (local) {
+		if (git_buf_puts(&value, git_reference_name(branch)) < 0)
+			goto on_error;
+	} else {
+		/* Get the remoe-tracking branch's refname in its repo */
+		if (git_remote_load(&remote, repo, git_buf_cstr(&value)) < 0)
+			goto on_error;
+
+		fetchspec = git_remote_fetchspec(remote);
+		git_buf_clear(&value);
+		if (git_refspec_transform_l(&value, fetchspec, git_reference_name(upstream)) < 0)
+			goto on_error;
+
+		git_remote_free(remote);
+		remote = NULL;
+	}
+
+	git_buf_clear(&key);
+	if (git_buf_printf(&key, "branch.%s.merge", shortname) < 0)
+		goto on_error;
+
+	if (git_config_set_string(config, git_buf_cstr(&key), git_buf_cstr(&value)) < 0)
+		goto on_error;
+
+	git_reference_free(upstream);
+	git_buf_free(&key);
+	git_buf_free(&value);
+
+	return 0;
+
+on_error:
+	git_reference_free(upstream);
+	git_buf_free(&key);
+	git_buf_free(&value);
+	git_remote_free(remote);
+
+	return -1;
 }
 
 int git_branch_is_head(

@@ -49,7 +49,7 @@ void test_clone_empty__can_clone_an_empty_local_repo_barely(void)
 
 	/* ...one can still retrieve the name of the remote tracking reference */
 	cl_assert_equal_i((int)strlen(expected_tracked_branch_name) + 1, 
-		git_branch_tracking_name(buffer, 1024, g_repo_cloned, local_name));
+		git_branch_upstream_name(buffer, 1024, g_repo_cloned, local_name));
 
 	cl_assert_equal_s(expected_tracked_branch_name, buffer);
 
