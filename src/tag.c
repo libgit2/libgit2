@@ -397,7 +397,8 @@ int git_tag_delete(git_repository *repo, const char *tag_name)
 int git_tag__parse(git_tag *tag, git_odb_object *obj)
 {
 	assert(tag);
-	return git_tag__parse_buffer(tag, obj->buffer, obj->cached.size);
+	return git_tag__parse_buffer(
+		tag, git_odb_object_data(obj), git_odb_object_size(obj));
 }
 
 typedef struct {

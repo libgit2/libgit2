@@ -371,7 +371,8 @@ static int tree_error(const char *str, const char *path)
 	return -1;
 }
 
-static int tree_parse_buffer(git_tree *tree, const char *buffer, const char *buffer_end)
+static int tree_parse_buffer(
+	git_tree *tree, const char *buffer, const char *buffer_end)
 {
 	if (git_vector_init(&tree->entries, DEFAULT_TREE_SIZE, entry_sort_cmp) < 0)
 		return -1;
@@ -418,10 +419,13 @@ static int tree_parse_buffer(git_tree *tree, const char *buffer, const char *buf
 
 int git_tree__parse(git_tree *tree, git_odb_object *obj)
 {
-	assert(tree);
-	return tree_parse_buffer(tree,
-		(char *)obj->buffer,
-		(char *)obj->buffer + obj->cached.size);
+	const char *buf;
+
+	assert(tree && obj);
+
+	buf = (const char *)git_odb_object_data(obj);
+
+	return tree_parse_buffer(tree, buf, buf + git_odb_object_size(obj));
 }
 
 static size_t find_next_dir(const char *dirname, git_index *index, size_t start)

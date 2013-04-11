@@ -18,19 +18,21 @@
 const void *git_blob_rawcontent(const git_blob *blob)
 {
 	assert(blob);
-	return blob->odb_object->buffer;
+	return git_odb_object_data(blob->odb_object);
 }
 
 git_off_t git_blob_rawsize(const git_blob *blob)
 {
 	assert(blob);
-	return (git_off_t)blob->odb_object->cached.size;
+	return (git_off_t)git_odb_object_size(blob->odb_object);
 }
 
 int git_blob__getbuf(git_buf *buffer, git_blob *blob)
 {
 	return git_buf_set(
-		buffer, blob->odb_object->buffer, blob->odb_object->cached.size);
+		buffer,
+		git_odb_object_data(blob->odb_object),
+		git_odb_object_size(blob->odb_object));
 }
 
 void git_blob__free(git_blob *blob)
