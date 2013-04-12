@@ -19,16 +19,27 @@ GIT__USE_OIDMAP
 
 bool git_cache__enabled = true;
 
-size_t git_cache__max_object_size[8] = {
-	0, /* GIT_OBJ__EXT1 */
+static size_t git_cache__max_object_size[8] = {
+	0,     /* GIT_OBJ__EXT1 */
 	4096,  /* GIT_OBJ_COMMIT */
 	4096,  /* GIT_OBJ_TREE */
-	0, /* GIT_OBJ_BLOB */
+	0,     /* GIT_OBJ_BLOB */
 	4096,  /* GIT_OBJ_TAG */
-	0, /* GIT_OBJ__EXT2 */
-	0, /* GIT_OBJ_OFS_DELTA */
-	0 /* GIT_OBJ_REF_DELTA */
+	0,     /* GIT_OBJ__EXT2 */
+	0,     /* GIT_OBJ_OFS_DELTA */
+	0      /* GIT_OBJ_REF_DELTA */
 };
+
+int git_cache_set_max_object_size(git_otype type, size_t size)
+{
+	if (type < 0 || (size_t)type >= ARRAY_SIZE(git_cache__max_object_size)) {
+		giterr_set(GITERR_INVALID, "type out of range");
+		return -1;
+	}
+
+	git_cache__max_object_size[type] = size;
+	return 0;
+}
 
 void git_cache_dump_stats(git_cache *cache)
 {
