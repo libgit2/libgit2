@@ -20,9 +20,6 @@ enum {
 	GIT_CACHE_STORE_PARSED = 2
 };
 
-extern bool git_cache__enabled;
-extern size_t git_cache__max_object_size[8];
-
 typedef struct {
 	git_oid oid;
 	int16_t type;
@@ -37,6 +34,10 @@ typedef struct {
 	size_t used_memory;
 } git_cache;
 
+extern bool git_cache__enabled;
+
+int git_cache_set_max_object_size(git_otype type, size_t size);
+
 int git_cache_init(git_cache *cache);
 void git_cache_free(git_cache *cache);
 
@@ -46,6 +47,11 @@ void *git_cache_store_parsed(git_cache *cache, git_object *entry);
 git_odb_object *git_cache_get_raw(git_cache *cache, const git_oid *oid);
 git_object *git_cache_get_parsed(git_cache *cache, const git_oid *oid);
 void *git_cache_get_any(git_cache *cache, const git_oid *oid);
+
+GIT_INLINE(size_t) git_cache_size(git_cache *cache)
+{
+	return (size_t)kh_size(cache->map);
+}
 
 GIT_INLINE(void) git_cached_obj_incref(void *_obj)
 {
