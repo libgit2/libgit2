@@ -296,23 +296,33 @@ static int pack_index_check(const char *path, struct git_pack_file *p)
 static int pack_index_open(struct git_pack_file *p)
 {
 	char *idx_name;
-	int error;
-	size_t name_len, offset;
+	int error = 0;
+	size_t name_len, base_len;
+
+	if ((error = git_mutex_lock(&p->lock)) < 0)
+		return error;
 
 	if (p->index_map.data)
-		return 0;
+		goto done;
 
-	idx_name = git__strdup(p->pack_name);
-	GITERR_CHECK_ALLOC(idx_name);
+	name_len = strlen(p->pack_name);
+	assert(name_len > strlen(".pack")); /* checked by git_pack_file alloc */
 
-	name_len = strlen(idx_name);
-	offset = name_len - strlen(".pack");
-	assert(offset < name_len); /* make sure no underflow */
+	if ((idx_name = git__malloc(name_len)) == NULL) {
+		error = -1;
+		goto done;
+	}
 
-	strncpy(idx_name + offset, ".idx", name_len - offset);
+	base_len = name_len - strlen(".pack");
+	memcpy(idx_name, p->pack_name, base_len);
+	memcpy(idx_name + base_len, ".idx", sizeof(".idx"));
 
 	error = pack_index_check(idx_name, p);
+
 	git__free(idx_name);
+
+done:
+	git_mutex_unlock(&p->lock);
 
 	return error;
 }
@@ -389,7 +399,7 @@ int git_packfile_unpack_header(
 	 * the maximum deflated object size is 2^137, which is just
 	 * insane, so we know won't exceed what we have been given.
 	 */
-//	base = pack_window_open(p, w_curs, *curpos, &left);
+/*	base = pack_window_open(p, w_curs, *curpos, &left); */
 	base = git_mwindow_open(mwf, w_curs, *curpos, 20, &left);
 	if (base == NULL)
 		return GIT_EBUFS;
@@ -789,15 +799,23 @@ git_off_t get_delta_base(
 static struct git_pack_file *packfile_alloc(size_t extra)
 {
 	struct git_pack_file *p = git__calloc(1, sizeof(*p) + extra);
-	if (p != NULL)
-		p->mwf.fd = -1;
+	if (!p)
+		return NULL;
+
+	p->mwf.fd = -1;
+	git_mutex_init(&p->lock);
+
 	return p;
 }
 
 
 void git_packfile_free(struct git_pack_file *p)
 {
-	assert(p);
+	if (!p)
+		return;
+
+	if (git_mutex_lock(&p->lock) < 0)
+		return;
 
 	cache_free(&p->bases);
 
@@ -810,6 +828,10 @@ void git_packfile_free(struct git_pack_file *p)
 	pack_index_free(p);
 
 	git__free(p->bad_object_sha1);
+
+	git_mutex_unlock(&p->lock);
+
+	git_mutex_free(&p->lock);
 	git__free(p);
 }
 
@@ -819,8 +841,6 @@ static int packfile_open(struct git_pack_file *p)
 	struct git_pack_header hdr;
 	git_oid sha1;
 	unsigned char *idx_sha1;
-
-	assert(p->index_map.data);
 
 	if (!p->index_map.data && pack_index_open(p) < 0)
 		return git_odb__error_notfound("failed to open packfile", NULL);
@@ -888,7 +908,10 @@ int git_packfile_check(struct git_pack_file **pack_out, const char *path)
 	size_t path_len;
 
 	*pack_out = NULL;
-	path_len = strlen(path);
+
+	if (!path || (path_len = strlen(path)) <= strlen(".idx"))
+		return git_odb__error_notfound("invalid packfile path", NULL);
+
 	p = packfile_alloc(path_len + 2);
 	GITERR_CHECK_ALLOC(p);
 
@@ -897,18 +920,13 @@ int git_packfile_check(struct git_pack_file **pack_out, const char *path)
 	 * the index looks sane.
 	 */
 	path_len -= strlen(".idx");
-	if (path_len < 1) {
-		git__free(p);
-		return git_odb__error_notfound("invalid packfile path", NULL);
-	}
-
 	memcpy(p->pack_name, path, path_len);
 
-	strcpy(p->pack_name + path_len, ".keep");
+	memcpy(p->pack_name + path_len, ".keep", sizeof(".keep"));
 	if (git_path_exists(p->pack_name) == true)
 		p->pack_keep = 1;
 
-	strcpy(p->pack_name + path_len, ".pack");
+	memcpy(p->pack_name + path_len, ".pack", sizeof(".pack"));
 	if (p_stat(p->pack_name, &st) < 0 || !S_ISREG(st.st_mode)) {
 		git__free(p);
 		return git_odb__error_notfound("packfile not found", NULL);
@@ -1039,7 +1057,6 @@ static int pack_entry_find_offset(
 
 		if ((error = pack_index_open(p)) < 0)
 			return error;
-
 		assert(p->index_map.data);
 
 		index = p->index_map.data;
@@ -1099,6 +1116,7 @@ static int pack_entry_find_offset(
 		return git_odb__error_notfound("failed to find offset for pack entry", short_oid);
 	if (found > 1)
 		return git_odb__error_ambiguous("found multiple offsets for pack entry");
+
 	*offset_out = nth_packed_object_offset(p, pos);
 	git_oid_fromraw(found_oid, current);
 
@@ -1110,6 +1128,7 @@ static int pack_entry_find_offset(
 		printf("found lo=%d %s\n", lo, hex_sha1);
 	}
 #endif
+
 	return 0;
 }
 
