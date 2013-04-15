@@ -731,6 +731,10 @@ static int git_remote_write_fetchhead(git_remote *remote, git_vector *update_hea
 
 	assert(remote);
 
+	/* no heads, nothing to do */
+	if (update_heads->length == 0)
+		return 0;
+
 	spec = &remote->fetch;
 
 	if (git_vector_init(&fetchhead_refs, update_heads->length, git_fetchhead_ref_cmp) < 0)
