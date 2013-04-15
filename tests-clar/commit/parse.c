@@ -269,6 +269,7 @@ void test_commit_parse__entire_commit(void)
 	const int broken_commit_count = sizeof(failing_commit_cases) / sizeof(*failing_commit_cases);
 	const int working_commit_count = sizeof(passing_commit_cases) / sizeof(*passing_commit_cases);
 	int i;
+	const char *buf;
 
 	for (i = 0; i < broken_commit_count; ++i) {
 		git_commit *commit;
@@ -276,9 +277,8 @@ void test_commit_parse__entire_commit(void)
 		memset(commit, 0x0, sizeof(git_commit));
 		commit->object.repo = g_repo;
 
-		cl_git_fail(git_commit__parse_buffer(
-			commit, failing_commit_cases[i], strlen(failing_commit_cases[i]))
-		);
+		buf = failing_commit_cases[i];
+		cl_git_fail(git_commit__parse(commit, buf, buf + strlen(buf)));
 
 		git_commit__free(commit);
 	}
@@ -290,11 +290,8 @@ void test_commit_parse__entire_commit(void)
 		memset(commit, 0x0, sizeof(git_commit));
 		commit->object.repo = g_repo;
 
-		cl_git_pass(git_commit__parse_buffer(
-                     commit,
-                     passing_commit_cases[i],
-                     strlen(passing_commit_cases[i]))
-         );
+		buf = passing_commit_cases[i];
+		cl_git_pass(git_commit__parse(commit, buf, buf + strlen(buf)));
 
 		if (!i)
 			cl_assert_equal_s("", git_commit_message(commit));

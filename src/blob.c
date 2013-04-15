@@ -35,17 +35,17 @@ int git_blob__getbuf(git_buf *buffer, git_blob *blob)
 		git_odb_object_size(blob->odb_object));
 }
 
-void git_blob__free(git_blob *blob)
+void git_blob__free(void *blob)
 {
-	git_odb_object_free(blob->odb_object);
+	git_odb_object_free(((git_blob *)blob)->odb_object);
 	git__free(blob);
 }
 
-int git_blob__parse(git_blob *blob, git_odb_object *odb_obj)
+int git_blob__from_odb_object(void *blob, git_odb_object *odb_obj)
 {
 	assert(blob);
 	git_cached_obj_incref((git_cached_obj *)odb_obj);
-	blob->odb_object = odb_obj;
+	((git_blob *)blob)->odb_object = odb_obj;
 	return 0;
 }
 

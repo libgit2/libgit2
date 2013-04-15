@@ -82,23 +82,24 @@ int git_odb__hashobj(git_oid *id, git_rawobj *obj)
 }
 
 
-static git_odb_object *new_odb_object(const git_oid *oid, git_rawobj *source)
+static git_odb_object *odb_object__alloc(const git_oid *oid, git_rawobj *source)
 {
-	git_odb_object *object = git__malloc(sizeof(git_odb_object));
-	memset(object, 0x0, sizeof(git_odb_object));
+	git_odb_object *object = git__calloc(1, sizeof(git_odb_object));
 
-	git_oid_cpy(&object->cached.oid, oid);
-	object->cached.size = source->len;
-	object->cached.type = source->type;
-	object->buffer = source->data;
+	if (object != NULL) {
+		git_oid_cpy(&object->cached.oid, oid);
+		object->cached.type = source->type;
+		object->cached.size = source->len;
+		object->buffer      = source->data;
+	}
 
 	return object;
 }
 
-void git_odb_object__free(git_odb_object *object)
+void git_odb_object__free(void *object)
 {
 	if (object != NULL) {
-		git__free(object->buffer);
+		git__free(((git_odb_object *)object)->buffer);
 		git__free(object);
 	}
 }
@@ -679,6 +680,7 @@ int git_odb_read(git_odb_object **out, git_odb *db, const git_oid *id)
 	int error;
 	bool refreshed = false;
 	git_rawobj raw;
+	git_odb_object *object;
 
 	assert(out && db && id);
 
@@ -713,7 +715,10 @@ attempt_lookup:
 	if (error && error != GIT_PASSTHROUGH)
 		return error;
 
-	*out = git_cache_store_raw(odb_cache(db), new_odb_object(id, &raw));
+	if ((object = odb_object__alloc(id, &raw)) == NULL)
+		return -1;
+
+	*out = git_cache_store_raw(odb_cache(db), object);
 	return 0;
 }
 
@@ -726,6 +731,7 @@ int git_odb_read_prefix(
 	git_rawobj raw;
 	void *data = NULL;
 	bool found = false, refreshed = false;
+	git_odb_object *object;
 
 	assert(out && db);
 
@@ -777,7 +783,10 @@ attempt_lookup:
 	if (!found)
 		return git_odb__error_notfound("no match for prefix", short_id);
 
-	*out = git_cache_store_raw(odb_cache(db), new_odb_object(&found_full_oid, &raw));
+	if ((object = odb_object__alloc(&found_full_oid, &raw)) == NULL)
+		return -1;
+
+	*out = git_cache_store_raw(odb_cache(db), object);
 	return 0;
 }
 

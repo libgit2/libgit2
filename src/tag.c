@@ -15,8 +15,9 @@
 #include "git2/signature.h"
 #include "git2/odb_backend.h"
 
-void git_tag__free(git_tag *tag)
+void git_tag__free(void *_tag)
 {
+	git_tag *tag = _tag;
 	git_signature_free(tag->tagger);
 	git__free(tag->message);
 	git__free(tag->tag_name);
@@ -69,17 +70,16 @@ static int tag_error(const char *str)
 	return -1;
 }
 
-int git_tag__parse_buffer(git_tag *tag, const char *buffer, size_t length)
+int git_tag__parse(void *_tag, const char *buffer, const char *buffer_end)
 {
 	static const char *tag_types[] = {
 		NULL, "commit\n", "tree\n", "blob\n", "tag\n"
 	};
 
+	git_tag *tag = _tag;
 	unsigned int i;
 	size_t text_len;
 	char *search;
-
-	const char *buffer_end = buffer + length;
 
 	if (git_oid__parse(&tag->target, &buffer, buffer_end, "object ") < 0)
 		return tag_error("Object field invalid");
@@ -317,7 +317,7 @@ int git_tag_create_frombuffer(git_oid *oid, git_repository *repo, const char *bu
 		return -1;
 
 	/* validate the buffer */
-	if (git_tag__parse_buffer(&tag, buffer, strlen(buffer)) < 0)
+	if (git_tag__parse(&tag, buffer, buffer + strlen(buffer)) < 0)
 		return -1;
 
 	/* validate the target */
@@ -390,15 +390,8 @@ int git_tag_delete(git_repository *repo, const char *tag_name)
 
 	if ((error = git_reference_delete(tag_ref)) == 0)
 		git_reference_free(tag_ref);
-	
-	return error;
-}
 
-int git_tag__parse(git_tag *tag, git_odb_object *obj)
-{
-	assert(tag);
-	return git_tag__parse_buffer(
-		tag, git_odb_object_data(obj), git_odb_object_size(obj));
+	return error;
 }
 
 typedef struct {
