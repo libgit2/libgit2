@@ -71,16 +71,15 @@ GIT_INLINE(int) git_atomic_dec(git_atomic *a)
 GIT_INLINE(void *) git___compare_and_swap(
 	volatile void **ptr, void *oldval, void *newval)
 {
-	bool swapped;
+	void *foundval;
 #if defined(GIT_WIN32)
-	swapped = ((LONGLONG)oldval == InterlockedCompareExchange64(
-		(LONGLONG volatile *)ptr, (LONGLONG)newval, (LONGLONG)oldval));
+	foundval = InterlockedCompareExchangePointer(ptr, newval, oldval);
 #elif defined(__GNUC__)
-	swapped = (__sync_val_compare_and_swap(ptr, oldval, newval) == oldval);
+	foundval = __sync_val_compare_and_swap(ptr, oldval, newval);
 #else
 #	error "Unsupported architecture for atomic operations"
 #endif
-	return swapped ? oldval : newval;
+	return (foundval == oldval) ? oldval : newval;
 }
 
 #else
