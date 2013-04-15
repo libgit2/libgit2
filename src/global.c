@@ -135,6 +135,12 @@ int git_threads_init(void)
 
 void git_threads_shutdown(void)
 {
+	if (_tls_init) {
+		void *ptr = pthread_getspecific(_tls_key);
+		pthread_setspecific(_tls_key, NULL);
+		git__free(ptr);
+	}
+
 	pthread_key_delete(_tls_key);
 	_tls_init = 0;
 	git_mutex_free(&git__mwindow_mutex);
