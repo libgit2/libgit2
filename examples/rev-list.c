@@ -29,6 +29,7 @@ static int push_spec(git_repository *repo, git_revwalk *walk, const char *spec, 
 
 	if ((error = git_revparse_single(&obj, repo, spec)) < 0)
 		return error;
+
 	error = push_commit(walk, git_object_id(obj), hide);
 	git_object_free(obj);
 	return error;
@@ -36,24 +37,25 @@ static int push_spec(git_repository *repo, git_revwalk *walk, const char *spec, 
 
 static int push_range(git_repository *repo, git_revwalk *walk, const char *range, int hide)
 {
-	git_object *left, *right;
-	git_revparse_flag_t flags;
+	git_revspec revspec;
 	int error = 0;
 
-	if ((error = git_revparse(&left, &right, &flags, repo, range)))
+	if ((error = git_revparse(&revspec, repo, range)))
 		return error;
-	if (flags & GIT_REVPARSE_MERGE_BASE) {
+
+	if (revspec.flags & GIT_REVPARSE_MERGE_BASE) {
 		/* TODO: support "<commit>...<commit>" */
 		return GIT_EINVALIDSPEC;
 	}
 
-	if ((error = push_commit(walk, git_object_id(left), !hide)))
+	if ((error = push_commit(walk, git_object_id(revspec.from), !hide)))
 		goto out;
-	error = push_commit(walk, git_object_id(right), hide);
 
-  out:
-	git_object_free(left);
-	git_object_free(right);
+	error = push_commit(walk, git_object_id(revspec.to), hide);
+
+out:
+	git_object_free(revspec.from);
+	git_object_free(revspec.to);
 	return error;
 }
 
