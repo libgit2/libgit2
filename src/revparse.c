@@ -722,7 +722,7 @@ static int ensure_left_hand_identifier_is_not_known_yet(git_object *object, git_
 	return GIT_EINVALIDSPEC;
 }
 
-static int git_revparse_single(git_object **out, git_repository *repo, const char *spec)
+int git_revparse_single(git_object **out, git_repository *repo, const char *spec)
 {
 	size_t pos = 0, identifier_len = 0;
 	int error = -1, n;
