@@ -219,15 +219,16 @@ git_tree_entry *git_tree_entry_dup(const git_tree_entry *entry)
 	return copy;
 }
 
-void git_tree__free(git_tree *tree)
+void git_tree__free(void *tree)
 {
+	git_vector *entries = &((git_tree *)tree)->entries;
 	size_t i;
 	git_tree_entry *e;
 
-	git_vector_foreach(&tree->entries, i, e)
+	git_vector_foreach(entries, i, e)
 		git_tree_entry_free(e);
 
-	git_vector_free(&tree->entries);
+	git_vector_free(entries);
 	git__free(tree);
 }
 
@@ -371,10 +372,11 @@ static int tree_error(const char *str, const char *path)
 	return -1;
 }
 
-static int tree_parse_buffer(
-	git_tree *tree, const char *buffer, const char *buffer_end)
+int git_tree__parse(void *tree, const char *buffer, const char *buffer_end)
 {
-	if (git_vector_init(&tree->entries, DEFAULT_TREE_SIZE, entry_sort_cmp) < 0)
+	git_vector *tree_entries = &((git_tree *)tree)->entries;
+
+	if (git_vector_init(tree_entries, DEFAULT_TREE_SIZE, entry_sort_cmp) < 0)
 		return -1;
 
 	while (buffer < buffer_end) {
@@ -397,7 +399,7 @@ static int tree_parse_buffer(
 			entry = alloc_entry(buffer);
 			GITERR_CHECK_ALLOC(entry);
 
-			if (git_vector_insert(&tree->entries, entry) < 0) {
+			if (git_vector_insert(tree_entries, entry) < 0) {
 				git__free(entry);
 				return -1;
 			}
@@ -415,17 +417,6 @@ static int tree_parse_buffer(
 	}
 
 	return 0;
-}
-
-int git_tree__parse(git_tree *tree, git_odb_object *obj)
-{
-	const char *buf;
-
-	assert(tree && obj);
-
-	buf = (const char *)git_odb_object_data(obj);
-
-	return tree_parse_buffer(tree, buf, buf + git_odb_object_size(obj));
 }
 
 static size_t find_next_dir(const char *dirname, git_index *index, size_t start)
