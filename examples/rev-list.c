@@ -14,7 +14,7 @@ static void check_error(int error_code, const char *action)
 	exit(1);
 }
 
-static int push_commit(git_revwalk *walk, git_oid *oid, int hide)
+static int push_commit(git_revwalk *walk, const git_oid *oid, int hide)
 {
 	if (hide)
 		return git_revwalk_hide(walk, oid);
@@ -27,7 +27,7 @@ static int push_spec(git_repository *repo, git_revwalk *walk, const char *spec, 
 	int error;
 	git_object *obj;
 
-	if ((error = git_revparse(&obj, NULL, NULL, repo, spec)) < 0)
+	if ((error = git_revparse_single(&obj, repo, spec)) < 0)
 		return error;
 	error = push_commit(walk, git_object_id(obj), hide);
 	git_object_free(obj);
@@ -36,7 +36,7 @@ static int push_spec(git_repository *repo, git_revwalk *walk, const char *spec, 
 
 static int push_range(git_repository *repo, git_revwalk *walk, const char *range, int hide)
 {
-	git_object left, right;
+	git_object *left, *right;
 	git_revparse_flag_t flags;
 	int error = 0;
 
