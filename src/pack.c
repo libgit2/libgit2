@@ -299,29 +299,27 @@ static int pack_index_open(struct git_pack_file *p)
 	int error = 0;
 	size_t name_len, base_len;
 
-	if ((error = git_mutex_lock(&p->lock)) < 0)
-		return error;
-
 	if (p->index_map.data)
-		goto done;
+		return 0;
 
 	name_len = strlen(p->pack_name);
 	assert(name_len > strlen(".pack")); /* checked by git_pack_file alloc */
 
-	if ((idx_name = git__malloc(name_len)) == NULL) {
-		error = -1;
-		goto done;
-	}
+	if ((idx_name = git__malloc(name_len)) == NULL)
+		return -1;
 
 	base_len = name_len - strlen(".pack");
 	memcpy(idx_name, p->pack_name, base_len);
 	memcpy(idx_name + base_len, ".idx", sizeof(".idx"));
 
-	error = pack_index_check(idx_name, p);
+	if ((error = git_mutex_lock(&p->lock)) < 0)
+		return error;
+
+	if (!p->index_map.data)
+		error = pack_index_check(idx_name, p);
 
 	git__free(idx_name);
 
-done:
 	git_mutex_unlock(&p->lock);
 
 	return error;
@@ -820,7 +818,6 @@ void git_packfile_free(struct git_pack_file *p)
 	cache_free(&p->bases);
 
 	git_mwindow_free_all(&p->mwf);
-	git_mwindow_file_deregister(&p->mwf);
 
 	if (p->mwf.fd != -1)
 		p_close(p->mwf.fd);
