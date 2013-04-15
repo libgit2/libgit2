@@ -30,7 +30,6 @@ void test_checkout_tree__cannot_checkout_a_non_treeish(void)
 {
 	/* blob */
 	cl_git_pass(git_revparse_single(&g_object, g_repo, "a71586c1dfe8a71c6cbf6c129f404c5642ff31bd"));
-
 	cl_git_fail(git_checkout_tree(g_repo, g_object, NULL));
 }
 
@@ -283,8 +282,7 @@ void test_checkout_tree__can_checkout_with_pattern(void)
 	g_opts.checkout_strategy =
 		GIT_CHECKOUT_FORCE | GIT_CHECKOUT_REMOVE_UNTRACKED;
 
-	cl_git_pass(git_revparse_single(&g_object, g_repo,
-		"8496071c1b46c854b31185ea97743be6a8774479"));
+	cl_git_pass(git_revparse_single(&g_object, g_repo, "8496071c1b46c854b31185ea97743be6a8774479"));
 
 	cl_git_pass(git_checkout_tree(g_repo, g_object, &g_opts));
 	cl_git_pass(
@@ -323,8 +321,7 @@ void test_checkout_tree__can_disable_pattern_match(void)
 	g_opts.checkout_strategy =
 		GIT_CHECKOUT_FORCE | GIT_CHECKOUT_REMOVE_UNTRACKED;
 
-	cl_git_pass(git_revparse_single(&g_object, g_repo,
-		"8496071c1b46c854b31185ea97743be6a8774479"));
+	cl_git_pass(git_revparse_single(&g_object, g_repo, "8496071c1b46c854b31185ea97743be6a8774479"));
 
 	cl_git_pass(git_checkout_tree(g_repo, g_object, &g_opts));
 	cl_git_pass(

@@ -232,12 +232,12 @@ int git_revwalk_push_ref(git_revwalk *walk, const char *refname)
 int git_revwalk_push_range(git_revwalk *walk, const char *range)
 {
 	git_object *left, *right;
-	int threedots;
+	git_revparse_flag_t revparseflags;
 	int error = 0;
 
-	if ((error = git_revparse_rangelike(&left, &right, &threedots, walk->repo, range)))
+	if ((error = git_revparse(&left, &right, &revparseflags, walk->repo, range)))
 		return error;
-	if (threedots) {
+	if (revparseflags & GIT_REVPARSE_MERGE_BASE) {
 		/* TODO: support "<commit>...<commit>" */
 		giterr_set(GITERR_INVALID, "Symmetric differences not implemented in revwalk");
 		return GIT_EINVALIDSPEC;
