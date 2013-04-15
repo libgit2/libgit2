@@ -25,16 +25,18 @@ static int push_commit(git_revwalk *walk, git_oid *oid, int hide)
 static int push_spec(git_repository *repo, git_revwalk *walk, const char *spec, int hide)
 {
 	int error;
-	git_oid oid;
+	git_object *obj;
 
-	if ((error = git_revparse(&oid, NULL, NULL, repo, spec)))
+	if ((error = git_revparse(&obj, NULL, NULL, repo, spec)) < 0)
 		return error;
-	return push_commit(walk, &oid, hide);
+	error = push_commit(walk, git_object_id(obj), hide);
+	git_object_free(obj);
+	return error;
 }
 
 static int push_range(git_repository *repo, git_revwalk *walk, const char *range, int hide)
 {
-	git_oid left, right;
+	git_object left, right;
 	git_revparse_flag_t flags;
 	int error = 0;
 
@@ -45,11 +47,13 @@ static int push_range(git_repository *repo, git_revwalk *walk, const char *range
 		return GIT_EINVALIDSPEC;
 	}
 
-	if ((error = push_commit(walk, &left, !hide)))
+	if ((error = push_commit(walk, git_object_id(left), !hide)))
 		goto out;
-	error = push_commit(walk, &right, hide);
+	error = push_commit(walk, git_object_id(right), hide);
 
   out:
+	git_object_free(left);
+	git_object_free(right);
 	return error;
 }
 

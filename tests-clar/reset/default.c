@@ -95,7 +95,6 @@ void test_reset_default__resetting_filepaths_against_a_null_target_removes_them_
 void test_reset_default__resetting_filepaths_replaces_their_corresponding_index_entries(void)
 {
 	git_strarray before, after;
-	git_oid oid;
 
 	char *paths[] = { "staged_changes", "staged_changes_file_deleted" };
 	char *before_shas[] = { "55d316c9ba708999f1918e9677d01dfcae69c6b9",
@@ -110,8 +109,7 @@ void test_reset_default__resetting_filepaths_replaces_their_corresponding_index_
 	after.strings = after_shas;
 	after.count = 2;
 
-	cl_git_pass(git_revparse(&oid, NULL, NULL, _repo, "0017bd4"));
-	cl_git_pass(git_object_lookup(&_target, _repo, &oid, GIT_OBJ_ANY));
+	cl_git_pass(git_revparse_single(&_target, _repo, "0017bd4"));
 	assert_content_in_index(&_pathspecs, true, &before);
 
 	cl_git_pass(git_reset_default(_repo, _target, &_pathspecs));
@@ -137,7 +135,6 @@ void test_reset_default__resetting_filepaths_clears_previous_conflicts(void)
 {
 	git_index_entry *conflict_entry[3];
 	git_strarray after;
-	git_oid oid;
 
 	char *paths[] = { "conflicts-one.txt" };
 	char *after_shas[] = { "1f85ca51b8e0aac893a621b61a9c2661d6aa6d81" };
@@ -153,8 +150,7 @@ void test_reset_default__resetting_filepaths_clears_previous_conflicts(void)
 	cl_git_pass(git_index_conflict_get(&conflict_entry[0], &conflict_entry[1],
 		&conflict_entry[2], _index, "conflicts-one.txt"));
 
-	cl_git_pass(git_revparse(&oid, NULL, NULL, _repo, "9a05ccb"));
-	cl_git_pass(git_object_lookup(&_target, _repo, &oid, GIT_OBJ_ANY));
+	cl_git_pass(git_revparse_single(&_target, _repo, "9a05ccb"));
 	cl_git_pass(git_reset_default(_repo, _target, &_pathspecs));
 
 	assert_content_in_index(&_pathspecs, true, &after);
@@ -171,15 +167,13 @@ Unstaged changes after reset:
 void test_reset_default__resetting_unknown_filepaths_does_not_fail(void)
 {
 	char *paths[] = { "I_am_not_there.txt", "me_neither.txt" };
-	git_oid oid;
 
 	_pathspecs.strings = paths;
 	_pathspecs.count = 2;
 
 	assert_content_in_index(&_pathspecs, false, NULL);
 
-	cl_git_pass(git_revparse(&oid, NULL, NULL, _repo, "HEAD"));
-	cl_git_pass(git_object_lookup(&_target, _repo, &oid, GIT_OBJ_ANY));
+	cl_git_pass(git_revparse_single(&_target, _repo, "HEAD"));
 	cl_git_pass(git_reset_default(_repo, _target, &_pathspecs));
 
 	assert_content_in_index(&_pathspecs, false, NULL);

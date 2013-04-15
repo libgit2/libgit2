@@ -34,7 +34,7 @@ static void test_id_inrepo(
 	git_revparse_flag_t expected_flags,
 	git_repository *repo)
 {
-	git_oid l = {{0}}, r = {{0}};
+	git_object *l, *r;
 	git_revparse_flag_t flags = 0;
 
 	int error = git_revparse(&l, &r, &flags, repo, spec);
@@ -42,16 +42,18 @@ static void test_id_inrepo(
 	if (expected_left) {
 		char str[64] = {0};
 		cl_assert_equal_i(0, error);
-		git_oid_fmt(str, &l);
+		git_oid_fmt(str, git_object_id(l));
 		cl_assert_equal_s(str, expected_left);
+		git_object_free(l);
 	} else {
 		cl_assert_equal_i(GIT_ENOTFOUND, error);
 	}
 
 	if (expected_right) {
 		char str[64] = {0};
-		git_oid_fmt(str, &r);
+		git_oid_fmt(str, git_object_id(r));
 		cl_assert_equal_s(str, expected_right);
+		git_object_free(r);
 	}
 
 	if (expected_flags)
@@ -69,7 +71,7 @@ static void test_rangelike(const char *rangelike,
 						   git_revparse_flag_t expected_revparseflags)
 {
 	char objstr[64] = {0};
-	git_oid left = {{0}}, right = {{0}};
+	git_object *left = NULL, *right = NULL;
 	git_revparse_flag_t revparseflags;
 	int error;
 
@@ -78,12 +80,15 @@ static void test_rangelike(const char *rangelike,
 	if (expected_left != NULL) {
 		cl_assert_equal_i(0, error);
 		cl_assert_equal_i(revparseflags, expected_revparseflags);
-		git_oid_fmt(objstr, &left);
+		git_oid_fmt(objstr, git_object_id(left));
 		cl_assert_equal_s(objstr, expected_left);
-		git_oid_fmt(objstr, &right);
+		git_oid_fmt(objstr, git_object_id(right));
 		cl_assert_equal_s(objstr, expected_right);
 	} else
 		cl_assert(error != 0);
+
+	git_object_free(left);
+	git_object_free(right);
 }
 
 
@@ -681,7 +686,7 @@ void test_refs_revparse__range(void)
 
 void test_refs_revparse__validates_args(void)
 {
-	git_oid l={{0}}, r={{0}};
+	git_object *l, *r;
 	git_revparse_flag_t flags = 0;
 
 	cl_git_pass(git_revparse(&l,&r,NULL, g_repo, "HEAD"));

@@ -231,7 +231,7 @@ int git_revwalk_push_ref(git_revwalk *walk, const char *refname)
 
 int git_revwalk_push_range(git_revwalk *walk, const char *range)
 {
-	git_oid left, right;
+	git_object *left, *right;
 	git_revparse_flag_t revparseflags;
 	int error = 0;
 
@@ -243,11 +243,13 @@ int git_revwalk_push_range(git_revwalk *walk, const char *range)
 		return GIT_EINVALIDSPEC;
 	}
 
-	if ((error = push_commit(walk, &left, 1)))
+	if ((error = push_commit(walk, git_object_id(left), 1)))
 		goto out;
-	error = push_commit(walk, &right, 0);
+	error = push_commit(walk, git_object_id(right), 0);
 
   out:
+	git_object_free(left);
+	git_object_free(right);
 	return error;
 }
 

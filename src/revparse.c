@@ -870,8 +870,8 @@ cleanup:
 
 
 int git_revparse(
-  git_oid *left,
-  git_oid *right,
+  git_object **left,
+  git_object **right,
   unsigned int *flags,
   git_repository *repo,
   const char *spec)
@@ -879,7 +879,6 @@ int git_revparse(
 	unsigned int lflags = 0;
 	const char *dotdot;
 	int error = 0;
-	git_object *obj = NULL;
 
 	assert(left && repo && spec);
 
@@ -895,22 +894,18 @@ int git_revparse(
 			rstr++;
 		}
 
-		if (!(error = git_revparse_single(&obj, repo, lstr))) {
-			git_oid_cpy(left, git_object_id(obj));
-			git_object_free(obj);
+		if ((error = git_revparse_single(left, repo, lstr)) < 0) {
+			return error;
 		}
-		if (right && !(error = git_revparse_single(&obj, repo, rstr))) {
-			git_oid_cpy(right, git_object_id(obj));
-			git_object_free(obj);
+		if (right &&
+		    (error = git_revparse_single(right, repo, rstr)) < 0) {
+			return error;
 		}
 
 		git__free((void*)lstr);
 	} else {
 		lflags = GIT_REVPARSE_SINGLE;
-		if (!(error = git_revparse_single(&obj, repo, spec))) {
-			git_oid_cpy(left, git_object_id(obj));
-			git_object_free(obj);
-		}
+		error = git_revparse_single(left, repo, spec);
 	}
 
 	if (flags)

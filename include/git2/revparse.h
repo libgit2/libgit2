@@ -66,8 +66,8 @@ typedef enum {
  * @return 0 on success, GIT_INVALIDSPEC, GIT_ENOTFOUND, GIT_EAMBIGUOUS or an error code
  */
 GIT_EXTERN(int) git_revparse(
-		git_oid *left,
-		git_oid *right,
+		git_object **left,
+		git_object **right,
 		unsigned int *flags,
 		git_repository *repo,
 		const char *spec);
