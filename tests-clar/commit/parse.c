@@ -297,7 +297,7 @@ void test_commit_parse__entire_commit(void)
          );
 
 		if (!i)
-			cl_assert_equal_s("\n", git_commit_message(commit));
+			cl_assert_equal_s("", git_commit_message(commit));
 		else
 			cl_assert(git__prefixcmp(
 				git_commit_message(commit), "a simple commit which works") == 0);
@@ -366,3 +366,30 @@ void test_commit_parse__details0(void) {
 	}
 }
 
+void test_commit_parse__leading_lf(void)
+{
+	git_commit *commit;
+	const char *buffer =
+"tree 1810dff58d8a660512d4832e740f692884338ccd\n\
+parent e90810b8df3e80c413d903f631643c716887138d\n\
+author Vicent Marti <tanoku@gmail.com> 1273848544 +0200\n\
+committer Vicent Marti <tanoku@gmail.com> 1273848544 +0200\n\
+\n\
+\n\
+\n\
+This commit has a few LF at the start of the commit message";
+	const char *message =
+"\n\
+\n\
+This commit has a few LF at the start of the commit message";
+
+	commit = (git_commit*)git__malloc(sizeof(git_commit));
+	memset(commit, 0x0, sizeof(git_commit));
+	commit->object.repo = g_repo;
+
+	cl_git_pass(git_commit__parse_buffer(commit, buffer, strlen(buffer)));
+
+	cl_assert_equal_s(message, git_commit_message(commit));
+
+	git_commit__free(commit);
+}
