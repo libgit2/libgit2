@@ -47,26 +47,24 @@ typedef enum {
 } git_revparse_mode_t;
 
 /**
- * Git Revision: output of a `git_revparse` operation
+ * Git Revision Spec: output of a `git_revparse` operation
  */
 typedef struct {
+	/** The left element of the revspec; must be freed by the user */
 	git_object *from;
+	/** The right element of the revspec; must be freed by the user */
 	git_object *to;
+	/** The intent of the revspec */
 	unsigned int flags;
 } git_revspec;
 
 /**
- * Parse a revision string for left, right, and intent. See `man gitrevisions` or
+ * Parse a revision string for `from`, `to`, and intent. See `man gitrevisions` or
  * http://git-scm.com/docs/git-rev-parse.html#_specifying_revisions for information
  * on the syntax accepted.
  *
- * @param left buffer that receives the target of the left side of a range operator. If
- *             there is no range operator, this buffer receives the single target.
- * @param right buffer that receives the target of the right side of a range operator.
- *              This is only filled in if `spec` specifies a range of commits. May
- *              be NULL.
- * @param flags buffer that receives a bitwise combination of `git_revparse_flag_t` values.
- *              May be NULL.
+ * @param revspec Pointer to an user-allocated git_revspec struct where the result
+ *	of the rev-parse will be stored
  * @param repo the repository to search in
  * @param spec the rev-parse spec to parse
  * @return 0 on success, GIT_INVALIDSPEC, GIT_ENOTFOUND, GIT_EAMBIGUOUS or an error code
