@@ -36,7 +36,8 @@ typedef struct {
 	git_atomic cancelled;
 	git_repository *repo;
 	git_vector refs;
-	unsigned connected : 1;
+	unsigned connected : 1,
+		have_refs : 1;
 } transport_local;
 
 static int add_ref(transport_local *t, const char *name)
@@ -139,6 +140,7 @@ static int store_refs(transport_local *t)
 			goto on_error;
 	}
 
+	t->have_refs = 1;
 	git_strarray_free(&ref_names);
 	return 0;
 
@@ -208,8 +210,8 @@ static int local_ls(git_transport *transport, git_headlist_cb list_cb, void *pay
 	unsigned int i;
 	git_remote_head *head = NULL;
 
-	if (!t->connected) {
-		giterr_set(GITERR_NET, "The transport is not connected");
+	if (!t->have_refs) {
+		giterr_set(GITERR_NET, "The transport has not yet loaded the refs");
 		return -1;
 	}
 
@@ -569,8 +571,6 @@ static void local_cancel(git_transport *transport)
 static int local_close(git_transport *transport)
 {
 	transport_local *t = (transport_local *)transport;
-	size_t i;
-	git_remote_head *head;
 
 	t->connected = 0;
 
@@ -578,13 +578,6 @@ static int local_close(git_transport *transport)
 		git_repository_free(t->repo);
 		t->repo = NULL;
 	}
-
-	git_vector_foreach(&t->refs, i, head) {
-		git__free(head->name);
-		git__free(head);
-	}
-
-	git_vector_free(&t->refs);
 
 	if (t->url) {
 		git__free(t->url);
@@ -597,9 +590,18 @@ static int local_close(git_transport *transport)
 static void local_free(git_transport *transport)
 {
 	transport_local *t = (transport_local *)transport;
+	size_t i;
+	git_remote_head *head;
 
 	/* Close the transport, if it's still open. */
 	local_close(transport);
+
+	git_vector_foreach(&t->refs, i, head) {
+		git__free(head->name);
+		git__free(head);
+	}
+
+	git_vector_free(&t->refs);
 
 	/* Free the transport */
 	git__free(t);

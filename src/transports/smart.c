@@ -253,18 +253,12 @@ static int git_smart__read_flags(git_transport *transport, int *flags)
 static int git_smart__close(git_transport *transport)
 {
 	transport_smart *t = (transport_smart *)transport;
-	git_vector *refs = &t->refs;
 	git_vector *common = &t->common;
 	unsigned int i;
 	git_pkt *p;
 	int ret;
 
 	ret = git_smart__reset_stream(t, true);
-
-	git_vector_foreach(refs, i, p)
-		git_pkt_free(p);
-
-	git_vector_free(refs);
 
 	git_vector_foreach(common, i, p)
 		git_pkt_free(p);
@@ -284,12 +278,20 @@ static int git_smart__close(git_transport *transport)
 static void git_smart__free(git_transport *transport)
 {
 	transport_smart *t = (transport_smart *)transport;
+	git_vector *refs = &t->refs;
+	unsigned int i;
+	git_pkt *p;
 
 	/* Make sure that the current stream is closed, if we have one. */
 	git_smart__close(transport);
 
 	/* Free the subtransport */
 	t->wrapped->free(t->wrapped);
+
+	git_vector_foreach(refs, i, p)
+		git_pkt_free(p);
+
+	git_vector_free(refs);
 
 	git__free(t);
 }
