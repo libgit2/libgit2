@@ -586,11 +586,6 @@ int git_remote_ls(git_remote *remote, git_headlist_cb list_cb, void *payload)
 {
 	assert(remote);
 
-	if (!git_remote_connected(remote)) {
-		giterr_set(GITERR_NET, "The remote is not connected");
-		return -1;
-	}
-
 	return remote->transport->ls(remote->transport, list_cb, payload);
 }
 
@@ -735,6 +730,10 @@ static int git_remote_write_fetchhead(git_remote *remote, git_vector *update_hea
 	int error = 0;
 
 	assert(remote);
+
+	/* no heads, nothing to do */
+	if (update_heads->length == 0)
+		return 0;
 
 	spec = &remote->fetch;
 
