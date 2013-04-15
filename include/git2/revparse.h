@@ -44,8 +44,16 @@ typedef enum {
 	GIT_REVPARSE_RANGE          = 1 << 1,
 	/** The spec used the '...' operator, which invokes special semantics. */
 	GIT_REVPARSE_MERGE_BASE     = 1 << 2,
-} git_revparse_flag_t;
+} git_revparse_mode_t;
 
+/**
+ * Git Revision: output of a `git_revparse` operation
+ */
+typedef struct {
+	git_object *from;
+	git_object *to;
+	unsigned int flags;
+} git_revision;
 
 /**
  * Parse a revision string for left, right, and intent. See `man gitrevisions` or
@@ -64,9 +72,7 @@ typedef enum {
  * @return 0 on success, GIT_INVALIDSPEC, GIT_ENOTFOUND, GIT_EAMBIGUOUS or an error code
  */
 GIT_EXTERN(int) git_revparse(
-		git_object **left,
-		git_object **right,
-		unsigned int *flags,
+		git_revision *revision,
 		git_repository *repo,
 		const char *spec);
 

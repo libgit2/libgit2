@@ -870,46 +870,42 @@ cleanup:
 
 
 int git_revparse(
-  git_object **left,
-  git_object **right,
-  unsigned int *flags,
-  git_repository *repo,
-  const char *spec)
+	git_revision *revision,
+	git_repository *repo,
+	const char *spec)
 {
-	unsigned int lflags = 0;
 	const char *dotdot;
 	int error = 0;
 
-	assert(left && repo && spec);
+	assert(revision && repo && spec);
+
+	memset(revision, 0x0, sizeof(*revision));
 
 	if ((dotdot = strstr(spec, "..")) != NULL) {
 		char *lstr;
 		const char *rstr;
-		lflags = GIT_REVPARSE_RANGE;
+		revision->flags = GIT_REVPARSE_RANGE;
 
-		lstr = git__substrdup(spec, dotdot-spec);
+		lstr = git__substrdup(spec, dotdot - spec);
 		rstr = dotdot + 2;
 		if (dotdot[2] == '.') {
-			lflags |= GIT_REVPARSE_MERGE_BASE;
+			revision->flags |= GIT_REVPARSE_MERGE_BASE;
 			rstr++;
 		}
 
-		if ((error = git_revparse_single(left, repo, lstr)) < 0) {
+		if ((error = git_revparse_single(&revision->from, repo, lstr)) < 0) {
 			return error;
 		}
-		if (right &&
-		    (error = git_revparse_single(right, repo, rstr)) < 0) {
+
+		if ((error = git_revparse_single(&revision->to, repo, rstr)) < 0) {
 			return error;
 		}
 
 		git__free((void*)lstr);
 	} else {
-		lflags = GIT_REVPARSE_SINGLE;
-		error = git_revparse_single(left, repo, spec);
+		revision->flags = GIT_REVPARSE_SINGLE;
+		error = git_revparse_single(&revision->from, repo, spec);
 	}
-
-	if (flags)
-		*flags = lflags;
 
 	return error;
 }
