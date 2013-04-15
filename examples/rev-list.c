@@ -14,12 +14,12 @@ static void check_error(int error_code, const char *action)
 	exit(1);
 }
 
-static int push_commit(git_revwalk *walk, git_object *obj, int hide)
+static int push_commit(git_revwalk *walk, const git_oid *oid, int hide)
 {
 	if (hide)
-		return git_revwalk_hide(walk, git_object_id(obj));
+		return git_revwalk_hide(walk, oid);
 	else
-		return git_revwalk_push(walk, git_object_id(obj));
+		return git_revwalk_push(walk, oid);
 }
 
 static int push_spec(git_repository *repo, git_revwalk *walk, const char *spec, int hide)
@@ -27,35 +27,39 @@ static int push_spec(git_repository *repo, git_revwalk *walk, const char *spec, 
 	int error;
 	git_object *obj;
 
-	if ((error = git_revparse_single(&obj, repo, spec)))
+	if ((error = git_revparse_single(&obj, repo, spec)) < 0)
 		return error;
-	return push_commit(walk, obj, hide);
+
+	error = push_commit(walk, git_object_id(obj), hide);
+	git_object_free(obj);
+	return error;
 }
 
 static int push_range(git_repository *repo, git_revwalk *walk, const char *range, int hide)
 {
-	git_object *left, *right;
-	int threedots;
+	git_revspec revspec;
 	int error = 0;
 
-	if ((error = git_revparse_rangelike(&left, &right, &threedots, repo, range)))
+	if ((error = git_revparse(&revspec, repo, range)))
 		return error;
-	if (threedots) {
+
+	if (revspec.flags & GIT_REVPARSE_MERGE_BASE) {
 		/* TODO: support "<commit>...<commit>" */
 		return GIT_EINVALIDSPEC;
 	}
 
-	if ((error = push_commit(walk, left, !hide)))
+	if ((error = push_commit(walk, git_object_id(revspec.from), !hide)))
 		goto out;
-	error = push_commit(walk, right, hide);
 
-  out:
-	git_object_free(left);
-	git_object_free(right);
+	error = push_commit(walk, git_object_id(revspec.to), hide);
+
+out:
+	git_object_free(revspec.from);
+	git_object_free(revspec.to);
 	return error;
 }
 
-static int revwalk_parseopts(git_repository *repo, git_revwalk *walk, int nopts, const char *const *opts)
+static int revwalk_parseopts(git_repository *repo, git_revwalk *walk, int nopts, char **opts)
 {
 	int hide, i, error;
 	unsigned int sorting = GIT_SORT_NONE;

@@ -21,29 +21,59 @@
 GIT_BEGIN_DECL
 
 /**
- * Find an object, as specified by a revision string. See `man gitrevisions`, or the documentation
- * for `git rev-parse` for information on the syntax accepted.
+ * Find a single object, as specified by a revision string. See `man gitrevisions`,
+ * or http://git-scm.com/docs/git-rev-parse.html#_specifying_revisions for
+ * information on the syntax accepted.
  *
  * @param out pointer to output object
  * @param repo the repository to search in
  * @param spec the textual specification for an object
- * @return 0 on success, GIT_ENOTFOUND, GIT_EAMBIGUOUS,
- * GIT_EINVALIDSPEC or an error code
+ * @return 0 on success, GIT_ENOTFOUND, GIT_EAMBIGUOUS, GIT_EINVALIDSPEC or an error code
  */
 GIT_EXTERN(int) git_revparse_single(git_object **out, git_repository *repo, const char *spec);
 
+
 /**
- * Parse a string with the form of a revision range, as accepted by
- * `git rev-list`, `git diff`, and others.
- *
- * @param left (output) the left-hand commit
- * @param right (output) the right-hand commit
- * @param threedots (output) 0 if the endpoints are separated by two dots, 1 if by three
- * @param repo the repository to find the commits in
- * @param rangelike the rangelike string to be parsed
- * @return 0 on success, or any error `git_revparse_single` can return
+ * Revparse flags.  These indicate the intended behavior of the spec passed to
+ * git_revparse.
  */
-GIT_EXTERN(int) git_revparse_rangelike(git_object **left, git_object **right, int *threedots, git_repository *repo, const char *rangelike);
+typedef enum {
+	/** The spec targeted a single object. */
+	GIT_REVPARSE_SINGLE         = 1 << 0,
+	/** The spec targeted a range of commits. */
+	GIT_REVPARSE_RANGE          = 1 << 1,
+	/** The spec used the '...' operator, which invokes special semantics. */
+	GIT_REVPARSE_MERGE_BASE     = 1 << 2,
+} git_revparse_mode_t;
+
+/**
+ * Git Revision Spec: output of a `git_revparse` operation
+ */
+typedef struct {
+	/** The left element of the revspec; must be freed by the user */
+	git_object *from;
+	/** The right element of the revspec; must be freed by the user */
+	git_object *to;
+	/** The intent of the revspec */
+	unsigned int flags;
+} git_revspec;
+
+/**
+ * Parse a revision string for `from`, `to`, and intent. See `man gitrevisions` or
+ * http://git-scm.com/docs/git-rev-parse.html#_specifying_revisions for information
+ * on the syntax accepted.
+ *
+ * @param revspec Pointer to an user-allocated git_revspec struct where the result
+ *	of the rev-parse will be stored
+ * @param repo the repository to search in
+ * @param spec the rev-parse spec to parse
+ * @return 0 on success, GIT_INVALIDSPEC, GIT_ENOTFOUND, GIT_EAMBIGUOUS or an error code
+ */
+GIT_EXTERN(int) git_revparse(
+		git_revspec *revspec,
+		git_repository *repo,
+		const char *spec);
+
 
 /** @} */
 GIT_END_DECL
