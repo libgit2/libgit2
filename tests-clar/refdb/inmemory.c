@@ -124,8 +124,8 @@ int foreach_test(const char *ref_name, void *payload)
 {
 	git_reference *ref;
 	git_oid expected;
-	int *i = payload;
-	
+	size_t *i = payload;
+
 	cl_git_pass(git_reference_lookup(&ref, repo, ref_name));
 
 	if (*i == 0)
@@ -136,7 +136,7 @@ int foreach_test(const char *ref_name, void *payload)
 		cl_git_pass(git_oid_fromstr(&expected, "763d71aadf09a7951596c9746c024e7eece7c7af"));
 
 	cl_assert(git_oid_cmp(&expected, &ref->target.oid) == 0);
-	
+
 	++(*i);
 	
 	git_reference_free(ref);
@@ -159,8 +159,8 @@ void test_refdb_inmemory__foreach(void)
 	cl_git_pass(git_oid_fromstr(&oid3, "763d71aadf09a7951596c9746c024e7eece7c7af"));
 	cl_git_pass(git_reference_create(&write3, repo, GIT_REFS_HEADS_DIR "test3", &oid3, 0));
 	
-	cl_git_pass(git_reference_foreach(repo, GIT_REF_LISTALL, foreach_test, &i));	
-	cl_assert(i == 3);
+	cl_git_pass(git_reference_foreach(repo, GIT_REF_LISTALL, foreach_test, &i));
+	cl_assert_equal_i(i, 3);
 	
 	git_reference_free(write1);
 	git_reference_free(write2);
@@ -171,8 +171,8 @@ int delete_test(const char *ref_name, void *payload)
 {
 	git_reference *ref;
 	git_oid expected;
-	int *i = payload;
-	
+	size_t *i = payload;
+
 	cl_git_pass(git_reference_lookup(&ref, repo, ref_name));
 	
 	cl_git_pass(git_oid_fromstr(&expected, "e90810b8df3e80c413d903f631643c716887138d"));	
@@ -207,7 +207,7 @@ void test_refdb_inmemory__delete(void)
 	git_reference_free(write3);
 	
 	cl_git_pass(git_reference_foreach(repo, GIT_REF_LISTALL, delete_test, &i));
-	cl_assert(i == 1);
+	cl_assert_equal_i(i, 1);
 
 	git_reference_free(write2);
 }
