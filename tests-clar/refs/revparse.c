@@ -34,28 +34,28 @@ static void test_id_inrepo(
 	git_revparse_mode_t expected_flags,
 	git_repository *repo)
 {
-	git_revision revision;
-	int error = git_revparse(&revision, repo, spec);
+	git_revspec revspec;
+	int error = git_revparse(&revspec, repo, spec);
 
 	if (expected_left) {
 		char str[64] = {0};
 		cl_assert_equal_i(0, error);
-		git_oid_fmt(str, git_object_id(revision.from));
+		git_oid_fmt(str, git_object_id(revspec.from));
 		cl_assert_equal_s(str, expected_left);
-		git_object_free(revision.from);
+		git_object_free(revspec.from);
 	} else {
 		cl_assert_equal_i(GIT_ENOTFOUND, error);
 	}
 
 	if (expected_right) {
 		char str[64] = {0};
-		git_oid_fmt(str, git_object_id(revision.to));
+		git_oid_fmt(str, git_object_id(revspec.to));
 		cl_assert_equal_s(str, expected_right);
-		git_object_free(revision.to);
+		git_object_free(revspec.to);
 	}
 
 	if (expected_flags)
-		cl_assert_equal_i(expected_flags, revision.flags);
+		cl_assert_equal_i(expected_flags, revspec.flags);
 }
 
 static void test_object(const char *spec, const char *expected_oid)
@@ -69,23 +69,23 @@ static void test_rangelike(const char *rangelike,
 						   git_revparse_mode_t expected_revparseflags)
 {
 	char objstr[64] = {0};
-	git_revision revision;
+	git_revspec revspec;
 	int error;
 
-	error = git_revparse(&revision, g_repo, rangelike);
+	error = git_revparse(&revspec, g_repo, rangelike);
 
 	if (expected_left != NULL) {
 		cl_assert_equal_i(0, error);
-		cl_assert_equal_i(revision.flags, expected_revparseflags);
-		git_oid_fmt(objstr, git_object_id(revision.from));
+		cl_assert_equal_i(revspec.flags, expected_revparseflags);
+		git_oid_fmt(objstr, git_object_id(revspec.from));
 		cl_assert_equal_s(objstr, expected_left);
-		git_oid_fmt(objstr, git_object_id(revision.to));
+		git_oid_fmt(objstr, git_object_id(revspec.to));
 		cl_assert_equal_s(objstr, expected_right);
 	} else
 		cl_assert(error != 0);
 
-	git_object_free(revision.from);
-	git_object_free(revision.to);
+	git_object_free(revspec.from);
+	git_object_free(revspec.to);
 }
 
 

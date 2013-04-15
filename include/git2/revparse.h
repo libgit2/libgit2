@@ -53,7 +53,7 @@ typedef struct {
 	git_object *from;
 	git_object *to;
 	unsigned int flags;
-} git_revision;
+} git_revspec;
 
 /**
  * Parse a revision string for left, right, and intent. See `man gitrevisions` or
@@ -72,7 +72,7 @@ typedef struct {
  * @return 0 on success, GIT_INVALIDSPEC, GIT_ENOTFOUND, GIT_EAMBIGUOUS or an error code
  */
 GIT_EXTERN(int) git_revparse(
-		git_revision *revision,
+		git_revspec *revspec,
 		git_repository *repo,
 		const char *spec);
 

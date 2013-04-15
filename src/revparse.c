@@ -870,41 +870,41 @@ cleanup:
 
 
 int git_revparse(
-	git_revision *revision,
+	git_revspec *revspec,
 	git_repository *repo,
 	const char *spec)
 {
 	const char *dotdot;
 	int error = 0;
 
-	assert(revision && repo && spec);
+	assert(revspec && repo && spec);
 
-	memset(revision, 0x0, sizeof(*revision));
+	memset(revspec, 0x0, sizeof(*revspec));
 
 	if ((dotdot = strstr(spec, "..")) != NULL) {
 		char *lstr;
 		const char *rstr;
-		revision->flags = GIT_REVPARSE_RANGE;
+		revspec->flags = GIT_REVPARSE_RANGE;
 
 		lstr = git__substrdup(spec, dotdot - spec);
 		rstr = dotdot + 2;
 		if (dotdot[2] == '.') {
-			revision->flags |= GIT_REVPARSE_MERGE_BASE;
+			revspec->flags |= GIT_REVPARSE_MERGE_BASE;
 			rstr++;
 		}
 
-		if ((error = git_revparse_single(&revision->from, repo, lstr)) < 0) {
+		if ((error = git_revparse_single(&revspec->from, repo, lstr)) < 0) {
 			return error;
 		}
 
-		if ((error = git_revparse_single(&revision->to, repo, rstr)) < 0) {
+		if ((error = git_revparse_single(&revspec->to, repo, rstr)) < 0) {
 			return error;
 		}
 
 		git__free((void*)lstr);
 	} else {
-		revision->flags = GIT_REVPARSE_SINGLE;
-		error = git_revparse_single(&revision->from, repo, spec);
+		revspec->flags = GIT_REVPARSE_SINGLE;
+		error = git_revparse_single(&revspec->from, repo, spec);
 	}
 
 	return error;

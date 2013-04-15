@@ -231,26 +231,26 @@ int git_revwalk_push_ref(git_revwalk *walk, const char *refname)
 
 int git_revwalk_push_range(git_revwalk *walk, const char *range)
 {
-	git_revision revision;
+	git_revspec revspec;
 	int error = 0;
 
-	if ((error = git_revparse(&revision, walk->repo, range)))
+	if ((error = git_revparse(&revspec, walk->repo, range)))
 		return error;
 
-	if (revision.flags & GIT_REVPARSE_MERGE_BASE) {
+	if (revspec.flags & GIT_REVPARSE_MERGE_BASE) {
 		/* TODO: support "<commit>...<commit>" */
 		giterr_set(GITERR_INVALID, "Symmetric differences not implemented in revwalk");
 		return GIT_EINVALIDSPEC;
 	}
 
-	if ((error = push_commit(walk, git_object_id(revision.from), 1)))
+	if ((error = push_commit(walk, git_object_id(revspec.from), 1)))
 		goto out;
 
-	error = push_commit(walk, git_object_id(revision.to), 0);
+	error = push_commit(walk, git_object_id(revspec.to), 0);
 
 out:
-	git_object_free(revision.from);
-	git_object_free(revision.to);
+	git_object_free(revspec.from);
+	git_object_free(revspec.to);
 	return error;
 }
 
