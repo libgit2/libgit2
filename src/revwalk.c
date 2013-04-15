@@ -231,25 +231,26 @@ int git_revwalk_push_ref(git_revwalk *walk, const char *refname)
 
 int git_revwalk_push_range(git_revwalk *walk, const char *range)
 {
-	git_object *left, *right;
-	int threedots;
+	git_revspec revspec;
 	int error = 0;
 
-	if ((error = git_revparse_rangelike(&left, &right, &threedots, walk->repo, range)))
+	if ((error = git_revparse(&revspec, walk->repo, range)))
 		return error;
-	if (threedots) {
+
+	if (revspec.flags & GIT_REVPARSE_MERGE_BASE) {
 		/* TODO: support "<commit>...<commit>" */
 		giterr_set(GITERR_INVALID, "Symmetric differences not implemented in revwalk");
 		return GIT_EINVALIDSPEC;
 	}
 
-	if ((error = push_commit(walk, git_object_id(left), 1)))
+	if ((error = push_commit(walk, git_object_id(revspec.from), 1)))
 		goto out;
-	error = push_commit(walk, git_object_id(right), 0);
 
-  out:
-	git_object_free(left);
-	git_object_free(right);
+	error = push_commit(walk, git_object_id(revspec.to), 0);
+
+out:
+	git_object_free(revspec.from);
+	git_object_free(revspec.to);
 	return error;
 }
 

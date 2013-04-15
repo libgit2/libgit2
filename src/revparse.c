@@ -107,7 +107,7 @@ static int build_regex(regex_t *regex, const char *pattern)
 	error = regcomp(regex, pattern, REG_EXTENDED);
 	if (!error)
 		return 0;
-	
+
 	error = giterr_set_regex(regex, error);
 
 	regfree(regex);
@@ -125,7 +125,7 @@ static int maybe_describe(git_object**out, git_repository *repo, const char *spe
 
 	if (substr == NULL)
 		return GIT_ENOTFOUND;
-	
+
 	if (build_regex(&regex, ".+-[0-9]+-g[0-9a-fA-F]+") < 0)
 		return -1;
 
@@ -358,7 +358,7 @@ static int retrieve_remote_tracking_reference(git_reference **base_ref, const ch
 
 	if ((error = git_branch_upstream(&tracking, ref)) < 0)
 		goto cleanup;
-	
+
 	*base_ref = tracking;
 
 cleanup:
@@ -508,7 +508,7 @@ static int walk_and_search(git_object **out, git_revwalk *walk, regex_t *regex)
 	int error;
 	git_oid oid;
 	git_object *obj;
-	
+
 	while (!(error = git_revwalk_next(&oid, walk))) {
 
 		error = git_object_lookup(&obj, git_revwalk_repository(walk), &oid, GIT_OBJ_COMMIT);
@@ -537,7 +537,7 @@ static int handle_grep_syntax(git_object **out, git_repository *repo, const git_
 
 	if ((error = build_regex(&preg, pattern)) < 0)
 		return error;
-		
+
 	if ((error = git_revwalk_new(&walk, repo)) < 0)
 		goto cleanup;
 
@@ -551,7 +551,7 @@ static int handle_grep_syntax(git_object **out, git_repository *repo, const git_
 			goto cleanup;
 
 	error = walk_and_search(out, walk, &preg);
-		
+
 cleanup:
 	regfree(&preg);
 	git_revwalk_free(walk);
@@ -868,27 +868,45 @@ cleanup:
 	return error;
 }
 
-int git_revparse_rangelike(git_object **left, git_object **right, int *threedots, git_repository *repo, const char *rangelike)
-{
-	int error = 0;
-	const char *p, *q;
-	char *revspec;
 
-	p = strstr(rangelike, "..");
-	if (!p) {
-		giterr_set(GITERR_INVALID, "Malformed range (or rangelike syntax): %s", rangelike);
-		return GIT_EINVALIDSPEC;
-	} else if (p[2] == '.') {
-		*threedots = 1;
-		q = p + 3;
+int git_revparse(
+	git_revspec *revspec,
+	git_repository *repo,
+	const char *spec)
+{
+	const char *dotdot;
+	int error = 0;
+
+	assert(revspec && repo && spec);
+
+	memset(revspec, 0x0, sizeof(*revspec));
+
+	if ((dotdot = strstr(spec, "..")) != NULL) {
+		char *lstr;
+		const char *rstr;
+		revspec->flags = GIT_REVPARSE_RANGE;
+
+		lstr = git__substrdup(spec, dotdot - spec);
+		rstr = dotdot + 2;
+		if (dotdot[2] == '.') {
+			revspec->flags |= GIT_REVPARSE_MERGE_BASE;
+			rstr++;
+		}
+
+		if ((error = git_revparse_single(&revspec->from, repo, lstr)) < 0) {
+			return error;
+		}
+
+		if ((error = git_revparse_single(&revspec->to, repo, rstr)) < 0) {
+			return error;
+		}
+
+		git__free((void*)lstr);
 	} else {
-		*threedots = 0;
-		q = p + 2;
+		revspec->flags = GIT_REVPARSE_SINGLE;
+		error = git_revparse_single(&revspec->from, repo, spec);
 	}
 
-	revspec = git__substrdup(rangelike, p - rangelike);
-	error = (git_revparse_single(left, repo, revspec)
-	      || git_revparse_single(right, repo, q));
-	git__free(revspec);
 	return error;
 }
+
