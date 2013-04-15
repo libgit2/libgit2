@@ -221,7 +221,7 @@ GIT_EXTERN(void) git_revwalk_sorting(git_revwalk *walk, unsigned int sort_mode);
  *
  * The range should be of the form
  *   <commit>..<commit>
- * where each <commit> is in the form accepted by 'git_revparse'.
+ * where each <commit> is in the form accepted by 'git_revparse_single'.
  * The left-hand commit will be hidden and the right-hand commit pushed.
  *
  * @param walk the walker being used for the traversal

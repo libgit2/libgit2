@@ -17,7 +17,7 @@ static int resolve_to_tree(
 	int err = 0;
 	git_object *obj = NULL;
 
-	if ((err =git_revparse(&obj, NULL, NULL, repo, identifier)) < 0)
+	if ((err = git_revparse_single(&obj, repo, identifier)) < 0)
 		return err;
 
 	switch (git_object_type(obj)) {

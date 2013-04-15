@@ -21,7 +21,6 @@
 GIT_BEGIN_DECL
 
 /**
- *
  * Find a single object, as specified by a revision string. See `man gitrevisions`,
  * or http://git-scm.com/docs/git-rev-parse.html#_specifying_revisions for
  * information on the syntax accepted.
@@ -31,8 +30,7 @@ GIT_BEGIN_DECL
  * @param spec the textual specification for an object
  * @return 0 on success, GIT_ENOTFOUND, GIT_EAMBIGUOUS, GIT_EINVALIDSPEC or an error code
  */
-GIT_EXTERN(int) git_revparse_single(git_object **out, git_repository *repo,
-		const char *spec);
+GIT_EXTERN(int) git_revparse_single(git_object **out, git_repository *repo, const char *spec);
 
 
 /**
