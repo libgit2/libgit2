@@ -313,23 +313,4 @@ int git__date_parse(git_time_t *out, const char *date);
  */
 extern size_t git__unescape(char *str);
 
-/*
- * Swap a pointer with thread safety, returning old value.
- */
-GIT_INLINE(void *) git__swap(git_mutex *lock, void **ptr_ptr, void *new_ptr)
-{
-	void *old_ptr;
-
-	if (*ptr_ptr == new_ptr)
-		return NULL;
-	if (git_mutex_lock(lock) < 0)
-		return new_ptr;
-
-	old_ptr = *ptr_ptr;
-	*ptr_ptr = new_ptr;
-
-	git_mutex_unlock(lock);
-	return old_ptr;
-}
-
 #endif /* INCLUDE_util_h__ */
