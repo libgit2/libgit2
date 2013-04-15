@@ -134,3 +134,30 @@ void test_online_fetch__can_cancel(void)
 	git_remote_disconnect(remote);
 	git_remote_free(remote);
 }
+
+int ls_cb(git_remote_head *rhead, void *payload)
+{
+	int *nr = payload;
+	GIT_UNUSED(rhead);
+
+	(*nr)++;
+
+	return 0;
+}
+
+void test_online_fetch__ls_disconnected(void)
+{
+	git_remote *remote;
+	int nr_before = 0, nr_after = 0;
+
+	cl_git_pass(git_remote_create(&remote, _repo, "test",
+				"http://github.com/libgit2/TestGitRepository.git"));
+	cl_git_pass(git_remote_connect(remote, GIT_DIRECTION_FETCH));
+	cl_git_pass(git_remote_ls(remote, ls_cb, &nr_before));
+	git_remote_disconnect(remote);
+	cl_git_pass(git_remote_ls(remote, ls_cb, &nr_after));
+
+	cl_assert_equal_i(nr_before, nr_after);
+
+	git_remote_free(remote);
+}

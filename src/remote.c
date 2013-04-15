@@ -586,11 +586,6 @@ int git_remote_ls(git_remote *remote, git_headlist_cb list_cb, void *payload)
 {
 	assert(remote);
 
-	if (!git_remote_connected(remote)) {
-		giterr_set(GITERR_NET, "The remote is not connected");
-		return -1;
-	}
-
 	return remote->transport->ls(remote->transport, list_cb, payload);
 }
 
