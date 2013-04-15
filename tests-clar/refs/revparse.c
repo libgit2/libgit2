@@ -27,6 +27,39 @@ static void test_object_inrepo(const char *spec, const char *expected_oid, git_r
 	git_object_free(obj);
 }
 
+static void test_id_inrepo(
+	const char *spec,
+	const char *expected_left,
+	const char *expected_right,
+	git_revparse_flag_t expected_flags,
+	git_repository *repo)
+{
+	git_object *l, *r;
+	git_revparse_flag_t flags = 0;
+
+	int error = git_revparse(&l, &r, &flags, repo, spec);
+
+	if (expected_left) {
+		char str[64] = {0};
+		cl_assert_equal_i(0, error);
+		git_oid_fmt(str, git_object_id(l));
+		cl_assert_equal_s(str, expected_left);
+		git_object_free(l);
+	} else {
+		cl_assert_equal_i(GIT_ENOTFOUND, error);
+	}
+
+	if (expected_right) {
+		char str[64] = {0};
+		git_oid_fmt(str, git_object_id(r));
+		cl_assert_equal_s(str, expected_right);
+		git_object_free(r);
+	}
+
+	if (expected_flags)
+		cl_assert_equal_i(expected_flags, flags);
+}
+
 static void test_object(const char *spec, const char *expected_oid)
 {
 	test_object_inrepo(spec, expected_oid, g_repo);
@@ -35,18 +68,18 @@ static void test_object(const char *spec, const char *expected_oid)
 static void test_rangelike(const char *rangelike,
 						   const char *expected_left,
 						   const char *expected_right,
-						   int expected_threedots)
+						   git_revparse_flag_t expected_revparseflags)
 {
 	char objstr[64] = {0};
 	git_object *left = NULL, *right = NULL;
-	int threedots;
+	git_revparse_flag_t revparseflags;
 	int error;
 
-	error = git_revparse_rangelike(&left, &right, &threedots, g_repo, rangelike);
+	error = git_revparse(&left, &right, &revparseflags, g_repo, rangelike);
 
 	if (expected_left != NULL) {
 		cl_assert_equal_i(0, error);
-		cl_assert_equal_i(threedots, expected_threedots);
+		cl_assert_equal_i(revparseflags, expected_revparseflags);
 		git_oid_fmt(objstr, git_object_id(left));
 		cl_assert_equal_s(objstr, expected_left);
 		git_oid_fmt(objstr, git_object_id(right));
@@ -58,6 +91,15 @@ static void test_rangelike(const char *rangelike,
 	git_object_free(right);
 }
 
+
+static void test_id(
+	const char *spec,
+	const char *expected_left,
+	const char *expected_right,
+	git_revparse_flag_t expected_flags)
+{
+	test_id_inrepo(spec, expected_left, expected_right, expected_flags, g_repo);
+}
 
 void test_refs_revparse__initialize(void)
 {
@@ -76,7 +118,7 @@ void test_refs_revparse__nonexistant_object(void)
 	test_object("this-does-not-exist~2", NULL);
 }
 
-static void assert_invalid_spec(const char *invalid_spec)
+static void assert_invalid_single_spec(const char *invalid_spec)
 {
 	cl_assert_equal_i(
 		GIT_EINVALIDSPEC, git_revparse_single(&g_obj, g_repo, invalid_spec));
@@ -84,9 +126,9 @@ static void assert_invalid_spec(const char *invalid_spec)
 
 void test_refs_revparse__invalid_reference_name(void)
 {
-	assert_invalid_spec("this doesn't make sense");
-	assert_invalid_spec("Inv@{id");
-	assert_invalid_spec("");
+	assert_invalid_single_spec("this doesn't make sense");
+	assert_invalid_single_spec("Inv@{id");
+	assert_invalid_single_spec("");
 }
 
 void test_refs_revparse__shas(void)
@@ -125,11 +167,11 @@ void test_refs_revparse__describe_output(void)
 
 void test_refs_revparse__nth_parent(void)
 {
-	assert_invalid_spec("be3563a^-1");
-	assert_invalid_spec("^");
-	assert_invalid_spec("be3563a^{tree}^");
-	assert_invalid_spec("point_to_blob^{blob}^");
-	assert_invalid_spec("this doesn't make sense^1");
+	assert_invalid_single_spec("be3563a^-1");
+	assert_invalid_single_spec("^");
+	assert_invalid_single_spec("be3563a^{tree}^");
+	assert_invalid_single_spec("point_to_blob^{blob}^");
+	assert_invalid_single_spec("this doesn't make sense^1");
 
 	test_object("be3563a^1", "9fd738e8f7967c078dceed8190330fc8648ee56a");
 	test_object("be3563a^", "9fd738e8f7967c078dceed8190330fc8648ee56a");
@@ -156,7 +198,7 @@ void test_refs_revparse__not_tag(void)
 
 void test_refs_revparse__to_type(void)
 {
-	assert_invalid_spec("wrapped_tag^{trip}");
+	assert_invalid_single_spec("wrapped_tag^{trip}");
 	test_object("point_to_blob^{commit}", NULL);
 	cl_assert_equal_i(
 		GIT_EAMBIGUOUS, git_revparse_single(&g_obj, g_repo, "wrapped_tag^{blob}"));
@@ -169,15 +211,15 @@ void test_refs_revparse__to_type(void)
 
 void test_refs_revparse__linear_history(void)
 {
-	assert_invalid_spec("~");
+	assert_invalid_single_spec("~");
 	test_object("foo~bar", NULL);
 
-	assert_invalid_spec("master~bar");
-	assert_invalid_spec("master~-1");
-	assert_invalid_spec("master~0bar");
-	assert_invalid_spec("this doesn't make sense~2");
-	assert_invalid_spec("be3563a^{tree}~");
-	assert_invalid_spec("point_to_blob^{blob}~");
+	assert_invalid_single_spec("master~bar");
+	assert_invalid_single_spec("master~-1");
+	assert_invalid_single_spec("master~0bar");
+	assert_invalid_single_spec("this doesn't make sense~2");
+	assert_invalid_single_spec("be3563a^{tree}~");
+	assert_invalid_single_spec("point_to_blob^{blob}~");
 
 	test_object("master~0", "a65fedf39aefe402d3bb6e24df4d4f5fe4547750");
 	test_object("master~1", "be3563ae3f795b2b4353bcce3a527ad0a4f7f644");
@@ -188,10 +230,10 @@ void test_refs_revparse__linear_history(void)
 
 void test_refs_revparse__chaining(void)
 {
-	assert_invalid_spec("master@{0}@{0}");
-	assert_invalid_spec("@{u}@{-1}");
-	assert_invalid_spec("@{-1}@{-1}");
-	assert_invalid_spec("@{-3}@{0}");
+	assert_invalid_single_spec("master@{0}@{0}");
+	assert_invalid_single_spec("@{u}@{-1}");
+	assert_invalid_single_spec("@{-1}@{-1}");
+	assert_invalid_single_spec("@{-3}@{0}");
 
 	test_object("master@{0}~1^1", "9fd738e8f7967c078dceed8190330fc8648ee56a");
 	test_object("@{u}@{0}", "be3563ae3f795b2b4353bcce3a527ad0a4f7f644");
@@ -207,8 +249,8 @@ void test_refs_revparse__chaining(void)
 
 void test_refs_revparse__upstream(void)
 {
-	assert_invalid_spec("e90810b@{u}");
-	assert_invalid_spec("refs/tags/e90810b@{u}");
+	assert_invalid_single_spec("e90810b@{u}");
+	assert_invalid_single_spec("refs/tags/e90810b@{u}");
 	test_object("refs/heads/e90810b@{u}", NULL);
 
 	test_object("master@{upstream}", "be3563ae3f795b2b4353bcce3a527ad0a4f7f644");
@@ -220,7 +262,7 @@ void test_refs_revparse__upstream(void)
 
 void test_refs_revparse__ordinal(void)
 {
-	assert_invalid_spec("master@{-2}");
+	assert_invalid_single_spec("master@{-2}");
 	
 	/* TODO: make the test below actually fail
 	 * cl_git_fail(git_revparse_single(&g_obj, g_repo, "master@{1a}"));
@@ -242,9 +284,9 @@ void test_refs_revparse__ordinal(void)
 
 void test_refs_revparse__previous_head(void)
 {
-	assert_invalid_spec("@{-xyz}");
-	assert_invalid_spec("@{-0}");
-	assert_invalid_spec("@{-1b}");
+	assert_invalid_single_spec("@{-xyz}");
+	assert_invalid_single_spec("@{-0}");
+	assert_invalid_single_spec("@{-1b}");
 
 	test_object("@{-42}", NULL);
 
@@ -304,7 +346,7 @@ void test_refs_revparse__revwalk(void)
 {
 	test_object("master^{/not found in any commit}", NULL);
 	test_object("master^{/merge}", NULL);
-	assert_invalid_spec("master^{/((}");
+	assert_invalid_single_spec("master^{/((}");
 
 	test_object("master^{/anoth}", "5b5b025afb0b4c913b4c338a42934a3863bf3644");
 	test_object("master^{/Merge}", "be3563ae3f795b2b4353bcce3a527ad0a4f7f644");
@@ -385,8 +427,8 @@ void test_refs_revparse__date(void)
 
 void test_refs_revparse__colon(void)
 {
-	assert_invalid_spec(":/");
-	assert_invalid_spec("point_to_blob:readme.txt");
+	assert_invalid_single_spec(":/");
+	assert_invalid_single_spec("point_to_blob:readme.txt");
 	cl_git_fail(git_revparse_single(&g_obj, g_repo, ":2:README")); /* Not implemented  */
 
 	test_object(":/not found in any commit", NULL);
@@ -627,15 +669,36 @@ void test_refs_revparse__try_to_retrieve_branch_before_abbrev_sha(void)
 
 void test_refs_revparse__range(void)
 {
+	assert_invalid_single_spec("be3563a^1..be3563a");
+
 	test_rangelike("be3563a^1..be3563a",
 	               "9fd738e8f7967c078dceed8190330fc8648ee56a",
 	               "be3563ae3f795b2b4353bcce3a527ad0a4f7f644",
-	               0);
+	               GIT_REVPARSE_RANGE);
 
 	test_rangelike("be3563a^1...be3563a",
 	               "9fd738e8f7967c078dceed8190330fc8648ee56a",
 	               "be3563ae3f795b2b4353bcce3a527ad0a4f7f644",
-	               1);
+	               GIT_REVPARSE_RANGE | GIT_REVPARSE_MERGE_BASE);
 
 	test_rangelike("be3563a^1.be3563a", NULL, NULL, 0);
 }
+
+void test_refs_revparse__validates_args(void)
+{
+	git_object *l, *r;
+	git_revparse_flag_t flags = 0;
+
+	cl_git_pass(git_revparse(&l,&r,NULL, g_repo, "HEAD"));
+	cl_git_pass(git_revparse(&l,NULL,&flags, g_repo, "HEAD"));
+	cl_assert_equal_i(GIT_EINVALIDSPEC, git_revparse(&l,&r,&flags, g_repo, "^&*("));
+}
+
+void test_refs_revparse__parses_range_operator(void)
+{
+	test_id("HEAD", "a65fedf39aefe402d3bb6e24df4d4f5fe4547750", NULL, GIT_REVPARSE_SINGLE);
+	test_id("HEAD~3..HEAD", "4a202b346bb0fb0db7eff3cffeb3c70babbd2045", "a65fedf39aefe402d3bb6e24df4d4f5fe4547750", GIT_REVPARSE_RANGE);
+	test_id("HEAD~3...HEAD", "4a202b346bb0fb0db7eff3cffeb3c70babbd2045", "a65fedf39aefe402d3bb6e24df4d4f5fe4547750",
+					GIT_REVPARSE_RANGE | GIT_REVPARSE_MERGE_BASE);
+}
+

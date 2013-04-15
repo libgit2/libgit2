@@ -146,8 +146,6 @@ void retrieve_top_stash_id(git_oid *out)
 	cl_git_pass(git_reference_name_to_id(out, repo, GIT_REFS_STASH_FILE));
 
 	cl_assert_equal_i(true, git_oid_cmp(out, git_object_id(top_stash)) == 0);
-
-	git_object_free(top_stash);
 }
 
 void test_stash_drop__dropping_the_top_stash_updates_the_stash_reference(void)
@@ -160,15 +158,11 @@ void test_stash_drop__dropping_the_top_stash_updates_the_stash_reference(void)
 	retrieve_top_stash_id(&oid);
 
 	cl_git_pass(git_revparse_single(&next_top_stash, repo, "stash@{1}"));
-	cl_assert_equal_i(
-		false, git_oid_cmp(&oid, git_object_id(next_top_stash)) == 0);
+	cl_assert_equal_i(false, git_oid_cmp(&oid, git_object_id(next_top_stash)) == 0);
 
 	cl_git_pass(git_stash_drop(repo, 0));
 
 	retrieve_top_stash_id(&oid);
 
-	cl_assert_equal_i(
-		true, git_oid_cmp(&oid, git_object_id(next_top_stash)) == 0);
-
-	git_object_free(next_top_stash);
+	cl_git_pass(git_oid_cmp(&oid, git_object_id(next_top_stash)));
 }
