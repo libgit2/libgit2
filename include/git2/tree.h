@@ -199,6 +199,17 @@ GIT_EXTERN(git_otype) git_tree_entry_type(const git_tree_entry *entry);
 GIT_EXTERN(git_filemode_t) git_tree_entry_filemode(const git_tree_entry *entry);
 
 /**
+ * Get the raw UNIX file attributes of a tree entry
+ *
+ * This function does not perform any normalization and is only useful
+ * if you need to be able to recreate the original tree object.
+ *
+ * @param entry a tree entry
+ * @return filemode as an integer
+ */
+
+GIT_EXTERN(git_filemode_t) git_tree_entry_filemode_raw(const git_tree_entry *entry);
+/**
  * Compare two tree entries
  *
  * @param e1 first tree entry
