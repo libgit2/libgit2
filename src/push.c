@@ -96,8 +96,9 @@ static int check_rref(char *ref)
 static int check_lref(git_push *push, char *ref)
 {
 	/* lref must be resolvable to an existing object */
-	git_oid oid;
-	int error = git_revparse(&oid, NULL, NULL, push->repo, ref);
+	git_object *obj;
+	int error = git_revparse_single(&obj, push->repo, ref);
+	git_object_free(obj);
 
 	if (!error)
 		return 0;

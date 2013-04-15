@@ -6,22 +6,25 @@
 #include "path.h"
 
 static git_repository *g_repo;
+static git_object *g_obj;
 
 /* Helpers */
 static void test_object_inrepo(const char *spec, const char *expected_oid, git_repository *repo)
 {
 	char objstr[64] = {0};
-	git_oid oid;
+	git_object *obj = NULL;
 	int error;
 
-	error = git_revparse(&oid, NULL, NULL, repo, spec);
+	error = git_revparse_single(&obj, repo, spec);
 
 	if (expected_oid != NULL) {
 		cl_assert_equal_i(0, error);
-		git_oid_fmt(objstr, &oid);
+		git_oid_fmt(objstr, git_object_id(obj));
 		cl_assert_equal_s(objstr, expected_oid);
 	} else
 		cl_assert_equal_i(GIT_ENOTFOUND, error);
+
+	git_object_free(obj);
 }
 
 static void test_id_inrepo(
@@ -110,18 +113,17 @@ void test_refs_revparse__nonexistant_object(void)
 	test_object("this-does-not-exist~2", NULL);
 }
 
-static void assert_invalid_spec(const char *invalid_spec)
+static void assert_invalid_single_spec(const char *invalid_spec)
 {
-	git_oid oid;
 	cl_assert_equal_i(
-		GIT_EINVALIDSPEC, git_revparse(&oid, NULL, NULL, g_repo, invalid_spec));
+		GIT_EINVALIDSPEC, git_revparse_single(&g_obj, g_repo, invalid_spec));
 }
 
 void test_refs_revparse__invalid_reference_name(void)
 {
-	assert_invalid_spec("this doesn't make sense");
-	assert_invalid_spec("Inv@{id");
-	assert_invalid_spec("");
+	assert_invalid_single_spec("this doesn't make sense");
+	assert_invalid_single_spec("Inv@{id");
+	assert_invalid_single_spec("");
 }
 
 void test_refs_revparse__shas(void)
@@ -160,11 +162,11 @@ void test_refs_revparse__describe_output(void)
 
 void test_refs_revparse__nth_parent(void)
 {
-	assert_invalid_spec("be3563a^-1");
-	assert_invalid_spec("^");
-	assert_invalid_spec("be3563a^{tree}^");
-	assert_invalid_spec("point_to_blob^{blob}^");
-	assert_invalid_spec("this doesn't make sense^1");
+	assert_invalid_single_spec("be3563a^-1");
+	assert_invalid_single_spec("^");
+	assert_invalid_single_spec("be3563a^{tree}^");
+	assert_invalid_single_spec("point_to_blob^{blob}^");
+	assert_invalid_single_spec("this doesn't make sense^1");
 
 	test_object("be3563a^1", "9fd738e8f7967c078dceed8190330fc8648ee56a");
 	test_object("be3563a^", "9fd738e8f7967c078dceed8190330fc8648ee56a");
@@ -191,12 +193,10 @@ void test_refs_revparse__not_tag(void)
 
 void test_refs_revparse__to_type(void)
 {
-	git_oid oid;
-
-	assert_invalid_spec("wrapped_tag^{trip}");
+	assert_invalid_single_spec("wrapped_tag^{trip}");
 	test_object("point_to_blob^{commit}", NULL);
 	cl_assert_equal_i(
-		GIT_EAMBIGUOUS, git_revparse(&oid, NULL, NULL, g_repo, "wrapped_tag^{blob}"));
+		GIT_EAMBIGUOUS, git_revparse_single(&g_obj, g_repo, "wrapped_tag^{blob}"));
 
 	test_object("wrapped_tag^{commit}", "a65fedf39aefe402d3bb6e24df4d4f5fe4547750");
 	test_object("wrapped_tag^{tree}", "944c0f6e4dfa41595e6eb3ceecdb14f50fe18162");
@@ -206,15 +206,15 @@ void test_refs_revparse__to_type(void)
 
 void test_refs_revparse__linear_history(void)
 {
-	assert_invalid_spec("~");
+	assert_invalid_single_spec("~");
 	test_object("foo~bar", NULL);
 
-	assert_invalid_spec("master~bar");
-	assert_invalid_spec("master~-1");
-	assert_invalid_spec("master~0bar");
-	assert_invalid_spec("this doesn't make sense~2");
-	assert_invalid_spec("be3563a^{tree}~");
-	assert_invalid_spec("point_to_blob^{blob}~");
+	assert_invalid_single_spec("master~bar");
+	assert_invalid_single_spec("master~-1");
+	assert_invalid_single_spec("master~0bar");
+	assert_invalid_single_spec("this doesn't make sense~2");
+	assert_invalid_single_spec("be3563a^{tree}~");
+	assert_invalid_single_spec("point_to_blob^{blob}~");
 
 	test_object("master~0", "a65fedf39aefe402d3bb6e24df4d4f5fe4547750");
 	test_object("master~1", "be3563ae3f795b2b4353bcce3a527ad0a4f7f644");
@@ -225,10 +225,10 @@ void test_refs_revparse__linear_history(void)
 
 void test_refs_revparse__chaining(void)
 {
-	assert_invalid_spec("master@{0}@{0}");
-	assert_invalid_spec("@{u}@{-1}");
-	assert_invalid_spec("@{-1}@{-1}");
-	assert_invalid_spec("@{-3}@{0}");
+	assert_invalid_single_spec("master@{0}@{0}");
+	assert_invalid_single_spec("@{u}@{-1}");
+	assert_invalid_single_spec("@{-1}@{-1}");
+	assert_invalid_single_spec("@{-3}@{0}");
 
 	test_object("master@{0}~1^1", "9fd738e8f7967c078dceed8190330fc8648ee56a");
 	test_object("@{u}@{0}", "be3563ae3f795b2b4353bcce3a527ad0a4f7f644");
@@ -244,8 +244,8 @@ void test_refs_revparse__chaining(void)
 
 void test_refs_revparse__upstream(void)
 {
-	assert_invalid_spec("e90810b@{u}");
-	assert_invalid_spec("refs/tags/e90810b@{u}");
+	assert_invalid_single_spec("e90810b@{u}");
+	assert_invalid_single_spec("refs/tags/e90810b@{u}");
 	test_object("refs/heads/e90810b@{u}", NULL);
 
 	test_object("master@{upstream}", "be3563ae3f795b2b4353bcce3a527ad0a4f7f644");
@@ -257,11 +257,10 @@ void test_refs_revparse__upstream(void)
 
 void test_refs_revparse__ordinal(void)
 {
-	assert_invalid_spec("master@{-2}");
+	assert_invalid_single_spec("master@{-2}");
 	
 	/* TODO: make the test below actually fail
-	 * git_oid oid;
-	 * cl_git_fail(git_revparse(&oid, NULL, NULL, g_repo, "master@{1a}"));
+	 * cl_git_fail(git_revparse_single(&g_obj, g_repo, "master@{1a}"));
 	 */
 
 	test_object("nope@{0}", NULL);
@@ -280,9 +279,9 @@ void test_refs_revparse__ordinal(void)
 
 void test_refs_revparse__previous_head(void)
 {
-	assert_invalid_spec("@{-xyz}");
-	assert_invalid_spec("@{-0}");
-	assert_invalid_spec("@{-1b}");
+	assert_invalid_single_spec("@{-xyz}");
+	assert_invalid_single_spec("@{-0}");
+	assert_invalid_single_spec("@{-1b}");
 
 	test_object("@{-42}", NULL);
 
@@ -342,7 +341,7 @@ void test_refs_revparse__revwalk(void)
 {
 	test_object("master^{/not found in any commit}", NULL);
 	test_object("master^{/merge}", NULL);
-	assert_invalid_spec("master^{/((}");
+	assert_invalid_single_spec("master^{/((}");
 
 	test_object("master^{/anoth}", "5b5b025afb0b4c913b4c338a42934a3863bf3644");
 	test_object("master^{/Merge}", "be3563ae3f795b2b4353bcce3a527ad0a4f7f644");
@@ -423,11 +422,9 @@ void test_refs_revparse__date(void)
 
 void test_refs_revparse__colon(void)
 {
-	git_oid oid;
-
-	assert_invalid_spec(":/");
-	assert_invalid_spec("point_to_blob:readme.txt");
-	cl_git_fail(git_revparse(&oid, NULL, NULL, g_repo, ":2:README")); /* Not implemented  */
+	assert_invalid_single_spec(":/");
+	assert_invalid_single_spec("point_to_blob:readme.txt");
+	cl_git_fail(git_revparse_single(&g_obj, g_repo, ":2:README")); /* Not implemented  */
 
 	test_object(":/not found in any commit", NULL);
 	test_object("subtrees:ab/42.txt", NULL);
@@ -517,9 +514,8 @@ void test_refs_revparse__disambiguation(void)
 
 void test_refs_revparse__a_too_short_objectid_returns_EAMBIGUOUS(void)
 {
-	git_oid oid;
 	cl_assert_equal_i(
-		GIT_EAMBIGUOUS, git_revparse(&oid, NULL, NULL, g_repo, "e90"));
+		GIT_EAMBIGUOUS, git_revparse_single(&g_obj, g_repo, "e90"));
 }
 
 void test_refs_revparse__issue_994(void)
@@ -527,15 +523,14 @@ void test_refs_revparse__issue_994(void)
 	git_repository *repo;
 	git_reference *head, *with_at;
 	git_object *target;
-	git_oid oid;
 	
 	repo = cl_git_sandbox_init("testrepo.git");
 
 	cl_assert_equal_i(GIT_ENOTFOUND,
-		git_revparse(&oid, NULL, NULL, repo, "origin/bim_with_3d@11296"));
+		git_revparse_single(&target, repo, "origin/bim_with_3d@11296"));
 
 	cl_assert_equal_i(GIT_ENOTFOUND,
-		git_revparse(&oid, NULL, NULL, repo, "refs/remotes/origin/bim_with_3d@11296"));
+		git_revparse_single(&target, repo, "refs/remotes/origin/bim_with_3d@11296"));
 
 
 	cl_git_pass(git_repository_head(&head, repo));
@@ -546,12 +541,10 @@ void test_refs_revparse__issue_994(void)
 		git_reference_target(head),
 		0));
 
-	cl_git_pass(git_revparse(&oid, NULL, NULL, repo, "origin/bim_with_3d@11296"));
-	cl_git_pass(git_object_lookup(&target, repo, &oid, GIT_OBJ_COMMIT));
+	cl_git_pass(git_revparse_single(&target, repo, "origin/bim_with_3d@11296"));
 	git_object_free(target);
 
-	cl_git_pass(git_revparse(&oid, NULL, NULL, repo, "refs/remotes/origin/bim_with_3d@11296"));
-	cl_git_pass(git_object_lookup(&target, repo, &oid, GIT_OBJ_COMMIT));
+	cl_git_pass(git_revparse_single(&target, repo, "refs/remotes/origin/bim_with_3d@11296"));
 	git_object_free(target);
 
 	git_reference_free(with_at);
@@ -577,14 +570,12 @@ void test_refs_revparse__try_to_retrieve_branch_before_described_tag(void)
 	git_reference *branch;
 	git_object *target;
 	char sha[GIT_OID_HEXSZ + 1];
-	git_oid oid;
 
 	repo = cl_git_sandbox_init("testrepo.git");
 
 	test_object_inrepo("blah-7-gc47800c", "c47800c7266a2be04c571c04d5a6614691ea99bd", repo);
 
-	cl_git_pass(git_revparse(&oid, NULL, NULL, repo, "HEAD~3"));
-	cl_git_pass(git_object_lookup(&target, repo, &oid, GIT_OBJ_COMMIT));
+	cl_git_pass(git_revparse_single(&target, repo, "HEAD~3"));
 	cl_git_pass(git_branch_create(&branch, repo, "blah-7-gc47800c", (git_commit *)target, 0));
 
 	git_oid_tostr(sha, GIT_OID_HEXSZ + 1, git_object_id(target));
@@ -617,14 +608,12 @@ void test_refs_revparse__try_to_retrieve_sha_before_branch(void)
 	git_reference *branch;
 	git_object *target;
 	char sha[GIT_OID_HEXSZ + 1];
-	git_oid oid;
 
 	repo = cl_git_sandbox_init("testrepo.git");
 
 	test_object_inrepo("a65fedf39aefe402d3bb6e24df4d4f5fe4547750", "a65fedf39aefe402d3bb6e24df4d4f5fe4547750", repo);
 
-	cl_git_pass(git_revparse(&oid, NULL, NULL, repo, "HEAD~3"));
-	cl_git_pass(git_object_lookup(&target, repo, &oid, GIT_OBJ_COMMIT));
+	cl_git_pass(git_revparse_single(&target, repo, "HEAD~3"));
 	cl_git_pass(git_branch_create(&branch, repo, "a65fedf39aefe402d3bb6e24df4d4f5fe4547750", (git_commit *)target, 0));
 
 	git_oid_tostr(sha, GIT_OID_HEXSZ + 1, git_object_id(target));
@@ -655,14 +644,12 @@ void test_refs_revparse__try_to_retrieve_branch_before_abbrev_sha(void)
 	git_reference *branch;
 	git_object *target;
 	char sha[GIT_OID_HEXSZ + 1];
-	git_oid oid;
 
 	repo = cl_git_sandbox_init("testrepo.git");
 
 	test_object_inrepo("c47800", "c47800c7266a2be04c571c04d5a6614691ea99bd", repo);
 
-	cl_git_pass(git_revparse(&oid, NULL, NULL, repo, "HEAD~3"));
-	cl_git_pass(git_object_lookup(&target, repo, &oid, GIT_OBJ_COMMIT));
+	cl_git_pass(git_revparse_single(&target, repo, "HEAD~3"));
 	cl_git_pass(git_branch_create(&branch, repo, "c47800", (git_commit *)target, 0));
 
 	git_oid_tostr(sha, GIT_OID_HEXSZ + 1, git_object_id(target));
@@ -677,6 +664,8 @@ void test_refs_revparse__try_to_retrieve_branch_before_abbrev_sha(void)
 
 void test_refs_revparse__range(void)
 {
+	assert_invalid_single_spec("be3563a^1..be3563a");
+
 	test_rangelike("be3563a^1..be3563a",
 	               "9fd738e8f7967c078dceed8190330fc8648ee56a",
 	               "be3563ae3f795b2b4353bcce3a527ad0a4f7f644",

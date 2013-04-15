@@ -236,13 +236,14 @@ static int local_negotiate_fetch(
 
 	/* Fill in the loids */
 	git_vector_foreach(&t->refs, i, rhead) {
-		git_oid oid;
+		git_object *obj;
 
-		int error = git_revparse(&oid, NULL, NULL, repo, rhead->name);
+		int error = git_revparse_single(&obj, repo, rhead->name);
 		if (!error)
-			git_oid_cpy(&rhead->loid, &oid);
+			git_oid_cpy(&rhead->loid, git_object_id(obj));
 		else if (error != GIT_ENOTFOUND)
 			return error;
+		git_object_free(obj);
 		giterr_clear();
 	}
 
