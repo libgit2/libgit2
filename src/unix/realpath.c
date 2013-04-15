@@ -22,7 +22,7 @@ char *p_realpath(const char *pathname, char *resolved)
 
 	/* Figure out if the file exists */
 	if (!access(ret, F_OK))
-		ret;
+		return ret;
 
 	return NULL;
 }
