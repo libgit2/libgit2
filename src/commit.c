@@ -189,8 +189,8 @@ int git_commit__parse_buffer(git_commit *commit, const void *data, size_t len)
 		buffer = eoln;
 	}
 
-	/* skip blank lines */
-	while (buffer < buffer_end - 1 && *buffer == '\n')
+	/* buffer is now at the end of the header, double-check and move forward into the message */
+	if (buffer < buffer_end && *buffer == '\n')
 		buffer++;
 
 	/* parse commit message */
