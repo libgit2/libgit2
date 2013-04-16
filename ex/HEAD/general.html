@@ -24,6 +24,7 @@
           <a class="source" href="network/git2.html">git2.c</a>
           <a class="source" href="network/index-pack.html">index-pack.c</a>
           <a class="source" href="network/ls-remote.html">ls-remote.c</a>
+          <a class="source" href="rev-list.html">rev-list.c</a>
           <a class="source" href="showindex.html">showindex.c</a>
       </div>
     </div>
@@ -134,6 +135,8 @@ as an example.</p>
         <p>There are a couple of methods for opening a repository, this being the
 simplest.  There are also <a href="http://libgit2.github.com/libgit2/#HEAD/group/repository">methods</a> for specifying the index file
 and work tree locations, here we assume they are in the normal places.</p>
+
+<p>(Try running this program against tests-clar/resources/testrepo.git.)</p>
       </td>
       <td class=code>
         <div class='highlight'><pre>  <span class="kt">int</span> <span class="n">error</span><span class="p">;</span>
@@ -165,7 +168,7 @@ and work tree locations, here we assume they are in the normal places.</p>
       </td>
       <td class=code>
         <div class='highlight'><pre>  <span class="n">printf</span><span class="p">(</span><span class="s">&quot;*Hex to Raw*</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
-  <span class="kt">char</span> <span class="n">hex</span><span class="p">[]</span> <span class="o">=</span> <span class="s">&quot;fd6e612585290339ea8bf39c692a7ff6a29cb7c3&quot;</span><span class="p">;</span></pre></div>
+  <span class="kt">char</span> <span class="n">hex</span><span class="p">[]</span> <span class="o">=</span> <span class="s">&quot;4a202b346bb0fb0db7eff3cffeb3c70babbd2045&quot;</span><span class="p">;</span></pre></div>
       </td>
     </tr>
     <tr id='section-9'>
@@ -188,10 +191,10 @@ key we&rsquo;re working with.</p>
           <a class="pilcrow" href="#section-10">&#182;</a>
         </div>
         <p>Once we&rsquo;ve converted the string into the oid value, we can get the raw
-value of the SHA.</p>
+value of the SHA by accessing <code>oid.id</code></p>
       </td>
       <td class=code>
-        <div class='highlight'><pre>  <span class="n">printf</span><span class="p">(</span><span class="s">&quot;Raw 20 bytes: [%.20s]</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="p">(</span><span class="o">&amp;</span><span class="n">oid</span><span class="p">)</span><span class="o">-&gt;</span><span class="n">id</span><span class="p">);</span></pre></div>
+        <div class='highlight'><pre></pre></div>
       </td>
     </tr>
     <tr id='section-11'>
@@ -405,7 +408,7 @@ data in the commit &ndash; the author (name, email, datetime), committer
         <div class='highlight'><pre>  <span class="n">printf</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\n</span><span class="s">*Commit Parsing*</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
 
   <span class="n">git_commit</span> <span class="o">*</span><span class="n">commit</span><span class="p">;</span>
-  <span class="n"><a name="git_oid_fromstr-32" class="fnlink" href="../../#HEAD/group/oid/git_oid_fromstr">git_oid_fromstr</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">oid</span><span class="p">,</span> <span class="s">&quot;f0877d0b841d75172ec404fc9370173dfffc20d1&quot;</span><span class="p">);</span>
+  <span class="n"><a name="git_oid_fromstr-32" class="fnlink" href="../../#HEAD/group/oid/git_oid_fromstr">git_oid_fromstr</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">oid</span><span class="p">,</span> <span class="s">&quot;8496071c1b46c854b31185ea97743be6a8774479&quot;</span><span class="p">);</span>
 
   <span class="n">error</span> <span class="o">=</span> <span class="n"><a name="git_commit_lookup-59" class="fnlink" href="../../#HEAD/group/commit/git_commit_lookup">git_commit_lookup</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">commit</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">oid</span><span class="p">);</span>
   <span class="n">check_error</span><span class="p">(</span><span class="n">error</span><span class="p">,</span> <span class="s">&quot;looking up commit&quot;</span><span class="p">);</span>
@@ -535,9 +538,9 @@ parents.  Here we&rsquo;re creating oid objects to create the commit with,
 but you can also use</p>
       </td>
       <td class=code>
-        <div class='highlight'><pre>  <span class="n"><a name="git_oid_fromstr-33" class="fnlink" href="../../#HEAD/group/oid/git_oid_fromstr">git_oid_fromstr</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">tree_id</span><span class="p">,</span> <span class="s">&quot;28873d96b4e8f4e33ea30f4c682fd325f7ba56ac&quot;</span><span class="p">);</span>
+        <div class='highlight'><pre>  <span class="n"><a name="git_oid_fromstr-33" class="fnlink" href="../../#HEAD/group/oid/git_oid_fromstr">git_oid_fromstr</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">tree_id</span><span class="p">,</span> <span class="s">&quot;f60079018b664e4e79329a7ef9559c8d9e0378d1&quot;</span><span class="p">);</span>
   <span class="n"><a name="git_tree_lookup-1" class="fnlink" href="../../#HEAD/group/tree/git_tree_lookup">git_tree_lookup</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">tree</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">tree_id</span><span class="p">);</span>
-  <span class="n"><a name="git_oid_fromstr-34" class="fnlink" href="../../#HEAD/group/oid/git_oid_fromstr">git_oid_fromstr</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">parent_id</span><span class="p">,</span> <span class="s">&quot;f0877d0b841d75172ec404fc9370173dfffc20d1&quot;</span><span class="p">);</span>
+  <span class="n"><a name="git_oid_fromstr-34" class="fnlink" href="../../#HEAD/group/oid/git_oid_fromstr">git_oid_fromstr</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">parent_id</span><span class="p">,</span> <span class="s">&quot;5b5b025afb0b4c913b4c338a42934a3863bf3644&quot;</span><span class="p">);</span>
   <span class="n"><a name="git_commit_lookup-60" class="fnlink" href="../../#HEAD/group/commit/git_commit_lookup">git_commit_lookup</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">parent</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">parent_id</span><span class="p">);</span></pre></div>
       </td>
     </tr>
@@ -611,7 +614,7 @@ methods, since the objects themselves are very similar.</p>
 the same way that we would a commit (or any other object).</p>
       </td>
       <td class=code>
-        <div class='highlight'><pre>  <span class="n"><a name="git_oid_fromstr-35" class="fnlink" href="../../#HEAD/group/oid/git_oid_fromstr">git_oid_fromstr</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">oid</span><span class="p">,</span> <span class="s">&quot;bc422d45275aca289c51d79830b45cecebff7c3a&quot;</span><span class="p">);</span>
+        <div class='highlight'><pre>  <span class="n"><a name="git_oid_fromstr-35" class="fnlink" href="../../#HEAD/group/oid/git_oid_fromstr">git_oid_fromstr</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">oid</span><span class="p">,</span> <span class="s">&quot;b25fa35b38051e4ae45d4222e795f9df2e43f1d1&quot;</span><span class="p">);</span>
 
   <span class="n">error</span> <span class="o">=</span> <span class="n"><a name="git_tag_lookup-9" class="fnlink" href="../../#HEAD/group/tag/git_tag_lookup">git_tag_lookup</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">tag</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">oid</span><span class="p">);</span>
   <span class="n">check_error</span><span class="p">(</span><span class="n">error</span><span class="p">,</span> <span class="s">&quot;looking up tag&quot;</span><span class="p">);</span></pre></div>
@@ -702,7 +705,7 @@ if you want to.</p>
 entry you&rsquo;re looking for.</p>
       </td>
       <td class=code>
-        <div class='highlight'><pre>  <span class="n">entry</span> <span class="o">=</span> <span class="n"><a name="git_tree_entry_byname-4" class="fnlink" href="../../#HEAD/group/tree/git_tree_entry_byname">git_tree_entry_byname</a></span><span class="p">(</span><span class="n">tree</span><span class="p">,</span> <span class="s">&quot;hello.c&quot;</span><span class="p">);</span>
+        <div class='highlight'><pre>  <span class="n">entry</span> <span class="o">=</span> <span class="n"><a name="git_tree_entry_byname-4" class="fnlink" href="../../#HEAD/group/tree/git_tree_entry_byname">git_tree_entry_byname</a></span><span class="p">(</span><span class="n">tree</span><span class="p">,</span> <span class="s">&quot;README&quot;</span><span class="p">);</span>
   <span class="n"><a name="git_tree_entry_name-7" class="fnlink" href="../../#HEAD/group/tree/git_tree_entry_name">git_tree_entry_name</a></span><span class="p">(</span><span class="n">entry</span><span class="p">);</span> <span class="c1">// &quot;hello.c&quot;</span></pre></div>
       </td>
     </tr>
@@ -758,7 +761,7 @@ don&rsquo;t have to do all those steps yourself.</p>
         <div class='highlight'><pre>  <span class="n">printf</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\n</span><span class="s">*Blob Parsing*</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
   <span class="n">git_blob</span> <span class="o">*</span><span class="n">blob</span><span class="p">;</span>
 
-  <span class="n"><a name="git_oid_fromstr-37" class="fnlink" href="../../#HEAD/group/oid/git_oid_fromstr">git_oid_fromstr</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">oid</span><span class="p">,</span> <span class="s">&quot;af7574ea73f7b166f869ef1a39be126d9a186ae0&quot;</span><span class="p">);</span>
+  <span class="n"><a name="git_oid_fromstr-37" class="fnlink" href="../../#HEAD/group/oid/git_oid_fromstr">git_oid_fromstr</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">oid</span><span class="p">,</span> <span class="s">&quot;1385f264afb75a56a5bec74243be9b367ba4ca08&quot;</span><span class="p">);</span>
   <span class="n"><a name="git_blob_lookup-78" class="fnlink" href="../../#HEAD/group/blob/git_blob_lookup">git_blob_lookup</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">blob</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">oid</span><span class="p">);</span></pre></div>
       </td>
     </tr>
@@ -806,7 +809,7 @@ can allow you to create <code>git log</code> type functionality.</p>
   <span class="n">git_revwalk</span> <span class="o">*</span><span class="n">walk</span><span class="p">;</span>
   <span class="n">git_commit</span> <span class="o">*</span><span class="n">wcommit</span><span class="p">;</span>
 
-  <span class="n"><a name="git_oid_fromstr-38" class="fnlink" href="../../#HEAD/group/oid/git_oid_fromstr">git_oid_fromstr</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">oid</span><span class="p">,</span> <span class="s">&quot;f0877d0b841d75172ec404fc9370173dfffc20d1&quot;</span><span class="p">);</span></pre></div>
+  <span class="n"><a name="git_oid_fromstr-38" class="fnlink" href="../../#HEAD/group/oid/git_oid_fromstr">git_oid_fromstr</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">oid</span><span class="p">,</span> <span class="s">&quot;5b5b025afb0b4c913b4c338a42934a3863bf3644&quot;</span><span class="p">);</span></pre></div>
       </td>
     </tr>
     <tr id='section-53'>
@@ -1042,7 +1045,9 @@ in any of the accessible config file locations (system, global, local).</p>
         <p>Open a config object so we can read global values from it.</p>
       </td>
       <td class=code>
-        <div class='highlight'><pre>  <span class="n"><a name="git_config_open_ondisk-56" class="fnlink" href="../../#HEAD/group/config/git_config_open_ondisk">git_config_open_ondisk</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">cfg</span><span class="p">,</span> <span class="s">&quot;~/.gitconfig&quot;</span><span class="p">);</span>
+        <div class='highlight'><pre>  <span class="kt">char</span> <span class="n">config_path</span><span class="p">[</span><span class="mi">256</span><span class="p">];</span>
+  <span class="n">sprintf</span><span class="p">(</span><span class="n">config_path</span><span class="p">,</span> <span class="s">&quot;%s/config&quot;</span><span class="p">,</span> <span class="n">repo_path</span><span class="p">);</span>
+  <span class="n">check_error</span><span class="p">(</span><span class="n"><a name="git_config_open_ondisk-56" class="fnlink" href="../../#HEAD/group/config/git_config_open_ondisk">git_config_open_ondisk</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">cfg</span><span class="p">,</span> <span class="n">config_path</span><span class="p">),</span> <span class="s">&quot;opening config&quot;</span><span class="p">);</span>
 
   <span class="n"><a name="git_config_get_int32-57" class="fnlink" href="../../#HEAD/group/config/git_config_get_int32">git_config_get_int32</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">j</span><span class="p">,</span> <span class="n">cfg</span><span class="p">,</span> <span class="s">&quot;help.autocorrect&quot;</span><span class="p">);</span>
   <span class="n">printf</span><span class="p">(</span><span class="s">&quot;Autocorrect: %d</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">j</span><span class="p">);</span>

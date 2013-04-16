@@ -24,6 +24,7 @@
           <a class="source" href="git2.html">git2.c</a>
           <a class="source" href="index-pack.html">index-pack.c</a>
           <a class="source" href="ls-remote.html">ls-remote.c</a>
+          <a class="source" href="../rev-list.html">rev-list.c</a>
           <a class="source" href="../showindex.html">showindex.c</a>
       </div>
     </div>
@@ -54,7 +55,7 @@
 <span class="p">{</span>
   <span class="kt">char</span> <span class="n">oid</span><span class="p">[</span><span class="n">GIT_OID_HEXSZ</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">};</span>
 
-  <span class="n">payload</span> <span class="o">=</span> <span class="n">payload</span><span class="p">;</span>
+  <span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="n">payload</span><span class="p">;</span>
   <span class="n"><a name="git_oid_fmt-10" class="fnlink" href="../../#HEAD/group/oid/git_oid_fmt">git_oid_fmt</a></span><span class="p">(</span><span class="n">oid</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">head</span><span class="o">-&gt;</span><span class="n">oid</span><span class="p">);</span>
   <span class="n">printf</span><span class="p">(</span><span class="s">&quot;%s</span><span class="se">\t</span><span class="s">%s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">oid</span><span class="p">,</span> <span class="n">head</span><span class="o">-&gt;</span><span class="n">name</span><span class="p">);</span>
   <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
@@ -153,7 +154,11 @@ the name of a configured remote or an URL.</p>
 <span class="p">{</span>
   <span class="kt">int</span> <span class="n">error</span><span class="p">;</span>
 
-  <span class="n">argc</span> <span class="o">=</span> <span class="n">argc</span><span class="p">;</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">argc</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span> <span class="s">&quot;usage: %s ls-remote &lt;remote&gt;</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">argv</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]);</span>
+    <span class="k">return</span> <span class="n">EXIT_FAILURE</span><span class="p">;</span>
+  <span class="p">}</span>
+
   <span class="cm">/* If there&#39;s a &#39;:&#39; in the name, assume it&#39;s an URL */</span>
   <span class="k">if</span> <span class="p">(</span><span class="n">strchr</span><span class="p">(</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="sc">&#39;:&#39;</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">NULL</span><span class="p">)</span> <span class="p">{</span>
     <span class="n">error</span> <span class="o">=</span> <span class="n">use_unnamed</span><span class="p">(</span><span class="n">repo</span><span class="p">,</span> <span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">]);</span>

@@ -24,6 +24,7 @@
           <a class="source" href="network/git2.html">git2.c</a>
           <a class="source" href="network/index-pack.html">index-pack.c</a>
           <a class="source" href="network/ls-remote.html">ls-remote.c</a>
+          <a class="source" href="rev-list.html">rev-list.c</a>
           <a class="source" href="showindex.html">showindex.c</a>
       </div>
     </div>
@@ -64,8 +65,8 @@
   <span class="kt">int</span> <span class="n">err</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
   <span class="n">git_object</span> <span class="o">*</span><span class="n">obj</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
 
-  <span class="k">if</span> <span class="p">(</span><span class="n"><a name="git_revparse_single-3" class="fnlink" href="../../#HEAD/group/revparse/git_revparse_single">git_revparse_single</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">obj</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="n">identifier</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">GIT_ENOTFOUND</span><span class="p">;</span>
+  <span class="k">if</span> <span class="p">((</span><span class="n">err</span> <span class="o">=</span> <span class="n"><a name="git_revparse_single-3" class="fnlink" href="../../#HEAD/group/revparse/git_revparse_single">git_revparse_single</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">obj</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="n">identifier</span><span class="p">))</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">err</span><span class="p">;</span>
 
   <span class="k">switch</span> <span class="p">(</span><span class="n"><a name="git_object_type-6" class="fnlink" href="../../#HEAD/group/object/git_object_type">git_object_type</a></span><span class="p">(</span><span class="n">obj</span><span class="p">))</span> <span class="p">{</span>
   <span class="k">case</span> <span class="n">GIT_OBJ_TREE</span>:
