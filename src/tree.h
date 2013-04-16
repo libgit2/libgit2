@@ -38,7 +38,7 @@ GIT_INLINE(bool) git_tree_entry__is_tree(const struct git_tree_entry *e)
 extern int git_tree_entry_icmp(const git_tree_entry *e1, const git_tree_entry *e2);
 
 void git_tree__free(void *tree);
-int git_tree__parse(void *tree, const char *buf, const char *buf_end);
+int git_tree__parse(void *tree, git_odb_object *obj);
 
 /**
  * Lookup the first position in the tree with a given prefix.

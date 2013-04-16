@@ -41,7 +41,7 @@ void git_blob__free(void *blob)
 	git__free(blob);
 }
 
-int git_blob__from_odb_object(void *blob, git_odb_object *odb_obj)
+int git_blob__parse(void *blob, git_odb_object *odb_obj)
 {
 	assert(blob);
 	git_cached_obj_incref((git_cached_obj *)odb_obj);

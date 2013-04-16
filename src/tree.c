@@ -372,8 +372,10 @@ static int tree_error(const char *str, const char *path)
 	return -1;
 }
 
-int git_tree__parse(void *tree, const char *buffer, const char *buffer_end)
+int git_tree__parse(void *tree, git_odb_object *odb_obj)
 {
+	const char *buffer = git_odb_object_data(odb_obj);
+	const char *buffer_end = buffer + git_odb_object_size(odb_obj);
 	git_vector *tree_entries = &((git_tree *)tree)->entries;
 
 	if (git_vector_init(tree_entries, DEFAULT_TREE_SIZE, entry_sort_cmp) < 0)

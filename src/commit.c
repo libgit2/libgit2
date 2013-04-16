@@ -168,9 +168,11 @@ int git_commit_create(
 	return retval;
 }
 
-int git_commit__parse(void *_commit, const char *buffer, const char *buffer_end)
+int git_commit__parse(void *_commit, git_odb_object *odb_obj)
 {
 	git_commit *commit = _commit;
+	const char *buffer = git_odb_object_data(odb_obj);
+	const char *buffer_end = buffer + git_odb_object_size(odb_obj);
 	git_oid parent_id;
 
 	if (git_vector_init(&commit->parent_ids, 4, NULL) < 0)
