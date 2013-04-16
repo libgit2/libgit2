@@ -304,7 +304,7 @@ int git__date_parse(git_time_t *out, const char *date);
 
 /*
  * Unescapes a string in-place.
- * 
+ *
  * Edge cases behavior:
  * - "jackie\" -> "jacky\"
  * - "chan\\" -> "chan\"

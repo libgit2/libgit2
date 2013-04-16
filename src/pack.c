@@ -299,29 +299,27 @@ static int pack_index_open(struct git_pack_file *p)
 	int error = 0;
 	size_t name_len, base_len;
 
-	if ((error = git_mutex_lock(&p->lock)) < 0)
-		return error;
-
 	if (p->index_map.data)
-		goto done;
+		return 0;
 
 	name_len = strlen(p->pack_name);
 	assert(name_len > strlen(".pack")); /* checked by git_pack_file alloc */
 
-	if ((idx_name = git__malloc(name_len)) == NULL) {
-		error = -1;
-		goto done;
-	}
+	if ((idx_name = git__malloc(name_len)) == NULL)
+		return -1;
 
 	base_len = name_len - strlen(".pack");
 	memcpy(idx_name, p->pack_name, base_len);
 	memcpy(idx_name + base_len, ".idx", sizeof(".idx"));
 
-	error = pack_index_check(idx_name, p);
+	if ((error = git_mutex_lock(&p->lock)) < 0)
+		return error;
+
+	if (!p->index_map.data)
+		error = pack_index_check(idx_name, p);
 
 	git__free(idx_name);
 
-done:
 	git_mutex_unlock(&p->lock);
 
 	return error;
@@ -796,19 +794,6 @@ git_off_t get_delta_base(
  *
  ***********************************************************/
 
-static struct git_pack_file *packfile_alloc(size_t extra)
-{
-	struct git_pack_file *p = git__calloc(1, sizeof(*p) + extra);
-	if (!p)
-		return NULL;
-
-	p->mwf.fd = -1;
-	git_mutex_init(&p->lock);
-
-	return p;
-}
-
-
 void git_packfile_free(struct git_pack_file *p)
 {
 	if (!p)
@@ -820,7 +805,6 @@ void git_packfile_free(struct git_pack_file *p)
 	cache_free(&p->bases);
 
 	git_mwindow_free_all(&p->mwf);
-	git_mwindow_file_deregister(&p->mwf);
 
 	if (p->mwf.fd != -1)
 		p_close(p->mwf.fd);
@@ -901,32 +885,37 @@ cleanup:
 	return -1;
 }
 
-int git_packfile_check(struct git_pack_file **pack_out, const char *path)
+int git_packfile_alloc(struct git_pack_file **pack_out, const char *path)
 {
 	struct stat st;
 	struct git_pack_file *p;
-	size_t path_len;
+	size_t path_len = path ? strlen(path) : 0;
 
 	*pack_out = NULL;
 
-	if (!path || (path_len = strlen(path)) <= strlen(".idx"))
+	if (path_len < strlen(".idx"))
 		return git_odb__error_notfound("invalid packfile path", NULL);
 
-	p = packfile_alloc(path_len + 2);
+	p = git__calloc(1, sizeof(*p) + path_len + 2);
 	GITERR_CHECK_ALLOC(p);
+
+	memcpy(p->pack_name, path, path_len + 1);
 
 	/*
 	 * Make sure a corresponding .pack file exists and that
 	 * the index looks sane.
 	 */
-	path_len -= strlen(".idx");
-	memcpy(p->pack_name, path, path_len);
+	if (git__suffixcmp(path, ".idx") == 0) {
+		size_t root_len = path_len - strlen(".idx");
 
-	memcpy(p->pack_name + path_len, ".keep", sizeof(".keep"));
-	if (git_path_exists(p->pack_name) == true)
-		p->pack_keep = 1;
+		memcpy(p->pack_name + root_len, ".keep", sizeof(".keep"));
+		if (git_path_exists(p->pack_name) == true)
+			p->pack_keep = 1;
 
-	memcpy(p->pack_name + path_len, ".pack", sizeof(".pack"));
+		memcpy(p->pack_name + root_len, ".pack", sizeof(".pack"));
+		path_len = path_len - strlen(".idx") + strlen(".pack");
+	}
+
 	if (p_stat(p->pack_name, &st) < 0 || !S_ISREG(st.st_mode)) {
 		git__free(p);
 		return git_odb__error_notfound("packfile not found", NULL);
@@ -935,9 +924,12 @@ int git_packfile_check(struct git_pack_file **pack_out, const char *path)
 	/* ok, it looks sane as far as we can check without
 	 * actually mapping the pack file.
 	 */
+	p->mwf.fd = -1;
 	p->mwf.size = st.st_size;
 	p->pack_local = 1;
 	p->mtime = (git_time_t)st.st_mtime;
+
+	git_mutex_init(&p->lock);
 
 	/* see if we can parse the sha1 oid in the packfile name */
 	if (path_len < 40 ||

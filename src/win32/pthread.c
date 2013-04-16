@@ -14,22 +14,28 @@ int pthread_create(
 	void *GIT_RESTRICT arg)
 {
 	GIT_UNUSED(attr);
-	*thread = (pthread_t) CreateThread(
+	*thread = CreateThread(
 		NULL, 0, (LPTHREAD_START_ROUTINE)start_routine, arg, 0, NULL);
 	return *thread ? 0 : -1;
 }
 
 int pthread_join(pthread_t thread, void **value_ptr)
 {
-	int ret;
-	ret = WaitForSingleObject(thread, INFINITE);
-	if (ret && value_ptr)
-		GetExitCodeThread(thread, (void*) value_ptr);
-	return -(!!ret);
+	DWORD ret = WaitForSingleObject(thread, INFINITE);
+
+	if (ret == WAIT_OBJECT_0) {
+		if (value_ptr != NULL)
+			GetExitCodeThread(thread, (void *)value_ptr);
+		CloseHandle(thread);
+		return 0;
+	}
+
+	return -1;
 }
 
-int pthread_mutex_init(pthread_mutex_t *GIT_RESTRICT mutex,
-						const pthread_mutexattr_t *GIT_RESTRICT mutexattr)
+int pthread_mutex_init(
+	pthread_mutex_t *GIT_RESTRICT mutex,
+	const pthread_mutexattr_t *GIT_RESTRICT mutexattr)
 {
 	GIT_UNUSED(mutexattr);
 	InitializeCriticalSection(mutex);
