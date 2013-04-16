@@ -71,7 +71,7 @@ GIT_INLINE(int) git_atomic_dec(git_atomic *a)
 GIT_INLINE(void *) git___compare_and_swap(
 	volatile void **ptr, void *oldval, void *newval)
 {
-	void *foundval;
+	volatile void *foundval;
 #if defined(GIT_WIN32)
 	foundval = InterlockedCompareExchangePointer(ptr, newval, oldval);
 #elif defined(__GNUC__)

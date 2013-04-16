@@ -33,8 +33,9 @@ int pthread_join(pthread_t thread, void **value_ptr)
 	return -1;
 }
 
-int pthread_mutex_init(pthread_mutex_t *GIT_RESTRICT mutex,
-						const pthread_mutexattr_t *GIT_RESTRICT mutexattr)
+int pthread_mutex_init(
+	pthread_mutex_t *GIT_RESTRICT mutex,
+	const pthread_mutexattr_t *GIT_RESTRICT mutexattr)
 {
 	GIT_UNUSED(mutexattr);
 	InitializeCriticalSection(mutex);
