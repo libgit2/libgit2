@@ -213,16 +213,16 @@ void test_object_cache__threadmania(void)
 			fn = (th & 1) ? cache_parsed : cache_raw;
 
 #ifdef GIT_THREADS
-			git_thread_create(&t[th], NULL, fn, data);
+			cl_git_pass(git_thread_create(&t[th], NULL, fn, data));
 #else
-			fn(data);
+			cl_assert(fn(data) == data);
 			git__free(data);
 #endif
 		}
 
 #ifdef GIT_THREADS
 		for (th = 0; th < THREADCOUNT; ++th) {
-			git_thread_join(t[th], &data);
+			cl_git_pass(git_thread_join(t[th], &data));
 			cl_assert_equal_i(th, ((int *)data)[0]);
 			git__free(data);
 		}
