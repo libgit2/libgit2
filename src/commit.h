@@ -27,8 +27,7 @@ struct git_commit {
 	char *message;
 };
 
-void git_commit__free(git_commit *c);
-int git_commit__parse(git_commit *commit, git_odb_object *obj);
+void git_commit__free(void *commit);
+int git_commit__parse(void *commit, git_odb_object *obj);
 
-int git_commit__parse_buffer(git_commit *commit, const void *data, size_t len);
 #endif

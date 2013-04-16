@@ -39,8 +39,6 @@ struct git_odb {
 	git_cache own_cache;
 };
 
-void git_odb_object__free(git_odb_object *object);
-
 /*
  * Hash a git_rawobj internally.
  * The `git_rawobj` is supposed to be previously initialized
@@ -97,5 +95,8 @@ int git_odb__error_ambiguous(const char *message);
 int git_odb__read_header_or_object(
 	git_odb_object **out, size_t *len_p, git_otype *type_p,
 	git_odb *db, const git_oid *id);
+
+/* fully free the object; internal method, DO NOT EXPORT */
+void git_odb_object__free(void *object);
 
 #endif

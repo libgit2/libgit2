@@ -21,17 +21,17 @@ enum {
 };
 
 typedef struct {
-	git_oid oid;
-	int16_t type;
-	uint16_t flags;
-	size_t size;
+	git_oid    oid;
+	int16_t    type;  /* git_otype value */
+	uint16_t   flags; /* GIT_CACHE_STORE value */
+	size_t     size;
 	git_atomic refcount;
 } git_cached_obj;
 
 typedef struct {
 	git_oidmap *map;
-	git_mutex lock;
-	size_t used_memory;
+	git_mutex   lock;
+	size_t      used_memory;
 } git_cache;
 
 extern bool git_cache__enabled;
