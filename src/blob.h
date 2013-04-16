@@ -18,7 +18,7 @@ struct git_blob {
 };
 
 void git_blob__free(void *blob);
-int git_blob__from_odb_object(void *blob, git_odb_object *obj);
+int git_blob__parse(void *blob, git_odb_object *obj);
 int git_blob__getbuf(git_buf *buffer, git_blob *blob);
 
 #endif

@@ -28,6 +28,6 @@ struct git_commit {
 };
 
 void git_commit__free(void *commit);
-int git_commit__parse(void *commit, const char *buf, const char *bufend);
+int git_commit__parse(void *commit, git_odb_object *obj);
 
 #endif

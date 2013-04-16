@@ -23,6 +23,6 @@ struct git_tag {
 };
 
 void git_tag__free(void *tag);
-int git_tag__parse(void *tag, const char *buf, const char *buf_end);
+int git_tag__parse(void *tag, git_odb_object *obj);
 
 #endif

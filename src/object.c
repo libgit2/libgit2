@@ -22,33 +22,32 @@ typedef struct {
 	const char	*str;	/* type name string */
 	size_t		size;	/* size in bytes of the object structure */
 
-	int  (*from_odb)(void *self, git_odb_object *obj);
-	int  (*parse)(void *self, const char *buf, const char *buf_end);
+	int  (*parse)(void *self, git_odb_object *obj);
 	void (*free)(void *self);
 } git_object_def;
 
 static git_object_def git_objects_table[] = {
 	/* 0 = GIT_OBJ__EXT1 */
-	{ "", 0, NULL, NULL, NULL },
+	{ "", 0, NULL, NULL },
 
 	/* 1 = GIT_OBJ_COMMIT */
-	{ "commit", sizeof(git_commit), NULL, git_commit__parse, git_commit__free },
+	{ "commit", sizeof(git_commit), git_commit__parse, git_commit__free },
 
 	/* 2 = GIT_OBJ_TREE */
-	{ "tree", sizeof(git_tree), NULL, git_tree__parse, git_tree__free },
+	{ "tree", sizeof(git_tree), git_tree__parse, git_tree__free },
 
 	/* 3 = GIT_OBJ_BLOB */
-	{ "blob", sizeof(git_blob), git_blob__from_odb_object, NULL, git_blob__free },
+	{ "blob", sizeof(git_blob), git_blob__parse, git_blob__free },
 
 	/* 4 = GIT_OBJ_TAG */
-	{ "tag", sizeof(git_tag), NULL, git_tag__parse, git_tag__free },
+	{ "tag", sizeof(git_tag), git_tag__parse, git_tag__free },
 
 	/* 5 = GIT_OBJ__EXT2 */
-	{ "", 0, NULL, NULL, NULL },
+	{ "", 0, NULL, NULL },
 	/* 6 = GIT_OBJ_OFS_DELTA */
-	{ "OFS_DELTA", 0, NULL, NULL, NULL },
+	{ "OFS_DELTA", 0, NULL, NULL },
 	/* 7 = GIT_OBJ_REF_DELTA */
-	{ "REF_DELTA", 0, NULL, NULL, NULL },
+	{ "REF_DELTA", 0, NULL, NULL },
 };
 
 int git_object__from_odb_object(
@@ -88,22 +87,14 @@ int git_object__from_odb_object(
 
 	/* Parse raw object data */
 	def = &git_objects_table[odb_obj->cached.type];
-	assert(def->free && (def->from_odb || def->parse));
+	assert(def->free && def->parse);
 
-	if (def->from_odb) {
-		error = def->from_odb(object, odb_obj);
-	} else {
-		const char *data = (const char *)git_odb_object_data(odb_obj);
-		error = def->parse(object, data, data + git_odb_object_size(odb_obj));
-	}
-
-	if (error < 0) {
+	if ((error = def->parse(object, odb_obj)) < 0)
 		def->free(object);
-		return error;
-	}
+	else
+		*object_out = git_cache_store_parsed(&repo->objects, object);
 
-	*object_out = git_cache_store_parsed(&repo->objects, object);
-	return 0;
+	return error;
 }
 
 void git_object__free(void *obj)
