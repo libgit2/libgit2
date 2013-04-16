@@ -885,7 +885,7 @@ cleanup:
 	return -1;
 }
 
-int git_packfile_check(struct git_pack_file **pack_out, const char *path)
+int git_packfile_alloc(struct git_pack_file **pack_out, const char *path)
 {
 	struct stat st;
 	struct git_pack_file *p;
