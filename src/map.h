@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2012 the libgit2 contributors
+ * Copyright (C) the libgit2 contributors. All rights reserved.
  *
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
@@ -22,6 +22,10 @@
 #define GIT_MAP_PRIVATE 2
 #define GIT_MAP_TYPE	0xf
 #define GIT_MAP_FIXED	0x10
+
+#ifdef __amigaos4__
+#define MAP_FAILED 0
+#endif
 
 typedef struct { /* memory mapped buffer	*/
 	void *data; /* data bytes			*/

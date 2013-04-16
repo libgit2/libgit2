@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2012 the libgit2 contributors
+ * Copyright (C) the libgit2 contributors. All rights reserved.
  *
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
@@ -55,6 +55,10 @@
 #define GIT_WIN32 1
 #endif
 
+#ifdef __amigaos4__
+#include <netinet/in.h>
+#endif
+
 /**
  * @file git2/common.h
  * @brief Git common platform definitions
@@ -81,13 +85,10 @@ GIT_BEGIN_DECL
  */
 #define GIT_PATH_MAX 4096
 
-typedef struct {
-	char **strings;
-	size_t count;
-} git_strarray;
-
-GIT_EXTERN(void) git_strarray_free(git_strarray *array);
-GIT_EXTERN(int) git_strarray_copy(git_strarray *tgt, const git_strarray *src);
+/**
+ * The string representation of the null object ID.
+ */
+#define GIT_OID_HEX_ZERO "0000000000000000000000000000000000000000"
 
 /**
  * Return the version of the libgit2 library
@@ -99,6 +100,91 @@ GIT_EXTERN(int) git_strarray_copy(git_strarray *tgt, const git_strarray *src);
  */
 GIT_EXTERN(void) git_libgit2_version(int *major, int *minor, int *rev);
 
+/**
+ * Combinations of these values describe the capabilities of libgit2.
+ */
+enum {
+	GIT_CAP_THREADS			= ( 1 << 0 ),
+	GIT_CAP_HTTPS			= ( 1 << 1 )
+};
+
+/**
+ * Query compile time options for libgit2.
+ *
+ * @return A combination of GIT_CAP_* values.
+ *
+ * - GIT_CAP_THREADS
+ *   Libgit2 was compiled with thread support. Note that thread support is still to be seen as a
+ *   'work in progress'.
+ *
+ * - GIT_CAP_HTTPS
+ *   Libgit2 supports the https:// protocol. This requires the open ssl library to be
+ *   found when compiling libgit2.
+ */
+GIT_EXTERN(int) git_libgit2_capabilities(void);
+
+
+enum {
+	GIT_OPT_GET_MWINDOW_SIZE,
+	GIT_OPT_SET_MWINDOW_SIZE,
+	GIT_OPT_GET_MWINDOW_MAPPED_LIMIT,
+	GIT_OPT_SET_MWINDOW_MAPPED_LIMIT,
+	GIT_OPT_GET_SEARCH_PATH,
+	GIT_OPT_SET_SEARCH_PATH,
+	GIT_OPT_GET_ODB_CACHE_SIZE,
+	GIT_OPT_SET_ODB_CACHE_SIZE,
+};
+
+/**
+ * Set or query a library global option
+ *
+ * Available options:
+ *
+ *	opts(GIT_OPT_GET_MWINDOW_SIZE, size_t *):
+ *		Get the maximum mmap window size
+ *
+ *	opts(GIT_OPT_SET_MWINDOW_SIZE, size_t):
+ *		Set the maximum mmap window size
+ *
+ *	opts(GIT_OPT_GET_MWINDOW_MAPPED_LIMIT, size_t *):
+ *		Get the maximum memory that will be mapped in total by the library
+ *
+ *	opts(GIT_OPT_SET_MWINDOW_MAPPED_LIMIT, size_t):
+ *		Set the maximum amount of memory that can be mapped at any time
+ *		by the library
+ *
+ *	opts(GIT_OPT_GET_SEARCH_PATH, int level, char *out, size_t len)
+ *		Get the search path for a given level of config data.  "level" must
+ *		be one of GIT_CONFIG_LEVEL_SYSTEM, GIT_CONFIG_LEVEL_GLOBAL, or
+ *		GIT_CONFIG_LEVEL_XDG.  The search path is written to the `out`
+ *		buffer up to size `len`.  Returns GIT_EBUFS if buffer is too small.
+ *
+ *	opts(GIT_OPT_SET_SEARCH_PATH, int level, const char *path)
+ *		Set the search path for a level of config data.  The search path
+ *		applied to shared attributes and ignore files, too.
+ *      - `path` lists directories delimited by GIT_PATH_LIST_SEPARATOR.
+ *		  Pass NULL to reset to the default (generally based on environment
+ *		  variables).  Use magic path `$PATH` to include the old value
+ *		  of the path (if you want to prepend or append, for instance).
+ *		- `level` must be GIT_CONFIG_LEVEL_SYSTEM, GIT_CONFIG_LEVEL_GLOBAL,
+ *		  or GIT_CONFIG_LEVEL_XDG.
+ *
+ *	opts(GIT_OPT_GET_ODB_CACHE_SIZE):
+ *		Get the size of the libgit2 odb cache.
+ *
+ *	opts(GIT_OPT_SET_ODB_CACHE_SIZE):
+ *		Set the size of the of the libgit2 odb cache. This needs
+ *		to be done before git_repository_open is called, since
+ *		git_repository_open initializes the odb layer. Defaults
+ *		to 128.
+ *
+ * @param option Option key
+ * @param ... value to set the option
+ * @return 0 on success, <0 on failure
+ */
+GIT_EXTERN(int) git_libgit2_opts(int option, ...);
+
 /** @} */
 GIT_END_DECL
+
 #endif

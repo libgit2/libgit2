@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2012 the libgit2 contributors
+ * Copyright (C) the libgit2 contributors. All rights reserved.
  *
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
@@ -31,15 +31,7 @@ void git_buf_init(git_buf *buf, size_t initial_size)
 		git_buf_grow(buf, initial_size);
 }
 
-int git_buf_grow(git_buf *buf, size_t target_size)
-{
-	int error = git_buf_try_grow(buf, target_size);
-	if (error != 0)
-		buf->ptr = git_buf__oom;
-	return error;
-}
-
-int git_buf_try_grow(git_buf *buf, size_t target_size)
+int git_buf_try_grow(git_buf *buf, size_t target_size, bool mark_oom)
 {
 	char *new_ptr;
 	size_t new_size;
@@ -67,8 +59,12 @@ int git_buf_try_grow(git_buf *buf, size_t target_size)
 	new_size = (new_size + 7) & ~7;
 
 	new_ptr = git__realloc(new_ptr, new_size);
-	if (!new_ptr)
+
+	if (!new_ptr) {
+		if (mark_oom)
+			buf->ptr = git_buf__oom;
 		return -1;
+	}
 
 	buf->asize = new_size;
 	buf->ptr   = new_ptr;
@@ -141,11 +137,52 @@ int git_buf_puts(git_buf *buf, const char *string)
 	return git_buf_put(buf, string, strlen(string));
 }
 
+static const char b64str[64] =
+	"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
+int git_buf_put_base64(git_buf *buf, const char *data, size_t len)
+{
+	size_t extra = len % 3;
+	uint8_t *write, a, b, c;
+	const uint8_t *read = (const uint8_t *)data;
+
+	ENSURE_SIZE(buf, buf->size + 4 * ((len / 3) + !!extra) + 1);
+	write = (uint8_t *)&buf->ptr[buf->size];
+
+	/* convert each run of 3 bytes into 4 output bytes */
+	for (len -= extra; len > 0; len -= 3) {
+		a = *read++;
+		b = *read++;
+		c = *read++;
+
+		*write++ = b64str[a >> 2];
+		*write++ = b64str[(a & 0x03) << 4 | b >> 4];
+		*write++ = b64str[(b & 0x0f) << 2 | c >> 6];
+		*write++ = b64str[c & 0x3f];
+	}
+
+	if (extra > 0) {
+		a = *read++;
+		b = (extra > 1) ? *read++ : 0;
+
+		*write++ = b64str[a >> 2];
+		*write++ = b64str[(a & 0x03) << 4 | b >> 4];
+		*write++ = (extra > 1) ? b64str[(b & 0x0f) << 2] : '=';
+		*write++ = '=';
+	}
+
+	buf->size = ((char *)write) - buf->ptr;
+	buf->ptr[buf->size] = '\0';
+
+	return 0;
+}
+
 int git_buf_vprintf(git_buf *buf, const char *format, va_list ap)
 {
 	int len;
+	const size_t expected_size = buf->size + (strlen(format) * 2);
 
-	ENSURE_SIZE(buf, buf->size + (strlen(format) * 2));
+	ENSURE_SIZE(buf, expected_size);
 
 	while (1) {
 		va_list args;
@@ -411,51 +448,30 @@ int git_buf_cmp(const git_buf *a, const git_buf *b)
 		(a->size < b->size) ? -1 : (a->size > b->size) ? 1 : 0;
 }
 
-int git_buf_common_prefix(git_buf *buf, const git_strarray *strings)
+int git_buf_splice(
+	git_buf *buf,
+	size_t where,
+	size_t nb_to_remove,
+	const char *data,
+	size_t nb_to_insert)
 {
-	size_t i;
-	const char *str, *pfx;
+	assert(buf &&
+		where <= git_buf_len(buf) &&
+		where + nb_to_remove <= git_buf_len(buf));
 
-	git_buf_clear(buf);
-
-	if (!strings || !strings->count)
-		return 0;
-
-	/* initialize common prefix to first string */
-	if (git_buf_sets(buf, strings->strings[0]) < 0)
+	/* Ported from git.git
+	 * https://github.com/git/git/blob/16eed7c/strbuf.c#L159-176
+	 */
+	if (git_buf_grow(buf, git_buf_len(buf) + nb_to_insert - nb_to_remove) < 0)
 		return -1;
 
-	/* go through the rest of the strings, truncating to shared prefix */
-	for (i = 1; i < strings->count; ++i) {
+	memmove(buf->ptr + where + nb_to_insert,
+			buf->ptr + where + nb_to_remove,
+			buf->size - where - nb_to_remove);
 
-		for (str = strings->strings[i], pfx = buf->ptr;
-			 *str && *str == *pfx; str++, pfx++)
-			/* scanning */;
+	memcpy(buf->ptr + where, data, nb_to_insert);
 
-		git_buf_truncate(buf, pfx - buf->ptr);
-
-		if (!buf->size)
-			break;
-	}
-
+	buf->size = buf->size + nb_to_insert - nb_to_remove;
+	buf->ptr[buf->size] = '\0';
 	return 0;
 }
-
-bool git_buf_is_binary(const git_buf *buf)
-{
-	size_t i;
-	int printable = 0, nonprintable = 0;
-
-	for (i = 0; i < buf->size; i++) {
-		unsigned char c = buf->ptr[i];
-		if (c > 0x1F && c < 0x7F)
-			printable++;
-		else if (c == '\0')
-			return true;
-		else if (!git__isspace(c))
-			nonprintable++;
-	}
-
-	return ((printable >> 7) < nonprintable);
-}
-

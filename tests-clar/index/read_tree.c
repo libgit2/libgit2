@@ -24,19 +24,19 @@ void test_index_read_tree__read_write_involution(void)
 	cl_git_mkfile("./read_tree/abc/d", NULL);
 	cl_git_mkfile("./read_tree/abc_d", NULL);
 
-	cl_git_pass(git_index_add(index, "abc-d", 0));
-	cl_git_pass(git_index_add(index, "abc_d", 0));
-	cl_git_pass(git_index_add(index, "abc/d", 0));
+	cl_git_pass(git_index_add_bypath(index, "abc-d"));
+	cl_git_pass(git_index_add_bypath(index, "abc_d"));
+	cl_git_pass(git_index_add_bypath(index, "abc/d"));
 
 	/* write-tree */
-	cl_git_pass(git_tree_create_fromindex(&expected, index));
+	cl_git_pass(git_index_write_tree(&expected, index));
 
 	/* read-tree */
 	git_tree_lookup(&tree, repo, &expected);
 	cl_git_pass(git_index_read_tree(index, tree));
 	git_tree_free(tree);
 
-	cl_git_pass(git_tree_create_fromindex(&tree_oid, index));
+	cl_git_pass(git_index_write_tree(&tree_oid, index));
 	cl_assert(git_oid_cmp(&expected, &tree_oid) == 0);
 
 	git_index_free(index);

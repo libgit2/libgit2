@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2012 the libgit2 contributors
+ * Copyright (C) the libgit2 contributors. All rights reserved.
  *
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
@@ -29,5 +29,22 @@ extern int git__delta_apply(
 	size_t base_len,
 	const unsigned char *delta,
 	size_t delta_len);
+
+/**
+ * Read the header of a git binary delta.
+ *
+ * @param delta the delta to execute copy/insert instructions from.
+ * @param delta_len total number of bytes in the delta.
+ * @param base_sz pointer to store the base size field.
+ * @param res_sz pointer to store the result size field.
+ * @return
+ * - 0 on a successful decoding the header.
+ * - GIT_ERROR if the delta is corrupt.
+ */
+extern int git__delta_read_header(
+	const unsigned char *delta,
+	size_t delta_len,
+	size_t *base_sz,
+	size_t *res_sz);
 
 #endif

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2012 the libgit2 contributors
+ * Copyright (C) the libgit2 contributors. All rights reserved.
  *
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
@@ -21,6 +21,7 @@
 /* stat: file mode type testing macros */
 #	define _S_IFLNK 0120000
 #	define S_IFLNK _S_IFLNK
+#	define S_IXUSR 00100
 
 #	define S_ISDIR(m)	(((m) & _S_IFMT) == _S_IFDIR)
 #	define S_ISREG(m)	(((m) & _S_IFMT) == _S_IFREG)
@@ -36,6 +37,15 @@
 /* MSVC doesn't define ssize_t at all */
 typedef SSIZE_T ssize_t;
 
+/* define snprintf using variadic macro support if available */
+#if _MSC_VER >= 1400
+# define snprintf(BUF, SZ, FMT, ...) _snprintf_s(BUF, SZ, _TRUNCATE, FMT, __VA_ARGS__)
+#else
+# define snprintf _snprintf
 #endif
+
+#endif
+
+#define GIT_STDLIB_CALL __cdecl
 
 #endif /* INCLUDE_msvc_compat__ */

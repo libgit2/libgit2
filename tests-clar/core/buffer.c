@@ -1,5 +1,8 @@
 #include "clar_libgit2.h"
 #include "buffer.h"
+#include "buf_text.h"
+#include "hashsig.h"
+#include "fileops.h"
 
 #define TESTSTR "Have you seen that? Have you seeeen that??"
 const char *test_string = TESTSTR;
@@ -456,6 +459,9 @@ void test_core_buffer__8(void)
 
 	git_buf_free(&a);
 
+	check_joinbuf_2(NULL, "", "");
+	check_joinbuf_2(NULL, "a", "a");
+	check_joinbuf_2(NULL, "/a", "/a");
 	check_joinbuf_2("", "", "");
 	check_joinbuf_2("", "a", "a");
 	check_joinbuf_2("", "/a", "/a");
@@ -576,38 +582,407 @@ void test_core_buffer__11(void)
 
 	t.strings = t1;
 	t.count = 3;
-	cl_git_pass(git_buf_common_prefix(&a, &t));
+	cl_git_pass(git_buf_text_common_prefix(&a, &t));
 	cl_assert_equal_s(a.ptr, "");
 
 	t.strings = t2;
 	t.count = 3;
-	cl_git_pass(git_buf_common_prefix(&a, &t));
+	cl_git_pass(git_buf_text_common_prefix(&a, &t));
 	cl_assert_equal_s(a.ptr, "some");
 
 	t.strings = t3;
 	t.count = 3;
-	cl_git_pass(git_buf_common_prefix(&a, &t));
+	cl_git_pass(git_buf_text_common_prefix(&a, &t));
 	cl_assert_equal_s(a.ptr, "");
 
 	t.strings = t4;
 	t.count = 3;
-	cl_git_pass(git_buf_common_prefix(&a, &t));
+	cl_git_pass(git_buf_text_common_prefix(&a, &t));
 	cl_assert_equal_s(a.ptr, "happ");
 
 	t.strings = t5;
 	t.count = 3;
-	cl_git_pass(git_buf_common_prefix(&a, &t));
+	cl_git_pass(git_buf_text_common_prefix(&a, &t));
 	cl_assert_equal_s(a.ptr, "happ");
 
 	t.strings = t6;
 	t.count = 3;
-	cl_git_pass(git_buf_common_prefix(&a, &t));
+	cl_git_pass(git_buf_text_common_prefix(&a, &t));
 	cl_assert_equal_s(a.ptr, "");
 
 	t.strings = t7;
 	t.count = 3;
-	cl_git_pass(git_buf_common_prefix(&a, &t));
+	cl_git_pass(git_buf_text_common_prefix(&a, &t));
 	cl_assert_equal_s(a.ptr, "");
 
 	git_buf_free(&a);
+}
+
+void test_core_buffer__rfind_variants(void)
+{
+	git_buf a = GIT_BUF_INIT;
+	ssize_t len;
+
+	cl_git_pass(git_buf_sets(&a, "/this/is/it/"));
+
+	len = (ssize_t)git_buf_len(&a);
+
+	cl_assert(git_buf_rfind(&a, '/') == len - 1);
+	cl_assert(git_buf_rfind_next(&a, '/') == len - 4);
+
+	cl_assert(git_buf_rfind(&a, 'i') == len - 3);
+	cl_assert(git_buf_rfind_next(&a, 'i') == len - 3);
+
+	cl_assert(git_buf_rfind(&a, 'h') == 2);
+	cl_assert(git_buf_rfind_next(&a, 'h') == 2);
+
+	cl_assert(git_buf_rfind(&a, 'q') == -1);
+	cl_assert(git_buf_rfind_next(&a, 'q') == -1);
+
+	git_buf_free(&a);
+}
+
+void test_core_buffer__puts_escaped(void)
+{
+	git_buf a = GIT_BUF_INIT;
+
+	git_buf_clear(&a);
+	cl_git_pass(git_buf_text_puts_escaped(&a, "this is a test", "", ""));
+	cl_assert_equal_s("this is a test", a.ptr);
+
+	git_buf_clear(&a);
+	cl_git_pass(git_buf_text_puts_escaped(&a, "this is a test", "t", "\\"));
+	cl_assert_equal_s("\\this is a \\tes\\t", a.ptr);
+
+	git_buf_clear(&a);
+	cl_git_pass(git_buf_text_puts_escaped(&a, "this is a test", "i ", "__"));
+	cl_assert_equal_s("th__is__ __is__ a__ test", a.ptr);
+
+	git_buf_clear(&a);
+	cl_git_pass(git_buf_text_puts_escape_regex(&a, "^match\\s*[A-Z]+.*"));
+	cl_assert_equal_s("\\^match\\\\s\\*\\[A-Z\\]\\+\\.\\*", a.ptr);
+
+	git_buf_free(&a);
+}
+
+static void assert_unescape(char *expected, char *to_unescape) {
+	git_buf buf = GIT_BUF_INIT;
+
+	cl_git_pass(git_buf_sets(&buf, to_unescape));
+	git_buf_text_unescape(&buf);
+	cl_assert_equal_s(expected, buf.ptr);
+	cl_assert_equal_sz(strlen(expected), buf.size);
+
+	git_buf_free(&buf);
+}
+
+void test_core_buffer__unescape(void)
+{
+	assert_unescape("Escaped\\", "Es\\ca\\ped\\");
+	assert_unescape("Es\\caped\\", "Es\\\\ca\\ped\\\\");
+	assert_unescape("\\", "\\");
+	assert_unescape("\\", "\\\\");
+	assert_unescape("", "");
+}
+
+void test_core_buffer__base64(void)
+{
+	git_buf buf = GIT_BUF_INIT;
+
+	/*     t  h  i  s
+	 * 0x 74 68 69 73
+     * 0b 01110100 01101000 01101001 01110011
+	 * 0b 011101 000110 100001 101001 011100 110000
+	 * 0x 1d 06 21 29 1c 30
+	 *     d  G  h  p  c  w
+	 */
+	cl_git_pass(git_buf_put_base64(&buf, "this", 4));
+	cl_assert_equal_s("dGhpcw==", buf.ptr);
+
+	git_buf_clear(&buf);
+	cl_git_pass(git_buf_put_base64(&buf, "this!", 5));
+	cl_assert_equal_s("dGhpcyE=", buf.ptr);
+
+	git_buf_clear(&buf);
+	cl_git_pass(git_buf_put_base64(&buf, "this!\n", 6));
+	cl_assert_equal_s("dGhpcyEK", buf.ptr);
+
+	git_buf_free(&buf);
+}
+
+void test_core_buffer__classify_with_utf8(void)
+{
+	char *data0 = "Simple text\n";
+	size_t data0len = 12;
+	char *data1 = "Is that UTF-8 data I see…\nYep!\n";
+	size_t data1len = 31;
+	char *data2 = "Internal NUL!!!\000\n\nI see you!\n";
+	size_t data2len = 29;
+	git_buf b;
+
+	b.ptr = data0; b.size = b.asize = data0len;
+	cl_assert(!git_buf_text_is_binary(&b));
+	cl_assert(!git_buf_text_contains_nul(&b));
+
+	b.ptr = data1; b.size = b.asize = data1len;
+	cl_assert(git_buf_text_is_binary(&b));
+	cl_assert(!git_buf_text_contains_nul(&b));
+
+	b.ptr = data2; b.size = b.asize = data2len;
+	cl_assert(git_buf_text_is_binary(&b));
+	cl_assert(git_buf_text_contains_nul(&b));
+}
+
+#define SIMILARITY_TEST_DATA_1 \
+	"test data\nright here\ninline\ntada\nneeds more data\nlots of data\n" \
+	"is this enough?\nthere has to be enough data to fill the hash array!\n" \
+	"Apparently 191 bytes is the minimum amount of data needed.\nHere goes!\n" \
+	"Let's make sure we've got plenty to go with here.\n   smile   \n"
+
+void test_core_buffer__similarity_metric(void)
+{
+	git_hashsig *a, *b;
+	git_buf buf = GIT_BUF_INIT;
+	int sim;
+
+	/* in the first case, we compare data to itself and expect 100% match */
+
+	cl_git_pass(git_buf_sets(&buf, SIMILARITY_TEST_DATA_1));
+	cl_git_pass(git_hashsig_create(&a, buf.ptr, buf.size, GIT_HASHSIG_NORMAL));
+	cl_git_pass(git_hashsig_create(&b, buf.ptr, buf.size, GIT_HASHSIG_NORMAL));
+
+	cl_assert_equal_i(100, git_hashsig_compare(a, b));
+
+	git_hashsig_free(a);
+	git_hashsig_free(b);
+
+	/* if we change just a single byte, how much does that change magnify? */
+
+	cl_git_pass(git_buf_sets(&buf, SIMILARITY_TEST_DATA_1));
+	cl_git_pass(git_hashsig_create(&a, buf.ptr, buf.size, GIT_HASHSIG_NORMAL));
+	cl_git_pass(git_buf_sets(&buf,
+		"Test data\nright here\ninline\ntada\nneeds more data\nlots of data\n"
+		"is this enough?\nthere has to be enough data to fill the hash array!\n"
+		"Apparently 191 bytes is the minimum amount of data needed.\nHere goes!\n"
+		 "Let's make sure we've got plenty to go with here.\n   smile   \n"));
+	cl_git_pass(git_hashsig_create(&b, buf.ptr, buf.size, GIT_HASHSIG_NORMAL));
+
+	sim = git_hashsig_compare(a, b);
+
+	cl_assert(95 < sim && sim < 100); /* expect >95% similarity */
+
+	git_hashsig_free(a);
+	git_hashsig_free(b);
+
+	/* let's try comparing data to a superset of itself */
+
+	cl_git_pass(git_buf_sets(&buf, SIMILARITY_TEST_DATA_1));
+	cl_git_pass(git_hashsig_create(&a, buf.ptr, buf.size, GIT_HASHSIG_NORMAL));
+	cl_git_pass(git_buf_sets(&buf, SIMILARITY_TEST_DATA_1
+		"and if I add some more, it should still be pretty similar, yes?\n"));
+	cl_git_pass(git_hashsig_create(&b, buf.ptr, buf.size, GIT_HASHSIG_NORMAL));
+
+	sim = git_hashsig_compare(a, b);
+
+	cl_assert(70 < sim && sim < 80); /* expect in the 70-80% similarity range */
+
+	git_hashsig_free(a);
+	git_hashsig_free(b);
+
+	/* what if we keep about half the original data and add half new */
+
+	cl_git_pass(git_buf_sets(&buf, SIMILARITY_TEST_DATA_1));
+	cl_git_pass(git_hashsig_create(&a, buf.ptr, buf.size, GIT_HASHSIG_NORMAL));
+	cl_git_pass(git_buf_sets(&buf,
+		"test data\nright here\ninline\ntada\nneeds more data\nlots of data\n"
+		"is this enough?\nthere has to be enough data to fill the hash array!\n"
+		"okay, that's half the original\nwhat else can we add?\nmore data\n"
+		 "one more line will complete this\nshort\nlines\ndon't\nmatter\n"));
+	cl_git_pass(git_hashsig_create(&b, buf.ptr, buf.size, GIT_HASHSIG_NORMAL));
+
+	sim = git_hashsig_compare(a, b);
+
+	cl_assert(40 < sim && sim < 60); /* expect in the 40-60% similarity range */
+
+	git_hashsig_free(a);
+	git_hashsig_free(b);
+
+	/* lastly, let's check that we can hash file content as well */
+
+	cl_git_pass(git_buf_sets(&buf, SIMILARITY_TEST_DATA_1));
+	cl_git_pass(git_hashsig_create(&a, buf.ptr, buf.size, GIT_HASHSIG_NORMAL));
+
+	cl_git_pass(git_futils_mkdir("scratch", NULL, 0755, GIT_MKDIR_PATH));
+	cl_git_mkfile("scratch/testdata", SIMILARITY_TEST_DATA_1);
+	cl_git_pass(git_hashsig_create_fromfile(
+		&b, "scratch/testdata", GIT_HASHSIG_NORMAL));
+
+	cl_assert_equal_i(100, git_hashsig_compare(a, b));
+
+	git_hashsig_free(a);
+	git_hashsig_free(b);
+
+	git_buf_free(&buf);
+	git_futils_rmdir_r("scratch", NULL, GIT_RMDIR_REMOVE_FILES);
+}
+
+
+void test_core_buffer__similarity_metric_whitespace(void)
+{
+	git_hashsig *a, *b;
+	git_buf buf = GIT_BUF_INIT;
+	int sim, i, j;
+	git_hashsig_option_t opt;
+	const char *tabbed =
+		"	for (s = 0; s < sizeof(sep) / sizeof(char); ++s) {\n"
+		"		separator = sep[s];\n"
+		"		expect = expect_values[s];\n"
+		"\n"
+		"		for (j = 0; j < sizeof(b) / sizeof(char*); ++j) {\n"
+		"			for (i = 0; i < sizeof(a) / sizeof(char*); ++i) {\n"
+		"				git_buf_join(&buf, separator, a[i], b[j]);\n"
+		"				cl_assert_equal_s(*expect, buf.ptr);\n"
+		"				expect++;\n"
+		"			}\n"
+		"		}\n"
+		"	}\n";
+	const char *spaced =
+		"   for (s = 0; s < sizeof(sep) / sizeof(char); ++s) {\n"
+		"       separator = sep[s];\n"
+		"       expect = expect_values[s];\n"
+		"\n"
+		"       for (j = 0; j < sizeof(b) / sizeof(char*); ++j) {\n"
+		"           for (i = 0; i < sizeof(a) / sizeof(char*); ++i) {\n"
+		"               git_buf_join(&buf, separator, a[i], b[j]);\n"
+		"               cl_assert_equal_s(*expect, buf.ptr);\n"
+		"               expect++;\n"
+		"           }\n"
+		"       }\n"
+		"   }\n";
+	const char *crlf_spaced2 =
+		"  for (s = 0; s < sizeof(sep) / sizeof(char); ++s) {\r\n"
+		"    separator = sep[s];\r\n"
+		"    expect = expect_values[s];\r\n"
+		"\r\n"
+		"    for (j = 0; j < sizeof(b) / sizeof(char*); ++j) {\r\n"
+		"      for (i = 0; i < sizeof(a) / sizeof(char*); ++i) {\r\n"
+		"        git_buf_join(&buf, separator, a[i], b[j]);\r\n"
+		"        cl_assert_equal_s(*expect, buf.ptr);\r\n"
+		"        expect++;\r\n"
+		"      }\r\n"
+		"    }\r\n"
+		"  }\r\n";
+	const char *text[3] = { tabbed, spaced, crlf_spaced2 };
+
+	/* let's try variations of our own code with whitespace changes */
+
+	for (opt = GIT_HASHSIG_NORMAL; opt <= GIT_HASHSIG_SMART_WHITESPACE; ++opt) {
+		for (i = 0; i < 3; ++i) {
+			for (j = 0; j < 3; ++j) {
+				cl_git_pass(git_buf_sets(&buf, text[i]));
+				cl_git_pass(git_hashsig_create(&a, buf.ptr, buf.size, opt));
+
+				cl_git_pass(git_buf_sets(&buf, text[j]));
+				cl_git_pass(git_hashsig_create(&b, buf.ptr, buf.size, opt));
+
+				sim = git_hashsig_compare(a, b);
+
+				if (opt == GIT_HASHSIG_NORMAL) {
+					if (i == j)
+						cl_assert_equal_i(100, sim);
+					else
+						cl_assert(sim < 30); /* expect pretty different */
+				} else {
+					cl_assert_equal_i(100, sim);
+				}
+
+				git_hashsig_free(a);
+				git_hashsig_free(b);
+			}
+		}
+	}
+
+	git_buf_free(&buf);
+}
+
+#define check_buf(expected,buf) do { \
+	cl_assert_equal_s(expected, buf.ptr); \
+	cl_assert_equal_sz(strlen(expected), buf.size); } while (0)
+
+void test_core_buffer__lf_and_crlf_conversions(void)
+{
+	git_buf src = GIT_BUF_INIT, tgt = GIT_BUF_INIT;
+
+	/* LF source */
+
+	git_buf_sets(&src, "lf\nlf\nlf\nlf\n");
+
+	cl_git_pass(git_buf_text_lf_to_crlf(&tgt, &src));
+	check_buf("lf\r\nlf\r\nlf\r\nlf\r\n", tgt);
+
+	cl_assert_equal_i(GIT_ENOTFOUND, git_buf_text_crlf_to_lf(&tgt, &src));
+	/* no conversion needed if all LFs already */
+
+	git_buf_sets(&src, "\nlf\nlf\nlf\nlf\nlf");
+
+	cl_git_pass(git_buf_text_lf_to_crlf(&tgt, &src));
+	check_buf("\r\nlf\r\nlf\r\nlf\r\nlf\r\nlf", tgt);
+
+	cl_assert_equal_i(GIT_ENOTFOUND, git_buf_text_crlf_to_lf(&tgt, &src));
+	/* no conversion needed if all LFs already */
+
+	/* CRLF source */
+
+	git_buf_sets(&src, "crlf\r\ncrlf\r\ncrlf\r\ncrlf\r\n");
+
+	cl_git_pass(git_buf_text_lf_to_crlf(&tgt, &src));
+	check_buf("crlf\r\ncrlf\r\ncrlf\r\ncrlf\r\n", tgt);
+	check_buf(src.ptr, tgt);
+
+	cl_git_pass(git_buf_text_crlf_to_lf(&tgt, &src));
+	check_buf("crlf\ncrlf\ncrlf\ncrlf\n", tgt);
+
+	git_buf_sets(&src, "\r\ncrlf\r\ncrlf\r\ncrlf\r\ncrlf\r\ncrlf");
+
+	cl_git_pass(git_buf_text_lf_to_crlf(&tgt, &src));
+	check_buf("\r\ncrlf\r\ncrlf\r\ncrlf\r\ncrlf\r\ncrlf", tgt);
+	check_buf(src.ptr, tgt);
+
+	cl_git_pass(git_buf_text_crlf_to_lf(&tgt, &src));
+	check_buf("\ncrlf\ncrlf\ncrlf\ncrlf\ncrlf", tgt);
+
+	/* CRLF in LF text */
+
+	git_buf_sets(&src, "\nlf\nlf\ncrlf\r\nlf\nlf\ncrlf\r\n");
+
+	cl_git_pass(git_buf_text_lf_to_crlf(&tgt, &src));
+	check_buf("\r\nlf\r\nlf\r\ncrlf\r\nlf\r\nlf\r\ncrlf\r\n", tgt);
+	cl_git_pass(git_buf_text_crlf_to_lf(&tgt, &src));
+	check_buf("\nlf\nlf\ncrlf\nlf\nlf\ncrlf\n", tgt);
+
+	/* LF in CRLF text */
+
+	git_buf_sets(&src, "\ncrlf\r\ncrlf\r\nlf\ncrlf\r\ncrlf");
+
+	cl_git_pass(git_buf_text_lf_to_crlf(&tgt, &src));
+	check_buf("\r\ncrlf\r\ncrlf\r\nlf\r\ncrlf\r\ncrlf", tgt);
+	cl_git_pass(git_buf_text_crlf_to_lf(&tgt, &src));
+	check_buf("\ncrlf\ncrlf\nlf\ncrlf\ncrlf", tgt);
+
+	/* bare CR test */
+
+	git_buf_sets(&src, "\rcrlf\r\nlf\nlf\ncr\rcrlf\r\nlf\ncr\r");
+
+	cl_git_pass(git_buf_text_lf_to_crlf(&tgt, &src));
+	check_buf("\rcrlf\r\nlf\r\nlf\r\ncr\rcrlf\r\nlf\r\ncr\r", tgt);
+	cl_git_pass(git_buf_text_crlf_to_lf(&tgt, &src));
+	check_buf("\rcrlf\nlf\nlf\ncr\rcrlf\nlf\ncr\r", tgt);
+
+	git_buf_sets(&src, "\rcr\r");
+	cl_assert_equal_i(GIT_ENOTFOUND, git_buf_text_lf_to_crlf(&tgt, &src));
+	cl_git_pass(git_buf_text_crlf_to_lf(&tgt, &src));
+	check_buf("\rcr\r", tgt);
+
+	git_buf_free(&src);
+	git_buf_free(&tgt);
 }

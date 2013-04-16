@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "common.h"
 
@@ -12,11 +13,12 @@ struct {
 } commands[] = {
 	{"ls-remote", ls_remote},
 	{"fetch", fetch},
+	{"clone", do_clone},
 	{"index-pack", index_pack},
 	{ NULL, NULL}
 };
 
-int run_command(git_cb fn, int argc, char **argv)
+static int run_command(git_cb fn, int argc, char **argv)
 {
 	int error;
 	git_repository *repo;
@@ -45,7 +47,7 @@ int run_command(git_cb fn, int argc, char **argv)
 
 int main(int argc, char **argv)
 {
-	int i, error;
+	int i;
 
 	if (argc < 2) {
 		fprintf(stderr, "usage: %s <cmd> [repo]\n", argv[0]);

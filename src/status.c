@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2012 the libgit2 contributors
+ * Copyright (C) the libgit2 contributors. All rights reserved.
  *
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
@@ -17,6 +17,7 @@
 
 #include "git2/diff.h"
 #include "diff.h"
+#include "diff_output.h"
 
 static unsigned int index_delta2status(git_delta_t index_status)
 {
@@ -25,7 +26,6 @@ static unsigned int index_delta2status(git_delta_t index_status)
 	switch (index_status) {
 	case GIT_DELTA_ADDED:
 	case GIT_DELTA_COPIED:
-	case GIT_DELTA_RENAMED:
 		st = GIT_STATUS_INDEX_NEW;
 		break;
 	case GIT_DELTA_DELETED:
@@ -33,6 +33,12 @@ static unsigned int index_delta2status(git_delta_t index_status)
 		break;
 	case GIT_DELTA_MODIFIED:
 		st = GIT_STATUS_INDEX_MODIFIED;
+		break;
+	case GIT_DELTA_RENAMED:
+		st = GIT_STATUS_INDEX_RENAMED;
+		break;
+	case GIT_DELTA_TYPECHANGE:
+		st = GIT_STATUS_INDEX_TYPECHANGE;
 		break;
 	default:
 		break;
@@ -47,8 +53,8 @@ static unsigned int workdir_delta2status(git_delta_t workdir_status)
 
 	switch (workdir_status) {
 	case GIT_DELTA_ADDED:
-	case GIT_DELTA_COPIED:
 	case GIT_DELTA_RENAMED:
+	case GIT_DELTA_COPIED:
 	case GIT_DELTA_UNTRACKED:
 		st = GIT_STATUS_WT_NEW;
 		break;
@@ -61,6 +67,9 @@ static unsigned int workdir_delta2status(git_delta_t workdir_status)
 	case GIT_DELTA_IGNORED:
 		st = GIT_STATUS_IGNORED;
 		break;
+	case GIT_DELTA_TYPECHANGE:
+		st = GIT_STATUS_WT_TYPECHANGE;
+		break;
 	default:
 		break;
 	}
@@ -68,28 +77,75 @@ static unsigned int workdir_delta2status(git_delta_t workdir_status)
 	return st;
 }
 
+typedef struct {
+	git_status_cb cb;
+	void *payload;
+	const git_status_options *opts;
+} status_user_callback;
+
+static int status_invoke_cb(
+	git_diff_delta *h2i, git_diff_delta *i2w, void *payload)
+{
+	status_user_callback *usercb = payload;
+	const char *path = NULL;
+	unsigned int status = 0;
+
+	if (i2w) {
+		path = i2w->old_file.path;
+		status |= workdir_delta2status(i2w->status);
+	}
+	if (h2i) {
+		path = h2i->old_file.path;
+		status |= index_delta2status(h2i->status);
+	}
+
+	/* if excluding submodules and this is a submodule everywhere */
+	if (usercb->opts &&
+		(usercb->opts->flags & GIT_STATUS_OPT_EXCLUDE_SUBMODULES) != 0)
+	{
+		bool in_tree  = (h2i && h2i->status != GIT_DELTA_ADDED);
+		bool in_index = (h2i && h2i->status != GIT_DELTA_DELETED);
+		bool in_wd    = (i2w && i2w->status != GIT_DELTA_DELETED);
+
+		if ((!in_tree || h2i->old_file.mode == GIT_FILEMODE_COMMIT) &&
+			(!in_index || h2i->new_file.mode == GIT_FILEMODE_COMMIT) &&
+			(!in_wd || i2w->new_file.mode == GIT_FILEMODE_COMMIT))
+			return 0;
+	}
+
+	return usercb->cb(path, status, usercb->payload);
+}
+
 int git_status_foreach_ext(
 	git_repository *repo,
 	const git_status_options *opts,
-	int (*cb)(const char *, unsigned int, void *),
-	void *cbdata)
+	git_status_cb cb,
+	void *payload)
 {
-	int err = 0, cmp;
-	git_diff_options diffopt;
-	git_diff_list *idx2head = NULL, *wd2idx = NULL;
+	int err = 0;
+	git_diff_options diffopt = GIT_DIFF_OPTIONS_INIT;
+	git_diff_list *head2idx = NULL, *idx2wd = NULL;
 	git_tree *head = NULL;
 	git_status_show_t show =
 		opts ? opts->show : GIT_STATUS_SHOW_INDEX_AND_WORKDIR;
-	git_diff_delta *i2h, *w2i;
-	unsigned int i, j, i_max, j_max;
+	status_user_callback usercb;
 
 	assert(show <= GIT_STATUS_SHOW_INDEX_THEN_WORKDIR);
 
-	if ((err = git_repository_head_tree(&head, repo)) < 0)
+	GITERR_CHECK_VERSION(opts, GIT_STATUS_OPTIONS_VERSION, "git_status_options");
+
+	if (show != GIT_STATUS_SHOW_INDEX_ONLY &&
+		(err = git_repository__ensure_not_bare(repo, "status")) < 0)
 		return err;
 
-	memset(&diffopt, 0, sizeof(diffopt));
+	/* if there is no HEAD, that's okay - we'll make an empty iterator */
+	if (((err = git_repository_head_tree(&head, repo)) < 0) &&
+		!(err == GIT_ENOTFOUND || err == GIT_EORPHANEDHEAD))
+			return err;
+
 	memcpy(&diffopt.pathspec, &opts->pathspec, sizeof(diffopt.pathspec));
+
+	diffopt.flags = GIT_DIFF_INCLUDE_TYPECHANGE;
 
 	if ((opts->flags & GIT_STATUS_OPT_INCLUDE_UNTRACKED) != 0)
 		diffopt.flags = diffopt.flags | GIT_DIFF_INCLUDE_UNTRACKED;
@@ -99,62 +155,58 @@ int git_status_foreach_ext(
 		diffopt.flags = diffopt.flags | GIT_DIFF_INCLUDE_UNMODIFIED;
 	if ((opts->flags & GIT_STATUS_OPT_RECURSE_UNTRACKED_DIRS) != 0)
 		diffopt.flags = diffopt.flags | GIT_DIFF_RECURSE_UNTRACKED_DIRS;
-	/* TODO: support EXCLUDE_SUBMODULES flag */
+	if ((opts->flags & GIT_STATUS_OPT_DISABLE_PATHSPEC_MATCH) != 0)
+		diffopt.flags = diffopt.flags | GIT_DIFF_DISABLE_PATHSPEC_MATCH;
+	if ((opts->flags & GIT_STATUS_OPT_RECURSE_IGNORED_DIRS) != 0)
+		diffopt.flags = diffopt.flags | GIT_DIFF_RECURSE_IGNORED_DIRS;
+	if ((opts->flags & GIT_STATUS_OPT_EXCLUDE_SUBMODULES) != 0)
+		diffopt.flags = diffopt.flags | GIT_DIFF_IGNORE_SUBMODULES;
 
-	if (show != GIT_STATUS_SHOW_WORKDIR_ONLY &&
-		(err = git_diff_index_to_tree(repo, &diffopt, head, &idx2head)) < 0)
-		goto cleanup;
+	if (show != GIT_STATUS_SHOW_WORKDIR_ONLY) {
+		err = git_diff_tree_to_index(&head2idx, repo, head, NULL, &diffopt);
+		if (err < 0)
+			goto cleanup;
+	}
 
-	if (show != GIT_STATUS_SHOW_INDEX_ONLY &&
-		(err = git_diff_workdir_to_index(repo, &diffopt, &wd2idx)) < 0)
-		goto cleanup;
+	if (show != GIT_STATUS_SHOW_INDEX_ONLY) {
+		err = git_diff_index_to_workdir(&idx2wd, repo, NULL, &diffopt);
+		if (err < 0)
+			goto cleanup;
+	}
+
+	usercb.cb = cb;
+	usercb.payload = payload;
+	usercb.opts = opts;
 
 	if (show == GIT_STATUS_SHOW_INDEX_THEN_WORKDIR) {
-		for (i = 0; !err && i < idx2head->deltas.length; i++) {
-			i2h = GIT_VECTOR_GET(&idx2head->deltas, i);
-			err = cb(i2h->old_file.path, index_delta2status(i2h->status), cbdata);
-		}
-		git_diff_list_free(idx2head);
-		idx2head = NULL;
+		if ((err = git_diff__paired_foreach(
+				 head2idx, NULL, status_invoke_cb, &usercb)) < 0)
+			goto cleanup;
+
+		git_diff_list_free(head2idx);
+		head2idx = NULL;
 	}
 
-	i_max = idx2head ? idx2head->deltas.length : 0;
-	j_max = wd2idx   ? wd2idx->deltas.length   : 0;
-
-	for (i = 0, j = 0; !err && (i < i_max || j < j_max); ) {
-		i2h = idx2head ? GIT_VECTOR_GET(&idx2head->deltas,i) : NULL;
-		w2i = wd2idx   ? GIT_VECTOR_GET(&wd2idx->deltas,j)   : NULL;
-
-		cmp = !w2i ? -1 : !i2h ? 1 : strcmp(i2h->old_file.path, w2i->old_file.path);
-
-		if (cmp < 0) {
-			err = cb(i2h->old_file.path, index_delta2status(i2h->status), cbdata);
-			i++;
-		} else if (cmp > 0) {
-			err = cb(w2i->old_file.path, workdir_delta2status(w2i->status), cbdata);
-			j++;
-		} else {
-			err = cb(i2h->old_file.path, index_delta2status(i2h->status) |
-					 workdir_delta2status(w2i->status), cbdata);
-			i++; j++;
-		}
-	}
+	err = git_diff__paired_foreach(head2idx, idx2wd, status_invoke_cb, &usercb);
 
 cleanup:
 	git_tree_free(head);
-	git_diff_list_free(idx2head);
-	git_diff_list_free(wd2idx);
+	git_diff_list_free(head2idx);
+	git_diff_list_free(idx2wd);
+
+	if (err == GIT_EUSER)
+		giterr_clear();
+
 	return err;
 }
 
 int git_status_foreach(
 	git_repository *repo,
-	int (*callback)(const char *, unsigned int, void *),
+	git_status_cb callback,
 	void *payload)
 {
-	git_status_options opts;
+	git_status_options opts = GIT_STATUS_OPTIONS_INIT;
 
-	memset(&opts, 0, sizeof(opts));
 	opts.show  = GIT_STATUS_SHOW_INDEX_AND_WORKDIR;
 	opts.flags = GIT_STATUS_OPT_INCLUDE_IGNORED |
 		GIT_STATUS_OPT_INCLUDE_UNTRACKED |
@@ -164,22 +216,29 @@ int git_status_foreach(
 }
 
 struct status_file_info {
+	char *expected;
 	unsigned int count;
 	unsigned int status;
-	char *expected;
+	int fnm_flags;
+	int ambiguous;
 };
 
 static int get_one_status(const char *path, unsigned int status, void *data)
 {
 	struct status_file_info *sfi = data;
+	int (*strcomp)(const char *a, const char *b);
 
 	sfi->count++;
 	sfi->status = status;
 
-	if (sfi->count > 1 || strcmp(sfi->expected, path) != 0) {
-		giterr_set(GITERR_INVALID,
-			"Ambiguous path '%s' given to git_status_file", sfi->expected);
-		return -1;
+	strcomp = (sfi->fnm_flags & FNM_CASEFOLD) ? git__strcasecmp : git__strcmp;
+
+	if (sfi->count > 1 ||
+		(strcomp(sfi->expected, path) != 0 &&
+		 p_fnmatch(sfi->expected, path, sfi->fnm_flags) != 0))
+	{
+		sfi->ambiguous = true;
+		return GIT_EAMBIGUOUS;
 	}
 
 	return 0;
@@ -191,16 +250,20 @@ int git_status_file(
 	const char *path)
 {
 	int error;
-	git_status_options opts;
-	struct status_file_info sfi;
+	git_status_options opts = GIT_STATUS_OPTIONS_INIT;
+	struct status_file_info sfi = {0};
+	git_index *index;
 
 	assert(status_flags && repo && path);
 
-	memset(&sfi, 0, sizeof(sfi));
+	if ((error = git_repository_index__weakptr(&index, repo)) < 0)
+		return error;
+
 	if ((sfi.expected = git__strdup(path)) == NULL)
 		return -1;
+	if (index->ignore_case)
+		sfi.fnm_flags = FNM_CASEFOLD;
 
-	memset(&opts, 0, sizeof(opts));
 	opts.show  = GIT_STATUS_SHOW_INDEX_AND_WORKDIR;
 	opts.flags = GIT_STATUS_OPT_INCLUDE_IGNORED |
 		GIT_STATUS_OPT_INCLUDE_UNTRACKED |
@@ -211,10 +274,29 @@ int git_status_file(
 
 	error = git_status_foreach_ext(repo, &opts, get_one_status, &sfi);
 
-	if (!error && !sfi.count) {
+	if (error < 0 && sfi.ambiguous) {
 		giterr_set(GITERR_INVALID,
-			"Attempt to get status of nonexistent file '%s'", path);
-		error = GIT_ENOTFOUND;
+			"Ambiguous path '%s' given to git_status_file", sfi.expected);
+		error = GIT_EAMBIGUOUS;
+	}
+
+	if (!error && !sfi.count) {
+		git_buf full = GIT_BUF_INIT;
+
+		/* if the file actually exists and we still did not get a callback
+		 * for it, then it must be contained inside an ignored directory, so
+		 * mark it as such instead of generating an error.
+		 */
+		if (!git_buf_joinpath(&full, git_repository_workdir(repo), path) &&
+			git_path_exists(full.ptr))
+			sfi.status = GIT_STATUS_IGNORED;
+		else {
+			giterr_set(GITERR_INVALID,
+				"Attempt to get status of nonexistent file '%s'", path);
+			error = GIT_ENOTFOUND;
+		}
+
+		git_buf_free(&full);
 	}
 
 	*status_flags = sfi.status;
@@ -229,14 +311,6 @@ int git_status_should_ignore(
 	git_repository *repo,
 	const char *path)
 {
-	int error;
-	git_ignores ignores;
-
-	if (git_ignore__for_path(repo, path, &ignores) < 0)
-		return -1;
-
-	error = git_ignore__lookup(&ignores, path, ignored);
-	git_ignore__free(&ignores);
-	return error;
+	return git_ignore_path_is_ignored(ignored, repo, path);
 }
 

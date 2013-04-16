@@ -6,12 +6,9 @@ extern git_tree *resolve_commit_oid_to_tree(
 
 typedef struct {
 	int files;
-	int file_adds;
-	int file_dels;
-	int file_mods;
-	int file_ignored;
-	int file_untracked;
-	int file_unmodified;
+	int files_binary;
+
+	int file_status[10]; /* indexed by git_delta_t value */
 
 	int hunks;
 	int hunk_new_lines;
@@ -21,27 +18,44 @@ typedef struct {
 	int line_ctxt;
 	int line_adds;
 	int line_dels;
-
-	bool at_least_one_of_them_is_binary;
 } diff_expects;
 
-extern int diff_file_fn(
-	void *cb_data,
-	git_diff_delta *delta,
-	float progress);
+typedef struct {
+	const char *path;
+	const char *matched_pathspec;
+} notify_expected;
 
-extern int diff_hunk_fn(
-	void *cb_data,
-	git_diff_delta *delta,
-	git_diff_range *range,
+extern int diff_file_cb(
+	const git_diff_delta *delta,
+	float progress,
+	void *cb_data);
+
+extern int diff_print_file_cb(
+	const git_diff_delta *delta,
+	float progress,
+	void *cb_data);
+
+extern int diff_hunk_cb(
+	const git_diff_delta *delta,
+	const git_diff_range *range,
 	const char *header,
-	size_t header_len);
+	size_t header_len,
+	void *cb_data);
 
-extern int diff_line_fn(
-	void *cb_data,
-	git_diff_delta *delta,
-	git_diff_range *range,
+extern int diff_line_cb(
+	const git_diff_delta *delta,
+	const git_diff_range *range,
 	char line_origin,
 	const char *content,
-	size_t content_len);
+	size_t content_len,
+	void *cb_data);
+
+extern int diff_foreach_via_iterator(
+	git_diff_list *diff,
+	git_diff_file_cb file_cb,
+	git_diff_hunk_cb hunk_cb,
+	git_diff_data_cb line_cb,
+	void *data);
+
+extern void diff_print(FILE *fp, git_diff_list *diff);
 

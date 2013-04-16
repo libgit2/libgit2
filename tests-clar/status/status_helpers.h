@@ -2,12 +2,12 @@
 #define INCLUDE_cl_status_helpers_h__
 
 typedef struct {
-	size_t wrong_status_flags_count;
-	size_t wrong_sorted_path;
-	size_t entry_count;
+	int wrong_status_flags_count;
+	int wrong_sorted_path;
+	int entry_count;
 	const unsigned int* expected_statuses;
 	const char** expected_paths;
-	size_t expected_entry_count;
+	int expected_entry_count;
 } status_entry_counts;
 
 /* cb_status__normal takes payload of "status_entry_counts *" */
@@ -29,5 +29,9 @@ typedef struct {
 /* cb_status__single takes payload of "status_entry_single *" */
 
 extern int cb_status__single(const char *p, unsigned int s, void *payload);
+
+/* cb_status__print takes optional payload of "int *" */
+
+extern int cb_status__print(const char *p, unsigned int s, void *payload);
 
 #endif

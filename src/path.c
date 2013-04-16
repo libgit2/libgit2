@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2012 the libgit2 contributors
+ * Copyright (C) the libgit2 contributors. All rights reserved.
  *
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
@@ -17,9 +17,55 @@
 #include <stdio.h>
 #include <ctype.h>
 
+#define LOOKS_LIKE_DRIVE_PREFIX(S) (git__isalpha((S)[0]) && (S)[1] == ':')
+
+#ifdef GIT_WIN32
+static bool looks_like_network_computer_name(const char *path, int pos)
+{
+	if (pos < 3)
+		return false;
+
+	if (path[0] != '/' || path[1] != '/')
+		return false;
+
+	while (pos-- > 2) {
+		if (path[pos] == '/')
+			return false;
+	}
+
+	return true;
+}
+#endif
+
 /*
  * Based on the Android implementation, BSD licensed.
- * Check http://android.git.kernel.org/
+ * http://android.git.kernel.org/
+ *
+ * Copyright (C) 2008 The Android Open Source Project
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * * Redistributions of source code must retain the above copyright
+ *   notice, this list of conditions and the following disclaimer.
+ * * Redistributions in binary form must reproduce the above copyright
+ *   notice, this list of conditions and the following disclaimer in
+ *   the documentation and/or other materials provided with the
+ *   distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * AS IS AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+ * COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+ * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
+ * OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
+ * AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+ * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
+ * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+ * SUCH DAMAGE.
  */
 int git_path_basename_r(git_buf *buffer, const char *path)
 {
@@ -105,10 +151,19 @@ int git_path_dirname_r(git_buf *buffer, const char *path)
 	/* Mimic unix behavior where '/.git' returns '/': 'C:/.git' will return
 		'C:/' here */
 
-	if (len == 2 && isalpha(path[0]) && path[1] == ':') {
+	if (len == 2 && LOOKS_LIKE_DRIVE_PREFIX(path)) {
 		len = 3;
 		goto Exit;
 	}
+
+	/* Similarly checks if we're dealing with a network computer name
+		'//computername/.git' will return '//computername/' */
+
+	if (looks_like_network_computer_name(path, len)) {
+		len++;
+		goto Exit;
+	}
+
 #endif
 
 Exit:
@@ -145,6 +200,20 @@ char *git_path_basename(const char *path)
 	return basename;
 }
 
+size_t git_path_basename_offset(git_buf *buffer)
+{
+	ssize_t slash;
+
+	if (!buffer || buffer->size <= 0)
+		return 0;
+
+	slash = git_buf_rfind_next(buffer, '/');
+
+	if (slash >= 0 && buffer->ptr[slash] == '/')
+		return (size_t)(slash + 1);
+
+	return 0;
+}
 
 const char *git_path_topdir(const char *path)
 {
@@ -168,11 +237,11 @@ int git_path_root(const char *path)
 {
 	int offset = 0;
 
-#ifdef GIT_WIN32
 	/* Does the root of the path look like a windows drive ? */
-	if (isalpha(path[0]) && (path[1] == ':'))
+	if (LOOKS_LIKE_DRIVE_PREFIX(path))
 		offset += 2;
 
+#ifdef GIT_WIN32
 	/* Are we dealing with a windows network path? */
 	else if ((path[0] == '/' && path[1] == '/') ||
 		(path[0] == '\\' && path[1] == '\\'))
@@ -189,6 +258,31 @@ int git_path_root(const char *path)
 		return offset;
 
 	return -1;	/* Not a real error - signals that path is not rooted */
+}
+
+int git_path_join_unrooted(
+	git_buf *path_out, const char *path, const char *base, ssize_t *root_at)
+{
+	int error, root;
+
+	assert(path && path_out);
+
+	root = git_path_root(path);
+
+	if (base != NULL && root < 0) {
+		error = git_buf_joinpath(path_out, base, path);
+
+		if (root_at)
+			*root_at = (ssize_t)strlen(base);
+	}
+	else {
+		error = git_buf_sets(path_out, path);
+
+		if (root_at)
+			*root_at = (root < 0) ? 0 : (ssize_t)root;
+	}
+
+	return error;
 }
 
 int git_path_prettify(git_buf *path_out, const char *path, const char *base)
@@ -210,7 +304,7 @@ int git_path_prettify(git_buf *path_out, const char *path, const char *base)
 		giterr_set(GITERR_OS, "Failed to resolve path '%s'", path);
 
 		git_buf_clear(path_out);
-		
+
 		return error;
 	}
 
@@ -306,7 +400,7 @@ int git_path_fromurl(git_buf *local_path_out, const char *file_url)
 	if (offset >= len || file_url[offset] == '/')
 		return error_invalid_local_file_uri(file_url);
 
-#ifndef _MSC_VER
+#ifndef GIT_WIN32
 	offset--;	/* A *nix absolute path starts with a forward slash */
 #endif
 
@@ -341,9 +435,10 @@ int git_path_walk_up(
 	iter.asize = path->asize;
 
 	while (scan >= stop) {
-		if ((error = cb(data, &iter)) < 0)
-			break;
+		error = cb(data, &iter);
 		iter.ptr[scan] = oldc;
+		if (error < 0)
+			break;
 		scan = git_buf_rfind_next(&iter, '/');
 		if (scan >= 0) {
 			scan++;
@@ -385,6 +480,68 @@ bool git_path_isfile(const char *path)
 	return S_ISREG(st.st_mode) != 0;
 }
 
+#ifdef GIT_WIN32
+
+bool git_path_is_empty_dir(const char *path)
+{
+	git_buf pathbuf = GIT_BUF_INIT;
+	HANDLE hFind = INVALID_HANDLE_VALUE;
+	wchar_t wbuf[GIT_WIN_PATH];
+	WIN32_FIND_DATAW ffd;
+	bool retval = true;
+
+	if (!git_path_isdir(path)) return false;
+
+	git_buf_printf(&pathbuf, "%s\\*", path);
+	git__utf8_to_16(wbuf, GIT_WIN_PATH, git_buf_cstr(&pathbuf));
+
+	hFind = FindFirstFileW(wbuf, &ffd);
+	if (INVALID_HANDLE_VALUE == hFind) {
+		giterr_set(GITERR_OS, "Couldn't open '%s'", path);
+		return false;
+	}
+
+	do {
+		if (!git_path_is_dot_or_dotdotW(ffd.cFileName)) {
+			retval = false;
+		}
+	} while (FindNextFileW(hFind, &ffd) != 0);
+
+	FindClose(hFind);
+	git_buf_free(&pathbuf);
+	return retval;
+}
+
+#else
+
+bool git_path_is_empty_dir(const char *path)
+{
+	DIR *dir = NULL;
+	struct dirent *e;
+	bool retval = true;
+
+	if (!git_path_isdir(path)) return false;
+
+	dir = opendir(path);
+	if (!dir) {
+		giterr_set(GITERR_OS, "Couldn't open '%s'", path);
+		return false;
+	}
+
+	while ((e = readdir(dir)) != NULL) {
+		if (!git_path_is_dot_or_dotdot(e->d_name)) {
+			giterr_set(GITERR_INVALID,
+						  "'%s' exists and is not an empty directory", path);
+			retval = false;
+			break;
+		}
+	}
+	closedir(dir);
+
+	return retval;
+}
+#endif
+
 int git_path_lstat(const char *path, struct stat *st)
 {
 	int err = 0;
@@ -407,7 +564,7 @@ static bool _check_dir_contents(
 	size_t sub_size = strlen(sub);
 
 	/* leave base valid even if we could not make space for subdir */
-	if (git_buf_try_grow(dir, dir_size + sub_size + 2) < 0)
+	if (git_buf_try_grow(dir, dir_size + sub_size + 2, false) < 0)
 		return false;
 
 	/* save excursion */
@@ -437,12 +594,7 @@ bool git_path_contains_file(git_buf *base, const char *file)
 
 int git_path_find_dir(git_buf *dir, const char *path, const char *base)
 {
-	int error;
-
-	if (base != NULL && git_path_root(path) < 0)
-		error = git_buf_joinpath(dir, base, path);
-	else
-		error = git_buf_sets(dir, path);
+	int error = git_path_join_unrooted(dir, path, base, NULL);
 
 	if (!error) {
 		char buf[GIT_PATH_MAX];
@@ -460,31 +612,94 @@ int git_path_find_dir(git_buf *dir, const char *path, const char *base)
 	return error;
 }
 
-int git_path_cmp(
-	const char *name1, size_t len1, int isdir1,
-	const char *name2, size_t len2, int isdir2)
+int git_path_resolve_relative(git_buf *path, size_t ceiling)
 {
-	size_t len = len1 < len2 ? len1 : len2;
-	int cmp;
+	char *base, *to, *from, *next;
+	size_t len;
 
-	cmp = memcmp(name1, name2, len);
-	if (cmp)
-		return cmp;
-	if (len1 < len2)
-		return (!isdir1 && !isdir2) ? -1 :
-			(isdir1 ? '/' - name2[len1] : name2[len1] - '/');
-	if (len1 > len2)
-		return (!isdir1 && !isdir2) ? 1 :
-			(isdir2 ? name1[len2] - '/' : '/' - name1[len2]);
+	if (!path || git_buf_oom(path))
+		return -1;
+
+	if (ceiling > path->size)
+		ceiling = path->size;
+
+	/* recognize drive prefixes, etc. that should not be backed over */
+	if (ceiling == 0)
+		ceiling = git_path_root(path->ptr) + 1;
+
+	/* recognize URL prefixes that should not be backed over */
+	if (ceiling == 0) {
+		for (next = path->ptr; *next && git__isalpha(*next); ++next);
+		if (next[0] == ':' && next[1] == '/' && next[2] == '/')
+			ceiling = (next + 3) - path->ptr;
+	}
+
+	base = to = from = path->ptr + ceiling;
+
+	while (*from) {
+		for (next = from; *next && *next != '/'; ++next);
+
+		len = next - from;
+
+		if (len == 1 && from[0] == '.')
+			/* do nothing with singleton dot */;
+
+		else if (len == 2 && from[0] == '.' && from[1] == '.') {
+			while (to > base && to[-1] == '/') to--;
+			while (to > base && to[-1] != '/') to--;
+		}
+
+		else {
+			if (*next == '/')
+				len++;
+
+			if (to != from)
+				memmove(to, from, len);
+
+			to += len;
+		}
+
+		from += len;
+
+		while (*from == '/') from++;
+	}
+
+	*to = '\0';
+
+	path->size = to - path->ptr;
+
 	return 0;
 }
 
-/* Taken from git.git */
-GIT_INLINE(int) is_dot_or_dotdot(const char *name)
+int git_path_apply_relative(git_buf *target, const char *relpath)
 {
-	return (name[0] == '.' &&
-		(name[1] == '\0' ||
-		 (name[1] == '.' && name[2] == '\0')));
+	git_buf_joinpath(target, git_buf_cstr(target), relpath);
+	return git_path_resolve_relative(target, 0);
+}
+
+int git_path_cmp(
+	const char *name1, size_t len1, int isdir1,
+	const char *name2, size_t len2, int isdir2,
+	int (*compare)(const char *, const char *, size_t))
+{
+	unsigned char c1, c2;
+	size_t len = len1 < len2 ? len1 : len2;
+	int cmp;
+
+	cmp = compare(name1, name2, len);
+	if (cmp)
+		return cmp;
+
+	c1 = name1[len];
+	c2 = name2[len];
+
+	if (c1 == '\0' && isdir1)
+		c1 = '/';
+
+	if (c2 == '\0' && isdir2)
+		c2 = '/';
+
+	return (c1 < c2) ? -1 : (c1 > c2) ? 1 : 0;
 }
 
 int git_path_direach(
@@ -506,7 +721,7 @@ int git_path_direach(
 		return -1;
 	}
 
-#ifdef __sun
+#if defined(__sun) || defined(__GNU__)
 	de_buf = git__malloc(sizeof(struct dirent) + FILENAME_MAX + 1);
 #else
 	de_buf = git__malloc(sizeof(struct dirent));
@@ -515,7 +730,7 @@ int git_path_direach(
 	while (p_readdir_r(dir, de_buf, &de) == 0 && de != NULL) {
 		int result;
 
-		if (is_dot_or_dotdot(de->d_name))
+		if (git_path_is_dot_or_dotdot(de->d_name))
 			continue;
 
 		if (git_buf_puts(path, de->d_name) < 0) {
@@ -560,7 +775,7 @@ int git_path_dirload(
 		return -1;
 	}
 
-#ifdef __sun
+#if defined(__sun) || defined(__GNU__)
 	de_buf = git__malloc(sizeof(struct dirent) + FILENAME_MAX + 1);
 #else
 	de_buf = git__malloc(sizeof(struct dirent));
@@ -574,7 +789,7 @@ int git_path_dirload(
 		char *entry_path;
 		size_t entry_len;
 
-		if (is_dot_or_dotdot(de->d_name))
+		if (git_path_is_dot_or_dotdot(de->d_name))
 			continue;
 
 		entry_len = strlen(de->d_name);
@@ -609,18 +824,30 @@ int git_path_dirload(
 int git_path_with_stat_cmp(const void *a, const void *b)
 {
 	const git_path_with_stat *psa = a, *psb = b;
-	return git__strcmp_cb(psa->path, psb->path);
+	return strcmp(psa->path, psb->path);
+}
+
+int git_path_with_stat_cmp_icase(const void *a, const void *b)
+{
+	const git_path_with_stat *psa = a, *psb = b;
+	return strcasecmp(psa->path, psb->path);
 }
 
 int git_path_dirload_with_stat(
 	const char *path,
 	size_t prefix_len,
+	bool ignore_case,
+	const char *start_stat,
+	const char *end_stat,
 	git_vector *contents)
 {
 	int error;
 	unsigned int i;
 	git_path_with_stat *ps;
 	git_buf full = GIT_BUF_INIT;
+	int (*strncomp)(const char *a, const char *b, size_t sz);
+	size_t start_len = start_stat ? strlen(start_stat) : 0;
+	size_t end_len = end_stat ? strlen(end_stat) : 0, cmp_len;
 
 	if (git_buf_set(&full, path, prefix_len) < 0)
 		return -1;
@@ -632,23 +859,45 @@ int git_path_dirload_with_stat(
 		return error;
 	}
 
+	strncomp = ignore_case ? git__strncasecmp : git__strncmp;
+
+	/* stat struct at start of git_path_with_stat, so shift path text */
 	git_vector_foreach(contents, i, ps) {
 		size_t path_len = strlen((char *)ps);
-
 		memmove(ps->path, ps, path_len + 1);
 		ps->path_len = path_len;
+	}
+
+	git_vector_foreach(contents, i, ps) {
+		/* skip if before start_stat or after end_stat */
+		cmp_len = min(start_len, ps->path_len);
+		if (cmp_len && strncomp(ps->path, start_stat, cmp_len) < 0)
+			continue;
+		cmp_len = min(end_len, ps->path_len);
+		if (cmp_len && strncomp(ps->path, end_stat, cmp_len) > 0)
+			continue;
+
+		git_buf_truncate(&full, prefix_len);
 
 		if ((error = git_buf_joinpath(&full, full.ptr, ps->path)) < 0 ||
 			(error = git_path_lstat(full.ptr, &ps->st)) < 0)
 			break;
 
-		git_buf_truncate(&full, prefix_len);
-
 		if (S_ISDIR(ps->st.st_mode)) {
-			ps->path[path_len] = '/';
-			ps->path[path_len + 1] = '\0';
+			if ((error = git_buf_joinpath(&full, full.ptr, ".git")) < 0)
+				break;
+
+			if (p_access(full.ptr, F_OK) == 0) {
+				ps->st.st_mode = GIT_FILEMODE_COMMIT;
+			} else {
+				ps->path[ps->path_len++] = '/';
+				ps->path[ps->path_len] = '\0';
+			}
 		}
 	}
+
+	/* sort now that directory suffix is added */
+	git_vector_sort(contents);
 
 	git_buf_free(&full);
 

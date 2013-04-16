@@ -1,4 +1,31 @@
 #include "clar_libgit2.h"
+
+void test_core_errors__public_api(void)
+{
+	char *str_in_error;
+
+	giterr_clear();
+	cl_assert(giterr_last() == NULL);
+
+	giterr_set_oom();
+
+	cl_assert(giterr_last() != NULL);
+	cl_assert(giterr_last()->klass == GITERR_NOMEMORY);
+	str_in_error = strstr(giterr_last()->message, "memory");
+	cl_assert(str_in_error != NULL);
+
+	giterr_clear();
+
+	giterr_set_str(GITERR_REPOSITORY, "This is a test");
+
+	cl_assert(giterr_last() != NULL);
+	str_in_error = strstr(giterr_last()->message, "This is a test");
+	cl_assert(str_in_error != NULL);
+
+	giterr_clear();
+	cl_assert(giterr_last() == NULL);
+}
+
 #include "common.h"
 #include "util.h"
 #include "posix.h"
@@ -31,7 +58,7 @@ void test_core_errors__new_school(void)
 	do {
 		struct stat st;
 		memset(&st, 0, sizeof(st));
-		assert(p_lstat("this_file_does_not_exist", &st) < 0);
+		cl_assert(p_lstat("this_file_does_not_exist", &st) < 0);
 		GIT_UNUSED(st);
 	} while (false);
 	giterr_set(GITERR_OS, "stat failed"); /* internal fn */

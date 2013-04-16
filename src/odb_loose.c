@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2012 the libgit2 contributors
+ * Copyright (C) the libgit2 contributors. All rights reserved.
  *
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
@@ -42,7 +42,7 @@ typedef struct loose_backend {
 typedef struct {
 	size_t dir_len;
 	unsigned char short_oid[GIT_OID_HEXSZ]; /* hex formatted oid to match */
-	unsigned int short_oid_len;
+	size_t short_oid_len;
 	int found;				/* number of matching
 						 * objects already found */
 	unsigned char res_oid[GIT_OID_HEXSZ];	/* hex formatted oid of
@@ -502,7 +502,7 @@ static int locate_object_short_oid(
 	git_oid *res_oid,
 	loose_backend *backend,
 	const git_oid *short_oid,
-	unsigned int len)
+	size_t len)
 {
 	char *objects_dir = backend->objects_dir;
 	size_t dir_len = strlen(objects_dir);
@@ -629,7 +629,7 @@ static int loose_backend__read_prefix(
 	git_otype *type_p,
 	git_odb_backend *backend,
 	const git_oid *short_oid,
-	unsigned int len)
+	size_t len)
 {
 	int error = 0;
 
@@ -674,6 +674,91 @@ static int loose_backend__exists(git_odb_backend *backend, const git_oid *oid)
 	git_buf_free(&object_path);
 
 	return !error;
+}
+
+struct foreach_state {
+	size_t dir_len;
+	git_odb_foreach_cb cb;
+	void *data;
+	int cb_error;
+};
+
+GIT_INLINE(int) filename_to_oid(git_oid *oid, const char *ptr)
+{
+	int v, i = 0;
+	if (strlen(ptr) != 41)
+		return -1;
+
+	if (ptr[2] != '/') {
+		return -1;
+	}
+
+	v = (git__fromhex(ptr[i]) << 4) | git__fromhex(ptr[i+1]);
+	if (v < 0)
+		return -1;
+
+	oid->id[0] = (unsigned char) v;
+
+	ptr += 3;
+	for (i = 0; i < 38; i += 2) {
+		v = (git__fromhex(ptr[i]) << 4) | git__fromhex(ptr[i + 1]);
+		if (v < 0)
+			return -1;
+
+		oid->id[1 + i/2] = (unsigned char) v;
+	}
+
+	return 0;
+}
+
+static int foreach_object_dir_cb(void *_state, git_buf *path)
+{
+	git_oid oid;
+	struct foreach_state *state = (struct foreach_state *) _state;
+
+	if (filename_to_oid(&oid, path->ptr + state->dir_len) < 0)
+		return 0;
+
+	if (state->cb(&oid, state->data)) {
+		state->cb_error = GIT_EUSER;
+		return -1;
+	}
+
+	return 0;
+}
+
+static int foreach_cb(void *_state, git_buf *path)
+{
+	struct foreach_state *state = (struct foreach_state *) _state;
+
+	return git_path_direach(path, foreach_object_dir_cb, state);
+}
+
+static int loose_backend__foreach(git_odb_backend *_backend, git_odb_foreach_cb cb, void *data)
+{
+	char *objects_dir;
+	int error;
+	git_buf buf = GIT_BUF_INIT;
+	struct foreach_state state;
+	loose_backend *backend = (loose_backend *) _backend;
+
+	assert(backend && cb);
+
+	objects_dir = backend->objects_dir;
+
+	git_buf_sets(&buf, objects_dir);
+	git_path_to_dir(&buf);
+
+	memset(&state, 0, sizeof(state));
+	state.cb = cb;
+	state.data = data;
+	state.dir_len = git_buf_len(&buf);
+
+	error = git_path_direach(&buf, foreach_cb, &state);
+
+	git_buf_free(&buf);
+
+	return state.cb_error ? state.cb_error : error;
 }
 
 static int loose_backend__stream_fwrite(git_oid *oid, git_odb_stream *_stream)
@@ -785,7 +870,6 @@ static int loose_backend__write(git_oid *oid, git_odb_backend *_backend, const v
 
 	if (git_buf_joinpath(&final_path, backend->objects_dir, "tmp_object") < 0 ||
 		git_filebuf_open(&fbuf, final_path.ptr,
-			GIT_FILEBUF_HASH_CONTENTS |
 			GIT_FILEBUF_TEMPORARY |
 			(backend->object_zlib_level << GIT_FILEBUF_DEFLATE_SHIFT)) < 0)
 	{
@@ -795,7 +879,6 @@ static int loose_backend__write(git_oid *oid, git_odb_backend *_backend, const v
 
 	git_filebuf_write(&fbuf, header, header_len);
 	git_filebuf_write(&fbuf, data, len);
-	git_filebuf_hash(oid, &fbuf);
 
 	if (object_file_name(&final_path, backend->objects_dir, oid) < 0 ||
 		git_futils_mkpath2file(final_path.ptr, GIT_OBJECT_DIR_MODE) < 0 ||
@@ -830,6 +913,7 @@ int git_odb_backend_loose(
 	backend = git__calloc(1, sizeof(loose_backend));
 	GITERR_CHECK_ALLOC(backend);
 
+	backend->parent.version = GIT_ODB_BACKEND_VERSION;
 	backend->objects_dir = git__strdup(objects_dir);
 	GITERR_CHECK_ALLOC(backend->objects_dir);
 
@@ -845,6 +929,7 @@ int git_odb_backend_loose(
 	backend->parent.read_header = &loose_backend__read_header;
 	backend->parent.writestream = &loose_backend__stream;
 	backend->parent.exists = &loose_backend__exists;
+	backend->parent.foreach = &loose_backend__foreach;
 	backend->parent.free = &loose_backend__free;
 
 	*backend_out = (git_odb_backend *)backend;

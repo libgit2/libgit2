@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2012 the libgit2 contributors
+ * Copyright (C) the libgit2 contributors. All rights reserved.
  *
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
@@ -8,6 +8,7 @@
 #define INCLUDE_buffer_h__
 
 #include "common.h"
+#include "git2/strarray.h"
 #include <stdarg.h>
 
 typedef struct {
@@ -26,30 +27,35 @@ extern char git_buf__oom[];
  * For the cases where GIT_BUF_INIT cannot be used to do static
  * initialization.
  */
-void git_buf_init(git_buf *buf, size_t initial_size);
-
-/**
- * Grow the buffer to hold at least `target_size` bytes.
- *
- * If the allocation fails, this will return an error and the buffer
- * will be marked as invalid for future operations.  The existing
- * contents of the buffer will be preserved however.
- * @return 0 on success or -1 on failure
- */
-int git_buf_grow(git_buf *buf, size_t target_size);
+extern void git_buf_init(git_buf *buf, size_t initial_size);
 
 /**
  * Attempt to grow the buffer to hold at least `target_size` bytes.
  *
- * This is just like `git_buf_grow` except that even if the allocation
- * fails, the git_buf will still be left in a valid state.
+ * If the allocation fails, this will return an error.  If mark_oom is true,
+ * this will mark the buffer as invalid for future operations; if false,
+ * existing buffer content will be preserved, but calling code must handle
+ * that buffer was not expanded.
  */
-int git_buf_try_grow(git_buf *buf, size_t target_size);
+extern int git_buf_try_grow(git_buf *buf, size_t target_size, bool mark_oom);
 
-void git_buf_free(git_buf *buf);
-void git_buf_swap(git_buf *buf_a, git_buf *buf_b);
-char *git_buf_detach(git_buf *buf);
-void git_buf_attach(git_buf *buf, char *ptr, size_t asize);
+/**
+ * Grow the buffer to hold at least `target_size` bytes.
+ *
+ * If the allocation fails, this will return an error and the buffer will be
+ * marked as invalid for future operations, invaliding contents.
+ *
+ * @return 0 on success or -1 on failure
+ */
+GIT_INLINE(int) git_buf_grow(git_buf *buf, size_t target_size)
+{
+	return git_buf_try_grow(buf, target_size, true);
+}
+
+extern void git_buf_free(git_buf *buf);
+extern void git_buf_swap(git_buf *buf_a, git_buf *buf_b);
+extern char *git_buf_detach(git_buf *buf);
+extern void git_buf_attach(git_buf *buf, char *ptr, size_t asize);
 
 /**
  * Test if there have been any reallocation failures with this git_buf.
@@ -113,7 +119,7 @@ void git_buf_copy_cstr(char *data, size_t datasize, const git_buf *buf);
 
 #define git_buf_PUTS(buf, str) git_buf_put(buf, str, sizeof(str) - 1)
 
-GIT_INLINE(ssize_t) git_buf_rfind_next(git_buf *buf, char ch)
+GIT_INLINE(ssize_t) git_buf_rfind_next(const git_buf *buf, char ch)
 {
 	ssize_t idx = (ssize_t)buf->size - 1;
 	while (idx >= 0 && buf->ptr[idx] == ch) idx--;
@@ -121,15 +127,50 @@ GIT_INLINE(ssize_t) git_buf_rfind_next(git_buf *buf, char ch)
 	return idx;
 }
 
+GIT_INLINE(ssize_t) git_buf_rfind(const git_buf *buf, char ch)
+{
+	ssize_t idx = (ssize_t)buf->size - 1;
+	while (idx >= 0 && buf->ptr[idx] != ch) idx--;
+	return idx;
+}
+
+GIT_INLINE(ssize_t) git_buf_find(const git_buf *buf, char ch)
+{
+	void *found = memchr(buf->ptr, ch, buf->size);
+	return found ? (ssize_t)((const char *)found - buf->ptr) : -1;
+}
+
 /* Remove whitespace from the end of the buffer */
 void git_buf_rtrim(git_buf *buf);
 
 int git_buf_cmp(const git_buf *a, const git_buf *b);
 
-/* Fill buf with the common prefix of a array of strings */
-int git_buf_common_prefix(git_buf *buf, const git_strarray *strings);
+/* Write data as base64 encoded in buffer */
+int git_buf_put_base64(git_buf *buf, const char *data, size_t len);
 
-/* Check if buffer looks like it contains binary data */
-bool git_buf_is_binary(const git_buf *buf);
+/*
+ * Insert, remove or replace a portion of the buffer.
+ *
+ * @param buf The buffer to work with
+ *
+ * @param where The location in the buffer where the transformation
+ * should be applied.
+ *
+ * @param nb_to_remove The number of chars to be removed. 0 to not
+ * remove any character in the buffer.
+ *
+ * @param data A pointer to the data which should be inserted.
+ *
+ * @param nb_to_insert The number of chars to be inserted. 0 to not
+ * insert any character from the buffer.
+ *
+ * @return 0 or an error code.
+ */
+int git_buf_splice(
+	git_buf *buf,
+	size_t where,
+	size_t nb_to_remove,
+	const char *data,
+	size_t nb_to_insert);
 
 #endif

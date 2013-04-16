@@ -7,25 +7,27 @@
 static int show_ref__cb(git_remote_head *head, void *payload)
 {
 	char oid[GIT_OID_HEXSZ + 1] = {0};
+
+	(void)payload;
 	git_oid_fmt(oid, &head->oid);
 	printf("%s\t%s\n", oid, head->name);
 	return 0;
 }
 
-int use_unnamed(git_repository *repo, const char *url)
+static int use_unnamed(git_repository *repo, const char *url)
 {
 	git_remote *remote = NULL;
 	int error;
 
 	// Create an instance of a remote from the URL. The transport to use
 	// is detected from the URL
-	error = git_remote_new(&remote, repo, NULL, url, NULL);
+	error = git_remote_create_inmemory(&remote, repo, NULL, url);
 	if (error < 0)
 		goto cleanup;
 
 	// When connecting, the underlying code needs to know wether we
 	// want to push or fetch
-	error = git_remote_connect(remote, GIT_DIR_FETCH);
+	error = git_remote_connect(remote, GIT_DIRECTION_FETCH);
 	if (error < 0)
 		goto cleanup;
 
@@ -37,7 +39,7 @@ cleanup:
 	return error;
 }
 
-int use_remote(git_repository *repo, char *name)
+static int use_remote(git_repository *repo, char *name)
 {
 	git_remote *remote = NULL;
 	int error;
@@ -47,7 +49,7 @@ int use_remote(git_repository *repo, char *name)
 	if (error < 0)
 		goto cleanup;
 
-	error = git_remote_connect(remote, GIT_DIR_FETCH);
+	error = git_remote_connect(remote, GIT_DIRECTION_FETCH);
 	if (error < 0)
 		goto cleanup;
 
@@ -63,7 +65,12 @@ cleanup:
 
 int ls_remote(git_repository *repo, int argc, char **argv)
 {
-	int error, i;
+	int error;
+
+	if (argc < 2) {
+		fprintf(stderr, "usage: %s ls-remote <remote>\n", argv[-1]);
+		return EXIT_FAILURE;
+	}
 
 	/* If there's a ':' in the name, assume it's an URL */
 	if (strchr(argv[1], ':') != NULL) {

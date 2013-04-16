@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2012 the libgit2 contributors
+ * Copyright (C) the libgit2 contributors. All rights reserved.
  *
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
@@ -7,89 +7,75 @@
 
 #include "common.h"
 #include "utf-conv.h"
-#include "git2/windows.h"
 
-/*
- * Default codepage value
- */
-static int _active_codepage = CP_UTF8;
+#define U16_LEAD(c) (wchar_t)(((c)>>10)+0xd7c0)
+#define U16_TRAIL(c) (wchar_t)(((c)&0x3ff)|0xdc00)
 
-void gitwin_set_codepage(unsigned int codepage)
+#if 0
+void git__utf8_to_16(wchar_t *dest, size_t length, const char *src)
 {
-	_active_codepage = codepage;
-}
+	wchar_t *pDest = dest;
+	uint32_t ch;
+	const uint8_t* pSrc = (uint8_t*) src;
 
-unsigned int gitwin_get_codepage(void)
-{
-	return _active_codepage;
-}
+	assert(dest && src && length);
 
-void gitwin_set_utf8(void)
-{
-	_active_codepage = CP_UTF8;
-}
+	length--;
 
-wchar_t* gitwin_to_utf16(const char* str)
-{
-	wchar_t* ret;
-	size_t cb;
+	while(*pSrc && length > 0) {
+		ch = *pSrc++;
+		length--;
 
-	if (!str)
-		return NULL;
+		if(ch < 0xc0) {
+			/*
+			 * ASCII, or a trail byte in lead position which is treated like
+			 * a single-byte sequence for better character boundary
+			 * resynchronization after illegal sequences.
+			 */
+			*pDest++ = (wchar_t)ch;
+			continue;
+		} else if(ch < 0xe0) { /* U+0080..U+07FF */
+			if (pSrc[0]) {
+				/* 0x3080 = (0xc0 << 6) + 0x80 */
+				*pDest++ = (wchar_t)((ch << 6) + *pSrc++ - 0x3080);
+				continue;
+			}
+		} else if(ch < 0xf0) { /* U+0800..U+FFFF */
+			if (pSrc[0] && pSrc[1]) {
+				/* no need for (ch & 0xf) because the upper bits are truncated after <<12 in the cast to (UChar) */
+				/* 0x2080 = (0x80 << 6) + 0x80 */
+				ch = (ch << 12) + (*pSrc++ << 6);
+				*pDest++ = (wchar_t)(ch + *pSrc++ - 0x2080);
+				continue;
+			}
+		} else /* f0..f4 */ { /* U+10000..U+10FFFF */
+			if (length >= 1 && pSrc[0] && pSrc[1] && pSrc[2]) {
+				/* 0x3c82080 = (0xf0 << 18) + (0x80 << 12) + (0x80 << 6) + 0x80 */
+				ch = (ch << 18) + (*pSrc++ << 12);
+				ch += *pSrc++ << 6;
+				ch += *pSrc++ - 0x3c82080;
+				*(pDest++) = U16_LEAD(ch);
+				*(pDest++) = U16_TRAIL(ch);
+				length--; /* two bytes for this character */
+				continue;
+			}
+		}
 
-	cb = strlen(str) * sizeof(wchar_t);
-	if (cb == 0)
-		return (wchar_t *)git__calloc(1, sizeof(wchar_t));
-
-	/* Add space for null terminator */
-	cb += sizeof(wchar_t);
-
-	ret = (wchar_t *)git__malloc(cb);
-	if (!ret)
-		return NULL;
-
-	if (MultiByteToWideChar(_active_codepage, 0, str, -1, ret, (int)cb) == 0) {
-		giterr_set(GITERR_OS, "Could not convert string to UTF-16");
-		git__free(ret);
-		ret = NULL;
+		/* truncated character at the end */
+		*pDest++ = 0xfffd;
+		break;
 	}
 
-	return ret;
+	*pDest++ = 0x0;
+}
+#endif
+
+int git__utf8_to_16(wchar_t *dest, size_t length, const char *src)
+{
+	return MultiByteToWideChar(CP_UTF8, 0, src, -1, dest, (int)length);
 }
 
-int gitwin_append_utf16(wchar_t *buffer, const char *str, size_t len)
+int git__utf16_to_8(char *out, const wchar_t *input)
 {
-	int result = MultiByteToWideChar(_active_codepage, 0, str, -1, buffer, (int)len);
-	if (result == 0)
-		giterr_set(GITERR_OS, "Could not convert string to UTF-16");
-	return result;
-}
-
-char* gitwin_from_utf16(const wchar_t* str)
-{
-	char* ret;
-	size_t cb;
-
-	if (!str)
-		return NULL;
-
-	cb = wcslen(str) * sizeof(char);
-	if (cb == 0)
-		return (char *)git__calloc(1, sizeof(char));
-
-	/* Add space for null terminator */
-	cb += sizeof(char);
-
-	ret = (char*)git__malloc(cb);
-	if (!ret)
-		return NULL;
-
-	if (WideCharToMultiByte(_active_codepage, 0, str, -1, ret, (int)cb, NULL, NULL) == 0) {
-		giterr_set(GITERR_OS, "Could not convert string to UTF-8");
-		git__free(ret);
-		ret = NULL;
-	}
-
-	return ret;
-
+	return WideCharToMultiByte(CP_UTF8, 0, input, -1, out, GIT_WIN_PATH, NULL, NULL);
 }

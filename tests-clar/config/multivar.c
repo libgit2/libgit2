@@ -12,13 +12,11 @@ void test_config_multivar__cleanup(void)
 	cl_fixture_cleanup("config");
 }
 
-static int mv_read_cb(const char *name, const char *value, void *data)
+static int mv_read_cb(const git_config_entry *entry, void *data)
 {
 	int *n = (int *) data;
 
-	GIT_UNUSED(value);
-
-	if (!strcmp(name, _name))
+	if (!strcmp(entry->name, _name))
 		(*n)++;
 
 	return 0;
@@ -37,11 +35,11 @@ void test_config_multivar__foreach(void)
 	git_config_free(cfg);
 }
 
-static int cb(const char *val, void *data)
+static int cb(const git_config_entry *entry, void *data)
 {
 	int *n = (int *) data;
 
-	GIT_UNUSED(val);
+	GIT_UNUSED(entry);
 
 	(*n)++;
 

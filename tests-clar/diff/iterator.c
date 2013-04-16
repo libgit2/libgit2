@@ -1,6 +1,7 @@
 #include "clar_libgit2.h"
 #include "diff_helpers.h"
 #include "iterator.h"
+#include "tree.h"
 
 void test_diff_iterator__initialize(void)
 {
@@ -30,25 +31,36 @@ static void tree_iterator_test(
 	git_tree *t;
 	git_iterator *i;
 	const git_index_entry *entry;
-	int count = 0;
+	int count = 0, count_post_reset = 0;
 	git_repository *repo = cl_git_sandbox_init(sandbox);
 
 	cl_assert(t = resolve_commit_oid_to_tree(repo, treeish));
-	cl_git_pass(git_iterator_for_tree_range(&i, repo, t, start, end));
-	cl_git_pass(git_iterator_current(i, &entry));
+	cl_git_pass(git_iterator_for_tree(
+		&i, t, GIT_ITERATOR_DONT_IGNORE_CASE, start, end));
 
+	/* test loop */
+	cl_git_pass(git_iterator_current(&entry, i));
 	while (entry != NULL) {
 		if (expected_values != NULL)
 			cl_assert_equal_s(expected_values[count], entry->path);
-
 		count++;
+		cl_git_pass(git_iterator_advance(&entry, i));
+	}
 
-		cl_git_pass(git_iterator_advance(i, &entry));
+	/* test reset */
+	cl_git_pass(git_iterator_reset(i, NULL, NULL));
+	cl_git_pass(git_iterator_current(&entry, i));
+	while (entry != NULL) {
+		if (expected_values != NULL)
+			cl_assert_equal_s(expected_values[count_post_reset], entry->path);
+		count_post_reset++;
+		cl_git_pass(git_iterator_advance(&entry, i));
 	}
 
 	git_iterator_free(i);
 
-	cl_assert(expected_count == count);
+	cl_assert_equal_i(expected_count, count);
+	cl_assert_equal_i(count, count_post_reset);
 
 	git_tree_free(t);
 }
@@ -237,6 +249,104 @@ void test_diff_iterator__tree_range_empty_2(void)
 		NULL, ".aaa_empty_before", 0, NULL);
 }
 
+static void check_tree_entry(
+	git_iterator *i,
+	const char *oid,
+	const char *oid_p,
+	const char *oid_pp,
+	const char *oid_ppp)
+{
+	const git_index_entry *ie;
+	const git_tree_entry *te;
+	const git_tree *tree;
+	git_buf path = GIT_BUF_INIT;
+
+	cl_git_pass(git_iterator_current_tree_entry(&te, i));
+	cl_assert(te);
+	cl_assert(git_oid_streq(&te->oid, oid) == 0);
+
+	cl_git_pass(git_iterator_current(&ie, i));
+	cl_git_pass(git_buf_sets(&path, ie->path));
+
+	if (oid_p) {
+		git_buf_rtruncate_at_char(&path, '/');
+		cl_git_pass(git_iterator_current_parent_tree(&tree, i, path.ptr));
+		cl_assert(tree);
+		cl_assert(git_oid_streq(git_tree_id(tree), oid_p) == 0);
+	}
+
+	if (oid_pp) {
+		git_buf_rtruncate_at_char(&path, '/');
+		cl_git_pass(git_iterator_current_parent_tree(&tree, i, path.ptr));
+		cl_assert(tree);
+		cl_assert(git_oid_streq(git_tree_id(tree), oid_pp) == 0);
+	}
+
+	if (oid_ppp) {
+		git_buf_rtruncate_at_char(&path, '/');
+		cl_git_pass(git_iterator_current_parent_tree(&tree, i, path.ptr));
+		cl_assert(tree);
+		cl_assert(git_oid_streq(git_tree_id(tree), oid_ppp) == 0);
+	}
+
+	git_buf_free(&path);
+}
+
+void test_diff_iterator__tree_special_functions(void)
+{
+	git_tree *t;
+	git_iterator *i;
+	const git_index_entry *entry;
+	git_repository *repo = cl_git_sandbox_init("attr");
+	int cases = 0;
+	const char *rootoid = "ce39a97a7fb1fa90bcf5e711249c1e507476ae0e";
+
+	t = resolve_commit_oid_to_tree(
+		repo, "24fa9a9fc4e202313e24b648087495441dab432b");
+	cl_assert(t != NULL);
+
+	cl_git_pass(git_iterator_for_tree(
+		&i, t, GIT_ITERATOR_DONT_IGNORE_CASE, NULL, NULL));
+	cl_git_pass(git_iterator_current(&entry, i));
+
+	while (entry != NULL) {
+		if (strcmp(entry->path, "sub/file") == 0) {
+			cases++;
+			check_tree_entry(
+				i, "45b983be36b73c0788dc9cbcb76cbb80fc7bb057",
+				"ecb97df2a174987475ac816e3847fc8e9f6c596b",
+				rootoid, NULL);
+		}
+		else if (strcmp(entry->path, "sub/sub/subsub.txt") == 0) {
+			cases++;
+			check_tree_entry(
+				i, "9e5bdc47d6a80f2be0ea3049ad74231b94609242",
+				"4e49ba8c5b6c32ff28cd9dcb60be34df50fcc485",
+				"ecb97df2a174987475ac816e3847fc8e9f6c596b", rootoid);
+		}
+		else if (strcmp(entry->path, "subdir/.gitattributes") == 0) {
+			cases++;
+			check_tree_entry(
+				i, "99eae476896f4907224978b88e5ecaa6c5bb67a9",
+				"9fb40b6675dde60b5697afceae91b66d908c02d9",
+				rootoid, NULL);
+		}
+		else if (strcmp(entry->path, "subdir2/subdir2_test1") == 0) {
+			cases++;
+			check_tree_entry(
+				i, "dccada462d3df8ac6de596fb8c896aba9344f941",
+				"2929de282ce999e95183aedac6451d3384559c4b",
+				rootoid, NULL);
+		}
+
+		cl_git_pass(git_iterator_advance(&entry, i));
+	}
+
+	cl_assert_equal_i(4, cases);
+	git_iterator_free(i);
+	git_tree_free(t);
+}
+
 /* -- INDEX ITERATOR TESTS -- */
 
 static void index_iterator_test(
@@ -247,13 +357,15 @@ static void index_iterator_test(
 	const char **expected_names,
 	const char **expected_oids)
 {
+	git_index *index;
 	git_iterator *i;
 	const git_index_entry *entry;
 	int count = 0;
 	git_repository *repo = cl_git_sandbox_init(sandbox);
 
-	cl_git_pass(git_iterator_for_index_range(&i, repo, start, end));
-	cl_git_pass(git_iterator_current(i, &entry));
+	cl_git_pass(git_repository_index(&index, repo));
+	cl_git_pass(git_iterator_for_index(&i, index, 0, start, end));
+	cl_git_pass(git_iterator_current(&entry, i));
 
 	while (entry != NULL) {
 		if (expected_names != NULL)
@@ -266,10 +378,11 @@ static void index_iterator_test(
 		}
 
 		count++;
-		cl_git_pass(git_iterator_advance(i, &entry));
+		cl_git_pass(git_iterator_advance(&entry, i));
 	}
 
 	git_iterator_free(i);
+	git_index_free(index);
 
 	cl_assert_equal_i(expected_count, count);
 }
@@ -312,7 +425,7 @@ static const char *expected_index_oids_0[] = {
 	"45141a79a77842c59a63229403220a4e4be74e3d",
 	"4d713dc48e6b1bd75b0d61ad078ba9ca3a56745d",
 	"108bb4e7fd7b16490dc33ff7d972151e73d7166e",
-	"fe773770c5a6cc7185580c9204b1ff18a33ff3fc",
+	"a0f7217ae99f5ac3e88534f5cea267febc5fa85b",
 	"3e42ffc54a663f9401cc25843d6c0e71a33e4249",
 	"45b983be36b73c0788dc9cbcb76cbb80fc7bb057",
 	"45b983be36b73c0788dc9cbcb76cbb80fc7bb057",
@@ -343,7 +456,7 @@ static const char *expected_index_oids_range[] = {
 	"45141a79a77842c59a63229403220a4e4be74e3d",
 	"4d713dc48e6b1bd75b0d61ad078ba9ca3a56745d",
 	"108bb4e7fd7b16490dc33ff7d972151e73d7166e",
-	"fe773770c5a6cc7185580c9204b1ff18a33ff3fc",
+	"a0f7217ae99f5ac3e88534f5cea267febc5fa85b",
 };
 
 void test_diff_iterator__index_range(void)
@@ -422,17 +535,18 @@ static void workdir_iterator_test(
 {
 	git_iterator *i;
 	const git_index_entry *entry;
-	int count = 0, count_all = 0;
+	int count = 0, count_all = 0, count_all_post_reset = 0;
 	git_repository *repo = cl_git_sandbox_init(sandbox);
 
-	cl_git_pass(git_iterator_for_workdir_range(&i, repo, start, end));
-	cl_git_pass(git_iterator_current(i, &entry));
+	cl_git_pass(git_iterator_for_workdir(
+		&i, repo, GIT_ITERATOR_DONT_AUTOEXPAND, start, end));
+	cl_git_pass(git_iterator_current(&entry, i));
 
 	while (entry != NULL) {
 		int ignored = git_iterator_current_is_ignored(i);
 
 		if (S_ISDIR(entry->mode)) {
-			cl_git_pass(git_iterator_advance_into_directory(i, &entry));
+			cl_git_pass(git_iterator_advance_into(&entry, i));
 			continue;
 		}
 
@@ -446,18 +560,34 @@ static void workdir_iterator_test(
 			count++;
 		count_all++;
 
-		cl_git_pass(git_iterator_advance(i, &entry));
+		cl_git_pass(git_iterator_advance(&entry, i));
+	}
+
+	cl_git_pass(git_iterator_reset(i, NULL, NULL));
+	cl_git_pass(git_iterator_current(&entry, i));
+
+	while (entry != NULL) {
+		if (S_ISDIR(entry->mode)) {
+			cl_git_pass(git_iterator_advance_into(&entry, i));
+			continue;
+		}
+		if (expected_names != NULL)
+			cl_assert_equal_s(
+				expected_names[count_all_post_reset], entry->path);
+		count_all_post_reset++;
+		cl_git_pass(git_iterator_advance(&entry, i));
 	}
 
 	git_iterator_free(i);
 
-	cl_assert(count == expected_count);
-	cl_assert(count_all == expected_count + expected_ignores);
+	cl_assert_equal_i(expected_count, count);
+	cl_assert_equal_i(expected_count + expected_ignores, count_all);
+	cl_assert_equal_i(count_all, count_all_post_reset);
 }
 
 void test_diff_iterator__workdir_0(void)
 {
-	workdir_iterator_test("attr", NULL, NULL, 25, 2, NULL, "ign");
+	workdir_iterator_test("attr", NULL, NULL, 27, 1, NULL, "ign");
 }
 
 static const char *status_paths[] = {
@@ -474,13 +604,14 @@ static const char *status_paths[] = {
 	"subdir/current_file",
 	"subdir/modified_file",
 	"subdir/new_file",
+	"\xe8\xbf\x99",
 	NULL
 };
 
 void test_diff_iterator__workdir_1(void)
 {
 	workdir_iterator_test(
-		"status", NULL, NULL, 12, 1, status_paths, "ignored_file");
+		"status", NULL, NULL, 13, 1, status_paths, "ignored_file");
 }
 
 static const char *status_paths_range_0[] = {
@@ -527,13 +658,14 @@ static const char *status_paths_range_4[] = {
 	"subdir/current_file",
 	"subdir/modified_file",
 	"subdir/new_file",
+	"\xe8\xbf\x99",
 	NULL
 };
 
 void test_diff_iterator__workdir_1_ranged_4(void)
 {
 	workdir_iterator_test(
-		"status", "subdir/", NULL, 3, 0, status_paths_range_4, NULL);
+		"status", "subdir/", NULL, 4, 0, status_paths_range_4, NULL);
 }
 
 static const char *status_paths_range_5[] = {
@@ -551,7 +683,7 @@ void test_diff_iterator__workdir_1_ranged_5(void)
 void test_diff_iterator__workdir_1_ranged_empty_0(void)
 {
 	workdir_iterator_test(
-		"status", "z_does_not_exist", NULL,
+		"status", "\xff_does_not_exist", NULL,
 		0, 0, NULL, NULL);
 }
 
@@ -567,4 +699,227 @@ void test_diff_iterator__workdir_1_ranged_empty_2(void)
 	workdir_iterator_test(
 		"status", NULL, "aaaa_empty_before",
 		0, 0, NULL, NULL);
+}
+
+void test_diff_iterator__workdir_builtin_ignores(void)
+{
+	git_repository *repo = cl_git_sandbox_init("attr");
+	git_iterator *i;
+	const git_index_entry *entry;
+	int idx;
+	static struct {
+		const char *path;
+		bool ignored;
+	} expected[] = {
+		{ "dir/", true },
+		{ "file", false },
+		{ "ign", true },
+		{ "macro_bad", false },
+		{ "macro_test", false },
+		{ "root_test1", false },
+		{ "root_test2", false },
+		{ "root_test3", false },
+		{ "root_test4.txt", false },
+		{ "sub", false },
+		{ "sub/.gitattributes", false },
+		{ "sub/abc", false },
+		{ "sub/dir/", true },
+		{ "sub/file", false },
+		{ "sub/ign/", true },
+		{ "sub/sub", false },
+		{ "sub/sub/.gitattributes", false },
+		{ "sub/sub/dir", false }, /* file is not actually a dir */
+		{ "sub/sub/file", false },
+		{ NULL, false }
+	};
+
+	cl_git_pass(p_mkdir("attr/sub/sub/.git", 0777));
+	cl_git_mkfile("attr/sub/.git", "whatever");
+
+	cl_git_pass(git_iterator_for_workdir(
+		&i, repo, GIT_ITERATOR_DONT_AUTOEXPAND, "dir", "sub/sub/file"));
+	cl_git_pass(git_iterator_current(&entry, i));
+
+	for (idx = 0; entry != NULL; ++idx) {
+		int ignored = git_iterator_current_is_ignored(i);
+
+		cl_assert_equal_s(expected[idx].path, entry->path);
+		cl_assert_(ignored == expected[idx].ignored, expected[idx].path);
+
+		if (!ignored &&
+			(entry->mode == GIT_FILEMODE_TREE ||
+			 entry->mode == GIT_FILEMODE_COMMIT))
+		{
+			/* it is possible to advance "into" a submodule */
+			cl_git_pass(git_iterator_advance_into(&entry, i));
+		} else
+			cl_git_pass(git_iterator_advance(&entry, i));
+	}
+
+	cl_assert(expected[idx].path == NULL);
+
+	git_iterator_free(i);
+}
+
+static void check_wd_first_through_third_range(
+	git_repository *repo, const char *start, const char *end)
+{
+	git_iterator *i;
+	const git_index_entry *entry;
+	int idx;
+	static const char *expected[] = { "FIRST", "second", "THIRD", NULL };
+
+	cl_git_pass(git_iterator_for_workdir(
+		&i, repo, GIT_ITERATOR_IGNORE_CASE, start, end));
+	cl_git_pass(git_iterator_current(&entry, i));
+
+	for (idx = 0; entry != NULL; ++idx) {
+		cl_assert_equal_s(expected[idx], entry->path);
+
+		cl_git_pass(git_iterator_advance(&entry, i));
+	}
+
+	cl_assert(expected[idx] == NULL);
+
+	git_iterator_free(i);
+}
+
+void test_diff_iterator__workdir_handles_icase_range(void)
+{
+	git_repository *repo;
+
+	repo = cl_git_sandbox_init("empty_standard_repo");
+	cl_git_remove_placeholders(git_repository_path(repo), "dummy-marker.txt");
+
+	cl_git_mkfile("empty_standard_repo/before", "whatever\n");
+	cl_git_mkfile("empty_standard_repo/FIRST", "whatever\n");
+	cl_git_mkfile("empty_standard_repo/second", "whatever\n");
+	cl_git_mkfile("empty_standard_repo/THIRD", "whatever\n");
+	cl_git_mkfile("empty_standard_repo/zafter", "whatever\n");
+	cl_git_mkfile("empty_standard_repo/Zlast", "whatever\n");
+
+	check_wd_first_through_third_range(repo, "first", "third");
+	check_wd_first_through_third_range(repo, "FIRST", "THIRD");
+	check_wd_first_through_third_range(repo, "first", "THIRD");
+	check_wd_first_through_third_range(repo, "FIRST", "third");
+	check_wd_first_through_third_range(repo, "FirSt", "tHiRd");
+}
+
+static void check_tree_range(
+	git_repository *repo,
+	const char *start,
+	const char *end,
+	bool ignore_case,
+	int expected_count)
+{
+	git_tree *head;
+	git_iterator *i;
+	const git_index_entry *entry;
+	int count;
+
+	cl_git_pass(git_repository_head_tree(&head, repo));
+
+	cl_git_pass(git_iterator_for_tree(
+		&i, head,
+		ignore_case ? GIT_ITERATOR_IGNORE_CASE : GIT_ITERATOR_DONT_IGNORE_CASE,
+		start, end));
+
+	cl_git_pass(git_iterator_current(&entry, i));
+
+	for (count = 0; entry != NULL; ) {
+		++count;
+		cl_git_pass(git_iterator_advance(&entry, i));
+	}
+
+	cl_assert_equal_i(expected_count, count);
+
+	git_iterator_free(i);
+	git_tree_free(head);
+}
+
+void test_diff_iterator__tree_handles_icase_range(void)
+{
+	git_repository *repo;
+
+	repo = cl_git_sandbox_init("testrepo");
+
+	check_tree_range(repo, "B", "C", false, 0);
+	check_tree_range(repo, "B", "C", true, 1);
+	check_tree_range(repo, "b", "c", false, 1);
+	check_tree_range(repo, "b", "c", true, 1);
+
+	check_tree_range(repo, "a", "z", false, 3);
+	check_tree_range(repo, "a", "z", true, 4);
+	check_tree_range(repo, "A", "Z", false, 1);
+	check_tree_range(repo, "A", "Z", true, 4);
+	check_tree_range(repo, "a", "Z", false, 0);
+	check_tree_range(repo, "a", "Z", true, 4);
+	check_tree_range(repo, "A", "z", false, 4);
+	check_tree_range(repo, "A", "z", true, 4);
+
+	check_tree_range(repo, "new.txt", "new.txt", true, 1);
+	check_tree_range(repo, "new.txt", "new.txt", false, 1);
+	check_tree_range(repo, "README", "README", true, 1);
+	check_tree_range(repo, "README", "README", false, 1);
+}
+
+static void check_index_range(
+	git_repository *repo,
+	const char *start,
+	const char *end,
+	bool ignore_case,
+	int expected_count)
+{
+	git_index *index;
+	git_iterator *i;
+	const git_index_entry *entry;
+	int count, caps;
+	bool is_ignoring_case;
+
+	cl_git_pass(git_repository_index(&index, repo));
+
+	caps = git_index_caps(index);
+	is_ignoring_case = ((caps & GIT_INDEXCAP_IGNORE_CASE) != 0);
+
+	if (ignore_case != is_ignoring_case)
+		cl_git_pass(git_index_set_caps(index, caps ^ GIT_INDEXCAP_IGNORE_CASE));
+
+	cl_git_pass(git_iterator_for_index(&i, index, 0, start, end));
+
+	cl_assert(git_iterator_ignore_case(i) == ignore_case);
+
+	cl_git_pass(git_iterator_current(&entry, i));
+
+	for (count = 0; entry != NULL; ) {
+		++count;
+		cl_git_pass(git_iterator_advance(&entry, i));
+	}
+
+	cl_assert_equal_i(expected_count, count);
+
+	git_iterator_free(i);
+	git_index_free(index);
+}
+
+void test_diff_iterator__index_handles_icase_range(void)
+{
+	git_repository *repo;
+	git_index *index;
+	git_tree *head;
+
+	repo = cl_git_sandbox_init("testrepo");
+
+	/* reset index to match HEAD */
+	cl_git_pass(git_repository_head_tree(&head, repo));
+	cl_git_pass(git_repository_index(&index, repo));
+	cl_git_pass(git_index_read_tree(index, head));
+	cl_git_pass(git_index_write(index));
+	git_tree_free(head);
+	git_index_free(index);
+
+	/* do some ranged iterator checks toggling case sensitivity */
+	check_index_range(repo, "B", "C", false, 0);
+	check_index_range(repo, "B", "C", true, 1);
+	check_index_range(repo, "a", "z", false, 3);
+	check_index_range(repo, "a", "z", true, 4);
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2012 the libgit2 contributors
+ * Copyright (C) the libgit2 contributors. All rights reserved.
  *
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
@@ -24,11 +24,8 @@ int git_oid_fromstrn(git_oid *out, const char *str, size_t length)
 	size_t p;
 	int v;
 
-	if (length < 4)
-		return oid_error_invalid("input too short");
-
 	if (length > GIT_OID_HEXSZ)
-		length = GIT_OID_HEXSZ;
+		return oid_error_invalid("too long");
 
 	for (p = 0; p < length - 1; p += 2) {
 		v = (git__fromhex(str[p + 0]) << 4)
@@ -52,6 +49,11 @@ int git_oid_fromstrn(git_oid *out, const char *str, size_t length)
 	memset(out->id + p / 2, 0, (GIT_OID_HEXSZ - p) / 2);
 
 	return 0;
+}
+
+int git_oid_fromstrp(git_oid *out, const char *str)
+{
+	return git_oid_fromstrn(out, str, strlen(str));
 }
 
 int git_oid_fromstr(git_oid *out, const char *str)
@@ -98,10 +100,13 @@ char *git_oid_tostr(char *out, size_t n, const git_oid *oid)
 {
 	char str[GIT_OID_HEXSZ];
 
-	if (!out || n == 0 || !oid)
+	if (!out || n == 0)
 		return "";
 
 	n--; /* allow room for terminating NUL */
+
+	if (oid == NULL)
+		n = 0;
 
 	if (n > 0) {
 		git_oid_fmt(str, oid);
@@ -161,12 +166,7 @@ void git_oid_cpy(git_oid *out, const git_oid *src)
 	memcpy(out->id, src->id, sizeof(out->id));
 }
 
-int git_oid_cmp(const git_oid *a, const git_oid *b)
-{
-	return memcmp(a->id, b->id, sizeof(a->id));
-}
-
-int git_oid_ncmp(const git_oid *oid_a, const git_oid *oid_b, unsigned int len)
+int git_oid_ncmp(const git_oid *oid_a, const git_oid *oid_b, size_t len)
 {
 	const unsigned char *a = oid_a->id;
 	const unsigned char *b = oid_b->id;
@@ -301,7 +301,7 @@ void git_oid_shorten_free(git_oid_shorten *os)
  *	- Each normal node points to 16 children (one for each possible
  *	character in the oid). This is *not* stored in an array of
  *	pointers, because in a 64-bit arch this would be sucking
- *	16*sizeof(void*) = 128 bytes of memory per node, which is fucking
+ *	16*sizeof(void*) = 128 bytes of memory per node, which is
  *	insane. What we do is store Node Indexes, and use these indexes
  *	to look up each node in the om->index array. These indexes are
  *	signed shorts, so this limits the amount of unique OIDs that

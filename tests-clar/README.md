@@ -4,7 +4,7 @@ Writing Clar tests for libgit2
 For information on the Clar testing framework and a detailed introduction
 please visit:
 
-https://github.com/tanoku/clar
+https://github.com/vmg/clar
 
 
 * Write your modules and tests. Use good, meaningful names.

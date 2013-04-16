@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2012 the libgit2 contributors
+ * Copyright (C) the libgit2 contributors. All rights reserved.
  *
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
@@ -8,7 +8,6 @@
 #define INCLUDE_posix__w32_h__
 
 #include "common.h"
-#include "compat/fnmatch.h"
 #include "utf-conv.h"
 
 GIT_INLINE(int) p_link(const char *old, const char *new)
@@ -21,18 +20,16 @@ GIT_INLINE(int) p_link(const char *old, const char *new)
 
 GIT_INLINE(int) p_mkdir(const char *path, mode_t mode)
 {
-	wchar_t* buf = gitwin_to_utf16(path);
-	int ret = _wmkdir(buf);
-
+	wchar_t buf[GIT_WIN_PATH];
 	GIT_UNUSED(mode);
-
-	git__free(buf);
-	return ret;
+	git__utf8_to_16(buf, GIT_WIN_PATH, path);
+	return _wmkdir(buf);
 }
 
 extern int p_unlink(const char *path);
 extern int p_lstat(const char *file_name, struct stat *buf);
 extern int p_readlink(const char *link, char *target, size_t target_len);
+extern int p_symlink(const char *old, const char *new);
 extern int p_hide_directory__w32(const char *path);
 extern char *p_realpath(const char *orig_path, char *buffer);
 extern int p_vsnprintf(char *buffer, size_t count, const char *format, va_list argptr);
@@ -51,5 +48,14 @@ extern int p_getcwd(char *buffer_out, size_t size);
 extern int p_rename(const char *from, const char *to);
 extern int p_recv(GIT_SOCKET socket, void *buffer, size_t length, int flags);
 extern int p_send(GIT_SOCKET socket, const void *buffer, size_t length, int flags);
+extern int p_inet_pton(int af, const char* src, void* dst);
+
+/* p_lstat is almost but not quite POSIX correct.  Specifically, the use of
+ * ENOTDIR is wrong, in that it does not mean precisely that a non-directory
+ * entry was encountered.  Making it correct is potentially expensive,
+ * however, so this is a separate version of p_lstat to use when correct
+ * POSIX ENOTDIR semantics is required.
+ */
+extern int p_lstat_posixly(const char *filename, struct stat *buf);
 
 #endif

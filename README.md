@@ -11,11 +11,14 @@ libgit2 is licensed under a **very permissive license** (GPLv2 with a special Li
 This basically means that you can link it (unmodified) with any kind of software without having to
 release its source code.
 
-* Mailing list: <libgit2@librelist.org>
+* Mailing list: ~~<libgit2@librelist.org>~~
+    The libgit2 mailing list has
+    traditionally been hosted in Librelist, but Librelist is and has always
+    been a shitshow. We encourage you to [open an issue](https://github.com/libgit2/libgit2/issues)
+    on GitHub instead for any questions regarding the library.
     * Archives: <http://librelist.com/browser/libgit2/>
 * Website: <http://libgit2.github.com>
 * API documentation: <http://libgit2.github.com/libgit2>
-* Usage guide: <http://libgit2.github.com/api.html>
 
 What It Can Do
 ==================================
@@ -58,20 +61,47 @@ To install the library you can specify the install prefix by setting:
 	$ cmake .. -DCMAKE_INSTALL_PREFIX=/install/prefix
 	$ cmake --build . --target install
 
-If you want to build a universal binary for Mac OS X, CMake sets it
-all up for you if you use `-DCMAKE_OSX_ARCHITECTURES="i386;x86_64"`
-when configuring.
-
 For more advanced use or questions about CMake please read <http://www.cmake.org/Wiki/CMake_FAQ>.
 
 The following CMake variables are declared:
 
-- `INSTALL_BIN`: Where to install binaries to.
-- `INSTALL_LIB`: Where to install libraries to.
-- `INSTALL_INC`: Where to install headers to.
+- `BIN_INSTALL_DIR`: Where to install binaries to.
+- `LIB_INSTALL_DIR`: Where to install libraries to.
+- `INCLUDE_INSTALL_DIR`: Where to install headers to.
 - `BUILD_SHARED_LIBS`: Build libgit2 as a Shared Library (defaults to ON)
-- `BUILD_CLAR`: Build [Clar](https://github.com/tanoku/clar)-based test suite (defaults to ON)
+- `BUILD_CLAR`: Build [Clar](https://github.com/vmg/clar)-based test suite (defaults to ON)
 - `THREADSAFE`: Build libgit2 with threading support (defaults to OFF)
+- `STDCALL`: Build libgit2 as `stdcall`. Turn off for `cdecl` (Windows; defaults to ON)
+
+Compiler and linker options
+---------------------------
+
+CMake lets you specify a few variables to control the behavior of the
+compiler and linker. These flags are rarely used but can be useful for
+64-bit to 32-bit cross-compilation.
+
+- `CMAKE_C_FLAGS`: Set your own compiler flags
+- `CMAKE_FIND_ROOT_PATH`: Override the search path for libraries
+- `ZLIB_LIBRARY`, `OPENSSL_SSL_LIBRARY` AND `OPENSSL_CRYPTO_LIBRARY`:
+Tell CMake where to find those specific libraries
+
+MacOS X
+-------
+
+If you want to build a universal binary for Mac OS X, CMake sets it
+all up for you if you use `-DCMAKE_OSX_ARCHITECTURES="i386;x86_64"`
+when configuring.
+
+Windows
+-------
+
+You need to run the CMake commands from the Visual Studio command
+prompt, not the regular or Windows SDK one. Select the right generator
+for your version with the `-G "Visual Studio X" option.
+
+See [the wiki]
+(https://github.com/libgit2/libgit2/wiki/Building-libgit2-on-Windows)
+for more detailed instructions.
 
 Language Bindings
 ==================================
@@ -82,6 +112,8 @@ Here are the bindings to libgit2 that are currently available:
     * libqgit2, Qt bindings <https://projects.kde.org/projects/playground/libs/libqgit2/>
 * Chicken Scheme
     * chicken-git <https://wiki.call-cc.org/egg/git>
+* D
+    * dlibgit <https://github.com/AndrejMitrovic/dlibgit>
 * Delphi
     * GitForDelphi <https://github.com/libgit2/GitForDelphi>
 * Erlang
@@ -89,9 +121,9 @@ Here are the bindings to libgit2 that are currently available:
 * Go
     * go-git <https://github.com/str1ngs/go-git>
 * GObject
-    * libgit2-glib <https://github.com/nacho/libgit2-glib>
+    * libgit2-glib <https://live.gnome.org/Libgit2-glib>
 * Haskell
-    * hgit2 <https://github.com/norm2782/hgit2>
+    * hgit2 <https://github.com/fpco/gitlib>
 * Lua
     * luagit2 <https://github.com/libgit2/luagit2>
 * .NET
@@ -124,7 +156,9 @@ How Can I Contribute?
 ==================================
 
 Fork libgit2/libgit2 on GitHub, add your improvement, push it to a branch
-in your fork named for the topic, send a pull request.
+in your fork named for the topic, send a pull request. If you change the
+API or make other large changes, make a note of it in docs/rel-notes/ in a
+file named after the next release.
 
 You can also file bugs or feature requests under the libgit2 project on
 GitHub, or join us on the mailing list by sending an email to:

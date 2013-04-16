@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2012 the libgit2 contributors
+ * Copyright (C) the libgit2 contributors. All rights reserved.
  *
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
@@ -8,67 +8,40 @@
 #include "common.h"
 #include "hash.h"
 
-#if defined(PPC_SHA1)
-# include "ppc/sha1.h"
-#else
-# include "sha1.h"
-#endif
-
-struct git_hash_ctx {
-	SHA_CTX c;
-};
-
-git_hash_ctx *git_hash_new_ctx(void)
+int git_hash_buf(git_oid *out, const void *data, size_t len)
 {
-	git_hash_ctx *ctx = git__malloc(sizeof(*ctx));
+	git_hash_ctx ctx;
+	int error = 0;
 
-	if (!ctx)
-		return NULL;
+	if (git_hash_ctx_init(&ctx) < 0)
+		return -1;
 
-	SHA1_Init(&ctx->c);
+	if ((error = git_hash_update(&ctx, data, len)) >= 0)
+		error = git_hash_final(out, &ctx);
 
-	return ctx;
+	git_hash_ctx_cleanup(&ctx);
+	
+	return error;
 }
 
-void git_hash_free_ctx(git_hash_ctx *ctx)
+int git_hash_vec(git_oid *out, git_buf_vec *vec, size_t n)
 {
-	git__free(ctx);
-}
-
-void git_hash_init(git_hash_ctx *ctx)
-{
-	assert(ctx);
-	SHA1_Init(&ctx->c);
-}
-
-void git_hash_update(git_hash_ctx *ctx, const void *data, size_t len)
-{
-	assert(ctx);
-	SHA1_Update(&ctx->c, data, len);
-}
-
-void git_hash_final(git_oid *out, git_hash_ctx *ctx)
-{
-	assert(ctx);
-	SHA1_Final(out->id, &ctx->c);
-}
-
-void git_hash_buf(git_oid *out, const void *data, size_t len)
-{
-	SHA_CTX c;
-
-	SHA1_Init(&c);
-	SHA1_Update(&c, data, len);
-	SHA1_Final(out->id, &c);
-}
-
-void git_hash_vec(git_oid *out, git_buf_vec *vec, size_t n)
-{
-	SHA_CTX c;
+	git_hash_ctx ctx;
 	size_t i;
+	int error = 0;
 
-	SHA1_Init(&c);
-	for (i = 0; i < n; i++)
-		SHA1_Update(&c, vec[i].data, vec[i].len);
-	SHA1_Final(out->id, &c);
+	if (git_hash_ctx_init(&ctx) < 0)
+		return -1;
+
+	for (i = 0; i < n; i++) {
+		if ((error = git_hash_update(&ctx, vec[i].data, vec[i].len)) < 0)
+			goto done;
+	}
+
+	error = git_hash_final(out, &ctx);
+
+done:
+	git_hash_ctx_cleanup(&ctx);
+
+	return error;
 }

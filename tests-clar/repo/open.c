@@ -7,7 +7,7 @@ void test_repo_open__cleanup(void)
 	cl_git_sandbox_cleanup();
 
 	if (git_path_isdir("alternate"))
-		git_futils_rmdir_r("alternate", GIT_DIRREMOVAL_FILES_AND_DIRS);
+		git_futils_rmdir_r("alternate", NULL, GIT_RMDIR_REMOVE_FILES);
 }
 
 void test_repo_open__bare_empty_repo(void)
@@ -202,8 +202,8 @@ void test_repo_open__bad_gitlinks(void)
 		cl_git_fail(git_repository_open_ext(&repo, "alternate", 0, NULL));
 	}
 
-	git_futils_rmdir_r("invalid", GIT_DIRREMOVAL_FILES_AND_DIRS);
-	git_futils_rmdir_r("invalid2", GIT_DIRREMOVAL_FILES_AND_DIRS);
+	git_futils_rmdir_r("invalid", NULL, GIT_RMDIR_REMOVE_FILES);
+	git_futils_rmdir_r("invalid2", NULL, GIT_RMDIR_REMOVE_FILES);
 }
 
 #ifdef GIT_WIN32

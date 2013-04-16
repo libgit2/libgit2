@@ -1,15 +1,31 @@
+PLATFORM=$(shell uname -o)
+
 rm=rm -f
-CC=cc
 AR=ar cq
 RANLIB=ranlib
 LIBNAME=libgit2.a
+ifeq ($(PLATFORM),Msys)
+	CC=gcc
+else
+	CC=cc
+endif
 
 INCLUDES= -I. -Isrc -Iinclude -Ideps/http-parser -Ideps/zlib
 
-DEFINES= $(INCLUDES) -DNO_VIZ -DSTDC -DNO_GZIP -D_FILE_OFFSET_BITS=64 -D_GNU_SOURCE
-CFLAGS= -g $(DEFINES) -Wall -Wextra -fPIC -O2
+DEFINES= $(INCLUDES) -DNO_VIZ -DSTDC -DNO_GZIP -D_FILE_OFFSET_BITS=64 -D_GNU_SOURCE $(EXTRA_DEFINES)
+CFLAGS= -g $(DEFINES) -Wall -Wextra -O2 $(EXTRA_CFLAGS)
 
-SRCS = $(wildcard src/*.c) $(wildcard src/transports/*.c) $(wildcard src/unix/*.c) $(wildcard deps/http-parser/*.c) $(wildcard deps/zlib/*.c)
+SRCS = $(wildcard src/*.c) $(wildcard src/transports/*.c) $(wildcard src/xdiff/*.c) $(wildcard deps/http-parser/*.c) $(wildcard deps/zlib/*.c) src/hash/hash_generic.c
+
+ifeq ($(PLATFORM),Msys)
+	SRCS += $(wildcard src/win32/*.c) $(wildcard src/compat/*.c) deps/regex/regex.c
+	INCLUDES += -Ideps/regex
+	DEFINES += -DWIN32 -D_WIN32_WINNT=0x0501
+else
+	SRCS += $(wildcard src/unix/*.c) 
+	CFLAGS += -fPIC
+endif
+
 OBJS = $(patsubst %.c,%.o,$(SRCS))
 
 %.c.o:

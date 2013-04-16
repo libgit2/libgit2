@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2012 the libgit2 contributors
+ * Copyright (C) the libgit2 contributors. All rights reserved.
  *
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
@@ -27,8 +27,10 @@ GIT_BEGIN_DECL
  *
  * If libgit2 has been built without GIT_THREADS
  * support, this function is a no-op.
+ *
+ * @return 0 or an error code
  */
-GIT_EXTERN(void) git_threads_init(void);
+GIT_EXTERN(int) git_threads_init(void);
 
 /**
  * Shutdown the threading system.

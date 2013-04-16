@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2012 the libgit2 contributors
+ * Copyright (C) the libgit2 contributors. All rights reserved.
  *
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
@@ -38,13 +38,13 @@ GIT_INLINE(void) git_atomic_set(git_atomic *a, int val)
 #define git_mutex_unlock(a) pthread_mutex_unlock(a)
 #define git_mutex_free(a)	pthread_mutex_destroy(a)
 
-/* Pthreads condition vars -- disabled by now */
-#define git_cond unsigned int //pthread_cond_t
-#define git_cond_init(c, a)	(void)0		//pthread_cond_init(c, a)
-#define git_cond_free(c) (void)0		//pthread_cond_destroy(c)
-#define git_cond_wait(c, l)	(void)0		//pthread_cond_wait(c, l)
-#define git_cond_signal(c)	(void)0		//pthread_cond_signal(c)
-#define git_cond_broadcast(c) (void)0	//pthread_cond_broadcast(c)
+/* Pthreads condition vars */
+#define git_cond pthread_cond_t
+#define git_cond_init(c)	pthread_cond_init(c, NULL)
+#define git_cond_free(c) 	pthread_cond_destroy(c)
+#define git_cond_wait(c, l)	pthread_cond_wait(c, l)
+#define git_cond_signal(c)	pthread_cond_signal(c)
+#define git_cond_broadcast(c)	pthread_cond_broadcast(c)
 
 GIT_INLINE(int) git_atomic_inc(git_atomic *a)
 {
@@ -79,7 +79,7 @@ GIT_INLINE(int) git_atomic_dec(git_atomic *a)
 /* Pthreads Mutex */
 #define git_mutex unsigned int
 #define git_mutex_init(a) (void)0
-#define git_mutex_lock(a) (void)0
+#define git_mutex_lock(a) 0
 #define git_mutex_unlock(a) (void)0
 #define git_mutex_free(a) (void)0
 

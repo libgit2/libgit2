@@ -135,7 +135,7 @@ void test_repo_discover__0(void)
 	ensure_repository_discover(REPOSITORY_ALTERNATE_FOLDER_SUB_SUB, ceiling_dirs, sub_repository_path);
 	ensure_repository_discover(REPOSITORY_ALTERNATE_FOLDER_SUB_SUB_SUB, ceiling_dirs, repository_path);
 
-	cl_git_pass(git_futils_rmdir_r(TEMP_REPO_FOLDER, GIT_DIRREMOVAL_FILES_AND_DIRS));
+	cl_git_pass(git_futils_rmdir_r(TEMP_REPO_FOLDER, NULL, GIT_RMDIR_REMOVE_FILES));
 	git_repository_free(repo);
 	git_buf_free(&ceiling_dirs_buf);
 }

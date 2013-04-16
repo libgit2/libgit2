@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2012 the libgit2 contributors
+ * Copyright (C) the libgit2 contributors. All rights reserved.
  *
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
@@ -8,19 +8,24 @@
 #define INCLUDE_global_h__
 
 #include "mwindow.h"
+#include "hash.h"
+
+#if defined(GIT_THREADS) && defined(_MSC_VER)
+# define GIT_MEMORY_BARRIER MemoryBarrier()
+#elif defined(GIT_THREADS)
+# define GIT_MEMORY_BARRIER __sync_synchronize()
+#else
+# define GIT_MEMORY_BARRIER /* noop */
+#endif
 
 typedef struct {
-	struct {
-		char last[1024];
-	} error;
-
 	git_error *last_error;
 	git_error error_t;
-
-	git_mwindow_ctl mem_ctl;
 } git_global_st;
 
 git_global_st *git__global_state(void);
+
+extern git_mutex git__mwindow_mutex;
 
 #define GIT_GLOBAL (git__global_state())
 

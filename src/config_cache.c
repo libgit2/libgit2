@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2012 the libgit2 contributors
+ * Copyright (C) the libgit2 contributors. All rights reserved.
  *
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
@@ -24,7 +24,7 @@ struct map_data {
  *	core.eol
  *		Sets the line ending type to use in the working directory for
  *	files that have the text property set. Alternatives are lf, crlf
- *	and native, which uses the platform’s native line ending. The default
+ *	and native, which uses the platform's native line ending. The default
  *	value is native. See gitattributes(5) for more information on
  *	end-of-line conversion. 
  */

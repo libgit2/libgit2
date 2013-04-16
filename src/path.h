@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2012 the libgit2 contributors
+ * Copyright (C) the libgit2 contributors. All rights reserved.
  *
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
@@ -58,6 +58,11 @@ extern int git_path_dirname_r(git_buf *buffer, const char *path);
 extern char *git_path_basename(const char *path);
 extern int git_path_basename_r(git_buf *buffer, const char *path);
 
+/* Return the offset of the start of the basename.  Unlike the other
+ * basename functions, this returns 0 if the path is empty.
+ */
+extern size_t git_path_basename_offset(git_buf *buffer);
+
 extern const char *git_path_topdir(const char *path);
 
 /**
@@ -80,7 +85,24 @@ extern int git_path_to_dir(git_buf *path);
  */
 extern void git_path_string_to_dir(char* path, size_t size);
 
+/**
+ * Taken from git.git; returns nonzero if the given path is "." or "..".
+ */
+GIT_INLINE(int) git_path_is_dot_or_dotdot(const char *name)
+{
+	return (name[0] == '.' &&
+			  (name[1] == '\0' ||
+				(name[1] == '.' && name[2] == '\0')));
+}
+
 #ifdef GIT_WIN32
+GIT_INLINE(int) git_path_is_dot_or_dotdotW(const wchar_t *name)
+{
+	return (name[0] == L'.' &&
+			  (name[1] == L'\0' ||
+				(name[1] == L'.' && name[2] == L'\0')));
+}
+
 /**
  * Convert backslashes in path to forward slashes.
  */
@@ -130,6 +152,11 @@ extern bool git_path_isdir(const char *path);
 extern bool git_path_isfile(const char *path);
 
 /**
+ * Check if the given path is a directory, and is empty.
+ */
+extern bool git_path_is_empty_dir(const char *path);
+
+/**
  * Stat a file and/or link and set error if needed.
  */
 extern int git_path_lstat(const char *path, struct stat *st);
@@ -164,6 +191,15 @@ extern bool git_path_contains_dir(git_buf *parent, const char *subdir);
 extern bool git_path_contains_file(git_buf *dir, const char *file);
 
 /**
+ * Prepend base to unrooted path or just copy path over.
+ *
+ * This will optionally return the index into the path where the "root"
+ * is, either the end of the base directory prefix or the path root.
+ */
+extern int git_path_join_unrooted(
+	git_buf *path_out, const char *path, const char *base, ssize_t *root_at);
+
+/**
  * Clean up path, prepending base if it is not already rooted.
  */
 extern int git_path_prettify(git_buf *path_out, const char *path, const char *base);
@@ -186,6 +222,29 @@ extern int git_path_prettify_dir(git_buf *path_out, const char *path, const char
 extern int git_path_find_dir(git_buf *dir, const char *path, const char *base);
 
 /**
+ * Resolve relative references within a path.
+ *
+ * This eliminates "./" and "../" relative references inside a path,
+ * as well as condensing multiple slashes into single ones.  It will
+ * not touch the path before the "ceiling" length.
+ *
+ * Additionally, this will recognize an "c:/" drive prefix or a "xyz://" URL
+ * prefix and not touch that part of the path.
+ */
+extern int git_path_resolve_relative(git_buf *path, size_t ceiling);
+
+/**
+ * Apply a relative path to base path.
+ *
+ * Note that the base path could be a filename or a URL and this
+ * should still work.  The relative path is walked segment by segment
+ * with three rules: series of slashes will be condensed to a single
+ * slash, "." will be eaten with no change, and ".." will remove a
+ * segment from the base path.
+ */
+extern int git_path_apply_relative(git_buf *target, const char *relpath);
+
+/**
  * Walk each directory entry, except '.' and '..', calling fn(state).
  *
  * @param pathbuf buffer the function reads the initial directory
@@ -194,6 +253,7 @@ extern int git_path_find_dir(git_buf *dir, const char *path, const char *base);
  *		the input state and the second arg is pathbuf. The function
  *		may modify the pathbuf, but only by appending new text.
  * @param state to pass to fn as the first arg.
+ * @return 0 on success, GIT_EUSER on non-zero callback, or error code
  */
 extern int git_path_direach(
 	git_buf *pathbuf,
@@ -201,11 +261,12 @@ extern int git_path_direach(
 	void *state);
 
 /**
- * Sort function to order two paths.
+ * Sort function to order two paths
  */
 extern int git_path_cmp(
 	const char *name1, size_t len1, int isdir1,
-	const char *name2, size_t len2, int isdir2);
+	const char *name2, size_t len2, int isdir2,
+	int (*compare)(const char *, const char *, size_t));
 
 /**
  * Invoke callback up path directory by directory until the ceiling is
@@ -261,18 +322,33 @@ typedef struct {
 } git_path_with_stat;
 
 extern int git_path_with_stat_cmp(const void *a, const void *b);
+extern int git_path_with_stat_cmp_icase(const void *a, const void *b);
 
 /**
  * Load all directory entries along with stat info into a vector.
  *
- * This is just like git_path_dirload except that each entry in the
- * vector is a git_path_with_stat structure that contains both the
- * path and the stat info, plus directories will have a / suffixed
- * to their path name.
+ * This adds four things on top of plain `git_path_dirload`:
+ *
+ * 1. Each entry in the vector is a `git_path_with_stat` struct that
+ *    contains both the path and the stat info
+ * 2. The entries will be sorted alphabetically
+ * 3. Entries that are directories will be suffixed with a '/'
+ * 4. Optionally, you can be a start and end prefix and only elements
+ *    after the start and before the end (inclusively) will be stat'ed.
+ *
+ * @param path The directory to read from
+ * @param prefix_len The trailing part of path to prefix to entry paths
+ * @param ignore_case How to sort and compare paths with start/end limits
+ * @param start_stat As optimization, only stat values after this prefix
+ * @param end_stat As optimization, only stat values before this prefix
+ * @param contents Vector to fill with git_path_with_stat structures
  */
 extern int git_path_dirload_with_stat(
 	const char *path,
 	size_t prefix_len,
+	bool ignore_case,
+	const char *start_stat,
+	const char *end_stat,
 	git_vector *contents);
 
 #endif

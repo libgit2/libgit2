@@ -1,6 +1,6 @@
 Here is some stuff at the start
 
-This should go in one hunk
+This should go in one hunk (first)
 
 Some additional lines
 
@@ -8,7 +8,7 @@ Down here below the other lines
 
 With even more at the end
 
-Followed by a second hunk of stuff
+Followed by a second hunk of stuff (second)
 
 That happens down here
 

@@ -17,16 +17,22 @@ void test_commit_write__initialize(void)
 {
    g_repo = cl_git_sandbox_init("testrepo");
 }
+
 void test_commit_write__cleanup(void)
 {
-   git_reference_free(head);
-   git_reference_free(branch);
+	git_reference_free(head);
+	head = NULL;
 
-   git_commit_free(commit);
+	git_reference_free(branch);
+	branch = NULL;
 
-   git__free(head_old);
+	git_commit_free(commit);
+	commit = NULL;
 
-   cl_git_sandbox_cleanup();
+	git__free(head_old);
+	head_old = NULL;
+
+	cl_git_sandbox_cleanup();
 }
 
 
@@ -72,19 +78,19 @@ void test_commit_write__from_memory(void)
    /* Check attributes were set correctly */
    author1 = git_commit_author(commit);
    cl_assert(author1 != NULL);
-   cl_assert(strcmp(author1->name, committer_name) == 0);
-   cl_assert(strcmp(author1->email, committer_email) == 0);
+   cl_assert_equal_s(committer_name, author1->name);
+   cl_assert_equal_s(committer_email, author1->email);
    cl_assert(author1->when.time == 987654321);
    cl_assert(author1->when.offset == 90);
 
    committer1 = git_commit_committer(commit);
    cl_assert(committer1 != NULL);
-   cl_assert(strcmp(committer1->name, committer_name) == 0);
-   cl_assert(strcmp(committer1->email, committer_email) == 0);
+   cl_assert_equal_s(committer_name, committer1->name);
+   cl_assert_equal_s(committer_email, committer1->email);
    cl_assert(committer1->when.time == 123456789);
    cl_assert(committer1->when.offset == 60);
 
-   cl_assert(strcmp(git_commit_message(commit), commit_message) == 0);
+   cl_assert_equal_s(commit_message, git_commit_message(commit));
 }
 
 // create a root commit
@@ -106,10 +112,11 @@ void test_commit_write__root(void)
 	/* First we need to update HEAD so it points to our non-existant branch */
 	cl_git_pass(git_reference_lookup(&head, g_repo, "HEAD"));
 	cl_assert(git_reference_type(head) == GIT_REF_SYMBOLIC);
-	head_old = git__strdup(git_reference_target(head));
+	head_old = git__strdup(git_reference_symbolic_target(head));
 	cl_assert(head_old != NULL);
-
-	cl_git_pass(git_reference_set_target(head, branch_name));
+	git_reference_free(head);
+	
+	cl_git_pass(git_reference_symbolic_create(&head, g_repo, "HEAD", branch_name, 1));
 
 	cl_git_pass(git_commit_create_v(
 		&commit_id, /* out id */
@@ -134,7 +141,7 @@ void test_commit_write__root(void)
 	cl_git_pass(git_commit_lookup(&commit, g_repo, &commit_id));
 	cl_assert(git_commit_parentcount(commit) == 0);
 	cl_git_pass(git_reference_lookup(&branch, g_repo, branch_name));
-	branch_oid = git_reference_oid(branch);
+	branch_oid = git_reference_target(branch);
 	cl_git_pass(git_oid_cmp(branch_oid, &commit_id));
-	cl_assert(!strcmp(git_commit_message(commit), root_commit_message));
+	cl_assert_equal_s(root_commit_message, git_commit_message(commit));
 }

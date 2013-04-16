@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2012 the libgit2 contributors
+ * Copyright (C) the libgit2 contributors. All rights reserved.
  *
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
@@ -11,79 +11,7 @@
 #include "filter.h"
 #include "repository.h"
 #include "git2/config.h"
-
-/* Tweaked from Core Git. I wonder what we could use this for... */
-void git_text_gather_stats(git_text_stats *stats, const git_buf *text)
-{
-	size_t i;
-
-	memset(stats, 0, sizeof(*stats));
-
-	for (i = 0; i < git_buf_len(text); i++) {
-		unsigned char c = text->ptr[i];
-
-		if (c == '\r') {
-			stats->cr++;
-
-			if (i + 1 < git_buf_len(text) && text->ptr[i + 1] == '\n')
-				stats->crlf++;
-		}
-
-		else if (c == '\n')
-			stats->lf++;
-
-		else if (c == 0x85)
-			/* Unicode CR+LF */
-			stats->crlf++;
-
-		else if (c == 127)
-			/* DEL */
-			stats->nonprintable++;
-
-		else if (c <= 0x1F || (c >= 0x80 && c <= 0x9F)) {
-			switch (c) {
-				/* BS, HT, ESC and FF */
-			case '\b': case '\t': case '\033': case '\014':
-				stats->printable++;
-				break;
-			case 0:
-				stats->nul++;
-				/* fall through */
-			default:
-				stats->nonprintable++;
-			}
-		}
-
-		else
-			stats->printable++;
-	}
-
-	/* If file ends with EOF then don't count this EOF as non-printable. */
-	if (git_buf_len(text) >= 1 && text->ptr[text->size - 1] == '\032')
-		stats->nonprintable--;
-}
-
-/*
- * Fresh from Core Git
- */
-int git_text_is_binary(git_text_stats *stats)
-{
-	if (stats->nul)
-		return 1;
-
-	if ((stats->printable >> 7) < stats->nonprintable)
-		return 1;
-	/*
-	 * Other heuristics? Average line length might be relevant,
-	 * as might LF vs CR vs CRLF counts..
-	 *
-	 * NOTE! It might be normal to have a low ratio of CRLF to LF
-	 * (somebody starts with a LF-only file and edits it with an editor
-	 * that adds CRLF only to lines that are added..). But do  we
-	 * want to support CR-only? Probably not.
-	 */
-	return 0;
-}
+#include "blob.h"
 
 int git_filters_load(git_vector *filters, git_repository *repo, const char *path, int mode)
 {
@@ -95,8 +23,9 @@ int git_filters_load(git_vector *filters, git_repository *repo, const char *path
 		if (error < 0)
 			return error;
 	} else {
-		giterr_set(GITERR_INVALID, "Worktree filters are not implemented yet");
-		return -1;
+		error = git_filter_add__crlf_to_workdir(filters, repo, path);
+		if (error < 0)
+			return error;
 	}
 
 	return (int)filters->length;
@@ -119,7 +48,8 @@ void git_filters_free(git_vector *filters)
 
 int git_filters_apply(git_buf *dest, git_buf *source, git_vector *filters)
 {
-	unsigned int i, src;
+	size_t i;
+	unsigned int src;
 	git_buf *dbuffer[2];
 
 	dbuffer[0] = source;
@@ -162,4 +92,3 @@ int git_filters_apply(git_buf *dest, git_buf *source, git_vector *filters)
 
 	return 0;
 }
-

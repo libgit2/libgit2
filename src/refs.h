@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2012 the libgit2 contributors
+ * Copyright (C) the libgit2 contributors. All rights reserved.
  *
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
@@ -10,7 +10,9 @@
 #include "common.h"
 #include "git2/oid.h"
 #include "git2/refs.h"
+#include "git2/refdb.h"
 #include "strmap.h"
+#include "buffer.h"
 
 #define GIT_REFS_DIR "refs/"
 #define GIT_REFS_HEADS_DIR GIT_REFS_DIR "heads/"
@@ -27,33 +29,43 @@
 #define GIT_PACKEDREFS_FILE_MODE 0666
 
 #define GIT_HEAD_FILE "HEAD"
+#define GIT_ORIG_HEAD_FILE "ORIG_HEAD"
 #define GIT_FETCH_HEAD_FILE "FETCH_HEAD"
 #define GIT_MERGE_HEAD_FILE "MERGE_HEAD"
+#define GIT_REVERT_HEAD_FILE "REVERT_HEAD"
+#define GIT_CHERRY_PICK_HEAD_FILE "CHERRY_PICK_HEAD"
+#define GIT_BISECT_LOG_FILE "BISECT_LOG"
+#define GIT_REBASE_MERGE_DIR "rebase-merge/"
+#define GIT_REBASE_MERGE_INTERACTIVE_FILE GIT_REBASE_MERGE_DIR "interactive"
+#define GIT_REBASE_APPLY_DIR "rebase-apply/"
+#define GIT_REBASE_APPLY_REBASING_FILE GIT_REBASE_APPLY_DIR "rebasing"
+#define GIT_REBASE_APPLY_APPLYING_FILE GIT_REBASE_APPLY_DIR "applying"
 #define GIT_REFS_HEADS_MASTER_FILE GIT_REFS_HEADS_DIR "master"
+
+#define GIT_STASH_FILE "stash"
+#define GIT_REFS_STASH_FILE GIT_REFS_DIR GIT_STASH_FILE
 
 #define GIT_REFNAME_MAX 1024
 
 struct git_reference {
-	unsigned int flags;
-	git_repository *owner;
-	char *name;
-	time_t mtime;
+	git_refdb *db;
+
+	git_ref_t type;
 
 	union {
 		git_oid oid;
 		char *symbolic;
 	} target;
+	
+	char name[0];
 };
 
-typedef struct {
-	git_strmap *packfile;
-	time_t packfile_time;
-} git_refcache;
-
-void git_repository__refcache_free(git_refcache *refs);
-
-int git_reference__normalize_name(char *buffer_out, size_t out_size, const char *name);
-int git_reference__normalize_name_oid(char *buffer_out, size_t out_size, const char *name);
+int git_reference__normalize_name_lax(char *buffer_out, size_t out_size, const char *name);
+int git_reference__normalize_name(git_buf *buf, const char *name, unsigned int flags);
+int git_reference__update_terminal(git_repository *repo, const char *ref_name, const git_oid *oid);
+int git_reference__is_valid_name(const char *refname, unsigned int flags);
+int git_reference__is_branch(const char *ref_name);
+int git_reference__is_remote(const char *ref_name);
 
 /**
  * Lookup a reference by name and try to resolve to an OID.

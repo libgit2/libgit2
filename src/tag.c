@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2012 the libgit2 contributors
+ * Copyright (C) the libgit2 contributors. All rights reserved.
  *
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
@@ -22,41 +22,41 @@ void git_tag__free(git_tag *tag)
 	git__free(tag);
 }
 
-const git_oid *git_tag_id(git_tag *c)
+const git_oid *git_tag_id(const git_tag *c)
 {
-	return git_object_id((git_object *)c);
+	return git_object_id((const git_object *)c);
 }
 
-int git_tag_target(git_object **target, git_tag *t)
+int git_tag_target(git_object **target, const git_tag *t)
 {
 	assert(t);
 	return git_object_lookup(target, t->object.repo, &t->target, t->type);
 }
 
-const git_oid *git_tag_target_oid(git_tag *t)
+const git_oid *git_tag_target_id(const git_tag *t)
 {
 	assert(t);
 	return &t->target;
 }
 
-git_otype git_tag_type(git_tag *t)
+git_otype git_tag_target_type(const git_tag *t)
 {
 	assert(t);
 	return t->type;
 }
 
-const char *git_tag_name(git_tag *t)
+const char *git_tag_name(const git_tag *t)
 {
 	assert(t);
 	return t->tag_name;
 }
 
-const git_signature *git_tag_tagger(git_tag *t)
+const git_signature *git_tag_tagger(const git_tag *t)
 {
 	return t->tagger;
 }
 
-const char *git_tag_message(git_tag *t)
+const char *git_tag_message(const git_tag *t)
 {
 	assert(t);
 	return t->message;
@@ -131,7 +131,7 @@ int git_tag__parse_buffer(git_tag *tag, const char *buffer, size_t length)
 	buffer = search + 1;
 
 	tag->tagger = NULL;
-	if (*buffer != '\n') {
+	if (buffer < buffer_end && *buffer != '\n') {
 		tag->tagger = git__malloc(sizeof(git_signature));
 		GITERR_CHECK_ALLOC(tag->tagger);
 
@@ -139,16 +139,19 @@ int git_tag__parse_buffer(git_tag *tag, const char *buffer, size_t length)
 			return -1;
 	}
 
-	if( *buffer != '\n' )
-		return tag_error("No new line before message");
+	tag->message = NULL;
+	if (buffer < buffer_end) {
+		if( *buffer != '\n' )
+			return tag_error("No new line before message");
 
-	text_len = buffer_end - ++buffer;
+		text_len = buffer_end - ++buffer;
 
-	tag->message = git__malloc(text_len + 1);
-	GITERR_CHECK_ALLOC(tag->message);
+		tag->message = git__malloc(text_len + 1);
+		GITERR_CHECK_ALLOC(tag->message);
 
-	memcpy(tag->message, buffer, text_len);
-	tag->message[text_len] = '\0';
+		memcpy(tag->message, buffer, text_len);
+		tag->message[text_len] = '\0';
+	}
 
 	return 0;
 }
@@ -185,7 +188,7 @@ static int retrieve_tag_reference_oid(
 	if (git_buf_joinpath(ref_name_out, GIT_REFS_TAGS_DIR, tag_name) < 0)
 		return -1;
 
-	return git_reference_name_to_oid(oid, repo, ref_name_out->ptr);
+	return git_reference_name_to_id(oid, repo, ref_name_out->ptr);
 }
 
 static int write_tag_annotation(
@@ -196,7 +199,7 @@ static int write_tag_annotation(
 		const git_signature *tagger,
 		const char *message)
 {
-	git_buf tag = GIT_BUF_INIT, cleaned_message = GIT_BUF_INIT;
+	git_buf tag = GIT_BUF_INIT;
 	git_odb *odb;
 
 	git_oid__writebuf(&tag, "object ", git_object_id(target));
@@ -205,14 +208,8 @@ static int write_tag_annotation(
 	git_signature__writebuf(&tag, "tagger ", tagger);
 	git_buf_putc(&tag, '\n');
 
-	/* Remove comments by default */
-	if (git_message_prettify(&cleaned_message, message, 1) < 0)
+	if (git_buf_puts(&tag, message) < 0)
 		goto on_error;
-
-	if (git_buf_puts(&tag, git_buf_cstr(&cleaned_message)) < 0)
-		goto on_error;
-
-	git_buf_free(&cleaned_message);
 
 	if (git_repository_odb__weakptr(&odb, repo) < 0)
 		goto on_error;
@@ -225,7 +222,6 @@ static int write_tag_annotation(
 
 on_error:
 	git_buf_free(&tag);
-	git_buf_free(&cleaned_message);
 	giterr_set(GITERR_OBJECT, "Failed to create tag annotation.");
 	return -1;
 }
@@ -255,7 +251,7 @@ static int git_tag_create__internal(
 
 	error = retrieve_tag_reference_oid(oid, &ref_name, repo, tag_name);
 	if (error < 0 && error != GIT_ENOTFOUND)
-		return -1;
+		goto cleanup;
 
 	/** Ensure the tag name doesn't conflict with an already existing
 	 *	reference unless overwriting has explictly been requested **/
@@ -271,8 +267,9 @@ static int git_tag_create__internal(
 	} else
 		git_oid_cpy(oid, git_object_id(target));
 
-	error = git_reference_create_oid(&new_ref, repo, ref_name.ptr, oid, allow_ref_overwrite);
+	error = git_reference_create(&new_ref, repo, ref_name.ptr, oid, allow_ref_overwrite);
 
+cleanup:
 	git_reference_free(new_ref);
 	git_buf_free(&ref_name);
 	return error;
@@ -362,7 +359,7 @@ int git_tag_create_frombuffer(git_oid *oid, git_repository *repo, const char *bu
 		return -1;
 	}
 
-	error = git_reference_create_oid(&new_ref, repo, ref_name.ptr, oid, allow_ref_overwrite);
+	error = git_reference_create(&new_ref, repo, ref_name.ptr, oid, allow_ref_overwrite);
 
 	git_reference_free(new_ref);
 	git_buf_free(&ref_name);
@@ -379,18 +376,21 @@ on_error:
 
 int git_tag_delete(git_repository *repo, const char *tag_name)
 {
-	int error;
 	git_reference *tag_ref;
 	git_buf ref_name = GIT_BUF_INIT;
+	int error;
 
 	error = retrieve_tag_reference(&tag_ref, &ref_name, repo, tag_name);
 
 	git_buf_free(&ref_name);
 
 	if (error < 0)
-		return -1;
+		return error;
 
-	return git_reference_delete(tag_ref);
+	if ((error = git_reference_delete(tag_ref)) == 0)
+		git_reference_free(tag_ref);
+	
+	return error;
 }
 
 int git_tag__parse(git_tag *tag, git_odb_object *obj)
@@ -400,22 +400,52 @@ int git_tag__parse(git_tag *tag, git_odb_object *obj)
 }
 
 typedef struct {
- git_vector *taglist;
- const char *pattern;
+	git_repository *repo;
+	git_tag_foreach_cb cb;
+	void *cb_data;
+} tag_cb_data;
+
+static int tags_cb(const char *ref, void *data)
+{
+	git_oid oid;
+	tag_cb_data *d = (tag_cb_data *)data;
+
+	if (git__prefixcmp(ref, GIT_REFS_TAGS_DIR) != 0)
+		return 0; /* no tag */
+
+	if (git_reference_name_to_id(&oid, d->repo, ref) < 0)
+		return -1;
+
+	return d->cb(ref, &oid, d->cb_data);
+}
+
+int git_tag_foreach(git_repository *repo, git_tag_foreach_cb cb, void *cb_data)
+{
+	tag_cb_data data;
+
+	assert(repo && cb);
+
+	data.cb = cb;
+	data.cb_data = cb_data;
+	data.repo = repo;
+
+	return git_reference_foreach(repo, GIT_REF_OID, &tags_cb, &data);
+}
+
+typedef struct {
+	git_vector *taglist;
+	const char *pattern;
 } tag_filter_data;
 
 #define GIT_REFS_TAGS_DIR_LEN strlen(GIT_REFS_TAGS_DIR)
 
-static int tag_list_cb(const char *tag_name, void *payload)
+static int tag_list_cb(const char *tag_name, git_oid *oid, void *data)
 {
-	tag_filter_data *filter;
+	tag_filter_data *filter = (tag_filter_data *)data;
+	GIT_UNUSED(oid);
 
-	if (git__prefixcmp(tag_name, GIT_REFS_TAGS_DIR) != 0)
-		return 0;
-
-	filter = (tag_filter_data *)payload;
 	if (!*filter->pattern || p_fnmatch(filter->pattern, tag_name + GIT_REFS_TAGS_DIR_LEN, 0) == 0)
-		return git_vector_insert(filter->taglist, git__strdup(tag_name));
+		return git_vector_insert(filter->taglist, git__strdup(tag_name + GIT_REFS_TAGS_DIR_LEN));
 
 	return 0;
 }
@@ -434,7 +464,7 @@ int git_tag_list_match(git_strarray *tag_names, const char *pattern, git_reposit
 	filter.taglist = &taglist;
 	filter.pattern = pattern;
 
-	error = git_reference_foreach(repo, GIT_REF_OID|GIT_REF_PACKED, &tag_list_cb, (void *)&filter);
+	error = git_tag_foreach(repo, &tag_list_cb, (void *)&filter);
 	if (error < 0) {
 		git_vector_free(&taglist);
 		return -1;
@@ -450,22 +480,7 @@ int git_tag_list(git_strarray *tag_names, git_repository *repo)
 	return git_tag_list_match(tag_names, "", repo);
 }
 
-int git_tag_peel(git_object **tag_target, git_tag *tag)
+int git_tag_peel(git_object **tag_target, const git_tag *tag)
 {
-	int error;
-	git_object *target;
-
-	assert(tag_target && tag);
-
-	if (git_tag_target(&target, tag) < 0)
-		return -1;
-
-	if (git_object_type(target) == GIT_OBJ_TAG) {
-		error = git_tag_peel(tag_target, (git_tag *)target);
-		git_object_free(target);
-		return error;
-	}
-
-	*tag_target = target;
-	return 0;
+	return git_object_peel(tag_target, (const git_object *)tag, GIT_OBJ_ANY);
 }

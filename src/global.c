@@ -1,13 +1,18 @@
 /*
- * Copyright (C) 2009-2012 the libgit2 contributors
+ * Copyright (C) the libgit2 contributors. All rights reserved.
  *
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
  */
 #include "common.h"
 #include "global.h"
-#include "git2/threads.h" 
+#include "hash.h"
+#include "fileops.h"
+#include "git2/threads.h"
 #include "thread-utils.h"
+
+
+git_mutex git__mwindow_mutex;
 
 /**
  * Handle the global state with TLS
@@ -35,29 +40,57 @@
  * functions are not available in that case.
  */
 
+/*
+ * `git_threads_init()` allows subsystems to perform global setup,
+ * which may take place in the global scope.  An explicit memory
+ * fence exists at the exit of `git_threads_init()`.  Without this,
+ * CPU cores are free to reorder cache invalidation of `_tls_init`
+ * before cache invalidation of the subsystems' newly written global
+ * state.
+ */
 #if defined(GIT_THREADS) && defined(GIT_WIN32)
 
 static DWORD _tls_index;
 static int _tls_init = 0;
 
-void git_threads_init(void)
+int git_threads_init(void)
 {
+	int error;
+
 	if (_tls_init)
-		return;
+		return 0;
 
 	_tls_index = TlsAlloc();
-	_tls_init = 1;
+	git_mutex_init(&git__mwindow_mutex);
+
+	/* Initialize any other subsystems that have global state */
+	if ((error = git_hash_global_init()) >= 0)
+		_tls_init = 1;
+
+	if (error == 0)
+		_tls_init = 1;
+
+	GIT_MEMORY_BARRIER;
+
+	return error;
 }
 
 void git_threads_shutdown(void)
 {
 	TlsFree(_tls_index);
 	_tls_init = 0;
+	git_mutex_free(&git__mwindow_mutex);
+
+	/* Shut down any subsystems that have global state */
+	git_hash_global_shutdown();
+	git_futils_dirs_free();
 }
 
 git_global_st *git__global_state(void)
 {
 	void *ptr;
+
+	assert(_tls_init);
 
 	if ((ptr = TlsGetValue(_tls_index)) != NULL)
 		return ptr;
@@ -81,24 +114,41 @@ static void cb__free_status(void *st)
 	git__free(st);
 }
 
-void git_threads_init(void)
+int git_threads_init(void)
 {
-	if (_tls_init)
-		return;
+	int error = 0;
 
+	if (_tls_init)
+		return 0;
+
+	git_mutex_init(&git__mwindow_mutex);
 	pthread_key_create(&_tls_key, &cb__free_status);
-	_tls_init = 1;
+
+	/* Initialize any other subsystems that have global state */
+	if ((error = git_hash_global_init()) >= 0)
+		_tls_init = 1;
+
+	GIT_MEMORY_BARRIER;
+
+	return error;
 }
 
 void git_threads_shutdown(void)
 {
 	pthread_key_delete(_tls_key);
 	_tls_init = 0;
+	git_mutex_free(&git__mwindow_mutex);
+
+	/* Shut down any subsystems that have global state */
+	git_hash_global_shutdown();
+	git_futils_dirs_free();
 }
 
 git_global_st *git__global_state(void)
 {
 	void *ptr;
+
+	assert(_tls_init);
 
 	if ((ptr = pthread_getspecific(_tls_key)) != NULL)
 		return ptr;
@@ -116,14 +166,17 @@ git_global_st *git__global_state(void)
 
 static git_global_st __state;
 
-void git_threads_init(void)
+int git_threads_init(void)
 {
 	/* noop */ 
+	return 0;
 }
 
 void git_threads_shutdown(void)
 {
-	/* noop */
+	/* Shut down any subsystems that have global state */
+	git_hash_global_shutdown();
+	git_futils_dirs_free();
 }
 
 git_global_st *git__global_state(void)

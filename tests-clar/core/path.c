@@ -87,6 +87,15 @@ void test_core_path__00_dirname(void)
 	check_dirname(".git/", ".");
 
 	check_dirname(REP16("/abc"), REP15("/abc"));
+
+#ifdef GIT_WIN32
+	check_dirname("C:/path/", "C:/");
+	check_dirname("C:/path", "C:/");
+	check_dirname("//computername/path/", "//computername/");
+	check_dirname("//computername/path", "//computername/");
+	check_dirname("//computername/sub/path/", "//computername/sub");
+	check_dirname("//computername/sub/path", "//computername/sub");
+#endif
 }
 
 /* get the base name of a path */
@@ -315,7 +324,7 @@ static void check_fromurl(const char *expected_result, const char *input, int sh
 	git_buf_free(&buf);
 }
 
-#ifdef _MSC_VER
+#ifdef GIT_WIN32
 #define ABS_PATH_MARKER ""
 #else
 #define ABS_PATH_MARKER "/"
@@ -415,6 +424,57 @@ void test_core_path__13_cannot_prettify_a_non_existing_file(void)
 	cl_must_pass(git_path_exists(NON_EXISTING_FILEPATH) == false);
 	cl_assert_equal_i(GIT_ENOTFOUND, git_path_prettify(&p, NON_EXISTING_FILEPATH, NULL));
 	cl_assert_equal_i(GIT_ENOTFOUND, git_path_prettify(&p, NON_EXISTING_FILEPATH "/so-do-i", NULL));
+
+	git_buf_free(&p);
+}
+
+void test_core_path__14_apply_relative(void)
+{
+	git_buf p = GIT_BUF_INIT;
+
+	cl_git_pass(git_buf_sets(&p, "/this/is/a/base"));
+
+	cl_git_pass(git_path_apply_relative(&p, "../test"));
+	cl_assert_equal_s("/this/is/a/test", p.ptr);
+
+	cl_git_pass(git_path_apply_relative(&p, "../../the/./end"));
+	cl_assert_equal_s("/this/is/the/end", p.ptr);
+
+	cl_git_pass(git_path_apply_relative(&p, "./of/this/../the/string"));
+	cl_assert_equal_s("/this/is/the/end/of/the/string", p.ptr);
+
+	cl_git_pass(git_path_apply_relative(&p, "../../../../../.."));
+	cl_assert_equal_s("/this/", p.ptr);
+
+	cl_git_pass(git_path_apply_relative(&p, "../../../../../"));
+	cl_assert_equal_s("/", p.ptr);
+
+	cl_git_pass(git_path_apply_relative(&p, "../../../../.."));
+	cl_assert_equal_s("/", p.ptr);
+
+
+	cl_git_pass(git_buf_sets(&p, "d:/another/test"));
+
+	cl_git_pass(git_path_apply_relative(&p, "../../../../.."));
+	cl_assert_equal_s("d:/", p.ptr);
+
+	cl_git_pass(git_path_apply_relative(&p, "from/here/to/../and/./back/."));
+	cl_assert_equal_s("d:/from/here/and/back/", p.ptr);
+
+
+	cl_git_pass(git_buf_sets(&p, "https://my.url.com/test.git"));
+
+	cl_git_pass(git_path_apply_relative(&p, "../another.git"));
+	cl_assert_equal_s("https://my.url.com/another.git", p.ptr);
+
+	cl_git_pass(git_path_apply_relative(&p, "../full/path/url.patch"));
+	cl_assert_equal_s("https://my.url.com/full/path/url.patch", p.ptr);
+
+	cl_git_pass(git_path_apply_relative(&p, ".."));
+	cl_assert_equal_s("https://my.url.com/full/path/", p.ptr);
+
+	cl_git_pass(git_path_apply_relative(&p, "../../../../../"));
+	cl_assert_equal_s("https://", p.ptr);
 
 	git_buf_free(&p);
 }

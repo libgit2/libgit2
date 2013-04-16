@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2012 the libgit2 contributors
+ * Copyright (C) the libgit2 contributors. All rights reserved.
  *
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
@@ -10,9 +10,17 @@
 #include "common.h"
 #include <fcntl.h>
 #include <time.h>
+#include "fnmatch.h"
 
+#ifndef S_IFGITLINK
 #define S_IFGITLINK 0160000
 #define S_ISGITLINK(m) (((m) & S_IFMT) == S_IFGITLINK)
+#endif
+
+/* if S_ISGID is not defined, then don't try to set it */
+#ifndef S_ISGID
+#define S_ISGID 0
+#endif
 
 #if !defined(O_BINARY)
 #define O_BINARY 0
@@ -24,14 +32,13 @@ typedef int git_file;
  * Standard POSIX Methods
  *
  * All the methods starting with the `p_` prefix are
- * direct ports of the standard POSIX methods. 
+ * direct ports of the standard POSIX methods.
  *
  * Some of the methods are slightly wrapped to provide
  * saner defaults. Some of these methods are emulated
  * in Windows platforns.
  *
  * Use your manpages to check the docs on these.
- * Straightforward 
  */
 
 extern int p_read(git_file fd, void *buf, size_t cnt);
@@ -59,9 +66,18 @@ extern int p_rename(const char *from, const char *to);
 typedef int GIT_SOCKET;
 #define INVALID_SOCKET -1
 
+#define p_localtime_r localtime_r
+#define p_gmtime_r gmtime_r
+#define p_gettimeofday gettimeofday
+
 #else
 
 typedef SOCKET GIT_SOCKET;
+struct timezone;
+extern struct tm * p_localtime_r (const time_t *timer, struct tm *result);
+extern struct tm * p_gmtime_r (const time_t *timer, struct tm *result);
+extern int p_gettimeofday(struct timeval *tv, struct timezone *tz);
+
 
 #endif
 
@@ -74,6 +90,41 @@ typedef SOCKET GIT_SOCKET;
 #	include "unix/posix.h"
 #endif
 
-#define p_readdir_r(d,e,r) readdir_r(d,e,r)
+#ifdef NO_READDIR_R
+#	include <dirent.h>
+GIT_INLINE(int) p_readdir_r(DIR *dirp, struct dirent *entry, struct dirent **result)
+{
+	GIT_UNUSED(entry);
+	*result = readdir(dirp);
+	return 0;
+}
+#else /* NO_READDIR_R */
+#	define p_readdir_r(d,e,r) readdir_r(d,e,r)
+#endif
+
+#ifdef NO_ADDRINFO
+#	include <netdb.h>
+struct addrinfo {
+	struct hostent *ai_hostent;
+	struct servent *ai_servent;
+	struct sockaddr_in ai_addr_in;
+	struct sockaddr *ai_addr;
+	size_t ai_addrlen;
+	int ai_family;
+	int ai_socktype;
+	int ai_protocol;
+	long ai_port;
+	struct addrinfo *ai_next;
+};
+
+extern int p_getaddrinfo(const char *host, const char *port,
+	struct addrinfo *hints, struct addrinfo **info);
+extern void p_freeaddrinfo(struct addrinfo *info);
+extern const char *p_gai_strerror(int ret);
+#else
+#	define p_getaddrinfo(a, b, c, d) getaddrinfo(a, b, c, d)
+#	define p_freeaddrinfo(a) freeaddrinfo(a)
+#	define p_gai_strerror(c) gai_strerror(c)
+#endif /* NO_ADDRINFO */
 
 #endif

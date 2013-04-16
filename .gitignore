@@ -1,5 +1,6 @@
-/tests-clar/clar.h
-/tests-clar/clar_main.c
+/tests-clar/clar.suite
+/tests-clar/clar.suite.rule
+/tests-clar/.clarcache
 /apidocs
 /trash-*.exe
 /libgit2.pc
@@ -13,6 +14,7 @@
 .lock-wafbuild
 .waf*
 build/
+build-amiga/
 tests/tmp/
 msvc/Debug/
 msvc/Release/
@@ -26,3 +28,5 @@ CMake*
 *.cmake
 .DS_Store
 *~
+tags
+mkmf.log

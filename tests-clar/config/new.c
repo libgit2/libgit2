@@ -9,21 +9,17 @@
 void test_config_new__write_new_config(void)
 {
 	const char *out;
-	struct git_config_file *file;
 	git_config *config;
 
-	cl_git_pass(git_config_file__ondisk(&file, TEST_CONFIG));
-	cl_git_pass(git_config_new(&config));
-	cl_git_pass(git_config_add_file(config, file, 0));
+	cl_git_mkfile(TEST_CONFIG, "");
+	cl_git_pass(git_config_open_ondisk(&config, TEST_CONFIG));
 
 	cl_git_pass(git_config_set_string(config, "color.ui", "auto"));
 	cl_git_pass(git_config_set_string(config, "core.editor", "ed"));
 
 	git_config_free(config);
 
-	cl_git_pass(git_config_file__ondisk(&file, TEST_CONFIG));
-	cl_git_pass(git_config_new(&config));
-	cl_git_pass(git_config_add_file(config, file, 0));
+	cl_git_pass(git_config_open_ondisk(&config, TEST_CONFIG));
 
 	cl_git_pass(git_config_get_string(&out, config, "color.ui"));
 	cl_assert_equal_s(out, "auto");

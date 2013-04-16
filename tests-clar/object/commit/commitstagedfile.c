@@ -13,16 +13,19 @@ void test_object_commit_commitstagedfile__initialize(void)
 void test_object_commit_commitstagedfile__cleanup(void)
 {
 	git_repository_free(repo);
+	repo = NULL;
+
 	cl_fixture_cleanup("treebuilder");
 }
 
 void test_object_commit_commitstagedfile__generate_predictable_object_ids(void)
 {
 	git_index *index;
-	git_index_entry *entry;
+	const git_index_entry *entry;
 	git_oid expected_blob_oid, tree_oid, expected_tree_oid, commit_oid, expected_commit_oid;
 	git_signature *signature;
 	git_tree *tree;
+	char buffer[128];
 
 	/*
 	 * The test below replicates the following git scenario
@@ -70,9 +73,9 @@ void test_object_commit_commitstagedfile__generate_predictable_object_ids(void)
 	 */
 	cl_git_mkfile("treebuilder/test.txt", "test\n");
 	cl_git_pass(git_repository_index(&index, repo));
-	cl_git_pass(git_index_add(index, "test.txt", 0));
+	cl_git_pass(git_index_add_bypath(index, "test.txt"));
 
-	entry = git_index_get(index, 0);
+	entry = git_index_get_byindex(index, 0);
 
 	cl_assert(git_oid_cmp(&expected_blob_oid, &entry->oid) == 0);
 
@@ -98,7 +101,7 @@ void test_object_commit_commitstagedfile__generate_predictable_object_ids(void)
 	/*
 	 * Build the tree from the index
 	 */
-	cl_git_pass(git_tree_create_fromindex(&tree_oid, index));
+	cl_git_pass(git_index_write_tree(&tree_oid, index));
 
 	cl_assert(git_oid_cmp(&expected_tree_oid, &tree_oid) == 0);
 
@@ -107,6 +110,9 @@ void test_object_commit_commitstagedfile__generate_predictable_object_ids(void)
 	 */
 	cl_git_pass(git_signature_new(&signature, "nulltoken", "emeric.fermas@gmail.com", 1323847743, 60));
 	cl_git_pass(git_tree_lookup(&tree, repo, &tree_oid));
+
+	cl_assert_equal_i(16, git_message_prettify(buffer, 128, "Initial commit", 0));
+
 	cl_git_pass(git_commit_create_v(
 		&commit_oid,
 		repo,
@@ -114,7 +120,7 @@ void test_object_commit_commitstagedfile__generate_predictable_object_ids(void)
 		signature,
 		signature,
 		NULL,
-		"Initial commit",
+		buffer,
 		tree,
 		0));
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2012 the libgit2 contributors
+ * Copyright (C) the libgit2 contributors. All rights reserved.
  *
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
@@ -17,8 +17,8 @@
 struct git_commit {
 	git_object object;
 
-	git_vector parent_oids;
-	git_oid tree_oid;
+	git_vector parent_ids;
+	git_oid tree_id;
 
 	git_signature *author;
 	git_signature *committer;

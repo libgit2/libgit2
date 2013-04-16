@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2012 the libgit2 contributors
+ * Copyright (C) the libgit2 contributors. All rights reserved.
  *
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
@@ -69,7 +69,7 @@ const git_tree_cache *git_tree_cache_get(const git_tree_cache *tree, const char 
 			return NULL;
 		}
 
-		if (end == NULL || end + 1 == '\0')
+		if (end == NULL || *end + 1 == '\0')
 			return tree;
 
 		ptr = end + 1;
@@ -104,7 +104,7 @@ static int read_tree_internal(git_tree_cache **out,
 	tree->name[name_len] = '\0';
 
 	/* Blank-terminated ASCII decimal number of entries in this tree */
-	if (git__strtol32(&count, buffer, &buffer, 10) < 0 || count < -1)
+	if (git__strtol32(&count, buffer, &buffer, 10) < 0)
 		goto corrupted;
 
 	tree->entries = count;

@@ -32,7 +32,7 @@ static re_dfastate_t *create_cd_newstate (const re_dfa_t *dfa,
 
 #ifdef GAWK
 #undef MAX	/* safety */
-static int
+static size_t
 MAX(size_t a, size_t b)
 {
 	return (a > b ? a : b);

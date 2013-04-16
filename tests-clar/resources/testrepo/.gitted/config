@@ -1,7 +1,7 @@
 [core]
         repositoryformatversion = 0
         filemode = true
-        bare = true
+        bare = false
         logallrefupdates = true
 [remote "test"]
 	url = git://github.com/libgit2/libgit2

@@ -1,9 +1,31 @@
 #include "repository.h"
 #include "fileops.h"
 #include "config.h"
+#include "attr.h"
+#include "ignore.h"
+#include "git2/oid.h"
 #include <ctype.h>
 
 GIT__USE_STRMAP;
+
+const char *git_attr__true  = "[internal]__TRUE__";
+const char *git_attr__false = "[internal]__FALSE__";
+const char *git_attr__unset = "[internal]__UNSET__";
+
+git_attr_t git_attr_value(const char *attr)
+{
+	if (attr == NULL || attr == git_attr__unset)
+		return GIT_ATTR_UNSPECIFIED_T;
+
+	if (attr == git_attr__true)
+		return GIT_ATTR_TRUE_T;
+
+	if (attr == git_attr__false)
+		return GIT_ATTR_FALSE_T;
+
+	return GIT_ATTR_VALUE_T;
+}
+
 
 static int collect_attr_files(
 	git_repository *repo,
@@ -22,7 +44,7 @@ int git_attr_get(
 	int error;
 	git_attr_path path;
 	git_vector files = GIT_VECTOR_INIT;
-	unsigned int i, j;
+	size_t i, j;
 	git_attr_file *file;
 	git_attr_name attr;
 	git_attr_rule *rule;
@@ -41,8 +63,9 @@ int git_attr_get(
 	git_vector_foreach(&files, i, file) {
 
 		git_attr_file__foreach_matching_rule(file, &path, j, rule) {
-			int pos = git_vector_bsearch(&rule->assigns, &attr);
-			if (pos >= 0) {
+			size_t pos;
+
+			if (!git_vector_bsearch(&pos, &rule->assigns, &attr)) {
 				*value = ((git_attr_assignment *)git_vector_get(
 							  &rule->assigns, pos))->value;
 				goto cleanup;
@@ -74,7 +97,7 @@ int git_attr_get_many(
 	int error;
 	git_attr_path path;
 	git_vector files = GIT_VECTOR_INIT;
-	unsigned int i, j, k;
+	size_t i, j, k;
 	git_attr_file *file;
 	git_attr_rule *rule;
 	attr_get_many_info *info = NULL;
@@ -96,7 +119,7 @@ int git_attr_get_many(
 		git_attr_file__foreach_matching_rule(file, &path, j, rule) {
 
 			for (k = 0; k < num_attr; k++) {
-				int pos;
+				size_t pos;
 
 				if (info[k].found != NULL) /* already found assignment */
 					continue;
@@ -106,8 +129,7 @@ int git_attr_get_many(
 					info[k].name.name_hash = git_attr_file__name_hash(names[k]);
 				}
 
-				pos = git_vector_bsearch(&rule->assigns, &info[k].name);
-				if (pos >= 0) {
+				if (!git_vector_bsearch(&pos, &rule->assigns, &info[k].name)) {
 					info[k].found = (git_attr_assignment *)
 						git_vector_get(&rule->assigns, pos);
 					values[k] = info[k].found->value;
@@ -138,7 +160,7 @@ int git_attr_foreach(
 	int error;
 	git_attr_path path;
 	git_vector files = GIT_VECTOR_INIT;
-	unsigned int i, j, k;
+	size_t i, j, k;
 	git_attr_file *file;
 	git_attr_rule *rule;
 	git_attr_assignment *assign;
@@ -163,11 +185,15 @@ int git_attr_foreach(
 					continue;
 
 				git_strmap_insert(seen, assign->name, assign, error);
-				if (error >= 0)
-					error = callback(assign->name, assign->value, payload);
-
-				if (error != 0)
+				if (error < 0)
 					goto cleanup;
+
+				error = callback(assign->name, assign->value, payload);
+				if (error) {
+					giterr_clear();
+					error = GIT_EUSER;
+					goto cleanup;
+				}
 			}
 		}
 	}
@@ -237,30 +263,30 @@ bool git_attr_cache__is_cached(
 
 static int load_attr_file(
 	const char **data,
-	git_attr_file_stat_sig *sig,
+	git_futils_filestamp *stamp,
 	const char *filename)
 {
 	int error;
 	git_buf content = GIT_BUF_INIT;
-	struct stat st;
 
-	if (p_stat(filename, &st) < 0)
-		return GIT_ENOTFOUND;
-
-	if (sig != NULL &&
-		(git_time_t)st.st_mtime == sig->seconds &&
-		(git_off_t)st.st_size == sig->size &&
-		(unsigned int)st.st_ino == sig->ino)
-		return GIT_ENOTFOUND;
-
-	error = git_futils_readbuffer_updated(&content, filename, NULL, NULL);
+	error = git_futils_filestamp_check(stamp, filename);
 	if (error < 0)
 		return error;
 
-	if (sig != NULL) {
-		sig->seconds = (git_time_t)st.st_mtime;
-		sig->size    = (git_off_t)st.st_size;
-		sig->ino     = (unsigned int)st.st_ino;
+	/* if error == 0, then file is up to date. By returning GIT_ENOTFOUND,
+	 * we tell the caller not to reparse this file...
+	 */
+	if (!error)
+		return GIT_ENOTFOUND;
+
+	error = git_futils_readbuffer(&content, filename);
+	if (error < 0) {
+		/* convert error into ENOTFOUND so failed permissions / invalid
+		 * file type don't actually stop the operation in progress.
+		 */
+		return GIT_ENOTFOUND;
+
+		/* TODO: once warnings are available, issue a warning callback */
 	}
 
 	*data = git_buf_detach(&content);
@@ -276,14 +302,15 @@ static int load_attr_blob_from_index(
 	const char *relfile)
 {
 	int error;
+	size_t pos;
 	git_index *index;
-	git_index_entry *entry;
+	const git_index_entry *entry;
 
 	if ((error = git_repository_index__weakptr(&index, repo)) < 0 ||
-		(error = git_index_find(index, relfile)) < 0)
+		(error = git_index_find(&pos, index, relfile)) < 0)
 		return error;
 
-	entry = git_index_get(index, error);
+	entry = git_index_get_byindex(index, pos);
 
 	if (old_oid && git_oid_cmp(old_oid, &entry->oid) == 0)
 		return GIT_ENOTFOUND;
@@ -352,6 +379,7 @@ int git_attr_cache__push_file(
 	const char *filename,
 	git_attr_file_source source,
 	git_attr_file_parser parse,
+	void* parsedata,
 	git_vector *stack)
 {
 	int error = 0;
@@ -361,7 +389,7 @@ int git_attr_cache__push_file(
 	git_attr_cache *cache = git_repository_attr_cache(repo);
 	git_attr_file *file = NULL;
 	git_blob *blob = NULL;
-	git_attr_file_stat_sig st;
+	git_futils_filestamp stamp;
 
 	assert(filename && stack);
 
@@ -383,12 +411,10 @@ int git_attr_cache__push_file(
 	/* if not in cache, load data, parse, and cache */
 
 	if (source == GIT_ATTR_FILE_FROM_FILE) {
-		if (file)
-			memcpy(&st, &file->cache_data.st, sizeof(st));
-		else
-			memset(&st, 0, sizeof(st));
+		git_futils_filestamp_set(
+			&stamp, file ? &file->cache_data.stamp : NULL);
 
-		error = load_attr_file(&content, &st, filename);
+		error = load_attr_file(&content, &stamp, filename);
 	} else {
 		error = load_attr_blob_from_index(&content, &blob,
 			repo, file ? &file->cache_data.oid : NULL, relfile);
@@ -403,14 +429,19 @@ int git_attr_cache__push_file(
 		goto finish;
 	}
 
-	if (!file &&
-		(error = git_attr_file__new(&file, source, relfile, &cache->pool)) < 0)
+	/* if we got here, we have to parse and/or reparse the file */
+	if (file)
+		git_attr_file__clear_rules(file);
+	else {
+		error = git_attr_file__new(&file, source, relfile, &cache->pool);
+		if (error < 0)
+			goto finish;
+	}
+
+	if (parse && (error = parse(repo, parsedata, content, file)) < 0)
 		goto finish;
 
-	if (parse && (error = parse(repo, content, file)) < 0)
-		goto finish;
-
-	git_strmap_insert(cache->files, file->key, file, error);
+	git_strmap_insert(cache->files, file->key, file, error); //-V595
 	if (error > 0)
 		error = 0;
 
@@ -418,7 +449,7 @@ int git_attr_cache__push_file(
 	if (blob)
 		git_oid_cpy(&file->cache_data.oid, git_object_id((git_object *)blob));
 	else
-		memcpy(&file->cache_data.st, &st, sizeof(st));
+		git_futils_filestamp_set(&file->cache_data.stamp, &stamp);
 
 finish:
 	/* push file onto vector if we found one*/
@@ -439,7 +470,7 @@ finish:
 }
 
 #define push_attr_file(R,S,B,F) \
-	git_attr_cache__push_file((R),(B),(F),GIT_ATTR_FILE_FROM_FILE,git_attr_file__parse_buffer,(S))
+	git_attr_cache__push_file((R),(B),(F),GIT_ATTR_FILE_FROM_FILE,git_attr_file__parse_buffer,NULL,(S))
 
 typedef struct {
 	git_repository *repo;
@@ -488,7 +519,7 @@ static int push_one_attr(void *ref, git_buf *path)
 	for (i = 0; !error && i < n_src; ++i)
 		error = git_attr_cache__push_file(
 			info->repo, path->ptr, GIT_ATTR_FILE, src[i],
-			git_attr_file__parse_buffer, info->files);
+			git_attr_file__parse_buffer, NULL, info->files);
 
 	return error;
 }
@@ -550,8 +581,10 @@ static int collect_attr_files(
 		error = git_futils_find_system_file(&dir, GIT_ATTR_FILE_SYSTEM);
 		if (!error)
 			error = push_attr_file(repo, files, NULL, dir.ptr);
-		else if (error == GIT_ENOTFOUND)
+		else if (error == GIT_ENOTFOUND) {
+			giterr_clear();
 			error = 0;
+		}
 	}
 
  cleanup:
@@ -562,6 +595,29 @@ static int collect_attr_files(
 	return error;
 }
 
+static int attr_cache__lookup_path(
+	const char **out, git_config *cfg, const char *key, const char *fallback)
+{
+	git_buf buf = GIT_BUF_INIT;
+	int error;
+
+	if (!(error = git_config_get_string(out, cfg, key)))
+		return 0;
+
+	if (error == GIT_ENOTFOUND) {
+		giterr_clear();
+		error = 0;
+
+		if (!git_futils_find_xdg_file(&buf, fallback))
+			*out = git_buf_detach(&buf);
+		else
+			*out = NULL;
+
+		git_buf_free(&buf);
+	}
+
+	return error;
+}
 
 int git_attr_cache__init(git_repository *repo)
 {
@@ -576,15 +632,15 @@ int git_attr_cache__init(git_repository *repo)
 	if (git_repository_config__weakptr(&cfg, repo) < 0)
 		return -1;
 
-	ret = git_config_get_string(&cache->cfg_attr_file, cfg, GIT_ATTR_CONFIG);
-	if (ret < 0 && ret != GIT_ENOTFOUND)
+	ret = attr_cache__lookup_path(
+		&cache->cfg_attr_file, cfg, GIT_ATTR_CONFIG, GIT_ATTR_FILE_XDG);
+	if (ret < 0)
 		return ret;
 
-	ret = git_config_get_string(&cache->cfg_excl_file, cfg, GIT_IGNORE_CONFIG);
-	if (ret < 0 && ret != GIT_ENOTFOUND)
+	ret = attr_cache__lookup_path(
+		&cache->cfg_excl_file, cfg, GIT_IGNORE_CONFIG, GIT_IGNORE_FILE_XDG);
+	if (ret < 0)
 		return ret;
-
-	giterr_clear();
 
 	/* allocate hashtable for attribute and ignore file contents */
 	if (cache->files == NULL) {

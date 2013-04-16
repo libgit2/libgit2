@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2012 the libgit2 contributors
+ * Copyright (C) the libgit2 contributors. All rights reserved.
  *
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
@@ -77,11 +77,63 @@ static int create_object(git_object **object_out, git_otype type)
 	return 0;
 }
 
+int git_object__from_odb_object(
+	git_object **object_out,
+	git_repository *repo,
+	git_odb_object *odb_obj,
+	git_otype type)
+{
+	int error;
+	git_object *object = NULL;
+
+	if (type != GIT_OBJ_ANY && type != odb_obj->raw.type) {
+		giterr_set(GITERR_INVALID, "The requested type does not match the type in the ODB");
+		return GIT_ENOTFOUND;
+	}
+
+	type = odb_obj->raw.type;
+
+	if ((error = create_object(&object, type)) < 0)
+		return error;
+
+	/* Initialize parent object */
+	git_oid_cpy(&object->cached.oid, &odb_obj->cached.oid);
+	object->repo = repo;
+
+	switch (type) {
+	case GIT_OBJ_COMMIT:
+		error = git_commit__parse((git_commit *)object, odb_obj);
+		break;
+
+	case GIT_OBJ_TREE:
+		error = git_tree__parse((git_tree *)object, odb_obj);
+		break;
+
+	case GIT_OBJ_TAG:
+		error = git_tag__parse((git_tag *)object, odb_obj);
+		break;
+
+	case GIT_OBJ_BLOB:
+		error = git_blob__parse((git_blob *)object, odb_obj);
+		break;
+
+	default:
+		break;
+	}
+
+	if (error < 0)
+		git_object__free(object);
+	else
+		*object_out = git_cache_try_store(&repo->objects, object);
+
+	return error;
+}
+
 int git_object_lookup_prefix(
 	git_object **object_out,
 	git_repository *repo,
 	const git_oid *id,
-	unsigned int len,
+	size_t len,
 	git_otype type)
 {
 	git_object *object = NULL;
@@ -109,7 +161,7 @@ int git_object_lookup_prefix(
 		if (object != NULL) {
 			if (type != GIT_OBJ_ANY && type != object->type) {
 				git_object_free(object);
-				giterr_set(GITERR_ODB, "The given type does not match the type in ODB");
+				giterr_set(GITERR_INVALID, "The requested type does not match the type in ODB");
 				return GIT_ENOTFOUND;
 			}
 
@@ -148,51 +200,11 @@ int git_object_lookup_prefix(
 	if (error < 0)
 		return error;
 
-	if (type != GIT_OBJ_ANY && type != odb_obj->raw.type) {
-		git_odb_object_free(odb_obj);
-		giterr_set(GITERR_ODB, "The given type does not match the type on the ODB");
-		return GIT_ENOTFOUND;
-	}
-
-	type = odb_obj->raw.type;
-
-	if (create_object(&object, type) < 0)
-		return -1;
-
-	/* Initialize parent object */
-	git_oid_cpy(&object->cached.oid, &odb_obj->cached.oid);
-	object->repo = repo;
-
-	switch (type) {
-	case GIT_OBJ_COMMIT:
-		error = git_commit__parse((git_commit *)object, odb_obj);
-		break;
-
-	case GIT_OBJ_TREE:
-		error = git_tree__parse((git_tree *)object, odb_obj);
-		break;
-
-	case GIT_OBJ_TAG:
-		error = git_tag__parse((git_tag *)object, odb_obj);
-		break;
-
-	case GIT_OBJ_BLOB:
-		error = git_blob__parse((git_blob *)object, odb_obj);
-		break;
-
-	default:
-		break;
-	}
+	error = git_object__from_odb_object(object_out, repo, odb_obj, type);
 
 	git_odb_object_free(odb_obj);
 
-	if (error < 0) {
-		git_object__free(object);
-		return -1;
-	}
-
-	*object_out = git_cache_try_store(&repo->objects, object);
-	return 0;
+	return error;
 }
 
 int git_object_lookup(git_object **object_out, git_repository *repo, const git_oid *id, git_otype type) {
@@ -292,42 +304,101 @@ size_t git_object__size(git_otype type)
 	return git_objects_table[type].size;
 }
 
-int git_object__resolve_to_type(git_object **obj, git_otype type)
+static int dereference_object(git_object **dereferenced, git_object *obj)
 {
-	int error = 0;
-	git_object *scan, *next;
+	git_otype type = git_object_type(obj);
 
-	if (type == GIT_OBJ_ANY)
-		return 0;
+	switch (type) {
+	case GIT_OBJ_COMMIT:
+		return git_commit_tree((git_tree **)dereferenced, (git_commit*)obj);
 
-	scan = *obj;
+	case GIT_OBJ_TAG:
+		return git_tag_target(dereferenced, (git_tag*)obj);
 
-	while (!error && scan && git_object_type(scan) != type) {
+	case GIT_OBJ_BLOB:
+		return GIT_ENOTFOUND;
 
-		switch (git_object_type(scan)) {
-		case GIT_OBJ_COMMIT:
+	case GIT_OBJ_TREE:
+		return GIT_EAMBIGUOUS;
+
+	default:
+		return GIT_EINVALIDSPEC;
+	}
+}
+
+static int peel_error(int error, const git_oid *oid, git_otype type)
+{
+	const char *type_name;
+	char hex_oid[GIT_OID_HEXSZ + 1];
+
+	type_name = git_object_type2string(type);
+
+	git_oid_fmt(hex_oid, oid);
+	hex_oid[GIT_OID_HEXSZ] = '\0';
+
+	giterr_set(GITERR_OBJECT, "The git_object of id '%s' can not be "
+		"successfully peeled into a %s (git_otype=%i).", hex_oid, type_name, type);
+
+	return error;
+}
+
+int git_object_peel(
+	git_object **peeled,
+	const git_object *object,
+	git_otype target_type)
+{
+	git_object *source, *deref = NULL;
+	int error;
+
+	if (target_type != GIT_OBJ_TAG && 
+		target_type != GIT_OBJ_COMMIT && 
+		target_type != GIT_OBJ_TREE && 
+		target_type != GIT_OBJ_BLOB && 
+		target_type != GIT_OBJ_ANY)
+			return GIT_EINVALIDSPEC;
+
+	assert(object && peeled);
+
+	if (git_object_type(object) == target_type)
+		return git_object_dup(peeled, (git_object *)object);
+
+	source = (git_object *)object;
+
+	while (!(error = dereference_object(&deref, source))) {
+
+		if (source != object)
+			git_object_free(source);
+
+		if (git_object_type(deref) == target_type) {
+			*peeled = deref;
+			return 0;
+		}
+
+		if (target_type == GIT_OBJ_ANY &&
+			git_object_type(deref) != git_object_type(object))
 		{
-			git_tree *tree = NULL;
-			error = git_commit_tree(&tree, (git_commit *)scan);
-			next = (git_object *)tree;
-			break;
+			*peeled = deref;
+			return 0;
 		}
 
-		case GIT_OBJ_TAG:
-			error = git_tag_target(&next, (git_tag *)scan);
-			break;
-
-		default:
-			giterr_set(GITERR_REFERENCE, "Object does not resolve to type");
-			error = -1;
-			next = NULL;
-			break;
-		}
-
-		git_object_free(scan);
-		scan = next;
+		source = deref;
+		deref = NULL;
 	}
 
-	*obj = scan;
+	if (source != object)
+		git_object_free(source);
+
+	git_object_free(deref);
+
+	if (error)
+		error = peel_error(error, git_object_id(object), target_type);
+
 	return error;
+}
+
+int git_object_dup(git_object **dest, git_object *source)
+{
+	git_cached_obj_incref(source);
+	*dest = source;
+	return 0;
 }

@@ -6,7 +6,7 @@ static void assert_message_prettifying(char *expected_output, char *input, int s
 {
 	git_buf prettified_message = GIT_BUF_INIT;
 
-	git_message_prettify(&prettified_message, input, strip_comments);
+	git_message__prettify(&prettified_message, input, strip_comments);
 	cl_assert_equal_s(expected_output, git_buf_cstr(&prettified_message));
 
 	git_buf_free(&prettified_message);
@@ -168,4 +168,69 @@ void test_object_message__keep_comments(void)
 	assert_message_prettifying(ttt "\n" "# comment\n", ttt "\n" "# comment\n", 0);
 	assert_message_prettifying("# comment\n" ttt "\n", "# comment\n" ttt "\n", 0);
 	assert_message_prettifying(ttt "\n" "# comment\n" ttt "\n", ttt "\n" "# comment\n" ttt "\n", 0);
+}
+
+void test_object_message__message_prettify(void)
+{
+	char buffer[100];
+
+	cl_assert(git_message_prettify(buffer, sizeof(buffer), "", 0) == 1);
+	cl_assert_equal_s(buffer, "");
+	cl_assert(git_message_prettify(buffer, sizeof(buffer), "", 1) == 1);
+	cl_assert_equal_s(buffer, "");
+
+	cl_assert_equal_i(7, git_message_prettify(buffer, sizeof(buffer), "Short", 0));
+	cl_assert_equal_s("Short\n", buffer);
+	cl_assert_equal_i(7, git_message_prettify(buffer, sizeof(buffer), "Short", 1));
+	cl_assert_equal_s("Short\n", buffer);
+
+	cl_assert(git_message_prettify(buffer, sizeof(buffer), "This is longer\nAnd multiline\n# with some comments still in\n", 0) > 0);
+	cl_assert_equal_s(buffer, "This is longer\nAnd multiline\n# with some comments still in\n");
+
+	cl_assert(git_message_prettify(buffer, sizeof(buffer), "This is longer\nAnd multiline\n# with some comments still in\n", 1) > 0);
+	cl_assert_equal_s(buffer, "This is longer\nAnd multiline\n");
+
+	/* try out overflow */
+	cl_assert(git_message_prettify(buffer, sizeof(buffer),
+		"1234567890" "1234567890" "1234567890" "1234567890" "1234567890"
+		"1234567890" "1234567890" "1234567890" "1234567890" "12345678",
+		0) > 0);
+	cl_assert_equal_s(buffer,
+		"1234567890" "1234567890" "1234567890" "1234567890" "1234567890"
+		"1234567890" "1234567890" "1234567890" "1234567890" "12345678\n");
+
+	cl_assert(git_message_prettify(buffer, sizeof(buffer),
+		"1234567890" "1234567890" "1234567890" "1234567890" "1234567890"
+		"1234567890" "1234567890" "1234567890" "1234567890" "12345678\n",
+		0) > 0);
+	cl_assert_equal_s(buffer,
+		"1234567890" "1234567890" "1234567890" "1234567890" "1234567890"
+		"1234567890" "1234567890" "1234567890" "1234567890" "12345678\n");
+
+	cl_git_fail(git_message_prettify(buffer, sizeof(buffer),
+		"1234567890" "1234567890" "1234567890" "1234567890" "1234567890"
+		"1234567890" "1234567890" "1234567890" "1234567890" "123456789",
+		0));
+	cl_git_fail(git_message_prettify(buffer, sizeof(buffer),
+		"1234567890" "1234567890" "1234567890" "1234567890" "1234567890"
+		"1234567890" "1234567890" "1234567890" "1234567890" "123456789\n",
+		0));
+	cl_git_fail(git_message_prettify(buffer, sizeof(buffer),
+		"1234567890" "1234567890" "1234567890" "1234567890" "1234567890"
+		"1234567890" "1234567890" "1234567890" "1234567890" "1234567890",
+		0));
+	cl_git_fail(git_message_prettify(buffer, sizeof(buffer),
+		"1234567890" "1234567890" "1234567890" "1234567890" "1234567890"
+		"1234567890" "1234567890" "1234567890" "1234567890" "1234567890""x",
+		0));
+
+	cl_assert(git_message_prettify(buffer, sizeof(buffer),
+		"1234567890" "1234567890" "1234567890" "1234567890" "1234567890\n"
+		"# 1234567890" "1234567890" "1234567890" "1234567890" "1234567890\n"
+		"1234567890",
+		1) > 0);
+
+	cl_assert(git_message_prettify(NULL, 0, "", 0) == 1);
+	cl_assert(git_message_prettify(NULL, 0, "Short test", 0) == 12);
+	cl_assert(git_message_prettify(NULL, 0, "Test\n# with\nComments", 1) == 15);
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2012 the libgit2 contributors
+ * Copyright (C) the libgit2 contributors. All rights reserved.
  *
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
@@ -50,6 +50,7 @@ static int lock_file(git_filebuf *file, int flags)
 		if (flags & GIT_FILEBUF_FORCE)
 			p_unlink(file->path_lock);
 		else {
+			giterr_clear(); /* actual OS error code just confuses */
 			giterr_set(GITERR_OS,
 				"Failed to lock file '%s' for writing", file->path_lock);
 			return -1;
@@ -72,7 +73,7 @@ static int lock_file(git_filebuf *file, int flags)
 	if ((flags & GIT_FILEBUF_APPEND) && git_path_exists(file->path_original) == true) {
 		git_file source;
 		char buffer[2048];
-		size_t read_bytes;
+		ssize_t read_bytes;
 
 		source = p_open(file->path_original, O_RDONLY);
 		if (source < 0) {
@@ -82,13 +83,18 @@ static int lock_file(git_filebuf *file, int flags)
 			return -1;
 		}
 
-		while ((read_bytes = p_read(source, buffer, 2048)) > 0) {
+		while ((read_bytes = p_read(source, buffer, sizeof(buffer))) > 0) {
 			p_write(file->fd, buffer, read_bytes);
-			if (file->digest)
-				git_hash_update(file->digest, buffer, read_bytes);
+			if (file->compute_digest)
+				git_hash_update(&file->digest, buffer, read_bytes);
 		}
 
 		p_close(source);
+
+		if (read_bytes < 0) {
+			giterr_set(GITERR_OS, "Failed to read file '%s'", file->path_original);
+			return -1;
+		}
 	}
 
 	return 0;
@@ -102,8 +108,10 @@ void git_filebuf_cleanup(git_filebuf *file)
 	if (file->fd_is_open && file->path_lock && git_path_exists(file->path_lock))
 		p_unlink(file->path_lock);
 
-	if (file->digest)
-		git_hash_free_ctx(file->digest);
+	if (file->compute_digest) {
+		git_hash_ctx_cleanup(&file->digest);
+		file->compute_digest = 0;
+	}
 
 	if (file->buffer)
 		git__free(file->buffer);
@@ -130,6 +138,11 @@ GIT_INLINE(int) flush_buffer(git_filebuf *file)
 	return result;
 }
 
+int git_filebuf_flush(git_filebuf *file)
+{
+	return flush_buffer(file);
+}
+
 static int write_normal(git_filebuf *file, void *source, size_t len)
 {
 	if (len > 0) {
@@ -138,8 +151,8 @@ static int write_normal(git_filebuf *file, void *source, size_t len)
 			return -1;
 		}
 
-		if (file->digest)
-			git_hash_update(file->digest, source, len);
+		if (file->compute_digest)
+			git_hash_update(&file->digest, source, len);
 	}
 
 	return 0;
@@ -175,8 +188,8 @@ static int write_deflate(git_filebuf *file, void *source, size_t len)
 
 		assert(zs->avail_in == 0);
 
-		if (file->digest)
-			git_hash_update(file->digest, source, len);
+		if (file->compute_digest)
+			git_hash_update(&file->digest, source, len);
 	}
 
 	return 0;
@@ -210,8 +223,10 @@ int git_filebuf_open(git_filebuf *file, const char *path, int flags)
 
 	/* If we are hashing on-write, allocate a new hash context */
 	if (flags & GIT_FILEBUF_HASH_CONTENTS) {
-		file->digest = git_hash_new_ctx();
-		GITERR_CHECK_ALLOC(file->digest);
+		file->compute_digest = 1;
+
+		if (git_hash_ctx_init(&file->digest) < 0)
+			goto cleanup;
 	}
 
 	compression = flags >> GIT_FILEBUF_DEFLATE_SHIFT;
@@ -280,16 +295,16 @@ cleanup:
 
 int git_filebuf_hash(git_oid *oid, git_filebuf *file)
 {
-	assert(oid && file && file->digest);
+	assert(oid && file && file->compute_digest);
 
 	flush_buffer(file);
 
 	if (verify_last_error(file) < 0)
 		return -1;
 
-	git_hash_final(oid, file->digest);
-	git_hash_free_ctx(file->digest);
-	file->digest = NULL;
+	git_hash_final(oid, &file->digest);
+	git_hash_ctx_cleanup(&file->digest);
+	file->compute_digest = 0;
 
 	return 0;
 }
@@ -314,9 +329,14 @@ int git_filebuf_commit(git_filebuf *file, mode_t mode)
 	if (verify_last_error(file) < 0)
 		goto on_error;
 
-	p_close(file->fd);
-	file->fd = -1;
 	file->fd_is_open = false;
+
+	if (p_close(file->fd) < 0) {
+		giterr_set(GITERR_OS, "Failed to close file at '%s'", file->path_lock);
+		goto on_error;
+	}
+
+	file->fd = -1;
 
 	if (p_chmod(file->path_lock, mode)) {
 		giterr_set(GITERR_OS, "Failed to set attributes for file at '%s'", file->path_lock);
@@ -450,3 +470,26 @@ int git_filebuf_printf(git_filebuf *file, const char *format, ...)
 	return res;
 }
 
+int git_filebuf_stats(time_t *mtime, size_t *size, git_filebuf *file)
+{
+	int res;
+	struct stat st;
+
+	if (file->fd_is_open)
+		res = p_fstat(file->fd, &st);
+	else
+		res = p_stat(file->path_original, &st);
+
+	if (res < 0) {
+		giterr_set(GITERR_OS, "Could not get stat info for '%s'",
+			file->path_original);
+		return res;
+	}
+
+	if (mtime)
+		*mtime = st.st_mtime;
+	if (size)
+		*size = (size_t)st.st_size;
+
+	return 0;
+}

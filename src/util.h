@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2012 the libgit2 contributors
+ * Copyright (C) the libgit2 contributors. All rights reserved.
  *
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
@@ -12,6 +12,9 @@
 #define MSB(x, bits) ((x) & (~0ULL << (bitsizeof(x) - (bits))))
 #ifndef min
 # define min(a,b) ((a) < (b) ? (a) : (b))
+#endif
+#ifndef max
+# define max(a,b) ((a) > (b) ? (a) : (b))
 #endif
 
 /*
@@ -42,22 +45,28 @@ GIT_INLINE(char *) git__strdup(const char *str)
 
 GIT_INLINE(char *) git__strndup(const char *str, size_t n)
 {
-	size_t length;
+	size_t length = 0;
 	char *ptr;
 
-	length = strlen(str);
-	if (n < length)
-		length = n;
+	while (length < n && str[length])
+		++length;
 
-	ptr = (char*)malloc(length + 1);
-	if (!ptr) {
-		giterr_set_oom();
-		return NULL;
-	}
+	ptr = (char*)git__malloc(length + 1);
 
-	memcpy(ptr, str, length);
+	if (length)
+		memcpy(ptr, str, length);
+
 	ptr[length] = '\0';
 
+	return ptr;
+}
+
+/* NOTE: This doesn't do null or '\0' checking.  Watch those boundaries! */
+GIT_INLINE(char *) git__substrdup(const char *start, size_t n)
+{
+	char *ptr = (char*)git__malloc(n+1);
+	memcpy(ptr, start, n);
+	ptr[n] = '\0';
 	return ptr;
 }
 
@@ -70,8 +79,20 @@ GIT_INLINE(void *) git__realloc(void *ptr, size_t size)
 
 #define git__free(ptr) free(ptr)
 
+#define STRCMP_CASESELECT(IGNORE_CASE, STR1, STR2) \
+	((IGNORE_CASE) ? strcasecmp((STR1), (STR2)) : strcmp((STR1), (STR2)))
+
+#define CASESELECT(IGNORE_CASE, ICASE, CASE) \
+	((IGNORE_CASE) ? (ICASE) : (CASE))
+
 extern int git__prefixcmp(const char *str, const char *prefix);
+extern int git__prefixcmp_icase(const char *str, const char *prefix);
 extern int git__suffixcmp(const char *str, const char *suffix);
+
+GIT_INLINE(int) git__signum(int val)
+{
+	return ((val > 0) - (val < 0));
+}
 
 extern int git__strtol32(int32_t *n, const char *buff, const char **end_buf, int base);
 extern int git__strtol64(int64_t *n, const char *buff, const char **end_buf, int base);
@@ -94,6 +115,7 @@ GIT_INLINE(int) git__is_sizet(git_off_t p)
 #endif
 
 extern char *git__strtok(char **end, const char *sep);
+extern char *git__strsep(char **end, const char *sep);
 
 extern void git__strntolower(char *str, size_t len);
 extern void git__strtolower(char *str);
@@ -105,21 +127,63 @@ GIT_INLINE(const char *) git__next_line(const char *s)
 	return s;
 }
 
-extern void git__tsort(void **dst, size_t size, int (*cmp)(const void *, const void *));
+GIT_INLINE(const void *) git__memrchr(const void *s, int c, size_t n)
+{
+	const unsigned char *cp;
+
+	if (n != 0) {
+		cp = (unsigned char *)s + n;
+		do {
+			if (*(--cp) == (unsigned char)c)
+				return cp;
+		} while (--n != 0);
+	}
+
+	return NULL;
+}
+
+typedef int (*git__tsort_cmp)(const void *a, const void *b);
+
+extern void git__tsort(void **dst, size_t size, git__tsort_cmp cmp);
+
+typedef int (*git__sort_r_cmp)(const void *a, const void *b, void *payload);
+
+extern void git__tsort_r(
+	void **dst, size_t size, git__sort_r_cmp cmp, void *payload);
+
+extern void git__qsort_r(
+	void *els, size_t nel, size_t elsize, git__sort_r_cmp cmp, void *payload);
+
+extern void git__insertsort_r(
+	void *els, size_t nel, size_t elsize, void *swapel,
+	git__sort_r_cmp cmp, void *payload);
 
 /**
  * @param position If non-NULL, this will be set to the position where the
  * 		element is or would be inserted if not found.
- * @return pos (>=0) if found or -1 if not found
+ * @return 0 if found; GIT_ENOTFOUND if not found
  */
 extern int git__bsearch(
 	void **array,
 	size_t array_len,
 	const void *key,
-	int (*compare)(const void *, const void *),
+	int (*compare)(const void *key, const void *element),
+	size_t *position);
+
+extern int git__bsearch_r(
+	void **array,
+	size_t array_len,
+	const void *key,
+	int (*compare_r)(const void *key, const void *element, void *payload),
+	void *payload,
 	size_t *position);
 
 extern int git__strcmp_cb(const void *a, const void *b);
+
+extern int git__strcmp(const char *a, const char *b);
+extern int git__strcasecmp(const char *a, const char *b);
+extern int git__strncmp(const char *a, const char *b, size_t sz);
+extern int git__strncasecmp(const char *a, const char *b, size_t sz);
 
 typedef struct {
 	short refcount;
@@ -204,9 +268,14 @@ GIT_INLINE(bool) git__isalpha(int c)
     return ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z'));
 }
 
+GIT_INLINE(bool) git__isdigit(int c)
+{
+    return (c >= '0' && c <= '9');
+}
+
 GIT_INLINE(bool) git__isspace(int c)
 {
-    return (c == ' ' || c == '\t' || c == '\n' || c == '\f' || c == '\r' || c == '\v');
+    return (c == ' ' || c == '\t' || c == '\n' || c == '\f' || c == '\r' || c == '\v' || c == 0x85 /* Unicode CR+LF */);
 }
 
 GIT_INLINE(bool) git__iswildcard(int c)
@@ -222,5 +291,24 @@ GIT_INLINE(bool) git__iswildcard(int c)
  * Valid values for false are: 'false', 'no', 'off'
  */
 extern int git__parse_bool(int *out, const char *value);
+
+/*
+ * Parse a string into a value as a git_time_t.
+ *
+ * Sample valid input:
+ * - "yesterday"
+ * - "July 17, 2003"
+ * - "2003-7-17 08:23"
+ */
+int git__date_parse(git_time_t *out, const char *date);
+
+/*
+ * Unescapes a string in-place.
+ * 
+ * Edge cases behavior:
+ * - "jackie\" -> "jacky\"
+ * - "chan\\" -> "chan\"
+ */
+extern size_t git__unescape(char *str);
 
 #endif /* INCLUDE_util_h__ */

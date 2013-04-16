@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2012 the libgit2 contributors
+ * Copyright (C) the libgit2 contributors. All rights reserved.
  *
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
@@ -7,7 +7,6 @@
 #define GIT__WIN32_NO_WRAP_DIR
 #include "dir.h"
 #include "utf-conv.h"
-#include "git2/windows.h"
 
 static int init_filter(char *filter, size_t n, const char *dir)
 {
@@ -26,8 +25,8 @@ static int init_filter(char *filter, size_t n, const char *dir)
 
 git__DIR *git__opendir(const char *dir)
 {
-	char filter[4096];
-	wchar_t* filter_w = NULL;
+	char filter[GIT_WIN_PATH];
+	wchar_t filter_w[GIT_WIN_PATH];
 	git__DIR *new = NULL;
 
 	if (!dir || !init_filter(filter, sizeof(filter), dir))
@@ -41,12 +40,8 @@ git__DIR *git__opendir(const char *dir)
 	if (!new->dir)
 		goto fail;
 
-	filter_w = gitwin_to_utf16(filter);
-	if (!filter_w)
-		goto fail;
-
+	git__utf8_to_16(filter_w, GIT_WIN_PATH, filter);
 	new->h = FindFirstFileW(filter_w, &new->f);
-	git__free(filter_w);
 
 	if (new->h == INVALID_HANDLE_VALUE) {
 		giterr_set(GITERR_OS, "Could not open directory '%s'", dir);
@@ -85,15 +80,8 @@ int git__readdir_ext(
 	if (wcslen(d->f.cFileName) >= sizeof(entry->d_name))
 		return -1;
 
+	git__utf16_to_8(entry->d_name, d->f.cFileName);
 	entry->d_ino = 0;
-
-	if (WideCharToMultiByte(
-		gitwin_get_codepage(), 0, d->f.cFileName, -1,
-		entry->d_name, GIT_PATH_MAX, NULL, NULL) == 0)
-	{
-		giterr_set(GITERR_OS, "Could not convert filename to UTF-8");
-		return -1;
-	}
 
 	*result = entry;
 
@@ -113,8 +101,8 @@ struct git__dirent *git__readdir(git__DIR *d)
 
 void git__rewinddir(git__DIR *d)
 {
-	char filter[4096];
-	wchar_t* filter_w;
+	char filter[GIT_WIN_PATH];
+	wchar_t filter_w[GIT_WIN_PATH];
 
 	if (!d)
 		return;
@@ -125,12 +113,11 @@ void git__rewinddir(git__DIR *d)
 		d->first = 0;
 	}
 
-	if (!init_filter(filter, sizeof(filter), d->dir) ||
-		(filter_w = gitwin_to_utf16(filter)) == NULL)
+	if (!init_filter(filter, sizeof(filter), d->dir))
 		return;
 
+	git__utf8_to_16(filter_w, GIT_WIN_PATH, filter);
 	d->h = FindFirstFileW(filter_w, &d->f);
-	git__free(filter_w);
 
 	if (d->h == INVALID_HANDLE_VALUE)
 		giterr_set(GITERR_OS, "Could not open directory '%s'", d->dir);

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2012 the libgit2 contributors
+ * Copyright (C) the libgit2 contributors. All rights reserved.
  *
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
@@ -24,21 +24,24 @@
 
 # include <io.h>
 # include <direct.h>
+# include <winsock2.h>
 # include <windows.h>
 # include "win32/msvc-compat.h"
 # include "win32/mingw-compat.h"
+# include "win32/error.h"
+# include "win32/version.h"
 # ifdef GIT_THREADS
 #	include "win32/pthread.h"
-#endif
-
-# define snprintf _snprintf
+# endif
 
 #else
-# include <unistd.h>
 
+# include <unistd.h>
 # ifdef GIT_THREADS
 #	include <pthread.h>
 # endif
+#define GIT_STDLIB_CALL
+
 #endif
 
 #include "git2/types.h"
@@ -48,25 +51,59 @@
 
 #include <regex.h>
 
-extern void git___throw(const char *, ...) GIT_FORMAT_PRINTF(1, 2);
-#define git__throw(error, ...) \
-	(git___throw(__VA_ARGS__), error)
-
-extern void git___rethrow(const char *, ...) GIT_FORMAT_PRINTF(1, 2);
-#define git__rethrow(error, ...) \
-	(git___rethrow(__VA_ARGS__), error)
-
-
+/**
+ * Check a pointer allocation result, returning -1 if it failed.
+ */
 #define GITERR_CHECK_ALLOC(ptr) if (ptr == NULL) { return -1; }
 
-void giterr_set_oom(void);
-void giterr_set(int error_class, const char *string, ...);
-void giterr_clear(void);
-void giterr_set_str(int error_class, const char *string);
-void giterr_set_regex(const regex_t *regex, int error_code);
+/**
+ * Check a return value and propogate result if non-zero.
+ */
+#define GITERR_CHECK_ERROR(code) \
+	do { int _err = (code); if (_err < 0) return _err; } while (0)
 
+/**
+ * Set the error message for this thread, formatting as needed.
+ */
+void giterr_set(int error_class, const char *string, ...);
+
+/**
+ * Set the error message for a regex failure, using the internal regex
+ * error code lookup and return a libgit error code.
+ */
+int giterr_set_regex(const regex_t *regex, int error_code);
+
+/**
+ * Check a versioned structure for validity
+ */
+GIT_INLINE(int) giterr__check_version(const void *structure, unsigned int expected_max, const char *name)
+{
+	unsigned int actual;
+
+	if (!structure)
+		return 0;
+
+	actual = *(const unsigned int*)structure;
+	if (actual > 0 && actual <= expected_max)
+		return 0;
+
+	giterr_set(GITERR_INVALID, "Invalid version %d on %s", actual, name);
+	return -1;
+}
+#define GITERR_CHECK_VERSION(S,V,N) if (giterr__check_version(S,V,N) < 0) return -1
+
+/**
+ * Initialize a structure with a version.
+ */
+GIT_INLINE(void) git__init_structure(void *structure, size_t len, unsigned int version)
+{
+	memset(structure, 0, len);
+	*((int*)structure) = version;
+}
+#define GIT_INIT_STRUCTURE(S,V) git__init_structure(S, sizeof(*S), V)
+
+/* NOTE: other giterr functions are in the public errors.h header file */
 
 #include "util.h"
-
 
 #endif /* INCLUDE_common_h__ */

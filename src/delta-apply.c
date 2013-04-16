@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2012 the libgit2 contributors
+ * Copyright (C) the libgit2 contributors. All rights reserved.
  *
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
@@ -33,6 +33,19 @@ static int hdr_sz(
 	} while (c & 0x80);
 	*delta = d;
 	*size = r;
+	return 0;
+}
+
+int git__delta_read_header(
+	const unsigned char *delta,
+	size_t delta_len,
+	size_t *base_sz,
+	size_t *res_sz)
+{
+	const unsigned char *delta_end = delta + delta_len;
+	if ((hdr_sz(base_sz, &delta, delta_end) < 0) ||
+	    (hdr_sz(res_sz, &delta, delta_end) < 0))
+		return -1;
 	return 0;
 }
 

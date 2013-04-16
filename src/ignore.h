@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2012 the libgit2 contributors
+ * Copyright (C) the libgit2 contributors. All rights reserved.
  *
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
@@ -9,6 +9,11 @@
 
 #include "repository.h"
 #include "vector.h"
+#include "attr_file.h"
+
+#define GIT_IGNORE_FILE			".gitignore"
+#define GIT_IGNORE_FILE_INREPO	"info/exclude"
+#define GIT_IGNORE_FILE_XDG		"ignore"
 
 /* The git_ignores structure maintains three sets of ignores:
  * - internal ignores
@@ -23,6 +28,7 @@ typedef struct {
 	git_attr_file *ign_internal;
 	git_vector ign_path;
 	git_vector ign_global;
+	unsigned int ignore_case:1;
 } git_ignores;
 
 extern int git_ignore__for_path(git_repository *repo, const char *path, git_ignores *ign);

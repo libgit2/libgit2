@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2012 the libgit2 contributors
+ * Copyright (C) the libgit2 contributors. All rights reserved.
  *
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
@@ -7,14 +7,17 @@
 #ifndef INCLUDE_attr_file_h__
 #define INCLUDE_attr_file_h__
 
+#include "git2/oid.h"
 #include "git2/attr.h"
 #include "vector.h"
 #include "pool.h"
 #include "buffer.h"
+#include "fileops.h"
 
 #define GIT_ATTR_FILE			".gitattributes"
 #define GIT_ATTR_FILE_INREPO	"info/attributes"
 #define GIT_ATTR_FILE_SYSTEM	"gitattributes"
+#define GIT_ATTR_FILE_XDG		"attributes"
 
 #define GIT_ATTR_FNMATCH_NEGATIVE	(1U << 0)
 #define GIT_ATTR_FNMATCH_DIRECTORY	(1U << 1)
@@ -22,6 +25,13 @@
 #define GIT_ATTR_FNMATCH_MACRO		(1U << 3)
 #define GIT_ATTR_FNMATCH_IGNORE		(1U << 4)
 #define GIT_ATTR_FNMATCH_HASWILD	(1U << 5)
+#define GIT_ATTR_FNMATCH_ALLOWSPACE	(1U << 6)
+#define GIT_ATTR_FNMATCH_ICASE		(1U << 7)
+#define GIT_ATTR_FNMATCH_MATCH_ALL	(1U << 8)
+
+extern const char *git_attr__true;
+extern const char *git_attr__false;
+extern const char *git_attr__unset;
 
 typedef struct {
 	char *pattern;
@@ -48,27 +58,21 @@ typedef struct {
 } git_attr_assignment;
 
 typedef struct {
-	git_time_t seconds;
-	git_off_t  size;
-	unsigned int ino;
-} git_attr_file_stat_sig;
-
-typedef struct {
 	char *key;				/* cache "source#path" this was loaded from */
 	git_vector rules;		/* vector of <rule*> or <fnmatch*> */
 	git_pool *pool;
 	bool pool_is_allocated;
 	union {
 		git_oid oid;
-		git_attr_file_stat_sig st;
+		git_futils_filestamp stamp;
 	} cache_data;
 } git_attr_file;
 
 typedef struct {
-	git_buf     full;
-	const char *path;
-	const char *basename;
-	int         is_dir;
+	git_buf  full;
+	char    *path;
+	char    *basename;
+	int      is_dir;
 } git_attr_path;
 
 typedef enum {
@@ -88,8 +92,10 @@ extern int git_attr_file__new_and_load(
 
 extern void git_attr_file__free(git_attr_file *file);
 
+extern void git_attr_file__clear_rules(git_attr_file *file);
+
 extern int git_attr_file__parse_buffer(
-	git_repository *repo, const char *buf, git_attr_file *file);
+	git_repository *repo, void *parsedata, const char *buf, git_attr_file *file);
 
 extern int git_attr_file__lookup_one(
 	git_attr_file *file,

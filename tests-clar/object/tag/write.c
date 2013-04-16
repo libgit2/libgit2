@@ -45,7 +45,7 @@ void test_object_tag_write__basic(void)
 	git_signature_free(tagger);
 
 	cl_git_pass(git_tag_lookup(&tag, g_repo, &tag_id));
-	cl_assert(git_oid_cmp(git_tag_target_oid(tag), &target_id) == 0);
+	cl_assert(git_oid_cmp(git_tag_target_id(tag), &target_id) == 0);
 
 	/* Check attributes were set correctly */
 	tagger1 = git_tag_tagger(tag);
@@ -58,8 +58,9 @@ void test_object_tag_write__basic(void)
 	cl_assert_equal_s(git_tag_message(tag), tagger_message);
 
 	cl_git_pass(git_reference_lookup(&ref_tag, g_repo, "refs/tags/the-tag"));
-	cl_assert(git_oid_cmp(git_reference_oid(ref_tag), &tag_id) == 0);
+	cl_assert(git_oid_cmp(git_reference_target(ref_tag), &tag_id) == 0);
 	cl_git_pass(git_reference_delete(ref_tag));
+	git_reference_free(ref_tag);
 
 	git_tag_free(tag);
 }
@@ -77,7 +78,7 @@ void test_object_tag_write__overwrite(void)
 	/* create signature */
 	cl_git_pass(git_signature_new(&tagger, tagger_name, tagger_email, 123456789, 60));
 
-	cl_git_fail(git_tag_create(
+	cl_assert_equal_i(GIT_EEXISTS, git_tag_create(
                               &tag_id, /* out id */
                               g_repo,
                               "e90810b",
@@ -88,7 +89,6 @@ void test_object_tag_write__overwrite(void)
 
 	git_object_free(target);
 	git_signature_free(tagger);
-
 }
 
 void test_object_tag_write__replace(void)
@@ -103,7 +103,7 @@ void test_object_tag_write__replace(void)
 	cl_git_pass(git_object_lookup(&target, g_repo, &target_id, GIT_OBJ_COMMIT));
 
 	cl_git_pass(git_reference_lookup(&ref_tag, g_repo, "refs/tags/e90810b"));
-	git_oid_cpy(&old_tag_id, git_reference_oid(ref_tag));
+	git_oid_cpy(&old_tag_id, git_reference_target(ref_tag));
 	git_reference_free(ref_tag);
 
 	/* create signature */
@@ -122,8 +122,8 @@ void test_object_tag_write__replace(void)
 	git_signature_free(tagger);
 
 	cl_git_pass(git_reference_lookup(&ref_tag, g_repo, "refs/tags/e90810b"));
-	cl_assert(git_oid_cmp(git_reference_oid(ref_tag), &tag_id) == 0);
-	cl_assert(git_oid_cmp(git_reference_oid(ref_tag), &old_tag_id) != 0);
+	cl_assert(git_oid_cmp(git_reference_target(ref_tag), &tag_id) == 0);
+	cl_assert(git_oid_cmp(git_reference_target(ref_tag), &old_tag_id) != 0);
 
 	git_reference_free(ref_tag);
 }
@@ -150,7 +150,7 @@ void test_object_tag_write__lightweight(void)
 	cl_assert(git_oid_cmp(&object_id, &target_id) == 0);
 
 	cl_git_pass(git_reference_lookup(&ref_tag, g_repo, "refs/tags/light-tag"));
-	cl_assert(git_oid_cmp(git_reference_oid(ref_tag), &target_id) == 0);
+	cl_assert(git_oid_cmp(git_reference_target(ref_tag), &target_id) == 0);
 
 	cl_git_pass(git_tag_delete(g_repo, "light-tag"));
 
@@ -166,7 +166,7 @@ void test_object_tag_write__lightweight_over_existing(void)
 	git_oid_fromstr(&target_id, tagged_commit);
 	cl_git_pass(git_object_lookup(&target, g_repo, &target_id, GIT_OBJ_COMMIT));
 
-	cl_git_fail(git_tag_create_lightweight(
+	cl_assert_equal_i(GIT_EEXISTS, git_tag_create_lightweight(
                                           &object_id,
                                           g_repo,
                                           "e90810b",
@@ -189,4 +189,34 @@ void test_object_tag_write__delete(void)
 	cl_git_fail(git_reference_lookup(&ref_tag, g_repo, "refs/tags/e90810b"));
 
 	git_reference_free(ref_tag);
+}
+
+void test_object_tag_write__creating_with_an_invalid_name_returns_EINVALIDSPEC(void)
+{
+	git_oid target_id, tag_id;
+	git_signature *tagger;
+	git_object *target;
+
+	git_oid_fromstr(&target_id, tagged_commit);
+	cl_git_pass(git_object_lookup(&target, g_repo, &target_id, GIT_OBJ_COMMIT));
+
+	cl_git_pass(git_signature_new(&tagger, tagger_name, tagger_email, 123456789, 60));
+
+	cl_assert_equal_i(GIT_EINVALIDSPEC,
+		git_tag_create(&tag_id, g_repo,
+		  "Inv@{id", target, tagger, tagger_message, 0)
+	);
+
+	cl_assert_equal_i(GIT_EINVALIDSPEC,
+		git_tag_create_lightweight(&tag_id, g_repo,
+		  "Inv@{id", target, 0)
+	);
+
+	git_object_free(target);
+	git_signature_free(tagger);
+}
+
+void test_object_tag_write__deleting_with_an_invalid_name_returns_EINVALIDSPEC(void)
+{
+	cl_assert_equal_i(GIT_EINVALIDSPEC, git_tag_delete(g_repo, "Inv@{id"));
 }

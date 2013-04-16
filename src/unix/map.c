@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2012 the libgit2 contributors
+ * Copyright (C) the libgit2 contributors. All rights reserved.
  *
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
@@ -31,8 +31,11 @@ int p_mmap(git_map *out, size_t len, int prot, int flags, int fd, git_off_t offs
 		mflag = MAP_SHARED;
 	else if ((flags & GIT_MAP_TYPE) == GIT_MAP_PRIVATE)
 		mflag = MAP_PRIVATE;
+	else
+		mflag = MAP_SHARED;
 
 	out->data = mmap(NULL, len, mprot, mflag, fd, offset);
+
 	if (!out->data || out->data == MAP_FAILED) {
 		giterr_set(GITERR_OS, "Failed to mmap. Could not write data");
 		return -1;
@@ -47,6 +50,7 @@ int p_munmap(git_map *map)
 {
 	assert(map != NULL);
 	munmap(map->data, map->len);
+
 	return 0;
 }
 

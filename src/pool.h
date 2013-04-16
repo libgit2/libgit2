@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 the libgit2 contributors
+ * Copyright (C) the libgit2 contributors. All rights reserved.
  *
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
@@ -76,6 +76,17 @@ extern void git_pool_swap(git_pool *a, git_pool *b);
 extern void *git_pool_malloc(git_pool *pool, uint32_t items);
 
 /**
+ * Allocate space and zero it out.
+ */
+GIT_INLINE(void *) git_pool_mallocz(git_pool *pool, uint32_t items)
+{
+	void *ptr = git_pool_malloc(pool, items);
+	if (ptr)
+		memset(ptr, 0, (size_t)items * (size_t)pool->item_size);
+	return ptr;
+}
+
+/**
  * Allocate space and duplicate string data into it.
  *
  * This is allowed only for pools with item_size == sizeof(char)
@@ -88,6 +99,13 @@ extern char *git_pool_strndup(git_pool *pool, const char *str, size_t n);
  * This is allowed only for pools with item_size == sizeof(char)
  */
 extern char *git_pool_strdup(git_pool *pool, const char *str);
+
+/**
+ * Allocate space and duplicate a string into it, NULL is no error.
+ *
+ * This is allowed only for pools with item_size == sizeof(char)
+ */
+extern char *git_pool_strdup_safe(git_pool *pool, const char *str);
 
 /**
  * Allocate space for the concatenation of two strings.
@@ -107,6 +125,13 @@ extern char *git_pool_strcat(git_pool *pool, const char *a, const char *b);
  * native block size is large enough to hold a void pointer
  */
 extern void git_pool_free(git_pool *pool, void *ptr);
+
+/**
+ * Push an array of pool allocated blocks efficiently onto the free list.
+ *
+ * This has the same constraints as `git_pool_free()` above.
+ */
+extern void git_pool_free_array(git_pool *pool, size_t count, void **ptrs);
 
 /*
  * Misc utilities

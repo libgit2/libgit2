@@ -21,9 +21,9 @@ void test_object_raw_convert__succeed_on_oid_to_string_conversion(void)
 	str = git_oid_tostr(out, 0, &in);
 	cl_assert(str && *str == '\0' && str != out);
 
-	/* NULL oid pointer, returns static empty string */
+	/* NULL oid pointer, sets existing buffer to empty string */
 	str = git_oid_tostr(out, sizeof(out), NULL);
-	cl_assert(str && *str == '\0' && str != out);
+	cl_assert(str && *str == '\0' && str == out);
 
 	/* n == 1, returns out as an empty string */
 	str = git_oid_tostr(out, 1, &in);

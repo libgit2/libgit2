@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2012 the libgit2 contributors
+ * Copyright (C) the libgit2 contributors. All rights reserved.
  *
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
@@ -11,6 +11,7 @@
 #include "thread-utils.h"
 #include "util.h"
 #include "cache.h"
+#include "git2/oid.h"
 
 int git_cache_init(git_cache *cache, size_t size, git_cached_obj_freeptr free_ptr)
 {
@@ -40,6 +41,7 @@ void git_cache_free(git_cache *cache)
 			git_cached_obj_decref(cache->nodes[i], cache->free_obj);
 	}
 
+	git_mutex_free(&cache->lock);
 	git__free(cache->nodes);
 }
 
@@ -50,7 +52,11 @@ void *git_cache_get(git_cache *cache, const git_oid *oid)
 
 	memcpy(&hash, oid->id, sizeof(hash));
 
-	git_mutex_lock(&cache->lock);
+	if (git_mutex_lock(&cache->lock)) {
+		giterr_set(GITERR_THREAD, "unable to lock cache mutex");
+		return NULL;
+	}
+
 	{
 		node = cache->nodes[hash & cache->size_mask];
 
@@ -69,15 +75,19 @@ void *git_cache_try_store(git_cache *cache, void *_entry)
 	git_cached_obj *entry = _entry;
 	uint32_t hash;
 
-	memcpy(&hash, &entry->oid, sizeof(hash));
+	memcpy(&hash, &entry->oid, sizeof(uint32_t));
 
-	/* increase the refcount on this object, because
-	 * the cache now owns it */
-	git_cached_obj_incref(entry);
+	if (git_mutex_lock(&cache->lock)) {
+		giterr_set(GITERR_THREAD, "unable to lock cache mutex");
+		return NULL;
+	}
 
-	git_mutex_lock(&cache->lock);
 	{
 		git_cached_obj *node = cache->nodes[hash & cache->size_mask];
+
+		/* increase the refcount on this object, because
+		 * the cache now owns it */
+		git_cached_obj_incref(entry);
 
 		if (node == NULL) {
 			cache->nodes[hash & cache->size_mask] = entry;
@@ -88,12 +98,13 @@ void *git_cache_try_store(git_cache *cache, void *_entry)
 			git_cached_obj_decref(node, cache->free_obj);
 			cache->nodes[hash & cache->size_mask] = entry;
 		}
+
+		/* increase the refcount again, because we are
+		 * returning it to the user */
+		git_cached_obj_incref(entry);
+
 	}
 	git_mutex_unlock(&cache->lock);
-
-	/* increase the refcount again, because we are
-	 * returning it to the user */
-	git_cached_obj_incref(entry);
 
 	return entry;
 }

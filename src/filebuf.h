@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2012 the libgit2 contributors
+ * Copyright (C) the libgit2 contributors. All rights reserved.
  *
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
@@ -31,7 +31,8 @@ struct git_filebuf {
 
 	int (*write)(struct git_filebuf *file, void *source, size_t len);
 
-	git_hash_ctx *digest;
+	bool compute_digest;
+	git_hash_ctx digest;
 
 	unsigned char *buffer;
 	unsigned char *z_buf;
@@ -81,5 +82,7 @@ int git_filebuf_commit(git_filebuf *lock, mode_t mode);
 int git_filebuf_commit_at(git_filebuf *lock, const char *path, mode_t mode);
 void git_filebuf_cleanup(git_filebuf *lock);
 int git_filebuf_hash(git_oid *oid, git_filebuf *file);
+int git_filebuf_flush(git_filebuf *file);
+int git_filebuf_stats(time_t *mtime, size_t *size, git_filebuf *file);
 
 #endif

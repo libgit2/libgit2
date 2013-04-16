@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2012 the libgit2 contributors
+ * Copyright (C) the libgit2 contributors. All rights reserved.
  *
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
@@ -32,6 +32,9 @@ GIT_BEGIN_DECL
  * stat() functions, for all platforms.
  */
 #include <sys/types.h>
+#ifdef __amigaos4__
+#include <stdint.h>
+#endif
 
 #if defined(_MSC_VER)
 
@@ -86,6 +89,15 @@ typedef struct git_odb_object git_odb_object;
 /** A stream to read/write from the ODB */
 typedef struct git_odb_stream git_odb_stream;
 
+/** A stream to write a packfile to the ODB */
+typedef struct git_odb_writepack git_odb_writepack;
+
+/** An open refs database handle. */
+typedef struct git_refdb git_refdb;
+
+/** A custom backend for refs */
+typedef struct git_refdb_backend git_refdb_backend;
+
 /**
  * Representation of an existing git repository,
  * including all its object contents
@@ -123,7 +135,7 @@ typedef struct git_index git_index;
 typedef struct git_config git_config;
 
 /** Interface to access a configuration file */
-typedef struct git_config_file git_config_file;
+typedef struct git_config_backend git_config_backend;
 
 /** Representation of a reference log entry */
 typedef struct git_reflog_entry git_reflog_entry;
@@ -133,6 +145,9 @@ typedef struct git_reflog git_reflog;
 
 /** Representation of a git note */
 typedef struct git_note git_note;
+
+/** Representation of a git packbuilder */
+typedef struct git_packbuilder git_packbuilder;
 
 /** Time in a signature */
 typedef struct git_time {
@@ -155,9 +170,7 @@ typedef enum {
 	GIT_REF_INVALID = 0, /** Invalid reference */
 	GIT_REF_OID = 1, /** A reference which points at an object id */
 	GIT_REF_SYMBOLIC = 2, /** A reference which points at another reference */
-	GIT_REF_PACKED = 4,
-	GIT_REF_HAS_PEEL = 8,
-	GIT_REF_LISTALL = GIT_REF_OID|GIT_REF_SYMBOLIC|GIT_REF_PACKED,
+	GIT_REF_LISTALL = GIT_REF_OID|GIT_REF_SYMBOLIC,
 } git_ref_t;
 
 /** Basic type of any Git branch. */
@@ -166,10 +179,22 @@ typedef enum {
 	GIT_BRANCH_REMOTE = 2,
 } git_branch_t;
 
+/** Valid modes for index and tree entries. */
+typedef enum {
+	GIT_FILEMODE_NEW					= 0000000,
+	GIT_FILEMODE_TREE					= 0040000,
+	GIT_FILEMODE_BLOB					= 0100644,
+	GIT_FILEMODE_BLOB_EXECUTABLE		= 0100755,
+	GIT_FILEMODE_LINK					= 0120000,
+	GIT_FILEMODE_COMMIT					= 0160000,
+} git_filemode_t;
+
 typedef struct git_refspec git_refspec;
 typedef struct git_remote git_remote;
+typedef struct git_push git_push;
 
 typedef struct git_remote_head git_remote_head;
+typedef struct git_remote_callbacks git_remote_callbacks;
 
 /** @} */
 GIT_END_DECL

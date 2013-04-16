@@ -689,7 +689,7 @@ re_search_internal (const regex_t *preg,
   if (nmatch > 1 || dfa->has_mb_node)
     {
       /* Avoid overflow.  */
-      if (BE (SIZE_MAX / sizeof (re_dfastate_t *) <= mctx.input.bufs_len, 0))
+      if (BE (SIZE_MAX / sizeof (re_dfastate_t *) <= (size_t)mctx.input.bufs_len, 0))
 	{
 	  err = REG_ESPACE;
 	  goto free_return;
@@ -920,7 +920,7 @@ re_search_internal (const regex_t *preg,
 
       if (dfa->subexp_map)
 	for (reg_idx = 0; reg_idx + 1 < nmatch; reg_idx++)
-	  if (dfa->subexp_map[reg_idx] != reg_idx)
+	  if (dfa->subexp_map[reg_idx] != (int)reg_idx)
 	    {
 	      pmatch[reg_idx + 1].rm_so
 		= pmatch[dfa->subexp_map[reg_idx] + 1].rm_so;
@@ -953,7 +953,7 @@ prune_impossible_nodes (re_match_context_t *mctx)
   halt_node = mctx->last_node;
 
   /* Avoid overflow.  */
-  if (BE (SIZE_MAX / sizeof (re_dfastate_t *) <= match_last, 0))
+  if (BE (SIZE_MAX / sizeof (re_dfastate_t *) <= (size_t)match_last, 0))
     return REG_ESPACE;
 
   sifted_states = re_malloc (re_dfastate_t *, match_last + 1);
@@ -3375,7 +3375,7 @@ build_trtable (const re_dfa_t *dfa, re_dfastate_t *state)
   /* Avoid arithmetic overflow in size calculation.  */
   if (BE ((((SIZE_MAX - (sizeof (re_node_set) + sizeof (bitset_t)) * SBC_MAX)
 	    / (3 * sizeof (re_dfastate_t *)))
-	   < ndests),
+	   < (size_t)ndests),
 	  0))
     goto out_free;
 
@@ -4099,7 +4099,7 @@ extend_buffers (re_match_context_t *mctx)
   re_string_t *pstr = &mctx->input;
 
   /* Avoid overflow.  */
-  if (BE (INT_MAX / 2 / sizeof (re_dfastate_t *) <= pstr->bufs_len, 0))
+  if (BE (INT_MAX / 2 / sizeof (re_dfastate_t *) <= (size_t)pstr->bufs_len, 0))
     return REG_ESPACE;
 
   /* Double the lengthes of the buffers.  */

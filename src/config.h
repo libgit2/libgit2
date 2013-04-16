@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2012 the libgit2 contributors
+ * Copyright (C) the libgit2 contributors. All rights reserved.
  *
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
@@ -12,9 +12,11 @@
 #include "vector.h"
 #include "repository.h"
 
-#define GIT_CONFIG_FILENAME ".gitconfig"
-#define GIT_CONFIG_FILENAME_INREPO "config"
 #define GIT_CONFIG_FILENAME_SYSTEM "gitconfig"
+#define GIT_CONFIG_FILENAME_GLOBAL ".gitconfig"
+#define GIT_CONFIG_FILENAME_XDG    "config"
+
+#define GIT_CONFIG_FILENAME_INREPO "config"
 #define GIT_CONFIG_FILE_MODE 0666
 
 struct git_config {
@@ -23,11 +25,25 @@ struct git_config {
 };
 
 extern int git_config_find_global_r(git_buf *global_config_path);
+extern int git_config_find_xdg_r(git_buf *system_config_path);
 extern int git_config_find_system_r(git_buf *system_config_path);
 
-extern int git_config_parse_bool(int *out, const char *bool_string);
+extern int git_config_rename_section(
+	git_repository *repo,
+	const char *old_section_name,	/* eg "branch.dummy" */
+	const char *new_section_name);	/* NULL to drop the old section */
 
-extern int git_config_lookup_map_value(
-	git_cvar_map *maps, size_t map_n, const char *value, int *out);
+/**
+ * Create a configuration file backend for ondisk files
+ *
+ * These are the normal `.gitconfig` files that Core Git
+ * processes. Note that you first have to add this file to a
+ * configuration object before you can query it for configuration
+ * variables.
+ *
+ * @param out the new backend
+ * @param path where the config file is located
+ */
+extern int git_config_file__ondisk(struct git_config_backend **out, const char *path);
 
 #endif

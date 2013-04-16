@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 the libgit2 contributors
+ * Copyright (C) the libgit2 contributors. All rights reserved.
  *
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
@@ -19,7 +19,7 @@ __KHASH_TYPE(str, const char *, void *);
 typedef khash_t(str) git_strmap;
 
 #define GIT__USE_STRMAP \
-	__KHASH_IMPL(str, static inline, const char *, void *, 1, kh_str_hash_func, kh_str_hash_equal)
+	__KHASH_IMPL(str, static kh_inline, const char *, void *, 1, kh_str_hash_func, kh_str_hash_equal)
 
 #define git_strmap_alloc()  kh_init(str)
 #define git_strmap_free(h)  kh_destroy(str, h), h = NULL
