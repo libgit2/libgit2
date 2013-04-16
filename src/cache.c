@@ -70,12 +70,6 @@ int git_cache_init(git_cache *cache)
 	return 0;
 }
 
-void git_cache_free(git_cache *cache)
-{
-	git_oidmap_free(cache->map);
-	git_mutex_free(&cache->lock);
-}
-
 void git_cache_clear(git_cache *cache)
 {
 	git_cached_obj *evict = NULL;
@@ -91,6 +85,14 @@ void git_cache_clear(git_cache *cache)
 	cache->used_memory = 0;
 
 	git_mutex_unlock(&cache->lock);
+}
+
+void git_cache_free(git_cache *cache)
+{
+	git_cache_clear(cache);
+
+	git_oidmap_free(cache->map);
+	git_mutex_free(&cache->lock);
 }
 
 /* Call with lock, yo */
