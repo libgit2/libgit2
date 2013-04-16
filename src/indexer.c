@@ -62,7 +62,7 @@ static int open_pack(struct git_pack_file **out, const char *filename)
 {
 	struct git_pack_file *pack;
 
-	if (git_packfile_check(&pack, filename) < 0)
+	if (git_packfile_alloc(&pack, filename) < 0)
 		return -1;
 
 	if ((pack->mwf.fd = p_open(pack->pack_name, O_RDONLY)) < 0) {
