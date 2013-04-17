@@ -808,3 +808,47 @@ void test_repo_iterator__workdir_depth(void)
 	expect_iterator_items(iter, 337, NULL, 337, NULL);
 	git_iterator_free(iter);
 }
+
+void test_repo_iterator__fs(void)
+{
+	git_iterator *i;
+	static const char *expect_subdir[] = {
+		"current_file",
+		"modified_file",
+		"new_file",
+		NULL,
+	};
+
+	g_repo = cl_git_sandbox_init("status");
+
+	cl_git_pass(git_iterator_for_filesystem(
+		&i, "status/subdir", 0, NULL, NULL));
+	expect_iterator_items(i, 3, expect_subdir, 3, expect_subdir);
+	git_iterator_free(i);
+}
+
+void test_repo_iterator__fs2(void)
+{
+	git_iterator *i;
+	static const char *expect_subdir[] = {
+		"heads/br2",
+		"heads/dir",
+		"heads/master",
+		"heads/packed-test",
+		"heads/subtrees",
+		"heads/test",
+		"tags/e90810b",
+		"tags/foo/bar",
+		"tags/foo/foo/bar",
+		"tags/point_to_blob",
+		"tags/test",
+		NULL,
+	};
+
+	g_repo = cl_git_sandbox_init("testrepo");
+
+	cl_git_pass(git_iterator_for_filesystem(
+		&i, "testrepo/.git/refs", 0, NULL, NULL));
+	expect_iterator_items(i, 11, expect_subdir, 11, expect_subdir);
+	git_iterator_free(i);
+}
