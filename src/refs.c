@@ -373,8 +373,7 @@ static int reference__create(
 		ref = git_reference__alloc_symbolic(refdb, name, symbolic);
 	}
 	
-	if (ref == NULL)
-		return -1;
+	GITERR_CHECK_ALLOC(ref);
 
 	if ((error = git_refdb_write(refdb, ref)) < 0) {
 		git_reference_free(ref);
