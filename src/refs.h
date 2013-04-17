@@ -52,14 +52,11 @@ struct git_reference {
 	git_ref_t type;
 
 	union {
-		struct {
-			git_oid oid;
-			git_oid peel;
-		} direct;
-
+		git_oid oid;
 		char *symbolic;
 	} target;
-	
+
+	git_oid peel;
 	char name[0];
 };
 

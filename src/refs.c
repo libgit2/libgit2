@@ -83,10 +83,10 @@ git_reference *git_reference__alloc(
 		return NULL;
 
 	ref->type = GIT_REF_OID;
-	git_oid_cpy(&ref->target.direct.oid, oid);
+	git_oid_cpy(&ref->target.oid, oid);
 
 	if (peel != NULL)
-		git_oid_cpy(&ref->target.direct.peel, peel);
+		git_oid_cpy(&ref->peel, peel);
 
 	return ref;
 }
@@ -322,17 +322,17 @@ const git_oid *git_reference_target(const git_reference *ref)
 	if (ref->type != GIT_REF_OID)
 		return NULL;
 
-	return &ref->target.direct.oid;
+	return &ref->target.oid;
 }
 
 const git_oid *git_reference_target_peel(const git_reference *ref)
 {
 	assert(ref);
 
-	if (ref->type != GIT_REF_OID || git_oid_iszero(&ref->target.direct.peel))
+	if (ref->type != GIT_REF_OID || git_oid_iszero(&ref->peel))
 		return NULL;
 
-	return &ref->target.direct.peel;
+	return &ref->peel;
 }
 
 const char *git_reference_symbolic_target(const git_reference *ref)
@@ -491,7 +491,7 @@ int git_reference_rename(
 	 */
 	if (ref->type == GIT_REF_OID) {
 		result = git_reference__alloc(ref->db, new_name,
-			&ref->target.direct.oid, &ref->target.direct.peel); 
+			&ref->target.oid, &ref->peel); 
 	} else if (ref->type == GIT_REF_SYMBOLIC) {
 		result = git_reference__alloc_symbolic(ref->db, new_name, ref->target.symbolic);
 	} else {
@@ -833,7 +833,7 @@ int git_reference_cmp(git_reference *ref1, git_reference *ref2)
 	if (type1 == GIT_REF_SYMBOLIC)
 		return strcmp(ref1->target.symbolic, ref2->target.symbolic);
 
-	return git_oid_cmp(&ref1->target.direct.oid, &ref2->target.direct.oid);
+	return git_oid_cmp(&ref1->target.oid, &ref2->target.oid);
 }
 
 static int reference__update_terminal(
@@ -969,12 +969,12 @@ int git_reference_peel(
 			return peel_error(error, ref, "Cannot resolve reference");
 	}
 
-	if (!git_oid_iszero(&resolved->target.direct.peel)) {
+	if (!git_oid_iszero(&resolved->peel)) {
 		error = git_object_lookup(&target,
-			git_reference_owner(ref), &resolved->target.direct.peel, GIT_OBJ_ANY);
+			git_reference_owner(ref), &resolved->peel, GIT_OBJ_ANY);
 	} else {
 		error = git_object_lookup(&target,
-			git_reference_owner(ref), &resolved->target.direct.oid, GIT_OBJ_ANY);
+			git_reference_owner(ref), &resolved->target.oid, GIT_OBJ_ANY);
 	}
 
 	if (error < 0) {

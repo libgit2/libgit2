@@ -645,7 +645,7 @@ static int loose_write(refdb_fs_backend *backend, const git_reference *ref)
 	if (ref->type == GIT_REF_OID) {
 		char oid[GIT_OID_HEXSZ + 1];
 
-		git_oid_fmt(oid, &ref->target.direct.oid);
+		git_oid_fmt(oid, &ref->target.oid);
 		oid[GIT_OID_HEXSZ] = '\0';
 
 		git_filebuf_printf(&file, "%s\n", oid);
