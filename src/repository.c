@@ -129,6 +129,12 @@ static git_repository *repository_alloc(void)
 	return repo;
 }
 
+int git_repository_new(git_repository **out)
+{
+	*out = repository_alloc();
+	return 0;
+}
+
 static int load_config_data(git_repository *repo)
 {
 	int is_bare;
