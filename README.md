@@ -139,7 +139,7 @@ Here are the bindings to libgit2 that are currently available:
 * Parrot Virtual Machine
     * parrot-libgit2 <https://github.com/letolabs/parrot-libgit2>
 * Perl
-    * git-xs-pm <https://github.com/ingydotnet/git-xs-pm>
+    * Git-Raw <https://github.com/ghedo/p5-Git-Raw>
 * PHP
     * php-git <https://github.com/libgit2/php-git>
 * Python
