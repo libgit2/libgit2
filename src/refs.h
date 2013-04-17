@@ -49,14 +49,14 @@
 
 struct git_reference {
 	git_refdb *db;
-
 	git_ref_t type;
 
 	union {
 		git_oid oid;
 		char *symbolic;
 	} target;
-	
+
+	git_oid peel;
 	char name[0];
 };
 

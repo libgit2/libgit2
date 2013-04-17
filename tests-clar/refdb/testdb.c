@@ -98,12 +98,16 @@ static int refdb_test_backend__lookup(
 	
 	git_vector_foreach(&backend->refs, i, entry) {
 		if (strcmp(entry->name, ref_name) == 0) {
-			const git_oid *oid =
-				entry->type == GIT_REF_OID ? &entry->target.oid : NULL;
-			const char *symbolic =
-				entry->type == GIT_REF_SYMBOLIC ? entry->target.symbolic : NULL;
-			
-			if ((*out = git_reference__alloc(backend->refdb, ref_name, oid, symbolic)) == NULL)
+
+			if (entry->type == GIT_REF_OID) {
+				*out = git_reference__alloc(backend->refdb, ref_name,
+					&entry->target.oid, NULL);
+			} else if (entry->type == GIT_REF_SYMBOLIC) {
+				*out = git_reference__alloc_symbolic(backend->refdb, ref_name,
+					entry->target.symbolic);
+			}
+
+			if (*out == NULL)
 				return -1;
 			
 			return 0;
