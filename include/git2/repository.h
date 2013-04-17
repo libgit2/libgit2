@@ -134,9 +134,7 @@ GIT_EXTERN(int) git_repository_open_ext(
  * @param bare_path Direct path to the bare repository
  * @return 0 on success, or an error code
  */
-GIT_EXTERN(int) git_repository_open_bare(
-	git_repository **out,
-	const char *bare_path);
+GIT_EXTERN(int) git_repository_open_bare(git_repository **out, const char *bare_path);
 
 /**
  * Free a previously allocated repository
