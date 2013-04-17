@@ -430,7 +430,7 @@ static int loose_lookup(
 			goto done;
 		}
 
-		*out = git_reference__alloc(backend->refdb, ref_name, NULL, target);
+		*out = git_reference__alloc_symbolic(backend->refdb, ref_name, target);
 	} else {
 		if ((error = loose_parse_oid(&oid, &ref_file)) < 0)
 			goto done;
@@ -484,7 +484,8 @@ static int packed_lookup(
 	if ((error = packed_map_entry(&entry, &pos, backend, ref_name)) < 0)
 		return error;
 
-	if ((*out = git_reference__alloc(backend->refdb, ref_name, &entry->oid, NULL)) == NULL)
+	if ((*out = git_reference__alloc(backend->refdb, ref_name,
+		&entry->oid, &entry->peel)) == NULL)
 		return -1;
 	
 	return 0;
@@ -644,7 +645,7 @@ static int loose_write(refdb_fs_backend *backend, const git_reference *ref)
 	if (ref->type == GIT_REF_OID) {
 		char oid[GIT_OID_HEXSZ + 1];
 
-		git_oid_fmt(oid, &ref->target.oid);
+		git_oid_fmt(oid, &ref->target.direct.oid);
 		oid[GIT_OID_HEXSZ] = '\0';
 
 		git_filebuf_printf(&file, "%s\n", oid);

@@ -133,6 +133,17 @@ GIT_EXTERN(int) git_reference_create(git_reference **out, git_repository *repo, 
 GIT_EXTERN(const git_oid *) git_reference_target(const git_reference *ref);
 
 /**
+ * Return the peeled OID target of this reference.
+ *
+ * This peeled OID only applies to direct references that point to
+ * a hard Tag object: it is the result of peeling such Tag.
+ *
+ * @param ref The reference
+ * @return a pointer to the oid if available, NULL otherwise
+ */
+GIT_EXTERN(const git_oid *) git_reference_target_peel(const git_reference *ref);
+
+/**
  * Get full name to the reference pointed to by a symbolic reference.
  *
  * Only available if the reference is symbolic.

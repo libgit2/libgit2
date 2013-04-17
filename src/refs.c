@@ -31,37 +31,62 @@ enum {
 	GIT_PACKREF_WAS_LOOSE = 2
 };
 
+static git_reference *alloc_ref(git_refdb *refdb, const char *name)
+{
+	git_reference *ref;
+	size_t namelen = strlen(name);
+
+	if ((ref = git__calloc(1, sizeof(git_reference) + namelen + 1)) == NULL)
+		return NULL;
+
+	ref->db = refdb;
+	memcpy(ref->name, name, namelen + 1);
+
+	return ref;
+}
+
+git_reference *git_reference__alloc_symbolic(
+	git_refdb *refdb,
+	const char *name,
+	const char *target)
+{
+	git_reference *ref;
+
+	assert(refdb && name && target);
+
+	ref = alloc_ref(refdb, name);
+	if (!ref)
+		return NULL;
+
+	ref->type = GIT_REF_SYMBOLIC;
+
+	if ((ref->target.symbolic = git__strdup(target)) == NULL) {
+		git__free(ref);
+		return NULL;
+	}
+
+	return ref;
+}
 
 git_reference *git_reference__alloc(
 	git_refdb *refdb,
 	const char *name,
 	const git_oid *oid,
-	const char *symbolic)
+	const git_oid *peel)
 {
 	git_reference *ref;
-	size_t namelen;
 
-	assert(refdb && name && ((oid && !symbolic) || (!oid && symbolic)));
+	assert(refdb && name && oid);
 
-	namelen = strlen(name);
-
-	if ((ref = git__calloc(1, sizeof(git_reference) + namelen + 1)) == NULL)
+	ref = alloc_ref(refdb, name);
+	if (!ref)
 		return NULL;
 
-	if (oid) {
-		ref->type = GIT_REF_OID;
-		git_oid_cpy(&ref->target.oid, oid);
-	} else {
-		ref->type = GIT_REF_SYMBOLIC;
+	ref->type = GIT_REF_OID;
+	git_oid_cpy(&ref->target.direct.oid, oid);
 
-		if ((ref->target.symbolic = git__strdup(symbolic)) == NULL) {
-			git__free(ref);
-			return NULL;
-		}
-	}
-
-	ref->db = refdb;
-	memcpy(ref->name, name, namelen + 1);
+	if (peel != NULL)
+		git_oid_cpy(&ref->target.direct.peel, peel);
 
 	return ref;
 }
@@ -71,13 +96,8 @@ void git_reference_free(git_reference *reference)
 	if (reference == NULL)
 		return;
 
-	if (reference->type == GIT_REF_SYMBOLIC) {
+	if (reference->type == GIT_REF_SYMBOLIC)
 		git__free(reference->target.symbolic);
-		reference->target.symbolic = NULL;
-	}
-
-	reference->db = NULL;
-	reference->type = GIT_REF_INVALID;
 
 	git__free(reference);
 }
@@ -302,7 +322,17 @@ const git_oid *git_reference_target(const git_reference *ref)
 	if (ref->type != GIT_REF_OID)
 		return NULL;
 
-	return &ref->target.oid;
+	return &ref->target.direct.oid;
+}
+
+const git_oid *git_reference_target_peel(const git_reference *ref)
+{
+	assert(ref);
+
+	if (ref->type != GIT_REF_OID || git_oid_iszero(&ref->target.direct.peel))
+		return NULL;
+
+	return &ref->target.direct.peel;
 }
 
 const char *git_reference_symbolic_target(const git_reference *ref)
@@ -335,8 +365,15 @@ static int reference__create(
 		(error = reference_can_write(repo, normalized, NULL, force)) < 0 ||
 		(error = git_repository_refdb__weakptr(&refdb, repo)) < 0)
 		return error;
+
+	if (oid != NULL) {
+		assert(symbolic == NULL);
+		ref = git_reference__alloc(refdb, name, oid, NULL);
+	} else {
+		ref = git_reference__alloc_symbolic(refdb, name, symbolic);
+	}
 	
-	if ((ref = git_reference__alloc(refdb, name, oid, symbolic)) == NULL)
+	if (ref == NULL)
 		return -1;
 
 	if ((error = git_refdb_write(refdb, ref)) < 0) {
@@ -437,8 +474,6 @@ int git_reference_rename(
 	char normalized[GIT_REFNAME_MAX];
 	bool should_head_be_updated = false;
 	git_reference *result = NULL;
-	git_oid *oid;
-	const char *symbolic;
 	int error = 0;
 	int reference_has_log;
 	
@@ -447,7 +482,8 @@ int git_reference_rename(
 	normalization_flags = ref->type == GIT_REF_SYMBOLIC ?
 		GIT_REF_FORMAT_ALLOW_ONELEVEL : GIT_REF_FORMAT_NORMAL;
 
-	if ((error = git_reference_normalize_name(normalized, sizeof(normalized), new_name, normalization_flags)) < 0 ||
+	if ((error = git_reference_normalize_name(
+			normalized, sizeof(normalized), new_name, normalization_flags)) < 0 ||
 		(error = reference_can_write(ref->db->repo, normalized, ref->name, force)) < 0)
 		return error;
 
@@ -455,14 +491,15 @@ int git_reference_rename(
 	 * Create the new reference.
 	 */
 	if (ref->type == GIT_REF_OID) {
-		oid = &ref->target.oid;
-		symbolic = NULL;
+		result = git_reference__alloc(ref->db, new_name,
+			&ref->target.direct.oid, &ref->target.direct.peel); 
+	} else if (ref->type == GIT_REF_SYMBOLIC) {
+		result = git_reference__alloc_symbolic(ref->db, new_name, ref->target.symbolic);
 	} else {
-		oid = NULL;
-		symbolic = ref->target.symbolic;
+		assert(0);
 	}
-	
-	if ((result = git_reference__alloc(ref->db, new_name, oid, symbolic)) == NULL)
+
+	if (result == NULL)
 		return -1;
 
 	/* Check if we have to update HEAD. */
@@ -509,11 +546,17 @@ on_error:
 
 int git_reference_resolve(git_reference **ref_out, const git_reference *ref)
 {
-	if (ref->type == GIT_REF_OID)
+	switch (git_reference_type(ref)) {
+	case GIT_REF_OID:
 		return git_reference_lookup(ref_out, ref->db->repo, ref->name);
-	else
-		return git_reference_lookup_resolved(ref_out, ref->db->repo,
-			ref->target.symbolic, -1);
+	
+	case GIT_REF_SYMBOLIC:
+		return git_reference_lookup_resolved(ref_out, ref->db->repo, ref->target.symbolic, -1);
+
+	default:
+		giterr_set(GITERR_REFERENCE, "Invalid reference");
+		return -1;
+	}
 }
 
 int git_reference_foreach(
@@ -778,16 +821,20 @@ int git_reference__normalize_name_lax(
 
 int git_reference_cmp(git_reference *ref1, git_reference *ref2)
 {
+	git_ref_t type1, type2;
 	assert(ref1 && ref2);
 
-	/* let's put symbolic refs before OIDs */
-	if (ref1->type != ref2->type)
-		return (ref1->type == GIT_REF_SYMBOLIC) ? -1 : 1;
+	type1 = git_reference_type(ref1);
+	type2 = git_reference_type(ref2);
 
-	if (ref1->type == GIT_REF_SYMBOLIC)
+	/* let's put symbolic refs before OIDs */
+	if (type1 != type2)
+		return (type1 == GIT_REF_SYMBOLIC) ? -1 : 1;
+
+	if (type1 == GIT_REF_SYMBOLIC)
 		return strcmp(ref1->target.symbolic, ref2->target.symbolic);
 
-	return git_oid_cmp(&ref1->target.oid, &ref2->target.oid);
+	return git_oid_cmp(&ref1->target.direct.oid, &ref2->target.direct.oid);
 }
 
 static int reference__update_terminal(
@@ -905,15 +952,6 @@ static int peel_error(int error, git_reference *ref, const char* msg)
 	return error;
 }
 
-static int reference_target(git_object **object, git_reference *ref)
-{
-	const git_oid *oid;
-
-	oid = git_reference_target(ref);
-
-	return git_object_lookup(object, git_reference_owner(ref), oid, GIT_OBJ_ANY);
-}
-
 int git_reference_peel(
 		git_object **peeled,
 		git_reference *ref,
@@ -925,10 +963,22 @@ int git_reference_peel(
 
 	assert(ref);
 
-	if ((error = git_reference_resolve(&resolved, ref)) < 0)
-		return peel_error(error, ref, "Cannot resolve reference");
+	if (ref->type == GIT_REF_OID) {
+		resolved = ref;
+	} else {
+		if ((error = git_reference_resolve(&resolved, ref)) < 0)
+			return peel_error(error, ref, "Cannot resolve reference");
+	}
 
-	if ((error = reference_target(&target, resolved)) < 0) {
+	if (!git_oid_iszero(&resolved->target.direct.peel)) {
+		error = git_object_lookup(&target,
+			git_reference_owner(ref), &resolved->target.direct.peel, GIT_OBJ_ANY);
+	} else {
+		error = git_object_lookup(&target,
+			git_reference_owner(ref), &resolved->target.direct.oid, GIT_OBJ_ANY);
+	}
+
+	if (error < 0) {
 		peel_error(error, ref, "Cannot retrieve reference target");
 		goto cleanup;
 	}
@@ -940,7 +990,10 @@ int git_reference_peel(
 
 cleanup:
 	git_object_free(target);
-	git_reference_free(resolved);
+
+	if (resolved != ref)
+		git_reference_free(resolved);
+
 	return error;
 }
 
