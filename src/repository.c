@@ -368,6 +368,37 @@ static int find_repo(
 	return error;
 }
 
+int git_repository_open_bare(
+	git_repository **repo_ptr,
+	const char *bare_path)
+{
+	int error;
+	git_buf path = GIT_BUF_INIT;
+	git_repository *repo = NULL;
+
+	if ((error = git_path_prettify_dir(&path, bare_path, NULL)) < 0)
+		return error;
+
+	if (!valid_repository_path(&path)) {
+		git_buf_free(&path);
+		giterr_set(GITERR_REPOSITORY, "Path is not a repository: %s", bare_path);
+		return GIT_ENOTFOUND;
+	}
+
+	repo = repository_alloc();
+	GITERR_CHECK_ALLOC(repo);
+
+	repo->path_repository = git_buf_detach(&path);
+	GITERR_CHECK_ALLOC(repo->path_repository);
+
+	/* of course we're bare! */
+	repo->is_bare = 1;
+	repo->workdir = NULL;
+
+	*repo_ptr = repo;
+	return 0;
+}
+
 int git_repository_open_ext(
 	git_repository **repo_ptr,
 	const char *start_path,

@@ -124,6 +124,21 @@ GIT_EXTERN(int) git_repository_open_ext(
 	const char *ceiling_dirs);
 
 /**
+ * Open a bare repository on the serverside.
+ *
+ * This is a fast open for bare repositories that will come in handy
+ * if you're e.g. hosting git repositories and need to access them
+ * efficiently
+ *
+ * @param out Pointer to the repo which will be opened.
+ * @param bare_path Direct path to the bare repository
+ * @return 0 on success, or an error code
+ */
+GIT_EXTERN(int) git_repository_open_bare(
+	git_repository **out,
+	const char *bare_path);
+
+/**
  * Free a previously allocated repository
  *
  * Note that after a repository is free'd, all the objects it has spawned
