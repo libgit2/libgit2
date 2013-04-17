@@ -119,6 +119,7 @@ static bool checkout_is_workdir_modified(
 	const git_index_entry *wditem)
 {
 	git_oid oid;
+	const git_index_entry *ie;
 
 	/* handle "modified" submodule */
 	if (wditem->mode == GIT_FILEMODE_COMMIT) {
@@ -138,6 +139,17 @@ static bool checkout_is_workdir_modified(
 			return false;
 
 		return (git_oid_cmp(&baseitem->oid, sm_oid) != 0);
+	}
+
+	/* Look at the cache to decide if the workdir is modified.  If not,
+	 * we can simply compare the oid in the cache to the baseitem instead
+	 * of hashing the file.
+	 */
+	if ((ie = git_index_get_bypath(data->index, wditem->path, 0)) != NULL) {
+		if (wditem->mtime.seconds == ie->mtime.seconds &&
+			wditem->mtime.nanoseconds == ie->mtime.nanoseconds &&
+			wditem->file_size == ie->file_size)
+			return (git_oid_cmp(&baseitem->oid, &ie->oid) != 0);
 	}
 
 	/* depending on where base is coming from, we may or may not know
