@@ -135,7 +135,7 @@ int foreach_test(const char *ref_name, void *payload)
 	else if (*i == 2)
 		cl_git_pass(git_oid_fromstr(&expected, "763d71aadf09a7951596c9746c024e7eece7c7af"));
 
-	cl_assert(git_oid_cmp(&expected, &ref->target.oid) == 0);
+	cl_assert(git_oid_cmp(&expected, git_reference_target(ref)) == 0);
 
 	++(*i);
 	
@@ -176,7 +176,7 @@ int delete_test(const char *ref_name, void *payload)
 	cl_git_pass(git_reference_lookup(&ref, repo, ref_name));
 	
 	cl_git_pass(git_oid_fromstr(&expected, "e90810b8df3e80c413d903f631643c716887138d"));	
-	cl_assert(git_oid_cmp(&expected, &ref->target.oid) == 0);
+	cl_assert(git_oid_cmp(&expected, git_reference_target(ref)) == 0);
 	
 	++(*i);
 	
