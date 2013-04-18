@@ -377,7 +377,7 @@ int git_branch_remote_name(char *buffer, size_t buffer_len, git_repository *repo
 	if (buffer)
 		git_buf_copy_cstr(buffer, buffer_len, &buf);
 
-	ret = git_buf_len(&buf) + 1;
+	ret = (int)git_buf_len(&buf) + 1;
 	git_buf_free(&buf);
 
 	return ret;
