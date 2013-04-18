@@ -799,8 +799,8 @@ void test_repo_iterator__workdir_depth(void)
 	g_repo = cl_git_sandbox_init("icase");
 
 	build_workdir_tree("icase", 10, 10);
-	build_workdir_tree("icase/dir01/Sub01", 50, 0);
-	build_workdir_tree("icase/DIR02/Sub01", 50, 0);
+	build_workdir_tree("icase/DIR01/sUB01", 50, 0);
+	build_workdir_tree("icase/dir02/sUB01", 50, 0);
 
 	/* auto expand with no tree entries */
 	cl_git_pass(git_iterator_for_workdir(&iter, g_repo, 0, NULL, NULL));
