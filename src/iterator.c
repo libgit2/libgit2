@@ -1252,16 +1252,14 @@ int git_iterator_for_workdir(
 	const char *end)
 {
 	int error;
-	workdir_iterator *wi = git__calloc(1, sizeof(workdir_iterator));
-	GITERR_CHECK_ALLOC(wi);
+	workdir_iterator *wi;
 
-	assert(out && repo);
-
-	if ((error = git_repository__ensure_not_bare(
-			 repo, "scan working directory")) < 0)
-		return error;
+	if (git_repository__ensure_not_bare(repo, "scan working directory") < 0)
+		return GIT_EBAREREPO;
 
 	/* initialize as an fs iterator then do overrides */
+	wi = git__calloc(1, sizeof(workdir_iterator));
+	GITERR_CHECK_ALLOC(wi);
 	ITERATOR_BASE_INIT((&wi->fi), fs, FS, repo);
 
 	wi->fi.base.type = GIT_ITERATOR_TYPE_WORKDIR;
