@@ -422,7 +422,7 @@ static void build_test_tree(
 	git_treebuilder *builder;
 	const char *scan = fmt, *next;
 	char type, delimiter;
-	git_filemode_t mode;
+	git_filemode_t mode = GIT_FILEMODE_BLOB;
 	git_buf name = GIT_BUF_INIT;
 	va_list arglist;
 
