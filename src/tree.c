@@ -525,7 +525,6 @@ static int write_tree(
 			/* Write out the subtree */
 			written = write_tree(&sub_oid, repo, index, subdir, i);
 			if (written < 0) {
-				tree_error("Failed to write subtree", subdir);
 				git__free(subdir);
 				goto on_error;
 			} else {
