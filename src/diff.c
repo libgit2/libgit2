@@ -267,6 +267,16 @@ static int config_bool(git_config *cfg, const char *name, int defvalue)
 	return val;
 }
 
+static int config_int(git_config *cfg, const char *name, int defvalue)
+{
+	int val = defvalue;
+
+	if (git_config_get_int32(&val, cfg, name) < 0)
+		giterr_clear();
+
+	return val;
+}
+
 static git_diff_list *git_diff_list_alloc(
 	git_repository *repo, const git_diff_options *opts)
 {
@@ -306,7 +316,8 @@ static git_diff_list *git_diff_list_alloc(
 
 	if (opts == NULL) {
 		/* Make sure we default to 3 lines */
-		diff->opts.context_lines = 3;
+		int context = config_int(cfg, "diff.context", 3);
+		diff->opts.context_lines = max(context, 0);
 		return diff;
 	}
 
