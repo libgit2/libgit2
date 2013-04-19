@@ -6,7 +6,6 @@
 #define TEST_REPO_PATH "testrepo"
 
 static git_repository *repo;
-static git_refdb *refdb;
 static git_refdb_backend *refdb_backend;
 
 int unlink_ref(void *payload, git_buf *file)
@@ -52,6 +51,8 @@ int ref_file_foreach(git_repository *repo, int (* cb)(void *payload, git_buf *fi
 
 void test_refdb_inmemory__initialize(void)
 {
+	git_refdb *refdb;
+
 	git_buf repo_refs_dir = GIT_BUF_INIT;
 
 	repo = cl_git_sandbox_init(TEST_REPO_PATH);
@@ -60,10 +61,10 @@ void test_refdb_inmemory__initialize(void)
 	cl_git_pass(refdb_backend_test(&refdb_backend, repo));
 	cl_git_pass(git_refdb_set_backend(refdb, refdb_backend));
 	
-	
 	ref_file_foreach(repo, unlink_ref);
 
 	git_buf_free(&repo_refs_dir);
+	git_refdb_free(refdb);
 }
 
 void test_refdb_inmemory__cleanup(void)

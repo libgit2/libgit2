@@ -101,8 +101,7 @@ struct git_refdb_backend {
  */
 GIT_EXTERN(int) git_refdb_backend_fs(
 	struct git_refdb_backend **backend_out,
-	git_repository *repo,
-	git_refdb *refdb);
+	git_repository *repo);
 
 GIT_END_DECL
 
