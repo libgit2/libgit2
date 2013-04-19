@@ -45,7 +45,7 @@ int git_refdb_open(git_refdb **out, git_repository *repo)
 		return -1;
 
 	/* Add the default (filesystem) backend */
-	if (git_refdb_backend_fs(&dir, repo, db) < 0) {
+	if (git_refdb_backend_fs(&dir, repo) < 0) {
 		git_refdb_free(db);
 		return -1;
 	}
@@ -111,9 +111,20 @@ int git_refdb_exists(int *exists, git_refdb *refdb, const char *ref_name)
 
 int git_refdb_lookup(git_reference **out, git_refdb *db, const char *ref_name)
 {
+	git_reference *ref;
+	int error;
+
 	assert(db && db->backend && ref_name);
 
-	return db->backend->lookup(out, db->backend, ref_name);
+	*out = NULL;
+
+	if ((error = db->backend->lookup(&ref, db->backend, ref_name)) == 0)
+	{
+		ref->db = db;
+		*out = ref;
+	}
+
+	return error;
 }
 
 int git_refdb_foreach(

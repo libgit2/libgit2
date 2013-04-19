@@ -284,6 +284,7 @@ void test_refs_rename__overwrite(void)
 	git_reference_free(ref_one);
 	git_reference_free(ref_one_new);
 	git_reference_free(ref_two);
+	git_refdb_free(refdb);
 }
 
 
