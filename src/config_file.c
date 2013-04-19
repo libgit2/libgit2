@@ -12,6 +12,7 @@
 #include "buffer.h"
 #include "buf_text.h"
 #include "git2/config.h"
+#include "git2/sys/config.h"
 #include "git2/types.h"
 #include "strmap.h"
 
