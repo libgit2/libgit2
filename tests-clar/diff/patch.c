@@ -1,4 +1,6 @@
 #include "clar_libgit2.h"
+#include "git2/sys/repository.h"
+
 #include "diff_helpers.h"
 #include "repository.h"
 #include "buf_text.h"

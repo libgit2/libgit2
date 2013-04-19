@@ -9,6 +9,7 @@
 
 #include "git2/object.h"
 #include "git2/refdb.h"
+#include "git2/sys/repository.h"
 
 #include "common.h"
 #include "repository.h"
