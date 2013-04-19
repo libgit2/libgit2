@@ -422,7 +422,7 @@ static void build_test_tree(
 	git_treebuilder *builder;
 	const char *scan = fmt, *next;
 	char type, delimiter;
-	git_filemode_t mode;
+	git_filemode_t mode = GIT_FILEMODE_BLOB;
 	git_buf name = GIT_BUF_INIT;
 	va_list arglist;
 
@@ -755,47 +755,52 @@ void test_repo_iterator__workdir_icase(void)
 	git_iterator_free(i);
 }
 
-void test_repo_iterator__workdir_depth(void)
+static void build_workdir_tree(const char *root, int dirs, int subs)
 {
 	int i, j;
+	char buf[64], sub[64];
+
+	for (i = 0; i < dirs; ++i) {
+		if (i % 2 == 0) {
+			p_snprintf(buf, sizeof(buf), "%s/dir%02d", root, i);
+			cl_git_pass(git_futils_mkdir(buf, NULL, 0775, GIT_MKDIR_PATH));
+
+			p_snprintf(buf, sizeof(buf), "%s/dir%02d/file", root, i);
+			cl_git_mkfile(buf, buf);
+			buf[strlen(buf) - 5] = '\0';
+		} else {
+			p_snprintf(buf, sizeof(buf), "%s/DIR%02d", root, i);
+			cl_git_pass(git_futils_mkdir(buf, NULL, 0775, GIT_MKDIR_PATH));
+		}
+
+		for (j = 0; j < subs; ++j) {
+			switch (j % 4) {
+			case 0: p_snprintf(sub, sizeof(sub), "%s/sub%02d", buf, j); break;
+			case 1: p_snprintf(sub, sizeof(sub), "%s/sUB%02d", buf, j); break;
+			case 2: p_snprintf(sub, sizeof(sub), "%s/Sub%02d", buf, j); break;
+			case 3: p_snprintf(sub, sizeof(sub), "%s/SUB%02d", buf, j); break;
+			}
+			cl_git_pass(git_futils_mkdir(sub, NULL, 0775, GIT_MKDIR_PATH));
+
+			if (j % 2 == 0) {
+				size_t sublen = strlen(sub);
+				memcpy(&sub[sublen], "/file", sizeof("/file"));
+				cl_git_mkfile(sub, sub);
+				sub[sublen] = '\0';
+			}
+		}
+	}
+}
+
+void test_repo_iterator__workdir_depth(void)
+{
 	git_iterator *iter;
-	char buf[64];
 
 	g_repo = cl_git_sandbox_init("icase");
 
-	for (i = 0; i < 10; ++i) {
-		p_snprintf(buf, sizeof(buf), "icase/dir%02d", i);
-		cl_git_pass(git_futils_mkdir(buf, NULL, 0775, GIT_MKDIR_PATH));
-
-		if (i % 2 == 0) {
-			p_snprintf(buf, sizeof(buf), "icase/dir%02d/file", i);
-			cl_git_mkfile(buf, buf);
-		}
-
-		for (j = 0; j < 10; ++j) {
-			p_snprintf(buf, sizeof(buf), "icase/dir%02d/sub%02d", i, j);
-			cl_git_pass(git_futils_mkdir(buf, NULL, 0775, GIT_MKDIR_PATH));
-
-			if (j % 2 == 0) {
-				p_snprintf(
-					buf, sizeof(buf), "icase/dir%02d/sub%02d/file", i, j);
-				cl_git_mkfile(buf, buf);
-			}
-		}
-	}
-
-	for (i = 1; i < 3; ++i) {
-		for (j = 0; j < 50; ++j) {
-			p_snprintf(buf, sizeof(buf), "icase/dir%02d/sub01/moar%02d", i, j);
-			cl_git_pass(git_futils_mkdir(buf, NULL, 0775, GIT_MKDIR_PATH));
-
-			if (j % 2 == 0) {
-				p_snprintf(buf, sizeof(buf),
-					"icase/dir%02d/sub01/moar%02d/file", i, j);
-				cl_git_mkfile(buf, buf);
-			}
-		}
-	}
+	build_workdir_tree("icase", 10, 10);
+	build_workdir_tree("icase/DIR01/sUB01", 50, 0);
+	build_workdir_tree("icase/dir02/sUB01", 50, 0);
 
 	/* auto expand with no tree entries */
 	cl_git_pass(git_iterator_for_workdir(&iter, g_repo, 0, NULL, NULL));
@@ -807,4 +812,115 @@ void test_repo_iterator__workdir_depth(void)
 		&iter, g_repo, GIT_ITERATOR_INCLUDE_TREES, NULL, NULL));
 	expect_iterator_items(iter, 337, NULL, 337, NULL);
 	git_iterator_free(iter);
+}
+
+void test_repo_iterator__fs(void)
+{
+	git_iterator *i;
+	static const char *expect_base[] = {
+		"DIR01/Sub02/file",
+		"DIR01/sub00/file",
+		"current_file",
+		"dir00/Sub02/file",
+		"dir00/file",
+		"dir00/sub00/file",
+		"modified_file",
+		"new_file",
+		NULL,
+	};
+	static const char *expect_trees[] = {
+		"DIR01/",
+		"DIR01/SUB03/",
+		"DIR01/Sub02/",
+		"DIR01/Sub02/file",
+		"DIR01/sUB01/",
+		"DIR01/sub00/",
+		"DIR01/sub00/file",
+		"current_file",
+		"dir00/",
+		"dir00/SUB03/",
+		"dir00/Sub02/",
+		"dir00/Sub02/file",
+		"dir00/file",
+		"dir00/sUB01/",
+		"dir00/sub00/",
+		"dir00/sub00/file",
+		"modified_file",
+		"new_file",
+		NULL,
+	};
+	static const char *expect_noauto[] = {
+		"DIR01/",
+		"current_file",
+		"dir00/",
+		"modified_file",
+		"new_file",
+		NULL,
+	};
+
+	g_repo = cl_git_sandbox_init("status");
+
+	build_workdir_tree("status/subdir", 2, 4);
+
+	cl_git_pass(git_iterator_for_filesystem(
+		&i, "status/subdir", 0, NULL, NULL));
+	expect_iterator_items(i, 8, expect_base, 8, expect_base);
+	git_iterator_free(i);
+
+	cl_git_pass(git_iterator_for_filesystem(
+		&i, "status/subdir", GIT_ITERATOR_INCLUDE_TREES, NULL, NULL));
+	expect_iterator_items(i, 18, expect_trees, 18, expect_trees);
+	git_iterator_free(i);
+
+	cl_git_pass(git_iterator_for_filesystem(
+		&i, "status/subdir", GIT_ITERATOR_DONT_AUTOEXPAND, NULL, NULL));
+	expect_iterator_items(i, 5, expect_noauto, 18, expect_trees);
+	git_iterator_free(i);
+
+	git__tsort((void **)expect_base, 8, (git__tsort_cmp)git__strcasecmp);
+	git__tsort((void **)expect_trees, 18, (git__tsort_cmp)git__strcasecmp);
+	git__tsort((void **)expect_noauto, 5, (git__tsort_cmp)git__strcasecmp);
+
+	cl_git_pass(git_iterator_for_filesystem(
+		&i, "status/subdir", GIT_ITERATOR_IGNORE_CASE, NULL, NULL));
+	expect_iterator_items(i, 8, expect_base, 8, expect_base);
+	git_iterator_free(i);
+
+	cl_git_pass(git_iterator_for_filesystem(
+		&i, "status/subdir", GIT_ITERATOR_IGNORE_CASE |
+		GIT_ITERATOR_INCLUDE_TREES, NULL, NULL));
+	expect_iterator_items(i, 18, expect_trees, 18, expect_trees);
+	git_iterator_free(i);
+
+	cl_git_pass(git_iterator_for_filesystem(
+		&i, "status/subdir", GIT_ITERATOR_IGNORE_CASE |
+		GIT_ITERATOR_DONT_AUTOEXPAND, NULL, NULL));
+	expect_iterator_items(i, 5, expect_noauto, 18, expect_trees);
+	git_iterator_free(i);
+}
+
+void test_repo_iterator__fs2(void)
+{
+	git_iterator *i;
+	static const char *expect_base[] = {
+		"heads/br2",
+		"heads/dir",
+		"heads/master",
+		"heads/packed-test",
+		"heads/subtrees",
+		"heads/test",
+		"tags/e90810b",
+		"tags/foo/bar",
+		"tags/foo/foo/bar",
+		"tags/point_to_blob",
+		"tags/test",
+		NULL,
+	};
+
+	g_repo = cl_git_sandbox_init("testrepo");
+
+	cl_git_pass(git_iterator_for_filesystem(
+		&i, "testrepo/.git/refs", 0, NULL, NULL));
+	expect_iterator_items(i, 11, expect_base, 11, expect_base);
+	git_iterator_free(i);
 }
