@@ -1,5 +1,6 @@
 #include "clar_libgit2.h"
-#include "odb.h"
+#include "git2/odb_backend.h"
+
 #include "pack_data_one.h"
 #include "pack.h"
 

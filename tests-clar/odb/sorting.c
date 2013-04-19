@@ -1,13 +1,12 @@
 #include "clar_libgit2.h"
-#include "git2/odb_backend.h"
-#include "odb.h"
+#include "git2/sys/odb_backend.h"
 
 typedef struct {
 	git_odb_backend base;
-	int position;
+	size_t position;
 } fake_backend;
 
-static git_odb_backend *new_backend(int position)
+static git_odb_backend *new_backend(size_t position)
 {
 	fake_backend *b;
 
@@ -22,14 +21,13 @@ static git_odb_backend *new_backend(int position)
 
 static void check_backend_sorting(git_odb *odb)
 {
-	unsigned int i;
+	size_t i, max_i = git_odb_num_backends(odb);
+	fake_backend *internal;
 
-	for (i = 0; i < odb->backends.length; ++i) {
-		fake_backend *internal =
-			*((fake_backend **)git_vector_get(&odb->backends, i));
-
+	for (i = 0; i < max_i; ++i) {
+		cl_git_pass(git_odb_get_backend((git_odb_backend **)&internal, odb, i));
 		cl_assert(internal != NULL);
-		cl_assert(internal->position == (int)i);
+		cl_assert_equal_sz(i, internal->position);
 	}
 }
 

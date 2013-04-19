@@ -4,8 +4,8 @@
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
  */
-#ifndef INCLUDE_git_sys_config_h__
-#define INCLUDE_git_sys_config_h__
+#ifndef INCLUDE_sys_git_config_backend_h__
+#define INCLUDE_sys_git_config_backend_h__
 
 #include "git2/common.h"
 #include "git2/types.h"
@@ -14,6 +14,7 @@
 /**
  * @file git2/sys/config.h
  * @brief Git config backend routines
+ * @defgroup git_backend Git custom backend APIs
  * @ingroup Git
  * @{
  */
