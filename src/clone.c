@@ -187,6 +187,7 @@ static int get_head_callback(git_remote_head *head, void *payload)
 static int update_head_to_remote(git_repository *repo, git_remote *remote)
 {
 	int retcode = -1;
+	git_refspec dummy_spec;
 	git_remote_head *remote_head;
 	struct head_info head_info;
 	git_buf remote_master_name = GIT_BUF_INIT;
@@ -211,8 +212,13 @@ static int update_head_to_remote(git_repository *repo, git_remote *remote)
 	git_oid_cpy(&head_info.remote_head_oid, &remote_head->oid);
 	git_buf_init(&head_info.branchname, 16);
 	head_info.repo = repo;
-	head_info.refspec = git_remote_fetchspec(remote);
+	head_info.refspec = git_remote__matching_refspec(remote, GIT_REFS_HEADS_MASTER_FILE);
 	head_info.found = 0;
+
+	if (head_info.refspec == NULL) {
+		memset(&dummy_spec, 0, sizeof(git_refspec));
+		head_info.refspec = &dummy_spec;
+	}
 	
 	/* Determine the remote tracking reference name from the local master */
 	if (git_refspec_transform_r(
@@ -318,11 +324,11 @@ static int create_and_configure_origin(
 		goto on_error;
 
 	if (options->fetch_spec &&
-	    (error = git_remote_set_fetchspec(origin, options->fetch_spec)) < 0)
+	    (error = git_remote_add_fetchspec(origin, options->fetch_spec)) < 0)
 		goto on_error;
 
 	if (options->push_spec &&
-	    (error = git_remote_set_pushspec(origin, options->push_spec)) < 0)
+	    (error = git_remote_add_pushspec(origin, options->push_spec)) < 0)
 		goto on_error;
 
 	if (options->pushurl &&

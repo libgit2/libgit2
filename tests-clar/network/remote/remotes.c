@@ -13,7 +13,7 @@ void test_network_remote_remotes__initialize(void)
 
 	cl_git_pass(git_remote_load(&_remote, _repo, "test"));
 
-	_refspec = git_remote_fetchspec(_remote);
+	_refspec = git_vector_get(&_remote->refspecs, 0);
 	cl_assert(_refspec != NULL);
 }
 
@@ -109,20 +109,41 @@ void test_network_remote_remotes__refspec_parsing(void)
 	cl_assert_equal_s(git_refspec_dst(_refspec), "refs/remotes/test/*");
 }
 
-void test_network_remote_remotes__set_fetchspec(void)
+void test_network_remote_remotes__add_fetchspec(void)
 {
-	cl_git_pass(git_remote_set_fetchspec(_remote, "refs/*:refs/*"));
-	_refspec = git_remote_fetchspec(_remote);
+	size_t size;
+
+	size = _remote->refspecs.length;
+	cl_assert_equal_i(size, _remote->refspec_strings.length);
+
+	cl_git_pass(git_remote_add_fetchspec(_remote, "refs/*:refs/*"));
+
+	size++;
+	cl_assert_equal_i(size, _remote->refspec_strings.length);
+	cl_assert_equal_i(size, _remote->refspecs.length);
+
+	_refspec = git_vector_get(&_remote->refspecs, size-1);
 	cl_assert_equal_s(git_refspec_src(_refspec), "refs/*");
 	cl_assert_equal_s(git_refspec_dst(_refspec), "refs/*");
+	cl_assert_equal_i(_refspec->push, false);
 }
 
-void test_network_remote_remotes__set_pushspec(void)
+void test_network_remote_remotes__add_pushspec(void)
 {
-	cl_git_pass(git_remote_set_pushspec(_remote, "refs/*:refs/*"));
-	_refspec = git_remote_pushspec(_remote);
+	size_t size;
+
+	size = _remote->refspecs.length;
+
+	cl_git_pass(git_remote_add_pushspec(_remote, "refs/*:refs/*"));
+	size++;
+	cl_assert_equal_i(size, _remote->refspec_strings.length);
+	cl_assert_equal_i(size, _remote->refspecs.length);
+
+	_refspec = git_vector_get(&_remote->refspecs, size-1);
 	cl_assert_equal_s(git_refspec_src(_refspec), "refs/*");
 	cl_assert_equal_s(git_refspec_dst(_refspec), "refs/*");
+
+	cl_assert_equal_i(_refspec->push, true);
 }
 
 void test_network_remote_remotes__save(void)
@@ -132,8 +153,18 @@ void test_network_remote_remotes__save(void)
 
 	/* Set up the remote and save it to config */
 	cl_git_pass(git_remote_create(&_remote, _repo, "upstream", "git://github.com/libgit2/libgit2"));
-	cl_git_pass(git_remote_set_fetchspec(_remote, "refs/heads/*:refs/remotes/upstream/*"));
-	cl_git_pass(git_remote_set_pushspec(_remote, "refs/heads/*:refs/heads/*"));
+	git_remote_clear_refspecs(_remote);
+	cl_assert_equal_i(0, _remote->refspecs.length);
+	cl_assert_equal_i(0, _remote->refspec_strings.length);
+
+	cl_git_pass(git_remote_add_fetchspec(_remote, "refs/heads/*:refs/remotes/upstream/*"));
+	cl_assert_equal_i(1, _remote->refspecs.length);
+	cl_assert_equal_i(1, _remote->refspec_strings.length);
+
+	cl_git_pass(git_remote_add_pushspec(_remote, "refs/heads/*:refs/heads/*"));
+	cl_assert_equal_i(2, _remote->refspecs.length);
+	cl_assert_equal_i(2, _remote->refspec_strings.length);
+
 	cl_git_pass(git_remote_set_pushurl(_remote, "git://github.com/libgit2/libgit2_push"));
 	cl_git_pass(git_remote_save(_remote));
 	git_remote_free(_remote);
@@ -142,13 +173,14 @@ void test_network_remote_remotes__save(void)
 	/* Load it from config and make sure everything matches */
 	cl_git_pass(git_remote_load(&_remote, _repo, "upstream"));
 
-	_refspec = git_remote_fetchspec(_remote);
+	_refspec = git_vector_get(&_remote->refspecs, 0);
 	cl_assert(_refspec != NULL);
 	cl_assert_equal_s(git_refspec_src(_refspec), "refs/heads/*");
 	cl_assert_equal_s(git_refspec_dst(_refspec), "refs/remotes/upstream/*");
 	cl_assert_equal_i(0, git_refspec_force(_refspec));
 
-	_refspec = git_remote_pushspec(_remote);
+	cl_assert(_refspec != git_vector_get(&_remote->refspecs, 1));
+	_refspec = git_vector_get(&_remote->refspecs, 1);
 	cl_assert(_refspec != NULL);
 	cl_assert_equal_s(git_refspec_src(_refspec), "refs/heads/*");
 	cl_assert_equal_s(git_refspec_dst(_refspec), "refs/heads/*");
@@ -265,7 +297,7 @@ void test_network_remote_remotes__add(void)
 	_remote = NULL;
 
 	cl_git_pass(git_remote_load(&_remote, _repo, "addtest"));
-	_refspec = git_remote_fetchspec(_remote);
+	_refspec = git_vector_get(&_remote->refspecs, 0);
 	cl_assert_equal_s("refs/heads/*", git_refspec_src(_refspec));
 	cl_assert(git_refspec_force(_refspec) == 1);
 	cl_assert_equal_s("refs/remotes/addtest/*", git_refspec_dst(_refspec));

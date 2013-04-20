@@ -25,6 +25,7 @@ int git_refspec__parse(git_refspec *refspec, const char *input, bool is_fetch)
 	assert(refspec && input);
 
 	memset(refspec, 0x0, sizeof(git_refspec));
+	refspec->push = !is_fetch;
 
 	lhs = input;
 	if (*lhs == '+') {
