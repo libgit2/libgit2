@@ -116,7 +116,7 @@ void test_network_remote_remotes__add_fetchspec(void)
 	size = _remote->refspecs.length;
 	cl_assert_equal_i(size, _remote->refspec_strings.length);
 
-	cl_git_pass(git_remote_add_fetchspec(_remote, "refs/*:refs/*"));
+	cl_git_pass(git_remote_add_fetch(_remote, "refs/*:refs/*"));
 
 	size++;
 	cl_assert_equal_i(size, _remote->refspec_strings.length);
@@ -134,7 +134,7 @@ void test_network_remote_remotes__add_pushspec(void)
 
 	size = _remote->refspecs.length;
 
-	cl_git_pass(git_remote_add_pushspec(_remote, "refs/*:refs/*"));
+	cl_git_pass(git_remote_add_push(_remote, "refs/*:refs/*"));
 	size++;
 	cl_assert_equal_i(size, _remote->refspec_strings.length);
 	cl_assert_equal_i(size, _remote->refspecs.length);
@@ -148,23 +148,19 @@ void test_network_remote_remotes__add_pushspec(void)
 
 void test_network_remote_remotes__save(void)
 {
+	git_strarray array;
+	const char *fetch_refspec = "refs/heads/*:refs/remotes/upstream/*";
+	const char *push_refspec = "refs/heads/*:refs/heads/*";
+
 	git_remote_free(_remote);
 	_remote = NULL;
 
 	/* Set up the remote and save it to config */
 	cl_git_pass(git_remote_create(&_remote, _repo, "upstream", "git://github.com/libgit2/libgit2"));
 	git_remote_clear_refspecs(_remote);
-	cl_assert_equal_i(0, _remote->refspecs.length);
-	cl_assert_equal_i(0, _remote->refspec_strings.length);
 
-	cl_git_pass(git_remote_add_fetchspec(_remote, "refs/heads/*:refs/remotes/upstream/*"));
-	cl_assert_equal_i(1, _remote->refspecs.length);
-	cl_assert_equal_i(1, _remote->refspec_strings.length);
-
-	cl_git_pass(git_remote_add_pushspec(_remote, "refs/heads/*:refs/heads/*"));
-	cl_assert_equal_i(2, _remote->refspecs.length);
-	cl_assert_equal_i(2, _remote->refspec_strings.length);
-
+	cl_git_pass(git_remote_add_fetch(_remote, fetch_refspec));
+	cl_git_pass(git_remote_add_push(_remote, push_refspec));
 	cl_git_pass(git_remote_set_pushurl(_remote, "git://github.com/libgit2/libgit2_push"));
 	cl_git_pass(git_remote_save(_remote));
 	git_remote_free(_remote);
@@ -173,20 +169,17 @@ void test_network_remote_remotes__save(void)
 	/* Load it from config and make sure everything matches */
 	cl_git_pass(git_remote_load(&_remote, _repo, "upstream"));
 
-	_refspec = git_vector_get(&_remote->refspecs, 0);
-	cl_assert(_refspec != NULL);
-	cl_assert_equal_s(git_refspec_src(_refspec), "refs/heads/*");
-	cl_assert_equal_s(git_refspec_dst(_refspec), "refs/remotes/upstream/*");
-	cl_assert_equal_i(0, git_refspec_force(_refspec));
+	cl_git_pass(git_remote_get_fetch_refspecs(&array, _remote));
+	cl_assert_equal_i(1, array.count);
+	cl_assert_equal_s(fetch_refspec, array.strings[0]);
+	git_strarray_free(&array);
 
-	cl_assert(_refspec != git_vector_get(&_remote->refspecs, 1));
-	_refspec = git_vector_get(&_remote->refspecs, 1);
-	cl_assert(_refspec != NULL);
-	cl_assert_equal_s(git_refspec_src(_refspec), "refs/heads/*");
-	cl_assert_equal_s(git_refspec_dst(_refspec), "refs/heads/*");
-
+	cl_git_pass(git_remote_get_push_refspecs(&array, _remote));
+	cl_assert_equal_i(1, array.count);
+	cl_assert_equal_s(push_refspec, array.strings[0]);
 	cl_assert_equal_s(git_remote_url(_remote), "git://github.com/libgit2/libgit2");
 	cl_assert_equal_s(git_remote_pushurl(_remote), "git://github.com/libgit2/libgit2_push");
+	git_strarray_free(&array);
 
 	/* remove the pushurl again and see if we can save that too */
 	cl_git_pass(git_remote_set_pushurl(_remote, NULL));
@@ -417,4 +410,44 @@ void test_network_remote_remotes__cannot_create_a_remote_which_name_is_invalid(v
 	assert_cannot_create_remote("//", GIT_EINVALIDSPEC);
 	assert_cannot_create_remote(".lock", GIT_EINVALIDSPEC);
 	assert_cannot_create_remote("a.lock", GIT_EINVALIDSPEC);
+}
+
+static const char *fetch_refspecs[] = {
+	"+refs/heads/*:refs/remotes/origin/*",
+	"refs/tags/*:refs/tags/*",
+	"+refs/pull/*:refs/pull/*",
+};
+
+static const char *push_refspecs[] = {
+	"refs/heads/*:refs/heads/*",
+	"refs/tags/*:refs/tags/*",
+	"refs/notes/*:refs/notes/*",
+};
+
+void test_network_remote_remotes__query_refspecs(void)
+{
+	git_remote *remote;
+	git_strarray array;
+	int i;
+
+	cl_git_pass(git_remote_create_inmemory(&remote, _repo, NULL, "git://github.com/libgit2/libgit2"));
+
+	for (i = 0; i < 3; i++) {
+		cl_git_pass(git_remote_add_fetch(remote, fetch_refspecs[i]));
+		cl_git_pass(git_remote_add_push(remote, push_refspecs[i]));
+	}
+
+	cl_git_pass(git_remote_get_fetch_refspecs(&array, remote));
+	for (i = 0; i < 3; i++) {
+		cl_assert_equal_s(fetch_refspecs[i], array.strings[i]);
+	}
+	git_strarray_free(&array);
+
+	cl_git_pass(git_remote_get_push_refspecs(&array, remote));
+	for (i = 0; i < 3; i++) {
+		cl_assert_equal_s(push_refspecs[i], array.strings[i]);
+	}
+	git_strarray_free(&array);
+
+	git_remote_free(remote);
 }

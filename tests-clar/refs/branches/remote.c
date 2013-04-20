@@ -70,7 +70,7 @@ void test_refs_branches_remote__ambiguous_remote_returns_error(void)
 
 	/* Update the remote fetch spec */
 	git_remote_clear_refspecs(remote);
-	cl_git_pass(git_remote_add_fetchspec(remote, "refs/heads/*:refs/remotes/test/*"));
+	cl_git_pass(git_remote_add_fetch(remote, "refs/heads/*:refs/remotes/test/*"));
 	cl_git_pass(git_remote_save(remote));
 
 	git_remote_free(remote);

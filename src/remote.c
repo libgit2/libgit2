@@ -1467,12 +1467,60 @@ void git_remote_clear_refspecs(git_remote *remote)
 	git_vector_clear(&remote->refspec_strings);
 }
 
-int git_remote_add_fetchspec(git_remote *remote, const char *refspec)
+int git_remote_add_fetch(git_remote *remote, const char *refspec)
 {
 	return add_refspec(remote, refspec, true);
 }
 
-int git_remote_add_pushspec(git_remote *remote, const char *refspec)
+int git_remote_add_push(git_remote *remote, const char *refspec)
 {
 	return add_refspec(remote, refspec, false);
+}
+
+static int copy_refspecs(git_strarray *array, git_remote *remote, int push)
+{
+	size_t i;
+	git_vector refspecs;
+	git_refspec *spec;
+	char *dup;
+
+	if (git_vector_init(&refspecs, remote->refspecs.length, NULL) < 0)
+		return -1;
+
+	git_vector_foreach(&remote->refspecs, i, spec) {
+		if (spec->push != push)
+			continue;
+
+		dup = git__strdup(git_vector_get(&remote->refspec_strings, i));
+		if (!dup) {
+			goto on_error;
+		}
+
+		if (git_vector_insert(&refspecs, dup) < 0) {
+			git__free(dup);
+			goto on_error;
+		}
+	}
+
+	array->strings = (char **)refspecs.contents;
+	array->count = refspecs.length;
+
+	return 0;
+
+on_error:
+	git_vector_foreach(&refspecs, i, dup)
+		git__free(dup);
+	git_vector_free(&refspecs);
+
+	return -1;
+}
+
+int git_remote_get_fetch_refspecs(git_strarray *array, git_remote *remote)
+{
+	return copy_refspecs(array, remote, false);
+}
+
+int git_remote_get_push_refspecs(git_strarray *array, git_remote *remote)
+{
+	return copy_refspecs(array, remote, true);
 }

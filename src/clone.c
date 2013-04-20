@@ -324,11 +324,11 @@ static int create_and_configure_origin(
 		goto on_error;
 
 	if (options->fetch_spec &&
-	    (error = git_remote_add_fetchspec(origin, options->fetch_spec)) < 0)
+	    (error = git_remote_add_fetch(origin, options->fetch_spec)) < 0)
 		goto on_error;
 
 	if (options->push_spec &&
-	    (error = git_remote_add_pushspec(origin, options->push_spec)) < 0)
+	    (error = git_remote_add_push(origin, options->push_spec)) < 0)
 		goto on_error;
 
 	if (options->pushurl &&

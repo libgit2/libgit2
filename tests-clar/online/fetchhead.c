@@ -44,7 +44,7 @@ static void fetchhead_test_fetch(const char *fetchspec, const char *expected_fet
 
 	if(fetchspec != NULL) {
 		git_remote_clear_refspecs(remote);
-		git_remote_add_fetchspec(remote, fetchspec);
+		git_remote_add_fetch(remote, fetchspec);
 	}
 
 	cl_git_pass(git_remote_connect(remote, GIT_DIRECTION_FETCH));

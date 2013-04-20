@@ -148,7 +148,18 @@ GIT_EXTERN(int) git_remote_set_pushurl(git_remote *remote, const char* url);
  * @apram refspec the new fetch refspec
  * @return 0 or an error value
  */
-GIT_EXTERN(int) git_remote_add_fetchspec(git_remote *remote, const char *refspec);
+GIT_EXTERN(int) git_remote_add_fetch(git_remote *remote, const char *refspec);
+
+/**
+ * Get the remote's list of fetch refspecs
+ *
+ * The memory is owned by the user and should be freed with
+ * `git_strarray_free`.
+ *
+ * @param array pointer to the array in which to store the strings
+ * @param remote the remote to query
+ */
+GIT_EXTERN(int) git_remote_get_fetch_refspecs(git_strarray *array, git_remote *remote);
 
 /**
  * Add a push refspec to the remote
@@ -157,7 +168,18 @@ GIT_EXTERN(int) git_remote_add_fetchspec(git_remote *remote, const char *refspec
  * @param refspec the new push refspec
  * @return 0 or an error value
  */
-GIT_EXTERN(int) git_remote_add_pushspec(git_remote *remote, const char *refspec);
+GIT_EXTERN(int) git_remote_add_push(git_remote *remote, const char *refspec);
+
+/**
+ * Get the remote's list of push refspecs
+ *
+ * The memory is owned by the user and should be freed with
+ * `git_strarray_free`.
+ *
+ * @param array pointer to the array in which to store the strings
+ * @param remote the remote to query
+ */
+GIT_EXTERN(int) git_remote_get_push_refspecs(git_strarray *array, git_remote *remote);
 
 /**
  * Get the push refspec
