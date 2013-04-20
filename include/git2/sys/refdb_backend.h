@@ -7,9 +7,9 @@
 #ifndef INCLUDE_git_refdb_backend_h__
 #define INCLUDE_git_refdb_backend_h__
 
-#include "common.h"
-#include "types.h"
-#include "oid.h"
+#include "git2/common.h"
+#include "git2/types.h"
+#include "git2/oid.h"
 
 /**
  * @file git2/refdb_backend.h
@@ -102,6 +102,18 @@ struct git_refdb_backend {
 GIT_EXTERN(int) git_refdb_backend_fs(
 	struct git_refdb_backend **backend_out,
 	git_repository *repo);
+
+/**
+ * Sets the custom backend to an existing reference DB
+ *
+ * @param refdb database to add the backend to
+ * @param backend pointer to a git_refdb_backend instance
+ * @param priority Value for ordering the backends queue
+ * @return 0 on success; error code otherwise
+ */
+GIT_EXTERN(int) git_refdb_set_backend(
+	git_refdb *refdb,
+	git_refdb_backend *backend);
 
 GIT_END_DECL
 

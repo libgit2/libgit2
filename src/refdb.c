@@ -7,14 +7,15 @@
 
 #include "common.h"
 #include "posix.h"
+
 #include "git2/object.h"
 #include "git2/refs.h"
 #include "git2/refdb.h"
+#include "git2/sys/refdb_backend.h"
+
 #include "hash.h"
 #include "refdb.h"
 #include "refs.h"
-
-#include "git2/refdb_backend.h"
 
 int git_refdb_new(git_refdb **out, git_repository *repo)
 {
@@ -74,11 +75,11 @@ int git_refdb_set_backend(git_refdb *db, git_refdb_backend *backend)
 int git_refdb_compress(git_refdb *db)
 {
 	assert(db);
-	
+
 	if (db->backend->compress) {
 		return db->backend->compress(db->backend);
 	}
-	
+
 	return 0;
 }
 

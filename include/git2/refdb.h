@@ -81,20 +81,6 @@ GIT_EXTERN(int) git_refdb_compress(git_refdb *refdb);
  */
 GIT_EXTERN(void) git_refdb_free(git_refdb *refdb);
 
-/**
- * Sets the custom backend to an existing reference DB
- *
- * Read <refdb_backends.h> for more information.
- *
- * @param refdb database to add the backend to
- * @param backend pointer to a git_refdb_backend instance
- * @param priority Value for ordering the backends queue
- * @return 0 on success; error code otherwise
- */
-GIT_EXTERN(int) git_refdb_set_backend(
-	git_refdb *refdb,
-	git_refdb_backend *backend);
-
 /** @} */
 GIT_END_DECL
 
