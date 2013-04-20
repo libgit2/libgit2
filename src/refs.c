@@ -31,7 +31,7 @@ enum {
 	GIT_PACKREF_WAS_LOOSE = 2
 };
 
-static git_reference *alloc_ref(git_refdb *refdb, const char *name)
+static git_reference *alloc_ref(const char *name)
 {
 	git_reference *ref;
 	size_t namelen = strlen(name);
@@ -39,22 +39,20 @@ static git_reference *alloc_ref(git_refdb *refdb, const char *name)
 	if ((ref = git__calloc(1, sizeof(git_reference) + namelen + 1)) == NULL)
 		return NULL;
 
-	ref->db = refdb;
 	memcpy(ref->name, name, namelen + 1);
 
 	return ref;
 }
 
 git_reference *git_reference__alloc_symbolic(
-	git_refdb *refdb,
 	const char *name,
 	const char *target)
 {
 	git_reference *ref;
 
-	assert(refdb && name && target);
+	assert(name && target);
 
-	ref = alloc_ref(refdb, name);
+	ref = alloc_ref(name);
 	if (!ref)
 		return NULL;
 
@@ -69,16 +67,15 @@ git_reference *git_reference__alloc_symbolic(
 }
 
 git_reference *git_reference__alloc(
-	git_refdb *refdb,
 	const char *name,
 	const git_oid *oid,
 	const git_oid *peel)
 {
 	git_reference *ref;
 
-	assert(refdb && name && oid);
+	assert(name && oid);
 
-	ref = alloc_ref(refdb, name);
+	ref = alloc_ref(name);
 	if (!ref)
 		return NULL;
 
@@ -368,12 +365,13 @@ static int reference__create(
 
 	if (oid != NULL) {
 		assert(symbolic == NULL);
-		ref = git_reference__alloc(refdb, name, oid, NULL);
+		ref = git_reference__alloc(name, oid, NULL);
 	} else {
-		ref = git_reference__alloc_symbolic(refdb, name, symbolic);
+		ref = git_reference__alloc_symbolic(name, symbolic);
 	}
 	
 	GITERR_CHECK_ALLOC(ref);
+	ref->db = refdb;
 
 	if ((error = git_refdb_write(refdb, ref)) < 0) {
 		git_reference_free(ref);
@@ -490,16 +488,17 @@ int git_reference_rename(
 	 * Create the new reference.
 	 */
 	if (ref->type == GIT_REF_OID) {
-		result = git_reference__alloc(ref->db, new_name,
-			&ref->target.oid, &ref->peel); 
+		result = git_reference__alloc(new_name, &ref->target.oid, &ref->peel); 
 	} else if (ref->type == GIT_REF_SYMBOLIC) {
-		result = git_reference__alloc_symbolic(ref->db, new_name, ref->target.symbolic);
+		result = git_reference__alloc_symbolic(new_name, ref->target.symbolic);
 	} else {
 		assert(0);
 	}
 
 	if (result == NULL)
 		return -1;
+
+	result->db = ref->db;
 
 	/* Check if we have to update HEAD. */
 	if ((error = git_branch_is_head(ref)) < 0)

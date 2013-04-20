@@ -42,7 +42,6 @@ typedef struct refdb_fs_backend {
 
 	git_repository *repo;
 	const char *path;
-	git_refdb *refdb;
 
 	git_refcache refcache;
 } refdb_fs_backend;
@@ -430,12 +429,12 @@ static int loose_lookup(
 			goto done;
 		}
 
-		*out = git_reference__alloc_symbolic(backend->refdb, ref_name, target);
+		*out = git_reference__alloc_symbolic(ref_name, target);
 	} else {
 		if ((error = loose_parse_oid(&oid, &ref_file)) < 0)
 			goto done;
 		
-		*out = git_reference__alloc(backend->refdb, ref_name, &oid, NULL);
+		*out = git_reference__alloc(ref_name, &oid, NULL);
 	}
 
 	if (*out == NULL)
@@ -484,7 +483,7 @@ static int packed_lookup(
 	if ((error = packed_map_entry(&entry, &pos, backend, ref_name)) < 0)
 		return error;
 
-	if ((*out = git_reference__alloc(backend->refdb, ref_name,
+	if ((*out = git_reference__alloc(ref_name,
 		&entry->oid, &entry->peel)) == NULL)
 		return -1;
 	
@@ -999,8 +998,7 @@ static void refdb_fs_backend__free(git_refdb_backend *_backend)
 
 int git_refdb_backend_fs(
 	git_refdb_backend **backend_out,
-	git_repository *repository,
-	git_refdb *refdb)
+	git_repository *repository)
 {
 	refdb_fs_backend *backend;
 
@@ -1009,7 +1007,6 @@ int git_refdb_backend_fs(
 
 	backend->repo = repository;
 	backend->path = repository->path_repository;
-	backend->refdb = refdb;
 
 	backend->parent.exists = &refdb_fs_backend__exists;
 	backend->parent.lookup = &refdb_fs_backend__lookup;

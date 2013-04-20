@@ -10,7 +10,6 @@ typedef struct refdb_test_backend {
 	git_refdb_backend parent;
 	
 	git_repository *repo;
-	git_refdb *refdb;
 	git_vector refs;
 } refdb_test_backend;
 
@@ -100,10 +99,10 @@ static int refdb_test_backend__lookup(
 		if (strcmp(entry->name, ref_name) == 0) {
 
 			if (entry->type == GIT_REF_OID) {
-				*out = git_reference__alloc(backend->refdb, ref_name,
+				*out = git_reference__alloc(ref_name,
 					&entry->target.oid, NULL);
 			} else if (entry->type == GIT_REF_SYMBOLIC) {
-				*out = git_reference__alloc_symbolic(backend->refdb, ref_name,
+				*out = git_reference__alloc_symbolic(ref_name,
 					entry->target.symbolic);
 			}
 
@@ -195,11 +194,6 @@ int refdb_backend_test(
 	git_repository *repo)
 {
 	refdb_test_backend *backend;
-	git_refdb *refdb;
-	int error = 0;
-
-	if ((error = git_repository_refdb(&refdb, repo)) < 0)
-		return error;
 
 	backend = git__calloc(1, sizeof(refdb_test_backend));
 	GITERR_CHECK_ALLOC(backend);
@@ -207,7 +201,6 @@ int refdb_backend_test(
 	git_vector_init(&backend->refs, 0, ref_name_cmp);
 
 	backend->repo = repo;
-	backend->refdb = refdb;
 
 	backend->parent.exists = &refdb_test_backend__exists;
 	backend->parent.lookup = &refdb_test_backend__lookup;
