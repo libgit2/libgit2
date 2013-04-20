@@ -11,6 +11,7 @@
 #include "buffer.h"
 
 struct git_refspec {
+	char *string;
 	char *src;
 	char *dst;
 	unsigned int force :1,

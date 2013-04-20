@@ -114,17 +114,17 @@ void test_network_remote_remotes__add_fetchspec(void)
 	size_t size;
 
 	size = _remote->refspecs.length;
-	cl_assert_equal_i(size, _remote->refspec_strings.length);
+	cl_assert_equal_i(size, _remote->refspecs.length);
 
 	cl_git_pass(git_remote_add_fetch(_remote, "refs/*:refs/*"));
 
 	size++;
-	cl_assert_equal_i(size, _remote->refspec_strings.length);
 	cl_assert_equal_i(size, _remote->refspecs.length);
 
 	_refspec = git_vector_get(&_remote->refspecs, size-1);
 	cl_assert_equal_s(git_refspec_src(_refspec), "refs/*");
 	cl_assert_equal_s(git_refspec_dst(_refspec), "refs/*");
+	cl_assert_equal_s(git_refspec_string(_refspec), "refs/*:refs/*");
 	cl_assert_equal_i(_refspec->push, false);
 }
 
@@ -136,12 +136,12 @@ void test_network_remote_remotes__add_pushspec(void)
 
 	cl_git_pass(git_remote_add_push(_remote, "refs/*:refs/*"));
 	size++;
-	cl_assert_equal_i(size, _remote->refspec_strings.length);
 	cl_assert_equal_i(size, _remote->refspecs.length);
 
 	_refspec = git_vector_get(&_remote->refspecs, size-1);
 	cl_assert_equal_s(git_refspec_src(_refspec), "refs/*");
 	cl_assert_equal_s(git_refspec_dst(_refspec), "refs/*");
+	cl_assert_equal_s(git_refspec_string(_refspec), "refs/*:refs/*");
 
 	cl_assert_equal_i(_refspec->push, true);
 }
