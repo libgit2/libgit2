@@ -41,6 +41,6 @@ int git_refdb_foreach_glob(
 
 int git_refdb_write(git_refdb *refdb, const git_reference *ref);
 
-int git_refdb_delete(struct git_refdb *refdb, const git_reference *ref);
+int git_refdb_delete(git_refdb *refdb, const git_reference *ref);
 
 #endif

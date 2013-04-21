@@ -58,15 +58,19 @@ int git_refdb_open(git_refdb **out, git_repository *repo)
 	return 0;
 }
 
-int git_refdb_set_backend(git_refdb *db, git_refdb_backend *backend)
+static void refdb_free_backend(git_refdb *db)
 {
 	if (db->backend) {
-		if(db->backend->free)
+		if (db->backend->free)
 			db->backend->free(db->backend);
 		else
 			git__free(db->backend);
 	}
+}
 
+int git_refdb_set_backend(git_refdb *db, git_refdb_backend *backend)
+{
+	refdb_free_backend(db);
 	db->backend = backend;
 
 	return 0;
@@ -76,22 +80,15 @@ int git_refdb_compress(git_refdb *db)
 {
 	assert(db);
 
-	if (db->backend->compress) {
+	if (db->backend->compress)
 		return db->backend->compress(db->backend);
-	}
 
 	return 0;
 }
 
 static void refdb_free(git_refdb *db)
 {
-	if (db->backend) {
-		if(db->backend->free)
-			db->backend->free(db->backend);
-		else
-			git__free(db->backend);
-	}
-
+	refdb_free_backend(db);
 	git__free(db);
 }
 
@@ -115,14 +112,13 @@ int git_refdb_lookup(git_reference **out, git_refdb *db, const char *ref_name)
 	git_reference *ref;
 	int error;
 
-	assert(db && db->backend && ref_name);
+	assert(db && db->backend && out && ref_name);
 
-	*out = NULL;
-
-	if ((error = db->backend->lookup(&ref, db->backend, ref_name)) == 0)
-	{
+	if (!(error = db->backend->lookup(&ref, db->backend, ref_name))) {
 		ref->db = db;
 		*out = ref;
+	} else {
+		*out = NULL;
 	}
 
 	return error;

@@ -63,7 +63,6 @@ void test_refdb_inmemory__initialize(void)
 	cl_git_pass(git_repository_refdb(&refdb, repo));
 	cl_git_pass(refdb_backend_test(&refdb_backend, repo));
 	cl_git_pass(git_refdb_set_backend(refdb, refdb_backend));
-	git_refdb_free(refdb);
 
 	ref_file_foreach(repo, unlink_ref);
 

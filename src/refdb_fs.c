@@ -19,6 +19,7 @@
 #include <git2/object.h>
 #include <git2/refdb.h>
 #include <git2/sys/refdb_backend.h>
+#include <git2/sys/refs.h>
 
 GIT__USE_STRMAP;
 

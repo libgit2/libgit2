@@ -19,6 +19,7 @@
 #include <git2/branch.h>
 #include <git2/refs.h>
 #include <git2/refdb.h>
+#include <git2/sys/refs.h>
 
 GIT__USE_STRMAP;
 
@@ -44,8 +45,7 @@ static git_reference *alloc_ref(const char *name)
 }
 
 git_reference *git_reference__alloc_symbolic(
-	const char *name,
-	const char *target)
+	const char *name, const char *target)
 {
 	git_reference *ref;
 

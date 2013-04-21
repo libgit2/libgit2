@@ -22,25 +22,6 @@
 GIT_BEGIN_DECL
 
 /**
- * Create a new reference.  Either an oid or a symbolic target must be
- * specified.
- *
- * @param refdb the reference database to associate with this reference
- * @param name the reference name
- * @param oid the object id for a direct reference
- * @param symbolic the target for a symbolic reference
- * @return the created git_reference or NULL on error
- */
-GIT_EXTERN(git_reference *) git_reference__alloc(
-	const char *name,
-	const git_oid *oid,
-	const git_oid *peel);
-
-GIT_EXTERN(git_reference *) git_reference__alloc_symbolic(
-	const char *name,
-	const char *target);
-
-/**
  * Create a new reference database with no backends.
  *
  * Before the Ref DB can be used for read/writing, a custom database
