@@ -21,6 +21,8 @@
 /* The OpenBSD realpath function behaves differently */
 #if !defined(__OpenBSD__)
 # define p_realpath(p, po) realpath(p, po)
+#else
+char *p_realpath(const char *, char *);
 #endif
 
 #define p_vsnprintf(b, c, f, a) vsnprintf(b, c, f, a)
