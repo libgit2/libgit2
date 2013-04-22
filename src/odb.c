@@ -30,7 +30,8 @@ typedef struct
 {
 	git_odb_backend *backend;
 	int priority;
-	int is_alternate;
+	bool is_alternate;
+	ino_t disk_inode;
 } backend_internal;
 
 size_t git_odb__cache_size = GIT_DEFAULT_CACHE_SIZE;
@@ -366,7 +367,9 @@ int git_odb_new(git_odb **out)
 	return 0;
 }
 
-static int add_backend_internal(git_odb *odb, git_odb_backend *backend, int priority, int is_alternate)
+static int add_backend_internal(
+	git_odb *odb, git_odb_backend *backend,
+	int priority, bool is_alternate, ino_t disk_inode)
 {
 	backend_internal *internal;
 
@@ -383,6 +386,7 @@ static int add_backend_internal(git_odb *odb, git_odb_backend *backend, int prio
 	internal->backend = backend;
 	internal->priority = priority;
 	internal->is_alternate = is_alternate;
+	internal->disk_inode = disk_inode;
 
 	if (git_vector_insert(&odb->backends, internal) < 0) {
 		git__free(internal);
@@ -396,12 +400,12 @@ static int add_backend_internal(git_odb *odb, git_odb_backend *backend, int prio
 
 int git_odb_add_backend(git_odb *odb, git_odb_backend *backend, int priority)
 {
-	return add_backend_internal(odb, backend, priority, 0);
+	return add_backend_internal(odb, backend, priority, false, 0);
 }
 
 int git_odb_add_alternate(git_odb *odb, git_odb_backend *backend, int priority)
 {
-	return add_backend_internal(odb, backend, priority, 1);
+	return add_backend_internal(odb, backend, priority, true, 0);
 }
 
 size_t git_odb_num_backends(git_odb *odb)
@@ -425,18 +429,37 @@ int git_odb_get_backend(git_odb_backend **out, git_odb *odb, size_t pos)
 	return GIT_ENOTFOUND;
 }
 
-static int add_default_backends(git_odb *db, const char *objects_dir, int as_alternates, int alternate_depth)
+static int add_default_backends(
+	git_odb *db, const char *objects_dir,
+	bool as_alternates, int alternate_depth)
 {
+	size_t i;
+	struct stat st;
 	git_odb_backend *loose, *packed;
 
+	/* TODO: inodes are not really relevant on Win32, so we need to find
+	 * a cross-platform workaround for this */
+#ifndef GIT_WIN32
+	if (p_stat(objects_dir, &st) < 0) {
+		giterr_set(GITERR_ODB, "Failed to load object database in '%s'", objects_dir);
+		return -1;
+	}
+
+	for (i = 0; i < db->backends.length; ++i) {
+		backend_internal *backend = git_vector_get(&db->backends, i);
+		if (backend->disk_inode == st.st_ino)
+			return 0;
+	}
+#endif
+	
 	/* add the loose object backend */
 	if (git_odb_backend_loose(&loose, objects_dir, -1, 0) < 0 ||
-		add_backend_internal(db, loose, GIT_LOOSE_PRIORITY, as_alternates) < 0)
+		add_backend_internal(db, loose, GIT_LOOSE_PRIORITY, as_alternates, st.st_ino) < 0)
 		return -1;
 
 	/* add the packed file backend */
 	if (git_odb_backend_pack(&packed, objects_dir) < 0 ||
-		add_backend_internal(db, packed, GIT_PACKED_PRIORITY, as_alternates) < 0)
+		add_backend_internal(db, packed, GIT_PACKED_PRIORITY, as_alternates, st.st_ino) < 0)
 		return -1;
 
 	return load_alternates(db, objects_dir, alternate_depth);
@@ -486,7 +509,7 @@ static int load_alternates(git_odb *odb, const char *objects_dir, int alternate_
 			alternate = git_buf_cstr(&alternates_path);
 		}
 
-		if ((result = add_default_backends(odb, alternate, 1, alternate_depth + 1)) < 0)
+		if ((result = add_default_backends(odb, alternate, true, alternate_depth + 1)) < 0)
 			break;
 	}
 
@@ -498,7 +521,7 @@ static int load_alternates(git_odb *odb, const char *objects_dir, int alternate_
 
 int git_odb_add_disk_alternate(git_odb *odb, const char *path)
 {
-	return add_default_backends(odb, path, 1, 0);
+	return add_default_backends(odb, path, true, 0);
 }
 
 int git_odb_open(git_odb **out, const char *objects_dir)
