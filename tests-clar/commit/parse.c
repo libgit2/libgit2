@@ -264,37 +264,40 @@ gpgsig -----BEGIN PGP SIGNATURE-----\n\
 a simple commit which works\n",
 };
 
+static int parse_commit(git_commit **out, const char *buffer)
+{
+	git_commit *commit;
+	git_odb_object fake_odb_object;
+	int error;
+
+	commit = (git_commit*)git__malloc(sizeof(git_commit));
+	memset(commit, 0x0, sizeof(git_commit));
+	commit->object.repo = g_repo;
+
+	memset(&fake_odb_object, 0x0, sizeof(git_odb_object));
+	fake_odb_object.buffer = (char *)buffer;
+	fake_odb_object.cached.size = strlen(fake_odb_object.buffer);
+
+	error = git_commit__parse(commit, &fake_odb_object);
+
+	*out = commit;
+	return error;
+}
+
 void test_commit_parse__entire_commit(void)
 {
-	const int broken_commit_count = sizeof(failing_commit_cases) / sizeof(*failing_commit_cases);
-	const int working_commit_count = sizeof(passing_commit_cases) / sizeof(*passing_commit_cases);
+	const int failing_commit_count = ARRAY_SIZE(failing_commit_cases);
+	const int passing_commit_count = ARRAY_SIZE(passing_commit_cases);
 	int i;
+	git_commit *commit;
 
-	for (i = 0; i < broken_commit_count; ++i) {
-		git_commit *commit;
-		commit = (git_commit*)git__malloc(sizeof(git_commit));
-		memset(commit, 0x0, sizeof(git_commit));
-		commit->object.repo = g_repo;
-
-		cl_git_fail(git_commit__parse_buffer(
-			commit, failing_commit_cases[i], strlen(failing_commit_cases[i]))
-		);
-
+	for (i = 0; i < failing_commit_count; ++i) {
+		cl_git_fail(parse_commit(&commit, failing_commit_cases[i]));
 		git_commit__free(commit);
 	}
 
-	for (i = 0; i < working_commit_count; ++i) {
-		git_commit *commit;
-
-		commit = (git_commit*)git__malloc(sizeof(git_commit));
-		memset(commit, 0x0, sizeof(git_commit));
-		commit->object.repo = g_repo;
-
-		cl_git_pass(git_commit__parse_buffer(
-                     commit,
-                     passing_commit_cases[i],
-                     strlen(passing_commit_cases[i]))
-         );
+	for (i = 0; i < passing_commit_count; ++i) {
+		cl_git_pass(parse_commit(&commit, passing_commit_cases[i]));
 
 		if (!i)
 			cl_assert_equal_s("", git_commit_message(commit));
@@ -387,9 +390,7 @@ This commit has a few LF at the start of the commit message";
 	memset(commit, 0x0, sizeof(git_commit));
 	commit->object.repo = g_repo;
 
-	cl_git_pass(git_commit__parse_buffer(commit, buffer, strlen(buffer)));
-
+	cl_git_pass(parse_commit(&commit, buffer));
 	cl_assert_equal_s(message, git_commit_message(commit));
-
 	git_commit__free(commit);
 }

@@ -11,7 +11,6 @@
 #include "fileops.h"
 #include "pack.h"
 #include "reflog.h"
-#include "config.h"
 #include "refdb.h"
 #include "refdb_fs.h"
 

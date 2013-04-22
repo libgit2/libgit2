@@ -31,8 +31,10 @@ static void clear_parents(git_commit *commit)
 	git_vector_clear(&commit->parent_ids);
 }
 
-void git_commit__free(git_commit *commit)
+void git_commit__free(void *_commit)
 {
+	git_commit *commit = _commit;
+
 	clear_parents(commit);
 	git_vector_free(&commit->parent_ids);
 
@@ -166,10 +168,11 @@ int git_commit_create(
 	return retval;
 }
 
-int git_commit__parse_buffer(git_commit *commit, const void *data, size_t len)
+int git_commit__parse(void *_commit, git_odb_object *odb_obj)
 {
-	const char *buffer = data;
-	const char *buffer_end = (const char *)data + len;
+	git_commit *commit = _commit;
+	const char *buffer = git_odb_object_data(odb_obj);
+	const char *buffer_end = buffer + git_odb_object_size(odb_obj);
 	git_oid parent_id;
 
 	if (git_vector_init(&commit->parent_ids, 4, NULL) < 0)
@@ -239,12 +242,6 @@ int git_commit__parse_buffer(git_commit *commit, const void *data, size_t len)
 bad_buffer:
 	giterr_set(GITERR_OBJECT, "Failed to parse bad commit object");
 	return -1;
-}
-
-int git_commit__parse(git_commit *commit, git_odb_object *obj)
-{
-	assert(commit);
-	return git_commit__parse_buffer(commit, obj->raw.data, obj->raw.len);
 }
 
 #define GIT_COMMIT_GETTER(_rvalue, _name, _return) \

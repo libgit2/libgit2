@@ -131,8 +131,9 @@ enum {
 	GIT_OPT_SET_MWINDOW_MAPPED_LIMIT,
 	GIT_OPT_GET_SEARCH_PATH,
 	GIT_OPT_SET_SEARCH_PATH,
-	GIT_OPT_GET_ODB_CACHE_SIZE,
-	GIT_OPT_SET_ODB_CACHE_SIZE,
+	GIT_OPT_SET_CACHE_OBJECT_LIMIT,
+	GIT_OPT_SET_CACHE_MAX_SIZE,
+	GIT_OPT_ENABLE_CACHING
 };
 
 /**
@@ -168,15 +169,6 @@ enum {
  *		  of the path (if you want to prepend or append, for instance).
  *		- `level` must be GIT_CONFIG_LEVEL_SYSTEM, GIT_CONFIG_LEVEL_GLOBAL,
  *		  or GIT_CONFIG_LEVEL_XDG.
- *
- *	opts(GIT_OPT_GET_ODB_CACHE_SIZE):
- *		Get the size of the libgit2 odb cache.
- *
- *	opts(GIT_OPT_SET_ODB_CACHE_SIZE):
- *		Set the size of the of the libgit2 odb cache. This needs
- *		to be done before git_repository_open is called, since
- *		git_repository_open initializes the odb layer. Defaults
- *		to 128.
  *
  * @param option Option key
  * @param ... value to set the option

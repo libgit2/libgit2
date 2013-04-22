@@ -32,41 +32,57 @@
 
 #define GIT_TEMPLATE_DIR "/usr/share/git-core/templates"
 
-static void drop_odb(git_repository *repo)
+static void set_odb(git_repository *repo, git_odb *odb)
 {
-	if (repo->_odb != NULL) {
-		GIT_REFCOUNT_OWN(repo->_odb, NULL);
-		git_odb_free(repo->_odb);
-		repo->_odb = NULL;
+	if (odb) {
+		GIT_REFCOUNT_OWN(odb, repo);
+		GIT_REFCOUNT_INC(odb);
+	}
+
+	if ((odb = git__swap(repo->_odb, odb)) != NULL) {
+		GIT_REFCOUNT_OWN(odb, NULL);
+		git_odb_free(odb);
 	}
 }
 
-static void drop_refdb(git_repository *repo)
+static void set_refdb(git_repository *repo, git_refdb *refdb)
 {
-	if (repo->_refdb != NULL) {
-		GIT_REFCOUNT_OWN(repo->_refdb, NULL);
-		git_refdb_free(repo->_refdb);
-		repo->_refdb = NULL;
+	if (refdb) {
+		GIT_REFCOUNT_OWN(refdb, repo);
+		GIT_REFCOUNT_INC(refdb);
+	}
+
+	if ((refdb = git__swap(repo->_refdb, refdb)) != NULL) {
+		GIT_REFCOUNT_OWN(refdb, NULL);
+		git_refdb_free(refdb);
 	}
 }
 
-static void drop_config(git_repository *repo)
+static void set_config(git_repository *repo, git_config *config)
 {
-	if (repo->_config != NULL) {
-		GIT_REFCOUNT_OWN(repo->_config, NULL);
-		git_config_free(repo->_config);
-		repo->_config = NULL;
+	if (config) {
+		GIT_REFCOUNT_OWN(config, repo);
+		GIT_REFCOUNT_INC(config);
+	}
+
+	if ((config = git__swap(repo->_config, config)) != NULL) {
+		GIT_REFCOUNT_OWN(config, NULL);
+		git_config_free(config);
 	}
 
 	git_repository__cvar_cache_clear(repo);
 }
 
-static void drop_index(git_repository *repo)
+static void set_index(git_repository *repo, git_index *index)
 {
-	if (repo->_index != NULL) {
-		GIT_REFCOUNT_OWN(repo->_index, NULL);
-		git_index_free(repo->_index);
-		repo->_index = NULL;
+	if (index) {
+		GIT_REFCOUNT_OWN(index, repo);
+		GIT_REFCOUNT_INC(index);
+	}
+
+	if ((index = git__swap(repo->_index, index)) != NULL) {
+		GIT_REFCOUNT_OWN(index, NULL);
+		git_index_free(index);
 	}
 }
 
@@ -79,13 +95,13 @@ void git_repository_free(git_repository *repo)
 	git_attr_cache_flush(repo);
 	git_submodule_config_free(repo);
 
+	set_config(repo, NULL);
+	set_index(repo, NULL);
+	set_odb(repo, NULL);
+	set_refdb(repo, NULL);
+
 	git__free(repo->path_repository);
 	git__free(repo->workdir);
-
-	drop_config(repo);
-	drop_index(repo);
-	drop_odb(repo);
-	drop_refdb(repo);
 
 	git__free(repo);
 }
@@ -119,7 +135,7 @@ static git_repository *repository_alloc(void)
 
 	memset(repo, 0x0, sizeof(git_repository));
 
-	if (git_cache_init(&repo->objects, GIT_DEFAULT_CACHE_SIZE, &git_object__free) < 0) {
+	if (git_cache_init(&repo->objects) < 0) {
 		git__free(repo);
 		return NULL;
 	}
@@ -549,39 +565,47 @@ on_error:
 	return error;
 }
 
+static const char *path_unless_empty(git_buf *buf)
+{
+	return git_buf_len(buf) > 0 ? git_buf_cstr(buf) : NULL;
+}
+
 int git_repository_config__weakptr(git_config **out, git_repository *repo)
 {
+	int error = 0;
+
 	if (repo->_config == NULL) {
-		git_buf global_buf = GIT_BUF_INIT, xdg_buf = GIT_BUF_INIT, system_buf = GIT_BUF_INIT;
-		int res;
+		git_buf global_buf = GIT_BUF_INIT;
+		git_buf xdg_buf = GIT_BUF_INIT;
+		git_buf system_buf = GIT_BUF_INIT;
+		git_config *config;
 
-		const char *global_config_path = NULL;
-		const char *xdg_config_path = NULL;
-		const char *system_config_path = NULL;
+		git_config_find_global_r(&global_buf);
+		git_config_find_xdg_r(&xdg_buf);
+		git_config_find_system_r(&system_buf);
 
-		if (git_config_find_global_r(&global_buf) == 0)
-			global_config_path = global_buf.ptr;
+		error = load_config(
+			&config, repo,
+			path_unless_empty(&global_buf),
+			path_unless_empty(&xdg_buf),
+			path_unless_empty(&system_buf));
+		if (!error) {
+			GIT_REFCOUNT_OWN(config, repo);
 
-		if (git_config_find_xdg_r(&xdg_buf) == 0)
-			xdg_config_path = xdg_buf.ptr;
-
-		if (git_config_find_system_r(&system_buf) == 0)
-			system_config_path = system_buf.ptr;
-
-		res = load_config(&repo->_config, repo, global_config_path, xdg_config_path, system_config_path);
+			config = git__compare_and_swap(&repo->_config, NULL, config);
+			if (config != NULL) {
+				GIT_REFCOUNT_OWN(config, NULL);
+				git_config_free(config);
+			}
+		}
 
 		git_buf_free(&global_buf);
 		git_buf_free(&xdg_buf);
 		git_buf_free(&system_buf);
-
-		if (res < 0)
-			return -1;
-
-		GIT_REFCOUNT_OWN(repo->_config, repo);
 	}
 
 	*out = repo->_config;
-	return 0;
+	return error;
 }
 
 int git_repository_config(git_config **out, git_repository *repo)
@@ -596,36 +620,37 @@ int git_repository_config(git_config **out, git_repository *repo)
 void git_repository_set_config(git_repository *repo, git_config *config)
 {
 	assert(repo && config);
-
-	drop_config(repo);
-
-	repo->_config = config;
-	GIT_REFCOUNT_OWN(repo->_config, repo);
-	GIT_REFCOUNT_INC(repo->_config);
+	set_config(repo, config);
 }
 
 int git_repository_odb__weakptr(git_odb **out, git_repository *repo)
 {
+	int error = 0;
+
 	assert(repo && out);
 
 	if (repo->_odb == NULL) {
 		git_buf odb_path = GIT_BUF_INIT;
-		int res;
+		git_odb *odb;
 
-		if (git_buf_joinpath(&odb_path, repo->path_repository, GIT_OBJECTS_DIR) < 0)
-			return -1;
+		git_buf_joinpath(&odb_path, repo->path_repository, GIT_OBJECTS_DIR);
 
-		res = git_odb_open(&repo->_odb, odb_path.ptr);
-		git_buf_free(&odb_path); /* done with path */
+		error = git_odb_open(&odb, odb_path.ptr);
+		if (!error) {
+			GIT_REFCOUNT_OWN(odb, repo);
 
-		if (res < 0)
-			return -1;
+			odb = git__compare_and_swap(&repo->_odb, NULL, odb);
+			if (odb != NULL) {
+				GIT_REFCOUNT_OWN(odb, NULL);
+				git_odb_free(odb);
+			}
+		}
 
-		GIT_REFCOUNT_OWN(repo->_odb, repo);
+		git_buf_free(&odb_path);
 	}
 
 	*out = repo->_odb;
-	return 0;
+	return error;
 }
 
 int git_repository_odb(git_odb **out, git_repository *repo)
@@ -640,31 +665,32 @@ int git_repository_odb(git_odb **out, git_repository *repo)
 void git_repository_set_odb(git_repository *repo, git_odb *odb)
 {
 	assert(repo && odb);
-
-	drop_odb(repo);
-
-	repo->_odb = odb;
-	GIT_REFCOUNT_OWN(repo->_odb, repo);
-	GIT_REFCOUNT_INC(odb);
+	set_odb(repo, odb);
 }
 
 int git_repository_refdb__weakptr(git_refdb **out, git_repository *repo)
 {
+	int error = 0;
+
 	assert(out && repo);
 
 	if (repo->_refdb == NULL) {
-		int res;
+		git_refdb *refdb;
 
-		res = git_refdb_open(&repo->_refdb, repo);
+		error = git_refdb_open(&refdb, repo);
+		if (!error) {
+			GIT_REFCOUNT_OWN(refdb, repo);
 
-		if (res < 0)
-			return -1;
-
-		GIT_REFCOUNT_OWN(repo->_refdb, repo);
+			refdb = git__compare_and_swap(&repo->_refdb, NULL, refdb);
+			if (refdb != NULL) {
+				GIT_REFCOUNT_OWN(refdb, NULL);
+				git_refdb_free(refdb);
+			}
+		}
 	}
 
 	*out = repo->_refdb;
-	return 0;
+	return error;
 }
 
 int git_repository_refdb(git_refdb **out, git_repository *repo)
@@ -678,40 +704,40 @@ int git_repository_refdb(git_refdb **out, git_repository *repo)
 
 void git_repository_set_refdb(git_repository *repo, git_refdb *refdb)
 {
-	assert (repo && refdb);
-
-	drop_refdb(repo);
-
-	repo->_refdb = refdb;
-	GIT_REFCOUNT_OWN(repo->_refdb, repo);
-	GIT_REFCOUNT_INC(refdb);
+	assert(repo && refdb);
+	set_refdb(repo, refdb);
 }
 
 int git_repository_index__weakptr(git_index **out, git_repository *repo)
 {
+	int error = 0;
+
 	assert(out && repo);
 
 	if (repo->_index == NULL) {
-		int res;
 		git_buf index_path = GIT_BUF_INIT;
+		git_index *index;
 
-		if (git_buf_joinpath(&index_path, repo->path_repository, GIT_INDEX_FILE) < 0)
-			return -1;
+		git_buf_joinpath(&index_path, repo->path_repository, GIT_INDEX_FILE);
 
-		res = git_index_open(&repo->_index, index_path.ptr);
-		git_buf_free(&index_path); /* done with path */
+		error = git_index_open(&index, index_path.ptr);
+		if (!error) {
+			GIT_REFCOUNT_OWN(index, repo);
 
-		if (res < 0)
-			return -1;
+			index = git__compare_and_swap(&repo->_index, NULL, index);
+			if (index != NULL) {
+				GIT_REFCOUNT_OWN(index, NULL);
+				git_index_free(index);
+			}
 
-		GIT_REFCOUNT_OWN(repo->_index, repo);
+			error = git_index_set_caps(repo->_index, GIT_INDEXCAP_FROM_OWNER);
+		}
 
-		if (git_index_set_caps(repo->_index, GIT_INDEXCAP_FROM_OWNER) < 0)
-			return -1;
+		git_buf_free(&index_path);
 	}
 
 	*out = repo->_index;
-	return 0;
+	return error;
 }
 
 int git_repository_index(git_index **out, git_repository *repo)
@@ -726,12 +752,7 @@ int git_repository_index(git_index **out, git_repository *repo)
 void git_repository_set_index(git_repository *repo, git_index *index)
 {
 	assert(repo && index);
-
-	drop_index(repo);
-
-	repo->_index = index;
-	GIT_REFCOUNT_OWN(repo->_index, repo);
-	GIT_REFCOUNT_INC(index);
+	set_index(repo, index);
 }
 
 static int check_repositoryformatversion(git_config *config)
@@ -1421,14 +1442,13 @@ static int at_least_one_cb(const char *refname, void *payload)
 
 static int repo_contains_no_reference(git_repository *repo)
 {
-	int error;
-	
-	error = git_reference_foreach(repo, GIT_REF_LISTALL, at_least_one_cb, NULL);
+	int error = git_reference_foreach(repo, GIT_REF_LISTALL, at_least_one_cb, NULL);
 
 	if (error == GIT_EUSER)
 		return 0;
-
-	return error == 0 ? 1 : error;
+	if (!error)
+		return 1;
+	return error;
 }
 
 int git_repository_is_empty(git_repository *repo)
