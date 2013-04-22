@@ -35,6 +35,7 @@ typedef struct {
 } git_cache;
 
 extern bool git_cache__enabled;
+extern size_t git_cache__max_storage;
 
 int git_cache_set_max_object_size(git_otype type, size_t size);
 

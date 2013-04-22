@@ -18,6 +18,7 @@
 GIT__USE_OIDMAP
 
 bool git_cache__enabled = true;
+size_t git_cache__max_storage = (4 * 1024 * 1024);
 
 static size_t git_cache__max_object_size[8] = {
 	0,     /* GIT_OBJ__EXT1 */
@@ -70,12 +71,10 @@ int git_cache_init(git_cache *cache)
 	return 0;
 }
 
-void git_cache_clear(git_cache *cache)
+/* called with lock */
+static void clear_cache(git_cache *cache)
 {
 	git_cached_obj *evict = NULL;
-
-	if (git_mutex_lock(&cache->lock) < 0)
-		return;
 
 	kh_foreach_value(cache->map, evict, {
 		git_cached_obj_decref(evict);
@@ -83,6 +82,14 @@ void git_cache_clear(git_cache *cache)
 
 	kh_clear(oid, cache->map);
 	cache->used_memory = 0;
+}
+
+void git_cache_clear(git_cache *cache)
+{
+	if (git_mutex_lock(&cache->lock) < 0)
+		return;
+
+	clear_cache(cache);
 
 	git_mutex_unlock(&cache->lock);
 }
@@ -95,14 +102,15 @@ void git_cache_free(git_cache *cache)
 	git_mutex_free(&cache->lock);
 }
 
-/* Call with lock, yo */
-static void cache_evict_entries(git_cache *cache, size_t evict_count)
+/* Called with lock */
+static void cache_evict_entries(git_cache *cache)
 {
 	uint32_t seed = rand();
+	size_t evict_count = 8;
 
 	/* do not infinite loop if there's not enough entries to evict  */
 	if (evict_count > kh_size(cache->map)) {
-		git_cache_clear(cache);
+		clear_cache(cache);
 		return;
 	}
 
@@ -162,6 +170,9 @@ static void *cache_store(git_cache *cache, git_cached_obj *entry)
 
 	if (git_mutex_lock(&cache->lock) < 0)
 		return entry;
+
+	if (cache->used_memory > git_cache__max_storage)
+		cache_evict_entries(cache);
 
 	pos = kh_get(oid, cache->map, &entry->oid);
 

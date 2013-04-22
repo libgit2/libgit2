@@ -13,7 +13,7 @@ void test_object_cache__cleanup(void)
 	git_repository_free(g_repo);
 	g_repo = NULL;
 
-	git_libgit2_opts(GIT_OPT_SET_CACHE_LIMIT, (int)GIT_OBJ_BLOB, (size_t)0);
+	git_libgit2_opts(GIT_OPT_SET_CACHE_OBJECT_LIMIT, (int)GIT_OBJ_BLOB, (size_t)0);
 }
 
 static struct {
@@ -54,7 +54,7 @@ void test_object_cache__cache_everything(void)
 	git_odb *odb;
 
 	git_libgit2_opts(
-		GIT_OPT_SET_CACHE_LIMIT, (int)GIT_OBJ_BLOB, (size_t)32767);
+		GIT_OPT_SET_CACHE_OBJECT_LIMIT, (int)GIT_OBJ_BLOB, (size_t)32767);
 
 	cl_git_pass(git_repository_odb(&odb, g_repo));
 
@@ -103,7 +103,7 @@ void test_object_cache__cache_no_blobs(void)
 	git_object *obj;
 	git_odb *odb;
 
-	git_libgit2_opts(GIT_OPT_SET_CACHE_LIMIT, (int)GIT_OBJ_BLOB, (size_t)0);
+	git_libgit2_opts(GIT_OPT_SET_CACHE_OBJECT_LIMIT, (int)GIT_OBJ_BLOB, (size_t)0);
 
 	cl_git_pass(git_repository_odb(&odb, g_repo));
 
