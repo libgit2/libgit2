@@ -15,24 +15,14 @@ static int parse_ignore_file(
 	git_attr_fnmatch *match = NULL;
 	const char *scan = NULL;
 	char *context = NULL;
-	bool ignore_case = false;
-	git_config *cfg = NULL;
-	int val;
+	int ignore_case = false;
 
-	/* Prefer to have the caller pass in a git_ignores as the parsedata object.
-	 * If they did not, then we can (much more slowly) find the value of
-	 * ignore_case by using the repository object. */
-	if (parsedata != NULL) {
+	/* Prefer to have the caller pass in a git_ignores as the parsedata
+	 * object.  If they did not, then look up the value of ignore_case */
+	if (parsedata != NULL)
 		ignore_case = ((git_ignores *)parsedata)->ignore_case;
-	} else {
-		if ((error = git_repository_config(&cfg, repo)) < 0)
-			return error;
-
-		if (git_config_get_bool(&val, cfg, "core.ignorecase") == 0)
-			ignore_case = (val != 0);
-
-		git_config_free(cfg);
-	}
+	else if (git_repository__cvar(&ignore_case, repo, GIT_CVAR_IGNORECASE) < 0)
+		return error;
 
 	if (ignores->key && git__suffixcmp(ignores->key, "/" GIT_IGNORE_FILE) == 0) {
 		context = ignores->key + 2;
@@ -109,8 +99,6 @@ int git_ignore__for_path(
 {
 	int error = 0;
 	const char *workdir = git_repository_workdir(repo);
-	git_config *cfg = NULL;
-	int val;
 
 	assert(ignores);
 
@@ -118,16 +106,10 @@ int git_ignore__for_path(
 	git_buf_init(&ignores->dir, 0);
 	ignores->ign_internal = NULL;
 
-	/* Set the ignore_case flag appropriately */
-	if ((error = git_repository_config(&cfg, repo)) < 0)
+	/* Read the ignore_case flag */
+	if ((error = git_repository__cvar(
+			&ignores->ignore_case, repo, GIT_CVAR_IGNORECASE)) < 0)
 		goto cleanup;
-
-	if (git_config_get_bool(&val, cfg, "core.ignorecase") == 0)
-		ignores->ignore_case = (val != 0);
-	else
-		ignores->ignore_case = 0;
-
-	git_config_free(cfg);
 
 	if ((error = git_vector_init(&ignores->ign_path, 8, NULL)) < 0 ||
 		(error = git_vector_init(&ignores->ign_global, 2, NULL)) < 0 ||
