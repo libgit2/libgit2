@@ -29,14 +29,14 @@ typedef struct {
 /* EXPORT */
 struct git_odb_object {
 	git_cached_obj cached;
-	git_rawobj raw;
+	void *buffer;
 };
 
 /* EXPORT */
 struct git_odb {
 	git_refcount rc;
 	git_vector backends;
-	git_cache cache;
+	git_cache own_cache;
 };
 
 /*
@@ -95,5 +95,8 @@ int git_odb__error_ambiguous(const char *message);
 int git_odb__read_header_or_object(
 	git_odb_object **out, size_t *len_p, git_otype *type_p,
 	git_odb *db, const git_oid *id);
+
+/* fully free the object; internal method, DO NOT EXPORT */
+void git_odb_object__free(void *object);
 
 #endif

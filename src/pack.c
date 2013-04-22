@@ -296,23 +296,31 @@ static int pack_index_check(const char *path, struct git_pack_file *p)
 static int pack_index_open(struct git_pack_file *p)
 {
 	char *idx_name;
-	int error;
-	size_t name_len, offset;
+	int error = 0;
+	size_t name_len, base_len;
 
 	if (p->index_map.data)
 		return 0;
 
-	idx_name = git__strdup(p->pack_name);
-	GITERR_CHECK_ALLOC(idx_name);
+	name_len = strlen(p->pack_name);
+	assert(name_len > strlen(".pack")); /* checked by git_pack_file alloc */
 
-	name_len = strlen(idx_name);
-	offset = name_len - strlen(".pack");
-	assert(offset < name_len); /* make sure no underflow */
+	if ((idx_name = git__malloc(name_len)) == NULL)
+		return -1;
 
-	strncpy(idx_name + offset, ".idx", name_len - offset);
+	base_len = name_len - strlen(".pack");
+	memcpy(idx_name, p->pack_name, base_len);
+	memcpy(idx_name + base_len, ".idx", sizeof(".idx"));
 
-	error = pack_index_check(idx_name, p);
+	if ((error = git_mutex_lock(&p->lock)) < 0)
+		return error;
+
+	if (!p->index_map.data)
+		error = pack_index_check(idx_name, p);
+
 	git__free(idx_name);
+
+	git_mutex_unlock(&p->lock);
 
 	return error;
 }
@@ -389,7 +397,7 @@ int git_packfile_unpack_header(
 	 * the maximum deflated object size is 2^137, which is just
 	 * insane, so we know won't exceed what we have been given.
 	 */
-//	base = pack_window_open(p, w_curs, *curpos, &left);
+/*	base = pack_window_open(p, w_curs, *curpos, &left); */
 	base = git_mwindow_open(mwf, w_curs, *curpos, 20, &left);
 	if (base == NULL)
 		return GIT_EBUFS;
@@ -786,23 +794,17 @@ git_off_t get_delta_base(
  *
  ***********************************************************/
 
-static struct git_pack_file *packfile_alloc(size_t extra)
-{
-	struct git_pack_file *p = git__calloc(1, sizeof(*p) + extra);
-	if (p != NULL)
-		p->mwf.fd = -1;
-	return p;
-}
-
-
 void git_packfile_free(struct git_pack_file *p)
 {
-	assert(p);
+	if (!p)
+		return;
+
+	if (git_mutex_lock(&p->lock) < 0)
+		return;
 
 	cache_free(&p->bases);
 
 	git_mwindow_free_all(&p->mwf);
-	git_mwindow_file_deregister(&p->mwf);
 
 	if (p->mwf.fd != -1)
 		p_close(p->mwf.fd);
@@ -810,6 +812,10 @@ void git_packfile_free(struct git_pack_file *p)
 	pack_index_free(p);
 
 	git__free(p->bad_object_sha1);
+
+	git_mutex_unlock(&p->lock);
+
+	git_mutex_free(&p->lock);
 	git__free(p);
 }
 
@@ -819,8 +825,6 @@ static int packfile_open(struct git_pack_file *p)
 	struct git_pack_header hdr;
 	git_oid sha1;
 	unsigned char *idx_sha1;
-
-	assert(p->index_map.data);
 
 	if (!p->index_map.data && pack_index_open(p) < 0)
 		return git_odb__error_notfound("failed to open packfile", NULL);
@@ -881,34 +885,37 @@ cleanup:
 	return -1;
 }
 
-int git_packfile_check(struct git_pack_file **pack_out, const char *path)
+int git_packfile_alloc(struct git_pack_file **pack_out, const char *path)
 {
 	struct stat st;
 	struct git_pack_file *p;
-	size_t path_len;
+	size_t path_len = path ? strlen(path) : 0;
 
 	*pack_out = NULL;
-	path_len = strlen(path);
-	p = packfile_alloc(path_len + 2);
+
+	if (path_len < strlen(".idx"))
+		return git_odb__error_notfound("invalid packfile path", NULL);
+
+	p = git__calloc(1, sizeof(*p) + path_len + 2);
 	GITERR_CHECK_ALLOC(p);
+
+	memcpy(p->pack_name, path, path_len + 1);
 
 	/*
 	 * Make sure a corresponding .pack file exists and that
 	 * the index looks sane.
 	 */
-	path_len -= strlen(".idx");
-	if (path_len < 1) {
-		git__free(p);
-		return git_odb__error_notfound("invalid packfile path", NULL);
+	if (git__suffixcmp(path, ".idx") == 0) {
+		size_t root_len = path_len - strlen(".idx");
+
+		memcpy(p->pack_name + root_len, ".keep", sizeof(".keep"));
+		if (git_path_exists(p->pack_name) == true)
+			p->pack_keep = 1;
+
+		memcpy(p->pack_name + root_len, ".pack", sizeof(".pack"));
+		path_len = path_len - strlen(".idx") + strlen(".pack");
 	}
 
-	memcpy(p->pack_name, path, path_len);
-
-	strcpy(p->pack_name + path_len, ".keep");
-	if (git_path_exists(p->pack_name) == true)
-		p->pack_keep = 1;
-
-	strcpy(p->pack_name + path_len, ".pack");
 	if (p_stat(p->pack_name, &st) < 0 || !S_ISREG(st.st_mode)) {
 		git__free(p);
 		return git_odb__error_notfound("packfile not found", NULL);
@@ -917,9 +924,12 @@ int git_packfile_check(struct git_pack_file **pack_out, const char *path)
 	/* ok, it looks sane as far as we can check without
 	 * actually mapping the pack file.
 	 */
+	p->mwf.fd = -1;
 	p->mwf.size = st.st_size;
 	p->pack_local = 1;
 	p->mtime = (git_time_t)st.st_mtime;
+
+	git_mutex_init(&p->lock);
 
 	/* see if we can parse the sha1 oid in the packfile name */
 	if (path_len < 40 ||
@@ -1039,7 +1049,6 @@ static int pack_entry_find_offset(
 
 		if ((error = pack_index_open(p)) < 0)
 			return error;
-
 		assert(p->index_map.data);
 
 		index = p->index_map.data;
@@ -1099,6 +1108,7 @@ static int pack_entry_find_offset(
 		return git_odb__error_notfound("failed to find offset for pack entry", short_oid);
 	if (found > 1)
 		return git_odb__error_ambiguous("found multiple offsets for pack entry");
+
 	*offset_out = nth_packed_object_offset(p, pos);
 	git_oid_fromraw(found_oid, current);
 
@@ -1110,6 +1120,7 @@ static int pack_entry_find_offset(
 		printf("found lo=%d %s\n", lo, hex_sha1);
 	}
 #endif
+
 	return 0;
 }
 

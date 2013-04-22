@@ -11,6 +11,7 @@
 #include <ctype.h>
 #include "posix.h"
 #include "fileops.h"
+#include "cache.h"
 
 #ifdef _MSC_VER
 # include <Shlwapi.h>
@@ -94,12 +95,20 @@ int git_libgit2_opts(int key, ...)
 			error = git_futils_dirs_set(error, va_arg(ap, const char *));
 		break;
 
-	case GIT_OPT_GET_ODB_CACHE_SIZE:
-		*(va_arg(ap, size_t *)) = git_odb__cache_size;
+	case GIT_OPT_SET_CACHE_OBJECT_LIMIT:
+		{
+			git_otype type = (git_otype)va_arg(ap, int);
+			size_t size = va_arg(ap, size_t);
+			error = git_cache_set_max_object_size(type, size);
+			break;
+		}
+
+	case GIT_OPT_SET_CACHE_MAX_SIZE:
+		git_cache__max_storage = va_arg(ap, size_t);
 		break;
 
-	case GIT_OPT_SET_ODB_CACHE_SIZE:
-		git_odb__cache_size = va_arg(ap, size_t);
+	case GIT_OPT_ENABLE_CACHING:
+		git_cache__enabled = (va_arg(ap, int) != 0);
 		break;
 	}
 
