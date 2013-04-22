@@ -5,6 +5,7 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 #include "git2.h"
+#include "git2/odb_backend.h"
 
 #include "smart.h"
 #include "refs.h"

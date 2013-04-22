@@ -7,6 +7,7 @@
 
 #include "common.h"
 #include "git2/config.h"
+#include "git2/sys/config.h"
 #include "git2/types.h"
 #include "git2/repository.h"
 #include "git2/index.h"

@@ -8,7 +8,7 @@
 #include "common.h"
 #include <zlib.h>
 #include "git2/object.h"
-#include "git2/oid.h"
+#include "git2/sys/odb_backend.h"
 #include "fileops.h"
 #include "hash.h"
 #include "odb.h"

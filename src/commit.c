@@ -9,6 +9,7 @@
 #include "git2/object.h"
 #include "git2/repository.h"
 #include "git2/signature.h"
+#include "git2/sys/commit.h"
 
 #include "common.h"
 #include "odb.h"
@@ -44,16 +45,16 @@ void git_commit__free(git_commit *commit)
 }
 
 int git_commit_create_v(
-		git_oid *oid,
-		git_repository *repo,
-		const char *update_ref,
-		const git_signature *author,
-		const git_signature *committer,
-		const char *message_encoding,
-		const char *message,
-		const git_tree *tree,
-		int parent_count,
-		...)
+	git_oid *oid,
+	git_repository *repo,
+	const char *update_ref,
+	const git_signature *author,
+	const git_signature *committer,
+	const char *message_encoding,
+	const char *message,
+	const git_tree *tree,
+	int parent_count,
+	...)
 {
 	va_list ap;
 	int i, res;
@@ -76,30 +77,29 @@ int git_commit_create_v(
 	return res;
 }
 
-int git_commit_create(
-		git_oid *oid,
-		git_repository *repo,
-		const char *update_ref,
-		const git_signature *author,
-		const git_signature *committer,
-		const char *message_encoding,
-		const char *message,
-		const git_tree *tree,
-		int parent_count,
-		const git_commit *parents[])
+int git_commit_create_from_oids(
+	git_oid *oid,
+	git_repository *repo,
+	const char *update_ref,
+	const git_signature *author,
+	const git_signature *committer,
+	const char *message_encoding,
+	const char *message,
+	const git_oid *tree,
+	int parent_count,
+	const git_oid *parents[])
 {
 	git_buf commit = GIT_BUF_INIT;
 	int i;
 	git_odb *odb;
 
+	assert(oid && repo && tree && parent_count >= 0);
 	assert(git_object_owner((const git_object *)tree) == repo);
 
-	git_oid__writebuf(&commit, "tree ", git_object_id((const git_object *)tree));
+	git_oid__writebuf(&commit, "tree ", tree);
 
-	for (i = 0; i < parent_count; ++i) {
-		assert(git_object_owner((const git_object *)parents[i]) == repo);
-		git_oid__writebuf(&commit, "parent ", git_object_id((const git_object *)parents[i]));
-	}
+	for (i = 0; i < parent_count; ++i)
+		git_oid__writebuf(&commit, "parent ", parents[i]);
 
 	git_signature__writebuf(&commit, "author ", author);
 	git_signature__writebuf(&commit, "committer ", committer);
@@ -129,6 +129,41 @@ on_error:
 	git_buf_free(&commit);
 	giterr_set(GITERR_OBJECT, "Failed to create commit.");
 	return -1;
+}
+
+int git_commit_create(
+	git_oid *oid,
+	git_repository *repo,
+	const char *update_ref,
+	const git_signature *author,
+	const git_signature *committer,
+	const char *message_encoding,
+	const char *message,
+	const git_tree *tree,
+	int parent_count,
+	const git_commit *parents[])
+{
+	int retval, i;
+	const git_oid **parent_oids;
+
+	assert(parent_count >= 0);
+
+	parent_oids = git__malloc(parent_count * sizeof(git_oid *));
+	GITERR_CHECK_ALLOC(parent_oids);
+
+	for (i = 0; i < parent_count; ++i) {
+		assert(git_object_owner((const git_object *)parents[i]) == repo);
+		parent_oids[i] = git_object_id((const git_object *)parents[i]);
+	}
+
+	retval = git_commit_create_from_oids(
+		oid, repo, update_ref, author, committer,
+		message_encoding, message,
+		git_object_id((const git_object *)tree), parent_count, parent_oids);
+
+	git__free((void *)parent_oids);
+
+	return retval;
 }
 
 int git_commit__parse_buffer(git_commit *commit, const void *data, size_t len)

@@ -8,6 +8,7 @@
 #include "git2/common.h"
 #include "git2/object.h"
 #include "git2/repository.h"
+#include "git2/odb_backend.h"
 
 #include "common.h"
 #include "blob.h"
