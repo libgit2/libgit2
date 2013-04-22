@@ -16,7 +16,7 @@
 
 static int disambiguate_refname(git_reference **out, git_repository *repo, const char *refname)
 {
-	int error, i;
+	int error = 0, i;
 	bool fallbackmode = true;
 	git_reference *ref;
 	git_buf refnamebuf = GIT_BUF_INIT, name = GIT_BUF_INIT;

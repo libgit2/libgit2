@@ -1345,7 +1345,7 @@ static size_t read_extension(git_index *index, const char *buffer, size_t buffer
 static int parse_index(git_index *index, const char *buffer, size_t buffer_size)
 {
 	unsigned int i;
-	struct index_header header;
+	struct index_header header = { 0 };
 	git_oid checksum_calculated, checksum_expected;
 
 #define seek_forward(_increase) { \

@@ -9,6 +9,7 @@
 
 #include "git2/object.h"
 #include "git2/refdb.h"
+#include "git2/sys/repository.h"
 
 #include "common.h"
 #include "repository.h"
@@ -127,6 +128,12 @@ static git_repository *repository_alloc(void)
 	git_repository__cvar_cache_clear(repo);
 
 	return repo;
+}
+
+int git_repository_new(git_repository **out)
+{
+	*out = repository_alloc();
+	return 0;
 }
 
 static int load_config_data(git_repository *repo)

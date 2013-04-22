@@ -8,6 +8,7 @@
 #include "common.h"
 #include <zlib.h>
 #include "git2/object.h"
+#include "git2/sys/odb_backend.h"
 #include "fileops.h"
 #include "hash.h"
 #include "odb.h"
@@ -405,6 +406,27 @@ int git_odb_add_backend(git_odb *odb, git_odb_backend *backend, int priority)
 int git_odb_add_alternate(git_odb *odb, git_odb_backend *backend, int priority)
 {
 	return add_backend_internal(odb, backend, priority, true, 0);
+}
+
+size_t git_odb_num_backends(git_odb *odb)
+{
+	assert(odb);
+	return odb->backends.length;
+}
+
+int git_odb_get_backend(git_odb_backend **out, git_odb *odb, size_t pos)
+{
+	backend_internal *internal;
+
+	assert(odb && odb);
+	internal = git_vector_get(&odb->backends, pos);
+
+	if (internal && internal->backend) {
+		*out = internal->backend;
+		return 0;
+	}
+
+	return GIT_ENOTFOUND;
 }
 
 static int add_default_backends(

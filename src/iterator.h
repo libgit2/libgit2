@@ -19,6 +19,7 @@ typedef enum {
 	GIT_ITERATOR_TYPE_TREE = 1,
 	GIT_ITERATOR_TYPE_INDEX = 2,
 	GIT_ITERATOR_TYPE_WORKDIR = 3,
+	GIT_ITERATOR_TYPE_FS = 4,
 } git_iterator_type_t;
 
 typedef enum {
@@ -84,6 +85,16 @@ extern int git_iterator_for_index(
 extern int git_iterator_for_workdir(
 	git_iterator **out,
 	git_repository *repo,
+	git_iterator_flag_t flags,
+	const char *start,
+	const char *end);
+
+/* for filesystem iterators, you have to explicitly pass in the ignore_case
+ * behavior that you desire
+ */
+extern int git_iterator_for_filesystem(
+	git_iterator **out,
+	const char *root,
 	git_iterator_flag_t flags,
 	const char *start,
 	const char *end);

@@ -4,12 +4,12 @@
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
  */
-#ifndef INCLUDE_git_refdb_backend_h__
-#define INCLUDE_git_refdb_backend_h__
+#ifndef INCLUDE_sys_git_refdb_backend_h__
+#define INCLUDE_sys_git_refdb_backend_h__
 
-#include "common.h"
-#include "types.h"
-#include "oid.h"
+#include "git2/common.h"
+#include "git2/types.h"
+#include "git2/oid.h"
 
 /**
  * @file git2/refdb_backend.h
@@ -30,7 +30,7 @@ struct git_refdb_backend {
 	 */
 	int (*exists)(
 		int *exists,
-		struct git_refdb_backend *backend,
+		git_refdb_backend *backend,
 		const char *ref_name);
 
 	/**
@@ -39,7 +39,7 @@ struct git_refdb_backend {
 	 */
 	int (*lookup)(
 		git_reference **out,
-		struct git_refdb_backend *backend,
+		git_refdb_backend *backend,
 		const char *ref_name);
 
 	/**
@@ -47,7 +47,7 @@ struct git_refdb_backend {
 	 * provide this function.
 	 */
 	int (*foreach)(
-		struct git_refdb_backend *backend,
+		git_refdb_backend *backend,
 		unsigned int list_flags,
 		git_reference_foreach_cb callback,
 		void *payload);
@@ -59,7 +59,7 @@ struct git_refdb_backend {
 	 * against the glob.
 	 */
 	int (*foreach_glob)(
-		struct git_refdb_backend *backend,
+		git_refdb_backend *backend,
 		const char *glob,
 		unsigned int list_flags,
 		git_reference_foreach_cb callback,
@@ -69,13 +69,13 @@ struct git_refdb_backend {
 	 * Writes the given reference to the refdb.  A refdb implementation
 	 * must provide this function.
 	 */
-	int (*write)(struct git_refdb_backend *backend, const git_reference *ref);
+	int (*write)(git_refdb_backend *backend, const git_reference *ref);
 
 	/**
 	 * Deletes the given reference from the refdb.  A refdb implementation
 	 * must provide this function.
 	 */
-	int (*delete)(struct git_refdb_backend *backend, const git_reference *ref);
+	int (*delete)(git_refdb_backend *backend, const git_reference *ref);
 
 	/**
 	 * Suggests that the given refdb compress or optimize its references.
@@ -84,25 +84,46 @@ struct git_refdb_backend {
 	 * implementation may provide this function; if it is not provided,
 	 * nothing will be done.
 	 */
-	int (*compress)(struct git_refdb_backend *backend);
+	int (*compress)(git_refdb_backend *backend);
 
 	/**
 	 * Frees any resources held by the refdb.  A refdb implementation may
 	 * provide this function; if it is not provided, nothing will be done.
 	 */
-	void (*free)(struct git_refdb_backend *backend);
+	void (*free)(git_refdb_backend *backend);
 };
 
 #define GIT_ODB_BACKEND_VERSION 1
 #define GIT_ODB_BACKEND_INIT {GIT_ODB_BACKEND_VERSION}
 
 /**
- * Constructors for default refdb backends.
+ * Constructors for default filesystem-based refdb backend
+ *
+ * Under normal usage, this is called for you when the repository is
+ * opened / created, but you can use this to explicitly construct a
+ * filesystem refdb backend for a repository.
+ *
+ * @param backend_out Output pointer to the git_refdb_backend object
+ * @param repo Git repository to access
+ * @return 0 on success, <0 error code on failure
  */
 GIT_EXTERN(int) git_refdb_backend_fs(
-	struct git_refdb_backend **backend_out,
-	git_repository *repo,
-	git_refdb *refdb);
+	git_refdb_backend **backend_out,
+	git_repository *repo);
+
+/**
+ * Sets the custom backend to an existing reference DB
+ *
+ * The `git_refdb` will take ownership of the `git_refdb_backend` so you
+ * should NOT free it after calling this function.
+ *
+ * @param refdb database to add the backend to
+ * @param backend pointer to a git_refdb_backend instance
+ * @return 0 on success; error code otherwise
+ */
+GIT_EXTERN(int) git_refdb_set_backend(
+	git_refdb *refdb,
+	git_refdb_backend *backend);
 
 GIT_END_DECL
 

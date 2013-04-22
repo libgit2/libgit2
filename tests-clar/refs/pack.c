@@ -25,6 +25,7 @@ static void packall(void)
 
 	cl_git_pass(git_repository_refdb(&refdb, g_repo));
 	cl_git_pass(git_refdb_compress(refdb));
+	git_refdb_free(refdb);
 }
 
 void test_refs_pack__empty(void)

@@ -1,5 +1,6 @@
-
 #include "clar_libgit2.h"
+#include "git2/odb_backend.h"
+
 #include "fileops.h"
 #include "odb.h"
 

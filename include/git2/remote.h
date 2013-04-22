@@ -184,7 +184,8 @@ GIT_EXTERN(const git_refspec *) git_remote_pushspec(const git_remote *remote);
  * starts up a specific binary which can only do the one or the other.
  *
  * @param remote the remote to connect to
- * @param direction whether you want to receive or send data
+ * @param direction GIT_DIRECTION_FETCH if you want to fetch or
+ * GIT_DIRECTION_PUSH if you want to push
  * @return 0 or an error code
  */
 GIT_EXTERN(int) git_remote_connect(git_remote *remote, git_direction direction);

@@ -196,6 +196,26 @@ typedef struct git_push git_push;
 typedef struct git_remote_head git_remote_head;
 typedef struct git_remote_callbacks git_remote_callbacks;
 
+/**
+ * This is passed as the first argument to the callback to allow the
+ * user to see the progress.
+ */
+typedef struct git_transfer_progress {
+	unsigned int total_objects;
+	unsigned int indexed_objects;
+	unsigned int received_objects;
+	size_t received_bytes;
+} git_transfer_progress;
+
+/**
+ * Type for progress callbacks during indexing.  Return a value less than zero
+ * to cancel the transfer.
+ *
+ * @param stats Structure containing information about the state of the transfer
+ * @param payload Payload provided by caller
+ */
+typedef int (*git_transfer_progress_callback)(const git_transfer_progress *stats, void *payload);
+
 /** @} */
 GIT_END_DECL
 
