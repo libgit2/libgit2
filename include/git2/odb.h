@@ -10,8 +10,6 @@
 #include "common.h"
 #include "types.h"
 #include "oid.h"
-#include "odb_backend.h"
-#include "indexer.h"
 
 /**
  * @file git2/odb.h
@@ -21,6 +19,11 @@
  * @{
  */
 GIT_BEGIN_DECL
+
+/**
+ * Function type for callbacks from git_odb_foreach.
+ */
+typedef int (*git_odb_foreach_cb)(const git_oid *id, void *payload);
 
 /**
  * Create a new object database with no backends.
@@ -51,42 +54,6 @@ GIT_EXTERN(int) git_odb_new(git_odb **out);
  * @return 0 or an error code
  */
 GIT_EXTERN(int) git_odb_open(git_odb **out, const char *objects_dir);
-
-/**
- * Add a custom backend to an existing Object DB
- *
- * The backends are checked in relative ordering, based on the
- * value of the `priority` parameter.
- *
- * Read <odb_backends.h> for more information.
- *
- * @param odb database to add the backend to
- * @param backend pointer to a git_odb_backend instance
- * @param priority Value for ordering the backends queue
- * @return 0 on success; error code otherwise
- */
-GIT_EXTERN(int) git_odb_add_backend(git_odb *odb, git_odb_backend *backend, int priority);
-
-/**
- * Add a custom backend to an existing Object DB; this
- * backend will work as an alternate.
- *
- * Alternate backends are always checked for objects *after*
- * all the main backends have been exhausted.
- *
- * The backends are checked in relative ordering, based on the
- * value of the `priority` parameter.
- *
- * Writing is disabled on alternate backends.
- *
- * Read <odb_backends.h> for more information.
- *
- * @param odb database to add the backend to
- * @param backend pointer to a git_odb_backend instance
- * @param priority Value for ordering the backends queue
- * @return 0 on success; error code otherwise
- */
-GIT_EXTERN(int) git_odb_add_alternate(git_odb *odb, git_odb_backend *backend, int priority);
 
 /**
  * Add an on-disk alternate to an existing Object DB.
@@ -405,6 +372,60 @@ GIT_EXTERN(size_t) git_odb_object_size(git_odb_object *object);
  * @return the type
  */
 GIT_EXTERN(git_otype) git_odb_object_type(git_odb_object *object);
+
+/**
+ * Add a custom backend to an existing Object DB
+ *
+ * The backends are checked in relative ordering, based on the
+ * value of the `priority` parameter.
+ *
+ * Read <odb_backends.h> for more information.
+ *
+ * @param odb database to add the backend to
+ * @param backend pointer to a git_odb_backend instance
+ * @param priority Value for ordering the backends queue
+ * @return 0 on success; error code otherwise
+ */
+GIT_EXTERN(int) git_odb_add_backend(git_odb *odb, git_odb_backend *backend, int priority);
+
+/**
+ * Add a custom backend to an existing Object DB; this
+ * backend will work as an alternate.
+ *
+ * Alternate backends are always checked for objects *after*
+ * all the main backends have been exhausted.
+ *
+ * The backends are checked in relative ordering, based on the
+ * value of the `priority` parameter.
+ *
+ * Writing is disabled on alternate backends.
+ *
+ * Read <odb_backends.h> for more information.
+ *
+ * @param odb database to add the backend to
+ * @param backend pointer to a git_odb_backend instance
+ * @param priority Value for ordering the backends queue
+ * @return 0 on success; error code otherwise
+ */
+GIT_EXTERN(int) git_odb_add_alternate(git_odb *odb, git_odb_backend *backend, int priority);
+
+/**
+ * Get the number of ODB backend objects
+ *
+ * @param odb object database
+ * @return number of backends in the ODB
+ */
+GIT_EXTERN(size_t) git_odb_num_backends(git_odb *odb);
+
+/**
+ * Lookup an ODB backend object by index
+ *
+ * @param out output pointer to ODB backend at pos
+ * @param odb object database
+ * @param pos index into object database backend list
+ * @return 0 on success; GIT_ENOTFOUND if pos is invalid; other errors < 0
+ */
+GIT_EXTERN(int) git_odb_get_backend(git_odb_backend **out, git_odb *odb, size_t pos);
 
 /** @} */
 GIT_END_DECL

@@ -19,7 +19,7 @@
 #include <git2/branch.h>
 #include <git2/refs.h>
 #include <git2/refdb.h>
-#include <git2/refdb_backend.h>
+#include <git2/sys/refs.h>
 
 GIT__USE_STRMAP;
 
@@ -45,8 +45,7 @@ static git_reference *alloc_ref(const char *name)
 }
 
 git_reference *git_reference__alloc_symbolic(
-	const char *name,
-	const char *target)
+	const char *name, const char *target)
 {
 	git_reference *ref;
 
@@ -255,10 +254,10 @@ int git_reference_lookup_resolved(
 		max_nesting = MAX_NESTING_LEVEL;
 	else if (max_nesting < 0)
 		max_nesting = DEFAULT_NESTING_LEVEL;
-	
+
 	strncpy(scan_name, name, GIT_REFNAME_MAX);
 	scan_type = GIT_REF_SYMBOLIC;
-	
+
 	if ((error = git_repository_refdb__weakptr(&refdb, repo)) < 0)
 		return -1;
 
@@ -276,7 +275,7 @@ int git_reference_lookup_resolved(
 
 		if ((error = git_refdb_lookup(&ref, refdb, scan_name)) < 0)
 			return error;
-		
+
 		scan_type = ref->type;
 	}
 
@@ -354,7 +353,7 @@ static int reference__create(
 	git_refdb *refdb;
 	git_reference *ref = NULL;
 	int error = 0;
-	
+
 	if (ref_out)
 		*ref_out = NULL;
 
@@ -369,7 +368,7 @@ static int reference__create(
 	} else {
 		ref = git_reference__alloc_symbolic(name, symbolic);
 	}
-	
+
 	GITERR_CHECK_ALLOC(ref);
 	ref->db = refdb;
 
@@ -377,7 +376,7 @@ static int reference__create(
 		git_reference_free(ref);
 		return error;
 	}
-	
+
 	if (ref_out == NULL)
 		git_reference_free(ref);
 	else
@@ -397,17 +396,17 @@ int git_reference_create(
 	int error = 0;
 
 	assert(repo && name && oid);
-	
+
 	/* Sanity check the reference being created - target must exist. */
 	if ((error = git_repository_odb__weakptr(&odb, repo)) < 0)
 		return error;
-	
+
 	if (!git_odb_exists(odb, oid)) {
 		giterr_set(GITERR_REFERENCE,
 			"Target OID for the reference doesn't exist on the repository");
 		return -1;
 	}
-	
+
 	return reference__create(ref_out, repo, name, oid, NULL, force);
 }
 
@@ -422,7 +421,7 @@ int git_reference_symbolic_create(
 	int error = 0;
 
 	assert(repo && name && target);
-	
+
 	if ((error = git_reference__normalize_name_lax(
 		normalized, sizeof(normalized), target)) < 0)
 		return error;
@@ -436,7 +435,7 @@ int git_reference_set_target(
 	const git_oid *id)
 {
 	assert(out && ref && id);
-	
+
 	if (ref->type != GIT_REF_OID) {
 		giterr_set(GITERR_REFERENCE, "Cannot set OID on symbolic reference");
 		return -1;
@@ -451,13 +450,13 @@ int git_reference_symbolic_set_target(
 	const char *target)
 {
 	assert(out && ref && target);
-	
+
 	if (ref->type != GIT_REF_SYMBOLIC) {
 		giterr_set(GITERR_REFERENCE,
 			"Cannot set symbolic target on a direct reference");
 		return -1;
 	}
-	
+
 	return git_reference_symbolic_create(out, ref->db->repo, ref->name, target, 1);
 }
 
@@ -473,7 +472,7 @@ int git_reference_rename(
 	git_reference *result = NULL;
 	int error = 0;
 	int reference_has_log;
-	
+
 	*out = NULL;
 
 	normalization_flags = ref->type == GIT_REF_SYMBOLIC ?
@@ -488,7 +487,7 @@ int git_reference_rename(
 	 * Create the new reference.
 	 */
 	if (ref->type == GIT_REF_OID) {
-		result = git_reference__alloc(new_name, &ref->target.oid, &ref->peel); 
+		result = git_reference__alloc(new_name, &ref->target.oid, &ref->peel);
 	} else if (ref->type == GIT_REF_SYMBOLIC) {
 		result = git_reference__alloc_symbolic(new_name, ref->target.symbolic);
 	} else {
@@ -509,11 +508,11 @@ int git_reference_rename(
 	/* Now delete the old ref and save the new one. */
 	if ((error = git_refdb_delete(ref->db, ref)) < 0)
 		goto on_error;
-	
+
 	/* Save the new reference. */
 	if ((error = git_refdb_write(ref->db, result)) < 0)
 		goto rollback;
-	
+
 	/* Update HEAD it was poiting to the reference being renamed. */
 	if (should_head_be_updated && (error = git_repository_set_head(ref->db->repo, new_name)) < 0) {
 		giterr_set(GITERR_REFERENCE, "Failed to update HEAD after renaming reference");
@@ -547,7 +546,7 @@ int git_reference_resolve(git_reference **ref_out, const git_reference *ref)
 	switch (git_reference_type(ref)) {
 	case GIT_REF_OID:
 		return git_reference_lookup(ref_out, ref->db->repo, ref->name);
-	
+
 	case GIT_REF_SYMBOLIC:
 		return git_reference_lookup_resolved(ref_out, ref->db->repo, ref->target.symbolic, -1);
 
@@ -846,7 +845,7 @@ static int reference__update_terminal(
 
 	if (nesting > MAX_NESTING_LEVEL)
 		return GIT_ENOTFOUND;
-	
+
 	error = git_reference_lookup(&ref, repo, ref_name);
 
 	/* If we haven't found the reference at all, create a new reference. */
@@ -854,10 +853,10 @@ static int reference__update_terminal(
 		giterr_clear();
 		return git_reference_create(NULL, repo, ref_name, oid, 0);
 	}
-	
+
 	if (error < 0)
 		return error;
-	
+
 	/* If the ref is a symbolic reference, follow its target. */
 	if (git_reference_type(ref) == GIT_REF_SYMBOLIC) {
 		error = reference__update_terminal(repo, git_reference_symbolic_target(ref), oid,
@@ -867,7 +866,7 @@ static int reference__update_terminal(
 		git_reference_free(ref);
 		error = git_reference_create(NULL, repo, ref_name, oid, 1);
 	}
-	
+
 	return error;
 }
 

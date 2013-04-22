@@ -1,4 +1,6 @@
 #include "clar_libgit2.h"
+#include "git2/sys/repository.h"
+
 #include "buffer.h"
 #include "posix.h"
 #include "util.h"

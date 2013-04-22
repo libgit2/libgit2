@@ -401,21 +401,6 @@ GIT_EXTERN(int) git_repository_is_bare(git_repository *repo);
 GIT_EXTERN(int) git_repository_config(git_config **out, git_repository *repo);
 
 /**
- * Set the configuration file for this repository
- *
- * This configuration file will be used for all configuration
- * queries involving this repository.
- *
- * The repository will keep a reference to the config file;
- * the user must still free the config after setting it
- * to the repository, or it will leak.
- *
- * @param repo A repository object
- * @param config A Config object
- */
-GIT_EXTERN(void) git_repository_set_config(git_repository *repo, git_config *config);
-
-/**
  * Get the Object Database for this repository.
  *
  * If a custom ODB has not been set, the default
@@ -430,21 +415,6 @@ GIT_EXTERN(void) git_repository_set_config(git_repository *repo, git_config *con
  * @return 0, or an error code
  */
 GIT_EXTERN(int) git_repository_odb(git_odb **out, git_repository *repo);
-
-/**
- * Set the Object Database for this repository
- *
- * The ODB will be used for all object-related operations
- * involving this repository.
- *
- * The repository will keep a reference to the ODB; the user
- * must still free the ODB object after setting it to the
- * repository, or it will leak.
- *
- * @param repo A repository object
- * @param odb An ODB object
- */
-GIT_EXTERN(void) git_repository_set_odb(git_repository *repo, git_odb *odb);
 
 /**
  * Get the Reference Database Backend for this repository.
@@ -463,23 +433,6 @@ GIT_EXTERN(void) git_repository_set_odb(git_repository *repo, git_odb *odb);
 GIT_EXTERN(int) git_repository_refdb(git_refdb **out, git_repository *repo);
 
 /**
- * Set the Reference Database Backend for this repository
- *
- * The refdb will be used for all reference related operations
- * involving this repository.
- *
- * The repository will keep a reference to the refdb; the user
- * must still free the refdb object after setting it to the
- * repository, or it will leak.
- *
- * @param repo A repository object
- * @param refdb An refdb object
- */
-GIT_EXTERN(void) git_repository_set_refdb(
-	git_repository *repo,
-	git_refdb *refdb);
-
-/**
  * Get the Index file for this repository.
  *
  * If a custom index has not been set, the default
@@ -494,21 +447,6 @@ GIT_EXTERN(void) git_repository_set_refdb(
  * @return 0, or an error code
  */
 GIT_EXTERN(int) git_repository_index(git_index **out, git_repository *repo);
-
-/**
- * Set the index file for this repository
- *
- * This index will be used for all index-related operations
- * involving this repository.
- *
- * The repository will keep a reference to the index file;
- * the user must still free the index after setting it
- * to the repository, or it will leak.
- *
- * @param repo A repository object
- * @param index An index object
- */
-GIT_EXTERN(void) git_repository_set_index(git_repository *repo, git_index *index);
 
 /**
  * Retrieve git's prepared message

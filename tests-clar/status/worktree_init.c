@@ -1,4 +1,6 @@
 #include "clar_libgit2.h"
+#include "git2/sys/repository.h"
+
 #include "fileops.h"
 #include "ignore.h"
 #include "status_helpers.h"
@@ -321,10 +323,10 @@ void test_status_worktree_init__new_staged_file_must_handle_crlf(void)
 	cl_set_cleanup(&cleanup_new_repo, "getting_started");
 	cl_git_pass(git_repository_init(&repo, "getting_started", 0));
 
-	// Ensure that repo has core.autocrlf=true
+	/* Ensure that repo has core.autocrlf=true */
 	cl_repo_set_bool(repo, "core.autocrlf", true);
 
-	cl_git_mkfile("getting_started/testfile.txt", "content\r\n");	// Content with CRLF
+	cl_git_mkfile("getting_started/testfile.txt", "content\r\n");	/* Content with CRLF */
 
 	cl_git_pass(git_repository_index(&index, repo));
 	cl_git_pass(git_index_add_bypath(index, "testfile.txt"));

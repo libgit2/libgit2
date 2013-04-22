@@ -1,4 +1,5 @@
 #include "clar_libgit2.h"
+#include "git2/sys/config.h"
 
 void test_config_backend__checks_version(void)
 {
