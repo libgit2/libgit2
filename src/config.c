@@ -363,6 +363,7 @@ int git_config_set_bool(git_config *cfg, const char *name, int value)
 
 int git_config_set_string(git_config *cfg, const char *name, const char *value)
 {
+	int error;
 	git_config_backend *file;
 	file_internal *internal;
 
@@ -374,7 +375,12 @@ int git_config_set_string(git_config *cfg, const char *name, const char *value)
 	internal = git_vector_get(&cfg->files, 0);
 	file = internal->file;
 
-	return file->set(file, name, value);
+	error = file->set(file, name, value);
+
+	if (!error && GIT_REFCOUNT_OWNER(cfg) != NULL)
+		git_repository__cvar_cache_clear(GIT_REFCOUNT_OWNER(cfg));
+
+	return error;
 }
 
 /***********
