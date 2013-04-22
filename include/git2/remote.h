@@ -142,30 +142,44 @@ GIT_EXTERN(int) git_remote_set_url(git_remote *remote, const char* url);
 GIT_EXTERN(int) git_remote_set_pushurl(git_remote *remote, const char* url);
 
 /**
- * Set the remote's fetch refspec
+ * Add a fetch refspec to the remote
  *
  * @param remote the remote
- * @apram spec the new fetch refspec
+ * @apram refspec the new fetch refspec
  * @return 0 or an error value
  */
-GIT_EXTERN(int) git_remote_set_fetchspec(git_remote *remote, const char *spec);
+GIT_EXTERN(int) git_remote_add_fetch(git_remote *remote, const char *refspec);
 
 /**
- * Get the fetch refspec
+ * Get the remote's list of fetch refspecs
  *
- * @param remote the remote
- * @return a pointer to the fetch refspec or NULL if it doesn't exist
+ * The memory is owned by the user and should be freed with
+ * `git_strarray_free`.
+ *
+ * @param array pointer to the array in which to store the strings
+ * @param remote the remote to query
  */
-GIT_EXTERN(const git_refspec *) git_remote_fetchspec(const git_remote *remote);
+GIT_EXTERN(int) git_remote_get_fetch_refspecs(git_strarray *array, git_remote *remote);
 
 /**
- * Set the remote's push refspec
+ * Add a push refspec to the remote
  *
  * @param remote the remote
- * @param spec the new push refspec
+ * @param refspec the new push refspec
  * @return 0 or an error value
  */
-GIT_EXTERN(int) git_remote_set_pushspec(git_remote *remote, const char *spec);
+GIT_EXTERN(int) git_remote_add_push(git_remote *remote, const char *refspec);
+
+/**
+ * Get the remote's list of push refspecs
+ *
+ * The memory is owned by the user and should be freed with
+ * `git_strarray_free`.
+ *
+ * @param array pointer to the array in which to store the strings
+ * @param remote the remote to query
+ */
+GIT_EXTERN(int) git_remote_get_push_refspecs(git_strarray *array, git_remote *remote);
 
 /**
  * Get the push refspec
@@ -175,6 +189,15 @@ GIT_EXTERN(int) git_remote_set_pushspec(git_remote *remote, const char *spec);
  */
 
 GIT_EXTERN(const git_refspec *) git_remote_pushspec(const git_remote *remote);
+
+/**
+ * Clear the refspecs
+ *
+ * Remove all configured fetch and push refspecs from the remote.
+ *
+ * @param remote the remote
+ */
+GIT_EXTERN(void) git_remote_clear_refspecs(git_remote *remote);
 
 /**
  * Open a connection to a remote

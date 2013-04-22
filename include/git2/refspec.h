@@ -36,6 +36,14 @@ GIT_EXTERN(const char *) git_refspec_src(const git_refspec *refspec);
 GIT_EXTERN(const char *) git_refspec_dst(const git_refspec *refspec);
 
 /**
+ * Get the refspec's string
+ *
+ * @param refspec the refspec
+ * @returns the refspec's original string
+ */
+GIT_EXTERN(const char *) git_refspec_string(const git_refspec *refspec);
+
+/**
  * Get the force update setting
  *
  * @param refspec the refspec

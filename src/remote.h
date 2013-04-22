@@ -20,8 +20,7 @@ struct git_remote {
 	char *url;
 	char *pushurl;
 	git_vector refs;
-	struct git_refspec fetch;
-	struct git_refspec push;
+	git_vector refspecs;
 	git_cred_acquire_cb cred_acquire_cb;
 	void *cred_acquire_payload;
 	git_transport *transport;
@@ -36,5 +35,8 @@ struct git_remote {
 
 const char* git_remote__urlfordirection(struct git_remote *remote, int direction);
 int git_remote__get_http_proxy(git_remote *remote, bool use_ssl, char **proxy_url);
+
+git_refspec *git_remote__matching_refspec(git_remote *remote, const char *refname);
+git_refspec *git_remote__matching_dst_refspec(git_remote *remote, const char *refname);
 
 #endif

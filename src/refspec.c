@@ -25,6 +25,7 @@ int git_refspec__parse(git_refspec *refspec, const char *input, bool is_fetch)
 	assert(refspec && input);
 
 	memset(refspec, 0x0, sizeof(git_refspec));
+	refspec->push = !is_fetch;
 
 	lhs = input;
 	if (*lhs == '+') {
@@ -119,6 +120,9 @@ int git_refspec__parse(git_refspec *refspec, const char *input, bool is_fetch)
 		}
 	}
 
+	refspec->string = git__strdup(input);
+	GITERR_CHECK_ALLOC(refspec->string);
+
 	return 0;
 
  invalid:
@@ -132,6 +136,7 @@ void git_refspec__free(git_refspec *refspec)
 
 	git__free(refspec->src);
 	git__free(refspec->dst);
+	git__free(refspec->string);
 }
 
 const char *git_refspec_src(const git_refspec *refspec)
@@ -142,6 +147,11 @@ const char *git_refspec_src(const git_refspec *refspec)
 const char *git_refspec_dst(const git_refspec *refspec)
 {
 	return refspec == NULL ? NULL : refspec->dst;
+}
+
+const char *git_refspec_string(const git_refspec *refspec)
+{
+	return refspec == NULL ? NULL : refspec->string;
 }
 
 int git_refspec_force(const git_refspec *refspec)

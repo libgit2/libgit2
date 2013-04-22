@@ -42,8 +42,10 @@ static void fetchhead_test_fetch(const char *fetchspec, const char *expected_fet
 	cl_git_pass(git_remote_load(&remote, g_repo, "origin"));
 	git_remote_set_autotag(remote, GIT_REMOTE_DOWNLOAD_TAGS_AUTO);
 
-	if(fetchspec != NULL)
-		git_remote_set_fetchspec(remote, fetchspec);
+	if(fetchspec != NULL) {
+		git_remote_clear_refspecs(remote);
+		git_remote_add_fetch(remote, fetchspec);
+	}
 
 	cl_git_pass(git_remote_connect(remote, GIT_DIRECTION_FETCH));
 	cl_git_pass(git_remote_download(remote, NULL, NULL));
