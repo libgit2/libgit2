@@ -31,11 +31,11 @@ typedef struct {
 typedef struct {
 	git_oidmap *map;
 	git_mutex   lock;
-	size_t      used_memory;
+	int64_t     used_memory;
 } git_cache;
 
 extern bool git_cache__enabled;
-extern size_t git_cache__max_storage;
+extern int64_t git_cache__max_storage;
 
 int git_cache_set_max_object_size(git_otype type, size_t size);
 
