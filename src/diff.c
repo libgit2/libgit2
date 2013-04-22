@@ -702,7 +702,11 @@ int git_diff__from_iterators(
 	int error = 0;
 	const git_index_entry *oitem, *nitem;
 	git_buf ignore_prefix = GIT_BUF_INIT;
-	git_diff_list *diff = diff_list_alloc(repo, old_iter, new_iter);
+	git_diff_list *diff;
+
+	*diff_ptr = NULL;
+
+	diff = diff_list_alloc(repo, old_iter, new_iter);
 	GITERR_CHECK_ALLOC(diff);
 
 	/* make iterators have matching icase behavior */
