@@ -1114,11 +1114,20 @@ int git_diff_print_compact(
 
 static int print_oid_range(diff_print_info *pi, const git_diff_delta *delta)
 {
-	char start_oid[8], end_oid[8];
+	int abbrevlen;
+	char start_oid[GIT_OID_HEXSZ+1], end_oid[GIT_OID_HEXSZ+1];
 
-	/* TODO: Determine a good actual OID range to print */
-	git_oid_tostr(start_oid, sizeof(start_oid), &delta->old_file.oid);
-	git_oid_tostr(end_oid, sizeof(end_oid), &delta->new_file.oid);
+	if (git_repository__cvar(&abbrevlen, pi->diff->repo, GIT_CVAR_ABBREV) < 0)
+		return -1;
+
+	abbrevlen += 1; /* for NUL byte */
+	if (abbrevlen < 2)
+		abbrevlen = 2;
+	else if (abbrevlen > (int)sizeof(start_oid))
+		abbrevlen = (int)sizeof(start_oid);
+
+	git_oid_tostr(start_oid, abbrevlen, &delta->old_file.oid);
+	git_oid_tostr(end_oid, abbrevlen, &delta->new_file.oid);
 
 	/* TODO: Match git diff more closely */
 	if (delta->old_file.mode == delta->new_file.mode) {
