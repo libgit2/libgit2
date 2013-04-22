@@ -195,9 +195,12 @@ static void *cache_raw(void *arg)
 void test_object_cache__threadmania(void)
 {
 	int try, th, max_i;
-	git_thread t[THREADCOUNT];
 	void *data;
 	void *(*fn)(void *);
+
+#ifdef GIT_THREADS
+	git_thread t[THREADCOUNT];
+#endif
 
 	for (max_i = 0; g_data[max_i].sha != NULL; ++max_i)
 		/* count up */;
