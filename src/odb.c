@@ -415,6 +415,9 @@ static int add_default_backends(
 	struct stat st;
 	git_odb_backend *loose, *packed;
 
+	/* TODO: inodes are not really relevant on Win32, so we need to find
+	 * a cross-platform workaround for this */
+#ifndef GIT_WIN32
 	if (p_stat(objects_dir, &st) < 0) {
 		giterr_set(GITERR_ODB, "Failed to load object database in '%s'", objects_dir);
 		return -1;
@@ -425,6 +428,7 @@ static int add_default_backends(
 		if (backend->disk_inode == st.st_ino)
 			return 0;
 	}
+#endif
 	
 	/* add the loose object backend */
 	if (git_odb_backend_loose(&loose, objects_dir, -1, 0) < 0 ||
