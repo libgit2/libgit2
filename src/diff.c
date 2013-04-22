@@ -870,12 +870,20 @@ int git_diff_tree_to_tree(
 	const git_diff_options *opts)
 {
 	int error = 0;
+	git_iterator_flag_t iflag = GIT_ITERATOR_DONT_IGNORE_CASE;
 
 	assert(diff && repo);
 
+	/* for tree to tree diff, be case sensitive even if the index is
+	 * currently case insensitive, unless the user explicitly asked
+	 * for case insensitivity
+	 */
+	if (opts && (opts->flags & GIT_DIFF_DELTAS_ARE_ICASE) != 0)
+		iflag = GIT_ITERATOR_IGNORE_CASE;
+
 	DIFF_FROM_ITERATORS(
-		git_iterator_for_tree(&a, old_tree, 0, pfx, pfx),
-		git_iterator_for_tree(&b, new_tree, 0, pfx, pfx)
+		git_iterator_for_tree(&a, old_tree, iflag, pfx, pfx),
+		git_iterator_for_tree(&b, new_tree, iflag, pfx, pfx)
 	);
 
 	return error;
