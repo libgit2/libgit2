@@ -293,6 +293,9 @@ int git_config_refresh(git_config *cfg)
 		error = file->refresh(file);
 	}
 
+	if (!error && GIT_REFCOUNT_OWNER(cfg) != NULL)
+		git_repository__cvar_cache_clear(GIT_REFCOUNT_OWNER(cfg));
+
 	return error;
 }
 
