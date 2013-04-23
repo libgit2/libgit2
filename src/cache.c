@@ -19,8 +19,7 @@ GIT__USE_OIDMAP
 
 bool git_cache__enabled = true;
 int64_t git_cache__max_storage = (256 * 1024 * 1024);
-
-static git_atomic64 git_cache__current_storage = {0};
+git_atomic64 git_cache__current_storage = {0};
 
 static size_t git_cache__max_object_size[8] = {
 	0,     /* GIT_OBJ__EXT1 */

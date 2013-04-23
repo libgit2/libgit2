@@ -109,6 +109,11 @@ int git_libgit2_opts(int key, ...)
 	case GIT_OPT_ENABLE_CACHING:
 		git_cache__enabled = (va_arg(ap, int) != 0);
 		break;
+
+	case GIT_OPT_GET_CACHED_MEMORY:
+		*(va_arg(ap, int64_t *)) = git_cache__current_storage.val;
+		*(va_arg(ap, int64_t *)) = git_cache__max_storage;
+		break;
 	}
 
 	va_end(ap);
