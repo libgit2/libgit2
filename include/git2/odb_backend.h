@@ -19,11 +19,43 @@
  */
 GIT_BEGIN_DECL
 
-/**
+/*
  * Constructors for in-box ODB backends.
  */
+
+/**
+ * Create a backend for the packfiles.
+ *
+ * @param out location to store the odb backend pointer
+ * @param objects_dir the Git repository's objects directory
+ *
+ * @return 0 or an error code
+ */
 GIT_EXTERN(int) git_odb_backend_pack(git_odb_backend **out, const char *objects_dir);
+
+/**
+ * Create a backend for loose objects
+ *
+ * @param out location to store the odb backend pointer
+ * @param objects_dir the Git repository's objects directory
+ * @param compression_level zlib compression level to use
+ * @param do_fsync whether to do an fsync() after writing (currently ignored)
+ *
+ * @return 0 or an error code
+ */
 GIT_EXTERN(int) git_odb_backend_loose(git_odb_backend **out, const char *objects_dir, int compression_level, int do_fsync);
+
+/**
+ * Create a backend out of a single packfile
+ *
+ * This can be useful for inspecting the contents of a single
+ * packfile.
+ *
+ * @param out location to store the odb backend pointer
+ * @param index_file path to the packfile's .idx file
+ *
+ * @return 0 or an error code
+ */
 GIT_EXTERN(int) git_odb_backend_one_pack(git_odb_backend **out, const char *index_file);
 
 /** Streaming mode */
