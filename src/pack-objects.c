@@ -1284,6 +1284,21 @@ static int cb_tree_walk(const char *root, const git_tree_entry *entry, void *pay
 		git_buf_cstr(&ctx->buf));
 }
 
+int git_packbuilder_insert_commit(git_packbuilder *pb, const git_oid *oid)
+{
+	git_commit *commit;
+
+	if (git_commit_lookup(&commit, pb->repo, oid) < 0 ||
+		git_packbuilder_insert(pb, oid, NULL) < 0)
+		return -1;
+
+	if (git_packbuilder_insert_tree(pb, git_commit_tree_id(commit)) < 0)
+		return -1;
+
+	git_commit_free(commit);
+	return 0;
+}
+
 int git_packbuilder_insert_tree(git_packbuilder *pb, const git_oid *oid)
 {
 	git_tree *tree;
