@@ -14,6 +14,8 @@
 
 #define DIFF_FLAG_IS_SET(DIFF,FLAG) (((DIFF)->opts.flags & (FLAG)) != 0)
 #define DIFF_FLAG_ISNT_SET(DIFF,FLAG) (((DIFF)->opts.flags & (FLAG)) == 0)
+#define DIFF_FLAG_SET(DIFF,FLAG,VAL) (DIFF)->opts.flags = \
+	(VAL) ? ((DIFF)->opts.flags | (FLAG)) : ((DIFF)->opts.flags & ~(VAL))
 
 static git_diff_delta *diff_delta__alloc(
 	git_diff_list *diff,
@@ -267,67 +269,158 @@ static int config_bool(git_config *cfg, const char *name, int defvalue)
 	return val;
 }
 
-static git_diff_list *git_diff_list_alloc(
-	git_repository *repo, const git_diff_options *opts)
+static int config_int(git_config *cfg, const char *name, int defvalue)
 {
-	git_config *cfg;
+	int val = defvalue;
+
+	if (git_config_get_int32(&val, cfg, name) < 0)
+		giterr_clear();
+
+	return val;
+}
+
+static const char *diff_mnemonic_prefix(
+	git_iterator_type_t type, bool left_side)
+{
+	const char *pfx = "";
+
+	switch (type) {
+	case GIT_ITERATOR_TYPE_EMPTY:   pfx = "c"; break;
+	case GIT_ITERATOR_TYPE_TREE:    pfx = "c"; break;
+	case GIT_ITERATOR_TYPE_INDEX:   pfx = "i"; break;
+	case GIT_ITERATOR_TYPE_WORKDIR: pfx = "w"; break;
+	case GIT_ITERATOR_TYPE_FS:      pfx = left_side ? "1" : "2"; break;
+	default: break;
+	}
+
+	/* note: without a deeper look at pathspecs, there is no easy way
+	 * to get the (o)bject / (w)ork tree mnemonics working...
+	 */
+
+	return pfx;
+}
+
+static git_diff_list *diff_list_alloc(
+	git_repository *repo,
+	git_iterator *old_iter,
+	git_iterator *new_iter)
+{
+	git_diff_options dflt = GIT_DIFF_OPTIONS_INIT;
 	git_diff_list *diff = git__calloc(1, sizeof(git_diff_list));
-	if (diff == NULL)
+	if (!diff)
 		return NULL;
+
+	assert(repo && old_iter && new_iter);
 
 	GIT_REFCOUNT_INC(diff);
 	diff->repo = repo;
+	diff->old_src = old_iter->type;
+	diff->new_src = new_iter->type;
+	memcpy(&diff->opts, &dflt, sizeof(diff->opts));
 
 	if (git_vector_init(&diff->deltas, 0, git_diff_delta__cmp) < 0 ||
-		git_pool_init(&diff->pool, 1, 0) < 0)
-		goto fail;
+		git_pool_init(&diff->pool, 1, 0) < 0) {
+		git_diff_list_free(diff);
+		return NULL;
+	}
+
+	/* Use case-insensitive compare if either iterator has
+	 * the ignore_case bit set */
+	if (!git_iterator_ignore_case(old_iter) &&
+		!git_iterator_ignore_case(new_iter))
+	{
+		diff->opts.flags &= ~GIT_DIFF_DELTAS_ARE_ICASE;
+
+		diff->strcomp    = git__strcmp;
+		diff->strncomp   = git__strncmp;
+		diff->pfxcomp    = git__prefixcmp;
+		diff->entrycomp  = git_index_entry__cmp;
+	} else {
+		diff->opts.flags |= GIT_DIFF_DELTAS_ARE_ICASE;
+
+		diff->strcomp    = git__strcasecmp;
+		diff->strncomp   = git__strncasecmp;
+		diff->pfxcomp    = git__prefixcmp_icase;
+		diff->entrycomp  = git_index_entry__cmp_icase;
+	}
+
+	return diff;
+}
+
+static int diff_list_apply_options(
+	git_diff_list *diff,
+	const git_diff_options *opts)
+{
+	git_config *cfg;
+	git_repository *repo = diff->repo;
+	git_pool *pool = &diff->pool;
+	int val;
+
+	if (opts) {
+		/* copy user options (except case sensitivity info from iterators) */
+		bool icase = DIFF_FLAG_IS_SET(diff, GIT_DIFF_DELTAS_ARE_ICASE);
+		memcpy(&diff->opts, opts, sizeof(diff->opts));
+		DIFF_FLAG_SET(diff, GIT_DIFF_DELTAS_ARE_ICASE, icase);
+
+		/* initialize pathspec from options */
+		if (git_pathspec_init(&diff->pathspec, &opts->pathspec, pool) < 0)
+			return -1;
+	}
+
+	/* flag INCLUDE_TYPECHANGE_TREES implies INCLUDE_TYPECHANGE */
+	if (DIFF_FLAG_IS_SET(diff, GIT_DIFF_INCLUDE_TYPECHANGE_TREES))
+		diff->opts.flags |= GIT_DIFF_INCLUDE_TYPECHANGE;
 
 	/* load config values that affect diff behavior */
 	if (git_repository_config__weakptr(&cfg, repo) < 0)
-		goto fail;
-	if (config_bool(cfg, "core.symlinks", 1))
+		return -1;
+
+	if (!git_repository__cvar(&val, repo, GIT_CVAR_SYMLINKS) && val)
 		diff->diffcaps = diff->diffcaps | GIT_DIFFCAPS_HAS_SYMLINKS;
-	if (config_bool(cfg, "core.ignorestat", 0))
+
+	if (!git_repository__cvar(&val, repo, GIT_CVAR_IGNORESTAT) && val)
 		diff->diffcaps = diff->diffcaps | GIT_DIFFCAPS_ASSUME_UNCHANGED;
-	if (config_bool(cfg, "core.filemode", 1))
+
+	if ((diff->opts.flags & GIT_DIFF_IGNORE_FILEMODE) == 0 &&
+		!git_repository__cvar(&val, repo, GIT_CVAR_FILEMODE) && val)
 		diff->diffcaps = diff->diffcaps | GIT_DIFFCAPS_TRUST_MODE_BITS;
-	if (config_bool(cfg, "core.trustctime", 1))
+
+	if (!git_repository__cvar(&val, repo, GIT_CVAR_TRUSTCTIME) && val)
 		diff->diffcaps = diff->diffcaps | GIT_DIFFCAPS_TRUST_CTIME;
+
 	/* Don't set GIT_DIFFCAPS_USE_DEV - compile time option in core git */
 
-	/* TODO: there are certain config settings where even if we were
-	 * not given an options structure, we need the diff list to have one
-	 * so that we can store the altered default values.
-	 *
-	 * - diff.ignoreSubmodules
-	 * - diff.mnemonicprefix
-	 * - diff.noprefix
-	 */
+	/* If not given explicit `opts`, check `diff.xyz` configs */
+	if (!opts) {
+		diff->opts.context_lines = config_int(cfg, "diff.context", 3);
 
-	if (opts == NULL) {
-		/* Make sure we default to 3 lines */
-		diff->opts.context_lines = 3;
-		return diff;
+		if (config_bool(cfg, "diff.ignoreSubmodules", 0))
+			diff->opts.flags |= GIT_DIFF_IGNORE_SUBMODULES;
 	}
 
-	memcpy(&diff->opts, opts, sizeof(git_diff_options));
+	/* if either prefix is not set, figure out appropriate value */
+	if (!diff->opts.old_prefix || !diff->opts.new_prefix) {
+		const char *use_old = DIFF_OLD_PREFIX_DEFAULT;
+		const char *use_new = DIFF_NEW_PREFIX_DEFAULT;
 
-	if(opts->flags & GIT_DIFF_IGNORE_FILEMODE)
-		diff->diffcaps = diff->diffcaps & ~GIT_DIFFCAPS_TRUST_MODE_BITS;
+		if (config_bool(cfg, "diff.noprefix", 0)) {
+			use_old = use_new = "";
+		} else if (config_bool(cfg, "diff.mnemonicprefix", 0)) {
+			use_old = diff_mnemonic_prefix(diff->old_src, true);
+			use_new = diff_mnemonic_prefix(diff->new_src, false);
+		}
 
-	/* pathspec init will do nothing for empty pathspec */
-	if (git_pathspec_init(&diff->pathspec, &opts->pathspec, &diff->pool) < 0)
-		goto fail;
+		if (!diff->opts.old_prefix)
+			diff->opts.old_prefix = use_old;
+		if (!diff->opts.new_prefix)
+			diff->opts.new_prefix = use_new;
+	}
 
-	/* TODO: handle config diff.mnemonicprefix, diff.noprefix */
-
-	diff->opts.old_prefix = diff_strdup_prefix(&diff->pool,
-		opts->old_prefix ? opts->old_prefix : DIFF_OLD_PREFIX_DEFAULT);
-	diff->opts.new_prefix = diff_strdup_prefix(&diff->pool,
-		opts->new_prefix ? opts->new_prefix : DIFF_NEW_PREFIX_DEFAULT);
-
+	/* strdup prefix from pool so we're not dependent on external data */
+	diff->opts.old_prefix = diff_strdup_prefix(pool, diff->opts.old_prefix);
+	diff->opts.new_prefix = diff_strdup_prefix(pool, diff->opts.new_prefix);
 	if (!diff->opts.old_prefix || !diff->opts.new_prefix)
-		goto fail;
+		return -1;
 
 	if (DIFF_FLAG_IS_SET(diff, GIT_DIFF_REVERSE)) {
 		const char *swap = diff->opts.old_prefix;
@@ -335,15 +428,7 @@ static git_diff_list *git_diff_list_alloc(
 		diff->opts.new_prefix = swap;
 	}
 
-	/* INCLUDE_TYPECHANGE_TREES implies INCLUDE_TYPECHANGE */
-	if (DIFF_FLAG_IS_SET(diff, GIT_DIFF_INCLUDE_TYPECHANGE_TREES))
-		diff->opts.flags |= GIT_DIFF_INCLUDE_TYPECHANGE;
-
-	return diff;
-
-fail:
-	git_diff_list_free(diff);
-	return NULL;
+	return 0;
 }
 
 static void diff_list_free(git_diff_list *diff)
@@ -607,37 +692,6 @@ static bool entry_is_prefixed(
 			item->path[pathlen] == '/');
 }
 
-static int diff_list_init_from_iterators(
-	git_diff_list *diff,
-	git_iterator *old_iter,
-	git_iterator *new_iter)
-{
-	diff->old_src = old_iter->type;
-	diff->new_src = new_iter->type;
-
-	/* Use case-insensitive compare if either iterator has
-	 * the ignore_case bit set */
-	if (!git_iterator_ignore_case(old_iter) &&
-		!git_iterator_ignore_case(new_iter))
-	{
-		diff->opts.flags &= ~GIT_DIFF_DELTAS_ARE_ICASE;
-
-		diff->strcomp    = git__strcmp;
-		diff->strncomp   = git__strncmp;
-		diff->pfxcomp    = git__prefixcmp;
-		diff->entrycomp  = git_index_entry__cmp;
-	} else {
-		diff->opts.flags |= GIT_DIFF_DELTAS_ARE_ICASE;
-
-		diff->strcomp    = git__strcasecmp;
-		diff->strncomp   = git__strncasecmp;
-		diff->pfxcomp    = git__prefixcmp_icase;
-		diff->entrycomp  = git_index_entry__cmp_icase;
-	}
-
-	return 0;
-}
-
 int git_diff__from_iterators(
 	git_diff_list **diff_ptr,
 	git_repository *repo,
@@ -648,20 +702,22 @@ int git_diff__from_iterators(
 	int error = 0;
 	const git_index_entry *oitem, *nitem;
 	git_buf ignore_prefix = GIT_BUF_INIT;
-	git_diff_list *diff = git_diff_list_alloc(repo, opts);
+	git_diff_list *diff;
 
 	*diff_ptr = NULL;
 
-	if (!diff || diff_list_init_from_iterators(diff, old_iter, new_iter) < 0)
-		goto fail;
+	diff = diff_list_alloc(repo, old_iter, new_iter);
+	GITERR_CHECK_ALLOC(diff);
 
+	/* make iterators have matching icase behavior */
 	if (DIFF_FLAG_IS_SET(diff, GIT_DIFF_DELTAS_ARE_ICASE)) {
 		if (git_iterator_set_ignore_case(old_iter, true) < 0 ||
 			git_iterator_set_ignore_case(new_iter, true) < 0)
 			goto fail;
 	}
 
-	if (git_iterator_current(&oitem, old_iter) < 0 ||
+	if (diff_list_apply_options(diff, opts) < 0 ||
+		git_iterator_current(&oitem, old_iter) < 0 ||
 		git_iterator_current(&nitem, new_iter) < 0)
 		goto fail;
 
@@ -859,12 +915,20 @@ int git_diff_tree_to_tree(
 	const git_diff_options *opts)
 {
 	int error = 0;
+	git_iterator_flag_t iflag = GIT_ITERATOR_DONT_IGNORE_CASE;
 
 	assert(diff && repo);
 
+	/* for tree to tree diff, be case sensitive even if the index is
+	 * currently case insensitive, unless the user explicitly asked
+	 * for case insensitivity
+	 */
+	if (opts && (opts->flags & GIT_DIFF_DELTAS_ARE_ICASE) != 0)
+		iflag = GIT_ITERATOR_IGNORE_CASE;
+
 	DIFF_FROM_ITERATORS(
-		git_iterator_for_tree(&a, old_tree, 0, pfx, pfx),
-		git_iterator_for_tree(&b, new_tree, 0, pfx, pfx)
+		git_iterator_for_tree(&a, old_tree, iflag, pfx, pfx),
+		git_iterator_for_tree(&b, new_tree, iflag, pfx, pfx)
 	);
 
 	return error;

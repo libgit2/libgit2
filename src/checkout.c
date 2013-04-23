@@ -1119,7 +1119,6 @@ static int checkout_data_init(
 	git_checkout_opts *proposed)
 {
 	int error = 0;
-	git_config *cfg;
 	git_repository *repo = git_iterator_owner(target);
 
 	memset(data, 0, sizeof(*data));
@@ -1130,9 +1129,6 @@ static int checkout_data_init(
 	}
 
 	if ((error = git_repository__ensure_not_bare(repo, "checkout")) < 0)
-		return error;
-
-	if ((error = git_repository_config__weakptr(&cfg, repo)) < 0)
 		return error;
 
 	data->repo = repo;
@@ -1147,7 +1143,10 @@ static int checkout_data_init(
 
 	/* refresh config and index content unless NO_REFRESH is given */
 	if ((data->opts.checkout_strategy & GIT_CHECKOUT_NO_REFRESH) == 0) {
-		if ((error = git_config_refresh(cfg)) < 0)
+		git_config *cfg;
+
+		if ((error = git_repository_config__weakptr(&cfg, repo)) < 0 ||
+			(error = git_config_refresh(cfg)) < 0)
 			goto cleanup;
 
 		/* if we are checking out the index, don't reload,
@@ -1184,19 +1183,13 @@ static int checkout_data_init(
 
 	data->pfx = git_pathspec_prefix(&data->opts.paths);
 
-	error = git_config_get_bool(&data->can_symlink, cfg, "core.symlinks");
-	if (error < 0) {
-		if (error != GIT_ENOTFOUND)
-			goto cleanup;
-
-		/* If "core.symlinks" is not found anywhere, default to true. */
-		data->can_symlink = true;
-		giterr_clear();
-		error = 0;
-	}
+	if ((error = git_repository__cvar(
+			 &data->can_symlink, repo, GIT_CVAR_SYMLINKS)) < 0)
+		goto cleanup;
 
 	if (!data->opts.baseline) {
 		data->opts_free_baseline = true;
+
 		error = checkout_lookup_head_tree(&data->opts.baseline, repo);
 
 		if (error == GIT_EORPHANEDHEAD) {
