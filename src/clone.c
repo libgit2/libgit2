@@ -323,9 +323,11 @@ static int create_and_configure_origin(
 	    (error = git_remote_set_callbacks(origin, options->remote_callbacks)) < 0)
 		goto on_error;
 
-	if (options->fetch_spec &&
-	    (error = git_remote_add_fetch(origin, options->fetch_spec)) < 0)
-		goto on_error;
+	if (options->fetch_spec) {
+		git_remote_clear_refspecs(origin);
+		if ((error = git_remote_add_fetch(origin, options->fetch_spec)) < 0)
+			goto on_error;
+	}
 
 	if (options->push_spec &&
 	    (error = git_remote_add_push(origin, options->push_spec)) < 0)
