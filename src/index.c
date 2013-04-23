@@ -330,7 +330,7 @@ void git_index_clear(git_index *index)
 	git_vector_clear(&index->entries);
 
 	git_index_reuc_clear(index);
-	
+
 	git_futils_filestamp_set(&index->stamp, NULL);
 
 	git_tree_cache_free(index->tree);
@@ -352,19 +352,18 @@ int git_index_set_caps(git_index *index, unsigned int caps)
 	old_ignore_case = index->ignore_case;
 
 	if (caps == GIT_INDEXCAP_FROM_OWNER) {
-		git_config *cfg;
+		git_repository *repo = INDEX_OWNER(index);
 		int val;
 
-		if (INDEX_OWNER(index) == NULL ||
-			git_repository_config__weakptr(&cfg, INDEX_OWNER(index)) < 0)
-				return create_index_error(-1,
-					"Cannot get repository config to set index caps");
+		if (!repo)
+			return create_index_error(
+				-1, "Cannot access repository to set index caps");
 
-		if (git_config_get_bool(&val, cfg, "core.ignorecase") == 0)
+		if (!git_repository__cvar(&val, repo, GIT_CVAR_IGNORECASE))
 			index->ignore_case = (val != 0);
-		if (git_config_get_bool(&val, cfg, "core.filemode") == 0)
+		if (!git_repository__cvar(&val, repo, GIT_CVAR_FILEMODE))
 			index->distrust_filemode = (val == 0);
-		if (git_config_get_bool(&val, cfg, "core.symlinks") == 0)
+		if (!git_repository__cvar(&val, repo, GIT_CVAR_SYMLINKS))
 			index->no_symlinks = (val == 0);
 	}
 	else {

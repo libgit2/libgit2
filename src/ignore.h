@@ -28,7 +28,7 @@ typedef struct {
 	git_attr_file *ign_internal;
 	git_vector ign_path;
 	git_vector ign_global;
-	unsigned int ignore_case:1;
+	int ignore_case;
 } git_ignores;
 
 extern int git_ignore__for_path(git_repository *repo, const char *path, git_ignores *ign);
