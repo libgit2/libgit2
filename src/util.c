@@ -39,7 +39,6 @@ int git_libgit2_capabilities()
 /* Declarations for tuneable settings */
 extern size_t git_mwindow__window_size;
 extern size_t git_mwindow__mapped_limit;
-extern size_t git_odb__cache_size;
 
 static int config_level_to_futils_dir(int config_level)
 {
@@ -104,11 +103,16 @@ int git_libgit2_opts(int key, ...)
 		}
 
 	case GIT_OPT_SET_CACHE_MAX_SIZE:
-		git_cache__max_storage = va_arg(ap, size_t);
+		git_cache__max_storage = va_arg(ap, int64_t);
 		break;
 
 	case GIT_OPT_ENABLE_CACHING:
 		git_cache__enabled = (va_arg(ap, int) != 0);
+		break;
+
+	case GIT_OPT_GET_CACHED_MEMORY:
+		*(va_arg(ap, int64_t *)) = git_cache__current_storage.val;
+		*(va_arg(ap, int64_t *)) = git_cache__max_storage;
 		break;
 	}
 
