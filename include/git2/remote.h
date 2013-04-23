@@ -182,15 +182,6 @@ GIT_EXTERN(int) git_remote_add_push(git_remote *remote, const char *refspec);
 GIT_EXTERN(int) git_remote_get_push_refspecs(git_strarray *array, git_remote *remote);
 
 /**
- * Get the push refspec
- *
- * @param remote the remote
- * @return a pointer to the push refspec or NULL if it doesn't exist
- */
-
-GIT_EXTERN(const git_refspec *) git_remote_pushspec(const git_remote *remote);
-
-/**
  * Clear the refspecs
  *
  * Remove all configured fetch and push refspecs from the remote.
