@@ -240,7 +240,7 @@ parse_failed:
 	return -1;
 }
 
-static int loose_parse_oid(git_oid *oid, git_buf *file_content)
+static int loose_parse_oid(git_oid *oid, const char *filename, git_buf *file_content)
 {
 	size_t len;
 	const char *str;
@@ -262,7 +262,7 @@ static int loose_parse_oid(git_oid *oid, git_buf *file_content)
 		return 0;
 
 corrupted:
-	giterr_set(GITERR_REFERENCE, "Corrupted loose reference file");
+	giterr_set(GITERR_REFERENCE, "Corrupted loose reference file: %s", filename);
 	return -1;
 }
 
@@ -289,7 +289,7 @@ static int loose_lookup_to_packfile(
 	memcpy(ref->name, name, name_len);
 	ref->name[name_len] = 0;
 
-	if (loose_parse_oid(&ref->oid, &ref_file) < 0) {
+	if (loose_parse_oid(&ref->oid, name, &ref_file) < 0) {
 		git_buf_free(&ref_file);
 		git__free(ref);
 		return -1;
@@ -431,7 +431,7 @@ static int loose_lookup(
 
 		*out = git_reference__alloc_symbolic(ref_name, target);
 	} else {
-		if ((error = loose_parse_oid(&oid, &ref_file)) < 0)
+		if ((error = loose_parse_oid(&oid, ref_name, &ref_file)) < 0)
 			goto done;
 
 		*out = git_reference__alloc(ref_name, &oid, NULL);
