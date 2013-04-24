@@ -228,7 +228,7 @@ GIT_EXTERN(void) git_attr_cache_flush(
  * function allows you to add others.  For example, to add the default
  * macro, you would call:
  *
- *    git_attr_add_macro(repo, "binary", "-diff -crlf");
+ *     git_attr_add_macro(repo, "binary", "-diff -crlf");
  */
 GIT_EXTERN(int) git_attr_add_macro(
 	git_repository *repo,
