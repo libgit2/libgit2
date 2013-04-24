@@ -77,6 +77,9 @@ static void clear_cache(git_cache *cache)
 {
 	git_cached_obj *evict = NULL;
 
+	if (kh_size(cache->map) == 0)
+		return;
+
 	kh_foreach_value(cache->map, evict, {
 		git_cached_obj_decref(evict);
 	});

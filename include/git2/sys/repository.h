@@ -27,6 +27,20 @@ GIT_BEGIN_DECL
  */
 GIT_EXTERN(int) git_repository_new(git_repository **out);
 
+
+/**
+ * Reset all the internal state in a repository.
+ *
+ * This will free all the mapped memory and internal objects
+ * of the repository and leave it in a "blank" state.
+ *
+ * There's no need to call this function directly unless you're
+ * trying to aggressively cleanup the repo before its
+ * deallocation. `git_repository_free` already performs this operation
+ * before deallocation the repo.
+ */
+GIT_EXTERN(void) git_repository__cleanup(git_repository *repo);
+
 /**
  * Set the configuration file for this repository
  *

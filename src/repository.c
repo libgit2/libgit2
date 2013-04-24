@@ -86,19 +86,28 @@ static void set_index(git_repository *repo, git_index *index)
 	}
 }
 
-void git_repository_free(git_repository *repo)
+void git_repository__cleanup(git_repository *repo)
 {
-	if (repo == NULL)
-		return;
+	assert(repo);
 
-	git_cache_free(&repo->objects);
+	git_cache_clear(&repo->objects);
 	git_attr_cache_flush(repo);
-	git_submodule_config_free(repo);
 
 	set_config(repo, NULL);
 	set_index(repo, NULL);
 	set_odb(repo, NULL);
 	set_refdb(repo, NULL);
+}
+
+void git_repository_free(git_repository *repo)
+{
+	if (repo == NULL)
+		return;
+
+	git_repository__cleanup(repo);
+
+	git_cache_free(&repo->objects);
+	git_submodule_config_free(repo);
 
 	git__free(repo->path_repository);
 	git__free(repo->workdir);
