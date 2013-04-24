@@ -154,10 +154,8 @@ $(function() {
       content.append(retdiv)
 
       // Show Non-Parsed Function Comments
-      if (fdata[fname]['comments']) {
-	html = $('<div>').text(fdata[fname]['comments']).html()
-        content.append($('<pre>').append(html))
-      }
+      if (fdata[fname]['comments'])
+        content.append($('<div>').append(fdata[fname]['comments']))
 
       // Show Function Signature
       ex = $('<code>').addClass('params')
@@ -387,8 +385,7 @@ $(function() {
 	if(fdata[f]['comments'])
 		description += "\n\n" + fdata[f]['comments']
 
-	html = $('<div>').text(description).html()
-	$('.content').append($('<pre>').append(html))
+	$('.content').append($('<div>').addClass('description').append(description))
       }
       return false
     },
