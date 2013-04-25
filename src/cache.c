@@ -18,8 +18,8 @@
 GIT__USE_OIDMAP
 
 bool git_cache__enabled = true;
-int64_t git_cache__max_storage = (256 * 1024 * 1024);
-git_atomic64 git_cache__current_storage = {0};
+ssize_t git_cache__max_storage = (256 * 1024 * 1024);
+git_atomic_ssize git_cache__current_storage = {0};
 
 static size_t git_cache__max_object_size[8] = {
 	0,     /* GIT_OBJ__EXT1 */
@@ -85,7 +85,7 @@ static void clear_cache(git_cache *cache)
 	});
 
 	kh_clear(oid, cache->map);
-	git_atomic64_add(&git_cache__current_storage, -cache->used_memory);
+	git_atomic_ssize_add(&git_cache__current_storage, -cache->used_memory);
 	cache->used_memory = 0;
 }
 
@@ -111,7 +111,8 @@ void git_cache_free(git_cache *cache)
 static void cache_evict_entries(git_cache *cache)
 {
 	uint32_t seed = rand();
-	int64_t evicted_memory = 0, evict_count = 8;
+	size_t evict_count = 8;
+	ssize_t evicted_memory = 0;
 
 	/* do not infinite loop if there's not enough entries to evict  */
 	if (evict_count > kh_size(cache->map)) {
@@ -134,7 +135,7 @@ static void cache_evict_entries(git_cache *cache)
 	}
 
 	cache->used_memory -= evicted_memory;
-	git_atomic64_add(&git_cache__current_storage, -evicted_memory);
+	git_atomic_ssize_add(&git_cache__current_storage, -evicted_memory);
 }
 
 static bool cache_should_store(git_otype object_type, size_t object_size)
@@ -195,7 +196,7 @@ static void *cache_store(git_cache *cache, git_cached_obj *entry)
 			kh_val(cache->map, pos) = entry;
 			git_cached_obj_incref(entry);
 			cache->used_memory += entry->size;
-			git_atomic64_add(&git_cache__current_storage, (int64_t)entry->size);
+			git_atomic_ssize_add(&git_cache__current_storage, (ssize_t)entry->size);
 		}
 	}
 	/* found */
