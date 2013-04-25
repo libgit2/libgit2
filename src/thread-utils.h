@@ -18,6 +18,8 @@ typedef struct {
 #endif
 } git_atomic;
 
+#ifdef GIT_ARCH_64
+
 typedef struct {
 #if defined(GIT_WIN32)
 	__int64 val;
@@ -25,6 +27,18 @@ typedef struct {
 	int64_t val;
 #endif
 } git_atomic64;
+
+typedef git_atomic64 git_atomic_ssize;
+
+#define git_atomic_ssize_add git_atomic64_add
+
+#else
+
+typedef git_atomic git_atomic_ssize;
+
+#define git_atomic_ssize_add git_atomic_add
+
+#endif
 
 GIT_INLINE(void) git_atomic_set(git_atomic *a, int val)
 {
@@ -68,7 +82,7 @@ GIT_INLINE(int) git_atomic_inc(git_atomic *a)
 GIT_INLINE(int) git_atomic_add(git_atomic *a, int32_t addend)
 {
 #if defined(GIT_WIN32)
-	return _InterlockedExchangeAdd(&a->val, addend);
+	return InterlockedExchangeAdd(&a->val, addend);
 #elif defined(__GNUC__)
 	return __sync_add_and_fetch(&a->val, addend);
 #else
@@ -101,16 +115,20 @@ GIT_INLINE(void *) git___compare_and_swap(
 	return (foundval == oldval) ? oldval : newval;
 }
 
-GIT_INLINE(int) git_atomic64_add(git_atomic64 *a, int64_t addend)
+#ifdef GIT_ARCH_64
+
+GIT_INLINE(int64_t) git_atomic64_add(git_atomic64 *a, int64_t addend)
 {
 #if defined(GIT_WIN32)
-	return _InterlockedExchangeAdd64(&a->val, addend);
+	return InterlockedExchangeAdd64(&a->val, addend);
 #elif defined(__GNUC__)
 	return __sync_add_and_fetch(&a->val, addend);
 #else
 #	error "Unsupported architecture for atomic operations"
 #endif
 }
+
+#endif
 
 #else
 
@@ -161,11 +179,15 @@ GIT_INLINE(void *) git___compare_and_swap(
 	return oldval;
 }
 
-GIT_INLINE(int) git_atomic64_add(git_atomic64 *a, int64_t addend)
+#ifdef GIT_ARCH_64
+
+GIT_INLINE(int64_t) git_atomic64_add(git_atomic64 *a, int64_t addend)
 {
 	a->val += addend;
 	return a->val;
 }
+
+#endif
 
 #endif
 
