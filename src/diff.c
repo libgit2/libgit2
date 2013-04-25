@@ -530,23 +530,29 @@ cleanup:
 	return result;
 }
 
+typedef struct {
+	git_repository *repo;
+	git_iterator *old_iter;
+	git_iterator *new_iter;
+	const git_index_entry *oitem;
+	const git_index_entry *nitem;
+	git_buf ignore_prefix;
+} diff_in_progress;
+
 #define MODE_BITS_MASK 0000777
 
 static int maybe_modified(
-	git_iterator *old_iter,
-	const git_index_entry *oitem,
-	git_iterator *new_iter,
-	const git_index_entry *nitem,
-	git_diff_list *diff)
+	git_diff_list *diff,
+	diff_in_progress *info)
 {
 	git_oid noid, *use_noid = NULL;
 	git_delta_t status = GIT_DELTA_MODIFIED;
+	const git_index_entry *oitem = info->oitem;
+	const git_index_entry *nitem = info->nitem;
 	unsigned int omode = oitem->mode;
 	unsigned int nmode = nitem->mode;
-	bool new_is_workdir = (new_iter->type == GIT_ITERATOR_TYPE_WORKDIR);
+	bool new_is_workdir = (info->new_iter->type == GIT_ITERATOR_TYPE_WORKDIR);
 	const char *matched_pathspec;
-
-	GIT_UNUSED(old_iter);
 
 	if (!git_pathspec_match_path(
 			&diff->pathspec, oitem->path,
@@ -692,6 +698,168 @@ static bool entry_is_prefixed(
 			item->path[pathlen] == '/');
 }
 
+static int handle_unmatched_new_directory(
+	git_diff_list *diff, diff_in_progress *info, git_delta_t *delta)
+{
+	int error = 0;
+	const git_index_entry *nitem = info->nitem;
+	bool contains_oitem = entry_is_prefixed(diff, info->oitem, nitem);
+	bool recurse_into_dir =
+		(*delta == GIT_DELTA_UNTRACKED &&
+		 DIFF_FLAG_IS_SET(diff, GIT_DIFF_RECURSE_UNTRACKED_DIRS)) ||
+		(*delta == GIT_DELTA_IGNORED &&
+		 DIFF_FLAG_IS_SET(diff, GIT_DIFF_RECURSE_IGNORED_DIRS));
+
+	/* do not advance into directories that contain a .git file */
+	if (!contains_oitem && recurse_into_dir) {
+		git_buf *full = NULL;
+		if (git_iterator_current_workdir_path(&full, info->new_iter) < 0)
+			return -1;
+		if (git_path_contains_dir(full, DOT_GIT))
+			recurse_into_dir = false;
+	}
+
+	/* if directory is ignored, remember ignore_prefix */
+	if ((contains_oitem || recurse_into_dir) &&
+		*delta == GIT_DELTA_UNTRACKED &&
+		git_iterator_current_is_ignored(info->new_iter))
+	{
+		git_buf_sets(&info->ignore_prefix, info->nitem->path);
+		*delta = GIT_DELTA_IGNORED;
+
+		/* skip recursion if we've just learned this is ignored */
+		if (DIFF_FLAG_ISNT_SET(diff, GIT_DIFF_RECURSE_IGNORED_DIRS))
+			recurse_into_dir = false;
+	}
+
+	if (contains_oitem || recurse_into_dir) {
+		/* advance into directory */
+		error = git_iterator_advance_into(&info->nitem, info->new_iter);
+
+		/* if directory is empty, can't advance into it, so skip */
+		if (error == GIT_ENOTFOUND) {
+			giterr_clear();
+			error = git_iterator_advance(&info->nitem, info->new_iter);
+
+			git_buf_clear(&info->ignore_prefix);
+		}
+
+		/* return UNMODIFIED to tell caller not to create a new record */
+		*delta = GIT_DELTA_UNMODIFIED;
+	}
+
+	return error;
+}
+
+static int handle_unmatched_new_item(
+	git_diff_list *diff, diff_in_progress *info)
+{
+	int error = 0;
+	const git_index_entry *nitem = info->nitem;
+	git_delta_t delta_type = GIT_DELTA_UNTRACKED;
+
+	/* check if contained in ignored parent directory */
+	if (git_buf_len(&info->ignore_prefix) &&
+		diff->pfxcomp(nitem->path, git_buf_cstr(&info->ignore_prefix)) == 0)
+		delta_type = GIT_DELTA_IGNORED;
+
+	if (S_ISDIR(nitem->mode)) {
+		error = handle_unmatched_new_directory(diff, info, &delta_type);
+
+		if (error || delta_type == GIT_DELTA_UNMODIFIED)
+			return error;
+	}
+
+	/* In core git, the next two "else if" clauses are effectively
+	 * reversed -- i.e. when an untracked file contained in an
+	 * ignored directory is individually ignored, it shows up as an
+	 * ignored file in the diff list, even though other untracked
+	 * files in the same directory are skipped completely.
+	 *
+	 * To me, this is odd.  If the directory is ignored and the file
+	 * is untracked, we should skip it consistently, regardless of
+	 * whether it happens to match a pattern in the ignore file.
+	 *
+	 * To match the core git behavior, just reverse the following
+	 * two "else if" cases so that individual file ignores are
+	 * checked before container directory exclusions are used to
+	 * skip the file.
+	 */
+	else if (delta_type == GIT_DELTA_IGNORED &&
+			 DIFF_FLAG_ISNT_SET(diff, GIT_DIFF_RECURSE_IGNORED_DIRS))
+		return git_iterator_advance(&info->nitem, info->new_iter);
+
+	else if (git_iterator_current_is_ignored(info->new_iter))
+		delta_type = GIT_DELTA_IGNORED;
+
+	else if (info->new_iter->type != GIT_ITERATOR_TYPE_WORKDIR)
+		delta_type = GIT_DELTA_ADDED;
+
+	if ((error = diff_delta__from_one(diff, delta_type, nitem)) < 0)
+		return error;
+
+	/* if we are generating TYPECHANGE records then check for that
+	 * instead of just generating an ADDED/UNTRACKED record
+	 */
+	if (delta_type != GIT_DELTA_IGNORED &&
+		DIFF_FLAG_IS_SET(diff, GIT_DIFF_INCLUDE_TYPECHANGE_TREES) &&
+		entry_is_prefixed(diff, info->oitem, nitem))
+	{
+		/* this entry was prefixed with a tree - make TYPECHANGE */
+		git_diff_delta *last = diff_delta__last_for_item(diff, nitem);
+		if (last) {
+			last->status = GIT_DELTA_TYPECHANGE;
+			last->old_file.mode = GIT_FILEMODE_TREE;
+		}
+	}
+
+	return git_iterator_advance(&info->nitem, info->new_iter);
+}
+
+static int handle_unmatched_old_item(
+	git_diff_list *diff, diff_in_progress *info)
+{
+	int error = diff_delta__from_one(diff, GIT_DELTA_DELETED, info->oitem);
+	if (error < 0)
+		return error;
+
+	/* if we are generating TYPECHANGE records then check for that
+	 * instead of just generating a DELETE record
+	 */
+	if (DIFF_FLAG_IS_SET(diff, GIT_DIFF_INCLUDE_TYPECHANGE_TREES) &&
+		entry_is_prefixed(diff, info->nitem, info->oitem))
+	{
+		/* this entry has become a tree! convert to TYPECHANGE */
+		git_diff_delta *last = diff_delta__last_for_item(diff, info->oitem);
+		if (last) {
+			last->status = GIT_DELTA_TYPECHANGE;
+			last->new_file.mode = GIT_FILEMODE_TREE;
+		}
+
+		/* If new_iter is a workdir iterator, then this situation
+		 * will certainly be followed by a series of untracked items.
+		 * Unless RECURSE_UNTRACKED_DIRS is set, skip over them...
+		 */
+		if (S_ISDIR(info->nitem->mode) &&
+			DIFF_FLAG_ISNT_SET(diff, GIT_DIFF_RECURSE_UNTRACKED_DIRS))
+			return git_iterator_advance(&info->nitem, info->new_iter);
+	}
+
+	return git_iterator_advance(&info->oitem, info->old_iter);
+}
+
+static int handle_matched_item(
+	git_diff_list *diff, diff_in_progress *info)
+{
+	int error = 0;
+
+	if (!(error = maybe_modified(diff, info)) &&
+		!(error = git_iterator_advance(&info->oitem, info->old_iter)))
+		error = git_iterator_advance(&info->nitem, info->new_iter);
+
+	return error;
+}
+
 int git_diff__from_iterators(
 	git_diff_list **diff_ptr,
 	git_repository *repo,
@@ -700,8 +868,7 @@ int git_diff__from_iterators(
 	const git_diff_options *opts)
 {
 	int error = 0;
-	const git_index_entry *oitem, *nitem;
-	git_buf ignore_prefix = GIT_BUF_INIT;
+	diff_in_progress info;
 	git_diff_list *diff;
 
 	*diff_ptr = NULL;
@@ -709,191 +876,51 @@ int git_diff__from_iterators(
 	diff = diff_list_alloc(repo, old_iter, new_iter);
 	GITERR_CHECK_ALLOC(diff);
 
+	info.repo = repo;
+	info.old_iter = old_iter;
+	info.new_iter = new_iter;
+	git_buf_init(&info.ignore_prefix, 0);
+
 	/* make iterators have matching icase behavior */
 	if (DIFF_FLAG_IS_SET(diff, GIT_DIFF_DELTAS_ARE_ICASE)) {
-		if (git_iterator_set_ignore_case(old_iter, true) < 0 ||
-			git_iterator_set_ignore_case(new_iter, true) < 0)
-			goto fail;
+		if (!(error = git_iterator_set_ignore_case(old_iter, true)))
+			error = git_iterator_set_ignore_case(new_iter, true);
 	}
 
-	if (diff_list_apply_options(diff, opts) < 0 ||
-		git_iterator_current(&oitem, old_iter) < 0 ||
-		git_iterator_current(&nitem, new_iter) < 0)
-		goto fail;
+	/* finish initialization */
+	if (!error &&
+		!(error = diff_list_apply_options(diff, opts)) &&
+		!(error = git_iterator_current(&info.oitem, old_iter)))
+		error = git_iterator_current(&info.nitem, new_iter);
 
 	/* run iterators building diffs */
-	while (oitem || nitem) {
-		int cmp = oitem ? (nitem ? diff->entrycomp(oitem, nitem) : -1) : 1;
+	while (!error && (info.oitem || info.nitem)) {
+		int cmp = info.oitem ?
+			(info.nitem ? diff->entrycomp(info.oitem, info.nitem) : -1) : 1;
 
 		/* create DELETED records for old items not matched in new */
-		if (cmp < 0) {
-			if (diff_delta__from_one(diff, GIT_DELTA_DELETED, oitem) < 0)
-				goto fail;
-
-			/* if we are generating TYPECHANGE records then check for that
-			 * instead of just generating a DELETE record
-			 */
-			if (DIFF_FLAG_IS_SET(diff, GIT_DIFF_INCLUDE_TYPECHANGE_TREES) &&
-				entry_is_prefixed(diff, nitem, oitem))
-			{
-				/* this entry has become a tree! convert to TYPECHANGE */
-				git_diff_delta *last = diff_delta__last_for_item(diff, oitem);
-				if (last) {
-					last->status = GIT_DELTA_TYPECHANGE;
-					last->new_file.mode = GIT_FILEMODE_TREE;
-				}
-
-				/* If new_iter is a workdir iterator, then this situation
-				 * will certainly be followed by a series of untracked items.
-				 * Unless RECURSE_UNTRACKED_DIRS is set, skip over them...
-				 */
-				if (S_ISDIR(nitem->mode) &&
-					DIFF_FLAG_ISNT_SET(diff, GIT_DIFF_RECURSE_UNTRACKED_DIRS))
-				{
-					if (git_iterator_advance(&nitem, new_iter) < 0)
-						goto fail;
-				}
-			}
-
-			if (git_iterator_advance(&oitem, old_iter) < 0)
-				goto fail;
-		}
+		if (cmp < 0)
+			error = handle_unmatched_old_item(diff, &info);
 
 		/* create ADDED, TRACKED, or IGNORED records for new items not
 		 * matched in old (and/or descend into directories as needed)
 		 */
-		else if (cmp > 0) {
-			git_delta_t delta_type = GIT_DELTA_UNTRACKED;
-			bool contains_oitem = entry_is_prefixed(diff, oitem, nitem);
-
-			/* check if contained in ignored parent directory */
-			if (git_buf_len(&ignore_prefix) &&
-				diff->pfxcomp(nitem->path, git_buf_cstr(&ignore_prefix)) == 0)
-				delta_type = GIT_DELTA_IGNORED;
-
-			if (S_ISDIR(nitem->mode)) {
-				/* recurse into directory only if there are tracked items in
-				 * it or if the user requested the contents of untracked
-				 * directories and it is not under an ignored directory.
-				 */
-				bool recurse_into_dir =
-					(delta_type == GIT_DELTA_UNTRACKED &&
-					 DIFF_FLAG_IS_SET(diff, GIT_DIFF_RECURSE_UNTRACKED_DIRS)) ||
-					(delta_type == GIT_DELTA_IGNORED &&
-					 DIFF_FLAG_IS_SET(diff, GIT_DIFF_RECURSE_IGNORED_DIRS));
-
-				/* do not advance into directories that contain a .git file */
-				if (!contains_oitem && recurse_into_dir) {
-					git_buf *full = NULL;
-					if (git_iterator_current_workdir_path(&full, new_iter) < 0)
-						goto fail;
-					if (git_path_contains_dir(full, DOT_GIT))
-						recurse_into_dir = false;
-				}
-
-				/* if directory is ignored, remember ignore_prefix */
-				if ((contains_oitem || recurse_into_dir) &&
-					delta_type == GIT_DELTA_UNTRACKED &&
-					git_iterator_current_is_ignored(new_iter))
-				{
-					git_buf_sets(&ignore_prefix, nitem->path);
-					delta_type = GIT_DELTA_IGNORED;
-
-					/* skip recursion if we've just learned this is ignored */
-					if (DIFF_FLAG_ISNT_SET(diff, GIT_DIFF_RECURSE_IGNORED_DIRS))
-						recurse_into_dir = false;
-				}
-
-				if (contains_oitem || recurse_into_dir) {
-					/* advance into directory */
-					error = git_iterator_advance_into(&nitem, new_iter);
-
-					/* if directory is empty, can't advance into it, so skip */
-					if (error == GIT_ENOTFOUND) {
-						giterr_clear();
-						error = git_iterator_advance(&nitem, new_iter);
-
-						git_buf_clear(&ignore_prefix);
-					}
-
-					if (error < 0)
-						goto fail;
-					continue;
-				}
-			}
-
-			/* In core git, the next two "else if" clauses are effectively
-			 * reversed -- i.e. when an untracked file contained in an
-			 * ignored directory is individually ignored, it shows up as an
-			 * ignored file in the diff list, even though other untracked
-			 * files in the same directory are skipped completely.
-			 *
-			 * To me, this is odd.  If the directory is ignored and the file
-			 * is untracked, we should skip it consistently, regardless of
-			 * whether it happens to match a pattern in the ignore file.
-			 *
-			 * To match the core git behavior, just reverse the following
-			 * two "else if" cases so that individual file ignores are
-			 * checked before container directory exclusions are used to
-			 * skip the file.
-			 */
-			else if (delta_type == GIT_DELTA_IGNORED &&
-					 DIFF_FLAG_ISNT_SET(diff, GIT_DIFF_RECURSE_IGNORED_DIRS)) {
-				if (git_iterator_advance(&nitem, new_iter) < 0)
-					goto fail;
-				continue; /* ignored parent directory, so skip completely */
-			}
-
-			else if (git_iterator_current_is_ignored(new_iter))
-				delta_type = GIT_DELTA_IGNORED;
-
-			else if (new_iter->type != GIT_ITERATOR_TYPE_WORKDIR)
-				delta_type = GIT_DELTA_ADDED;
-
-			if (diff_delta__from_one(diff, delta_type, nitem) < 0)
-				goto fail;
-
-			/* if we are generating TYPECHANGE records then check for that
-			 * instead of just generating an ADDED/UNTRACKED record
-			 */
-			if (delta_type != GIT_DELTA_IGNORED &&
-				DIFF_FLAG_IS_SET(diff, GIT_DIFF_INCLUDE_TYPECHANGE_TREES) &&
-				contains_oitem)
-			{
-				/* this entry was prefixed with a tree - make TYPECHANGE */
-				git_diff_delta *last = diff_delta__last_for_item(diff, nitem);
-				if (last) {
-					last->status = GIT_DELTA_TYPECHANGE;
-					last->old_file.mode = GIT_FILEMODE_TREE;
-				}
-			}
-
-			if (git_iterator_advance(&nitem, new_iter) < 0)
-				goto fail;
-		}
+		else if (cmp > 0)
+			error = handle_unmatched_new_item(diff, &info);
 
 		/* otherwise item paths match, so create MODIFIED record
 		 * (or ADDED and DELETED pair if type changed)
 		 */
-		else {
-			assert(oitem && nitem && cmp == 0);
-
-			if (maybe_modified(old_iter, oitem, new_iter, nitem, diff) < 0 ||
-				git_iterator_advance(&oitem, old_iter) < 0 ||
-				git_iterator_advance(&nitem, new_iter) < 0)
-				goto fail;
-		}
+		else
+			error = handle_matched_item(diff, &info);
 	}
 
-	*diff_ptr = diff;
-
-fail:
-	if (!*diff_ptr) {
+	if (!error)
+		*diff_ptr = diff;
+	else
 		git_diff_list_free(diff);
-		error = -1;
-	}
 
-	git_buf_free(&ignore_prefix);
+	git_buf_free(&info.ignore_prefix);
 
 	return error;
 }
