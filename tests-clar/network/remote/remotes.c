@@ -416,37 +416,91 @@ static const char *fetch_refspecs[] = {
 	"+refs/heads/*:refs/remotes/origin/*",
 	"refs/tags/*:refs/tags/*",
 	"+refs/pull/*:refs/pull/*",
+	"refs/heads/special:refs/remotes/origin/very_special",
 };
 
 static const char *push_refspecs[] = {
 	"refs/heads/*:refs/heads/*",
 	"refs/tags/*:refs/tags/*",
 	"refs/notes/*:refs/notes/*",
+	"refs/heads/special:refs/remotes/origin/very_special",
 };
 
-void test_network_remote_remotes__query_refspecs(void)
+static const int num_fetch_specs = sizeof(fetch_refspecs) / sizeof(char*);
+static const int num_push_specs = sizeof(push_refspecs) / sizeof(char*);
+
+static git_remote* setup_test_remote(void)
 {
-	git_remote *remote;
-	git_strarray array;
 	int i;
+	git_remote *remote;
 
 	cl_git_pass(git_remote_create_inmemory(&remote, _repo, NULL, "git://github.com/libgit2/libgit2"));
 
-	for (i = 0; i < 3; i++) {
+	for (i = 0; i < num_fetch_specs; i++) {
 		cl_git_pass(git_remote_add_fetch(remote, fetch_refspecs[i]));
+	}
+	for (i = 0; i < num_push_specs; i++) {
 		cl_git_pass(git_remote_add_push(remote, push_refspecs[i]));
 	}
 
+	return remote;
+}
+
+void test_network_remote_remotes__query_refspecs(void)
+{
+	git_remote *remote = setup_test_remote();
+	git_strarray array;
+	int i;
+
 	cl_git_pass(git_remote_get_fetch_refspecs(&array, remote));
-	for (i = 0; i < 3; i++) {
+	for (i = 0; i < num_fetch_specs; i++) {
 		cl_assert_equal_s(fetch_refspecs[i], array.strings[i]);
 	}
 	git_strarray_free(&array);
 
 	cl_git_pass(git_remote_get_push_refspecs(&array, remote));
-	for (i = 0; i < 3; i++) {
+	for (i = 0; i < num_push_specs; i++) {
 		cl_assert_equal_s(push_refspecs[i], array.strings[i]);
 	}
+	git_strarray_free(&array);
+
+	git_remote_free(remote);
+}
+
+void test_network_remote_remotes__transform_refspecs(void)
+{
+	git_remote *remote = setup_test_remote();
+	git_strarray array;
+	int push;
+
+	for (push = 0; push < 2; push++) {
+		cl_git_pass(git_remote_transform_multiple(&array, remote,
+					"refs/doesntexist", push, 0));
+		cl_assert_equal_i(array.count, 0);
+		git_strarray_free(&array);
+
+		cl_git_pass(git_remote_transform_multiple(&array, remote,
+					"refs/tags/nested/tag", push, 0));
+		cl_assert_equal_i(array.count, 1);
+		cl_assert_equal_s(array.strings[0], "refs/tags/nested/tag");
+		git_strarray_free(&array);
+
+		cl_git_pass(git_remote_transform_multiple(&array, remote,
+					"refs/heads/special", push, 0));
+		cl_assert_equal_i(array.count, 2);
+		if (push) {
+			cl_assert_equal_s(array.strings[0], "refs/heads/special");
+		} else {
+			cl_assert_equal_s(array.strings[0], "refs/remotes/origin/special");
+		}
+		cl_assert_equal_s(array.strings[1], "refs/remotes/origin/very_special");
+		git_strarray_free(&array);
+	}
+
+	cl_git_pass(git_remote_transform_multiple(&array, remote,
+				"refs/remotes/origin/special", 0, 1));
+	cl_assert_equal_i(array.count, 1);
+	cl_assert_equal_s(array.strings[0], "refs/heads/special");
 	git_strarray_free(&array);
 
 	git_remote_free(remote);

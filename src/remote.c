@@ -1518,7 +1518,7 @@ int git_remote_transform_multiple(git_strarray *out, git_remote *remote, const c
 
 
 		if (reverse) {
-			if (git_refspec_src_matches(spec, name)) {
+			if (git_refspec_dst_matches(spec, name)) {
 				if ((error = git_refspec_transform_l(&buf, spec, name)) < 0) {
 					goto cleanup;
 				}
@@ -1527,7 +1527,7 @@ int git_remote_transform_multiple(git_strarray *out, git_remote *remote, const c
 				}
 			}
 		} else {
-			if (git_refspec_dst_matches(spec, name)) {
+			if (git_refspec_src_matches(spec, name)) {
 				if ((error = git_refspec_transform_r(&buf, spec, name)) < 0) {
 					goto cleanup;
 				}
