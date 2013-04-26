@@ -1483,7 +1483,6 @@ static int copy_refspecs(git_strarray *array, git_remote *remote, int push)
 
 on_error:
 	git_vector_foreach(&refspecs, i, dup)
-		git__free(dup);
 	git_vector_free(&refspecs);
 
 	return -1;
