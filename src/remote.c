@@ -1497,3 +1497,60 @@ int git_remote_get_push_refspecs(git_strarray *array, git_remote *remote)
 {
 	return copy_refspecs(array, remote, true);
 }
+
+int git_remote_transform_multiple(git_strarray *out, git_remote *remote, const char *name, int push, int reverse)
+{
+	size_t i;
+	int error = 0;
+	git_buf buf = GIT_BUF_INIT;
+	git_vector results;
+	git_refspec *spec;
+	char *result = NULL;
+
+	assert(out && remote && name);
+
+	if (git_vector_init(&results, remote->refspecs.length, NULL) < 0)
+		return -1;
+
+	git_vector_foreach(&remote->refspecs, i, spec) {
+		if (spec->push != push)
+			continue;
+
+
+		if (reverse) {
+			if (git_refspec_src_matches(spec, name)) {
+				if ((error = git_refspec_transform_l(&buf, spec, name)) < 0) {
+					goto cleanup;
+				}
+				if ((result = git__strdup(git_buf_cstr(&buf))) == NULL) {
+					goto cleanup;
+				}
+			}
+		} else {
+			if (git_refspec_dst_matches(spec, name)) {
+				if ((error = git_refspec_transform_r(&buf, spec, name)) < 0) {
+					goto cleanup;
+				}
+				if ((result = git__strdup(git_buf_cstr(&buf))) == NULL) {
+					goto cleanup;
+				}
+			}
+		}
+
+		if (result) {
+			if (git_vector_insert(&results, result) < 0) {
+				git__free(result);
+				goto cleanup;
+			}
+			git_buf_clear(&buf);
+			result = NULL;
+		}
+	}
+
+	out->strings = (char **)results.contents;
+	out->count = results.length;
+
+cleanup:
+	git_buf_free(&buf);
+	return error;
+}
