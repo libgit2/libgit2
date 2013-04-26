@@ -40,7 +40,8 @@ int cb_status__single(const char *p, unsigned int s, void *payload)
 {
 	status_entry_single *data = (status_entry_single *)payload;
 
-	GIT_UNUSED(p);
+	if (data->debug)
+		fprintf(stderr, "%02d: %s (%04x)\n", data->count, p, s);
 
 	data->count++;
 	data->status = s;

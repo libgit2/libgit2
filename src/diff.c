@@ -698,55 +698,57 @@ static bool entry_is_prefixed(
 			item->path[pathlen] == '/');
 }
 
-static int handle_unmatched_new_directory(
-	git_diff_list *diff, diff_in_progress *info, git_delta_t *delta)
+static int diff_scan_inside_untracked_dir(
+	git_diff_list *diff, diff_in_progress *info, git_delta_t *delta_type)
 {
 	int error = 0;
-	const git_index_entry *nitem = info->nitem;
-	bool contains_oitem = entry_is_prefixed(diff, info->oitem, nitem);
-	bool recurse_into_dir =
-		(*delta == GIT_DELTA_UNTRACKED &&
-		 DIFF_FLAG_IS_SET(diff, GIT_DIFF_RECURSE_UNTRACKED_DIRS)) ||
-		(*delta == GIT_DELTA_IGNORED &&
-		 DIFF_FLAG_IS_SET(diff, GIT_DIFF_RECURSE_IGNORED_DIRS));
+	git_buf base = GIT_BUF_INIT;
+	bool is_ignored;
 
-	/* do not advance into directories that contain a .git file */
-	if (!contains_oitem && recurse_into_dir) {
-		git_buf *full = NULL;
-		if (git_iterator_current_workdir_path(&full, info->new_iter) < 0)
-			return -1;
-		if (git_path_contains_dir(full, DOT_GIT))
-			recurse_into_dir = false;
-	}
+	*delta_type = GIT_DELTA_IGNORED;
+	git_buf_sets(&base, info->nitem->path);
 
-	/* if directory is ignored, remember ignore_prefix */
-	if ((contains_oitem || recurse_into_dir) &&
-		*delta == GIT_DELTA_UNTRACKED &&
-		git_iterator_current_is_ignored(info->new_iter))
-	{
-		git_buf_sets(&info->ignore_prefix, info->nitem->path);
-		*delta = GIT_DELTA_IGNORED;
+	/* advance into untracked directory */
+	if ((error = git_iterator_advance_into(&info->nitem, info->new_iter)) < 0) {
 
-		/* skip recursion if we've just learned this is ignored */
-		if (DIFF_FLAG_ISNT_SET(diff, GIT_DIFF_RECURSE_IGNORED_DIRS))
-			recurse_into_dir = false;
-	}
-
-	if (contains_oitem || recurse_into_dir) {
-		/* advance into directory */
-		error = git_iterator_advance_into(&info->nitem, info->new_iter);
-
-		/* if directory is empty, can't advance into it, so skip */
+		/* skip ahead if empty */
 		if (error == GIT_ENOTFOUND) {
 			giterr_clear();
 			error = git_iterator_advance(&info->nitem, info->new_iter);
-
-			git_buf_clear(&info->ignore_prefix);
 		}
 
-		/* return UNMODIFIED to tell caller not to create a new record */
-		*delta = GIT_DELTA_UNMODIFIED;
+		return error;
 	}
+
+	/* look for actual untracked file */
+	while (!diff->pfxcomp(info->nitem->path, git_buf_cstr(&base))) {
+		is_ignored = git_iterator_current_is_ignored(info->new_iter);
+
+		/* need to recurse into non-ignored directories */
+		if (!is_ignored && S_ISDIR(info->nitem->mode)) {
+			if ((error = git_iterator_advance_into(
+					 &info->nitem, info->new_iter)) < 0)
+				break;
+			continue;
+		}
+
+		/* found a non-ignored item - treat parent dir as untracked */
+		if (!is_ignored) {
+			*delta_type = GIT_DELTA_UNTRACKED;
+			break;
+		}
+
+		if ((error = git_iterator_advance(&info->nitem, info->new_iter)) < 0)
+			break;
+	}
+
+	/* finish off scan */
+	while (!diff->pfxcomp(info->nitem->path, git_buf_cstr(&base))) {
+		if ((error = git_iterator_advance(&info->nitem, info->new_iter)) < 0)
+			break;
+	}
+
+	git_buf_free(&base);
 
 	return error;
 }
@@ -757,36 +759,116 @@ static int handle_unmatched_new_item(
 	int error = 0;
 	const git_index_entry *nitem = info->nitem;
 	git_delta_t delta_type = GIT_DELTA_UNTRACKED;
+	bool contains_oitem;
 
-	/* check if contained in ignored parent directory */
-	if (git_buf_len(&info->ignore_prefix) &&
-		diff->pfxcomp(nitem->path, git_buf_cstr(&info->ignore_prefix)) == 0)
-		delta_type = GIT_DELTA_IGNORED;
+	/* check if this is a prefix of the other side */
+	contains_oitem = entry_is_prefixed(diff, info->oitem, nitem);
 
-	if (S_ISDIR(nitem->mode)) {
-		error = handle_unmatched_new_directory(diff, info, &delta_type);
-
-		if (error || delta_type == GIT_DELTA_UNMODIFIED)
-			return error;
+	/* check if this is contained in an ignored parent directory */
+	if (git_buf_len(&info->ignore_prefix)) {
+		if (diff->pfxcomp(nitem->path, git_buf_cstr(&info->ignore_prefix)) == 0)
+			delta_type = GIT_DELTA_IGNORED;
+		else
+			git_buf_clear(&info->ignore_prefix);
 	}
 
-	/* In core git, the next two "else if" clauses are effectively
-	 * reversed -- i.e. when an untracked file contained in an
-	 * ignored directory is individually ignored, it shows up as an
-	 * ignored file in the diff list, even though other untracked
-	 * files in the same directory are skipped completely.
+	if (S_ISDIR(nitem->mode)) {
+		bool recurse_into_dir = contains_oitem;
+
+		/* if not already inside an ignored dir, check if this is ignored */
+		if (delta_type != GIT_DELTA_IGNORED &&
+			git_iterator_current_is_ignored(info->new_iter))
+		{
+			delta_type = GIT_DELTA_IGNORED;
+			git_buf_sets(&info->ignore_prefix, nitem->path);
+		}
+
+		/* check if user requests recursion into this type of dir */
+		recurse_into_dir = contains_oitem ||
+			(delta_type == GIT_DELTA_UNTRACKED &&
+			 DIFF_FLAG_IS_SET(diff, GIT_DIFF_RECURSE_UNTRACKED_DIRS)) ||
+			(delta_type == GIT_DELTA_IGNORED &&
+			 DIFF_FLAG_IS_SET(diff, GIT_DIFF_RECURSE_IGNORED_DIRS));
+
+		/* do not advance into directories that contain a .git file */
+		if (recurse_into_dir) {
+			git_buf *full = NULL;
+			if (git_iterator_current_workdir_path(&full, info->new_iter) < 0)
+				return -1;
+			if (full && git_path_contains_dir(full, DOT_GIT))
+				recurse_into_dir = false;
+		}
+
+		/* still have to look into untracked directories to match core git -
+		 * with no untracked files, directory is treated as ignored
+		 */
+		if (!recurse_into_dir &&
+			delta_type == GIT_DELTA_UNTRACKED &&
+			DIFF_FLAG_ISNT_SET(diff, GIT_DIFF_FAST_UNTRACKED_DIRS))
+		{
+			git_diff_delta *last;
+
+			/* attempt to insert record for this directory */
+			if ((error = diff_delta__from_one(diff, delta_type, nitem)) < 0)
+				return error;
+
+			/* if delta wasn't created (because of rules), just skip ahead */
+			last = diff_delta__last_for_item(diff, nitem);
+			if (!last)
+				return git_iterator_advance(&info->nitem, info->new_iter);
+
+			/* iterate into dir looking for an actual untracked file */
+			if (diff_scan_inside_untracked_dir(diff, info, &delta_type) < 0)
+				return -1;
+
+			/* it iteration changed delta type, the update the record */
+			if (delta_type == GIT_DELTA_IGNORED) {
+				last->status = GIT_DELTA_IGNORED;
+
+				/* remove the record if we don't want ignored records */
+				if (DIFF_FLAG_ISNT_SET(diff, GIT_DIFF_INCLUDE_IGNORED)) {
+					git_vector_pop(&diff->deltas);
+					git__free(last);
+				}
+			}
+
+			return 0;
+		}
+
+		/* try to advance into directory if necessary */
+		if (recurse_into_dir) {
+			error = git_iterator_advance_into(&info->nitem, info->new_iter);
+
+			/* if real error or no error, proceed with iteration */
+			if (error != GIT_ENOTFOUND)
+				return error;
+			giterr_clear();
+
+			/* if directory is empty, can't advance into it, so either skip
+			 * it or ignore it
+			 */
+			if (contains_oitem)
+				return git_iterator_advance(&info->nitem, info->new_iter);
+			delta_type = GIT_DELTA_IGNORED;
+		}
+	}
+
+	/* In core git, the next two checks are effectively reversed --
+	 * i.e. when an file contained in an ignored directory is explicitly
+	 * ignored, it shows up as an ignored file in the diff list, even though
+	 * other untracked files in the same directory are skipped completely.
 	 *
-	 * To me, this is odd.  If the directory is ignored and the file
-	 * is untracked, we should skip it consistently, regardless of
-	 * whether it happens to match a pattern in the ignore file.
+	 * To me, this seems odd.  If the directory is ignored and the file is
+	 * untracked, we should skip it consistently, regardless of whether it
+	 * happens to match a pattern in the ignore file.
 	 *
-	 * To match the core git behavior, just reverse the following
-	 * two "else if" cases so that individual file ignores are
-	 * checked before container directory exclusions are used to
-	 * skip the file.
+	 * To match the core git behavior, reverse the following two if checks
+	 * so that individual file ignores are checked before container
+	 * directory exclusions are used to skip the file.
 	 */
 	else if (delta_type == GIT_DELTA_IGNORED &&
-			 DIFF_FLAG_ISNT_SET(diff, GIT_DIFF_RECURSE_IGNORED_DIRS))
+		DIFF_FLAG_ISNT_SET(diff, GIT_DIFF_RECURSE_IGNORED_DIRS))
+		/* item contained in ignored directory, so skip over it */
 		return git_iterator_advance(&info->nitem, info->new_iter);
 
 	else if (git_iterator_current_is_ignored(info->new_iter))
@@ -795,15 +877,16 @@ static int handle_unmatched_new_item(
 	else if (info->new_iter->type != GIT_ITERATOR_TYPE_WORKDIR)
 		delta_type = GIT_DELTA_ADDED;
 
+	/* Actually create the record for this item if necessary */
 	if ((error = diff_delta__from_one(diff, delta_type, nitem)) < 0)
 		return error;
 
-	/* if we are generating TYPECHANGE records then check for that
-	 * instead of just generating an ADDED/UNTRACKED record
+	/* If user requested TYPECHANGE records, then check for that instead of
+	 * just generating an ADDED/UNTRACKED record
 	 */
 	if (delta_type != GIT_DELTA_IGNORED &&
 		DIFF_FLAG_IS_SET(diff, GIT_DIFF_INCLUDE_TYPECHANGE_TREES) &&
-		entry_is_prefixed(diff, info->oitem, nitem))
+		contains_oitem)
 	{
 		/* this entry was prefixed with a tree - make TYPECHANGE */
 		git_diff_delta *last = diff_delta__last_for_item(diff, nitem);

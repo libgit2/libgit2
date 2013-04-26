@@ -124,6 +124,13 @@ typedef enum {
 	 *  adds all files under the directory as IGNORED entries, too.
 	 */
 	GIT_DIFF_RECURSE_IGNORED_DIRS = (1 << 18),
+	/** For an untracked directory, diff can immediately label it UNTRACKED,
+	 *  but this differs from core Git which scans underneath for untracked
+	 *  or ignored files and marks the directory ignored unless it contains
+	 *  untracked files under it.  That search can be slow.  This flag makes
+	 *  diff skip ahead and immediately report the directory as untracked.
+	 */
+	GIT_DIFF_FAST_UNTRACKED_DIRS = (1 << 19),
 } git_diff_option_t;
 
 /**
