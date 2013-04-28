@@ -17,6 +17,7 @@ struct git_refspec {
 	unsigned int force :1,
 		push : 1,
 		pattern :1,
+		dwim :1,
 		matching :1;
 };
 
