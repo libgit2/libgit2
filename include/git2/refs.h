@@ -422,6 +422,13 @@ typedef enum {
 	 * (e.g., foo/<star>/bar but not foo/bar<star>).
 	 */
 	GIT_REF_FORMAT_REFSPEC_PATTERN = (1 << 1),
+
+	/**
+	 * Interpret the name as part of a refspec in shorthand form
+	 * so the `ONELEVEL` naming rules aren't enforced and 'master'
+	 * becomes a valid name.
+	 */
+	GIT_REF_FORMAT_REFSPEC_SHORTHAND = (1 << 2),
 } git_reference_normalize_t;
 
 /**
