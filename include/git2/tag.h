@@ -25,6 +25,11 @@ GIT_BEGIN_DECL
 /**
  * Lookup a tag object from the repository.
  *
+ * NOTE: 
+ * This is an inline function and therefore not exported in the shared library.
+ *
+ * @see git_object_lookup
+ * 
  * @param out pointer to the looked up tag
  * @param repo the repo to use when locating the tag.
  * @param id identity of the tag to locate.
@@ -40,6 +45,9 @@ GIT_INLINE(int) git_tag_lookup(
 /**
  * Lookup a tag object from the repository,
  * given a prefix of its identifier (short id).
+ *
+ * NOTE: 
+ * This is an inline function and therefore not exported in the shared library.
  *
  * @see git_object_lookup_prefix
  *
@@ -64,6 +72,11 @@ GIT_INLINE(int) git_tag_lookup_prefix(
  * IMPORTANT: You MUST call this method when you are through with a tag to
  * release memory. Failure to do so will cause a memory leak.
  *
+ * NOTE: 
+ * This is an inline function and therefore not exported in the shared library.
+ *
+ * @see git_object_free
+ * 
  * @param tag the tag to close
  */
 

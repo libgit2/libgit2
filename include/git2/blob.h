@@ -24,6 +24,11 @@ GIT_BEGIN_DECL
 /**
  * Lookup a blob object from a repository.
  *
+ * NOTE: 
+ * This is an inline function and therefore not exported in the shared library.
+ *
+ * @see git_object_lookup
+ * 
  * @param blob pointer to the looked up blob
  * @param repo the repo to use when locating the blob.
  * @param id identity of the blob to locate.
@@ -38,6 +43,9 @@ GIT_INLINE(int) git_blob_lookup(git_blob **blob, git_repository *repo, const git
  * Lookup a blob object from a repository,
  * given a prefix of its identifier (short id).
  *
+ * NOTE: 
+ * This is an inline function and therefore not exported in the shared library.
+ * 
  * @see git_object_lookup_prefix
  *
  * @param blob pointer to the looked up blob
@@ -60,6 +68,11 @@ GIT_INLINE(int) git_blob_lookup_prefix(git_blob **blob, git_repository *repo, co
  * It *is* necessary to call this method when you stop
  * using a blob. Failure to do so will cause a memory leak.
  *
+ * NOTE:
+ * This is an inline function and therefore not exported in the shared library.
+ *
+ * @see git_object_free
+ * 
  * @param blob the blob to close
  */
 
@@ -71,6 +84,11 @@ GIT_INLINE(void) git_blob_free(git_blob *blob)
 /**
  * Get the id of a blob.
  *
+ * NOTE:
+ * This is an inline function and therefore not exported in the shared library.
+ *
+ * @see git_object_id
+ * 
  * @param blob a previously loaded blob.
  * @return SHA1 hash for this blob.
  */

@@ -24,6 +24,11 @@ GIT_BEGIN_DECL
 /**
  * Lookup a commit object from a repository.
  *
+ * NOTE:
+ * This is an inline function and therefore not exported in the shared library.
+ *
+ * @see git_object_lookup
+ * 
  * @param commit pointer to the looked up commit
  * @param repo the repo to use when locating the commit.
  * @param id identity of the commit to locate. If the object is
@@ -38,6 +43,9 @@ GIT_INLINE(int) git_commit_lookup(git_commit **commit, git_repository *repo, con
 /**
  * Lookup a commit object from a repository,
  * given a prefix of its identifier (short id).
+ *
+ * NOTE:
+ * This is an inline function and therefore not exported in the shared library.
  *
  * @see git_object_lookup_prefix
  *
@@ -62,6 +70,11 @@ GIT_INLINE(int) git_commit_lookup_prefix(git_commit **commit, git_repository *re
  * It *is* necessary to call this method when you stop
  * using a commit. Failure to do so will cause a memory leak.
  *
+ * NOTE:
+ * This is an inline function and therefore not exported in the shared library.
+ *
+ * @see git_object_free
+ *
  * @param commit the commit to close
  */
 
@@ -72,6 +85,11 @@ GIT_INLINE(void) git_commit_free(git_commit *commit)
 
 /**
  * Get the id of a commit.
+ * 
+ * NOTE:
+ * This is an inline function and therefore not exported in the shared library.
+ *
+ * @see git_object_id
  *
  * @param commit a previously loaded commit.
  * @return object identity for the commit.
