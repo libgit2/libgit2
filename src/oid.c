@@ -194,14 +194,31 @@ int git_oid_ncmp(const git_oid *oid_a, const git_oid *oid_b, size_t len)
 	return 0;
 }
 
-int git_oid_streq(const git_oid *a, const char *str)
+int git_oid_strcmp(const git_oid *oid_a, const char *str)
 {
-	git_oid id;
+	const unsigned char *a = oid_a->id;
+	unsigned char strval;
+	int hexval;
 
-	if (git_oid_fromstr(&id, str) < 0)
-		return -1;
+	for (a = oid_a->id; *str && (a - oid_a->id) < GIT_OID_RAWSZ; ++a) {
+		if ((hexval = git__fromhex(*str++)) < 0)
+			return -1;
+		strval = hexval << 4;
+		if (*str) {
+			if ((hexval = git__fromhex(*str++)) < 0)
+				return -1;
+			strval |= hexval;
+		}
+		if (*a != strval)
+			return (*a - strval);
+	}
 
-	return git_oid_cmp(a, &id) == 0 ? 0 : -1;
+	return 0;
+}
+
+int git_oid_streq(const git_oid *oid_a, const char *str)
+{
+	return git_oid_strcmp(oid_a, str) == 0 ? 0 : -1;
 }
 
 int git_oid_iszero(const git_oid *oid_a)

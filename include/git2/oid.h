@@ -202,6 +202,16 @@ GIT_EXTERN(int) git_oid_ncmp(const git_oid *a, const git_oid *b, size_t len);
 GIT_EXTERN(int) git_oid_streq(const git_oid *id, const char *str);
 
 /**
+ * Compare an oid to an hex formatted object id.
+ *
+ * @param id oid structure.
+ * @param str input hex string of an object id.
+ * @return -1 if str is not valid, <0 if id sorts before str,
+ *         0 if id matches str, >0 if id sorts after str.
+ */
+GIT_EXTERN(int) git_oid_strcmp(const git_oid *id, const char *str);
+
+/**
  * Check is an oid is all zeros.
  *
  * @return 1 if all zeros, 0 otherwise.
