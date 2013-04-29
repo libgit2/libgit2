@@ -166,6 +166,11 @@ void git_oid_cpy(git_oid *out, const git_oid *src)
 	memcpy(out->id, src->id, sizeof(out->id));
 }
 
+int git_oid_compare(const git_oid *oid_a, const git_oid *oid_b)
+{
+	return git_oid_cmp(oid_a, oid_b);
+}
+
 int git_oid_ncmp(const git_oid *oid_a, const git_oid *oid_b, size_t len)
 {
 	const unsigned char *a = oid_a->id;
