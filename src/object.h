@@ -28,4 +28,16 @@ int git_oid__parse(git_oid *oid, const char **buffer_out, const char *buffer_end
 
 void git_oid__writebuf(git_buf *buf, const char *header, const git_oid *oid);
 
+#define GIT_OBJ_WRAPPER(TYPE,OBJTYPE) \
+	int TYPE##_lookup(TYPE **out, git_repository *repo, const git_oid *id) { \
+		return git_object_lookup((git_object **)out, repo, id, OBJTYPE); } \
+	int TYPE##_lookup_prefix(TYPE **out, git_repository *repo, const git_oid *id, size_t len) { \
+		return git_object_lookup_prefix((git_object **)out, repo, id, len, OBJTYPE); } \
+	void TYPE##_free(TYPE *obj) { \
+		git_object_free((git_object *)obj); } \
+	const git_oid *TYPE##_id(const TYPE *obj) { \
+		return git_object_id((const git_object *)obj); } \
+	git_repository *TYPE##_owner(const TYPE *obj) { \
+		return git_object_owner((const git_object *)obj); }
+
 #endif

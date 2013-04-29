@@ -15,6 +15,8 @@
 #include "git2/signature.h"
 #include "git2/odb_backend.h"
 
+GIT_OBJ_WRAPPER(git_tag, GIT_OBJ_TAG)
+
 void git_tag__free(void *_tag)
 {
 	git_tag *tag = _tag;
@@ -22,11 +24,6 @@ void git_tag__free(void *_tag)
 	git__free(tag->message);
 	git__free(tag->tag_name);
 	git__free(tag);
-}
-
-const git_oid *git_tag_id(const git_tag *c)
-{
-	return git_object_id((const git_object *)c);
 }
 
 int git_tag_target(git_object **target, const git_tag *t)
