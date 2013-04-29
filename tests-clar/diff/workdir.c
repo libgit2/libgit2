@@ -1033,3 +1033,190 @@ void test_diff_workdir__to_tree_issue_1397(void)
 	git_diff_list_free(diff);
 	git_tree_free(a);
 }
+
+void test_diff_workdir__untracked_directory_scenarios(void)
+{
+	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
+	git_diff_list *diff = NULL;
+	diff_expects exp;
+	char *pathspec = NULL;
+	static const char *files0[] = {
+		"subdir/deleted_file",
+		"subdir/modified_file",
+		"subdir/new_file",
+		NULL
+	};
+	static const char *files1[] = {
+		"subdir/deleted_file",
+		"subdir/directory/",
+		"subdir/modified_file",
+		"subdir/new_file",
+		NULL
+	};
+	static const char *files2[] = {
+		"subdir/deleted_file",
+		"subdir/directory/more/notignored",
+		"subdir/modified_file",
+		"subdir/new_file",
+		NULL
+	};
+
+	g_repo = cl_git_sandbox_init("status");
+	cl_git_mkfile("status/.gitignore", "ignored\n");
+
+	opts.context_lines = 3;
+	opts.interhunk_lines = 1;
+	opts.flags |= GIT_DIFF_INCLUDE_IGNORED | GIT_DIFF_INCLUDE_UNTRACKED;
+	opts.pathspec.strings = &pathspec;
+	opts.pathspec.count   = 1;
+	pathspec = "subdir";
+
+	/* baseline for "subdir" pathspec */
+
+	memset(&exp, 0, sizeof(exp));
+	exp.names = files0;
+
+	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, NULL, &opts));
+
+	cl_git_pass(git_diff_foreach(diff, diff_file_cb, NULL, NULL, &exp));
+
+	cl_assert_equal_i(3, exp.files);
+	cl_assert_equal_i(0, exp.file_status[GIT_DELTA_ADDED]);
+	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_DELETED]);
+	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_MODIFIED]);
+	cl_assert_equal_i(0, exp.file_status[GIT_DELTA_IGNORED]);
+	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_UNTRACKED]);
+
+	git_diff_list_free(diff);
+
+	/* empty directory */
+
+	cl_git_pass(p_mkdir("status/subdir/directory", 0777));
+
+	memset(&exp, 0, sizeof(exp));
+	exp.names = files1;
+
+	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, NULL, &opts));
+
+	cl_git_pass(git_diff_foreach(diff, diff_file_cb, NULL, NULL, &exp));
+
+	cl_assert_equal_i(4, exp.files);
+	cl_assert_equal_i(0, exp.file_status[GIT_DELTA_ADDED]);
+	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_DELETED]);
+	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_MODIFIED]);
+	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_IGNORED]);
+	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_UNTRACKED]);
+
+	git_diff_list_free(diff);
+
+	/* directory with only ignored files */
+
+	cl_git_pass(p_mkdir("status/subdir/directory/deeper", 0777));
+	cl_git_mkfile("status/subdir/directory/deeper/ignored", "ignore me\n");
+
+	cl_git_pass(p_mkdir("status/subdir/directory/another", 0777));
+	cl_git_mkfile("status/subdir/directory/another/ignored", "ignore me\n");
+
+	memset(&exp, 0, sizeof(exp));
+	exp.names = files1;
+
+	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, NULL, &opts));
+
+	cl_git_pass(git_diff_foreach(diff, diff_file_cb, NULL, NULL, &exp));
+
+	cl_assert_equal_i(4, exp.files);
+	cl_assert_equal_i(0, exp.file_status[GIT_DELTA_ADDED]);
+	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_DELETED]);
+	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_MODIFIED]);
+	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_IGNORED]);
+	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_UNTRACKED]);
+
+	git_diff_list_free(diff);
+
+	/* directory with ignored directory (contents irrelevant) */
+
+	cl_git_pass(p_mkdir("status/subdir/directory/more", 0777));
+	cl_git_pass(p_mkdir("status/subdir/directory/more/ignored", 0777));
+	cl_git_mkfile("status/subdir/directory/more/ignored/notignored",
+		"inside ignored dir\n");
+
+	memset(&exp, 0, sizeof(exp));
+	exp.names = files1;
+
+	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, NULL, &opts));
+
+	cl_git_pass(git_diff_foreach(diff, diff_file_cb, NULL, NULL, &exp));
+
+	cl_assert_equal_i(4, exp.files);
+	cl_assert_equal_i(0, exp.file_status[GIT_DELTA_ADDED]);
+	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_DELETED]);
+	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_MODIFIED]);
+	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_IGNORED]);
+	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_UNTRACKED]);
+
+	git_diff_list_free(diff);
+
+	/* quick version avoids directory scan */
+
+	opts.flags = opts.flags | GIT_DIFF_FAST_UNTRACKED_DIRS;
+
+	memset(&exp, 0, sizeof(exp));
+	exp.names = files1;
+
+	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, NULL, &opts));
+
+	cl_git_pass(git_diff_foreach(diff, diff_file_cb, NULL, NULL, &exp));
+
+	cl_assert_equal_i(4, exp.files);
+	cl_assert_equal_i(0, exp.file_status[GIT_DELTA_ADDED]);
+	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_DELETED]);
+	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_MODIFIED]);
+	cl_assert_equal_i(0, exp.file_status[GIT_DELTA_IGNORED]);
+	cl_assert_equal_i(2, exp.file_status[GIT_DELTA_UNTRACKED]);
+
+	git_diff_list_free(diff);
+
+	/* directory with nested non-ignored content */
+
+	opts.flags = opts.flags & ~GIT_DIFF_FAST_UNTRACKED_DIRS;
+
+	cl_git_mkfile("status/subdir/directory/more/notignored",
+		"not ignored deep under untracked\n");
+
+	memset(&exp, 0, sizeof(exp));
+	exp.names = files1;
+
+	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, NULL, &opts));
+
+	cl_git_pass(git_diff_foreach(diff, diff_file_cb, NULL, NULL, &exp));
+
+	cl_assert_equal_i(4, exp.files);
+	cl_assert_equal_i(0, exp.file_status[GIT_DELTA_ADDED]);
+	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_DELETED]);
+	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_MODIFIED]);
+	cl_assert_equal_i(0, exp.file_status[GIT_DELTA_IGNORED]);
+	cl_assert_equal_i(2, exp.file_status[GIT_DELTA_UNTRACKED]);
+
+	git_diff_list_free(diff);
+
+	/* use RECURSE_UNTRACKED_DIRS to get actual untracked files (no ignores) */
+
+	opts.flags = opts.flags & ~GIT_DIFF_INCLUDE_IGNORED;
+	opts.flags = opts.flags | GIT_DIFF_RECURSE_UNTRACKED_DIRS;
+
+	memset(&exp, 0, sizeof(exp));
+	exp.names = files2;
+
+	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, NULL, &opts));
+
+	cl_git_pass(git_diff_foreach(diff, diff_file_cb, NULL, NULL, &exp));
+
+	cl_assert_equal_i(4, exp.files);
+	cl_assert_equal_i(0, exp.file_status[GIT_DELTA_ADDED]);
+	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_DELETED]);
+	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_MODIFIED]);
+	cl_assert_equal_i(0, exp.file_status[GIT_DELTA_IGNORED]);
+	cl_assert_equal_i(2, exp.file_status[GIT_DELTA_UNTRACKED]);
+
+	git_diff_list_free(diff);
+}
