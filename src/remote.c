@@ -632,26 +632,102 @@ int git_remote__get_http_proxy(git_remote *remote, bool use_ssl, char **proxy_ur
 	return 0;
 }
 
+static int store_refs(git_remote_head *head, void *payload)
+{
+	git_vector *refs = (git_vector *)payload;
+
+	return git_vector_insert(refs, head);
+}
+
+static int dwim_refspecs(git_vector *refspecs, git_vector *refs)
+{
+	git_buf buf = GIT_BUF_INIT;
+	git_refspec *spec;
+	size_t i, j, pos;
+	git_remote_head key;
+
+	const char* formatters[] = {
+		GIT_REFS_DIR "%s",
+		GIT_REFS_TAGS_DIR "%s",
+		GIT_REFS_HEADS_DIR "%s",
+		NULL
+	};
+
+	git_vector_foreach(refspecs, i, spec) {
+		if (spec->dwim)
+			continue;
+
+		/* shorthand on the lhs */
+		if (git__prefixcmp(spec->src, GIT_REFS_DIR)) {
+			for (j = 0; formatters[j]; j++) {
+				git_buf_clear(&buf);
+				if (git_buf_printf(&buf, formatters[j], spec->src) < 0)
+					return -1;
+
+				key.name = (char *) git_buf_cstr(&buf);
+				if (!git_vector_search(&pos, refs, &key)) {
+					/* we found something to match the shorthand, set src to that */
+					git__free(spec->src);
+					spec->src = git_buf_detach(&buf);
+				}
+			}
+		}
+
+		if (spec->dst && git__prefixcmp(spec->dst, GIT_REFS_DIR)) {
+			/* if it starts with "remotes" then we just prepend "refs/" */
+			if (!git__prefixcmp(spec->dst, "remotes/")) {
+				git_buf_puts(&buf, GIT_REFS_DIR);
+			} else {
+				git_buf_puts(&buf, GIT_REFS_HEADS_DIR);
+			}
+
+			if (git_buf_puts(&buf, spec->dst) < 0)
+				return -1;
+
+			git__free(spec->dst);
+			spec->dst = git_buf_detach(&buf);
+		}
+
+		spec->dwim = 1;
+	}
+
+	return 0;
+}
+
+static int remote_head_cmp(const void *_a, const void *_b)
+{
+	const git_remote_head *a = (git_remote_head *) _a;
+	const git_remote_head *b = (git_remote_head *) _b;
+
+	return git__strcmp_cb(a->name, b->name);
+}
+
 int git_remote_download(
 		git_remote *remote,
 		git_transfer_progress_callback progress_cb,
 		void *progress_payload)
 {
 	int error;
+	git_vector refs;
 
 	assert(remote);
+
+	if (git_vector_init(&refs, 16, remote_head_cmp) < 0)
+		return -1;
+
+	if (git_remote_ls(remote, store_refs, &refs) < 0) {
+		return -1;
+	}
+
+	error = dwim_refspecs(&remote->refspecs, &refs);
+	git_vector_free(&refs);
+	if (error < 0)
+		return -1;
 
 	if ((error = git_fetch_negotiate(remote)) < 0)
 		return error;
 
 	return git_fetch_download_pack(remote, progress_cb, progress_payload);
-}
-
-static int update_tips_callback(git_remote_head *head, void *payload)
-{
-	git_vector *refs = (git_vector *)payload;
-
-	return git_vector_insert(refs, head);
 }
 
 static int remote_head_for_fetchspec_src(git_remote_head **out, git_vector *update_heads, const char *fetchspec_src)
@@ -814,7 +890,7 @@ static int update_tips_for_spec(git_remote *remote, git_refspec *spec, git_vecto
 		if (!git_reference_is_valid_name(head->name))
 			continue;
 
-		if (git_refspec_src_matches(spec, head->name)) {
+		if (git_refspec_src_matches(spec, head->name) && spec->dst) {
 			if (git_refspec_transform_r(&refname, spec, head->name) < 0)
 				goto on_error;
 		} else if (remote->download_tags != GIT_REMOTE_DOWNLOAD_TAGS_NONE) {
@@ -887,7 +963,7 @@ int git_remote_update_tips(git_remote *remote)
 	if (git_vector_init(&refs, 16, NULL) < 0)
 		return -1;
 
-	if (git_remote_ls(remote, update_tips_callback, &refs) < 0)
+	if (git_remote_ls(remote, store_refs, &refs) < 0)
 		goto on_error;
 
 	git_vector_foreach(&remote->refspecs, i, spec) {

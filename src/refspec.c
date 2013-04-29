@@ -60,7 +60,7 @@ int git_refspec__parse(git_refspec *refspec, const char *input, bool is_fetch)
 
 	refspec->pattern = is_glob;
 	refspec->src = git__strndup(lhs, llen);
-	flags = GIT_REF_FORMAT_ALLOW_ONELEVEL
+	flags = GIT_REF_FORMAT_ALLOW_ONELEVEL | GIT_REF_FORMAT_REFSPEC_SHORTHAND
 		| (is_glob ? GIT_REF_FORMAT_REFSPEC_PATTERN : 0);
 
 	if (is_fetch) {

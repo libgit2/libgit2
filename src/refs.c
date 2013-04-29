@@ -752,6 +752,7 @@ int git_reference__normalize_name(
 		goto cleanup;
 
 	if ((segments_count == 1 ) &&
+	    !(flags & GIT_REF_FORMAT_REFSPEC_SHORTHAND) &&
 		!(is_all_caps_and_underscore(name, (size_t)segment_len) ||
 			((flags & GIT_REF_FORMAT_REFSPEC_PATTERN) && !strcmp("*", name))))
 			goto cleanup;
