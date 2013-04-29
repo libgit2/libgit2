@@ -9,7 +9,6 @@
 
 #include "git2/indexer.h"
 #include "git2/object.h"
-#include "git2/oid.h"
 
 #include "common.h"
 #include "pack.h"
@@ -17,6 +16,7 @@
 #include "posix.h"
 #include "pack.h"
 #include "filebuf.h"
+#include "oid.h"
 #include "oidmap.h"
 
 #define UINT31_MAX (0x7FFFFFFF)
@@ -103,7 +103,7 @@ static int objects_cmp(const void *a, const void *b)
 	const struct entry *entrya = a;
 	const struct entry *entryb = b;
 
-	return git_oid_cmp(&entrya->oid, &entryb->oid);
+	return git_oid__cmp(&entrya->oid, &entryb->oid);
 }
 
 int git_indexer_stream_new(

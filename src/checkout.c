@@ -138,7 +138,7 @@ static bool checkout_is_workdir_modified(
 		if (!sm_oid)
 			return false;
 
-		return (git_oid_cmp(&baseitem->oid, sm_oid) != 0);
+		return (git_oid__cmp(&baseitem->oid, sm_oid) != 0);
 	}
 
 	/* Look at the cache to decide if the workdir is modified.  If not,
@@ -149,7 +149,7 @@ static bool checkout_is_workdir_modified(
 		if (wditem->mtime.seconds == ie->mtime.seconds &&
 			wditem->mtime.nanoseconds == ie->mtime.nanoseconds &&
 			wditem->file_size == ie->file_size)
-			return (git_oid_cmp(&baseitem->oid, &ie->oid) != 0);
+			return (git_oid__cmp(&baseitem->oid, &ie->oid) != 0);
 	}
 
 	/* depending on where base is coming from, we may or may not know
@@ -163,7 +163,7 @@ static bool checkout_is_workdir_modified(
 			wditem->file_size, &oid) < 0)
 		return false;
 
-	return (git_oid_cmp(&baseitem->oid, &oid) != 0);
+	return (git_oid__cmp(&baseitem->oid, &oid) != 0);
 }
 
 #define CHECKOUT_ACTION_IF(FLAG,YES,NO) \

@@ -429,7 +429,7 @@ static int similarity_measure(
 	if (GIT_MODE_TYPE(a_file->mode) != GIT_MODE_TYPE(b_file->mode))
 		return 0;
 
-	if (git_oid_cmp(&a_file->oid, &b_file->oid) == 0)
+	if (git_oid__cmp(&a_file->oid, &b_file->oid) == 0)
 		return 100;
 
 	/* update signature cache if needed */

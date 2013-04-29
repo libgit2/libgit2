@@ -12,8 +12,8 @@
 #include "sha1_lookup.h"
 #include "mwindow.h"
 #include "fileops.h"
+#include "oid.h"
 
-#include "git2/oid.h"
 #include <zlib.h>
 
 static int packfile_open(struct git_pack_file *p);
@@ -875,7 +875,7 @@ static int packfile_open(struct git_pack_file *p)
 
 	idx_sha1 = ((unsigned char *)p->index_map.data) + p->index_map.len - 40;
 
-	if (git_oid_cmp(&sha1, (git_oid *)idx_sha1) == 0)
+	if (git_oid__cmp(&sha1, (git_oid *)idx_sha1) == 0)
 		return 0;
 
 cleanup:
@@ -1139,7 +1139,7 @@ int git_pack_entry_find(
 	if (len == GIT_OID_HEXSZ && p->num_bad_objects) {
 		unsigned i;
 		for (i = 0; i < p->num_bad_objects; i++)
-			if (git_oid_cmp(short_oid, &p->bad_object_sha1[i]) == 0)
+			if (git_oid__cmp(short_oid, &p->bad_object_sha1[i]) == 0)
 				return packfile_error("bad object found in packfile");
 	}
 
