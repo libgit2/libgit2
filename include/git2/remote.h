@@ -191,6 +191,26 @@ GIT_EXTERN(int) git_remote_get_push_refspecs(git_strarray *array, git_remote *re
 GIT_EXTERN(void) git_remote_clear_refspecs(git_remote *remote);
 
 /**
+ * Transform a reference name obeying the refspec rules
+ *
+ * The memory is owned by the user and should be freed with
+ * `git_strarray_free`.
+ *
+ * @param out pointer to the array in which to store the strings
+ * @param remote the remote to query
+ * @param name the reference name to query
+ * @param push whether to use the push or fetch refspec rules
+ * @param reverse whether the lookup should be done in reverse (default
+ * is from remote to local.
+ */
+GIT_EXTERN(int) git_remote_transform_multiple(
+	git_strarray *out,
+	git_remote *remote,
+	const char *name,
+	int push,
+	int reverse);
+
+/**
  * Open a connection to a remote
  *
  * The transport is selected based on the URL. The direction argument
