@@ -25,6 +25,10 @@ install:
 
 # Run the Build script
 script:
+ - mkdir _temp
+ - git init --bare _temp/test.git
+ - git daemon --listen=localhost --export-all --enable=receive-pack --base-path=_temp _temp 2>/dev/null &
+ - export GITTEST_REMOTE_URL="git://localhost/test.git"
  - mkdir _build
  - cd _build
  - cmake .. -DCMAKE_INSTALL_PREFIX=../_install $OPTIONS
