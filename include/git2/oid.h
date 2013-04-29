@@ -141,6 +141,9 @@ GIT_EXTERN(void) git_oid_cpy(git_oid *out, const git_oid *src);
 /**
  * Compare two oid structures.
  *
+ * NOTE: 
+ * This is an inline function and therefore not exported in the shared library.
+ * 
  * @param a first oid structure.
  * @param b second oid structure.
  * @return <0, 0, >0 if a < b, a == b, a > b.
@@ -162,6 +165,9 @@ GIT_INLINE(int) git_oid_cmp(const git_oid *a, const git_oid *b)
 /**
  * Compare two oid structures for equality
  *
+ * NOTE: 
+ * This is an inline function and therefore not exported in the shared library.
+ * 
  * @param a first oid structure.
  * @param b second oid structure.
  * @return true if equal, false otherwise

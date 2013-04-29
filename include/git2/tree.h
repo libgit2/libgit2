@@ -23,6 +23,11 @@ GIT_BEGIN_DECL
 
 /**
  * Lookup a tree object from the repository.
+ * 
+ * NOTE: 
+ * This is an inline function and therefore not exported in the shared library.
+ *
+ * @see git_object_lookup
  *
  * @param out Pointer to the looked up tree
  * @param repo The repo to use when locating the tree.
@@ -38,6 +43,9 @@ GIT_INLINE(int) git_tree_lookup(
 /**
  * Lookup a tree object from the repository,
  * given a prefix of its identifier (short id).
+ *
+ * NOTE: 
+ * This is an inline function and therefore not exported in the shared library.
  *
  * @see git_object_lookup_prefix
  *
@@ -65,6 +73,11 @@ GIT_INLINE(int) git_tree_lookup_prefix(
  * IMPORTANT: You MUST call this method when you stop using a tree to
  * release memory. Failure to do so will cause a memory leak.
  *
+ * NOTE: 
+ * This is an inline function and therefore not exported in the shared library.
+ *
+ * @see git_object_free
+ * 
  * @param tree The tree to close
  */
 GIT_INLINE(void) git_tree_free(git_tree *tree)
