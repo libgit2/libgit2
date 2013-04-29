@@ -445,31 +445,39 @@ static int add_default_backends(
 {
 	size_t i;
 	struct stat st;
+	ino_t inode;
 	git_odb_backend *loose, *packed;
 
 	/* TODO: inodes are not really relevant on Win32, so we need to find
 	 * a cross-platform workaround for this */
-#ifndef GIT_WIN32
+#ifdef GIT_WIN32
+	GIT_UNUSED(i);
+	GIT_UNUSED(st);
+
+	inode = 0;
+#else
 	if (p_stat(objects_dir, &st) < 0) {
 		giterr_set(GITERR_ODB, "Failed to load object database in '%s'", objects_dir);
 		return -1;
 	}
 
+	inode = st.st_ino;
+
 	for (i = 0; i < db->backends.length; ++i) {
 		backend_internal *backend = git_vector_get(&db->backends, i);
-		if (backend->disk_inode == st.st_ino)
+		if (backend->disk_inode == inode)
 			return 0;
 	}
 #endif
 	
 	/* add the loose object backend */
 	if (git_odb_backend_loose(&loose, objects_dir, -1, 0) < 0 ||
-		add_backend_internal(db, loose, GIT_LOOSE_PRIORITY, as_alternates, st.st_ino) < 0)
+		add_backend_internal(db, loose, GIT_LOOSE_PRIORITY, as_alternates, inode) < 0)
 		return -1;
 
 	/* add the packed file backend */
 	if (git_odb_backend_pack(&packed, objects_dir) < 0 ||
-		add_backend_internal(db, packed, GIT_PACKED_PRIORITY, as_alternates, st.st_ino) < 0)
+		add_backend_internal(db, packed, GIT_PACKED_PRIORITY, as_alternates, inode) < 0)
 		return -1;
 
 	return load_alternates(db, objects_dir, alternate_depth);
