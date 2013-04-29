@@ -176,13 +176,16 @@ int git_oid_ncmp(const git_oid *oid_a, const git_oid *oid_b, size_t len)
 	const unsigned char *a = oid_a->id;
 	const unsigned char *b = oid_b->id;
 
-	do {
+	if (len > GIT_OID_HEXSZ)
+		len = GIT_OID_HEXSZ;
+
+	while (len > 1) {
 		if (*a != *b)
 			return 1;
 		a++;
 		b++;
 		len -= 2;
-	} while (len > 1);
+	};
 
 	if (len)
 		if ((*a ^ *b) & 0xf0)
