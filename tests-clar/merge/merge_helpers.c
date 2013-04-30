@@ -5,6 +5,7 @@
 #include "merge_helpers.h"
 #include "merge.h"
 #include "git2/merge.h"
+#include "git2/sys/index.h"
 
 int merge_trees_from_branches(
 	git_index **index, git_repository *repo,

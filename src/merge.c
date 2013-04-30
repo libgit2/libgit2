@@ -36,6 +36,7 @@
 #include "git2/signature.h"
 #include "git2/config.h"
 #include "git2/tree.h"
+#include "git2/sys/index.h"
 
 #define GIT_MERGE_INDEX_ENTRY_EXISTS(X)	((X).mode != 0)
 
