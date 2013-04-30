@@ -923,7 +923,7 @@ static int update_tips_for_spec(git_remote *remote, git_refspec *spec, git_vecto
 		if (error == GIT_ENOTFOUND)
 			memset(&old, 0, GIT_OID_RAWSZ);
 
-		if (!git_oid_cmp(&old, &head->oid))
+		if (!git_oid__cmp(&old, &head->oid))
 			continue;
 
 		/* In autotag mode, don't overwrite any locally-existing tags */

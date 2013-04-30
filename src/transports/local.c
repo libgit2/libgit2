@@ -282,7 +282,7 @@ static int local_push_copy_object(
 		odb_obj_size) < 0 ||
 		odb_stream->finalize_write(&remote_odb_obj_oid, odb_stream) < 0) {
 		error = -1;
-	} else if (git_oid_cmp(&obj->id, &remote_odb_obj_oid) != 0) {
+	} else if (git_oid__cmp(&obj->id, &remote_odb_obj_oid) != 0) {
 		giterr_set(GITERR_ODB, "Error when writing object to remote odb "
 			"during local push operation. Remote odb object oid does not "
 			"match local oid.");

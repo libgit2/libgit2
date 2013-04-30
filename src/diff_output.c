@@ -660,7 +660,7 @@ static int diff_patch_load(
 	 */
 	if (check_if_unmodified &&
 		delta->old_file.mode == delta->new_file.mode &&
-		!git_oid_cmp(&delta->old_file.oid, &delta->new_file.oid))
+		!git_oid__cmp(&delta->old_file.oid, &delta->new_file.oid))
 	{
 		delta->status = GIT_DELTA_UNMODIFIED;
 
@@ -1388,7 +1388,7 @@ static int diff_single_apply(diff_single_data *data)
 		(has_old ? GIT_DELTA_MODIFIED : GIT_DELTA_ADDED) :
 		(has_old ? GIT_DELTA_DELETED : GIT_DELTA_UNTRACKED);
 
-	if (git_oid_cmp(&delta->new_file.oid, &delta->old_file.oid) == 0)
+	if (git_oid__cmp(&delta->new_file.oid, &delta->old_file.oid) == 0)
 		delta->status = GIT_DELTA_UNMODIFIED;
 
 	if ((error = diff_delta_is_binary_by_content(

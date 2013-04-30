@@ -15,6 +15,8 @@
 #include "filter.h"
 #include "buf_text.h"
 
+GIT_OBJECT__TYPED_FUNCTIONS(git_blob, GIT_OBJ_BLOB)
+
 const void *git_blob_rawcontent(const git_blob *blob)
 {
 	assert(blob);

@@ -13,6 +13,7 @@
 #include "git2/refdb.h"
 #include "strmap.h"
 #include "buffer.h"
+#include "oid.h"
 
 #define GIT_REFS_DIR "refs/"
 #define GIT_REFS_HEADS_DIR GIT_REFS_DIR "heads/"

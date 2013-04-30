@@ -145,19 +145,7 @@ GIT_EXTERN(void) git_oid_cpy(git_oid *out, const git_oid *src);
  * @param b second oid structure.
  * @return <0, 0, >0 if a < b, a == b, a > b.
  */
-GIT_INLINE(int) git_oid_cmp(const git_oid *a, const git_oid *b)
-{
-	const unsigned char *sha1 = a->id;
-	const unsigned char *sha2 = b->id;
-	int i;
-
-	for (i = 0; i < GIT_OID_RAWSZ; i++, sha1++, sha2++) {
-		if (*sha1 != *sha2)
-			return *sha1 - *sha2;
-	}
-
-	return 0;
-}
+GIT_EXTERN(int) git_oid_cmp(const git_oid *a, const git_oid *b);
 
 /**
  * Compare two oid structures for equality
@@ -191,6 +179,16 @@ GIT_EXTERN(int) git_oid_ncmp(const git_oid *a, const git_oid *b, size_t len);
  * 0 in case of a match, GIT_ERROR otherwise.
  */
 GIT_EXTERN(int) git_oid_streq(const git_oid *id, const char *str);
+
+/**
+ * Compare an oid to an hex formatted object id.
+ *
+ * @param id oid structure.
+ * @param str input hex string of an object id.
+ * @return -1 if str is not valid, <0 if id sorts before str,
+ *         0 if id matches str, >0 if id sorts after str.
+ */
+GIT_EXTERN(int) git_oid_strcmp(const git_oid *id, const char *str);
 
 /**
  * Check is an oid is all zeros.

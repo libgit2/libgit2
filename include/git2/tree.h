@@ -29,11 +29,8 @@ GIT_BEGIN_DECL
  * @param id Identity of the tree to locate.
  * @return 0 or an error code
  */
-GIT_INLINE(int) git_tree_lookup(
-	git_tree **out, git_repository *repo, const git_oid *id)
-{
-	return git_object_lookup((git_object **)out, repo, id, GIT_OBJ_TREE);
-}
+GIT_EXTERN(int) git_tree_lookup(
+	git_tree **out, git_repository *repo, const git_oid *id);
 
 /**
  * Lookup a tree object from the repository,
@@ -47,15 +44,11 @@ GIT_INLINE(int) git_tree_lookup(
  * @param len the length of the short identifier
  * @return 0 or an error code
  */
-GIT_INLINE(int) git_tree_lookup_prefix(
+GIT_EXTERN(int) git_tree_lookup_prefix(
 	git_tree **out,
 	git_repository *repo,
 	const git_oid *id,
-	size_t len)
-{
-	return git_object_lookup_prefix(
-		(git_object **)out, repo, id, len, GIT_OBJ_TREE);
-}
+	size_t len);
 
 /**
  * Close an open tree
@@ -67,10 +60,7 @@ GIT_INLINE(int) git_tree_lookup_prefix(
  *
  * @param tree The tree to close
  */
-GIT_INLINE(void) git_tree_free(git_tree *tree)
-{
-	git_object_free((git_object *)tree);
-}
+GIT_EXTERN(void) git_tree_free(git_tree *tree);
 
 /**
  * Get the id of a tree.

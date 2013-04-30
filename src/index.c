@@ -1411,7 +1411,7 @@ static int parse_index(git_index *index, const char *buffer, size_t buffer_size)
 	/* 160-bit SHA-1 over the content of the index file before this checksum. */
 	git_oid_fromraw(&checksum_expected, (const unsigned char *)buffer);
 
-	if (git_oid_cmp(&checksum_calculated, &checksum_expected) != 0)
+	if (git_oid__cmp(&checksum_calculated, &checksum_expected) != 0)
 		return index_error_invalid("calculated checksum does not match expected");
 
 #undef seek_forward
