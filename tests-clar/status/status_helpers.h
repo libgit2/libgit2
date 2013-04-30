@@ -24,6 +24,7 @@ extern int cb_status__count(const char *p, unsigned int s, void *payload);
 typedef struct {
 	int count;
 	unsigned int status;
+	bool debug;
 } status_entry_single;
 
 /* cb_status__single takes payload of "status_entry_single *" */
