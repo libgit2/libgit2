@@ -15,8 +15,6 @@
 #include "git2/signature.h"
 #include "git2/odb_backend.h"
 
-GIT_OBJECT__TYPED_FUNCTIONS(git_tag, GIT_OBJ_TAG)
-
 void git_tag__free(void *_tag)
 {
 	git_tag *tag = _tag;

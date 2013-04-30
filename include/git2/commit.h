@@ -30,10 +30,7 @@ GIT_BEGIN_DECL
  *		an annotated tag it will be peeled back to the commit.
  * @return 0 or an error code
  */
-GIT_INLINE(int) git_commit_lookup(git_commit **commit, git_repository *repo, const git_oid *id)
-{
-	return git_object_lookup((git_object **)commit, repo, id, GIT_OBJ_COMMIT);
-}
+GIT_EXTERN(int) git_commit_lookup(git_commit **commit, git_repository *repo, const git_oid *id);
 
 /**
  * Lookup a commit object from a repository,
@@ -48,10 +45,7 @@ GIT_INLINE(int) git_commit_lookup(git_commit **commit, git_repository *repo, con
  * @param len the length of the short identifier
  * @return 0 or an error code
  */
-GIT_INLINE(int) git_commit_lookup_prefix(git_commit **commit, git_repository *repo, const git_oid *id, size_t len)
-{
-	return git_object_lookup_prefix((git_object **)commit, repo, id, len, GIT_OBJ_COMMIT);
-}
+GIT_EXTERN(int) git_commit_lookup_prefix(git_commit **commit, git_repository *repo, const git_oid *id, size_t len);
 
 /**
  * Close an open commit
@@ -65,10 +59,7 @@ GIT_INLINE(int) git_commit_lookup_prefix(git_commit **commit, git_repository *re
  * @param commit the commit to close
  */
 
-GIT_INLINE(void) git_commit_free(git_commit *commit)
-{
-	git_object_free((git_object *) commit);
-}
+GIT_EXTERN(void) git_commit_free(git_commit *commit);
 
 /**
  * Get the id of a commit.
@@ -76,10 +67,7 @@ GIT_INLINE(void) git_commit_free(git_commit *commit)
  * @param commit a previously loaded commit.
  * @return object identity for the commit.
  */
-GIT_INLINE(const git_oid *) git_commit_id(const git_commit *commit)
-{
-	return git_object_id((const git_object *)commit);
-}
+GIT_EXTERN(const git_oid *) git_commit_id(const git_commit *commit);
 
 /**
  * Get the encoding for the message of a commit,
