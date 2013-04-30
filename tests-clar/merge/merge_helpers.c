@@ -51,10 +51,62 @@ int merge_trees_from_branches(
 	return 0;
 }
 
+static void dump_index_entries(git_vector *index_entries)
+{
+	size_t i;
+	const git_index_entry *index_entry;
+	
+	printf ("\nINDEX [%d]:\n", (int)index_entries->length);
+	for (i = 0; i < index_entries->length; i++) {
+		index_entry = index_entries->contents[i];
+		
+		printf("%o ", index_entry->mode);
+		printf("%s ", git_oid_allocfmt(&index_entry->oid));
+		printf("%d ", git_index_entry_stage(index_entry));
+		printf("%s ", index_entry->path);
+		printf("\n");
+	}
+	printf("\n");
+}
+
+static void dump_names(git_index *index)
+{
+	size_t i;
+	const git_index_name_entry *conflict_name;
+
+	for (i = 0; i < git_index_name_entrycount(index); i++) {
+		conflict_name = git_index_name_get_byindex(index, i);
+		
+		printf("%s %s %s\n", conflict_name->ancestor, conflict_name->ours, conflict_name->theirs);
+	}
+	printf("\n");
+}
+
+static void dump_reuc(git_index *index)
+{
+	size_t i;
+	const git_index_reuc_entry *reuc;
+
+	printf ("\nREUC:\n");
+	for (i = 0; i < git_index_reuc_entrycount(index); i++) {
+		reuc = git_index_reuc_get_byindex(index, i);
+		
+		printf("%s ", reuc->path);
+		printf("%o ", reuc->mode[0]);
+		printf("%s\n", git_oid_allocfmt(&reuc->oid[0]));
+		printf("          %o ", reuc->mode[1]);
+		printf("          %s\n", git_oid_allocfmt(&reuc->oid[1]));
+		printf("          %o ", reuc->mode[2]);
+		printf("          %s ", git_oid_allocfmt(&reuc->oid[2]));
+		printf("\n");
+	}
+	printf("\n");
+}
+
 static int index_entry_eq_merge_index_entry(const struct merge_index_entry *expected, const git_index_entry *actual)
 {
 	git_oid expected_oid;
-    bool test_oid;
+	bool test_oid;
 
 	if (strlen(expected->oid_str) != 0) {
 		cl_git_pass(git_oid_fromstr(&expected_oid, expected->oid_str));
@@ -82,6 +134,16 @@ static int name_entry_eq(const char *expected, const char *actual)
 		return (actual == NULL) ? 1 : 0;
 	
 	return (strcmp(expected, actual) == 0) ? 1 : 0;
+}
+
+static int name_entry_eq_merge_name_entry(const struct merge_name_entry *expected, const git_index_name_entry *actual)
+{
+	if (name_entry_eq(expected->ancestor_path, actual->ancestor) == 0 ||
+		name_entry_eq(expected->our_path, actual->ours) == 0 ||
+		name_entry_eq(expected->their_path, actual->theirs) == 0)
+		return 0;
+
+	return 1;
 }
 
 static int index_conflict_data_eq_merge_diff(const struct merge_index_conflict_data *expected, git_merge_diff *actual)
@@ -137,6 +199,29 @@ int merge_test_index(git_index *index, const struct merge_index_entry expected[]
     }
     
     return 1;
+}
+
+int merge_test_names(git_index *index, const struct merge_name_entry expected[], size_t expected_len)
+{
+	size_t i;
+	const git_index_name_entry *name_entry;
+	
+	/*
+	dump_names(index);
+	*/
+
+	if (git_index_name_entrycount(index) != expected_len)
+		return 0;
+
+	for (i = 0; i < expected_len; i++) {
+		if ((name_entry = git_index_name_get_byindex(index, i)) == NULL)
+			return 0;
+
+		if (! name_entry_eq_merge_name_entry(&expected[i], name_entry))
+			return 0;
+	}
+	
+	return 1;
 }
 
 int merge_test_reuc(git_index *index, const struct merge_reuc_entry expected[], size_t expected_len)
