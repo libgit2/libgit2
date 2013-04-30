@@ -15,7 +15,7 @@
 #include "filter.h"
 #include "buf_text.h"
 
-GIT_OBJ_WRAPPER(git_blob, GIT_OBJ_BLOB)
+GIT_OBJECT__TYPED_FUNCTIONS(git_blob, GIT_OBJ_BLOB)
 
 const void *git_blob_rawcontent(const git_blob *blob)
 {

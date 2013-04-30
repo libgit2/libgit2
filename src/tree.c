@@ -11,7 +11,7 @@
 #include "git2/repository.h"
 #include "git2/object.h"
 
-GIT_OBJ_WRAPPER(git_tree, GIT_OBJ_TREE)
+GIT_OBJECT__TYPED_FUNCTIONS(git_tree, GIT_OBJ_TREE)
 
 #define DEFAULT_TREE_SIZE 16
 #define MAX_FILEMODE_BYTES 6

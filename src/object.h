@@ -28,7 +28,7 @@ int git_oid__parse(git_oid *oid, const char **buffer_out, const char *buffer_end
 
 void git_oid__writebuf(git_buf *buf, const char *header, const git_oid *oid);
 
-#define GIT_OBJ_WRAPPER(TYPE,OBJTYPE) \
+#define GIT_OBJECT__TYPED_FUNCTIONS(TYPE,OBJTYPE) \
 	int TYPE##_lookup(TYPE **out, git_repository *repo, const git_oid *id) { \
 		return git_object_lookup((git_object **)out, repo, id, OBJTYPE); } \
 	int TYPE##_lookup_prefix(TYPE **out, git_repository *repo, const git_oid *id, size_t len) { \
