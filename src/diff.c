@@ -327,8 +327,7 @@ static git_diff_list *diff_list_alloc(
 	/* Use case-insensitive compare if either iterator has
 	 * the ignore_case bit set */
 	if (!git_iterator_ignore_case(old_iter) &&
-		!git_iterator_ignore_case(new_iter))
-	{
+		!git_iterator_ignore_case(new_iter)) {
 		diff->opts.flags &= ~GIT_DIFF_DELTAS_ARE_ICASE;
 
 		diff->strcomp    = git__strcmp;
@@ -777,8 +776,7 @@ static int handle_unmatched_new_item(
 
 		/* if not already inside an ignored dir, check if this is ignored */
 		if (delta_type != GIT_DELTA_IGNORED &&
-			git_iterator_current_is_ignored(info->new_iter))
-		{
+			git_iterator_current_is_ignored(info->new_iter)) {
 			delta_type = GIT_DELTA_IGNORED;
 			git_buf_sets(&info->ignore_prefix, nitem->path);
 		}
