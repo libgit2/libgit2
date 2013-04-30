@@ -692,6 +692,7 @@ static int dwim_refspecs(git_vector *refspecs, git_vector *refs)
 		spec->dwim = 1;
 	}
 
+	git_buf_free(&buf);
 	return 0;
 }
 
