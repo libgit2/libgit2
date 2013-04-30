@@ -111,6 +111,7 @@ struct git_repository {
 
 	char *path_repository;
 	char *workdir;
+	char *namespace;
 
 	unsigned is_bare:1;
 	unsigned int lru_counter;

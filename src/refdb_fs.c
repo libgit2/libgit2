@@ -41,7 +41,7 @@ typedef struct refdb_fs_backend {
 	git_refdb_backend parent;
 
 	git_repository *repo;
-	const char *path;
+	char *path;
 
 	git_refcache refcache;
 } refdb_fs_backend;
@@ -993,6 +993,7 @@ static void refdb_fs_backend__free(git_refdb_backend *_backend)
 	backend = (refdb_fs_backend *)_backend;
 
 	refcache_free(&backend->refcache);
+	git__free(backend->path);
 	git__free(backend);
 }
 
@@ -1000,13 +1001,19 @@ int git_refdb_backend_fs(
 	git_refdb_backend **backend_out,
 	git_repository *repository)
 {
+	git_buf path = GIT_BUF_INIT;
 	refdb_fs_backend *backend;
 
 	backend = git__calloc(1, sizeof(refdb_fs_backend));
 	GITERR_CHECK_ALLOC(backend);
 
 	backend->repo = repository;
-	backend->path = repository->path_repository;
+
+	git_buf_puts(&path, repository->path_repository);
+	if (repository->namespace != NULL)
+		git_buf_printf(&path, "refs/%s/", repository->namespace);
+
+	backend->path = git_buf_detach(&path);
 
 	backend->parent.exists = &refdb_fs_backend__exists;
 	backend->parent.lookup = &refdb_fs_backend__lookup;
