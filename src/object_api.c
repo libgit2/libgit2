@@ -48,12 +48,12 @@ git_repository *git_commit_owner(const git_commit *obj)
  */
 int git_tree_lookup(git_tree **out, git_repository *repo, const git_oid *id)
 {
-	return git_object_lookup((git_object **)out, repo, id, GIT_OBJ_COMMIT);
+	return git_object_lookup((git_object **)out, repo, id, GIT_OBJ_TREE);
 }
 
 int git_tree_lookup_prefix(git_tree **out, git_repository *repo, const git_oid *id, size_t len)
 {
-	return git_object_lookup_prefix((git_object **)out, repo, id, len, GIT_OBJ_COMMIT);
+	return git_object_lookup_prefix((git_object **)out, repo, id, len, GIT_OBJ_TREE);
 }
 
 void git_tree_free(git_tree *obj)
@@ -77,12 +77,12 @@ git_repository *git_tree_owner(const git_tree *obj)
  */
 int git_tag_lookup(git_tag **out, git_repository *repo, const git_oid *id)
 {
-	return git_object_lookup((git_object **)out, repo, id, GIT_OBJ_COMMIT);
+	return git_object_lookup((git_object **)out, repo, id, GIT_OBJ_TAG);
 }
 
 int git_tag_lookup_prefix(git_tag **out, git_repository *repo, const git_oid *id, size_t len)
 {
-	return git_object_lookup_prefix((git_object **)out, repo, id, len, GIT_OBJ_COMMIT);
+	return git_object_lookup_prefix((git_object **)out, repo, id, len, GIT_OBJ_TAG);
 }
 
 void git_tag_free(git_tag *obj)
@@ -105,12 +105,12 @@ git_repository *git_tag_owner(const git_tag *obj)
  */
 int git_blob_lookup(git_blob **out, git_repository *repo, const git_oid *id)
 {
-	return git_object_lookup((git_object **)out, repo, id, GIT_OBJ_COMMIT);
+	return git_object_lookup((git_object **)out, repo, id, GIT_OBJ_BLOB);
 }
 
 int git_blob_lookup_prefix(git_blob **out, git_repository *repo, const git_oid *id, size_t len)
 {
-	return git_object_lookup_prefix((git_object **)out, repo, id, len, GIT_OBJ_COMMIT);
+	return git_object_lookup_prefix((git_object **)out, repo, id, len, GIT_OBJ_BLOB);
 }
 
 void git_blob_free(git_blob *obj)
