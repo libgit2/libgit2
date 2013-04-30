@@ -626,6 +626,28 @@ typedef enum {
  */
 GIT_EXTERN(int) git_repository_state(git_repository *repo);
 
+/**
+ * Sets the active namespace for this Git Repository
+ *
+ * This namespace affects all reference operations for the repo.
+ * See `man gitnamespaces`
+ *
+ * @param repo The repo
+ * @param nmspace The namespace. This should not include the refs
+ *	folder, e.g. to namespace all references under `refs/namespaces/foo/`,
+ *	use `foo` as the namespace.
+ *	@return 0 on success, -1 on error
+ */
+GIT_EXTERN(int) git_repository_set_namespace(git_repository *repo, const char *nmspace);
+
+/**
+ * Get the currently active namespace for this repository
+ *
+ * @param repo The repo
+ * @return the active namespace, or NULL if there isn't one
+ */
+GIT_EXTERN(const char *) git_repository_get_namespace(git_repository *repo);
+
 /** @} */
 GIT_END_DECL
 #endif

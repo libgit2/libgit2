@@ -111,6 +111,7 @@ void git_repository_free(git_repository *repo)
 
 	git__free(repo->path_repository);
 	git__free(repo->workdir);
+	git__free(repo->namespace);
 
 	git__free(repo);
 }
@@ -762,6 +763,23 @@ void git_repository_set_index(git_repository *repo, git_index *index)
 {
 	assert(repo && index);
 	set_index(repo, index);
+}
+
+int git_repository_set_namespace(git_repository *repo, const char *namespace)
+{
+	git__free(repo->namespace);
+
+	if (namespace == NULL) {
+		repo->namespace = NULL;
+		return 0;
+	}
+
+	return (repo->namespace = git__strdup(namespace)) ? 0 : -1;
+}
+
+const char *git_repository_get_namespace(git_repository *repo)
+{
+	return repo->namespace;
 }
 
 static int check_repositoryformatversion(git_config *config)
