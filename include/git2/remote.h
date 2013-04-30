@@ -191,6 +191,32 @@ GIT_EXTERN(int) git_remote_get_push_refspecs(git_strarray *array, git_remote *re
 GIT_EXTERN(void) git_remote_clear_refspecs(git_remote *remote);
 
 /**
+ * Get the number of refspecs for a remote
+ *
+ * @param remote the remote
+ * @return the amount of refspecs configured in this remote
+ */
+GIT_EXTERN(size_t) git_remote_refspec_count(git_remote *remote);
+
+/**
+ * Get a refspec from the remote
+ *
+ * @param remote the remote to query
+ * @param n the refspec to get
+ * @return the nth refspec
+ */
+GIT_EXTERN(const git_refspec *)git_remote_get_refspec(git_remote *remote, size_t n);
+
+/**
+ * Remove a refspec from the remote
+ *
+ * @param remote the remote to query
+ * @param n the refspec to remove
+ * @return 0 or GIT_ENOTFOUND
+ */
+GIT_EXTERN(int) git_remote_remove_refspec(git_remote *remote, size_t n);
+
+/**
  * Open a connection to a remote
  *
  * The transport is selected based on the URL. The direction argument

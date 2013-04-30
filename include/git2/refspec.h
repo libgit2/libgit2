@@ -9,6 +9,7 @@
 
 #include "common.h"
 #include "types.h"
+#include "net.h"
 
 /**
  * @file git2/refspec.h

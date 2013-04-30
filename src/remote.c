@@ -8,6 +8,7 @@
 #include "git2/config.h"
 #include "git2/types.h"
 #include "git2/oid.h"
+#include "git2/net.h"
 
 #include "config.h"
 #include "repository.h"
@@ -1573,4 +1574,29 @@ int git_remote_get_fetch_refspecs(git_strarray *array, git_remote *remote)
 int git_remote_get_push_refspecs(git_strarray *array, git_remote *remote)
 {
 	return copy_refspecs(array, remote, true);
+}
+
+size_t git_remote_refspec_count(git_remote *remote)
+{
+	return remote->refspecs.length;
+}
+
+const git_refspec *git_remote_get_refspec(git_remote *remote, size_t n)
+{
+	return git_vector_get(&remote->refspecs, n);
+}
+
+int git_remote_remove_refspec(git_remote *remote, size_t n)
+{
+	git_refspec *spec;
+
+	assert(remote);
+
+	spec = git_vector_get(&remote->refspecs, n);
+	if (spec) {
+		git_refspec__free(spec);
+		git__free(spec);
+	}
+
+	return git_vector_remove(&remote->refspecs, n);
 }
