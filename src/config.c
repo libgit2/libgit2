@@ -373,6 +373,12 @@ int git_config_set_string(git_config *cfg, const char *name, const char *value)
 	}
 
 	internal = git_vector_get(&cfg->files, 0);
+	if (!internal) {
+		/* Should we auto-vivify .git/config? Tricky from this location */
+		giterr_set(GITERR_CONFIG, "Cannot set value when no config files exist");
+		return GIT_ENOTFOUND;
+	}
+
 	file = internal->file;
 
 	error = file->set(file, name, value);
