@@ -149,7 +149,7 @@ void test_clone_nonetwork__custom_fetch_spec(void)
 	cl_git_pass(git_clone(&g_repo, cl_git_fixture_url("testrepo.git"), "./foo", &g_options));
 
 	cl_git_pass(git_remote_load(&g_remote, g_repo, "origin"));
-	actual_fs = git_vector_get(&g_remote->refspecs, 0);
+	actual_fs = git_remote_get_refspec(g_remote, 0);
 	cl_assert_equal_s("refs/heads/master", git_refspec_src(actual_fs));
 	cl_assert_equal_s("refs/heads/foo", git_refspec_dst(actual_fs));
 
@@ -165,7 +165,7 @@ void test_clone_nonetwork__custom_push_spec(void)
 	cl_git_pass(git_clone(&g_repo, cl_git_fixture_url("testrepo.git"), "./foo", &g_options));
 
 	cl_git_pass(git_remote_load(&g_remote, g_repo, "origin"));
-	actual_fs = git_vector_get(&g_remote->refspecs, g_remote->refspecs.length - 1);
+	actual_fs = git_remote_get_refspec(g_remote, git_remote_refspec_count(g_remote) - 1);
 	cl_assert_equal_s("refs/heads/master", git_refspec_src(actual_fs));
 	cl_assert_equal_s("refs/heads/foo", git_refspec_dst(actual_fs));
 }
