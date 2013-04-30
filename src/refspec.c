@@ -274,3 +274,10 @@ int git_refspec_is_wildcard(const git_refspec *spec)
 
 	return (spec->src[strlen(spec->src) - 1] == '*');
 }
+
+git_direction git_refspec_direction(const git_refspec *spec)
+{
+	assert(spec);
+
+	return spec->push;
+}
