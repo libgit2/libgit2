@@ -196,21 +196,21 @@ static git_diff_delta *diff_delta__last_for_item(
 	switch (delta->status) {
 	case GIT_DELTA_UNMODIFIED:
 	case GIT_DELTA_DELETED:
-		if (git_oid_cmp(&delta->old_file.oid, &item->oid) == 0)
+		if (git_oid__cmp(&delta->old_file.oid, &item->oid) == 0)
 			return delta;
 		break;
 	case GIT_DELTA_ADDED:
-		if (git_oid_cmp(&delta->new_file.oid, &item->oid) == 0)
+		if (git_oid__cmp(&delta->new_file.oid, &item->oid) == 0)
 			return delta;
 		break;
 	case GIT_DELTA_UNTRACKED:
 		if (diff->strcomp(delta->new_file.path, item->path) == 0 &&
-			git_oid_cmp(&delta->new_file.oid, &item->oid) == 0)
+			git_oid__cmp(&delta->new_file.oid, &item->oid) == 0)
 			return delta;
 		break;
 	case GIT_DELTA_MODIFIED:
-		if (git_oid_cmp(&delta->old_file.oid, &item->oid) == 0 ||
-			git_oid_cmp(&delta->new_file.oid, &item->oid) == 0)
+		if (git_oid__cmp(&delta->old_file.oid, &item->oid) == 0 ||
+			git_oid__cmp(&delta->new_file.oid, &item->oid) == 0)
 			return delta;
 		break;
 	default:

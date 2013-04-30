@@ -832,7 +832,7 @@ int git_reference_cmp(git_reference *ref1, git_reference *ref2)
 	if (type1 == GIT_REF_SYMBOLIC)
 		return strcmp(ref1->target.symbolic, ref2->target.symbolic);
 
-	return git_oid_cmp(&ref1->target.oid, &ref2->target.oid);
+	return git_oid__cmp(&ref1->target.oid, &ref2->target.oid);
 }
 
 static int reference__update_terminal(

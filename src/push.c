@@ -376,7 +376,7 @@ static int queue_differences(
 		const git_tree_entry *d_entry = git_tree_entry_byindex(delta, j);
 		int cmp = 0;
 
-		if (!git_oid_cmp(&b_entry->oid, &d_entry->oid))
+		if (!git_oid__cmp(&b_entry->oid, &d_entry->oid))
 			goto loop;
 
 		cmp = strcmp(b_entry->filename, d_entry->filename);

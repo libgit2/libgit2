@@ -11,6 +11,8 @@
 #include "git2/repository.h"
 #include "git2/object.h"
 
+GIT_OBJECT__TYPED_FUNCTIONS(git_tree, GIT_OBJ_TREE)
+
 #define DEFAULT_TREE_SIZE 16
 #define MAX_FILEMODE_BYTES 6
 
@@ -230,16 +232,6 @@ void git_tree__free(void *_tree)
 
 	git_vector_free(&tree->entries);
 	git__free(tree);
-}
-
-const git_oid *git_tree_id(const git_tree *t)
-{
-	return git_object_id((const git_object *)t);
-}
-
-git_repository *git_tree_owner(const git_tree *t)
-{
-	return git_object_owner((const git_object *)t);
 }
 
 git_filemode_t git_tree_entry_filemode(const git_tree_entry *entry)

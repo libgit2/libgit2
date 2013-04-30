@@ -132,14 +132,14 @@ static int reference_matches_remote_head(
 			return 0;
 	}
 
-	if (git_oid_cmp(&head_info->remote_head_oid, &oid) == 0) {
+	if (git_oid__cmp(&head_info->remote_head_oid, &oid) == 0) {
 		/* Determine the local reference name from the remote tracking one */
 		if (git_refspec_transform_l(
-			&head_info->branchname, 
+			&head_info->branchname,
 			head_info->refspec,
 			reference_name) < 0)
 				return -1;
-		
+
 		if (git_buf_len(&head_info->branchname) > 0) {
 			if (git_buf_sets(
 				&head_info->branchname,
