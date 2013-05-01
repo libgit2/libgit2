@@ -435,7 +435,7 @@ int git_clone(
 	/* Only clone to a new directory or an empty directory */
 	if (git_path_exists(local_path) && !git_path_is_empty_dir(local_path)) {
 		giterr_set(GITERR_INVALID,
-			"'%s' exists and is not an empty directory", path);
+			"'%s' exists and is not an empty directory", local_path);
 		return GIT_ERROR;
 	}
 
