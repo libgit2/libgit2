@@ -32,15 +32,15 @@ static git_index *repo_index;
 #define OCTO5_OID                   "e4f618a2c3ed0669308735727df5ebf2447f022f"
 
 // Fixture setup and teardown
-void test_merge_setup__initialize(void)
+void test_merge_workdir_setup__initialize(void)
 {
 	repo = cl_git_sandbox_init(TEST_REPO_PATH);
-    git_repository_index(&repo_index, repo);
+	git_repository_index(&repo_index, repo);
 }
 
-void test_merge_setup__cleanup(void)
+void test_merge_workdir_setup__cleanup(void)
 {
-    git_index_free(repo_index);
+	git_index_free(repo_index);
 	cl_git_sandbox_cleanup();
 }
 
@@ -48,7 +48,8 @@ static void write_file_contents(const char *filename, const char *output)
 {
 	git_buf file_path_buf = GIT_BUF_INIT;
 
-    git_buf_printf(&file_path_buf, "%s/%s", git_repository_path(repo), filename);
+	git_buf_printf(&file_path_buf, "%s/%s", git_repository_path(repo),
+		filename);
 	cl_git_rewritefile(file_path_buf.ptr, output);
 
 	git_buf_free(&file_path_buf);
@@ -72,7 +73,7 @@ static int merge_head_foreach_cb(const git_oid *oid, void *payload)
 	return 0;
 }
 
-void test_merge_setup__head_notfound(void)
+void test_merge_workdir_setup__head_notfound(void)
 {
 	int error;
 
@@ -81,7 +82,7 @@ void test_merge_setup__head_notfound(void)
 	cl_assert(error == GIT_ENOTFOUND);
 }
 
-void test_merge_setup__head_invalid_oid(void)
+void test_merge_workdir_setup__head_invalid_oid(void)
 {
 	int error;
 
@@ -92,7 +93,7 @@ void test_merge_setup__head_invalid_oid(void)
 	cl_assert(error == -1);
 }
 
-void test_merge_setup__head_foreach_nonewline(void)
+void test_merge_workdir_setup__head_foreach_nonewline(void)
 {
 	int error;
 
@@ -103,7 +104,7 @@ void test_merge_setup__head_foreach_nonewline(void)
 	cl_assert(error == -1);
 }
 
-void test_merge_setup__head_foreach_one(void)
+void test_merge_workdir_setup__head_foreach_one(void)
 {
 	const char *expected = THEIRS_SIMPLE_OID;
 
@@ -117,7 +118,7 @@ void test_merge_setup__head_foreach_one(void)
 	cl_assert(cb_data.i == cb_data.len);
 }
 
-void test_merge_setup__head_foreach_octopus(void)
+void test_merge_workdir_setup__head_foreach_octopus(void)
 {
 	const char *expected[] = { THEIRS_SIMPLE_OID,
 		OCTO1_OID, OCTO2_OID, OCTO3_OID, OCTO4_OID, OCTO5_OID };
