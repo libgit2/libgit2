@@ -496,8 +496,10 @@ const git_index_entry *git_index_get_bypath(
 
 	git_vector_sort(&index->entries);
 
-	if (index_find(&pos, index, path, stage) < 0)
+	if (index_find(&pos, index, path, stage) < 0) {
+		giterr_set(GITERR_INDEX, "Index does not contain %s", path);
 		return NULL;
+	}
 
 	return git_index_get_byindex(index, pos);
 }
@@ -778,8 +780,11 @@ int git_index_remove(git_index *index, const char *path, int stage)
 
 	git_vector_sort(&index->entries);
 
-	if (index_find(&position, index, path, stage) < 0)
+	if (index_find(&position, index, path, stage) < 0) {
+		giterr_set(GITERR_INDEX, "Index does not contain %s at stage %d",
+			path, stage);
 		return GIT_ENOTFOUND;
+	}
 
 	entry = git_vector_get(&index->entries, position);
 	if (entry != NULL)
