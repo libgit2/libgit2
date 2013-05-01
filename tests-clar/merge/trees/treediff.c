@@ -33,13 +33,6 @@ void test_merge_trees_treediff__cleanup(void)
 	cl_git_sandbox_cleanup();
 }
 
-struct treediff_cb_data {
-    struct merge_index_conflict_data *conflict_data;
-    size_t conflict_data_len;
-
-    size_t idx;
-};
-
 static void test_find_differences(
     const char *ancestor_oidstr,
     const char *ours_oidstr,
@@ -50,7 +43,6 @@ static void test_find_differences(
     git_merge_diff_list *merge_diff_list = git_merge_diff_list__alloc(repo);
     git_oid ancestor_oid, ours_oid, theirs_oid;
     git_tree *ancestor_tree, *ours_tree, *theirs_tree;
-    struct treediff_cb_data treediff_cb_data = {0};
 
 	git_merge_tree_opts opts = GIT_MERGE_TREE_OPTS_INIT;
 	opts.flags |= GIT_MERGE_TREE_FIND_RENAMES;
@@ -82,9 +74,6 @@ static void test_find_differences(
 	 */
 	
     cl_assert(treediff_conflict_data_len == merge_diff_list->conflicts.length);
-    
-    treediff_cb_data.conflict_data = treediff_conflict_data;
-	treediff_cb_data.conflict_data_len = treediff_conflict_data_len;
 
 	cl_assert(merge_test_merge_conflicts(&merge_diff_list->conflicts, treediff_conflict_data, treediff_conflict_data_len));
 

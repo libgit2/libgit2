@@ -209,6 +209,9 @@ static int conflict_name_cmp(const void *a, const void *b)
 	return strcmp(name_a->ours, name_b->ours);
 }
 
+/**
+ * TODO: enable this when resolving case insensitive conflicts
+ */
 static int conflict_name_icmp(const void *a, const void *b)
 {
 	const git_index_name_entry *name_a = a;

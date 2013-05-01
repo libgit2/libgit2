@@ -1269,7 +1269,7 @@ int git_merge_diff_list__find_differences(
 	const git_tree *their_tree)
 {
 	git_iterator *iterators[3] = {0};
-	git_index_entry *items[3] = {0}, *best_cur_item, *cur_items[3];
+	const git_index_entry *items[3] = {0}, *best_cur_item, *cur_items[3];
 	git_vector_cmp entry_compare = git_index_entry__cmp;
 	struct merge_diff_df_data df_data = {0};
 	int cur_item_modified;

@@ -52,7 +52,7 @@ int merge_trees_from_branches(
 	return 0;
 }
 
-static void dump_index_entries(git_vector *index_entries)
+void merge__dump_index_entries(git_vector *index_entries)
 {
 	size_t i;
 	const git_index_entry *index_entry;
@@ -70,7 +70,7 @@ static void dump_index_entries(git_vector *index_entries)
 	printf("\n");
 }
 
-static void dump_names(git_index *index)
+void merge__dump_names(git_index *index)
 {
 	size_t i;
 	const git_index_name_entry *conflict_name;
@@ -83,7 +83,7 @@ static void dump_names(git_index *index)
 	printf("\n");
 }
 
-static void dump_reuc(git_index *index)
+void merge__dump_reuc(git_index *index)
 {
 	size_t i;
 	const git_index_reuc_entry *reuc;

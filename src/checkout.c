@@ -16,6 +16,7 @@
 #include "git2/config.h"
 #include "git2/diff.h"
 #include "git2/submodule.h"
+#include "git2/sys/index.h"
 
 #include "refs.h"
 #include "repository.h"
