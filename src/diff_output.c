@@ -1611,6 +1611,12 @@ int git_diff_patch_line_stats(
 	return 0;
 }
 
+static int diff_error_outofrange(const char *thing)
+{
+	giterr_set(GITERR_INVALID, "Diff patch %s index out of range", thing);
+	return GIT_ENOTFOUND;
+}
+
 int git_diff_patch_get_hunk(
 	const git_diff_range **range,
 	const char **header,
@@ -1628,7 +1634,8 @@ int git_diff_patch_get_hunk(
 		if (header) *header = NULL;
 		if (header_len) *header_len = 0;
 		if (lines_in_hunk) *lines_in_hunk = 0;
-		return GIT_ENOTFOUND;
+
+		return diff_error_outofrange("hunk");
 	}
 
 	hunk = &patch->hunks[hunk_idx];
@@ -1648,7 +1655,7 @@ int git_diff_patch_num_lines_in_hunk(
 	assert(patch);
 
 	if (hunk_idx >= patch->hunks_size)
-		return GIT_ENOTFOUND;
+		return diff_error_outofrange("hunk");
 	else
 		return (int)patch->hunks[hunk_idx].line_count;
 }
@@ -1665,15 +1672,20 @@ int git_diff_patch_get_line_in_hunk(
 {
 	diff_patch_hunk *hunk;
 	diff_patch_line *line;
+	const char *thing;
 
 	assert(patch);
 
-	if (hunk_idx >= patch->hunks_size)
+	if (hunk_idx >= patch->hunks_size) {
+		thing = "hunk";
 		goto notfound;
+	}
 	hunk = &patch->hunks[hunk_idx];
 
-	if (line_of_hunk >= hunk->line_count)
+	if (line_of_hunk >= hunk->line_count) {
+		thing = "link";
 		goto notfound;
+	}
 
 	line = &patch->lines[hunk->line_start + line_of_hunk];
 
@@ -1692,7 +1704,7 @@ notfound:
 	if (old_lineno) *old_lineno = -1;
 	if (new_lineno) *new_lineno = -1;
 
-	return GIT_ENOTFOUND;
+	return diff_error_outofrange(thing);
 }
 
 static int print_to_buffer_cb(
