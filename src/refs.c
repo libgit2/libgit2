@@ -844,8 +844,10 @@ static int reference__update_terminal(
 	git_reference *ref;
 	int error = 0;
 
-	if (nesting > MAX_NESTING_LEVEL)
+	if (nesting > MAX_NESTING_LEVEL) {
+		giterr_set(GITERR_REFERENCE, "Reference chain too deep (%d)", nesting);
 		return GIT_ENOTFOUND;
+	}
 
 	error = git_reference_lookup(&ref, repo, ref_name);
 
