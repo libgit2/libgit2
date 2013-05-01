@@ -303,7 +303,7 @@ static int revwalk(git_vector *commits, git_push *push)
 				continue;
 
 			if (!git_odb_exists(push->repo->_odb, &spec->roid)) {
-				giterr_clear();
+				giterr_set(GITERR_REFERENCE, "Cannot push missing reference");
 				error = GIT_ENONFASTFORWARD;
 				goto on_error;
 			}
@@ -313,7 +313,8 @@ static int revwalk(git_vector *commits, git_push *push)
 
 			if (error == GIT_ENOTFOUND ||
 				(!error && !git_oid_equal(&base, &spec->roid))) {
-				giterr_clear();
+				giterr_set(GITERR_REFERENCE,
+					"Cannot push non-fastforwardable reference");
 				error = GIT_ENONFASTFORWARD;
 				goto on_error;
 			}
@@ -333,12 +334,13 @@ static int revwalk(git_vector *commits, git_push *push)
 
 	while ((error = git_revwalk_next(&oid, rw)) == 0) {
 		git_oid *o = git__malloc(GIT_OID_RAWSZ);
-		GITERR_CHECK_ALLOC(o);
-		git_oid_cpy(o, &oid);
-		if (git_vector_insert(commits, o) < 0) {
+		if (!o) {
 			error = -1;
 			goto on_error;
 		}
+		git_oid_cpy(o, &oid);
+		if ((error = git_vector_insert(commits, o)) < 0)
+			goto on_error;
 	}
 
 on_error:
@@ -519,7 +521,7 @@ static int calculate_work(git_push *push)
 			/* This is a create or update.  Local ref must exist. */
 			if (git_reference_name_to_id(
 					&spec->loid, push->repo, spec->lref) < 0) {
-				giterr_set(GIT_ENOTFOUND, "No such reference '%s'", spec->lref);
+				giterr_set(GITERR_REFERENCE, "No such reference '%s'", spec->lref);
 				return -1;
 			}
 		}
