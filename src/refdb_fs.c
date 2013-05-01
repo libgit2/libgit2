@@ -997,6 +997,43 @@ static void refdb_fs_backend__free(git_refdb_backend *_backend)
 	git__free(backend);
 }
 
+static int setup_namespace(git_buf *path, git_repository *repo)
+{
+	char *parts, *start, *end; 
+
+	/* Load the path to the repo first */
+	git_buf_puts(path, repo->path_repository);
+
+	/* if the repo is not namespaced, nothing else to do */
+	if (repo->namespace == NULL)
+		return 0;
+
+	parts = end = git__strdup(repo->namespace);
+	if (parts == NULL)
+		return -1;
+
+	/**
+	 * From `man gitnamespaces`:
+	 *  namespaces which include a / will expand to a hierarchy
+	 *  of namespaces; for example, GIT_NAMESPACE=foo/bar will store
+	 *  refs under refs/namespaces/foo/refs/namespaces/bar/
+	 */
+	while ((start = git__strsep(&end, "/")) != NULL) {
+		git_buf_printf(path, "refs/namespaces/%s/", start);
+	}
+
+	git_buf_printf(path, "refs/namespaces/%s/refs", end);
+	free(parts);
+
+	/* Make sure that the folder with the namespace exists */
+	if (git_futils_mkdir_r(git_buf_cstr(path), repo->path_repository, 0777) < 0) 
+		return -1;
+
+	/* Return the root of the namespaced path, i.e. without the trailing '/refs' */
+	git_buf_rtruncate_at_char(path, '/');
+	return 0;
+}
+
 int git_refdb_backend_fs(
 	git_refdb_backend **backend_out,
 	git_repository *repository)
@@ -1009,9 +1046,10 @@ int git_refdb_backend_fs(
 
 	backend->repo = repository;
 
-	git_buf_puts(&path, repository->path_repository);
-	if (repository->namespace != NULL)
-		git_buf_printf(&path, "refs/namespaces/%s/", repository->namespace);
+	if (setup_namespace(&path, repository) < 0) {
+		git__free(backend);
+		return -1;
+	}
 
 	backend->path = git_buf_detach(&path);
 
