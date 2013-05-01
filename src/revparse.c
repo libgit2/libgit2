@@ -17,7 +17,7 @@
 static int disambiguate_refname(git_reference **out, git_repository *repo, const char *refname)
 {
 	int error = 0, i;
-	bool fallbackmode = true;
+	bool fallbackmode = true, foundvalid = false;
 	git_reference *ref;
 	git_buf refnamebuf = GIT_BUF_INIT, name = GIT_BUF_INIT;
 
@@ -49,6 +49,7 @@ static int disambiguate_refname(git_reference **out, git_repository *repo, const
 			error = GIT_EINVALIDSPEC;
 			continue;
 		}
+		foundvalid = true;
 
 		error = git_reference_lookup_resolved(&ref, repo, git_buf_cstr(&refnamebuf), -1);
 
@@ -63,6 +64,12 @@ static int disambiguate_refname(git_reference **out, git_repository *repo, const
 	}
 
 cleanup:
+	if (error && !foundvalid) {
+		/* never found a valid reference name */
+		giterr_set(GITERR_REFERENCE,
+			"Could not use '%s' as valid reference name", git_buf_cstr(&name));
+	}
+
 	git_buf_free(&name);
 	git_buf_free(&refnamebuf);
 	return error;
