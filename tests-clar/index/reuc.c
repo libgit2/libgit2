@@ -1,5 +1,6 @@
 #include "clar_libgit2.h"
 #include "index.h"
+#include "git2/sys/index.h"
 #include "git2/repository.h"
 #include "../reset/reset_helpers.h"
 

@@ -84,13 +84,6 @@ typedef struct git_index_entry {
 	char *path;
 } git_index_entry;
 
-/** Representation of a resolve undo entry in the index. */
-typedef struct git_index_reuc_entry {
-	unsigned int mode[3];
-	git_oid oid[3];
-	char *path;
-} git_index_reuc_entry;
-
 /** Capabilities of system that affect index actions. */
 enum {
 	GIT_INDEXCAP_IGNORE_CASE = 1,
@@ -475,102 +468,6 @@ GIT_EXTERN(void) git_index_conflict_cleanup(git_index *index);
  * @return 1 if at least one conflict is found, 0 otherwise.
  */
 GIT_EXTERN(int) git_index_has_conflicts(const git_index *index);
-
-/**@}*/
-
-/** @name Resolve Undo (REUC) index entry manipulation.
- *
- * These functions work on the Resolve Undo index extension and contains
- * data about the original files that led to a merge conflict.
- */
-/**@{*/
-
-/**
- * Get the count of resolve undo entries currently in the index.
- *
- * @param index an existing index object
- * @return integer of count of current resolve undo entries
- */
-GIT_EXTERN(unsigned int) git_index_reuc_entrycount(git_index *index);
-
-/**
- * Finds the resolve undo entry that points to the given path in the Git
- * index.
- *
- * @param at_pos the address to which the position of the reuc entry is written (optional)
- * @param index an existing index object
- * @param path path to search
- * @return 0 if found, < 0 otherwise (GIT_ENOTFOUND)
- */
-GIT_EXTERN(int) git_index_reuc_find(size_t *at_pos, git_index *index, const char *path);
-
-/**
- * Get a resolve undo entry from the index.
- *
- * The returned entry is read-only and should not be modified
- * or freed by the caller.
- *
- * @param index an existing index object
- * @param path path to search
- * @return the resolve undo entry; NULL if not found
- */
-GIT_EXTERN(const git_index_reuc_entry *) git_index_reuc_get_bypath(git_index *index, const char *path);
-
-/**
- * Get a resolve undo entry from the index.
- *
- * The returned entry is read-only and should not be modified
- * or freed by the caller.
- *
- * @param index an existing index object
- * @param n the position of the entry
- * @return a pointer to the resolve undo entry; NULL if out of bounds
- */
-GIT_EXTERN(const git_index_reuc_entry *) git_index_reuc_get_byindex(git_index *index, size_t n);
-
-/**
- * Adds a resolve undo entry for a file based on the given parameters.
- *
- * The resolve undo entry contains the OIDs of files that were involved
- * in a merge conflict after the conflict has been resolved.  This allows
- * conflicts to be re-resolved later.
- *
- * If there exists a resolve undo entry for the given path in the index,
- * it will be removed.
- *
- * This method will fail in bare index instances.
- *
- * @param index an existing index object
- * @param path filename to add
- * @param ancestor_mode mode of the ancestor file
- * @param ancestor_id oid of the ancestor file
- * @param our_mode mode of our file
- * @param our_id oid of our file
- * @param their_mode mode of their file
- * @param their_id oid of their file
- * @return 0 or an error code
- */
-GIT_EXTERN(int) git_index_reuc_add(git_index *index, const char *path,
-	int ancestor_mode, git_oid *ancestor_id,
-	int our_mode, git_oid *our_id,
-	int their_mode, git_oid *their_id);
-
-/**
- * Remove an resolve undo entry from the index
- *
- * @param index an existing index object
- * @param n position of the resolve undo entry to remove
- * @return 0 or an error code
- */
-GIT_EXTERN(int) git_index_reuc_remove(git_index *index, size_t n);
-
-/**
- * Remove all resolve undo entries from the index
- *
- * @param index an existing index object
- * @return 0 or an error code
- */
-GIT_EXTERN(void) git_index_reuc_clear(git_index *index);
 
 /**@}*/
 
