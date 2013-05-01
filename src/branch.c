@@ -185,7 +185,7 @@ int git_branch_move(
 		git_buf_cstr(&old_config_section),
 		git_buf_cstr(&new_config_section))) < 0)
 		goto done;
-	
+
 	if ((error = git_reference_rename(out, branch, git_buf_cstr(&new_reference_name), force)) < 0)
 		goto done;
 
@@ -276,6 +276,8 @@ int git_branch_upstream__name(
 			goto cleanup;
 
 	if (!*remote_name || !*merge_name) {
+		giterr_set(GITERR_REFERENCE,
+			"branch '%s' does not have an upstream", canonical_branch_name);
 		error = GIT_ENOTFOUND;
 		goto cleanup;
 	}
@@ -342,6 +344,9 @@ static int remote_name(git_buf *buf, git_repository *repo, const char *canonical
 				remote_name = remote_list.strings[i];
 			} else {
 				git_remote_free(remote);
+
+				giterr_set(GITERR_REFERENCE,
+					"Reference '%s' is ambiguous", canonical_branch_name);
 				error = GIT_EAMBIGUOUS;
 				goto cleanup;
 			}
@@ -354,6 +359,8 @@ static int remote_name(git_buf *buf, git_repository *repo, const char *canonical
 		git_buf_clear(buf);
 		error = git_buf_puts(buf, remote_name);
 	} else {
+		giterr_set(GITERR_REFERENCE,
+			"Could not determine remote for '%s'", canonical_branch_name);
 		error = GIT_ENOTFOUND;
 	}
 
@@ -490,8 +497,11 @@ int git_branch_set_upstream(git_reference *branch, const char *upstream_name)
 		local = 1;
 	else if (git_branch_lookup(&upstream, repo, upstream_name, GIT_BRANCH_REMOTE) == 0)
 		local = 0;
-	else
+	else {
+		giterr_set(GITERR_REFERENCE,
+			"Cannot set upstream for branch '%s'", shortname);
 		return GIT_ENOTFOUND;
+	}
 
 	/*
 	 * If it's local, the remote is "." and the branch name is
