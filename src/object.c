@@ -122,8 +122,10 @@ int git_object_lookup_prefix(
 
 	assert(repo && object_out && id);
 
-	if (len < GIT_OID_MINPREFIXLEN)
+	if (len < GIT_OID_MINPREFIXLEN) {
+		giterr_set(GITERR_OBJECT, "Ambiguous lookup - OID prefix is too short");
 		return GIT_EAMBIGUOUS;
+	}
 
 	error = git_repository_odb__weakptr(&odb, repo);
 	if (error < 0)
@@ -311,17 +313,21 @@ int git_object_peel(
 	git_object *source, *deref = NULL;
 	int error;
 
-	if (target_type != GIT_OBJ_TAG && 
-		target_type != GIT_OBJ_COMMIT && 
-		target_type != GIT_OBJ_TREE && 
-		target_type != GIT_OBJ_BLOB && 
-		target_type != GIT_OBJ_ANY)
-			return GIT_EINVALIDSPEC;
-
 	assert(object && peeled);
 
 	if (git_object_type(object) == target_type)
 		return git_object_dup(peeled, (git_object *)object);
+
+	if (target_type != GIT_OBJ_TAG &&
+		target_type != GIT_OBJ_COMMIT &&
+		target_type != GIT_OBJ_TREE &&
+		target_type != GIT_OBJ_BLOB &&
+		target_type != GIT_OBJ_ANY) {
+
+		giterr_set(GITERR_OBJECT, "Cannot peel to object type %d",
+			(int)target_type);
+		return GIT_EINVALIDSPEC;
+	}
 
 	source = (git_object *)object;
 
