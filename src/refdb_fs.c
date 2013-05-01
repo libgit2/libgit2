@@ -1011,7 +1011,7 @@ int git_refdb_backend_fs(
 
 	git_buf_puts(&path, repository->path_repository);
 	if (repository->namespace != NULL)
-		git_buf_printf(&path, "refs/%s/", repository->namespace);
+		git_buf_printf(&path, "refs/namespaces/%s/", repository->namespace);
 
 	backend->path = git_buf_detach(&path);
 
