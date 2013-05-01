@@ -467,6 +467,7 @@ static int checkout_action(
 	int cmp = -1, act;
 	int (*strcomp)(const char *, const char *) = data->diff->strcomp;
 	int (*pfxcomp)(const char *str, const char *pfx) = data->diff->pfxcomp;
+	int error;
 
 	/* move workdir iterator to follow along with deltas */
 
@@ -490,8 +491,11 @@ static int checkout_action(
 			if (cmp == 0) {
 				if (wd->mode == GIT_FILEMODE_TREE) {
 					/* case 2 - entry prefixed by workdir tree */
-					if (git_iterator_advance_into(&wd, workdir) < 0)
-						goto fail;
+					if ((error = git_iterator_advance_into(&wd, workdir)) < 0) {
+						if (error != GIT_ENOTFOUND ||
+							git_iterator_advance(&wd, workdir) < 0)
+							goto fail;
+					}
 
 					*wditem_ptr = wd;
 					continue;
