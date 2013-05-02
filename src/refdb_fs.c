@@ -678,13 +678,6 @@ static int packed_find_peel(refdb_fs_backend *backend, struct packref *ref)
 		return 0;
 
 	/*
-	 * Only applies to tags, i.e. references
-	 * in the /refs/tags folder
-	 */
-	if (git__prefixcmp(ref->name, GIT_REFS_TAGS_DIR) != 0)
-		return 0;
-
-	/*
 	 * Find the tagged object in the repository
 	 */
 	if (git_object_lookup(&object, backend->repo, &ref->oid, GIT_OBJ_ANY) < 0)
