@@ -205,13 +205,18 @@ static int pack_index_check(const char *path, struct git_pack_file *p)
 	if (fd < 0)
 		return fd;
 
-	if (p_fstat(fd, &st) < 0 ||
-		!S_ISREG(st.st_mode) ||
+	if (p_fstat(fd, &st) < 0) {
+		p_close(fd);
+		giterr_set(GITERR_OS, "Unable to stat pack index '%s'", path);
+		return -1;
+	}
+
+	if (!S_ISREG(st.st_mode) ||
 		!git__is_sizet(st.st_size) ||
 		(idx_size = (size_t)st.st_size) < 4 * 256 + 20 + 20)
 	{
 		p_close(fd);
-		giterr_set(GITERR_OS, "Failed to check pack index.");
+		giterr_set(GITERR_ODB, "Invalid pack index '%s'", path);
 		return -1;
 	}
 
@@ -402,7 +407,7 @@ int git_packfile_unpack_header(
 	if (base == NULL)
 		return GIT_EBUFS;
 
-		ret = packfile_unpack_header1(&used, size_p, type_p, base, left);
+	ret = packfile_unpack_header1(&used, size_p, type_p, base, left);
 	git_mwindow_close(w_curs);
 	if (ret == GIT_EBUFS)
 		return ret;
@@ -799,9 +804,6 @@ void git_packfile_free(struct git_pack_file *p)
 	if (!p)
 		return;
 
-	if (git_mutex_lock(&p->lock) < 0)
-		return;
-
 	cache_free(&p->bases);
 
 	git_mwindow_free_all(&p->mwf);
@@ -812,8 +814,6 @@ void git_packfile_free(struct git_pack_file *p)
 	pack_index_free(p);
 
 	git__free(p->bad_object_sha1);
-
-	git_mutex_unlock(&p->lock);
 
 	git_mutex_free(&p->lock);
 	git__free(p);
@@ -829,12 +829,19 @@ static int packfile_open(struct git_pack_file *p)
 	if (!p->index_map.data && pack_index_open(p) < 0)
 		return git_odb__error_notfound("failed to open packfile", NULL);
 
+	/* if mwf opened by another thread, return now */
+	if (git_mutex_lock(&p->lock) < 0)
+		return packfile_error("failed to get lock for open");
+
+	if (p->mwf.fd >= 0) {
+		git_mutex_unlock(&p->lock);
+		return 0;
+	}
+
 	/* TODO: open with noatime */
 	p->mwf.fd = git_futils_open_ro(p->pack_name);
-	if (p->mwf.fd < 0) {
-		p->mwf.fd = -1;
-		return -1;
-	}
+	if (p->mwf.fd < 0)
+		goto cleanup;
 
 	if (p_fstat(p->mwf.fd, &st) < 0 ||
 		git_mwindow_file_register(&p->mwf) < 0)
@@ -875,13 +882,20 @@ static int packfile_open(struct git_pack_file *p)
 
 	idx_sha1 = ((unsigned char *)p->index_map.data) + p->index_map.len - 40;
 
-	if (git_oid__cmp(&sha1, (git_oid *)idx_sha1) == 0)
-		return 0;
+	if (git_oid__cmp(&sha1, (git_oid *)idx_sha1) != 0)
+		goto cleanup;
+
+	git_mutex_unlock(&p->lock);
+	return 0;
 
 cleanup:
 	giterr_set(GITERR_OS, "Invalid packfile '%s'", p->pack_name);
+
 	p_close(p->mwf.fd);
 	p->mwf.fd = -1;
+
+	git_mutex_unlock(&p->lock);
+
 	return -1;
 }
 
@@ -1036,24 +1050,24 @@ static int pack_entry_find_offset(
 	const git_oid *short_oid,
 	size_t len)
 {
-	const uint32_t *level1_ofs = p->index_map.data;
-	const unsigned char *index = p->index_map.data;
+	const uint32_t *level1_ofs;
+	const unsigned char *index;
 	unsigned hi, lo, stride;
 	int pos, found = 0;
 	const unsigned char *current = 0;
 
 	*offset_out = 0;
 
-	if (index == NULL) {
-		int error;
+	if (!p->index_map.data && pack_index_open(p) < 0)
+		return git_odb__error_notfound("failed to open packfile", NULL);
 
-		if ((error = pack_index_open(p)) < 0)
-			return error;
-		assert(p->index_map.data);
+	if (git_mutex_lock(&p->lock) < 0)
+		return packfile_error("failed to get lock for finding entry offset");
 
-		index = p->index_map.data;
-		level1_ofs = p->index_map.data;
-	}
+	assert(p->index_map.data);
+
+	index = p->index_map.data;
+	level1_ofs = p->index_map.data;
 
 	if (p->index_version > 1) {
 		level1_ofs += 2;
@@ -1078,6 +1092,8 @@ static int pack_entry_find_offset(
 
 	/* Use git.git lookup code */
 	pos = sha1_entry_pos(index, stride, 0, lo, hi, p->num_objects, short_oid->id);
+
+	git_mutex_unlock(&p->lock);
 
 	if (pos >= 0) {
 		/* An object matching exactly the oid was found */

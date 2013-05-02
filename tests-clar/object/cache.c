@@ -5,7 +5,7 @@ static git_repository *g_repo;
 
 void test_object_cache__initialize(void)
 {
-   cl_git_pass(git_repository_open(&g_repo, cl_fixture("testrepo.git")));
+	g_repo = NULL;
 }
 
 void test_object_cache__cleanup(void)
@@ -56,6 +56,7 @@ void test_object_cache__cache_everything(void)
 	git_libgit2_opts(
 		GIT_OPT_SET_CACHE_OBJECT_LIMIT, (int)GIT_OBJ_BLOB, (size_t)32767);
 
+	cl_git_pass(git_repository_open(&g_repo, cl_fixture("testrepo.git")));
 	cl_git_pass(git_repository_odb(&odb, g_repo));
 
 	start = (int)git_cache_size(&g_repo->objects);
@@ -105,6 +106,7 @@ void test_object_cache__cache_no_blobs(void)
 
 	git_libgit2_opts(GIT_OPT_SET_CACHE_OBJECT_LIMIT, (int)GIT_OBJ_BLOB, (size_t)0);
 
+	cl_git_pass(git_repository_open(&g_repo, cl_fixture("testrepo.git")));
 	cl_git_pass(git_repository_odb(&odb, g_repo));
 
 	start = (int)git_cache_size(&g_repo->objects);
@@ -189,8 +191,8 @@ static void *cache_raw(void *arg)
 	return arg;
 }
 
-#define REPEAT 50
-#define THREADCOUNT 20
+#define REPEAT 20
+#define THREADCOUNT 50
 
 void test_object_cache__threadmania(void)
 {
@@ -206,6 +208,8 @@ void test_object_cache__threadmania(void)
 		/* count up */;
 
 	for (try = 0; try < REPEAT; ++try) {
+
+		cl_git_pass(git_repository_open(&g_repo, cl_fixture("testrepo.git")));
 
 		for (th = 0; th < THREADCOUNT; ++th) {
 			data = git__malloc(2 * sizeof(int));
@@ -231,5 +235,53 @@ void test_object_cache__threadmania(void)
 		}
 #endif
 
+		git_repository_free(g_repo);
+		g_repo = NULL;
+	}
+}
+
+static void *cache_quick(void *arg)
+{
+	git_oid oid;
+	git_object *obj;
+
+	cl_git_pass(git_oid_fromstr(&oid, g_data[4].sha));
+	cl_git_pass(git_object_lookup(&obj, g_repo, &oid, GIT_OBJ_ANY));
+	cl_assert(g_data[4].type == git_object_type(obj));
+	git_object_free(obj);
+
+	return arg;
+}
+
+void test_object_cache__fast_thread_rush(void)
+{
+	int try, th, data[THREADCOUNT*2];
+#ifdef GIT_THREADS
+	git_thread t[THREADCOUNT*2];
+#endif
+
+	for (try = 0; try < REPEAT; ++try) {
+		cl_git_pass(git_repository_open(&g_repo, cl_fixture("testrepo.git")));
+
+		for (th = 0; th < THREADCOUNT*2; ++th) {
+			data[th] = th;
+#ifdef GIT_THREADS
+			cl_git_pass(
+				git_thread_create(&t[th], NULL, cache_quick, &data[th]));
+#else
+			cl_assert(cache_quick(&data[th]) == &data[th]);
+#endif
+		}
+
+#ifdef GIT_THREADS
+		for (th = 0; th < THREADCOUNT*2; ++th) {
+			void *rval;
+			cl_git_pass(git_thread_join(t[th], &rval));
+			cl_assert_equal_i(th, *((int *)rval));
+		}
+#endif
+
+		git_repository_free(g_repo);
+		g_repo = NULL;
 	}
 }
