@@ -349,6 +349,7 @@ static void index_free(git_index *index)
 {
 	git_index_clear(index);
 	git_vector_free(&index->entries);
+	git_vector_free(&index->names);
 	git_vector_free(&index->reuc);
 
 	git__free(index->index_file_path);
