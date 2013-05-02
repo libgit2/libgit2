@@ -14,7 +14,8 @@
 PROJECT(libgit2 C)
 CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
 
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
+# Add find modules to the path
+SET(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
 
 # Build options
 #
@@ -100,8 +101,16 @@ ELSE ()
 	IF (NOT AMIGA)
 		FIND_PACKAGE(OpenSSL)
 	ENDIF ()
-	FILE(GLOB SRC_HTTP deps/http-parser/*.c)
-	INCLUDE_DIRECTORIES(deps/http-parser)
+
+	FIND_PACKAGE(HTTP_Parser QUIET)
+	IF (HTTP_PARSER_FOUND AND HTTP_PARSER_VERSION_MAJOR EQUAL 2)
+		INCLUDE_DIRECTORIES(${HTTP_PARSER_INCLUDE_DIRS})
+		LINK_LIBRARIES(${HTTP_PARSER_LIBRARIES})
+	ELSE()
+		MESSAGE("http-parser was not found or is too old; using bundled 3rd-party sources.")
+		INCLUDE_DIRECTORIES(deps/http-parser)
+		FILE(GLOB SRC_HTTP deps/http-parser/*.c)
+	ENDIF()
 ENDIF()
 
 # Specify sha1 implementation
