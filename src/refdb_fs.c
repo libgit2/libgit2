@@ -252,7 +252,9 @@ static int packed_load(refdb_fs_backend *backend)
 		if (buffer_start[0] == '^') {
 			if (packed_parse_peel(ref, &buffer_start, buffer_end) < 0)
 				goto parse_failed;
-		} else if (backend->peeling_mode == PEELING_FULL) {
+		} else if (backend->peeling_mode == PEELING_FULL ||
+                           (backend->peeling_mode == PEELING_STANDARD &&
+                            git__prefixcmp(ref->name, GIT_REFS_TAGS_DIR) == 0)) {
 			ref->flags |= PACKREF_CANNOT_PEEL;
 		}
 
