@@ -216,8 +216,13 @@ static int packed_load(refdb_fs_backend *backend)
 		static const char *traits_header = "# pack-refs with: "; 
 
 		if (git__prefixcmp(buffer_start, traits_header) == 0) {
-			const char *traits = buffer_start + strlen(traits_header);
-			const char *traits_end = strchr(traits, '\n');
+			char *traits = (char *)buffer_start + strlen(traits_header);
+			char *traits_end = strchr(traits, '\n');
+
+			if (traits_end == NULL)
+				goto parse_failed;
+
+			*traits_end = '\0';
 
 			if (strstr(traits, " fully-peeled ") != NULL) {
 				backend->peeling_mode = PEELING_FULL;
