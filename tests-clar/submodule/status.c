@@ -409,4 +409,6 @@ void test_submodule_status__untracked_dirs_containing_ignored_files(void)
 		GIT_SUBMODULE_STATUS_IN_WD;
 
 	cl_assert(status == expected);
+
+	git_buf_free(&path);
 }
