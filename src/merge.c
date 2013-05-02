@@ -357,7 +357,7 @@ static int merge_conflict_resolve_trivial(
 	git_merge_diff_list *diff_list,
 	const git_merge_diff *conflict)
 {
-	int ancestor_empty, ours_empty, theirs_empty;
+	int ours_empty, theirs_empty;
 	int ours_changed, theirs_changed, ours_theirs_differ;
 	git_index_entry const *result = NULL;
 	int error = 0;
@@ -374,7 +374,6 @@ static int merge_conflict_resolve_trivial(
 		conflict->their_status == GIT_DELTA_RENAMED)
 		return 0;
 
-	ancestor_empty = !GIT_MERGE_INDEX_ENTRY_EXISTS(conflict->ancestor_entry);
 	ours_empty = !GIT_MERGE_INDEX_ENTRY_EXISTS(conflict->our_entry);
 	theirs_empty = !GIT_MERGE_INDEX_ENTRY_EXISTS(conflict->their_entry);
 	
@@ -678,6 +677,7 @@ static int index_entry_similarity_calc(
 {
 	git_blob *blob;
 	git_diff_file diff_file = {{{0}}};
+	git_off_t blobsize;
 	int error;
 	
 	*out = NULL;
@@ -691,8 +691,14 @@ static int index_entry_similarity_calc(
 	diff_file.mode = entry->mode;
 	diff_file.flags = 0;
 	
+	blobsize = git_blob_rawsize(blob);
+
+	/* file too big for rename processing */
+	if (!git__is_sizet(blobsize))
+		return 0;
+	
 	error = opts->metric->buffer_signature(out, &diff_file,
-		git_blob_rawcontent(blob), git_blob_rawsize(blob),
+		git_blob_rawcontent(blob), (size_t)blobsize,
 		opts->metric->payload);
 	
 	git_blob_free(blob);
@@ -1273,7 +1279,7 @@ int git_merge_diff_list__find_differences(
 	git_vector_cmp entry_compare = git_index_entry__cmp;
 	struct merge_diff_df_data df_data = {0};
 	int cur_item_modified;
-	size_t i;
+	size_t i, j;
 	int error = 0;
 	
 	assert(diff_list && our_tree && their_tree);
@@ -1290,7 +1296,9 @@ int git_merge_diff_list__find_differences(
 	}
 	
 	while (true) {
-		memset(cur_items, 0x0, sizeof(git_index_entry *) * 3);
+		for (i = 0; i < 3; i++)
+			cur_items[i] = NULL;
+
 		best_cur_item = NULL;
 		cur_item_modified = 0;
 		
@@ -1312,7 +1320,9 @@ int git_merge_diff_list__find_differences(
 					 * Found an item that sorts before our current item, make
 					 * our current item this one.
 					 */
-					memset(cur_items, 0x0, sizeof(git_index_entry *) * 3);
+					for (j = 0; j < i; j++)
+						cur_items[j] = NULL;
+
 					cur_item_modified = 1;
 					best_cur_item = items[i];
 					cur_items[i] = items[i];
