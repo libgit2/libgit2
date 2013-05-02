@@ -26,8 +26,15 @@ GIT__USE_STRMAP;
 #define MAX_NESTING_LEVEL		10
 
 enum {
-	GIT_PACKREF_HAS_PEEL = 1,
-	GIT_PACKREF_WAS_LOOSE = 2
+	PACKREF_HAS_PEEL = 1,
+	PACKREF_WAS_LOOSE = 2,
+	PACKREF_CANNOT_PEEL = 4
+};
+
+enum {
+	PEELING_NONE = 0,
+	PEELING_STANDARD,
+	PEELING_FULL
 };
 
 struct packref {
@@ -44,6 +51,7 @@ typedef struct refdb_fs_backend {
 	char *path;
 
 	git_refcache refcache;
+	int peeling_mode;
 } refdb_fs_backend;
 
 static int reference_read(
@@ -150,6 +158,7 @@ static int packed_parse_peel(
 			goto corrupt;
 	}
 
+	tag_ref->flags |= PACKREF_HAS_PEEL;
 	*buffer_out = buffer;
 	return 0;
 
@@ -201,6 +210,25 @@ static int packed_load(refdb_fs_backend *backend)
 	buffer_start = (const char *)packfile.ptr;
 	buffer_end = (const char *)(buffer_start) + packfile.size;
 
+	backend->peeling_mode = PEELING_NONE;
+
+	if (buffer_start[0] == '#') {
+		static const char *traits_header = "# pack-refs with: "; 
+
+		if (git__prefixcmp(buffer_start, traits_header) == 0) {
+			const char *traits = buffer_start + strlen(traits_header);
+			const char *traits_end = strchr(traits, '\n');
+
+			if (strstr(traits, "fully-peeled") != NULL) {
+				backend->peeling_mode = PEELING_FULL;
+			} else if (strstr(traits, "peeled") != NULL) {
+				backend->peeling_mode = PEELING_STANDARD;
+			}
+
+			buffer_start = traits_end + 1;
+		}
+	}
+
 	while (buffer_start < buffer_end && buffer_start[0] == '#') {
 		buffer_start = strchr(buffer_start, '\n');
 		if (buffer_start == NULL)
@@ -219,6 +247,8 @@ static int packed_load(refdb_fs_backend *backend)
 		if (buffer_start[0] == '^') {
 			if (packed_parse_peel(ref, &buffer_start, buffer_end) < 0)
 				goto parse_failed;
+		} else if (backend->peeling_mode == PEELING_FULL) {
+			ref->flags |= PACKREF_CANNOT_PEEL;
 		}
 
 		git_strmap_insert(ref_cache->packfile, ref->name, ref, err);
@@ -291,7 +321,7 @@ static int loose_lookup_to_packfile(
 		return -1;
 	}
 
-	ref->flags = GIT_PACKREF_WAS_LOOSE;
+	ref->flags = PACKREF_WAS_LOOSE;
 
 	*ref_out = ref;
 	git_buf_free(&ref_file);
@@ -674,7 +704,7 @@ static int packed_find_peel(refdb_fs_backend *backend, struct packref *ref)
 {
 	git_object *object;
 
-	if (ref->flags & GIT_PACKREF_HAS_PEEL)
+	if (ref->flags & PACKREF_HAS_PEEL || ref->flags & PACKREF_CANNOT_PEEL)
 		return 0;
 
 	/*
@@ -695,7 +725,7 @@ static int packed_find_peel(refdb_fs_backend *backend, struct packref *ref)
 		 * Find the object pointed at by this tag
 		 */
 		git_oid_cpy(&ref->peel, git_tag_target_id(tag));
-		ref->flags |= GIT_PACKREF_HAS_PEEL;
+		ref->flags |= PACKREF_HAS_PEEL;
 
 		/*
 		 * The reference has now cached the resolved OID, and is
@@ -728,7 +758,7 @@ static int packed_write_ref(struct packref *ref, git_filebuf *file)
 	 * This obviously only applies to tags.
 	 * The required peels have already been loaded into `ref->peel_target`.
 	 */
-	if (ref->flags & GIT_PACKREF_HAS_PEEL) {
+	if (ref->flags & PACKREF_HAS_PEEL) {
 		char peel[GIT_OID_HEXSZ + 1];
 		git_oid_fmt(peel, &ref->peel);
 		peel[GIT_OID_HEXSZ] = 0;
@@ -765,7 +795,7 @@ static int packed_remove_loose(
 	for (i = 0; i < packing_list->length; ++i) {
 		struct packref *ref = git_vector_get(packing_list, i);
 
-		if ((ref->flags & GIT_PACKREF_WAS_LOOSE) == 0)
+		if ((ref->flags & PACKREF_WAS_LOOSE) == 0)
 			continue;
 
 		if (git_buf_joinpath(&full_path, backend->path, ref->name) < 0)
