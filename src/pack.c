@@ -293,8 +293,8 @@ static int pack_index_check(const char *path, struct git_pack_file *p)
 		}
 	}
 
-	p->index_version = version;
 	p->num_objects = nr;
+	p->index_version = version;
 	return 0;
 }
 
@@ -304,7 +304,7 @@ static int pack_index_open(struct git_pack_file *p)
 	int error = 0;
 	size_t name_len, base_len;
 
-	if (p->index_map.data)
+	if (p->index_version > -1)
 		return 0;
 
 	name_len = strlen(p->pack_name);
@@ -320,7 +320,7 @@ static int pack_index_open(struct git_pack_file *p)
 	if ((error = git_mutex_lock(&p->lock)) < 0)
 		return error;
 
-	if (!p->index_map.data)
+	if (p->index_version == -1)
 		error = pack_index_check(idx_name, p);
 
 	git__free(idx_name);
@@ -826,7 +826,7 @@ static int packfile_open(struct git_pack_file *p)
 	git_oid sha1;
 	unsigned char *idx_sha1;
 
-	if (!p->index_map.data && pack_index_open(p) < 0)
+	if (p->index_version == -1 && pack_index_open(p) < 0)
 		return git_odb__error_notfound("failed to open packfile", NULL);
 
 	/* if mwf opened by another thread, return now */
@@ -942,6 +942,7 @@ int git_packfile_alloc(struct git_pack_file **pack_out, const char *path)
 	p->mwf.size = st.st_size;
 	p->pack_local = 1;
 	p->mtime = (git_time_t)st.st_mtime;
+	p->index_version = -1;
 
 	git_mutex_init(&p->lock);
 
@@ -1058,7 +1059,7 @@ static int pack_entry_find_offset(
 
 	*offset_out = 0;
 
-	if (index == NULL) {
+	if (p->index_version == -1) {
 		int error;
 
 		if ((error = pack_index_open(p)) < 0)
