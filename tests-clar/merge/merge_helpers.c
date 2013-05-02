@@ -149,9 +149,9 @@ static int name_entry_eq_merge_name_entry(const struct merge_name_entry *expecte
 
 static int index_conflict_data_eq_merge_diff(const struct merge_index_conflict_data *expected, git_merge_diff *actual)
 {
-	if (!index_entry_eq_merge_index_entry((const struct merge_index_entry *)&expected->ancestor, &actual->ancestor_entry) ||
-		!index_entry_eq_merge_index_entry((const struct merge_index_entry *)&expected->ours, &actual->our_entry) ||
-		!index_entry_eq_merge_index_entry((const struct merge_index_entry *)&expected->theirs, &actual->their_entry))
+	if (!index_entry_eq_merge_index_entry(&expected->ancestor.entry, &actual->ancestor_entry) ||
+		!index_entry_eq_merge_index_entry(&expected->ours.entry, &actual->our_entry) ||
+		!index_entry_eq_merge_index_entry(&expected->theirs.entry, &actual->their_entry))
 		return 0;
 	
 	if (expected->ours.status != actual->our_status ||

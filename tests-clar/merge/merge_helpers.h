@@ -18,11 +18,8 @@ struct merge_name_entry {
 };
 
 struct merge_index_with_status {
-    uint16_t mode;
-	char oid_str[41];
-	int stage;
-	char path[128];
-    unsigned int status;
+	struct merge_index_entry entry;
+	unsigned int status;
 };
 
 struct merge_reuc_entry {
