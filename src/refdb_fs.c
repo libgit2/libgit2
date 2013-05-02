@@ -132,10 +132,6 @@ static int packed_parse_peel(
 	if (tag_ref == NULL)
 		goto corrupt;
 
-	/* Ensure reference is a tag */
-	if (git__prefixcmp(tag_ref->name, GIT_REFS_TAGS_DIR) != 0)
-		goto corrupt;
-
 	if (buffer + GIT_OID_HEXSZ > buffer_end)
 		goto corrupt;
 
