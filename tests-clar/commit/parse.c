@@ -386,10 +386,6 @@ This commit has a few LF at the start of the commit message";
 \n\
 This commit has a few LF at the start of the commit message";
 
-	commit = (git_commit*)git__malloc(sizeof(git_commit));
-	memset(commit, 0x0, sizeof(git_commit));
-	commit->object.repo = g_repo;
-
 	cl_git_pass(parse_commit(&commit, buffer));
 	cl_assert_equal_s(message, git_commit_message(commit));
 	git_commit__free(commit);
