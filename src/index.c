@@ -193,44 +193,46 @@ static int conflict_name_cmp(const void *a, const void *b)
 {
 	const git_index_name_entry *name_a = a;
 	const git_index_name_entry *name_b = b;
-	
+
 	if (name_a->ancestor && !name_b->ancestor)
 		return 1;
-	
+
 	if (!name_a->ancestor && name_b->ancestor)
 		return -1;
-	
+
 	if (name_a->ancestor)
 		return strcmp(name_a->ancestor, name_b->ancestor);
-	
+
 	if (!name_a->ours || !name_b->ours)
 		return 0;
-	
+
 	return strcmp(name_a->ours, name_b->ours);
 }
 
 /**
  * TODO: enable this when resolving case insensitive conflicts
  */
+#if 0
 static int conflict_name_icmp(const void *a, const void *b)
 {
 	const git_index_name_entry *name_a = a;
 	const git_index_name_entry *name_b = b;
-	
+
 	if (name_a->ancestor && !name_b->ancestor)
 		return 1;
-	
+
 	if (!name_a->ancestor && name_b->ancestor)
 		return -1;
-	
+
 	if (name_a->ancestor)
 		return strcasecmp(name_a->ancestor, name_b->ancestor);
-	
+
 	if (!name_a->ours || !name_b->ours)
 		return 0;
-	
+
 	return strcasecmp(name_a->ours, name_b->ours);
 }
+#endif
 
 static int reuc_srch(const void *key, const void *array_member)
 {
