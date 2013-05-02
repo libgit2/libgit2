@@ -219,9 +219,9 @@ static int packed_load(refdb_fs_backend *backend)
 			const char *traits = buffer_start + strlen(traits_header);
 			const char *traits_end = strchr(traits, '\n');
 
-			if (strstr(traits, "fully-peeled") != NULL) {
+			if (strstr(traits, " fully-peeled ") != NULL) {
 				backend->peeling_mode = PEELING_FULL;
-			} else if (strstr(traits, "peeled") != NULL) {
+			} else if (strstr(traits, " peeled ") != NULL) {
 				backend->peeling_mode = PEELING_STANDARD;
 			}
 
