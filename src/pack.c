@@ -1050,24 +1050,24 @@ static int pack_entry_find_offset(
 	const git_oid *short_oid,
 	size_t len)
 {
-	const uint32_t *level1_ofs = p->index_map.data;
-	const unsigned char *index = p->index_map.data;
+	const uint32_t *level1_ofs;
+	const unsigned char *index;
 	unsigned hi, lo, stride;
 	int pos, found = 0;
 	const unsigned char *current = 0;
 
 	*offset_out = 0;
 
-	if (index == NULL) {
-		int error;
+	if (!p->index_map.data && pack_index_open(p) < 0)
+		return git_odb__error_notfound("failed to open packfile", NULL);
 
-		if ((error = pack_index_open(p)) < 0)
-			return error;
-		assert(p->index_map.data);
+	if (git_mutex_lock(&p->lock) < 0)
+		return packfile_error("failed to get lock for finding entry offset");
 
-		index = p->index_map.data;
-		level1_ofs = p->index_map.data;
-	}
+	assert(p->index_map.data);
+
+	index = p->index_map.data;
+	level1_ofs = p->index_map.data;
 
 	if (p->index_version > 1) {
 		level1_ofs += 2;
@@ -1092,6 +1092,8 @@ static int pack_entry_find_offset(
 
 	/* Use git.git lookup code */
 	pos = sha1_entry_pos(index, stride, 0, lo, hi, p->num_objects, short_oid->id);
+
+	git_mutex_unlock(&p->lock);
 
 	if (pos >= 0) {
 		/* An object matching exactly the oid was found */
