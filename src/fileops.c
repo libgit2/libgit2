@@ -444,7 +444,7 @@ static int futils__rmdir_recurs_foreach(void *opaque, git_buf *path)
 
 		if (data->error < 0) {
 			if ((data->flags & GIT_RMDIR_SKIP_NONEMPTY) != 0 &&
-				(errno == ENOTEMPTY || errno == EEXIST))
+				(errno == ENOTEMPTY || errno == EEXIST || errno == EBUSY))
 				data->error = 0;
 			else
 				futils__error_cannot_rmdir(path->ptr, NULL);
@@ -480,7 +480,7 @@ static int futils__rmdir_empty_parent(void *opaque, git_buf *path)
 		if (en == ENOENT || en == ENOTDIR) {
 			giterr_clear();
 			error = 0;
-		} else if (en == ENOTEMPTY || en == EEXIST) {
+		} else if (en == ENOTEMPTY || en == EEXIST || en == EBUSY) {
 			giterr_clear();
 			error = GIT_ITEROVER;
 		} else {

@@ -134,6 +134,9 @@ typedef enum {
 	/** Treat pathspec as simple list of exact match file paths */
 	GIT_CHECKOUT_DISABLE_PATHSPEC_MATCH = (1u << 13),
 
+	/** Ignore directories in use, they will be left empty */
+	GIT_CHECKOUT_SKIP_LOCKED_DIRECTORIES = (1u << 18),
+
 	/**
 	 * THE FOLLOWING OPTIONS ARE NOT YET IMPLEMENTED
 	 */

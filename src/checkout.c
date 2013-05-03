@@ -955,6 +955,9 @@ static int checkout_remove_the_old(
 	uint32_t flg = GIT_RMDIR_EMPTY_PARENTS |
 		GIT_RMDIR_REMOVE_FILES | GIT_RMDIR_REMOVE_BLOCKERS;
 
+	if (data->opts.checkout_strategy & GIT_CHECKOUT_SKIP_LOCKED_DIRECTORIES)
+		flg |= GIT_RMDIR_SKIP_NONEMPTY;
+
 	git_buf_truncate(&data->path, data->workdir_len);
 
 	git_vector_foreach(&data->diff->deltas, i, delta) {
