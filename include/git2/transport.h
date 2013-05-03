@@ -319,6 +319,17 @@ GIT_EXTERN(int) git_smart_subtransport_git(
 	git_smart_subtransport **out,
 	git_transport* owner);
 
+/**
+ * Create an instance of the ssh subtransport.
+ *
+ * @param out The newly created subtransport
+ * @param owner The smart transport to own this subtransport
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_smart_subtransport_ssh(
+	git_smart_subtransport **out,
+	git_transport* owner);
+
 /*
  *** End interface for subtransports for the smart transport ***
  */
