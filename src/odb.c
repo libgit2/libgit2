@@ -457,6 +457,9 @@ static int add_default_backends(
 	inode = 0;
 #else
 	if (p_stat(objects_dir, &st) < 0) {
+		if (as_alternates)
+			return 0;
+
 		giterr_set(GITERR_ODB, "Failed to load object database in '%s'", objects_dir);
 		return -1;
 	}
