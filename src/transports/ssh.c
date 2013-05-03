@@ -13,8 +13,7 @@
 
 #define OWNING_SUBTRANSPORT(s) ((ssh_subtransport *)(s)->parent.subtransport)
 
-static const char prefix_git_ssh[] = "git+ssh://";
-static const char prefix_ssh_git[] = "ssh+git://";
+static const char prefix_ssh[] = "ssh://";
 static const char prefix_git[] = "git@";
 static const char cmd_uploadpack[] = "git-upload-pack";
 static const char cmd_receivepack[] = "git-receive-pack";
@@ -36,7 +35,7 @@ typedef struct {
 /*
  * Create a git protocol request.
  *
- * For example: 0035git-upload-pack /libgit2/libgit2\0host=github.com\0
+ * For example: 0035git-upload-pack /libgit2/libgit2\0
  */
 static int gen_proto(git_buf *request, const char *cmd, const char *url)
 {
@@ -178,6 +177,38 @@ static int ssh_stream_alloc(
 	return 0;
 }
 
+/* Temp */
+static int gitssh_extract_url_parts(
+	char **host,
+	char **username,
+	char **path,
+	const char *url)
+{
+	char *colon, *at;
+	const char *start;
+    
+    colon = strchr(url, ':');
+	at = strchr(url, '@');
+	
+	if (colon == NULL) {
+		giterr_set(GITERR_NET, "Malformed URL: missing :");
+		return -1;
+	}
+	
+	start = url;
+	if (at) {
+		start = at+1;
+		*username = git__substrdup(url, at - url);
+	} else {
+		*username = "git";
+	}
+	
+	*host = git__substrdup(start, colon - start);
+	*path = colon+1;
+	
+	return 0;
+}
+
 static int _git_uploadpack_ls(
 	ssh_subtransport *t,
 	const char *url,
@@ -188,8 +219,8 @@ static int _git_uploadpack_ls(
 	
 	*stream = NULL;
 	
-	if (!git__prefixcmp(url, prefix_git))
-		url += strlen(prefix_git);
+	if (!git__prefixcmp(url, prefix_ssh))
+		url += strlen(prefix_ssh);
 	
 	if (ssh_stream_alloc(t, url, cmd_uploadpack, stream) < 0)
 		return -1;
@@ -239,30 +270,65 @@ static int _git_receivepack_ls(
 	const char *url,
 	git_smart_subtransport_stream **stream)
 {
-	char *host, *port, *user=NULL, *pass=NULL;
+	char *host, *path, *user=NULL;
 	ssh_stream *s;
 	
 	*stream = NULL;
-	
-	if (!git__prefixcmp(url, prefix_git))
-		url += strlen(prefix_git);
-	
 	if (ssh_stream_alloc(t, url, cmd_receivepack, stream) < 0)
 		return -1;
 	
 	s = (ssh_stream *)*stream;
 	
-	if (gitno_extract_url_parts(&host, &port, &user, &pass, url, GIT_DEFAULT_PORT) < 0)
+	if (gitssh_extract_url_parts(&host, &user, &path, url) < 0)
 		goto on_error;
 	
-	if (gitno_connect(&s->socket, host, port, 0) < 0)
+	if (gitno_connect(&s->socket, host, "22", 0) < 0)
 		goto on_error;
+	
+	LIBSSH2_SESSION* session = libssh2_session_init();
+    if (!session)
+        goto on_error;
+	
+    int rc = 0;
+    do {
+        rc = libssh2_session_startup(session, s->socket.socket);
+    } while (LIBSSH2_ERROR_EAGAIN == rc || LIBSSH2_ERROR_TIMEOUT == rc);
+	
+	if (0 != rc) {
+        goto on_error;
+    }
+	
+	libssh2_trace(session, 0x1FF);
+	libssh2_session_set_blocking(session, 1);
+	
+    do {
+        rc = libssh2_userauth_publickey_fromfile_ex(
+            session, 
+            user,
+			strlen(user),
+            NULL,
+			"/Users/bradfordmorgan/.ssh/id_rsa",
+            NULL
+        );
+    } while (LIBSSH2_ERROR_EAGAIN == rc || LIBSSH2_ERROR_TIMEOUT == rc);
+	
+    if (0 != rc) {
+        goto on_error;
+    }
+	
+	LIBSSH2_CHANNEL* channel = NULL;
+    do {
+        channel = libssh2_channel_open_session(session);
+    } while (LIBSSH2_ERROR_EAGAIN == rc || LIBSSH2_ERROR_TIMEOUT == rc);
+	
+	if (!channel) {
+        goto on_error;
+    }
+	
+	libssh2_channel_set_blocking(channel, 1);
 	
 	t->current_stream = s;
 	git__free(host);
-	git__free(port);
-	git__free(user);
-	git__free(pass);
 	return 0;
 	
 on_error:
@@ -270,7 +336,7 @@ on_error:
 		ssh_stream_free(*stream);
 	
 	git__free(host);
-	git__free(port);
+	git__free(path);
 	return -1;
 }
 
@@ -336,7 +402,7 @@ static void _git_free(git_smart_subtransport *subtransport)
 	git__free(t);
 }
 
-int git_smart_subtransport_git(git_smart_subtransport **out, git_transport *owner)
+int git_smart_subtransport_ssh(git_smart_subtransport **out, git_transport *owner)
 {
 	ssh_subtransport *t;
 	
