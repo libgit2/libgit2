@@ -8,6 +8,7 @@
 #include "git2.h"
 #include "buffer.h"
 #include "netops.h"
+#include "smart.h"
 
 #include <libssh2.h>
 
@@ -21,6 +22,8 @@ static const char cmd_receivepack[] = "git-receive-pack";
 typedef struct {
 	git_smart_subtransport_stream parent;
 	gitno_socket socket;
+	LIBSSH2_SESSION *session;
+	LIBSSH2_CHANNEL *channel;
 	const char *cmd;
 	char *url;
 	unsigned sent_command : 1;
@@ -28,8 +31,9 @@ typedef struct {
 
 typedef struct {
 	git_smart_subtransport parent;
-	git_transport *owner;
+	transport_smart *owner;
 	ssh_stream *current_stream;
+	git_cred *cred;
 } ssh_subtransport;
 
 /*
@@ -40,27 +44,19 @@ typedef struct {
 static int gen_proto(git_buf *request, const char *cmd, const char *url)
 {
 	char *delim, *repo;
-	char host[] = "host=";
 	size_t len;
 	
-	delim = strchr(url, '/');
+	delim = strchr(url, ':');
 	if (delim == NULL) {
 		giterr_set(GITERR_NET, "Malformed URL");
 		return -1;
 	}
 	
-	repo = delim;
-	
-	delim = strchr(url, ':');
-	if (delim == NULL)
-		delim = strchr(url, '/');
-	
-	len = 4 + strlen(cmd) + 1 + strlen(repo) + 1 + strlen(host) + (delim - url) + 1;
+	repo = delim+1;
+	len = strlen(cmd) + 1 + 1 + strlen(repo) + 1;
 	
 	git_buf_grow(request, len);
-	git_buf_printf(request, "%04x%s %s%c%s",
-				   (unsigned int)(len & 0x0FFFF), cmd, repo, 0, host);
-	git_buf_put(request, url, delim - url);
+	git_buf_printf(request, "%s '%s'", cmd, repo);
 	git_buf_putc(request, '\0');
 	
 	if (git_buf_oom(request))
@@ -78,12 +74,18 @@ static int send_command(ssh_stream *s)
 	if (error < 0)
 		goto cleanup;
 	
-	/* It looks like negative values are errors here, and positive values
-	 * are the number of bytes sent. */
-	error = gitno_send(&s->socket, request.ptr, request.size, 0);
+	error = libssh2_channel_process_startup(
+		s->channel, 
+		"exec", 
+		(uint32_t)sizeof("exec") - 1, 
+		request.ptr,
+		request.size
+	);
+
+	if (0 != error)
+		goto cleanup;
 	
-	if (error >= 0)
-		s->sent_command = 1;
+	s->sent_command = 1;
 	
 cleanup:
 	git_buf_free(&request);
@@ -97,19 +99,18 @@ static int ssh_stream_read(
 	size_t *bytes_read)
 {
 	ssh_stream *s = (ssh_stream *)stream;
-	gitno_buffer buf;
 	
 	*bytes_read = 0;
 	
 	if (!s->sent_command && send_command(s) < 0)
 		return -1;
 	
-	gitno_buffer_setup(&s->socket, &buf, buffer, buf_size);
+	int rc = libssh2_channel_read(s->channel, buffer, buf_size);
 	
-	if (gitno_recv(&buf) < 0)
+	if (rc < 0)
 		return -1;
 	
-	*bytes_read = buf.offset;
+	*bytes_read = rc;
 	
 	return 0;
 }
@@ -124,7 +125,12 @@ static int ssh_stream_write(
 	if (!s->sent_command && send_command(s) < 0)
 		return -1;
 	
-	return gitno_send(&s->socket, buffer, len, 0);
+	int rc = libssh2_channel_write(s->channel, buffer, len);
+	if (rc < 0) {
+		return -1;
+	}
+	
+	return rc;
 }
 
 static void ssh_stream_free(git_smart_subtransport_stream *stream)
@@ -285,6 +291,17 @@ static int _git_receivepack_ls(
 	if (gitno_connect(&s->socket, host, "22", 0) < 0)
 		goto on_error;
 	
+	if (t->owner->cred_acquire_cb(&t->cred,
+			t->owner->url,
+			user,
+			GIT_CREDTYPE_SSH_KEYFILE_PASSPHRASE,
+			t->owner->cred_acquire_payload) < 0)
+		return -1;
+	
+	assert(t->cred);
+	
+	git_cred_ssh_keyfile_passphrase *cred = (git_cred_ssh_keyfile_passphrase *)t->cred;
+	
 	LIBSSH2_SESSION* session = libssh2_session_init();
     if (!session)
         goto on_error;
@@ -306,9 +323,9 @@ static int _git_receivepack_ls(
             session, 
             user,
 			strlen(user),
-            NULL,
-			"/Users/bradfordmorgan/.ssh/id_rsa",
-            NULL
+            cred->publickey,
+			cred->privatekey,
+            cred->passphrase
         );
     } while (LIBSSH2_ERROR_EAGAIN == rc || LIBSSH2_ERROR_TIMEOUT == rc);
 	
@@ -326,6 +343,9 @@ static int _git_receivepack_ls(
     }
 	
 	libssh2_channel_set_blocking(channel, 1);
+	
+	s->session = session;
+	s->channel = channel;
 	
 	t->current_stream = s;
 	git__free(host);
@@ -412,7 +432,7 @@ int git_smart_subtransport_ssh(git_smart_subtransport **out, git_transport *owne
 	t = git__calloc(sizeof(ssh_subtransport), 1);
 	GITERR_CHECK_ALLOC(t);
 	
-	t->owner = owner;
+	t->owner = (transport_smart *)owner;
 	t->parent.action = _git_action;
 	t->parent.close = _git_close;
 	t->parent.free = _git_free;

@@ -27,6 +27,7 @@ GIT_BEGIN_DECL
 typedef enum {
 	/* git_cred_userpass_plaintext */
 	GIT_CREDTYPE_USERPASS_PLAINTEXT = 1,
+	GIT_CREDTYPE_SSH_KEYFILE_PASSPHRASE = 2,
 } git_credtype_t;
 
 /* The base structure for all credential types */
@@ -43,6 +44,14 @@ typedef struct git_cred_userpass_plaintext {
 	char *password;
 } git_cred_userpass_plaintext;
 
+/* A plaintext username and password */
+typedef struct git_cred_ssh_keyfile_passphrase {
+	git_cred parent;
+	char *publickey;
+	char *privatekey;
+	char *passphrase;
+} git_cred_ssh_keyfile_passphrase;
+
 /**
  * Creates a new plain-text username and password credential object.
  * The supplied credential parameter will be internally duplicated.
@@ -56,6 +65,22 @@ GIT_EXTERN(int) git_cred_userpass_plaintext_new(
 	git_cred **out,
 	const char *username,
 	const char *password);
+
+/**
+ * Creates a new ssh key file and passphrase credential object.
+ * The supplied credential parameter will be internally duplicated.
+ *
+ * @param out The newly created credential object.
+ * @param publickey The path to the public key of the credential.
+ * @param privatekey The path to the private key of the credential.
+ * @param passphrase The passphrase of the credential.
+ * @return 0 for success or an error code for failure
+ */
+GIT_EXTERN(int) git_cred_ssh_keyfile_passphrase_new(
+	git_cred **out,
+	const char *publickey,
+	const char *privatekey,
+    const char *passphrase);
 
 /**
  * Signature of a function which acquires a credential object.

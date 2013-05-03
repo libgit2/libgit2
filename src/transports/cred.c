@@ -58,3 +58,80 @@ int git_cred_userpass_plaintext_new(
 	*cred = &c->parent;
 	return 0;
 }
+
+static void ssh_keyfile_passphrase_free(struct git_cred *cred)
+{
+	git_cred_ssh_keyfile_passphrase *c = (git_cred_ssh_keyfile_passphrase *)cred;
+	size_t pass_len = strlen(c->passphrase);
+
+    if (c->publickey) {
+        git__free(c->publickey);
+    }
+    
+	git__free(c->privatekey);
+
+    if (c->passphrase) {
+        /* Zero the memory which previously held the passphrase */
+        memset(c->passphrase, 0x0, pass_len);
+        git__free(c->passphrase);
+    }
+
+	memset(c, 0, sizeof(*c));
+
+	git__free(c);
+}
+
+int git_cred_ssh_keyfile_passphrase_new(
+	git_cred **cred,
+	const char *publickey,
+	const char *privatekey,
+	const char *passphrase)
+{
+	git_cred_ssh_keyfile_passphrase *c;
+
+	if (!cred)
+		return -1;
+
+	c = git__malloc(sizeof(git_cred_ssh_keyfile_passphrase));
+	GITERR_CHECK_ALLOC(c);
+
+	c->parent.credtype = GIT_CREDTYPE_SSH_KEYFILE_PASSPHRASE;
+	c->parent.free = ssh_keyfile_passphrase_free;
+    
+    c->privatekey = git__strdup(privatekey);
+    
+	if (!c->privatekey) {
+		git__free(c);
+		return -1;
+	}
+    
+    if (publickey) {
+        c->publickey = git__strdup(publickey);
+
+        if (!c->publickey) {
+            git__free(c->privatekey);
+            git__free(c);
+            return -1;
+        }
+    } else {
+        c->publickey = NULL;
+    }
+    
+    if (passphrase) {
+        c->passphrase = git__strdup(passphrase);
+        
+        if (!c->passphrase) {
+            git__free(c->privatekey);
+            if (c->publickey) {
+                git__free(c->publickey);
+            }
+            git__free(c);
+            return -1;
+        }
+    } else {
+        c->passphrase = NULL;
+    }
+
+	*cred = &c->parent;
+	return 0;
+}
