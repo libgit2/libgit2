@@ -47,36 +47,9 @@ typedef enum {
 } git_status_t;
 
 /**
- * Function pointer to receive status on individual files
- *
- * `path` is the relative path to the file from the root of the repository.
- *
- * `status_flags` is a combination of `git_status_t` values that apply.
- *
- * `payload` is the value you passed to the foreach function as payload.
+ * Status iterator
  */
-typedef int (*git_status_cb)(
-	const char *path, unsigned int status_flags, void *payload);
-
-/**
- * Gather file statuses and run a callback for each one.
- *
- * The callback is passed the path of the file, the status (a combination of
- * the `git_status_t` values above) and the `payload` data pointer passed
- * into this function.
- *
- * If the callback returns a non-zero value, this function will stop looping
- * and return GIT_EUSER.
- *
- * @param repo A repository object
- * @param callback The function to call on each file
- * @param payload Pointer to pass through to callback function
- * @return 0 on success, GIT_EUSER on non-zero callback, or error code
- */
-GIT_EXTERN(int) git_status_foreach(
-	git_repository *repo,
-	git_status_cb callback,
-	void *payload);
+typedef struct git_status_iterator git_status_iterator;
 
 /**
  * For extended status, select the files on which to report status.
@@ -152,7 +125,8 @@ typedef enum {
 	GIT_STATUS_OPT_RECURSE_UNTRACKED_DIRS)
 
 /**
- * Options to control how `git_status_foreach_ext()` will issue callbacks.
+ * Options to control how `git_status_iterator_new_ext()` will iterate
+ * and how `git_status_foreach_ext()` will issue callbacks.
  *
  * This structure is set so that zeroing it out will give you relatively
  * sane defaults.
@@ -178,30 +152,67 @@ typedef struct {
 #define GIT_STATUS_OPTIONS_INIT {GIT_STATUS_OPTIONS_VERSION}
 
 /**
+ * Gather file statuses and provide a `git_status_iterator` for them.
+ *
+ * The iterator must be freed when it's no longer being used by calling
+ * `git_status_iterator_free()`.
+ *
+ * @param iterator_out Pointer to store the new iterator
+ * @param repo A repository object
+ * @return 0 on success or error code
+ */
+GIT_EXTERN(int) git_status_iterator_new(
+	git_status_iterator **iterator_out,
+	git_repository *repo);
+
+/**
  * Gather file status information and run callbacks as requested.
  *
- * This is an extended version of the `git_status_foreach()` API that
+ * This is an extended version of the `git_status_iterator_new()` API that
  * allows for more granular control over which paths will be processed and
  * in what order.  See the `git_status_options` structure for details
  * about the additional controls that this makes available.
  *
- * @param repo Repository object
+ * @param iterator_out Pointer to store the new iterator
+ * @param repo A repository object
  * @param opts Status options structure
- * @param callback The function to call on each file
- * @param payload Pointer to pass through to callback function
- * @return 0 on success, GIT_EUSER on non-zero callback, or error code
+ * @return 0 on success or error code
  */
-GIT_EXTERN(int) git_status_foreach_ext(
+GIT_EXTERN(int) git_status_iterator_new_ext(
+	git_status_iterator **iterator_out,
 	git_repository *repo,
-	const git_status_options *opts,
-	git_status_cb callback,
-	void *payload);
+	const git_status_options *opts);
+
+/**
+ * Returns the current item (old path, new path and status) and advance the
+ * iterator internally to the next value. and advance the iterator
+ * internally to the next value
+ *
+ * @param path_old_out Pointer to store the old path of the file
+ * @param path_new_out Pointer to store the new path of the file
+ * @param status_out Pointer to store the status of the file
+ * @param it Pointer to the iterator
+ * @return 0 (no error), GIT_ITEROVER (iteration is done) or an error code
+ *         (negative value)
+ */
+GIT_EXTERN(int) git_status_next(
+	const char **path_old_out,
+	const char **path_new_out,
+	unsigned int *status_out,
+	git_status_iterator *iterator);
+
+/**
+ * Frees a `git_status_iterator`.
+ *
+ * @param it pointer to the iterator
+ */
+GIT_EXTERN(void) git_status_iterator_free(git_status_iterator *iterator);
 
 /**
  * Get file status for a single file.
  *
- * This is not quite the same as calling `git_status_foreach_ext()` with
- * the pathspec set to the specified path.
+ * This is not quite the same as calling `git_status_iterator_new_ext()` or
+ * `git_status_foreach_ext()` with the pathspec set to the specified path.
  *
  * @param status_flags The status value for the file
  * @param repo A repository object
@@ -235,6 +246,68 @@ GIT_EXTERN(int) git_status_should_ignore(
 	int *ignored,
 	git_repository *repo,
 	const char *path);
+
+/** @name Status foreach functions
+ *
+ * These functions will execute a given callback for each status
+ * entry.  These functions are deprecated in favor of
+ * `git_status_iterator_new`.
+ */
+/**@{*/
+
+/**
+ * Function pointer to receive status on individual files
+ *
+ * `path` is the relative path to the file from the root of the repository.
+ *
+ * `status_flags` is a combination of `git_status_t` values that apply.
+ *
+ * `payload` is the value you passed to the foreach function as payload.
+ */
+typedef int (*git_status_cb)(
+	const char *path, unsigned int status_flags, void *payload);
+
+/**
+ * Gather file statuses and run a callback for each one.
+ *
+ * The callback is passed the path of the file, the status (a combination of
+ * the `git_status_t` values above) and the `payload` data pointer passed
+ * into this function.
+ *
+ * If the callback returns a non-zero value, this function will stop looping
+ * and return GIT_EUSER.
+ *
+ * @param repo A repository object
+ * @param callback The function to call on each file
+ * @param payload Pointer to pass through to callback function
+ * @return 0 on success, GIT_EUSER on non-zero callback, or error code
+ */
+GIT_EXTERN(int) git_status_foreach(
+	git_repository *repo,
+	git_status_cb callback,
+	void *payload);
+
+/**
+ * Gather file status information and run callbacks as requested.
+ *
+ * This is an extended version of the `git_status_foreach()` API that
+ * allows for more granular control over which paths will be processed and
+ * in what order.  See the `git_status_options` structure for details
+ * about the additional controls that this makes available.
+ *
+ * @param repo Repository object
+ * @param opts Status options structure
+ * @param callback The function to call on each file
+ * @param payload Pointer to pass through to callback function
+ * @return 0 on success, GIT_EUSER on non-zero callback, or error code
+ */
+GIT_EXTERN(int) git_status_foreach_ext(
+	git_repository *repo,
+	const git_status_options *opts,
+	git_status_cb cb,
+	void *payload);
+
+/**@}*/
 
 /** @} */
 GIT_END_DECL
