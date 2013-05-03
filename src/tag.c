@@ -458,11 +458,15 @@ int git_tag_lookup_byname(
 	git_repository *repo,
 	const char *tag_name)
 {
+	int error;
 	git_buf ref_name = GIT_BUF_INIT;
 
 	assert(out && repo && tag_name);
 
-	return retrieve_tag_reference(out, &ref_name, repo, tag_name);
+	error = retrieve_tag_reference(out, &ref_name, repo, tag_name);
+
+	git_buf_free(&ref_name);
+	return error;
 }
 
 int git_tag_list_match(git_strarray *tag_names, const char *pattern, git_repository *repo)
