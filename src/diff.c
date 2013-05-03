@@ -716,7 +716,7 @@ static int diff_scan_inside_untracked_dir(
 			error = git_iterator_advance(&info->nitem, info->new_iter);
 		}
 
-		return error;
+		goto done;
 	}
 
 	/* look for actual untracked file */
@@ -747,6 +747,7 @@ static int diff_scan_inside_untracked_dir(
 			break;
 	}
 
+done:
 	git_buf_free(&base);
 
 	return error;
