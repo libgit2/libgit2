@@ -69,7 +69,7 @@ GIT_INLINE(int) git_tag_lookup_prefix(
  * @param out pointer to the looked up tag
  * @param repo the repo to use when location the tag
  * @param tag_name the name of the tag to locate
- * @return 0 on success, ENOTFOUND, EINVALIDSPEC or an error code
+ * @return 0 on success, GIT_ENOTFOUND, GIT_EINVALIDSPEC or an error code
  */
 GIT_EXTERN(int) git_tag_lookup_byname(
 	git_reference **out,
