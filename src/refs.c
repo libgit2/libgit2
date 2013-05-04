@@ -593,6 +593,16 @@ int git_reference_iterator_new(git_reference_iterator **out, git_repository *rep
 	return git_refdb_iterator(out, refdb);
 }
 
+int git_reference_iterator_glob_new(git_reference_iterator **out, git_repository *repo, const char *glob)
+{
+	git_refdb *refdb;
+
+	if (git_repository_refdb__weakptr(&refdb, repo) < 0)
+		return -1;
+
+	return git_refdb_iterator_glob(out, refdb, glob);
+}
+
 int git_reference_next(const char **out, git_reference_iterator *iter)
 {
 	return git_refdb_next(out, iter);
@@ -928,13 +938,10 @@ int git_reference_foreach_glob(
 	const char *name;
 	int error;
 
-	if (git_reference_iterator_new(&iter, repo) < 0)
+	if (git_reference_iterator_glob_new(&iter, repo, glob) < 0)
 		return -1;
 
 	while ((error = git_reference_next(&name, iter)) == 0) {
-		if (p_fnmatch(glob, name, 0))
-			continue;
-
 		if (callback(name, payload)) {
 			error = GIT_EUSER;
 			goto out;

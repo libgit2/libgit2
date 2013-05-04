@@ -123,7 +123,7 @@ static int refdb_test_backend__iterator(git_reference_iterator **out, git_refdb_
 
 	GIT_UNUSED(_backend);
 
-	iter = git__malloc(sizeof(refdb_test_iter));
+	iter = git__calloc(1, sizeof(refdb_test_iter));
 	GITERR_CHECK_ALLOC(iter);
 
 	iter->parent.backend = _backend;

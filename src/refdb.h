@@ -27,6 +27,7 @@ int git_refdb_lookup(
 	const char *ref_name);
 
 int git_refdb_iterator(git_reference_iterator **out, git_refdb *db);
+int git_refdb_iterator_glob(git_reference_iterator **out, git_refdb *db, const char *glob);
 int git_refdb_next(const char **out, git_reference_iterator *iter);
 void git_refdb_iterator_free(git_reference_iterator *iter);
 

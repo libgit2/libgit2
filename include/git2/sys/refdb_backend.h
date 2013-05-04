@@ -30,10 +30,11 @@ GIT_BEGIN_DECL
  *             ...
  *     }
  *
- * and assing `iter->parent.backend` to your `git_refdb_backend`.
+ * and assign `iter->parent.backend` to your `git_refdb_backend`.
  */
 struct git_reference_iterator {
 	git_refdb_backend *backend;
+	char *glob;
 };
 
 /** An instance for a custom backend */
@@ -66,6 +67,17 @@ struct git_refdb_backend {
 	int (*iterator)(
 		git_reference_iterator **iter,
 		struct git_refdb_backend *backend);
+
+	/**
+	 * Allocate a glob-filtering iterator object for the backend.
+	 *
+	 * A refdb implementation may provide this function. If it's
+	 * not available, the glob matching will be done by the frontend.
+	 */
+	int (*iterator_glob)(
+		git_reference_iterator **iter,
+		struct git_refdb_backend *backend,
+		const char *glob);
 
 	/**
 	 * Return the current value and advance the iterator.
