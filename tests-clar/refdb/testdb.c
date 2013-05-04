@@ -112,6 +112,49 @@ static int refdb_test_backend__lookup(
 	return GIT_ENOTFOUND;
 }
 
+typedef struct {
+	git_reference_iterator parent;
+	size_t i;
+} refdb_test_iter;
+
+static int refdb_test_backend__iterator(git_reference_iterator **out, git_refdb_backend *_backend)
+{
+	refdb_test_iter *iter;
+
+	GIT_UNUSED(_backend);
+
+	iter = git__malloc(sizeof(refdb_test_iter));
+	GITERR_CHECK_ALLOC(iter);
+
+	iter->parent.backend = _backend;
+	iter->i = 0;
+
+	*out = (git_reference_iterator *) iter;
+
+	return 0;
+}
+
+static int refdb_test_backend__next(const char **name, git_reference_iterator *_iter)
+{
+	refdb_test_entry *entry;
+	refdb_test_backend *backend = (refdb_test_backend *) _iter->backend;
+	refdb_test_iter *iter = (refdb_test_iter *) _iter;
+
+	entry = git_vector_get(&backend->refs, iter->i);
+	if (!entry)
+		return GIT_ITEROVER;
+
+	*name = entry->name;
+	iter->i++;
+
+	return 0;
+}
+
+static void refdb_test_backend__iterator_free(git_reference_iterator *iter)
+{
+	git__free(iter);
+}
+
 static int refdb_test_backend__foreach(
 	git_refdb_backend *_backend,
 	unsigned int list_flags,
@@ -200,6 +243,9 @@ int refdb_backend_test(
 
 	backend->parent.exists = &refdb_test_backend__exists;
 	backend->parent.lookup = &refdb_test_backend__lookup;
+	backend->parent.iterator = &refdb_test_backend__iterator;
+	backend->parent.next = &refdb_test_backend__next;
+	backend->parent.iterator_free = &refdb_test_backend__iterator_free;
 	backend->parent.foreach = &refdb_test_backend__foreach;
 	backend->parent.write = &refdb_test_backend__write;
 	backend->parent.delete = &refdb_test_backend__delete;
