@@ -103,8 +103,3 @@ void test_object_peel__target_any_object_for_type_change(void)
 	/* fail to peel blob */
 	assert_peel_error(GIT_ENOTFOUND, "0266163a49e280c4f5ed1e08facd36a2bd716bcf", GIT_OBJ_ANY);
 }
-
-void test_object_peel__should_use_a_well_known_type(void)
-{
-	assert_peel_error(GIT_EINVALIDSPEC, "7b4384978d2493e851f9cca7858815fac9b10980", GIT_OBJ__EXT2);
-}
