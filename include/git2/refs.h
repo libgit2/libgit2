@@ -284,12 +284,6 @@ GIT_EXTERN(int) git_reference_delete(git_reference *ref);
 /**
  * Fill a list with all the references that can be found in a repository.
  *
- * Using the `list_flags` parameter, the listed references may be filtered
- * by type (`GIT_REF_OID` or `GIT_REF_SYMBOLIC`) or using a bitwise OR of
- * `git_ref_t` values.  To include packed refs, include `GIT_REF_PACKED`.
- * For convenience, use the value `GIT_REF_LISTALL` to obtain all
- * references, including packed ones.
- *
  * The string array will be filled with the names of all references; these
  * values are owned by the user and should be free'd manually when no
  * longer needed, using `git_strarray_free()`.
@@ -297,21 +291,14 @@ GIT_EXTERN(int) git_reference_delete(git_reference *ref);
  * @param array Pointer to a git_strarray structure where
  *		the reference names will be stored
  * @param repo Repository where to find the refs
- * @param list_flags Filtering flags for the reference listing
  * @return 0 or an error code
  */
-GIT_EXTERN(int) git_reference_list(git_strarray *array, git_repository *repo, unsigned int list_flags);
+GIT_EXTERN(int) git_reference_list(git_strarray *array, git_repository *repo);
 
 typedef int (*git_reference_foreach_cb)(const char *refname, void *payload);
 
 /**
  * Perform a callback on each reference in the repository.
- *
- * Using the `list_flags` parameter, the references may be filtered by
- * type (`GIT_REF_OID` or `GIT_REF_SYMBOLIC`) or using a bitwise OR of
- * `git_ref_t` values.  To include packed refs, include `GIT_REF_PACKED`.
- * For convenience, use the value `GIT_REF_LISTALL` to obtain all
- * references, including packed ones.
  *
  * The `callback` function will be called for each reference in the
  * repository, receiving the name of the reference and the `payload` value
@@ -319,14 +306,12 @@ typedef int (*git_reference_foreach_cb)(const char *refname, void *payload);
  * will terminate the iteration.
  *
  * @param repo Repository where to find the refs
- * @param list_flags Filtering flags for the reference listing.
  * @param callback Function which will be called for every listed ref
  * @param payload Additional data to pass to the callback
  * @return 0 on success, GIT_EUSER on non-zero callback, or error code
  */
 GIT_EXTERN(int) git_reference_foreach(
 	git_repository *repo,
-	unsigned int list_flags,
 	git_reference_foreach_cb callback,
 	void *payload);
 
@@ -385,7 +370,6 @@ GIT_EXTERN(void) git_reference_iterator_free(git_reference_iterator *iter);
  *
  * @param repo Repository where to find the refs
  * @param glob Pattern to match (fnmatch-style) against reference name.
- * @param list_flags Filtering flags for the reference listing.
  * @param callback Function which will be called for every listed ref
  * @param payload Additional data to pass to the callback
  * @return 0 on success, GIT_EUSER on non-zero callback, or error code
@@ -393,7 +377,6 @@ GIT_EXTERN(void) git_reference_iterator_free(git_reference_iterator *iter);
 GIT_EXTERN(int) git_reference_foreach_glob(
 	git_repository *repo,
 	const char *glob,
-	unsigned int list_flags,
 	git_reference_foreach_cb callback,
 	void *payload);
 

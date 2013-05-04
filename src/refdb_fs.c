@@ -562,100 +562,6 @@ struct dirent_list_data {
 	int callback_error;
 };
 
-static git_ref_t loose_guess_rtype(const git_buf *full_path)
-{
-	git_buf ref_file = GIT_BUF_INIT;
-	git_ref_t type;
-
-	type = GIT_REF_INVALID;
-
-	if (git_futils_readbuffer(&ref_file, full_path->ptr) == 0) {
-		if (git__prefixcmp((const char *)(ref_file.ptr), GIT_SYMREF) == 0)
-			type = GIT_REF_SYMBOLIC;
-		else
-			type = GIT_REF_OID;
-	}
-
-	git_buf_free(&ref_file);
-	return type;
-}
-
-static int _dirent_loose_listall(void *_data, git_buf *full_path)
-{
-	struct dirent_list_data *data = (struct dirent_list_data *)_data;
-	const char *file_path = full_path->ptr + data->repo_path_len;
-
-	if (git_path_isdir(full_path->ptr) == true)
-		return git_path_direach(full_path, _dirent_loose_listall, _data);
-
-	/* do not add twice a reference that exists already in the packfile */
-	if (git_strmap_exists(data->backend->refcache.packfile, file_path))
-		return 0;
-
-	if (data->list_type != GIT_REF_LISTALL) {
-		if ((data->list_type & loose_guess_rtype(full_path)) == 0)
-			return 0; /* we are filtering out this reference */
-	}
-
-	/* Locked references aren't returned */
-	if (!git__suffixcmp(file_path, GIT_FILELOCK_EXTENSION))
-		return 0;
-
-	if (data->callback(file_path, data->callback_payload))
-		data->callback_error = GIT_EUSER;
-
-	return data->callback_error;
-}
-
-static int refdb_fs_backend__foreach(
-	git_refdb_backend *_backend,
-	unsigned int list_type,
-	git_reference_foreach_cb callback,
-	void *payload)
-{
-	refdb_fs_backend *backend;
-	int result;
-	struct dirent_list_data data;
-	git_buf refs_path = GIT_BUF_INIT;
-	const char *ref_name;
-	void *ref = NULL;
-
-	GIT_UNUSED(ref);
-
-	assert(_backend);
-	backend = (refdb_fs_backend *)_backend;
-
-	if (packed_load(backend) < 0)
-		return -1;
-
-	/* list all the packed references first */
-	if (list_type & GIT_REF_OID) {
-		git_strmap_foreach(backend->refcache.packfile, ref_name, ref, {
-			if (callback(ref_name, payload))
-				return GIT_EUSER;
-		});
-	}
-
-	/* now list the loose references, trying not to
-	 * duplicate the ref names already in the packed-refs file */
-
-	data.repo_path_len = strlen(backend->path);
-	data.list_type = list_type;
-	data.backend = backend;
-	data.callback = callback;
-	data.callback_payload = payload;
-	data.callback_error = 0;
-
-	if (git_buf_joinpath(&refs_path, backend->path, GIT_REFS_DIR) < 0)
-		return -1;
-
-	result = git_path_direach(&refs_path, _dirent_loose_listall, &data);
-
-	git_buf_free(&refs_path);
-
-	return data.callback_error ? GIT_EUSER : result;
-}
-
 typedef struct {
 	git_reference_iterator parent;
 	unsigned int loose;
@@ -1211,7 +1117,6 @@ int git_refdb_backend_fs(
 
 	backend->parent.exists = &refdb_fs_backend__exists;
 	backend->parent.lookup = &refdb_fs_backend__lookup;
-	backend->parent.foreach = &refdb_fs_backend__foreach;
 	backend->parent.iterator = &refdb_fs_backend__iterator;
 	backend->parent.next = &refdb_fs_backend__next;
 	backend->parent.iterator_free = &refdb_fs_backend__iterator_free;

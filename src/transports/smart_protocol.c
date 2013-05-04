@@ -193,7 +193,7 @@ static int fetch_setup_walk(git_revwalk **out, git_repository *repo)
 	unsigned int i;
 	git_reference *ref;
 
-	if (git_reference_list(&refs, repo, GIT_REF_LISTALL) < 0)
+	if (git_reference_list(&refs, repo) < 0)
 		return -1;
 
 	if (git_revwalk_new(&walk, repo) < 0)

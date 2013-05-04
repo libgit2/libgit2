@@ -1297,7 +1297,6 @@ static int rename_remote_references(
 
 	if (git_reference_foreach(
 		repo,
-		GIT_REF_LISTALL,
 		rename_cb,
 		&refnames) < 0)
 			goto cleanup;

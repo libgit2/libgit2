@@ -152,59 +152,11 @@ void git_refdb_iterator_free(git_reference_iterator *iter)
 	iter->backend->iterator_free(iter);
 }
 
-int git_refdb_foreach(
-	git_refdb *db,
-	unsigned int list_flags,
-	git_reference_foreach_cb callback,
-	void *payload)
-{
-	assert(db && db->backend);
-
-	return db->backend->foreach(db->backend, list_flags, callback, payload);
-}
-
 struct glob_cb_data {
 	const char *glob;
 	git_reference_foreach_cb callback;
 	void *payload;
 };
-
-static int fromglob_cb(const char *reference_name, void *payload)
-{
-	struct glob_cb_data *data = (struct glob_cb_data *)payload;
-
-	if (!p_fnmatch(data->glob, reference_name, 0))
-		return data->callback(reference_name, data->payload);
-
-	return 0;
-}
-
-int git_refdb_foreach_glob(
-	git_refdb *db,
-	const char *glob,
-	unsigned int list_flags,
-	git_reference_foreach_cb callback,
-	void *payload)
-{
-	int error;
-	struct glob_cb_data data;
-
-	assert(db && db->backend && glob && callback);
-
-	if(db->backend->foreach_glob != NULL)
-		error = db->backend->foreach_glob(db->backend,
-			glob, list_flags, callback, payload);
-	else {
-		data.glob = glob;
-		data.callback = callback;
-		data.payload = payload;
-
-		error = db->backend->foreach(db->backend,
-			list_flags, fromglob_cb, &data);
-	}
-
-	return error;
-}
 
 int git_refdb_write(git_refdb *db, const git_reference *ref)
 {

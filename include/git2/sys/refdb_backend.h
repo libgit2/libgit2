@@ -59,30 +59,9 @@ struct git_refdb_backend {
 		const char *ref_name);
 
 	/**
-	 * Enumerates each reference in the refdb.  A refdb implementation must
-	 * provide this function.
-	 */
-	int (*foreach)(
-		git_refdb_backend *backend,
-		unsigned int list_flags,
-		git_reference_foreach_cb callback,
-		void *payload);
-
-	/**
-	 * Enumerates each reference in the refdb that matches the given
-	 * glob string.  A refdb implementation may provide this function;
-	 * if it is not provided, foreach will be used and the results filtered
-	 * against the glob.
-	 */
-	int (*foreach_glob)(
-		git_refdb_backend *backend,
-		const char *glob,
-		unsigned int list_flags,
-		git_reference_foreach_cb callback,
-		void *payload);
-
-	/**
-	 * Allocate an iterator object for the backend
+	 * Allocate an iterator object for the backend.
+	 *
+	 * A refdb implementation must provide this function.
 	 */
 	int (*iterator)(
 		git_reference_iterator **iter,
@@ -90,6 +69,8 @@ struct git_refdb_backend {
 
 	/**
 	 * Return the current value and advance the iterator.
+	 *
+	 * A refdb implementation must provide this function.
 	 */
 	int (*next)(
 		const char **name,
@@ -97,6 +78,8 @@ struct git_refdb_backend {
 
 	/**
 	 * Free the iterator
+	 *
+	 * A refdb implementation must provide this function.
 	 */
 	void (*iterator_free)(
 		git_reference_iterator *iter);

@@ -243,7 +243,6 @@ static int update_head_to_remote(git_repository *repo, git_remote *remote)
 	/* Not master. Check all the other refs. */
 	if (git_reference_foreach(
 		repo,
-		GIT_REF_LISTALL,
 		reference_matches_remote_head,
 		&head_info) < 0)
 			goto cleanup;

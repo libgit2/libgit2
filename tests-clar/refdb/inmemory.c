@@ -163,7 +163,7 @@ void test_refdb_inmemory__foreach(void)
 	cl_git_pass(git_oid_fromstr(&oid3, "763d71aadf09a7951596c9746c024e7eece7c7af"));
 	cl_git_pass(git_reference_create(&write3, repo, GIT_REFS_HEADS_DIR "test3", &oid3, 0));
 
-	cl_git_pass(git_reference_foreach(repo, GIT_REF_LISTALL, foreach_test, &i));
+	cl_git_pass(git_reference_foreach(repo,foreach_test, &i));
 	cl_assert_equal_i(3, (int)i);
 
 	git_reference_free(write1);
@@ -210,7 +210,7 @@ void test_refdb_inmemory__delete(void)
 	git_reference_delete(write3);
 	git_reference_free(write3);
 
-	cl_git_pass(git_reference_foreach(repo, GIT_REF_LISTALL, delete_test, &i));
+	cl_git_pass(git_reference_foreach(repo, delete_test, &i));
 	cl_assert_equal_i(1, (int)i);
 
 	git_reference_free(write2);

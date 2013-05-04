@@ -155,33 +155,6 @@ static void refdb_test_backend__iterator_free(git_reference_iterator *iter)
 	git__free(iter);
 }
 
-static int refdb_test_backend__foreach(
-	git_refdb_backend *_backend,
-	unsigned int list_flags,
-	git_reference_foreach_cb callback,
-	void *payload)
-{
-	refdb_test_backend *backend;
-	refdb_test_entry *entry;
-	size_t i;
-
-	assert(_backend);
-	backend = (refdb_test_backend *)_backend;
-
-	git_vector_foreach(&backend->refs, i, entry) {
-		if (entry->type == GIT_REF_OID && (list_flags & GIT_REF_OID) == 0)
-			continue;
-
-		if (entry->type == GIT_REF_SYMBOLIC && (list_flags & GIT_REF_SYMBOLIC) == 0)
-			continue;
-
-		if (callback(entry->name, payload) != 0)
-			return GIT_EUSER;
-	}
-
-	return 0;
-}
-
 static void refdb_test_entry_free(refdb_test_entry *entry)
 {
 	if (entry->type == GIT_REF_SYMBOLIC)
@@ -246,7 +219,6 @@ int refdb_backend_test(
 	backend->parent.iterator = &refdb_test_backend__iterator;
 	backend->parent.next = &refdb_test_backend__next;
 	backend->parent.iterator_free = &refdb_test_backend__iterator_free;
-	backend->parent.foreach = &refdb_test_backend__foreach;
 	backend->parent.write = &refdb_test_backend__write;
 	backend->parent.delete = &refdb_test_backend__delete;
 	backend->parent.free = &refdb_test_backend__free;

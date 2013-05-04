@@ -157,7 +157,7 @@ int git_branch_foreach(
 	filter.branch_type = list_flags;
 	filter.callback_payload = payload;
 
-	return git_reference_foreach(repo, GIT_REF_LISTALL, &branch_foreach_cb, (void *)&filter);
+	return git_reference_foreach(repo, &branch_foreach_cb, (void *)&filter);
 }
 
 int git_branch_move(
