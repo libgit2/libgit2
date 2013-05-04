@@ -128,7 +128,11 @@ int git_refdb_iterator(git_reference_iterator **out, git_refdb *db)
 {
 	git_reference_iterator *iter;
 
-	/* FIXME: don't segfault when there is no backends */
+	if (!db->backend || !db->backend->iterator) {
+		giterr_set(GITERR_REFERENCE, "This backend doesn't support iterators");
+		return -1;
+	}
+
 	if (db->backend->iterator(&iter, db->backend) < 0) {
 		git__free(iter);
 		return -1;

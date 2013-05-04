@@ -74,3 +74,21 @@ void test_refs_iterator__list(void)
 	}
 	git_vector_free(&output);
 }
+
+void test_refs_iterator__empty(void)
+{
+	git_reference_iterator *iter;
+	git_odb *odb;
+	const char *name;
+	git_repository *empty;
+
+	cl_git_pass(git_odb_new(&odb));
+	cl_git_pass(git_repository_wrap_odb(&empty, odb));
+
+	cl_git_pass(git_reference_iterator_new(&iter, empty));
+	cl_assert_equal_i(GIT_ITEROVER, git_reference_next(&name, iter));
+
+	git_reference_iterator_free(iter);
+	git_odb_free(odb);
+	git_repository_free(empty);
+}
