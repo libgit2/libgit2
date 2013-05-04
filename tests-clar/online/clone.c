@@ -3,6 +3,7 @@
 #include "git2/clone.h"
 #include "git2/cred_helpers.h"
 #include "repository.h"
+#include "remote.h"
 
 #define LIVE_REPO_URL "http://github.com/libgit2/TestGitRepository"
 #define LIVE_EMPTYREPO_URL "http://github.com/libgit2/TestEmptyRepository"
@@ -41,6 +42,8 @@ void test_online_clone__network_full(void)
 	cl_git_pass(git_clone(&g_repo, LIVE_REPO_URL, "./foo", &g_options));
 	cl_assert(!git_repository_is_bare(g_repo));
 	cl_git_pass(git_remote_load(&origin, g_repo, "origin"));
+
+	cl_assert_equal_i(GIT_REMOTE_DOWNLOAD_TAGS_AUTO, origin->download_tags);
 
 	git_remote_free(origin);
 }
