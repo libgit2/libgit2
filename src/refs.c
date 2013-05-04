@@ -562,10 +562,28 @@ int git_reference_foreach(
 	git_reference_foreach_cb callback,
 	void *payload)
 {
-	git_refdb *refdb;
-	git_repository_refdb__weakptr(&refdb, repo);
+	git_reference_iterator *iter;
+	const char *name;
+	int error;
 
-	return git_refdb_foreach(refdb, list_flags, callback, payload);
+	GIT_UNUSED(list_flags);
+
+	if (git_reference_iterator_new(&iter, repo) < 0)
+		return -1;
+
+	while ((error = git_reference_next(&name, iter)) == 0) {
+		if (callback(name, payload)) {
+			error = GIT_EUSER;
+			goto out;
+		}
+	}
+
+	if (error == GIT_ITEROVER)
+		error = 0;
+
+out:
+	git_reference_iterator_free(iter);
+	return error;
 }
 
 int git_reference_iterator_new(git_reference_iterator **out, git_repository *repo)
