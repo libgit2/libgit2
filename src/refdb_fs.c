@@ -181,6 +181,9 @@ static int packed_load(refdb_fs_backend *backend)
 		GITERR_CHECK_ALLOC(ref_cache->packfile);
 	}
 
+	if (backend->path == NULL)
+		return 0;
+
 	result = reference_read(&packfile, &ref_cache->packfile_time,
 		backend->path, GIT_PACKEDREFS_FILE, &updated);
 
@@ -1149,6 +1152,10 @@ static void refdb_fs_backend__free(git_refdb_backend *_backend)
 static int setup_namespace(git_buf *path, git_repository *repo)
 {
 	char *parts, *start, *end; 
+
+	/* Not all repositories have a path */
+	if (repo->path_repository == NULL)
+		return 0;
 
 	/* Load the path to the repo first */
 	git_buf_puts(path, repo->path_repository);
