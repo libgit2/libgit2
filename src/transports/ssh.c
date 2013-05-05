@@ -210,12 +210,12 @@ static int git_ssh_extract_url_parts(
 		return -1;
 	}
 	
-	start = url;
 	at = strchr(url, '@');
 	if (at) {
 		start = at+1;
 		*username = git__substrdup(url, at - url);
 	} else {
+		start = url;
 		*username = git__strdup(default_user);
 	}
 	
