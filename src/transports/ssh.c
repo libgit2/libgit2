@@ -378,16 +378,14 @@ on_error:
 		ssh_stream_free(*stream);
 	
 	git__free(host);
-	git__free(port);
-	if (user) {
+	if (port)
+		git__free(port);
+	if (user)
 		git__free(user);
-	}
-	if (pass) {
+	if (pass)
 		git__free(pass);
-	}
-	if (session) {
+	if (session)
 		libssh2_session_free(session), session = NULL;
-	}
 
 	return -1;
 }
