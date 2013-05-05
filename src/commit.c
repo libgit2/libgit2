@@ -149,6 +149,7 @@ int git_commit_create(
 	const git_oid **parent_oids;
 
 	assert(parent_count >= 0);
+	assert(git_object_owner((const git_object *)tree) == repo);
 
 	parent_oids = git__malloc(parent_count * sizeof(git_oid *));
 	GITERR_CHECK_ALLOC(parent_oids);
