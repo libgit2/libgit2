@@ -97,7 +97,6 @@ static int ssh_stream_read(
 		return -1;
 	
 	int rc = libssh2_channel_read(s->channel, buffer, buf_size);
-	
 	if (rc < 0)
 		return -1;
 	
@@ -133,6 +132,16 @@ static void ssh_stream_free(git_smart_subtransport_stream *stream)
 	GIT_UNUSED(ret);
 	
 	t->current_stream = NULL;
+	
+	if (s->channel) {
+		libssh2_channel_close(s->channel);
+        libssh2_channel_free(s->channel);
+        s->channel = NULL;
+	}
+	
+	if (s->session) {
+		libssh2_session_free(s->session), s->session = NULL;
+	}
 	
 	if (s->socket.socket) {
 		ret = gitno_close(&s->socket);
