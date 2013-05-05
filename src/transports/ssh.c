@@ -26,6 +26,7 @@ typedef struct {
 	LIBSSH2_CHANNEL *channel;
 	const char *cmd;
 	char *url;
+	char *path;
 	unsigned sent_command : 1;
 } ssh_stream;
 
@@ -39,21 +40,11 @@ typedef struct {
 /*
  * Create a git protocol request.
  *
- * For example: 0035git-upload-pack /libgit2/libgit2\0
+ * For example: git-upload-pack '/libgit2/libgit2'
  */
-static int gen_proto(git_buf *request, const char *cmd, const char *url)
+static int gen_proto(git_buf *request, const char *cmd, const char *repo)
 {
-	char *delim, *repo;
-	size_t len;
-	
-	delim = strchr(url, ':');
-	if (delim == NULL) {
-		giterr_set(GITERR_NET, "Malformed URL");
-		return -1;
-	}
-	
-	repo = delim+1;
-	len = strlen(cmd) + 1 + 1 + strlen(repo) + 1;
+	int len = strlen(cmd) + 1 /* Space */ + 1 /* Quote */ + strlen(repo) + 1 /* Quote */ + 1;
 	
 	git_buf_grow(request, len);
 	git_buf_printf(request, "%s '%s'", cmd, repo);
@@ -70,7 +61,7 @@ static int send_command(ssh_stream *s)
 	int error;
 	git_buf request = GIT_BUF_INIT;
 	
-	error = gen_proto(&request, s->cmd, s->url);
+	error = gen_proto(&request, s->cmd, s->path);
 	if (error < 0)
 		goto cleanup;
 	
@@ -276,7 +267,7 @@ static int _git_receivepack_ls(
 	const char *url,
 	git_smart_subtransport_stream **stream)
 {
-	char *host, *path, *user=NULL;
+	char *host, *user=NULL;
 	ssh_stream *s;
 	
 	*stream = NULL;
@@ -285,7 +276,7 @@ static int _git_receivepack_ls(
 	
 	s = (ssh_stream *)*stream;
 	
-	if (gitssh_extract_url_parts(&host, &user, &path, url) < 0)
+	if (gitssh_extract_url_parts(&host, &user, &s->path, url) < 0)
 		goto on_error;
 	
 	if (gitno_connect(&s->socket, host, "22", 0) < 0)
@@ -356,7 +347,6 @@ on_error:
 		ssh_stream_free(*stream);
 	
 	git__free(host);
-	git__free(path);
 	return -1;
 }
 
