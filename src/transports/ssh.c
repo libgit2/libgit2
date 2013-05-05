@@ -254,11 +254,48 @@ static int _git_ssh_authenticate_session(
 				break;
 			}
 			default:
-				rc = -1;
+				rc = LIBSSH2_ERROR_AUTHENTICATION_FAILED;
 		}
     } while (LIBSSH2_ERROR_EAGAIN == rc || LIBSSH2_ERROR_TIMEOUT == rc);
 	
     return rc;
+}
+
+static int _git_ssh_session_create
+(
+	LIBSSH2_SESSION** session,
+	gitno_socket socket
+)
+{
+	if (!session) {
+		return -1;
+	}
+	
+	LIBSSH2_SESSION* s = libssh2_session_init();
+    if (!s)
+        return -1;
+	
+    int rc = 0;
+    do {
+        rc = libssh2_session_startup(s, socket.socket);
+    } while (LIBSSH2_ERROR_EAGAIN == rc || LIBSSH2_ERROR_TIMEOUT == rc);
+	
+	if (0 != rc) {
+        goto on_error;
+    }
+	
+	libssh2_session_set_blocking(s, 1);
+	
+	*session = s;
+	
+	return 0;
+	
+on_error:
+	if (s) {
+		libssh2_session_free(s), s = NULL;
+	}
+	
+	return -1;
 }
 
 static int _git_ssh_setup_conn(
@@ -268,9 +305,11 @@ static int _git_ssh_setup_conn(
 	git_smart_subtransport_stream **stream
 )
 {
-	char *host, *port, *user=NULL, *pass=NULL;
-	const char *default_port = "22";
+	char *host, *port=NULL, *user=NULL, *pass=NULL;
+	const char *default_port="22";
 	ssh_stream *s;
+	LIBSSH2_SESSION* session=NULL;
+	LIBSSH2_CHANNEL* channel=NULL;
 	
 	*stream = NULL;
 	if (ssh_stream_alloc(t, url, cmd, stream) < 0)
@@ -307,34 +346,15 @@ static int _git_ssh_setup_conn(
 		user = git__strdup(default_user);
 	}
 	
-	LIBSSH2_SESSION* session = libssh2_session_init();
-    if (!session)
-        goto on_error;
-	
-    int rc = 0;
-    do {
-        rc = libssh2_session_startup(session, s->socket.socket);
-    } while (LIBSSH2_ERROR_EAGAIN == rc || LIBSSH2_ERROR_TIMEOUT == rc);
-	
-	if (0 != rc) {
-        goto on_error;
-    }
-	
-	libssh2_trace(session, 0x1FF);
-	libssh2_session_set_blocking(session, 1);
-	
-    if (_git_ssh_authenticate_session(session, user, t->cred) < 0) {
+	if (_git_ssh_session_create(&session, s->socket) < 0)
 		goto on_error;
-	}
 	
-	LIBSSH2_CHANNEL* channel = NULL;
-    do {
-        channel = libssh2_channel_open_session(session);
-    } while (LIBSSH2_ERROR_EAGAIN == rc || LIBSSH2_ERROR_TIMEOUT == rc);
+    if (_git_ssh_authenticate_session(session, user, t->cred) < 0)
+		goto on_error;
 	
-	if (!channel) {
+	channel = libssh2_channel_open_session(session);
+	if (!channel)
         goto on_error;
-    }
 	
 	libssh2_channel_set_blocking(channel, 1);
 	
@@ -343,6 +363,14 @@ static int _git_ssh_setup_conn(
 	
 	t->current_stream = s;
 	git__free(host);
+	git__free(port);
+	if (user) {
+		git__free(user);
+	}
+	if (pass) {
+		git__free(pass);
+	}
+
 	return 0;
 	
 on_error:
@@ -350,6 +378,17 @@ on_error:
 		ssh_stream_free(*stream);
 	
 	git__free(host);
+	git__free(port);
+	if (user) {
+		git__free(user);
+	}
+	if (pass) {
+		git__free(pass);
+	}
+	if (session) {
+		libssh2_session_free(session), session = NULL;
+	}
+
 	return -1;
 }
 
