@@ -224,6 +224,43 @@ static int git_ssh_extract_url_parts(
 	return 0;
 }
 
+static int _git_ssh_authenticate_session(
+	LIBSSH2_SESSION* session,
+	const char *user,
+	git_cred* cred
+)
+{
+	int rc;
+	do {
+		switch (cred->credtype) {
+			case GIT_CREDTYPE_USERPASS_PLAINTEXT: {
+				git_cred_userpass_plaintext *c = (git_cred_userpass_plaintext *)cred;
+				rc = libssh2_userauth_password(
+					session, 
+					c->username,
+					c->password
+				);
+				break;
+			}
+			case GIT_CREDTYPE_SSH_KEYFILE_PASSPHRASE: {
+				git_cred_ssh_keyfile_passphrase *c = (git_cred_ssh_keyfile_passphrase *)cred;
+				rc = libssh2_userauth_publickey_fromfile(
+					session, 
+					user,
+					c->publickey,
+					c->privatekey,
+					c->passphrase
+				);
+				break;
+			}
+			default:
+				rc = -1;
+		}
+    } while (LIBSSH2_ERROR_EAGAIN == rc || LIBSSH2_ERROR_TIMEOUT == rc);
+	
+    return rc;
+}
+
 static int _git_ssh_setup_conn(
 	ssh_subtransport *t,
 	const char *url,
@@ -244,7 +281,7 @@ static int _git_ssh_setup_conn(
 	if (!git__prefixcmp(url, prefix_ssh)) {
 		url = url + strlen(prefix_ssh);
 		if (gitno_extract_url_parts(&host, &port, &user, &pass, url, default_port) < 0)
-			return -1;
+			goto on_error;
 	} else {
 		if (git_ssh_extract_url_parts(&host, &user, url) < 0)
 			goto on_error;
@@ -270,8 +307,6 @@ static int _git_ssh_setup_conn(
 		user = git__strdup(default_user);
 	}
 	
-	git_cred_ssh_keyfile_passphrase *cred = (git_cred_ssh_keyfile_passphrase *)t->cred;
-	
 	LIBSSH2_SESSION* session = libssh2_session_init();
     if (!session)
         goto on_error;
@@ -288,20 +323,9 @@ static int _git_ssh_setup_conn(
 	libssh2_trace(session, 0x1FF);
 	libssh2_session_set_blocking(session, 1);
 	
-    do {
-        rc = libssh2_userauth_publickey_fromfile_ex(
-            session, 
-            user,
-			strlen(user),
-            cred->publickey,
-			cred->privatekey,
-            cred->passphrase
-        );
-    } while (LIBSSH2_ERROR_EAGAIN == rc || LIBSSH2_ERROR_TIMEOUT == rc);
-	
-    if (0 != rc) {
-        goto on_error;
-    }
+    if (_git_ssh_authenticate_session(session, user, t->cred) < 0) {
+		goto on_error;
+	}
 	
 	LIBSSH2_CHANNEL* channel = NULL;
     do {
