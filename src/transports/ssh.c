@@ -446,7 +446,7 @@ static int _git_receivepack(
 	return -1;
 }
 
-static int _git_action(
+static int _ssh_action(
 	git_smart_subtransport_stream **stream,
 	git_smart_subtransport *subtransport,
 	const char *url,
@@ -472,7 +472,7 @@ static int _git_action(
 	return -1;
 }
 
-static int _git_close(git_smart_subtransport *subtransport)
+static int _ssh_close(git_smart_subtransport *subtransport)
 {
 	ssh_subtransport *t = (ssh_subtransport *) subtransport;
 	
@@ -483,7 +483,7 @@ static int _git_close(git_smart_subtransport *subtransport)
 	return 0;
 }
 
-static void _git_free(git_smart_subtransport *subtransport)
+static void _ssh_free(git_smart_subtransport *subtransport)
 {
 	ssh_subtransport *t = (ssh_subtransport *) subtransport;
 	
@@ -503,9 +503,9 @@ int git_smart_subtransport_ssh(git_smart_subtransport **out, git_transport *owne
 	GITERR_CHECK_ALLOC(t);
 	
 	t->owner = (transport_smart *)owner;
-	t->parent.action = _git_action;
-	t->parent.close = _git_close;
-	t->parent.free = _git_free;
+	t->parent.action = _ssh_action;
+	t->parent.close = _ssh_close;
+	t->parent.free = _ssh_free;
 	
 	*out = (git_smart_subtransport *) t;
 	return 0;
