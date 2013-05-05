@@ -215,72 +215,18 @@ static int gitssh_extract_url_parts(
 	return 0;
 }
 
-static int _git_uploadpack_ls(
+static int _git_ssh_setup_conn(
 	ssh_subtransport *t,
 	const char *url,
-	git_smart_subtransport_stream **stream)
-{
-	char *host, *port, *user=NULL, *pass=NULL;
-	ssh_stream *s;
-	
-	*stream = NULL;
-	
-	if (!git__prefixcmp(url, prefix_ssh))
-		url += strlen(prefix_ssh);
-	
-	if (ssh_stream_alloc(t, url, cmd_uploadpack, stream) < 0)
-		return -1;
-	
-	s = (ssh_stream *)*stream;
-	
-	if (gitno_extract_url_parts(&host, &port, &user, &pass, url, GIT_DEFAULT_PORT) < 0)
-		goto on_error;
-	
-	if (gitno_connect(&s->socket, host, port, 0) < 0)
-		goto on_error;
-	
-	t->current_stream = s;
-	git__free(host);
-	git__free(port);
-	git__free(user);
-	git__free(pass);
-	return 0;
-	
-on_error:
-	if (*stream)
-		ssh_stream_free(*stream);
-	
-	git__free(host);
-	git__free(port);
-	return -1;
-}
-
-static int _git_uploadpack(
-	ssh_subtransport *t,
-	const char *url,
-	git_smart_subtransport_stream **stream)
-{
-	GIT_UNUSED(url);
-	
-	if (t->current_stream) {
-		*stream = &t->current_stream->parent;
-		return 0;
-	}
-	
-	giterr_set(GITERR_NET, "Must call UPLOADPACK_LS before UPLOADPACK");
-	return -1;
-}
-
-static int _git_receivepack_ls(
-	ssh_subtransport *t,
-	const char *url,
-	git_smart_subtransport_stream **stream)
+	const char *cmd,
+	git_smart_subtransport_stream **stream
+)
 {
 	char *host, *user=NULL;
 	ssh_stream *s;
 	
 	*stream = NULL;
-	if (ssh_stream_alloc(t, url, cmd_receivepack, stream) < 0)
+	if (ssh_stream_alloc(t, url, cmd, stream) < 0)
 		return -1;
 	
 	s = (ssh_stream *)*stream;
@@ -357,6 +303,44 @@ on_error:
 	
 	git__free(host);
 	return -1;
+}
+
+static int _git_uploadpack_ls(
+	ssh_subtransport *t,
+	const char *url,
+	git_smart_subtransport_stream **stream)
+{
+	if (_git_ssh_setup_conn(t, url, cmd_uploadpack, stream) < 0)
+		return -1;
+	
+	return 0;
+}
+
+static int _git_uploadpack(
+	ssh_subtransport *t,
+	const char *url,
+	git_smart_subtransport_stream **stream)
+{
+	GIT_UNUSED(url);
+	
+	if (t->current_stream) {
+		*stream = &t->current_stream->parent;
+		return 0;
+	}
+	
+	giterr_set(GITERR_NET, "Must call UPLOADPACK_LS before UPLOADPACK");
+	return -1;
+}
+
+static int _git_receivepack_ls(
+	ssh_subtransport *t,
+	const char *url,
+	git_smart_subtransport_stream **stream)
+{
+	if (_git_ssh_setup_conn(t, url, cmd_receivepack, stream) < 0)
+		return -1;
+	
+	return 0;
 }
 
 static int _git_receivepack(
