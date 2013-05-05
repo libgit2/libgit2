@@ -18,21 +18,22 @@ typedef struct transport_definition {
 	void *param;
 } transport_definition;
 
-static transport_definition local_transport_definition = { "file://", 1, git_transport_local, NULL };
-static transport_definition dummy_transport_definition = { NULL, 1, git_transport_dummy, NULL };
-
 static git_smart_subtransport_definition http_subtransport_definition = { git_smart_subtransport_http, 1 };
 static git_smart_subtransport_definition git_subtransport_definition = { git_smart_subtransport_git, 0 };
 static git_smart_subtransport_definition ssh_subtransport_definition = { git_smart_subtransport_ssh, 0 };
+
+static transport_definition local_transport_definition = { "file://", 1, git_transport_local, NULL };
+#ifdef GIT_WIN32
+static transport_definition dummy_transport_definition = { NULL, 1, git_transport_dummy, NULL };
+#endif
+static transport_definition ssh_transport_definition = { "ssh://", 1, git_transport_smart, &ssh_subtransport_definition };
 
 static transport_definition transports[] = {
 	{"git://", 1, git_transport_smart, &git_subtransport_definition},
 	{"http://", 1, git_transport_smart, &http_subtransport_definition},
 	{"https://", 1, git_transport_smart, &http_subtransport_definition},
 	{"file://", 1, git_transport_local, NULL},
-	{"git+ssh://", 1, git_transport_smart, &ssh_subtransport_definition},
-	{"ssh+git://", 1, git_transport_smart, &ssh_subtransport_definition},
-	{"git@", 1, git_transport_smart, &ssh_subtransport_definition},
+	{"ssh://", 1, git_transport_smart, &ssh_subtransport_definition},
 	{NULL, 0, 0}
 };
 
@@ -75,7 +76,7 @@ static int transport_find_fn(const char *url, git_transport_cb *callback, void *
 	/* It could be a SSH remote path. Check to see if there's a :
 	 * SSH is an unsupported transport mechanism in this version of libgit2 */
 	if (!definition && strrchr(url, ':'))
-		definition = &dummy_transport_definition;
+		definition = &ssh_transport_definition;
 
 	/* Check to see if the path points to a file on the local file system */
 	if (!definition && git_path_exists(url) && git_path_isdir(url))

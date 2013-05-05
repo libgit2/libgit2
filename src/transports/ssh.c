@@ -15,7 +15,7 @@
 #define OWNING_SUBTRANSPORT(s) ((ssh_subtransport *)(s)->parent.subtransport)
 
 static const char prefix_ssh[] = "ssh://";
-static const char prefix_git[] = "git@";
+static const char default_user[] = "git";
 static const char cmd_uploadpack[] = "git-upload-pack";
 static const char cmd_receivepack[] = "git-receive-pack";
 
@@ -26,7 +26,6 @@ typedef struct {
 	LIBSSH2_CHANNEL *channel;
 	const char *cmd;
 	char *url;
-	char *path;
 	unsigned sent_command : 1;
 } ssh_stream;
 
@@ -42,8 +41,21 @@ typedef struct {
  *
  * For example: git-upload-pack '/libgit2/libgit2'
  */
-static int gen_proto(git_buf *request, const char *cmd, const char *repo)
+static int gen_proto(git_buf *request, const char *cmd, const char *url)
 {
+	char *repo;
+	
+	if (!git__prefixcmp(url, prefix_ssh)) {
+		url = url + strlen(prefix_ssh);
+		repo = strchr(url, '/');
+	} else {
+		repo = strchr(url, ':');
+	}
+	
+	if (!repo) {
+		return -1;
+	}
+	
 	int len = strlen(cmd) + 1 /* Space */ + 1 /* Quote */ + strlen(repo) + 1 /* Quote */ + 1;
 	
 	git_buf_grow(request, len);
@@ -61,7 +73,7 @@ static int send_command(ssh_stream *s)
 	int error;
 	git_buf request = GIT_BUF_INIT;
 	
-	error = gen_proto(&request, s->cmd, s->path);
+	error = gen_proto(&request, s->cmd, s->url);
 	if (error < 0)
 		goto cleanup;
 	
@@ -183,18 +195,15 @@ static int ssh_stream_alloc(
 	return 0;
 }
 
-/* Temp */
-static int gitssh_extract_url_parts(
+static int git_ssh_extract_url_parts(
 	char **host,
 	char **username,
-	char **path,
 	const char *url)
 {
 	char *colon, *at;
 	const char *start;
     
     colon = strchr(url, ':');
-	at = strchr(url, '@');
 	
 	if (colon == NULL) {
 		giterr_set(GITERR_NET, "Malformed URL: missing :");
@@ -202,15 +211,15 @@ static int gitssh_extract_url_parts(
 	}
 	
 	start = url;
+	at = strchr(url, '@');
 	if (at) {
 		start = at+1;
 		*username = git__substrdup(url, at - url);
 	} else {
-		*username = "git";
+		*username = git__strdup(default_user);
 	}
 	
 	*host = git__substrdup(start, colon - start);
-	*path = colon+1;
 	
 	return 0;
 }
@@ -222,7 +231,8 @@ static int _git_ssh_setup_conn(
 	git_smart_subtransport_stream **stream
 )
 {
-	char *host, *user=NULL;
+	char *host, *port, *user=NULL, *pass=NULL;
+	const char *default_port = "22";
 	ssh_stream *s;
 	
 	*stream = NULL;
@@ -231,20 +241,34 @@ static int _git_ssh_setup_conn(
 	
 	s = (ssh_stream *)*stream;
 	
-	if (gitssh_extract_url_parts(&host, &user, &s->path, url) < 0)
+	if (!git__prefixcmp(url, prefix_ssh)) {
+		url = url + strlen(prefix_ssh);
+		if (gitno_extract_url_parts(&host, &port, &user, &pass, url, default_port) < 0)
+			return -1;
+	} else {
+		if (git_ssh_extract_url_parts(&host, &user, url) < 0)
+			goto on_error;
+		port = git__strdup(default_port);
+	}
+	
+	if (gitno_connect(&s->socket, host, port, 0) < 0)
 		goto on_error;
 	
-	if (gitno_connect(&s->socket, host, "22", 0) < 0)
-		goto on_error;
-	
-	if (t->owner->cred_acquire_cb(&t->cred,
-			t->owner->url,
-			user,
-			GIT_CREDTYPE_SSH_KEYFILE_PASSPHRASE,
-			t->owner->cred_acquire_payload) < 0)
-		return -1;
-	
+	if (user && pass) {
+		git_cred_userpass_plaintext_new(&t->cred, user, pass);
+	} else {
+		if (t->owner->cred_acquire_cb(&t->cred,
+				t->owner->url,
+				user,
+				GIT_CREDTYPE_USERPASS_PLAINTEXT | GIT_CREDTYPE_SSH_KEYFILE_PASSPHRASE,
+				t->owner->cred_acquire_payload) < 0)
+			return -1;
+	}
 	assert(t->cred);
+	
+	if (!user) {
+		user = git__strdup(default_user);
+	}
 	
 	git_cred_ssh_keyfile_passphrase *cred = (git_cred_ssh_keyfile_passphrase *)t->cred;
 	
