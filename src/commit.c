@@ -96,7 +96,6 @@ int git_commit_create_from_oids(
 	git_odb *odb;
 
 	assert(oid && repo && tree && parent_count >= 0);
-	assert(git_object_owner((const git_object *)tree) == repo);
 
 	git_oid__writebuf(&commit, "tree ", tree);
 

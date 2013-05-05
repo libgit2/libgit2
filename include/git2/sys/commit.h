@@ -25,8 +25,9 @@ GIT_BEGIN_DECL
  *
  * See documentation for `git_commit_create()` for information about the
  * parameters, as the meaning is identical excepting that `tree` and
- * `parents` now take `git_oid`.  This is a dangerous API in that the
- * `parents` list of `git_oid`s in not checked for validity.
+ * `parents` now take `git_oid`.  This is a dangerous API in that nor
+ * the `tree`, neither the `parents` list of `git_oid`s are checked for
+ * validity.
  */
 GIT_EXTERN(int) git_commit_create_from_oids(
 	git_oid *oid,
