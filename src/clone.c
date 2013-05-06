@@ -358,31 +358,41 @@ static int setup_remotes_and_fetch(
 	git_remote *origin;
 
 	/* Construct an origin remote */
-	if (!create_and_configure_origin(&origin, repo, url, options)) {
-		git_remote_set_update_fetchhead(origin, 0);
+	if ((retcode = create_and_configure_origin(&origin, repo, url, options)) < 0)
+		goto on_error;
 
-		/* Connect and download everything */
-		if (!git_remote_connect(origin, GIT_DIRECTION_FETCH)) {
-			if (!(retcode = git_remote_download(origin, options->fetch_progress_cb,
-						options->fetch_progress_payload))) {
-				/* Create "origin/foo" branches for all remote branches */
-				if (!git_remote_update_tips(origin)) {
-					/* Point HEAD to the requested branch */
-					if (options->checkout_branch) {
-						if (!update_head_to_branch(repo, options))
-							retcode = 0;
-					}
-					/* Point HEAD to the same ref as the remote's head */
-					else if (!update_head_to_remote(repo, origin)) {
-						retcode = 0;
-					}
-				}
-			}
-			git_remote_disconnect(origin);
-		}
-		git_remote_free(origin);
-	}
+	git_remote_set_update_fetchhead(origin, 0);
 
+	/* If the download_tags value has not been specified, then make sure to
+		* download tags as well. It is set here because we want to download tags
+		* on the initial clone, but do not want to persist the value in the
+		* configuration file.
+		*/
+	if (origin->download_tags == GIT_REMOTE_DOWNLOAD_TAGS_AUTO &&
+		((retcode = git_remote_add_fetch(origin, "refs/tags/*:refs/tags/*")) < 0))
+		goto on_error;
+
+	/* Connect and download everything */
+	if ((retcode = git_remote_connect(origin, GIT_DIRECTION_FETCH)) < 0)
+		goto on_error;
+
+	if ((retcode = git_remote_download(origin, options->fetch_progress_cb,
+		options->fetch_progress_payload)) < 0)
+		goto on_error;
+
+	/* Create "origin/foo" branches for all remote branches */
+	if ((retcode = git_remote_update_tips(origin)) < 0)
+		goto on_error;
+
+	/* Point HEAD to the requested branch */
+	if (options->checkout_branch)
+		retcode = update_head_to_branch(repo, options);
+	/* Point HEAD to the same ref as the remote's head */
+	else
+		retcode = update_head_to_remote(repo, origin);
+
+on_error:
+	git_remote_free(origin);
 	return retcode;
 }
 
@@ -425,7 +435,7 @@ static void normalize_options(git_clone_options *dst, const git_clone_options *s
 
 	/* Provide defaults for null pointers */
 	if (!dst->remote_name) dst->remote_name = "origin";
-	if (!dst->remote_autotag) dst->remote_autotag = GIT_REMOTE_DOWNLOAD_TAGS_ALL;
+	if (!dst->remote_autotag) dst->remote_autotag = GIT_REMOTE_DOWNLOAD_TAGS_AUTO;
 }
 
 int git_clone(
