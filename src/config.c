@@ -91,13 +91,15 @@ int git_config_add_file_ondisk(
 	int force)
 {
 	git_config_backend *file = NULL;
+	struct stat st;
 	int res;
 
 	assert(cfg && path);
 
-	if (!git_path_isfile(path)) {
-		giterr_set(GITERR_CONFIG, "Cannot find config file '%s'", path);
-		return GIT_ENOTFOUND;
+	res = p_stat(path, &st);
+	if (res < 0 && errno != ENOENT) {
+		giterr_set(GITERR_CONFIG, "Error stat'ing config file '%s'", path);
+		return -1;
 	}
 
 	if (git_config_file__ondisk(&file, path) < 0)
@@ -381,7 +383,6 @@ int git_config_set_string(git_config *cfg, const char *name, const char *value)
 
 	internal = git_vector_get(&cfg->files, 0);
 	if (!internal)
-		/* Should we auto-vivify .git/config? Tricky from this location */
 		return config_error_nofiles(name);
 	file = internal->file;
 
@@ -598,6 +599,33 @@ int git_config_find_system(char *system_config_path, size_t length)
 		system_config_path, length, git_config_find_system_r);
 }
 
+int git_config__global_location(git_buf *buf)
+{
+	const git_buf *paths;
+	const char *sep, *start;
+	size_t len;
+
+	if (git_futils_dirs_get(&paths, GIT_FUTILS_DIR_GLOBAL) < 0)
+		return -1;
+
+	/* no paths, so give up */
+	if (git_buf_len(paths) == 0)
+		return -1;
+
+	start = git_buf_cstr(paths);
+	sep = strchr(start, GIT_PATH_LIST_SEPARATOR);
+
+	if (sep)
+		len = sep - start;
+	else
+		len = paths->size;
+
+	if (git_buf_set(buf, start, len) < 0)
+		return -1;
+
+	return git_buf_joinpath(buf, buf->ptr, GIT_CONFIG_FILENAME_GLOBAL);
+}
+
 int git_config_open_default(git_config **out)
 {
 	int error;
@@ -606,9 +634,12 @@ int git_config_open_default(git_config **out)
 
 	error = git_config_new(&cfg);
 
-	if (!error && !git_config_find_global_r(&buf))
+	if (!error && (!git_config_find_global_r(&buf) ||
+		       !git_config__global_location(&buf))) {
 		error = git_config_add_file_ondisk(cfg, buf.ptr,
 			GIT_CONFIG_LEVEL_GLOBAL, 0);
+	} else {
+	}
 
 	if (!error && !git_config_find_xdg_r(&buf))
 		error = git_config_add_file_ondisk(cfg, buf.ptr,

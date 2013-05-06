@@ -309,7 +309,7 @@ void test_repo_open__no_config(void)
 	cl_git_pass(git_repository_open(&repo, "empty_standard_repo"));
 	cl_git_pass(git_repository_config(&config, repo));
 
-	cl_git_fail(git_config_set_string(config, "test.set", "42"));
+	cl_git_pass(git_config_set_string(config, "test.set", "42"));
 
 	git_config_free(config);
 	git_repository_free(repo);

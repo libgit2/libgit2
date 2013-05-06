@@ -594,6 +594,10 @@ int git_repository_config__weakptr(git_config **out, git_repository *repo)
 		git_config_find_xdg_r(&xdg_buf);
 		git_config_find_system_r(&system_buf);
 
+		/* If there is no global file, open a backend for it anyway */
+		if (git_buf_len(&global_buf) == 0)
+			git_config__global_location(&global_buf);
+
 		error = load_config(
 			&config, repo,
 			path_unless_empty(&global_buf),
