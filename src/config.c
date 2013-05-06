@@ -344,6 +344,13 @@ int git_config_delete_entry(git_config *cfg, const char *name)
  * Setters
  **************/
 
+static int config_error_nofiles(const char *name)
+{
+	giterr_set(GITERR_CONFIG,
+		"Cannot set value for '%s' when no config files exist", name);
+	return GIT_ENOTFOUND;
+}
+
 int git_config_set_int64(git_config *cfg, const char *name, int64_t value)
 {
 	char str_value[32]; /* All numbers should fit in here */
@@ -373,12 +380,9 @@ int git_config_set_string(git_config *cfg, const char *name, const char *value)
 	}
 
 	internal = git_vector_get(&cfg->files, 0);
-	if (!internal) {
+	if (!internal)
 		/* Should we auto-vivify .git/config? Tricky from this location */
-		giterr_set(GITERR_CONFIG, "Cannot set value when no config files exist");
-		return GIT_ENOTFOUND;
-	}
-
+		return config_error_nofiles(name);
 	file = internal->file;
 
 	error = file->set(file, name, value);
@@ -442,6 +446,12 @@ static int get_string_at_file(const char **out, const git_config_backend *file, 
 	return res;
 }
 
+static int config_error_notfound(const char *name)
+{
+	giterr_set(GITERR_CONFIG, "Config value '%s' was not found", name);
+	return GIT_ENOTFOUND;
+}
+
 static int get_string(const char **out, const git_config *cfg, const char *name)
 {
 	file_internal *internal;
@@ -454,7 +464,7 @@ static int get_string(const char **out, const git_config *cfg, const char *name)
 			return res;
 	}
 
-	return GIT_ENOTFOUND;
+	return config_error_notfound(name);
 }
 
 int git_config_get_bool(int *out, const git_config *cfg, const char *name)
@@ -494,7 +504,7 @@ int git_config_get_entry(const git_config_entry **out, const git_config *cfg, co
 			return ret;
 	}
 
-	return GIT_ENOTFOUND;
+	return config_error_notfound(name);
 }
 
 int git_config_get_multivar(const git_config *cfg, const char *name, const char *regexp,
@@ -517,7 +527,7 @@ int git_config_get_multivar(const git_config *cfg, const char *name, const char 
 			return ret;
 	}
 
-	return 0;
+	return (ret == GIT_ENOTFOUND) ? config_error_notfound(name) : 0;
 }
 
 int git_config_set_multivar(git_config *cfg, const char *name, const char *regexp, const char *value)
@@ -526,6 +536,8 @@ int git_config_set_multivar(git_config *cfg, const char *name, const char *regex
 	file_internal *internal;
 
 	internal = git_vector_get(&cfg->files, 0);
+	if (!internal)
+		return config_error_nofiles(name);
 	file = internal->file;
 
 	return file->set_multivar(file, name, regexp, value);

@@ -988,8 +988,10 @@ int git_futils_filestamp_check(
 	if (stamp == NULL)
 		return 1;
 
-	if (p_stat(path, &st) < 0)
+	if (p_stat(path, &st) < 0) {
+		giterr_set(GITERR_OS, "Could not stat '%s'", path);
 		return GIT_ENOTFOUND;
+	}
 
 	if (stamp->mtime == (git_time_t)st.st_mtime &&
 		stamp->size  == (git_off_t)st.st_size   &&

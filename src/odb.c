@@ -424,6 +424,14 @@ size_t git_odb_num_backends(git_odb *odb)
 	return odb->backends.length;
 }
 
+static int git_odb__error_unsupported_in_backend(const char *action)
+{
+	giterr_set(GITERR_ODB,
+		"Cannot %s - unsupported in the loaded odb backends", action);
+	return -1;
+}
+
+
 int git_odb_get_backend(git_odb_backend **out, git_odb *odb, size_t pos)
 {
 	backend_internal *internal;
@@ -436,6 +444,7 @@ int git_odb_get_backend(git_odb_backend **out, git_odb *odb, size_t pos)
 		return 0;
 	}
 
+	giterr_set(GITERR_ODB, "No ODB backend loaded at index " PRIuZ, pos);
 	return GIT_ENOTFOUND;
 }
 
@@ -472,7 +481,7 @@ static int add_default_backends(
 			return 0;
 	}
 #endif
-	
+
 	/* add the loose object backend */
 	if (git_odb_backend_loose(&loose, objects_dir, -1, 0) < 0 ||
 		add_backend_internal(db, loose, GIT_LOOSE_PRIORITY, as_alternates, inode) < 0)
@@ -495,9 +504,8 @@ static int load_alternates(git_odb *odb, const char *objects_dir, int alternate_
 	int result = 0;
 
 	/* Git reports an error, we just ignore anything deeper */
-	if (alternate_depth > GIT_ALTERNATES_MAX_DEPTH) {
+	if (alternate_depth > GIT_ALTERNATES_MAX_DEPTH)
 		return 0;
-	}
 
 	if (git_buf_joinpath(&alternates_path, objects_dir, GIT_ALTERNATES_FILE) < 0)
 		return -1;
@@ -687,18 +695,13 @@ int git_odb__read_header_or_object(
 
 int git_odb_read(git_odb_object **out, git_odb *db, const git_oid *id)
 {
-	size_t i;
+	size_t i, reads = 0;
 	int error;
 	bool refreshed = false;
 	git_rawobj raw;
 	git_odb_object *object;
 
 	assert(out && db && id);
-
-	if (db->backends.length == 0) {
-		giterr_set(GITERR_ODB, "Failed to lookup object: no backends loaded");
-		return GIT_ENOTFOUND;
-	}
 
 	*out = git_cache_get_raw(odb_cache(db), id);
 	if (*out != NULL)
@@ -711,8 +714,10 @@ attempt_lookup:
 		backend_internal *internal = git_vector_get(&db->backends, i);
 		git_odb_backend *b = internal->backend;
 
-		if (b->read != NULL)
+		if (b->read != NULL) {
+			++reads;
 			error = b->read(&raw.data, &raw.len, &raw.type, b, id);
+		}
 	}
 
 	if (error == GIT_ENOTFOUND && !refreshed) {
@@ -723,8 +728,11 @@ attempt_lookup:
 		goto attempt_lookup;
 	}
 
-	if (error && error != GIT_PASSTHROUGH)
+	if (error && error != GIT_PASSTHROUGH) {
+		if (!reads)
+			return git_odb__error_notfound("no match for id", id);
 		return error;
+	}
 
 	if ((object = odb_object__alloc(id, &raw)) == NULL)
 		return -1;
@@ -844,10 +852,10 @@ int git_odb_write(
 	if (!error || error == GIT_PASSTHROUGH)
 		return 0;
 
-	/* if no backends were able to write the object directly, we try a streaming
-	 * write to the backends; just write the whole object into the stream in one
-	 * push */
-
+	/* if no backends were able to write the object directly, we try a
+	 * streaming write to the backends; just write the whole object into the
+	 * stream in one push
+	 */
 	if ((error = git_odb_open_wstream(&stream, db, len, type)) != 0)
 		return error;
 
@@ -861,7 +869,7 @@ int git_odb_write(
 int git_odb_open_wstream(
 	git_odb_stream **stream, git_odb *db, size_t size, git_otype type)
 {
-	size_t i;
+	size_t i, writes = 0;
 	int error = GIT_ERROR;
 
 	assert(stream && db);
@@ -874,21 +882,26 @@ int git_odb_open_wstream(
 		if (internal->is_alternate)
 			continue;
 
-		if (b->writestream != NULL)
+		if (b->writestream != NULL) {
+			++writes;
 			error = b->writestream(stream, b, size, type);
-		else if (b->write != NULL)
+		} else if (b->write != NULL) {
+			++writes;
 			error = init_fake_wstream(stream, b, size, type);
+		}
 	}
 
 	if (error == GIT_PASSTHROUGH)
 		error = 0;
+	if (error < 0 && !writes)
+		error = git_odb__error_unsupported_in_backend("write object");
 
 	return error;
 }
 
 int git_odb_open_rstream(git_odb_stream **stream, git_odb *db, const git_oid *oid)
 {
-	size_t i;
+	size_t i, reads = 0;
 	int error = GIT_ERROR;
 
 	assert(stream && db);
@@ -897,19 +910,23 @@ int git_odb_open_rstream(git_odb_stream **stream, git_odb *db, const git_oid *oi
 		backend_internal *internal = git_vector_get(&db->backends, i);
 		git_odb_backend *b = internal->backend;
 
-		if (b->readstream != NULL)
+		if (b->readstream != NULL) {
+			++reads;
 			error = b->readstream(stream, b, oid);
+		}
 	}
 
 	if (error == GIT_PASSTHROUGH)
 		error = 0;
+	if (error < 0 && !reads)
+		error = git_odb__error_unsupported_in_backend("read object streamed");
 
 	return error;
 }
 
 int git_odb_write_pack(struct git_odb_writepack **out, git_odb *db, git_transfer_progress_callback progress_cb, void *progress_payload)
 {
-	size_t i;
+	size_t i, writes = 0;
 	int error = GIT_ERROR;
 
 	assert(out && db);
@@ -922,12 +939,16 @@ int git_odb_write_pack(struct git_odb_writepack **out, git_odb *db, git_transfer
 		if (internal->is_alternate)
 			continue;
 
-		if (b->writepack != NULL)
+		if (b->writepack != NULL) {
+			++writes;
 			error = b->writepack(out, b, progress_cb, progress_payload);
+		}
 	}
 
 	if (error == GIT_PASSTHROUGH)
 		error = 0;
+	if (error < 0 && !writes)
+		error = git_odb__error_unsupported_in_backend("write pack");
 
 	return error;
 }
