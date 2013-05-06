@@ -521,7 +521,8 @@ int git_branch_set_upstream(git_reference *branch, const char *upstream_name)
 		goto on_error;
 
 	if (local) {
-		if (git_buf_puts(&value, git_reference_name(branch)) < 0)
+		git_buf_clear(&value);
+		if (git_buf_puts(&value, git_reference_name(upstream)) < 0)
 			goto on_error;
 	} else {
 		/* Get the remoe-tracking branch's refname in its repo */
