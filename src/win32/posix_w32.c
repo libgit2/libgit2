@@ -314,9 +314,20 @@ int p_chmod(const char* path, mode_t mode)
 
 int p_rmdir(const char* path)
 {
+	int error;
 	wchar_t buf[GIT_WIN_PATH];
 	git__utf8_to_16(buf, GIT_WIN_PATH, path);
-	return _wrmdir(buf);
+
+	error = _wrmdir(buf);
+
+	/* _wrmdir() is documented to return EACCES if "A program has an open
+	 * handle to the directory."  This sounds like what everybody else calls
+	 * EBUSY.  Let's convert appropriate error codes.
+	 */
+	if (GetLastError() == ERROR_SHARING_VIOLATION)
+		errno = EBUSY;
+
+	return error;
 }
 
 int p_hide_directory__w32(const char *path)
