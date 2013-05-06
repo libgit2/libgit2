@@ -295,7 +295,18 @@ int p_getcwd(char *buffer_out, size_t size)
 
 int p_stat(const char* path, struct stat* buf)
 {
-	return do_lstat(path, buf, 0);
+	char target[GIT_WIN_PATH];
+	int error = 0;
+
+	error = do_lstat(path, buf, 0);
+
+	/* We need not do this in a loop to unwind chains of symlinks since
+	 * p_readlink calls GetFinalPathNameByHandle which does it for us. */
+	if (error >= 0 && S_ISLNK(buf->st_mode) &&
+		(error = p_readlink(path, target, GIT_WIN_PATH)) >= 0)
+		error = do_lstat(target, buf, 0);
+
+	return error;
 }
 
 int p_chdir(const char* path)
