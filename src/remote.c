@@ -63,8 +63,10 @@ static int download_tags_value(git_remote *remote, git_config *cfg)
 	else if (!error && !strcmp(val, "--tags"))
 		remote->download_tags = GIT_REMOTE_DOWNLOAD_TAGS_ALL;
 
-	if (error == GIT_ENOTFOUND)
+	if (error == GIT_ENOTFOUND) {
+		giterr_clear();
 		error = 0;
+	}
 
 	return error;
 }
@@ -210,6 +212,31 @@ static int refspec_cb(const git_config_entry *entry, void *payload)
 	return add_refspec(data->remote, entry->value, data->fetch);
 }
 
+static int get_optional_config(
+	git_config *config, git_buf *buf, git_config_foreach_cb cb, void *payload)
+{
+	int error = 0;
+	const char *key = git_buf_cstr(buf);
+
+	if (git_buf_oom(buf))
+		return -1;
+
+	if (cb != NULL)
+		error = git_config_get_multivar(config, key, NULL, cb, payload);
+	else
+		error = git_config_get_string(payload, config, key);
+
+	if (error == GIT_ENOTFOUND) {
+		giterr_clear();
+		error = 0;
+	}
+
+	if (error < 0)
+		error = -1;
+
+	return error;
+}
+
 int git_remote_load(git_remote **out, git_repository *repo, const char *name)
 {
 	git_remote *remote;
@@ -250,7 +277,7 @@ int git_remote_load(git_remote **out, git_repository *repo, const char *name)
 
 	if ((error = git_config_get_string(&val, config, git_buf_cstr(&buf))) < 0)
 		goto cleanup;
-	
+
 	if (strlen(val) == 0) {
 		giterr_set(GITERR_INVALID, "Malformed remote '%s' - missing URL", name);
 		error = -1;
@@ -261,60 +288,32 @@ int git_remote_load(git_remote **out, git_repository *repo, const char *name)
 	remote->url = git__strdup(val);
 	GITERR_CHECK_ALLOC(remote->url);
 
+	val = NULL;
 	git_buf_clear(&buf);
-	if (git_buf_printf(&buf, "remote.%s.pushurl", name) < 0) {
-		error = -1;
-		goto cleanup;
-	}
+	git_buf_printf(&buf, "remote.%s.pushurl", name);
 
-	error = git_config_get_string(&val, config, git_buf_cstr(&buf));
-	if (error == GIT_ENOTFOUND) {
-		val = NULL;
-		error = 0;
-	}
-
-	if (error < 0) {
-		error = -1;
+	if ((error = get_optional_config(config, &buf, NULL, &val)) < 0)
 		goto cleanup;
-	}
 
 	if (val) {
 		remote->pushurl = git__strdup(val);
 		GITERR_CHECK_ALLOC(remote->pushurl);
 	}
 
-	git_buf_clear(&buf);
-	if (git_buf_printf(&buf, "remote.%s.fetch", name) < 0) {
-		error = -1;
-		goto cleanup;
-	}
-
 	data.remote = remote;
 	data.fetch = true;
-	error = git_config_get_multivar(config, git_buf_cstr(&buf), NULL, refspec_cb, &data);
-	if (error == GIT_ENOTFOUND)
-		error = 0;
-
-	if (error < 0) {
-		error = -1;
-		goto cleanup;
-	}
-
 	git_buf_clear(&buf);
-	if (git_buf_printf(&buf, "remote.%s.push", name) < 0) {
-		error = -1;
+	git_buf_printf(&buf, "remote.%s.fetch", name);
+
+	if ((error = get_optional_config(config, &buf, refspec_cb, &data)) < 0)
 		goto cleanup;
-	}
 
 	data.fetch = false;
-	error = git_config_get_multivar(config, git_buf_cstr(&buf), NULL, refspec_cb, &data);
-	if (error == GIT_ENOTFOUND)
-		error = 0;
+	git_buf_clear(&buf);
+	git_buf_printf(&buf, "remote.%s.push", name);
 
-	if (error < 0) {
-		error = -1;
+	if ((error = get_optional_config(config, &buf, refspec_cb, &data)) < 0)
 		goto cleanup;
-	}
 
 	if (download_tags_value(remote, config) < 0)
 		goto cleanup;
@@ -336,7 +335,7 @@ static int update_config_refspec(const git_remote *remote, git_config *config, i
 	int push;
 	const char *dir;
 	size_t i;
-	int error = -1;
+	int error = 0;
 
 	push = direction == GIT_DIRECTION_PUSH;
 	dir = push ? "push" : "fetch";
@@ -345,9 +344,8 @@ static int update_config_refspec(const git_remote *remote, git_config *config, i
 		return -1;
 
 	/* Clear out the existing config */
-	do {
+	while (!error)
 		error = git_config_delete_entry(config, git_buf_cstr(&name));
-	} while (!error);
 
 	if (error != GIT_ENOTFOUND)
 		return error;
@@ -358,7 +356,8 @@ static int update_config_refspec(const git_remote *remote, git_config *config, i
 		if (spec->push != push)
 			continue;
 
-		if ((error = git_config_set_multivar(config, git_buf_cstr(&name), "", spec->string)) < 0) {
+		if ((error = git_config_set_multivar(
+				config, git_buf_cstr(&name), "", spec->string)) < 0) {
 			goto cleanup;
 		}
 	}

@@ -1598,6 +1598,7 @@ int git_repository_message(char *buffer, size_t len, git_repository *repo)
 	if ((error = p_stat(git_buf_cstr(&path), &st)) < 0) {
 		if (errno == ENOENT)
 			error = GIT_ENOTFOUND;
+		giterr_set(GITERR_OS, "Could not access message file");
 	}
 	else if (buffer != NULL) {
 		error = git_futils_readbuffer(&buf, git_buf_cstr(&path));

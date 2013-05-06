@@ -127,6 +127,7 @@ int git_merge_base_many(git_oid *out, git_repository *repo, const git_oid input_
 		goto cleanup;
 
 	if (!result) {
+		giterr_set(GITERR_MERGE, "No merge base found");
 		error = GIT_ENOTFOUND;
 		goto cleanup;
 	}
@@ -172,7 +173,7 @@ int git_merge_base(git_oid *out, git_repository *repo, const git_oid *one, const
 
 	if (!result) {
 		git_revwalk_free(walk);
-		giterr_clear();
+		giterr_set(GITERR_MERGE, "No merge base found");
 		return GIT_ENOTFOUND;
 	}
 

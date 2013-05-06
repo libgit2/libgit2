@@ -141,7 +141,7 @@ int git_status_foreach_ext(
 	/* if there is no HEAD, that's okay - we'll make an empty iterator */
 	if (((err = git_repository_head_tree(&head, repo)) < 0) &&
 		!(err == GIT_ENOTFOUND || err == GIT_EORPHANEDHEAD))
-			return err;
+		return err;
 
 	memcpy(&diffopt.pathspec, &opts->pathspec, sizeof(diffopt.pathspec));
 
@@ -238,7 +238,7 @@ static int get_one_status(const char *path, unsigned int status, void *data)
 		 p_fnmatch(sfi->expected, path, sfi->fnm_flags) != 0))
 	{
 		sfi->ambiguous = true;
-		return GIT_EAMBIGUOUS;
+		return GIT_EAMBIGUOUS; /* giterr_set will be done by caller */
 	}
 
 	return 0;

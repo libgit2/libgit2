@@ -397,18 +397,6 @@ on_error:
 }
 
 
-static bool path_is_okay(const char *path)
-{
-	/* The path must either not exist, or be an empty directory */
-	if (!git_path_exists(path)) return true;
-	if (!git_path_is_empty_dir(path)) {
-		giterr_set(GITERR_INVALID,
-					  "'%s' exists and is not an empty directory", path);
-		return false;
-	}
-	return true;
-}
-
 static bool should_checkout(
 	git_repository *repo,
 	bool is_bare,
@@ -454,7 +442,10 @@ int git_clone(
 	normalize_options(&normOptions, options);
 	GITERR_CHECK_VERSION(&normOptions, GIT_CLONE_OPTIONS_VERSION, "git_clone_options");
 
-	if (!path_is_okay(local_path)) {
+	/* Only clone to a new directory or an empty directory */
+	if (git_path_exists(local_path) && !git_path_is_empty_dir(local_path)) {
+		giterr_set(GITERR_INVALID,
+			"'%s' exists and is not an empty directory", local_path);
 		return GIT_ERROR;
 	}
 

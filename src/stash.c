@@ -587,8 +587,10 @@ int git_stash_foreach(
 	const git_reflog_entry *entry;
 
 	error = git_reference_lookup(&stash, repo, GIT_REFS_STASH_FILE);
-	if (error == GIT_ENOTFOUND)
+	if (error == GIT_ENOTFOUND) {
+		giterr_clear();
 		return 0;
+	}
 	if (error < 0)
 		goto cleanup;
 
@@ -651,7 +653,7 @@ int git_stash_drop(
 		const git_reflog_entry *entry;
 
 		entry = git_reflog_entry_byindex(reflog, 0);
-		
+
 		git_reference_free(stash);
 		error = git_reference_create(&stash, repo, GIT_REFS_STASH_FILE, &entry->oid_cur, 1);
 	}
