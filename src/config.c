@@ -227,6 +227,14 @@ static int git_config__add_internal(
 	return 0;
 }
 
+int git_config_open_global(git_config **cfg_out, git_config *cfg)
+{
+	if (!git_config_open_level(cfg_out, cfg, GIT_CONFIG_LEVEL_XDG))
+		return 0;
+
+	return git_config_open_level(cfg_out, cfg, GIT_CONFIG_LEVEL_GLOBAL);
+}
+
 int git_config_open_level(
     git_config **cfg_out,
     const git_config *cfg_parent,
