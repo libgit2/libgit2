@@ -237,7 +237,7 @@ GIT_EXTERN(int) git_branch_is_head(
  *
  * @return Number of characters in the reference name
  *     including the trailing NUL byte; GIT_ENOTFOUND
- *     when no remote matching remote was gound,
+ *     when no remote matching remote was found,
  *     GIT_EAMBIGUOUS when the branch maps to several remotes,
  *     otherwise an error code.
  */
