@@ -172,6 +172,7 @@ void test_clone_nonetwork__custom_push_spec(void)
 
 void test_clone_nonetwork__custom_autotag(void)
 {
+	git_remote *origin;
 	git_strarray tags = {0};
 
 	g_options.remote_autotag = GIT_REMOTE_DOWNLOAD_TAGS_NONE;
@@ -179,6 +180,23 @@ void test_clone_nonetwork__custom_autotag(void)
 
 	cl_git_pass(git_tag_list(&tags, g_repo));
 	cl_assert_equal_sz(0, tags.count);
+
+	cl_git_pass(git_remote_load(&origin, g_repo, "origin"));
+	cl_assert_equal_i(GIT_REMOTE_DOWNLOAD_TAGS_NONE, origin->download_tags);
+
+	git_strarray_free(&tags);
+}
+
+void test_clone_nonetwork__custom_autotag_tags_all(void)
+{
+	git_strarray tags = {0};
+	git_remote *origin;
+
+	g_options.remote_autotag = GIT_REMOTE_DOWNLOAD_TAGS_ALL;
+	cl_git_pass(git_clone(&g_repo, cl_git_fixture_url("testrepo.git"), "./foo", &g_options));
+
+	cl_git_pass(git_remote_load(&origin, g_repo, "origin"));
+	cl_assert_equal_i(GIT_REMOTE_DOWNLOAD_TAGS_ALL, origin->download_tags);
 
 	git_strarray_free(&tags);
 }
