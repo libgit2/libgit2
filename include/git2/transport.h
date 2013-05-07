@@ -11,6 +11,8 @@
 #include "net.h"
 #include "types.h"
 
+#include <libssh2.h>
+
 /**
  * @file git2/transport.h
  * @brief Git transport interfaces and functions
@@ -28,6 +30,7 @@ typedef enum {
 	/* git_cred_userpass_plaintext */
 	GIT_CREDTYPE_USERPASS_PLAINTEXT = 1,
 	GIT_CREDTYPE_SSH_KEYFILE_PASSPHRASE = 2,
+	GIT_CREDTYPE_SSH_PUBLICKEY = 3,
 } git_credtype_t;
 
 /* The base structure for all credential types */
@@ -44,13 +47,22 @@ typedef struct git_cred_userpass_plaintext {
 	char *password;
 } git_cred_userpass_plaintext;
 
-/* A plaintext username and password */
+/* A ssh key file and passphrase */
 typedef struct git_cred_ssh_keyfile_passphrase {
 	git_cred parent;
 	char *publickey;
 	char *privatekey;
 	char *passphrase;
 } git_cred_ssh_keyfile_passphrase;
+
+/* A ssh public key and authentication callback */
+typedef struct git_cred_ssh_publickey {
+	git_cred parent;
+	char *publickey;
+    size_t publickey_len;
+	void *sign_callback;
+	void *sign_data;
+} git_cred_ssh_publickey;
 
 /**
  * Creates a new plain-text username and password credential object.
@@ -81,6 +93,24 @@ GIT_EXTERN(int) git_cred_ssh_keyfile_passphrase_new(
 	const char *publickey,
 	const char *privatekey,
     const char *passphrase);
+
+/**
+ * Creates a new ssh public key credential object.
+ * The supplied credential parameter will be internally duplicated.
+ *
+ * @param out The newly created credential object.
+ * @param publickey The bytes of the public key.
+ * @param publickey_len The length of the public key in bytes.
+ * @param sign_callback The callback method for authenticating.
+ * @param sign_data The abstract data sent to the sign_callback method.
+ * @return 0 for success or an error code for failure
+ */
+GIT_EXTERN(int) git_cred_ssh_publickey_new(
+	git_cred **out,
+	const char *publickey,
+    size_t publickey_len,
+    LIBSSH2_USERAUTH_PUBLICKEY_SIGN_FUNC((*sign_callback)),
+    void *sign_data);
 
 /**
  * Signature of a function which acquires a credential object.

@@ -253,6 +253,18 @@ static int _git_ssh_authenticate_session(
 				);
 				break;
 			}
+			case GIT_CREDTYPE_SSH_PUBLICKEY: {
+				git_cred_ssh_publickey *c = (git_cred_ssh_publickey *)cred;
+				rc = libssh2_userauth_publickey(
+					session,
+					user,
+					(const unsigned char *)c->publickey,
+					c->publickey_len,
+					c->sign_callback,
+					&c->sign_data
+				);
+				break;
+			}
 			default:
 				rc = LIBSSH2_ERROR_AUTHENTICATION_FAILED;
 		}

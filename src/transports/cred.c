@@ -135,3 +135,52 @@ int git_cred_ssh_keyfile_passphrase_new(
 	*cred = &c->parent;
 	return 0;
 }
+
+static void ssh_publickey_free(struct git_cred *cred)
+{
+	git_cred_ssh_publickey *c = (git_cred_ssh_publickey *)cred;
+
+    git__free(c->publickey);
+
+    c->sign_callback = NULL;
+    c->sign_data = NULL;
+    
+	memset(c, 0, sizeof(*c));
+
+	git__free(c);
+}
+
+int git_cred_ssh_publickey_new(
+	git_cred **cred,
+	const char *publickey,
+    size_t publickey_len,
+	LIBSSH2_USERAUTH_PUBLICKEY_SIGN_FUNC((*sign_callback)),
+    void *sign_data)
+{
+	git_cred_ssh_publickey *c;
+
+	if (!cred)
+		return -1;
+
+	c = git__malloc(sizeof(git_cred_ssh_publickey));
+	GITERR_CHECK_ALLOC(c);
+
+	c->parent.credtype = GIT_CREDTYPE_SSH_PUBLICKEY;
+	c->parent.free = ssh_publickey_free;
+    
+    c->publickey = git__malloc(publickey_len);
+    memcpy(c->publickey, publickey, publickey_len);
+    
+    if (!c->publickey) {
+        git__free(c);
+        return -1;
+    }
+    
+    c->publickey_len = publickey_len;
+    
+    c->sign_callback = sign_callback;
+    c->sign_data = sign_data;
+
+	*cred = &c->parent;
+	return 0;
+}
