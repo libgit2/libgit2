@@ -930,11 +930,13 @@ static int diff_patch_line_cb(
 
 	switch (line_origin) {
 	case GIT_DIFF_LINE_ADDITION:
+	case GIT_DIFF_LINE_DEL_EOFNL:
 		line->oldno = -1;
 		line->newno = patch->newno;
 		patch->newno += line->lines;
 		break;
 	case GIT_DIFF_LINE_DELETION:
+	case GIT_DIFF_LINE_ADD_EOFNL:
 		line->oldno = patch->oldno;
 		line->newno = -1;
 		patch->oldno += line->lines;
