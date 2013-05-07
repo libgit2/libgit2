@@ -226,12 +226,16 @@ void test_diff_patch__hunks_have_correct_line_numbers(void)
 	size_t hdrlen, hunklen, textlen;
 	char origin;
 	int oldno, newno;
+	git_buf old_content = GIT_BUF_INIT, actual = GIT_BUF_INIT;
 	const char *new_content = "The Song of Seven Cities\n------------------------\n\nI WAS Lord of Cities very sumptuously builded.\nSeven roaring Cities paid me tribute from afar.\nIvory their outposts were--the guardrooms of them gilded,\nAnd garrisoned with Amazons invincible in war.\n\nThis is some new text;\nNot as good as the old text;\nBut here it is.\n\nSo they warred and trafficked only yesterday, my Cities.\nTo-day there is no mark or mound of where my Cities stood.\nFor the River rose at midnight and it washed away my Cities.\nThey are evened with Atlantis and the towns before the Flood.\n\nRain on rain-gorged channels raised the water-levels round them,\nFreshet backed on freshet swelled and swept their world from sight,\nTill the emboldened floods linked arms and, flashing forward, drowned them--\nDrowned my Seven Cities and their peoples in one night!\n\nLow among the alders lie their derelict foundations,\nThe beams wherein they trusted and the plinths whereon they built--\nMy rulers and their treasure and their unborn populations,\nDead, destroyed, aborted, and defiled with mud and silt!\n\nAnother replacement;\nBreaking up the poem;\nGenerating some hunks.\n\nTo the sound of trumpets shall their seed restore my Cities\nWealthy and well-weaponed, that once more may I behold\nAll the world go softly when it walks before my Cities,\nAnd the horses and the chariots fleeing from them as of old!\n\n  -- Rudyard Kipling\n";
 
 	g_repo = cl_git_sandbox_init("renames");
 
 	cl_git_pass(git_config_new(&cfg));
 	git_repository_set_config(g_repo, cfg);
+
+	cl_git_pass(
+		git_futils_readbuffer(&old_content, "renames/songof7cities.txt"));
 
 	cl_git_rewritefile("renames/songof7cities.txt", new_content);
 
@@ -263,21 +267,24 @@ void test_diff_patch__hunks_have_correct_line_numbers(void)
 	cl_git_pass(git_diff_patch_get_line_in_hunk(
 		&origin, &text, &textlen, &oldno, &newno, patch, 0, 0));
 	cl_assert_equal_i(GIT_DIFF_LINE_CONTEXT, (int)origin);
-	cl_assert(strncmp("Ivory their outposts were--the guardrooms of them gilded,\n", text, textlen) == 0);
+	cl_git_pass(git_buf_set(&actual, text, textlen));
+	cl_assert_equal_s("Ivory their outposts were--the guardrooms of them gilded,\n", actual.ptr);
 	cl_assert_equal_i(6, oldno);
 	cl_assert_equal_i(6, newno);
 
 	cl_git_pass(git_diff_patch_get_line_in_hunk(
 		&origin, &text, &textlen, &oldno, &newno, patch, 0, 3));
 	cl_assert_equal_i(GIT_DIFF_LINE_DELETION, (int)origin);
-	cl_assert(strncmp("All the world went softly when it walked before my Cities--\n", text, textlen) == 0);
+	cl_git_pass(git_buf_set(&actual, text, textlen));
+	cl_assert_equal_s("All the world went softly when it walked before my Cities--\n", actual.ptr);
 	cl_assert_equal_i(9, oldno);
 	cl_assert_equal_i(-1, newno);
 
 	cl_git_pass(git_diff_patch_get_line_in_hunk(
 		&origin, &text, &textlen, &oldno, &newno, patch, 0, 12));
 	cl_assert_equal_i(GIT_DIFF_LINE_ADDITION, (int)origin);
-	cl_assert(strncmp("This is some new text;\n", text, textlen) == 0);
+	cl_git_pass(git_buf_set(&actual, text, textlen));
+	cl_assert_equal_s("This is some new text;\n", actual.ptr);
 	cl_assert_equal_i(-1, oldno);
 	cl_assert_equal_i(9, newno);
 
@@ -298,37 +305,116 @@ void test_diff_patch__hunks_have_correct_line_numbers(void)
 	cl_git_pass(git_diff_patch_get_line_in_hunk(
 		&origin, &text, &textlen, &oldno, &newno, patch, 1, 0));
 	cl_assert_equal_i(GIT_DIFF_LINE_CONTEXT, (int)origin);
-	cl_assert(strncmp("My rulers and their treasure and their unborn populations,\n", text, textlen) == 0);
+	cl_git_pass(git_buf_set(&actual, text, textlen));
+	cl_assert_equal_s("My rulers and their treasure and their unborn populations,\n", actual.ptr);
 	cl_assert_equal_i(31, oldno);
 	cl_assert_equal_i(25, newno);
 
 	cl_git_pass(git_diff_patch_get_line_in_hunk(
 		&origin, &text, &textlen, &oldno, &newno, patch, 1, 3));
 	cl_assert_equal_i(GIT_DIFF_LINE_DELETION, (int)origin);
-	cl_assert(strncmp("The Daughters of the Palace whom they cherished in my Cities,\n", text, textlen) == 0);
+	cl_git_pass(git_buf_set(&actual, text, textlen));
+	cl_assert_equal_s("The Daughters of the Palace whom they cherished in my Cities,\n", actual.ptr);
 	cl_assert_equal_i(34, oldno);
 	cl_assert_equal_i(-1, newno);
 
 	cl_git_pass(git_diff_patch_get_line_in_hunk(
 		&origin, &text, &textlen, &oldno, &newno, patch, 1, 12));
 	cl_assert_equal_i(GIT_DIFF_LINE_ADDITION, (int)origin);
-	cl_assert(strncmp("Another replacement;\n", text, textlen) == 0);
+	cl_git_pass(git_buf_set(&actual, text, textlen));
+	cl_assert_equal_s("Another replacement;\n", actual.ptr);
 	cl_assert_equal_i(-1, oldno);
 	cl_assert_equal_i(28, newno);
 
 	git_diff_patch_free(patch);
 	git_diff_list_free(diff);
+
+	/* Let's check line numbers when there is no newline */
+
+	git_buf_rtrim(&old_content);
+	cl_git_rewritefile("renames/songof7cities.txt", old_content.ptr);
+
+	cl_git_pass(git_diff_tree_to_workdir(&diff, g_repo, head, &opt));
+
+	cl_assert_equal_i(1, (int)git_diff_num_deltas(diff));
+
+	cl_git_pass(git_diff_get_patch(&patch, &delta, diff, 0));
+
+	cl_assert_equal_i(GIT_DELTA_MODIFIED, (int)delta->status);
+	cl_assert_equal_i(1, (int)git_diff_patch_num_hunks(patch));
+
+	/* check hunk 0 */
+
+	cl_git_pass(
+		git_diff_patch_get_hunk(&range, &hdr, &hdrlen, &hunklen, patch, 0));
+
+	cl_assert_equal_i(6, (int)hunklen);
+
+	cl_assert_equal_i(46, (int)range->old_start);
+	cl_assert_equal_i(4, (int)range->old_lines);
+	cl_assert_equal_i(46, (int)range->new_start);
+	cl_assert_equal_i(4, (int)range->new_lines);
+
+	cl_assert_equal_i(6, (int)git_diff_patch_num_lines_in_hunk(patch, 0));
+
+	cl_git_pass(git_diff_patch_get_line_in_hunk(
+		&origin, &text, &textlen, &oldno, &newno, patch, 0, 1));
+	cl_assert_equal_i(GIT_DIFF_LINE_CONTEXT, (int)origin);
+	cl_git_pass(git_buf_set(&actual, text, textlen));
+	cl_assert_equal_s("And the horses and the chariots fleeing from them as of old!\n", actual.ptr);
+	cl_assert_equal_i(47, oldno);
+	cl_assert_equal_i(47, newno);
+
+	cl_git_pass(git_diff_patch_get_line_in_hunk(
+		&origin, &text, &textlen, &oldno, &newno, patch, 0, 2));
+	cl_assert_equal_i(GIT_DIFF_LINE_CONTEXT, (int)origin);
+	cl_git_pass(git_buf_set(&actual, text, textlen));
+	cl_assert_equal_s("\n", actual.ptr);
+	cl_assert_equal_i(48, oldno);
+	cl_assert_equal_i(48, newno);
+
+	cl_git_pass(git_diff_patch_get_line_in_hunk(
+		&origin, &text, &textlen, &oldno, &newno, patch, 0, 3));
+	cl_assert_equal_i(GIT_DIFF_LINE_DELETION, (int)origin);
+	cl_git_pass(git_buf_set(&actual, text, textlen));
+	cl_assert_equal_s("  -- Rudyard Kipling\n", actual.ptr);
+	cl_assert_equal_i(49, oldno);
+	cl_assert_equal_i(-1, newno);
+
+	cl_git_pass(git_diff_patch_get_line_in_hunk(
+		&origin, &text, &textlen, &oldno, &newno, patch, 0, 4));
+	cl_assert_equal_i(GIT_DIFF_LINE_ADDITION, (int)origin);
+	cl_git_pass(git_buf_set(&actual, text, textlen));
+	cl_assert_equal_s("  -- Rudyard Kipling", actual.ptr);
+	cl_assert_equal_i(-1, oldno);
+	cl_assert_equal_i(49, newno);
+
+	cl_git_pass(git_diff_patch_get_line_in_hunk(
+		&origin, &text, &textlen, &oldno, &newno, patch, 0, 5));
+	cl_assert_equal_i(GIT_DIFF_LINE_DEL_EOFNL, (int)origin);
+	cl_git_pass(git_buf_set(&actual, text, textlen));
+	cl_assert_equal_s("\n\\ No newline at end of file\n", actual.ptr);
+	cl_assert_equal_i(-1, oldno);
+	cl_assert_equal_i(49, newno);
+
+	git_diff_patch_free(patch);
+	git_diff_list_free(diff);
+
+	git_buf_free(&actual);
+	git_buf_free(&old_content);
 	git_tree_free(head);
 	git_config_free(cfg);
 }
 
 static void check_single_patch_stats(
-	git_repository *repo, size_t hunks, size_t adds, size_t dels)
+	git_repository *repo, size_t hunks,
+	size_t adds, size_t dels, size_t ctxt,
+	const char *expected)
 {
 	git_diff_list *diff;
 	git_diff_patch *patch;
 	const git_diff_delta *delta;
-	size_t actual_adds, actual_dels;
+	size_t actual_ctxt, actual_adds, actual_dels;
 
 	cl_git_pass(git_diff_index_to_workdir(&diff, repo, NULL, NULL));
 
@@ -339,11 +425,51 @@ static void check_single_patch_stats(
 
 	cl_assert_equal_i((int)hunks, (int)git_diff_patch_num_hunks(patch));
 
-	cl_git_pass(
-		git_diff_patch_line_stats(NULL, &actual_adds, &actual_dels, patch));
+	cl_git_pass( git_diff_patch_line_stats(
+		&actual_ctxt, &actual_adds, &actual_dels, patch) );
 
+	cl_assert_equal_sz(ctxt, actual_ctxt);
 	cl_assert_equal_sz(adds, actual_adds);
 	cl_assert_equal_sz(dels, actual_dels);
+
+	if (expected != NULL) {
+		char *text;
+		cl_git_pass(git_diff_patch_to_str(&text, patch));
+		cl_assert_equal_s(expected, text);
+		git__free(text);
+	}
+
+	/* walk lines in hunk with basic sanity checks */
+	for (; hunks > 0; --hunks) {
+		size_t i, max_i;
+		int lastoldno = -1, oldno, lastnewno = -1, newno;
+		char origin;
+
+		max_i = git_diff_patch_num_lines_in_hunk(patch, hunks - 1);
+
+		for (i = 0; i < max_i; ++i) {
+			int expected = 1;
+
+			cl_git_pass(git_diff_patch_get_line_in_hunk(
+				&origin, NULL, NULL, &oldno, &newno, patch, hunks - 1, i));
+
+			if (origin == GIT_DIFF_LINE_ADD_EOFNL ||
+				origin == GIT_DIFF_LINE_DEL_EOFNL ||
+				origin == GIT_DIFF_LINE_CONTEXT_EOFNL)
+				expected = 0;
+
+			if (oldno >= 0) {
+				if (lastoldno >= 0)
+					cl_assert_equal_i(expected, oldno - lastoldno);
+				lastoldno = oldno;
+			}
+			if (newno >= 0) {
+				if (lastnewno >= 0)
+					cl_assert_equal_i(expected, newno - lastnewno);
+				lastnewno = newno;
+			}
+		}
+	}
 
 	git_diff_patch_free(patch);
 	git_diff_list_free(diff);
@@ -369,14 +495,14 @@ void test_diff_patch__line_counts_with_eofnl(void)
 	git_buf_consume(&content, end);
 	cl_git_rewritefile("renames/songof7cities.txt", content.ptr);
 
-	check_single_patch_stats(g_repo, 1, 0, 1);
+	check_single_patch_stats(g_repo, 1, 0, 1, 3, NULL);
 
 	/* remove trailing whitespace */
 
 	git_buf_rtrim(&content);
 	cl_git_rewritefile("renames/songof7cities.txt", content.ptr);
 
-	check_single_patch_stats(g_repo, 2, 1, 2);
+	check_single_patch_stats(g_repo, 2, 1, 2, 6, NULL);
 
 	/* add trailing whitespace */
 
@@ -388,7 +514,45 @@ void test_diff_patch__line_counts_with_eofnl(void)
 	cl_git_pass(git_buf_putc(&content, '\n'));
 	cl_git_rewritefile("renames/songof7cities.txt", content.ptr);
 
-	check_single_patch_stats(g_repo, 1, 1, 1);
+	check_single_patch_stats(g_repo, 1, 1, 1, 3, NULL);
+
+	/* no trailing whitespace as context line */
+
+	{
+		/* walk back a couple lines, make space and insert char */
+		char *scan = content.ptr + content.size;
+		int i;
+
+		for (i = 0; i < 5; ++i) {
+			for (--scan; scan > content.ptr && *scan != '\n'; --scan)
+				/* seek to prev \n */;
+		}
+		cl_assert(scan > content.ptr);
+
+		/* overwrite trailing \n with right-shifted content */
+		memmove(scan + 1, scan, content.size - (scan - content.ptr) - 1);
+		/* insert '#' char into space we created */
+		scan[1] = '#';
+	}
+	cl_git_rewritefile("renames/songof7cities.txt", content.ptr);
+
+	check_single_patch_stats(
+		g_repo, 1, 1, 1, 6,
+		/* below is pasted output of 'git diff' with fn context removed */
+		"diff --git a/songof7cities.txt b/songof7cities.txt\n"
+		"index 378a7d9..3d0154e 100644\n"
+		"--- a/songof7cities.txt\n"
+		"+++ b/songof7cities.txt\n"
+		"@@ -42,7 +42,7 @@\n"
+		" \n"
+		" To the sound of trumpets shall their seed restore my Cities\n"
+		" Wealthy and well-weaponed, that once more may I behold\n"
+		"-All the world go softly when it walks before my Cities,\n"
+		"+#All the world go softly when it walks before my Cities,\n"
+		" And the horses and the chariots fleeing from them as of old!\n"
+		" \n"
+		"   -- Rudyard Kipling\n"
+		"\\ No newline at end of file\n");
 
 	git_buf_free(&content);
 	git_config_free(cfg);
