@@ -685,7 +685,7 @@ static int GIT_STDLIB_CALL git__qsort_r_glue_cmp(
 void git__qsort_r(
 	void *els, size_t nel, size_t elsize, git__sort_r_cmp cmp, void *payload)
 {
-#if defined(__MINGW32__) || defined(__OpenBSD__)
+#if defined(__MINGW32__) || defined(__OpenBSD__) || defined(AMIGA)
 	git__insertsort_r(els, nel, elsize, NULL, cmp, payload);
 #elif defined(GIT_WIN32)
 	git__qsort_r_glue glue = { cmp, payload };
