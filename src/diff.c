@@ -389,6 +389,9 @@ static int diff_list_apply_options(
 
 	/* Don't set GIT_DIFFCAPS_USE_DEV - compile time option in core git */
 
+	/* Set GIT_DIFFCAPS_TRUST_NANOSECS on a platform basis */
+	diff->diffcaps = diff->diffcaps | GIT_DIFFCAPS_TRUST_NANOSECS;
+
 	/* If not given explicit `opts`, check `diff.xyz` configs */
 	if (!opts) {
 		diff->opts.context_lines = config_int(cfg, "diff.context", 3);
@@ -529,6 +532,13 @@ cleanup:
 	return result;
 }
 
+static bool diff_time_eq(
+	const git_index_time *a, const git_index_time *b, bool use_nanos)
+{
+	return a->seconds == a->seconds &&
+		(!use_nanos || a->nanoseconds == b->nanoseconds);
+}
+
 typedef struct {
 	git_repository *repo;
 	git_iterator *old_iter;
@@ -540,11 +550,51 @@ typedef struct {
 
 #define MODE_BITS_MASK 0000777
 
+static int maybe_modified_submodule(
+	git_delta_t *status,
+	git_oid *found_oid,
+	git_diff_list *diff,
+	diff_in_progress *info)
+{
+	int error = 0;
+	git_submodule *sub;
+	unsigned int sm_status = 0;
+	const git_oid *sm_oid;
+
+	*status = GIT_DELTA_UNMODIFIED;
+
+	if (!DIFF_FLAG_IS_SET(diff, GIT_DIFF_IGNORE_SUBMODULES) &&
+		!(error = git_submodule_lookup(
+			  &sub, diff->repo, info->nitem->path)) &&
+		git_submodule_ignore(sub) != GIT_SUBMODULE_IGNORE_ALL &&
+		!(error = git_submodule_status(&sm_status, sub)))
+	{
+		/* check IS_WD_UNMODIFIED because this case is only used
+		 * when the new side of the diff is the working directory
+		 */
+		if (!GIT_SUBMODULE_STATUS_IS_WD_UNMODIFIED(sm_status))
+			*status = GIT_DELTA_MODIFIED;
+
+		/* grab OID while we are here */
+		if (git_oid_iszero(&info->nitem->oid) &&
+			(sm_oid = git_submodule_wd_id(sub)) != NULL)
+			git_oid_cpy(found_oid, sm_oid);
+	}
+
+	/* GIT_EEXISTS means a dir with .git in it was found - ignore it */
+	if (error == GIT_EEXISTS) {
+		giterr_clear();
+		error = 0;
+	}
+
+	return error;
+}
+
 static int maybe_modified(
 	git_diff_list *diff,
 	diff_in_progress *info)
 {
-	git_oid noid, *use_noid = NULL;
+	git_oid noid;
 	git_delta_t status = GIT_DELTA_MODIFIED;
 	const git_index_entry *oitem = info->oitem;
 	const git_index_entry *nitem = info->nitem;
@@ -559,6 +609,8 @@ static int maybe_modified(
 			DIFF_FLAG_IS_SET(diff, GIT_DIFF_DELTAS_ARE_ICASE),
 			&matched_pathspec))
 		return 0;
+
+	memset(&noid, 0, sizeof(noid));
 
 	/* on platforms with no symlinks, preserve mode of existing symlinks */
 	if (S_ISLNK(omode) && S_ISREG(nmode) && new_is_workdir &&
@@ -600,55 +652,30 @@ static int maybe_modified(
 	 * circumstances that can accelerate things or need special handling
 	 */
 	else if (git_oid_iszero(&nitem->oid) && new_is_workdir) {
+		bool use_ctime = ((diff->diffcaps & GIT_DIFFCAPS_TRUST_CTIME) != 0);
+		bool use_nanos = ((diff->diffcaps & GIT_DIFFCAPS_TRUST_NANOSECS) != 0);
+
+		status = GIT_DELTA_UNMODIFIED;
+
 		/* TODO: add check against index file st_mtime to avoid racy-git */
 
-		/* if the stat data looks exactly alike, then assume the same */
-		if (omode == nmode &&
-			oitem->file_size == nitem->file_size &&
-			(!(diff->diffcaps & GIT_DIFFCAPS_TRUST_CTIME) ||
-			 (oitem->ctime.seconds == nitem->ctime.seconds)) &&
-			oitem->mtime.seconds == nitem->mtime.seconds &&
-			(!(diff->diffcaps & GIT_DIFFCAPS_USE_DEV) ||
-			 (oitem->dev == nitem->dev)) &&
-			oitem->ino == nitem->ino &&
-			oitem->uid == nitem->uid &&
-			oitem->gid == nitem->gid)
-			status = GIT_DELTA_UNMODIFIED;
-
-		else if (S_ISGITLINK(nmode)) {
-			int err;
-			git_submodule *sub;
-
-			if (DIFF_FLAG_IS_SET(diff, GIT_DIFF_IGNORE_SUBMODULES))
-				status = GIT_DELTA_UNMODIFIED;
-			else if ((err = git_submodule_lookup(&sub, diff->repo, nitem->path)) < 0) {
-				if (err == GIT_EEXISTS)
-					status = GIT_DELTA_UNMODIFIED;
-				else
-					return err;
-			} else if (git_submodule_ignore(sub) == GIT_SUBMODULE_IGNORE_ALL)
-				status = GIT_DELTA_UNMODIFIED;
-			else {
-				unsigned int sm_status = 0;
-				if (git_submodule_status(&sm_status, sub) < 0)
-					return -1;
-
-				/* check IS_WD_UNMODIFIED because this case is only used
-				 * when the new side of the diff is the working directory
-				 */
-				status = GIT_SUBMODULE_STATUS_IS_WD_UNMODIFIED(sm_status)
-						 ? GIT_DELTA_UNMODIFIED : GIT_DELTA_MODIFIED;
-
-				/* grab OID while we are here */
-				if (git_oid_iszero(&nitem->oid)) {
-					const git_oid *sm_oid = git_submodule_wd_id(sub);
-					if (sm_oid != NULL) {
-						git_oid_cpy(&noid, sm_oid);
-						use_noid = &noid;
-					}
-				}
-			}
+		if (S_ISGITLINK(nmode)) {
+			if (maybe_modified_submodule(&status, &noid, diff, info) < 0)
+				return -1;
 		}
+
+		/* if the stat data looks different, then mark modified - this just
+		 * means that the OID will be recalculated below to confirm change
+		 */
+		else if (omode != nmode ||
+			oitem->file_size != nitem->file_size ||
+			!diff_time_eq(&oitem->mtime, &nitem->mtime, use_nanos) ||
+			(use_ctime &&
+			 !diff_time_eq(&oitem->ctime, &nitem->ctime, use_nanos)) ||
+			oitem->ino != nitem->ino ||
+			oitem->uid != nitem->uid ||
+			oitem->gid != nitem->gid)
+			status = GIT_DELTA_MODIFIED;
 	}
 
 	/* if mode is GITLINK and submodules are ignored, then skip */
@@ -660,11 +687,10 @@ static int maybe_modified(
 	 * haven't calculated the OID of the new item, then calculate it now
 	 */
 	if (status != GIT_DELTA_UNMODIFIED && git_oid_iszero(&nitem->oid)) {
-		if (!use_noid) {
+		if (git_oid_iszero(&noid)) {
 			if (git_diff__oid_for_file(diff->repo,
 					nitem->path, nitem->mode, nitem->file_size, &noid) < 0)
 				return -1;
-			use_noid = &noid;
 		}
 
 		/* if oid matches, then mark unmodified (except submodules, where
@@ -672,12 +698,13 @@ static int maybe_modified(
 		 * matches between the index and the workdir HEAD)
 		 */
 		if (omode == nmode && !S_ISGITLINK(omode) &&
-			git_oid_equal(&oitem->oid, use_noid))
+			git_oid_equal(&oitem->oid, &noid))
 			status = GIT_DELTA_UNMODIFIED;
 	}
 
 	return diff_delta__from_two(
-		diff, status, oitem, omode, nitem, nmode, use_noid, matched_pathspec);
+		diff, status, oitem, omode, nitem, nmode,
+		git_oid_iszero(&noid) ? NULL : &noid, matched_pathspec);
 }
 
 static bool entry_is_prefixed(
