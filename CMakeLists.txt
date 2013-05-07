@@ -288,6 +288,15 @@ ELSE()
 ENDIF()
 FILE(GLOB SRC_GIT2 src/*.c src/transports/*.c src/xdiff/*.c)
 
+# Determine architecture of the machine
+IF (CMAKE_SIZEOF_VOID_P EQUAL 8)
+	ADD_DEFINITIONS(-DGIT_ARCH_64)
+ELSEIF (CMAKE_SIZEOF_VOID_P EQUAL 4)
+	ADD_DEFINITIONS(-DGIT_ARCH_32)
+ELSE()
+	message(FATAL_ERROR "Unsupported architecture")
+ENDIF()
+
 # Compile and link libgit2
 ADD_LIBRARY(git2 ${SRC_GIT2} ${SRC_OS} ${SRC_ZLIB} ${SRC_HTTP} ${SRC_REGEX} ${SRC_SHA1} ${WIN_RC})
 TARGET_LINK_LIBRARIES(git2 ${SSL_LIBRARIES})
@@ -296,7 +305,7 @@ TARGET_OS_LIBRARIES(git2)
 
 # Workaround for Cmake bug #0011240 (see http://public.kitware.com/Bug/view.php?id=11240)
 # Win64+MSVC+static libs = linker error
-IF(MSVC AND NOT BUILD_SHARED_LIBS AND (${CMAKE_SIZEOF_VOID_P} MATCHES "8") )
+IF(MSVC AND GIT_ARCH_64 AND NOT BUILD_SHARED_LIBS)
   SET_TARGET_PROPERTIES(git2 PROPERTIES STATIC_LIBRARY_FLAGS "/MACHINE:x64")
 ENDIF()
 

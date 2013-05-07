@@ -170,7 +170,7 @@ int git_diff_merge(
 	return error;
 }
 
-static int find_similar__hashsig_for_file(
+int git_diff_find_similar__hashsig_for_file(
 	void **out, const git_diff_file *f, const char *path, void *p)
 {
 	git_hashsig_option_t opt = (git_hashsig_option_t)p;
@@ -187,12 +187,12 @@ static int find_similar__hashsig_for_file(
 	return error;
 }
 
-static int find_similar__hashsig_for_buf(
+int git_diff_find_similar__hashsig_for_buf(
 	void **out, const git_diff_file *f, const char *buf, size_t len, void *p)
 {
 	git_hashsig_option_t opt = (git_hashsig_option_t)p;
 	int error = 0;
-	
+
 	GIT_UNUSED(f);
 	error = git_hashsig_create((git_hashsig **)out, buf, len, opt);
 	
@@ -204,13 +204,13 @@ static int find_similar__hashsig_for_buf(
 	return error;
 }
 
-static void find_similar__hashsig_free(void *sig, void *payload)
+void git_diff_find_similar__hashsig_free(void *sig, void *payload)
 {
 	GIT_UNUSED(payload);
 	git_hashsig_free(sig);
 }
 
-static int find_similar__calc_similarity(
+int git_diff_find_similar__calc_similarity(
 	int *score, void *siga, void *sigb, void *payload)
 {
 	GIT_UNUSED(payload);
@@ -291,10 +291,10 @@ static int normalize_find_opts(
 		opts->metric = git__malloc(sizeof(git_diff_similarity_metric));
 		GITERR_CHECK_ALLOC(opts->metric);
 
-		opts->metric->file_signature = find_similar__hashsig_for_file;
-		opts->metric->buffer_signature = find_similar__hashsig_for_buf;
-		opts->metric->free_signature = find_similar__hashsig_free;
-		opts->metric->similarity = find_similar__calc_similarity;
+		opts->metric->file_signature = git_diff_find_similar__hashsig_for_file;
+		opts->metric->buffer_signature = git_diff_find_similar__hashsig_for_buf;
+		opts->metric->free_signature = git_diff_find_similar__hashsig_free;
+		opts->metric->similarity = git_diff_find_similar__calc_similarity;
 
 		if (opts->flags & GIT_DIFF_FIND_IGNORE_WHITESPACE)
 			opts->metric->payload = (void *)GIT_HASHSIG_IGNORE_WHITESPACE;
@@ -429,7 +429,7 @@ static int similarity_measure(
 	if (GIT_MODE_TYPE(a_file->mode) != GIT_MODE_TYPE(b_file->mode))
 		return 0;
 
-	if (git_oid_cmp(&a_file->oid, &b_file->oid) == 0)
+	if (git_oid__cmp(&a_file->oid, &b_file->oid) == 0)
 		return 100;
 
 	/* update signature cache if needed */

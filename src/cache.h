@@ -12,30 +12,49 @@
 #include "git2/odb.h"
 
 #include "thread-utils.h"
+#include "oidmap.h"
 
-#define GIT_DEFAULT_CACHE_SIZE 128
-
-typedef void (*git_cached_obj_freeptr)(void *);
+enum {
+	GIT_CACHE_STORE_ANY = 0,
+	GIT_CACHE_STORE_RAW = 1,
+	GIT_CACHE_STORE_PARSED = 2
+};
 
 typedef struct {
-	git_oid oid;
+	git_oid    oid;
+	int16_t    type;  /* git_otype value */
+	uint16_t   flags; /* GIT_CACHE_STORE value */
+	size_t     size;
 	git_atomic refcount;
 } git_cached_obj;
 
 typedef struct {
-	git_cached_obj **nodes;
-	git_mutex lock;
-
-	unsigned int lru_count;
-	size_t size_mask;
-	git_cached_obj_freeptr free_obj;
+	git_oidmap *map;
+	git_mutex   lock;
+	ssize_t     used_memory;
 } git_cache;
 
-int git_cache_init(git_cache *cache, size_t size, git_cached_obj_freeptr free_ptr);
-void git_cache_free(git_cache *cache);
+extern bool git_cache__enabled;
+extern ssize_t git_cache__max_storage;
+extern git_atomic_ssize git_cache__current_storage;
 
-void *git_cache_try_store(git_cache *cache, void *entry);
-void *git_cache_get(git_cache *cache, const git_oid *oid);
+int git_cache_set_max_object_size(git_otype type, size_t size);
+
+int git_cache_init(git_cache *cache);
+void git_cache_free(git_cache *cache);
+void git_cache_clear(git_cache *cache);
+
+void *git_cache_store_raw(git_cache *cache, git_odb_object *entry);
+void *git_cache_store_parsed(git_cache *cache, git_object *entry);
+
+git_odb_object *git_cache_get_raw(git_cache *cache, const git_oid *oid);
+git_object *git_cache_get_parsed(git_cache *cache, const git_oid *oid);
+void *git_cache_get_any(git_cache *cache, const git_oid *oid);
+
+GIT_INLINE(size_t) git_cache_size(git_cache *cache)
+{
+	return (size_t)kh_size(cache->map);
+}
 
 GIT_INLINE(void) git_cached_obj_incref(void *_obj)
 {
@@ -43,12 +62,6 @@ GIT_INLINE(void) git_cached_obj_incref(void *_obj)
 	git_atomic_inc(&obj->refcount);
 }
 
-GIT_INLINE(void) git_cached_obj_decref(void *_obj, git_cached_obj_freeptr free_obj)
-{
-	git_cached_obj *obj = _obj;
-
-	if (git_atomic_dec(&obj->refcount) == 0)
-		free_obj(obj);
-}
+void git_cached_obj_decref(void *_obj);
 
 #endif

@@ -160,7 +160,7 @@ static int tracking_branch_list_cb(const char *branch_name, git_branch_t branch_
  */
 static void verify_tracking_branches(git_remote *remote, expected_ref expected_refs[], size_t expected_refs_len)
 {
-	git_refspec *fetch_spec = &remote->fetch;
+	git_refspec *fetch_spec;
 	size_t i, j;
 	git_buf msg = GIT_BUF_INIT;
 	git_buf ref_name = GIT_BUF_INIT;
@@ -179,7 +179,8 @@ static void verify_tracking_branches(git_remote *remote, expected_ref expected_r
 		/* Convert remote reference name into tracking branch name.
 		 * If the spec is not under refs/heads/, then skip.
 		 */
-		if (!git_refspec_src_matches(fetch_spec, expected_refs[i].name))
+		fetch_spec = git_remote__matching_refspec(remote, expected_refs[i].name);
+		if (!fetch_spec)
 			continue;
 
 		cl_git_pass(git_refspec_transform_r(&ref_name, fetch_spec, expected_refs[i].name));

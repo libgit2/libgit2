@@ -131,8 +131,10 @@ enum {
 	GIT_OPT_SET_MWINDOW_MAPPED_LIMIT,
 	GIT_OPT_GET_SEARCH_PATH,
 	GIT_OPT_SET_SEARCH_PATH,
-	GIT_OPT_GET_ODB_CACHE_SIZE,
-	GIT_OPT_SET_ODB_CACHE_SIZE,
+	GIT_OPT_SET_CACHE_OBJECT_LIMIT,
+	GIT_OPT_SET_CACHE_MAX_SIZE,
+	GIT_OPT_ENABLE_CACHING,
+	GIT_OPT_GET_CACHED_MEMORY
 };
 
 /**
@@ -140,43 +142,42 @@ enum {
  *
  * Available options:
  *
- *	opts(GIT_OPT_GET_MWINDOW_SIZE, size_t *):
- *		Get the maximum mmap window size
+ *	* opts(GIT_OPT_GET_MWINDOW_SIZE, size_t *):
  *
- *	opts(GIT_OPT_SET_MWINDOW_SIZE, size_t):
- *		Set the maximum mmap window size
+ *		> Get the maximum mmap window size
  *
- *	opts(GIT_OPT_GET_MWINDOW_MAPPED_LIMIT, size_t *):
- *		Get the maximum memory that will be mapped in total by the library
+ *	* opts(GIT_OPT_SET_MWINDOW_SIZE, size_t):
  *
- *	opts(GIT_OPT_SET_MWINDOW_MAPPED_LIMIT, size_t):
- *		Set the maximum amount of memory that can be mapped at any time
+ *		> Set the maximum mmap window size
+ *
+ *	* opts(GIT_OPT_GET_MWINDOW_MAPPED_LIMIT, size_t *):
+ *
+ *		> Get the maximum memory that will be mapped in total by the library
+ *
+ *	* opts(GIT_OPT_SET_MWINDOW_MAPPED_LIMIT, size_t):
+ *
+ *		>Set the maximum amount of memory that can be mapped at any time
  *		by the library
  *
- *	opts(GIT_OPT_GET_SEARCH_PATH, int level, char *out, size_t len)
- *		Get the search path for a given level of config data.  "level" must
- *		be one of GIT_CONFIG_LEVEL_SYSTEM, GIT_CONFIG_LEVEL_GLOBAL, or
- *		GIT_CONFIG_LEVEL_XDG.  The search path is written to the `out`
- *		buffer up to size `len`.  Returns GIT_EBUFS if buffer is too small.
+ *	* opts(GIT_OPT_GET_SEARCH_PATH, int level, char *out, size_t len)
  *
- *	opts(GIT_OPT_SET_SEARCH_PATH, int level, const char *path)
- *		Set the search path for a level of config data.  The search path
- *		applied to shared attributes and ignore files, too.
- *      - `path` lists directories delimited by GIT_PATH_LIST_SEPARATOR.
- *		  Pass NULL to reset to the default (generally based on environment
- *		  variables).  Use magic path `$PATH` to include the old value
- *		  of the path (if you want to prepend or append, for instance).
- *		- `level` must be GIT_CONFIG_LEVEL_SYSTEM, GIT_CONFIG_LEVEL_GLOBAL,
- *		  or GIT_CONFIG_LEVEL_XDG.
+ *		> Get the search path for a given level of config data.  "level" must
+ *		> be one of `GIT_CONFIG_LEVEL_SYSTEM`, `GIT_CONFIG_LEVEL_GLOBAL`, or
+ *		> `GIT_CONFIG_LEVEL_XDG`.  The search path is written to the `out`
+ *		> buffer up to size `len`.  Returns GIT_EBUFS if buffer is too small.
  *
- *	opts(GIT_OPT_GET_ODB_CACHE_SIZE):
- *		Get the size of the libgit2 odb cache.
+ *	* opts(GIT_OPT_SET_SEARCH_PATH, int level, const char *path)
  *
- *	opts(GIT_OPT_SET_ODB_CACHE_SIZE):
- *		Set the size of the of the libgit2 odb cache. This needs
- *		to be done before git_repository_open is called, since
- *		git_repository_open initializes the odb layer. Defaults
- *		to 128.
+ *		> Set the search path for a level of config data.  The search path
+ *		> applied to shared attributes and ignore files, too.
+ *		>
+ *		> - `path` lists directories delimited by GIT_PATH_LIST_SEPARATOR.
+ *		>   Pass NULL to reset to the default (generally based on environment
+ *		>   variables).  Use magic path `$PATH` to include the old value
+ *		>   of the path (if you want to prepend or append, for instance).
+ *		>
+ *		> - `level` must be GIT_CONFIG_LEVEL_SYSTEM, GIT_CONFIG_LEVEL_GLOBAL,
+ *		>   or GIT_CONFIG_LEVEL_XDG.
  *
  * @param option Option key
  * @param ... value to set the option

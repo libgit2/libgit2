@@ -13,18 +13,15 @@
 #include "git2/object.h"
 #include "git2/repository.h"
 #include "git2/signature.h"
+#include "git2/odb_backend.h"
 
-void git_tag__free(git_tag *tag)
+void git_tag__free(void *_tag)
 {
+	git_tag *tag = _tag;
 	git_signature_free(tag->tagger);
 	git__free(tag->message);
 	git__free(tag->tag_name);
 	git__free(tag);
-}
-
-const git_oid *git_tag_id(const git_tag *c)
-{
-	return git_object_id((const git_object *)c);
 }
 
 int git_tag_target(git_object **target, const git_tag *t)
@@ -68,7 +65,7 @@ static int tag_error(const char *str)
 	return -1;
 }
 
-int git_tag__parse_buffer(git_tag *tag, const char *buffer, size_t length)
+static int tag_parse(git_tag *tag, const char *buffer, const char *buffer_end)
 {
 	static const char *tag_types[] = {
 		NULL, "commit\n", "tree\n", "blob\n", "tag\n"
@@ -77,8 +74,6 @@ int git_tag__parse_buffer(git_tag *tag, const char *buffer, size_t length)
 	unsigned int i;
 	size_t text_len;
 	char *search;
-
-	const char *buffer_end = buffer + length;
 
 	if (git_oid__parse(&tag->target, &buffer, buffer_end, "object ") < 0)
 		return tag_error("Object field invalid");
@@ -154,6 +149,15 @@ int git_tag__parse_buffer(git_tag *tag, const char *buffer, size_t length)
 	}
 
 	return 0;
+}
+
+int git_tag__parse(void *_tag, git_odb_object *odb_obj)
+{
+	git_tag *tag = _tag;
+	const char *buffer = git_odb_object_data(odb_obj);
+	const char *buffer_end = buffer + git_odb_object_size(odb_obj);
+
+	return tag_parse(tag, buffer, buffer_end);
 }
 
 static int retrieve_tag_reference(
@@ -276,23 +280,23 @@ cleanup:
 }
 
 int git_tag_create(
-		git_oid *oid,
-		git_repository *repo,
-		const char *tag_name,
-		const git_object *target,
-		const git_signature *tagger,
-		const char *message,
-		int allow_ref_overwrite)
+	git_oid *oid,
+	git_repository *repo,
+	const char *tag_name,
+	const git_object *target,
+	const git_signature *tagger,
+	const char *message,
+	int allow_ref_overwrite)
 {
 	return git_tag_create__internal(oid, repo, tag_name, target, tagger, message, allow_ref_overwrite, 1);
 }
 
 int git_tag_create_lightweight(
-		git_oid *oid,
-		git_repository *repo,
-		const char *tag_name,
-		const git_object *target,
-		int allow_ref_overwrite)
+	git_oid *oid,
+	git_repository *repo,
+	const char *tag_name,
+	const git_object *target,
+	int allow_ref_overwrite)
 {
 	return git_tag_create__internal(oid, repo, tag_name, target, NULL, NULL, allow_ref_overwrite, 0);
 }
@@ -316,14 +320,14 @@ int git_tag_create_frombuffer(git_oid *oid, git_repository *repo, const char *bu
 		return -1;
 
 	/* validate the buffer */
-	if (git_tag__parse_buffer(&tag, buffer, strlen(buffer)) < 0)
+	if (tag_parse(&tag, buffer, buffer + strlen(buffer)) < 0)
 		return -1;
 
 	/* validate the target */
 	if (git_odb_read(&target_obj, odb, &tag.target) < 0)
 		goto on_error;
 
-	if (tag.type != target_obj->raw.type) {
+	if (tag.type != target_obj->cached.type) {
 		giterr_set(GITERR_TAG, "The type for the given target is invalid");
 		goto on_error;
 	}
@@ -389,14 +393,8 @@ int git_tag_delete(git_repository *repo, const char *tag_name)
 
 	if ((error = git_reference_delete(tag_ref)) == 0)
 		git_reference_free(tag_ref);
-	
-	return error;
-}
 
-int git_tag__parse(git_tag *tag, git_odb_object *obj)
-{
-	assert(tag);
-	return git_tag__parse_buffer(tag, obj->raw.data, obj->raw.len);
+	return error;
 }
 
 typedef struct {

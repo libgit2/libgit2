@@ -26,7 +26,7 @@ struct map_data {
  *	files that have the text property set. Alternatives are lf, crlf
  *	and native, which uses the platform's native line ending. The default
  *	value is native. See gitattributes(5) for more information on
- *	end-of-line conversion. 
+ *	end-of-line conversion.
  */
 static git_cvar_map _cvar_map_eol[] = {
 	{GIT_CVAR_FALSE, NULL, GIT_EOL_UNSET},
@@ -37,7 +37,7 @@ static git_cvar_map _cvar_map_eol[] = {
 
 /*
  *	core.autocrlf
- *		Setting this variable to "true" is almost the same as setting 
+ *		Setting this variable to "true" is almost the same as setting
  *	the text attribute to "auto" on all files except that text files are
  *	not guaranteed to be normalized: files that contain CRLF in the
  *	repository will not be touched. Use this setting if you want to have
@@ -51,9 +51,22 @@ static git_cvar_map _cvar_map_autocrlf[] = {
 	{GIT_CVAR_STRING, "input", GIT_AUTO_CRLF_INPUT}
 };
 
+/*
+ * Generic map for integer values
+ */
+static git_cvar_map _cvar_map_int[] = {
+	{GIT_CVAR_INT32, NULL, 0},
+};
+
 static struct map_data _cvar_maps[] = {
 	{"core.autocrlf", _cvar_map_autocrlf, ARRAY_SIZE(_cvar_map_autocrlf), GIT_AUTO_CRLF_DEFAULT},
-	{"core.eol", _cvar_map_eol, ARRAY_SIZE(_cvar_map_eol), GIT_EOL_DEFAULT}
+	{"core.eol", _cvar_map_eol, ARRAY_SIZE(_cvar_map_eol), GIT_EOL_DEFAULT},
+	{"core.symlinks", NULL, 0, GIT_SYMLINKS_DEFAULT },
+	{"core.ignorecase", NULL, 0, GIT_IGNORECASE_DEFAULT },
+	{"core.filemode", NULL, 0, GIT_FILEMODE_DEFAULT },
+	{"core.ignorestat", NULL, 0, GIT_IGNORESTAT_DEFAULT },
+	{"core.trustctime", NULL, 0, GIT_TRUSTCTIME_DEFAULT },
+	{"core.abbrev", _cvar_map_int, 1, GIT_ABBREV_DEFAULT },
 };
 
 int git_repository__cvar(int *out, git_repository *repo, git_cvar_cached cvar)
@@ -69,12 +82,16 @@ int git_repository__cvar(int *out, git_repository *repo, git_cvar_cached cvar)
 		if (error < 0)
 			return error;
 
-		error = git_config_get_mapped(out,
-			config, data->cvar_name, data->maps, data->map_count);
+		if (data->maps)
+			error = git_config_get_mapped(
+				out, config, data->cvar_name, data->maps, data->map_count);
+		else
+			error = git_config_get_bool(out, config, data->cvar_name);
 
-		if (error == GIT_ENOTFOUND)
+		if (error == GIT_ENOTFOUND) {
+			giterr_clear();
 			*out = data->default_value;
-
+		}
 		else if (error < 0)
 			return error;
 

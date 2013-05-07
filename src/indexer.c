@@ -9,7 +9,6 @@
 
 #include "git2/indexer.h"
 #include "git2/object.h"
-#include "git2/oid.h"
 
 #include "common.h"
 #include "pack.h"
@@ -17,6 +16,7 @@
 #include "posix.h"
 #include "pack.h"
 #include "filebuf.h"
+#include "oid.h"
 #include "oidmap.h"
 
 #define UINT31_MAX (0x7FFFFFFF)
@@ -60,36 +60,19 @@ const git_oid *git_indexer_stream_hash(const git_indexer_stream *idx)
 
 static int open_pack(struct git_pack_file **out, const char *filename)
 {
-	size_t namelen;
 	struct git_pack_file *pack;
-	struct stat st;
-	int fd;
 
-	namelen = strlen(filename);
-	pack = git__calloc(1, sizeof(struct git_pack_file) + namelen + 1);
-	GITERR_CHECK_ALLOC(pack);
+	if (git_packfile_alloc(&pack, filename) < 0)
+		return -1;
 
-	memcpy(pack->pack_name, filename, namelen + 1);
-
-	if (p_stat(filename, &st) < 0) {
-		giterr_set(GITERR_OS, "Failed to stat packfile.");
-		goto cleanup;
-	}
-
-	if ((fd = p_open(pack->pack_name, O_RDONLY)) < 0) {
+	if ((pack->mwf.fd = p_open(pack->pack_name, O_RDONLY)) < 0) {
 		giterr_set(GITERR_OS, "Failed to open packfile.");
-		goto cleanup;
+		git_packfile_free(pack);
+		return -1;
 	}
-
-	pack->mwf.fd = fd;
-	pack->mwf.size = (git_off_t)st.st_size;
 
 	*out = pack;
 	return 0;
-
-cleanup:
-	git__free(pack);
-	return -1;
 }
 
 static int parse_header(struct git_pack_header *hdr, struct git_pack_file *pack)
@@ -120,7 +103,7 @@ static int objects_cmp(const void *a, const void *b)
 	const struct entry *entrya = a;
 	const struct entry *entryb = b;
 
-	return git_oid_cmp(&entrya->oid, &entryb->oid);
+	return git_oid__cmp(&entrya->oid, &entryb->oid);
 }
 
 int git_indexer_stream_new(
@@ -391,7 +374,7 @@ int git_indexer_stream_add(git_indexer_stream *idx, const void *data, size_t siz
 {
 	int error = -1;
 	struct git_pack_header hdr;
-	size_t processed; 
+	size_t processed;
 	git_mwindow_file *mwf = &idx->pack->mwf;
 
 	assert(idx && data && stats);
@@ -404,7 +387,6 @@ int git_indexer_stream_add(git_indexer_stream *idx, const void *data, size_t siz
 	/* Make sure we set the new size of the pack */
 	if (idx->opened_pack) {
 		idx->pack->mwf.size += size;
-		//printf("\nadding %zu for %zu\n", size, idx->pack->mwf.size);
 	} else {
 		if (open_pack(&idx->pack, idx->pack_file.path_lock) < 0)
 			return -1;

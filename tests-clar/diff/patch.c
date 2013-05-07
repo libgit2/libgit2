@@ -1,4 +1,6 @@
 #include "clar_libgit2.h"
+#include "git2/sys/repository.h"
+
 #include "diff_helpers.h"
 #include "repository.h"
 #include "buf_text.h"
@@ -131,6 +133,84 @@ void test_diff_patch__to_string(void)
 	git_diff_list_free(diff);
 	git_tree_free(another);
 	git_tree_free(one);
+}
+
+void test_diff_patch__config_options(void)
+{
+	const char *one_sha = "26a125e"; /* current HEAD */
+	git_tree *one;
+	git_config *cfg;
+	git_diff_list *diff;
+	git_diff_patch *patch;
+	char *text;
+	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
+	char *onefile = "staged_changes_modified_file";
+	const char *expected1 = "diff --git c/staged_changes_modified_file i/staged_changes_modified_file\nindex 70bd944..906ee77 100644\n--- c/staged_changes_modified_file\n+++ i/staged_changes_modified_file\n@@ -1 +1,2 @@\n staged_changes_modified_file\n+staged_changes_modified_file\n";
+	const char *expected2 = "diff --git i/staged_changes_modified_file w/staged_changes_modified_file\nindex 906ee77..011c344 100644\n--- i/staged_changes_modified_file\n+++ w/staged_changes_modified_file\n@@ -1,2 +1,3 @@\n staged_changes_modified_file\n staged_changes_modified_file\n+staged_changes_modified_file\n";
+	const char *expected3 = "diff --git staged_changes_modified_file staged_changes_modified_file\nindex 906ee77..011c344 100644\n--- staged_changes_modified_file\n+++ staged_changes_modified_file\n@@ -1,2 +1,3 @@\n staged_changes_modified_file\n staged_changes_modified_file\n+staged_changes_modified_file\n";
+	const char *expected4 = "diff --git staged_changes_modified_file staged_changes_modified_file\nindex 70bd9443ada0..906ee7711f4f 100644\n--- staged_changes_modified_file\n+++ staged_changes_modified_file\n@@ -1 +1,2 @@\n staged_changes_modified_file\n+staged_changes_modified_file\n";
+
+	g_repo = cl_git_sandbox_init("status");
+	cl_git_pass(git_repository_config(&cfg, g_repo));
+	one = resolve_commit_oid_to_tree(g_repo, one_sha);
+	opts.pathspec.count = 1;
+	opts.pathspec.strings = &onefile;
+
+
+	cl_git_pass(git_config_set_string(cfg, "diff.mnemonicprefix", "true"));
+
+	cl_git_pass(git_diff_tree_to_index(&diff, g_repo, one, NULL, &opts));
+
+	cl_assert_equal_i(1, (int)git_diff_num_deltas(diff));
+	cl_git_pass(git_diff_get_patch(&patch, NULL, diff, 0));
+	cl_git_pass(git_diff_patch_to_str(&text, patch));
+	cl_assert_equal_s(expected1, text);
+
+	git__free(text);
+	git_diff_patch_free(patch);
+	git_diff_list_free(diff);
+
+	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, NULL, &opts));
+
+	cl_assert_equal_i(1, (int)git_diff_num_deltas(diff));
+	cl_git_pass(git_diff_get_patch(&patch, NULL, diff, 0));
+	cl_git_pass(git_diff_patch_to_str(&text, patch));
+	cl_assert_equal_s(expected2, text);
+
+	git__free(text);
+	git_diff_patch_free(patch);
+	git_diff_list_free(diff);
+
+
+	cl_git_pass(git_config_set_string(cfg, "diff.noprefix", "true"));
+
+	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, NULL, &opts));
+
+	cl_assert_equal_i(1, (int)git_diff_num_deltas(diff));
+	cl_git_pass(git_diff_get_patch(&patch, NULL, diff, 0));
+	cl_git_pass(git_diff_patch_to_str(&text, patch));
+	cl_assert_equal_s(expected3, text);
+
+	git__free(text);
+	git_diff_patch_free(patch);
+	git_diff_list_free(diff);
+
+
+	cl_git_pass(git_config_set_int32(cfg, "core.abbrev", 12));
+
+	cl_git_pass(git_diff_tree_to_index(&diff, g_repo, one, NULL, &opts));
+
+	cl_assert_equal_i(1, (int)git_diff_num_deltas(diff));
+	cl_git_pass(git_diff_get_patch(&patch, NULL, diff, 0));
+	cl_git_pass(git_diff_patch_to_str(&text, patch));
+	cl_assert_equal_s(expected4, text);
+
+	git__free(text);
+	git_diff_patch_free(patch);
+	git_diff_list_free(diff);
+
+	git_tree_free(one);
+	git_config_free(cfg);
 }
 
 void test_diff_patch__hunks_have_correct_line_numbers(void)

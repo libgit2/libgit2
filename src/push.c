@@ -177,9 +177,9 @@ int git_push_add_refspec(git_push *push, const char *refspec)
 
 int git_push_update_tips(git_push *push)
 {
-	git_refspec *fetch_spec = &push->remote->fetch;
 	git_buf remote_ref_name = GIT_BUF_INIT;
 	size_t i, j;
+	git_refspec *fetch_spec;
 	push_spec *push_spec;
 	git_reference *remote_ref;
 	push_status *status;
@@ -191,7 +191,8 @@ int git_push_update_tips(git_push *push)
 			continue;
 
 		/* Find the corresponding remote ref */
-		if (!git_refspec_src_matches(fetch_spec, status->ref))
+		fetch_spec = git_remote__matching_refspec(push->remote, status->ref);
+		if (!fetch_spec)
 			continue;
 
 		if ((error = git_refspec_transform_r(&remote_ref_name, fetch_spec, status->ref)) < 0)
@@ -375,7 +376,7 @@ static int queue_differences(
 		const git_tree_entry *d_entry = git_tree_entry_byindex(delta, j);
 		int cmp = 0;
 
-		if (!git_oid_cmp(&b_entry->oid, &d_entry->oid))
+		if (!git_oid__cmp(&b_entry->oid, &d_entry->oid))
 			goto loop;
 
 		cmp = strcmp(b_entry->filename, d_entry->filename);

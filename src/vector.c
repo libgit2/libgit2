@@ -277,15 +277,13 @@ void git_vector_swap(git_vector *a, git_vector *b)
 
 int git_vector_resize_to(git_vector *v, size_t new_length)
 {
-	if (new_length <= v->length)
-		return 0;
-
 	if (new_length > v->_alloc_size &&
 		resize_vector(v, new_length) < 0)
 		return -1;
 
-	memset(&v->contents[v->length], 0,
-		sizeof(void *) * (new_length - v->length));
+	if (new_length > v->length)
+		memset(&v->contents[v->length], 0,
+			sizeof(void *) * (new_length - v->length));
 
 	v->length = new_length;
 

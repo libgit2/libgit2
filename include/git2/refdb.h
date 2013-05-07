@@ -22,22 +22,6 @@
 GIT_BEGIN_DECL
 
 /**
- * Create a new reference.  Either an oid or a symbolic target must be
- * specified.
- *
- * @param refdb the reference database to associate with this reference
- * @param name the reference name
- * @param oid the object id for a direct reference
- * @param symbolic the target for a symbolic reference
- * @return the created git_reference or NULL on error
- */
-GIT_EXTERN(git_reference *) git_reference__alloc(
-	git_refdb *refdb,
-	const char *name,
-	const git_oid *oid,
-	const char *symbolic);
-
-/**
  * Create a new reference database with no backends.
  *
  * Before the Ref DB can be used for read/writing, a custom database
@@ -77,20 +61,6 @@ GIT_EXTERN(int) git_refdb_compress(git_refdb *refdb);
  * @param refdb reference database pointer or NULL
  */
 GIT_EXTERN(void) git_refdb_free(git_refdb *refdb);
-
-/**
- * Sets the custom backend to an existing reference DB
- *
- * Read <refdb_backends.h> for more information.
- *
- * @param refdb database to add the backend to
- * @param backend pointer to a git_refdb_backend instance
- * @param priority Value for ordering the backends queue
- * @return 0 on success; error code otherwise
- */
-GIT_EXTERN(int) git_refdb_set_backend(
-	git_refdb *refdb,
-	git_refdb_backend *backend);
 
 /** @} */
 GIT_END_DECL

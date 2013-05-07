@@ -30,10 +30,7 @@ GIT_BEGIN_DECL
  *		an annotated tag it will be peeled back to the commit.
  * @return 0 or an error code
  */
-GIT_INLINE(int) git_commit_lookup(git_commit **commit, git_repository *repo, const git_oid *id)
-{
-	return git_object_lookup((git_object **)commit, repo, id, GIT_OBJ_COMMIT);
-}
+GIT_EXTERN(int) git_commit_lookup(git_commit **commit, git_repository *repo, const git_oid *id);
 
 /**
  * Lookup a commit object from a repository,
@@ -48,10 +45,7 @@ GIT_INLINE(int) git_commit_lookup(git_commit **commit, git_repository *repo, con
  * @param len the length of the short identifier
  * @return 0 or an error code
  */
-GIT_INLINE(int) git_commit_lookup_prefix(git_commit **commit, git_repository *repo, const git_oid *id, size_t len)
-{
-	return git_object_lookup_prefix((git_object **)commit, repo, id, len, GIT_OBJ_COMMIT);
-}
+GIT_EXTERN(int) git_commit_lookup_prefix(git_commit **commit, git_repository *repo, const git_oid *id, size_t len);
 
 /**
  * Close an open commit
@@ -65,10 +59,7 @@ GIT_INLINE(int) git_commit_lookup_prefix(git_commit **commit, git_repository *re
  * @param commit the commit to close
  */
 
-GIT_INLINE(void) git_commit_free(git_commit *commit)
-{
-	git_object_free((git_object *) commit);
-}
+GIT_EXTERN(void) git_commit_free(git_commit *commit);
 
 /**
  * Get the id of a commit.
@@ -76,10 +67,7 @@ GIT_INLINE(void) git_commit_free(git_commit *commit)
  * @param commit a previously loaded commit.
  * @return object identity for the commit.
  */
-GIT_INLINE(const git_oid *) git_commit_id(const git_commit *commit)
-{
-	return git_object_id((const git_object *)commit);
-}
+GIT_EXTERN(const git_oid *) git_commit_id(const git_commit *commit);
 
 /**
  * Get the encoding for the message of a commit,
@@ -201,14 +189,12 @@ GIT_EXTERN(int) git_commit_nth_gen_ancestor(
 	unsigned int n);
 
 /**
- * Create a new commit in the repository using `git_object`
- * instances as parameters.
+ * Create new commit in the repository from a list of `git_object` pointers
  *
- * The message will not be cleaned up. This can be achieved
- * through `git_message_prettify()`.
+ * The message will not be cleaned up automatically. You can do that with
+ * the `git_message_prettify()` function.
  *
- * @param id Pointer where to store the OID of the
- *	newly created commit
+ * @param id Pointer in which to store the OID of the newly created commit
  *
  * @param repo Repository where to store the commit
  *
@@ -219,73 +205,69 @@ GIT_EXTERN(int) git_commit_nth_gen_ancestor(
  *	make it point to this commit. If the reference doesn't
  *	exist yet, it will be created.
  *
- * @param author Signature representing the author and the authory
- *	time of this commit
+ * @param author Signature with author and author time of commit
  *
- * @param committer Signature representing the committer and the
- * commit time of this commit
+ * @param committer Signature with committer and * commit time of commit
  *
  * @param message_encoding The encoding for the message in the
- * commit, represented with a standard encoding name.
- * E.g. "UTF-8". If NULL, no encoding header is written and
- * UTF-8 is assumed.
+ *  commit, represented with a standard encoding name.
+ *  E.g. "UTF-8". If NULL, no encoding header is written and
+ *  UTF-8 is assumed.
  *
  * @param message Full message for this commit
  *
  * @param tree An instance of a `git_tree` object that will
- * be used as the tree for the commit. This tree object must
- * also be owned by the given `repo`.
+ *  be used as the tree for the commit. This tree object must
+ *  also be owned by the given `repo`.
  *
  * @param parent_count Number of parents for this commit
  *
  * @param parents[] Array of `parent_count` pointers to `git_commit`
- * objects that will be used as the parents for this commit. This
- * array may be NULL if `parent_count` is 0 (root commit). All the
- * given commits must be owned by the `repo`.
+ *  objects that will be used as the parents for this commit. This
+ *  array may be NULL if `parent_count` is 0 (root commit). All the
+ *  given commits must be owned by the `repo`.
  *
  * @return 0 or an error code
  *	The created commit will be written to the Object Database and
  *	the given reference will be updated to point to it
  */
 GIT_EXTERN(int) git_commit_create(
-		git_oid *id,
-		git_repository *repo,
-		const char *update_ref,
-		const git_signature *author,
-		const git_signature *committer,
-		const char *message_encoding,
-		const char *message,
-		const git_tree *tree,
-		int parent_count,
-		const git_commit *parents[]);
+	git_oid *id,
+	git_repository *repo,
+	const char *update_ref,
+	const git_signature *author,
+	const git_signature *committer,
+	const char *message_encoding,
+	const char *message,
+	const git_tree *tree,
+	int parent_count,
+	const git_commit *parents[]);
 
 /**
- * Create a new commit in the repository using a variable
- * argument list.
+ * Create new commit in the repository using a variable argument list.
  *
- * The message will be cleaned up from excess whitespace
- * it will be made sure that the last line ends with a '\n'.
+ * The message will be cleaned up from excess whitespace and it will be made
+ * sure that the last line ends with a '\n'.
  *
- * The parents for the commit are specified as a variable
- * list of pointers to `const git_commit *`. Note that this
- * is a convenience method which may not be safe to export
- * for certain languages or compilers
+ * The parents for the commit are specified as a variable list of pointers
+ * to `const git_commit *`. Note that this is a convenience method which may
+ * not be safe to export for certain languages or compilers
  *
- * All other parameters remain the same
+ * All other parameters remain the same at `git_commit_create()`.
  *
  * @see git_commit_create
  */
 GIT_EXTERN(int) git_commit_create_v(
-		git_oid *id,
-		git_repository *repo,
-		const char *update_ref,
-		const git_signature *author,
-		const git_signature *committer,
-		const char *message_encoding,
-		const char *message,
-		const git_tree *tree,
-		int parent_count,
-		...);
+	git_oid *id,
+	git_repository *repo,
+	const char *update_ref,
+	const git_signature *author,
+	const git_signature *committer,
+	const char *message_encoding,
+	const char *message,
+	const git_tree *tree,
+	int parent_count,
+	...);
 
 /** @} */
 GIT_END_DECL

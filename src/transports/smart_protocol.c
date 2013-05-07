@@ -5,6 +5,7 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 #include "git2.h"
+#include "git2/odb_backend.h"
 
 #include "smart.h"
 #include "refs.h"
@@ -806,13 +807,13 @@ int git_smart__push(git_transport *transport, git_push *push)
 	transport_smart *t = (transport_smart *)transport;
 	git_smart_subtransport_stream *s;
 	git_buf pktline = GIT_BUF_INIT;
-	int error = -1;
+	int error = -1, need_pack = 0;
+	push_spec *spec;
+	unsigned int i;
 
 #ifdef PUSH_DEBUG
 {
 	git_remote_head *head;
-	push_spec *spec;
-	unsigned int i;
 	char hex[41]; hex[40] = '\0';
 
 	git_vector_foreach(&push->remote->refs, i, head) {
@@ -830,10 +831,23 @@ int git_smart__push(git_transport *transport, git_push *push)
 }
 #endif
 
+	/*
+	 * Figure out if we need to send a packfile; which is in all
+	 * cases except when we only send delete commands
+	 */
+	git_vector_foreach(&push->specs, i, spec) {
+		if (spec->lref) {
+			need_pack = 1;
+			break;
+		}
+	}
+
 	if (git_smart__get_push_stream(t, &s) < 0 ||
 		gen_pktline(&pktline, push) < 0 ||
-		s->write(s, git_buf_cstr(&pktline), git_buf_len(&pktline)) < 0 ||
-		git_packbuilder_foreach(push->pb, &stream_thunk, s) < 0)
+		s->write(s, git_buf_cstr(&pktline), git_buf_len(&pktline)) < 0)
+		goto on_error;
+
+	if (need_pack && git_packbuilder_foreach(push->pb, &stream_thunk, s) < 0)
 		goto on_error;
 
 	/* If we sent nothing or the server doesn't support report-status, then

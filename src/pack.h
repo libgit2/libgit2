@@ -79,6 +79,7 @@ typedef struct {
 struct git_pack_file {
 	git_mwindow_file mwf;
 	git_map index_map;
+	git_mutex lock; /* protect updates to mwf and index_map */
 
 	uint32_t num_objects;
 	uint32_t num_bad_objects;
@@ -142,7 +143,8 @@ git_off_t get_delta_base(struct git_pack_file *p, git_mwindow **w_curs,
 		git_off_t delta_obj_offset);
 
 void git_packfile_free(struct git_pack_file *p);
-int git_packfile_check(struct git_pack_file **pack_out, const char *path);
+int git_packfile_alloc(struct git_pack_file **pack_out, const char *path);
+
 int git_pack_entry_find(
 		struct git_pack_entry *e,
 		struct git_pack_file *p,

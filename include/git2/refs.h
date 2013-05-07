@@ -133,6 +133,17 @@ GIT_EXTERN(int) git_reference_create(git_reference **out, git_repository *repo, 
 GIT_EXTERN(const git_oid *) git_reference_target(const git_reference *ref);
 
 /**
+ * Return the peeled OID target of this reference.
+ *
+ * This peeled OID only applies to direct references that point to
+ * a hard Tag object: it is the result of peeling such Tag.
+ *
+ * @param ref The reference
+ * @return a pointer to the oid if available, NULL otherwise
+ */
+GIT_EXTERN(const git_oid *) git_reference_target_peel(const git_reference *ref);
+
+/**
  * Get full name to the reference pointed to by a symbolic reference.
  *
  * Only available if the reference is symbolic.
@@ -411,6 +422,13 @@ typedef enum {
 	 * (e.g., foo/<star>/bar but not foo/bar<star>).
 	 */
 	GIT_REF_FORMAT_REFSPEC_PATTERN = (1 << 1),
+
+	/**
+	 * Interpret the name as part of a refspec in shorthand form
+	 * so the `ONELEVEL` naming rules aren't enforced and 'master'
+	 * becomes a valid name.
+	 */
+	GIT_REF_FORMAT_REFSPEC_SHORTHAND = (1 << 2),
 } git_reference_normalize_t;
 
 /**

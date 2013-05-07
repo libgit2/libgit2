@@ -101,8 +101,8 @@ static bool diff_delta_is_binary_forced(
 
 	/* make sure files are conceivably mmap-able */
 	if ((git_off_t)((size_t)delta->old_file.size) != delta->old_file.size ||
-		(git_off_t)((size_t)delta->new_file.size) != delta->new_file.size)
-	{
+		(git_off_t)((size_t)delta->new_file.size) != delta->new_file.size) {
+
 		delta->old_file.flags |= GIT_DIFF_FLAG_BINARY;
 		delta->new_file.flags |= GIT_DIFF_FLAG_BINARY;
 		delta->flags |= GIT_DIFF_FLAG_BINARY;
@@ -232,8 +232,7 @@ static int get_blob_content(
 	if (git_oid_iszero(&file->oid))
 		return 0;
 
-	if (file->mode == GIT_FILEMODE_COMMIT)
-	{
+	if (file->mode == GIT_FILEMODE_COMMIT) {
 		char oidstr[GIT_OID_HEXSZ+1];
 		git_buf content = GIT_BUF_INIT;
 
@@ -299,8 +298,8 @@ static int get_workdir_sm_content(
 	char oidstr[GIT_OID_HEXSZ+1];
 
 	if ((error = git_submodule_lookup(&sm, ctxt->repo, file->path)) < 0 ||
-		(error = git_submodule_status(&sm_status, sm)) < 0)
-	{
+		(error = git_submodule_status(&sm_status, sm)) < 0) {
+
 		/* GIT_EEXISTS means a "submodule" that has not been git added */
 		if (error == GIT_EEXISTS)
 			error = 0;
@@ -312,8 +311,8 @@ static int get_workdir_sm_content(
 		const git_oid* sm_head;
 
 		if ((sm_head = git_submodule_wd_id(sm)) != NULL ||
-			(sm_head = git_submodule_head_id(sm)) != NULL)
-		{
+			(sm_head = git_submodule_head_id(sm)) != NULL) {
+
 			git_oid_cpy(&file->oid, sm_head);
 			file->flags |= GIT_DIFF_FLAG_VALID_OID;
 		}
@@ -660,8 +659,8 @@ static int diff_patch_load(
 	 */
 	if (check_if_unmodified &&
 		delta->old_file.mode == delta->new_file.mode &&
-		!git_oid_cmp(&delta->old_file.oid, &delta->new_file.oid))
-	{
+		!git_oid__cmp(&delta->old_file.oid, &delta->new_file.oid)) {
+
 		delta->status = GIT_DELTA_UNMODIFIED;
 
 		if ((ctxt->opts->flags & GIT_DIFF_INCLUDE_UNMODIFIED) == 0)
@@ -1049,6 +1048,12 @@ char git_diff_status_char(git_delta_t status)
 	return code;
 }
 
+static int callback_error(void)
+{
+	giterr_clear();
+	return GIT_EUSER;
+}
+
 static int print_compact(
 	const git_diff_delta *delta, float progress, void *data)
 {
@@ -1083,10 +1088,7 @@ static int print_compact(
 
 	if (pi->print_cb(delta, NULL, GIT_DIFF_LINE_FILE_HDR,
 			git_buf_cstr(pi->buf), git_buf_len(pi->buf), pi->payload))
-	{
-		giterr_clear();
-		return GIT_EUSER;
-	}
+		return callback_error();
 
 	return 0;
 }
@@ -1114,11 +1116,20 @@ int git_diff_print_compact(
 
 static int print_oid_range(diff_print_info *pi, const git_diff_delta *delta)
 {
-	char start_oid[8], end_oid[8];
+	int abbrevlen;
+	char start_oid[GIT_OID_HEXSZ+1], end_oid[GIT_OID_HEXSZ+1];
 
-	/* TODO: Determine a good actual OID range to print */
-	git_oid_tostr(start_oid, sizeof(start_oid), &delta->old_file.oid);
-	git_oid_tostr(end_oid, sizeof(end_oid), &delta->new_file.oid);
+	if (git_repository__cvar(&abbrevlen, pi->diff->repo, GIT_CVAR_ABBREV) < 0)
+		return -1;
+
+	abbrevlen += 1; /* for NUL byte */
+	if (abbrevlen < 2)
+		abbrevlen = 2;
+	else if (abbrevlen > (int)sizeof(start_oid))
+		abbrevlen = (int)sizeof(start_oid);
+
+	git_oid_tostr(start_oid, abbrevlen, &delta->old_file.oid);
+	git_oid_tostr(end_oid, abbrevlen, &delta->new_file.oid);
 
 	/* TODO: Match git diff more closely */
 	if (delta->old_file.mode == delta->new_file.mode) {
@@ -1191,10 +1202,7 @@ static int print_patch_file(
 
 	if (pi->print_cb(delta, NULL, GIT_DIFF_LINE_FILE_HDR,
 			git_buf_cstr(pi->buf), git_buf_len(pi->buf), pi->payload))
-	{
-		giterr_clear();
-		return GIT_EUSER;
-	}
+		return callback_error();
 
 	if ((delta->flags & GIT_DIFF_FLAG_BINARY) == 0)
 		return 0;
@@ -1208,10 +1216,7 @@ static int print_patch_file(
 
 	if (pi->print_cb(delta, NULL, GIT_DIFF_LINE_BINARY,
 			git_buf_cstr(pi->buf), git_buf_len(pi->buf), pi->payload))
-	{
-		giterr_clear();
-		return GIT_EUSER;
-	}
+		return callback_error();
 
 	return 0;
 }
@@ -1234,10 +1239,7 @@ static int print_patch_hunk(
 
 	if (pi->print_cb(d, r, GIT_DIFF_LINE_HUNK_HDR,
 			git_buf_cstr(pi->buf), git_buf_len(pi->buf), pi->payload))
-	{
-		giterr_clear();
-		return GIT_EUSER;
-	}
+		return callback_error();
 
 	return 0;
 }
@@ -1269,10 +1271,7 @@ static int print_patch_line(
 
 	if (pi->print_cb(delta, range, line_origin,
 			git_buf_cstr(pi->buf), git_buf_len(pi->buf), pi->payload))
-	{
-		giterr_clear();
-		return GIT_EUSER;
-	}
+		return callback_error();
 
 	return 0;
 }
@@ -1379,7 +1378,7 @@ static int diff_single_apply(diff_single_data *data)
 		(has_old ? GIT_DELTA_MODIFIED : GIT_DELTA_ADDED) :
 		(has_old ? GIT_DELTA_DELETED : GIT_DELTA_UNTRACKED);
 
-	if (git_oid_cmp(&delta->new_file.oid, &delta->old_file.oid) == 0)
+	if (git_oid__cmp(&delta->new_file.oid, &delta->old_file.oid) == 0)
 		delta->status = GIT_DELTA_UNMODIFIED;
 
 	if ((error = diff_delta_is_binary_by_content(

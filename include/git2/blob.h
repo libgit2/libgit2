@@ -29,10 +29,7 @@ GIT_BEGIN_DECL
  * @param id identity of the blob to locate.
  * @return 0 or an error code
  */
-GIT_INLINE(int) git_blob_lookup(git_blob **blob, git_repository *repo, const git_oid *id)
-{
-	return git_object_lookup((git_object **)blob, repo, id, GIT_OBJ_BLOB);
-}
+GIT_EXTERN(int) git_blob_lookup(git_blob **blob, git_repository *repo, const git_oid *id);
 
 /**
  * Lookup a blob object from a repository,
@@ -46,10 +43,7 @@ GIT_INLINE(int) git_blob_lookup(git_blob **blob, git_repository *repo, const git
  * @param len the length of the short identifier
  * @return 0 or an error code
  */
-GIT_INLINE(int) git_blob_lookup_prefix(git_blob **blob, git_repository *repo, const git_oid *id, size_t len)
-{
-	return git_object_lookup_prefix((git_object **)blob, repo, id, len, GIT_OBJ_BLOB);
-}
+GIT_EXTERN(int) git_blob_lookup_prefix(git_blob **blob, git_repository *repo, const git_oid *id, size_t len);
 
 /**
  * Close an open blob
@@ -62,11 +56,7 @@ GIT_INLINE(int) git_blob_lookup_prefix(git_blob **blob, git_repository *repo, co
  *
  * @param blob the blob to close
  */
-
-GIT_INLINE(void) git_blob_free(git_blob *blob)
-{
-	git_object_free((git_object *) blob);
-}
+GIT_EXTERN(void) git_blob_free(git_blob *blob);
 
 /**
  * Get the id of a blob.
@@ -74,11 +64,15 @@ GIT_INLINE(void) git_blob_free(git_blob *blob)
  * @param blob a previously loaded blob.
  * @return SHA1 hash for this blob.
  */
-GIT_INLINE(const git_oid *) git_blob_id(const git_blob *blob)
-{
-	return git_object_id((const git_object *)blob);
-}
+GIT_EXTERN(const git_oid *) git_blob_id(const git_blob *blob);
 
+/**
+ * Get the repository that contains the blob.
+ *
+ * @param blob A previously loaded blob.
+ * @return Repository that contains this blob.
+ */
+GIT_EXTERN(git_repository *) git_blob_owner(const git_blob *blob);
 
 /**
  * Get a read-only buffer with the raw content of a blob.

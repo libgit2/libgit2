@@ -7,6 +7,8 @@
 #ifndef INCLUDE_util_h__
 #define INCLUDE_util_h__
 
+#include "common.h"
+
 #define ARRAY_SIZE(x) (sizeof(x)/sizeof(x[0]))
 #define bitsizeof(x) (CHAR_BIT * sizeof(x))
 #define MSB(x, bits) ((x) & (~0ULL << (bitsizeof(x) - (bits))))
@@ -186,20 +188,20 @@ extern int git__strncmp(const char *a, const char *b, size_t sz);
 extern int git__strncasecmp(const char *a, const char *b, size_t sz);
 
 typedef struct {
-	short refcount;
+	git_atomic refcount;
 	void *owner;
 } git_refcount;
 
 typedef void (*git_refcount_freeptr)(void *r);
 
 #define GIT_REFCOUNT_INC(r) { \
-	((git_refcount *)(r))->refcount++; \
+	git_atomic_inc(&((git_refcount *)(r))->refcount);	\
 }
 
 #define GIT_REFCOUNT_DEC(_r, do_free) { \
 	git_refcount *r = (git_refcount *)(_r); \
-	r->refcount--; \
-	if (r->refcount <= 0 && r->owner == NULL) { do_free(_r); } \
+	int val = git_atomic_dec(&r->refcount); \
+	if (val <= 0 && r->owner == NULL) { do_free(_r); } \
 }
 
 #define GIT_REFCOUNT_OWN(r, o) { \
@@ -304,7 +306,7 @@ int git__date_parse(git_time_t *out, const char *date);
 
 /*
  * Unescapes a string in-place.
- * 
+ *
  * Edge cases behavior:
  * - "jackie\" -> "jacky\"
  * - "chan\\" -> "chan\"

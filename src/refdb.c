@@ -7,14 +7,15 @@
 
 #include "common.h"
 #include "posix.h"
+
 #include "git2/object.h"
 #include "git2/refs.h"
 #include "git2/refdb.h"
+#include "git2/sys/refdb_backend.h"
+
 #include "hash.h"
 #include "refdb.h"
 #include "refs.h"
-
-#include "git2/refdb_backend.h"
 
 int git_refdb_new(git_refdb **out, git_repository *repo)
 {
@@ -45,7 +46,7 @@ int git_refdb_open(git_refdb **out, git_repository *repo)
 		return -1;
 
 	/* Add the default (filesystem) backend */
-	if (git_refdb_backend_fs(&dir, repo, db) < 0) {
+	if (git_refdb_backend_fs(&dir, repo) < 0) {
 		git_refdb_free(db);
 		return -1;
 	}
@@ -57,15 +58,19 @@ int git_refdb_open(git_refdb **out, git_repository *repo)
 	return 0;
 }
 
-int git_refdb_set_backend(git_refdb *db, git_refdb_backend *backend)
+static void refdb_free_backend(git_refdb *db)
 {
 	if (db->backend) {
-		if(db->backend->free)
+		if (db->backend->free)
 			db->backend->free(db->backend);
 		else
 			git__free(db->backend);
 	}
+}
 
+int git_refdb_set_backend(git_refdb *db, git_refdb_backend *backend)
+{
+	refdb_free_backend(db);
 	db->backend = backend;
 
 	return 0;
@@ -74,23 +79,16 @@ int git_refdb_set_backend(git_refdb *db, git_refdb_backend *backend)
 int git_refdb_compress(git_refdb *db)
 {
 	assert(db);
-	
-	if (db->backend->compress) {
+
+	if (db->backend->compress)
 		return db->backend->compress(db->backend);
-	}
-	
+
 	return 0;
 }
 
 static void refdb_free(git_refdb *db)
 {
-	if (db->backend) {
-		if(db->backend->free)
-			db->backend->free(db->backend);
-		else
-			git__free(db->backend);
-	}
-
+	refdb_free_backend(db);
 	git__free(db);
 }
 
@@ -111,9 +109,19 @@ int git_refdb_exists(int *exists, git_refdb *refdb, const char *ref_name)
 
 int git_refdb_lookup(git_reference **out, git_refdb *db, const char *ref_name)
 {
-	assert(db && db->backend && ref_name);
+	git_reference *ref;
+	int error;
 
-	return db->backend->lookup(out, db->backend, ref_name);
+	assert(db && db->backend && out && ref_name);
+
+	if (!(error = db->backend->lookup(&ref, db->backend, ref_name))) {
+		ref->db = db;
+		*out = ref;
+	} else {
+		*out = NULL;
+	}
+
+	return error;
 }
 
 int git_refdb_foreach(
