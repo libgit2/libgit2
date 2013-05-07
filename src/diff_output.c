@@ -726,7 +726,7 @@ static int diff_patch_cb(void *priv, mmbuffer_t *bufs, int len)
 		char origin =
 			(*bufs[0].ptr == '+') ? GIT_DIFF_LINE_DEL_EOFNL :
 			(*bufs[0].ptr == '-') ? GIT_DIFF_LINE_ADD_EOFNL :
-			GIT_DIFF_LINE_CONTEXT;
+			GIT_DIFF_LINE_CONTEXT_EOFNL;
 
 		if (ctxt->data_cb != NULL &&
 			ctxt->data_cb(patch->delta, &ctxt->range,

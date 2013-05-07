@@ -356,8 +356,10 @@ typedef enum {
 	GIT_DIFF_LINE_CONTEXT   = ' ',
 	GIT_DIFF_LINE_ADDITION  = '+',
 	GIT_DIFF_LINE_DELETION  = '-',
-	GIT_DIFF_LINE_ADD_EOFNL = '\n', /**< Removed line w/o LF & added one with */
-	GIT_DIFF_LINE_DEL_EOFNL = '\0', /**< LF was removed at end of file */
+
+	GIT_DIFF_LINE_CONTEXT_EOFNL = '=', /**< Both files have no LF at end */
+	GIT_DIFF_LINE_ADD_EOFNL = '>',     /**< Old has no LF at end, new does */
+	GIT_DIFF_LINE_DEL_EOFNL = '<',     /**< Old has LF at end, new does not */
 
 	/* The following values will only be sent to a `git_diff_data_cb` when
 	 * the content of a diff is being formatted (eg. through

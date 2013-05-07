@@ -97,20 +97,15 @@ int diff_line_cb(
 	e->lines++;
 	switch (line_origin) {
 	case GIT_DIFF_LINE_CONTEXT:
+	case GIT_DIFF_LINE_CONTEXT_EOFNL: /* techically not a line */
 		e->line_ctxt++;
 		break;
 	case GIT_DIFF_LINE_ADDITION:
-		e->line_adds++;
-		break;
-	case GIT_DIFF_LINE_ADD_EOFNL:
-		/* technically not a line add, but we'll count it as such */
+	case GIT_DIFF_LINE_ADD_EOFNL: /* technically not a line add */
 		e->line_adds++;
 		break;
 	case GIT_DIFF_LINE_DELETION:
-		e->line_dels++;
-		break;
-	case GIT_DIFF_LINE_DEL_EOFNL:
-		/* technically not a line delete, but we'll count it as such */
+	case GIT_DIFF_LINE_DEL_EOFNL: /* technically not a line delete */
 		e->line_dels++;
 		break;
 	default:

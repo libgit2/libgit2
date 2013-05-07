@@ -323,12 +323,12 @@ void test_diff_patch__hunks_have_correct_line_numbers(void)
 }
 
 static void check_single_patch_stats(
-	git_repository *repo, size_t hunks, size_t adds, size_t dels)
+	git_repository *repo, size_t hunks, size_t adds, size_t dels, size_t ctxt)
 {
 	git_diff_list *diff;
 	git_diff_patch *patch;
 	const git_diff_delta *delta;
-	size_t actual_adds, actual_dels;
+	size_t actual_ctxt, actual_adds, actual_dels;
 
 	cl_git_pass(git_diff_index_to_workdir(&diff, repo, NULL, NULL));
 
@@ -339,9 +339,10 @@ static void check_single_patch_stats(
 
 	cl_assert_equal_i((int)hunks, (int)git_diff_patch_num_hunks(patch));
 
-	cl_git_pass(
-		git_diff_patch_line_stats(NULL, &actual_adds, &actual_dels, patch));
+	cl_git_pass( git_diff_patch_line_stats(
+		&actual_ctxt, &actual_adds, &actual_dels, patch) );
 
+	cl_assert_equal_sz(ctxt, actual_ctxt);
 	cl_assert_equal_sz(adds, actual_adds);
 	cl_assert_equal_sz(dels, actual_dels);
 
@@ -369,14 +370,14 @@ void test_diff_patch__line_counts_with_eofnl(void)
 	git_buf_consume(&content, end);
 	cl_git_rewritefile("renames/songof7cities.txt", content.ptr);
 
-	check_single_patch_stats(g_repo, 1, 0, 1);
+	check_single_patch_stats(g_repo, 1, 0, 1, 3);
 
 	/* remove trailing whitespace */
 
 	git_buf_rtrim(&content);
 	cl_git_rewritefile("renames/songof7cities.txt", content.ptr);
 
-	check_single_patch_stats(g_repo, 2, 1, 2);
+	check_single_patch_stats(g_repo, 2, 1, 2, 6);
 
 	/* add trailing whitespace */
 
@@ -388,7 +389,29 @@ void test_diff_patch__line_counts_with_eofnl(void)
 	cl_git_pass(git_buf_putc(&content, '\n'));
 	cl_git_rewritefile("renames/songof7cities.txt", content.ptr);
 
-	check_single_patch_stats(g_repo, 1, 1, 1);
+	check_single_patch_stats(g_repo, 1, 1, 1, 3);
+
+	/* no trailing whitespace as context line */
+
+	{
+		/* walk back a couple lines, make space and insert char */
+		char *scan = content.ptr + content.size;
+		int i;
+
+		for (i = 0; i < 5; ++i) {
+			for (--scan; scan > content.ptr && *scan != '\n'; --scan)
+				/* seek to prev \n */;
+		}
+		cl_assert(scan > content.ptr);
+
+		/* overwrite trailing \n with right-shifted content */
+		memmove(scan + 1, scan, content.size - (scan - content.ptr) - 1);
+		/* insert '#' char into space we created */
+		scan[1] = '#';
+	}
+	cl_git_rewritefile("renames/songof7cities.txt", content.ptr);
+
+	check_single_patch_stats(g_repo, 1, 1, 1, 6);
 
 	git_buf_free(&content);
 	git_config_free(cfg);
