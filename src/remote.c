@@ -957,30 +957,38 @@ on_error:
 
 int git_remote_update_tips(git_remote *remote)
 {
-	git_refspec *spec;
+	git_refspec *spec, tagspec;
 	git_vector refs;
+	int error;
 	size_t i;
+
+
+	if (git_refspec__parse(&tagspec, GIT_REFSPEC_TAGS, true) < 0)
+		return -1;
 
 	if (git_vector_init(&refs, 16, NULL) < 0)
 		return -1;
 
-	if (git_remote_ls(remote, store_refs, &refs) < 0)
-		goto on_error;
+	if ((error = git_remote_ls(remote, store_refs, &refs)) < 0)
+		goto out;
+
+	if (remote->download_tags == GIT_REMOTE_DOWNLOAD_TAGS_ALL) {
+		error = update_tips_for_spec(remote, &tagspec, &refs);
+		goto out;
+	}
 
 	git_vector_foreach(&remote->refspecs, i, spec) {
 		if (spec->push)
 			continue;
 
-		if (update_tips_for_spec(remote, spec, &refs) < 0)
-			goto on_error;
+		if ((error = update_tips_for_spec(remote, spec, &refs)) < 0)
+			goto out;
 	}
 
+out:
+	git_refspec__free(&tagspec);
 	git_vector_free(&refs);
-	return 0;
-
-on_error:
-	git_vector_free(&refs);
-	return -1;
+	return error;
 }
 
 int git_remote_connected(git_remote *remote)
