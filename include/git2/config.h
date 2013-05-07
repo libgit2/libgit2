@@ -195,6 +195,21 @@ GIT_EXTERN(int) git_config_open_level(
     unsigned int level);
 
 /**
+ * Open the global/XDG configuration file according to git's rules
+ *
+ * Git allows you to store your global configuration at
+ * `$HOME/.config` or `$XDG_CONFIG_HOME/git/config`. For backwards
+ * compatability, the XDG file shouldn't be used unless the use has
+ * created it explicitly. With this function you'll open the correct
+ * one to write to.
+ *
+ * @param out pointer in which to store the config object
+ * @param config the config object in which to look
+ */
+GIT_EXTERN(int) git_config_open_global(git_config **out, git_config *config);
+
+
+/**
  * Reload changed config files
  *
  * A config file may be changed on disk out from under the in-memory
