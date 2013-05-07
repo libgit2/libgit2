@@ -323,7 +323,9 @@ void test_diff_patch__hunks_have_correct_line_numbers(void)
 }
 
 static void check_single_patch_stats(
-	git_repository *repo, size_t hunks, size_t adds, size_t dels, size_t ctxt)
+	git_repository *repo, size_t hunks,
+	size_t adds, size_t dels, size_t ctxt,
+	const char *expected)
 {
 	git_diff_list *diff;
 	git_diff_patch *patch;
@@ -345,6 +347,13 @@ static void check_single_patch_stats(
 	cl_assert_equal_sz(ctxt, actual_ctxt);
 	cl_assert_equal_sz(adds, actual_adds);
 	cl_assert_equal_sz(dels, actual_dels);
+
+	if (expected != NULL) {
+		char *text;
+		cl_git_pass(git_diff_patch_to_str(&text, patch));
+		cl_assert_equal_s(expected, text);
+		git__free(text);
+	}
 
 	git_diff_patch_free(patch);
 	git_diff_list_free(diff);
@@ -370,14 +379,14 @@ void test_diff_patch__line_counts_with_eofnl(void)
 	git_buf_consume(&content, end);
 	cl_git_rewritefile("renames/songof7cities.txt", content.ptr);
 
-	check_single_patch_stats(g_repo, 1, 0, 1, 3);
+	check_single_patch_stats(g_repo, 1, 0, 1, 3, NULL);
 
 	/* remove trailing whitespace */
 
 	git_buf_rtrim(&content);
 	cl_git_rewritefile("renames/songof7cities.txt", content.ptr);
 
-	check_single_patch_stats(g_repo, 2, 1, 2, 6);
+	check_single_patch_stats(g_repo, 2, 1, 2, 6, NULL);
 
 	/* add trailing whitespace */
 
@@ -389,7 +398,7 @@ void test_diff_patch__line_counts_with_eofnl(void)
 	cl_git_pass(git_buf_putc(&content, '\n'));
 	cl_git_rewritefile("renames/songof7cities.txt", content.ptr);
 
-	check_single_patch_stats(g_repo, 1, 1, 1, 3);
+	check_single_patch_stats(g_repo, 1, 1, 1, 3, NULL);
 
 	/* no trailing whitespace as context line */
 
@@ -411,7 +420,23 @@ void test_diff_patch__line_counts_with_eofnl(void)
 	}
 	cl_git_rewritefile("renames/songof7cities.txt", content.ptr);
 
-	check_single_patch_stats(g_repo, 1, 1, 1, 6);
+	check_single_patch_stats(
+		g_repo, 1, 1, 1, 6,
+		/* below is pasted output of 'git diff' with fn context removed */
+		"diff --git a/songof7cities.txt b/songof7cities.txt\n"
+		"index 378a7d9..3d0154e 100644\n"
+		"--- a/songof7cities.txt\n"
+		"+++ b/songof7cities.txt\n"
+		"@@ -42,7 +42,7 @@\n"
+		" \n"
+		" To the sound of trumpets shall their seed restore my Cities\n"
+		" Wealthy and well-weaponed, that once more may I behold\n"
+		"-All the world go softly when it walks before my Cities,\n"
+		"+#All the world go softly when it walks before my Cities,\n"
+		" And the horses and the chariots fleeing from them as of old!\n"
+		" \n"
+		"   -- Rudyard Kipling\n"
+		"\\ No newline at end of file\n");
 
 	git_buf_free(&content);
 	git_config_free(cfg);
