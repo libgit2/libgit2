@@ -70,6 +70,14 @@ GIT_EXTERN(void) git_commit_free(git_commit *commit);
 GIT_EXTERN(const git_oid *) git_commit_id(const git_commit *commit);
 
 /**
+ * Get the repository that contains the commit.
+ *
+ * @param commit A previously loaded commit.
+ * @return Repository that contains this commit.
+ */
+GIT_EXTERN(git_repository *) git_commit_owner(const git_commit *commit);
+
+/**
  * Get the encoding for the message of a commit,
  * as a string representing a standard encoding name.
  *
