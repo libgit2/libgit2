@@ -5,6 +5,8 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
+#ifdef GIT_SSH
+
 #include "git2.h"
 #include "buffer.h"
 #include "netops.h"
@@ -520,3 +522,5 @@ int git_smart_subtransport_ssh(git_smart_subtransport **out, git_transport *owne
 	*out = (git_smart_subtransport *) t;
 	return 0;
 }
+
+#endif

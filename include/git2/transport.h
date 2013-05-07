@@ -11,7 +11,9 @@
 #include "net.h"
 #include "types.h"
 
+#ifdef GIT_SSH
 #include <libssh2.h>
+#endif
 
 /**
  * @file git2/transport.h
@@ -47,6 +49,7 @@ typedef struct git_cred_userpass_plaintext {
 	char *password;
 } git_cred_userpass_plaintext;
 
+#ifdef GIT_SSH
 /* A ssh key file and passphrase */
 typedef struct git_cred_ssh_keyfile_passphrase {
 	git_cred parent;
@@ -63,6 +66,7 @@ typedef struct git_cred_ssh_publickey {
 	void *sign_callback;
 	void *sign_data;
 } git_cred_ssh_publickey;
+#endif
 
 /**
  * Creates a new plain-text username and password credential object.
@@ -78,6 +82,7 @@ GIT_EXTERN(int) git_cred_userpass_plaintext_new(
 	const char *username,
 	const char *password);
 
+#ifdef GIT_SSH
 /**
  * Creates a new ssh key file and passphrase credential object.
  * The supplied credential parameter will be internally duplicated.
@@ -111,6 +116,7 @@ GIT_EXTERN(int) git_cred_ssh_publickey_new(
     size_t publickey_len,
     LIBSSH2_USERAUTH_PUBLICKEY_SIGN_FUNC((*sign_callback)),
     void *sign_data);
+#endif
 
 /**
  * Signature of a function which acquires a credential object.

@@ -59,6 +59,7 @@ int git_cred_userpass_plaintext_new(
 	return 0;
 }
 
+#ifdef GIT_SSH
 static void ssh_keyfile_passphrase_free(struct git_cred *cred)
 {
 	git_cred_ssh_keyfile_passphrase *c = (git_cred_ssh_keyfile_passphrase *)cred;
@@ -184,3 +185,4 @@ int git_cred_ssh_publickey_new(
 	*cred = &c->parent;
 	return 0;
 }
+#endif
