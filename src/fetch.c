@@ -34,10 +34,16 @@ static int filter_ref__cb(git_remote_head *head, void *payload)
 
 	if (!p->found_head && strcmp(head->name, GIT_HEAD_FILE) == 0)
 		p->found_head = 1;
-	else if (git_remote__matching_refspec(p->remote, head->name))
+	else if (p->remote->download_tags == GIT_REMOTE_DOWNLOAD_TAGS_ALL) {
+		/*
+		 * If tagopt is --tags, then we only use the default
+		 * tags refspec and ignore the remote's
+		 */
+		if (git_refspec_src_matches(p->tagspec, head->name))
 			match = 1;
-	else if (p->remote->download_tags == GIT_REMOTE_DOWNLOAD_TAGS_ALL &&
-		 git_refspec_src_matches(p->tagspec, head->name))
+		else
+			return 0;
+	} else if (git_remote__matching_refspec(p->remote, head->name))
 			match = 1;
 
 	if (!match)
