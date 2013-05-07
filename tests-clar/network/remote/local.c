@@ -141,3 +141,20 @@ void test_network_remote_local__shorthand_fetch_refspec1(void)
 
 	cl_git_fail(git_reference_lookup(&ref, repo, "refs/tags/hard_tag"));
 }
+
+void test_network_remote_local__tagopt(void)
+{
+	git_reference *ref;
+
+	connect_to_local_repository(cl_fixture("testrepo.git"));
+	git_remote_set_autotag(remote, GIT_REMOTE_DOWNLOAD_TAGS_ALL);
+
+	cl_git_pass(git_remote_download(remote, NULL, NULL));
+	cl_git_pass(git_remote_update_tips(remote));
+
+
+	cl_git_fail(git_reference_lookup(&ref, repo, "refs/remotes/master"));
+
+	cl_git_pass(git_reference_lookup(&ref, repo, "refs/tags/hard_tag"));
+	git_reference_free(ref);
+}
