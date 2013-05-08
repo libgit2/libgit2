@@ -67,7 +67,7 @@ static int merge_trivial(git_index **index, const char *ours, const char *theirs
 static int merge_trivial_conflict_entrycount(git_index *index)
 {
 	const git_index_entry *entry;
-	size_t count = 0;
+	int count = 0;
 	size_t i;
 
 	for (i = 0; i < git_index_entrycount(index); i++) {

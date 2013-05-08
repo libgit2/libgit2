@@ -292,7 +292,7 @@ int git_remote_load(git_remote **out, git_repository *repo, const char *name)
 	git_buf_clear(&buf);
 	git_buf_printf(&buf, "remote.%s.pushurl", name);
 
-	if ((error = get_optional_config(config, &buf, NULL, &val)) < 0)
+	if ((error = get_optional_config(config, &buf, NULL, (void *)&val)) < 0)
 		goto cleanup;
 
 	if (val) {

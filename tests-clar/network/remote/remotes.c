@@ -118,13 +118,13 @@ void test_network_remote_remotes__add_fetchspec(void)
 	cl_git_pass(git_remote_add_fetch(_remote, "refs/*:refs/*"));
 
 	size++;
-	cl_assert_equal_i(size, git_remote_refspec_count(_remote));
+	cl_assert_equal_i((int)size, (int)git_remote_refspec_count(_remote));
 
 	_refspec = git_remote_get_refspec(_remote, size - 1);
 	cl_assert_equal_s(git_refspec_src(_refspec), "refs/*");
 	cl_assert_equal_s(git_refspec_dst(_refspec), "refs/*");
 	cl_assert_equal_s(git_refspec_string(_refspec), "refs/*:refs/*");
-	cl_assert_equal_i(_refspec->push, false);
+	cl_assert_equal_b(_refspec->push, false);
 }
 
 void test_network_remote_remotes__add_pushspec(void)
@@ -135,14 +135,14 @@ void test_network_remote_remotes__add_pushspec(void)
 
 	cl_git_pass(git_remote_add_push(_remote, "refs/*:refs/*"));
 	size++;
-	cl_assert_equal_i(size, git_remote_refspec_count(_remote));
+	cl_assert_equal_i((int)size, (int)git_remote_refspec_count(_remote));
 
 	_refspec = git_remote_get_refspec(_remote, size - 1);
 	cl_assert_equal_s(git_refspec_src(_refspec), "refs/*");
 	cl_assert_equal_s(git_refspec_dst(_refspec), "refs/*");
 	cl_assert_equal_s(git_refspec_string(_refspec), "refs/*:refs/*");
 
-	cl_assert_equal_i(_refspec->push, true);
+	cl_assert_equal_b(_refspec->push, true);
 }
 
 void test_network_remote_remotes__save(void)
@@ -169,12 +169,12 @@ void test_network_remote_remotes__save(void)
 	cl_git_pass(git_remote_load(&_remote, _repo, "upstream"));
 
 	cl_git_pass(git_remote_get_fetch_refspecs(&array, _remote));
-	cl_assert_equal_i(1, array.count);
+	cl_assert_equal_i(1, (int)array.count);
 	cl_assert_equal_s(fetch_refspec, array.strings[0]);
 	git_strarray_free(&array);
 
 	cl_git_pass(git_remote_get_push_refspecs(&array, _remote));
-	cl_assert_equal_i(1, array.count);
+	cl_assert_equal_i(1, (int)array.count);
 	cl_assert_equal_s(push_refspec, array.strings[0]);
 	cl_assert_equal_s(git_remote_url(_remote), "git://github.com/libgit2/libgit2");
 	cl_assert_equal_s(git_remote_pushurl(_remote), "git://github.com/libgit2/libgit2_push");
