@@ -55,6 +55,19 @@ GIT_EXTERN(int) git_reference_name_to_id(
 	git_oid *out, git_repository *repo, const char *name);
 
 /**
+ * Lookup a reference by DWIMing its short name
+ *
+ * Apply the git precendence rules to the given shorthand to determine
+ * which reference the user is refering to.
+ *
+ * @param out pointer in which to store the reference
+ * @param repo the repository in which to look
+ * @param shrothand the short name for the reference
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_reference_dwim(git_reference **out, git_repository *repo, const char *shorthand);
+
+/**
  * Create a new symbolic reference.
  *
  * A symbolic reference is a reference name that refers to another
