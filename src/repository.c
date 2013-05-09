@@ -1596,6 +1596,9 @@ int git_repository_message(char *buffer, size_t len, git_repository *repo)
 	struct stat st;
 	int error;
 
+	if (buffer != NULL)
+		*buffer = '\0';
+
 	if (git_buf_joinpath(&path, repo->path_repository, GIT_MERGE_MSG_FILE) < 0)
 		return -1;
 

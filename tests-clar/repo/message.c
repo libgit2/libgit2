@@ -35,12 +35,17 @@ void test_repo_message__message(void)
 
 	len = git_repository_message(NULL, 0, _repo);
 	cl_assert(len > 0);
+
 	_actual = git__malloc(len + 1);
 	cl_assert(_actual != NULL);
 
+	/* Test non truncation */
 	cl_assert(git_repository_message(_actual, len, _repo) > 0);
-	_actual[len] = '\0';
 	cl_assert_equal_s(expected, _actual);
+
+	/* Test truncation and that trailing NUL is inserted */
+	cl_assert(git_repository_message(_actual, 6, _repo) > 0);
+	cl_assert_equal_s("Test\n", _actual);
 
 	cl_git_pass(p_unlink(git_buf_cstr(&_path)));
 	cl_assert_equal_i(GIT_ENOTFOUND, git_repository_message(NULL, 0, _repo));
