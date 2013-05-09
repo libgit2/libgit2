@@ -66,12 +66,6 @@ int git_signature_new(git_signature **sig_out, const char *name, const char *ema
 	p->name = extract_trimmed(name, strlen(name));
 	p->email = extract_trimmed(email, strlen(email));
 
-	if (p->name == NULL || p->email == NULL ||
-		p->name[0] == '\0' || p->email[0] == '\0') {
-		git_signature_free(p);
-		return signature_error("Empty name or email");
-	}
-		
 	p->when.time = time;
 	p->when.offset = offset;
 
