@@ -535,7 +535,7 @@ cleanup:
 static bool diff_time_eq(
 	const git_index_time *a, const git_index_time *b, bool use_nanos)
 {
-	return a->seconds == a->seconds &&
+	return a->seconds == b->seconds &&
 		(!use_nanos || a->nanoseconds == b->nanoseconds);
 }
 

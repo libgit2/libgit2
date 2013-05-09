@@ -80,7 +80,7 @@ void test_object_cache__cache_everything(void)
 		cl_assert_equal_i(count + 1, (int)git_cache_size(&g_repo->objects));
 	}
 
-	cl_assert_equal_i(i, git_cache_size(&g_repo->objects) - start);
+	cl_assert_equal_i(i, (int)git_cache_size(&g_repo->objects) - start);
 
 	git_odb_free(odb);
 
@@ -135,7 +135,7 @@ void test_object_cache__cache_no_blobs(void)
 		}
 	}
 
-	cl_assert_equal_i(nonblobs, git_cache_size(&g_repo->objects) - start);
+	cl_assert_equal_i(nonblobs, (int)git_cache_size(&g_repo->objects) - start);
 
 	git_odb_free(odb);
 }
