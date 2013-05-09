@@ -79,12 +79,9 @@ static int send_command(ssh_stream *s)
 	if (error < 0)
 		goto cleanup;
 	
-	error = libssh2_channel_process_startup(
-		s->channel, 
-		"exec", 
-		(uint32_t)sizeof("exec") - 1, 
-		request.ptr,
-		request.size
+	error = libssh2_channel_exec(
+		s->channel,
+		request.ptr
 	);
 
 	if (0 != error)
