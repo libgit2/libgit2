@@ -460,10 +460,19 @@ GIT_EXTERN(int) git_repository_index(git_index **out, git_repository *repo);
  * Use this function to get the contents of this file. Don't forget to
  * remove the file after you create the commit.
  *
+ * If the repository message exists and there are no errors reading it, this
+ * returns the bytes needed to store the message in memory (i.e. message
+ * file size plus one terminating NUL byte).  That value is returned even if
+ * `out` is NULL or `len` is shorter than the necessary size.
+ *
+ * The `out` buffer will *always* be NUL terminated, even if truncation
+ * occurs.
+ *
  * @param out Buffer to write data into or NULL to just read required size
- * @param len Length of buffer in bytes
+ * @param len Length of `out` buffer in bytes
  * @param repo Repository to read prepared message from
- * @return Bytes written to buffer, GIT_ENOTFOUND if no message, or -1 on error
+ * @return GIT_ENOUTFOUND if no message exists, other value < 0 for other
+ *         errors, or total bytes in message (may be > `len`) on success
  */
 GIT_EXTERN(int) git_repository_message(char *out, size_t len, git_repository *repo);
 
