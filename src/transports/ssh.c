@@ -404,7 +404,7 @@ on_error:
 	return -1;
 }
 
-static int _git_uploadpack_ls(
+static int ssh_uploadpack_ls(
 	ssh_subtransport *t,
 	const char *url,
 	git_smart_subtransport_stream **stream)
@@ -415,7 +415,7 @@ static int _git_uploadpack_ls(
 	return 0;
 }
 
-static int _git_uploadpack(
+static int ssh_uploadpack(
 	ssh_subtransport *t,
 	const char *url,
 	git_smart_subtransport_stream **stream)
@@ -431,7 +431,7 @@ static int _git_uploadpack(
 	return -1;
 }
 
-static int _git_receivepack_ls(
+static int ssh_receivepack_ls(
 	ssh_subtransport *t,
 	const char *url,
 	git_smart_subtransport_stream **stream)
@@ -442,7 +442,7 @@ static int _git_receivepack_ls(
 	return 0;
 }
 
-static int _git_receivepack(
+static int ssh_receivepack(
 	ssh_subtransport *t,
 	const char *url,
 	git_smart_subtransport_stream **stream)
@@ -468,16 +468,16 @@ static int _ssh_action(
 	
 	switch (action) {
 		case GIT_SERVICE_UPLOADPACK_LS:
-			return _git_uploadpack_ls(t, url, stream);
+			return ssh_uploadpack_ls(t, url, stream);
 			
 		case GIT_SERVICE_UPLOADPACK:
-			return _git_uploadpack(t, url, stream);
+			return ssh_uploadpack(t, url, stream);
 			
 		case GIT_SERVICE_RECEIVEPACK_LS:
-			return _git_receivepack_ls(t, url, stream);
+			return ssh_receivepack_ls(t, url, stream);
 			
 		case GIT_SERVICE_RECEIVEPACK:
-			return _git_receivepack(t, url, stream);
+			return ssh_receivepack(t, url, stream);
 	}
 	
 	*stream = NULL;
