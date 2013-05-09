@@ -114,6 +114,7 @@ static int packed_parse_oid(
 
 	git_oid_cpy(&ref->oid, &id);
 
+	memset(&ref->peel, 0, sizeof(git_oid));
 	ref->flags = 0;
 
 	*ref_out = ref;
