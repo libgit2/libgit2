@@ -290,6 +290,67 @@ int git_reference_lookup_resolved(
 	return 0;
 }
 
+int git_reference_dwim(git_reference **out, git_repository *repo, const char *refname)
+{
+	int error = 0, i;
+	bool fallbackmode = true, foundvalid = false;
+	git_reference *ref;
+	git_buf refnamebuf = GIT_BUF_INIT, name = GIT_BUF_INIT;
+
+	static const char* formatters[] = {
+		"%s",
+		GIT_REFS_DIR "%s",
+		GIT_REFS_TAGS_DIR "%s",
+		GIT_REFS_HEADS_DIR "%s",
+		GIT_REFS_REMOTES_DIR "%s",
+		GIT_REFS_REMOTES_DIR "%s/" GIT_HEAD_FILE,
+		NULL
+	};
+
+	if (*refname)
+		git_buf_puts(&name, refname);
+	else {
+		git_buf_puts(&name, GIT_HEAD_FILE);
+		fallbackmode = false;
+	}
+
+	for (i = 0; formatters[i] && (fallbackmode || i == 0); i++) {
+
+		git_buf_clear(&refnamebuf);
+
+		if ((error = git_buf_printf(&refnamebuf, formatters[i], git_buf_cstr(&name))) < 0)
+			goto cleanup;
+
+		if (!git_reference_is_valid_name(git_buf_cstr(&refnamebuf))) {
+			error = GIT_EINVALIDSPEC;
+			continue;
+		}
+		foundvalid = true;
+
+		error = git_reference_lookup_resolved(&ref, repo, git_buf_cstr(&refnamebuf), -1);
+
+		if (!error) {
+			*out = ref;
+			error = 0;
+			goto cleanup;
+		}
+
+		if (error != GIT_ENOTFOUND)
+			goto cleanup;
+	}
+
+cleanup:
+	if (error && !foundvalid) {
+		/* never found a valid reference name */
+		giterr_set(GITERR_REFERENCE,
+			"Could not use '%s' as valid reference name", git_buf_cstr(&name));
+	}
+
+	git_buf_free(&name);
+	git_buf_free(&refnamebuf);
+	return error;
+}
+
 /**
  * Getters
  */

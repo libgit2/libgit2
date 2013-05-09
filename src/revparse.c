@@ -14,67 +14,6 @@
 
 #include "git2.h"
 
-static int disambiguate_refname(git_reference **out, git_repository *repo, const char *refname)
-{
-	int error = 0, i;
-	bool fallbackmode = true, foundvalid = false;
-	git_reference *ref;
-	git_buf refnamebuf = GIT_BUF_INIT, name = GIT_BUF_INIT;
-
-	static const char* formatters[] = {
-		"%s",
-		GIT_REFS_DIR "%s",
-		GIT_REFS_TAGS_DIR "%s",
-		GIT_REFS_HEADS_DIR "%s",
-		GIT_REFS_REMOTES_DIR "%s",
-		GIT_REFS_REMOTES_DIR "%s/" GIT_HEAD_FILE,
-		NULL
-	};
-
-	if (*refname)
-		git_buf_puts(&name, refname);
-	else {
-		git_buf_puts(&name, GIT_HEAD_FILE);
-		fallbackmode = false;
-	}
-
-	for (i = 0; formatters[i] && (fallbackmode || i == 0); i++) {
-
-		git_buf_clear(&refnamebuf);
-
-		if ((error = git_buf_printf(&refnamebuf, formatters[i], git_buf_cstr(&name))) < 0)
-			goto cleanup;
-
-		if (!git_reference_is_valid_name(git_buf_cstr(&refnamebuf))) {
-			error = GIT_EINVALIDSPEC;
-			continue;
-		}
-		foundvalid = true;
-
-		error = git_reference_lookup_resolved(&ref, repo, git_buf_cstr(&refnamebuf), -1);
-
-		if (!error) {
-			*out = ref;
-			error = 0;
-			goto cleanup;
-		}
-
-		if (error != GIT_ENOTFOUND)
-			goto cleanup;
-	}
-
-cleanup:
-	if (error && !foundvalid) {
-		/* never found a valid reference name */
-		giterr_set(GITERR_REFERENCE,
-			"Could not use '%s' as valid reference name", git_buf_cstr(&name));
-	}
-
-	git_buf_free(&name);
-	git_buf_free(&refnamebuf);
-	return error;
-}
-
 static int maybe_sha_or_abbrev(git_object** out, git_repository *repo, const char *spec, size_t speclen)
 {
 	git_oid oid;
@@ -157,7 +96,7 @@ static int revparse_lookup_object(git_object **out, git_repository *repo, const 
 	if (error < 0 && error != GIT_ENOTFOUND)
 		return error;
 
-	error = disambiguate_refname(&ref, repo, spec);
+	error = git_reference_dwim(&ref, repo, spec);
 	if (!error) {
 		error = git_object_lookup(out, repo, git_reference_target(ref), GIT_OBJ_ANY);
 		git_reference_free(ref);
@@ -242,7 +181,7 @@ static int retrieve_previously_checked_out_branch_or_revision(git_object **out, 
 
 		git_buf_put(&buf, msg+regexmatches[1].rm_so, regexmatches[1].rm_eo - regexmatches[1].rm_so);
 
-		if ((error = disambiguate_refname(base_ref, repo, git_buf_cstr(&buf))) == 0)
+		if ((error = git_reference_dwim(base_ref, repo, git_buf_cstr(&buf))) == 0)
 			goto cleanup;
 
 		if (error < 0 && error != GIT_ENOTFOUND)
@@ -323,7 +262,7 @@ static int retrieve_revobject_from_reflog(git_object **out, git_reference **base
 	int error = -1;
 
 	if (*base_ref == NULL) {
-		if ((error = disambiguate_refname(&ref, repo, identifier)) < 0)
+		if ((error = git_reference_dwim(&ref, repo, identifier)) < 0)
 			return error;
 	} else {
 		ref = *base_ref;
@@ -351,7 +290,7 @@ static int retrieve_remote_tracking_reference(git_reference **base_ref, const ch
 	int error = -1;
 
 	if (*base_ref == NULL) {
-		if ((error = disambiguate_refname(&ref, repo, identifier)) < 0)
+		if ((error = git_reference_dwim(&ref, repo, identifier)) < 0)
 			return error;
 	} else {
 		ref = *base_ref;
