@@ -32,6 +32,28 @@ GIT_BEGIN_DECL
  */
 GIT_EXTERN(int) git_revparse_single(git_object **out, git_repository *repo, const char *spec);
 
+/**
+ * Find a single object, as specified by a revision string.
+ * See `man gitrevisions`,
+ * or http://git-scm.com/docs/git-rev-parse.html#_specifying_revisions for
+ * information on the syntax accepted.
+ *
+ * In some cases (`@{<-n>}` or `<branchname>@{upstream}`), the expression may
+ * point to an intermediate reference. When such expressions are being passed
+ * in, `reference_out` will be valued as well.
+ *
+ * @param object_out pointer to output object
+ * @param reference_out pointer to output reference or NULL
+ * @param repo the repository to search in
+ * @param spec the textual specification for an object
+ * @return 0 on success, GIT_ENOTFOUND, GIT_EAMBIGUOUS, GIT_EINVALIDSPEC
+ * or an error code
+ */
+GIT_EXTERN(int) git_revparse_ext(
+	git_object **object_out,
+	git_reference **reference_out,
+	git_repository *repo,
+	const char *spec);
 
 /**
  * Revparse flags.  These indicate the intended behavior of the spec passed to
