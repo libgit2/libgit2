@@ -609,7 +609,7 @@ static int object_from_reference(git_object **object, git_reference *reference)
 	return error;
 }
 
-static int ensure_base_rev_loaded(git_object **object, git_reference **reference, const char *spec, size_t identifier_len, git_repository *repo, bool allow_empty_identifier)
+static int ensure_base_rev_loaded(git_object **object, git_reference *reference, const char *spec, size_t identifier_len, git_repository *repo, bool allow_empty_identifier)
 {
 	int error;
 	git_buf identifier = GIT_BUF_INIT;
@@ -617,14 +617,8 @@ static int ensure_base_rev_loaded(git_object **object, git_reference **reference
 	if (*object != NULL)
 		return 0;
 
-	if (*reference != NULL) {
-		if ((error = object_from_reference(object, *reference)) < 0)
-			return error;
-
-		git_reference_free(*reference);
-		*reference = NULL;
-		return 0;
-	}
+	if (reference != NULL)
+		return object_from_reference(object, reference);
 
 	if (!allow_empty_identifier && identifier_len == 0)
 		return GIT_EINVALIDSPEC;
@@ -684,7 +678,7 @@ int git_revparse_single(git_object **out, git_repository *repo, const char *spec
 	while (spec[pos]) {
 		switch (spec[pos]) {
 		case '^':
-			if ((error = ensure_base_rev_loaded(&base_rev, &reference, spec, identifier_len, repo, false)) < 0)
+			if ((error = ensure_base_rev_loaded(&base_rev, reference, spec, identifier_len, repo, false)) < 0)
 				goto cleanup;
 
 			if (spec[pos+1] == '{') {
@@ -719,7 +713,7 @@ int git_revparse_single(git_object **out, git_repository *repo, const char *spec
 			if ((error = extract_how_many(&n, spec, &pos)) < 0)
 				goto cleanup;
 
-			if ((error = ensure_base_rev_loaded(&base_rev, &reference, spec, identifier_len, repo, false)) < 0)
+			if ((error = ensure_base_rev_loaded(&base_rev, reference, spec, identifier_len, repo, false)) < 0)
 				goto cleanup;
 
 			if ((error = handle_linear_syntax(&temp_object, base_rev, n)) < 0)
@@ -738,7 +732,7 @@ int git_revparse_single(git_object **out, git_repository *repo, const char *spec
 				goto cleanup;
 
 			if (any_left_hand_identifier(base_rev, reference, identifier_len)) {
-				if ((error = ensure_base_rev_loaded(&base_rev, &reference, spec, identifier_len, repo, true)) < 0)
+				if ((error = ensure_base_rev_loaded(&base_rev, reference, spec, identifier_len, repo, true)) < 0)
 					goto cleanup;
 
 				if ((error = handle_colon_syntax(&temp_object, base_rev, git_buf_cstr(&buf))) < 0)
@@ -795,7 +789,7 @@ int git_revparse_single(git_object **out, git_repository *repo, const char *spec
 		}
 	}
 
-	if ((error = ensure_base_rev_loaded(&base_rev, &reference, spec, identifier_len, repo, false)) < 0)
+	if ((error = ensure_base_rev_loaded(&base_rev, reference, spec, identifier_len, repo, false)) < 0)
 		goto cleanup;
 
 	*out = base_rev;
