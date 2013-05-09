@@ -52,6 +52,8 @@ typedef struct git_cred_userpass_plaintext {
 } git_cred_userpass_plaintext;
 
 #ifdef GIT_SSH
+typedef LIBSSH2_USERAUTH_PUBLICKEY_SIGN_FUNC((*git_cred_sign_callback));
+
 /* A ssh key file and passphrase */
 typedef struct git_cred_ssh_keyfile_passphrase {
 	git_cred parent;
@@ -116,7 +118,7 @@ GIT_EXTERN(int) git_cred_ssh_publickey_new(
 	git_cred **out,
 	const char *publickey,
     size_t publickey_len,
-    LIBSSH2_USERAUTH_PUBLICKEY_SIGN_FUNC((*sign_callback)),
+    git_cred_sign_callback,
     void *sign_data);
 #endif
 
