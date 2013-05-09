@@ -106,7 +106,7 @@ static int packed_parse_oid(
 
 	refname_len = refname_end - refname_begin;
 
-	ref = git__malloc(sizeof(struct packref) + refname_len + 1);
+	ref = git__calloc(1, sizeof(struct packref) + refname_len + 1);
 	GITERR_CHECK_ALLOC(ref);
 
 	memcpy(ref->name, refname_begin, refname_len);
@@ -316,7 +316,7 @@ static int loose_lookup_to_packfile(
 	git_buf_rtrim(&ref_file);
 
 	name_len = strlen(name);
-	ref = git__malloc(sizeof(struct packref) + name_len + 1);
+	ref = git__calloc(1, sizeof(struct packref) + name_len + 1);
 	GITERR_CHECK_ALLOC(ref);
 
 	memcpy(ref->name, name, name_len);
