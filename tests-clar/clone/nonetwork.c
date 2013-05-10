@@ -185,6 +185,7 @@ void test_clone_nonetwork__custom_autotag(void)
 	cl_assert_equal_i(GIT_REMOTE_DOWNLOAD_TAGS_NONE, origin->download_tags);
 
 	git_strarray_free(&tags);
+	git_remote_free(origin);
 }
 
 void test_clone_nonetwork__custom_autotag_tags_all(void)
@@ -199,6 +200,7 @@ void test_clone_nonetwork__custom_autotag_tags_all(void)
 	cl_assert_equal_i(GIT_REMOTE_DOWNLOAD_TAGS_ALL, origin->download_tags);
 
 	git_strarray_free(&tags);
+	git_remote_free(origin);
 }
 
 void test_clone_nonetwork__cope_with_already_existing_directory(void)
