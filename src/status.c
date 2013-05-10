@@ -266,6 +266,7 @@ int git_status_file(
 
 	opts.show  = GIT_STATUS_SHOW_INDEX_AND_WORKDIR;
 	opts.flags = GIT_STATUS_OPT_INCLUDE_IGNORED |
+		GIT_STATUS_OPT_RECURSE_IGNORED_DIRS |
 		GIT_STATUS_OPT_INCLUDE_UNTRACKED |
 		GIT_STATUS_OPT_RECURSE_UNTRACKED_DIRS |
 		GIT_STATUS_OPT_INCLUDE_UNMODIFIED;
@@ -281,22 +282,9 @@ int git_status_file(
 	}
 
 	if (!error && !sfi.count) {
-		git_buf full = GIT_BUF_INIT;
-
-		/* if the file actually exists and we still did not get a callback
-		 * for it, then it must be contained inside an ignored directory, so
-		 * mark it as such instead of generating an error.
-		 */
-		if (!git_buf_joinpath(&full, git_repository_workdir(repo), path) &&
-			git_path_exists(full.ptr))
-			sfi.status = GIT_STATUS_IGNORED;
-		else {
-			giterr_set(GITERR_INVALID,
-				"Attempt to get status of nonexistent file '%s'", path);
-			error = GIT_ENOTFOUND;
-		}
-
-		git_buf_free(&full);
+		giterr_set(GITERR_INVALID,
+			"Attempt to get status of nonexistent file '%s'", path);
+		error = GIT_ENOTFOUND;
 	}
 
 	*status_flags = sfi.status;

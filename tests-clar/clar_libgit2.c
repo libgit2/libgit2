@@ -190,6 +190,18 @@ git_repository *cl_git_sandbox_init(const char *sandbox)
 	return _cl_repo;
 }
 
+git_repository *cl_git_sandbox_reopen(void)
+{
+	if (_cl_repo) {
+		git_repository_free(_cl_repo);
+		_cl_repo = NULL;
+
+		cl_git_pass(git_repository_open(&_cl_repo, _cl_sandbox));
+	}
+
+	return _cl_repo;
+}
+
 void cl_git_sandbox_cleanup(void)
 {
 	if (_cl_repo) {
