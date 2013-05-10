@@ -90,3 +90,14 @@ void test_refs_delete__packed_only(void)
 	git_reference_free(ref);
 	git_refdb_free(refdb);
 }
+
+void test_refs_delete__deleting_a_non_existing_ref_returns_ENOTFOUND(void)
+{
+	git_reference *ref;
+
+	cl_git_pass(git_reference_lookup(&ref, g_repo, "refs/heads/br2"));
+	cl_git_pass(git_reference_delete(ref));
+
+	cl_git_fail_with(git_reference_delete(ref), GIT_ENOTFOUND);
+	git_reference_free(ref);
+}
