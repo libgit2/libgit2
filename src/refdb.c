@@ -208,9 +208,9 @@ int git_refdb_write_symbolic(
 	return db->backend->write_symbolic(db->backend, reference_name, target_ref);
 }
 
-int git_refdb_delete(struct git_refdb *db, const git_reference *ref)
+int git_refdb_delete(struct git_refdb *db, const char *reference_name)
 {
 	assert(db && db->backend);
 
-	return db->backend->delete(db->backend, ref);
+	return db->backend->delete(db->backend, reference_name);
 }

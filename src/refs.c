@@ -211,7 +211,7 @@ static int reference_can_write(
 
 int git_reference_delete(git_reference *ref)
 {
-	return git_refdb_delete(ref->db, ref);
+	return git_refdb_delete(ref->db, ref->name);
 }
 
 int git_reference_lookup(git_reference **ref_out,
@@ -582,7 +582,7 @@ int git_reference_rename(
 	should_head_be_updated = (error > 0);
 
 	/* Now delete the old ref and save the new one. */
-	if ((error = git_refdb_delete(ref->db, ref)) < 0)
+	if ((error = git_refdb_delete(ref->db, ref->name)) < 0)
 		goto on_error;
 
 	/* Save the new reference. */

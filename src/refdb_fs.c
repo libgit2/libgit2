@@ -985,7 +985,7 @@ static int refdb_fs_backend__write_symbolic(
 
 static int refdb_fs_backend__delete(
 	git_refdb_backend *_backend,
-	const git_reference *ref)
+	const char *refname)
 {
 	refdb_fs_backend *backend;
 	git_repository *repo;
@@ -996,14 +996,14 @@ static int refdb_fs_backend__delete(
 	bool loose_deleted;
 
 	assert(_backend);
-	assert(ref);
+	assert(refname);
 
 	backend = (refdb_fs_backend *)_backend;
 	repo = backend->repo;
 
 	/* If a loose reference exists, remove it from the filesystem */
 
-	if (git_buf_joinpath(&loose_path, repo->path_repository, ref->name) < 0)
+	if (git_buf_joinpath(&loose_path, repo->path_repository, refname) < 0)
 		return -1;
 
 	if (git_path_isfile(loose_path.ptr)) {
@@ -1018,7 +1018,7 @@ static int refdb_fs_backend__delete(
 
 	/* If a packed reference exists, remove it from the packfile and repack */
 
-	if ((pack_error = packed_map_entry(&pack_ref, &pack_ref_pos, backend, ref->name)) == 0) {
+	if ((pack_error = packed_map_entry(&pack_ref, &pack_ref_pos, backend, refname)) == 0) {
 		git_strmap_delete_at(backend->refcache.packfile, pack_ref_pos);
 		git__free(pack_ref);
 

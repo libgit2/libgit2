@@ -41,6 +41,8 @@ int git_refdb_write_symbolic(
 	const char *reference_name,
 	const char *target_ref);
 
-int git_refdb_delete(git_refdb *refdb, const git_reference *ref);
+int git_refdb_delete(
+	git_refdb *refdb,
+	const char *ref);
 
 #endif

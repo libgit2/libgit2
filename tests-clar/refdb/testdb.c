@@ -184,7 +184,7 @@ static void refdb_test_entry_free(refdb_test_entry *entry)
 
 static int refdb_test_backend__delete(
 	git_refdb_backend *_backend,
-	const git_reference *ref)
+	const char *refname)
 {
 	refdb_test_backend *backend;
 	refdb_test_entry *entry;
@@ -194,7 +194,7 @@ static int refdb_test_backend__delete(
 	backend = (refdb_test_backend *)_backend;
 
 	git_vector_foreach(&backend->refs, i, entry) {
-		if (strcmp(entry->name, git_reference_name(ref)) == 0) {
+		if (strcmp(entry->name, refname) == 0) {
 			git_vector_remove(&backend->refs, i);
 			refdb_test_entry_free(entry);
 		}
