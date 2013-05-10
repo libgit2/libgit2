@@ -355,7 +355,7 @@ static int setup_remotes_and_fetch(
 		const git_clone_options *options)
 {
 	int retcode = GIT_ERROR;
-	git_remote *origin;
+	git_remote *origin = NULL;
 
 	/* Construct an origin remote */
 	if ((retcode = create_and_configure_origin(&origin, repo, url, options)) < 0)
