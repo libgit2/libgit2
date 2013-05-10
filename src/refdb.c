@@ -188,11 +188,24 @@ struct glob_cb_data {
 	void *payload;
 };
 
-int git_refdb_write(git_refdb *db, const git_reference *ref)
+int git_refdb_write(
+	git_refdb *db,
+	const char *reference_name,
+	const git_oid *target_oid)
 {
 	assert(db && db->backend);
 
-	return db->backend->write(db->backend, ref);
+	return db->backend->write(db->backend, reference_name, target_oid);
+}
+
+int git_refdb_write_symbolic(
+	git_refdb *db,
+	const char *reference_name,
+	const char *target_ref)
+{
+	assert(db && db->backend);
+
+	return db->backend->write_symbolic(db->backend, reference_name, target_ref);
 }
 
 int git_refdb_delete(struct git_refdb *db, const git_reference *ref)

@@ -415,6 +415,8 @@ static int reference__create(
 	git_reference *ref = NULL;
 	int error = 0;
 
+	assert((symbolic == NULL) ^ (oid == NULL));
+
 	if (ref_out)
 		*ref_out = NULL;
 
@@ -424,24 +426,24 @@ static int reference__create(
 		return error;
 
 	if (oid != NULL) {
-		assert(symbolic == NULL);
-		ref = git_reference__alloc(name, oid, NULL);
+		if ((error = git_refdb_write(refdb, normalized, oid)) < 0)
+			return error;
 	} else {
-		ref = git_reference__alloc_symbolic(name, symbolic);
+		if ((error = git_refdb_write_symbolic(refdb, normalized, symbolic)) < 0)
+			return error;
 	}
 
-	GITERR_CHECK_ALLOC(ref);
-	ref->db = refdb;
+	if (ref_out != NULL) {
+		if (oid != NULL)
+			ref = git_reference__alloc(normalized, oid, NULL);
+		else
+			ref = git_reference__alloc_symbolic(normalized, symbolic);
 
-	if ((error = git_refdb_write(refdb, ref)) < 0) {
-		git_reference_free(ref);
-		return error;
-	}
+		GITERR_CHECK_ALLOC(ref);
+		ref->db = refdb;
 
-	if (ref_out == NULL)
-		git_reference_free(ref);
-	else
 		*ref_out = ref;
+	}
 
 	return 0;
 }
@@ -521,6 +523,19 @@ int git_reference_symbolic_set_target(
 	return git_reference_symbolic_create(out, ref->db->repo, ref->name, target, 1);
 }
 
+int refdb__write(
+	git_refdb *db,
+	const git_reference *ref)
+{
+	assert(db && db->backend && ref);
+	assert(ref->type == GIT_REF_OID || ref->type == GIT_REF_SYMBOLIC);
+
+	if (ref->type == GIT_REF_OID)
+		return git_refdb_write(db, ref->name, &ref->target.oid);
+	
+	return git_refdb_write_symbolic(db, ref->name, ref->target.symbolic);
+}
+
 int git_reference_rename(
 	git_reference **out,
 	git_reference *ref,
@@ -571,7 +586,7 @@ int git_reference_rename(
 		goto on_error;
 
 	/* Save the new reference. */
-	if ((error = git_refdb_write(ref->db, result)) < 0)
+	if ((error = refdb__write(ref->db, result)) < 0)
 		goto rollback;
 
 	/* Update HEAD it was poiting to the reference being renamed. */
@@ -594,7 +609,7 @@ int git_reference_rename(
 	return error;
 
 rollback:
-	git_refdb_write(ref->db, ref);
+	refdb__write(ref->db, ref);
 
 on_error:
 	git_reference_free(result);

@@ -49,9 +49,11 @@ static int refdb_test_backend__exists(
 	return 0;
 }
 
-static int refdb_test_backend__write(
+static int backend__write(
 	git_refdb_backend *_backend,
-	const git_reference *ref)
+	const char *refname,
+	const git_oid *target_oid,
+	const char *target_name)
 {
 	refdb_test_backend *backend;
 	refdb_test_entry *entry;
@@ -62,21 +64,37 @@ static int refdb_test_backend__write(
 	entry = git__calloc(1, sizeof(refdb_test_entry));
 	GITERR_CHECK_ALLOC(entry);
 
-	entry->name = git__strdup(git_reference_name(ref));
+	entry->name = git__strdup(refname);
 	GITERR_CHECK_ALLOC(entry->name);
 
-	entry->type = git_reference_type(ref);
-
-	if (entry->type == GIT_REF_OID)
-		git_oid_cpy(&entry->target.oid, git_reference_target(ref));
-	else {
-		entry->target.symbolic = git__strdup(git_reference_symbolic_target(ref));
+	if (target_oid != NULL) {
+		entry->type = GIT_REF_OID;
+		git_oid_cpy(&entry->target.oid, target_oid);
+	} else {
+		entry->type = GIT_REF_SYMBOLIC;
+		entry->target.symbolic = git__strdup(target_name);
 		GITERR_CHECK_ALLOC(entry->target.symbolic);
 	}
 
 	git_vector_insert(&backend->refs, entry);
 
 	return 0;
+}
+
+static int refdb_test_backend__write_symbolic(
+	git_refdb_backend *backend,
+	const char *refname,
+	const char *target_name)
+{
+	return backend__write(backend, refname, NULL, target_name);
+}
+
+static int refdb_test_backend__write(
+	git_refdb_backend *backend,
+	const char *refname,
+	const git_oid *target_oid)
+{
+	return backend__write(backend, refname, target_oid, NULL);
 }
 
 static int refdb_test_backend__lookup(
@@ -220,6 +238,7 @@ int refdb_backend_test(
 	backend->parent.next = &refdb_test_backend__next;
 	backend->parent.iterator_free = &refdb_test_backend__iterator_free;
 	backend->parent.write = &refdb_test_backend__write;
+	backend->parent.write_symbolic = &refdb_test_backend__write_symbolic;
 	backend->parent.delete = &refdb_test_backend__delete;
 	backend->parent.free = &refdb_test_backend__free;
 

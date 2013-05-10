@@ -31,7 +31,15 @@ int git_refdb_iterator_glob(git_reference_iterator **out, git_refdb *db, const c
 int git_refdb_next(const char **out, git_reference_iterator *iter);
 void git_refdb_iterator_free(git_reference_iterator *iter);
 
-int git_refdb_write(git_refdb *refdb, const git_reference *ref);
+int git_refdb_write(
+	git_refdb *refdb,
+	const char *reference_name,
+	const git_oid *target_oid);
+
+int git_refdb_write_symbolic(
+	git_refdb *refdb,
+	const char *reference_name,
+	const char *target_ref);
 
 int git_refdb_delete(git_refdb *refdb, const git_reference *ref);
 

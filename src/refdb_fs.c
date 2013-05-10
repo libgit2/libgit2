@@ -687,19 +687,25 @@ static int refdb_fs_backend__next(const char **out, git_reference_iterator *_ite
 	return iter_loose(out, iter);
 }
 
-static int loose_write(refdb_fs_backend *backend, const git_reference *ref)
+static int loose_write(
+	refdb_fs_backend *backend,
+	const char *reference_name,
+	const git_oid *target_oid,
+	const char *target_ref)
 {
 	git_filebuf file = GIT_FILEBUF_INIT;
 	git_buf ref_path = GIT_BUF_INIT;
 
+	assert(reference_name && ((target_oid == NULL) ^ (target_ref == NULL)));
+
 	/* Remove a possibly existing empty directory hierarchy
 	 * which name would collide with the reference name
 	 */
-	if (git_futils_rmdir_r(ref->name, backend->path,
+	if (git_futils_rmdir_r(reference_name, backend->path,
 		GIT_RMDIR_SKIP_NONEMPTY) < 0)
 		return -1;
 
-	if (git_buf_joinpath(&ref_path, backend->path, ref->name) < 0)
+	if (git_buf_joinpath(&ref_path, backend->path, reference_name) < 0)
 		return -1;
 
 	if (git_filebuf_open(&file, ref_path.ptr, GIT_FILEBUF_FORCE) < 0) {
@@ -709,19 +715,16 @@ static int loose_write(refdb_fs_backend *backend, const git_reference *ref)
 
 	git_buf_free(&ref_path);
 
-	if (ref->type == GIT_REF_OID) {
+	if (target_oid != NULL) {
 		char oid[GIT_OID_HEXSZ + 1];
 
-		git_oid_fmt(oid, &ref->target.oid);
+		git_oid_fmt(oid, target_oid);
 		oid[GIT_OID_HEXSZ] = '\0';
 
 		git_filebuf_printf(&file, "%s\n", oid);
 
-	} else if (ref->type == GIT_REF_SYMBOLIC) {
-		git_filebuf_printf(&file, GIT_SYMREF "%s\n", ref->target.symbolic);
-	} else {
-		assert(0); /* don't let this happen */
-	}
+	} else 
+		git_filebuf_printf(&file, GIT_SYMREF "%s\n", target_ref);
 
 	return git_filebuf_commit(&file, GIT_REFS_FILE_MODE);
 }
@@ -956,14 +959,28 @@ cleanup_memory:
 
 static int refdb_fs_backend__write(
 	git_refdb_backend *_backend,
-	const git_reference *ref)
+	const char *reference_name,
+	const git_oid *target_oid)
 {
 	refdb_fs_backend *backend;
 
 	assert(_backend);
 	backend = (refdb_fs_backend *)_backend;
 
-	return loose_write(backend, ref);
+	return loose_write(backend, reference_name, target_oid, NULL);
+}
+
+static int refdb_fs_backend__write_symbolic(
+	git_refdb_backend *_backend,
+	const char *reference_name,
+	const char *target_ref)
+{
+	refdb_fs_backend *backend;
+
+	assert(_backend);
+	backend = (refdb_fs_backend *)_backend;
+
+	return loose_write(backend, reference_name, NULL, target_ref);
 }
 
 static int refdb_fs_backend__delete(
@@ -1124,6 +1141,7 @@ int git_refdb_backend_fs(
 	backend->parent.next = &refdb_fs_backend__next;
 	backend->parent.iterator_free = &refdb_fs_backend__iterator_free;
 	backend->parent.write = &refdb_fs_backend__write;
+	backend->parent.write_symbolic = &refdb_fs_backend__write_symbolic;
 	backend->parent.delete = &refdb_fs_backend__delete;
 	backend->parent.compress = &refdb_fs_backend__compress;
 	backend->parent.free = &refdb_fs_backend__free;
