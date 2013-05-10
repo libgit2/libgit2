@@ -292,7 +292,7 @@ int git_commit_nth_gen_ancestor(
 	const git_commit *commit,
 	unsigned int n)
 {
-	git_commit *current, *parent;
+	git_commit *current, *parent = NULL;
 	int error;
 
 	assert(ancestor && commit);

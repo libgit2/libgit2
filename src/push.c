@@ -180,7 +180,7 @@ int git_push_update_tips(git_push *push)
 	git_buf remote_ref_name = GIT_BUF_INIT;
 	size_t i, j;
 	git_refspec *fetch_spec;
-	push_spec *push_spec;
+	push_spec *push_spec = NULL;
 	git_reference *remote_ref;
 	push_status *status;
 	int error = 0;
