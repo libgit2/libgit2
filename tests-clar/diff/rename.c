@@ -364,7 +364,7 @@ void test_diff_rename__handles_small_files(void)
 	cl_git_pass(git_repository_index(&index, g_repo));
 
 	tree = resolve_commit_oid_to_tree(g_repo, tree_sha);
-		
+
 	cl_git_rewritefile("renames/songof7cities.txt", "single line\n");
 	cl_git_pass(git_index_add_bypath(index, "songof7cities.txt"));
 
@@ -390,4 +390,57 @@ void test_diff_rename__working_directory_changes(void)
 	/* let's rewrite some files in the working directory on demand */
 
 	/* and with / without CRLF changes */
+}
+
+void test_diff_rename__patch(void)
+{
+	const char *sha0 = "2bc7f351d20b53f1c72c16c4b036e491c478c49a";
+	const char *sha1 = "1c068dee5790ef1580cfc4cd670915b48d790084";
+	git_tree *old_tree, *new_tree;
+	git_diff_list *diff;
+	git_diff_options diffopts = GIT_DIFF_OPTIONS_INIT;
+	git_diff_find_options opts = GIT_DIFF_FIND_OPTIONS_INIT;
+	git_diff_patch *patch;
+	const git_diff_delta *delta;
+	char *text;
+	const char *expected = "diff --git a/sixserving.txt b/ikeepsix.txt\nindex ad0a8e5..36020db 100644\n--- a/sixserving.txt\n+++ b/ikeepsix.txt\n@@ -1,3 +1,6 @@\n+I Keep Six Honest Serving-Men\n+=============================\n+\n I KEEP six honest serving-men\n  (They taught me all I knew);\n Their names are What and Why and When\n@@ -21,4 +24,4 @@\n One million Hows, two million Wheres,\n And seven million Whys!\n \n-                -- Rudyard Kipling\n+  -- Rudyard Kipling\n";
+
+	old_tree = resolve_commit_oid_to_tree(g_repo, sha0);
+	new_tree = resolve_commit_oid_to_tree(g_repo, sha1);
+
+	diffopts.flags |= GIT_DIFF_INCLUDE_UNMODIFIED;
+	cl_git_pass(git_diff_tree_to_tree(
+		&diff, g_repo, old_tree, new_tree, &diffopts));
+
+	opts.flags = GIT_DIFF_FIND_RENAMES | GIT_DIFF_FIND_COPIES;
+	cl_git_pass(git_diff_find_similar(diff, &opts));
+
+	/* == Changes =====================================================
+	 * sixserving.txt  -> ikeepsix.txt    (copy, add title, >80% match)
+	 * sevencities.txt                    (no change)
+	 * sixserving.txt  -> sixserving.txt  (indentation change)
+	 * songofseven.txt -> songofseven.txt (major rewrite, <20% match - split)
+	 */
+
+	cl_assert_equal_i(4, (int)git_diff_num_deltas(diff));
+
+	cl_git_pass(git_diff_get_patch(&patch, &delta, diff, 0));
+	cl_assert_equal_i(GIT_DELTA_COPIED, (int)delta->status);
+
+	cl_git_pass(git_diff_patch_to_str(&text, patch));
+	cl_assert_equal_s(expected, text);
+	git__free(text);
+
+	git_diff_patch_free(patch);
+
+	cl_git_pass(git_diff_get_patch(NULL, &delta, diff, 1));
+	cl_assert_equal_i(GIT_DELTA_UNMODIFIED, (int)delta->status);
+
+	cl_git_pass(git_diff_get_patch(NULL, &delta, diff, 2));
+	cl_assert_equal_i(GIT_DELTA_MODIFIED, (int)delta->status);
+
+	cl_git_pass(git_diff_get_patch(NULL, &delta, diff, 3));
+	cl_assert_equal_i(GIT_DELTA_MODIFIED, (int)delta->status);
+
+	git_diff_list_free(diff);
 }
