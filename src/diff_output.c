@@ -593,6 +593,8 @@ static int diff_patch_load(
 		delta->new_file.flags |= GIT_DIFF_FLAG__NO_DATA;
 		break;
 	case GIT_DELTA_MODIFIED:
+	case GIT_DELTA_COPIED:
+	case GIT_DELTA_RENAMED:
 		break;
 	case GIT_DELTA_UNTRACKED:
 		delta->old_file.flags |= GIT_DIFF_FLAG__NO_DATA;
