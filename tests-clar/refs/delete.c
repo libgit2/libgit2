@@ -101,3 +101,23 @@ void test_refs_delete__deleting_a_non_existing_ref_returns_ENOTFOUND(void)
 	cl_git_fail_with(git_reference_delete(ref), GIT_ENOTFOUND);
 	git_reference_free(ref);
 }
+
+void test_refs_delete__can_delete_byname_an_existing_reference(void)
+{
+	git_reference *ref;
+
+	cl_git_pass(git_reference_lookup(&ref, g_repo, "refs/heads/br2"));
+	git_reference_free(ref);
+
+	cl_git_pass(git_reference_delete_byname(g_repo, "refs/heads/br2"));
+	cl_git_fail_with(git_reference_lookup(&ref, g_repo, "refs/heads/br2"), GIT_ENOTFOUND);
+}
+
+void test_refs_delete__deleting_byname_an_existing_reference_returns_ENOTFOUND(void)
+{
+	git_reference *ref;
+
+	cl_git_fail_with(git_reference_lookup(&ref, g_repo, "refs/heads/ed-does-renames"), GIT_ENOTFOUND);
+
+	cl_git_fail_with(git_reference_delete_byname(g_repo, "refs/heads/ed-does-renames"), GIT_ENOTFOUND);
+}

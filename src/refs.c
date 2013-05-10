@@ -214,6 +214,17 @@ int git_reference_delete(git_reference *ref)
 	return git_refdb_delete(ref->db, ref->name);
 }
 
+int git_reference_delete_byname(git_repository *repo, const char *refname)
+{
+	int error;
+	git_refdb *refdb;
+
+	if ((error = git_repository_refdb__weakptr(&refdb, repo)) < 0)
+		return -1;
+
+	return git_refdb_delete(refdb, refname);
+}
+
 int git_reference_lookup(git_reference **ref_out,
 	git_repository *repo, const char *name)
 {
