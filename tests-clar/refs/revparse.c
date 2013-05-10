@@ -732,10 +732,10 @@ void test_refs_revparse__ext_retrieves_both_the_reference_and_its_target(void)
 		"refs/heads/br2");
 }
 
-void test_refs_revparse__ext_only_retrieve_the_object_target(void)
+void test_refs_revparse__ext_can_expand_short_reference_names(void)
 {
 	test_object_and_ref(
 		"master",
 		"a65fedf39aefe402d3bb6e24df4d4f5fe4547750",
-		NULL);
+		"refs/heads/master");
 }

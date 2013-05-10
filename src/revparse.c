@@ -84,12 +84,16 @@ static int maybe_describe(git_object**out, git_repository *repo, const char *spe
 	return maybe_abbrev(out, repo, substr+2);
 }
 
-static int revparse_lookup_object(git_object **out, git_repository *repo, const char *spec)
+static int revparse_lookup_object(
+	git_object **object_out,
+	git_reference **reference_out,
+	git_repository *repo,
+	const char *spec)
 {
 	int error;
 	git_reference *ref;
 
-	error = maybe_sha(out, repo, spec);
+	error = maybe_sha(object_out, repo, spec);
 	if (!error)
 		return 0;
 
@@ -98,22 +102,27 @@ static int revparse_lookup_object(git_object **out, git_repository *repo, const 
 
 	error = git_reference_dwim(&ref, repo, spec);
 	if (!error) {
-		error = git_object_lookup(out, repo, git_reference_target(ref), GIT_OBJ_ANY);
-		git_reference_free(ref);
+
+		error = git_object_lookup(
+			object_out, repo, git_reference_target(ref), GIT_OBJ_ANY);
+
+		if (!error)
+			*reference_out = ref;
+
 		return error;
 	}
 
 	if (error < 0 && error != GIT_ENOTFOUND)
 		return error;
 
-	error = maybe_abbrev(out, repo, spec);
+	error = maybe_abbrev(object_out, repo, spec);
 	if (!error)
 		return 0;
 
 	if (error < 0 && error != GIT_ENOTFOUND)
 		return error;
 
-	error = maybe_describe(out, repo, spec);
+	error = maybe_describe(object_out, repo, spec);
 	if (!error)
 		return 0;
 
@@ -609,7 +618,7 @@ static int object_from_reference(git_object **object, git_reference *reference)
 	return error;
 }
 
-static int ensure_base_rev_loaded(git_object **object, git_reference *reference, const char *spec, size_t identifier_len, git_repository *repo, bool allow_empty_identifier)
+static int ensure_base_rev_loaded(git_object **object, git_reference **reference, const char *spec, size_t identifier_len, git_repository *repo, bool allow_empty_identifier)
 {
 	int error;
 	git_buf identifier = GIT_BUF_INIT;
@@ -617,8 +626,8 @@ static int ensure_base_rev_loaded(git_object **object, git_reference *reference,
 	if (*object != NULL)
 		return 0;
 
-	if (reference != NULL)
-		return object_from_reference(object, reference);
+	if (*reference != NULL)
+		return object_from_reference(object, *reference);
 
 	if (!allow_empty_identifier && identifier_len == 0)
 		return GIT_EINVALIDSPEC;
@@ -626,7 +635,7 @@ static int ensure_base_rev_loaded(git_object **object, git_reference *reference,
 	if (git_buf_put(&identifier, spec, identifier_len) < 0)
 		return -1;
 
-	error = revparse_lookup_object(object, repo, git_buf_cstr(&identifier));
+	error = revparse_lookup_object(object, reference, repo, git_buf_cstr(&identifier));
 	git_buf_free(&identifier);
 
 	return error;
@@ -684,7 +693,7 @@ int revparse__ext(
 	while (spec[pos]) {
 		switch (spec[pos]) {
 		case '^':
-			if ((error = ensure_base_rev_loaded(&base_rev, reference, spec, identifier_len, repo, false)) < 0)
+			if ((error = ensure_base_rev_loaded(&base_rev, &reference, spec, identifier_len, repo, false)) < 0)
 				goto cleanup;
 
 			if (spec[pos+1] == '{') {
@@ -719,7 +728,7 @@ int revparse__ext(
 			if ((error = extract_how_many(&n, spec, &pos)) < 0)
 				goto cleanup;
 
-			if ((error = ensure_base_rev_loaded(&base_rev, reference, spec, identifier_len, repo, false)) < 0)
+			if ((error = ensure_base_rev_loaded(&base_rev, &reference, spec, identifier_len, repo, false)) < 0)
 				goto cleanup;
 
 			if ((error = handle_linear_syntax(&temp_object, base_rev, n)) < 0)
@@ -738,7 +747,7 @@ int revparse__ext(
 				goto cleanup;
 
 			if (any_left_hand_identifier(base_rev, reference, identifier_len)) {
-				if ((error = ensure_base_rev_loaded(&base_rev, reference, spec, identifier_len, repo, true)) < 0)
+				if ((error = ensure_base_rev_loaded(&base_rev, &reference, spec, identifier_len, repo, true)) < 0)
 					goto cleanup;
 
 				if ((error = handle_colon_syntax(&temp_object, base_rev, git_buf_cstr(&buf))) < 0)
@@ -795,7 +804,7 @@ int revparse__ext(
 		}
 	}
 
-	if ((error = ensure_base_rev_loaded(&base_rev, reference, spec, identifier_len, repo, false)) < 0)
+	if ((error = ensure_base_rev_loaded(&base_rev, &reference, spec, identifier_len, repo, false)) < 0)
 		goto cleanup;
 
 	*object_out = base_rev;
