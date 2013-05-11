@@ -33,6 +33,11 @@ struct tree_walk_context {
 	git_buf buf;
 };
 
+struct pack_write_context {
+	git_indexer_stream *indexer;
+	git_transfer_progress *stats;
+};
+
 #ifdef GIT_THREADS
 
 #define GIT_PACKBUILDER__MUTEX_OP(pb, mtx, op) do { \
@@ -618,26 +623,6 @@ static int write_pack_buf(void *buf, size_t size, void *data)
 {
 	git_buf *b = (git_buf *)data;
 	return git_buf_put(b, buf, size);
-}
-
-static int write_pack_to_file(void *buf, size_t size, void *data)
-{
-	git_filebuf *file = (git_filebuf *)data;
-	return git_filebuf_write(file, buf, size);
-}
-
-static int write_pack_file(git_packbuilder *pb, const char *path)
-{
-	git_filebuf file = GIT_FILEBUF_INIT;
-
-	if (git_filebuf_open(&file, path, 0) < 0 ||
-	    write_pack(pb, &write_pack_to_file, &file) < 0 ||
-	    git_filebuf_commit(&file, GIT_PACK_FILE_MODE) < 0) {
-		git_filebuf_cleanup(&file);
-		return -1;
-	}
-
-	return 0;
 }
 
 static int type_size_sort(const void *_a, const void *_b)
@@ -1259,10 +1244,39 @@ int git_packbuilder_write_buf(git_buf *buf, git_packbuilder *pb)
 	return write_pack(pb, &write_pack_buf, buf);
 }
 
-int git_packbuilder_write(git_packbuilder *pb, const char *path)
+static int write_cb(void *buf, size_t len, void *payload)
 {
+	struct pack_write_context *ctx = payload;
+	return git_indexer_stream_add(ctx->indexer, buf, len, ctx->stats);
+}
+
+int git_packbuilder_write(
+	git_packbuilder *pb,
+	const char *path,
+	git_transfer_progress_callback progress_cb,
+	void *progress_cb_payload)
+{
+	git_indexer_stream *indexer;
+	git_transfer_progress stats;
+	struct pack_write_context ctx;
+
 	PREPARE_PACK;
-	return write_pack_file(pb, path);
+
+	if (git_indexer_stream_new(
+		&indexer, path, progress_cb, progress_cb_payload) < 0)
+		return -1;
+
+	ctx.indexer = indexer;
+	ctx.stats = &stats;
+
+	if (git_packbuilder_foreach(pb, write_cb, &ctx) < 0 ||
+		git_indexer_stream_finalize(indexer, &stats) < 0) {
+		git_indexer_stream_free(indexer);
+		return -1;
+	}
+
+	git_indexer_stream_free(indexer);
+	return 0;
 }
 
 #undef PREPARE_PACK
