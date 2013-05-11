@@ -24,6 +24,8 @@ void test_refs_branches_foreach__cleanup(void)
 	repo = NULL;
 
 	cl_fixture_cleanup("testrepo.git");
+
+	cl_git_sandbox_cleanup();
 }
 
 static int count_branch_list_cb(const char *branch_name, git_branch_t branch_type, void *payload)
@@ -72,14 +74,11 @@ static void assert_branch_has_been_found(struct expectations *findings, const ch
 {
 	int pos = 0;
 
-	while (findings[pos].branch_name)
-	{
+	for (pos = 0; findings[pos].branch_name; ++pos) {
 		if (strcmp(expected_branch_name, findings[pos].branch_name) == 0) {
 			cl_assert_equal_i(1, findings[pos].encounters);
 			return;
 		}
-
-		pos++;
 	}
 
 	cl_fail("expected branch not found in list.");
@@ -94,12 +93,9 @@ static int contains_branch_list_cb(const char *branch_name, git_branch_t branch_
 
 	exp = (struct expectations *)payload;
 
-	while (exp[pos].branch_name)
-	{
+	for (pos = 0; exp[pos].branch_name; ++pos) {
 		if (strcmp(branch_name, exp[pos].branch_name) == 0)
 			exp[pos].encounters++;
-		
-		pos++;
 	}
 
 	return 0;
@@ -152,4 +148,26 @@ void test_refs_branches_foreach__can_cancel(void)
 			branch_list_interrupt_cb, &count));
 
 	cl_assert_equal_i(5, count);
+}
+
+void test_refs_branches_foreach__mix_of_packed_and_loose(void)
+{
+	struct expectations exp[] = {
+		{ "master", 0 },
+		{ "origin/HEAD", 0 },
+		{ "origin/master", 0 },
+		{ "origin/packed", 0 },
+		{ NULL, 0 }
+	};
+	git_repository *r2;
+
+	r2 = cl_git_sandbox_init("testrepo2");
+
+	cl_git_pass(git_branch_foreach(r2, GIT_BRANCH_LOCAL | GIT_BRANCH_REMOTE,
+		contains_branch_list_cb, &exp));
+
+	assert_branch_has_been_found(exp, "master");
+	assert_branch_has_been_found(exp, "origin/HEAD");
+	assert_branch_has_been_found(exp, "origin/master");
+	assert_branch_has_been_found(exp, "origin/packed");
 }
