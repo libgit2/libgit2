@@ -296,7 +296,7 @@ cleanup:
 
 static int config_set(git_config_backend *cfg, const char *name, const char *value)
 {
-	cvar_t *var = NULL, *old_var;
+	cvar_t *var = NULL, *old_var = NULL;
 	diskfile_backend *b = (diskfile_backend *)cfg;
 	char *key, *esc_value = NULL;
 	khiter_t pos;
