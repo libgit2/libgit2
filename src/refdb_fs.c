@@ -671,17 +671,20 @@ static int refdb_fs_backend__next(const char **out, git_reference_iterator *_ite
 {
 	refdb_fs_iter *iter = (refdb_fs_iter *)_iter;
 
-	/* First round of checks to make sure where we are */
-	if (!iter->loose && iter->k == kh_end(iter->h)) {
-		if (iter_loose_setup(iter) < 0)
-			return -1;
-		iter->loose = 1;
+	if (iter->loose)
+		return iter_loose(out, iter);
+
+	if (iter->k != kh_end(iter->h)) {
+		int error = iter_packed(out, iter);
+		if (error != GIT_ITEROVER)
+			return error;
 	}
 
-	if (!iter->loose)
-		return iter_packed(out, iter);
-	else
-		return iter_loose(out, iter);
+	if (iter_loose_setup(iter) < 0)
+		return -1;
+	iter->loose = 1;
+
+	return iter_loose(out, iter);
 }
 
 static int loose_write(refdb_fs_backend *backend, const git_reference *ref)
