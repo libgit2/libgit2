@@ -124,15 +124,62 @@ int git_refdb_lookup(git_reference **out, git_refdb *db, const char *ref_name)
 	return error;
 }
 
-int git_refdb_foreach(
-	git_refdb *db,
-	unsigned int list_flags,
-	git_reference_foreach_cb callback,
-	void *payload)
+int git_refdb_iterator(git_reference_iterator **out, git_refdb *db)
 {
-	assert(db && db->backend);
+	if (!db->backend || !db->backend->iterator) {
+		giterr_set(GITERR_REFERENCE, "This backend doesn't support iterators");
+		return -1;
+	}
 
-	return db->backend->foreach(db->backend, list_flags, callback, payload);
+	if (db->backend->iterator(out, db->backend) < 0)
+		return -1;
+
+	return 0;
+}
+
+int git_refdb_iterator_glob(git_reference_iterator **out, git_refdb *db, const char *glob)
+{
+	if (!db->backend) {
+		giterr_set(GITERR_REFERENCE, "There are no backends loaded");
+		return -1;
+	}
+
+	if (db->backend->iterator_glob)
+		return db->backend->iterator_glob(out, db->backend, glob);
+
+	/* If the backend doesn't support glob-filtering themselves, we have to do it */
+	if (db->backend->iterator(out, db->backend) < 0)
+		return -1;
+
+	(*out)->glob = git__strdup(glob);
+	if (!(*out)->glob) {
+		db->backend->iterator_free(*out);
+		return -1;
+	}
+
+	return 0;
+}
+
+int git_refdb_next(const char **out, git_reference_iterator *iter)
+{
+	int error;
+
+	if (!iter->glob)
+		return iter->backend->next(out, iter);
+
+	/* If the iterator has a glob, we need to filter */
+	while ((error = iter->backend->next(out, iter)) == 0) {
+		if (!p_fnmatch(iter->glob, *out, 0))
+			break;
+	}
+
+	return error;
+}
+
+void git_refdb_iterator_free(git_reference_iterator *iter)
+{
+	git__free(iter->glob);
+	iter->backend->iterator_free(iter);
 }
 
 struct glob_cb_data {
@@ -140,43 +187,6 @@ struct glob_cb_data {
 	git_reference_foreach_cb callback;
 	void *payload;
 };
-
-static int fromglob_cb(const char *reference_name, void *payload)
-{
-	struct glob_cb_data *data = (struct glob_cb_data *)payload;
-
-	if (!p_fnmatch(data->glob, reference_name, 0))
-		return data->callback(reference_name, data->payload);
-
-	return 0;
-}
-
-int git_refdb_foreach_glob(
-	git_refdb *db,
-	const char *glob,
-	unsigned int list_flags,
-	git_reference_foreach_cb callback,
-	void *payload)
-{
-	int error;
-	struct glob_cb_data data;
-
-	assert(db && db->backend && glob && callback);
-
-	if(db->backend->foreach_glob != NULL)
-		error = db->backend->foreach_glob(db->backend,
-			glob, list_flags, callback, payload);
-	else {
-		data.glob = glob;
-		data.callback = callback;
-		data.payload = payload;
-
-		error = db->backend->foreach(db->backend,
-			list_flags, fromglob_cb, &data);
-	}
-
-	return error;
-}
 
 int git_refdb_write(git_refdb *db, const git_reference *ref)
 {

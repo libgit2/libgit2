@@ -124,40 +124,43 @@ on_error:
 	return error;
 }
 
-typedef struct {
-	git_branch_foreach_cb branch_cb;
-	void *callback_payload;
-	unsigned int branch_type;
-} branch_foreach_filter;
-
-static int branch_foreach_cb(const char *branch_name, void *payload)
-{
-	branch_foreach_filter *filter = (branch_foreach_filter *)payload;
-
-	if (filter->branch_type & GIT_BRANCH_LOCAL &&
-		git__prefixcmp(branch_name, GIT_REFS_HEADS_DIR) == 0)
-		return filter->branch_cb(branch_name + strlen(GIT_REFS_HEADS_DIR), GIT_BRANCH_LOCAL, filter->callback_payload);
-
-	if (filter->branch_type & GIT_BRANCH_REMOTE &&
-		git__prefixcmp(branch_name, GIT_REFS_REMOTES_DIR) == 0)
-		return filter->branch_cb(branch_name + strlen(GIT_REFS_REMOTES_DIR), GIT_BRANCH_REMOTE, filter->callback_payload);
-
-	return 0;
-}
-
 int git_branch_foreach(
 	git_repository *repo,
 	unsigned int list_flags,
-	git_branch_foreach_cb branch_cb,
+	git_branch_foreach_cb callback,
 	void *payload)
 {
-	branch_foreach_filter filter;
+	git_reference_iterator *iter;
+	const char *name;
+	int error;
 
-	filter.branch_cb = branch_cb;
-	filter.branch_type = list_flags;
-	filter.callback_payload = payload;
+	if (git_reference_iterator_new(&iter, repo) < 0)
+		return -1;
 
-	return git_reference_foreach(repo, GIT_REF_LISTALL, &branch_foreach_cb, (void *)&filter);
+	while ((error = git_reference_next(&name, iter)) == 0) {
+		if (list_flags & GIT_BRANCH_LOCAL &&
+		    git__prefixcmp(name, GIT_REFS_HEADS_DIR) == 0) {
+			if (callback(name + strlen(GIT_REFS_HEADS_DIR), GIT_BRANCH_LOCAL, payload)) {
+				error = GIT_EUSER;
+				break;
+			}
+		}
+
+		if (list_flags & GIT_BRANCH_REMOTE &&
+		    git__prefixcmp(name, GIT_REFS_REMOTES_DIR) == 0) {
+			if (callback(name + strlen(GIT_REFS_REMOTES_DIR), GIT_BRANCH_REMOTE, payload)) {
+				error = GIT_EUSER;
+				break;
+			}
+		}
+	}
+
+	if (error == GIT_ITEROVER)
+		error = 0;
+
+	git_reference_iterator_free(iter);
+	return error;
+
 }
 
 int git_branch_move(
