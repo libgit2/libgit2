@@ -25,7 +25,7 @@ void test_refs_list__all(void)
    // try to list all the references in our test repo
 	git_strarray ref_list;
 
-	cl_git_pass(git_reference_list(&ref_list, g_repo, GIT_REF_LISTALL));
+	cl_git_pass(git_reference_list(&ref_list, g_repo));
 
 	/*{
 		unsigned short i;
@@ -41,17 +41,6 @@ void test_refs_list__all(void)
 	git_strarray_free(&ref_list);
 }
 
-void test_refs_list__symbolic_only(void)
-{
-   // try to list only the symbolic references
-	git_strarray ref_list;
-
-	cl_git_pass(git_reference_list(&ref_list, g_repo, GIT_REF_SYMBOLIC));
-	cl_assert(ref_list.count == 0); /* no symrefs in the test repo */
-
-	git_strarray_free(&ref_list);
-}
-
 void test_refs_list__do_not_retrieve_references_which_name_end_with_a_lock_extension(void)
 {
 	git_strarray ref_list;
@@ -61,7 +50,7 @@ void test_refs_list__do_not_retrieve_references_which_name_end_with_a_lock_exten
 		"./testrepo/.git/refs/heads/hanwen.lock",
 		"144344043ba4d4a405da03de3844aa829ae8be0e\n");
 
-	cl_git_pass(git_reference_list(&ref_list, g_repo, GIT_REF_LISTALL));
+	cl_git_pass(git_reference_list(&ref_list, g_repo));
 	cl_assert_equal_i((int)ref_list.count, 13);
 
 	git_strarray_free(&ref_list);

@@ -20,6 +20,23 @@
  */
 GIT_BEGIN_DECL
 
+
+/**
+ * Every backend's iterator must have a pointer to itself as the first
+ * element, so the API can talk to it. You'd define your iterator as
+ *
+ *     struct my_iterator {
+ *             git_reference_iterator parent;
+ *             ...
+ *     }
+ *
+ * and assign `iter->parent.backend` to your `git_refdb_backend`.
+ */
+struct git_reference_iterator {
+	git_refdb_backend *backend;
+	char *glob;
+};
+
 /** An instance for a custom backend */
 struct git_refdb_backend {
     unsigned int version;
@@ -43,29 +60,42 @@ struct git_refdb_backend {
 		const char *ref_name);
 
 	/**
-	 * Enumerates each reference in the refdb.  A refdb implementation must
-	 * provide this function.
+	 * Allocate an iterator object for the backend.
+	 *
+	 * A refdb implementation must provide this function.
 	 */
-	int (*foreach)(
-		git_refdb_backend *backend,
-		unsigned int list_flags,
-		git_reference_foreach_cb callback,
-		void *payload);
+	int (*iterator)(
+		git_reference_iterator **iter,
+		struct git_refdb_backend *backend);
 
 	/**
-	 * Enumerates each reference in the refdb that matches the given
-	 * glob string.  A refdb implementation may provide this function;
-	 * if it is not provided, foreach will be used and the results filtered
-	 * against the glob.
+	 * Allocate a glob-filtering iterator object for the backend.
+	 *
+	 * A refdb implementation may provide this function. If it's
+	 * not available, the glob matching will be done by the frontend.
 	 */
-	int (*foreach_glob)(
-		git_refdb_backend *backend,
-		const char *glob,
-		unsigned int list_flags,
-		git_reference_foreach_cb callback,
-		void *payload);
+	int (*iterator_glob)(
+		git_reference_iterator **iter,
+		struct git_refdb_backend *backend,
+		const char *glob);
 
 	/**
+	 * Return the current value and advance the iterator.
+	 *
+	 * A refdb implementation must provide this function.
+	 */
+	int (*next)(
+		const char **name,
+		git_reference_iterator *iter);
+
+	/**
+	 * Free the iterator
+	 *
+	 * A refdb implementation must provide this function.
+	 */
+	void (*iterator_free)(
+		git_reference_iterator *iter);
+	/*
 	 * Writes the given reference to the refdb.  A refdb implementation
 	 * must provide this function.
 	 */

@@ -34,7 +34,7 @@ void test_network_fetchlocal__complete(void)
 	cl_git_pass(git_remote_download(origin, transfer_cb, &callcount));
 	cl_git_pass(git_remote_update_tips(origin));
 
-	cl_git_pass(git_reference_list(&refnames, repo, GIT_REF_LISTALL));
+	cl_git_pass(git_reference_list(&refnames, repo));
 	cl_assert_equal_i(19, (int)refnames.count);
 	cl_assert(callcount > 0);
 
@@ -58,7 +58,7 @@ void test_network_fetchlocal__partial(void)
 	const char *url;
 
 	cl_set_cleanup(&cleanup_sandbox, NULL);
-	cl_git_pass(git_reference_list(&refnames, repo, GIT_REF_LISTALL));
+	cl_git_pass(git_reference_list(&refnames, repo));
 	cl_assert_equal_i(1, (int)refnames.count);
 
 	url = cl_git_fixture_url("testrepo.git");
@@ -69,7 +69,7 @@ void test_network_fetchlocal__partial(void)
 
 	git_strarray_free(&refnames);
 
-	cl_git_pass(git_reference_list(&refnames, repo, GIT_REF_LISTALL));
+	cl_git_pass(git_reference_list(&refnames, repo));
 	cl_assert_equal_i(20, (int)refnames.count); /* 18 remote + 1 local */
 	cl_assert(callcount > 0);
 

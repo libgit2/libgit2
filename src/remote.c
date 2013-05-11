@@ -1251,14 +1251,6 @@ static int update_branch_remote_config_entry(
 		update_config_entries_cb, &data);
 }
 
-static int rename_cb(const char *ref, void *data)
-{
-	if (git__prefixcmp(ref, GIT_REFS_REMOTES_DIR))
-		return 0;
-	
-	return git_vector_insert((git_vector *)data, git__strdup(ref));
-}
-
 static int rename_one_remote_reference(
 	git_repository *repo,
 	const char *reference_name,
@@ -1298,16 +1290,29 @@ static int rename_remote_references(
 	int error = -1;
 	unsigned int i;
 	char *name;
+	const char *refname;
+	git_reference_iterator *iter;
 
 	if (git_vector_init(&refnames, 8, NULL) < 0)
+		return -1;
+
+	if (git_reference_iterator_new(&iter, repo) < 0)
 		goto cleanup;
 
-	if (git_reference_foreach(
-		repo,
-		GIT_REF_LISTALL,
-		rename_cb,
-		&refnames) < 0)
-			goto cleanup;
+	while ((error = git_reference_next(&refname, iter)) == 0) {
+		if (git__prefixcmp(refname, GIT_REFS_REMOTES_DIR))
+			continue;
+
+		if ((error = git_vector_insert(&refnames, git__strdup(refname))) < 0)
+			break;
+
+	}
+
+	git_reference_iterator_free(iter);
+	if (error == GIT_ITEROVER)
+		error = 0;
+	else
+		goto cleanup;
 
 	git_vector_foreach(&refnames, i, name) {
 		if ((error = rename_one_remote_reference(repo, name, old_name, new_name)) < 0)

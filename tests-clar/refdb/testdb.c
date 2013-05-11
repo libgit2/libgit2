@@ -112,31 +112,47 @@ static int refdb_test_backend__lookup(
 	return GIT_ENOTFOUND;
 }
 
-static int refdb_test_backend__foreach(
-	git_refdb_backend *_backend,
-	unsigned int list_flags,
-	git_reference_foreach_cb callback,
-	void *payload)
-{
-	refdb_test_backend *backend;
-	refdb_test_entry *entry;
+typedef struct {
+	git_reference_iterator parent;
 	size_t i;
+} refdb_test_iter;
 
-	assert(_backend);
-	backend = (refdb_test_backend *)_backend;
+static int refdb_test_backend__iterator(git_reference_iterator **out, git_refdb_backend *_backend)
+{
+	refdb_test_iter *iter;
 
-	git_vector_foreach(&backend->refs, i, entry) {
-		if (entry->type == GIT_REF_OID && (list_flags & GIT_REF_OID) == 0)
-			continue;
+	GIT_UNUSED(_backend);
 
-		if (entry->type == GIT_REF_SYMBOLIC && (list_flags & GIT_REF_SYMBOLIC) == 0)
-			continue;
+	iter = git__calloc(1, sizeof(refdb_test_iter));
+	GITERR_CHECK_ALLOC(iter);
 
-		if (callback(entry->name, payload) != 0)
-			return GIT_EUSER;
-	}
+	iter->parent.backend = _backend;
+	iter->i = 0;
+
+	*out = (git_reference_iterator *) iter;
 
 	return 0;
+}
+
+static int refdb_test_backend__next(const char **name, git_reference_iterator *_iter)
+{
+	refdb_test_entry *entry;
+	refdb_test_backend *backend = (refdb_test_backend *) _iter->backend;
+	refdb_test_iter *iter = (refdb_test_iter *) _iter;
+
+	entry = git_vector_get(&backend->refs, iter->i);
+	if (!entry)
+		return GIT_ITEROVER;
+
+	*name = entry->name;
+	iter->i++;
+
+	return 0;
+}
+
+static void refdb_test_backend__iterator_free(git_reference_iterator *iter)
+{
+	git__free(iter);
 }
 
 static void refdb_test_entry_free(refdb_test_entry *entry)
@@ -200,7 +216,9 @@ int refdb_backend_test(
 
 	backend->parent.exists = &refdb_test_backend__exists;
 	backend->parent.lookup = &refdb_test_backend__lookup;
-	backend->parent.foreach = &refdb_test_backend__foreach;
+	backend->parent.iterator = &refdb_test_backend__iterator;
+	backend->parent.next = &refdb_test_backend__next;
+	backend->parent.iterator_free = &refdb_test_backend__iterator_free;
 	backend->parent.write = &refdb_test_backend__write;
 	backend->parent.delete = &refdb_test_backend__delete;
 	backend->parent.free = &refdb_test_backend__free;
