@@ -117,7 +117,7 @@ int git_object_lookup_prefix(
 {
 	git_object *object = NULL;
 	git_odb *odb = NULL;
-	git_odb_object *odb_obj;
+	git_odb_object *odb_obj = NULL;
 	int error = 0;
 
 	assert(repo && object_out && id);

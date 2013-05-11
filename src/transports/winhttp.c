@@ -893,7 +893,7 @@ static int winhttp_connect(
 	wchar_t *ua = L"git/1.0 (libgit2 " WIDEN(LIBGIT2_VERSION) L")";
 	wchar_t host[GIT_WIN_PATH];
 	int32_t port;
-	const char *default_port;
+	const char *default_port = "80";
 	int ret;
 
 	if (!git__prefixcmp(url, prefix_http)) {
