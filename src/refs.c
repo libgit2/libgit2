@@ -335,6 +335,8 @@ static int reference__create(
 	git_reference *ref = NULL;
 	int error = 0;
 
+	assert(repo && name);
+
 	if (ref_out)
 		*ref_out = NULL;
 
@@ -347,10 +349,29 @@ static int reference__create(
 		return error;
 
 	if (oid != NULL) {
+		git_odb *odb;
+
 		assert(symbolic == NULL);
-		ref = git_reference__alloc(normalized, oid, NULL);
+
+		/* Sanity check the reference being created - target must exist. */
+		if ((error = git_repository_odb__weakptr(&odb, repo)) < 0)
+			return error;
+
+		if (!git_odb_exists(odb, oid)) {
+			giterr_set(GITERR_REFERENCE,
+				"Target OID for the reference doesn't exist on the repository");
+			return -1;
+		}
+
+		ref = git_reference__alloc(name, oid, NULL);
 	} else {
-		ref = git_reference__alloc_symbolic(normalized, symbolic);
+		char normalized_target[GIT_REFNAME_MAX];
+
+		if ((error = git_reference__normalize_name_lax(
+			normalized_target, sizeof(normalized_target), symbolic)) < 0)
+			return error;
+
+		ref = git_reference__alloc_symbolic(name, normalized_target);
 	}
 
 	GITERR_CHECK_ALLOC(ref);
@@ -375,20 +396,7 @@ int git_reference_create(
 	const git_oid *oid,
 	int force)
 {
-	git_odb *odb;
-	int error = 0;
-
-	assert(repo && name && oid);
-
-	/* Sanity check the reference being created - target must exist. */
-	if ((error = git_repository_odb__weakptr(&odb, repo)) < 0)
-		return error;
-
-	if (!git_odb_exists(odb, oid)) {
-		giterr_set(GITERR_REFERENCE,
-			"Target OID for the reference doesn't exist on the repository");
-		return -1;
-	}
+	assert(oid);
 
 	return reference__create(ref_out, repo, name, oid, NULL, force);
 }
@@ -400,16 +408,9 @@ int git_reference_symbolic_create(
 	const char *target,
 	int force)
 {
-	char normalized[GIT_REFNAME_MAX];
-	int error = 0;
+	assert(target);
 
-	assert(repo && name && target);
-
-	if ((error = git_reference__normalize_name_lax(
-		normalized, sizeof(normalized), target)) < 0)
-		return error;
-
-	return reference__create(ref_out, repo, name, NULL, normalized, force);
+	return reference__create(ref_out, repo, name, NULL, target, force);
 }
 
 int git_reference_set_target(
