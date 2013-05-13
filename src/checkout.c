@@ -771,7 +771,7 @@ static int blob_content_to_link(
 
 	if ((error = git_futils_mkpath2file(path, dir_mode)) < 0)
 		return error;
-	
+
 	if ((error = git_blob__getbuf(&linktarget, blob)) < 0)
 		return error;
 

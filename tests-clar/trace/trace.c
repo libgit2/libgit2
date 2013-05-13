@@ -85,4 +85,3 @@ void test_trace_trace__writes_lower_level(void)
 	cl_assert(written == 1);
 #endif
 }
-

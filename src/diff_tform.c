@@ -178,7 +178,7 @@ int git_diff_find_similar__hashsig_for_file(
 
 	GIT_UNUSED(f);
 	error = git_hashsig_create_fromfile((git_hashsig **)out, path, opt);
-	
+
 	if (error == GIT_EBUFS) {
 		error = 0;
 		giterr_clear();
@@ -195,7 +195,7 @@ int git_diff_find_similar__hashsig_for_buf(
 
 	GIT_UNUSED(f);
 	error = git_hashsig_create((git_hashsig **)out, buf, len, opt);
-	
+
 	if (error == GIT_EBUFS) {
 		error = 0;
 		giterr_clear();
@@ -437,7 +437,7 @@ static int similarity_measure(
 		return -1;
 	if (!cache[b_idx] && similarity_calc(diff, opts, b_idx, cache) < 0)
 		return -1;
-	
+
 	/* some metrics may not wish to process this file (too big / too small) */
 	if (!cache[a_idx] || !cache[b_idx])
 		return 0;

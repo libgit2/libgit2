@@ -16,7 +16,7 @@ typedef struct {
 	char *path;
 	unsigned int mode;
 	mmfile_t mmfile;
-	
+
 	git_odb_object *odb_object;
 } git_merge_file_input;
 
@@ -24,10 +24,10 @@ typedef struct {
 
 typedef struct {
 	bool automergeable;
-	
+
 	const char *path;
 	int mode;
-	
+
 	unsigned char *data;
 	size_t len;
 } git_merge_file_result;

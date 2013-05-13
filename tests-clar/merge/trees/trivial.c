@@ -34,7 +34,7 @@ static int merge_trivial(git_index **index, const char *ours, const char *theirs
 	git_merge_tree_opts opts = GIT_MERGE_TREE_OPTS_INIT;
 
 	opts.automerge_flags |= automerge ? 0 : GIT_MERGE_AUTOMERGE_NONE;
-	
+
 	git_buf_printf(&branch_buf, "%s%s", GIT_REFS_HEADS_DIR, ours);
 	cl_git_pass(git_reference_name_to_id(&our_oid, repo, branch_buf.ptr));
 	cl_git_pass(git_commit_lookup(&our_commit, repo, &our_oid));
@@ -46,7 +46,7 @@ static int merge_trivial(git_index **index, const char *ours, const char *theirs
 
 	cl_git_pass(git_merge_base(&ancestor_oid, repo, git_commit_id(our_commit), git_commit_id(their_commit)));
 	cl_git_pass(git_commit_lookup(&ancestor_commit, repo, &ancestor_oid));
-	
+
 	cl_git_pass(git_commit_tree(&ancestor_tree, ancestor_commit));
 	cl_git_pass(git_commit_tree(&our_tree, our_commit));
 	cl_git_pass(git_commit_tree(&their_tree, their_commit));
@@ -106,7 +106,7 @@ void test_merge_trees_trivial__3alt(void)
 	cl_assert(entry = git_index_get_bypath(result, "new-in-3alt.txt", 0));
 	cl_assert(git_index_reuc_entrycount(result) == 0);
 	cl_assert(merge_trivial_conflict_entrycount(result) == 0);
-	
+
 	git_index_free(result);
 }
 
@@ -124,7 +124,7 @@ void test_merge_trees_trivial__4(void)
 	cl_assert(merge_trivial_conflict_entrycount(result) == 2);
 	cl_assert(entry = git_index_get_bypath(result, "new-and-different.txt", 2));
 	cl_assert(entry = git_index_get_bypath(result, "new-and-different.txt", 3));
-	
+
 	git_index_free(result);
 }
 
@@ -139,7 +139,7 @@ void test_merge_trees_trivial__5alt_1(void)
 	cl_assert(entry = git_index_get_bypath(result, "new-and-same.txt", 0));
 	cl_assert(git_index_reuc_entrycount(result) == 0);
 	cl_assert(merge_trivial_conflict_entrycount(result) == 0);
-	
+
 	git_index_free(result);
 }
 
@@ -154,7 +154,7 @@ void test_merge_trees_trivial__5alt_2(void)
 	cl_assert(entry = git_index_get_bypath(result, "modified-to-same.txt", 0));
 	cl_assert(git_index_reuc_entrycount(result) == 0);
 	cl_assert(merge_trivial_conflict_entrycount(result) == 0);
-	
+
 	git_index_free(result);
 }
 
@@ -171,7 +171,7 @@ void test_merge_trees_trivial__6(void)
 
 	cl_assert(merge_trivial_conflict_entrycount(result) == 1);
 	cl_assert(entry = git_index_get_bypath(result, "removed-in-both.txt", 1));
-	
+
 	git_index_free(result);
 }
 
@@ -189,7 +189,7 @@ void test_merge_trees_trivial__6_automerge(void)
 	cl_assert(reuc = git_index_reuc_get_bypath(result, "removed-in-both.txt"));
 
 	cl_assert(merge_trivial_conflict_entrycount(result) == 0);
-	
+
 	git_index_free(result);
 }
 
@@ -207,7 +207,7 @@ void test_merge_trees_trivial__8(void)
 	cl_assert(merge_trivial_conflict_entrycount(result) == 2);
 	cl_assert(entry = git_index_get_bypath(result, "removed-in-8.txt", 1));
 	cl_assert(entry = git_index_get_bypath(result, "removed-in-8.txt", 3));
-	
+
 	git_index_free(result);
 }
 
@@ -226,7 +226,7 @@ void test_merge_trees_trivial__8_automerge(void)
 	cl_assert(reuc = git_index_reuc_get_bypath(result, "removed-in-8.txt"));
 
 	cl_assert(merge_trivial_conflict_entrycount(result) == 0);
-	
+
 	git_index_free(result);
 }
 
@@ -244,7 +244,7 @@ void test_merge_trees_trivial__7(void)
 	cl_assert(merge_trivial_conflict_entrycount(result) == 2);
 	cl_assert(entry = git_index_get_bypath(result, "removed-in-7.txt", 1));
 	cl_assert(entry = git_index_get_bypath(result, "removed-in-7.txt", 3));
-	
+
 	git_index_free(result);
 }
 
@@ -262,7 +262,7 @@ void test_merge_trees_trivial__7_automerge(void)
 	cl_assert(merge_trivial_conflict_entrycount(result) == 2);
 	cl_assert(entry = git_index_get_bypath(result, "removed-in-7.txt", 1));
 	cl_assert(entry = git_index_get_bypath(result, "removed-in-7.txt", 3));
-	
+
 	git_index_free(result);
 }
 
@@ -280,7 +280,7 @@ void test_merge_trees_trivial__10(void)
 	cl_assert(merge_trivial_conflict_entrycount(result) == 2);
 	cl_assert(entry = git_index_get_bypath(result, "removed-in-10-branch.txt", 1));
 	cl_assert(entry = git_index_get_bypath(result, "removed-in-10-branch.txt", 2));
-	
+
 	git_index_free(result);
 }
 
@@ -299,7 +299,7 @@ void test_merge_trees_trivial__10_automerge(void)
 	cl_assert(reuc = git_index_reuc_get_bypath(result, "removed-in-10-branch.txt"));
 
 	cl_assert(merge_trivial_conflict_entrycount(result) == 0);
-	
+
 	git_index_free(result);
 }
 
@@ -317,7 +317,7 @@ void test_merge_trees_trivial__9(void)
 	cl_assert(merge_trivial_conflict_entrycount(result) == 2);
 	cl_assert(entry = git_index_get_bypath(result, "removed-in-9-branch.txt", 1));
 	cl_assert(entry = git_index_get_bypath(result, "removed-in-9-branch.txt", 2));
-	
+
 	git_index_free(result);
 }
 
@@ -335,7 +335,7 @@ void test_merge_trees_trivial__9_automerge(void)
 	cl_assert(merge_trivial_conflict_entrycount(result) == 2);
 	cl_assert(entry = git_index_get_bypath(result, "removed-in-9-branch.txt", 1));
 	cl_assert(entry = git_index_get_bypath(result, "removed-in-9-branch.txt", 2));
-	
+
 	git_index_free(result);
 }
 
@@ -354,7 +354,7 @@ void test_merge_trees_trivial__13(void)
 
 	cl_assert(git_index_reuc_entrycount(result) == 0);
 	cl_assert(merge_trivial_conflict_entrycount(result) == 0);
-	
+
 	git_index_free(result);
 }
 
@@ -373,7 +373,7 @@ void test_merge_trees_trivial__14(void)
 
 	cl_assert(git_index_reuc_entrycount(result) == 0);
 	cl_assert(merge_trivial_conflict_entrycount(result) == 0);
-	
+
 	git_index_free(result);
 }
 
@@ -392,6 +392,6 @@ void test_merge_trees_trivial__11(void)
 	cl_assert(entry = git_index_get_bypath(result, "modified-in-both.txt", 1));
 	cl_assert(entry = git_index_get_bypath(result, "modified-in-both.txt", 2));
 	cl_assert(entry = git_index_get_bypath(result, "modified-in-both.txt", 3));
-	
+
 	git_index_free(result);
 }

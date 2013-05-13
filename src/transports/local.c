@@ -348,7 +348,7 @@ static int local_push(
 	if ((error = git_repository_open(&remote_repo, push->remote->url)) < 0)
 		return error;
 
-	/* We don't currently support pushing locally to non-bare repos. Proper 
+	/* We don't currently support pushing locally to non-bare repos. Proper
 	   non-bare repo push support would require checking configs to see if
 	   we should override the default 'don't let this happen' behavior */
 	if (!remote_repo->is_bare) {

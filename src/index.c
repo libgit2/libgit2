@@ -381,7 +381,7 @@ void git_index_clear(git_index *index)
 	git_index_reuc_clear(index);
 
 	git_index_name_clear(index);
-	
+
 	git_futils_filestamp_set(&index->stamp, NULL);
 
 	git_tree_cache_free(index->tree);
@@ -1108,7 +1108,7 @@ const git_index_name_entry *git_index_name_get_byindex(
 	git_index *index, size_t n)
 {
 	assert(index);
-	
+
 	git_vector_sort(&index->names);
 	return git_vector_get(&index->names, n);
 }
@@ -1122,7 +1122,7 @@ int git_index_name_add(git_index *index,
 
 	conflict_name = git__calloc(1, sizeof(git_index_name_entry));
 	GITERR_CHECK_ALLOC(conflict_name);
-	
+
 	if (ancestor) {
 		conflict_name->ancestor = git__strdup(ancestor);
 		GITERR_CHECK_ALLOC(conflict_name->ancestor);
@@ -1137,7 +1137,7 @@ int git_index_name_add(git_index *index,
 		conflict_name->theirs = git__strdup(theirs);
 		GITERR_CHECK_ALLOC(conflict_name->theirs);
 	}
-	
+
 	return git_vector_insert(&index->names, conflict_name);
 }
 
@@ -1147,7 +1147,7 @@ void git_index_name_clear(git_index *index)
 	git_index_name_entry *conflict_name;
 
 	assert(index);
-	
+
 	git_vector_foreach(&index->names, i, conflict_name) {
 		if (conflict_name->ancestor)
 			git__free(conflict_name->ancestor);
@@ -1160,7 +1160,7 @@ void git_index_name_clear(git_index *index)
 
 		git__free(conflict_name);
 	}
-	
+
 	git_vector_clear(&index->names);
 }
 
@@ -1354,7 +1354,7 @@ static int read_reuc(git_index *index, const char *buffer, size_t size)
 static int read_conflict_names(git_index *index, const char *buffer, size_t size)
 {
 	size_t len;
-	
+
 	/* This gets called multiple times, the vector might already be initialized */
 	if (index->names._alloc_size == 0 &&
 		git_vector_init(&index->names, 16, conflict_name_cmp) < 0)
@@ -1375,7 +1375,7 @@ static int read_conflict_names(git_index *index, const char *buffer, size_t size
 	\
 	buffer += len; \
 	size -= len;
-	
+
 	while (size) {
 		git_index_name_entry *conflict_name = git__calloc(1, sizeof(git_index_name_entry));
 		GITERR_CHECK_ALLOC(conflict_name);
@@ -1383,17 +1383,17 @@ static int read_conflict_names(git_index *index, const char *buffer, size_t size
 		read_conflict_name(conflict_name->ancestor);
 		read_conflict_name(conflict_name->ours);
 		read_conflict_name(conflict_name->theirs);
-		
+
 		if (git_vector_insert(&index->names, conflict_name) < 0)
 			return -1;
 	}
 
 #undef read_conflict_name
-	
+
 	/* entries are guaranteed to be sorted on-disk */
 	index->names.sorted = 1;
-	
-	return 0;	
+
+	return 0;
 }
 
 static size_t read_entry(git_index_entry *dest, const void *buffer, size_t buffer_size)
@@ -1724,7 +1724,7 @@ static int create_name_extension_data(git_buf *name_buf, git_index_name_entry *c
 		error = git_buf_put(name_buf, "\0", 1);
 	else
 		error = git_buf_put(name_buf, conflict_name->ancestor, strlen(conflict_name->ancestor) + 1);
-	
+
 	if (error != 0)
 		goto on_error;
 
@@ -1753,20 +1753,20 @@ static int write_name_extension(git_index *index, git_filebuf *file)
 	struct index_extension extension;
 	size_t i;
 	int error = 0;
-	
+
 	git_vector_foreach(out, i, conflict_name) {
 		if ((error = create_name_extension_data(&name_buf, conflict_name)) < 0)
 			goto done;
 	}
-	
+
 	memset(&extension, 0x0, sizeof(struct index_extension));
 	memcpy(&extension.signature, INDEX_EXT_CONFLICT_NAME_SIG, 4);
 	extension.extension_size = (uint32_t)name_buf.size;
-	
+
 	error = write_extension(file, &extension, &name_buf);
-	
+
 	git_buf_free(&name_buf);
-	
+
 done:
 	return error;
 }
@@ -1844,7 +1844,7 @@ static int write_index(git_index *index, git_filebuf *file)
 	/* write the rename conflict extension */
 	if (index->names.length > 0 && write_name_extension(index, file) < 0)
 		return -1;
-	
+
 	/* write the reuc extension */
 	if (index->reuc.length > 0 && write_reuc_extension(index, file) < 0)
 		return -1;

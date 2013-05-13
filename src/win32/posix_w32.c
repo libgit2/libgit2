@@ -535,7 +535,7 @@ int p_gettimeofday(struct timeval *tv, struct timezone *tz)
 
 		/*converting file time to unix epoch*/
 		tmpres /= 10;  /*convert into microseconds*/
-		tmpres -= DELTA_EPOCH_IN_MICROSECS; 
+		tmpres -= DELTA_EPOCH_IN_MICROSECS;
 		tv->tv_sec = (long)(tmpres / 1000000UL);
 		tv->tv_usec = (long)(tmpres % 1000000UL);
 	}

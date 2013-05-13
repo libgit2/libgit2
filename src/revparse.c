@@ -855,4 +855,3 @@ int git_revparse(
 
 	return error;
 }
-

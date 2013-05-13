@@ -274,7 +274,7 @@ static int update_head_to_branch(
 	int retcode;
 	git_buf remote_branch_name = GIT_BUF_INIT;
 	git_reference* remote_ref = NULL;
-	
+
 	assert(options->checkout_branch);
 
 	if ((retcode = git_buf_printf(&remote_branch_name, GIT_REFS_REMOTES_DIR "%s/%s",

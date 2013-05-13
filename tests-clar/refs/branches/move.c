@@ -24,7 +24,7 @@ void test_refs_branches_move__can_move_a_local_branch(void)
 
 	cl_git_pass(git_branch_move(&new_ref, original_ref, NEW_BRANCH_NAME, 0));
 	cl_assert_equal_s(GIT_REFS_HEADS_DIR NEW_BRANCH_NAME, git_reference_name(new_ref));
-	
+
 	git_reference_free(original_ref);
 	git_reference_free(new_ref);
 }
@@ -32,7 +32,7 @@ void test_refs_branches_move__can_move_a_local_branch(void)
 void test_refs_branches_move__can_move_a_local_branch_to_a_different_namespace(void)
 {
 	git_reference *original_ref, *new_ref, *newer_ref;
-	
+
 	cl_git_pass(git_reference_lookup(&original_ref, repo, "refs/heads/br2"));
 
 	/* Downward */
@@ -42,14 +42,14 @@ void test_refs_branches_move__can_move_a_local_branch_to_a_different_namespace(v
 	/* Upward */
 	cl_git_pass(git_branch_move(&newer_ref, new_ref, "br2", 0));
 	git_reference_free(new_ref);
-	
+
 	git_reference_free(newer_ref);
 }
 
 void test_refs_branches_move__can_move_a_local_branch_to_a_partially_colliding_namespace(void)
 {
 	git_reference *original_ref, *new_ref, *newer_ref;
-	
+
 	cl_git_pass(git_reference_lookup(&original_ref, repo, "refs/heads/br2"));
 
 	/* Downward */
@@ -59,29 +59,29 @@ void test_refs_branches_move__can_move_a_local_branch_to_a_partially_colliding_n
 	/* Upward */
 	cl_git_pass(git_branch_move(&newer_ref, new_ref, "br2", 0));
 	git_reference_free(new_ref);
-	
+
 	git_reference_free(newer_ref);
 }
 
 void test_refs_branches_move__can_not_move_a_branch_if_its_destination_name_collide_with_an_existing_one(void)
 {
 	git_reference *original_ref, *new_ref;
-	
+
 	cl_git_pass(git_reference_lookup(&original_ref, repo, "refs/heads/br2"));
 
 	cl_assert_equal_i(GIT_EEXISTS, git_branch_move(&new_ref, original_ref, "master", 0));
-	
+
 	git_reference_free(original_ref);
 }
 
 void test_refs_branches_move__moving_a_branch_with_an_invalid_name_returns_EINVALIDSPEC(void)
 {
 	git_reference *original_ref, *new_ref;
-	
+
 	cl_git_pass(git_reference_lookup(&original_ref, repo, "refs/heads/br2"));
 
 	cl_assert_equal_i(GIT_EINVALIDSPEC, git_branch_move(&new_ref, original_ref, "Inv@{id", 0));
-	
+
 	git_reference_free(original_ref);
 }
 
@@ -98,11 +98,11 @@ void test_refs_branches_move__can_not_move_a_non_branch(void)
 void test_refs_branches_move__can_force_move_over_an_existing_branch(void)
 {
 	git_reference *original_ref, *new_ref;
-	
+
 	cl_git_pass(git_reference_lookup(&original_ref, repo, "refs/heads/br2"));
 
 	cl_git_pass(git_branch_move(&new_ref, original_ref, "master", 1));
-	
+
 	git_reference_free(original_ref);
 	git_reference_free(new_ref);
 }

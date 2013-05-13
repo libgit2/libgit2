@@ -115,7 +115,7 @@ void test_commit_write__root(void)
 	head_old = git__strdup(git_reference_symbolic_target(head));
 	cl_assert(head_old != NULL);
 	git_reference_free(head);
-	
+
 	cl_git_pass(git_reference_symbolic_create(&head, g_repo, "HEAD", branch_name, 1));
 
 	cl_git_pass(git_commit_create_v(

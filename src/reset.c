@@ -32,7 +32,7 @@ int git_reset_default(
 	int error;
 	git_index *index = NULL;
 
-	assert(pathspecs != NULL && pathspecs->count > 0); 
+	assert(pathspecs != NULL && pathspecs->count > 0);
 
 	memset(&entry, 0, sizeof(git_index_entry));
 

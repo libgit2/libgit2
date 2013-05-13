@@ -363,7 +363,7 @@ void assert_conflict(
 	git_index *index;
 	git_object *hack_tree;
 	git_reference *branch, *head;
-	git_buf file_path = GIT_BUF_INIT; 
+	git_buf file_path = GIT_BUF_INIT;
 
 	cl_git_pass(git_repository_index(&index, g_repo));
 
