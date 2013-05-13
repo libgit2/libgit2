@@ -21,18 +21,44 @@
  */
 GIT_BEGIN_DECL
 
+/**
+ * Bitmasks for on-disk fields of `git_index_entry` `flags`
+ *
+ * These bitmasks match the four fields in the `git_index_entry` `flags`
+ * value both in memory and on disk.  You can use them to interpret the
+ * data in the `flags`.
+ */
 #define GIT_IDXENTRY_NAMEMASK  (0x0fff)
 #define GIT_IDXENTRY_STAGEMASK (0x3000)
 #define GIT_IDXENTRY_EXTENDED  (0x4000)
 #define GIT_IDXENTRY_VALID     (0x8000)
 #define GIT_IDXENTRY_STAGESHIFT 12
 
-/*
- * Flags are divided into two parts: in-memory flags and
- * on-disk ones. Flags in GIT_IDXENTRY_EXTENDED_FLAGS
- * will get saved on-disk.
+/**
+ * Bitmasks for on-disk fields of `git_index_entry` `flags_extended`
  *
- * In-memory only flags:
+ * In memory, the `flags_extended` fields are divided into two parts: the
+ * fields that are read from and written to disk, and other fields that
+ * in-memory only and used by libgit2.  Only the flags in
+ * `GIT_IDXENTRY_EXTENDED_FLAGS` will get saved on-disk.
+ *
+ * These bitmasks match the three fields in the `git_index_entry`
+ * `flags_extended` value that belong on disk.  You can use them to
+ * interpret the data in the `flags_extended`.
+ */
+#define GIT_IDXENTRY_INTENT_TO_ADD     (1 << 13)
+#define GIT_IDXENTRY_SKIP_WORKTREE     (1 << 14)
+/* GIT_IDXENTRY_EXTENDED2 is reserved for future extension */
+#define GIT_IDXENTRY_EXTENDED2         (1 << 15)
+
+#define GIT_IDXENTRY_EXTENDED_FLAGS (GIT_IDXENTRY_INTENT_TO_ADD | GIT_IDXENTRY_SKIP_WORKTREE)
+
+/**
+ * Bitmasks for in-memory only fields of `git_index_entry` `flags_extended`
+ *
+ * These bitmasks match the other fields in the `git_index_entry`
+ * `flags_extended` value that are only used in-memory by libgit2.  You
+ * can use them to interpret the data in the `flags_extended`.
  */
 #define GIT_IDXENTRY_UPDATE            (1 << 0)
 #define GIT_IDXENTRY_REMOVE            (1 << 1)
@@ -47,15 +73,6 @@ GIT_BEGIN_DECL
 #define GIT_IDXENTRY_UNPACKED          (1 << 8)
 #define GIT_IDXENTRY_NEW_SKIP_WORKTREE (1 << 9)
 
-/*
- * Extended on-disk flags:
- */
-#define GIT_IDXENTRY_INTENT_TO_ADD     (1 << 13)
-#define GIT_IDXENTRY_SKIP_WORKTREE     (1 << 14)
-/* GIT_IDXENTRY_EXTENDED2 is for future extension */
-#define GIT_IDXENTRY_EXTENDED2         (1 << 15)
-
-#define GIT_IDXENTRY_EXTENDED_FLAGS (GIT_IDXENTRY_INTENT_TO_ADD | GIT_IDXENTRY_SKIP_WORKTREE)
 
 #define GIT_IDXENTRY_STAGE(E) (((E)->flags & GIT_IDXENTRY_STAGEMASK) >> GIT_IDXENTRY_STAGESHIFT)
 
@@ -87,12 +104,12 @@ typedef struct git_index_entry {
 } git_index_entry;
 
 /** Capabilities of system that affect index actions. */
-enum {
+typedef enum {
 	GIT_INDEXCAP_IGNORE_CASE = 1,
 	GIT_INDEXCAP_NO_FILEMODE = 2,
 	GIT_INDEXCAP_NO_SYMLINKS = 4,
 	GIT_INDEXCAP_FROM_OWNER  = ~0u
-};
+} git_indexcap_t;
 
 /** @name Index File Functions
  *
@@ -429,7 +446,7 @@ GIT_EXTERN(int) git_index_find(size_t *at_pos, git_index *index, const char *pat
  * @return 0 or an error code
  */
 GIT_EXTERN(int) git_index_conflict_add(
-   git_index *index,
+	git_index *index,
 	const git_index_entry *ancestor_entry,
 	const git_index_entry *our_entry,
 	const git_index_entry *their_entry);
@@ -447,7 +464,12 @@ GIT_EXTERN(int) git_index_conflict_add(
  * @param index an existing index object
  * @param path path to search
  */
-GIT_EXTERN(int) git_index_conflict_get(git_index_entry **ancestor_out, git_index_entry **our_out, git_index_entry **their_out, git_index *index, const char *path);
+GIT_EXTERN(int) git_index_conflict_get(
+	git_index_entry **ancestor_out,
+	git_index_entry **our_out,
+	git_index_entry **their_out,
+	git_index *index,
+	const char *path);
 
 /**
  * Removes the index entries that represent a conflict of a single file.
