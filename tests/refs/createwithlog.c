@@ -50,3 +50,34 @@ void test_refs_createwithlog__creating_a_direct_reference_adds_a_reflog_entry(vo
 	git_reference_free(reference);
 	git_signature_free(signature);
 }
+
+void test_refs_createwithlog__creating_a_symbolic_reference_adds_a_reflog_entry(void)
+{
+	git_reference *reference;
+	git_oid id;
+	git_signature *signature;
+	git_reflog *reflog;
+	const git_reflog_entry *entry;
+
+	const char *name = "ANOTHER_HEAD_TRACKER";
+	const char *message = "You've been logged, mate!";
+
+	git_oid_fromstr(&id, current_master_tip);
+
+	cl_git_pass(git_signature_now(&signature, "foo", "foo@bar"));
+
+	cl_git_pass(git_reference_symbolic_create_with_log(&reference, g_repo,
+		name, current_head_target, 0, signature, message));
+
+	cl_git_pass(git_reflog_read(&reflog, reference));
+	cl_assert_equal_sz(1, git_reflog_entrycount(reflog));
+
+	entry = git_reflog_entry_byindex(reflog, 0);
+	cl_assert(git_oid_streq(&entry->oid_old, GIT_OID_HEX_ZERO) == 0);
+	cl_assert(git_oid_cmp(&id, &entry->oid_cur) == 0);
+	cl_assert_equal_s(message, entry->msg);
+
+	git_reflog_free(reflog);
+	git_reference_free(reference);
+	git_signature_free(signature);
+}
