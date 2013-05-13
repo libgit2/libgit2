@@ -416,3 +416,51 @@ void test_index_tests__remove_directory(void)
 	git_repository_free(repo);
 	cl_fixture_cleanup("index_test");
 }
+
+void test_index_tests__dup_and_free_entries(void)
+{
+	git_repository *repo;
+	git_index *index;
+	const git_index_entry *entry;
+	git_index_entry *dup1, *dup2;
+
+	cl_git_pass(git_repository_open(&repo, cl_fixture("testrepo.git")));
+	cl_git_pass(git_repository_index(&index, repo));
+
+	cl_assert(entry = git_index_get_bypath(index, "COPYING", 0));
+	cl_assert((entry->flags_extended & GIT_IDXENTRY_ALLOCATED) == 0);
+
+	cl_assert(dup1 = git_index_entry_dup(entry));
+	cl_assert((dup1->flags_extended & GIT_IDXENTRY_ALLOCATED) != 0);
+
+	cl_assert_equal_s(entry->path, dup1->path);
+	cl_assert(git_oid_equal(&entry->oid, &dup1->oid));
+
+	cl_assert(entry = git_index_get_byindex(index, 0));
+	cl_assert((entry->flags_extended & GIT_IDXENTRY_ALLOCATED) == 0);
+
+	cl_assert(dup2 = git_index_entry_dup(entry));
+	cl_assert((dup2->flags_extended & GIT_IDXENTRY_ALLOCATED) != 0);
+
+	cl_assert_equal_s(entry->path, dup2->path);
+	cl_assert(git_oid_equal(&entry->oid, &dup2->oid));
+
+	git_index_free(index);
+	git_repository_free(repo);
+
+	/* entry is no longer pointing to valid memory, but dup1 and dup2 are */
+
+	cl_assert_equal_s("COPYING", dup1->path);
+	git_index_entry_free(dup1);
+
+	cl_assert_equal_s(".HEADER", dup2->path);
+
+	/* what would a binding that wanted to set the path do? */
+	dup2->path = git__strdup("newpath");
+	dup2->flags_extended |= GIT_IDXENTRY_ALLOCATED_PATH;
+	git_index_entry_free(dup2);
+
+	/* at this point there should be no memory leaks nor double-frees in
+	 * this function; that will have to be checked by an external tool.
+	 */
+}
