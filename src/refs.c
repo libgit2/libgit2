@@ -322,13 +322,44 @@ const char *git_reference_symbolic_target(const git_reference *ref)
 	return ref->target.symbolic;
 }
 
+static int feed_reflog(
+	const git_reference *ref,
+	const git_signature *signature,
+	const char *log_message)
+{
+
+	git_reflog *reflog = NULL;
+	git_oid peeled_ref_oid;
+	int error;
+
+	if ((error = git_reflog_read(&reflog, ref)) < 0)
+		goto cleanup;
+
+	if ((error = git_reference_name_to_id(&peeled_ref_oid,
+		git_reference_owner(ref), git_reference_name(ref))) < 0)
+			goto cleanup;
+
+	if ((error = git_reflog_append(reflog, &peeled_ref_oid, 
+		signature, log_message)) < 0)
+			goto cleanup;
+
+	error = git_reflog_write(reflog);
+
+cleanup:
+	git_reflog_free(reflog);
+
+	return 0;
+}
+
 static int reference__create(
 	git_reference **ref_out,
 	git_repository *repo,
 	const char *name,
 	const git_oid *oid,
 	const char *symbolic,
-	int force)
+	int force,
+	const git_signature *signature,
+	const char *log_message)
 {
 	char normalized[GIT_REFNAME_MAX];
 	git_refdb *refdb;
@@ -336,6 +367,7 @@ static int reference__create(
 	int error = 0;
 
 	assert(repo && name);
+	assert(!((signature == NULL) ^ (log_message == NULL)));
 
 	if (ref_out)
 		*ref_out = NULL;
@@ -381,6 +413,11 @@ static int reference__create(
 		return error;
 	}
 
+	if (log_message && (error = feed_reflog(ref, signature, log_message)) < 0) {
+		git_reference_free(ref);
+		return error;
+	}
+
 	if (ref_out == NULL)
 		git_reference_free(ref);
 	else
@@ -398,7 +435,22 @@ int git_reference_create(
 {
 	assert(oid);
 
-	return reference__create(ref_out, repo, name, oid, NULL, force);
+	return reference__create(ref_out, repo, name, oid, NULL, force, NULL, NULL);
+}
+
+int git_reference_create_with_log(
+	git_reference **ref_out,
+	git_repository *repo,
+	const char *name,
+	const git_oid *oid,
+	int force,
+	const git_signature *signature,
+	const char *log_message)
+{
+	assert(oid && signature && log_message);
+
+	return reference__create(
+		ref_out, repo, name, oid, NULL, force, signature, log_message);
 }
 
 int git_reference_symbolic_create(
@@ -410,7 +462,7 @@ int git_reference_symbolic_create(
 {
 	assert(target);
 
-	return reference__create(ref_out, repo, name, NULL, target, force);
+	return reference__create(ref_out, repo, name, NULL, target, force, NULL, NULL);
 }
 
 int git_reference_set_target(
