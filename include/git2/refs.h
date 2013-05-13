@@ -99,6 +99,48 @@ GIT_EXTERN(int) git_reference_dwim(git_reference **out, git_repository *repo, co
 GIT_EXTERN(int) git_reference_symbolic_create(git_reference **out, git_repository *repo, const char *name, const char *target, int force);
 
 /**
+ * Create a new symbolic reference and update the reflog with a given
+ * message.
+ *
+ * A symbolic reference is a reference name that refers to another
+ * reference name.  If the other name moves, the symbolic name will move,
+ * too.  As a simple example, the "HEAD" reference might refer to
+ * "refs/heads/master" while on the "master" branch of a repository.
+ *
+ * The symbolic reference will be created in the repository and written to
+ * the disk.  The generated reference object must be freed by the user.
+ *
+ * Valid reference names must follow one of two patterns:
+ *
+ * 1. Top-level names must contain only capital letters and underscores,
+ *    and must begin and end with a letter. (e.g. "HEAD", "ORIG_HEAD").
+ * 2. Names prefixed with "refs/" can be almost anything.  You must avoid
+ *    the characters '~', '^', ':', '\\', '?', '[', and '*', and the
+ *    sequences ".." and "@{" which have special meaning to revparse.
+ *
+ * This function will return an error if a reference already exists with the
+ * given name unless `force` is true, in which case it will be overwritten.
+ *
+ * @param out Pointer to the newly created reference
+ * @param repo Repository where that reference will live
+ * @param name The name of the reference
+ * @param target The target of the reference
+ * @param force Overwrite existing references
+ * @param signature The identity that will used to populate the reflog entry
+ * @param log_message The one line long message that has to be appended
+ * to the reflog
+ * @return 0 on success, EEXISTS, EINVALIDSPEC or an error code
+ */
+GIT_EXTERN(int) git_reference_symbolic_create_with_log(
+	git_reference **out,
+	git_repository *repo,
+	const char *name,
+	const char *target,
+	int force,
+	const git_signature *signature,
+	const char *log_message);
+
+/**
  * Create a new direct reference.
  *
  * A direct reference (also called an object id reference) refers directly
