@@ -335,6 +335,29 @@ GIT_EXTERN(int) git_reference_set_target(
 	const git_oid *id);
 
 /**
+ * Create a new reference with the same name as the given reference but a
+ * different OID target and update the reflog with a given message.
+ *
+ * The reference must be a direct reference, otherwise this will fail.
+ *
+ * The new reference will be written to disk, overwriting the given reference.
+ *
+ * @param out Pointer to the newly created reference
+ * @param ref The reference
+ * @param id The new target OID for the reference
+ * @param signature The identity that will used to populate the reflog entry
+ * @param log_message The one line long message that has to be appended
+ * to the reflog
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_reference_set_target_with_log(
+	git_reference **out,
+	git_reference *ref,
+	const git_oid *id,
+	const git_signature *signature,
+	const char *log_message);
+
+/**
  * Rename an existing reference.
  *
  * This method works for both direct and symbolic references.
