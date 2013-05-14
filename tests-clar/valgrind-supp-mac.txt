@@ -80,3 +80,75 @@
    ...
    fun:puts
 }
+{
+	mac-ssl-uninitialized-1
+	Memcheck:Cond
+	obj:/usr/lib/libcrypto.0.9.8.dylib
+	...
+	fun:ssl23_connect
+}
+{
+	mac-ssl-uninitialized-2
+	Memcheck:Cond
+	...
+	obj:/usr/lib/libssl.0.9.8.dylib
+	...
+	fun:ssl23_connect
+}
+{
+	mac-ssl-uninitialized-3
+	Memcheck:Value8
+	obj:/usr/lib/libcrypto.0.9.8.dylib
+	...
+	fun:ssl23_connect
+}
+{
+	mac-ssl-uninitialized-4
+	Memcheck:Param
+	...
+	obj:/usr/lib/libcrypto.0.9.8.dylib
+	...
+	fun:ssl23_connect
+}
+{
+	mac-ssl-leak-1
+	Memcheck:Leak
+	fun:malloc
+	fun:CRYPTO_malloc
+	...
+	fun:ERR_load_strings
+}
+{
+	mac-ssl-leak-2
+	Memcheck:Leak
+	fun:malloc
+	fun:CRYPTO_malloc
+	...
+	fun:SSL_library_init
+}
+{
+	mac-ssl-leak-3
+	Memcheck:Leak
+	fun:malloc
+	fun:strdup
+	...
+	fun:si_module_with_name
+	fun:getaddrinfo
+}
+{
+	mac-ssl-leak-4
+	Memcheck:Leak
+	fun:malloc
+	fun:CRYPTO_malloc
+	...
+	fun:ssl3_get_server_certificate
+}
+{
+	clar-printf-buf
+	Memcheck:Leak
+	fun:malloc
+	fun:__smakebuf
+	...
+	fun:printf
+	fun:clar_print_init
+}
