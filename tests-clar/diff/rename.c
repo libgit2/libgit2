@@ -443,4 +443,6 @@ void test_diff_rename__patch(void)
 	cl_assert_equal_i(GIT_DELTA_MODIFIED, (int)delta->status);
 
 	git_diff_list_free(diff);
+	git_tree_free(old_tree);
+	git_tree_free(new_tree);
 }
