@@ -53,3 +53,42 @@ void test_refs_settargetwithlog__updating_a_direct_reference_adds_a_reflog_entry
 	git_reference_free(reference);
 	git_signature_free(signature);
 }
+
+void test_refs_settargetwithlog__updating_a_symbolic_reference_adds_a_reflog_entry(void)
+{
+	git_reference *reference, *reference_out;
+	git_oid id;
+	git_signature *signature;
+	git_reflog *reflog;
+	const git_reflog_entry *entry;
+
+	const char *name = "HEAD";
+	const char *message = "You've been logged, mate!";
+
+	git_oid_fromstr(&id, br2_tip);
+
+	cl_git_pass(git_signature_now(&signature, "foo", "foo@bar"));
+	
+	cl_git_pass(git_reference_lookup(&reference, g_repo, name));
+
+	cl_assert_equal_s(
+		"refs/heads/master", git_reference_symbolic_target(reference));
+
+	cl_git_pass(git_reference_symbolic_set_target_with_log(&reference_out,
+		reference, br2_name, signature, message));
+
+	cl_assert_equal_s(
+		br2_name, git_reference_symbolic_target(reference_out));
+
+	cl_git_pass(git_reflog_read(&reflog, reference));
+
+	entry = git_reflog_entry_byindex(reflog, 0);
+	cl_assert(git_oid_streq(&entry->oid_old, master_tip) == 0);
+	cl_assert(git_oid_streq(&entry->oid_cur, br2_tip) == 0);
+	cl_assert_equal_s(message, entry->msg);
+
+	git_reflog_free(reflog);
+	git_reference_free(reference_out);
+	git_reference_free(reference);
+	git_signature_free(signature);
+}

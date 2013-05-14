@@ -319,6 +319,31 @@ GIT_EXTERN(int) git_reference_symbolic_set_target(
 
 /**
  * Create a new reference with the same name as the given reference but a
+ * different symbolic target  and update the reflog with a given message.
+ *
+ * The reference must be a symbolic reference, otherwise this will fail.
+ *
+ * The new reference will be written to disk, overwriting the given reference.
+ *
+ * The target name will be checked for validity.
+ * See `git_reference_create_symbolic()` for rules about valid names.
+ *
+ * @param out Pointer to the newly created reference
+ * @param ref The reference
+ * @param target The new target for the reference
+ * @param signature The identity that will used to populate the reflog entry
+ * @param log_message The one line long message that has to be appended
+ * @return 0 on success, EINVALIDSPEC or an error code
+ */
+GIT_EXTERN(int) git_reference_symbolic_set_target_with_log(
+	git_reference **out,
+	git_reference *ref,
+	const char *target,
+	const git_signature *signature,
+	const char *log_message);
+
+/**
+ * Create a new reference with the same name as the given reference but a
  * different OID target. The reference must be a direct reference, otherwise
  * this will fail.
  *

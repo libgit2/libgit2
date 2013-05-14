@@ -523,20 +523,47 @@ int git_reference_set_target_with_log(
 		out, ref->db->repo, ref->name, id, 1, signature, log_message);
 }
 
+static int ensure_is_an_updatable_symbolic_reference(git_reference *ref)
+{
+	if (ref->type == GIT_REF_SYMBOLIC)
+		return 0;
+
+	giterr_set(GITERR_REFERENCE, "Cannot set symbolic target on a direct reference");
+	return -1;
+}
+
 int git_reference_symbolic_set_target(
 	git_reference **out,
 	git_reference *ref,
 	const char *target)
 {
+	int error;
+
 	assert(out && ref && target);
 
-	if (ref->type != GIT_REF_SYMBOLIC) {
-		giterr_set(GITERR_REFERENCE,
-			"Cannot set symbolic target on a direct reference");
-		return -1;
-	}
+	if ((error = ensure_is_an_updatable_symbolic_reference(ref)) < 0)
+		return error;
 
 	return git_reference_symbolic_create(out, ref->db->repo, ref->name, target, 1);
+}
+
+int git_reference_symbolic_set_target_with_log(
+	git_reference **out,
+	git_reference *ref,
+	const char *target,
+	const git_signature *signature,
+	const char *log_message)
+{
+	int error;
+
+	assert(out && ref && target);
+	assert(signature && log_message);
+
+	if ((error = ensure_is_an_updatable_symbolic_reference(ref)) < 0)
+		return error;
+
+	return git_reference_symbolic_create_with_log(
+		out, ref->db->repo, ref->name, target, 1, signature, log_message);
 }
 
 int git_reference_rename(
