@@ -764,11 +764,14 @@ cleanup:
 }
 
 static int blob_content_to_link(
-	struct stat *st, git_blob *blob, const char *path, int can_symlink)
+	struct stat *st, git_blob *blob, const char *path, mode_t dir_mode, int can_symlink)
 {
 	git_buf linktarget = GIT_BUF_INIT;
 	int error;
 
+	if ((error = git_futils_mkpath2file(path, dir_mode)) < 0)
+        return error;
+	
 	if ((error = git_blob__getbuf(&linktarget, blob)) < 0)
 		return error;
 
@@ -914,7 +917,7 @@ static int checkout_blob(
 
 	if (S_ISLNK(file->mode))
 		error = blob_content_to_link(
-			&st, blob, git_buf_cstr(&data->path), data->can_symlink);
+			&st, blob, git_buf_cstr(&data->path), data->opts.dir_mode, data->can_symlink);
 	else
 		error = blob_content_to_file(
 			&st, blob, git_buf_cstr(&data->path), file->mode, &data->opts);
