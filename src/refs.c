@@ -480,19 +480,47 @@ int git_reference_symbolic_create_with_log(
 		ref_out, repo, name, NULL, target, force, signature, log_message);
 }
 
+static int ensure_is_an_updatable_direct_reference(git_reference *ref)
+{
+	if (ref->type == GIT_REF_OID)
+		return 0;
+
+	giterr_set(GITERR_REFERENCE, "Cannot set OID on symbolic reference");
+	return -1;
+}
+
 int git_reference_set_target(
 	git_reference **out,
 	git_reference *ref,
 	const git_oid *id)
 {
+	int error;
+
 	assert(out && ref && id);
 
-	if (ref->type != GIT_REF_OID) {
-		giterr_set(GITERR_REFERENCE, "Cannot set OID on symbolic reference");
-		return -1;
-	}
+	if ((error = ensure_is_an_updatable_direct_reference(ref)) < 0)
+		return error;
 
 	return git_reference_create(out, ref->db->repo, ref->name, id, 1);
+}
+
+int git_reference_set_target_with_log(
+	git_reference **out,
+	git_reference *ref,
+	const git_oid *id,
+	const git_signature *signature,
+	const char *log_message)
+{
+	int error;
+
+	assert(out && ref && id);
+	assert(signature && log_message);
+
+	if ((error = ensure_is_an_updatable_direct_reference(ref)) < 0)
+		return error;
+
+	return git_reference_create_with_log(
+		out, ref->db->repo, ref->name, id, 1, signature, log_message);
 }
 
 int git_reference_symbolic_set_target(
