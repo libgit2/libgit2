@@ -375,12 +375,8 @@ static int _git_ssh_setup_conn(
 	t->current_stream = s;
 	git__free(host);
 	git__free(port);
-	if (user) {
-		git__free(user);
-	}
-	if (pass) {
-		git__free(pass);
-	}
+	git__free(user);
+	git__free(pass);
 
 	return 0;
 	
@@ -389,12 +385,10 @@ on_error:
 		ssh_stream_free(*stream);
 	
 	git__free(host);
-	if (port)
-		git__free(port);
-	if (user)
-		git__free(user);
-	if (pass)
-		git__free(pass);
+	git__free(port);
+	git__free(user);
+	git__free(pass);
+
 	if (session)
 		libssh2_session_free(session), session = NULL;
 
