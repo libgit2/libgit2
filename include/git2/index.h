@@ -57,6 +57,8 @@ GIT_BEGIN_DECL
 
 #define GIT_IDXENTRY_EXTENDED_FLAGS (GIT_IDXENTRY_INTENT_TO_ADD | GIT_IDXENTRY_SKIP_WORKTREE)
 
+#define GIT_IDXENTRY_STAGE(E) (((E)->flags & GIT_IDXENTRY_STAGEMASK) >> GIT_IDXENTRY_STAGESHIFT)
+
 /** Time used in a git index entry */
 typedef struct {
 	git_time_t seconds;

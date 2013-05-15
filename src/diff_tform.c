@@ -386,8 +386,12 @@ static int similarity_calc(
 
 		/* TODO: apply wd-to-odb filters to file data if necessary */
 
-		if (!(error = git_buf_joinpath(
-				&path, git_repository_workdir(diff->repo), file->path)))
+		if ((error = git_buf_joinpath(
+				 &path, git_repository_workdir(diff->repo), file->path)) < 0)
+			return error;
+
+		/* if path is not a regular file, just skip this item */
+		if (git_path_isfile(path.ptr))
 			error = opts->metric->file_signature(
 				&cache[file_idx], file, path.ptr, opts->metric->payload);
 
@@ -398,8 +402,11 @@ static int similarity_calc(
 
 		/* TODO: add max size threshold a la diff? */
 
-		if ((error = git_blob_lookup(&blob, diff->repo, &file->oid)) < 0)
-			return error;
+		if (git_blob_lookup(&blob, diff->repo, &file->oid) < 0) {
+			/* if lookup fails, just skip this item in similarity calc */
+			giterr_clear();
+			return 0;
+		}
 
 		blobsize = git_blob_rawsize(blob);
 		if (!git__is_sizet(blobsize)) /* ? what to do ? */
