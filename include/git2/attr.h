@@ -141,7 +141,7 @@ GIT_EXTERN(git_attr_t) git_attr_value(const char *attr);
  */
 GIT_EXTERN(int) git_attr_get(
 	const char **value_out,
-    git_repository *repo,
+	git_repository *repo,
 	uint32_t flags,
 	const char *path,
 	const char *name);

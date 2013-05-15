@@ -39,7 +39,7 @@ struct git_reference_iterator {
 
 /** An instance for a custom backend */
 struct git_refdb_backend {
-    unsigned int version;
+	unsigned int version;
 
 	/**
 	 * Queries the refdb backend to determine if the given ref_name

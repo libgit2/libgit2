@@ -545,11 +545,11 @@ GIT_EXTERN(int) git_repository_mergehead_foreach(git_repository *repo,
  *             applied when calculating the hash.
  */
 GIT_EXTERN(int) git_repository_hashfile(
-    git_oid *out,
-    git_repository *repo,
-    const char *path,
-    git_otype type,
-    const char *as_path);
+	git_oid *out,
+	git_repository *repo,
+	const char *path,
+	git_otype type,
+	const char *as_path);
 
 /**
  * Make the repository HEAD point to the specified reference.

@@ -262,22 +262,22 @@ GIT_INLINE(size_t) git__size_t_powerof2(size_t v)
 
 GIT_INLINE(bool) git__isupper(int c)
 {
-    return (c >= 'A' && c <= 'Z');
+	return (c >= 'A' && c <= 'Z');
 }
 
 GIT_INLINE(bool) git__isalpha(int c)
 {
-    return ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z'));
+	return ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z'));
 }
 
 GIT_INLINE(bool) git__isdigit(int c)
 {
-    return (c >= '0' && c <= '9');
+	return (c >= '0' && c <= '9');
 }
 
 GIT_INLINE(bool) git__isspace(int c)
 {
-    return (c == ' ' || c == '\t' || c == '\n' || c == '\f' || c == '\r' || c == '\v' || c == 0x85 /* Unicode CR+LF */);
+	return (c == ' ' || c == '\t' || c == '\n' || c == '\f' || c == '\r' || c == '\v' || c == 0x85 /* Unicode CR+LF */);
 }
 
 GIT_INLINE(bool) git__iswildcard(int c)

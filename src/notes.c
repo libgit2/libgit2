@@ -579,30 +579,30 @@ cleanup:
 }
 
 int git_note_foreach(
-    git_repository *repo,
-    const char *notes_ref,
-    git_note_foreach_cb note_cb,
-    void *payload)
+	git_repository *repo,
+	const char *notes_ref,
+	git_note_foreach_cb note_cb,
+	void *payload)
 {
-    int error;
-    git_note_iterator *iter = NULL;
-    git_oid note_id, annotated_id;
+	int error;
+	git_note_iterator *iter = NULL;
+	git_oid note_id, annotated_id;
 
-    if ((error = git_note_iterator_new(&iter, repo, notes_ref)) < 0)
-        return error;
+	if ((error = git_note_iterator_new(&iter, repo, notes_ref)) < 0)
+		return error;
 
-    while (!(error = git_note_next(&note_id, &annotated_id, iter))) {
-        if (note_cb(&note_id, &annotated_id, payload)) {
-            error = GIT_EUSER;
-            break;
-        }
-    }
+	while (!(error = git_note_next(&note_id, &annotated_id, iter))) {
+		if (note_cb(&note_id, &annotated_id, payload)) {
+			error = GIT_EUSER;
+			break;
+		}
+	}
 
-    if (error == GIT_ITEROVER)
-        error = 0;
+	if (error == GIT_ITEROVER)
+		error = 0;
 
-    git_note_iterator_free(iter);
-    return error;
+	git_note_iterator_free(iter);
+	return error;
 }
 
 

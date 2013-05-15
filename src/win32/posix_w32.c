@@ -479,29 +479,29 @@ int p_send(GIT_SOCKET socket, const void *buffer, size_t length, int flags)
  * Borrowed from http://old.nabble.com/Porting-localtime_r-and-gmtime_r-td15282276.html
  * On Win32, `gmtime_r` doesn't exist but `gmtime` is threadsafe, so we can use that
  */
-struct tm * 
-p_localtime_r (const time_t *timer, struct tm *result) 
-{ 
-   struct tm *local_result; 
-   local_result = localtime (timer); 
+struct tm *
+p_localtime_r (const time_t *timer, struct tm *result)
+{
+	struct tm *local_result;
+	local_result = localtime (timer);
 
-   if (local_result == NULL || result == NULL) 
-      return NULL; 
+	if (local_result == NULL || result == NULL)
+		return NULL;
 
-   memcpy (result, local_result, sizeof (struct tm)); 
-   return result; 
-} 
-struct tm * 
-p_gmtime_r (const time_t *timer, struct tm *result) 
-{ 
-   struct tm *local_result; 
-   local_result = gmtime (timer); 
+	memcpy (result, local_result, sizeof (struct tm));
+	return result;
+}
+struct tm *
+p_gmtime_r (const time_t *timer, struct tm *result)
+{
+	struct tm *local_result;
+	local_result = gmtime (timer);
 
-   if (local_result == NULL || result == NULL) 
-      return NULL; 
+	if (local_result == NULL || result == NULL)
+		return NULL;
 
-   memcpy (result, local_result, sizeof (struct tm)); 
-   return result; 
+	memcpy (result, local_result, sizeof (struct tm));
+	return result;
 }
 
 #if defined(_MSC_VER) || defined(_MSC_EXTENSIONS)
@@ -514,44 +514,44 @@ p_gmtime_r (const time_t *timer, struct tm *result)
 #define _TIMEZONE_DEFINED
 struct timezone 
 {
-   int  tz_minuteswest; /* minutes W of Greenwich */
-   int  tz_dsttime;     /* type of dst correction */
+	int  tz_minuteswest; /* minutes W of Greenwich */
+	int  tz_dsttime;     /* type of dst correction */
 };
 #endif
- 
+
 int p_gettimeofday(struct timeval *tv, struct timezone *tz)
 {
-   FILETIME ft;
-   unsigned __int64 tmpres = 0;
-   static int tzflag;
- 
-   if (NULL != tv)
-      {
-         GetSystemTimeAsFileTime(&ft);
- 
-         tmpres |= ft.dwHighDateTime;
-         tmpres <<= 32;
-         tmpres |= ft.dwLowDateTime;
- 
-         /*converting file time to unix epoch*/
-         tmpres /= 10;  /*convert into microseconds*/
-         tmpres -= DELTA_EPOCH_IN_MICROSECS; 
-         tv->tv_sec = (long)(tmpres / 1000000UL);
-         tv->tv_usec = (long)(tmpres % 1000000UL);
-      }
- 
-   if (NULL != tz)
-      {
-         if (!tzflag)
-            {
-               _tzset();
-               tzflag++;
-            }
-         tz->tz_minuteswest = _timezone / 60;
-         tz->tz_dsttime = _daylight;
-      }
- 
-   return 0;
+	FILETIME ft;
+	unsigned __int64 tmpres = 0;
+	static int tzflag;
+
+	if (NULL != tv)
+	{
+		GetSystemTimeAsFileTime(&ft);
+
+		tmpres |= ft.dwHighDateTime;
+		tmpres <<= 32;
+		tmpres |= ft.dwLowDateTime;
+
+		/*converting file time to unix epoch*/
+		tmpres /= 10;  /*convert into microseconds*/
+		tmpres -= DELTA_EPOCH_IN_MICROSECS; 
+		tv->tv_sec = (long)(tmpres / 1000000UL);
+		tv->tv_usec = (long)(tmpres % 1000000UL);
+	}
+
+	if (NULL != tz)
+	{
+		 if (!tzflag)
+		{
+			_tzset();
+			tzflag++;
+		}
+		tz->tz_minuteswest = _timezone / 60;
+		tz->tz_dsttime = _daylight;
+	}
+
+	return 0;
 }
 
 int p_inet_pton(int af, const char* src, void* dst)

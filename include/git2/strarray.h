@@ -20,8 +20,8 @@ GIT_BEGIN_DECL
 
 /** Array of strings */
 typedef struct git_strarray {
-    char **strings;
-    size_t count;
+	char **strings;
+	size_t count;
 } git_strarray;
 
 /**
