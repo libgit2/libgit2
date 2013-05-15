@@ -290,9 +290,20 @@ GIT_EXTERN(int) git_reference_rename(
  * Callers must call `git_reference_free`.
  *
  * @param ref The reference to remove
- * @return 0 or an error code
+ * @return 0, GIT_ENOTFOUND or an error code
  */
 GIT_EXTERN(int) git_reference_delete(git_reference *ref);
+
+/**
+ * Delete an existing reference.
+ *
+ * This method works for both direct and symbolic references.
+ *
+ * @param repo The repository where the reference lives.
+ * @param refname The name of the reference to remove.
+ * @return 0, GIT_ENOTFOUND or an error code
+ */
+GIT_EXTERN(int) git_reference_delete_byname(git_repository *repo, const char *refname);
 
 /**
  * Fill a list with all the references that can be found in a repository.

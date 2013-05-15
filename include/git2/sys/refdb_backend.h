@@ -95,17 +95,30 @@ struct git_refdb_backend {
 	 */
 	void (*iterator_free)(
 		git_reference_iterator *iter);
+
 	/*
 	 * Writes the given reference to the refdb.  A refdb implementation
 	 * must provide this function.
 	 */
-	int (*write)(git_refdb_backend *backend, const git_reference *ref);
+	int (*write)(
+		git_refdb_backend *backend,
+		const char *reference_name,
+		const git_oid *target_oid);
+
+	/**
+	 * Writes a symbolic reference to the refdb.  A refdb implementation
+	 * must provide this function.
+	 */
+	int (*write_symbolic)(
+		git_refdb_backend *backend,
+		const char *reference_name,
+		const char *target_ref);
 
 	/**
 	 * Deletes the given reference from the refdb.  A refdb implementation
 	 * must provide this function.
 	 */
-	int (*delete)(git_refdb_backend *backend, const git_reference *ref);
+	int (*delete)(git_refdb_backend *backend, const char *reference_name);
 
 	/**
 	 * Suggests that the given refdb compress or optimize its references.
