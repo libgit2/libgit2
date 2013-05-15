@@ -342,7 +342,8 @@ static int _git_ssh_setup_conn(
 		goto on_error;
 	
 	if (user && pass) {
-		git_cred_userpass_plaintext_new(&t->cred, user, pass);
+		if (git_cred_userpass_plaintext_new(&t->cred, user, pass) < 0)
+			goto on_error;
 	} else {
 		if (t->owner->cred_acquire_cb(&t->cred,
 				t->owner->url,
