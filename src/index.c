@@ -550,51 +550,6 @@ const git_index_entry *git_index_get_bypath(
 	return git_index_get_byindex(index, pos);
 }
 
-typedef struct {
-	git_index_entry entry;
-	char pathdata[GIT_FLEX_ARRAY];
-} git_index_entry_with_path;
-
-git_index_entry *git_index_entry_dup(const git_index_entry *src)
-{
-	git_index_entry_with_path *tgt;
-	size_t pathlen;
-
-	if (!src)
-		return NULL;
-
-	pathlen = strlen(src->path);
-
-	tgt = git__calloc(sizeof(git_index_entry_with_path) + pathlen + 1, 1);
-	if (!tgt)
-		return NULL;
-
-	memcpy(&tgt->entry, src, sizeof(tgt->entry));
-	tgt->entry.flags_extended |= GIT_IDXENTRY_ALLOCATED;
-
-	memcpy(tgt->pathdata, src->path, pathlen + 1);
-	tgt->entry.path = tgt->pathdata;
-
-	return (git_index_entry *)tgt;
-}
-
-void git_index_entry_free(git_index_entry *entry)
-{
-	assert(entry);
-
-	if (!(entry->flags_extended & GIT_IDXENTRY_ALLOCATED))
-		return;
-
-	if ((entry->flags_extended & GIT_IDXENTRY_ALLOCATED_PATH) != 0 &&
-		entry->path != ((git_index_entry_with_path *)entry)->pathdata)
-		git__free(entry->path);
-
-	/* ward off accidental double free */
-	entry->flags_extended = (entry->flags_extended & ~GIT_IDXENTRY_ALLOCATED);
-
-	git__free(entry);
-}
-
 void git_index_entry__init_from_stat(git_index_entry *entry, struct stat *st)
 {
 	entry->ctime.seconds = (git_time_t)st->st_ctime;

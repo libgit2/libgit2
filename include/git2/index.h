@@ -34,6 +34,8 @@ GIT_BEGIN_DECL
 #define GIT_IDXENTRY_VALID     (0x8000)
 #define GIT_IDXENTRY_STAGESHIFT 12
 
+#define GIT_IDXENTRY_STAGE(E) (((E)->flags & GIT_IDXENTRY_STAGEMASK) >> GIT_IDXENTRY_STAGESHIFT)
+
 /**
  * Bitmasks for on-disk fields of `git_index_entry` `flags_extended`
  *
@@ -72,11 +74,6 @@ GIT_BEGIN_DECL
 
 #define GIT_IDXENTRY_UNPACKED          (1 << 8)
 #define GIT_IDXENTRY_NEW_SKIP_WORKTREE (1 << 9)
-
-#define GIT_IDXENTRY_ALLOCATED         (1 << 10)
-#define GIT_IDXENTRY_ALLOCATED_PATH    (1 << 11)
-
-#define GIT_IDXENTRY_STAGE(E) (((E)->flags & GIT_IDXENTRY_STAGEMASK) >> GIT_IDXENTRY_STAGESHIFT)
 
 /** Time used in a git index entry */
 typedef struct {
@@ -286,9 +283,9 @@ GIT_EXTERN(void) git_index_clear(git_index *index);
 /**
  * Get a pointer to one of the entries in the index
  *
- * The entry is not modifiable and should not be freed.  If you need a
- * permanent copy of the entry, use `git_index_entry_dup()` (after which
- * you will be responsible for calling `git_index_entry_free()`)
+ * The entry is not modifiable and should not be freed.  Because the
+ * `git_index_entry` struct is a publicly defined struct, you should
+ * be able to make your own permanent copy of the data if necessary.
  *
  * @param index an existing index object
  * @param n the position of the entry
@@ -300,9 +297,9 @@ GIT_EXTERN(const git_index_entry *) git_index_get_byindex(
 /**
  * Get a pointer to one of the entries in the index
  *
- * The entry is not modifiable and should not be freed.  If you need a
- * permanent copy of the entry, use `git_index_entry_dup()` (after which
- * you will be responsible for calling `git_index_entry_free()`).
+ * The entry is not modifiable and should not be freed.  Because the
+ * `git_index_entry` struct is a publicly defined struct, you should
+ * be able to make your own permanent copy of the data if necessary.
  *
  * @param index an existing index object
  * @param path path to search
@@ -360,33 +357,6 @@ GIT_EXTERN(int) git_index_add(git_index *index, const git_index_entry *source_en
  * @returns the stage number
  */
 GIT_EXTERN(int) git_index_entry_stage(const git_index_entry *entry);
-
-/**
- * Make a copy of an entry that you can keep
- *
- * The `git_index_entry` pointers that are returned by the accessor
- * functions are `const git_index_entry *` so they can't be modified
- * and their lifetime as objects matches that of the `git_index`.
- *
- * This function allows you to make a copy of those entries that can
- * be modified and which you are responsible for freeing.
- *
- * @param entry The entry to be copied
- * @returns Newly allocated entry (or NULL if allocation failure)
- */
-GIT_EXTERN(git_index_entry *) git_index_entry_dup(const git_index_entry *entry);
-
-/**
- * Release the memory for a git_index_entry
- *
- * You should only call this on `git_index_entry` objects that you have
- * obtained through `git_index_entry_dup()`.  It is an error to call this
- * on the values returned by `git_index_get_byindex()` or
- * `git_index_get_bypath()`.
- *
- * @param entry The entry to be freed
- */
-GIT_EXTERN(void) git_index_entry_free(git_index_entry *entry);
 
 /**@}*/
 
