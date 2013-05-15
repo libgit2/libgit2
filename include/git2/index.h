@@ -21,68 +21,29 @@
  */
 GIT_BEGIN_DECL
 
-/**
- * Bitmasks for on-disk fields of `git_index_entry` `flags`
- *
- * These bitmasks match the four fields in the `git_index_entry` `flags`
- * value both in memory and on disk.  You can use them to interpret the
- * data in the `flags`.
- */
-#define GIT_IDXENTRY_NAMEMASK  (0x0fff)
-#define GIT_IDXENTRY_STAGEMASK (0x3000)
-#define GIT_IDXENTRY_EXTENDED  (0x4000)
-#define GIT_IDXENTRY_VALID     (0x8000)
-#define GIT_IDXENTRY_STAGESHIFT 12
-
-#define GIT_IDXENTRY_STAGE(E) (((E)->flags & GIT_IDXENTRY_STAGEMASK) >> GIT_IDXENTRY_STAGESHIFT)
-
-/**
- * Bitmasks for on-disk fields of `git_index_entry` `flags_extended`
- *
- * In memory, the `flags_extended` fields are divided into two parts: the
- * fields that are read from and written to disk, and other fields that
- * in-memory only and used by libgit2.  Only the flags in
- * `GIT_IDXENTRY_EXTENDED_FLAGS` will get saved on-disk.
- *
- * These bitmasks match the three fields in the `git_index_entry`
- * `flags_extended` value that belong on disk.  You can use them to
- * interpret the data in the `flags_extended`.
- */
-#define GIT_IDXENTRY_INTENT_TO_ADD     (1 << 13)
-#define GIT_IDXENTRY_SKIP_WORKTREE     (1 << 14)
-/* GIT_IDXENTRY_EXTENDED2 is reserved for future extension */
-#define GIT_IDXENTRY_EXTENDED2         (1 << 15)
-
-#define GIT_IDXENTRY_EXTENDED_FLAGS (GIT_IDXENTRY_INTENT_TO_ADD | GIT_IDXENTRY_SKIP_WORKTREE)
-
-/**
- * Bitmasks for in-memory only fields of `git_index_entry` `flags_extended`
- *
- * These bitmasks match the other fields in the `git_index_entry`
- * `flags_extended` value that are only used in-memory by libgit2.  You
- * can use them to interpret the data in the `flags_extended`.
- */
-#define GIT_IDXENTRY_UPDATE            (1 << 0)
-#define GIT_IDXENTRY_REMOVE            (1 << 1)
-#define GIT_IDXENTRY_UPTODATE          (1 << 2)
-#define GIT_IDXENTRY_ADDED             (1 << 3)
-
-#define GIT_IDXENTRY_HASHED            (1 << 4)
-#define GIT_IDXENTRY_UNHASHED          (1 << 5)
-#define GIT_IDXENTRY_WT_REMOVE         (1 << 6) /* remove in work directory */
-#define GIT_IDXENTRY_CONFLICTED        (1 << 7)
-
-#define GIT_IDXENTRY_UNPACKED          (1 << 8)
-#define GIT_IDXENTRY_NEW_SKIP_WORKTREE (1 << 9)
-
-/** Time used in a git index entry */
+/** Time structure used in a git index entry */
 typedef struct {
 	git_time_t seconds;
 	/* nsec should not be stored as time_t compatible */
 	unsigned int nanoseconds;
 } git_index_time;
 
-/** Memory representation of a file entry in the index. */
+/**
+ * In-memory representation of a file entry in the index.
+ *
+ * This is a public structure that represents a file entry in the index.
+ * The meaning of the fields corresponds to core Git's documentation (in
+ * "Documentation/technical/index-format.txt").
+ *
+ * The `flags` field consists of a number of bit fields which can be
+ * accessed via the first set of `GIT_IDXENTRY_...` bitmasks below.  These
+ * flags are all read from and persisted to disk.
+ *
+ * The `flags_extended` field also has a number of bit fields which can be
+ * accessed via the later `GIT_IDXENTRY_...` bitmasks below.  Some of
+ * these flags are read from and written to disk, but some are set aside
+ * for in-memory only reference.
+ */
 typedef struct git_index_entry {
 	git_index_time ctime;
 	git_index_time mtime;
@@ -101,6 +62,60 @@ typedef struct git_index_entry {
 
 	char *path;
 } git_index_entry;
+
+/**
+ * Bitmasks for on-disk fields of `git_index_entry`'s `flags`
+ *
+ * These bitmasks match the four fields in the `git_index_entry` `flags`
+ * value both in memory and on disk.  You can use them to interpret the
+ * data in the `flags`.
+ */
+#define GIT_IDXENTRY_NAMEMASK  (0x0fff)
+#define GIT_IDXENTRY_STAGEMASK (0x3000)
+#define GIT_IDXENTRY_EXTENDED  (0x4000)
+#define GIT_IDXENTRY_VALID     (0x8000)
+#define GIT_IDXENTRY_STAGESHIFT 12
+
+#define GIT_IDXENTRY_STAGE(E) (((E)->flags & GIT_IDXENTRY_STAGEMASK) >> GIT_IDXENTRY_STAGESHIFT)
+
+/**
+ * Bitmasks for on-disk fields of `git_index_entry`'s `flags_extended`
+ *
+ * In memory, the `flags_extended` fields are divided into two parts: the
+ * fields that are read from and written to disk, and other fields that
+ * in-memory only and used by libgit2.  Only the flags in
+ * `GIT_IDXENTRY_EXTENDED_FLAGS` will get saved on-disk.
+ *
+ * These bitmasks match the three fields in the `git_index_entry`
+ * `flags_extended` value that belong on disk.  You can use them to
+ * interpret the data in the `flags_extended`.
+ */
+#define GIT_IDXENTRY_INTENT_TO_ADD     (1 << 13)
+#define GIT_IDXENTRY_SKIP_WORKTREE     (1 << 14)
+/* GIT_IDXENTRY_EXTENDED2 is reserved for future extension */
+#define GIT_IDXENTRY_EXTENDED2         (1 << 15)
+
+#define GIT_IDXENTRY_EXTENDED_FLAGS (GIT_IDXENTRY_INTENT_TO_ADD | GIT_IDXENTRY_SKIP_WORKTREE)
+
+/**
+ * Bitmasks for in-memory only fields of `git_index_entry`'s `flags_extended`
+ *
+ * These bitmasks match the other fields in the `git_index_entry`
+ * `flags_extended` value that are only used in-memory by libgit2.  You
+ * can use them to interpret the data in the `flags_extended`.
+ */
+#define GIT_IDXENTRY_UPDATE            (1 << 0)
+#define GIT_IDXENTRY_REMOVE            (1 << 1)
+#define GIT_IDXENTRY_UPTODATE          (1 << 2)
+#define GIT_IDXENTRY_ADDED             (1 << 3)
+
+#define GIT_IDXENTRY_HASHED            (1 << 4)
+#define GIT_IDXENTRY_UNHASHED          (1 << 5)
+#define GIT_IDXENTRY_WT_REMOVE         (1 << 6) /* remove in work directory */
+#define GIT_IDXENTRY_CONFLICTED        (1 << 7)
+
+#define GIT_IDXENTRY_UNPACKED          (1 << 8)
+#define GIT_IDXENTRY_NEW_SKIP_WORKTREE (1 << 9)
 
 /** Capabilities of system that affect index actions. */
 typedef enum {
