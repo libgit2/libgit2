@@ -235,4 +235,3 @@ int git_win32__find_xdg_dirs(git_buf *out)
 
 	return win32_find_existing_dirs(out, global_tmpls, temp);
 }
-

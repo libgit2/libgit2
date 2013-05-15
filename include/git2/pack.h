@@ -96,12 +96,12 @@ GIT_EXTERN(int) git_packbuilder_insert_tree(git_packbuilder *pb, const git_oid *
 
 /**
  * Insert a commit object
- * 
+ *
  * This will add a commit as well as the completed referenced tree.
- * 
+ *
  * @param pb The packbuilder
  * @param id The oid of the commit
- * 
+ *
  * @return 0 or an error code
  */
 GIT_EXTERN(int) git_packbuilder_insert_commit(git_packbuilder *pb, const git_oid *id);

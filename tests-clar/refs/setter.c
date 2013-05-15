@@ -25,7 +25,7 @@ void test_refs_setter__update_direct(void)
 {
 	git_reference *ref, *test_ref, *new_ref;
 	git_oid id;
-	
+
 	cl_git_pass(git_reference_lookup(&ref, g_repo, ref_master_name));
 	cl_assert(git_reference_type(ref) == GIT_REF_OID);
 	git_oid_cpy(&id, git_reference_target(ref));
@@ -48,7 +48,7 @@ void test_refs_setter__update_direct(void)
 void test_refs_setter__update_symbolic(void)
 {
 	git_reference *head, *new_head;
-	
+
 	cl_git_pass(git_reference_lookup(&head, g_repo, "HEAD"));
 	cl_assert(git_reference_type(head) == GIT_REF_SYMBOLIC);
 	cl_assert(strcmp(git_reference_symbolic_target(head), ref_master_name) == 0);
@@ -56,7 +56,7 @@ void test_refs_setter__update_symbolic(void)
 	cl_git_pass(git_reference_symbolic_set_target(&new_head, head, ref_test_name));
 	git_reference_free(new_head);
 	git_reference_free(head);
-	
+
 	cl_git_pass(git_reference_lookup(&head, g_repo, "HEAD"));
 	cl_assert(git_reference_type(head) == GIT_REF_SYMBOLIC);
 	cl_assert(strcmp(git_reference_symbolic_target(head), ref_test_name) == 0);
@@ -68,13 +68,13 @@ void test_refs_setter__cant_update_direct_with_symbolic(void)
 	// Overwrite an existing object id reference with a symbolic one
 	git_reference *ref, *new;
 	git_oid id;
-	
+
 	cl_git_pass(git_reference_lookup(&ref, g_repo, ref_master_name));
 	cl_assert(git_reference_type(ref) == GIT_REF_OID);
 	git_oid_cpy(&id, git_reference_target(ref));
-	
+
 	cl_git_fail(git_reference_symbolic_set_target(&new, ref, ref_name));
-	
+
 	git_reference_free(ref);
 }
 
@@ -83,7 +83,7 @@ void test_refs_setter__cant_update_symbolic_with_direct(void)
 	// Overwrite an existing symbolic reference with an object id one
 	git_reference *ref, *new;
 	git_oid id;
-	
+
 	cl_git_pass(git_reference_lookup(&ref, g_repo, ref_master_name));
 	cl_assert(git_reference_type(ref) == GIT_REF_OID);
 	git_oid_cpy(&id, git_reference_target(ref));
@@ -94,6 +94,6 @@ void test_refs_setter__cant_update_symbolic_with_direct(void)
 
 	/* Can't set an OID on a direct ref */
 	cl_git_fail(git_reference_set_target(&new, ref, &id));
-	
+
 	git_reference_free(ref);
 }
