@@ -90,48 +90,26 @@ int git_cred_ssh_keyfile_passphrase_new(
 {
 	git_cred_ssh_keyfile_passphrase *c;
 
-	if (!cred)
-		return -1;
+	assert(cred && privatekey);
 
-	c = git__malloc(sizeof(git_cred_ssh_keyfile_passphrase));
+	c = git__calloc(1, sizeof(git_cred_ssh_keyfile_passphrase));
 	GITERR_CHECK_ALLOC(c);
 
 	c->parent.credtype = GIT_CREDTYPE_SSH_KEYFILE_PASSPHRASE;
 	c->parent.free = ssh_keyfile_passphrase_free;
     
     c->privatekey = git__strdup(privatekey);
-    
-	if (!c->privatekey) {
-		git__free(c);
-		return -1;
-	}
+	GITERR_CHECK_ALLOC(c->privatekey);
     
     if (publickey) {
-        c->publickey = git__strdup(publickey);
-
-        if (!c->publickey) {
-            git__free(c->privatekey);
-            git__free(c);
-            return -1;
-        }
-    } else {
-        c->publickey = NULL;
-    }
-    
-    if (passphrase) {
-        c->passphrase = git__strdup(passphrase);
-        
-        if (!c->passphrase) {
-            git__free(c->privatekey);
-            if (c->publickey) {
-                git__free(c->publickey);
-            }
-            git__free(c);
-            return -1;
-        }
-    } else {
-        c->passphrase = NULL;
-    }
+		c->publickey = git__strdup(publickey);
+		GITERR_CHECK_ALLOC(c->publickey);
+	}
+	
+	if (passphrase) {
+		c->passphrase = git__strdup(passphrase);
+		GITERR_CHECK_ALLOC(c->passphrase);
+	}
 
 	*cred = &c->parent;
 	return 0;
