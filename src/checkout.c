@@ -820,6 +820,31 @@ static int checkout_update_index(
 	return git_index_add(data->index, &entry);
 }
 
+static int checkout_submodule_update_index(
+	checkout_data *data,
+	const git_diff_file *file)
+{
+	struct stat st;
+
+	/* update the index unless prevented */
+	if ((data->strategy & GIT_CHECKOUT_DONT_UPDATE_INDEX) != 0)
+		return 0;
+
+	git_buf_truncate(&data->path, data->workdir_len);
+	if (git_buf_puts(&data->path, file->path) < 0)
+		return -1;
+
+	if (p_stat(git_buf_cstr(&data->path), &st) < 0) {
+		giterr_set(
+			GITERR_CHECKOUT, "Could not stat submodule %s\n", file->path);
+		return GIT_ENOTFOUND;
+	}
+
+	st.st_mode = GIT_FILEMODE_COMMIT;
+
+	return checkout_update_index(data, file, &st);
+}
+
 static int checkout_submodule(
 	checkout_data *data,
 	const git_diff_file *file)
@@ -836,8 +861,17 @@ static int checkout_submodule(
 			data->opts.dir_mode, GIT_MKDIR_PATH)) < 0)
 		return error;
 
-	if ((error = git_submodule_lookup(&sm, data->repo, file->path)) < 0)
+	if ((error = git_submodule_lookup(&sm, data->repo, file->path)) < 0) {
+		/* I've observed repos with submodules in the tree that do not
+		 * have a .gitmodules - core Git just makes an empty directory
+		 */
+		if (error == GIT_ENOTFOUND) {
+			giterr_clear();
+			return checkout_submodule_update_index(data, file);
+		}
+
 		return error;
+	}
 
 	/* TODO: Support checkout_strategy options.  Two circumstances:
 	 * 1 - submodule already checked out, but we need to move the HEAD
@@ -848,26 +882,7 @@ static int checkout_submodule(
 	 * command should probably be able to.  Do we need a submodule callback?
 	 */
 
-	/* update the index unless prevented */
-	if ((data->strategy & GIT_CHECKOUT_DONT_UPDATE_INDEX) == 0) {
-		struct stat st;
-
-		git_buf_truncate(&data->path, data->workdir_len);
-		if (git_buf_puts(&data->path, file->path) < 0)
-			return -1;
-
-		if ((error = p_stat(git_buf_cstr(&data->path), &st)) < 0) {
-			giterr_set(
-				GITERR_CHECKOUT, "Could not stat submodule %s\n", file->path);
-			return error;
-		}
-
-		st.st_mode = GIT_FILEMODE_COMMIT;
-
-		error = checkout_update_index(data, file, &st);
-	}
-
-	return error;
+	return checkout_submodule_update_index(data, file);
 }
 
 static void report_progress(

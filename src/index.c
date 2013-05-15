@@ -106,7 +106,7 @@ static void index_entry_reuc_free(git_index_reuc_entry *reuc);
 
 GIT_INLINE(int) index_entry_stage(const git_index_entry *entry)
 {
-	return (entry->flags & GIT_IDXENTRY_STAGEMASK) >> GIT_IDXENTRY_STAGESHIFT;
+	return GIT_IDXENTRY_STAGE(entry);
 }
 
 static int index_srch(const void *key, const void *array_member)
