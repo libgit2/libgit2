@@ -24,46 +24,46 @@
 typedef enum {
 	/* No conflict - a change only occurs in one branch. */
 	GIT_MERGE_DIFF_NONE = 0,
-	
+
 	/* Occurs when a file is modified in both branches. */
 	GIT_MERGE_DIFF_BOTH_MODIFIED = (1 << 0),
-	
+
 	/* Occurs when a file is added in both branches. */
 	GIT_MERGE_DIFF_BOTH_ADDED = (1 << 1),
-	
+
 	/* Occurs when a file is deleted in both branches. */
 	GIT_MERGE_DIFF_BOTH_DELETED = (1 << 2),
-	
+
 	/* Occurs when a file is modified in one branch and deleted in the other. */
 	GIT_MERGE_DIFF_MODIFIED_DELETED = (1 << 3),
-	
+
 	/* Occurs when a file is renamed in one branch and modified in the other. */
 	GIT_MERGE_DIFF_RENAMED_MODIFIED = (1 << 4),
-	
+
 	/* Occurs when a file is renamed in one branch and deleted in the other. */
 	GIT_MERGE_DIFF_RENAMED_DELETED = (1 << 5),
-	
+
 	/* Occurs when a file is renamed in one branch and a file with the same
 	 * name is added in the other.  Eg, A->B and new file B.  Core git calls
 	 * this a "rename/delete". */
 	GIT_MERGE_DIFF_RENAMED_ADDED = (1 << 6),
-	
+
 	/* Occurs when both a file is renamed to the same name in the ours and
 	 * theirs branches.  Eg, A->B and A->B in both.  Automergeable. */
 	GIT_MERGE_DIFF_BOTH_RENAMED = (1 << 7),
-	
+
 	/* Occurs when a file is renamed to different names in the ours and theirs
 	 * branches.  Eg, A->B and A->C. */
 	GIT_MERGE_DIFF_BOTH_RENAMED_1_TO_2 = (1 << 8),
-	
+
 	/* Occurs when two files are renamed to the same name in the ours and
 	 * theirs branches.  Eg, A->C and B->C. */
 	GIT_MERGE_DIFF_BOTH_RENAMED_2_TO_1 = (1 << 9),
-	
+
 	/* Occurs when an item at a path in one branch is a directory, and an
 	 * item at the same path in a different branch is a file. */
 	GIT_MERGE_DIFF_DIRECTORY_FILE = (1 << 10),
-	
+
 	/* The child of a folder that is in a directory/file conflict. */
 	GIT_MERGE_DIFF_DF_CHILD = (1 << 11),
 } git_merge_diff_type_t;
@@ -72,20 +72,20 @@ typedef enum {
 typedef struct {
 	git_repository *repo;
 	git_pool pool;
-	
+
 	/* Vector of git_index_entry that represent the merged items that
 	 * have been staged, either because only one side changed, or because
 	 * the two changes were non-conflicting and mergeable.  These items
 	 * will be written as staged entries in the main index.
 	 */
 	git_vector staged;
-	
+
 	/* Vector of git_merge_diff entries that represent the conflicts that
 	 * have not been automerged.  These items will be written to high-stage
 	 * entries in the main index.
 	 */
 	git_vector conflicts;
-	
+
 	/* Vector of git_merge_diff that have been automerged.  These items
 	 * will be written to the REUC when the index is produced.
 	 */
@@ -97,12 +97,12 @@ typedef struct {
  */
 typedef struct {
 	git_merge_diff_type_t type;
-	
+
 	git_index_entry ancestor_entry;
-	
+
 	git_index_entry our_entry;
 	git_delta_t our_status;
-	
+
 	git_index_entry their_entry;
 	git_delta_t their_status;
 } git_merge_diff;

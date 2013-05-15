@@ -28,12 +28,12 @@ GIT_INLINE(const char *) merge_file_best_path(
 
 		return NULL;
 	}
-	
+
 	if (strcmp(ancestor->path, ours->path) == 0)
 		return theirs->path;
 	else if(strcmp(ancestor->path, theirs->path) == 0)
 		return ours->path;
-	
+
 	return NULL;
 }
 
@@ -51,15 +51,15 @@ GIT_INLINE(int) merge_file_best_mode(
 		if (ours->mode == GIT_FILEMODE_BLOB_EXECUTABLE ||
 			theirs->mode == GIT_FILEMODE_BLOB_EXECUTABLE)
 			return GIT_FILEMODE_BLOB_EXECUTABLE;
-		
+
 		return GIT_FILEMODE_BLOB;
 	}
-	
+
 	if (ancestor->mode == ours->mode)
 		return theirs->mode;
 	else if(ancestor->mode == theirs->mode)
 		return ours->mode;
-	
+
 	return 0;
 }
 
@@ -70,27 +70,27 @@ int git_merge_file_input_from_index_entry(
 {
 	git_odb *odb = NULL;
 	int error = 0;
-	
+
 	assert(input && repo && entry);
-	
+
 	if (entry->mode == 0)
 		return 0;
-	
+
 	if ((error = git_repository_odb(&odb, repo)) < 0 ||
 		(error = git_odb_read(&input->odb_object, odb, &entry->oid)) < 0)
 		goto done;
-	
+
 	input->mode = entry->mode;
 	input->path = git__strdup(entry->path);
 	input->mmfile.size = git_odb_object_size(input->odb_object);
 	input->mmfile.ptr = (char *)git_odb_object_data(input->odb_object);
-	
+
 	if (input->label == NULL)
 		input->label = entry->path;
-	
+
 done:
 	git_odb_free(odb);
-	
+
 	return error;
 }
 
@@ -101,27 +101,27 @@ int git_merge_file_input_from_diff_file(
 {
 	git_odb *odb = NULL;
 	int error = 0;
-	
+
 	assert(input && repo && file);
-	
+
 	if (file->mode == 0)
 		return 0;
-	
+
 	if ((error = git_repository_odb(&odb, repo)) < 0 ||
 		(error = git_odb_read(&input->odb_object, odb, &file->oid)) < 0)
 		goto done;
-	
+
 	input->mode = file->mode;
 	input->path = git__strdup(file->path);
 	input->mmfile.size = git_odb_object_size(input->odb_object);
 	input->mmfile.ptr = (char *)git_odb_object_data(input->odb_object);
-	
+
 	if (input->label == NULL)
 		input->label = file->path;
-	
+
 done:
 	git_odb_free(odb);
-	
+
 	return error;
 }
 
@@ -138,12 +138,12 @@ int git_merge_files(
 	int error = 0;
 
 	assert(out && ancestor && ours && theirs);
-	
+
 	memset(out, 0x0, sizeof(git_merge_file_result));
 
 	if (!GIT_MERGE_FILE_SIDE_EXISTS(ours) || !GIT_MERGE_FILE_SIDE_EXISTS(theirs))
 		return 0;
-	
+
 	memset(&xmparam, 0x0, sizeof(xmparam_t));
 	xmparam.ancestor = ancestor->label;
 	xmparam.file1 = ours->label;
@@ -154,7 +154,7 @@ int git_merge_files(
 
 	if (flags == GIT_MERGE_AUTOMERGE_FAVOR_OURS)
 		xmparam.favor = XDL_MERGE_FAVOR_OURS;
-		
+
 	if (flags == GIT_MERGE_AUTOMERGE_FAVOR_THEIRS)
 		xmparam.favor = XDL_MERGE_FAVOR_THEIRS;
 
@@ -164,7 +164,7 @@ int git_merge_files(
 		error = -1;
 		goto done;
 	}
-	
+
 	out->automergeable = (xdl_result == 0);
 	out->data = (unsigned char *)mmbuffer.ptr;
 	out->len = mmbuffer.size;
@@ -172,4 +172,3 @@ int git_merge_files(
 done:
 	return error;
 }
-

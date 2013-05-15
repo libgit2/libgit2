@@ -177,4 +177,3 @@ GIT_EXTERN(void) git_index_reuc_clear(git_index *index);
 /** @} */
 GIT_END_DECL
 #endif
-

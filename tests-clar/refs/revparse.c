@@ -557,12 +557,12 @@ void test_refs_revparse__issue_994(void)
 /**
  * $ git rev-parse blah-7-gc47800c
  * c47800c7266a2be04c571c04d5a6614691ea99bd
- * 
+ *
  * $ git rev-parse HEAD~3
  * 4a202b346bb0fb0db7eff3cffeb3c70babbd2045
- * 
+ *
  * $ git branch blah-7-gc47800c HEAD~3
- * 
+ *
  * $ git rev-parse blah-7-gc47800c
  * 4a202b346bb0fb0db7eff3cffeb3c70babbd2045
  */
@@ -592,15 +592,15 @@ void test_refs_revparse__try_to_retrieve_branch_before_described_tag(void)
 /**
  * $ git rev-parse a65fedf39aefe402d3bb6e24df4d4f5fe4547750
  * a65fedf39aefe402d3bb6e24df4d4f5fe4547750
- * 
+ *
  * $ git rev-parse HEAD~3
  * 4a202b346bb0fb0db7eff3cffeb3c70babbd2045
- * 
+ *
  * $ git branch a65fedf39aefe402d3bb6e24df4d4f5fe4547750 HEAD~3
- * 
+ *
  * $ git rev-parse a65fedf39aefe402d3bb6e24df4d4f5fe4547750
  * a65fedf39aefe402d3bb6e24df4d4f5fe4547750
- * 
+ *
  * $ git rev-parse heads/a65fedf39aefe402d3bb6e24df4d4f5fe4547750
  * 4a202b346bb0fb0db7eff3cffeb3c70babbd2045
  */
@@ -631,12 +631,12 @@ void test_refs_revparse__try_to_retrieve_sha_before_branch(void)
 /**
  * $ git rev-parse c47800
  * c47800c7266a2be04c571c04d5a6614691ea99bd
- * 
+ *
  * $ git rev-parse HEAD~3
  * 4a202b346bb0fb0db7eff3cffeb3c70babbd2045
- * 
+ *
  * $ git branch c47800 HEAD~3
- * 
+ *
  * $ git rev-parse c47800
  * 4a202b346bb0fb0db7eff3cffeb3c70babbd2045
  */
@@ -694,4 +694,3 @@ void test_refs_revparse__parses_range_operator(void)
 		"a65fedf39aefe402d3bb6e24df4d4f5fe4547750",
 		GIT_REVPARSE_RANGE | GIT_REVPARSE_MERGE_BASE);
 }
-

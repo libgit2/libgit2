@@ -217,7 +217,7 @@ static int packed_load(refdb_fs_backend *backend)
 	backend->peeling_mode = PEELING_NONE;
 
 	if (buffer_start[0] == '#') {
-		static const char *traits_header = "# pack-refs with: "; 
+		static const char *traits_header = "# pack-refs with: ";
 
 		if (git__prefixcmp(buffer_start, traits_header) == 0) {
 			char *traits = (char *)buffer_start + strlen(traits_header);
@@ -1060,7 +1060,7 @@ static void refdb_fs_backend__free(git_refdb_backend *_backend)
 
 static int setup_namespace(git_buf *path, git_repository *repo)
 {
-	char *parts, *start, *end; 
+	char *parts, *start, *end;
 
 	/* Not all repositories have a path */
 	if (repo->path_repository == NULL)
@@ -1091,7 +1091,7 @@ static int setup_namespace(git_buf *path, git_repository *repo)
 	free(parts);
 
 	/* Make sure that the folder with the namespace exists */
-	if (git_futils_mkdir_r(git_buf_cstr(path), repo->path_repository, 0777) < 0) 
+	if (git_futils_mkdir_r(git_buf_cstr(path), repo->path_repository, 0777) < 0)
 		return -1;
 
 	/* Return the root of the namespaced path, i.e. without the trailing '/refs' */

@@ -72,14 +72,14 @@ void test_merge_trees_renames__index(void)
 		{ 0100644, "b42712cfe99a1a500b2a51fe984e0b8a7702ba11", 2, "7-both-renamed.txt" },
 		{ 0100644, "b69fe837e4cecfd4c9a40cdca7c138468687df07", 3, "7-both-renamed.txt" },
 	};
-	
+
 	struct merge_name_entry merge_name_entries[] = {
 		{
 			"3a-renamed-in-ours-deleted-in-theirs.txt",
 			"3a-newname-in-ours-deleted-in-theirs.txt",
 			""
 		},
-		
+
 		{
 			"3b-renamed-in-theirs-deleted-in-ours.txt",
 			"",
@@ -97,7 +97,7 @@ void test_merge_trees_renames__index(void)
 			"",
 			"4b-newname-in-theirs-added-in-ours.txt",
 		},
-		
+
 		{
 			"5a-renamed-in-ours-added-in-theirs.txt",
 			"5a-newname-in-ours-added-in-theirs.txt",
@@ -115,13 +115,13 @@ void test_merge_trees_renames__index(void)
 			"6-both-renamed-1-to-2-ours.txt",
 			"6-both-renamed-1-to-2-theirs.txt",
 		},
-		
+
 		{
 			"7-both-renamed-side-1.txt",
 			"7-both-renamed.txt",
 			"7-both-renamed-side-1.txt",
 		},
-		
+
 		{
 			"7-both-renamed-side-2.txt",
 			"7-both-renamed-side-2.txt",
@@ -159,7 +159,7 @@ void test_merge_trees_renames__index(void)
 			"",
 			"",
 			"241a1005cd9b980732741b74385b891142bcba28" },
-		
+
 		{ "1b-newname-in-theirs.txt",
 			0, 0, 0100644,
 			"",
@@ -194,11 +194,11 @@ void test_merge_trees_renames__index(void)
 	cl_git_pass(merge_trees_from_branches(&index, repo,
 		BRANCH_RENAME_OURS, BRANCH_RENAME_THEIRS,
 		opts));
-	
+
 	cl_assert(merge_test_index(index, merge_index_entries, 41));
 	cl_assert(merge_test_names(index, merge_name_entries, 9));
 	cl_assert(merge_test_reuc(index, merge_reuc_entries, 10));
-	
+
 	git_index_free(index);
 }
 
@@ -206,7 +206,7 @@ void test_merge_trees_renames__no_rename_index(void)
 {
 	git_index *index;
 	git_merge_tree_opts opts = GIT_MERGE_TREE_OPTS_INIT;
-	
+
 	struct merge_index_entry merge_index_entries[] = {
 		{ 0100644, "68c6c84b091926c7d90aa6a79b2bc3bb6adccd8e", 0, "0a-no-change.txt" },
 		{ 0100644, "f0ce2b8e4986084d9b308fb72709e414c23eb5e6", 0, "0b-duplicated-in-ours.txt" },
@@ -241,13 +241,12 @@ void test_merge_trees_renames__no_rename_index(void)
 		{ 0100644, "b42712cfe99a1a500b2a51fe984e0b8a7702ba11", 2, "7-both-renamed.txt" },
 		{ 0100644, "b69fe837e4cecfd4c9a40cdca7c138468687df07", 3, "7-both-renamed.txt" },
 	};
-	
+
 	cl_git_pass(merge_trees_from_branches(&index, repo,
 		BRANCH_RENAME_OURS, BRANCH_RENAME_THEIRS,
 		&opts));
-	
+
 	cl_assert(merge_test_index(index, merge_index_entries, 32));
-	
+
 	git_index_free(index);
 }
-

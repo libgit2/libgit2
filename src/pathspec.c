@@ -141,7 +141,7 @@ bool git_pathspec_match_path(
 
 	git_vector_foreach(vspec, i, match) {
 		int result = (match->flags & GIT_ATTR_FNMATCH_MATCH_ALL) ? 0 : FNM_NOMATCH;
-			
+
 		if (result == FNM_NOMATCH)
 			result = use_strcmp(match->pattern, path) ? FNM_NOMATCH : 0;
 
