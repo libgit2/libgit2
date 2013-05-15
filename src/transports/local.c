@@ -495,7 +495,7 @@ static int local_download_pack(
 			/* Tag or some other wanted object. Add it on its own */
 			error = git_packbuilder_insert(pack, &rhead->oid, rhead->name);
 		}
-      git_object_free(obj);
+		git_object_free(obj);
 	}
 
 	/* Walk the objects, building a packfile */

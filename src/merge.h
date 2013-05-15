@@ -70,41 +70,41 @@ typedef enum {
 
 
 typedef struct {
-    git_repository *repo;
-    git_pool pool;
+	git_repository *repo;
+	git_pool pool;
 	
-    /* Vector of git_index_entry that represent the merged items that
+	/* Vector of git_index_entry that represent the merged items that
 	 * have been staged, either because only one side changed, or because
 	 * the two changes were non-conflicting and mergeable.  These items
 	 * will be written as staged entries in the main index.
 	 */
-    git_vector staged;
+	git_vector staged;
 	
-    /* Vector of git_merge_diff entries that represent the conflicts that
+	/* Vector of git_merge_diff entries that represent the conflicts that
 	 * have not been automerged.  These items will be written to high-stage
 	 * entries in the main index.
 	 */
-    git_vector conflicts;
+	git_vector conflicts;
 	
-    /* Vector of git_merge_diff that have been automerged.  These items
+	/* Vector of git_merge_diff that have been automerged.  These items
 	 * will be written to the REUC when the index is produced.
 	 */
-    git_vector resolved;
+	git_vector resolved;
 } git_merge_diff_list;
 
 /**
  * Description of changes to one file across three trees.
  */
 typedef struct {
-    git_merge_diff_type_t type;
+	git_merge_diff_type_t type;
 	
-    git_index_entry ancestor_entry;
+	git_index_entry ancestor_entry;
 	
-    git_index_entry our_entry;
-    git_delta_t our_status;
+	git_index_entry our_entry;
+	git_delta_t our_status;
 	
-    git_index_entry their_entry;
-    git_delta_t their_status;
+	git_index_entry their_entry;
+	git_delta_t their_status;
 } git_merge_diff;
 
 int git_merge__bases_many(

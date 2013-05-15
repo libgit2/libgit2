@@ -1712,12 +1712,12 @@ notfound:
 }
 
 static int print_to_buffer_cb(
-    const git_diff_delta *delta,
-    const git_diff_range *range,
-    char line_origin,
-    const char *content,
-    size_t content_len,
-    void *payload)
+	const git_diff_delta *delta,
+	const git_diff_range *range,
+	char line_origin,
+	const char *content,
+	size_t content_len,
+	void *payload)
 {
 	git_buf *output = payload;
 	GIT_UNUSED(delta); GIT_UNUSED(range); GIT_UNUSED(line_origin);
@@ -1797,16 +1797,16 @@ int git_diff__paired_foreach(
 	i_max = idx2head ? idx2head->deltas.length : 0;
 	j_max = wd2idx   ? wd2idx->deltas.length   : 0;
 
-   /* Get appropriate strcmp function */
-   strcomp = idx2head ? idx2head->strcomp : wd2idx ? wd2idx->strcomp : NULL;
+	/* Get appropriate strcmp function */
+	strcomp = idx2head ? idx2head->strcomp : wd2idx ? wd2idx->strcomp : NULL;
 
-   /* Assert both iterators use matching ignore-case. If this function ever
-    * supports merging diffs that are not sorted by the same function, then
-    * it will need to spool and sort on one of the results before merging
-    */
-   if (idx2head && wd2idx) {
-       assert(idx2head->strcomp == wd2idx->strcomp);
-   }
+	/* Assert both iterators use matching ignore-case. If this function ever
+	* supports merging diffs that are not sorted by the same function, then
+	* it will need to spool and sort on one of the results before merging
+	*/
+	if (idx2head && wd2idx) {
+		assert(idx2head->strcomp == wd2idx->strcomp);
+	}
 
 	for (i = 0, j = 0; i < i_max || j < j_max; ) {
 		i2h = idx2head ? GIT_VECTOR_GET(&idx2head->deltas,i) : NULL;
