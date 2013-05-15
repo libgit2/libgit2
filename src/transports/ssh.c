@@ -336,6 +336,7 @@ static int _git_ssh_setup_conn(
 		if (git_ssh_extract_url_parts(&host, &user, url) < 0)
 			goto on_error;
 		port = git__strdup(default_port);
+		GITERR_CHECK_ALLOC(port);
 	}
 	
 	if (gitno_connect(&s->socket, host, port, 0) < 0)
