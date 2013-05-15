@@ -72,9 +72,9 @@ GIT_EXTERN(int) git_reset(
  * @return 0 on success or an error code < 0
  */
 GIT_EXTERN(int) git_reset_default(
-    git_repository *repo,
-    git_object *target,
-    git_strarray* pathspecs);
+	git_repository *repo,
+	git_object *target,
+	git_strarray* pathspecs);
 
 /** @} */
 GIT_END_DECL

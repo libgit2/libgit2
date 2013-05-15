@@ -1636,11 +1636,11 @@ int git_repository_message_remove(git_repository *repo)
 }
 
 int git_repository_hashfile(
-    git_oid *out,
-    git_repository *repo,
-    const char *path,
-    git_otype type,
-    const char *as_path)
+	git_oid *out,
+	git_repository *repo,
+	const char *path,
+	git_otype type,
+	const char *as_path)
 {
 	int error;
 	git_vector filters = GIT_VECTOR_INIT;

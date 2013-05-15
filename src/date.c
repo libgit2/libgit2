@@ -823,8 +823,8 @@ static void pending_number(struct tm *tm, int *num)
 }
 
 static git_time_t approxidate_str(const char *date,
-                                  const struct timeval *tv,
-                                  int *error_ret)
+									const struct timeval *tv,
+									int *error_ret)
 {
 	int number = 0;
 	int touched = 0;
@@ -866,7 +866,7 @@ int git__date_parse(git_time_t *out, const char *date)
 	int offset, error_ret=0;
 
 	if (!parse_date_basic(date, &timestamp, &offset)) {
-      *out = timestamp;
+		*out = timestamp;
 		return 0;
 	}
 

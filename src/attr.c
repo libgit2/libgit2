@@ -36,7 +36,7 @@ static int collect_attr_files(
 
 int git_attr_get(
 	const char **value,
-    git_repository *repo,
+	git_repository *repo,
 	uint32_t flags,
 	const char *pathname,
 	const char *name)
@@ -88,10 +88,10 @@ typedef struct {
 
 int git_attr_get_many(
 	const char **values,
-    git_repository *repo,
+	git_repository *repo,
 	uint32_t flags,
 	const char *pathname,
-    size_t num_attr,
+	size_t num_attr,
 	const char **names)
 {
 	int error;
@@ -151,7 +151,7 @@ cleanup:
 
 
 int git_attr_foreach(
-    git_repository *repo,
+	git_repository *repo,
 	uint32_t flags,
 	const char *pathname,
 	int (*callback)(const char *name, const char *value, void *payload),

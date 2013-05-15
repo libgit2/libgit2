@@ -54,7 +54,7 @@ typedef struct {
 	 */
 	unsigned int target_limit;
 
-    /** Pluggable similarity metric; pass NULL to use internal metric */
+	/** Pluggable similarity metric; pass NULL to use internal metric */
 	git_diff_similarity_metric *metric;
 	
 	/** Flags for automerging content. */

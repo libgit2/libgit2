@@ -236,9 +236,9 @@ int git_config_open_global(git_config **cfg_out, git_config *cfg)
 }
 
 int git_config_open_level(
-    git_config **cfg_out,
-    const git_config *cfg_parent,
-    unsigned int level)
+	git_config **cfg_out,
+	const git_config *cfg_parent,
+	unsigned int level)
 {
 	git_config *cfg;
 	file_internal *internal;
