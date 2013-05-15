@@ -66,10 +66,12 @@ int git_signature_new(git_signature **sig_out, const char *name, const char *ema
 	p->name = extract_trimmed(name, strlen(name));
 	p->email = extract_trimmed(email, strlen(email));
 
-	if (p->name == NULL || p->email == NULL ||
-		p->name[0] == '\0' || p->email[0] == '\0') {
+	if (p->name == NULL || p->email == NULL)
+		return -1; /* oom */
+
+	if (p->name[0] == '\0') {
 		git_signature_free(p);
-		return signature_error("Empty name or email");
+		return signature_error("Signature cannot have an empty name");
 	}
 		
 	p->when.time = time;
@@ -81,9 +83,16 @@ int git_signature_new(git_signature **sig_out, const char *name, const char *ema
 
 git_signature *git_signature_dup(const git_signature *sig)
 {
-	git_signature *new;
-	if (git_signature_new(&new, sig->name, sig->email, sig->when.time, sig->when.offset) < 0)
+	git_signature *new = git__calloc(1, sizeof(git_signature));
+
+	if (new == NULL)
 		return NULL;
+
+	new->name = git__strdup(sig->name);
+	new->email = git__strdup(sig->email);
+	new->when.time = sig->when.time;
+	new->when.offset = sig->when.offset;
+
 	return new;
 }
 
