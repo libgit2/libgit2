@@ -148,15 +148,11 @@ int git_cred_ssh_publickey_new(
 	c->parent.free = ssh_publickey_free;
     
     c->publickey = git__malloc(publickey_len);
+	GITERR_CHECK_ALLOC(c->publickey);
+	
     memcpy(c->publickey, publickey, publickey_len);
     
-    if (!c->publickey) {
-        git__free(c);
-        return -1;
-    }
-    
     c->publickey_len = publickey_len;
-    
     c->sign_callback = sign_callback;
     c->sign_data = sign_data;
 
