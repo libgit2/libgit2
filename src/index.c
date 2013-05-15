@@ -104,11 +104,6 @@ static int index_find(size_t *at_pos, git_index *index, const char *path, int st
 static void index_entry_free(git_index_entry *entry);
 static void index_entry_reuc_free(git_index_reuc_entry *reuc);
 
-GIT_INLINE(int) index_entry_stage(const git_index_entry *entry)
-{
-	return GIT_IDXENTRY_STAGE(entry);
-}
-
 static int index_srch(const void *key, const void *array_member)
 {
 	const struct entry_srch_key *srch_key = key;
@@ -118,7 +113,7 @@ static int index_srch(const void *key, const void *array_member)
 	ret = strcmp(srch_key->path, entry->path);
 
 	if (ret == 0)
-		ret = srch_key->stage - index_entry_stage(entry);
+		ret = srch_key->stage - GIT_IDXENTRY_STAGE(entry);
 
 	return ret;
 }
@@ -132,7 +127,7 @@ static int index_isrch(const void *key, const void *array_member)
 	ret = strcasecmp(srch_key->path, entry->path);
 
 	if (ret == 0)
-		ret = srch_key->stage - index_entry_stage(entry);
+		ret = srch_key->stage - GIT_IDXENTRY_STAGE(entry);
 
 	return ret;
 }
@@ -170,7 +165,7 @@ static int index_cmp(const void *a, const void *b)
 	diff = strcmp(entry_a->path, entry_b->path);
 
 	if (diff == 0)
-		diff = (index_entry_stage(entry_a) - index_entry_stage(entry_b));
+		diff = (GIT_IDXENTRY_STAGE(entry_a) - GIT_IDXENTRY_STAGE(entry_b));
 
 	return diff;
 }
@@ -184,7 +179,7 @@ static int index_icmp(const void *a, const void *b)
 	diff = strcasecmp(entry_a->path, entry_b->path);
 
 	if (diff == 0)
-		diff = (index_entry_stage(entry_a) - index_entry_stage(entry_b));
+		diff = (GIT_IDXENTRY_STAGE(entry_a) - GIT_IDXENTRY_STAGE(entry_b));
 
 	return diff;
 }
@@ -721,7 +716,7 @@ static int index_insert(git_index *index, git_index_entry *entry, int replace)
 		entry->flags |= GIT_IDXENTRY_NAMEMASK;
 
 	/* look if an entry with this path already exists */
-	if (!index_find(&position, index, entry->path, index_entry_stage(entry))) {
+	if (!index_find(&position, index, entry->path, GIT_IDXENTRY_STAGE(entry))) {
 		existing = (git_index_entry **)&index->entries.contents[position];
 
 		/* update filemode to existing values if stat is not trusted */
@@ -869,7 +864,7 @@ int git_index_remove_directory(git_index *index, const char *dir, int stage)
 		if (!entry || git__prefixcmp(entry->path, pfx.ptr) != 0)
 			break;
 
-		if (index_entry_stage(entry) != stage) {
+		if (GIT_IDXENTRY_STAGE(entry) != stage) {
 			++pos;
 			continue;
 		}
@@ -1008,7 +1003,7 @@ int git_index_conflict_get(git_index_entry **ancestor_out,
 		if (index->entries_cmp_path(conflict_entry->path, path) != 0)
 			break;
 
-		stage = index_entry_stage(conflict_entry);
+		stage = GIT_IDXENTRY_STAGE(conflict_entry);
 
 		switch (stage) {
 		case 3:
@@ -1050,7 +1045,7 @@ int git_index_conflict_remove(git_index *index, const char *path)
 		if (index->entries_cmp_path(conflict_entry->path, path) != 0)
 			break;
 
-		if (index_entry_stage(conflict_entry) == 0) {
+		if (GIT_IDXENTRY_STAGE(conflict_entry) == 0) {
 			pos++;
 			continue;
 		}
@@ -1069,7 +1064,7 @@ static int index_conflicts_match(const git_vector *v, size_t idx)
 {
 	git_index_entry *entry = git_vector_get(v, idx);
 
-	if (index_entry_stage(entry) > 0) {
+	if (GIT_IDXENTRY_STAGE(entry) > 0) {
 		index_entry_free(entry);
 		return 1;
 	}
@@ -1091,7 +1086,7 @@ int git_index_has_conflicts(const git_index *index)
 	assert(index);
 
 	git_vector_foreach(&index->entries, i, entry) {
-		if (index_entry_stage(entry) > 0)
+		if (GIT_IDXENTRY_STAGE(entry) > 0)
 			return 1;
 	}
 
@@ -1858,7 +1853,7 @@ static int write_index(git_index *index, git_filebuf *file)
 
 int git_index_entry_stage(const git_index_entry *entry)
 {
-	return index_entry_stage(entry);
+	return GIT_IDXENTRY_STAGE(entry);
 }
 
 typedef struct read_tree_data {
