@@ -259,7 +259,7 @@ static int store_object(git_indexer_stream *idx)
 	entry = git__calloc(1, sizeof(*entry));
 	GITERR_CHECK_ALLOC(entry);
 
-	pentry = git__malloc(sizeof(struct git_pack_entry));
+	pentry = git__calloc(1, sizeof(struct git_pack_entry));
 	GITERR_CHECK_ALLOC(pentry);
 
 	git_hash_final(&oid, ctx);
@@ -328,7 +328,7 @@ static int hash_and_save(git_indexer_stream *idx, git_rawobj *obj, git_off_t ent
 		return -1;
 	}
 
-	pentry = git__malloc(sizeof(struct git_pack_entry));
+	pentry = git__calloc(1, sizeof(struct git_pack_entry));
 	GITERR_CHECK_ALLOC(pentry);
 
 	git_oid_cpy(&pentry->sha1, &oid);
