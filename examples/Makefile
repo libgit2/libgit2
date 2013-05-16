@@ -3,7 +3,7 @@
 CC = gcc
 CFLAGS = -g -I../include -I../src -Wall -Wextra -Wmissing-prototypes -Wno-missing-field-initializers
 LFLAGS = -L../build -lgit2 -lz
-APPS = general showindex diff rev-list
+APPS = general showindex diff rev-list cat-file
 
 all: $(APPS)
 

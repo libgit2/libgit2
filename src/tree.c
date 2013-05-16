@@ -271,25 +271,27 @@ int git_tree_entry_to_object(
 }
 
 static const git_tree_entry *entry_fromname(
-	git_tree *tree, const char *name, size_t name_len)
+	const git_tree *tree, const char *name, size_t name_len)
 {
 	size_t idx;
 
-	if (tree_key_search(&idx, &tree->entries, name, name_len) < 0)
+	assert(tree->entries.sorted); /* be safe when we cast away constness */
+
+	if (tree_key_search(&idx, (git_vector *)&tree->entries, name, name_len) < 0)
 		return NULL;
 
 	return git_vector_get(&tree->entries, idx);
 }
 
 const git_tree_entry *git_tree_entry_byname(
-	git_tree *tree, const char *filename)
+	const git_tree *tree, const char *filename)
 {
 	assert(tree && filename);
 	return entry_fromname(tree, filename, strlen(filename));
 }
 
 const git_tree_entry *git_tree_entry_byindex(
-	git_tree *tree, size_t idx)
+	const git_tree *tree, size_t idx)
 {
 	assert(tree);
 	return git_vector_get(&tree->entries, idx);
@@ -311,9 +313,9 @@ const git_tree_entry *git_tree_entry_byoid(
 	return NULL;
 }
 
-int git_tree__prefix_position(git_tree *tree, const char *path)
+int git_tree__prefix_position(const git_tree *tree, const char *path)
 {
-	git_vector *entries = &tree->entries;
+	const git_vector *entries = &tree->entries;
 	struct tree_key_search ksearch;
 	size_t at_pos;
 
@@ -323,8 +325,11 @@ int git_tree__prefix_position(git_tree *tree, const char *path)
 	ksearch.filename = path;
 	ksearch.filename_len = strlen(path);
 
+	assert(tree->entries.sorted); /* be safe when we cast away constness */
+
 	/* Find tree entry with appropriate prefix */
-	git_vector_bsearch2(&at_pos, entries, &homing_search_cmp, &ksearch);
+	git_vector_bsearch2(
+		&at_pos, (git_vector *)entries, &homing_search_cmp, &ksearch);
 
 	for (; at_pos < entries->length; ++at_pos) {
 		const git_tree_entry *entry = entries->contents[at_pos];
@@ -407,6 +412,8 @@ int git_tree__parse(void *_tree, git_odb_object *odb_obj)
 		git_oid_fromraw(&entry->oid, (const unsigned char *)buffer);
 		buffer += GIT_OID_RAWSZ;
 	}
+
+	git_vector_sort(&tree->entries);
 
 	return 0;
 }
@@ -796,7 +803,7 @@ static size_t subpath_len(const char *path)
 
 int git_tree_entry_bypath(
 	git_tree_entry **entry_out,
-	git_tree *root,
+	const git_tree *root,
 	const char *path)
 {
 	int error = 0;
