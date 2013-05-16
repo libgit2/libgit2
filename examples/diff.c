@@ -117,7 +117,10 @@ int main(int argc, char *argv[])
 	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
 	git_diff_list *diff;
 	int i, color = -1, compact = 0, cached = 0;
-	char *a, *dir = ".", *treeish1 = NULL, *treeish2 = NULL;
+	char *a, *treeish1 = NULL, *treeish2 = NULL;
+	const char *dir = ".";
+
+	git_threads_init();
 
 	/* parse arguments as copied from git-diff */
 
@@ -162,7 +165,8 @@ int main(int argc, char *argv[])
 			!check_uint16_param(a, "--inter-hunk-context=",
 				&opts.interhunk_lines) &&
 			!check_str_param(a, "--src-prefix=", &opts.old_prefix) &&
-			!check_str_param(a, "--dst-prefix=", &opts.new_prefix))
+			!check_str_param(a, "--dst-prefix=", &opts.new_prefix) &&
+			!check_str_param(a, "--git-dir=", &dir))
 			usage("Unknown arg", a);
 	}
 
@@ -215,6 +219,8 @@ int main(int argc, char *argv[])
 	git_tree_free(t1);
 	git_tree_free(t2);
 	git_repository_free(repo);
+
+	git_threads_shutdown();
 
 	return 0;
 }
