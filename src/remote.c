@@ -870,19 +870,6 @@ static int update_tips_for_spec(git_remote *remote, git_refspec *spec, git_vecto
 	if (git_vector_init(&update_heads, 16, NULL) < 0)
 		return -1;
 
-	/* Let's go find HEAD, if it exists. Check only the first ref in the vector. */
-	if (refs->length > 0) {
-		head = git_vector_get(refs, 0);
-
-		if (!strcmp(head->name, GIT_HEAD_FILE))	{
-			if (git_reference_create(&ref, remote->repo, GIT_FETCH_HEAD_FILE, &head->oid, 1) < 0)
-				goto on_error;
-
-			i = 1;
-			git_reference_free(ref);
-		}
-	}
-
 	for (; i < refs->length; ++i) {
 		head = git_vector_get(refs, i);
 		autotag = 0;
