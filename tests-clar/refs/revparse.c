@@ -9,13 +9,19 @@ static git_repository *g_repo;
 static git_object *g_obj;
 
 /* Helpers */
-static void test_object_inrepo(const char *spec, const char *expected_oid, git_repository *repo)
+static void test_object_and_ref_inrepo(
+	const char *spec,
+	const char *expected_oid,
+	const char *expected_refname,
+	git_repository *repo,
+	bool assert_reference_retrieval)
 {
 	char objstr[64] = {0};
 	git_object *obj = NULL;
+	git_reference *ref = NULL;
 	int error;
 
-	error = git_revparse_single(&obj, repo, spec);
+	error = git_revparse_ext(&obj, &ref, repo, spec);
 
 	if (expected_oid != NULL) {
 		cl_assert_equal_i(0, error);
@@ -24,7 +30,20 @@ static void test_object_inrepo(const char *spec, const char *expected_oid, git_r
 	} else
 		cl_assert_equal_i(GIT_ENOTFOUND, error);
 
+	if (assert_reference_retrieval) {
+		if (expected_refname == NULL)
+			cl_assert(NULL == ref);
+		else
+			cl_assert_equal_s(expected_refname, git_reference_name(ref));
+	}
+
 	git_object_free(obj);
+	git_reference_free(ref);
+}
+
+static void test_object_inrepo(const char *spec, const char *expected_oid, git_repository *repo)
+{
+	test_object_and_ref_inrepo(spec, expected_oid, NULL, repo, false);
 }
 
 static void test_id_inrepo(
@@ -61,6 +80,11 @@ static void test_id_inrepo(
 static void test_object(const char *spec, const char *expected_oid)
 {
 	test_object_inrepo(spec, expected_oid, g_repo);
+}
+
+static void test_object_and_ref(const char *spec, const char *expected_oid, const char *expected_refname)
+{
+	test_object_and_ref_inrepo(spec, expected_oid, expected_refname, g_repo, true);
 }
 
 static void test_rangelike(const char *rangelike,
@@ -693,4 +717,25 @@ void test_refs_revparse__parses_range_operator(void)
 		"4a202b346bb0fb0db7eff3cffeb3c70babbd2045",
 		"a65fedf39aefe402d3bb6e24df4d4f5fe4547750",
 		GIT_REVPARSE_RANGE | GIT_REVPARSE_MERGE_BASE);
+}
+
+void test_refs_revparse__ext_retrieves_both_the_reference_and_its_target(void)
+{
+	test_object_and_ref(
+		"master@{upstream}",
+		"be3563ae3f795b2b4353bcce3a527ad0a4f7f644",
+		"refs/remotes/test/master");
+
+	test_object_and_ref(
+		"@{-1}",
+		"a4a7dce85cf63874e984719f4fdd239f5145052f",
+		"refs/heads/br2");
+}
+
+void test_refs_revparse__ext_can_expand_short_reference_names(void)
+{
+	test_object_and_ref(
+		"master",
+		"a65fedf39aefe402d3bb6e24df4d4f5fe4547750",
+		"refs/heads/master");
 }
