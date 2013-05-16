@@ -266,14 +266,16 @@ int git_commit_tree(git_tree **tree_out, const git_commit *commit)
 	return git_tree_lookup(tree_out, commit->object.repo, &commit->tree_id);
 }
 
-const git_oid *git_commit_parent_id(git_commit *commit, unsigned int n)
+const git_oid *git_commit_parent_id(
+	const git_commit *commit, unsigned int n)
 {
 	assert(commit);
 
 	return git_vector_get(&commit->parent_ids, n);
 }
 
-int git_commit_parent(git_commit **parent, git_commit *commit, unsigned int n)
+int git_commit_parent(
+	git_commit **parent, const git_commit *commit, unsigned int n)
 {
 	const git_oid *parent_id;
 	assert(commit);

@@ -97,7 +97,7 @@ GIT_EXTERN(size_t) git_tree_entrycount(const git_tree *tree);
  * @return the tree entry; NULL if not found
  */
 GIT_EXTERN(const git_tree_entry *) git_tree_entry_byname(
-	git_tree *tree, const char *filename);
+	const git_tree *tree, const char *filename);
 
 /**
  * Lookup a tree entry by its position in the tree
@@ -110,7 +110,7 @@ GIT_EXTERN(const git_tree_entry *) git_tree_entry_byname(
  * @return the tree entry; NULL if not found
  */
 GIT_EXTERN(const git_tree_entry *) git_tree_entry_byindex(
-	git_tree *tree, size_t idx);
+	const git_tree *tree, size_t idx);
 
 /**
  * Lookup a tree entry by SHA value.
@@ -141,7 +141,7 @@ GIT_EXTERN(const git_tree_entry *) git_tree_entry_byoid(
  */
 GIT_EXTERN(int) git_tree_entry_bypath(
 	git_tree_entry **out,
-	git_tree *root,
+	const git_tree *root,
 	const char *path);
 
 /**
