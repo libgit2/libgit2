@@ -47,7 +47,7 @@ int git_tree__parse(void *tree, git_odb_object *obj);
  * @param prefix the beginning of a path to find in the tree.
  * @return index of the first item at or after the given prefix.
  */
-int git_tree__prefix_position(git_tree *tree, const char *prefix);
+int git_tree__prefix_position(const git_tree *tree, const char *prefix);
 
 
 /**

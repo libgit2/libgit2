@@ -164,7 +164,10 @@ GIT_EXTERN(unsigned int) git_commit_parentcount(const git_commit *commit);
  * @param n the position of the parent (from 0 to `parentcount`)
  * @return 0 or an error code
  */
-GIT_EXTERN(int) git_commit_parent(git_commit **out, git_commit *commit, unsigned int n);
+GIT_EXTERN(int) git_commit_parent(
+	git_commit **out,
+	const git_commit *commit,
+	unsigned int n);
 
 /**
  * Get the oid of a specified parent for a commit. This is different from
@@ -175,7 +178,9 @@ GIT_EXTERN(int) git_commit_parent(git_commit **out, git_commit *commit, unsigned
  * @param n the position of the parent (from 0 to `parentcount`)
  * @return the id of the parent, NULL on error.
  */
-GIT_EXTERN(const git_oid *) git_commit_parent_id(git_commit *commit, unsigned int n);
+GIT_EXTERN(const git_oid *) git_commit_parent_id(
+	const git_commit *commit,
+	unsigned int n);
 
 /**
  * Get the commit object that is the <n>th generation ancestor
