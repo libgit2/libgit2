@@ -32,7 +32,7 @@ git__DIR *git__opendir(const char *dir)
 	if (!dir || !init_filter(filter, sizeof(filter), dir))
 		return NULL;
 
-	new = git__malloc(sizeof(*new));
+	new = git__calloc(1, sizeof(*new));
 	if (!new)
 		return NULL;
 
