@@ -84,12 +84,16 @@ static int maybe_describe(git_object**out, git_repository *repo, const char *spe
 	return maybe_abbrev(out, repo, substr+2);
 }
 
-static int revparse_lookup_object(git_object **out, git_repository *repo, const char *spec)
+static int revparse_lookup_object(
+	git_object **object_out,
+	git_reference **reference_out,
+	git_repository *repo,
+	const char *spec)
 {
 	int error;
 	git_reference *ref;
 
-	error = maybe_sha(out, repo, spec);
+	error = maybe_sha(object_out, repo, spec);
 	if (!error)
 		return 0;
 
@@ -98,22 +102,27 @@ static int revparse_lookup_object(git_object **out, git_repository *repo, const 
 
 	error = git_reference_dwim(&ref, repo, spec);
 	if (!error) {
-		error = git_object_lookup(out, repo, git_reference_target(ref), GIT_OBJ_ANY);
-		git_reference_free(ref);
+
+		error = git_object_lookup(
+			object_out, repo, git_reference_target(ref), GIT_OBJ_ANY);
+
+		if (!error)
+			*reference_out = ref;
+
 		return error;
 	}
 
 	if (error < 0 && error != GIT_ENOTFOUND)
 		return error;
 
-	error = maybe_abbrev(out, repo, spec);
+	error = maybe_abbrev(object_out, repo, spec);
 	if (!error)
 		return 0;
 
 	if (error < 0 && error != GIT_ENOTFOUND)
 		return error;
 
-	error = maybe_describe(out, repo, spec);
+	error = maybe_describe(object_out, repo, spec);
 	if (!error)
 		return 0;
 
@@ -617,14 +626,8 @@ static int ensure_base_rev_loaded(git_object **object, git_reference **reference
 	if (*object != NULL)
 		return 0;
 
-	if (*reference != NULL) {
-		if ((error = object_from_reference(object, *reference)) < 0)
-			return error;
-
-		git_reference_free(*reference);
-		*reference = NULL;
-		return 0;
-	}
+	if (*reference != NULL)
+		return object_from_reference(object, *reference);
 
 	if (!allow_empty_identifier && identifier_len == 0)
 		return GIT_EINVALIDSPEC;
@@ -632,7 +635,7 @@ static int ensure_base_rev_loaded(git_object **object, git_reference **reference
 	if (git_buf_put(&identifier, spec, identifier_len) < 0)
 		return -1;
 
-	error = revparse_lookup_object(object, repo, git_buf_cstr(&identifier));
+	error = revparse_lookup_object(object, reference, repo, git_buf_cstr(&identifier));
 	git_buf_free(&identifier);
 
 	return error;
@@ -668,7 +671,12 @@ static int ensure_left_hand_identifier_is_not_known_yet(git_object *object, git_
 	return GIT_EINVALIDSPEC;
 }
 
-int git_revparse_single(git_object **out, git_repository *repo, const char *spec)
+int revparse__ext(
+	git_object **object_out,
+	git_reference **reference_out,
+	int *identifier_len_out,
+	git_repository *repo,
+	const char *spec)
 {
 	size_t pos = 0, identifier_len = 0;
 	int error = -1, n;
@@ -677,9 +685,10 @@ int git_revparse_single(git_object **out, git_repository *repo, const char *spec
 	git_reference *reference = NULL;
 	git_object *base_rev = NULL;
 
-	assert(out && repo && spec);
+	assert(object_out && reference_out && repo && spec);
 
-	*out = NULL;
+	*object_out = NULL;
+	*reference_out = NULL;
 
 	while (spec[pos]) {
 		switch (spec[pos]) {
@@ -798,7 +807,9 @@ int git_revparse_single(git_object **out, git_repository *repo, const char *spec
 	if ((error = ensure_base_rev_loaded(&base_rev, &reference, spec, identifier_len, repo, false)) < 0)
 		goto cleanup;
 
-	*out = base_rev;
+	*object_out = base_rev;
+	*reference_out = reference;
+	*identifier_len_out = identifier_len;
 	error = 0;
 
 cleanup:
@@ -808,12 +819,59 @@ cleanup:
 				"Failed to parse revision specifier - Invalid pattern '%s'", spec);
 
 		git_object_free(base_rev);
+		git_reference_free(reference);
 	}
-	git_reference_free(reference);
+
 	git_buf_free(&buf);
 	return error;
 }
 
+int git_revparse_ext(
+	git_object **object_out,
+	git_reference **reference_out,
+	git_repository *repo,
+	const char *spec)
+{
+	int error, identifier_len;
+	git_object *obj = NULL;
+	git_reference *ref = NULL;
+
+	if ((error = revparse__ext(&obj, &ref, &identifier_len, repo, spec)) < 0)
+		goto cleanup;
+
+	*object_out = obj;
+	*reference_out = ref;
+
+	return 0;
+
+cleanup:
+	git_object_free(obj);
+	git_reference_free(ref);
+	return error;
+}
+
+int git_revparse_single(git_object **out, git_repository *repo, const char *spec)
+{
+	int error;
+	git_object *obj = NULL;
+	git_reference *ref = NULL;
+
+	*out = NULL;
+
+	if ((error = git_revparse_ext(&obj, &ref, repo, spec)) < 0)
+		goto cleanup;
+
+	git_reference_free(ref);
+
+	*out = obj;
+
+	return 0;
+
+cleanup:
+	git_object_free(obj);
+	git_reference_free(ref);
+	return error;
+}
 
 int git_revparse(
 	git_revspec *revspec,
