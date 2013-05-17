@@ -1104,14 +1104,70 @@ int git_diff_print_compact(
 {
 	int error;
 	git_buf buf = GIT_BUF_INIT;
-	diff_print_info pi;
-
-	pi.diff     = diff;
-	pi.print_cb = print_cb;
-	pi.payload  = payload;
-	pi.buf      = &buf;
+	diff_print_info pi = { diff, print_cb, payload, &buf };
 
 	error = git_diff_foreach(diff, print_compact, NULL, NULL, &pi);
+
+	git_buf_free(&buf);
+
+	return error;
+}
+
+static int print_raw(
+	const git_diff_delta *delta, float progress, void *data)
+{
+	diff_print_info *pi = data;
+	char code = git_diff_status_char(delta->status);
+	char ooid[8], noid[8];
+
+	GIT_UNUSED(progress);
+
+	if (code == ' ')
+		return 0;
+
+	git_buf_clear(pi->buf);
+
+	git_oid_nfmt(ooid, sizeof(ooid), &delta->old_file.oid);
+	ooid[7] = '\0';
+
+	git_oid_nfmt(noid, sizeof(noid), &delta->new_file.oid);
+	noid[7] = '\0';
+
+	git_buf_printf(
+		pi->buf, ":%06o %06o %s... %s... %c",
+		delta->old_file.mode, delta->new_file.mode, ooid, noid, code);
+
+	if (delta->similarity > 0)
+		git_buf_printf(pi->buf, "%03u", delta->similarity);
+
+	if (delta->status == GIT_DELTA_RENAMED || delta->status == GIT_DELTA_COPIED)
+		git_buf_printf(
+			pi->buf, "\t%s %s\n", delta->old_file.path, delta->new_file.path);
+	else
+		git_buf_printf(
+			pi->buf, "\t%s\n", delta->old_file.path ?
+			delta->old_file.path : delta->new_file.path);
+
+	if (git_buf_oom(pi->buf))
+		return -1;
+
+	if (pi->print_cb(delta, NULL, GIT_DIFF_LINE_FILE_HDR,
+			git_buf_cstr(pi->buf), git_buf_len(pi->buf), pi->payload))
+		return callback_error();
+
+	return 0;
+}
+
+int git_diff_print_raw(
+	git_diff_list *diff,
+	git_diff_data_cb print_cb,
+	void *payload)
+{
+	int error;
+	git_buf buf = GIT_BUF_INIT;
+	diff_print_info pi = { diff, print_cb, payload, &buf };
+
+	error = git_diff_foreach(diff, print_raw, NULL, NULL, &pi);
 
 	git_buf_free(&buf);
 
