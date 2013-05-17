@@ -463,9 +463,9 @@ GIT_EXTERN(int) git_index_conflict_add(
 /**
  * Get the index entries that represent a conflict of a single file.
  *
- * The values of this entry can be modified (except the paths)
- * and the changes will be written back to disk on the next
- * write() call.
+ * The entries are not modifiable and should not be freed.  Because the
+ * `git_index_entry` struct is a publicly defined struct, you should
+ * be able to make your own permanent copy of the data if necessary.
  *
  * @param ancestor_out Pointer to store the ancestor entry
  * @param our_out Pointer to store the our entry
@@ -474,9 +474,9 @@ GIT_EXTERN(int) git_index_conflict_add(
  * @param path path to search
  */
 GIT_EXTERN(int) git_index_conflict_get(
-	git_index_entry **ancestor_out,
-	git_index_entry **our_out,
-	git_index_entry **their_out,
+	const git_index_entry **ancestor_out,
+	const git_index_entry **our_out,
+	const git_index_entry **their_out,
 	git_index *index,
 	const char *path);
 
@@ -501,6 +501,40 @@ GIT_EXTERN(void) git_index_conflict_cleanup(git_index *index);
  * @return 1 if at least one conflict is found, 0 otherwise.
  */
 GIT_EXTERN(int) git_index_has_conflicts(const git_index *index);
+
+/**
+ * Create an iterator for the conflicts in the index.  You may not modify the
+ * index while iterating, the results are undefined.
+ *
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_index_conflict_iterator_new(
+	git_index_conflict_iterator **iterator_out,
+	git_index *index);
+
+/**
+ * Returns the current conflict (ancestor, ours and theirs entry) and
+ * advance the iterator internally to the next value.
+ *
+ * @param ancestor_out Pointer to store the ancestor side of the conflict
+ * @param our_out Pointer to store our side of the conflict
+ * @param their_out Pointer to store their side of the conflict
+ * @return 0 (no error), GIT_ITEROVER (iteration is done) or an error code
+ *         (negative value)
+ */
+GIT_EXTERN(int) git_index_conflict_next(
+	const git_index_entry **ancestor_out,
+	const git_index_entry **our_out,
+	const git_index_entry **their_out,
+	git_index_conflict_iterator *iterator);
+
+/**
+ * Frees a `git_index_conflict_iterator`.
+ *
+ * @param it pointer to the iterator
+ */
+GIT_EXTERN(void) git_index_conflict_iterator_free(
+	git_index_conflict_iterator *iterator);
 
 /**@}*/
 
