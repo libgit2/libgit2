@@ -231,10 +231,23 @@ static char *diff_strdup_prefix(git_pool *pool, const char *prefix)
 		return git_pool_strndup(pool, prefix, len + 1);
 }
 
+GIT_INLINE(const char *) diff_delta__path(const git_diff_delta *delta)
+{
+	const char *str = delta->old_file.path;
+
+	if (!str ||
+		delta->status == GIT_DELTA_ADDED ||
+		delta->status == GIT_DELTA_RENAMED ||
+		delta->status == GIT_DELTA_COPIED)
+		str = delta->new_file.path;
+
+	return str;
+}
+
 int git_diff_delta__cmp(const void *a, const void *b)
 {
 	const git_diff_delta *da = a, *db = b;
-	int val = strcmp(da->old_file.path, db->old_file.path);
+	int val = strcmp(diff_delta__path(da), diff_delta__path(db));
 	return val ? val : ((int)da->status - (int)db->status);
 }
 
