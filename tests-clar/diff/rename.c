@@ -377,7 +377,8 @@ void test_diff_rename__handles_small_files(void)
 	 */
 	cl_git_pass(git_diff_tree_to_index(&diff, g_repo, tree, index, &diffopts));
 
-	opts.flags = GIT_DIFF_FIND_RENAMES | GIT_DIFF_FIND_COPIES | GIT_DIFF_FIND_AND_BREAK_REWRITES;
+	opts.flags = GIT_DIFF_FIND_RENAMES | GIT_DIFF_FIND_COPIES |
+		GIT_DIFF_FIND_AND_BREAK_REWRITES;
 	cl_git_pass(git_diff_find_similar(diff, &opts));
 
 	git_diff_list_free(diff);

@@ -243,6 +243,19 @@ typedef struct {
  * `NOT_BINARY` flag set to avoid examining file contents if you do not pass
  * in hunk and/or line callbacks to the diff foreach iteration function.  It
  * will just use the git attributes for those files.
+ *
+ * The similarity score is zero unless you call `git_diff_find_similar()`
+ * which does a similarity analysis of files in the diff.  Use that
+ * function to do rename and copy detection, and to split heavily modified
+ * files in add/delete pairs.  After that call, deltas with a status of
+ * GIT_DELTA_RENAMED or GIT_DELTA_COPIED will have a similarity score
+ * between 0 and 100 indicating how similar the old and new sides are.
+ *
+ * If you ask `git_diff_find_similar` to find heavily modified files to
+ * break, but to not *actually* break the records, then GIT_DELTA_MODIFIED
+ * records may have a non-zero similarity score if the self-similarity is
+ * below the split threshold.  To display this value like core Git, invert
+ * the score (a la `printf("M%03d", 100 - delta->similarity)`).
  */
 typedef struct {
 	git_diff_file old_file;
@@ -408,18 +421,26 @@ typedef enum {
 	/** consider unmodified as copy sources? (`--find-copies-harder`) */
 	GIT_DIFF_FIND_COPIES_FROM_UNMODIFIED = (1 << 3),
 
-	/** split large rewrites into delete/add pairs (`--break-rewrites=/M`) */
-	GIT_DIFF_FIND_AND_BREAK_REWRITES = (1 << 4),
+	/** mark large rewrites for split (`--break-rewrites=/M`) */
+	GIT_DIFF_FIND_REWRITES = (1 << 4),
+	/** actually split large rewrites into delete/add pairs */
+	GIT_DIFF_BREAK_REWRITES = (1 << 5),
+	/** mark rewrites for split and break into delete/add pairs */
+	GIT_DIFF_FIND_AND_BREAK_REWRITES =
+		(GIT_DIFF_FIND_REWRITES | GIT_DIFF_BREAK_REWRITES),
+
+	/** consider untracked files as rename/copy targets */
+	GIT_DIFF_FIND_FROM_UNTRACKED = (1 << 6),
 
 	/** turn on all finding features */
-	GIT_DIFF_FIND_ALL = (0x1f),
+	GIT_DIFF_FIND_ALL = (0x0ff),
 
 	/** measure similarity ignoring leading whitespace (default) */
 	GIT_DIFF_FIND_IGNORE_LEADING_WHITESPACE = 0,
 	/** measure similarity ignoring all whitespace */
-	GIT_DIFF_FIND_IGNORE_WHITESPACE = (1 << 6),
+	GIT_DIFF_FIND_IGNORE_WHITESPACE = (1 << 12),
 	/** measure similarity including all data */
-	GIT_DIFF_FIND_DONT_IGNORE_WHITESPACE = (1 << 7),
+	GIT_DIFF_FIND_DONT_IGNORE_WHITESPACE = (1 << 13),
 } git_diff_find_t;
 
 /**
@@ -446,7 +467,7 @@ typedef struct {
  * - `copy_threshold` is the same as the -C option with a value
  * - `rename_from_rewrite_threshold` matches the top of the -B option
  * - `break_rewrite_threshold` matches the bottom of the -B option
- * - `target_limit` matches the -l option
+ * - `target_limit` matches the -l option (approximately)
  *
  * The `metric` option allows you to plug in a custom similarity metric.
  * Set it to NULL for the default internal metric which is based on sampling
@@ -461,18 +482,18 @@ typedef struct {
 	unsigned int flags;
 
 	/** Similarity to consider a file renamed (default 50) */
-	unsigned int rename_threshold;
+	uint16_t rename_threshold;
 	/** Similarity of modified to be eligible rename source (default 50) */
-	unsigned int rename_from_rewrite_threshold;
+	uint16_t rename_from_rewrite_threshold;
 	/** Similarity to consider a file a copy (default 50) */
-	unsigned int copy_threshold;
+	uint16_t copy_threshold;
 	/** Similarity to split modify into delete/add pair (default 60) */
-	unsigned int break_rewrite_threshold;
+	uint16_t break_rewrite_threshold;
 
 	/** Maximum similarity sources to examine (a la diff's `-l` option or
 	 *  the `diff.renameLimit` config) (default 200)
 	 */
-	unsigned int target_limit;
+	size_t target_limit;
 
 	/** Pluggable similarity metric; pass NULL to use internal metric */
 	git_diff_similarity_metric *metric;
