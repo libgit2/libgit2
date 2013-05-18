@@ -220,3 +220,41 @@ void test_object_tag_write__deleting_with_an_invalid_name_returns_EINVALIDSPEC(v
 {
 	cl_assert_equal_i(GIT_EINVALIDSPEC, git_tag_delete(g_repo, "Inv@{id"));
 }
+
+void create_annotation(git_oid *tag_id, const char *name)
+{
+	git_object *target;
+	git_oid target_id;
+	git_signature *tagger;
+
+	cl_git_pass(git_signature_new(&tagger, tagger_name, tagger_email, 123456789, 60));
+
+	git_oid_fromstr(&target_id, tagged_commit);
+	cl_git_pass(git_object_lookup(&target, g_repo, &target_id, GIT_OBJ_COMMIT));
+
+	cl_git_pass(git_tag_annotation_create(tag_id, g_repo, name, target, tagger, "boom!"));
+	git_object_free(target);
+	git_signature_free(tagger);
+}
+
+void test_object_tag_write__creating_an_annotation_stores_the_new_object_in_the_odb(void)
+{
+	git_oid tag_id;
+	git_tag *tag;
+
+	create_annotation(&tag_id, "new_tag");
+
+	cl_git_pass(git_tag_lookup(&tag, g_repo, &tag_id));
+	cl_assert_equal_s("new_tag", git_tag_name(tag));
+
+	git_tag_free(tag);
+}
+
+void test_object_tag_write__creating_an_annotation_does_not_create_a_reference(void)
+{
+	git_oid tag_id;
+	git_reference *tag_ref;
+
+	create_annotation(&tag_id, "new_tag");
+	cl_git_fail_with(git_reference_lookup(&tag_ref, g_repo, "refs/tags/new_tag"), GIT_ENOTFOUND);
+}
