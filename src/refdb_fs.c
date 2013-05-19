@@ -976,7 +976,7 @@ static int refdb_fs_backend__delete(
 	struct packref *pack_ref;
 	khiter_t pack_ref_pos;
 	int error = 0, pack_error;
-	bool loose_deleted;
+	bool loose_deleted = 0;
 
 	assert(_backend);
 	assert(ref);
