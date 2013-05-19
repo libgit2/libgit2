@@ -17,6 +17,7 @@
     <div id="jump_wrapper">
       <div id="jump_page">
         <a class="source" href="../../#HEAD">API Docs</a>
+          <a class="source" href="cat-file.html">cat-file.c</a>
           <a class="source" href="diff.html">diff.c</a>
           <a class="source" href="general.html">general.c</a>
           <a class="source" href="network/clone.html">clone.c</a>
@@ -165,7 +166,10 @@
   <span class="n">git_diff_options</span> <span class="n">opts</span> <span class="o">=</span> <span class="n">GIT_DIFF_OPTIONS_INIT</span><span class="p">;</span>
   <span class="n">git_diff_list</span> <span class="o">*</span><span class="n">diff</span><span class="p">;</span>
   <span class="kt">int</span> <span class="n">i</span><span class="p">,</span> <span class="n">color</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">compact</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">cached</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
-  <span class="kt">char</span> <span class="o">*</span><span class="n">a</span><span class="p">,</span> <span class="o">*</span><span class="n">dir</span> <span class="o">=</span> <span class="s">&quot;.&quot;</span><span class="p">,</span> <span class="o">*</span><span class="n">treeish1</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">,</span> <span class="o">*</span><span class="n">treeish2</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
+  <span class="kt">char</span> <span class="o">*</span><span class="n">a</span><span class="p">,</span> <span class="o">*</span><span class="n">treeish1</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">,</span> <span class="o">*</span><span class="n">treeish2</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
+  <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">dir</span> <span class="o">=</span> <span class="s">&quot;.&quot;</span><span class="p">;</span>
+
+  <span class="n"><a name="git_threads_init-18" class="fnlink" href="../../#HEAD/group/threads/git_threads_init">git_threads_init</a></span><span class="p">();</span>
 
   <span class="cm">/* parse arguments as copied from git-diff */</span>
 
@@ -210,7 +214,8 @@
       <span class="o">!</span><span class="n">check_uint16_param</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="s">&quot;--inter-hunk-context=&quot;</span><span class="p">,</span>
         <span class="o">&amp;</span><span class="n">opts</span><span class="p">.</span><span class="n">interhunk_lines</span><span class="p">)</span> <span class="o">&amp;&amp;</span>
       <span class="o">!</span><span class="n">check_str_param</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="s">&quot;--src-prefix=&quot;</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">opts</span><span class="p">.</span><span class="n">old_prefix</span><span class="p">)</span> <span class="o">&amp;&amp;</span>
-      <span class="o">!</span><span class="n">check_str_param</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="s">&quot;--dst-prefix=&quot;</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">opts</span><span class="p">.</span><span class="n">new_prefix</span><span class="p">))</span>
+      <span class="o">!</span><span class="n">check_str_param</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="s">&quot;--dst-prefix=&quot;</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">opts</span><span class="p">.</span><span class="n">new_prefix</span><span class="p">)</span> <span class="o">&amp;&amp;</span>
+      <span class="o">!</span><span class="n">check_str_param</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="s">&quot;--git-dir=&quot;</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">dir</span><span class="p">))</span>
       <span class="n">usage</span><span class="p">(</span><span class="s">&quot;Unknown arg&quot;</span><span class="p">,</span> <span class="n">a</span><span class="p">);</span>
   <span class="p">}</span>
 
@@ -260,9 +265,11 @@
     <span class="n">fputs</span><span class="p">(</span><span class="n">colors</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">stdout</span><span class="p">);</span>
 
   <span class="n"><a name="git_diff_list_free-3" class="fnlink" href="../../#HEAD/group/diff/git_diff_list_free">git_diff_list_free</a></span><span class="p">(</span><span class="n">diff</span><span class="p">);</span>
-  <span class="n"><a name="git_tree_free-18" class="fnlink" href="../../#HEAD/group/tree/git_tree_free">git_tree_free</a></span><span class="p">(</span><span class="n">t1</span><span class="p">);</span>
-  <span class="n"><a name="git_tree_free-19" class="fnlink" href="../../#HEAD/group/tree/git_tree_free">git_tree_free</a></span><span class="p">(</span><span class="n">t2</span><span class="p">);</span>
+  <span class="n"><a name="git_tree_free-20" class="fnlink" href="../../#HEAD/group/tree/git_tree_free">git_tree_free</a></span><span class="p">(</span><span class="n">t1</span><span class="p">);</span>
+  <span class="n"><a name="git_tree_free-21" class="fnlink" href="../../#HEAD/group/tree/git_tree_free">git_tree_free</a></span><span class="p">(</span><span class="n">t2</span><span class="p">);</span>
   <span class="n"><a name="git_repository_free-16" class="fnlink" href="../../#HEAD/group/repository/git_repository_free">git_repository_free</a></span><span class="p">(</span><span class="n">repo</span><span class="p">);</span>
+
+  <span class="n"><a name="git_threads_shutdown-19" class="fnlink" href="../../#HEAD/group/threads/git_threads_shutdown">git_threads_shutdown</a></span><span class="p">();</span>
 
   <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
 <span class="p">}</span></pre></div>
