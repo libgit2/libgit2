@@ -223,6 +223,7 @@ extern git_off_t git_futils_filesize(git_file fd);
 #define GIT_MODE_PERMS_MASK			0777
 #define GIT_CANONICAL_PERMS(MODE)	(((MODE) & 0100) ? 0755 : 0644)
 #define GIT_MODE_TYPE(MODE)			((MODE) & ~GIT_MODE_PERMS_MASK)
+#define GIT_MODE_ISBLOB(MODE)		(GIT_MODE_TYPE(MODE) == GIT_MODE_TYPE(GIT_FILEMODE_BLOB))
 
 /**
  * Convert a mode_t from the OS to a legal git mode_t value.

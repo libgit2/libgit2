@@ -441,6 +441,8 @@ typedef enum {
 	GIT_DIFF_FIND_IGNORE_WHITESPACE = (1 << 12),
 	/** measure similarity including all data */
 	GIT_DIFF_FIND_DONT_IGNORE_WHITESPACE = (1 << 13),
+	/** measure similarity only by comparing SHAs (fast and cheap) */
+	GIT_DIFF_FIND_EXACT_MATCH_ONLY = (1 << 14),
 } git_diff_find_t;
 
 /**
