@@ -106,8 +106,8 @@ ENDIF()
 
 # Specify sha1 implementation
 IF (WIN32 AND NOT MINGW AND NOT SHA1_TYPE STREQUAL "builtin")
-    ADD_DEFINITIONS(-DWIN32_SHA1)
-    FILE(GLOB SRC_SHA1 src/hash/hash_win32.c)
+	ADD_DEFINITIONS(-DWIN32_SHA1)
+	FILE(GLOB SRC_SHA1 src/hash/hash_win32.c)
 ELSEIF (OPENSSL_FOUND AND NOT SHA1_TYPE STREQUAL "builtin")
 	ADD_DEFINITIONS(-DOPENSSL_SHA1)
 ELSE()
@@ -155,7 +155,7 @@ ENDIF()
 # Platform specific compilation flags
 IF (MSVC)
 
-    STRING(REPLACE "/Zm1000" " " CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
+	STRING(REPLACE "/Zm1000" " " CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
 
 	# /GF - String pooling
 	# /MP - Parallel build
@@ -170,7 +170,7 @@ IF (MSVC)
 		SET(CRT_FLAG_DEBUG "/MTd")
 		SET(CRT_FLAG_RELEASE "/MT")
 	ELSE()
-	    SET(CRT_FLAG_DEBUG "/MDd")
+		SET(CRT_FLAG_DEBUG "/MDd")
 		SET(CRT_FLAG_RELEASE "/MD")
 	ENDIF()
 
