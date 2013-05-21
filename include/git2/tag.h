@@ -178,6 +178,37 @@ GIT_EXTERN(int) git_tag_create(
 	int force);
 
 /**
+ * Create a new tag in the object database pointing to a git_object
+ *
+ * The message will not be cleaned up. This can be achieved
+ * through `git_message_prettify()`.
+ *
+ * @param oid Pointer where to store the OID of the
+ * newly created tag
+ *
+ * @param repo Repository where to store the tag
+ *
+ * @param tag_name Name for the tag
+ *
+ * @param target Object to which this tag points. This object
+ * must belong to the given `repo`.
+ *
+ * @param tagger Signature of the tagger for this tag, and
+ * of the tagging time
+ *
+ * @param message Full message for this tag
+ *
+ * @return 0 on success or an error code
+ */
+GIT_EXTERN(int) git_tag_annotation_create(
+	git_oid *oid,
+	git_repository *repo,
+	const char *tag_name,
+	const git_object *target,
+	const git_signature *tagger,
+	const char *message);
+
+/**
  * Create a new tag in the repository from a buffer
  *
  * @param oid Pointer where to store the OID of the newly created tag

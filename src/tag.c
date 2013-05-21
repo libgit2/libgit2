@@ -291,6 +291,19 @@ int git_tag_create(
 	return git_tag_create__internal(oid, repo, tag_name, target, tagger, message, allow_ref_overwrite, 1);
 }
 
+int git_tag_annotation_create(
+	git_oid *oid,
+	git_repository *repo,
+	const char *tag_name,
+	const git_object *target,
+	const git_signature *tagger,
+	const char *message)
+{
+	assert(oid && repo && tag_name && target && tagger && message);
+
+	return write_tag_annotation(oid, repo, tag_name, target, tagger, message);
+}
+
 int git_tag_create_lightweight(
 	git_oid *oid,
 	git_repository *repo,
