@@ -48,7 +48,7 @@ GIT_EXTERN(int) git_reference_lookup(git_reference **out, git_repository *repo, 
  *
  * @param out Pointer to oid to be filled in
  * @param repo The repository in which to look up the reference
- * @param name The long name for the reference
+ * @param name The long name for the reference (e.g. HEAD, refs/heads/master, refs/tags/v0.1.0, ...)
  * @return 0 on success, ENOTFOUND, EINVALIDSPEC or an error code.
  */
 GIT_EXTERN(int) git_reference_name_to_id(
