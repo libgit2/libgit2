@@ -15,6 +15,18 @@ void test_diff_rename__cleanup(void)
 }
 
 /*
+static int debug_print(
+    const git_diff_delta *delta, const git_diff_range *range, char usage,
+    const char *line, size_t line_len, void *data)
+{
+    GIT_UNUSED(delta); GIT_UNUSED(range); GIT_UNUSED(usage);
+    GIT_UNUSED(line_len); GIT_UNUSED(data);
+    fputs(line, stderr);
+    return 0;
+}
+*/
+
+/*
  * Renames repo has:
  *
  * commit 31e47d8c1fa36d7f8d537b96158e3f024de0a9f2 -
@@ -72,8 +84,10 @@ void test_diff_rename__match_oid(void)
 
 	/* git diff 31e47d8c1fa36d7f8d537b96158e3f024de0a9f2 \
 	 *          2bc7f351d20b53f1c72c16c4b036e491c478c49a
+	 * don't use NULL opts to avoid config `diff.renames` contamination
 	 */
-	cl_git_pass(git_diff_find_similar(diff, NULL));
+	opts.flags = GIT_DIFF_FIND_RENAMES;
+	cl_git_pass(git_diff_find_similar(diff, &opts));
 
 	memset(&exp, 0, sizeof(exp));
 	cl_git_pass(git_diff_foreach(
@@ -243,8 +257,8 @@ void test_diff_rename__not_exact_match(void)
 	cl_assert_equal_i(5, exp.files);
 	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_UNMODIFIED]);
 	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_MODIFIED]);
-	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_DELETED]);
 	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_ADDED]);
+	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_DELETED]);
 	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_COPIED]);
 
 	git_diff_list_free(diff);
@@ -429,8 +443,8 @@ void test_diff_rename__working_directory_changes(void)
 
 	cl_assert_equal_i(6, exp.files);
 	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_MODIFIED]);
-	cl_assert_equal_i(3, exp.file_status[GIT_DELTA_UNTRACKED]);
 	cl_assert_equal_i(2, exp.file_status[GIT_DELTA_DELETED]);
+	cl_assert_equal_i(3, exp.file_status[GIT_DELTA_UNTRACKED]);
 
 	/* git diff -M 2bc7f351d20b53f1c72c16c4b036e491c478c49a */
 	opts.flags = GIT_DIFF_FIND_ALL;
@@ -441,7 +455,8 @@ void test_diff_rename__working_directory_changes(void)
 		diff, diff_file_cb, diff_hunk_cb, diff_line_cb, &exp));
 
 	cl_assert_equal_i(5, exp.files);
-	cl_assert_equal_i(3, exp.file_status[GIT_DELTA_RENAMED]);
+	cl_assert_equal_i(2, exp.file_status[GIT_DELTA_RENAMED]);
+	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_DELETED]);
 	cl_assert_equal_i(2, exp.file_status[GIT_DELTA_UNTRACKED]);
 
 	git_diff_list_free(diff);
@@ -466,7 +481,8 @@ void test_diff_rename__working_directory_changes(void)
 		diff, diff_file_cb, diff_hunk_cb, diff_line_cb, &exp));
 
 	cl_assert_equal_i(5, exp.files);
-	cl_assert_equal_i(3, exp.file_status[GIT_DELTA_RENAMED]);
+	cl_assert_equal_i(2, exp.file_status[GIT_DELTA_RENAMED]);
+	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_DELETED]);
 	cl_assert_equal_i(2, exp.file_status[GIT_DELTA_UNTRACKED]);
 
 	git_diff_list_free(diff);
@@ -521,13 +537,19 @@ void test_diff_rename__working_directory_changes(void)
 	opts.flags = GIT_DIFF_FIND_ALL | GIT_DIFF_FIND_EXACT_MATCH_ONLY;
 	cl_git_pass(git_diff_find_similar(diff, &opts));
 
+	/*
+	fprintf(stderr, "\n\n");
+    cl_git_pass(git_diff_print_raw(diff, debug_print, NULL));
+	*/
+
 	memset(&exp, 0, sizeof(exp));
 	cl_git_pass(git_diff_foreach(
 		diff, diff_file_cb, diff_hunk_cb, diff_line_cb, &exp));
 
 	cl_assert_equal_i(5, exp.files);
 	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_MODIFIED]);
-	cl_assert_equal_i(2, exp.file_status[GIT_DELTA_RENAMED]);
+	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_DELETED]);
+	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_RENAMED]);
 	cl_assert_equal_i(2, exp.file_status[GIT_DELTA_UNTRACKED]);
 
 	git_diff_list_free(diff);

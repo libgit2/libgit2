@@ -87,7 +87,6 @@ void test_object_raw_convert__convert_oid_partially(void)
 	const char *exp = "16a0123456789abcdef4b775213c23a8bd74f5e0";
 	git_oid in;
 	char big[GIT_OID_HEXSZ + 1 + 3]; /* note + 4 => big buffer */
-	char *str;
 
 	cl_git_pass(git_oid_fromstr(&in, exp));
 

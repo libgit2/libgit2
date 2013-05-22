@@ -429,8 +429,8 @@ typedef enum {
 	GIT_DIFF_FIND_AND_BREAK_REWRITES =
 		(GIT_DIFF_FIND_REWRITES | GIT_DIFF_BREAK_REWRITES),
 
-	/** consider untracked files as rename/copy targets */
-	GIT_DIFF_FIND_FROM_UNTRACKED = (1 << 6),
+	/** find renames/copies for untracked items in working directory */
+	GIT_DIFF_FIND_FOR_UNTRACKED = (1 << 6),
 
 	/** turn on all finding features */
 	GIT_DIFF_FIND_ALL = (0x0ff),
@@ -469,7 +469,10 @@ typedef struct {
  * - `copy_threshold` is the same as the -C option with a value
  * - `rename_from_rewrite_threshold` matches the top of the -B option
  * - `break_rewrite_threshold` matches the bottom of the -B option
- * - `target_limit` matches the -l option (approximately)
+ * - `rename_limit` is the maximum number of matches to consider for
+ *   a particular file.  This is a little different from the `-l` option
+ *   to regular Git because we will still process up to this many matches
+ *   before abandoning the search.
  *
  * The `metric` option allows you to plug in a custom similarity metric.
  * Set it to NULL for the default internal metric which is based on sampling
@@ -492,10 +495,10 @@ typedef struct {
 	/** Similarity to split modify into delete/add pair (default 60) */
 	uint16_t break_rewrite_threshold;
 
-	/** Maximum similarity sources to examine (a la diff's `-l` option or
-	 *  the `diff.renameLimit` config) (default 200)
+	/** Maximum similarity sources to examine for a file (somewhat like
+	 *  git-diff's `-l` option or `diff.renameLimit` config) (default 200)
 	 */
-	size_t target_limit;
+	size_t rename_limit;
 
 	/** Pluggable similarity metric; pass NULL to use internal metric */
 	git_diff_similarity_metric *metric;
