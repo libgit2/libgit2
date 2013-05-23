@@ -214,8 +214,8 @@ int git_reference_delete(git_reference *ref)
 	return git_refdb_delete(ref->db, ref);
 }
 
-int git_reference_lookup(git_reference **ref_out,
-	git_repository *repo, const char *name)
+int git_reference_lookup(
+	git_reference **ref_out, git_repository *repo, const char *name)
 {
 	return git_reference_lookup_resolved(ref_out, repo, name, 0);
 }
@@ -246,7 +246,8 @@ int git_reference_lookup_resolved(
 	git_reference *ref = NULL;
 	git_refdb *refdb;
 
-	assert(ref_out && repo && name);
+	GIT_REFCOUNT_VALIDATE(repo);
+	assert(ref_out && name);
 
 	*ref_out = NULL;
 

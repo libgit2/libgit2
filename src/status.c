@@ -301,4 +301,3 @@ int git_status_should_ignore(
 {
 	return git_ignore_path_is_ignored(ignored, repo, path);
 }
-
