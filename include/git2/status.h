@@ -42,6 +42,7 @@ typedef enum {
 	GIT_STATUS_WT_MODIFIED      = (1u << 8),
 	GIT_STATUS_WT_DELETED       = (1u << 9),
 	GIT_STATUS_WT_TYPECHANGE    = (1u << 10),
+	GIT_STATUS_WT_RENAMED       = (1u << 11),
 
 	GIT_STATUS_IGNORED          = (1u << 14),
 } git_status_t;
@@ -130,6 +131,10 @@ typedef enum {
  * - GIT_STATUS_OPT_RECURSE_IGNORED_DIRS indicates that the contents of
  *   ignored directories should be included in the status.  This is like
  *   doing `git ls-files -o -i --exclude-standard` with core git.
+ * - GIT_STATUS_OPT_RENAMES_HEAD_TO_INDEX indicates that items that are
+ *   renamed in the index will be reported as renames.
+ * - GIT_STATUS_OPT_RENAMES_INDEX_TO_WORKDIR indicates that items that
+ *   are renamed in the working directory will be reported as renames.
  *
  * Calling `git_status_foreach()` is like calling the extended version
  * with: GIT_STATUS_OPT_INCLUDE_IGNORED, GIT_STATUS_OPT_INCLUDE_UNTRACKED,
@@ -137,13 +142,15 @@ typedef enum {
  * together as `GIT_STATUS_OPT_DEFAULTS` if you want them as a baseline.
  */
 typedef enum {
-	GIT_STATUS_OPT_INCLUDE_UNTRACKED      = (1u << 0),
-	GIT_STATUS_OPT_INCLUDE_IGNORED        = (1u << 1),
-	GIT_STATUS_OPT_INCLUDE_UNMODIFIED     = (1u << 2),
-	GIT_STATUS_OPT_EXCLUDE_SUBMODULES     = (1u << 3),
-	GIT_STATUS_OPT_RECURSE_UNTRACKED_DIRS = (1u << 4),
-	GIT_STATUS_OPT_DISABLE_PATHSPEC_MATCH = (1u << 5),
-	GIT_STATUS_OPT_RECURSE_IGNORED_DIRS   = (1u << 6),
+	GIT_STATUS_OPT_INCLUDE_UNTRACKED        = (1u << 0),
+	GIT_STATUS_OPT_INCLUDE_IGNORED          = (1u << 1),
+	GIT_STATUS_OPT_INCLUDE_UNMODIFIED       = (1u << 2),
+	GIT_STATUS_OPT_EXCLUDE_SUBMODULES       = (1u << 3),
+	GIT_STATUS_OPT_RECURSE_UNTRACKED_DIRS   = (1u << 4),
+	GIT_STATUS_OPT_DISABLE_PATHSPEC_MATCH   = (1u << 5),
+	GIT_STATUS_OPT_RECURSE_IGNORED_DIRS     = (1u << 6),
+	GIT_STATUS_OPT_RENAMES_HEAD_TO_INDEX    = (1u << 7),
+	GIT_STATUS_OPT_RENAMES_INDEX_TO_WORKDIR = (1u << 8),
 } git_status_opt_t;
 
 #define GIT_STATUS_OPT_DEFAULTS \

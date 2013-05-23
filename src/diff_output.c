@@ -1845,47 +1845,35 @@ int git_diff_patch_to_str(
 }
 
 int git_diff__paired_foreach(
-	git_diff_list *idx2head,
-	git_diff_list *wd2idx,
-	int (*cb)(git_diff_delta *i2h, git_diff_delta *w2i, void *payload),
+	git_diff_list *head2idx,
+	git_diff_list *idx2wd,
+	int (*cb)(git_diff_delta *h2i, git_diff_delta *i2w, void *payload),
 	void *payload)
 {
 	int cmp;
-	git_diff_delta *i2h, *w2i;
+	git_diff_delta *h2i, *i2w;
 	size_t i, j, i_max, j_max;
-	int (*strcomp)(const char *, const char *);
 
-	i_max = idx2head ? idx2head->deltas.length : 0;
-	j_max = wd2idx   ? wd2idx->deltas.length   : 0;
-
-	/* Get appropriate strcmp function */
-	strcomp = idx2head ? idx2head->strcomp : wd2idx ? wd2idx->strcomp : NULL;
-
-	/* Assert both iterators use matching ignore-case. If this function ever
-	* supports merging diffs that are not sorted by the same function, then
-	* it will need to spool and sort on one of the results before merging
-	*/
-	if (idx2head && wd2idx) {
-		assert(idx2head->strcomp == wd2idx->strcomp);
-	}
+	i_max = head2idx ? head2idx->deltas.length : 0;
+	j_max = idx2wd ? idx2wd->deltas.length : 0;
 
 	for (i = 0, j = 0; i < i_max || j < j_max; ) {
-		i2h = idx2head ? GIT_VECTOR_GET(&idx2head->deltas,i) : NULL;
-		w2i = wd2idx   ? GIT_VECTOR_GET(&wd2idx->deltas,j)   : NULL;
+		h2i = head2idx ? GIT_VECTOR_GET(&head2idx->deltas, i) : NULL;
+		i2w = idx2wd ? GIT_VECTOR_GET(&idx2wd->deltas, j) : NULL;
 
-		cmp = !w2i ? -1 : !i2h ? 1 :
-			strcomp(i2h->old_file.path, w2i->old_file.path);
+		cmp = !i2w ? -1 : !h2i ? 1 :
+			git__strcmp(h2i->new_file.path, i2w->old_file.path);
 
 		if (cmp < 0) {
-			if (cb(i2h, NULL, payload))
+			if (cb(h2i, NULL, payload))
 				return GIT_EUSER;
 			i++;
 		} else if (cmp > 0) {
-			if (cb(NULL, w2i, payload))
+			if (cb(NULL, i2w, payload))
 				return GIT_EUSER;
 			j++;
 		} else {
-			if (cb(i2h, w2i, payload))
+			if (cb(h2i, i2w, payload))
 				return GIT_EUSER;
 			i++; j++;
 		}
