@@ -18,6 +18,7 @@ static git_diff_delta *diff_delta__dup(
 		return NULL;
 
 	memcpy(delta, d, sizeof(git_diff_delta));
+	GIT_DIFF_FLAG__CLEAR_INTERNAL(delta->flags);
 
 	if (d->old_file.path != NULL) {
 		delta->old_file.path = git_pool_strdup(pool, d->old_file.path);
@@ -361,21 +362,25 @@ static int apply_splits_and_deletes(
 			delta->old_file.flags |= GIT_DIFF_FLAG_VALID_OID;
 		}
 
-		if (git_vector_insert(&onto, delta) < 0)
-			goto on_error;
-	}
-
-	/* cannot return an error past this point */
-	git_vector_foreach(&diff->deltas, i, delta) {
-		if ((delta->flags & GIT_DIFF_FLAG__TO_DELETE) != 0)
-			git__free(delta);
-
+		/* clean up delta before inserting into new list */
 		GIT_DIFF_FLAG__CLEAR_INTERNAL(delta->flags);
 
 		if (delta->status != GIT_DELTA_COPIED &&
 			delta->status != GIT_DELTA_RENAMED &&
 			(delta->status != GIT_DELTA_MODIFIED || actually_split))
 			delta->similarity = 0;
+
+		/* insert into new list */
+		if (git_vector_insert(&onto, delta) < 0)
+			goto on_error;
+	}
+
+	/* cannot return an error past this point */
+
+	/* free deltas from old list that didn't make it to the new one */
+	git_vector_foreach(&diff->deltas, i, delta) {
+		if ((delta->flags & GIT_DIFF_FLAG__TO_DELETE) != 0)
+			git__free(delta);
 	}
 
 	/* swap new delta list into place */
