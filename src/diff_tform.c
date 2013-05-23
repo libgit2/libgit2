@@ -776,7 +776,7 @@ int git_diff_find_similar(
 
 				num_rewrites++;
 			} else {
-				assert(delta_is_split(from));
+				assert(delta_is_split(to));
 
 				if (similarity < (int)opts.rename_from_rewrite_threshold)
 					continue;
