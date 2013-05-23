@@ -236,9 +236,8 @@ static int get_blob_content(
 		char oidstr[GIT_OID_HEXSZ+1];
 		git_buf content = GIT_BUF_INIT;
 
-		git_oid_fmt(oidstr, &file->oid);
-		oidstr[GIT_OID_HEXSZ] = 0;
-		git_buf_printf(&content, "Subproject commit %s\n", oidstr );
+		git_oid_tostr(oidstr, sizeof(oidstr), &file->oid);
+		git_buf_printf(&content, "Subproject commit %s\n", oidstr);
 
 		map->data = git_buf_detach(&content);
 		map->len = strlen(map->data);
@@ -318,14 +317,13 @@ static int get_workdir_sm_content(
 		}
 	}
 
-	git_oid_fmt(oidstr, &file->oid);
-	oidstr[GIT_OID_HEXSZ] = '\0';
+	git_oid_tostr(oidstr, sizeof(oidstr), &file->oid);
 
 	if (GIT_SUBMODULE_STATUS_IS_WD_DIRTY(sm_status))
 		sm_status_text = "-dirty";
 
-	git_buf_printf(&content, "Subproject commit %s%s\n",
-				   oidstr, sm_status_text);
+	git_buf_printf(
+		&content, "Subproject commit %s%s\n", oidstr, sm_status_text);
 
 	map->data = git_buf_detach(&content);
 	map->len = strlen(map->data);
@@ -1021,7 +1019,32 @@ typedef struct {
 	git_diff_data_cb print_cb;
 	void *payload;
 	git_buf *buf;
+	int oid_strlen;
 } diff_print_info;
+
+static int diff_print_info_init(
+	diff_print_info *pi,
+	git_buf *out, git_diff_list *diff, git_diff_data_cb cb, void *payload)
+{
+	assert(diff && diff->repo);
+
+	pi->diff     = diff;
+	pi->print_cb = cb;
+	pi->payload  = payload;
+	pi->buf      = out;
+
+	if (git_repository__cvar(&pi->oid_strlen, diff->repo, GIT_CVAR_ABBREV) < 0)
+		return -1;
+
+	pi->oid_strlen += 1; /* for NUL byte */
+
+	if (pi->oid_strlen < 2)
+		pi->oid_strlen = 2;
+	else if (pi->oid_strlen > GIT_OID_HEXSZ + 1)
+		pi->oid_strlen = GIT_OID_HEXSZ + 1;
+
+	return 0;
+}
 
 static char pick_suffix(int mode)
 {
@@ -1104,9 +1127,10 @@ int git_diff_print_compact(
 {
 	int error;
 	git_buf buf = GIT_BUF_INIT;
-	diff_print_info pi = { diff, print_cb, payload, &buf };
+	diff_print_info pi;
 
-	error = git_diff_foreach(diff, print_compact, NULL, NULL, &pi);
+	if (!(error = diff_print_info_init(&pi, &buf, diff, print_cb, payload)))
+		error = git_diff_foreach(diff, print_compact, NULL, NULL, &pi);
 
 	git_buf_free(&buf);
 
@@ -1118,7 +1142,7 @@ static int print_raw(
 {
 	diff_print_info *pi = data;
 	char code = git_diff_status_char(delta->status);
-	char ooid[8], noid[8];
+	char start_oid[GIT_OID_HEXSZ+1], end_oid[GIT_OID_HEXSZ+1];
 
 	GIT_UNUSED(progress);
 
@@ -1127,15 +1151,12 @@ static int print_raw(
 
 	git_buf_clear(pi->buf);
 
-	git_oid_nfmt(ooid, sizeof(ooid), &delta->old_file.oid);
-	ooid[7] = '\0';
-
-	git_oid_nfmt(noid, sizeof(noid), &delta->new_file.oid);
-	noid[7] = '\0';
+	git_oid_tostr(start_oid, pi->oid_strlen, &delta->old_file.oid);
+	git_oid_tostr(end_oid, pi->oid_strlen, &delta->new_file.oid);
 
 	git_buf_printf(
 		pi->buf, ":%06o %06o %s... %s... %c",
-		delta->old_file.mode, delta->new_file.mode, ooid, noid, code);
+		delta->old_file.mode, delta->new_file.mode, start_oid, end_oid, code);
 
 	if (delta->similarity > 0)
 		git_buf_printf(pi->buf, "%03u", delta->similarity);
@@ -1165,9 +1186,10 @@ int git_diff_print_raw(
 {
 	int error;
 	git_buf buf = GIT_BUF_INIT;
-	diff_print_info pi = { diff, print_cb, payload, &buf };
+	diff_print_info pi;
 
-	error = git_diff_foreach(diff, print_raw, NULL, NULL, &pi);
+	if (!(error = diff_print_info_init(&pi, &buf, diff, print_cb, payload)))
+		error = git_diff_foreach(diff, print_raw, NULL, NULL, &pi);
 
 	git_buf_free(&buf);
 
@@ -1176,20 +1198,10 @@ int git_diff_print_raw(
 
 static int print_oid_range(diff_print_info *pi, const git_diff_delta *delta)
 {
-	int abbrevlen;
 	char start_oid[GIT_OID_HEXSZ+1], end_oid[GIT_OID_HEXSZ+1];
 
-	if (git_repository__cvar(&abbrevlen, pi->diff->repo, GIT_CVAR_ABBREV) < 0)
-		return -1;
-
-	abbrevlen += 1; /* for NUL byte */
-	if (abbrevlen < 2)
-		abbrevlen = 2;
-	else if (abbrevlen > (int)sizeof(start_oid))
-		abbrevlen = (int)sizeof(start_oid);
-
-	git_oid_tostr(start_oid, abbrevlen, &delta->old_file.oid);
-	git_oid_tostr(end_oid, abbrevlen, &delta->new_file.oid);
+	git_oid_tostr(start_oid, pi->oid_strlen, &delta->old_file.oid);
+	git_oid_tostr(end_oid, pi->oid_strlen, &delta->new_file.oid);
 
 	/* TODO: Match git diff more closely */
 	if (delta->old_file.mode == delta->new_file.mode) {
@@ -1345,13 +1357,9 @@ int git_diff_print_patch(
 	git_buf buf = GIT_BUF_INIT;
 	diff_print_info pi;
 
-	pi.diff     = diff;
-	pi.print_cb = print_cb;
-	pi.payload  = payload;
-	pi.buf      = &buf;
-
-	error = git_diff_foreach(
-		diff, print_patch_file, print_patch_hunk, print_patch_line, &pi);
+	if (!(error = diff_print_info_init(&pi, &buf, diff, print_cb, payload)))
+		error = git_diff_foreach(
+			diff, print_patch_file, print_patch_hunk, print_patch_line, &pi);
 
 	git_buf_free(&buf);
 
@@ -1792,12 +1800,9 @@ int git_diff_patch_print(
 
 	assert(patch && print_cb);
 
-	pi.diff     = patch->diff;
-	pi.print_cb = print_cb;
-	pi.payload  = payload;
-	pi.buf      = &temp;
-
-	error = print_patch_file(patch->delta, 0, &pi);
+	if (!(error = diff_print_info_init(
+			&pi, &temp, patch->diff, print_cb, payload)))
+		error = print_patch_file(patch->delta, 0, &pi);
 
 	for (h = 0; h < patch->hunks_size && !error; ++h) {
 		diff_patch_hunk *hunk = &patch->hunks[h];
