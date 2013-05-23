@@ -188,27 +188,49 @@ extern int git__strncmp(const char *a, const char *b, size_t sz);
 extern int git__strncasecmp(const char *a, const char *b, size_t sz);
 
 typedef struct {
+	int signature;
 	git_atomic refcount;
 	void *owner;
 } git_refcount;
 
+#define GIT_REFCOUNT_SIGNATURE 0x71B6172A
+
 typedef void (*git_refcount_freeptr)(void *r);
 
-#define GIT_REFCOUNT_INC(r) { \
-	git_atomic_inc(&((git_refcount *)(r))->refcount);	\
-}
+#define GIT_REFCOUNT_INIT(r, start) do { \
+    ((git_refcount *)(r))->signature = GIT_REFCOUNT_SIGNATURE; \
+	git_atomic_set(&((git_refcount *)(r))->refcount, start); \
+	GIT_REFCOUNT_OWN(r, NULL); \
+} while (0)
 
-#define GIT_REFCOUNT_DEC(_r, do_free) { \
+#define GIT_REFCOUNT_FREE(r) do { \
+	assert(GIT_REFCOUNT_VALID(r)); \
+    ((git_refcount *)(r))->signature = 0; \
+	git__free(r); \
+} while (0)
+
+#define GIT_REFCOUNT_INC(r) do { \
+	assert(GIT_REFCOUNT_VALID(r)); \
+	git_atomic_inc(&((git_refcount *)(r))->refcount); \
+} while (0)
+
+#define GIT_REFCOUNT_DEC(_r, do_free) do { \
 	git_refcount *r = (git_refcount *)(_r); \
+	assert(GIT_REFCOUNT_VALID(r)); \
 	int val = git_atomic_dec(&r->refcount); \
 	if (val <= 0 && r->owner == NULL) { do_free(_r); } \
-}
+} while (0)
 
-#define GIT_REFCOUNT_OWN(r, o) { \
+#define GIT_REFCOUNT_OWN(r, o) do { \
+	assert(GIT_REFCOUNT_VALID(r)); \
 	((git_refcount *)(r))->owner = o; \
-}
+} while (0)
 
 #define GIT_REFCOUNT_OWNER(r) (((git_refcount *)(r))->owner)
+
+#define GIT_REFCOUNT_VALID(r) \
+	(r != NULL && ((const git_refcount *)(r))->signature == GIT_REFCOUNT_SIGNATURE)
+
 
 static signed char from_hex[] = {
 -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, /* 00 */

@@ -309,6 +309,7 @@ int git_index_open(git_index **index_out, const char *index_path)
 
 	index = git__calloc(1, sizeof(git_index));
 	GITERR_CHECK_ALLOC(index);
+	GIT_REFCOUNT_INIT(index, 0);
 
 	if (index_path != NULL) {
 		index->index_file_path = git__strdup(index_path);
@@ -348,7 +349,7 @@ static void index_free(git_index *index)
 	git_vector_free(&index->reuc);
 
 	git__free(index->index_file_path);
-	git__free(index);
+	GIT_REFCOUNT_FREE(index);
 }
 
 void git_index_free(git_index *index)
@@ -363,7 +364,7 @@ void git_index_clear(git_index *index)
 {
 	size_t i;
 
-	assert(index);
+	assert(GIT_REFCOUNT_VALID(index));
 
 	for (i = 0; i < index->entries.length; ++i) {
 		git_index_entry *e;
@@ -393,7 +394,7 @@ int git_index_set_caps(git_index *index, unsigned int caps)
 {
 	int old_ignore_case;
 
-	assert(index);
+	assert(GIT_REFCOUNT_VALID(index));
 
 	old_ignore_case = index->ignore_case;
 
@@ -438,6 +439,8 @@ int git_index_read(git_index *index)
 	git_buf buffer = GIT_BUF_INIT;
 	git_futils_filestamp stamp = {0};
 
+	assert(GIT_REFCOUNT_VALID(index));
+
 	if (!index->index_file_path)
 		return create_index_error(-1,
 			"Failed to read index: The index is in-memory only");
@@ -471,6 +474,8 @@ int git_index_write(git_index *index)
 	git_filebuf file = GIT_FILEBUF_INIT;
 	int error;
 
+	assert(GIT_REFCOUNT_VALID(index));
+
 	if (!index->index_file_path)
 		return create_index_error(-1,
 			"Failed to read index: The index is in-memory only");
@@ -502,7 +507,7 @@ int git_index_write_tree(git_oid *oid, git_index *index)
 {
 	git_repository *repo;
 
-	assert(oid && index);
+	assert(oid && GIT_REFCOUNT_VALID(index));
 
 	repo = INDEX_OWNER(index);
 
@@ -528,7 +533,7 @@ size_t git_index_entrycount(const git_index *index)
 const git_index_entry *git_index_get_byindex(
 	git_index *index, size_t n)
 {
-	assert(index);
+	assert(GIT_REFCOUNT_VALID(index));
 	git_vector_sort(&index->entries);
 	return git_vector_get(&index->entries, n);
 }
@@ -538,7 +543,7 @@ const git_index_entry *git_index_get_bypath(
 {
 	size_t pos;
 
-	assert(index);
+	assert(GIT_REFCOUNT_VALID(index));
 
 	git_vector_sort(&index->entries);
 
@@ -1207,7 +1212,7 @@ int git_index_reuc_add(git_index *index, const char *path,
 	}
 
 	return error;
-} 
+}
 
 int git_index_reuc_find(size_t *at_pos, git_index *index, const char *path)
 {

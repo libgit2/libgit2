@@ -113,7 +113,7 @@ void git_repository_free(git_repository *repo)
 	git__free(repo->workdir);
 	git__free(repo->namespace);
 
-	git__free(repo);
+	GIT_REFCOUNT_FREE(repo);
 }
 
 /*
@@ -139,11 +139,10 @@ static bool valid_repository_path(git_buf *repository_path)
 
 static git_repository *repository_alloc(void)
 {
-	git_repository *repo = git__malloc(sizeof(git_repository));
+	git_repository *repo = git__calloc(1, sizeof(git_repository));
 	if (!repo)
 		return NULL;
-
-	memset(repo, 0x0, sizeof(git_repository));
+	GIT_REFCOUNT_INIT(repo, 1);
 
 	if (git_cache_init(&repo->objects) < 0) {
 		git__free(repo);
@@ -584,6 +583,8 @@ int git_repository_config__weakptr(git_config **out, git_repository *repo)
 {
 	int error = 0;
 
+	assert(GIT_REFCOUNT_VALID(repo) && out);
+
 	if (repo->_config == NULL) {
 		git_buf global_buf = GIT_BUF_INIT;
 		git_buf xdg_buf = GIT_BUF_INIT;
@@ -633,7 +634,8 @@ int git_repository_config(git_config **out, git_repository *repo)
 
 void git_repository_set_config(git_repository *repo, git_config *config)
 {
-	assert(repo && config);
+	assert(GIT_REFCOUNT_VALID(repo) && config);
+
 	set_config(repo, config);
 }
 
@@ -641,7 +643,7 @@ int git_repository_odb__weakptr(git_odb **out, git_repository *repo)
 {
 	int error = 0;
 
-	assert(repo && out);
+	assert(GIT_REFCOUNT_VALID(repo) && out);
 
 	if (repo->_odb == NULL) {
 		git_buf odb_path = GIT_BUF_INIT;
@@ -678,7 +680,8 @@ int git_repository_odb(git_odb **out, git_repository *repo)
 
 void git_repository_set_odb(git_repository *repo, git_odb *odb)
 {
-	assert(repo && odb);
+	assert(GIT_REFCOUNT_VALID(repo) && odb);
+
 	set_odb(repo, odb);
 }
 
@@ -686,7 +689,7 @@ int git_repository_refdb__weakptr(git_refdb **out, git_repository *repo)
 {
 	int error = 0;
 
-	assert(out && repo);
+	assert(GIT_REFCOUNT_VALID(repo) && out);
 
 	if (repo->_refdb == NULL) {
 		git_refdb *refdb;
@@ -718,7 +721,8 @@ int git_repository_refdb(git_refdb **out, git_repository *repo)
 
 void git_repository_set_refdb(git_repository *repo, git_refdb *refdb)
 {
-	assert(repo && refdb);
+	assert(GIT_REFCOUNT_VALID(repo) && refdb);
+
 	set_refdb(repo, refdb);
 }
 
@@ -726,7 +730,7 @@ int git_repository_index__weakptr(git_index **out, git_repository *repo)
 {
 	int error = 0;
 
-	assert(out && repo);
+	assert(GIT_REFCOUNT_VALID(repo) && out);
 
 	if (repo->_index == NULL) {
 		git_buf index_path = GIT_BUF_INIT;
@@ -765,12 +769,15 @@ int git_repository_index(git_index **out, git_repository *repo)
 
 void git_repository_set_index(git_repository *repo, git_index *index)
 {
-	assert(repo && index);
+	assert(GIT_REFCOUNT_VALID(repo) && index);
+
 	set_index(repo, index);
 }
 
 int git_repository_set_namespace(git_repository *repo, const char *namespace)
 {
+	assert(GIT_REFCOUNT_VALID(repo));
+
 	git__free(repo->namespace);
 
 	if (namespace == NULL) {
@@ -1440,7 +1447,8 @@ int git_repository_head(git_reference **head_out, git_repository *repo)
 		return 0;
 	}
 
-	error = git_reference_lookup_resolved(head_out, repo, git_reference_symbolic_target(head), -1);
+	error = git_reference_lookup_resolved(
+		head_out, repo, git_reference_symbolic_target(head), -1);
 	git_reference_free(head);
 
 	return error == GIT_ENOTFOUND ? GIT_EORPHANEDHEAD : error;
@@ -1507,13 +1515,14 @@ cleanup:
 
 const char *git_repository_path(git_repository *repo)
 {
-	assert(repo);
+	assert(GIT_REFCOUNT_VALID(repo));
+
 	return repo->path_repository;
 }
 
 const char *git_repository_workdir(git_repository *repo)
 {
-	assert(repo);
+	assert(GIT_REFCOUNT_VALID(repo));
 
 	if (repo->is_bare)
 		return NULL;
@@ -1527,7 +1536,7 @@ int git_repository_set_workdir(
 	int error = 0;
 	git_buf path = GIT_BUF_INIT;
 
-	assert(repo && workdir);
+	assert(GIT_REFCOUNT_VALID(repo) && workdir);
 
 	if (git_path_prettify_dir(&path, workdir, NULL) < 0)
 		return -1;
@@ -1567,7 +1576,8 @@ int git_repository_set_workdir(
 
 int git_repository_is_bare(git_repository *repo)
 {
-	assert(repo);
+	assert(GIT_REFCOUNT_VALID(repo));
+
 	return repo->is_bare;
 }
 
@@ -1648,7 +1658,7 @@ int git_repository_hashfile(
 	git_off_t len;
 	git_buf full_path = GIT_BUF_INIT;
 
-	assert(out && path && repo); /* as_path can be NULL */
+	assert(GIT_REFCOUNT_VALID(repo) && out && path); /* as_path can be NULL */
 
 	/* At some point, it would be nice if repo could be NULL to just
 	 * apply filter rules defined in system and global files, but for
@@ -1712,11 +1722,10 @@ int git_repository_set_head(
 	git_repository* repo,
 	const char* refname)
 {
-	git_reference *ref,
-		*new_head = NULL;
+	git_reference *ref, *new_head = NULL;
 	int error;
 
-	assert(repo && refname);
+	assert(GIT_REFCOUNT_VALID(repo) && refname);
 
 	error = git_reference_lookup(&ref, repo, refname);
 	if (error < 0 && error != GIT_ENOTFOUND)
@@ -1744,7 +1753,7 @@ int git_repository_set_head_detached(
 		*peeled = NULL;
 	git_reference *new_head = NULL;
 
-	assert(repo && commitish);
+	assert(GIT_REFCOUNT_VALID(repo) && commitish);
 
 	if ((error = git_object_lookup(&object, repo, commitish, GIT_OBJ_ANY)) < 0)
 		return error;
@@ -1764,12 +1773,11 @@ cleanup:
 int git_repository_detach_head(
 	git_repository* repo)
 {
-	git_reference *old_head = NULL,
-		*new_head = NULL;
+	git_reference *old_head = NULL, *new_head = NULL;
 	git_object *object = NULL;
 	int error;
 
-	assert(repo);
+	assert(GIT_REFCOUNT_VALID(repo));
 
 	if ((error = git_repository_head(&old_head, repo)) < 0)
 		return error;
@@ -1795,7 +1803,7 @@ int git_repository_state(git_repository *repo)
 	git_buf repo_path = GIT_BUF_INIT;
 	int state = GIT_REPOSITORY_STATE_NONE;
 
-	assert(repo);
+	assert(GIT_REFCOUNT_VALID(repo));
 
 	if (git_buf_puts(&repo_path, repo->path_repository) < 0)
 		return -1;

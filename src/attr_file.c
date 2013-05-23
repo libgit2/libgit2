@@ -23,6 +23,7 @@ int git_attr_file__new(
 
 	attrs = git__calloc(1, sizeof(git_attr_file));
 	GITERR_CHECK_ALLOC(attrs);
+	GIT_REFCOUNT_INIT(attrs, 0);
 
 	if (pool)
 		attrs->pool = pool;
@@ -158,6 +159,8 @@ void git_attr_file__free(git_attr_file *file)
 	if (!file)
 		return;
 
+	assert(GIT_REFCOUNT_VALID(file));
+
 	git_attr_file__clear_rules(file);
 
 	if (file->pool_is_allocated) {
@@ -166,7 +169,7 @@ void git_attr_file__free(git_attr_file *file)
 	}
 	file->pool = NULL;
 
-	git__free(file);
+	GIT_REFCOUNT_FREE(file);
 }
 
 uint32_t git_attr_file__name_hash(const char *name)
@@ -472,7 +475,7 @@ static void git_attr_assignment__free(git_attr_assignment *assign)
 	 */
 	assign->name = NULL;
 	assign->value = NULL;
-	git__free(assign);
+	GIT_REFCOUNT_FREE(assign);
 }
 
 static int merge_assignments(void **old_raw, void *new_raw)
@@ -509,7 +512,7 @@ int git_attr_assignment__parse(
 		if (!assign) {
 			assign = git__calloc(1, sizeof(git_attr_assignment));
 			GITERR_CHECK_ALLOC(assign);
-			GIT_REFCOUNT_INC(assign);
+			GIT_REFCOUNT_INIT(assign, 1);
 		}
 
 		assign->name_hash = 5381;

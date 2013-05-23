@@ -310,9 +310,9 @@ static git_diff_list *diff_list_alloc(
 	if (!diff)
 		return NULL;
 
-	assert(repo && old_iter && new_iter);
+	assert(GIT_REFCOUNT_VALID(repo) && old_iter && new_iter);
 
-	GIT_REFCOUNT_INC(diff);
+	GIT_REFCOUNT_INIT(diff, 1);
 	diff->repo = repo;
 	diff->old_src = old_iter->type;
 	diff->new_src = new_iter->type;
@@ -446,7 +446,8 @@ static void diff_list_free(git_diff_list *diff)
 
 	git_pathspec_free(&diff->pathspec);
 	git_pool_clear(&diff->pool);
-	git__free(diff);
+
+	GIT_REFCOUNT_FREE(diff);
 }
 
 void git_diff_list_free(git_diff_list *diff)
@@ -1055,7 +1056,7 @@ int git_diff_tree_to_tree(
 	int error = 0;
 	git_iterator_flag_t iflag = GIT_ITERATOR_DONT_IGNORE_CASE;
 
-	assert(diff && repo);
+	assert(diff && GIT_REFCOUNT_VALID(repo));
 
 	/* for tree to tree diff, be case sensitive even if the index is
 	 * currently case insensitive, unless the user explicitly asked
@@ -1081,7 +1082,7 @@ int git_diff_tree_to_index(
 {
 	int error = 0;
 
-	assert(diff && repo);
+	assert(diff && GIT_REFCOUNT_VALID(repo));
 
 	if (!index && (error = git_repository_index__weakptr(&index, repo)) < 0)
 		return error;
@@ -1102,7 +1103,7 @@ int git_diff_index_to_workdir(
 {
 	int error = 0;
 
-	assert(diff && repo);
+	assert(diff && GIT_REFCOUNT_VALID(repo));
 
 	if (!index && (error = git_repository_index__weakptr(&index, repo)) < 0)
 		return error;
@@ -1125,7 +1126,7 @@ int git_diff_tree_to_workdir(
 {
 	int error = 0;
 
-	assert(diff && repo);
+	assert(diff && GIT_REFCOUNT_VALID(repo));
 
 	DIFF_FROM_ITERATORS(
 		git_iterator_for_tree(&a, old_tree, 0, pfx, pfx),

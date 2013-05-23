@@ -526,6 +526,7 @@ static void diff_patch_init(
 	diff_context *ctxt, git_diff_patch *patch)
 {
 	memset(patch, 0, sizeof(git_diff_patch));
+	GIT_REFCOUNT_INIT(patch, 0);
 
 	patch->diff = ctxt->diff;
 	patch->ctxt = ctxt;
@@ -819,7 +820,7 @@ static void diff_patch_free(git_diff_patch *patch)
 
 	git_diff_list_free(patch->diff); /* decrements refcount */
 
-	git__free(patch);
+	GIT_REFCOUNT_FREE(patch);
 }
 
 #define MAX_HUNK_STEP 128
@@ -958,11 +959,12 @@ static int diff_patch_line_cb(
 
 static int diff_required(git_diff_list *diff, const char *action)
 {
-	if (!diff) {
+	if (!GIT_REFCOUNT_VALID(diff)) {
 		giterr_set(GITERR_INVALID, "Must provide valid diff to %s", action);
 		return -1;
 	}
 
+	assert(GIT_REFCOUNT_VALID(diff->repo));
 	return 0;
 }
 

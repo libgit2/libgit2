@@ -21,15 +21,16 @@ int git_refdb_new(git_refdb **out, git_repository *repo)
 {
 	git_refdb *db;
 
-	assert(out && repo);
+	assert(out && GIT_REFCOUNT_VALID(repo));
 
 	db = git__calloc(1, sizeof(*db));
 	GITERR_CHECK_ALLOC(db);
 
+	GIT_REFCOUNT_INIT(db, 1);
 	db->repo = repo;
 
 	*out = db;
-	GIT_REFCOUNT_INC(db);
+
 	return 0;
 }
 
@@ -38,7 +39,7 @@ int git_refdb_open(git_refdb **out, git_repository *repo)
 	git_refdb *db;
 	git_refdb_backend *dir;
 
-	assert(out && repo);
+	assert(out && GIT_REFCOUNT_VALID(repo));
 
 	*out = NULL;
 
@@ -89,7 +90,7 @@ int git_refdb_compress(git_refdb *db)
 static void refdb_free(git_refdb *db)
 {
 	refdb_free_backend(db);
-	git__free(db);
+	GIT_REFCOUNT_FREE(db);
 }
 
 void git_refdb_free(git_refdb *db)
@@ -112,7 +113,7 @@ int git_refdb_lookup(git_reference **out, git_refdb *db, const char *ref_name)
 	git_reference *ref;
 	int error;
 
-	assert(db && db->backend && out && ref_name);
+	assert(GIT_REFCOUNT_VALID(db) && db->backend && out && ref_name);
 
 	if (!(error = db->backend->lookup(&ref, db->backend, ref_name))) {
 		ref->db = db;
@@ -126,6 +127,8 @@ int git_refdb_lookup(git_reference **out, git_refdb *db, const char *ref_name)
 
 int git_refdb_iterator(git_reference_iterator **out, git_refdb *db)
 {
+	assert(GIT_REFCOUNT_VALID(db) && out);
+
 	if (!db->backend || !db->backend->iterator) {
 		giterr_set(GITERR_REFERENCE, "This backend doesn't support iterators");
 		return -1;
@@ -190,14 +193,14 @@ struct glob_cb_data {
 
 int git_refdb_write(git_refdb *db, const git_reference *ref)
 {
-	assert(db && db->backend);
+	assert(GIT_REFCOUNT_VALID(db) && db->backend);
 
 	return db->backend->write(db->backend, ref);
 }
 
 int git_refdb_delete(struct git_refdb *db, const git_reference *ref)
 {
-	assert(db && db->backend);
+	assert(GIT_REFCOUNT_VALID(db) && db->backend);
 
 	return db->backend->delete(db->backend, ref);
 }

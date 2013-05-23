@@ -416,6 +416,8 @@ int git_revwalk_new(git_revwalk **revwalk_out, git_repository *repo)
 {
 	git_revwalk *walk;
 
+	assert(revwalk_out && GIT_REFCOUNT_VALID(repo));
+
 	walk = git__malloc(sizeof(git_revwalk));
 	GITERR_CHECK_ALLOC(walk);
 
@@ -461,7 +463,7 @@ void git_revwalk_free(git_revwalk *walk)
 
 git_repository *git_revwalk_repository(git_revwalk *walk)
 {
-	assert(walk);
+	assert(walk && GIT_REFCOUNT_VALID(walk->repo));
 	return walk->repo;
 }
 

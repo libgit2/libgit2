@@ -14,6 +14,7 @@
 #include "git2/object.h"
 #include "git2/config.h"
 
+#include "util.h"
 #include "index.h"
 #include "cache.h"
 #include "refs.h"
@@ -100,6 +101,8 @@ enum {
 
 /** Internal structure for repository object */
 struct git_repository {
+	git_refcount rc;
+
 	git_odb *_odb;
 	git_refdb *_refdb;
 	git_config *_config;
