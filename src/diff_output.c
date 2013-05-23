@@ -964,7 +964,7 @@ static int diff_required(git_diff_list *diff, const char *action)
 		return -1;
 	}
 
-	assert(GIT_REFCOUNT_VALID(diff->repo));
+	GIT_REFCOUNT_VALIDATE(diff->repo);
 	return 0;
 }
 
@@ -1030,7 +1030,8 @@ static int diff_print_info_init(
 	diff_print_info *pi,
 	git_buf *out, git_diff_list *diff, git_diff_data_cb cb, void *payload)
 {
-	assert(GIT_REFCOUNT_VALID(diff) && GIT_REFCOUNT_VALID(diff->repo));
+	GIT_REFCOUNT_VALIDATE(diff);
+	GIT_REFCOUNT_VALIDATE(diff->repo);
 
 	pi->diff     = diff;
 	pi->print_cb = cb;
@@ -1747,7 +1748,8 @@ int git_diff_patch_print(
 	diff_print_info pi;
 	size_t h, l;
 
-	assert(GIT_REFCOUNT_VALID(patch) && print_cb);
+	GIT_REFCOUNT_VALIDATE(patch);
+	assert(print_cb);
 
 	if (diff_print_info_init(&pi, &temp, patch->diff, print_cb, payload) < 0)
 		return -1;

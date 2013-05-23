@@ -583,7 +583,8 @@ int git_repository_config__weakptr(git_config **out, git_repository *repo)
 {
 	int error = 0;
 
-	assert(GIT_REFCOUNT_VALID(repo) && out);
+	GIT_REFCOUNT_VALIDATE(repo);
+	assert(out);
 
 	if (repo->_config == NULL) {
 		git_buf global_buf = GIT_BUF_INIT;
@@ -634,7 +635,8 @@ int git_repository_config(git_config **out, git_repository *repo)
 
 void git_repository_set_config(git_repository *repo, git_config *config)
 {
-	assert(GIT_REFCOUNT_VALID(repo) && config);
+	GIT_REFCOUNT_VALIDATE(repo);
+	assert(config);
 
 	set_config(repo, config);
 }
@@ -643,7 +645,8 @@ int git_repository_odb__weakptr(git_odb **out, git_repository *repo)
 {
 	int error = 0;
 
-	assert(GIT_REFCOUNT_VALID(repo) && out);
+	GIT_REFCOUNT_VALIDATE(repo);
+	assert(out);
 
 	if (repo->_odb == NULL) {
 		git_buf odb_path = GIT_BUF_INIT;
@@ -689,7 +692,8 @@ int git_repository_refdb__weakptr(git_refdb **out, git_repository *repo)
 {
 	int error = 0;
 
-	assert(GIT_REFCOUNT_VALID(repo) && out);
+	GIT_REFCOUNT_VALIDATE(repo);
+	assert(out);
 
 	if (repo->_refdb == NULL) {
 		git_refdb *refdb;
@@ -730,7 +734,8 @@ int git_repository_index__weakptr(git_index **out, git_repository *repo)
 {
 	int error = 0;
 
-	assert(GIT_REFCOUNT_VALID(repo) && out);
+	GIT_REFCOUNT_VALIDATE(repo);
+	assert(out);
 
 	if (repo->_index == NULL) {
 		git_buf index_path = GIT_BUF_INIT;
@@ -1515,14 +1520,14 @@ cleanup:
 
 const char *git_repository_path(git_repository *repo)
 {
-	assert(GIT_REFCOUNT_VALID(repo));
+	GIT_REFCOUNT_VALIDATE(repo);
 
 	return repo->path_repository;
 }
 
 const char *git_repository_workdir(git_repository *repo)
 {
-	assert(GIT_REFCOUNT_VALID(repo));
+	GIT_REFCOUNT_VALIDATE(repo);
 
 	if (repo->is_bare)
 		return NULL;
@@ -1576,7 +1581,7 @@ int git_repository_set_workdir(
 
 int git_repository_is_bare(git_repository *repo)
 {
-	assert(GIT_REFCOUNT_VALID(repo));
+	GIT_REFCOUNT_VALIDATE(repo);
 
 	return repo->is_bare;
 }
@@ -1803,7 +1808,7 @@ int git_repository_state(git_repository *repo)
 	git_buf repo_path = GIT_BUF_INIT;
 	int state = GIT_REPOSITORY_STATE_NONE;
 
-	assert(GIT_REFCOUNT_VALID(repo));
+	GIT_REFCOUNT_VALIDATE(repo);
 
 	if (git_buf_puts(&repo_path, repo->path_repository) < 0)
 		return -1;

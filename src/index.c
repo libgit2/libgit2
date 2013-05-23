@@ -364,7 +364,7 @@ void git_index_clear(git_index *index)
 {
 	size_t i;
 
-	assert(GIT_REFCOUNT_VALID(index));
+	GIT_REFCOUNT_VALIDATE(index);
 
 	for (i = 0; i < index->entries.length; ++i) {
 		git_index_entry *e;
@@ -394,7 +394,7 @@ int git_index_set_caps(git_index *index, unsigned int caps)
 {
 	int old_ignore_case;
 
-	assert(GIT_REFCOUNT_VALID(index));
+	GIT_REFCOUNT_VALIDATE(index);
 
 	old_ignore_case = index->ignore_case;
 
@@ -439,7 +439,7 @@ int git_index_read(git_index *index)
 	git_buf buffer = GIT_BUF_INIT;
 	git_futils_filestamp stamp = {0};
 
-	assert(GIT_REFCOUNT_VALID(index));
+	GIT_REFCOUNT_VALIDATE(index);
 
 	if (!index->index_file_path)
 		return create_index_error(-1,
@@ -474,7 +474,7 @@ int git_index_write(git_index *index)
 	git_filebuf file = GIT_FILEBUF_INIT;
 	int error;
 
-	assert(GIT_REFCOUNT_VALID(index));
+	GIT_REFCOUNT_VALIDATE(index);
 
 	if (!index->index_file_path)
 		return create_index_error(-1,
@@ -533,7 +533,7 @@ size_t git_index_entrycount(const git_index *index)
 const git_index_entry *git_index_get_byindex(
 	git_index *index, size_t n)
 {
-	assert(GIT_REFCOUNT_VALID(index));
+	GIT_REFCOUNT_VALIDATE(index);
 	git_vector_sort(&index->entries);
 	return git_vector_get(&index->entries, n);
 }
@@ -543,7 +543,7 @@ const git_index_entry *git_index_get_bypath(
 {
 	size_t pos;
 
-	assert(GIT_REFCOUNT_VALID(index));
+	GIT_REFCOUNT_VALIDATE(index);
 
 	git_vector_sort(&index->entries);
 

@@ -246,7 +246,8 @@ int git_reference_lookup_resolved(
 	git_reference *ref = NULL;
 	git_refdb *refdb;
 
-	assert(GIT_REFCOUNT_VALID(repo) && ref_out && name);
+	GIT_REFCOUNT_VALIDATE(repo);
+	assert(ref_out && name);
 
 	*ref_out = NULL;
 

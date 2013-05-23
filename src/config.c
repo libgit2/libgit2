@@ -401,7 +401,7 @@ int git_config_set_string(git_config *cfg, const char *name, const char *value)
 	git_config_backend *file;
 	file_internal *internal;
 
-	assert(GIT_REFCOUNT_VALID(cfg));
+	GIT_REFCOUNT_VALIDATE(cfg);
 
 	if (!value) {
 		giterr_set(GITERR_CONFIG, "The value to set cannot be NULL");
@@ -486,7 +486,8 @@ static int get_string(const char **out, const git_config *cfg, const char *name)
 	unsigned int i;
 	int res;
 
-	assert(GIT_REFCOUNT_VALID(cfg) && out && name);
+	GIT_REFCOUNT_VALIDATE(cfg);
+	assert(out && name);
 
 	git_vector_foreach(&cfg->files, i, internal) {
 		if (!internal || !internal->file || !internal->file->get)
@@ -528,7 +529,8 @@ int git_config_get_entry(const git_config_entry **out, const git_config *cfg, co
 	file_internal *internal;
 	unsigned int i;
 
-	assert(GIT_REFCOUNT_VALID(cfg) && out && name);
+	GIT_REFCOUNT_VALIDATE(cfg);
+	assert(out && name);
 
 	*out = NULL;
 

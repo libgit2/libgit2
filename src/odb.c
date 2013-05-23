@@ -609,7 +609,8 @@ int git_odb_exists(git_odb *db, const git_oid *id)
 	bool found = false;
 	bool refreshed = false;
 
-	assert(GIT_REFCOUNT_VALID(db) && id);
+	GIT_REFCOUNT_VALIDATE(db);
+	assert(id);
 
 	if ((object = git_cache_get_raw(odb_cache(db), id)) != NULL) {
 		git_odb_object_free(object);
@@ -659,7 +660,8 @@ int git_odb__read_header_or_object(
 	int error = GIT_ENOTFOUND;
 	git_odb_object *object;
 
-	assert(GIT_REFCOUNT_VALID(db) && id && out && len_p && type_p);
+	GIT_REFCOUNT_VALIDATE(db);
+	assert(id && out && len_p && type_p);
 
 	if ((object = git_cache_get_raw(odb_cache(db), id)) != NULL) {
 		*len_p = object->cached.size;
@@ -703,7 +705,8 @@ int git_odb_read(git_odb_object **out, git_odb *db, const git_oid *id)
 	git_rawobj raw;
 	git_odb_object *object;
 
-	assert(GIT_REFCOUNT_VALID(db) && out && id);
+	GIT_REFCOUNT_VALIDATE(db);
+	assert(out && id);
 
 	*out = git_cache_get_raw(odb_cache(db), id);
 	if (*out != NULL)
@@ -754,7 +757,8 @@ int git_odb_read_prefix(
 	bool found = false, refreshed = false;
 	git_odb_object *object;
 
-	assert(GIT_REFCOUNT_VALID(db) && out);
+	GIT_REFCOUNT_VALIDATE(db);
+	assert(out);
 
 	if (len < GIT_OID_MINPREFIXLEN)
 		return git_odb__error_ambiguous("prefix length too short");
@@ -816,7 +820,7 @@ int git_odb_foreach(git_odb *db, git_odb_foreach_cb cb, void *payload)
 	unsigned int i;
 	backend_internal *internal;
 
-	assert(GIT_REFCOUNT_VALID(db));
+	GIT_REFCOUNT_VALIDATE(db);
 
 	git_vector_foreach(&db->backends, i, internal) {
 		git_odb_backend *b = internal->backend;
@@ -835,7 +839,8 @@ int git_odb_write(
 	int error = GIT_ERROR;
 	git_odb_stream *stream;
 
-	assert(GIT_REFCOUNT_VALID(db) && oid);
+	GIT_REFCOUNT_VALIDATE(db);
+	assert(oid);
 
 	git_odb_hash(oid, data, len, type);
 	if (git_odb_exists(db, oid))
@@ -967,7 +972,7 @@ int git_odb_refresh(struct git_odb *db)
 {
 	size_t i;
 
-	assert(GIT_REFCOUNT_VALID(db));
+	GIT_REFCOUNT_VALIDATE(db);
 
 	for (i = 0; i < db->backends.length; ++i) {
 		backend_internal *internal = git_vector_get(&db->backends, i);
