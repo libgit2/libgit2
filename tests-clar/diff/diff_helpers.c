@@ -213,3 +213,8 @@ void diff_print(FILE *fp, git_diff_list *diff)
 {
 	cl_git_pass(git_diff_print_patch(diff, diff_print_cb, fp ? fp : stderr));
 }
+
+void diff_print_raw(FILE *fp, git_diff_list *diff)
+{
+	cl_git_pass(git_diff_print_raw(diff, diff_print_cb, fp ? fp : stderr));
+}

@@ -484,7 +484,7 @@ typedef struct {
 	unsigned int version;
 
 	/** Combination of git_diff_find_t values (default FIND_RENAMES) */
-	unsigned int flags;
+	uint32_t flags;
 
 	/** Similarity to consider a file renamed (default 50) */
 	uint16_t rename_threshold;

@@ -44,6 +44,8 @@ enum {
 
 #define GIT_DIFF_FLAG__CLEAR_INTERNAL(F) (F) = ((F) & 0x00FFFF)
 
+#define GIT_DIFF__VERBOSE  (1 << 30)
+
 struct git_diff_list {
 	git_refcount     rc;
 	git_repository   *repo;

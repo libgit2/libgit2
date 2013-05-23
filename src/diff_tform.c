@@ -828,20 +828,35 @@ int git_diff_find_similar(
 				if (similarity < (int)opts.rename_from_rewrite_threshold)
 					continue;
 
-				memcpy(&swap, &from->new_file, sizeof(swap));
+				memcpy(&swap, &to->new_file, sizeof(swap));
 
-				from->status = GIT_DELTA_RENAMED;
-				from->similarity = (uint32_t)similarity;
-				memcpy(&from->new_file, &to->new_file, sizeof(from->new_file));
-				if ((from->flags & GIT_DIFF_FLAG__TO_SPLIT) != 0) {
-					from->flags &= ~GIT_DIFF_FLAG__TO_SPLIT;
+				to->status = GIT_DELTA_RENAMED;
+				to->similarity = (uint32_t)similarity;
+				memcpy(&to->new_file, &from->new_file, sizeof(to->new_file));
+				if ((to->flags & GIT_DIFF_FLAG__TO_SPLIT) != 0) {
+					to->flags &= ~GIT_DIFF_FLAG__TO_SPLIT;
 					num_rewrites--;
 				}
 
-				memcpy(&to->new_file, &swap, sizeof(to->new_file));
-				if ((to->flags & GIT_DIFF_FLAG__TO_SPLIT) == 0) {
-					to->flags |= GIT_DIFF_FLAG__TO_SPLIT;
+				memcpy(&from->new_file, &swap, sizeof(from->new_file));
+				if ((from->flags & GIT_DIFF_FLAG__TO_SPLIT) == 0) {
+					from->flags |= GIT_DIFF_FLAG__TO_SPLIT;
 					num_rewrites++;
+				}
+
+				/* in the off chance that we've just swapped the new
+				 * element into the correct place, clear the SPLIT flag
+				 */
+				if (matches[matches[i].idx].idx == i &&
+					matches[matches[i].idx].similarity >
+					opts.rename_from_rewrite_threshold) {
+
+					from->status = GIT_DELTA_RENAMED;
+					from->similarity =
+						(uint32_t)matches[matches[i].idx].similarity;
+					matches[matches[i].idx].similarity = 0;
+					from->flags &= ~GIT_DIFF_FLAG__TO_SPLIT;
+					num_rewrites--;
 				}
 
 				num_updates++;

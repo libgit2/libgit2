@@ -15,18 +15,6 @@ void test_diff_rename__cleanup(void)
 }
 
 /*
-static int debug_print(
-    const git_diff_delta *delta, const git_diff_range *range, char usage,
-    const char *line, size_t line_len, void *data)
-{
-    GIT_UNUSED(delta); GIT_UNUSED(range); GIT_UNUSED(usage);
-    GIT_UNUSED(line_len); GIT_UNUSED(data);
-    fputs(line, stderr);
-    return 0;
-}
-*/
-
-/*
  * Renames repo has:
  *
  * commit 31e47d8c1fa36d7f8d537b96158e3f024de0a9f2 -
@@ -539,7 +527,7 @@ void test_diff_rename__working_directory_changes(void)
 
 	/*
 	fprintf(stderr, "\n\n");
-    cl_git_pass(git_diff_print_raw(diff, debug_print, NULL));
+    diff_print_raw(stderr, diff);
 	*/
 
 	memset(&exp, 0, sizeof(exp));
@@ -612,4 +600,109 @@ void test_diff_rename__patch(void)
 	git_diff_list_free(diff);
 	git_tree_free(old_tree);
 	git_tree_free(new_tree);
+}
+
+void test_diff_rename__file_exchange(void)
+{
+	git_buf c1 = GIT_BUF_INIT, c2 = GIT_BUF_INIT;
+	git_index *index;
+	git_tree *tree;
+	git_diff_list *diff;
+	git_diff_options diffopts = GIT_DIFF_OPTIONS_INIT;
+	git_diff_find_options opts = GIT_DIFF_FIND_OPTIONS_INIT;
+	diff_expects exp;
+
+	cl_git_pass(git_futils_readbuffer(&c1, "renames/untimely.txt"));
+	cl_git_pass(git_futils_readbuffer(&c2, "renames/songof7cities.txt"));
+	cl_git_pass(git_futils_writebuffer(&c1, "renames/songof7cities.txt", 0, 0));
+	cl_git_pass(git_futils_writebuffer(&c2, "renames/untimely.txt", 0, 0));
+
+	cl_git_pass(
+		git_revparse_single((git_object **)&tree, g_repo, "HEAD^{tree}"));
+
+	cl_git_pass(git_repository_index(&index, g_repo));
+	cl_git_pass(git_index_read_tree(index, tree));
+	cl_git_pass(git_index_add_bypath(index, "songof7cities.txt"));
+	cl_git_pass(git_index_add_bypath(index, "untimely.txt"));
+
+	cl_git_pass(git_diff_tree_to_index(&diff, g_repo, tree, index, &diffopts));
+
+	memset(&exp, 0, sizeof(exp));
+	cl_git_pass(git_diff_foreach(
+		diff, diff_file_cb, diff_hunk_cb, diff_line_cb, &exp));
+	cl_assert_equal_i(2, exp.files);
+	cl_assert_equal_i(2, exp.file_status[GIT_DELTA_MODIFIED]);
+
+	opts.flags = GIT_DIFF_FIND_ALL;
+	cl_git_pass(git_diff_find_similar(diff, &opts));
+
+	memset(&exp, 0, sizeof(exp));
+	cl_git_pass(git_diff_foreach(
+		diff, diff_file_cb, diff_hunk_cb, diff_line_cb, &exp));
+	cl_assert_equal_i(2, exp.files);
+	cl_assert_equal_i(2, exp.file_status[GIT_DELTA_RENAMED]);
+
+	git_diff_list_free(diff);
+	git_tree_free(tree);
+	git_index_free(index);
+
+	git_buf_free(&c1);
+	git_buf_free(&c2);
+}
+
+void test_diff_rename__file_split(void)
+{
+	git_buf c1 = GIT_BUF_INIT, c2 = GIT_BUF_INIT;
+	git_index *index;
+	git_tree *tree;
+	git_diff_list *diff;
+	git_diff_options diffopts = GIT_DIFF_OPTIONS_INIT;
+	git_diff_find_options opts = GIT_DIFF_FIND_OPTIONS_INIT;
+	diff_expects exp;
+
+	/* put the first 2/3 of file into one new place
+	 * and the second 2/3 of file into another new place
+	 */
+	cl_git_pass(git_futils_readbuffer(&c1, "renames/songof7cities.txt"));
+	cl_git_pass(git_buf_set(&c2, c1.ptr, c1.size));
+	git_buf_truncate(&c1, c1.size * 2 / 3);
+	git_buf_consume(&c2, ((char *)c2.ptr) + (c2.size / 3));
+	cl_git_pass(git_futils_writebuffer(&c1, "renames/song_a.txt", 0, 0));
+	cl_git_pass(git_futils_writebuffer(&c2, "renames/song_b.txt", 0, 0));
+
+	cl_git_pass(
+		git_revparse_single((git_object **)&tree, g_repo, "HEAD^{tree}"));
+
+	cl_git_pass(git_repository_index(&index, g_repo));
+	cl_git_pass(git_index_read_tree(index, tree));
+	cl_git_pass(git_index_add_bypath(index, "song_a.txt"));
+	cl_git_pass(git_index_add_bypath(index, "song_b.txt"));
+
+	diffopts.flags = GIT_DIFF_INCLUDE_UNMODIFIED;
+
+	cl_git_pass(git_diff_tree_to_index(&diff, g_repo, tree, index, &diffopts));
+
+	memset(&exp, 0, sizeof(exp));
+	cl_git_pass(git_diff_foreach(
+		diff, diff_file_cb, diff_hunk_cb, diff_line_cb, &exp));
+	cl_assert_equal_i(6, exp.files);
+	cl_assert_equal_i(2, exp.file_status[GIT_DELTA_ADDED]);
+	cl_assert_equal_i(4, exp.file_status[GIT_DELTA_UNMODIFIED]);
+
+	opts.flags = GIT_DIFF_FIND_ALL;
+	cl_git_pass(git_diff_find_similar(diff, &opts));
+
+	memset(&exp, 0, sizeof(exp));
+	cl_git_pass(git_diff_foreach(
+		diff, diff_file_cb, diff_hunk_cb, diff_line_cb, &exp));
+	cl_assert_equal_i(6, exp.files);
+	cl_assert_equal_i(2, exp.file_status[GIT_DELTA_COPIED]);
+	cl_assert_equal_i(4, exp.file_status[GIT_DELTA_UNMODIFIED]);
+
+	git_diff_list_free(diff);
+	git_tree_free(tree);
+	git_index_free(index);
+
+	git_buf_free(&c1);
+	git_buf_free(&c2);
 }
