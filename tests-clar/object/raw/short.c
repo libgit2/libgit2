@@ -92,3 +92,42 @@ void test_object_raw_short__oid_shortener_stresstest_git_oid_shorten(void)
 
 #undef MAX_OIDS
 }
+
+void test_object_raw_short__oid_shortener_too_much_oids(void) {
+    /* The magic number of oids at which an oid_shortener will fail.
+     * This was experimentally established. */
+#define MAX_OIDS 24556
+
+	git_oid_shorten *os;
+	char number_buffer[16];
+	git_oid oid;
+	size_t i;
+
+	int min_len = 0;
+
+	os = git_oid_shorten_new(0);
+	cl_assert(os != NULL);
+
+	for (i = 0; i < MAX_OIDS; ++i) {
+		char *oid_text;
+
+		p_snprintf(number_buffer, 16, "%u", (unsigned int)i);
+		git_hash_buf(&oid, number_buffer, strlen(number_buffer));
+
+		oid_text = git__malloc(GIT_OID_HEXSZ + 1);
+		git_oid_fmt(oid_text, &oid);
+		oid_text[GIT_OID_HEXSZ] = 0;
+
+		min_len = git_oid_shorten_add(os, oid_text);
+        /* All but the last oid should give a non-negative min_len. At the
+         * last oid, git_oid_shorten_add should fail, returning a negative
+         * value */
+        if (i < MAX_OIDS - 1)
+            cl_assert(min_len >= 0);
+        else
+            cl_assert(min_len < 0);
+	}
+
+	git_oid_shorten_free(os);
+
+}
