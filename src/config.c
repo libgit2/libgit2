@@ -465,10 +465,13 @@ static int get_string(const char **out, const git_config *cfg, const char *name)
 {
 	file_internal *internal;
 	unsigned int i;
+	int res;
 
 	git_vector_foreach(&cfg->files, i, internal) {
-		int res = get_string_at_file(out, internal->file, name);
+		if (!internal || !internal->file || !internal->file->get)
+			continue;
 
+		res = get_string_at_file(out, internal->file, name);
 		if (res != GIT_ENOTFOUND)
 			return res;
 	}
