@@ -1023,7 +1023,32 @@ typedef struct {
 	git_diff_data_cb print_cb;
 	void *payload;
 	git_buf *buf;
+	int oid_strlen;
 } diff_print_info;
+
+static int diff_print_info_init(
+	diff_print_info *pi,
+	git_buf *out, git_diff_list *diff, git_diff_data_cb cb, void *payload)
+{
+	assert(GIT_REFCOUNT_VALID(diff) && GIT_REFCOUNT_VALID(diff->repo));
+
+	pi->diff     = diff;
+	pi->print_cb = cb;
+	pi->payload  = payload;
+	pi->buf      = out;
+
+	if (git_repository__cvar(&pi->oid_strlen, diff->repo, GIT_CVAR_ABBREV) < 0)
+		return -1;
+
+	pi->oid_strlen += 1; /* for NUL byte */
+
+	if (pi->oid_strlen < 2)
+		pi->oid_strlen = 2;
+	else if (pi->oid_strlen > GIT_OID_HEXSZ + 1)
+		pi->oid_strlen = GIT_OID_HEXSZ + 1;
+
+	return 0;
+}
 
 static char pick_suffix(int mode)
 {
@@ -1108,10 +1133,8 @@ int git_diff_print_compact(
 	git_buf buf = GIT_BUF_INIT;
 	diff_print_info pi;
 
-	pi.diff     = diff;
-	pi.print_cb = print_cb;
-	pi.payload  = payload;
-	pi.buf      = &buf;
+	if (diff_print_info_init(&pi, &buf, diff, print_cb, payload) < 0)
+		return -1;
 
 	error = git_diff_foreach(diff, print_compact, NULL, NULL, &pi);
 
@@ -1122,20 +1145,10 @@ int git_diff_print_compact(
 
 static int print_oid_range(diff_print_info *pi, const git_diff_delta *delta)
 {
-	int abbrevlen;
 	char start_oid[GIT_OID_HEXSZ+1], end_oid[GIT_OID_HEXSZ+1];
 
-	if (git_repository__cvar(&abbrevlen, pi->diff->repo, GIT_CVAR_ABBREV) < 0)
-		return -1;
-
-	abbrevlen += 1; /* for NUL byte */
-	if (abbrevlen < 2)
-		abbrevlen = 2;
-	else if (abbrevlen > (int)sizeof(start_oid))
-		abbrevlen = (int)sizeof(start_oid);
-
-	git_oid_tostr(start_oid, abbrevlen, &delta->old_file.oid);
-	git_oid_tostr(end_oid, abbrevlen, &delta->new_file.oid);
+	git_oid_tostr(start_oid, pi->oid_strlen, &delta->old_file.oid);
+	git_oid_tostr(end_oid, pi->oid_strlen, &delta->new_file.oid);
 
 	/* TODO: Match git diff more closely */
 	if (delta->old_file.mode == delta->new_file.mode) {
@@ -1291,10 +1304,8 @@ int git_diff_print_patch(
 	git_buf buf = GIT_BUF_INIT;
 	diff_print_info pi;
 
-	pi.diff     = diff;
-	pi.print_cb = print_cb;
-	pi.payload  = payload;
-	pi.buf      = &buf;
+	if (diff_print_info_init(&pi, &buf, diff, print_cb, payload) < 0)
+		return -1;
 
 	error = git_diff_foreach(
 		diff, print_patch_file, print_patch_hunk, print_patch_line, &pi);
@@ -1736,12 +1747,10 @@ int git_diff_patch_print(
 	diff_print_info pi;
 	size_t h, l;
 
-	assert(patch && print_cb);
+	assert(GIT_REFCOUNT_VALID(patch) && print_cb);
 
-	pi.diff     = patch->diff;
-	pi.print_cb = print_cb;
-	pi.payload  = payload;
-	pi.buf      = &temp;
+	if (diff_print_info_init(&pi, &temp, patch->diff, print_cb, payload) < 0)
+		return -1;
 
 	error = print_patch_file(patch->delta, 0, &pi);
 
