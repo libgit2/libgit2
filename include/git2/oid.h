@@ -90,6 +90,17 @@ GIT_EXTERN(void) git_oid_fromraw(git_oid *out, const unsigned char *raw);
 GIT_EXTERN(void) git_oid_fmt(char *out, const git_oid *id);
 
 /**
+ * Format a git_oid into a partial hex string.
+ *
+ * @param out output hex string; you say how many bytes to write.
+ *		If the number of bytes is > GIT_OID_HEXSZ, extra bytes
+ *		will be zeroed; if not, a '\0' terminator is NOT added.
+ * @param n number of characters to write into out string
+ * @param oid oid structure to format.
+ */
+GIT_EXTERN(void) git_oid_nfmt(char *out, size_t n, const git_oid *id);
+
+/**
  * Format a git_oid into a loose-object path string.
  *
  * The resulting string is "aa/...", where "aa" is the first two
@@ -117,10 +128,12 @@ GIT_EXTERN(char *) git_oid_allocfmt(const git_oid *id);
  * Format a git_oid into a buffer as a hex format c-string.
  *
  * If the buffer is smaller than GIT_OID_HEXSZ+1, then the resulting
- * oid c-string will be truncated to n-1 characters. If there are
- * any input parameter errors (out == NULL, n == 0, oid == NULL),
- * then a pointer to an empty string is returned, so that the return
- * value can always be printed.
+ * oid c-string will be truncated to n-1 characters (but will still be
+ * NUL-byte terminated).
+ *
+ * If there are any input parameter errors (out == NULL, n == 0, oid ==
+ * NULL), then a pointer to an empty string is returned, so that the
+ * return value can always be printed.
  *
  * @param out the buffer into which the oid string is output.
  * @param n the size of the out buffer.

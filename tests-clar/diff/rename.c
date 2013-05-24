@@ -1,5 +1,6 @@
 #include "clar_libgit2.h"
 #include "diff_helpers.h"
+#include "buf_text.h"
 
 static git_repository *g_repo = NULL;
 
@@ -71,8 +72,10 @@ void test_diff_rename__match_oid(void)
 
 	/* git diff 31e47d8c1fa36d7f8d537b96158e3f024de0a9f2 \
 	 *          2bc7f351d20b53f1c72c16c4b036e491c478c49a
+	 * don't use NULL opts to avoid config `diff.renames` contamination
 	 */
-	cl_git_pass(git_diff_find_similar(diff, NULL));
+	opts.flags = GIT_DIFF_FIND_RENAMES;
+	cl_git_pass(git_diff_find_similar(diff, &opts));
 
 	memset(&exp, 0, sizeof(exp));
 	cl_git_pass(git_diff_foreach(
@@ -242,8 +245,8 @@ void test_diff_rename__not_exact_match(void)
 	cl_assert_equal_i(5, exp.files);
 	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_UNMODIFIED]);
 	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_MODIFIED]);
-	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_DELETED]);
 	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_ADDED]);
+	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_DELETED]);
 	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_COPIED]);
 
 	git_diff_list_free(diff);
@@ -377,7 +380,8 @@ void test_diff_rename__handles_small_files(void)
 	 */
 	cl_git_pass(git_diff_tree_to_index(&diff, g_repo, tree, index, &diffopts));
 
-	opts.flags = GIT_DIFF_FIND_RENAMES | GIT_DIFF_FIND_COPIES | GIT_DIFF_FIND_AND_BREAK_REWRITES;
+	opts.flags = GIT_DIFF_FIND_RENAMES | GIT_DIFF_FIND_COPIES |
+		GIT_DIFF_FIND_AND_BREAK_REWRITES;
 	cl_git_pass(git_diff_find_similar(diff, &opts));
 
 	git_diff_list_free(diff);
@@ -387,9 +391,160 @@ void test_diff_rename__handles_small_files(void)
 
 void test_diff_rename__working_directory_changes(void)
 {
-	/* let's rewrite some files in the working directory on demand */
+	const char *sha0 = "2bc7f351d20b53f1c72c16c4b036e491c478c49a";
+	const char *blobsha = "66311f5cfbe7836c27510a3ba2f43e282e2c8bba";
+	git_oid id;
+	git_tree *tree;
+	git_blob *blob;
+	git_diff_list *diff;
+	git_diff_options diffopts = GIT_DIFF_OPTIONS_INIT;
+	git_diff_find_options opts = GIT_DIFF_FIND_OPTIONS_INIT;
+	diff_expects exp;
+	git_buf old_content = GIT_BUF_INIT, content = GIT_BUF_INIT;;
 
-	/* and with / without CRLF changes */
+	tree = resolve_commit_oid_to_tree(g_repo, sha0);
+	diffopts.flags |= GIT_DIFF_INCLUDE_UNMODIFIED | GIT_DIFF_INCLUDE_UNTRACKED;
+
+	/*
+	$ git cat-file -p 2bc7f351d20b53f1c72c16c4b036e491c478c49a^{tree}
+
+	100644 blob 66311f5cfbe7836c27510a3ba2f43e282e2c8bba	sevencities.txt
+	100644 blob ad0a8e55a104ac54a8a29ed4b84b49e76837a113	sixserving.txt
+	100644 blob 66311f5cfbe7836c27510a3ba2f43e282e2c8bba	songofseven.txt
+
+	$ for f in *.txt; do
+		echo `git hash-object -t blob $f` $f
+	done
+
+	eaf4a3e3bfe68585e90cada20736ace491cd100b ikeepsix.txt
+	f90d4fc20ecddf21eebe6a37e9225d244339d2b5 sixserving.txt
+	4210ffd5c390b21dd5483375e75288dea9ede512 songof7cities.txt
+	9a69d960ae94b060f56c2a8702545e2bb1abb935 untimely.txt
+	*/
+
+	cl_git_pass(git_diff_tree_to_workdir(&diff, g_repo, tree, &diffopts));
+
+	/* git diff --no-renames 2bc7f351d20b53f1c72c16c4b036e491c478c49a */
+	memset(&exp, 0, sizeof(exp));
+	cl_git_pass(git_diff_foreach(
+		diff, diff_file_cb, diff_hunk_cb, diff_line_cb, &exp));
+
+	cl_assert_equal_i(6, exp.files);
+	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_MODIFIED]);
+	cl_assert_equal_i(2, exp.file_status[GIT_DELTA_DELETED]);
+	cl_assert_equal_i(3, exp.file_status[GIT_DELTA_UNTRACKED]);
+
+	/* git diff -M 2bc7f351d20b53f1c72c16c4b036e491c478c49a */
+	opts.flags = GIT_DIFF_FIND_ALL;
+	cl_git_pass(git_diff_find_similar(diff, &opts));
+
+	memset(&exp, 0, sizeof(exp));
+	cl_git_pass(git_diff_foreach(
+		diff, diff_file_cb, diff_hunk_cb, diff_line_cb, &exp));
+
+	cl_assert_equal_i(5, exp.files);
+	cl_assert_equal_i(2, exp.file_status[GIT_DELTA_RENAMED]);
+	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_DELETED]);
+	cl_assert_equal_i(2, exp.file_status[GIT_DELTA_UNTRACKED]);
+
+	git_diff_list_free(diff);
+
+	/* rewrite files in the working directory with / without CRLF changes */
+
+	cl_git_pass(
+		git_futils_readbuffer(&old_content, "renames/songof7cities.txt"));
+	cl_git_pass(
+		git_buf_text_lf_to_crlf(&content, &old_content));
+	cl_git_pass(
+		git_futils_writebuffer(&content, "renames/songof7cities.txt", 0, 0));
+
+	cl_git_pass(git_diff_tree_to_workdir(&diff, g_repo, tree, &diffopts));
+
+	/* git diff -M 2bc7f351d20b53f1c72c16c4b036e491c478c49a */
+	opts.flags = GIT_DIFF_FIND_ALL;
+	cl_git_pass(git_diff_find_similar(diff, &opts));
+
+	memset(&exp, 0, sizeof(exp));
+	cl_git_pass(git_diff_foreach(
+		diff, diff_file_cb, diff_hunk_cb, diff_line_cb, &exp));
+
+	cl_assert_equal_i(5, exp.files);
+	cl_assert_equal_i(2, exp.file_status[GIT_DELTA_RENAMED]);
+	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_DELETED]);
+	cl_assert_equal_i(2, exp.file_status[GIT_DELTA_UNTRACKED]);
+
+	git_diff_list_free(diff);
+
+	/* try a different whitespace option */
+
+	cl_git_pass(git_diff_tree_to_workdir(&diff, g_repo, tree, &diffopts));
+
+	opts.flags = GIT_DIFF_FIND_ALL | GIT_DIFF_FIND_DONT_IGNORE_WHITESPACE;
+	cl_git_pass(git_diff_find_similar(diff, &opts));
+
+	memset(&exp, 0, sizeof(exp));
+	cl_git_pass(git_diff_foreach(
+		diff, diff_file_cb, diff_hunk_cb, diff_line_cb, &exp));
+
+	cl_assert_equal_i(6, exp.files);
+	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_RENAMED]);
+	cl_assert_equal_i(2, exp.file_status[GIT_DELTA_DELETED]);
+	cl_assert_equal_i(3, exp.file_status[GIT_DELTA_UNTRACKED]);
+
+	git_diff_list_free(diff);
+
+	/* try a different matching option */
+
+	cl_git_pass(git_diff_tree_to_workdir(&diff, g_repo, tree, &diffopts));
+
+	opts.flags = GIT_DIFF_FIND_ALL | GIT_DIFF_FIND_EXACT_MATCH_ONLY;
+	cl_git_pass(git_diff_find_similar(diff, &opts));
+
+	memset(&exp, 0, sizeof(exp));
+	cl_git_pass(git_diff_foreach(
+		diff, diff_file_cb, diff_hunk_cb, diff_line_cb, &exp));
+
+	cl_assert_equal_i(6, exp.files);
+	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_MODIFIED]);
+	cl_assert_equal_i(3, exp.file_status[GIT_DELTA_UNTRACKED]);
+	cl_assert_equal_i(2, exp.file_status[GIT_DELTA_DELETED]);
+
+	git_diff_list_free(diff);
+
+	/* again with exact match blob */
+
+	cl_git_pass(git_oid_fromstr(&id, blobsha));
+	cl_git_pass(git_blob_lookup(&blob, g_repo, &id));
+	cl_git_pass(git_buf_set(
+		&content, git_blob_rawcontent(blob), git_blob_rawsize(blob)));
+	cl_git_rewritefile("renames/songof7cities.txt", content.ptr);
+	git_blob_free(blob);
+
+	cl_git_pass(git_diff_tree_to_workdir(&diff, g_repo, tree, &diffopts));
+
+	opts.flags = GIT_DIFF_FIND_ALL | GIT_DIFF_FIND_EXACT_MATCH_ONLY;
+	cl_git_pass(git_diff_find_similar(diff, &opts));
+
+	/*
+	fprintf(stderr, "\n\n");
+    diff_print_raw(stderr, diff);
+	*/
+
+	memset(&exp, 0, sizeof(exp));
+	cl_git_pass(git_diff_foreach(
+		diff, diff_file_cb, diff_hunk_cb, diff_line_cb, &exp));
+
+	cl_assert_equal_i(5, exp.files);
+	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_MODIFIED]);
+	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_DELETED]);
+	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_RENAMED]);
+	cl_assert_equal_i(2, exp.file_status[GIT_DELTA_UNTRACKED]);
+
+	git_diff_list_free(diff);
+
+	git_tree_free(tree);
+	git_buf_free(&content);
+	git_buf_free(&old_content);
 }
 
 void test_diff_rename__patch(void)
@@ -445,4 +600,214 @@ void test_diff_rename__patch(void)
 	git_diff_list_free(diff);
 	git_tree_free(old_tree);
 	git_tree_free(new_tree);
+}
+
+void test_diff_rename__file_exchange(void)
+{
+	git_buf c1 = GIT_BUF_INIT, c2 = GIT_BUF_INIT;
+	git_index *index;
+	git_tree *tree;
+	git_diff_list *diff;
+	git_diff_options diffopts = GIT_DIFF_OPTIONS_INIT;
+	git_diff_find_options opts = GIT_DIFF_FIND_OPTIONS_INIT;
+	diff_expects exp;
+
+	cl_git_pass(git_futils_readbuffer(&c1, "renames/untimely.txt"));
+	cl_git_pass(git_futils_readbuffer(&c2, "renames/songof7cities.txt"));
+	cl_git_pass(git_futils_writebuffer(&c1, "renames/songof7cities.txt", 0, 0));
+	cl_git_pass(git_futils_writebuffer(&c2, "renames/untimely.txt", 0, 0));
+
+	cl_git_pass(
+		git_revparse_single((git_object **)&tree, g_repo, "HEAD^{tree}"));
+
+	cl_git_pass(git_repository_index(&index, g_repo));
+	cl_git_pass(git_index_read_tree(index, tree));
+	cl_git_pass(git_index_add_bypath(index, "songof7cities.txt"));
+	cl_git_pass(git_index_add_bypath(index, "untimely.txt"));
+
+	cl_git_pass(git_diff_tree_to_index(&diff, g_repo, tree, index, &diffopts));
+
+	memset(&exp, 0, sizeof(exp));
+	cl_git_pass(git_diff_foreach(
+		diff, diff_file_cb, diff_hunk_cb, diff_line_cb, &exp));
+	cl_assert_equal_i(2, exp.files);
+	cl_assert_equal_i(2, exp.file_status[GIT_DELTA_MODIFIED]);
+
+	opts.flags = GIT_DIFF_FIND_ALL;
+	cl_git_pass(git_diff_find_similar(diff, &opts));
+
+	memset(&exp, 0, sizeof(exp));
+	cl_git_pass(git_diff_foreach(
+		diff, diff_file_cb, diff_hunk_cb, diff_line_cb, &exp));
+	cl_assert_equal_i(2, exp.files);
+	cl_assert_equal_i(2, exp.file_status[GIT_DELTA_RENAMED]);
+
+	git_diff_list_free(diff);
+	git_tree_free(tree);
+	git_index_free(index);
+
+	git_buf_free(&c1);
+	git_buf_free(&c2);
+}
+
+void test_diff_rename__file_partial_exchange(void)
+{
+	git_buf c1 = GIT_BUF_INIT, c2 = GIT_BUF_INIT;
+	git_index *index;
+	git_tree *tree;
+	git_diff_list *diff;
+	git_diff_options diffopts = GIT_DIFF_OPTIONS_INIT;
+	git_diff_find_options opts = GIT_DIFF_FIND_OPTIONS_INIT;
+	diff_expects exp;
+	int i;
+
+	cl_git_pass(git_futils_readbuffer(&c1, "renames/untimely.txt"));
+	cl_git_pass(git_futils_writebuffer(&c1, "renames/songof7cities.txt", 0, 0));
+	for (i = 0; i < 100; ++i)
+		cl_git_pass(git_buf_puts(&c2, "this is not the content you are looking for\n"));
+	cl_git_pass(git_futils_writebuffer(&c2, "renames/untimely.txt", 0, 0));
+
+	cl_git_pass(
+		git_revparse_single((git_object **)&tree, g_repo, "HEAD^{tree}"));
+
+	cl_git_pass(git_repository_index(&index, g_repo));
+	cl_git_pass(git_index_read_tree(index, tree));
+	cl_git_pass(git_index_add_bypath(index, "songof7cities.txt"));
+	cl_git_pass(git_index_add_bypath(index, "untimely.txt"));
+
+	cl_git_pass(git_diff_tree_to_index(&diff, g_repo, tree, index, &diffopts));
+
+	memset(&exp, 0, sizeof(exp));
+	cl_git_pass(git_diff_foreach(
+		diff, diff_file_cb, diff_hunk_cb, diff_line_cb, &exp));
+	cl_assert_equal_i(2, exp.files);
+	cl_assert_equal_i(2, exp.file_status[GIT_DELTA_MODIFIED]);
+
+	opts.flags = GIT_DIFF_FIND_ALL;
+	cl_git_pass(git_diff_find_similar(diff, &opts));
+
+	memset(&exp, 0, sizeof(exp));
+	cl_git_pass(git_diff_foreach(
+		diff, diff_file_cb, diff_hunk_cb, diff_line_cb, &exp));
+	cl_assert_equal_i(3, exp.files);
+	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_RENAMED]);
+	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_ADDED]);
+	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_DELETED]);
+
+	git_diff_list_free(diff);
+	git_tree_free(tree);
+	git_index_free(index);
+
+	git_buf_free(&c1);
+	git_buf_free(&c2);
+}
+
+void test_diff_rename__file_split(void)
+{
+	git_buf c1 = GIT_BUF_INIT, c2 = GIT_BUF_INIT;
+	git_index *index;
+	git_tree *tree;
+	git_diff_list *diff;
+	git_diff_options diffopts = GIT_DIFF_OPTIONS_INIT;
+	git_diff_find_options opts = GIT_DIFF_FIND_OPTIONS_INIT;
+	diff_expects exp;
+
+	/* put the first 2/3 of file into one new place
+	 * and the second 2/3 of file into another new place
+	 */
+	cl_git_pass(git_futils_readbuffer(&c1, "renames/songof7cities.txt"));
+	cl_git_pass(git_buf_set(&c2, c1.ptr, c1.size));
+	git_buf_truncate(&c1, c1.size * 2 / 3);
+	git_buf_consume(&c2, ((char *)c2.ptr) + (c2.size / 3));
+	cl_git_pass(git_futils_writebuffer(&c1, "renames/song_a.txt", 0, 0));
+	cl_git_pass(git_futils_writebuffer(&c2, "renames/song_b.txt", 0, 0));
+
+	cl_git_pass(
+		git_revparse_single((git_object **)&tree, g_repo, "HEAD^{tree}"));
+
+	cl_git_pass(git_repository_index(&index, g_repo));
+	cl_git_pass(git_index_read_tree(index, tree));
+	cl_git_pass(git_index_add_bypath(index, "song_a.txt"));
+	cl_git_pass(git_index_add_bypath(index, "song_b.txt"));
+
+	diffopts.flags = GIT_DIFF_INCLUDE_UNMODIFIED;
+
+	cl_git_pass(git_diff_tree_to_index(&diff, g_repo, tree, index, &diffopts));
+
+	memset(&exp, 0, sizeof(exp));
+	cl_git_pass(git_diff_foreach(
+		diff, diff_file_cb, diff_hunk_cb, diff_line_cb, &exp));
+	cl_assert_equal_i(6, exp.files);
+	cl_assert_equal_i(2, exp.file_status[GIT_DELTA_ADDED]);
+	cl_assert_equal_i(4, exp.file_status[GIT_DELTA_UNMODIFIED]);
+
+	opts.flags = GIT_DIFF_FIND_ALL;
+	cl_git_pass(git_diff_find_similar(diff, &opts));
+
+	memset(&exp, 0, sizeof(exp));
+	cl_git_pass(git_diff_foreach(
+		diff, diff_file_cb, diff_hunk_cb, diff_line_cb, &exp));
+	cl_assert_equal_i(6, exp.files);
+	cl_assert_equal_i(2, exp.file_status[GIT_DELTA_COPIED]);
+	cl_assert_equal_i(4, exp.file_status[GIT_DELTA_UNMODIFIED]);
+
+	git_diff_list_free(diff);
+	git_tree_free(tree);
+	git_index_free(index);
+
+	git_buf_free(&c1);
+	git_buf_free(&c2);
+}
+
+void test_diff_rename__from_deleted_to_split(void)
+{
+	git_buf c1 = GIT_BUF_INIT;
+	git_index *index;
+	git_tree *tree;
+	git_diff_list *diff;
+	git_diff_options diffopts = GIT_DIFF_OPTIONS_INIT;
+	git_diff_find_options opts = GIT_DIFF_FIND_OPTIONS_INIT;
+	diff_expects exp;
+
+	/* old file is missing, new file is actually old file renamed */
+
+	cl_git_pass(git_futils_readbuffer(&c1, "renames/songof7cities.txt"));
+	cl_git_pass(git_futils_writebuffer(&c1, "renames/untimely.txt", 0, 0));
+
+	cl_git_pass(
+		git_revparse_single((git_object **)&tree, g_repo, "HEAD^{tree}"));
+
+	cl_git_pass(git_repository_index(&index, g_repo));
+	cl_git_pass(git_index_read_tree(index, tree));
+	cl_git_pass(git_index_remove_bypath(index, "songof7cities.txt"));
+	cl_git_pass(git_index_add_bypath(index, "untimely.txt"));
+
+	diffopts.flags = GIT_DIFF_INCLUDE_UNMODIFIED;
+
+	cl_git_pass(git_diff_tree_to_index(&diff, g_repo, tree, index, &diffopts));
+
+	memset(&exp, 0, sizeof(exp));
+	cl_git_pass(git_diff_foreach(
+		diff, diff_file_cb, diff_hunk_cb, diff_line_cb, &exp));
+	cl_assert_equal_i(4, exp.files);
+	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_DELETED]);
+	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_MODIFIED]);
+	cl_assert_equal_i(2, exp.file_status[GIT_DELTA_UNMODIFIED]);
+
+	opts.flags = GIT_DIFF_FIND_ALL;
+	cl_git_pass(git_diff_find_similar(diff, &opts));
+
+	memset(&exp, 0, sizeof(exp));
+	cl_git_pass(git_diff_foreach(
+		diff, diff_file_cb, diff_hunk_cb, diff_line_cb, &exp));
+	cl_assert_equal_i(4, exp.files);
+	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_DELETED]);
+	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_RENAMED]);
+	cl_assert_equal_i(2, exp.file_status[GIT_DELTA_UNMODIFIED]);
+
+	git_diff_list_free(diff);
+	git_tree_free(tree);
+	git_index_free(index);
+
+	git_buf_free(&c1);
 }

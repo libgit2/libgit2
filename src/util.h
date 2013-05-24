@@ -109,6 +109,13 @@ GIT_INLINE(int) git__is_sizet(git_off_t p)
 	return p == (git_off_t)r;
 }
 
+/** @return true if p fits into the range of a uint32_t */
+GIT_INLINE(int) git__is_uint32(size_t p)
+{
+	uint32_t r = (uint32_t)p;
+	return p == (size_t)r;
+}
+
 /* 32-bit cross-platform rotl */
 #ifdef _MSC_VER /* use built-in method in MSVC */
 #	define git__rotl(v, s) (uint32_t)_rotl(v, s)

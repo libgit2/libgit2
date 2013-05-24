@@ -676,33 +676,26 @@ static int buffer_to_file(
 	int file_open_flags,
 	mode_t file_mode)
 {
-	int fd, error;
+	int error;
 
 	if ((error = git_futils_mkpath2file(path, dir_mode)) < 0)
 		return error;
 
-	if ((fd = p_open(path, file_open_flags, file_mode)) < 0) {
-		giterr_set(GITERR_OS, "Could not open '%s' for writing", path);
-		return fd;
+	if ((error = git_futils_writebuffer(
+			buffer, path, file_open_flags, file_mode)) < 0)
+		return error;
+
+	if (st != NULL && (error = p_stat(path, st)) < 0) {
+		giterr_set(GITERR_OS, "Error while statting '%s'", path);
+		return error;
 	}
 
-	if ((error = p_write(fd, git_buf_cstr(buffer), git_buf_len(buffer))) < 0) {
-		giterr_set(GITERR_OS, "Could not write to '%s'", path);
-		(void)p_close(fd);
-	} else {
-		if ((error = p_close(fd)) < 0)
-			giterr_set(GITERR_OS, "Error while closing '%s'", path);
-
-		if ((error = p_stat(path, st)) < 0)
-			giterr_set(GITERR_OS, "Error while statting '%s'", path);
-	}
-
-	if (!error &&
-		(file_mode & 0100) != 0 &&
-		(error = p_chmod(path, file_mode)) < 0)
+	if ((file_mode & 0100) != 0 && (error = p_chmod(path, file_mode)) < 0) {
 		giterr_set(GITERR_OS, "Failed to set permissions on '%s'", path);
+		return error;
+	}
 
-	return error;
+	return 0;
 }
 
 static int blob_content_to_file(
