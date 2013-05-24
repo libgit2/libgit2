@@ -34,9 +34,17 @@ enum {
 	GIT_DIFF_FLAG__FREE_DATA  = (1 << 8),  /* internal file data is allocated */
 	GIT_DIFF_FLAG__UNMAP_DATA = (1 << 9),  /* internal file data is mmap'ed */
 	GIT_DIFF_FLAG__NO_DATA    = (1 << 10), /* file data should not be loaded */
-	GIT_DIFF_FLAG__TO_DELETE  = (1 << 11), /* delete entry during rename det. */
-	GIT_DIFF_FLAG__TO_SPLIT   = (1 << 12), /* split entry during rename det. */
+
+	GIT_DIFF_FLAG__TO_DELETE  = (1 << 16), /* delete entry during rename det. */
+	GIT_DIFF_FLAG__TO_SPLIT   = (1 << 17), /* split entry during rename det. */
+	GIT_DIFF_FLAG__IS_RENAME_TARGET = (1 << 18),
+	GIT_DIFF_FLAG__IS_RENAME_SOURCE = (1 << 19),
+	GIT_DIFF_FLAG__HAS_SELF_SIMILARITY = (1 << 20),
 };
+
+#define GIT_DIFF_FLAG__CLEAR_INTERNAL(F) (F) = ((F) & 0x00FFFF)
+
+#define GIT_DIFF__VERBOSE  (1 << 30)
 
 struct git_diff_list {
 	git_refcount     rc;

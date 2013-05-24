@@ -202,6 +202,32 @@ int git_futils_readbuffer(git_buf *buf, const char *path)
 	return git_futils_readbuffer_updated(buf, path, NULL, NULL, NULL);
 }
 
+int git_futils_writebuffer(
+	const git_buf *buf,	const char *path, int flags, mode_t mode)
+{
+	int fd, error = 0;
+
+	if (flags <= 0)
+		flags = O_CREAT | O_TRUNC | O_WRONLY;
+	if (!mode)
+		mode = GIT_FILEMODE_BLOB;
+
+	if ((fd = p_open(path, flags, mode)) < 0) {
+		giterr_set(GITERR_OS, "Could not open '%s' for writing", path);
+		return fd;
+	}
+
+	if ((error = p_write(fd, git_buf_cstr(buf), git_buf_len(buf))) < 0) {
+		giterr_set(GITERR_OS, "Could not write to '%s'", path);
+		(void)p_close(fd);
+	}
+
+	if ((error = p_close(fd)) < 0)
+		giterr_set(GITERR_OS, "Error while closing '%s'", path);
+
+	return error;
+}
+
 int git_futils_mv_withpath(const char *from, const char *to, const mode_t dirmode)
 {
 	if (git_futils_mkpath2file(to, dirmode) < 0)
