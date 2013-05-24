@@ -54,39 +54,6 @@ struct merge_diff_df_data {
 };
 
 
-int git_repository_merge_cleanup(git_repository *repo)
-{
-	int error = 0;
-	git_buf merge_head_path = GIT_BUF_INIT,
-		merge_mode_path = GIT_BUF_INIT,
-		merge_msg_path = GIT_BUF_INIT;
-
-	assert(repo);
-
-	if (git_buf_joinpath(&merge_head_path, repo->path_repository, GIT_MERGE_HEAD_FILE) < 0 ||
-		git_buf_joinpath(&merge_mode_path, repo->path_repository, GIT_MERGE_MODE_FILE) < 0 ||
-		git_buf_joinpath(&merge_msg_path, repo->path_repository, GIT_MERGE_MSG_FILE) < 0)
-		return -1;
-
-	if (git_path_isfile(merge_head_path.ptr)) {
-		if ((error = p_unlink(merge_head_path.ptr)) < 0)
-			goto cleanup;
-	}
-
-	if (git_path_isfile(merge_mode_path.ptr))
-		(void)p_unlink(merge_mode_path.ptr);
-
-	if (git_path_isfile(merge_msg_path.ptr))
-		(void)p_unlink(merge_msg_path.ptr);
-
-cleanup:
-	git_buf_free(&merge_msg_path);
-	git_buf_free(&merge_mode_path);
-	git_buf_free(&merge_head_path);
-
-	return error;
-}
-
 /* Merge base computation */
 
 int git_merge_base_many(git_oid *out, git_repository *repo, const git_oid input_array[], size_t length)
@@ -1380,6 +1347,18 @@ git_merge_diff_list *git_merge_diff_list__alloc(git_repository *repo)
 	return diff_list;
 }
 
+void git_merge_diff_list__free(git_merge_diff_list *diff_list)
+{
+	if (!diff_list)
+		return;
+
+	git_vector_free(&diff_list->staged);
+	git_vector_free(&diff_list->conflicts);
+	git_vector_free(&diff_list->resolved);
+	git_pool_clear(&diff_list->pool);
+	git__free(diff_list);
+}
+
 static int merge_tree_normalize_opts(
 	git_repository *repo,
 	git_merge_tree_opts *opts,
@@ -1617,14 +1596,550 @@ done:
 	return error;
 }
 
-void git_merge_diff_list__free(git_merge_diff_list *diff_list)
+/* Merge setup / cleanup */
+
+static int write_orig_head(
+	git_repository *repo,
+	const git_merge_head *our_head)
 {
-	if (!diff_list)
+	git_filebuf file = GIT_FILEBUF_INIT;
+	git_buf file_path = GIT_BUF_INIT;
+	char orig_oid_str[GIT_OID_HEXSZ + 1];
+	int error = 0;
+
+	assert(repo && our_head);
+
+	git_oid_tostr(orig_oid_str, GIT_OID_HEXSZ+1, &our_head->oid);
+
+	if ((error = git_buf_joinpath(&file_path, repo->path_repository, GIT_ORIG_HEAD_FILE)) == 0 &&
+		(error = git_filebuf_open(&file, file_path.ptr, GIT_FILEBUF_FORCE)) == 0 &&
+		(error = git_filebuf_printf(&file, "%s\n", orig_oid_str)) == 0)
+		error = git_filebuf_commit(&file, 0666);
+
+	if (error < 0)
+		git_filebuf_cleanup(&file);
+
+	git_buf_free(&file_path);
+
+	return error;
+}
+
+static int write_merge_head(
+	git_repository *repo,
+	const git_merge_head *heads[],
+	size_t heads_len)
+{
+	git_filebuf file = GIT_FILEBUF_INIT;
+	git_buf file_path = GIT_BUF_INIT;
+	char merge_oid_str[GIT_OID_HEXSZ + 1];
+	size_t i;
+	int error = 0;
+
+	assert(repo && heads);
+
+	if ((error = git_buf_joinpath(&file_path, repo->path_repository, GIT_MERGE_HEAD_FILE)) < 0 ||
+		(error = git_filebuf_open(&file, file_path.ptr, GIT_FILEBUF_FORCE)) < 0)
+		goto cleanup;
+
+	for (i = 0; i < heads_len; i++) {
+		git_oid_tostr(merge_oid_str, GIT_OID_HEXSZ+1, &heads[i]->oid);
+
+		if ((error = git_filebuf_printf(&file, "%s\n", merge_oid_str)) < 0)
+			goto cleanup;
+	}
+
+	error = git_filebuf_commit(&file, 0666);
+
+cleanup:
+	if (error < 0)
+		git_filebuf_cleanup(&file);
+
+	git_buf_free(&file_path);
+
+	return error;
+}
+
+static int write_merge_mode(git_repository *repo, unsigned int flags)
+{
+	git_filebuf file = GIT_FILEBUF_INIT;
+	git_buf file_path = GIT_BUF_INIT;
+	int error = 0;
+
+	/* For future expansion */
+	GIT_UNUSED(flags);
+
+	assert(repo);
+
+	if ((error = git_buf_joinpath(&file_path, repo->path_repository, GIT_MERGE_MODE_FILE)) < 0 ||
+		(error = git_filebuf_open(&file, file_path.ptr, GIT_FILEBUF_FORCE)) < 0)
+		goto cleanup;
+
+	error = git_filebuf_commit(&file, 0666);
+
+cleanup:
+	if (error < 0)
+		git_filebuf_cleanup(&file);
+
+	git_buf_free(&file_path);
+
+	return error;
+}
+
+struct merge_msg_entry {
+	const git_merge_head *merge_head;
+	bool written;
+};
+
+static int msg_entry_is_branch(
+	const struct merge_msg_entry *entry,
+	git_vector *entries)
+{
+	GIT_UNUSED(entries);
+
+	return (entry->written == 0 &&
+		entry->merge_head->remote_url == NULL &&
+		entry->merge_head->ref_name != NULL &&
+		git__strncmp(GIT_REFS_HEADS_DIR, entry->merge_head->ref_name, strlen(GIT_REFS_HEADS_DIR)) == 0);
+}
+
+static int msg_entry_is_tracking(
+	const struct merge_msg_entry *entry,
+	git_vector *entries)
+{
+	GIT_UNUSED(entries);
+
+	return (entry->written == 0 &&
+		entry->merge_head->remote_url == NULL &&
+		entry->merge_head->ref_name != NULL &&
+		git__strncmp(GIT_REFS_REMOTES_DIR, entry->merge_head->ref_name, strlen(GIT_REFS_REMOTES_DIR)) == 0);
+}
+
+static int msg_entry_is_tag(
+	const struct merge_msg_entry *entry,
+	git_vector *entries)
+{
+	GIT_UNUSED(entries);
+
+	return (entry->written == 0 &&
+		entry->merge_head->remote_url == NULL &&
+		entry->merge_head->ref_name != NULL &&
+		git__strncmp(GIT_REFS_TAGS_DIR, entry->merge_head->ref_name, strlen(GIT_REFS_TAGS_DIR)) == 0);
+}
+
+static int msg_entry_is_remote(
+	const struct merge_msg_entry *entry,
+	git_vector *entries)
+{
+	if (entry->written == 0 &&
+		entry->merge_head->remote_url != NULL &&
+		entry->merge_head->ref_name != NULL &&
+		git__strncmp(GIT_REFS_HEADS_DIR, entry->merge_head->ref_name, strlen(GIT_REFS_HEADS_DIR)) == 0)
+	{
+		struct merge_msg_entry *existing;
+
+		/* Match only branches from the same remote */
+		if (entries->length == 0)
+			return 1;
+
+		existing = git_vector_get(entries, 0);
+
+		return (git__strcmp(existing->merge_head->remote_url,
+			entry->merge_head->remote_url) == 0);
+	}
+
+	return 0;
+}
+
+static int msg_entry_is_oid(
+	const struct merge_msg_entry *merge_msg_entry)
+{
+	return (merge_msg_entry->written == 0 &&
+		merge_msg_entry->merge_head->ref_name == NULL &&
+		merge_msg_entry->merge_head->remote_url == NULL);
+}
+
+static int merge_msg_entry_written(
+	const struct merge_msg_entry *merge_msg_entry)
+{
+	return (merge_msg_entry->written == 1);
+}
+
+static int merge_msg_entries(
+	git_vector *v,
+	const struct merge_msg_entry *entries,
+	size_t len,
+	int (*match)(const struct merge_msg_entry *entry, git_vector *entries))
+{
+	size_t i;
+	int matches, total = 0;
+
+	git_vector_clear(v);
+
+	for (i = 0; i < len; i++) {
+		if ((matches = match(&entries[i], v)) < 0)
+			return matches;
+		else if (!matches)
+			continue;
+
+		git_vector_insert(v, (struct merge_msg_entry *)&entries[i]);
+		total++;
+	}
+
+	return total;
+}
+
+static int merge_msg_write_entries(
+	git_filebuf *file,
+	git_vector *entries,
+	const char *item_name,
+	const char *item_plural_name,
+	size_t ref_name_skip,
+	const char *source,
+	char sep)
+{
+	struct merge_msg_entry *entry;
+	size_t i;
+	int error = 0;
+
+	if (entries->length == 0)
+		return 0;
+
+	if (sep && (error = git_filebuf_printf(file, "%c ", sep)) < 0)
+		goto done;
+
+	if ((error = git_filebuf_printf(file, "%s ",
+		(entries->length == 1) ? item_name : item_plural_name)) < 0)
+		goto done;
+
+	git_vector_foreach(entries, i, entry) {
+		if (i > 0 &&
+			(error = git_filebuf_printf(file, "%s", (i == entries->length - 1) ? " and " : ", ")) < 0)
+			goto done;
+
+		if ((error = git_filebuf_printf(file, "'%s'", entry->merge_head->ref_name + ref_name_skip)) < 0)
+			goto done;
+
+		entry->written = 1;
+	}
+
+	if (source)
+		error = git_filebuf_printf(file, " of %s", source);
+
+done:
+	return error;
+}
+
+static int merge_msg_write_branches(
+	git_filebuf *file,
+	git_vector *entries,
+	char sep)
+{
+	return merge_msg_write_entries(file, entries,
+		"branch", "branches", strlen(GIT_REFS_HEADS_DIR), NULL, sep);
+}
+
+static int merge_msg_write_tracking(
+	git_filebuf *file,
+	git_vector *entries,
+	char sep)
+{
+	return merge_msg_write_entries(file, entries,
+		"remote-tracking branch", "remote-tracking branches", 0, NULL, sep);
+}
+
+static int merge_msg_write_tags(
+	git_filebuf *file,
+	git_vector *entries,
+	char sep)
+{
+	return merge_msg_write_entries(file, entries,
+		"tag", "tags", strlen(GIT_REFS_TAGS_DIR), NULL, sep);
+}
+
+static int merge_msg_write_remotes(
+	git_filebuf *file,
+	git_vector *entries,
+	char sep)
+{
+	const char *source;
+
+	if (entries->length == 0)
+		return 0;
+
+	source = ((struct merge_msg_entry *)entries->contents[0])->merge_head->remote_url;
+
+	return merge_msg_write_entries(file, entries,
+		"branch", "branches", strlen(GIT_REFS_HEADS_DIR), source, sep);
+}
+
+static int write_merge_msg(
+	git_repository *repo,
+	const git_merge_head *heads[],
+	size_t heads_len)
+{
+	git_filebuf file = GIT_FILEBUF_INIT;
+	git_buf file_path = GIT_BUF_INIT;
+	char oid_str[GIT_OID_HEXSZ + 1];
+	struct merge_msg_entry *entries;
+	git_vector matching = GIT_VECTOR_INIT;
+	size_t i;
+	char sep = 0;
+	int error = 0;
+
+	assert(repo && heads);
+
+	entries = git__calloc(heads_len, sizeof(struct merge_msg_entry));
+	GITERR_CHECK_ALLOC(entries); 
+
+	if (git_vector_init(&matching, heads_len, NULL) < 0)
+		return -1;
+
+	for (i = 0; i < heads_len; i++)
+		entries[i].merge_head = heads[i];
+
+	if ((error = git_buf_joinpath(&file_path, repo->path_repository, GIT_MERGE_MSG_FILE)) < 0 ||
+		(error = git_filebuf_open(&file, file_path.ptr, GIT_FILEBUF_FORCE)) < 0 ||
+		(error = git_filebuf_write(&file, "Merge ", 6)) < 0)
+		goto cleanup;
+
+	/*
+	 * This is to emulate the format of MERGE_MSG by core git.
+	 *
+	 * Core git will write all the commits specified by OID, in the order
+	 * provided, until the first named branch or tag is reached, at which
+	 * point all branches will be written in the order provided, then all
+	 * tags, then all remote tracking branches and finally all commits that
+	 * were specified by OID that were not already written.
+	 *
+	 * Yes.  Really.
+	 */
+	for (i = 0; i < heads_len; i++) {
+		if (!msg_entry_is_oid(&entries[i]))
+			break;
+
+		git_oid_fmt(oid_str, &entries[i].merge_head->oid);
+		oid_str[GIT_OID_HEXSZ] = '\0';
+
+		if ((error = git_filebuf_printf(&file, "%scommit '%s'", (i > 0) ? "; " : "", oid_str)) < 0)
+			goto cleanup;
+
+		entries[i].written = 1;
+	}
+
+	if (i)
+		sep = ';';
+
+	if ((error = merge_msg_entries(&matching, entries, heads_len, msg_entry_is_branch)) < 0 ||
+		(error = merge_msg_write_branches(&file, &matching, sep)) < 0)
+		goto cleanup;
+
+	if (matching.length)
+		sep =',';
+
+	if ((error = merge_msg_entries(&matching, entries, heads_len, msg_entry_is_tracking)) < 0 ||
+		(error = merge_msg_write_tracking(&file, &matching, sep)) < 0)
+		goto cleanup;
+
+	if (matching.length)
+		sep =',';
+	
+	if ((error = merge_msg_entries(&matching, entries, heads_len, msg_entry_is_tag)) < 0 ||
+		(error = merge_msg_write_tags(&file, &matching, sep)) < 0)
+		goto cleanup;
+
+	if (matching.length)
+		sep =',';
+
+	/* We should never be called with multiple remote branches, but handle
+	 * it in case we are... */
+	while ((error = merge_msg_entries(&matching, entries, heads_len, msg_entry_is_remote)) > 0) {
+		if ((error = merge_msg_write_remotes(&file, &matching, sep)) < 0)
+			goto cleanup;
+
+		if (matching.length)
+			sep =',';
+	}
+
+	if (error < 0)
+		goto cleanup;
+
+	for (i = 0; i < heads_len; i++) {
+		if (merge_msg_entry_written(&entries[i]))
+			continue;
+
+		git_oid_fmt(oid_str, &entries[i].merge_head->oid);
+		oid_str[GIT_OID_HEXSZ] = '\0';
+
+		if ((error = git_filebuf_printf(&file, "; commit '%s'", oid_str)) < 0)
+			goto cleanup;
+	}
+
+	if ((error = git_filebuf_printf(&file, "\n")) < 0 ||
+		(error = git_filebuf_commit(&file, 0666)) < 0)
+		goto cleanup;
+
+cleanup:
+	if (error < 0)
+		git_filebuf_cleanup(&file);
+
+	git_buf_free(&file_path);
+
+	git_vector_free(&matching);
+	git__free(entries);
+
+	return error;
+}
+
+int git_merge__setup(
+	git_repository *repo,
+	const git_merge_head *our_head,
+	const git_merge_head *heads[],
+	size_t heads_len,
+	unsigned int flags)
+{
+	int error = 0;
+
+	assert (repo && our_head && heads);
+	
+	if ((error = write_orig_head(repo, our_head)) == 0 &&
+		(error = write_merge_head(repo, heads, heads_len)) == 0 &&
+		(error = write_merge_mode(repo, flags)) == 0) {
+		error = write_merge_msg(repo, heads, heads_len);
+	}
+
+	return error;
+}
+
+int git_repository_merge_cleanup(git_repository *repo)
+{
+	int error = 0;
+	git_buf merge_head_path = GIT_BUF_INIT,
+		merge_mode_path = GIT_BUF_INIT,
+		merge_msg_path = GIT_BUF_INIT;
+
+	assert(repo);
+
+	if (git_buf_joinpath(&merge_head_path, repo->path_repository, GIT_MERGE_HEAD_FILE) < 0 ||
+		git_buf_joinpath(&merge_mode_path, repo->path_repository, GIT_MERGE_MODE_FILE) < 0 ||
+		git_buf_joinpath(&merge_msg_path, repo->path_repository, GIT_MERGE_MSG_FILE) < 0)
+		return -1;
+
+	if (git_path_isfile(merge_head_path.ptr)) {
+		if ((error = p_unlink(merge_head_path.ptr)) < 0)
+			goto cleanup;
+	}
+
+	if (git_path_isfile(merge_mode_path.ptr))
+		(void)p_unlink(merge_mode_path.ptr);
+
+	if (git_path_isfile(merge_msg_path.ptr))
+		(void)p_unlink(merge_msg_path.ptr);
+
+cleanup:
+	git_buf_free(&merge_msg_path);
+	git_buf_free(&merge_mode_path);
+	git_buf_free(&merge_head_path);
+
+	return error;
+}
+
+/* Merge heads are the input to merge */
+
+static int merge_head_init(
+	git_merge_head **out,
+	git_repository *repo,
+	const char *ref_name,
+	const char *remote_url,
+	const git_oid *oid)
+{
+	git_merge_head *head;
+	int error = 0;
+
+	assert(out && oid);
+
+	*out = NULL;
+
+	head = git__calloc(1, sizeof(git_merge_head));
+	GITERR_CHECK_ALLOC(head);
+
+	if (ref_name) {
+		head->ref_name = git__strdup(ref_name);
+		GITERR_CHECK_ALLOC(head->ref_name);
+	}
+
+	if (remote_url) {
+		head->remote_url = git__strdup(remote_url);
+		GITERR_CHECK_ALLOC(head->remote_url);
+	}
+
+	git_oid_cpy(&head->oid, oid);
+
+	if ((error = git_commit_lookup(&head->commit, repo, &head->oid)) < 0) {
+		git_merge_head_free(head);
+		return error;
+	}
+
+	*out = head;
+	return error;
+}
+
+int git_merge_head_from_ref(
+	git_merge_head **out,
+	git_repository *repo,
+	git_reference *ref)
+{
+	git_reference *resolved;
+	int error = 0;
+
+	assert(out && repo && ref);
+
+	*out = NULL;
+
+	if ((error = git_reference_resolve(&resolved, ref)) < 0)
+		return error;
+	
+	error = merge_head_init(out, repo, git_reference_name(ref), NULL,
+		git_reference_target(resolved));
+
+	git_reference_free(resolved);
+	return error;
+}
+
+int git_merge_head_from_oid(
+	git_merge_head **out,
+	git_repository *repo,
+	const git_oid *oid)
+{
+	assert(out && repo && oid);
+
+	return merge_head_init(out, repo, NULL, NULL, oid);
+}
+
+int git_merge_head_from_fetchhead(
+	git_merge_head **out,
+	git_repository *repo,
+	const char *branch_name,
+	const char *remote_url,
+	const git_oid *oid)
+{
+	assert(repo && branch_name && remote_url && oid);
+
+	return merge_head_init(out, repo, branch_name, remote_url, oid);
+}
+
+void git_merge_head_free(git_merge_head *head)
+{
+	if (head == NULL)
 		return;
 
-	git_vector_free(&diff_list->staged);
-	git_vector_free(&diff_list->conflicts);
-	git_vector_free(&diff_list->resolved);
-	git_pool_clear(&diff_list->pool);
-	git__free(diff_list);
+	if (head->commit != NULL)
+		git_object_free((git_object *)head->commit);
+
+	if (head->ref_name != NULL)
+		git__free(head->ref_name);
+
+	if (head->remote_url != NULL)
+		git__free(head->remote_url);
+
+	git__free(head);
 }
