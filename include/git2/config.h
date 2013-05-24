@@ -27,18 +27,33 @@ GIT_BEGIN_DECL
  * git_config_open_default() and git_repository_config() honor those
  * priority levels as well.
  */
-enum {
-	GIT_CONFIG_LEVEL_SYSTEM = 1,	/**< System-wide configuration file. */
-	GIT_CONFIG_LEVEL_XDG = 2,		/**< XDG compatible configuration file (.config/git/config). */
-	GIT_CONFIG_LEVEL_GLOBAL = 3,	/**< User-specific configuration file, also called Global configuration file. */
-	GIT_CONFIG_LEVEL_LOCAL = 4,		/**< Repository specific configuration file. */
-	GIT_CONFIG_HIGHEST_LEVEL = -1,	/**< Represents the highest level of a config file. */
-};
+typedef enum {
+	/** System-wide configuration file; /etc/gitconfig on Linux systems */
+	GIT_CONFIG_LEVEL_SYSTEM = 1,
+
+	/** XDG compatible configuration file; typically ~/.config/git/config */
+	GIT_CONFIG_LEVEL_XDG = 2,
+
+	/** User-specific configuration file (also called Global configuration
+	 * file); typically ~/.gitconfig
+	 */
+	GIT_CONFIG_LEVEL_GLOBAL = 3,
+
+	/** Repository specific configuration file; $WORK_DIR/.git/config on
+	 * non-bare repos
+	 */
+	GIT_CONFIG_LEVEL_LOCAL = 4,
+
+	/** Represents the highest level available config file (i.e. the most
+	 * specific config file available that actually is loaded)
+	 */
+	GIT_CONFIG_HIGHEST_LEVEL = -1,
+} git_config_level_t;
 
 typedef struct {
 	const char *name;
 	const char *value;
-	unsigned int level;
+	git_config_level_t level;
 } git_config_entry;
 
 typedef int  (*git_config_foreach_cb)(const git_config_entry *, void *);
@@ -155,7 +170,7 @@ GIT_EXTERN(int) git_config_new(git_config **out);
 GIT_EXTERN(int) git_config_add_file_ondisk(
 	git_config *cfg,
 	const char *path,
-	unsigned int level,
+	git_config_level_t level,
 	int force);
 
 /**
@@ -192,7 +207,7 @@ GIT_EXTERN(int) git_config_open_ondisk(git_config **out, const char *path);
 GIT_EXTERN(int) git_config_open_level(
 	git_config **out,
 	const git_config *parent,
-	unsigned int level);
+	git_config_level_t level);
 
 /**
  * Open the global/XDG configuration file according to git's rules
@@ -241,7 +256,7 @@ GIT_EXTERN(void) git_config_free(git_config *cfg);
  * @return 0 or an error code
  */
 GIT_EXTERN(int) git_config_get_entry(
-   const git_config_entry **out,
+	const git_config_entry **out,
 	const git_config *cfg,
 	const char *name);
 

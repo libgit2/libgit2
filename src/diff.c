@@ -383,6 +383,10 @@ static int diff_list_apply_options(
 	if (DIFF_FLAG_IS_SET(diff, GIT_DIFF_INCLUDE_TYPECHANGE_TREES))
 		diff->opts.flags |= GIT_DIFF_INCLUDE_TYPECHANGE;
 
+	/* flag INCLUDE_UNTRACKED_CONTENT implies INCLUDE_UNTRACKED */
+	if (DIFF_FLAG_IS_SET(diff, GIT_DIFF_INCLUDE_UNTRACKED_CONTENT))
+		diff->opts.flags |= GIT_DIFF_INCLUDE_UNTRACKED;
+
 	/* load config values that affect diff behavior */
 	if (git_repository_config__weakptr(&cfg, repo) < 0)
 		return -1;

@@ -81,10 +81,10 @@ typedef struct {
 	time_t file_mtime;
 	size_t file_size;
 
-	unsigned int level;
+	git_config_level_t level;
 } diskfile_backend;
 
-static int config_parse(diskfile_backend *cfg_file, unsigned int level);
+static int config_parse(diskfile_backend *cfg_file, git_config_level_t level);
 static int parse_variable(diskfile_backend *cfg, char **var_name, char **var_value);
 static int config_write(diskfile_backend *cfg, const char *key, const regex_t *preg, const char *value);
 static char *escape_value(const char *ptr);
@@ -181,7 +181,7 @@ static void free_vars(git_strmap *values)
 	git_strmap_free(values);
 }
 
-static int config_open(git_config_backend *cfg, unsigned int level)
+static int config_open(git_config_backend *cfg, git_config_level_t level)
 {
 	int res;
 	diskfile_backend *b = (diskfile_backend *)cfg;
@@ -965,7 +965,7 @@ static int strip_comments(char *line, int in_quotes)
 	return quote_count;
 }
 
-static int config_parse(diskfile_backend *cfg_file, unsigned int level)
+static int config_parse(diskfile_backend *cfg_file, git_config_level_t level)
 {
 	int c;
 	char *current_section = NULL;

@@ -59,11 +59,11 @@ GIT_EXTERN(int) git_odb_backend_loose(git_odb_backend **out, const char *objects
 GIT_EXTERN(int) git_odb_backend_one_pack(git_odb_backend **out, const char *index_file);
 
 /** Streaming mode */
-enum {
+typedef enum {
 	GIT_STREAM_RDONLY = (1 << 1),
 	GIT_STREAM_WRONLY = (1 << 2),
 	GIT_STREAM_RW = (GIT_STREAM_RDONLY | GIT_STREAM_WRONLY),
-};
+} git_odb_stream_t;
 
 /** A stream to read/write from a backend */
 struct git_odb_stream {

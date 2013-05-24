@@ -18,7 +18,7 @@
 GIT_BEGIN_DECL
 
 /** Generic return codes */
-enum {
+typedef enum {
 	GIT_OK = 0,
 	GIT_ERROR = -1,
 	GIT_ENOTFOUND = -3,
@@ -35,7 +35,7 @@ enum {
 
 	GIT_PASSTHROUGH = -30,
 	GIT_ITEROVER = -31,
-};
+} git_error_code;
 
 typedef struct {
 	char *message;
