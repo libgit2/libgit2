@@ -89,9 +89,10 @@ typedef enum {
 	/** Include unmodified files in the diff list */
 	GIT_DIFF_INCLUDE_UNMODIFIED = (1 << 9),
 
-	/** Even with GIT_DIFF_INCLUDE_UNTRACKED, an entire untracked directory
-	 *  will be marked with only a single entry in the diff list; this flag
-	 *  adds all files under the directory as UNTRACKED entries, too.
+	/** Even with GIT_DIFF_INCLUDE_UNTRACKED, an entire untracked
+	 *  directory will be marked with only a single entry in the diff list
+	 *  (a la what core Git does in `git status`); this flag adds *all*
+	 *  files under untracked directories as UNTRACKED entries, too.
 	 */
 	GIT_DIFF_RECURSE_UNTRACKED_DIRS = (1 << 10),
 
@@ -103,7 +104,11 @@ typedef enum {
 	/** Use case insensitive filename comparisons */
 	GIT_DIFF_DELTAS_ARE_ICASE = (1 << 12),
 
-	/** When generating patch text, include the content of untracked files */
+	/** When generating patch text, include the content of untracked
+	 *  files.  This automatically turns on GIT_DIFF_INCLUDE_UNTRACKED but
+	 *  it does not turn on GIT_DIFF_RECURSE_UNTRACKED_DIRS.  Add that
+	 *  flag if you want the content of every single UNTRACKED file.
+	 */
 	GIT_DIFF_INCLUDE_UNTRACKED_CONTENT = (1 << 13),
 
 	/** Disable updating of the `binary` flag in delta records.  This is
@@ -139,7 +144,7 @@ typedef enum {
 	 *  consider UNTRACKED only if it has an actual untracked file in it.
 	 *  This scan is extra work for a case you often don't care about.  This
 	 *  flag makes libgit2 immediately label an untracked directory as
-	 *  UNTRACKED without looking insde it (which differs from core Git).
+	 *  UNTRACKED without looking inside it (which differs from core Git).
 	 *  Of course, ignore rules are still checked for the directory itself.
 	 */
 	GIT_DIFF_FAST_UNTRACKED_DIRS = (1 << 19),
