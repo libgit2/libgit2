@@ -131,6 +131,9 @@ typedef struct git_treebuilder git_treebuilder;
 /** Memory representation of an index file. */
 typedef struct git_index git_index;
 
+/** An interator for conflicts in the index. */
+typedef struct git_index_conflict_iterator git_index_conflict_iterator;
+
 /** Memory representation of a set of config files */
 typedef struct git_config git_config;
 

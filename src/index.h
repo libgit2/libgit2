@@ -42,6 +42,11 @@ struct git_index {
 	git_vector_cmp reuc_search;
 };
 
+struct git_index_conflict_iterator {
+	git_index *index;
+	size_t cur;
+};
+
 extern void git_index_entry__init_from_stat(git_index_entry *entry, struct stat *st);
 
 extern size_t git_index__prefix_position(git_index *index, const char *path);
