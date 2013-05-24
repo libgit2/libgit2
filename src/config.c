@@ -23,7 +23,7 @@ typedef struct {
 	git_refcount rc;
 
 	git_config_backend *file;
-	unsigned int level;
+	git_config_level_t level;
 } file_internal;
 
 static void file_internal_free(file_internal *internal)
@@ -87,7 +87,7 @@ int git_config_new(git_config **out)
 int git_config_add_file_ondisk(
 	git_config *cfg,
 	const char *path,
-	unsigned int level,
+	git_config_level_t level,
 	int force)
 {
 	git_config_backend *file = NULL;
@@ -138,11 +138,11 @@ int git_config_open_ondisk(git_config **out, const char *path)
 static int find_internal_file_by_level(
 	file_internal **internal_out,
 	const git_config *cfg,
-	int level)
+	git_config_level_t level)
 {
 	int pos = -1;
 	file_internal *internal;
-	unsigned int i;
+	size_t i;
 
 	/* when passing GIT_CONFIG_HIGHEST_LEVEL, the idea is to get the config file
 	 * which has the highest level. As config files are stored in a vector
@@ -153,14 +153,14 @@ static int find_internal_file_by_level(
 		pos = 0;
 	} else {
 		git_vector_foreach(&cfg->files, i, internal) {
-			if (internal->level == (unsigned int)level)
+			if (internal->level == level)
 				pos = i;
 		}
 	}
 
 	if (pos == -1) {
 		giterr_set(GITERR_CONFIG,
-			"No config file exists for the given level '%i'", level);
+			"No config file exists for the given level '%i'", (int)level);
 		return GIT_ENOTFOUND;
 	}
 
@@ -175,17 +175,17 @@ static int duplicate_level(void **old_raw, void *new_raw)
 
 	GIT_UNUSED(new_raw);
 
-	giterr_set(GITERR_CONFIG, "A file with the same level (%i) has already been added to the config", (*old)->level);
+	giterr_set(GITERR_CONFIG, "A file with the same level (%i) has already been added to the config", (int)(*old)->level);
 	return GIT_EEXISTS;
 }
 
 static void try_remove_existing_file_internal(
 	git_config *cfg,
-	unsigned int level)
+	git_config_level_t level)
 {
 	int pos = -1;
 	file_internal *internal;
-	unsigned int i;
+	size_t i;
 
 	git_vector_foreach(&cfg->files, i, internal) {
 		if (internal->level == level)
@@ -206,7 +206,7 @@ static void try_remove_existing_file_internal(
 static int git_config__add_internal(
 	git_config *cfg,
 	file_internal *internal,
-	unsigned int level,
+	git_config_level_t level,
 	int force)
 {
 	int result;
@@ -238,7 +238,7 @@ int git_config_open_global(git_config **cfg_out, git_config *cfg)
 int git_config_open_level(
 	git_config **cfg_out,
 	const git_config *cfg_parent,
-	unsigned int level)
+	git_config_level_t level)
 {
 	git_config *cfg;
 	file_internal *internal;
@@ -263,7 +263,7 @@ int git_config_open_level(
 int git_config_add_backend(
 	git_config *cfg,
 	git_config_backend *file,
-	unsigned int level,
+	git_config_level_t level,
 	int force)
 {
 	file_internal *internal;

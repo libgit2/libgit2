@@ -174,6 +174,11 @@ static void *cache_store(git_cache *cache, git_cached_obj *entry)
 
 	git_cached_obj_incref(entry);
 
+	if (!git_cache__enabled && cache->used_memory > 0) {
+		git_cache_clear(cache);
+		return entry;
+	}
+
 	if (!cache_should_store(entry->type, entry->size))
 		return entry;
 

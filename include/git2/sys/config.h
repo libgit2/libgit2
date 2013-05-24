@@ -29,7 +29,7 @@ struct git_config_backend {
 	struct git_config *cfg;
 
 	/* Open means open the file/database and parse if necessary */
-	int (*open)(struct git_config_backend *, unsigned int level);
+	int (*open)(struct git_config_backend *, git_config_level_t level);
 	int (*get)(const struct git_config_backend *, const char *key, const git_config_entry **entry);
 	int (*get_multivar)(struct git_config_backend *, const char *key, const char *regexp, git_config_foreach_cb callback, void *payload);
 	int (*set)(struct git_config_backend *, const char *key, const char *value);
@@ -63,7 +63,7 @@ struct git_config_backend {
 GIT_EXTERN(int) git_config_add_backend(
 	git_config *cfg,
 	git_config_backend *file,
-	unsigned int level,
+	git_config_level_t level,
 	int force);
 
 /** @} */
