@@ -1822,3 +1822,20 @@ int git_repository_state(git_repository *repo)
 	git_buf_free(&repo_path);
 	return state;
 }
+
+int git_repository_is_shallow(git_repository *repo)
+{
+	git_buf path = GIT_BUF_INIT;
+	struct stat st;
+	int error;
+
+	git_buf_joinpath(&path, repo->path_repository, "shallow");
+	error = git_path_lstat(path.ptr, &st);
+	git_buf_free(&path);
+
+	if (error == GIT_ENOTFOUND)
+		return 0;
+	if (error < 0)
+		return -1;
+	return st.st_size == 0 ? 0 : 1;
+}
