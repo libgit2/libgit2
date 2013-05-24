@@ -1373,8 +1373,9 @@ static int read_reuc(git_index *index, const char *buffer, size_t size)
 	size_t len;
 	int i;
 
-	/* This gets called multiple times, the vector might already be initialized */
-	if (index->reuc._alloc_size == 0 && git_vector_init(&index->reuc, 16, reuc_cmp) < 0)
+	/* If called multiple times, the vector might already be initialized */
+	if (index->reuc._alloc_size == 0 &&
+		git_vector_init(&index->reuc, 16, reuc_cmp) < 0)
 		return -1;
 
 	while (size) {
@@ -1384,11 +1385,8 @@ static int read_reuc(git_index *index, const char *buffer, size_t size)
 		if (size <= len)
 			return index_error_invalid("reading reuc entries");
 
-		lost = git__malloc(sizeof(git_index_reuc_entry));
+		lost = git__calloc(1, sizeof(git_index_reuc_entry));
 		GITERR_CHECK_ALLOC(lost);
-
-		if (git_vector_insert(&index->reuc, lost) < 0)
-			return -1;
 
 		/* read NUL-terminated pathname for entry */
 		lost->path = git__strdup(buffer);
@@ -1427,6 +1425,10 @@ static int read_reuc(git_index *index, const char *buffer, size_t size)
 			size -= 20;
 			buffer += 20;
 		}
+
+		/* entry was read successfully - insert into reuc vector */
+		if (git_vector_insert(&index->reuc, lost) < 0)
+			return -1;
 	}
 
 	/* entries are guaranteed to be sorted on-disk */
