@@ -418,7 +418,7 @@ static int pack_backend__read_prefix(
 	return error;
 }
 
-static int pack_backend__exists(git_odb_backend *backend, const git_oid *oid)
+static int pack_backend__exists(git_odb_backend *backend, const git_oid *oid, int confirm_not_exist)
 {
 	struct git_pack_entry e;
 	return pack_entry_find(&e, (struct pack_backend *)backend, oid) == 0;

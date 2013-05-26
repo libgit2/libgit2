@@ -265,7 +265,7 @@ static int local_push_copy_object(
 	git_oid remote_odb_obj_oid;
 
 	/* Object already exists in the remote ODB; do nothing and return 0*/
-	if (git_odb_exists(remote_odb, &obj->id))
+	if (git_odb_exists(remote_odb, &obj->id, 1))
 		return 0;
 
 	if ((error = git_odb_read(&odb_obj, local_odb, &obj->id)) < 0)
@@ -506,7 +506,7 @@ static int local_download_pack(
 		git_commit *commit;
 
 		/* Skip commits we already have */
-		if (git_odb_exists(odb, &oid)) continue;
+		if (git_odb_exists(odb, &oid, 0)) continue;
 
 		if (!git_object_lookup((git_object**)&commit, t->repo, &oid, GIT_OBJ_COMMIT)) {
 			const git_oid *tree_oid = git_commit_tree_id(commit);

@@ -1331,7 +1331,7 @@ int git_repository_head_detached(git_repository *repo)
 		return 0;
 	}
 
-	exists = git_odb_exists(odb, git_reference_target(ref));
+	exists = git_odb_exists(odb, git_reference_target(ref), 0);
 
 	git_reference_free(ref);
 	return exists;

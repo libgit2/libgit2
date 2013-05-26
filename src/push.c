@@ -301,7 +301,7 @@ static int revwalk(git_vector *commits, git_push *push)
 			if (git_oid_iszero(&spec->roid))
 				continue;
 
-			if (!git_odb_exists(push->repo->_odb, &spec->roid)) {
+			if (!git_odb_exists(push->repo->_odb, &spec->roid, 0)) {
 				giterr_clear();
 				error = GIT_ENONFASTFORWARD;
 				goto on_error;

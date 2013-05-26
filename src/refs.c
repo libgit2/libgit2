@@ -368,7 +368,7 @@ int git_reference_create(
 	if ((error = git_repository_odb__weakptr(&odb, repo)) < 0)
 		return error;
 	
-	if (!git_odb_exists(odb, oid)) {
+	if (!git_odb_exists(odb, oid, 0)) {
 		giterr_set(GITERR_REFERENCE,
 			"Target OID for the reference doesn't exist on the repository");
 		return -1;

@@ -185,11 +185,15 @@ GIT_EXTERN(int) git_odb_read_header(size_t *len_out, git_otype *type_out, git_od
  *
  * @param db database to be searched for the given object.
  * @param id the object to search for.
+ * @param confirm_not_exist true if this existence call is simply
+ *   verifying that the object does not already exist in the object
+ *   database (allowing for an optimization opportunity in custom
+ *   backends)
  * @return
  * - 1, if the object was found
  * - 0, otherwise
  */
-GIT_EXTERN(int) git_odb_exists(git_odb *db, const git_oid *id);
+GIT_EXTERN(int) git_odb_exists(git_odb *db, const git_oid *id, int confirm_not_exist);
 
 /**
  * Refresh the object database to load newly added files.

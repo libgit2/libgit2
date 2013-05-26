@@ -856,7 +856,7 @@ int git_remote_update_tips(git_remote *remote)
 			continue;
 		}
 
-		if (autotag && !git_odb_exists(odb, &head->oid))
+		if (autotag && !git_odb_exists(odb, &head->oid, 0))
 			continue;
 
 		if (git_vector_insert(&update_heads, head) < 0)

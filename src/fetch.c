@@ -44,7 +44,7 @@ static int filter_ref__cb(git_remote_head *head, void *payload)
 		return 0;
 
 	/* If we have the object, mark it so we don't ask for it */
-	if (git_odb_exists(p->odb, &head->oid))
+	if (git_odb_exists(p->odb, &head->oid, 0))
 		head->local = 1;
 	else
 		p->remote->need_pack = 1;

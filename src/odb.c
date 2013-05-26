@@ -526,7 +526,7 @@ void git_odb_free(git_odb *db)
 	GIT_REFCOUNT_DEC(db, odb_free);
 }
 
-int git_odb_exists(git_odb *db, const git_oid *id)
+int git_odb_exists(git_odb *db, const git_oid *id, int confirm_not_exist)
 {
 	git_odb_object *object;
 	size_t i;
@@ -546,7 +546,7 @@ attempt_lookup:
 		git_odb_backend *b = internal->backend;
 
 		if (b->exists != NULL)
-			found = b->exists(b, id);
+			found = b->exists(b, id, confirm_not_exist);
 	}
 
 	if (!found && !refreshed) {
@@ -752,7 +752,7 @@ int git_odb_write(
 	assert(oid && db);
 
 	git_odb_hash(oid, data, len, type);
-	if (git_odb_exists(db, oid))
+	if (git_odb_exists(db, oid, 1))
 		return 0;
 
 	for (i = 0; i < db->backends.length && error < 0; ++i) {
