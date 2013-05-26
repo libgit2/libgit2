@@ -58,7 +58,8 @@ GIT_EXTERN(int) git_branch_create(
  * Delete an existing branch reference.
  *
  * If the branch is successfully deleted, the passed reference
- * object will be freed and invalidated.
+ * object will be invalidated. The reference must be freed manually
+ * by the user.
  *
  * @param branch A valid reference representing a branch
  * @return 0 on success, or an error code.
