@@ -100,7 +100,9 @@ void test_network_remote_remotes__supported_transport_methods_are_supported(void
 
 void test_network_remote_remotes__unsupported_transport_methods_are_unsupported(void)
 {
+#ifndef GIT_SSH
 	cl_assert( !git_remote_supported_url("git@github.com:libgit2/libgit2.git") );
+#endif
 }
 
 void test_network_remote_remotes__refspec_parsing(void)
