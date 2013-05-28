@@ -160,17 +160,26 @@ int git_refdb_iterator_glob(git_reference_iterator **out, git_refdb *db, const c
 	return 0;
 }
 
-int git_refdb_next(const char **out, git_reference_iterator *iter)
+int git_refdb_next(git_reference **out, git_reference_iterator *iter)
 {
 	int error;
 
-	if (!iter->glob)
-		return iter->backend->next(out, iter);
+	if (!iter->glob) {
+		if ((error = iter->backend->next(out, iter)) < 0)
+			return error;
+
+		(*out)->db = iter->backend;
+		return 0;
+	}
 
 	/* If the iterator has a glob, we need to filter */
 	while ((error = iter->backend->next(out, iter)) == 0) {
-		if (!p_fnmatch(iter->glob, *out, 0))
-			break;
+		if (!p_fnmatch(iter->glob, (*out)->name, 0)) {
+			(*out)->db = iter->backend;
+			return 0;
+		}
+
+		git_reference_free(*out);
 	}
 
 	return error;

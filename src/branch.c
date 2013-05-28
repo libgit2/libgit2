@@ -131,28 +131,32 @@ int git_branch_foreach(
 	void *payload)
 {
 	git_reference_iterator *iter;
-	const char *name;
+	git_reference *ref;
 	int error;
 
 	if (git_reference_iterator_new(&iter, repo) < 0)
 		return -1;
 
-	while ((error = git_reference_next(&name, iter)) == 0) {
+	while ((error = git_reference_next(&ref, iter)) == 0) {
 		if (list_flags & GIT_BRANCH_LOCAL &&
-		    git__prefixcmp(name, GIT_REFS_HEADS_DIR) == 0) {
-			if (callback(name + strlen(GIT_REFS_HEADS_DIR), GIT_BRANCH_LOCAL, payload)) {
+		    git__prefixcmp(ref->name, GIT_REFS_HEADS_DIR) == 0) {
+			if (callback(ref->name + strlen(GIT_REFS_HEADS_DIR),
+					GIT_BRANCH_LOCAL, payload)) {
 				error = GIT_EUSER;
 				break;
 			}
 		}
 
 		if (list_flags & GIT_BRANCH_REMOTE &&
-		    git__prefixcmp(name, GIT_REFS_REMOTES_DIR) == 0) {
-			if (callback(name + strlen(GIT_REFS_REMOTES_DIR), GIT_BRANCH_REMOTE, payload)) {
+		    git__prefixcmp(ref->name, GIT_REFS_REMOTES_DIR) == 0) {
+			if (callback(ref->name + strlen(GIT_REFS_REMOTES_DIR),
+					GIT_BRANCH_REMOTE, payload)) {
 				error = GIT_EUSER;
 				break;
 			}
 		}
+
+		git_reference_free(ref);
 	}
 
 	if (error == GIT_ITEROVER)
@@ -160,7 +164,6 @@ int git_branch_foreach(
 
 	git_reference_iterator_free(iter);
 	return error;
-
 }
 
 int git_branch_move(

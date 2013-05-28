@@ -85,7 +85,7 @@ struct git_refdb_backend {
 	 * A refdb implementation must provide this function.
 	 */
 	int (*next)(
-		const char **name,
+		git_reference **ref,
 		git_reference_iterator *iter);
 
 	/**

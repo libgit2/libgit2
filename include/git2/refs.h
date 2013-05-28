@@ -351,7 +351,9 @@ GIT_EXTERN(int) git_reference_cmp(git_reference *ref1, git_reference *ref2);
  * @param repo the repository
  * @return 0 or an error code
  */
-GIT_EXTERN(int) git_reference_iterator_new(git_reference_iterator **out, git_repository *repo);
+GIT_EXTERN(int) git_reference_iterator_new(
+	git_reference_iterator **out,
+	git_repository *repo);
 
 /**
  * Create an iterator for the repo's references that match the
@@ -362,16 +364,19 @@ GIT_EXTERN(int) git_reference_iterator_new(git_reference_iterator **out, git_rep
  * @param glob the glob to match against the reference names
  * @return 0 or an error code
  */
-GIT_EXTERN(int) git_reference_iterator_glob_new(git_reference_iterator **out, git_repository *repo, const char *glob);
+GIT_EXTERN(int) git_reference_iterator_glob_new(
+	git_reference_iterator **out,
+	git_repository *repo,
+	const char *glob);
 
 /**
- * Get the next reference name
+ * Get the next reference
  *
- * @param out pointer in which to store the string
+ * @param out pointer in which to store the reference
  * @param iter the iterator
  * @param 0, GIT_ITEROVER if there are no more; or an error code
  */
-GIT_EXTERN(int) git_reference_next(const char **out, git_reference_iterator *iter);
+GIT_EXTERN(int) git_reference_next(git_reference **out, git_reference_iterator *iter);
 
 /**
  * Free the iterator and its associated resources

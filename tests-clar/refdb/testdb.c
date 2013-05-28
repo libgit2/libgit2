@@ -134,7 +134,7 @@ static int refdb_test_backend__iterator(git_reference_iterator **out, git_refdb_
 	return 0;
 }
 
-static int refdb_test_backend__next(const char **name, git_reference_iterator *_iter)
+static int refdb_test_backend__next(git_reference **out, git_reference_iterator *_iter)
 {
 	refdb_test_entry *entry;
 	refdb_test_backend *backend = (refdb_test_backend *) _iter->backend;
@@ -144,9 +144,15 @@ static int refdb_test_backend__next(const char **name, git_reference_iterator *_
 	if (!entry)
 		return GIT_ITEROVER;
 
-	*name = entry->name;
-	iter->i++;
+	if (entry->type == GIT_REF_OID) {
+		*out = git_reference__alloc(entry->name, &entry->target.oid, NULL);
+	} else if (entry->type == GIT_REF_SYMBOLIC) {
+		*out = git_reference__alloc_symbolic(entry->name, entry->target.symbolic);
+	} else {
+		return -1;
+	}
 
+	iter->i++;
 	return 0;
 }
 

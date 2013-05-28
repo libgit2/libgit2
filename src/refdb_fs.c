@@ -645,16 +645,19 @@ static int iter_load_loose_paths(refdb_fs_iter *iter)
 	return 0;
 }
 
-static int refdb_fs_backend__next(const char **out, git_reference_iterator *_iter)
+static int refdb_fs_backend__next(git_reference **out, git_reference_iterator *_iter)
 {
 	refdb_fs_iter *iter = (refdb_fs_iter *)_iter;
-	refdb_fs_backend *backend = (refdb_fs_backend *) iter->parent.backend;
+	refdb_fs_backend *backend = (refdb_fs_backend *)iter->parent.backend;
 	git_strmap *packfile = backend->refcache.packfile;
 
-	if (iter->loose_pos < iter->loose.length) {
+	while (iter->loose_pos < iter->loose.length) {
 		const char *path = git_vector_get(&iter->loose, iter->loose_pos++);
-		*out = path;
-		return 0;
+
+		if (loose_lookup(out, backend, path) == 0)
+			return 0;
+
+		giterr_clear();
 	}
 
 	if (iter->packed_pos < kh_end(packfile)) {
@@ -671,7 +674,10 @@ static int refdb_fs_backend__next(const char **out, git_reference_iterator *_ite
 			iter->packed_pos++;
 		} while (ref->flags & PACKREF_SHADOWED);
 
-		*out = ref->name;
+		*out = git_reference__alloc(ref->name, &ref->oid, &ref->peel);
+		if (*out == NULL)
+			return -1;
+
 		return 0;
 	}
 

@@ -664,7 +664,7 @@ int git_reference_iterator_glob_new(git_reference_iterator **out, git_repository
 	return git_refdb_iterator_glob(out, refdb, glob);
 }
 
-int git_reference_next(const char **out, git_reference_iterator *iter)
+int git_reference_next(git_reference **out, git_reference_iterator *iter)
 {
 	return git_refdb_next(out, iter);
 }
