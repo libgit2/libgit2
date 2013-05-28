@@ -23,8 +23,8 @@
 GIT_BEGIN_DECL
 
 /**
- * Flags for `git_mrege_tree` options.  A combination of these flags can be
- * passed in via the `flags` vlaue in the `git_merge_tree_opts`.
+ * Flags for `git_merge_tree` options.  A combination of these flags can be
+ * passed in via the `flags` value in the `git_merge_tree_opts`.
  */
 typedef enum {
 	/** Detect renames */
