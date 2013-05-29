@@ -34,6 +34,27 @@ void test_attr_ignore__honor_temporary_rules(void)
 	assert_is_ignored(true, "NewFolder/NewFolder/File.txt");
 }
 
+void test_attr_ignore__allow_root(void)
+{
+	cl_git_rewritefile("attr/.gitignore", "/");
+
+	assert_is_ignored(false, "File.txt");
+	assert_is_ignored(false, "NewFolder");
+	assert_is_ignored(false, "NewFolder/NewFolder");
+	assert_is_ignored(false, "NewFolder/NewFolder/File.txt");
+}
+
+void test_attr_ignore__ignore_root(void)
+{
+	cl_git_rewritefile("attr/.gitignore", "/\n\n/NewFolder\n/NewFolder/NewFolder");
+
+	assert_is_ignored(false, "File.txt");
+	assert_is_ignored(true, "NewFolder");
+	assert_is_ignored(true, "NewFolder/NewFolder");
+	assert_is_ignored(true, "NewFolder/NewFolder/File.txt");
+}
+
+
 void test_attr_ignore__skip_gitignore_directory(void)
 {
 	cl_git_rewritefile("attr/.git/info/exclude", "/NewFolder\n/NewFolder/NewFolder");

@@ -397,7 +397,8 @@ int git_attr_fnmatch__parse(
 
 	*base = scan;
 
-	spec->length = scan - pattern;
+	if ((spec->length = scan - pattern) == 0)
+		return GIT_ENOTFOUND;
 
 	if (pattern[spec->length - 1] == '/') {
 		spec->length--;

@@ -194,6 +194,11 @@ char *git_pool_strndup(git_pool *pool, const char *str, size_t n)
 
 	assert(pool && str && pool->item_size == sizeof(char));
 
+	if (n + 1 == 0) {
+		giterr_set_oom();
+		return NULL;
+	}
+
 	if ((ptr = git_pool_malloc(pool, (uint32_t)(n + 1))) != NULL) {
 		memcpy(ptr, str, n);
 		*(((char *)ptr) + n) = '\0';
