@@ -10,6 +10,7 @@
 #include "git2/object.h"
 #include "git2/refdb.h"
 #include "git2/sys/repository.h"
+#include "git2/filter.h"
 
 #include "common.h"
 #include "repository.h"
@@ -102,6 +103,21 @@ void git_repository__cleanup(git_repository *repo)
 	set_refdb(repo, NULL);
 }
 
+void git_filters_filters_free(git_vector *filters)
+{
+	size_t i;
+	git_filter *filter;
+
+	git_vector_foreach(filters, i, filter) {
+		if (filter->do_free != NULL)
+			filter->do_free(filter);
+		else
+			git__free(filter);
+	}
+
+	git_vector_free(filters);
+}
+
 void git_repository_free(git_repository *repo)
 {
 	if (repo == NULL)
@@ -109,6 +125,7 @@ void git_repository_free(git_repository *repo)
 
 	git_repository__cleanup(repo);
 
+	git_filters_filters_free(&repo->filters);
 	git_cache_free(&repo->objects);
 	git_submodule_config_free(repo);
 
@@ -164,6 +181,21 @@ static git_repository *repository_alloc(void)
 int git_repository_new(git_repository **out)
 {
 	*out = repository_alloc();
+	return 0;
+}
+
+static int load_internal_filters(git_repository *repo)
+{
+	int error;
+	git_filter *filter;
+
+	/* Load the CRLF filter */
+	if ((error = git_filter_create__crlf_filter(&filter)) < 0)
+		return error;
+
+	if ((error = git_vector_insert(&repo->filters, filter)) < 0)
+		return error;
+
 	return 0;
 }
 
@@ -462,6 +494,12 @@ int git_repository_open_ext(
 
 	if ((error = load_config_data(repo)) < 0 ||
 		(error = load_workdir(repo, &parent)) < 0)
+	{
+		git_repository_free(repo);
+		return error;
+	}
+
+	if ((error = load_internal_filters(repo)) < 0)
 	{
 		git_repository_free(repo);
 		return error;
@@ -1659,7 +1697,7 @@ int git_repository_hashfile(
 
 	/* At some point, it would be nice if repo could be NULL to just
 	 * apply filter rules defined in system and global files, but for
-	 * now that is not possible because git_filters_load() needs it.
+	 * now that is not possible because git_filters__get_filters_to_apply() needs it.
 	 */
 
 	error = git_path_join_unrooted(
@@ -1672,7 +1710,7 @@ int git_repository_hashfile(
 
 	/* passing empty string for "as_path" indicated --no-filters */
 	if (strlen(as_path) > 0) {
-		error = git_filters_load(&filters, repo, as_path, GIT_FILTER_TO_ODB);
+		error = git_filters__get_filters_to_apply(&filters, repo, as_path, GIT_FILTER_TO_ODB);
 		if (error < 0)
 			return error;
 	} else {
@@ -1704,7 +1742,7 @@ int git_repository_hashfile(
 cleanup:
 	if (fd >= 0)
 		p_close(fd);
-	git_filters_free(&filters);
+	git_filters__free(&filters);
 	git_buf_free(&full_path);
 
 	return error;

@@ -193,7 +193,7 @@ int git_odb__hashfd_filtered(
 	 */
 
 	if (!(error = git_futils_readbuffer_fd(&raw, fd, size)))
-		error = git_filters_apply(&filtered, &raw, filters);
+		error = git_filters__apply(&filtered, &raw, filters);
 
 	git_buf_free(&raw);
 

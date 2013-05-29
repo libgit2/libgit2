@@ -73,7 +73,7 @@ int git_buf_text_crlf_to_lf(git_buf *tgt, const git_buf *src)
 		return GIT_ENOTFOUND;
 
 	/* reduce reallocs while in the loop */
-	if (git_buf_grow(tgt, src->size) < 0)
+	if (git_buf_grow(tgt, src->size + 1) < 0)
 		return -1;
 	out = tgt->ptr;
 	tgt->size = 0;

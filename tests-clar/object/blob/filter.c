@@ -3,6 +3,7 @@
 #include "blob.h"
 #include "filter.h"
 #include "buf_text.h"
+#include "git2/filter.h"
 
 static git_repository *g_repo = NULL;
 #define NUM_TEST_OBJECTS 8
@@ -110,7 +111,7 @@ void test_object_blob_filter__to_odb(void)
 	git_attr_cache_flush(g_repo);
 	cl_git_append2file("empty_standard_repo/.gitattributes", "*.txt text\n");
 
-	cl_assert(git_filters_load(
+	cl_assert(git_filters__get_filters_to_apply(
 		&filters, g_repo, "filename.txt", GIT_FILTER_TO_ODB) > 0);
 	cl_assert(filters.length == 1);
 
@@ -118,15 +119,15 @@ void test_object_blob_filter__to_odb(void)
 		cl_git_pass(git_blob_lookup(&blob, g_repo, &g_oids[i]));
 		cl_git_pass(git_blob__getbuf(&orig, blob));
 
-		cl_git_pass(git_filters_apply(&out, &orig, &filters));
+		cl_git_pass(git_filters__apply(&out, &orig, &filters));
 		cl_assert(git_buf_cmp(&out, &g_crlf_filtered[i]) == 0);
 
 		git_blob_free(blob);
+		git_buf_free(&orig);
+		git_buf_free(&out);
 	}
 
-	git_filters_free(&filters);
-	git_buf_free(&orig);
-	git_buf_free(&out);
+	git_filters__free(&filters);
 	git_config_free(cfg);
 }
 
