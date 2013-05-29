@@ -114,99 +114,65 @@ int git_refdb_lookup(git_reference **out, git_refdb *db, const char *ref_name)
 
 	assert(db && db->backend && out && ref_name);
 
-	if (!(error = db->backend->lookup(&ref, db->backend, ref_name))) {
-		ref->db = db;
-		*out = ref;
-	} else {
-		*out = NULL;
-	}
+	error = db->backend->lookup(&ref, db->backend, ref_name);
+	if (error < 0)
+		return error;
 
-	return error;
+	GIT_REFCOUNT_INC(db);
+	ref->db = db;
+
+	*out = ref;
+	return 0;
 }
 
-int git_refdb_iterator(git_reference_iterator **out, git_refdb *db)
+int git_refdb_iterator(git_reference_iterator **out, git_refdb *db, const char *glob)
 {
 	if (!db->backend || !db->backend->iterator) {
 		giterr_set(GITERR_REFERENCE, "This backend doesn't support iterators");
 		return -1;
 	}
 
-	if (db->backend->iterator(out, db->backend) < 0)
+	if (db->backend->iterator(out, db->backend, glob) < 0)
 		return -1;
+
+	GIT_REFCOUNT_INC(db);
+	(*out)->db = db;
 
 	return 0;
 }
 
-int git_refdb_iterator_glob(git_reference_iterator **out, git_refdb *db, const char *glob)
-{
-	if (!db->backend) {
-		giterr_set(GITERR_REFERENCE, "There are no backends loaded");
-		return -1;
-	}
-
-	if (db->backend->iterator_glob)
-		return db->backend->iterator_glob(out, db->backend, glob);
-
-	/* If the backend doesn't support glob-filtering themselves, we have to do it */
-	if (db->backend->iterator(out, db->backend) < 0)
-		return -1;
-
-	(*out)->glob = git__strdup(glob);
-	if (!(*out)->glob) {
-		db->backend->iterator_free(*out);
-		return -1;
-	}
-
-	return 0;
-}
-
-int git_refdb_next(git_reference **out, git_reference_iterator *iter)
+int git_refdb_iterator_next(git_reference **out, git_reference_iterator *iter)
 {
 	int error;
 
-	if (!iter->glob) {
-		if ((error = iter->backend->next(out, iter)) < 0)
-			return error;
+	if ((error = iter->next(out, iter)) < 0)
+		return error;
 
-		(*out)->db = iter->backend;
-		return 0;
-	}
+	GIT_REFCOUNT_INC(iter->db);
+	(*out)->db = iter->db;
 
-	/* If the iterator has a glob, we need to filter */
-	while ((error = iter->backend->next(out, iter)) == 0) {
-		if (!p_fnmatch(iter->glob, (*out)->name, 0)) {
-			(*out)->db = iter->backend;
-			return 0;
-		}
+	return 0;
+}
 
-		git_reference_free(*out);
-	}
-
-	return error;
+int git_refdb_iterator_next_name(const char **out, git_reference_iterator *iter)
+{
+	return iter->next_name(out, iter);
 }
 
 void git_refdb_iterator_free(git_reference_iterator *iter)
 {
-	git__free(iter->glob);
-	iter->backend->iterator_free(iter);
+	GIT_REFCOUNT_DEC(iter->db, refdb_free);
+	iter->free(iter);
 }
-
-struct glob_cb_data {
-	const char *glob;
-	git_reference_foreach_cb callback;
-	void *payload;
-};
 
 int git_refdb_write(git_refdb *db, const git_reference *ref)
 {
 	assert(db && db->backend);
-
 	return db->backend->write(db->backend, ref);
 }
 
 int git_refdb_delete(struct git_refdb *db, const git_reference *ref)
 {
 	assert(db && db->backend);
-
 	return db->backend->delete(db->backend, ref);
 }

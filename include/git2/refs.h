@@ -308,7 +308,8 @@ GIT_EXTERN(int) git_reference_delete(git_reference *ref);
  */
 GIT_EXTERN(int) git_reference_list(git_strarray *array, git_repository *repo);
 
-typedef int (*git_reference_foreach_cb)(const char *refname, void *payload);
+typedef int (*git_reference_foreach_cb)(git_reference *reference, void *payload);
+typedef int (*git_reference_foreach_name_cb)(const char *name, void *payload);
 
 /**
  * Perform a callback on each reference in the repository.
@@ -326,6 +327,11 @@ typedef int (*git_reference_foreach_cb)(const char *refname, void *payload);
 GIT_EXTERN(int) git_reference_foreach(
 	git_repository *repo,
 	git_reference_foreach_cb callback,
+	void *payload);
+
+GIT_EXTERN(int) git_reference_foreach_name(
+	git_repository *repo,
+	git_reference_foreach_name_cb callback,
 	void *payload);
 
 /**
@@ -378,6 +384,8 @@ GIT_EXTERN(int) git_reference_iterator_glob_new(
  */
 GIT_EXTERN(int) git_reference_next(git_reference **out, git_reference_iterator *iter);
 
+GIT_EXTERN(int) git_reference_next_name(const char **out, git_reference_iterator *iter);
+
 /**
  * Free the iterator and its associated resources
  *
@@ -406,7 +414,7 @@ GIT_EXTERN(void) git_reference_iterator_free(git_reference_iterator *iter);
 GIT_EXTERN(int) git_reference_foreach_glob(
 	git_repository *repo,
 	const char *glob,
-	git_reference_foreach_cb callback,
+	git_reference_foreach_name_cb callback,
 	void *payload);
 
 /**

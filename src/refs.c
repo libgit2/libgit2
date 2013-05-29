@@ -104,20 +104,20 @@ struct reference_available_t {
 	int available;
 };
 
-static int _reference_available_cb(const char *ref, void *data)
+static int _reference_available_cb(const char *refname, void *data)
 {
 	struct reference_available_t *d;
 
-	assert(ref && data);
+	assert(refname && data);
 	d = (struct reference_available_t *)data;
 
-	if (!d->old_ref || strcmp(d->old_ref, ref)) {
-		size_t reflen = strlen(ref);
+	if (!d->old_ref || strcmp(d->old_ref, refname)) {
+		size_t reflen = strlen(refname);
 		size_t newlen = strlen(d->new_ref);
 		size_t cmplen = reflen < newlen ? reflen : newlen;
-		const char *lead = reflen < newlen ? d->new_ref : ref;
+		const char *lead = reflen < newlen ? d->new_ref : refname;
 
-		if (!strncmp(d->new_ref, ref, cmplen) && lead[cmplen] == '/') {
+		if (!strncmp(d->new_ref, refname, cmplen) && lead[cmplen] == '/') {
 			d->available = 0;
 			return -1;
 		}
@@ -126,6 +126,9 @@ static int _reference_available_cb(const char *ref, void *data)
 	return 0;
 }
 
+/**
+ * TODO: this should be part of the FS backend
+ */
 static int reference_path_available(
 	git_repository *repo,
 	const char *ref,
@@ -138,8 +141,7 @@ static int reference_path_available(
 	data.old_ref = old_ref;
 	data.available = 1;
 
-	error = git_reference_foreach(
-		repo, _reference_available_cb, (void *)&data);
+	error = git_reference_foreach_name(repo, _reference_available_cb, (void *)&data);
 	if (error < 0)
 		return error;
 
@@ -430,6 +432,7 @@ static int reference__create(
 		ref = git_reference__alloc_symbolic(name, symbolic);
 	}
 
+	/* TODO: this needs to be written more explicitly */
 	GITERR_CHECK_ALLOC(ref);
 	ref->db = refdb;
 
@@ -558,6 +561,7 @@ int git_reference_rename(
 	if (result == NULL)
 		return -1;
 
+	/* TODO: this is bad */
 	result->db = ref->db;
 
 	/* Check if we have to update HEAD. */
@@ -623,14 +627,69 @@ int git_reference_foreach(
 	void *payload)
 {
 	git_reference_iterator *iter;
-	const char *name;
+	git_reference *ref;
 	int error;
 
 	if (git_reference_iterator_new(&iter, repo) < 0)
 		return -1;
 
-	while ((error = git_reference_next(&name, iter)) == 0) {
-		if (callback(name, payload)) {
+	while ((error = git_reference_next(&ref, iter)) == 0) {
+		if (callback(ref, payload)) {
+			error = GIT_EUSER;
+			goto out;
+		}
+	}
+
+	if (error == GIT_ITEROVER)
+		error = 0;
+
+out:
+	git_reference_iterator_free(iter);
+	return error;
+}
+
+int git_reference_foreach_name(
+	git_repository *repo,
+	git_reference_foreach_name_cb callback,
+	void *payload)
+{
+	git_reference_iterator *iter;
+	const char *refname;
+	int error;
+
+	if (git_reference_iterator_new(&iter, repo) < 0)
+		return -1;
+
+	while ((error = git_reference_next_name(&refname, iter)) == 0) {
+		if (callback(refname, payload)) {
+			error = GIT_EUSER;
+			goto out;
+		}
+	}
+
+	if (error == GIT_ITEROVER)
+		error = 0;
+
+out:
+	git_reference_iterator_free(iter);
+	return error;
+}
+
+int git_reference_foreach_glob(
+	git_repository *repo,
+	const char *glob,
+	git_reference_foreach_name_cb callback,
+	void *payload)
+{
+	git_reference_iterator *iter;
+	const char *refname;
+	int error;
+
+	if (git_reference_iterator_glob_new(&iter, repo, glob) < 0)
+		return -1;
+
+	while ((error = git_reference_next_name(&refname, iter)) == 0) {
+		if (callback(refname, payload)) {
 			error = GIT_EUSER;
 			goto out;
 		}
@@ -651,22 +710,28 @@ int git_reference_iterator_new(git_reference_iterator **out, git_repository *rep
 	if (git_repository_refdb__weakptr(&refdb, repo) < 0)
 		return -1;
 
-	return git_refdb_iterator(out, refdb);
+	return git_refdb_iterator(out, refdb, NULL);
 }
 
-int git_reference_iterator_glob_new(git_reference_iterator **out, git_repository *repo, const char *glob)
+int git_reference_iterator_glob_new(
+	git_reference_iterator **out, git_repository *repo, const char *glob)
 {
 	git_refdb *refdb;
 
 	if (git_repository_refdb__weakptr(&refdb, repo) < 0)
 		return -1;
 
-	return git_refdb_iterator_glob(out, refdb, glob);
+	return git_refdb_iterator(out, refdb, glob);
 }
 
 int git_reference_next(git_reference **out, git_reference_iterator *iter)
 {
-	return git_refdb_next(out, iter);
+	return git_refdb_iterator_next(out, iter);
+}
+
+int git_reference_next_name(const char **out, git_reference_iterator *iter)
+{
+	return git_refdb_iterator_next_name(out, iter);
 }
 
 void git_reference_iterator_free(git_reference_iterator *iter)
@@ -693,7 +758,7 @@ int git_reference_list(
 	if (git_vector_init(&ref_list, 8, NULL) < 0)
 		return -1;
 
-	if (git_reference_foreach(
+	if (git_reference_foreach_name(
 			repo, &cb__reflist_add, (void *)&ref_list) < 0) {
 		git_vector_free(&ref_list);
 		return -1;
@@ -989,34 +1054,6 @@ int git_reference__update_terminal(
 	const git_oid *oid)
 {
 	return reference__update_terminal(repo, ref_name, oid, 0);
-}
-
-int git_reference_foreach_glob(
-	git_repository *repo,
-	const char *glob,
-	git_reference_foreach_cb callback,
-	void *payload)
-{
-	git_reference_iterator *iter;
-	const char *name;
-	int error;
-
-	if (git_reference_iterator_glob_new(&iter, repo, glob) < 0)
-		return -1;
-
-	while ((error = git_reference_next(&name, iter)) == 0) {
-		if (callback(name, payload)) {
-			error = GIT_EUSER;
-			goto out;
-		}
-	}
-
-	if (error == GIT_ITEROVER)
-		error = 0;
-
-out:
-	git_reference_iterator_free(iter);
-	return error;
 }
 
 int git_reference_has_log(

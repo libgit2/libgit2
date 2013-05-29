@@ -1473,12 +1473,14 @@ static int at_least_one_cb(const char *refname, void *payload)
 
 static int repo_contains_no_reference(git_repository *repo)
 {
-	int error = git_reference_foreach(repo, at_least_one_cb, NULL);
+	int error = git_reference_foreach_name(repo, &at_least_one_cb, NULL);
 
 	if (error == GIT_EUSER)
 		return 0;
+
 	if (!error)
 		return 1;
+
 	return error;
 }
 
