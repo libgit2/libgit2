@@ -21,6 +21,7 @@
 #include "attrcache.h"
 #include "strmap.h"
 #include "diff_driver.h"
+#include "vector.h"
 
 #define DOT_GIT ".git"
 #define GIT_DIR DOT_GIT "/"
@@ -103,6 +104,7 @@ struct git_repository {
 	git_config *_config;
 	git_index *_index;
 
+	git_vector filters;
 	git_cache objects;
 	git_attr_cache attrcache;
 	git_strmap *submodules;

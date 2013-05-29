@@ -320,7 +320,7 @@ static int diff_file_content_load_workdir_file(
 	if (diff_file_content_binary_by_size(fc))
 		goto cleanup;
 
-	if ((error = git_filters_load(
+	if ((error = git_filters__get_filters_to_apply(
 			&filters, fc->repo, fc->file->path, GIT_FILTER_TO_ODB)) < 0)
 		goto cleanup;
 	/* error >= is a filter count */
@@ -341,7 +341,7 @@ static int diff_file_content_load_workdir_file(
 		if (!filters.length)
 			git_buf_swap(&filtered, &raw);
 		else
-			error = git_filters_apply(&filtered, &raw, &filters);
+			error = git_filters__apply(&filtered, &raw, &filters);
 
 		if (!error) {
 			fc->map.len  = git_buf_len(&filtered);
@@ -354,7 +354,7 @@ static int diff_file_content_load_workdir_file(
 	}
 
 cleanup:
-	git_filters_free(&filters);
+	git_filters__free(&filters);
 	p_close(fd);
 
 	return error;

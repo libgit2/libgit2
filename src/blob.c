@@ -116,7 +116,7 @@ static int write_file_filtered(
 	if ((error = git_futils_readbuffer(&source, full_path)) < 0)
 		return error;
 
-	error = git_filters_apply(&dest, &source, filters);
+	error = git_filters__apply(&dest, &source, filters);
 
 	/* Free the source as soon as possible. This can be big in memory,
 	 * and we don't want to ODB write to choke */
@@ -174,7 +174,7 @@ static int blob_create_internal(git_oid *oid, git_repository *repo, const char *
 
 		if (try_load_filters) {
 			/* Load the filters for writing this file to the ODB */
-			filter_count = git_filters_load(
+			filter_count = git_filters__get_filters_to_apply(
 				&write_filters, repo, hint_path, GIT_FILTER_TO_ODB);
 		}
 
@@ -190,7 +190,7 @@ static int blob_create_internal(git_oid *oid, git_repository *repo, const char *
 			error = write_file_filtered(oid, odb, content_path, &write_filters);
 		}
 
-		git_filters_free(&write_filters);
+		git_filters__free(&write_filters);
 
 		/*
 		 * TODO: eventually support streaming filtered files, for files

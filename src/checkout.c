@@ -16,6 +16,7 @@
 #include "git2/config.h"
 #include "git2/diff.h"
 #include "git2/submodule.h"
+#include "git2/filter.h"
 #include "git2/sys/index.h"
 
 #include "refs.h"
@@ -727,7 +728,7 @@ static int blob_content_to_file(
 
 	if (!opts->disable_filters &&
 		!git_buf_text_is_binary(&filtered) &&
-		(nb_filters = git_filters_load(
+		(nb_filters = git_filters__get_filters_to_apply(
 			&filters,
 			git_object_owner((git_object *)blob),
 			path,
@@ -745,7 +746,7 @@ static int blob_content_to_file(
 		if ((error = git_blob__getbuf(&unfiltered, blob)) < 0)
 			goto cleanup;
 
-		if ((error = git_filters_apply(&filtered, &unfiltered, &filters)) < 0)
+		if ((error = git_filters__apply(&filtered, &unfiltered, &filters)) < 0)
 			goto cleanup;
 	}
 
@@ -760,7 +761,7 @@ static int blob_content_to_file(
 		st->st_mode = entry_filemode;
 
 cleanup:
-	git_filters_free(&filters);
+	git_filters__free(&filters);
 	git_buf_free(&unfiltered);
 	if (!dont_free_filtered)
 		git_buf_free(&filtered);
