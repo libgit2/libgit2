@@ -566,7 +566,7 @@ static void refdb_fs_backend__iterator_free(git_reference_iterator *_iter)
 	size_t i;
 
 	git_vector_foreach(&iter->loose, i, loose_path) {
-		free(loose_path);
+		git__free(loose_path);
 	}
 
 	git_vector_free(&iter->loose);
@@ -1232,7 +1232,7 @@ static int setup_namespace(git_buf *path, git_repository *repo)
 	}
 
 	git_buf_printf(path, "refs/namespaces/%s/refs", end);
-	free(parts);
+	git__free(parts);
 
 	/* Make sure that the folder with the namespace exists */
 	if (git_futils_mkdir_r(git_buf_cstr(path), repo->path_repository, 0777) < 0)
