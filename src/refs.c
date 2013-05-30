@@ -95,6 +95,9 @@ void git_reference_free(git_reference *reference)
 	if (reference->type == GIT_REF_SYMBOLIC)
 		git__free(reference->target.symbolic);
 
+	if (reference->db)
+		GIT_REFCOUNT_DEC(reference->db, git_refdb__free);
+
 	git__free(reference);
 }
 

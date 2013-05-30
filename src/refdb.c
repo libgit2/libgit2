@@ -86,7 +86,7 @@ int git_refdb_compress(git_refdb *db)
 	return 0;
 }
 
-static void refdb_free(git_refdb *db)
+void git_refdb__free(git_refdb *db)
 {
 	refdb_free_backend(db);
 	git__free(db);
@@ -97,7 +97,7 @@ void git_refdb_free(git_refdb *db)
 	if (db == NULL)
 		return;
 
-	GIT_REFCOUNT_DEC(db, refdb_free);
+	GIT_REFCOUNT_DEC(db, git_refdb__free);
 }
 
 int git_refdb_exists(int *exists, git_refdb *refdb, const char *ref_name)
@@ -161,7 +161,7 @@ int git_refdb_iterator_next_name(const char **out, git_reference_iterator *iter)
 
 void git_refdb_iterator_free(git_reference_iterator *iter)
 {
-	GIT_REFCOUNT_DEC(iter->db, refdb_free);
+	GIT_REFCOUNT_DEC(iter->db, git_refdb__free);
 	iter->free(iter);
 }
 

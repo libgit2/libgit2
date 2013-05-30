@@ -16,6 +16,8 @@ struct git_refdb {
 	git_refdb_backend *backend;
 };
 
+void git_refdb__free(git_refdb *db);
+
 int git_refdb_exists(
 	int *exists,
 	git_refdb *refdb,
