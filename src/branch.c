@@ -182,18 +182,21 @@ int git_branch_move(
 	if (!git_reference_is_branch(branch))
 		return not_a_local_branch(git_reference_name(branch));
 
-	if ((error = git_buf_joinpath(&new_reference_name, GIT_REFS_HEADS_DIR, new_branch_name)) < 0 ||
-		(error = git_buf_printf(&old_config_section, "branch.%s", git_reference_name(branch) + strlen(GIT_REFS_HEADS_DIR))) < 0 ||
-		(error = git_buf_printf(&new_config_section, "branch.%s", new_branch_name)) < 0)
+	error = git_buf_joinpath(&new_reference_name, GIT_REFS_HEADS_DIR, new_branch_name);
+	if (error < 0)
 		goto done;
+
+	git_buf_printf(&old_config_section,
+		"branch.%s", git_reference_name(branch) + strlen(GIT_REFS_HEADS_DIR));
+
+	git_buf_printf(&new_config_section, "branch.%s", new_branch_name);
 
 	if ((error = git_config_rename_section(git_reference_owner(branch),
 		git_buf_cstr(&old_config_section),
 		git_buf_cstr(&new_config_section))) < 0)
 		goto done;
 
-	if ((error = git_reference_rename(out, branch, git_buf_cstr(&new_reference_name), force)) < 0)
-		goto done;
+	error = git_reference_rename(out, branch, git_buf_cstr(&new_reference_name), force);
 
 done:
 	git_buf_free(&new_reference_name);

@@ -257,11 +257,6 @@ GIT_EXTERN(int) git_reference_set_target(
  * The new name will be checked for validity.
  * See `git_reference_create_symbolic()` for rules about valid names.
  *
- * On success, the given git_reference will be deleted from disk and a
- * new `git_reference` will be returned.
- *
- * The reference will be immediately renamed in-memory and on disk.
- *
  * If the `force` flag is not enabled, and there's already
  * a reference with the given name, the renaming will fail.
  *
@@ -277,7 +272,7 @@ GIT_EXTERN(int) git_reference_set_target(
  *
  */
 GIT_EXTERN(int) git_reference_rename(
-	git_reference **out,
+	git_reference **new_ref,
 	git_reference *ref,
 	const char *new_name,
 	int force);

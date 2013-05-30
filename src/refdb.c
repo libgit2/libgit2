@@ -165,14 +165,40 @@ void git_refdb_iterator_free(git_reference_iterator *iter)
 	iter->free(iter);
 }
 
-int git_refdb_write(git_refdb *db, const git_reference *ref)
+int git_refdb_write(git_refdb *db, git_reference *ref, int force)
 {
 	assert(db && db->backend);
-	return db->backend->write(db->backend, ref);
+
+	GIT_REFCOUNT_INC(db);
+	ref->db = db;
+
+	return db->backend->write(db->backend, ref, force);
 }
 
-int git_refdb_delete(struct git_refdb *db, const git_reference *ref)
+int git_refdb_rename(
+	git_reference **out,
+	git_refdb *db,
+	const char *old_name,
+	const char *new_name,
+	int force)
+{
+	int error;
+
+	assert(db && db->backend);
+	error = db->backend->rename(out, db->backend, old_name, new_name, force);
+	if (error < 0)
+		return error;
+
+	if (out) {
+		GIT_REFCOUNT_INC(db);
+		(*out)->db = db;
+	}
+
+	return 0;
+}
+
+int git_refdb_delete(struct git_refdb *db, const char *ref_name)
 {
 	assert(db && db->backend);
-	return db->backend->delete(db->backend, ref);
+	return db->backend->delete(db->backend, ref_name);
 }

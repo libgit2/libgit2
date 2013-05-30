@@ -92,13 +92,18 @@ struct git_refdb_backend {
 	 * Writes the given reference to the refdb.  A refdb implementation
 	 * must provide this function.
 	 */
-	int (*write)(git_refdb_backend *backend, const git_reference *ref);
+	int (*write)(git_refdb_backend *backend,
+		const git_reference *ref, int force);
+
+	int (*rename)(
+		git_reference **out, git_refdb_backend *backend,
+		const char *old_name, const char *new_name, int force);
 
 	/**
 	 * Deletes the given reference from the refdb.  A refdb implementation
 	 * must provide this function.
 	 */
-	int (*delete)(git_refdb_backend *backend, const git_reference *ref);
+	int (*delete)(git_refdb_backend *backend, const char *ref_name);
 
 	/**
 	 * Suggests that the given refdb compress or optimize its references.
