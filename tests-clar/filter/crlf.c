@@ -10,14 +10,10 @@ static git_repository *g_repo = NULL;
 
 void test_filter_crlf__initialize(void)
 {
-	git_config *cfg;
-
 	cl_fixture_sandbox("empty_standard_repo");
 	cl_git_pass(cl_rename("empty_standard_repo/.gitted", "empty_standard_repo/.git"));
 
 	cl_git_pass(git_repository_open(&g_repo, "empty_standard_repo"));
-	cl_git_pass(git_repository_config(&cfg, g_repo));
-	cl_assert(cfg);
 
 	git_attr_cache_flush(g_repo);
 	cl_git_append2file("empty_standard_repo/.gitattributes", "*.txt text\n");
@@ -56,7 +52,7 @@ void test_filter_crlf__to_odb(void)
 		}
 	}
 
-	git__free(filter);
+	git_filter_free(filter);
 }
 
 void test_filter_crlf__to_worktree(void)
@@ -65,6 +61,9 @@ void test_filter_crlf__to_worktree(void)
 	char *dst = NULL;
 	int i, ret;
 	size_t dst_size;
+
+	git_attr_cache_flush(g_repo);
+	cl_git_append2file("empty_standard_repo/.gitattributes", "*.txt eol=crlf\n");
 
 	cl_git_pass(git_filter_create__crlf_filter(&filter));
 
@@ -85,5 +84,5 @@ void test_filter_crlf__to_worktree(void)
 		}
 	}
 
-	git__free(filter);
+	git_filter_free(filter);
 }

@@ -323,17 +323,7 @@ static int should_apply_to_path(
 
 int git_filter_create__crlf_filter(git_filter **out)
 {
-	git_filter *filter;
-
-	filter = git__malloc(sizeof(git_filter));
-	GITERR_CHECK_ALLOC(filter);
-
-	filter->should_apply_to_path = should_apply_to_path;
-	filter->apply_to_odb = crlf_apply_to_odb;
-	filter->apply_to_worktree = crlf_apply_to_worktree;
-	filter->do_free = NULL;
-
-	*out = filter;
-
-	return 0;
+	return git_filters_create_filter(out, should_apply_to_path,
+		crlf_apply_to_odb, crlf_apply_to_worktree, NULL,
+		"crlf");
 }
