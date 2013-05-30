@@ -426,10 +426,9 @@ GIT_EXTERN(int) git_remote_set_callbacks(git_remote *remote, git_remote_callback
 GIT_EXTERN(const git_transfer_progress *) git_remote_stats(git_remote *remote);
 
 typedef enum {
-	GIT_REMOTE_DOWNLOAD_TAGS_UNSET,
-	GIT_REMOTE_DOWNLOAD_TAGS_NONE,
-	GIT_REMOTE_DOWNLOAD_TAGS_AUTO,
-	GIT_REMOTE_DOWNLOAD_TAGS_ALL
+	GIT_REMOTE_DOWNLOAD_TAGS_AUTO = 0,
+	GIT_REMOTE_DOWNLOAD_TAGS_NONE = 1,
+	GIT_REMOTE_DOWNLOAD_TAGS_ALL = 2
 } git_remote_autotag_option_t;
 
 /**
