@@ -773,7 +773,8 @@ static int blob_content_to_link(
 		return error;
 
 	if (can_symlink) {
-		if ((error = p_symlink(git_buf_cstr(&linktarget), path)) < 0)
+		if ((error = git_futils_mkpath2file(path, 0755)) < 0 ||
+			(error = p_symlink(git_buf_cstr(&linktarget), path)) < 0)
 			giterr_set(GITERR_CHECKOUT, "Could not create symlink %s\n", path);
 	} else {
 		error = git_futils_fake_symlink(git_buf_cstr(&linktarget), path);
