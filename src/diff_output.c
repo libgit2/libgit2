@@ -196,26 +196,77 @@ static int diff_delta_is_binary_by_size(
 	return 0;
 }
 
-static void setup_xdiff_options(
-	const git_diff_options *opts, xdemitconf_t *cfg, xpparam_t *param)
+static long diff_context_find(
+	const char *line,
+	long line_len,
+	char *out,
+	long out_size,
+	void *payload)
 {
-	memset(cfg, 0, sizeof(xdemitconf_t));
-	memset(param, 0, sizeof(xpparam_t));
+	diff_context *ctxt = payload;
+	const char *scan;
+	bool found_paren = false;
 
-	cfg->ctxlen =
-		(!opts) ? 3 : opts->context_lines;
-	cfg->interhunkctxlen =
-		(!opts) ? 0 : opts->interhunk_lines;
+	if (line_len > 0 && line[line_len - 1] == '\n')
+		line_len--;
+	if (line_len > 0 && line[line_len - 1] == '\r')
+		line_len--;
+	if (!line_len)
+		return -1;
 
-	if (!opts)
+	if (!isalpha(*line))
+		return -1;
+
+	for (scan = &line[line_len - 1]; scan > line && *scan != '('; --scan)
+		/* search backward for ( */;
+	if (scan != line) {
+		found_paren = true;
+		line_len = scan - line;
+
+		for (--scan; scan > line && !isalpha(*scan); --scan)
+			--line_len;
+	}
+
+	if (!line_len)
+		return -1;
+
+	if (out_size > line_len) {
+		memcpy(out, line, line_len);
+
+		if (found_paren)
+			out[line_len++] = '(';
+		out[line_len] = '\0';
+	} else {
+		memcpy(out, line, out_size);
+		line_len = out_size;
+	}
+
+	return line_len;
+}
+
+static void setup_xdiff_options(diff_context *ctxt)
+{
+	memset(&ctxt->xdiff_config, 0, sizeof(ctxt->xdiff_config));
+	memset(&ctxt->xdiff_params, 0, sizeof(ctxt->xdiff_params));
+
+	ctxt->xdiff_config.ctxlen =
+		(!ctxt->opts) ? 3 : ctxt->opts->context_lines;
+	ctxt->xdiff_config.interhunkctxlen =
+		(!ctxt->opts) ? 0 : ctxt->opts->interhunk_lines;
+
+	ctxt->xdiff_config.flags = XDL_EMIT_FUNCNAMES;
+	ctxt->xdiff_config.find_func = diff_context_find;
+	ctxt->xdiff_config.find_func_priv = ctxt;
+
+	if (!ctxt->opts)
 		return;
 
-	if (opts->flags & GIT_DIFF_IGNORE_WHITESPACE)
-		param->flags |= XDF_WHITESPACE_FLAGS;
-	if (opts->flags & GIT_DIFF_IGNORE_WHITESPACE_CHANGE)
-		param->flags |= XDF_IGNORE_WHITESPACE_CHANGE;
-	if (opts->flags & GIT_DIFF_IGNORE_WHITESPACE_EOL)
-		param->flags |= XDF_IGNORE_WHITESPACE_AT_EOL;
+	if (ctxt->opts->flags & GIT_DIFF_IGNORE_WHITESPACE)
+		ctxt->xdiff_params.flags |= XDF_WHITESPACE_FLAGS;
+	if (ctxt->opts->flags & GIT_DIFF_IGNORE_WHITESPACE_CHANGE)
+		ctxt->xdiff_params.flags |= XDF_IGNORE_WHITESPACE_CHANGE;
+	if (ctxt->opts->flags & GIT_DIFF_IGNORE_WHITESPACE_EOL)
+		ctxt->xdiff_params.flags |= XDF_IGNORE_WHITESPACE_AT_EOL;
 }
 
 
@@ -499,7 +550,7 @@ static int diff_context_init(
 	ctxt->payload = payload;
 	ctxt->error = 0;
 
-	setup_xdiff_options(ctxt->opts, &ctxt->xdiff_config, &ctxt->xdiff_params);
+	setup_xdiff_options(ctxt);
 
 	return 0;
 }
