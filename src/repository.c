@@ -112,7 +112,7 @@ void git_filters_filters_free(git_vector *filters)
 		if (filter->do_free != NULL)
 			filter->do_free(filter);
 		else
-			git__free(filter);
+			git_filter_free(filter);
 	}
 
 	git_vector_free(filters);
