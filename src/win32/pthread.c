@@ -24,8 +24,10 @@ int pthread_join(pthread_t thread, void **value_ptr)
 	DWORD ret = WaitForSingleObject(thread, INFINITE);
 
 	if (ret == WAIT_OBJECT_0) {
-		if (value_ptr != NULL)
+		if (value_ptr != NULL) {
+			*value_ptr = NULL;
 			GetExitCodeThread(thread, (void *)value_ptr);
+		}
 		CloseHandle(thread);
 		return 0;
 	}
