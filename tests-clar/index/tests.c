@@ -416,3 +416,35 @@ void test_index_tests__remove_directory(void)
 	git_repository_free(repo);
 	cl_fixture_cleanup("index_test");
 }
+
+void test_index_tests__preserves_case(void)
+{
+	git_repository *repo;
+	git_index *index;
+	const git_index_entry *entry;
+
+	cl_set_cleanup(&cleanup_myrepo, NULL);
+
+	cl_git_pass(git_repository_init(&repo, "./myrepo", 0));
+	cl_git_pass(git_repository_index(&index, repo));
+
+	cl_git_rewritefile("myrepo/test.txt", "hey there\n");
+	cl_git_pass(git_index_add_bypath(index, "test.txt"));
+
+	cl_git_pass(p_rename("myrepo/test.txt", "myrepo/TEST.txt"));
+	cl_git_rewritefile("myrepo/TEST.txt", "hello again\n");
+	cl_git_pass(git_index_add_bypath(index, "TEST.txt"));
+
+	cl_assert(git_index_entrycount(index) == 1);
+
+	/* Test access by path instead of index */
+	cl_assert((entry = git_index_get_bypath(index, "test.txt", 0)) != NULL);
+	cl_assert((entry = git_index_get_bypath(index, "TEST.txt", 0)) != NULL);
+
+	/* The path should *not* have changed without an explicit remove */
+	cl_assert(git__strcmp(entry->path, "test.txt") == 0);
+
+	git_index_free(index);
+	git_repository_free(repo);
+}
+
