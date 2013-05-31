@@ -336,6 +336,10 @@ static int create_and_configure_origin(
 	    (error = git_remote_set_pushurl(origin, options->pushurl)) < 0)
 		goto on_error;
 
+	if (options->transport_flags == GIT_TRANSPORTFLAGS_NO_CHECK_CERT) {
+        git_remote_check_cert(origin, 0);
+    }
+
 	if ((error = git_remote_save(origin)) < 0)
 		goto on_error;
 

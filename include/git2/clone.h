@@ -51,6 +51,8 @@ GIT_BEGIN_DECL
  * - `cred_acquire_cb` is a callback to be used if credentials are required
  *   during the initial fetch.
  * - `cred_acquire_payload` is the payload for the above callback.
+ * - `transport_flags` is flags used to create transport if no transport is
+ *   provided.
  * - `transport` is a custom transport to be used for the initial fetch.  NULL
  *   means use the transport autodetected from the URL.
  * - `remote_callbacks` may be used to specify custom progress callbacks for
@@ -75,6 +77,7 @@ typedef struct git_clone_options {
 	const char *push_spec;
 	git_cred_acquire_cb cred_acquire_cb;
 	void *cred_acquire_payload;
+    git_transport_flags_t transport_flags;
 	git_transport *transport;
 	git_remote_callbacks *remote_callbacks;
 	git_remote_autotag_option_t remote_autotag;
