@@ -525,6 +525,21 @@ GIT_EXTERN(int) git_reference_peel(
  */
 GIT_EXTERN(int) git_reference_is_valid_name(const char *refname);
 
+/**
+ * Get the reference's short name
+ *
+ * This will transform the reference name into a name "human-readable"
+ * version. If no shortname is appropriate, it will return the full
+ * name.
+ *
+ * The memory is owned by the reference and must not be freed.
+ *
+ * @param ref a reference
+ * @return the human-readable version of the name
+ */
+GIT_EXTERN(const char *) git_reference_shorthand(git_reference *ref);
+
+
 /** @} */
 GIT_END_DECL
 #endif
