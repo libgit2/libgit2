@@ -1853,16 +1853,37 @@ int git_diff__paired_foreach(
 	int cmp;
 	git_diff_delta *h2i, *i2w;
 	size_t i, j, i_max, j_max;
+	int (*strcomp)(const char *a, const char *b);
+	bool icase = 0;
 
 	i_max = head2idx ? head2idx->deltas.length : 0;
 	j_max = idx2wd ? idx2wd->deltas.length : 0;
+
+	/* Assert both iterators use matching ignore-case. If this function ever
+	 * supports merging diffs that are not sorted by the same function, then
+	 * it will need to spool and sort on one of the results before merging
+	 */
+	if (head2idx && idx2wd &&
+		(head2idx->opts.flags & GIT_DIFF_DELTAS_ARE_ICASE) !=
+		(idx2wd->opts.flags & GIT_DIFF_DELTAS_ARE_ICASE)) {
+		giterr_set(GITERR_INVALID, "incompatible case sensitivity in paired diff_lists");
+		return -1;
+	}
+
+	icase = head2idx ? (head2idx->opts.flags & GIT_DIFF_DELTAS_ARE_ICASE) != 0 :
+		 (idx2wd->opts.flags & GIT_DIFF_DELTAS_ARE_ICASE) != 0;
+
+	/* On case sensitive file iterators, we need to maintain that ordering,
+	 * but we want strict equality so that we identify case-changing
+	 * renames. */
+	strcomp = icase ? git__strcasesort_cmp : git__strcmp;
 
 	for (i = 0, j = 0; i < i_max || j < j_max; ) {
 		h2i = head2idx ? GIT_VECTOR_GET(&head2idx->deltas, i) : NULL;
 		i2w = idx2wd ? GIT_VECTOR_GET(&idx2wd->deltas, j) : NULL;
 
 		cmp = !i2w ? -1 : !h2i ? 1 :
-			git__strcmp(h2i->new_file.path, i2w->old_file.path);
+			strcomp(h2i->new_file.path, i2w->old_file.path);
 
 		if (cmp < 0) {
 			if (cb(h2i, NULL, payload))
