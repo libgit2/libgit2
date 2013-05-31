@@ -796,6 +796,9 @@ static int diff_scan_inside_untracked_dir(
 done:
 	git_buf_free(&base);
 
+	if (error == GIT_ITEROVER)
+		error = 0;
+
 	return error;
 }
 
@@ -981,8 +984,11 @@ static int handle_matched_item(
 {
 	int error = 0;
 
-	if (!(error = maybe_modified(diff, info)) &&
-		!(error = git_iterator_advance(&info->oitem, info->old_iter)))
+	if ((error = maybe_modified(diff, info)) < 0)
+		return error;
+
+	if (!(error = git_iterator_advance(&info->oitem, info->old_iter)) ||
+		error == GIT_ITEROVER)
 		error = git_iterator_advance(&info->nitem, info->new_iter);
 
 	return error;
@@ -1011,15 +1017,22 @@ int git_diff__from_iterators(
 
 	/* make iterators have matching icase behavior */
 	if (DIFF_FLAG_IS_SET(diff, GIT_DIFF_DELTAS_ARE_ICASE)) {
-		if (!(error = git_iterator_set_ignore_case(old_iter, true)))
-			error = git_iterator_set_ignore_case(new_iter, true);
+		if ((error = git_iterator_set_ignore_case(old_iter, true)) < 0 ||
+			(error = git_iterator_set_ignore_case(new_iter, true)) < 0)
+			goto cleanup;
 	}
 
 	/* finish initialization */
-	if (!error &&
-		!(error = diff_list_apply_options(diff, opts)) &&
-		!(error = git_iterator_current(&info.oitem, old_iter)))
-		error = git_iterator_current(&info.nitem, new_iter);
+	if ((error = diff_list_apply_options(diff, opts)) < 0)
+		goto cleanup;
+
+	if ((error = git_iterator_current(&info.oitem, old_iter)) < 0 &&
+		error != GIT_ITEROVER)
+		goto cleanup;
+	if ((error = git_iterator_current(&info.nitem, new_iter)) < 0 &&
+		error != GIT_ITEROVER)
+		goto cleanup;
+	error = 0;
 
 	/* run iterators building diffs */
 	while (!error && (info.oitem || info.nitem)) {
@@ -1041,8 +1054,13 @@ int git_diff__from_iterators(
 		 */
 		else
 			error = handle_matched_item(diff, &info);
+
+		/* because we are iterating over two lists, ignore ITEROVER */
+		if (error == GIT_ITEROVER)
+			error = 0;
 	}
 
+cleanup:
 	if (!error)
 		*diff_ptr = diff;
 	else
