@@ -647,18 +647,12 @@ int git_note_next(
 	const git_index_entry *item;
 
 	if ((error = git_iterator_current(&item, it)) < 0)
-		goto exit;
+		return error;
 
-	if (item != NULL) {
-		git_oid_cpy(note_id, &item->oid);
-		error = process_entry_path(item->path, annotated_id);
+	git_oid_cpy(note_id, &item->oid);
 
-		if (error >= 0)
-			error = git_iterator_advance(NULL, it);
-	} else {
-		error = GIT_ITEROVER;
-	}
+	if (!(error = process_entry_path(item->path, annotated_id)))
+		git_iterator_advance(NULL, it);
 
-exit:
 	return error;
 }

@@ -582,6 +582,9 @@ static int iter_load_loose_paths(refdb_fs_backend *backend, refdb_fs_iter *iter)
 	git_iterator *fsit;
 	const git_index_entry *entry = NULL;
 
+	if (!backend->path) /* do nothing if no path for loose refs */
+		return 0;
+
 	if (git_buf_printf(&path, "%s/refs", backend->path) < 0)
 		return -1;
 
@@ -591,7 +594,7 @@ static int iter_load_loose_paths(refdb_fs_backend *backend, refdb_fs_iter *iter)
 	git_vector_init(&iter->loose, 8, NULL);
 	git_buf_sets(&path, GIT_REFS_DIR);
 
-	while (!git_iterator_current(&entry, fsit) && entry) {
+	while (!git_iterator_advance(&entry, fsit)) {
 		const char *ref_name;
 		khiter_t pos;
 
@@ -600,10 +603,8 @@ static int iter_load_loose_paths(refdb_fs_backend *backend, refdb_fs_iter *iter)
 		ref_name = git_buf_cstr(&path);
 
 		if (git__suffixcmp(ref_name, ".lock") == 0 ||
-			(iter->glob && p_fnmatch(iter->glob, ref_name, 0) != 0)) {
-			git_iterator_advance(NULL, fsit);
+			(iter->glob && p_fnmatch(iter->glob, ref_name, 0) != 0))
 			continue;
-		}
 
 		pos = git_strmap_lookup_index(packfile, ref_name);
 		if (git_strmap_valid_index(packfile, pos)) {
@@ -612,7 +613,6 @@ static int iter_load_loose_paths(refdb_fs_backend *backend, refdb_fs_iter *iter)
 		}
 
 		git_vector_insert(&iter->loose, git__strdup(ref_name));
-		git_iterator_advance(NULL, fsit);
 	}
 
 	git_iterator_free(fsit);
