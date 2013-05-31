@@ -495,12 +495,9 @@ static int checkout_action(
 			if (cmp == 0) {
 				if (wd->mode == GIT_FILEMODE_TREE) {
 					/* case 2 - entry prefixed by workdir tree */
-					if ((error = git_iterator_advance_into(&wd, workdir)) < 0) {
-						if (error != GIT_ENOTFOUND ||
-							git_iterator_advance(&wd, workdir) < 0)
-							goto fail;
-					}
-
+					error = git_iterator_advance_into_or_over(&wd, workdir);
+					if (error && error != GIT_ITEROVER)
+						goto fail;
 					*wditem_ptr = wd;
 					continue;
 				}
@@ -515,8 +512,10 @@ static int checkout_action(
 			}
 
 			/* case 1 - handle wd item (if it matches pathspec) */
-			if (checkout_action_wd_only(data, workdir, wd, pathspec) < 0 ||
-				git_iterator_advance(&wd, workdir) < 0)
+			if (checkout_action_wd_only(data, workdir, wd, pathspec) < 0)
+				goto fail;
+			if ((error = git_iterator_advance(&wd, workdir)) < 0 &&
+				error != GIT_ITEROVER)
 				goto fail;
 
 			*wditem_ptr = wd;
@@ -539,8 +538,9 @@ static int checkout_action(
 			if (delta->status == GIT_DELTA_TYPECHANGE) {
 				if (delta->old_file.mode == GIT_FILEMODE_TREE) {
 					act = checkout_action_with_wd(data, delta, wd);
-					if (git_iterator_advance_into(&wd, workdir) < 0)
-						wd = NULL;
+					if ((error = git_iterator_advance_into(&wd, workdir)) < 0 &&
+						error != GIT_ENOTFOUND)
+						goto fail;
 					*wditem_ptr = wd;
 					return act;
 				}
@@ -550,8 +550,9 @@ static int checkout_action(
 					delta->old_file.mode == GIT_FILEMODE_COMMIT)
 				{
 					act = checkout_action_with_wd(data, delta, wd);
-					if (git_iterator_advance(&wd, workdir) < 0)
-						wd = NULL;
+					if ((error = git_iterator_advance(&wd, workdir)) < 0 &&
+						error != GIT_ITEROVER)
+						goto fail;
 					*wditem_ptr = wd;
 					return act;
 				}
@@ -582,6 +583,9 @@ static int checkout_remaining_wd_items(
 			error = git_iterator_advance(&wd, workdir);
 	}
 
+	if (error == GIT_ITEROVER)
+		error = 0;
+
 	return error;
 }
 
@@ -603,7 +607,8 @@ static int checkout_get_actions(
 		git_pathspec_init(&pathspec, &data->opts.paths, &pathpool) < 0)
 		return -1;
 
-	if ((error = git_iterator_current(&wditem, workdir)) < 0)
+	if ((error = git_iterator_current(&wditem, workdir)) < 0 &&
+		error != GIT_ITEROVER)
 		goto fail;
 
 	deltas = &data->diff->deltas;

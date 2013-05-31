@@ -31,12 +31,11 @@ static void expect_iterator_items(
 	if (expected_flat < 0) { v = true; expected_flat = -expected_flat; }
 	if (expected_total < 0) { v = true; expected_total = -expected_total; }
 
-	count = 0;
-	cl_git_pass(git_iterator_current(&entry, i));
-
 	if (v) fprintf(stderr, "== %s ==\n", no_trees ? "notrees" : "trees");
 
-	while (entry != NULL) {
+	count = 0;
+
+	while (!git_iterator_advance(&entry, i)) {
 		if (v) fprintf(stderr, "  %s %07o\n", entry->path, (int)entry->mode);
 
 		if (no_trees)
@@ -53,8 +52,6 @@ static void expect_iterator_items(
 			else
 				cl_assert(entry->mode != GIT_FILEMODE_TREE);
 		}
-
-		cl_git_pass(git_iterator_advance(&entry, i));
 
 		if (++count > expected_flat)
 			break;
@@ -93,10 +90,14 @@ static void expect_iterator_items(
 			/* could return NOTFOUND if directory is empty */
 			cl_assert(!error || error == GIT_ENOTFOUND);
 
-			if (error == GIT_ENOTFOUND)
-				cl_git_pass(git_iterator_advance(&entry, i));
-		} else
-			cl_git_pass(git_iterator_advance(&entry, i));
+			if (error == GIT_ENOTFOUND) {
+				error = git_iterator_advance(&entry, i);
+				cl_assert(!error || error == GIT_ITEROVER);
+			}
+		} else {
+			error = git_iterator_advance(&entry, i);
+			cl_assert(!error || error == GIT_ITEROVER);
+		}
 
 		if (++count > expected_total)
 			break;
