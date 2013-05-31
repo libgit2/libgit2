@@ -85,13 +85,17 @@ static void cache_free(git_pack_cache *cache)
 		git_offmap_free(cache->entries);
 		git_mutex_free(&cache->lock);
 	}
+
+	memset(cache, 0, sizeof(*cache));
 }
 
 static int cache_init(git_pack_cache *cache)
 {
-	memset(cache, 0, sizeof(git_pack_cache));
+	memset(cache, 0, sizeof(*cache));
+
 	cache->entries = git_offmap_alloc();
 	GITERR_CHECK_ALLOC(cache->entries);
+
 	cache->memory_limit = GIT_PACK_CACHE_MEMORY_LIMIT;
 	git_mutex_init(&cache->lock);
 

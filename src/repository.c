@@ -113,6 +113,7 @@ void git_repository_free(git_repository *repo)
 	git__free(repo->workdir);
 	git__free(repo->namespace);
 
+	memset(repo, 0, sizeof(*repo));
 	git__free(repo);
 }
 

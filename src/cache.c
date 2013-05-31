@@ -66,7 +66,7 @@ void git_cache_dump_stats(git_cache *cache)
 
 int git_cache_init(git_cache *cache)
 {
-	cache->used_memory = 0;
+	memset(cache, 0, sizeof(*cache));
 	cache->map = git_oidmap_alloc();
 	git_mutex_init(&cache->lock);
 	return 0;
@@ -102,9 +102,9 @@ void git_cache_clear(git_cache *cache)
 void git_cache_free(git_cache *cache)
 {
 	git_cache_clear(cache);
-
 	git_oidmap_free(cache->map);
 	git_mutex_free(&cache->lock);
+	memset(cache, 0, sizeof(*cache));
 }
 
 /* Called with lock */

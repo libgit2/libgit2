@@ -40,12 +40,14 @@ static void config_free(git_config *cfg)
 	size_t i;
 	file_internal *internal;
 
-	for(i = 0; i < cfg->files.length; ++i){
+	for (i = 0; i < cfg->files.length; ++i) {
 		internal = git_vector_get(&cfg->files, i);
 		GIT_REFCOUNT_DEC(internal, file_internal_free);
 	}
 
 	git_vector_free(&cfg->files);
+
+	memset(cfg, 0, sizeof(*cfg));
 	git__free(cfg);
 }
 
