@@ -68,7 +68,10 @@ int git_cache_init(git_cache *cache)
 {
 	memset(cache, 0, sizeof(*cache));
 	cache->map = git_oidmap_alloc();
-	git_mutex_init(&cache->lock);
+	if (git_mutex_init(&cache->lock)) {
+		giterr_set(GITERR_OS, "Failed to initialize cache mutex");
+		return -1;
+	}
 	return 0;
 }
 

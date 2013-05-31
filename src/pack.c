@@ -97,7 +97,15 @@ static int cache_init(git_pack_cache *cache)
 	GITERR_CHECK_ALLOC(cache->entries);
 
 	cache->memory_limit = GIT_PACK_CACHE_MEMORY_LIMIT;
-	git_mutex_init(&cache->lock);
+
+	if (git_mutex_init(&cache->lock)) {
+		giterr_set(GITERR_OS, "Failed to initialize pack cache mutex");
+
+		git__free(cache->entries);
+		cache->entries = NULL;
+
+		return -1;
+	}
 
 	return 0;
 }
@@ -948,7 +956,11 @@ int git_packfile_alloc(struct git_pack_file **pack_out, const char *path)
 	p->mtime = (git_time_t)st.st_mtime;
 	p->index_version = -1;
 
-	git_mutex_init(&p->lock);
+	if (git_mutex_init(&p->lock)) {
+		giterr_set(GITERR_OS, "Failed to initialize packfile mutex");
+		git__free(p);
+		return -1;
+	}
 
 	/* see if we can parse the sha1 oid in the packfile name */
 	if (path_len < 40 ||
