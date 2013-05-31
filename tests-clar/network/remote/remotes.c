@@ -286,11 +286,14 @@ void test_network_remote_remotes__add(void)
 	_remote = NULL;
 
 	cl_git_pass(git_remote_create(&_remote, _repo, "addtest", "http://github.com/libgit2/libgit2"));
+	cl_assert_equal_i(GIT_REMOTE_DOWNLOAD_TAGS_AUTO, git_remote_autotag(_remote));
 
 	git_remote_free(_remote);
 	_remote = NULL;
 
 	cl_git_pass(git_remote_load(&_remote, _repo, "addtest"));
+	cl_assert_equal_i(GIT_REMOTE_DOWNLOAD_TAGS_AUTO, git_remote_autotag(_remote));
+
 	_refspec = git_vector_get(&_remote->refspecs, 0);
 	cl_assert_equal_s("refs/heads/*", git_refspec_src(_refspec));
 	cl_assert(git_refspec_force(_refspec) == 1);
