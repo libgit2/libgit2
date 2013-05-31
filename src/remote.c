@@ -48,11 +48,7 @@ static int download_tags_value(git_remote *remote, git_config *cfg)
 	git_buf buf = GIT_BUF_INIT;
 	int error;
 
-	if (remote->download_tags != GIT_REMOTE_DOWNLOAD_TAGS_UNSET)
-		return 0;
-
-	/* This is the default, let's see if we need to change it */
-	remote->download_tags = GIT_REMOTE_DOWNLOAD_TAGS_AUTO;
+	/* The 0 value is the default (auto), let's see if we need to change it */
 	if (git_buf_printf(&buf, "remote.%s.tagopt", remote->name) < 0)
 		return -1;
 
@@ -117,10 +113,9 @@ static int create_internal(git_remote **out, git_repository *repo, const char *n
 			goto on_error;
 	}
 
-	/* A remote without a name doesn't download tags */
-	if (!name) {
+	if (!name)
+		/* A remote without a name doesn't download tags */
 		remote->download_tags = GIT_REMOTE_DOWNLOAD_TAGS_NONE;
-	}
 
 	*out = remote;
 	git_buf_free(&fetchbuf);
@@ -245,7 +240,6 @@ int git_remote_load(git_remote **out, git_repository *repo, const char *name)
 	int error = 0;
 	git_config *config;
 	struct refspec_cb_data data;
-
 
 	assert(out && repo && name);
 
