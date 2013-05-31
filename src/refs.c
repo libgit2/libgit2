@@ -1131,3 +1131,20 @@ int git_reference_is_valid_name(
 		refname,
 		GIT_REF_FORMAT_ALLOW_ONELEVEL);
 }
+
+const char *git_reference_shorthand(git_reference *ref)
+{
+	const char *name = ref->name;
+
+	if (!git__prefixcmp(name, GIT_REFS_HEADS_DIR))
+		return name + strlen(GIT_REFS_HEADS_DIR);
+	else if (!git__prefixcmp(name, GIT_REFS_TAGS_DIR))
+		return name + strlen(GIT_REFS_TAGS_DIR);
+	else if (!git__prefixcmp(name, GIT_REFS_REMOTES_DIR))
+		return name + strlen(GIT_REFS_REMOTES_DIR);
+	else if (!git__prefixcmp(name, GIT_REFS_DIR))
+		return name + strlen(GIT_REFS_DIR);
+
+	/* No shorthands are avaiable, so just return the name */
+	return name;
+}
