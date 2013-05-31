@@ -1575,7 +1575,8 @@ static size_t read_extension(git_index *index, const char *buffer, size_t buffer
 
 	total_size = dest.extension_size + sizeof(struct index_extension);
 
-	if (buffer_size - total_size < INDEX_FOOTER_SIZE)
+	if (buffer_size < total_size ||
+		buffer_size - total_size < INDEX_FOOTER_SIZE)
 		return 0;
 
 	/* optional extension */
@@ -1661,7 +1662,7 @@ static int parse_index(git_index *index, const char *buffer, size_t buffer_size)
 
 		/* see if we have read any bytes from the extension */
 		if (extension_size == 0)
-			return index_error_invalid("extension size is zero");
+			return index_error_invalid("extension is truncated");
 
 		seek_forward(extension_size);
 	}
