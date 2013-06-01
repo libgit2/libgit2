@@ -359,22 +359,25 @@ void git_index_free(git_index *index)
 	GIT_REFCOUNT_DEC(index, index_free);
 }
 
-void git_index_clear(git_index *index)
+static void index_entries_free(git_vector *entries)
 {
 	size_t i;
 
-	assert(index);
-
-	for (i = 0; i < index->entries.length; ++i) {
-		git_index_entry *e;
-		e = git_vector_get(&index->entries, i);
+	for (i = 0; i < entries->length; ++i) {
+		git_index_entry *e = git_vector_get(entries, i);
 		git__free(e->path);
 		git__free(e);
 	}
-	git_vector_clear(&index->entries);
 
+	git_vector_clear(entries);
+}
+
+void git_index_clear(git_index *index)
+{
+	assert(index);
+
+	index_entries_free(&index->entries);
 	git_index_reuc_clear(index);
-
 	git_index_name_clear(index);
 
 	git_futils_filestamp_set(&index->stamp, NULL);
@@ -1951,13 +1954,14 @@ int git_index_entry_stage(const git_index_entry *entry)
 
 typedef struct read_tree_data {
 	git_index *index;
-	git_transfer_progress *stats;
+	git_vector *old_entries;
 } read_tree_data;
 
-static int read_tree_cb(const char *root, const git_tree_entry *tentry, void *data)
+static int read_tree_cb(
+	const char *root, const git_tree_entry *tentry, void *payload)
 {
-	git_index *index = (git_index *)data;
-	git_index_entry *entry = NULL;
+	read_tree_data *data = payload;
+	git_index_entry *entry = NULL, *old_entry;
 	git_buf path = GIT_BUF_INIT;
 
 	if (git_tree_entry__is_tree(tentry))
@@ -1972,6 +1976,25 @@ static int read_tree_cb(const char *root, const git_tree_entry *tentry, void *da
 	entry->mode = tentry->attr;
 	entry->oid = tentry->oid;
 
+	/* look for corresponding old entry and copy data to new entry */
+	if (data->old_entries) {
+		size_t pos;
+		struct entry_srch_key skey;
+
+		skey.path = path.ptr;
+		skey.stage = 0;
+
+		if (!git_vector_bsearch2(
+				&pos, data->old_entries, data->index->entries_search, &skey) &&
+			(old_entry = git_vector_get(data->old_entries, pos)) != NULL &&
+			entry->mode == old_entry->mode &&
+			git_oid_equal(&entry->oid, &old_entry->oid))
+		{
+			memcpy(entry, old_entry, sizeof(*entry));
+			entry->flags_extended = 0;
+		}
+	}
+
 	if (path.size < GIT_IDXENTRY_NAMEMASK)
 		entry->flags = path.size & GIT_IDXENTRY_NAMEMASK;
 	else
@@ -1980,7 +2003,7 @@ static int read_tree_cb(const char *root, const git_tree_entry *tentry, void *da
 	entry->path = git_buf_detach(&path);
 	git_buf_free(&path);
 
-	if (git_vector_insert(&index->entries, entry) < 0) {
+	if (git_vector_insert(&data->index->entries, entry) < 0) {
 		index_entry_free(entry);
 		return -1;
 	}
@@ -1990,9 +2013,26 @@ static int read_tree_cb(const char *root, const git_tree_entry *tentry, void *da
 
 int git_index_read_tree(git_index *index, const git_tree *tree)
 {
+	int error = 0;
+	git_vector entries = GIT_VECTOR_INIT;
+	read_tree_data data;
+
+	git_vector_sort(&index->entries);
+
+	entries._cmp = index->entries._cmp;
+	git_vector_swap(&entries, &index->entries);
+
 	git_index_clear(index);
 
-	return git_tree_walk(tree, GIT_TREEWALK_POST, read_tree_cb, index);
+	data.index = index;
+	data.old_entries = &entries;
+
+	error = git_tree_walk(tree, GIT_TREEWALK_POST, read_tree_cb, &data);
+
+	index_entries_free(&entries);
+	git_vector_sort(&index->entries);
+
+	return error;
 }
 
 git_repository *git_index_owner(const git_index *index)
