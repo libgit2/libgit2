@@ -174,8 +174,10 @@ int git_signature__parse(git_signature *sig, const char **buffer_out,
 			tz_start = time_end + 1;
 
 			if ((tz_start[0] != '-' && tz_start[0] != '+') ||
-				git__strtol32(&offset, tz_start + 1, &tz_end, 10) < 0)
-				return signature_error("malformed timezone");
+				git__strtol32(&offset, tz_start + 1, &tz_end, 10) < 0) {
+				//malformed timezone, just assume it's zero
+				offset = 0;
+			}
 
 			hours = offset / 100;
 			mins = offset % 100;
