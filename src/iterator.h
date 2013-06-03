@@ -142,9 +142,9 @@ GIT_INLINE(int) git_iterator_advance(
  *
  * If the current item is not a tree, this is a no-op.
  *
- * For working directory iterators only, a tree (i.e. directory) can be
- * empty.  In that case, this function returns GIT_ENOTFOUND and does not
- * advance.  That can't happen for tree and index iterators.
+ * For filesystem and working directory iterators, a tree (i.e. directory)
+ * can be empty.  In that case, this function returns GIT_ENOTFOUND and
+ * does not advance.  That can't happen for tree and index iterators.
  */
 GIT_INLINE(int) git_iterator_advance_into(
 	const git_index_entry **entry, git_iterator *iter)
@@ -152,18 +152,50 @@ GIT_INLINE(int) git_iterator_advance_into(
 	return iter->cb->advance_into(entry, iter);
 }
 
+/**
+ * Advance into a tree or skip over it if it is empty.
+ *
+ * Because `git_iterator_advance_into` may return GIT_ENOTFOUND if the
+ * directory is empty (only with filesystem and working directory
+ * iterators) and a common response is to just call `git_iterator_advance`
+ * when that happens, this bundles the two into a single simple call.
+ */
+GIT_INLINE(int) git_iterator_advance_into_or_over(
+	const git_index_entry **entry, git_iterator *iter)
+{
+	int error = iter->cb->advance_into(entry, iter);
+	if (error == GIT_ENOTFOUND) {
+		giterr_clear();
+		error = iter->cb->advance(entry, iter);
+	}
+	return error;
+}
+
+/* Seek is currently unimplemented */
 GIT_INLINE(int) git_iterator_seek(
 	git_iterator *iter, const char *prefix)
 {
 	return iter->cb->seek(iter, prefix);
 }
 
+/**
+ * Go back to the start of the iteration.
+ *
+ * This resets the iterator to the start of the iteration.  It also allows
+ * you to reset the `start` and `end` pathname boundaries of the iteration
+ * when doing so.
+ */
 GIT_INLINE(int) git_iterator_reset(
 	git_iterator *iter, const char *start, const char *end)
 {
 	return iter->cb->reset(iter, start, end);
 }
 
+/**
+ * Check if the iterator is at the end
+ *
+ * @return 0 if not at end, >0 if at end
+ */
 GIT_INLINE(int) git_iterator_at_end(git_iterator *iter)
 {
 	return iter->cb->at_end(iter);

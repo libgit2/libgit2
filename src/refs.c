@@ -95,123 +95,15 @@ void git_reference_free(git_reference *reference)
 	if (reference->type == GIT_REF_SYMBOLIC)
 		git__free(reference->target.symbolic);
 
+	if (reference->db)
+		GIT_REFCOUNT_DEC(reference->db, git_refdb__free);
+
 	git__free(reference);
-}
-
-struct reference_available_t {
-	const char *new_ref;
-	const char *old_ref;
-	int available;
-};
-
-static int _reference_available_cb(const char *ref, void *data)
-{
-	struct reference_available_t *d;
-
-	assert(ref && data);
-	d = (struct reference_available_t *)data;
-
-	if (!d->old_ref || strcmp(d->old_ref, ref)) {
-		size_t reflen = strlen(ref);
-		size_t newlen = strlen(d->new_ref);
-		size_t cmplen = reflen < newlen ? reflen : newlen;
-		const char *lead = reflen < newlen ? d->new_ref : ref;
-
-		if (!strncmp(d->new_ref, ref, cmplen) && lead[cmplen] == '/') {
-			d->available = 0;
-			return -1;
-		}
-	}
-
-	return 0;
-}
-
-static int reference_path_available(
-	git_repository *repo,
-	const char *ref,
-	const char* old_ref)
-{
-	int error;
-	struct reference_available_t data;
-
-	data.new_ref = ref;
-	data.old_ref = old_ref;
-	data.available = 1;
-
-	error = git_reference_foreach(
-		repo, _reference_available_cb, (void *)&data);
-	if (error < 0)
-		return error;
-
-	if (!data.available) {
-		giterr_set(GITERR_REFERENCE,
-			"The path to reference '%s' collides with an existing one", ref);
-		return -1;
-	}
-
-	return 0;
-}
-
-/*
- * Check if a reference could be written to disk, based on:
- *
- *	- Whether a reference with the same name already exists,
- *	and we are allowing or disallowing overwrites
- *
- *	- Whether the name of the reference would collide with
- *	an existing path
- */
-static int reference_can_write(
-	git_repository *repo,
-	const char *refname,
-	const char *previous_name,
-	int force)
-{
-	git_refdb *refdb;
-
-	if (git_repository_refdb__weakptr(&refdb, repo) < 0)
-		return -1;
-
-	/* see if the reference shares a path with an existing reference;
-	 * if a path is shared, we cannot create the reference, even when forcing */
-	if (reference_path_available(repo, refname, previous_name) < 0)
-		return -1;
-
-	/* check if the reference actually exists, but only if we are not forcing
-	 * the rename. If we are forcing, it's OK to overwrite */
-	if (!force) {
-		int exists;
-
-		if (git_refdb_exists(&exists, refdb, refname) < 0)
-			return -1;
-
-		/* We cannot proceed if the reference already exists and we're not forcing
-		 * the rename; the existing one would be overwritten */
-		if (exists) {
-			giterr_set(GITERR_REFERENCE,
-				"A reference with that name (%s) already exists", refname);
-			return GIT_EEXISTS;
-		}
-	}
-
-	/* FIXME: if the reference exists and we are forcing, do we really need to
-	 * remove the reference first?
-	 *
-	 * Two cases:
-	 *
-	 *	- the reference already exists and is loose: not a problem, the file
-	 *	gets overwritten on disk
-	 *
-	 *	- the reference already exists and is packed: we write a new one as
-	 *	loose, which by all means renders the packed one useless
-	 */
-
-	return 0;
 }
 
 int git_reference_delete(git_reference *ref)
 {
-	return git_refdb_delete(ref->db, ref);
+	return git_refdb_delete(ref->db, ref->name);
 }
 
 int git_reference_lookup(git_reference **ref_out,
@@ -418,22 +310,24 @@ static int reference__create(
 	if (ref_out)
 		*ref_out = NULL;
 
-	if ((error = git_reference__normalize_name_lax(normalized, sizeof(normalized), name)) < 0 ||
-		(error = reference_can_write(repo, normalized, NULL, force)) < 0 ||
-		(error = git_repository_refdb__weakptr(&refdb, repo)) < 0)
+	error = git_reference__normalize_name_lax(normalized, sizeof(normalized), name);
+	if (error < 0)
+		return error;
+
+	error = git_repository_refdb__weakptr(&refdb, repo);
+	if (error < 0)
 		return error;
 
 	if (oid != NULL) {
 		assert(symbolic == NULL);
-		ref = git_reference__alloc(name, oid, NULL);
+		ref = git_reference__alloc(normalized, oid, NULL);
 	} else {
-		ref = git_reference__alloc_symbolic(name, symbolic);
+		ref = git_reference__alloc_symbolic(normalized, symbolic);
 	}
 
 	GITERR_CHECK_ALLOC(ref);
-	ref->db = refdb;
 
-	if ((error = git_refdb_write(refdb, ref)) < 0) {
+	if ((error = git_refdb_write(refdb, ref, force)) < 0) {
 		git_reference_free(ref);
 		return error;
 	}
@@ -530,76 +424,41 @@ int git_reference_rename(
 	unsigned int normalization_flags;
 	char normalized[GIT_REFNAME_MAX];
 	bool should_head_be_updated = false;
-	git_reference *result = NULL;
 	int error = 0;
 	int reference_has_log;
-
-	*out = NULL;
 
 	normalization_flags = ref->type == GIT_REF_SYMBOLIC ?
 		GIT_REF_FORMAT_ALLOW_ONELEVEL : GIT_REF_FORMAT_NORMAL;
 
 	if ((error = git_reference_normalize_name(
-			normalized, sizeof(normalized), new_name, normalization_flags)) < 0 ||
-		(error = reference_can_write(ref->db->repo, normalized, ref->name, force)) < 0)
+			normalized, sizeof(normalized), new_name, normalization_flags)) < 0)
 		return error;
-
-	/*
-	 * Create the new reference.
-	 */
-	if (ref->type == GIT_REF_OID) {
-		result = git_reference__alloc(new_name, &ref->target.oid, &ref->peel);
-	} else if (ref->type == GIT_REF_SYMBOLIC) {
-		result = git_reference__alloc_symbolic(new_name, ref->target.symbolic);
-	} else {
-		assert(0);
-	}
-
-	if (result == NULL)
-		return -1;
-
-	result->db = ref->db;
 
 	/* Check if we have to update HEAD. */
 	if ((error = git_branch_is_head(ref)) < 0)
-		goto on_error;
+		return error;
 
 	should_head_be_updated = (error > 0);
 
-	/* Now delete the old ref and save the new one. */
-	if ((error = git_refdb_delete(ref->db, ref)) < 0)
-		goto on_error;
-
-	/* Save the new reference. */
-	if ((error = git_refdb_write(ref->db, result)) < 0)
-		goto rollback;
+	if ((error = git_refdb_rename(out, ref->db, ref->name, new_name, force)) < 0)
+		return error;
 
 	/* Update HEAD it was poiting to the reference being renamed. */
-	if (should_head_be_updated && (error = git_repository_set_head(ref->db->repo, new_name)) < 0) {
+	if (should_head_be_updated &&
+		(error = git_repository_set_head(ref->db->repo, new_name)) < 0) {
 		giterr_set(GITERR_REFERENCE, "Failed to update HEAD after renaming reference");
-		goto on_error;
+		return error;
 	}
 
 	/* Rename the reflog file, if it exists. */
 	reference_has_log = git_reference_has_log(ref);
-	if (reference_has_log < 0) {
-		error = reference_has_log;
-		goto on_error;
-	}
+	if (reference_has_log < 0)
+		return reference_has_log;
+
 	if (reference_has_log && (error = git_reflog_rename(ref, new_name)) < 0)
-		goto on_error;
+		return error;
 
-	*out = result;
-
-	return error;
-
-rollback:
-	git_refdb_write(ref->db, ref);
-
-on_error:
-	git_reference_free(result);
-
-	return error;
+	return 0;
 }
 
 int git_reference_resolve(git_reference **ref_out, const git_reference *ref)
@@ -623,14 +482,69 @@ int git_reference_foreach(
 	void *payload)
 {
 	git_reference_iterator *iter;
-	const char *name;
+	git_reference *ref;
 	int error;
 
 	if (git_reference_iterator_new(&iter, repo) < 0)
 		return -1;
 
-	while ((error = git_reference_next(&name, iter)) == 0) {
-		if (callback(name, payload)) {
+	while ((error = git_reference_next(&ref, iter)) == 0) {
+		if (callback(ref, payload)) {
+			error = GIT_EUSER;
+			goto out;
+		}
+	}
+
+	if (error == GIT_ITEROVER)
+		error = 0;
+
+out:
+	git_reference_iterator_free(iter);
+	return error;
+}
+
+int git_reference_foreach_name(
+	git_repository *repo,
+	git_reference_foreach_name_cb callback,
+	void *payload)
+{
+	git_reference_iterator *iter;
+	const char *refname;
+	int error;
+
+	if (git_reference_iterator_new(&iter, repo) < 0)
+		return -1;
+
+	while ((error = git_reference_next_name(&refname, iter)) == 0) {
+		if (callback(refname, payload)) {
+			error = GIT_EUSER;
+			goto out;
+		}
+	}
+
+	if (error == GIT_ITEROVER)
+		error = 0;
+
+out:
+	git_reference_iterator_free(iter);
+	return error;
+}
+
+int git_reference_foreach_glob(
+	git_repository *repo,
+	const char *glob,
+	git_reference_foreach_name_cb callback,
+	void *payload)
+{
+	git_reference_iterator *iter;
+	const char *refname;
+	int error;
+
+	if (git_reference_iterator_glob_new(&iter, repo, glob) < 0)
+		return -1;
+
+	while ((error = git_reference_next_name(&refname, iter)) == 0) {
+		if (callback(refname, payload)) {
 			error = GIT_EUSER;
 			goto out;
 		}
@@ -651,22 +565,28 @@ int git_reference_iterator_new(git_reference_iterator **out, git_repository *rep
 	if (git_repository_refdb__weakptr(&refdb, repo) < 0)
 		return -1;
 
-	return git_refdb_iterator(out, refdb);
+	return git_refdb_iterator(out, refdb, NULL);
 }
 
-int git_reference_iterator_glob_new(git_reference_iterator **out, git_repository *repo, const char *glob)
+int git_reference_iterator_glob_new(
+	git_reference_iterator **out, git_repository *repo, const char *glob)
 {
 	git_refdb *refdb;
 
 	if (git_repository_refdb__weakptr(&refdb, repo) < 0)
 		return -1;
 
-	return git_refdb_iterator_glob(out, refdb, glob);
+	return git_refdb_iterator(out, refdb, glob);
 }
 
-int git_reference_next(const char **out, git_reference_iterator *iter)
+int git_reference_next(git_reference **out, git_reference_iterator *iter)
 {
-	return git_refdb_next(out, iter);
+	return git_refdb_iterator_next(out, iter);
+}
+
+int git_reference_next_name(const char **out, git_reference_iterator *iter)
+{
+	return git_refdb_iterator_next_name(out, iter);
 }
 
 void git_reference_iterator_free(git_reference_iterator *iter)
@@ -693,7 +613,7 @@ int git_reference_list(
 	if (git_vector_init(&ref_list, 8, NULL) < 0)
 		return -1;
 
-	if (git_reference_foreach(
+	if (git_reference_foreach_name(
 			repo, &cb__reflist_add, (void *)&ref_list) < 0) {
 		git_vector_free(&ref_list);
 		return -1;
@@ -989,34 +909,6 @@ int git_reference__update_terminal(
 	const git_oid *oid)
 {
 	return reference__update_terminal(repo, ref_name, oid, 0);
-}
-
-int git_reference_foreach_glob(
-	git_repository *repo,
-	const char *glob,
-	git_reference_foreach_cb callback,
-	void *payload)
-{
-	git_reference_iterator *iter;
-	const char *name;
-	int error;
-
-	if (git_reference_iterator_glob_new(&iter, repo, glob) < 0)
-		return -1;
-
-	while ((error = git_reference_next(&name, iter)) == 0) {
-		if (callback(name, payload)) {
-			error = GIT_EUSER;
-			goto out;
-		}
-	}
-
-	if (error == GIT_ITEROVER)
-		error = 0;
-
-out:
-	git_reference_iterator_free(iter);
-	return error;
 }
 
 int git_reference_has_log(

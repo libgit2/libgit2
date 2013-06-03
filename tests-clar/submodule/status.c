@@ -370,12 +370,9 @@ void test_submodule_status__iterator(void)
 
 	cl_git_pass(git_iterator_for_workdir(&iter, g_repo,
 		GIT_ITERATOR_IGNORE_CASE | GIT_ITERATOR_INCLUDE_TREES, NULL, NULL));
-	cl_git_pass(git_iterator_current(&entry, iter));
 
-	for (i = 0; entry; ++i) {
+	for (i = 0; !git_iterator_advance(&entry, iter); ++i)
 		cl_assert_equal_s(expected[i], entry->path);
-		cl_git_pass(git_iterator_advance(&entry, iter));
-	}
 
 	git_iterator_free(iter);
 
