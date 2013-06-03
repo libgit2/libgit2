@@ -257,11 +257,6 @@ GIT_EXTERN(int) git_reference_set_target(
  * The new name will be checked for validity.
  * See `git_reference_create_symbolic()` for rules about valid names.
  *
- * On success, the given git_reference will be deleted from disk and a
- * new `git_reference` will be returned.
- *
- * The reference will be immediately renamed in-memory and on disk.
- *
  * If the `force` flag is not enabled, and there's already
  * a reference with the given name, the renaming will fail.
  *
@@ -277,7 +272,7 @@ GIT_EXTERN(int) git_reference_set_target(
  *
  */
 GIT_EXTERN(int) git_reference_rename(
-	git_reference **out,
+	git_reference **new_ref,
 	git_reference *ref,
 	const char *new_name,
 	int force);
@@ -308,7 +303,8 @@ GIT_EXTERN(int) git_reference_delete(git_reference *ref);
  */
 GIT_EXTERN(int) git_reference_list(git_strarray *array, git_repository *repo);
 
-typedef int (*git_reference_foreach_cb)(const char *refname, void *payload);
+typedef int (*git_reference_foreach_cb)(git_reference *reference, void *payload);
+typedef int (*git_reference_foreach_name_cb)(const char *name, void *payload);
 
 /**
  * Perform a callback on each reference in the repository.
@@ -326,6 +322,11 @@ typedef int (*git_reference_foreach_cb)(const char *refname, void *payload);
 GIT_EXTERN(int) git_reference_foreach(
 	git_repository *repo,
 	git_reference_foreach_cb callback,
+	void *payload);
+
+GIT_EXTERN(int) git_reference_foreach_name(
+	git_repository *repo,
+	git_reference_foreach_name_cb callback,
 	void *payload);
 
 /**
@@ -351,7 +352,9 @@ GIT_EXTERN(int) git_reference_cmp(git_reference *ref1, git_reference *ref2);
  * @param repo the repository
  * @return 0 or an error code
  */
-GIT_EXTERN(int) git_reference_iterator_new(git_reference_iterator **out, git_repository *repo);
+GIT_EXTERN(int) git_reference_iterator_new(
+	git_reference_iterator **out,
+	git_repository *repo);
 
 /**
  * Create an iterator for the repo's references that match the
@@ -362,16 +365,21 @@ GIT_EXTERN(int) git_reference_iterator_new(git_reference_iterator **out, git_rep
  * @param glob the glob to match against the reference names
  * @return 0 or an error code
  */
-GIT_EXTERN(int) git_reference_iterator_glob_new(git_reference_iterator **out, git_repository *repo, const char *glob);
+GIT_EXTERN(int) git_reference_iterator_glob_new(
+	git_reference_iterator **out,
+	git_repository *repo,
+	const char *glob);
 
 /**
- * Get the next reference name
+ * Get the next reference
  *
- * @param out pointer in which to store the string
+ * @param out pointer in which to store the reference
  * @param iter the iterator
  * @param 0, GIT_ITEROVER if there are no more; or an error code
  */
-GIT_EXTERN(int) git_reference_next(const char **out, git_reference_iterator *iter);
+GIT_EXTERN(int) git_reference_next(git_reference **out, git_reference_iterator *iter);
+
+GIT_EXTERN(int) git_reference_next_name(const char **out, git_reference_iterator *iter);
 
 /**
  * Free the iterator and its associated resources
@@ -401,7 +409,7 @@ GIT_EXTERN(void) git_reference_iterator_free(git_reference_iterator *iter);
 GIT_EXTERN(int) git_reference_foreach_glob(
 	git_repository *repo,
 	const char *glob,
-	git_reference_foreach_cb callback,
+	git_reference_foreach_name_cb callback,
 	void *payload);
 
 /**

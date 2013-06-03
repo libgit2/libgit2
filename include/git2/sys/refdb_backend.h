@@ -33,8 +33,27 @@ GIT_BEGIN_DECL
  * and assign `iter->parent.backend` to your `git_refdb_backend`.
  */
 struct git_reference_iterator {
-	git_refdb_backend *backend;
-	char *glob;
+	git_refdb *db;
+
+	/**
+	 * Return the current reference and advance the iterator.
+	 */
+	int (*next)(
+		git_reference **ref,
+		git_reference_iterator *iter);
+
+	/**
+	 * Return the name of the current reference and advance the iterator
+	 */
+	int (*next_name)(
+		const char **ref_name,
+		git_reference_iterator *iter);
+
+	/**
+	 * Free the iterator
+	 */
+	void (*free)(
+		git_reference_iterator *iter);
 };
 
 /** An instance for a custom backend */
@@ -66,46 +85,25 @@ struct git_refdb_backend {
 	 */
 	int (*iterator)(
 		git_reference_iterator **iter,
-		struct git_refdb_backend *backend);
-
-	/**
-	 * Allocate a glob-filtering iterator object for the backend.
-	 *
-	 * A refdb implementation may provide this function. If it's
-	 * not available, the glob matching will be done by the frontend.
-	 */
-	int (*iterator_glob)(
-		git_reference_iterator **iter,
 		struct git_refdb_backend *backend,
 		const char *glob);
 
-	/**
-	 * Return the current value and advance the iterator.
-	 *
-	 * A refdb implementation must provide this function.
-	 */
-	int (*next)(
-		const char **name,
-		git_reference_iterator *iter);
-
-	/**
-	 * Free the iterator
-	 *
-	 * A refdb implementation must provide this function.
-	 */
-	void (*iterator_free)(
-		git_reference_iterator *iter);
 	/*
 	 * Writes the given reference to the refdb.  A refdb implementation
 	 * must provide this function.
 	 */
-	int (*write)(git_refdb_backend *backend, const git_reference *ref);
+	int (*write)(git_refdb_backend *backend,
+		const git_reference *ref, int force);
+
+	int (*rename)(
+		git_reference **out, git_refdb_backend *backend,
+		const char *old_name, const char *new_name, int force);
 
 	/**
 	 * Deletes the given reference from the refdb.  A refdb implementation
 	 * must provide this function.
 	 */
-	int (*delete)(git_refdb_backend *backend, const git_reference *ref);
+	int (*delete)(git_refdb_backend *backend, const char *ref_name);
 
 	/**
 	 * Suggests that the given refdb compress or optimize its references.

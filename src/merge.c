@@ -1259,7 +1259,8 @@ int git_merge_diff_list__find_differences(
 
 	/* Set up the iterators */
 	for (i = 0; i < 3; i++) {
-		if ((error = git_iterator_current(&items[i], iterators[i])) < 0)
+		error = git_iterator_current(&items[i], iterators[i]);
+		if (error < 0 && error != GIT_ITEROVER)
 			goto done;
 	}
 
@@ -1313,11 +1314,16 @@ int git_merge_diff_list__find_differences(
 			error = merge_index_insert_conflict(diff_list, &df_data, cur_items);
 		else
 			error = merge_index_insert_unmodified(diff_list, cur_items);
+		if (error < 0)
+			goto done;
 
 		/* Advance each iterator that participated */
 		for (i = 0; i < 3; i++) {
-			if (cur_items[i] != NULL &&
-				(error = git_iterator_advance(&items[i], iterators[i])) < 0)
+			if (cur_items[i] == NULL)
+				continue;
+
+			error = git_iterator_advance(&items[i], iterators[i]);
+			if (error < 0 && error != GIT_ITEROVER)
 				goto done;
 		}
 	}
@@ -1325,6 +1331,9 @@ int git_merge_diff_list__find_differences(
 done:
 	for (i = 0; i < 3; i++)
 		git_iterator_free(iterators[i]);
+
+	if (error == GIT_ITEROVER)
+		error = 0;
 
 	return error;
 }
