@@ -277,7 +277,7 @@ int git_futils_mkdir(
 	mode_t mode,
 	uint32_t flags)
 {
-	int error = -1;
+	int error = -1, tmp_errno;
 	git_buf make_path = GIT_BUF_INIT;
 	ssize_t root = 0;
 	char lastch, *tail;
@@ -345,18 +345,26 @@ int git_futils_mkdir(
 
 				already_exists = 1;
 				break;
+#ifdef GIT_WIN32
+			case EACCES:
+#endif
 			case ENOSYS:
-				/* Solaris can generate this error if you try to mkdir
-				 * a path which is already a mount point. In that case,
-				 * the path does already exist; but it's not implied by
+				/* The following errors can be generated if:
+				 * EACCES - Win32 can generate this error if you try to mkdir
+				 *          a path which is the root of a volume.
+				 * ENOSYS - Solaris can generate a ENOSYS error if you try to mkdir
+				 *          a path which is already a mount point.
+				 * In these cases, the path does already exist; but it's not implied by
 				 * the definition of the error, so let's recheck */
+				tmp_errno = errno;
+
 				if (git_path_isdir(make_path.ptr)) {
 					already_exists = 1;
 					break;
 				}
 
 				/* Fall through */
-				errno = ENOSYS;
+				errno = tmp_errno;
 			default:
 				giterr_set(GITERR_OS, "Failed to make directory '%s'",
 					make_path.ptr);
