@@ -277,9 +277,9 @@ int git_futils_mkdir(
 	mode_t mode,
 	uint32_t flags)
 {
-	int error = -1, tmp;
+	int error = -1, tmp_errno;
 	git_buf make_path = GIT_BUF_INIT;
-	ssize_t root = 0;
+	ssize_t root = 0, min_root_len;
 	char lastch, *tail;
 
 	/* build path and find "root" where we should start calling mkdir */
@@ -316,9 +316,9 @@ int git_futils_mkdir(
 		root = 0;
 
 	/* make sure mkdir root is at least after filesystem root */
-	tmp = git_path_root(make_path.ptr);
-	if (root < tmp)
-		root = tmp;
+	min_root_len = git_path_root(make_path.ptr);
+	if (root < min_root_len)
+		root = min_root_len;
 
 	tail = & make_path.ptr[root];
 
@@ -357,7 +357,7 @@ int git_futils_mkdir(
 				 * or at the root of a volume.  If the path is a dir, just
 				 * treat as EEXIST.
 				 */
-				tmp = errno;
+				tmp_errno = errno;
 
 				if (git_path_isdir(make_path.ptr)) {
 					already_exists = 1;
@@ -365,7 +365,7 @@ int git_futils_mkdir(
 				}
 
 				/* Fall through */
-				errno = tmp;
+				errno = tmp_errno;
 			default:
 				giterr_set(GITERR_OS, "Failed to make directory '%s'",
 					make_path.ptr);
