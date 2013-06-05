@@ -277,10 +277,10 @@ int git_futils_mkdir(
 	mode_t mode,
 	uint32_t flags)
 {
-	int error = -1, verify_final;
+	int error = -1;
 	git_buf make_path = GIT_BUF_INIT;
 	ssize_t root = 0, min_root_len;
-	char lastch, *tail;
+	char lastch = '/', *tail;
 	struct stat st;
 
 	/* build path and find "root" where we should start calling mkdir */
@@ -306,27 +306,32 @@ int git_futils_mkdir(
 	if ((flags & GIT_MKDIR_SKIP_LAST) != 0)
 		git_buf_rtruncate_at_char(&make_path, '/');
 
+	/* if nothing left after truncation, then we're done! */
+	if (!make_path.size) {
+		error = 0;
+		goto done;
+	}
+
 	/* if we are not supposed to make the whole path, reset root */
 	if ((flags & GIT_MKDIR_PATH) == 0)
 		root = git_buf_rfind(&make_path, '/');
 
+	/* advance root past drive name or network mount prefix */
+	min_root_len = git_path_root(make_path.ptr);
+	if (root < min_root_len)
+		root = min_root_len;
+	while (make_path.ptr[root] == '/')
+		++root;
+
 	/* clip root to make_path length */
-	if (root >= (ssize_t)make_path.size)
-		root = (ssize_t)make_path.size - 1;
+	if (root > (ssize_t)make_path.size)
+		root = (ssize_t)make_path.size; /* i.e. NUL byte of string */
 	if (root < 0)
 		root = 0;
 
-	tail = &make_path.ptr[root];
+	/* walk down tail of path making each directory */
+	for (tail = &make_path.ptr[root]; *tail; *tail = lastch) {
 
-	/* is there any path to make? */
-	verify_final = ((flags & GIT_MKDIR_VERIFY_DIR) != 0) && (*tail != 0);
-
-	/* make sure mkdir root is at least after filesystem root */
-	min_root_len = git_path_root(make_path.ptr);
-	if (root < min_root_len)
-		tail = &make_path.ptr[min_root_len];
-
-	while (*tail) {
 		/* advance tail to include next path component */
 		while (*tail == '/')
 			tail++;
@@ -345,45 +350,35 @@ int git_futils_mkdir(
 			/* ignore error if directory already exists */
 			if (p_stat(make_path.ptr, &st) < 0 || !S_ISDIR(st.st_mode)) {
 				errno = tmp_errno;
-				giterr_set(GITERR_OS, "Failed to make directory '%s'",
-					make_path.ptr);
+				giterr_set(GITERR_OS, "Failed to make directory '%s'", make_path.ptr);
 				goto done;
 			}
 
 			/* with exclusive create, existing dir is an error */
 			if ((flags & GIT_MKDIR_EXCL) != 0) {
-				giterr_set(GITERR_OS, "Directory already exists '%s'",
-					make_path.ptr);
+				giterr_set(GITERR_OS, "Directory already exists '%s'", make_path.ptr);
 				error = GIT_EEXISTS;
 				goto done;
 			}
 		}
 
 		/* chmod if requested and necessary */
-		if ((flags & GIT_MKDIR_CHMOD_PATH) != 0 ||
-			(lastch == '\0' && (flags & GIT_MKDIR_CHMOD) != 0))
-		{
-			if (st.st_mode != mode && p_chmod(make_path.ptr, mode) < 0) {
-				giterr_set(GITERR_OS, "Failed to set permissions on '%s'",
-					make_path.ptr);
-				goto done;
-			}
+		if (((flags & GIT_MKDIR_CHMOD_PATH) != 0 ||
+			 (lastch == '\0' && (flags & GIT_MKDIR_CHMOD) != 0)) &&
+			st.st_mode != mode &&
+			(error = p_chmod(make_path.ptr, mode)) < 0) {
+			giterr_set(GITERR_OS, "Failed to set permissions on '%s'", make_path.ptr);
+			goto done;
 		}
-
-		/* if we made it to the end, then final isdir check is not needed */
-		if (lastch == '\0')
-			verify_final = false;
-
-		*tail = lastch;
 	}
 
 	error = 0;
 
 	/* check that full path really is a directory if requested & needed */
-	if (verify_final &&
+	if ((flags & GIT_MKDIR_VERIFY_DIR) != 0 &&
+		lastch != '\0' &&
 		(p_stat(make_path.ptr, &st) < 0 || !S_ISDIR(st.st_mode))) {
-		giterr_set(
-			GITERR_OS, "Path is not a directory '%s'", make_path.ptr);
+		giterr_set(GITERR_OS, "Path is not a directory '%s'", make_path.ptr);
 		error = GIT_ENOTFOUND;
 	}
 
