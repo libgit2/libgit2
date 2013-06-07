@@ -293,8 +293,7 @@ GIT_INLINE(bool) git__iswildcard(int c)
 }
 
 /*
- * Parse a string value as a boolean, just like Core Git
- * does.
+ * Parse a string value as a boolean, just like Core Git does.
  *
  * Valid values for true are: 'true', 'yes', 'on'
  * Valid values for false are: 'false', 'no', 'off'
@@ -309,7 +308,7 @@ extern int git__parse_bool(int *out, const char *value);
  * - "July 17, 2003"
  * - "2003-7-17 08:23"
  */
-int git__date_parse(git_time_t *out, const char *date);
+extern int git__date_parse(git_time_t *out, const char *date);
 
 /*
  * Unescapes a string in-place.
@@ -319,5 +318,11 @@ int git__date_parse(git_time_t *out, const char *date);
  * - "chan\\" -> "chan\"
  */
 extern size_t git__unescape(char *str);
+
+/*
+ * Memset that will not be optimized away by the compiler.
+ * You usually should just use regular `memset()`.
+ */
+extern void git__memset(void *data, int c, size_t size);
 
 #endif /* INCLUDE_util_h__ */

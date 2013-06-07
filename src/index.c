@@ -349,7 +349,7 @@ static void index_free(git_index *index)
 
 	git__free(index->index_file_path);
 
-	memset(index, 0, sizeof(*index));
+	git__memset(index, 0, sizeof(*index));
 	git__free(index);
 }
 

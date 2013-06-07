@@ -464,7 +464,7 @@ static void diff_list_free(git_diff_list *diff)
 	git_pathspec_free(&diff->pathspec);
 	git_pool_clear(&diff->pool);
 
-	memset(diff, 0, sizeof(*diff));
+	git__memset(diff, 0, sizeof(*diff));
 	git__free(diff);
 }
 

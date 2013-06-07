@@ -89,7 +89,7 @@ int git_refdb_compress(git_refdb *db)
 static void refdb_free(git_refdb *db)
 {
 	refdb_free_backend(db);
-	memset(db, 0, sizeof(*db));
+	git__memset(db, 0, sizeof(*db));
 	git__free(db);
 }
 

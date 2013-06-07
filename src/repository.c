@@ -113,7 +113,7 @@ void git_repository_free(git_repository *repo)
 	git__free(repo->workdir);
 	git__free(repo->namespace);
 
-	memset(repo, 0, sizeof(*repo));
+	git__memset(repo, 0, sizeof(*repo));
 	git__free(repo);
 }
 
@@ -140,11 +140,9 @@ static bool valid_repository_path(git_buf *repository_path)
 
 static git_repository *repository_alloc(void)
 {
-	git_repository *repo = git__malloc(sizeof(git_repository));
+	git_repository *repo = git__calloc(1, sizeof(git_repository));
 	if (!repo)
 		return NULL;
-
-	memset(repo, 0x0, sizeof(git_repository));
 
 	if (git_cache_init(&repo->objects) < 0) {
 		git__free(repo);

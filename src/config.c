@@ -47,7 +47,7 @@ static void config_free(git_config *cfg)
 
 	git_vector_free(&cfg->files);
 
-	memset(cfg, 0, sizeof(*cfg));
+	git__memset(cfg, 0, sizeof(*cfg));
 	git__free(cfg);
 }
 

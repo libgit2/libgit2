@@ -590,7 +590,7 @@ static void odb_free(git_odb *db)
 	git_vector_free(&db->backends);
 	git_cache_free(&db->own_cache);
 
-	memset(db, 0, sizeof(*db));
+	git__memset(db, 0, sizeof(*db));
 	git__free(db);
 }
 

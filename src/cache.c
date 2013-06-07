@@ -107,7 +107,7 @@ void git_cache_free(git_cache *cache)
 	git_cache_clear(cache);
 	git_oidmap_free(cache->map);
 	git_mutex_free(&cache->lock);
-	memset(cache, 0, sizeof(*cache));
+	git__memset(cache, 0, sizeof(*cache));
 }
 
 /* Called with lock */
