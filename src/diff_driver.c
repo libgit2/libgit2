@@ -16,6 +16,8 @@
 #include "map.h"
 #include "buf_text.h"
 
+GIT__USE_STRMAP;
+
 typedef enum {
 	DIFF_DRIVER_AUTO = 0,
 	DIFF_DRIVER_FALSE = 1,
@@ -33,7 +35,7 @@ enum {
 struct git_diff_driver {
 	git_diff_driver_t type;
 	git_strarray fn_patterns;
-	int binary;
+	int binary; /* 0 => treat as text, 1 => treat as binary, -1 => auto */
 };
 
 struct git_diff_driver_registry {
@@ -49,17 +51,45 @@ static git_diff_driver global_drivers[3] = {
 
 git_diff_driver_registry *git_diff_driver_registry_new()
 {
-	return git__calloc(1, sizeof(git_diff_driver_registry));
+	git_diff_driver_registry *reg =
+		git__calloc(1, sizeof(git_diff_driver_registry));
+	if (!reg)
+		return NULL;
+
+	if (git_pool_init(&reg->strings, 1, 0) < 0 ||
+		(reg->drivers = git_strmap_alloc()) == NULL)
+	{
+		git_diff_driver_registry_free(reg);
+		return NULL;
+	}
+
+	return reg;
 }
 
 void git_diff_driver_registry_free(git_diff_driver_registry *reg)
 {
+	if (!reg)
+		return;
+
+	git_strmap_free(reg->drivers);
+	git_pool_clear(&reg->strings);
 	git__free(reg);
+}
+
+static int git_diff_driver_load(
+	git_diff_driver **out, git_repository *repo, const char *name)
+{
+	GIT_UNUSED(out);
+	GIT_UNUSED(repo);
+	GIT_UNUSED(name);
+
+	return GIT_ENOTFOUND;
 }
 
 int git_diff_driver_lookup(
 	git_diff_driver **out, git_repository *repo, const char *path)
 {
+	int error = 0;
 	const char *value;
 
 	assert(out);
@@ -67,8 +97,8 @@ int git_diff_driver_lookup(
 	if (!repo || !path || !strlen(path))
 		goto use_auto;
 
-	if (git_attr_get(&value, repo, 0, path, "diff") < 0)
-		return -1;
+	if ((error = git_attr_get(&value, repo, 0, path, "diff")) < 0)
+		return error;
 
 	if (GIT_ATTR_FALSE(value)) {
 		*out = &global_drivers[DIFF_DRIVER_FALSE];
@@ -81,6 +111,12 @@ int git_diff_driver_lookup(
 	}
 
 	/* otherwise look for driver information in config and build driver */
+	if ((error = git_diff_driver_load(out, repo, value)) < 0) {
+		if (error != GIT_ENOTFOUND)
+			return error;
+		else
+			giterr_clear();
+	}
 
 use_auto:
 	*out = &global_drivers[DIFF_DRIVER_AUTO];

@@ -111,7 +111,9 @@ void git_repository_free(git_repository *repo)
 
 	git_cache_free(&repo->objects);
 	git_submodule_config_free(repo);
+
 	git_diff_driver_registry_free(repo->diff_drivers);
+	repo->diff_drivers = NULL;
 
 	git__free(repo->path_repository);
 	git__free(repo->workdir);
