@@ -9,6 +9,7 @@
 #include "hash.h"
 #include "repository.h"
 #include "fileops.h"
+#include "filebuf.h"
 #include "pack.h"
 #include "reflog.h"
 #include "refdb.h"

@@ -6,7 +6,8 @@
  */
 #include "common.h"
 #include "diff.h"
-#include "diff_output.h"
+#include "diff_patch.h"
+#include "buffer.h"
 
 typedef struct {
 	git_diff_list *diff;
@@ -390,14 +391,15 @@ int git_diff_patch_print(
 			&pi, &temp, patch->diff, print_cb, payload)))
 		error = print_patch_file(patch->delta, 0, &pi);
 
-	for (h = 0; h < patch->hunks_size && !error; ++h) {
-		diff_patch_hunk *hunk = &patch->hunks[h];
+	for (h = 0; h < git_array_size(patch->hunks) && !error; ++h) {
+		diff_patch_hunk *hunk = git_array_get(patch->hunks, h);
 
 		error = print_patch_hunk(
 			patch->delta, &hunk->range, hunk->header, hunk->header_len, &pi);
 
 		for (l = 0; l < hunk->line_count && !error; ++l) {
-			diff_patch_line *line = &patch->lines[hunk->line_start + l];
+			diff_patch_line *line =
+				git_array_get(patch->lines, hunk->line_start + l);
 
 			error = print_patch_line(
 				patch->delta, &hunk->range,

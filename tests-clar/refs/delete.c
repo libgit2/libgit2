@@ -1,7 +1,8 @@
 #include "clar_libgit2.h"
 
-#include "repository.h"
+#include "fileops.h"
 #include "git2/reflog.h"
+#include "git2/refdb.h"
 #include "reflog.h"
 #include "ref_helpers.h"
 
@@ -31,7 +32,7 @@ void test_refs_delete__packed_loose(void)
 	git_buf temp_path = GIT_BUF_INIT;
 
 	/* Ensure the loose reference exists on the file system */
-	cl_git_pass(git_buf_joinpath(&temp_path, g_repo->path_repository, packed_test_head_name));
+	cl_git_pass(git_buf_joinpath(&temp_path, git_repository_path(g_repo), packed_test_head_name));
 	cl_assert(git_path_exists(temp_path.ptr));
 
 	/* Lookup the reference */

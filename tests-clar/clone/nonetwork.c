@@ -1,8 +1,9 @@
 #include "clar_libgit2.h"
 
 #include "git2/clone.h"
-#include "repository.h"
 #include "remote.h"
+#include "fileops.h"
+#include "repository.h"
 
 #define LIVE_REPO_URL "git://github.com/libgit2/TestGitRepository"
 

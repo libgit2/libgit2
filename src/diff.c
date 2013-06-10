@@ -11,6 +11,8 @@
 #include "attr_file.h"
 #include "filter.h"
 #include "pathspec.h"
+#include "index.h"
+#include "odb.h"
 
 #define DIFF_FLAG_IS_SET(DIFF,FLAG) (((DIFF)->opts.flags & (FLAG)) != 0)
 #define DIFF_FLAG_ISNT_SET(DIFF,FLAG) (((DIFF)->opts.flags & (FLAG)) == 0)
@@ -1169,4 +1171,74 @@ int git_diff_tree_to_workdir(
 	);
 
 	return error;
+}
+
+size_t git_diff_num_deltas(git_diff_list *diff)
+{
+	assert(diff);
+	return (size_t)diff->deltas.length;
+}
+
+size_t git_diff_num_deltas_of_type(git_diff_list *diff, git_delta_t type)
+{
+	size_t i, count = 0;
+	git_diff_delta *delta;
+
+	assert(diff);
+
+	git_vector_foreach(&diff->deltas, i, delta) {
+		count += (delta->status == type);
+	}
+
+	return count;
+}
+
+int git_diff__paired_foreach(
+	git_diff_list *idx2head,
+	git_diff_list *wd2idx,
+	int (*cb)(git_diff_delta *i2h, git_diff_delta *w2i, void *payload),
+	void *payload)
+{
+	int cmp;
+	git_diff_delta *i2h, *w2i;
+	size_t i, j, i_max, j_max;
+	int (*strcomp)(const char *, const char *);
+
+	i_max = idx2head ? idx2head->deltas.length : 0;
+	j_max = wd2idx   ? wd2idx->deltas.length   : 0;
+
+	/* Get appropriate strcmp function */
+	strcomp = idx2head ? idx2head->strcomp : wd2idx ? wd2idx->strcomp : NULL;
+
+	/* Assert both iterators use matching ignore-case. If this function ever
+	* supports merging diffs that are not sorted by the same function, then
+	* it will need to spool and sort on one of the results before merging
+	*/
+	if (idx2head && wd2idx) {
+		assert(idx2head->strcomp == wd2idx->strcomp);
+	}
+
+	for (i = 0, j = 0; i < i_max || j < j_max; ) {
+		i2h = idx2head ? GIT_VECTOR_GET(&idx2head->deltas,i) : NULL;
+		w2i = wd2idx   ? GIT_VECTOR_GET(&wd2idx->deltas,j)   : NULL;
+
+		cmp = !w2i ? -1 : !i2h ? 1 :
+			strcomp(i2h->old_file.path, w2i->old_file.path);
+
+		if (cmp < 0) {
+			if (cb(i2h, NULL, payload))
+				return GIT_EUSER;
+			i++;
+		} else if (cmp > 0) {
+			if (cb(NULL, w2i, payload))
+				return GIT_EUSER;
+			j++;
+		} else {
+			if (cb(i2h, w2i, payload))
+				return GIT_EUSER;
+			i++; j++;
+		}
+	}
+
+	return 0;
 }

@@ -17,12 +17,15 @@
 #include "tag.h"
 #include "blob.h"
 #include "fileops.h"
+#include "filebuf.h"
+#include "index.h"
 #include "config.h"
 #include "refs.h"
 #include "filter.h"
 #include "odb.h"
 #include "remote.h"
 #include "merge.h"
+#include "diff_driver.h"
 
 #define GIT_FILE_CONTENT_PREFIX "gitdir:"
 
@@ -108,6 +111,7 @@ void git_repository_free(git_repository *repo)
 
 	git_cache_free(&repo->objects);
 	git_submodule_config_free(repo);
+	git_diff_driver_registry_free(repo->diff_drivers);
 
 	git__free(repo->path_repository);
 	git__free(repo->workdir);

@@ -1,6 +1,6 @@
 #include "clar_libgit2.h"
 #include "odb.h"
-#include "repository.h"
+#include "filebuf.h"
 
 static git_buf destpath, filepath;
 static const char *paths[] = {

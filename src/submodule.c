@@ -22,6 +22,8 @@
 #include "submodule.h"
 #include "tree.h"
 #include "iterator.h"
+#include "path.h"
+#include "index.h"
 
 #define GIT_MODULES_FILE ".gitmodules"
 
