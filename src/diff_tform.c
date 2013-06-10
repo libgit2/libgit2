@@ -684,7 +684,7 @@ int git_diff_find_similar(
 	git_diff_find_options opts;
 	size_t num_rewrites = 0, num_updates = 0;
 	void **cache; /* cache of similarity metric file signatures */
-	diff_find_match *matches; /* cache of best matches */
+	diff_find_match *match_sources, *match_targets; /* cache of best matches */
 
 	if ((error = normalize_find_opts(diff, &opts, given_opts)) < 0)
 		return error;
@@ -697,16 +697,18 @@ int git_diff_find_similar(
 	cache = git__calloc(cache_size, sizeof(void *));
 	GITERR_CHECK_ALLOC(cache);
 
-	matches = git__calloc(diff->deltas.length, sizeof(diff_find_match));
-	GITERR_CHECK_ALLOC(matches);
+	match_sources = git__calloc(diff->deltas.length, sizeof(diff_find_match));
+	match_targets = git__calloc(diff->deltas.length, sizeof(diff_find_match));
+	GITERR_CHECK_ALLOC(match_sources);
+	GITERR_CHECK_ALLOC(match_targets);
 
 	/* next find the most similar delta for each rename / copy candidate */
 
 	git_vector_foreach(&diff->deltas, i, to) {
 		size_t tried_sources = 0;
 
-		matches[i].idx = i;
-		matches[i].similarity = 0;
+		match_targets[i].idx = i;
+		match_targets[i].similarity = 0;
 
 		/* skip things that are not rename targets */
 		if (!is_rename_target(diff, &opts, i, cache))
@@ -734,9 +736,12 @@ int git_diff_find_similar(
 				continue;
 			}
 
-			if (matches[i].similarity < (uint32_t)similarity) {
-				matches[i].similarity = (uint32_t)similarity;
-				matches[i].idx = j;
+			if (match_targets[i].similarity < (uint32_t)similarity &&
+				match_sources[j].similarity < (uint32_t)similarity) {
+				match_targets[i].similarity = (uint32_t)similarity;
+				match_sources[j].similarity = (uint32_t)similarity;
+				match_targets[i].idx = j;
+				match_sources[j].idx = i;
 			}
 		}
 	}
@@ -744,13 +749,13 @@ int git_diff_find_similar(
 	/* next rewrite the diffs with renames / copies */
 
 	git_vector_foreach(&diff->deltas, i, to) {
-
-		/* check if this delta was matched to another one */
-		if ((similarity = (int)matches[i].similarity) <= 0)
+		/* check if this delta was the target of a similarity */
+		if ((similarity = (int)match_targets[i].similarity) <= 0)
 			continue;
+
 		assert(to && (to->flags & GIT_DIFF_FLAG__IS_RENAME_TARGET) != 0);
 
-		from = GIT_VECTOR_GET(&diff->deltas, matches[i].idx);
+		from = GIT_VECTOR_GET(&diff->deltas, match_targets[i].idx);
 		assert(from && (from->flags & GIT_DIFF_FLAG__IS_RENAME_SOURCE) != 0);
 
 		/* possible scenarios:
@@ -847,14 +852,14 @@ int git_diff_find_similar(
 				/* in the off chance that we've just swapped the new
 				 * element into the correct place, clear the SPLIT flag
 				 */
-				if (matches[matches[i].idx].idx == i &&
-					matches[matches[i].idx].similarity >
+				if (match_targets[match_targets[i].idx].idx == i &&
+					match_targets[match_targets[i].idx].similarity >
 					opts.rename_from_rewrite_threshold) {
 
 					from->status = GIT_DELTA_RENAMED;
 					from->similarity =
-						(uint32_t)matches[matches[i].idx].similarity;
-					matches[matches[i].idx].similarity = 0;
+						(uint32_t)match_targets[match_targets[i].idx].similarity;
+					match_targets[match_targets[i].idx].similarity = 0;
 					from->flags &= ~GIT_DIFF_FLAG__TO_SPLIT;
 					num_rewrites--;
 				}
@@ -882,7 +887,8 @@ int git_diff_find_similar(
 			FLAG_SET(&opts, GIT_DIFF_BREAK_REWRITES));
 
 cleanup:
-	git__free(matches);
+	git__free(match_sources);
+	git__free(match_targets);
 
 	for (i = 0; i < cache_size; ++i) {
 		if (cache[i] != NULL)
