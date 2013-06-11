@@ -44,6 +44,10 @@ typedef enum {
 	 */
 	GIT_CONFIG_LEVEL_LOCAL = 4,
 
+	/** Application specific configuration file; freely defined by applications
+	 */
+	GIT_CONFIG_LEVEL_APP = 5,
+
 	/** Represents the highest level available config file (i.e. the most
 	 * specific config file available that actually is loaded)
 	 */
