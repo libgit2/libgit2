@@ -35,11 +35,11 @@ static bool contains_angle_brackets(const char *input)
 
 static char *extract_trimmed(const char *ptr, size_t len)
 {
-	while (len && ptr[0] == ' ') {
+	while (len && git__isspace(ptr[0])) {
 		ptr++; len--;
 	}
 
-	while (len && ptr[len - 1] == ' ') {
+	while (len && git__isspace(ptr[len - 1])) {
 		len--;
 	}
 
