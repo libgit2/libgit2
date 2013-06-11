@@ -19,14 +19,9 @@ static bool diff_file_content_binary_by_size(git_diff_file_content *fc)
 {
 	/* if we have diff opts, check max_size vs file size */
 	if ((fc->file.flags & DIFF_FLAGS_KNOWN_BINARY) == 0 &&
-		fc->opts && fc->opts->max_size >= 0)
-	{
-		git_off_t threshold = DIFF_MAX_FILESIZE;
-		if (fc->opts->max_size > 0)
-			threshold = fc->opts->max_size;
-		if (fc->file.size > threshold)
-			fc->file.flags |= GIT_DIFF_FLAG_BINARY;
-	}
+		fc->opts_max_size > 0 &&
+		fc->file.size > fc->opts_max_size)
+		fc->file.flags |= GIT_DIFF_FLAG_BINARY;
 
 	return ((fc->file.flags & GIT_DIFF_FLAG_BINARY) != 0);
 }
@@ -44,9 +39,14 @@ static void diff_file_content_binary_by_content(git_diff_file_content *fc)
 	}
 }
 
-static int diff_file_content_init_common(git_diff_file_content *fc)
+static int diff_file_content_init_common(
+	git_diff_file_content *fc, const git_diff_options *opts)
 {
-	uint32_t flags = fc->opts ? fc->opts->flags : GIT_DIFF_NORMAL;
+	fc->opts_flags = opts ? opts->flags : GIT_DIFF_NORMAL;
+
+	if (opts && opts->max_size >= 0)
+		fc->opts_max_size = opts->max_size ?
+			opts->max_size : DIFF_MAX_FILESIZE;
 
 	if (!fc->driver) {
 		if (git_diff_driver_lookup(&fc->driver, fc->repo, "") < 0)
@@ -54,20 +54,22 @@ static int diff_file_content_init_common(git_diff_file_content *fc)
 		fc->src = GIT_ITERATOR_TYPE_TREE;
 	}
 
+	/* give driver a chance to modify options */
+	git_diff_driver_update_options(&fc->opts_flags, fc->driver);
+
 	/* make sure file is conceivable mmap-able */
 	if ((git_off_t)((size_t)fc->file.size) != fc->file.size)
 		fc->file.flags |= GIT_DIFF_FLAG_BINARY;
-
-	/* check if user is forcing is to text diff the file */
-	else if (flags & GIT_DIFF_FORCE_TEXT)
+	/* check if user is forcing text diff the file */
+	else if (fc->opts_flags & GIT_DIFF_FORCE_TEXT) {
+		fc->file.flags &= ~GIT_DIFF_FLAG_BINARY;
 		fc->file.flags |= GIT_DIFF_FLAG_NOT_BINARY;
-
-	/* otherwise see if diff driver forces a behavior */
-	else switch (git_diff_driver_is_binary(fc->driver)) {
-		case 0: fc->file.flags |= GIT_DIFF_FLAG_NOT_BINARY; break;
-		case 1: fc->file.flags |= GIT_DIFF_FLAG_BINARY; break;
-		default: break;
-		}
+	}
+	/* check if user is forcing binary diff the file */
+	else if (fc->opts_flags & GIT_DIFF_FORCE_BINARY) {
+		fc->file.flags &= ~GIT_DIFF_FLAG_NOT_BINARY;
+		fc->file.flags |= GIT_DIFF_FLAG_BINARY;
+	}
 
 	diff_file_content_binary_by_size(fc);
 
@@ -95,7 +97,6 @@ int diff_file_content_init_from_diff(
 
 	memset(fc, 0, sizeof(*fc));
 	fc->repo = diff->repo;
-	fc->opts = &diff->opts;
 	fc->src  = use_old ? diff->old_src : diff->new_src;
 	memcpy(&fc->file, file, sizeof(fc->file));
 
@@ -123,7 +124,7 @@ int diff_file_content_init_from_diff(
 	if (!has_data)
 		fc->file.flags |= GIT_DIFF_FLAG__NO_DATA;
 
-	return diff_file_content_init_common(fc);
+	return diff_file_content_init_common(fc, &diff->opts);
 }
 
 int diff_file_content_init_from_blob(
@@ -134,7 +135,6 @@ int diff_file_content_init_from_blob(
 {
 	memset(fc, 0, sizeof(*fc));
 	fc->repo = repo;
-	fc->opts = opts;
 	fc->blob = blob;
 
 	if (!blob) {
@@ -149,7 +149,7 @@ int diff_file_content_init_from_blob(
 		fc->map.data = (char *)git_blob_rawcontent(blob);
 	}
 
-	return diff_file_content_init_common(fc);
+	return diff_file_content_init_common(fc, opts);
 }
 
 int diff_file_content_init_from_raw(
@@ -161,7 +161,6 @@ int diff_file_content_init_from_raw(
 {
 	memset(fc, 0, sizeof(*fc));
 	fc->repo = repo;
-	fc->opts = opts;
 
 	if (!buf) {
 		fc->file.flags |= GIT_DIFF_FLAG__NO_DATA;
@@ -175,7 +174,7 @@ int diff_file_content_init_from_raw(
 		fc->map.data = (char *)buf;
 	}
 
-	return diff_file_content_init_common(fc);
+	return diff_file_content_init_common(fc, opts);
 }
 
 static int diff_file_content_commit_to_str(

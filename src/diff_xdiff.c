@@ -109,6 +109,7 @@ static int git_xdiff(git_diff_output *output, git_diff_patch *patch)
 {
 	git_xdiff_output *xo = (git_xdiff_output *)output;
 	git_xdiff_info info;
+	git_diff_find_context_payload findctxt;
 	mmfile_t old_xdiff_data, new_xdiff_data;
 
 	memset(&info, 0, sizeof(info));
@@ -117,15 +118,18 @@ static int git_xdiff(git_diff_output *output, git_diff_patch *patch)
 
 	xo->callback.priv = &info;
 
-	xo->config.find_func_priv = patch->ofile.driver;
-	xo->config.find_func = patch->ofile.driver ?
-		git_diff_driver_find_content_fn(patch->ofile.driver) : NULL;
+	git_diff_find_context_init(
+		&xo->config.find_func, &findctxt, patch->ofile.driver);
+	xo->config.find_func_priv = &findctxt;
 
 	if (xo->config.find_func != NULL)
 		xo->config.flags |= XDL_EMIT_FUNCNAMES;
 	else
 		xo->config.flags &= ~XDL_EMIT_FUNCNAMES;
 
+	/* TODO: check ofile.opts_flags to see if driver-specific per-file
+	 * updates are needed to xo->params.flags
+	 */
 
 	old_xdiff_data.ptr  = patch->ofile.map.data;
 	old_xdiff_data.size = patch->ofile.map.len;
@@ -134,6 +138,8 @@ static int git_xdiff(git_diff_output *output, git_diff_patch *patch)
 
 	xdl_diff(&old_xdiff_data, &new_xdiff_data,
 		&xo->params, &xo->config, &xo->callback);
+
+	git_diff_find_context_clear(&findctxt);
 
 	return xo->output.error;
 }

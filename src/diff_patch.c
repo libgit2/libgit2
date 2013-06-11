@@ -96,8 +96,7 @@ static int diff_patch_load(git_diff_patch *patch, git_diff_output *output)
 	/* if no hunk and data callbacks and user doesn't care if data looks
 	 * binary, then there is no need to actually load the data
 	 */
-	if (patch->ofile.opts &&
-		(patch->ofile.opts->flags & GIT_DIFF_SKIP_BINARY_CHECK) != 0 &&
+	if ((patch->ofile.opts_flags & GIT_DIFF_SKIP_BINARY_CHECK) != 0 &&
 		output && !output->hunk_cb && !output->data_cb)
 		return 0;
 
@@ -718,6 +717,6 @@ static void diff_output_init(
 static void diff_output_to_patch(git_diff_output *out, git_diff_patch *patch)
 {
 	diff_output_init(
-		out, patch->ofile.opts,
+		out, NULL,
 		diff_patch_file_cb, diff_patch_hunk_cb, diff_patch_line_cb, patch);
 }

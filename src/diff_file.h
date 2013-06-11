@@ -15,9 +15,10 @@
 /* expanded information for one side of a delta */
 typedef struct {
 	git_repository *repo;
-	const git_diff_options *opts;
 	git_diff_file file;
 	git_diff_driver *driver;
+	uint32_t opts_flags;
+	git_off_t opts_max_size;
 	git_iterator_type_t src;
 	const git_blob *blob;
 	git_map map;

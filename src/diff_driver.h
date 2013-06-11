@@ -8,6 +8,7 @@
 #define INCLUDE_diff_driver_h__
 
 #include "common.h"
+#include "buffer.h"
 
 typedef struct git_diff_driver_registry git_diff_driver_registry;
 
@@ -19,8 +20,8 @@ typedef struct git_diff_driver git_diff_driver;
 int git_diff_driver_lookup(git_diff_driver **, git_repository *, const char *);
 void git_diff_driver_free(git_diff_driver *);
 
-/* returns -1 meaning "unknown", 0 meaning not binary, 1 meaning binary */
-int git_diff_driver_is_binary(git_diff_driver *);
+/* diff option flags to force off and on for this driver */
+void git_diff_driver_update_options(uint32_t *option_flags, git_diff_driver *);
 
 /* returns -1 meaning "unknown", 0 meaning not binary, 1 meaning binary */
 int git_diff_driver_content_is_binary(
@@ -29,6 +30,20 @@ int git_diff_driver_content_is_binary(
 typedef long (*git_diff_find_context_fn)(
 	const char *, long, char *, long, void *);
 
-git_diff_find_context_fn git_diff_driver_find_content_fn(git_diff_driver *);
+typedef int (*git_diff_find_context_line)(
+	git_diff_driver *, const char *, long);
+
+typedef struct {
+	git_diff_driver *driver;
+	git_diff_find_context_line match_line;
+	git_buf line;
+} git_diff_find_context_payload;
+
+void git_diff_find_context_init(
+	git_diff_find_context_fn *findfn_out,
+	git_diff_find_context_payload *payload_out,
+	git_diff_driver *driver);
+
+void git_diff_find_context_clear(git_diff_find_context_payload *);
 
 #endif

@@ -86,4 +86,3 @@ Internal Objects
     for hunk headers
 ** At some point, the logic for getting a filtered version of file content
    or calculating the OID of a file may be moved into the driver.
-   

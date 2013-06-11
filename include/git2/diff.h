@@ -148,6 +148,9 @@ typedef enum {
 	 *  Of course, ignore rules are still checked for the directory itself.
 	 */
 	GIT_DIFF_FAST_UNTRACKED_DIRS = (1 << 19),
+
+	/** Treat all files as binary, disabling text diffs */
+	GIT_DIFF_FORCE_BINARY = (1 << 20),
 } git_diff_option_t;
 
 /**
