@@ -12,48 +12,19 @@
 #include "diff_file.h"
 #include "array.h"
 
-/* cached information about a single span in a diff */
-typedef struct diff_patch_line diff_patch_line;
-struct diff_patch_line {
-	const char *ptr;
-	size_t len;
-	size_t lines, oldno, newno;
-	char origin;
-};
+extern git_diff_list *git_diff_patch__diff(git_diff_patch *);
 
-/* cached information about a hunk in a diff */
-typedef struct diff_patch_hunk diff_patch_hunk;
-struct diff_patch_hunk {
-	git_diff_range range;
-	char   header[128];
-	size_t header_len;
-	size_t line_start;
-	size_t line_count;
-};
+extern git_diff_driver *git_diff_patch__driver(git_diff_patch *);
 
-struct git_diff_patch {
-	git_refcount rc;
-	git_diff_list *diff; /* for refcount purposes, maybe NULL for blob diffs */
-	git_diff_delta *delta;
-	size_t delta_index;
-	git_diff_file_content ofile;
-	git_diff_file_content nfile;
-	uint32_t flags;
-	git_array_t(diff_patch_hunk) hunks;
-	git_array_t(diff_patch_line) lines;
-	size_t oldno, newno;
-	size_t content_size;
-	git_pool flattened;
-};
+extern void git_diff_patch__old_data(char **, size_t *, git_diff_patch *);
+extern void git_diff_patch__new_data(char **, size_t *, git_diff_patch *);
 
-enum {
-	GIT_DIFF_PATCH_ALLOCATED   = (1 << 0),
-	GIT_DIFF_PATCH_INITIALIZED = (1 << 1),
-	GIT_DIFF_PATCH_LOADED      = (1 << 2),
-	GIT_DIFF_PATCH_DIFFABLE    = (1 << 3),
-	GIT_DIFF_PATCH_DIFFED      = (1 << 4),
-	GIT_DIFF_PATCH_FLATTENED   = (1 << 5),
-};
+extern int git_diff_patch__invoke_callbacks(
+	git_diff_patch *patch,
+	git_diff_file_cb file_cb,
+	git_diff_hunk_cb hunk_cb,
+	git_diff_data_cb line_cb,
+	void *payload);
 
 typedef struct git_diff_output git_diff_output;
 struct git_diff_output {

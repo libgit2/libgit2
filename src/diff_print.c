@@ -383,29 +383,13 @@ int git_diff_patch_print(
 	int error;
 	git_buf temp = GIT_BUF_INIT;
 	diff_print_info pi;
-	size_t h, l;
 
 	assert(patch && print_cb);
 
 	if (!(error = diff_print_info_init(
-			&pi, &temp, patch->diff, print_cb, payload)))
-		error = print_patch_file(patch->delta, 0, &pi);
-
-	for (h = 0; h < git_array_size(patch->hunks) && !error; ++h) {
-		diff_patch_hunk *hunk = git_array_get(patch->hunks, h);
-
-		error = print_patch_hunk(
-			patch->delta, &hunk->range, hunk->header, hunk->header_len, &pi);
-
-		for (l = 0; l < hunk->line_count && !error; ++l) {
-			diff_patch_line *line =
-				git_array_get(patch->lines, hunk->line_start + l);
-
-			error = print_patch_line(
-				patch->delta, &hunk->range,
-				line->origin, line->ptr, line->len, &pi);
-		}
-	}
+			&pi, &temp, git_diff_patch__diff(patch), print_cb, payload)))
+		error = git_diff_patch__invoke_callbacks(
+			patch, print_patch_file, print_patch_hunk, print_patch_line, &pi);
 
 	git_buf_free(&temp);
 

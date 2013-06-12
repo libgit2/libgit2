@@ -24,19 +24,19 @@ typedef struct {
 	git_map map;
 } git_diff_file_content;
 
-extern int diff_file_content_init_from_diff(
+extern int git_diff_file_content__init_from_diff(
 	git_diff_file_content *fc,
 	git_diff_list *diff,
 	size_t delta_index,
 	bool use_old);
 
-extern int diff_file_content_init_from_blob(
+extern int git_diff_file_content__init_from_blob(
 	git_diff_file_content *fc,
 	git_repository *repo,
 	const git_diff_options *opts,
 	const git_blob *blob);
 
-extern int diff_file_content_init_from_raw(
+extern int git_diff_file_content__init_from_raw(
 	git_diff_file_content *fc,
 	git_repository *repo,
 	const git_diff_options *opts,
@@ -44,12 +44,12 @@ extern int diff_file_content_init_from_raw(
 	size_t buflen);
 
 /* this loads the blob/file-on-disk as needed */
-extern int diff_file_content_load(git_diff_file_content *fc);
+extern int git_diff_file_content__load(git_diff_file_content *fc);
 
 /* this releases the blob/file-in-memory */
-extern void diff_file_content_unload(git_diff_file_content *fc);
+extern void git_diff_file_content__unload(git_diff_file_content *fc);
 
 /* this unloads and also releases any other resources */
-extern void diff_file_content_clear(git_diff_file_content *fc);
+extern void git_diff_file_content__clear(git_diff_file_content *fc);
 
 #endif

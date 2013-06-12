@@ -11,6 +11,49 @@
 #include "diff_patch.h"
 #include "diff_xdiff.h"
 
+/* cached information about a single span in a diff */
+typedef struct diff_patch_line diff_patch_line;
+struct diff_patch_line {
+	const char *ptr;
+	size_t len;
+	size_t lines, oldno, newno;
+	char origin;
+};
+
+/* cached information about a hunk in a diff */
+typedef struct diff_patch_hunk diff_patch_hunk;
+struct diff_patch_hunk {
+	git_diff_range range;
+	char   header[128];
+	size_t header_len;
+	size_t line_start;
+	size_t line_count;
+};
+
+struct git_diff_patch {
+	git_refcount rc;
+	git_diff_list *diff; /* for refcount purposes, maybe NULL for blob diffs */
+	git_diff_delta *delta;
+	size_t delta_index;
+	git_diff_file_content ofile;
+	git_diff_file_content nfile;
+	uint32_t flags;
+	git_array_t(diff_patch_hunk) hunks;
+	git_array_t(diff_patch_line) lines;
+	size_t oldno, newno;
+	size_t content_size;
+	git_pool flattened;
+};
+
+enum {
+	GIT_DIFF_PATCH_ALLOCATED   = (1 << 0),
+	GIT_DIFF_PATCH_INITIALIZED = (1 << 1),
+	GIT_DIFF_PATCH_LOADED      = (1 << 2),
+	GIT_DIFF_PATCH_DIFFABLE    = (1 << 3),
+	GIT_DIFF_PATCH_DIFFED      = (1 << 4),
+	GIT_DIFF_PATCH_FLATTENED   = (1 << 5),
+};
+
 static void diff_output_init(git_diff_output*, const git_diff_options*,
 	git_diff_file_cb, git_diff_hunk_cb, git_diff_data_cb, void*);
 
@@ -53,9 +96,9 @@ static int diff_patch_init_from_diff(
 	patch->delta = git_vector_get(&diff->deltas, delta_index);
 	patch->delta_index = delta_index;
 
-	if ((error = diff_file_content_init_from_diff(
+	if ((error = git_diff_file_content__init_from_diff(
 			&patch->ofile, diff, delta_index, true)) < 0 ||
-		(error = diff_file_content_init_from_diff(
+		(error = git_diff_file_content__init_from_diff(
 			&patch->nfile, diff, delta_index, false)) < 0)
 		return error;
 
@@ -110,24 +153,24 @@ static int diff_patch_load(git_diff_patch *patch, git_diff_output *output)
 	 * need 2x data size and this minimizes peak memory footprint
 	 */
 	if (patch->ofile.src == GIT_ITERATOR_TYPE_WORKDIR) {
-		if ((error = diff_file_content_load(&patch->ofile)) < 0 ||
+		if ((error = git_diff_file_content__load(&patch->ofile)) < 0 ||
 			(patch->ofile.file.flags & GIT_DIFF_FLAG_BINARY) != 0)
 			goto cleanup;
 	}
 	if (patch->nfile.src == GIT_ITERATOR_TYPE_WORKDIR) {
-		if ((error = diff_file_content_load(&patch->nfile)) < 0 ||
+		if ((error = git_diff_file_content__load(&patch->nfile)) < 0 ||
 			(patch->nfile.file.flags & GIT_DIFF_FLAG_BINARY) != 0)
 			goto cleanup;
 	}
 
 	/* once workdir has been tried, load other data as needed */
 	if (patch->ofile.src != GIT_ITERATOR_TYPE_WORKDIR) {
-		if ((error = diff_file_content_load(&patch->ofile)) < 0 ||
+		if ((error = git_diff_file_content__load(&patch->ofile)) < 0 ||
 			(patch->ofile.file.flags & GIT_DIFF_FLAG_BINARY) != 0)
 			goto cleanup;
 	}
 	if (patch->nfile.src != GIT_ITERATOR_TYPE_WORKDIR) {
-		if ((error = diff_file_content_load(&patch->nfile)) < 0 ||
+		if ((error = git_diff_file_content__load(&patch->nfile)) < 0 ||
 			(patch->nfile.file.flags & GIT_DIFF_FLAG_BINARY) != 0)
 			goto cleanup;
 	}
@@ -198,8 +241,8 @@ static int diff_patch_generate(git_diff_patch *patch, git_diff_output *output)
 
 static void diff_patch_free(git_diff_patch *patch)
 {
-	diff_file_content_clear(&patch->ofile);
-	diff_file_content_clear(&patch->nfile);
+	git_diff_file_content__clear(&patch->ofile);
+	git_diff_file_content__clear(&patch->nfile);
 
 	git_array_clear(patch->lines);
 	git_array_clear(patch->hunks);
@@ -323,9 +366,9 @@ static int diff_patch_from_blobs(
 		new_blob = swap;
 	}
 
-	if ((error = diff_file_content_init_from_blob(
+	if ((error = git_diff_file_content__init_from_blob(
 			&pd->patch.ofile, repo, opts, old_blob)) < 0 ||
-		(error = diff_file_content_init_from_blob(
+		(error = git_diff_file_content__init_from_blob(
 			&pd->patch.nfile, repo, opts, new_blob)) < 0)
 		return error;
 
@@ -409,14 +452,14 @@ static int diff_patch_from_blob_and_buffer(
 		return 0;
 
 	if (opts && (opts->flags & GIT_DIFF_REVERSE) != 0) {
-		if (!(error = diff_file_content_init_from_raw(
+		if (!(error = git_diff_file_content__init_from_raw(
 				&pd->patch.ofile, repo, opts, buf, buflen)))
-			error = diff_file_content_init_from_blob(
+			error = git_diff_file_content__init_from_blob(
 				&pd->patch.nfile, repo, opts, old_blob);
 	} else {
-		if (!(error = diff_file_content_init_from_blob(
+		if (!(error = git_diff_file_content__init_from_blob(
 				&pd->patch.ofile, repo, opts, old_blob)))
-			error = diff_file_content_init_from_raw(
+			error = git_diff_file_content__init_from_raw(
 				&pd->patch.nfile, repo, opts, buf, buflen);
 	}
 
@@ -688,6 +731,68 @@ notfound:
 	if (new_lineno) *new_lineno = -1;
 
 	return diff_error_outofrange(thing);
+}
+
+git_diff_list *git_diff_patch__diff(git_diff_patch *patch)
+{
+	return patch->diff;
+}
+
+git_diff_driver *git_diff_patch__driver(git_diff_patch *patch)
+{
+	/* ofile driver is representative for whole patch */
+	return patch->ofile.driver;
+}
+
+void git_diff_patch__old_data(
+	char **ptr, size_t *len, git_diff_patch *patch)
+{
+	*ptr = patch->ofile.map.data;
+	*len = patch->ofile.map.len;
+}
+
+void git_diff_patch__new_data(
+	char **ptr, size_t *len, git_diff_patch *patch)
+{
+	*ptr = patch->nfile.map.data;
+	*len = patch->nfile.map.len;
+}
+
+int git_diff_patch__invoke_callbacks(
+	git_diff_patch *patch,
+	git_diff_file_cb file_cb,
+	git_diff_hunk_cb hunk_cb,
+	git_diff_data_cb line_cb,
+	void *payload)
+{
+	int error = 0;
+	uint32_t i, j;
+
+	if (file_cb)
+		error = file_cb(patch->delta, 0, payload);
+
+	if (!hunk_cb && !line_cb)
+		return error;
+
+	for (i = 0; !error && i < git_array_size(patch->hunks); ++i) {
+		diff_patch_hunk *h = git_array_get(patch->hunks, i);
+
+		error = hunk_cb(
+			patch->delta, &h->range, h->header, h->header_len, payload);
+
+		if (!line_cb)
+			continue;
+
+		for (j = 0; !error && j < h->line_count; ++j) {
+			diff_patch_line *l =
+				git_array_get(patch->lines, h->line_start + j);
+
+			error = line_cb(
+				patch->delta, &h->range, l->origin, l->ptr, l->len, payload);
+		}
+	}
+
+	return error;
 }
 
 

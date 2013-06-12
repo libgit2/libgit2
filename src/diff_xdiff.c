@@ -59,6 +59,7 @@ static int git_xdiff_cb(void *priv, mmbuffer_t *bufs, int len)
 {
 	git_xdiff_info *info = priv;
 	git_diff_patch *patch = info->patch;
+	const git_diff_delta *delta = git_diff_patch_delta(patch);
 	git_diff_output *output = &info->xo->output;
 
 	if (len == 1) {
@@ -67,7 +68,7 @@ static int git_xdiff_cb(void *priv, mmbuffer_t *bufs, int len)
 			return output->error;
 
 		if (output->hunk_cb != NULL &&
-			output->hunk_cb(patch->delta, &info->range,
+			output->hunk_cb(delta, &info->range,
 				bufs[0].ptr, bufs[0].size, output->payload))
 			output->error = GIT_EUSER;
 	}
@@ -80,7 +81,7 @@ static int git_xdiff_cb(void *priv, mmbuffer_t *bufs, int len)
 			GIT_DIFF_LINE_CONTEXT;
 
 		if (output->data_cb != NULL &&
-			output->data_cb(patch->delta, &info->range,
+			output->data_cb(delta, &info->range,
 				origin, bufs[1].ptr, bufs[1].size, output->payload))
 			output->error = GIT_EUSER;
 	}
@@ -97,7 +98,7 @@ static int git_xdiff_cb(void *priv, mmbuffer_t *bufs, int len)
 			GIT_DIFF_LINE_CONTEXT_EOFNL;
 
 		if (output->data_cb != NULL &&
-			output->data_cb(patch->delta, &info->range,
+			output->data_cb(delta, &info->range,
 				origin, bufs[2].ptr, bufs[2].size, output->payload))
 			output->error = GIT_EUSER;
 	}
@@ -110,7 +111,7 @@ static int git_xdiff(git_diff_output *output, git_diff_patch *patch)
 	git_xdiff_output *xo = (git_xdiff_output *)output;
 	git_xdiff_info info;
 	git_diff_find_context_payload findctxt;
-	mmfile_t old_xdiff_data, new_xdiff_data;
+	mmfile_t xd_old_data, xd_new_data;
 
 	memset(&info, 0, sizeof(info));
 	info.patch = patch;
@@ -119,7 +120,7 @@ static int git_xdiff(git_diff_output *output, git_diff_patch *patch)
 	xo->callback.priv = &info;
 
 	git_diff_find_context_init(
-		&xo->config.find_func, &findctxt, patch->ofile.driver);
+		&xo->config.find_func, &findctxt, git_diff_patch__driver(patch));
 	xo->config.find_func_priv = &findctxt;
 
 	if (xo->config.find_func != NULL)
@@ -131,12 +132,10 @@ static int git_xdiff(git_diff_output *output, git_diff_patch *patch)
 	 * updates are needed to xo->params.flags
 	 */
 
-	old_xdiff_data.ptr  = patch->ofile.map.data;
-	old_xdiff_data.size = patch->ofile.map.len;
-	new_xdiff_data.ptr  = patch->nfile.map.data;
-	new_xdiff_data.size = patch->nfile.map.len;
+	git_diff_patch__old_data(&xd_old_data.ptr, &xd_old_data.size, patch);
+	git_diff_patch__new_data(&xd_new_data.ptr, &xd_new_data.size, patch);
 
-	xdl_diff(&old_xdiff_data, &new_xdiff_data,
+	xdl_diff(&xd_old_data, &xd_new_data,
 		&xo->params, &xo->config, &xo->callback);
 
 	git_diff_find_context_clear(&findctxt);

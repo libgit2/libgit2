@@ -85,7 +85,7 @@ static int diff_file_content_init_common(
 	return 0;
 }
 
-int diff_file_content_init_from_diff(
+int git_diff_file_content__init_from_diff(
 	git_diff_file_content *fc,
 	git_diff_list *diff,
 	size_t delta_index,
@@ -127,7 +127,7 @@ int diff_file_content_init_from_diff(
 	return diff_file_content_init_common(fc, &diff->opts);
 }
 
-int diff_file_content_init_from_blob(
+int git_diff_file_content__init_from_blob(
 	git_diff_file_content *fc,
 	git_repository *repo,
 	const git_diff_options *opts,
@@ -152,7 +152,7 @@ int diff_file_content_init_from_blob(
 	return diff_file_content_init_common(fc, opts);
 }
 
-int diff_file_content_init_from_raw(
+int git_diff_file_content__init_from_raw(
 	git_diff_file_content *fc,
 	git_repository *repo,
 	const git_diff_options *opts,
@@ -385,7 +385,7 @@ static int diff_file_content_load_workdir(git_diff_file_content *fc)
 	return error;
 }
 
-int diff_file_content_load(git_diff_file_content *fc)
+int git_diff_file_content__load(git_diff_file_content *fc)
 {
 	int error = 0;
 
@@ -409,7 +409,7 @@ int diff_file_content_load(git_diff_file_content *fc)
 	return 0;
 }
 
-void diff_file_content_unload(git_diff_file_content *fc)
+void git_diff_file_content__unload(git_diff_file_content *fc)
 {
 	if (fc->file.flags & GIT_DIFF_FLAG__FREE_DATA) {
 		git__free(fc->map.data);
@@ -433,9 +433,9 @@ void diff_file_content_unload(git_diff_file_content *fc)
 	fc->file.flags &= ~GIT_DIFF_FLAG__LOADED;
 }
 
-void diff_file_content_clear(git_diff_file_content *fc)
+void git_diff_file_content__clear(git_diff_file_content *fc)
 {
-	diff_file_content_unload(fc);
+	git_diff_file_content__unload(fc);
 
 	/* for now, nothing else to do */
 }
