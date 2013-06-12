@@ -265,38 +265,71 @@ int git_diff_foreach(
 }
 
 typedef struct {
-	git_xdiff_output xo;
 	git_diff_patch patch;
 	git_diff_delta delta;
-} diff_single_info;
+} diff_patch_with_delta;
 
-static int diff_single_generate(diff_single_info *info)
+static int diff_single_generate(diff_patch_with_delta *pd, git_xdiff_output *xo)
 {
 	int error = 0;
-	git_diff_patch *patch = &info->patch;
+	git_diff_patch *patch = &pd->patch;
 	bool has_old = ((patch->ofile.file.flags & GIT_DIFF_FLAG__NO_DATA) == 0);
 	bool has_new = ((patch->nfile.file.flags & GIT_DIFF_FLAG__NO_DATA) == 0);
 
-	info->delta.status = has_new ?
+	pd->delta.status = has_new ?
 		(has_old ? GIT_DELTA_MODIFIED : GIT_DELTA_ADDED) :
 		(has_old ? GIT_DELTA_DELETED : GIT_DELTA_UNTRACKED);
 
 	if (git_oid_equal(&patch->nfile.file.oid, &patch->ofile.file.oid))
-		info->delta.status = GIT_DELTA_UNMODIFIED;
+		pd->delta.status = GIT_DELTA_UNMODIFIED;
 
-	patch->delta = &info->delta;
+	patch->delta = &pd->delta;
 
 	diff_patch_init_common(patch);
 
-	error = diff_patch_file_callback(patch, (git_diff_output *)&info->xo);
+	error = diff_patch_file_callback(patch, (git_diff_output *)xo);
 
 	if (!error)
-		error = diff_patch_generate(patch, (git_diff_output *)&info->xo);
+		error = diff_patch_generate(patch, (git_diff_output *)xo);
 
 	if (error == GIT_EUSER)
 		giterr_clear(); /* don't leave error message set invalidly */
 
 	return error;
+}
+
+static int diff_patch_from_blobs(
+	diff_patch_with_delta *pd,
+	git_xdiff_output *xo,
+	const git_blob *old_blob,
+	const git_blob *new_blob,
+	const git_diff_options *opts)
+{
+	int error = 0;
+	git_repository *repo =
+		new_blob ? git_object_owner((const git_object *)new_blob) :
+		old_blob ? git_object_owner((const git_object *)old_blob) : NULL;
+
+	GITERR_CHECK_VERSION(opts, GIT_DIFF_OPTIONS_VERSION, "git_diff_options");
+
+	pd->patch.delta = &pd->delta;
+
+	if (!repo) /* return two NULL items as UNMODIFIED delta */
+		return 0;
+
+	if (opts && (opts->flags & GIT_DIFF_REVERSE) != 0) {
+		const git_blob *swap = old_blob;
+		old_blob = new_blob;
+		new_blob = swap;
+	}
+
+	if ((error = diff_file_content_init_from_blob(
+			&pd->patch.ofile, repo, opts, old_blob)) < 0 ||
+		(error = diff_file_content_init_from_blob(
+			&pd->patch.nfile, repo, opts, new_blob)) < 0)
+		return error;
+
+	return diff_single_generate(pd, xo);
 }
 
 int git_diff_blobs(
@@ -309,37 +342,85 @@ int git_diff_blobs(
 	void *payload)
 {
 	int error = 0;
-	diff_single_info info;
+	diff_patch_with_delta pd;
+	git_xdiff_output xo;
+
+	memset(&pd, 0, sizeof(pd));
+	memset(&xo, 0, sizeof(xo));
+
+	diff_output_init(
+		(git_diff_output *)&xo, opts, file_cb, hunk_cb, data_cb, payload);
+	git_xdiff_init(&xo, opts);
+
+	error = diff_patch_from_blobs(&pd, &xo, old_blob, new_blob, opts);
+
+	git_diff_patch_free((git_diff_patch *)&pd);
+
+	return error;
+}
+
+int git_diff_patch_from_blobs(
+	git_diff_patch **out,
+	const git_blob *old_blob,
+	const git_blob *new_blob,
+	const git_diff_options *opts)
+{
+	int error = 0;
+	diff_patch_with_delta *pd;
+	git_xdiff_output xo;
+
+	assert(out);
+	*out = NULL;
+
+	pd = git__calloc(1, sizeof(*pd));
+	GITERR_CHECK_ALLOC(pd);
+	pd->patch.flags = GIT_DIFF_PATCH_ALLOCATED;
+
+	memset(&xo, 0, sizeof(xo));
+
+	diff_output_to_patch((git_diff_output *)&xo, &pd->patch);
+	git_xdiff_init(&xo, opts);
+
+	if (!(error = diff_patch_from_blobs(pd, &xo, old_blob, new_blob, opts)))
+		*out = (git_diff_patch *)pd;
+	else
+		git_diff_patch_free((git_diff_patch *)pd);
+
+	return error;
+}
+
+static int diff_patch_from_blob_and_buffer(
+	diff_patch_with_delta *pd,
+	git_xdiff_output *xo,
+	const git_blob *old_blob,
+	const char *buf,
+	size_t buflen,
+	const git_diff_options *opts)
+{
+	int error = 0;
 	git_repository *repo =
-		new_blob ? git_object_owner((const git_object *)new_blob) :
 		old_blob ? git_object_owner((const git_object *)old_blob) : NULL;
 
 	GITERR_CHECK_VERSION(opts, GIT_DIFF_OPTIONS_VERSION, "git_diff_options");
 
-	if (!repo) /* Hmm, given two NULL blobs, silently do no callbacks? */
+	pd->patch.delta = &pd->delta;
+
+	if (!repo && !buf) /* return two NULL items as UNMODIFIED delta */
 		return 0;
 
 	if (opts && (opts->flags & GIT_DIFF_REVERSE) != 0) {
-		const git_blob *swap = old_blob;
-		old_blob = new_blob;
-		new_blob = swap;
+		if (!(error = diff_file_content_init_from_raw(
+				&pd->patch.ofile, repo, opts, buf, buflen)))
+			error = diff_file_content_init_from_blob(
+				&pd->patch.nfile, repo, opts, old_blob);
+	} else {
+		if (!(error = diff_file_content_init_from_blob(
+				&pd->patch.ofile, repo, opts, old_blob)))
+			error = diff_file_content_init_from_raw(
+				&pd->patch.nfile, repo, opts, buf, buflen);
 	}
 
-	memset(&info, 0, sizeof(info));
-
-	diff_output_init((git_diff_output *)&info.xo,
-		opts, file_cb, hunk_cb, data_cb, payload);
-	git_xdiff_init(&info.xo, opts);
-
-	if (!(error = diff_file_content_init_from_blob(
-			&info.patch.ofile, repo, opts, old_blob)) &&
-		!(error = diff_file_content_init_from_blob(
-			&info.patch.nfile, repo, opts, new_blob)))
-		error = diff_single_generate(&info);
-
-	git_diff_patch_free(&info.patch);
-
-	return error;
+	return diff_single_generate(pd, xo);
 }
 
 int git_diff_blob_to_buffer(
@@ -353,36 +434,52 @@ int git_diff_blob_to_buffer(
 	void *payload)
 {
 	int error = 0;
-	diff_single_info info;
-	git_repository *repo =
-		old_blob ? git_object_owner((const git_object *)old_blob) : NULL;
+	diff_patch_with_delta pd;
+	git_xdiff_output xo;
 
-	GITERR_CHECK_VERSION(opts, GIT_DIFF_OPTIONS_VERSION, "git_diff_options");
+	memset(&pd, 0, sizeof(pd));
+	memset(&xo, 0, sizeof(xo));
 
-	if (!repo && !buf) /* Hmm, given NULLs, silently do no callbacks? */
-		return 0;
+	diff_output_init(
+		(git_diff_output *)&xo, opts, file_cb, hunk_cb, data_cb, payload);
+	git_xdiff_init(&xo, opts);
 
-	memset(&info, 0, sizeof(info));
+	error = diff_patch_from_blob_and_buffer(
+		&pd, &xo, old_blob, buf, buflen, opts);
 
-	diff_output_init((git_diff_output *)&info.xo,
-		opts, file_cb, hunk_cb, data_cb, payload);
-	git_xdiff_init(&info.xo, opts);
+	git_diff_patch_free((git_diff_patch *)&pd);
 
-	if (opts && (opts->flags & GIT_DIFF_REVERSE) != 0) {
-		if (!(error = diff_file_content_init_from_raw(
-				&info.patch.ofile, repo, opts, buf, buflen)))
-			error = diff_file_content_init_from_blob(
-				&info.patch.nfile, repo, opts, old_blob);
-	} else {
-		if (!(error = diff_file_content_init_from_blob(
-				&info.patch.ofile, repo, opts, old_blob)))
-			error = diff_file_content_init_from_raw(
-				&info.patch.nfile, repo, opts, buf, buflen);
-	}
+	return error;
+}
 
-	error = diff_single_generate(&info);
+int git_diff_patch_from_blob_and_buffer(
+	git_diff_patch **out,
+	const git_blob *old_blob,
+	const char *buf,
+	size_t buflen,
+	const git_diff_options *opts)
+{
+	int error = 0;
+	diff_patch_with_delta *pd;
+	git_xdiff_output xo;
 
-	git_diff_patch_free(&info.patch);
+	assert(out);
+	*out = NULL;
+
+	pd = git__calloc(1, sizeof(*pd));
+	GITERR_CHECK_ALLOC(pd);
+	pd->patch.flags = GIT_DIFF_PATCH_ALLOCATED;
+
+	memset(&xo, 0, sizeof(xo));
+
+	diff_output_to_patch((git_diff_output *)&xo, &pd->patch);
+	git_xdiff_init(&xo, opts);
+
+	if (!(error = diff_patch_from_blob_and_buffer(
+			pd, &xo, old_blob, buf, buflen, opts)))
+		*out = (git_diff_patch *)pd;
+	else
+		git_diff_patch_free((git_diff_patch *)pd);
 
 	return error;
 }
@@ -599,9 +696,7 @@ static int diff_patch_file_cb(
 	float progress,
 	void *payload)
 {
-	GIT_UNUSED(delta);
-	GIT_UNUSED(progress);
-	GIT_UNUSED(payload);
+	GIT_UNUSED(delta); GIT_UNUSED(progress); GIT_UNUSED(payload);
 	return 0;
 }
 
