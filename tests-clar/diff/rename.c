@@ -811,3 +811,96 @@ void test_diff_rename__from_deleted_to_split(void)
 
 	git_buf_free(&c1);
 }
+
+struct rename_expected
+{
+	size_t len;
+	const char **sources;
+	const char **targets;
+
+	size_t idx;
+};
+
+int test_names_expected(const git_diff_delta *delta, float progress, void *p)
+{
+	struct rename_expected *expected = p;
+
+	cl_assert(expected->idx < expected->len);
+
+	cl_assert_equal_i(delta->status, GIT_DELTA_RENAMED);
+
+	cl_assert(git__strcmp(expected->sources[expected->idx],
+		delta->old_file.path) == 0);
+	cl_assert(git__strcmp(expected->targets[expected->idx],
+		delta->new_file.path) == 0);
+
+	expected->idx++;
+
+	return 0;
+}
+
+void test_diff_rename__rejected_match_can_match_others(void)
+{
+	git_reference *head, *selfsimilar;
+	git_index *index;
+	git_tree *tree;
+	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
+	git_diff_list *diff;
+	git_diff_options diffopts = GIT_DIFF_OPTIONS_INIT;
+	git_diff_find_options findopts = GIT_DIFF_FIND_OPTIONS_INIT;
+	git_buf one = GIT_BUF_INIT, two = GIT_BUF_INIT;
+	const char *sources[] = { "Class1.cs", "Class2.cs" };
+	const char *targets[] = { "ClassA.cs", "ClassB.cs" };
+	struct rename_expected expect = { 2, sources, targets };
+	char *ptr;
+
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+
+	cl_git_pass(git_reference_lookup(&head, g_repo, "HEAD"));
+	cl_git_pass(git_reference_symbolic_set_target(
+		&selfsimilar, head, "refs/heads/renames_similar"));
+	cl_git_pass(git_checkout_head(g_repo, &opts));
+	cl_git_pass(git_repository_index(&index, g_repo));
+
+	cl_git_pass(git_futils_readbuffer(&one, "renames/Class1.cs"));
+	cl_git_pass(git_futils_readbuffer(&two, "renames/Class2.cs"));
+
+	cl_git_pass(p_unlink("renames/Class1.cs"));
+	cl_git_pass(p_unlink("renames/Class2.cs"));
+
+	cl_git_pass(git_index_remove_bypath(index, "Class1.cs"));
+	cl_git_pass(git_index_remove_bypath(index, "Class2.cs"));
+
+	cl_assert(ptr = strstr(one.ptr, "Class1"));
+	ptr[5] = 'A';
+
+	cl_assert(ptr = strstr(two.ptr, "Class2"));
+	ptr[5] = 'B';
+
+	cl_git_pass(
+		git_futils_writebuffer(&one, "renames/ClassA.cs", O_RDWR|O_CREAT, 0777));
+	cl_git_pass(
+		git_futils_writebuffer(&two, "renames/ClassB.cs", O_RDWR|O_CREAT, 0777));
+
+	cl_git_pass(git_index_add_bypath(index, "ClassA.cs"));
+	cl_git_pass(git_index_add_bypath(index, "ClassB.cs"));
+
+	cl_git_pass(git_index_write(index));
+
+	cl_git_pass(
+		git_revparse_single((git_object **)&tree, g_repo, "HEAD^{tree}"));
+
+	cl_git_pass(
+		git_diff_tree_to_index(&diff, g_repo, tree, index, &diffopts));
+	cl_git_pass(git_diff_find_similar(diff, &findopts));
+
+	cl_git_pass(
+		git_diff_foreach(diff, test_names_expected, NULL, NULL, &expect));
+
+	git_tree_free(tree);
+	git_index_free(index);
+	git_reference_free(head);
+	git_reference_free(selfsimilar);
+	git_buf_free(&one);
+	git_buf_free(&two);
+}
