@@ -1,10 +1,8 @@
 #include <winver.h>
 #include "../../include/git2/version.h"
 
-#ifndef INCLUDE_LIB
-#define LIBGIT2_FILENAME "git2.dll"
-#else
-#define LIBGIT2_FILENAME "libgit2.dll"
+#ifndef LIBGIT2_FILENAME
+#	define LIBGIT2_FILENAME "git2.dll"
 #endif
 
 VS_VERSION_INFO		VERSIONINFO	MOVEABLE IMPURE LOADONCALL DISCARDABLE
