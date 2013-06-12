@@ -322,9 +322,9 @@ extern int git__date_parse(git_time_t *out, const char *date);
 extern size_t git__unescape(char *str);
 
 /*
- * Memset that will not be optimized away by the compiler.
- * You usually should just use regular `memset()`.
+ * Safely zero-out memory, making sure that the compiler
+ * doesn't optimize away the operation.
  */
-extern void git__memset(void *data, int c, size_t size);
+extern void git__memzero(volatile void *data, size_t size);
 
 #endif /* INCLUDE_util_h__ */

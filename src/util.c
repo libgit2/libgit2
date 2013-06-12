@@ -723,12 +723,11 @@ void git__insertsort_r(
 		git__free(swapel);
 }
 
-void git__memset(void *data, int c, size_t size)
+void git__memzero(volatile void *data, size_t size)
 {
 	volatile uint8_t *scan = data;
 	uint8_t *end = scan + size;
-	uint8_t val = (uint8_t)c;
 
 	while (scan < end)
-		*scan++ = val;
+		*scan++ = 0x0;
 }
