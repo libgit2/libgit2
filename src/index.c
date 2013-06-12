@@ -348,6 +348,8 @@ static void index_free(git_index *index)
 	git_vector_free(&index->reuc);
 
 	git__free(index->index_file_path);
+
+	git__memset(index, 0, sizeof(*index));
 	git__free(index);
 }
 
