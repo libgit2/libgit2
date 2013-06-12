@@ -712,7 +712,7 @@ static int diff_patch_hunk_cb(
 
 	GIT_UNUSED(delta);
 
-	git_array_alloc(patch->hunks, hunk);
+	hunk = git_array_alloc(patch->hunks);
 	GITERR_CHECK_ALLOC(hunk);
 
 	memcpy(&hunk->range, range, sizeof(hunk->range));
@@ -749,7 +749,7 @@ static int diff_patch_line_cb(
 	hunk = git_array_last(patch->hunks);
 	GITERR_CHECK_ALLOC(hunk);
 
-	git_array_alloc(patch->lines, line);
+	line = git_array_alloc(patch->lines);
 	GITERR_CHECK_ALLOC(line);
 
 	line->ptr = content;

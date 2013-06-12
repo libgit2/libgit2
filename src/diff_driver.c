@@ -93,7 +93,7 @@ static int diff_driver_add_funcname(
 		return error;
 	}
 
-	git_array_alloc(drv->fn_patterns, re_ptr);
+	re_ptr = git_array_alloc(drv->fn_patterns);
 	GITERR_CHECK_ALLOC(re_ptr);
 
 	memcpy(re_ptr, &re, sizeof(re));
