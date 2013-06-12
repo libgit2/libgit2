@@ -14,10 +14,10 @@
 #include "git2/status.h"
 #include "repository.h"
 #include "ignore.h"
+#include "index.h"
 
 #include "git2/diff.h"
 #include "diff.h"
-#include "diff_output.h"
 
 static unsigned int index_delta2status(git_delta_t index_status)
 {

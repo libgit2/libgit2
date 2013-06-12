@@ -14,15 +14,13 @@
 #include "git2/object.h"
 #include "git2/config.h"
 
-#include "index.h"
 #include "cache.h"
 #include "refs.h"
 #include "buffer.h"
-#include "odb.h"
 #include "object.h"
 #include "attrcache.h"
 #include "strmap.h"
-#include "refdb.h"
+#include "diff_driver.h"
 
 #define DOT_GIT ".git"
 #define GIT_DIR DOT_GIT "/"
@@ -108,6 +106,7 @@ struct git_repository {
 	git_cache objects;
 	git_attr_cache attrcache;
 	git_strmap *submodules;
+	git_diff_driver_registry *diff_drivers;
 
 	char *path_repository;
 	char *workdir;

@@ -11,6 +11,7 @@
 #include "git2/odb_backend.h"
 
 #include "common.h"
+#include "filebuf.h"
 #include "blob.h"
 #include "filter.h"
 #include "buf_text.h"

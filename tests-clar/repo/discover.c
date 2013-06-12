@@ -1,8 +1,8 @@
 #include "clar_libgit2.h"
 
 #include "odb.h"
+#include "fileops.h"
 #include "repository.h"
-
 
 #define TEMP_REPO_FOLDER "temprepo/"
 #define DISCOVER_FOLDER TEMP_REPO_FOLDER "discover.git"

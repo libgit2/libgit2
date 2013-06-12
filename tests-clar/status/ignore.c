@@ -169,7 +169,7 @@ void test_status_ignore__ignore_pattern_ignorecase(void)
 	cl_git_mkfile("empty_standard_repo/A.txt", "Differs in case");
 
 	cl_git_pass(git_repository_index(&index, g_repo));
-	ignore_case = index->ignore_case;
+	ignore_case = (git_index_caps(index) & GIT_INDEXCAP_IGNORE_CASE) != 0;
 	git_index_free(index);
 
 	cl_git_pass(git_status_file(&flags, g_repo, "A.txt"));

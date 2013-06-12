@@ -16,6 +16,8 @@
 #include "pack.h"
 #include "fetch.h"
 #include "netops.h"
+#include "repository.h"
+#include "refs.h"
 
 struct filter_payload {
 	git_remote *remote;

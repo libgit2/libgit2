@@ -2030,6 +2030,8 @@ int git_index_read_tree(git_index *index, const git_tree *tree)
 	error = git_tree_walk(tree, GIT_TREEWALK_POST, read_tree_cb, &data);
 
 	index_entries_free(&entries);
+	git_vector_free(&entries);
+
 	git_vector_sort(&index->entries);
 
 	return error;

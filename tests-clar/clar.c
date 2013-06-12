@@ -183,10 +183,10 @@ clar_run_test(
 }
 
 static void
-clar_run_suite(const struct clar_suite *suite)
+clar_run_suite(const struct clar_suite *suite, const char *name)
 {
 	const struct clar_func *test = suite->tests;
-	size_t i;
+	size_t i, namelen;
 
 	if (!suite->enabled)
 		return;
@@ -200,7 +200,23 @@ clar_run_suite(const struct clar_suite *suite)
 	_clar.active_suite = suite->name;
 	_clar.suite_errors = 0;
 
+	if (name) {
+		size_t suitelen = strlen(suite->name);
+		namelen = strlen(name);
+		if (namelen <= suitelen) {
+			name = NULL;
+		} else {
+			name += suitelen;
+			while (*name == ':')
+				++name;
+			namelen = strlen(name);
+		}
+	}
+
 	for (i = 0; i < suite->test_count; ++i) {
+		if (name && strncmp(test[i].name, name, namelen))
+			continue;
+
 		_clar.active_test = test[i].name;
 		clar_run_test(&test[i], &suite->initialize, &suite->cleanup);
 
@@ -240,7 +256,7 @@ clar_parse_args(int argc, char **argv)
 		case 'x': { /* given suite name */
 			int offset = (argument[2] == '=') ? 3 : 2, found = 0;
 			char action = argument[1];
-			size_t j, len;
+			size_t j, len, cmplen;
 
 			argument += offset;
 			len = strlen(argument);
@@ -249,7 +265,11 @@ clar_parse_args(int argc, char **argv)
 				clar_usage(argv[0]);
 
 			for (j = 0; j < _clar_suite_count; ++j) {
-				if (strncmp(argument, _clar_suites[j].name, len) == 0) {
+				cmplen = strlen(_clar_suites[j].name);
+				if (cmplen > len)
+					cmplen = len;
+
+				if (strncmp(argument, _clar_suites[j].name, cmplen) == 0) {
 					int exact = !strcmp(argument, _clar_suites[j].name);
 
 					++found;
@@ -258,9 +278,9 @@ clar_parse_args(int argc, char **argv)
 						_clar.report_suite_names = 1;
 
 					switch (action) {
-						case 's': clar_run_suite(&_clar_suites[j]); break;
-						case 'i': _clar_suites[j].enabled = 1; break;
-						case 'x': _clar_suites[j].enabled = 0; break;
+					case 's': clar_run_suite(&_clar_suites[j], argument); break;
+					case 'i': _clar_suites[j].enabled = 1; break;
+					case 'x': _clar_suites[j].enabled = 0; break;
 					}
 
 					if (exact)
@@ -318,7 +338,7 @@ clar_test(int argc, char **argv)
 	if (!_clar.suites_ran) {
 		size_t i;
 		for (i = 0; i < _clar_suite_count; ++i)
-			clar_run_suite(&_clar_suites[i]);
+			clar_run_suite(&_clar_suites[i], NULL);
 	}
 
 	clar_print_shutdown(

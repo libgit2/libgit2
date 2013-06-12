@@ -7,8 +7,6 @@
 #ifndef INCLUDE_thread_utils_h__
 #define INCLUDE_thread_utils_h__
 
-#include "common.h"
-
 /* Common operations even if threading has been disabled */
 typedef struct {
 #if defined(GIT_WIN32)

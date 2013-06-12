@@ -2,8 +2,9 @@
 
 #include "git2/clone.h"
 #include "git2/cred_helpers.h"
-#include "repository.h"
 #include "remote.h"
+#include "fileops.h"
+#include "refs.h"
 
 #define LIVE_REPO_URL "http://github.com/libgit2/TestGitRepository"
 #define LIVE_EMPTYREPO_URL "http://github.com/libgit2/TestEmptyRepository"

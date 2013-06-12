@@ -5,10 +5,14 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 #include "common.h"
-#include "diff.h"
+
 #include "git2/config.h"
 #include "git2/blob.h"
+
+#include "diff.h"
 #include "hashsig.h"
+#include "path.h"
+#include "fileops.h"
 
 static git_diff_delta *diff_delta__dup(
 	const git_diff_delta *d, git_pool *pool)

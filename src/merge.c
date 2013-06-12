@@ -24,6 +24,8 @@
 #include "blob.h"
 #include "hashsig.h"
 #include "oid.h"
+#include "index.h"
+#include "filebuf.h"
 
 #include "git2/types.h"
 #include "git2/repository.h"

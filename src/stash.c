@@ -14,6 +14,7 @@
 #include "git2/stash.h"
 #include "git2/status.h"
 #include "git2/checkout.h"
+#include "git2/index.h"
 #include "signature.h"
 
 static int create_error(int error, const char *msg)

@@ -29,11 +29,16 @@ enum {
 	GIT_DIFFCAPS_TRUST_NANOSECS   = (1 << 5), /* use stat time nanoseconds */
 };
 
+#define DIFF_FLAGS_KNOWN_BINARY (GIT_DIFF_FLAG_BINARY|GIT_DIFF_FLAG_NOT_BINARY)
+#define DIFF_FLAGS_NOT_BINARY   (GIT_DIFF_FLAG_NOT_BINARY|GIT_DIFF_FLAG__NO_DATA)
+
 enum {
 	GIT_DIFF_FLAG__FREE_PATH  = (1 << 7),  /* `path` is allocated memory */
 	GIT_DIFF_FLAG__FREE_DATA  = (1 << 8),  /* internal file data is allocated */
 	GIT_DIFF_FLAG__UNMAP_DATA = (1 << 9),  /* internal file data is mmap'ed */
 	GIT_DIFF_FLAG__NO_DATA    = (1 << 10), /* file data should not be loaded */
+	GIT_DIFF_FLAG__FREE_BLOB  = (1 << 11), /* release the blob when done */
+	GIT_DIFF_FLAG__LOADED     = (1 << 12), /* file data has been loaded */
 
 	GIT_DIFF_FLAG__TO_DELETE  = (1 << 16), /* delete entry during rename det. */
 	GIT_DIFF_FLAG__TO_SPLIT   = (1 << 17), /* split entry during rename det. */
@@ -82,6 +87,12 @@ extern int git_diff__from_iterators(
 	git_iterator *old_iter,
 	git_iterator *new_iter,
 	const git_diff_options *opts);
+
+extern int git_diff__paired_foreach(
+	git_diff_list *idx2head,
+	git_diff_list *wd2idx,
+	int (*cb)(git_diff_delta *i2h, git_diff_delta *w2i, void *payload),
+	void *payload);
 
 int git_diff_find_similar__hashsig_for_file(
 	void **out, const git_diff_file *f, const char *path, void *p);
