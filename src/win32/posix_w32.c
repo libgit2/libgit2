@@ -5,6 +5,7 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 #include "../posix.h"
+#include "../fileops.h"
 #include "path.h"
 #include "utf-conv.h"
 #include "repository.h"

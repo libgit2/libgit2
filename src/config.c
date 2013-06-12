@@ -154,7 +154,7 @@ static int find_internal_file_by_level(
 	} else {
 		git_vector_foreach(&cfg->files, i, internal) {
 			if (internal->level == level)
-				pos = i;
+				pos = (int)i;
 		}
 	}
 
@@ -189,7 +189,7 @@ static void try_remove_existing_file_internal(
 
 	git_vector_foreach(&cfg->files, i, internal) {
 		if (internal->level == level)
-			pos = i;
+			pos = (int)i;
 	}
 
 	if (pos == -1)

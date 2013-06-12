@@ -711,7 +711,7 @@ int git_diff_find_similar(
 	git_vector_foreach(&diff->deltas, i, to) {
 		size_t tried_sources = 0;
 
-		match_targets[i].idx = i;
+		match_targets[i].idx = (uint32_t)i;
 		match_targets[i].similarity = 0;
 
 		/* skip things that are not rename targets */
@@ -744,8 +744,8 @@ int git_diff_find_similar(
 				match_sources[j].similarity < (uint32_t)similarity) {
 				match_targets[i].similarity = (uint32_t)similarity;
 				match_sources[j].similarity = (uint32_t)similarity;
-				match_targets[i].idx = j;
-				match_sources[j].idx = i;
+				match_targets[i].idx = (uint32_t)j;
+				match_sources[j].idx = (uint32_t)i;
 			}
 		}
 	}
