@@ -132,7 +132,10 @@ int git_packbuilder_new(git_packbuilder **out, git_repository *repo)
 	if (git_mutex_init(&pb->cache_mutex) ||
 		git_mutex_init(&pb->progress_mutex) ||
 		git_cond_init(&pb->progress_cond))
+	{
+		giterr_set(GITERR_OS, "Failed to initialize packbuilder mutex");
 		goto on_error;
+	}
 
 #endif
 
