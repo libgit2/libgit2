@@ -2,6 +2,7 @@
 #include "checkout_helpers.h"
 
 #include "git2/checkout.h"
+#include "fileops.h"
 #include "repository.h"
 
 static git_repository *g_repo;

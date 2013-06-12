@@ -21,6 +21,7 @@
 #include "fileops.h"
 #include "refs.h"
 #include "path.h"
+#include "repository.h"
 
 static int create_branch(
 	git_reference **branch,

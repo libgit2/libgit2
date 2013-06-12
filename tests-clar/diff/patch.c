@@ -543,7 +543,7 @@ void test_diff_patch__line_counts_with_eofnl(void)
 		"index 378a7d9..3d0154e 100644\n"
 		"--- a/songof7cities.txt\n"
 		"+++ b/songof7cities.txt\n"
-		"@@ -42,7 +42,7 @@\n"
+		"@@ -42,7 +42,7 @@ With peoples undefeated of the dark, enduring blood.\n"
 		" \n"
 		" To the sound of trumpets shall their seed restore my Cities\n"
 		" Wealthy and well-weaponed, that once more may I behold\n"

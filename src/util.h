@@ -194,6 +194,8 @@ extern int git__strcasecmp(const char *a, const char *b);
 extern int git__strncmp(const char *a, const char *b, size_t sz);
 extern int git__strncasecmp(const char *a, const char *b, size_t sz);
 
+#include "thread-utils.h"
+
 typedef struct {
 	git_atomic refcount;
 	void *owner;

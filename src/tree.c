@@ -10,6 +10,9 @@
 #include "tree.h"
 #include "git2/repository.h"
 #include "git2/object.h"
+#include "path.h"
+#include "tree-cache.h"
+#include "index.h"
 
 #define DEFAULT_TREE_SIZE 16
 #define MAX_FILEMODE_BYTES 6

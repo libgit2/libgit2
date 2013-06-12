@@ -148,6 +148,9 @@ typedef enum {
 	 *  Of course, ignore rules are still checked for the directory itself.
 	 */
 	GIT_DIFF_FAST_UNTRACKED_DIRS = (1 << 19),
+
+	/** Treat all files as binary, disabling text diffs */
+	GIT_DIFF_FORCE_BINARY = (1 << 20),
 } git_diff_option_t;
 
 /**
@@ -857,7 +860,7 @@ GIT_EXTERN(size_t) git_diff_patch_num_hunks(
  * @param total_additions Count of addition lines in output, can be NULL.
  * @param total_deletions Count of deletion lines in output, can be NULL.
  * @param patch The git_diff_patch object
- * @return Number of lines in hunk or -1 if invalid hunk index
+ * @return 0 on success, <0 on error
  */
 GIT_EXTERN(int) git_diff_patch_line_stats(
 	size_t *total_context,
@@ -998,6 +1001,26 @@ GIT_EXTERN(int) git_diff_blobs(
 	void *payload);
 
 /**
+ * Directly generate a patch from the difference between two blobs.
+ *
+ * This is just like `git_diff_blobs()` except it generates a patch object
+ * for the difference instead of directly making callbacks.  You can use the
+ * standard `git_diff_patch` accessor functions to read the patch data, and
+ * you must call `git_diff_patch_free()` on the patch when done.
+ *
+ * @param out The generated patch; NULL on error
+ * @param old_blob Blob for old side of diff, or NULL for empty blob
+ * @param new_blob Blob for new side of diff, or NULL for empty blob
+ * @param options Options for diff, or NULL for default options
+ * @return 0 on success or error code < 0
+ */
+GIT_EXTERN(int) git_diff_patch_from_blobs(
+	git_diff_patch **out,
+	const git_blob *old_blob,
+	const git_blob *new_blob,
+	const git_diff_options *opts);
+
+/**
  * Directly run a diff between a blob and a buffer.
  *
  * As with `git_diff_blobs`, comparing a blob and buffer lacks some context,
@@ -1010,7 +1033,7 @@ GIT_EXTERN(int) git_diff_blobs(
  * the reverse, with GIT_DELTA_REMOVED and blob content removed.
  *
  * @param old_blob Blob for old side of diff, or NULL for empty blob
- * @param buffer Raw data for new side of diff
+ * @param buffer Raw data for new side of diff, or NULL for empty
  * @param buffer_len Length of raw data for new side of diff
  * @param options Options for diff, or NULL for default options
  * @param file_cb Callback for "file"; made once if there is a diff; can be NULL
@@ -1028,6 +1051,29 @@ GIT_EXTERN(int) git_diff_blob_to_buffer(
 	git_diff_hunk_cb hunk_cb,
 	git_diff_data_cb data_cb,
 	void *payload);
+
+/**
+ * Directly generate a patch from the difference between a blob and a buffer.
+ *
+ * This is just like `git_diff_blob_to_buffer()` except it generates a patch
+ * object for the difference instead of directly making callbacks.  You can
+ * use the standard `git_diff_patch` accessor functions to read the patch
+ * data, and you must call `git_diff_patch_free()` on the patch when done.
+ *
+ * @param out The generated patch; NULL on error
+ * @param old_blob Blob for old side of diff, or NULL for empty blob
+ * @param buffer Raw data for new side of diff, or NULL for empty
+ * @param buffer_len Length of raw data for new side of diff
+ * @param options Options for diff, or NULL for default options
+ * @return 0 on success or error code < 0
+ */
+GIT_EXTERN(int) git_diff_patch_from_blob_and_buffer(
+	git_diff_patch **out,
+	const git_blob *old_blob,
+	const char *buf,
+	size_t buflen,
+	const git_diff_options *opts);
+
 
 GIT_END_DECL
 

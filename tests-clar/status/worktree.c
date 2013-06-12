@@ -105,7 +105,7 @@ void test_status_worktree__swap_subdir_and_file(void)
 	bool ignore_case;
 
 	cl_git_pass(git_repository_index(&index, repo));
-	ignore_case = index->ignore_case;
+	ignore_case = (git_index_caps(index) & GIT_INDEXCAP_IGNORE_CASE) != 0;
 	git_index_free(index);
 
 	/* first alter the contents of the worktree */

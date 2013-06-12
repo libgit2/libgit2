@@ -1267,8 +1267,10 @@ static int rename_remote_references(
 		return -1;
 
 	while ((error = git_reference_next(&ref, iter)) == 0) {
-		if (git__prefixcmp(ref->name, GIT_REFS_REMOTES_DIR))
+		if (git__prefixcmp(ref->name, GIT_REFS_REMOTES_DIR)) {
+			git_reference_free(ref);
 			continue;
+		}
 
 		if ((error = rename_one_remote_reference(ref, old_name, new_name)) < 0) {
 			git_reference_iterator_free(iter);

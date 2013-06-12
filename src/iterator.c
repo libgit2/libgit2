@@ -7,6 +7,7 @@
 
 #include "iterator.h"
 #include "tree.h"
+#include "index.h"
 #include "ignore.h"
 #include "buffer.h"
 #include "git2/submodule.h"
