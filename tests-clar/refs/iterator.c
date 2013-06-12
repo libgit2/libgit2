@@ -66,7 +66,7 @@ void test_refs_iterator__list(void)
 	} while (!error);
 
 	git_reference_iterator_free(iter);
-	cl_assert_equal_i(output.length, ARRAY_SIZE(refnames));
+	cl_assert_equal_sz(output.length, ARRAY_SIZE(refnames));
 
 	git_vector_sort(&output);
 
