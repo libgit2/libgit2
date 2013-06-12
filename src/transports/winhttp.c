@@ -19,6 +19,8 @@
 #include <winhttp.h>
 #pragma comment(lib, "winhttp")
 
+#include <strsafe.h>
+
 /* For UuidCreate */
 #pragma comment(lib, "rpcrt4")
 

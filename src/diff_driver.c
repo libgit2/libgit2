@@ -331,7 +331,7 @@ int git_diff_driver_content_is_binary(
 }
 
 static int diff_context_line__simple(
-	git_diff_driver *driver, const char *line, long line_len)
+	git_diff_driver *driver, const char *line, size_t line_len)
 {
 	GIT_UNUSED(driver);
 	GIT_UNUSED(line_len);
@@ -339,7 +339,7 @@ static int diff_context_line__simple(
 }
 
 static int diff_context_line__pattern_match(
-	git_diff_driver *driver, const char *line, long line_len)
+	git_diff_driver *driver, const char *line, size_t line_len)
 {
 	size_t i;
 

@@ -674,7 +674,7 @@ static int ensure_left_hand_identifier_is_not_known_yet(git_object *object, git_
 int revparse__ext(
 	git_object **object_out,
 	git_reference **reference_out,
-	int *identifier_len_out,
+	size_t *identifier_len_out,
 	git_repository *repo,
 	const char *spec)
 {
@@ -832,7 +832,8 @@ int git_revparse_ext(
 	git_repository *repo,
 	const char *spec)
 {
-	int error, identifier_len;
+	int error;
+	size_t identifier_len;
 	git_object *obj = NULL;
 	git_reference *ref = NULL;
 
@@ -841,6 +842,7 @@ int git_revparse_ext(
 
 	*object_out = obj;
 	*reference_out = ref;
+	GIT_UNUSED(identifier_len);
 
 	return 0;
 
