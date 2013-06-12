@@ -42,6 +42,7 @@ typedef enum {
 	GIT_STATUS_WT_MODIFIED      = (1u << 8),
 	GIT_STATUS_WT_DELETED       = (1u << 9),
 	GIT_STATUS_WT_TYPECHANGE    = (1u << 10),
+	GIT_STATUS_WT_RENAMED       = (1u << 11),
 
 	GIT_STATUS_IGNORED          = (1u << 14),
 } git_status_t;
@@ -130,6 +131,10 @@ typedef enum {
  * - GIT_STATUS_OPT_RECURSE_IGNORED_DIRS indicates that the contents of
  *   ignored directories should be included in the status.  This is like
  *   doing `git ls-files -o -i --exclude-standard` with core git.
+ * - GIT_STATUS_OPT_RENAMES_HEAD_TO_INDEX indicates that items that are
+ *   renamed in the index will be reported as renames.
+ * - GIT_STATUS_OPT_RENAMES_INDEX_TO_WORKDIR indicates that items that
+ *   are renamed in the working directory will be reported as renames.
  *
  * Calling `git_status_foreach()` is like calling the extended version
  * with: GIT_STATUS_OPT_INCLUDE_IGNORED, GIT_STATUS_OPT_INCLUDE_UNTRACKED,
@@ -137,13 +142,15 @@ typedef enum {
  * together as `GIT_STATUS_OPT_DEFAULTS` if you want them as a baseline.
  */
 typedef enum {
-	GIT_STATUS_OPT_INCLUDE_UNTRACKED      = (1u << 0),
-	GIT_STATUS_OPT_INCLUDE_IGNORED        = (1u << 1),
-	GIT_STATUS_OPT_INCLUDE_UNMODIFIED     = (1u << 2),
-	GIT_STATUS_OPT_EXCLUDE_SUBMODULES     = (1u << 3),
-	GIT_STATUS_OPT_RECURSE_UNTRACKED_DIRS = (1u << 4),
-	GIT_STATUS_OPT_DISABLE_PATHSPEC_MATCH = (1u << 5),
-	GIT_STATUS_OPT_RECURSE_IGNORED_DIRS   = (1u << 6),
+	GIT_STATUS_OPT_INCLUDE_UNTRACKED        = (1u << 0),
+	GIT_STATUS_OPT_INCLUDE_IGNORED          = (1u << 1),
+	GIT_STATUS_OPT_INCLUDE_UNMODIFIED       = (1u << 2),
+	GIT_STATUS_OPT_EXCLUDE_SUBMODULES       = (1u << 3),
+	GIT_STATUS_OPT_RECURSE_UNTRACKED_DIRS   = (1u << 4),
+	GIT_STATUS_OPT_DISABLE_PATHSPEC_MATCH   = (1u << 5),
+	GIT_STATUS_OPT_RECURSE_IGNORED_DIRS     = (1u << 6),
+	GIT_STATUS_OPT_RENAMES_HEAD_TO_INDEX    = (1u << 7),
+	GIT_STATUS_OPT_RENAMES_INDEX_TO_WORKDIR = (1u << 8),
 } git_status_opt_t;
 
 #define GIT_STATUS_OPT_DEFAULTS \
@@ -174,8 +181,71 @@ typedef struct {
 	git_strarray      pathspec;
 } git_status_options;
 
+/**
+ * A status entry, providing the differences between the file as it exists
+ * in HEAD and the index, and providing the differences between the index
+ * and the working directory.
+ *
+ * The `status` value provides the status flags for this file.
+ *
+ * The `head_to_index` value provides detailed information about the
+ * differences between the file in HEAD and the file in the index.
+ *
+ * The `index_to_workdir` value provides detailed information about the
+ * differences between the file in the index and the file in the
+ * working directory.
+ */
+typedef struct {
+	git_status_t status;
+	git_diff_delta *head_to_index;
+	git_diff_delta *index_to_workdir;
+} git_status_entry;
+
 #define GIT_STATUS_OPTIONS_VERSION 1
 #define GIT_STATUS_OPTIONS_INIT {GIT_STATUS_OPTIONS_VERSION}
+
+/**
+ * Gather file status information and populate the `git_status_list`.
+ *
+ * @param out Pointer to store the status results in
+ * @param repo Repository object
+ * @param opts Status options structure
+ * @return 0 on success or error code
+ */
+GIT_EXTERN(int) git_status_list_new(
+	git_status_list **out,
+	git_repository *repo,
+	const git_status_options *opts);
+
+/**
+ * Gets the count of status entries in this list.
+ *
+ * @param statuslist Existing status list object
+ * @return the number of status entries
+ */
+GIT_EXTERN(size_t) git_status_list_entrycount(
+	git_status_list *statuslist);
+
+/**
+ * Get a pointer to one of the entries in the status list.
+ *
+ * The entry is not modifiable and should not be freed.
+ *
+ * @param statuslist Existing status list object
+ * @param idx Position of the entry
+ * @return Pointer to the entry; NULL if out of bounds
+ */
+GIT_EXTERN(const git_status_entry *) git_status_byindex(
+	git_status_list *statuslist,
+	size_t idx);
+
+/**
+ * Free an existing status list
+ *
+ * @param statuslist Existing status list object
+ */
+GIT_EXTERN(void) git_status_list_free(
+	git_status_list *statuslist);
 
 /**
  * Gather file status information and run callbacks as requested.

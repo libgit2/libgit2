@@ -11,6 +11,7 @@
 #include "hash.h"
 #include "vector.h"
 #include "tree.h"
+#include "status.h"
 #include "git2/status.h"
 #include "repository.h"
 #include "ignore.h"
@@ -53,7 +54,6 @@ static unsigned int workdir_delta2status(git_delta_t workdir_status)
 
 	switch (workdir_status) {
 	case GIT_DELTA_ADDED:
-	case GIT_DELTA_RENAMED:
 	case GIT_DELTA_COPIED:
 	case GIT_DELTA_UNTRACKED:
 		st = GIT_STATUS_WT_NEW;
@@ -67,6 +67,9 @@ static unsigned int workdir_delta2status(git_delta_t workdir_status)
 	case GIT_DELTA_IGNORED:
 		st = GIT_STATUS_IGNORED;
 		break;
+	case GIT_DELTA_RENAMED:
+		st = GIT_STATUS_WT_RENAMED;
+		break;
 	case GIT_DELTA_TYPECHANGE:
 		st = GIT_STATUS_WT_TYPECHANGE;
 		break;
@@ -77,71 +80,161 @@ static unsigned int workdir_delta2status(git_delta_t workdir_status)
 	return st;
 }
 
-typedef struct {
-	git_status_cb cb;
-	void *payload;
-	const git_status_options *opts;
-} status_user_callback;
-
-static int status_invoke_cb(
-	git_diff_delta *h2i, git_diff_delta *i2w, void *payload)
+static bool status_is_included(
+	git_status_list *statuslist,
+	git_diff_delta *head2idx,
+	git_diff_delta *idx2wd)
 {
-	status_user_callback *usercb = payload;
-	const char *path = NULL;
-	unsigned int status = 0;
-
-	if (i2w) {
-		path = i2w->old_file.path;
-		status |= workdir_delta2status(i2w->status);
-	}
-	if (h2i) {
-		path = h2i->old_file.path;
-		status |= index_delta2status(h2i->status);
-	}
-
 	/* if excluding submodules and this is a submodule everywhere */
-	if (usercb->opts &&
-		(usercb->opts->flags & GIT_STATUS_OPT_EXCLUDE_SUBMODULES) != 0)
-	{
-		bool in_tree  = (h2i && h2i->status != GIT_DELTA_ADDED);
-		bool in_index = (h2i && h2i->status != GIT_DELTA_DELETED);
-		bool in_wd    = (i2w && i2w->status != GIT_DELTA_DELETED);
+	if ((statuslist->opts.flags & GIT_STATUS_OPT_EXCLUDE_SUBMODULES) != 0) {
+		bool in_tree = (head2idx && head2idx->status != GIT_DELTA_ADDED);
+		bool in_index = (head2idx && head2idx->status != GIT_DELTA_DELETED);
+		bool in_wd = (idx2wd && idx2wd->status != GIT_DELTA_DELETED);
 
-		if ((!in_tree || h2i->old_file.mode == GIT_FILEMODE_COMMIT) &&
-			(!in_index || h2i->new_file.mode == GIT_FILEMODE_COMMIT) &&
-			(!in_wd || i2w->new_file.mode == GIT_FILEMODE_COMMIT))
+		if ((!in_tree || head2idx->old_file.mode == GIT_FILEMODE_COMMIT) &&
+			(!in_index || head2idx->new_file.mode == GIT_FILEMODE_COMMIT) &&
+			(!in_wd || idx2wd->new_file.mode == GIT_FILEMODE_COMMIT))
 			return 0;
 	}
 
-	return usercb->cb(path, status, usercb->payload);
+	return 1;
 }
 
-int git_status_foreach_ext(
-	git_repository *repo,
-	const git_status_options *opts,
-	git_status_cb cb,
+static git_status_t status_compute(
+	git_diff_delta *head2idx,
+	git_diff_delta *idx2wd)
+{
+	git_status_t status = 0;
+
+	if (head2idx)
+		status |= index_delta2status(head2idx->status);
+
+	if (idx2wd)
+		status |= workdir_delta2status(idx2wd->status);
+
+	return status;
+}
+
+static int status_collect(
+	git_diff_delta *head2idx,
+	git_diff_delta *idx2wd,
 	void *payload)
 {
-	int err = 0;
+	git_status_list *statuslist = payload;
+	git_status_entry *status_entry;
+	
+	if (!status_is_included(statuslist, head2idx, idx2wd))
+		return 0;
+	
+	status_entry = git__malloc(sizeof(git_status_entry));
+	GITERR_CHECK_ALLOC(status_entry);
+
+	status_entry->status = status_compute(head2idx, idx2wd);
+	status_entry->head_to_index = head2idx;
+	status_entry->index_to_workdir = idx2wd;
+
+	git_vector_insert(&statuslist->paired, status_entry);
+
+	return 0;
+}
+
+GIT_INLINE(int) status_entry_cmp_base(
+	const void *a,
+	const void *b,
+	int (*strcomp)(const char *a, const char *b))
+{
+	const git_status_entry *entry_a = a;
+	const git_status_entry *entry_b = b;
+	const git_diff_delta *delta_a, *delta_b;
+
+	delta_a = entry_a->index_to_workdir ? entry_a->index_to_workdir :
+		entry_a->head_to_index;
+	delta_b = entry_b->index_to_workdir ? entry_b->index_to_workdir :
+		entry_b->head_to_index;
+
+	if (!delta_a && delta_b)
+		return -1;
+	if (delta_a && !delta_b)
+		return 1;
+	if (!delta_a && !delta_b)
+		return 0;
+
+	return strcomp(delta_a->new_file.path, delta_b->new_file.path);
+}
+
+static int status_entry_icmp(const void *a, const void *b)
+{
+	return status_entry_cmp_base(a, b, git__strcasecmp);
+}
+
+static int status_entry_cmp(const void *a, const void *b)
+{
+	return status_entry_cmp_base(a, b, git__strcmp);
+}
+
+static git_status_list *git_status_list_alloc(git_index *index)
+{
+	git_status_list *statuslist = NULL;
+	int (*entrycmp)(const void *a, const void *b);
+
+	entrycmp = index->ignore_case ? status_entry_icmp : status_entry_cmp;
+
+	if ((statuslist = git__calloc(1, sizeof(git_status_list))) == NULL ||
+		git_vector_init(&statuslist->paired, 0, entrycmp) < 0)
+		return NULL;
+
+	return statuslist;
+}
+
+static int newfile_cmp(const void *a, const void *b)
+{
+	const git_diff_delta *delta_a = a;
+	const git_diff_delta *delta_b = b;
+
+	return git__strcmp(delta_a->new_file.path, delta_b->new_file.path);
+}
+
+static int newfile_casecmp(const void *a, const void *b)
+{
+	const git_diff_delta *delta_a = a;
+	const git_diff_delta *delta_b = b;
+
+	return git__strcasecmp(delta_a->new_file.path, delta_b->new_file.path);
+}
+
+int git_status_list_new(
+	git_status_list **out,
+	git_repository *repo,
+	const git_status_options *opts)
+{
+	git_index *index = NULL;
+	git_status_list *statuslist = NULL;
 	git_diff_options diffopt = GIT_DIFF_OPTIONS_INIT;
-	git_diff_list *head2idx = NULL, *idx2wd = NULL;
+	git_diff_find_options findopts_i2w = GIT_DIFF_FIND_OPTIONS_INIT;
 	git_tree *head = NULL;
 	git_status_show_t show =
 		opts ? opts->show : GIT_STATUS_SHOW_INDEX_AND_WORKDIR;
-	status_user_callback usercb;
+	int error = 0;
 
 	assert(show <= GIT_STATUS_SHOW_INDEX_THEN_WORKDIR);
 
+	*out = NULL;
+
 	GITERR_CHECK_VERSION(opts, GIT_STATUS_OPTIONS_VERSION, "git_status_options");
 
-	if (show != GIT_STATUS_SHOW_INDEX_ONLY &&
-		(err = git_repository__ensure_not_bare(repo, "status")) < 0)
-		return err;
+	if ((error = git_repository__ensure_not_bare(repo, "status")) < 0 ||
+		(error = git_repository_index(&index, repo)) < 0)
+		return error;
 
 	/* if there is no HEAD, that's okay - we'll make an empty iterator */
-	if (((err = git_repository_head_tree(&head, repo)) < 0) &&
-		!(err == GIT_ENOTFOUND || err == GIT_EORPHANEDHEAD))
-		return err;
+	if (((error = git_repository_head_tree(&head, repo)) < 0) &&
+		!(error == GIT_ENOTFOUND || error == GIT_EORPHANEDHEAD))
+		return error;
+
+	statuslist = git_status_list_alloc(index);
+	GITERR_CHECK_ALLOC(statuslist);
+
+	memcpy(&statuslist->opts, opts, sizeof(git_status_options));
 
 	memcpy(&diffopt.pathspec, &opts->pathspec, sizeof(diffopt.pathspec));
 
@@ -162,42 +255,127 @@ int git_status_foreach_ext(
 	if ((opts->flags & GIT_STATUS_OPT_EXCLUDE_SUBMODULES) != 0)
 		diffopt.flags = diffopt.flags | GIT_DIFF_IGNORE_SUBMODULES;
 
+	findopts_i2w.flags |= GIT_DIFF_FIND_FOR_UNTRACKED;
+
 	if (show != GIT_STATUS_SHOW_WORKDIR_ONLY) {
-		err = git_diff_tree_to_index(&head2idx, repo, head, NULL, &diffopt);
-		if (err < 0)
-			goto cleanup;
+		if ((error = git_diff_tree_to_index(&statuslist->head2idx, repo, head, NULL, &diffopt)) < 0)
+			goto on_error;
+
+		if ((opts->flags & GIT_STATUS_OPT_RENAMES_HEAD_TO_INDEX) != 0 &&
+			(error = git_diff_find_similar(statuslist->head2idx, NULL)) < 0)
+			goto on_error;
 	}
 
 	if (show != GIT_STATUS_SHOW_INDEX_ONLY) {
-		err = git_diff_index_to_workdir(&idx2wd, repo, NULL, &diffopt);
-		if (err < 0)
-			goto cleanup;
-	}
+		if ((error = git_diff_index_to_workdir(&statuslist->idx2wd, repo, NULL, &diffopt)) < 0)
+			goto on_error;
 
-	usercb.cb = cb;
-	usercb.payload = payload;
-	usercb.opts = opts;
+		if ((opts->flags & GIT_STATUS_OPT_RENAMES_INDEX_TO_WORKDIR) != 0 &&
+			(error = git_diff_find_similar(statuslist->idx2wd, &findopts_i2w)) < 0)
+			goto on_error;
+	}
 
 	if (show == GIT_STATUS_SHOW_INDEX_THEN_WORKDIR) {
-		if ((err = git_diff__paired_foreach(
-				 head2idx, NULL, status_invoke_cb, &usercb)) < 0)
-			goto cleanup;
+		if ((error = git_diff__paired_foreach(statuslist->head2idx, NULL, status_collect, statuslist)) < 0)
+			goto on_error;
 
-		git_diff_list_free(head2idx);
-		head2idx = NULL;
+		git_diff_list_free(statuslist->head2idx);
+		statuslist->head2idx = NULL;
 	}
 
-	err = git_diff__paired_foreach(head2idx, idx2wd, status_invoke_cb, &usercb);
+	if ((opts->flags & GIT_STATUS_OPT_RENAMES_HEAD_TO_INDEX) != 0) {
+		statuslist->head2idx->deltas._cmp =
+			(statuslist->head2idx->opts.flags & GIT_DIFF_DELTAS_ARE_ICASE) != 0 ?
+			newfile_casecmp : newfile_cmp;
 
-cleanup:
+		git_vector_sort(&statuslist->head2idx->deltas);
+	}
+
+	if ((error = git_diff__paired_foreach(statuslist->head2idx, statuslist->idx2wd,
+		status_collect, statuslist)) < 0)
+		goto on_error;
+
+	if ((opts->flags & GIT_STATUS_OPT_RENAMES_HEAD_TO_INDEX) != 0 ||
+		(opts->flags & GIT_STATUS_OPT_RENAMES_INDEX_TO_WORKDIR) != 0)
+		git_vector_sort(&statuslist->paired);
+
+	*out = statuslist;
+	goto done;
+
+on_error:
+	git_status_list_free(statuslist);
+
+done:
 	git_tree_free(head);
-	git_diff_list_free(head2idx);
-	git_diff_list_free(idx2wd);
+	git_index_free(index);
 
-	if (err == GIT_EUSER)
-		giterr_clear();
+	return error;
+}
 
-	return err;
+size_t git_status_list_entrycount(git_status_list *statuslist)
+{
+	assert(statuslist);
+
+	return statuslist->paired.length;
+}
+
+const git_status_entry *git_status_byindex(
+	git_status_list *statuslist, 
+	size_t i)
+{
+	assert(statuslist);
+
+	return git_vector_get(&statuslist->paired, i);
+}
+
+void git_status_list_free(git_status_list *statuslist)
+{
+	git_status_entry *status_entry;
+	size_t i;
+
+	if (statuslist == NULL)
+		return;
+
+	git_diff_list_free(statuslist->head2idx);
+	git_diff_list_free(statuslist->idx2wd);
+
+	git_vector_foreach(&statuslist->paired, i, status_entry)
+		git__free(status_entry);
+
+	git_vector_free(&statuslist->paired);
+
+	git__free(statuslist);
+}
+
+int git_status_foreach_ext(
+	git_repository *repo,
+	const git_status_options *opts,
+	git_status_cb cb,
+	void *payload)
+{
+	git_status_list *statuslist;
+	const git_status_entry *status_entry;
+	size_t i;
+	int error = 0;
+
+	if ((error = git_status_list_new(&statuslist, repo, opts)) < 0)
+		return error;
+
+	git_vector_foreach(&statuslist->paired, i, status_entry) {
+		const char *path = status_entry->head_to_index ?
+			status_entry->head_to_index->old_file.path :
+			status_entry->index_to_workdir->old_file.path;
+
+		if (cb(path, status_entry->status, payload) != 0) {
+			error = GIT_EUSER;
+			giterr_clear();
+			break;
+		}
+	}
+
+	git_status_list_free(statuslist);
+
+	return error;
 }
 
 int git_status_foreach(
@@ -207,7 +385,7 @@ int git_status_foreach(
 {
 	git_status_options opts = GIT_STATUS_OPTIONS_INIT;
 
-	opts.show  = GIT_STATUS_SHOW_INDEX_AND_WORKDIR;
+	opts.show = GIT_STATUS_SHOW_INDEX_AND_WORKDIR;
 	opts.flags = GIT_STATUS_OPT_INCLUDE_IGNORED |
 		GIT_STATUS_OPT_INCLUDE_UNTRACKED |
 		GIT_STATUS_OPT_RECURSE_UNTRACKED_DIRS;
@@ -264,7 +442,7 @@ int git_status_file(
 	if (index->ignore_case)
 		sfi.fnm_flags = FNM_CASEFOLD;
 
-	opts.show  = GIT_STATUS_SHOW_INDEX_AND_WORKDIR;
+	opts.show = GIT_STATUS_SHOW_INDEX_AND_WORKDIR;
 	opts.flags = GIT_STATUS_OPT_INCLUDE_IGNORED |
 		GIT_STATUS_OPT_RECURSE_IGNORED_DIRS |
 		GIT_STATUS_OPT_INCLUDE_UNTRACKED |

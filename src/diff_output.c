@@ -1845,47 +1845,56 @@ int git_diff_patch_to_str(
 }
 
 int git_diff__paired_foreach(
-	git_diff_list *idx2head,
-	git_diff_list *wd2idx,
-	int (*cb)(git_diff_delta *i2h, git_diff_delta *w2i, void *payload),
+	git_diff_list *head2idx,
+	git_diff_list *idx2wd,
+	int (*cb)(git_diff_delta *h2i, git_diff_delta *i2w, void *payload),
 	void *payload)
 {
 	int cmp;
-	git_diff_delta *i2h, *w2i;
+	git_diff_delta *h2i, *i2w;
 	size_t i, j, i_max, j_max;
-	int (*strcomp)(const char *, const char *);
+	int (*strcomp)(const char *a, const char *b);
+	bool icase = 0;
 
-	i_max = idx2head ? idx2head->deltas.length : 0;
-	j_max = wd2idx   ? wd2idx->deltas.length   : 0;
-
-	/* Get appropriate strcmp function */
-	strcomp = idx2head ? idx2head->strcomp : wd2idx ? wd2idx->strcomp : NULL;
+	i_max = head2idx ? head2idx->deltas.length : 0;
+	j_max = idx2wd ? idx2wd->deltas.length : 0;
 
 	/* Assert both iterators use matching ignore-case. If this function ever
-	* supports merging diffs that are not sorted by the same function, then
-	* it will need to spool and sort on one of the results before merging
-	*/
-	if (idx2head && wd2idx) {
-		assert(idx2head->strcomp == wd2idx->strcomp);
+	 * supports merging diffs that are not sorted by the same function, then
+	 * it will need to spool and sort on one of the results before merging
+	 */
+	if (head2idx && idx2wd &&
+		(head2idx->opts.flags & GIT_DIFF_DELTAS_ARE_ICASE) !=
+		(idx2wd->opts.flags & GIT_DIFF_DELTAS_ARE_ICASE)) {
+		giterr_set(GITERR_INVALID, "incompatible case sensitivity in paired diff_lists");
+		return -1;
 	}
 
-	for (i = 0, j = 0; i < i_max || j < j_max; ) {
-		i2h = idx2head ? GIT_VECTOR_GET(&idx2head->deltas,i) : NULL;
-		w2i = wd2idx   ? GIT_VECTOR_GET(&wd2idx->deltas,j)   : NULL;
+	icase = head2idx ? (head2idx->opts.flags & GIT_DIFF_DELTAS_ARE_ICASE) != 0 :
+		 (idx2wd->opts.flags & GIT_DIFF_DELTAS_ARE_ICASE) != 0;
 
-		cmp = !w2i ? -1 : !i2h ? 1 :
-			strcomp(i2h->old_file.path, w2i->old_file.path);
+	/* On case sensitive file iterators, we need to maintain that ordering,
+	 * but we want strict equality so that we identify case-changing
+	 * renames. */
+	strcomp = icase ? git__strcasesort_cmp : git__strcmp;
+
+	for (i = 0, j = 0; i < i_max || j < j_max; ) {
+		h2i = head2idx ? GIT_VECTOR_GET(&head2idx->deltas, i) : NULL;
+		i2w = idx2wd ? GIT_VECTOR_GET(&idx2wd->deltas, j) : NULL;
+
+		cmp = !i2w ? -1 : !h2i ? 1 :
+			strcomp(h2i->new_file.path, i2w->old_file.path);
 
 		if (cmp < 0) {
-			if (cb(i2h, NULL, payload))
+			if (cb(h2i, NULL, payload))
 				return GIT_EUSER;
 			i++;
 		} else if (cmp > 0) {
-			if (cb(NULL, w2i, payload))
+			if (cb(NULL, i2w, payload))
 				return GIT_EUSER;
 			j++;
 		} else {
-			if (cb(i2h, w2i, payload))
+			if (cb(h2i, i2w, payload))
 				return GIT_EUSER;
 			i++; j++;
 		}
