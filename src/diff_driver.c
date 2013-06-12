@@ -163,10 +163,10 @@ static int git_diff_driver_load(
 	memcpy(drv->name, driver_name, namelen);
 
 	if ((error = git_buf_printf(&name, "diff.%s.binary", driver_name)) < 0)
-		goto fail;
+		goto done;
 	if ((error = git_config_get_string(&val, cfg, name.ptr)) < 0) {
 		if (error != GIT_ENOTFOUND)
-			goto fail;
+			goto done;
 		/* diff.<driver>.binary unspecified, so just continue */
 		giterr_clear();
 	} else if (git_config_parse_bool(&bval, val) < 0) {
@@ -174,9 +174,8 @@ static int git_diff_driver_load(
 		giterr_clear();
 	} else if (bval) {
 		/* if diff.<driver>.binary is true, just return the binary driver */
-		git__free(drv);
 		*out = &global_drivers[DIFF_DRIVER_BINARY];
-		return 0;
+		goto done;
 	} else {
 		/* if diff.<driver>.binary is false, force binary checks off */
 		/* but still may have custom function context patterns, etc. */
@@ -191,7 +190,7 @@ static int git_diff_driver_load(
 	if ((error = git_config_get_multivar(
 			cfg, name.ptr, NULL, diff_driver_xfuncname, drv)) < 0) {
 		if (error != GIT_ENOTFOUND)
-			goto fail;
+			goto done;
 		giterr_clear(); /* no diff.<driver>.xfuncname, so just continue */
 	}
 
@@ -200,7 +199,7 @@ static int git_diff_driver_load(
 	if ((error = git_config_get_multivar(
 			cfg, name.ptr, NULL, diff_driver_funcname, drv)) < 0) {
 		if (error != GIT_ENOTFOUND)
-			goto fail;
+			goto done;
 		giterr_clear(); /* no diff.<driver>.funcname, so just continue */
 	}
 
@@ -214,12 +213,12 @@ static int git_diff_driver_load(
 	git_buf_put(&name, "wordregex", strlen("wordregex"));
 	if ((error = git_config_get_string(&val, cfg, name.ptr)) < 0) {
 		if (error != GIT_ENOTFOUND)
-			goto fail;
+			goto done;
 		giterr_clear(); /* no diff.<driver>.wordregex, so just continue */
 	} else if ((error = regcomp(&drv->word_pattern, val, REG_EXTENDED)) != 0) {
 		/* TODO: warning about bad regex instead of failure */
 		error = giterr_set_regex(&drv->word_pattern, error);
-		goto fail;
+		goto done;
 	} else {
 		found_driver = true;
 	}
@@ -228,21 +227,26 @@ static int git_diff_driver_load(
 	 * diff in drv->other_flags
 	 */
 
-	/* if no driver config found, fall back on AUTO driver */
+	/* if no driver config found at all, fall back on AUTO driver */
 	if (!found_driver)
-		goto fail;
+		goto done;
 
 	/* store driver in registry */
 	git_strmap_insert(reg->drivers, drv->name, drv, error);
 	if (error < 0)
-		goto fail;
+		goto done;
 
 	*out = drv;
-	return 0;
 
-fail:
-	git_diff_driver_free(drv);
-	*out = &global_drivers[DIFF_DRIVER_AUTO];
+done:
+	git_buf_free(&name);
+
+	if (!*out)
+		*out = &global_drivers[DIFF_DRIVER_AUTO];
+
+	if (drv && drv != *out)
+		git_diff_driver_free(drv);
+
 	return error;
 }
 
@@ -289,7 +293,7 @@ void git_diff_driver_free(git_diff_driver *driver)
 	if (!driver)
 		return;
 
-	for (i = 0; i > git_array_size(driver->fn_patterns); ++i)
+	for (i = 0; i < git_array_size(driver->fn_patterns); ++i)
 		regfree(git_array_get(driver->fn_patterns, i));
 	git_array_clear(driver->fn_patterns);
 

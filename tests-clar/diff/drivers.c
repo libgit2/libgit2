@@ -4,7 +4,6 @@
 #include "diff_driver.h"
 
 static git_repository *g_repo = NULL;
-static git_config *g_cfg = NULL;
 
 void test_diff_drivers__initialize(void)
 {
@@ -12,15 +11,13 @@ void test_diff_drivers__initialize(void)
 
 void test_diff_drivers__cleanup(void)
 {
-	git_config_free(g_cfg);
-	g_cfg = NULL;
-
 	cl_git_sandbox_cleanup();
 	g_repo = NULL;
 }
 
 void test_diff_drivers__patterns(void)
 {
+	git_config *cfg;
 	const char *one_sha = "19dd32dfb1520a64e5bbaae8dce6ef423dfa2f13";
 	git_tree *one;
 	git_diff_list *diff;
@@ -87,8 +84,9 @@ void test_diff_drivers__patterns(void)
 
 	/* let's define that driver */
 
-	cl_git_pass(git_repository_config(&g_cfg, g_repo));
-	cl_git_pass(git_config_set_bool(g_cfg, "diff.kipling0.binary", 1));
+	cl_git_pass(git_repository_config(&cfg, g_repo));
+	cl_git_pass(git_config_set_bool(cfg, "diff.kipling0.binary", 1));
+	git_config_free(cfg);
 
 	cl_git_pass(git_diff_tree_to_workdir(&diff, g_repo, one, NULL));
 	cl_assert_equal_i(1, (int)git_diff_num_deltas(diff));
@@ -106,9 +104,10 @@ void test_diff_drivers__patterns(void)
 	git_diff_driver_registry_free(g_repo->diff_drivers);
 	g_repo->diff_drivers = NULL;
 
-	cl_git_pass(git_repository_config(&g_cfg, g_repo));
-	cl_git_pass(git_config_set_bool(g_cfg, "diff.kipling0.binary", 0));
-	cl_git_pass(git_config_set_string(g_cfg, "diff.kipling0.xfuncname", "^H"));
+	cl_git_pass(git_repository_config(&cfg, g_repo));
+	cl_git_pass(git_config_set_bool(cfg, "diff.kipling0.binary", 0));
+	cl_git_pass(git_config_set_string(cfg, "diff.kipling0.xfuncname", "^H"));
+	git_config_free(cfg);
 
 	cl_git_pass(git_diff_tree_to_workdir(&diff, g_repo, one, NULL));
 	cl_assert_equal_i(1, (int)git_diff_num_deltas(diff));
