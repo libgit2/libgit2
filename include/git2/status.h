@@ -60,43 +60,19 @@ typedef int (*git_status_cb)(
 	const char *path, unsigned int status_flags, void *payload);
 
 /**
- * Gather file statuses and run a callback for each one.
- *
- * The callback is passed the path of the file, the status (a combination of
- * the `git_status_t` values above) and the `payload` data pointer passed
- * into this function.
- *
- * If the callback returns a non-zero value, this function will stop looping
- * and return GIT_EUSER.
- *
- * @param repo A repository object
- * @param callback The function to call on each file
- * @param payload Pointer to pass through to callback function
- * @return 0 on success, GIT_EUSER on non-zero callback, or error code
- */
-GIT_EXTERN(int) git_status_foreach(
-	git_repository *repo,
-	git_status_cb callback,
-	void *payload);
-
-/**
  * For extended status, select the files on which to report status.
  *
- * - GIT_STATUS_SHOW_INDEX_AND_WORKDIR is the default.  This is the
- *   rough equivalent of `git status --porcelain` where each file
- *   will receive a callback indicating its status in the index and
- *   in the workdir.
- * - GIT_STATUS_SHOW_INDEX_ONLY will only make callbacks for index
- *   side of status.  The status of the index contents relative to
- *   the HEAD will be given.
- * - GIT_STATUS_SHOW_WORKDIR_ONLY will only make callbacks for the
- *   workdir side of status, reporting the status of workdir content
- *   relative to the index.
- * - GIT_STATUS_SHOW_INDEX_THEN_WORKDIR behaves like index-only
- *   followed by workdir-only, causing two callbacks to be issued
- *   per file (first index then workdir).  This is slightly more
- *   efficient than making separate calls.  This makes it easier to
- *   emulate the output of a plain `git status`.
+ * - GIT_STATUS_SHOW_INDEX_AND_WORKDIR is the default.  This roughly
+ *   matches `git status --porcelain` where each file gets a callback
+ *   indicating its status in the index and in the working directory.
+ * - GIT_STATUS_SHOW_INDEX_ONLY only gives status based on HEAD to index
+ *   comparison, not looking at working directory changes.
+ * - GIT_STATUS_SHOW_WORKDIR_ONLY only gives status based on index to
+ *   working directory comparison, not comparing the index to the HEAD.
+ * - GIT_STATUS_SHOW_INDEX_THEN_WORKDIR runs index-only then workdir-only,
+ *   issuing (up to) two callbacks per file (first index, then workdir).
+ *   This is slightly more efficient than separate calls and can make it
+ *   easier to emulate plain `git status` text output.
  */
 typedef enum {
 	GIT_STATUS_SHOW_INDEX_AND_WORKDIR = 0,
@@ -111,30 +87,30 @@ typedef enum {
  * - GIT_STATUS_OPT_INCLUDE_UNTRACKED says that callbacks should be made
  *   on untracked files.  These will only be made if the workdir files are
  *   included in the status "show" option.
- * - GIT_STATUS_OPT_INCLUDE_IGNORED says that ignored files should get
- *   callbacks.  Again, these callbacks will only be made if the workdir
- *   files are included in the status "show" option.  Right now, there is
- *   no option to include all files in directories that are ignored
- *   completely.
+ * - GIT_STATUS_OPT_INCLUDE_IGNORED says that ignored files get callbacks.
+ *   Again, these callbacks will only be made if the workdir files are
+ *   included in the status "show" option.
  * - GIT_STATUS_OPT_INCLUDE_UNMODIFIED indicates that callback should be
  *   made even on unmodified files.
- * - GIT_STATUS_OPT_EXCLUDE_SUBMODULES indicates that directories which
- *   appear to be submodules should just be skipped over.
- * - GIT_STATUS_OPT_RECURSE_UNTRACKED_DIRS indicates that the contents of
- *   untracked directories should be included in the status.  Normally if
- *   an entire directory is new, then just the top-level directory will be
- *   included (with a trailing slash on the entry name).  Given this flag,
- *   the directory itself will not be included, but all the files in it
- *   will.
+ * - GIT_STATUS_OPT_EXCLUDE_SUBMODULES indicates that submodules should be
+ *   skipped.  This only applies if there are no pending typechanges to
+ *   the submodule (either from or to another type).
+ * - GIT_STATUS_OPT_RECURSE_UNTRACKED_DIRS indicates that all files in
+ *   untracked directories should be included.  Normally if an entire
+ *   directory is new, then just the top-level directory is included (with
+ *   a trailing slash on the entry name).  This flag says to include all
+ *   of the individual files in the directory instead.
  * - GIT_STATUS_OPT_DISABLE_PATHSPEC_MATCH indicates that the given path
- *   will be treated as a literal path, and not as a pathspec.
+ *   should be treated as a literal path, and not as a pathspec pattern.
  * - GIT_STATUS_OPT_RECURSE_IGNORED_DIRS indicates that the contents of
  *   ignored directories should be included in the status.  This is like
  *   doing `git ls-files -o -i --exclude-standard` with core git.
- * - GIT_STATUS_OPT_RENAMES_HEAD_TO_INDEX indicates that items that are
- *   renamed in the index will be reported as renames.
- * - GIT_STATUS_OPT_RENAMES_INDEX_TO_WORKDIR indicates that items that
- *   are renamed in the working directory will be reported as renames.
+ * - GIT_STATUS_OPT_RENAMES_HEAD_TO_INDEX indicates that rename detection
+ *   should be processed between the head and the index and enables
+ *   the GIT_STATUS_INDEX_RENAMED as a possible status flag.
+ * - GIT_STATUS_OPT_RENAMES_INDEX_TO_WORKDIR indicates tha rename
+ *   detection should be run between the index and the working directory
+ *   and enabled GIT_STATUS_WT_RENAMED as a possible status flag.
  *
  * Calling `git_status_foreach()` is like calling the extended version
  * with: GIT_STATUS_OPT_INCLUDE_IGNORED, GIT_STATUS_OPT_INCLUDE_UNTRACKED,
@@ -181,6 +157,9 @@ typedef struct {
 	git_strarray      pathspec;
 } git_status_options;
 
+#define GIT_STATUS_OPTIONS_VERSION 1
+#define GIT_STATUS_OPTIONS_INIT {GIT_STATUS_OPTIONS_VERSION}
+
 /**
  * A status entry, providing the differences between the file as it exists
  * in HEAD and the index, and providing the differences between the index
@@ -201,8 +180,64 @@ typedef struct {
 	git_diff_delta *index_to_workdir;
 } git_status_entry;
 
-#define GIT_STATUS_OPTIONS_VERSION 1
-#define GIT_STATUS_OPTIONS_INIT {GIT_STATUS_OPTIONS_VERSION}
+
+/**
+ * Gather file statuses and run a callback for each one.
+ *
+ * The callback is passed the path of the file, the status (a combination of
+ * the `git_status_t` values above) and the `payload` data pointer passed
+ * into this function.
+ *
+ * If the callback returns a non-zero value, this function will stop looping
+ * and return GIT_EUSER.
+ *
+ * @param repo A repository object
+ * @param callback The function to call on each file
+ * @param payload Pointer to pass through to callback function
+ * @return 0 on success, GIT_EUSER on non-zero callback, or error code
+ */
+GIT_EXTERN(int) git_status_foreach(
+	git_repository *repo,
+	git_status_cb callback,
+	void *payload);
+
+/**
+ * Gather file status information and run callbacks as requested.
+ *
+ * This is an extended version of the `git_status_foreach()` API that
+ * allows for more granular control over which paths will be processed and
+ * in what order.  See the `git_status_options` structure for details
+ * about the additional controls that this makes available.
+ *
+ * @param repo Repository object
+ * @param opts Status options structure
+ * @param callback The function to call on each file
+ * @param payload Pointer to pass through to callback function
+ * @return 0 on success, GIT_EUSER on non-zero callback, or error code
+ */
+GIT_EXTERN(int) git_status_foreach_ext(
+	git_repository *repo,
+	const git_status_options *opts,
+	git_status_cb callback,
+	void *payload);
+
+/**
+ * Get file status for a single file.
+ *
+ * This is not quite the same as calling `git_status_foreach_ext()` with
+ * the pathspec set to the specified path.
+ *
+ * @param status_flags The status value for the file
+ * @param repo A repository object
+ * @param path The file to retrieve status for, rooted at the repo's workdir
+ * @return 0 on success, GIT_ENOTFOUND if the file is not found in the HEAD,
+ *      index, and work tree, GIT_EINVALIDPATH if `path` points at a folder,
+ *      GIT_EAMBIGUOUS if "path" matches multiple files, -1 on other error.
+ */
+GIT_EXTERN(int) git_status_file(
+	unsigned int *status_flags,
+	git_repository *repo,
+	const char *path);
 
 /**
  * Gather file status information and populate the `git_status_list`.
@@ -246,44 +281,6 @@ GIT_EXTERN(const git_status_entry *) git_status_byindex(
  */
 GIT_EXTERN(void) git_status_list_free(
 	git_status_list *statuslist);
-
-/**
- * Gather file status information and run callbacks as requested.
- *
- * This is an extended version of the `git_status_foreach()` API that
- * allows for more granular control over which paths will be processed and
- * in what order.  See the `git_status_options` structure for details
- * about the additional controls that this makes available.
- *
- * @param repo Repository object
- * @param opts Status options structure
- * @param callback The function to call on each file
- * @param payload Pointer to pass through to callback function
- * @return 0 on success, GIT_EUSER on non-zero callback, or error code
- */
-GIT_EXTERN(int) git_status_foreach_ext(
-	git_repository *repo,
-	const git_status_options *opts,
-	git_status_cb callback,
-	void *payload);
-
-/**
- * Get file status for a single file.
- *
- * This is not quite the same as calling `git_status_foreach_ext()` with
- * the pathspec set to the specified path.
- *
- * @param status_flags The status value for the file
- * @param repo A repository object
- * @param path The file to retrieve status for, rooted at the repo's workdir
- * @return 0 on success, GIT_ENOTFOUND if the file is not found in the HEAD,
- *      index, and work tree, GIT_EINVALIDPATH if `path` points at a folder,
- *      GIT_EAMBIGUOUS if "path" matches multiple files, -1 on other error.
- */
-GIT_EXTERN(int) git_status_file(
-	unsigned int *status_flags,
-	git_repository *repo,
-	const char *path);
 
 /**
  * Test if the ignore rules apply to a given file.
