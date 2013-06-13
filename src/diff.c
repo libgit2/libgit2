@@ -134,6 +134,7 @@ static int diff_delta__from_two(
 {
 	git_diff_delta *delta;
 	int notify_res;
+	const char *canonical_path = old_entry->path;
 
 	if (status == GIT_DELTA_UNMODIFIED &&
 		DIFF_FLAG_ISNT_SET(diff, GIT_DIFF_INCLUDE_UNMODIFIED))
@@ -153,7 +154,7 @@ static int diff_delta__from_two(
 		new_mode = temp_mode;
 	}
 
-	delta = diff_delta__alloc(diff, status, old_entry->path);
+	delta = diff_delta__alloc(diff, status, canonical_path);
 	GITERR_CHECK_ALLOC(delta);
 
 	git_oid_cpy(&delta->old_file.oid, &old_entry->oid);
