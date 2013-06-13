@@ -364,6 +364,8 @@ static git_diff_list *diff_list_alloc(
 		diff->strncomp   = git__strncasecmp;
 		diff->pfxcomp    = git__prefixcmp_icase;
 		diff->entrycomp  = git_index_entry__cmp_icase;
+
+		diff->deltas._cmp = git_diff_delta__casecmp;
 	}
 
 	return diff;
@@ -1127,16 +1129,39 @@ int git_diff_tree_to_index(
 	const git_diff_options *opts)
 {
 	int error = 0;
+	bool reset_index_ignore_case = false;
 
 	assert(diff && repo);
 
 	if (!index && (error = git_repository_index__weakptr(&index, repo)) < 0)
 		return error;
 
+	if (index->ignore_case) {
+		git_index__set_ignore_case(index, false);
+		reset_index_ignore_case = true;
+	}
+
 	DIFF_FROM_ITERATORS(
 		git_iterator_for_tree(&a, old_tree, 0, pfx, pfx),
 		git_iterator_for_index(&b, index, 0, pfx, pfx)
 	);
+
+	if (reset_index_ignore_case) {
+		git_index__set_ignore_case(index, true);
+
+		if (!error) {
+			git_diff_list *d = *diff;
+
+			d->opts.flags |= GIT_DIFF_DELTAS_ARE_ICASE;
+			d->strcomp    = git__strcasecmp;
+			d->strncomp   = git__strncasecmp;
+			d->pfxcomp    = git__prefixcmp_icase;
+			d->entrycomp  = git_index_entry__cmp_icase;
+
+			d->deltas._cmp = git_diff_delta__casecmp;
+			git_vector_sort(&d->deltas);
+		}
+	}
 
 	return error;
 }
