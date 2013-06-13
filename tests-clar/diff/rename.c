@@ -911,7 +911,6 @@ void test_diff_rename__case_changes_are_split(void)
 {
 	git_index *index;
 	git_tree *tree;
-	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
 	git_diff_list *diff = NULL;
 	diff_expects exp;
 
