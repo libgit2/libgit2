@@ -81,23 +81,33 @@ static unsigned int workdir_delta2status(git_delta_t workdir_status)
 }
 
 static bool status_is_included(
-	git_status_list *statuslist,
+	git_status_list *status,
 	git_diff_delta *head2idx,
 	git_diff_delta *idx2wd)
 {
-	/* if excluding submodules and this is a submodule everywhere */
-	if ((statuslist->opts.flags & GIT_STATUS_OPT_EXCLUDE_SUBMODULES) != 0) {
-		bool in_tree = (head2idx && head2idx->status != GIT_DELTA_ADDED);
-		bool in_index = (head2idx && head2idx->status != GIT_DELTA_DELETED);
-		bool in_wd = (idx2wd && idx2wd->status != GIT_DELTA_DELETED);
+	if (!(status->opts.flags & GIT_STATUS_OPT_EXCLUDE_SUBMODULES))
+		return 1;
 
-		if ((!in_tree || head2idx->old_file.mode == GIT_FILEMODE_COMMIT) &&
-			(!in_index || head2idx->new_file.mode == GIT_FILEMODE_COMMIT) &&
-			(!in_wd || idx2wd->new_file.mode == GIT_FILEMODE_COMMIT))
-			return 0;
+	/* if excluding submodules and this is a submodule everywhere */
+	if (head2idx) {
+		if (head2idx->status != GIT_DELTA_ADDED &&
+			head2idx->old_file.mode != GIT_FILEMODE_COMMIT)
+			return 1;
+		if (head2idx->status != GIT_DELTA_DELETED &&
+			head2idx->new_file.mode != GIT_FILEMODE_COMMIT)
+			return 1;
+	}
+	if (idx2wd) {
+		if (idx2wd->status != GIT_DELTA_ADDED &&
+			idx2wd->old_file.mode != GIT_FILEMODE_COMMIT)
+			return 1;
+		if (idx2wd->status != GIT_DELTA_DELETED &&
+			idx2wd->new_file.mode != GIT_FILEMODE_COMMIT)
+			return 1;
 	}
 
-	return 1;
+	/* only get here if every valid mode is GIT_FILEMODE_COMMIT */
+	return 0;
 }
 
 static git_status_t status_compute(
