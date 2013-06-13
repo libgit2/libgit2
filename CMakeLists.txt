@@ -27,7 +27,8 @@ OPTION( BUILD_EXAMPLES		"Build library usage example apps"		OFF )
 OPTION( TAGS				"Generate tags"							OFF )
 OPTION( PROFILE				"Generate profiling information"		OFF )
 OPTION( ENABLE_TRACE		"Enables tracing support"				OFF )
-OPTION( SONAME_APPEND "Append the given string to the library's filename" OFF )
+OPTION( LIBGIT2_FILENAME	"Name of the produced binary" OFF )
+
 IF(MSVC)
 	# This option is only availalbe when building with MSVC. By default,
 	# libgit2 is build using the stdcall calling convention, as that's what
@@ -326,22 +327,12 @@ MSVC_SPLIT_SOURCES(git2)
 IF (SONAME)
 	SET_TARGET_PROPERTIES(git2 PROPERTIES VERSION ${LIBGIT2_VERSION_STRING})
 	SET_TARGET_PROPERTIES(git2 PROPERTIES SOVERSION ${LIBGIT2_VERSION_MAJOR})
-	IF (SONAME_APPEND)
-		SET_TARGET_PROPERTIES(git2 PROPERTIES OUTPUT_NAME "git2-${SONAME_APPEND}")
+	IF (LIBGIT2_FILENAME)
+		ADD_DEFINITIONS(-DLIBGIT2_FILENAME=\"${LIBGIT2_FILENAME}\")
+		SET_TARGET_PROPERTIES(git2 PROPERTIES OUTPUT_NAME ${LIBGIT2_FILENAME})
 	ENDIF()
 ENDIF()
-
 CONFIGURE_FILE(${CMAKE_CURRENT_SOURCE_DIR}/libgit2.pc.in ${CMAKE_CURRENT_BINARY_DIR}/libgit2.pc @ONLY)
-
-IF (NOT BUILD_SHARED_LIBS)
-	SET(LIBGIT2_NAME_PREFIX "lib")
-ENDIF()
-
-IF (SONAME_APPEND)
-	SET(LIBGIT2_NAME_SUFFIX "-${SONAME_APPEND}")
-ENDIF()
-
-CONFIGURE_FILE(${CMAKE_CURRENT_SOURCE_DIR}/src/win32/git2.rc.cmake ${WIN_RC} @ONLY)
 
 IF (MSVC_IDE)
    # Precompiled headers

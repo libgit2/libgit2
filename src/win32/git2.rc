@@ -1,7 +1,9 @@
 #include <winver.h>
 #include "../../include/git2/version.h"
 
-#define LIBGIT2_FILENAME "@LIBGIT2_NAME_PREFIX@git2@LIBGIT2_NAME_SUFFIX@.dll"
+#ifndef LIBGIT2_FILENAME
+#	define LIBGIT2_FILENAME "git2"
+#endif
 
 VS_VERSION_INFO		VERSIONINFO	MOVEABLE IMPURE LOADONCALL DISCARDABLE
   FILEVERSION		LIBGIT2_VER_MAJOR,LIBGIT2_VER_MINOR,LIBGIT2_VER_REVISION,0
@@ -23,9 +25,9 @@ BEGIN
     BEGIN
       VALUE "FileDescription",	"libgit2 - the Git linkable library\0"
       VALUE "FileVersion",	LIBGIT2_VERSION "\0"
-      VALUE "InternalName",	LIBGIT2_FILENAME "\0"
+      VALUE "InternalName",	LIBGIT2_FILENAME ".dll\0"
       VALUE "LegalCopyright",	"Copyright (C) the libgit2 contributors. All rights reserved.\0"
-      VALUE "OriginalFilename",	LIBGIT2_FILENAME "\0"
+      VALUE "OriginalFilename",	LIBGIT2_FILENAME ".dll\0"
       VALUE "ProductName",	"libgit2\0"
       VALUE "ProductVersion",	LIBGIT2_VERSION "\0"
       VALUE "Comments",		"For more information visit http://libgit2.github.com/\0"
