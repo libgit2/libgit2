@@ -825,6 +825,8 @@ int test_names_expected(const git_diff_delta *delta, float progress, void *p)
 {
 	struct rename_expected *expected = p;
 
+	GIT_UNUSED(progress);
+
 	cl_assert(expected->idx < expected->len);
 
 	cl_assert_equal_i(delta->status, GIT_DELTA_RENAMED);
