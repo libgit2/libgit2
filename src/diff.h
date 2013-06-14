@@ -95,17 +95,16 @@ extern int git_diff__paired_foreach(
 	int (*cb)(git_diff_delta *i2h, git_diff_delta *w2i, void *payload),
 	void *payload);
 
-int git_diff_find_similar__hashsig_for_file(
+extern int git_diff_find_similar__hashsig_for_file(
 	void **out, const git_diff_file *f, const char *path, void *p);
 
-int git_diff_find_similar__hashsig_for_buf(
+extern int git_diff_find_similar__hashsig_for_buf(
 	void **out, const git_diff_file *f, const char *buf, size_t len, void *p);
 
-void git_diff_find_similar__hashsig_free(void *sig, void *payload);
+extern void git_diff_find_similar__hashsig_free(void *sig, void *payload);
 
-int git_diff_find_similar__calc_similarity(
+extern int git_diff_find_similar__calc_similarity(
 	int *score, void *siga, void *sigb, void *payload);
-
 
 #endif
 

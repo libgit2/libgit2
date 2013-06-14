@@ -175,10 +175,11 @@ static int diff_patch_load(git_diff_patch *patch, git_diff_output *output)
 			goto cleanup;
 	}
 
-	/* if we were previously missing an oid, reassess UNMODIFIED state */
+	/* if we were previously missing an oid, update MODIFIED->UNMODIFIED */
 	if (incomplete_data &&
 		patch->ofile.file.mode == patch->nfile.file.mode &&
-		git_oid_equal(&patch->ofile.file.oid, &patch->nfile.file.oid))
+		git_oid_equal(&patch->ofile.file.oid, &patch->nfile.file.oid) &&
+		patch->delta->status == GIT_DELTA_MODIFIED) /* not RENAMED/COPIED! */
 		patch->delta->status = GIT_DELTA_UNMODIFIED;
 
 cleanup:
@@ -284,6 +285,7 @@ int git_diff_foreach(
 	git_xdiff_init(&xo, &diff->opts);
 
 	git_vector_foreach(&diff->deltas, idx, patch.delta) {
+
 		/* check flags against patch status */
 		if (git_diff_delta__should_skip(&diff->opts, patch.delta))
 			continue;

@@ -20,11 +20,11 @@
 #include "git2/diff.h"
 #include "diff.h"
 
-static unsigned int index_delta2status(git_delta_t index_status)
+static unsigned int index_delta2status(const git_diff_delta *head2idx)
 {
-	unsigned int st = GIT_STATUS_CURRENT;
+	git_status_t st = GIT_STATUS_CURRENT;
 
-	switch (index_status) {
+	switch (head2idx->status) {
 	case GIT_DELTA_ADDED:
 	case GIT_DELTA_COPIED:
 		st = GIT_STATUS_INDEX_NEW;
@@ -37,6 +37,9 @@ static unsigned int index_delta2status(git_delta_t index_status)
 		break;
 	case GIT_DELTA_RENAMED:
 		st = GIT_STATUS_INDEX_RENAMED;
+
+		if (!git_oid_equal(&head2idx->old_file.oid, &head2idx->new_file.oid))
+			st |= GIT_STATUS_INDEX_MODIFIED;
 		break;
 	case GIT_DELTA_TYPECHANGE:
 		st = GIT_STATUS_INDEX_TYPECHANGE;
@@ -48,11 +51,12 @@ static unsigned int index_delta2status(git_delta_t index_status)
 	return st;
 }
 
-static unsigned int workdir_delta2status(git_delta_t workdir_status)
+static unsigned int workdir_delta2status(
+	git_diff_list *diff, git_diff_delta *idx2wd)
 {
-	unsigned int st = GIT_STATUS_CURRENT;
+	git_status_t st = GIT_STATUS_CURRENT;
 
-	switch (workdir_status) {
+	switch (idx2wd->status) {
 	case GIT_DELTA_ADDED:
 	case GIT_DELTA_COPIED:
 	case GIT_DELTA_UNTRACKED:
@@ -69,6 +73,28 @@ static unsigned int workdir_delta2status(git_delta_t workdir_status)
 		break;
 	case GIT_DELTA_RENAMED:
 		st = GIT_STATUS_WT_RENAMED;
+
+		if (!git_oid_equal(&idx2wd->old_file.oid, &idx2wd->new_file.oid)) {
+			/* if OIDs don't match, we might need to calculate them now to
+			 * discern between RENAMED vs RENAMED+MODIFED
+			 */
+			if (git_oid_iszero(&idx2wd->old_file.oid) &&
+				diff->old_src == GIT_ITERATOR_TYPE_WORKDIR &&
+				!git_diff__oid_for_file(
+					diff->repo, idx2wd->old_file.path, idx2wd->old_file.mode,
+					idx2wd->old_file.size, &idx2wd->old_file.oid))
+			idx2wd->old_file.flags |= GIT_DIFF_FLAG_VALID_OID;
+
+			if (git_oid_iszero(&idx2wd->new_file.oid) &&
+				diff->new_src == GIT_ITERATOR_TYPE_WORKDIR &&
+				!git_diff__oid_for_file(
+					diff->repo, idx2wd->new_file.path, idx2wd->new_file.mode,
+					idx2wd->new_file.size, &idx2wd->new_file.oid))
+				idx2wd->new_file.flags |= GIT_DIFF_FLAG_VALID_OID;
+
+			if (!git_oid_equal(&idx2wd->old_file.oid, &idx2wd->new_file.oid))
+				st |= GIT_STATUS_WT_MODIFIED;
+		}
 		break;
 	case GIT_DELTA_TYPECHANGE:
 		st = GIT_STATUS_WT_TYPECHANGE;
@@ -111,18 +137,19 @@ static bool status_is_included(
 }
 
 static git_status_t status_compute(
+	git_status_list *status,
 	git_diff_delta *head2idx,
 	git_diff_delta *idx2wd)
 {
-	git_status_t status = 0;
+	git_status_t st = GIT_STATUS_CURRENT;
 
 	if (head2idx)
-		status |= index_delta2status(head2idx->status);
+		st |= index_delta2status(head2idx);
 
 	if (idx2wd)
-		status |= workdir_delta2status(idx2wd->status);
+		st |= workdir_delta2status(status->idx2wd, idx2wd);
 
-	return status;
+	return st;
 }
 
 static int status_collect(
@@ -139,7 +166,7 @@ static int status_collect(
 	status_entry = git__malloc(sizeof(git_status_entry));
 	GITERR_CHECK_ALLOC(status_entry);
 
-	status_entry->status = status_compute(head2idx, idx2wd);
+	status_entry->status = status_compute(status, head2idx, idx2wd);
 	status_entry->head_to_index = head2idx;
 	status_entry->index_to_workdir = idx2wd;
 
