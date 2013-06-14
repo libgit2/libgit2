@@ -320,7 +320,7 @@ int git_futils_mkdir(
 	min_root_len = git_path_root(make_path.ptr);
 	if (root < min_root_len)
 		root = min_root_len;
-	while (make_path.ptr[root] == '/')
+	while (root >= 0 && make_path.ptr[root] == '/')
 		++root;
 
 	/* clip root to make_path length */
