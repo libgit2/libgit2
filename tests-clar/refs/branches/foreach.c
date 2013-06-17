@@ -122,7 +122,7 @@ void test_refs_branches_foreach__retrieve_remote_symbolic_HEAD_when_present(void
 	cl_git_pass(git_branch_foreach(repo, GIT_BRANCH_REMOTE, contains_branch_list_cb, &exp));
 
 	assert_branch_has_been_found(exp, "nulltoken/HEAD");
-	assert_branch_has_been_found(exp, "nulltoken/HEAD");
+	assert_branch_has_been_found(exp, "nulltoken/master");
 }
 
 static int branch_list_interrupt_cb(
