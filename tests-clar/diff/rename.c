@@ -908,6 +908,76 @@ void test_diff_rename__rejected_match_can_match_others(void)
 	git_buf_free(&two);
 }
 
+static void write_similarity_file_two(const char *filename, size_t b_lines)
+{
+	git_buf contents = GIT_BUF_INIT;
+	size_t i;
+
+	for (i = 0; i < b_lines; i++)
+		git_buf_printf(&contents, "%0.2d - bbbbb\r\n", (i+1));
+
+	for (i = b_lines; i < 50; i++)
+		git_buf_printf(&contents, "%0.2d - aaaaa%s", (i+1), (i == 49 ? "" : "\r\n"));
+
+	cl_git_pass(
+		git_futils_writebuffer(&contents, filename, O_RDWR|O_CREAT, 0777));
+
+	git_buf_free(&contents);
+}
+
+void test_diff_rename__rejected_match_can_match_others_two(void)
+{
+	git_reference *head, *selfsimilar;
+	git_index *index;
+	git_tree *tree;
+	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
+	git_diff_list *diff;
+	git_diff_options diffopts = GIT_DIFF_OPTIONS_INIT;
+	git_diff_find_options findopts = GIT_DIFF_FIND_OPTIONS_INIT;
+	const char *sources[] = { "a.txt", "b.txt" };
+	const char *targets[] = { "c.txt", "d.txt" };
+	struct rename_expected expect = { 2, sources, targets };
+
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+
+	cl_git_pass(git_reference_lookup(&head, g_repo, "HEAD"));
+	cl_git_pass(git_reference_symbolic_set_target(
+		&selfsimilar, head, "refs/heads/renames_similar_two"));
+	cl_git_pass(git_checkout_head(g_repo, &opts));
+	cl_git_pass(git_repository_index(&index, g_repo));
+
+	cl_git_pass(p_unlink("renames/a.txt"));
+	cl_git_pass(p_unlink("renames/b.txt"));
+
+	cl_git_pass(git_index_remove_bypath(index, "a.txt"));
+	cl_git_pass(git_index_remove_bypath(index, "b.txt"));
+
+	write_similarity_file_two("renames/c.txt", 7);
+	write_similarity_file_two("renames/d.txt", 8);
+
+	cl_git_pass(git_index_add_bypath(index, "c.txt"));
+	cl_git_pass(git_index_add_bypath(index, "d.txt"));
+
+	cl_git_pass(git_index_write(index));
+
+	cl_git_pass(
+		git_revparse_single((git_object **)&tree, g_repo, "HEAD^{tree}"));
+
+	cl_git_pass(
+		git_diff_tree_to_index(&diff, g_repo, tree, index, &diffopts));
+	cl_git_pass(git_diff_find_similar(diff, &findopts));
+
+	cl_git_pass(
+		git_diff_foreach(diff, test_names_expected, NULL, NULL, &expect));
+	cl_assert(expect.idx > 0);
+
+	git_diff_list_free(diff);
+	git_tree_free(tree);
+	git_index_free(index);
+	git_reference_free(head);
+	git_reference_free(selfsimilar);
+}
+
 void test_diff_rename__case_changes_are_split(void)
 {
 	git_index *index;
