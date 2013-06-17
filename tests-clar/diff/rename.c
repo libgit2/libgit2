@@ -947,6 +947,7 @@ void test_diff_rename__case_changes_are_split(void)
 
 	git_diff_list_free(diff);
 	git_index_free(index);
+	git_tree_free(tree);
 }
 
 void test_diff_rename__unmodified_can_be_renamed(void)
@@ -993,4 +994,6 @@ void test_diff_rename__unmodified_can_be_renamed(void)
 	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_RENAMED]);
 
 	git_diff_list_free(diff);
+	git_index_free(index);
+	git_tree_free(tree);
 }
