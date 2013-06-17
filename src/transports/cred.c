@@ -17,7 +17,7 @@ static void plaintext_free(struct git_cred *cred)
 	git__free(c->username);
 
 	/* Zero the memory which previously held the password */
-	memset(c->password, 0x0, pass_len);
+	git__memzero(c->password, pass_len);
 	git__free(c->password);
 
 	memset(c, 0, sizeof(*c));
@@ -73,7 +73,7 @@ static void ssh_keyfile_passphrase_free(struct git_cred *cred)
 
     if (c->passphrase) {
         /* Zero the memory which previously held the passphrase */
-        memset(c->passphrase, 0x0, pass_len);
+        git__memzero(c->passphrase, pass_len);
         git__free(c->passphrase);
     }
 
