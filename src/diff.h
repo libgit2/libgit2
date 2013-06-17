@@ -74,6 +74,7 @@ extern void git_diff__cleanup_modes(
 extern void git_diff_list_addref(git_diff_list *diff);
 
 extern int git_diff_delta__cmp(const void *a, const void *b);
+extern int git_diff_delta__casecmp(const void *a, const void *b);
 
 extern bool git_diff_delta__should_skip(
 	const git_diff_options *opts, const git_diff_delta *delta);
@@ -94,17 +95,16 @@ extern int git_diff__paired_foreach(
 	int (*cb)(git_diff_delta *i2h, git_diff_delta *w2i, void *payload),
 	void *payload);
 
-int git_diff_find_similar__hashsig_for_file(
+extern int git_diff_find_similar__hashsig_for_file(
 	void **out, const git_diff_file *f, const char *path, void *p);
 
-int git_diff_find_similar__hashsig_for_buf(
+extern int git_diff_find_similar__hashsig_for_buf(
 	void **out, const git_diff_file *f, const char *buf, size_t len, void *p);
 
-void git_diff_find_similar__hashsig_free(void *sig, void *payload);
+extern void git_diff_find_similar__hashsig_free(void *sig, void *payload);
 
-int git_diff_find_similar__calc_similarity(
+extern int git_diff_find_similar__calc_similarity(
 	int *score, void *siga, void *sigb, void *payload);
-
 
 #endif
 

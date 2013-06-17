@@ -899,10 +899,101 @@ void test_diff_rename__rejected_match_can_match_others(void)
 	cl_git_pass(
 		git_diff_foreach(diff, test_names_expected, NULL, NULL, &expect));
 
+	git_diff_list_free(diff);
 	git_tree_free(tree);
 	git_index_free(index);
 	git_reference_free(head);
 	git_reference_free(selfsimilar);
 	git_buf_free(&one);
 	git_buf_free(&two);
+}
+
+void test_diff_rename__case_changes_are_split(void)
+{
+	git_index *index;
+	git_tree *tree;
+	git_diff_list *diff = NULL;
+	diff_expects exp;
+	git_diff_find_options opts = GIT_DIFF_FIND_OPTIONS_INIT;
+
+	cl_git_pass(git_repository_index(&index, g_repo));
+
+	cl_git_pass(
+		git_revparse_single((git_object **)&tree, g_repo, "HEAD^{tree}"));
+
+	cl_git_pass(p_rename("renames/ikeepsix.txt", "renames/IKEEPSIX.txt"));
+
+	cl_git_pass(git_index_remove_bypath(index, "ikeepsix.txt"));
+	cl_git_pass(git_index_add_bypath(index, "IKEEPSIX.txt"));
+	cl_git_pass(git_index_write(index));
+
+	cl_git_pass(git_diff_tree_to_index(&diff, g_repo, tree, index, NULL));
+
+	memset(&exp, 0, sizeof(exp));
+	cl_git_pass(git_diff_foreach(
+		diff, diff_file_cb, diff_hunk_cb, diff_line_cb, &exp));
+	cl_assert_equal_i(2, exp.files);
+	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_DELETED]);
+	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_ADDED]);
+
+	opts.flags = GIT_DIFF_FIND_ALL;
+	cl_git_pass(git_diff_find_similar(diff, &opts));
+
+	memset(&exp, 0, sizeof(exp));
+	cl_git_pass(git_diff_foreach(
+		diff, diff_file_cb, diff_hunk_cb, diff_line_cb, &exp));
+	cl_assert_equal_i(1, exp.files);
+	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_RENAMED]);
+
+	git_diff_list_free(diff);
+	git_index_free(index);
+	git_tree_free(tree);
+}
+
+void test_diff_rename__unmodified_can_be_renamed(void)
+{
+	git_index *index;
+	git_tree *tree;
+	git_diff_list *diff = NULL;
+	diff_expects exp;
+	git_diff_options diffopts = GIT_DIFF_OPTIONS_INIT;
+	git_diff_find_options opts = GIT_DIFF_FIND_OPTIONS_INIT;
+
+	cl_git_pass(git_repository_index(&index, g_repo));
+	cl_git_pass(
+		git_revparse_single((git_object **)&tree, g_repo, "HEAD^{tree}"));
+
+	cl_git_pass(p_rename("renames/ikeepsix.txt", "renames/ikeepsix2.txt"));
+
+	cl_git_pass(git_index_remove_bypath(index, "ikeepsix.txt"));
+	cl_git_pass(git_index_add_bypath(index, "ikeepsix2.txt"));
+	cl_git_pass(git_index_write(index));
+
+	cl_git_pass(git_diff_tree_to_index(&diff, g_repo, tree, index, &diffopts));
+
+	memset(&exp, 0, sizeof(exp));
+	cl_git_pass(git_diff_foreach(
+		diff, diff_file_cb, diff_hunk_cb, diff_line_cb, &exp));
+	cl_assert_equal_i(2, exp.files);
+	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_DELETED]);
+	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_ADDED]);
+
+	opts.flags = GIT_DIFF_FIND_ALL;
+	cl_git_pass(git_diff_find_similar(diff, &opts));
+
+	memset(&exp, 0, sizeof(exp));
+	cl_git_pass(git_diff_foreach(
+		diff, diff_file_cb, diff_hunk_cb, diff_line_cb, &exp));
+	cl_assert_equal_i(1, exp.files);
+	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_RENAMED]);
+
+	memset(&exp, 0, sizeof(exp));
+	cl_git_pass(git_diff_foreach(
+		diff, diff_file_cb, diff_hunk_cb, diff_line_cb, &exp));
+	cl_assert_equal_i(1, exp.files);
+	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_RENAMED]);
+
+	git_diff_list_free(diff);
+	git_index_free(index);
+	git_tree_free(tree);
 }

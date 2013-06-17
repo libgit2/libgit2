@@ -174,6 +174,9 @@ typedef struct git_reference_iterator  git_reference_iterator;
 /** Merge heads, the input to merge */
 typedef struct git_merge_head git_merge_head;
 
+/** Representation of a status collection */
+typedef struct git_status_list git_status_list;
+
 
 /** Basic type of any Git reference. */
 typedef enum {
