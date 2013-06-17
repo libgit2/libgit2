@@ -137,7 +137,7 @@ int git_branch_foreach(
 	if (git_reference_iterator_new(&iter, repo) < 0)
 		return -1;
 
-	while (!error && (error = git_reference_next(&ref, iter)) == 0) {
+	while ((error = git_reference_next(&ref, iter)) == 0) {
 		if (list_flags & GIT_BRANCH_LOCAL &&
 		    git__prefixcmp(ref->name, GIT_REFS_HEADS_DIR) == 0) {
 			if (callback(ref->name + strlen(GIT_REFS_HEADS_DIR),
@@ -155,6 +155,10 @@ int git_branch_foreach(
 		}
 
 		git_reference_free(ref);
+
+		/* check if the callback has cancelled iteration */
+		if (error == GIT_EUSER)
+			break;
 	}
 
 	if (error == GIT_ITEROVER)
