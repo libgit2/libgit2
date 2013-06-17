@@ -134,6 +134,7 @@ static int diff_delta__from_two(
 {
 	git_diff_delta *delta;
 	int notify_res;
+	const char *canonical_path = old_entry->path;
 
 	if (status == GIT_DELTA_UNMODIFIED &&
 		DIFF_FLAG_ISNT_SET(diff, GIT_DIFF_INCLUDE_UNMODIFIED))
@@ -153,7 +154,7 @@ static int diff_delta__from_two(
 		new_mode = temp_mode;
 	}
 
-	delta = diff_delta__alloc(diff, status, old_entry->path);
+	delta = diff_delta__alloc(diff, status, canonical_path);
 	GITERR_CHECK_ALLOC(delta);
 
 	git_oid_cpy(&delta->old_file.oid, &old_entry->oid);
@@ -250,6 +251,13 @@ int git_diff_delta__cmp(const void *a, const void *b)
 {
 	const git_diff_delta *da = a, *db = b;
 	int val = strcmp(diff_delta__path(da), diff_delta__path(db));
+	return val ? val : ((int)da->status - (int)db->status);
+}
+
+int git_diff_delta__casecmp(const void *a, const void *b)
+{
+	const git_diff_delta *da = a, *db = b;
+	int val = strcasecmp(diff_delta__path(da), diff_delta__path(db));
 	return val ? val : ((int)da->status - (int)db->status);
 }
 
@@ -356,6 +364,8 @@ static git_diff_list *diff_list_alloc(
 		diff->strncomp   = git__strncasecmp;
 		diff->pfxcomp    = git__prefixcmp_icase;
 		diff->entrycomp  = git_index_entry__cmp_icase;
+
+		diff->deltas._cmp = git_diff_delta__casecmp;
 	}
 
 	return diff;
@@ -1119,16 +1129,39 @@ int git_diff_tree_to_index(
 	const git_diff_options *opts)
 {
 	int error = 0;
+	bool reset_index_ignore_case = false;
 
 	assert(diff && repo);
 
 	if (!index && (error = git_repository_index__weakptr(&index, repo)) < 0)
 		return error;
 
+	if (index->ignore_case) {
+		git_index__set_ignore_case(index, false);
+		reset_index_ignore_case = true;
+	}
+
 	DIFF_FROM_ITERATORS(
 		git_iterator_for_tree(&a, old_tree, 0, pfx, pfx),
 		git_iterator_for_index(&b, index, 0, pfx, pfx)
 	);
+
+	if (reset_index_ignore_case) {
+		git_index__set_ignore_case(index, true);
+
+		if (!error) {
+			git_diff_list *d = *diff;
+
+			d->opts.flags |= GIT_DIFF_DELTAS_ARE_ICASE;
+			d->strcomp    = git__strcasecmp;
+			d->strncomp   = git__strncasecmp;
+			d->pfxcomp    = git__prefixcmp_icase;
+			d->entrycomp  = git_index_entry__cmp_icase;
+
+			d->deltas._cmp = git_diff_delta__casecmp;
+			git_vector_sort(&d->deltas);
+		}
+	}
 
 	return error;
 }
@@ -1196,49 +1229,76 @@ size_t git_diff_num_deltas_of_type(git_diff_list *diff, git_delta_t type)
 }
 
 int git_diff__paired_foreach(
-	git_diff_list *idx2head,
-	git_diff_list *wd2idx,
-	int (*cb)(git_diff_delta *i2h, git_diff_delta *w2i, void *payload),
+	git_diff_list *head2idx,
+	git_diff_list *idx2wd,
+	int (*cb)(git_diff_delta *h2i, git_diff_delta *i2w, void *payload),
 	void *payload)
 {
 	int cmp;
-	git_diff_delta *i2h, *w2i;
+	git_diff_delta *h2i, *i2w;
 	size_t i, j, i_max, j_max;
-	int (*strcomp)(const char *, const char *);
+	int (*strcomp)(const char *, const char *) = git__strcmp;
+	bool icase_mismatch;
 
-	i_max = idx2head ? idx2head->deltas.length : 0;
-	j_max = wd2idx   ? wd2idx->deltas.length   : 0;
+	i_max = head2idx ? head2idx->deltas.length : 0;
+	j_max = idx2wd ? idx2wd->deltas.length : 0;
 
-	/* Get appropriate strcmp function */
-	strcomp = idx2head ? idx2head->strcomp : wd2idx ? wd2idx->strcomp : NULL;
+	/* At some point, tree-to-index diffs will probably never ignore case,
+	 * even if that isn't true now.  Index-to-workdir diffs may or may not
+	 * ignore case, but the index filename for the idx2wd diff should
+	 * still be using the canonical case-preserving name.
+	 *
+	 * Therefore the main thing we need to do here is make sure the diffs
+	 * are traversed in a compatible order.  To do this, we temporarily
+	 * resort a mismatched diff to get the order correct.
+	 */
+	icase_mismatch =
+		(head2idx != NULL && idx2wd != NULL &&
+		 ((head2idx->opts.flags ^ idx2wd->opts.flags) & GIT_DIFF_DELTAS_ARE_ICASE));
 
-	/* Assert both iterators use matching ignore-case. If this function ever
-	* supports merging diffs that are not sorted by the same function, then
-	* it will need to spool and sort on one of the results before merging
-	*/
-	if (idx2head && wd2idx) {
-		assert(idx2head->strcomp == wd2idx->strcomp);
+	/* force case-sensitive delta sort */
+	if (icase_mismatch) {
+		if (head2idx->opts.flags & GIT_DIFF_DELTAS_ARE_ICASE) {
+			head2idx->deltas._cmp = git_diff_delta__cmp;
+			git_vector_sort(&head2idx->deltas);
+		} else {
+			idx2wd->deltas._cmp = git_diff_delta__cmp;
+			git_vector_sort(&idx2wd->deltas);
+		}
 	}
+	else if (head2idx->opts.flags & GIT_DIFF_DELTAS_ARE_ICASE)
+		strcomp = git__strcasecmp;
 
 	for (i = 0, j = 0; i < i_max || j < j_max; ) {
-		i2h = idx2head ? GIT_VECTOR_GET(&idx2head->deltas,i) : NULL;
-		w2i = wd2idx   ? GIT_VECTOR_GET(&wd2idx->deltas,j)   : NULL;
+		h2i = head2idx ? GIT_VECTOR_GET(&head2idx->deltas, i) : NULL;
+		i2w = idx2wd ? GIT_VECTOR_GET(&idx2wd->deltas, j) : NULL;
 
-		cmp = !w2i ? -1 : !i2h ? 1 :
-			strcomp(i2h->old_file.path, w2i->old_file.path);
+		cmp = !i2w ? -1 : !h2i ? 1 :
+			strcomp(h2i->new_file.path, i2w->old_file.path);
 
 		if (cmp < 0) {
-			if (cb(i2h, NULL, payload))
+			if (cb(h2i, NULL, payload))
 				return GIT_EUSER;
 			i++;
 		} else if (cmp > 0) {
-			if (cb(NULL, w2i, payload))
+			if (cb(NULL, i2w, payload))
 				return GIT_EUSER;
 			j++;
 		} else {
-			if (cb(i2h, w2i, payload))
+			if (cb(h2i, i2w, payload))
 				return GIT_EUSER;
 			i++; j++;
+		}
+	}
+
+	/* restore case-insensitive delta sort */
+	if (icase_mismatch) {
+		if (head2idx->opts.flags & GIT_DIFF_DELTAS_ARE_ICASE) {
+			head2idx->deltas._cmp = git_diff_delta__casecmp;
+			git_vector_sort(&head2idx->deltas);
+		} else {
+			idx2wd->deltas._cmp = git_diff_delta__casecmp;
+			git_vector_sort(&idx2wd->deltas);
 		}
 	}
 

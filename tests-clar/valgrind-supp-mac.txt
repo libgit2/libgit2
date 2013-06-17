@@ -113,24 +113,18 @@
 {
 	mac-ssl-leak-1
 	Memcheck:Leak
-	fun:malloc
-	fun:CRYPTO_malloc
 	...
 	fun:ERR_load_strings
 }
 {
 	mac-ssl-leak-2
 	Memcheck:Leak
-	fun:malloc
-	fun:CRYPTO_malloc
 	...
 	fun:SSL_library_init
 }
 {
 	mac-ssl-leak-3
 	Memcheck:Leak
-	fun:malloc
-	fun:strdup
 	...
 	fun:si_module_with_name
 	fun:getaddrinfo
@@ -142,6 +136,14 @@
 	fun:CRYPTO_malloc
 	...
 	fun:ssl3_get_server_certificate
+}
+{
+	mac-ssl-leak-5
+	Memcheck:Leak
+	fun:malloc
+	fun:CRYPTO_malloc
+	...
+	fun:ERR_put_error
 }
 {
 	clar-printf-buf

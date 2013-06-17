@@ -183,10 +183,10 @@ clar_run_test(
 }
 
 static void
-clar_run_suite(const struct clar_suite *suite, const char *name)
+clar_run_suite(const struct clar_suite *suite, const char *filter)
 {
 	const struct clar_func *test = suite->tests;
-	size_t i, namelen;
+	size_t i, matchlen;
 
 	if (!suite->enabled)
 		return;
@@ -200,21 +200,21 @@ clar_run_suite(const struct clar_suite *suite, const char *name)
 	_clar.active_suite = suite->name;
 	_clar.suite_errors = 0;
 
-	if (name) {
+	if (filter) {
 		size_t suitelen = strlen(suite->name);
-		namelen = strlen(name);
-		if (namelen <= suitelen) {
-			name = NULL;
+		matchlen = strlen(filter);
+		if (matchlen <= suitelen) {
+			filter = NULL;
 		} else {
-			name += suitelen;
-			while (*name == ':')
-				++name;
-			namelen = strlen(name);
+			filter += suitelen;
+			while (*filter == ':')
+				++filter;
+			matchlen = strlen(filter);
 		}
 	}
 
 	for (i = 0; i < suite->test_count; ++i) {
-		if (name && strncmp(test[i].name, name, namelen))
+		if (filter && strncmp(test[i].name, filter, matchlen))
 			continue;
 
 		_clar.active_test = test[i].name;
@@ -230,7 +230,7 @@ clar_usage(const char *arg)
 {
 	printf("Usage: %s [options]\n\n", arg);
 	printf("Options:\n");
-	printf("  -sname\tRun only the suite with `name`\n");
+	printf("  -sname\tRun only the suite with `name` (can go to individual test name)\n");
 	printf("  -iname\tInclude the suite with `name`\n");
 	printf("  -xname\tExclude the suite with `name`\n");
 	printf("  -q    \tOnly report tests that had an error\n");
@@ -256,21 +256,20 @@ clar_parse_args(int argc, char **argv)
 		case 'x': { /* given suite name */
 			int offset = (argument[2] == '=') ? 3 : 2, found = 0;
 			char action = argument[1];
-			size_t j, len, cmplen;
+			size_t j, arglen, suitelen, cmplen;
 
 			argument += offset;
-			len = strlen(argument);
+			arglen = strlen(argument);
 
-			if (len == 0)
+			if (arglen == 0)
 				clar_usage(argv[0]);
 
 			for (j = 0; j < _clar_suite_count; ++j) {
-				cmplen = strlen(_clar_suites[j].name);
-				if (cmplen > len)
-					cmplen = len;
+				suitelen = strlen(_clar_suites[j].name);
+				cmplen = (arglen < suitelen) ? arglen : suitelen;
 
 				if (strncmp(argument, _clar_suites[j].name, cmplen) == 0) {
-					int exact = !strcmp(argument, _clar_suites[j].name);
+					int exact = (arglen >= suitelen);
 
 					++found;
 
@@ -419,7 +418,16 @@ void clar__assert_equal_s(
 
 	if (!match) {
 		char buf[4096];
-		snprint_eq(buf, sizeof(buf), "'%s' != '%s'", s1, s2);
+
+		if (s1 && s2) {
+			int pos;
+			for (pos = 0; s1[pos] == s2[pos] && s1[pos] && s2[pos]; ++pos)
+				/* find differing byte offset */;
+			snprint_eq(buf, sizeof(buf), "'%s' != '%s' (at byte %d)", s1, s2, pos);
+		} else {
+			snprint_eq(buf, sizeof(buf), "'%s' != '%s'", s1, s2);
+		}
+
 		clar__fail(file, line, err, buf, should_abort);
 	}
 }

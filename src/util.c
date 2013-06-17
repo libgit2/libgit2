@@ -279,6 +279,28 @@ int git__strcasecmp(const char *a, const char *b)
 	return (tolower(*a) - tolower(*b));
 }
 
+int git__strcasesort_cmp(const char *a, const char *b)
+{
+	int cmp = 0;
+
+	while (*a && *b) {
+		if (*a != *b) {
+			if (tolower(*a) != tolower(*b))
+				break;
+			/* use case in sort order even if not in equivalence */
+			if (!cmp)
+				cmp = (int)(*(const uint8_t *)a) - (int)(*(const uint8_t *)b);
+		}
+
+		++a, ++b;
+	}
+
+	if (*a || *b)
+		return tolower(*a) - tolower(*b);
+
+	return cmp;
+}
+
 int git__strncmp(const char *a, const char *b, size_t sz)
 {
 	while (sz && *a && *b && *a == *b)

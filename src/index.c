@@ -734,8 +734,9 @@ static int index_insert(git_index *index, git_index_entry *entry, int replace)
 	if (!replace || !existing)
 		return git_vector_insert(&index->entries, entry);
 
-	/* exists, replace it */
-	git__free((*existing)->path);
+	/* exists, replace it (preserving name from existing entry) */
+	git__free(entry->path);
+	entry->path = (*existing)->path;
 	git__free(*existing);
 	*existing = entry;
 

@@ -483,7 +483,7 @@ static int similarity_measure(
 	if (GIT_MODE_TYPE(a_file->mode) != GIT_MODE_TYPE(b_file->mode))
 		return 0;
 
-	/* if exact match is requested, force calculation of missing OIDs */
+	/* if exact match is requested, force calculation of missing OIDs now */
 	if (exact_match) {
 		if (git_oid_iszero(&a_file->oid) &&
 			diff->old_src == GIT_ITERATOR_TYPE_WORKDIR &&
