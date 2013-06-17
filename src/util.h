@@ -325,6 +325,16 @@ extern size_t git__unescape(char *str);
  * Safely zero-out memory, making sure that the compiler
  * doesn't optimize away the operation.
  */
-extern void git__memzero(volatile void *data, size_t size);
+GIT_INLINE(void) git__memzero(void *data, size_t size)
+{
+#ifdef _MSC_VER
+	SecureZeroMemory((PVOID)data, size);
+#else
+	volatile uint8_t *scan = (volatile uint8_t *)data;
+
+	while (size--)
+		*scan++ = 0x0;
+#endif
+}
 
 #endif /* INCLUDE_util_h__ */
