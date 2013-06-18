@@ -15,8 +15,9 @@
 /* expanded information for one side of a delta */
 typedef struct {
 	git_repository *repo;
-	git_diff_file file;
+	git_diff_file *file;
 	git_diff_driver *driver;
+	uint32_t flags;
 	uint32_t opts_flags;
 	git_off_t opts_max_size;
 	git_iterator_type_t src;
@@ -34,14 +35,16 @@ extern int git_diff_file_content__init_from_blob(
 	git_diff_file_content *fc,
 	git_repository *repo,
 	const git_diff_options *opts,
-	const git_blob *blob);
+	const git_blob *blob,
+	git_diff_file *as_file);
 
 extern int git_diff_file_content__init_from_raw(
 	git_diff_file_content *fc,
 	git_repository *repo,
 	const git_diff_options *opts,
 	const char *buf,
-	size_t buflen);
+	size_t buflen,
+	git_diff_file *as_file);
 
 /* this loads the blob/file-on-disk as needed */
 extern int git_diff_file_content__load(git_diff_file_content *fc);
