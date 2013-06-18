@@ -21,14 +21,15 @@ static int diff_print_info_init(
 	diff_print_info *pi,
 	git_buf *out, git_diff_list *diff, git_diff_data_cb cb, void *payload)
 {
-	assert(diff && diff->repo);
-
 	pi->diff     = diff;
 	pi->print_cb = cb;
 	pi->payload  = payload;
 	pi->buf      = out;
 
-	if (git_repository__cvar(&pi->oid_strlen, diff->repo, GIT_CVAR_ABBREV) < 0)
+	if (!diff || !diff->repo)
+		pi->oid_strlen = GIT_ABBREV_DEFAULT;
+	else if (git_repository__cvar(
+		&pi->oid_strlen, diff->repo, GIT_CVAR_ABBREV) < 0)
 		return -1;
 
 	pi->oid_strlen += 1; /* for NUL byte */
@@ -82,6 +83,8 @@ static int diff_print_one_compact(
 	diff_print_info *pi = data;
 	git_buf *out = pi->buf;
 	char old_suffix, new_suffix, code = git_diff_status_char(delta->status);
+	int (*strcomp)(const char *, const char *) =
+		pi->diff ? pi->diff->strcomp : git__strcmp;
 
 	GIT_UNUSED(progress);
 
@@ -94,7 +97,7 @@ static int diff_print_one_compact(
 	git_buf_clear(out);
 
 	if (delta->old_file.path != delta->new_file.path &&
-		pi->diff->strcomp(delta->old_file.path,delta->new_file.path) != 0)
+		strcomp(delta->old_file.path,delta->new_file.path) != 0)
 		git_buf_printf(out, "%c\t%s%c -> %s%c\n", code,
 			delta->old_file.path, old_suffix, delta->new_file.path, new_suffix);
 	else if (delta->old_file.mode != delta->new_file.mode &&
@@ -229,10 +232,11 @@ static int diff_print_patch_file(
 	const git_diff_delta *delta, float progress, void *data)
 {
 	diff_print_info *pi = data;
-	const char *oldpfx = pi->diff->opts.old_prefix;
+	const char *oldpfx = pi->diff ? pi->diff->opts.old_prefix : NULL;
 	const char *oldpath = delta->old_file.path;
-	const char *newpfx = pi->diff->opts.new_prefix;
+	const char *newpfx = pi->diff ? pi->diff->opts.new_prefix : NULL;
 	const char *newpath = delta->new_file.path;
+	uint32_t opts_flags = pi->diff ? pi->diff->opts.flags : GIT_DIFF_NORMAL;
 
 	GIT_UNUSED(progress);
 
@@ -240,17 +244,17 @@ static int diff_print_patch_file(
 		delta->status == GIT_DELTA_UNMODIFIED ||
 		delta->status == GIT_DELTA_IGNORED ||
 		(delta->status == GIT_DELTA_UNTRACKED &&
-		 (pi->diff->opts.flags & GIT_DIFF_INCLUDE_UNTRACKED_CONTENT) == 0))
+		 (opts_flags & GIT_DIFF_INCLUDE_UNTRACKED_CONTENT) == 0))
 		return 0;
 
 	if (!oldpfx)
 		oldpfx = DIFF_OLD_PREFIX_DEFAULT;
-
 	if (!newpfx)
 		newpfx = DIFF_NEW_PREFIX_DEFAULT;
 
 	git_buf_clear(pi->buf);
-	git_buf_printf(pi->buf, "diff --git %s%s %s%s\n", oldpfx, delta->old_file.path, newpfx, delta->new_file.path);
+	git_buf_printf(pi->buf, "diff --git %s%s %s%s\n",
+		oldpfx, delta->old_file.path, newpfx, delta->new_file.path);
 
 	if (diff_print_oid_range(pi, delta) < 0)
 		return -1;
