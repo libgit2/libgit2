@@ -46,7 +46,7 @@ static char diff_pick_suffix(int mode)
 {
 	if (S_ISDIR(mode))
 		return '/';
-	else if (mode & 0100) //-V536
+	else if (mode & 0100) /* -V536 */
 		/* in git, modes are very regular, so we must have 0100755 mode */
 		return '*';
 	else
@@ -162,7 +162,7 @@ static int diff_print_one_raw(
 	if (delta->similarity > 0)
 		git_buf_printf(out, "%03u", delta->similarity);
 
-	if (delta->status == GIT_DELTA_RENAMED || delta->status == GIT_DELTA_COPIED)
+	if (delta->old_file.path != delta->new_file.path)
 		git_buf_printf(
 			out, "\t%s %s\n", delta->old_file.path, delta->new_file.path);
 	else

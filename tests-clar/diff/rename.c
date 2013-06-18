@@ -755,7 +755,7 @@ void test_diff_rename__file_partial_exchange(void)
 	git_buf_free(&c2);
 }
 
-void test_diff_rename__file_split(void)
+void test_diff_rename__rename_and_copy_from_same_source(void)
 {
 	git_buf c1 = GIT_BUF_INIT, c2 = GIT_BUF_INIT;
 	git_index *index;
@@ -947,6 +947,7 @@ void test_diff_rename__rejected_match_can_match_others(void)
 
 	cl_git_pass(
 		git_diff_tree_to_index(&diff, g_repo, tree, index, &diffopts));
+
 	cl_git_pass(git_diff_find_similar(diff, &findopts));
 
 	cl_git_pass(
@@ -967,10 +968,10 @@ static void write_similarity_file_two(const char *filename, size_t b_lines)
 	size_t i;
 
 	for (i = 0; i < b_lines; i++)
-		git_buf_printf(&contents, "%0.2d - bbbbb\r\n", (i+1));
+		git_buf_printf(&contents, "%0.2d - bbbbb\r\n", (int)(i+1));
 
 	for (i = b_lines; i < 50; i++)
-		git_buf_printf(&contents, "%0.2d - aaaaa%s", (i+1), (i == 49 ? "" : "\r\n"));
+		git_buf_printf(&contents, "%0.2d - aaaaa%s", (int)(i+1), (i == 49 ? "" : "\r\n"));
 
 	cl_git_pass(
 		git_futils_writebuffer(&contents, filename, O_RDWR|O_CREAT, 0777));
@@ -1018,6 +1019,7 @@ void test_diff_rename__rejected_match_can_match_others_two(void)
 
 	cl_git_pass(
 		git_diff_tree_to_index(&diff, g_repo, tree, index, &diffopts));
+
 	cl_git_pass(git_diff_find_similar(diff, &findopts));
 
 	cl_git_pass(
