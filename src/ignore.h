@@ -41,4 +41,13 @@ extern void git_ignore__free(git_ignores *ign);
 
 extern int git_ignore__lookup(git_ignores *ign, const char *path, int *ignored);
 
+/* command line Git sometimes generates an error message if given a
+ * pathspec that contains an exact match to an ignored file (provided
+ * --force isn't also given).  This makes it easy to check it that has
+ * happened.  Returns GIT_EINVALIDSPEC if the pathspec contains ignored
+ * exact matches (that are not already present in the index).
+ */
+extern int git_ignore__check_pathspec_for_exact_ignores(
+	git_repository *repo, git_vector *pathspec, bool no_fnmatch);
+
 #endif
