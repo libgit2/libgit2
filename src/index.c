@@ -15,6 +15,8 @@
 #include "hash.h"
 #include "iterator.h"
 #include "pathspec.h"
+#include "ignore.h"
+
 #include "git2/odb.h"
 #include "git2/oid.h"
 #include "git2/blob.h"
@@ -997,7 +999,7 @@ static int index_conflict__get_byindex(
 	int stage, len = 0;
 
 	assert(ancestor_out && our_out && their_out && index);
-	
+
 	*ancestor_out = NULL;
 	*our_out = NULL;
 	*their_out = NULL;
@@ -1010,7 +1012,7 @@ static int index_conflict__get_byindex(
 
 		stage = GIT_IDXENTRY_STAGE(conflict_entry);
 		path = conflict_entry->path;
-		
+
 		switch (stage) {
 		case 3:
 			*their_out = conflict_entry;
@@ -2043,4 +2045,219 @@ int git_index_read_tree(git_index *index, const git_tree *tree)
 git_repository *git_index_owner(const git_index *index)
 {
 	return INDEX_OWNER(index);
+}
+
+int git_index_add_all(
+	git_index *index,
+	const git_strarray *paths,
+	unsigned int flags,
+	git_index_matched_path_cb cb,
+	void *payload)
+{
+	int error;
+	git_repository *repo;
+	git_iterator *wditer = NULL;
+	const git_index_entry *wd = NULL;
+	git_index_entry *entry;
+	git_pathspec_context ps;
+	const char *match;
+	size_t existing;
+	bool no_fnmatch = (flags & GIT_INDEX_ADD_DISABLE_PATHSPEC_MATCH) != 0;
+	int ignorecase;
+	git_oid blobid;
+
+	assert(index);
+
+	if (INDEX_OWNER(index) == NULL)
+		return create_index_error(-1,
+			"Could not add paths to index. "
+			"Index is not backed up by an existing repository.");
+
+	repo = INDEX_OWNER(index);
+	if ((error = git_repository__ensure_not_bare(repo, "index add all")) < 0)
+		return error;
+
+	if (git_repository__cvar(&ignorecase, repo, GIT_CVAR_IGNORECASE) < 0)
+		return -1;
+
+	if ((error = git_pathspec_context_init(&ps, paths)) < 0)
+		return error;
+
+	/* optionally check that pathspec doesn't mention any ignored files */
+	if ((flags & GIT_INDEX_ADD_CHECK_PATHSPEC) != 0 &&
+		(flags & GIT_INDEX_ADD_FORCE) == 0 &&
+		(error = git_ignore__check_pathspec_for_exact_ignores(
+			repo, &ps.pathspec, no_fnmatch)) < 0)
+		goto cleanup;
+
+	if ((error = git_iterator_for_workdir(
+			&wditer, repo, 0, ps.prefix, ps.prefix)) < 0)
+		goto cleanup;
+
+	while (!(error = git_iterator_advance(&wd, wditer))) {
+
+		/* check if path actually matches */
+		if (!git_pathspec_match_path(
+				&ps.pathspec, wd->path, no_fnmatch, ignorecase, &match))
+			continue;
+
+		/* skip ignored items that are not already in the index */
+		if ((flags & GIT_INDEX_ADD_FORCE) == 0 &&
+			git_iterator_current_is_ignored(wditer) &&
+			index_find(&existing, index, wd->path, 0) < 0)
+			continue;
+
+		/* issue notification callback if requested */
+		if (cb && (error = cb(wd->path, match, payload)) != 0) {
+			if (error > 0) /* return > 0 means skip this one */
+				continue;
+			if (error < 0) { /* return < 0 means abort */
+				giterr_clear();
+				error = GIT_EUSER;
+				break;
+			}
+		}
+
+		/* TODO: Should we check if the file on disk is already an exact
+		 * match to the file in the index and skip this work if it is?
+		 */
+
+		/* write the blob to disk and get the oid */
+		if ((error = git_blob_create_fromworkdir(&blobid, repo, wd->path)) < 0)
+			break;
+
+		/* make the new entry to insert */
+		if ((entry = index_entry_dup(wd)) == NULL) {
+			error = -1;
+			break;
+		}
+		entry->oid = blobid;
+
+		/* add working directory item to index */
+		if ((error = index_insert(index, entry, 1)) < 0) {
+			index_entry_free(entry);
+			break;
+		}
+
+		git_tree_cache_invalidate_path(index->tree, wd->path);
+
+		/* add implies conflict resolved, move conflict entries to REUC */
+		if ((error = index_conflict_to_reuc(index, wd->path)) < 0) {
+			if (error != GIT_ENOTFOUND)
+				break;
+			giterr_clear();
+		}
+	}
+
+	if (error == GIT_ITEROVER)
+		error = 0;
+
+cleanup:
+	git_iterator_free(wditer);
+	git_pathspec_context_free(&ps);
+
+	return error;
+}
+
+enum {
+	INDEX_ACTION_NONE = 0,
+	INDEX_ACTION_UPDATE = 1,
+	INDEX_ACTION_REMOVE = 2,
+};
+
+static int index_apply_to_all(
+	git_index *index,
+	int action,
+	const git_strarray *paths,
+	git_index_matched_path_cb cb,
+	void *payload)
+{
+	int error = 0;
+	size_t i;
+	git_pathspec_context ps;
+	const char *match;
+	git_buf path = GIT_BUF_INIT;
+
+	assert(index);
+
+	if ((error = git_pathspec_context_init(&ps, paths)) < 0)
+		return error;
+
+	git_vector_sort(&index->entries);
+
+	for (i = 0; !error && i < index->entries.length; ++i) {
+		git_index_entry *entry = git_vector_get(&index->entries, i);
+
+		/* check if path actually matches */
+		if (!git_pathspec_match_path(
+				&ps.pathspec, entry->path, false, index->ignore_case, &match))
+			continue;
+
+		/* issue notification callback if requested */
+		if (cb && (error = cb(entry->path, match, payload)) != 0) {
+			if (error > 0) { /* return > 0 means skip this one */
+				error = 0;
+				continue;
+			}
+			if (error < 0) { /* return < 0 means abort */
+				giterr_clear();
+				error = GIT_EUSER;
+				break;
+			}
+		}
+
+		/* index manipulation may alter entry, so don't depend on it */
+		if ((error = git_buf_sets(&path, entry->path)) < 0)
+			break;
+
+		switch (action) {
+		case INDEX_ACTION_NONE:
+			break;
+		case INDEX_ACTION_UPDATE:
+			error = git_index_add_bypath(index, path.ptr);
+
+			if (error == GIT_ENOTFOUND) {
+				giterr_clear();
+
+				error = git_index_remove_bypath(index, path.ptr);
+
+				if (!error) /* back up foreach if we removed this */
+					i--;
+			}
+			break;
+		case INDEX_ACTION_REMOVE:
+			if (!(error = git_index_remove_bypath(index, path.ptr)))
+				i--; /* back up foreach if we removed this */
+			break;
+		default:
+			giterr_set(GITERR_INVALID, "Unknown index action %d", action);
+			error = -1;
+			break;
+		}
+	}
+
+	git_buf_free(&path);
+	git_pathspec_context_free(&ps);
+
+	return error;
+}
+
+int git_index_remove_all(
+	git_index *index,
+	const git_strarray *pathspec,
+	git_index_matched_path_cb cb,
+	void *payload)
+{
+	return index_apply_to_all(
+		index, INDEX_ACTION_REMOVE, pathspec, cb, payload);
+}
+
+int git_index_update_all(
+	git_index *index,
+	const git_strarray *pathspec,
+	git_index_matched_path_cb cb,
+	void *payload)
+{
+	return index_apply_to_all(
+		index, INDEX_ACTION_UPDATE, pathspec, cb, payload);
 }
