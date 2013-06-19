@@ -136,17 +136,15 @@ IF(WIN32 OR AMIGA)
 ENDIF()
 
 # Optional external dependency: zlib
-IF(NOT ZLIB_LIBRARY)
-	# It's optional, but FIND_PACKAGE gives a warning that looks more like an
-	# error.
-	FIND_PACKAGE(ZLIB QUIET)
-ENDIF()
+# It's optional, but FIND_PACKAGE gives a warning that looks more like an
+# error.
+FIND_PACKAGE(ZLIB QUIET)
 IF (ZLIB_FOUND)
 	INCLUDE_DIRECTORIES(${ZLIB_INCLUDE_DIRS})
 	LINK_LIBRARIES(${ZLIB_LIBRARIES})
 	# Fake the message CMake would have shown
 	MESSAGE("-- Found zlib: ${ZLIB_LIBRARY}")
-ELSEIF (NOT ZLIB_LIBRARY)
+ELSE()
 	MESSAGE( "zlib was not found; using bundled 3rd-party sources." )
 	INCLUDE_DIRECTORIES(deps/zlib)
 	ADD_DEFINITIONS(-DNO_VIZ -DSTDC -DNO_GZIP)
