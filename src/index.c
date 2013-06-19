@@ -2176,6 +2176,7 @@ static int index_apply_to_all(
 	size_t i;
 	git_pathspec_context ps;
 	const char *match;
+	git_buf path = GIT_BUF_INIT;
 
 	assert(index);
 
@@ -2205,23 +2206,27 @@ static int index_apply_to_all(
 			}
 		}
 
+		/* index manipulation may alter entry, so don't depend on it */
+		if ((error = git_buf_sets(&path, entry->path)) < 0)
+			break;
+
 		switch (action) {
 		case INDEX_ACTION_NONE:
 			break;
 		case INDEX_ACTION_UPDATE:
-			error = git_index_add_bypath(index, entry->path);
+			error = git_index_add_bypath(index, path.ptr);
 
 			if (error == GIT_ENOTFOUND) {
 				giterr_clear();
 
-				error = git_index_remove_bypath(index, entry->path);
+				error = git_index_remove_bypath(index, path.ptr);
 
 				if (!error) /* back up foreach if we removed this */
 					i--;
 			}
 			break;
 		case INDEX_ACTION_REMOVE:
-			if (!(error = git_index_remove_bypath(index, entry->path)))
+			if (!(error = git_index_remove_bypath(index, path.ptr)))
 				i--; /* back up foreach if we removed this */
 			break;
 		default:
@@ -2231,6 +2236,7 @@ static int index_apply_to_all(
 		}
 	}
 
+	git_buf_free(&path);
 	git_pathspec_context_free(&ps);
 
 	return error;

@@ -132,6 +132,7 @@ static void commit_index_to_head(
 
 	cl_git_pass(git_repository_index(&index, repo));
 	cl_git_pass(git_index_write_tree(&tree_id, index));
+	cl_git_pass(git_index_write(index)); /* not needed, but might as well */
 	git_index_free(index);
 
 	cl_git_pass(git_tree_lookup(&tree, repo, &tree_id));
@@ -249,6 +250,25 @@ void test_index_addall__repo_lifecycle(void)
 	/* update_all should be able to remove entries */
 	cl_git_pass(git_index_update_all(index, NULL, NULL, NULL));
 	check_status(g_repo, 0, 1, 0, 3, 0, 0, 0);
+
+	strs[0] = "*";
+	cl_git_pass(git_index_add_all(index, &paths, 0, NULL, NULL));
+	check_status(g_repo, 3, 1, 0, 0, 0, 0, 0);
+
+	/* must be able to remove at any position while still updating other files */
+	cl_must_pass(p_unlink("addall/.gitignore"));
+	cl_git_rewritefile("addall/file.zzz", "reconstructed file");
+	cl_git_rewritefile("addall/more.zzz", "altered file reality");
+	check_status(g_repo, 3, 1, 0, 1, 1, 1, 0);
+
+	cl_git_pass(git_index_update_all(index, NULL, NULL, NULL));
+	check_status(g_repo, 2, 1, 0, 1, 0, 0, 0);
+	/* this behavior actually matches 'git add -u' where "file.zzz" has
+	 * been removed from the index, so when you go to update, even though
+	 * it exists in the HEAD, it is not re-added to the index, leaving it
+	 * as a DELETE when comparing HEAD to index and as an ADD comparing
+	 * index to worktree
+	 */
 
 	git_index_free(index);
 }
