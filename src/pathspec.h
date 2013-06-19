@@ -37,4 +37,18 @@ extern bool git_pathspec_match_path(
 	bool casefold,
 	const char **matched_pathspec);
 
+/* easy pathspec setup */
+
+typedef struct {
+	char *prefix;
+	git_vector pathspec;
+	git_pool pool;
+} git_pathspec_context;
+
+extern int git_pathspec_context_init(
+	git_pathspec_context *ctxt, const git_strarray *paths);
+
+extern void git_pathspec_context_free(
+	git_pathspec_context *ctxt);
+
 #endif

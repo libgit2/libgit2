@@ -166,3 +166,28 @@ bool git_pathspec_match_path(
 	return false;
 }
 
+
+int git_pathspec_context_init(
+	git_pathspec_context *ctxt, const git_strarray *paths)
+{
+	int error = 0;
+
+	memset(ctxt, 0, sizeof(*ctxt));
+
+	ctxt->prefix = git_pathspec_prefix(paths);
+
+	if ((error = git_pool_init(&ctxt->pool, 1, 0)) < 0 ||
+		(error = git_pathspec_init(&ctxt->pathspec, paths, &ctxt->pool)) < 0)
+		git_pathspec_context_free(ctxt);
+
+	return error;
+}
+
+void git_pathspec_context_free(
+	git_pathspec_context *ctxt)
+{
+	git__free(ctxt->prefix);
+	git_pathspec_free(&ctxt->pathspec);
+	git_pool_clear(&ctxt->pool);
+	memset(ctxt, 0, sizeof(*ctxt));
+}
