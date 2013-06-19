@@ -11,6 +11,7 @@
 #include "indexer.h"
 #include "types.h"
 #include "oid.h"
+#include "strarray.h"
 
 /**
  * @file git2/index.h
@@ -124,6 +125,18 @@ typedef enum {
 	GIT_INDEXCAP_NO_SYMLINKS = 4,
 	GIT_INDEXCAP_FROM_OWNER  = ~0u
 } git_indexcap_t;
+
+/** Callback for APIs that add/remove/update files matching pathspec */
+typedef int (*git_index_matched_path_cb)(
+	const char *path, const char *matched_pathspec, void *payload);
+
+/** Flags for APIs that add files matching pathspec */
+typedef enum {
+	GIT_INDEX_ADD_DEFAULT = 0,
+	GIT_INDEX_ADD_FORCE = (1u << 0),
+	GIT_INDEX_ADD_DISABLE_PATHSPEC_MATCH = (1u << 1),
+	GIT_INDEX_ADD_CHECK_PATHSPEC = (1u << 2),
+} git_index_add_option_t;
 
 /** @name Index File Functions
  *
@@ -419,6 +432,108 @@ GIT_EXTERN(int) git_index_add_bypath(git_index *index, const char *path);
  * @return 0 or an error code
  */
 GIT_EXTERN(int) git_index_remove_bypath(git_index *index, const char *path);
+
+/**
+ * Add or update index entries matching files in the working directory.
+ *
+ * This method will fail in bare index instances.
+ *
+ * The `pathspec` is a list of file names or shell glob patterns that will
+ * matched against files in the repository's working directory.  Each file
+ * that matches will be added to the index (either updating an existing
+ * entry or adding a new entry).  You can disable glob expansion and force
+ * exact matching with the `GIT_INDEX_ADD_DISABLE_PATHSPEC_MATCH` flag.
+ *
+ * Files that are ignored will be skipped (unlike `git_index_add_bypath`).
+ * If a file is already tracked in the index, then it *will* be updated
+ * even if it is ignored.  Pass the `GIT_INDEX_ADD_FORCE` flag to
+ * skip the checking of ignore rules.
+ *
+ * To emulate `git add -A` and generate an error if the pathspec contains
+ * the exact path of an ignored file (when not using FORCE), add the
+ * `GIT_INDEX_ADD_CHECK_PATHSPEC` flag.  This checks that each entry
+ * in the `pathspec` that is an exact match to a filename on disk is
+ * either not ignored or already in the index.  If this check fails, the
+ * function will return GIT_EINVALIDSPEC.
+ *
+ * To emulate `git add -A` with the "dry-run" option, just use a callback
+ * function that always returns a positive value.  See below for details.
+ *
+ * If any files are currently the result of a merge conflict, those files
+ * will no longer be marked as conflicting.  The data about the conflicts
+ * will be moved to the "resolve undo" (REUC) section.
+ *
+ * If you provide a callback function, it will be invoked on each matching
+ * item in the working directory immediately *before* it is added to /
+ * updated in the index.  Returning zero will add the item to the index,
+ * greater than zero will skip the item, and less than zero will abort the
+ * scan and cause GIT_EUSER to be returned.
+ *
+ * @param index an existing index object
+ * @param pathspec array of path patterns
+ * @param flags combination of git_index_add_option_t flags
+ * @param callback notification callback for each added/updated path (also
+ *                 gets index of matching pathspec entry); can be NULL;
+ *                 return 0 to add, >0 to skip, <0 to abort scan.
+ * @param payload payload passed through to callback function
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_index_add_all(
+	git_index *index,
+	const git_strarray *pathspec,
+	unsigned int flags,
+	git_index_matched_path_cb callback,
+	void *payload);
+
+/**
+ * Remove all matching index entries.
+ *
+ * If you provide a callback function, it will be invoked on each matching
+ * item in the index immediately *before* it is removed.  Return 0 to
+ * remove the item, > 0 to skip the item, and < 0 to abort the scan.
+ *
+ * @param index An existing index object
+ * @param pathspec array of path patterns
+ * @param callback notification callback for each removed path (also
+ *                 gets index of matching pathspec entry); can be NULL;
+ *                 return 0 to add, >0 to skip, <0 to abort scan.
+ * @param payload payload passed through to callback function
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_index_remove_all(
+	git_index *index,
+	const git_strarray *pathspec,
+	git_index_matched_path_cb callback,
+	void *payload);
+
+/**
+ * Update all index entries to match the working directory
+ *
+ * This method will fail in bare index instances.
+ *
+ * This scans the existing index entries and synchronizes them with the
+ * working directory, deleting them if the corresponding working directory
+ * file no longer exists otherwise updating the information (including
+ * adding the latest version of file to the ODB if needed).
+ *
+ * If you provide a callback function, it will be invoked on each matching
+ * item in the index immediately *before* it is updated (either refreshed
+ * or removed depending on working directory state).  Return 0 to proceed
+ * with updating the item, > 0 to skip the item, and < 0 to abort the scan.
+ *
+ * @param index An existing index object
+ * @param pathspec array of path patterns
+ * @param callback notification callback for each updated path (also
+ *                 gets index of matching pathspec entry); can be NULL;
+ *                 return 0 to add, >0 to skip, <0 to abort scan.
+ * @param payload payload passed through to callback function
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_index_update_all(
+	git_index *index,
+	const git_strarray *pathspec,
+	git_index_matched_path_cb callback,
+	void *payload);
 
 /**
  * Find the first position of any entries which point to given

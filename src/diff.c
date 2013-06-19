@@ -675,8 +675,10 @@ static int maybe_modified(
 		}
 	}
 
-	/* if oids and modes match, then file is unmodified */
-	else if (git_oid_equal(&oitem->oid, &nitem->oid) && omode == nmode)
+	/* if oids and modes match (and are valid), then file is unmodified */
+	else if (git_oid_equal(&oitem->oid, &nitem->oid) &&
+			 omode == nmode &&
+			 !git_oid_iszero(&oitem->oid))
 		status = GIT_DELTA_UNMODIFIED;
 
 	/* if we have an unknown OID and a workdir iterator, then check some
