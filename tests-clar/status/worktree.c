@@ -743,3 +743,83 @@ void test_status_worktree__simple_delete_indexed(void)
 		GIT_STATUS_WT_DELETED, git_status_byindex(status, 0)->status);
 	git_status_list_free(status);
 }
+
+static const char *icase_paths[] = { "B", "c", "g", "H" };
+static unsigned int icase_statuses[] = {
+	GIT_STATUS_WT_MODIFIED, GIT_STATUS_WT_DELETED,
+	GIT_STATUS_WT_MODIFIED, GIT_STATUS_WT_DELETED,
+};
+
+static const char *case_paths[] = { "B", "H", "c", "g" };
+static unsigned int case_statuses[] = {
+	GIT_STATUS_WT_MODIFIED, GIT_STATUS_WT_DELETED,
+	GIT_STATUS_WT_DELETED, GIT_STATUS_WT_MODIFIED,
+};
+
+void test_status_worktree__sorting_by_case(void)
+{
+	git_repository *repo = cl_git_sandbox_init("icase");
+	git_index *index;
+	git_status_options opts = GIT_STATUS_OPTIONS_INIT;
+	bool native_ignore_case;
+	status_entry_counts counts;
+
+	cl_git_pass(git_repository_index(&index, repo));
+	native_ignore_case =
+		(git_index_caps(index) & GIT_INDEXCAP_IGNORE_CASE) != 0;
+	git_index_free(index);
+
+	memset(&counts, 0, sizeof(counts));
+	counts.expected_entry_count = 0;
+	counts.expected_paths = NULL;
+	counts.expected_statuses = NULL;
+	cl_git_pass(
+		git_status_foreach_ext(repo, &opts, cb_status__normal, &counts));
+	cl_assert_equal_i(counts.expected_entry_count, counts.entry_count);
+	cl_assert_equal_i(0, counts.wrong_status_flags_count);
+	cl_assert_equal_i(0, counts.wrong_sorted_path);
+
+	cl_git_rewritefile("icase/B", "new stuff");
+	cl_must_pass(p_unlink("icase/c"));
+	cl_git_rewritefile("icase/g", "new stuff");
+	cl_must_pass(p_unlink("icase/H"));
+
+	memset(&counts, 0, sizeof(counts));
+	counts.expected_entry_count = 4;
+	if (native_ignore_case) {
+		counts.expected_paths = icase_paths;
+		counts.expected_statuses = icase_statuses;
+	} else {
+		counts.expected_paths = case_paths;
+		counts.expected_statuses = case_statuses;
+	}
+	cl_git_pass(
+		git_status_foreach_ext(repo, &opts, cb_status__normal, &counts));
+	cl_assert_equal_i(counts.expected_entry_count, counts.entry_count);
+	cl_assert_equal_i(0, counts.wrong_status_flags_count);
+	cl_assert_equal_i(0, counts.wrong_sorted_path);
+
+	opts.flags = GIT_STATUS_OPT_SORT_CASE_SENSITIVELY;
+
+	memset(&counts, 0, sizeof(counts));
+	counts.expected_entry_count = 4;
+	counts.expected_paths = case_paths;
+	counts.expected_statuses = case_statuses;
+	cl_git_pass(
+		git_status_foreach_ext(repo, &opts, cb_status__normal, &counts));
+	cl_assert_equal_i(counts.expected_entry_count, counts.entry_count);
+	cl_assert_equal_i(0, counts.wrong_status_flags_count);
+	cl_assert_equal_i(0, counts.wrong_sorted_path);
+
+	opts.flags = GIT_STATUS_OPT_SORT_CASE_INSENSITIVELY;
+
+	memset(&counts, 0, sizeof(counts));
+	counts.expected_entry_count = 4;
+	counts.expected_paths = icase_paths;
+	counts.expected_statuses = icase_statuses;
+	cl_git_pass(
+		git_status_foreach_ext(repo, &opts, cb_status__normal, &counts));
+	cl_assert_equal_i(counts.expected_entry_count, counts.entry_count);
+	cl_assert_equal_i(0, counts.wrong_status_flags_count);
+	cl_assert_equal_i(0, counts.wrong_sorted_path);
+}

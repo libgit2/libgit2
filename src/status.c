@@ -335,8 +335,16 @@ int git_status_list_new(
 			status->head2idx, status->idx2wd, status_collect, status)) < 0)
 		goto done;
 
-	if ((flags & GIT_STATUS_OPT_RENAMES_HEAD_TO_INDEX) != 0 ||
-		(flags & GIT_STATUS_OPT_RENAMES_INDEX_TO_WORKDIR) != 0)
+	if (flags & GIT_STATUS_OPT_SORT_CASE_SENSITIVELY)
+		git_vector_set_cmp(&status->paired, status_entry_cmp);
+	if (flags & GIT_STATUS_OPT_SORT_CASE_INSENSITIVELY)
+		git_vector_set_cmp(&status->paired, status_entry_icmp);
+
+	if ((flags &
+		 (GIT_STATUS_OPT_RENAMES_HEAD_TO_INDEX |
+		  GIT_STATUS_OPT_RENAMES_INDEX_TO_WORKDIR |
+		  GIT_STATUS_OPT_SORT_CASE_SENSITIVELY |
+		  GIT_STATUS_OPT_SORT_CASE_INSENSITIVELY)) != 0)
 		git_vector_sort(&status->paired);
 
 done:
