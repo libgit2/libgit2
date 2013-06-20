@@ -76,7 +76,8 @@ static void show_branch(git_repository *repo, int format)
 		check(error, "failed to get current branch", NULL);
 
 	if (format == FORMAT_LONG)
-		printf("# %s\n", branch ? branch : "Not currently on any branch.");
+		printf("# On branch %s\n",
+			branch ? branch : "Not currently on any branch.");
 	else
 		printf("## %s\n", branch ? branch : "HEAD (no branch)");
 
@@ -85,8 +86,150 @@ static void show_branch(git_repository *repo, int format)
 
 static void print_long(git_repository *repo, git_status_list *status)
 {
+	size_t i, maxi = git_status_list_entrycount(status);
+	const git_status_entry *s;
+	int header = 0, changes_in_index = 0;
+	int changed_in_workdir = 0, rm_in_workdir = 0;
+	const char *old_path, *new_path;
+
 	(void)repo;
-	(void)status;
+
+	/* print index changes */
+
+	for (i = 0; i < maxi; ++i) {
+		char *istatus = NULL;
+
+		s = git_status_byindex(status, i);
+
+		if (s->status == GIT_STATUS_CURRENT)
+			continue;
+
+		if (s->status & GIT_STATUS_WT_DELETED)
+			rm_in_workdir = 1;
+
+		if (s->status & GIT_STATUS_INDEX_NEW)
+			istatus = "new file: ";
+		if (s->status & GIT_STATUS_INDEX_MODIFIED)
+			istatus = "modified: ";
+		if (s->status & GIT_STATUS_INDEX_DELETED)
+			istatus = "deleted:  ";
+		if (s->status & GIT_STATUS_INDEX_RENAMED)
+			istatus = "renamed:  ";
+		if (s->status & GIT_STATUS_INDEX_TYPECHANGE)
+			istatus = "typechange:";
+
+		if (istatus == NULL)
+			continue;
+
+		if (!header) {
+			printf("# Changes to be committed:\n");
+			printf("#   (use \"git reset HEAD <file>...\" to unstage)\n");
+			printf("#\n");
+			header = 1;
+		}
+
+		old_path = s->head_to_index->old_file.path;
+		new_path = s->head_to_index->new_file.path;
+
+		if (old_path && new_path && strcmp(old_path, new_path))
+			printf("#\t%s  %s -> %s\n", istatus, old_path, new_path);
+		else
+			printf("#\t%s  %s\n", istatus, old_path ? old_path : new_path);
+	}
+
+	if (header) {
+		changes_in_index = 1;
+		printf("#\n");
+	}
+	header = 0;
+
+	/* print workdir changes to tracked files */
+
+	for (i = 0; i < maxi; ++i) {
+		char *wstatus = NULL;
+
+		s = git_status_byindex(status, i);
+
+		if (s->status == GIT_STATUS_CURRENT || s->index_to_workdir == NULL)
+			continue;
+
+		if (s->status & GIT_STATUS_WT_MODIFIED)
+			wstatus = "modified: ";
+		if (s->status & GIT_STATUS_WT_DELETED)
+			wstatus = "deleted:  ";
+		if (s->status & GIT_STATUS_WT_RENAMED)
+			wstatus = "renamed:  ";
+		if (s->status & GIT_STATUS_WT_TYPECHANGE)
+			wstatus = "typechange:";
+
+		if (wstatus == NULL)
+			continue;
+
+		if (!header) {
+			printf("# Changes not staged for commit:\n");
+			printf("#   (use \"git add%s <file>...\" to update what will be committed)\n", rm_in_workdir ? "/rm" : "");
+			printf("#   (use \"git checkout -- <file>...\" to discard changes in working directory)\n");
+			printf("#\n");
+			header = 1;
+		}
+
+		old_path = s->index_to_workdir->old_file.path;
+		new_path = s->index_to_workdir->new_file.path;
+
+		if (old_path && new_path && strcmp(old_path, new_path))
+			printf("#\t%s  %s -> %s\n", wstatus, old_path, new_path);
+		else
+			printf("#\t%s  %s\n", wstatus, old_path ? old_path : new_path);
+	}
+
+	if (header) {
+		changed_in_workdir = 1;
+		printf("#\n");
+	}
+	header = 0;
+
+	/* print untracked files */
+
+	header = 0;
+
+	for (i = 0; i < maxi; ++i) {
+		s = git_status_byindex(status, i);
+
+		if (s->status == GIT_STATUS_WT_NEW) {
+
+			if (!header) {
+				printf("# Untracked files:\n");
+				printf("#   (use \"git add <file>...\" to include in what will be committed)\n");
+				printf("#\n");
+				header = 1;
+			}
+
+			printf("#\t%s\n", s->index_to_workdir->old_file.path);
+		}
+	}
+
+	header = 0;
+
+	/* print ignored files */
+
+	for (i = 0; i < maxi; ++i) {
+		s = git_status_byindex(status, i);
+
+		if (s->status == GIT_STATUS_IGNORED) {
+
+			if (!header) {
+				printf("# Ignored files:\n");
+				printf("#   (use \"git add -f <file>...\" to include in what will be committed)\n");
+				printf("#\n");
+				header = 1;
+			}
+
+			printf("#\t%s\n", s->index_to_workdir->old_file.path);
+		}
+	}
+
+	if (!changes_in_index && changed_in_workdir)
+		printf("no changes added to commit (use \"git add\" and/or \"git commit -a\")\n");
 }
 
 static void print_short(git_repository *repo, git_status_list *status)
