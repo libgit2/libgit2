@@ -290,16 +290,16 @@ void git_index__set_ignore_case(git_index *index, bool ignore_case)
 {
 	index->ignore_case = ignore_case;
 
-	index->entries._cmp = ignore_case ? index_icmp : index_cmp;
 	index->entries_cmp_path = ignore_case ? index_icmp_path : index_cmp_path;
 	index->entries_search = ignore_case ? index_isrch : index_srch;
 	index->entries_search_path = ignore_case ? index_isrch_path : index_srch_path;
-	index->entries.sorted = 0;
+
+	git_vector_set_cmp(&index->entries, ignore_case ? index_icmp : index_cmp);
 	git_vector_sort(&index->entries);
 
-	index->reuc._cmp = ignore_case ? reuc_icmp : reuc_cmp;
 	index->reuc_search = ignore_case ? reuc_isrch : reuc_srch;
-	index->reuc.sorted = 0;
+
+	git_vector_set_cmp(&index->reuc, ignore_case ? reuc_icmp : reuc_cmp);
 	git_vector_sort(&index->reuc);
 }
 
@@ -2024,7 +2024,7 @@ int git_index_read_tree(git_index *index, const git_tree *tree)
 
 	git_vector_sort(&index->entries);
 
-	entries._cmp = index->entries._cmp;
+	git_vector_set_cmp(&entries, index->entries._cmp);
 	git_vector_swap(&entries, &index->entries);
 
 	git_index_clear(index);

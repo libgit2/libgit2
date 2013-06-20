@@ -151,7 +151,7 @@ int git_submodule_foreach(
 	int error;
 	git_submodule *sm;
 	git_vector seen = GIT_VECTOR_INIT;
-	seen._cmp = submodule_cmp;
+	git_vector_set_cmp(&seen, submodule_cmp);
 
 	assert(repo && callback);
 

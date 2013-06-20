@@ -203,7 +203,8 @@ int main(int argc, char *argv[])
 
 	opt.show  = GIT_STATUS_SHOW_INDEX_AND_WORKDIR;
 	opt.flags = GIT_STATUS_OPT_INCLUDE_UNTRACKED |
-		GIT_STATUS_OPT_RENAMES_HEAD_TO_INDEX;
+		GIT_STATUS_OPT_RENAMES_HEAD_TO_INDEX |
+		GIT_STATUS_OPT_SORT_CASE_SENSITIVELY;
 
 	for (i = 1; i < argc; ++i) {
 		if (argv[i][0] != '-') {

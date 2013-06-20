@@ -365,7 +365,7 @@ static git_diff_list *diff_list_alloc(
 		diff->pfxcomp    = git__prefixcmp_icase;
 		diff->entrycomp  = git_index_entry__cmp_icase;
 
-		diff->deltas._cmp = git_diff_delta__casecmp;
+		git_vector_set_cmp(&diff->deltas, git_diff_delta__casecmp);
 	}
 
 	return diff;
@@ -1165,7 +1165,7 @@ int git_diff_tree_to_index(
 			d->pfxcomp    = git__prefixcmp_icase;
 			d->entrycomp  = git_index_entry__cmp_icase;
 
-			d->deltas._cmp = git_diff_delta__casecmp;
+			git_vector_set_cmp(&d->deltas, git_diff_delta__casecmp);
 			git_vector_sort(&d->deltas);
 		}
 	}
@@ -1266,10 +1266,10 @@ int git_diff__paired_foreach(
 	/* force case-sensitive delta sort */
 	if (icase_mismatch) {
 		if (head2idx->opts.flags & GIT_DIFF_DELTAS_ARE_ICASE) {
-			head2idx->deltas._cmp = git_diff_delta__cmp;
+			git_vector_set_cmp(&head2idx->deltas, git_diff_delta__cmp);
 			git_vector_sort(&head2idx->deltas);
 		} else {
-			idx2wd->deltas._cmp = git_diff_delta__cmp;
+			git_vector_set_cmp(&idx2wd->deltas, git_diff_delta__cmp);
 			git_vector_sort(&idx2wd->deltas);
 		}
 	}
@@ -1301,10 +1301,10 @@ int git_diff__paired_foreach(
 	/* restore case-insensitive delta sort */
 	if (icase_mismatch) {
 		if (head2idx->opts.flags & GIT_DIFF_DELTAS_ARE_ICASE) {
-			head2idx->deltas._cmp = git_diff_delta__casecmp;
+			git_vector_set_cmp(&head2idx->deltas, git_diff_delta__casecmp);
 			git_vector_sort(&head2idx->deltas);
 		} else {
-			idx2wd->deltas._cmp = git_diff_delta__casecmp;
+			git_vector_set_cmp(&idx2wd->deltas, git_diff_delta__casecmp);
 			git_vector_sort(&idx2wd->deltas);
 		}
 	}
