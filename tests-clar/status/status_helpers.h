@@ -8,6 +8,7 @@ typedef struct {
 	const unsigned int* expected_statuses;
 	const char** expected_paths;
 	int expected_entry_count;
+	bool debug;
 } status_entry_counts;
 
 /* cb_status__normal takes payload of "status_entry_counts *" */

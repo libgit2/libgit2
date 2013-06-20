@@ -78,4 +78,13 @@ void git_vector_remove_matching(
 int git_vector_resize_to(git_vector *v, size_t new_length);
 int git_vector_set(void **old, git_vector *v, size_t position, void *value);
 
+/** Set the comparison function used for sorting the vector */
+GIT_INLINE(void) git_vector_set_cmp(git_vector *v, git_vector_cmp cmp)
+{
+	if (cmp != v->_cmp) {
+		v->_cmp = cmp;
+		v->sorted = 0;
+	}
+}
+
 #endif

@@ -498,7 +498,7 @@ int git_attr_assignment__parse(
 
 	assert(assigns && !assigns->length);
 
-	assigns->_cmp = sort_by_hash_and_name;
+	git_vector_set_cmp(assigns, sort_by_hash_and_name);
 
 	while (*scan && *scan != '\n') {
 		const char *name_start, *value_start;
