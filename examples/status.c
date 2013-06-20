@@ -1,10 +1,9 @@
 /*
- * Copyright (C) 2011-2012 the libgit2 contributors
+ * Copyright (C) the libgit2 contributors. All rights reserved.
  *
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
  */
-
 #include <git2.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -19,15 +18,21 @@ enum {
 #define MAX_PATHSPEC 8
 
 /*
- * This example demonstrates the use of `git_status_foreach()` to roughly
- * simulate the output of running `git status`.  It should serve as a simple
- * example of how to get basic status information.
+ * This example demonstrates the use of the libgit2 status APIs,
+ * particularly the `git_status_list` object, to roughly simulate the
+ * output of running `git status`.  It serves as a simple example of
+ * using those APIs to get basic status information.
  *
  * This does not have:
  * - Robust error handling
- * - Any real command line parsing
  * - Colorized or paginated output formatting
  *
+ * This does have:
+ * - Examples of translating command line arguments to the status
+ *   options settings to mimic `git status` results.
+ * - A sample status formatter that matches the default "long" format
+ *   from `git status`
+ * - A sample status formatter that matches the "short" format
  */
 
 static void check(int error, const char *message, const char *extra)
