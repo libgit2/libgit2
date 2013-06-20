@@ -1109,6 +1109,26 @@ void test_diff_workdir__untracked_directory_scenarios(void)
 
 	git_diff_list_free(diff);
 
+	/* empty directory in empty directory */
+
+	cl_git_pass(p_mkdir("status/subdir/directory/empty", 0777));
+
+	memset(&exp, 0, sizeof(exp));
+	exp.names = files1;
+
+	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, NULL, &opts));
+
+	cl_git_pass(git_diff_foreach(diff, diff_file_cb, NULL, NULL, &exp));
+
+	cl_assert_equal_i(4, exp.files);
+	cl_assert_equal_i(0, exp.file_status[GIT_DELTA_ADDED]);
+	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_DELETED]);
+	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_MODIFIED]);
+	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_IGNORED]);
+	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_UNTRACKED]);
+
+	git_diff_list_free(diff);
+
 	/* directory with only ignored files */
 
 	cl_git_pass(p_mkdir("status/subdir/directory/deeper", 0777));
