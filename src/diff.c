@@ -786,10 +786,15 @@ static int diff_scan_inside_untracked_dir(
 
 		/* need to recurse into non-ignored directories */
 		if (!is_ignored && S_ISDIR(info->nitem->mode)) {
-			if ((error = git_iterator_advance_into(
-					 &info->nitem, info->new_iter)) < 0)
-				break;
-			continue;
+			error = git_iterator_advance_into(&info->nitem, info->new_iter);
+
+			if (!error)
+				continue;
+			else if (error == GIT_ENOTFOUND) {
+				error = 0;
+				is_ignored = true; /* treat empty as ignored */
+			} else
+				break; /* real error, must stop */
 		}
 
 		/* found a non-ignored item - treat parent dir as untracked */
