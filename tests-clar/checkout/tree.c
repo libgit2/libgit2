@@ -596,6 +596,8 @@ void test_checkout_tree__fails_when_dir_in_use(void)
 	cl_git_pass(p_chdir("../.."));
 
 	cl_assert(git_path_is_empty_dir("testrepo/a"));
+
+	git_object_free(obj);
 #endif
 }
 
@@ -628,5 +630,47 @@ void test_checkout_tree__can_continue_when_dir_in_use(void)
 	cl_git_pass(p_chdir("../.."));
 
 	cl_assert(git_path_is_empty_dir("testrepo/a"));
+
+	git_object_free(obj);
 #endif
+}
+
+void test_checkout_tree__target_directory_from_bare(void)
+{
+	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
+	git_oid oid;
+	checkout_counts cts;
+	memset(&cts, 0, sizeof(cts));
+
+	test_checkout_tree__cleanup(); /* cleanup default checkout */
+
+	g_repo = cl_git_sandbox_init("testrepo.git");
+	cl_assert(git_repository_is_bare(g_repo));
+
+	opts.checkout_strategy = GIT_CHECKOUT_SAFE_CREATE;
+
+	opts.notify_flags = GIT_CHECKOUT_NOTIFY_ALL;
+	opts.notify_cb = checkout_count_callback;
+	opts.notify_payload = &cts;
+
+	cl_git_pass(git_reference_name_to_id(&oid, g_repo, "HEAD"));
+	cl_git_pass(git_object_lookup(&g_object, g_repo, &oid, GIT_OBJ_ANY));
+
+	cl_git_fail(git_checkout_tree(g_repo, g_object, &opts));
+
+	opts.target_directory = "alternative";
+	cl_assert(!git_path_isdir("alternative"));
+
+	cl_git_pass(git_checkout_tree(g_repo, g_object, &opts));
+
+	cl_assert_equal_i(0, cts.n_untracked);
+	cl_assert_equal_i(0, cts.n_ignored);
+	cl_assert_equal_i(3, cts.n_updates);
+
+	check_file_contents("./alternative/README", "hey there\n");
+	check_file_contents("./alternative/branch_file.txt", "hi\nbye!\n");
+	check_file_contents("./alternative/new.txt", "my new file\n");
+
+	cl_git_pass(git_futils_rmdir_r(
+		"alternative", NULL, GIT_RMDIR_REMOVE_FILES));
 }
