@@ -506,3 +506,102 @@ void test_checkout_index__issue_1397(void)
 
 	check_file_contents("./issue_1397/crlf_file.txt", "first line\r\nsecond line\r\nboth with crlf");
 }
+
+void test_checkout_index__target_directory(void)
+{
+	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
+	checkout_counts cts;
+	memset(&cts, 0, sizeof(cts));
+
+	opts.checkout_strategy = GIT_CHECKOUT_SAFE_CREATE;
+	opts.target_directory = "alternative";
+	cl_assert(!git_path_isdir("alternative"));
+
+	opts.notify_flags = GIT_CHECKOUT_NOTIFY_ALL;
+	opts.notify_cb = checkout_count_callback;
+	opts.notify_payload = &cts;
+
+	/* create some files that *would* conflict if we were using the wd */
+	cl_git_mkfile("testrepo/README", "I'm in the way!\n");
+	cl_git_mkfile("testrepo/new.txt", "my new file\n");
+
+	cl_git_pass(git_checkout_index(g_repo, NULL, &opts));
+
+	cl_assert_equal_i(0, cts.n_untracked);
+	cl_assert_equal_i(0, cts.n_ignored);
+	cl_assert_equal_i(4, cts.n_updates);
+
+	check_file_contents("./alternative/README", "hey there\n");
+	check_file_contents("./alternative/branch_file.txt", "hi\nbye!\n");
+	check_file_contents("./alternative/new.txt", "my new file\n");
+
+	cl_git_pass(git_futils_rmdir_r(
+		"alternative", NULL, GIT_RMDIR_REMOVE_FILES));
+}
+
+void test_checkout_index__target_directory_from_bare(void)
+{
+	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
+	git_index *index;
+	git_object *head = NULL;
+	checkout_counts cts;
+	memset(&cts, 0, sizeof(cts));
+
+	test_checkout_index__cleanup();
+
+	g_repo = cl_git_sandbox_init("testrepo.git");
+	cl_assert(git_repository_is_bare(g_repo));
+
+	cl_git_pass(git_repository_index(&index, g_repo));
+	cl_git_pass(git_revparse_single(&head, g_repo, "HEAD^{tree}"));
+	cl_git_pass(git_index_read_tree(index, (const git_tree *)head));
+	cl_git_pass(git_index_write(index));
+	git_index_free(index);
+
+	opts.checkout_strategy = GIT_CHECKOUT_SAFE_CREATE;
+
+	opts.notify_flags = GIT_CHECKOUT_NOTIFY_ALL;
+	opts.notify_cb = checkout_count_callback;
+	opts.notify_payload = &cts;
+
+	/* fail to checkout a bare repo */
+	cl_git_fail(git_checkout_index(g_repo, NULL, &opts));
+
+	opts.target_directory = "alternative";
+	cl_assert(!git_path_isdir("alternative"));
+
+	cl_git_pass(git_checkout_index(g_repo, NULL, &opts));
+
+	cl_assert_equal_i(0, cts.n_untracked);
+	cl_assert_equal_i(0, cts.n_ignored);
+	cl_assert_equal_i(3, cts.n_updates);
+
+	check_file_contents("./alternative/README", "hey there\n");
+	check_file_contents("./alternative/branch_file.txt", "hi\nbye!\n");
+	check_file_contents("./alternative/new.txt", "my new file\n");
+
+	cl_git_pass(git_futils_rmdir_r(
+		"alternative", NULL, GIT_RMDIR_REMOVE_FILES));
+}
+
+void test_checkout_index__can_get_repo_from_index(void)
+{
+	git_index *index;
+	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
+
+	cl_assert_equal_i(false, git_path_isfile("./testrepo/README"));
+	cl_assert_equal_i(false, git_path_isfile("./testrepo/branch_file.txt"));
+	cl_assert_equal_i(false, git_path_isfile("./testrepo/new.txt"));
+
+	opts.checkout_strategy = GIT_CHECKOUT_SAFE_CREATE;
+
+	cl_git_pass(git_repository_index(&index, g_repo));
+
+	cl_git_pass(git_checkout_index(NULL, index, &opts));
+
+	check_file_contents("./testrepo/README", "hey there\n");
+	check_file_contents("./testrepo/branch_file.txt", "hi\nbye!\n");
+	check_file_contents("./testrepo/new.txt", "my new file\n");
+
+	git_index_free(index);
+}
