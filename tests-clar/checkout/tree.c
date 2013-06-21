@@ -448,8 +448,14 @@ void test_checkout_tree__donot_update_deleted_file_by_default(void)
 	git_oid old_id, new_id;
 	git_commit *old_commit = NULL, *new_commit = NULL;
 	git_index *index = NULL;
+	checkout_counts ct;
 
 	opts.checkout_strategy = GIT_CHECKOUT_SAFE;
+
+	memset(&ct, 0, sizeof(ct));
+	opts.notify_flags = GIT_CHECKOUT_NOTIFY_ALL;
+	opts.notify_cb = checkout_count_callback;
+	opts.notify_payload = &ct;
 
 	cl_git_pass(git_repository_index(&index, g_repo));
 
@@ -465,7 +471,12 @@ void test_checkout_tree__donot_update_deleted_file_by_default(void)
 
 	cl_git_pass(git_oid_fromstr(&new_id, "099fabac3a9ea935598528c27f866e34089c2eff"));
 	cl_git_pass(git_commit_lookup(&new_commit, g_repo, &new_id));
+
+
 	cl_git_fail(git_checkout_tree(g_repo, (git_object *)new_commit, &opts));
+
+	cl_assert_equal_i(1, ct.n_conflicts);
+	cl_assert_equal_i(1, ct.n_updates);
 
 	git_commit_free(old_commit);
 	git_commit_free(new_commit);
