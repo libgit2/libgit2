@@ -1369,8 +1369,19 @@ int git_checkout_index(
 	int error;
 	git_iterator *index_i;
 
-	if ((error = git_repository__ensure_not_bare(repo, "checkout index")) < 0)
-		return error;
+	if (!index && !repo) {
+		giterr_set(GITERR_CHECKOUT,
+			"Must provide either repository or index to checkout");
+		return -1;
+	}
+	if (index && repo && git_index_owner(index) != repo) {
+		giterr_set(GITERR_CHECKOUT,
+			"Index to checkout does not match repository");
+		return -1;
+	}
+
+	if (!repo)
+		repo = git_index_owner(index);
 
 	if (!index && (error = git_repository_index__weakptr(&index, repo)) < 0)
 		return error;
@@ -1394,8 +1405,19 @@ int git_checkout_tree(
 	git_tree *tree = NULL;
 	git_iterator *tree_i = NULL;
 
-	if ((error = git_repository__ensure_not_bare(repo, "checkout tree")) < 0)
-		return error;
+	if (!treeish && !repo) {
+		giterr_set(GITERR_CHECKOUT,
+			"Must provide either repository or tree to checkout");
+		return -1;
+	}
+	if (treeish && repo && git_object_owner(treeish) != repo) {
+		giterr_set(GITERR_CHECKOUT,
+			"Object to checkout does not match repository");
+		return -1;
+	}
+
+	if (!repo)
+		repo = git_object_owner(treeish);
 
 	if (git_object_peel((git_object **)&tree, treeish, GIT_OBJ_TREE) < 0) {
 		giterr_set(
@@ -1420,8 +1442,7 @@ int git_checkout_head(
 	git_tree *head = NULL;
 	git_iterator *head_i = NULL;
 
-	if ((error = git_repository__ensure_not_bare(repo, "checkout head")) < 0)
-		return error;
+	assert(repo);
 
 	if (!(error = checkout_lookup_head_tree(&head, repo)) &&
 		!(error = git_iterator_for_tree(&head_i, head, 0, NULL, NULL)))
