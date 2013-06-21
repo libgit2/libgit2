@@ -19,3 +19,20 @@ extern void check_file_contents_nocr_at_line(
 
 #define check_file_contents_nocr(PATH,EXP) \
 	check_file_contents_nocr_at_line(PATH,EXP,__FILE__,__LINE__,"String mismatch: " #EXP " != " #PATH)
+
+typedef struct {
+	int n_conflicts;
+	int n_dirty;
+	int n_updates;
+	int n_untracked;
+	int n_ignored;
+	int debug;
+} checkout_counts;
+
+extern int checkout_count_callback(
+	git_checkout_notify_t why,
+	const char *path,
+	const git_diff_file *baseline,
+	const git_diff_file *target,
+	const git_diff_file *workdir,
+	void *payload);

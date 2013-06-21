@@ -183,6 +183,8 @@ typedef enum {
 	GIT_CHECKOUT_NOTIFY_UPDATED   = (1u << 2),
 	GIT_CHECKOUT_NOTIFY_UNTRACKED = (1u << 3),
 	GIT_CHECKOUT_NOTIFY_IGNORED   = (1u << 4),
+
+	GIT_CHECKOUT_NOTIFY_ALL       = 0x0FFFFu
 } git_checkout_notify_t;
 
 /** Checkout notification callback function */
