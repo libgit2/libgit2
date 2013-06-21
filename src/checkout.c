@@ -220,8 +220,10 @@ static int checkout_action_no_wd(
 		action = CHECKOUT_ACTION_IF(SAFE_CREATE, UPDATE_BLOB, NONE);
 		break;
 	case GIT_DELTA_ADDED:    /* case 2 or 28 (and 5 but not really) */
-	case GIT_DELTA_MODIFIED: /* case 13 (and 35 but not really) */
 		action = CHECKOUT_ACTION_IF(SAFE, UPDATE_BLOB, NONE);
+		break;
+	case GIT_DELTA_MODIFIED: /* case 13 (and 35 but not really) */
+		action = CHECKOUT_ACTION_IF(SAFE_CREATE, UPDATE_BLOB, CONFLICT);
 		break;
 	case GIT_DELTA_TYPECHANGE: /* case 21 (B->T) and 28 (T->B)*/
 		if (delta->new_file.mode == GIT_FILEMODE_TREE)
