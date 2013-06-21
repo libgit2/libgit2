@@ -506,3 +506,31 @@ void test_checkout_index__issue_1397(void)
 
 	check_file_contents("./issue_1397/crlf_file.txt", "first line\r\nsecond line\r\nboth with crlf");
 }
+
+void test_checkout_index__target_directory(void)
+{
+	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
+	checkout_counts cts;
+	memset(&cts, 0, sizeof(cts));
+
+	opts.checkout_strategy = GIT_CHECKOUT_SAFE_CREATE;
+	opts.target_directory = "alternative";
+
+	opts.notify_flags = GIT_CHECKOUT_NOTIFY_ALL;
+	opts.notify_cb = checkout_count_callback;
+	opts.notify_payload = &cts;
+
+	/* create some files that *would* conflict if we were using the wd */
+	cl_git_mkfile("testrepo/README", "I'm in the way!\n");
+	cl_git_mkfile("testrepo/new.txt", "my new file\n");
+
+	cl_git_pass(git_checkout_index(g_repo, NULL, &opts));
+
+	cl_assert_equal_i(0, cts.n_untracked);
+	cl_assert_equal_i(0, cts.n_ignored);
+	cl_assert_equal_i(4, cts.n_updates);
+
+	check_file_contents("./alternative/README", "hey there\n");
+	check_file_contents("./alternative/branch_file.txt", "hi\nbye!\n");
+	check_file_contents("./alternative/new.txt", "my new file\n");
+}

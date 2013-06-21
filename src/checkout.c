@@ -858,7 +858,7 @@ static int checkout_submodule(
 		return 0;
 
 	if ((error = git_futils_mkdir(
-			file->path, git_repository_workdir(data->repo),
+			file->path, data->opts.target_directory,
 			data->opts.dir_mode, GIT_MKDIR_PATH)) < 0)
 		return error;
 
@@ -1030,7 +1030,7 @@ static int checkout_deferred_remove(git_repository *repo, const char *path)
 {
 #if 0
 	int error = git_futils_rmdir_r(
-		path, git_repository_workdir(repo), GIT_RMDIR_EMPTY_PARENTS);
+		path, data->opts.target_directory, GIT_RMDIR_EMPTY_PARENTS);
 
 	if (error == GIT_ENOTFOUND) {
 		error = 0;
@@ -1163,7 +1163,8 @@ static int checkout_data_init(
 		return -1;
 	}
 
-	if ((error = git_repository__ensure_not_bare(repo, "checkout")) < 0)
+	if ((!proposed || !proposed->target_directory) &&
+		(error = git_repository__ensure_not_bare(repo, "checkout")) < 0)
 		return error;
 
 	data->repo = repo;
@@ -1175,6 +1176,13 @@ static int checkout_data_init(
 		GIT_INIT_STRUCTURE(&data->opts, GIT_CHECKOUT_OPTS_VERSION);
 	else
 		memmove(&data->opts, proposed, sizeof(git_checkout_opts));
+
+	if (!data->opts.target_directory)
+		data->opts.target_directory = git_repository_workdir(repo);
+	else if (!git_path_isdir(data->opts.target_directory) &&
+			 (error = git_futils_mkdir(data->opts.target_directory, NULL,
+					GIT_DIR_MODE, GIT_MKDIR_VERIFY_DIR)) < 0)
+		goto cleanup;
 
 	/* refresh config and index content unless NO_REFRESH is given */
 	if ((data->opts.checkout_strategy & GIT_CHECKOUT_NO_REFRESH) == 0) {
@@ -1238,7 +1246,8 @@ static int checkout_data_init(
 
 	if ((error = git_vector_init(&data->removes, 0, git__strcmp_cb)) < 0 ||
 		(error = git_pool_init(&data->pool, 1, 0)) < 0 ||
-		(error = git_buf_puts(&data->path, git_repository_workdir(repo))) < 0)
+		(error = git_buf_puts(&data->path, data->opts.target_directory)) < 0 ||
+		(error = git_path_to_dir(&data->path)) < 0)
 		goto cleanup;
 
 	data->workdir_len = git_buf_len(&data->path);
@@ -1286,11 +1295,13 @@ int git_checkout_iterator(
 		GIT_ITERATOR_IGNORE_CASE : GIT_ITERATOR_DONT_IGNORE_CASE;
 
 	if ((error = git_iterator_reset(target, data.pfx, data.pfx)) < 0 ||
-		(error = git_iterator_for_workdir(
-			&workdir, data.repo, iterflags | GIT_ITERATOR_DONT_AUTOEXPAND,
+		(error = git_iterator_for_workdir_ext(
+			&workdir, data.repo, data.opts.target_directory,
+			iterflags | GIT_ITERATOR_DONT_AUTOEXPAND,
 			data.pfx, data.pfx)) < 0 ||
 		(error = git_iterator_for_tree(
-			&baseline, data.opts.baseline, iterflags, data.pfx, data.pfx)) < 0)
+			&baseline, data.opts.baseline,
+			iterflags, data.pfx, data.pfx)) < 0)
 		goto cleanup;
 
 	/* Should not have case insensitivity mismatch */
