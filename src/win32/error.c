@@ -12,7 +12,9 @@
 # include <winhttp.h>
 #endif
 
+#ifndef WC_ERR_INVALID_CHARS
 #define WC_ERR_INVALID_CHARS	0x80
+#endif
 
 char *git_win32_get_error_message(DWORD error_code)
 {
