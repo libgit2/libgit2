@@ -26,6 +26,10 @@ void test_checkout_index__initialize(void)
 void test_checkout_index__cleanup(void)
 {
 	cl_git_sandbox_cleanup();
+
+	/* try to remove alternative dir */
+	if (git_path_isdir("alternative"))
+		git_futils_rmdir_r("alternative", NULL, GIT_RMDIR_REMOVE_FILES);
 }
 
 void test_checkout_index__cannot_checkout_a_bare_repository(void)
@@ -576,9 +580,10 @@ void test_checkout_index__target_directory_from_bare(void)
 	cl_assert_equal_i(0, cts.n_ignored);
 	cl_assert_equal_i(3, cts.n_updates);
 
-	check_file_contents("./alternative/README", "hey there\n");
-	check_file_contents("./alternative/branch_file.txt", "hi\nbye!\n");
-	check_file_contents("./alternative/new.txt", "my new file\n");
+	/* files will have been filtered if needed, so strip CR */
+	check_file_contents_nocr("./alternative/README", "hey there\n");
+	check_file_contents_nocr("./alternative/branch_file.txt", "hi\nbye!\n");
+	check_file_contents_nocr("./alternative/new.txt", "my new file\n");
 
 	cl_git_pass(git_futils_rmdir_r(
 		"alternative", NULL, GIT_RMDIR_REMOVE_FILES));
