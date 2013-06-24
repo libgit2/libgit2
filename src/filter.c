@@ -108,10 +108,10 @@ void git_filter_free(git_filter *filter)
 
 int git_filter_create_filter(
 	git_filter **out,
-	should_apply_to_path_cb should_apply, 
-	apply_to_cb apply_to_odb,
-	apply_to_cb apply_to_workdir,
-	do_free_cb free,
+	git_filter_should_apply_to_path_cb should_apply, 
+	git_filter_apply_to_cb apply_to_odb,
+	git_filter_apply_to_cb apply_to_workdir,
+	git_filter_do_free_cb free,
 	const char *name)
 {
 	git_filter *filter;
