@@ -103,7 +103,7 @@ void git_repository__cleanup(git_repository *repo)
 	set_refdb(repo, NULL);
 }
 
-void git_filters_filters_free(git_vector *filters)
+static void filters_free(git_vector *filters)
 {
 	size_t i;
 	git_filter *filter;
@@ -125,7 +125,7 @@ void git_repository_free(git_repository *repo)
 
 	git_repository__cleanup(repo);
 
-	git_filters_filters_free(&repo->filters);
+	filters_free(&repo->filters);
 	git_cache_free(&repo->objects);
 	git_submodule_config_free(repo);
 
