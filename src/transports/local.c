@@ -571,6 +571,8 @@ static void local_cancel(git_transport *transport)
 static int local_close(git_transport *transport)
 {
 	transport_local *t = (transport_local *)transport;
+	size_t i;
+	git_remote_head *head;
 
 	t->connected = 0;
 
@@ -584,24 +586,22 @@ static int local_close(git_transport *transport)
 		t->url = NULL;
 	}
 
-	return 0;
-}
-
-static void local_free(git_transport *transport)
-{
-	transport_local *t = (transport_local *)transport;
-	size_t i;
-	git_remote_head *head;
-
-	/* Close the transport, if it's still open. */
-	local_close(transport);
-
 	git_vector_foreach(&t->refs, i, head) {
 		git__free(head->name);
 		git__free(head);
 	}
 
 	git_vector_free(&t->refs);
+
+	return 0;
+}
+
+static void local_free(git_transport *transport)
+{
+	transport_local *t = (transport_local *)transport;
+
+	/* Close the transport, if it's still open. */
+	local_close(transport);
 
 	/* Free the transport */
 	git__free(t);
