@@ -1,4 +1,6 @@
 #include "clar_libgit2.h"
+#include "git2/sys/repository.h"
+
 #include "buffer.h"
 #include "posix.h"
 #include "util.h"
@@ -67,13 +69,13 @@ void test_repo_setters__setting_a_new_index_on_a_repo_which_has_already_loaded_o
 	git_index *new_index;
 
 	cl_git_pass(git_index_open(&new_index, "./my-index"));
-	cl_assert(((git_refcount *)new_index)->refcount == 1);
+	cl_assert(((git_refcount *)new_index)->refcount.val == 1);
 
 	git_repository_set_index(repo, new_index);
-	cl_assert(((git_refcount *)new_index)->refcount == 2);
+	cl_assert(((git_refcount *)new_index)->refcount.val == 2);
 
 	git_repository_free(repo);
-	cl_assert(((git_refcount *)new_index)->refcount == 1);
+	cl_assert(((git_refcount *)new_index)->refcount.val == 1);
 
 	git_index_free(new_index);
 
@@ -88,13 +90,13 @@ void test_repo_setters__setting_a_new_odb_on_a_repo_which_already_loaded_one_pro
 	git_odb *new_odb;
 
 	cl_git_pass(git_odb_open(&new_odb, "./testrepo.git/objects"));
-	cl_assert(((git_refcount *)new_odb)->refcount == 1);
+	cl_assert(((git_refcount *)new_odb)->refcount.val == 1);
 
 	git_repository_set_odb(repo, new_odb);
-	cl_assert(((git_refcount *)new_odb)->refcount == 2);
+	cl_assert(((git_refcount *)new_odb)->refcount.val == 2);
 
 	git_repository_free(repo);
-	cl_assert(((git_refcount *)new_odb)->refcount == 1);
+	cl_assert(((git_refcount *)new_odb)->refcount.val == 1);
 
 	git_odb_free(new_odb);
 

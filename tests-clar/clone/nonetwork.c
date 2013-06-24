@@ -1,6 +1,8 @@
 #include "clar_libgit2.h"
 
 #include "git2/clone.h"
+#include "remote.h"
+#include "fileops.h"
 #include "repository.h"
 
 #define LIVE_REPO_URL "git://github.com/libgit2/TestGitRepository"
@@ -148,7 +150,7 @@ void test_clone_nonetwork__custom_fetch_spec(void)
 	cl_git_pass(git_clone(&g_repo, cl_git_fixture_url("testrepo.git"), "./foo", &g_options));
 
 	cl_git_pass(git_remote_load(&g_remote, g_repo, "origin"));
-	actual_fs = git_remote_fetchspec(g_remote);
+	actual_fs = git_remote_get_refspec(g_remote, 0);
 	cl_assert_equal_s("refs/heads/master", git_refspec_src(actual_fs));
 	cl_assert_equal_s("refs/heads/foo", git_refspec_dst(actual_fs));
 
@@ -164,13 +166,14 @@ void test_clone_nonetwork__custom_push_spec(void)
 	cl_git_pass(git_clone(&g_repo, cl_git_fixture_url("testrepo.git"), "./foo", &g_options));
 
 	cl_git_pass(git_remote_load(&g_remote, g_repo, "origin"));
-	actual_fs = git_remote_pushspec(g_remote);
+	actual_fs = git_remote_get_refspec(g_remote, git_remote_refspec_count(g_remote) - 1);
 	cl_assert_equal_s("refs/heads/master", git_refspec_src(actual_fs));
 	cl_assert_equal_s("refs/heads/foo", git_refspec_dst(actual_fs));
 }
 
 void test_clone_nonetwork__custom_autotag(void)
 {
+	git_remote *origin;
 	git_strarray tags = {0};
 
 	g_options.remote_autotag = GIT_REMOTE_DOWNLOAD_TAGS_NONE;
@@ -179,7 +182,26 @@ void test_clone_nonetwork__custom_autotag(void)
 	cl_git_pass(git_tag_list(&tags, g_repo));
 	cl_assert_equal_sz(0, tags.count);
 
+	cl_git_pass(git_remote_load(&origin, g_repo, "origin"));
+	cl_assert_equal_i(GIT_REMOTE_DOWNLOAD_TAGS_NONE, origin->download_tags);
+
 	git_strarray_free(&tags);
+	git_remote_free(origin);
+}
+
+void test_clone_nonetwork__custom_autotag_tags_all(void)
+{
+	git_strarray tags = {0};
+	git_remote *origin;
+
+	g_options.remote_autotag = GIT_REMOTE_DOWNLOAD_TAGS_ALL;
+	cl_git_pass(git_clone(&g_repo, cl_git_fixture_url("testrepo.git"), "./foo", &g_options));
+
+	cl_git_pass(git_remote_load(&origin, g_repo, "origin"));
+	cl_assert_equal_i(GIT_REMOTE_DOWNLOAD_TAGS_ALL, origin->download_tags);
+
+	git_strarray_free(&tags);
+	git_remote_free(origin);
 }
 
 void test_clone_nonetwork__cope_with_already_existing_directory(void)

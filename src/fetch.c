@@ -16,6 +16,8 @@
 #include "pack.h"
 #include "fetch.h"
 #include "netops.h"
+#include "repository.h"
+#include "refs.h"
 
 struct filter_payload {
 	git_remote *remote;
@@ -34,10 +36,16 @@ static int filter_ref__cb(git_remote_head *head, void *payload)
 
 	if (!p->found_head && strcmp(head->name, GIT_HEAD_FILE) == 0)
 		p->found_head = 1;
-	else if (git_refspec_src_matches(p->spec, head->name))
+	else if (p->remote->download_tags == GIT_REMOTE_DOWNLOAD_TAGS_ALL) {
+		/*
+		 * If tagopt is --tags, then we only use the default
+		 * tags refspec and ignore the remote's
+		 */
+		if (git_refspec_src_matches(p->tagspec, head->name))
 			match = 1;
-	else if (p->remote->download_tags == GIT_REMOTE_DOWNLOAD_TAGS_ALL &&
-		 git_refspec_src_matches(p->tagspec, head->name))
+		else
+			return 0;
+	} else if (git_remote__matching_refspec(p->remote, head->name))
 			match = 1;
 
 	if (!match)
@@ -68,7 +76,6 @@ static int filter_wants(git_remote *remote)
 	 * not interested in any particular branch but just the remote's
 	 * HEAD, which will be stored in FETCH_HEAD after the fetch.
 	 */
-	p.spec = git_remote_fetchspec(remote);
 	p.tagspec = &tagspec;
 	p.found_head = 0;
 	p.remote = remote;

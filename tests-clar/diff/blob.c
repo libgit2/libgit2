@@ -6,6 +6,20 @@ static diff_expects expected;
 static git_diff_options opts;
 static git_blob *d, *alien;
 
+static void quick_diff_blob_to_str(
+	const git_blob *blob, const char *blob_path,
+	const char *str, size_t len, const char *str_path)
+{
+	memset(&expected, 0, sizeof(expected));
+
+	if (str && !len)
+		len = strlen(str);
+
+	cl_git_pass(git_diff_blob_to_buffer(
+		blob, blob_path, str, len, str_path,
+		&opts, diff_file_cb, diff_hunk_cb, diff_line_cb, &expected));
+}
+
 void test_diff_blob__initialize(void)
 {
 	git_oid oid;
@@ -59,7 +73,8 @@ void test_diff_blob__can_compare_text_blobs(void)
 
 	/* diff on tests/resources/attr/root_test1 */
 	cl_git_pass(git_diff_blobs(
-		a, b, &opts, diff_file_cb, diff_hunk_cb, diff_line_cb, &expected));
+		a, NULL, b, NULL, &opts,
+		diff_file_cb, diff_hunk_cb, diff_line_cb, &expected));
 
 	cl_assert_equal_i(1, expected.files);
 	cl_assert_equal_i(1, expected.file_status[GIT_DELTA_MODIFIED]);
@@ -74,7 +89,8 @@ void test_diff_blob__can_compare_text_blobs(void)
 	/* diff on tests/resources/attr/root_test2 */
 	memset(&expected, 0, sizeof(expected));
 	cl_git_pass(git_diff_blobs(
-		b, c, &opts, diff_file_cb, diff_hunk_cb, diff_line_cb, &expected));
+		b, NULL, c, NULL, &opts,
+		diff_file_cb, diff_hunk_cb, diff_line_cb, &expected));
 
 	cl_assert_equal_i(1, expected.files);
 	cl_assert_equal_i(1, expected.file_status[GIT_DELTA_MODIFIED]);
@@ -89,7 +105,8 @@ void test_diff_blob__can_compare_text_blobs(void)
 	/* diff on tests/resources/attr/root_test3 */
 	memset(&expected, 0, sizeof(expected));
 	cl_git_pass(git_diff_blobs(
-		a, c, &opts, diff_file_cb, diff_hunk_cb, diff_line_cb, &expected));
+		a, NULL, c, NULL, &opts,
+		diff_file_cb, diff_hunk_cb, diff_line_cb, &expected));
 
 	cl_assert_equal_i(1, expected.files);
 	cl_assert_equal_i(1, expected.file_status[GIT_DELTA_MODIFIED]);
@@ -103,7 +120,8 @@ void test_diff_blob__can_compare_text_blobs(void)
 
 	memset(&expected, 0, sizeof(expected));
 	cl_git_pass(git_diff_blobs(
-		c, d, &opts, diff_file_cb, diff_hunk_cb, diff_line_cb, &expected));
+		c, NULL, d, NULL, &opts,
+		diff_file_cb, diff_hunk_cb, diff_line_cb, &expected));
 
 	cl_assert_equal_i(1, expected.files);
 	cl_assert_equal_i(1, expected.file_status[GIT_DELTA_MODIFIED]);
@@ -120,12 +138,130 @@ void test_diff_blob__can_compare_text_blobs(void)
 	git_blob_free(c);
 }
 
+void test_diff_blob__can_compare_text_blobs_with_patch(void)
+{
+	git_blob *a, *b, *c;
+	git_oid a_oid, b_oid, c_oid;
+	git_diff_patch *p;
+	const git_diff_delta *delta;
+	size_t tc, ta, td;
+
+	/* tests/resources/attr/root_test1 */
+	cl_git_pass(git_oid_fromstrn(&a_oid, "45141a79", 8));
+	cl_git_pass(git_blob_lookup_prefix(&a, g_repo, &a_oid, 4));
+
+	/* tests/resources/attr/root_test2 */
+	cl_git_pass(git_oid_fromstrn(&b_oid, "4d713dc4", 8));
+	cl_git_pass(git_blob_lookup_prefix(&b, g_repo, &b_oid, 4));
+
+	/* tests/resources/attr/root_test3 */
+	cl_git_pass(git_oid_fromstrn(&c_oid, "c96bbb2c2557a832", 16));
+	cl_git_pass(git_blob_lookup_prefix(&c, g_repo, &c_oid, 8));
+
+	/* Doing the equivalent of a `git diff -U1` on these files */
+
+	/* diff on tests/resources/attr/root_test1 */
+	cl_git_pass(git_diff_patch_from_blobs(&p, a, NULL, b, NULL, &opts));
+
+	cl_assert(p != NULL);
+
+	delta = git_diff_patch_delta(p);
+	cl_assert(delta != NULL);
+	cl_assert_equal_i(GIT_DELTA_MODIFIED, delta->status);
+	cl_assert(git_oid_equal(git_blob_id(a), &delta->old_file.oid));
+	cl_assert_equal_sz(git_blob_rawsize(a), delta->old_file.size);
+	cl_assert(git_oid_equal(git_blob_id(b), &delta->new_file.oid));
+	cl_assert_equal_sz(git_blob_rawsize(b), delta->new_file.size);
+
+	cl_assert_equal_i(1, (int)git_diff_patch_num_hunks(p));
+	cl_assert_equal_i(6, git_diff_patch_num_lines_in_hunk(p, 0));
+
+	cl_git_pass(git_diff_patch_line_stats(&tc, &ta, &td, p));
+	cl_assert_equal_i(1, (int)tc);
+	cl_assert_equal_i(5, (int)ta);
+	cl_assert_equal_i(0, (int)td);
+
+	git_diff_patch_free(p);
+
+	/* diff on tests/resources/attr/root_test2 */
+	cl_git_pass(git_diff_patch_from_blobs(&p, b, NULL, c, NULL, &opts));
+
+	cl_assert(p != NULL);
+
+	delta = git_diff_patch_delta(p);
+	cl_assert(delta != NULL);
+	cl_assert_equal_i(GIT_DELTA_MODIFIED, delta->status);
+	cl_assert(git_oid_equal(git_blob_id(b), &delta->old_file.oid));
+	cl_assert_equal_sz(git_blob_rawsize(b), delta->old_file.size);
+	cl_assert(git_oid_equal(git_blob_id(c), &delta->new_file.oid));
+	cl_assert_equal_sz(git_blob_rawsize(c), delta->new_file.size);
+
+	cl_assert_equal_i(1, (int)git_diff_patch_num_hunks(p));
+	cl_assert_equal_i(15, git_diff_patch_num_lines_in_hunk(p, 0));
+
+	cl_git_pass(git_diff_patch_line_stats(&tc, &ta, &td, p));
+	cl_assert_equal_i(3, (int)tc);
+	cl_assert_equal_i(9, (int)ta);
+	cl_assert_equal_i(3, (int)td);
+
+	git_diff_patch_free(p);
+
+	/* diff on tests/resources/attr/root_test3 */
+	cl_git_pass(git_diff_patch_from_blobs(&p, a, NULL, c, NULL, &opts));
+
+	cl_assert(p != NULL);
+
+	delta = git_diff_patch_delta(p);
+	cl_assert(delta != NULL);
+	cl_assert_equal_i(GIT_DELTA_MODIFIED, delta->status);
+	cl_assert(git_oid_equal(git_blob_id(a), &delta->old_file.oid));
+	cl_assert_equal_sz(git_blob_rawsize(a), delta->old_file.size);
+	cl_assert(git_oid_equal(git_blob_id(c), &delta->new_file.oid));
+	cl_assert_equal_sz(git_blob_rawsize(c), delta->new_file.size);
+
+	cl_git_pass(git_diff_patch_line_stats(&tc, &ta, &td, p));
+	cl_assert_equal_i(0, (int)tc);
+	cl_assert_equal_i(12, (int)ta);
+	cl_assert_equal_i(1, (int)td);
+
+	git_diff_patch_free(p);
+
+	/* one more */
+	cl_git_pass(git_diff_patch_from_blobs(&p, c, NULL, d, NULL, &opts));
+
+	cl_assert(p != NULL);
+
+	delta = git_diff_patch_delta(p);
+	cl_assert(delta != NULL);
+	cl_assert_equal_i(GIT_DELTA_MODIFIED, delta->status);
+	cl_assert(git_oid_equal(git_blob_id(c), &delta->old_file.oid));
+	cl_assert_equal_sz(git_blob_rawsize(c), delta->old_file.size);
+	cl_assert(git_oid_equal(git_blob_id(d), &delta->new_file.oid));
+	cl_assert_equal_sz(git_blob_rawsize(d), delta->new_file.size);
+
+	cl_assert_equal_i(2, (int)git_diff_patch_num_hunks(p));
+	cl_assert_equal_i(5, git_diff_patch_num_lines_in_hunk(p, 0));
+	cl_assert_equal_i(9, git_diff_patch_num_lines_in_hunk(p, 1));
+
+	cl_git_pass(git_diff_patch_line_stats(&tc, &ta, &td, p));
+	cl_assert_equal_i(4, (int)tc);
+	cl_assert_equal_i(6, (int)ta);
+	cl_assert_equal_i(4, (int)td);
+
+	git_diff_patch_free(p);
+
+	git_blob_free(a);
+	git_blob_free(b);
+	git_blob_free(c);
+}
+
 void test_diff_blob__can_compare_against_null_blobs(void)
 {
 	git_blob *e = NULL;
 
 	cl_git_pass(git_diff_blobs(
-		d, e, &opts, diff_file_cb, diff_hunk_cb, diff_line_cb, &expected));
+		d, NULL, e, NULL, &opts,
+		diff_file_cb, diff_hunk_cb, diff_line_cb, &expected));
 
 	cl_assert_equal_i(1, expected.files);
 	cl_assert_equal_i(1, expected.file_status[GIT_DELTA_DELETED]);
@@ -140,7 +276,8 @@ void test_diff_blob__can_compare_against_null_blobs(void)
 	memset(&expected, 0, sizeof(expected));
 
 	cl_git_pass(git_diff_blobs(
-		d, e, &opts, diff_file_cb, diff_hunk_cb, diff_line_cb, &expected));
+		d, NULL, e, NULL, &opts,
+		diff_file_cb, diff_hunk_cb, diff_line_cb, &expected));
 
 	cl_assert_equal_i(1, expected.files);
 	cl_assert_equal_i(1, expected.file_status[GIT_DELTA_ADDED]);
@@ -155,7 +292,8 @@ void test_diff_blob__can_compare_against_null_blobs(void)
 	memset(&expected, 0, sizeof(expected));
 
 	cl_git_pass(git_diff_blobs(
-		alien, NULL, &opts, diff_file_cb, diff_hunk_cb, diff_line_cb, &expected));
+		alien, NULL, NULL, NULL, &opts,
+		diff_file_cb, diff_hunk_cb, diff_line_cb, &expected));
 
 	cl_assert_equal_i(1, expected.files);
 	cl_assert_equal_i(1, expected.files_binary);
@@ -166,13 +304,99 @@ void test_diff_blob__can_compare_against_null_blobs(void)
 	memset(&expected, 0, sizeof(expected));
 
 	cl_git_pass(git_diff_blobs(
-		NULL, alien, &opts, diff_file_cb, diff_hunk_cb, diff_line_cb, &expected));
+		NULL, NULL, alien, NULL, &opts,
+		diff_file_cb, diff_hunk_cb, diff_line_cb, &expected));
 
 	cl_assert_equal_i(1, expected.files);
 	cl_assert_equal_i(1, expected.files_binary);
 	cl_assert_equal_i(1, expected.file_status[GIT_DELTA_ADDED]);
 	cl_assert_equal_i(0, expected.hunks);
 	cl_assert_equal_i(0, expected.lines);
+}
+
+void test_diff_blob__can_compare_against_null_blobs_with_patch(void)
+{
+	git_blob *e = NULL;
+	git_diff_patch *p;
+	const git_diff_delta *delta;
+	int line;
+	char origin;
+
+	cl_git_pass(git_diff_patch_from_blobs(&p, d, NULL, e, NULL, &opts));
+
+	cl_assert(p != NULL);
+
+	delta = git_diff_patch_delta(p);
+	cl_assert(delta != NULL);
+	cl_assert_equal_i(GIT_DELTA_DELETED, delta->status);
+	cl_assert(git_oid_equal(git_blob_id(d), &delta->old_file.oid));
+	cl_assert_equal_sz(git_blob_rawsize(d), delta->old_file.size);
+	cl_assert(git_oid_iszero(&delta->new_file.oid));
+	cl_assert_equal_sz(0, delta->new_file.size);
+
+	cl_assert_equal_i(1, (int)git_diff_patch_num_hunks(p));
+	cl_assert_equal_i(14, git_diff_patch_num_lines_in_hunk(p, 0));
+
+	for (line = 0; line < git_diff_patch_num_lines_in_hunk(p, 0); ++line) {
+		cl_git_pass(git_diff_patch_get_line_in_hunk(
+			&origin, NULL, NULL, NULL, NULL, p, 0, line));
+		cl_assert_equal_i(GIT_DIFF_LINE_DELETION, (int)origin);
+	}
+
+	git_diff_patch_free(p);
+
+	opts.flags |= GIT_DIFF_REVERSE;
+
+	cl_git_pass(git_diff_patch_from_blobs(&p, d, NULL, e, NULL, &opts));
+
+	cl_assert(p != NULL);
+
+	delta = git_diff_patch_delta(p);
+	cl_assert(delta != NULL);
+	cl_assert_equal_i(GIT_DELTA_ADDED, delta->status);
+	cl_assert(git_oid_iszero(&delta->old_file.oid));
+	cl_assert_equal_sz(0, delta->old_file.size);
+	cl_assert(git_oid_equal(git_blob_id(d), &delta->new_file.oid));
+	cl_assert_equal_sz(git_blob_rawsize(d), delta->new_file.size);
+
+	cl_assert_equal_i(1, (int)git_diff_patch_num_hunks(p));
+	cl_assert_equal_i(14, git_diff_patch_num_lines_in_hunk(p, 0));
+
+	for (line = 0; line < git_diff_patch_num_lines_in_hunk(p, 0); ++line) {
+		cl_git_pass(git_diff_patch_get_line_in_hunk(
+			&origin, NULL, NULL, NULL, NULL, p, 0, line));
+		cl_assert_equal_i(GIT_DIFF_LINE_ADDITION, (int)origin);
+	}
+
+	git_diff_patch_free(p);
+
+	opts.flags ^= GIT_DIFF_REVERSE;
+
+	cl_git_pass(git_diff_patch_from_blobs(&p, alien, NULL, NULL, NULL, &opts));
+
+	cl_assert(p != NULL);
+
+	delta = git_diff_patch_delta(p);
+	cl_assert(delta != NULL);
+	cl_assert_equal_i(GIT_DELTA_DELETED, delta->status);
+	cl_assert((delta->flags & GIT_DIFF_FLAG_BINARY) != 0);
+
+	cl_assert_equal_i(0, (int)git_diff_patch_num_hunks(p));
+
+	git_diff_patch_free(p);
+
+	cl_git_pass(git_diff_patch_from_blobs(&p, NULL, NULL, alien, NULL, &opts));
+
+	cl_assert(p != NULL);
+
+	delta = git_diff_patch_delta(p);
+	cl_assert(delta != NULL);
+	cl_assert_equal_i(GIT_DELTA_ADDED, delta->status);
+	cl_assert((delta->flags & GIT_DIFF_FLAG_BINARY) != 0);
+
+	cl_assert_equal_i(0, (int)git_diff_patch_num_hunks(p));
+
+	git_diff_patch_free(p);
 }
 
 static void assert_identical_blobs_comparison(diff_expects *expected)
@@ -185,25 +409,70 @@ static void assert_identical_blobs_comparison(diff_expects *expected)
 
 void test_diff_blob__can_compare_identical_blobs(void)
 {
-	cl_git_pass(git_diff_blobs(
-		d, d, &opts, diff_file_cb, diff_hunk_cb, diff_line_cb, &expected));
+	opts.flags |= GIT_DIFF_INCLUDE_UNMODIFIED;
 
-	cl_assert_equal_i(0, expected.files_binary);
+	cl_git_pass(git_diff_blobs(
+		d, NULL, d, NULL, &opts,
+		diff_file_cb, diff_hunk_cb, diff_line_cb, &expected));
+
 	assert_identical_blobs_comparison(&expected);
-
-	memset(&expected, 0, sizeof(expected));
-	cl_git_pass(git_diff_blobs(
-		NULL, NULL, &opts, diff_file_cb, diff_hunk_cb, diff_line_cb, &expected));
-
 	cl_assert_equal_i(0, expected.files_binary);
-	cl_assert_equal_i(0, expected.files); /* NULLs mean no callbacks, period */
 
 	memset(&expected, 0, sizeof(expected));
 	cl_git_pass(git_diff_blobs(
-		alien, alien, &opts, diff_file_cb, diff_hunk_cb, diff_line_cb, &expected));
+		NULL, NULL, NULL, NULL, &opts,
+		diff_file_cb, diff_hunk_cb, diff_line_cb, &expected));
 
+	assert_identical_blobs_comparison(&expected);
+	cl_assert_equal_i(0, expected.files_binary);
+
+	memset(&expected, 0, sizeof(expected));
+	cl_git_pass(git_diff_blobs(
+		alien, NULL, alien, NULL, &opts,
+		diff_file_cb, diff_hunk_cb, diff_line_cb, &expected));
+
+	assert_identical_blobs_comparison(&expected);
 	cl_assert(expected.files_binary > 0);
-	assert_identical_blobs_comparison(&expected);
+}
+
+void test_diff_blob__can_compare_identical_blobs_with_patch(void)
+{
+	git_diff_patch *p;
+	const git_diff_delta *delta;
+
+	cl_git_pass(git_diff_patch_from_blobs(&p, d, NULL, d, NULL, &opts));
+	cl_assert(p != NULL);
+
+	delta = git_diff_patch_delta(p);
+	cl_assert(delta != NULL);
+	cl_assert_equal_i(GIT_DELTA_UNMODIFIED, delta->status);
+	cl_assert_equal_sz(delta->old_file.size, git_blob_rawsize(d));
+	cl_assert(git_oid_equal(git_blob_id(d), &delta->old_file.oid));
+	cl_assert_equal_sz(delta->new_file.size, git_blob_rawsize(d));
+	cl_assert(git_oid_equal(git_blob_id(d), &delta->new_file.oid));
+
+	cl_assert_equal_i(0, (int)git_diff_patch_num_hunks(p));
+	git_diff_patch_free(p);
+
+	cl_git_pass(git_diff_patch_from_blobs(&p, NULL, NULL, NULL, NULL, &opts));
+	cl_assert(p != NULL);
+
+	delta = git_diff_patch_delta(p);
+	cl_assert(delta != NULL);
+	cl_assert_equal_i(GIT_DELTA_UNMODIFIED, delta->status);
+	cl_assert_equal_sz(0, delta->old_file.size);
+	cl_assert(git_oid_iszero(&delta->old_file.oid));
+	cl_assert_equal_sz(0, delta->new_file.size);
+	cl_assert(git_oid_iszero(&delta->new_file.oid));
+
+	cl_assert_equal_i(0, (int)git_diff_patch_num_hunks(p));
+	git_diff_patch_free(p);
+
+	cl_git_pass(git_diff_patch_from_blobs(&p, alien, NULL, alien, NULL, &opts));
+	cl_assert(p != NULL);
+	cl_assert_equal_i(GIT_DELTA_UNMODIFIED, git_diff_patch_delta(p)->status);
+	cl_assert_equal_i(0, (int)git_diff_patch_num_hunks(p));
+	git_diff_patch_free(p);
 }
 
 static void assert_binary_blobs_comparison(diff_expects *expected)
@@ -226,14 +495,16 @@ void test_diff_blob__can_compare_two_binary_blobs(void)
 	cl_git_pass(git_blob_lookup_prefix(&heart, g_repo, &h_oid, 4));
 
 	cl_git_pass(git_diff_blobs(
-		alien, heart, &opts, diff_file_cb, diff_hunk_cb, diff_line_cb, &expected));
+		alien, NULL, heart, NULL, &opts,
+		diff_file_cb, diff_hunk_cb, diff_line_cb, &expected));
 
 	assert_binary_blobs_comparison(&expected);
 
 	memset(&expected, 0, sizeof(expected));
 
 	cl_git_pass(git_diff_blobs(
-		heart, alien, &opts, diff_file_cb, diff_hunk_cb, diff_line_cb, &expected));
+		heart, NULL, alien, NULL, &opts,
+		diff_file_cb, diff_hunk_cb, diff_line_cb, &expected));
 
 	assert_binary_blobs_comparison(&expected);
 
@@ -243,14 +514,16 @@ void test_diff_blob__can_compare_two_binary_blobs(void)
 void test_diff_blob__can_compare_a_binary_blob_and_a_text_blob(void)
 {
 	cl_git_pass(git_diff_blobs(
-		alien, d, &opts, diff_file_cb, diff_hunk_cb, diff_line_cb, &expected));
+		alien, NULL, d, NULL, &opts,
+		diff_file_cb, diff_hunk_cb, diff_line_cb, &expected));
 
 	assert_binary_blobs_comparison(&expected);
 
 	memset(&expected, 0, sizeof(expected));
 
 	cl_git_pass(git_diff_blobs(
-		d, alien, &opts, diff_file_cb, diff_hunk_cb, diff_line_cb, &expected));
+		d, NULL, alien, NULL, &opts,
+		diff_file_cb, diff_hunk_cb, diff_line_cb, &expected));
 
 	assert_binary_blobs_comparison(&expected);
 }
@@ -291,7 +564,8 @@ void test_diff_blob__comparing_two_text_blobs_honors_interhunkcontext(void)
 
 	/* Test with default inter-hunk-context (not set) => default is 0 */
 	cl_git_pass(git_diff_blobs(
-		old_d, d, &opts, diff_file_cb, diff_hunk_cb, diff_line_cb, &expected));
+		old_d, NULL, d, NULL, &opts,
+		diff_file_cb, diff_hunk_cb, diff_line_cb, &expected));
 
 	cl_assert_equal_i(2, expected.hunks);
 
@@ -299,7 +573,8 @@ void test_diff_blob__comparing_two_text_blobs_honors_interhunkcontext(void)
 	opts.interhunk_lines = 0;
 	memset(&expected, 0, sizeof(expected));
 	cl_git_pass(git_diff_blobs(
-		old_d, d, &opts, diff_file_cb, diff_hunk_cb, diff_line_cb, &expected));
+		old_d, NULL, d, NULL, &opts,
+		diff_file_cb, diff_hunk_cb, diff_line_cb, &expected));
 
 	cl_assert_equal_i(2, expected.hunks);
 
@@ -307,7 +582,8 @@ void test_diff_blob__comparing_two_text_blobs_honors_interhunkcontext(void)
 	opts.interhunk_lines = 1;
 	memset(&expected, 0, sizeof(expected));
 	cl_git_pass(git_diff_blobs(
-		old_d, d, &opts, diff_file_cb, diff_hunk_cb, diff_line_cb, &expected));
+		old_d, NULL, d, NULL, &opts,
+		diff_file_cb, diff_hunk_cb, diff_line_cb, &expected));
 
 	cl_assert_equal_i(1, expected.hunks);
 
@@ -320,7 +596,8 @@ void test_diff_blob__checks_options_version_too_low(void)
 
 	opts.version = 0;
 	cl_git_fail(git_diff_blobs(
-		d, alien, &opts, diff_file_cb, diff_hunk_cb, diff_line_cb, &expected));
+		d, NULL, alien, NULL, &opts,
+		diff_file_cb, diff_hunk_cb, diff_line_cb, &expected));
 	err = giterr_last();
 	cl_assert_equal_i(GITERR_INVALID, err->klass);
 }
@@ -331,7 +608,8 @@ void test_diff_blob__checks_options_version_too_high(void)
 
 	opts.version = 1024;
 	cl_git_fail(git_diff_blobs(
-		d, alien, &opts, diff_file_cb, diff_hunk_cb, diff_line_cb, &expected));
+		d, NULL, alien, NULL, &opts,
+		diff_file_cb, diff_hunk_cb, diff_line_cb, &expected));
 	err = giterr_last();
 	cl_assert_equal_i(GITERR_INVALID, err->klass);
 }
@@ -378,10 +656,7 @@ void test_diff_blob__can_compare_blob_to_buffer(void)
 	cl_git_pass(git_blob_lookup_prefix(&a, g_repo, &a_oid, 4));
 
 	/* diff from blob a to content of b */
-	cl_git_pass(git_diff_blob_to_buffer(
-		a, b_content, strlen(b_content),
-		&opts, diff_file_cb, diff_hunk_cb, diff_line_cb, &expected));
-
+	quick_diff_blob_to_str(a, NULL, b_content, 0, NULL);
 	cl_assert_equal_i(1, expected.files);
 	cl_assert_equal_i(1, expected.file_status[GIT_DELTA_MODIFIED]);
 	cl_assert_equal_i(0, expected.files_binary);
@@ -392,42 +667,99 @@ void test_diff_blob__can_compare_blob_to_buffer(void)
 	cl_assert_equal_i(0, expected.line_dels);
 
 	/* diff from blob a to content of a */
-	memset(&expected, 0, sizeof(expected));
-	cl_git_pass(git_diff_blob_to_buffer(
-		a, a_content, strlen(a_content),
-		&opts, diff_file_cb, diff_hunk_cb, diff_line_cb, &expected));
-
+	opts.flags |= GIT_DIFF_INCLUDE_UNMODIFIED;
+	quick_diff_blob_to_str(a, NULL, a_content, 0, NULL);
 	assert_identical_blobs_comparison(&expected);
 
 	/* diff from NULL blob to content of a */
 	memset(&expected, 0, sizeof(expected));
-	cl_git_pass(git_diff_blob_to_buffer(
-		NULL, a_content, strlen(a_content),
-		&opts, diff_file_cb, diff_hunk_cb, diff_line_cb, &expected));
-
+	quick_diff_blob_to_str(NULL, NULL, a_content, 0, NULL);
 	assert_changed_single_one_line_file(&expected, GIT_DELTA_ADDED);
 
 	/* diff from blob a to NULL buffer */
 	memset(&expected, 0, sizeof(expected));
-	cl_git_pass(git_diff_blob_to_buffer(
-		a, NULL, 0,
-		&opts, diff_file_cb, diff_hunk_cb, diff_line_cb, &expected));
-
+	quick_diff_blob_to_str(a, NULL, NULL, 0, NULL);
 	assert_changed_single_one_line_file(&expected, GIT_DELTA_DELETED);
 
 	/* diff with reverse */
 	opts.flags ^= GIT_DIFF_REVERSE;
 
 	memset(&expected, 0, sizeof(expected));
-	cl_git_pass(git_diff_blob_to_buffer(
-		a, NULL, 0,
-		&opts, diff_file_cb, diff_hunk_cb, diff_line_cb, &expected));
-
+	quick_diff_blob_to_str(a, NULL, NULL, 0, NULL);
 	assert_changed_single_one_line_file(&expected, GIT_DELTA_ADDED);
 
 	git_blob_free(a);
 }
 
+void test_diff_blob__can_compare_blob_to_buffer_with_patch(void)
+{
+	git_diff_patch *p;
+	git_blob *a;
+	git_oid a_oid;
+	const char *a_content = "Hello from the root\n";
+	const char *b_content = "Hello from the root\n\nSome additional lines\n\nDown here below\n\n";
+	size_t tc, ta, td;
+
+	/* tests/resources/attr/root_test1 */
+	cl_git_pass(git_oid_fromstrn(&a_oid, "45141a79", 8));
+	cl_git_pass(git_blob_lookup_prefix(&a, g_repo, &a_oid, 4));
+
+	/* diff from blob a to content of b */
+	cl_git_pass(git_diff_patch_from_blob_and_buffer(
+		&p, a, NULL, b_content, strlen(b_content), NULL, &opts));
+
+	cl_assert(p != NULL);
+	cl_assert_equal_i(GIT_DELTA_MODIFIED, git_diff_patch_delta(p)->status);
+	cl_assert_equal_i(1, (int)git_diff_patch_num_hunks(p));
+	cl_assert_equal_i(6, git_diff_patch_num_lines_in_hunk(p, 0));
+
+	cl_git_pass(git_diff_patch_line_stats(&tc, &ta, &td, p));
+	cl_assert_equal_i(1, (int)tc);
+	cl_assert_equal_i(5, (int)ta);
+	cl_assert_equal_i(0, (int)td);
+
+	git_diff_patch_free(p);
+
+	/* diff from blob a to content of a */
+	opts.flags |= GIT_DIFF_INCLUDE_UNMODIFIED;
+	cl_git_pass(git_diff_patch_from_blob_and_buffer(
+		&p, a, NULL, a_content, strlen(a_content), NULL, &opts));
+	cl_assert(p != NULL);
+	cl_assert_equal_i(GIT_DELTA_UNMODIFIED, git_diff_patch_delta(p)->status);
+	cl_assert_equal_i(0, (int)git_diff_patch_num_hunks(p));
+	git_diff_patch_free(p);
+
+	/* diff from NULL blob to content of a */
+	cl_git_pass(git_diff_patch_from_blob_and_buffer(
+		&p, NULL, NULL, a_content, strlen(a_content), NULL, &opts));
+	cl_assert(p != NULL);
+	cl_assert_equal_i(GIT_DELTA_ADDED, git_diff_patch_delta(p)->status);
+	cl_assert_equal_i(1, (int)git_diff_patch_num_hunks(p));
+	cl_assert_equal_i(1, git_diff_patch_num_lines_in_hunk(p, 0));
+	git_diff_patch_free(p);
+
+	/* diff from blob a to NULL buffer */
+	cl_git_pass(git_diff_patch_from_blob_and_buffer(
+		&p, a, NULL, NULL, 0, NULL, &opts));
+	cl_assert(p != NULL);
+	cl_assert_equal_i(GIT_DELTA_DELETED, git_diff_patch_delta(p)->status);
+	cl_assert_equal_i(1, (int)git_diff_patch_num_hunks(p));
+	cl_assert_equal_i(1, git_diff_patch_num_lines_in_hunk(p, 0));
+	git_diff_patch_free(p);
+
+	/* diff with reverse */
+	opts.flags ^= GIT_DIFF_REVERSE;
+
+	cl_git_pass(git_diff_patch_from_blob_and_buffer(
+		&p, a, NULL, NULL, 0, NULL, &opts));
+	cl_assert(p != NULL);
+	cl_assert_equal_i(GIT_DELTA_ADDED, git_diff_patch_delta(p)->status);
+	cl_assert_equal_i(1, (int)git_diff_patch_num_hunks(p));
+	cl_assert_equal_i(1, git_diff_patch_num_lines_in_hunk(p, 0));
+	git_diff_patch_free(p);
+
+	git_blob_free(a);
+}
 
 static void assert_one_modified_with_lines(diff_expects *expected, int lines)
 {
@@ -446,6 +778,8 @@ void test_diff_blob__binary_data_comparisons(void)
 	const char *bin_content = "0123456789\n\x01\x02\x03\x04\x05\x06\x07\x08\x09\x00\n0123456789\n";
 	size_t bin_len = 33;
 
+	opts.flags |= GIT_DIFF_INCLUDE_UNMODIFIED;
+
 	cl_git_pass(git_oid_fromstrn(&oid, "45141a79", 8));
 	cl_git_pass(git_blob_lookup_prefix(&nonbin, g_repo, &oid, 4));
 
@@ -454,44 +788,32 @@ void test_diff_blob__binary_data_comparisons(void)
 
 	/* non-binary to reference content */
 
-	memset(&expected, 0, sizeof(expected));
-	cl_git_pass(git_diff_blob_to_buffer(
-		nonbin, nonbin_content, nonbin_len,
-		&opts, diff_file_cb, diff_hunk_cb, diff_line_cb, &expected));
+	quick_diff_blob_to_str(nonbin, NULL, nonbin_content, nonbin_len, NULL);
 	assert_identical_blobs_comparison(&expected);
 	cl_assert_equal_i(0, expected.files_binary);
 
 	/* binary to reference content */
 
-	memset(&expected, 0, sizeof(expected));
-	cl_git_pass(git_diff_blob_to_buffer(
-		bin, bin_content, bin_len,
-		&opts, diff_file_cb, diff_hunk_cb, diff_line_cb, &expected));
+	quick_diff_blob_to_str(bin, NULL, bin_content, bin_len, NULL);
 	assert_identical_blobs_comparison(&expected);
 
 	cl_assert_equal_i(1, expected.files_binary);
 
 	/* non-binary to binary content */
 
-	memset(&expected, 0, sizeof(expected));
-	cl_git_pass(git_diff_blob_to_buffer(
-		nonbin, bin_content, bin_len,
-		&opts, diff_file_cb, diff_hunk_cb, diff_line_cb, &expected));
+	quick_diff_blob_to_str(nonbin, NULL, bin_content, bin_len, NULL);
 	assert_binary_blobs_comparison(&expected);
 
 	/* binary to non-binary content */
 
-	memset(&expected, 0, sizeof(expected));
-	cl_git_pass(git_diff_blob_to_buffer(
-		bin, nonbin_content, nonbin_len,
-		&opts, diff_file_cb, diff_hunk_cb, diff_line_cb, &expected));
+	quick_diff_blob_to_str(bin, NULL, nonbin_content, nonbin_len, NULL);
 	assert_binary_blobs_comparison(&expected);
 
 	/* non-binary to binary blob */
 
 	memset(&expected, 0, sizeof(expected));
 	cl_git_pass(git_diff_blobs(
-		bin, nonbin, &opts,
+		bin, NULL, nonbin, NULL, &opts,
 		diff_file_cb, diff_hunk_cb, diff_line_cb, &expected));
 	assert_binary_blobs_comparison(&expected);
 
@@ -501,31 +823,246 @@ void test_diff_blob__binary_data_comparisons(void)
 
 	opts.flags |= GIT_DIFF_FORCE_TEXT;
 
-	memset(&expected, 0, sizeof(expected));
-	cl_git_pass(git_diff_blob_to_buffer(
-		bin, bin_content, bin_len,
-		&opts, diff_file_cb, diff_hunk_cb, diff_line_cb, &expected));
+	quick_diff_blob_to_str(bin, NULL, bin_content, bin_len, NULL);
 	assert_identical_blobs_comparison(&expected);
 
-	memset(&expected, 0, sizeof(expected));
-	cl_git_pass(git_diff_blob_to_buffer(
-		nonbin, bin_content, bin_len,
-		&opts, diff_file_cb, diff_hunk_cb, diff_line_cb, &expected));
+	quick_diff_blob_to_str(nonbin, NULL, bin_content, bin_len, NULL);
 	assert_one_modified_with_lines(&expected, 4);
 
-	memset(&expected, 0, sizeof(expected));
-	cl_git_pass(git_diff_blob_to_buffer(
-		bin, nonbin_content, nonbin_len,
-		&opts, diff_file_cb, diff_hunk_cb, diff_line_cb, &expected));
+	quick_diff_blob_to_str(bin, NULL, nonbin_content, nonbin_len, NULL);
 	assert_one_modified_with_lines(&expected, 4);
 
 	memset(&expected, 0, sizeof(expected));
 	cl_git_pass(git_diff_blobs(
-		bin, nonbin, &opts,
+		bin, NULL, nonbin, NULL, &opts,
 		diff_file_cb, diff_hunk_cb, diff_line_cb, &expected));
 	assert_one_modified_with_lines(&expected, 4);
 
 	/* cleanup */
 	git_blob_free(bin);
 	git_blob_free(nonbin);
+}
+
+void test_diff_blob__using_path_and_attributes(void)
+{
+	git_config *cfg;
+	git_blob *bin, *nonbin;
+	git_oid oid;
+	const char *nonbin_content = "Hello from the root\n";
+	const char *bin_content =
+		"0123456789\n\x01\x02\x03\x04\x05\x06\x07\x08\x09\x00\n0123456789\n";
+	size_t bin_len = 33;
+	const char *changed;
+	git_diff_patch *p;
+	char *pout;
+
+	/* set up custom diff drivers and 'diff' attribute mappings for them */
+
+	cl_git_pass(git_repository_config(&cfg, g_repo));
+	cl_git_pass(git_config_set_bool(cfg, "diff.iam_binary.binary", 1));
+	cl_git_pass(git_config_set_bool(cfg, "diff.iam_text.binary", 0));
+	cl_git_pass(git_config_set_string(
+		cfg, "diff.iam_alphactx.xfuncname", "^[A-Za-z]"));
+	cl_git_pass(git_config_set_bool(cfg, "diff.iam_textalpha.binary", 0));
+	cl_git_pass(git_config_set_string(
+		cfg, "diff.iam_textalpha.xfuncname", "^[A-Za-z]"));
+	cl_git_pass(git_config_set_string(
+		cfg, "diff.iam_numctx.funcname", "^[0-9]"));
+	cl_git_pass(git_config_set_bool(cfg, "diff.iam_textnum.binary", 0));
+	cl_git_pass(git_config_set_string(
+		cfg, "diff.iam_textnum.funcname", "^[0-9]"));
+	git_config_free(cfg);
+
+	cl_git_append2file(
+		"attr/.gitattributes",
+		"\n\n# test_diff_blob__using_path_and_attributes extra\n\n"
+		"*.binary  diff=iam_binary\n"
+		"*.textary diff=iam_text\n"
+		"*.alphary diff=iam_alphactx\n"
+		"*.textalphary diff=iam_textalpha\n"
+		"*.textnumary diff=iam_textnum\n"
+		"*.numary  diff=iam_numctx\n\n");
+
+	opts.context_lines = 0;
+	opts.flags |= GIT_DIFF_INCLUDE_UNMODIFIED;
+
+	cl_git_pass(git_oid_fromstrn(&oid, "45141a79", 8));
+	cl_git_pass(git_blob_lookup_prefix(&nonbin, g_repo, &oid, 4));
+	/* 20b: "Hello from the root\n" */
+
+	cl_git_pass(git_oid_fromstrn(&oid, "b435cd56", 8));
+	cl_git_pass(git_blob_lookup_prefix(&bin, g_repo, &oid, 4));
+	/* 33b: "0123456789\n\x01\x02\x03\x04\x05\x06\x07\x08\x09\n0123456789\n" */
+
+	/* non-binary to reference content */
+
+	quick_diff_blob_to_str(nonbin, NULL, nonbin_content, 0, NULL);
+	assert_identical_blobs_comparison(&expected);
+	cl_assert_equal_i(0, expected.files_binary);
+
+	/* binary to reference content */
+
+	quick_diff_blob_to_str(bin, NULL, bin_content, bin_len, NULL);
+	assert_identical_blobs_comparison(&expected);
+	cl_assert_equal_i(1, expected.files_binary);
+
+	/* add some text */
+
+	changed = "Hello from the root\nMore lines\nAnd more\nGo here\n";
+
+	quick_diff_blob_to_str(nonbin, NULL, changed, 0, NULL);
+	cl_assert_equal_i(1, expected.files);
+	cl_assert_equal_i(1, expected.file_status[GIT_DELTA_MODIFIED]);
+	cl_assert_equal_i(0, expected.files_binary);
+	cl_assert_equal_i(1, expected.hunks);
+	cl_assert_equal_i(3, expected.lines);
+	cl_assert_equal_i(0, expected.line_ctxt);
+	cl_assert_equal_i(3, expected.line_adds);
+	cl_assert_equal_i(0, expected.line_dels);
+
+	quick_diff_blob_to_str(nonbin, "foo/bar.binary", changed, 0, NULL);
+	cl_assert_equal_i(1, expected.files);
+	cl_assert_equal_i(1, expected.file_status[GIT_DELTA_MODIFIED]);
+	cl_assert_equal_i(1, expected.files_binary);
+	cl_assert_equal_i(0, expected.hunks);
+	cl_assert_equal_i(0, expected.lines);
+	cl_assert_equal_i(0, expected.line_ctxt);
+	cl_assert_equal_i(0, expected.line_adds);
+	cl_assert_equal_i(0, expected.line_dels);
+
+	quick_diff_blob_to_str(nonbin, "foo/bar.textary", changed, 0, NULL);
+	cl_assert_equal_i(1, expected.files);
+	cl_assert_equal_i(1, expected.file_status[GIT_DELTA_MODIFIED]);
+	cl_assert_equal_i(0, expected.files_binary);
+	cl_assert_equal_i(1, expected.hunks);
+	cl_assert_equal_i(3, expected.lines);
+	cl_assert_equal_i(0, expected.line_ctxt);
+	cl_assert_equal_i(3, expected.line_adds);
+	cl_assert_equal_i(0, expected.line_dels);
+
+	quick_diff_blob_to_str(nonbin, "foo/bar.alphary", changed, 0, NULL);
+	cl_assert_equal_i(1, expected.files);
+	cl_assert_equal_i(1, expected.file_status[GIT_DELTA_MODIFIED]);
+	cl_assert_equal_i(0, expected.files_binary);
+	cl_assert_equal_i(1, expected.hunks);
+	cl_assert_equal_i(3, expected.lines);
+	cl_assert_equal_i(0, expected.line_ctxt);
+	cl_assert_equal_i(3, expected.line_adds);
+	cl_assert_equal_i(0, expected.line_dels);
+
+	cl_git_pass(git_diff_patch_from_blob_and_buffer(
+		&p, nonbin, "zzz.normal", changed, strlen(changed), NULL, &opts));
+	cl_git_pass(git_diff_patch_to_str(&pout, p));
+	cl_assert_equal_s(
+		"diff --git a/zzz.normal b/zzz.normal\n"
+		"index 45141a7..75b0dbb 100644\n"
+		"--- a/zzz.normal\n"
+		"+++ b/zzz.normal\n"
+		"@@ -1,0 +2,3 @@ Hello from the root\n"
+		"+More lines\n"
+		"+And more\n"
+		"+Go here\n", pout);
+	git__free(pout);
+	git_diff_patch_free(p);
+
+	cl_git_pass(git_diff_patch_from_blob_and_buffer(
+		&p, nonbin, "zzz.binary", changed, strlen(changed), NULL, &opts));
+	cl_git_pass(git_diff_patch_to_str(&pout, p));
+	cl_assert_equal_s(
+		"diff --git a/zzz.binary b/zzz.binary\n"
+		"index 45141a7..75b0dbb 100644\n"
+		"Binary files a/zzz.binary and b/zzz.binary differ\n", pout);
+	git__free(pout);
+	git_diff_patch_free(p);
+
+	cl_git_pass(git_diff_patch_from_blob_and_buffer(
+		&p, nonbin, "zzz.alphary", changed, strlen(changed), NULL, &opts));
+	cl_git_pass(git_diff_patch_to_str(&pout, p));
+	cl_assert_equal_s(
+		"diff --git a/zzz.alphary b/zzz.alphary\n"
+		"index 45141a7..75b0dbb 100644\n"
+		"--- a/zzz.alphary\n"
+		"+++ b/zzz.alphary\n"
+		"@@ -1,0 +2,3 @@ Hello from the root\n"
+		"+More lines\n"
+		"+And more\n"
+		"+Go here\n", pout);
+	git__free(pout);
+	git_diff_patch_free(p);
+
+	cl_git_pass(git_diff_patch_from_blob_and_buffer(
+		&p, nonbin, "zzz.numary", changed, strlen(changed), NULL, &opts));
+	cl_git_pass(git_diff_patch_to_str(&pout, p));
+	cl_assert_equal_s(
+		"diff --git a/zzz.numary b/zzz.numary\n"
+		"index 45141a7..75b0dbb 100644\n"
+		"--- a/zzz.numary\n"
+		"+++ b/zzz.numary\n"
+		"@@ -1,0 +2,3 @@\n"
+		"+More lines\n"
+		"+And more\n"
+		"+Go here\n", pout);
+	git__free(pout);
+	git_diff_patch_free(p);
+
+	/* "0123456789\n\x01\x02\x03\x04\x05\x06\x07\x08\x09\x00\n0123456789\n"
+	 * 33 bytes
+	 */
+
+	changed = "0123456789\n\x01\x02\x03\x04\x05\x06\x07\x08\x09\x00\nreplace a line\n";
+
+	cl_git_pass(git_diff_patch_from_blob_and_buffer(
+		&p, bin, "zzz.normal", changed, 37, NULL, &opts));
+	cl_git_pass(git_diff_patch_to_str(&pout, p));
+	cl_assert_equal_s(
+		"diff --git a/zzz.normal b/zzz.normal\n"
+		"index b435cd5..1604519 100644\n"
+		"Binary files a/zzz.normal and b/zzz.normal differ\n", pout);
+	git__free(pout);
+	git_diff_patch_free(p);
+
+	cl_git_pass(git_diff_patch_from_blob_and_buffer(
+		&p, bin, "zzz.textary", changed, 37, NULL, &opts));
+	cl_git_pass(git_diff_patch_to_str(&pout, p));
+	cl_assert_equal_s(
+		"diff --git a/zzz.textary b/zzz.textary\n"
+		"index b435cd5..1604519 100644\n"
+		"--- a/zzz.textary\n"
+		"+++ b/zzz.textary\n"
+		"@@ -3 +3 @@\n"
+		"-0123456789\n"
+		"+replace a line\n", pout);
+	git__free(pout);
+	git_diff_patch_free(p);
+
+	cl_git_pass(git_diff_patch_from_blob_and_buffer(
+		&p, bin, "zzz.textalphary", changed, 37, NULL, &opts));
+	cl_git_pass(git_diff_patch_to_str(&pout, p));
+	cl_assert_equal_s(
+		"diff --git a/zzz.textalphary b/zzz.textalphary\n"
+		"index b435cd5..1604519 100644\n"
+		"--- a/zzz.textalphary\n"
+		"+++ b/zzz.textalphary\n"
+		"@@ -3 +3 @@\n"
+		"-0123456789\n"
+		"+replace a line\n", pout);
+	git__free(pout);
+	git_diff_patch_free(p);
+
+	cl_git_pass(git_diff_patch_from_blob_and_buffer(
+		&p, bin, "zzz.textnumary", changed, 37, NULL, &opts));
+	cl_git_pass(git_diff_patch_to_str(&pout, p));
+	cl_assert_equal_s(
+		"diff --git a/zzz.textnumary b/zzz.textnumary\n"
+		"index b435cd5..1604519 100644\n"
+		"--- a/zzz.textnumary\n"
+		"+++ b/zzz.textnumary\n"
+		"@@ -3 +3 @@ 0123456789\n"
+		"-0123456789\n"
+		"+replace a line\n", pout);
+	git__free(pout);
+	git_diff_patch_free(p);
+
+	git_blob_free(nonbin);
+	git_blob_free(bin);
 }

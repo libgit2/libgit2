@@ -61,7 +61,8 @@ int git_threads_init(void)
 		return 0;
 
 	_tls_index = TlsAlloc();
-	git_mutex_init(&git__mwindow_mutex);
+	if (git_mutex_init(&git__mwindow_mutex))
+		return -1;
 
 	/* Initialize any other subsystems that have global state */
 	if ((error = git_hash_global_init()) >= 0)
@@ -121,7 +122,8 @@ int git_threads_init(void)
 	if (_tls_init)
 		return 0;
 
-	git_mutex_init(&git__mwindow_mutex);
+	if (git_mutex_init(&git__mwindow_mutex))
+		return -1;
 	pthread_key_create(&_tls_key, &cb__free_status);
 
 	/* Initialize any other subsystems that have global state */
@@ -135,6 +137,12 @@ int git_threads_init(void)
 
 void git_threads_shutdown(void)
 {
+	if (_tls_init) {
+		void *ptr = pthread_getspecific(_tls_key);
+		pthread_setspecific(_tls_key, NULL);
+		git__free(ptr);
+	}
+
 	pthread_key_delete(_tls_key);
 	_tls_init = 0;
 	git_mutex_free(&git__mwindow_mutex);

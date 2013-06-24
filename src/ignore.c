@@ -15,24 +15,14 @@ static int parse_ignore_file(
 	git_attr_fnmatch *match = NULL;
 	const char *scan = NULL;
 	char *context = NULL;
-	bool ignore_case = false;
-	git_config *cfg = NULL;
-	int val;
+	int ignore_case = false;
 
-	/* Prefer to have the caller pass in a git_ignores as the parsedata object.
-	 * If they did not, then we can (much more slowly) find the value of
-	 * ignore_case by using the repository object. */
-	if (parsedata != NULL) {
+	/* Prefer to have the caller pass in a git_ignores as the parsedata
+	 * object.  If they did not, then look up the value of ignore_case */
+	if (parsedata != NULL)
 		ignore_case = ((git_ignores *)parsedata)->ignore_case;
-	} else {
-		if ((error = git_repository_config(&cfg, repo)) < 0)
-			return error;
-
-		if (git_config_get_bool(&val, cfg, "core.ignorecase") == 0)
-			ignore_case = (val != 0);
-
-		git_config_free(cfg);
-	}
+	else if (git_repository__cvar(&ignore_case, repo, GIT_CVAR_IGNORECASE) < 0)
+		return error;
 
 	if (ignores->key && git__suffixcmp(ignores->key, "/" GIT_IGNORE_FILE) == 0) {
 		context = ignores->key + 2;
@@ -109,8 +99,6 @@ int git_ignore__for_path(
 {
 	int error = 0;
 	const char *workdir = git_repository_workdir(repo);
-	git_config *cfg = NULL;
-	int val;
 
 	assert(ignores);
 
@@ -118,16 +106,10 @@ int git_ignore__for_path(
 	git_buf_init(&ignores->dir, 0);
 	ignores->ign_internal = NULL;
 
-	/* Set the ignore_case flag appropriately */
-	if ((error = git_repository_config(&cfg, repo)) < 0)
+	/* Read the ignore_case flag */
+	if ((error = git_repository__cvar(
+			&ignores->ignore_case, repo, GIT_CVAR_IGNORECASE)) < 0)
 		goto cleanup;
-
-	if (git_config_get_bool(&val, cfg, "core.ignorecase") == 0)
-		ignores->ignore_case = (val != 0);
-	else
-		ignores->ignore_case = 0;
-
-	git_config_free(cfg);
 
 	if ((error = git_vector_init(&ignores->ign_path, 8, NULL)) < 0 ||
 		(error = git_vector_init(&ignores->ign_global, 2, NULL)) < 0 ||
@@ -355,6 +337,64 @@ int git_ignore_path_is_ignored(
 cleanup:
 	git_attr_path__free(&path);
 	git_ignore__free(&ignores);
+	return error;
+}
+
+
+int git_ignore__check_pathspec_for_exact_ignores(
+	git_repository *repo,
+	git_vector *vspec,
+	bool no_fnmatch)
+{
+	int error = 0;
+	size_t i;
+	git_attr_fnmatch *match;
+	int ignored;
+	git_buf path = GIT_BUF_INIT;
+	const char *wd, *filename;
+	git_index *idx;
+
+	if ((error = git_repository__ensure_not_bare(
+			repo, "validate pathspec")) < 0 ||
+		(error = git_repository_index(&idx, repo)) < 0)
+		return error;
+
+	wd = git_repository_workdir(repo);
+
+	git_vector_foreach(vspec, i, match) {
+		/* skip wildcard matches (if they are being used) */
+		if ((match->flags & GIT_ATTR_FNMATCH_HASWILD) != 0 &&
+			!no_fnmatch)
+			continue;
+
+		filename = match->pattern;
+
+		/* if file is already in the index, it's fine */
+		if (git_index_get_bypath(idx, filename, 0) != NULL)
+			continue;
+
+		if ((error = git_buf_joinpath(&path, wd, filename)) < 0)
+			break;
+
+		/* is there a file on disk that matches this exactly? */
+		if (!git_path_isfile(path.ptr))
+			continue;
+
+		/* is that file ignored? */
+		if ((error = git_ignore_path_is_ignored(&ignored, repo, filename)) < 0)
+			break;
+
+		if (ignored) {
+			giterr_set(GITERR_INVALID, "pathspec contains ignored file '%s'",
+				filename);
+			error = GIT_EINVALIDSPEC;
+			break;
+		}
+	}
+
+	git_index_free(idx);
+	git_buf_free(&path);
+
 	return error;
 }
 

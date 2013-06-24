@@ -22,6 +22,9 @@ extern int git_futils_readbuffer_updated(
 	git_buf *obj, const char *path, time_t *mtime, size_t *size, int *updated);
 extern int git_futils_readbuffer_fd(git_buf *obj, git_file fd, size_t len);
 
+extern int git_futils_writebuffer(
+	const git_buf *buf, const char *path, int open_flags, mode_t mode);
+
 /**
  * File utils
  *
@@ -223,6 +226,7 @@ extern git_off_t git_futils_filesize(git_file fd);
 #define GIT_MODE_PERMS_MASK			0777
 #define GIT_CANONICAL_PERMS(MODE)	(((MODE) & 0100) ? 0755 : 0644)
 #define GIT_MODE_TYPE(MODE)			((MODE) & ~GIT_MODE_PERMS_MASK)
+#define GIT_MODE_ISBLOB(MODE)		(GIT_MODE_TYPE(MODE) == GIT_MODE_TYPE(GIT_FILEMODE_BLOB))
 
 /**
  * Convert a mode_t from the OS to a legal git mode_t value.

@@ -36,7 +36,7 @@ static int collect_attr_files(
 
 int git_attr_get(
 	const char **value,
-    git_repository *repo,
+	git_repository *repo,
 	uint32_t flags,
 	const char *pathname,
 	const char *name)
@@ -88,10 +88,10 @@ typedef struct {
 
 int git_attr_get_many(
 	const char **values,
-    git_repository *repo,
+	git_repository *repo,
 	uint32_t flags,
 	const char *pathname,
-    size_t num_attr,
+	size_t num_attr,
 	const char **names)
 {
 	int error;
@@ -151,7 +151,7 @@ cleanup:
 
 
 int git_attr_foreach(
-    git_repository *repo,
+	git_repository *repo,
 	uint32_t flags,
 	const char *pathname,
 	int (*callback)(const char *name, const char *value, void *payload),
@@ -312,7 +312,7 @@ static int load_attr_blob_from_index(
 
 	entry = git_index_get_byindex(index, pos);
 
-	if (old_oid && git_oid_cmp(old_oid, &entry->oid) == 0)
+	if (old_oid && git_oid__cmp(old_oid, &entry->oid) == 0)
 		return GIT_ENOTFOUND;
 
 	if ((error = git_blob_lookup(blob, repo, &entry->oid)) < 0)
@@ -596,25 +596,32 @@ static int collect_attr_files(
 }
 
 static int attr_cache__lookup_path(
-	const char **out, git_config *cfg, const char *key, const char *fallback)
+	char **out, git_config *cfg, const char *key, const char *fallback)
 {
 	git_buf buf = GIT_BUF_INIT;
 	int error;
+	const char *cfgval = NULL;
 
-	if (!(error = git_config_get_string(out, cfg, key)))
-		return 0;
+	*out = NULL;
 
-	if (error == GIT_ENOTFOUND) {
+	if (!(error = git_config_get_string(&cfgval, cfg, key))) {
+
+		/* expand leading ~/ as needed */
+		if (cfgval && cfgval[0] == '~' && cfgval[1] == '/' &&
+			!git_futils_find_global_file(&buf, &cfgval[2]))
+			*out = git_buf_detach(&buf);
+		else if (cfgval)
+			*out = git__strdup(cfgval);
+
+	} else if (error == GIT_ENOTFOUND) {
 		giterr_clear();
 		error = 0;
 
 		if (!git_futils_find_xdg_file(&buf, fallback))
 			*out = git_buf_detach(&buf);
-		else
-			*out = NULL;
-
-		git_buf_free(&buf);
 	}
+
+	git_buf_free(&buf);
 
 	return error;
 }
@@ -695,6 +702,12 @@ void git_attr_cache_flush(
 	}
 
 	git_pool_clear(&cache->pool);
+
+	git__free(cache->cfg_attr_file);
+	cache->cfg_attr_file = NULL;
+
+	git__free(cache->cfg_excl_file);
+	cache->cfg_excl_file = NULL;
 
 	cache->initialized = 0;
 }

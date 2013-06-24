@@ -22,17 +22,55 @@ void test_object_raw_short__oid_shortener_no_duplicates(void)
 	git_oid_shorten_free(os);
 }
 
+static int insert_sequential_oids(
+	char ***out, git_oid_shorten *os, int n, int fail)
+{
+	int i, min_len = 0;
+	char numbuf[16];
+	git_oid oid;
+	char **oids = git__calloc(n, sizeof(char *));
+	cl_assert(oids != NULL);
+
+	for (i = 0; i < n; ++i) {
+		p_snprintf(numbuf, sizeof(numbuf), "%u", (unsigned int)i);
+		git_hash_buf(&oid, numbuf, strlen(numbuf));
+
+		oids[i] = git__malloc(GIT_OID_HEXSZ + 1);
+		cl_assert(oids[i]);
+		git_oid_nfmt(oids[i], GIT_OID_HEXSZ + 1, &oid);
+
+		min_len = git_oid_shorten_add(os, oids[i]);
+
+		/* After "fail", we expect git_oid_shorten_add to fail */
+		if (fail >= 0 && i >= fail)
+            cl_assert(min_len < 0);
+		else
+            cl_assert(min_len >= 0);
+	}
+
+	*out = oids;
+
+	return min_len;
+}
+
+static void free_oids(int n, char **oids)
+{
+	int i;
+
+	for (i = 0; i < n; ++i) {
+		git__free(oids[i]);
+	}
+	git__free(oids);
+}
+
 void test_object_raw_short__oid_shortener_stresstest_git_oid_shorten(void)
 {
 #define MAX_OIDS 1000
 
 	git_oid_shorten *os;
-	char *oids[MAX_OIDS];
-	char number_buffer[16];
-	git_oid oid;
 	size_t i, j;
-
 	int min_len = 0, found_collision;
+	char **oids;
 
 	os = git_oid_shorten_new(0);
 	cl_assert(os != NULL);
@@ -40,21 +78,8 @@ void test_object_raw_short__oid_shortener_stresstest_git_oid_shorten(void)
 	/*
 	 * Insert in the shortener 1000 unique SHA1 ids
 	 */
-	for (i = 0; i < MAX_OIDS; ++i) {
-		char *oid_text;
-
-		p_snprintf(number_buffer, 16, "%u", (unsigned int)i);
-		git_hash_buf(&oid, number_buffer, strlen(number_buffer));
-
-		oid_text = git__malloc(GIT_OID_HEXSZ + 1);
-		git_oid_fmt(oid_text, &oid);
-		oid_text[GIT_OID_HEXSZ] = 0;
-
-		min_len = git_oid_shorten_add(os, oid_text);
-		cl_assert(min_len >= 0);
-
-		oids[i] = oid_text;
-	}
+	min_len = insert_sequential_oids(&oids, os, MAX_OIDS, MAX_OIDS);
+	cl_assert(min_len > 0);
 
 	/*
 	 * Compare the first `min_char - 1` characters of each
@@ -63,12 +88,12 @@ void test_object_raw_short__oid_shortener_stresstest_git_oid_shorten(void)
 	 */
 	found_collision = 0;
 	for (i = 0; i < MAX_OIDS; ++i) {
-		for (j = 0; j < MAX_OIDS; ++j) {
-			if (i != j && memcmp(oids[i], oids[j], min_len - 1) == 0)
+		for (j = i + 1; j < MAX_OIDS; ++j) {
+			if (memcmp(oids[i], oids[j], min_len - 1) == 0)
 				found_collision = 1;
 		}
 	}
-	cl_assert(found_collision == 1);
+	cl_assert_equal_b(true, found_collision);
 
 	/*
 	 * Compare the first `min_char` characters of each
@@ -77,17 +102,35 @@ void test_object_raw_short__oid_shortener_stresstest_git_oid_shorten(void)
 	 */
 	found_collision = 0;
 	for (i = 0; i < MAX_OIDS; ++i) {
-		for (j = 0; j < MAX_OIDS; ++j) {
-			if (i != j && memcmp(oids[i], oids[j], min_len) == 0)
+		for (j = i + 1; j < MAX_OIDS; ++j) {
+			if (memcmp(oids[i], oids[j], min_len) == 0)
 				found_collision = 1;
 		}
 	}
-	cl_assert(found_collision == 0);
+	cl_assert_equal_b(false, found_collision);
 
 	/* cleanup */
-	for (i = 0; i < MAX_OIDS; ++i)
-		git__free(oids[i]);
+	free_oids(MAX_OIDS, oids);
+	git_oid_shorten_free(os);
 
+#undef MAX_OIDS
+}
+
+void test_object_raw_short__oid_shortener_too_much_oids(void)
+{
+    /* The magic number of oids at which an oid_shortener will fail.
+     * This was experimentally established. */
+#define MAX_OIDS 24556
+
+	git_oid_shorten *os;
+	char **oids;
+
+	os = git_oid_shorten_new(0);
+	cl_assert(os != NULL);
+
+	cl_assert(insert_sequential_oids(&oids, os, MAX_OIDS, MAX_OIDS - 1) < 0);
+
+	free_oids(MAX_OIDS, oids);
 	git_oid_shorten_free(os);
 
 #undef MAX_OIDS

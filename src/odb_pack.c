@@ -8,7 +8,8 @@
 #include "common.h"
 #include <zlib.h>
 #include "git2/repository.h"
-#include "git2/oid.h"
+#include "git2/indexer.h"
+#include "git2/sys/odb_backend.h"
 #include "fileops.h"
 #include "hash.h"
 #include "odb.h"
@@ -206,7 +207,7 @@ static int packfile_load__cb(void *_data, git_buf *path)
 			return 0;
 	}
 
-	error = git_packfile_check(&pack, path->ptr);
+	error = git_packfile_alloc(&pack, path->ptr);
 	if (error == GIT_ENOTFOUND)
 		/* ignore missing .pack file as git does */
 		return 0;
@@ -526,67 +527,17 @@ static void pack_backend__free(git_odb_backend *_backend)
 	git__free(backend);
 }
 
-int git_odb_backend_one_pack(git_odb_backend **backend_out, const char *idx)
+static int pack_backend__alloc(struct pack_backend **out, size_t initial_size)
 {
-	struct pack_backend *backend = NULL;
-	struct git_pack_file *packfile = NULL;
-
-	if (git_packfile_check(&packfile, idx) < 0)
-		return -1;
-
-	backend = git__calloc(1, sizeof(struct pack_backend));
+	struct pack_backend *backend = git__calloc(1, sizeof(struct pack_backend));
 	GITERR_CHECK_ALLOC(backend);
-	backend->parent.version = GIT_ODB_BACKEND_VERSION;
 
-	if (git_vector_init(&backend->packs, 1, NULL) < 0)
-		goto on_error;
-
-	if (git_vector_insert(&backend->packs, packfile) < 0)
-		goto on_error;
-
-	backend->parent.read = &pack_backend__read;
-	backend->parent.read_prefix = &pack_backend__read_prefix;
-	backend->parent.read_header = &pack_backend__read_header;
-	backend->parent.exists = &pack_backend__exists;
-	backend->parent.refresh = &pack_backend__refresh;
-	backend->parent.foreach = &pack_backend__foreach;
-	backend->parent.free = &pack_backend__free;
-
-	*backend_out = (git_odb_backend *)backend;
-
-	return 0;
-
-on_error:
-	git_vector_free(&backend->packs);
-	git__free(backend);
-	git__free(packfile);
-	return -1;
-}
-
-int git_odb_backend_pack(git_odb_backend **backend_out, const char *objects_dir)
-{
-	struct pack_backend *backend = NULL;
-	git_buf path = GIT_BUF_INIT;
-
-	backend = git__calloc(1, sizeof(struct pack_backend));
-	GITERR_CHECK_ALLOC(backend);
-	backend->parent.version = GIT_ODB_BACKEND_VERSION;
-
-	if (git_vector_init(&backend->packs, 8, packfile_sort__cb) < 0 ||
-		git_buf_joinpath(&path, objects_dir, "pack") < 0)
-	{
+	if (git_vector_init(&backend->packs, initial_size, packfile_sort__cb) < 0) {
 		git__free(backend);
 		return -1;
 	}
 
-	if (git_path_isdir(git_buf_cstr(&path)) == true) {
-		int error;
-
-		backend->pack_folder = git_buf_detach(&path);
-		error = pack_backend__refresh((git_odb_backend *)backend);
-		if (error < 0)
-			return error;
-	}
+	backend->parent.version = GIT_ODB_BACKEND_VERSION;
 
 	backend->parent.read = &pack_backend__read;
 	backend->parent.read_prefix = &pack_backend__read_prefix;
@@ -597,9 +548,54 @@ int git_odb_backend_pack(git_odb_backend **backend_out, const char *objects_dir)
 	backend->parent.writepack = &pack_backend__writepack;
 	backend->parent.free = &pack_backend__free;
 
+	*out = backend;
+	return 0;
+}
+
+int git_odb_backend_one_pack(git_odb_backend **backend_out, const char *idx)
+{
+	struct pack_backend *backend = NULL;
+	struct git_pack_file *packfile = NULL;
+
+	if (pack_backend__alloc(&backend, 1) < 0)
+		return -1;
+
+	if (git_packfile_alloc(&packfile, idx) < 0 ||
+		git_vector_insert(&backend->packs, packfile) < 0)
+	{
+		pack_backend__free((git_odb_backend *)backend);
+		return -1;
+	}
+
+	*backend_out = (git_odb_backend *)backend;
+	return 0;
+}
+
+int git_odb_backend_pack(git_odb_backend **backend_out, const char *objects_dir)
+{
+	int error = 0;
+	struct pack_backend *backend = NULL;
+	git_buf path = GIT_BUF_INIT;
+
+	if (pack_backend__alloc(&backend, 8) < 0)
+		return -1;
+
+	if (!(error = git_buf_joinpath(&path, objects_dir, "pack")) &&
+		git_path_isdir(git_buf_cstr(&path)))
+	{
+		backend->pack_folder = git_buf_detach(&path);
+
+		error = pack_backend__refresh((git_odb_backend *)backend);
+	}
+
+	if (error < 0) {
+		pack_backend__free((git_odb_backend *)backend);
+		backend = NULL;
+	}
+
 	*backend_out = (git_odb_backend *)backend;
 
 	git_buf_free(&path);
 
-	return 0;
+	return error;
 }

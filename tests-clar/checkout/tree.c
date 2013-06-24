@@ -24,6 +24,9 @@ void test_checkout_tree__cleanup(void)
 	g_object = NULL;
 
 	cl_git_sandbox_cleanup();
+
+	if (git_path_isdir("alternative"))
+		git_futils_rmdir_r("alternative", NULL, GIT_RMDIR_REMOVE_FILES);
 }
 
 void test_checkout_tree__cannot_checkout_a_non_treeish(void)
@@ -363,7 +366,7 @@ void assert_conflict(
 	git_index *index;
 	git_object *hack_tree;
 	git_reference *branch, *head;
-	git_buf file_path = GIT_BUF_INIT; 
+	git_buf file_path = GIT_BUF_INIT;
 
 	cl_git_pass(git_repository_index(&index, g_repo));
 
@@ -442,6 +445,47 @@ void test_checkout_tree__checking_out_a_conflicting_content_change_returns_EMERG
 	assert_conflict("branch_file.txt", "hello\n", "5b5b025", "c47800c");
 }
 
+void test_checkout_tree__donot_update_deleted_file_by_default(void)
+{
+	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
+	git_oid old_id, new_id;
+	git_commit *old_commit = NULL, *new_commit = NULL;
+	git_index *index = NULL;
+	checkout_counts ct;
+
+	opts.checkout_strategy = GIT_CHECKOUT_SAFE;
+
+	memset(&ct, 0, sizeof(ct));
+	opts.notify_flags = GIT_CHECKOUT_NOTIFY_ALL;
+	opts.notify_cb = checkout_count_callback;
+	opts.notify_payload = &ct;
+
+	cl_git_pass(git_repository_index(&index, g_repo));
+
+	cl_git_pass(git_oid_fromstr(&old_id, "be3563ae3f795b2b4353bcce3a527ad0a4f7f644"));
+	cl_git_pass(git_commit_lookup(&old_commit, g_repo, &old_id));
+	cl_git_pass(git_reset(g_repo, (git_object *)old_commit, GIT_RESET_HARD));
+
+	cl_git_pass(p_unlink("testrepo/branch_file.txt"));
+	cl_git_pass(git_index_remove_bypath(index ,"branch_file.txt"));
+	cl_git_pass(git_index_write(index));
+
+	cl_assert(!git_path_exists("testrepo/branch_file.txt"));
+
+	cl_git_pass(git_oid_fromstr(&new_id, "099fabac3a9ea935598528c27f866e34089c2eff"));
+	cl_git_pass(git_commit_lookup(&new_commit, g_repo, &new_id));
+
+
+	cl_git_fail(git_checkout_tree(g_repo, (git_object *)new_commit, &opts));
+
+	cl_assert_equal_i(1, ct.n_conflicts);
+	cl_assert_equal_i(1, ct.n_updates);
+
+	git_commit_free(old_commit);
+	git_commit_free(new_commit);
+	git_index_free(index);
+}
+
 void test_checkout_tree__can_checkout_with_last_workdir_item_missing(void)
 {
 	git_index *index = NULL;
@@ -500,4 +544,136 @@ void test_checkout_tree__issue_1397(void)
 	check_file_contents("./issue_1397/crlf_file.txt", "first line\r\nsecond line\r\nboth with crlf");
 
 	git_object_free(tree);
+}
+
+void test_checkout_tree__can_write_to_empty_dirs(void)
+{
+	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
+	git_oid oid;
+	git_object *obj = NULL;
+
+	assert_on_branch(g_repo, "master");
+
+	cl_git_pass(p_mkdir("testrepo/a", 0777));
+
+	/* do first checkout with FORCE because we don't know if testrepo
+	 * base data is clean for a checkout or not
+	 */
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+
+	cl_git_pass(git_reference_name_to_id(&oid, g_repo, "refs/heads/dir"));
+	cl_git_pass(git_object_lookup(&obj, g_repo, &oid, GIT_OBJ_ANY));
+
+	cl_git_pass(git_checkout_tree(g_repo, obj, &opts));
+
+	cl_assert(git_path_isfile("testrepo/a/b.txt"));
+
+	git_object_free(obj);
+}
+
+void test_checkout_tree__fails_when_dir_in_use(void)
+{
+#ifdef GIT_WIN32
+	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
+	git_oid oid;
+	git_object *obj = NULL;
+
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+
+	cl_git_pass(git_reference_name_to_id(&oid, g_repo, "refs/heads/dir"));
+	cl_git_pass(git_object_lookup(&obj, g_repo, &oid, GIT_OBJ_ANY));
+
+	cl_git_pass(git_checkout_tree(g_repo, obj, &opts));
+
+	cl_assert(git_path_isfile("testrepo/a/b.txt"));
+
+	git_object_free(obj);
+
+	cl_git_pass(p_chdir("testrepo/a"));
+
+	cl_git_pass(git_reference_name_to_id(&oid, g_repo, "refs/heads/master"));
+	cl_git_pass(git_object_lookup(&obj, g_repo, &oid, GIT_OBJ_ANY));
+
+	cl_git_fail(git_checkout_tree(g_repo, obj, &opts));
+
+	cl_git_pass(p_chdir("../.."));
+
+	cl_assert(git_path_is_empty_dir("testrepo/a"));
+
+	git_object_free(obj);
+#endif
+}
+
+void test_checkout_tree__can_continue_when_dir_in_use(void)
+{
+#ifdef GIT_WIN32
+	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
+	git_oid oid;
+	git_object *obj = NULL;
+
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE |
+		GIT_CHECKOUT_SKIP_LOCKED_DIRECTORIES;
+
+	cl_git_pass(git_reference_name_to_id(&oid, g_repo, "refs/heads/dir"));
+	cl_git_pass(git_object_lookup(&obj, g_repo, &oid, GIT_OBJ_ANY));
+
+	cl_git_pass(git_checkout_tree(g_repo, obj, &opts));
+
+	cl_assert(git_path_isfile("testrepo/a/b.txt"));
+
+	git_object_free(obj);
+
+	cl_git_pass(p_chdir("testrepo/a"));
+
+	cl_git_pass(git_reference_name_to_id(&oid, g_repo, "refs/heads/master"));
+	cl_git_pass(git_object_lookup(&obj, g_repo, &oid, GIT_OBJ_ANY));
+
+	cl_git_pass(git_checkout_tree(g_repo, obj, &opts));
+
+	cl_git_pass(p_chdir("../.."));
+
+	cl_assert(git_path_is_empty_dir("testrepo/a"));
+
+	git_object_free(obj);
+#endif
+}
+
+void test_checkout_tree__target_directory_from_bare(void)
+{
+	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
+	git_oid oid;
+	checkout_counts cts;
+	memset(&cts, 0, sizeof(cts));
+
+	test_checkout_tree__cleanup(); /* cleanup default checkout */
+
+	g_repo = cl_git_sandbox_init("testrepo.git");
+	cl_assert(git_repository_is_bare(g_repo));
+
+	opts.checkout_strategy = GIT_CHECKOUT_SAFE_CREATE;
+
+	opts.notify_flags = GIT_CHECKOUT_NOTIFY_ALL;
+	opts.notify_cb = checkout_count_callback;
+	opts.notify_payload = &cts;
+
+	cl_git_pass(git_reference_name_to_id(&oid, g_repo, "HEAD"));
+	cl_git_pass(git_object_lookup(&g_object, g_repo, &oid, GIT_OBJ_ANY));
+
+	cl_git_fail(git_checkout_tree(g_repo, g_object, &opts));
+
+	opts.target_directory = "alternative";
+	cl_assert(!git_path_isdir("alternative"));
+
+	cl_git_pass(git_checkout_tree(g_repo, g_object, &opts));
+
+	cl_assert_equal_i(0, cts.n_untracked);
+	cl_assert_equal_i(0, cts.n_ignored);
+	cl_assert_equal_i(3, cts.n_updates);
+
+	check_file_contents_nocr("./alternative/README", "hey there\n");
+	check_file_contents_nocr("./alternative/branch_file.txt", "hi\nbye!\n");
+	check_file_contents_nocr("./alternative/new.txt", "my new file\n");
+
+	cl_git_pass(git_futils_rmdir_r(
+		"alternative", NULL, GIT_RMDIR_REMOVE_FILES));
 }

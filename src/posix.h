@@ -25,6 +25,9 @@
 #if !defined(O_BINARY)
 #define O_BINARY 0
 #endif
+#if !defined(O_CLOEXEC)
+#define O_CLOEXEC 0
+#endif
 
 typedef int git_file;
 

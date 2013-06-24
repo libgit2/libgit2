@@ -25,14 +25,14 @@ GIT_INLINE(void) git_trace__write_fmt(
 	git_trace_level_t level,
 	const char *fmt, ...)
 {
-	git_trace_callback callback = git_trace__data.callback;	
+	git_trace_callback callback = git_trace__data.callback;
 	git_buf message = GIT_BUF_INIT;
 	va_list ap;
-		
+
 	va_start(ap, fmt);
 	git_buf_vprintf(&message, fmt, ap);
 	va_end(ap);
-		
+
 	callback(level, git_buf_cstr(&message));
 
 	git_buf_free(&message);

@@ -95,14 +95,32 @@ GIT_EXTERN(int) git_packbuilder_insert(git_packbuilder *pb, const git_oid *id, c
 GIT_EXTERN(int) git_packbuilder_insert_tree(git_packbuilder *pb, const git_oid *id);
 
 /**
- * Write the new pack and the corresponding index to path
+ * Insert a commit object
+ *
+ * This will add a commit as well as the completed referenced tree.
  *
  * @param pb The packbuilder
- * @param path Directory to store the new pack and index
+ * @param id The oid of the commit
  *
  * @return 0 or an error code
  */
-GIT_EXTERN(int) git_packbuilder_write(git_packbuilder *pb, const char *file);
+GIT_EXTERN(int) git_packbuilder_insert_commit(git_packbuilder *pb, const git_oid *id);
+
+/**
+ * Write the new pack and corresponding index file to path.
+ *
+ * @param pb The packbuilder
+ * @param path to the directory where the packfile and index should be stored
+ * @param progress_cb function to call with progress information from the indexer (optional)
+ * @param progress_cb_payload payload for the progress callback (optional)
+ *
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_packbuilder_write(
+	git_packbuilder *pb,
+	const char *path,
+	git_transfer_progress_callback progress_cb,
+	void *progress_cb_payload);
 
 typedef int (*git_packbuilder_foreach_cb)(void *buf, size_t size, void *payload);
 /**

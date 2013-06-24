@@ -483,8 +483,10 @@ int git_reflog_drop(
 
 	entry = (git_reflog_entry *)git_reflog_entry_byindex(reflog, idx);
 
-	if (entry == NULL)
+	if (entry == NULL) {
+		giterr_set(GITERR_REFERENCE, "No reflog entry at index "PRIuZ, idx);
 		return GIT_ENOTFOUND;
+	}
 
 	reflog_entry_free(entry);
 

@@ -1,8 +1,10 @@
 #include "clar_libgit2.h"
 
-#include "repository.h"
+#include "fileops.h"
 #include "git2/reflog.h"
+#include "git2/refdb.h"
 #include "reflog.h"
+#include "refs.h"
 #include "ref_helpers.h"
 
 static const char *loose_tag_ref_name = "refs/tags/e90810b";
@@ -25,6 +27,7 @@ static void packall(void)
 
 	cl_git_pass(git_repository_refdb(&refdb, g_repo));
 	cl_git_pass(git_refdb_compress(refdb));
+	git_refdb_free(refdb);
 }
 
 void test_refs_pack__empty(void)
@@ -32,7 +35,7 @@ void test_refs_pack__empty(void)
    // create a packfile for an empty folder
 	git_buf temp_path = GIT_BUF_INIT;
 
-	cl_git_pass(git_buf_join_n(&temp_path, '/', 3, g_repo->path_repository, GIT_REFS_HEADS_DIR, "empty_dir"));
+	cl_git_pass(git_buf_join_n(&temp_path, '/', 3, git_repository_path(g_repo), GIT_REFS_HEADS_DIR, "empty_dir"));
 	cl_git_pass(git_futils_mkdir_r(temp_path.ptr, NULL, GIT_REFS_DIR_MODE));
 	git_buf_free(&temp_path);
 
@@ -59,7 +62,7 @@ void test_refs_pack__loose(void)
 	packall();
 
 	/* Ensure the packed-refs file exists */
-	cl_git_pass(git_buf_joinpath(&temp_path, g_repo->path_repository, GIT_PACKEDREFS_FILE));
+	cl_git_pass(git_buf_joinpath(&temp_path, git_repository_path(g_repo), GIT_PACKEDREFS_FILE));
 	cl_assert(git_path_exists(temp_path.ptr));
 
 	/* Ensure the known ref can still be looked up but is now packed */
@@ -68,7 +71,7 @@ void test_refs_pack__loose(void)
 	cl_assert_equal_s(reference->name, loose_tag_ref_name);
 
 	/* Ensure the known ref has been removed from the loose folder structure */
-	cl_git_pass(git_buf_joinpath(&temp_path, g_repo->path_repository, loose_tag_ref_name));
+	cl_git_pass(git_buf_joinpath(&temp_path, git_repository_path(g_repo), loose_tag_ref_name));
 	cl_assert(!git_path_exists(temp_path.ptr));
 
 	git_reference_free(reference);

@@ -37,8 +37,8 @@ GIT_INLINE(bool) git_tree_entry__is_tree(const struct git_tree_entry *e)
 
 extern int git_tree_entry_icmp(const git_tree_entry *e1, const git_tree_entry *e2);
 
-void git_tree__free(git_tree *tree);
-int git_tree__parse(git_tree *tree, git_odb_object *obj);
+void git_tree__free(void *tree);
+int git_tree__parse(void *tree, git_odb_object *obj);
 
 /**
  * Lookup the first position in the tree with a given prefix.
@@ -47,7 +47,7 @@ int git_tree__parse(git_tree *tree, git_odb_object *obj);
  * @param prefix the beginning of a path to find in the tree.
  * @return index of the first item at or after the given prefix.
  */
-int git_tree__prefix_position(git_tree *tree, const char *prefix);
+int git_tree__prefix_position(const git_tree *tree, const char *prefix);
 
 
 /**

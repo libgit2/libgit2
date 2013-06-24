@@ -453,7 +453,7 @@ int main (int argc, char** argv)
   // Here we will implement something like `git for-each-ref` simply listing
   // out all available references and the object SHA they resolve to.
   git_strarray ref_list;
-  git_reference_list(&ref_list, repo, GIT_REF_LISTALL);
+  git_reference_list(&ref_list, repo);
 
   const char *refname;
   git_reference *ref;

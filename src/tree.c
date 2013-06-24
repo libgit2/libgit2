@@ -10,6 +10,9 @@
 #include "tree.h"
 #include "git2/repository.h"
 #include "git2/object.h"
+#include "path.h"
+#include "tree-cache.h"
+#include "index.h"
 
 #define DEFAULT_TREE_SIZE 16
 #define MAX_FILEMODE_BYTES 6
@@ -149,7 +152,7 @@ static int tree_key_search(
 	/* Initial homing search; find an entry on the tree with
 	 * the same prefix as the filename we're looking for */
 	if (git_vector_bsearch2(&homing, entries, &homing_search_cmp, &ksearch) < 0)
-		return GIT_ENOTFOUND;
+		return GIT_ENOTFOUND; /* just a signal error; not passed back to user */
 
 	/* We found a common prefix. Look forward as long as
 	 * there are entries that share the common prefix */
@@ -219,8 +222,9 @@ git_tree_entry *git_tree_entry_dup(const git_tree_entry *entry)
 	return copy;
 }
 
-void git_tree__free(git_tree *tree)
+void git_tree__free(void *_tree)
 {
+	git_tree *tree = _tree;
 	size_t i;
 	git_tree_entry *e;
 
@@ -229,16 +233,6 @@ void git_tree__free(git_tree *tree)
 
 	git_vector_free(&tree->entries);
 	git__free(tree);
-}
-
-const git_oid *git_tree_id(const git_tree *t)
-{
-	return git_object_id((const git_object *)t);
-}
-
-git_repository *git_tree_owner(const git_tree *t)
-{
-	return git_object_owner((const git_object *)t);
 }
 
 git_filemode_t git_tree_entry_filemode(const git_tree_entry *entry)
@@ -280,25 +274,27 @@ int git_tree_entry_to_object(
 }
 
 static const git_tree_entry *entry_fromname(
-	git_tree *tree, const char *name, size_t name_len)
+	const git_tree *tree, const char *name, size_t name_len)
 {
 	size_t idx;
 
-	if (tree_key_search(&idx, &tree->entries, name, name_len) < 0)
+	assert(tree->entries.sorted); /* be safe when we cast away constness */
+
+	if (tree_key_search(&idx, (git_vector *)&tree->entries, name, name_len) < 0)
 		return NULL;
 
 	return git_vector_get(&tree->entries, idx);
 }
 
 const git_tree_entry *git_tree_entry_byname(
-	git_tree *tree, const char *filename)
+	const git_tree *tree, const char *filename)
 {
 	assert(tree && filename);
 	return entry_fromname(tree, filename, strlen(filename));
 }
 
 const git_tree_entry *git_tree_entry_byindex(
-	git_tree *tree, size_t idx)
+	const git_tree *tree, size_t idx)
 {
 	assert(tree);
 	return git_vector_get(&tree->entries, idx);
@@ -320,9 +316,9 @@ const git_tree_entry *git_tree_entry_byoid(
 	return NULL;
 }
 
-int git_tree__prefix_position(git_tree *tree, const char *path)
+int git_tree__prefix_position(const git_tree *tree, const char *path)
 {
-	git_vector *entries = &tree->entries;
+	const git_vector *entries = &tree->entries;
 	struct tree_key_search ksearch;
 	size_t at_pos;
 
@@ -332,8 +328,11 @@ int git_tree__prefix_position(git_tree *tree, const char *path)
 	ksearch.filename = path;
 	ksearch.filename_len = strlen(path);
 
+	assert(tree->entries.sorted); /* be safe when we cast away constness */
+
 	/* Find tree entry with appropriate prefix */
-	git_vector_bsearch2(&at_pos, entries, &homing_search_cmp, &ksearch);
+	git_vector_bsearch2(
+		&at_pos, (git_vector *)entries, &homing_search_cmp, &ksearch);
 
 	for (; at_pos < entries->length; ++at_pos) {
 		const git_tree_entry *entry = entries->contents[at_pos];
@@ -371,8 +370,12 @@ static int tree_error(const char *str, const char *path)
 	return -1;
 }
 
-static int tree_parse_buffer(git_tree *tree, const char *buffer, const char *buffer_end)
+int git_tree__parse(void *_tree, git_odb_object *odb_obj)
 {
+	git_tree *tree = _tree;
+	const char *buffer = git_odb_object_data(odb_obj);
+	const char *buffer_end = buffer + git_odb_object_size(odb_obj);
+
 	if (git_vector_init(&tree->entries, DEFAULT_TREE_SIZE, entry_sort_cmp) < 0)
 		return -1;
 
@@ -413,13 +416,9 @@ static int tree_parse_buffer(git_tree *tree, const char *buffer, const char *buf
 		buffer += GIT_OID_RAWSZ;
 	}
 
-	return 0;
-}
+	git_vector_sort(&tree->entries);
 
-int git_tree__parse(git_tree *tree, git_odb_object *obj)
-{
-	assert(tree);
-	return tree_parse_buffer(tree, (char *)obj->raw.data, (char *)obj->raw.data + obj->raw.len);
+	return 0;
 }
 
 static size_t find_next_dir(const char *dirname, git_index *index, size_t start)
@@ -525,7 +524,6 @@ static int write_tree(
 			/* Write out the subtree */
 			written = write_tree(&sub_oid, repo, index, subdir, i);
 			if (written < 0) {
-				tree_error("Failed to write subtree", subdir);
 				git__free(subdir);
 				goto on_error;
 			} else {
@@ -808,7 +806,7 @@ static size_t subpath_len(const char *path)
 
 int git_tree_entry_bypath(
 	git_tree_entry **entry_out,
-	git_tree *root,
+	const git_tree *root,
 	const char *path)
 {
 	int error = 0;

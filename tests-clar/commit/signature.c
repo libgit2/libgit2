@@ -31,6 +31,8 @@ static void assert_name_and_email(
 void test_commit_signature__leading_and_trailing_spaces_are_trimmed(void)
 {
 	assert_name_and_email("nulltoken", "emeric.fermas@gmail.com", "  nulltoken ", "   emeric.fermas@gmail.com     ");
+	assert_name_and_email("nulltoken", "emeric.fermas@gmail.com", "  nulltoken ", "   emeric.fermas@gmail.com  \n");
+	assert_name_and_email("nulltoken", "emeric.fermas@gmail.com", " \t nulltoken \n", " \n  emeric.fermas@gmail.com  \n");
 }
 
 void test_commit_signature__angle_brackets_in_names_are_not_supported(void)
@@ -54,8 +56,8 @@ void test_commit_signature__create_empties(void)
 
 	cl_git_fail(try_build_signature("", "emeric.fermas@gmail.com", 1234567890, 60));
 	cl_git_fail(try_build_signature("   ", "emeric.fermas@gmail.com", 1234567890, 60));
-	cl_git_fail(try_build_signature("nulltoken", "", 1234567890, 60));
-	cl_git_fail(try_build_signature("nulltoken", "  ", 1234567890, 60));
+	cl_git_pass(try_build_signature("nulltoken", "", 1234567890, 60));
+	cl_git_pass(try_build_signature("nulltoken", "  ", 1234567890, 60));
 }
 
 void test_commit_signature__create_one_char(void)

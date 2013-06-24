@@ -8,30 +8,10 @@
 #define _INCLUDE_git_indexer_h__
 
 #include "common.h"
+#include "types.h"
 #include "oid.h"
 
 GIT_BEGIN_DECL
-
-/**
- * This is passed as the first argument to the callback to allow the
- * user to see the progress.
- */
-typedef struct git_transfer_progress {
-	unsigned int total_objects;
-	unsigned int indexed_objects;
-	unsigned int received_objects;
-	size_t received_bytes;
-} git_transfer_progress;
-
-
-/**
- * Type for progress callbacks during indexing.  Return a value less than zero
- * to cancel the transfer.
- *
- * @param stats Structure containing information about the state of the transfer
- * @param payload Payload provided by caller
- */
-typedef int (*git_transfer_progress_callback)(const git_transfer_progress *stats, void *payload);
 
 typedef struct git_indexer_stream git_indexer_stream;
 
@@ -41,7 +21,7 @@ typedef struct git_indexer_stream git_indexer_stream;
  * @param out where to store the indexer instance
  * @param path to the directory where the packfile should be stored
  * @param progress_cb function to call with progress information
- * @param progress_payload payload for the progress callback
+ * @param progress_cb_payload payload for the progress callback
  */
 GIT_EXTERN(int) git_indexer_stream_new(
 		git_indexer_stream **out,

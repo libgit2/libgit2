@@ -131,6 +131,9 @@ typedef struct git_treebuilder git_treebuilder;
 /** Memory representation of an index file. */
 typedef struct git_index git_index;
 
+/** An interator for conflicts in the index. */
+typedef struct git_index_conflict_iterator git_index_conflict_iterator;
+
 /** Memory representation of a set of config files */
 typedef struct git_config git_config;
 
@@ -165,6 +168,16 @@ typedef struct git_signature {
 /** In-memory representation of a reference. */
 typedef struct git_reference git_reference;
 
+/** Iterator for references */
+typedef struct git_reference_iterator  git_reference_iterator;
+
+/** Merge heads, the input to merge */
+typedef struct git_merge_head git_merge_head;
+
+/** Representation of a status collection */
+typedef struct git_status_list git_status_list;
+
+
 /** Basic type of any Git reference. */
 typedef enum {
 	GIT_REF_INVALID = 0, /** Invalid reference */
@@ -195,6 +208,26 @@ typedef struct git_push git_push;
 
 typedef struct git_remote_head git_remote_head;
 typedef struct git_remote_callbacks git_remote_callbacks;
+
+/**
+ * This is passed as the first argument to the callback to allow the
+ * user to see the progress.
+ */
+typedef struct git_transfer_progress {
+	unsigned int total_objects;
+	unsigned int indexed_objects;
+	unsigned int received_objects;
+	size_t received_bytes;
+} git_transfer_progress;
+
+/**
+ * Type for progress callbacks during indexing.  Return a value less than zero
+ * to cancel the transfer.
+ *
+ * @param stats Structure containing information about the state of the transfer
+ * @param payload Payload provided by caller
+ */
+typedef int (*git_transfer_progress_callback)(const git_transfer_progress *stats, void *payload);
 
 /** @} */
 GIT_END_DECL

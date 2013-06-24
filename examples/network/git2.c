@@ -54,6 +54,8 @@ int main(int argc, char **argv)
 		exit(EXIT_FAILURE);
 	}
 
+	git_threads_init();
+
 	for (i = 0; commands[i].name != NULL; ++i) {
 		if (!strcmp(argv[1], commands[i].name))
 			return run_command(commands[i].fn, --argc, ++argv);

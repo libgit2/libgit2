@@ -280,3 +280,38 @@ void test_repo_open__opening_a_non_existing_repository_returns_ENOTFOUND(void)
 	git_repository *repo;
 	cl_assert_equal_i(GIT_ENOTFOUND, git_repository_open(&repo, "i-do-not/exist"));
 }
+
+void test_repo_open__no_config(void)
+{
+	git_buf path = GIT_BUF_INIT;
+	git_repository *repo;
+	git_config *config;
+
+	cl_fixture_sandbox("empty_standard_repo");
+	cl_git_pass(cl_rename("empty_standard_repo/.gitted", "empty_standard_repo/.git"));
+
+	/* remove local config */
+	cl_git_pass(git_futils_rmdir_r(
+		"empty_standard_repo/.git/config", NULL, GIT_RMDIR_REMOVE_FILES));
+
+	/* isolate from system level configs */
+	cl_must_pass(p_mkdir("alternate", 0777));
+	cl_git_pass(git_path_prettify(&path, "alternate", NULL));
+	cl_git_pass(git_libgit2_opts(
+		GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL, path.ptr));
+	cl_git_pass(git_libgit2_opts(
+		GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_SYSTEM, path.ptr));
+	cl_git_pass(git_libgit2_opts(
+		GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_XDG, path.ptr));
+
+	git_buf_free(&path);
+
+	cl_git_pass(git_repository_open(&repo, "empty_standard_repo"));
+	cl_git_pass(git_repository_config(&config, repo));
+
+	cl_git_pass(git_config_set_string(config, "test.set", "42"));
+
+	git_config_free(config);
+	git_repository_free(repo);
+	cl_fixture_cleanup("empty_standard_repo");
+}

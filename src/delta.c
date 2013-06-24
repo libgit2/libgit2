@@ -168,7 +168,7 @@ git_delta_create_index(const void *buf, unsigned long bufsize)
 	memset(hash, 0, hsize * sizeof(*hash));
 
 	/* allocate an array to count hash entries */
-	hash_count = calloc(hsize, sizeof(*hash_count));
+	hash_count = git__calloc(hsize, sizeof(*hash_count));
 	if (!hash_count) {
 		git__free(index);
 		return NULL;

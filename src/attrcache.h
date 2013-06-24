@@ -13,10 +13,10 @@
 typedef struct {
 	int initialized;
 	git_pool pool;
-	git_strmap *files;	/* hash path to git_attr_file of rules */
-	git_strmap *macros;	/* hash name to vector<git_attr_assignment> */
-	const char *cfg_attr_file; /* cached value of core.attributesfile */
-	const char *cfg_excl_file; /* cached value of core.excludesfile */
+	git_strmap *files;	 /* hash path to git_attr_file of rules */
+	git_strmap *macros;	 /* hash name to vector<git_attr_assignment> */
+	char *cfg_attr_file; /* cached value of core.attributesfile */
+	char *cfg_excl_file; /* cached value of core.excludesfile */
 } git_attr_cache;
 
 extern int git_attr_cache__init(git_repository *repo);

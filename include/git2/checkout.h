@@ -134,6 +134,9 @@ typedef enum {
 	/** Treat pathspec as simple list of exact match file paths */
 	GIT_CHECKOUT_DISABLE_PATHSPEC_MATCH = (1u << 13),
 
+	/** Ignore directories in use, they will be left empty */
+	GIT_CHECKOUT_SKIP_LOCKED_DIRECTORIES = (1u << 18),
+
 	/**
 	 * THE FOLLOWING OPTIONS ARE NOT YET IMPLEMENTED
 	 */
@@ -180,6 +183,8 @@ typedef enum {
 	GIT_CHECKOUT_NOTIFY_UPDATED   = (1u << 2),
 	GIT_CHECKOUT_NOTIFY_UNTRACKED = (1u << 3),
 	GIT_CHECKOUT_NOTIFY_IGNORED   = (1u << 4),
+
+	GIT_CHECKOUT_NOTIFY_ALL       = 0x0FFFFu
 } git_checkout_notify_t;
 
 /** Checkout notification callback function */
@@ -231,6 +236,8 @@ typedef struct git_checkout_opts {
 	git_strarray paths;
 
 	git_tree *baseline; /** expected content of workdir, defaults to HEAD */
+
+	const char *target_directory; /** alternative checkout path to workdir */
 } git_checkout_opts;
 
 #define GIT_CHECKOUT_OPTS_VERSION 1

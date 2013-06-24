@@ -11,6 +11,10 @@
 #include "net.h"
 #include "types.h"
 
+#ifdef GIT_SSH
+#include <libssh2.h>
+#endif
+
 /**
  * @file git2/transport.h
  * @brief Git transport interfaces and functions
@@ -27,6 +31,8 @@ GIT_BEGIN_DECL
 typedef enum {
 	/* git_cred_userpass_plaintext */
 	GIT_CREDTYPE_USERPASS_PLAINTEXT = 1,
+	GIT_CREDTYPE_SSH_KEYFILE_PASSPHRASE = 2,
+	GIT_CREDTYPE_SSH_PUBLICKEY = 3,
 } git_credtype_t;
 
 /* The base structure for all credential types */
@@ -43,6 +49,27 @@ typedef struct git_cred_userpass_plaintext {
 	char *password;
 } git_cred_userpass_plaintext;
 
+#ifdef GIT_SSH
+typedef LIBSSH2_USERAUTH_PUBLICKEY_SIGN_FUNC((*git_cred_sign_callback));
+
+/* A ssh key file and passphrase */
+typedef struct git_cred_ssh_keyfile_passphrase {
+	git_cred parent;
+	char *publickey;
+	char *privatekey;
+	char *passphrase;
+} git_cred_ssh_keyfile_passphrase;
+
+/* A ssh public key and authentication callback */
+typedef struct git_cred_ssh_publickey {
+	git_cred parent;
+	char *publickey;
+    size_t publickey_len;
+	void *sign_callback;
+	void *sign_data;
+} git_cred_ssh_publickey;
+#endif
+
 /**
  * Creates a new plain-text username and password credential object.
  * The supplied credential parameter will be internally duplicated.
@@ -56,6 +83,42 @@ GIT_EXTERN(int) git_cred_userpass_plaintext_new(
 	git_cred **out,
 	const char *username,
 	const char *password);
+
+#ifdef GIT_SSH
+/**
+ * Creates a new ssh key file and passphrase credential object.
+ * The supplied credential parameter will be internally duplicated.
+ *
+ * @param out The newly created credential object.
+ * @param publickey The path to the public key of the credential.
+ * @param privatekey The path to the private key of the credential.
+ * @param passphrase The passphrase of the credential.
+ * @return 0 for success or an error code for failure
+ */
+GIT_EXTERN(int) git_cred_ssh_keyfile_passphrase_new(
+	git_cred **out,
+	const char *publickey,
+	const char *privatekey,
+    const char *passphrase);
+
+/**
+ * Creates a new ssh public key credential object.
+ * The supplied credential parameter will be internally duplicated.
+ *
+ * @param out The newly created credential object.
+ * @param publickey The bytes of the public key.
+ * @param publickey_len The length of the public key in bytes.
+ * @param sign_callback The callback method for authenticating.
+ * @param sign_data The abstract data sent to the sign_callback method.
+ * @return 0 for success or an error code for failure
+ */
+GIT_EXTERN(int) git_cred_ssh_publickey_new(
+	git_cred **out,
+	const char *publickey,
+    size_t publickey_len,
+    git_cred_sign_callback,
+    void *sign_data);
+#endif
 
 /**
  * Signature of a function which acquires a credential object.
@@ -316,6 +379,17 @@ GIT_EXTERN(int) git_smart_subtransport_http(
  * @return 0 or an error code
  */
 GIT_EXTERN(int) git_smart_subtransport_git(
+	git_smart_subtransport **out,
+	git_transport* owner);
+
+/**
+ * Create an instance of the ssh subtransport.
+ *
+ * @param out The newly created subtransport
+ * @param owner The smart transport to own this subtransport
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_smart_subtransport_ssh(
 	git_smart_subtransport **out,
 	git_transport* owner);
 

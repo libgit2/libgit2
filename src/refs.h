@@ -13,6 +13,7 @@
 #include "git2/refdb.h"
 #include "strmap.h"
 #include "buffer.h"
+#include "oid.h"
 
 #define GIT_REFS_DIR "refs/"
 #define GIT_REFS_HEADS_DIR GIT_REFS_DIR "heads/"
@@ -25,7 +26,7 @@
 
 #define GIT_SYMREF "ref: "
 #define GIT_PACKEDREFS_FILE "packed-refs"
-#define GIT_PACKEDREFS_HEADER "# pack-refs with: peeled "
+#define GIT_PACKEDREFS_HEADER "# pack-refs with: peeled fully-peeled "
 #define GIT_PACKEDREFS_FILE_MODE 0666
 
 #define GIT_HEAD_FILE "HEAD"
@@ -49,14 +50,14 @@
 
 struct git_reference {
 	git_refdb *db;
-
 	git_ref_t type;
 
 	union {
 		git_oid oid;
 		char *symbolic;
 	} target;
-	
+
+	git_oid peel;
 	char name[0];
 };
 

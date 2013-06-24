@@ -7,14 +7,15 @@
 
 #include "common.h"
 #include "posix.h"
+
 #include "git2/object.h"
 #include "git2/refs.h"
 #include "git2/refdb.h"
+#include "git2/sys/refdb_backend.h"
+
 #include "hash.h"
 #include "refdb.h"
 #include "refs.h"
-
-#include "git2/refdb_backend.h"
 
 int git_refdb_new(git_refdb **out, git_repository *repo)
 {
@@ -45,7 +46,7 @@ int git_refdb_open(git_refdb **out, git_repository *repo)
 		return -1;
 
 	/* Add the default (filesystem) backend */
-	if (git_refdb_backend_fs(&dir, repo, db) < 0) {
+	if (git_refdb_backend_fs(&dir, repo) < 0) {
 		git_refdb_free(db);
 		return -1;
 	}
@@ -57,15 +58,19 @@ int git_refdb_open(git_refdb **out, git_repository *repo)
 	return 0;
 }
 
-int git_refdb_set_backend(git_refdb *db, git_refdb_backend *backend)
+static void refdb_free_backend(git_refdb *db)
 {
 	if (db->backend) {
-		if(db->backend->free)
+		if (db->backend->free)
 			db->backend->free(db->backend);
 		else
 			git__free(db->backend);
 	}
+}
 
+int git_refdb_set_backend(git_refdb *db, git_refdb_backend *backend)
+{
+	refdb_free_backend(db);
 	db->backend = backend;
 
 	return 0;
@@ -74,23 +79,17 @@ int git_refdb_set_backend(git_refdb *db, git_refdb_backend *backend)
 int git_refdb_compress(git_refdb *db)
 {
 	assert(db);
-	
-	if (db->backend->compress) {
+
+	if (db->backend->compress)
 		return db->backend->compress(db->backend);
-	}
-	
+
 	return 0;
 }
 
-static void refdb_free(git_refdb *db)
+void git_refdb__free(git_refdb *db)
 {
-	if (db->backend) {
-		if(db->backend->free)
-			db->backend->free(db->backend);
-		else
-			git__free(db->backend);
-	}
-
+	refdb_free_backend(db);
+	git__memzero(db, sizeof(*db));
 	git__free(db);
 }
 
@@ -99,7 +98,7 @@ void git_refdb_free(git_refdb *db)
 	if (db == NULL)
 		return;
 
-	GIT_REFCOUNT_DEC(db, refdb_free);
+	GIT_REFCOUNT_DEC(db, git_refdb__free);
 }
 
 int git_refdb_exists(int *exists, git_refdb *refdb, const char *ref_name)
@@ -111,75 +110,96 @@ int git_refdb_exists(int *exists, git_refdb *refdb, const char *ref_name)
 
 int git_refdb_lookup(git_reference **out, git_refdb *db, const char *ref_name)
 {
-	assert(db && db->backend && ref_name);
+	git_reference *ref;
+	int error;
 
-	return db->backend->lookup(out, db->backend, ref_name);
+	assert(db && db->backend && out && ref_name);
+
+	error = db->backend->lookup(&ref, db->backend, ref_name);
+	if (error < 0)
+		return error;
+
+	GIT_REFCOUNT_INC(db);
+	ref->db = db;
+
+	*out = ref;
+	return 0;
 }
 
-int git_refdb_foreach(
-	git_refdb *db,
-	unsigned int list_flags,
-	git_reference_foreach_cb callback,
-	void *payload)
+int git_refdb_iterator(git_reference_iterator **out, git_refdb *db, const char *glob)
 {
-	assert(db && db->backend);
+	if (!db->backend || !db->backend->iterator) {
+		giterr_set(GITERR_REFERENCE, "This backend doesn't support iterators");
+		return -1;
+	}
 
-	return db->backend->foreach(db->backend, list_flags, callback, payload);
-}
+	if (db->backend->iterator(out, db->backend, glob) < 0)
+		return -1;
 
-struct glob_cb_data {
-	const char *glob;
-	git_reference_foreach_cb callback;
-	void *payload;
-};
-
-static int fromglob_cb(const char *reference_name, void *payload)
-{
-	struct glob_cb_data *data = (struct glob_cb_data *)payload;
-
-	if (!p_fnmatch(data->glob, reference_name, 0))
-		return data->callback(reference_name, data->payload);
+	GIT_REFCOUNT_INC(db);
+	(*out)->db = db;
 
 	return 0;
 }
 
-int git_refdb_foreach_glob(
-	git_refdb *db,
-	const char *glob,
-	unsigned int list_flags,
-	git_reference_foreach_cb callback,
-	void *payload)
+int git_refdb_iterator_next(git_reference **out, git_reference_iterator *iter)
 {
 	int error;
-	struct glob_cb_data data;
 
-	assert(db && db->backend && glob && callback);
+	if ((error = iter->next(out, iter)) < 0)
+		return error;
 
-	if(db->backend->foreach_glob != NULL)
-		error = db->backend->foreach_glob(db->backend,
-			glob, list_flags, callback, payload);
-	else {
-		data.glob = glob;
-		data.callback = callback;
-		data.payload = payload;
+	GIT_REFCOUNT_INC(iter->db);
+	(*out)->db = iter->db;
 
-		error = db->backend->foreach(db->backend,
-			list_flags, fromglob_cb, &data);
+	return 0;
+}
+
+int git_refdb_iterator_next_name(const char **out, git_reference_iterator *iter)
+{
+	return iter->next_name(out, iter);
+}
+
+void git_refdb_iterator_free(git_reference_iterator *iter)
+{
+	GIT_REFCOUNT_DEC(iter->db, git_refdb__free);
+	iter->free(iter);
+}
+
+int git_refdb_write(git_refdb *db, git_reference *ref, int force)
+{
+	assert(db && db->backend);
+
+	GIT_REFCOUNT_INC(db);
+	ref->db = db;
+
+	return db->backend->write(db->backend, ref, force);
+}
+
+int git_refdb_rename(
+	git_reference **out,
+	git_refdb *db,
+	const char *old_name,
+	const char *new_name,
+	int force)
+{
+	int error;
+
+	assert(db && db->backend);
+	error = db->backend->rename(out, db->backend, old_name, new_name, force);
+	if (error < 0)
+		return error;
+
+	if (out) {
+		GIT_REFCOUNT_INC(db);
+		(*out)->db = db;
 	}
 
-	return error;
+	return 0;
 }
 
-int git_refdb_write(git_refdb *db, const git_reference *ref)
+int git_refdb_delete(struct git_refdb *db, const char *ref_name)
 {
 	assert(db && db->backend);
-
-	return db->backend->write(db->backend, ref);
-}
-
-int git_refdb_delete(struct git_refdb *db, const git_reference *ref)
-{
-	assert(db && db->backend);
-
-	return db->backend->delete(db->backend, ref);
+	return db->backend->delete(db->backend, ref_name);
 }

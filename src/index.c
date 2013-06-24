@@ -15,10 +15,13 @@
 #include "hash.h"
 #include "iterator.h"
 #include "pathspec.h"
+#include "ignore.h"
+
 #include "git2/odb.h"
 #include "git2/oid.h"
 #include "git2/blob.h"
 #include "git2/config.h"
+#include "git2/sys/index.h"
 
 #define entry_size(type,len) ((offsetof(type, path) + (len) + 8) & ~7)
 #define short_entry_size(len) entry_size(struct entry_short, len)
@@ -35,6 +38,7 @@ static const unsigned int INDEX_VERSION_NUMBER_EXT = 3;
 static const unsigned int INDEX_HEADER_SIG = 0x44495243;
 static const char INDEX_EXT_TREECACHE_SIG[] = {'T', 'R', 'E', 'E'};
 static const char INDEX_EXT_UNMERGED_SIG[] = {'R', 'E', 'U', 'C'};
+static const char INDEX_EXT_CONFLICT_NAME_SIG[] = {'N', 'A', 'M', 'E'};
 
 #define INDEX_OWNER(idx) ((git_repository *)(GIT_REFCOUNT_OWNER(idx)))
 
@@ -102,11 +106,6 @@ static int index_find(size_t *at_pos, git_index *index, const char *path, int st
 static void index_entry_free(git_index_entry *entry);
 static void index_entry_reuc_free(git_index_reuc_entry *reuc);
 
-GIT_INLINE(int) index_entry_stage(const git_index_entry *entry)
-{
-	return (entry->flags & GIT_IDXENTRY_STAGEMASK) >> GIT_IDXENTRY_STAGESHIFT;
-}
-
 static int index_srch(const void *key, const void *array_member)
 {
 	const struct entry_srch_key *srch_key = key;
@@ -116,7 +115,7 @@ static int index_srch(const void *key, const void *array_member)
 	ret = strcmp(srch_key->path, entry->path);
 
 	if (ret == 0)
-		ret = srch_key->stage - index_entry_stage(entry);
+		ret = srch_key->stage - GIT_IDXENTRY_STAGE(entry);
 
 	return ret;
 }
@@ -130,7 +129,7 @@ static int index_isrch(const void *key, const void *array_member)
 	ret = strcasecmp(srch_key->path, entry->path);
 
 	if (ret == 0)
-		ret = srch_key->stage - index_entry_stage(entry);
+		ret = srch_key->stage - GIT_IDXENTRY_STAGE(entry);
 
 	return ret;
 }
@@ -168,7 +167,7 @@ static int index_cmp(const void *a, const void *b)
 	diff = strcmp(entry_a->path, entry_b->path);
 
 	if (diff == 0)
-		diff = (index_entry_stage(entry_a) - index_entry_stage(entry_b));
+		diff = (GIT_IDXENTRY_STAGE(entry_a) - GIT_IDXENTRY_STAGE(entry_b));
 
 	return diff;
 }
@@ -182,10 +181,55 @@ static int index_icmp(const void *a, const void *b)
 	diff = strcasecmp(entry_a->path, entry_b->path);
 
 	if (diff == 0)
-		diff = (index_entry_stage(entry_a) - index_entry_stage(entry_b));
+		diff = (GIT_IDXENTRY_STAGE(entry_a) - GIT_IDXENTRY_STAGE(entry_b));
 
 	return diff;
 }
+
+static int conflict_name_cmp(const void *a, const void *b)
+{
+	const git_index_name_entry *name_a = a;
+	const git_index_name_entry *name_b = b;
+
+	if (name_a->ancestor && !name_b->ancestor)
+		return 1;
+
+	if (!name_a->ancestor && name_b->ancestor)
+		return -1;
+
+	if (name_a->ancestor)
+		return strcmp(name_a->ancestor, name_b->ancestor);
+
+	if (!name_a->ours || !name_b->ours)
+		return 0;
+
+	return strcmp(name_a->ours, name_b->ours);
+}
+
+/**
+ * TODO: enable this when resolving case insensitive conflicts
+ */
+#if 0
+static int conflict_name_icmp(const void *a, const void *b)
+{
+	const git_index_name_entry *name_a = a;
+	const git_index_name_entry *name_b = b;
+
+	if (name_a->ancestor && !name_b->ancestor)
+		return 1;
+
+	if (!name_a->ancestor && name_b->ancestor)
+		return -1;
+
+	if (name_a->ancestor)
+		return strcasecmp(name_a->ancestor, name_b->ancestor);
+
+	if (!name_a->ours || !name_b->ours)
+		return 0;
+
+	return strcasecmp(name_a->ours, name_b->ours);
+}
+#endif
 
 static int reuc_srch(const void *key, const void *array_member)
 {
@@ -246,16 +290,16 @@ void git_index__set_ignore_case(git_index *index, bool ignore_case)
 {
 	index->ignore_case = ignore_case;
 
-	index->entries._cmp = ignore_case ? index_icmp : index_cmp;
 	index->entries_cmp_path = ignore_case ? index_icmp_path : index_cmp_path;
 	index->entries_search = ignore_case ? index_isrch : index_srch;
 	index->entries_search_path = ignore_case ? index_isrch_path : index_srch_path;
-	index->entries.sorted = 0;
+
+	git_vector_set_cmp(&index->entries, ignore_case ? index_icmp : index_cmp);
 	git_vector_sort(&index->entries);
 
-	index->reuc._cmp = ignore_case ? reuc_icmp : reuc_cmp;
 	index->reuc_search = ignore_case ? reuc_isrch : reuc_srch;
-	index->reuc.sorted = 0;
+
+	git_vector_set_cmp(&index->reuc, ignore_case ? reuc_icmp : reuc_cmp);
 	git_vector_sort(&index->reuc);
 }
 
@@ -278,6 +322,7 @@ int git_index_open(git_index **index_out, const char *index_path)
 	}
 
 	if (git_vector_init(&index->entries, 32, index_cmp) < 0 ||
+		git_vector_init(&index->names, 32, conflict_name_cmp) < 0 ||
 		git_vector_init(&index->reuc, 32, reuc_cmp) < 0)
 		return -1;
 
@@ -301,9 +346,12 @@ static void index_free(git_index *index)
 {
 	git_index_clear(index);
 	git_vector_free(&index->entries);
+	git_vector_free(&index->names);
 	git_vector_free(&index->reuc);
 
 	git__free(index->index_file_path);
+
+	git__memzero(index, sizeof(*index));
 	git__free(index);
 }
 
@@ -315,22 +363,27 @@ void git_index_free(git_index *index)
 	GIT_REFCOUNT_DEC(index, index_free);
 }
 
-void git_index_clear(git_index *index)
+static void index_entries_free(git_vector *entries)
 {
 	size_t i;
 
-	assert(index);
-
-	for (i = 0; i < index->entries.length; ++i) {
-		git_index_entry *e;
-		e = git_vector_get(&index->entries, i);
+	for (i = 0; i < entries->length; ++i) {
+		git_index_entry *e = git_vector_get(entries, i);
 		git__free(e->path);
 		git__free(e);
 	}
-	git_vector_clear(&index->entries);
 
+	git_vector_clear(entries);
+}
+
+void git_index_clear(git_index *index)
+{
+	assert(index);
+
+	index_entries_free(&index->entries);
 	git_index_reuc_clear(index);
-	
+	git_index_name_clear(index);
+
 	git_futils_filestamp_set(&index->stamp, NULL);
 
 	git_tree_cache_free(index->tree);
@@ -352,19 +405,18 @@ int git_index_set_caps(git_index *index, unsigned int caps)
 	old_ignore_case = index->ignore_case;
 
 	if (caps == GIT_INDEXCAP_FROM_OWNER) {
-		git_config *cfg;
+		git_repository *repo = INDEX_OWNER(index);
 		int val;
 
-		if (INDEX_OWNER(index) == NULL ||
-			git_repository_config__weakptr(&cfg, INDEX_OWNER(index)) < 0)
-				return create_index_error(-1,
-					"Cannot get repository config to set index caps");
+		if (!repo)
+			return create_index_error(
+				-1, "Cannot access repository to set index caps");
 
-		if (git_config_get_bool(&val, cfg, "core.ignorecase") == 0)
+		if (!git_repository__cvar(&val, repo, GIT_CVAR_IGNORECASE))
 			index->ignore_case = (val != 0);
-		if (git_config_get_bool(&val, cfg, "core.filemode") == 0)
+		if (!git_repository__cvar(&val, repo, GIT_CVAR_FILEMODE))
 			index->distrust_filemode = (val == 0);
-		if (git_config_get_bool(&val, cfg, "core.symlinks") == 0)
+		if (!git_repository__cvar(&val, repo, GIT_CVAR_SYMLINKS))
 			index->no_symlinks = (val == 0);
 	}
 	else {
@@ -497,8 +549,10 @@ const git_index_entry *git_index_get_bypath(
 
 	git_vector_sort(&index->entries);
 
-	if (index_find(&pos, index, path, stage) < 0)
+	if (index_find(&pos, index, path, stage) < 0) {
+		giterr_set(GITERR_INDEX, "Index does not contain %s", path);
 		return NULL;
+	}
 
 	return git_index_get_byindex(index, pos);
 }
@@ -586,8 +640,9 @@ static int index_entry_init(git_index_entry **entry_out, git_index *index, const
 
 static int index_entry_reuc_init(git_index_reuc_entry **reuc_out,
 	const char *path,
-	int ancestor_mode, git_oid *ancestor_oid,
-	int our_mode, git_oid *our_oid, int their_mode, git_oid *their_oid)
+	int ancestor_mode, const git_oid *ancestor_oid,
+	int our_mode, const git_oid *our_oid,
+	int their_mode, const git_oid *their_oid)
 {
 	git_index_reuc_entry *reuc = NULL;
 
@@ -668,7 +723,7 @@ static int index_insert(git_index *index, git_index_entry *entry, int replace)
 		entry->flags |= GIT_IDXENTRY_NAMEMASK;
 
 	/* look if an entry with this path already exists */
-	if (!index_find(&position, index, entry->path, index_entry_stage(entry))) {
+	if (!index_find(&position, index, entry->path, GIT_IDXENTRY_STAGE(entry))) {
 		existing = (git_index_entry **)&index->entries.contents[position];
 
 		/* update filemode to existing values if stat is not trusted */
@@ -681,8 +736,9 @@ static int index_insert(git_index *index, git_index_entry *entry, int replace)
 	if (!replace || !existing)
 		return git_vector_insert(&index->entries, entry);
 
-	/* exists, replace it */
-	git__free((*existing)->path);
+	/* exists, replace it (preserving name from existing entry) */
+	git__free(entry->path);
+	entry->path = (*existing)->path;
 	git__free(*existing);
 	*existing = entry;
 
@@ -691,9 +747,9 @@ static int index_insert(git_index *index, git_index_entry *entry, int replace)
 
 static int index_conflict_to_reuc(git_index *index, const char *path)
 {
-	git_index_entry *conflict_entries[3];
+	const git_index_entry *conflict_entries[3];
 	int ancestor_mode, our_mode, their_mode;
-	git_oid *ancestor_oid, *our_oid, *their_oid;
+	git_oid const *ancestor_oid, *our_oid, *their_oid;
 	int ret;
 
 	if ((ret = git_index_conflict_get(&conflict_entries[0],
@@ -779,8 +835,11 @@ int git_index_remove(git_index *index, const char *path, int stage)
 
 	git_vector_sort(&index->entries);
 
-	if (index_find(&position, index, path, stage) < 0)
+	if (index_find(&position, index, path, stage) < 0) {
+		giterr_set(GITERR_INDEX, "Index does not contain %s at stage %d",
+			path, stage);
 		return GIT_ENOTFOUND;
+	}
 
 	entry = git_vector_get(&index->entries, position);
 	if (entry != NULL)
@@ -813,7 +872,7 @@ int git_index_remove_directory(git_index *index, const char *dir, int stage)
 		if (!entry || git__prefixcmp(entry->path, pfx.ptr) != 0)
 			break;
 
-		if (index_entry_stage(entry) != stage) {
+		if (GIT_IDXENTRY_STAGE(entry) != stage) {
 			++pos;
 			continue;
 		}
@@ -927,15 +986,63 @@ on_error:
 	return ret;
 }
 
-int git_index_conflict_get(git_index_entry **ancestor_out,
-	git_index_entry **our_out,
-	git_index_entry **their_out,
-	git_index *index, const char *path)
+static int index_conflict__get_byindex(
+	const git_index_entry **ancestor_out,
+	const git_index_entry **our_out,
+	const git_index_entry **their_out,
+	git_index *index,
+	size_t n)
 {
-	size_t pos, posmax;
-	int stage;
-	git_index_entry *conflict_entry;
-	int error = GIT_ENOTFOUND;
+	const git_index_entry *conflict_entry;
+	const char *path = NULL;
+	size_t count;
+	int stage, len = 0;
+
+	assert(ancestor_out && our_out && their_out && index);
+
+	*ancestor_out = NULL;
+	*our_out = NULL;
+	*their_out = NULL;
+
+	for (count = git_index_entrycount(index); n < count; ++n) {
+		conflict_entry = git_vector_get(&index->entries, n);
+
+		if (path && index->entries_cmp_path(conflict_entry->path, path) != 0)
+			break;
+
+		stage = GIT_IDXENTRY_STAGE(conflict_entry);
+		path = conflict_entry->path;
+
+		switch (stage) {
+		case 3:
+			*their_out = conflict_entry;
+			len++;
+			break;
+		case 2:
+			*our_out = conflict_entry;
+			len++;
+			break;
+		case 1:
+			*ancestor_out = conflict_entry;
+			len++;
+			break;
+		default:
+			break;
+		};
+	}
+
+	return len;
+}
+
+int git_index_conflict_get(
+	const git_index_entry **ancestor_out,
+	const git_index_entry **our_out,
+	const git_index_entry **their_out,
+	git_index *index,
+	const char *path)
+{
+	size_t pos;
+	int len = 0;
 
 	assert(ancestor_out && our_out && their_out && index && path);
 
@@ -946,34 +1053,13 @@ int git_index_conflict_get(git_index_entry **ancestor_out,
 	if (git_index_find(&pos, index, path) < 0)
 		return GIT_ENOTFOUND;
 
-	for (posmax = git_index_entrycount(index); pos < posmax; ++pos) {
+	if ((len = index_conflict__get_byindex(
+		ancestor_out, our_out, their_out, index, pos)) < 0)
+		return len;
+	else if (len == 0)
+		return GIT_ENOTFOUND;
 
-		conflict_entry = git_vector_get(&index->entries, pos);
-
-		if (index->entries_cmp_path(conflict_entry->path, path) != 0)
-			break;
-
-		stage = index_entry_stage(conflict_entry);
-
-		switch (stage) {
-		case 3:
-			*their_out = conflict_entry;
-			error = 0;
-			break;
-		case 2:
-			*our_out = conflict_entry;
-			error = 0;
-			break;
-		case 1:
-			*ancestor_out = conflict_entry;
-			error = 0;
-			break;
-		default:
-			break;
-		};
-	}
-
-	return error;
+	return 0;
 }
 
 int git_index_conflict_remove(git_index *index, const char *path)
@@ -995,7 +1081,7 @@ int git_index_conflict_remove(git_index *index, const char *path)
 		if (index->entries_cmp_path(conflict_entry->path, path) != 0)
 			break;
 
-		if (index_entry_stage(conflict_entry) == 0) {
+		if (GIT_IDXENTRY_STAGE(conflict_entry) == 0) {
 			pos++;
 			continue;
 		}
@@ -1014,7 +1100,7 @@ static int index_conflicts_match(const git_vector *v, size_t idx)
 {
 	git_index_entry *entry = git_vector_get(v, idx);
 
-	if (index_entry_stage(entry) > 0) {
+	if (GIT_IDXENTRY_STAGE(entry) > 0) {
 		index_entry_free(entry);
 		return 1;
 	}
@@ -1036,11 +1122,139 @@ int git_index_has_conflicts(const git_index *index)
 	assert(index);
 
 	git_vector_foreach(&index->entries, i, entry) {
-		if (index_entry_stage(entry) > 0)
+		if (GIT_IDXENTRY_STAGE(entry) > 0)
 			return 1;
 	}
 
 	return 0;
+}
+
+int git_index_conflict_iterator_new(
+	git_index_conflict_iterator **iterator_out,
+	git_index *index)
+{
+	git_index_conflict_iterator *it = NULL;
+
+	assert(iterator_out && index);
+
+	it = git__calloc(1, sizeof(git_index_conflict_iterator));
+	GITERR_CHECK_ALLOC(it);
+
+	it->index = index;
+
+	*iterator_out = it;
+	return 0;
+}
+
+int git_index_conflict_next(
+	const git_index_entry **ancestor_out,
+	const git_index_entry **our_out,
+	const git_index_entry **their_out,
+	git_index_conflict_iterator *iterator)
+{
+	const git_index_entry *entry;
+	int len;
+
+	assert(ancestor_out && our_out && their_out && iterator);
+
+	*ancestor_out = NULL;
+	*our_out = NULL;
+	*their_out = NULL;
+
+	while (iterator->cur < iterator->index->entries.length) {
+		entry = git_index_get_byindex(iterator->index, iterator->cur);
+
+		if (git_index_entry_stage(entry) > 0) {
+			if ((len = index_conflict__get_byindex(
+				ancestor_out,
+				our_out,
+				their_out,
+				iterator->index,
+				iterator->cur)) < 0)
+				return len;
+
+			iterator->cur += len;
+			return 0;
+		}
+
+		iterator->cur++;
+	}
+
+	return GIT_ITEROVER;
+}
+
+void git_index_conflict_iterator_free(git_index_conflict_iterator *iterator)
+{
+	if (iterator == NULL)
+		return;
+
+	git__free(iterator);
+}
+
+unsigned int git_index_name_entrycount(git_index *index)
+{
+	assert(index);
+	return (unsigned int)index->names.length;
+}
+
+const git_index_name_entry *git_index_name_get_byindex(
+	git_index *index, size_t n)
+{
+	assert(index);
+
+	git_vector_sort(&index->names);
+	return git_vector_get(&index->names, n);
+}
+
+int git_index_name_add(git_index *index,
+	const char *ancestor, const char *ours, const char *theirs)
+{
+	git_index_name_entry *conflict_name;
+
+	assert ((ancestor && ours) || (ancestor && theirs) || (ours && theirs));
+
+	conflict_name = git__calloc(1, sizeof(git_index_name_entry));
+	GITERR_CHECK_ALLOC(conflict_name);
+
+	if (ancestor) {
+		conflict_name->ancestor = git__strdup(ancestor);
+		GITERR_CHECK_ALLOC(conflict_name->ancestor);
+	}
+
+	if (ours) {
+		conflict_name->ours = git__strdup(ours);
+		GITERR_CHECK_ALLOC(conflict_name->ours);
+	}
+
+	if (theirs) {
+		conflict_name->theirs = git__strdup(theirs);
+		GITERR_CHECK_ALLOC(conflict_name->theirs);
+	}
+
+	return git_vector_insert(&index->names, conflict_name);
+}
+
+void git_index_name_clear(git_index *index)
+{
+	size_t i;
+	git_index_name_entry *conflict_name;
+
+	assert(index);
+
+	git_vector_foreach(&index->names, i, conflict_name) {
+		if (conflict_name->ancestor)
+			git__free(conflict_name->ancestor);
+
+		if (conflict_name->ours)
+			git__free(conflict_name->ours);
+
+		if (conflict_name->theirs)
+			git__free(conflict_name->theirs);
+
+		git__free(conflict_name);
+	}
+
+	git_vector_clear(&index->names);
 }
 
 unsigned int git_index_reuc_entrycount(git_index *index)
@@ -1049,7 +1263,10 @@ unsigned int git_index_reuc_entrycount(git_index *index)
 	return (unsigned int)index->reuc.length;
 }
 
-static int index_reuc_insert(git_index *index, git_index_reuc_entry *reuc, int replace)
+static int index_reuc_insert(
+	git_index *index,
+	git_index_reuc_entry *reuc,
+	int replace)
 {
 	git_index_reuc_entry **existing = NULL;
 	size_t position;
@@ -1071,9 +1288,9 @@ static int index_reuc_insert(git_index *index, git_index_reuc_entry *reuc, int r
 }
 
 int git_index_reuc_add(git_index *index, const char *path,
-	int ancestor_mode, git_oid *ancestor_oid,
-	int our_mode, git_oid *our_oid,
-	int their_mode, git_oid *their_oid)
+	int ancestor_mode, const git_oid *ancestor_oid,
+	int our_mode, const git_oid *our_oid,
+	int their_mode, const git_oid *their_oid)
 {
 	git_index_reuc_entry *reuc = NULL;
 	int error = 0;
@@ -1164,8 +1381,9 @@ static int read_reuc(git_index *index, const char *buffer, size_t size)
 	size_t len;
 	int i;
 
-	/* This gets called multiple times, the vector might already be initialized */
-	if (index->reuc._alloc_size == 0 && git_vector_init(&index->reuc, 16, reuc_cmp) < 0)
+	/* If called multiple times, the vector might already be initialized */
+	if (index->reuc._alloc_size == 0 &&
+		git_vector_init(&index->reuc, 16, reuc_cmp) < 0)
 		return -1;
 
 	while (size) {
@@ -1175,11 +1393,8 @@ static int read_reuc(git_index *index, const char *buffer, size_t size)
 		if (size <= len)
 			return index_error_invalid("reading reuc entries");
 
-		lost = git__malloc(sizeof(git_index_reuc_entry));
+		lost = git__calloc(1, sizeof(git_index_reuc_entry));
 		GITERR_CHECK_ALLOC(lost);
-
-		if (git_vector_insert(&index->reuc, lost) < 0)
-			return -1;
 
 		/* read NUL-terminated pathname for entry */
 		lost->path = git__strdup(buffer);
@@ -1218,10 +1433,60 @@ static int read_reuc(git_index *index, const char *buffer, size_t size)
 			size -= 20;
 			buffer += 20;
 		}
+
+		/* entry was read successfully - insert into reuc vector */
+		if (git_vector_insert(&index->reuc, lost) < 0)
+			return -1;
 	}
 
 	/* entries are guaranteed to be sorted on-disk */
 	index->reuc.sorted = 1;
+
+	return 0;
+}
+
+
+static int read_conflict_names(git_index *index, const char *buffer, size_t size)
+{
+	size_t len;
+
+	/* This gets called multiple times, the vector might already be initialized */
+	if (index->names._alloc_size == 0 &&
+		git_vector_init(&index->names, 16, conflict_name_cmp) < 0)
+		return -1;
+
+#define read_conflict_name(ptr) \
+	len = strlen(buffer) + 1; \
+	if (size < len) \
+		return index_error_invalid("reading conflict name entries"); \
+	\
+	if (len == 1) \
+		ptr = NULL; \
+	else { \
+		ptr = git__malloc(len); \
+		GITERR_CHECK_ALLOC(ptr); \
+		memcpy(ptr, buffer, len); \
+	} \
+	\
+	buffer += len; \
+	size -= len;
+
+	while (size) {
+		git_index_name_entry *conflict_name = git__calloc(1, sizeof(git_index_name_entry));
+		GITERR_CHECK_ALLOC(conflict_name);
+
+		read_conflict_name(conflict_name->ancestor);
+		read_conflict_name(conflict_name->ours);
+		read_conflict_name(conflict_name->theirs);
+
+		if (git_vector_insert(&index->names, conflict_name) < 0)
+			return -1;
+	}
+
+#undef read_conflict_name
+
+	/* entries are guaranteed to be sorted on-disk */
+	index->names.sorted = 1;
 
 	return 0;
 }
@@ -1318,7 +1583,8 @@ static size_t read_extension(git_index *index, const char *buffer, size_t buffer
 
 	total_size = dest.extension_size + sizeof(struct index_extension);
 
-	if (buffer_size - total_size < INDEX_FOOTER_SIZE)
+	if (buffer_size < total_size ||
+		buffer_size - total_size < INDEX_FOOTER_SIZE)
 		return 0;
 
 	/* optional extension */
@@ -1329,6 +1595,9 @@ static size_t read_extension(git_index *index, const char *buffer, size_t buffer
 				return 0;
 		} else if (memcmp(dest.signature, INDEX_EXT_UNMERGED_SIG, 4) == 0) {
 			if (read_reuc(index, buffer + 8, dest.extension_size) < 0)
+				return 0;
+		} else if (memcmp(dest.signature, INDEX_EXT_CONFLICT_NAME_SIG, 4) == 0) {
+			if (read_conflict_names(index, buffer + 8, dest.extension_size) < 0)
 				return 0;
 		}
 		/* else, unsupported extension. We cannot parse this, but we can skip
@@ -1345,7 +1614,7 @@ static size_t read_extension(git_index *index, const char *buffer, size_t buffer
 static int parse_index(git_index *index, const char *buffer, size_t buffer_size)
 {
 	unsigned int i;
-	struct index_header header;
+	struct index_header header = { 0 };
 	git_oid checksum_calculated, checksum_expected;
 
 #define seek_forward(_increase) { \
@@ -1401,7 +1670,7 @@ static int parse_index(git_index *index, const char *buffer, size_t buffer_size)
 
 		/* see if we have read any bytes from the extension */
 		if (extension_size == 0)
-			return index_error_invalid("extension size is zero");
+			return index_error_invalid("extension is truncated");
 
 		seek_forward(extension_size);
 	}
@@ -1412,7 +1681,7 @@ static int parse_index(git_index *index, const char *buffer, size_t buffer_size)
 	/* 160-bit SHA-1 over the content of the index file before this checksum. */
 	git_oid_fromraw(&checksum_expected, (const unsigned char *)buffer);
 
-	if (git_oid_cmp(&checksum_calculated, &checksum_expected) != 0)
+	if (git_oid__cmp(&checksum_calculated, &checksum_expected) != 0)
 		return index_error_invalid("calculated checksum does not match expected");
 
 #undef seek_forward
@@ -1543,6 +1812,61 @@ static int write_extension(git_filebuf *file, struct index_extension *header, gi
 	return error;
 }
 
+static int create_name_extension_data(git_buf *name_buf, git_index_name_entry *conflict_name)
+{
+	int error = 0;
+
+	if (conflict_name->ancestor == NULL)
+		error = git_buf_put(name_buf, "\0", 1);
+	else
+		error = git_buf_put(name_buf, conflict_name->ancestor, strlen(conflict_name->ancestor) + 1);
+
+	if (error != 0)
+		goto on_error;
+
+	if (conflict_name->ours == NULL)
+		error = git_buf_put(name_buf, "\0", 1);
+	else
+		error = git_buf_put(name_buf, conflict_name->ours, strlen(conflict_name->ours) + 1);
+
+	if (error != 0)
+		goto on_error;
+
+	if (conflict_name->theirs == NULL)
+		error = git_buf_put(name_buf, "\0", 1);
+	else
+		error = git_buf_put(name_buf, conflict_name->theirs, strlen(conflict_name->theirs) + 1);
+
+on_error:
+	return error;
+}
+
+static int write_name_extension(git_index *index, git_filebuf *file)
+{
+	git_buf name_buf = GIT_BUF_INIT;
+	git_vector *out = &index->names;
+	git_index_name_entry *conflict_name;
+	struct index_extension extension;
+	size_t i;
+	int error = 0;
+
+	git_vector_foreach(out, i, conflict_name) {
+		if ((error = create_name_extension_data(&name_buf, conflict_name)) < 0)
+			goto done;
+	}
+
+	memset(&extension, 0x0, sizeof(struct index_extension));
+	memcpy(&extension.signature, INDEX_EXT_CONFLICT_NAME_SIG, 4);
+	extension.extension_size = (uint32_t)name_buf.size;
+
+	error = write_extension(file, &extension, &name_buf);
+
+	git_buf_free(&name_buf);
+
+done:
+	return error;
+}
+
 static int create_reuc_extension_data(git_buf *reuc_buf, git_index_reuc_entry *reuc)
 {
 	int i;
@@ -1613,6 +1937,10 @@ static int write_index(git_index *index, git_filebuf *file)
 
 	/* TODO: write tree cache extension */
 
+	/* write the rename conflict extension */
+	if (index->names.length > 0 && write_name_extension(index, file) < 0)
+		return -1;
+
 	/* write the reuc extension */
 	if (index->reuc.length > 0 && write_reuc_extension(index, file) < 0)
 		return -1;
@@ -1626,18 +1954,19 @@ static int write_index(git_index *index, git_filebuf *file)
 
 int git_index_entry_stage(const git_index_entry *entry)
 {
-	return index_entry_stage(entry);
+	return GIT_IDXENTRY_STAGE(entry);
 }
 
 typedef struct read_tree_data {
 	git_index *index;
-	git_transfer_progress *stats;
+	git_vector *old_entries;
 } read_tree_data;
 
-static int read_tree_cb(const char *root, const git_tree_entry *tentry, void *data)
+static int read_tree_cb(
+	const char *root, const git_tree_entry *tentry, void *payload)
 {
-	git_index *index = (git_index *)data;
-	git_index_entry *entry = NULL;
+	read_tree_data *data = payload;
+	git_index_entry *entry = NULL, *old_entry;
 	git_buf path = GIT_BUF_INIT;
 
 	if (git_tree_entry__is_tree(tentry))
@@ -1652,6 +1981,25 @@ static int read_tree_cb(const char *root, const git_tree_entry *tentry, void *da
 	entry->mode = tentry->attr;
 	entry->oid = tentry->oid;
 
+	/* look for corresponding old entry and copy data to new entry */
+	if (data->old_entries) {
+		size_t pos;
+		struct entry_srch_key skey;
+
+		skey.path = path.ptr;
+		skey.stage = 0;
+
+		if (!git_vector_bsearch2(
+				&pos, data->old_entries, data->index->entries_search, &skey) &&
+			(old_entry = git_vector_get(data->old_entries, pos)) != NULL &&
+			entry->mode == old_entry->mode &&
+			git_oid_equal(&entry->oid, &old_entry->oid))
+		{
+			memcpy(entry, old_entry, sizeof(*entry));
+			entry->flags_extended = 0;
+		}
+	}
+
 	if (path.size < GIT_IDXENTRY_NAMEMASK)
 		entry->flags = path.size & GIT_IDXENTRY_NAMEMASK;
 	else
@@ -1660,7 +2008,7 @@ static int read_tree_cb(const char *root, const git_tree_entry *tentry, void *da
 	entry->path = git_buf_detach(&path);
 	git_buf_free(&path);
 
-	if (git_vector_insert(&index->entries, entry) < 0) {
+	if (git_vector_insert(&data->index->entries, entry) < 0) {
 		index_entry_free(entry);
 		return -1;
 	}
@@ -1670,12 +2018,246 @@ static int read_tree_cb(const char *root, const git_tree_entry *tentry, void *da
 
 int git_index_read_tree(git_index *index, const git_tree *tree)
 {
+	int error = 0;
+	git_vector entries = GIT_VECTOR_INIT;
+	read_tree_data data;
+
+	git_vector_sort(&index->entries);
+
+	git_vector_set_cmp(&entries, index->entries._cmp);
+	git_vector_swap(&entries, &index->entries);
+
 	git_index_clear(index);
 
-	return git_tree_walk(tree, GIT_TREEWALK_POST, read_tree_cb, index);
+	data.index = index;
+	data.old_entries = &entries;
+
+	error = git_tree_walk(tree, GIT_TREEWALK_POST, read_tree_cb, &data);
+
+	index_entries_free(&entries);
+	git_vector_free(&entries);
+
+	git_vector_sort(&index->entries);
+
+	return error;
 }
 
 git_repository *git_index_owner(const git_index *index)
 {
 	return INDEX_OWNER(index);
+}
+
+int git_index_add_all(
+	git_index *index,
+	const git_strarray *paths,
+	unsigned int flags,
+	git_index_matched_path_cb cb,
+	void *payload)
+{
+	int error;
+	git_repository *repo;
+	git_iterator *wditer = NULL;
+	const git_index_entry *wd = NULL;
+	git_index_entry *entry;
+	git_pathspec_context ps;
+	const char *match;
+	size_t existing;
+	bool no_fnmatch = (flags & GIT_INDEX_ADD_DISABLE_PATHSPEC_MATCH) != 0;
+	int ignorecase;
+	git_oid blobid;
+
+	assert(index);
+
+	if (INDEX_OWNER(index) == NULL)
+		return create_index_error(-1,
+			"Could not add paths to index. "
+			"Index is not backed up by an existing repository.");
+
+	repo = INDEX_OWNER(index);
+	if ((error = git_repository__ensure_not_bare(repo, "index add all")) < 0)
+		return error;
+
+	if (git_repository__cvar(&ignorecase, repo, GIT_CVAR_IGNORECASE) < 0)
+		return -1;
+
+	if ((error = git_pathspec_context_init(&ps, paths)) < 0)
+		return error;
+
+	/* optionally check that pathspec doesn't mention any ignored files */
+	if ((flags & GIT_INDEX_ADD_CHECK_PATHSPEC) != 0 &&
+		(flags & GIT_INDEX_ADD_FORCE) == 0 &&
+		(error = git_ignore__check_pathspec_for_exact_ignores(
+			repo, &ps.pathspec, no_fnmatch)) < 0)
+		goto cleanup;
+
+	if ((error = git_iterator_for_workdir(
+			&wditer, repo, 0, ps.prefix, ps.prefix)) < 0)
+		goto cleanup;
+
+	while (!(error = git_iterator_advance(&wd, wditer))) {
+
+		/* check if path actually matches */
+		if (!git_pathspec_match_path(
+				&ps.pathspec, wd->path, no_fnmatch, ignorecase, &match))
+			continue;
+
+		/* skip ignored items that are not already in the index */
+		if ((flags & GIT_INDEX_ADD_FORCE) == 0 &&
+			git_iterator_current_is_ignored(wditer) &&
+			index_find(&existing, index, wd->path, 0) < 0)
+			continue;
+
+		/* issue notification callback if requested */
+		if (cb && (error = cb(wd->path, match, payload)) != 0) {
+			if (error > 0) /* return > 0 means skip this one */
+				continue;
+			if (error < 0) { /* return < 0 means abort */
+				giterr_clear();
+				error = GIT_EUSER;
+				break;
+			}
+		}
+
+		/* TODO: Should we check if the file on disk is already an exact
+		 * match to the file in the index and skip this work if it is?
+		 */
+
+		/* write the blob to disk and get the oid */
+		if ((error = git_blob_create_fromworkdir(&blobid, repo, wd->path)) < 0)
+			break;
+
+		/* make the new entry to insert */
+		if ((entry = index_entry_dup(wd)) == NULL) {
+			error = -1;
+			break;
+		}
+		entry->oid = blobid;
+
+		/* add working directory item to index */
+		if ((error = index_insert(index, entry, 1)) < 0) {
+			index_entry_free(entry);
+			break;
+		}
+
+		git_tree_cache_invalidate_path(index->tree, wd->path);
+
+		/* add implies conflict resolved, move conflict entries to REUC */
+		if ((error = index_conflict_to_reuc(index, wd->path)) < 0) {
+			if (error != GIT_ENOTFOUND)
+				break;
+			giterr_clear();
+		}
+	}
+
+	if (error == GIT_ITEROVER)
+		error = 0;
+
+cleanup:
+	git_iterator_free(wditer);
+	git_pathspec_context_free(&ps);
+
+	return error;
+}
+
+enum {
+	INDEX_ACTION_NONE = 0,
+	INDEX_ACTION_UPDATE = 1,
+	INDEX_ACTION_REMOVE = 2,
+};
+
+static int index_apply_to_all(
+	git_index *index,
+	int action,
+	const git_strarray *paths,
+	git_index_matched_path_cb cb,
+	void *payload)
+{
+	int error = 0;
+	size_t i;
+	git_pathspec_context ps;
+	const char *match;
+	git_buf path = GIT_BUF_INIT;
+
+	assert(index);
+
+	if ((error = git_pathspec_context_init(&ps, paths)) < 0)
+		return error;
+
+	git_vector_sort(&index->entries);
+
+	for (i = 0; !error && i < index->entries.length; ++i) {
+		git_index_entry *entry = git_vector_get(&index->entries, i);
+
+		/* check if path actually matches */
+		if (!git_pathspec_match_path(
+				&ps.pathspec, entry->path, false, index->ignore_case, &match))
+			continue;
+
+		/* issue notification callback if requested */
+		if (cb && (error = cb(entry->path, match, payload)) != 0) {
+			if (error > 0) { /* return > 0 means skip this one */
+				error = 0;
+				continue;
+			}
+			if (error < 0) { /* return < 0 means abort */
+				giterr_clear();
+				error = GIT_EUSER;
+				break;
+			}
+		}
+
+		/* index manipulation may alter entry, so don't depend on it */
+		if ((error = git_buf_sets(&path, entry->path)) < 0)
+			break;
+
+		switch (action) {
+		case INDEX_ACTION_NONE:
+			break;
+		case INDEX_ACTION_UPDATE:
+			error = git_index_add_bypath(index, path.ptr);
+
+			if (error == GIT_ENOTFOUND) {
+				giterr_clear();
+
+				error = git_index_remove_bypath(index, path.ptr);
+
+				if (!error) /* back up foreach if we removed this */
+					i--;
+			}
+			break;
+		case INDEX_ACTION_REMOVE:
+			if (!(error = git_index_remove_bypath(index, path.ptr)))
+				i--; /* back up foreach if we removed this */
+			break;
+		default:
+			giterr_set(GITERR_INVALID, "Unknown index action %d", action);
+			error = -1;
+			break;
+		}
+	}
+
+	git_buf_free(&path);
+	git_pathspec_context_free(&ps);
+
+	return error;
+}
+
+int git_index_remove_all(
+	git_index *index,
+	const git_strarray *pathspec,
+	git_index_matched_path_cb cb,
+	void *payload)
+{
+	return index_apply_to_all(
+		index, INDEX_ACTION_REMOVE, pathspec, cb, payload);
+}
+
+int git_index_update_all(
+	git_index *index,
+	const git_strarray *pathspec,
+	git_index_matched_path_cb cb,
+	void *payload)
+{
+	return index_apply_to_all(
+		index, INDEX_ACTION_UPDATE, pathspec, cb, payload);
 }

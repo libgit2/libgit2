@@ -32,7 +32,7 @@ typedef enum {
 
 	/** Errors that do not impact the program's execution */
 	GIT_TRACE_ERROR = 2,
-	
+
 	/** Warnings that suggest abnormal data */
 	GIT_TRACE_WARN = 3,
 
@@ -65,4 +65,3 @@ GIT_EXTERN(int) git_trace_set(git_trace_level_t level, git_trace_callback cb);
 /** @} */
 GIT_END_DECL
 #endif
-

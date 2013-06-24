@@ -84,6 +84,10 @@ static int check_uint16_param(const char *arg, const char *pattern, uint16_t *va
 	char *endptr = NULL;
 	if (strncmp(arg, pattern, len))
 		return 0;
+	if (arg[len] == '\0' && pattern[len - 1] != '=')
+		return 1;
+	if (arg[len] == '=')
+		len++;
 	strval = strtoul(arg + len, &endptr, 0);
 	if (endptr == arg)
 		return 0;
@@ -110,14 +114,24 @@ static void usage(const char *message, const char *arg)
 	exit(1);
 }
 
+enum {
+	FORMAT_PATCH = 0,
+	FORMAT_COMPACT = 1,
+	FORMAT_RAW = 2
+};
+
 int main(int argc, char *argv[])
 {
 	git_repository *repo = NULL;
 	git_tree *t1 = NULL, *t2 = NULL;
 	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
+	git_diff_find_options findopts = GIT_DIFF_FIND_OPTIONS_INIT;
 	git_diff_list *diff;
-	int i, color = -1, compact = 0, cached = 0;
-	char *a, *dir = ".", *treeish1 = NULL, *treeish2 = NULL;
+	int i, color = -1, format = FORMAT_PATCH, cached = 0;
+	char *a, *treeish1 = NULL, *treeish2 = NULL;
+	const char *dir = ".";
+
+	git_threads_init();
 
 	/* parse arguments as copied from git-diff */
 
@@ -134,11 +148,13 @@ int main(int argc, char *argv[])
 		}
 		else if (!strcmp(a, "-p") || !strcmp(a, "-u") ||
 			!strcmp(a, "--patch"))
-			compact = 0;
+			format = FORMAT_PATCH;
 		else if (!strcmp(a, "--cached"))
 			cached = 1;
 		else if (!strcmp(a, "--name-status"))
-			compact = 1;
+			format = FORMAT_COMPACT;
+		else if (!strcmp(a, "--raw"))
+			format = FORMAT_RAW;
 		else if (!strcmp(a, "--color"))
 			color = 0;
 		else if (!strcmp(a, "--no-color"))
@@ -157,12 +173,27 @@ int main(int argc, char *argv[])
 			opts.flags |= GIT_DIFF_INCLUDE_IGNORED;
 		else if (!strcmp(a, "--untracked"))
 			opts.flags |= GIT_DIFF_INCLUDE_UNTRACKED;
+		else if (check_uint16_param(a, "-M", &findopts.rename_threshold) ||
+				 check_uint16_param(a, "--find-renames",
+					&findopts.rename_threshold))
+			findopts.flags |= GIT_DIFF_FIND_RENAMES;
+		else if (check_uint16_param(a, "-C", &findopts.copy_threshold) ||
+				 check_uint16_param(a, "--find-copies",
+					&findopts.copy_threshold))
+			findopts.flags |= GIT_DIFF_FIND_COPIES;
+		else if (!strcmp(a, "--find-copies-harder"))
+			findopts.flags |= GIT_DIFF_FIND_COPIES_FROM_UNMODIFIED;
+		else if (!strncmp(a, "-B", 2) || !strncmp(a, "--break-rewrites", 16)) {
+			/* TODO: parse thresholds */
+			findopts.flags |= GIT_DIFF_FIND_REWRITES;
+		}
 		else if (!check_uint16_param(a, "-U", &opts.context_lines) &&
 			!check_uint16_param(a, "--unified=", &opts.context_lines) &&
 			!check_uint16_param(a, "--inter-hunk-context=",
 				&opts.interhunk_lines) &&
 			!check_str_param(a, "--src-prefix=", &opts.old_prefix) &&
-			!check_str_param(a, "--dst-prefix=", &opts.new_prefix))
+			!check_str_param(a, "--dst-prefix=", &opts.new_prefix) &&
+			!check_str_param(a, "--git-dir=", &dir))
 			usage("Unknown arg", a);
 	}
 
@@ -200,13 +231,24 @@ int main(int argc, char *argv[])
 	else
 		check(git_diff_index_to_workdir(&diff, repo, NULL, &opts), "Diff");
 
+	if ((findopts.flags & GIT_DIFF_FIND_ALL) != 0)
+		check(git_diff_find_similar(diff, &findopts),
+			"finding renames and copies ");
+
 	if (color >= 0)
 		fputs(colors[0], stdout);
 
-	if (compact)
-		check(git_diff_print_compact(diff, printer, &color), "Displaying diff");
-	else
+	switch (format) {
+	case FORMAT_PATCH:
 		check(git_diff_print_patch(diff, printer, &color), "Displaying diff");
+		break;
+	case FORMAT_COMPACT:
+		check(git_diff_print_compact(diff, printer, &color), "Displaying diff");
+		break;
+	case FORMAT_RAW:
+		check(git_diff_print_raw(diff, printer, &color), "Displaying diff");
+		break;
+	}
 
 	if (color >= 0)
 		fputs(colors[0], stdout);
@@ -215,6 +257,8 @@ int main(int argc, char *argv[])
 	git_tree_free(t1);
 	git_tree_free(t2);
 	git_repository_free(repo);
+
+	git_threads_shutdown();
 
 	return 0;
 }

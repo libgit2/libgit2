@@ -48,10 +48,10 @@ struct hash_cryptoapi_prov {
 
 /* Function declarations for CNG */
 typedef NTSTATUS (WINAPI *hash_win32_cng_open_algorithm_provider_fn)(
-    HANDLE /* BCRYPT_ALG_HANDLE */ *phAlgorithm,
-    LPCWSTR pszAlgId,
-    LPCWSTR pszImplementation,
-    DWORD dwFlags);
+	HANDLE /* BCRYPT_ALG_HANDLE */ *phAlgorithm,
+	LPCWSTR pszAlgId,
+	LPCWSTR pszImplementation,
+	DWORD dwFlags);
 
 typedef NTSTATUS (WINAPI *hash_win32_cng_get_property_fn)(
 	HANDLE /* BCRYPT_HANDLE */ hObject,

@@ -12,6 +12,7 @@
 #include "buffer.h"
 #include "buf_text.h"
 #include "git2/config.h"
+#include "git2/sys/config.h"
 #include "git2/types.h"
 #include "strmap.h"
 
@@ -80,10 +81,10 @@ typedef struct {
 	time_t file_mtime;
 	size_t file_size;
 
-	unsigned int level;
+	git_config_level_t level;
 } diskfile_backend;
 
-static int config_parse(diskfile_backend *cfg_file, unsigned int level);
+static int config_parse(diskfile_backend *cfg_file, git_config_level_t level);
 static int parse_variable(diskfile_backend *cfg, char **var_name, char **var_value);
 static int config_write(diskfile_backend *cfg, const char *key, const regex_t *preg, const char *value);
 static char *escape_value(const char *ptr);
@@ -180,7 +181,7 @@ static void free_vars(git_strmap *values)
 	git_strmap_free(values);
 }
 
-static int config_open(git_config_backend *cfg, unsigned int level)
+static int config_open(git_config_backend *cfg, git_config_level_t level)
 {
 	int res;
 	diskfile_backend *b = (diskfile_backend *)cfg;
@@ -295,7 +296,7 @@ cleanup:
 
 static int config_set(git_config_backend *cfg, const char *name, const char *value)
 {
-	cvar_t *var = NULL, *old_var;
+	cvar_t *var = NULL, *old_var = NULL;
 	diskfile_backend *b = (diskfile_backend *)cfg;
 	char *key, *esc_value = NULL;
 	khiter_t pos;
@@ -481,8 +482,10 @@ static int config_set_multivar(
 
 	pos = git_strmap_lookup_index(b->values, key);
 	if (!git_strmap_valid_index(b->values, pos)) {
+		/* If we don't have it, behave like a normal set */
+		result = config_set(cfg, name, value);
 		git__free(key);
-		return GIT_ENOTFOUND;
+		return result;
 	}
 
 	var = git_strmap_value_at(b->values, pos);
@@ -962,7 +965,7 @@ static int strip_comments(char *line, int in_quotes)
 	return quote_count;
 }
 
-static int config_parse(diskfile_backend *cfg_file, unsigned int level)
+static int config_parse(diskfile_backend *cfg_file, git_config_level_t level)
 {
 	int c;
 	char *current_section = NULL;

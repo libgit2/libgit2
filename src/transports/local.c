@@ -124,7 +124,7 @@ static int store_refs(transport_local *t)
 
 	assert(t);
 
-	if (git_reference_list(&ref_names, t->repo, GIT_REF_LISTALL) < 0 ||
+	if (git_reference_list(&ref_names, t->repo) < 0 ||
 		git_vector_init(&t->refs, ref_names.count, NULL) < 0)
 		goto on_error;
 
@@ -282,7 +282,7 @@ static int local_push_copy_object(
 		odb_obj_size) < 0 ||
 		odb_stream->finalize_write(&remote_odb_obj_oid, odb_stream) < 0) {
 		error = -1;
-	} else if (git_oid_cmp(&obj->id, &remote_odb_obj_oid) != 0) {
+	} else if (git_oid__cmp(&obj->id, &remote_odb_obj_oid) != 0) {
 		giterr_set(GITERR_ODB, "Error when writing object to remote odb "
 			"during local push operation. Remote odb object oid does not "
 			"match local oid.");
@@ -348,7 +348,7 @@ static int local_push(
 	if ((error = git_repository_open(&remote_repo, push->remote->url)) < 0)
 		return error;
 
-	/* We don't currently support pushing locally to non-bare repos. Proper 
+	/* We don't currently support pushing locally to non-bare repos. Proper
 	   non-bare repo push support would require checking configs to see if
 	   we should override the default 'don't let this happen' behavior */
 	if (!remote_repo->is_bare) {
@@ -495,7 +495,7 @@ static int local_download_pack(
 			/* Tag or some other wanted object. Add it on its own */
 			error = git_packbuilder_insert(pack, &rhead->oid, rhead->name);
 		}
-      git_object_free(obj);
+		git_object_free(obj);
 	}
 
 	/* Walk the objects, building a packfile */
@@ -571,6 +571,8 @@ static void local_cancel(git_transport *transport)
 static int local_close(git_transport *transport)
 {
 	transport_local *t = (transport_local *)transport;
+	size_t i;
+	git_remote_head *head;
 
 	t->connected = 0;
 
@@ -584,24 +586,22 @@ static int local_close(git_transport *transport)
 		t->url = NULL;
 	}
 
-	return 0;
-}
-
-static void local_free(git_transport *transport)
-{
-	transport_local *t = (transport_local *)transport;
-	size_t i;
-	git_remote_head *head;
-
-	/* Close the transport, if it's still open. */
-	local_close(transport);
-
 	git_vector_foreach(&t->refs, i, head) {
 		git__free(head->name);
 		git__free(head);
 	}
 
 	git_vector_free(&t->refs);
+
+	return 0;
+}
+
+static void local_free(git_transport *transport)
+{
+	transport_local *t = (transport_local *)transport;
+
+	/* Close the transport, if it's still open. */
+	local_close(transport);
 
 	/* Free the transport */
 	git__free(t);

@@ -111,12 +111,12 @@ int p_open(const char *path, int flags, ...)
 		va_end(arg_list);
 	}
 
-	return open(path, flags | O_BINARY, mode);
+	return open(path, flags | O_BINARY | O_CLOEXEC, mode);
 }
 
 int p_creat(const char *path, mode_t mode)
 {
-	return open(path, O_WRONLY | O_CREAT | O_TRUNC | O_BINARY, mode);
+	return open(path, O_WRONLY | O_CREAT | O_TRUNC | O_BINARY | O_CLOEXEC, mode);
 }
 
 int p_getcwd(char *buffer_out, size_t size)

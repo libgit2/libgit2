@@ -14,6 +14,9 @@
 PROJECT(libgit2 C)
 CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
 
+# Add find modules to the path
+SET(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
+
 # Build options
 #
 OPTION( SONAME				"Set the (SO)VERSION of the target"		ON  )
@@ -24,6 +27,8 @@ OPTION( BUILD_EXAMPLES		"Build library usage example apps"		OFF )
 OPTION( TAGS				"Generate tags"							OFF )
 OPTION( PROFILE				"Generate profiling information"		OFF )
 OPTION( ENABLE_TRACE		"Enables tracing support"				OFF )
+OPTION( LIBGIT2_FILENAME	"Name of the produced binary" OFF )
+
 IF(MSVC)
 	# This option is only availalbe when building with MSVC. By default,
 	# libgit2 is build using the stdcall calling convention, as that's what
@@ -97,14 +102,22 @@ ELSE ()
 	IF (NOT AMIGA)
 		FIND_PACKAGE(OpenSSL)
 	ENDIF ()
-	FILE(GLOB SRC_HTTP deps/http-parser/*.c)
-	INCLUDE_DIRECTORIES(deps/http-parser)
+
+	FIND_PACKAGE(HTTP_Parser QUIET)
+	IF (HTTP_PARSER_FOUND AND HTTP_PARSER_VERSION_MAJOR EQUAL 2)
+		INCLUDE_DIRECTORIES(${HTTP_PARSER_INCLUDE_DIRS})
+		LINK_LIBRARIES(${HTTP_PARSER_LIBRARIES})
+	ELSE()
+		MESSAGE("http-parser was not found or is too old; using bundled 3rd-party sources.")
+		INCLUDE_DIRECTORIES(deps/http-parser)
+		FILE(GLOB SRC_HTTP deps/http-parser/*.c)
+	ENDIF()
 ENDIF()
 
 # Specify sha1 implementation
 IF (WIN32 AND NOT MINGW AND NOT SHA1_TYPE STREQUAL "builtin")
-    ADD_DEFINITIONS(-DWIN32_SHA1)
-    FILE(GLOB SRC_SHA1 src/hash/hash_win32.c)
+	ADD_DEFINITIONS(-DWIN32_SHA1)
+	FILE(GLOB SRC_SHA1 src/hash/hash_win32.c)
 ELSEIF (OPENSSL_FOUND AND NOT SHA1_TYPE STREQUAL "builtin")
 	ADD_DEFINITIONS(-DOPENSSL_SHA1)
 ELSE()
@@ -123,14 +136,14 @@ IF(WIN32 OR AMIGA)
 ENDIF()
 
 # Optional external dependency: zlib
-IF(NOT ZLIB_LIBRARY)
-	# It's optional, but FIND_PACKAGE gives a warning that looks more like an
-	# error.
-	FIND_PACKAGE(ZLIB QUIET)
-ENDIF()
+# It's optional, but FIND_PACKAGE gives a warning that looks more like an
+# error.
+FIND_PACKAGE(ZLIB QUIET)
 IF (ZLIB_FOUND)
 	INCLUDE_DIRECTORIES(${ZLIB_INCLUDE_DIRS})
 	LINK_LIBRARIES(${ZLIB_LIBRARIES})
+	# Fake the message CMake would have shown
+	MESSAGE("-- Found zlib: ${ZLIB_LIBRARY}")
 ELSE()
 	MESSAGE( "zlib was not found; using bundled 3rd-party sources." )
 	INCLUDE_DIRECTORIES(deps/zlib)
@@ -138,10 +151,19 @@ ELSE()
 	FILE(GLOB SRC_ZLIB deps/zlib/*.c)
 ENDIF()
 
+IF(NOT LIBSSH2_LIBRARY)
+	FIND_PACKAGE(LIBSSH2 QUIET)
+ENDIF()
+IF (LIBSSH2_FOUND)
+	ADD_DEFINITIONS(-DGIT_SSH)
+	INCLUDE_DIRECTORIES(${LIBSSH2_INCLUDE_DIR})
+	SET(SSH_LIBRARIES ${LIBSSH2_LIBRARIES})
+ENDIF()
+
 # Platform specific compilation flags
 IF (MSVC)
 
-    STRING(REPLACE "/Zm1000" " " CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
+	STRING(REPLACE "/Zm1000" " " CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
 
 	# /GF - String pooling
 	# /MP - Parallel build
@@ -156,7 +178,7 @@ IF (MSVC)
 		SET(CRT_FLAG_DEBUG "/MTd")
 		SET(CRT_FLAG_RELEASE "/MT")
 	ELSE()
-	    SET(CRT_FLAG_DEBUG "/MDd")
+		SET(CRT_FLAG_DEBUG "/MDd")
 		SET(CRT_FLAG_RELEASE "/MD")
 	ENDIF()
 
@@ -277,14 +299,24 @@ ELSE()
 ENDIF()
 FILE(GLOB SRC_GIT2 src/*.c src/transports/*.c src/xdiff/*.c)
 
+# Determine architecture of the machine
+IF (CMAKE_SIZEOF_VOID_P EQUAL 8)
+	ADD_DEFINITIONS(-DGIT_ARCH_64)
+ELSEIF (CMAKE_SIZEOF_VOID_P EQUAL 4)
+	ADD_DEFINITIONS(-DGIT_ARCH_32)
+ELSE()
+	message(FATAL_ERROR "Unsupported architecture")
+ENDIF()
+
 # Compile and link libgit2
 ADD_LIBRARY(git2 ${SRC_GIT2} ${SRC_OS} ${SRC_ZLIB} ${SRC_HTTP} ${SRC_REGEX} ${SRC_SHA1} ${WIN_RC})
 TARGET_LINK_LIBRARIES(git2 ${SSL_LIBRARIES})
+TARGET_LINK_LIBRARIES(git2 ${SSH_LIBRARIES})
 TARGET_OS_LIBRARIES(git2)
 
 # Workaround for Cmake bug #0011240 (see http://public.kitware.com/Bug/view.php?id=11240)
 # Win64+MSVC+static libs = linker error
-IF(MSVC AND NOT BUILD_SHARED_LIBS AND (${CMAKE_SIZEOF_VOID_P} MATCHES "8") )
+IF(MSVC AND GIT_ARCH_64 AND NOT BUILD_SHARED_LIBS)
   SET_TARGET_PROPERTIES(git2 PROPERTIES STATIC_LIBRARY_FLAGS "/MACHINE:x64")
 ENDIF()
 
@@ -293,6 +325,10 @@ MSVC_SPLIT_SOURCES(git2)
 IF (SONAME)
 	SET_TARGET_PROPERTIES(git2 PROPERTIES VERSION ${LIBGIT2_VERSION_STRING})
 	SET_TARGET_PROPERTIES(git2 PROPERTIES SOVERSION ${LIBGIT2_VERSION_MAJOR})
+	IF (LIBGIT2_FILENAME)
+		ADD_DEFINITIONS(-DLIBGIT2_FILENAME=\"${LIBGIT2_FILENAME}\")
+		SET_TARGET_PROPERTIES(git2 PROPERTIES OUTPUT_NAME ${LIBGIT2_FILENAME})
+	ENDIF()
 ENDIF()
 CONFIGURE_FILE(${CMAKE_CURRENT_SOURCE_DIR}/libgit2.pc.in ${CMAKE_CURRENT_BINARY_DIR}/libgit2.pc @ONLY)
 
@@ -328,7 +364,7 @@ IF (BUILD_CLAR)
 
 	ADD_CUSTOM_COMMAND(
 		OUTPUT ${CLAR_PATH}/clar.suite
-		COMMAND ${PYTHON_EXECUTABLE} generate.py -xonline .
+		COMMAND ${PYTHON_EXECUTABLE} generate.py -f -xonline .
 		DEPENDS ${SRC_TEST}
 		WORKING_DIRECTORY ${CLAR_PATH}
 	)
@@ -340,6 +376,7 @@ IF (BUILD_CLAR)
 	ADD_EXECUTABLE(libgit2_clar ${SRC_GIT2} ${SRC_OS} ${SRC_CLAR} ${SRC_TEST} ${SRC_ZLIB} ${SRC_HTTP} ${SRC_REGEX} ${SRC_SHA1})
 
 	TARGET_LINK_LIBRARIES(libgit2_clar ${SSL_LIBRARIES})
+	TARGET_LINK_LIBRARIES(libgit2_clar ${SSH_LIBRARIES})
 	TARGET_OS_LIBRARIES(libgit2_clar)
 	MSVC_SPLIT_SOURCES(libgit2_clar)
 

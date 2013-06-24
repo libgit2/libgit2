@@ -16,6 +16,8 @@ struct git_refdb {
 	git_refdb_backend *backend;
 };
 
+void git_refdb__free(git_refdb *db);
+
 int git_refdb_exists(
 	int *exists,
 	git_refdb *refdb,
@@ -26,21 +28,19 @@ int git_refdb_lookup(
 	git_refdb *refdb,
 	const char *ref_name);
 
-int git_refdb_foreach(
-	git_refdb *refdb,
-	unsigned int list_flags,
-	git_reference_foreach_cb callback,
-	void *payload);
+int git_refdb_rename(
+	git_reference **out,
+	git_refdb *db,
+	const char *old_name,
+	const char *new_name,
+	int force);
 
-int git_refdb_foreach_glob(
-	git_refdb *refdb,
-	const char *glob,
-	unsigned int list_flags,
-	git_reference_foreach_cb callback,
-	void *payload);
+int git_refdb_iterator(git_reference_iterator **out, git_refdb *db, const char *glob);
+int git_refdb_iterator_next(git_reference **out, git_reference_iterator *iter);
+int git_refdb_iterator_next_name(const char **out, git_reference_iterator *iter);
+void git_refdb_iterator_free(git_reference_iterator *iter);
 
-int git_refdb_write(git_refdb *refdb, const git_reference *ref);
-
-int git_refdb_delete(struct git_refdb *refdb, const git_reference *ref);
+int git_refdb_write(git_refdb *refdb, git_reference *ref, int force);
+int git_refdb_delete(git_refdb *refdb, const char *ref_name);
 
 #endif

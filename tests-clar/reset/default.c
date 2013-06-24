@@ -133,7 +133,7 @@ void test_reset_default__resetting_filepaths_replaces_their_corresponding_index_
  */
 void test_reset_default__resetting_filepaths_clears_previous_conflicts(void)
 {
-	git_index_entry *conflict_entry[3];
+	const git_index_entry *conflict_entry[3];
 	git_strarray after;
 
 	char *paths[] = { "conflicts-one.txt" };

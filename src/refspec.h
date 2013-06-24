@@ -11,11 +11,13 @@
 #include "buffer.h"
 
 struct git_refspec {
-	struct git_refspec *next;
+	char *string;
 	char *src;
 	char *dst;
 	unsigned int force :1,
+		push : 1,
 		pattern :1,
+		dwim :1,
 		matching :1;
 };
 

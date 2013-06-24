@@ -370,16 +370,45 @@ void test_submodule_status__iterator(void)
 
 	cl_git_pass(git_iterator_for_workdir(&iter, g_repo,
 		GIT_ITERATOR_IGNORE_CASE | GIT_ITERATOR_INCLUDE_TREES, NULL, NULL));
-	cl_git_pass(git_iterator_current(&entry, iter));
 
-	for (i = 0; entry; ++i) {
+	for (i = 0; !git_iterator_advance(&entry, iter); ++i)
 		cl_assert_equal_s(expected[i], entry->path);
-		cl_git_pass(git_iterator_advance(&entry, iter));
-	}
 
 	git_iterator_free(iter);
 
-	opts.flags = GIT_STATUS_OPT_INCLUDE_UNTRACKED | GIT_STATUS_OPT_INCLUDE_UNMODIFIED | GIT_STATUS_OPT_RECURSE_UNTRACKED_DIRS;
+	opts.flags = GIT_STATUS_OPT_INCLUDE_UNTRACKED |
+		GIT_STATUS_OPT_INCLUDE_UNMODIFIED |
+		GIT_STATUS_OPT_RECURSE_UNTRACKED_DIRS;
 
-	cl_git_pass(git_status_foreach_ext(g_repo, &opts, confirm_submodule_status, &exp));
+	cl_git_pass(git_status_foreach_ext(
+		g_repo, &opts, confirm_submodule_status, &exp));
+}
+
+void test_submodule_status__untracked_dirs_containing_ignored_files(void)
+{
+	git_buf path = GIT_BUF_INIT;
+	unsigned int status, expected;
+	git_submodule *sm;
+
+	cl_git_pass(git_buf_joinpath(&path, git_repository_path(g_repo), "modules/sm_unchanged/info/exclude"));
+	cl_git_append2file(git_buf_cstr(&path), "\n*.ignored\n");
+
+	cl_git_pass(git_buf_joinpath(&path, git_repository_workdir(g_repo), "sm_unchanged/directory"));
+	cl_git_pass(git_futils_mkdir(git_buf_cstr(&path), NULL, 0755, 0));
+	cl_git_pass(git_buf_joinpath(&path, git_buf_cstr(&path), "i_am.ignored"));
+	cl_git_mkfile(git_buf_cstr(&path), "ignored this file, please\n");
+
+	cl_git_pass(git_submodule_lookup(&sm, g_repo, "sm_unchanged"));
+	cl_git_pass(git_submodule_status(&status, sm));
+
+	cl_assert(GIT_SUBMODULE_STATUS_IS_UNMODIFIED(status));
+
+	expected = GIT_SUBMODULE_STATUS_IN_HEAD |
+		GIT_SUBMODULE_STATUS_IN_INDEX |
+		GIT_SUBMODULE_STATUS_IN_CONFIG |
+		GIT_SUBMODULE_STATUS_IN_WD;
+
+	cl_assert(status == expected);
+
+	git_buf_free(&path);
 }

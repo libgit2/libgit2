@@ -11,6 +11,7 @@
 #include "indexer.h"
 #include "types.h"
 #include "oid.h"
+#include "strarray.h"
 
 /**
  * @file git2/index.h
@@ -21,50 +22,29 @@
  */
 GIT_BEGIN_DECL
 
-#define GIT_IDXENTRY_NAMEMASK  (0x0fff)
-#define GIT_IDXENTRY_STAGEMASK (0x3000)
-#define GIT_IDXENTRY_EXTENDED  (0x4000)
-#define GIT_IDXENTRY_VALID     (0x8000)
-#define GIT_IDXENTRY_STAGESHIFT 12
-
-/*
- * Flags are divided into two parts: in-memory flags and
- * on-disk ones. Flags in GIT_IDXENTRY_EXTENDED_FLAGS
- * will get saved on-disk.
- *
- * In-memory only flags:
- */
-#define GIT_IDXENTRY_UPDATE            (1 << 0)
-#define GIT_IDXENTRY_REMOVE            (1 << 1)
-#define GIT_IDXENTRY_UPTODATE          (1 << 2)
-#define GIT_IDXENTRY_ADDED             (1 << 3)
-
-#define GIT_IDXENTRY_HASHED            (1 << 4)
-#define GIT_IDXENTRY_UNHASHED          (1 << 5)
-#define GIT_IDXENTRY_WT_REMOVE         (1 << 6) /* remove in work directory */
-#define GIT_IDXENTRY_CONFLICTED        (1 << 7)
-
-#define GIT_IDXENTRY_UNPACKED          (1 << 8)
-#define GIT_IDXENTRY_NEW_SKIP_WORKTREE (1 << 9)
-
-/*
- * Extended on-disk flags:
- */
-#define GIT_IDXENTRY_INTENT_TO_ADD     (1 << 13)
-#define GIT_IDXENTRY_SKIP_WORKTREE     (1 << 14)
-/* GIT_IDXENTRY_EXTENDED2 is for future extension */
-#define GIT_IDXENTRY_EXTENDED2         (1 << 15)
-
-#define GIT_IDXENTRY_EXTENDED_FLAGS (GIT_IDXENTRY_INTENT_TO_ADD | GIT_IDXENTRY_SKIP_WORKTREE)
-
-/** Time used in a git index entry */
+/** Time structure used in a git index entry */
 typedef struct {
 	git_time_t seconds;
 	/* nsec should not be stored as time_t compatible */
 	unsigned int nanoseconds;
 } git_index_time;
 
-/** Memory representation of a file entry in the index. */
+/**
+ * In-memory representation of a file entry in the index.
+ *
+ * This is a public structure that represents a file entry in the index.
+ * The meaning of the fields corresponds to core Git's documentation (in
+ * "Documentation/technical/index-format.txt").
+ *
+ * The `flags` field consists of a number of bit fields which can be
+ * accessed via the first set of `GIT_IDXENTRY_...` bitmasks below.  These
+ * flags are all read from and persisted to disk.
+ *
+ * The `flags_extended` field also has a number of bit fields which can be
+ * accessed via the later `GIT_IDXENTRY_...` bitmasks below.  Some of
+ * these flags are read from and written to disk, but some are set aside
+ * for in-memory only reference.
+ */
 typedef struct git_index_entry {
 	git_index_time ctime;
 	git_index_time mtime;
@@ -84,20 +64,79 @@ typedef struct git_index_entry {
 	char *path;
 } git_index_entry;
 
-/** Representation of a resolve undo entry in the index. */
-typedef struct git_index_reuc_entry {
-	unsigned int mode[3];
-	git_oid oid[3];
-	char *path;
-} git_index_reuc_entry;
+/**
+ * Bitmasks for on-disk fields of `git_index_entry`'s `flags`
+ *
+ * These bitmasks match the four fields in the `git_index_entry` `flags`
+ * value both in memory and on disk.  You can use them to interpret the
+ * data in the `flags`.
+ */
+#define GIT_IDXENTRY_NAMEMASK  (0x0fff)
+#define GIT_IDXENTRY_STAGEMASK (0x3000)
+#define GIT_IDXENTRY_EXTENDED  (0x4000)
+#define GIT_IDXENTRY_VALID     (0x8000)
+#define GIT_IDXENTRY_STAGESHIFT 12
+
+#define GIT_IDXENTRY_STAGE(E) (((E)->flags & GIT_IDXENTRY_STAGEMASK) >> GIT_IDXENTRY_STAGESHIFT)
+
+/**
+ * Bitmasks for on-disk fields of `git_index_entry`'s `flags_extended`
+ *
+ * In memory, the `flags_extended` fields are divided into two parts: the
+ * fields that are read from and written to disk, and other fields that
+ * in-memory only and used by libgit2.  Only the flags in
+ * `GIT_IDXENTRY_EXTENDED_FLAGS` will get saved on-disk.
+ *
+ * These bitmasks match the three fields in the `git_index_entry`
+ * `flags_extended` value that belong on disk.  You can use them to
+ * interpret the data in the `flags_extended`.
+ */
+#define GIT_IDXENTRY_INTENT_TO_ADD     (1 << 13)
+#define GIT_IDXENTRY_SKIP_WORKTREE     (1 << 14)
+/* GIT_IDXENTRY_EXTENDED2 is reserved for future extension */
+#define GIT_IDXENTRY_EXTENDED2         (1 << 15)
+
+#define GIT_IDXENTRY_EXTENDED_FLAGS (GIT_IDXENTRY_INTENT_TO_ADD | GIT_IDXENTRY_SKIP_WORKTREE)
+
+/**
+ * Bitmasks for in-memory only fields of `git_index_entry`'s `flags_extended`
+ *
+ * These bitmasks match the other fields in the `git_index_entry`
+ * `flags_extended` value that are only used in-memory by libgit2.  You
+ * can use them to interpret the data in the `flags_extended`.
+ */
+#define GIT_IDXENTRY_UPDATE            (1 << 0)
+#define GIT_IDXENTRY_REMOVE            (1 << 1)
+#define GIT_IDXENTRY_UPTODATE          (1 << 2)
+#define GIT_IDXENTRY_ADDED             (1 << 3)
+
+#define GIT_IDXENTRY_HASHED            (1 << 4)
+#define GIT_IDXENTRY_UNHASHED          (1 << 5)
+#define GIT_IDXENTRY_WT_REMOVE         (1 << 6) /* remove in work directory */
+#define GIT_IDXENTRY_CONFLICTED        (1 << 7)
+
+#define GIT_IDXENTRY_UNPACKED          (1 << 8)
+#define GIT_IDXENTRY_NEW_SKIP_WORKTREE (1 << 9)
 
 /** Capabilities of system that affect index actions. */
-enum {
+typedef enum {
 	GIT_INDEXCAP_IGNORE_CASE = 1,
 	GIT_INDEXCAP_NO_FILEMODE = 2,
 	GIT_INDEXCAP_NO_SYMLINKS = 4,
 	GIT_INDEXCAP_FROM_OWNER  = ~0u
-};
+} git_indexcap_t;
+
+/** Callback for APIs that add/remove/update files matching pathspec */
+typedef int (*git_index_matched_path_cb)(
+	const char *path, const char *matched_pathspec, void *payload);
+
+/** Flags for APIs that add files matching pathspec */
+typedef enum {
+	GIT_INDEX_ADD_DEFAULT = 0,
+	GIT_INDEX_ADD_FORCE = (1u << 0),
+	GIT_INDEX_ADD_DISABLE_PATHSPEC_MATCH = (1u << 1),
+	GIT_INDEX_ADD_CHECK_PATHSPEC = (1u << 2),
+} git_index_add_option_t;
 
 /** @name Index File Functions
  *
@@ -272,11 +311,9 @@ GIT_EXTERN(void) git_index_clear(git_index *index);
 /**
  * Get a pointer to one of the entries in the index
  *
- * The values of this entry can be modified (except the path)
- * and the changes will be written back to disk on the next
- * write() call.
- *
- * The entry should not be freed by the caller.
+ * The entry is not modifiable and should not be freed.  Because the
+ * `git_index_entry` struct is a publicly defined struct, you should
+ * be able to make your own permanent copy of the data if necessary.
  *
  * @param index an existing index object
  * @param n the position of the entry
@@ -288,11 +325,9 @@ GIT_EXTERN(const git_index_entry *) git_index_get_byindex(
 /**
  * Get a pointer to one of the entries in the index
  *
- * The values of this entry can be modified (except the path)
- * and the changes will be written back to disk on the next
- * write() call.
- *
- * The entry should not be freed by the caller.
+ * The entry is not modifiable and should not be freed.  Because the
+ * `git_index_entry` struct is a publicly defined struct, you should
+ * be able to make your own permanent copy of the data if necessary.
  *
  * @param index an existing index object
  * @param path path to search
@@ -342,8 +377,7 @@ GIT_EXTERN(int) git_index_add(git_index *index, const git_index_entry *source_en
 /**
  * Return the stage number from a git index entry
  *
- * This entry is calculated from the entry's flag
- * attribute like this:
+ * This entry is calculated from the entry's flag attribute like this:
  *
  *	(entry->flags & GIT_IDXENTRY_STAGEMASK) >> GIT_IDXENTRY_STAGESHIFT
  *
@@ -400,6 +434,108 @@ GIT_EXTERN(int) git_index_add_bypath(git_index *index, const char *path);
 GIT_EXTERN(int) git_index_remove_bypath(git_index *index, const char *path);
 
 /**
+ * Add or update index entries matching files in the working directory.
+ *
+ * This method will fail in bare index instances.
+ *
+ * The `pathspec` is a list of file names or shell glob patterns that will
+ * matched against files in the repository's working directory.  Each file
+ * that matches will be added to the index (either updating an existing
+ * entry or adding a new entry).  You can disable glob expansion and force
+ * exact matching with the `GIT_INDEX_ADD_DISABLE_PATHSPEC_MATCH` flag.
+ *
+ * Files that are ignored will be skipped (unlike `git_index_add_bypath`).
+ * If a file is already tracked in the index, then it *will* be updated
+ * even if it is ignored.  Pass the `GIT_INDEX_ADD_FORCE` flag to
+ * skip the checking of ignore rules.
+ *
+ * To emulate `git add -A` and generate an error if the pathspec contains
+ * the exact path of an ignored file (when not using FORCE), add the
+ * `GIT_INDEX_ADD_CHECK_PATHSPEC` flag.  This checks that each entry
+ * in the `pathspec` that is an exact match to a filename on disk is
+ * either not ignored or already in the index.  If this check fails, the
+ * function will return GIT_EINVALIDSPEC.
+ *
+ * To emulate `git add -A` with the "dry-run" option, just use a callback
+ * function that always returns a positive value.  See below for details.
+ *
+ * If any files are currently the result of a merge conflict, those files
+ * will no longer be marked as conflicting.  The data about the conflicts
+ * will be moved to the "resolve undo" (REUC) section.
+ *
+ * If you provide a callback function, it will be invoked on each matching
+ * item in the working directory immediately *before* it is added to /
+ * updated in the index.  Returning zero will add the item to the index,
+ * greater than zero will skip the item, and less than zero will abort the
+ * scan and cause GIT_EUSER to be returned.
+ *
+ * @param index an existing index object
+ * @param pathspec array of path patterns
+ * @param flags combination of git_index_add_option_t flags
+ * @param callback notification callback for each added/updated path (also
+ *                 gets index of matching pathspec entry); can be NULL;
+ *                 return 0 to add, >0 to skip, <0 to abort scan.
+ * @param payload payload passed through to callback function
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_index_add_all(
+	git_index *index,
+	const git_strarray *pathspec,
+	unsigned int flags,
+	git_index_matched_path_cb callback,
+	void *payload);
+
+/**
+ * Remove all matching index entries.
+ *
+ * If you provide a callback function, it will be invoked on each matching
+ * item in the index immediately *before* it is removed.  Return 0 to
+ * remove the item, > 0 to skip the item, and < 0 to abort the scan.
+ *
+ * @param index An existing index object
+ * @param pathspec array of path patterns
+ * @param callback notification callback for each removed path (also
+ *                 gets index of matching pathspec entry); can be NULL;
+ *                 return 0 to add, >0 to skip, <0 to abort scan.
+ * @param payload payload passed through to callback function
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_index_remove_all(
+	git_index *index,
+	const git_strarray *pathspec,
+	git_index_matched_path_cb callback,
+	void *payload);
+
+/**
+ * Update all index entries to match the working directory
+ *
+ * This method will fail in bare index instances.
+ *
+ * This scans the existing index entries and synchronizes them with the
+ * working directory, deleting them if the corresponding working directory
+ * file no longer exists otherwise updating the information (including
+ * adding the latest version of file to the ODB if needed).
+ *
+ * If you provide a callback function, it will be invoked on each matching
+ * item in the index immediately *before* it is updated (either refreshed
+ * or removed depending on working directory state).  Return 0 to proceed
+ * with updating the item, > 0 to skip the item, and < 0 to abort the scan.
+ *
+ * @param index An existing index object
+ * @param pathspec array of path patterns
+ * @param callback notification callback for each updated path (also
+ *                 gets index of matching pathspec entry); can be NULL;
+ *                 return 0 to add, >0 to skip, <0 to abort scan.
+ * @param payload payload passed through to callback function
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_index_update_all(
+	git_index *index,
+	const git_strarray *pathspec,
+	git_index_matched_path_cb callback,
+	void *payload);
+
+/**
  * Find the first position of any entries which point to given
  * path in the Git index.
  *
@@ -434,7 +570,7 @@ GIT_EXTERN(int) git_index_find(size_t *at_pos, git_index *index, const char *pat
  * @return 0 or an error code
  */
 GIT_EXTERN(int) git_index_conflict_add(
-   git_index *index,
+	git_index *index,
 	const git_index_entry *ancestor_entry,
 	const git_index_entry *our_entry,
 	const git_index_entry *their_entry);
@@ -442,9 +578,9 @@ GIT_EXTERN(int) git_index_conflict_add(
 /**
  * Get the index entries that represent a conflict of a single file.
  *
- * The values of this entry can be modified (except the paths)
- * and the changes will be written back to disk on the next
- * write() call.
+ * The entries are not modifiable and should not be freed.  Because the
+ * `git_index_entry` struct is a publicly defined struct, you should
+ * be able to make your own permanent copy of the data if necessary.
  *
  * @param ancestor_out Pointer to store the ancestor entry
  * @param our_out Pointer to store the our entry
@@ -452,7 +588,12 @@ GIT_EXTERN(int) git_index_conflict_add(
  * @param index an existing index object
  * @param path path to search
  */
-GIT_EXTERN(int) git_index_conflict_get(git_index_entry **ancestor_out, git_index_entry **our_out, git_index_entry **their_out, git_index *index, const char *path);
+GIT_EXTERN(int) git_index_conflict_get(
+	const git_index_entry **ancestor_out,
+	const git_index_entry **our_out,
+	const git_index_entry **their_out,
+	git_index *index,
+	const char *path);
 
 /**
  * Removes the index entries that represent a conflict of a single file.
@@ -476,101 +617,39 @@ GIT_EXTERN(void) git_index_conflict_cleanup(git_index *index);
  */
 GIT_EXTERN(int) git_index_has_conflicts(const git_index *index);
 
-/**@}*/
-
-/** @name Resolve Undo (REUC) index entry manipulation.
- *
- * These functions work on the Resolve Undo index extension and contains
- * data about the original files that led to a merge conflict.
- */
-/**@{*/
-
 /**
- * Get the count of resolve undo entries currently in the index.
+ * Create an iterator for the conflicts in the index.  You may not modify the
+ * index while iterating, the results are undefined.
  *
- * @param index an existing index object
- * @return integer of count of current resolve undo entries
- */
-GIT_EXTERN(unsigned int) git_index_reuc_entrycount(git_index *index);
-
-/**
- * Finds the resolve undo entry that points to the given path in the Git
- * index.
- *
- * @param at_pos the address to which the position of the reuc entry is written (optional)
- * @param index an existing index object
- * @param path path to search
- * @return 0 if found, < 0 otherwise (GIT_ENOTFOUND)
- */
-GIT_EXTERN(int) git_index_reuc_find(size_t *at_pos, git_index *index, const char *path);
-
-/**
- * Get a resolve undo entry from the index.
- *
- * The returned entry is read-only and should not be modified
- * or freed by the caller.
- *
- * @param index an existing index object
- * @param path path to search
- * @return the resolve undo entry; NULL if not found
- */
-GIT_EXTERN(const git_index_reuc_entry *) git_index_reuc_get_bypath(git_index *index, const char *path);
-
-/**
- * Get a resolve undo entry from the index.
- *
- * The returned entry is read-only and should not be modified
- * or freed by the caller.
- *
- * @param index an existing index object
- * @param n the position of the entry
- * @return a pointer to the resolve undo entry; NULL if out of bounds
- */
-GIT_EXTERN(const git_index_reuc_entry *) git_index_reuc_get_byindex(git_index *index, size_t n);
-
-/**
- * Adds a resolve undo entry for a file based on the given parameters.
- *
- * The resolve undo entry contains the OIDs of files that were involved
- * in a merge conflict after the conflict has been resolved.  This allows
- * conflicts to be re-resolved later.
- *
- * If there exists a resolve undo entry for the given path in the index,
- * it will be removed.
- *
- * This method will fail in bare index instances.
- *
- * @param index an existing index object
- * @param path filename to add
- * @param ancestor_mode mode of the ancestor file
- * @param ancestor_id oid of the ancestor file
- * @param our_mode mode of our file
- * @param our_id oid of our file
- * @param their_mode mode of their file
- * @param their_id oid of their file
  * @return 0 or an error code
  */
-GIT_EXTERN(int) git_index_reuc_add(git_index *index, const char *path,
-	int ancestor_mode, git_oid *ancestor_id,
-	int our_mode, git_oid *our_id,
-	int their_mode, git_oid *their_id);
+GIT_EXTERN(int) git_index_conflict_iterator_new(
+	git_index_conflict_iterator **iterator_out,
+	git_index *index);
 
 /**
- * Remove an resolve undo entry from the index
+ * Returns the current conflict (ancestor, ours and theirs entry) and
+ * advance the iterator internally to the next value.
  *
- * @param index an existing index object
- * @param n position of the resolve undo entry to remove
- * @return 0 or an error code
+ * @param ancestor_out Pointer to store the ancestor side of the conflict
+ * @param our_out Pointer to store our side of the conflict
+ * @param their_out Pointer to store their side of the conflict
+ * @return 0 (no error), GIT_ITEROVER (iteration is done) or an error code
+ *         (negative value)
  */
-GIT_EXTERN(int) git_index_reuc_remove(git_index *index, size_t n);
+GIT_EXTERN(int) git_index_conflict_next(
+	const git_index_entry **ancestor_out,
+	const git_index_entry **our_out,
+	const git_index_entry **their_out,
+	git_index_conflict_iterator *iterator);
 
 /**
- * Remove all resolve undo entries from the index
+ * Frees a `git_index_conflict_iterator`.
  *
- * @param index an existing index object
- * @return 0 or an error code
+ * @param iterator pointer to the iterator
  */
-GIT_EXTERN(void) git_index_reuc_clear(git_index *index);
+GIT_EXTERN(void) git_index_conflict_iterator_free(
+	git_index_conflict_iterator *iterator);
 
 /**@}*/
 
