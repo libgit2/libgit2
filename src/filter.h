@@ -16,10 +16,10 @@
 struct git_filter {
 	char *name;
 
-	should_apply_to_path_cb should_apply_to_path;
-	apply_to_cb apply_to_odb;
-	apply_to_cb apply_to_workdir;
-	do_free_cb do_free;
+	git_filter_should_apply_to_path_cb should_apply_to_path;
+	git_filter_apply_to_cb apply_to_odb;
+	git_filter_apply_to_cb apply_to_workdir;
+	git_filter_do_free_cb do_free;
 };
 
 typedef enum {

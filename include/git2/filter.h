@@ -38,7 +38,7 @@ typedef enum {
  * If the function returns 0, the filter won't be applied.
  * if this function returns any other value, the filter will be applied.
  */
-typedef int (*should_apply_to_path_cb)(
+typedef int (*git_filter_should_apply_to_path_cb)(
 	struct git_filter *self,
 	git_repository *repo,
 	const char *path,
@@ -52,7 +52,7 @@ typedef int (*should_apply_to_path_cb)(
  * rely on the `source_size` to get the real length of the content to filter.
  * The filter must also store the filtered content length in `dst_size`.
  */
-typedef int (*apply_to_cb)(
+typedef int (*git_filter_apply_to_cb)(
 	struct git_filter *self,
 	git_repository *repo,
 	const char *path,
@@ -67,7 +67,7 @@ typedef int (*apply_to_cb)(
  * It will be called when the repository this filter belongs to
  * is freed  through `git_repository_free()`.
  */
-typedef void (*do_free_cb)(struct git_filter *self);
+typedef void (*git_filter_do_free_cb)(struct git_filter *self);
 
 /**
  * Allocate and initialize a new `git_filter`.
@@ -98,10 +98,10 @@ typedef void (*do_free_cb)(struct git_filter *self);
  */
 int git_filter_create_filter(
 	git_filter **out,
-	should_apply_to_path_cb should_apply, 
-	apply_to_cb apply_to_odb,
-	apply_to_cb apply_to_workdir,
-	do_free_cb free,
+	git_filter_should_apply_to_path_cb should_apply, 
+	git_filter_apply_to_cb apply_to_odb,
+	git_filter_apply_to_cb apply_to_workdir,
+	git_filter_do_free_cb free,
 	const char *name);
 
 /**
