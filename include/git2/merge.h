@@ -141,7 +141,7 @@ GIT_EXTERN(int) git_merge_head_from_oid(
 /**
  * Frees a `git_merge_head`
  *
- * @param the merge head to free
+ * @param head merge head to free
  */
 GIT_EXTERN(void) git_merge_head_free(
 	git_merge_head *head);

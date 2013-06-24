@@ -646,7 +646,7 @@ GIT_EXTERN(int) git_index_conflict_next(
 /**
  * Frees a `git_index_conflict_iterator`.
  *
- * @param it pointer to the iterator
+ * @param iterator pointer to the iterator
  */
 GIT_EXTERN(void) git_index_conflict_iterator_free(
 	git_index_conflict_iterator *iterator);

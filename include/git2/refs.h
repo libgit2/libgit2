@@ -62,7 +62,7 @@ GIT_EXTERN(int) git_reference_name_to_id(
  *
  * @param out pointer in which to store the reference
  * @param repo the repository in which to look
- * @param shrothand the short name for the reference
+ * @param shorthand the short name for the reference
  * @return 0 or an error code
  */
 GIT_EXTERN(int) git_reference_dwim(git_reference **out, git_repository *repo, const char *shorthand);
@@ -198,7 +198,7 @@ GIT_EXTERN(const char *) git_reference_name(const git_reference *ref);
  * If a direct reference is passed as an argument, a copy of that
  * reference is returned. This copy must be manually freed too.
  *
- * @param resolved_ref Pointer to the peeled reference
+ * @param out Pointer to the peeled reference
  * @param ref The reference
  * @return 0 or an error code
  */
@@ -266,7 +266,7 @@ GIT_EXTERN(int) git_reference_set_target(
  * the reflog if it exists.
  *
  * @param ref The reference to rename
- * @param name The new name for the reference
+ * @param new_name The new name for the reference
  * @param force Overwrite an existing reference
  * @return 0 on success, EINVALIDSPEC, EEXISTS or an error code
  *
@@ -375,7 +375,7 @@ GIT_EXTERN(int) git_reference_iterator_glob_new(
  *
  * @param out pointer in which to store the reference
  * @param iter the iterator
- * @param 0, GIT_ITEROVER if there are no more; or an error code
+ * @return 0, GIT_ITEROVER if there are no more; or an error code
  */
 GIT_EXTERN(int) git_reference_next(git_reference **out, git_reference_iterator *iter);
 
@@ -506,9 +506,9 @@ GIT_EXTERN(int) git_reference_normalize_name(
  * If you pass `GIT_OBJ_ANY` as the target type, then the object
  * will be peeled until a non-tag object is met.
  *
- * @param peeled Pointer to the peeled git_object
+ * @param out Pointer to the peeled git_object
  * @param ref The reference to be processed
- * @param target_type The type of the requested object (GIT_OBJ_COMMIT,
+ * @param type The type of the requested object (GIT_OBJ_COMMIT,
  * GIT_OBJ_TAG, GIT_OBJ_TREE, GIT_OBJ_BLOB or GIT_OBJ_ANY).
  * @return 0 on success, GIT_EAMBIGUOUS, GIT_ENOTFOUND or an error code
  */

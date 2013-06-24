@@ -235,7 +235,7 @@ GIT_EXTERN(int) git_commit_nth_gen_ancestor(
  *
  * @param parent_count Number of parents for this commit
  *
- * @param parents[] Array of `parent_count` pointers to `git_commit`
+ * @param parents Array of `parent_count` pointers to `git_commit`
  *  objects that will be used as the parents for this commit. This
  *  array may be NULL if `parent_count` is 0 (root commit). All the
  *  given commits must be owned by the `repo`.

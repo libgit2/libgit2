@@ -747,7 +747,7 @@ GIT_EXTERN(int) git_diff_print_raw(
  * letters for your own purposes.  This function does just that.  By the
  * way, unmodified will return a space (i.e. ' ').
  *
- * @param delta_t The git_delta_t value to look up
+ * @param status The git_delta_t value to look up
  * @return The single character label for that code
  */
 GIT_EXTERN(char) git_diff_status_char(git_delta_t status);
@@ -918,7 +918,7 @@ GIT_EXTERN(int) git_diff_patch_num_lines_in_hunk(
  * @param new_lineno Line number in new file or -1 if line is deleted
  * @param patch The patch to look in
  * @param hunk_idx The index of the hunk
- * @param line_of_index The index of the line in the hunk
+ * @param line_of_hunk The index of the line in the hunk
  * @return 0 on success, <0 on failure
  */
 GIT_EXTERN(int) git_diff_patch_get_line_in_hunk(
@@ -1017,7 +1017,7 @@ GIT_EXTERN(int) git_diff_blobs(
  * @param old_as_path Treat old blob as if it had this filename; can be NULL
  * @param new_blob Blob for new side of diff, or NULL for empty blob
  * @param new_as_path Treat new blob as if it had this filename; can be NULL
- * @param options Options for diff, or NULL for default options
+ * @param opts Options for diff, or NULL for default options
  * @return 0 on success or error code < 0
  */
 GIT_EXTERN(int) git_diff_patch_from_blobs(
@@ -1048,7 +1048,7 @@ GIT_EXTERN(int) git_diff_patch_from_blobs(
  * @param options Options for diff, or NULL for default options
  * @param file_cb Callback for "file"; made once if there is a diff; can be NULL
  * @param hunk_cb Callback for each hunk in diff; can be NULL
- * @param line_cb Callback for each line in diff; can be NULL
+ * @param data_cb Callback for each line in diff; can be NULL
  * @param payload Payload passed to each callback function
  * @return 0 on success, GIT_EUSER on non-zero callback return, or error code
  */
@@ -1078,7 +1078,7 @@ GIT_EXTERN(int) git_diff_blob_to_buffer(
  * @param buffer Raw data for new side of diff, or NULL for empty
  * @param buffer_len Length of raw data for new side of diff
  * @param buffer_as_path Treat buffer as if it had this filename; can be NULL
- * @param options Options for diff, or NULL for default options
+ * @param opts Options for diff, or NULL for default options
  * @return 0 on success or error code < 0
  */
 GIT_EXTERN(int) git_diff_patch_from_blob_and_buffer(

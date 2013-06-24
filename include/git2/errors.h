@@ -100,7 +100,7 @@ GIT_EXTERN(void) giterr_clear(void);
  *
  * @param error_class One of the `git_error_t` enum above describing the
  *                    general subsystem that is responsible for the error.
- * @param message The formatted error message to keep
+ * @param string The formatted error message to keep
  */
 GIT_EXTERN(void) giterr_set_str(int error_class, const char *string);
 
