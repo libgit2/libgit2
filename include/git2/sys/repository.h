@@ -101,6 +101,24 @@ GIT_EXTERN(void) git_repository_set_refdb(git_repository *repo, git_refdb *refdb
  */
 GIT_EXTERN(void) git_repository_set_index(git_repository *repo, git_index *index);
 
+/**
+ * Adds a custom filter to the repository.
+ *
+ * The specified priority indicates the order of filter application; small
+ * priority values will be run earlier when writing into the object database
+ * and later when writing into the working directory.
+ *
+ * The repository will call the filter's free function when it is done with
+ * the filter.
+ *
+ * @param repo A repository object
+ * @param filter A custom filter
+ * @param priority The priority to run this filter
+ * @return 0 on success, or an error code
+ */
+GIT_EXTERN(int) git_repository_add_filter(git_repository *repo,
+	git_filter *filter, int priority);
+
 /** @} */
 GIT_END_DECL
 #endif

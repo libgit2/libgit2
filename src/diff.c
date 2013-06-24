@@ -4,8 +4,6 @@
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
  */
-#include "git2/filter.h"
-
 #include "common.h"
 #include "diff.h"
 #include "fileops.h"
@@ -552,19 +550,19 @@ int git_diff__oid_for_file(
 	} else {
 		git_vector filters = GIT_VECTOR_INIT;
 
-		result = git_filters__get_filters_to_apply(&filters, repo, path, GIT_FILTER_TO_ODB);
+		result = git_filters__load(&filters, repo, path, GIT_FILTER_TO_ODB);
 		if (result >= 0) {
 			int fd = git_futils_open_ro(full_path.ptr);
 			if (fd < 0)
 				result = fd;
 			else {
 				result = git_odb__hashfd_filtered(
-					oid, fd, (size_t)size, GIT_OBJ_BLOB, &filters);
+					oid, fd, (size_t)size, GIT_OBJ_BLOB, &filters, path);
 				p_close(fd);
 			}
 		}
 
-		git_filters__free(&filters);
+		git_vector_free(&filters);
 	}
 
 cleanup:

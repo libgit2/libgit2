@@ -307,7 +307,8 @@ static int diff_file_content_load_workdir_file(
 {
 	int error = 0;
 	git_vector filters = GIT_VECTOR_INIT;
-	git_buf raw = GIT_BUF_INIT, filtered = GIT_BUF_INIT;
+	git_buf raw = GIT_BUF_INIT;
+	git_filterbuf *filtered = NULL;
 	git_file fd = git_futils_open_ro(git_buf_cstr(path));
 
 	if (fd < 0)
@@ -320,7 +321,7 @@ static int diff_file_content_load_workdir_file(
 	if (diff_file_content_binary_by_size(fc))
 		goto cleanup;
 
-	if ((error = git_filters__get_filters_to_apply(
+	if ((error = git_filters__load(
 			&filters, fc->repo, fc->file->path, GIT_FILTER_TO_ODB)) < 0)
 		goto cleanup;
 	/* error >= is a filter count */
@@ -334,27 +335,41 @@ static int diff_file_content_load_workdir_file(
 	}
 
 	if (error != 0) {
-		error = git_futils_readbuffer_fd(&raw, fd, (size_t)fc->file->size);
-		if (error < 0)
+		if ((error = git_futils_readbuffer_fd(&raw, fd, (size_t)fc->file->size)) < 0)
 			goto cleanup;
 
-		if (!filters.length)
-			git_buf_swap(&filtered, &raw);
-		else
-			error = git_filters__apply(&filtered, &raw, &filters);
+		if (filters.length > 0) {
+			if ((error = git_filters__apply(&filtered,
+				&filters,
+				fc->file->path,
+				GIT_FILTER_TO_ODB,
+				git_buf_cstr(&raw),
+				git_buf_len(&raw))) < 0)
+				goto cleanup;
 
-		if (!error) {
-			fc->map.len  = git_buf_len(&filtered);
-			fc->map.data = git_buf_detach(&filtered);
-			fc->flags |= GIT_DIFF_FLAG__FREE_DATA;
+			if (error > 0) {
+				git_buf_free(&raw);
+
+				fc->flags |= GIT_DIFF_FLAG__FREE_DATA;
+				fc->map.len = filtered->len;
+				fc->map.data = git__malloc(filtered->len);
+				GITERR_CHECK_ALLOC(fc->map.data);
+
+				memcpy(fc->map.data, filtered->ptr, filtered->len);
+			}
 		}
 
-		git_buf_free(&raw);
-		git_buf_free(&filtered);
+		if (!filtered)
+		{
+			fc->map.len = git_buf_len(&raw);
+			fc->map.data = git_buf_detach(&raw);
+			fc->flags |= GIT_DIFF_FLAG__FREE_DATA;
+		}
 	}
 
 cleanup:
-	git_filters__free(&filters);
+	git_vector_free(&filters);
+	git_filterbuf_free(filtered);
 	p_close(fd);
 
 	return error;

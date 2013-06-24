@@ -107,26 +107,43 @@ static int write_file_filtered(
 	git_oid *oid,
 	git_odb *odb,
 	const char *full_path,
+	const char *hint_path,
 	git_vector *filters)
 {
-	int error;
 	git_buf source = GIT_BUF_INIT;
-	git_buf dest = GIT_BUF_INIT;
+	const void *content;
+	git_filterbuf *filtered = NULL;
+	size_t content_len;
+	int error;
 
 	if ((error = git_futils_readbuffer(&source, full_path)) < 0)
 		return error;
 
-	error = git_filters__apply(&dest, &source, filters);
+	content = git_buf_cstr(&source);
+	content_len = git_buf_len(&source);
 
-	/* Free the source as soon as possible. This can be big in memory,
-	 * and we don't want to ODB write to choke */
+	if ((error = git_filters__apply(&filtered,
+		filters,
+		hint_path,
+		GIT_FILTER_TO_ODB,
+		git_buf_cstr(&source),
+		git_buf_len(&source))) < 0)
+		goto done;
+
+	if (error > 0) {		
+		/* Free the source as soon as possible. This can be big in memory,
+		 * and we don't want to ODB write to choke */
+		git_buf_free(&source);
+
+		content = filtered->ptr;
+		content_len = filtered->len;
+	}
+
+	error = git_odb_write(oid, odb, content, content_len, GIT_OBJ_BLOB);
+
+done:
 	git_buf_free(&source);
-
-	/* Write the file to disk if it was properly filtered */
-	if (!error)
-		error = git_odb_write(oid, odb, dest.ptr, dest.size, GIT_OBJ_BLOB);
-
-	git_buf_free(&dest);
+	git_filterbuf_free(filtered);
 	return error;
 }
 
@@ -174,7 +191,7 @@ static int blob_create_internal(git_oid *oid, git_repository *repo, const char *
 
 		if (try_load_filters) {
 			/* Load the filters for writing this file to the ODB */
-			filter_count = git_filters__get_filters_to_apply(
+			filter_count = git_filters__load(
 				&write_filters, repo, hint_path, GIT_FILTER_TO_ODB);
 		}
 
@@ -187,10 +204,10 @@ static int blob_create_internal(git_oid *oid, git_repository *repo, const char *
 			error = write_file_stream(oid, odb, content_path, size);
 		} else {
 			/* We need to apply one or more filters */
-			error = write_file_filtered(oid, odb, content_path, &write_filters);
+			error = write_file_filtered(oid, odb, content_path, hint_path, &write_filters);
 		}
 
-		git_filters__free(&write_filters);
+		git_vector_free(&write_filters);
 
 		/*
 		 * TODO: eventually support streaming filtered files, for files

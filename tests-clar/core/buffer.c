@@ -380,7 +380,7 @@ void test_core_buffer__7(void)
 	git_buf_free(&a);
 
 	b = git__strdup(fun);
-	git_buf_attach(&a, b, strlen(b), 0);
+	git_buf_attach(&a, b, strlen(b), strlen(fun) + 1);
 
 	cl_assert_equal_s(fun, a.ptr);
 	cl_assert(a.size == strlen(fun));

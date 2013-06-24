@@ -39,7 +39,7 @@ static git_buf g_crlf_filtered[NUM_TEST_OBJECTS] = {
 	{ "\xFE\xFF\x00T\x00h\x00i\x00s\x00!", 0, 12 }
 };
 
-void test_filter_crlf__initialize(void)
+void test_object_blob_filter__initialize(void)
 {
 	int i;
 
@@ -58,14 +58,14 @@ void test_filter_crlf__initialize(void)
 	}
 }
 
-void test_filter_crlf__cleanup(void)
+void test_object_blob_filter__cleanup(void)
 {
 	git_repository_free(g_repo);
 	g_repo = NULL;
 	cl_fixture_cleanup("empty_standard_repo");
 }
 
-void test_filter_crlf__unfiltered(void)
+void test_object_blob_filter__unfiltered(void)
 {
 	int i;
 	git_blob *blob;
@@ -78,7 +78,7 @@ void test_filter_crlf__unfiltered(void)
 	}
 }
 
-void test_filter_crlf__stats(void)
+void test_object_blob_filter__stats(void)
 {
 	int i;
 	git_blob *blob;
@@ -96,7 +96,7 @@ void test_filter_crlf__stats(void)
 	git_buf_free(&buf);
 }
 
-void test_filter_crlf__to_odb(void)
+void test_object_blob_filter__to_odb(void)
 {
 	git_vector filters = GIT_VECTOR_INIT;
 	git_config *cfg;

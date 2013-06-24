@@ -92,9 +92,10 @@ int git_buf_text_crlf_to_lf(git_buf *tgt, const git_buf *src)
 	}
 
 	/* Copy remaining input into dest */
-	memcpy(out, scan, scan_end - scan + 1); /* +1 for NUL byte */
-	out += (scan_end - scan);
+	memcpy(out, scan, scan_end - scan); /* +1 for NUL byte */
+	out += (scan_end - scan);	
 	tgt->size = out - tgt->ptr;
+	*out = 0;
 
 	return 0;
 }

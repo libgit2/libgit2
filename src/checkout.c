@@ -16,7 +16,6 @@
 #include "git2/config.h"
 #include "git2/diff.h"
 #include "git2/submodule.h"
-#include "git2/filter.h"
 #include "git2/sys/index.h"
 
 #include "refs.h"
@@ -714,40 +713,31 @@ static int blob_content_to_file(
 	mode_t entry_filemode,
 	git_checkout_opts *opts)
 {
-	int error = -1, nb_filters = 0;
+	int error = -1;
 	mode_t file_mode = opts->file_mode;
-	bool dont_free_filtered;
-	git_buf unfiltered = GIT_BUF_INIT, filtered = GIT_BUF_INIT;
+	git_buf content = GIT_BUF_INIT;
+	git_filterbuf *filtered = NULL;
 	git_vector filters = GIT_VECTOR_INIT;
 
 	/* Create a fake git_buf from the blob raw data... */
-	filtered.ptr  = (void *)git_blob_rawcontent(blob);
-	filtered.size = (size_t)git_blob_rawsize(blob);
-	/* ... and make sure it doesn't get unexpectedly freed */
-	dont_free_filtered = true;
+	content.ptr = (void *)git_blob_rawcontent(blob);
+	content.size = (size_t)git_blob_rawsize(blob);
 
-	if (!opts->disable_filters &&
-		!git_buf_text_is_binary(&filtered) &&
-		(nb_filters = git_filters__get_filters_to_apply(
-			&filters,
-			git_object_owner((git_object *)blob),
+	if (!opts->disable_filters && !git_buf_text_is_binary(&content)) {
+		git_repository *repo = git_blob_owner(blob);
+
+		if ((error = git_filters__apply(&filtered,
+			&repo->filters,
 			path,
-			GIT_FILTER_TO_WORKDIR)) > 0)
-	{
-		/* reset 'filtered' so it can be a filter target */
-		git_buf_init(&filtered, 0);
-		dont_free_filtered = false;
-	}
-
-	if (nb_filters < 0)
-		return nb_filters;
-
-	if (nb_filters > 0)	 {
-		if ((error = git_blob__getbuf(&unfiltered, blob)) < 0)
+			GIT_FILTER_TO_WORKDIR,
+			content.ptr,
+			content.size)) < 0)
 			goto cleanup;
 
-		if ((error = git_filters__apply(&filtered, &unfiltered, &filters)) < 0)
-			goto cleanup;
+		if (error > 0) {
+			content.ptr = filtered->ptr;
+			content.size = filtered->len;
+		}
 	}
 
 	/* Allow overriding of file mode */
@@ -755,16 +745,14 @@ static int blob_content_to_file(
 		file_mode = entry_filemode;
 
 	error = buffer_to_file(
-		st, &filtered, path, opts->dir_mode, opts->file_open_flags, file_mode);
+		st, &content, path, opts->dir_mode, opts->file_open_flags, file_mode);
 
 	if (!error)
 		st->st_mode = entry_filemode;
 
 cleanup:
-	git_filters__free(&filters);
-	git_buf_free(&unfiltered);
-	if (!dont_free_filtered)
-		git_buf_free(&filtered);
+	git_vector_free(&filters);
+	git_filterbuf_free(filtered);
 
 	return error;
 }

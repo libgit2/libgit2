@@ -9,130 +9,149 @@
 #include "fileops.h"
 #include "hash.h"
 #include "filter.h"
-#include "git2/filter.h"
 #include "repository.h"
-#include "git2/config.h"
 #include "blob.h"
+#include "git2/config.h"
+#include "git2/sys/filter.h"
 
-int git_filters__get_filters_to_apply(
-	git_vector *filters, git_repository *repo, const char *path,
+#define filter_foreach(v, mode, iter, elem) \
+	for ((iter) = ((mode) == GIT_FILTER_TO_ODB) ? 0 : (v)->length - 1; \
+		(iter) < (((mode) == GIT_FILTER_TO_ODB) ? (v)->length : SIZE_MAX) && ((elem) = (v)->contents[(iter)], 1); \
+		(iter) = ((mode) == GIT_FILTER_TO_ODB) ? (iter) + 1 : (iter) - 1)
+
+typedef struct
+{
+	git_filter *filter;
+	int priority;
+} filter_internal;
+
+static int filter_cmp(const void *a, const void *b)
+{
+	const filter_internal *f_a = a;
+	const filter_internal *f_b = b;
+
+	if (f_a->priority < f_b->priority)
+		return -1;
+	else if (f_a->priority > f_b->priority)
+		return 1;
+
+	return 0;
+}
+
+int git_filters__init(git_vector *filters)
+{
+	filters->_cmp = filter_cmp;
+	return 0;
+}
+
+int git_filters__add(git_vector *filters, git_filter *filter, int priority)
+{
+	filter_internal *f;
+
+	if ((f = git__calloc(1, sizeof(filter_internal))) == NULL)
+		return -1;
+
+	f->filter = filter;
+	f->priority = priority;
+
+	if (git_vector_insert(filters, f) < 0) {
+		git__free(f);
+		return -1;
+	}
+
+	git_vector_sort(filters);
+
+	return 0;
+}
+
+int git_filters__load(
+	git_vector *filters,
+	git_repository *repo,
+	const char *path,
 	git_filter_mode_t mode)
 {
+	filter_internal *f;
 	size_t i;
-	git_filter *filter;
+	int error, count = 0;
 
-	git_vector_foreach(&repo->filters, i, filter) {
-		if (filter->should_apply_to_path(filter, repo, path, mode)) {
-			git_filter_internal *internal_filter;
-
-			internal_filter = git__malloc(sizeof(git_filter_internal));
-			GITERR_CHECK_ALLOC(internal_filter);
-
-			internal_filter->filter = filter;
-			internal_filter->mode = mode;
-			internal_filter->repo = repo;
-			internal_filter->path = git__strdup(path);
-
-			git_vector_insert(filters, internal_filter);
+	filter_foreach(&repo->filters, mode, i, f) {
+		if (f->filter->should_apply(f->filter, path, mode)) {
+			if ((error = git_vector_insert(filters, f)) < 0)
+				return error;
+			
+			++count;
 		}
 	}
 
-	return (int)filters->length;
+	return count;
+}
+
+int git_filters__apply(
+	git_filterbuf **out,
+	git_vector *filters,
+	const char *path,
+	git_filter_mode_t mode,
+	const void *src,
+	size_t src_len)
+{
+	filter_internal *f;
+	void *cur;
+	void *dst = NULL;
+	size_t cur_len, dst_len = 0;
+	void (*cur_free)(void *);
+	size_t i;
+	int error = 0;
+	int filtered = 0;
+
+	*out = NULL;
+
+	if (src_len == 0)
+		return 0;
+
+	cur = (void *)src;
+	cur_len = src_len;
+
+	filter_foreach(filters, mode, i, f) {
+		if ((error = f->filter->apply(&dst, &dst_len, f->filter, path, mode, cur, cur_len)) < 0)
+			return error;
+
+		/* Filter cancelled application; do nothing. */
+		if (error == 0)
+			continue;
+
+		if (filtered)
+			cur_free(cur);
+
+		filtered++;
+
+		cur = dst;
+		cur_len = dst_len;
+		cur_free = f->filter->free_buf;
+	}
+
+	if (filtered) {
+		if ((*out = git__calloc(1, sizeof(git_filterbuf))) == NULL)
+			return -1;
+
+		(*out)->ptr = cur;
+		(*out)->len = cur_len;
+		(*out)->free = cur_free;
+	}
+
+	return filtered;
 }
 
 void git_filters__free(git_vector *filters)
 {
+	filter_internal *f;
 	size_t i;
-	git_filter_internal *internal_filter;
 
-	git_vector_foreach(filters, i, internal_filter) {
-		git__free(internal_filter->path);
-		git__free(internal_filter);
+	git_vector_foreach(filters, i, f) {
+		if (f->filter->free)
+			f->filter->free(f->filter);
+
+		git__free(f);
 	}
 
 	git_vector_free(filters);
-}
-
-#define APPLY_FILTER(DIRECTION, APPLY) ( \
-		internal_filter->mode == DIRECTION && \
-		internal_filter->filter->APPLY != NULL && \
-		internal_filter->filter->APPLY(internal_filter->filter, \
-		internal_filter->repo, internal_filter->path, \
-		current_source, current_source_size, \
-		&filtered_output, &filtered_output_size) == 0 \
-	)
-
-int git_filters__apply(
-	git_buf *dest, git_buf *source, git_vector *filters)
-{
-	size_t i, current_source_size = git_buf_len(source);
-	const char *initial_source = git_buf_cstr(source);
-	char *current_source = (char *)initial_source;
-
-	for (i = 0; i < filters->length; ++i) {
-		git_filter_internal *internal_filter = git_vector_get(filters, i);
-		char *filtered_output;
-		size_t filtered_output_size;
-
-		/* Apply the filter, and consider the result as the source for
-		 * the next filter.
-		 */
-		if (APPLY_FILTER(GIT_FILTER_TO_ODB, apply_to_odb) ||
-			APPLY_FILTER(GIT_FILTER_TO_WORKDIR, apply_to_workdir)) {
-				if (current_source != initial_source)
-					git__free(current_source);
-
-				current_source = filtered_output;
-				current_source_size = filtered_output_size;
-				filtered_output = NULL;
-		}
-	}
-
-	if (current_source == source->ptr)
-		git_buf_swap(dest, source);
-	else {
-		git_buf_attach(dest, current_source, current_source_size, 0);
-	}
-
-	return 0;
-}
-
-void git_filter_free(git_filter *filter) 
-{
-	if (filter == NULL)
-		return;
-
-	git__free(filter->name);
-	git__free(filter);
-}
-
-int git_filter_create_filter(
-	git_filter **out,
-	git_filter_should_apply_to_path_cb should_apply, 
-	git_filter_apply_to_cb apply_to_odb,
-	git_filter_apply_to_cb apply_to_workdir,
-	git_filter_do_free_cb free,
-	const char *name)
-{
-	git_filter *filter;
-
-	if (!name || name[0] == '\0') {
-		giterr_set(GITERR_INVALID, "A filter must have a name.");
-		return GIT_EINVALIDSPEC;
-	}
-
-	filter = git__malloc(sizeof(git_filter));
-	GITERR_CHECK_ALLOC(filter);
-
-	filter->should_apply_to_path = should_apply;
-	filter->apply_to_odb = apply_to_odb;
-	filter->apply_to_workdir = apply_to_workdir;
-	filter->do_free = free;
-
-	filter->name = git__strdup(name);
-	GITERR_CHECK_ALLOC(filter->name);
-
-	*out = filter;
-
-	return 0;
 }

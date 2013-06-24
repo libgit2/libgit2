@@ -179,11 +179,13 @@ done:
 }
 
 int git_odb__hashfd_filtered(
-	git_oid *out, git_file fd, size_t size, git_otype type, git_vector *filters)
+	git_oid *out, git_file fd, size_t size, git_otype type, git_vector *filters, const char *path)
 {
-	int error;
 	git_buf raw = GIT_BUF_INIT;
-	git_buf filtered = GIT_BUF_INIT;
+	const void *content;
+	size_t content_len;
+	git_filterbuf *filtered = NULL;
+	int error;
 
 	if (!filters || !filters->length)
 		return git_odb__hashfd(out, fd, size, type);
@@ -192,15 +194,32 @@ int git_odb__hashfd_filtered(
 	 * into memory to apply filters before beginning to calculate the hash
 	 */
 
-	if (!(error = git_futils_readbuffer_fd(&raw, fd, size)))
-		error = git_filters__apply(&filtered, &raw, filters);
+	if ((error = git_futils_readbuffer_fd(&raw, fd, size)) < 0)
+		goto done;
 
+	content = git_buf_cstr(&raw);
+	content_len = git_buf_len(&raw);
+
+	if ((error = git_filters__apply(&filtered,
+		filters,
+		path,
+		GIT_FILTER_TO_ODB,
+		content,
+		content_len)) < 0)
+		goto done;
+
+	if (error > 0) {
+		git_buf_free(&raw);
+
+		content = filtered->ptr;
+		content_len = filtered->len;
+	}
+	
+	error = git_odb_hash(out, content, content_len, type);
+
+done:
 	git_buf_free(&raw);
-
-	if (!error)
-		error = git_odb_hash(out, filtered.ptr, filtered.size, type);
-
-	git_buf_free(&filtered);
+	git_filterbuf_free(filtered);
 
 	return error;
 }
