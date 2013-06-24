@@ -11,17 +11,13 @@ static git_repository *g_repo = NULL;
 
 void test_filter_custom_filters__initialize(void)
 {
-	cl_fixture_sandbox("empty_standard_repo");
-	cl_git_pass(p_rename(
-		"empty_standard_repo/.gitted", "empty_standard_repo/.git"));
-	cl_git_pass(git_repository_open(&g_repo, "empty_standard_repo"));
+	g_repo = cl_git_sandbox_init("empty_standard_repo");
 }
 
 void test_filter_custom_filters__cleanup(void)
 {
-	git_repository_free(g_repo);
+	cl_git_sandbox_cleanup();
 	g_repo = NULL;
-	cl_fixture_cleanup("empty_standard_repo");
 }
 
 void test_filter_custom_filters__rawcontent_is_unfiltered(void)
