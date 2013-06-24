@@ -78,7 +78,7 @@ int git_filters__apply(
 		 * the next filter.
 		 */
 		if (APPLY_FILTER(GIT_FILTER_TO_ODB, apply_to_odb) ||
-			APPLY_FILTER(GIT_FILTER_TO_WORKTREE, apply_to_worktree)) {
+			APPLY_FILTER(GIT_FILTER_TO_WORKDIR, apply_to_workdir)) {
 				if (current_source != initial_source)
 					git__free(current_source);
 
@@ -110,7 +110,7 @@ int git_filters_create_filter(
 	git_filter **out,
 	should_apply_to_path_cb should_apply, 
 	apply_to_cb apply_to_odb,
-	apply_to_cb apply_to_worktree,
+	apply_to_cb apply_to_workdir,
 	do_free_cb free,
 	const char *name)
 {
@@ -126,7 +126,7 @@ int git_filters_create_filter(
 
 	filter->should_apply_to_path = should_apply;
 	filter->apply_to_odb = apply_to_odb;
-	filter->apply_to_worktree = apply_to_worktree;
+	filter->apply_to_workdir = apply_to_workdir;
 	filter->do_free = free;
 
 	filter->name = git__strdup(name);

@@ -245,7 +245,7 @@ line_ending_error:
 	return NULL;
 }
 
-static int crlf_apply_to_worktree(
+static int crlf_apply_to_workdir(
 	git_filter *self, git_repository *repo,
 	const char *path, const char *source, size_t source_size,
 	char **dst, size_t *dest_size)
@@ -324,6 +324,6 @@ static int should_apply_to_path(
 int git_filter_create__crlf_filter(git_filter **out)
 {
 	return git_filters_create_filter(out, should_apply_to_path,
-		crlf_apply_to_odb, crlf_apply_to_worktree, NULL,
+		crlf_apply_to_odb, crlf_apply_to_workdir, NULL,
 		"crlf");
 }

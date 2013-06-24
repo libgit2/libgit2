@@ -37,7 +37,7 @@ typedef struct git_filter_internal {
  * For any given path in the working directory, fill the `filters`
  * array with the relevant filters that need to be applied.
  *
- * Mode is either `GIT_FILTER_TO_WORKTREE` if you need to load the
+ * Mode is either `GIT_FILTER_TO_WORKDIR` if you need to load the
  * filters that will be used when checking out a file to the working
  * directory, or `GIT_FILTER_TO_ODB` for the filters used when writing
  * a file to the ODB.

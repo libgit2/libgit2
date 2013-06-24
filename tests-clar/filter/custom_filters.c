@@ -105,17 +105,17 @@ void test_filter_custom_filters__can_register_a_custom_filter_in_the_repository(
 	git_vector filters = GIT_VECTOR_INIT;
 	int filters_nb = 0;
 
-	filters_nb = git_filters__get_filters_to_apply(&filters, g_repo, "herocorp", GIT_FILTER_TO_WORKTREE);
+	filters_nb = git_filters__get_filters_to_apply(&filters, g_repo, "herocorp", GIT_FILTER_TO_WORKDIR);
 	git_filters__free(&filters);
 
 	cl_git_pass(create_custom_filter(&filter, FILTER_NAME));
 	cl_git_pass(git_filters_register_filter(g_repo, filter));
 
-	git_filters__get_filters_to_apply(&filters, g_repo, "herocorp", GIT_FILTER_TO_WORKTREE);
+	git_filters__get_filters_to_apply(&filters, g_repo, "herocorp", GIT_FILTER_TO_WORKDIR);
 	cl_assert_equal_sz(filters_nb + 1, filters.length);
 	git_filters__free(&filters);
 
-	git_filters__get_filters_to_apply(&filters, g_repo, "doesntapplytome", GIT_FILTER_TO_WORKTREE);
+	git_filters__get_filters_to_apply(&filters, g_repo, "doesntapplytome", GIT_FILTER_TO_WORKDIR);
 	cl_assert_equal_sz(filters_nb, filters.length);
 	git_filters__free(&filters);
 }
