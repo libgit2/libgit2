@@ -68,7 +68,7 @@ void test_filter_crlf__to_worktree(void)
 	cl_git_pass(git_filter_create__crlf_filter(&filter));
 
 	for (i = 0; i < NUM_CRLF_TEST_OBJECTS; i++) {
-		ret = filter->apply_to_worktree(filter, g_repo, "filename.txt",
+		ret = filter->apply_to_workdir(filter, g_repo, "filename.txt",
 			g_raw[i], g_len_raw[i], &dst, &dst_size);
 
 		cl_assert_equal_i(g_to_worktree_expected_ret[i], ret);

@@ -732,7 +732,7 @@ static int blob_content_to_file(
 			&filters,
 			git_object_owner((git_object *)blob),
 			path,
-			GIT_FILTER_TO_WORKTREE)) > 0)
+			GIT_FILTER_TO_WORKDIR)) > 0)
 	{
 		/* reset 'filtered' so it can be a filter target */
 		git_buf_init(&filtered, 0);

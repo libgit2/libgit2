@@ -24,12 +24,12 @@ typedef struct git_filter git_filter;
 /**
  * Direction of the filter to apply.
  *
- * `GIT_FILTER_TO_WORKTREE` means applying filters from the odb to the worktree.
+ * `GIT_FILTER_TO_WORKDIR` means applying filters from the odb to the workdir.
  *
- * `GIT_FILTER_TO_ODB` means applying filters from the worktree to the odb.
+ * `GIT_FILTER_TO_ODB` means applying filters from the workdir to the odb.
  */
 typedef enum {
-	GIT_FILTER_TO_WORKTREE = 1,
+	GIT_FILTER_TO_WORKDIR = 1,
 	GIT_FILTER_TO_ODB = 2
 } git_filter_mode_t;
 
@@ -76,15 +76,15 @@ typedef void (*do_free_cb)(struct git_filter *self);
  *
  * The filter must be able to know when it should apply (through the
  * `must_be_applied()` function), and must be able to filter both from
- * the worktree to the odb, and from the odb to the worktree.
+ * the workdir to the odb, and from the odb to the workdir.
  *
  * - `must_be_applied` must return 0 if the filter shouldn't be applied
- *   for the passed path and the passed direction (to odb or to worktree).
+ *   for the passed path and the passed direction (to odb or to workdir).
  * - `apply_to_odb` must apply the filter to the passed `source`, and store the
  *   result in `dst`. `source` may contain NUL characters , so the filter should
  *   rely on the `source_size` to get the real length of the content to filter.
  *   The filter must also store the filtered content length in `dst_size`.
- * - `apply_to_worktree` must apply the filter to the passed `source`, and store the
+ * - `apply_to_workdir` must apply the filter to the passed `source`, and store the
  *   result in `dst`. `source` may contain NUL characters , so the filter should
  *   rely on the `source_size` to get the real length of the content to filter.
  *   The filter must also store the filtered content length in `dst_size`.
@@ -96,7 +96,7 @@ struct git_filter {
 
 	should_apply_to_path_cb should_apply_to_path;
 	apply_to_cb apply_to_odb;
-	apply_to_cb apply_to_worktree;
+	apply_to_cb apply_to_workdir;
 	do_free_cb do_free;
 };
 
@@ -107,7 +107,7 @@ int git_filters_create_filter(
 	git_filter **out,
 	should_apply_to_path_cb should_apply, 
 	apply_to_cb apply_to_odb,
-	apply_to_cb apply_to_worktree,
+	apply_to_cb apply_to_workdir,
 	do_free_cb free,
 	const char *name);
 
