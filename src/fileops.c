@@ -348,7 +348,8 @@ int git_futils_mkdir(
 			int tmp_errno = errno;
 
 			/* ignore error if directory already exists */
-			if (p_stat(make_path.ptr, &st) < 0 || !S_ISDIR(st.st_mode)) {
+			if (p_stat(make_path.ptr, &st) < 0 ||
+				!(S_ISDIR(st.st_mode) || S_ISLNK(st.st_mode))) {
 				errno = tmp_errno;
 				giterr_set(GITERR_OS, "Failed to make directory '%s'", make_path.ptr);
 				goto done;
