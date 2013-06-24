@@ -481,7 +481,7 @@ GIT_EXTERN(int) git_submodule_sync(git_submodule *submodule);
  * function will return distinct `git_repository` objects.  This will only
  * work if the submodule is checked out into the working directory.
  *
- * @param subrepo Pointer to the submodule repo which was opened
+ * @param repo Pointer to the submodule repo which was opened
  * @param submodule Submodule to be opened
  * @return 0 on success, <0 if submodule repo could not be opened.
  */
@@ -531,7 +531,7 @@ GIT_EXTERN(int) git_submodule_status(
  * This can be useful if you want to know if the submodule is present in the
  * working directory at this point in time, etc.
  *
- * @param status Combination of first four `GIT_SUBMODULE_STATUS` flags
+ * @param location_status Combination of first four `GIT_SUBMODULE_STATUS` flags
  * @param submodule Submodule for which to get status
  * @return 0 on success, <0 on error
  */

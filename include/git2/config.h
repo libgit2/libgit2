@@ -119,7 +119,7 @@ GIT_EXTERN(int) git_config_find_xdg(char *out, size_t length);
  * If /etc/gitconfig doesn't exist, it will look for
  * %PROGRAMFILES%\Git\etc\gitconfig.
 
- * @param global_config_path Buffer to store the path in
+ * @param out Buffer to store the path in
  * @param length size of the buffer in bytes
  * @return 0 if a system configuration file has been
  *	found. Its path will be stored in `buffer`.
@@ -335,8 +335,8 @@ GIT_EXTERN(int) git_config_get_string(const char **out, const git_config *cfg, c
  * @param name the variable's name
  * @param regexp regular expression to filter which variables we're
  * interested in. Use NULL to indicate all
- * @param fn the function to be called on each value of the variable
- * @param data opaque pointer to pass to the callback
+ * @param callback the function to be called on each value of the variable
+ * @param payload opaque pointer to pass to the callback
  */
 GIT_EXTERN(int) git_config_get_multivar(const git_config *cfg, const char *name, const char *regexp, git_config_foreach_cb callback, void *payload);
 

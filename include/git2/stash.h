@@ -89,7 +89,7 @@ typedef int (*git_stash_cb)(
  *
  * @param repo Repository where to find the stash.
  *
- * @param callabck Callback to invoke per found stashed state. The most recent
+ * @param callback Callback to invoke per found stashed state. The most recent
  * stash state will be enumerated first.
  *
  * @param payload Extra parameter to callback function.

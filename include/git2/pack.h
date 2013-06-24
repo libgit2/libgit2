@@ -112,7 +112,7 @@ GIT_EXTERN(int) git_packbuilder_insert_commit(git_packbuilder *pb, const git_oid
  * @param pb The packbuilder
  * @param path to the directory where the packfile and index should be stored
  * @param progress_cb function to call with progress information from the indexer (optional)
- * @param progress_payload payload for the progress callback (optional)
+ * @param progress_cb_payload payload for the progress callback (optional)
  *
  * @return 0 or an error code
  */

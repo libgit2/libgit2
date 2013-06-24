@@ -21,7 +21,7 @@ typedef struct git_indexer_stream git_indexer_stream;
  * @param out where to store the indexer instance
  * @param path to the directory where the packfile should be stored
  * @param progress_cb function to call with progress information
- * @param progress_payload payload for the progress callback
+ * @param progress_cb_payload payload for the progress callback
  */
 GIT_EXTERN(int) git_indexer_stream_new(
 		git_indexer_stream **out,

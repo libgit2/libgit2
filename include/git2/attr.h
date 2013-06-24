@@ -162,7 +162,7 @@ GIT_EXTERN(int) git_attr_get(
  * Then you could loop through the 3 values to get the settings for
  * the three attributes you asked about.
  *
- * @param values An array of num_attr entries that will have string
+ * @param values_out An array of num_attr entries that will have string
  *             pointers written into it for the values of the attributes.
  *             You should not modify or free the values that are written
  *             into this array (although of course, you should free the
