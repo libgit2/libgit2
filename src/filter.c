@@ -106,7 +106,7 @@ void git_filter_free(git_filter *filter)
 	git__free(filter);
 }
 
-int git_filters_create_filter(
+int git_filter_create_filter(
 	git_filter **out,
 	should_apply_to_path_cb should_apply, 
 	apply_to_cb apply_to_odb,
@@ -133,56 +133,6 @@ int git_filters_create_filter(
 	GITERR_CHECK_ALLOC(filter->name);
 
 	*out = filter;
-
-	return 0;
-}
-
-static int find_filter_by_name(const void *a, const void *b)
-{
-	const git_filter *filter = (const git_filter *)(b);
-	const char *key = (const char *)(a);
-
-	return strcmp(key, filter->name);
-}
-
-int git_filters_register_filter(git_repository *repo, git_filter *filter)
-{
-	int error;
-
-	if (!filter->name || filter->name[0] == '\0') {
-		giterr_set(GITERR_INVALID, "A filter must have a name.");
-		return GIT_EINVALIDSPEC;
-	}
-
-	if (git_vector_search2(NULL, &repo->filters, find_filter_by_name,
-		filter->name) != GIT_ENOTFOUND)
-			return GIT_EEXISTS;
-
-	if ((error = git_vector_insert(&repo->filters, filter)) < 0)
-		return error;
-
-	return 0;
-}
-
-int git_filters_unregister_filter(git_repository *repo, const char *filtername)
-{
-	int error;
-	size_t pos;
-	git_filter *filter;
-
-	if ((error = git_vector_search2(&pos, &repo->filters, find_filter_by_name,
-		filtername)) < 0)
-			return error;
-
-	filter = (git_filter *)git_vector_get(&repo->filters, pos);
-
-	if (filter->do_free)
-		filter->do_free(filter);
-	else
-		git_filter_free(filter);
-
-	if ((error = git_vector_remove(&repo->filters, pos)) < 0)
-		return error;
 
 	return 0;
 }

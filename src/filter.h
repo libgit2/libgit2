@@ -13,26 +13,6 @@
 #include "git2/repository.h"
 #include "git2/filter.h"
 
-/**
- * Structure describing a filter.
- *
- * The filter must be able to know when it should apply (through the
- * `must_be_applied()` function), and must be able to filter both from
- * the workdir to the odb, and from the odb to the workdir.
- *
- * - `should_apply_to_path` must return 0 if the filter shouldn't be applied
- *   for the passed path and the passed direction (to odb or to workdir).
- * - `apply_to_odb` must apply the filter to the passed `source`, and store the
- *   result in `dst`. `source` may contain NUL characters , so the filter should
- *   rely on the `source_size` to get the real length of the content to filter.
- *   The filter must also store the filtered content length in `dst_size`.
- * - `apply_to_workdir` must apply the filter to the passed `source`, and store the
- *   result in `dst`. `source` may contain NUL characters , so the filter should
- *   rely on the `source_size` to get the real length of the content to filter.
- *   The filter must also store the filtered content length in `dst_size`.
- * - `do_free` free filter-specific resources. Called when freeing a repository
- *   through `git_repository_free`
- */
 struct git_filter {
 	char *name;
 

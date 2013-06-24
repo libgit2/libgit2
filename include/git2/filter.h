@@ -19,8 +19,6 @@
  */
 GIT_BEGIN_DECL
 
-typedef struct git_filter git_filter;
-
 /**
  * Direction of the filter to apply.
  *
@@ -73,39 +71,38 @@ typedef void (*do_free_cb)(struct git_filter *self);
 
 /**
  * Allocate and initialize a new `git_filter`.
+ * 
+ * The filter must be able to know when it should apply (through the
+ * `must_be_applied()` function), and must be able to filter both from
+ * the workdir to the odb, and from the odb to the workdir.
+ *
+ * @param out the allocated `git_filter`
+ * @param should_apply_to_path callback which will be called to determine if
+ *   the filter must be applied or not. must return 0 if the filter shouldn't
+ *   be applied for the passed path and the passed direction.
+ * @param apply_to_odb callback which will be called to filter from workdir to
+ *   odb. The implementation must apply the filter to the passed `source`, and
+ *   store the result in `dst`. `source` may contain NUL characters , so the
+ *   filter must rely on the `source_size` to get the real length of the
+ *   content to filter.
+ *   The filter must also store the filtered content length in `dst_size`.
+ * @param apply_to_workdir callback which will be called to filter from odb to
+ *   workdir. The implementation must apply the filter to the passed `source`,
+ *   and store the result in `dst`. `source` may contain NUL characters , so
+ *   the filter must rely on the `source_size` to get the real length of the
+ *   content to filter.
+ *   The filter must also store the filtered content length in `dst_size`.
+ * @param do_free callback called to free filter-specific resources. Called
+ *   when freeing a repository through `git_repository_free`.
+ * @param name the name of the filter
  */
-int git_filters_create_filter(
+int git_filter_create_filter(
 	git_filter **out,
 	should_apply_to_path_cb should_apply, 
 	apply_to_cb apply_to_odb,
 	apply_to_cb apply_to_workdir,
 	do_free_cb free,
 	const char *name);
-
-/**
- * Register a `git_filter` in the given repository.
- *
- * This filter will be applied according to its `should_apply_to_path()`
- * definition.
- *
- * @param repo repository for which to register the filter
- * @param filter the filter to register
- * @return 0 on success, -1 on failure
- */
-GIT_EXTERN(int) git_filters_register_filter(
-	git_repository *repo,
-	git_filter *filter);
-
-/**
- * Remove a `git_filter` from the given repository.
- *
- * @param repo repository for which to register the filter
- * @param filtername the name of the filter to remove
- * @return 0 on success, -1 on failure
- */
-GIT_EXTERN(int) git_filters_unregister_filter(
-	git_repository *repo,
-	const char *filtername);
 
 /**
  * Free an existing `git_filter` object.

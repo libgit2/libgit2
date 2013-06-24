@@ -666,6 +666,31 @@ GIT_EXTERN(const char *) git_repository_get_namespace(git_repository *repo);
  */
 GIT_EXTERN(int) git_repository_is_shallow(git_repository *repo);
 
+/**
+ * Add a `git_filter` to the given repository.
+ *
+ * This filter will be applied according to its `should_apply_to_path()`
+ * definition.
+ *
+ * @param repo repository for which to register the filter
+ * @param filter the filter to register
+ * @return 0 on success, -1 on failure
+ */
+GIT_EXTERN(int) git_repository_add_filter(
+	git_repository *repo,
+	git_filter *filter);
+
+/**
+ * Remove a `git_filter` from the given repository.
+ *
+ * @param repo repository for which to register the filter
+ * @param filtername the name of the filter to remove
+ * @return 0 on success, -1 on failure
+ */
+GIT_EXTERN(int) git_repository_remove_filter(
+	git_repository *repo,
+	const char *filtername);
+
 /** @} */
 GIT_END_DECL
 #endif

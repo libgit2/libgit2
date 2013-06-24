@@ -323,7 +323,7 @@ static int should_apply_to_path(
 
 int git_filter_create__crlf_filter(git_filter **out)
 {
-	return git_filters_create_filter(out, should_apply_to_path,
+	return git_filter_create_filter(out, should_apply_to_path,
 		crlf_apply_to_odb, crlf_apply_to_workdir, NULL,
 		"crlf");
 }

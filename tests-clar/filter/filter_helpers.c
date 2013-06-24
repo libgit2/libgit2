@@ -60,6 +60,6 @@ static void do_free(git_filter *self)
 
 int create_custom_filter(git_filter **out, char *name)
 {
-	return git_filters_create_filter(out, should_apply_to_path,
+	return git_filter_create_filter(out, should_apply_to_path,
 		apply_to_odb, apply_to_worktree, do_free, name);
 }

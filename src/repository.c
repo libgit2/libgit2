@@ -765,6 +765,56 @@ void git_repository_set_refdb(git_repository *repo, git_refdb *refdb)
 	set_refdb(repo, refdb);
 }
 
+static int find_filter_by_name(const void *a, const void *b)
+{
+	const git_filter *filter = (const git_filter *)(b);
+	const char *key = (const char *)(a);
+
+	return strcmp(key, filter->name);
+}
+
+int git_repository_add_filter(git_repository *repo, git_filter *filter)
+{
+	int error;
+
+	if (!filter->name || filter->name[0] == '\0') {
+		giterr_set(GITERR_INVALID, "A filter must have a name.");
+		return GIT_EINVALIDSPEC;
+	}
+
+	if (git_vector_search2(NULL, &repo->filters, find_filter_by_name,
+		filter->name) != GIT_ENOTFOUND)
+			return GIT_EEXISTS;
+
+	if ((error = git_vector_insert(&repo->filters, filter)) < 0)
+		return error;
+
+	return 0;
+}
+
+int git_repository_remove_filter(git_repository *repo, const char *filtername)
+{
+	int error;
+	size_t pos;
+	git_filter *filter;
+
+	if ((error = git_vector_search2(&pos, &repo->filters, find_filter_by_name,
+		filtername)) < 0)
+			return error;
+
+	filter = (git_filter *)git_vector_get(&repo->filters, pos);
+
+	if (filter->do_free)
+		filter->do_free(filter);
+	else
+		git_filter_free(filter);
+
+	if ((error = git_vector_remove(&repo->filters, pos)) < 0)
+		return error;
+
+	return 0;
+}
+
 int git_repository_index__weakptr(git_index **out, git_repository *repo)
 {
 	int error = 0;
