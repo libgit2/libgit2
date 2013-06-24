@@ -1,19 +1,24 @@
 #include "clar_libgit2.h"
 
 static git_repository *g_repo;
+static git_repository *g_peel_repo;
 
 void test_refs_peel__initialize(void)
 {
 	cl_git_pass(git_repository_open(&g_repo, cl_fixture("testrepo.git")));
+	cl_git_pass(git_repository_open(&g_peel_repo, cl_fixture("peeled.git")));
 }
 
 void test_refs_peel__cleanup(void)
 {
 	git_repository_free(g_repo);
 	g_repo = NULL;
+	git_repository_free(g_peel_repo);
+	g_peel_repo = NULL;
 }
 
-static void assert_peel(
+static void assert_peel_generic(
+	git_repository *repo,
 	const char *ref_name,
 	git_otype requested_type,
 	const char* expected_sha,
@@ -23,7 +28,7 @@ static void assert_peel(
 	git_reference *ref;
 	git_object *peeled;
 
-	cl_git_pass(git_reference_lookup(&ref, g_repo, ref_name));
+	cl_git_pass(git_reference_lookup(&ref, repo, ref_name));
 	
 	cl_git_pass(git_reference_peel(&peeled, ref, requested_type));
 
@@ -34,6 +39,16 @@ static void assert_peel(
 
 	git_object_free(peeled);
 	git_reference_free(ref);
+}
+
+static void assert_peel(
+	const char *ref_name,
+	git_otype requested_type,
+	const char* expected_sha,
+	git_otype expected_type)
+{
+	assert_peel_generic(g_repo, ref_name, requested_type,
+			    expected_sha, expected_type);
 }
 
 static void assert_peel_error(int error, const char *ref_name, git_otype requested_type)
@@ -89,4 +104,16 @@ void test_refs_peel__can_peel_into_any_non_tag_object(void)
 		"1385f264afb75a56a5bec74243be9b367ba4ca08", GIT_OBJ_BLOB);
 	assert_peel("refs/tags/test", GIT_OBJ_ANY,
 		"e90810b8df3e80c413d903f631643c716887138d", GIT_OBJ_COMMIT);
+}
+
+void test_refs_peel__can_peel_fully_peeled_packed_refs(void)
+{
+	assert_peel_generic(g_peel_repo,
+			    "refs/tags/tag-inside-tags", GIT_OBJ_ANY,
+			    "0df1a5865c8abfc09f1f2182e6a31be550e99f07",
+			    GIT_OBJ_COMMIT);
+	assert_peel_generic(g_peel_repo,
+			    "refs/foo/tag-outside-tags", GIT_OBJ_ANY,
+			    "0df1a5865c8abfc09f1f2182e6a31be550e99f07",
+			    GIT_OBJ_COMMIT);
 }

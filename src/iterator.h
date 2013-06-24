@@ -19,6 +19,7 @@ typedef enum {
 	GIT_ITERATOR_TYPE_TREE = 1,
 	GIT_ITERATOR_TYPE_INDEX = 2,
 	GIT_ITERATOR_TYPE_WORKDIR = 3,
+	GIT_ITERATOR_TYPE_FS = 4,
 } git_iterator_type_t;
 
 typedef enum {
@@ -78,12 +79,33 @@ extern int git_iterator_for_index(
 	const char *start,
 	const char *end);
 
+extern int git_iterator_for_workdir_ext(
+	git_iterator **out,
+	git_repository *repo,
+	const char *repo_workdir,
+	git_iterator_flag_t flags,
+	const char *start,
+	const char *end);
+
 /* workdir iterators will match the ignore_case value from the index of the
  * repository, unless you override with a non-zero flag value
  */
-extern int git_iterator_for_workdir(
+GIT_INLINE(int) git_iterator_for_workdir(
 	git_iterator **out,
 	git_repository *repo,
+	git_iterator_flag_t flags,
+	const char *start,
+	const char *end)
+{
+	return git_iterator_for_workdir_ext(out, repo, NULL, flags, start, end);
+}
+
+/* for filesystem iterators, you have to explicitly pass in the ignore_case
+ * behavior that you desire
+ */
+extern int git_iterator_for_filesystem(
+	git_iterator **out,
+	const char *root,
 	git_iterator_flag_t flags,
 	const char *start,
 	const char *end);
@@ -131,9 +153,9 @@ GIT_INLINE(int) git_iterator_advance(
  *
  * If the current item is not a tree, this is a no-op.
  *
- * For working directory iterators only, a tree (i.e. directory) can be
- * empty.  In that case, this function returns GIT_ENOTFOUND and does not
- * advance.  That can't happen for tree and index iterators.
+ * For filesystem and working directory iterators, a tree (i.e. directory)
+ * can be empty.  In that case, this function returns GIT_ENOTFOUND and
+ * does not advance.  That can't happen for tree and index iterators.
  */
 GIT_INLINE(int) git_iterator_advance_into(
 	const git_index_entry **entry, git_iterator *iter)
@@ -141,18 +163,50 @@ GIT_INLINE(int) git_iterator_advance_into(
 	return iter->cb->advance_into(entry, iter);
 }
 
+/**
+ * Advance into a tree or skip over it if it is empty.
+ *
+ * Because `git_iterator_advance_into` may return GIT_ENOTFOUND if the
+ * directory is empty (only with filesystem and working directory
+ * iterators) and a common response is to just call `git_iterator_advance`
+ * when that happens, this bundles the two into a single simple call.
+ */
+GIT_INLINE(int) git_iterator_advance_into_or_over(
+	const git_index_entry **entry, git_iterator *iter)
+{
+	int error = iter->cb->advance_into(entry, iter);
+	if (error == GIT_ENOTFOUND) {
+		giterr_clear();
+		error = iter->cb->advance(entry, iter);
+	}
+	return error;
+}
+
+/* Seek is currently unimplemented */
 GIT_INLINE(int) git_iterator_seek(
 	git_iterator *iter, const char *prefix)
 {
 	return iter->cb->seek(iter, prefix);
 }
 
+/**
+ * Go back to the start of the iteration.
+ *
+ * This resets the iterator to the start of the iteration.  It also allows
+ * you to reset the `start` and `end` pathname boundaries of the iteration
+ * when doing so.
+ */
 GIT_INLINE(int) git_iterator_reset(
 	git_iterator *iter, const char *start, const char *end)
 {
 	return iter->cb->reset(iter, start, end);
 }
 
+/**
+ * Check if the iterator is at the end
+ *
+ * @return 0 if not at end, >0 if at end
+ */
 GIT_INLINE(int) git_iterator_at_end(git_iterator *iter)
 {
 	return iter->cb->at_end(iter);

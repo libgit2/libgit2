@@ -18,6 +18,13 @@ typedef struct {
 	int line_ctxt;
 	int line_adds;
 	int line_dels;
+
+	/* optional arrays of expected specific values */
+	const char **names;
+	int *statuses;
+
+	int debug;
+
 } diff_expects;
 
 typedef struct {
@@ -58,4 +65,4 @@ extern int diff_foreach_via_iterator(
 	void *data);
 
 extern void diff_print(FILE *fp, git_diff_list *diff);
-
+extern void diff_print_raw(FILE *fp, git_diff_list *diff);

@@ -5,6 +5,7 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 #include "../posix.h"
+#include "../fileops.h"
 #include "path.h"
 #include "utf-conv.h"
 #include "repository.h"
@@ -295,7 +296,18 @@ int p_getcwd(char *buffer_out, size_t size)
 
 int p_stat(const char* path, struct stat* buf)
 {
-	return do_lstat(path, buf, 0);
+	char target[GIT_WIN_PATH];
+	int error = 0;
+
+	error = do_lstat(path, buf, 0);
+
+	/* We need not do this in a loop to unwind chains of symlinks since
+	 * p_readlink calls GetFinalPathNameByHandle which does it for us. */
+	if (error >= 0 && S_ISLNK(buf->st_mode) &&
+		(error = p_readlink(path, target, GIT_WIN_PATH)) >= 0)
+		error = do_lstat(target, buf, 0);
+
+	return error;
 }
 
 int p_chdir(const char* path)
@@ -314,9 +326,20 @@ int p_chmod(const char* path, mode_t mode)
 
 int p_rmdir(const char* path)
 {
+	int error;
 	wchar_t buf[GIT_WIN_PATH];
 	git__utf8_to_16(buf, GIT_WIN_PATH, path);
-	return _wrmdir(buf);
+
+	error = _wrmdir(buf);
+
+	/* _wrmdir() is documented to return EACCES if "A program has an open
+	 * handle to the directory."  This sounds like what everybody else calls
+	 * EBUSY.  Let's convert appropriate error codes.
+	 */
+	if (GetLastError() == ERROR_SHARING_VIOLATION)
+		errno = EBUSY;
+
+	return error;
 }
 
 int p_hide_directory__w32(const char *path)
@@ -457,29 +480,29 @@ int p_send(GIT_SOCKET socket, const void *buffer, size_t length, int flags)
  * Borrowed from http://old.nabble.com/Porting-localtime_r-and-gmtime_r-td15282276.html
  * On Win32, `gmtime_r` doesn't exist but `gmtime` is threadsafe, so we can use that
  */
-struct tm * 
-p_localtime_r (const time_t *timer, struct tm *result) 
-{ 
-   struct tm *local_result; 
-   local_result = localtime (timer); 
+struct tm *
+p_localtime_r (const time_t *timer, struct tm *result)
+{
+	struct tm *local_result;
+	local_result = localtime (timer);
 
-   if (local_result == NULL || result == NULL) 
-      return NULL; 
+	if (local_result == NULL || result == NULL)
+		return NULL;
 
-   memcpy (result, local_result, sizeof (struct tm)); 
-   return result; 
-} 
-struct tm * 
-p_gmtime_r (const time_t *timer, struct tm *result) 
-{ 
-   struct tm *local_result; 
-   local_result = gmtime (timer); 
+	memcpy (result, local_result, sizeof (struct tm));
+	return result;
+}
+struct tm *
+p_gmtime_r (const time_t *timer, struct tm *result)
+{
+	struct tm *local_result;
+	local_result = gmtime (timer);
 
-   if (local_result == NULL || result == NULL) 
-      return NULL; 
+	if (local_result == NULL || result == NULL)
+		return NULL;
 
-   memcpy (result, local_result, sizeof (struct tm)); 
-   return result; 
+	memcpy (result, local_result, sizeof (struct tm));
+	return result;
 }
 
 #if defined(_MSC_VER) || defined(_MSC_EXTENSIONS)
@@ -492,44 +515,44 @@ p_gmtime_r (const time_t *timer, struct tm *result)
 #define _TIMEZONE_DEFINED
 struct timezone 
 {
-   int  tz_minuteswest; /* minutes W of Greenwich */
-   int  tz_dsttime;     /* type of dst correction */
+	int  tz_minuteswest; /* minutes W of Greenwich */
+	int  tz_dsttime;     /* type of dst correction */
 };
 #endif
- 
+
 int p_gettimeofday(struct timeval *tv, struct timezone *tz)
 {
-   FILETIME ft;
-   unsigned __int64 tmpres = 0;
-   static int tzflag;
- 
-   if (NULL != tv)
-      {
-         GetSystemTimeAsFileTime(&ft);
- 
-         tmpres |= ft.dwHighDateTime;
-         tmpres <<= 32;
-         tmpres |= ft.dwLowDateTime;
- 
-         /*converting file time to unix epoch*/
-         tmpres /= 10;  /*convert into microseconds*/
-         tmpres -= DELTA_EPOCH_IN_MICROSECS; 
-         tv->tv_sec = (long)(tmpres / 1000000UL);
-         tv->tv_usec = (long)(tmpres % 1000000UL);
-      }
- 
-   if (NULL != tz)
-      {
-         if (!tzflag)
-            {
-               _tzset();
-               tzflag++;
-            }
-         tz->tz_minuteswest = _timezone / 60;
-         tz->tz_dsttime = _daylight;
-      }
- 
-   return 0;
+	FILETIME ft;
+	unsigned __int64 tmpres = 0;
+	static int tzflag;
+
+	if (NULL != tv)
+	{
+		GetSystemTimeAsFileTime(&ft);
+
+		tmpres |= ft.dwHighDateTime;
+		tmpres <<= 32;
+		tmpres |= ft.dwLowDateTime;
+
+		/*converting file time to unix epoch*/
+		tmpres /= 10;  /*convert into microseconds*/
+		tmpres -= DELTA_EPOCH_IN_MICROSECS;
+		tv->tv_sec = (long)(tmpres / 1000000UL);
+		tv->tv_usec = (long)(tmpres % 1000000UL);
+	}
+
+	if (NULL != tz)
+	{
+		 if (!tzflag)
+		{
+			_tzset();
+			tzflag++;
+		}
+		tz->tz_minuteswest = _timezone / 60;
+		tz->tz_dsttime = _daylight;
+	}
+
+	return 0;
 }
 
 int p_inet_pton(int af, const char* src, void* dst)

@@ -37,11 +37,11 @@ static int count_cb(const char *reference_name, void *payload)
 	return 0;
 }
 
-static void assert_retrieval(const char *glob, unsigned int flags, int expected_count)
+static void assert_retrieval(const char *glob, int expected_count)
 {
 	int count = 0;
 
-	cl_git_pass(git_reference_foreach_glob(repo, glob, flags, count_cb, &count));
+	cl_git_pass(git_reference_foreach_glob(repo, glob, count_cb, &count));
 
 	cl_assert_equal_i(expected_count, count);
 }
@@ -49,17 +49,17 @@ static void assert_retrieval(const char *glob, unsigned int flags, int expected_
 void test_refs_foreachglob__retrieve_all_refs(void)
 {
 	/* 12 heads (including one packed head) + 1 note + 2 remotes + 7 tags */
-	assert_retrieval("*", GIT_REF_LISTALL, 22);
+	assert_retrieval("*", 22);
 }
 
 void test_refs_foreachglob__retrieve_remote_branches(void)
 {
-	assert_retrieval("refs/remotes/*", GIT_REF_LISTALL, 2);
+	assert_retrieval("refs/remotes/*", 2);
 }
 
 void test_refs_foreachglob__retrieve_local_branches(void)
 {
-	assert_retrieval("refs/heads/*", GIT_REF_LISTALL, 12);
+	assert_retrieval("refs/heads/*", 12);
 }
 
 void test_refs_foreachglob__retrieve_partially_named_references(void)
@@ -69,7 +69,7 @@ void test_refs_foreachglob__retrieve_partially_named_references(void)
 	 * refs/remotes/test/master, refs/tags/test
 	 */
 
-	assert_retrieval("*test*", GIT_REF_LISTALL, 4);
+	assert_retrieval("*test*", 4);
 }
 
 
@@ -89,7 +89,7 @@ void test_refs_foreachglob__can_cancel(void)
 	int count = 0;
 
 	cl_assert_equal_i(GIT_EUSER, git_reference_foreach_glob(
-		repo, "*", GIT_REF_LISTALL, interrupt_cb, &count) );
+		repo, "*", interrupt_cb, &count) );
 
 	cl_assert_equal_i(11, count);
 }

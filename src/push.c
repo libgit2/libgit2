@@ -177,10 +177,10 @@ int git_push_add_refspec(git_push *push, const char *refspec)
 
 int git_push_update_tips(git_push *push)
 {
-	git_refspec *fetch_spec = &push->remote->fetch;
 	git_buf remote_ref_name = GIT_BUF_INIT;
 	size_t i, j;
-	push_spec *push_spec;
+	git_refspec *fetch_spec;
+	push_spec *push_spec = NULL;
 	git_reference *remote_ref;
 	push_status *status;
 	int error = 0;
@@ -191,7 +191,8 @@ int git_push_update_tips(git_push *push)
 			continue;
 
 		/* Find the corresponding remote ref */
-		if (!git_refspec_src_matches(fetch_spec, status->ref))
+		fetch_spec = git_remote__matching_refspec(push->remote, status->ref);
+		if (!fetch_spec)
 			continue;
 
 		if ((error = git_refspec_transform_r(&remote_ref_name, fetch_spec, status->ref)) < 0)
@@ -302,7 +303,7 @@ static int revwalk(git_vector *commits, git_push *push)
 				continue;
 
 			if (!git_odb_exists(push->repo->_odb, &spec->roid)) {
-				giterr_clear();
+				giterr_set(GITERR_REFERENCE, "Cannot push missing reference");
 				error = GIT_ENONFASTFORWARD;
 				goto on_error;
 			}
@@ -312,7 +313,8 @@ static int revwalk(git_vector *commits, git_push *push)
 
 			if (error == GIT_ENOTFOUND ||
 				(!error && !git_oid_equal(&base, &spec->roid))) {
-				giterr_clear();
+				giterr_set(GITERR_REFERENCE,
+					"Cannot push non-fastforwardable reference");
 				error = GIT_ENONFASTFORWARD;
 				goto on_error;
 			}
@@ -332,12 +334,13 @@ static int revwalk(git_vector *commits, git_push *push)
 
 	while ((error = git_revwalk_next(&oid, rw)) == 0) {
 		git_oid *o = git__malloc(GIT_OID_RAWSZ);
-		GITERR_CHECK_ALLOC(o);
-		git_oid_cpy(o, &oid);
-		if (git_vector_insert(commits, o) < 0) {
+		if (!o) {
 			error = -1;
 			goto on_error;
 		}
+		git_oid_cpy(o, &oid);
+		if ((error = git_vector_insert(commits, o)) < 0)
+			goto on_error;
 	}
 
 on_error:
@@ -375,7 +378,7 @@ static int queue_differences(
 		const git_tree_entry *d_entry = git_tree_entry_byindex(delta, j);
 		int cmp = 0;
 
-		if (!git_oid_cmp(&b_entry->oid, &d_entry->oid))
+		if (!git_oid__cmp(&b_entry->oid, &d_entry->oid))
 			goto loop;
 
 		cmp = strcmp(b_entry->filename, d_entry->filename);
@@ -518,7 +521,7 @@ static int calculate_work(git_push *push)
 			/* This is a create or update.  Local ref must exist. */
 			if (git_reference_name_to_id(
 					&spec->loid, push->repo, spec->lref) < 0) {
-				giterr_set(GIT_ENOTFOUND, "No such reference '%s'", spec->lref);
+				giterr_set(GITERR_REFERENCE, "No such reference '%s'", spec->lref);
 				return -1;
 			}
 		}

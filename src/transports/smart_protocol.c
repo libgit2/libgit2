@@ -5,6 +5,7 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 #include "git2.h"
+#include "git2/odb_backend.h"
 
 #include "smart.h"
 #include "refs.h"
@@ -20,12 +21,18 @@ int git_smart__store_refs(transport_smart *t, int flushes)
 	gitno_buffer *buf = &t->buffer;
 	git_vector *refs = &t->refs;
 	int error, flush = 0, recvd;
-	const char *line_end;
-	git_pkt *pkt;
+	const char *line_end = NULL;
+	git_pkt *pkt = NULL;
+	git_pkt_ref *ref;
+	size_t i;
 
 	/* Clear existing refs in case git_remote_connect() is called again
 	 * after git_remote_disconnect().
 	 */
+	git_vector_foreach(refs, i, ref) {
+		git__free(ref->head.name);
+		git__free(ref);
+	}
 	git_vector_clear(refs);
 
 	do {
@@ -128,7 +135,7 @@ int git_smart__detect_caps(git_pkt_ref *pkt, transport_smart_caps *caps)
 static int recv_pkt(git_pkt **out, gitno_buffer *buf)
 {
 	const char *ptr = buf->data, *line_end = ptr;
-	git_pkt *pkt;
+	git_pkt *pkt = NULL;
 	int pkt_type, error = 0, ret;
 
 	do {
@@ -186,7 +193,7 @@ static int fetch_setup_walk(git_revwalk **out, git_repository *repo)
 	unsigned int i;
 	git_reference *ref;
 
-	if (git_reference_list(&refs, repo, GIT_REF_LISTALL) < 0)
+	if (git_reference_list(&refs, repo) < 0)
 		return -1;
 
 	if (git_revwalk_new(&walk, repo) < 0)
@@ -569,7 +576,7 @@ static int add_push_report_pkt(git_push *push, git_pkt *pkt)
 
 	switch (pkt->type) {
 		case GIT_PKT_OK:
-			status = git__malloc(sizeof(push_status));
+			status = git__calloc(1, sizeof(push_status));
 			GITERR_CHECK_ALLOC(status);
 			status->msg = NULL;
 			status->ref = git__strdup(((git_pkt_ok *)pkt)->ref);
@@ -633,8 +640,8 @@ static int add_push_report_sideband_pkt(git_push *push, git_pkt_data *data_pkt)
 
 static int parse_report(gitno_buffer *buf, git_push *push)
 {
-	git_pkt *pkt;
-	const char *line_end;
+	git_pkt *pkt = NULL;
+	const char *line_end = NULL;
 	int error, recvd;
 
 	for (;;) {
@@ -806,13 +813,13 @@ int git_smart__push(git_transport *transport, git_push *push)
 	transport_smart *t = (transport_smart *)transport;
 	git_smart_subtransport_stream *s;
 	git_buf pktline = GIT_BUF_INIT;
-	int error = -1;
+	int error = -1, need_pack = 0;
+	push_spec *spec;
+	unsigned int i;
 
 #ifdef PUSH_DEBUG
 {
 	git_remote_head *head;
-	push_spec *spec;
-	unsigned int i;
 	char hex[41]; hex[40] = '\0';
 
 	git_vector_foreach(&push->remote->refs, i, head) {
@@ -830,10 +837,23 @@ int git_smart__push(git_transport *transport, git_push *push)
 }
 #endif
 
+	/*
+	 * Figure out if we need to send a packfile; which is in all
+	 * cases except when we only send delete commands
+	 */
+	git_vector_foreach(&push->specs, i, spec) {
+		if (spec->lref) {
+			need_pack = 1;
+			break;
+		}
+	}
+
 	if (git_smart__get_push_stream(t, &s) < 0 ||
 		gen_pktline(&pktline, push) < 0 ||
-		s->write(s, git_buf_cstr(&pktline), git_buf_len(&pktline)) < 0 ||
-		git_packbuilder_foreach(push->pb, &stream_thunk, s) < 0)
+		s->write(s, git_buf_cstr(&pktline), git_buf_len(&pktline)) < 0)
+		goto on_error;
+
+	if (need_pack && git_packbuilder_foreach(push->pb, &stream_thunk, s) < 0)
 		goto on_error;
 
 	/* If we sent nothing or the server doesn't support report-status, then

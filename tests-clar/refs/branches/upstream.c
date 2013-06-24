@@ -103,6 +103,7 @@ void test_refs_branches_upstream__set_unset_upstream(void)
 
 	repository = cl_git_sandbox_init("testrepo.git");
 
+	/* remote */
 	cl_git_pass(git_reference_lookup(&branch, repository, "refs/heads/test"));
 	cl_git_pass(git_branch_set_upstream(branch, "test/master"));
 
@@ -112,6 +113,18 @@ void test_refs_branches_upstream__set_unset_upstream(void)
 	cl_git_pass(git_config_get_string(&value, config, "branch.test.merge"));
 	cl_assert_equal_s(value, "refs/heads/master");
 
+	git_reference_free(branch);
+
+	/* local */
+	cl_git_pass(git_reference_lookup(&branch, repository, "refs/heads/test"));
+	cl_git_pass(git_branch_set_upstream(branch, "master"));
+
+	cl_git_pass(git_config_get_string(&value, config, "branch.test.remote"));
+	cl_assert_equal_s(value, ".");
+	cl_git_pass(git_config_get_string(&value, config, "branch.test.merge"));
+	cl_assert_equal_s(value, "refs/heads/master");
+
+	/* unset */
 	cl_git_pass(git_branch_set_upstream(branch, NULL));
 	cl_git_fail_with(git_config_get_string(&value, config, "branch.test.merge"), GIT_ENOTFOUND);
 	cl_git_fail_with(git_config_get_string(&value, config, "branch.test.remote"), GIT_ENOTFOUND);

@@ -48,11 +48,24 @@ GIT_EXTERN(int) git_reference_lookup(git_reference **out, git_repository *repo, 
  *
  * @param out Pointer to oid to be filled in
  * @param repo The repository in which to look up the reference
- * @param name The long name for the reference
+ * @param name The long name for the reference (e.g. HEAD, refs/heads/master, refs/tags/v0.1.0, ...)
  * @return 0 on success, ENOTFOUND, EINVALIDSPEC or an error code.
  */
 GIT_EXTERN(int) git_reference_name_to_id(
 	git_oid *out, git_repository *repo, const char *name);
+
+/**
+ * Lookup a reference by DWIMing its short name
+ *
+ * Apply the git precendence rules to the given shorthand to determine
+ * which reference the user is refering to.
+ *
+ * @param out pointer in which to store the reference
+ * @param repo the repository in which to look
+ * @param shorthand the short name for the reference
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_reference_dwim(git_reference **out, git_repository *repo, const char *shorthand);
 
 /**
  * Create a new symbolic reference.
@@ -133,6 +146,17 @@ GIT_EXTERN(int) git_reference_create(git_reference **out, git_repository *repo, 
 GIT_EXTERN(const git_oid *) git_reference_target(const git_reference *ref);
 
 /**
+ * Return the peeled OID target of this reference.
+ *
+ * This peeled OID only applies to direct references that point to
+ * a hard Tag object: it is the result of peeling such Tag.
+ *
+ * @param ref The reference
+ * @return a pointer to the oid if available, NULL otherwise
+ */
+GIT_EXTERN(const git_oid *) git_reference_target_peel(const git_reference *ref);
+
+/**
  * Get full name to the reference pointed to by a symbolic reference.
  *
  * Only available if the reference is symbolic.
@@ -174,7 +198,7 @@ GIT_EXTERN(const char *) git_reference_name(const git_reference *ref);
  * If a direct reference is passed as an argument, a copy of that
  * reference is returned. This copy must be manually freed too.
  *
- * @param resolved_ref Pointer to the peeled reference
+ * @param out Pointer to the peeled reference
  * @param ref The reference
  * @return 0 or an error code
  */
@@ -233,11 +257,6 @@ GIT_EXTERN(int) git_reference_set_target(
  * The new name will be checked for validity.
  * See `git_reference_create_symbolic()` for rules about valid names.
  *
- * On success, the given git_reference will be deleted from disk and a
- * new `git_reference` will be returned.
- *
- * The reference will be immediately renamed in-memory and on disk.
- *
  * If the `force` flag is not enabled, and there's already
  * a reference with the given name, the renaming will fail.
  *
@@ -247,13 +266,13 @@ GIT_EXTERN(int) git_reference_set_target(
  * the reflog if it exists.
  *
  * @param ref The reference to rename
- * @param name The new name for the reference
+ * @param new_name The new name for the reference
  * @param force Overwrite an existing reference
  * @return 0 on success, EINVALIDSPEC, EEXISTS or an error code
  *
  */
 GIT_EXTERN(int) git_reference_rename(
-	git_reference **out,
+	git_reference **new_ref,
 	git_reference *ref,
 	const char *new_name,
 	int force);
@@ -273,12 +292,6 @@ GIT_EXTERN(int) git_reference_delete(git_reference *ref);
 /**
  * Fill a list with all the references that can be found in a repository.
  *
- * Using the `list_flags` parameter, the listed references may be filtered
- * by type (`GIT_REF_OID` or `GIT_REF_SYMBOLIC`) or using a bitwise OR of
- * `git_ref_t` values.  To include packed refs, include `GIT_REF_PACKED`.
- * For convenience, use the value `GIT_REF_LISTALL` to obtain all
- * references, including packed ones.
- *
  * The string array will be filled with the names of all references; these
  * values are owned by the user and should be free'd manually when no
  * longer needed, using `git_strarray_free()`.
@@ -286,21 +299,15 @@ GIT_EXTERN(int) git_reference_delete(git_reference *ref);
  * @param array Pointer to a git_strarray structure where
  *		the reference names will be stored
  * @param repo Repository where to find the refs
- * @param list_flags Filtering flags for the reference listing
  * @return 0 or an error code
  */
-GIT_EXTERN(int) git_reference_list(git_strarray *array, git_repository *repo, unsigned int list_flags);
+GIT_EXTERN(int) git_reference_list(git_strarray *array, git_repository *repo);
 
-typedef int (*git_reference_foreach_cb)(const char *refname, void *payload);
+typedef int (*git_reference_foreach_cb)(git_reference *reference, void *payload);
+typedef int (*git_reference_foreach_name_cb)(const char *name, void *payload);
 
 /**
  * Perform a callback on each reference in the repository.
- *
- * Using the `list_flags` parameter, the references may be filtered by
- * type (`GIT_REF_OID` or `GIT_REF_SYMBOLIC`) or using a bitwise OR of
- * `git_ref_t` values.  To include packed refs, include `GIT_REF_PACKED`.
- * For convenience, use the value `GIT_REF_LISTALL` to obtain all
- * references, including packed ones.
  *
  * The `callback` function will be called for each reference in the
  * repository, receiving the name of the reference and the `payload` value
@@ -308,15 +315,18 @@ typedef int (*git_reference_foreach_cb)(const char *refname, void *payload);
  * will terminate the iteration.
  *
  * @param repo Repository where to find the refs
- * @param list_flags Filtering flags for the reference listing.
  * @param callback Function which will be called for every listed ref
  * @param payload Additional data to pass to the callback
  * @return 0 on success, GIT_EUSER on non-zero callback, or error code
  */
 GIT_EXTERN(int) git_reference_foreach(
 	git_repository *repo,
-	unsigned int list_flags,
 	git_reference_foreach_cb callback,
+	void *payload);
+
+GIT_EXTERN(int) git_reference_foreach_name(
+	git_repository *repo,
+	git_reference_foreach_name_cb callback,
 	void *payload);
 
 /**
@@ -336,6 +346,49 @@ GIT_EXTERN(void) git_reference_free(git_reference *ref);
 GIT_EXTERN(int) git_reference_cmp(git_reference *ref1, git_reference *ref2);
 
 /**
+ * Create an iterator for the repo's references
+ *
+ * @param out pointer in which to store the iterator
+ * @param repo the repository
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_reference_iterator_new(
+	git_reference_iterator **out,
+	git_repository *repo);
+
+/**
+ * Create an iterator for the repo's references that match the
+ * specified glob
+ *
+ * @param out pointer in which to store the iterator
+ * @param repo the repository
+ * @param glob the glob to match against the reference names
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_reference_iterator_glob_new(
+	git_reference_iterator **out,
+	git_repository *repo,
+	const char *glob);
+
+/**
+ * Get the next reference
+ *
+ * @param out pointer in which to store the reference
+ * @param iter the iterator
+ * @return 0, GIT_ITEROVER if there are no more; or an error code
+ */
+GIT_EXTERN(int) git_reference_next(git_reference **out, git_reference_iterator *iter);
+
+GIT_EXTERN(int) git_reference_next_name(const char **out, git_reference_iterator *iter);
+
+/**
+ * Free the iterator and its associated resources
+ *
+ * @param iter the iterator to free
+ */
+GIT_EXTERN(void) git_reference_iterator_free(git_reference_iterator *iter);
+
+/**
  * Perform a callback on each reference in the repository whose name
  * matches the given pattern.
  *
@@ -349,7 +402,6 @@ GIT_EXTERN(int) git_reference_cmp(git_reference *ref1, git_reference *ref2);
  *
  * @param repo Repository where to find the refs
  * @param glob Pattern to match (fnmatch-style) against reference name.
- * @param list_flags Filtering flags for the reference listing.
  * @param callback Function which will be called for every listed ref
  * @param payload Additional data to pass to the callback
  * @return 0 on success, GIT_EUSER on non-zero callback, or error code
@@ -357,8 +409,7 @@ GIT_EXTERN(int) git_reference_cmp(git_reference *ref1, git_reference *ref2);
 GIT_EXTERN(int) git_reference_foreach_glob(
 	git_repository *repo,
 	const char *glob,
-	unsigned int list_flags,
-	git_reference_foreach_cb callback,
+	git_reference_foreach_name_cb callback,
 	void *payload);
 
 /**
@@ -411,6 +462,13 @@ typedef enum {
 	 * (e.g., foo/<star>/bar but not foo/bar<star>).
 	 */
 	GIT_REF_FORMAT_REFSPEC_PATTERN = (1 << 1),
+
+	/**
+	 * Interpret the name as part of a refspec in shorthand form
+	 * so the `ONELEVEL` naming rules aren't enforced and 'master'
+	 * becomes a valid name.
+	 */
+	GIT_REF_FORMAT_REFSPEC_SHORTHAND = (1 << 2),
 } git_reference_normalize_t;
 
 /**
@@ -448,9 +506,9 @@ GIT_EXTERN(int) git_reference_normalize_name(
  * If you pass `GIT_OBJ_ANY` as the target type, then the object
  * will be peeled until a non-tag object is met.
  *
- * @param peeled Pointer to the peeled git_object
+ * @param out Pointer to the peeled git_object
  * @param ref The reference to be processed
- * @param target_type The type of the requested object (GIT_OBJ_COMMIT,
+ * @param type The type of the requested object (GIT_OBJ_COMMIT,
  * GIT_OBJ_TAG, GIT_OBJ_TREE, GIT_OBJ_BLOB or GIT_OBJ_ANY).
  * @return 0 on success, GIT_EAMBIGUOUS, GIT_ENOTFOUND or an error code
  */
@@ -474,6 +532,21 @@ GIT_EXTERN(int) git_reference_peel(
  * @return 1 if the reference name is acceptable; 0 if it isn't
  */
 GIT_EXTERN(int) git_reference_is_valid_name(const char *refname);
+
+/**
+ * Get the reference's short name
+ *
+ * This will transform the reference name into a name "human-readable"
+ * version. If no shortname is appropriate, it will return the full
+ * name.
+ *
+ * The memory is owned by the reference and must not be freed.
+ *
+ * @param ref a reference
+ * @return the human-readable version of the name
+ */
+GIT_EXTERN(const char *) git_reference_shorthand(git_reference *ref);
+
 
 /** @} */
 GIT_END_DECL

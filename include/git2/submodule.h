@@ -103,20 +103,20 @@ typedef enum {
  * * WD_UNTRACKED      - wd contains untracked files
  */
 typedef enum {
-	 GIT_SUBMODULE_STATUS_IN_HEAD           = (1u << 0),
-	 GIT_SUBMODULE_STATUS_IN_INDEX          = (1u << 1),
-	 GIT_SUBMODULE_STATUS_IN_CONFIG         = (1u << 2),
-	 GIT_SUBMODULE_STATUS_IN_WD             = (1u << 3),
-	 GIT_SUBMODULE_STATUS_INDEX_ADDED       = (1u << 4),
-	 GIT_SUBMODULE_STATUS_INDEX_DELETED     = (1u << 5),
-	 GIT_SUBMODULE_STATUS_INDEX_MODIFIED    = (1u << 6),
-	 GIT_SUBMODULE_STATUS_WD_UNINITIALIZED  = (1u << 7),
-	 GIT_SUBMODULE_STATUS_WD_ADDED          = (1u << 8),
-	 GIT_SUBMODULE_STATUS_WD_DELETED        = (1u << 9),
-	 GIT_SUBMODULE_STATUS_WD_MODIFIED       = (1u << 10),
-	 GIT_SUBMODULE_STATUS_WD_INDEX_MODIFIED = (1u << 11),
-	 GIT_SUBMODULE_STATUS_WD_WD_MODIFIED    = (1u << 12),
-	 GIT_SUBMODULE_STATUS_WD_UNTRACKED      = (1u << 13),
+	GIT_SUBMODULE_STATUS_IN_HEAD           = (1u << 0),
+	GIT_SUBMODULE_STATUS_IN_INDEX          = (1u << 1),
+	GIT_SUBMODULE_STATUS_IN_CONFIG         = (1u << 2),
+	GIT_SUBMODULE_STATUS_IN_WD             = (1u << 3),
+	GIT_SUBMODULE_STATUS_INDEX_ADDED       = (1u << 4),
+	GIT_SUBMODULE_STATUS_INDEX_DELETED     = (1u << 5),
+	GIT_SUBMODULE_STATUS_INDEX_MODIFIED    = (1u << 6),
+	GIT_SUBMODULE_STATUS_WD_UNINITIALIZED  = (1u << 7),
+	GIT_SUBMODULE_STATUS_WD_ADDED          = (1u << 8),
+	GIT_SUBMODULE_STATUS_WD_DELETED        = (1u << 9),
+	GIT_SUBMODULE_STATUS_WD_MODIFIED       = (1u << 10),
+	GIT_SUBMODULE_STATUS_WD_INDEX_MODIFIED = (1u << 11),
+	GIT_SUBMODULE_STATUS_WD_WD_MODIFIED    = (1u << 12),
+	GIT_SUBMODULE_STATUS_WD_UNTRACKED      = (1u << 13),
 } git_submodule_status_t;
 
 #define GIT_SUBMODULE_STATUS__IN_FLAGS \
@@ -481,7 +481,7 @@ GIT_EXTERN(int) git_submodule_sync(git_submodule *submodule);
  * function will return distinct `git_repository` objects.  This will only
  * work if the submodule is checked out into the working directory.
  *
- * @param subrepo Pointer to the submodule repo which was opened
+ * @param repo Pointer to the submodule repo which was opened
  * @param submodule Submodule to be opened
  * @return 0 on success, <0 if submodule repo could not be opened.
  */
@@ -531,7 +531,7 @@ GIT_EXTERN(int) git_submodule_status(
  * This can be useful if you want to know if the submodule is present in the
  * working directory at this point in time, etc.
  *
- * @param status Combination of first four `GIT_SUBMODULE_STATUS` flags
+ * @param location_status Combination of first four `GIT_SUBMODULE_STATUS` flags
  * @param submodule Submodule for which to get status
  * @return 0 on success, <0 on error
  */

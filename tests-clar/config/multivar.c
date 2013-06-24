@@ -97,6 +97,22 @@ void test_config_multivar__add(void)
 	git_config_free(cfg);
 }
 
+void test_config_multivar__add_new(void)
+{
+	const char *var = "a.brand.new";
+	git_config *cfg;
+	int n;
+
+	cl_git_pass(git_config_open_ondisk(&cfg, "config/config11"));
+
+	cl_git_pass(git_config_set_multivar(cfg, var, "", "variable"));
+	n = 0;
+	cl_git_pass(git_config_get_multivar(cfg, var, NULL, cb, &n));
+	cl_assert(n == 1);
+
+	git_config_free(cfg);
+}
+
 void test_config_multivar__replace(void)
 {
 	git_config *cfg;

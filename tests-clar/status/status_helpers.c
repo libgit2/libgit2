@@ -6,6 +6,9 @@ int cb_status__normal(
 {
 	status_entry_counts *counts = payload;
 
+	if (counts->debug)
+		cb_status__print(path, status_flags, NULL);
+
 	if (counts->entry_count >= counts->expected_entry_count) {
 		counts->wrong_status_flags_count++;
 		goto exit;
@@ -40,7 +43,8 @@ int cb_status__single(const char *p, unsigned int s, void *payload)
 {
 	status_entry_single *data = (status_entry_single *)payload;
 
-	GIT_UNUSED(p);
+	if (data->debug)
+		fprintf(stderr, "%02d: %s (%04x)\n", data->count, p, s);
 
 	data->count++;
 	data->status = s;

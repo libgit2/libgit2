@@ -1,8 +1,9 @@
 #include "clar_libgit2.h"
 
-#include "repository.h"
+#include "fileops.h"
 #include "git2/reflog.h"
 #include "reflog.h"
+#include "refs.h"
 #include "ref_helpers.h"
 
 static const char *loose_tag_ref_name = "refs/tags/e90810b";
@@ -38,7 +39,7 @@ void test_refs_rename__loose(void)
 	const char *new_name = "refs/tags/Nemo/knows/refs.kung-fu";
 
 	/* Ensure the ref doesn't exist on the file system */
-	cl_git_pass(git_buf_joinpath(&temp_path, g_repo->path_repository, new_name));
+	cl_git_pass(git_buf_joinpath(&temp_path, git_repository_path(g_repo), new_name));
 	cl_assert(!git_path_exists(temp_path.ptr));
 
 	/* Retrieval of the reference to rename */
@@ -64,7 +65,7 @@ void test_refs_rename__loose(void)
 	cl_assert(reference_is_packed(new_ref) == 0);
 
 	/* ...and the ref can be found in the file system */
-	cl_git_pass(git_buf_joinpath(&temp_path, g_repo->path_repository, new_name));
+	cl_git_pass(git_buf_joinpath(&temp_path, git_repository_path(g_repo), new_name));
 	cl_assert(git_path_exists(temp_path.ptr));
 
 	git_reference_free(new_ref);
@@ -80,7 +81,7 @@ void test_refs_rename__packed(void)
 	const char *brand_new_name = "refs/heads/brand_new_name";
 
 	/* Ensure the ref doesn't exist on the file system */
-	cl_git_pass(git_buf_joinpath(&temp_path, g_repo->path_repository, packed_head_name));
+	cl_git_pass(git_buf_joinpath(&temp_path, git_repository_path(g_repo), packed_head_name));
 	cl_assert(!git_path_exists(temp_path.ptr));
 
 	/* The reference can however be looked-up... */
@@ -106,7 +107,7 @@ void test_refs_rename__packed(void)
 	cl_assert(reference_is_packed(new_ref) == 0);
 
 	/* ...and the ref now happily lives in the file system */
-	cl_git_pass(git_buf_joinpath(&temp_path, g_repo->path_repository, brand_new_name));
+	cl_git_pass(git_buf_joinpath(&temp_path, git_repository_path(g_repo), brand_new_name));
 	cl_assert(git_path_exists(temp_path.ptr));
 
 	git_reference_free(new_ref);
@@ -122,7 +123,7 @@ void test_refs_rename__packed_doesnt_pack_others(void)
 	const char *brand_new_name = "refs/heads/brand_new_name";
 
 	/* Ensure the other reference exists on the file system */
-	cl_git_pass(git_buf_joinpath(&temp_path, g_repo->path_repository, packed_test_head_name));
+	cl_git_pass(git_buf_joinpath(&temp_path, git_repository_path(g_repo), packed_test_head_name));
 	cl_assert(git_path_exists(temp_path.ptr));
 
 	/* Lookup the other reference */
@@ -284,6 +285,7 @@ void test_refs_rename__overwrite(void)
 	git_reference_free(ref_one);
 	git_reference_free(ref_one_new);
 	git_reference_free(ref_two);
+	git_refdb_free(refdb);
 }
 
 

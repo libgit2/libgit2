@@ -26,16 +26,30 @@ enum {
 	GIT_DIFFCAPS_TRUST_MODE_BITS  = (1 << 2), /* use st_mode? */
 	GIT_DIFFCAPS_TRUST_CTIME      = (1 << 3), /* use st_ctime? */
 	GIT_DIFFCAPS_USE_DEV          = (1 << 4), /* use st_dev? */
+	GIT_DIFFCAPS_TRUST_NANOSECS   = (1 << 5), /* use stat time nanoseconds */
 };
+
+#define DIFF_FLAGS_KNOWN_BINARY (GIT_DIFF_FLAG_BINARY|GIT_DIFF_FLAG_NOT_BINARY)
+#define DIFF_FLAGS_NOT_BINARY   (GIT_DIFF_FLAG_NOT_BINARY|GIT_DIFF_FLAG__NO_DATA)
 
 enum {
 	GIT_DIFF_FLAG__FREE_PATH  = (1 << 7),  /* `path` is allocated memory */
 	GIT_DIFF_FLAG__FREE_DATA  = (1 << 8),  /* internal file data is allocated */
 	GIT_DIFF_FLAG__UNMAP_DATA = (1 << 9),  /* internal file data is mmap'ed */
 	GIT_DIFF_FLAG__NO_DATA    = (1 << 10), /* file data should not be loaded */
-	GIT_DIFF_FLAG__TO_DELETE  = (1 << 11), /* delete entry during rename det. */
-	GIT_DIFF_FLAG__TO_SPLIT   = (1 << 12), /* split entry during rename det. */
+	GIT_DIFF_FLAG__FREE_BLOB  = (1 << 11), /* release the blob when done */
+	GIT_DIFF_FLAG__LOADED     = (1 << 12), /* file data has been loaded */
+
+	GIT_DIFF_FLAG__TO_DELETE  = (1 << 16), /* delete entry during rename det. */
+	GIT_DIFF_FLAG__TO_SPLIT   = (1 << 17), /* split entry during rename det. */
+	GIT_DIFF_FLAG__IS_RENAME_TARGET = (1 << 18),
+	GIT_DIFF_FLAG__IS_RENAME_SOURCE = (1 << 19),
+	GIT_DIFF_FLAG__HAS_SELF_SIMILARITY = (1 << 20),
 };
+
+#define GIT_DIFF_FLAG__CLEAR_INTERNAL(F) (F) = ((F) & 0x00FFFF)
+
+#define GIT_DIFF__VERBOSE  (1 << 30)
 
 struct git_diff_list {
 	git_refcount     rc;
@@ -60,6 +74,7 @@ extern void git_diff__cleanup_modes(
 extern void git_diff_list_addref(git_diff_list *diff);
 
 extern int git_diff_delta__cmp(const void *a, const void *b);
+extern int git_diff_delta__casecmp(const void *a, const void *b);
 
 extern bool git_diff_delta__should_skip(
 	const git_diff_options *opts, const git_diff_delta *delta);
@@ -73,6 +88,23 @@ extern int git_diff__from_iterators(
 	git_iterator *old_iter,
 	git_iterator *new_iter,
 	const git_diff_options *opts);
+
+extern int git_diff__paired_foreach(
+	git_diff_list *idx2head,
+	git_diff_list *wd2idx,
+	int (*cb)(git_diff_delta *i2h, git_diff_delta *w2i, void *payload),
+	void *payload);
+
+extern int git_diff_find_similar__hashsig_for_file(
+	void **out, const git_diff_file *f, const char *path, void *p);
+
+extern int git_diff_find_similar__hashsig_for_buf(
+	void **out, const git_diff_file *f, const char *buf, size_t len, void *p);
+
+extern void git_diff_find_similar__hashsig_free(void *sig, void *payload);
+
+extern int git_diff_find_similar__calc_similarity(
+	int *score, void *siga, void *sigb, void *payload);
 
 #endif
 

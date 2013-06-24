@@ -47,14 +47,14 @@ typedef struct {
 typedef struct {
 	git_refcount unused;
 	const char *name;
-    uint32_t name_hash;
+	uint32_t name_hash;
 } git_attr_name;
 
 typedef struct {
 	git_refcount rc;		/* for macros */
 	char *name;
-    uint32_t name_hash;
-    const char *value;
+	uint32_t name_hash;
+	const char *value;
 } git_attr_assignment;
 
 typedef struct {

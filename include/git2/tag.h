@@ -30,12 +30,8 @@ GIT_BEGIN_DECL
  * @param id identity of the tag to locate.
  * @return 0 or an error code
  */
-GIT_INLINE(int) git_tag_lookup(
-	git_tag **out, git_repository *repo, const git_oid *id)
-{
-	return git_object_lookup(
-		(git_object **)out, repo, id, (git_otype)GIT_OBJ_TAG);
-}
+GIT_EXTERN(int) git_tag_lookup(
+	git_tag **out, git_repository *repo, const git_oid *id);
 
 /**
  * Lookup a tag object from the repository,
@@ -49,12 +45,8 @@ GIT_INLINE(int) git_tag_lookup(
  * @param len the length of the short identifier
  * @return 0 or an error code
  */
-GIT_INLINE(int) git_tag_lookup_prefix(
-	git_tag **out, git_repository *repo, const git_oid *id, size_t len)
-{
-	return git_object_lookup_prefix(
-		(git_object **)out, repo, id, len, (git_otype)GIT_OBJ_TAG);
-}
+GIT_EXTERN(int) git_tag_lookup_prefix(
+	git_tag **out, git_repository *repo, const git_oid *id, size_t len);
 
 /**
  * Close an open tag
@@ -66,12 +58,7 @@ GIT_INLINE(int) git_tag_lookup_prefix(
  *
  * @param tag the tag to close
  */
-
-GIT_INLINE(void) git_tag_free(git_tag *tag)
-{
-	git_object_free((git_object *)tag);
-}
-
+GIT_EXTERN(void) git_tag_free(git_tag *tag);
 
 /**
  * Get the id of a tag.
@@ -80,6 +67,14 @@ GIT_INLINE(void) git_tag_free(git_tag *tag)
  * @return object identity for the tag.
  */
 GIT_EXTERN(const git_oid *) git_tag_id(const git_tag *tag);
+
+/**
+ * Get the repository that contains the tag.
+ *
+ * @param tag A previously loaded tag.
+ * @return Repository that contains this tag.
+ */
+GIT_EXTERN(git_repository *) git_tag_owner(const git_tag *tag);
 
 /**
  * Get the tagged object of a tag
@@ -181,6 +176,37 @@ GIT_EXTERN(int) git_tag_create(
 	const git_signature *tagger,
 	const char *message,
 	int force);
+
+/**
+ * Create a new tag in the object database pointing to a git_object
+ *
+ * The message will not be cleaned up. This can be achieved
+ * through `git_message_prettify()`.
+ *
+ * @param oid Pointer where to store the OID of the
+ * newly created tag
+ *
+ * @param repo Repository where to store the tag
+ *
+ * @param tag_name Name for the tag
+ *
+ * @param target Object to which this tag points. This object
+ * must belong to the given `repo`.
+ *
+ * @param tagger Signature of the tagger for this tag, and
+ * of the tagging time
+ *
+ * @param message Full message for this tag
+ *
+ * @return 0 on success or an error code
+ */
+GIT_EXTERN(int) git_tag_annotation_create(
+	git_oid *oid,
+	git_repository *repo,
+	const char *tag_name,
+	const git_object *target,
+	const git_signature *tagger,
+	const char *message);
 
 /**
  * Create a new tag in the repository from a buffer

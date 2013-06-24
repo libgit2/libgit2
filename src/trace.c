@@ -25,7 +25,7 @@ int git_trace_set(git_trace_level_t level, git_trace_callback callback)
 	git_trace__data.level = level;
 	git_trace__data.callback = callback;
 	GIT_MEMORY_BARRIER;
-	
+
 	return 0;
 #else
 	GIT_UNUSED(level);
@@ -36,4 +36,3 @@ int git_trace_set(git_trace_level_t level, git_trace_callback callback)
 	return -1;
 #endif
 }
-

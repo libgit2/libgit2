@@ -186,7 +186,7 @@ static int push_glob(git_revwalk *walk, const char *glob, int hide)
 	data.hide = hide;
 
 	if (git_reference_foreach_glob(
-		walk->repo, git_buf_cstr(&buf), GIT_REF_LISTALL, push_glob_cb, &data) < 0)
+		walk->repo, git_buf_cstr(&buf), push_glob_cb, &data) < 0)
 		goto on_error;
 
 	regfree(&preg);
