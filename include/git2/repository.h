@@ -519,7 +519,7 @@ typedef int (*git_repository_mergehead_foreach_cb)(const git_oid *oid,
  *
  * @param repo A repository object
  * @param callback Callback function
- * @param apyload Pointer to callback data (optional)
+ * @param payload Pointer to callback data (optional)
  * @return 0 on success, GIT_ENOTFOUND, GIT_EUSER or error
  */
 GIT_EXTERN(int) git_repository_mergehead_foreach(git_repository *repo,
