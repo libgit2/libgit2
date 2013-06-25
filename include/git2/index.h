@@ -138,6 +138,14 @@ typedef enum {
 	GIT_INDEX_ADD_CHECK_PATHSPEC = (1u << 2),
 } git_index_add_option_t;
 
+/**
+ * Match any index stage.
+ *
+ * Some index APIs take a stage to match; pass this value to match
+ * any entry matching the path regardless of stage.
+ */
+#define GIT_INDEX_STAGE_ANY -1
+
 /** @name Index File Functions
  *
  * These functions work on the index file itself.
