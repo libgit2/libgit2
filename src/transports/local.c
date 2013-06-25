@@ -599,6 +599,13 @@ static int local_close(git_transport *transport)
 static void local_free(git_transport *transport)
 {
 	transport_local *t = (transport_local *)transport;
+	size_t i;
+	git_remote_head *head;
+
+	git_vector_foreach(&t->refs, i, head) {
+		git__free(head->name);
+		git__free(head);
+	}
 
 	git_vector_free(&t->refs);
 
