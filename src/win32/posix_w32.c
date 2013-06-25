@@ -90,6 +90,9 @@ static int do_lstat(
 		if (fdata.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT)
 			fMode |= S_IFLNK;
 
+		if ((fMode & (S_IFDIR | S_IFLNK)) == (S_IFDIR | S_IFLNK)) // junction
+			fMode ^= S_IFLNK;
+
 		buf->st_ino = 0;
 		buf->st_gid = 0;
 		buf->st_uid = 0;
