@@ -75,6 +75,18 @@ void test_network_remote_local__retrieve_advertised_references(void)
 	cl_assert_equal_i(how_many_refs, 28);
 }
 
+void test_network_remote_local__retrieve_advertised_references_after_disconnect(void)
+{
+	int how_many_refs = 0;
+
+	connect_to_local_repository(cl_fixture("testrepo.git"));
+	git_remote_disconnect(remote);
+
+	cl_git_pass(git_remote_ls(remote, &count_ref__cb, &how_many_refs));
+
+	cl_assert_equal_i(how_many_refs, 28);
+}
+
 void test_network_remote_local__retrieve_advertised_references_from_spaced_repository(void)
 {
 	int how_many_refs = 0;
