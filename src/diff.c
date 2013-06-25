@@ -81,11 +81,11 @@ static int diff_delta__from_one(
 		DIFF_FLAG_IS_SET(diff, GIT_DIFF_IGNORE_SUBMODULES))
 		return 0;
 
-	if (!git_pathspec_match_path(
+	if (!git_pathspec__match(
 			&diff->pathspec, entry->path,
 			DIFF_FLAG_IS_SET(diff, GIT_DIFF_DISABLE_PATHSPEC_MATCH),
 			DIFF_FLAG_IS_SET(diff, GIT_DIFF_DELTAS_ARE_ICASE),
-			&matched_pathspec))
+			&matched_pathspec, NULL))
 		return 0;
 
 	delta = diff_delta__alloc(diff, status, entry->path);
@@ -387,7 +387,7 @@ static int diff_list_apply_options(
 		DIFF_FLAG_SET(diff, GIT_DIFF_DELTAS_ARE_ICASE, icase);
 
 		/* initialize pathspec from options */
-		if (git_pathspec_init(&diff->pathspec, &opts->pathspec, pool) < 0)
+		if (git_pathspec__vinit(&diff->pathspec, &opts->pathspec, pool) < 0)
 			return -1;
 	}
 
@@ -473,7 +473,7 @@ static void diff_list_free(git_diff_list *diff)
 	}
 	git_vector_free(&diff->deltas);
 
-	git_pathspec_free(&diff->pathspec);
+	git_pathspec__vfree(&diff->pathspec);
 	git_pool_clear(&diff->pool);
 
 	git__memzero(diff, sizeof(*diff));
@@ -634,11 +634,11 @@ static int maybe_modified(
 	bool new_is_workdir = (info->new_iter->type == GIT_ITERATOR_TYPE_WORKDIR);
 	const char *matched_pathspec;
 
-	if (!git_pathspec_match_path(
+	if (!git_pathspec__match(
 			&diff->pathspec, oitem->path,
 			DIFF_FLAG_IS_SET(diff, GIT_DIFF_DISABLE_PATHSPEC_MATCH),
 			DIFF_FLAG_IS_SET(diff, GIT_DIFF_DELTAS_ARE_ICASE),
-			&matched_pathspec))
+			&matched_pathspec, NULL))
 		return 0;
 
 	memset(&noid, 0, sizeof(noid));
