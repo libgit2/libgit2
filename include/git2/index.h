@@ -240,6 +240,14 @@ GIT_EXTERN(int) git_index_read(git_index *index);
 GIT_EXTERN(int) git_index_write(git_index *index);
 
 /**
+ * Get the full path to the index file on disk.
+ *
+ * @param index an existing index object
+ * @return path to index file or NULL for in-memory index
+ */
+GIT_EXTERN(const char *) git_index_path(git_index *index);
+
+/**
  * Read a tree into the index file with stats
  *
  * The current index contents will be replaced by the specified tree.
