@@ -163,6 +163,7 @@ void test_diff_submodules__dirty_submodule_2(void)
 		cl_git_pass(git_diff_tree_to_index(&diff2, g_repo, head, NULL, &opts));
 		cl_git_pass(git_diff_merge(diff, diff2));
 		git_diff_list_free(diff2);
+		git_tree_free(head);
 
 		check_diff_patches(diff, expected_dirty);
 	}
