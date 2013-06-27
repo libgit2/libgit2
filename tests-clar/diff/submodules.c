@@ -37,7 +37,8 @@ void test_diff_submodules__cleanup(void)
 	cl_fixture_cleanup("submod2_target");
 }
 
-static void check_diff_patches(git_diff_list *diff, const char **expected)
+static void check_diff_patches_at_line(
+	git_diff_list *diff, const char **expected, const char *file, int line)
 {
 	const git_diff_delta *delta;
 	git_diff_patch *patch = NULL;
@@ -48,23 +49,29 @@ static void check_diff_patches(git_diff_list *diff, const char **expected)
 		cl_git_pass(git_diff_get_patch(&patch, &delta, diff, d));
 
 		if (delta->status == GIT_DELTA_UNMODIFIED) {
-			cl_assert(expected[d] == NULL);
+			clar__assert(expected[d] == NULL, file, line, "found UNMODIFIED delta where modified was expected", NULL, 1);
 			continue;
 		}
 
 		if (expected[d] && !strcmp(expected[d], "<SKIP>"))
 			continue;
-		if (expected[d] && !strcmp(expected[d], "<END>"))
-			cl_assert(0);
+		if (expected[d] && !strcmp(expected[d], "<END>")) {
+			cl_git_pass(git_diff_patch_to_str(&patch_text, patch));
+			clar__assert(0, file, line, "expected end of deltas, but found more", patch_text, 1);
+		}
 
 		cl_git_pass(git_diff_patch_to_str(&patch_text, patch));
 
-		cl_assert_equal_s(expected[d], patch_text);
+		clar__assert_equal_s(expected[d], patch_text, file, line,
+			"expected diff did not match actual diff", 1);
 		git__free(patch_text);
 	}
 
-	cl_assert(expected[d] && !strcmp(expected[d], "<END>"));
+	clar__assert(expected[d] && !strcmp(expected[d], "<END>"), file, line, "found fewer deltas than expected", expected[d], 1);
 }
+
+#define check_diff_patches(diff, exp) \
+	check_diff_patches_at_line(diff, exp, __FILE__, __LINE__)
 
 void test_diff_submodules__unmodified_submodule(void)
 {
