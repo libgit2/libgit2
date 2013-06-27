@@ -86,6 +86,7 @@ void test_diff_submodules__unmodified_submodule(void)
 	opts.flags = GIT_DIFF_INCLUDE_IGNORED |
 		GIT_DIFF_INCLUDE_UNTRACKED |
 		GIT_DIFF_INCLUDE_UNMODIFIED;
+	opts.old_prefix = "a"; opts.new_prefix = "b";
 
 	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, NULL, &opts));
 	check_diff_patches(diff, expected);
@@ -115,6 +116,7 @@ void test_diff_submodules__dirty_submodule(void)
 	opts.flags = GIT_DIFF_INCLUDE_IGNORED |
 		GIT_DIFF_INCLUDE_UNTRACKED |
 		GIT_DIFF_INCLUDE_UNMODIFIED;
+	opts.old_prefix = "a"; opts.new_prefix = "b";
 
 	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, NULL, &opts));
 	check_diff_patches(diff, expected);
@@ -124,9 +126,9 @@ void test_diff_submodules__dirty_submodule(void)
 void test_diff_submodules__dirty_submodule_2(void)
 {
 	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
-	git_diff_list *diff = NULL;
+	git_diff_list *diff = NULL, *diff2 = NULL;
 	char *smpath = "testrepo";
-	static const char *expected_none[] = { NULL, "<END>" };
+	static const char *expected_none[] = { "<END>" };
 	static const char *expected_dirty[] = {
 		"diff --git a/testrepo b/testrepo\nindex a65fedf..a65fedf 160000\n--- a/testrepo\n+++ b/testrepo\n@@ -1 +1 @@\n-Subproject commit a65fedf39aefe402d3bb6e24df4d4f5fe4547750\n+Subproject commit a65fedf39aefe402d3bb6e24df4d4f5fe4547750-dirty\n", /* testrepo.git */
 		"<END>"
@@ -136,9 +138,11 @@ void test_diff_submodules__dirty_submodule_2(void)
 
 	cl_git_pass(git_submodule_reload_all(g_repo));
 
-	opts.flags = GIT_DIFF_INCLUDE_IGNORED |
-		GIT_DIFF_INCLUDE_UNTRACKED |
-		GIT_DIFF_INCLUDE_UNMODIFIED;
+	opts.flags = GIT_DIFF_INCLUDE_UNTRACKED |
+		GIT_DIFF_INCLUDE_UNTRACKED_CONTENT |
+		GIT_DIFF_RECURSE_UNTRACKED_DIRS |
+		GIT_DIFF_DISABLE_PATHSPEC_MATCH;
+	opts.old_prefix = "a"; opts.new_prefix = "b";
 	opts.pathspec.count = 1;
 	opts.pathspec.strings = &smpath;
 
@@ -151,6 +155,18 @@ void test_diff_submodules__dirty_submodule_2(void)
 
 	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, NULL, &opts));
 	check_diff_patches(diff, expected_dirty);
+
+	{
+		git_tree *head;
+
+		cl_git_pass(git_repository_head_tree(&head, g_repo));
+		cl_git_pass(git_diff_tree_to_index(&diff2, g_repo, head, NULL, &opts));
+		cl_git_pass(git_diff_merge(diff, diff2));
+		git_diff_list_free(diff2);
+
+		check_diff_patches(diff, expected_dirty);
+	}
+
 	git_diff_list_free(diff);
 
 	cl_git_pass(git_submodule_reload_all(g_repo));
@@ -179,6 +195,7 @@ void test_diff_submodules__submod2_index_to_wd(void)
 	setup_submodules2();
 
 	opts.flags = GIT_DIFF_INCLUDE_UNTRACKED;
+	opts.old_prefix = "a"; opts.new_prefix = "b";
 
 	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, NULL, &opts));
 	check_diff_patches(diff, expected);
@@ -201,6 +218,7 @@ void test_diff_submodules__submod2_head_to_index(void)
 	cl_git_pass(git_repository_head_tree(&head, g_repo));
 
 	opts.flags = GIT_DIFF_INCLUDE_UNTRACKED;
+	opts.old_prefix = "a"; opts.new_prefix = "b";
 
 	cl_git_pass(git_diff_tree_to_index(&diff, g_repo, head, NULL, &opts));
 	check_diff_patches(diff, expected);
