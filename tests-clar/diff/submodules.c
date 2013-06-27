@@ -121,6 +121,45 @@ void test_diff_submodules__dirty_submodule(void)
 	git_diff_list_free(diff);
 }
 
+void test_diff_submodules__dirty_submodule_2(void)
+{
+	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
+	git_diff_list *diff = NULL;
+	char *smpath = "testrepo";
+	static const char *expected_none[] = { NULL, "<END>" };
+	static const char *expected_dirty[] = {
+		"diff --git a/testrepo b/testrepo\nindex a65fedf..a65fedf 160000\n--- a/testrepo\n+++ b/testrepo\n@@ -1 +1 @@\n-Subproject commit a65fedf39aefe402d3bb6e24df4d4f5fe4547750\n+Subproject commit a65fedf39aefe402d3bb6e24df4d4f5fe4547750-dirty\n", /* testrepo.git */
+		"<END>"
+	};
+
+	setup_submodules();
+
+	cl_git_pass(git_submodule_reload_all(g_repo));
+
+	opts.flags = GIT_DIFF_INCLUDE_IGNORED |
+		GIT_DIFF_INCLUDE_UNTRACKED |
+		GIT_DIFF_INCLUDE_UNMODIFIED;
+	opts.pathspec.count = 1;
+	opts.pathspec.strings = &smpath;
+
+	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, NULL, &opts));
+	check_diff_patches(diff, expected_none);
+	git_diff_list_free(diff);
+
+	cl_git_rewritefile("submodules/testrepo/README", "heyheyhey");
+	cl_git_mkfile("submodules/testrepo/all_new.txt", "never seen before");
+
+	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, NULL, &opts));
+	check_diff_patches(diff, expected_dirty);
+	git_diff_list_free(diff);
+
+	cl_git_pass(git_submodule_reload_all(g_repo));
+
+	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, NULL, &opts));
+	check_diff_patches(diff, expected_dirty);
+	git_diff_list_free(diff);
+}
+
 void test_diff_submodules__submod2_index_to_wd(void)
 {
 	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
