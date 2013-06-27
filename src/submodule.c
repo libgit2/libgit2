@@ -9,9 +9,7 @@
 #include "git2/config.h"
 #include "git2/sys/config.h"
 #include "git2/types.h"
-#include "git2/repository.h"
 #include "git2/index.h"
-#include "git2/submodule.h"
 #include "buffer.h"
 #include "buf_text.h"
 #include "vector.h"
@@ -544,6 +542,15 @@ const git_oid *git_submodule_wd_id(git_submodule *submodule)
 {
 	assert(submodule);
 
+	/* if we know the submodule index timestamp and it has moved, then
+	 * let's reload the working directory information for the submodule
+	 */
+	if (submodule->wd_head_path != NULL &&
+		git_futils_filestamp_check(
+			&submodule->wd_stamp, submodule->wd_head_path))
+		submodule->flags &= ~GIT_SUBMODULE_STATUS__WD_OID_VALID;
+
+	/* load unless we think we have a valid oid */
 	if (!(submodule->flags & GIT_SUBMODULE_STATUS__WD_OID_VALID)) {
 		git_repository *subrepo;
 
@@ -702,11 +709,36 @@ int git_submodule_open(
 
 	/* if we have opened the submodule successfully, let's grab the HEAD OID */
 	if (!error) {
+		git_buf buf = GIT_BUF_INIT;
+
+		/* For now, let's just the index timestamp...
+		 *
+		 * git_buf_joinpath(&buf, git_repository_path(*subrepo), GIT_HEAD_FILE);
+		 * if (!git_path_exists(buf.ptr)) {
+		 */
+			git_index *index;
+			if (!git_repository_index__weakptr(&index, *subrepo))
+				git_buf_sets(&buf, git_index_path(index));
+			else
+				git_buf_free(&buf);
+		/* } */
+
+		if (git_buf_len(&buf) > 0) {
+			git__free(submodule->wd_head_path);
+			submodule->wd_head_path = git_buf_detach(&buf);
+		}
+
 		if (!git_reference_name_to_id(
-				&submodule->wd_oid, *subrepo, GIT_HEAD_FILE))
+				&submodule->wd_oid, *subrepo, GIT_HEAD_FILE)) {
+
 			submodule->flags |= GIT_SUBMODULE_STATUS__WD_OID_VALID;
-		else
-			giterr_clear();
+
+			if (submodule->wd_head_path)
+				git_futils_filestamp_check(
+					&submodule->wd_stamp, submodule->wd_head_path);
+		}
+
+		giterr_clear();
 	}
 
 	return error;

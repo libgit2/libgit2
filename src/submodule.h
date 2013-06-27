@@ -7,6 +7,10 @@
 #ifndef INCLUDE_submodule_h__
 #define INCLUDE_submodule_h__
 
+#include "git2/submodule.h"
+#include "git2/repository.h"
+#include "fileops.h"
+
 /* Notes:
  *
  * Submodule information can be in four places: the index, the config files
@@ -44,43 +48,53 @@
  * an entry for every submodule found in the HEAD and index, and for every
  * submodule described in .gitmodules.  The fields are as follows:
  *
- * - `owner` is the git_repository containing this submodule
  * - `name` is the name of the submodule from .gitmodules.
  * - `path` is the path to the submodule from the repo root.  It is almost
  *    always the same as `name`.
  * - `url` is the url for the submodule.
- * - `tree_oid` is the SHA1 for the submodule path in the repo HEAD.
- * - `index_oid` is the SHA1 for the submodule recorded in the index.
- * - `workdir_oid` is the SHA1 for the HEAD of the checked out submodule.
  * - `update` is a git_submodule_update_t value - see gitmodules(5) update.
+ * - `update_default` is the update value from the config
  * - `ignore` is a git_submodule_ignore_t value - see gitmodules(5) ignore.
+ * - `ignore_default` is the ignore value from the config
  * - `fetch_recurse` is 0 or 1 - see gitmodules(5) fetchRecurseSubmodules.
- * - `refcount` tracks how many hashmap entries there are for this submodule.
- *   It only comes into play if the name and path of the submodule differ.
- * - `flags` is for internal use, tracking where this submodule has been
- *   found (head, index, config, workdir) and other misc info about it.
+ *
+ * - `owner` is the git_repository containing this submodule
+ * - `flags` after for internal use, tracking where this submodule has been
+ *   found (head, index, config, workdir) and known status info, etc.
+ * - `head_oid` is the SHA1 for the submodule path in the repo HEAD.
+ * - `index_oid` is the SHA1 for the submodule recorded in the index.
+ * - `wd_oid` is the SHA1 for the HEAD of the checked out submodule.
+ * - `wd_index_path` is the path to the index of the checked out submodule
+ * - `wd_last_index` is a timestamp of that submodule index so we can
+ *   quickly check if the `wd_oid` should be rechecked
+ * - `refcount` tracks how many hash table entries in the
+ *   git_submodule_cache there are for this submodule.  It only comes into
+ *   play if the name and path of the submodule differ.
  *
  * If the submodule has been added to .gitmodules but not yet git added,
- * then the `index_oid` will be valid and zero.  If the submodule has been
- * deleted, but the delete has not been committed yet, then the `index_oid`
- * will be set, but the `url` will be NULL.
+ * then the `index_oid` will be zero but still marked valid.  If the
+ * submodule has been deleted, but the delete has not been committed yet,
+ * then the `index_oid` will be set, but the `url` will be NULL.
  */
 struct git_submodule {
-	git_repository *owner;
+	/* information from config */
 	char *name;
 	char *path; /* important: may point to same string data as "name" */
 	char *url;
-	uint32_t flags;
-	git_oid head_oid;
-	git_oid index_oid;
-	git_oid wd_oid;
-	/* information from config */
 	git_submodule_update_t update;
 	git_submodule_update_t update_default;
 	git_submodule_ignore_t ignore;
 	git_submodule_ignore_t ignore_default;
 	int fetch_recurse;
+
 	/* internal information */
+	git_repository *owner;
+	uint32_t flags;
+	git_oid head_oid;
+	git_oid index_oid;
+	git_oid wd_oid;
+	char *wd_head_path;
+	git_futils_filestamp wd_stamp;
 	int refcount;
 };
 

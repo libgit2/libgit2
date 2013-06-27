@@ -333,29 +333,34 @@ void test_diff_submodules__invalid_cache(void)
 	check_diff_patches(diff, expected_unchanged);
 	git_diff_list_free(diff);
 
+	sleep(2);
+
 	/* commit changed index of submodule */
 	{
 		git_object *parent;
 		git_oid tree_id, commit_id;
 		git_tree *tree;
 		git_signature *sig;
+		git_reference *ref;
 
-		cl_git_pass(git_revparse_single(&parent, smrepo, "HEAD"));
+		cl_git_pass(git_revparse_ext(&parent, &ref, smrepo, "HEAD"));
 		cl_git_pass(git_index_write_tree(&tree_id, smindex));
 		cl_git_pass(git_index_write(smindex));
 		cl_git_pass(git_tree_lookup(&tree, smrepo, &tree_id));
 		cl_git_pass(git_signature_new(&sig, "Sm Test", "sm@tester.test", 1372350000, 480));
 		cl_git_pass(git_commit_create_v(
-			&commit_id, smrepo, "HEAD", sig, sig, NULL,
-			"Move it", tree, 1, parent));
+			&commit_id, smrepo, git_reference_name(ref), sig, sig,
+			NULL, "Move it", tree, 1, parent));
 		git_object_free(parent);
 		git_tree_free(tree);
+		git_reference_free(ref);
 		git_signature_free(sig);
 	}
 
-	/* THIS RELOAD SHOULD NOT BE REQUIRED */
+	/* THIS RELOAD SHOULD NOT BE REQUIRED
 	cl_git_pass(git_submodule_reload_all(g_repo));
 	cl_git_pass(git_submodule_lookup(&sm, g_repo, smpath));
+ */
 
 	git_submodule_set_ignore(sm, GIT_SUBMODULE_IGNORE_DIRTY);
 
