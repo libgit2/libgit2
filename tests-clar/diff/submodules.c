@@ -47,8 +47,10 @@ static void check_diff_patches(git_diff_list *diff, const char **expected)
 	for (d = 0; d < num_d; ++d, git_diff_patch_free(patch)) {
 		cl_git_pass(git_diff_get_patch(&patch, &delta, diff, d));
 
-		if (delta->status == GIT_DELTA_UNMODIFIED)
+		if (delta->status == GIT_DELTA_UNMODIFIED) {
+			cl_assert(expected[d] == NULL);
 			continue;
+		}
 
 		if (expected[d] && !strcmp(expected[d], "<SKIP>"))
 			continue;
