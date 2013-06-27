@@ -10,6 +10,7 @@
 #include "diff_driver.h"
 #include "diff_patch.h"
 #include "diff_xdiff.h"
+#include "fileops.h"
 
 /* cached information about a single span in a diff */
 typedef struct diff_patch_line diff_patch_line;
@@ -175,9 +176,12 @@ static int diff_patch_load(git_diff_patch *patch, git_diff_output *output)
 			goto cleanup;
 	}
 
-	/* if we were previously missing an oid, update MODIFIED->UNMODIFIED */
+	/* if previously missing an oid, and now that we have it the two sides
+	 * are the same (and not submodules), update MODIFIED -> UNMODIFIED
+	 */
 	if (incomplete_data &&
 		patch->ofile.file->mode == patch->nfile.file->mode &&
+		patch->ofile.file->mode != GIT_FILEMODE_COMMIT &&
 		git_oid_equal(&patch->ofile.file->oid, &patch->nfile.file->oid) &&
 		patch->delta->status == GIT_DELTA_MODIFIED) /* not RENAMED/COPIED! */
 		patch->delta->status = GIT_DELTA_UNMODIFIED;
