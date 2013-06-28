@@ -1176,8 +1176,11 @@ static int load_submodule_config_from_head(
 	git_iterator *i;
 	const git_index_entry *entry;
 
-	if ((error = git_repository_head_tree(&head, repo)) < 0)
-		return error;
+	/* if we can't look up current head, then there's no submodule in it */
+	if (git_repository_head_tree(&head, repo) < 0) {
+		giterr_clear();
+		return 0;
+	}
 
 	if ((error = git_iterator_for_tree(&i, head, 0, NULL, NULL)) < 0) {
 		git_tree_free(head);
