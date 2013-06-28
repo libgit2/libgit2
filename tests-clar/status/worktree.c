@@ -683,7 +683,6 @@ void test_status_worktree__file_status_honors_case_ignorecase_regarding_untracke
 
 	repo = cl_git_sandbox_reopen();
 
-	/* Actually returns GIT_STATUS_IGNORED on Windows */
 	cl_git_fail_with(git_status_file(&status, repo, "NEW_FILE"), GIT_ENOTFOUND);
 
 	cl_git_pass(git_repository_index(&index, repo));
@@ -692,7 +691,6 @@ void test_status_worktree__file_status_honors_case_ignorecase_regarding_untracke
 	cl_git_pass(git_index_write(index));
 	git_index_free(index);
 
-	/* Actually returns GIT_STATUS_IGNORED on Windows */
 	cl_git_fail_with(git_status_file(&status, repo, "NEW_FILE"), GIT_ENOTFOUND);
 }
 
