@@ -1269,7 +1269,8 @@ static int load_submodule_config(git_repository *repo)
 
 	/* add submodule information from index */
 
-	load_submodule_config_from_index(repo, &gitmodules_oid);
+    if ((error = load_submodule_config_from_index(repo, &gitmodules_oid)) < 0)        
+        goto cleanup;
 
 	/* add submodule information from HEAD */
 
