@@ -284,13 +284,13 @@ char *git_buf_detach(git_buf *buf)
 	return data;
 }
 
-void git_buf_attach(git_buf *buf, char *ptr, size_t asize)
+void git_buf_attach(git_buf *buf, char *ptr, size_t size, size_t asize)
 {
 	git_buf_free(buf);
 
 	if (ptr) {
 		buf->ptr = ptr;
-		buf->size = strlen(ptr);
+		buf->size = size;
 		if (asize)
 			buf->asize = (asize < buf->size) ? buf->size + 1 : asize;
 		else /* pass 0 to fall back on strlen + 1 */

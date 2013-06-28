@@ -9,86 +9,130 @@
 #include "fileops.h"
 #include "hash.h"
 #include "filter.h"
+#include "git2/filter.h"
 #include "repository.h"
 #include "git2/config.h"
 #include "blob.h"
 
-int git_filters_load(git_vector *filters, git_repository *repo, const char *path, int mode)
+int git_filters__get_filters_to_apply(
+	git_vector *filters, git_repository *repo, const char *path,
+	git_filter_mode_t mode)
 {
-	int error;
+	size_t i;
+	git_filter *filter;
 
-	if (mode == GIT_FILTER_TO_ODB) {
-		/* Load the CRLF cleanup filter when writing to the ODB */
-		error = git_filter_add__crlf_to_odb(filters, repo, path);
-		if (error < 0)
-			return error;
-	} else {
-		error = git_filter_add__crlf_to_workdir(filters, repo, path);
-		if (error < 0)
-			return error;
+	git_vector_foreach(&repo->filters, i, filter) {
+		if (filter->should_apply_to_path(filter, repo, path, mode)) {
+			git_filter_internal *internal_filter;
+
+			internal_filter = git__malloc(sizeof(git_filter_internal));
+			GITERR_CHECK_ALLOC(internal_filter);
+
+			internal_filter->filter = filter;
+			internal_filter->mode = mode;
+			internal_filter->repo = repo;
+			internal_filter->path = git__strdup(path);
+
+			git_vector_insert(filters, internal_filter);
+		}
 	}
 
 	return (int)filters->length;
 }
 
-void git_filters_free(git_vector *filters)
+void git_filters__free(git_vector *filters)
 {
 	size_t i;
-	git_filter *filter;
+	git_filter_internal *internal_filter;
 
-	git_vector_foreach(filters, i, filter) {
-		if (filter->do_free != NULL)
-			filter->do_free(filter);
-		else
-			git__free(filter);
+	git_vector_foreach(filters, i, internal_filter) {
+		git__free(internal_filter->path);
+		git__free(internal_filter);
 	}
 
 	git_vector_free(filters);
 }
 
-int git_filters_apply(git_buf *dest, git_buf *source, git_vector *filters)
+#define APPLY_FILTER(DIRECTION, APPLY) ( \
+		internal_filter->mode == DIRECTION && \
+		internal_filter->filter->APPLY != NULL && \
+		internal_filter->filter->APPLY(internal_filter->filter, \
+		internal_filter->repo, internal_filter->path, \
+		current_source, current_source_size, \
+		&filtered_output, &filtered_output_size) == 0 \
+	)
+
+int git_filters__apply(
+	git_buf *dest, git_buf *source, git_vector *filters)
 {
-	size_t i;
-	unsigned int src;
-	git_buf *dbuffer[2];
-
-	dbuffer[0] = source;
-	dbuffer[1] = dest;
-
-	src = 0;
-
-	if (git_buf_len(source) == 0) {
-		git_buf_clear(dest);
-		return 0;
-	}
-
-	/* Pre-grow the destination buffer to more or less the size
-	 * we expect it to have */
-	if (git_buf_grow(dest, git_buf_len(source)) < 0)
-		return -1;
+	size_t i, current_source_size = git_buf_len(source);
+	const char *initial_source = git_buf_cstr(source);
+	char *current_source = (char *)initial_source;
 
 	for (i = 0; i < filters->length; ++i) {
-		git_filter *filter = git_vector_get(filters, i);
-		unsigned int dst = 1 - src;
+		git_filter_internal *internal_filter = git_vector_get(filters, i);
+		char *filtered_output;
+		size_t filtered_output_size;
 
-		git_buf_clear(dbuffer[dst]);
-
-		/* Apply the filter from dbuffer[src] to the other buffer;
-		 * if the filtering is canceled by the user mid-filter,
-		 * we skip to the next filter without changing the source
-		 * of the double buffering (so that the text goes through
-		 * cleanly).
+		/* Apply the filter, and consider the result as the source for
+		 * the next filter.
 		 */
-		if (filter->apply(filter, dbuffer[dst], dbuffer[src]) == 0)
-			src = dst;
+		if (APPLY_FILTER(GIT_FILTER_TO_ODB, apply_to_odb) ||
+			APPLY_FILTER(GIT_FILTER_TO_WORKDIR, apply_to_workdir)) {
+				if (current_source != initial_source)
+					git__free(current_source);
 
-		if (git_buf_oom(dbuffer[dst]))
-			return -1;
+				current_source = filtered_output;
+				current_source_size = filtered_output_size;
+				filtered_output = NULL;
+		}
 	}
 
-	/* Ensure that the output ends up in dbuffer[1] (i.e. the dest) */
-	if (src != 1)
+	if (current_source == source->ptr)
 		git_buf_swap(dest, source);
+	else {
+		git_buf_attach(dest, current_source, current_source_size, 0);
+	}
+
+	return 0;
+}
+
+void git_filter_free(git_filter *filter) 
+{
+	if (filter == NULL)
+		return;
+
+	git__free(filter->name);
+	git__free(filter);
+}
+
+int git_filter_create_filter(
+	git_filter **out,
+	git_filter_should_apply_to_path_cb should_apply, 
+	git_filter_apply_to_cb apply_to_odb,
+	git_filter_apply_to_cb apply_to_workdir,
+	git_filter_do_free_cb free,
+	const char *name)
+{
+	git_filter *filter;
+
+	if (!name || name[0] == '\0') {
+		giterr_set(GITERR_INVALID, "A filter must have a name.");
+		return GIT_EINVALIDSPEC;
+	}
+
+	filter = git__malloc(sizeof(git_filter));
+	GITERR_CHECK_ALLOC(filter);
+
+	filter->should_apply_to_path = should_apply;
+	filter->apply_to_odb = apply_to_odb;
+	filter->apply_to_workdir = apply_to_workdir;
+	filter->do_free = free;
+
+	filter->name = git__strdup(name);
+	GITERR_CHECK_ALLOC(filter->name);
+
+	*out = filter;
 
 	return 0;
 }

@@ -119,6 +119,9 @@ typedef struct git_blob git_blob;
 /** Parsed representation of a commit object. */
 typedef struct git_commit git_commit;
 
+/** Representation of a smudge/clean filter. */
+typedef struct git_filter git_filter;
+
 /** Representation of each one of the entries in a tree object. */
 typedef struct git_tree_entry git_tree_entry;
 
