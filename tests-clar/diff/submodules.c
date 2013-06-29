@@ -333,8 +333,6 @@ void test_diff_submodules__invalid_cache(void)
 	check_diff_patches(diff, expected_unchanged);
 	git_diff_list_free(diff);
 
-	sleep(2);
-
 	/* commit changed index of submodule */
 	{
 		git_object *parent;
@@ -356,11 +354,6 @@ void test_diff_submodules__invalid_cache(void)
 		git_reference_free(ref);
 		git_signature_free(sig);
 	}
-
-	/* THIS RELOAD SHOULD NOT BE REQUIRED
-	cl_git_pass(git_submodule_reload_all(g_repo));
-	cl_git_pass(git_submodule_lookup(&sm, g_repo, smpath));
- */
 
 	git_submodule_set_ignore(sm, GIT_SUBMODULE_IGNORE_DIRTY);
 

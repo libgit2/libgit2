@@ -13,6 +13,7 @@
 #include "pathspec.h"
 #include "index.h"
 #include "odb.h"
+#include "submodule.h"
 
 #define DIFF_FLAG_IS_SET(DIFF,FLAG) (((DIFF)->opts.flags & (FLAG)) != 0)
 #define DIFF_FLAG_ISNT_SET(DIFF,FLAG) (((DIFF)->opts.flags & (FLAG)) == 0)
@@ -595,7 +596,6 @@ static int maybe_modified_submodule(
 	int error = 0;
 	git_submodule *sub;
 	unsigned int sm_status = 0;
-	const git_oid *sm_oid;
 
 	*status = GIT_DELTA_UNMODIFIED;
 
@@ -603,7 +603,9 @@ static int maybe_modified_submodule(
 		!(error = git_submodule_lookup(
 			  &sub, diff->repo, info->nitem->path)) &&
 		git_submodule_ignore(sub) != GIT_SUBMODULE_IGNORE_ALL &&
-		!(error = git_submodule_status(&sm_status, sub)))
+		!(error = git_submodule__status(
+			  &sm_status, NULL, NULL, found_oid, sub,
+			  GIT_SUBMODULE_IGNORE_DEFAULT)))
 	{
 		/* check IS_WD_UNMODIFIED because this case is only used
 		 * when the new side of the diff is the working directory
@@ -611,10 +613,10 @@ static int maybe_modified_submodule(
 		if (!GIT_SUBMODULE_STATUS_IS_WD_UNMODIFIED(sm_status))
 			*status = GIT_DELTA_MODIFIED;
 
-		/* grab OID while we are here */
-		if (git_oid_iszero(&info->nitem->oid) &&
-			(sm_oid = git_submodule_wd_id(sub)) != NULL)
-			git_oid_cpy(found_oid, sm_oid);
+		/* now that we have a HEAD OID, check if HEAD moved */
+		if ((sm_status & GIT_SUBMODULE_STATUS_IN_WD) != 0 &&
+			!git_oid_equal(&info->oitem->oid, found_oid))
+			*status = GIT_DELTA_MODIFIED;
 	}
 
 	/* GIT_EEXISTS means a dir with .git in it was found - ignore it */
