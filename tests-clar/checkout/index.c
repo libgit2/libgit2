@@ -587,6 +587,8 @@ void test_checkout_index__target_directory_from_bare(void)
 
 	cl_git_pass(git_futils_rmdir_r(
 		"alternative", NULL, GIT_RMDIR_REMOVE_FILES));
+
+	git_object_free(head);
 }
 
 void test_checkout_index__can_get_repo_from_index(void)

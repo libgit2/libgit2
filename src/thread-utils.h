@@ -104,7 +104,7 @@ GIT_INLINE(void *) git___compare_and_swap(
 {
 	volatile void *foundval;
 #if defined(GIT_WIN32)
-	foundval = InterlockedCompareExchangePointer(ptr, newval, oldval);
+	foundval = InterlockedCompareExchangePointer((volatile PVOID *)ptr, newval, oldval);
 #elif defined(__GNUC__)
 	foundval = __sync_val_compare_and_swap(ptr, oldval, newval);
 #else

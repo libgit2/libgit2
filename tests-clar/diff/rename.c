@@ -516,7 +516,7 @@ void test_diff_rename__working_directory_changes(void)
 	cl_git_pass(git_oid_fromstr(&id, blobsha));
 	cl_git_pass(git_blob_lookup(&blob, g_repo, &id));
 	cl_git_pass(git_buf_set(
-		&content, git_blob_rawcontent(blob), git_blob_rawsize(blob)));
+		&content, git_blob_rawcontent(blob), (size_t)git_blob_rawsize(blob)));
 	cl_git_rewritefile("renames/songof7cities.txt", content.ptr);
 	git_blob_free(blob);
 
