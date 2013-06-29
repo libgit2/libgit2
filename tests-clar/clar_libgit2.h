@@ -5,6 +5,10 @@
 #include <git2.h>
 #include "common.h"
 
+#if (defined(GIT_WIN32) || defined(__APPLE__))
+#define CASE_INSENSITIVE_FILESYSTEM 1
+#endif
+
 /**
  * Replace for `clar_must_pass` that passes the last library error as the
  * test failure message.
