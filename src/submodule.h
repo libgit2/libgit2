@@ -48,6 +48,10 @@
  * an entry for every submodule found in the HEAD and index, and for every
  * submodule described in .gitmodules.  The fields are as follows:
  *
+ * - `rc` tracks the refcount of how many hash table entries in the
+ *   git_submodule_cache there are for this submodule.  It only comes into
+ *   play if the name and path of the submodule differ.
+ *
  * - `name` is the name of the submodule from .gitmodules.
  * - `path` is the path to the submodule from the repo root.  It is almost
  *    always the same as `name`.
@@ -58,18 +62,12 @@
  * - `ignore_default` is the ignore value from the config
  * - `fetch_recurse` is 0 or 1 - see gitmodules(5) fetchRecurseSubmodules.
  *
- * - `owner` is the git_repository containing this submodule
+ * - `repo` is the parent repository that contains this submodule.
  * - `flags` after for internal use, tracking where this submodule has been
  *   found (head, index, config, workdir) and known status info, etc.
  * - `head_oid` is the SHA1 for the submodule path in the repo HEAD.
  * - `index_oid` is the SHA1 for the submodule recorded in the index.
  * - `wd_oid` is the SHA1 for the HEAD of the checked out submodule.
- * - `wd_index_path` is the path to the index of the checked out submodule
- * - `wd_last_index` is a timestamp of that submodule index so we can
- *   quickly check if the `wd_oid` should be rechecked
- * - `refcount` tracks how many hash table entries in the
- *   git_submodule_cache there are for this submodule.  It only comes into
- *   play if the name and path of the submodule differ.
  *
  * If the submodule has been added to .gitmodules but not yet git added,
  * then the `index_oid` will be zero but still marked valid.  If the
@@ -77,9 +75,11 @@
  * then the `index_oid` will be set, but the `url` will be NULL.
  */
 struct git_submodule {
+	git_refcount rc;
+
 	/* information from config */
 	char *name;
-	char *path; /* important: may point to same string data as "name" */
+	char *path; /* important: may just point to "name" string */
 	char *url;
 	git_submodule_update_t update;
 	git_submodule_update_t update_default;
@@ -88,14 +88,11 @@ struct git_submodule {
 	int fetch_recurse;
 
 	/* internal information */
-	git_repository *owner;
+	git_repository *repo;
 	uint32_t flags;
 	git_oid head_oid;
 	git_oid index_oid;
 	git_oid wd_oid;
-	char *wd_head_path;
-	git_futils_filestamp wd_stamp;
-	int refcount;
 };
 
 /* Additional flags on top of public GIT_SUBMODULE_STATUS values */
@@ -112,5 +109,22 @@ enum {
 
 #define GIT_SUBMODULE_STATUS__CLEAR_INTERNAL(S) \
 	((S) & ~(0xFFFFFFFFu << 20))
+
+/* Internal status fn returns status and optionally the various OIDs */
+extern int git_submodule__status(
+	unsigned int *out_status,
+	git_oid *out_head_id,
+	git_oid *out_index_id,
+	git_oid *out_wd_id,
+	git_submodule *sm,
+	git_submodule_ignore_t ign);
+
+/* Open submodule repository as bare repo for quick HEAD check, etc. */
+extern int git_submodule_open_bare(
+	git_repository **repo,
+	git_submodule *submodule);
+
+/* Release reference to submodule object - not currently for external use */
+extern void git_submodule_free(git_submodule *sm);
 
 #endif
