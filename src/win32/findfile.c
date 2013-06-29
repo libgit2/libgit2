@@ -156,7 +156,7 @@ static int win32_find_git_in_registry(
 }
 
 static int win32_find_existing_dirs(
-	git_buf *out, const wchar_t *tmpl[], char *temp[])
+	git_buf *out, const wchar_t *tmpl[])
 {
 	struct git_win32__path path16;
 	git_buf buf = GIT_BUF_INIT;
@@ -209,7 +209,6 @@ int git_win32__find_system_dirs(git_buf *out)
 
 int git_win32__find_global_dirs(git_buf *out)
 {
-	char *temp[3];
 	static const wchar_t *global_tmpls[4] = {
 		L"%HOME%\\",
 		L"%HOMEDRIVE%%HOMEPATH%\\",
@@ -217,12 +216,11 @@ int git_win32__find_global_dirs(git_buf *out)
 		NULL,
 	};
 
-	return win32_find_existing_dirs(out, global_tmpls, temp);
+	return win32_find_existing_dirs(out, global_tmpls);
 }
 
 int git_win32__find_xdg_dirs(git_buf *out)
 {
-	char *temp[6];
 	static const wchar_t *global_tmpls[7] = {
 		L"%XDG_CONFIG_HOME%\\git",
 		L"%APPDATA%\\git",
@@ -233,5 +231,5 @@ int git_win32__find_xdg_dirs(git_buf *out)
 		NULL,
 	};
 
-	return win32_find_existing_dirs(out, global_tmpls, temp);
+	return win32_find_existing_dirs(out, global_tmpls);
 }
