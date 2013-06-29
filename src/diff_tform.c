@@ -900,7 +900,7 @@ find_best_matches:
 				}
 				/* otherwise, if we just overwrote a source, update mapping */
 				else if (j > i && match_srcs[i].similarity > 0) {
-					match_tgts[match_srcs[i].idx].idx = j;
+					match_tgts[match_srcs[i].idx].idx = (uint32_t)j;
 				}
 
 				num_updates++;
