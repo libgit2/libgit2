@@ -387,6 +387,7 @@ void test_diff_submodules__diff_ignore_options(void)
 {
 	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
 	git_diff_list *diff = NULL;
+	git_config *cfg;
 	static const char *expected_normal[] = {
 		"<SKIP>", /* .gitmodules */
 		NULL, /* not-submodule */
@@ -440,4 +441,32 @@ void test_diff_submodules__diff_ignore_options(void)
 	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, NULL, &opts));
 	check_diff_patches(diff, expected_ignore_dirty);
 	git_diff_list_free(diff);
+
+	opts.ignore_submodules = 0;
+	cl_git_pass(git_repository_config(&cfg, g_repo));
+	cl_git_pass(git_config_set_bool(cfg, "diff.ignoreSubmodules", false));
+
+	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, NULL, &opts));
+	check_diff_patches(diff, expected_normal);
+	git_diff_list_free(diff);
+
+	cl_git_pass(git_config_set_bool(cfg, "diff.ignoreSubmodules", true));
+
+	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, NULL, &opts));
+	check_diff_patches(diff, expected_ignore_all);
+	git_diff_list_free(diff);
+
+	cl_git_pass(git_config_set_string(cfg, "diff.ignoreSubmodules", "none"));
+
+	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, NULL, &opts));
+	check_diff_patches(diff, expected_normal);
+	git_diff_list_free(diff);
+
+	cl_git_pass(git_config_set_string(cfg, "diff.ignoreSubmodules", "dirty"));
+
+	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, NULL, &opts));
+	check_diff_patches(diff, expected_ignore_dirty);
+	git_diff_list_free(diff);
+
+	git_config_free(cfg);
 }
