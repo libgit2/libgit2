@@ -966,7 +966,7 @@ static git_submodule *submodule_alloc(git_repository *repo, const char *name)
 		return NULL;
 	}
 
-	sm = git__calloc(1, sizeof(git_submodule) + namelen + 1);
+	sm = git__calloc(1, sizeof(git_submodule));
 	if (sm == NULL)
 		return NULL;
 
