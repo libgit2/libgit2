@@ -30,6 +30,8 @@ static git_cvar_map _sm_update_map[] = {
 	{GIT_CVAR_STRING, "rebase", GIT_SUBMODULE_UPDATE_REBASE},
 	{GIT_CVAR_STRING, "merge", GIT_SUBMODULE_UPDATE_MERGE},
 	{GIT_CVAR_STRING, "none", GIT_SUBMODULE_UPDATE_NONE},
+	{GIT_CVAR_FALSE, NULL, GIT_SUBMODULE_UPDATE_NONE},
+	{GIT_CVAR_TRUE, NULL, GIT_SUBMODULE_UPDATE_CHECKOUT},
 };
 
 static git_cvar_map _sm_ignore_map[] = {
@@ -37,6 +39,8 @@ static git_cvar_map _sm_ignore_map[] = {
 	{GIT_CVAR_STRING, "untracked", GIT_SUBMODULE_IGNORE_UNTRACKED},
 	{GIT_CVAR_STRING, "dirty", GIT_SUBMODULE_IGNORE_DIRTY},
 	{GIT_CVAR_STRING, "all", GIT_SUBMODULE_IGNORE_ALL},
+	{GIT_CVAR_FALSE, NULL, GIT_SUBMODULE_IGNORE_NONE},
+	{GIT_CVAR_TRUE, NULL, GIT_SUBMODULE_IGNORE_ALL},
 };
 
 static kh_inline khint_t str_hash_no_trailing_slash(const char *s)
@@ -406,11 +410,30 @@ cleanup:
 	return error;
 }
 
+const char *git_submodule_ignore_to_str(git_submodule_ignore_t ignore)
+{
+	int i;
+	for (i = 0; i < (int)ARRAY_SIZE(_sm_ignore_map); ++i)
+		if (_sm_ignore_map[i].map_value == ignore)
+			return _sm_ignore_map[i].str_match;
+	return NULL;
+}
+
+const char *git_submodule_update_to_str(git_submodule_update_t update)
+{
+	int i;
+	for (i = 0; i < (int)ARRAY_SIZE(_sm_update_map); ++i)
+		if (_sm_update_map[i].map_value == update)
+			return _sm_update_map[i].str_match;
+	return NULL;
+}
+
 int git_submodule_save(git_submodule *submodule)
 {
 	int error = 0;
 	git_config_backend *mods;
 	git_buf key = GIT_BUF_INIT;
+	const char *val;
 
 	assert(submodule);
 
@@ -435,22 +458,14 @@ int git_submodule_save(git_submodule *submodule)
 		goto cleanup;
 
 	if (!(error = submodule_config_key_trunc_puts(&key, "update")) &&
-		submodule->update != GIT_SUBMODULE_UPDATE_DEFAULT)
-	{
-		const char *val = (submodule->update == GIT_SUBMODULE_UPDATE_CHECKOUT) ?
-			NULL : _sm_update_map[submodule->update].str_match;
+		(val = git_submodule_update_to_str(submodule->update)) != NULL)
 		error = git_config_file_set_string(mods, key.ptr, val);
-	}
 	if (error < 0)
 		goto cleanup;
 
 	if (!(error = submodule_config_key_trunc_puts(&key, "ignore")) &&
-		submodule->ignore != GIT_SUBMODULE_IGNORE_DEFAULT)
-	{
-		const char *val = (submodule->ignore == GIT_SUBMODULE_IGNORE_NONE) ?
-			NULL : _sm_ignore_map[submodule->ignore].str_match;
+		(val = git_submodule_ignore_to_str(submodule->ignore)) != NULL)
 		error = git_config_file_set_string(mods, key.ptr, val);
-	}
 	if (error < 0)
 		goto cleanup;
 
@@ -554,7 +569,8 @@ const git_oid *git_submodule_wd_id(git_submodule *submodule)
 git_submodule_ignore_t git_submodule_ignore(git_submodule *submodule)
 {
 	assert(submodule);
-	return submodule->ignore;
+	return (submodule->ignore < GIT_SUBMODULE_IGNORE_NONE) ?
+		GIT_SUBMODULE_IGNORE_NONE : submodule->ignore;
 }
 
 git_submodule_ignore_t git_submodule_set_ignore(
@@ -564,7 +580,7 @@ git_submodule_ignore_t git_submodule_set_ignore(
 
 	assert(submodule);
 
-	if (ignore == GIT_SUBMODULE_IGNORE_DEFAULT)
+	if (ignore == GIT_SUBMODULE_IGNORE_RESET)
 		ignore = submodule->ignore_default;
 
 	old = submodule->ignore;
@@ -575,7 +591,8 @@ git_submodule_ignore_t git_submodule_set_ignore(
 git_submodule_update_t git_submodule_update(git_submodule *submodule)
 {
 	assert(submodule);
-	return submodule->update;
+	return (submodule->update < GIT_SUBMODULE_UPDATE_CHECKOUT) ?
+		GIT_SUBMODULE_UPDATE_CHECKOUT : submodule->update;
 }
 
 git_submodule_update_t git_submodule_set_update(
@@ -585,7 +602,7 @@ git_submodule_update_t git_submodule_set_update(
 
 	assert(submodule);
 
-	if (update == GIT_SUBMODULE_UPDATE_DEFAULT)
+	if (update == GIT_SUBMODULE_UPDATE_RESET)
 		update = submodule->update_default;
 
 	old = submodule->update;
@@ -616,6 +633,7 @@ int git_submodule_set_fetch_recurse_submodules(
 int git_submodule_init(git_submodule *submodule, int overwrite)
 {
 	int error;
+	const char *val;
 
 	/* write "submodule.NAME.url" */
 
@@ -632,14 +650,10 @@ int git_submodule_init(git_submodule *submodule, int overwrite)
 
 	/* write "submodule.NAME.update" if not default */
 
-	if (submodule->update == GIT_SUBMODULE_UPDATE_CHECKOUT)
-		error = submodule_update_config(
-			submodule, "update", NULL, (overwrite != 0), false);
-	else if (submodule->update != GIT_SUBMODULE_UPDATE_DEFAULT)
-		error = submodule_update_config(
-			submodule, "update",
-			_sm_update_map[submodule->update].str_match,
-			(overwrite != 0), false);
+	val = (submodule->update == GIT_SUBMODULE_UPDATE_CHECKOUT) ?
+		NULL : git_submodule_update_to_str(submodule->update);
+	error = submodule_update_config(
+		submodule, "update", val, (overwrite != 0), false);
 
 	return error;
 }
@@ -873,7 +887,7 @@ int git_submodule__status(
 	unsigned int status;
 	git_repository *smrepo = NULL;
 
-	if (ign == GIT_SUBMODULE_IGNORE_DEFAULT)
+	if (ign < GIT_SUBMODULE_IGNORE_NONE)
 		ign = sm->ignore;
 
 	/* only return location info if ignore == all */
@@ -926,8 +940,7 @@ int git_submodule_status(unsigned int *status, git_submodule *sm)
 {
 	assert(status && sm);
 
-	return git_submodule__status(
-		status, NULL, NULL, NULL, sm, GIT_SUBMODULE_IGNORE_DEFAULT);
+	return git_submodule__status(status, NULL, NULL, NULL, sm, 0);
 }
 
 int git_submodule_location(unsigned int *location, git_submodule *sm)
@@ -964,7 +977,10 @@ static git_submodule *submodule_alloc(git_repository *repo, const char *name)
 	}
 
 	GIT_REFCOUNT_INC(sm);
-	sm->repo = repo;
+	sm->ignore = sm->ignore_default = GIT_SUBMODULE_IGNORE_NONE;
+	sm->update = sm->update_default = GIT_SUBMODULE_UPDATE_CHECKOUT;
+	sm->repo   = repo;
+
 	return sm;
 }
 
@@ -1037,6 +1053,34 @@ static int submodule_config_error(const char *property, const char *value)
 	giterr_set(GITERR_INVALID,
 		"Invalid value for submodule '%s' property: '%s'", property, value);
 	return -1;
+}
+
+int git_submodule_parse_ignore(git_submodule_ignore_t *out, const char *value)
+{
+	int val;
+
+	if (git_config_lookup_map_value(
+			&val, _sm_ignore_map, ARRAY_SIZE(_sm_ignore_map), value) < 0) {
+		*out = GIT_SUBMODULE_IGNORE_NONE;
+		return submodule_config_error("ignore", value);
+	}
+
+	*out = (git_submodule_ignore_t)val;
+	return 0;
+}
+
+int git_submodule_parse_update(git_submodule_update_t *out, const char *value)
+{
+	int val;
+
+	if (git_config_lookup_map_value(
+			&val, _sm_update_map, ARRAY_SIZE(_sm_update_map), value) < 0) {
+		*out = GIT_SUBMODULE_UPDATE_CHECKOUT;
+		return submodule_config_error("update", value);
+	}
+
+	*out = (git_submodule_update_t)val;
+	return 0;
 }
 
 static int submodule_load_from_config(
@@ -1120,22 +1164,18 @@ static int submodule_load_from_config(
 			return -1;
 	}
 	else if (strcasecmp(property, "update") == 0) {
-		int val;
-		if (git_config_lookup_map_value(
-			&val, _sm_update_map, ARRAY_SIZE(_sm_update_map), value) < 0)
-			return submodule_config_error("update", value);
-		sm->update_default = sm->update = (git_submodule_update_t)val;
+		if (git_submodule_parse_update(&sm->update, value) < 0)
+			return -1;
+		sm->update_default = sm->update;
 	}
 	else if (strcasecmp(property, "fetchRecurseSubmodules") == 0) {
 		if (git__parse_bool(&sm->fetch_recurse, value) < 0)
 			return submodule_config_error("fetchRecurseSubmodules", value);
 	}
 	else if (strcasecmp(property, "ignore") == 0) {
-		int val;
-		if (git_config_lookup_map_value(
-			&val, _sm_ignore_map, ARRAY_SIZE(_sm_ignore_map), value) < 0)
-			return submodule_config_error("ignore", value);
-		sm->ignore_default = sm->ignore = (git_submodule_ignore_t)val;
+		if (git_submodule_parse_ignore(&sm->ignore, value) < 0)
+			return -1;
+		sm->ignore_default = sm->ignore;
 	}
 	/* ignore other unknown submodule properties */
 
