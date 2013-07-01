@@ -117,6 +117,32 @@ static int add_revision(struct log_state *s, const char *revstr)
 	return 0;
 }
 
+static void print_time(const git_time *intime, const char *prefix)
+{
+	char sign, out[32];
+	struct tm intm;
+	int offset, hours, minutes;
+	time_t t;
+
+	offset = intime->offset;
+	if (offset < 0) {
+		sign = '-';
+		offset = -offset;
+	} else {
+		sign = '+';
+	}
+
+	hours   = offset / 60;
+	minutes = offset % 60;
+
+	t = (time_t)intime->time + (intime->offset * 60);
+
+	gmtime_r(&t, &intm);
+	strftime(out, sizeof(out), "%a %b %d %T %Y", &intm);
+
+	printf("%s%s %c%02d%02d\n", prefix, out, sign, hours, minutes);
+}
+
 struct log_options {
 	int show_diff;
 	int skip;
@@ -125,7 +151,6 @@ struct log_options {
 	git_time_t after;
 	char *author;
 	char *committer;
-
 };
 
 int main(int argc, char *argv[])
@@ -173,12 +198,39 @@ int main(int argc, char *argv[])
 	paths.count   = argc - i;
 
 	while (!git_revwalk_next(&oid, s.walker)) {
+		const git_signature *sig;
+		const char *scan, *eol;
+
 		check(git_commit_lookup(&commit, s.repo, &oid),
 			"Failed to look up commit", NULL);
-		git_commit_free(commit);
 
 		git_oid_tostr(buf, sizeof(buf), &oid);
-		printf("%s\n", buf);
+		printf("commit %s\n", buf);
+
+		if ((count = (int)git_commit_parentcount(commit)) > 1) {
+			printf("Merge:");
+			for (i = 0; i < count; ++i) {
+				git_oid_tostr(buf, 8, git_commit_parent_id(commit, i));
+				printf(" %s", buf);
+			}
+			printf("\n");
+		}
+
+		if ((sig = git_commit_author(commit)) != NULL) {
+			printf("Author: %s <%s>\n", sig->name, sig->email);
+			print_time(&sig->when, "Date:   ");
+		}
+		printf("\n");
+
+		for (scan = git_commit_message(commit); scan && *scan; ) {
+			for (eol = scan; *eol && *eol != '\n'; ++eol) /* find eol */;
+
+			printf("    %.*s\n", (int)(eol - scan), scan);
+			scan = *eol ? eol + 1 : NULL;
+		}
+		printf("\n");
+
+		git_commit_free(commit);
 	}
 
 	git_revwalk_free(s.walker);
