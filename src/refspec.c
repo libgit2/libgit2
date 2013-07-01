@@ -225,25 +225,31 @@ int git_refspec_rtransform(char *out, size_t outlen, const git_refspec *spec, co
 	return refspec_transform_internal(out, outlen, spec->dst, spec->src, name);
 }
 
-static int refspec_transform(git_buf *out, const char *from, const char *to, const char *name)
+static int refspec_transform(
+	git_buf *out, const char *from, const char *to, const char *name)
 {
-	if (git_buf_sets(out, to) < 0)
+	size_t to_len   = to   ? strlen(to)   : 0;
+	size_t from_len = from ? strlen(from) : 0;
+	size_t name_len = name ? strlen(name) : 0;
+
+	if (git_buf_set(out, to, to_len) < 0)
 		return -1;
 
-	/*
-	 * No '*' at the end means that it's mapped to one specific
-	 * branch, so no actual transformation is needed.
-	 */
-	if (git_buf_len(out) > 0 && out->ptr[git_buf_len(out) - 1] != '*')
-		return 0;
+	if (to_len > 0) {
+		/* No '*' at the end of 'to' means that refspec is mapped to one
+		 * specific branch, so no actual transformation is needed.
+		 */
+		if (out->ptr[to_len - 1] != '*')
+			return 0;
+		git_buf_shorten(out, 1); /* remove trailing '*' copied from 'to' */
+	}
 
-	git_buf_truncate(out, git_buf_len(out) - 1); /* remove trailing '*' */
-	git_buf_puts(out, name + strlen(from) - 1);
+	if (from_len > 0) /* ignore trailing '*' from 'from' */
+		from_len--;
+	if (from_len > name_len)
+		from_len = name_len;
 
-	if (git_buf_oom(out))
-		return -1;
-
-	return 0;
+	return git_buf_put(out, name + from_len, name_len - from_len);
 }
 
 int git_refspec_transform_r(git_buf *out, const git_refspec *spec, const char *name)

@@ -204,7 +204,7 @@ static int update_head_to_remote(git_repository *repo, git_remote *remote)
 
 	/* Get the remote's HEAD. This is always the first ref in remote->refs. */
 	remote_head = NULL;
-	
+
 	if (!remote->transport->ls(remote->transport, get_head_callback, &remote_head))
 		return -1;
 
@@ -220,7 +220,7 @@ static int update_head_to_remote(git_repository *repo, git_remote *remote)
 		memset(&dummy_spec, 0, sizeof(git_refspec));
 		head_info.refspec = &dummy_spec;
 	}
-	
+
 	/* Determine the remote tracking reference name from the local master */
 	if (git_refspec_transform_r(
 		&remote_master_name,
