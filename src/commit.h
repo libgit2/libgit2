@@ -25,6 +25,7 @@ struct git_commit {
 
 	char *message_encoding;
 	char *message;
+	char *raw_header;
 };
 
 void git_commit__free(void *commit);
