@@ -130,6 +130,14 @@ GIT_EXTERN(const git_signature *) git_commit_committer(const git_commit *commit)
 GIT_EXTERN(const git_signature *) git_commit_author(const git_commit *commit);
 
 /**
+ * Get the full raw text of the commit header.
+ *
+ * @param commit a previously loaded commit
+ * @return the header text of the commit
+ */
+GIT_EXTERN(const char *) git_commit_raw_header(const git_commit *commit);
+
+/**
  * Get the tree pointed to by a commit.
  *
  * @param tree_out pointer where to store the tree object
