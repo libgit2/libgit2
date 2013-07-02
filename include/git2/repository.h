@@ -471,7 +471,7 @@ GIT_EXTERN(int) git_repository_index(git_index **out, git_repository *repo);
  * @param out Buffer to write data into or NULL to just read required size
  * @param len Length of `out` buffer in bytes
  * @param repo Repository to read prepared message from
- * @return GIT_ENOUTFOUND if no message exists, other value < 0 for other
+ * @return GIT_ENOTFOUND if no message exists, other value < 0 for other
  *         errors, or total bytes in message (may be > `len`) on success
  */
 GIT_EXTERN(int) git_repository_message(char *out, size_t len, git_repository *repo);
