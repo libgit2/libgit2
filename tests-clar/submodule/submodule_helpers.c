@@ -82,3 +82,38 @@ void rewrite_gitmodules(const char *workdir)
 	git_buf_free(&out_f);
 	git_buf_free(&path);
 }
+
+git_repository *setup_fixture_submodules(void)
+{
+	git_repository *repo = cl_git_sandbox_init("submodules");
+
+	cl_fixture_sandbox("testrepo.git");
+
+	rewrite_gitmodules(git_repository_workdir(repo));
+	p_rename("submodules/testrepo/.gitted", "submodules/testrepo/.git");
+
+	return repo;
+}
+
+git_repository *setup_fixture_submod2(void)
+{
+	git_repository *repo = cl_git_sandbox_init("submod2");
+
+	cl_fixture_sandbox("submod2_target");
+	p_rename("submod2_target/.gitted", "submod2_target/.git");
+
+	rewrite_gitmodules(git_repository_workdir(repo));
+	p_rename("submod2/not-submodule/.gitted", "submod2/not-submodule/.git");
+	p_rename("submod2/not/.gitted", "submod2/not/.git");
+
+	return repo;
+}
+
+void cleanup_fixture_submodules(void)
+{
+	cl_git_sandbox_cleanup();
+
+	/* just try to clean up both possible extras */
+	cl_fixture_cleanup("testrepo.git");
+	cl_fixture_cleanup("submod2_target");
+}

@@ -735,7 +735,7 @@ static int maybe_modified(
 	/* if we got here and decided that the files are modified, but we
 	 * haven't calculated the OID of the new item, then calculate it now
 	 */
-	if (status != GIT_DELTA_UNMODIFIED && git_oid_iszero(&nitem->oid)) {
+	if (status == GIT_DELTA_MODIFIED && git_oid_iszero(&nitem->oid)) {
 		if (git_oid_iszero(&noid)) {
 			if (git_diff__oid_for_file(diff->repo,
 					nitem->path, nitem->mode, nitem->file_size, &noid) < 0)
@@ -858,7 +858,7 @@ static int handle_unmatched_new_item(
 			git_buf_clear(&info->ignore_prefix);
 	}
 
-	if (S_ISDIR(nitem->mode)) {
+	if (nitem->mode == GIT_FILEMODE_TREE) {
 		bool recurse_into_dir = contains_oitem;
 
 		/* if not already inside an ignored dir, check if this is ignored */
@@ -961,6 +961,16 @@ static int handle_unmatched_new_item(
 
 	else if (info->new_iter->type != GIT_ITERATOR_TYPE_WORKDIR)
 		delta_type = GIT_DELTA_ADDED;
+
+	else if (nitem->mode == GIT_FILEMODE_COMMIT) {
+		git_submodule *sm;
+
+		/* ignore things that are not actual submodules */
+		if (git_submodule_lookup(&sm, info->repo, nitem->path) != 0) {
+			giterr_clear();
+			delta_type = GIT_DELTA_IGNORED;
+		}
+	}
 
 	/* Actually create the record for this item if necessary */
 	if ((error = diff_delta__from_one(diff, delta_type, nitem)) < 0)

@@ -5,36 +5,13 @@
 
 static git_repository *g_repo = NULL;
 
-static void setup_submodules(void)
-{
-	g_repo = cl_git_sandbox_init("submodules");
-	cl_fixture_sandbox("testrepo.git");
-	rewrite_gitmodules(git_repository_workdir(g_repo));
-	p_rename("submodules/testrepo/.gitted", "submodules/testrepo/.git");
-}
-
-static void setup_submodules2(void)
-{
-	g_repo = cl_git_sandbox_init("submod2");
-
-	cl_fixture_sandbox("submod2_target");
-	p_rename("submod2_target/.gitted", "submod2_target/.git");
-
-	rewrite_gitmodules(git_repository_workdir(g_repo));
-	p_rename("submod2/not-submodule/.gitted", "submod2/not-submodule/.git");
-	p_rename("submod2/not/.gitted", "submod2/not/.git");
-}
-
 void test_diff_submodules__initialize(void)
 {
 }
 
 void test_diff_submodules__cleanup(void)
 {
-	cl_git_sandbox_cleanup();
-
-	cl_fixture_cleanup("testrepo.git");
-	cl_fixture_cleanup("submod2_target");
+	cleanup_fixture_submodules();
 }
 
 static void check_diff_patches_at_line(
@@ -88,7 +65,7 @@ void test_diff_submodules__unmodified_submodule(void)
 		"<END>"
 	};
 
-	setup_submodules();
+	g_repo = setup_fixture_submodules();
 
 	opts.flags = GIT_DIFF_INCLUDE_IGNORED |
 		GIT_DIFF_INCLUDE_UNTRACKED |
@@ -115,7 +92,7 @@ void test_diff_submodules__dirty_submodule(void)
 		"<END>"
 	};
 
-	setup_submodules();
+	g_repo = setup_fixture_submodules();
 
 	cl_git_rewritefile("submodules/testrepo/README", "heyheyhey");
 	cl_git_mkfile("submodules/testrepo/all_new.txt", "never seen before");
@@ -141,7 +118,7 @@ void test_diff_submodules__dirty_submodule_2(void)
 		"<END>"
 	};
 
-	setup_submodules();
+	g_repo = setup_fixture_submodules();
 
 	cl_git_pass(git_submodule_reload_all(g_repo));
 
@@ -190,8 +167,6 @@ void test_diff_submodules__submod2_index_to_wd(void)
 	git_diff_list *diff = NULL;
 	static const char *expected[] = {
 		"<SKIP>", /* .gitmodules */
-		NULL, /* not-submodule */
-		NULL, /* not */
 		"diff --git a/sm_changed_file b/sm_changed_file\nindex 4800958..4800958 160000\n--- a/sm_changed_file\n+++ b/sm_changed_file\n@@ -1 +1 @@\n-Subproject commit 480095882d281ed676fe5b863569520e54a7d5c0\n+Subproject commit 480095882d281ed676fe5b863569520e54a7d5c0-dirty\n", /* sm_changed_file */
 		"diff --git a/sm_changed_head b/sm_changed_head\nindex 4800958..3d9386c 160000\n--- a/sm_changed_head\n+++ b/sm_changed_head\n@@ -1 +1 @@\n-Subproject commit 480095882d281ed676fe5b863569520e54a7d5c0\n+Subproject commit 3d9386c507f6b093471a3e324085657a3c2b4247\n", /* sm_changed_head */
 		"diff --git a/sm_changed_index b/sm_changed_index\nindex 4800958..4800958 160000\n--- a/sm_changed_index\n+++ b/sm_changed_index\n@@ -1 +1 @@\n-Subproject commit 480095882d281ed676fe5b863569520e54a7d5c0\n+Subproject commit 480095882d281ed676fe5b863569520e54a7d5c0-dirty\n", /* sm_changed_index */
@@ -200,7 +175,7 @@ void test_diff_submodules__submod2_index_to_wd(void)
 		"<END>"
 	};
 
-	setup_submodules2();
+	g_repo = setup_fixture_submod2();
 
 	opts.flags = GIT_DIFF_INCLUDE_UNTRACKED;
 	opts.old_prefix = "a"; opts.new_prefix = "b";
@@ -221,7 +196,7 @@ void test_diff_submodules__submod2_head_to_index(void)
 		"<END>"
 	};
 
-	setup_submodules2();
+	g_repo = setup_fixture_submod2();
 
 	cl_git_pass(git_repository_head_tree(&head, g_repo));
 
@@ -261,7 +236,7 @@ void test_diff_submodules__invalid_cache(void)
 		"<END>"
 	};
 
-	setup_submodules2();
+	g_repo = setup_fixture_submod2();
 
 	opts.flags = GIT_DIFF_INCLUDE_UNTRACKED;
 	opts.old_prefix = "a"; opts.new_prefix = "b";
@@ -390,8 +365,6 @@ void test_diff_submodules__diff_ignore_options(void)
 	git_config *cfg;
 	static const char *expected_normal[] = {
 		"<SKIP>", /* .gitmodules */
-		NULL, /* not-submodule */
-		NULL, /* not */
 		"diff --git a/sm_changed_file b/sm_changed_file\nindex 4800958..4800958 160000\n--- a/sm_changed_file\n+++ b/sm_changed_file\n@@ -1 +1 @@\n-Subproject commit 480095882d281ed676fe5b863569520e54a7d5c0\n+Subproject commit 480095882d281ed676fe5b863569520e54a7d5c0-dirty\n", /* sm_changed_file */
 		"diff --git a/sm_changed_head b/sm_changed_head\nindex 4800958..3d9386c 160000\n--- a/sm_changed_head\n+++ b/sm_changed_head\n@@ -1 +1 @@\n-Subproject commit 480095882d281ed676fe5b863569520e54a7d5c0\n+Subproject commit 3d9386c507f6b093471a3e324085657a3c2b4247\n", /* sm_changed_head */
 		"diff --git a/sm_changed_index b/sm_changed_index\nindex 4800958..4800958 160000\n--- a/sm_changed_index\n+++ b/sm_changed_index\n@@ -1 +1 @@\n-Subproject commit 480095882d281ed676fe5b863569520e54a7d5c0\n+Subproject commit 480095882d281ed676fe5b863569520e54a7d5c0-dirty\n", /* sm_changed_index */
@@ -401,20 +374,16 @@ void test_diff_submodules__diff_ignore_options(void)
 	};
 	static const char *expected_ignore_all[] = {
 		"<SKIP>", /* .gitmodules */
-		NULL, /* not-submodule */
-		NULL, /* not */
 		"<END>"
 	};
 	static const char *expected_ignore_dirty[] = {
 		"<SKIP>", /* .gitmodules */
-		NULL, /* not-submodule */
-		NULL, /* not */
 		"diff --git a/sm_changed_head b/sm_changed_head\nindex 4800958..3d9386c 160000\n--- a/sm_changed_head\n+++ b/sm_changed_head\n@@ -1 +1 @@\n-Subproject commit 480095882d281ed676fe5b863569520e54a7d5c0\n+Subproject commit 3d9386c507f6b093471a3e324085657a3c2b4247\n", /* sm_changed_head */
 		"diff --git a/sm_missing_commits b/sm_missing_commits\nindex 4800958..5e49635 160000\n--- a/sm_missing_commits\n+++ b/sm_missing_commits\n@@ -1 +1 @@\n-Subproject commit 480095882d281ed676fe5b863569520e54a7d5c0\n+Subproject commit 5e4963595a9774b90524d35a807169049de8ccad\n", /* sm_missing_commits */
 		"<END>"
 	};
 
-	setup_submodules2();
+	g_repo = setup_fixture_submod2();
 
 	opts.flags = GIT_DIFF_INCLUDE_UNTRACKED;
 	opts.old_prefix = "a"; opts.new_prefix = "b";
