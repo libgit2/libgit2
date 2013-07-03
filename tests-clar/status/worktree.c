@@ -82,12 +82,6 @@ void test_status_worktree__show_workdir_only(void)
 		GIT_STATUS_SHOW_WORKDIR_ONLY);
 }
 
-void test_status_worktree__show_index_then_workdir_only(void)
-{
-	assert_show(entry_count7, entry_paths7, entry_statuses7,
-		GIT_STATUS_SHOW_INDEX_THEN_WORKDIR);
-}
-
 /* this test is equivalent to t18-status.c:statuscb1 */
 void test_status_worktree__empty_repository(void)
 {
