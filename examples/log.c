@@ -94,11 +94,11 @@ static int add_revision(struct log_state *s, const char *revstr)
 	if (*revstr == '^') {
 		revs.flags = GIT_REVPARSE_SINGLE;
 		hide = !hide;
-		if (!git_revparse_single(&revs.from, s->repo, revstr + 1))
+
+		if (git_revparse_single(&revs.from, s->repo, revstr + 1) < 0)
 			return -1;
-	} else
-		if (!git_revparse(&revs, s->repo, revstr))
-			return -1;
+	} else if (git_revparse(&revs, s->repo, revstr) < 0)
+		return -1;
 
 	if ((revs.flags & GIT_REVPARSE_SINGLE) != 0)
 		push_rev(s, revs.from, hide);
