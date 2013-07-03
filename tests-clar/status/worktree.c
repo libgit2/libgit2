@@ -40,6 +40,54 @@ void test_status_worktree__whole_repository(void)
 	cl_assert_equal_i(0, counts.wrong_sorted_path);
 }
 
+void assert_show(const int entry_counts, const char *entry_paths[],
+				 const unsigned int entry_statuses[], git_status_show_t show)
+{
+	status_entry_counts counts;
+	git_repository *repo = cl_git_sandbox_init("status");
+	git_status_options opts = GIT_STATUS_OPTIONS_INIT;
+
+	memset(&counts, 0x0, sizeof(status_entry_counts));
+	counts.expected_entry_count = entry_counts;
+	counts.expected_paths = entry_paths;
+	counts.expected_statuses = entry_statuses;
+
+	opts.flags = GIT_STATUS_OPT_DEFAULTS;
+	opts.show = show;
+
+	cl_git_pass(
+		git_status_foreach_ext(repo, &opts, cb_status__normal, &counts)
+	);
+
+	cl_assert_equal_i(counts.expected_entry_count, counts.entry_count);
+	cl_assert_equal_i(0, counts.wrong_status_flags_count);
+	cl_assert_equal_i(0, counts.wrong_sorted_path);
+}
+
+void test_status_worktree__show_index_and_workdir(void)
+{
+	assert_show(entry_count0, entry_paths0, entry_statuses0,
+		GIT_STATUS_SHOW_INDEX_AND_WORKDIR);
+}
+
+void test_status_worktree__show_index_only(void)
+{
+	assert_show(entry_count5, entry_paths5, entry_statuses5,
+		GIT_STATUS_SHOW_INDEX_ONLY);
+}
+
+void test_status_worktree__show_workdir_only(void)
+{
+	assert_show(entry_count6, entry_paths6, entry_statuses6,
+		GIT_STATUS_SHOW_WORKDIR_ONLY);
+}
+
+void test_status_worktree__show_index_then_workdir_only(void)
+{
+	assert_show(entry_count7, entry_paths7, entry_statuses7,
+		GIT_STATUS_SHOW_INDEX_THEN_WORKDIR);
+}
+
 /* this test is equivalent to t18-status.c:statuscb1 */
 void test_status_worktree__empty_repository(void)
 {
