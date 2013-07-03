@@ -250,3 +250,130 @@ static const unsigned int entry_statuses4[] = {
 };
 
 static const int entry_count4 = 23;
+
+
+/* entries for a copy of tests/resources/status with options
+ * passed to the status call in order to only get the differences
+ * between the HEAD and the index (changes to be committed)
+ */
+
+static const char *entry_paths5[] = {
+	"staged_changes",
+	"staged_changes_file_deleted",
+	"staged_changes_modified_file",
+	"staged_delete_file_deleted",
+	"staged_delete_modified_file",
+	"staged_new_file",
+	"staged_new_file_deleted_file",
+	"staged_new_file_modified_file",
+};
+
+static const unsigned int entry_statuses5[] = {
+	GIT_STATUS_INDEX_MODIFIED,
+	GIT_STATUS_INDEX_MODIFIED,
+	GIT_STATUS_INDEX_MODIFIED,
+	GIT_STATUS_INDEX_DELETED,
+	GIT_STATUS_INDEX_DELETED,
+	GIT_STATUS_INDEX_NEW,
+	GIT_STATUS_INDEX_NEW,
+	GIT_STATUS_INDEX_NEW,
+};
+
+static const int entry_count5 = 8;
+
+
+/* entries for a copy of tests/resources/status with options
+ * passed to the status call in order to only get the differences
+ * between the workdir and the index (changes not staged, untracked files)
+ */
+
+static const char *entry_paths6[] = {
+	"file_deleted",
+	"ignored_file",
+	"modified_file",
+	"new_file",
+	"staged_changes_file_deleted",
+	"staged_changes_modified_file",
+	"staged_delete_modified_file",
+	"staged_new_file_deleted_file",
+	"staged_new_file_modified_file",
+	"subdir/deleted_file",
+	"subdir/modified_file",
+	"subdir/new_file",
+	"\xe8\xbf\x99",
+};
+
+static const unsigned int entry_statuses6[] = {
+	GIT_STATUS_WT_DELETED,
+	GIT_STATUS_IGNORED,
+	GIT_STATUS_WT_MODIFIED,
+	GIT_STATUS_WT_NEW,
+	GIT_STATUS_WT_DELETED,
+	GIT_STATUS_WT_MODIFIED,
+	GIT_STATUS_WT_NEW,
+	GIT_STATUS_WT_DELETED,
+	GIT_STATUS_WT_MODIFIED,
+	GIT_STATUS_WT_DELETED,
+	GIT_STATUS_WT_MODIFIED,
+	GIT_STATUS_WT_NEW,
+	GIT_STATUS_WT_NEW,
+};
+
+static const int entry_count6 = 13;
+
+
+/* entries for a copy of tests/resources/status with options
+ * passed to the status call in order to get the differences
+ * between the HEAD and the index and then between the workdir
+ * and the index.
+ */
+
+static const char *entry_paths7[] = {
+	"staged_changes",
+	"staged_changes_file_deleted",
+	"staged_changes_modified_file",
+	"staged_delete_file_deleted",
+	"staged_delete_modified_file",
+	"staged_new_file",
+	"staged_new_file_deleted_file",
+	"staged_new_file_modified_file",
+	"file_deleted",
+	"ignored_file",
+	"modified_file",
+	"new_file",
+	"staged_changes_file_deleted",
+	"staged_changes_modified_file",
+	"staged_delete_modified_file",
+	"staged_new_file_deleted_file",
+	"staged_new_file_modified_file",
+	"subdir/deleted_file",
+	"subdir/modified_file",
+	"subdir/new_file",
+	"\xe8\xbf\x99",
+};
+
+static const unsigned int entry_statuses7[] = {
+	GIT_STATUS_INDEX_MODIFIED,
+	GIT_STATUS_INDEX_MODIFIED,
+	GIT_STATUS_INDEX_MODIFIED,
+	GIT_STATUS_INDEX_DELETED,
+	GIT_STATUS_INDEX_DELETED,
+	GIT_STATUS_INDEX_NEW,
+	GIT_STATUS_INDEX_NEW,
+	GIT_STATUS_INDEX_NEW,
+	GIT_STATUS_WT_DELETED,
+	GIT_STATUS_IGNORED,
+	GIT_STATUS_WT_MODIFIED,
+	GIT_STATUS_WT_NEW,
+	GIT_STATUS_WT_DELETED,
+	GIT_STATUS_WT_MODIFIED,
+	GIT_STATUS_WT_NEW,
+	GIT_STATUS_WT_DELETED,
+	GIT_STATUS_WT_MODIFIED,
+	GIT_STATUS_WT_DELETED,
+	GIT_STATUS_WT_MODIFIED,
+	GIT_STATUS_WT_NEW,
+	GIT_STATUS_WT_NEW,
+};
+
+static const int entry_count7 = 21;

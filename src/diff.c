@@ -1273,7 +1273,7 @@ int git_diff__paired_foreach(
 			git_vector_sort(&idx2wd->deltas);
 		}
 	}
-	else if (head2idx->opts.flags & GIT_DIFF_DELTAS_ARE_ICASE)
+	else if (head2idx != NULL && head2idx->opts.flags & GIT_DIFF_DELTAS_ARE_ICASE)
 		strcomp = git__strcasecmp;
 
 	for (i = 0, j = 0; i < i_max || j < j_max; ) {
