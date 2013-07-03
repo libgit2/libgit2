@@ -345,14 +345,16 @@ static int _git_ssh_setup_conn(
 	if (user && pass) {
 		if (git_cred_userpass_plaintext_new(&t->cred, user, pass) < 0)
 			goto on_error;
-	} else {
+	} else if (t->owner->cred_acquire_cb) {
 		if (t->owner->cred_acquire_cb(&t->cred,
 				t->owner->url,
 				user,
 				GIT_CREDTYPE_USERPASS_PLAINTEXT | GIT_CREDTYPE_SSH_KEYFILE_PASSPHRASE,
 				t->owner->cred_acquire_payload) < 0)
 			return -1;
-	}
+	} else {
+        goto on_error;
+    }
 	assert(t->cred);
 	
 	if (!user) {
