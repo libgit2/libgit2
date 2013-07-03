@@ -261,6 +261,22 @@ static int reuc_icmp(const void *a, const void *b)
 	return strcasecmp(info_a->path, info_b->path);
 }
 
+static void index_entry_reuc_free(git_index_reuc_entry *reuc)
+{
+	if (!reuc)
+		return;
+	git__free(reuc->path);
+	git__free(reuc);
+}
+
+static void index_entry_free(git_index_entry *entry)
+{
+	if (!entry)
+		return;
+	git__free(entry->path);
+	git__free(entry);
+}
+
 static unsigned int index_create_mode(unsigned int mode)
 {
 	if (S_ISLNK(mode))
@@ -367,11 +383,8 @@ static void index_entries_free(git_vector *entries)
 {
 	size_t i;
 
-	for (i = 0; i < entries->length; ++i) {
-		git_index_entry *e = git_vector_get(entries, i);
-		git__free(e->path);
-		git__free(e);
-	}
+	for (i = 0; i < entries->length; ++i)
+		index_entry_free(git__swap(entries->contents[i], NULL));
 
 	git_vector_clear(entries);
 }
@@ -670,15 +683,6 @@ static int index_entry_reuc_init(git_index_reuc_entry **reuc_out,
 	return 0;
 }
 
-static void index_entry_reuc_free(git_index_reuc_entry *reuc)
-{
-	if (!reuc)
-		return;
-
-	git__free(reuc->path);
-	git__free(reuc);
-}
-
 static git_index_entry *index_entry_dup(const git_index_entry *source_entry)
 {
 	git_index_entry *entry;
@@ -695,14 +699,6 @@ static git_index_entry *index_entry_dup(const git_index_entry *source_entry)
 		return NULL;
 
 	return entry;
-}
-
-static void index_entry_free(git_index_entry *entry)
-{
-	if (!entry)
-		return;
-	git__free(entry->path);
-	git__free(entry);
 }
 
 static int index_insert(git_index *index, git_index_entry *entry, int replace)
@@ -1357,14 +1353,11 @@ int git_index_reuc_remove(git_index *index, size_t position)
 void git_index_reuc_clear(git_index *index)
 {
 	size_t i;
-	git_index_reuc_entry *reuc;
 
 	assert(index);
 
-	git_vector_foreach(&index->reuc, i, reuc) {
-		git__free(reuc->path);
-		git__free(reuc);
-	}
+	for (i = 0; i < index->reuc.length; ++i)
+		index_entry_reuc_free(git__swap(index->reuc.contents[i], NULL));
 
 	git_vector_clear(&index->reuc);
 }
@@ -1958,8 +1951,9 @@ int git_index_entry_stage(const git_index_entry *entry)
 }
 
 typedef struct read_tree_data {
-	git_index *index;
 	git_vector *old_entries;
+	git_vector *new_entries;
+	git_vector_cmp entries_search;
 } read_tree_data;
 
 static int read_tree_cb(
@@ -1990,7 +1984,7 @@ static int read_tree_cb(
 		skey.stage = 0;
 
 		if (!git_vector_bsearch2(
-				&pos, data->old_entries, data->index->entries_search, &skey) &&
+				&pos, data->old_entries, data->entries_search, &skey) &&
 			(old_entry = git_vector_get(data->old_entries, pos)) != NULL &&
 			entry->mode == old_entry->mode &&
 			git_oid_equal(&entry->oid, &old_entry->oid))
@@ -2008,7 +2002,7 @@ static int read_tree_cb(
 	entry->path = git_buf_detach(&path);
 	git_buf_free(&path);
 
-	if (git_vector_insert(&data->index->entries, entry) < 0) {
+	if (git_vector_insert(data->new_entries, entry) < 0) {
 		index_entry_free(entry);
 		return -1;
 	}
@@ -2022,22 +2016,22 @@ int git_index_read_tree(git_index *index, const git_tree *tree)
 	git_vector entries = GIT_VECTOR_INIT;
 	read_tree_data data;
 
+	git_vector_set_cmp(&entries, index->entries._cmp); /* match sort */
+
+	data.old_entries = &index->entries;
+	data.new_entries = &entries;
+	data.entries_search = index->entries_search;
+
 	git_vector_sort(&index->entries);
-
-	git_vector_set_cmp(&entries, index->entries._cmp);
-	git_vector_swap(&entries, &index->entries);
-
-	git_index_clear(index);
-
-	data.index = index;
-	data.old_entries = &entries;
 
 	error = git_tree_walk(tree, GIT_TREEWALK_POST, read_tree_cb, &data);
 
-	index_entries_free(&entries);
-	git_vector_free(&entries);
+	git_vector_sort(&entries);
 
-	git_vector_sort(&index->entries);
+	git_index_clear(index);
+
+	git_vector_swap(&entries, &index->entries);
+	git_vector_free(&entries);
 
 	return error;
 }
