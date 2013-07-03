@@ -86,9 +86,12 @@ static int add_revision(struct log_state *s, const char *revstr)
 			"Could not open repository", s->repodir);
 	}
 
-	if (!revstr)
+	if (!revstr) {
 		push_rev(s, NULL, hide);
-	else if (*revstr == '^') {
+		return 0;
+	}
+
+	if (*revstr == '^') {
 		revs.flags = GIT_REVPARSE_SINGLE;
 		hide = !hide;
 		if (!git_revparse_single(&revs.from, s->repo, revstr + 1))
