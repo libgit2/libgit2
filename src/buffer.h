@@ -91,6 +91,7 @@ int git_buf_vprintf(git_buf *buf, const char *format, va_list ap);
 void git_buf_clear(git_buf *buf);
 void git_buf_consume(git_buf *buf, const char *end);
 void git_buf_truncate(git_buf *buf, size_t len);
+void git_buf_shorten(git_buf *buf, size_t amount);
 void git_buf_rtruncate_at_char(git_buf *path, char separator);
 
 int git_buf_join_n(git_buf *buf, char separator, int nbuf, ...);
