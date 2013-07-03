@@ -44,6 +44,9 @@ int merge_trees_from_branches(
 	const char *ours_name, const char *theirs_name,
 	git_merge_tree_opts *opts);
 
+int merge_branches(git_merge_result **result, git_repository *repo,
+	const char *ours_branch, const char *theirs_branch, git_merge_opts *opts);
+
 int merge_test_diff_list(git_merge_diff_list *diff_list, const struct merge_index_entry expected[], size_t expected_len);
 
 int merge_test_merge_conflicts(git_vector *conflicts, const struct merge_index_conflict_data expected[], size_t expected_len);
