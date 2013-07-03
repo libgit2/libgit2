@@ -56,9 +56,11 @@ static void push_rev(struct log_state *s, git_object *obj, int hide)
 {
 	hide = s->hide ^ hide;
 
-	if (!s->walker)
+	if (!s->walker) {
 		check(git_revwalk_new(&s->walker, s->repo),
 			"Could not create revision walker", NULL);
+		git_revwalk_sorting(s->walker, s->sorting);
+	}
 
 	if (!obj)
 		check(git_revwalk_push_head(s->walker),
@@ -138,7 +140,7 @@ static void print_time(const git_time *intime, const char *prefix)
 	t = (time_t)intime->time + (intime->offset * 60);
 
 	gmtime_r(&t, &intm);
-	strftime(out, sizeof(out), "%a %b %d %T %Y", &intm);
+	strftime(out, sizeof(out), "%a %b %e %T %Y", &intm);
 
 	printf("%s%s %c%02d%02d\n", prefix, out, sign, hours, minutes);
 }
@@ -166,6 +168,7 @@ int main(int argc, char *argv[])
 	git_threads_init();
 
 	memset(&s, 0, sizeof(s));
+	s.sorting = GIT_SORT_TIME;
 
 	for (i = 1; i < argc; ++i) {
 		a = argv[i];
