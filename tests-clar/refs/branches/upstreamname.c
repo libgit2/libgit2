@@ -40,3 +40,22 @@ void test_refs_branches_upstreamname__can_return_the_size_of_thelocal_upstream_r
 	cl_assert_equal_i((int)strlen("refs/heads/master") + 1,
 		git_branch_upstream_name(NULL, 0, repo, "refs/heads/track-local"));
 }
+
+void test_refs_branches_upstreamname__gimme_a_meaningful_name(void)
+{
+   git_repository *repository;
+   git_config *config;
+
+   repository = cl_git_sandbox_init("testrepo.git");
+
+   cl_git_pass(git_repository_config(&config, repository));
+   cl_git_pass(git_config_set_string(config, "branch.master.merge", "master"));
+   
+   cl_git_pass(git_branch_upstream__name(
+       &upstream_name, repository, "refs/heads/master"));
+
+   cl_assert_equal_s("refs/remotes/test/master", git_buf_cstr(&upstream_name));
+
+   git_config_free(config);
+   cl_git_sandbox_cleanup();
+}

@@ -268,6 +268,7 @@ int git_branch_upstream__name(
 	const char *canonical_branch_name)
 {
 	const char *remote_name, *merge_name;
+	git_buf canonical_merge_name = GIT_BUF_INIT;
 	git_buf buf = GIT_BUF_INIT;
 	int error = -1;
 	git_remote *remote = NULL;
@@ -286,6 +287,13 @@ int git_branch_upstream__name(
 		&merge_name, repo, canonical_branch_name, "branch.%s.merge")) < 0)
 			goto cleanup;
 
+	if (strncmp(GIT_REFS_HEADS_DIR, merge_name, strlen(GIT_REFS_HEADS_DIR)) == 0) {
+		git_buf_sets(&canonical_merge_name, merge_name);
+	} else {
+		if (git_buf_printf(&canonical_merge_name, "%s%s", GIT_REFS_HEADS_DIR, merge_name) < 0)
+			goto cleanup;
+	}
+
 	if (!*remote_name || !*merge_name) {
 		giterr_set(GITERR_REFERENCE,
 			"branch '%s' does not have an upstream", canonical_branch_name);
@@ -297,16 +305,18 @@ int git_branch_upstream__name(
 		if ((error = git_remote_load(&remote, repo, remote_name)) < 0)
 			goto cleanup;
 
-		refspec = git_remote__matching_refspec(remote, merge_name);
+		refspec = git_remote__matching_refspec(remote, git_buf_cstr(&canonical_merge_name));
 		if (!refspec) {
 			error = GIT_ENOTFOUND;
 			goto cleanup;
 		}
 
-		if (git_refspec_transform_r(&buf, refspec, merge_name) < 0)
+		if (git_refspec_transform_r(&buf, refspec, git_buf_cstr(&canonical_merge_name)) < 0)
 			goto cleanup;
+
+
 	} else
-		if (git_buf_sets(&buf, merge_name) < 0)
+		if (git_buf_sets(&buf, git_buf_cstr(&canonical_merge_name)) < 0)
 			goto cleanup;
 
 	error = git_buf_set(tracking_name, git_buf_cstr(&buf), git_buf_len(&buf));
@@ -314,6 +324,7 @@ int git_branch_upstream__name(
 cleanup:
 	git_remote_free(remote);
 	git_buf_free(&buf);
+	git_buf_free(&canonical_merge_name);
 	return error;
 }
 
