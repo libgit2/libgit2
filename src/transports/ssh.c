@@ -351,7 +351,7 @@ static int _git_ssh_setup_conn(
 				user,
 				GIT_CREDTYPE_USERPASS_PLAINTEXT | GIT_CREDTYPE_SSH_KEYFILE_PASSPHRASE,
 				t->owner->cred_acquire_payload) < 0)
-			return -1;
+			goto on_error;
 	} else {
         goto on_error;
     }
