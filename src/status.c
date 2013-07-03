@@ -257,6 +257,7 @@ int git_status_list_new(
 		opts ? opts->show : GIT_STATUS_SHOW_INDEX_AND_WORKDIR;
 	int error = 0;
 	unsigned int flags = opts ? opts->flags : GIT_STATUS_OPT_DEFAULTS;
+	git_diff_list *head2idx = NULL;
 
 	assert(show <= GIT_STATUS_SHOW_INDEX_THEN_WORKDIR);
 
@@ -307,8 +308,10 @@ int git_status_list_new(
 				&status->head2idx, repo, head, NULL, &diffopt)) < 0)
 			goto done;
 
+		head2idx = status->head2idx;
+
 		if ((flags & GIT_STATUS_OPT_RENAMES_HEAD_TO_INDEX) != 0 &&
-			(error = git_diff_find_similar(status->head2idx, NULL)) < 0)
+			(error = git_diff_find_similar(head2idx, NULL)) < 0)
 			goto done;
 	}
 
@@ -324,15 +327,14 @@ int git_status_list_new(
 
 	if (show == GIT_STATUS_SHOW_INDEX_THEN_WORKDIR) {
 		if ((error = git_diff__paired_foreach(
-				status->head2idx, NULL, status_collect, status)) < 0)
+				head2idx, NULL, status_collect, status)) < 0)
 			goto done;
 
-		git_diff_list_free(status->head2idx);
-		status->head2idx = NULL;
+		head2idx = NULL;
 	}
 
 	if ((error = git_diff__paired_foreach(
-			status->head2idx, status->idx2wd, status_collect, status)) < 0)
+			head2idx, status->idx2wd, status_collect, status)) < 0)
 		goto done;
 
 	if (flags & GIT_STATUS_OPT_SORT_CASE_SENSITIVELY)
