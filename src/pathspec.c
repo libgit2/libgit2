@@ -311,7 +311,7 @@ static int pathspec_match_from_iterator(
 	git_pathspec *ps)
 {
 	int error = 0;
-	git_pathspec_match_list *m;
+	git_pathspec_match_list *m = NULL;
 	const git_index_entry *entry = NULL;
 	struct pathspec_match_context ctxt;
 	git_vector *patterns = &ps->pathspec;
@@ -322,8 +322,13 @@ static int pathspec_match_from_iterator(
 	uint8_t *used_patterns = NULL;
 	char **file;
 
-	*out = m = pathspec_match_alloc(ps);
-	GITERR_CHECK_ALLOC(m);
+	if (out) {
+		*out = m = pathspec_match_alloc(ps);
+		GITERR_CHECK_ALLOC(m);
+	} else {
+		failures_only = true;
+		find_failures = false;
+	}
 
 	if ((error = git_iterator_reset(iter, ps->prefix, ps->prefix)) < 0)
 		goto done;
@@ -385,7 +390,7 @@ static int pathspec_match_from_iterator(
 		}
 
 		/* if only looking at failures, exit early or just continue */
-		if (failures_only) {
+		if (failures_only || !out) {
 			if (used_ct == patterns->length)
 				break;
 			continue;
@@ -429,7 +434,7 @@ done:
 
 	if (error < 0) {
 		pathspec_match_free(m);
-		*out = NULL;
+		if (out) *out = NULL;
 	}
 
 	return error;
@@ -456,7 +461,7 @@ int git_pathspec_match_workdir(
 	int error = 0;
 	git_iterator *iter;
 
-	assert(out && repo);
+	assert(repo);
 
 	if (!(error = git_iterator_for_workdir(
 			&iter, repo, pathspec_match_iter_flags(flags), NULL, NULL))) {
@@ -478,7 +483,7 @@ int git_pathspec_match_index(
 	int error = 0;
 	git_iterator *iter;
 
-	assert(out && index);
+	assert(index);
 
 	if (!(error = git_iterator_for_index(
 			&iter, index, pathspec_match_iter_flags(flags), NULL, NULL))) {
@@ -500,7 +505,7 @@ int git_pathspec_match_tree(
 	int error = 0;
 	git_iterator *iter;
 
-	assert(out && tree);
+	assert(tree);
 
 	if (!(error = git_iterator_for_tree(
 			&iter, tree, pathspec_match_iter_flags(flags), NULL, NULL))) {

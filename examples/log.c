@@ -158,15 +158,73 @@ struct log_options {
 	char *committer;
 };
 
+static void print_commit(git_commit *commit)
+{
+	char buf[GIT_OID_HEXSZ + 1];
+	int i, count;
+	const git_signature *sig;
+	const char *scan, *eol;
+
+	git_oid_tostr(buf, sizeof(buf), git_commit_id(commit));
+	printf("commit %s\n", buf);
+
+	if ((count = (int)git_commit_parentcount(commit)) > 1) {
+		printf("Merge:");
+		for (i = 0; i < count; ++i) {
+			git_oid_tostr(buf, 8, git_commit_parent_id(commit, i));
+			printf(" %s", buf);
+		}
+		printf("\n");
+	}
+
+	if ((sig = git_commit_author(commit)) != NULL) {
+		printf("Author: %s <%s>\n", sig->name, sig->email);
+		print_time(&sig->when, "Date:   ");
+	}
+	printf("\n");
+
+	for (scan = git_commit_message(commit); scan && *scan; ) {
+		for (eol = scan; *eol && *eol != '\n'; ++eol) /* find eol */;
+
+		printf("    %.*s\n", (int)(eol - scan), scan);
+		scan = *eol ? eol + 1 : NULL;
+	}
+	printf("\n");
+}
+
+static int match_with_parent(
+	git_commit *commit, int i, git_diff_options *opts)
+{
+	git_commit *parent;
+	git_tree *a, *b;
+	git_diff_list *diff;
+	int ndeltas;
+
+	check(git_commit_parent(&parent, commit, (size_t)i), "Get parent", NULL);
+	check(git_commit_tree(&a, parent), "Tree for parent", NULL);
+	check(git_commit_tree(&b, commit), "Tree for commit", NULL);
+	check(git_diff_tree_to_tree(&diff, git_commit_owner(commit), a, b, opts),
+		  "Checking diff between parent and commit", NULL);
+
+	ndeltas = (int)git_diff_num_deltas(diff);
+
+	git_diff_list_free(diff);
+	git_tree_free(a);
+	git_tree_free(b);
+	git_commit_free(parent);
+
+	return ndeltas > 0;
+}
+
 int main(int argc, char *argv[])
 {
-	int i, count = 0;
+	int i, count = 0, parents;
 	char *a;
 	struct log_state s;
-	git_strarray paths;
+	git_diff_options diffopts = GIT_DIFF_OPTIONS_INIT;
 	git_oid oid;
 	git_commit *commit;
-	char buf[GIT_OID_HEXSZ + 1];
+	git_pathspec *ps = NULL;
 
 	git_threads_init();
 
@@ -200,45 +258,47 @@ int main(int argc, char *argv[])
 	if (!count)
 		add_revision(&s, NULL);
 
-	paths.strings = &argv[i];
-	paths.count   = argc - i;
+	diffopts.pathspec.strings = &argv[i];
+	diffopts.pathspec.count   = argc - i;
+	count = 0;
+	if (diffopts.pathspec.count > 0)
+		check(git_pathspec_new(&ps, &diffopts.pathspec),
+			"Building pathspec", NULL);
 
-	while (!git_revwalk_next(&oid, s.walker)) {
-		const git_signature *sig;
-		const char *scan, *eol;
-
+	for (; !git_revwalk_next(&oid, s.walker); git_commit_free(commit)) {
 		check(git_commit_lookup(&commit, s.repo, &oid),
 			"Failed to look up commit", NULL);
 
-		git_oid_tostr(buf, sizeof(buf), &oid);
-		printf("commit %s\n", buf);
+		parents = (int)git_commit_parentcount(commit);
 
-		if ((count = (int)git_commit_parentcount(commit)) > 1) {
-			printf("Merge:");
-			for (i = 0; i < count; ++i) {
-				git_oid_tostr(buf, 8, git_commit_parent_id(commit, i));
-				printf(" %s", buf);
+		if (diffopts.pathspec.count > 0) {
+			int unmatched = parents;
+
+			if (parents == 0) {
+				git_tree *tree;
+				check(git_commit_tree(&tree, commit), "Get tree", NULL);
+				if (git_pathspec_match_tree(
+						NULL, tree, GIT_PATHSPEC_NO_MATCH_ERROR, ps) != 0)
+					unmatched = 1;
+				git_tree_free(tree);
+			} else if (parents == 1) {
+				unmatched = match_with_parent(commit, 0, &diffopts) ? 0 : 1;
+			} else {
+				for (i = 0; i < parents; ++i) {
+					if (match_with_parent(commit, i, &diffopts))
+						unmatched--;
+				}
 			}
-			printf("\n");
+
+			if (unmatched > 0)
+				continue;
 		}
 
-		if ((sig = git_commit_author(commit)) != NULL) {
-			printf("Author: %s <%s>\n", sig->name, sig->email);
-			print_time(&sig->when, "Date:   ");
-		}
-		printf("\n");
-
-		for (scan = git_commit_message(commit); scan && *scan; ) {
-			for (eol = scan; *eol && *eol != '\n'; ++eol) /* find eol */;
-
-			printf("    %.*s\n", (int)(eol - scan), scan);
-			scan = *eol ? eol + 1 : NULL;
-		}
-		printf("\n");
-
-		git_commit_free(commit);
+		print_commit(commit);
+		++count;
 	}
 
+	git_pathspec_free(ps);
 	git_revwalk_free(s.walker);
 	git_repository_free(s.repo);
 	git_threads_shutdown();
