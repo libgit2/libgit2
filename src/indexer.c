@@ -602,7 +602,7 @@ int git_indexer_stream_finalize(git_indexer_stream *idx, git_transfer_progress *
 	git_vector_sort(&idx->objects);
 
 	git_buf_sets(&filename, idx->pack->pack_name);
-	git_buf_truncate(&filename, filename.size - strlen("pack"));
+	git_buf_shorten(&filename, strlen("pack"));
 	git_buf_puts(&filename, "idx");
 	if (git_buf_oom(&filename))
 		return -1;
