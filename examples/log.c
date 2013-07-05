@@ -148,16 +148,6 @@ static void print_time(const git_time *intime, const char *prefix)
 	printf("%s%s %c%02d%02d\n", prefix, out, sign, hours, minutes);
 }
 
-struct log_options {
-	int show_diff;
-	int skip;
-	int min_parents, max_parents;
-	git_time_t before;
-	git_time_t after;
-	char *author;
-	char *committer;
-};
-
 static void print_commit(git_commit *commit)
 {
 	char buf[GIT_OID_HEXSZ + 1];
@@ -192,6 +182,37 @@ static void print_commit(git_commit *commit)
 	printf("\n");
 }
 
+static int print_diff(
+	const git_diff_delta *delta,
+	const git_diff_range *range,
+	char usage,
+	const char *line,
+	size_t line_len,
+	void *data)
+{
+	(void)delta; (void)range; (void)usage; (void)line_len; (void)data;
+	fputs(line, stdout);
+	return 0;
+}
+
+static int match_int(int *value, const char *arg, int allow_negative)
+{
+	char *found;
+	*value = (int)strtol(arg, &found, 10);
+	return (found && *found == '\0' && (allow_negative || *value >= 0));
+}
+
+static int match_int_arg(
+	int *value, const char *arg, const char *pfx, int allow_negative)
+{
+	size_t pfxlen = strlen(pfx);
+	if (strncmp(arg, pfx, pfxlen) != 0)
+		return 0;
+	if (!match_int(value, arg + pfxlen, allow_negative))
+		usage("Invalid value after argument", arg);
+	return 1;
+}
+
 static int match_with_parent(
 	git_commit *commit, int i, git_diff_options *opts)
 {
@@ -216,20 +237,34 @@ static int match_with_parent(
 	return ndeltas > 0;
 }
 
+struct log_options {
+	int show_diff;
+	int skip, limit;
+	int min_parents, max_parents;
+	git_time_t before;
+	git_time_t after;
+	char *author;
+	char *committer;
+};
+
 int main(int argc, char *argv[])
 {
-	int i, count = 0, parents;
+	int i, count = 0, printed = 0, parents;
 	char *a;
 	struct log_state s;
+	struct log_options opt;
 	git_diff_options diffopts = GIT_DIFF_OPTIONS_INIT;
 	git_oid oid;
-	git_commit *commit;
+	git_commit *commit = NULL;
 	git_pathspec *ps = NULL;
 
 	git_threads_init();
 
 	memset(&s, 0, sizeof(s));
 	s.sorting = GIT_SORT_TIME;
+
+	memset(&opt, 0, sizeof(opt));
+	opt.max_parents = -1;
 
 	for (i = 1; i < argc; ++i) {
 		a = argv[i];
@@ -251,6 +286,33 @@ int main(int argc, char *argv[])
 			set_sorting(&s, GIT_SORT_REVERSE);
 		else if (!strncmp(a, "--git-dir=", strlen("--git-dir=")))
 			s.repodir = a + strlen("--git-dir=");
+		else if (match_int_arg(&opt.skip, a, "--skip=", 0))
+			/* found valid --skip */;
+		else if (match_int_arg(&opt.limit, a, "--max-count=", 0))
+			/* found valid --max-count */;
+		else if (a[1] >= '0' && a[1] <= '9') {
+			if (!match_int(&opt.limit, a + 1, 0))
+				usage("Invalid limit on number of commits", a);
+		} else if (!strcmp(a, "-n")) {
+			if (i + 1 == argc || !match_int(&opt.limit, argv[i], 0))
+				usage("Argument -n not followed by valid count", argv[i]);
+			else
+				++i;
+		}
+		else if (!strcmp(a, "--merges"))
+			opt.min_parents = 2;
+		else if (!strcmp(a, "--no-merges"))
+			opt.max_parents = 1;
+		else if (!strcmp(a, "--no-min-parents"))
+			opt.min_parents = 0;
+		else if (!strcmp(a, "--no-max-parents"))
+			opt.max_parents = -1;
+		else if (match_int_arg(&opt.max_parents, a, "--max-parents=", 1))
+			/* found valid --max-parents */;
+		else if (match_int_arg(&opt.min_parents, a, "--min-parents=", 0))
+			/* found valid --min_parents */;
+		else if (!strcmp(a, "-p") || !strcmp(a, "-u") || !strcmp(a, "--patch"))
+			opt.show_diff = 1;
 		else
 			usage("Unsupported argument", a);
 	}
@@ -260,16 +322,21 @@ int main(int argc, char *argv[])
 
 	diffopts.pathspec.strings = &argv[i];
 	diffopts.pathspec.count   = argc - i;
-	count = 0;
 	if (diffopts.pathspec.count > 0)
 		check(git_pathspec_new(&ps, &diffopts.pathspec),
 			"Building pathspec", NULL);
+
+	printed = count = 0;
 
 	for (; !git_revwalk_next(&oid, s.walker); git_commit_free(commit)) {
 		check(git_commit_lookup(&commit, s.repo, &oid),
 			"Failed to look up commit", NULL);
 
 		parents = (int)git_commit_parentcount(commit);
+		if (parents < opt.min_parents)
+			continue;
+		if (opt.max_parents > 0 && parents > opt.max_parents)
+			continue;
 
 		if (diffopts.pathspec.count > 0) {
 			int unmatched = parents;
@@ -294,8 +361,39 @@ int main(int argc, char *argv[])
 				continue;
 		}
 
+		if (count++ < opt.skip)
+			continue;
+		if (printed++ >= opt.limit) {
+			git_commit_free(commit);
+			break;
+		}
+
 		print_commit(commit);
-		++count;
+
+		if (opt.show_diff) {
+			git_tree *a = NULL, *b = NULL;
+			git_diff_list *diff = NULL;
+
+			if (parents > 1)
+				continue;
+			check(git_commit_tree(&b, commit), "Get tree", NULL);
+			if (parents == 1) {
+				git_commit *parent;
+				check(git_commit_parent(&parent, commit, 0), "Get parent", NULL);
+				check(git_commit_tree(&a, parent), "Tree for parent", NULL);
+				git_commit_free(parent);
+			}
+
+			check(git_diff_tree_to_tree(
+				&diff, git_commit_owner(commit), a, b, &diffopts),
+				"Diff commit with parent", NULL);
+			check(git_diff_print_patch(diff, print_diff, NULL),
+				"Displaying diff", NULL);
+
+			git_diff_list_free(diff);
+			git_tree_free(a);
+			git_tree_free(b);
+		}
 	}
 
 	git_pathspec_free(ps);
