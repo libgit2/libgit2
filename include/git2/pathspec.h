@@ -25,20 +25,22 @@ typedef struct git_pathspec_match_list git_pathspec_match_list;
  * Options controlling how pathspec match should be executed
  *
  * - GIT_PATHSPEC_IGNORE_CASE forces match to ignore case; otherwise
- *   match will use native case sensitivity of platform
+ *   match will use native case sensitivity of platform filesystem
  * - GIT_PATHSPEC_USE_CASE forces case sensitive match; otherwise
- *   match will use native case sensitivity of platform
+ *   match will use native case sensitivity of platform filesystem
  * - GIT_PATHSPEC_NO_GLOB disables glob patterns and just uses simple
  *   string comparison for matching
- * - GIT_PATHSPEC_NO_MATCH_ERROR means the match function will return
- *   GIT_ENOTFOUND if no matches are found; otherwise it will return 0
- *   for success and `git_pathspec_match_list_entrycount` will be 0.
- * - GIT_PATHSPEC_FIND_FAILURES only applies to a git_pathspec_match_list;
- *   it means to check file names against all unmatched patterns so that
- *   at the end of a match we can identify patterns that did not match any
- *   files.
- * - GIT_PATHSPEC_FAILURES_ONLY only applies to a git_pathspec_match_list;
- *   it means to only check for mismatches and not record matched paths.
+ * - GIT_PATHSPEC_NO_MATCH_ERROR means the match functions return error
+ *   code GIT_ENOTFOUND if no matches are found; otherwise no matches is
+ *   still success (return 0) but `git_pathspec_match_list_entrycount`
+ *   will indicate 0 matches.
+ * - GIT_PATHSPEC_FIND_FAILURES means that the `git_pathspec_match_list`
+ *   should track which patterns matched which files so that at the end of
+ *   the match we can identify patterns that did not match any files.
+ * - GIT_PATHSPEC_FAILURES_ONLY means that the `git_pathspec_match_list`
+ *   does not need to keep the actual matching filenames.  Use this to
+ *   just test if there were any matches at all or in combination with
+ *   GIT_PATHSPEC_FIND_FAILURES to validate a pathspec.
  */
 typedef enum {
 	GIT_PATHSPEC_DEFAULT        = 0,
@@ -54,7 +56,6 @@ typedef enum {
  * Compile a pathspec
  *
  * @param out Output of the compiled pathspec
- * @param flags Combination of git_pathspec_flag_t values
  * @param pathspec A git_strarray of the paths to match
  * @return 0 on success, <0 on failure
  */
@@ -77,7 +78,7 @@ GIT_EXTERN(void) git_pathspec_free(git_pathspec *ps);
  * fall back on being case sensitive.
  *
  * @param ps The compiled pathspec
- * @param flags Match flags to influence matching behavior
+ * @param flags Combination of git_pathspec_flag_t options to control match
  * @param path The pathname to attempt to match
  * @return 1 is path matches spec, 0 if it does not
  */
@@ -87,18 +88,24 @@ GIT_EXTERN(int) git_pathspec_matches_path(
 /**
  * Match a pathspec against the working directory of a repository.
  *
- * This returns a `git_patchspec_match` object that contains the list of
- * all files matching the given pathspec in the working directory of the
- * repository.  This handles git ignores (i.e. ignored files will not be
+ * This matches the pathspec against the current files in the working
+ * directory of the repository.  It is an error to invoke this on a bare
+ * repo.  This handles git ignores (i.e. ignored files will not be
  * considered to match the `pathspec` unless the file is tracked in the
  * index).
  *
- * @param out Object with list of matching items
+ * If `out` is not NULL, this returns a `git_patchspec_match_list`.  That
+ * contains the list of all matched filenames (unless you pass the
+ * `GIT_PATHSPEC_FAILURES_ONLY` flag) and may also contain the list of
+ * pathspecs with no match (if you used the `GIT_PATHSPEC_FIND_FAILURES`
+ * flag).  You must call `git_pathspec_match_list_free()` on this object.
+ *
+ * @param out Output list of matches; pass NULL to just get return value
  * @param repo The repository in which to match; bare repo is an error
- * @param flags Options to control matching behavior
+ * @param flags Combination of git_pathspec_flag_t options to control match
  * @param ps Pathspec to be matched
  * @return 0 on success, -1 on error, GIT_ENOTFOUND if no matches and
- *         the GIT_PATHSPEC_NO_MATCH_ERROR flag is used
+ *         the GIT_PATHSPEC_NO_MATCH_ERROR flag was given
  */
 GIT_EXTERN(int) git_pathspec_match_workdir(
 	git_pathspec_match_list **out,
@@ -109,17 +116,22 @@ GIT_EXTERN(int) git_pathspec_match_workdir(
 /**
  * Match a pathspec against entries in an index.
  *
- * This returns a `git_patchspec_match` object that contains the list of
- * all files matching the given pathspec in the index.
+ * This matches the pathspec against the files in the repository index.
  *
  * NOTE: At the moment, the case sensitivity of this match is controlled
  * by the current case-sensitivity of the index object itself and the
  * USE_CASE and IGNORE_CASE flags will have no effect.  This behavior will
  * be corrected in a future release.
  *
- * @param out Object with list of matching items
- * @param inex The index in which to match
- * @param flags Options to control matching behavior
+ * If `out` is not NULL, this returns a `git_patchspec_match_list`.  That
+ * contains the list of all matched filenames (unless you pass the
+ * `GIT_PATHSPEC_FAILURES_ONLY` flag) and may also contain the list of
+ * pathspecs with no match (if you used the `GIT_PATHSPEC_FIND_FAILURES`
+ * flag).  You must call `git_pathspec_match_list_free()` on this object.
+ *
+ * @param out Output list of matches; pass NULL to just get return value
+ * @param index The index to match against
+ * @param flags Combination of git_pathspec_flag_t options to control match
  * @param ps Pathspec to be matched
  * @return 0 on success, -1 on error, GIT_ENOTFOUND if no matches and
  *         the GIT_PATHSPEC_NO_MATCH_ERROR flag is used
@@ -133,12 +145,17 @@ GIT_EXTERN(int) git_pathspec_match_index(
 /**
  * Match a pathspec against files in a tree.
  *
- * This returns a `git_patchspec_match` object that contains the list of
- * all files matching the given pathspec in the given tree.
+ * This matches the pathspec against the files in the given tree.
  *
- * @param out Object with list of matching items
- * @param inex The index in which to match
- * @param flags Options to control matching behavior
+ * If `out` is not NULL, this returns a `git_patchspec_match_list`.  That
+ * contains the list of all matched filenames (unless you pass the
+ * `GIT_PATHSPEC_FAILURES_ONLY` flag) and may also contain the list of
+ * pathspecs with no match (if you used the `GIT_PATHSPEC_FIND_FAILURES`
+ * flag).  You must call `git_pathspec_match_list_free()` on this object.
+ *
+ * @param out Output list of matches; pass NULL to just get return value
+ * @param tree The root-level tree to match against
+ * @param flags Combination of git_pathspec_flag_t options to control match
  * @param ps Pathspec to be matched
  * @return 0 on success, -1 on error, GIT_ENOTFOUND if no matches and
  *         the GIT_PATHSPEC_NO_MATCH_ERROR flag is used
