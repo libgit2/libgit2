@@ -33,6 +33,9 @@ int git_libgit2_capabilities()
 #if defined(GIT_SSL) || defined(GIT_WINHTTP)
 		| GIT_CAP_HTTPS
 #endif
+#if defined(GIT_SSH)
+		| GIT_CAP_SSH
+#endif
 	;
 }
 
