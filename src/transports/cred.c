@@ -67,12 +67,12 @@ static void ssh_keyfile_passphrase_free(struct git_cred *cred)
 	git__free(c->publickey);
 	git__free(c->privatekey);
 
-    if (c->passphrase) {
-        /* Zero the memory which previously held the passphrase */
+	if (c->passphrase) {
+		/* Zero the memory which previously held the passphrase */
 		size_t pass_len = strlen(c->passphrase);
-        git__memzero(c->passphrase, pass_len);
-        git__free(c->passphrase);
-    }
+		git__memzero(c->passphrase, pass_len);
+		git__free(c->passphrase);
+	}
 
 	memset(c, 0, sizeof(*c));
 
@@ -83,10 +83,10 @@ static void ssh_publickey_free(struct git_cred *cred)
 {
 	git_cred_ssh_publickey *c = (git_cred_ssh_publickey *)cred;
 
-    git__free(c->publickey);
+	git__free(c->publickey);
 
-    c->sign_callback = NULL;
-    c->sign_data = NULL;
+	c->sign_callback = NULL;
+	c->sign_data = NULL;
 
 	memset(c, 0, sizeof(*c));
 
@@ -109,10 +109,10 @@ int git_cred_ssh_keyfile_passphrase_new(
 	c->parent.credtype = GIT_CREDTYPE_SSH_KEYFILE_PASSPHRASE;
 	c->parent.free = ssh_keyfile_passphrase_free;
 
-    c->privatekey = git__strdup(privatekey);
+	c->privatekey = git__strdup(privatekey);
 	GITERR_CHECK_ALLOC(c->privatekey);
 
-    if (publickey) {
+	if (publickey) {
 		c->publickey = git__strdup(publickey);
 		GITERR_CHECK_ALLOC(c->publickey);
 	}
@@ -129,9 +129,9 @@ int git_cred_ssh_keyfile_passphrase_new(
 int git_cred_ssh_publickey_new(
 	git_cred **cred,
 	const char *publickey,
-    size_t publickey_len,
+	size_t publickey_len,
 	git_cred_sign_callback sign_callback,
-    void *sign_data)
+	void *sign_data)
 {
 	git_cred_ssh_publickey *c;
 
@@ -150,9 +150,9 @@ int git_cred_ssh_publickey_new(
 		memcpy(c->publickey, publickey, publickey_len);
 	}
 
-    c->publickey_len = publickey_len;
-    c->sign_callback = sign_callback;
-    c->sign_data = sign_data;
+	c->publickey_len = publickey_len;
+	c->sign_callback = sign_callback;
+	c->sign_data = sign_data;
 
 	*cred = &c->parent;
 	return 0;
