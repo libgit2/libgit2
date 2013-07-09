@@ -70,8 +70,9 @@ int diff_hunk_cb(
 	diff_expects *e = payload;
 
 	GIT_UNUSED(delta);
-	GIT_UNUSED(header);
-	GIT_UNUSED(header_len);
+
+	/* confirm no NUL bytes in header text */
+	while (header_len--) cl_assert('\0' != *header++);
 
 	e->hunks++;
 	e->hunk_old_lines += range->old_lines;

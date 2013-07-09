@@ -373,10 +373,11 @@ static long diff_context_find(
 		!ctxt->match_line(ctxt->driver, ctxt->line.ptr, ctxt->line.size))
 		return -1;
 
-	git_buf_truncate(&ctxt->line, (size_t)out_size);
-	git_buf_copy_cstr(out, (size_t)out_size, &ctxt->line);
+	if (out_size > (long)ctxt->line.size)
+		out_size = ctxt->line.size;
+	memcpy(out, ctxt->line.ptr, (size_t)out_size);
 
-	return (long)ctxt->line.size;
+	return out_size;
 }
 
 void git_diff_find_context_init(
