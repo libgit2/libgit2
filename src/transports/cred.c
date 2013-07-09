@@ -68,7 +68,7 @@ static void ssh_keyfile_passphrase_free(struct git_cred *cred)
     if (c->publickey) {
         git__free(c->publickey);
     }
-    
+
 	git__free(c->privatekey);
 
     if (c->passphrase) {
@@ -82,12 +82,28 @@ static void ssh_keyfile_passphrase_free(struct git_cred *cred)
 	git__free(c);
 }
 
+static void ssh_publickey_free(struct git_cred *cred)
+{
+	git_cred_ssh_publickey *c = (git_cred_ssh_publickey *)cred;
+
+    git__free(c->publickey);
+
+    c->sign_callback = NULL;
+    c->sign_data = NULL;
+
+	memset(c, 0, sizeof(*c));
+
+	git__free(c);
+}
+#endif
+
 int git_cred_ssh_keyfile_passphrase_new(
 	git_cred **cred,
 	const char *publickey,
 	const char *privatekey,
 	const char *passphrase)
 {
+#ifdef GIT_SSH
 	git_cred_ssh_keyfile_passphrase *c;
 
 	assert(cred && privatekey);
@@ -97,15 +113,15 @@ int git_cred_ssh_keyfile_passphrase_new(
 
 	c->parent.credtype = GIT_CREDTYPE_SSH_KEYFILE_PASSPHRASE;
 	c->parent.free = ssh_keyfile_passphrase_free;
-    
+
     c->privatekey = git__strdup(privatekey);
 	GITERR_CHECK_ALLOC(c->privatekey);
-    
+
     if (publickey) {
 		c->publickey = git__strdup(publickey);
 		GITERR_CHECK_ALLOC(c->publickey);
 	}
-	
+
 	if (passphrase) {
 		c->passphrase = git__strdup(passphrase);
 		GITERR_CHECK_ALLOC(c->passphrase);
@@ -113,29 +129,27 @@ int git_cred_ssh_keyfile_passphrase_new(
 
 	*cred = &c->parent;
 	return 0;
-}
+#else
+	GIT_UNUSED(publickey);
+	GIT_UNUSED(privatekey);
+	GIT_UNUSED(passphrase);
 
-static void ssh_publickey_free(struct git_cred *cred)
-{
-	git_cred_ssh_publickey *c = (git_cred_ssh_publickey *)cred;
+	assert(cred);
+	*cred = NULL;
 
-    git__free(c->publickey);
-
-    c->sign_callback = NULL;
-    c->sign_data = NULL;
-    
-	memset(c, 0, sizeof(*c));
-
-	git__free(c);
+	giterr_set(GITERR_INVALID, "Cannot create SSH credential. Library was built without SSH support");
+	return -1;
+#endif
 }
 
 int git_cred_ssh_publickey_new(
 	git_cred **cred,
 	const char *publickey,
     size_t publickey_len,
-	LIBSSH2_USERAUTH_PUBLICKEY_SIGN_FUNC((*sign_callback)),
+	git_cred_sign_callback sign_callback,
     void *sign_data)
 {
+#ifdef GIT_SSH
 	git_cred_ssh_publickey *c;
 
 	if (!cred)
@@ -146,17 +160,28 @@ int git_cred_ssh_publickey_new(
 
 	c->parent.credtype = GIT_CREDTYPE_SSH_PUBLICKEY;
 	c->parent.free = ssh_publickey_free;
-    
+
     c->publickey = git__malloc(publickey_len);
 	GITERR_CHECK_ALLOC(c->publickey);
-	
+
     memcpy(c->publickey, publickey, publickey_len);
-    
+
     c->publickey_len = publickey_len;
     c->sign_callback = sign_callback;
     c->sign_data = sign_data;
 
 	*cred = &c->parent;
 	return 0;
-}
+#else
+	GIT_UNUSED(publickey);
+    GIT_UNUSED(publickey_len);
+	GIT_UNUSED(sign_callback);
+    GIT_UNUSED(sign_data);
+
+	assert(cred);
+	*cred = NULL;
+
+	giterr_set(GITERR_INVALID, "Cannot create SSH credential. Library was built without SSH support");
+	return -1;
 #endif
+}
