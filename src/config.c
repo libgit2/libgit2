@@ -534,7 +534,7 @@ int git_config_get_multivar(
 {
 	file_internal *internal;
 	git_config_backend *file;
-	int ret = GIT_ENOTFOUND;
+	int ret = GIT_ENOTFOUND, err;
 	size_t i;
 
 	/*
@@ -547,9 +547,10 @@ int git_config_get_multivar(
 			continue;
 		file = internal->file;
 
-		ret = file->get_multivar(file, name, regexp, cb, payload);
-		if (ret < 0 && ret != GIT_ENOTFOUND)
-			return ret;
+		if (!(err = file->get_multivar(file, name, regexp, cb, payload)))
+			ret = 0;
+		else if (err != GIT_ENOTFOUND)
+			return err;
 	}
 
 	return (ret == GIT_ENOTFOUND) ? config_error_notfound(name) : 0;
