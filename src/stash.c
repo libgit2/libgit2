@@ -117,7 +117,7 @@ static int build_tree_from_index(git_tree **out, git_index *index)
 static int commit_index(
 	git_commit **i_commit,
 	git_index *index,
-	git_signature *stasher,
+	const git_signature *stasher,
 	const char *message,
 	const git_commit *parent)
 {
@@ -267,7 +267,7 @@ cleanup:
 static int commit_untracked(
 	git_commit **u_commit,
 	git_index *index,
-	git_signature *stasher,
+	const git_signature *stasher,
 	const char *message,
 	git_commit *i_commit,
 	uint32_t flags)
@@ -354,7 +354,7 @@ cleanup:
 static int commit_worktree(
 	git_oid *w_commit_oid,
 	git_index *index,
-	git_signature *stasher,
+	const git_signature *stasher,
 	const char *message,
 	git_commit *i_commit,
 	git_commit *b_commit,
@@ -431,7 +431,7 @@ cleanup:
 static int update_reflog(
 	git_oid *w_commit_oid,
 	git_repository *repo,
-	git_signature *stasher,
+	const git_signature *stasher,
 	const char *message)
 {
 	git_reference *stash = NULL;
@@ -510,7 +510,7 @@ static int reset_index_and_workdir(
 int git_stash_save(
 	git_oid *out,
 	git_repository *repo,
-	git_signature *stasher,
+	const git_signature *stasher,
 	const char *message,
 	uint32_t flags)
 {
