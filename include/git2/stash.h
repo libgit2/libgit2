@@ -57,7 +57,7 @@ typedef enum {
 GIT_EXTERN(int) git_stash_save(
 	git_oid *out,
 	git_repository *repo,
-	git_signature *stasher,
+	const git_signature *stasher,
 	const char *message,
 	unsigned int flags);
 
