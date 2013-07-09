@@ -22,12 +22,20 @@ struct git_pathspec {
 	git_pool pool;
 };
 
+enum {
+	PATHSPEC_DATATYPE_STRINGS = 0,
+	PATHSPEC_DATATYPE_DIFF = 1,
+};
+
+typedef git_array_t(char *) git_pathspec_string_array_t;
+
 /* public interface to pathspec matching */
 struct git_pathspec_match_list {
 	git_pathspec *pathspec;
-	git_array_t(char *) matches;
-	git_array_t(char *) failures;
+	git_array_t(void *) matches;
+	git_pathspec_string_array_t failures;
 	git_pool pool;
+	int datatype;
 };
 
 /* what is the common non-wildcard prefix for all items in the pathspec */

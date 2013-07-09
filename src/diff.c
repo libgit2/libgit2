@@ -247,6 +247,11 @@ GIT_INLINE(const char *) diff_delta__path(const git_diff_delta *delta)
 	return str;
 }
 
+const char *git_diff_delta__path(const git_diff_delta *delta)
+{
+	return diff_delta__path(delta);
+}
+
 int git_diff_delta__cmp(const void *a, const void *b)
 {
 	const git_diff_delta *da = a, *db = b;
@@ -1233,6 +1238,11 @@ size_t git_diff_num_deltas_of_type(git_diff_list *diff, git_delta_t type)
 	}
 
 	return count;
+}
+
+int git_diff_is_sorted_icase(const git_diff_list *diff)
+{
+	return (diff->opts.flags & GIT_DIFF_DELTAS_ARE_ICASE) != 0;
 }
 
 int git_diff__paired_foreach(

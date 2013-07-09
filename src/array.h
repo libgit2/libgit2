@@ -66,4 +66,6 @@ GIT_INLINE(void *) git_array_grow(git_array_generic_t *a, size_t item_size)
 
 #define git_array_size(a) (a).size
 
+#define git_array_valid_index(a, i) ((i) < (a).size)
+
 #endif
