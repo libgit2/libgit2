@@ -30,6 +30,9 @@
 #define git_array_init(a) \
 	do { (a).size = (a).asize = 0; (a).ptr = NULL; } while (0)
 
+#define git_array_init_to_size(a, desired) \
+	do { (a).size = 0; (a).asize = desired; (a).ptr = git__calloc(desired, sizeof(*(a).ptr)); } while (0)
+
 #define git_array_clear(a) \
 	do { git__free((a).ptr); git_array_init(a); } while (0)
 
@@ -62,5 +65,7 @@ GIT_INLINE(void *) git_array_grow(git_array_generic_t *a, size_t item_size)
 #define git_array_get(a, i) (((i) < (a).size) ? &(a).ptr[(i)] : NULL)
 
 #define git_array_size(a) (a).size
+
+#define git_array_valid_index(a, i) ((i) < (a).size)
 
 #endif

@@ -798,6 +798,14 @@ GIT_EXTERN(size_t) git_diff_num_deltas_of_type(
 	git_delta_t type);
 
 /**
+ * Check if deltas are sorted case sensitively or insensitively.
+ *
+ * @param diff Diff list to check
+ * @return 0 if case sensitive, 1 if case is ignored
+ */
+GIT_EXTERN(int) git_diff_is_sorted_icase(const git_diff_list *diff);
+
+/**
  * Return the diff delta and patch for an entry in the diff list.
  *
  * The `git_diff_patch` is a newly created object contains the text diffs
