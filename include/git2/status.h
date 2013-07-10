@@ -60,25 +60,24 @@ typedef int (*git_status_cb)(
 	const char *path, unsigned int status_flags, void *payload);
 
 /**
- * For extended status, select the files on which to report status.
+ * Select the files on which to report status.
+ *
+ * With `git_status_foreach_ext`, this will control which changes get
+ * callbacks.  With `git_status_list_new`, these will control which
+ * changes are included in the list.
  *
  * - GIT_STATUS_SHOW_INDEX_AND_WORKDIR is the default.  This roughly
- *   matches `git status --porcelain` where each file gets a callback
- *   indicating its status in the index and in the working directory.
+ *   matches `git status --porcelain` regarding which files are
+ *   included and in what order.
  * - GIT_STATUS_SHOW_INDEX_ONLY only gives status based on HEAD to index
  *   comparison, not looking at working directory changes.
  * - GIT_STATUS_SHOW_WORKDIR_ONLY only gives status based on index to
  *   working directory comparison, not comparing the index to the HEAD.
- * - GIT_STATUS_SHOW_INDEX_THEN_WORKDIR runs index-only then workdir-only,
- *   issuing (up to) two callbacks per file (first index, then workdir).
- *   This is slightly more efficient than separate calls and can make it
- *   easier to emulate plain `git status` text output.
  */
 typedef enum {
 	GIT_STATUS_SHOW_INDEX_AND_WORKDIR = 0,
 	GIT_STATUS_SHOW_INDEX_ONLY = 1,
 	GIT_STATUS_SHOW_WORKDIR_ONLY = 2,
-	GIT_STATUS_SHOW_INDEX_THEN_WORKDIR = 3,
 } git_status_show_t;
 
 /**
