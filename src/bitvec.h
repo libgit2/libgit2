@@ -19,58 +19,43 @@
 typedef struct {
 	size_t length;
 	union {
-		uint8_t *ptr;
+		uint64_t *words;
 		uint64_t bits;
 	} u;
 } git_bitvec;
 
 GIT_INLINE(int) git_bitvec_init(git_bitvec *bv, size_t capacity)
 {
-	if (capacity < 64) {
-		bv->length = 0;
-		bv->u.bits = 0;
-		return 0;
+	memset(bv, 0x0, sizeof(*bv));
+
+	if (capacity >= 64) {
+		bv->length = (capacity / 64) + 1;
+		bv->u.words = git__calloc(bv->length, sizeof(uint64_t));
+		if (!bv->u.words)
+			return -1;
 	}
 
-	bv->length = (capacity + 7) / 8;
-	bv->u.ptr  = git__calloc(bv->length, 1);
-	return bv->u.ptr ? 0 : -1;
+	return 0;
 }
 
-#define GIT_BITVEC_MASK_INLINE(BIT) (((uint64_t)1) << BIT)
-
-#define GIT_BITVEC_MASK_BYTE(BIT)  (((uint8_t)1) << ((BIT) & 0x07))
-#define GIT_BITVEC_INDEX_BYTE(BIT) ((BIT) >> 3)
+#define GIT_BITVEC_MASK(BIT) ((uint64_t)1 << (BIT % 64))
+#define GIT_BITVEC_WORD(BV, BIT) (BV->length ? &BV->u.words[BIT / 64] : &BV->u.bits)
 
 GIT_INLINE(void) git_bitvec_set(git_bitvec *bv, size_t bit, bool on)
 {
-	if (!bv->length) {
-		assert(bit < 64);
+	uint64_t *word = GIT_BITVEC_WORD(bv, bit);
+	uint64_t mask = GIT_BITVEC_MASK(bit);
 
-		if (on)
-			bv->u.bits |= GIT_BITVEC_MASK_INLINE(bit);
-		else
-			bv->u.bits &= ~GIT_BITVEC_MASK_INLINE(bit);
-	} else {
-		assert(bit < bv->length * 8);
-
-		if (on)
-			bv->u.ptr[GIT_BITVEC_INDEX_BYTE(bit)] |= GIT_BITVEC_MASK_BYTE(bit);
-		else
-			bv->u.ptr[GIT_BITVEC_INDEX_BYTE(bit)] &= ~GIT_BITVEC_MASK_BYTE(bit);
-	}
+	if (on)
+		*word |= mask;
+	else
+		*word &= ~mask;
 }
 
 GIT_INLINE(bool) git_bitvec_get(git_bitvec *bv, size_t bit)
 {
-	if (!bv->length) {
-		assert(bit < 64);
-		return (bv->u.bits & GIT_BITVEC_MASK_INLINE(bit)) != 0;
-	} else {
-		assert(bit < bv->length * 8);
-		return (bv->u.ptr[GIT_BITVEC_INDEX_BYTE(bit)] &
-				GIT_BITVEC_MASK_BYTE(bit)) != 0;
-	}
+	uint64_t *word = GIT_BITVEC_WORD(bv, bit);
+	return (*word & GIT_BITVEC_MASK(bit)) != 0;
 }
 
 GIT_INLINE(void) git_bitvec_clear(git_bitvec *bv)
@@ -78,15 +63,13 @@ GIT_INLINE(void) git_bitvec_clear(git_bitvec *bv)
 	if (!bv->length)
 		bv->u.bits = 0;
 	else
-		memset(bv->u.ptr, 0, bv->length);
+		memset(bv->u.words, 0x0, bv->length * sizeof(uint64_t));
 }
 
 GIT_INLINE(void) git_bitvec_free(git_bitvec *bv)
 {
-	if (bv->length) {
-		git__free(bv->u.ptr);
-		memset(bv, 0, sizeof(*bv));
-	}
+	if (bv->length)
+		git__free(bv->u.words);
 }
 
 #endif
