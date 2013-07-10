@@ -146,8 +146,8 @@ static void ssh_stream_free(git_smart_subtransport_stream *stream)
 
 	if (s->channel) {
 		libssh2_channel_close(s->channel);
-        libssh2_channel_free(s->channel);
-        s->channel = NULL;
+		libssh2_channel_free(s->channel);
+		s->channel = NULL;
 	}
 
 	if (s->session) {
@@ -202,7 +202,7 @@ static int git_ssh_extract_url_parts(
 	char *colon, *at;
 	const char *start;
 
-    colon = strchr(url, ':');
+	colon = strchr(url, ':');
 
 	if (colon == NULL) {
 		giterr_set(GITERR_NET, "Malformed URL: missing :");
@@ -226,8 +226,7 @@ static int git_ssh_extract_url_parts(
 static int _git_ssh_authenticate_session(
 	LIBSSH2_SESSION* session,
 	const char *user,
-	git_cred* cred
-)
+	git_cred* cred)
 {
 	int rc;
 	do {
@@ -267,33 +266,31 @@ static int _git_ssh_authenticate_session(
 			default:
 				rc = LIBSSH2_ERROR_AUTHENTICATION_FAILED;
 		}
-    } while (LIBSSH2_ERROR_EAGAIN == rc || LIBSSH2_ERROR_TIMEOUT == rc);
+	} while (LIBSSH2_ERROR_EAGAIN == rc || LIBSSH2_ERROR_TIMEOUT == rc);
 
-    return rc;
+	return rc;
 }
 
-static int _git_ssh_session_create
-(
+static int _git_ssh_session_create(
 	LIBSSH2_SESSION** session,
-	gitno_socket socket
-)
+	gitno_socket socket)
 {
 	if (!session) {
 		return -1;
 	}
 
 	LIBSSH2_SESSION* s = libssh2_session_init();
-    if (!s)
-        return -1;
+	if (!s)
+		return -1;
 
-    int rc = 0;
-    do {
-        rc = libssh2_session_startup(s, socket.socket);
-    } while (LIBSSH2_ERROR_EAGAIN == rc || LIBSSH2_ERROR_TIMEOUT == rc);
+	int rc = 0;
+	do {
+		rc = libssh2_session_startup(s, socket.socket);
+	} while (LIBSSH2_ERROR_EAGAIN == rc || LIBSSH2_ERROR_TIMEOUT == rc);
 
 	if (0 != rc) {
-        goto on_error;
-    }
+		goto on_error;
+	}
 
 	libssh2_session_set_blocking(s, 1);
 
@@ -345,13 +342,16 @@ static int _git_ssh_setup_conn(
 	if (user && pass) {
 		if (git_cred_userpass_plaintext_new(&t->cred, user, pass) < 0)
 			goto on_error;
-	} else {
+	} else if (t->owner->cred_acquire_cb) {
 		if (t->owner->cred_acquire_cb(&t->cred,
 				t->owner->url,
 				user,
 				GIT_CREDTYPE_USERPASS_PLAINTEXT | GIT_CREDTYPE_SSH_KEYFILE_PASSPHRASE,
 				t->owner->cred_acquire_payload) < 0)
-			return -1;
+			goto on_error;
+	} else {
+		giterr_set(GITERR_NET, "Cannot set up SSH connection without credentials");
+		goto on_error;
 	}
 	assert(t->cred);
 
@@ -359,15 +359,21 @@ static int _git_ssh_setup_conn(
 		user = git__strdup(default_user);
 	}
 
-	if (_git_ssh_session_create(&session, s->socket) < 0)
+	if (_git_ssh_session_create(&session, s->socket) < 0) {
+		giterr_set(GITERR_NET, "Failed to initialize SSH session");
 		goto on_error;
+	}
 
-    if (_git_ssh_authenticate_session(session, user, t->cred) < 0)
+	if (_git_ssh_authenticate_session(session, user, t->cred) < 0) {
+		giterr_set(GITERR_NET, "Failed to authenticate SSH session");
 		goto on_error;
+	}
 
 	channel = libssh2_channel_open_session(session);
-	if (!channel)
-        goto on_error;
+	if (!channel) {
+		giterr_set(GITERR_NET, "Failed to open SSH channel");
+		goto on_error;
+	}
 
 	libssh2_channel_set_blocking(channel, 1);
 
@@ -383,6 +389,10 @@ static int _git_ssh_setup_conn(
 	return 0;
 
 on_error:
+	s->session = NULL;
+	s->channel = NULL;
+	t->current_stream = NULL;
+
 	if (*stream)
 		ssh_stream_free(*stream);
 
