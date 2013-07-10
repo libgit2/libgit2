@@ -9,24 +9,18 @@ static git_repository *g_repo = NULL;
 
 void test_status_submodules__initialize(void)
 {
-	g_repo = cl_git_sandbox_init("submodules");
-
-	cl_fixture_sandbox("testrepo.git");
-
-	rewrite_gitmodules(git_repository_workdir(g_repo));
-
-	p_rename("submodules/testrepo/.gitted", "submodules/testrepo/.git");
 }
 
 void test_status_submodules__cleanup(void)
 {
-	cl_git_sandbox_cleanup();
-	cl_fixture_cleanup("testrepo.git");
+	cleanup_fixture_submodules();
 }
 
 void test_status_submodules__api(void)
 {
 	git_submodule *sm;
+
+	g_repo = setup_fixture_submodules();
 
 	cl_assert(git_submodule_lookup(NULL, g_repo, "nonexistent") == GIT_ENOTFOUND);
 
@@ -41,6 +35,8 @@ void test_status_submodules__api(void)
 void test_status_submodules__0(void)
 {
 	int counts = 0;
+
+	g_repo = setup_fixture_submodules();
 
 	cl_assert(git_path_isdir("submodules/.git"));
 	cl_assert(git_path_isdir("submodules/testrepo/.git"));
@@ -86,6 +82,8 @@ void test_status_submodules__1(void)
 {
 	status_entry_counts counts;
 
+	g_repo = setup_fixture_submodules();
+
 	cl_assert(git_path_isdir("submodules/.git"));
 	cl_assert(git_path_isdir("submodules/testrepo/.git"));
 	cl_assert(git_path_isfile("submodules/.gitmodules"));
@@ -104,6 +102,7 @@ void test_status_submodules__1(void)
 void test_status_submodules__single_file(void)
 {
 	unsigned int status = 0;
+	g_repo = setup_fixture_submodules();
 	cl_git_pass( git_status_file(&status, g_repo, "testrepo") );
 	cl_assert(!status);
 }
@@ -133,6 +132,8 @@ void test_status_submodules__moved_head(void)
 		GIT_STATUS_WT_MODIFIED,
 		GIT_STATUS_WT_NEW
 	};
+
+	g_repo = setup_fixture_submodules();
 
 	cl_git_pass(git_submodule_lookup(&sm, g_repo, "testrepo"));
 	cl_git_pass(git_submodule_open(&smrepo, sm));
@@ -191,6 +192,8 @@ void test_status_submodules__dirty_workdir_only(void)
 		GIT_STATUS_WT_MODIFIED,
 		GIT_STATUS_WT_NEW
 	};
+
+	g_repo = setup_fixture_submodules();
 
 	cl_git_rewritefile("submodules/testrepo/README", "heyheyhey");
 	cl_git_mkfile("submodules/testrepo/all_new.txt", "never seen before");

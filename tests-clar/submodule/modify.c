@@ -204,10 +204,10 @@ void test_submodule_modify__edit_and_save(void)
 	cl_git_pass(git_submodule_set_url(sm1, old_url));
 	cl_assert_equal_i(
 		(int)GIT_SUBMODULE_IGNORE_UNTRACKED,
-		(int)git_submodule_set_ignore(sm1, GIT_SUBMODULE_IGNORE_DEFAULT));
+		(int)git_submodule_set_ignore(sm1, GIT_SUBMODULE_IGNORE_RESET));
 	cl_assert_equal_i(
 		(int)GIT_SUBMODULE_UPDATE_REBASE,
-		(int)git_submodule_set_update(sm1, GIT_SUBMODULE_UPDATE_DEFAULT));
+		(int)git_submodule_set_update(sm1, GIT_SUBMODULE_UPDATE_RESET));
 	cl_assert_equal_i(
 		1, git_submodule_set_fetch_recurse_submodules(sm1, old_fetchrecurse));
 
@@ -228,10 +228,10 @@ void test_submodule_modify__edit_and_save(void)
 	cl_git_pass(git_submodule_save(sm1));
 
 	/* attempt to "revert" values */
-	git_submodule_set_ignore(sm1, GIT_SUBMODULE_IGNORE_DEFAULT);
-	git_submodule_set_update(sm1, GIT_SUBMODULE_UPDATE_DEFAULT);
+	git_submodule_set_ignore(sm1, GIT_SUBMODULE_IGNORE_RESET);
+	git_submodule_set_update(sm1, GIT_SUBMODULE_UPDATE_RESET);
 
-	/* but ignore and update should NOT revert because the DEFAULT
+	/* but ignore and update should NOT revert because the RESET
 	 * should now be the newly saved value...
 	 */
 	cl_assert_equal_i(

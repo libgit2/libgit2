@@ -516,6 +516,12 @@ int git_index_write(git_index *index)
 	return 0;
 }
 
+const char * git_index_path(git_index *index)
+{
+	assert(index);
+	return index->index_file_path;
+}
+
 int git_index_write_tree(git_oid *oid, git_index *index)
 {
 	git_repository *repo;

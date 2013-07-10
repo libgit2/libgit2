@@ -94,10 +94,14 @@ GIT_EXTERN(int) git_repository_discover(
  *   changes from the `stat` system call).  (E.g. Searching in a user's home
  *   directory "/home/user/source/" will not return "/.git/" as the found
  *   repo if "/" is a different filesystem than "/home".)
+ * * GIT_REPOSITORY_OPEN_BARE - Open repository as a bare repo regardless
+ *   of core.bare config, and defer loading config file for faster setup.
+ *   Unlike `git_repository_open_bare`, this can follow gitlinks.
  */
 typedef enum {
 	GIT_REPOSITORY_OPEN_NO_SEARCH = (1 << 0),
 	GIT_REPOSITORY_OPEN_CROSS_FS  = (1 << 1),
+	GIT_REPOSITORY_OPEN_BARE      = (1 << 2),
 } git_repository_open_flag_t;
 
 /**

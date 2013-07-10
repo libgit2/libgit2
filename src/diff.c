@@ -13,6 +13,7 @@
 #include "pathspec.h"
 #include "index.h"
 #include "odb.h"
+#include "submodule.h"
 
 #define DIFF_FLAG_IS_SET(DIFF,FLAG) (((DIFF)->opts.flags & (FLAG)) != 0)
 #define DIFF_FLAG_ISNT_SET(DIFF,FLAG) (((DIFF)->opts.flags & (FLAG)) == 0)
@@ -77,10 +78,6 @@ static int diff_delta__from_one(
 		DIFF_FLAG_ISNT_SET(diff, GIT_DIFF_INCLUDE_UNTRACKED))
 		return 0;
 
-	if (entry->mode == GIT_FILEMODE_COMMIT &&
-		DIFF_FLAG_IS_SET(diff, GIT_DIFF_IGNORE_SUBMODULES))
-		return 0;
-
 	if (!git_pathspec__match(
 			&diff->pathspec, entry->path,
 			DIFF_FLAG_IS_SET(diff, GIT_DIFF_DISABLE_PATHSPEC_MATCH),
@@ -138,11 +135,6 @@ static int diff_delta__from_two(
 
 	if (status == GIT_DELTA_UNMODIFIED &&
 		DIFF_FLAG_ISNT_SET(diff, GIT_DIFF_INCLUDE_UNMODIFIED))
-		return 0;
-
-	if (old_entry->mode == GIT_FILEMODE_COMMIT &&
-		new_entry->mode == GIT_FILEMODE_COMMIT &&
-		DIFF_FLAG_IS_SET(diff, GIT_DIFF_IGNORE_SUBMODULES))
 		return 0;
 
 	if (DIFF_FLAG_IS_SET(diff, GIT_DIFF_REVERSE)) {
@@ -430,8 +422,18 @@ static int diff_list_apply_options(
 	if (!opts) {
 		diff->opts.context_lines = config_int(cfg, "diff.context", 3);
 
-		if (config_bool(cfg, "diff.ignoreSubmodules", 0))
-			diff->opts.flags |= GIT_DIFF_IGNORE_SUBMODULES;
+		/* add other defaults here */
+	}
+
+	/* if ignore_submodules not explicitly set, check diff config */
+	if (diff->opts.ignore_submodules <= 0) {
+		const char *str;
+
+		if (git_config_get_string(&str , cfg, "diff.ignoreSubmodules") < 0)
+			giterr_clear();
+		else if (str != NULL &&
+			git_submodule_parse_ignore(&diff->opts.ignore_submodules, str) < 0)
+			giterr_clear();
 	}
 
 	/* if either prefix is not set, figure out appropriate value */
@@ -595,35 +597,44 @@ static int maybe_modified_submodule(
 	int error = 0;
 	git_submodule *sub;
 	unsigned int sm_status = 0;
-	const git_oid *sm_oid;
+	git_submodule_ignore_t ign = diff->opts.ignore_submodules;
 
 	*status = GIT_DELTA_UNMODIFIED;
 
-	if (!DIFF_FLAG_IS_SET(diff, GIT_DIFF_IGNORE_SUBMODULES) &&
-		!(error = git_submodule_lookup(
-			  &sub, diff->repo, info->nitem->path)) &&
-		git_submodule_ignore(sub) != GIT_SUBMODULE_IGNORE_ALL &&
-		!(error = git_submodule_status(&sm_status, sub)))
-	{
-		/* check IS_WD_UNMODIFIED because this case is only used
-		 * when the new side of the diff is the working directory
-		 */
-		if (!GIT_SUBMODULE_STATUS_IS_WD_UNMODIFIED(sm_status))
-			*status = GIT_DELTA_MODIFIED;
+	if (DIFF_FLAG_IS_SET(diff, GIT_DIFF_IGNORE_SUBMODULES) ||
+		ign == GIT_SUBMODULE_IGNORE_ALL)
+		return 0;
 
-		/* grab OID while we are here */
-		if (git_oid_iszero(&info->nitem->oid) &&
-			(sm_oid = git_submodule_wd_id(sub)) != NULL)
-			git_oid_cpy(found_oid, sm_oid);
+	if ((error = git_submodule_lookup(
+			&sub, diff->repo, info->nitem->path)) < 0) {
+
+		/* GIT_EEXISTS means dir with .git in it was found - ignore it */
+		if (error == GIT_EEXISTS) {
+			giterr_clear();
+			error = 0;
+		}
+		return error;
 	}
 
-	/* GIT_EEXISTS means a dir with .git in it was found - ignore it */
-	if (error == GIT_EEXISTS) {
-		giterr_clear();
-		error = 0;
-	}
+	if (ign <= 0 && git_submodule_ignore(sub) == GIT_SUBMODULE_IGNORE_ALL)
+		return 0;
 
-	return error;
+	if ((error = git_submodule__status(
+			&sm_status, NULL, NULL, found_oid, sub, ign)) < 0)
+		return error;
+
+	/* check IS_WD_UNMODIFIED because this case is only used
+	 * when the new side of the diff is the working directory
+	 */
+	if (!GIT_SUBMODULE_STATUS_IS_WD_UNMODIFIED(sm_status))
+		*status = GIT_DELTA_MODIFIED;
+
+	/* now that we have a HEAD OID, check if HEAD moved */
+	if ((sm_status & GIT_SUBMODULE_STATUS_IN_WD) != 0 &&
+		!git_oid_equal(&info->oitem->oid, found_oid))
+		*status = GIT_DELTA_MODIFIED;
+
+	return 0;
 }
 
 static int maybe_modified(
@@ -724,7 +735,7 @@ static int maybe_modified(
 	/* if we got here and decided that the files are modified, but we
 	 * haven't calculated the OID of the new item, then calculate it now
 	 */
-	if (status != GIT_DELTA_UNMODIFIED && git_oid_iszero(&nitem->oid)) {
+	if (status == GIT_DELTA_MODIFIED && git_oid_iszero(&nitem->oid)) {
 		if (git_oid_iszero(&noid)) {
 			if (git_diff__oid_for_file(diff->repo,
 					nitem->path, nitem->mode, nitem->file_size, &noid) < 0)
@@ -847,7 +858,7 @@ static int handle_unmatched_new_item(
 			git_buf_clear(&info->ignore_prefix);
 	}
 
-	if (S_ISDIR(nitem->mode)) {
+	if (nitem->mode == GIT_FILEMODE_TREE) {
 		bool recurse_into_dir = contains_oitem;
 
 		/* if not already inside an ignored dir, check if this is ignored */
@@ -950,6 +961,16 @@ static int handle_unmatched_new_item(
 
 	else if (info->new_iter->type != GIT_ITERATOR_TYPE_WORKDIR)
 		delta_type = GIT_DELTA_ADDED;
+
+	else if (nitem->mode == GIT_FILEMODE_COMMIT) {
+		git_submodule *sm;
+
+		/* ignore things that are not actual submodules */
+		if (git_submodule_lookup(&sm, info->repo, nitem->path) != 0) {
+			giterr_clear();
+			delta_type = GIT_DELTA_IGNORED;
+		}
+	}
 
 	/* Actually create the record for this item if necessary */
 	if ((error = diff_delta__from_one(diff, delta_type, nitem)) < 0)
