@@ -43,6 +43,11 @@ GIT_INLINE(void) git_atomic_set(git_atomic *a, int val)
 	a->val = val;
 }
 
+GIT_INLINE(int) git_atomic_get(git_atomic *a)
+{
+	return (int)a->val;
+}
+
 #ifdef GIT_THREADS
 
 #define git_thread pthread_t

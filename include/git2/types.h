@@ -229,6 +229,40 @@ typedef struct git_transfer_progress {
  */
 typedef int (*git_transfer_progress_callback)(const git_transfer_progress *stats, void *payload);
 
+/**
+ * Opaque structure representing a submodule.
+ */
+typedef struct git_submodule git_submodule;
+
+/**
+ * Values that could be specified for the update rule of a submodule.
+ *
+ * Use the RESET value if you have altered the in-memory update value via
+ * `git_submodule_set_update()` and wish to reset to the original default.
+ */
+typedef enum {
+	GIT_SUBMODULE_UPDATE_RESET = -1,
+	GIT_SUBMODULE_UPDATE_CHECKOUT = 1,
+	GIT_SUBMODULE_UPDATE_REBASE = 2,
+	GIT_SUBMODULE_UPDATE_MERGE = 3,
+	GIT_SUBMODULE_UPDATE_NONE = 4
+} git_submodule_update_t;
+
+/**
+ * Values that could be specified for how closely to examine the
+ * working directory when getting submodule status.
+ *
+ * Use the RESET value if you have altered the in-memory ignore value via
+ * `git_submodule_set_ignore()` and wish to reset to the original value.
+ */
+typedef enum {
+	GIT_SUBMODULE_IGNORE_RESET = -1,    /* reset to on-disk value */
+	GIT_SUBMODULE_IGNORE_NONE = 1,      /* any change or untracked == dirty */
+	GIT_SUBMODULE_IGNORE_UNTRACKED = 2, /* dirty if tracked files change */
+	GIT_SUBMODULE_IGNORE_DIRTY = 3,     /* only dirty if HEAD moved */
+	GIT_SUBMODULE_IGNORE_ALL = 4        /* never dirty */
+} git_submodule_ignore_t;
+
 /** @} */
 GIT_END_DECL
 

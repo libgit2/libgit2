@@ -14,51 +14,18 @@
 /**
  * @file git2/submodule.h
  * @brief Git submodule management utilities
- * @defgroup git_submodule Git submodule management routines
- * @ingroup Git
- * @{
- */
-GIT_BEGIN_DECL
-
-/**
- * Opaque structure representing a submodule.
  *
  * Submodule support in libgit2 builds a list of known submodules and keeps
  * it in the repository.  The list is built from the .gitmodules file, the
  * .git/config file, the index, and the HEAD tree.  Items in the working
  * directory that look like submodules (i.e. a git repo) but are not
  * mentioned in those places won't be tracked.
- */
-typedef struct git_submodule git_submodule;
-
-/**
- * Values that could be specified for the update rule of a submodule.
  *
- * Use the DEFAULT value if you have altered the update value via
- * `git_submodule_set_update()` and wish to reset to the original default.
+ * @defgroup git_submodule Git submodule management routines
+ * @ingroup Git
+ * @{
  */
-typedef enum {
-	GIT_SUBMODULE_UPDATE_DEFAULT = -1,
-	GIT_SUBMODULE_UPDATE_CHECKOUT = 0,
-	GIT_SUBMODULE_UPDATE_REBASE = 1,
-	GIT_SUBMODULE_UPDATE_MERGE = 2,
-	GIT_SUBMODULE_UPDATE_NONE = 3
-} git_submodule_update_t;
-
-/**
- * Values that could be specified for how closely to examine the
- * working directory when getting submodule status.
- *
- * Use the DEFUALT value if you have altered the ignore value via
- * `git_submodule_set_ignore()` and wish to reset to the original value.
- */
-typedef enum {
-	GIT_SUBMODULE_IGNORE_DEFAULT = -1,  /* reset to default */
-	GIT_SUBMODULE_IGNORE_NONE = 0,      /* any change or untracked == dirty */
-	GIT_SUBMODULE_IGNORE_UNTRACKED = 1, /* dirty if tracked files change */
-	GIT_SUBMODULE_IGNORE_DIRTY = 2,     /* only dirty if HEAD moved */
-	GIT_SUBMODULE_IGNORE_ALL = 3        /* never dirty */
-} git_submodule_ignore_t;
+GIT_BEGIN_DECL
 
 /**
  * Return codes for submodule status.
@@ -119,19 +86,9 @@ typedef enum {
 	GIT_SUBMODULE_STATUS_WD_UNTRACKED      = (1u << 13),
 } git_submodule_status_t;
 
-#define GIT_SUBMODULE_STATUS__IN_FLAGS \
-	(GIT_SUBMODULE_STATUS_IN_HEAD | \
-	GIT_SUBMODULE_STATUS_IN_INDEX | \
-	GIT_SUBMODULE_STATUS_IN_CONFIG | \
-	GIT_SUBMODULE_STATUS_IN_WD)
-
-#define GIT_SUBMODULE_STATUS__INDEX_FLAGS \
-	(GIT_SUBMODULE_STATUS_INDEX_ADDED | \
-	GIT_SUBMODULE_STATUS_INDEX_DELETED | \
-	GIT_SUBMODULE_STATUS_INDEX_MODIFIED)
-
-#define GIT_SUBMODULE_STATUS__WD_FLAGS \
-	~(GIT_SUBMODULE_STATUS__IN_FLAGS | GIT_SUBMODULE_STATUS__INDEX_FLAGS)
+#define GIT_SUBMODULE_STATUS__IN_FLAGS		0x000Fu
+#define GIT_SUBMODULE_STATUS__INDEX_FLAGS	0x0070u
+#define GIT_SUBMODULE_STATUS__WD_FLAGS		0x3F80u
 
 #define GIT_SUBMODULE_STATUS_IS_UNMODIFIED(S) \
 	(((S) & ~GIT_SUBMODULE_STATUS__IN_FLAGS) == 0)
@@ -387,9 +344,9 @@ GIT_EXTERN(git_submodule_ignore_t) git_submodule_ignore(
  * submodule is in memory.  You should call `git_submodule_save()` if you
  * want to persist the new ignore role.
  *
- * Calling this again with GIT_SUBMODULE_IGNORE_DEFAULT or calling
- * `git_submodule_reload()` will revert the rule to the value that was in the
- * original config.
+ * Calling this again with GIT_SUBMODULE_IGNORE_RESET or calling
+ * `git_submodule_reload()` will revert the rule to the value that was in
+ * the original config.
  *
  * @return old value for ignore
  */
@@ -409,9 +366,9 @@ GIT_EXTERN(git_submodule_update_t) git_submodule_update(
  * This sets the update rule in memory for the submodule.  You should call
  * `git_submodule_save()` if you want to persist the new update rule.
  *
- * Calling this again with GIT_SUBMODULE_UPDATE_DEFAULT or calling
- * `git_submodule_reload()` will revert the rule to the value that was in the
- * original config.
+ * Calling this again with GIT_SUBMODULE_UPDATE_RESET or calling
+ * `git_submodule_reload()` will revert the rule to the value that was in
+ * the original config.
  *
  * @return old value for update
  */
