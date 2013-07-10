@@ -246,10 +246,10 @@ static int checkout_action_wd_only(
 	bool remove = false;
 	git_checkout_notify_t notify = GIT_CHECKOUT_NOTIFY_NONE;
 
-	if (!git_pathspec_match_path(
+	if (!git_pathspec__match(
 			pathspec, wd->path,
 			(data->strategy & GIT_CHECKOUT_DISABLE_PATHSPEC_MATCH) != 0,
-			git_iterator_ignore_case(workdir), NULL))
+			git_iterator_ignore_case(workdir), NULL, NULL))
 		return 0;
 
 	/* check if item is tracked in the index but not in the checkout diff */
@@ -607,7 +607,7 @@ static int checkout_get_actions(
 	uint32_t *actions = NULL;
 
 	if (data->opts.paths.count > 0 &&
-		git_pathspec_init(&pathspec, &data->opts.paths, &pathpool) < 0)
+		git_pathspec__vinit(&pathspec, &data->opts.paths, &pathpool) < 0)
 		return -1;
 
 	if ((error = git_iterator_current(&wditem, workdir)) < 0 &&
@@ -659,7 +659,7 @@ static int checkout_get_actions(
 		goto fail;
 	}
 
-	git_pathspec_free(&pathspec);
+	git_pathspec__vfree(&pathspec);
 	git_pool_clear(&pathpool);
 
 	return 0;
@@ -670,7 +670,7 @@ fail:
 	*actions_ptr = NULL;
 	git__free(actions);
 
-	git_pathspec_free(&pathspec);
+	git_pathspec__vfree(&pathspec);
 	git_pool_clear(&pathpool);
 
 	return error;

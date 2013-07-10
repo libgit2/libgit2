@@ -101,8 +101,6 @@ static int parse_index(git_index *index, const char *buffer, size_t buffer_size)
 static bool is_index_extended(git_index *index);
 static int write_index(git_index *index, git_filebuf *file);
 
-static int index_find(size_t *at_pos, git_index *index, const char *path, int stage);
-
 static void index_entry_free(git_index_entry *entry);
 static void index_entry_reuc_free(git_index_reuc_entry *reuc);
 
@@ -114,7 +112,7 @@ static int index_srch(const void *key, const void *array_member)
 
 	ret = strcmp(srch_key->path, entry->path);
 
-	if (ret == 0)
+	if (ret == 0 && srch_key->stage != GIT_INDEX_STAGE_ANY)
 		ret = srch_key->stage - GIT_IDXENTRY_STAGE(entry);
 
 	return ret;
@@ -128,7 +126,7 @@ static int index_isrch(const void *key, const void *array_member)
 
 	ret = strcasecmp(srch_key->path, entry->path);
 
-	if (ret == 0)
+	if (ret == 0 && srch_key->stage != GIT_INDEX_STAGE_ANY)
 		ret = srch_key->stage - GIT_IDXENTRY_STAGE(entry);
 
 	return ret;
@@ -562,7 +560,7 @@ const git_index_entry *git_index_get_bypath(
 
 	git_vector_sort(&index->entries);
 
-	if (index_find(&pos, index, path, stage) < 0) {
+	if (git_index__find(&pos, index, path, stage) < 0) {
 		giterr_set(GITERR_INDEX, "Index does not contain %s", path);
 		return NULL;
 	}
@@ -719,7 +717,8 @@ static int index_insert(git_index *index, git_index_entry *entry, int replace)
 		entry->flags |= GIT_IDXENTRY_NAMEMASK;
 
 	/* look if an entry with this path already exists */
-	if (!index_find(&position, index, entry->path, GIT_IDXENTRY_STAGE(entry))) {
+	if (!git_index__find(
+			&position, index, entry->path, GIT_IDXENTRY_STAGE(entry))) {
 		existing = (git_index_entry **)&index->entries.contents[position];
 
 		/* update filemode to existing values if stat is not trusted */
@@ -831,7 +830,7 @@ int git_index_remove(git_index *index, const char *path, int stage)
 
 	git_vector_sort(&index->entries);
 
-	if (index_find(&position, index, path, stage) < 0) {
+	if (git_index__find(&position, index, path, stage) < 0) {
 		giterr_set(GITERR_INDEX, "Index does not contain %s at stage %d",
 			path, stage);
 		return GIT_ENOTFOUND;
@@ -887,7 +886,8 @@ int git_index_remove_directory(git_index *index, const char *dir, int stage)
 	return error;
 }
 
-static int index_find(size_t *at_pos, git_index *index, const char *path, int stage)
+int git_index__find(
+	size_t *at_pos, git_index *index, const char *path, int stage)
 {
 	struct entry_srch_key srch_key;
 
@@ -896,7 +896,8 @@ static int index_find(size_t *at_pos, git_index *index, const char *path, int st
 	srch_key.path = path;
 	srch_key.stage = stage;
 
-	return git_vector_bsearch2(at_pos, &index->entries, index->entries_search, &srch_key);
+	return git_vector_bsearch2(
+		at_pos, &index->entries, index->entries_search, &srch_key);
 }
 
 int git_index_find(size_t *at_pos, git_index *index, const char *path)
@@ -2053,7 +2054,7 @@ int git_index_add_all(
 	git_iterator *wditer = NULL;
 	const git_index_entry *wd = NULL;
 	git_index_entry *entry;
-	git_pathspec_context ps;
+	git_pathspec ps;
 	const char *match;
 	size_t existing;
 	bool no_fnmatch = (flags & GIT_INDEX_ADD_DISABLE_PATHSPEC_MATCH) != 0;
@@ -2074,7 +2075,7 @@ int git_index_add_all(
 	if (git_repository__cvar(&ignorecase, repo, GIT_CVAR_IGNORECASE) < 0)
 		return -1;
 
-	if ((error = git_pathspec_context_init(&ps, paths)) < 0)
+	if ((error = git_pathspec__init(&ps, paths)) < 0)
 		return error;
 
 	/* optionally check that pathspec doesn't mention any ignored files */
@@ -2091,14 +2092,14 @@ int git_index_add_all(
 	while (!(error = git_iterator_advance(&wd, wditer))) {
 
 		/* check if path actually matches */
-		if (!git_pathspec_match_path(
-				&ps.pathspec, wd->path, no_fnmatch, ignorecase, &match))
+		if (!git_pathspec__match(
+				&ps.pathspec, wd->path, no_fnmatch, ignorecase, &match, NULL))
 			continue;
 
 		/* skip ignored items that are not already in the index */
 		if ((flags & GIT_INDEX_ADD_FORCE) == 0 &&
 			git_iterator_current_is_ignored(wditer) &&
-			index_find(&existing, index, wd->path, 0) < 0)
+			git_index__find(&existing, index, wd->path, 0) < 0)
 			continue;
 
 		/* issue notification callback if requested */
@@ -2148,7 +2149,7 @@ int git_index_add_all(
 
 cleanup:
 	git_iterator_free(wditer);
-	git_pathspec_context_free(&ps);
+	git_pathspec__clear(&ps);
 
 	return error;
 }
@@ -2168,13 +2169,13 @@ static int index_apply_to_all(
 {
 	int error = 0;
 	size_t i;
-	git_pathspec_context ps;
+	git_pathspec ps;
 	const char *match;
 	git_buf path = GIT_BUF_INIT;
 
 	assert(index);
 
-	if ((error = git_pathspec_context_init(&ps, paths)) < 0)
+	if ((error = git_pathspec__init(&ps, paths)) < 0)
 		return error;
 
 	git_vector_sort(&index->entries);
@@ -2183,8 +2184,9 @@ static int index_apply_to_all(
 		git_index_entry *entry = git_vector_get(&index->entries, i);
 
 		/* check if path actually matches */
-		if (!git_pathspec_match_path(
-				&ps.pathspec, entry->path, false, index->ignore_case, &match))
+		if (!git_pathspec__match(
+				&ps.pathspec, entry->path, false, index->ignore_case,
+				&match, NULL))
 			continue;
 
 		/* issue notification callback if requested */
@@ -2231,7 +2233,7 @@ static int index_apply_to_all(
 	}
 
 	git_buf_free(&path);
-	git_pathspec_context_free(&ps);
+	git_pathspec__clear(&ps);
 
 	return error;
 }
