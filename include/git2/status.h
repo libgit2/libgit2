@@ -234,12 +234,12 @@ GIT_EXTERN(int) git_status_foreach_ext(
  * This is not quite the same as calling `git_status_foreach_ext()` with
  * the pathspec set to the specified path.
  *
- * @param status_flags The status value for the file
+ * @param status_flags Output combination of git_status_t values for file
  * @param repo A repository object
- * @param path The file to retrieve status for, rooted at the repo's workdir
+ * @param path The file to retrieve status for relative to the repo workdir
  * @return 0 on success, GIT_ENOTFOUND if the file is not found in the HEAD,
- *      index, and work tree, GIT_EINVALIDPATH if `path` points at a folder,
- *      GIT_EAMBIGUOUS if "path" matches multiple files, -1 on other error.
+ *      index, and work tree, GIT_EAMBIGUOUS if `path` matches multiple files
+ *      or if it refers to a folder, and -1 on other errors.
  */
 GIT_EXTERN(int) git_status_file(
 	unsigned int *status_flags,
