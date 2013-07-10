@@ -372,7 +372,7 @@ int git_smart__negotiate_fetch(git_transport *transport, git_repository *repo, c
 				return error;
 
 			if (pkt->type == GIT_PKT_NAK ||
-			    (pkt->type == GIT_PKT_ACK && pkt->status != GIT_ACK_CONTINUE)) {
+				(pkt->type == GIT_PKT_ACK && pkt->status != GIT_ACK_CONTINUE)) {
 				git__free(pkt);
 				break;
 			}
