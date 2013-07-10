@@ -1249,6 +1249,8 @@ int git_diff__paired_foreach(
 
 	i_max = head2idx ? head2idx->deltas.length : 0;
 	j_max = idx2wd ? idx2wd->deltas.length : 0;
+	if (!i_max && !j_max)
+		return 0;
 
 	/* At some point, tree-to-index diffs will probably never ignore case,
 	 * even if that isn't true now.  Index-to-workdir diffs may or may not
