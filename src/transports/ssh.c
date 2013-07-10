@@ -353,24 +353,31 @@ static int _git_ssh_setup_conn(
 				t->owner->cred_acquire_payload) < 0)
 			goto on_error;
 	} else {
-        goto on_error;
-    }
+		giterr_set(GITERR_NET, "Cannot set up SSH connection without credentials");
+		goto on_error;
+	}
 	assert(t->cred);
 	
 	if (!user) {
 		user = git__strdup(default_user);
 	}
 	
-	if (_git_ssh_session_create(&session, s->socket) < 0)
+	if (_git_ssh_session_create(&session, s->socket) < 0) {
+		giterr_set(GITERR_NET, "Failed to initialize SSH session");
 		goto on_error;
-	
-    if (_git_ssh_authenticate_session(session, user, t->cred) < 0)
+	}
+
+    if (_git_ssh_authenticate_session(session, user, t->cred) < 0) {
+		giterr_set(GITERR_NET, "Failed to authenticate SSH session");
 		goto on_error;
-	
+	}
+
 	channel = libssh2_channel_open_session(session);
-	if (!channel)
-        goto on_error;
-	
+	if (!channel) {
+		giterr_set(GITERR_NET, "Failed to open SSH channel");
+		goto on_error;
+	}
+
 	libssh2_channel_set_blocking(channel, 1);
 	
 	s->session = session;
