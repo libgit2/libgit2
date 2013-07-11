@@ -312,11 +312,11 @@ typedef enum {
 /**
  * Get the search path for global/system/xdg files
  *
- * @param out pointer to git_buf containing search path
+ * @param out pointer to git_buf to write into
  * @param which which list of paths to return
  * @return 0 on success, <0 on failure
  */
-extern int git_futils_dirs_get(const git_buf **out, git_futils_dir_t which);
+extern int git_futils_dirs_get(git_buf *out, git_futils_dir_t which);
 
 /**
  * Get search path into a preallocated buffer

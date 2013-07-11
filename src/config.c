@@ -626,29 +626,34 @@ int git_config_find_system(char *system_config_path, size_t length)
 
 int git_config__global_location(git_buf *buf)
 {
-	const git_buf *paths;
+	git_buf paths = GIT_BUF_INIT;
 	const char *sep, *start;
 	size_t len;
 
 	if (git_futils_dirs_get(&paths, GIT_FUTILS_DIR_GLOBAL) < 0)
-		return -1;
+		goto on_error;
 
 	/* no paths, so give up */
-	if (git_buf_len(paths) == 0)
-		return -1;
+	if (git_buf_len(&paths) == 0)
+		goto on_error;
 
-	start = git_buf_cstr(paths);
+	start = git_buf_cstr(&paths);
 	sep = strchr(start, GIT_PATH_LIST_SEPARATOR);
 
 	if (sep)
 		len = sep - start;
 	else
-		len = paths->size;
+		len = git_buf_len(&paths);
 
 	if (git_buf_set(buf, start, len) < 0)
-		return -1;
+		goto on_error;
 
+	git_buf_free(&paths);
 	return git_buf_joinpath(buf, buf->ptr, GIT_CONFIG_FILENAME_GLOBAL);
+
+on_error:
+	git_buf_free(&paths);
+	return -1;
 }
 
 int git_config_open_default(git_config **out)

@@ -137,6 +137,12 @@ int git_buf_puts(git_buf *buf, const char *string)
 	return git_buf_put(buf, string, strlen(string));
 }
 
+int git_buf_putbuf(git_buf *buf, git_buf *in)
+{
+	assert(in);
+	return git_buf_put(buf, in->ptr, in->size);
+}
+
 static const char b64str[64] =
 	"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
