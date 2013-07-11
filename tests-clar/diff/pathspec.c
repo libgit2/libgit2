@@ -34,7 +34,7 @@ void test_diff_pathspec__0(void)
 	cl_git_pass(git_pathspec_new(&ps, &paths));
 
 	cl_git_pass(git_pathspec_match_tree(&matches, a, GIT_PATHSPEC_DEFAULT, ps));
-	cl_assert_equal_i(7, git_pathspec_match_list_entrycount(matches));
+	cl_assert_equal_i(7, (int)git_pathspec_match_list_entrycount(matches));
 	cl_assert_equal_s("current_file", git_pathspec_match_list_entry(matches,0));
 	cl_assert(git_pathspec_match_list_diff_entry(matches,0) == NULL);
 	git_pathspec_match_list_free(matches);
@@ -43,13 +43,13 @@ void test_diff_pathspec__0(void)
 
 	cl_git_pass(git_pathspec_match_diff(
 		&matches, diff, GIT_PATHSPEC_DEFAULT, ps));
-	cl_assert_equal_i(7, git_pathspec_match_list_entrycount(matches));
+	cl_assert_equal_i(7, (int)git_pathspec_match_list_entrycount(matches));
 	cl_assert(git_pathspec_match_list_diff_entry(matches, 0) != NULL);
 	cl_assert(git_pathspec_match_list_entry(matches, 0) == NULL);
 	cl_assert_equal_s("current_file",
 		git_pathspec_match_list_diff_entry(matches,0)->new_file.path);
 	cl_assert_equal_i(GIT_DELTA_ADDED,
-		git_pathspec_match_list_diff_entry(matches,0)->status);
+		(int)git_pathspec_match_list_diff_entry(matches,0)->status);
 	git_pathspec_match_list_free(matches);
 
 	git_diff_list_free(diff);
@@ -59,13 +59,13 @@ void test_diff_pathspec__0(void)
 
 	cl_git_pass(git_pathspec_match_diff(
 		&matches, diff, GIT_PATHSPEC_DEFAULT, ps));
-	cl_assert_equal_i(3, git_pathspec_match_list_entrycount(matches));
+	cl_assert_equal_i(3, (int)git_pathspec_match_list_entrycount(matches));
 	cl_assert(git_pathspec_match_list_diff_entry(matches, 0) != NULL);
 	cl_assert(git_pathspec_match_list_entry(matches, 0) == NULL);
 	cl_assert_equal_s("subdir/current_file",
 		git_pathspec_match_list_diff_entry(matches,0)->new_file.path);
 	cl_assert_equal_i(GIT_DELTA_DELETED,
-		git_pathspec_match_list_diff_entry(matches,0)->status);
+		(int)git_pathspec_match_list_diff_entry(matches,0)->status);
 	git_pathspec_match_list_free(matches);
 
 	git_diff_list_free(diff);
@@ -75,13 +75,13 @@ void test_diff_pathspec__0(void)
 
 	cl_git_pass(git_pathspec_match_diff(
 		&matches, diff, GIT_PATHSPEC_DEFAULT, ps));
-	cl_assert_equal_i(4, git_pathspec_match_list_entrycount(matches));
+	cl_assert_equal_i(4, (int)git_pathspec_match_list_entrycount(matches));
 	cl_assert(git_pathspec_match_list_diff_entry(matches, 0) != NULL);
 	cl_assert(git_pathspec_match_list_entry(matches, 0) == NULL);
 	cl_assert_equal_s("modified_file",
 		git_pathspec_match_list_diff_entry(matches,0)->new_file.path);
 	cl_assert_equal_i(GIT_DELTA_MODIFIED,
-		git_pathspec_match_list_diff_entry(matches,0)->status);
+		(int)git_pathspec_match_list_diff_entry(matches,0)->status);
 	git_pathspec_match_list_free(matches);
 
 	git_diff_list_free(diff);

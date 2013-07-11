@@ -163,7 +163,8 @@ int git_commit__parse(void *_commit, git_odb_object *odb_obj)
 	const char *buffer_start = git_odb_object_data(odb_obj), *buffer;
 	const char *buffer_end = buffer_start + git_odb_object_size(odb_obj);
 	git_oid parent_id;
-	size_t parent_count = 0, header_len;
+	uint32_t parent_count = 0;
+	size_t header_len;
 
 	/* find end-of-header (counting parents as we go) */
 	for (buffer = buffer_start; buffer < buffer_end; ++buffer) {
