@@ -490,3 +490,28 @@ int git_buf_splice(
 	buf->ptr[buf->size] = '\0';
 	return 0;
 }
+
+git_refcounted_buf *git_refcounted_buf_init()
+{
+	git_refcounted_buf *buf;
+	
+	if ((buf = git__calloc(1, sizeof(git_refcounted_buf))) == NULL)
+		return NULL;
+
+	git_buf_init(&buf->buf, 0);
+	return buf;
+}
+
+static void refcounted_buf_free(git_refcounted_buf *buf)
+{
+	git_buf_free(&buf->buf);
+	git__free(buf);
+}
+
+void git_refcounted_buf_free(git_refcounted_buf *buf)
+{
+	if (buf == NULL)
+		return;
+
+	GIT_REFCOUNT_DEC(buf, refcounted_buf_free);
+}

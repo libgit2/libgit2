@@ -618,7 +618,7 @@ static int git_futils_guess_xdg_dirs(git_buf *out)
 
 typedef int (*git_futils_dirs_guess_cb)(git_buf *out);
 
-static git_buf *git_futils__dirs[GIT_FUTILS_DIR__MAX] =
+static git_refcounted_buf *git_futils__dirs[GIT_FUTILS_DIR__MAX] =
 	{ NULL, NULL, NULL };
 
 static git_futils_dirs_guess_cb git_futils__dir_guess[GIT_FUTILS_DIR__MAX] = {
@@ -635,9 +635,9 @@ static int git_futils_check_selector(git_futils_dir_t which)
 	return -1;
 }
 
-static int git_futils__dir_cache(const git_buf **out, git_futils_dir_t which)
+static int git_futils__dir_cache(git_refcounted_buf **out, git_futils_dir_t which)
 {
-	git_buf *path;
+	git_refcounted_buf *path;
 	int error;
 
 	GITERR_CHECK_ERROR(git_futils_check_selector(which));
@@ -645,32 +645,36 @@ static int git_futils__dir_cache(const git_buf **out, git_futils_dir_t which)
 	*out = NULL;
 
 	if ((path = git_futils__dirs[which]) == NULL) {
-		path = git__calloc(1, sizeof(git_buf));
+		path = git_refcounted_buf_init();
 		GITERR_CHECK_ALLOC(path);
 
-		error = git_futils__dir_guess[which](path);
+		error = git_futils__dir_guess[which](&path->buf);
 
-		if (error != 0 || git_buf_len(path) == 0) {
-			git__free(path);
+		if (error != 0 || git_buf_len(&path->buf) == 0) {
+			git_refcounted_buf_free(path);
 			return error;
 		}
 
-		/* If another thread beat us to setting this, free ourselves. */
-		if (git__compare_and_swap(&git_futils__dirs[which], NULL, path)) {
-			git_buf_free(path);
-			git__free(path);
+		GIT_REFCOUNT_OWN(path, git_futils__dirs);
 
-			path = git_futils__dirs[which];
+		/* If another thread beat us to setting this, free ourselves. */
+		if ((path = git__compare_and_swap(
+			&git_futils__dirs[which], NULL, path)) != NULL) {
+
+			GIT_REFCOUNT_OWN(path, NULL);
+			git_refcounted_buf_free(path);
 		}
 	}
 
-	*out = path;
+	*out = git_futils__dirs[which];
+	GIT_REFCOUNT_INC(*out);
+
 	return 0;
 }
 
 int git_futils_dirs_get(git_buf *out, git_futils_dir_t which)
 {
-	git_buf *path;
+	git_refcounted_buf *path;
 
 	assert(out);
 
@@ -679,23 +683,27 @@ int git_futils_dirs_get(git_buf *out, git_futils_dir_t which)
 	GITERR_CHECK_ERROR(git_futils__dir_cache(&path, which));
 
 	if (path)
-		git_buf_putbuf(out, path);
+		git_buf_putbuf(out, &path->buf);
+
+	git_refcounted_buf_free(path);
 
 	return 0;
 }
 
 int git_futils_dirs_get_str(char *out, size_t outlen, git_futils_dir_t which)
 {
-	const git_buf *path = NULL;
+	git_refcounted_buf *path = NULL;
 
 	GITERR_CHECK_ERROR(git_futils__dir_cache(&path, which));
 
-	if (!out || !path || path->size >= outlen) {
+	if (!out || git_buf_len(&path->buf) >= outlen) {
 		giterr_set(GITERR_NOMEMORY, "Buffer is too short for the path");
 		return GIT_EBUFS;
 	}
 
-	git_buf_copy_cstr(out, outlen, path);
+	git_buf_copy_cstr(out, outlen, &path->buf);
+	git_refcounted_buf_free(path);
+
 	return 0;
 }
 
@@ -704,12 +712,12 @@ int git_futils_dirs_get_str(char *out, size_t outlen, git_futils_dir_t which)
 int git_futils_dirs_set(git_futils_dir_t which, const char *search_path)
 {
 	const char *expand_path = NULL;
-	git_buf *result;
+	git_refcounted_buf *result;
 	int error;
 
 	GITERR_CHECK_ERROR(git_futils_check_selector(which));
 
-	result = git__calloc(1, sizeof(git_buf));
+	result = git_refcounted_buf_init();
 	GITERR_CHECK_ALLOC(result);
 
 	if (search_path != NULL)
@@ -717,7 +725,7 @@ int git_futils_dirs_set(git_futils_dir_t which, const char *search_path)
 
 	/* init with default */
 	if ((!search_path || expand_path) &&
-		(error = git_futils__dir_guess[which](result)) < 0) {
+		(error = git_futils__dir_guess[which](&result->buf)) < 0) {
 
 		if (error != GIT_ENOTFOUND)
 			return -1;
@@ -727,7 +735,7 @@ int git_futils_dirs_set(git_futils_dir_t which, const char *search_path)
 
 	/* if $PATH is not referenced, then just set the path */
 	if (!expand_path) {
-		if (git_buf_sets(result, search_path) < 0)
+		if (git_buf_sets(&result->buf, search_path) < 0)
 			return -1;
 	} else {
 		git_buf merge = GIT_BUF_INIT;
@@ -736,27 +744,28 @@ int git_futils_dirs_set(git_futils_dir_t which, const char *search_path)
 		if (expand_path > search_path)
 			git_buf_set(&merge, search_path, expand_path - search_path);
 
-		if (git_buf_len(result))
-			git_buf_join(&merge, GIT_PATH_LIST_SEPARATOR, merge.ptr, result->ptr);
+		if (git_buf_len(&result->buf))
+			git_buf_join(&merge, GIT_PATH_LIST_SEPARATOR,
+				git_buf_cstr(&merge), git_buf_cstr(&result->buf));
 
 		expand_path += strlen(PATH_MAGIC);
 		if (*expand_path)
-			git_buf_join(&merge, GIT_PATH_LIST_SEPARATOR, merge.ptr, expand_path);
+			git_buf_join(&merge, GIT_PATH_LIST_SEPARATOR,
+				git_buf_cstr(&merge), expand_path);
 
-		git_buf_swap(result, &merge);
+		git_buf_swap(&result->buf, &merge);
 		git_buf_free(&merge);
 	}
 
-	if (git_buf_len(result) == 0) {
-		git_buf_free(result);
-		git__free(result);
-
+	if (git_buf_len(&result->buf) == 0) {
+		git_refcounted_buf_free(result);
 		result = NULL;
-	}
+	} else
+		GIT_REFCOUNT_OWN(result, git_futils__dirs);
 
 	if ((result = git__swap(git_futils__dirs[which], result)) != NULL) {
-		git_buf_free(result);
-		git__free(result);
+		GIT_REFCOUNT_OWN(result, NULL);
+		git_refcounted_buf_free(result);
 	}
 
 	return 0;
@@ -765,12 +774,12 @@ int git_futils_dirs_set(git_futils_dir_t which, const char *search_path)
 void git_futils_dirs_free(void)
 {
 	int i;
-	git_buf *dir;
+	git_refcounted_buf *dir;
 
 	for (i = 0; i < GIT_FUTILS_DIR__MAX; ++i) {
 		if ((dir = git__swap(git_futils__dirs[i], NULL)) != NULL) {
-			git_buf_free(dir);
-			git__free(dir);
+			GIT_REFCOUNT_OWN(dir, NULL);
+			git_refcounted_buf_free(dir);
 		}
 	}
 }

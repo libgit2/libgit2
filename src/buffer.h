@@ -175,4 +175,16 @@ int git_buf_splice(
 	const char *data,
 	size_t nb_to_insert);
 
+/* A special-case buffer with a refcount */
+
+typedef struct {
+	git_refcount refcount;
+	git_buf buf;
+} git_refcounted_buf;
+
+#define GIT_REFCOUNTED_BUF_INIT { GIT_BUF_INIT }
+
+extern git_refcounted_buf *git_refcounted_buf_init(void);
+extern void git_refcounted_buf_free(git_refcounted_buf *buf);
+
 #endif
