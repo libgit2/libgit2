@@ -38,16 +38,6 @@ typedef git_atomic git_atomic_ssize;
 
 #endif
 
-GIT_INLINE(void) git_atomic_set(git_atomic *a, int val)
-{
-	a->val = val;
-}
-
-GIT_INLINE(int) git_atomic_get(git_atomic *a)
-{
-	return (int)a->val;
-}
-
 #ifdef GIT_THREADS
 
 #define git_thread pthread_t
@@ -70,6 +60,17 @@ GIT_INLINE(int) git_atomic_get(git_atomic *a)
 #define git_cond_wait(c, l)	pthread_cond_wait(c, l)
 #define git_cond_signal(c)	pthread_cond_signal(c)
 #define git_cond_broadcast(c)	pthread_cond_broadcast(c)
+
+GIT_INLINE(void) git_atomic_set(git_atomic *a, int val)
+{
+#if defined(GIT_WIN32)
+	InterlockedExchange(&a->val, (LONG)val);
+#elif defined(__GNUC__)
+	__sync_lock_test_and_set(&a->val, val);
+#else
+#	error "Unsupported architecture for atomic operations"
+#endif
+}
 
 GIT_INLINE(int) git_atomic_inc(git_atomic *a)
 {
@@ -105,7 +106,7 @@ GIT_INLINE(int) git_atomic_dec(git_atomic *a)
 }
 
 GIT_INLINE(void *) git___compare_and_swap(
-	volatile void **ptr, void *oldval, void *newval)
+	void * volatile *ptr, void *oldval, void *newval)
 {
 	volatile void *foundval;
 #if defined(GIT_WIN32)
@@ -116,6 +117,16 @@ GIT_INLINE(void *) git___compare_and_swap(
 #	error "Unsupported architecture for atomic operations"
 #endif
 	return (foundval == oldval) ? oldval : newval;
+}
+
+GIT_INLINE(volatile void *) git___swap(
+	void * volatile *ptr, void *newval)
+{
+#if defined(GIT_WIN32)
+	return InterlockedExchangePointer(ptr, newval);
+#else
+	return __sync_lock_test_and_set(ptr, newval);
+#endif
 }
 
 #ifdef GIT_ARCH_64
@@ -156,6 +167,11 @@ GIT_INLINE(int64_t) git_atomic64_add(git_atomic64 *a, int64_t addend)
 #define git_cond_signal(c) (void)0
 #define git_cond_broadcast(c) (void)0
 
+GIT_INLINE(void) git_atomic_set(git_atomic *a, int val)
+{
+	a->val = val;
+}
+
 GIT_INLINE(int) git_atomic_inc(git_atomic *a)
 {
 	return ++a->val;
@@ -173,13 +189,21 @@ GIT_INLINE(int) git_atomic_dec(git_atomic *a)
 }
 
 GIT_INLINE(void *) git___compare_and_swap(
-	volatile void **ptr, void *oldval, void *newval)
+	void * volatile *ptr, void *oldval, void *newval)
 {
 	if (*ptr == oldval)
 		*ptr = newval;
 	else
 		oldval = newval;
 	return oldval;
+}
+
+GIT_INLINE(volatile void *) git___swap(
+	void * volatile *ptr, void *newval)
+{
+	volatile void *old = *ptr;
+	*ptr = newval;
+	return old;
 }
 
 #ifdef GIT_ARCH_64
@@ -194,13 +218,18 @@ GIT_INLINE(int64_t) git_atomic64_add(git_atomic64 *a, int64_t addend)
 
 #endif
 
+GIT_INLINE(int) git_atomic_get(git_atomic *a)
+{
+	return (int)a->val;
+}
+
 /* Atomically replace oldval with newval
  * @return oldval if it was replaced or newval if it was not
  */
 #define git__compare_and_swap(P,O,N) \
-	git___compare_and_swap((volatile void **)P, O, N)
+	git___compare_and_swap((void * volatile *)P, O, N)
 
-#define git__swap(ptr, val) git__compare_and_swap(&ptr, ptr, val)
+#define git__swap(ptr, val) (void *)git___swap((void * volatile *)&ptr, val)
 
 extern int git_online_cpus(void);
 
