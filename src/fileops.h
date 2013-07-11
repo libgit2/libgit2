@@ -310,6 +310,13 @@ typedef enum {
 } git_futils_dir_t;
 
 /**
+ * Configures global data for configuration file search paths.
+ *
+ * @return 0 on success, <0 on failure
+ */
+extern int git_futils_dirs_global_init(void);
+
+/**
  * Get the search path for global/system/xdg files
  *
  * @param out pointer to git_buf containing search path
