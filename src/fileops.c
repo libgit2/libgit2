@@ -627,6 +627,20 @@ static git_futils_dirs_guess_cb git_futils__dir_guess[GIT_FUTILS_DIR__MAX] = {
 	git_futils_guess_xdg_dirs,
 };
 
+int git_futils_dirs_global_init(void)
+{
+	git_futils_dir_t i;
+	git_buf *path;
+	int error = 0;
+
+	for (i = 0; i < GIT_FUTILS_DIR__MAX; i++) {
+		if ((error = git_futils_dirs_get(&path, i)) < 0)
+			break;
+	}
+
+	return error;
+}
+
 static int git_futils_check_selector(git_futils_dir_t which)
 {
 	if (which < GIT_FUTILS_DIR__MAX)

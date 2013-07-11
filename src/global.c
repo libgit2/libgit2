@@ -65,10 +65,8 @@ int git_threads_init(void)
 		return -1;
 
 	/* Initialize any other subsystems that have global state */
-	if ((error = git_hash_global_init()) >= 0)
-		_tls_init = 1;
-
-	if (error == 0)
+	if ((error = git_hash_global_init()) >= 0 &&
+		(error = git_futils_dirs_global_init()) >= 0)
 		_tls_init = 1;
 
 	GIT_MEMORY_BARRIER;
@@ -127,7 +125,8 @@ int git_threads_init(void)
 	pthread_key_create(&_tls_key, &cb__free_status);
 
 	/* Initialize any other subsystems that have global state */
-	if ((error = git_hash_global_init()) >= 0)
+	if ((error = git_hash_global_init()) >= 0 &&
+		(error = git_futils_dirs_global_init()) >= 0)
 		_tls_init = 1;
 
 	GIT_MEMORY_BARRIER;
