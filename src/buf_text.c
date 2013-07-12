@@ -261,29 +261,34 @@ bool git_buf_text_gather_stats(
 	/* Counting loop */
 	while (scan < end) {
 		unsigned char c = *scan++;
-
-		if ((c > 0x1F && c < 0x7F) || c > 0x9f)
-			stats->printable++;
-		else switch (c) {
-			case '\0':
-				stats->nul++;
-				stats->nonprintable++;
-				break;
-			case '\n':
-				stats->lf++;
-				break;
-			case '\r':
-				stats->cr++;
-				if (scan < end && *scan == '\n')
-					stats->crlf++;
-				break;
-			case '\t': case '\f': case '\v': case '\b': case 0x1b: /*ESC*/
+		if (c == '\r') {
+			stats->cr++;
+			  if (scan < end && *scan == '\n')
+				stats->crlf++;
+			continue;
+		}
+		if (c == '\n') {
+			stats->lf++;
+			continue;
+		}
+		if (c == 127)
+			/* DEL */
+			stats->nonprintable++;
+		else if (c < 32) {
+			switch (c) {
+				/* BS, HT, ESC and FF */
+			case '\b': case '\t': case '\033': case '\014':
 				stats->printable++;
 				break;
+			case 0:
+				stats->nul++;
+				/* fall through */
 			default:
 				stats->nonprintable++;
-				break;
 			}
+		}
+		else
+			stats->printable++;
 	}
 
 	return (stats->nul > 0 ||
