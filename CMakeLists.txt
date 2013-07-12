@@ -110,7 +110,7 @@ ELSE ()
 	ELSE()
 		MESSAGE("http-parser was not found or is too old; using bundled 3rd-party sources.")
 		INCLUDE_DIRECTORIES(deps/http-parser)
-		FILE(GLOB SRC_HTTP deps/http-parser/*.c)
+		FILE(GLOB SRC_HTTP deps/http-parser/*.c deps/http-parser/*.h)
 	ENDIF()
 ENDIF()
 
@@ -148,7 +148,7 @@ ELSE()
 	MESSAGE( "zlib was not found; using bundled 3rd-party sources." )
 	INCLUDE_DIRECTORIES(deps/zlib)
 	ADD_DEFINITIONS(-DNO_VIZ -DSTDC -DNO_GZIP)
-	FILE(GLOB SRC_ZLIB deps/zlib/*.c)
+	FILE(GLOB SRC_ZLIB deps/zlib/*.c deps/zlib/*.h)
 ENDIF()
 
 IF(NOT LIBSSH2_LIBRARY)
@@ -285,19 +285,19 @@ ENDIF()
 ADD_DEFINITIONS(-D_FILE_OFFSET_BITS=64)
 
 # Collect sourcefiles
-FILE(GLOB SRC_H include/git2/*.h)
+FILE(GLOB SRC_H include/git2.h include/git2/*.h include/git2/sys/*.h)
 
 # On Windows use specific platform sources
 IF (WIN32 AND NOT CYGWIN)
 	ADD_DEFINITIONS(-DWIN32 -D_WIN32_WINNT=0x0501)
-	FILE(GLOB SRC_OS src/win32/*.c)
+	FILE(GLOB SRC_OS src/win32/*.c src/win32/*.h)
 ELSEIF (AMIGA)
 	ADD_DEFINITIONS(-DNO_ADDRINFO -DNO_READDIR_R)
-	FILE(GLOB SRC_OS src/amiga/*.c)
+	FILE(GLOB SRC_OS src/amiga/*.c src/amiga/*.h)
 ELSE()
-	FILE(GLOB SRC_OS src/unix/*.c)
+	FILE(GLOB SRC_OS src/unix/*.c src/unix/*.h)
 ENDIF()
-FILE(GLOB SRC_GIT2 src/*.c src/transports/*.c src/xdiff/*.c)
+FILE(GLOB SRC_GIT2 src/*.c src/*.h src/transports/*.c src/transports/*.h src/xdiff/*.c src/xdiff/*.h)
 
 # Determine architecture of the machine
 IF (CMAKE_SIZEOF_VOID_P EQUAL 8)
@@ -309,7 +309,7 @@ ELSE()
 ENDIF()
 
 # Compile and link libgit2
-ADD_LIBRARY(git2 ${SRC_GIT2} ${SRC_OS} ${SRC_ZLIB} ${SRC_HTTP} ${SRC_REGEX} ${SRC_SHA1} ${WIN_RC})
+ADD_LIBRARY(git2 ${SRC_H} ${SRC_GIT2} ${SRC_OS} ${SRC_ZLIB} ${SRC_HTTP} ${SRC_REGEX} ${SRC_SHA1} ${WIN_RC})
 TARGET_LINK_LIBRARIES(git2 ${SSL_LIBRARIES})
 TARGET_LINK_LIBRARIES(git2 ${SSH_LIBRARIES})
 TARGET_OS_LIBRARIES(git2)
@@ -359,7 +359,7 @@ IF (BUILD_CLAR)
 	ADD_DEFINITIONS(-DCLAR_RESOURCES=\"${TEST_RESOURCES}\")
 
 	INCLUDE_DIRECTORIES(${CLAR_PATH})
-	FILE(GLOB_RECURSE SRC_TEST ${CLAR_PATH}/*/*.c)
+	FILE(GLOB_RECURSE SRC_TEST ${CLAR_PATH}/*/*.c ${CLAR_PATH}/*/*.h)
 	SET(SRC_CLAR "${CLAR_PATH}/main.c" "${CLAR_PATH}/clar_libgit2.c" "${CLAR_PATH}/clar.c")
 
 	ADD_CUSTOM_COMMAND(
@@ -373,7 +373,7 @@ IF (BUILD_CLAR)
 		${CLAR_PATH}/clar.c
 		PROPERTIES OBJECT_DEPENDS ${CLAR_PATH}/clar.suite)
 
-	ADD_EXECUTABLE(libgit2_clar ${SRC_GIT2} ${SRC_OS} ${SRC_CLAR} ${SRC_TEST} ${SRC_ZLIB} ${SRC_HTTP} ${SRC_REGEX} ${SRC_SHA1})
+	ADD_EXECUTABLE(libgit2_clar ${SRC_H} ${SRC_GIT2} ${SRC_OS} ${SRC_CLAR} ${SRC_TEST} ${SRC_ZLIB} ${SRC_HTTP} ${SRC_REGEX} ${SRC_SHA1})
 
 	TARGET_LINK_LIBRARIES(libgit2_clar ${SSL_LIBRARIES})
 	TARGET_LINK_LIBRARIES(libgit2_clar ${SSH_LIBRARIES})
@@ -409,7 +409,7 @@ IF (TAGS)
 ENDIF ()
 
 IF (BUILD_EXAMPLES)
-	FILE(GLOB_RECURSE EXAMPLE_SRC examples/network/*.c)
+	FILE(GLOB_RECURSE EXAMPLE_SRC examples/network/*.c examples/network/*.h)
 	ADD_EXECUTABLE(cgit2 ${EXAMPLE_SRC})
 	IF(WIN32)
 		TARGET_LINK_LIBRARIES(cgit2 git2)
