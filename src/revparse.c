@@ -685,6 +685,8 @@ int revparse__ext(
 	git_reference *reference = NULL;
 	git_object *base_rev = NULL;
 
+	bool should_return_reference = true;
+
 	assert(object_out && reference_out && repo && spec);
 
 	*object_out = NULL;
@@ -693,6 +695,8 @@ int revparse__ext(
 	while (spec[pos]) {
 		switch (spec[pos]) {
 		case '^':
+			should_return_reference = false;
+
 			if ((error = ensure_base_rev_loaded(&base_rev, &reference, spec, identifier_len, repo, false)) < 0)
 				goto cleanup;
 
@@ -725,6 +729,8 @@ int revparse__ext(
 		{
 			git_object *temp_object = NULL;
 
+			should_return_reference = false;
+
 			if ((error = extract_how_many(&n, spec, &pos)) < 0)
 				goto cleanup;
 
@@ -742,6 +748,8 @@ int revparse__ext(
 		case ':':
 		{
 			git_object *temp_object = NULL;
+
+			should_return_reference = false;
 
 			if ((error = extract_path(&buf, spec, &pos)) < 0)
 				goto cleanup;
@@ -806,6 +814,11 @@ int revparse__ext(
 
 	if ((error = ensure_base_rev_loaded(&base_rev, &reference, spec, identifier_len, repo, false)) < 0)
 		goto cleanup;
+
+	if (!should_return_reference) {
+		git_reference_free(reference);
+		reference = NULL;
+	}
 
 	*object_out = base_rev;
 	*reference_out = reference;
