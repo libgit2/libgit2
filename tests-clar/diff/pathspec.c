@@ -89,4 +89,5 @@ void test_diff_pathspec__0(void)
 
 	git_tree_free(a);
 	git_tree_free(b);
+	git_pathspec_free(ps);
 }
