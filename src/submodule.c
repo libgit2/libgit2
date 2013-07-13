@@ -798,7 +798,7 @@ static void submodule_update_from_head_data(
 static int submodule_update_head(git_submodule *submodule)
 {
 	git_tree *head = NULL;
-	git_tree_entry *te;
+	git_tree_entry *te = NULL;
 
 	submodule->flags = submodule->flags &
 		~(GIT_SUBMODULE_STATUS_IN_HEAD |
@@ -811,6 +811,7 @@ static int submodule_update_head(git_submodule *submodule)
 	else
 		submodule_update_from_head_data(submodule, te->attr, &te->oid);
 
+	git_tree_entry_free(te);
 	git_tree_free(head);
 	return 0;
 }
