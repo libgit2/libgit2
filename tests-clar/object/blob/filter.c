@@ -15,7 +15,7 @@ static const char *g_raw[NUM_TEST_OBJECTS] = {
 	"foo\nbar\rboth\r\nreversed\n\ragain\nproblems\r",
 	"123\n\000\001\002\003\004abc\255\254\253\r\n",
 	"\xEF\xBB\xBFThis is UTF-8\n",
-	"\xEF\xBB\xBF0xE30x810xBB0xE30x810x920xE30x810xBB0xE30x810x92\r\n0xE30x810xBB0xE30x810x920xE30x810xBB0xE30x810x92\r\n",
+	"\xEF\xBB\xBF\xE3\x81\xBB\xE3\x81\x92\xE3\x81\xBB\xE3\x81\x92\r\n\xE3\x81\xBB\xE3\x81\x92\xE3\x81\xBB\xE3\x81\x92\r\n",
 	"\xFE\xFF\x00T\x00h\x00i\x00s\x00!"
 };
 static git_off_t g_len[NUM_TEST_OBJECTS] = { -1, -1, -1, -1, -1, 17, -1, -1, 12 };
@@ -38,7 +38,7 @@ static git_buf g_crlf_filtered[NUM_TEST_OBJECTS] = {
 	{ "foo\nbar\rboth\nreversed\n\ragain\nproblems\r", 0, 38 },
 	{ "123\n\000\001\002\003\004abc\255\254\253\n", 0, 16 },
 	{ "\xEF\xBB\xBFThis is UTF-8\n", 0, 17 },
-	{ "\xEF\xBB\xBF0xE30x810xBB0xE30x810x920xE30x810xBB0xE30x810x92\n0xE30x810xBB0xE30x810x920xE30x810xBB0xE30x810x92\n", 0, 29 },
+	{ "\xEF\xBB\xBF\xE3\x81\xBB\xE3\x81\x92\xE3\x81\xBB\xE3\x81\x92\n\xE3\x81\xBB\xE3\x81\x92\xE3\x81\xBB\xE3\x81\x92\n", 0, 29 },
 	{ "\xFE\xFF\x00T\x00h\x00i\x00s\x00!", 0, 12 }
 };
 
