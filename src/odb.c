@@ -232,6 +232,7 @@ int git_odb__hashlink(git_oid *out, const char *path)
 		link_data[size] = '\0';
 		if (read_len != (ssize_t)size) {
 			giterr_set(GITERR_OS, "Failed to read symlink data for '%s'", path);
+			git__free(link_data);
 			return -1;
 		}
 
