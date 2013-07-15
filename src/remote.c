@@ -467,6 +467,12 @@ const char *git_remote_name(const git_remote *remote)
 	return remote->name;
 }
 
+git_repository *git_remote_owner(const git_remote *remote)
+{
+	assert(remote);
+	return remote->repo;
+}
+
 const char *git_remote_url(const git_remote *remote)
 {
 	assert(remote);
