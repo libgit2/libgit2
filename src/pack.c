@@ -329,8 +329,10 @@ static int pack_index_open(struct git_pack_file *p)
 	memcpy(idx_name, p->pack_name, base_len);
 	memcpy(idx_name + base_len, ".idx", sizeof(".idx"));
 
-	if ((error = git_mutex_lock(&p->lock)) < 0)
+	if ((error = git_mutex_lock(&p->lock)) < 0) {
+		git__free(idx_name);
 		return error;
+	}
 
 	if (p->index_version == -1)
 		error = pack_index_check(idx_name, p);
