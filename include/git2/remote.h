@@ -96,6 +96,14 @@ GIT_EXTERN(int) git_remote_load(git_remote **out, git_repository *repo, const ch
 GIT_EXTERN(int) git_remote_save(const git_remote *remote);
 
 /**
+ * Get the remote's repository
+ *
+ * @param remote the remote
+ * @return a pointer to the repository
+ */
+GIT_EXTERN(git_repository *) git_remote_owner(const git_remote *remote);
+
+/**
  * Get the remote's name
  *
  * @param remote the remote
