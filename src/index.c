@@ -1409,14 +1409,18 @@ static int read_reuc(git_index *index, const char *buffer, size_t size)
 
 			if (git__strtol32(&tmp, buffer, &endptr, 8) < 0 ||
 				!endptr || endptr == buffer || *endptr ||
-				(unsigned)tmp > UINT_MAX)
+				(unsigned)tmp > UINT_MAX) {
+				index_entry_reuc_free(lost);
 				return index_error_invalid("reading reuc entry stage");
+			}
 
 			lost->mode[i] = tmp;
 
 			len = (endptr + 1) - buffer;
-			if (size <= len)
+			if (size <= len) {
+				index_entry_reuc_free(lost);
 				return index_error_invalid("reading reuc entry stage");
+			}
 
 			size -= len;
 			buffer += len;
@@ -1426,8 +1430,10 @@ static int read_reuc(git_index *index, const char *buffer, size_t size)
 		for (i = 0; i < 3; i++) {
 			if (!lost->mode[i])
 				continue;
-			if (size < 20)
+			if (size < 20) {
+				index_entry_reuc_free(lost);
 				return index_error_invalid("reading reuc entry oid");
+			}
 
 			git_oid_fromraw(&lost->oid[i], (const unsigned char *) buffer);
 			size -= 20;
