@@ -10,7 +10,7 @@
 
 #include "hash.h"
 
-struct git_hash_ctx_t {
+struct _git_hash_ctx {
 	unsigned long long size;
 	unsigned int H[5];
 	unsigned int W[16];

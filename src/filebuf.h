@@ -25,8 +25,8 @@
 #define GIT_FILELOCK_EXTENSION ".lock\0"
 #define GIT_FILELOCK_EXTLENGTH 6
 
-typedef struct git_filebuf_t git_filebuf;
-struct git_filebuf_t {
+typedef struct _git_filebuf git_filebuf;
+struct _git_filebuf {
 	char *path_original;
 	char *path_lock;
 

@@ -32,7 +32,7 @@ typedef int (*git_note_foreach_cb)(
 /**
  * note iterator
  */
-typedef struct git_iterator_t git_note_iterator;
+typedef struct _git_iterator git_note_iterator;
 
 /**
  * Creates a new iterator for notes

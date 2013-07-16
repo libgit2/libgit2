@@ -9,7 +9,7 @@
 
 #include "common.h"
 
-typedef struct git_pool_page_t git_pool_page;
+typedef struct _git_pool_page git_pool_page;
 
 /**
  * Chunked allocator.

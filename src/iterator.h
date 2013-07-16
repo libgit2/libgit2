@@ -12,7 +12,7 @@
 #include "vector.h"
 #include "buffer.h"
 
-typedef struct git_iterator_t git_iterator;
+typedef struct _git_iterator git_iterator;
 
 typedef enum {
 	GIT_ITERATOR_TYPE_EMPTY = 0,
@@ -43,7 +43,7 @@ typedef struct {
 	void (*free)(git_iterator *);
 } git_iterator_callbacks;
 
-struct git_iterator_t {
+struct _git_iterator {
 	git_iterator_type_t type;
 	git_iterator_callbacks *cb;
 	git_repository *repo;

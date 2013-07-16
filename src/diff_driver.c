@@ -32,7 +32,7 @@ enum {
 };
 
 /* data for finding function context for a given file type */
-struct git_diff_driver_t {
+struct _git_diff_driver {
 	git_diff_driver_type type;
 	uint32_t binary_flags;
 	uint32_t other_flags;
@@ -41,7 +41,7 @@ struct git_diff_driver_t {
 	char name[GIT_FLEX_ARRAY];
 };
 
-struct git_diff_driver_registry_t {
+struct _git_diff_driver_registry {
 	git_strmap *drivers;
 };
 

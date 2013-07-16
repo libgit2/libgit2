@@ -27,7 +27,7 @@
 
 #define GIT_ALTERNATES_MAX_DEPTH 5
 
-typedef struct backend_internal_t {
+typedef struct _backend_internal {
 	git_odb_backend *backend;
 	int priority;
 	bool is_alternate;

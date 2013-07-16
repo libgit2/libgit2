@@ -23,8 +23,8 @@
 #define GIT_PACK_DELTA_CACHE_LIMIT 1000
 #define GIT_PACK_BIG_FILE_THRESHOLD (512 * 1024 * 1024)
 
-typedef struct git_pobject_t git_pobject;
-struct git_pobject_t {
+typedef struct _git_pobject git_pobject;
+struct _git_pobject {
 	git_oid id;
 	git_otype type;
 	git_off_t offset;

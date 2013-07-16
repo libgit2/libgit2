@@ -11,8 +11,8 @@
 #include "common.h"
 #include "git2/oid.h"
 
-typedef struct git_tree_cache_t git_tree_cache;
-struct git_tree_cache_t {
+typedef struct _git_tree_cache git_tree_cache;
+struct _git_tree_cache {
 	git_tree_cache *parent;
 	git_tree_cache **children;
 	size_t children_count;

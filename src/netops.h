@@ -14,7 +14,7 @@
 # include <openssl/ssl.h>
 #endif
 
-typedef struct gitno_ssl_t {
+typedef struct _gitno_ssl {
 #ifdef GIT_SSL
 	SSL_CTX *ctx;
 	SSL *ssl;
@@ -24,13 +24,13 @@ typedef struct gitno_ssl_t {
 } gitno_ssl;
 
 /* Represents a socket that may or may not be using SSL */
-typedef struct gitno_socket_t {
+typedef struct _gitno_socket {
 	GIT_SOCKET socket;
 	gitno_ssl ssl;
 } gitno_socket;
 
-typedef struct gitno_buffer_t gitno_buffer;
-struct gitno_buffer_t {
+typedef struct _gitno_buffer gitno_buffer;
+struct _gitno_buffer {
 	char *data;
 	size_t len;
 	size_t offset;
