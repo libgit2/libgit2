@@ -208,7 +208,7 @@ GIT_EXTERN(git_filemode_t) git_tree_entry_filemode(const git_tree_entry *entry);
 GIT_EXTERN(int) git_tree_entry_cmp(const git_tree_entry *e1, const git_tree_entry *e2);
 
 /**
- * Convert a tree entry to the git_object it points too.
+ * Convert a tree entry to the git_object it points to.
  *
  * You must call `git_object_free()` on the object when you are done with it.
  *
