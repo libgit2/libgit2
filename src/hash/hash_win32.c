@@ -13,7 +13,7 @@
 #include <wincrypt.h>
 #include <strsafe.h>
 
-static struct git_hash_prov hash_prov = {0};
+static struct git_hash_prov_t hash_prov = {0};
 
 /* Hash initialization */
 

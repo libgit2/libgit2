@@ -26,8 +26,8 @@ extern int git_diff_patch__invoke_callbacks(
 	git_diff_data_cb line_cb,
 	void *payload);
 
-typedef struct git_diff_output git_diff_output;
-struct git_diff_output {
+typedef struct git_diff_output_t git_diff_output;
+struct git_diff_output_t {
 	/* these callbacks are issued with the diff data */
 	git_diff_file_cb file_cb;
 	git_diff_hunk_cb hunk_cb;

@@ -240,7 +240,7 @@ int git_merge__bases_many(git_commit_list **out, git_revwalk *walk, git_commit_l
 	result = NULL;
 
 	while (tmp) {
-		struct git_commit_list *next = tmp->next;
+		git_commit_list *next = tmp->next;
 		if (!(tmp->item->flags & STALE))
 			if (git_commit_list_insert_by_date(tmp->item, &result) == NULL)
 				return -1;

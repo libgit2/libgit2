@@ -9,8 +9,8 @@
 
 #include "git2/oid.h"
 
-typedef struct git_hash_prov git_hash_prov;
-typedef struct git_hash_ctx git_hash_ctx;
+typedef struct git_hash_prov_t git_hash_prov;
+typedef struct git_hash_ctx_t git_hash_ctx;
 
 int git_hash_global_init(void);
 void git_hash_global_shutdown(void);
@@ -26,7 +26,7 @@ void git_hash_ctx_cleanup(git_hash_ctx *ctx);
 # include "hash/hash_generic.h"
 #endif
 
-typedef struct {
+typedef struct git_buf_vec_t {
 	void *data;
 	size_t len;
 } git_buf_vec;

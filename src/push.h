@@ -9,7 +9,7 @@
 
 #include "git2.h"
 
-typedef struct push_spec {
+typedef struct push_spec_t {
 	char *lref;
 	char *rref;
 
@@ -19,7 +19,7 @@ typedef struct push_spec {
 	bool force;
 } push_spec;
 
-typedef struct push_status {
+typedef struct push_status_t {
 	bool ok;
 
 	char *ref;

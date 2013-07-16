@@ -11,21 +11,22 @@
 #include "map.h"
 #include "vector.h"
 
-typedef struct git_mwindow {
-	struct git_mwindow *next;
+typedef struct git_mwindow_t git_mwindow;
+struct git_mwindow_t {
+	git_mwindow *next;
 	git_map window_map;
 	git_off_t offset;
 	size_t last_used;
 	size_t inuse_cnt;
-} git_mwindow;
+};
 
-typedef struct git_mwindow_file {
+typedef struct git_mwindow_file_t {
 	git_mwindow *windows;
 	int fd;
 	git_off_t size;
 } git_mwindow_file;
 
-typedef struct git_mwindow_ctl {
+typedef struct git_mwindow_ctl_t {
 	size_t mapped;
 	unsigned int open_windows;
 	unsigned int mmap_calls;

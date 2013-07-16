@@ -1963,7 +1963,7 @@ int git_index_entry_stage(const git_index_entry *entry)
 	return GIT_IDXENTRY_STAGE(entry);
 }
 
-typedef struct read_tree_data {
+typedef struct read_tree_data_t {
 	git_vector *old_entries;
 	git_vector *new_entries;
 	git_vector_cmp entries_search;

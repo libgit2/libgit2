@@ -3,7 +3,7 @@
 #include <unistd.h>
 #endif
 
-struct git_pool_page {
+struct git_pool_page_t {
 	git_pool_page *next;
 	uint32_t size;
 	uint32_t avail;

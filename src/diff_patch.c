@@ -13,8 +13,8 @@
 #include "fileops.h"
 
 /* cached information about a single span in a diff */
-typedef struct diff_patch_line diff_patch_line;
-struct diff_patch_line {
+typedef struct diff_patch_line_t diff_patch_line;
+struct diff_patch_line_t {
 	const char *ptr;
 	size_t len;
 	size_t lines, oldno, newno;
@@ -22,8 +22,8 @@ struct diff_patch_line {
 };
 
 /* cached information about a hunk in a diff */
-typedef struct diff_patch_hunk diff_patch_hunk;
-struct diff_patch_hunk {
+typedef struct diff_patch_hunk_t diff_patch_hunk;
+struct diff_patch_hunk_t {
 	git_diff_range range;
 	char   header[128];
 	size_t header_len;

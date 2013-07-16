@@ -105,7 +105,7 @@ struct hash_cng_prov {
 	DWORD hash_object_size;
 };
 
-struct git_hash_prov {
+struct git_hash_prov_t {
 	enum hash_win32_prov_type type;
 
 	union {
@@ -127,7 +127,7 @@ struct hash_cng_ctx {
 	PBYTE hash_object;
 };
 
-struct git_hash_ctx {
+struct git_hash_ctx_t {
 	enum hash_win32_prov_type type;
 	git_hash_prov *prov;
 

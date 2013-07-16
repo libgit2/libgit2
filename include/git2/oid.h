@@ -30,7 +30,7 @@ GIT_BEGIN_DECL
 #define GIT_OID_MINPREFIXLEN 4
 
 /** Unique identity of any object (commit, tree, blob, tag). */
-typedef struct git_oid {
+typedef struct git_oid_t {
 	/** raw binary formatted id */
 	unsigned char id[GIT_OID_RAWSZ];
 } git_oid;

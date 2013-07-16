@@ -18,7 +18,8 @@
 #define COMMIT_ALLOC \
 	(sizeof(git_commit_list_node) + PARENTS_PER_COMMIT * sizeof(git_commit_list_node *))
 
-typedef struct git_commit_list_node {
+typedef struct git_commit_list_node_t git_commit_list_node;
+struct git_commit_list_node_t {
 	git_oid oid;
 	uint32_t time;
 	unsigned int seen:1,
@@ -30,13 +31,14 @@ typedef struct git_commit_list_node {
 	unsigned short in_degree;
 	unsigned short out_degree;
 
-	struct git_commit_list_node **parents;
-} git_commit_list_node;
+	git_commit_list_node **parents;
+};
 
-typedef struct git_commit_list {
+typedef struct git_commit_list_t git_commit_list;
+struct git_commit_list_t {
 	git_commit_list_node *item;
-	struct git_commit_list *next;
-} git_commit_list;
+	git_commit_list *next;
+};
 
 git_commit_list_node *git_commit_list_alloc_node(git_revwalk *walk);
 int git_commit_list_time_cmp(void *a, void *b);

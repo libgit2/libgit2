@@ -11,7 +11,7 @@
 #include "git2/transport.h"
 #include "path.h"
 
-typedef struct transport_definition {
+typedef struct transport_definition_t {
 	char *prefix;
 	unsigned priority;
 	git_transport_cb fn;
