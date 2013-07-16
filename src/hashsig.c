@@ -36,7 +36,7 @@ typedef struct {
 
 #define HASHSIG_IN_PROGRESS_INIT { HASHSIG_HASH_START, 1, {0}, 0, 0, 1 }
 
-struct git_hashsig {
+struct _git_hashsig {
 	hashsig_heap mins;
 	hashsig_heap maxs;
 	git_hashsig_option_t opt;

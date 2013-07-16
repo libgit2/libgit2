@@ -169,15 +169,15 @@ int git_iterator_for_nothing(
 }
 
 
-typedef struct tree_iterator_entry tree_iterator_entry;
-struct tree_iterator_entry {
+typedef struct _tree_iterator_entry tree_iterator_entry;
+struct _tree_iterator_entry {
 	tree_iterator_entry *parent;
 	const git_tree_entry *te;
 	git_tree *tree;
 };
 
-typedef struct tree_iterator_frame tree_iterator_frame;
-struct tree_iterator_frame {
+typedef struct _tree_iterator_frame tree_iterator_frame;
+struct _tree_iterator_frame {
 	tree_iterator_frame *up, *down;
 
 	size_t n_entries; /* items in this frame */
@@ -878,15 +878,15 @@ int git_iterator_for_index(
 }
 
 
-typedef struct fs_iterator_frame fs_iterator_frame;
-struct fs_iterator_frame {
+typedef struct _fs_iterator_frame fs_iterator_frame;
+struct _fs_iterator_frame {
 	fs_iterator_frame *next;
 	git_vector entries;
 	size_t index;
 };
 
-typedef struct fs_iterator fs_iterator;
-struct fs_iterator {
+typedef struct _fs_iterator fs_iterator;
+struct _fs_iterator {
 	git_iterator base;
 	git_iterator_callbacks cb;
 	fs_iterator_frame *stack;

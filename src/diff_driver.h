@@ -10,12 +10,12 @@
 #include "common.h"
 #include "buffer.h"
 
-typedef struct git_diff_driver_registry git_diff_driver_registry;
+typedef struct _git_diff_driver_registry git_diff_driver_registry;
 
 git_diff_driver_registry *git_diff_driver_registry_new(void);
 void git_diff_driver_registry_free(git_diff_driver_registry *);
 
-typedef struct git_diff_driver git_diff_driver;
+typedef struct _git_diff_driver git_diff_driver;
 
 int git_diff_driver_lookup(git_diff_driver **, git_repository *, const char *);
 void git_diff_driver_free(git_diff_driver *);

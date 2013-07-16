@@ -12,10 +12,11 @@
 #include "git2/odb.h"
 #include "git2/repository.h"
 
-typedef struct git_filter {
-	int (*apply)(struct git_filter *self, git_buf *dest, const git_buf *source);
-	void (*do_free)(struct git_filter *self);
-} git_filter;
+typedef struct _git_filter git_filter;
+struct _git_filter {
+	int (*apply)(git_filter *self, git_buf *dest, const git_buf *source);
+	void (*do_free)(git_filter *self);
+};
 
 typedef enum {
 	GIT_FILTER_TO_WORKTREE,

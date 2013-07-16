@@ -23,7 +23,8 @@
 #define GIT_PACK_DELTA_CACHE_LIMIT 1000
 #define GIT_PACK_BIG_FILE_THRESHOLD (512 * 1024 * 1024)
 
-typedef struct git_pobject {
+typedef struct _git_pobject git_pobject;
+struct _git_pobject {
 	git_oid id;
 	git_otype type;
 	git_off_t offset;
@@ -32,9 +33,9 @@ typedef struct git_pobject {
 
 	unsigned int hash; /* name hint hash */
 
-	struct git_pobject *delta; /* delta base object */
-	struct git_pobject *delta_child; /* deltified objects who bases me */
-	struct git_pobject *delta_sibling; /* other deltified objects
+	git_pobject *delta; /* delta base object */
+	git_pobject *delta_child; /* deltified objects who bases me */
+	git_pobject *delta_sibling; /* other deltified objects
 					    * who uses the same base as
 					    * me */
 
@@ -46,7 +47,7 @@ typedef struct git_pobject {
 	    recursing:1,
 	    tagged:1,
 	    filled:1;
-} git_pobject;
+};
 
 struct git_packbuilder {
 	git_repository *repo; /* associated repository */

@@ -11,7 +11,7 @@
 
 typedef int (*git_vector_cmp)(const void *, const void *);
 
-typedef struct git_vector {
+typedef struct _git_vector {
 	size_t _alloc_size;
 	git_vector_cmp _cmp;
 	void **contents;

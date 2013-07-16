@@ -54,7 +54,7 @@ struct git_pack_idx_header {
 	uint32_t idx_version;
 };
 
-typedef struct git_pack_cache_entry {
+typedef struct _git_pack_cache_entry {
 	size_t last_usage; /* enough? */
 	git_atomic refcount;
 	git_rawobj raw;
@@ -104,7 +104,7 @@ struct git_pack_entry {
 	struct git_pack_file *p;
 };
 
-typedef struct git_packfile_stream {
+typedef struct _git_packfile_stream {
 	git_off_t curpos;
 	int done;
 	z_stream zstream;

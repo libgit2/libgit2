@@ -12,7 +12,7 @@
 /**
  * Similarity signature of line hashes for a buffer
  */
-typedef struct git_hashsig git_hashsig;
+typedef struct _git_hashsig git_hashsig;
 
 typedef enum {
 	GIT_HASHSIG_NORMAL = 0, /* use all data */

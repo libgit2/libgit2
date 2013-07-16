@@ -23,7 +23,7 @@ typedef enum {
 	DIFF_DRIVER_BINARY = 1,
 	DIFF_DRIVER_TEXT = 2,
 	DIFF_DRIVER_PATTERNLIST = 3,
-} git_diff_driver_t;
+} git_diff_driver_type;
 
 enum {
 	DIFF_CONTEXT_FIND_NORMAL = 0,
@@ -32,8 +32,8 @@ enum {
 };
 
 /* data for finding function context for a given file type */
-struct git_diff_driver {
-	git_diff_driver_t type;
+struct _git_diff_driver {
+	git_diff_driver_type type;
 	uint32_t binary_flags;
 	uint32_t other_flags;
 	git_array_t(regex_t) fn_patterns;
@@ -41,7 +41,7 @@ struct git_diff_driver {
 	char name[GIT_FLEX_ARRAY];
 };
 
-struct git_diff_driver_registry {
+struct _git_diff_driver_registry {
 	git_strmap *drivers;
 };
 

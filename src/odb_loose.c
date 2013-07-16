@@ -28,7 +28,7 @@ typedef struct {
 	git_filebuf fbuf;
 } loose_writestream;
 
-typedef struct loose_backend {
+typedef struct _loose_backend {
 	git_odb_backend parent;
 
 	int object_zlib_level; /** loose object zlib compression level. */

@@ -47,7 +47,7 @@ struct packref {
 	char name[GIT_FLEX_ARRAY];
 };
 
-typedef struct refdb_fs_backend {
+typedef struct _refdb_fs_backend {
 	git_refdb_backend parent;
 
 	git_repository *repo;

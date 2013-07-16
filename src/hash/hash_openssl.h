@@ -12,7 +12,7 @@
 
 #include <openssl/sha.h>
 
-struct git_hash_ctx {
+struct _git_hash_ctx {
 	SHA_CTX c;
 };
 

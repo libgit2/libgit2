@@ -260,7 +260,7 @@ static int crlf_apply_to_workdir(
 
 static int find_and_add_filter(
 	git_vector *filters, git_repository *repo, const char *path,
-	int (*apply)(struct git_filter *self, git_buf *dest, const git_buf *source))
+	int (*apply)(git_filter *self, git_buf *dest, const git_buf *source))
 {
 	struct crlf_attrs ca;
 	struct crlf_filter *filter;
