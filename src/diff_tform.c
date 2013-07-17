@@ -590,10 +590,12 @@ static bool is_rename_target(
 		return false;
 
 	case GIT_DELTA_UNTRACKED:
-	case GIT_DELTA_IGNORED:
 		if (!FLAG_SET(opts, GIT_DIFF_FIND_FOR_UNTRACKED))
 			return false;
 		break;
+
+	case GIT_DELTA_IGNORED:
+		return false;
 
 	default: /* all other status values should be checked */
 		break;
