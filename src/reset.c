@@ -135,7 +135,7 @@ int git_reset(
 
 	if (reset_type == GIT_RESET_HARD) {
 		/* overwrite working directory with HEAD */
-		opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+		opts.checkout_strategy = GIT_CHECKOUT_FORCE | GIT_CHECKOUT_SKIP_UNMERGED;
 
 		if ((error = git_checkout_tree(repo, (git_object *)tree, &opts)) < 0)
 			goto cleanup;

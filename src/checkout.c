@@ -41,24 +41,6 @@ enum {
 		(CHECKOUT_ACTION__UPDATE_BLOB | CHECKOUT_ACTION__REMOVE),
 };
 
-typedef struct {
-	git_repository *repo;
-	git_diff_list *diff;
-	git_checkout_opts opts;
-	bool opts_free_baseline;
-	char *pfx;
-	git_index *index;
-	git_pool pool;
-	git_vector removes;
-	git_buf path;
-	size_t workdir_len;
-	unsigned int strategy;
-	int can_symlink;
-	bool reload_submodules;
-	size_t total_steps;
-	size_t completed_steps;
-} checkout_data;
-
 static int checkout_notify(
 	checkout_data *data,
 	git_checkout_notify_t why,
@@ -707,6 +689,7 @@ static int blob_content_to_file(
 	struct stat *st,
 	git_blob *blob,
 	const char *path,
+	const char * hint_path,
 	mode_t entry_filemode,
 	git_checkout_opts *opts)
 {
@@ -715,9 +698,12 @@ static int blob_content_to_file(
 	git_buf out = GIT_BUF_INIT;
 	git_filter_list *fl = NULL;
 
+	if (hint_path == NULL)
+		hint_path = path;
+
 	if (!opts->disable_filters)
 		error = git_filter_list_load(
-			&fl, git_blob_owner(blob), blob, path, GIT_FILTER_TO_WORKTREE);
+			&fl, git_blob_owner(blob), blob, hint_path, GIT_FILTER_TO_WORKTREE);
 
 	if (!error)
 		error = git_filter_list_apply_to_blob(&out, fl, blob);
@@ -886,34 +872,26 @@ static int checkout_safe_for_update_only(const char *path, mode_t expected_mode)
 	return 0;
 }
 
-static int checkout_blob(
+int git_checkout__write_content(
 	checkout_data *data,
-	const git_diff_file *file)
+	const git_oid *oid,
+	const char *full_path,
+	const char *hint_path,
+	unsigned int mode,
+	struct stat *st)
 {
 	int error = 0;
 	git_blob *blob;
-	struct stat st;
 
-	git_buf_truncate(&data->path, data->workdir_len);
-	if (git_buf_puts(&data->path, file->path) < 0)
-		return -1;
-
-	if ((data->strategy & GIT_CHECKOUT_UPDATE_ONLY) != 0) {
-		int rval = checkout_safe_for_update_only(
-			git_buf_cstr(&data->path), file->mode);
-		if (rval <= 0)
-			return rval;
-	}
-
-	if ((error = git_blob_lookup(&blob, data->repo, &file->oid)) < 0)
+	if ((error = git_blob_lookup(&blob, data->repo, oid)) < 0)
 		return error;
 
-	if (S_ISLNK(file->mode))
+	if (S_ISLNK(mode))
 		error = blob_content_to_link(
-			&st, blob, git_buf_cstr(&data->path), data->opts.dir_mode, data->can_symlink);
+			st, blob, full_path, data->opts.dir_mode, data->can_symlink);
 	else
 		error = blob_content_to_file(
-			&st, blob, git_buf_cstr(&data->path), file->mode, &data->opts);
+			st, blob, full_path, hint_path, mode, &data->opts);
 
 	git_blob_free(blob);
 
@@ -927,6 +905,30 @@ static int checkout_blob(
 		giterr_clear();
 		error = 0;
 	}
+
+	return error;
+}
+
+static int checkout_blob(
+	checkout_data *data,
+	const git_diff_file *file)
+{
+	int error = 0;
+	struct stat st;
+
+	git_buf_truncate(&data->path, data->workdir_len);
+	if (git_buf_puts(&data->path, file->path) < 0)
+		return -1;
+
+	if ((data->strategy & GIT_CHECKOUT_UPDATE_ONLY) != 0) {
+		int rval = checkout_safe_for_update_only(
+			git_buf_cstr(&data->path), file->mode);
+		if (rval <= 0)
+			return rval;
+	}
+
+	error = git_checkout__write_content(
+		data, &file->oid, git_buf_cstr(&data->path), NULL, file->mode, &st);
 
 	/* update the index unless prevented */
 	if (!error && (data->strategy & GIT_CHECKOUT_DONT_UPDATE_INDEX) == 0)
@@ -1172,7 +1174,17 @@ static int checkout_data_init(
 				(error = git_index_read(data->index)) < 0)
 				goto cleanup;
 
-			/* clear the REUC when doing a tree or commit checkout */
+			/* cannot checkout if unresolved conflicts exist */
+			if ((data->opts.checkout_strategy & GIT_CHECKOUT_FORCE) == 0 &&
+				git_index_has_conflicts(data->index)) {
+				error = GIT_EMERGECONFLICT;
+				giterr_set(GITERR_CHECKOUT,
+					"unresolved conflicts exist in the index");
+				goto cleanup;
+			}
+
+			/* clean conflict data when doing a tree or commit checkout */
+			git_index_name_clear(data->index);
 			git_index_reuc_clear(data->index);
 		}
 	}
@@ -1311,6 +1323,9 @@ int git_checkout_iterator(
 		goto cleanup;
 
 	assert(data.completed_steps == data.total_steps);
+
+	/* Write conflict data to disk */
+	error = git_checkout__conflicts(&data);
 
 cleanup:
 	if (error == GIT_EUSER)

@@ -131,6 +131,13 @@ typedef enum {
 	/** Don't refresh index/config/etc before doing checkout */
 	GIT_CHECKOUT_NO_REFRESH = (1u << 9),
 
+	/** Allow checkout to skip unmerged files */
+	GIT_CHECKOUT_SKIP_UNMERGED = (1u << 10),
+	/** For unmerged files, checkout stage 2 from index */
+	GIT_CHECKOUT_USE_OURS = (1u << 11),
+	/** For unmerged files, checkout stage 3 from index */
+	GIT_CHECKOUT_USE_THEIRS = (1u << 12),
+
 	/** Treat pathspec as simple list of exact match file paths */
 	GIT_CHECKOUT_DISABLE_PATHSPEC_MATCH = (1u << 13),
 
@@ -140,13 +147,6 @@ typedef enum {
 	/**
 	 * THE FOLLOWING OPTIONS ARE NOT YET IMPLEMENTED
 	 */
-
-	/** Allow checkout to skip unmerged files (NOT IMPLEMENTED) */
-	GIT_CHECKOUT_SKIP_UNMERGED = (1u << 10),
-	/** For unmerged files, checkout stage 2 from index (NOT IMPLEMENTED) */
-	GIT_CHECKOUT_USE_OURS = (1u << 11),
-	/** For unmerged files, checkout stage 3 from index (NOT IMPLEMENTED) */
-	GIT_CHECKOUT_USE_THEIRS = (1u << 12),
 
 	/** Recursively checkout submodules with same options (NOT IMPLEMENTED) */
 	GIT_CHECKOUT_UPDATE_SUBMODULES = (1u << 16),
@@ -238,6 +238,9 @@ typedef struct git_checkout_opts {
 	git_tree *baseline; /** expected content of workdir, defaults to HEAD */
 
 	const char *target_directory; /** alternative checkout path to workdir */
+
+	const char *our_label; /** the name of the "our" side of conflicts */
+	const char *their_label; /** the name of the "their" side of conflicts */
 } git_checkout_opts;
 
 #define GIT_CHECKOUT_OPTS_VERSION 1
