@@ -30,16 +30,13 @@ OPTION( ENABLE_TRACE		"Enables tracing support"				OFF )
 OPTION( LIBGIT2_FILENAME	"Name of the produced binary" OFF )
 
 IF(MSVC)
-	# This option is only availalbe when building with MSVC. By default,
-	# libgit2 is build using the stdcall calling convention, as that's what
-	# the CLR expects by default and how the Windows API is built.
+	# This option is only availalbe when building with MSVC. By default, libgit2
+	# is build using the cdecl calling convention, which is useful if you're
+	# writing C. However, the CLR and Win32 API both expect stdcall.
 	#
-	# If you are writing a C or C++ program and want to link to libgit2, you
-	# have to either:
-	# - Add /Gz to the compiler options of _your_ program / library.
-	# - Turn this off by invoking CMake with the "-DSTDCALL=Off" argument.
-	#
-	OPTION( STDCALL			"Build libgit2 with the __stdcall convention"	ON  )
+	# If you are writing a CLR program and want to link to libgit2, you'll want
+	# to turn this on by invoking CMake with the "-DSTDCALL=ON" argument.
+	OPTION( STDCALL			"Build libgit2 with the __stdcall convention"	OFF  )
 
 	# This option must match the settings used in your program, in particular if you
 	# are linking statically
