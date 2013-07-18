@@ -30,7 +30,7 @@ OPTION( ENABLE_TRACE		"Enables tracing support"				OFF )
 OPTION( LIBGIT2_FILENAME	"Name of the produced binary" OFF )
 
 IF(MSVC)
-	# This option is only availalbe when building with MSVC. By default, libgit2
+	# This option is only available when building with MSVC. By default, libgit2
 	# is build using the cdecl calling convention, which is useful if you're
 	# writing C. However, the CLR and Win32 API both expect stdcall.
 	#
