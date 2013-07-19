@@ -262,7 +262,7 @@ bool git_buf_text_gather_stats(
 	while (scan < end) {
 		unsigned char c = *scan++;
 
-		if ((c > 0x1F && c < 0x7F) || c > 0x9f)
+		if (c > 0x1F && c != 0x7F)
 			stats->printable++;
 		else switch (c) {
 			case '\0':
