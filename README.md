@@ -11,20 +11,23 @@ libgit2 is licensed under a **very permissive license** (GPLv2 with a special Li
 This basically means that you can link it (unmodified) with any kind of software without having to
 release its source code.
 
-* Mailing list: ~~<libgit2@librelist.org>~~
-    The libgit2 mailing list has
-    traditionally been hosted in Librelist, but Librelist is and has always
-    been a shitshow. We encourage you to [open an issue](https://github.com/libgit2/libgit2/issues)
-    on GitHub instead for any questions regarding the library.
-    * Archives: <http://librelist.com/browser/libgit2/>
 * Website: <http://libgit2.github.com>
+* StackOverflow Tag: [libgit2](http://stackoverflow.com/questions/tagged/libgit2)
+* Issues: <https://github.com/libgit2/libgit2/issues>
 * API documentation: <http://libgit2.github.com/libgit2>
 * IRC: #libgit2 on irc.freenode.net.
+* Mailing list: The libgit2 mailing list was
+    traditionally hosted in Librelist but has been deprecated. We encourage you to 
+    [use StackOverflow](http://stackoverflow.com/questions/tagged/libgit2) or [open an issue](https://github.com/libgit2/libgit2/issues) 
+    on GitHub instead for any questions regarding the library.  The mailing list archives are still available at 
+    <http://librelist.com/browser/libgit2/>.
+
 
 What It Can Do
 ==================================
 
-libgit2 is already very usable.
+libgit2 is already very usable and is being used in production for many applications including the GitHub.com site, in Plastic SCM 
+and also powering Microsoft's Visual Studio tools for Git.  The library provides:
 
 * SHA conversions, formatting and shortening
 * abstracted ODB backend system
@@ -128,8 +131,8 @@ Here are the bindings to libgit2 that are currently available:
 * Lua
     * luagit2 <https://github.com/libgit2/luagit2>
 * .NET
-    * libgit2net, low level bindings <https://github.com/txdv/libgit2net>
     * libgit2sharp <https://github.com/libgit2/libgit2sharp>
+    * libgit2net, low level bindings superceeded by libgit2sharp <https://github.com/txdv/libgit2net>
 * Node.js
     * node-gitteh <https://github.com/libgit2/node-gitteh>
     * nodegit <https://github.com/tbranyen/nodegit>
