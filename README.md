@@ -13,7 +13,7 @@ release its source code.
 
 * Mailing list: ~~<libgit2@librelist.org>~~
     The libgit2 mailing list has
-    traditionally been hosted in Librelist, but Librelist is and has always
+    traditionally been hosted in Librelist, but ~~Librelist~~ mailing lists are and always have
     been a shitshow. We encourage you to [open an issue](https://github.com/libgit2/libgit2/issues)
     on GitHub instead for any questions regarding the library.
     * Archives: <http://librelist.com/browser/libgit2/>
