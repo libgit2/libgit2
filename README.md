@@ -18,8 +18,9 @@ release its source code.
 * IRC: #libgit2 on irc.freenode.net.
 * Mailing list: The libgit2 mailing list was
     traditionally hosted in Librelist but has been deprecated. We encourage you to 
-    [use StackOverflow](http://stackoverflow.com/questions/tagged/libgit2) or [open an issue](https://github.com/libgit2/libgit2/issues) 
-    on GitHub instead for any questions regarding the library.  The mailing list archives are still available at 
+    [use StackOverflow](http://stackoverflow.com/questions/tagged/libgit2) instead for any questions regarding
+    the library, or [open an issue](https://github.com/libgit2/libgit2/issues) 
+    on GitHub for bug reports.  The mailing list archives are still available at 
     <http://librelist.com/browser/libgit2/>.
 
 
