@@ -142,6 +142,28 @@ void test_revwalk_basic__glob_heads(void)
 	cl_assert(i == 14);
 }
 
+void test_revwalk_basic__glob_heads_with_invalid(void)
+{
+	int i;
+	git_oid oid;
+
+	test_revwalk_basic__cleanup();
+
+	_repo = cl_git_sandbox_init("testrepo");
+	cl_git_mkfile("testrepo/.git/refs/heads/garbage", "not-a-ref");
+
+	cl_git_pass(git_revwalk_new(&_walk, _repo));
+	cl_git_pass(git_revwalk_push_glob(_walk, "heads"));
+
+	for (i = 0; !git_revwalk_next(&oid, _walk); ++i)
+		/* walking */;
+
+	/* git log --branches --oneline | wc -l => 16 */
+	cl_assert_equal_i(16, i);
+
+	cl_fixture_cleanup("testrepo");
+}
+
 void test_revwalk_basic__push_head(void)
 {
 	int i = 0;

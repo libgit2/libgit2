@@ -452,6 +452,9 @@ static int loose_lookup(
 	git_buf ref_file = GIT_BUF_INIT;
 	int error = 0;
 
+	if (out)
+		*out = NULL;
+
 	error = reference_read(&ref_file, NULL, backend->path, ref_name, NULL);
 
 	if (error < 0)
@@ -465,15 +468,17 @@ static int loose_lookup(
 			goto done;
 		}
 
-		*out = git_reference__alloc_symbolic(ref_name, target);
+		if (out)
+			*out = git_reference__alloc_symbolic(ref_name, target);
 	} else {
 		if ((error = loose_parse_oid(&oid, ref_name, &ref_file)) < 0)
 			goto done;
 
-		*out = git_reference__alloc(ref_name, &oid, NULL);
+		if (out)
+			*out = git_reference__alloc(ref_name, &oid, NULL);
 	}
 
-	if (*out == NULL)
+	if (out && *out == NULL)
 		error = -1;
 
 done:
@@ -678,6 +683,11 @@ static int refdb_fs_backend__iterator_next_name(
 
 		if (git_strmap_exists(packfile, path))
 			continue;
+
+		if (loose_lookup(NULL, backend, path) != 0) {
+			giterr_clear();
+			continue;
+		}
 
 		*out = path;
 		return 0;
