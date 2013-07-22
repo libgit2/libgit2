@@ -452,6 +452,9 @@ static int loose_lookup(
 	git_buf ref_file = GIT_BUF_INIT;
 	int error = 0;
 
+	if (out)
+		*out = NULL;
+
 	error = reference_read(&ref_file, NULL, backend->path, ref_name, NULL);
 
 	if (error < 0)
@@ -465,15 +468,17 @@ static int loose_lookup(
 			goto done;
 		}
 
-		*out = git_reference__alloc_symbolic(ref_name, target);
+		if (out)
+			*out = git_reference__alloc_symbolic(ref_name, target);
 	} else {
 		if ((error = loose_parse_oid(&oid, ref_name, &ref_file)) < 0)
 			goto done;
 
-		*out = git_reference__alloc(ref_name, &oid, NULL);
+		if (out)
+			*out = git_reference__alloc(ref_name, &oid, NULL);
 	}
 
-	if (*out == NULL)
+	if (out && *out == NULL)
 		error = -1;
 
 done:
@@ -555,7 +560,10 @@ typedef struct {
 	git_reference_iterator parent;
 
 	char *glob;
+
+	git_pool pool;
 	git_vector loose;
+
 	unsigned int loose_pos;
 	khiter_t packed_pos;
 } refdb_fs_iter;
@@ -563,24 +571,18 @@ typedef struct {
 static void refdb_fs_backend__iterator_free(git_reference_iterator *_iter)
 {
 	refdb_fs_iter *iter = (refdb_fs_iter *) _iter;
-	char *loose_path;
-	size_t i;
-
-	git_vector_foreach(&iter->loose, i, loose_path) {
-		git__free(loose_path);
-	}
 
 	git_vector_free(&iter->loose);
-
-	git__free(iter->glob);
+	git_pool_clear(&iter->pool);
 	git__free(iter);
 }
 
 static int iter_load_loose_paths(refdb_fs_backend *backend, refdb_fs_iter *iter)
 {
+	int error = 0;
 	git_strmap *packfile = backend->refcache.packfile;
 	git_buf path = GIT_BUF_INIT;
-	git_iterator *fsit;
+	git_iterator *fsit = NULL;
 	const git_index_entry *entry = NULL;
 
 	if (!backend->path) /* do nothing if no path for loose refs */
@@ -589,15 +591,16 @@ static int iter_load_loose_paths(refdb_fs_backend *backend, refdb_fs_iter *iter)
 	if (git_buf_printf(&path, "%s/refs", backend->path) < 0)
 		return -1;
 
-	if (git_iterator_for_filesystem(&fsit, git_buf_cstr(&path), 0, NULL, NULL) < 0)
-		return -1;
-
-	git_vector_init(&iter->loose, 8, NULL);
-	git_buf_sets(&path, GIT_REFS_DIR);
+	if ((error = git_iterator_for_filesystem(
+			&fsit, git_buf_cstr(&path), 0, NULL, NULL)) < 0 ||
+		(error = git_vector_init(&iter->loose, 8, NULL)) < 0 ||
+		(error = git_buf_sets(&path, GIT_REFS_DIR)) < 0)
+		goto cleanup;
 
 	while (!git_iterator_advance(&entry, fsit)) {
 		const char *ref_name;
 		khiter_t pos;
+		char *ref_dup;
 
 		git_buf_truncate(&path, strlen(GIT_REFS_DIR));
 		git_buf_puts(&path, entry->path);
@@ -613,9 +616,16 @@ static int iter_load_loose_paths(refdb_fs_backend *backend, refdb_fs_iter *iter)
 			ref->flags |= PACKREF_SHADOWED;
 		}
 
-		git_vector_insert(&iter->loose, git__strdup(ref_name));
+		if (!(ref_dup = git_pool_strdup(&iter->pool, ref_name))) {
+			error = -1;
+			goto cleanup;
+		}
+
+		if ((error = git_vector_insert(&iter->loose, ref_dup)) < 0)
+			goto cleanup;
 	}
 
+cleanup:
 	git_iterator_free(fsit);
 	git_buf_free(&path);
 
@@ -679,6 +689,11 @@ static int refdb_fs_backend__iterator_next_name(
 		if (git_strmap_exists(packfile, path))
 			continue;
 
+		if (loose_lookup(NULL, backend, path) != 0) {
+			giterr_clear();
+			continue;
+		}
+
 		*out = path;
 		return 0;
 	}
@@ -717,20 +732,26 @@ static int refdb_fs_backend__iterator(
 	iter = git__calloc(1, sizeof(refdb_fs_iter));
 	GITERR_CHECK_ALLOC(iter);
 
-	if (glob != NULL)
-		iter->glob = git__strdup(glob);
+	if (git_pool_init(&iter->pool, 1, 0) < 0)
+		goto fail;
+
+	if (glob != NULL &&
+		(iter->glob = git_pool_strdup(&iter->pool, glob)) == NULL)
+		goto fail;
 
 	iter->parent.next = refdb_fs_backend__iterator_next;
 	iter->parent.next_name = refdb_fs_backend__iterator_next_name;
 	iter->parent.free = refdb_fs_backend__iterator_free;
 
-	if (iter_load_loose_paths(backend, iter) < 0) {
-		refdb_fs_backend__iterator_free((git_reference_iterator *)iter);
-		return -1;
-	}
+	if (iter_load_loose_paths(backend, iter) < 0)
+		goto fail;
 
 	*out = (git_reference_iterator *)iter;
 	return 0;
+
+fail:
+	refdb_fs_backend__iterator_free((git_reference_iterator *)iter);
+	return -1;
 }
 
 static bool ref_is_available(
@@ -782,7 +803,7 @@ static int reference_path_available(
 			return -1;
 		}
 	});
-	
+
 	return 0;
 }
 
