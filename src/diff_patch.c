@@ -42,7 +42,7 @@ struct git_diff_patch {
 	git_array_t(diff_patch_hunk) hunks;
 	git_array_t(diff_patch_line) lines;
 	size_t oldno, newno;
-	size_t content_size;
+	size_t content_size, context_size;
 	git_pool flattened;
 };
 
@@ -806,6 +806,20 @@ notfound:
 	return diff_error_outofrange(thing);
 }
 
+size_t git_diff_patch_size(git_diff_patch *patch, int include_context)
+{
+	size_t out;
+
+	assert(patch);
+
+	out = patch->content_size;
+
+	if (!include_context)
+		out -= patch->context_size;
+
+	return out;
+}
+
 git_diff_list *git_diff_patch__diff(git_diff_patch *patch)
 {
 	return patch->diff;
@@ -934,7 +948,11 @@ static int diff_patch_line_cb(
 	line->len = content_len;
 	line->origin = line_origin;
 
-	patch->content_size += content_len;
+	patch->content_size += content_len + 1; /* +1 for line_origin */
+
+	if (line_origin == GIT_DIFF_LINE_CONTEXT ||
+		line_origin == GIT_DIFF_LINE_CONTEXT_EOFNL)
+		patch->context_size += content_len + 1;
 
 	/* do some bookkeeping so we can provide old/new line numbers */
 

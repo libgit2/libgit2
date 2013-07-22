@@ -943,6 +943,24 @@ GIT_EXTERN(int) git_diff_patch_get_line_in_hunk(
 	size_t line_of_hunk);
 
 /**
+ * Look up size of patch diff data in bytes
+ *
+ * This returns the raw size of the patch data.  This only includes the
+ * actual data from the lines of the diff, not the file or hunk headers.
+ *
+ * If you pass `include_context` as true (non-zero), this will be the size
+ * of all of the diff output; if you pass it as false (zero), this will
+ * only include the actual changed lines (as if `context_lines` was 0).
+ *
+ * @param patch A git_diff_patch representing changes to one file
+ * @param include_context Include context lines in size if non-zero
+ * @return The number of bytes of data
+ */
+GIT_EXTERN(size_t) git_diff_patch_size(
+	git_diff_patch *patch,
+	int include_context);
+
+/**
  * Serialize the patch to text via callback.
  *
  * Returning a non-zero value from the callback will terminate the iteration
