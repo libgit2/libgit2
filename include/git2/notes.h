@@ -99,7 +99,7 @@ GIT_EXTERN(int) git_note_read(
 /**
  * Get the note message
  *
- * @param note
+ * @param note the note
  * @return the note message
  */
 GIT_EXTERN(const char *) git_note_message(const git_note *note);
@@ -108,7 +108,7 @@ GIT_EXTERN(const char *) git_note_message(const git_note *note);
 /**
  * Get the note object OID
  *
- * @param note
+ * @param note the note
  * @return the note object OID
  */
 GIT_EXTERN(const git_oid *) git_note_oid(const git_note *note);

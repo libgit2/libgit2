@@ -110,7 +110,7 @@ GIT_EXTERN(int) git_cred_ssh_keyfile_passphrase_new(
  * @param out The newly created credential object.
  * @param publickey The bytes of the public key.
  * @param publickey_len The length of the public key in bytes.
- * @param sign_callback The callback method for authenticating.
+ * @param sign_fn The callback method for authenticating.
  * @param sign_data The abstract data sent to the sign_callback method.
  * @return 0 for success or an error code for failure
  */
