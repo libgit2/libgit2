@@ -391,7 +391,7 @@ typedef enum {
 	 */
 	GIT_DIFF_LINE_FILE_HDR  = 'F',
 	GIT_DIFF_LINE_HUNK_HDR  = 'H',
-	GIT_DIFF_LINE_BINARY    = 'B'  /**< Deprecated, will not be returned */
+	GIT_DIFF_LINE_BINARY    = 'B' /**< For "Binary files x and y differ" */
 } git_diff_line_t;
 
 /**
