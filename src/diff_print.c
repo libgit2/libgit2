@@ -98,12 +98,12 @@ static int diff_print_one_compact(
 
 	if (delta->old_file.path != delta->new_file.path &&
 		strcomp(delta->old_file.path,delta->new_file.path) != 0)
-		git_buf_printf(out, "%c\t%s%c -> %s%c\n", code,
+		git_buf_printf(out, "%c\t%s%c %s%c\n", code,
 			delta->old_file.path, old_suffix, delta->new_file.path, new_suffix);
 	else if (delta->old_file.mode != delta->new_file.mode &&
 		delta->old_file.mode != 0 && delta->new_file.mode != 0)
-		git_buf_printf(out, "%c\t%s%c (%o -> %o)\n", code,
-			delta->old_file.path, new_suffix, delta->old_file.mode, delta->new_file.mode);
+		git_buf_printf(out, "%c\t%s%c %s%c\n", code,
+			delta->old_file.path, old_suffix, delta->new_file.path, new_suffix);
 	else if (old_suffix != ' ')
 		git_buf_printf(out, "%c\t%s%c\n", code, delta->old_file.path, old_suffix);
 	else
