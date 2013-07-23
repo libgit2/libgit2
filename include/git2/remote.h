@@ -25,13 +25,6 @@
 GIT_BEGIN_DECL
 
 typedef int (*git_remote_rename_problem_cb)(const char *problematic_refspec, void *payload);
-/*
- * TODO: This functions still need to be implemented:
- * - _listcb/_foreach
- * - _add
- * - _rename
- * - _del (needs support from config)
- */
 
 /**
  * Add a remote with the default fetch refspec to the repository's configuration.  This
@@ -255,13 +248,14 @@ GIT_EXTERN(int) git_remote_connect(git_remote *remote, git_direction direction);
 GIT_EXTERN(int) git_remote_ls(git_remote *remote, git_headlist_cb list_cb, void *payload);
 
 /**
- * Download the packfile
+ * Download and index the packfile
  *
- * Negotiate what objects should be downloaded and download the
- * packfile with those objects. The packfile is downloaded with a
- * temporary filename, as it's final name is not known yet. If there
- * was no packfile needed (all the objects were available locally),
- * filename will be NULL and the function will return success.
+ * Connect to the remote if it hasn't been done yet, negotiate with
+ * the remote git which objects are missing, download and index the
+ * packfile.
+ *
+ * The .idx file will be created and both it and the packfile with be
+ * renamed to their final name.
  *
  * @param remote the remote to download from
  * @param progress_cb function to call with progress information.  Be aware that
