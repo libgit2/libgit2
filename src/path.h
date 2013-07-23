@@ -175,7 +175,6 @@ extern bool git_path_contains(git_buf *dir, const char *item);
  *
  * @param parent Directory path that might contain subdir
  * @param subdir Subdirectory name to look for in parent
- * @param append_if_exists If true, then subdir will be appended to the parent path if it does exist
  * @return true if subdirectory exists, false otherwise.
  */
 extern bool git_path_contains_dir(git_buf *parent, const char *subdir);
@@ -185,7 +184,6 @@ extern bool git_path_contains_dir(git_buf *parent, const char *subdir);
  *
  * @param dir Directory path that might contain file
  * @param file File name to look for in parent
- * @param append_if_exists If true, then file will be appended to the path if it does exist
  * @return true if file exists, false otherwise.
  */
 extern bool git_path_contains_file(git_buf *dir, const char *file);
