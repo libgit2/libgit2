@@ -42,7 +42,7 @@ struct git_diff_patch {
 	git_array_t(diff_patch_hunk) hunks;
 	git_array_t(diff_patch_line) lines;
 	size_t oldno, newno;
-	size_t content_size, context_size;
+	size_t content_size, context_size, header_size;
 	git_pool flattened;
 };
 
@@ -806,7 +806,11 @@ notfound:
 	return diff_error_outofrange(thing);
 }
 
-size_t git_diff_patch_size(git_diff_patch *patch, int include_context)
+size_t git_diff_patch_size(
+	git_diff_patch *patch,
+	int include_context,
+	int include_hunk_headers,
+	int include_file_headers)
 {
 	size_t out;
 
@@ -816,6 +820,21 @@ size_t git_diff_patch_size(git_diff_patch *patch, int include_context)
 
 	if (!include_context)
 		out -= patch->context_size;
+
+	if (include_hunk_headers)
+		out += patch->header_size;
+
+	if (include_file_headers) {
+		git_buf file_header = GIT_BUF_INIT;
+
+		if (git_diff_delta__format_file_header(
+				&file_header, patch->delta, NULL, NULL, 0) < 0)
+			giterr_clear();
+		else
+			out += git_buf_len(&file_header);
+
+		git_buf_free(&file_header);
+	}
 
 	return out;
 }
@@ -914,6 +933,8 @@ static int diff_patch_hunk_cb(
 	hunk->header[header_len] = '\0';
 	hunk->header_len = header_len;
 
+	patch->header_size += header_len;
+
 	hunk->line_start = git_array_size(patch->lines);
 	hunk->line_count = 0;
 
@@ -934,6 +955,7 @@ static int diff_patch_line_cb(
 	git_diff_patch *patch = payload;
 	diff_patch_hunk *hunk;
 	diff_patch_line *line;
+	const char *content_end = content + content_len;
 
 	GIT_UNUSED(delta);
 	GIT_UNUSED(range);
@@ -948,37 +970,42 @@ static int diff_patch_line_cb(
 	line->len = content_len;
 	line->origin = line_origin;
 
-	patch->content_size += content_len + 1; /* +1 for line_origin */
-
-	if (line_origin == GIT_DIFF_LINE_CONTEXT ||
-		line_origin == GIT_DIFF_LINE_CONTEXT_EOFNL)
-		patch->context_size += content_len + 1;
-
 	/* do some bookkeeping so we can provide old/new line numbers */
 
-	for (line->lines = 0; content_len > 0; --content_len) {
+	line->lines = 0;
+	while (content < content_end)
 		if (*content++ == '\n')
 			++line->lines;
-	}
+
+	patch->content_size += content_len;
 
 	switch (line_origin) {
 	case GIT_DIFF_LINE_ADDITION:
+		patch->content_size += 1;
 	case GIT_DIFF_LINE_DEL_EOFNL:
 		line->oldno = -1;
 		line->newno = patch->newno;
 		patch->newno += line->lines;
 		break;
 	case GIT_DIFF_LINE_DELETION:
+		patch->content_size += 1;
 	case GIT_DIFF_LINE_ADD_EOFNL:
 		line->oldno = patch->oldno;
 		line->newno = -1;
 		patch->oldno += line->lines;
 		break;
-	default:
+	case GIT_DIFF_LINE_CONTEXT:
+		patch->content_size += 1;
+		patch->context_size += 1;
+	case GIT_DIFF_LINE_CONTEXT_EOFNL:
+		patch->context_size += content_len;
 		line->oldno = patch->oldno;
 		line->newno = patch->newno;
 		patch->oldno += line->lines;
 		patch->newno += line->lines;
+		break;
+	default:
+		assert(false);
 		break;
 	}
 

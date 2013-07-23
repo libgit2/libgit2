@@ -391,7 +391,7 @@ typedef enum {
 	 */
 	GIT_DIFF_LINE_FILE_HDR  = 'F',
 	GIT_DIFF_LINE_HUNK_HDR  = 'H',
-	GIT_DIFF_LINE_BINARY    = 'B'
+	GIT_DIFF_LINE_BINARY    = 'B'  /**< Deprecated, will not be returned */
 } git_diff_line_t;
 
 /**
@@ -954,11 +954,15 @@ GIT_EXTERN(int) git_diff_patch_get_line_in_hunk(
  *
  * @param patch A git_diff_patch representing changes to one file
  * @param include_context Include context lines in size if non-zero
+ * @param include_hunk_headers Include hunk header lines if non-zero
+ * @param include_file_headers Include file header lines if non-zero
  * @return The number of bytes of data
  */
 GIT_EXTERN(size_t) git_diff_patch_size(
 	git_diff_patch *patch,
-	int include_context);
+	int include_context,
+	int include_hunk_headers,
+	int include_file_headers);
 
 /**
  * Serialize the patch to text via callback.

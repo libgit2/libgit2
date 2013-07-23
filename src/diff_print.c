@@ -198,13 +198,13 @@ int git_diff_print_raw(
 	return error;
 }
 
-static int diff_print_oid_range(diff_print_info *pi, const git_diff_delta *delta)
+static int diff_print_oid_range(
+	git_buf *out, const git_diff_delta *delta, int oid_strlen)
 {
-	git_buf *out = pi->buf;
 	char start_oid[GIT_OID_HEXSZ+1], end_oid[GIT_OID_HEXSZ+1];
 
-	git_oid_tostr(start_oid, pi->oid_strlen, &delta->old_file.oid);
-	git_oid_tostr(end_oid, pi->oid_strlen, &delta->new_file.oid);
+	git_oid_tostr(start_oid, oid_strlen, &delta->old_file.oid);
+	git_oid_tostr(end_oid, oid_strlen, &delta->new_file.oid);
 
 	/* TODO: Match git diff more closely */
 	if (delta->old_file.mode == delta->new_file.mode) {
@@ -228,35 +228,29 @@ static int diff_print_oid_range(diff_print_info *pi, const git_diff_delta *delta
 	return 0;
 }
 
-static int diff_print_patch_file(
-	const git_diff_delta *delta, float progress, void *data)
+int git_diff_delta__format_file_header(
+	git_buf *out,
+	const git_diff_delta *delta,
+	const char *oldpfx,
+	const char *newpfx,
+	int oid_strlen)
 {
-	diff_print_info *pi = data;
-	const char *oldpfx = pi->diff ? pi->diff->opts.old_prefix : NULL;
 	const char *oldpath = delta->old_file.path;
-	const char *newpfx = pi->diff ? pi->diff->opts.new_prefix : NULL;
 	const char *newpath = delta->new_file.path;
-	uint32_t opts_flags = pi->diff ? pi->diff->opts.flags : GIT_DIFF_NORMAL;
-
-	GIT_UNUSED(progress);
-
-	if (S_ISDIR(delta->new_file.mode) ||
-		delta->status == GIT_DELTA_UNMODIFIED ||
-		delta->status == GIT_DELTA_IGNORED ||
-		(delta->status == GIT_DELTA_UNTRACKED &&
-		 (opts_flags & GIT_DIFF_INCLUDE_UNTRACKED_CONTENT) == 0))
-		return 0;
 
 	if (!oldpfx)
 		oldpfx = DIFF_OLD_PREFIX_DEFAULT;
 	if (!newpfx)
 		newpfx = DIFF_NEW_PREFIX_DEFAULT;
+	if (!oid_strlen)
+		oid_strlen = GIT_ABBREV_DEFAULT + 1;
 
-	git_buf_clear(pi->buf);
-	git_buf_printf(pi->buf, "diff --git %s%s %s%s\n",
-		oldpfx, delta->old_file.path, newpfx, delta->new_file.path);
+	git_buf_clear(out);
 
-	if (diff_print_oid_range(pi, delta) < 0)
+	git_buf_printf(out, "diff --git %s%s %s%s\n",
+		oldpfx, oldpath, newpfx, newpath);
+
+	if (diff_print_oid_range(out, delta, oid_strlen) < 0)
 		return -1;
 
 	if (git_oid_iszero(&delta->old_file.oid)) {
@@ -269,28 +263,39 @@ static int diff_print_patch_file(
 	}
 
 	if ((delta->flags & GIT_DIFF_FLAG_BINARY) == 0) {
-		git_buf_printf(pi->buf, "--- %s%s\n", oldpfx, oldpath);
-		git_buf_printf(pi->buf, "+++ %s%s\n", newpfx, newpath);
+		git_buf_printf(out, "--- %s%s\n", oldpfx, oldpath);
+		git_buf_printf(out, "+++ %s%s\n", newpfx, newpath);
+	} else {
+		git_buf_printf(
+			out, "Binary files %s%s and %s%s differ\n",
+			oldpfx, oldpath, newpfx, newpath);
 	}
 
-	if (git_buf_oom(pi->buf))
+	return git_buf_oom(out) ? -1 : 0;
+}
+
+static int diff_print_patch_file(
+	const git_diff_delta *delta, float progress, void *data)
+{
+	diff_print_info *pi = data;
+	const char *oldpfx = pi->diff ? pi->diff->opts.old_prefix : NULL;
+	const char *newpfx = pi->diff ? pi->diff->opts.new_prefix : NULL;
+	uint32_t opts_flags = pi->diff ? pi->diff->opts.flags : GIT_DIFF_NORMAL;
+
+	GIT_UNUSED(progress);
+
+	if (S_ISDIR(delta->new_file.mode) ||
+		delta->status == GIT_DELTA_UNMODIFIED ||
+		delta->status == GIT_DELTA_IGNORED ||
+		(delta->status == GIT_DELTA_UNTRACKED &&
+		 (opts_flags & GIT_DIFF_INCLUDE_UNTRACKED_CONTENT) == 0))
+		return 0;
+
+	if (git_diff_delta__format_file_header(
+			pi->buf, delta, oldpfx, newpfx, pi->oid_strlen) < 0)
 		return -1;
 
 	if (pi->print_cb(delta, NULL, GIT_DIFF_LINE_FILE_HDR,
-			git_buf_cstr(pi->buf), git_buf_len(pi->buf), pi->payload))
-		return callback_error();
-
-	if ((delta->flags & GIT_DIFF_FLAG_BINARY) == 0)
-		return 0;
-
-	git_buf_clear(pi->buf);
-	git_buf_printf(
-		pi->buf, "Binary files %s%s and %s%s differ\n",
-		oldpfx, oldpath, newpfx, newpath);
-	if (git_buf_oom(pi->buf))
-		return -1;
-
-	if (pi->print_cb(delta, NULL, GIT_DIFF_LINE_BINARY,
 			git_buf_cstr(pi->buf), git_buf_len(pi->buf), pi->payload))
 		return callback_error();
 
