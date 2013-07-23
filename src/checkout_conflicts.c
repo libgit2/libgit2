@@ -395,7 +395,10 @@ static int checkout_write_entry(
 	if (git_buf_puts(&data->path, side->path) < 0)
 		return -1;
 
-	if (conflict->name_collision || conflict->directoryfile) {
+	if ((conflict->name_collision || conflict->directoryfile) &&
+		(data->strategy & GIT_CHECKOUT_USE_OURS) == 0 &&
+		(data->strategy & GIT_CHECKOUT_USE_THEIRS) == 0) {
+
 		if (side == conflict->ours)
 			side_label = data->opts.our_label ? data->opts.our_label :
 				"ours";
