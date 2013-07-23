@@ -11,14 +11,10 @@ void test_config_global__initialize(void)
 	cl_git_pass(git_libgit2_opts(
 		GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL, path.ptr));
 
+	cl_git_pass(git_libgit2_opts(
+		GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_SYSTEM, NULL));
+
 	cl_must_pass(p_mkdir("xdg", 0777));
-	cl_git_pass(git_path_prettify(&path, "xdg", NULL));
-	cl_git_pass(git_libgit2_opts(
-		GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_SYSTEM, path.ptr));
-
-	cl_git_pass(git_libgit2_opts(
-		GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_XDG, NULL));
-
 	git_buf_free(&path);
 }
 
@@ -31,6 +27,11 @@ void test_config_global__cleanup(void)
 void test_config_global__open_global(void)
 {
 	git_config *cfg, *global, *selected, *dummy;
+	git_buf path = GIT_BUF_INIT;
+
+	cl_git_pass(git_path_prettify(&path, "xdg", NULL));
+	cl_git_pass(git_libgit2_opts(
+		GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_XDG, path.ptr));
 
 	cl_git_pass(git_config_open_default(&cfg));
 	cl_git_pass(git_config_open_level(&global, cfg, GIT_CONFIG_LEVEL_GLOBAL));
@@ -48,6 +49,8 @@ void test_config_global__open_xdg(void)
 	const char *val, *str = "teststring";
 	const char *key = "this.variable";
 
+	cl_git_pass(git_libgit2_opts(
+		GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_XDG, NULL));
 	p_setenv("XDG_CONFIG_HOME", "xdg", 1);
 
 	cl_must_pass(p_mkdir("xdg/git/", 0777));
