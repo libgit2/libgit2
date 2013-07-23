@@ -331,6 +331,12 @@ static int crlf_apply_to_workdir(
 	if (!should_apply)
 		return 0;
 
+	git_buf_attach(&source, (void *)in, in_len, in_len);
+
+	/* Don't filter binary files */
+	if (git_buf_text_is_binary(&source))
+		return 0;
+
 	/* Determine proper line ending */
 	workdir_ending = line_ending(&ca);
 
@@ -342,8 +348,6 @@ static int crlf_apply_to_workdir(
 
 	/* for now, only lf->crlf conversion is supported here */
 	assert(!strcmp("\r\n", workdir_ending));
-
-	git_buf_attach(&source, (void *)in, in_len, in_len);
 
 	/* Actually add the carriage returns */
 	if ((error = git_buf_text_lf_to_crlf(&dest, &source)) < 0) {

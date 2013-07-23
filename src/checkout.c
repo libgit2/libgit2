@@ -723,7 +723,7 @@ static int blob_content_to_file(
 	content.ptr = (void *)git_blob_rawcontent(blob);
 	content.size = (size_t)git_blob_rawsize(blob);
 
-	if (!opts->disable_filters && !git_buf_text_is_binary(&content)) {
+	if (!opts->disable_filters) {
 		git_repository *repo = git_blob_owner(blob);
 
 		if ((error = git_filters__apply(&filtered,
