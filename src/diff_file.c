@@ -417,6 +417,9 @@ int git_diff_file_content__load(git_diff_file_content *fc)
 
 void git_diff_file_content__unload(git_diff_file_content *fc)
 {
+	if ((fc->flags & GIT_DIFF_FLAG__LOADED) == 0)
+		return;
+
 	if (fc->flags & GIT_DIFF_FLAG__FREE_DATA) {
 		git__free(fc->map.data);
 		fc->map.data = "";
