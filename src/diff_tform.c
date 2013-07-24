@@ -446,6 +446,8 @@ static int similarity_calc(
 		}
 
 		blobsize = git_blob_rawsize(blob);
+		if (!file->size)
+			file->size = blobsize;
 		if (!git__is_sizet(blobsize)) /* ? what to do ? */
 			blobsize = (size_t)-1;
 
@@ -509,6 +511,13 @@ static int similarity_measure(
 		*score = 0;
 		return 0;
 	}
+
+	/* check if file sizes too small or nowhere near each other */
+	if (a_file->size > 127 &&
+		b_file->size > 127 &&
+		(a_file->size > (b_file->size << 4) ||
+		 b_file->size > (a_file->size << 4)))
+		return 0;
 
 	/* update signature cache if needed */
 	if (!cache[a_idx] && similarity_calc(diff, opts, a_idx, cache) < 0)
