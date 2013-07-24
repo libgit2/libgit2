@@ -230,6 +230,10 @@ static int diff_patch_generate(git_diff_patch *patch, git_diff_output *output)
 	if ((patch->flags & GIT_DIFF_PATCH_DIFFED) != 0)
 		return 0;
 
+	/* if we are not looking at the hunks and lines, don't do the diff */
+	if (!output->hunk_cb && !output->data_cb)
+		return 0;
+
 	if ((patch->flags & GIT_DIFF_PATCH_LOADED) == 0 &&
 		(error = diff_patch_load(patch, output)) < 0)
 		return error;
