@@ -512,7 +512,7 @@ static int similarity_measure(
 		return 0;
 	}
 
-	/* check if file sizes too small or nowhere near each other */
+	/* check if file sizes are nowhere near each other */
 	if (a_file->size > 127 &&
 		b_file->size > 127 &&
 		(a_file->size > (b_file->size << 4) ||
