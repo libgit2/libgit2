@@ -43,8 +43,8 @@ struct git_hashsig {
 	int considered;
 };
 
-#define HEAP_LCHILD_OF(I) (((I)*2)+1)
-#define HEAP_RCHILD_OF(I) (((I)*2)+2)
+#define HEAP_LCHILD_OF(I) (((I)<<1)+1)
+#define HEAP_RCHILD_OF(I) (((I)<<1)+2)
 #define HEAP_PARENT_OF(I) (((I)-1)>>1)
 
 static void hashsig_heap_init(hashsig_heap *h, hashsig_cmp cmp)
@@ -152,8 +152,9 @@ static void hashsig_initial_window(
 	hashsig_in_progress *prog)
 {
 	hashsig_state state, shift_n;
-	int win_len;
+	int win_len, saw_lf = prog->saw_lf;
 	const char *scan, *end;
+	char *window = &prog->window[0];
 
 	/* init until we have processed at least HASHSIG_HASH_WINDOW data */
 
@@ -170,7 +171,7 @@ static void hashsig_initial_window(
 	while (scan < end && win_len < HASHSIG_HASH_WINDOW) {
 		char ch = *scan++;
 
-		if (!hashsig_include_char(ch, sig->opt, &prog->saw_lf))
+		if (!hashsig_include_char(ch, sig->opt, &saw_lf))
 			continue;
 
 		state = (state * HASHSIG_HASH_SHIFT + ch) & HASHSIG_HASH_MASK;
@@ -180,7 +181,7 @@ static void hashsig_initial_window(
 		else
 			shift_n = (shift_n * HASHSIG_HASH_SHIFT) & HASHSIG_HASH_MASK;
 
-		prog->window[win_len++] = ch;
+		window[win_len++] = ch;
 	}
 
 	/* insert initial hash if we just finished */
@@ -194,6 +195,7 @@ static void hashsig_initial_window(
 	prog->state   = state;
 	prog->win_len = win_len;
 	prog->shift_n = shift_n;
+	prog->saw_lf  = saw_lf;
 
 	*data = scan;
 }
@@ -206,22 +208,26 @@ static int hashsig_add_hashes(
 {
 	const char *scan = data, *end = data + size;
 	hashsig_state state, shift_n, rmv;
+	int win_pos, saw_lf;
+	char *window = &prog->window[0];
 
 	if (prog->win_len < HASHSIG_HASH_WINDOW)
 		hashsig_initial_window(sig, &scan, size, prog);
 
 	state   = prog->state;
 	shift_n = prog->shift_n;
+	saw_lf  = prog->saw_lf;
+	win_pos = prog->win_pos;
 
 	/* advance window, adding new chars and removing old */
 
 	for (; scan < end; ++scan) {
 		char ch = *scan;
 
-		if (!hashsig_include_char(ch, sig->opt, &prog->saw_lf))
+		if (!hashsig_include_char(ch, sig->opt, &saw_lf))
 			continue;
 
-		rmv = shift_n * prog->window[prog->win_pos];
+		rmv = shift_n * window[win_pos];
 
 		state = (state - rmv) & HASHSIG_HASH_MASK;
 		state = (state * HASHSIG_HASH_SHIFT) & HASHSIG_HASH_MASK;
@@ -231,11 +237,13 @@ static int hashsig_add_hashes(
 		hashsig_heap_insert(&sig->maxs, (hashsig_t)state);
 		sig->considered++;
 
-		prog->window[prog->win_pos] = ch;
-		prog->win_pos = (prog->win_pos + 1) % HASHSIG_HASH_WINDOW;
+		window[win_pos] = ch;
+		win_pos = (win_pos + 1) % HASHSIG_HASH_WINDOW;
 	}
 
-	prog->state = state;
+	prog->state   = state;
+	prog->saw_lf  = saw_lf;
+	prog->win_pos = win_pos;
 
 	return 0;
 }
@@ -296,7 +304,7 @@ int git_hashsig_create_fromfile(
 	const char *path,
 	git_hashsig_option_t opts)
 {
-	char buf[4096];
+	char buf[0x1000];
 	ssize_t buflen = 0;
 	int error = 0, fd;
 	hashsig_in_progress prog = HASHSIG_IN_PROGRESS_INIT;
