@@ -473,7 +473,13 @@ static int similarity_calc(
 			/* if lookup fails, just skip this item in similarity calc */
 			giterr_clear();
 		} else {
-			size_t sz = (size_t)(git__is_sizet(file->size) ? file->size : -1);
+			size_t sz;
+
+			/* index size may not be actual blob size if filtered */
+			if (file->size != git_blob_rawsize(info->blob))
+				file->size = git_blob_rawsize(info->blob);
+
+			sz = (size_t)(git__is_sizet(file->size) ? file->size : -1);
 
 			error = opts->metric->buffer_signature(
 				&cache[info->idx], info->file,

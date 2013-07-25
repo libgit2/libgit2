@@ -16,6 +16,7 @@
 #include "iterator.h"
 #include "pathspec.h"
 #include "ignore.h"
+#include "blob.h"
 
 #include "git2/odb.h"
 #include "git2/oid.h"
@@ -604,42 +605,23 @@ int git_index_entry__cmp_icase(const void *a, const void *b)
 	return strcasecmp(entry_a->path, entry_b->path);
 }
 
-static int index_entry_init(git_index_entry **entry_out, git_index *index, const char *rel_path)
+static int index_entry_init(
+	git_index_entry **entry_out, git_index *index, const char *rel_path)
 {
+	int error = 0;
 	git_index_entry *entry = NULL;
 	struct stat st;
 	git_oid oid;
-	const char *workdir;
-	git_buf full_path = GIT_BUF_INIT;
-	int error;
 
 	if (INDEX_OWNER(index) == NULL)
 		return create_index_error(-1,
 			"Could not initialize index entry. "
 			"Index is not backed up by an existing repository.");
 
-	workdir = git_repository_workdir(INDEX_OWNER(index));
-
-	if (!workdir)
-		return create_index_error(GIT_EBAREREPO,
-			"Could not initialize index entry. Repository is bare");
-
-	if ((error = git_buf_joinpath(&full_path, workdir, rel_path)) < 0)
-		return error;
-
-	if ((error = git_path_lstat(full_path.ptr, &st)) < 0) {
-		git_buf_free(&full_path);
-		return error;
-	}
-
-	git_buf_free(&full_path); /* done with full path */
-
-	/* There is no need to validate the rel_path here, since it will be
-	 * immediately validated by the call to git_blob_create_fromfile.
-	 */
-
-	/* write the blob to disk and get the oid */
-	if ((error = git_blob_create_fromworkdir(&oid, INDEX_OWNER(index), rel_path)) < 0)
+	/* write the blob to disk and get the oid and stat info */
+	error = git_blob__create_from_paths(
+		&oid, &st, INDEX_OWNER(index), NULL, rel_path, 0, true);
+	if (error < 0)
 		return error;
 
 	entry = git__calloc(1, sizeof(git_index_entry));
