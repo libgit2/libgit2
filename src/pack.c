@@ -822,7 +822,7 @@ void git_packfile_free(struct git_pack_file *p)
 
 	git_mwindow_free_all(&p->mwf);
 
-	if (p->mwf.fd != -1)
+	if (p->mwf.fd >= 0)
 		p_close(p->mwf.fd);
 
 	pack_index_free(p);
@@ -905,7 +905,8 @@ static int packfile_open(struct git_pack_file *p)
 cleanup:
 	giterr_set(GITERR_OS, "Invalid packfile '%s'", p->pack_name);
 
-	p_close(p->mwf.fd);
+	if (p->mwf.fd >= 0)
+		p_close(p->mwf.fd);
 	p->mwf.fd = -1;
 
 	git_mutex_unlock(&p->lock);
