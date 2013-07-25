@@ -241,19 +241,9 @@ static int diff_file_content_load_blob(git_diff_file_content *fc)
 
 	/* if we don't know size, try to peek at object header first */
 	if (!fc->file->size) {
-		git_odb *odb;
-		size_t len;
-		git_otype type;
-
-		if (!(error = git_repository_odb__weakptr(&odb, fc->repo))) {
-			error = git_odb__read_header_or_object(
-				&odb_obj, &len, &type, odb, &fc->file->oid);
-			git_odb_free(odb);
-		}
-		if (error)
+		if ((error = git_diff_file__resolve_zero_size(
+				fc->file, &odb_obj, fc->repo)) < 0)
 			return error;
-
-		fc->file->size = len;
 	}
 
 	if (diff_file_content_binary_by_size(fc))

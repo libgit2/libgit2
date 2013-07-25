@@ -414,59 +414,26 @@ typedef struct {
 	git_repository *repo;
 	git_diff_file *file;
 	git_buf data;
+	git_odb_object *odb_obj;
 	git_blob *blob;
-	int loaded;
 } similarity_info;
 
-static void similarity_init(
+static int similarity_init(
 	similarity_info *info, git_diff_list *diff, size_t file_idx)
 {
 	info->idx  = file_idx;
 	info->src  = (file_idx & 1) ? diff->new_src : diff->old_src;
 	info->repo = diff->repo;
 	info->file = similarity_get_file(diff, file_idx);
+	info->odb_obj = NULL;
 	info->blob = NULL;
-	info->loaded = 0;
 	git_buf_init(&info->data, 0);
-}
 
-static int similarity_load(similarity_info *info)
-{
-	int error = 0;
-	git_diff_file *file = info->file;
+	if (info->file->size > 0)
+		return 0;
 
-	if (info->src == GIT_ITERATOR_TYPE_WORKDIR) {
-		error = git_buf_joinpath(
-			&info->data, git_repository_workdir(info->repo), file->path);
-
-		/* if path is not a regular file, just skip this item */
-		if (!error && !git_path_isfile(info->data.ptr))
-			git_buf_free(&info->data);
-	} else if (git_blob_lookup(&info->blob, info->repo, &file->oid) < 0) {
-		/* if lookup fails, just skip this item in similarity calc */
-		giterr_clear();
-	} else {
-		if (!file->size)
-			file->size = git_blob_rawsize(info->blob);
-		assert(file->size == git_blob_rawsize(info->blob));
-
-		info->data.size = (size_t)(git__is_sizet(file->size) ? file->size : -1);
-		info->data.ptr  = (char *)git_blob_rawcontent(info->blob);
-	}
-
-	info->loaded = 1;
-
-	return error;
-}
-
-static void similarity_unload(similarity_info *info)
-{
-	if (info->blob)
-		git_blob_free(info->blob);
-	else
-		git_buf_free(&info->data);
-
-	info->loaded = 0;
+	return git_diff_file__resolve_zero_size(
+		info->file, &info->odb_obj, info->repo);
 }
 
 static int similarity_calc(
@@ -475,26 +442,57 @@ static int similarity_calc(
 	void **cache)
 {
 	int error = 0;
-
-	if (!info->loaded && (error = similarity_load(info)) < 0)
-		return error;
-
-	if (!info->data.size)
-		return 0;
+	git_diff_file *file = info->file;
 
 	if (info->src == GIT_ITERATOR_TYPE_WORKDIR) {
+		if ((error = git_buf_joinpath(
+			&info->data, git_repository_workdir(info->repo), file->path)) < 0)
+			return error;
+
+		/* if path is not a regular file, just skip this item */
+		if (!git_path_isfile(info->data.ptr))
+			return 0;
+
 		/* TODO: apply wd-to-odb filters to file data if necessary */
 
 		error = opts->metric->file_signature(
 			&cache[info->idx], info->file,
 			info->data.ptr, opts->metric->payload);
 	} else {
-		error = opts->metric->buffer_signature(
-			&cache[info->idx], info->file,
-			info->data.ptr, info->data.size, opts->metric->payload);
+		/* if we didn't initially know the size, we might have an odb_obj
+		 * around from earlier, so convert that, otherwise load the blob now
+		 */
+		if (info->odb_obj != NULL)
+			error = git_object__from_odb_object(
+				(git_object **)&info->blob, info->repo,
+				info->odb_obj, GIT_OBJ_BLOB);
+		else
+			error = git_blob_lookup(&info->blob, info->repo, &file->oid);
+
+		if (error < 0) {
+			/* if lookup fails, just skip this item in similarity calc */
+			giterr_clear();
+		} else {
+			size_t sz = (size_t)(git__is_sizet(file->size) ? file->size : -1);
+
+			error = opts->metric->buffer_signature(
+				&cache[info->idx], info->file,
+				git_blob_rawcontent(info->blob), sz, opts->metric->payload);
+		}
 	}
 
 	return error;
+}
+
+static void similarity_unload(similarity_info *info)
+{
+	if (info->odb_obj)
+		git_odb_object_free(info->odb_obj);
+
+	if (info->blob)
+		git_blob_free(info->blob);
+	else
+		git_buf_free(&info->data);
 }
 
 #define FLAG_SET(opts,flag_name) (((opts)->flags & flag_name) != 0)
@@ -550,26 +548,28 @@ static int similarity_measure(
 		return 0;
 	}
 
-	similarity_init(&a_info, diff, a_idx);
-	similarity_init(&b_info, diff, b_idx);
+	memset(&a_info, 0, sizeof(a_info));
+	memset(&b_info, 0, sizeof(b_info));
 
-	if (!a_file->size && (error = similarity_load(&a_info)) < 0)
-		goto done;
-	if (!b_file->size && (error = similarity_load(&b_info)) < 0)
-		goto done;
+	/* set up similarity data (will try to update missing file sizes) */
+	if (!cache[a_idx] && (error = similarity_init(&a_info, diff, a_idx)) < 0)
+		return error;
+	if (!cache[b_idx] && (error = similarity_init(&b_info, diff, b_idx)) < 0)
+		goto cleanup;
 
 	/* check if file sizes are nowhere near each other */
 	if (a_file->size > 127 &&
 		b_file->size > 127 &&
 		(a_file->size > (b_file->size << 4) ||
 		 b_file->size > (a_file->size << 4)))
-		goto done;
+		goto cleanup;
 
 	/* update signature cache if needed */
 	if (!cache[a_idx] && (error = similarity_calc(&a_info, opts, cache)) < 0)
-		goto done;
+		goto cleanup;
+
 	if (!cache[b_idx] && (error = similarity_calc(&b_info, opts, cache)) < 0)
-		goto done;
+		goto cleanup;
 
 	/* calculate similarity provided that the metric choose to process
 	 * both the a and b files (some may not if file is too big, etc).
@@ -578,7 +578,7 @@ static int similarity_measure(
 		error = opts->metric->similarity(
 			score, cache[a_idx], cache[b_idx], opts->metric->payload);
 
-done:
+cleanup:
 	similarity_unload(&a_info);
 	similarity_unload(&b_info);
 
