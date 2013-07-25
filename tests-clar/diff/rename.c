@@ -1126,7 +1126,7 @@ void test_diff_rename__unmodified_can_be_renamed(void)
 void test_diff_rename__many_files(void)
 {
 	git_index *index;
-	git_tree *tree;
+	git_tree *tree, *new_tree;
 	git_diff_list *diff = NULL;
 	diff_expects exp;
 	git_diff_options diffopts = GIT_DIFF_OPTIONS_INIT;
@@ -1176,6 +1176,52 @@ void test_diff_rename__many_files(void)
 	cl_assert_equal_i(51, exp.files);
 
 	git_diff_list_free(diff);
-	git_index_free(index);
+
+	{
+		git_object *parent;
+		git_signature *sig;
+		git_oid tree_id, commit_id;
+		git_reference *ref;
+
+		cl_git_pass(git_index_write_tree(&tree_id, index));
+		cl_git_pass(git_tree_lookup(&new_tree, g_repo, &tree_id));
+
+		cl_git_pass(git_revparse_ext(&parent, &ref, g_repo, "HEAD"));
+		cl_git_pass(git_signature_new(
+			&sig, "Sm Test", "sm@tester.test", 1372350000, 480));
+
+		cl_git_pass(git_commit_create_v(
+			&commit_id, g_repo, git_reference_name(ref), sig, sig,
+			NULL, "yoyoyo", new_tree, 1, parent));
+
+		git_object_free(parent);
+		git_reference_free(ref);
+		git_signature_free(sig);
+	}
+
+	cl_git_pass(git_diff_tree_to_tree(
+		&diff, g_repo, tree, new_tree, &diffopts));
+
+	memset(&exp, 0, sizeof(exp));
+	cl_git_pass(git_diff_foreach(
+		diff, diff_file_cb, NULL, NULL, &exp));
+	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_DELETED]);
+	cl_assert_equal_i(51, exp.file_status[GIT_DELTA_ADDED]);
+	cl_assert_equal_i(52, exp.files);
+
+	opts.flags = GIT_DIFF_FIND_ALL;
+	cl_git_pass(git_diff_find_similar(diff, &opts));
+
+	memset(&exp, 0, sizeof(exp));
+	cl_git_pass(git_diff_foreach(
+		diff, diff_file_cb, NULL, NULL, &exp));
+	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_RENAMED]);
+	cl_assert_equal_i(50, exp.file_status[GIT_DELTA_ADDED]);
+	cl_assert_equal_i(51, exp.files);
+
+	git_diff_list_free(diff);
+
+	git_tree_free(new_tree);
 	git_tree_free(tree);
+	git_index_free(index);
 }
