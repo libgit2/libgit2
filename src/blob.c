@@ -195,7 +195,7 @@ int git_blob__create_from_paths(
 	size = st.st_size;
 	mode = hint_mode ? hint_mode : st.st_mode;
 
-	if (S_ISLNK(hint_mode)) {
+	if (S_ISLNK(mode)) {
 		error = write_symlink(oid, odb, content_path, (size_t)size);
 	} else {
 		git_vector write_filters = GIT_VECTOR_INIT;
