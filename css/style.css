@@ -182,7 +182,6 @@ h1.funcTitle small {
 
 .signatures {
   padding: 10px;
-  float: left;
 }
 
 .funcEx {
@@ -194,7 +193,6 @@ h1.funcTitle small {
   padding: 4px;
   margin: 0;
   color: #000;
-  float: left;
 }
 
 .signatures a.changed {
@@ -210,6 +208,16 @@ h1.funcTitle small {
   margin-top: 0;
 }
 
+.signatures ul {
+    list-style: none outside none;
+    float: left;
+}
+
+.signatures ul li {
+    list-style: none;
+    float: left;
+    display: block;
+}
 
 h2.funcGroup {
   border: 0;

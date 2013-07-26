@@ -65,9 +65,9 @@ $(function() {
       return false
     },
 
-    showIndexPage: function() {
+    showIndexPage: function(replace) {
       version = docurium.get('version')
-      ws.saveLocation(version)
+      ws.navigate(version, {replace: replace})
 
       data = docurium.get('data')
       content = $('.content')
@@ -169,17 +169,19 @@ $(function() {
       sigs = $('<div>').addClass('signatures')
       sigs.append($('<h3>').append("versions"))
       sigHist = docurium.get('signatures')[fname]
+      var list = $('<ul>')
       for(var i in sigHist.exists) {
         ver = sigHist.exists[i]
-        link = $('<a>').attr('href', '#' + groupLink(gname, fname, ver)).append(ver)
+        link = $('<li>').append($('<a>').attr('href', '#' + groupLink(gname, fname, ver)).append(ver))
         if(sigHist.changes[ver]) {
           link.addClass('changed')
         }
         if(ver == docurium.get('version')) {
           link.addClass('current')
         }
-        sigs.append(link)
+        list.append(link)
       }
+      sigs.append(list)
       content.append(sigs)
 
       // Link to Function Def on GitHub
@@ -298,7 +300,7 @@ $(function() {
       tname = tdata[0]
       data = tdata[1]
 
-      ws.saveLocation(typeLink(tname))
+      ws.navigate(typeLink(tname))
 
       content = $('.content')
       content.empty()
@@ -351,7 +353,7 @@ $(function() {
       fdata = docurium.get('data')['functions']
       gname = group[0]
 
-      ws.saveLocation(groupLink(gname));
+      ws.navigate(groupLink(gname));
 
       functions = group[1]
       $('.content').empty()
@@ -541,7 +543,7 @@ $(function() {
       }
       this.searchResults = []
 
-      ws.saveLocation(searchLink(value))
+      ws.navigate(searchLink(value))
 
       data = docurium.get('data')
 
@@ -596,7 +598,7 @@ $(function() {
 
   })
 
-  var Workspace = Backbone.Controller.extend({
+  var Workspace = Backbone.Router.extend({
 
     routes: {
       "":                             "main",
@@ -610,7 +612,9 @@ $(function() {
 
     main: function(version) {
       docurium.setVersion(version)
-      docurium.showIndexPage()
+      // when asking for '/', replace with 'HEAD' instead of redirecting
+      var replace = version == undefined
+      docurium.showIndexPage(replace)
     },
 
     group: function(version, gname) {
