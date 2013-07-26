@@ -265,6 +265,7 @@ int main(int argc, char *argv[])
 
 	memset(&opt, 0, sizeof(opt));
 	opt.max_parents = -1;
+ 	opt.limit = -1;
 
 	for (i = 1; i < argc; ++i) {
 		a = argv[i];
@@ -294,8 +295,8 @@ int main(int argc, char *argv[])
 			if (!match_int(&opt.limit, a + 1, 0))
 				usage("Invalid limit on number of commits", a);
 		} else if (!strcmp(a, "-n")) {
-			if (i + 1 == argc || !match_int(&opt.limit, argv[i], 0))
-				usage("Argument -n not followed by valid count", argv[i]);
+			if (i + 1 == argc || !match_int(&opt.limit, argv[i + 1], 0))
+				usage("Argument -n not followed by valid count", argv[i + 1]);
 			else
 				++i;
 		}
@@ -363,7 +364,7 @@ int main(int argc, char *argv[])
 
 		if (count++ < opt.skip)
 			continue;
-		if (printed++ >= opt.limit) {
+		if (opt.limit != -1 && printed++ >= opt.limit) {
 			git_commit_free(commit);
 			break;
 		}
