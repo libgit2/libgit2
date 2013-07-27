@@ -172,14 +172,14 @@ $(function() {
       var list = $('<ul>')
       for(var i in sigHist.exists) {
         ver = sigHist.exists[i]
-        link = $('<li>').append($('<a>').attr('href', '#' + groupLink(gname, fname, ver)).append(ver))
+        link = $('<a>').attr('href', '#' + groupLink(gname, fname, ver)).append(ver)
         if(sigHist.changes[ver]) {
           link.addClass('changed')
         }
         if(ver == docurium.get('version')) {
           link.addClass('current')
         }
-        list.append(link)
+        list.append($('<li>').append(link))
       }
       sigs.append(list)
       content.append(sigs)
@@ -537,10 +537,13 @@ $(function() {
 
     search: function(data) {
       var searchResults = []
-      var value = $('#search-field').attr('value')
+      var value = $('#search-field').val()
+
       if (value.length < 3) {
-        return false
+        docurium.showIndexPage(false)
+        return
       }
+
       this.searchResults = []
 
       ws.navigate(searchLink(value))
@@ -634,7 +637,7 @@ $(function() {
 
     search: function(version, query) {
       docurium.setVersion(version)
-      $('#search-field').attr('value', query)
+      $('#search-field').val(query)
       docurium.search()
     },
 
