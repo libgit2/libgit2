@@ -427,8 +427,15 @@ int git_revwalk_new(git_revwalk **revwalk_out, git_repository *repo)
 	if (git_pqueue_init(&walk->iterator_time, 8, git_commit_list_time_cmp) < 0 ||
 		git_vector_init(&walk->twos, 4, NULL) < 0 ||
 		git_pool_init(&walk->commit_pool, 1,
-			git_pool__suggest_items_per_page(COMMIT_ALLOC) * COMMIT_ALLOC) < 0)
+			git_pool__suggest_items_per_page(COMMIT_ALLOC) * COMMIT_ALLOC) < 0) {
+		git_oidmap_free(walk->commits);
+		if (&walk->iterator_time)
+			git_pqueue_free(&walk->iterator_time);
+		if (&walk->twos)
+			git_vector_free(&walk->twos);
+		git__free(walk);
 		return -1;
+	}
 
 	walk->get_next = &revwalk_next_unsorted;
 	walk->enqueue = &revwalk_enqueue_unsorted;

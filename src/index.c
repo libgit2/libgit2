@@ -325,6 +325,7 @@ int git_index_open(git_index **index_out, const char *index_path)
 
 	index = git__calloc(1, sizeof(git_index));
 	GITERR_CHECK_ALLOC(index);
+	// memset(git_index,0 , sizeof(*git_index)); needed?
 
 	if (index_path != NULL) {
 		index->index_file_path = git__strdup(index_path);
@@ -337,8 +338,16 @@ int git_index_open(git_index **index_out, const char *index_path)
 
 	if (git_vector_init(&index->entries, 32, index_cmp) < 0 ||
 		git_vector_init(&index->names, 32, conflict_name_cmp) < 0 ||
-		git_vector_init(&index->reuc, 32, reuc_cmp) < 0)
+		git_vector_init(&index->reuc, 32, reuc_cmp) < 0) {
+		if (&index->entries)
+			git_vector_free(&index->entries);
+		if (&index->names)
+			git_vector_free(&index->names);
+		if (index->index_file_path)
+			git__free(index->index_file_path);
+		git__free(index);
 		return -1;
+	}
 
 	index->entries_cmp_path = index_cmp_path;
 	index->entries_search = index_srch;
@@ -671,8 +680,10 @@ static int index_entry_reuc_init(git_index_reuc_entry **reuc_out,
 	GITERR_CHECK_ALLOC(reuc);
 
 	reuc->path = git__strdup(path);
-	if (reuc->path == NULL)
+	if (reuc->path == NULL) {
+		git__free(reuc);
 		return -1;
+	}
 
 	if ((reuc->mode[0] = ancestor_mode) > 0)
 		git_oid_cpy(&reuc->oid[0], ancestor_oid);
@@ -699,8 +710,10 @@ static git_index_entry *index_entry_dup(const git_index_entry *source_entry)
 
 	/* duplicate the path string so we own it */
 	entry->path = git__strdup(entry->path);
-	if (!entry->path)
+	if (!entry->path) {
+		git__free(entry);
 		return NULL;
+	}
 
 	return entry;
 }
@@ -1485,8 +1498,10 @@ static int read_conflict_names(git_index *index, const char *buffer, size_t size
 		read_conflict_name(conflict_name->ours);
 		read_conflict_name(conflict_name->theirs);
 
-		if (git_vector_insert(&index->names, conflict_name) < 0)
+		if (git_vector_insert(&index->names, conflict_name) < 0) {
+			git__free(conflict_name);
 			return -1;
+		}
 	}
 
 #undef read_conflict_name
@@ -1656,8 +1671,10 @@ static int parse_index(git_index *index, const char *buffer, size_t buffer_size)
 		entry_size = read_entry(entry, buffer, buffer_size);
 
 		/* 0 bytes read means an object corruption */
-		if (entry_size == 0)
+		if (entry_size == 0) {
+			git__free(entry);
 			return index_error_invalid("invalid entry");
+		}
 
 		if (git_vector_insert(&index->entries, entry) < 0)
 			return -1;

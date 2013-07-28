@@ -224,6 +224,7 @@ static int fetch_setup_walk(git_revwalk **out, git_repository *repo)
 on_error:
 	git_reference_free(ref);
 	git_strarray_free(&refs);
+	git_revwalk_free(walk);
 	return -1;
 }
 
