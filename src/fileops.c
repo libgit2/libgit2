@@ -222,6 +222,7 @@ int git_futils_writebuffer(
 	if ((error = p_write(fd, git_buf_cstr(buf), git_buf_len(buf))) < 0) {
 		giterr_set(GITERR_OS, "Could not write to '%s'", path);
 		(void)p_close(fd);
+		return error;
 	}
 
 	if ((error = p_close(fd)) < 0)
