@@ -1347,13 +1347,21 @@ git_merge_diff_list *git_merge_diff_list__alloc(git_repository *repo)
 	if (diff_list == NULL)
 		return NULL;
 
+	// memset(diff_list, 0, sizeof(*diff_list)); needed?
+
 	diff_list->repo = repo;
 
 	if (git_vector_init(&diff_list->staged, 0, NULL) < 0 ||
 		git_vector_init(&diff_list->conflicts, 0, NULL) < 0 ||
 		git_vector_init(&diff_list->resolved, 0, NULL) < 0 ||
-		git_pool_init(&diff_list->pool, 1, 0) < 0)
+		git_pool_init(&diff_list->pool, 1, 0) < 0) {
+		if (&diff_list->staged)
+			git_vector_free(&diff_list->staged);
+		if (&diff_list->conflicts)
+			git_vector_free(&diff_list->conflicts);
+		git__free(diff_list);
 		return NULL;
+	}
 
 	return diff_list;
 }

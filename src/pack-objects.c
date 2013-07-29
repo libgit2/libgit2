@@ -563,6 +563,7 @@ static git_pobject **compute_write_order(git_packbuilder *pb)
 
 	if (wo_end != pb->nr_objects) {
 		giterr_set(GITERR_INVALID, "invalid write order");
+		git__free(wo);
 		return NULL;
 	}
 
