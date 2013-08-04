@@ -871,7 +871,7 @@ void test_diff_rename__from_deleted_to_split(void)
 struct rename_expected
 {
 	size_t len;
-	
+
 	unsigned int *status;
 	const char **sources;
 	const char **targets;
@@ -1129,7 +1129,7 @@ void test_diff_rename__can_rename_from_rewrite(void)
 
 	cl_git_pass(
 		git_diff_tree_to_index(&diff, g_repo, tree, index, &diffopts));
-	
+
 	findopts.flags |= GIT_DIFF_FIND_AND_BREAK_REWRITES |
 		GIT_DIFF_FIND_REWRITES |
 		GIT_DIFF_FIND_RENAMES_FROM_REWRITES;
@@ -1334,8 +1334,6 @@ void test_diff_rename__many_files(void)
 	int i, j;
 	git_buf b = GIT_BUF_INIT;
 
-/*
-
 	cl_git_pass(git_repository_index(&index, g_repo));
 
 	for (i = 0; i < 100; i += 1) {
@@ -1354,7 +1352,6 @@ void test_diff_rename__many_files(void)
 	git_index_free(index);
 
 	test_with_many(100);
-*/
 }
 
 void test_diff_rename__again_many_files(void)
@@ -1363,8 +1360,6 @@ void test_diff_rename__again_many_files(void)
 	char tmp[64];
 	int i;
 	git_buf b = GIT_BUF_INIT;
-
-/*
 
 	cl_git_pass(git_repository_index(&index, g_repo));
 
@@ -1386,5 +1381,4 @@ void test_diff_rename__again_many_files(void)
 	git_index_free(index);
 
 	test_with_many(2500);
-*/
 }
