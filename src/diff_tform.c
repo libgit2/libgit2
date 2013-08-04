@@ -947,6 +947,11 @@ find_best_matches:
 				src->new_file.flags |= GIT_DIFF_FLAG_VALID_OID;
 
 				num_updates++;
+
+				if (src2tgt[t].similarity > 0 && src2tgt[t].idx > t) {
+					/* what used to be at src t is now at src s */
+					tgt2src[src2tgt[t].idx].idx = (uint32_t)s;
+				}
 			}
 		}
 
@@ -996,7 +1001,7 @@ find_best_matches:
 					num_rewrites--;
 				}
 				/* otherwise, if we just overwrote a source, update mapping */
-				else if (s > t && src2tgt[t].similarity > 0) {
+				else if (src2tgt[t].similarity > 0 && src2tgt[t].idx > t) {
 					/* what used to be at src t is now at src s */
 					tgt2src[src2tgt[t].idx].idx = (uint32_t)s;
 				}
