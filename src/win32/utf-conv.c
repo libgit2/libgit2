@@ -77,5 +77,5 @@ int git__utf8_to_16(wchar_t *dest, size_t length, const char *src)
 
 int git__utf16_to_8(char *out, const wchar_t *input)
 {
-	return WideCharToMultiByte(CP_UTF8, 0, input, -1, out, GIT_WIN_PATH, NULL, NULL);
+	return WideCharToMultiByte(CP_UTF8, 0, input, -1, out, GIT_WIN_PATH_UTF8, NULL, NULL);
 }

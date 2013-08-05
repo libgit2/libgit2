@@ -10,7 +10,8 @@
 #ifndef INCLUDE_git_utfconv_h__
 #define INCLUDE_git_utfconv_h__
 
-#define GIT_WIN_PATH (260 + 1)
+#define GIT_WIN_PATH_UTF16 (260 + 1)
+#define GIT_WIN_PATH_UTF8  (260 * 4 + 1)
 
 int git__utf8_to_16(wchar_t *dest, size_t length, const char *src);
 int git__utf16_to_8(char *dest, const wchar_t *src);

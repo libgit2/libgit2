@@ -16,8 +16,8 @@
 
 int p_unlink(const char *path)
 {
-	wchar_t buf[GIT_WIN_PATH];
-	git__utf8_to_16(buf, GIT_WIN_PATH, path);
+	wchar_t buf[GIT_WIN_PATH_UTF16];
+	git__utf8_to_16(buf, GIT_WIN_PATH_UTF16, path);
 	_wchmod(buf, 0666);
 	return _wunlink(buf);
 }
@@ -59,10 +59,10 @@ static int do_lstat(
 	const char *file_name, struct stat *buf, int posix_enotdir)
 {
 	WIN32_FILE_ATTRIBUTE_DATA fdata;
-	wchar_t fbuf[GIT_WIN_PATH], lastch;
+	wchar_t fbuf[GIT_WIN_PATH_UTF16], lastch;
 	int flen;
 
-	flen = git__utf8_to_16(fbuf, GIT_WIN_PATH, file_name);
+	flen = git__utf8_to_16(fbuf, GIT_WIN_PATH_UTF16, file_name);
 
 	/* truncate trailing slashes */
 	for (; flen > 0; --flen) {
@@ -108,10 +108,10 @@ static int do_lstat(
 		 * the length of the path pointed to, which we expect everywhere else
 		 */
 		if (S_ISLNK(fMode)) {
-			char target[GIT_WIN_PATH];
+			char target[GIT_WIN_PATH_UTF8];
 			int readlink_result;
 
-			readlink_result = p_readlink(file_name, target, GIT_WIN_PATH);
+			readlink_result = p_readlink(file_name, target, GIT_WIN_PATH_UTF8);
 
 			if (readlink_result == -1)
 				return -1;
@@ -165,7 +165,7 @@ int p_readlink(const char *link, char *target, size_t target_len)
 	static fpath_func pGetFinalPath = NULL;
 	HANDLE hFile;
 	DWORD dwRet;
-	wchar_t link_w[GIT_WIN_PATH];
+	wchar_t link_w[GIT_WIN_PATH_UTF16];
 	wchar_t* target_w;
 	int error = 0;
 
@@ -188,7 +188,7 @@ int p_readlink(const char *link, char *target, size_t target_len)
 		}
 	}
 
-	git__utf8_to_16(link_w, GIT_WIN_PATH, link);
+	git__utf8_to_16(link_w, GIT_WIN_PATH_UTF16, link);
 
 	hFile = CreateFileW(link_w,			// file to open
 			GENERIC_READ,			// open for reading
@@ -254,10 +254,10 @@ int p_symlink(const char *old, const char *new)
 
 int p_open(const char *path, int flags, ...)
 {
-	wchar_t buf[GIT_WIN_PATH];
+	wchar_t buf[GIT_WIN_PATH_UTF16];
 	mode_t mode = 0;
 
-	git__utf8_to_16(buf, GIT_WIN_PATH, path);
+	git__utf8_to_16(buf, GIT_WIN_PATH_UTF16, path);
 
 	if (flags & O_CREAT) {
 		va_list arg_list;
@@ -272,8 +272,8 @@ int p_open(const char *path, int flags, ...)
 
 int p_creat(const char *path, mode_t mode)
 {
-	wchar_t buf[GIT_WIN_PATH];
-	git__utf8_to_16(buf, GIT_WIN_PATH, path);
+	wchar_t buf[GIT_WIN_PATH_UTF16];
+	git__utf8_to_16(buf, GIT_WIN_PATH_UTF16, path);
 	return _wopen(buf, _O_WRONLY | _O_CREAT | _O_TRUNC | _O_BINARY, mode);
 }
 
@@ -299,7 +299,7 @@ int p_getcwd(char *buffer_out, size_t size)
 
 int p_stat(const char* path, struct stat* buf)
 {
-	char target[GIT_WIN_PATH];
+	char target[GIT_WIN_PATH_UTF8];
 	int error = 0;
 
 	error = do_lstat(path, buf, 0);
@@ -307,7 +307,7 @@ int p_stat(const char* path, struct stat* buf)
 	/* We need not do this in a loop to unwind chains of symlinks since
 	 * p_readlink calls GetFinalPathNameByHandle which does it for us. */
 	if (error >= 0 && S_ISLNK(buf->st_mode) &&
-		(error = p_readlink(path, target, GIT_WIN_PATH)) >= 0)
+		(error = p_readlink(path, target, GIT_WIN_PATH_UTF8)) >= 0)
 		error = do_lstat(target, buf, 0);
 
 	return error;
@@ -315,23 +315,23 @@ int p_stat(const char* path, struct stat* buf)
 
 int p_chdir(const char* path)
 {
-	wchar_t buf[GIT_WIN_PATH];
-	git__utf8_to_16(buf, GIT_WIN_PATH, path);
+	wchar_t buf[GIT_WIN_PATH_UTF16];
+	git__utf8_to_16(buf, GIT_WIN_PATH_UTF16, path);
 	return _wchdir(buf);
 }
 
 int p_chmod(const char* path, mode_t mode)
 {
-	wchar_t buf[GIT_WIN_PATH];
-	git__utf8_to_16(buf, GIT_WIN_PATH, path);
+	wchar_t buf[GIT_WIN_PATH_UTF16];
+	git__utf8_to_16(buf, GIT_WIN_PATH_UTF16, path);
 	return _wchmod(buf, mode);
 }
 
 int p_rmdir(const char* path)
 {
 	int error;
-	wchar_t buf[GIT_WIN_PATH];
-	git__utf8_to_16(buf, GIT_WIN_PATH, path);
+	wchar_t buf[GIT_WIN_PATH_UTF16];
+	git__utf8_to_16(buf, GIT_WIN_PATH_UTF16, path);
 
 	error = _wrmdir(buf);
 
@@ -347,24 +347,24 @@ int p_rmdir(const char* path)
 
 int p_hide_directory__w32(const char *path)
 {
-	wchar_t buf[GIT_WIN_PATH];
-	git__utf8_to_16(buf, GIT_WIN_PATH, path);
+	wchar_t buf[GIT_WIN_PATH_UTF16];
+	git__utf8_to_16(buf, GIT_WIN_PATH_UTF16, path);
 	return (SetFileAttributesW(buf, FILE_ATTRIBUTE_HIDDEN) != 0) ? 0 : -1;
 }
 
 char *p_realpath(const char *orig_path, char *buffer)
 {
 	int ret;
-	wchar_t orig_path_w[GIT_WIN_PATH];
-	wchar_t buffer_w[GIT_WIN_PATH];
+	wchar_t orig_path_w[GIT_WIN_PATH_UTF16];
+	wchar_t buffer_w[GIT_WIN_PATH_UTF16];
 
-	git__utf8_to_16(orig_path_w, GIT_WIN_PATH, orig_path);
+	git__utf8_to_16(orig_path_w, GIT_WIN_PATH_UTF16, orig_path);
 
 	/* Implicitly use GetCurrentDirectory which can be a threading issue */
-	ret = GetFullPathNameW(orig_path_w, GIT_WIN_PATH, buffer_w, NULL);
+	ret = GetFullPathNameW(orig_path_w, GIT_WIN_PATH_UTF16, buffer_w, NULL);
 
 	/* According to MSDN, a return value equals to zero means a failure. */
-	if (ret == 0 || ret > GIT_WIN_PATH)
+	if (ret == 0 || ret > GIT_WIN_PATH_UTF16)
 		buffer = NULL;
 
 	else if (GetFileAttributesW(buffer_w) == INVALID_FILE_ATTRIBUTES) {
@@ -448,18 +448,18 @@ int p_setenv(const char* name, const char* value, int overwrite)
 
 int p_access(const char* path, mode_t mode)
 {
-	wchar_t buf[GIT_WIN_PATH];
-	git__utf8_to_16(buf, GIT_WIN_PATH, path);
+	wchar_t buf[GIT_WIN_PATH_UTF16];
+	git__utf8_to_16(buf, GIT_WIN_PATH_UTF16, path);
 	return _waccess(buf, mode);
 }
 
 int p_rename(const char *from, const char *to)
 {
-	wchar_t wfrom[GIT_WIN_PATH];
-	wchar_t wto[GIT_WIN_PATH];
+	wchar_t wfrom[GIT_WIN_PATH_UTF16];
+	wchar_t wto[GIT_WIN_PATH_UTF16];
 
-	git__utf8_to_16(wfrom, GIT_WIN_PATH, from);
-	git__utf8_to_16(wto, GIT_WIN_PATH, to);
+	git__utf8_to_16(wfrom, GIT_WIN_PATH_UTF16, from);
+	git__utf8_to_16(wto, GIT_WIN_PATH_UTF16, to);
 	return MoveFileExW(wfrom, wto, MOVEFILE_REPLACE_EXISTING | MOVEFILE_COPY_ALLOWED) ? 0 : -1;
 }
 

@@ -11,7 +11,7 @@
 
 struct git__dirent {
 	int d_ino;
-	char d_name[261];
+	char d_name[260*4+1];
 };
 
 typedef struct {
