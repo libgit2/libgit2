@@ -153,6 +153,65 @@ void test_status_renames__head2index_two(void)
 	git_index_free(index);
 }
 
+void test_status_renames__head2index_no_rename_from_rewrite(void)
+{
+	git_index *index;
+	git_status_list *statuslist;
+	git_status_options opts = GIT_STATUS_OPTIONS_INIT;
+	struct status_entry expected[] = {
+		{ GIT_STATUS_INDEX_MODIFIED, "ikeepsix.txt", "ikeepsix.txt" },
+		{ GIT_STATUS_INDEX_MODIFIED, "sixserving.txt", "sixserving.txt" },
+	};
+
+	opts.flags |= GIT_STATUS_OPT_RENAMES_HEAD_TO_INDEX;
+
+	cl_git_pass(git_repository_index(&index, g_repo));
+
+	rename_file(g_repo, "ikeepsix.txt", "_temp_.txt");
+	rename_file(g_repo, "sixserving.txt", "ikeepsix.txt");
+	rename_file(g_repo, "_temp_.txt", "sixserving.txt");
+
+	cl_git_pass(git_index_add_bypath(index, "ikeepsix.txt"));
+	cl_git_pass(git_index_add_bypath(index, "sixserving.txt"));
+	cl_git_pass(git_index_write(index));
+
+	cl_git_pass(git_status_list_new(&statuslist, g_repo, &opts));
+	test_status(statuslist, expected, 2);
+	git_status_list_free(statuslist);
+
+	git_index_free(index);
+}
+
+void test_status_renames__head2index_rename_from_rewrite(void)
+{
+	git_index *index;
+	git_status_list *statuslist;
+	git_status_options opts = GIT_STATUS_OPTIONS_INIT;
+	struct status_entry expected[] = {
+		{ GIT_STATUS_INDEX_RENAMED, "sixserving.txt", "ikeepsix.txt" },
+		{ GIT_STATUS_INDEX_RENAMED, "ikeepsix.txt", "sixserving.txt" },
+	};
+
+	opts.flags |= GIT_STATUS_OPT_RENAMES_HEAD_TO_INDEX;
+	opts.flags |= GIT_STATUS_OPT_RENAMES_FROM_REWRITES;
+
+	cl_git_pass(git_repository_index(&index, g_repo));
+
+	rename_file(g_repo, "ikeepsix.txt", "_temp_.txt");
+	rename_file(g_repo, "sixserving.txt", "ikeepsix.txt");
+	rename_file(g_repo, "_temp_.txt", "sixserving.txt");
+
+	cl_git_pass(git_index_add_bypath(index, "ikeepsix.txt"));
+	cl_git_pass(git_index_add_bypath(index, "sixserving.txt"));
+	cl_git_pass(git_index_write(index));
+
+	cl_git_pass(git_status_list_new(&statuslist, g_repo, &opts));
+	test_status(statuslist, expected, 2);
+	git_status_list_free(statuslist);
+
+	git_index_free(index);
+}
+
 void test_status_renames__index2workdir_one(void)
 {
 	git_status_list *statuslist;
@@ -195,6 +254,32 @@ void test_status_renames__index2workdir_two(void)
 	cl_git_pass(git_status_list_new(&statuslist, g_repo, &opts));
 	test_status(statuslist, expected, 4);
 	git_status_list_free(statuslist);
+}
+
+void test_status_renames__index2workdir_rename_from_rewrite(void)
+{
+	git_index *index;
+	git_status_list *statuslist;
+	git_status_options opts = GIT_STATUS_OPTIONS_INIT;
+	struct status_entry expected[] = {
+		{ GIT_STATUS_WT_RENAMED, "sixserving.txt", "ikeepsix.txt" },
+		{ GIT_STATUS_WT_RENAMED, "ikeepsix.txt", "sixserving.txt" },
+	};
+
+	opts.flags |= GIT_STATUS_OPT_RENAMES_INDEX_TO_WORKDIR;
+	opts.flags |= GIT_STATUS_OPT_RENAMES_FROM_REWRITES;
+
+	cl_git_pass(git_repository_index(&index, g_repo));
+
+	rename_file(g_repo, "ikeepsix.txt", "_temp_.txt");
+	rename_file(g_repo, "sixserving.txt", "ikeepsix.txt");
+	rename_file(g_repo, "_temp_.txt", "sixserving.txt");
+
+	cl_git_pass(git_status_list_new(&statuslist, g_repo, &opts));
+	test_status(statuslist, expected, 2);
+	git_status_list_free(statuslist);
+
+	git_index_free(index);
 }
 
 void test_status_renames__both_one(void)
@@ -269,6 +354,50 @@ void test_status_renames__both_two(void)
 
 	cl_git_pass(git_status_list_new(&statuslist, g_repo, &opts));
 	test_status(statuslist, expected, 4);
+	git_status_list_free(statuslist);
+
+	git_index_free(index);
+}
+
+
+void test_status_renames__both_rename_from_rewrite(void)
+{
+	git_index *index;
+	git_status_list *statuslist;
+	git_status_options opts = GIT_STATUS_OPTIONS_INIT;
+	struct status_entry expected[] = {
+		{ GIT_STATUS_INDEX_RENAMED | GIT_STATUS_WT_RENAMED,
+		  "songof7cities.txt", "ikeepsix.txt" },
+		{ GIT_STATUS_INDEX_RENAMED | GIT_STATUS_WT_RENAMED,
+		  "ikeepsix.txt", "sixserving.txt" },
+		{ GIT_STATUS_INDEX_RENAMED | GIT_STATUS_WT_RENAMED,
+		  "sixserving.txt", "songof7cities.txt" },
+	};
+
+	opts.flags |= GIT_STATUS_OPT_INCLUDE_UNTRACKED;
+	opts.flags |= GIT_STATUS_OPT_RENAMES_HEAD_TO_INDEX;
+	opts.flags |= GIT_STATUS_OPT_RENAMES_INDEX_TO_WORKDIR;
+	opts.flags |= GIT_STATUS_OPT_RENAMES_FROM_REWRITES;
+
+	cl_git_pass(git_repository_index(&index, g_repo));
+
+	rename_file(g_repo, "ikeepsix.txt", "_temp_.txt");
+	rename_file(g_repo, "sixserving.txt", "ikeepsix.txt");
+	rename_file(g_repo, "songof7cities.txt", "sixserving.txt");
+	rename_file(g_repo, "_temp_.txt", "songof7cities.txt");
+
+	cl_git_pass(git_index_add_bypath(index, "ikeepsix.txt"));
+	cl_git_pass(git_index_add_bypath(index, "sixserving.txt"));
+	cl_git_pass(git_index_add_bypath(index, "songof7cities.txt"));
+	cl_git_pass(git_index_write(index));
+
+	rename_file(g_repo, "songof7cities.txt", "_temp_.txt");
+	rename_file(g_repo, "ikeepsix.txt", "songof7cities.txt");
+	rename_file(g_repo, "sixserving.txt", "ikeepsix.txt");
+	rename_file(g_repo, "_temp_.txt", "sixserving.txt");
+
+	cl_git_pass(git_status_list_new(&statuslist, g_repo, &opts));
+	test_status(statuslist, expected, 3);
 	git_status_list_free(statuslist);
 
 	git_index_free(index);
