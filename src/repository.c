@@ -10,6 +10,7 @@
 #include "git2/object.h"
 #include "git2/refdb.h"
 #include "git2/sys/repository.h"
+#include "git2/sys/filter.h"
 
 #include "common.h"
 #include "repository.h"
@@ -109,6 +110,7 @@ void git_repository_free(git_repository *repo)
 
 	git_repository__cleanup(repo);
 
+	git_filters__free(&repo->filters);
 	git_cache_free(&repo->objects);
 	git_submodule_config_free(repo);
 
@@ -150,7 +152,8 @@ static git_repository *repository_alloc(void)
 	if (!repo)
 		return NULL;
 
-	if (git_cache_init(&repo->objects) < 0) {
+	if (git_filters__init(&repo->filters) < 0 ||
+		git_cache_init(&repo->objects) < 0) {
 		git__free(repo);
 		return NULL;
 	}
@@ -222,6 +225,17 @@ static int load_workdir(git_repository *repo, git_buf *parent_path)
 	GITERR_CHECK_ALLOC(repo->workdir);
 
 	return 0;
+}
+
+static int load_filters(git_repository *repo)
+{
+	git_filter *filter;
+	int error = -1;
+
+	if ((error = git_filter_crlf_new(&filter, repo)) == 0)
+		error = git_filters__add(&repo->filters, filter, GIT_FILTER_CRLF_PRIORITY);
+
+	return error;
 }
 
 /*
@@ -464,7 +478,8 @@ int git_repository_open_ext(
 	if ((flags & GIT_REPOSITORY_OPEN_BARE) != 0)
 		repo->is_bare = 1;
 	else if ((error = load_config_data(repo)) < 0 ||
-		(error = load_workdir(repo, &parent)) < 0)
+		(error = load_workdir(repo, &parent)) < 0 ||
+		(error = load_filters(repo)) < 0)
 	{
 		git_repository_free(repo);
 		return error;
@@ -792,6 +807,18 @@ int git_repository_set_namespace(git_repository *repo, const char *namespace)
 const char *git_repository_get_namespace(git_repository *repo)
 {
 	return repo->namespace;
+}
+
+int git_repository_add_filter(git_repository *repo, git_filter *filter, int priority)
+{
+	assert(repo && filter);
+
+	if (filter->version != GIT_FILTER_VERSION) {
+		giterr_set(GITERR_REPOSITORY, "Invalid filter version %d.", filter->version);
+		return -1;
+	}
+
+	return git_filters__add(&repo->filters, filter, priority);
 }
 
 static int check_repositoryformatversion(git_config *config)
@@ -1675,7 +1702,7 @@ int git_repository_hashfile(
 
 	/* passing empty string for "as_path" indicated --no-filters */
 	if (strlen(as_path) > 0) {
-		error = git_filters_load(&filters, repo, as_path, GIT_FILTER_TO_ODB);
+		error = git_filters__load(&filters, repo, as_path, GIT_FILTER_TO_ODB);
 		if (error < 0)
 			return error;
 	} else {
@@ -1702,12 +1729,12 @@ int git_repository_hashfile(
 		goto cleanup;
 	}
 
-	error = git_odb__hashfd_filtered(out, fd, (size_t)len, type, &filters);
+	error = git_odb__hashfd_filtered(out, fd, (size_t)len, type, &filters, as_path);
 
 cleanup:
 	if (fd >= 0)
 		p_close(fd);
-	git_filters_free(&filters);
+	git_vector_free(&filters);
 	git_buf_free(&full_path);
 
 	return error;

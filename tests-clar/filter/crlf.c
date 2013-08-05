@@ -5,8 +5,11 @@
 #include "buf_text.h"
 
 static git_repository *g_repo = NULL;
-#define NUM_TEST_OBJECTS 8
+
+#define NUM_TEST_OBJECTS 9
+
 static git_oid g_oids[NUM_TEST_OBJECTS];
+
 static const char *g_raw[NUM_TEST_OBJECTS] = {
 	"",
 	"foo\nbar\n",
@@ -15,9 +18,13 @@ static const char *g_raw[NUM_TEST_OBJECTS] = {
 	"foo\nbar\rboth\r\nreversed\n\ragain\nproblems\r",
 	"123\n\000\001\002\003\004abc\255\254\253\r\n",
 	"\xEF\xBB\xBFThis is UTF-8\n",
+	"\xEF\xBB\xBF\xE3\x81\xBB\xE3\x81\x92\xE3\x81\xBB\xE3\x81\x92\r\n\xE3\x81\xBB\xE3\x81\x92\xE3\x81\xBB\xE3\x81\x92\r\n",
 	"\xFE\xFF\x00T\x00h\x00i\x00s\x00!"
 };
-static git_off_t g_len[NUM_TEST_OBJECTS] = { -1, -1, -1, -1, -1, 17, -1, 12 };
+
+static git_off_t g_len[NUM_TEST_OBJECTS] =
+	{ -1, -1, -1, -1, -1, 17, -1, -1, 12 };
+
 static git_buf_text_stats g_stats[NUM_TEST_OBJECTS] = {
 	{ 0, 0, 0, 0, 0, 0, 0 },
 	{ 0, 0, 0, 2, 0, 6, 0 },
@@ -26,6 +33,7 @@ static git_buf_text_stats g_stats[NUM_TEST_OBJECTS] = {
 	{ 0, 0, 4, 4, 1, 31, 0 },
 	{ 0, 1, 1, 2, 1, 9, 5 },
 	{ GIT_BOM_UTF8, 0, 0, 1, 0, 16, 0 },
+	{ GIT_BOM_UTF8, 0, 2, 2, 2, 27, 0 },
 	{ GIT_BOM_UTF16_BE, 5, 0, 0, 0, 7, 5 },
 };
 static git_buf g_crlf_filtered[NUM_TEST_OBJECTS] = {
@@ -36,10 +44,11 @@ static git_buf g_crlf_filtered[NUM_TEST_OBJECTS] = {
 	{ "foo\nbar\rboth\nreversed\n\ragain\nproblems\r", 0, 38 },
 	{ "123\n\000\001\002\003\004abc\255\254\253\n", 0, 16 },
 	{ "\xEF\xBB\xBFThis is UTF-8\n", 0, 17 },
+	{ "\xEF\xBB\xBF\xE3\x81\xBB\xE3\x81\x92\xE3\x81\xBB\xE3\x81\x92\n\xE3\x81\xBB\xE3\x81\x92\xE3\x81\xBB\xE3\x81\x92\n", 0, 29 },
 	{ "\xFE\xFF\x00T\x00h\x00i\x00s\x00!", 0, 12 }
 };
 
-void test_object_blob_filter__initialize(void)
+void test_filter_crlf__initialize(void)
 {
 	int i;
 
@@ -58,14 +67,14 @@ void test_object_blob_filter__initialize(void)
 	}
 }
 
-void test_object_blob_filter__cleanup(void)
+void test_filter_crlf__cleanup(void)
 {
 	git_repository_free(g_repo);
 	g_repo = NULL;
 	cl_fixture_cleanup("empty_standard_repo");
 }
 
-void test_object_blob_filter__unfiltered(void)
+void test_filter_crlf__unfiltered(void)
 {
 	int i;
 	git_blob *blob;
@@ -78,7 +87,7 @@ void test_object_blob_filter__unfiltered(void)
 	}
 }
 
-void test_object_blob_filter__stats(void)
+void test_filter_crlf__stats(void)
 {
 	int i;
 	git_blob *blob;
@@ -96,7 +105,7 @@ void test_object_blob_filter__stats(void)
 	git_buf_free(&buf);
 }
 
-void test_object_blob_filter__to_odb(void)
+void test_filter_crlf__to_odb(void)
 {
 	git_vector filters = GIT_VECTOR_INIT;
 	git_config *cfg;

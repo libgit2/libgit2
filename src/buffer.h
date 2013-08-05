@@ -55,7 +55,7 @@ GIT_INLINE(int) git_buf_grow(git_buf *buf, size_t target_size)
 extern void git_buf_free(git_buf *buf);
 extern void git_buf_swap(git_buf *buf_a, git_buf *buf_b);
 extern char *git_buf_detach(git_buf *buf);
-extern void git_buf_attach(git_buf *buf, char *ptr, size_t asize);
+extern void git_buf_attach(git_buf *buf, char *ptr, size_t size, size_t asize);
 
 /**
  * Test if there have been any reallocation failures with this git_buf.

@@ -10,85 +10,148 @@
 #include "hash.h"
 #include "filter.h"
 #include "repository.h"
-#include "git2/config.h"
 #include "blob.h"
+#include "git2/config.h"
+#include "git2/sys/filter.h"
 
-int git_filters_load(git_vector *filters, git_repository *repo, const char *path, int mode)
+#define filter_foreach(v, mode, iter, elem) \
+	for ((iter) = ((mode) == GIT_FILTER_TO_ODB) ? 0 : (v)->length - 1; \
+		(iter) < (((mode) == GIT_FILTER_TO_ODB) ? (v)->length : SIZE_MAX) && ((elem) = (v)->contents[(iter)], 1); \
+		(iter) = ((mode) == GIT_FILTER_TO_ODB) ? (iter) + 1 : (iter) - 1)
+
+typedef struct
 {
-	int error;
+	git_filter *filter;
+	int priority;
+} filter_internal;
 
-	if (mode == GIT_FILTER_TO_ODB) {
-		/* Load the CRLF cleanup filter when writing to the ODB */
-		error = git_filter_add__crlf_to_odb(filters, repo, path);
-		if (error < 0)
-			return error;
-	} else {
-		error = git_filter_add__crlf_to_workdir(filters, repo, path);
-		if (error < 0)
-			return error;
-	}
+static int filter_cmp(const void *a, const void *b)
+{
+	const filter_internal *f_a = a;
+	const filter_internal *f_b = b;
 
-	return (int)filters->length;
+	if (f_a->priority < f_b->priority)
+		return -1;
+	else if (f_a->priority > f_b->priority)
+		return 1;
+
+	return 0;
 }
 
-void git_filters_free(git_vector *filters)
+int git_filters__init(git_vector *filters)
 {
-	size_t i;
-	git_filter *filter;
+	filters->_cmp = filter_cmp;
+	return 0;
+}
 
-	git_vector_foreach(filters, i, filter) {
-		if (filter->do_free != NULL)
-			filter->do_free(filter);
-		else
-			git__free(filter);
+int git_filters__add(git_vector *filters, git_filter *filter, int priority)
+{
+	filter_internal *f;
+
+	if ((f = git__calloc(1, sizeof(filter_internal))) == NULL)
+		return -1;
+
+	f->filter = filter;
+	f->priority = priority;
+
+	if (git_vector_insert(filters, f) < 0) {
+		git__free(f);
+		return -1;
+	}
+
+	git_vector_sort(filters);
+
+	return 0;
+}
+
+int git_filters__load(
+	git_vector *filters,
+	git_repository *repo,
+	const char *path,
+	git_filter_mode_t mode)
+{
+	filter_internal *f;
+	size_t i;
+	int error, count = 0;
+
+	filter_foreach(&repo->filters, mode, i, f) {
+		if (f->filter->should_apply(f->filter, path, mode)) {
+			if ((error = git_vector_insert(filters, f)) < 0)
+				return error;
+			
+			++count;
+		}
+	}
+
+	return count;
+}
+
+int git_filters__apply(
+	git_filterbuf **out,
+	git_vector *filters,
+	const char *path,
+	git_filter_mode_t mode,
+	const void *src,
+	size_t src_len)
+{
+	filter_internal *f;
+	void *cur;
+	void *dst = NULL;
+	size_t cur_len, dst_len = 0;
+	void (*cur_free)(void *);
+	size_t i;
+	int error = 0;
+	int filtered = 0;
+
+	*out = NULL;
+
+	if (src_len == 0)
+		return 0;
+
+	cur = (void *)src;
+	cur_len = src_len;
+
+	filter_foreach(filters, mode, i, f) {
+		if ((error = f->filter->apply(&dst, &dst_len, f->filter, path, mode, cur, cur_len)) < 0)
+			return error;
+
+		/* Filter cancelled application; do nothing. */
+		if (error == 0)
+			continue;
+
+		if (filtered)
+			cur_free(cur);
+
+		filtered++;
+
+		cur = dst;
+		cur_len = dst_len;
+		cur_free = f->filter->free_buf;
+	}
+
+	if (filtered) {
+		if ((*out = git__calloc(1, sizeof(git_filterbuf))) == NULL)
+			return -1;
+
+		(*out)->ptr = cur;
+		(*out)->len = cur_len;
+		(*out)->free = cur_free;
+	}
+
+	return filtered;
+}
+
+void git_filters__free(git_vector *filters)
+{
+	filter_internal *f;
+	size_t i;
+
+	git_vector_foreach(filters, i, f) {
+		if (f->filter->free)
+			f->filter->free(f->filter);
+
+		git__free(f);
 	}
 
 	git_vector_free(filters);
-}
-
-int git_filters_apply(git_buf *dest, git_buf *source, git_vector *filters)
-{
-	size_t i;
-	unsigned int src;
-	git_buf *dbuffer[2];
-
-	dbuffer[0] = source;
-	dbuffer[1] = dest;
-
-	src = 0;
-
-	if (git_buf_len(source) == 0) {
-		git_buf_clear(dest);
-		return 0;
-	}
-
-	/* Pre-grow the destination buffer to more or less the size
-	 * we expect it to have */
-	if (git_buf_grow(dest, git_buf_len(source)) < 0)
-		return -1;
-
-	for (i = 0; i < filters->length; ++i) {
-		git_filter *filter = git_vector_get(filters, i);
-		unsigned int dst = 1 - src;
-
-		git_buf_clear(dbuffer[dst]);
-
-		/* Apply the filter from dbuffer[src] to the other buffer;
-		 * if the filtering is canceled by the user mid-filter,
-		 * we skip to the next filter without changing the source
-		 * of the double buffering (so that the text goes through
-		 * cleanly).
-		 */
-		if (filter->apply(filter, dbuffer[dst], dbuffer[src]) == 0)
-			src = dst;
-
-		if (git_buf_oom(dbuffer[dst]))
-			return -1;
-	}
-
-	/* Ensure that the output ends up in dbuffer[1] (i.e. the dest) */
-	if (src != 1)
-		git_buf_swap(dest, source);
-
-	return 0;
 }

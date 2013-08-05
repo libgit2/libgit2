@@ -550,19 +550,19 @@ int git_diff__oid_for_file(
 	} else {
 		git_vector filters = GIT_VECTOR_INIT;
 
-		result = git_filters_load(&filters, repo, path, GIT_FILTER_TO_ODB);
+		result = git_filters__load(&filters, repo, path, GIT_FILTER_TO_ODB);
 		if (result >= 0) {
 			int fd = git_futils_open_ro(full_path.ptr);
 			if (fd < 0)
 				result = fd;
 			else {
 				result = git_odb__hashfd_filtered(
-					oid, fd, (size_t)size, GIT_OBJ_BLOB, &filters);
+					oid, fd, (size_t)size, GIT_OBJ_BLOB, &filters, path);
 				p_close(fd);
 			}
 		}
 
-		git_filters_free(&filters);
+		git_vector_free(&filters);
 	}
 
 cleanup:

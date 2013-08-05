@@ -8,6 +8,7 @@
 #include "git2/attr.h"
 #include "git2/blob.h"
 #include "git2/index.h"
+#include "git2/sys/filter.h"
 
 #include "common.h"
 #include "fileops.h"
@@ -16,17 +17,24 @@
 #include "buf_text.h"
 #include "repository.h"
 
+typedef enum {
+	GIT_CRLF_GUESS = -1,
+	GIT_CRLF_BINARY = 0,
+	GIT_CRLF_TEXT,
+	GIT_CRLF_INPUT,
+	GIT_CRLF_CRLF,
+	GIT_CRLF_AUTO,
+} git_crlf_t;
+
 struct crlf_attrs {
 	int crlf_action;
 	int eol;
 };
 
-struct crlf_filter {
-	git_filter f;
-	struct crlf_attrs attrs;
+typedef struct {
+	git_filter base;
 	git_repository *repo;
-	char path[GIT_FLEX_ARRAY];
-};
+} git_filter_crlf;
 
 static int check_crlf(const char *value)
 {
@@ -76,7 +84,10 @@ static int crlf_input_action(struct crlf_attrs *ca)
 	return ca->crlf_action;
 }
 
-static int crlf_load_attributes(struct crlf_attrs *ca, git_repository *repo, const char *path)
+static int crlf_load_attributes(
+	struct crlf_attrs *ca,
+	git_repository *repo,
+	const char *path)
 {
 #define NUM_CONV_ATTRS 3
 
@@ -90,27 +101,48 @@ static int crlf_load_attributes(struct crlf_attrs *ca, git_repository *repo, con
 	error = git_attr_get_many(attr_vals,
 		repo, 0, path, NUM_CONV_ATTRS, attr_names);
 
-	if (error == GIT_ENOTFOUND) {
+	if (error < 0 && error != GIT_ENOTFOUND)
+		return error;
+	else if (error == GIT_ENOTFOUND) {
 		ca->crlf_action = GIT_CRLF_GUESS;
 		ca->eol = GIT_EOL_UNSET;
-		return 0;
-	}
-
-	if (error == 0) {
+	} else {
 		ca->crlf_action = check_crlf(attr_vals[2]); /* text */
+
 		if (ca->crlf_action == GIT_CRLF_GUESS)
 			ca->crlf_action = check_crlf(attr_vals[0]); /* clrf */
 
 		ca->eol = check_eol(attr_vals[1]); /* eol */
-		return 0;
 	}
 
-	return -1;
+	/*
+	 * Use the core Git logic to see if we should perform CRLF for this file
+	 * based on its attributes & the value of `core.autocrlf`
+	 */
+	ca->crlf_action = crlf_input_action(ca);
+
+	/*
+	 * Determine if we should apply a filter based on this.
+	 */
+	if (ca->crlf_action == GIT_CRLF_BINARY)
+		return 0;
+
+	if (ca->crlf_action == GIT_CRLF_GUESS) {
+		int auto_crlf;
+
+		if ((error = git_repository__cvar(
+			&auto_crlf, repo, GIT_CVAR_AUTO_CRLF)) < 0)
+			return error;
+
+		if (auto_crlf == GIT_AUTO_CRLF_FALSE)
+			return 0;
+	}
+
+	return 1;
 }
 
-static int has_cr_in_index(git_filter *self)
+static int has_cr_in_index(git_filter_crlf *filter, const char *path)
 {
-	struct crlf_filter *filter = (struct crlf_filter *)self;
 	git_index *index;
 	const git_index_entry *entry;
 	git_blob *blob;
@@ -123,8 +155,8 @@ static int has_cr_in_index(git_filter *self)
 		return false;
 	}
 
-	if (!(entry = git_index_get_bypath(index, filter->path, 0)) &&
-		!(entry = git_index_get_bypath(index, filter->path, 1)))
+	if (!(entry = git_index_get_bypath(index, path, 0)) &&
+		!(entry = git_index_get_bypath(index, path, 1)))
 		return false;
 
 	if (!S_ISREG(entry->mode)) /* don't crlf filter non-blobs */
@@ -147,27 +179,47 @@ static int has_cr_in_index(git_filter *self)
 }
 
 static int crlf_apply_to_odb(
-	git_filter *self, git_buf *dest, const git_buf *source)
+	void **out,
+	size_t *out_len,
+	git_filter_crlf *filter,
+	const char *path,
+	const void *in,
+	size_t in_len)
 {
-	struct crlf_filter *filter = (struct crlf_filter *)self;
+	struct crlf_attrs ca;
+	git_buf source = GIT_BUF_INIT, dest = GIT_BUF_INIT;
+	int should_apply, error = 0;
 
-	assert(self && dest && source);
+	assert(out && out_len && filter && path && in);
+
+	*out = NULL;
+	*out_len = 0;
 
 	/* Empty file? Nothing to do */
-	if (git_buf_len(source) == 0)
+	if (in_len == 0)
+		goto cleanup;
+
+	/* Create a fake git_buf */
+	git_buf_attach(&source, (void *)in, in_len, in_len);
+
+	/* Load gitattributes for the path */
+	if ((should_apply = crlf_load_attributes(&ca, filter->repo, path)) < 0)
+		return should_apply;
+
+	if (!should_apply)
 		return 0;
 
 	/* Heuristics to see if we can skip the conversion.
 	 * Straight from Core Git.
 	 */
-	if (filter->attrs.crlf_action == GIT_CRLF_AUTO ||
-		filter->attrs.crlf_action == GIT_CRLF_GUESS) {
+	if (ca.crlf_action == GIT_CRLF_AUTO ||
+		ca.crlf_action == GIT_CRLF_GUESS) {
 
 		git_buf_text_stats stats;
 
 		/* Check heuristics for binary vs text... */
-		if (git_buf_text_gather_stats(&stats, source, false))
-			return -1;
+		if (git_buf_text_gather_stats(&stats, &source, false))
+			goto cleanup;
 
 		/*
 		 * We're currently not going to even try to convert stuff
@@ -175,28 +227,44 @@ static int crlf_apply_to_odb(
 		 * stuff?
 		 */
 		if (stats.cr != stats.crlf)
-			return -1;
+			goto cleanup;
 
-		if (filter->attrs.crlf_action == GIT_CRLF_GUESS) {
+		if (ca.crlf_action == GIT_CRLF_GUESS) {
 			/*
 			 * If the file in the index has any CR in it, do not convert.
 			 * This is the new safer autocrlf handling.
 			 */
-			if (has_cr_in_index(self))
-				return -1;
+			if (has_cr_in_index(filter, path))
+				goto cleanup;
 		}
 
 		if (!stats.cr)
-			return -1;
+			goto cleanup;
 	}
 
 	/* Actually drop the carriage returns */
-	return git_buf_text_crlf_to_lf(dest, source);
+	if ((error = git_buf_text_crlf_to_lf(&dest, &source)) < 0) {
+		if (error == GIT_ENOTFOUND) {
+			giterr_clear();
+			error = 0;
+		}
+
+		goto cleanup;
+	}
+
+	*out_len = git_buf_len(&dest);
+	*out = git_buf_detach(&dest);
+
+	return 1;
+
+cleanup:
+	git_buf_free(&dest);
+	return error;
 }
 
-static const char *line_ending(struct crlf_filter *filter)
+static const char *line_ending(struct crlf_attrs *ca)
 {
-	switch (filter->attrs.crlf_action) {
+	switch (ca->crlf_action) {
 	case GIT_CRLF_BINARY:
 	case GIT_CRLF_INPUT:
 		return "\n";
@@ -213,7 +281,7 @@ static const char *line_ending(struct crlf_filter *filter)
 		goto line_ending_error;
 	}
 
-	switch (filter->attrs.eol) {
+	switch (ca->eol) {
 	case GIT_EOL_UNSET:
 		return GIT_EOL_NATIVE == GIT_EOL_CRLF
 			? "\r\n"
@@ -235,84 +303,127 @@ line_ending_error:
 }
 
 static int crlf_apply_to_workdir(
-	git_filter *self, git_buf *dest, const git_buf *source)
+	void **out,
+	size_t *out_len,
+	git_filter_crlf *filter,
+	const char *path,
+	const void *in,
+	size_t in_len)
 {
-	struct crlf_filter *filter = (struct crlf_filter *)self;
+	struct crlf_attrs ca;
+	git_buf source = GIT_BUF_INIT, dest = GIT_BUF_INIT;
 	const char *workdir_ending = NULL;
+	int should_apply, error = 0;
 
-	assert(self && dest && source);
+	assert(out && out_len && filter && path && in);
+
+	*out = NULL;
+	*out_len = 0;
 
 	/* Empty file? Nothing to do. */
-	if (git_buf_len(source) == 0)
-		return -1;
+	if (in_len == 0)
+		return 0;
+		
+	/* Load gitattributes for the path */
+	if ((should_apply = crlf_load_attributes(&ca, filter->repo, path)) < 0)
+		return should_apply;
+
+	if (!should_apply)
+		return 0;
+
+	git_buf_attach(&source, (void *)in, in_len, in_len);
+
+	/* Don't filter binary files */
+	if (git_buf_text_is_binary(&source))
+		return 0;
 
 	/* Determine proper line ending */
-	workdir_ending = line_ending(filter);
+	workdir_ending = line_ending(&ca);
+
 	if (!workdir_ending)
-		return -1;
+		return 0;
+
 	if (!strcmp("\n", workdir_ending)) /* do nothing for \n ending */
-		return -1;
+		return 0;
 
 	/* for now, only lf->crlf conversion is supported here */
 	assert(!strcmp("\r\n", workdir_ending));
-	return git_buf_text_lf_to_crlf(dest, source);
-}
 
-static int find_and_add_filter(
-	git_vector *filters, git_repository *repo, const char *path,
-	int (*apply)(struct git_filter *self, git_buf *dest, const git_buf *source))
-{
-	struct crlf_attrs ca;
-	struct crlf_filter *filter;
-	size_t pathlen;
-	int error;
+	/* Actually add the carriage returns */
+	if ((error = git_buf_text_lf_to_crlf(&dest, &source)) < 0) {
 
-	/* Load gitattributes for the path */
-	if ((error = crlf_load_attributes(&ca, repo, path)) < 0)
+		if (error == GIT_ENOTFOUND) {
+			giterr_clear();
+			error = 0;
+		}
+
+		git_buf_free(&dest);
 		return error;
-
-	/*
-	 * Use the core Git logic to see if we should perform CRLF for this file
-	 * based on its attributes & the value of `core.autocrlf`
-	 */
-	ca.crlf_action = crlf_input_action(&ca);
-
-	if (ca.crlf_action == GIT_CRLF_BINARY)
-		return 0;
-
-	if (ca.crlf_action == GIT_CRLF_GUESS) {
-		int auto_crlf;
-
-		if ((error = git_repository__cvar(&auto_crlf, repo, GIT_CVAR_AUTO_CRLF)) < 0)
-			return error;
-
-		if (auto_crlf == GIT_AUTO_CRLF_FALSE)
-			return 0;
 	}
 
-	/* If we're good, we create a new filter object and push it
-	 * into the filters array */
-	pathlen = strlen(path);
-	filter = git__malloc(sizeof(struct crlf_filter) + pathlen + 1);
-	GITERR_CHECK_ALLOC(filter);
+	*out_len = git_buf_len(&dest);
+	*out = git_buf_detach(&dest);
 
-	filter->f.apply = apply;
-	filter->f.do_free = NULL;
-	memcpy(&filter->attrs, &ca, sizeof(struct crlf_attrs));
+	return 1;
+}
+
+static int crlf_should_apply(
+	git_filter *f,
+	const char *path,
+	git_filter_mode_t mode)
+{
+	struct crlf_attrs ca;
+	git_filter_crlf *filter = (git_filter_crlf *)f;
+
+	GIT_UNUSED(mode);
+
+	return crlf_load_attributes(&ca, filter->repo, path);
+}
+
+static int crlf_apply(
+	void **out,
+	size_t *out_len,
+	git_filter *f,
+	const char *path,
+	git_filter_mode_t mode,
+	const void *in,
+	size_t in_len)
+{
+	git_filter_crlf *filter = (git_filter_crlf *)f;
+
+	return mode == GIT_FILTER_TO_ODB ?
+		crlf_apply_to_odb(out, out_len, filter, path, in, in_len) :
+		crlf_apply_to_workdir(out, out_len, filter, path, in, in_len);
+}
+
+static void crlf_free_buf(void *buf)
+{
+	git__free(buf);
+}
+
+static void crlf_free(git_filter *f)
+{
+	git_filter_crlf *filter = (git_filter_crlf *)f;
+
+	git__free(filter);
+}
+
+int git_filter_crlf_new(git_filter **out, git_repository *repo)
+{
+	git_filter_crlf *filter;
+
+	if ((filter = git__calloc(1, sizeof(git_filter_crlf))) == NULL) {
+		*out = NULL;
+		return -1;
+	}
+
+	filter->base.version = GIT_FILTER_VERSION;
+	filter->base.should_apply = crlf_should_apply;
+	filter->base.apply = crlf_apply;
+	filter->base.free_buf = crlf_free_buf;
+	filter->base.free = crlf_free;
 	filter->repo = repo;
-	memcpy(filter->path, path, pathlen + 1);
 
-	return git_vector_insert(filters, filter);
-}
-
-int git_filter_add__crlf_to_odb(
-	git_vector *filters, git_repository *repo, const char *path)
-{
-	return find_and_add_filter(filters, repo, path, &crlf_apply_to_odb);
-}
-
-int git_filter_add__crlf_to_workdir(
-	git_vector *filters, git_repository *repo, const char *path)
-{
-	return find_and_add_filter(filters, repo, path, &crlf_apply_to_workdir);
+	*out = (git_filter *)filter;
+	return 0;
 }

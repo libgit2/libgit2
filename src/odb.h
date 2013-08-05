@@ -66,7 +66,7 @@ int git_odb__hashfd(git_oid *out, git_file fd, size_t size, git_otype type);
  * Acts just like git_odb__hashfd with the addition of filters...
  */
 int git_odb__hashfd_filtered(
-	git_oid *out, git_file fd, size_t len, git_otype type, git_vector *filters);
+	git_oid *out, git_file fd, size_t len, git_otype type, git_vector *filters, const char *path);
 
 /*
  * Hash a `path`, assuming it could be a POSIX symlink: if the path is a
