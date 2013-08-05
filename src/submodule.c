@@ -1025,6 +1025,7 @@ static int submodule_get(
 
 	if (!git_strmap_valid_index(smcfg, pos)) {
 		sm = submodule_alloc(repo, name);
+		GITERR_CHECK_ALLOC(sm);
 
 		/* insert value at name - if another thread beats us to it, then use
 		 * their record and release our own.
@@ -1101,8 +1102,10 @@ static int submodule_load_from_config(
 
 	namestart = key + strlen("submodule.");
 	property  = strrchr(namestart, '.');
-	if (property == NULL)
+
+	if (!property || (property == namestart))
 		return 0;
+
 	property++;
 	is_path = (strcasecmp(property, "path") == 0);
 
