@@ -235,10 +235,29 @@ typedef int (*git_transfer_progress_callback)(const git_transfer_progress *stats
 typedef struct git_submodule git_submodule;
 
 /**
- * Values that could be specified for the update rule of a submodule.
+ * Submodule update values
  *
- * Use the RESET value if you have altered the in-memory update value via
- * `git_submodule_set_update()` and wish to reset to the original default.
+ * These values represent settings for the `submodule.$name.update`
+ * configuration value which says how to handle `git submodule update` for
+ * this submodule.  The value is usually set in the ".gitmodules" file and
+ * copied to ".git/config" when the submodule is initialized.
+ *
+ * You can override this setting on a per-submodule basis with
+ * `git_submodule_set_update()` and write the changed value to disk using
+ * `git_submodule_save()`.  If you have overwritten the value, you can
+ * revert it by passing `GIT_SUBMODULE_UPDATE_RESET` to the set function.
+ *
+ * The values are:
+ *
+ * - GIT_SUBMODULE_UPDATE_RESET: reset to the on-disk value.
+ * - GIT_SUBMODULE_UPDATE_CHECKOUT: the default; when a submodule is
+ *   updated, checkout the new detached HEAD to the submodule directory.
+ * - GIT_SUBMODULE_UPDATE_REBASE: update by rebasing the current checked
+ *   out branch onto the commit from the superproject.
+ * - GIT_SUBMODULE_UPDATE_MERGE: update by merging the commit in the
+ *   superproject into the current checkout out branch of the submodule.
+ * - GIT_SUBMODULE_UPDATE_NONE: do not update this submodule even when
+ *   the commit in the superproject is updated.
  */
 typedef enum {
 	GIT_SUBMODULE_UPDATE_RESET = -1,
@@ -249,11 +268,29 @@ typedef enum {
 } git_submodule_update_t;
 
 /**
- * Values that could be specified for how closely to examine the
- * working directory when getting submodule status.
+ * Submodule ignore values
  *
- * Use the RESET value if you have altered the in-memory ignore value via
- * `git_submodule_set_ignore()` and wish to reset to the original value.
+ * These values represent settings for the `submodule.$name.ignore`
+ * configuration value which says how deeply to look at the working
+ * directory when getting submodule status.
+ *
+ * You can override this value in memory on a per-submodule basis with
+ * `git_submodule_set_ignore()` and can write the changed value to disk
+ * with `git_submodule_save()`.  If you have overwritten the value, you
+ * can revert to the on disk value by using `GIT_SUBMODULE_IGNORE_RESET`.
+ *
+ * The values are:
+ *
+ * - GIT_SUBMODULE_IGNORE_RESET: reset to the on-disk value.
+ * - GIT_SUBMODULE_IGNORE_NONE: don't ignore any change - i.e. even an
+ *   untracked file, will mark the submodule as dirty.  Ignored files are
+ *   still ignored, of course.
+ * - GIT_SUBMODULE_IGNORE_UNTRACKED: ignore untracked files; only changes
+ *   to tracked files, or the index or the HEAD commit will matter.
+ * - GIT_SUBMODULE_IGNORE_DIRTY: ignore changes in the working directory,
+ *   only considering changes if the HEAD of submodule has moved from the
+ *   value in the superproject.
+ * - GIT_SUBMODULE_IGNORE_ALL: never check if the submodule is dirty
  */
 typedef enum {
 	GIT_SUBMODULE_IGNORE_RESET = -1,    /* reset to on-disk value */
