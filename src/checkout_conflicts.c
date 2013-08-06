@@ -56,14 +56,16 @@ static int checkout_conflictdata_cmp(const void *a, const void *b)
 
 int checkout_conflictdata_empty(const git_vector *conflicts, size_t idx)
 {
-	const checkout_conflictdata *conflict;
+	checkout_conflictdata *conflict;
 
 	if ((conflict = git_vector_get(conflicts, idx)) == NULL)
 		return -1;
 
-	return (conflict->ancestor == NULL &&
-		conflict->ours == NULL &&
-		conflict->theirs == NULL);
+	if (conflict->ancestor || conflict->ours || conflict->theirs)
+		return 0;
+
+	git__free(conflict);
+	return 1;
 }
 
 static int checkout_conflicts_load(checkout_data *data, git_vector *conflicts)
@@ -409,8 +411,7 @@ static int checkout_write_entry(
 	const char *hint_path = NULL, *suffix;
 	struct stat st;
 
-	assert (side == conflict->ours ||
-		side == conflict->theirs);
+	assert (side == conflict->ours || side == conflict->theirs);
 
 	git_buf_truncate(&data->path, data->workdir_len);
 	if (git_buf_puts(&data->path, side->path) < 0)
@@ -423,7 +424,7 @@ static int checkout_write_entry(
 		if (side == conflict->ours)
 			suffix = data->opts.our_label ? data->opts.our_label :
 				"ours";
-		else if (side == conflict->theirs)
+		else
 			suffix = data->opts.their_label ? data->opts.their_label :
 				"theirs";
 
@@ -456,7 +457,7 @@ static int checkout_merge_path(
 	git_merge_file_result *result)
 {
 	const char *our_label_raw, *their_label_raw, *suffix;
-	int i = 0, error = 0;
+	int error = 0;
 
 	if ((error = git_buf_joinpath(out, git_repository_workdir(data->repo), result->path)) < 0)
 		return error;
