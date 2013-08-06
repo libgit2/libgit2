@@ -120,7 +120,7 @@ GIT_EXTERN(int) git_odb_read(git_odb_object **out, git_odb *db, const git_oid *i
  * @param db database to search for the object in.
  * @param short_id a prefix of the id of the object to read.
  * @param len the length of the prefix
- * @return 
+ * @return
  * - 0 if the object was read;
  * - GIT_ENOTFOUND if the object is not in the database.
  * - GIT_EAMBIGUOUS if the prefix is ambiguous (several objects match the prefix)
