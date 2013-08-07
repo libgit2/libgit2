@@ -56,12 +56,12 @@ void cl_git_rewritefile(const char *filename, const char *new_content)
 
 char *cl_getenv(const char *name)
 {
-	wchar_t name_utf16[GIT_WIN_PATH_UTF16];
+	git_win_str_utf16 name_utf16;
 	DWORD alloc_len;
 	wchar_t *value_utf16;
 	char *value_utf8;
 
-	git__utf8_to_16(name_utf16, GIT_WIN_PATH_UTF16, name);
+	git__utf8_to_16(name_utf16, name);
 	alloc_len = GetEnvironmentVariableW(name_utf16, NULL, 0);
 	if (alloc_len <= 0)
 		return NULL;
@@ -81,13 +81,13 @@ char *cl_getenv(const char *name)
 
 int cl_setenv(const char *name, const char *value)
 {
-	wchar_t name_utf16[GIT_WIN_PATH_UTF16];
-	wchar_t value_utf16[GIT_WIN_PATH_UTF16];
+	git_win_str_utf16 name_utf16;
+	git_win_str_utf16 value_utf16;
 
-	git__utf8_to_16(name_utf16, GIT_WIN_PATH_UTF16, name);
+	git__utf8_to_16(name_utf16, name);
 
 	if (value) {
-		git__utf8_to_16(value_utf16, GIT_WIN_PATH_UTF16, value);
+		git__utf8_to_16(value_utf16, value);
 		cl_assert(SetEnvironmentVariableW(name_utf16, value_utf16));
 	} else {
 		/* Windows XP returns 0 (failed) when passing NULL for lpValue when
@@ -107,12 +107,12 @@ int cl_setenv(const char *name, const char *value)
  * the source is a directory, a child of the source). */
 int cl_rename(const char *source, const char *dest)
 {
-	wchar_t source_utf16[GIT_WIN_PATH_UTF16];
-	wchar_t dest_utf16[GIT_WIN_PATH_UTF16];
+	git_win_str_utf16 source_utf16;
+	git_win_str_utf16 dest_utf16;
 	unsigned retries = 1;
 
-	git__utf8_to_16(source_utf16, GIT_WIN_PATH_UTF16, source);
-	git__utf8_to_16(dest_utf16, GIT_WIN_PATH_UTF16, dest);
+	git__utf8_to_16(source_utf16, source);
+	git__utf8_to_16(dest_utf16, dest);
 
 	while (!MoveFileW(source_utf16, dest_utf16)) {
 		/* Only retry if the error is ERROR_ACCESS_DENIED;

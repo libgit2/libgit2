@@ -20,9 +20,9 @@ GIT_INLINE(int) p_link(const char *old, const char *new)
 
 GIT_INLINE(int) p_mkdir(const char *path, mode_t mode)
 {
-	wchar_t buf[GIT_WIN_PATH_UTF16];
+	git_win_str_utf16 buf;
 	GIT_UNUSED(mode);
-	git__utf8_to_16(buf, GIT_WIN_PATH_UTF16, path);
+	git__utf8_to_16(buf, path);
 	return _wmkdir(buf);
 }
 

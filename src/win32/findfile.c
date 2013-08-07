@@ -53,7 +53,7 @@ int git_win32__find_file(
 	if (*filename == '/' || *filename == '\\')
 		filename++;
 
-	git__utf8_to_16(file_utf16 + root->len - 1, alloc_len, filename);
+	git__utf8_to_16(file_utf16 + root->len - 1, filename);
 
 	/* check access */
 	if (_waccess(file_utf16, F_OK) < 0) {

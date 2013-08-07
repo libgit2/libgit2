@@ -264,7 +264,7 @@ static int winhttp_stream_connect(winhttp_stream *s)
 		if (git_buf_printf(&buf, "Content-Type: application/x-git-%s-request", s->service) < 0)
 			goto on_error;
 
-		git__utf8_to_16(ct, MAX_CONTENT_TYPE_LEN, git_buf_cstr(&buf));
+		git__utf8_to_16(ct, git_buf_cstr(&buf));
 
 		if (!WinHttpAddRequestHeaders(s->request, ct, (ULONG) -1L, WINHTTP_ADDREQ_FLAG_ADD)) {
 			giterr_set(GITERR_OS, "Failed to add a header to the request");
@@ -593,7 +593,7 @@ replay:
 		else
 			snprintf(expected_content_type_8, MAX_CONTENT_TYPE_LEN, "application/x-git-%s-advertisement", s->service);
 
-		git__utf8_to_16(expected_content_type, MAX_CONTENT_TYPE_LEN, expected_content_type_8);
+		git__utf8_to_16(expected_content_type, expected_content_type_8);
 		content_type_length = sizeof(content_type);
 
 		if (!WinHttpQueryHeaders(s->request,
@@ -893,7 +893,7 @@ static int winhttp_connect(
 	const char *url)
 {
 	wchar_t *ua = L"git/1.0 (libgit2 " WIDEN(LIBGIT2_VERSION) L")";
-	wchar_t host[GIT_WIN_PATH_UTF16];
+	git_win_str_utf16 host;
 	int32_t port;
 	const char *default_port = "80";
 	int ret;
@@ -920,7 +920,7 @@ static int winhttp_connect(
 		return -1;
 
 	/* Prepare host */
-	git__utf8_to_16(host, GIT_WIN_PATH_UTF16, t->host);
+	git__utf8_to_16(host, t->host);
 
 	/* Establish session */
 	t->session = WinHttpOpen(
