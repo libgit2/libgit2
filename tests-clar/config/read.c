@@ -431,10 +431,10 @@ void test_config_read__simple_read_from_specific_level(void)
 	git_config_free(cfg);
 }
 
-static void clean_empty_config(void *unused)
+static void clean_test_config(void *unused)
 {
 	GIT_UNUSED(unused);
-	cl_fixture_cleanup("./empty");
+	cl_fixture_cleanup("./testconfig");
 }
 
 void test_config_read__can_load_and_parse_an_empty_config_file(void)
@@ -442,10 +442,21 @@ void test_config_read__can_load_and_parse_an_empty_config_file(void)
 	git_config *cfg;
 	int i;
 
-	cl_set_cleanup(&clean_empty_config, NULL);
-	cl_git_mkfile("./empty", "");
-	cl_git_pass(git_config_open_ondisk(&cfg, "./empty"));
+	cl_set_cleanup(&clean_test_config, NULL);
+	cl_git_mkfile("./testconfig", "");
+	cl_git_pass(git_config_open_ondisk(&cfg, "./testconfig"));
 	cl_assert_equal_i(GIT_ENOTFOUND, git_config_get_int32(&i, cfg, "nope.neither"));
+
+	git_config_free(cfg);
+}
+
+void test_config_read__corrupt_header(void)
+{
+	git_config *cfg;
+
+	cl_set_cleanup(&clean_test_config, NULL);
+	cl_git_mkfile("./testconfig", "[sneaky ] \"quoted closing quote mark\\\"");
+	cl_git_fail(git_config_open_ondisk(&cfg, "./testconfig"));
 
 	git_config_free(cfg);
 }
