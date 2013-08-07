@@ -792,6 +792,11 @@ static int parse_section_header_ext(diskfile_backend *cfg, const char *line, con
 		}
 
 		switch (c) {
+		case 0:
+			set_parse_error(cfg, 0, "Unexpected end-of-line in section header");
+			git_buf_free(&buf);
+			return -1;
+
 		case '"':
 			++quote_marks;
 			continue;
@@ -801,6 +806,12 @@ static int parse_section_header_ext(diskfile_backend *cfg, const char *line, con
 
 			switch (c) {
 			case '"':
+				if (&line[rpos-1] == last_quote) {
+					set_parse_error(cfg, 0, "Missing closing quotation mark in section header");
+					git_buf_free(&buf);
+					return -1;
+				}
+
 			case '\\':
 				break;
 
