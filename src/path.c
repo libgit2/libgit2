@@ -603,7 +603,7 @@ int git_path_find_dir(git_buf *dir, const char *path, const char *base)
 	}
 
 	/* call dirname if this is not a directory */
-	if (!error && git_path_isdir(dir->ptr) == false)
+	if (!error) /* && git_path_isdir(dir->ptr) == false) */
 		error = git_path_dirname_r(dir, dir->ptr);
 
 	if (!error)

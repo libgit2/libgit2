@@ -159,17 +159,26 @@ int git_ignore__push_dir(git_ignores *ign, const char *dir)
 {
 	if (git_buf_joinpath(&ign->dir, ign->dir.ptr, dir) < 0)
 		return -1;
-	else
-		return push_ignore_file(
-			ign->repo, ign, &ign->ign_path, ign->dir.ptr, GIT_IGNORE_FILE);
+
+	return push_ignore_file(
+		ign->repo, ign, &ign->ign_path, ign->dir.ptr, GIT_IGNORE_FILE);
 }
 
 int git_ignore__pop_dir(git_ignores *ign)
 {
 	if (ign->ign_path.length > 0) {
 		git_attr_file *file = git_vector_last(&ign->ign_path);
-		if (git__suffixcmp(ign->dir.ptr, file->key + 2) == 0)
+		size_t keylen = strlen(file->key);
+
+		while (keylen && file->key[keylen] != '/')
+			keylen--;
+		keylen -= 1; /* because we will skip "0#" prefix */
+
+		if (ign->dir.size > keylen &&
+			!memcmp(ign->dir.ptr + ign->dir.size - keylen,
+					file->key + 2, keylen))
 			git_vector_pop(&ign->ign_path);
+
 		git_buf_rtruncate_at_char(&ign->dir, '/');
 	}
 	return 0;
@@ -298,12 +307,9 @@ int git_ignore_path_is_ignored(
 		path.full.size = (tail - path.full.ptr);
 		path.is_dir = (tail == end) ? full_is_dir : true;
 
-		/* update ignores for new path fragment */
-		if (path.basename == path.path)
-			error = git_ignore__for_path(repo, path.path, &ignores);
-		else
-			error = git_ignore__push_dir(&ignores, path.basename);
-		if (error < 0)
+		/* initialize ignores the first time through */
+		if (path.basename == path.path &&
+			(error = git_ignore__for_path(repo, path.path, &ignores)) < 0)
 			break;
 
 		/* first process builtins - success means path was found */
@@ -325,6 +331,10 @@ int git_ignore_path_is_ignored(
 
 		/* if we found no rules before reaching the end, we're done */
 		if (tail == end)
+			break;
+
+		/* now add this directory to list of ignores */
+		if ((error = git_ignore__push_dir(&ignores, path.path)) < 0)
 			break;
 
 		/* reinstate divider in path */
