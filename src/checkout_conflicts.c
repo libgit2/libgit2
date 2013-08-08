@@ -23,7 +23,8 @@ typedef struct {
 	const git_index_entry *theirs;
 
 	int name_collision:1,
-		directoryfile:1;
+		directoryfile:1,
+		one_to_two:1;
 } checkout_conflictdata;
 
 GIT_INLINE(int) checkout_idxentry_cmp(
@@ -104,7 +105,6 @@ GIT_INLINE(int) checkout_conflicts_cmp_entry(
 	const char *path,
 	const git_index_entry *entry)
 {
-	/* TODO: is strcmp right here?  should we use index->strcomp ? */
 	return strcmp((const char *)path, entry->path);
 }
 
@@ -207,6 +207,8 @@ static int checkout_conflicts_load_byname_entry(
 	if (name_entry->theirs) {
 		if (strcmp(name_entry->ancestor, name_entry->theirs) == 0)
 			theirs = ancestor;
+		else if (name_entry->ours && strcmp(name_entry->ours, name_entry->theirs) == 0)
+			theirs = ours;
 		else if ((theirs = checkout_conflicts_search_branch(conflicts, name_entry->theirs)) == NULL ||
 			theirs->theirs == NULL) {
 			giterr_set(GITERR_INDEX,
@@ -267,6 +269,10 @@ static int checkout_conflicts_coalesce_renames(
 			if (their_conflict->name_collision)
 				ancestor_conflict->name_collision = 1;
 		}
+
+		if (our_conflict && our_conflict != ancestor_conflict &&
+			their_conflict && their_conflict != ancestor_conflict)
+			ancestor_conflict->one_to_two = 1;
 	}
 
 	git_vector_remove_matching(conflicts, checkout_conflictdata_empty);
@@ -275,29 +281,27 @@ done:
 	return error;
 }
 
-/* TODO: does this exist elsewhere? */
 GIT_INLINE(void) path_equal_or_prefixed(
 	bool *path_eq,
 	bool *path_prefixed,
 	const char *parent,
 	const char *child)
 {
-	size_t child_len = strlen(child);
-	size_t parent_len = strlen(parent);
+	const char *p, *c;
 
-	if (child_len == parent_len) {
-		*path_eq = (strcmp(parent, child) == 0);
-		*path_prefixed = 0;
-		return;
-	}
-	
 	*path_eq = 0;
+	*path_prefixed = 0;
 
-	if (child_len < parent_len ||
-		strncmp(parent, child, parent_len) != 0)
-		*path_prefixed = 0;
-	else
-		*path_prefixed = (child[parent_len] == '/');
+	for (p = parent, c = child; *p && *c; p++, c++) {
+		if (*p != *c)
+			return;
+	}
+
+	if (!*p)
+		*path_prefixed = (*c == '/');
+
+	if (!*p && !*c)
+		*path_eq = 1;
 }
 
 static int checkout_conflicts_mark_directoryfile(
@@ -483,7 +487,6 @@ static int checkout_write_merge(
 
 	/* Rename 2->1 conflicts need the branch name appended */
 	if (conflict->name_collision) {
-		/* TODO: strcmp? */
 		if ((error = conflict_path_suffixed(&path_suffixed, result.path,
 			(strcmp(result.path, conflict->ours->path) == 0 ?
 			our_label_raw : their_label_raw))) < 0)
@@ -512,15 +515,6 @@ done:
 	git_buf_free(&path_suffixed);
 
 	return error;
-}
-
-GIT_INLINE(bool) conflict_is_1_to_2(checkout_conflictdata *conflict)
-{
-	/* TODO: can't we detect these when we coalesce? */
-	return conflict->ancestor && conflict->ours && conflict->theirs &&
-		(strcmp(conflict->ancestor->path, conflict->ours->path) != 0 &&
-		strcmp(conflict->ancestor->path, conflict->theirs->path) != 0 &&
-		strcmp(conflict->ours->path, conflict->theirs->path) != 0);
 }
 
 int git_checkout__conflicts(checkout_data *data)
@@ -569,7 +563,7 @@ int git_checkout__conflicts(checkout_data *data)
 		/* Add/add conflicts and rename 1->2 conflicts, write the
 		 * ours/theirs sides (potentially name mangled).
 		 */
-		else if (conflict_is_1_to_2(conflict))
+		else if (conflict->one_to_two)
 			error = checkout_write_entries(data, conflict);
 
 		/* If all sides are links, write the ours side */
