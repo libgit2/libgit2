@@ -242,3 +242,20 @@ void test_config_write__can_set_a_value_to_NULL(void)
 
     cl_git_sandbox_cleanup();
 }
+
+void test_config_write__can_set_an_empty_value(void)
+{
+	git_repository *repository;
+	git_config *config;
+	const char * str;
+
+	repository = cl_git_sandbox_init("testrepo.git");
+	cl_git_pass(git_repository_config(&config, repository));
+
+	cl_git_pass(git_config_set_string(config, "core.somevar", ""));
+	cl_git_pass(git_config_get_string(&str, config, "core.somevar"));
+	cl_assert_equal_s(str, "");
+
+	git_config_free(config);
+	cl_git_sandbox_cleanup();
+}
