@@ -1293,6 +1293,9 @@ static char *escape_value(const char *ptr)
 	assert(ptr);
 
 	len = strlen(ptr);
+	if (!len)
+		return git__calloc(1, sizeof(char));
+
 	git_buf_grow(&buf, len);
 
 	while (*ptr != '\0') {
