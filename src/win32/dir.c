@@ -40,7 +40,7 @@ git__DIR *git__opendir(const char *dir)
 	if (!new->dir)
 		goto fail;
 
-	git__utf8_to_16(filter_w, filter);
+	git__win32_path_utf8_to_16(filter_w, filter);
 	new->h = FindFirstFileW(filter_w, &new->f);
 
 	if (new->h == INVALID_HANDLE_VALUE) {
@@ -80,7 +80,7 @@ int git__readdir_ext(
 	if (wcslen(d->f.cFileName) >= sizeof(entry->d_name))
 		return -1;
 
-	git__utf16_to_8(entry->d_name, d->f.cFileName);
+	git__win32_path_utf16_to_8(entry->d_name, d->f.cFileName);
 	entry->d_ino = 0;
 
 	*result = entry;
@@ -116,7 +116,7 @@ void git__rewinddir(git__DIR *d)
 	if (!init_filter(filter, sizeof(filter), d->dir))
 		return;
 
-	git__utf8_to_16(filter_w, filter);
+	git__win32_path_utf8_to_16(filter_w, filter);
 	d->h = FindFirstFileW(filter_w, &d->f);
 
 	if (d->h == INVALID_HANDLE_VALUE)

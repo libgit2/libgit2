@@ -493,7 +493,7 @@ bool git_path_is_empty_dir(const char *path)
 	if (!git_path_isdir(path)) return false;
 
 	git_buf_printf(&pathbuf, "%s\\*", path);
-	git__utf8_to_16(wbuf, git_buf_cstr(&pathbuf));
+	git__win32_path_utf8_to_16(wbuf, git_buf_cstr(&pathbuf));
 
 	hFind = FindFirstFileW(wbuf, &ffd);
 	if (INVALID_HANDLE_VALUE == hFind) {

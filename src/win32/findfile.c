@@ -27,7 +27,7 @@ static int win32_path_utf16_to_8(git_buf *path_utf8, const wchar_t *path_utf16)
 {
 	char temp_utf8[GIT_PATH_MAX];
 
-	git__utf16_to_8(temp_utf8, path_utf16);
+	git__utf16_to_8(temp_utf8, GIT_PATH_MAX, path_utf16);
 	git_path_mkposix(temp_utf8);
 
 	return git_buf_sets(path_utf8, temp_utf8);
@@ -53,7 +53,7 @@ int git_win32__find_file(
 	if (*filename == '/' || *filename == '\\')
 		filename++;
 
-	git__utf8_to_16(file_utf16 + root->len - 1, filename);
+	git__utf8_to_16(file_utf16 + root->len - 1, alloc_len - root->len, filename);
 
 	/* check access */
 	if (_waccess(file_utf16, F_OK) < 0) {
