@@ -39,7 +39,7 @@ struct git_config_iterator {
 	 * Return the current entry and advance the iterator. The
 	 * memory belongs to the library.
 	 */
-	int (*next)(const git_config_entry *entry, git_config_iterator *iter);
+	int (*next)(git_config_entry *entry, git_config_iterator *iter);
 
 	/**
 	 * Free the iterator

@@ -433,7 +433,7 @@ static void foreach_iter_free(git_config_iterator *_iter)
 	git__free(iter);
 }
 
-static int foreach_iter_next(git_config_entry **out, git_config_iterator *_iter)
+static int foreach_iter_next(git_config_entry *out, git_config_iterator *_iter)
 {
 	foreach_iter *iter = (foreach_iter *) _iter;
 
@@ -443,7 +443,9 @@ static int foreach_iter_next(git_config_entry **out, git_config_iterator *_iter)
 		return GIT_ITEROVER;
 
 	if (!iter->have_regex) {
-		*out = var->entry;
+		out->name = var->entry->name;
+		out->value = var->entry->value;
+
 		iter->var = var->next;
 		return 0;
 	}
@@ -453,7 +455,8 @@ static int foreach_iter_next(git_config_entry **out, git_config_iterator *_iter)
 		git_config_entry *entry = var->entry;
 		regex_t *regex = &iter->regex;;
 		if (regexec(regex, entry->value, 0, NULL, 0) == 0) {
-			*out = entry;
+			out->name = entry->name;
+			out->value = entry->value;
 			return 0;
 		}
 	} while(var != NULL);
