@@ -187,7 +187,7 @@ static int git_diff_driver_load(
 
 	git_buf_truncate(&name, namelen + strlen("diff.."));
 	git_buf_put(&name, "xfuncname", strlen("xfuncname"));
-	if ((error = git_config_get_multivar(
+	if ((error = git_config_get_multivar_foreach(
 			cfg, name.ptr, NULL, diff_driver_xfuncname, drv)) < 0) {
 		if (error != GIT_ENOTFOUND)
 			goto done;
@@ -196,7 +196,7 @@ static int git_diff_driver_load(
 
 	git_buf_truncate(&name, namelen + strlen("diff.."));
 	git_buf_put(&name, "funcname", strlen("funcname"));
-	if ((error = git_config_get_multivar(
+	if ((error = git_config_get_multivar_foreach(
 			cfg, name.ptr, NULL, diff_driver_funcname, drv)) < 0) {
 		if (error != GIT_ENOTFOUND)
 			goto done;

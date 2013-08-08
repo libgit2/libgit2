@@ -328,7 +328,7 @@ GIT_EXTERN(int) git_config_get_bool(int *out, const git_config *cfg, const char 
 GIT_EXTERN(int) git_config_get_string(const char **out, const git_config *cfg, const char *name);
 
 /**
- * Get each value of a multivar.
+ * Get each value of a multivar in a foreach callback
  *
  * The callback will be called on each variable found
  *
@@ -339,7 +339,7 @@ GIT_EXTERN(int) git_config_get_string(const char **out, const git_config *cfg, c
  * @param callback the function to be called on each value of the variable
  * @param payload opaque pointer to pass to the callback
  */
-GIT_EXTERN(int) git_config_get_multivar(const git_config *cfg, const char *name, const char *regexp, git_config_foreach_cb callback, void *payload);
+GIT_EXTERN(int) git_config_get_multivar_foreach(const git_config *cfg, const char *name, const char *regexp, git_config_foreach_cb callback, void *payload);
 
 /**
  * Set the value of an integer config variable in the config file

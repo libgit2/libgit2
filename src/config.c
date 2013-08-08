@@ -574,7 +574,7 @@ int git_config_get_entry(const git_config_entry **out, const git_config *cfg, co
 	return config_error_notfound(name);
 }
 
-int git_config_get_multivar(
+int git_config_get_multivar_foreach(
 	const git_config *cfg, const char *name, const char *regexp,
 	git_config_foreach_cb cb, void *payload)
 {
@@ -593,7 +593,7 @@ int git_config_get_multivar(
 			continue;
 		file = internal->file;
 
-		if (!(err = file->get_multivar(file, name, regexp, cb, payload)))
+		if (!(err = file->get_multivar_foreach(file, name, regexp, cb, payload)))
 			ret = 0;
 		else if (err != GIT_ENOTFOUND)
 			return err;

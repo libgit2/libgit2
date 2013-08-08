@@ -413,7 +413,7 @@ static int config_get(const git_config_backend *cfg, const char *name, const git
 	return 0;
 }
 
-static int config_get_multivar(
+static int config_get_multivar_foreach(
 	git_config_backend *cfg,
 	const char *name,
 	const char *regex_str,
@@ -603,7 +603,7 @@ int git_config_file__ondisk(git_config_backend **out, const char *path)
 
 	backend->parent.open = config_open;
 	backend->parent.get = config_get;
-	backend->parent.get_multivar = config_get_multivar;
+	backend->parent.get_multivar_foreach = config_get_multivar_foreach;
 	backend->parent.set = config_set;
 	backend->parent.set_multivar = config_set_multivar;
 	backend->parent.del = config_delete;

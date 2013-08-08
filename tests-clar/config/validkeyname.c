@@ -28,7 +28,7 @@ static void assert_invalid_config_key_name(const char *name)
 		GIT_EINVALIDSPEC);
 	cl_git_fail_with(git_config_delete_entry(cfg, name),
 		GIT_EINVALIDSPEC);
-	cl_git_fail_with(git_config_get_multivar(cfg, name, "*", NULL, NULL),
+	cl_git_fail_with(git_config_get_multivar_foreach(cfg, name, "*", NULL, NULL),
 		GIT_EINVALIDSPEC);
 	cl_git_fail_with(git_config_set_multivar(cfg, name, "*", "42"),
 		GIT_EINVALIDSPEC);

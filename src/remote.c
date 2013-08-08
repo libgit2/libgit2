@@ -217,7 +217,7 @@ static int get_optional_config(
 		return -1;
 
 	if (cb != NULL)
-		error = git_config_get_multivar(config, key, NULL, cb, payload);
+		error = git_config_get_multivar_foreach(config, key, NULL, cb, payload);
 	else
 		error = git_config_get_string(payload, config, key);
 
