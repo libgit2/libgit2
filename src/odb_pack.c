@@ -259,23 +259,26 @@ static int pack_entry_find(struct git_pack_entry *e, struct pack_backend *backen
 	return git_odb__error_notfound("failed to find pack entry", oid);
 }
 
-static unsigned pack_entry_find_prefix_inner(
-		struct git_pack_entry *e,
-		struct pack_backend *backend,
-		const git_oid *short_oid,
-		size_t len,
-		struct git_pack_file *last_found)
+static int pack_entry_find_prefix(
+	struct git_pack_entry *e,
+	struct pack_backend *backend,
+	const git_oid *short_oid,
+	size_t len)
 {
 	int error;
 	size_t i;
-	unsigned found = 0;
+	git_oid found_full_oid = {{0}};
+	bool found = false;
+	struct git_pack_file *last_found = backend->last_found;
 
 	if (last_found) {
 		error = git_pack_entry_find(e, last_found, short_oid, len);
 		if (error == GIT_EAMBIGUOUS)
 			return error;
-		if (!error)
-			found = 1;
+		if (!error) {
+			git_oid_cpy(&found_full_oid, &e->sha1);
+			found = true;
+		}
 	}
 
 	for (i = 0; i < backend->packs.length; ++i) {
@@ -289,28 +292,16 @@ static unsigned pack_entry_find_prefix_inner(
 		if (error == GIT_EAMBIGUOUS)
 			return error;
 		if (!error) {
-			if (++found > 1)
-				break;
+			if (found && git_oid_cmp(&e->sha1, &found_full_oid))
+				return git_odb__error_ambiguous("found multiple pack entries");
+			git_oid_cpy(&found_full_oid, &e->sha1);
+			found = true;
 			backend->last_found = p;
 		}
 	}
 
-	return found;
-}
-
-static int pack_entry_find_prefix(
-	struct git_pack_entry *e,
-	struct pack_backend *backend,
-	const git_oid *short_oid,
-	size_t len)
-{
-	struct git_pack_file *last_found = backend->last_found;
-	unsigned int found = pack_entry_find_prefix_inner(e, backend, short_oid, len, last_found);
-
 	if (!found)
 		return git_odb__error_notfound("no matching pack entry for prefix", short_oid);
-	else if (found > 1)
-		return git_odb__error_ambiguous("found multiple pack entries");
 	else
 		return 0;
 }
