@@ -327,7 +327,7 @@ int git_config_backend_foreach_match(
 	int (*fn)(const git_config_entry *, void *),
 	void *data)
 {
-	git_config_entry entry;
+	git_config_entry *entry;
 	git_config_iterator* iter;
 	regex_t regex;
 	int result = 0;
@@ -347,11 +347,11 @@ int git_config_backend_foreach_match(
 
 	while(!(iter->next(&entry, iter) < 0)) {
 		/* skip non-matching keys if regexp was provided */
-		if (regexp && regexec(&regex, entry.name, 0, NULL, 0) != 0)
+		if (regexp && regexec(&regex, entry->name, 0, NULL, 0) != 0)
 			continue;
 
 		/* abort iterator on non-zero return value */
-		if (fn(&entry, data)) {
+		if (fn(entry, data)) {
 			giterr_clear();
 			result = GIT_EUSER;
 			goto cleanup;
@@ -578,35 +578,36 @@ int git_config_get_multivar_foreach(
 	const git_config *cfg, const char *name, const char *regexp,
 	git_config_foreach_cb cb, void *payload)
 {
-	file_internal *internal;
-	git_config_backend *file;
-	int ret = GIT_ENOTFOUND, err;
-	size_t i;
+	int err, found;
+	git_config_iterator *iter;
+	git_config_entry *entry;
 
-	/*
-	 * This loop runs the "wrong" way 'round because we need to
-	 * look at every value from the most general to most specific
-	 */
-	for (i = cfg->files.length; i > 0; --i) {
-		internal = git_vector_get(&cfg->files, i - 1);
-		if (!internal || !internal->file)
-			continue;
-		file = internal->file;
+	if ((err = git_config_get_multivar(&iter, cfg, name, regexp)) < 0)
+		return err;
 
-		if (!(err = file->get_multivar_foreach(file, name, regexp, cb, payload)))
-			ret = 0;
-		else if (err != GIT_ENOTFOUND)
-			return err;
+	found = 0;
+	while ((err = iter->next(&entry, iter)) == 0) {
+		found = 1;
+		if(cb(entry, payload)) {
+			iter->free(iter);
+			return GIT_EUSER;
+		}
 	}
 
-	return (ret == GIT_ENOTFOUND) ? config_error_notfound(name) : 0;
+	if (err == GIT_ITEROVER)
+		err = 0;
+
+	if (found == 0 && err == 0)
+		err = config_error_notfound(name);
+
+	return err;
 }
 
 typedef struct {
 	git_config_iterator parent;
 	git_config_iterator *current;
-	const char *name;
-	const char *regexp;
+	char *name;
+	char *regexp;
 	const git_config *cfg;
 	size_t i;
 } multivar_iter;
@@ -627,7 +628,7 @@ static int find_next_backend(size_t *out, const git_config *cfg, size_t i)
 	return -1;
 }
 
-static int multivar_iter_next_empty(git_config_entry *entry, git_config_iterator *_iter)
+static int multivar_iter_next_empty(git_config_entry **entry, git_config_iterator *_iter)
 {
 	GIT_UNUSED(entry);
 	GIT_UNUSED(_iter);
@@ -635,20 +636,21 @@ static int multivar_iter_next_empty(git_config_entry *entry, git_config_iterator
 	return GIT_ITEROVER;
 }
 
-static int multivar_iter_next(git_config_entry *entry, git_config_iterator *_iter)
+static int multivar_iter_next(git_config_entry **entry, git_config_iterator *_iter)
 {
 	multivar_iter *iter = (multivar_iter *) _iter;
 	git_config_iterator *current = iter->current;
 	file_internal *internal;
 	git_config_backend *backend;
 	size_t i;
-	int error;
+	int error = 0;
 
 	if (current != NULL &&
-	    (error = current->next(entry, current)) == 0)
+	    (error = current->next(entry, current)) == 0) {
 		return 0;
+	}
 
-	if (error != GIT_ITEROVER)
+	if (error < 0 && error != GIT_ITEROVER)
 		return error;
 
 	do {
@@ -657,15 +659,29 @@ static int multivar_iter_next(git_config_entry *entry, git_config_iterator *_ite
 
 		internal = git_vector_get(&iter->cfg->files, i - 1);
 		backend = internal->file;
-		if ((error = backend->get_multivar(&iter->current, backend, iter->name, iter->regexp)) < 0)
-			return -1;
+		iter->i = i - 1;
 
-		iter->i = i;
+		error = backend->get_multivar(&iter->current, backend, iter->name, iter->regexp);
+		if (error == GIT_ENOTFOUND)
+			continue;
+
+		if (error < 0)
+			return error;
+
 		return iter->current->next(entry, iter->current);
 
 	} while(1);
 
 	return GIT_ITEROVER;
+}
+
+void multivar_iter_free(git_config_iterator *_iter)
+{
+	multivar_iter *iter = (multivar_iter *) _iter;
+
+	git__free(iter->name);
+	git__free(iter->regexp);
+	git__free(iter);
 }
 
 int git_config_get_multivar(git_config_iterator **out, const git_config *cfg, const char *name, const char *regexp)
@@ -676,6 +692,15 @@ int git_config_get_multivar(git_config_iterator **out, const git_config *cfg, co
 	iter = git__calloc(1, sizeof(multivar_iter));
 	GITERR_CHECK_ALLOC(iter);
 
+	iter->name = git__strdup(name);
+	GITERR_CHECK_ALLOC(iter->name);
+
+	if (regexp != NULL) {
+		iter->regexp = git__strdup(regexp);
+		GITERR_CHECK_ALLOC(iter->regexp);
+	}
+
+	iter->parent.free = multivar_iter_free;
 	if (find_next_backend(&i, cfg, cfg->files.length) < 0)
 		iter->parent.next = multivar_iter_next_empty;
 	else
@@ -683,8 +708,6 @@ int git_config_get_multivar(git_config_iterator **out, const git_config *cfg, co
 
 	iter->i = cfg->files.length;
 	iter->cfg = cfg;
-	iter->name = name;
-	iter->regexp = regexp;
 
 	*out = (git_config_iterator *) iter;
 

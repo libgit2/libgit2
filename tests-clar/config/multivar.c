@@ -114,11 +114,11 @@ void test_config_multivar__add(void)
 
 	n = 0;
 	cl_git_pass(git_config_get_multivar_foreach(cfg, _name, NULL, cb, &n));
-	cl_assert(n == 3);
+	cl_assert_equal_i(n, 3);
 
 	n = 0;
 	cl_git_pass(git_config_get_multivar_foreach(cfg, _name, "otherplace", cb, &n));
-	cl_assert(n == 1);
+	cl_assert_equal_i(n, 1);
 
 	git_config_free(cfg);
 
@@ -128,11 +128,11 @@ void test_config_multivar__add(void)
 
 	n = 0;
 	cl_git_pass(git_config_get_multivar_foreach(cfg, _name, NULL, cb, &n));
-	cl_assert(n == 3);
+	cl_assert_equal_i(n, 3);
 
 	n = 0;
 	cl_git_pass(git_config_get_multivar_foreach(cfg, _name, "otherplace", cb, &n));
-	cl_assert(n == 1);
+	cl_assert_equal_i(n, 1);
 
 	git_config_free(cfg);
 }
@@ -148,7 +148,7 @@ void test_config_multivar__add_new(void)
 	cl_git_pass(git_config_set_multivar(cfg, var, "", "variable"));
 	n = 0;
 	cl_git_pass(git_config_get_multivar_foreach(cfg, var, NULL, cb, &n));
-	cl_assert(n == 1);
+	cl_assert_equal_i(n, 1);
 
 	git_config_free(cfg);
 }
@@ -191,7 +191,7 @@ void test_config_multivar__replace_multiple(void)
 
 	n = 0;
 	cl_git_pass(git_config_get_multivar_foreach(cfg, _name, "otherplace", cb, &n));
-	cl_assert(n == 2);
+	cl_assert_equal_i(n, 2);
 
 	git_config_free(cfg);
 
@@ -199,7 +199,7 @@ void test_config_multivar__replace_multiple(void)
 
 	n = 0;
 	cl_git_pass(git_config_get_multivar_foreach(cfg, _name, "otherplace", cb, &n));
-	cl_assert(n == 2);
+	cl_assert_equal_i(n, 2);
 
 	git_config_free(cfg);
 }

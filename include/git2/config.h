@@ -342,6 +342,16 @@ GIT_EXTERN(int) git_config_get_string(const char **out, const git_config *cfg, c
 GIT_EXTERN(int) git_config_get_multivar_foreach(const git_config *cfg, const char *name, const char *regexp, git_config_foreach_cb callback, void *payload);
 
 /**
+ * Get each value of a multivar
+ *
+ * @param out pointer to store the iterator
+ * @param cfg where to look for the variable
+ * @param name the variable's name
+ * @param regexp regular expression to filter which variables we're
+ * interested in. Use NULL to indicate all
+ */
+GIT_EXTERN(int) git_config_get_multivar(git_config_iterator **out, const git_config *cfg, const char *name, const char *regexp);
+/**
  * Set the value of an integer config variable in the config file
  * with the highest level (usually the local one).
  *

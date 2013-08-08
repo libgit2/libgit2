@@ -261,7 +261,7 @@ static void config_iterator_free(
 }
 
 static int config_iterator_next(
-	git_config_entry *entry,
+	git_config_entry **entry,
 	git_config_iterator *iter)
 {
 	git_config_file_iter *it = (git_config_file_iter *) iter;
@@ -282,9 +282,7 @@ static int config_iterator_next(
 		return -1;
 	}
 
-	entry->name = key;
-	entry->value = var->entry->value;
-	entry->level = var->entry->level;
+	*entry = var->entry;
 	it->next_var = CVAR_LIST_NEXT(var);
 
 	return 0;
@@ -433,19 +431,18 @@ static void foreach_iter_free(git_config_iterator *_iter)
 	git__free(iter);
 }
 
-static int foreach_iter_next(git_config_entry *out, git_config_iterator *_iter)
+static int foreach_iter_next(git_config_entry **out, git_config_iterator *_iter)
 {
 	foreach_iter *iter = (foreach_iter *) _iter;
 
 	cvar_t* var = iter->var;
 
+
 	if (var == NULL)
 		return GIT_ITEROVER;
 
 	if (!iter->have_regex) {
-		out->name = var->entry->name;
-		out->value = var->entry->value;
-
+		*out = var->entry;
 		iter->var = var->next;
 		return 0;
 	}
@@ -455,10 +452,11 @@ static int foreach_iter_next(git_config_entry *out, git_config_iterator *_iter)
 		git_config_entry *entry = var->entry;
 		regex_t *regex = &iter->regex;;
 		if (regexec(regex, entry->value, 0, NULL, 0) == 0) {
-			out->name = entry->name;
-			out->value = entry->value;
+			*out = entry;
+			iter->var = var->next;
 			return 0;
 		}
+		var = var->next;
 	} while(var != NULL);
 
 	return GIT_ITEROVER;
@@ -550,7 +548,7 @@ static int config_get_multivar_foreach(
 			if (regexec(&regex, var->entry->value, 0, NULL, 0) == 0) {
 				/* early termination by the user is not an error;
 				 * just break and return successfully */
-				if (fn(var->entry, data) < 0)
+				if (fn(var->entry, data))
 					break;
 			}
 
