@@ -16,7 +16,7 @@
 
 int p_unlink(const char *path)
 {
-	git_win_str_utf16 buf;
+	git_win32_path_utf16 buf;
 	git__utf8_to_16(buf, path);
 	_wchmod(buf, 0666);
 	return _wunlink(buf);
@@ -59,7 +59,7 @@ static int do_lstat(
 	const char *file_name, struct stat *buf, int posix_enotdir)
 {
 	WIN32_FILE_ATTRIBUTE_DATA fdata;
-	git_win_str_utf16 fbuf;
+	git_win32_path_utf16 fbuf;
 	wchar_t lastch;
 	int flen;
 
@@ -166,7 +166,7 @@ int p_readlink(const char *link, char *target, size_t target_len)
 	static fpath_func pGetFinalPath = NULL;
 	HANDLE hFile;
 	DWORD dwRet;
-	git_win_str_utf16 link_w;
+	git_win32_path_utf16 link_w;
 	wchar_t* target_w;
 	int error = 0;
 
@@ -255,7 +255,7 @@ int p_symlink(const char *old, const char *new)
 
 int p_open(const char *path, int flags, ...)
 {
-	git_win_str_utf16 buf;
+	git_win32_path_utf16 buf;
 	mode_t mode = 0;
 
 	git__utf8_to_16(buf, path);
@@ -273,7 +273,7 @@ int p_open(const char *path, int flags, ...)
 
 int p_creat(const char *path, mode_t mode)
 {
-	git_win_str_utf16 buf;
+	git_win32_path_utf16 buf;
 	git__utf8_to_16(buf, path);
 	return _wopen(buf, _O_WRONLY | _O_CREAT | _O_TRUNC | _O_BINARY, mode);
 }
@@ -316,14 +316,14 @@ int p_stat(const char* path, struct stat* buf)
 
 int p_chdir(const char* path)
 {
-	git_win_str_utf16 buf;
+	git_win32_path_utf16 buf;
 	git__utf8_to_16(buf, path);
 	return _wchdir(buf);
 }
 
 int p_chmod(const char* path, mode_t mode)
 {
-	git_win_str_utf16 buf;
+	git_win32_path_utf16 buf;
 	git__utf8_to_16(buf, path);
 	return _wchmod(buf, mode);
 }
@@ -331,7 +331,7 @@ int p_chmod(const char* path, mode_t mode)
 int p_rmdir(const char* path)
 {
 	int error;
-	git_win_str_utf16 buf;
+	git_win32_path_utf16 buf;
 	git__utf8_to_16(buf, path);
 
 	error = _wrmdir(buf);
@@ -348,7 +348,7 @@ int p_rmdir(const char* path)
 
 int p_hide_directory__w32(const char *path)
 {
-	git_win_str_utf16 buf;
+	git_win32_path_utf16 buf;
 	git__utf8_to_16(buf, path);
 	return (SetFileAttributesW(buf, FILE_ATTRIBUTE_HIDDEN) != 0) ? 0 : -1;
 }
@@ -356,8 +356,8 @@ int p_hide_directory__w32(const char *path)
 char *p_realpath(const char *orig_path, char *buffer)
 {
 	int ret;
-	git_win_str_utf16 orig_path_w;
-	git_win_str_utf16 buffer_w;
+	git_win32_path_utf16 orig_path_w;
+	git_win32_path_utf16 buffer_w;
 
 	git__utf8_to_16(orig_path_w, orig_path);
 
@@ -449,15 +449,15 @@ int p_setenv(const char* name, const char* value, int overwrite)
 
 int p_access(const char* path, mode_t mode)
 {
-	git_win_str_utf16 buf;
+	git_win32_path_utf16 buf;
 	git__utf8_to_16(buf, path);
 	return _waccess(buf, mode);
 }
 
 int p_rename(const char *from, const char *to)
 {
-	git_win_str_utf16 wfrom;
-	git_win_str_utf16 wto;
+	git_win32_path_utf16 wfrom;
+	git_win32_path_utf16 wto;
 
 	git__utf8_to_16(wfrom, from);
 	git__utf8_to_16(wto, to);

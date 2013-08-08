@@ -26,7 +26,7 @@ static int init_filter(char *filter, size_t n, const char *dir)
 git__DIR *git__opendir(const char *dir)
 {
 	char filter[GIT_WIN_PATH_UTF8];
-	git_win_str_utf16 filter_w;
+	git_win32_path_utf16 filter_w;
 	git__DIR *new = NULL;
 
 	if (!dir || !init_filter(filter, sizeof(filter), dir))
@@ -102,7 +102,7 @@ struct git__dirent *git__readdir(git__DIR *d)
 void git__rewinddir(git__DIR *d)
 {
 	char filter[GIT_WIN_PATH_UTF8];
-	git_win_str_utf16 filter_w;
+	git_win32_path_utf16 filter_w;
 
 	if (!d)
 		return;

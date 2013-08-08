@@ -56,7 +56,7 @@ void cl_git_rewritefile(const char *filename, const char *new_content)
 
 char *cl_getenv(const char *name)
 {
-	git_win_str_utf16 name_utf16;
+	git_win32_path_utf16 name_utf16;
 	DWORD alloc_len;
 	wchar_t *value_utf16;
 	char *value_utf8;
@@ -81,8 +81,8 @@ char *cl_getenv(const char *name)
 
 int cl_setenv(const char *name, const char *value)
 {
-	git_win_str_utf16 name_utf16;
-	git_win_str_utf16 value_utf16;
+	git_win32_path_utf16 name_utf16;
+	git_win32_path_utf16 value_utf16;
 
 	git__utf8_to_16(name_utf16, name);
 
@@ -107,8 +107,8 @@ int cl_setenv(const char *name, const char *value)
  * the source is a directory, a child of the source). */
 int cl_rename(const char *source, const char *dest)
 {
-	git_win_str_utf16 source_utf16;
-	git_win_str_utf16 dest_utf16;
+	git_win32_path_utf16 source_utf16;
+	git_win32_path_utf16 dest_utf16;
 	unsigned retries = 1;
 
 	git__utf8_to_16(source_utf16, source);

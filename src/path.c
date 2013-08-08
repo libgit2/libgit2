@@ -486,7 +486,7 @@ bool git_path_is_empty_dir(const char *path)
 {
 	git_buf pathbuf = GIT_BUF_INIT;
 	HANDLE hFind = INVALID_HANDLE_VALUE;
-	git_win_str_utf16 wbuf;
+	git_win32_path_utf16 wbuf;
 	WIN32_FIND_DATAW ffd;
 	bool retval = true;
 

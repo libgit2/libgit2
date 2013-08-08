@@ -893,7 +893,7 @@ static int winhttp_connect(
 	const char *url)
 {
 	wchar_t *ua = L"git/1.0 (libgit2 " WIDEN(LIBGIT2_VERSION) L")";
-	git_win_str_utf16 host;
+	git_win32_path_utf16 host;
 	int32_t port;
 	const char *default_port = "80";
 	int ret;
