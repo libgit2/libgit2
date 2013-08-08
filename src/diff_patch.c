@@ -230,6 +230,10 @@ static int diff_patch_generate(git_diff_patch *patch, git_diff_output *output)
 	if ((patch->flags & GIT_DIFF_PATCH_DIFFED) != 0)
 		return 0;
 
+	/* if we are not looking at the hunks and lines, don't do the diff */
+	if (!output->hunk_cb && !output->data_cb)
+		return 0;
+
 	if ((patch->flags & GIT_DIFF_PATCH_LOADED) == 0 &&
 		(error = diff_patch_load(patch, output)) < 0)
 		return error;
@@ -284,8 +288,8 @@ int git_diff_foreach(
 	if (diff_required(diff, "git_diff_foreach") < 0)
 		return -1;
 
-	diff_output_init((git_diff_output *)&xo,
-		&diff->opts, file_cb, hunk_cb, data_cb, payload);
+	diff_output_init(
+		&xo.output, &diff->opts, file_cb, hunk_cb, data_cb, payload);
 	git_xdiff_init(&xo, &diff->opts);
 
 	git_vector_foreach(&diff->deltas, idx, patch.delta) {
@@ -296,10 +300,10 @@ int git_diff_foreach(
 
 		if (!(error = diff_patch_init_from_diff(&patch, diff, idx))) {
 
-			error = diff_patch_file_callback(&patch, (git_diff_output *)&xo);
+			error = diff_patch_file_callback(&patch, &xo.output);
 
 			if (!error)
-				error = diff_patch_generate(&patch, (git_diff_output *)&xo);
+				error = diff_patch_generate(&patch, &xo.output);
 
 			git_diff_patch_free(&patch);
 		}
@@ -437,7 +441,7 @@ int git_diff_blobs(
 	memset(&xo, 0, sizeof(xo));
 
 	diff_output_init(
-		(git_diff_output *)&xo, opts, file_cb, hunk_cb, data_cb, payload);
+		&xo.output, opts, file_cb, hunk_cb, data_cb, payload);
 	git_xdiff_init(&xo, opts);
 
 	if (!old_path && new_path)
@@ -448,7 +452,7 @@ int git_diff_blobs(
 	error = diff_patch_from_blobs(
 		&pd, &xo, old_blob, old_path, new_blob, new_path, opts);
 
-	git_diff_patch_free((git_diff_patch *)&pd);
+	git_diff_patch_free(&pd.patch);
 
 	return error;
 }
@@ -473,7 +477,7 @@ int git_diff_patch_from_blobs(
 
 	memset(&xo, 0, sizeof(xo));
 
-	diff_output_to_patch((git_diff_output *)&xo, &pd->patch);
+	diff_output_to_patch(&xo.output, &pd->patch);
 	git_xdiff_init(&xo, opts);
 
 	error = diff_patch_from_blobs(
@@ -549,7 +553,7 @@ int git_diff_blob_to_buffer(
 	memset(&xo, 0, sizeof(xo));
 
 	diff_output_init(
-		(git_diff_output *)&xo, opts, file_cb, hunk_cb, data_cb, payload);
+		&xo.output, opts, file_cb, hunk_cb, data_cb, payload);
 	git_xdiff_init(&xo, opts);
 
 	if (!old_path && buf_path)
@@ -560,7 +564,7 @@ int git_diff_blob_to_buffer(
 	error = diff_patch_from_blob_and_buffer(
 		&pd, &xo, old_blob, old_path, buf, buflen, buf_path, opts);
 
-	git_diff_patch_free((git_diff_patch *)&pd);
+	git_diff_patch_free(&pd.patch);
 
 	return error;
 }
@@ -586,7 +590,7 @@ int git_diff_patch_from_blob_and_buffer(
 
 	memset(&xo, 0, sizeof(xo));
 
-	diff_output_to_patch((git_diff_output *)&xo, &pd->patch);
+	diff_output_to_patch(&xo.output, &pd->patch);
 	git_xdiff_init(&xo, opts);
 
 	error = diff_patch_from_blob_and_buffer(
@@ -638,13 +642,13 @@ int git_diff_get_patch(
 	if ((error = diff_patch_alloc_from_diff(&patch, diff, idx)) < 0)
 		return error;
 
-	diff_output_to_patch((git_diff_output *)&xo, patch);
+	diff_output_to_patch(&xo.output, patch);
 	git_xdiff_init(&xo, &diff->opts);
 
-	error = diff_patch_file_callback(patch, (git_diff_output *)&xo);
+	error = diff_patch_file_callback(patch, &xo.output);
 
 	if (!error)
-		error = diff_patch_generate(patch, (git_diff_output *)&xo);
+		error = diff_patch_generate(patch, &xo.output);
 
 	if (!error) {
 		/* if cumulative diff size is < 0.5 total size, flatten the patch */

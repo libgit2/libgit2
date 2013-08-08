@@ -16,6 +16,7 @@
 #include "iterator.h"
 #include "repository.h"
 #include "pool.h"
+#include "odb.h"
 
 #define DIFF_OLD_PREFIX_DEFAULT "a/"
 #define DIFF_NEW_PREFIX_DEFAULT "b/"
@@ -107,6 +108,34 @@ extern void git_diff_find_similar__hashsig_free(void *sig, void *payload);
 
 extern int git_diff_find_similar__calc_similarity(
 	int *score, void *siga, void *sigb, void *payload);
+
+/*
+ * Sometimes a git_diff_file will have a zero size; this attempts to
+ * fill in the size without loading the blob if possible.  If that is
+ * not possible, then it will return the git_odb_object that had to be
+ * loaded and the caller can use it or dispose of it as needed.
+ */
+GIT_INLINE(int) git_diff_file__resolve_zero_size(
+	git_diff_file *file, git_odb_object **odb_obj, git_repository *repo)
+{
+	int error;
+	git_odb *odb;
+	size_t len;
+	git_otype type;
+
+	if ((error = git_repository_odb(&odb, repo)) < 0)
+		return error;
+
+	error = git_odb__read_header_or_object(
+		odb_obj, &len, &type, odb, &file->oid);
+
+	git_odb_free(odb);
+
+	if (!error)
+		file->size = (git_off_t)len;
+
+	return error;
+}
 
 #endif
 
