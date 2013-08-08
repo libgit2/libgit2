@@ -82,6 +82,13 @@ extern const char *git_diff_delta__path(const git_diff_delta *delta);
 extern bool git_diff_delta__should_skip(
 	const git_diff_options *opts, const git_diff_delta *delta);
 
+extern int git_diff_delta__format_file_header(
+	git_buf *out,
+	const git_diff_delta *delta,
+	const char *oldpfx,
+	const char *newpfx,
+	int oid_strlen);
+
 extern int git_diff__oid_for_file(
 	git_repository *, const char *, uint16_t, git_off_t, git_oid *);
 
