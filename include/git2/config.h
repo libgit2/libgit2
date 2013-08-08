@@ -61,7 +61,7 @@ typedef struct {
 } git_config_entry;
 
 typedef int  (*git_config_foreach_cb)(const git_config_entry *, void *);
-typedef struct git_config_backend_iter* git_config_backend_iter;
+typedef struct git_config_backend_iter git_config_backend_iter;
 
 typedef enum {
 	GIT_CVAR_FALSE = 0,

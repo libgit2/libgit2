@@ -37,7 +37,7 @@ struct git_config_backend {
 	int (*del)(struct git_config_backend *, const char *key);
 	int (*iterator_new)(git_config_backend_iter **, struct git_config_backend *);
 	void (*iterator_free)(git_config_backend_iter *);
-	int (*next)(git_config_backend_iter *, git_config_entry *, struct git_config_backend *);
+	int (*next)(git_config_entry *, git_config_backend_iter *);
 	int (*refresh)(struct git_config_backend *);
 	void (*free)(struct git_config_backend *);
 };

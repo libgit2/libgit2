@@ -28,6 +28,8 @@ typedef struct cvar_t {
 } cvar_t;
 
 typedef struct git_config_file_iter {
+	git_config_backend *backend;
+	unsigned int flags;
 	git_strmap_iter iter;
 	cvar_t* next;
 } git_config_file_iter;
@@ -254,7 +256,7 @@ static void backend_free(git_config_backend *_backend)
 }
 
 static int config_iterator_new(
-	git_config_backend_iter *iter,
+	git_config_backend_iter **iter,
 	struct git_config_backend* backend)
 {
 	diskfile_backend *b = (diskfile_backend *)backend;
@@ -266,6 +268,7 @@ static int config_iterator_new(
 	*it = git__calloc(1, sizeof(git_config_file_iter));
 	GITERR_CHECK_ALLOC(it);
 
+	(*it)->backend = backend;
 	(*it)->iter = git_strmap_begin(b->values);
 	(*it)->next = NULL;
 
@@ -273,18 +276,17 @@ static int config_iterator_new(
 }
 
 static void config_iterator_free(
-	git_config_backend_iter iter)
+	git_config_backend_iter* iter)
 {
 	git__free(iter);
 }
 
-static int config_next(
-	git_config_backend_iter *iter,
-	git_config_entry* entry,
-	struct git_config_backend* backend)
+static int config_iterator_next(
+	git_config_entry *entry,
+	git_config_backend_iter *iter)
 {
-	diskfile_backend *b = (diskfile_backend *)backend;
 	git_config_file_iter *it = *((git_config_file_iter**) iter);
+	diskfile_backend *b = (diskfile_backend *)it->backend;
 	int err;
 	cvar_t * var;
 	const char* key;
@@ -611,7 +613,7 @@ int git_config_file__ondisk(git_config_backend **out, const char *path)
 	backend->parent.del = config_delete;
 	backend->parent.iterator_new = config_iterator_new;
 	backend->parent.iterator_free = config_iterator_free;
-	backend->parent.next = config_next;
+	backend->parent.next = config_iterator_next;
 	backend->parent.refresh = config_refresh;
 	backend->parent.free = backend_free;
 

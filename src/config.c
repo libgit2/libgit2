@@ -328,7 +328,7 @@ int git_config_backend_foreach_match(
 	void *data)
 {
 	git_config_entry entry;
-	git_config_backend_iter iter;
+	git_config_backend_iter* iter;
 	regex_t regex;
 	int result = 0;
 
@@ -343,7 +343,7 @@ int git_config_backend_foreach_match(
 	if (backend->iterator_new(&iter, backend) < 0)
 		return 0;
 
-	while(!(backend->next(&iter, &entry, backend) < 0)) {
+	while(!(backend->next(&entry, iter) < 0)) {
 		/* skip non-matching keys if regexp was provided */
 		if (regexp && regexec(&regex, entry.name, 0, NULL, 0) != 0)
 			continue;
