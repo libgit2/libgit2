@@ -24,10 +24,10 @@ struct git_config {
 	git_vector files;
 };
 
-typedef struct {
+struct git_config_backend_iter {
 	git_config_backend *backend;
 	unsigned int flags;
-} git_config_backend_iter;
+};
 
 extern int git_config_find_global_r(git_buf *global_config_path);
 extern int git_config_find_xdg_r(git_buf *system_config_path);
