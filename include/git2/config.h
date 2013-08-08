@@ -351,6 +351,23 @@ GIT_EXTERN(int) git_config_get_multivar_foreach(const git_config *cfg, const cha
  * interested in. Use NULL to indicate all
  */
 GIT_EXTERN(int) git_config_get_multivar(git_config_iterator **out, const git_config *cfg, const char *name, const char *regexp);
+
+/**
+ * Return the current entry and advance the iterator
+ *
+ * @param entry pointer to store the entry
+ * @param iter the iterator
+ * @return 0 or an error code. GIT_ITEROVER if the iteration has completed
+ */
+GIT_EXTERN(int) git_config_next(git_config_entry **entry, git_config_iterator *iter);
+
+/**
+ * Free a config iterator
+ *
+ * @param iter the iterator to free
+ */
+GIT_EXTERN(void) git_config_iterator_free(git_config_iterator *iter);
+
 /**
  * Set the value of an integer config variable in the config file
  * with the highest level (usually the local one).

@@ -70,6 +70,22 @@ static void check_get_multivar_foreach(
 	}
 }
 
+static void check_get_multivar(git_config *cfg, int expected)
+{
+	git_config_iterator *iter;
+	git_config_entry *entry;
+	int n = 0;
+
+	cl_git_pass(git_config_get_multivar(&iter, cfg, _name, NULL));
+
+	while (git_config_next(&entry, iter) == 0)
+		n++;
+
+	cl_assert_equal_i(expected, n);
+	git_config_iterator_free(iter);
+
+}
+
 void test_config_multivar__get(void)
 {
 	git_config *cfg;
@@ -100,6 +116,8 @@ void test_config_multivar__get(void)
 	/* reload original file (add different place in order) */
 	cl_git_pass(git_config_add_file_ondisk(cfg, "config/config11", GIT_CONFIG_LEVEL_SYSTEM, 1));
 	check_get_multivar_foreach(cfg, 2, 1);
+
+	check_get_multivar(cfg, 2);
 
 	git_config_free(cfg);
 }

@@ -727,6 +727,16 @@ int git_config_set_multivar(git_config *cfg, const char *name, const char *regex
 	return file->set_multivar(file, name, regexp, value);
 }
 
+int git_config_next(git_config_entry **entry, git_config_iterator *iter)
+{
+	return iter->next(entry, iter);
+}
+
+void git_config_iterator_free(git_config_iterator *iter)
+{
+	iter->free(iter);
+}
+
 static int git_config__find_file_to_path(
 	char *out, size_t outlen, int (*find)(git_buf *buf))
 {
