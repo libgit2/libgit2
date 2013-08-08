@@ -416,6 +416,95 @@ static int config_get(const git_config_backend *cfg, const char *name, const git
 	return 0;
 }
 
+typedef struct {
+	git_config_iterator parent;
+	cvar_t *var;
+	regex_t regex;
+	int have_regex;
+} foreach_iter;
+
+static void foreach_iter_free(git_config_iterator *_iter)
+{
+	foreach_iter *iter = (foreach_iter *) _iter;
+
+	if (iter->have_regex)
+		regfree(&iter->regex);
+
+	git__free(iter);
+}
+
+static int foreach_iter_next(git_config_entry **out, git_config_iterator *_iter)
+{
+	foreach_iter *iter = (foreach_iter *) _iter;
+
+	cvar_t* var = iter->var;
+
+	if (var == NULL)
+		return GIT_ITEROVER;
+
+	if (!iter->have_regex) {
+		*out = var->entry;
+		iter->var = var->next;
+		return 0;
+	}
+
+	/* For the regex case, we must loop until we find something we like */
+	do {
+		git_config_entry *entry = var->entry;
+		regex_t *regex = &iter->regex;;
+		if (regexec(regex, entry->value, 0, NULL, 0) == 0) {
+			*out = entry;
+			return 0;
+		}
+	} while(var != NULL);
+
+	return GIT_ITEROVER;
+}
+
+static int config_get_multivar(git_config_iterator **out, git_config_backend *_backend,
+			       const char *name, const char *regexp)
+{
+	foreach_iter *iter;
+	diskfile_backend *b = (diskfile_backend *) _backend;
+
+	char *key;
+	khiter_t pos;
+	int error = 0;
+
+	if ((error = normalize_name(name, &key)) < 0)
+		return error;
+
+	pos = git_strmap_lookup_index(b->values, key);
+	git__free(key);
+
+	if (!git_strmap_valid_index(b->values, pos))
+		return GIT_ENOTFOUND;
+
+	iter = git__calloc(1, sizeof(foreach_iter));
+	GITERR_CHECK_ALLOC(iter);
+
+	iter->var = git_strmap_value_at(b->values, pos);
+
+	if (regexp != NULL) {
+		int result;
+
+		result = regcomp(&iter->regex, regexp, REG_EXTENDED);
+		if (result < 0) {
+			giterr_set_regex(&iter->regex, result);
+			regfree(&iter->regex);
+			return -1;
+		}
+		iter->have_regex = 1;
+	}
+
+	iter->parent.free = foreach_iter_free;
+	iter->parent.next = foreach_iter_next;
+
+	*out = (git_config_iterator *) iter;
+
+	return 0;
+ }
+
 static int config_get_multivar_foreach(
 	git_config_backend *cfg,
 	const char *name,
@@ -607,6 +696,7 @@ int git_config_file__ondisk(git_config_backend **out, const char *path)
 	backend->parent.open = config_open;
 	backend->parent.get = config_get;
 	backend->parent.get_multivar_foreach = config_get_multivar_foreach;
+	backend->parent.get_multivar = config_get_multivar;
 	backend->parent.set = config_set;
 	backend->parent.set_multivar = config_set_multivar;
 	backend->parent.del = config_delete;

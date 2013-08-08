@@ -602,6 +602,24 @@ int git_config_get_multivar_foreach(
 	return (ret == GIT_ENOTFOUND) ? config_error_notfound(name) : 0;
 }
 
+struct config_multivar_iter {
+	git_config_iterator parent;
+};
+
+int git_config_get_multivar(git_config_iterator **out, const git_config *cfg, const char *name, const char *regexp)
+{
+	struct config_multivar_iter *iter;
+
+	iter = git__calloc(1, sizeof(struct config_multivar_iter));
+	GITERR_CHECK_ALLOC(iter);
+
+	/* get multivar from each */
+
+	*out = (git_config_iterator *) iter;
+
+	return 0;
+}
+
 int git_config_set_multivar(git_config *cfg, const char *name, const char *regexp, const char *value)
 {
 	git_config_backend *file;

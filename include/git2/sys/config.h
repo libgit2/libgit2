@@ -36,9 +36,10 @@ struct git_config_iterator {
 	unsigned int flags;
 
 	/**
-	 * Return the current entry and advance the iterator
+	 * Return the current entry and advance the iterator. The
+	 * memory belongs to the library.
 	 */
-	int (*next)(git_config_entry *entry, git_config_iterator *iter);
+	int (*next)(const git_config_entry *entry, git_config_iterator *iter);
 
 	/**
 	 * Free the iterator
@@ -58,6 +59,7 @@ struct git_config_backend {
 	int (*open)(struct git_config_backend *, git_config_level_t level);
 	int (*get)(const struct git_config_backend *, const char *key, const git_config_entry **entry);
 	int (*get_multivar_foreach)(struct git_config_backend *, const char *key, const char *regexp, git_config_foreach_cb callback, void *payload);
+	int (*get_multivar)(git_config_iterator **, struct git_config_backend *, const char *name, const char *regexp);
 	int (*set)(struct git_config_backend *, const char *key, const char *value);
 	int (*set_multivar)(git_config_backend *cfg, const char *name, const char *regexp, const char *value);
 	int (*del)(struct git_config_backend *, const char *key);
