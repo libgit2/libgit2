@@ -28,9 +28,9 @@ typedef struct cvar_t {
 } cvar_t;
 
 typedef struct git_config_file_iter {
-	git_config_backend_iter parent;
+	git_config_iterator parent;
 	git_strmap_iter iter;
-	cvar_t* next;
+	cvar_t* next_var;
 } git_config_file_iter;
 
 
@@ -254,8 +254,44 @@ static void backend_free(git_config_backend *_backend)
 	git__free(backend);
 }
 
+static void config_iterator_free(
+	git_config_iterator* iter)
+{
+	git__free(iter);
+}
+
+static int config_iterator_next(
+	git_config_entry *entry,
+	git_config_iterator *iter)
+{
+	git_config_file_iter *it = (git_config_file_iter *) iter;
+	diskfile_backend *b = (diskfile_backend *) it->parent.backend;
+	int err = 0;
+	cvar_t * var;
+	const char* key;
+
+	if (it->next_var == NULL) {
+		err = git_strmap_next(&key, (void**) &var, &(it->iter), b->values);
+	} else {
+		key = it->next_var->entry->name;
+		var = it->next_var;
+	}
+
+	if (err < 0) {
+		it->next_var = NULL;
+		return -1;
+	}
+
+	entry->name = key;
+	entry->value = var->entry->value;
+	entry->level = var->entry->level;
+	it->next_var = CVAR_LIST_NEXT(var);
+
+	return 0;
+}
+
 static int config_iterator_new(
-	git_config_backend_iter **iter,
+	git_config_iterator **iter,
 	struct git_config_backend* backend)
 {
 	diskfile_backend *b = (diskfile_backend *)backend;
@@ -265,44 +301,11 @@ static int config_iterator_new(
 
 	it->parent.backend = backend;
 	it->iter = git_strmap_begin(b->values);
-	it->next = NULL;
-	*iter = (git_config_backend_iter *) it;
+	it->next_var = NULL;
 
-	return 0;
-}
-
-static void config_iterator_free(
-	git_config_backend_iter* iter)
-{
-	git__free(iter);
-}
-
-static int config_iterator_next(
-	git_config_entry *entry,
-	git_config_backend_iter *iter)
-{
-	git_config_file_iter *it = (git_config_file_iter *) iter;
-	diskfile_backend *b = (diskfile_backend *) it->parent.backend;
-	int err = 0;
-	cvar_t * var;
-	const char* key;
-
-	if (it->next == NULL) {
-		err = git_strmap_next(&key, (void**) &var, &(it->iter), b->values);
-	} else {
-		key = it->next->entry->name;
-		var = it->next;
-	}
-
-	if (err < 0) {
-		it->next = NULL;
-		return -1;
-	}
-
-	entry->name = key;
-	entry->value = var->entry->value;
-	entry->level = var->entry->level;
-	it->next = CVAR_LIST_NEXT(var);
+	it->parent.next = config_iterator_next;
+	it->parent.free = config_iterator_free;
+	*iter = (git_config_iterator *) it;
 
 	return 0;
 }
@@ -607,9 +610,7 @@ int git_config_file__ondisk(git_config_backend **out, const char *path)
 	backend->parent.set = config_set;
 	backend->parent.set_multivar = config_set_multivar;
 	backend->parent.del = config_delete;
-	backend->parent.iterator_new = config_iterator_new;
-	backend->parent.iterator_free = config_iterator_free;
-	backend->parent.next = config_iterator_next;
+	backend->parent.iterator = config_iterator_new;
 	backend->parent.refresh = config_refresh;
 	backend->parent.free = backend_free;
 

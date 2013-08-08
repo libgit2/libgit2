@@ -21,6 +21,32 @@
 GIT_BEGIN_DECL
 
 /**
+ * Every iterator must have this struct as its first element, so the
+ * API can talk to it. You'd define your iterator as
+ *
+ *     struct my_iterator {
+ *             git_config_iterator parent;
+ *             ...
+ *     }
+ *
+ * and assign `iter->parent.backend` to your `git_config_backend`.
+ */
+struct git_config_iterator {
+	git_config_backend *backend;
+	unsigned int flags;
+
+	/**
+	 * Return the current entry and advance the iterator
+	 */
+	int (*next)(git_config_entry *entry, git_config_iterator *iter);
+
+	/**
+	 * Free the iterator
+	 */
+	void (*free)(git_config_iterator *iter);
+};
+
+/**
  * Generic backend that implements the interface to
  * access a configuration file
  */
@@ -35,9 +61,7 @@ struct git_config_backend {
 	int (*set)(struct git_config_backend *, const char *key, const char *value);
 	int (*set_multivar)(git_config_backend *cfg, const char *name, const char *regexp, const char *value);
 	int (*del)(struct git_config_backend *, const char *key);
-	int (*iterator_new)(git_config_backend_iter **, struct git_config_backend *);
-	void (*iterator_free)(git_config_backend_iter *);
-	int (*next)(git_config_entry *, git_config_backend_iter *);
+	int (*iterator)(git_config_iterator **, struct git_config_backend *);
 	int (*refresh)(struct git_config_backend *);
 	void (*free)(struct git_config_backend *);
 };
