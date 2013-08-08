@@ -328,7 +328,7 @@ static int checkout_conflicts_mark_directoryfile(
 
 		if ((error = git_index_find(&j, data->index, path)) < 0) {
 			if (error == GIT_ENOTFOUND)
-				giterr_set(GITERR_MERGE,
+				giterr_set(GITERR_INDEX,
 					"Index inconsistency, could not find entry for expected conflict '%s'", path);
 
 			goto done;
@@ -336,7 +336,7 @@ static int checkout_conflicts_mark_directoryfile(
 
 		for (; j < len; j++) {
 			if ((entry = git_index_get_byindex(data->index, j)) == NULL) {
-				giterr_set(GITERR_MERGE,
+				giterr_set(GITERR_INDEX,
 					"Index inconsistency, truncated index while loading expected conflict '%s'", path);
 				error = -1;
 				goto done;
@@ -371,15 +371,32 @@ static int conflict_entry_name(
 	return 0;
 }
 
-static int conflict_path_suffixed(
-	git_buf *out,
-	const char *path,
-	const char *side_name)
+static int checkout_path_suffixed(git_buf *path, const char *suffix)
 {
-	if (git_buf_puts(out, path) < 0 ||
-		git_buf_putc(out, '~') < 0 ||
-		git_buf_puts(out, side_name) < 0)
+	size_t path_len;
+	int i = 0, error = 0;
+
+	if ((error = git_buf_putc(path, '~')) < 0 || (error = git_buf_puts(path, suffix)) < 0)
 		return -1;
+
+	path_len = git_buf_len(path);
+
+	while (git_path_exists(git_buf_cstr(path)) && i < INT_MAX) {
+		git_buf_truncate(path, path_len);
+
+		if ((error = git_buf_putc(path, '_')) < 0 ||
+			(error = git_buf_printf(path, "%d", i)) < 0)
+			return error;
+
+		i++;
+	}
+
+	if (i == INT_MAX) {
+		git_buf_truncate(path, path_len);
+
+		giterr_set(GITERR_CHECKOUT, "Could not write '%s': working directory file exists", path);
+		return GIT_EEXISTS;
+	}
 
 	return 0;
 }
@@ -389,7 +406,7 @@ static int checkout_write_entry(
 	checkout_conflictdata *conflict,
 	const git_index_entry *side)
 {
-	const char *hint_path = NULL, *side_label;
+	const char *hint_path = NULL, *suffix;
 	struct stat st;
 
 	assert (side == conflict->ours ||
@@ -404,14 +421,13 @@ static int checkout_write_entry(
 		(data->strategy & GIT_CHECKOUT_USE_THEIRS) == 0) {
 
 		if (side == conflict->ours)
-			side_label = data->opts.our_label ? data->opts.our_label :
+			suffix = data->opts.our_label ? data->opts.our_label :
 				"ours";
 		else if (side == conflict->theirs)
-			side_label = data->opts.their_label ? data->opts.their_label :
+			suffix = data->opts.their_label ? data->opts.their_label :
 				"theirs";
 
-		if (git_buf_putc(&data->path, '~') < 0 ||
-			git_buf_puts(&data->path, side_label) < 0)
+		if (checkout_path_suffixed(&data->path, suffix) < 0)
 			return -1;
 
 		hint_path = side->path;
@@ -433,6 +449,33 @@ static int checkout_write_entries(
 	return error;
 }
 
+static int checkout_merge_path(
+	git_buf *out,
+	checkout_data *data,
+	checkout_conflictdata *conflict,
+	git_merge_file_result *result)
+{
+	const char *our_label_raw, *their_label_raw, *suffix;
+	int i = 0, error = 0;
+
+	if ((error = git_buf_joinpath(out, git_repository_workdir(data->repo), result->path)) < 0)
+		return error;
+
+	/* Most conflicts simply use the filename in the index */
+	if (!conflict->name_collision)
+		return 0;
+
+	/* Rename 2->1 conflicts need the branch name appended */
+	our_label_raw = data->opts.our_label ? data->opts.our_label : "ours";
+	their_label_raw = data->opts.their_label ? data->opts.their_label : "theirs";
+	suffix = strcmp(result->path, conflict->ours->path) == 0 ? our_label_raw : their_label_raw;
+
+	if ((error = checkout_path_suffixed(out, suffix)) < 0)
+		return error;
+
+	return 0;
+}
+
 static int checkout_write_merge(
 	checkout_data *data,
 	checkout_conflictdata *conflict)
@@ -444,7 +487,6 @@ static int checkout_write_merge(
 		theirs = GIT_MERGE_FILE_INPUT_INIT;
 	git_merge_file_result result = GIT_MERGE_FILE_RESULT_INIT;
 	git_filebuf output = GIT_FILEBUF_INIT;
-	const char *our_label_raw, *their_label_raw, *path;
 	int error = 0;
 
 	if ((conflict->ancestor &&
@@ -457,8 +499,8 @@ static int checkout_write_merge(
 		goto done;
 
 	ancestor.label = NULL;
-	ours.label = our_label_raw = data->opts.our_label ? data->opts.our_label : "ours";
-	theirs.label = their_label_raw = data->opts.their_label ? data->opts.their_label : "theirs";
+	ours.label = data->opts.our_label ? data->opts.our_label : "ours";
+	theirs.label = data->opts.their_label ? data->opts.their_label : "theirs";
 
 	/* If all the paths are identical, decorate the diff3 file with the branch
 	 * names.  Otherwise, append branch_name:path.
@@ -485,19 +527,8 @@ static int checkout_write_merge(
 		goto done;
 	}
 
-	/* Rename 2->1 conflicts need the branch name appended */
-	if (conflict->name_collision) {
-		if ((error = conflict_path_suffixed(&path_suffixed, result.path,
-			(strcmp(result.path, conflict->ours->path) == 0 ?
-			our_label_raw : their_label_raw))) < 0)
-			goto done;
-		
-		path = git_buf_cstr(&path_suffixed);
-	} else
-		path = result.path;
-
-	if ((error = git_buf_joinpath(&path_workdir, git_repository_workdir(data->repo), path)) < 0 ||
-		(error = git_futils_mkpath2file(path_workdir.ptr, 0755) < 0) ||
+	if ((error = checkout_merge_path(&path_workdir, data, conflict, &result)) < 0 ||
+		(error = git_futils_mkpath2file(path_workdir.ptr, 0755)) < 0 ||
 		(error = git_filebuf_open(&output, path_workdir.ptr, GIT_FILEBUF_DO_NOT_BUFFER)) < 0 ||
 		(error = git_filebuf_write(&output, result.data, result.len)) < 0 ||
 		(error = git_filebuf_commit(&output, result.mode)) < 0)
