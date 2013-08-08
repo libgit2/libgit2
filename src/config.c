@@ -594,6 +594,7 @@ int git_config_get_multivar_foreach(
 		}
 	}
 
+	iter->free(iter);
 	if (err == GIT_ITEROVER)
 		err = 0;
 
@@ -661,6 +662,10 @@ static int multivar_iter_next(git_config_entry **entry, git_config_iterator *_it
 		backend = internal->file;
 		iter->i = i - 1;
 
+		if (iter->current)
+			iter->current->free(current);
+
+		iter->current = NULL;
 		error = backend->get_multivar(&iter->current, backend, iter->name, iter->regexp);
 		if (error == GIT_ENOTFOUND)
 			continue;
@@ -678,6 +683,9 @@ static int multivar_iter_next(git_config_entry **entry, git_config_iterator *_it
 void multivar_iter_free(git_config_iterator *_iter)
 {
 	multivar_iter *iter = (multivar_iter *) _iter;
+
+	if (iter->current)
+		iter->current->free(iter->current);
 
 	git__free(iter->name);
 	git__free(iter->regexp);
