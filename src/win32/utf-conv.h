@@ -6,6 +6,7 @@
  */
 
 #include <wchar.h>
+#include "common.h"
 
 #ifndef INCLUDE_git_utfconv_h__
 #define INCLUDE_git_utfconv_h__
