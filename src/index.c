@@ -1371,7 +1371,7 @@ static int read_reuc(git_index *index, const char *buffer, size_t size)
 	while (size) {
 		git_index_reuc_entry *lost;
 
-		len = strlen(buffer) + 1;
+		len = p_strnlen(buffer, size) + 1;
 		if (size <= len)
 			return index_error_invalid("reading reuc entries");
 
@@ -1444,7 +1444,7 @@ static int read_conflict_names(git_index *index, const char *buffer, size_t size
 		return -1;
 
 #define read_conflict_name(ptr) \
-	len = strlen(buffer) + 1; \
+	len = p_strnlen(buffer, size) + 1; \
 	if (size < len) \
 		return index_error_invalid("reading conflict name entries"); \
 	\
@@ -1571,7 +1571,8 @@ static size_t read_extension(git_index *index, const char *buffer, size_t buffer
 
 	total_size = dest.extension_size + sizeof(struct index_extension);
 
-	if (buffer_size < total_size ||
+	if (dest.extension_size > total_size ||
+		buffer_size < total_size ||
 		buffer_size - total_size < INDEX_FOOTER_SIZE)
 		return 0;
 

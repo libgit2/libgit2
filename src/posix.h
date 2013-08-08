@@ -93,6 +93,10 @@ extern int p_gettimeofday(struct timeval *tv, struct timezone *tz);
 #	include "unix/posix.h"
 #endif
 
+#ifndef __MINGW32__
+# define p_strnlen strnlen
+#endif
+
 #ifdef NO_READDIR_R
 #	include <dirent.h>
 GIT_INLINE(int) p_readdir_r(DIR *dirp, struct dirent *entry, struct dirent **result)
