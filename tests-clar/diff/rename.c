@@ -236,6 +236,8 @@ void test_diff_rename__not_exact_match(void)
 		&diff, g_repo, old_tree, new_tree, &diffopts));
 
 	opts.flags = GIT_DIFF_FIND_ALL;
+	opts.break_rewrite_threshold = 70;
+
 	cl_git_pass(git_diff_find_similar(diff, &opts));
 
 	memset(&exp, 0, sizeof(exp));
@@ -312,8 +314,8 @@ void test_diff_rename__not_exact_match(void)
 
 	/* the default match algorithm is going to find the internal
 	 * whitespace differences in the lines of sixserving.txt to be
-	 * significant enough that this will decide to split it into
-	 * an ADD and a DELETE
+	 * significant enough that this will decide to split it into an ADD
+	 * and a DELETE
 	 */
 
 	memset(&exp, 0, sizeof(exp));
@@ -480,6 +482,7 @@ void test_diff_rename__working_directory_changes(void)
 	cl_git_pass(git_diff_tree_to_workdir(&diff, g_repo, tree, &diffopts));
 
 	opts.flags = GIT_DIFF_FIND_ALL | GIT_DIFF_FIND_DONT_IGNORE_WHITESPACE;
+	opts.rename_threshold = 70;
 	cl_git_pass(git_diff_find_similar(diff, &opts));
 
 	memset(&exp, 0, sizeof(exp));
@@ -868,6 +871,8 @@ void test_diff_rename__from_deleted_to_split(void)
 struct rename_expected
 {
 	size_t len;
+
+	unsigned int *status;
 	const char **sources;
 	const char **targets;
 
@@ -882,7 +887,7 @@ int test_names_expected(const git_diff_delta *delta, float progress, void *p)
 
 	cl_assert(expected->idx < expected->len);
 
-	cl_assert_equal_i(delta->status, GIT_DELTA_RENAMED);
+	cl_assert_equal_i(delta->status, expected->status[expected->idx]);
 
 	cl_assert(git__strcmp(expected->sources[expected->idx],
 		delta->old_file.path) == 0);
@@ -904,9 +909,10 @@ void test_diff_rename__rejected_match_can_match_others(void)
 	git_diff_options diffopts = GIT_DIFF_OPTIONS_INIT;
 	git_diff_find_options findopts = GIT_DIFF_FIND_OPTIONS_INIT;
 	git_buf one = GIT_BUF_INIT, two = GIT_BUF_INIT;
+	unsigned int status[] = { GIT_DELTA_RENAMED, GIT_DELTA_RENAMED };
 	const char *sources[] = { "Class1.cs", "Class2.cs" };
 	const char *targets[] = { "ClassA.cs", "ClassB.cs" };
-	struct rename_expected expect = { 2, sources, targets };
+	struct rename_expected expect = { 2, status, sources, targets };
 	char *ptr;
 
 	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
@@ -988,9 +994,10 @@ void test_diff_rename__rejected_match_can_match_others_two(void)
 	git_diff_list *diff;
 	git_diff_options diffopts = GIT_DIFF_OPTIONS_INIT;
 	git_diff_find_options findopts = GIT_DIFF_FIND_OPTIONS_INIT;
+	unsigned int status[] = { GIT_DELTA_RENAMED, GIT_DELTA_RENAMED };
 	const char *sources[] = { "a.txt", "b.txt" };
 	const char *targets[] = { "c.txt", "d.txt" };
-	struct rename_expected expect = { 2, sources, targets };
+	struct rename_expected expect = { 2, status, sources, targets };
 
 	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
 
@@ -1031,6 +1038,112 @@ void test_diff_rename__rejected_match_can_match_others_two(void)
 	git_index_free(index);
 	git_reference_free(head);
 	git_reference_free(selfsimilar);
+}
+
+void test_diff_rename__rejected_match_can_match_others_three(void)
+{
+	git_reference *head, *selfsimilar;
+	git_index *index;
+	git_tree *tree;
+	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
+	git_diff_list *diff;
+	git_diff_options diffopts = GIT_DIFF_OPTIONS_INIT;
+	git_diff_find_options findopts = GIT_DIFF_FIND_OPTIONS_INIT;
+
+	/* Both cannot be renames from a.txt */
+	unsigned int status[] = { GIT_DELTA_ADDED, GIT_DELTA_RENAMED };
+	const char *sources[] = { "0001.txt", "a.txt" };
+	const char *targets[] = { "0001.txt", "0002.txt" };
+	struct rename_expected expect = { 2, status, sources, targets };
+
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+
+	cl_git_pass(git_reference_lookup(&head, g_repo, "HEAD"));
+	cl_git_pass(git_reference_symbolic_set_target(
+		&selfsimilar, head, "refs/heads/renames_similar_two"));
+	cl_git_pass(git_checkout_head(g_repo, &opts));
+	cl_git_pass(git_repository_index(&index, g_repo));
+
+	cl_git_pass(p_unlink("renames/a.txt"));
+
+	cl_git_pass(git_index_remove_bypath(index, "a.txt"));
+
+	write_similarity_file_two("renames/0001.txt", 7);
+	write_similarity_file_two("renames/0002.txt", 0);
+
+	cl_git_pass(git_index_add_bypath(index, "0001.txt"));
+	cl_git_pass(git_index_add_bypath(index, "0002.txt"));
+
+	cl_git_pass(git_index_write(index));
+
+	cl_git_pass(
+		git_revparse_single((git_object **)&tree, g_repo, "HEAD^{tree}"));
+
+	cl_git_pass(
+		git_diff_tree_to_index(&diff, g_repo, tree, index, &diffopts));
+
+	cl_git_pass(git_diff_find_similar(diff, &findopts));
+
+	cl_git_pass(
+		git_diff_foreach(diff, test_names_expected, NULL, NULL, &expect));
+
+	cl_assert(expect.idx == expect.len);
+
+	git_diff_list_free(diff);
+	git_tree_free(tree);
+	git_index_free(index);
+	git_reference_free(head);
+	git_reference_free(selfsimilar);
+}
+
+void test_diff_rename__can_rename_from_rewrite(void)
+{
+	git_index *index;
+	git_tree *tree;
+	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
+	git_diff_list *diff;
+	git_diff_options diffopts = GIT_DIFF_OPTIONS_INIT;
+	git_diff_find_options findopts = GIT_DIFF_FIND_OPTIONS_INIT;
+
+	unsigned int status[] = { GIT_DELTA_RENAMED, GIT_DELTA_RENAMED };
+	const char *sources[] = { "ikeepsix.txt", "songof7cities.txt" };
+	const char *targets[] = { "songof7cities.txt", "this-is-a-rename.txt" };
+	struct rename_expected expect = { 2, status, sources, targets };
+
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+
+	cl_git_pass(git_repository_index(&index, g_repo));
+
+	cl_git_pass(p_rename("renames/songof7cities.txt", "renames/this-is-a-rename.txt"));
+	cl_git_pass(p_rename("renames/ikeepsix.txt", "renames/songof7cities.txt"));
+
+	cl_git_pass(git_index_remove_bypath(index, "ikeepsix.txt"));
+
+	cl_git_pass(git_index_add_bypath(index, "songof7cities.txt"));
+	cl_git_pass(git_index_add_bypath(index, "this-is-a-rename.txt"));
+
+	cl_git_pass(git_index_write(index));
+
+	cl_git_pass(
+		git_revparse_single((git_object **)&tree, g_repo, "HEAD^{tree}"));
+
+	cl_git_pass(
+		git_diff_tree_to_index(&diff, g_repo, tree, index, &diffopts));
+
+	findopts.flags |= GIT_DIFF_FIND_AND_BREAK_REWRITES |
+		GIT_DIFF_FIND_REWRITES |
+		GIT_DIFF_FIND_RENAMES_FROM_REWRITES;
+
+	cl_git_pass(git_diff_find_similar(diff, &findopts));
+
+	cl_git_pass(
+		git_diff_foreach(diff, test_names_expected, NULL, NULL, &expect));
+
+	cl_assert(expect.idx == expect.len);
+
+	git_diff_list_free(diff);
+	git_tree_free(tree);
+	git_index_free(index);
 }
 
 void test_diff_rename__case_changes_are_split(void)
