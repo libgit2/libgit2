@@ -261,9 +261,6 @@ static int config_iterator_new(
 	diskfile_backend *b = (diskfile_backend *)backend;
 	git_config_file_iter *it = git__calloc(1, sizeof(git_config_file_iter));
 
-	if (!b->values || git_strmap_num_entries(b->values) < 1)
-		return -1;
-
 	GITERR_CHECK_ALLOC(it);
 
 	it->parent.backend = backend;

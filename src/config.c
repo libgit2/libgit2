@@ -340,8 +340,10 @@ int git_config_backend_foreach_match(
 		}
 	}
 
-	if (backend->iterator_new(&iter, backend) < 0)
-		return 0;
+	if ((result = backend->iterator_new(&iter, backend)) < 0) {
+		iter = NULL;
+		return -1;
+	}
 
 	while(!(backend->next(&entry, iter) < 0)) {
 		/* skip non-matching keys if regexp was provided */
