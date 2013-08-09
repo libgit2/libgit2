@@ -375,7 +375,12 @@ static int all_iter_next(git_config_entry **entry, git_config_iterator *_iter)
 		if (error < 0)
 			return error;
 
-		return iter->current->next(entry, iter->current);
+		error = iter->current->next(entry, iter->current);
+		/* If this backend is empty, then keep going */
+		if (error == GIT_ITEROVER)
+			continue;
+
+		return error;
 
 	} while(1);
 
