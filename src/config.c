@@ -455,11 +455,11 @@ int git_config_iterator_glob_new(git_config_iterator **out, const git_config *cf
 		}
 
 		iter->parent.next = all_iter_glob_next;
+		iter->parent.free = all_iter_glob_free;
 	} else {
 		iter->parent.next = all_iter_next;
+		iter->parent.free = all_iter_free;
 	}
-
-	iter->parent.free = all_iter_glob_free;
 
 	iter->i = cfg->files.length;
 	iter->cfg = cfg;
@@ -527,18 +527,27 @@ int git_config_foreach_match(
 	git_config_foreach_cb cb,
 	void *payload)
 {
-	int ret = 0;
-	size_t i;
-	file_internal *internal;
-	git_config_backend *file;
+	int error;
+	git_config_iterator *iter;
+	git_config_entry *entry;
 
-	for (i = 0; i < cfg->files.length && ret == 0; ++i) {
-		internal = git_vector_get(&cfg->files, i);
-		file = internal->file;
-		ret = git_config_backend_foreach_match(file, regexp, cb, payload);
+	if ((error = git_config_iterator_glob_new(&iter, cfg, regexp)) < 0)
+		return error;
+
+	while ((error = git_config_next(&entry, iter)) == 0) {
+		if(cb(entry, payload)) {
+			giterr_clear();
+			error = GIT_EUSER;
+			break;
+		}
 	}
 
-	return ret;
+	git_config_iterator_free(iter);
+
+	if (error == GIT_ITEROVER)
+		error = 0;
+
+	return error;
 }
 
 /**************
