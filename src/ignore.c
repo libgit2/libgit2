@@ -39,7 +39,7 @@ static int parse_ignore_file(
 
 		match->flags = GIT_ATTR_FNMATCH_ALLOWSPACE;
 
-		if (!(error = git_attr_fnmatch__parse(
+		if (!(error = git_attr_fnmatch__parse_gitattr_format(
 			match, ignores->pool, context, &scan)))
 		{
 			match->flags |= GIT_ATTR_FNMATCH_IGNORE;

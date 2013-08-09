@@ -85,7 +85,7 @@ int git_pathspec__vinit(
 
 		match->flags = GIT_ATTR_FNMATCH_ALLOWSPACE;
 
-		ret = git_attr_fnmatch__parse(match, strpool, NULL, &pattern);
+		ret = git_attr_fnmatch__parse_shellglob_format(match, strpool, NULL, &pattern);
 		if (ret == GIT_ENOTFOUND) {
 			git__free(match);
 			continue;

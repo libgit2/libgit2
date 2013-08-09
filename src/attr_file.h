@@ -115,7 +115,13 @@ extern uint32_t git_attr_file__name_hash(const char *name);
  * other utilities
  */
 
-extern int git_attr_fnmatch__parse(
+extern int git_attr_fnmatch__parse_gitattr_format(
+	git_attr_fnmatch *spec,
+	git_pool *pool,
+	const char *source,
+	const char **base);
+
+extern int git_attr_fnmatch__parse_shellglob_format(
 	git_attr_fnmatch *spec,
 	git_pool *pool,
 	const char *source,
