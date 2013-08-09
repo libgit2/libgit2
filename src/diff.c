@@ -258,6 +258,26 @@ int git_diff_delta__casecmp(const void *a, const void *b)
 	return val ? val : ((int)da->status - (int)db->status);
 }
 
+GIT_INLINE(const char *) diff_delta__i2w_path(const git_diff_delta *delta)
+{
+	return delta->old_file.path ?
+		delta->old_file.path : delta->new_file.path;
+}
+
+int git_diff_delta__i2w_cmp(const void *a, const void *b)
+{
+	const git_diff_delta *da = a, *db = b;
+	int val = strcmp(diff_delta__i2w_path(da), diff_delta__i2w_path(db));
+	return val ? val : ((int)da->status - (int)db->status);
+}
+
+int git_diff_delta__i2w_casecmp(const void *a, const void *b)
+{
+	const git_diff_delta *da = a, *db = b;
+	int val = strcasecmp(diff_delta__i2w_path(da), diff_delta__i2w_path(db));
+	return val ? val : ((int)da->status - (int)db->status);
+}
+
 bool git_diff_delta__should_skip(
 	const git_diff_options *opts, const git_diff_delta *delta)
 {
@@ -1276,7 +1296,7 @@ int git_diff__paired_foreach(
 	git_diff_delta *h2i, *i2w;
 	size_t i, j, i_max, j_max;
 	int (*strcomp)(const char *, const char *) = git__strcmp;
-	bool icase_mismatch;
+	bool h2i_icase, i2w_icase, icase_mismatch;
 
 	i_max = head2idx ? head2idx->deltas.length : 0;
 	j_max = idx2wd ? idx2wd->deltas.length : 0;
@@ -1291,23 +1311,34 @@ int git_diff__paired_foreach(
 	 * Therefore the main thing we need to do here is make sure the diffs
 	 * are traversed in a compatible order.  To do this, we temporarily
 	 * resort a mismatched diff to get the order correct.
+	 *
+	 * In order to traverse renames in the index->workdir, we need to
+	 * ensure that we compare the index name on both sides, so we
+	 * always sort by the old name in the i2w list.
 	 */
-	icase_mismatch =
-		(head2idx != NULL && idx2wd != NULL &&
-		 ((head2idx->opts.flags ^ idx2wd->opts.flags) & GIT_DIFF_DELTAS_ARE_ICASE));
+	h2i_icase = head2idx != NULL &&
+		(head2idx->opts.flags & GIT_DIFF_DELTAS_ARE_ICASE) != 0;
 
-	/* force case-sensitive delta sort */
-	if (icase_mismatch) {
-		if (head2idx->opts.flags & GIT_DIFF_DELTAS_ARE_ICASE) {
-			git_vector_set_cmp(&head2idx->deltas, git_diff_delta__cmp);
-			git_vector_sort(&head2idx->deltas);
-		} else {
-			git_vector_set_cmp(&idx2wd->deltas, git_diff_delta__cmp);
-			git_vector_sort(&idx2wd->deltas);
-		}
+	i2w_icase = idx2wd != NULL &&
+		(idx2wd->opts.flags & GIT_DIFF_DELTAS_ARE_ICASE) != 0;
+
+	icase_mismatch =
+		(head2idx != NULL && idx2wd != NULL && h2i_icase != i2w_icase);
+
+	if (icase_mismatch && h2i_icase) {
+		git_vector_set_cmp(&head2idx->deltas, git_diff_delta__cmp);
+		git_vector_sort(&head2idx->deltas);
 	}
-	else if (head2idx != NULL && head2idx->opts.flags & GIT_DIFF_DELTAS_ARE_ICASE)
+
+	if (i2w_icase && !icase_mismatch) {
 		strcomp = git__strcasecmp;
+
+		git_vector_set_cmp(&idx2wd->deltas, git_diff_delta__i2w_casecmp);
+		git_vector_sort(&idx2wd->deltas);
+	} else if (idx2wd != NULL) {
+		git_vector_set_cmp(&idx2wd->deltas, git_diff_delta__i2w_cmp);
+		git_vector_sort(&idx2wd->deltas);
+	}
 
 	for (i = 0, j = 0; i < i_max || j < j_max; ) {
 		h2i = head2idx ? GIT_VECTOR_GET(&head2idx->deltas, i) : NULL;
@@ -1332,14 +1363,16 @@ int git_diff__paired_foreach(
 	}
 
 	/* restore case-insensitive delta sort */
-	if (icase_mismatch) {
-		if (head2idx->opts.flags & GIT_DIFF_DELTAS_ARE_ICASE) {
-			git_vector_set_cmp(&head2idx->deltas, git_diff_delta__casecmp);
-			git_vector_sort(&head2idx->deltas);
-		} else {
-			git_vector_set_cmp(&idx2wd->deltas, git_diff_delta__casecmp);
-			git_vector_sort(&idx2wd->deltas);
-		}
+	if (icase_mismatch && h2i_icase) {
+		git_vector_set_cmp(&head2idx->deltas, git_diff_delta__casecmp);
+		git_vector_sort(&head2idx->deltas);
+	}
+
+	/* restore idx2wd sort by new path */
+	if (idx2wd != NULL) {
+		git_vector_set_cmp(&idx2wd->deltas,
+			i2w_icase ? git_diff_delta__casecmp : git_diff_delta__cmp);
+		git_vector_sort(&idx2wd->deltas);
 	}
 
 	return 0;
