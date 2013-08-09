@@ -220,7 +220,7 @@ static int git_ssh_extract_url_parts(
 
 	at = strchr(url, '@');
 	if (at) {
-		start = at+1;
+		start = at + 1;
 		*username = git__substrdup(url, at - url);
 		GITERR_CHECK_ALLOC(*username);
 	} else {
