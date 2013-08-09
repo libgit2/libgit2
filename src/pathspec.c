@@ -166,7 +166,8 @@ static int pathspec_match_one(
 	if (result == FNM_NOMATCH &&
 		(match->flags & GIT_ATTR_FNMATCH_NEGATIVE) != 0 &&
 		*path == '!' &&
-		ctxt->strncomp(path + 1, match->pattern, match->length) == 0)
+		ctxt->strncomp(path + 1, match->pattern, match->length) == 0 &&
+		(!path[match->length + 1] || path[match->length + 1] == '/'))
 		return 1;
 
 	if (result == 0)
