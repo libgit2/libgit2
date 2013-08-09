@@ -449,23 +449,20 @@ int git_config_iterator_glob_new(git_config_iterator **out, const git_config *cf
 	all_iter *iter;
 	int result;
 
+	if (regexp == NULL)
+		return git_config_iterator_new(out, cfg);
+
 	iter = git__calloc(1, sizeof(all_iter));
 	GITERR_CHECK_ALLOC(iter);
 
-	if (regexp != NULL) {
-		if ((result = regcomp(&iter->regex, regexp, REG_EXTENDED)) < 0) {
-			giterr_set_regex(&iter->regex, result);
-			regfree(&iter->regex);
-			return -1;
-		}
-
-		iter->parent.next = all_iter_glob_next;
-		iter->parent.free = all_iter_glob_free;
-	} else {
-		iter->parent.next = all_iter_next;
-		iter->parent.free = all_iter_free;
+	if ((result = regcomp(&iter->regex, regexp, REG_EXTENDED)) < 0) {
+		giterr_set_regex(&iter->regex, result);
+		regfree(&iter->regex);
+		return -1;
 	}
 
+	iter->parent.next = all_iter_glob_next;
+	iter->parent.free = all_iter_glob_free;
 	iter->i = cfg->files.length;
 	iter->cfg = cfg;
 
