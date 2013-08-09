@@ -107,7 +107,7 @@ typedef enum {
  * - GIT_STATUS_OPT_RENAMES_HEAD_TO_INDEX indicates that rename detection
  *   should be processed between the head and the index and enables
  *   the GIT_STATUS_INDEX_RENAMED as a possible status flag.
- * - GIT_STATUS_OPT_RENAMES_INDEX_TO_WORKDIR indicates tha rename
+ * - GIT_STATUS_OPT_RENAMES_INDEX_TO_WORKDIR indicates that rename
  *   detection should be run between the index and the working directory
  *   and enabled GIT_STATUS_WT_RENAMED as a possible status flag.
  * - GIT_STATUS_OPT_SORT_CASE_SENSITIVELY overrides the native case
@@ -116,6 +116,8 @@ typedef enum {
  * - GIT_STATUS_OPT_SORT_CASE_INSENSITIVELY overrides the native case
  *   sensitivity for the file system and forces the output to be in
  *   case-insensitive order
+ * - GIT_STATUS_OPT_RENAMES_FROM_REWRITES indicates that rename detection
+ *   should include rewritten files
  *
  * Calling `git_status_foreach()` is like calling the extended version
  * with: GIT_STATUS_OPT_INCLUDE_IGNORED, GIT_STATUS_OPT_INCLUDE_UNTRACKED,
@@ -134,6 +136,7 @@ typedef enum {
 	GIT_STATUS_OPT_RENAMES_INDEX_TO_WORKDIR = (1u << 8),
 	GIT_STATUS_OPT_SORT_CASE_SENSITIVELY    = (1u << 9),
 	GIT_STATUS_OPT_SORT_CASE_INSENSITIVELY  = (1u << 10),
+	GIT_STATUS_OPT_RENAMES_FROM_REWRITES    = (1u << 11),
 } git_status_opt_t;
 
 #define GIT_STATUS_OPT_DEFAULTS \
