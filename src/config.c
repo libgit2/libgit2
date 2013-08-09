@@ -315,6 +315,99 @@ int git_config_refresh(git_config *cfg)
  * Loop over all the variables
  */
 
+typedef struct {
+	git_config_iterator parent;
+	git_config_iterator *current;
+	const git_config *cfg;
+	size_t i;
+} all_iter;
+
+static int find_next_backend(size_t *out, const git_config *cfg, size_t i)
+{
+	file_internal *internal;
+
+	for (; i > 0; --i) {
+		internal = git_vector_get(&cfg->files, i - 1);
+		if (!internal || !internal->file)
+			continue;
+
+		*out = i;
+		return 0;
+	}
+
+	return -1;
+}
+
+static int all_iter_next(git_config_entry **entry, git_config_iterator *_iter)
+{
+	all_iter *iter = (all_iter *) _iter;
+	file_internal *internal;
+	git_config_backend *backend;
+	size_t i;
+	int error = 0;
+
+	if (iter->current != NULL &&
+	    (error = iter->current->next(entry, iter->current)) == 0) {
+		return 0;
+	}
+
+	if (error < 0 && error != GIT_ITEROVER)
+		return error;
+
+	do {
+		if (find_next_backend(&i, iter->cfg, iter->i) < 0)
+			return GIT_ITEROVER;
+
+		internal = git_vector_get(&iter->cfg->files, i - 1);
+		backend = internal->file;
+		iter->i = i - 1;
+
+		if (iter->current)
+			iter->current->free(iter->current);
+
+		iter->current = NULL;
+		error = backend->iterator(&iter->current, backend);
+		if (error == GIT_ENOTFOUND)
+			continue;
+
+		if (error < 0)
+			return error;
+
+		return iter->current->next(entry, iter->current);
+
+	} while(1);
+
+	return GIT_ITEROVER;
+}
+
+static void all_iter_free(git_config_iterator *_iter)
+{
+	all_iter *iter = (all_iter *) _iter;
+
+	if (iter->current)
+		iter->current->free(iter->current);
+
+	git__free(iter);
+}
+
+int git_config_iterator_new(git_config_iterator **out, const git_config *cfg)
+{
+	all_iter *iter;
+
+	iter = git__calloc(1, sizeof(all_iter));
+	GITERR_CHECK_ALLOC(iter);
+
+	iter->parent.free = all_iter_free;
+	iter->parent.next = all_iter_next;
+
+	iter->i = cfg->files.length;
+	iter->cfg = cfg;
+
+	*out = (git_config_iterator *) iter;
+
+	return 0;
+}
+
 int git_config_foreach(
 	const git_config *cfg, git_config_foreach_cb cb, void *payload)
 {
@@ -613,30 +706,6 @@ typedef struct {
 	size_t i;
 } multivar_iter;
 
-static int find_next_backend(size_t *out, const git_config *cfg, size_t i)
-{
-	file_internal *internal;
-
-	for (; i > 0; --i) {
-		internal = git_vector_get(&cfg->files, i - 1);
-		if (!internal || !internal->file)
-			continue;
-
-		*out = i;
-		return 0;
-	}
-
-	return -1;
-}
-
-static int multivar_iter_next_empty(git_config_entry **entry, git_config_iterator *_iter)
-{
-	GIT_UNUSED(entry);
-	GIT_UNUSED(_iter);
-
-	return GIT_ITEROVER;
-}
-
 static int multivar_iter_next(git_config_entry **entry, git_config_iterator *_iter)
 {
 	multivar_iter *iter = (multivar_iter *) _iter;
@@ -695,7 +764,6 @@ void multivar_iter_free(git_config_iterator *_iter)
 int git_config_get_multivar(git_config_iterator **out, const git_config *cfg, const char *name, const char *regexp)
 {
 	multivar_iter *iter;
-	size_t i;
 
 	iter = git__calloc(1, sizeof(multivar_iter));
 	GITERR_CHECK_ALLOC(iter);
@@ -709,10 +777,7 @@ int git_config_get_multivar(git_config_iterator **out, const git_config *cfg, co
 	}
 
 	iter->parent.free = multivar_iter_free;
-	if (find_next_backend(&i, cfg, cfg->files.length) < 0)
-		iter->parent.next = multivar_iter_next_empty;
-	else
-		iter->parent.next = multivar_iter_next;
+	iter->parent.next = multivar_iter_next;
 
 	iter->i = cfg->files.length;
 	iter->cfg = cfg;

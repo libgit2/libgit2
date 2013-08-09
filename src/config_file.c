@@ -279,7 +279,7 @@ static int config_iterator_next(
 
 	if (err < 0) {
 		it->next_var = NULL;
-		return -1;
+		return err;
 	}
 
 	*entry = var->entry;
