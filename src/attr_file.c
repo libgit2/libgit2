@@ -85,7 +85,7 @@ int git_attr_file__parse_buffer(
 		}
 
 		/* parse the next "pattern attr attr attr" line */
-		if (!(error = git_attr_fnmatch__parse(
+		if (!(error = git_attr_fnmatch__parse_gitattr_format(
 				&rule->match, attrs->pool, context, &scan)) &&
 			!(error = git_attr_assignment__parse(
 				repo, attrs->pool, &rule->assigns, &scan)))
@@ -337,22 +337,15 @@ void git_attr_path__free(git_attr_path *info)
  * GIT_ENOTFOUND if the fnmatch does not require matching, or
  * another error code there was an actual problem.
  */
-int git_attr_fnmatch__parse(
+int git_attr_fnmatch__parse_gitattr_format(
 	git_attr_fnmatch *spec,
 	git_pool *pool,
 	const char *source,
 	const char **base)
 {
-	const char *pattern, *scan;
-	int slash_count, allow_space;
+	const char *pattern;
 
 	assert(spec && base && *base);
-
-	if (parse_optimized_patterns(spec, pool, *base))
-		return 0;
-
-	spec->flags = (spec->flags & GIT_ATTR_FNMATCH_ALLOWSPACE);
-	allow_space = (spec->flags != 0);
 
 	pattern = *base;
 
@@ -374,6 +367,39 @@ int git_attr_fnmatch__parse(
 		spec->flags = spec->flags | GIT_ATTR_FNMATCH_NEGATIVE;
 		pattern++;
 	}
+
+	if (git_attr_fnmatch__parse_shellglob_format(spec, pool, 
+		source, &pattern) < 0)
+			return -1;
+
+	*base = pattern;
+
+	return 0;
+}
+
+/*
+ * Fills a spec for the purpose of pure pathspec matching, not
+ * related to a gitattribute file parsing.
+ *
+ * This will return 0 if the spec was filled out, or
+ * another error code there was an actual problem.
+ */
+int git_attr_fnmatch__parse_shellglob_format(
+	git_attr_fnmatch *spec,
+	git_pool *pool,
+	const char *source,
+	const char **base)
+{
+	const char *pattern, *scan;
+	int slash_count, allow_space;
+
+	assert(spec && base && *base);
+
+	if (parse_optimized_patterns(spec, pool, *base))
+		return 0;
+
+	allow_space = (spec->flags & GIT_ATTR_FNMATCH_ALLOWSPACE) != 0;
+	pattern = *base;
 
 	slash_count = 0;
 	for (scan = pattern; *scan != '\0'; ++scan) {
@@ -610,6 +636,7 @@ static void git_attr_rule__clear(git_attr_rule *rule)
 	/* match.pattern is stored in a git_pool, so no need to free */
 	rule->match.pattern = NULL;
 	rule->match.length = 0;
+	rule->match.flags = 0;
 }
 
 void git_attr_rule__free(git_attr_rule *rule)
