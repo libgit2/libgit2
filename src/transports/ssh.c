@@ -37,6 +37,14 @@ typedef struct {
 	git_cred *cred;
 } ssh_subtransport;
 
+static void ssh_error(LIBSSH2_SESSION *session, const char *errmsg)
+{
+	char *ssherr;
+	libssh2_session_last_error(session, &ssherr, NULL, 0);
+
+	giterr_set(GITERR_SSH, "%s: %s", errmsg, ssherr);
+}
+
 /*
  * Create a git protocol request.
  *
@@ -81,8 +89,8 @@ static int send_command(ssh_stream *s)
 		goto cleanup;
 
 	error = libssh2_channel_exec(s->channel, request.ptr);
-	if (error < 0) {
-		giterr_set(GITERR_NET, "SSH could not execute request");
+	if (error < LIBSSH2_ERROR_NONE) {
+		ssh_error(s->session, "SSH could not execute request");
 		goto cleanup;
 	}
 
@@ -107,8 +115,8 @@ static int ssh_stream_read(
 	if (!s->sent_command && send_command(s) < 0)
 		return -1;
 
-	if ((rc = libssh2_channel_read(s->channel, buffer, buf_size)) < 0) {
-		giterr_set(GITERR_NET, "SSH could not read data");
+	if ((rc = libssh2_channel_read(s->channel, buffer, buf_size)) < LIBSSH2_ERROR_NONE) {
+		ssh_error(s->session, "SSH could not read data");;
 		return -1;
 	}
 
@@ -127,8 +135,8 @@ static int ssh_stream_write(
 	if (!s->sent_command && send_command(s) < 0)
 		return -1;
 
-	if (libssh2_channel_write(s->channel, buffer, len) < 0) {
-		giterr_set(GITERR_NET, "SSH could not write data");
+	if (libssh2_channel_write(s->channel, buffer, len) < LIBSSH2_ERROR_NONE) {
+		ssh_error(s->session, "SSH could not write data");
 		return -1;
 	}
 
@@ -262,8 +270,8 @@ static int _git_ssh_authenticate_session(
 		}
 	} while (LIBSSH2_ERROR_EAGAIN == rc || LIBSSH2_ERROR_TIMEOUT == rc);
 
-	if (rc != 0) {
-		giterr_set(GITERR_NET, "Failed to authenticate SSH session");
+	if (rc != LIBSSH2_ERROR_NONE) {
+		ssh_error(session, "Failed to authenticate SSH session");
 		return -1;
 	}
 
@@ -289,9 +297,9 @@ static int _git_ssh_session_create(
 		rc = libssh2_session_startup(s, socket.socket);
 	} while (LIBSSH2_ERROR_EAGAIN == rc || LIBSSH2_ERROR_TIMEOUT == rc);
 
-	if (0 != rc) {
+	if (rc != LIBSSH2_ERROR_NONE) {
+		ssh_error(s, "Failed to start SSH session");
 		libssh2_session_free(s);
-		giterr_set(GITERR_NET, "Failed to start SSH session");
 		return -1;
 	}
 
@@ -346,11 +354,11 @@ static int _git_ssh_setup_conn(
 			goto on_error;
 
 		if (!t->cred) {
-			giterr_set(GITERR_NET, "Callback failed to initialize SSH credentials");
+			giterr_set(GITERR_SSH, "Callback failed to initialize SSH credentials");
 			goto on_error;
 		}
 	} else {
-		giterr_set(GITERR_NET, "Cannot set up SSH connection without credentials");
+		giterr_set(GITERR_SSH, "Cannot set up SSH connection without credentials");
 		goto on_error;
 	}
 	assert(t->cred);
@@ -368,7 +376,7 @@ static int _git_ssh_setup_conn(
 
 	channel = libssh2_channel_open_session(session);
 	if (!channel) {
-		giterr_set(GITERR_NET, "Failed to open SSH channel");
+		ssh_error(session, "Failed to open SSH channel");
 		goto on_error;
 	}
 
