@@ -168,15 +168,25 @@ int git_ignore__pop_dir(git_ignores *ign)
 {
 	if (ign->ign_path.length > 0) {
 		git_attr_file *file = git_vector_last(&ign->ign_path);
-		size_t keylen = strlen(file->key);
+		const char *start, *end, *scan;
+		size_t keylen;
 
-		while (keylen && file->key[keylen] != '/')
-			keylen--;
-		keylen -= 1; /* because we will skip "0#" prefix */
+		/* - ign->dir looks something like "a/b" (or "a/b/c/d")
+		 * - file->key looks something like "0#a/b/.gitignore
+		 *
+		 * We are popping the last directory off ign->dir.  We also want to
+		 * remove the file from the vector if the directory part of the key
+		 * matches the ign->dir path.  We need to test if the "a/b" part of
+		 * the file key matches the path we are about to pop.
+		 */
 
-		if (ign->dir.size > keylen &&
-			!memcmp(ign->dir.ptr + ign->dir.size - keylen,
-					file->key + 2, keylen))
+		for (start = end = scan = &file->key[2]; *scan; ++scan)
+			if (*scan == '/')
+				end = scan; /* point 'end' to last '/' in key */
+		keylen = (end - start) + 1;
+
+		if (ign->dir.size >= keylen &&
+			!memcmp(ign->dir.ptr + ign->dir.size - keylen, start, keylen))
 			git_vector_pop(&ign->ign_path);
 
 		git_buf_rtruncate_at_char(&ign->dir, '/');
