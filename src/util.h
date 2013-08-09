@@ -55,6 +55,9 @@ GIT_INLINE(char *) git__strndup(const char *str, size_t n)
 
 	ptr = (char*)git__malloc(length + 1);
 
+	if (!ptr)
+		return NULL;
+
 	if (length)
 		memcpy(ptr, str, length);
 
