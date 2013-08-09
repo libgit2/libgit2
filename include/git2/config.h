@@ -464,6 +464,18 @@ GIT_EXTERN(int) git_config_foreach(
 GIT_EXTERN(int) git_config_iterator_new(git_config_iterator **out, const git_config *cfg);
 
 /**
+ * Iterate over all the config variables whose name matches a pattern
+ *
+ * Use `git_config_next` to advance the iteration and
+ * `git_config_iterator_free` when done.
+ *
+ * @param out pointer to store the iterator
+ * @param cfg where to ge the variables from
+ * @param regexp regular expression to match the names
+ */
+GIT_EXTERN(int) git_config_iterator_glob_new(git_config_iterator **out, const git_config *cfg, const char *regexp);
+
+/**
  * Perform an operation on each config variable matching a regular expression.
  *
  * This behaviors like `git_config_foreach` with an additional filter of a

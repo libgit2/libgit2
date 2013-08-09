@@ -319,6 +319,8 @@ typedef struct {
 	git_config_iterator parent;
 	git_config_iterator *current;
 	const git_config *cfg;
+	regex_t regex;
+	int has_regex;
 	size_t i;
 } all_iter;
 
@@ -380,6 +382,27 @@ static int all_iter_next(git_config_entry **entry, git_config_iterator *_iter)
 	return GIT_ITEROVER;
 }
 
+static int all_iter_glob_next(git_config_entry **entry, git_config_iterator *_iter)
+{
+	int error;
+	all_iter *iter = (all_iter *) _iter;
+
+	/*
+	 * We use the "normal" function to grab the next one across
+	 * backends and then apply the regex
+	 */
+	while ((error = all_iter_next(entry, _iter)) == 0) {
+		/* skip non-matching keys if regexp was provided */
+		if (regexec(&iter->regex, (*entry)->name, 0, NULL, 0) != 0)
+			continue;
+
+		/* and simply return if we like the entry's name */
+		return 0;
+	}
+
+	return error;
+}
+
 static void all_iter_free(git_config_iterator *_iter)
 {
 	all_iter *iter = (all_iter *) _iter;
@@ -388,6 +411,14 @@ static void all_iter_free(git_config_iterator *_iter)
 		iter->current->free(iter->current);
 
 	git__free(iter);
+}
+
+static void all_iter_glob_free(git_config_iterator *_iter)
+{
+	all_iter *iter = (all_iter *) _iter;
+
+	regfree(&iter->regex);
+	all_iter_free(_iter);
 }
 
 int git_config_iterator_new(git_config_iterator **out, const git_config *cfg)
@@ -399,6 +430,36 @@ int git_config_iterator_new(git_config_iterator **out, const git_config *cfg)
 
 	iter->parent.free = all_iter_free;
 	iter->parent.next = all_iter_next;
+
+	iter->i = cfg->files.length;
+	iter->cfg = cfg;
+
+	*out = (git_config_iterator *) iter;
+
+	return 0;
+}
+
+int git_config_iterator_glob_new(git_config_iterator **out, const git_config *cfg, const char *regexp)
+{
+	all_iter *iter;
+	int result;
+
+	iter = git__calloc(1, sizeof(all_iter));
+	GITERR_CHECK_ALLOC(iter);
+
+	if (regexp != NULL) {
+		if ((result = regcomp(&iter->regex, regexp, REG_EXTENDED)) < 0) {
+			giterr_set_regex(&iter->regex, result);
+			regfree(&iter->regex);
+			return -1;
+		}
+
+		iter->parent.next = all_iter_glob_next;
+	} else {
+		iter->parent.next = all_iter_next;
+	}
+
+	iter->parent.free = all_iter_glob_free;
 
 	iter->i = cfg->files.length;
 	iter->cfg = cfg;
