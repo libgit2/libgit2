@@ -83,9 +83,9 @@ int git_pathspec__vinit(
 		if (!match)
 			return -1;
 
-		match->flags = GIT_ATTR_FNMATCH_ALLOWSPACE;
+		match->flags = GIT_ATTR_FNMATCH_ALLOWSPACE | GIT_ATTR_FNMATCH_ALLOWNEG;
 
-		ret = git_attr_fnmatch__parse_shellglob_format(match, strpool, NULL, &pattern);
+		ret = git_attr_fnmatch__parse(match, strpool, NULL, &pattern);
 		if (ret == GIT_ENOTFOUND) {
 			git__free(match);
 			continue;
@@ -159,6 +159,16 @@ static int pathspec_match_one(
 		ctxt->strncomp(path, match->pattern, match->length) == 0 &&
 		path[match->length] == '/')
 		result = 0;
+
+	/* if we didn't match and this is a negative match, check for exact
+	 * match of filename with leading '!'
+	 */
+	if (result == FNM_NOMATCH &&
+		(match->flags & GIT_ATTR_FNMATCH_NEGATIVE) != 0 &&
+		*path == '!' &&
+		ctxt->strncomp(path + 1, match->pattern, match->length) == 0 &&
+		(!path[match->length + 1] || path[match->length + 1] == '/'))
+		return 1;
 
 	if (result == 0)
 		return (match->flags & GIT_ATTR_FNMATCH_NEGATIVE) ? 0 : 1;

@@ -49,7 +49,6 @@ void test_attr_file__match_variants(void)
 	cl_assert(rule);
 	cl_assert_equal_s("pat0", rule->match.pattern);
 	cl_assert(rule->match.length == strlen("pat0"));
-	cl_assert(rule->match.flags == 0);
 	cl_assert(rule->assigns.length == 1);
 	assign = get_assign(rule,0);
 	cl_assert_equal_s("attr0", assign->name);
@@ -59,16 +58,16 @@ void test_attr_file__match_variants(void)
 	rule = get_rule(1);
 	cl_assert_equal_s("pat1", rule->match.pattern);
 	cl_assert(rule->match.length == strlen("pat1"));
-	cl_assert(rule->match.flags == GIT_ATTR_FNMATCH_NEGATIVE);
+	cl_assert((rule->match.flags & GIT_ATTR_FNMATCH_NEGATIVE) != 0);
 
 	rule = get_rule(2);
 	cl_assert_equal_s("pat2", rule->match.pattern);
 	cl_assert(rule->match.length == strlen("pat2"));
-	cl_assert(rule->match.flags == GIT_ATTR_FNMATCH_DIRECTORY);
+	cl_assert((rule->match.flags & GIT_ATTR_FNMATCH_DIRECTORY) != 0);
 
 	rule = get_rule(3);
 	cl_assert_equal_s("pat3dir/pat3file", rule->match.pattern);
-	cl_assert(rule->match.flags == GIT_ATTR_FNMATCH_FULLPATH);
+	cl_assert((rule->match.flags & GIT_ATTR_FNMATCH_FULLPATH) != 0);
 
 	rule = get_rule(4);
 	cl_assert_equal_s("pat4.*", rule->match.pattern);
@@ -89,7 +88,6 @@ void test_attr_file__match_variants(void)
 	rule = get_rule(8);
 	cl_assert_equal_s("pat8 with spaces", rule->match.pattern);
 	cl_assert(rule->match.length == strlen("pat8 with spaces"));
-	cl_assert(rule->match.flags == 0);
 
 	rule = get_rule(9);
 	cl_assert_equal_s("pat9", rule->match.pattern);

@@ -28,6 +28,12 @@
 #define GIT_ATTR_FNMATCH_ALLOWSPACE	(1U << 6)
 #define GIT_ATTR_FNMATCH_ICASE		(1U << 7)
 #define GIT_ATTR_FNMATCH_MATCH_ALL	(1U << 8)
+#define GIT_ATTR_FNMATCH_ALLOWNEG   (1U << 9)
+#define GIT_ATTR_FNMATCH_ALLOWMACRO (1U << 10)
+
+#define GIT_ATTR_FNMATCH__INCOMING \
+	(GIT_ATTR_FNMATCH_ALLOWSPACE | \
+	 GIT_ATTR_FNMATCH_ALLOWNEG | GIT_ATTR_FNMATCH_ALLOWMACRO)
 
 extern const char *git_attr__true;
 extern const char *git_attr__false;
@@ -115,13 +121,7 @@ extern uint32_t git_attr_file__name_hash(const char *name);
  * other utilities
  */
 
-extern int git_attr_fnmatch__parse_gitattr_format(
-	git_attr_fnmatch *spec,
-	git_pool *pool,
-	const char *source,
-	const char **base);
-
-extern int git_attr_fnmatch__parse_shellglob_format(
+extern int git_attr_fnmatch__parse(
 	git_attr_fnmatch *spec,
 	git_pool *pool,
 	const char *source,

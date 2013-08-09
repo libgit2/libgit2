@@ -79,13 +79,17 @@ int git_attr_file__parse_buffer(
 
 	while (!error && *scan) {
 		/* allocate rule if needed */
-		if (!rule && !(rule = git__calloc(1, sizeof(git_attr_rule)))) {
-			error = -1;
-			break;
+		if (!rule) {
+			if (!(rule = git__calloc(1, sizeof(git_attr_rule)))) {
+				error = -1;
+				break;
+			}
+			rule->match.flags = GIT_ATTR_FNMATCH_ALLOWNEG |
+				GIT_ATTR_FNMATCH_ALLOWMACRO;
 		}
 
 		/* parse the next "pattern attr attr attr" line */
-		if (!(error = git_attr_fnmatch__parse_gitattr_format(
+		if (!(error = git_attr_fnmatch__parse(
 				&rule->match, attrs->pool, context, &scan)) &&
 			!(error = git_attr_assignment__parse(
 				repo, attrs->pool, &rule->assigns, &scan)))
@@ -337,54 +341,7 @@ void git_attr_path__free(git_attr_path *info)
  * GIT_ENOTFOUND if the fnmatch does not require matching, or
  * another error code there was an actual problem.
  */
-int git_attr_fnmatch__parse_gitattr_format(
-	git_attr_fnmatch *spec,
-	git_pool *pool,
-	const char *source,
-	const char **base)
-{
-	const char *pattern;
-
-	assert(spec && base && *base);
-
-	pattern = *base;
-
-	while (git__isspace(*pattern)) pattern++;
-	if (!*pattern || *pattern == '#') {
-		*base = git__next_line(pattern);
-		return GIT_ENOTFOUND;
-	}
-
-	if (*pattern == '[') {
-		if (strncmp(pattern, "[attr]", 6) == 0) {
-			spec->flags = spec->flags | GIT_ATTR_FNMATCH_MACRO;
-			pattern += 6;
-		}
-		/* else a character range like [a-e]* which is accepted */
-	}
-
-	if (*pattern == '!') {
-		spec->flags = spec->flags | GIT_ATTR_FNMATCH_NEGATIVE;
-		pattern++;
-	}
-
-	if (git_attr_fnmatch__parse_shellglob_format(spec, pool, 
-		source, &pattern) < 0)
-			return -1;
-
-	*base = pattern;
-
-	return 0;
-}
-
-/*
- * Fills a spec for the purpose of pure pathspec matching, not
- * related to a gitattribute file parsing.
- *
- * This will return 0 if the spec was filled out, or
- * another error code there was an actual problem.
- */
-int git_attr_fnmatch__parse_shellglob_format(
+int git_attr_fnmatch__parse(
 	git_attr_fnmatch *spec,
 	git_pool *pool,
 	const char *source,
@@ -398,8 +355,29 @@ int git_attr_fnmatch__parse_shellglob_format(
 	if (parse_optimized_patterns(spec, pool, *base))
 		return 0;
 
-	allow_space = (spec->flags & GIT_ATTR_FNMATCH_ALLOWSPACE) != 0;
+	spec->flags = (spec->flags & GIT_ATTR_FNMATCH__INCOMING);
+	allow_space = ((spec->flags & GIT_ATTR_FNMATCH_ALLOWSPACE) != 0);
+
 	pattern = *base;
+
+	while (git__isspace(*pattern)) pattern++;
+	if (!*pattern || *pattern == '#') {
+		*base = git__next_line(pattern);
+		return GIT_ENOTFOUND;
+	}
+
+	if (*pattern == '[' && (spec->flags & GIT_ATTR_FNMATCH_ALLOWMACRO) != 0) {
+		if (strncmp(pattern, "[attr]", 6) == 0) {
+			spec->flags = spec->flags | GIT_ATTR_FNMATCH_MACRO;
+			pattern += 6;
+		}
+		/* else a character range like [a-e]* which is accepted */
+	}
+
+	if (*pattern == '!' && (spec->flags & GIT_ATTR_FNMATCH_ALLOWNEG) != 0) {
+		spec->flags = spec->flags | GIT_ATTR_FNMATCH_NEGATIVE;
+		pattern++;
+	}
 
 	slash_count = 0;
 	for (scan = pattern; *scan != '\0'; ++scan) {
@@ -636,7 +614,6 @@ static void git_attr_rule__clear(git_attr_rule *rule)
 	/* match.pattern is stored in a git_pool, so no need to free */
 	rule->match.pattern = NULL;
 	rule->match.length = 0;
-	rule->match.flags = 0;
 }
 
 void git_attr_rule__free(git_attr_rule *rule)
