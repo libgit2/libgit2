@@ -410,6 +410,7 @@ static int checkout_write_entry(
 {
 	const char *hint_path = NULL, *suffix;
 	struct stat st;
+	int error;
 
 	assert (side == conflict->ours || side == conflict->theirs);
 
@@ -433,6 +434,10 @@ static int checkout_write_entry(
 
 		hint_path = side->path;
 	}
+
+	if ((data->strategy & GIT_CHECKOUT_UPDATE_ONLY) != 0 &&
+		(error = git_checkout__safe_for_update_only(git_buf_cstr(&data->path), side->mode)) <= 0)
+		return error;
 
 	return git_checkout__write_content(data,
 		&side->oid, git_buf_cstr(&data->path), hint_path, side->mode, &st);
@@ -528,8 +533,14 @@ static int checkout_write_merge(
 		goto done;
 	}
 
-	if ((error = checkout_merge_path(&path_workdir, data, conflict, &result)) < 0 ||
-		(error = git_futils_mkpath2file(path_workdir.ptr, 0755)) < 0 ||
+	if ((error = checkout_merge_path(&path_workdir, data, conflict, &result)) < 0)
+		goto done;
+
+	if ((data->strategy & GIT_CHECKOUT_UPDATE_ONLY) != 0 &&
+		(error = git_checkout__safe_for_update_only(git_buf_cstr(&path_workdir), result.mode)) <= 0)
+		goto done;
+
+	if ((error = git_futils_mkpath2file(path_workdir.ptr, 0755)) < 0 ||
 		(error = git_filebuf_open(&output, path_workdir.ptr, GIT_FILEBUF_DO_NOT_BUFFER)) < 0 ||
 		(error = git_filebuf_write(&output, result.data, result.len)) < 0 ||
 		(error = git_filebuf_commit(&output, result.mode)) < 0)

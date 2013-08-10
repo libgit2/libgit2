@@ -82,7 +82,9 @@ static void create_index(struct checkout_index_entry *entries, size_t entries_le
 
 	for (i = 0; i < entries_len; i++) {
 		git_buf_joinpath(&path, TEST_REPO_PATH, entries[i].path);
-		p_unlink(git_buf_cstr(&path));
+
+		if (entries[i].stage == 3 && (i == 0 || strcmp(entries[i-1].path, entries[i].path) != 0 || entries[i-1].stage != 2))
+			p_unlink(git_buf_cstr(&path));
 
 		git_index_remove_bypath(g_index, entries[i].path);
 	}
@@ -203,6 +205,7 @@ void test_checkout_conflict__ignored(void)
 	opts.checkout_strategy |= GIT_CHECKOUT_SKIP_UNMERGED;
 
 	create_conflicting_index();
+	cl_git_pass(p_unlink(TEST_REPO_PATH "/conflicting.txt"));
 
 	cl_git_pass(git_checkout_index(g_repo, g_index, &opts));
 
@@ -973,4 +976,49 @@ void test_checkout_conflict__name_mangled_file_exists_in_workdir(void)
 
 	ensure_workdir("directory_file-one~ours_0", 0100644, CONFLICTING_OURS_OID);
 	ensure_workdir("directory_file-two~theirs_0", 0100644, CONFLICTING_THEIRS_OID);
+}
+
+void test_checkout_conflict__update_only(void)
+{
+	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
+
+	struct checkout_index_entry checkout_index_entries[] = {
+		{ 0100644, AUTOMERGEABLE_ANCESTOR_OID, 1, "automergeable.txt" },
+		{ 0100644, AUTOMERGEABLE_OURS_OID, 2, "automergeable.txt" },
+		{ 0100644, AUTOMERGEABLE_THEIRS_OID, 3, "automergeable.txt" },
+
+		{ 0100644, CONFLICTING_ANCESTOR_OID, 1, "modify-delete" },
+		{ 0100644, CONFLICTING_THEIRS_OID, 3, "modify-delete" },
+
+		{ 0100644, CONFLICTING_ANCESTOR_OID, 1, "directory_file-one" },
+		{ 0100644, CONFLICTING_OURS_OID, 2, "directory_file-one" },
+		{ 0100644, CONFLICTING_THEIRS_OID, 0, "directory_file-one/file" },
+
+		{ 0100644, CONFLICTING_ANCESTOR_OID, 1, "directory_file-two" },
+		{ 0100644, CONFLICTING_OURS_OID, 0, "directory_file-two/file" },
+		{ 0100644, CONFLICTING_THEIRS_OID, 3, "directory_file-two" },
+	};
+
+	opts.checkout_strategy |= GIT_CHECKOUT_UPDATE_ONLY;
+
+	create_index(checkout_index_entries, 3);
+	git_index_write(g_index);
+
+	cl_git_pass(p_mkdir("merge-resolve/directory_file-two", 0777));
+	cl_git_rewritefile("merge-resolve/directory_file-two/file", CONFLICTING_OURS_FILE);
+
+	cl_git_pass(git_checkout_index(g_repo, g_index, &opts));
+
+	ensure_workdir_contents("automergeable.txt", AUTOMERGEABLE_MERGED_FILE);
+	ensure_workdir("directory_file-two/file", 0100644, CONFLICTING_OURS_OID);
+
+	cl_assert(!git_path_exists("merge-resolve/modify-delete"));
+	cl_assert(!git_path_exists("merge-resolve/test-one.txt"));
+	cl_assert(!git_path_exists("merge-resolve/test-one-side-one.txt"));
+	cl_assert(!git_path_exists("merge-resolve/test-one-side-two.txt"));
+	cl_assert(!git_path_exists("merge-resolve/test-one.txt~ours"));
+	cl_assert(!git_path_exists("merge-resolve/test-one.txt~theirs"));
+	cl_assert(!git_path_exists("merge-resolve/directory_file-one/file"));
+	cl_assert(!git_path_exists("merge-resolve/directory_file-one~ours"));
+	cl_assert(!git_path_exists("merge-resolve/directory_file-two~theirs"));
 }

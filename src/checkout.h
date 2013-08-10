@@ -40,6 +40,10 @@ extern int git_checkout_iterator(
 	git_iterator *target,
 	const git_checkout_opts *opts);
 
+int git_checkout__safe_for_update_only(
+	const char *path,
+	mode_t expected_mode);
+
 int git_checkout__write_content(
 	checkout_data *data,
 	const git_oid *oid,
