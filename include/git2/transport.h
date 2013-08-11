@@ -59,6 +59,7 @@ typedef int (*git_cred_sign_callback)(void *, ...);
 /* A ssh key file and passphrase */
 typedef struct git_cred_ssh_keyfile_passphrase {
 	git_cred parent;
+	char *username;
 	char *publickey;
 	char *privatekey;
 	char *passphrase;
@@ -67,11 +68,20 @@ typedef struct git_cred_ssh_keyfile_passphrase {
 /* A ssh public key and authentication callback */
 typedef struct git_cred_ssh_publickey {
 	git_cred parent;
+	char *username;
 	char *publickey;
-    size_t publickey_len;
+	size_t publickey_len;
 	void *sign_callback;
 	void *sign_data;
 } git_cred_ssh_publickey;
+
+/**
+ * Check whether a credential object contains username information.
+ *
+ * @param cred object to check
+ * @return 1 if the credential object has non-NULL username, 0 otherwise
+ */
+GIT_EXTERN(int) git_cred_has_username(git_cred *cred);
 
 /**
  * Creates a new plain-text username and password credential object.
@@ -92,6 +102,7 @@ GIT_EXTERN(int) git_cred_userpass_plaintext_new(
  * The supplied credential parameter will be internally duplicated.
  *
  * @param out The newly created credential object.
+ * @param username username to use to authenticate
  * @param publickey The path to the public key of the credential.
  * @param privatekey The path to the private key of the credential.
  * @param passphrase The passphrase of the credential.
@@ -99,6 +110,7 @@ GIT_EXTERN(int) git_cred_userpass_plaintext_new(
  */
 GIT_EXTERN(int) git_cred_ssh_keyfile_passphrase_new(
 	git_cred **out,
+	const char *username,
 	const char *publickey,
 	const char *privatekey,
     const char *passphrase);
@@ -108,6 +120,7 @@ GIT_EXTERN(int) git_cred_ssh_keyfile_passphrase_new(
  * The supplied credential parameter will be internally duplicated.
  *
  * @param out The newly created credential object.
+ * @param username username to use to authenticate
  * @param publickey The bytes of the public key.
  * @param publickey_len The length of the public key in bytes.
  * @param sign_fn The callback method for authenticating.
@@ -116,6 +129,7 @@ GIT_EXTERN(int) git_cred_ssh_keyfile_passphrase_new(
  */
 GIT_EXTERN(int) git_cred_ssh_publickey_new(
 	git_cred **out,
+	const char *username,
 	const char *publickey,
     size_t publickey_len,
     git_cred_sign_callback sign_fn,

@@ -17,7 +17,6 @@
 #define OWNING_SUBTRANSPORT(s) ((ssh_subtransport *)(s)->parent.subtransport)
 
 static const char prefix_ssh[] = "ssh://";
-static const char default_user[] = "git";
 static const char cmd_uploadpack[] = "git-upload-pack";
 static const char cmd_receivepack[] = "git-receive-pack";
 
@@ -214,11 +213,10 @@ static int git_ssh_extract_url_parts(
 	if (at) {
 		start = at+1;
 		*username = git__substrdup(url, at - url);
+		GITERR_CHECK_ALLOC(*username);
 	} else {
-		start = url;
-		*username = git__strdup(default_user);
+		*username = NULL;
 	}
-	GITERR_CHECK_ALLOC(*username);
 
 	*host = git__substrdup(start, colon - start);
 	GITERR_CHECK_ALLOC(*host);
@@ -237,19 +235,23 @@ static int _git_ssh_authenticate_session(
 		switch (cred->credtype) {
 		case GIT_CREDTYPE_USERPASS_PLAINTEXT: {
 			git_cred_userpass_plaintext *c = (git_cred_userpass_plaintext *)cred;
-			rc = libssh2_userauth_password(session, c->username, c->password);
+			user = c->username ? c->username : user;
+			rc = libssh2_userauth_password(session, user, c->password);
 			break;
 		}
 		case GIT_CREDTYPE_SSH_KEYFILE_PASSPHRASE: {
 			git_cred_ssh_keyfile_passphrase *c = (git_cred_ssh_keyfile_passphrase *)cred;
+			user = c->username ? c->username : user;
 			rc = libssh2_userauth_publickey_fromfile(
-				session, user, c->publickey, c->privatekey, c->passphrase);
+				session, c->username, c->publickey, c->privatekey, c->passphrase);
 			break;
 		}
 		case GIT_CREDTYPE_SSH_PUBLICKEY: {
 			git_cred_ssh_publickey *c = (git_cred_ssh_publickey *)cred;
+
+			user = c->username ? c->username : user;
 			rc = libssh2_userauth_publickey(
-				session, user, (const unsigned char *)c->publickey,
+				session, c->username, (const unsigned char *)c->publickey,
 				c->publickey_len, c->sign_callback, &c->sign_data);
 			break;
 		}
@@ -351,9 +353,9 @@ static int _git_ssh_setup_conn(
 	}
 	assert(t->cred);
 
-	if (!user) {
-		user = git__strdup(default_user);
-		GITERR_CHECK_ALLOC(user);
+	if (!user && !git_cred_has_username(t->cred)) {
+		giterr_set_str(GITERR_NET, "Cannot authenticate without a username");
+		goto on_error;
 	}
 
 	if (_git_ssh_session_create(&session, s->socket) < 0)
