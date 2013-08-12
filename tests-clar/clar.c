@@ -36,7 +36,7 @@
 #		define strncpy(to, from, to_size) strncpy_s(to, to_size, from, _TRUNCATE)
 #		define W_OK 02
 #		define S_ISDIR(x) ((x & _S_IFDIR) != 0)
-#		define snprint_eq(buf,sz,fmt,a,b) _snprintf_s(buf,sz,_TRUNCATE,fmt,a,b)
+#		define snprint_eq(buf,sz,fmt,...) _snprintf_s(buf,sz,_TRUNCATE,fmt,__VA_ARGS__)
 #	else
 #		define snprint_eq snprintf
 #	endif
