@@ -22,6 +22,7 @@ void test_odb_mixed__dup_oid(void) {
 
 	cl_git_pass(git_oid_fromstr(&oid, hex));
 	cl_git_pass(git_odb_read_prefix(&obj, _odb, &oid, GIT_OID_HEXSZ));
+	git_odb_object_free(obj);
 	cl_git_pass(git_oid_fromstrn(&oid, short_hex, sizeof(short_hex) - 1));
 	cl_git_pass(git_odb_read_prefix(&obj, _odb, &oid, sizeof(short_hex) - 1));
 	git_odb_object_free(obj);

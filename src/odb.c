@@ -786,8 +786,10 @@ attempt_lookup:
 			git__free(data);
 			data = raw.data;
 
-			if (found && git_oid__cmp(&full_oid, &found_full_oid))
+			if (found && git_oid__cmp(&full_oid, &found_full_oid)) {
+				git__free(raw.data);
 				return git_odb__error_ambiguous("multiple matches for prefix");
+			}
 
 			found_full_oid = full_oid;
 			found = true;
