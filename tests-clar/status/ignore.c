@@ -493,3 +493,90 @@ void test_status_ignore__filenames_with_special_prefixes_do_not_interfere_with_s
 		git_buf_free(&file);
 	}
 }
+
+void test_status_ignore__issue_1766_negated_ignores(void)
+{
+	int ignored = 0;
+	unsigned int status;
+
+	g_repo = cl_git_sandbox_init("empty_standard_repo");
+
+	cl_git_pass(git_futils_mkdir_r(
+		"empty_standard_repo/a", NULL, 0775));
+	cl_git_mkfile(
+		"empty_standard_repo/a/.gitignore", "*\n!.gitignore\n");
+	cl_git_mkfile(
+		"empty_standard_repo/a/ignoreme", "I should be ignored\n");
+
+	cl_git_pass(git_status_should_ignore(&ignored, g_repo, "a/.gitignore"));
+	cl_assert(!ignored);
+
+	cl_git_pass(git_status_should_ignore(&ignored, g_repo, "a/ignoreme"));
+	cl_assert(ignored);
+
+	cl_git_pass(git_futils_mkdir_r(
+		"empty_standard_repo/b", NULL, 0775));
+	cl_git_mkfile(
+		"empty_standard_repo/b/.gitignore", "*\n!.gitignore\n");
+	cl_git_mkfile(
+		"empty_standard_repo/b/ignoreme", "I should be ignored\n");
+
+	cl_git_pass(git_status_should_ignore(&ignored, g_repo, "b/.gitignore"));
+	cl_assert(!ignored);
+
+	cl_git_pass(git_status_should_ignore(&ignored, g_repo, "b/ignoreme"));
+	cl_assert(ignored);
+
+	/* shouldn't have changed results from first couple either */
+
+	cl_git_pass(git_status_should_ignore(&ignored, g_repo, "a/.gitignore"));
+	cl_assert(!ignored);
+	cl_git_pass(git_status_should_ignore(&ignored, g_repo, "a/ignoreme"));
+	cl_assert(ignored);
+
+	/* status should find the two ignore files and nothing else */
+
+	cl_git_pass(git_status_file(&status, g_repo, "a/.gitignore"));
+	cl_assert_equal_i(GIT_STATUS_WT_NEW, (int)status);
+
+	cl_git_pass(git_status_file(&status, g_repo, "a/ignoreme"));
+	cl_assert_equal_i(GIT_STATUS_IGNORED, (int)status);
+
+	cl_git_pass(git_status_file(&status, g_repo, "b/.gitignore"));
+	cl_assert_equal_i(GIT_STATUS_WT_NEW, (int)status);
+
+	cl_git_pass(git_status_file(&status, g_repo, "b/ignoreme"));
+	cl_assert_equal_i(GIT_STATUS_IGNORED, (int)status);
+
+	{
+		git_status_options opts = GIT_STATUS_OPTIONS_INIT;
+		status_entry_counts counts;
+		static const char *paths[] = {
+			"a/.gitignore",
+			"a/ignoreme",
+			"b/.gitignore",
+			"b/ignoreme",
+		};
+		static const unsigned int statuses[] = {
+			GIT_STATUS_WT_NEW,
+			GIT_STATUS_IGNORED,
+			GIT_STATUS_WT_NEW,
+			GIT_STATUS_IGNORED,
+		};
+
+		memset(&counts, 0x0, sizeof(status_entry_counts));
+		counts.expected_entry_count = 4;
+		counts.expected_paths = paths;
+		counts.expected_statuses = statuses;
+
+		opts.flags = GIT_STATUS_OPT_DEFAULTS;
+
+		cl_git_pass(git_status_foreach_ext(
+			g_repo, &opts, cb_status__normal, &counts));
+
+		cl_assert_equal_i(counts.expected_entry_count, counts.entry_count);
+		cl_assert_equal_i(0, counts.wrong_status_flags_count);
+		cl_assert_equal_i(0, counts.wrong_sorted_path);
+	}
+}
+

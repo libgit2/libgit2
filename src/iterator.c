@@ -1350,7 +1350,7 @@ int git_iterator_for_workdir_ext(
 	wi->fi.update_entry_cb = workdir_iterator__update_entry;
 
 	if ((error = iterator__update_ignore_case((git_iterator *)wi, flags)) < 0 ||
-		(error = git_ignore__for_path(repo, "", &wi->ignores)) < 0)
+		(error = git_ignore__for_path(repo, ".gitignore", &wi->ignores)) < 0)
 	{
 		git_iterator_free((git_iterator *)wi);
 		return error;
