@@ -8,7 +8,6 @@
 #include "strmap.h"
 
 int git_strmap_next(
-	const char **key,
 	void **data,
 	git_strmap_iter* iter,
 	git_strmap *map)
@@ -22,7 +21,6 @@ int git_strmap_next(
 			continue;
 		}
 
-		*key = git_strmap_key(map, *iter);
 		*data = git_strmap_value_at(map, *iter);
 
 		++(*iter);

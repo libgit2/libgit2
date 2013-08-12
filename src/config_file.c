@@ -268,12 +268,10 @@ static int config_iterator_next(
 	diskfile_backend *b = (diskfile_backend *) it->parent.backend;
 	int err = 0;
 	cvar_t * var;
-	const char* key;
 
 	if (it->next_var == NULL) {
-		err = git_strmap_next(&key, (void**) &var, &(it->iter), b->values);
+		err = git_strmap_next((void**) &var, &(it->iter), b->values);
 	} else {
-		key = it->next_var->entry->name;
 		var = it->next_var;
 	}
 
