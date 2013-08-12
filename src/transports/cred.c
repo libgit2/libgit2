@@ -9,6 +9,31 @@
 #include "smart.h"
 #include "git2/cred_helpers.h"
 
+int git_cred_has_username(git_cred *cred)
+{
+	int ret = 0;
+
+	switch (cred->credtype) {
+	case GIT_CREDTYPE_USERPASS_PLAINTEXT: {
+		git_cred_userpass_plaintext *c = (git_cred_userpass_plaintext *)cred;
+		ret = !!c->username;
+		break;
+	}
+	case GIT_CREDTYPE_SSH_KEYFILE_PASSPHRASE: {
+		git_cred_ssh_keyfile_passphrase *c = (git_cred_ssh_keyfile_passphrase *)cred;
+		ret = !!c->username;
+		break;
+	}
+	case GIT_CREDTYPE_SSH_PUBLICKEY: {
+		git_cred_ssh_publickey *c = (git_cred_ssh_publickey *)cred;
+		ret = !!c->username;
+		break;
+	}
+	}
+
+	return ret;
+}
+
 static void plaintext_free(struct git_cred *cred)
 {
 	git_cred_userpass_plaintext *c = (git_cred_userpass_plaintext *)cred;
@@ -64,6 +89,7 @@ static void ssh_keyfile_passphrase_free(struct git_cred *cred)
 	git_cred_ssh_keyfile_passphrase *c =
 		(git_cred_ssh_keyfile_passphrase *)cred;
 
+	git__free(c->username);
 	git__free(c->publickey);
 	git__free(c->privatekey);
 
@@ -82,6 +108,7 @@ static void ssh_publickey_free(struct git_cred *cred)
 {
 	git_cred_ssh_publickey *c = (git_cred_ssh_publickey *)cred;
 
+	git__free(c->username);
 	git__free(c->publickey);
 
 	git__memzero(c, sizeof(*c));
@@ -90,6 +117,7 @@ static void ssh_publickey_free(struct git_cred *cred)
 
 int git_cred_ssh_keyfile_passphrase_new(
 	git_cred **cred,
+	const char *username,
 	const char *publickey,
 	const char *privatekey,
 	const char *passphrase)
@@ -103,6 +131,11 @@ int git_cred_ssh_keyfile_passphrase_new(
 
 	c->parent.credtype = GIT_CREDTYPE_SSH_KEYFILE_PASSPHRASE;
 	c->parent.free = ssh_keyfile_passphrase_free;
+
+	if (username) {
+		c->username = git__strdup(username);
+		GITERR_CHECK_ALLOC(c->username);
+	}
 
 	c->privatekey = git__strdup(privatekey);
 	GITERR_CHECK_ALLOC(c->privatekey);
@@ -123,6 +156,7 @@ int git_cred_ssh_keyfile_passphrase_new(
 
 int git_cred_ssh_publickey_new(
 	git_cred **cred,
+	const char *username,
 	const char *publickey,
 	size_t publickey_len,
 	git_cred_sign_callback sign_callback,
@@ -137,6 +171,11 @@ int git_cred_ssh_publickey_new(
 
 	c->parent.credtype = GIT_CREDTYPE_SSH_PUBLICKEY;
 	c->parent.free = ssh_publickey_free;
+
+	if (username) {
+		c->username = git__strdup(username);
+		GITERR_CHECK_ALLOC(c->username);
+	}
 
 	if (publickey_len > 0) {
 		c->publickey = git__malloc(publickey_len);
