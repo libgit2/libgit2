@@ -116,6 +116,7 @@ $(function() {
       gname = group[0]
       functions = group[1]
 
+      document.body.scrollTop = document.documentElement.scrollTop = 0;
       content = $('.content')
       content.empty()
 
@@ -301,6 +302,7 @@ $(function() {
       data = tdata[1]
 
       ws.navigate(typeLink(tname))
+      document.body.scrollTop = document.documentElement.scrollTop = 0;
 
       content = $('.content')
       content.empty()
@@ -354,6 +356,7 @@ $(function() {
       gname = group[0]
 
       ws.navigate(groupLink(gname));
+      document.body.scrollTop = document.documentElement.scrollTop = 0;
 
       functions = group[1]
       $('.content').empty()
