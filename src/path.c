@@ -497,12 +497,14 @@ bool git_path_is_empty_dir(const char *path)
 	hFind = FindFirstFileW(wbuf, &ffd);
 	if (INVALID_HANDLE_VALUE == hFind) {
 		giterr_set(GITERR_OS, "Couldn't open '%s'", path);
+		git_buf_free(&pathbuf);
 		return false;
 	}
 
 	do {
 		if (!git_path_is_dot_or_dotdotW(ffd.cFileName)) {
 			retval = false;
+			break;
 		}
 	} while (FindNextFileW(hFind, &ffd) != 0);
 

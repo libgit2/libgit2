@@ -18,8 +18,8 @@ typedef struct {
 	HANDLE h;
 	WIN32_FIND_DATAW f;
 	struct git__dirent entry;
-	char *dir;
 	int first;
+	char dir[GIT_FLEX_ARRAY];
 } git__DIR;
 
 extern git__DIR *git__opendir(const char *);

@@ -27,33 +27,29 @@ git__DIR *git__opendir(const char *dir)
 	git_win32_path_as_utf8 filter;
 	git_win32_path filter_w;
 	git__DIR *new = NULL;
+	size_t dirlen;
 
 	if (!dir || !init_filter(filter, sizeof(filter), dir))
 		return NULL;
 
-	new = git__calloc(1, sizeof(*new));
+	dirlen = strlen(dir);
+
+	new = git__calloc(sizeof(*new) + dirlen + 1, 1);
 	if (!new)
 		return NULL;
-
-	new->dir = git__strdup(dir);
-	if (!new->dir)
-		goto fail;
+	memcpy(new->dir, dir, dirlen);
 
 	git_win32_path_from_c(filter_w, filter);
 	new->h = FindFirstFileW(filter_w, &new->f);
 
 	if (new->h == INVALID_HANDLE_VALUE) {
 		giterr_set(GITERR_OS, "Could not open directory '%s'", dir);
-		goto fail;
+		git__free(new);
+		return NULL;
 	}
 
 	new->first = 1;
 	return new;
-
-fail:
-	git__free(new->dir);
-	git__free(new);
-	return NULL;
 }
 
 int git__readdir_ext(
@@ -133,8 +129,7 @@ int git__closedir(git__DIR *d)
 		FindClose(d->h);
 		d->h = INVALID_HANDLE_VALUE;
 	}
-	git__free(d->dir);
-	d->dir = NULL;
+
 	git__free(d);
 	return 0;
 }

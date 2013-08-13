@@ -514,10 +514,10 @@ p_gmtime_r (const time_t *timer, struct tm *result)
 #else
 #define DELTA_EPOCH_IN_MICROSECS  11644473600000000ULL
 #endif
- 
+
 #ifndef _TIMEZONE_DEFINED
 #define _TIMEZONE_DEFINED
-struct timezone 
+struct timezone
 {
 	int  tz_minuteswest; /* minutes W of Greenwich */
 	int  tz_dsttime;     /* type of dst correction */

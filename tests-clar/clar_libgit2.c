@@ -66,12 +66,13 @@ char *cl_getenv(const char *name)
 	if (alloc_len <= 0)
 		return NULL;
 
-	alloc_len = GIT_WIN_PATH_UTF8;
 	cl_assert(value_utf16 = git__calloc(alloc_len, sizeof(wchar_t)));
 
 	GetEnvironmentVariableW(name_utf16, value_utf16, alloc_len);
 
-	cl_assert(value_utf8 = git__malloc(alloc_len));
+	alloc_len = alloc_len * 4 + 1; /* worst case UTF16->UTF8 growth */
+	cl_assert(value_utf8 = git__calloc(alloc_len, 1));
+
 	git__utf16_to_8(value_utf8, alloc_len, value_utf16);
 
 	git__free(value_utf16);
