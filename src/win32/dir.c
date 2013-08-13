@@ -96,7 +96,7 @@ struct git__dirent *git__readdir(git__DIR *d)
 
 void git__rewinddir(git__DIR *d)
 {
-	char filter[GIT_WIN_PATH_UTF8];
+	git_win32_path_as_utf8 filter;
 	git_win32_path filter_w;
 
 	if (!d)
