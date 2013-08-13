@@ -79,7 +79,7 @@ int git__readdir_ext(
 	if (wcslen(d->f.cFileName) >= sizeof(entry->d_name))
 		return -1;
 
-	git__win32_path_from_c(entry->d_name, d->f.cFileName);
+	git__win32_path_to_c(entry->d_name, d->f.cFileName);
 	entry->d_ino = 0;
 
 	*result = entry;
