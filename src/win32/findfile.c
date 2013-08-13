@@ -23,11 +23,11 @@ int git_win32__expand_path(struct git_win32__path *s_root, const wchar_t *templ)
 	return s_root->len ? 0 : -1;
 }
 
-static int win32_path_utf16_to_8(git_buf *path_utf8, const wchar_t *path_utf16)
+static int win32_path_to_8(git_buf *path_utf8, const wchar_t *path)
 {
 	char temp_utf8[GIT_PATH_MAX];
 
-	git__utf16_to_8(temp_utf8, GIT_PATH_MAX, path_utf16);
+	git__utf16_to_8(temp_utf8, GIT_PATH_MAX, path);
 	git_path_mkposix(temp_utf8);
 
 	return git_buf_sets(path_utf8, temp_utf8);
@@ -61,7 +61,7 @@ int git_win32__find_file(
 		return GIT_ENOTFOUND;
 	}
 
-	win32_path_utf16_to_8(path, file_utf16);
+	win32_path_to_8(path, file_utf16);
 	git__free(file_utf16);
 
 	return 0;
@@ -113,7 +113,7 @@ static int win32_find_git_in_path(git_buf *buf, const wchar_t *gitexe)
 			/* replace "bin\\" or "cmd\\" with "etc\\" */
 			wcscpy(&root.path[root.len - 4], L"etc\\");
 
-			win32_path_utf16_to_8(buf, root.path);
+			win32_path_to_8(buf, root.path);
 			return 0;
 		}
 	}
@@ -146,7 +146,7 @@ static int win32_find_git_in_registry(
 			wcscat(path16.path, L"etc\\");
 			path16.len += 4;
 
-			win32_path_utf16_to_8(buf, path16.path);
+			win32_path_to_8(buf, path16.path);
 		}
 
 		RegCloseKey(hKey);
@@ -168,7 +168,7 @@ static int win32_find_existing_dirs(
 			path16.path[0] != L'%' &&
 			!_waccess(path16.path, F_OK))
 		{
-			win32_path_utf16_to_8(&buf, path16.path);
+			win32_path_to_8(&buf, path16.path);
 
 			if (buf.size)
 				git_buf_join(out, GIT_PATH_LIST_SEPARATOR, out->ptr, buf.ptr);

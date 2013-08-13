@@ -486,14 +486,14 @@ bool git_path_is_empty_dir(const char *path)
 {
 	git_buf pathbuf = GIT_BUF_INIT;
 	HANDLE hFind = INVALID_HANDLE_VALUE;
-	git_win32_path_utf16 wbuf;
+	git_win32_path wbuf;
 	WIN32_FIND_DATAW ffd;
 	bool retval = true;
 
 	if (!git_path_isdir(path)) return false;
 
 	git_buf_printf(&pathbuf, "%s\\*", path);
-	git__win32_path_utf8_to_16(wbuf, git_buf_cstr(&pathbuf));
+	git__win32_path_from_c(wbuf, git_buf_cstr(&pathbuf));
 
 	hFind = FindFirstFileW(wbuf, &ffd);
 	if (INVALID_HANDLE_VALUE == hFind) {

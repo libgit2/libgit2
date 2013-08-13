@@ -58,9 +58,9 @@ int git_futils_creat_locked(const char *path, const mode_t mode)
 	int fd;
 
 #ifdef GIT_WIN32
-	git_win32_path_utf16 buf;
+	git_win32_path buf;
 
-	git__win32_path_utf8_to_16(buf, path);
+	git__win32_path_from_c(buf, path);
 	fd = _wopen(buf, O_WRONLY | O_CREAT | O_TRUNC |
 		O_EXCL | O_BINARY | O_CLOEXEC, mode);
 #else
