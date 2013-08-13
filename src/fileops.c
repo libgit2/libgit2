@@ -147,6 +147,7 @@ int git_futils_readbuffer_fd(git_buf *buf, git_file fd, size_t len)
 int git_futils_readbuffer_updated(
 	git_buf *buf, const char *path, time_t *mtime, size_t *size, int *updated)
 {
+	int error = 0;
 	git_file fd;
 	struct stat st;
 	bool changed = false;
@@ -156,11 +157,15 @@ int git_futils_readbuffer_updated(
 	if (updated != NULL)
 		*updated = 0;
 
-	if ((fd = git_futils_open_ro(path)) < 0)
-		return fd;
+	if (p_stat(path, &st) < 0) {
+		error = errno;
+		giterr_set(GITERR_OS, "Failed to stat '%s'", path);
+		if (error == ENOENT || error == ENOTDIR)
+			return GIT_ENOTFOUND;
+		return -1;
+	}
 
-	if (p_fstat(fd, &st) < 0 || S_ISDIR(st.st_mode) || !git__is_sizet(st.st_size+1)) {
-		p_close(fd);
+	if (S_ISDIR(st.st_mode) || !git__is_sizet(st.st_size+1)) {
 		giterr_set(GITERR_OS, "Invalid regular file stat for '%s'", path);
 		return -1;
 	}
@@ -177,7 +182,6 @@ int git_futils_readbuffer_updated(
 		changed = true;
 
 	if (!changed) {
-		p_close(fd);
 		return 0;
 	}
 
@@ -185,6 +189,9 @@ int git_futils_readbuffer_updated(
 		*mtime = st.st_mtime;
 	if (size != NULL)
 		*size = (size_t)st.st_size;
+
+	if ((fd = git_futils_open_ro(path)) < 0)
+		return fd;
 
 	if (git_futils_readbuffer_fd(buf, fd, (size_t)st.st_size) < 0) {
 		p_close(fd);
