@@ -5,8 +5,7 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 #define GIT__WIN32_NO_WRAP_DIR
-#include "dir.h"
-#include "utf-conv.h"
+#include "posix.h"
 
 static int init_filter(char *filter, size_t n, const char *dir)
 {

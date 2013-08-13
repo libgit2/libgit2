@@ -9,6 +9,7 @@
 
 #include "common.h"
 #include "utf-conv.h"
+#include "dir.h"
 
 GIT_INLINE(int) p_link(const char *old, const char *new)
 {

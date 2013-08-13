@@ -8,7 +8,6 @@
 #include "path.h"
 #include "posix.h"
 #ifdef GIT_WIN32
-#include "win32/dir.h"
 #include "win32/posix.h"
 #else
 #include <dirent.h>
