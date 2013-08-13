@@ -81,6 +81,31 @@ static int ensure_remote_name_is_valid(const char *name)
 	return error;
 }
 
+static int get_check_cert(git_repository *repo)
+{
+	git_config *cfg;
+	const char *val;
+	int check_cert;
+
+	assert(repo);
+
+	/* Go through the possible sources for SSL verification settings, from
+	 * most specific to least specific. */
+
+	/* GIT_SSL_NO_VERIFY environment variable */
+	if ((val = getenv("GIT_SSL_NO_VERIFY")) &&
+		!git_config_parse_bool(&check_cert, val))
+		return !check_cert;
+
+	/* http.sslVerify config setting */
+	if (!git_repository_config__weakptr(&cfg, repo) &&
+		!git_config_get_bool(&check_cert, cfg, "http.sslVerify"))
+		return check_cert;
+
+	/* By default, we *DO* want to verify the certificate. */
+	return 1;
+}
+
 static int create_internal(git_remote **out, git_repository *repo, const char *name, const char *url, const char *fetch)
 {
 	git_remote *remote;
@@ -94,7 +119,7 @@ static int create_internal(git_remote **out, git_repository *repo, const char *n
 	GITERR_CHECK_ALLOC(remote);
 
 	remote->repo = repo;
-	remote->check_cert = 1;
+	remote->check_cert = (unsigned)get_check_cert(repo);
 	remote->update_fetchhead = 1;
 
 	if (git_vector_init(&remote->refs, 32, NULL) < 0)
@@ -253,7 +278,7 @@ int git_remote_load(git_remote **out, git_repository *repo, const char *name)
 	GITERR_CHECK_ALLOC(remote);
 
 	memset(remote, 0x0, sizeof(git_remote));
-	remote->check_cert = 1;
+	remote->check_cert = (unsigned)get_check_cert(repo);
 	remote->update_fetchhead = 1;
 	remote->name = git__strdup(name);
 	GITERR_CHECK_ALLOC(remote->name);
