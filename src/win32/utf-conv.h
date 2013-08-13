@@ -25,7 +25,7 @@ GIT_INLINE(int) git__win32_path_from_c(git_win32_path dest, const char *src)
 	return git__utf8_to_16(dest, GIT_WIN_PATH_UTF16, src);
 }
 
-GIT_INLINE(int) git__win32_path_to_c(char *dest, const git_win32_path *src)
+GIT_INLINE(int) git__win32_path_to_c(char *dest, const git_win32_path src)
 {
 	return git__utf16_to_8(dest, GIT_WIN_PATH_UTF8, src);
 }
