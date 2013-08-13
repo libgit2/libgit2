@@ -24,7 +24,7 @@ static int init_filter(char *filter, size_t n, const char *dir)
 
 git__DIR *git__opendir(const char *dir)
 {
-	char filter[GIT_WIN_PATH_UTF8];
+	git_win32_path_as_utf8 filter;
 	git_win32_path filter_w;
 	git__DIR *new = NULL;
 

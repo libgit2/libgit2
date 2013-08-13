@@ -109,10 +109,10 @@ static int do_lstat(
 		 * the length of the path pointed to, which we expect everywhere else
 		 */
 		if (S_ISLNK(fMode)) {
-			char target[GIT_WIN_PATH_UTF8];
+			git_win32_path_as_utf8 target;
 			int readlink_result;
 
-			readlink_result = p_readlink(file_name, target, GIT_WIN_PATH_UTF8);
+			readlink_result = p_readlink(file_name, target, sizeof(target));
 
 			if (readlink_result == -1)
 				return -1;
@@ -300,7 +300,7 @@ int p_getcwd(char *buffer_out, size_t size)
 
 int p_stat(const char* path, struct stat* buf)
 {
-	char target[GIT_WIN_PATH_UTF8];
+	git_win32_path_as_utf8 target;
 	int error = 0;
 
 	error = do_lstat(path, buf, 0);
@@ -308,7 +308,7 @@ int p_stat(const char* path, struct stat* buf)
 	/* We need not do this in a loop to unwind chains of symlinks since
 	 * p_readlink calls GetFinalPathNameByHandle which does it for us. */
 	if (error >= 0 && S_ISLNK(buf->st_mode) &&
-		(error = p_readlink(path, target, GIT_WIN_PATH_UTF8)) >= 0)
+		(error = p_readlink(path, target, sizeof(target))) >= 0)
 		error = do_lstat(target, buf, 0);
 
 	return error;

@@ -11,7 +11,7 @@
 
 struct git__dirent {
 	int d_ino;
-	char d_name[GIT_WIN_PATH_UTF8];
+	git_win32_path_as_utf8 d_name;
 };
 
 typedef struct {
