@@ -61,7 +61,7 @@ char *cl_getenv(const char *name)
 	wchar_t *value_utf16;
 	char *value_utf8;
 
-	git__win32_path_from_c(name_utf16, name);
+	git_win32_path_from_c(name_utf16, name);
 	alloc_len = GetEnvironmentVariableW(name_utf16, NULL, 0);
 	if (alloc_len <= 0)
 		return NULL;
@@ -84,10 +84,10 @@ int cl_setenv(const char *name, const char *value)
 	git_win32_path name_utf16;
 	git_win32_path value_utf16;
 
-	git__win32_path_from_c(name_utf16, name);
+	git_win32_path_from_c(name_utf16, name);
 
 	if (value) {
-		git__win32_path_from_c(value_utf16, value);
+		git_win32_path_from_c(value_utf16, value);
 		cl_assert(SetEnvironmentVariableW(name_utf16, value_utf16));
 	} else {
 		/* Windows XP returns 0 (failed) when passing NULL for lpValue when
@@ -111,8 +111,8 @@ int cl_rename(const char *source, const char *dest)
 	git_win32_path dest_utf16;
 	unsigned retries = 1;
 
-	git__win32_path_from_c(source_utf16, source);
-	git__win32_path_from_c(dest_utf16, dest);
+	git_win32_path_from_c(source_utf16, source);
+	git_win32_path_from_c(dest_utf16, dest);
 
 	while (!MoveFileW(source_utf16, dest_utf16)) {
 		/* Only retry if the error is ERROR_ACCESS_DENIED;

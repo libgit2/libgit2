@@ -24,7 +24,7 @@ GIT_INLINE(int) p_mkdir(const char *path, mode_t mode)
 {
 	git_win32_path buf;
 	GIT_UNUSED(mode);
-	git__win32_path_from_c(buf, path);
+	git_win32_path_from_c(buf, path);
 	return _wmkdir(buf);
 }
 

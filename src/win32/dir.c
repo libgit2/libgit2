@@ -39,7 +39,7 @@ git__DIR *git__opendir(const char *dir)
 	if (!new->dir)
 		goto fail;
 
-	git__win32_path_from_c(filter_w, filter);
+	git_win32_path_from_c(filter_w, filter);
 	new->h = FindFirstFileW(filter_w, &new->f);
 
 	if (new->h == INVALID_HANDLE_VALUE) {
@@ -79,7 +79,7 @@ int git__readdir_ext(
 	if (wcslen(d->f.cFileName) >= sizeof(entry->d_name))
 		return -1;
 
-	git__win32_path_to_c(entry->d_name, d->f.cFileName);
+	git_win32_path_to_c(entry->d_name, d->f.cFileName);
 	entry->d_ino = 0;
 
 	*result = entry;
@@ -115,7 +115,7 @@ void git__rewinddir(git__DIR *d)
 	if (!init_filter(filter, sizeof(filter), d->dir))
 		return;
 
-	git__win32_path_from_c(filter_w, filter);
+	git_win32_path_from_c(filter_w, filter);
 	d->h = FindFirstFileW(filter_w, &d->f);
 
 	if (d->h == INVALID_HANDLE_VALUE)

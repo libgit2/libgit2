@@ -920,7 +920,7 @@ static int winhttp_connect(
 		return -1;
 
 	/* Prepare host */
-	git__win32_path_from_c(host, t->host);
+	git_win32_path_from_c(host, t->host);
 
 	/* Establish session */
 	t->session = WinHttpOpen(
@@ -934,7 +934,7 @@ static int winhttp_connect(
 		giterr_set(GITERR_OS, "Failed to init WinHTTP");
 		return -1;
 	}
-	
+
 	/* Establish connection */
 	t->connection = WinHttpConnect(
 			t->session,
