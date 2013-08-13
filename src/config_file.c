@@ -136,41 +136,6 @@ int git_config_file_normalize_section(char *start, char *end)
 	return 0;
 }
 
-/* Take something the user gave us and make it nice for our hash function */
-static int normalize_name(const char *in, char **out)
-{
-	char *name, *fdot, *ldot;
-
-	assert(in && out);
-
-	name = git__strdup(in);
-	GITERR_CHECK_ALLOC(name);
-
-	fdot = strchr(name, '.');
-	ldot = strrchr(name, '.');
-
-	if (fdot == NULL || fdot == name || ldot == NULL || !ldot[1])
-		goto invalid;
-
-	/* Validate and downcase up to first dot and after last dot */
-	if (git_config_file_normalize_section(name, fdot) < 0 ||
-		git_config_file_normalize_section(ldot + 1, NULL) < 0)
-		goto invalid;
-
-	/* If there is a middle range, make sure it doesn't have newlines */
-	while (fdot < ldot)
-		if (*fdot++ == '\n')
-			goto invalid;
-
-	*out = name;
-	return 0;
-
-invalid:
-	git__free(name);
-	giterr_set(GITERR_CONFIG, "Invalid config item name '%s'", in);
-	return GIT_EINVALIDSPEC;
-}
-
 static void free_vars(git_strmap *values)
 {
 	cvar_t *var = NULL;
@@ -314,7 +279,7 @@ static int config_set(git_config_backend *cfg, const char *name, const char *val
 	khiter_t pos;
 	int rval, ret;
 
-	if ((rval = normalize_name(name, &key)) < 0)
+	if ((rval = git_config__normalize_name(name, &key)) < 0)
 		return rval;
 
 	/*
@@ -397,7 +362,7 @@ static int config_get(const git_config_backend *cfg, const char *name, const git
 	khiter_t pos;
 	int error;
 
-	if ((error = normalize_name(name, &key)) < 0)
+	if ((error = git_config__normalize_name(name, &key)) < 0)
 		return error;
 
 	pos = git_strmap_lookup_index(b->values, key);
@@ -408,162 +373,6 @@ static int config_get(const git_config_backend *cfg, const char *name, const git
 		return GIT_ENOTFOUND;
 
 	*out = ((cvar_t *)git_strmap_value_at(b->values, pos))->entry;
-
-	return 0;
-}
-
-typedef struct {
-	git_config_iterator parent;
-	cvar_t *var;
-	regex_t regex;
-	int have_regex;
-} foreach_iter;
-
-static void foreach_iter_free(git_config_iterator *_iter)
-{
-	foreach_iter *iter = (foreach_iter *) _iter;
-
-	if (iter->have_regex)
-		regfree(&iter->regex);
-
-	git__free(iter);
-}
-
-static int foreach_iter_next(git_config_entry **out, git_config_iterator *_iter)
-{
-	foreach_iter *iter = (foreach_iter *) _iter;
-
-	cvar_t* var = iter->var;
-
-
-	if (var == NULL)
-		return GIT_ITEROVER;
-
-	if (!iter->have_regex) {
-		*out = var->entry;
-		iter->var = var->next;
-		return 0;
-	}
-
-	/* For the regex case, we must loop until we find something we like */
-	do {
-		git_config_entry *entry = var->entry;
-		regex_t *regex = &iter->regex;;
-		if (regexec(regex, entry->value, 0, NULL, 0) == 0) {
-			*out = entry;
-			iter->var = var->next;
-			return 0;
-		}
-		var = var->next;
-	} while(var != NULL);
-
-	return GIT_ITEROVER;
-}
-
-static int config_get_multivar(git_config_iterator **out, git_config_backend *_backend,
-			       const char *name, const char *regexp)
-{
-	foreach_iter *iter;
-	diskfile_backend *b = (diskfile_backend *) _backend;
-
-	char *key;
-	khiter_t pos;
-	int error = 0;
-
-	if ((error = normalize_name(name, &key)) < 0)
-		return error;
-
-	pos = git_strmap_lookup_index(b->values, key);
-	git__free(key);
-
-	if (!git_strmap_valid_index(b->values, pos))
-		return GIT_ENOTFOUND;
-
-	iter = git__calloc(1, sizeof(foreach_iter));
-	GITERR_CHECK_ALLOC(iter);
-
-	iter->var = git_strmap_value_at(b->values, pos);
-
-	if (regexp != NULL) {
-		int result;
-
-		result = regcomp(&iter->regex, regexp, REG_EXTENDED);
-		if (result < 0) {
-			giterr_set_regex(&iter->regex, result);
-			regfree(&iter->regex);
-			return -1;
-		}
-		iter->have_regex = 1;
-	}
-
-	iter->parent.free = foreach_iter_free;
-	iter->parent.next = foreach_iter_next;
-
-	*out = (git_config_iterator *) iter;
-
-	return 0;
- }
-
-static int config_get_multivar_foreach(
-	git_config_backend *cfg,
-	const char *name,
-	const char *regex_str,
-	int (*fn)(const git_config_entry *, void *),
-	void *data)
-{
-	cvar_t *var;
-	diskfile_backend *b = (diskfile_backend *)cfg;
-	char *key;
-	khiter_t pos;
-	int error;
-
-	if ((error = normalize_name(name, &key)) < 0)
-		return error;
-
-	pos = git_strmap_lookup_index(b->values, key);
-	git__free(key);
-
-	if (!git_strmap_valid_index(b->values, pos))
-		return GIT_ENOTFOUND;
-
-	var = git_strmap_value_at(b->values, pos);
-
-	if (regex_str != NULL) {
-		regex_t regex;
-		int result;
-
-		/* regex matching; build the regex */
-		result = regcomp(&regex, regex_str, REG_EXTENDED);
-		if (result < 0) {
-			giterr_set_regex(&regex, result);
-			regfree(&regex);
-			return -1;
-		}
-
-		/* and throw the callback only on the variables that
-		 * match the regex */
-		do {
-			if (regexec(&regex, var->entry->value, 0, NULL, 0) == 0) {
-				/* early termination by the user is not an error;
-				 * just break and return successfully */
-				if (fn(var->entry, data))
-					break;
-			}
-
-			var = var->next;
-		} while (var != NULL);
-		regfree(&regex);
-	} else {
-		/* no regex; go through all the variables */
-		do {
-			/* early termination by the user is not an error;
-			 * just break and return successfully */
-			if (fn(var->entry, data) < 0)
-				break;
-
-			var = var->next;
-		} while (var != NULL);
-	}
 
 	return 0;
 }
@@ -581,7 +390,7 @@ static int config_set_multivar(
 
 	assert(regexp);
 
-	if ((result = normalize_name(name, &key)) < 0)
+	if ((result = git_config__normalize_name(name, &key)) < 0)
 		return result;
 
 	pos = git_strmap_lookup_index(b->values, key);
@@ -654,7 +463,7 @@ static int config_delete(git_config_backend *cfg, const char *name)
 	int result;
 	khiter_t pos;
 
-	if ((result = normalize_name(name, &key)) < 0)
+	if ((result = git_config__normalize_name(name, &key)) < 0)
 		return result;
 
 	pos = git_strmap_lookup_index(b->values, key);
@@ -694,8 +503,6 @@ int git_config_file__ondisk(git_config_backend **out, const char *path)
 
 	backend->parent.open = config_open;
 	backend->parent.get = config_get;
-	backend->parent.get_multivar_foreach = config_get_multivar_foreach;
-	backend->parent.get_multivar = config_get_multivar;
 	backend->parent.set = config_set;
 	backend->parent.set_multivar = config_set_multivar;
 	backend->parent.del = config_delete;

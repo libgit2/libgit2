@@ -76,7 +76,7 @@ static void check_get_multivar(git_config *cfg, int expected)
 	git_config_entry *entry;
 	int n = 0;
 
-	cl_git_pass(git_config_get_multivar(&iter, cfg, _name, NULL));
+	cl_git_pass(git_config_multivar_iterator_new(&iter, cfg, _name, NULL));
 
 	while (git_config_next(&entry, iter) == 0)
 		n++;

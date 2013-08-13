@@ -747,7 +747,7 @@ int git_config_get_multivar_foreach(
 	git_config_iterator *iter;
 	git_config_entry *entry;
 
-	if ((err = git_config_get_multivar(&iter, cfg, name, regexp)) < 0)
+	if ((err = git_config_multivar_iterator_new(&iter, cfg, name, regexp)) < 0)
 		return err;
 
 	found = 0;
@@ -771,92 +771,82 @@ int git_config_get_multivar_foreach(
 
 typedef struct {
 	git_config_iterator parent;
-	git_config_iterator *current;
+	git_config_iterator *iter;
 	char *name;
-	char *regexp;
-	const git_config *cfg;
-	size_t i;
+	regex_t regex;
+	int have_regex;
 } multivar_iter;
 
 static int multivar_iter_next(git_config_entry **entry, git_config_iterator *_iter)
 {
 	multivar_iter *iter = (multivar_iter *) _iter;
-	git_config_iterator *current = iter->current;
-	file_internal *internal;
-	git_config_backend *backend;
-	size_t i;
 	int error = 0;
 
-	if (current != NULL &&
-	    (error = current->next(entry, current)) == 0) {
-		return 0;
-	}
-
-	if (error < 0 && error != GIT_ITEROVER)
-		return error;
-
-	do {
-		if (find_next_backend(&i, iter->cfg, iter->i) < 0)
-			return GIT_ITEROVER;
-
-		internal = git_vector_get(&iter->cfg->files, i - 1);
-		backend = internal->file;
-		iter->i = i - 1;
-
-		if (iter->current)
-			iter->current->free(current);
-
-		iter->current = NULL;
-		error = backend->get_multivar(&iter->current, backend, iter->name, iter->regexp);
-		if (error == GIT_ENOTFOUND)
+	while ((error = iter->iter->next(entry, iter->iter)) == 0) {
+		if (git__strcmp(iter->name, (*entry)->name))
 			continue;
 
-		if (error < 0)
-			return error;
+		if (!iter->have_regex)
+			return 0;
 
-		return iter->current->next(entry, iter->current);
+		if (regexec(&iter->regex, (*entry)->value, 0, NULL, 0) == 0)
+			return 0;
+	}
 
-	} while(1);
-
-	return GIT_ITEROVER;
+	return error;
 }
 
 void multivar_iter_free(git_config_iterator *_iter)
 {
 	multivar_iter *iter = (multivar_iter *) _iter;
 
-	if (iter->current)
-		iter->current->free(iter->current);
+	iter->iter->free(iter->iter);
 
 	git__free(iter->name);
-	git__free(iter->regexp);
+	regfree(&iter->regex);
 	git__free(iter);
 }
 
-int git_config_get_multivar(git_config_iterator **out, const git_config *cfg, const char *name, const char *regexp)
+int git_config_multivar_iterator_new(git_config_iterator **out, const git_config *cfg, const char *name, const char *regexp)
 {
-	multivar_iter *iter;
+	multivar_iter *iter = NULL;
+	git_config_iterator *inner = NULL;
+	int error;
+
+	if ((error = git_config_iterator_new(&inner, cfg)) < 0)
+		return error;
 
 	iter = git__calloc(1, sizeof(multivar_iter));
 	GITERR_CHECK_ALLOC(iter);
 
-	iter->name = git__strdup(name);
-	GITERR_CHECK_ALLOC(iter->name);
+	if ((error = git_config__normalize_name(name, &iter->name)) < 0)
+		goto on_error;
 
 	if (regexp != NULL) {
-		iter->regexp = git__strdup(regexp);
-		GITERR_CHECK_ALLOC(iter->regexp);
+		error = regcomp(&iter->regex, regexp, REG_EXTENDED);
+		if (error < 0) {
+			giterr_set_regex(&iter->regex, error);
+			error = -1;
+			regfree(&iter->regex);
+			goto on_error;
+		}
+
+		iter->have_regex = 1;
 	}
 
+	iter->iter = inner;
 	iter->parent.free = multivar_iter_free;
 	iter->parent.next = multivar_iter_next;
-
-	iter->i = cfg->files.length;
-	iter->cfg = cfg;
 
 	*out = (git_config_iterator *) iter;
 
 	return 0;
+
+on_error:
+
+	inner->free(inner);
+	git__free(iter);
+	return error;
 }
 
 int git_config_set_multivar(git_config *cfg, const char *name, const char *regexp, const char *value)
@@ -1123,6 +1113,41 @@ int git_config_parse_int32(int32_t *out, const char *value)
 fail_parse:
 	giterr_set(GITERR_CONFIG, "Failed to parse '%s' as a 32-bit integer", value);
 	return -1;
+}
+
+/* Take something the user gave us and make it nice for our hash function */
+int git_config__normalize_name(const char *in, char **out)
+{
+	char *name, *fdot, *ldot;
+
+	assert(in && out);
+
+	name = git__strdup(in);
+	GITERR_CHECK_ALLOC(name);
+
+	fdot = strchr(name, '.');
+	ldot = strrchr(name, '.');
+
+	if (fdot == NULL || fdot == name || ldot == NULL || !ldot[1])
+		goto invalid;
+
+	/* Validate and downcase up to first dot and after last dot */
+	if (git_config_file_normalize_section(name, fdot) < 0 ||
+		git_config_file_normalize_section(ldot + 1, NULL) < 0)
+		goto invalid;
+
+	/* If there is a middle range, make sure it doesn't have newlines */
+	while (fdot < ldot)
+		if (*fdot++ == '\n')
+			goto invalid;
+
+	*out = name;
+	return 0;
+
+invalid:
+	git__free(name);
+	giterr_set(GITERR_CONFIG, "Invalid config item name '%s'", in);
+	return GIT_EINVALIDSPEC;
 }
 
 struct rename_data {

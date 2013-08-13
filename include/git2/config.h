@@ -350,7 +350,7 @@ GIT_EXTERN(int) git_config_get_multivar_foreach(const git_config *cfg, const cha
  * @param regexp regular expression to filter which variables we're
  * interested in. Use NULL to indicate all
  */
-GIT_EXTERN(int) git_config_get_multivar(git_config_iterator **out, const git_config *cfg, const char *name, const char *regexp);
+GIT_EXTERN(int) git_config_multivar_iterator_new(git_config_iterator **out, const git_config *cfg, const char *name, const char *regexp);
 
 /**
  * Return the current entry and advance the iterator
