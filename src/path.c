@@ -8,7 +8,6 @@
 #include "path.h"
 #include "posix.h"
 #ifdef GIT_WIN32
-#include "win32/dir.h"
 #include "win32/posix.h"
 #else
 #include <dirent.h>
@@ -486,24 +485,26 @@ bool git_path_is_empty_dir(const char *path)
 {
 	git_buf pathbuf = GIT_BUF_INIT;
 	HANDLE hFind = INVALID_HANDLE_VALUE;
-	wchar_t wbuf[GIT_WIN_PATH];
+	git_win32_path wbuf;
 	WIN32_FIND_DATAW ffd;
 	bool retval = true;
 
 	if (!git_path_isdir(path)) return false;
 
 	git_buf_printf(&pathbuf, "%s\\*", path);
-	git__utf8_to_16(wbuf, GIT_WIN_PATH, git_buf_cstr(&pathbuf));
+	git_win32_path_from_c(wbuf, git_buf_cstr(&pathbuf));
 
 	hFind = FindFirstFileW(wbuf, &ffd);
 	if (INVALID_HANDLE_VALUE == hFind) {
 		giterr_set(GITERR_OS, "Couldn't open '%s'", path);
+		git_buf_free(&pathbuf);
 		return false;
 	}
 
 	do {
 		if (!git_path_is_dot_or_dotdotW(ffd.cFileName)) {
 			retval = false;
+			break;
 		}
 	} while (FindNextFileW(hFind, &ffd) != 0);
 

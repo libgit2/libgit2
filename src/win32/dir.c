@@ -5,8 +5,7 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 #define GIT__WIN32_NO_WRAP_DIR
-#include "dir.h"
-#include "utf-conv.h"
+#include "posix.h"
 
 static int init_filter(char *filter, size_t n, const char *dir)
 {
@@ -25,36 +24,32 @@ static int init_filter(char *filter, size_t n, const char *dir)
 
 git__DIR *git__opendir(const char *dir)
 {
-	char filter[GIT_WIN_PATH];
-	wchar_t filter_w[GIT_WIN_PATH];
+	git_win32_path_as_utf8 filter;
+	git_win32_path filter_w;
 	git__DIR *new = NULL;
+	size_t dirlen;
 
 	if (!dir || !init_filter(filter, sizeof(filter), dir))
 		return NULL;
 
-	new = git__calloc(1, sizeof(*new));
+	dirlen = strlen(dir);
+
+	new = git__calloc(sizeof(*new) + dirlen + 1, 1);
 	if (!new)
 		return NULL;
+	memcpy(new->dir, dir, dirlen);
 
-	new->dir = git__strdup(dir);
-	if (!new->dir)
-		goto fail;
-
-	git__utf8_to_16(filter_w, GIT_WIN_PATH, filter);
+	git_win32_path_from_c(filter_w, filter);
 	new->h = FindFirstFileW(filter_w, &new->f);
 
 	if (new->h == INVALID_HANDLE_VALUE) {
 		giterr_set(GITERR_OS, "Could not open directory '%s'", dir);
-		goto fail;
+		git__free(new);
+		return NULL;
 	}
 
 	new->first = 1;
 	return new;
-
-fail:
-	git__free(new->dir);
-	git__free(new);
-	return NULL;
 }
 
 int git__readdir_ext(
@@ -80,7 +75,7 @@ int git__readdir_ext(
 	if (wcslen(d->f.cFileName) >= sizeof(entry->d_name))
 		return -1;
 
-	git__utf16_to_8(entry->d_name, d->f.cFileName);
+	git_win32_path_to_c(entry->d_name, d->f.cFileName);
 	entry->d_ino = 0;
 
 	*result = entry;
@@ -101,8 +96,8 @@ struct git__dirent *git__readdir(git__DIR *d)
 
 void git__rewinddir(git__DIR *d)
 {
-	char filter[GIT_WIN_PATH];
-	wchar_t filter_w[GIT_WIN_PATH];
+	git_win32_path_as_utf8 filter;
+	git_win32_path filter_w;
 
 	if (!d)
 		return;
@@ -116,7 +111,7 @@ void git__rewinddir(git__DIR *d)
 	if (!init_filter(filter, sizeof(filter), d->dir))
 		return;
 
-	git__utf8_to_16(filter_w, GIT_WIN_PATH, filter);
+	git_win32_path_from_c(filter_w, filter);
 	d->h = FindFirstFileW(filter_w, &d->f);
 
 	if (d->h == INVALID_HANDLE_VALUE)
@@ -134,8 +129,7 @@ int git__closedir(git__DIR *d)
 		FindClose(d->h);
 		d->h = INVALID_HANDLE_VALUE;
 	}
-	git__free(d->dir);
-	d->dir = NULL;
+
 	git__free(d);
 	return 0;
 }

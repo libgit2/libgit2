@@ -865,3 +865,35 @@ void test_status_worktree__sorting_by_case(void)
 	cl_assert_equal_i(0, counts.wrong_status_flags_count);
 	cl_assert_equal_i(0, counts.wrong_sorted_path);
 }
+
+void test_status_worktree__long_filenames(void)
+{
+	char path[260*4+1];
+	const char *expected_paths[] = {path};
+	const unsigned int expected_statuses[] = {GIT_STATUS_WT_NEW};
+
+	git_repository *repo = cl_git_sandbox_init("empty_standard_repo");
+	git_status_options opts = GIT_STATUS_OPTIONS_INIT;
+	status_entry_counts counts = {0};
+
+	// Create directory with amazingly long filename
+	sprintf(path, "empty_standard_repo/%s", longname);
+	cl_git_pass(git_futils_mkdir_r(path, NULL, 0777));
+	sprintf(path, "empty_standard_repo/%s/foo", longname);
+	cl_git_mkfile(path, "dummy");
+
+	sprintf(path, "%s/foo", longname);
+	counts.expected_entry_count = 1;
+	counts.expected_paths = expected_paths;
+	counts.expected_statuses = expected_statuses;
+
+	opts.show = GIT_STATUS_SHOW_WORKDIR_ONLY;
+	opts.flags = GIT_STATUS_OPT_DEFAULTS;
+
+	cl_git_pass(
+		git_status_foreach_ext(repo, &opts, cb_status__normal, &counts) );
+	cl_assert_equal_i(counts.expected_entry_count, counts.entry_count);
+	cl_assert_equal_i(0, counts.wrong_status_flags_count);
+	cl_assert_equal_i(0, counts.wrong_sorted_path);
+}
+
