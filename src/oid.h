@@ -9,6 +9,18 @@
 
 #include "git2/oid.h"
 
+GIT_INLINE(int) git_oid__hashcmp(const unsigned char *sha1, const unsigned char *sha2)
+{
+	int i;
+
+	for (i = 0; i < GIT_OID_RAWSZ; i++, sha1++, sha2++) {
+		if (*sha1 != *sha2)
+			return *sha1 - *sha2;
+	}
+
+	return 0;
+}
+
 /*
  * Compare two oid structures.
  *
@@ -18,16 +30,7 @@
  */
 GIT_INLINE(int) git_oid__cmp(const git_oid *a, const git_oid *b)
 {
-	const unsigned char *sha1 = a->id;
-	const unsigned char *sha2 = b->id;
-	int i;
-
-	for (i = 0; i < GIT_OID_RAWSZ; i++, sha1++, sha2++) {
-		if (*sha1 != *sha2)
-			return *sha1 - *sha2;
-	}
-
-	return 0;
+	return git_oid__hashcmp(a->id, b->id);
 }
 
 #endif
