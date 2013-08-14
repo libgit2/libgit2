@@ -361,13 +361,15 @@ void test_network_remote_remotes__tagopt(void)
 	git_config_free(cfg);
 }
 
-void test_network_remote_remotes__cannot_load_with_an_empty_url(void)
+void test_network_remote_remotes__can_load_with_an_empty_url(void)
 {
 	git_remote *remote = NULL;
 
-	cl_git_fail(git_remote_load(&remote, _repo, "empty-remote-url"));
-	cl_assert(giterr_last()->klass == GITERR_INVALID);
-	cl_assert_equal_p(remote, NULL);
+	cl_git_pass(git_remote_load(&remote, _repo, "empty-remote-url"));
+
+	cl_git_fail(git_remote_connect(remote, GIT_DIRECTION_FETCH));
+
+	git_remote_free(remote);
 }
 
 void test_network_remote_remotes__check_structure_version(void)
