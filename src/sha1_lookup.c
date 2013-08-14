@@ -187,7 +187,7 @@ int sha1_position(const void *table,
 
 	do {
 		unsigned mi = (lo + hi) / 2;
-		int cmp = git_oid__cmp((git_oid *)(base + mi * stride), (git_oid *)key);
+		int cmp = git_oid__hashcmp(base + mi * stride, key);
 
 		if (!cmp)
 			return mi;
