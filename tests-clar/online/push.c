@@ -33,6 +33,7 @@ static git_oid _tag_commit;
 static git_oid _tag_tree;
 static git_oid _tag_blob;
 static git_oid _tag_lightweight;
+static git_oid _tag_tag;
 
 static int cred_acquire_cb(
 		git_cred **cred,
@@ -279,6 +280,7 @@ void test_online_push__initialize(void)
 	git_oid_fromstr(&_tag_tree, "ff83aa4c5e5d28e3bcba2f5c6e2adc61286a4e5e");
 	git_oid_fromstr(&_tag_blob, "b483ae7ba66decee9aee971f501221dea84b1498");
 	git_oid_fromstr(&_tag_lightweight, "951bbbb90e2259a4c8950db78946784fb53fcbce");
+	git_oid_fromstr(&_tag_tag, "eea4f2705eeec2db3813f2430829afce99cd00b5");
 
 	/* Remote URL environment variable must be set.  User and password are optional.  */
 	_remote_url = cl_getenv("GITTEST_REMOTE_URL");
@@ -574,6 +576,16 @@ void test_online_push__tag_lightweight(void)
 	const char *specs[] = { "refs/tags/tag-lightweight:refs/tags/tag-lightweight" };
 	push_status exp_stats[] = { { "refs/tags/tag-lightweight", NULL } };
 	expected_ref exp_refs[] = { { "refs/tags/tag-lightweight", &_tag_lightweight } };
+	do_push(specs, ARRAY_SIZE(specs),
+		exp_stats, ARRAY_SIZE(exp_stats),
+		exp_refs, ARRAY_SIZE(exp_refs), 0);
+}
+
+void test_online_push__tag_to_tag(void)
+{
+	const char *specs[] = { "refs/tags/tag-tag:refs/tags/tag-tag" };
+	push_status exp_stats[] = { { "refs/tags/tag-tag", NULL } };
+	expected_ref exp_refs[] = { { "refs/tags/tag-tag", &_tag_tag } };
 	do_push(specs, ARRAY_SIZE(specs),
 		exp_stats, ARRAY_SIZE(exp_stats),
 		exp_refs, ARRAY_SIZE(exp_refs), 0);
