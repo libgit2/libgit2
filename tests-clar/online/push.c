@@ -9,6 +9,10 @@
 
 static git_repository *_repo;
 
+static char *_remote_ssh_key;
+static char *_remote_ssh_pubkey;
+static char *_remote_ssh_passphrase;
+
 static char *_remote_url;
 static char *_remote_user;
 static char *_remote_pass;
@@ -41,6 +45,9 @@ static int cred_acquire_cb(
 	GIT_UNUSED(user_from_url);
 
 	*((bool*)payload) = true;
+
+	if (GIT_CREDTYPE_SSH_PUBLICKEY & allowed_types)
+		return git_cred_ssh_keyfile_passphrase_new(cred, _remote_user, _remote_ssh_pubkey, _remote_ssh_key, _remote_ssh_passphrase);
 
 	if ((GIT_CREDTYPE_USERPASS_PLAINTEXT & allowed_types) == 0 ||
 		git_cred_userpass_plaintext_new(cred, _remote_user, _remote_pass) < 0)
@@ -277,6 +284,9 @@ void test_online_push__initialize(void)
 	_remote_url = cl_getenv("GITTEST_REMOTE_URL");
 	_remote_user = cl_getenv("GITTEST_REMOTE_USER");
 	_remote_pass = cl_getenv("GITTEST_REMOTE_PASS");
+	_remote_ssh_key = cl_getenv("GITTEST_REMOTE_SSH_KEY");
+	_remote_ssh_pubkey = cl_getenv("GITTEST_REMOTE_SSH_PUBKEY");
+	_remote_ssh_passphrase = cl_getenv("GITTEST_REMOTE_SSH_PASSPHRASE");
 	_remote = NULL;
 
 	if (_remote_url) {
