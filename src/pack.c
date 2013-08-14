@@ -1110,8 +1110,11 @@ static int pack_entry_find_offset(
 		short_oid->id[0], short_oid->id[1], short_oid->id[2], lo, hi, p->num_objects);
 #endif
 
-	/* Use git.git lookup code */
+#ifdef GIT_USE_LOOKUP
 	pos = sha1_entry_pos(index, stride, 0, lo, hi, p->num_objects, short_oid->id);
+#else
+	pos = sha1_position(index, stride, lo, hi, short_oid->id);
+#endif
 
 	if (pos >= 0) {
 		/* An object matching exactly the oid was found */

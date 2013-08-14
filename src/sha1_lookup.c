@@ -9,6 +9,7 @@
 
 #include "sha1_lookup.h"
 #include "common.h"
+#include "oid.h"
 
 /*
  * Conventional binary search loop looks like this:
@@ -123,7 +124,7 @@ int sha1_entry_pos(const void *table,
 			lov = (lov << 8) | lo_key[ofs_0+1];
 			kyv = (kyv << 8) | key[ofs_0+1];
 		}
-		assert(lov < hiv);
+		assert(lov <= hiv);
 
 		if (kyv < lov)
 			return -1 - lo;
@@ -174,5 +175,26 @@ int sha1_entry_pos(const void *table,
 			lo_key = mi_key + elem_size;
 		}
 	} while (lo < hi);
+	return -((int)lo)-1;
+}
+
+int sha1_position(const void *table,
+			size_t stride,
+			unsigned lo, unsigned hi,
+			const unsigned char *key)
+{
+	do {
+		unsigned mi = (lo + hi) / 2;
+		int cmp = git_oid__cmp(table + mi * stride, (git_oid *)key);
+
+		if (!cmp)
+			return mi;
+
+		if (cmp > 0)
+			hi = mi;
+		else
+			lo = mi+1;
+	} while (lo < hi);
+
 	return -((int)lo)-1;
 }
