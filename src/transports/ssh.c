@@ -215,6 +215,7 @@ static int git_ssh_extract_url_parts(
 		*username = git__substrdup(url, at - url);
 		GITERR_CHECK_ALLOC(*username);
 	} else {
+		start = url;
 		*username = NULL;
 	}
 
