@@ -124,7 +124,7 @@ int sha1_entry_pos(const void *table,
 			lov = (lov << 8) | lo_key[ofs_0+1];
 			kyv = (kyv << 8) | key[ofs_0+1];
 		}
-		assert(lov <= hiv);
+		assert(lov < hiv);
 
 		if (kyv < lov)
 			return -1 - lo;
