@@ -912,13 +912,9 @@ int git_revparse(
 			rstr++;
 		}
 
-		if ((error = git_revparse_single(&revspec->from, repo, lstr)) < 0) {
-			return error;
-		}
-
-		if ((error = git_revparse_single(&revspec->to, repo, rstr)) < 0) {
-			return error;
-		}
+		error = git_revparse_single(&revspec->from, repo, lstr);
+		if (error == 0)
+			error = git_revparse_single(&revspec->to, repo, rstr);
 
 		git__free((void*)lstr);
 	} else {
