@@ -913,7 +913,7 @@ int git_revparse(
 		}
 
 		error = git_revparse_single(&revspec->from, repo, lstr);
-		if (error == 0)
+		if (!error)
 			error = git_revparse_single(&revspec->to, repo, rstr);
 
 		git__free((void*)lstr);
