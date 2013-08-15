@@ -864,9 +864,9 @@ int git_odb_write(
 	if ((error = git_odb_open_wstream(&stream, db, len, type)) != 0)
 		return error;
 
-	stream->write(stream, data, len);
-	error = stream->finalize_write(oid, stream);
-	stream->free(stream);
+	git_odb_stream_write(stream, data, len);
+	error = git_odb_stream_finalize_write(oid, stream);
+	git_odb_stream_free(stream);
 
 	return error;
 }
@@ -902,6 +902,26 @@ int git_odb_open_wstream(
 		error = git_odb__error_unsupported_in_backend("write object");
 
 	return error;
+}
+
+int git_odb_stream_write(git_odb_stream *stream, const char *buffer, size_t len)
+{
+	return stream->write(stream, buffer, len);
+}
+
+int git_odb_stream_finalize_write(git_oid *out, git_odb_stream *stream)
+{
+	return stream->finalize_write(out, stream);
+}
+
+int git_odb_stream_read(git_odb_stream *stream, char *buffer, size_t len)
+{
+	return stream->read(stream, buffer, len);
+}
+
+void git_odb_stream_free(git_odb_stream *stream)
+{
+	stream->free(stream);
 }
 
 int git_odb_open_rstream(git_odb_stream **stream, git_odb *db, const git_oid *oid)
