@@ -809,17 +809,6 @@ static void loose_backend__stream_free(git_odb_stream *_stream)
 	git__free(stream);
 }
 
-static int format_object_header(char *hdr, size_t n, size_t obj_len, git_otype obj_type)
-{
-	const char *type_str = git_object_type2string(obj_type);
-	int len = snprintf(hdr, n, "%s %"PRIuZ, type_str, obj_len);
-
-	assert(len > 0);				/* otherwise snprintf() is broken */
-	assert(((size_t)len) < n);		/* otherwise the caller is broken! */
-
-	return len+1;
-}
-
 static int loose_backend__stream(git_odb_stream **stream_out, git_odb_backend *_backend, size_t length, git_otype type)
 {
 	loose_backend *backend;
@@ -833,7 +822,7 @@ static int loose_backend__stream(git_odb_stream **stream_out, git_odb_backend *_
 	backend = (loose_backend *)_backend;
 	*stream_out = NULL;
 
-	hdrlen = format_object_header(hdr, sizeof(hdr), length, type);
+	hdrlen = git_odb__format_object_header(hdr, sizeof(hdr), length, type);
 
 	stream = git__calloc(1, sizeof(loose_writestream));
 	GITERR_CHECK_ALLOC(stream);
@@ -872,7 +861,7 @@ static int loose_backend__write(git_oid *oid, git_odb_backend *_backend, const v
 	backend = (loose_backend *)_backend;
 
 	/* prepare the header for the file */
-	header_len = format_object_header(header, sizeof(header), len, type);
+	header_len = git_odb__format_object_header(header, sizeof(header), len, type);
 
 	if (git_buf_joinpath(&final_path, backend->objects_dir, "tmp_object") < 0 ||
 		git_filebuf_open(&fbuf, final_path.ptr,
