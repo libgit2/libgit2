@@ -776,8 +776,7 @@ static int loose_backend__stream_fwrite(git_oid *oid, git_odb_stream *_stream)
 	git_buf final_path = GIT_BUF_INIT;
 	int error = 0;
 
-	if (git_filebuf_hash(oid, &stream->fbuf) < 0 ||
-		object_file_name(&final_path, backend, oid) < 0 ||
+	if (object_file_name(&final_path, backend, oid) < 0 ||
 		object_mkdir(&final_path, backend) < 0)
 		error = -1;
 	/*
@@ -848,7 +847,6 @@ static int loose_backend__stream(git_odb_stream **stream_out, git_odb_backend *_
 
 	if (git_buf_joinpath(&tmp_path, backend->objects_dir, "tmp_object") < 0 ||
 		git_filebuf_open(&stream->fbuf, tmp_path.ptr,
-			GIT_FILEBUF_HASH_CONTENTS |
 			GIT_FILEBUF_TEMPORARY |
 			(backend->object_zlib_level << GIT_FILEBUF_DEFLATE_SHIFT)) < 0 ||
 		stream->stream.write((git_odb_stream *)stream, hdr, hdrlen) < 0)
