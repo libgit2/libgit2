@@ -75,7 +75,7 @@ struct git_odb_stream {
 
 	int (*read)(git_odb_stream *stream, char *buffer, size_t len);
 	int (*write)(git_odb_stream *stream, const char *buffer, size_t len);
-	int (*finalize_write)(git_oid *oid_p, git_odb_stream *stream);
+	int (*finalize_write)(git_odb_stream *stream, const git_oid *oid);
 	void (*free)(git_odb_stream *stream);
 };
 

@@ -48,12 +48,8 @@ struct git_odb_backend {
 	int (* read_header)(
 		size_t *, git_otype *, git_odb_backend *, const git_oid *);
 
-	/* The writer may assume that the object
-	 * has already been hashed and is passed
-	 * in the first parameter.
-	 */
 	int (* write)(
-		git_oid *, git_odb_backend *, const void *, size_t, git_otype);
+		git_odb_backend *, const git_oid *, const void *, size_t, git_otype);
 
 	int (* writestream)(
 		git_odb_stream **, git_odb_backend *, size_t, git_otype);

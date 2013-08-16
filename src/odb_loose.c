@@ -769,7 +769,7 @@ static int loose_backend__foreach(git_odb_backend *_backend, git_odb_foreach_cb 
 	return state.cb_error ? state.cb_error : error;
 }
 
-static int loose_backend__stream_fwrite(git_oid *oid, git_odb_stream *_stream)
+static int loose_backend__stream_fwrite(git_odb_stream *_stream, const git_oid *oid)
 {
 	loose_writestream *stream = (loose_writestream *)_stream;
 	loose_backend *backend = (loose_backend *)_stream->backend;
@@ -850,7 +850,7 @@ static int loose_backend__stream(git_odb_stream **stream_out, git_odb_backend *_
 	return !stream ? -1 : 0;
 }
 
-static int loose_backend__write(git_oid *oid, git_odb_backend *_backend, const void *data, size_t len, git_otype type)
+static int loose_backend__write(git_odb_backend *_backend, const git_oid *oid, const void *data, size_t len, git_otype type)
 {
 	int error = 0, header_len;
 	git_buf final_path = GIT_BUF_INIT;

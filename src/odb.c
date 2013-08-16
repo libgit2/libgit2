@@ -291,10 +291,10 @@ typedef struct {
 	git_otype type;
 } fake_wstream;
 
-static int fake_wstream__fwrite(git_oid *oid, git_odb_stream *_stream)
+static int fake_wstream__fwrite(git_odb_stream *_stream, const git_oid *oid)
 {
 	fake_wstream *stream = (fake_wstream *)_stream;
-	return _stream->backend->write(oid, _stream->backend, stream->buffer, stream->size, stream->type);
+	return _stream->backend->write(_stream->backend, oid, stream->buffer, stream->size, stream->type);
 }
 
 static int fake_wstream__write(git_odb_stream *_stream, const char *data, size_t len)
@@ -851,7 +851,7 @@ int git_odb_write(
 			continue;
 
 		if (b->write != NULL)
-			error = b->write(oid, b, data, len, type);
+			error = b->write(b, oid, data, len, type);
 	}
 
 	if (!error || error == GIT_PASSTHROUGH)
@@ -931,7 +931,7 @@ int git_odb_stream_write(git_odb_stream *stream, const char *buffer, size_t len)
 int git_odb_stream_finalize_write(git_oid *out, git_odb_stream *stream)
 {
 	git_hash_final(out, stream->hash_ctx);
-	return stream->finalize_write(out, stream);
+	return stream->finalize_write(stream, out);
 }
 
 int git_odb_stream_read(git_odb_stream *stream, char *buffer, size_t len)
