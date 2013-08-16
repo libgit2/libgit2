@@ -1,9 +1,27 @@
+/*
+ * This is a sample program that is similar to "git init".  See the
+ * documentation for that (try "git help init") to understand what this
+ * program is emulating.
+ *
+ * This demonstrates using the libgit2 APIs to initialize a new repository.
+ *
+ * This also contains a special additional option that regular "git init"
+ * does not support which is "--initial-commit" to make a first empty commit.
+ * That is demonstrated in the "create_initial_commit" helper function.
+ *
+ * Copyright (C) the libgit2 contributors. All rights reserved.
+ *
+ * This file is part of libgit2, distributed under the GNU GPL v2 with
+ * a Linking Exception. For full terms see the included COPYING file.
+ */
+
 #include <stdio.h>
 #include <git2.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
 
+/* not actually good error handling */
 static void fail(const char *msg, const char *arg)
 {
 	if (arg)
@@ -21,12 +39,14 @@ static void usage(const char *error, const char *arg)
 	exit(1);
 }
 
+/* simple string prefix test used in argument parsing */
 static size_t is_prefixed(const char *arg, const char *pfx)
 {
 	size_t len = strlen(pfx);
 	return !strncmp(arg, pfx, len) ? len : 0;
 }
 
+/* parse the tail of the --shared= argument */
 static uint32_t parse_shared(const char *shared)
 {
 	if (!strcmp(shared, "false") || !strcmp(shared, "umask"))
@@ -54,7 +74,9 @@ static uint32_t parse_shared(const char *shared)
 	return 0;
 }
 
+/* forward declaration of helper to make an empty parent-less commit */
 static void create_initial_commit(git_repository *repo);
+
 
 int main(int argc, char *argv[])
 {
@@ -142,6 +164,8 @@ int main(int argc, char *argv[])
 			fail("Could not initialize repository", dir);
 	}
 
+	/* Print a message to stdout like "git init" does */
+
 	if (!quiet) {
 		if (bare || gitdir)
 			dir = git_repository_path(repo);
@@ -167,6 +191,10 @@ int main(int argc, char *argv[])
 	return 0;
 }
 
+/* Unlike regular "git init", this example shows how to create an initial
+ * empty commit in the repository.  This is the helper function that does
+ * that.
+ */
 static void create_initial_commit(git_repository *repo)
 {
 	git_signature *sig;

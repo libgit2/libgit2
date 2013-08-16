@@ -559,6 +559,17 @@ void test_repo_init__init_with_initial_commit(void)
 	cl_git_pass(git_index_add_bypath(index, "file.txt"));
 	cl_git_pass(git_index_write(index));
 
+	/* Make sure we're ready to use git_signature_default :-) */
+	{
+		git_config *cfg, *local;
+		cl_git_pass(git_repository_config(&cfg, _repo));
+		cl_git_pass(git_config_open_level(&local, cfg, GIT_CONFIG_LEVEL_LOCAL));
+		cl_git_pass(git_config_set_string(local, "user.name", "Test User"));
+		cl_git_pass(git_config_set_string(local, "user.email", "t@example.com"));
+		git_config_free(local);
+		git_config_free(cfg);
+	}
+
 	/* Create a commit with the new contents of the index */
 	{
 		git_signature *sig;
