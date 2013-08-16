@@ -160,6 +160,15 @@ int p_lstat_posixly(const char *filename, struct stat *buf)
 	return do_lstat(filename, buf, 1);
 }
 
+
+/*
+ * Parts of the The p_readlink function are heavily inspired by the php 
+ * readlink function in link_win32.c
+ *
+ * Copyright (c) 1999 - 2012 The PHP Group. All rights reserved.
+ *
+ * For details of the PHP license see http://www.php.net/license/3_01.txt
+ */
 int p_readlink(const char *link, char *target, size_t target_len)
 {
 	typedef DWORD (WINAPI *fpath_func)(HANDLE, LPWSTR, DWORD, DWORD);
