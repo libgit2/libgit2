@@ -51,8 +51,8 @@ int main (int argc, char** argv)
   // There are a couple of methods for opening a repository, this being the
   // simplest.  There are also [methods][me] for specifying the index file
   // and work tree locations, here we assume they are in the normal places.
-	//
-	// (Try running this program against tests-clar/resources/testrepo.git.)
+  //
+  // (Try running this program against example.git in this folder.)
   //
   // [me]: http://libgit2.github.com/libgit2/#HEAD/group/repository
   int error;
