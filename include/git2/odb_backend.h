@@ -67,15 +67,39 @@ typedef enum {
 
 typedef struct git_hash_ctx git_hash_ctx;
 
-/** A stream to read/write from a backend */
+/**
+ * A stream to read/write from a backend.
+ *
+ * This represents a stream of data being written to or read from a
+ * backend. When writing, the frontend functions take care of
+ * calculating the object's id and all `finalize_write` needs to do is
+ * store the object with the id it is passed.
+ */
 struct git_odb_stream {
 	git_odb_backend *backend;
 	unsigned int mode;
 	git_hash_ctx *hash_ctx;
 
+	/**
+	 * Write at most `len` bytes into `buffer` and advance the
+	 * stream.
+	 */
 	int (*read)(git_odb_stream *stream, char *buffer, size_t len);
+
+	/**
+	 * Write `len` bytes from `buffer` into the stream.
+	 */
 	int (*write)(git_odb_stream *stream, const char *buffer, size_t len);
+
+	/**
+	 * Store the contents of the stream as an object with the id
+	 * specified in `oid`.
+	 */
 	int (*finalize_write)(git_odb_stream *stream, const git_oid *oid);
+
+	/**
+	 * Free the stream's memory.
+	 */
 	void (*free)(git_odb_stream *stream);
 };
 

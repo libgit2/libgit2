@@ -48,6 +48,10 @@ struct git_odb_backend {
 	int (* read_header)(
 		size_t *, git_otype *, git_odb_backend *, const git_oid *);
 
+	/**
+	 * Write an object into the backend. The id of the object has
+	 * already been calculated and is passed in.
+	 */
 	int (* write)(
 		git_odb_backend *, const git_oid *, const void *, size_t, git_otype);
 
