@@ -864,8 +864,8 @@ int git_odb_write(
 	if ((error = git_odb_open_wstream(&stream, db, len, type)) != 0)
 		return error;
 
-	git_odb_stream_write(stream, data, len);
-	error = git_odb_stream_finalize_write(oid, stream);
+	stream->write(stream, data, len);
+	error = stream->finalize_write(stream, oid);
 	git_odb_stream_free(stream);
 
 	return error;
