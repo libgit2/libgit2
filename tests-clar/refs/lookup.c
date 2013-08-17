@@ -46,3 +46,15 @@ void test_refs_lookup__oid(void)
 	cl_git_pass(git_oid_fromstr(&expected, "1385f264afb75a56a5bec74243be9b367ba4ca08"));
 	cl_assert(git_oid_cmp(&tag, &expected) == 0);
 }
+
+void test_refs_lookup__namespace(void)
+{
+	int error;
+	git_reference *ref;
+
+	error = git_reference_lookup(&ref, g_repo, "refs/heads");
+	cl_assert_equal_i(error, GIT_ENOTFOUND);
+
+	error = git_reference_lookup(&ref, g_repo, "refs/heads/");
+	cl_assert_equal_i(error, GIT_EINVALIDSPEC);
+}
