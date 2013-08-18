@@ -28,7 +28,7 @@ script:
 # Run Tests
 after_success:
  - sudo apt-get -qq install valgrind
- - valgrind --leak-check=full --show-reachable=yes --suppressions=../libgit2_clar.supp ./libgit2_clar -ionline
+ - valgrind --leak-check=full --show-reachable=yes --suppressions=./libgit2_clar.supp _build/libgit2_clar -ionline
 
 # Only watch the development branch
 branches:
