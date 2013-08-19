@@ -129,7 +129,7 @@ static int revparse_lookup_object(
 	if (error < 0 && error != GIT_ENOTFOUND)
 		return error;
 
-	giterr_set(GITERR_REFERENCE, "Refspec '%s' not found.", spec);
+	giterr_set(GITERR_REFERENCE, "Revspec '%s' not found.", spec);
 	return GIT_ENOTFOUND;
 }
 
