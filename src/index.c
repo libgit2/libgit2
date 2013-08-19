@@ -498,8 +498,12 @@ int git_index_write(git_index *index)
 	git_vector_sort(&index->reuc);
 
 	if ((error = git_filebuf_open(
-			 &file, index->index_file_path, GIT_FILEBUF_HASH_CONTENTS)) < 0)
+		     &file, index->index_file_path, GIT_FILEBUF_HASH_CONTENTS)) < 0) {
+		if (error == GIT_ELOCKED)
+			giterr_set(GITERR_INDEX, "The index is locked. This might be due to a concurrrent or crashed process");
+
 		return error;
+	}
 
 	if ((error = write_index(index, &file)) < 0) {
 		git_filebuf_cleanup(&file);
