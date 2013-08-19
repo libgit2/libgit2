@@ -60,10 +60,10 @@ int git_blob_create_frombuffer(git_oid *oid, git_repository *repo, const void *b
 		(error = git_odb_open_wstream(&stream, odb, len, GIT_OBJ_BLOB)) < 0)
 		return error;
 
-	if ((error = stream->write(stream, buffer, len)) == 0)
-		error = stream->finalize_write(oid, stream);
+	if ((error = git_odb_stream_write(stream, buffer, len)) == 0)
+		error = git_odb_stream_finalize_write(oid, stream);
 
-	stream->free(stream);
+	git_odb_stream_free(stream);
 	return error;
 }
 
@@ -80,12 +80,12 @@ static int write_file_stream(
 		return error;
 
 	if ((fd = git_futils_open_ro(path)) < 0) {
-		stream->free(stream);
+		git_odb_stream_free(stream);
 		return -1;
 	}
 
 	while (!error && (read_len = p_read(fd, buffer, sizeof(buffer))) > 0) {
-		error = stream->write(stream, buffer, read_len);
+		error = git_odb_stream_write(stream, buffer, read_len);
 		written += read_len;
 	}
 
@@ -97,9 +97,9 @@ static int write_file_stream(
 	}
 
 	if (!error)
-		error = stream->finalize_write(oid, stream);
+		error = git_odb_stream_finalize_write(oid, stream);
 
-	stream->free(stream);
+	git_odb_stream_free(stream);
 	return error;
 }
 
