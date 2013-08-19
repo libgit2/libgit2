@@ -718,6 +718,8 @@ void test_core_buffer__classify_with_utf8(void)
 	size_t data1len = 31;
 	char *data2 = "Internal NUL!!!\000\n\nI see you!\n";
 	size_t data2len = 29;
+	char *data3 = "\xef\xbb\xbfThis is UTF-8 with a BOM.\n";
+	size_t data3len = 20;
 	git_buf b;
 
 	b.ptr = data0; b.size = b.asize = data0len;
@@ -731,6 +733,10 @@ void test_core_buffer__classify_with_utf8(void)
 	b.ptr = data2; b.size = b.asize = data2len;
 	cl_assert(git_buf_text_is_binary(&b));
 	cl_assert(git_buf_text_contains_nul(&b));
+
+	b.ptr = data3; b.size = b.asize = data3len;
+	cl_assert(!git_buf_text_is_binary(&b));
+	cl_assert(!git_buf_text_contains_nul(&b));
 }
 
 #define SIMILARITY_TEST_DATA_1 \
