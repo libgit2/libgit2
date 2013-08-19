@@ -291,10 +291,10 @@ typedef struct {
 	git_otype type;
 } fake_wstream;
 
-static int fake_wstream__fwrite(git_oid *oid, git_odb_stream *_stream)
+static int fake_wstream__fwrite(git_odb_stream *_stream, const git_oid *oid)
 {
 	fake_wstream *stream = (fake_wstream *)_stream;
-	return _stream->backend->write(oid, _stream->backend, stream->buffer, stream->size, stream->type);
+	return _stream->backend->write(_stream->backend, oid, stream->buffer, stream->size, stream->type);
 }
 
 static int fake_wstream__write(git_odb_stream *_stream, const char *data, size_t len)
@@ -851,7 +851,7 @@ int git_odb_write(
 			continue;
 
 		if (b->write != NULL)
-			error = b->write(oid, b, data, len, type);
+			error = b->write(b, oid, data, len, type);
 	}
 
 	if (!error || error == GIT_PASSTHROUGH)
@@ -865,10 +865,19 @@ int git_odb_write(
 		return error;
 
 	stream->write(stream, data, len);
-	error = stream->finalize_write(oid, stream);
-	stream->free(stream);
+	error = stream->finalize_write(stream, oid);
+	git_odb_stream_free(stream);
 
 	return error;
+}
+
+static void hash_header(git_hash_ctx *ctx, size_t size, git_otype type)
+{
+	char header[64];
+	int hdrlen;
+
+	hdrlen = git_odb__format_object_header(header, sizeof(header), size, type);
+	git_hash_update(ctx, header, hdrlen);
 }
 
 int git_odb_open_wstream(
@@ -876,6 +885,7 @@ int git_odb_open_wstream(
 {
 	size_t i, writes = 0;
 	int error = GIT_ERROR;
+	git_hash_ctx *ctx;
 
 	assert(stream && db);
 
@@ -901,7 +911,38 @@ int git_odb_open_wstream(
 	if (error < 0 && !writes)
 		error = git_odb__error_unsupported_in_backend("write object");
 
+	ctx = git__malloc(sizeof(git_hash_ctx));
+	GITERR_CHECK_ALLOC(ctx);
+
+
+	git_hash_ctx_init(ctx);
+	hash_header(ctx, size, type);
+	(*stream)->hash_ctx = ctx;
+
 	return error;
+}
+
+int git_odb_stream_write(git_odb_stream *stream, const char *buffer, size_t len)
+{
+	git_hash_update(stream->hash_ctx, buffer, len);
+	return stream->write(stream, buffer, len);
+}
+
+int git_odb_stream_finalize_write(git_oid *out, git_odb_stream *stream)
+{
+	git_hash_final(out, stream->hash_ctx);
+	return stream->finalize_write(stream, out);
+}
+
+int git_odb_stream_read(git_odb_stream *stream, char *buffer, size_t len)
+{
+	return stream->read(stream, buffer, len);
+}
+
+void git_odb_stream_free(git_odb_stream *stream)
+{
+	git__free(stream->hash_ctx);
+	stream->free(stream);
 }
 
 int git_odb_open_rstream(git_odb_stream **stream, git_odb *db, const git_oid *oid)

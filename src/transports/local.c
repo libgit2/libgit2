@@ -287,9 +287,9 @@ static int local_push_copy_object(
 		odb_obj_size, odb_obj_type)) < 0)
 		goto on_error;
 
-	if (odb_stream->write(odb_stream, (char *)git_odb_object_data(odb_obj),
+	if (git_odb_stream_write(odb_stream, (char *)git_odb_object_data(odb_obj),
 		odb_obj_size) < 0 ||
-		odb_stream->finalize_write(&remote_odb_obj_oid, odb_stream) < 0) {
+		git_odb_stream_finalize_write(&remote_odb_obj_oid, odb_stream) < 0) {
 		error = -1;
 	} else if (git_oid__cmp(&obj->id, &remote_odb_obj_oid) != 0) {
 		giterr_set(GITERR_ODB, "Error when writing object to remote odb "
@@ -298,7 +298,7 @@ static int local_push_copy_object(
 		error = -1;
 	}
 
-	odb_stream->free(odb_stream);
+	git_odb_stream_free(odb_stream);
 
 on_error:
 	git_odb_object_free(odb_obj);

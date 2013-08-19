@@ -366,10 +366,10 @@ int git_tag_create_frombuffer(git_oid *oid, git_repository *repo, const char *bu
 	if (git_odb_open_wstream(&stream, odb, strlen(buffer), GIT_OBJ_TAG) < 0)
 		return -1;
 
-	stream->write(stream, buffer, strlen(buffer));
+	git_odb_stream_write(stream, buffer, strlen(buffer));
 
-	error = stream->finalize_write(oid, stream);
-	stream->free(stream);
+	error = git_odb_stream_finalize_write(oid, stream);
+	git_odb_stream_free(stream);
 
 	if (error < 0) {
 		git_buf_free(&ref_name);
