@@ -50,7 +50,7 @@ void test_refs_reflog_reflog__append_then_read(void)
 
 	cl_git_pass(git_signature_now(&committer, "foo", "foo@bar"));
 
-	cl_git_pass(git_reflog_read(&reflog, ref));
+	cl_git_pass(git_reflog_read(&reflog, g_repo, new_ref));
 
 	cl_git_fail(git_reflog_append(reflog, &oid, committer, "no inner\nnewline"));
 	cl_git_pass(git_reflog_append(reflog, &oid, committer, NULL));
@@ -65,7 +65,7 @@ void test_refs_reflog_reflog__append_then_read(void)
 	cl_git_pass(git_reference_lookup(&lookedup_ref, repo2, new_ref));
 
 	/* Read and parse the reflog for this branch */
-	cl_git_pass(git_reflog_read(&reflog, lookedup_ref));
+	cl_git_pass(git_reflog_read(&reflog, repo2, new_ref));
 	cl_assert_equal_i(2, (int)git_reflog_entrycount(reflog));
 
 	entry = git_reflog_entry_byindex(reflog, 1);
@@ -133,21 +133,18 @@ void test_refs_reflog_reflog__reference_has_reflog(void)
 
 void test_refs_reflog_reflog__reading_the_reflog_from_a_reference_with_no_log_returns_an_empty_one(void)
 {
-	git_reference *subtrees;
 	git_reflog *reflog;
+	const char *refname = "refs/heads/subtrees";
 	git_buf subtrees_log_path = GIT_BUF_INIT;
 
-	cl_git_pass(git_reference_lookup(&subtrees, g_repo, "refs/heads/subtrees"));
-
-	git_buf_join_n(&subtrees_log_path, '/', 3, git_repository_path(g_repo), GIT_REFLOG_DIR, git_reference_name(subtrees));
+	git_buf_join_n(&subtrees_log_path, '/', 3, git_repository_path(g_repo), GIT_REFLOG_DIR, refname);
 	cl_assert_equal_i(false, git_path_isfile(git_buf_cstr(&subtrees_log_path)));
 
-	cl_git_pass(git_reflog_read(&reflog, subtrees));
+	cl_git_pass(git_reflog_read(&reflog, g_repo, refname));
 
 	cl_assert_equal_i(0, (int)git_reflog_entrycount(reflog));
 
 	git_reflog_free(reflog);
-	git_reference_free(subtrees);
 	git_buf_free(&subtrees_log_path);
 }
 
@@ -158,7 +155,7 @@ void test_refs_reflog_reflog__cannot_write_a_moved_reflog(void)
 	git_reflog *reflog;
 
 	cl_git_pass(git_reference_lookup(&master, g_repo, "refs/heads/master"));
-	cl_git_pass(git_reflog_read(&reflog, master));
+	cl_git_pass(git_reflog_read(&reflog, g_repo, "refs/heads/master"));
 
 	cl_git_pass(git_reflog_write(reflog));
 
@@ -175,12 +172,6 @@ void test_refs_reflog_reflog__cannot_write_a_moved_reflog(void)
 
 void test_refs_reflog_reflog__renaming_with_an_invalid_name_returns_EINVALIDSPEC(void)
 {
-	git_reference *master;
-
-	cl_git_pass(git_reference_lookup(&master, g_repo, "refs/heads/master"));
-
 	cl_assert_equal_i(GIT_EINVALIDSPEC,
-		git_reflog_rename(master, "refs/heads/Inv@{id"));
-
-	git_reference_free(master);
+			  git_reflog_rename(g_repo, "refs/heads/master", "refs/heads/Inv@{id"));
 }

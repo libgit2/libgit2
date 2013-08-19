@@ -119,6 +119,38 @@ struct git_refdb_backend {
 	 * provide this function; if it is not provided, nothing will be done.
 	 */
 	void (*free)(git_refdb_backend *backend);
+
+	/**
+	 * Read the reflog for the given reference name.
+	 */
+	int (*reflog_read)(git_reflog **out, git_refdb_backend *backend, const char *name);
+
+	/**
+	 * Write a reflog to disk.
+	 */
+	int (*reflog_write)(git_refdb_backend *backend, git_reflog *reflog);
+
+	/**
+	 * Append an entry to the given reflog
+	 */
+	int (*reflog_append)(git_refdb_backend *backend, git_reflog *reflog,
+			     const git_oid *new_oid, const git_signature *committer,
+			     const char *msg);
+
+	/**
+	 * Rename a reflog
+	 */
+	int (*reflog_rename)(git_refdb_backend *_backend, const char *old_name, const char *new_name);
+
+	/**
+	 * Drop an entry from the reflog
+	 */
+	int (*reflog_drop)(git_refdb_backend *_backend, git_reflog *reflog,
+			   size_t idx, int rewrite_previous_entry);
+	/**
+	 * Remove a reflog.
+	 */
+	int (*reflog_delete)(git_refdb_backend *backend, const char *name);
 };
 
 #define GIT_REFDB_BACKEND_VERSION 1

@@ -31,10 +31,11 @@ GIT_BEGIN_DECL
  * git_reflog_free().
  *
  * @param out pointer to reflog
- * @param ref reference to read the reflog for
+ * @param repo the repostiory
+ * @param name reference to look up
  * @return 0 or an error code
  */
-GIT_EXTERN(int) git_reflog_read(git_reflog **out, const git_reference *ref);
+GIT_EXTERN(int) git_reflog_read(git_reflog **out, git_repository *repo,  const char *name);
 
 /**
  * Write an existing in-memory reflog object back to disk
@@ -59,26 +60,28 @@ GIT_EXTERN(int) git_reflog_write(git_reflog *reflog);
 GIT_EXTERN(int) git_reflog_append(git_reflog *reflog, const git_oid *id, const git_signature *committer, const char *msg);
 
 /**
- * Rename the reflog for the given reference
+ * Rename a reflog
  *
  * The reflog to be renamed is expected to already exist
  *
  * The new name will be checked for validity.
  * See `git_reference_create_symbolic()` for rules about valid names.
  *
- * @param ref the reference
- * @param name the new name of the reference
+ * @param repo the repository
+ * @param old_name the old name of the reference
+ * @param new_name the new name of the reference
  * @return 0 on success, GIT_EINVALIDSPEC or an error code
  */
-GIT_EXTERN(int) git_reflog_rename(git_reference *ref, const char *name);
+GIT_EXTERN(int) git_reflog_rename(git_repository *repo, const char *old_name, const char *name);
 
 /**
  * Delete the reflog for the given reference
  *
- * @param ref the reference
+ * @param repo the repository
+ * @param name the reflog to delete
  * @return 0 or an error code
  */
-GIT_EXTERN(int) git_reflog_delete(git_reference *ref);
+GIT_EXTERN(int) git_reflog_delete(git_repository *repo, const char *name);
 
 /**
  * Get the number of log entries in a reflog

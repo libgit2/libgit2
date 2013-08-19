@@ -436,14 +436,16 @@ static int update_reflog(
 	const git_signature *stasher,
 	const char *message)
 {
-	git_reference *stash = NULL;
+	git_reference *stash;
 	git_reflog *reflog = NULL;
 	int error;
 
 	if ((error = git_reference_create(&stash, repo, GIT_REFS_STASH_FILE, w_commit_oid, 1)) < 0)
 		goto cleanup;
 
-	if ((error = git_reflog_read(&reflog, stash)) < 0)
+	git_reference_free(stash);
+
+	if ((error = git_reflog_read(&reflog, repo, GIT_REFS_STASH_FILE) < 0))
 		goto cleanup;
 
 	if ((error = git_reflog_append(reflog, w_commit_oid, stasher, message)) < 0)
@@ -453,7 +455,6 @@ static int update_reflog(
 		goto cleanup;
 
 cleanup:
-	git_reference_free(stash);
 	git_reflog_free(reflog);
 	return error;
 }
@@ -599,7 +600,7 @@ int git_stash_foreach(
 	if (error < 0)
 		goto cleanup;
 
-	if ((error = git_reflog_read(&reflog, stash)) < 0)
+	if ((error = git_reflog_read(&reflog, repo, GIT_REFS_STASH_FILE)) < 0)
 		goto cleanup;
 
 	max = git_reflog_entrycount(reflog);
@@ -633,7 +634,7 @@ int git_stash_drop(
 	if ((error = git_reference_lookup(&stash, repo, GIT_REFS_STASH_FILE)) < 0)
 		return error;
 
-	if ((error = git_reflog_read(&reflog, stash)) < 0)
+	if ((error = git_reflog_read(&reflog, repo, GIT_REFS_STASH_FILE)) < 0)
 		goto cleanup;
 
 	max = git_reflog_entrycount(reflog);

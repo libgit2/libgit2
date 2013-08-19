@@ -27,9 +27,14 @@ struct git_reflog_entry {
 };
 
 struct git_reflog {
+	git_refdb *db;
 	char *ref_name;
-	git_repository *owner;
 	git_vector entries;
 };
+
+GIT_INLINE(size_t) reflog_inverse_index(size_t idx, size_t total)
+{
+	return (total - 1) - idx;
+}
 
 #endif /* INCLUDE_reflog_h__ */
