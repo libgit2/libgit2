@@ -44,7 +44,7 @@ void test_refs_pack__empty(void)
 
 void test_refs_pack__loose(void)
 {
-	/* create a packfile from all the loose rn a repo */
+	/* create a packfile from all the loose refs in a repo */
 	git_reference *reference;
 	git_buf temp_path = GIT_BUF_INIT;
 
