@@ -518,44 +518,40 @@ p_gmtime_r (const time_t *timer, struct tm *result)
 	return result;
 }
 
-int p_inet_pton(int af, const char* src, void* dst)
+int p_inet_pton(int af, const char *src, void *dst)
 {
-	union {
-		struct sockaddr_in6 sin6;
-		struct sockaddr_in sin;
-	} sa;
-	int srcsize;
+	struct sockaddr_storage sin;
+	void *addr;
+	int sin_len = sizeof(struct sockaddr_storage), addr_len;
+	int error = 0;
 
-	switch(af)
-	{
-		case AF_INET:
-			sa.sin.sin_family = AF_INET;
-			srcsize = (int)sizeof(sa.sin);
-		break;
-		case AF_INET6:
-			sa.sin6.sin6_family = AF_INET6;
-			srcsize = (int)sizeof(sa.sin6);
-		break;
-		default:
-			errno = WSAEPFNOSUPPORT;
-			return -1;
-	}
-
-	if (WSAStringToAddress((LPSTR)src, af, NULL, (struct sockaddr *) &sa, &srcsize) != 0)
-	{
-		errno = WSAGetLastError();
+	if (af == AF_INET) {
+		addr = &((struct sockaddr_in *)&sin)->sin_addr;
+		addr_len = sizeof(struct in_addr);
+	} else if (af == AF_INET6) {
+		addr = &((struct sockaddr_in6 *)&sin)->sin6_addr;
+		addr_len = sizeof(struct in6_addr);
+	} else {
+		errno = EAFNOSUPPORT;
 		return -1;
 	}
 
-	switch(af)
-	{
-		case AF_INET:
-			memcpy(dst, &sa.sin.sin_addr, sizeof(sa.sin.sin_addr));
-		break;
-		case AF_INET6:
-			memcpy(dst, &sa.sin6.sin6_addr, sizeof(sa.sin6.sin6_addr));
-		break;
+	if ((error = WSAStringToAddressA((LPSTR)src, af, NULL, (LPSOCKADDR)&sin, &sin_len)) == 0) {
+		memcpy(dst, addr, addr_len);
+		return 1;
 	}
 
-	return 1;
+	switch(WSAGetLastError()) {
+	case WSAEINVAL:
+		return 0;
+	case WSAEFAULT:
+		errno = ENOSPC;
+		return -1;
+	case WSA_NOT_ENOUGH_MEMORY:
+		errno = ENOMEM;
+		return -1;
+	}
+
+	errno = EINVAL;
+	return -1;
 }
