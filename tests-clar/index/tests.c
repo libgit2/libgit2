@@ -459,3 +459,28 @@ void test_index_tests__preserves_case(void)
 	git_repository_free(repo);
 }
 
+void test_index_tests__elocked(void)
+{
+	git_repository *repo;
+	git_index *index;
+	git_filebuf file = GIT_FILEBUF_INIT;
+	const git_error *err;
+	int error;
+
+	cl_set_cleanup(&cleanup_myrepo, NULL);
+
+	cl_git_pass(git_repository_init(&repo, "./myrepo", 0));
+	cl_git_pass(git_repository_index(&index, repo));
+
+	/* Lock the index file so we fail to lock it */
+	cl_git_pass(git_filebuf_open(&file, index->index_file_path, 0));
+	error = git_index_write(index);
+	cl_assert_equal_i(GIT_ELOCKED, error);
+
+	err = giterr_last();
+	cl_assert_equal_i(err->klass, GITERR_INDEX);
+
+	git_filebuf_cleanup(&file);
+	git_index_free(index);
+	git_repository_free(repo);
+}

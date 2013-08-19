@@ -53,7 +53,7 @@ static int lock_file(git_filebuf *file, int flags)
 			giterr_clear(); /* actual OS error code just confuses */
 			giterr_set(GITERR_OS,
 				"Failed to lock file '%s' for writing", file->path_lock);
-			return -1;
+			return GIT_ELOCKED;
 		}
 	}
 
@@ -66,7 +66,7 @@ static int lock_file(git_filebuf *file, int flags)
 	}
 
 	if (file->fd < 0)
-		return -1;
+		return file->fd;
 
 	file->fd_is_open = true;
 
@@ -197,7 +197,7 @@ static int write_deflate(git_filebuf *file, void *source, size_t len)
 
 int git_filebuf_open(git_filebuf *file, const char *path, int flags)
 {
-	int compression;
+	int compression, error = -1;
 	size_t path_len;
 
 	/* opening an already open buffer is a programming error;
@@ -282,7 +282,7 @@ int git_filebuf_open(git_filebuf *file, const char *path, int flags)
 		memcpy(file->path_lock + path_len, GIT_FILELOCK_EXTENSION, GIT_FILELOCK_EXTLENGTH);
 
 		/* open the file for locking */
-		if (lock_file(file, flags) < 0)
+		if ((error = lock_file(file, flags)) < 0)
 			goto cleanup;
 	}
 
@@ -290,7 +290,7 @@ int git_filebuf_open(git_filebuf *file, const char *path, int flags)
 
 cleanup:
 	git_filebuf_cleanup(file);
-	return -1;
+	return error;
 }
 
 int git_filebuf_hash(git_oid *oid, git_filebuf *file)
