@@ -736,6 +736,3 @@ git_attr_rule *git_attr_cache__lookup_macro(
 	if (!git_strmap_valid_index(macros, pos))
 		return NULL;
 
-	return (git_attr_rule *)git_strmap_value_at(macros, pos);
-}
-
