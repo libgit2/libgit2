@@ -12,6 +12,13 @@
 #include "utf-conv.h"
 #include "dir.h"
 
+/* define some standard errnos that the runtime may be missing.  for example,
+ * mingw lacks EAFNOSUPPORT. */
+
+#ifndef EAFNOSUPPORT
+# define EAFNOSUPPORT (INT_MAX-1)
+#endif
+
 GIT_INLINE(int) p_link(const char *old, const char *new)
 {
 	GIT_UNUSED(old);
