@@ -65,8 +65,6 @@ typedef enum {
 	GIT_STREAM_RW = (GIT_STREAM_RDONLY | GIT_STREAM_WRONLY),
 } git_odb_stream_t;
 
-typedef struct git_hash_ctx git_hash_ctx;
-
 /**
  * A stream to read/write from a backend.
  *
@@ -78,7 +76,7 @@ typedef struct git_hash_ctx git_hash_ctx;
 struct git_odb_stream {
 	git_odb_backend *backend;
 	unsigned int mode;
-	git_hash_ctx *hash_ctx;
+	void *hash_ctx;
 
 	/**
 	 * Write at most `len` bytes into `buffer` and advance the
