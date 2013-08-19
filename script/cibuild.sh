@@ -11,6 +11,11 @@ cd _build
 cmake .. -DCMAKE_INSTALL_PREFIX=../_install $OPTIONS
 cmake --build . --target install
 ctest -V .
+ecode=$?
+
+if [ $ecode -ne 0 ]; then
+    exit $ecode
+fi
 
 # Now that we've tested the raw git protocol, let's set up ssh to we
 # can do the push tests over it
