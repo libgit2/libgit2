@@ -316,6 +316,12 @@ static int loose_lookup_to_packfile(
 	if (reference_read(&ref_file, NULL, backend->path, name, NULL) < 0)
 		return -1;
 
+	/* skip symbolic refs */
+	if (!git__prefixcmp(git_buf_cstr(&ref_file), GIT_SYMREF)) {
+		git_buf_free(&ref_file);
+		return 0;
+	}
+
 	git_buf_rtrim(&ref_file);
 
 	name_len = strlen(name);
@@ -354,6 +360,9 @@ static int _dirent_loose_load(void *data, git_buf *full_path)
 
 	if (loose_lookup_to_packfile(&ref, backend, file_path) < 0)
 		return -1;
+
+	if (!ref)
+		return 0;
 
 	git_strmap_insert2(
 		backend->refcache.packfile, ref->name, ref, old_ref, err);
@@ -460,7 +469,7 @@ static int loose_lookup(
 	if (error < 0)
 		goto done;
 
-	if (git__prefixcmp((const char *)(ref_file.ptr), GIT_SYMREF) == 0) {
+	if (git__prefixcmp(git_buf_cstr(&ref_file), GIT_SYMREF) == 0) {
 		git_buf_rtrim(&ref_file);
 
 		if ((target = loose_parse_symbolic(&ref_file)) == NULL) {
