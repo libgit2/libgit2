@@ -55,6 +55,11 @@ GIT_INLINE(void *) git_vector_get(const git_vector *v, size_t position)
 
 #define GIT_VECTOR_GET(V,I) ((I) < (V)->length ? (V)->contents[(I)] : NULL)
 
+GIT_INLINE(size_t) git_vector_length(const git_vector *v)
+{
+	return v->length;
+}
+
 GIT_INLINE(void *) git_vector_last(const git_vector *v)
 {
 	return (v->length > 0) ? git_vector_get(v, v->length - 1) : NULL;
