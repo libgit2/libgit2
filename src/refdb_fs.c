@@ -1308,56 +1308,6 @@ success:
 	return error;
 }
 
-static int refdb_reflog_fs__append(git_refdb_backend *_backend, git_reflog *reflog,
-		      const git_oid *new_oid, const git_signature *committer, const char *msg)
-{
-	git_reflog_entry *entry;
-	const git_reflog_entry *previous;
-	const char *newline;
-
-	assert(_backend && reflog && new_oid && committer);
-
-	entry = git__calloc(1, sizeof(git_reflog_entry));
-	GITERR_CHECK_ALLOC(entry);
-
-	if ((entry->committer = git_signature_dup(committer)) == NULL)
-		goto cleanup;
-
-	if (msg != NULL) {
-		if ((entry->msg = git__strdup(msg)) == NULL)
-			goto cleanup;
-
-		newline = strchr(msg, '\n');
-
-		if (newline) {
-			if (newline[1] != '\0') {
-				giterr_set(GITERR_INVALID, "Reflog message cannot contain newline");
-				goto cleanup;
-			}
-
-			entry->msg[newline - msg] = '\0';
-		}
-	}
-
-	previous = git_reflog_entry_byindex(reflog, 0);
-
-	if (previous == NULL)
-		git_oid_fromstr(&entry->oid_old, GIT_OID_HEX_ZERO);
-	else
-		git_oid_cpy(&entry->oid_old, &previous->oid_cur);
-
-	git_oid_cpy(&entry->oid_cur, new_oid);
-
-	if (git_vector_insert(&reflog->entries, entry) < 0)
-		goto cleanup;
-
-	return 0;
-
-cleanup:
-	git_reflog_entry__free(entry);
-	return -1;
-}
-
 static int refdb_reflog_fs__rename(git_refdb_backend *_backend, const char *old_name, const char *new_name)
 {
 	int error = 0, fd;
@@ -1434,57 +1384,6 @@ cleanup:
 	return error;
 }
 
-static int refdb_reflog_fs__drop(git_refdb_backend *_backend, git_reflog *reflog,
-				 size_t idx, int rewrite_previous_entry)
-{
-	size_t entrycount;
-	git_reflog_entry *entry, *previous;
-
-	assert(_backend && reflog);
-
-	entrycount = git_reflog_entrycount(reflog);
-
-	entry = (git_reflog_entry *)git_reflog_entry_byindex(reflog, idx);
-
-	if (entry == NULL) {
-		giterr_set(GITERR_REFERENCE, "No reflog entry at index "PRIuZ, idx);
-		return GIT_ENOTFOUND;
-	}
-
-	git_reflog_entry__free(entry);
-
-	if (git_vector_remove(
-			&reflog->entries, reflog_inverse_index(idx, entrycount)) < 0)
-		return -1;
-
-	if (!rewrite_previous_entry)
-		return 0;
-
-	/* No need to rewrite anything when removing the most recent entry */
-	if (idx == 0)
-		return 0;
-
-	/* Have the latest entry just been dropped? */
-	if (entrycount == 1)
-		return 0;
-
-	entry = (git_reflog_entry *)git_reflog_entry_byindex(reflog, idx - 1);
-
-	/* If the oldest entry has just been removed... */
-	if (idx == entrycount - 1) {
-		/* ...clear the oid_old member of the "new" oldest entry */
-		if (git_oid_fromstr(&entry->oid_old, GIT_OID_HEX_ZERO) < 0)
-			return -1;
-
-		return 0;
-	}
-
-	previous = (git_reflog_entry *)git_reflog_entry_byindex(reflog, idx);
-	git_oid_cpy(&entry->oid_old, &previous->oid_cur);
-
-	return 0;
-}
-
 static int refdb_reflog_fs__delete(git_refdb_backend *_backend, const char *name)
 {
 	int error;
@@ -1544,9 +1443,7 @@ int git_refdb_backend_fs(
 	backend->parent.free = &refdb_fs_backend__free;
 	backend->parent.reflog_read = &refdb_reflog_fs__read;
 	backend->parent.reflog_write = &refdb_reflog_fs__write;
-	backend->parent.reflog_append = &refdb_reflog_fs__append;
 	backend->parent.reflog_rename = &refdb_reflog_fs__rename;
-	backend->parent.reflog_drop = &refdb_reflog_fs__drop;
 	backend->parent.reflog_delete = &refdb_reflog_fs__delete;
 
 	*backend_out = (git_refdb_backend *)backend;

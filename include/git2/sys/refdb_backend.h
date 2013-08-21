@@ -131,22 +131,10 @@ struct git_refdb_backend {
 	int (*reflog_write)(git_refdb_backend *backend, git_reflog *reflog);
 
 	/**
-	 * Append an entry to the given reflog
-	 */
-	int (*reflog_append)(git_refdb_backend *backend, git_reflog *reflog,
-			     const git_oid *new_oid, const git_signature *committer,
-			     const char *msg);
-
-	/**
 	 * Rename a reflog
 	 */
 	int (*reflog_rename)(git_refdb_backend *_backend, const char *old_name, const char *new_name);
 
-	/**
-	 * Drop an entry from the reflog
-	 */
-	int (*reflog_drop)(git_refdb_backend *_backend, git_reflog *reflog,
-			   size_t idx, int rewrite_previous_entry);
 	/**
 	 * Remove a reflog.
 	 */
