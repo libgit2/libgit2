@@ -98,4 +98,11 @@ size_t git_sortedcache_entrycount(const git_sortedcache *sc);
 /* lookup item by index */
 void *git_sortedcache_entry(const git_sortedcache *sc, size_t pos);
 
+/* lookup index of item by key */
+int git_sortedcache_lookup_index(
+	size_t *out, git_sortedcache *sc, const char *key);
+
+/* remove entry from cache */
+int git_sortedcache_remove(git_sortedcache *sc, size_t pos, bool lock);
+
 #endif

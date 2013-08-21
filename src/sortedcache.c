@@ -295,3 +295,62 @@ void *git_sortedcache_entry(const git_sortedcache *sc, size_t pos)
 {
 	return git_vector_get(&sc->items, pos);
 }
+
+struct sortedcache_magic_key {
+	size_t offset;
+	const char *key;
+};
+
+static int sortedcache_magic_cmp(const void *key, const void *value)
+{
+	const struct sortedcache_magic_key *magic = key;
+	const char *value_key = ((const char *)value) + magic->offset;
+	return strcmp(magic->key, value_key);
+}
+
+/* lookup index of item by key */
+int git_sortedcache_lookup_index(
+	size_t *out, git_sortedcache *sc, const char *key)
+{
+	struct sortedcache_magic_key magic;
+
+	magic.offset = sc->item_path_offset;
+	magic.key    = key;
+
+	return git_vector_bsearch2(out, &sc->items, sortedcache_magic_cmp, &magic);
+}
+
+/* remove entry from cache */
+int git_sortedcache_remove(git_sortedcache *sc, size_t pos, bool lock)
+{
+	int error = 0;
+	char *item;
+	khiter_t mappos;
+
+	if (lock && git_sortedcache_lock(sc) < 0)
+		return -1;
+
+	/* because of pool allocation, this can't actually remove the item,
+	 * but we can remove it from the items vector and the hash table.
+	 */
+
+	if ((item = git_vector_get(&sc->items, pos)) == NULL) {
+		giterr_set(GITERR_INVALID, "Removing item out of range");
+		error = GIT_ENOTFOUND;
+		goto done;
+	}
+
+	(void)git_vector_remove(&sc->items, pos);
+
+	mappos = git_strmap_lookup_index(sc->map, item + sc->item_path_offset);
+	git_strmap_delete_at(sc->map, mappos);
+
+	if (sc->free_item)
+		sc->free_item(sc->free_item_payload, item);
+
+done:
+	if (lock)
+		git_sortedcache_unlock(sc);
+	return error;
+}
+

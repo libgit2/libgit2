@@ -10,6 +10,7 @@ void test_core_sortedcache__name_only(void)
 {
 	git_sortedcache *sc;
 	void *item;
+	size_t pos;
 
 	cl_git_pass(git_sortedcache_new(
 		&sc, 0, NULL, NULL, name_only_cmp, NULL));
@@ -43,6 +44,15 @@ void test_core_sortedcache__name_only(void)
 	cl_assert((item = git_sortedcache_entry(sc, 4)) != NULL);
 	cl_assert_equal_s("zzz", item);
 	cl_assert(git_sortedcache_entry(sc, 5) == NULL);
+
+	cl_git_pass(git_sortedcache_lookup_index(&pos, sc, "aaa"));
+	cl_assert_equal_sz(0, pos);
+	cl_git_pass(git_sortedcache_lookup_index(&pos, sc, "iii"));
+	cl_assert_equal_sz(2, pos);
+	cl_git_pass(git_sortedcache_lookup_index(&pos, sc, "zzz"));
+	cl_assert_equal_sz(4, pos);
+	cl_assert_equal_i(
+		GIT_ENOTFOUND, git_sortedcache_lookup_index(&pos, sc, "abc"));
 
 	git_sortedcache_clear(sc, true);
 
@@ -182,6 +192,34 @@ void test_core_sortedcache__in_memory(void)
 	cl_assert_equal_i(10, item->value);
 	cl_assert(git_sortedcache_entry(sc, 3) == NULL);
 
+	{
+		size_t pos;
+
+		cl_git_pass(git_sortedcache_lookup_index(&pos, sc, "again"));
+		cl_assert_equal_sz(0, pos);
+		cl_git_pass(git_sortedcache_remove(sc, pos, true));
+		cl_assert_equal_i(
+			GIT_ENOTFOUND, git_sortedcache_lookup_index(&pos, sc, "again"));
+
+		cl_assert_equal_sz(2, git_sortedcache_entrycount(sc));
+
+		cl_git_pass(git_sortedcache_lookup_index(&pos, sc, "testing"));
+		cl_assert_equal_sz(1, pos);
+		cl_git_pass(git_sortedcache_remove(sc, pos, true));
+		cl_assert_equal_i(
+			GIT_ENOTFOUND, git_sortedcache_lookup_index(&pos, sc, "testing"));
+
+		cl_assert_equal_sz(1, git_sortedcache_entrycount(sc));
+
+		cl_git_pass(git_sortedcache_lookup_index(&pos, sc, "final"));
+		cl_assert_equal_sz(0, pos);
+		cl_git_pass(git_sortedcache_remove(sc, pos, true));
+		cl_assert_equal_i(
+			GIT_ENOTFOUND, git_sortedcache_lookup_index(&pos, sc, "final"));
+
+		cl_assert_equal_sz(0, git_sortedcache_entrycount(sc));
+	}
+
 	git_sortedcache_free(sc);
 
 	cl_assert_equal_i(3, free_count);
@@ -223,6 +261,7 @@ void test_core_sortedcache__on_disk(void)
 	git_sortedcache *sc;
 	sortedcache_test_struct *item;
 	int free_count = 0;
+	size_t pos;
 
 	cl_git_mkfile("cacheitems.txt", "10 abc\n20 bcd\n30 cde\n");
 
@@ -290,6 +329,19 @@ void test_core_sortedcache__on_disk(void)
 	cl_assert((item = git_sortedcache_entry(sc, 3)) != NULL);
 	cl_assert_equal_s("zzz", item->path);
 	cl_assert_equal_i(200, item->value);
+
+	cl_git_pass(git_sortedcache_lookup_index(&pos, sc, "aaa"));
+	cl_assert_equal_sz(0, pos);
+	cl_git_pass(git_sortedcache_lookup_index(&pos, sc, "abc"));
+	cl_assert_equal_sz(1, pos);
+	cl_git_pass(git_sortedcache_lookup_index(&pos, sc, "final"));
+	cl_assert_equal_sz(2, pos);
+	cl_git_pass(git_sortedcache_lookup_index(&pos, sc, "zzz"));
+	cl_assert_equal_sz(3, pos);
+	cl_assert_equal_i(
+		GIT_ENOTFOUND, git_sortedcache_lookup_index(&pos, sc, "missing"));
+	cl_assert_equal_i(
+		GIT_ENOTFOUND, git_sortedcache_lookup_index(&pos, sc, "cde"));
 
 	git_sortedcache_free(sc);
 
