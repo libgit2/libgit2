@@ -534,6 +534,8 @@ const char* git_remote__urlfordirection(git_remote *remote, int direction)
 {
 	assert(remote);
 
+	assert(direction == GIT_DIRECTION_FETCH || direction == GIT_DIRECTION_PUSH);
+
 	if (direction == GIT_DIRECTION_FETCH) {
 		return remote->url;
 	}
