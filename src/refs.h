@@ -61,6 +61,8 @@ struct git_reference {
 	char name[0];
 };
 
+git_reference *git_reference__set_name(git_reference *ref, const char *name);
+
 int git_reference__normalize_name_lax(char *buffer_out, size_t out_size, const char *name);
 int git_reference__normalize_name(git_buf *buf, const char *name, unsigned int flags);
 int git_reference__update_terminal(git_repository *repo, const char *ref_name, const git_oid *oid);
