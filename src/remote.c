@@ -233,7 +233,8 @@ static int refspec_cb(const git_config_entry *entry, void *payload)
 }
 
 static int get_optional_config(
-	git_config *config, git_buf *buf, git_config_foreach_cb cb, void *payload)
+	bool *found, git_config *config, git_buf *buf,
+	git_config_foreach_cb cb, void *payload)
 {
 	int error = 0;
 	const char *key = git_buf_cstr(buf);
@@ -245,6 +246,9 @@ static int get_optional_config(
 		error = git_config_get_multivar(config, key, NULL, cb, payload);
 	else
 		error = git_config_get_string(payload, config, key);
+
+	if (found)
+		*found = !error;
 
 	if (error == GIT_ENOTFOUND) {
 		giterr_clear();
@@ -265,6 +269,7 @@ int git_remote_load(git_remote **out, git_repository *repo, const char *name)
 	int error = 0;
 	git_config *config;
 	struct refspec_cb_data data;
+	bool optional_setting_found = false, found;
 
 	assert(out && repo && name);
 
@@ -294,21 +299,33 @@ int git_remote_load(git_remote **out, git_repository *repo, const char *name)
 		goto cleanup;
 	}
 
-	if ((error = git_config_get_string(&val, config, git_buf_cstr(&buf))) < 0)
+	if ((error = get_optional_config(&found, config, &buf, NULL, (void *)&val)) < 0)
 		goto cleanup;
 
+	optional_setting_found |= found;
+
 	remote->repo = repo;
-	remote->url = git__strdup(val);
-	GITERR_CHECK_ALLOC(remote->url);
+
+	if (found && strlen(val) > 0) {
+		remote->url = git__strdup(val);
+		GITERR_CHECK_ALLOC(remote->url);
+	}
 
 	val = NULL;
 	git_buf_clear(&buf);
 	git_buf_printf(&buf, "remote.%s.pushurl", name);
 
-	if ((error = get_optional_config(config, &buf, NULL, (void *)&val)) < 0)
+	if ((error = get_optional_config(&found, config, &buf, NULL, (void *)&val)) < 0)
 		goto cleanup;
 
-	if (val && strlen(val) > 0) {
+	optional_setting_found |= found;
+
+	if (!optional_setting_found) {
+		error = GIT_ENOTFOUND;
+		goto cleanup;
+	}
+
+	if (found && strlen(val) > 0) {
 		remote->pushurl = git__strdup(val);
 		GITERR_CHECK_ALLOC(remote->pushurl);
 	}
@@ -318,14 +335,14 @@ int git_remote_load(git_remote **out, git_repository *repo, const char *name)
 	git_buf_clear(&buf);
 	git_buf_printf(&buf, "remote.%s.fetch", name);
 
-	if ((error = get_optional_config(config, &buf, refspec_cb, &data)) < 0)
+	if ((error = get_optional_config(NULL, config, &buf, refspec_cb, &data)) < 0)
 		goto cleanup;
 
 	data.fetch = false;
 	git_buf_clear(&buf);
 	git_buf_printf(&buf, "remote.%s.push", name);
 
-	if ((error = get_optional_config(config, &buf, refspec_cb, &data)) < 0)
+	if ((error = get_optional_config(NULL, config, &buf, refspec_cb, &data)) < 0)
 		goto cleanup;
 
 	if (download_tags_value(remote, config) < 0)
