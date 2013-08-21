@@ -284,8 +284,10 @@ int git_status_list_new(
 		diffopt.flags = diffopt.flags | GIT_DIFF_IGNORE_SUBMODULES;
 
 	if ((flags & GIT_STATUS_OPT_RENAMES_FROM_REWRITES) != 0)
-		findopt.flags = findopt.flags | GIT_DIFF_FIND_AND_BREAK_REWRITES |
-			GIT_DIFF_FIND_RENAMES_FROM_REWRITES;
+		findopt.flags = findopt.flags |
+			GIT_DIFF_FIND_AND_BREAK_REWRITES |
+			GIT_DIFF_FIND_RENAMES_FROM_REWRITES |
+			GIT_DIFF_BREAK_REWRITES_FOR_RENAMES_ONLY;
 
 	if (show != GIT_STATUS_SHOW_WORKDIR_ONLY) {
 		if ((error = git_diff_tree_to_index(

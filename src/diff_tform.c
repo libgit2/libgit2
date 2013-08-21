@@ -799,6 +799,9 @@ int git_diff_find_similar(
 
 		if (is_rename_target(diff, &opts, t, sigcache))
 			++num_tgts;
+
+		if ((tgt->flags & GIT_DIFF_FLAG__TO_SPLIT) != 0)
+			num_rewrites++;
 	}
 
 	/* if there are no candidate srcs or tgts, we're done */
@@ -1036,7 +1039,8 @@ find_best_matches:
 	if (num_rewrites > 0 || num_updates > 0)
 		error = apply_splits_and_deletes(
 			diff, diff->deltas.length - num_rewrites,
-			FLAG_SET(&opts, GIT_DIFF_BREAK_REWRITES));
+			FLAG_SET(&opts, GIT_DIFF_BREAK_REWRITES) &&
+			!FLAG_SET(&opts, GIT_DIFF_BREAK_REWRITES_FOR_RENAMES_ONLY));
 
 cleanup:
 	git__free(tgt2src);
