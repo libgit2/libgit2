@@ -558,8 +558,11 @@ int git_remote_connect(git_remote *remote, git_direction direction)
 	t = remote->transport;
 
 	url = git_remote__urlfordirection(remote, direction);
-	if (url == NULL )
+	if (url == NULL ) {
+		giterr_set(GITERR_INVALID,
+			"Malformed remote '%s' - missing URL", remote->name);
 		return -1;
+	}
 
 	/* A transport could have been supplied in advance with
 	 * git_remote_set_transport */
