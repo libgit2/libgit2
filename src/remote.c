@@ -308,7 +308,7 @@ int git_remote_load(git_remote **out, git_repository *repo, const char *name)
 	if ((error = get_optional_config(config, &buf, NULL, (void *)&val)) < 0)
 		goto cleanup;
 
-	if (val) {
+	if (val && strlen(val) > 0) {
 		remote->pushurl = git__strdup(val);
 		GITERR_CHECK_ALLOC(remote->pushurl);
 	}

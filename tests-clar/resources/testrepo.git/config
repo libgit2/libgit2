@@ -10,7 +10,7 @@
 	url = git://github.com/libgit2/libgit2
 [remote "empty-remote-url"]
 	url = 
-
+	pushurl =
 [remote "test_with_pushurl"]
 	url = git://github.com/libgit2/fetchlibgit2
 	pushurl = git://github.com/libgit2/pushlibgit2

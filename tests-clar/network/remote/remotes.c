@@ -367,7 +367,13 @@ void test_network_remote_remotes__can_load_with_an_empty_url(void)
 
 	cl_git_pass(git_remote_load(&remote, _repo, "empty-remote-url"));
 
+	cl_assert(remote->url == NULL);
+	cl_assert(remote->pushurl == NULL);
+
 	cl_git_fail(git_remote_connect(remote, GIT_DIRECTION_FETCH));
+
+	cl_assert(giterr_last() != NULL);
+	cl_assert(giterr_last()->klass == GITERR_INVALID);
 
 	git_remote_free(remote);
 }
