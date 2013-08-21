@@ -23,9 +23,7 @@ static void *iterate_refs(void *arg)
 {
 	git_reference_iterator *i;
 	git_reference *ref;
-	int count = 0, *id = arg;
-
-	usleep(THREADS - *id);
+	int count = 0;
 
 	cl_git_pass(git_reference_iterator_new(&i, g_repo));
 
@@ -75,12 +73,19 @@ void test_threads_refdb__iterator(void)
 
 		for (t = 0; t < THREADS; ++t) {
 			id[t] = t;
+#ifdef GIT_THREADS
 			cl_git_pass(git_thread_create(&th[t], NULL, iterate_refs, &id[t]));
+#else
+			th[t] = t;
+			iterate_refs(&id[t]);
+#endif
 		}
 
+#ifdef GIT_THREADS
 		for (t = 0; t < THREADS; ++t) {
 			cl_git_pass(git_thread_join(th[t], NULL));
 		}
+#endif
 
 		memset(th, 0, sizeof(th));
 	}
@@ -124,7 +129,6 @@ static void *delete_refs(void *arg)
 			name, sizeof(name), "refs/heads/thread-%03d-%02d", (*id) & ~0x3, i);
 
 		if (!git_reference_lookup(&ref, g_repo, name)) {
-			fprintf(stderr, "deleting %s\n", name);
 			cl_git_pass(git_reference_delete(ref));
 			git_reference_delete(ref);
 		}
@@ -180,9 +184,15 @@ void test_threads_refdb__edit_while_iterate(void)
 		}
 
 		id[t] = t;
+#ifdef GIT_THREADS
 		cl_git_pass(git_thread_create(&th[t], NULL, fn, &id[t]));
+#else
+		th[t] = t;
+		fn(&id[t]);
+#endif
 	}
 
+#ifdef GIT_THREADS
 	for (t = 0; t < THREADS; ++t) {
 		cl_git_pass(git_thread_join(th[t], NULL));
 	}
@@ -197,4 +207,5 @@ void test_threads_refdb__edit_while_iterate(void)
 	for (t = 0; t < THREADS; ++t) {
 		cl_git_pass(git_thread_join(th[t], NULL));
 	}
+#endif
 }

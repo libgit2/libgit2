@@ -176,6 +176,8 @@ bool git_sortedcache_out_of_date(git_sortedcache *sc)
 /* lock sortedcache while making modifications */
 int git_sortedcache_lock(git_sortedcache *sc)
 {
+	GIT_UNUSED(sc); /* to prevent warning when compiled w/o threads */
+
 	if (git_mutex_lock(&sc->lock) < 0) {
 		giterr_set(GITERR_OS, "Unable to acquire mutex lock");
 		return -1;
