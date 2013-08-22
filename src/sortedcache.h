@@ -62,22 +62,24 @@ int git_sortedcache_copy(
 	int (*copy_item)(void *payload, void *tgt_item, void *src_item),
 	void *payload);
 
-/* free sorted cache (first calling free_item callbacks) */
+/* free sorted cache (first calling free_item callbacks)
+ * don't call on a locked collection - it may acquire a lock
+ */
 void git_sortedcache_free(git_sortedcache *sc);
 
-/* increment reference count */
+/* increment reference count - balance with call to free */
 void git_sortedcache_incref(git_sortedcache *sc);
 
-/* release all items in sorted cache - lock during clear if lock is true */
+/* release all items in sorted cache - lock during clear if `lock` is true */
 void git_sortedcache_clear(git_sortedcache *sc, bool lock);
 
 /* check file stamp to see if reload is required */
 bool git_sortedcache_out_of_date(git_sortedcache *sc);
 
-/* lock sortedcache while making modifications */
+/* lock sortedcache during access or modification */
 int git_sortedcache_lock(git_sortedcache *sc);
 
-/* unlock sorted cache when done with modifications */
+/* unlock sorted cache when done */
 int git_sortedcache_unlock(git_sortedcache *sc);
 
 /* if the file has changed, lock cache and load file contents into buf;
@@ -85,24 +87,33 @@ int git_sortedcache_unlock(git_sortedcache *sc);
  */
 int git_sortedcache_lockandload(git_sortedcache *sc, git_buf *buf);
 
-/* find and/or insert item, returning pointer to item data - lock first */
+/* find and/or insert item, returning pointer to item data
+ * should only call on locked collection
+ */
 int git_sortedcache_upsert(
 	void **out, git_sortedcache *sc, const char *key);
 
-/* lookup item by key */
+/* lookup item by key
+ * should only call on locked collection if return value will be used
+ */
 void *git_sortedcache_lookup(const git_sortedcache *sc, const char *key);
 
 /* find out how many items are in the cache */
 size_t git_sortedcache_entrycount(const git_sortedcache *sc);
 
-/* lookup item by index */
+/* lookup item by index
+ * should only call on locked collection if return value will be used
+ */
 void *git_sortedcache_entry(const git_sortedcache *sc, size_t pos);
 
-/* lookup index of item by key */
+/* lookup index of item by key
+ * if collection is not locked, there is no guarantee the returned index
+ * will be correct if it used to look up the item
+ */
 int git_sortedcache_lookup_index(
 	size_t *out, git_sortedcache *sc, const char *key);
 
-/* remove entry from cache */
+/* remove entry from cache - lock during delete if `lock` is true */
 int git_sortedcache_remove(git_sortedcache *sc, size_t pos, bool lock);
 
 #endif
