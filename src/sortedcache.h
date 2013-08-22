@@ -16,9 +16,10 @@
 
 /*
  * The purpose of this data structure is to cache the parsed contents of a
- * file where each item in the file can be identified by a key string and
- * you want to both look them up by name and traverse them in sorted
- * order.  Each item is assumed to itself end in a GIT_FLEX_ARRAY.
+ * file (a.k.a. the backing file) where each item in the file can be
+ * identified by a key string and you want to both look them up by name
+ * and traverse them in sorted order.  Each item is assumed to itself end
+ * in a GIT_FLEX_ARRAY.
  */
 
 typedef void (*git_sortedcache_free_item_fn)(void *payload, void *item);
@@ -42,6 +43,16 @@ typedef struct {
  * the end containing their key string, you have to provide the item_cmp
  * sorting function because the sorting function doesn't get a payload
  * and therefore can't know the offset to the item key string. :-(
+ *
+ * @param out The allocated git_sortedcache
+ * @param item_path_offset Offset to the GIT_FLEX_ARRAY item key in the
+ *        struct - use offsetof(struct mine, key-field) to get this
+ * @param free_item Optional callback to free each item
+ * @param free_item_payload Optional payload passed to free_item callback
+ * @param item_cmp Compare the keys of two items
+ * @param path The path to the backing store file for this cache; this
+ *        may be NULL.  The cache makes it easy to load this and check
+ *        if it has been modified since the last load and/or write.
  */
 int git_sortedcache_new(
 	git_sortedcache **out,
@@ -54,12 +65,12 @@ int git_sortedcache_new(
 /* Copy a sorted cache
  *
  * - `copy_item` can be NULL to just use memcpy
- * - if `wlock`, grabs write lock on `src` during copy and releases after
+ * - if `lock`, grabs read lock on `src` during copy and releases after
  */
 int git_sortedcache_copy(
 	git_sortedcache **out,
 	git_sortedcache *src,
-	bool wlock,
+	bool lock,
 	int (*copy_item)(void *payload, void *tgt_item, void *src_item),
 	void *payload);
 
@@ -90,8 +101,18 @@ int git_sortedcache_wlock(git_sortedcache *sc);
 /* Unlock sorted cache when done with write */
 void git_sortedcache_wunlock(git_sortedcache *sc);
 
-/* Lock cache and test if the file has changed.  If the file has changed,
- * then load the contents into `buf` otherwise unlock and return 0.
+/* Lock cache and load backing file into a buffer.
+ *
+ * This grabs a write lock on the cache then looks at the modification
+ * time and size of the file on disk.
+ *
+ * If the file appears to have changed, this loads the file contents into
+ * the buffer and returns a positive value leaving the cache locked - the
+ * caller should parse the file content, update the cache as needed, then
+ * release the lock.  NOTE: In this case, the caller MUST unlock the cache.
+ *
+ * If the file appears to be unchanged, then this automatically releases
+ * the lock on the cache, clears the buffer, and returns 0.
  *
  * @return 0 if up-to-date, 1 if out-of-date, <0 on error
  */

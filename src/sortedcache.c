@@ -110,7 +110,7 @@ static int sortedcache_copy_item(void *payload, void *tgt_item, void *src_item)
 int git_sortedcache_copy(
 	git_sortedcache **out,
 	git_sortedcache *src,
-	bool wlock,
+	bool lock,
 	int (*copy_item)(void *payload, void *tgt_item, void *src_item),
 	void *payload)
 {
@@ -131,7 +131,7 @@ int git_sortedcache_copy(
 			src->items._cmp, src->path)) < 0)
 		return error;
 
-	if (wlock && git_sortedcache_wlock(src) < 0) {
+	if (lock && git_sortedcache_rlock(src) < 0) {
 		git_sortedcache_free(tgt);
 		return -1;
 	}
@@ -144,8 +144,8 @@ int git_sortedcache_copy(
 			break;
 	}
 
-	if (wlock)
-		git_sortedcache_wunlock(src);
+	if (lock)
+		git_sortedcache_runlock(src);
 	if (error)
 		git_sortedcache_free(tgt);
 
