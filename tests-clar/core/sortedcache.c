@@ -15,13 +15,13 @@ void test_core_sortedcache__name_only(void)
 	cl_git_pass(git_sortedcache_new(
 		&sc, 0, NULL, NULL, name_only_cmp, NULL));
 
-	cl_git_pass(git_sortedcache_lock(sc));
+	cl_git_pass(git_sortedcache_wlock(sc));
 	cl_git_pass(git_sortedcache_upsert(&item, sc, "aaa"));
 	cl_git_pass(git_sortedcache_upsert(&item, sc, "bbb"));
 	cl_git_pass(git_sortedcache_upsert(&item, sc, "zzz"));
 	cl_git_pass(git_sortedcache_upsert(&item, sc, "mmm"));
 	cl_git_pass(git_sortedcache_upsert(&item, sc, "iii"));
-	cl_git_pass(git_sortedcache_unlock(sc));
+	git_sortedcache_wunlock(sc);
 
 	cl_assert_equal_sz(5, git_sortedcache_entrycount(sc));
 
@@ -95,7 +95,7 @@ void test_core_sortedcache__in_memory(void)
 		sortedcache_test_struct_free, &free_count,
 		sortedcache_test_struct_cmp, NULL));
 
-	cl_git_pass(git_sortedcache_lock(sc));
+	cl_git_pass(git_sortedcache_wlock(sc));
 	cl_git_pass(git_sortedcache_upsert((void **)&item, sc, "aaa"));
 	item->value = 10;
 	item->smaller_value = 1;
@@ -111,9 +111,11 @@ void test_core_sortedcache__in_memory(void)
 	cl_git_pass(git_sortedcache_upsert((void **)&item, sc, "iii"));
 	item->value = 50;
 	item->smaller_value = 9;
-	cl_git_pass(git_sortedcache_unlock(sc));
+	git_sortedcache_wunlock(sc);
 
 	cl_assert_equal_sz(5, git_sortedcache_entrycount(sc));
+
+	cl_git_pass(git_sortedcache_rlock(sc));
 
 	cl_assert((item = git_sortedcache_lookup(sc, "aaa")) != NULL);
 	cl_assert_equal_s("aaa", item->path);
@@ -125,6 +127,8 @@ void test_core_sortedcache__in_memory(void)
 	cl_assert_equal_s("zzz", item->path);
 	cl_assert_equal_i(30, item->value);
 	cl_assert(git_sortedcache_lookup(sc, "abc") == NULL);
+
+	cl_git_pass(git_sortedcache_rlock(sc)); /* grab more than one */
 
 	cl_assert((item = git_sortedcache_entry(sc, 0)) != NULL);
 	cl_assert_equal_s("aaa", item->path);
@@ -143,6 +147,9 @@ void test_core_sortedcache__in_memory(void)
 	cl_assert_equal_i(30, item->value);
 	cl_assert(git_sortedcache_entry(sc, 5) == NULL);
 
+	git_sortedcache_runlock(sc);
+	git_sortedcache_runlock(sc);
+
 	cl_assert_equal_i(0, free_count);
 
 	git_sortedcache_clear(sc, true);
@@ -156,7 +163,7 @@ void test_core_sortedcache__in_memory(void)
 
 	free_count = 0;
 
-	cl_git_pass(git_sortedcache_lock(sc));
+	cl_git_pass(git_sortedcache_wlock(sc));
 	cl_git_pass(git_sortedcache_upsert((void **)&item, sc, "testing"));
 	item->value = 10;
 	item->smaller_value = 3;
@@ -166,7 +173,7 @@ void test_core_sortedcache__in_memory(void)
 	cl_git_pass(git_sortedcache_upsert((void **)&item, sc, "final"));
 	item->value = 30;
 	item->smaller_value = 2;
-	cl_git_pass(git_sortedcache_unlock(sc));
+	git_sortedcache_wunlock(sc);
 
 	cl_assert_equal_sz(3, git_sortedcache_entrycount(sc));
 
@@ -195,9 +202,11 @@ void test_core_sortedcache__in_memory(void)
 	{
 		size_t pos;
 
+		cl_git_pass(git_sortedcache_wlock(sc));
+
 		cl_git_pass(git_sortedcache_lookup_index(&pos, sc, "again"));
 		cl_assert_equal_sz(0, pos);
-		cl_git_pass(git_sortedcache_remove(sc, pos, true));
+		cl_git_pass(git_sortedcache_remove(sc, pos));
 		cl_assert_equal_i(
 			GIT_ENOTFOUND, git_sortedcache_lookup_index(&pos, sc, "again"));
 
@@ -205,7 +214,7 @@ void test_core_sortedcache__in_memory(void)
 
 		cl_git_pass(git_sortedcache_lookup_index(&pos, sc, "testing"));
 		cl_assert_equal_sz(1, pos);
-		cl_git_pass(git_sortedcache_remove(sc, pos, true));
+		cl_git_pass(git_sortedcache_remove(sc, pos));
 		cl_assert_equal_i(
 			GIT_ENOTFOUND, git_sortedcache_lookup_index(&pos, sc, "testing"));
 
@@ -213,11 +222,13 @@ void test_core_sortedcache__in_memory(void)
 
 		cl_git_pass(git_sortedcache_lookup_index(&pos, sc, "final"));
 		cl_assert_equal_sz(0, pos);
-		cl_git_pass(git_sortedcache_remove(sc, pos, true));
+		cl_git_pass(git_sortedcache_remove(sc, pos));
 		cl_assert_equal_i(
 			GIT_ENOTFOUND, git_sortedcache_lookup_index(&pos, sc, "final"));
 
 		cl_assert_equal_sz(0, git_sortedcache_entrycount(sc));
+
+		git_sortedcache_wunlock(sc);
 	}
 
 	git_sortedcache_free(sc);
@@ -251,7 +262,7 @@ static void sortedcache_test_reload(git_sortedcache *sc)
 		item->smaller_value = (char)(count++);
 	}
 
-	cl_git_pass(git_sortedcache_unlock(sc));
+	git_sortedcache_wunlock(sc);
 
 	git_buf_free(&buf);
 }

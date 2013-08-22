@@ -23,13 +23,13 @@ int git_sortedcache_new(
 		(sc->map = git_strmap_alloc()) == NULL)
 		goto fail;
 
-	if (git_mutex_init(&sc->lock)) {
-		giterr_set(GITERR_OS, "Failed to initialize mutex");
+	if (git_rwlock_init(&sc->lock)) {
+		giterr_set(GITERR_OS, "Failed to initialize lock");
 		goto fail;
 	}
 
-	sc->item_path_offset = item_path_offset;
-	sc->free_item = free_item;
+	sc->item_path_offset  = item_path_offset;
+	sc->free_item         = free_item;
 	sc->free_item_payload = free_item_payload;
 	GIT_REFCOUNT_INC(sc);
 	if (pathlen)
@@ -52,6 +52,11 @@ void git_sortedcache_incref(git_sortedcache *sc)
 	GIT_REFCOUNT_INC(sc);
 }
 
+const char *git_sortedcache_path(git_sortedcache *sc)
+{
+	return sc->path;
+}
+
 static void sortedcache_clear(git_sortedcache *sc)
 {
 	git_strmap_clear(sc->map);
@@ -72,19 +77,17 @@ static void sortedcache_clear(git_sortedcache *sc)
 
 static void sortedcache_free(git_sortedcache *sc)
 {
-	if (git_mutex_lock(&sc->lock) < 0) {
-		giterr_set(GITERR_OS, "Unable to acquire mutex lock for free");
+	/* acquire write lock to make sure everyone else is done */
+	if (git_sortedcache_wlock(sc) < 0)
 		return;
-	}
 
 	sortedcache_clear(sc);
-
 	git_vector_free(&sc->items);
 	git_strmap_free(sc->map);
 
-	git_mutex_unlock(&sc->lock);
-	git_mutex_free(&sc->lock);
+	git_sortedcache_wunlock(sc);
 
+	git_rwlock_free(&sc->lock);
 	git__free(sc);
 }
 
@@ -107,86 +110,86 @@ static int sortedcache_copy_item(void *payload, void *tgt_item, void *src_item)
 int git_sortedcache_copy(
 	git_sortedcache **out,
 	git_sortedcache *src,
+	bool wlock,
 	int (*copy_item)(void *payload, void *tgt_item, void *src_item),
 	void *payload)
 {
+	int error = 0;
 	git_sortedcache *tgt;
 	size_t i;
 	void *src_item, *tgt_item;
 
+	/* just use memcpy if no special copy fn is passed in */
 	if (!copy_item) {
 		copy_item = sortedcache_copy_item;
 		payload   = src;
 	}
 
-	if (git_sortedcache_new(
+	if ((error = git_sortedcache_new(
 			&tgt, src->item_path_offset,
 			src->free_item, src->free_item_payload,
-			src->items._cmp, src->path) < 0)
-		return -1;
+			src->items._cmp, src->path)) < 0)
+		return error;
 
-	if (git_sortedcache_lock(src) < 0) {
+	if (wlock && git_sortedcache_wlock(src) < 0) {
 		git_sortedcache_free(tgt);
 		return -1;
 	}
 
 	git_vector_foreach(&src->items, i, src_item) {
-		if (git_sortedcache_upsert(
-				&tgt_item, tgt, ((char *)src_item) + src->item_path_offset) < 0)
-			goto fail;
-		if (copy_item(payload, tgt_item, src_item) < 0)
-			goto fail;
+		char *path = ((char *)src_item) + src->item_path_offset;
+
+		if ((error = git_sortedcache_upsert(&tgt_item, tgt, path)) < 0 ||
+			(error = copy_item(payload, tgt_item, src_item)) < 0)
+			break;
 	}
 
-	git_sortedcache_unlock(src);
+	if (wlock)
+		git_sortedcache_wunlock(src);
+	if (error)
+		git_sortedcache_free(tgt);
 
-	*out = tgt;
-	return 0;
+	*out = !error ? tgt : NULL;
 
-fail:
-	git_sortedcache_unlock(src);
-	git_sortedcache_free(tgt);
-	return -1;
-}
-
-/* release all items in sorted cache */
-void git_sortedcache_clear(git_sortedcache *sc, bool lock)
-{
-	if (lock && git_mutex_lock(&sc->lock) < 0) {
-		giterr_set(GITERR_OS, "Unable to acquire mutex lock for clear");
-		return;
-	}
-
-	sortedcache_clear(sc);
-
-	if (lock)
-		git_mutex_unlock(&sc->lock);
-}
-
-/* check file stamp to see if reload is required */
-bool git_sortedcache_out_of_date(git_sortedcache *sc)
-{
-	return (git_futils_filestamp_check(&sc->stamp, sc->path) != 0);
+	return error;
 }
 
 /* lock sortedcache while making modifications */
-int git_sortedcache_lock(git_sortedcache *sc)
+int git_sortedcache_wlock(git_sortedcache *sc)
 {
-	GIT_UNUSED(sc); /* to prevent warning when compiled w/o threads */
+	GIT_UNUSED(sc); /* prevent warning when compiled w/o threads */
 
-	if (git_mutex_lock(&sc->lock) < 0) {
-		giterr_set(GITERR_OS, "Unable to acquire mutex lock");
+	if (git_rwlock_wrlock(&sc->lock) < 0) {
+		giterr_set(GITERR_OS, "Unable to acquire write lock on cache");
 		return -1;
 	}
 	return 0;
 }
 
 /* unlock sorted cache when done with modifications */
-int git_sortedcache_unlock(git_sortedcache *sc)
+void git_sortedcache_wunlock(git_sortedcache *sc)
 {
 	git_vector_sort(&sc->items);
-	git_mutex_unlock(&sc->lock);
+	git_rwlock_wrunlock(&sc->lock);
+}
+
+/* lock sortedcache for read */
+int git_sortedcache_rlock(git_sortedcache *sc)
+{
+	GIT_UNUSED(sc); /* prevent warning when compiled w/o threads */
+
+	if (git_rwlock_rdlock(&sc->lock) < 0) {
+		giterr_set(GITERR_OS, "Unable to acquire read lock on cache");
+		return -1;
+	}
 	return 0;
+}
+
+/* unlock sorted cache when done reading */
+void git_sortedcache_runlock(git_sortedcache *sc)
+{
+	GIT_UNUSED(sc); /* prevent warning when compiled w/o threads */
+	git_rwlock_rdunlock(&sc->lock);
 }
 
 /* if the file has changed, lock cache and load file contents into buf;
@@ -196,7 +199,7 @@ int git_sortedcache_lockandload(git_sortedcache *sc, git_buf *buf)
 {
 	int error, fd;
 
-	if ((error = git_sortedcache_lock(sc)) < 0)
+	if ((error = git_sortedcache_wlock(sc)) < 0)
 		return error;
 
 	if ((error = git_futils_filestamp_check(&sc->stamp, sc->path)) <= 0)
@@ -224,13 +227,33 @@ int git_sortedcache_lockandload(git_sortedcache *sc, git_buf *buf)
 	return 1; /* return 1 -> file needs reload and was successfully loaded */
 
 unlock:
-	git_sortedcache_unlock(sc);
+	git_sortedcache_wunlock(sc);
 	return error;
 }
 
+void git_sortedcache_updated(git_sortedcache *sc)
+{
+	 /* update filestamp to latest value */
+	if (git_futils_filestamp_check(&sc->stamp, sc->path) < 0)
+		giterr_clear();
+}
+
+/* release all items in sorted cache */
+int git_sortedcache_clear(git_sortedcache *sc, bool wlock)
+{
+	if (wlock && git_sortedcache_wlock(sc) < 0)
+		return -1;
+
+	sortedcache_clear(sc);
+
+	if (wlock)
+		git_sortedcache_wunlock(sc);
+
+	return 0;
+}
+
 /* find and/or insert item, returning pointer to item data */
-int git_sortedcache_upsert(
-	void **out, git_sortedcache *sc, const char *key)
+int git_sortedcache_upsert(void **out, git_sortedcache *sc, const char *key)
 {
 	int error = 0;
 	khiter_t pos;
@@ -246,7 +269,10 @@ int git_sortedcache_upsert(
 
 	keylen = strlen(key);
 	item = git_pool_mallocz(&sc->pool, sc->item_path_offset + keylen + 1);
-	GITERR_CHECK_ALLOC(item);
+	if (!item) { /* don't use GITERR_CHECK_ALLOC b/c of lock */
+		error = -1;
+		goto done;
+	}
 
 	/* one strange thing is that even if the vector or hash table insert
 	 * fail, there is no way to free the pool item so we just abandon it
@@ -289,11 +315,16 @@ size_t git_sortedcache_entrycount(const git_sortedcache *sc)
 }
 
 /* lookup item by index */
-void *git_sortedcache_entry(const git_sortedcache *sc, size_t pos)
+void *git_sortedcache_entry(git_sortedcache *sc, size_t pos)
 {
+	/* make sure the items are sorted so this gets the correct item */
+	if (!sc->items.sorted)
+		git_vector_sort(&sc->items);
+
 	return git_vector_get(&sc->items, pos);
 }
 
+/* helper struct so bsearch callback can know offset + key value for cmp */
 struct sortedcache_magic_key {
 	size_t offset;
 	const char *key;
@@ -319,14 +350,10 @@ int git_sortedcache_lookup_index(
 }
 
 /* remove entry from cache */
-int git_sortedcache_remove(git_sortedcache *sc, size_t pos, bool lock)
+int git_sortedcache_remove(git_sortedcache *sc, size_t pos)
 {
-	int error = 0;
 	char *item;
 	khiter_t mappos;
-
-	if (lock && git_sortedcache_lock(sc) < 0)
-		return -1;
 
 	/* because of pool allocation, this can't actually remove the item,
 	 * but we can remove it from the items vector and the hash table.
@@ -334,8 +361,7 @@ int git_sortedcache_remove(git_sortedcache *sc, size_t pos, bool lock)
 
 	if ((item = git_vector_get(&sc->items, pos)) == NULL) {
 		giterr_set(GITERR_INVALID, "Removing item out of range");
-		error = GIT_ENOTFOUND;
-		goto done;
+		return GIT_ENOTFOUND;
 	}
 
 	(void)git_vector_remove(&sc->items, pos);
@@ -346,9 +372,6 @@ int git_sortedcache_remove(git_sortedcache *sc, size_t pos, bool lock)
 	if (sc->free_item)
 		sc->free_item(sc->free_item_payload, item);
 
-done:
-	if (lock)
-		git_sortedcache_unlock(sc);
-	return error;
+	return 0;
 }
 

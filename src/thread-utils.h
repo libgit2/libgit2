@@ -41,7 +41,8 @@ typedef git_atomic git_atomic_ssize;
 #ifdef GIT_THREADS
 
 #define git_thread pthread_t
-#define git_thread_create(thread, attr, start_routine, arg) pthread_create(thread, attr, start_routine, arg)
+#define git_thread_create(thread, attr, start_routine, arg) \
+	pthread_create(thread, attr, start_routine, arg)
 #define git_thread_kill(thread) pthread_cancel(thread)
 #define git_thread_exit(status)	pthread_exit(status)
 #define git_thread_join(id, status) pthread_join(id, status)
@@ -60,6 +61,17 @@ typedef git_atomic git_atomic_ssize;
 #define git_cond_wait(c, l)	pthread_cond_wait(c, l)
 #define git_cond_signal(c)	pthread_cond_signal(c)
 #define git_cond_broadcast(c)	pthread_cond_broadcast(c)
+
+/* Pthreads rwlock */
+#define git_rwlock pthread_rwlock_t
+#define git_rwlock_init(a)		pthread_rwlock_init(a, NULL)
+#define git_rwlock_rdlock(a)	pthread_rwlock_rdlock(a)
+#define git_rwlock_rdunlock(a)	pthread_rwlock_unlock(a)
+#define git_rwlock_wrlock(a)	pthread_rwlock_wrlock(a)
+#define git_rwlock_wrunlock(a)	pthread_rwlock_unlock(a)
+#define git_rwlock_free(a)		pthread_rwlock_destroy(a)
+#define GIT_RWLOCK_STATIC_INIT	PTHREAD_RWLOCK_INITIALIZER
+
 
 GIT_INLINE(void) git_atomic_set(git_atomic *a, int val)
 {
@@ -147,7 +159,7 @@ GIT_INLINE(int64_t) git_atomic64_add(git_atomic64 *a, int64_t addend)
 #else
 
 #define git_thread unsigned int
-#define git_thread_create(thread, attr, start_routine, arg) (void)0
+#define git_thread_create(thread, attr, start_routine, arg) 0
 #define git_thread_kill(thread) (void)0
 #define git_thread_exit(status) (void)0
 #define git_thread_join(id, status) (void)0
@@ -166,6 +178,17 @@ GIT_INLINE(int64_t) git_atomic64_add(git_atomic64 *a, int64_t addend)
 #define git_cond_wait(c, l)	(void)0
 #define git_cond_signal(c) (void)0
 #define git_cond_broadcast(c) (void)0
+
+/* Pthreads rwlock */
+#define git_rwlock unsigned int
+#define git_rwlock_init(a)		0
+#define git_rwlock_rdlock(a)	0
+#define git_rwlock_rdunlock(a)	(void)0
+#define git_rwlock_wrlock(a)	0
+#define git_rwlock_wrunlock(a)	(void)0
+#define git_rwlock_free(a)		(void)0
+#define GIT_RWLOCK_STATIC_INIT	0
+
 
 GIT_INLINE(void) git_atomic_set(git_atomic *a, int val)
 {

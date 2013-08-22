@@ -172,7 +172,7 @@ static int packed_reload(refdb_fs_backend *backend)
 			ref->flags |= PACKREF_CANNOT_PEEL;
 	}
 
-	git_sortedcache_unlock(backend->refcache);
+	git_sortedcache_wunlock(backend->refcache);
 	git_buf_free(&packedrefs);
 
 	return 0;
@@ -181,7 +181,7 @@ parse_failed:
 	giterr_set(GITERR_REFERENCE, "Corrupted packed references file");
 
 	git_sortedcache_clear(backend->refcache, false);
-	git_sortedcache_unlock(backend->refcache);
+	git_sortedcache_wunlock(backend->refcache);
 	git_buf_free(&packedrefs);
 
 	return -1;
@@ -244,7 +244,7 @@ static int loose_lookup_to_packfile(refdb_fs_backend *backend, const char *name)
 	if ((error = loose_parse_oid(&oid, name, &ref_file)) < 0)
 		goto done;
 
-	git_sortedcache_lock(backend->refcache);
+	git_sortedcache_wlock(backend->refcache);
 
 	if (!(error = git_sortedcache_upsert(
 			(void **)&ref, backend->refcache, name))) {
@@ -253,7 +253,7 @@ static int loose_lookup_to_packfile(refdb_fs_backend *backend, const char *name)
 		ref->flags = PACKREF_WAS_LOOSE;
 	}
 
-	git_sortedcache_unlock(backend->refcache);
+	git_sortedcache_wunlock(backend->refcache);
 
 done:
 	git_buf_free(&ref_file);
@@ -317,7 +317,7 @@ static int refdb_fs_backend__exists(
 		return -1;
 
 	*exists = git_path_isfile(ref_path.ptr) ||
-		git_sortedcache_lookup(backend->refcache, ref_name);
+		(git_sortedcache_lookup(backend->refcache, ref_name) != NULL);
 
 	git_buf_free(&ref_path);
 	return 0;
@@ -395,7 +395,8 @@ static int packed_lookup(
 	if (packed_reload(backend) < 0)
 		return -1;
 
-	git_sortedcache_lock(backend->refcache);
+	if (git_sortedcache_rlock(backend->refcache) < 0)
+		return -1;
 
 	entry = git_sortedcache_lookup(backend->refcache, ref_name);
 	if (!entry) {
@@ -406,7 +407,8 @@ static int packed_lookup(
 			error = -1;
 	}
 
-	git_sortedcache_unlock(backend->refcache);
+	git_sortedcache_runlock(backend->refcache);
+
 	return error;
 }
 
@@ -486,11 +488,11 @@ static int iter_load_loose_paths(refdb_fs_backend *backend, refdb_fs_iter *iter)
 			(iter->glob && p_fnmatch(iter->glob, ref_name, 0) != 0))
 			continue;
 
-		git_sortedcache_lock(backend->refcache);
+		git_sortedcache_rlock(backend->refcache);
 		ref = git_sortedcache_lookup(backend->refcache, ref_name);
 		if (ref)
 			ref->flags |= PACKREF_SHADOWED;
-		git_sortedcache_unlock(backend->refcache);
+		git_sortedcache_runlock(backend->refcache);
 
 		ref_dup = git_pool_strdup(&iter->pool, ref_name);
 		if (!ref_dup)
@@ -508,6 +510,7 @@ static int iter_load_loose_paths(refdb_fs_backend *backend, refdb_fs_iter *iter)
 static int refdb_fs_backend__iterator_next(
 	git_reference **out, git_reference_iterator *_iter)
 {
+	int error = GIT_ITEROVER;
 	refdb_fs_iter *iter = (refdb_fs_iter *)_iter;
 	refdb_fs_backend *backend = (refdb_fs_backend *)iter->parent.db->backend;
 	struct packref *ref;
@@ -521,7 +524,7 @@ static int refdb_fs_backend__iterator_next(
 		giterr_clear();
 	}
 
-	git_sortedcache_lock(backend->refcache);
+	git_sortedcache_rlock(backend->refcache);
 
 	while (iter->packed_pos < git_sortedcache_entrycount(backend->refcache)) {
 		ref = git_sortedcache_entry(backend->refcache, iter->packed_pos++);
@@ -530,57 +533,56 @@ static int refdb_fs_backend__iterator_next(
 
 		if (ref->flags & PACKREF_SHADOWED)
 			continue;
-
 		if (iter->glob && p_fnmatch(iter->glob, ref->name, 0) != 0)
 			continue;
 
 		*out = git_reference__alloc(ref->name, &ref->oid, &ref->peel);
-		git_sortedcache_unlock(backend->refcache);
-		return (*out != NULL) ? 0 : -1;
+		error = (*out != NULL) ? 0 : -1;
+		break;
 	}
 
-	git_sortedcache_unlock(backend->refcache);
-	return GIT_ITEROVER;
+	git_sortedcache_runlock(backend->refcache);
+	return error;
 }
 
 static int refdb_fs_backend__iterator_next_name(
 	const char **out, git_reference_iterator *_iter)
 {
+	int error = GIT_ITEROVER;
 	refdb_fs_iter *iter = (refdb_fs_iter *)_iter;
 	refdb_fs_backend *backend = (refdb_fs_backend *)iter->parent.db->backend;
+	struct packref *ref;
 
 	while (iter->loose_pos < iter->loose.length) {
 		const char *path = git_vector_get(&iter->loose, iter->loose_pos++);
 
-		if (loose_lookup(NULL, backend, path) != 0) {
-			giterr_clear();
-			continue;
+		if (loose_lookup(NULL, backend, path) == 0) {
+			*out = path;
+			return 0;
 		}
 
-		*out = path;
-		return 0;
+		giterr_clear();
 	}
 
-	git_sortedcache_lock(backend->refcache);
+	git_sortedcache_rlock(backend->refcache);
 
 	while (iter->packed_pos < git_sortedcache_entrycount(backend->refcache)) {
-		struct packref *ref =
-			git_sortedcache_entry(backend->refcache, iter->packed_pos++);
+		ref = git_sortedcache_entry(backend->refcache, iter->packed_pos++);
+		if (!ref) /* stop now if another thread deleted refs and we past end */
+			break;
 
 		if (ref->flags & PACKREF_SHADOWED)
 			continue;
-
-		*out = ref->name;
-
-		if (iter->glob && p_fnmatch(iter->glob, *out, 0) != 0)
+		if (iter->glob && p_fnmatch(iter->glob, ref->name, 0) != 0)
 			continue;
 
-		git_sortedcache_unlock(backend->refcache);
-		return 0;
+		*out = ref->name;
+		error = 0;
+		break;
 	}
 
-	git_sortedcache_unlock(backend->refcache);
-	return GIT_ITEROVER;
+	git_sortedcache_runlock(backend->refcache);
+	return error;
 }
 
 static int refdb_fs_backend__iterator(
@@ -658,26 +660,25 @@ static int reference_path_available(
 		if (exists) {
 			giterr_set(GITERR_REFERENCE,
 				"Failed to write reference '%s': a reference with "
-				" that name already exists.", new_ref);
+				"that name already exists.", new_ref);
 			return GIT_EEXISTS;
 		}
 	}
 
-	git_sortedcache_lock(backend->refcache);
+	git_sortedcache_rlock(backend->refcache);
 
 	for (i = 0; i < git_sortedcache_entrycount(backend->refcache); ++i) {
-		struct packref *this_ref =
-			git_sortedcache_entry(backend->refcache, i);
+		struct packref *ref = git_sortedcache_entry(backend->refcache, i);
 
-		if (!ref_is_available(old_ref, new_ref, this_ref->name)) {
-			git_sortedcache_unlock(backend->refcache);
+		if (ref && !ref_is_available(old_ref, new_ref, ref->name)) {
+			git_sortedcache_runlock(backend->refcache);
 			giterr_set(GITERR_REFERENCE,
-				"The path to reference '%s' collides with an existing one", new_ref);
+				"Path to reference '%s' collides with existing one", new_ref);
 			return -1;
 		}
 	}
 
-	git_sortedcache_unlock(backend->refcache);
+	git_sortedcache_runlock(backend->refcache);
 	return 0;
 }
 
@@ -816,7 +817,7 @@ static int packed_remove_loose(refdb_fs_backend *backend)
 	for (i = 0; i < git_sortedcache_entrycount(backend->refcache); ++i) {
 		struct packref *ref = git_sortedcache_entry(backend->refcache, i);
 
-		if ((ref->flags & PACKREF_WAS_LOOSE) == 0)
+		if (!ref || !(ref->flags & PACKREF_WAS_LOOSE))
 			continue;
 
 		if (git_buf_joinpath(&full_path, backend->path, ref->name) < 0)
@@ -849,67 +850,53 @@ static int packed_remove_loose(refdb_fs_backend *backend)
  */
 static int packed_write(refdb_fs_backend *backend)
 {
+	git_sortedcache *refcache = backend->refcache;
 	git_filebuf pack_file = GIT_FILEBUF_INIT;
 	size_t i;
-	git_buf pack_file_path = GIT_BUF_INIT;
 
 	/* lock the cache to updates while we do this */
-	if (git_sortedcache_lock(backend->refcache) < 0)
+	if (git_sortedcache_wlock(refcache) < 0)
 		return -1;
 
 	/* Open the file! */
-	if (git_buf_joinpath(
-			&pack_file_path, backend->path, GIT_PACKEDREFS_FILE) < 0)
-		goto cleanup_memory;
-
-	if (git_filebuf_open(&pack_file, pack_file_path.ptr, 0) < 0)
-		goto cleanup_packfile;
+	if (git_filebuf_open(&pack_file, git_sortedcache_path(refcache), 0) < 0)
+		goto fail;
 
 	/* Packfiles have a header... apparently
 	 * This is in fact not required, but we might as well print it
 	 * just for kicks */
 	if (git_filebuf_printf(&pack_file, "%s\n", GIT_PACKEDREFS_HEADER) < 0)
-		goto cleanup_packfile;
+		goto fail;
 
-	for (i = 0; i < git_sortedcache_entrycount(backend->refcache); ++i) {
-		struct packref *ref =
-			git_sortedcache_entry(backend->refcache, i);
+	for (i = 0; i < git_sortedcache_entrycount(refcache); ++i) {
+		struct packref *ref = git_sortedcache_entry(refcache, i);
 
 		if (packed_find_peel(backend, ref) < 0)
-			goto cleanup_packfile;
+			goto fail;
 
 		if (packed_write_ref(ref, &pack_file) < 0)
-			goto cleanup_packfile;
+			goto fail;
 	}
 
 	/* if we've written all the references properly, we can commit
 	 * the packfile to make the changes effective */
 	if (git_filebuf_commit(&pack_file, GIT_PACKEDREFS_FILE_MODE) < 0)
-		goto cleanup_memory;
+		goto fail;
 
 	/* when and only when the packfile has been properly written,
 	 * we can go ahead and remove the loose refs */
 	if (packed_remove_loose(backend) < 0)
-		goto cleanup_memory;
+		goto fail;
 
-	git_sortedcache_unlock(backend->refcache);
-
-	 /* update filestamp to latest value */
-	if (git_futils_filestamp_check(
-			&backend->refcache->stamp, pack_file_path.ptr) < 0)
-		giterr_clear();
-
-	git_buf_free(&pack_file_path);
+	git_sortedcache_updated(refcache);
+	git_sortedcache_wunlock(refcache);
 
 	/* we're good now */
 	return 0;
 
-cleanup_packfile:
+fail:
 	git_filebuf_cleanup(&pack_file);
-
-cleanup_memory:
-	git_sortedcache_unlock(backend->refcache);
-	git_buf_free(&pack_file_path);
+	git_sortedcache_wunlock(refcache);
 
 	return -1;
 }
@@ -961,14 +948,14 @@ static int refdb_fs_backend__delete(
 		return -1;
 
 	/* If a packed reference exists, remove it from the packfile and repack */
-	if (git_sortedcache_lock(backend->refcache) < 0)
+	if (git_sortedcache_wlock(backend->refcache) < 0)
 		return -1;
 
 	if (!(error = git_sortedcache_lookup_index(
 			&pack_pos, backend->refcache, ref_name)))
-		error = git_sortedcache_remove(backend->refcache, pack_pos, false);
+		error = git_sortedcache_remove(backend->refcache, pack_pos);
 
-	git_sortedcache_unlock(backend->refcache);
+	git_sortedcache_wunlock(backend->refcache);
 
 	if (error == GIT_ENOTFOUND)
 		return loose_deleted ? 0 : ref_error_notfound(ref_name);
