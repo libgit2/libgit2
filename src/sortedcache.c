@@ -130,9 +130,6 @@ int git_sortedcache_copy(
 		return -1;
 	}
 
-	if (git_sortedcache_lock(tgt) < 0)
-		goto fail;
-
 	git_vector_foreach(&src->items, i, src_item) {
 		if (git_sortedcache_upsert(
 				&tgt_item, tgt, ((char *)src_item) + src->item_path_offset) < 0)
@@ -141,7 +138,6 @@ int git_sortedcache_copy(
 			goto fail;
 	}
 
-	git_sortedcache_unlock(tgt);
 	git_sortedcache_unlock(src);
 
 	*out = tgt;
