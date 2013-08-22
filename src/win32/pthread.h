@@ -30,15 +30,16 @@ typedef SRWLOCK pthread_rwlock_t;
 #define PTHREAD_RWLOCK_INITIALIZER SRWLOCK_INIT
 
 int pthread_create(
-	pthread_t *GIT_RESTRICT,
-	const pthread_attr_t *GIT_RESTRICT,
+	pthread_t *GIT_RESTRICT thread,
+	const pthread_attr_t *GIT_RESTRICT attr,
 	void *(*start_routine)(void*),
-	void *__restrict);
+	void *GIT_RESTRICT arg);
 
 int pthread_join(pthread_t, void **);
 
 int pthread_mutex_init(
-	pthread_mutex_t *GIT_RESTRICT, const pthread_mutexattr_t *GIT_RESTRICT);
+	pthread_mutex_t *GIT_RESTRICT mutex,
+	const pthread_mutexattr_t *GIT_RESTRICT mutexattr);
 int pthread_mutex_destroy(pthread_mutex_t *);
 int pthread_mutex_lock(pthread_mutex_t *);
 int pthread_mutex_unlock(pthread_mutex_t *);
@@ -52,7 +53,8 @@ int pthread_cond_signal(pthread_cond_t *);
 int pthread_num_processors_np(void);
 
 int pthread_rwlock_init(
-	pthread_rwlock_t *GIT_RESTRICT, const pthread_rwlockattr_t *GIT_RESTRICT);
+	pthread_rwlock_t *GIT_RESTRICT lock,
+	const pthread_rwlockattr_t *GIT_RESTRICT attr);
 int pthread_rwlock_rdlock(pthread_rwlock_t *);
 int pthread_rwlock_rdunlock(pthread_rwlock_t *);
 int pthread_rwlock_wrlock(pthread_rwlock_t *);
