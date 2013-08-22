@@ -66,11 +66,16 @@ typedef git_atomic git_atomic_ssize;
 #define git_rwlock pthread_rwlock_t
 #define git_rwlock_init(a)		pthread_rwlock_init(a, NULL)
 #define git_rwlock_rdlock(a)	pthread_rwlock_rdlock(a)
-#define git_rwlock_rdunlock(a)	pthread_rwlock_unlock(a)
+#define git_rwlock_rdunlock(a)	pthread_rwlock_rdunlock(a)
 #define git_rwlock_wrlock(a)	pthread_rwlock_wrlock(a)
-#define git_rwlock_wrunlock(a)	pthread_rwlock_unlock(a)
+#define git_rwlock_wrunlock(a)	pthread_rwlock_wrunlock(a)
 #define git_rwlock_free(a)		pthread_rwlock_destroy(a)
 #define GIT_RWLOCK_STATIC_INIT	PTHREAD_RWLOCK_INITIALIZER
+
+#ifndef GIT_WIN32
+#define pthread_rwlock_rdunlock pthread_rwlock_unlock
+#define pthread_rwlock_wrunlock pthread_rwlock_unlock
+#endif
 
 
 GIT_INLINE(void) git_atomic_set(git_atomic *a, int val)

@@ -128,7 +128,9 @@ void test_core_sortedcache__in_memory(void)
 	cl_assert_equal_i(30, item->value);
 	cl_assert(git_sortedcache_lookup(sc, "abc") == NULL);
 
-	cl_git_pass(git_sortedcache_rlock(sc)); /* grab more than one */
+	/* not on Windows:
+	 * cl_git_pass(git_sortedcache_rlock(sc)); -- grab more than one
+	 */
 
 	cl_assert((item = git_sortedcache_entry(sc, 0)) != NULL);
 	cl_assert_equal_s("aaa", item->path);
@@ -148,7 +150,7 @@ void test_core_sortedcache__in_memory(void)
 	cl_assert(git_sortedcache_entry(sc, 5) == NULL);
 
 	git_sortedcache_runlock(sc);
-	git_sortedcache_runlock(sc);
+	/* git_sortedcache_runlock(sc); */
 
 	cl_assert_equal_i(0, free_count);
 

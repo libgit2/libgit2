@@ -142,3 +142,41 @@ int pthread_num_processors_np(void)
 	return n ? n : 1;
 }
 
+int pthread_rwlock_init(
+	pthread_rwlock_t *GIT_RESTRICT lock,
+	const pthread_rwlockattr_t *GIT_RESTRICT attr)
+{
+	(void)attr;
+	InitializeSRWLock(lock);
+	return 0;
+}
+
+int pthread_rwlock_rdlock(pthread_rwlock_t *lock)
+{
+	AcquireSRWLockShared(lock);
+	return 0;
+}
+
+int pthread_rwlock_rdunlock(pthread_rwlock_t *lock)
+{
+	ReleaseSRWLockShared(lock);
+	return 0;
+}
+
+int pthread_rwlock_wrlock(pthread_rwlock_t *lock)
+{
+	AcquireSRWLockExclusive(lock);
+	return 0;
+}
+
+int pthread_rwlock_wrunlock(pthread_rwlock_t *lock)
+{
+	ReleaseSRWLockExclusive(lock);
+	return 0;
+}
+
+int pthread_rwlock_destroy(pthread_rwlock_t *lock)
+{
+	(void)lock;
+	return 0;
+}
