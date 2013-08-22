@@ -258,7 +258,7 @@ int git_sortedcache_upsert(void **out, git_sortedcache *sc, const char *key)
 	int error = 0;
 	khiter_t pos;
 	void *item;
-	size_t keylen;
+	size_t keylen, itemlen;
 	char *item_key;
 
 	pos = git_strmap_lookup_index(sc->map, key);
@@ -267,9 +267,12 @@ int git_sortedcache_upsert(void **out, git_sortedcache *sc, const char *key)
 		goto done;
 	}
 
-	keylen = strlen(key);
-	item = git_pool_mallocz(&sc->pool, sc->item_path_offset + keylen + 1);
-	if (!item) { /* don't use GITERR_CHECK_ALLOC b/c of lock */
+	keylen  = strlen(key);
+	itemlen = sc->item_path_offset + keylen + 1;
+	itemlen = (itemlen + 7) & ~7;
+
+	if ((item = git_pool_mallocz(&sc->pool, itemlen)) == NULL) {
+		/* don't use GITERR_CHECK_ALLOC b/c of lock */
 		error = -1;
 		goto done;
 	}
