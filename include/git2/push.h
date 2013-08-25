@@ -98,7 +98,7 @@ GIT_EXTERN(int) git_push_finish(git_push *push);
  *
  * @param push The push object
  *
- * @return true if equal, false otherwise
+ * @return true if remote side successfully unpacked, false otherwise
  */
 GIT_EXTERN(int) git_push_unpack_ok(git_push *push);
 
