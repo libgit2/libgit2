@@ -255,6 +255,22 @@ void test_refs_read__can_determine_if_a_reference_is_a_local_branch(void)
 	assert_is_branch("refs/tags/e90810b", false);
 }
 
+static void assert_is_tag(const char *name, bool expected_tagness)
+{
+	git_reference *reference;
+	cl_git_pass(git_reference_lookup(&reference, g_repo, name));
+	cl_assert_equal_i(expected_tagness, git_reference_is_tag(reference));
+	git_reference_free(reference);
+}
+
+void test_refs_read__can_determine_if_a_reference_is_a_tag(void)
+{
+	assert_is_tag("refs/tags/e90810b", true);
+	assert_is_tag("refs/tags/test", true);
+	assert_is_tag("refs/heads/packed", false);
+	assert_is_tag("refs/remotes/test/master", false);
+}
+
 void test_refs_read__invalid_name_returns_EINVALIDSPEC(void)
 {
 	git_reference *reference;

@@ -442,6 +442,15 @@ GIT_EXTERN(int) git_reference_is_branch(git_reference *ref);
  */
 GIT_EXTERN(int) git_reference_is_remote(git_reference *ref);
 
+/**
+ * Check if a reference is a tag
+ *
+ * @param ref A git reference
+ *
+ * @return 1 when the reference lives in the refs/tags
+ * namespace; 0 otherwise.
+ */
+GIT_EXTERN(int) git_reference_is_tag(git_reference *ref);
 
 typedef enum {
 	GIT_REF_FORMAT_NORMAL = 0,
