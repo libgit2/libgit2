@@ -24,10 +24,17 @@ typedef int pthread_rwlockattr_t;
 typedef CRITICAL_SECTION pthread_mutex_t;
 typedef HANDLE pthread_t;
 typedef HANDLE pthread_cond_t;
-typedef SRWLOCK pthread_rwlock_t;
+
+/* typedef struct { void *Ptr; } SRWLOCK; */
+
+typedef struct {
+	union {
+		SRWLOCK srwl;
+		CRITICAL_SECTION csec;
+	} native;
+} pthread_rwlock_t;
 
 #define PTHREAD_MUTEX_INITIALIZER  {(void*)-1}
-#define PTHREAD_RWLOCK_INITIALIZER SRWLOCK_INIT
 
 int pthread_create(
 	pthread_t *GIT_RESTRICT thread,
@@ -60,5 +67,8 @@ int pthread_rwlock_rdunlock(pthread_rwlock_t *);
 int pthread_rwlock_wrlock(pthread_rwlock_t *);
 int pthread_rwlock_wrunlock(pthread_rwlock_t *);
 int pthread_rwlock_destroy(pthread_rwlock_t *);
+
+extern int win32_pthread_initialize(void);
+extern int win32_pthread_shutdown(void);
 
 #endif

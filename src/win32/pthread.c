@@ -127,9 +127,10 @@ int pthread_cond_signal(pthread_cond_t *cond)
 	return 0;
 }
 
-/* pthread_cond_broadcast is not implemented because doing so with just Win32 events
- * is quite complicated, and no caller in libgit2 uses it yet. */
-
+/* pthread_cond_broadcast is not implemented because doing so with just
+ * Win32 events is quite complicated, and no caller in libgit2 uses it
+ * yet.
+ */
 int pthread_num_processors_np(void)
 {
 	DWORD_PTR p, s;
@@ -142,41 +143,111 @@ int pthread_num_processors_np(void)
 	return n ? n : 1;
 }
 
+
+static HINSTANCE win32_kernel32_dll;
+
+typedef void (WINAPI *win32_srwlock_fn)(SRWLOCK *);
+
+static win32_srwlock_fn win32_srwlock_initialize;
+static win32_srwlock_fn win32_srwlock_acquire_shared;
+static win32_srwlock_fn win32_srwlock_release_shared;
+static win32_srwlock_fn win32_srwlock_acquire_exclusive;
+static win32_srwlock_fn win32_srwlock_release_exclusive;
+
 int pthread_rwlock_init(
 	pthread_rwlock_t *GIT_RESTRICT lock,
 	const pthread_rwlockattr_t *GIT_RESTRICT attr)
 {
 	(void)attr;
-	InitializeSRWLock(lock);
+
+	if (win32_srwlock_initialize)
+		win32_srwlock_initialize(&lock->native.srwl);
+	else
+		InitializeCriticalSection(&lock->native.csec);
+
 	return 0;
 }
 
 int pthread_rwlock_rdlock(pthread_rwlock_t *lock)
 {
-	AcquireSRWLockShared(lock);
+	if (win32_srwlock_acquire_shared)
+		win32_srwlock_acquire_shared(&lock->native.srwl);
+	else
+		EnterCriticalSection(&lock->native.csec);
+
 	return 0;
 }
 
 int pthread_rwlock_rdunlock(pthread_rwlock_t *lock)
 {
-	ReleaseSRWLockShared(lock);
+	if (win32_srwlock_release_shared)
+		win32_srwlock_release_shared(&lock->native.srwl);
+	else
+		LeaveCriticalSection(&lock->native.csec);
+
 	return 0;
 }
 
 int pthread_rwlock_wrlock(pthread_rwlock_t *lock)
 {
-	AcquireSRWLockExclusive(lock);
+	if (win32_srwlock_acquire_exclusive)
+		win32_srwlock_acquire_exclusive(&lock->native.srwl);
+	else
+		EnterCriticalSection(&lock->native.csec);
+
 	return 0;
 }
 
 int pthread_rwlock_wrunlock(pthread_rwlock_t *lock)
 {
-	ReleaseSRWLockExclusive(lock);
+	if (win32_srwlock_release_exclusive)
+		win32_srwlock_release_exclusive(&lock->native.srwl);
+	else
+		LeaveCriticalSection(&lock->native.csec);
+
 	return 0;
 }
 
 int pthread_rwlock_destroy(pthread_rwlock_t *lock)
 {
-	(void)lock;
+	if (!win32_srwlock_initialize)
+		DeleteCriticalSection(&lock->native.csec);
+	git__memzero(lock, sizeof(*lock));
+	return 0;
+}
+
+
+int win32_pthread_initialize(void)
+{
+	if (win32_kernel32_dll)
+		return 0;
+
+	win32_kernel32_dll = LoadLibrary("Kernel32.dll");
+	if (!win32_kernel32_dll) {
+		giterr_set(GITERR_OS, "Could not load Kernel32.dll!");
+		return -1;
+	}
+
+	win32_srwlock_initialize = (win32_srwlock_fn)
+		GetProcAddress(win32_kernel32_dll, "InitializeSRWLock");
+	win32_srwlock_acquire_shared = (win32_srwlock_fn)
+		GetProcAddress(win32_kernel32_dll, "AcquireSRWLockShared");
+	win32_srwlock_release_shared = (win32_srwlock_fn)
+		GetProcAddress(win32_kernel32_dll, "ReleaseSRWLockShared");
+	win32_srwlock_acquire_exclusive = (win32_srwlock_fn)
+		GetProcAddress(win32_kernel32_dll, "AcquireSRWLockExclusive");
+	win32_srwlock_release_exclusive = (win32_srwlock_fn)
+		GetProcAddress(win32_kernel32_dll, "ReleaseSRWLockExclusive");
+
+	return 0;
+}
+
+int win32_pthread_shutdown(void)
+{
+	if (win32_kernel32_dll) {
+		FreeLibrary(win32_kernel32_dll);
+		win32_kernel32_dll = NULL;
+	}
+
 	return 0;
 }

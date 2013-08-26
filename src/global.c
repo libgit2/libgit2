@@ -71,18 +71,22 @@ int git_threads_init(void)
 
 	GIT_MEMORY_BARRIER;
 
+	win32_pthread_initialize();
+
 	return error;
 }
 
 void git_threads_shutdown(void)
 {
+	/* Shut down any subsystems that have global state */
+	win32_pthread_shutdown();
+	git_futils_dirs_free();
+	git_hash_global_shutdown();
+
 	TlsFree(_tls_index);
 	_tls_init = 0;
-	git_mutex_free(&git__mwindow_mutex);
 
-	/* Shut down any subsystems that have global state */
-	git_hash_global_shutdown();
-	git_futils_dirs_free();
+	git_mutex_free(&git__mwindow_mutex);
 }
 
 git_global_st *git__global_state(void)

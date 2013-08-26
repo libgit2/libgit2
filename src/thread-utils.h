@@ -40,10 +40,6 @@ typedef git_atomic git_atomic_ssize;
 
 #ifdef GIT_THREADS
 
-#if defined(GIT_WIN32) && _WIN32_WINNT < 0x0600
-#	error "Unsupported Windows version for thread support"
-#endif
-
 #define git_thread pthread_t
 #define git_thread_create(thread, attr, start_routine, arg) \
 	pthread_create(thread, attr, start_routine, arg)
