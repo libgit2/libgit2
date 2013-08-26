@@ -25,8 +25,6 @@ typedef CRITICAL_SECTION pthread_mutex_t;
 typedef HANDLE pthread_t;
 typedef HANDLE pthread_cond_t;
 
-/* typedef struct { void *Ptr; } SRWLOCK; */
-
 typedef struct {
 	union {
 		SRWLOCK srwl;
