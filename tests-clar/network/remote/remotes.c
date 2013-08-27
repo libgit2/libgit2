@@ -243,13 +243,19 @@ void test_network_remote_remotes__list(void)
 	git_config *cfg;
 
 	cl_git_pass(git_remote_list(&list, _repo));
-	cl_assert(list.count == 4);
+	cl_assert(list.count == 5);
 	git_strarray_free(&list);
 
 	cl_git_pass(git_repository_config(&cfg, _repo));
+
+	/* Create a new remote */
 	cl_git_pass(git_config_set_string(cfg, "remote.specless.url", "http://example.com"));
+
+	/* Update a remote (previously without any url/pushurl entry) */
+	cl_git_pass(git_config_set_string(cfg, "remote.no-remote-url.pushurl", "http://example.com"));
+
 	cl_git_pass(git_remote_list(&list, _repo));
-	cl_assert(list.count == 5);
+	cl_assert(list.count == 7);
 	git_strarray_free(&list);
 
 	git_config_free(cfg);

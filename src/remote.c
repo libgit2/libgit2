@@ -1109,10 +1109,10 @@ int git_remote_list(git_strarray *remotes_list, git_repository *repo)
 	if (git_repository_config__weakptr(&cfg, repo) < 0)
 		return -1;
 
-	if (git_vector_init(&list, 4, NULL) < 0)
+	if (git_vector_init(&list, 4, git__strcmp_cb) < 0)
 		return -1;
 
-	if (regcomp(&preg, "^remote\\.(.*)\\.url$", REG_EXTENDED) < 0) {
+	if (regcomp(&preg, "^remote\\.(.*)\\.(push)?url$", REG_EXTENDED) < 0) {
 		giterr_set(GITERR_OS, "Remote catch regex failed to compile");
 		return -1;
 	}
@@ -1136,6 +1136,8 @@ int git_remote_list(git_strarray *remotes_list, git_repository *repo)
 
 		return error;
 	}
+
+	git_vector_uniq(&list, git__free);
 
 	remotes_list->strings = (char **)list.contents;
 	remotes_list->count = list.length;
