@@ -82,7 +82,10 @@ GIT_INLINE(void *) git__realloc(void *ptr, size_t size)
 	return new_ptr;
 }
 
-#define git__free(ptr) free(ptr)
+GIT_INLINE(void) git__free(void *ptr)
+{
+	free(ptr);
+}
 
 #define STRCMP_CASESELECT(IGNORE_CASE, STR1, STR2) \
 	((IGNORE_CASE) ? strcasecmp((STR1), (STR2)) : strcmp((STR1), (STR2)))
