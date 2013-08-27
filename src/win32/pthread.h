@@ -25,9 +25,11 @@ typedef CRITICAL_SECTION pthread_mutex_t;
 typedef HANDLE pthread_t;
 typedef HANDLE pthread_cond_t;
 
+typedef struct { void *Ptr; } GIT_SRWLOCK;
+
 typedef struct {
 	union {
-		SRWLOCK srwl;
+		GIT_SRWLOCK srwl;
 		CRITICAL_SECTION csec;
 	} native;
 } pthread_rwlock_t;

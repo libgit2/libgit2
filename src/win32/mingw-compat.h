@@ -24,8 +24,6 @@ GIT_INLINE(size_t) p_strnlen(const char *s, size_t maxlen) {
 	return end ? (size_t)(end - s) : maxlen;
 }
 
-typedef struct { void *Ptr; } SRWLOCK;
-
 #endif
 
 #endif /* INCLUDE_mingw_compat__ */

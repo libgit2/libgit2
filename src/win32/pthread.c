@@ -146,7 +146,7 @@ int pthread_num_processors_np(void)
 
 static HINSTANCE win32_kernel32_dll;
 
-typedef void (WINAPI *win32_srwlock_fn)(SRWLOCK *);
+typedef void (WINAPI *win32_srwlock_fn)(GIT_SRWLOCK *);
 
 static win32_srwlock_fn win32_srwlock_initialize;
 static win32_srwlock_fn win32_srwlock_acquire_shared;
