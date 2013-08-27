@@ -338,3 +338,54 @@ int git_blob_is_binary(git_blob *blob)
 
 	return git_buf_text_is_binary(&content);
 }
+
+int git_blob_filtered_content(
+	git_buffer *out,
+	git_blob *blob,
+	const char *as_path,
+	int check_for_binary_data)
+{
+	int error = 0, num_filters = 0;
+	git_buf filtered = GIT_BUF_INIT, unfiltered = GIT_BUF_INIT;
+	git_vector filters = GIT_VECTOR_INIT;
+
+	assert(blob && as_path && out);
+
+	/* Create a fake git_buf from the blob raw data... */
+	filtered.ptr   = (void *)git_blob_rawcontent(blob);
+	filtered.size  = (size_t)git_blob_rawsize(blob);
+	filtered.asize = 0;
+
+	if (check_for_binary_data && git_buf_text_is_binary(&filtered))
+		return 0;
+
+	num_filters = git_filters_load(
+		&filters, git_blob_owner(blob), as_path, GIT_FILTER_TO_WORKTREE);
+	if (num_filters < 0)
+		return num_filters;
+
+	if (num_filters > 0) {
+		if (out->ptr && out->available) {
+			filtered.ptr   = out->ptr;
+			filtered.size  = out->size;
+			filtered.asize = out->available;
+		} else {
+			git_buf_init(&filtered, filtered.size + 1);
+		}
+
+		if (!(error = git_blob__getbuf(&unfiltered, blob)))
+			error = git_filters_apply(&filtered, &unfiltered, &filters);
+
+		git_filters_free(&filters);
+		git_buf_free(&unfiltered);
+	}
+
+	if (!error) {
+		out->ptr  = filtered.ptr;
+		out->size = filtered.size;
+		out->available = filtered.asize;
+	}
+
+	return error;
+}
+

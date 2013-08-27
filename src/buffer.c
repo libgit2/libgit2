@@ -6,6 +6,7 @@
  */
 #include "buffer.h"
 #include "posix.h"
+#include "git2/buffer.h"
 #include <stdarg.h>
 #include <ctype.h>
 
@@ -482,5 +483,58 @@ int git_buf_splice(
 
 	buf->size = buf->size + nb_to_insert - nb_to_remove;
 	buf->ptr[buf->size] = '\0';
+	return 0;
+}
+
+/*
+ * Public buffers API
+ */
+
+void git_buffer_free(git_buffer *buffer)
+{
+	if (!buffer)
+		return;
+
+	if (buffer->ptr != NULL && buffer->available > 0)
+		git__free(buffer->ptr);
+
+	git__memzero(buffer, sizeof(*buffer));
+}
+
+int git_buffer_resize(git_buffer *buffer, size_t want_size)
+{
+	int non_allocated_buffer = 0;
+	char *new_ptr;
+
+	assert(buffer);
+
+	/* check if buffer->ptr points to memory owned elsewhere */
+	non_allocated_buffer = (buffer->ptr != NULL && buffer->available == 0);
+
+	if (non_allocated_buffer && !want_size)
+		want_size = buffer->size;
+
+	if (buffer->available <= want_size)
+		return 0;
+
+	if (non_allocated_buffer) {
+		new_ptr = NULL;
+		if (want_size < buffer->size)
+			want_size = buffer->size;
+	} else {
+		new_ptr = buffer->ptr;
+	}
+
+	want_size = (want_size + 7) & ~7; /* round up to multiple of 8 */
+
+	new_ptr = git__realloc(new_ptr, want_size);
+	GITERR_CHECK_ALLOC(new_ptr);
+
+	if (non_allocated_buffer)
+		memcpy(new_ptr, buffer->ptr, buffer->size);
+
+	buffer->ptr       = new_ptr;
+	buffer->available = want_size;
+
 	return 0;
 }

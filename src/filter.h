@@ -11,16 +11,12 @@
 #include "buffer.h"
 #include "git2/odb.h"
 #include "git2/repository.h"
+#include "git2/filter.h"
 
-typedef struct git_filter {
+struct git_filter {
 	int (*apply)(struct git_filter *self, git_buf *dest, const git_buf *source);
 	void (*do_free)(struct git_filter *self);
-} git_filter;
-
-typedef enum {
-	GIT_FILTER_TO_WORKTREE,
-	GIT_FILTER_TO_ODB
-} git_filter_mode;
+};
 
 typedef enum {
 	GIT_CRLF_GUESS = -1,
@@ -60,13 +56,14 @@ extern int git_filters_load(git_vector *filters, git_repository *repo, const cha
  * and `dest` buffers are owned by the caller and must be freed once
  * they are no longer needed.
  *
- * NOTE: Because of the double-buffering schema, the `source` buffer that contains
- * the original file may be tampered once the filtering is complete. Regardless, 
- * the `dest` buffer will always contain the final result of the filtering
+ * NOTE: Because of the double-buffering schema, the `source` buffer that
+ * contains the original file may be tampered once the filtering is
+ * complete. Regardless, the `dest` buffer will always contain the final
+ * result of the filtering
  *
  * @param dest Buffer to store the result of the filtering
  * @param source Buffer containing the document to filter
- * @param filters A non-empty vector of filters as supplied by `git_filters_load`
+ * @param filters Vector of filters as supplied by `git_filters_load`
  * @return 0 on success, an error code otherwise
  */
 extern int git_filters_apply(git_buf *dest, git_buf *source, git_vector *filters);

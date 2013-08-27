@@ -1,18 +1,9 @@
 #include "clar_libgit2.h"
 #include "checkout_helpers.h"
+#include "../filter/crlf.h"
 
 #include "git2/checkout.h"
 #include "repository.h"
-
-#define UTF8_BOM "\xEF\xBB\xBF"
-#define ALL_CRLF_TEXT_RAW	"crlf\r\ncrlf\r\ncrlf\r\ncrlf\r\n"
-#define ALL_LF_TEXT_RAW		"lf\nlf\nlf\nlf\nlf\n"
-#define MORE_CRLF_TEXT_RAW	"crlf\r\ncrlf\r\nlf\ncrlf\r\ncrlf\r\n"
-#define MORE_LF_TEXT_RAW	"lf\nlf\ncrlf\r\nlf\nlf\n"
-
-#define ALL_LF_TEXT_AS_CRLF		"lf\r\nlf\r\nlf\r\nlf\r\nlf\r\n"
-#define MORE_CRLF_TEXT_AS_CRLF	"crlf\r\ncrlf\r\nlf\r\ncrlf\r\ncrlf\r\n"
-#define MORE_LF_TEXT_AS_CRLF	"lf\r\nlf\r\ncrlf\r\nlf\r\nlf\r\n"
 
 static git_repository *g_repo;
 

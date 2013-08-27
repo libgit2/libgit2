@@ -235,32 +235,36 @@ line_ending_error:
 }
 
 static int crlf_apply_to_workdir(
-	git_filter *self, git_buf *dest, const git_buf *source)
+	git_filter *self, git_buf *tgt, const git_buf *src)
 {
 	struct crlf_filter *filter = (struct crlf_filter *)self;
 	const char *workdir_ending = NULL;
 
-	assert(self && dest && source);
+	assert(self && tgt && src);
 
 	/* Empty file? Nothing to do. */
-	if (git_buf_len(source) == 0)
+	if (git_buf_len(src) == 0)
 		return -1;
 
 	/* Determine proper line ending */
 	workdir_ending = line_ending(filter);
 	if (!workdir_ending)
 		return -1;
-	if (!strcmp("\n", workdir_ending)) /* do nothing for \n ending */
-		return -1;
 
-	/* for now, only lf->crlf conversion is supported here */
+	if (!strcmp("\n", workdir_ending)) {
+		if (git_buf_find(src, '\r') < 0)
+			return -1;
+		return git_buf_text_crlf_to_lf(tgt, src);
+	}
+
+	/* only other supported option is lf->crlf conversion */
 	assert(!strcmp("\r\n", workdir_ending));
-	return git_buf_text_lf_to_crlf(dest, source);
+	return git_buf_text_lf_to_crlf(tgt, src);
 }
 
 static int find_and_add_filter(
 	git_vector *filters, git_repository *repo, const char *path,
-	int (*apply)(struct git_filter *self, git_buf *dest, const git_buf *source))
+	int (*apply)(struct git_filter *self, git_buf *tgt, const git_buf *src))
 {
 	struct crlf_attrs ca;
 	struct crlf_filter *filter;
