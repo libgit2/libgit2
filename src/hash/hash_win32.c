@@ -20,29 +20,11 @@ static struct git_hash_prov hash_prov = {0};
 /* Initialize CNG, if available */
 GIT_INLINE(int) hash_cng_prov_init(void)
 {
-	OSVERSIONINFOEX version_test = {0};
-	DWORD version_test_mask;
-	DWORDLONG version_condition_mask = 0;
 	char dll_path[MAX_PATH];
 	DWORD dll_path_len, size_len;
 
-	return -1;
-
 	/* Only use CNG on Windows 2008 / Vista SP1  or better (Windows 6.0 SP1) */
-	version_test.dwOSVersionInfoSize = sizeof(OSVERSIONINFOEX);
-	version_test.dwMajorVersion = 6;
-	version_test.dwMinorVersion = 0;
-	version_test.wServicePackMajor = 1;
-	version_test.wServicePackMinor = 0;
-
-	version_test_mask = (VER_MAJORVERSION | VER_MINORVERSION | VER_SERVICEPACKMAJOR | VER_SERVICEPACKMINOR);
-
-	VER_SET_CONDITION(version_condition_mask, VER_MAJORVERSION, VER_GREATER_EQUAL);
-	VER_SET_CONDITION(version_condition_mask, VER_MINORVERSION, VER_GREATER_EQUAL);
-	VER_SET_CONDITION(version_condition_mask, VER_SERVICEPACKMAJOR, VER_GREATER_EQUAL);
-	VER_SET_CONDITION(version_condition_mask, VER_SERVICEPACKMINOR, VER_GREATER_EQUAL);
-
-	if (!VerifyVersionInfo(&version_test, version_test_mask, version_condition_mask))
+	if (!git_has_win32_version(6, 0, 1))
 		return -1;
 
 	/* Load bcrypt.dll explicitly from the system directory */

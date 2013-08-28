@@ -511,7 +511,7 @@ replay:
 
 			/* Check for Windows 7. This workaround is only necessary on
 			 * Windows Vista and earlier. Windows 7 is version 6.1. */
-			if (!git_has_win32_version(6, 1)) {
+			if (!git_has_win32_version(6, 1, 0)) {
 				wchar_t *location;
 				DWORD location_length;
 				int redirect_cmp;
@@ -989,7 +989,7 @@ static int winhttp_receivepack(
 {
 	/* WinHTTP only supports Transfer-Encoding: chunked
 	 * on Windows Vista (NT 6.0) and higher. */
-	s->chunked = git_has_win32_version(6, 0);
+	s->chunked = git_has_win32_version(6, 0, 0);
 
 	if (s->chunked)
 		s->parent.write = winhttp_stream_write_chunked;
