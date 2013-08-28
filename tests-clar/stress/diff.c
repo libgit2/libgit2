@@ -15,7 +15,7 @@ void test_stress_diff__cleanup(void)
 #define ANOTHER_POEM \
 "OH, glorious are the guarded heights\nWhere guardian souls abide—\nSelf-exiled from our gross delights—\nAbove, beyond, outside:\nAn ampler arc their spirit swings—\nCommands a juster view—\nWe have their word for all these things,\nNo doubt their words are true.\n\nYet we, the bond slaves of our day,\nWhom dirt and danger press—\nCo-heirs of insolence, delay,\nAnd leagued unfaithfulness—\nSuch is our need must seek indeed\nAnd, having found, engage\nThe men who merely do the work\nFor which they draw the wage.\n\nFrom forge and farm and mine and bench,\nDeck, altar, outpost lone—\nMill, school, battalion, counter, trench,\nRail, senate, sheepfold, throne—\nCreation's cry goes up on high\nFrom age to cheated age:\n\"Send us the men who do the work\n\"For which they draw the wage!\"\n"
 
-static void test_with_many(size_t expected_new)
+static void test_with_many(int expected_new)
 {
 	git_index *index;
 	git_tree *tree, *new_tree;
