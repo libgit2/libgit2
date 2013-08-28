@@ -9,6 +9,7 @@
 
 #include "common.h"
 #include "git2/strarray.h"
+#include "git2/buffer.h"
 #include <stdarg.h>
 
 typedef struct {
@@ -173,5 +174,26 @@ int git_buf_splice(
 	size_t nb_to_remove,
 	const char *data,
 	size_t nb_to_insert);
+
+
+#define GIT_BUF_FROM_BUFFER(buffer) \
+	{ (buffer)->ptr, (buffer)->available, (buffer)->size }
+
+GIT_INLINE(void) git_buf_from_buffer(git_buf *buf, const git_buffer *buffer)
+{
+	buf->ptr   = buffer->ptr;
+	buf->size  = buffer->size;
+	buf->asize = buffer->available;
+}
+
+#define GIT_BUFFER_FROM_BUF(buf) \
+	{ (buf)->ptr, (buf)->size, (buf)->asize }
+
+GIT_INLINE(void) git_buffer_from_buf(git_buffer *buffer, const git_buf *buf)
+{
+	buffer->ptr  = buf->ptr;
+	buffer->size = buf->size;
+	buffer->available = buf->asize;
+}
 
 #endif

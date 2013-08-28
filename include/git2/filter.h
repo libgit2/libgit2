@@ -39,13 +39,27 @@ typedef enum {
  * A filter that can transform file data
  *
  * This represents a filter that can be used to transform or even replace
- * file data.  Libgit2 currently includes one built in filter:
+ * file data.  Libgit2 includes one built in filter and it is possible to
+ * write your own (see git2/sys/filter.h for information on that).
+ *
+ * The built in filter is:
  *
  * * "crlf" which uses the complex rules with the "text", "eol", and
  *   "crlf" file attributes to decide how to convert between LF and CRLF
  *   line endings
  */
 typedef struct git_filter git_filter;
+
+GIT_EXTERN(git_filter *) git_filter_lookup(const char *name);
+
+#define GIT_FILTER_CRLF "crlf"
+
+GIT_EXTERN(int) git_filter_apply_to_buffer(
+	git_buffer *out,
+	git_filter *filter,
+	const git_buffer *input,
+	const char *as_path,
+	git_filter_mode_t mode);
 
 GIT_END_DECL
 

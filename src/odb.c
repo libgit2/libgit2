@@ -179,13 +179,13 @@ done:
 }
 
 int git_odb__hashfd_filtered(
-	git_oid *out, git_file fd, size_t size, git_otype type, git_vector *filters)
+	git_oid *out, git_file fd, size_t size, git_otype type, git_filter_list *fl)
 {
 	int error;
 	git_buf raw = GIT_BUF_INIT;
 	git_buf filtered = GIT_BUF_INIT;
 
-	if (!filters || !filters->length)
+	if (!fl)
 		return git_odb__hashfd(out, fd, size, type);
 
 	/* size of data is used in header, so we have to read the whole file
@@ -193,7 +193,7 @@ int git_odb__hashfd_filtered(
 	 */
 
 	if (!(error = git_futils_readbuffer_fd(&raw, fd, size)))
-		error = git_filters_apply(&filtered, &raw, filters);
+		error = git_filter_list_apply(&filtered, &raw, fl);
 
 	git_buf_free(&raw);
 

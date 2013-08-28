@@ -101,7 +101,7 @@ void test_object_blob_filter__stats(void)
 
 void test_object_blob_filter__to_odb(void)
 {
-	git_vector filters = GIT_VECTOR_INIT;
+	git_filter_list *fl = NULL;
 	git_config *cfg;
 	int i;
 	git_blob *blob;
@@ -113,21 +113,21 @@ void test_object_blob_filter__to_odb(void)
 	git_attr_cache_flush(g_repo);
 	cl_git_append2file("empty_standard_repo/.gitattributes", "*.txt text\n");
 
-	cl_assert(git_filters_load(
-		&filters, g_repo, "filename.txt", GIT_FILTER_TO_ODB) > 0);
-	cl_assert(filters.length == 1);
+	cl_git_pass(
+		git_filter_list_load(&fl, g_repo, "filename.txt", GIT_FILTER_TO_ODB));
+	cl_assert(fl != NULL);
 
 	for (i = 0; i < NUM_TEST_OBJECTS; i++) {
 		cl_git_pass(git_blob_lookup(&blob, g_repo, &g_oids[i]));
 		cl_git_pass(git_blob__getbuf(&orig, blob));
 
-		cl_git_pass(git_filters_apply(&out, &orig, &filters));
+		cl_git_pass(git_filter_list_apply(&out, &orig, fl));
 		cl_assert(git_buf_cmp(&out, &g_crlf_filtered[i]) == 0);
 
 		git_blob_free(blob);
 	}
 
-	git_filters_free(&filters);
+	git_filter_list_free(fl);
 	git_buf_free(&orig);
 	git_buf_free(&out);
 	git_config_free(cfg);

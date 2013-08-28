@@ -710,56 +710,40 @@ static int blob_content_to_file(
 	mode_t entry_filemode,
 	git_checkout_opts *opts)
 {
-	int error = -1, nb_filters = 0;
-	mode_t file_mode = opts->file_mode;
-	bool dont_free_filtered;
+	int error = 0;
+	mode_t file_mode = opts->file_mode ? opts->file_mode : entry_filemode;
 	git_buf unfiltered = GIT_BUF_INIT, filtered = GIT_BUF_INIT;
-	git_vector filters = GIT_VECTOR_INIT;
+	git_filter_list *fl = NULL;
 
 	/* Create a fake git_buf from the blob raw data... */
 	filtered.ptr  = (void *)git_blob_rawcontent(blob);
 	filtered.size = (size_t)git_blob_rawsize(blob);
-	/* ... and make sure it doesn't get unexpectedly freed */
-	dont_free_filtered = true;
 
-	if (!opts->disable_filters &&
-		!git_buf_text_is_binary(&filtered) &&
-		(nb_filters = git_filters_load(
-			&filters,
-			git_object_owner((git_object *)blob),
-			path,
-			GIT_FILTER_TO_WORKTREE)) > 0)
-	{
+	if (!opts->disable_filters && !git_buf_text_is_binary(&filtered)) {
+		error = git_filter_list_load(
+			&fl, git_blob_owner(blob), path, GIT_FILTER_TO_WORKTREE);
+	}
+
+	if (fl != NULL) {
 		/* reset 'filtered' so it can be a filter target */
 		git_buf_init(&filtered, 0);
-		dont_free_filtered = false;
+
+		if (!(error = git_blob__getbuf(&unfiltered, blob))) {
+			error = git_filter_list_apply(&filtered, &unfiltered, fl);
+
+			git_buf_free(&unfiltered);
+		}
+
+		git_filter_list_free(fl);
 	}
 
-	if (nb_filters < 0)
-		return nb_filters;
-
-	if (nb_filters > 0)	 {
-		if ((error = git_blob__getbuf(&unfiltered, blob)) < 0)
-			goto cleanup;
-
-		if ((error = git_filters_apply(&filtered, &unfiltered, &filters)) < 0)
-			goto cleanup;
-	}
-
-	/* Allow overriding of file mode */
-	if (!file_mode)
-		file_mode = entry_filemode;
-
-	error = buffer_to_file(
-		st, &filtered, path, opts->dir_mode, opts->file_open_flags, file_mode);
-
-	if (!error)
+	if (!error &&
+		!(error = buffer_to_file(
+			st, &filtered, path, opts->dir_mode,
+			opts->file_open_flags, file_mode)))
 		st->st_mode = entry_filemode;
 
-cleanup:
-	git_filters_free(&filters);
-	git_buf_free(&unfiltered);
-	if (!dont_free_filtered)
+	if (filtered.asize != 0)
 		git_buf_free(&filtered);
 
 	return error;
