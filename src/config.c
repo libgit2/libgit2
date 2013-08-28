@@ -315,10 +315,212 @@ int git_config_refresh(git_config *cfg)
  * Loop over all the variables
  */
 
+typedef struct {
+	git_config_iterator parent;
+	git_config_iterator *current;
+	const git_config *cfg;
+	regex_t regex;
+	int has_regex;
+	size_t i;
+} all_iter;
+
+static int find_next_backend(size_t *out, const git_config *cfg, size_t i)
+{
+	file_internal *internal;
+
+	for (; i > 0; --i) {
+		internal = git_vector_get(&cfg->files, i - 1);
+		if (!internal || !internal->file)
+			continue;
+
+		*out = i;
+		return 0;
+	}
+
+	return -1;
+}
+
+static int all_iter_next(git_config_entry **entry, git_config_iterator *_iter)
+{
+	all_iter *iter = (all_iter *) _iter;
+	file_internal *internal;
+	git_config_backend *backend;
+	size_t i;
+	int error = 0;
+
+	if (iter->current != NULL &&
+	    (error = iter->current->next(entry, iter->current)) == 0) {
+		return 0;
+	}
+
+	if (error < 0 && error != GIT_ITEROVER)
+		return error;
+
+	do {
+		if (find_next_backend(&i, iter->cfg, iter->i) < 0)
+			return GIT_ITEROVER;
+
+		internal = git_vector_get(&iter->cfg->files, i - 1);
+		backend = internal->file;
+		iter->i = i - 1;
+
+		if (iter->current)
+			iter->current->free(iter->current);
+
+		iter->current = NULL;
+		error = backend->iterator(&iter->current, backend);
+		if (error == GIT_ENOTFOUND)
+			continue;
+
+		if (error < 0)
+			return error;
+
+		error = iter->current->next(entry, iter->current);
+		/* If this backend is empty, then keep going */
+		if (error == GIT_ITEROVER)
+			continue;
+
+		return error;
+
+	} while(1);
+
+	return GIT_ITEROVER;
+}
+
+static int all_iter_glob_next(git_config_entry **entry, git_config_iterator *_iter)
+{
+	int error;
+	all_iter *iter = (all_iter *) _iter;
+
+	/*
+	 * We use the "normal" function to grab the next one across
+	 * backends and then apply the regex
+	 */
+	while ((error = all_iter_next(entry, _iter)) == 0) {
+		/* skip non-matching keys if regexp was provided */
+		if (regexec(&iter->regex, (*entry)->name, 0, NULL, 0) != 0)
+			continue;
+
+		/* and simply return if we like the entry's name */
+		return 0;
+	}
+
+	return error;
+}
+
+static void all_iter_free(git_config_iterator *_iter)
+{
+	all_iter *iter = (all_iter *) _iter;
+
+	if (iter->current)
+		iter->current->free(iter->current);
+
+	git__free(iter);
+}
+
+static void all_iter_glob_free(git_config_iterator *_iter)
+{
+	all_iter *iter = (all_iter *) _iter;
+
+	regfree(&iter->regex);
+	all_iter_free(_iter);
+}
+
+int git_config_iterator_new(git_config_iterator **out, const git_config *cfg)
+{
+	all_iter *iter;
+
+	iter = git__calloc(1, sizeof(all_iter));
+	GITERR_CHECK_ALLOC(iter);
+
+	iter->parent.free = all_iter_free;
+	iter->parent.next = all_iter_next;
+
+	iter->i = cfg->files.length;
+	iter->cfg = cfg;
+
+	*out = (git_config_iterator *) iter;
+
+	return 0;
+}
+
+int git_config_iterator_glob_new(git_config_iterator **out, const git_config *cfg, const char *regexp)
+{
+	all_iter *iter;
+	int result;
+
+	if (regexp == NULL)
+		return git_config_iterator_new(out, cfg);
+
+	iter = git__calloc(1, sizeof(all_iter));
+	GITERR_CHECK_ALLOC(iter);
+
+	if ((result = regcomp(&iter->regex, regexp, REG_EXTENDED)) < 0) {
+		giterr_set_regex(&iter->regex, result);
+		regfree(&iter->regex);
+		return -1;
+	}
+
+	iter->parent.next = all_iter_glob_next;
+	iter->parent.free = all_iter_glob_free;
+	iter->i = cfg->files.length;
+	iter->cfg = cfg;
+
+	*out = (git_config_iterator *) iter;
+
+	return 0;
+}
+
 int git_config_foreach(
 	const git_config *cfg, git_config_foreach_cb cb, void *payload)
 {
 	return git_config_foreach_match(cfg, NULL, cb, payload);
+}
+
+int git_config_backend_foreach_match(
+	git_config_backend *backend,
+	const char *regexp,
+	int (*fn)(const git_config_entry *, void *),
+	void *data)
+{
+	git_config_entry *entry;
+	git_config_iterator* iter;
+	regex_t regex;
+	int result = 0;
+
+	if (regexp != NULL) {
+		if ((result = regcomp(&regex, regexp, REG_EXTENDED)) < 0) {
+			giterr_set_regex(&regex, result);
+			regfree(&regex);
+			return -1;
+		}
+	}
+
+	if ((result = backend->iterator(&iter, backend)) < 0) {
+		iter = NULL;
+		return -1;
+	}
+
+	while(!(iter->next(&entry, iter) < 0)) {
+		/* skip non-matching keys if regexp was provided */
+		if (regexp && regexec(&regex, entry->name, 0, NULL, 0) != 0)
+			continue;
+
+		/* abort iterator on non-zero return value */
+		if (fn(entry, data)) {
+			giterr_clear();
+			result = GIT_EUSER;
+			goto cleanup;
+		}
+	}
+
+cleanup:
+	if (regexp != NULL)
+		regfree(&regex);
+
+	iter->free(iter);
+
+	return result;
 }
 
 int git_config_foreach_match(
@@ -327,18 +529,27 @@ int git_config_foreach_match(
 	git_config_foreach_cb cb,
 	void *payload)
 {
-	int ret = 0;
-	size_t i;
-	file_internal *internal;
-	git_config_backend *file;
+	int error;
+	git_config_iterator *iter;
+	git_config_entry *entry;
 
-	for (i = 0; i < cfg->files.length && ret == 0; ++i) {
-		internal = git_vector_get(&cfg->files, i);
-		file = internal->file;
-		ret = file->foreach(file, regexp, cb, payload);
+	if ((error = git_config_iterator_glob_new(&iter, cfg, regexp)) < 0)
+		return error;
+
+	while ((error = git_config_next(&entry, iter)) == 0) {
+		if(cb(entry, payload)) {
+			giterr_clear();
+			error = GIT_EUSER;
+			break;
+		}
 	}
 
-	return ret;
+	git_config_iterator_free(iter);
+
+	if (error == GIT_ITEROVER)
+		error = 0;
+
+	return error;
 }
 
 /**************
@@ -528,32 +739,114 @@ int git_config_get_entry(const git_config_entry **out, const git_config *cfg, co
 	return config_error_notfound(name);
 }
 
-int git_config_get_multivar(
+int git_config_get_multivar_foreach(
 	const git_config *cfg, const char *name, const char *regexp,
 	git_config_foreach_cb cb, void *payload)
 {
-	file_internal *internal;
-	git_config_backend *file;
-	int ret = GIT_ENOTFOUND, err;
-	size_t i;
+	int err, found;
+	git_config_iterator *iter;
+	git_config_entry *entry;
 
-	/*
-	 * This loop runs the "wrong" way 'round because we need to
-	 * look at every value from the most general to most specific
-	 */
-	for (i = cfg->files.length; i > 0; --i) {
-		internal = git_vector_get(&cfg->files, i - 1);
-		if (!internal || !internal->file)
-			continue;
-		file = internal->file;
+	if ((err = git_config_multivar_iterator_new(&iter, cfg, name, regexp)) < 0)
+		return err;
 
-		if (!(err = file->get_multivar(file, name, regexp, cb, payload)))
-			ret = 0;
-		else if (err != GIT_ENOTFOUND)
-			return err;
+	found = 0;
+	while ((err = iter->next(&entry, iter)) == 0) {
+		found = 1;
+		if(cb(entry, payload)) {
+			iter->free(iter);
+			return GIT_EUSER;
+		}
 	}
 
-	return (ret == GIT_ENOTFOUND) ? config_error_notfound(name) : 0;
+	iter->free(iter);
+	if (err == GIT_ITEROVER)
+		err = 0;
+
+	if (found == 0 && err == 0)
+		err = config_error_notfound(name);
+
+	return err;
+}
+
+typedef struct {
+	git_config_iterator parent;
+	git_config_iterator *iter;
+	char *name;
+	regex_t regex;
+	int have_regex;
+} multivar_iter;
+
+static int multivar_iter_next(git_config_entry **entry, git_config_iterator *_iter)
+{
+	multivar_iter *iter = (multivar_iter *) _iter;
+	int error = 0;
+
+	while ((error = iter->iter->next(entry, iter->iter)) == 0) {
+		if (git__strcmp(iter->name, (*entry)->name))
+			continue;
+
+		if (!iter->have_regex)
+			return 0;
+
+		if (regexec(&iter->regex, (*entry)->value, 0, NULL, 0) == 0)
+			return 0;
+	}
+
+	return error;
+}
+
+void multivar_iter_free(git_config_iterator *_iter)
+{
+	multivar_iter *iter = (multivar_iter *) _iter;
+
+	iter->iter->free(iter->iter);
+
+	git__free(iter->name);
+	regfree(&iter->regex);
+	git__free(iter);
+}
+
+int git_config_multivar_iterator_new(git_config_iterator **out, const git_config *cfg, const char *name, const char *regexp)
+{
+	multivar_iter *iter = NULL;
+	git_config_iterator *inner = NULL;
+	int error;
+
+	if ((error = git_config_iterator_new(&inner, cfg)) < 0)
+		return error;
+
+	iter = git__calloc(1, sizeof(multivar_iter));
+	GITERR_CHECK_ALLOC(iter);
+
+	if ((error = git_config__normalize_name(name, &iter->name)) < 0)
+		goto on_error;
+
+	if (regexp != NULL) {
+		error = regcomp(&iter->regex, regexp, REG_EXTENDED);
+		if (error < 0) {
+			giterr_set_regex(&iter->regex, error);
+			error = -1;
+			regfree(&iter->regex);
+			goto on_error;
+		}
+
+		iter->have_regex = 1;
+	}
+
+	iter->iter = inner;
+	iter->parent.free = multivar_iter_free;
+	iter->parent.next = multivar_iter_next;
+
+	*out = (git_config_iterator *) iter;
+
+	return 0;
+
+on_error:
+
+	inner->free(inner);
+	git__free(iter);
+	return error;
 }
 
 int git_config_set_multivar(git_config *cfg, const char *name, const char *regexp, const char *value)
@@ -567,6 +860,16 @@ int git_config_set_multivar(git_config *cfg, const char *name, const char *regex
 	file = internal->file;
 
 	return file->set_multivar(file, name, regexp, value);
+}
+
+int git_config_next(git_config_entry **entry, git_config_iterator *iter)
+{
+	return iter->next(entry, iter);
+}
+
+void git_config_iterator_free(git_config_iterator *iter)
+{
+	iter->free(iter);
 }
 
 static int git_config__find_file_to_path(
@@ -810,6 +1113,41 @@ int git_config_parse_int32(int32_t *out, const char *value)
 fail_parse:
 	giterr_set(GITERR_CONFIG, "Failed to parse '%s' as a 32-bit integer", value);
 	return -1;
+}
+
+/* Take something the user gave us and make it nice for our hash function */
+int git_config__normalize_name(const char *in, char **out)
+{
+	char *name, *fdot, *ldot;
+
+	assert(in && out);
+
+	name = git__strdup(in);
+	GITERR_CHECK_ALLOC(name);
+
+	fdot = strchr(name, '.');
+	ldot = strrchr(name, '.');
+
+	if (fdot == NULL || fdot == name || ldot == NULL || !ldot[1])
+		goto invalid;
+
+	/* Validate and downcase up to first dot and after last dot */
+	if (git_config_file_normalize_section(name, fdot) < 0 ||
+		git_config_file_normalize_section(ldot + 1, NULL) < 0)
+		goto invalid;
+
+	/* If there is a middle range, make sure it doesn't have newlines */
+	while (fdot < ldot)
+		if (*fdot++ == '\n')
+			goto invalid;
+
+	*out = name;
+	return 0;
+
+invalid:
+	git__free(name);
+	giterr_set(GITERR_CONFIG, "Invalid config item name '%s'", in);
+	return GIT_EINVALIDSPEC;
 }
 
 struct rename_data {

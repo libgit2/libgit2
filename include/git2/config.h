@@ -61,6 +61,7 @@ typedef struct {
 } git_config_entry;
 
 typedef int  (*git_config_foreach_cb)(const git_config_entry *, void *);
+typedef struct git_config_iterator git_config_iterator;
 
 typedef enum {
 	GIT_CVAR_FALSE = 0,
@@ -327,7 +328,7 @@ GIT_EXTERN(int) git_config_get_bool(int *out, const git_config *cfg, const char 
 GIT_EXTERN(int) git_config_get_string(const char **out, const git_config *cfg, const char *name);
 
 /**
- * Get each value of a multivar.
+ * Get each value of a multivar in a foreach callback
  *
  * The callback will be called on each variable found
  *
@@ -338,7 +339,34 @@ GIT_EXTERN(int) git_config_get_string(const char **out, const git_config *cfg, c
  * @param callback the function to be called on each value of the variable
  * @param payload opaque pointer to pass to the callback
  */
-GIT_EXTERN(int) git_config_get_multivar(const git_config *cfg, const char *name, const char *regexp, git_config_foreach_cb callback, void *payload);
+GIT_EXTERN(int) git_config_get_multivar_foreach(const git_config *cfg, const char *name, const char *regexp, git_config_foreach_cb callback, void *payload);
+
+/**
+ * Get each value of a multivar
+ *
+ * @param out pointer to store the iterator
+ * @param cfg where to look for the variable
+ * @param name the variable's name
+ * @param regexp regular expression to filter which variables we're
+ * interested in. Use NULL to indicate all
+ */
+GIT_EXTERN(int) git_config_multivar_iterator_new(git_config_iterator **out, const git_config *cfg, const char *name, const char *regexp);
+
+/**
+ * Return the current entry and advance the iterator
+ *
+ * @param entry pointer to store the entry
+ * @param iter the iterator
+ * @return 0 or an error code. GIT_ITEROVER if the iteration has completed
+ */
+GIT_EXTERN(int) git_config_next(git_config_entry **entry, git_config_iterator *iter);
+
+/**
+ * Free a config iterator
+ *
+ * @param iter the iterator to free
+ */
+GIT_EXTERN(void) git_config_iterator_free(git_config_iterator *iter);
 
 /**
  * Set the value of an integer config variable in the config file
@@ -423,6 +451,29 @@ GIT_EXTERN(int) git_config_foreach(
 	const git_config *cfg,
 	git_config_foreach_cb callback,
 	void *payload);
+
+/**
+ * Iterate over all the config variables
+ *
+ * Use `git_config_next` to advance the iteration and
+ * `git_config_iterator_free` when done.
+ *
+ * @param out pointer to store the iterator
+ * @param cfg where to ge the variables from
+ */
+GIT_EXTERN(int) git_config_iterator_new(git_config_iterator **out, const git_config *cfg);
+
+/**
+ * Iterate over all the config variables whose name matches a pattern
+ *
+ * Use `git_config_next` to advance the iteration and
+ * `git_config_iterator_free` when done.
+ *
+ * @param out pointer to store the iterator
+ * @param cfg where to ge the variables from
+ * @param regexp regular expression to match the names
+ */
+GIT_EXTERN(int) git_config_iterator_glob_new(git_config_iterator **out, const git_config *cfg, const char *regexp);
 
 /**
  * Perform an operation on each config variable matching a regular expression.
@@ -533,6 +584,25 @@ GIT_EXTERN(int) git_config_parse_int32(int32_t *out, const char *value);
  * @param value value to parse
  */
 GIT_EXTERN(int) git_config_parse_int64(int64_t *out, const char *value);
+
+
+/**
+ * Perform an operation on each config variable in given config backend
+ * matching a regular expression.
+ *
+ * This behaviors like `git_config_foreach_match` except instead of all config
+ * entries it just enumerates through the given backend entry.
+ *
+ * @param backend where to get the variables from
+ * @param regexp regular expression to match against config names (can be NULL)
+ * @param callback the function to call on each variable
+ * @param payload the data to pass to the callback
+ */
+GIT_EXTERN(int) git_config_backend_foreach_match(
+	git_config_backend *backend,
+	const char *regexp,
+	int (*fn)(const git_config_entry *, void *),
+	void *data);
 
 
 /** @} */
