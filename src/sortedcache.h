@@ -14,6 +14,8 @@
 #include "pool.h"
 #include "strmap.h"
 
+#include <stddef.h>
+
 /*
  * The purpose of this data structure is to cache the parsed contents of a
  * file (a.k.a. the backing file) where each item in the file can be
