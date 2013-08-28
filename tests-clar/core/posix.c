@@ -24,6 +24,16 @@ void test_core_posix__initialize(void)
 #endif
 }
 
+static bool supports_ipv6(void)
+{
+#ifdef GIT_WIN32
+	/* IPv6 is supported on Vista and newer */
+	return git_has_win32_version(6, 0, 0);
+#else
+	return 1;
+#endif
+}
+
 void test_core_posix__inet_pton(void)
 {
 	struct in_addr addr;
@@ -65,9 +75,12 @@ void test_core_posix__inet_pton(void)
 	}
 
 	/* Test some ipv6 addresses */
-	for (i = 0; i < 6; i++) {
-		cl_assert(p_inet_pton(AF_INET6, in6_addr_data[i].p, &addr6) == 1);
-		cl_assert(memcmp(&addr6, in6_addr_data[i].n, sizeof(struct in6_addr)) == 0);
+	if (supports_ipv6())
+	{
+		for (i = 0; i < 6; i++) {
+			cl_assert(p_inet_pton(AF_INET6, in6_addr_data[i].p, &addr6) == 1);
+			cl_assert(memcmp(&addr6, in6_addr_data[i].n, sizeof(struct in6_addr)) == 0);
+		}
 	}
 
 	/* Test some invalid strings */
