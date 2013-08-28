@@ -54,7 +54,7 @@ void test_core_vector__2(void)
 	cl_git_pass(git_vector_insert(&x, ptrs[1]));
 	cl_assert(x.length == 5);
 
-	git_vector_uniq(&x);
+	git_vector_uniq(&x, NULL);
 	cl_assert(x.length == 2);
 
 	git_vector_free(&x);

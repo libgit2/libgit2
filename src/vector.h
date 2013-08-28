@@ -71,7 +71,7 @@ int git_vector_insert_sorted(git_vector *v, void *element,
 	int (*on_dup)(void **old, void *new));
 int git_vector_remove(git_vector *v, size_t idx);
 void git_vector_pop(git_vector *v);
-void git_vector_uniq(git_vector *v);
+void git_vector_uniq(git_vector *v, void  (*git_free_cb)(void *));
 void git_vector_remove_matching(
 	git_vector *v, int (*match)(const git_vector *v, size_t idx));
 
