@@ -220,7 +220,7 @@ void git_vector_pop(git_vector *v)
 		v->length--;
 }
 
-void git_vector_uniq(git_vector *v)
+void git_vector_uniq(git_vector *v, void  (*git_free_cb)(void *))
 {
 	git_vector_cmp cmp;
 	size_t i, j;
@@ -232,9 +232,12 @@ void git_vector_uniq(git_vector *v)
 	cmp = v->_cmp ? v->_cmp : strict_comparison;
 
 	for (i = 0, j = 1 ; j < v->length; ++j)
-		if (!cmp(v->contents[i], v->contents[j]))
+		if (!cmp(v->contents[i], v->contents[j])) {
+			if (git_free_cb)
+				git_free_cb(v->contents[i]);
+
 			v->contents[i] = v->contents[j];
-		else
+		} else
 			v->contents[++i] = v->contents[j];
 
 	v->length -= j - i - 1;

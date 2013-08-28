@@ -243,13 +243,19 @@ void test_network_remote_remotes__list(void)
 	git_config *cfg;
 
 	cl_git_pass(git_remote_list(&list, _repo));
-	cl_assert(list.count == 4);
+	cl_assert(list.count == 5);
 	git_strarray_free(&list);
 
 	cl_git_pass(git_repository_config(&cfg, _repo));
+
+	/* Create a new remote */
 	cl_git_pass(git_config_set_string(cfg, "remote.specless.url", "http://example.com"));
+
+	/* Update a remote (previously without any url/pushurl entry) */
+	cl_git_pass(git_config_set_string(cfg, "remote.no-remote-url.pushurl", "http://example.com"));
+
 	cl_git_pass(git_remote_list(&list, _repo));
-	cl_assert(list.count == 5);
+	cl_assert(list.count == 7);
 	git_strarray_free(&list);
 
 	git_config_free(cfg);
@@ -367,9 +373,37 @@ void test_network_remote_remotes__can_load_with_an_empty_url(void)
 
 	cl_git_pass(git_remote_load(&remote, _repo, "empty-remote-url"));
 
+	cl_assert(remote->url == NULL);
+	cl_assert(remote->pushurl == NULL);
+
+	cl_git_fail(git_remote_connect(remote, GIT_DIRECTION_FETCH));
+
+	cl_assert(giterr_last() != NULL);
+	cl_assert(giterr_last()->klass == GITERR_INVALID);
+
+	git_remote_free(remote);
+}
+
+void test_network_remote_remotes__can_load_with_only_an_empty_pushurl(void)
+{
+	git_remote *remote = NULL;
+
+	cl_git_pass(git_remote_load(&remote, _repo, "empty-remote-pushurl"));
+
+	cl_assert(remote->url == NULL);
+	cl_assert(remote->pushurl == NULL);
+
 	cl_git_fail(git_remote_connect(remote, GIT_DIRECTION_FETCH));
 
 	git_remote_free(remote);
+}
+
+void test_network_remote_remotes__returns_ENOTFOUND_when_neither_url_nor_pushurl(void)
+{
+	git_remote *remote = NULL;
+
+	cl_git_fail_with(
+		git_remote_load(&remote, _repo, "no-remote-url"), GIT_ENOTFOUND);
 }
 
 void test_network_remote_remotes__check_structure_version(void)
