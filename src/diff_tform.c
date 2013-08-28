@@ -859,9 +859,9 @@ find_best_matches:
 				}
 
 				/* write new mapping */
-				tgt2src[t].idx = s;
+				tgt2src[t].idx = (uint32_t)s;
 				tgt2src[t].similarity = (uint32_t)similarity;
-				src2tgt[s].idx = t;
+				src2tgt[s].idx = (uint32_t)t;
 				src2tgt[s].similarity = (uint32_t)similarity;
 			}
 
@@ -869,7 +869,7 @@ find_best_matches:
 			if (tgt2src_copy != NULL &&
 				tgt2src_copy[t].similarity < (uint32_t)similarity)
 			{
-				tgt2src_copy[t].idx = s;
+				tgt2src_copy[t].idx = (uint32_t)s;
 				tgt2src_copy[t].similarity = (uint32_t)similarity;
 			}
 
