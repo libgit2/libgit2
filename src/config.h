@@ -49,4 +49,7 @@ extern int git_config_rename_section(
  */
 extern int git_config_file__ondisk(struct git_config_backend **out, const char *path);
 
+extern int git_config__normalize_name(const char *in, char **out);
+
+
 #endif
