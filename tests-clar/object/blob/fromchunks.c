@@ -41,11 +41,15 @@ void test_object_blob_fromchunks__can_create_a_blob_from_a_in_memory_chunk_provi
 
 	cl_git_pass(git_oid_fromstr(&expected_oid, "321cbdf08803c744082332332838df6bd160f8f9"));
 
-	cl_git_fail(git_object_lookup(&blob, repo, &expected_oid, GIT_OBJ_ANY));
+	cl_git_fail_with(
+		git_object_lookup(&blob, repo, &expected_oid, GIT_OBJ_ANY),
+		GIT_ENOTFOUND);
 
 	cl_git_pass(git_blob_create_fromchunks(&oid, repo, NULL, text_chunked_source_cb, &howmany));
 
 	cl_git_pass(git_object_lookup(&blob, repo, &expected_oid, GIT_OBJ_ANY));
+	cl_assert(git_oid_cmp(&expected_oid, git_object_id(blob)) == 0);
+
 	git_object_free(blob);
 }
 
