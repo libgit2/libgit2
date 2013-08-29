@@ -1500,7 +1500,7 @@ int git_repository_is_empty(git_repository *repo)
 	if (git_reference_lookup(&head, repo, GIT_HEAD_FILE) < 0)
 		return -1;
 
-	if (!((error = git_reference_type(head)) == GIT_REF_SYMBOLIC))
+	if (!(error = (git_reference_type(head) == GIT_REF_SYMBOLIC)))
 		goto cleanup;
 
 	if (!(error = (strcmp(
