@@ -900,6 +900,10 @@ int git_odb_stream_write(git_odb_stream *stream, const char *buffer, size_t len)
 int git_odb_stream_finalize_write(git_oid *out, git_odb_stream *stream)
 {
 	git_hash_final(out, stream->hash_ctx);
+
+	if (git_odb_exists(stream->backend->odb, out))
+		return 0;
+
 	return stream->finalize_write(stream, out);
 }
 

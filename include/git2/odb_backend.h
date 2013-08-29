@@ -92,6 +92,10 @@ struct git_odb_stream {
 	/**
 	 * Store the contents of the stream as an object with the id
 	 * specified in `oid`.
+	 *
+	 * This method will *not* be invoked by libgit2 if the object pointed at
+	 * by `oid` already exists in any backend. Libgit2 will however take care
+	 * of properly disposing the stream through a call to `free()`.
 	 */
 	int (*finalize_write)(git_odb_stream *stream, const git_oid *oid);
 

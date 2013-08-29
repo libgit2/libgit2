@@ -781,13 +781,6 @@ static int loose_backend__stream_fwrite(git_odb_stream *_stream, const git_oid *
 	if (object_file_name(&final_path, backend, oid) < 0 ||
 		object_mkdir(&final_path, backend) < 0)
 		error = -1;
-	/*
-	 * Don't try to add an existing object to the repository. This
-	 * is what git does and allows us to sidestep the fact that
-	 * we're not allowed to overwrite a read-only file on Windows.
-	 */
-	else if (git_path_exists(final_path.ptr) == true)
-		git_filebuf_cleanup(&stream->fbuf);
 	else
 		error = git_filebuf_commit_at(
 			&stream->fbuf, final_path.ptr, GIT_OBJECT_FILE_MODE);
