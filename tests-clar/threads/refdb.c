@@ -130,7 +130,7 @@ static void *delete_refs(void *arg)
 
 		if (!git_reference_lookup(&ref, g_repo, name)) {
 			cl_git_pass(git_reference_delete(ref));
-			git_reference_delete(ref);
+			git_reference_free(ref);
 		}
 
 		if (i == 5) {
