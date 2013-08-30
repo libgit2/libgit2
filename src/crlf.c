@@ -107,8 +107,10 @@ static int crlf_load_attributes(
 	return -1;
 }
 
-static int has_cr_in_index(git_repository *repo, const char *path)
+static int has_cr_in_index(const git_filter_source *src)
 {
+	git_repository *repo = git_filter_source_repo(src);
+	const char *path = git_filter_source_path(src);
 	git_index *index;
 	const git_index_entry *entry;
 	git_blob *blob;
@@ -180,7 +182,7 @@ static int crlf_apply_to_odb(
 			 * If the file in the index has any CR in it, do not convert.
 			 * This is the new safer autocrlf handling.
 			 */
-			if (has_cr_in_index(src->repo, src->path))
+			if (has_cr_in_index(src))
 				return GIT_ENOTFOUND;
 		}
 
@@ -290,7 +292,9 @@ static int crlf_check(
 	GIT_UNUSED(mode);
 
 	/* Load gitattributes for the path */
-	if ((error = crlf_load_attributes(&ca, src->repo, src->path)) < 0)
+	error = crlf_load_attributes(
+		&ca, git_filter_source_repo(src), git_filter_source_path(src));
+	if (error < 0)
 		return error;
 
 	/*
@@ -303,8 +307,9 @@ static int crlf_check(
 		return GIT_ENOTFOUND;
 
 	if (ca.crlf_action == GIT_CRLF_GUESS) {
-		if ((error = git_repository__cvar(
-				&ca.auto_crlf, src->repo, GIT_CVAR_AUTO_CRLF)) < 0)
+		error = git_repository__cvar(
+			&ca.auto_crlf, git_filter_source_repo(src), GIT_CVAR_AUTO_CRLF);
+		if (error < 0)
 			return error;
 
 		if (ca.auto_crlf == GIT_AUTO_CRLF_FALSE)

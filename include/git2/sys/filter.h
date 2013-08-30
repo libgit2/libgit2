@@ -22,12 +22,29 @@ GIT_BEGIN_DECL
  * A filter source represents a file/blob to be processed
  */
 typedef struct git_filter_source git_filter_source;
-struct git_filter_source {
-	git_repository *repo;
-	const char     *path;
-	git_oid         oid;  /* zero if unknown (which is likely) */
-	uint16_t        filemode; /* zero if unknown */
-};
+
+/**
+ * Get the repository that the source data is coming from.
+ */
+GIT_EXTERN(git_repository *) git_filter_source_repo(const git_filter_source *src);
+
+/**
+ * Get the path that the source data is coming from.
+ */
+GIT_EXTERN(const char *) git_filter_source_path(const git_filter_source *src);
+
+/**
+ * Get the file mode of the source file
+ * If the mode is unknown, this will return 0
+ */
+GIT_EXTERN(uint16_t) git_filter_source_filemode(const git_filter_source *src);
+
+/**
+ * Get the OID of the source
+ * If the OID is unknown (often the case with GIT_FILTER_CLEAN) then
+ * this will return NULL.
+ */
+GIT_EXTERN(const git_oid *) git_filter_source_id(const git_filter_source *src);
 
 /**
  * Callback to actually perform the data filtering

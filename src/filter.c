@@ -13,6 +13,13 @@
 #include "git2/config.h"
 #include "blob.h"
 
+struct git_filter_source {
+	git_repository *repo;
+	const char     *path;
+	git_oid         oid;  /* zero if unknown (which is likely) */
+	uint16_t        filemode; /* zero if unknown */
+};
+
 typedef struct {
 	git_filter *filter;
 	void *payload;
@@ -31,6 +38,26 @@ typedef struct {
 } git_filter_def;
 
 static git_array_t(git_filter_def) filter_registry = GIT_ARRAY_INIT;
+
+git_repository *git_filter_source_repo(const git_filter_source *src)
+{
+	return src->repo;
+}
+
+const char *git_filter_source_path(const git_filter_source *src)
+{
+	return src->path;
+}
+
+uint16_t git_filter_source_filemode(const git_filter_source *src)
+{
+	return src->filemode;
+}
+
+const git_oid *git_filter_source_id(const git_filter_source *src)
+{
+	return git_oid_iszero(&src->oid) ? NULL : &src->oid;
+}
 
 static int filter_load_defaults(void)
 {
