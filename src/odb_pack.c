@@ -342,7 +342,7 @@ static int pack_backend__refresh(git_odb_backend *_backend)
 	return 0;
 }
 
-static int pack_backend__read_header(
+static int pack_backend__read_header_internal(
 	size_t *len_p, git_otype *type_p,
 	struct git_odb_backend *backend, const git_oid *oid)
 {
@@ -357,7 +357,24 @@ static int pack_backend__read_header(
 	return git_packfile_resolve_header(len_p, type_p, e.p, e.offset);
 }
 
-static int pack_backend__read(
+static int pack_backend__read_header(
+	size_t *len_p, git_otype *type_p,
+	struct git_odb_backend *backend, const git_oid *oid)
+{
+	int error;
+
+	error = pack_backend__read_header_internal(len_p, type_p, backend, oid);
+
+	if (error != GIT_ENOTFOUND)
+		return error;
+
+	if ((error = pack_backend__refresh(backend)) < 0)
+		return error;
+
+	return pack_backend__read_header_internal(len_p, type_p, backend, oid);
+}
+
+static int pack_backend__read_internal(
 	void **buffer_p, size_t *len_p, git_otype *type_p,
 	git_odb_backend *backend, const git_oid *oid)
 {
@@ -376,7 +393,24 @@ static int pack_backend__read(
 	return 0;
 }
 
-static int pack_backend__read_prefix(
+static int pack_backend__read(
+	void **buffer_p, size_t *len_p, git_otype *type_p,
+	git_odb_backend *backend, const git_oid *oid)
+{
+	int error;
+
+	error = pack_backend__read_internal(buffer_p, len_p, type_p, backend, oid);
+
+	if (error != GIT_ENOTFOUND)
+		return error;
+
+	if ((error = pack_backend__refresh(backend)) < 0)
+		return error;
+
+	return pack_backend__read_internal(buffer_p, len_p, type_p, backend, oid);
+}
+
+static int pack_backend__read_prefix_internal(
 	git_oid *out_oid,
 	void **buffer_p,
 	size_t *len_p,
@@ -413,9 +447,45 @@ static int pack_backend__read_prefix(
 	return error;
 }
 
+static int pack_backend__read_prefix(
+	git_oid *out_oid,
+	void **buffer_p,
+	size_t *len_p,
+	git_otype *type_p,
+	git_odb_backend *backend,
+	const git_oid *short_oid,
+	size_t len)
+{
+	int error;
+
+	error = pack_backend__read_prefix_internal(
+		out_oid, buffer_p, len_p, type_p, backend, short_oid, len);
+
+	if (error != GIT_ENOTFOUND)
+		return error;
+
+	if ((error = pack_backend__refresh(backend)) < 0)
+		return error;
+
+	return pack_backend__read_prefix_internal(
+		out_oid, buffer_p, len_p, type_p, backend, short_oid, len);
+}
+
 static int pack_backend__exists(git_odb_backend *backend, const git_oid *oid)
 {
 	struct git_pack_entry e;
+	int error;
+
+	error = pack_entry_find(&e, (struct pack_backend *)backend, oid);
+
+	if (error != GIT_ENOTFOUND)
+		return error == 0;
+
+	if ((error = pack_backend__refresh(backend)) < 0) {
+		giterr_clear();
+		return (int)false;
+	}
+
 	return pack_entry_find(&e, (struct pack_backend *)backend, oid) == 0;
 }
 

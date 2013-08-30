@@ -64,6 +64,16 @@ struct git_odb_backend {
 	int (* exists)(
 		git_odb_backend *, const git_oid *);
 
+	/**
+	 * If the backend implements a refreshing mechanism, it should be exposed
+	 * through this endpoint. Each call to `git_odb_refresh()` will invoke it.
+	 *
+	 * However, the backend implementation should try to stay up-to-date as much
+	 * as possible by itself as libgit2 will not automatically invoke
+	 * `git_odb_refresh()`. For instance, a potential strategy for the backend
+	 * implementation to achieve this could be to internally invoke this
+	 * endpoint on failed lookups (ie. `exists()`, `read()`, `read_header()`).
+	 */
 	int (* refresh)(git_odb_backend *);
 
 	int (* foreach)(
