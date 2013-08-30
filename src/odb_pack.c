@@ -342,8 +342,9 @@ static int pack_backend__refresh(git_odb_backend *_backend)
 	return 0;
 }
 
-
-static int pack_backend__read_header(size_t *len_p, git_otype *type_p, struct git_odb_backend *backend, const git_oid *oid)
+static int pack_backend__read_header(
+	size_t *len_p, git_otype *type_p,
+	struct git_odb_backend *backend, const git_oid *oid)
 {
 	struct git_pack_entry e;
 	int error;
@@ -356,7 +357,9 @@ static int pack_backend__read_header(size_t *len_p, git_otype *type_p, struct gi
 	return git_packfile_resolve_header(len_p, type_p, e.p, e.offset);
 }
 
-static int pack_backend__read(void **buffer_p, size_t *len_p, git_otype *type_p, git_odb_backend *backend, const git_oid *oid)
+static int pack_backend__read(
+	void **buffer_p, size_t *len_p, git_otype *type_p,
+	git_odb_backend *backend, const git_oid *oid)
 {
 	struct git_pack_entry e;
 	git_rawobj raw;
