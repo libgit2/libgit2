@@ -622,7 +622,7 @@ attempt_lookup:
 		backend_internal *internal = git_vector_get(&db->backends, i);
 		git_odb_backend *b = internal->backend;
 
-		if (b->exists != NULL)
+		if (b->exists != NULL && (!refreshed || b->refresh))
 			found = b->exists(b, id);
 	}
 
@@ -717,7 +717,7 @@ attempt_lookup:
 		backend_internal *internal = git_vector_get(&db->backends, i);
 		git_odb_backend *b = internal->backend;
 
-		if (b->read != NULL) {
+		if (b->read != NULL && (!refreshed || b->refresh)) {
 			++reads;
 			error = b->read(&raw.data, &raw.len, &raw.type, b, id);
 		}
@@ -774,7 +774,7 @@ attempt_lookup:
 		backend_internal *internal = git_vector_get(&db->backends, i);
 		git_odb_backend *b = internal->backend;
 
-		if (b->read_prefix != NULL) {
+		if (b->read_prefix != NULL && (!refreshed || b->refresh)) {
 			git_oid full_oid;
 			error = b->read_prefix(&full_oid, &raw.data, &raw.len, &raw.type, b, short_id, len);
 			if (error == GIT_ENOTFOUND || error == GIT_PASSTHROUGH)
