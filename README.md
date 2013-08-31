@@ -124,7 +124,7 @@ Here are the bindings to libgit2 that are currently available:
 * Erlang
     * Geef <https://github.com/carlosmn/geef>
 * Go
-    * go-git <https://github.com/str1ngs/go-git>
+    * git2go <https://github.com/libgit2/git2go>
 * GObject
     * libgit2-glib <https://live.gnome.org/Libgit2-glib>
 * Haskell
