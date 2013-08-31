@@ -122,7 +122,7 @@ Here are the bindings to libgit2 that are currently available:
 * Delphi
     * GitForDelphi <https://github.com/libgit2/GitForDelphi>
 * Erlang
-    * Geef <https://github.com/schacon/geef>
+    * Geef <https://github.com/carlosmn/geef>
 * Go
     * go-git <https://github.com/str1ngs/go-git>
 * GObject
