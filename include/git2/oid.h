@@ -241,13 +241,13 @@ GIT_EXTERN(git_oid_shorten *) git_oid_shorten_new(size_t min_length);
  * or freed.
  *
  * For performance reasons, there is a hard-limit of how many
- * OIDs can be added to a single set (around ~22000, assuming
+ * OIDs can be added to a single set (around ~32000, assuming
  * a mostly randomized distribution), which should be enough
  * for any kind of program, and keeps the algorithm fast and
  * memory-efficient.
  *
  * Attempting to add more than those OIDs will result in a
- * GIT_ENOMEM error
+ * GITERR_INVALID error
  *
  * @param os a `git_oid_shorten` instance
  * @param text_id an OID in text form

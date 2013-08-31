@@ -369,8 +369,10 @@ int git_oid_shorten_add(git_oid_shorten *os, const char *text_oid)
 	bool is_leaf;
 	node_index idx;
 
-	if (os->full)
+	if (os->full) {
+		giterr_set(GITERR_INVALID, "Unable to shorten OID - OID set full");
 		return -1;
+	}
 
 	if (text_oid == NULL)
 		return os->min_length;
@@ -396,12 +398,19 @@ int git_oid_shorten_add(git_oid_shorten *os, const char *text_oid)
 			node->tail = NULL;
 
 			node = push_leaf(os, idx, git__fromhex(tail[0]), &tail[1]);
-			GITERR_CHECK_ALLOC(node);
+			if (node == NULL) {
+				if (os->full)
+					giterr_set(GITERR_INVALID, "Unable to shorten OID - OID set full");
+				return -1;
+			}
 		}
 
 		if (node->children[c] == 0) {
-			if (push_leaf(os, idx, c, &text_oid[i + 1]) == NULL)
+			if (push_leaf(os, idx, c, &text_oid[i + 1]) == NULL) {
+				if (os->full)
+					giterr_set(GITERR_INVALID, "Unable to shorten OID - OID set full");
 				return -1;
+			}
 			break;
 		}
 
