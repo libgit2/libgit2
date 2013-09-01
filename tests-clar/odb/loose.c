@@ -3,6 +3,11 @@
 #include "posix.h"
 #include "loose_data.h"
 
+#ifdef __ANDROID_API__
+# define S_IREAD        S_IRUSR
+# define S_IWRITE       S_IWUSR
+#endif
+
 static void write_object_files(object_data *d)
 {
 	int fd;
