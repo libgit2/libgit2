@@ -29,6 +29,8 @@ OPTION( PROFILE				"Generate profiling information"		OFF )
 OPTION( ENABLE_TRACE		"Enables tracing support"				OFF )
 OPTION( LIBGIT2_FILENAME	"Name of the produced binary" OFF )
 
+OPTION( ANDROID				"Build for android NDK" OFF )
+
 IF(MSVC)
 	# This option is only available when building with MSVC. By default, libgit2
 	# is build using the cdecl calling convention, which is useful if you're
@@ -127,7 +129,7 @@ IF (ENABLE_TRACE STREQUAL "ON")
 ENDIF()
 
 # Include POSIX regex when it is required
-IF(WIN32 OR AMIGA)
+IF(WIN32 OR AMIGA OR ANDROID)
 	INCLUDE_DIRECTORIES(deps/regex)
 	SET(SRC_REGEX deps/regex/regex.c)
 ENDIF()
@@ -409,7 +411,7 @@ ENDIF ()
 IF (BUILD_EXAMPLES)
 	FILE(GLOB_RECURSE EXAMPLE_SRC examples/network/*.c examples/network/*.h)
 	ADD_EXECUTABLE(cgit2 ${EXAMPLE_SRC})
-	IF(WIN32)
+	IF(WIN32 OR ANDROID)
 		TARGET_LINK_LIBRARIES(cgit2 git2)
 	ELSE()
 		TARGET_LINK_LIBRARIES(cgit2 git2 pthread)
