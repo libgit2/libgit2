@@ -426,4 +426,19 @@ IF (BUILD_EXAMPLES)
 
 	ADD_EXECUTABLE(git-rev-list examples/rev-list.c)
 	TARGET_LINK_LIBRARIES(git-rev-list git2)
+
+	ADD_EXECUTABLE(git-rev-parse examples/rev-parse.c)
+	TARGET_LINK_LIBRARIES(git-rev-parse git2)
+
+	ADD_EXECUTABLE(git-log examples/log.c)
+	TARGET_LINK_LIBRARIES(git-log git2)
+
+	ADD_EXECUTABLE(git-status examples/status.c)
+	TARGET_LINK_LIBRARIES(git-status git2)
+
+	ADD_EXECUTABLE(git-init examples/init.c)
+	TARGET_LINK_LIBRARIES(git-init git2)
+
+	ADD_EXECUTABLE(git-cat-file examples/cat-file.c)
+	TARGET_LINK_LIBRARIES(git-cat-file git2)
 ENDIF ()
