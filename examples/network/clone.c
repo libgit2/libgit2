@@ -9,19 +9,6 @@
 # include <unistd.h>
 #endif
 
-/* Shamelessly borrowed from http://stackoverflow.com/questions/3417837/
- * with permission of the original author, Martin Pool.
- * http://sourcefrog.net/weblog/software/languages/C/unused.html
- */
-#ifdef UNUSED
-#elif defined(__GNUC__)
-# define UNUSED(x) UNUSED_ ## x __attribute__((unused))
-#elif defined(__LCLINT__)
-# define UNUSED(x) /*@unused@*/ x
-#else
-# define UNUSED(x) x
-#endif
-
 typedef struct progress_data {
 	git_transfer_progress fetch_progress;
 	size_t completed_steps;
@@ -63,24 +50,6 @@ static void checkout_progress(const char *path, size_t cur, size_t tot, void *pa
 	print_progress(pd);
 }
 
-static int cred_acquire(git_cred **out,
-		const char * UNUSED(url),
-		const char * UNUSED(username_from_url),
-		unsigned int UNUSED(allowed_types),
-		void * UNUSED(payload))
-{
-	char username[128] = {0};
-	char password[128] = {0};
-
-	printf("Username: ");
-	scanf("%s", username);
-
-	/* Yup. Right there on your terminal. Careful where you copy/paste output. */
-	printf("Password: ");
-	scanf("%s", password);
-
-	return git_cred_userpass_plaintext_new(out, username, password);
-}
 
 int do_clone(git_repository *repo, int argc, char **argv)
 {
@@ -107,7 +76,7 @@ int do_clone(git_repository *repo, int argc, char **argv)
 	clone_opts.checkout_opts = checkout_opts;
 	clone_opts.fetch_progress_cb = &fetch_progress;
 	clone_opts.fetch_progress_payload = &pd;
-	clone_opts.cred_acquire_cb = cred_acquire;
+	clone_opts.cred_acquire_cb = cred_acquire_cb;
 
 	// Do the clone
 	error = git_clone(&cloned_repo, url, path, &clone_opts);

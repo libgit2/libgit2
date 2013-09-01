@@ -27,6 +27,7 @@ static int use_remote(git_repository *repo, char *name)
 			goto cleanup;
 	}
 
+	git_remote_set_cred_acquire_cb(remote, &cred_acquire_cb, NULL);
 
 	error = git_remote_connect(remote, GIT_DIRECTION_FETCH);
 	if (error < 0)

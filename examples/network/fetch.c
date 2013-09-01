@@ -92,6 +92,7 @@ int fetch(git_repository *repo, int argc, char **argv)
 	callbacks.update_tips = &update_cb;
 	callbacks.progress = &progress_cb;
 	git_remote_set_callbacks(remote, &callbacks);
+	git_remote_set_cred_acquire_cb(remote, &cred_acquire_cb, NULL);
 
 	// Set up the information for the background worker thread
 	data.remote = remote;
