@@ -188,8 +188,7 @@ GIT_EXTERN(int) git_oid_ncmp(const git_oid *a, const git_oid *b, size_t len);
  *
  * @param id oid structure.
  * @param str input hex string of an object id.
- * @return GIT_ENOTOID if str is not a valid hex string,
- * 0 in case of a match, GIT_ERROR otherwise.
+ * @return 0 in case of a match, -1 otherwise.
  */
 GIT_EXTERN(int) git_oid_streq(const git_oid *id, const char *str);
 
