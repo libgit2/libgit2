@@ -711,7 +711,7 @@ void git__qsort_r(
 	void *els, size_t nel, size_t elsize, git__sort_r_cmp cmp, void *payload)
 {
 #if defined(__MINGW32__) || defined(__OpenBSD__) || defined(AMIGA) || \
-	defined(__gnu_hurd__) || \
+	defined(__gnu_hurd__) || defined(__ANDROID_API__) || \
 	(__GLIBC__ == 2 && __GLIBC_MINOR__ < 8)
 	git__insertsort_r(els, nel, elsize, NULL, cmp, payload);
 #elif defined(GIT_WIN32)
