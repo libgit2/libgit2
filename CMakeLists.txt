@@ -441,4 +441,7 @@ IF (BUILD_EXAMPLES)
 
 	ADD_EXECUTABLE(git-cat-file examples/cat-file.c)
 	TARGET_LINK_LIBRARIES(git-cat-file git2)
+
+	ADD_EXECUTABLE(git-add examples/add.c)
+	TARGET_LINK_LIBRARIES(git-add git2)
 ENDIF ()
