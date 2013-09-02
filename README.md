@@ -108,6 +108,28 @@ See [the wiki]
 (https://github.com/libgit2/libgit2/wiki/Building-libgit2-on-Windows)
 for more detailed instructions.
 
+Android
+-------
+
+Extract toolchain from NDK using, `make-standalone-toolchain.sh` script.
+Optionaly, crosscompile and install OpenSSL inside of it. Then create CMake
+toolchain file that configures paths to your crosscompiler (substitude `{PATH}`
+with full path to the toolchain):
+
+	SET(CMAKE_SYSTEM_NAME Linux)
+	SET(CMAKE_SYSTEM_VERSION Android)
+	
+	SET(CMAKE_C_COMPILER   {PATH}/bin/arm-linux-androideabi-gcc)
+	SET(CMAKE_CXX_COMPILER {PATH}/bin/arm-linux-androideabi-g++)
+	SET(CMAKE_FIND_ROOT_PATH {PATH}/sysroot/)
+	
+	SET(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
+	SET(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
+	SET(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
+
+Add `-DCMAKE_TOOLCHAIN_FILE={pathToToolchainFile} -DANDROID=1` to cmake command
+when configuring.
+
 Language Bindings
 ==================================
 
