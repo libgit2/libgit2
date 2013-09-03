@@ -1235,3 +1235,52 @@ void test_diff_rename__unmodified_can_be_renamed(void)
 	git_index_free(index);
 	git_tree_free(tree);
 }
+
+void test_diff_rename__rewrite_on_single_file(void)
+{
+	git_index *index;
+	git_diff_list *diff = NULL;
+	diff_expects exp;
+	git_diff_options diffopts = GIT_DIFF_OPTIONS_INIT;
+	git_diff_find_options findopts = GIT_DIFF_FIND_OPTIONS_INIT;
+
+	diffopts.flags = GIT_DIFF_INCLUDE_UNTRACKED;
+
+	findopts.flags = GIT_DIFF_FIND_FOR_UNTRACKED |
+		GIT_DIFF_FIND_AND_BREAK_REWRITES |
+		GIT_DIFF_FIND_RENAMES_FROM_REWRITES;
+
+	cl_git_pass(git_repository_index(&index, g_repo));
+
+	cl_git_rewritefile("renames/ikeepsix.txt",
+		"This is enough content for the file to be rewritten.\n" \
+		"This is enough content for the file to be rewritten.\n" \
+		"This is enough content for the file to be rewritten.\n" \
+		"This is enough content for the file to be rewritten.\n" \
+		"This is enough content for the file to be rewritten.\n" \
+		"This is enough content for the file to be rewritten.\n" \
+		"This is enough content for the file to be rewritten.\n" \
+		"This is enough content for the file to be rewritten.\n" \
+		"This is enough content for the file to be rewritten.\n" \
+		"This is enough content for the file to be rewritten.\n" \
+		"This is enough content for the file to be rewritten.\n" \
+		"This is enough content for the file to be rewritten.\n" \
+		"This is enough content for the file to be rewritten.\n" \
+		"This is enough content for the file to be rewritten.\n" \
+		"This is enough content for the file to be rewritten.\n" \
+		"This is enough content for the file to be rewritten.\n");
+
+	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, index, &diffopts));
+	cl_git_pass(git_diff_find_similar(diff, &findopts));
+
+	memset(&exp, 0, sizeof(exp));
+
+	cl_git_pass(git_diff_foreach(
+		diff, diff_file_cb, diff_hunk_cb, diff_line_cb, &exp));
+	cl_assert_equal_i(2, exp.files);
+	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_DELETED]);
+	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_UNTRACKED]);
+
+	git_diff_list_free(diff);
+	git_index_free(index);
+}
