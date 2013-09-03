@@ -646,12 +646,33 @@ int git_path_resolve_relative(git_buf *path, size_t ceiling)
 			/* do nothing with singleton dot */;
 
 		else if (len == 2 && from[0] == '.' && from[1] == '.') {
-			while (to > base && to[-1] == '/') to--;
-			while (to > base && to[-1] != '/') to--;
-		}
+			/* error out if trying to up one from a hard base */
+			if (to == base && ceiling != 0) {
+				giterr_set(GITERR_INVALID,
+					"Cannot strip root component off url");
+				return -1;
+			}
 
-		else {
-			if (*next == '/')
+			/* no more path segments to strip,
+			 * use '../' as a new base path */
+			if (to == base) {
+				if (*next == '/')
+					len++;
+
+				if (to != from)
+					memmove(to, from, len);
+
+				to += len;
+				/* this is now the base, can't back up from a
+				 * relative prefix */
+				base = to;
+			} else {
+				/* back up a path segment */
+				while (to > base && to[-1] == '/') to--;
+				while (to > base && to[-1] != '/') to--;
+			}
+		} else {
+			if (*next == '/' && *from != '/')
 				len++;
 
 			if (to != from)
