@@ -1495,24 +1495,20 @@ static int repo_contains_no_reference(git_repository *repo)
 int git_repository_is_empty(git_repository *repo)
 {
 	git_reference *head = NULL;
-	int error;
+	int is_empty = 0;
 
 	if (git_reference_lookup(&head, repo, GIT_HEAD_FILE) < 0)
 		return -1;
 
-	if (!((error = git_reference_type(head)) == GIT_REF_SYMBOLIC))
-		goto cleanup;
+	if (git_reference_type(head) == GIT_REF_SYMBOLIC)
+		is_empty =
+			(strcmp(git_reference_symbolic_target(head),
+					GIT_REFS_HEADS_DIR "master") == 0) &&
+			repo_contains_no_reference(repo);
 
-	if (!(error = (strcmp(
-		git_reference_symbolic_target(head),
-		GIT_REFS_HEADS_DIR "master") == 0)))
-			goto cleanup;
-
-	error = repo_contains_no_reference(repo);
-
-cleanup:
 	git_reference_free(head);
-	return error < 0 ? -1 : error;
+
+	return is_empty;
 }
 
 const char *git_repository_path(git_repository *repo)
