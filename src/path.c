@@ -242,8 +242,8 @@ int git_path_root(const char *path)
 
 #ifdef GIT_WIN32
 	/* Are we dealing with a windows network path? */
-	else if ((path[0] == '/' && path[1] == '/') ||
-		(path[0] == '\\' && path[1] == '\\'))
+	else if ((path[0] == '/' && path[1] == '/' && path[2] != '/') ||
+		(path[0] == '\\' && path[1] == '\\' && path[2] != '\\'))
 	{
 		offset += 2;
 
