@@ -489,7 +489,8 @@ void test_core_path__14_apply_relative(void)
 	git_buf_free(&p);
 }
 
-static inline void assert_resolve_relative(git_buf *buf, const char *expected, const char *path)
+static void assert_resolve_relative(
+	git_buf *buf, const char *expected, const char *path)
 {
 	cl_git_pass(git_buf_sets(buf, path));
 	cl_git_pass(git_path_resolve_relative(buf, 0));
