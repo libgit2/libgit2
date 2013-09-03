@@ -538,7 +538,6 @@ void test_core_path__15_resolve_relative(void)
 	assert_resolve_relative(&buf, "a/b/", "a/b/.");
 
 	assert_resolve_relative(&buf, "/a/b/c", "///a/b/c");
-	assert_resolve_relative(&buf, "/a/b/c", "//a/b/c");
 	assert_resolve_relative(&buf, "/", "////");
 	assert_resolve_relative(&buf, "/a", "///a");
 	assert_resolve_relative(&buf, "/", "///.");
@@ -564,6 +563,21 @@ void test_core_path__15_resolve_relative(void)
 
 	cl_git_pass(git_buf_sets(&buf, "////.."));
 	cl_git_fail(git_path_resolve_relative(&buf, 0));
+
+	/* things that start with Windows network paths */
+#ifdef GIT_WIN32
+	assert_resolve_relative(&buf, "//a/b/c", "//a/b/c");
+	assert_resolve_relative(&buf, "//a/", "//a/b/..");
+	assert_resolve_relative(&buf, "//a/b/c", "//a/Q/../b/x/y/../../c");
+
+	cl_git_pass(git_buf_sets(&buf, "//a/b/../.."));
+	cl_git_fail(git_path_resolve_relative(&buf, 0));
+#else
+	assert_resolve_relative(&buf, "/a/b/c", "//a/b/c");
+	assert_resolve_relative(&buf, "/a/", "//a/b/..");
+	assert_resolve_relative(&buf, "/a/b/c", "//a/Q/../b/x/y/../../c");
+	assert_resolve_relative(&buf, "/", "//a/b/../..");
+#endif
 
 	git_buf_free(&buf);
 }
