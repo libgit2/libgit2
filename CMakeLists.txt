@@ -409,38 +409,5 @@ IF (TAGS)
 ENDIF ()
 
 IF (BUILD_EXAMPLES)
-	FILE(GLOB_RECURSE EXAMPLE_SRC examples/network/*.c examples/network/*.h)
-	ADD_EXECUTABLE(cgit2 ${EXAMPLE_SRC})
-	IF(WIN32 OR ANDROID)
-		TARGET_LINK_LIBRARIES(cgit2 git2)
-	ELSE()
-		TARGET_LINK_LIBRARIES(cgit2 git2 pthread)
-	ENDIF()
-
-	ADD_EXECUTABLE(git-diff examples/diff.c)
-	TARGET_LINK_LIBRARIES(git-diff git2)
-
-	ADD_EXECUTABLE(git-general examples/general.c)
-	TARGET_LINK_LIBRARIES(git-general git2)
-
-	ADD_EXECUTABLE(git-showindex examples/showindex.c)
-	TARGET_LINK_LIBRARIES(git-showindex git2)
-
-	ADD_EXECUTABLE(git-rev-list examples/rev-list.c)
-	TARGET_LINK_LIBRARIES(git-rev-list git2)
-
-	ADD_EXECUTABLE(git-rev-parse examples/rev-parse.c)
-	TARGET_LINK_LIBRARIES(git-rev-parse git2)
-
-	ADD_EXECUTABLE(git-log examples/log.c)
-	TARGET_LINK_LIBRARIES(git-log git2)
-
-	ADD_EXECUTABLE(git-status examples/status.c)
-	TARGET_LINK_LIBRARIES(git-status git2)
-
-	ADD_EXECUTABLE(git-init examples/init.c)
-	TARGET_LINK_LIBRARIES(git-init git2)
-
-	ADD_EXECUTABLE(git-cat-file examples/cat-file.c)
-	TARGET_LINK_LIBRARIES(git-cat-file git2)
+	ADD_SUBDIRECTORY(examples)
 ENDIF ()
