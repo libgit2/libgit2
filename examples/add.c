@@ -67,7 +67,7 @@ int main (int argc, char** argv)
 	struct print_payload payload = {0};
 
 	if (argc < 2) {
-		fprintf(stderr, "usage: add file-spec [file-spec] [...]\n");
+		fprintf(stderr, "usage: add [-n|--dry-run] [-v|--verbose] file-spec [file-spec] [...]\n");
 		return 1;
 	}
 
