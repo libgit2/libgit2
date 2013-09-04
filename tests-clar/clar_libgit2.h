@@ -32,7 +32,7 @@ void cl_git_report_failure(int, const char *, int, const char *);
 #define cl_assert_at_line(expr,file,line) \
 	clar__assert((expr) != 0, file, line, "Expression is not true: " #expr, NULL, 1)
 
-#define cl_assert_equal_sz(sz1,sz2) cl_assert_equal_i((int)sz1, (int)(sz2))
+#define cl_assert_equal_sz(sz1,sz2) clar__assert_equal(__FILE__,__LINE__,#sz1 " != " #sz2, 1, PRIuZ, (size_t)(sz1), (size_t)(sz2))
 
 GIT_INLINE(void) clar__assert_in_range(
 	int lo, int val, int hi,

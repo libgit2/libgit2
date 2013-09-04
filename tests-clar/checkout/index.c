@@ -229,6 +229,7 @@ void test_checkout_index__options_dir_modes(void)
 	struct stat st;
 	git_oid oid;
 	git_commit *commit;
+	mode_t um;
 
 	cl_git_pass(git_reference_name_to_id(&oid, g_repo, "refs/heads/dir"));
 	cl_git_pass(git_commit_lookup(&commit, g_repo, &oid));
@@ -240,12 +241,15 @@ void test_checkout_index__options_dir_modes(void)
 
 	cl_git_pass(git_checkout_index(g_repo, NULL, &opts));
 
+	/* umask will influence actual directory creation mode */
+	(void)p_umask(um = p_umask(022));
+
 	cl_git_pass(p_stat("./testrepo/a", &st));
-	cl_assert_equal_i(st.st_mode & 0777, 0701);
+	cl_assert_equal_i_fmt(st.st_mode, GIT_FILEMODE_TREE | 0701 & ~um, "%07o");
 
 	/* File-mode test, since we're on the 'dir' branch */
 	cl_git_pass(p_stat("./testrepo/a/b.txt", &st));
-	cl_assert_equal_i(st.st_mode & 0777, 0755);
+	cl_assert_equal_i_fmt(st.st_mode, GIT_FILEMODE_BLOB_EXECUTABLE, "%07o");
 
 	git_commit_free(commit);
 #endif
@@ -263,7 +267,7 @@ void test_checkout_index__options_override_file_modes(void)
 	cl_git_pass(git_checkout_index(g_repo, NULL, &opts));
 
 	cl_git_pass(p_stat("./testrepo/new.txt", &st));
-	cl_assert_equal_i(st.st_mode & 0777, 0700);
+	cl_assert_equal_i_fmt(st.st_mode & 0777, 0700, "%07o");
 #endif
 }
 

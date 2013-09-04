@@ -10,10 +10,17 @@ enum repo_mode {
 };
 
 static git_repository *_repo = NULL;
+static mode_t _umask = 0;
 
 void test_repo_init__initialize(void)
 {
 	_repo = NULL;
+
+	/* load umask if not already loaded */
+	if (!_umask) {
+		_umask = p_umask(022);
+		(void)p_umask(_umask);
+	}
 }
 
 static void cleanup_repository(void *path)
@@ -377,14 +384,18 @@ static void assert_hooks_match(
 	cl_git_pass(git_buf_joinpath(&actual, repo_dir, hook_path));
 	cl_git_pass(git_path_lstat(actual.ptr, &st));
 
-	cl_assert(expected_st.st_size == st.st_size);
+	cl_assert_equal_sz(expected_st.st_size, st.st_size);
+
+	expected_st.st_mode =
+		(expected_st.st_mode & ~0777) |
+		(((expected_st.st_mode & 0111) ? 0100777 : 0100666) & ~_umask);
 
 	if (!core_filemode) {
 		expected_st.st_mode = expected_st.st_mode & ~0111;
 		st.st_mode = st.st_mode & ~0111;
 	}
 
-	cl_assert_equal_i((int)expected_st.st_mode, (int)st.st_mode);
+	cl_assert_equal_i_fmt(expected_st.st_mode, st.st_mode, "%07o");
 
 	git_buf_free(&expected);
 	git_buf_free(&actual);
