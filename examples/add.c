@@ -42,9 +42,7 @@ int print_matched_cb(const char *path, const char *matched_pathspec, void *paylo
 
 	if (status & GIT_STATUS_WT_MODIFIED ||
 	         status & GIT_STATUS_WT_NEW) {
-		if (p.options & VERBOSE || p.options & SKIP) {
-			printf("add '%s'\n", path);
-		}
+		printf("add '%s'\n", path);
 		ret = 0;
 	} else {
 		ret = 1;
@@ -120,7 +118,9 @@ int main (int argc, char** argv)
 		return 1;
 	}
 
-	matched_cb = &print_matched_cb;
+	if (options&VERBOSE || options&SKIP) {
+		matched_cb = &print_matched_cb;
+	}
 
 	payload.options = options;
 	payload.repo = repo;
