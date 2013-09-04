@@ -10,16 +10,16 @@ enum repo_mode {
 };
 
 static git_repository *_repo = NULL;
-static mode_t _umask = 0;
+static mode_t g_umask = 0;
 
 void test_repo_init__initialize(void)
 {
 	_repo = NULL;
 
 	/* load umask if not already loaded */
-	if (!_umask) {
-		_umask = p_umask(022);
-		(void)p_umask(_umask);
+	if (!g_umask) {
+		g_umask = p_umask(022);
+		(void)p_umask(g_umask);
 	}
 }
 
@@ -388,7 +388,7 @@ static void assert_hooks_match(
 
 	expected_st.st_mode =
 		(expected_st.st_mode & ~0777) |
-		(((expected_st.st_mode & 0111) ? 0100777 : 0100666) & ~_umask);
+		(((expected_st.st_mode & 0111) ? 0100777 : 0100666) & ~g_umask);
 
 	if (!core_filemode) {
 		expected_st.st_mode = expected_st.st_mode & ~0111;
