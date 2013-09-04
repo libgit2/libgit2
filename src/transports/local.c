@@ -361,7 +361,8 @@ static int local_push(
 	   non-bare repo push support would require checking configs to see if
 	   we should override the default 'don't let this happen' behavior */
 	if (!remote_repo->is_bare) {
-		error = -1;
+		error = GIT_EBAREREPO;
+		giterr_set(GITERR_INVALID, "Local push doesn't (yet) support pushing to non-bare repos.");
 		goto on_error;
 	}
 
