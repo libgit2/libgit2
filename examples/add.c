@@ -104,9 +104,6 @@ int main (int argc, char** argv)
 		}
 	}
 
-	printf("args:\n");
-	for(i=0; i<array.count; i++) {
-		printf(" - %s\n", array.strings[i]);
 	if (argc<=i) {
 		print_usage();
 		return 1;
