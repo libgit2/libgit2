@@ -24,28 +24,59 @@
 
 #	define _MAIN_CC __cdecl
 
-#	define stat(path, st) _stat(path, st)
-#	define mkdir(path, mode) _mkdir(path)
-#	define chdir(path) _chdir(path)
-#	define access(path, mode) _access(path, mode)
-#	define strdup(str) _strdup(str)
-#	define strcasecmp(a,b) _stricmp(a,b)
+#	ifndef stat
+#		define stat(path, st) _stat(path, st)
+#	endif
+#	ifndef mkdir
+#		define mkdir(path, mode) _mkdir(path)
+#	endif
+#	ifndef chdir
+#		define chdir(path) _chdir(path)
+#	endif
+#	ifndef access
+#		define access(path, mode) _access(path, mode)
+#	endif
+#	ifndef strdup
+#		define strdup(str) _strdup(str)
+#	endif
+#	ifndef strcasecmp
+#		define strcasecmp(a,b) _stricmp(a,b)
+#	endif
 
 #	ifndef __MINGW32__
 #		pragma comment(lib, "shell32")
-#		define strncpy(to, from, to_size) strncpy_s(to, to_size, from, _TRUNCATE)
-#		define W_OK 02
-#		define S_ISDIR(x) ((x & _S_IFDIR) != 0)
-#		define snprint_eq(buf,sz,fmt,...) _snprintf_s(buf,sz,_TRUNCATE,fmt,__VA_ARGS__)
+#		ifndef strncpy
+#			define strncpy(to, from, to_size) strncpy_s(to, to_size, from, _TRUNCATE)
+#		endif
+#		ifndef W_OK
+#			define W_OK 02
+#		endif
+#		ifndef S_ISDIR
+#			define S_ISDIR(x) ((x & _S_IFDIR) != 0)
+#		endif
+#		define p_snprintf(buf,sz,fmt,...) _snprintf_s(buf,sz,_TRUNCATE,fmt,__VA_ARGS__)
 #	else
-#		define snprint_eq snprintf
+#		define p_snprintf snprintf
+#	endif
+
+#	ifndef PRIuZ
+#		define PRIuZ "Iu"
+#	endif
+#	ifndef PRIxZ
+#		define PRIxZ "Ix"
 #	endif
 	typedef struct _stat STAT_T;
 #else
 #	include <sys/wait.h> /* waitpid(2) */
 #	include <unistd.h>
 #	define _MAIN_CC
-#	define snprint_eq snprintf
+#	define p_snprintf snprintf
+#	ifndef PRIuZ
+#		define PRIuZ "zu"
+#	endif
+#	ifndef PRIxZ
+#		define PRIxZ "zx"
+#	endif
 	typedef struct stat STAT_T;
 #endif
 
@@ -406,45 +437,66 @@ void clar__assert(
 	clar__fail(file, line, error_msg, description, should_abort);
 }
 
-void clar__assert_equal_s(
-	const char *s1,
-	const char *s2,
+void clar__assert_equal(
 	const char *file,
 	int line,
 	const char *err,
-	int should_abort)
+	int should_abort,
+	const char *fmt,
+	...)
 {
-	int match = (s1 == NULL || s2 == NULL) ? (s1 == s2) : (strcmp(s1, s2) == 0);
+	va_list args;
+	char buf[4096];
+	int is_equal = 1;
 
-	if (!match) {
-		char buf[4096];
+	va_start(args, fmt);
 
-		if (s1 && s2) {
-			int pos;
-			for (pos = 0; s1[pos] == s2[pos] && s1[pos] && s2[pos]; ++pos)
-				/* find differing byte offset */;
-			snprint_eq(buf, sizeof(buf), "'%s' != '%s' (at byte %d)", s1, s2, pos);
-		} else {
-			snprint_eq(buf, sizeof(buf), "'%s' != '%s'", s1, s2);
+	if (!strcmp("%s", fmt)) {
+		const char *s1 = va_arg(args, const char *);
+		const char *s2 = va_arg(args, const char *);
+		is_equal = (!s1 || !s2) ? (s1 == s2) : !strcmp(s1, s2);
+
+		if (!is_equal) {
+			if (s1 && s2) {
+				int pos;
+				for (pos = 0; s1[pos] == s2[pos] && s1[pos] && s2[pos]; ++pos)
+					/* find differing byte offset */;
+				p_snprintf(buf, sizeof(buf), "'%s' != '%s' (at byte %d)",
+					s1, s2, pos);
+			} else {
+				p_snprintf(buf, sizeof(buf), "'%s' != '%s'", s1, s2);
+			}
 		}
-
-		clar__fail(file, line, err, buf, should_abort);
 	}
-}
-
-void clar__assert_equal_i(
-	int i1,
-	int i2,
-	const char *file,
-	int line,
-	const char *err,
-	int should_abort)
-{
-	if (i1 != i2) {
-		char buf[128];
-		snprint_eq(buf, sizeof(buf), "%d != %d", i1, i2);
-		clar__fail(file, line, err, buf, should_abort);
+	else if (!strcmp(PRIuZ, fmt) || !strcmp(PRIxZ, fmt)) {
+		size_t sz1 = va_arg(args, size_t), sz2 = va_arg(args, size_t);
+		is_equal = (sz1 == sz2);
+		if (!is_equal) {
+			int offset = p_snprintf(buf, sizeof(buf), fmt, sz1);
+			strncat(buf, " != ", sizeof(buf) - offset);
+			p_snprintf(buf + offset + 4, sizeof(buf) - offset - 4, fmt, sz2);
+		}
 	}
+	else if (!strcmp("%p", fmt)) {
+		void *p1 = va_arg(args, void *), *p2 = va_arg(args, void *);
+		is_equal = (p1 == p2);
+		if (!is_equal)
+			p_snprintf(buf, sizeof(buf), "%p != %p", p1, p2);
+	}
+	else {
+		int i1 = va_arg(args, int), i2 = va_arg(args, int);
+		is_equal = (i1 == i2);
+		if (!is_equal) {
+			int offset = p_snprintf(buf, sizeof(buf), fmt, i1);
+			strncat(buf, " != ", sizeof(buf) - offset);
+			p_snprintf(buf + offset + 4, sizeof(buf) - offset - 4, fmt, i2);
+		}
+	}
+
+	va_end(args);
+
+	if (!is_equal)
+		clar__fail(file, line, err, buf, should_abort);
 }
 
 void cl_set_cleanup(void (*cleanup)(void *), void *opaque)

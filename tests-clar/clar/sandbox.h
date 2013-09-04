@@ -43,10 +43,8 @@ find_tmp_path(char *buffer, size_t length)
 	}
 
 #else
-	DWORD env_len;
-
-	if ((env_len = GetEnvironmentVariable("CLAR_TMP", buffer, length)) > 0 &&
-		env_len < length)
+	DWORD env_len = GetEnvironmentVariable("CLAR_TMP", buffer, (DWORD)length);
+	if (env_len > 0 && env_len < (DWORD)length)
 		return 0;
 
 	if (GetTempPath((DWORD)length, buffer))
