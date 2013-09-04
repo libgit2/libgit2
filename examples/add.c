@@ -6,6 +6,7 @@
 enum print_options {
 	SKIP = 1,
 	VERBOSE = 2,
+	UPDATE = 4,
 };
 
 struct print_payload {
@@ -67,7 +68,7 @@ int main (int argc, char** argv)
 	struct print_payload payload = {0};
 
 	if (argc < 2) {
-		fprintf(stderr, "usage: add [-n|--dry-run] [-v|--verbose] file-spec [file-spec] [...]\n");
+		fprintf(stderr, "usage: add [-n|--dry-run] [-v|--verbose] [-u|--update] file-spec [file-spec] [...]\n");
 		return 1;
 	}
 
@@ -80,6 +81,9 @@ int main (int argc, char** argv)
 		}
 		else if(!strcmp(argv[i], "--dry-run") || !strcmp(argv[i], "-n")) {
 			options |= SKIP;
+		}
+		else if(!strcmp(argv[i], "--update") || !strcmp(argv[i], "-u")) {
+			options |= UPDATE;
 		}
 		else if(!strcmp(argv[i], "--")) {
 			break;
@@ -111,7 +115,12 @@ int main (int argc, char** argv)
 
 	payload.options = options;
 	payload.repo = repo;
-	git_index_add_all(index, &array, 0, matched_cb, &payload);
+
+	if (options&UPDATE) {
+		git_index_update_all(index, &array, matched_cb, &payload);
+	} else {
+		git_index_add_all(index, &array, 0, matched_cb, &payload);
+	}
 
 	git_index_write(index);
 	git_index_free(index);
