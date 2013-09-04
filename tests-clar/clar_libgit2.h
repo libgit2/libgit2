@@ -88,5 +88,6 @@ int cl_git_remove_placeholders(const char *directory_path, const char *filename)
 
 /* config setting helpers */
 void cl_repo_set_bool(git_repository *repo, const char *cfg, int value);
+int cl_repo_get_bool(git_repository *repo, const char *cfg);
 
 #endif
