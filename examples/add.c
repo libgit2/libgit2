@@ -58,6 +58,15 @@ int print_matched_cb(const char *path, const char *matched_pathspec, void *paylo
 	return ret;
 }
 
+void print_usage(void)
+{
+	fprintf(stderr, "usage: add [options] [--] file-spec [file-spec] [...]\n\n");
+	fprintf(stderr, "\t-n, --dry-run    dry run\n");
+	fprintf(stderr, "\t-v, --verbose    be verbose\n");
+	fprintf(stderr, "\t-u, --update     update tracked files\n");
+}
+
+
 int main (int argc, char** argv)
 {
 	git_index_matched_path_cb matched_cb = NULL;
@@ -66,11 +75,6 @@ int main (int argc, char** argv)
 	git_strarray array = {0};
 	int i, options = 0;
 	struct print_payload payload = {0};
-
-	if (argc < 2) {
-		fprintf(stderr, "usage: add [-n|--dry-run] [-v|--verbose] [-u|--update] file-spec [file-spec] [...]\n");
-		return 1;
-	}
 
 	for (i = 1; i < argc; ++i) {
 		if (argv[i][0] != '-') {
@@ -85,21 +89,30 @@ int main (int argc, char** argv)
 		else if(!strcmp(argv[i], "--update") || !strcmp(argv[i], "-u")) {
 			options |= UPDATE;
 		}
+		else if(!strcmp(argv[i], "-h")) {
+			print_usage();
+			break;
+		}
 		else if(!strcmp(argv[i], "--")) {
+			i++;
 			break;
 		}
 		else {
 			fprintf(stderr, "Unsupported option %s.\n", argv[i]);
+			print_usage();
 			return 1;
 		}
 	}
-	
-	init_array(&array, argc-i, argv+i);
 
 	printf("args:\n");
 	for(i=0; i<array.count; i++) {
 		printf(" - %s\n", array.strings[i]);
+	if (argc<=i) {
+		print_usage();
+		return 1;
 	}
+
+	init_array(&array, argc-i, argv+i);
 
 	if (git_repository_open(&repo, ".") < 0) {
 		fprintf(stderr, "No git repository\n");
