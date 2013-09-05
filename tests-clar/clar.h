@@ -57,15 +57,17 @@ void cl_fixture_cleanup(const char *fixture_name);
 /**
  * Typed assertion macros
  */
-#define cl_assert_equal_s(s1,s2) clar__assert_equal_s((s1),(s2),__FILE__,__LINE__,"String mismatch: " #s1 " != " #s2, 1)
-#define cl_assert_equal_s_(s1,s2,note) clar__assert_equal_s((s1),(s2),__FILE__,__LINE__,"String mismatch: " #s1 " != " #s2 " (" #note ")", 1)
+#define cl_assert_equal_s(s1,s2) clar__assert_equal(__FILE__,__LINE__,"String mismatch: " #s1 " != " #s2, 1, "%s", (s1), (s2))
+#define cl_assert_equal_s_(s1,s2,note) clar__assert_equal(__FILE__,__LINE__,"String mismatch: " #s1 " != " #s2 " (" #note ")", 1, "%s", (s1), (s2))
 
-#define cl_assert_equal_i(i1,i2) clar__assert_equal_i((i1),(i2),__FILE__,__LINE__,#i1 " != " #i2, 1)
-#define cl_assert_equal_i_(i1,i2,note) clar__assert_equal_i((i1),(i2),__FILE__,__LINE__,#i1 " != " #i2 " (" #note ")", 1)
+#define cl_assert_equal_i(i1,i2) clar__assert_equal(__FILE__,__LINE__,#i1 " != " #i2, 1, "%d", (int)(i1), (int)(i2))
+#define cl_assert_equal_i_(i1,i2,note) clar__assert_equal(__FILE__,__LINE__,#i1 " != " #i2 " (" #note ")", 1, "%d", (i1), (i2))
+#define cl_assert_equal_i_fmt(i1,i2,fmt) clar__assert_equal(__FILE__,__LINE__,#i1 " != " #i2, 1, (fmt), (int)(i1), (int)(i2))
 
-#define cl_assert_equal_b(b1,b2) clar__assert_equal_i(!!(b1),!!(b2),__FILE__,__LINE__,#b1 " != " #b2, 1)
+#define cl_assert_equal_b(b1,b2) clar__assert_equal(__FILE__,__LINE__,#b1 " != " #b2, 1, "%d", (int)((b1) != 0),(int)((b2) != 0))
 
-#define cl_assert_equal_p(p1,p2) cl_assert((p1) == (p2))
+#define cl_assert_equal_p(p1,p2) clar__assert_equal(__FILE__,__LINE__,"Pointer mismatch: " #p1 " != " #p2, 1, "%p", (p1), (p2))
+
 
 void clar__fail(
 	const char *file,
@@ -82,7 +84,12 @@ void clar__assert(
 	const char *description,
 	int should_abort);
 
-void clar__assert_equal_s(const char *,const char *,const char *,int,const char *,int);
-void clar__assert_equal_i(int,int,const char *,int,const char *,int);
+void clar__assert_equal(
+	const char *file,
+	int line,
+	const char *err,
+	int should_abort,
+	const char *fmt,
+	...);
 
 #endif

@@ -110,7 +110,7 @@ git_off_t git_futils_filesize(git_file fd)
 mode_t git_futils_canonical_mode(mode_t raw_mode)
 {
 	if (S_ISREG(raw_mode))
-		return S_IFREG | GIT_CANONICAL_PERMS(raw_mode);
+		return S_IFREG | GIT_PERMS_CANONICAL(raw_mode);
 	else if (S_ISLNK(raw_mode))
 		return S_IFLNK;
 	else if (S_ISGITLINK(raw_mode))
@@ -972,7 +972,7 @@ static int _cp_r_callback(void *ref, git_buf *from)
 		mode_t usemode = from_st.st_mode;
 
 		if ((info->flags & GIT_CPDIR_SIMPLE_TO_MODE) != 0)
-			usemode = (usemode & 0111) ? 0777 : 0666;
+			usemode = GIT_PERMS_FOR_WRITE(usemode);
 
 		error = git_futils_cp(from->ptr, info->to.ptr, usemode);
 	}

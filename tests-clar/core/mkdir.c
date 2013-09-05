@@ -115,9 +115,9 @@ static void check_mode(mode_t expected, mode_t actual)
 {
 #ifdef GIT_WIN32
 	/* chmod on Win32 doesn't support exec bit, not group/world bits */
-	cl_assert((expected & 0600) == (actual & 0777));
+	cl_assert_equal_i_fmt((expected & 0600), (actual & 0777), "%07o");
 #else
-	cl_assert(expected == (actual & 0777));
+	cl_assert_equal_i_fmt(expected, (actual & 0777), "%07o");
 #endif
 }
 

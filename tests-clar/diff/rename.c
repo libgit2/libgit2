@@ -1100,7 +1100,6 @@ void test_diff_rename__can_rename_from_rewrite(void)
 {
 	git_index *index;
 	git_tree *tree;
-	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
 	git_diff_list *diff;
 	git_diff_options diffopts = GIT_DIFF_OPTIONS_INIT;
 	git_diff_find_options findopts = GIT_DIFF_FIND_OPTIONS_INIT;
@@ -1109,8 +1108,6 @@ void test_diff_rename__can_rename_from_rewrite(void)
 	const char *sources[] = { "ikeepsix.txt", "songof7cities.txt" };
 	const char *targets[] = { "songof7cities.txt", "this-is-a-rename.txt" };
 	struct rename_expected expect = { 2, status, sources, targets };
-
-	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
 
 	cl_git_pass(git_repository_index(&index, g_repo));
 

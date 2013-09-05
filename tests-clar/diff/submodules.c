@@ -39,8 +39,9 @@ static void check_diff_patches_at_line(
 
 		cl_git_pass(git_diff_patch_to_str(&patch_text, patch));
 
-		clar__assert_equal_s(expected[d], patch_text, file, line,
-			"expected diff did not match actual diff", 1);
+		clar__assert_equal(
+			file, line, "expected diff did not match actual diff", 1,
+			"%s", expected[d], patch_text);
 		git__free(patch_text);
 	}
 
