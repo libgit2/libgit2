@@ -132,8 +132,8 @@ static int build_fake_backend(
 
 static void setup_repository_and_backend(git_error_code error_code)
 {
-	git_odb *odb;
-	git_odb_backend *backend;
+	git_odb *odb = NULL;
+	git_odb_backend *backend = NULL;
 
 	_repo = cl_git_sandbox_init("testrepo.git");
 
