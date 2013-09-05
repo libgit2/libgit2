@@ -2,38 +2,8 @@
 #include "fileops.h"
 #include "stash_helpers.h"
 
-void commit_staged_files(
-	git_oid *commit_oid,
-	git_index *index,
-	git_signature *signature)
-{
-	git_tree *tree;
-	git_oid tree_oid;
-	git_repository *repo;
-
-	repo = git_index_owner(index);
-
-	cl_git_pass(git_index_write_tree(&tree_oid, index));
-
-	cl_git_pass(git_tree_lookup(&tree, repo, &tree_oid));
-
-	cl_git_pass(git_commit_create_v(
-		commit_oid,
-		repo,
-		"HEAD",
-		signature,
-		signature,
-		NULL,
-		"Initial commit",
-		tree,
-		0));
-
-	git_tree_free(tree);
-}
-
 void setup_stash(git_repository *repo, git_signature *signature)
 {
-	git_oid commit_oid;
 	git_index *index;
 
 	cl_git_pass(git_repository_index(&index, repo));
@@ -50,9 +20,8 @@ void setup_stash(git_repository *repo, git_signature *signature)
 	cl_git_pass(git_index_add_bypath(index, "how"));
 	cl_git_pass(git_index_add_bypath(index, "who"));
 	cl_git_pass(git_index_add_bypath(index, ".gitignore"));
-	cl_git_pass(git_index_write(index));
 
-	commit_staged_files(&commit_oid, index, signature);
+	cl_repo_commit_from_index(NULL, repo, signature, 0, "Initial commit");
 
 	cl_git_rewritefile("stash/what", "goodbye\n");			/* dd7e1c6f0fefe118f0b63d9f10908c460aa317a6 */
 	cl_git_rewritefile("stash/how", "not so small and\n");	/* e6d64adb2c7f3eb8feb493b556cc8070dca379a3 */

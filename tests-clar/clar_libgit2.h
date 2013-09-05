@@ -98,6 +98,14 @@ const char* cl_git_path_url(const char *path);
 /* Test repository cleaner */
 int cl_git_remove_placeholders(const char *directory_path, const char *filename);
 
+/* commit creation helpers */
+void cl_repo_commit_from_index(
+	git_oid *out,
+	git_repository *repo,
+	git_signature *sig,
+	git_time_t time,
+	const char *msg);
+
 /* config setting helpers */
 void cl_repo_set_bool(git_repository *repo, const char *cfg, int value);
 int cl_repo_get_bool(git_repository *repo, const char *cfg);

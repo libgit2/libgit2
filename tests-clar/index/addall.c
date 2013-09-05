@@ -120,37 +120,6 @@ static void check_stat_data(git_index *index, const char *path, bool match)
 	}
 }
 
-static void commit_index_to_head(
-	git_repository *repo,
-	const char *commit_message)
-{
-	git_index *index;
-	git_oid tree_id, commit_id;
-	git_tree *tree;
-	git_signature *sig;
-	git_commit *parent = NULL;
-
-	git_revparse_single((git_object **)&parent, repo, "HEAD");
-	/* it is okay if looking up the HEAD fails */
-
-	cl_git_pass(git_repository_index(&index, repo));
-	cl_git_pass(git_index_write_tree(&tree_id, index));
-	cl_git_pass(git_index_write(index)); /* not needed, but might as well */
-	git_index_free(index);
-
-	cl_git_pass(git_tree_lookup(&tree, repo, &tree_id));
-
-	cl_git_pass(git_signature_now(&sig, "Testy McTester", "tt@tester.test"));
-
-	cl_git_pass(git_commit_create_v(
-		&commit_id, repo, "HEAD", sig, sig,
-		NULL, commit_message, tree, parent ? 1 : 0, parent));
-
-	git_commit_free(parent);
-	git_tree_free(tree);
-	git_signature_free(sig);
-}
-
 void test_index_addall__repo_lifecycle(void)
 {
 	int error;
@@ -197,7 +166,7 @@ void test_index_addall__repo_lifecycle(void)
 	check_stat_data(index, "addall/file.zzz", true);
 	check_status(g_repo, 2, 0, 0, 3, 0, 0, 1);
 
-	commit_index_to_head(g_repo, "first commit");
+	cl_repo_commit_from_index(NULL, g_repo, NULL, 0, "first commit");
 	check_status(g_repo, 0, 0, 0, 3, 0, 0, 1);
 
 	/* attempt to add an ignored file - does nothing */
@@ -244,7 +213,7 @@ void test_index_addall__repo_lifecycle(void)
 	cl_git_pass(git_index_add_bypath(index, "file.zzz"));
 	check_status(g_repo, 1, 0, 1, 3, 0, 0, 0);
 
-	commit_index_to_head(g_repo, "second commit");
+	cl_repo_commit_from_index(NULL, g_repo, NULL, 0, "second commit");
 	check_status(g_repo, 0, 0, 0, 3, 0, 0, 0);
 
 	cl_must_pass(p_unlink("addall/file.zzz"));
