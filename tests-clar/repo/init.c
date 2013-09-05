@@ -10,10 +10,17 @@ enum repo_mode {
 };
 
 static git_repository *_repo = NULL;
+static mode_t g_umask = 0;
 
 void test_repo_init__initialize(void)
 {
 	_repo = NULL;
+
+	/* load umask if not already loaded */
+	if (!g_umask) {
+		g_umask = p_umask(022);
+		(void)p_umask(g_umask);
+	}
 }
 
 static void cleanup_repository(void *path)
@@ -263,7 +270,6 @@ void test_repo_init__reinit_doesnot_overwrite_ignorecase(void)
 
 void test_repo_init__reinit_overwrites_filemode(void)
 {
-	git_config *config;
 	int expected, current_value;
 
 #ifdef GIT_WIN32
@@ -284,13 +290,10 @@ void test_repo_init__reinit_overwrites_filemode(void)
 
 	/* Reinit the repository */
 	cl_git_pass(git_repository_init(&_repo, "overwrite.git", 1));
-	git_repository_config(&config, _repo);
 
 	/* Ensure the "core.filemode" config value has been reset */
-	cl_git_pass(git_config_get_bool(&current_value, config, "core.filemode"));
+	current_value = cl_repo_get_bool(_repo, "core.filemode");
 	cl_assert_equal_i(expected, current_value);
-
-	git_config_free(config);
 }
 
 void test_repo_init__sets_logAllRefUpdates_according_to_type_of_repository(void)
@@ -361,6 +364,8 @@ void test_repo_init__extended_1(void)
 	cl_fixture_cleanup("root");
 }
 
+#define CLEAR_FOR_CORE_FILEMODE(M) ((M) &= ~0177)
+
 static void assert_hooks_match(
 	const char *template_dir,
 	const char *repo_dir,
@@ -377,14 +382,20 @@ static void assert_hooks_match(
 	cl_git_pass(git_buf_joinpath(&actual, repo_dir, hook_path));
 	cl_git_pass(git_path_lstat(actual.ptr, &st));
 
-	cl_assert(expected_st.st_size == st.st_size);
+	cl_assert_equal_sz(expected_st.st_size, st.st_size);
 
-	if (!core_filemode) {
-		expected_st.st_mode = expected_st.st_mode & ~0111;
-		st.st_mode = st.st_mode & ~0111;
+	if (GIT_MODE_TYPE(expected_st.st_mode) != GIT_FILEMODE_LINK) {
+		mode_t expected_mode =
+			GIT_MODE_TYPE(expected_st.st_mode) |
+			(GIT_PERMS_FOR_WRITE(expected_st.st_mode) & ~g_umask);
+
+		if (!core_filemode) {
+			CLEAR_FOR_CORE_FILEMODE(expected_mode);
+			CLEAR_FOR_CORE_FILEMODE(st.st_mode);
+		}
+
+		cl_assert_equal_i_fmt(expected_mode, st.st_mode, "%07o");
 	}
-
-	cl_assert_equal_i((int)expected_st.st_mode, (int)st.st_mode);
 
 	git_buf_free(&expected);
 	git_buf_free(&actual);
@@ -402,24 +413,19 @@ static void assert_mode_seems_okay(
 	git_buf_free(&full);
 
 	if (!core_filemode) {
-		expect_mode = expect_mode & ~0111;
-		st.st_mode = st.st_mode & ~0111;
+		CLEAR_FOR_CORE_FILEMODE(expect_mode);
+		CLEAR_FOR_CORE_FILEMODE(st.st_mode);
 		expect_setgid = false;
 	}
 
-	if (S_ISGID != 0) {
-		if (expect_setgid)
-			cl_assert((st.st_mode & S_ISGID) != 0);
-		else
-			cl_assert((st.st_mode & S_ISGID) == 0);
-	}
+	if (S_ISGID != 0)
+		cl_assert_equal_b(expect_setgid, (st.st_mode & S_ISGID) != 0);
 
-	if ((expect_mode & 0111) != 0)
-		cl_assert((st.st_mode & 0111) != 0);
-	else
-		cl_assert((st.st_mode & 0111) == 0);
+	cl_assert_equal_b(
+		GIT_PERMS_IS_EXEC(expect_mode), GIT_PERMS_IS_EXEC(st.st_mode));
 
-	cl_assert((expect_mode & 0170000) == (st.st_mode & 0170000));
+	cl_assert_equal_i_fmt(
+		GIT_MODE_TYPE(expect_mode), GIT_MODE_TYPE(st.st_mode), "%07o");
 }
 
 void test_repo_init__extended_with_template(void)
@@ -427,6 +433,7 @@ void test_repo_init__extended_with_template(void)
 	git_buf expected = GIT_BUF_INIT;
 	git_buf actual = GIT_BUF_INIT;
 	git_repository_init_options opts = GIT_REPOSITORY_INIT_OPTIONS_INIT;
+	int filemode;
 
 	cl_set_cleanup(&cleanup_repository, "templated.git");
 
@@ -450,13 +457,15 @@ void test_repo_init__extended_with_template(void)
 	git_buf_free(&expected);
 	git_buf_free(&actual);
 
-	assert_hooks_match(
-		cl_fixture("template"), git_repository_path(_repo),
-		"hooks/update.sample", true);
+	filemode = cl_repo_get_bool(_repo, "core.filemode");
 
 	assert_hooks_match(
 		cl_fixture("template"), git_repository_path(_repo),
-		"hooks/link.sample", true);
+		"hooks/update.sample", filemode);
+
+	assert_hooks_match(
+		cl_fixture("template"), git_repository_path(_repo),
+		"hooks/link.sample", filemode);
 }
 
 void test_repo_init__extended_with_template_and_shared_mode(void)
@@ -464,7 +473,6 @@ void test_repo_init__extended_with_template_and_shared_mode(void)
 	git_buf expected = GIT_BUF_INIT;
 	git_buf actual = GIT_BUF_INIT;
 	git_repository_init_options opts = GIT_REPOSITORY_INIT_OPTIONS_INIT;
-	git_config *config;
 	int filemode = true;
 	const char *repo_path = NULL;
 
@@ -480,9 +488,7 @@ void test_repo_init__extended_with_template_and_shared_mode(void)
 	cl_assert(!git_repository_is_bare(_repo));
 	cl_assert(!git__suffixcmp(git_repository_path(_repo), "/init_shared_from_tpl/.git/"));
 
-	cl_git_pass(git_repository_config(&config, _repo));
-	cl_git_pass(git_config_get_bool(&filemode, config, "core.filemode"));
-	git_config_free(config);
+	filemode = cl_repo_get_bool(_repo, "core.filemode");
 
 	cl_git_pass(git_futils_readbuffer(
 		&expected, cl_fixture("template/description")));

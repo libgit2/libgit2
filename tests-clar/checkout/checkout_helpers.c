@@ -74,8 +74,8 @@ static void check_file_contents_internal(
 	if (strip_cr)
 		strip_cr_from_buf(&buf);
 
-	clar__assert_equal_i((int)expected_len, (int)buf.size, file, line, "strlen(expected_content) != strlen(actual_content)", 1);
-	clar__assert_equal_s(expected_content, buf.ptr, file, line, msg, 1);
+	clar__assert_equal(file, line, "strlen(expected_content) != strlen(actual_content)", 1, PRIuZ, expected_len, (size_t)buf.size);
+	clar__assert_equal(file, line, msg, 1, "%s", expected_content, buf.ptr);
 }
 
 void check_file_contents_at_line(

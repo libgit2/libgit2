@@ -344,3 +344,13 @@ void cl_repo_set_bool(git_repository *repo, const char *cfg, int value)
 	cl_git_pass(git_config_set_bool(config, cfg, value != 0));
 	git_config_free(config);
 }
+
+int cl_repo_get_bool(git_repository *repo, const char *cfg)
+{
+	int val = 0;
+	git_config *config;
+	cl_git_pass(git_repository_config(&config, repo));
+	cl_git_pass(git_config_get_bool(&val, config, cfg));;
+	git_config_free(config);
+	return val;
+}

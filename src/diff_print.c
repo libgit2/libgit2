@@ -7,7 +7,7 @@
 #include "common.h"
 #include "diff.h"
 #include "diff_patch.h"
-#include "buffer.h"
+#include "fileops.h"
 
 typedef struct {
 	git_diff_list *diff;
@@ -46,7 +46,7 @@ static char diff_pick_suffix(int mode)
 {
 	if (S_ISDIR(mode))
 		return '/';
-	else if (mode & 0100) /* -V536 */
+	else if (GIT_PERMS_IS_EXEC(mode)) /* -V536 */
 		/* in git, modes are very regular, so we must have 0100755 mode */
 		return '*';
 	else
