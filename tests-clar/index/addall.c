@@ -1,6 +1,7 @@
 #include "clar_libgit2.h"
 #include "../status/status_helpers.h"
 #include "posix.h"
+#include "fileops.h"
 
 git_repository *g_repo = NULL;
 
@@ -108,8 +109,10 @@ static void check_stat_data(git_index *index, const char *path, bool match)
 		cl_assert(st.st_size == entry->file_size);
 		cl_assert(st.st_uid  == entry->uid);
 		cl_assert(st.st_gid  == entry->gid);
-		cl_assert_equal_b(st.st_mode & ~0777, entry->mode & ~0777);
-		cl_assert_equal_b(st.st_mode &  0111, entry->mode &  0111);
+		cl_assert_equal_i_fmt(
+			GIT_MODE_TYPE(st.st_mode), GIT_MODE_TYPE(entry->mode), "%07o");
+		cl_assert_equal_b(
+			GIT_PERMS_EXECUTABLE(st.st_mode), GIT_PERMS_EXECUTABLE(entry->mode));
 	} else {
 		/* most things will still match */
 		cl_assert(st.st_size != entry->file_size);

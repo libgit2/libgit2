@@ -364,6 +364,8 @@ void test_repo_init__extended_1(void)
 	cl_fixture_cleanup("root");
 }
 
+#define CLEAR_FOR_CORE_FILEMODE(M) ((M) &= ~0177)
+
 static void assert_hooks_match(
 	const char *template_dir,
 	const char *repo_dir,
@@ -382,16 +384,18 @@ static void assert_hooks_match(
 
 	cl_assert_equal_sz(expected_st.st_size, st.st_size);
 
-	expected_st.st_mode =
-		(expected_st.st_mode & ~0777) |
-		(((expected_st.st_mode & 0111) ? 0100777 : 0100666) & ~g_umask);
+	if (GIT_MODE_TYPE(expected_st.st_mode) != GIT_FILEMODE_LINK) {
+		mode_t expected_mode =
+			GIT_MODE_TYPE(expected_st.st_mode) |
+			(GIT_PERMS_FOR_WRITE(expected_st.st_mode) & ~g_umask);
 
-	if (!core_filemode) {
-		expected_st.st_mode = expected_st.st_mode & ~0177;
-		st.st_mode = st.st_mode & ~0177;
+		if (!core_filemode) {
+			CLEAR_FOR_CORE_FILEMODE(expected_mode);
+			CLEAR_FOR_CORE_FILEMODE(st.st_mode);
+		}
+
+		cl_assert_equal_i_fmt(expected_mode, st.st_mode, "%07o");
 	}
-
-	cl_assert_equal_i_fmt(expected_st.st_mode, st.st_mode, "%07o");
 
 	git_buf_free(&expected);
 	git_buf_free(&actual);
@@ -409,8 +413,8 @@ static void assert_mode_seems_okay(
 	git_buf_free(&full);
 
 	if (!core_filemode) {
-		expect_mode = expect_mode & ~0111;
-		st.st_mode = st.st_mode & ~0111;
+		CLEAR_FOR_CORE_FILEMODE(expect_mode);
+		CLEAR_FOR_CORE_FILEMODE(st.st_mode);
 		expect_setgid = false;
 	}
 
@@ -421,12 +425,11 @@ static void assert_mode_seems_okay(
 			cl_assert((st.st_mode & S_ISGID) == 0);
 	}
 
-	if ((expect_mode & 0111) != 0)
-		cl_assert((st.st_mode & 0111) != 0);
-	else
-		cl_assert((st.st_mode & 0111) == 0);
+	cl_assert_equal_b(
+		GIT_PERMS_EXECUTABLE(expect_mode), GIT_PERMS_EXECUTABLE(st.st_mode));
 
-	cl_assert((expect_mode & 0170000) == (st.st_mode & 0170000));
+	cl_assert_equal_i_fmt(
+		GIT_MODE_TYPE(expect_mode), GIT_MODE_TYPE(st.st_mode), "%07o");
 }
 
 void test_repo_init__extended_with_template(void)

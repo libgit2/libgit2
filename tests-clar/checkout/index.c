@@ -267,7 +267,7 @@ void test_checkout_index__options_override_file_modes(void)
 	cl_git_pass(git_checkout_index(g_repo, NULL, &opts));
 
 	cl_git_pass(p_stat("./testrepo/new.txt", &st));
-	cl_assert_equal_i_fmt(st.st_mode & 0777, 0700, "%07o");
+	cl_assert_equal_i_fmt(st.st_mode & GIT_MODE_PERMS_MASK, 0700, "%07o");
 #endif
 }
 
