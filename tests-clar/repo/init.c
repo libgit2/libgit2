@@ -418,12 +418,8 @@ static void assert_mode_seems_okay(
 		expect_setgid = false;
 	}
 
-	if (S_ISGID != 0) {
-		if (expect_setgid)
-			cl_assert((st.st_mode & S_ISGID) != 0);
-		else
-			cl_assert((st.st_mode & S_ISGID) == 0);
-	}
+	if (S_ISGID != 0)
+		cl_assert_equal_b(expect_setgid, (st.st_mode & S_ISGID) != 0);
 
 	cl_assert_equal_b(
 		GIT_PERMS_EXECUTABLE(expect_mode), GIT_PERMS_EXECUTABLE(st.st_mode));
