@@ -696,7 +696,7 @@ static int buffer_to_file(
 	if (st != NULL && (error = p_stat(path, st)) < 0)
 		giterr_set(GITERR_OS, "Error statting '%s'", path);
 
-	else if (GIT_PERMS_EXECUTABLE(file_mode) &&
+	else if (GIT_PERMS_IS_EXEC(file_mode) &&
 			(error = p_chmod(path, file_mode)) < 0)
 		giterr_set(GITERR_OS, "Failed to set permissions on '%s'", path);
 

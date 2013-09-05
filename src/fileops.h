@@ -223,9 +223,9 @@ extern int git_futils_open_ro(const char *path);
  */
 extern git_off_t git_futils_filesize(git_file fd);
 
-#define GIT_PERMS_EXECUTABLE(MODE)  (((MODE) & 0111) != 0)
-#define GIT_PERMS_CANONICAL(MODE)	(GIT_PERMS_EXECUTABLE(MODE) ? 0755 : 0644)
-#define GIT_PERMS_FOR_WRITE(MODE)   (GIT_PERMS_EXECUTABLE(MODE) ? 0777 : 0666)
+#define GIT_PERMS_IS_EXEC(MODE)		(((MODE) & 0111) != 0)
+#define GIT_PERMS_CANONICAL(MODE)	(GIT_PERMS_IS_EXEC(MODE) ? 0755 : 0644)
+#define GIT_PERMS_FOR_WRITE(MODE)   (GIT_PERMS_IS_EXEC(MODE) ? 0777 : 0666)
 
 #define GIT_MODE_PERMS_MASK			0777
 #define GIT_MODE_TYPE_MASK			0170000

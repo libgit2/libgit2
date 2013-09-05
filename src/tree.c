@@ -33,7 +33,7 @@ GIT_INLINE(git_filemode_t) normalize_filemode(git_filemode_t filemode)
 		return GIT_FILEMODE_TREE;
 
 	/* If any of the x bits are set */
-	if (GIT_PERMS_EXECUTABLE(filemode))
+	if (GIT_PERMS_IS_EXEC(filemode))
 		return GIT_FILEMODE_BLOB_EXECUTABLE;
 
 	/* 16XXXX means commit */
