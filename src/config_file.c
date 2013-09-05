@@ -34,6 +34,8 @@ typedef struct git_config_file_iter {
 	cvar_t* next_var;
 } git_config_file_iter;
 
+/* Max depth for [include] directives */
+#define MAX_INCLUDE_DEPTH 10
 
 #define CVAR_LIST_HEAD(list) ((list)->head)
 
@@ -74,6 +76,8 @@ typedef struct git_config_file_iter {
 		 (iter) = (tmp))
 
 struct reader {
+	time_t file_mtime;
+	size_t file_size;
 	char *file_path;
 	git_buf buffer;
 	char *read_ptr;
@@ -89,8 +93,6 @@ typedef struct {
 	struct reader reader;
 
 	char  *file_path;
-	time_t file_mtime;
-	size_t file_size;
 
 	git_config_level_t level;
 } diskfile_backend;
@@ -169,7 +171,7 @@ static int config_open(git_config_backend *cfg, git_config_level_t level)
 
 	git_buf_init(&b->reader.buffer, 0);
 	res = git_futils_readbuffer_updated(
-		&b->reader.buffer, b->file_path, &b->file_mtime, &b->file_size, NULL);
+		&b->reader.buffer, b->file_path, &b->reader.file_mtime, &b->reader.file_size, NULL);
 
 	/* It's fine if the file doesn't exist */
 	if (res == GIT_ENOTFOUND)
@@ -191,7 +193,7 @@ static int config_refresh(git_config_backend *cfg)
 	git_strmap *old_values;
 
 	res = git_futils_readbuffer_updated(
-		&b->reader.buffer, b->file_path, &b->file_mtime, &b->file_size, &updated);
+		&b->reader.buffer, b->file_path, &b->reader.file_mtime, &b->reader.file_size, &updated);
 	if (res < 0 || !updated)
 		return (res == GIT_ENOTFOUND) ? 0 : res;
 
@@ -899,6 +901,15 @@ static int strip_comments(char *line, int in_quotes)
 	return quote_count;
 }
 
+static int included_path(git_buf *out, const char *dir, const char *path)
+{
+	/* From the user's home */
+	if (path[0] == '~' && path[1] == '/')
+		return git_futils_find_global_file(out, &path[1]);
+
+	return git_path_join_unrooted(out, path, dir, NULL);
+}
+
 static int config_parse(diskfile_backend *cfg_file, struct reader *reader, git_config_level_t level, int depth)
 {
 	int c;
@@ -909,6 +920,10 @@ static int config_parse(diskfile_backend *cfg_file, struct reader *reader, git_c
 	git_buf buf = GIT_BUF_INIT;
 	int result = 0;
 	khiter_t pos;
+
+	/* FIXME: should we return an error? */
+	if (depth >= MAX_INCLUDE_DEPTH)
+		return 0;
 
 	/* Initialize the reading position */
 	reader->read_ptr = reader->buffer.ptr;
@@ -977,6 +992,38 @@ static int config_parse(diskfile_backend *cfg_file, struct reader *reader, git_c
 					existing = existing->next;
 				}
 				existing->next = var;
+			}
+
+			if (!git__strcmp(var->entry->name, "include.path")) {
+				struct reader r;
+				git_buf path = GIT_BUF_INIT;
+				char *dir;
+
+				memset(&r, 0, sizeof(r));
+				if ((result = git_path_dirname_r(&path, reader->file_path)) < 0)
+					break;
+
+				dir = git_buf_detach(&path);
+				result = included_path(&path, dir, var->entry->value);
+				git__free(dir);
+
+				if (result < 0)
+					break;
+
+				r.file_path = git_buf_detach(&path);
+				git_buf_init(&r.buffer, 0);
+				if ((result = git_futils_readbuffer_updated(&r.buffer, r.file_path, &r.file_mtime,
+									    &r.file_size, NULL)) < 0) {
+					git__free(r.file_path);
+					break;
+				}
+
+				result = config_parse(cfg_file, &r, level, depth+1);
+				git__free(r.file_path);
+				git_buf_free(&r.buffer);
+
+				if (result < 0)
+					break;
 			}
 
 			break;
@@ -1199,7 +1246,7 @@ static int config_write(diskfile_backend *cfg, const char *key, const regex_t *p
 	git__free(current_section);
 
 	/* refresh stats - if this errors, then commit will error too */
-	(void)git_filebuf_stats(&cfg->file_mtime, &cfg->file_size, &file);
+	(void)git_filebuf_stats(&cfg->reader.file_mtime, &cfg->reader.file_size, &file);
 
 	result = git_filebuf_commit(&file, GIT_CONFIG_FILE_MODE);
 	git_buf_free(&cfg->reader.buffer);
