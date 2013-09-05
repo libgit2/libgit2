@@ -284,7 +284,7 @@ static unsigned int index_create_mode(unsigned int mode)
 	if (S_ISDIR(mode) || (mode & S_IFMT) == (S_IFLNK | S_IFDIR))
 		return (S_IFLNK | S_IFDIR);
 
-	return S_IFREG | ((mode & 0100) ? 0755 : 0644);
+	return S_IFREG | GIT_PERMS_CANONICAL(mode);
 }
 
 static unsigned int index_merge_mode(

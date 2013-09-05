@@ -10,7 +10,7 @@
 #include "tree.h"
 #include "git2/repository.h"
 #include "git2/object.h"
-#include "path.h"
+#include "fileops.h"
 #include "tree-cache.h"
 #include "index.h"
 
@@ -29,19 +29,19 @@ static bool valid_filemode(const int filemode)
 GIT_INLINE(git_filemode_t) normalize_filemode(git_filemode_t filemode)
 {
 	/* Tree bits set, but it's not a commit */
-	if (filemode & GIT_FILEMODE_TREE && !(filemode & 0100000))
+	if (GIT_MODE_TYPE(filemode) == GIT_FILEMODE_TREE)
 		return GIT_FILEMODE_TREE;
 
-	/* If any of the x bits is set */
-	if (filemode & 0111)
+	/* If any of the x bits are set */
+	if (GIT_PERMS_EXECUTABLE(filemode))
 		return GIT_FILEMODE_BLOB_EXECUTABLE;
 
 	/* 16XXXX means commit */
-	if ((filemode & GIT_FILEMODE_COMMIT) == GIT_FILEMODE_COMMIT)
+	if (GIT_MODE_TYPE(filemode) == GIT_FILEMODE_COMMIT)
 		return GIT_FILEMODE_COMMIT;
 
 	/* 12XXXX means commit */
-	if ((filemode & GIT_FILEMODE_LINK) == GIT_FILEMODE_LINK)
+	if (GIT_MODE_TYPE(filemode) == GIT_FILEMODE_LINK)
 		return GIT_FILEMODE_LINK;
 
 	/* Otherwise, return a blob */
