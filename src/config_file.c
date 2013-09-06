@@ -395,6 +395,7 @@ static int config_get(const git_config_backend *cfg, const char *name, const git
 	char *key;
 	khiter_t pos;
 	int error;
+	cvar_t *var;
 
 	if ((error = git_config__normalize_name(name, &key)) < 0)
 		return error;
@@ -406,7 +407,11 @@ static int config_get(const git_config_backend *cfg, const char *name, const git
 	if (!git_strmap_valid_index(b->values, pos))
 		return GIT_ENOTFOUND;
 
-	*out = ((cvar_t *)git_strmap_value_at(b->values, pos))->entry;
+	var = git_strmap_value_at(b->values, pos);
+	while (var->next)
+		var = var->next;
+
+	*out = var->entry;
 
 	return 0;
 }
