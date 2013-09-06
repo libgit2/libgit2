@@ -41,12 +41,44 @@ void test_object_blob_fromchunks__can_create_a_blob_from_a_in_memory_chunk_provi
 
 	cl_git_pass(git_oid_fromstr(&expected_oid, "321cbdf08803c744082332332838df6bd160f8f9"));
 
-	cl_git_fail(git_object_lookup(&blob, repo, &expected_oid, GIT_OBJ_ANY));
+	cl_git_fail_with(
+		git_object_lookup(&blob, repo, &expected_oid, GIT_OBJ_ANY),
+		GIT_ENOTFOUND);
 
 	cl_git_pass(git_blob_create_fromchunks(&oid, repo, NULL, text_chunked_source_cb, &howmany));
 
 	cl_git_pass(git_object_lookup(&blob, repo, &expected_oid, GIT_OBJ_ANY));
+	cl_assert(git_oid_cmp(&expected_oid, git_object_id(blob)) == 0);
+
 	git_object_free(blob);
+}
+
+void test_object_blob_fromchunks__doesnot_overwrite_an_already_existing_object(void)
+{
+	git_buf path = GIT_BUF_INIT;
+	git_buf content = GIT_BUF_INIT;
+	git_oid expected_oid, oid;
+	int howmany = 7;
+	
+	cl_git_pass(git_oid_fromstr(&expected_oid, "321cbdf08803c744082332332838df6bd160f8f9"));
+
+	cl_git_pass(git_blob_create_fromchunks(&oid, repo, NULL, text_chunked_source_cb, &howmany));
+
+	/* Let's replace the content of the blob file storage with something else... */
+	cl_git_pass(git_buf_joinpath(&path, git_repository_path(repo), "objects/32/1cbdf08803c744082332332838df6bd160f8f9"));
+	cl_git_pass(p_unlink(git_buf_cstr(&path)));
+	cl_git_mkfile(git_buf_cstr(&path), "boom");
+
+	/* ...request a creation of the same blob... */
+	howmany = 7;
+	cl_git_pass(git_blob_create_fromchunks(&oid, repo, NULL, text_chunked_source_cb, &howmany));
+
+	/* ...and ensure the content of the faked blob file hasn't been altered */
+	cl_git_pass(git_futils_readbuffer(&content, git_buf_cstr(&path)));
+	cl_assert(!git__strcmp("boom", git_buf_cstr(&content)));
+
+	git_buf_free(&path);
+	git_buf_free(&content);
 }
 
 #define GITATTR "* text=auto\n" \
