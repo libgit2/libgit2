@@ -48,3 +48,26 @@ void test_config_include__homedir(void)
 
 	git_config_free(cfg);
 }
+
+void test_config_include__refresh(void)
+{
+	git_config *cfg;
+	const char *str;
+
+	cl_fixture_sandbox("config");
+
+	cl_git_pass(git_config_open_ondisk(&cfg, "config/config-include"));
+
+	cl_git_pass(git_config_get_string(&str, cfg, "foo.bar.baz"));
+	cl_assert_equal_s(str, "huzzah");
+
+	/* Change the included file and see if we refresh */
+	cl_git_mkfile("config/config-included", "[foo \"bar\"]\nbaz = hurrah");
+	cl_git_pass(git_config_refresh(cfg));
+
+	cl_git_pass(git_config_get_string(&str, cfg, "foo.bar.baz"));
+	cl_assert_equal_s(str, "hurrah");
+
+	git_config_free(cfg);
+	cl_fixture_cleanup("config");
+}

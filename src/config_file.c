@@ -197,14 +197,25 @@ static int config_open(git_config_backend *cfg, git_config_level_t level)
 
 static int config_refresh(git_config_backend *cfg)
 {
-	int res, updated = 0;
+	int res = 0, updated = 0, any_updated = 0;
 	diskfile_backend *b = (diskfile_backend *)cfg;
 	git_strmap *old_values;
-	struct reader *reader = git_array_get(b->readers, 0);
+	struct reader *reader;
+	uint32_t i;
 
-	res = git_futils_readbuffer_updated(
-		&reader->buffer, b->file_path, &reader->file_mtime, &reader->file_size, &updated);
-	if (res < 0 || !updated)
+	for (i = 0; i < git_array_size(b->readers); i++) {
+		reader = git_array_get(b->readers, i);
+		res = git_futils_readbuffer_updated(
+			&reader->buffer, reader->file_path, &reader->file_mtime, &reader->file_size, &updated);
+
+		if (res < 0)
+			return (res == GIT_ENOTFOUND) ? 0 : res;
+
+		if (updated)
+			any_updated = 1;
+	}
+
+	if (!any_updated)
 		return (res == GIT_ENOTFOUND) ? 0 : res;
 
 	/* need to reload - store old values and prep for reload */
