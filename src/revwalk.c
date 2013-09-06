@@ -41,28 +41,50 @@ git_commit_list_node *git_revwalk__commit_lookup(
 	return commit;
 }
 
-static void mark_uninteresting(git_commit_list_node *commit)
+static int mark_uninteresting(git_commit_list_node *commit)
 {
 	unsigned short i;
+	git_array_t(git_commit_list_node *) pending = GIT_ARRAY_INIT;
+	git_commit_list_node **tmp;
+
 	assert(commit);
 
-	commit->uninteresting = 1;
+	git_array_alloc(pending);
+	GITERR_CHECK_ARRAY(pending);
 
-	/* This means we've reached a merge base, so there's no need to walk any more */
-	if ((commit->flags & (RESULT | STALE)) == RESULT)
-		return;
+	do {
+		commit->uninteresting = 1;
 
-	for (i = 0; i < commit->out_degree; ++i)
-		if (!commit->parents[i]->uninteresting)
-			mark_uninteresting(commit->parents[i]);
+		/* This means we've reached a merge base, so there's no need to walk any more */
+		if ((commit->flags & (RESULT | STALE)) == RESULT) {
+			tmp = git_array_pop(pending);
+			commit = tmp ? *tmp : NULL;
+			continue;
+		}
+
+		for (i = 0; i < commit->out_degree; ++i)
+			if (!commit->parents[i]->uninteresting) {
+				git_commit_list_node **node = git_array_alloc(pending);
+				GITERR_CHECK_ALLOC(node);
+				*node = commit->parents[i];
+			}
+
+		tmp = git_array_pop(pending);
+		commit = tmp ? *tmp : NULL;
+
+	} while (git_array_size(pending) > 0);
+
+	git_array_clear(pending);
+
+	return 0;
 }
 
 static int process_commit(git_revwalk *walk, git_commit_list_node *commit, int hide)
 {
 	int error;
 
-	if (hide)
-		mark_uninteresting(commit);
+	if (hide && mark_uninteresting(commit) < 0)
+		return -1;
 
 	if (commit->seen)
 		return 0;
