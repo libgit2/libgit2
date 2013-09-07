@@ -259,3 +259,16 @@ void test_odb_backend_nonrefreshing__readheader_is_invoked_once_on_success(void)
 
 	cl_assert_equal_i(1, _fake->read_header_calls);
 }
+
+void test_odb_backend_nonrefreshing__read_is_invoked_once_when_revparsing_a_full_oid(void)
+{
+	git_object *obj;
+
+	setup_repository_and_backend(GIT_ENOTFOUND);
+
+	cl_git_fail_with(
+		git_revparse_single(&obj, _repo, "deadbeefdeadbeefdeadbeefdeadbeefdeadbeef"),
+		GIT_ENOTFOUND);
+
+	cl_assert_equal_i(1, _fake->read_calls);
+}
