@@ -238,6 +238,9 @@ GIT_EXTERN(int) git_odb_open_wstream(git_odb_stream **out, git_odb *db, size_t s
 /**
  * Write to an odb stream
  *
+ * This method will fail as soon as the total number of
+ * received bytes exceeds the size declared with `git_odb_open_wstream()`
+ *
  * @param stream the stream
  * @param buffer the data to write
  * @param len the buffer's length
@@ -250,6 +253,9 @@ GIT_EXTERN(int) git_odb_stream_write(git_odb_stream *stream, const char *buffer,
  *
  * The object will take its final name and will be available to the
  * odb.
+ *
+ * This method will fail if the total number of received bytes
+ * differs from the size declared with `git_odb_open_wstream()`
  *
  * @param out pointer to store the resulting object's id
  * @param stream the stream
