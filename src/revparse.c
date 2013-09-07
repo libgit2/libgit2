@@ -93,11 +93,7 @@ static int revparse_lookup_object(
 	int error;
 	git_reference *ref;
 
-	error = maybe_sha(object_out, repo, spec);
-	if (!error)
-		return 0;
-
-	if (error < 0 && error != GIT_ENOTFOUND)
+	if ((error = maybe_sha(object_out, repo, spec)) != GIT_ENOTFOUND)
 		return error;
 
 	error = git_reference_dwim(&ref, repo, spec);
@@ -112,18 +108,14 @@ static int revparse_lookup_object(
 		return error;
 	}
 
-	if (error < 0 && error != GIT_ENOTFOUND)
+	if (error != GIT_ENOTFOUND)
 		return error;
 
 	if ((strlen(spec) < GIT_OID_HEXSZ) &&
 		((error = maybe_abbrev(object_out, repo, spec)) != GIT_ENOTFOUND))
 			return error;
 
-	error = maybe_describe(object_out, repo, spec);
-	if (!error)
-		return 0;
-
-	if (error < 0 && error != GIT_ENOTFOUND)
+	if ((error = maybe_describe(object_out, repo, spec)) != GIT_ENOTFOUND)
 		return error;
 
 	giterr_set(GITERR_REFERENCE, "Revspec '%s' not found.", spec);
