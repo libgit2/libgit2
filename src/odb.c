@@ -888,17 +888,44 @@ int git_odb_open_wstream(
 	hash_header(ctx, size, type);
 	(*stream)->hash_ctx = ctx;
 
+	(*stream)->declared_size = size;
+	(*stream)->received_bytes = 0;
+
 	return error;
+}
+
+static int git_odb_stream__invalid_length(
+	const git_odb_stream *stream,
+	const char *action)
+{
+	giterr_set(GITERR_ODB,
+		"Cannot %s - "
+		"Invalid length. %"PRIuZ" was expected. The "
+		"total size of the received chunks amounts to %"PRIuZ".",
+		action, stream->declared_size, stream->received_bytes);		
+
+	return -1;
 }
 
 int git_odb_stream_write(git_odb_stream *stream, const char *buffer, size_t len)
 {
 	git_hash_update(stream->hash_ctx, buffer, len);
+
+	stream->received_bytes += len;
+
+	if (stream->received_bytes > stream->declared_size)
+		return git_odb_stream__invalid_length(stream,
+			"stream_write()");
+
 	return stream->write(stream, buffer, len);
 }
 
 int git_odb_stream_finalize_write(git_oid *out, git_odb_stream *stream)
 {
+	if (stream->received_bytes != stream->declared_size)
+		return git_odb_stream__invalid_length(stream,
+			"stream_finalize_write()");
+
 	git_hash_final(out, stream->hash_ctx);
 
 	if (git_odb_exists(stream->backend->odb, out))
