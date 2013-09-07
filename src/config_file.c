@@ -949,9 +949,10 @@ static int config_parse(diskfile_backend *cfg_file, struct reader *reader, git_c
 	int result = 0;
 	khiter_t pos;
 
-	/* FIXME: should we return an error? */
-	if (depth >= MAX_INCLUDE_DEPTH)
-		return 0;
+	if (depth >= MAX_INCLUDE_DEPTH) {
+		giterr_set(GITERR_CONFIG, "Maximum config include depth reached");
+		return -1;
+	}
 
 	/* Initialize the reading position */
 	reader->read_ptr = reader->buffer.ptr;
