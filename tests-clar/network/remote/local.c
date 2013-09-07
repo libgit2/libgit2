@@ -201,6 +201,7 @@ void test_network_remote_local__push_to_bare_remote(void)
 	cl_assert(git_push_unpack_ok(push));
 
 	/* Clean up */
+	git_push_free(push);
 	git_remote_free(localremote);
 	cl_fixture_cleanup("localbare.git");
 }
@@ -236,6 +237,7 @@ void test_network_remote_local__push_to_non_bare_remote(void)
 	cl_assert_equal_i(0, git_push_unpack_ok(push));
 
 	/* Clean up */
+	git_push_free(push);
 	git_remote_free(localremote);
 	cl_fixture_cleanup("localbare.git");
 }
