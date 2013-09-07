@@ -93,3 +93,17 @@ void test_config_include__ordering(void)
 
 	git_config_free(cfg);
 }
+
+/* We need to pretend that the variables were defined where the file was included */
+void test_config_include__depth(void)
+{
+	git_config *cfg;
+
+	cl_git_mkfile("a", "[include]\npath = b");
+	cl_git_mkfile("b", "[include]\npath = a");
+
+	cl_git_fail(git_config_open_ondisk(&cfg, "a"));
+
+	unlink("a");
+	unlink("b");
+}

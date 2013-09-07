@@ -191,6 +191,7 @@ static int config_open(git_config_backend *cfg, git_config_level_t level)
 		b->values = NULL;
 	}
 
+	reader = git_array_get(b->readers, 0);
 	git_buf_free(&reader->buffer);
 	return res;
 }
@@ -948,12 +949,14 @@ static int config_parse(diskfile_backend *cfg_file, struct reader *reader, git_c
 	git_buf buf = GIT_BUF_INIT;
 	int result = 0;
 	khiter_t pos;
+	uint32_t reader_idx;
 
 	if (depth >= MAX_INCLUDE_DEPTH) {
 		giterr_set(GITERR_CONFIG, "Maximum config include depth reached");
 		return -1;
 	}
 
+	reader_idx = git_array_size(cfg_file->readers) - 1;
 	/* Initialize the reading position */
 	reader->read_ptr = reader->buffer.ptr;
 	reader->eof = 0;
@@ -1027,12 +1030,17 @@ static int config_parse(diskfile_backend *cfg_file, struct reader *reader, git_c
 				struct reader *r;
 				git_buf path = GIT_BUF_INIT;
 				char *dir;
+				uint32_t index;
 
 				r = git_array_alloc(cfg_file->readers);
+				/* The reader may have been reallocated */
+				reader = git_array_get(cfg_file->readers, reader_idx);
 				memset(r, 0, sizeof(struct reader));
 				if ((result = git_path_dirname_r(&path, reader->file_path)) < 0)
 					break;
 
+				/* We need to know out index in the array, as the next config_parse call may realloc */
+				index = git_array_size(cfg_file->readers) - 1;
 				dir = git_buf_detach(&path);
 				result = included_path(&path, dir, var->entry->value);
 				git__free(dir);
@@ -1047,6 +1055,7 @@ static int config_parse(diskfile_backend *cfg_file, struct reader *reader, git_c
 					break;
 
 				result = config_parse(cfg_file, r, level, depth+1);
+				r = git_array_get(cfg_file->readers, index);
 				git_buf_free(&r->buffer);
 
 				if (result < 0)
