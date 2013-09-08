@@ -195,7 +195,7 @@ static int winhttp_stream_connect(winhttp_stream *s)
 	}
 
 	/* Set proxy if necessary */
-	if (git_remote__get_http_proxy(t->owner->owner, t->use_ssl, &proxy_url) < 0)
+	if (git_remote__get_http_proxy(t->owner->owner, !!t->use_ssl, &proxy_url) < 0)
 		goto on_error;
 
 	if (proxy_url) {
@@ -939,7 +939,7 @@ static int winhttp_connect(
 	t->connection = WinHttpConnect(
 			t->session,
 			host,
-			port,
+			(INTERNET_PORT)port,
 			0);
 
 	if (!t->connection) {

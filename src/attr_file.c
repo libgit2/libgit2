@@ -39,7 +39,7 @@ int git_attr_file__new(
 		attrs->key = git_pool_malloc(attrs->pool, (uint32_t)len + 3);
 		GITERR_CHECK_ALLOC(attrs->key);
 
-		attrs->key[0] = '0' + from;
+		attrs->key[0] = '0' + (char)from;
 		attrs->key[1] = '#';
 		memcpy(&attrs->key[2], path, len);
 		attrs->key[len + 2] = '\0';

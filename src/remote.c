@@ -362,7 +362,7 @@ cleanup:
 static int update_config_refspec(const git_remote *remote, git_config *config, int direction)
 {
 	git_buf name = GIT_BUF_INIT;
-	int push;
+	unsigned int push;
 	const char *dir;
 	size_t i;
 	int error = 0;
@@ -1549,7 +1549,7 @@ int git_remote_add_push(git_remote *remote, const char *refspec)
 	return add_refspec(remote, refspec, false);
 }
 
-static int copy_refspecs(git_strarray *array, git_remote *remote, int push)
+static int copy_refspecs(git_strarray *array, git_remote *remote, unsigned int push)
 {
 	size_t i;
 	git_vector refspecs;

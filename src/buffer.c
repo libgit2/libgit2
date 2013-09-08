@@ -137,7 +137,7 @@ int git_buf_puts(git_buf *buf, const char *string)
 	return git_buf_put(buf, string, strlen(string));
 }
 
-static const char b64str[64] =
+static const char b64str[] =
 	"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
 int git_buf_put_base64(git_buf *buf, const char *data, size_t len)

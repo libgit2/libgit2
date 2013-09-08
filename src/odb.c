@@ -168,7 +168,6 @@ int git_odb__hashfd(git_oid *out, git_file fd, size_t size, git_otype type)
 		error = -1;
 
 		goto done;
-		return -1;
 	}
 
 	error = git_hash_final(out, &ctx);
@@ -621,7 +620,7 @@ int git_odb_exists(git_odb *db, const git_oid *id)
 		git_odb_backend *b = internal->backend;
 
 		if (b->exists != NULL)
-			found = b->exists(b, id);
+			found = (bool)b->exists(b, id);
 	}
 
 	return (int)found;

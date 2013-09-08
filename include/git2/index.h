@@ -219,7 +219,7 @@ GIT_EXTERN(unsigned int) git_index_caps(const git_index *index);
  * @param caps A combination of GIT_INDEXCAP values
  * @return 0 on success, -1 on failure
  */
-GIT_EXTERN(int) git_index_set_caps(git_index *index, unsigned int caps);
+GIT_EXTERN(int) git_index_set_caps(git_index *index, int caps);
 
 /**
  * Update the contents of an existing index object in memory

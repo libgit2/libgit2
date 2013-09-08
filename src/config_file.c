@@ -125,7 +125,7 @@ int git_config_file_normalize_section(char *start, char *end)
 		if (end && scan >= end)
 			break;
 		if (isalnum(*scan))
-			*scan = tolower(*scan);
+			*scan = (char)tolower(*scan);
 		else if (*scan != '-' || scan == start)
 			return GIT_EINVALIDSPEC;
 	}
@@ -737,7 +737,7 @@ static int parse_section_header_ext(diskfile_backend *cfg, const char *line, con
 			break;
 		}
 
-		git_buf_putc(&buf, c);
+		git_buf_putc(&buf, (char)c);
 	} while ((c = line[rpos++]) != ']');
 
 	*section_name = git_buf_detach(&buf);
