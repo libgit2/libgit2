@@ -765,10 +765,10 @@ int git_path_direach(
 
 		git_buf_truncate(path, wd_len); /* restore path */
 
-		if (result < 0) {
+		if (result) {
 			closedir(dir);
 			git__free(de_buf);
-			return -1;
+			return GIT_EUSER;
 		}
 	}
 

@@ -299,7 +299,7 @@ static int packed_loadloose(refdb_fs_backend *backend)
 
 	git_buf_free(&refs_path);
 
-	return error;
+	return (error == GIT_EUSER) ? -1 : error;
 }
 
 static int refdb_fs_backend__exists(
