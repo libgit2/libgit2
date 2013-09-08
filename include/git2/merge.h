@@ -7,11 +7,11 @@
 #ifndef INCLUDE_git_merge_h__
 #define INCLUDE_git_merge_h__
 
-#include "git2/common.h"
-#include "git2/types.h"
-#include "git2/oid.h"
-#include "git2/checkout.h"
-#include "git2/index.h"
+#include "common.h"
+#include "types.h"
+#include "oid.h"
+#include "checkout.h"
+#include "index.h"
 
 /**
  * @file git2/merge.h
