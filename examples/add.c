@@ -106,6 +106,8 @@ int main (int argc, char** argv)
 		return 1;
 	}
 
+	git_threads_init();
+
 	init_array(&array, argc-i, argv+i);
 
 	if (git_repository_open(&repo, ".") < 0) {
@@ -134,6 +136,8 @@ int main (int argc, char** argv)
 	git_index_write(index);
 	git_index_free(index);
 	git_repository_free(repo);
+
+	git_threads_shutdown();
 
 	return 0;
 }
