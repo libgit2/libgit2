@@ -74,39 +74,6 @@ static int crlf_input_action(struct crlf_attrs *ca)
 	return ca->crlf_action;
 }
 
-static int crlf_load_attributes(
-	struct crlf_attrs *ca, git_repository *repo, const char *path)
-{
-#define NUM_CONV_ATTRS 3
-
-	static const char *attr_names[NUM_CONV_ATTRS] = {
-		"crlf", "eol", "text",
-	};
-
-	const char *attr_vals[NUM_CONV_ATTRS];
-	int error;
-
-	error = git_attr_get_many(attr_vals,
-		repo, 0, path, NUM_CONV_ATTRS, attr_names);
-
-	if (error == GIT_ENOTFOUND) {
-		ca->crlf_action = GIT_CRLF_GUESS;
-		ca->eol = GIT_EOL_UNSET;
-		return 0;
-	}
-
-	if (error == 0) {
-		ca->crlf_action = check_crlf(attr_vals[2]); /* text */
-		if (ca->crlf_action == GIT_CRLF_GUESS)
-			ca->crlf_action = check_crlf(attr_vals[0]); /* clrf */
-
-		ca->eol = check_eol(attr_vals[1]); /* eol */
-		return 0;
-	}
-
-	return -1;
-}
-
 static int has_cr_in_index(const git_filter_source *src)
 {
 	git_repository *repo = git_filter_source_repo(src);
@@ -283,7 +250,8 @@ static int crlf_check(
 	git_filter        *self,
 	void              **payload, /* points to NULL ptr on entry, may be set */
 	git_filter_mode_t mode,
-	const git_filter_source *src)
+	const git_filter_source *src,
+	const char **attr_values)
 {
 	int error;
 	struct crlf_attrs ca;
@@ -291,11 +259,16 @@ static int crlf_check(
 	GIT_UNUSED(self);
 	GIT_UNUSED(mode);
 
-	/* Load gitattributes for the path */
-	error = crlf_load_attributes(
-		&ca, git_filter_source_repo(src), git_filter_source_path(src));
-	if (error < 0)
-		return error;
+	if (!attr_values) {
+		ca.crlf_action = GIT_CRLF_GUESS;
+		ca.eol = GIT_EOL_UNSET;
+	} else {
+		ca.crlf_action = check_crlf(attr_values[2]); /* text */
+		if (ca.crlf_action == GIT_CRLF_GUESS)
+			ca.crlf_action = check_crlf(attr_values[0]); /* clrf */
+		ca.eol = check_eol(attr_values[1]); /* eol */
+	}
+	ca.auto_crlf = GIT_AUTO_CRLF_DEFAULT;
 
 	/*
 	 * Use the core Git logic to see if we should perform CRLF for this file
@@ -350,7 +323,11 @@ static void crlf_cleanup(
 git_filter *git_crlf_filter_new(void)
 {
 	struct crlf_filter *f = git__calloc(1, sizeof(struct crlf_filter));
+
 	f->f.version = GIT_FILTER_VERSION;
+	f->f.attributes = "crlf eol text";
+	f->f.initialize = NULL;
+	f->f.shutdown   = NULL;
 	f->f.check   = crlf_check;
 	f->f.apply   = crlf_apply;
 	f->f.cleanup = crlf_cleanup;

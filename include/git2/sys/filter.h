@@ -46,6 +46,37 @@ GIT_EXTERN(uint16_t) git_filter_source_filemode(const git_filter_source *src);
  */
 GIT_EXTERN(const git_oid *) git_filter_source_id(const git_filter_source *src);
 
+/*
+ * struct git_filter
+ *
+ * The filter lifecycle:
+ * - initialize - first use of filter
+ * - shutdown   - filter removed/unregistered from system
+ * - check      - considering for file
+ * - apply      - applied to file
+ * - cleanup    - done with file
+ */
+
+/**
+ * Initialize callback on filter
+ */
+typedef int (*git_filter_init_fn)(git_filter *self);
+
+/**
+ * Shutdown callback on filter
+ */
+typedef void (*git_filter_shutdown_fn)(git_filter *self);
+
+/**
+ * Callback to decide if a given source needs this filter
+ */
+typedef int (*git_filter_check_fn)(
+	git_filter        *self,
+	void              **payload, /* points to NULL ptr on entry, may be set */
+	git_filter_mode_t mode,
+	const git_filter_source *src,
+	const char        **attr_values);
+
 /**
  * Callback to actually perform the data filtering
  */
@@ -55,15 +86,6 @@ typedef int (*git_filter_apply_fn)(
 	git_filter_mode_t mode,
 	git_buffer        *to,
 	const git_buffer  *from,
-	const git_filter_source *src);
-
-/**
- * Callback to decide if a given source needs this filter
- */
-typedef int (*git_filter_check_fn)(
-	git_filter        *self,
-	void              **payload, /* points to NULL ptr on entry, may be set */
-	git_filter_mode_t mode,
 	const git_filter_source *src);
 
 /**
@@ -83,10 +105,32 @@ typedef void (*git_filter_cleanup_fn)(
  *
  * `version` should be set to GIT_FILTER_VERSION
  *
- * `apply` is the callback that actually filters data.
+ * `attributes` is a list of attributes to check on a file to see if the
+ * filter applies.  The format is a whitespace-delimited list of names
+ * (like "eol crlf text").  Each name may have an optional value that will
+ * be tested even without a `check` callback.  If the value does not
+ * match, the filter will be skipped.  The values are specified as in a
+ * .gitattributes file (e.g. "myattr=foobar" or "myattr" or "-myattr").
+ * If a check function is supplied, then the values of the attributes will
+ * be passed to that function.
+ *
+ * `initialize` is an optional callback invoked before a filter is first
+ * used.  It will be called once at most.
+ *
+ * `shutdown` is an optional callback invoked when the filter is
+ * unregistered or when libgit2 is shutting down.  It will be called once
+ * at most and should free any memory as needed.
  *
  * `check` is an optional callback that checks if filtering is needed for
- * a given source.
+ * a given source.  It should return 0 if the filter should be applied
+ * (i.e. success), GIT_ENOTFOUND if the filter should not be applied, or
+ * an other error code to fail out of the filter processing pipeline and
+ * return to the caller.
+ *
+ * `apply` is the callback that actually filters data.  If it successfully
+ * writes the output, it should return 0.  Like `check`, it can return
+ * GIT_ENOTFOUND to indicate that the filter doesn't actually want to run.
+ * Other error codes will stop filter processing and return to the caller.
  *
  * `cleanup` is an optional callback that is made after the filter has
  * been applied.  Both the `check` and `apply` callbacks are able to
@@ -94,25 +138,46 @@ typedef void (*git_filter_cleanup_fn)(
  * is given that value and can clean up as needed.
  */
 struct git_filter {
-	unsigned int          version;
-	git_filter_apply_fn   apply;
-	git_filter_check_fn   check;
-	git_filter_cleanup_fn cleanup;
+	unsigned int           version;
+	const char            *attributes;
+	git_filter_init_fn     initialize;
+	git_filter_shutdown_fn shutdown;
+	git_filter_check_fn    check;
+	git_filter_apply_fn    apply;
+	git_filter_cleanup_fn  cleanup;
 };
 
 #define GIT_FILTER_VERSION 1
 
 /**
- * Register a filter under a given name
+ * Register a filter under a given name with a given priority.
  *
- * Two filters will be preregistered with libgit2: GIT_FILTER_CRLF and
- * GIT_FILTER_IDENT.
+ * If non-NULL, the filter's initialize callback will be invoked before
+ * the first use of the filter, so you can defer expensive operations (in
+ * case libgit2 is being used in a way that doesn't need the filter).
+ *
+ * A filter's attribute checks and `check` and `apply` callbacks will be
+ * issued in order of `priority` on smudge (to workdir), and in reverse
+ * order of `priority` on clean (to odb).
+ *
+ * One filter will be preregistered with libgit2:
+ * - GIT_FILTER_CRLF with priority of 0.
+ *
+ * Currently the filter registry is not thread safe, so any registering or
+ * deregistering of filters must be done outside of any possible usage of
+ * the filters (i.e. during application setup or shutdown).
  */
 GIT_EXTERN(int) git_filter_register(
-	const char *name, const git_filter *filter);
+	const char *name, git_filter *filter, int priority);
 
 /**
  * Remove the filter with the given name
+ *
+ * It is not allowed to remove the builtin libgit2 filters.
+ *
+ * Currently the filter registry is not thread safe, so any registering or
+ * deregistering of filters must be done outside of any possible usage of
+ * the filters (i.e. during application setup or shutdown).
  */
 GIT_EXTERN(int) git_filter_unregister(const char *name);
 
