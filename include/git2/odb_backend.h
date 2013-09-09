@@ -7,8 +7,8 @@
 #ifndef INCLUDE_git_odb_backend_h__
 #define INCLUDE_git_odb_backend_h__
 
-#include "git2/common.h"
-#include "git2/types.h"
+#include "common.h"
+#include "types.h"
 
 /**
  * @file git2/backend.h
