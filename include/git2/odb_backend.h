@@ -82,8 +82,7 @@ struct git_odb_stream {
 	size_t received_bytes;
 
 	/**
-	 * Write at most `len` bytes into `buffer` and advance the
-	 * stream.
+	 * Write at most `len` bytes into `buffer` and advance the stream.
 	 */
 	int (*read)(git_odb_stream *stream, char *buffer, size_t len);
 
@@ -96,18 +95,19 @@ struct git_odb_stream {
 	 * Store the contents of the stream as an object with the id
 	 * specified in `oid`.
 	 *
-	 * This method will *not* be invoked by libgit2 when:
-	 *  - the object pointed at by `oid` already exists in any backend.
-	 * 	- the total number of received bytes differs from the size declared
-	 *    with `git_odb_open_wstream()`
-	 *
-	 * Libgit2 will however take care of properly disposing the stream through
-	 * a call to `free()`.
+	 * This method might not be invoked if:
+	 * - an error occurs earlier with the `write` callback,
+	 * - the object referred to by `oid` already exists in any backend, or
+	 * - the final number of received bytes differs from the size declared
+	 *   with `git_odb_open_wstream()`
 	 */
 	int (*finalize_write)(git_odb_stream *stream, const git_oid *oid);
 
 	/**
 	 * Free the stream's memory.
+	 *
+	 * This method might be called without a call to `finalize_write` if
+	 * an error occurs or if the object is already present in the ODB.
 	 */
 	void (*free)(git_odb_stream *stream);
 };

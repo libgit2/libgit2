@@ -223,7 +223,8 @@ GIT_EXTERN(int) git_odb_write(git_oid *out, git_odb *odb, const void *data, size
  * won't be effective until `git_odb_stream_finalize_write` is called
  * and returns without an error
  *
- * The stream must always be free'd or will leak memory.
+ * The stream must always be freed when done with `git_odb_stream_free` or
+ * will leak memory.
  *
  * @see git_odb_stream
  *
@@ -238,8 +239,8 @@ GIT_EXTERN(int) git_odb_open_wstream(git_odb_stream **out, git_odb *db, size_t s
 /**
  * Write to an odb stream
  *
- * This method will fail as soon as the total number of
- * received bytes exceeds the size declared with `git_odb_open_wstream()`
+ * This method will fail if the total number of received bytes exceeds the
+ * size declared with `git_odb_open_wstream()`
  *
  * @param stream the stream
  * @param buffer the data to write
