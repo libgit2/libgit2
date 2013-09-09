@@ -7,7 +7,7 @@
 #ifndef INCLUDE_git_cred_helpers_h__
 #define INCLUDE_git_cred_helpers_h__
 
-#include "git2/transport.h"
+#include "transport.h"
 
 /**
  * @file git2/cred_helpers.h
