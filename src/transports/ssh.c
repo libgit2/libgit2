@@ -51,7 +51,7 @@ static int gen_proto(git_buf *request, const char *cmd, const char *url)
 		repo = strchr(url, '/');
 	} else {
 		repo = strchr(url, ':');
-		repo++;
+		if (repo) repo++;
 	}
 
 	if (!repo) {
