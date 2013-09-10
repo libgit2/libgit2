@@ -869,6 +869,7 @@ typedef struct {
 	uint32_t flags;
 	uint32_t mkdir_flags;
 	mode_t dirmode;
+	int error;
 } cp_r_info;
 
 #define GIT_CPDIR__MKDIR_DONE_FOR_TO_ROOT (1u << 10)
@@ -907,20 +908,23 @@ static int _cp_r_callback(void *ref, git_buf *from)
 		return 0;
 
 	if (git_buf_joinpath(
-			&info->to, info->to_root, from->ptr + info->from_prefix) < 0)
-		return -1;
+			&info->to, info->to_root, from->ptr + info->from_prefix) < 0) {
+		error = -1;
+		goto exit;
+	}
 
 	if (p_lstat(info->to.ptr, &to_st) < 0) {
 		if (errno != ENOENT && errno != ENOTDIR) {
 			giterr_set(GITERR_OS,
 				"Could not access %s while copying files", info->to.ptr);
-			return -1;
+			error = -1;
+			goto exit;
 		}
 	} else
 		exists = true;
 
 	if ((error = git_path_lstat(from->ptr, &from_st)) < 0)
-		return error;
+		goto exit;
 
 	if (S_ISDIR(from_st.st_mode)) {
 		mode_t oldmode = info->dirmode;
@@ -934,13 +938,14 @@ static int _cp_r_callback(void *ref, git_buf *from)
 			error = _cp_r_mkdir(info, from);
 
 		/* recurse onto target directory */
-		if (!error && (!exists || S_ISDIR(to_st.st_mode)))
-			error = git_path_direach(from, _cp_r_callback, info);
+		if (!error && (!exists || S_ISDIR(to_st.st_mode)) &&
+			((error = git_path_direach(from, _cp_r_callback, info)) == GIT_EUSER))
+			error = info->error;
 
 		if (oldmode != 0)
 			info->dirmode = oldmode;
 
-		return error;
+		goto exit;
 	}
 
 	if (exists) {
@@ -950,7 +955,8 @@ static int _cp_r_callback(void *ref, git_buf *from)
 		if (p_unlink(info->to.ptr) < 0) {
 			giterr_set(GITERR_OS, "Cannot overwrite existing file '%s'",
 				info->to.ptr);
-			return -1;
+			error = -1;
+			goto exit;
 		}
 	}
 
@@ -963,7 +969,7 @@ static int _cp_r_callback(void *ref, git_buf *from)
 	/* Make container directory on demand if needed */
 	if ((info->flags & GIT_CPDIR_CREATE_EMPTY_DIRS) == 0 &&
 		(error = _cp_r_mkdir(info, from)) < 0)
-		return error;
+		goto exit;
 
 	/* make symlink or regular file */
 	if (S_ISLNK(from_st.st_mode))
@@ -977,6 +983,8 @@ static int _cp_r_callback(void *ref, git_buf *from)
 		error = git_futils_cp(from->ptr, info->to.ptr, usemode);
 	}
 
+exit:
+	info->error = error;
 	return error;
 }
 
@@ -997,6 +1005,7 @@ int git_futils_cp_r(
 	info.flags   = flags;
 	info.dirmode = dirmode;
 	info.from_prefix = path.size;
+	info.error = 0;
 	git_buf_init(&info.to, 0);
 
 	/* precalculate mkdir flags */
@@ -1017,6 +1026,9 @@ int git_futils_cp_r(
 
 	git_buf_free(&path);
 	git_buf_free(&info.to);
+
+	if (error == GIT_EUSER)
+		error = info.error;
 
 	return error;
 }

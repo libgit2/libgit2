@@ -499,7 +499,7 @@ static int fn_locate_object_short_oid(void *state, git_buf *pathbuf) {
 	}
 
 	if (sstate->found > 1)
-		return git_odb__error_ambiguous("multiple matches in loose objects");
+		return GIT_EAMBIGUOUS;
 
 	return 0;
 }
@@ -545,11 +545,15 @@ static int locate_object_short_oid(
 	/* Explore directory to find a unique object matching short_oid */
 	error = git_path_direach(
 		object_location, fn_locate_object_short_oid, &state);
-	if (error)
+
+	if (error && error != GIT_EUSER)
 		return error;
 
 	if (!state.found)
 		return git_odb__error_notfound("no matching loose object for prefix", short_oid);
+
+	if (state.found > 1)
+		return git_odb__error_ambiguous("multiple matches in loose objects");
 
 	/* Convert obtained hex formatted oid to raw */
 	error = git_oid_fromstr(res_oid, (char *)state.res_oid);

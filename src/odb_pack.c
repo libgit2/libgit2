@@ -336,7 +336,7 @@ static int pack_backend__refresh(git_odb_backend *_backend)
 	git_buf_free(&path);
 
 	if (error < 0)
-		return error;
+		return -1;
 
 	git_vector_sort(&backend->packs);
 	return 0;

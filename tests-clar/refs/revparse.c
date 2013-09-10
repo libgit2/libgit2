@@ -544,6 +544,37 @@ void test_refs_revparse__a_too_short_objectid_returns_EAMBIGUOUS(void)
 		GIT_EAMBIGUOUS, git_revparse_single(&g_obj, g_repo, "e90"));
 }
 
+/*
+ * $ echo "aabqhq" | git hash-object -t blob --stdin
+ * dea509d0b3cb8ee0650f6ca210bc83f4678851ba
+ * 
+ * $ echo "aaazvc" | git hash-object -t blob --stdin
+ * dea509d097ce692e167dfc6a48a7a280cc5e877e
+ */
+void test_refs_revparse__a_not_precise_enough_objectid_returns_EAMBIGUOUS(void)
+{
+	git_repository *repo;
+	git_index *index;
+	git_object *obj;
+
+	repo = cl_git_sandbox_init("testrepo");
+
+	cl_git_mkfile("testrepo/one.txt", "aabqhq\n");
+	cl_git_mkfile("testrepo/two.txt", "aaazvc\n");
+	
+	cl_git_pass(git_repository_index(&index, repo));
+	cl_git_pass(git_index_add_bypath(index, "one.txt"));
+	cl_git_pass(git_index_add_bypath(index, "two.txt"));
+	
+	cl_git_fail_with(git_revparse_single(&obj, repo, "dea509d0"), GIT_EAMBIGUOUS);
+
+	cl_git_pass(git_revparse_single(&obj, repo, "dea509d09"));
+
+	git_object_free(obj);
+	git_index_free(index);
+	cl_git_sandbox_cleanup();
+}
+
 void test_refs_revparse__issue_994(void)
 {
 	git_repository *repo;
