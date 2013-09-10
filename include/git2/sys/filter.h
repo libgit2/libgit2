@@ -139,7 +139,9 @@ typedef void (*git_filter_cleanup_fn)(
  */
 struct git_filter {
 	unsigned int           version;
+
 	const char            *attributes;
+
 	git_filter_init_fn     initialize;
 	git_filter_shutdown_fn shutdown;
 	git_filter_check_fn    check;

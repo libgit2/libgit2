@@ -39,6 +39,7 @@ typedef struct {
 	const char *filter_name;
 	git_filter *filter;
 	int priority;
+	int initialized;
 	size_t nattrs, nmatches;
 	char *attrdata;
 	const char *attrs[GIT_FLEX_ARRAY];
@@ -178,6 +179,23 @@ static git_filter_def *filter_find_by_name(size_t *pos, const char *name)
 	return fdef;
 }
 
+static int filter_initialize(git_filter_def *fdef)
+{
+	int error = 0;
+
+	if (!fdef->initialized &&
+		fdef->filter &&
+		fdef->filter->initialize &&
+		(error = fdef->filter->initialize(fdef->filter)) < 0)
+	{
+		git_filter_unregister(fdef->filter_name);
+		return error;
+	}
+
+	fdef->initialized = true;
+	return 0;
+}
+
 int git_filter_unregister(const char *name)
 {
 	size_t pos;
@@ -196,8 +214,10 @@ int git_filter_unregister(const char *name)
 
 	(void)git_vector_remove(&git__filter_registry, pos);
 
-	if (fdef->filter->shutdown)
+	if (fdef->initialized && fdef->filter && fdef->filter->shutdown) {
 		fdef->filter->shutdown(fdef->filter);
+		fdef->initialized = false;
+	}
 
 	git__free(fdef->attrdata);
 	git__free(fdef);
@@ -209,7 +229,14 @@ git_filter *git_filter_lookup(const char *name)
 {
 	size_t pos;
 	git_filter_def *fdef = filter_find_by_name(&pos, name);
-	return fdef ? fdef->filter : NULL;
+
+	if (!fdef)
+		return NULL;
+
+	if (!fdef->initialized && filter_initialize(fdef) < 0)
+		return NULL;
+
+	return fdef->filter;
 }
 
 static int filter_load_defaults(void)
@@ -340,6 +367,9 @@ int git_filter_list_load(
 			} else if (error < 0)
 				break;
 		}
+
+		if (!fdef->initialized && (error = filter_initialize(fdef)) < 0)
+			break;
 
 		if (fdef->filter->check)
 			error = fdef->filter->check(
