@@ -111,26 +111,18 @@ static int write_file_filtered(
 	git_filter_list *fl)
 {
 	int error;
-	git_buf source = GIT_BUF_INIT;
-	git_buf dest = GIT_BUF_INIT;
+	git_buffer tgt = GIT_BUFFER_INIT;
 
-	if ((error = git_futils_readbuffer(&source, full_path)) < 0)
-		return error;
-
-	error = git_filter_list_apply(&dest, &source, fl);
-
-	/* Free the source as soon as possible. This can be big in memory,
-	 * and we don't want to ODB write to choke */
-	git_buf_free(&source);
+	error = git_filter_list_apply_to_file(&tgt, fl, NULL, full_path);
 
 	/* Write the file to disk if it was properly filtered */
 	if (!error) {
-		*size = dest.size;
+		*size = tgt.size;
 
-		error = git_odb_write(oid, odb, dest.ptr, dest.size, GIT_OBJ_BLOB);
+		error = git_odb_write(oid, odb, tgt.ptr, tgt.size, GIT_OBJ_BLOB);
 	}
 
-	git_buf_free(&dest);
+	git_buffer_free(&tgt);
 	return error;
 }
 
@@ -329,8 +321,9 @@ int git_blob_is_binary(git_blob *blob)
 
 	assert(blob);
 
-	content.ptr = blob->odb_object->buffer;
-	content.size = min(blob->odb_object->cached.size, 4000);
+	content.ptr   = blob->odb_object->buffer;
+	content.size  = min(blob->odb_object->cached.size, 4000);
+	content.asize = 0;
 
 	return git_buf_text_is_binary(&content);
 }
@@ -342,46 +335,20 @@ int git_blob_filtered_content(
 	int check_for_binary_data)
 {
 	int error = 0;
-	git_buf filtered = GIT_BUF_INIT, unfiltered = GIT_BUF_INIT;
 	git_filter_list *fl = NULL;
 
 	assert(blob && as_path && out);
 
-	/* Create a fake git_buf from the blob raw data... */
-	filtered.ptr   = (void *)git_blob_rawcontent(blob);
-	filtered.size  = (size_t)git_blob_rawsize(blob);
-	filtered.asize = 0;
-
-	if (check_for_binary_data && git_buf_text_is_binary(&filtered))
+	if (check_for_binary_data && git_blob_is_binary(blob))
 		return 0;
 
-	error = git_filter_list_load(
-		&fl, git_blob_owner(blob), as_path, GIT_FILTER_TO_WORKTREE);
-	if (error < 0)
-		return error;
+	if (!(error = git_filter_list_load(
+			&fl, git_blob_owner(blob), as_path, GIT_FILTER_TO_WORKTREE))) {
 
-	if (fl != NULL) {
-		if (out->ptr && out->available) {
-			filtered.ptr   = out->ptr;
-			filtered.size  = out->size;
-			filtered.asize = out->available;
-		} else {
-			git_buf_init(&filtered, filtered.size + 1);
-		}
-
-		if (!(error = git_blob__getbuf(&unfiltered, blob)))
-			error = git_filter_list_apply(&filtered, &unfiltered, fl);
+		error = git_filter_list_apply_to_blob(out, fl, blob);
 
 		git_filter_list_free(fl);
-		git_buf_free(&unfiltered);
-	}
-
-	if (!error) {
-		out->ptr  = filtered.ptr;
-		out->size = filtered.size;
-		out->available = filtered.asize;
 	}
 
 	return error;
 }
-

@@ -678,19 +678,20 @@ fail:
 
 static int buffer_to_file(
 	struct stat *st,
-	git_buf *buffer,
+	git_buffer *buffer,
 	const char *path,
 	mode_t dir_mode,
 	int file_open_flags,
 	mode_t file_mode)
 {
 	int error;
+	git_buf buf = GIT_BUF_FROM_BUFFER(buffer);
 
 	if ((error = git_futils_mkpath2file(path, dir_mode)) < 0)
 		return error;
 
 	if ((error = git_futils_writebuffer(
-			buffer, path, file_open_flags, file_mode)) < 0)
+			&buf, path, file_open_flags, file_mode)) < 0)
 		return error;
 
 	if (st != NULL && (error = p_stat(path, st)) < 0)
@@ -712,39 +713,26 @@ static int blob_content_to_file(
 {
 	int error = 0;
 	mode_t file_mode = opts->file_mode ? opts->file_mode : entry_filemode;
-	git_buf unfiltered = GIT_BUF_INIT, filtered = GIT_BUF_INIT;
+	git_buffer out = GIT_BUFFER_INIT;
 	git_filter_list *fl = NULL;
 
-	/* Create a fake git_buf from the blob raw data... */
-	filtered.ptr  = (void *)git_blob_rawcontent(blob);
-	filtered.size = (size_t)git_blob_rawsize(blob);
-
-	if (!opts->disable_filters && !git_buf_text_is_binary(&filtered)) {
+	if (!opts->disable_filters && !git_blob_is_binary(blob))
 		error = git_filter_list_load(
 			&fl, git_blob_owner(blob), path, GIT_FILTER_TO_WORKTREE);
-	}
 
-	if (fl != NULL) {
-		/* reset 'filtered' so it can be a filter target */
-		git_buf_init(&filtered, 0);
+	if (!error)
+		error = git_filter_list_apply_to_blob(&out, fl, blob);
 
-		if (!(error = git_blob__getbuf(&unfiltered, blob))) {
-			error = git_filter_list_apply(&filtered, &unfiltered, fl);
+	git_filter_list_free(fl);
 
-			git_buf_free(&unfiltered);
-		}
+	if (!error) {
+		error = buffer_to_file(
+			st, &out, path, opts->dir_mode, opts->file_open_flags, file_mode);
 
-		git_filter_list_free(fl);
-	}
-
-	if (!error &&
-		!(error = buffer_to_file(
-			st, &filtered, path, opts->dir_mode,
-			opts->file_open_flags, file_mode)))
 		st->st_mode = entry_filemode;
 
-	if (filtered.asize != 0)
-		git_buf_free(&filtered);
+		git_buffer_free(&out);
+	}
 
 	return error;
 }

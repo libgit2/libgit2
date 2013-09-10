@@ -21,17 +21,17 @@ GIT_BEGIN_DECL
 /**
  * A data buffer for exporting data from libgit2
  *
- * There are a number of places where libgit2 wants to return an allocated
- * data buffer to the caller and have the caller take ownership of that
- * allocated memory.  This can be awkward if the caller does not have easy
- * access to the same allocation functions that libgit2 is using.  In those
- * cases, libgit2 will instead fill in a `git_buffer` and the caller can
- * use `git_buffer_free()` to release it when they are done.
+ * Sometimes libgit2 wants to return an allocated data buffer to the
+ * caller and have the caller take responsibility for freeing that memory.
+ * This can be awkward if the caller does not have easy access to the same
+ * allocation functions that libgit2 is using.  In those cases, libgit2
+ * will instead fill in a `git_buffer` and the caller can use
+ * `git_buffer_free()` to release it when they are done.
  *
  * * `ptr` refers to the start of the allocated memory.
  * * `size` contains the size of the data in `ptr` that is actually used.
- * * `available` refers to the known total amount of allocated memory in
- *   cases where it is larger than the `size` actually in use.
+ * * `available` refers to the known total amount of allocated memory. It
+ *   may be larger than the `size` actually in use.
  *
  * In a few cases, for uniformity and simplicity, an API may populate a
  * `git_buffer` with data that should *not* be freed (i.e. the lifetime of
@@ -78,6 +78,17 @@ GIT_EXTERN(void) git_buffer_free(git_buffer *buffer);
  * @return 0 on success, negative error code on allocation failure
  */
 GIT_EXTERN(int) git_buffer_resize(git_buffer *buffer, size_t want_size);
+
+/**
+ * Set buffer to a copy of some raw data.
+ *
+ * @param buffer The buffer to set
+ * @param data The data to copy into the buffer
+ * @param datalen The length of the data to copy into the buffer
+ * @return 0 on success, negative error code on allocation failure
+ */
+GIT_EXTERN(int) git_buffer_copy(
+	git_buffer *buffer, const void *data, size_t datalen);
 
 GIT_END_DECL
 

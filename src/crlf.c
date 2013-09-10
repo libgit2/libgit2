@@ -8,6 +8,7 @@
 #include "git2/attr.h"
 #include "git2/blob.h"
 #include "git2/index.h"
+#include "git2/sys/filter.h"
 
 #include "common.h"
 #include "fileops.h"
@@ -249,7 +250,6 @@ static int crlf_apply_to_workdir(
 static int crlf_check(
 	git_filter        *self,
 	void              **payload, /* points to NULL ptr on entry, may be set */
-	git_filter_mode_t mode,
 	const git_filter_source *src,
 	const char **attr_values)
 {
@@ -257,7 +257,6 @@ static int crlf_check(
 	struct crlf_attrs ca;
 
 	GIT_UNUSED(self);
-	GIT_UNUSED(mode);
 
 	if (!attr_values) {
 		ca.crlf_action = GIT_CRLF_GUESS;
@@ -299,14 +298,13 @@ static int crlf_check(
 static int crlf_apply(
 	git_filter        *self,
 	void              **payload, /* may be read and/or set */
-	git_filter_mode_t mode,
 	git_buffer        *to,
 	const git_buffer  *from,
 	const git_filter_source *src)
 {
 	GIT_UNUSED(self);
 
-	if (mode == GIT_FILTER_SMUDGE)
+	if (git_filter_source_mode(src) == GIT_FILTER_SMUDGE)
 		return crlf_apply_to_workdir(*payload, to, from);
 	else
 		return crlf_apply_to_odb(*payload, to, from, src);
@@ -331,5 +329,6 @@ git_filter *git_crlf_filter_new(void)
 	f->f.check   = crlf_check;
 	f->f.apply   = crlf_apply;
 	f->f.cleanup = crlf_cleanup;
+
 	return (git_filter *)f;
 }

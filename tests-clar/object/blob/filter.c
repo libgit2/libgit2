@@ -1,7 +1,6 @@
 #include "clar_libgit2.h"
 #include "posix.h"
 #include "blob.h"
-#include "filter.h"
 #include "buf_text.h"
 
 static git_repository *g_repo = NULL;
@@ -105,7 +104,7 @@ void test_object_blob_filter__to_odb(void)
 	git_config *cfg;
 	int i;
 	git_blob *blob;
-	git_buf orig = GIT_BUF_INIT, out = GIT_BUF_INIT;
+	git_buffer out = GIT_BUFFER_INIT;
 
 	cl_git_pass(git_repository_config(&cfg, g_repo));
 	cl_assert(cfg);
@@ -119,17 +118,18 @@ void test_object_blob_filter__to_odb(void)
 
 	for (i = 0; i < NUM_TEST_OBJECTS; i++) {
 		cl_git_pass(git_blob_lookup(&blob, g_repo, &g_oids[i]));
-		cl_git_pass(git_blob__getbuf(&orig, blob));
 
-		cl_git_pass(git_filter_list_apply(&out, &orig, fl));
-		cl_assert(git_buf_cmp(&out, &g_crlf_filtered[i]) == 0);
+		cl_git_pass(git_filter_list_apply_to_blob(&out, fl, blob));
+
+		cl_assert(!memcmp(
+			out.ptr, g_crlf_filtered[i].ptr,
+			min(out.size, g_crlf_filtered[i].size)));
 
 		git_blob_free(blob);
 	}
 
 	git_filter_list_free(fl);
-	git_buf_free(&orig);
-	git_buf_free(&out);
+	git_buffer_free(&out);
 	git_config_free(cfg);
 }
 

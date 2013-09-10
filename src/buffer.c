@@ -501,7 +501,8 @@ void git_buffer_free(git_buffer *buffer)
 	git__memzero(buffer, sizeof(*buffer));
 }
 
-int git_buffer_resize(git_buffer *buffer, size_t want_size)
+static int git_buffer__resize(
+	git_buffer *buffer, size_t want_size, int preserve_data)
 {
 	int non_allocated_buffer = 0;
 	char *new_ptr;
@@ -514,7 +515,7 @@ int git_buffer_resize(git_buffer *buffer, size_t want_size)
 	if (non_allocated_buffer && !want_size)
 		want_size = buffer->size;
 
-	if (buffer->available <= want_size)
+	if (buffer->available >= want_size)
 		return 0;
 
 	if (non_allocated_buffer) {
@@ -530,7 +531,7 @@ int git_buffer_resize(git_buffer *buffer, size_t want_size)
 	new_ptr = git__realloc(new_ptr, want_size);
 	GITERR_CHECK_ALLOC(new_ptr);
 
-	if (non_allocated_buffer)
+	if (non_allocated_buffer && preserve_data)
 		memcpy(new_ptr, buffer->ptr, buffer->size);
 
 	buffer->ptr       = new_ptr;
@@ -538,3 +539,19 @@ int git_buffer_resize(git_buffer *buffer, size_t want_size)
 
 	return 0;
 }
+
+int git_buffer_resize(git_buffer *buffer, size_t want_size)
+{
+	return git_buffer__resize(buffer, want_size, true);
+}
+
+int git_buffer_copy(
+	git_buffer *buffer, const void *data, size_t datalen)
+{
+	if (git_buffer__resize(buffer, datalen, false) < 0)
+		return -1;
+	memcpy(buffer->ptr, data, datalen);
+	buffer->size = datalen;
+	return 0;
+}
+

@@ -176,6 +176,11 @@ int git_buf_splice(
 	size_t nb_to_insert);
 
 
+GIT_INLINE(bool) git_buffer_is_allocated(const git_buffer *buffer)
+{
+	return (buffer->ptr != NULL && buffer->available > 0);
+}
+
 #define GIT_BUF_FROM_BUFFER(buffer) \
 	{ (buffer)->ptr, (buffer)->available, (buffer)->size }
 

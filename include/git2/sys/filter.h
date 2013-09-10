@@ -46,6 +46,11 @@ GIT_EXTERN(uint16_t) git_filter_source_filemode(const git_filter_source *src);
  */
 GIT_EXTERN(const git_oid *) git_filter_source_id(const git_filter_source *src);
 
+/**
+ * Get the git_filter_mode_t to be applied
+ */
+GIT_EXTERN(git_filter_mode_t) git_filter_source_mode(const git_filter_source *src);
+
 /*
  * struct git_filter
  *
@@ -73,7 +78,6 @@ typedef void (*git_filter_shutdown_fn)(git_filter *self);
 typedef int (*git_filter_check_fn)(
 	git_filter        *self,
 	void              **payload, /* points to NULL ptr on entry, may be set */
-	git_filter_mode_t mode,
 	const git_filter_source *src,
 	const char        **attr_values);
 
@@ -83,7 +87,6 @@ typedef int (*git_filter_check_fn)(
 typedef int (*git_filter_apply_fn)(
 	git_filter        *self,
 	void              **payload, /* may be read and/or set */
-	git_filter_mode_t mode,
 	git_buffer        *to,
 	const git_buffer  *from,
 	const git_filter_source *src);
@@ -105,14 +108,11 @@ typedef void (*git_filter_cleanup_fn)(
  *
  * `version` should be set to GIT_FILTER_VERSION
  *
- * `attributes` is a list of attributes to check on a file to see if the
- * filter applies.  The format is a whitespace-delimited list of names
- * (like "eol crlf text").  Each name may have an optional value that will
- * be tested even without a `check` callback.  If the value does not
- * match, the filter will be skipped.  The values are specified as in a
- * .gitattributes file (e.g. "myattr=foobar" or "myattr" or "-myattr").
- * If a check function is supplied, then the values of the attributes will
- * be passed to that function.
+ * `attributes` is a whitespace-separated list of attribute names to check
+ * for this filter (e.g. "eol crlf text").  If the attribute name is bare,
+ * it will be simply loaded and passed to the `check` callback.  If it has
+ * a value (i.e. "name=value"), the attribute must match that value for
+ * the filter to be applied.
  *
  * `initialize` is an optional callback invoked before a filter is first
  * used.  It will be called once at most.

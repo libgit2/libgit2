@@ -10,15 +10,18 @@
 #include "hash.h"
 #include "filter.h"
 #include "repository.h"
+#include "git2/sys/filter.h"
 #include "git2/config.h"
 #include "blob.h"
 #include "attr_file.h"
+#include "array.h"
 
 struct git_filter_source {
 	git_repository *repo;
 	const char     *path;
 	git_oid         oid;  /* zero if unknown (which is likely) */
 	uint16_t        filemode; /* zero if unknown */
+	git_filter_mode_t mode;
 };
 
 typedef struct {
@@ -28,7 +31,6 @@ typedef struct {
 
 struct git_filter_list {
 	git_array_t(git_filter_entry) filters;
-	git_filter_mode_t mode;
 	git_filter_source source;
 	char path[GIT_FLEX_ARRAY];
 };
@@ -238,8 +240,13 @@ const git_oid *git_filter_source_id(const git_filter_source *src)
 	return git_oid_iszero(&src->oid) ? NULL : &src->oid;
 }
 
+git_filter_mode_t git_filter_source_mode(const git_filter_source *src)
+{
+	return src->mode;
+}
+
 static int git_filter_list_new(
-	git_filter_list **out, git_filter_mode_t mode, const git_filter_source *src)
+	git_filter_list **out, const git_filter_source *src)
 {
 	git_filter_list *fl = NULL;
 	size_t pathlen = src->path ? strlen(src->path) : 0;
@@ -247,11 +254,11 @@ static int git_filter_list_new(
 	fl = git__calloc(1, sizeof(git_filter_list) + pathlen + 1);
 	GITERR_CHECK_ALLOC(fl);
 
-	fl->mode = mode;
 	if (src->path)
 		memcpy(fl->path, src->path, pathlen);
 	fl->source.repo = src->repo;
 	fl->source.path = fl->path;
+	fl->source.mode = src->mode;
 
 	*out = fl;
 	return 0;
@@ -316,6 +323,7 @@ int git_filter_list_load(
 
 	src.repo = repo;
 	src.path = path;
+	src.mode = mode;
 
 	git_vector_foreach(&git__filter_registry, idx, fdef) {
 		const char **values = NULL;
@@ -335,7 +343,7 @@ int git_filter_list_load(
 
 		if (fdef->filter->check)
 			error = fdef->filter->check(
-				fdef->filter, &payload, mode, &src, values);
+				fdef->filter, &payload, &src, values);
 
 		git__free(values);
 
@@ -344,7 +352,7 @@ int git_filter_list_load(
 		else if (error < 0)
 			break;
 		else {
-			if (!fl && (error = git_filter_list_new(&fl, mode, &src)) < 0)
+			if (!fl && (error = git_filter_list_new(&fl, &src)) < 0)
 				return error;
 
 			fe = git_array_alloc(fl->filters);
@@ -381,40 +389,46 @@ void git_filter_list_free(git_filter_list *fl)
 	git__free(fl);
 }
 
-int git_filter_list_apply(
-	git_buf *dest,
-	git_buf *source,
-	git_filter_list *fl)
+static int filter_list_out_buffer_from_raw(
+	git_buffer *out, const void *ptr, size_t size)
+{
+	if (git_buffer_is_allocated(out))
+		git_buffer_free(out);
+
+	out->ptr  = (char *)ptr;
+	out->size = size;
+	out->available = 0;
+	return 0;
+}
+
+int git_filter_list_apply_to_data(
+	git_buffer *tgt, git_filter_list *fl, git_buffer *src)
 {
 	int error = 0;
 	uint32_t i;
-	unsigned int src;
-	git_buf *dbuffer[2];
-	git_filter_entry *fe;
+	git_buffer *dbuffer[2], local = GIT_BUFFER_INIT;
+	unsigned int si = 0;
 
-	if (!fl) {
-		git_buf_swap(dest, source);
-		return 0;
+	if (!fl)
+		return filter_list_out_buffer_from_raw(tgt, src->ptr, src->size);
+
+	dbuffer[0] = src;
+	dbuffer[1] = tgt;
+
+	/* if `src` buffer is reallocable, then use it, otherwise copy it */
+	if (!git_buffer_is_allocated(src)) {
+		if (git_buffer_copy(&local, src->ptr, src->size) < 0)
+			return -1;
+		dbuffer[0] = &local;
 	}
 
-	dbuffer[0] = source;
-	dbuffer[1] = dest;
-
-	src = 0;
-
-	/* Pre-grow the destination buffer to more or less the size
-	 * we expect it to have */
-	if (git_buf_grow(dest, git_buf_len(source)) < 0)
-		return -1;
-
 	for (i = 0; i < git_array_size(fl->filters); ++i) {
-		unsigned int dst = 1 - src;
+		unsigned int di = 1 - si;
+		uint32_t fidx = (fl->source.mode == GIT_FILTER_TO_ODB) ?
+			i : git_array_size(fl->filters) - 1 - i;
+		git_filter_entry *fe = git_array_get(fl->filters, fidx);
 
-		git_buf_clear(dbuffer[dst]);
-
-		fe = git_array_get(
-			fl->filters, (fl->mode == GIT_FILTER_TO_ODB) ?
-			i : git_array_size(fl->filters) - 1 - i);
+		dbuffer[di]->size = 0;
 
 		/* Apply the filter from dbuffer[src] to the other buffer;
 		 * if the filtering is canceled by the user mid-filter,
@@ -422,33 +436,64 @@ int git_filter_list_apply(
 		 * of the double buffering (so that the text goes through
 		 * cleanly).
 		 */
-		{
-			git_buffer srcb = GIT_BUFFER_FROM_BUF(dbuffer[src]);
-			git_buffer dstb = GIT_BUFFER_FROM_BUF(dbuffer[dst]);
 
-			error = fe->filter->apply(
-				fe->filter, &fe->payload, fl->mode, &dstb, &srcb, &fl->source);
+		error = fe->filter->apply(
+			fe->filter, &fe->payload, dbuffer[di], dbuffer[si], &fl->source);
 
-			if (error == GIT_ENOTFOUND)
-				error = 0;
-			else if (error < 0) {
-				git_buf_clear(dest);
-				return error;
-			}
-			else {
-				git_buf_from_buffer(dbuffer[src], &srcb);
-				git_buf_from_buffer(dbuffer[dst], &dstb);
-				src = dst;
-			}
+		if (error == GIT_ENOTFOUND)
+			error = 0;
+		else if (!error)
+			si = di; /* swap buffers */
+		else {
+			tgt->size = 0;
+			return error;
 		}
-
-		if (git_buf_oom(dbuffer[dst]))
-			return -1;
 	}
 
 	/* Ensure that the output ends up in dbuffer[1] (i.e. the dest) */
-	if (src != 1)
-		git_buf_swap(dest, source);
+	if (si != 1) {
+		git_buffer sw = *dbuffer[1];
+		*dbuffer[1] = *dbuffer[0];
+		*dbuffer[0] = sw;
+	}
+
+	git_buffer_free(&local); /* don't leak if we allocated locally */
 
 	return 0;
+}
+
+int git_filter_list_apply_to_file(
+	git_buffer *out,
+	git_filter_list *filters,
+	git_repository *repo,
+	const char *path)
+{
+	int error;
+	const char *base = repo ? git_repository_workdir(repo) : NULL;
+	git_buf abspath = GIT_BUF_INIT, raw = GIT_BUF_INIT;
+
+	if (!(error = git_path_join_unrooted(&abspath, path, base, NULL)) &&
+		!(error = git_futils_readbuffer(&raw, abspath.ptr)))
+	{
+		git_buffer in = GIT_BUFFER_FROM_BUF(&raw);
+
+		error = git_filter_list_apply_to_data(out, filters, &in);
+
+		git_buffer_free(&in);
+	}
+
+	git_buf_free(&abspath);
+	return error;
+}
+
+int git_filter_list_apply_to_blob(
+	git_buffer *out,
+	git_filter_list *filters,
+	git_blob *blob)
+{
+	git_buffer in = {
+		(char *)git_blob_rawcontent(blob), git_blob_rawsize(blob), 0
+	};
+
+	return git_filter_list_apply_to_data(out, filters, &in);
 }

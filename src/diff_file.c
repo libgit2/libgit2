@@ -297,8 +297,8 @@ static int diff_file_content_load_workdir_file(
 {
 	int error = 0;
 	git_filter_list *fl = NULL;
-	git_buf raw = GIT_BUF_INIT, filtered = GIT_BUF_INIT;
 	git_file fd = git_futils_open_ro(git_buf_cstr(path));
+	git_buf raw = GIT_BUF_INIT;
 
 	if (fd < 0)
 		return fd;
@@ -326,16 +326,19 @@ static int diff_file_content_load_workdir_file(
 		giterr_clear();
 	}
 
-	if (!(error = git_futils_readbuffer_fd(&raw, fd, (size_t)fc->file->size)) &&
-		!(error = git_filter_list_apply(&filtered, &raw, fl)))
-	{
-		fc->map.len  = git_buf_len(&filtered);
-		fc->map.data = git_buf_detach(&filtered);
-		fc->flags |= GIT_DIFF_FLAG__FREE_DATA;
-	}
+	if (!(error = git_futils_readbuffer_fd(&raw, fd, (size_t)fc->file->size))) {
+		git_buffer in = GIT_BUFFER_FROM_BUF(&raw), out = GIT_BUFFER_INIT;
 
-	git_buf_free(&raw);
-	git_buf_free(&filtered);
+		error = git_filter_list_apply_to_data(&out, fl, &in);
+
+		git_buffer_free(&in);
+
+		if (!error) {
+			fc->map.len  = out.size;
+			fc->map.data = out.ptr;
+			fc->flags |= GIT_DIFF_FLAG__FREE_DATA;
+		}
+	}
 
 cleanup:
 	git_filter_list_free(fl);

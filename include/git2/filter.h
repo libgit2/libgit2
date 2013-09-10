@@ -29,10 +29,10 @@ GIT_BEGIN_DECL
  * change is being applied.
  */
 typedef enum {
-	GIT_FILTER_SMUDGE = 0,
-	GIT_FILTER_TO_WORKTREE = GIT_FILTER_SMUDGE,
-	GIT_FILTER_CLEAN = 1,
-	GIT_FILTER_TO_ODB = GIT_FILTER_CLEAN,
+	GIT_FILTER_TO_WORKTREE = 0,
+	GIT_FILTER_SMUDGE = GIT_FILTER_TO_WORKTREE,
+	GIT_FILTER_TO_ODB = 1,
+	GIT_FILTER_CLEAN = GIT_FILTER_TO_ODB,
 } git_filter_mode_t;
 
 /**
@@ -50,16 +50,102 @@ typedef enum {
  */
 typedef struct git_filter git_filter;
 
+/**
+ * List of filters to be applied
+ *
+ * This represents a list of filters to be applied to a file / blob.  You
+ * can build the list with one call, apply it with another, and dispose it
+ * with a third.  In typical usage, there are not many occasions where a
+ * git_filter_list is needed directly since the library will generally
+ * handle conversions for you, but it can be convenient to be able to
+ * build and apply the list sometimes.
+ */
+typedef struct git_filter_list git_filter_list;
+
+/**
+ * Look up a filter by name
+ */
 GIT_EXTERN(git_filter *) git_filter_lookup(const char *name);
 
 #define GIT_FILTER_CRLF "crlf"
 
+/**
+ * Apply a single filter to a buffer of data
+ */
 GIT_EXTERN(int) git_filter_apply_to_buffer(
 	git_buffer *out,
 	git_filter *filter,
 	const git_buffer *input,
 	const char *as_path,
 	git_filter_mode_t mode);
+
+/**
+ * Load the filter list for a given path.
+ *
+ * This will return 0 (success) but set the output git_filter_list to NULL
+ * if no filters are requested for the given file.
+ *
+ * @param filters Output newly created git_filter_list (or NULL)
+ * @param repo Repository object that contains `path`
+ * @param path Relative path of the file to be filtered
+ * @param mode Filtering direction (WT->ODB or ODB->WT)
+ * @return 0 on success (which could still return NULL if no filters are
+ *         needed for the requested file), <0 on error
+ */
+GIT_EXTERN(int) git_filter_list_load(
+	git_filter_list **filters,
+	git_repository *repo,
+	const char *path,
+	git_filter_mode_t mode);
+
+/**
+ * Apply filter list to a data buffer.
+ *
+ * See `git2/buffer.h` for background on `git_buffer` objects.
+ *
+ * If the `in` buffer refers to data managed by libgit2
+ * (i.e. `in->available` is not zero), then it will be overwritten when
+ * applying the filters.  If not, then it will be left untouched.
+ *
+ * If there are no filters to apply (or `filters` is NULL), then the `out`
+ * buffer will reference the `in` buffer data (with `available` set to
+ * zero) instead of allocating data.  This keeps allocations to a minimum,
+ * but it means you have to be careful about freeing the `in` data.
+ *
+ * @param out Buffer to store the result of the filtering
+ * @param filters A loaded git_filter_list (or NULL)
+ * @param in Buffer containing the data to filter
+ * @return 0 on success, an error code otherwise
+ */
+GIT_EXTERN(int) git_filter_list_apply_to_data(
+	git_buffer *out,
+	git_filter_list *filters,
+	git_buffer *in);
+
+/**
+ * Apply filter list to the contents of a file on disk
+ */
+GIT_EXTERN(int) git_filter_list_apply_to_file(
+	git_buffer *out,
+	git_filter_list *filters,
+	git_repository *repo,
+	const char *path);
+
+/**
+ * Apply filter list to the contents of a blob
+ */
+GIT_EXTERN(int) git_filter_list_apply_to_blob(
+	git_buffer *out,
+	git_filter_list *filters,
+	git_blob *blob);
+
+/**
+ * Free a git_filter_list
+ *
+ * @param filters A git_filter_list created by `git_filter_list_load`
+ */
+GIT_EXTERN(void) git_filter_list_free(git_filter_list *filters);
+
 
 GIT_END_DECL
 
