@@ -217,6 +217,14 @@ int pthread_rwlock_destroy(pthread_rwlock_t *lock)
 }
 
 
+static void win32_pthread_shutdown(void)
+{
+	if (win32_kernel32_dll) {
+		FreeLibrary(win32_kernel32_dll);
+		win32_kernel32_dll = NULL;
+	}
+}
+
 int win32_pthread_initialize(void)
 {
 	if (win32_kernel32_dll)
@@ -239,15 +247,7 @@ int win32_pthread_initialize(void)
 	win32_srwlock_release_exclusive = (win32_srwlock_fn)
 		GetProcAddress(win32_kernel32_dll, "ReleaseSRWLockExclusive");
 
-	return 0;
-}
-
-int win32_pthread_shutdown(void)
-{
-	if (win32_kernel32_dll) {
-		FreeLibrary(win32_kernel32_dll);
-		win32_kernel32_dll = NULL;
-	}
+	git__on_shutdown(win32_pthread_shutdown);
 
 	return 0;
 }

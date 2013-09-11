@@ -6,6 +6,7 @@
  */
 #include "common.h"
 #include "fileops.h"
+#include "global.h"
 #include <ctype.h>
 #if GIT_WIN32
 #include "win32/findfile.h"
@@ -635,6 +636,13 @@ static git_futils_dirs_guess_cb git_futils__dir_guess[GIT_FUTILS_DIR__MAX] = {
 	git_futils_guess_xdg_dirs,
 };
 
+static void git_futils_dirs_global_shutdown(void)
+{
+	int i;
+	for (i = 0; i < GIT_FUTILS_DIR__MAX; ++i)
+		git_buf_free(&git_futils__dirs[i]);
+}
+
 int git_futils_dirs_global_init(void)
 {
 	git_futils_dir_t i;
@@ -643,6 +651,8 @@ int git_futils_dirs_global_init(void)
 
 	for (i = 0; !error && i < GIT_FUTILS_DIR__MAX; i++)
 		error = git_futils_dirs_get(&path, i);
+
+	git__on_shutdown(git_futils_dirs_global_shutdown);
 
 	return error;
 }
@@ -724,13 +734,6 @@ int git_futils_dirs_set(git_futils_dir_t which, const char *search_path)
 	git_buf_free(&merge);
 
 	return git_buf_oom(&git_futils__dirs[which]) ? -1 : 0;
-}
-
-void git_futils_dirs_free(void)
-{
-	int i;
-	for (i = 0; i < GIT_FUTILS_DIR__MAX; ++i)
-		git_buf_free(&git_futils__dirs[i]);
 }
 
 static int git_futils_find_in_dirlist(

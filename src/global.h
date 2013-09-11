@@ -21,4 +21,8 @@ extern git_mutex git__mwindow_mutex;
 
 #define GIT_GLOBAL (git__global_state())
 
+typedef void (*git_global_shutdown_fn)(void);
+
+extern void git__on_shutdown(git_global_shutdown_fn callback);
+
 #endif
