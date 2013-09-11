@@ -20,8 +20,10 @@
           <a class="source" href="../cat-file.html">cat-file.c</a>
           <a class="source" href="../diff.html">diff.c</a>
           <a class="source" href="../general.html">general.c</a>
+          <a class="source" href="../init.html">init.c</a>
           <a class="source" href="../log.html">log.c</a>
           <a class="source" href="clone.html">clone.c</a>
+          <a class="source" href="common.html">common.c</a>
           <a class="source" href="fetch.html">fetch.c</a>
           <a class="source" href="git2.html">git2.c</a>
           <a class="source" href="index-pack.html">index-pack.c</a>
@@ -65,7 +67,7 @@
   <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
 <span class="p">}</span>
 
-<span class="k">static</span> <span class="kt">int</span> <span class="nf">use_unnamed</span><span class="p">(</span><span class="n">git_repository</span> <span class="o">*</span><span class="n">repo</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">url</span><span class="p">)</span>
+<span class="k">static</span> <span class="kt">int</span> <span class="nf">use_remote</span><span class="p">(</span><span class="n">git_repository</span> <span class="o">*</span><span class="n">repo</span><span class="p">,</span> <span class="kt">char</span> <span class="o">*</span><span class="n">name</span><span class="p">)</span>
 <span class="p">{</span>
   <span class="n">git_remote</span> <span class="o">*</span><span class="n">remote</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
   <span class="kt">int</span> <span class="n">error</span><span class="p">;</span></pre></div>
@@ -76,78 +78,34 @@
         <div class="pilwrap">
           <a class="pilcrow" href="#section-2">&#182;</a>
         </div>
-        <p>Create an instance of a remote from the URL. The transport to use
-is detected from the URL</p>
+        <p>Find the remote by name</p>
       </td>
       <td class=code>
-        <div class='highlight'><pre>  <span class="n">error</span> <span class="o">=</span> <span class="n"><a name="git_remote_create_inmemory-2" class="fnlink" href="../../#HEAD/group/remote/git_remote_create_inmemory">git_remote_create_inmemory</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">remote</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">,</span> <span class="n">url</span><span class="p">);</span>
+        <div class='highlight'><pre>  <span class="n">error</span> <span class="o">=</span> <span class="n"><a name="git_remote_load-3" class="fnlink" href="../../#HEAD/group/remote/git_remote_load">git_remote_load</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">remote</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="n">name</span><span class="p">);</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">error</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">error</span> <span class="o">=</span> <span class="n"><a name="git_remote_create_inmemory-2" class="fnlink" href="../../#HEAD/group/remote/git_remote_create_inmemory">git_remote_create_inmemory</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">remote</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">,</span> <span class="n">name</span><span class="p">);</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">error</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
+      <span class="k">goto</span> <span class="n">cleanup</span><span class="p">;</span>
+  <span class="p">}</span>
+
+  <span class="n"><a name="git_remote_set_cred_acquire_cb-7" class="fnlink" href="../../#HEAD/group/remote/git_remote_set_cred_acquire_cb">git_remote_set_cred_acquire_cb</a></span><span class="p">(</span><span class="n">remote</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">cred_acquire_cb</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+
+  <span class="n">error</span> <span class="o">=</span> <span class="n"><a name="git_remote_connect-4" class="fnlink" href="../../#HEAD/group/remote/git_remote_connect">git_remote_connect</a></span><span class="p">(</span><span class="n">remote</span><span class="p">,</span> <span class="n">GIT_DIRECTION_FETCH</span><span class="p">);</span>
   <span class="k">if</span> <span class="p">(</span><span class="n">error</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
-    <span class="k">goto</span> <span class="n">cleanup</span><span class="p">;</span></pre></div>
+    <span class="k">goto</span> <span class="n">cleanup</span><span class="p">;</span>
+
+  <span class="n">error</span> <span class="o">=</span> <span class="n"><a name="git_remote_ls-5" class="fnlink" href="../../#HEAD/group/remote/git_remote_ls">git_remote_ls</a></span><span class="p">(</span><span class="n">remote</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">show_ref__cb</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+
+<span class="nl">cleanup:</span>
+  <span class="n"><a name="git_remote_free-6" class="fnlink" href="../../#HEAD/group/remote/git_remote_free">git_remote_free</a></span><span class="p">(</span><span class="n">remote</span><span class="p">);</span>
+  <span class="k">return</span> <span class="n">error</span><span class="p">;</span>
+<span class="p">}</span></pre></div>
       </td>
     </tr>
     <tr id='section-3'>
       <td class=docs>
         <div class="pilwrap">
           <a class="pilcrow" href="#section-3">&#182;</a>
-        </div>
-        <p>When connecting, the underlying code needs to know wether we
-want to push or fetch</p>
-      </td>
-      <td class=code>
-        <div class='highlight'><pre>  <span class="n">error</span> <span class="o">=</span> <span class="n"><a name="git_remote_connect-4" class="fnlink" href="../../#HEAD/group/remote/git_remote_connect">git_remote_connect</a></span><span class="p">(</span><span class="n">remote</span><span class="p">,</span> <span class="n">GIT_DIRECTION_FETCH</span><span class="p">);</span>
-  <span class="k">if</span> <span class="p">(</span><span class="n">error</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
-    <span class="k">goto</span> <span class="n">cleanup</span><span class="p">;</span></pre></div>
-      </td>
-    </tr>
-    <tr id='section-4'>
-      <td class=docs>
-        <div class="pilwrap">
-          <a class="pilcrow" href="#section-4">&#182;</a>
-        </div>
-        <p>With <a name="git_remote_ls-6" class="fnlink" href="../../#HEAD/group/remote/git_remote_ls">git_remote_ls</a> we can retrieve the advertised heads</p>
-      </td>
-      <td class=code>
-        <div class='highlight'><pre>  <span class="n">error</span> <span class="o">=</span> <span class="n"><a name="git_remote_ls-7" class="fnlink" href="../../#HEAD/group/remote/git_remote_ls">git_remote_ls</a></span><span class="p">(</span><span class="n">remote</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">show_ref__cb</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
-
-<span class="nl">cleanup:</span>
-  <span class="n"><a name="git_remote_free-9" class="fnlink" href="../../#HEAD/group/remote/git_remote_free">git_remote_free</a></span><span class="p">(</span><span class="n">remote</span><span class="p">);</span>
-  <span class="k">return</span> <span class="n">error</span><span class="p">;</span>
-<span class="p">}</span>
-
-<span class="k">static</span> <span class="kt">int</span> <span class="nf">use_remote</span><span class="p">(</span><span class="n">git_repository</span> <span class="o">*</span><span class="n">repo</span><span class="p">,</span> <span class="kt">char</span> <span class="o">*</span><span class="n">name</span><span class="p">)</span>
-<span class="p">{</span>
-  <span class="n">git_remote</span> <span class="o">*</span><span class="n">remote</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
-  <span class="kt">int</span> <span class="n">error</span><span class="p">;</span></pre></div>
-      </td>
-    </tr>
-    <tr id='section-5'>
-      <td class=docs>
-        <div class="pilwrap">
-          <a class="pilcrow" href="#section-5">&#182;</a>
-        </div>
-        <p>Find the remote by name</p>
-      </td>
-      <td class=code>
-        <div class='highlight'><pre>  <span class="n">error</span> <span class="o">=</span> <span class="n"><a name="git_remote_load-3" class="fnlink" href="../../#HEAD/group/remote/git_remote_load">git_remote_load</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">remote</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="n">name</span><span class="p">);</span>
-  <span class="k">if</span> <span class="p">(</span><span class="n">error</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
-    <span class="k">goto</span> <span class="n">cleanup</span><span class="p">;</span>
-
-  <span class="n">error</span> <span class="o">=</span> <span class="n"><a name="git_remote_connect-5" class="fnlink" href="../../#HEAD/group/remote/git_remote_connect">git_remote_connect</a></span><span class="p">(</span><span class="n">remote</span><span class="p">,</span> <span class="n">GIT_DIRECTION_FETCH</span><span class="p">);</span>
-  <span class="k">if</span> <span class="p">(</span><span class="n">error</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
-    <span class="k">goto</span> <span class="n">cleanup</span><span class="p">;</span>
-
-  <span class="n">error</span> <span class="o">=</span> <span class="n"><a name="git_remote_ls-8" class="fnlink" href="../../#HEAD/group/remote/git_remote_ls">git_remote_ls</a></span><span class="p">(</span><span class="n">remote</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">show_ref__cb</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
-
-<span class="nl">cleanup:</span>
-  <span class="n"><a name="git_remote_free-10" class="fnlink" href="../../#HEAD/group/remote/git_remote_free">git_remote_free</a></span><span class="p">(</span><span class="n">remote</span><span class="p">);</span>
-  <span class="k">return</span> <span class="n">error</span><span class="p">;</span>
-<span class="p">}</span></pre></div>
-      </td>
-    </tr>
-    <tr id='section-6'>
-      <td class=docs>
-        <div class="pilwrap">
-          <a class="pilcrow" href="#section-6">&#182;</a>
         </div>
         <p>This gets called to do the work. The remote can be given either as
 the name of a configured remote or an URL.</p>
@@ -163,12 +121,7 @@ the name of a configured remote or an URL.</p>
     <span class="k">return</span> <span class="n">EXIT_FAILURE</span><span class="p">;</span>
   <span class="p">}</span>
 
-  <span class="cm">/* If there&#39;s a &#39;:&#39; in the name, assume it&#39;s an URL */</span>
-  <span class="k">if</span> <span class="p">(</span><span class="n">strchr</span><span class="p">(</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="sc">&#39;:&#39;</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">NULL</span><span class="p">)</span> <span class="p">{</span>
-    <span class="n">error</span> <span class="o">=</span> <span class="n">use_unnamed</span><span class="p">(</span><span class="n">repo</span><span class="p">,</span> <span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">]);</span>
-  <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
-    <span class="n">error</span> <span class="o">=</span> <span class="n">use_remote</span><span class="p">(</span><span class="n">repo</span><span class="p">,</span> <span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">]);</span>
-  <span class="p">}</span>
+  <span class="n">error</span> <span class="o">=</span> <span class="n">use_remote</span><span class="p">(</span><span class="n">repo</span><span class="p">,</span> <span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">]);</span>
 
   <span class="k">return</span> <span class="n">error</span><span class="p">;</span>
 <span class="p">}</span></pre></div>

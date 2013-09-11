@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta http-equiv="content-type" content="text/html;charset=utf-8">
+  <title>init.c</title>
+  <link rel="stylesheet" href="https://raw.github.com/jashkenas/docco/c640fda9b0b1d09d2b7236f655b3663dc06c63d6/resources/docco.css">
+  <style type="text/css">
+    a.fnlink {text-decoration: none}
+    a.fnlink:hover {text-decoration: underline}
+  </style>
+</head>
+<body>
+<div id='container'>
+  <div id="background"></div>
+  <div id="jump_to">
+    Jump To &hellip;
+    <div id="jump_wrapper">
+      <div id="jump_page">
+        <a class="source" href="../../#HEAD">API Docs</a>
+          <a class="source" href="cat-file.html">cat-file.c</a>
+          <a class="source" href="diff.html">diff.c</a>
+          <a class="source" href="general.html">general.c</a>
+          <a class="source" href="init.html">init.c</a>
+          <a class="source" href="log.html">log.c</a>
+          <a class="source" href="network/clone.html">clone.c</a>
+          <a class="source" href="network/common.html">common.c</a>
+          <a class="source" href="network/fetch.html">fetch.c</a>
+          <a class="source" href="network/git2.html">git2.c</a>
+          <a class="source" href="network/index-pack.html">index-pack.c</a>
+          <a class="source" href="network/ls-remote.html">ls-remote.c</a>
+          <a class="source" href="rev-list.html">rev-list.c</a>
+          <a class="source" href="rev-parse.html">rev-parse.c</a>
+          <a class="source" href="showindex.html">showindex.c</a>
+          <a class="source" href="status.html">status.c</a>
+      </div>
+    </div>
+  </div>
+  <table cellspacing=0 cellpadding=0>
+  <thead>
+    <tr>
+      <th class=docs><h1>init.c</h1></th>
+      <th class=code></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr id='section-1'>
+      <td class=docs>
+        <div class="pilwrap">
+          <a class="pilcrow" href="#section-1">&#182;</a>
+        </div>
+        
+
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><span class="cm">/*</span>
+<span class="cm"> * This is a sample program that is similar to &quot;git init&quot;.  See the</span>
+<span class="cm"> * documentation for that (try &quot;git help init&quot;) to understand what this</span>
+<span class="cm"> * program is emulating.</span>
+<span class="cm"> *</span>
+<span class="cm"> * This demonstrates using the libgit2 APIs to initialize a new repository.</span>
+<span class="cm"> *</span>
+<span class="cm"> * This also contains a special additional option that regular &quot;git init&quot;</span>
+<span class="cm"> * does not support which is &quot;--initial-commit&quot; to make a first empty commit.</span>
+<span class="cm"> * That is demonstrated in the &quot;create_initial_commit&quot; helper function.</span>
+<span class="cm"> *</span>
+<span class="cm"> * Copyright (C) the libgit2 contributors. All rights reserved.</span>
+<span class="cm"> *</span>
+<span class="cm"> * This file is part of libgit2, distributed under the GNU GPL v2 with</span>
+<span class="cm"> * a Linking Exception. For full terms see the included COPYING file.</span>
+<span class="cm"> */</span>
+
+<span class="cp">#include &lt;stdio.h&gt;</span>
+<span class="cp">#include &lt;git2.h&gt;</span>
+<span class="cp">#include &lt;stdlib.h&gt;</span>
+<span class="cp">#include &lt;string.h&gt;</span>
+<span class="cp">#include &lt;time.h&gt;</span>
+
+<span class="cm">/* not actually good error handling */</span>
+<span class="k">static</span> <span class="kt">void</span> <span class="nf">fail</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">msg</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">arg</span><span class="p">)</span>
+<span class="p">{</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">arg</span><span class="p">)</span>
+    <span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span> <span class="s">&quot;%s %s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">msg</span><span class="p">,</span> <span class="n">arg</span><span class="p">);</span>
+  <span class="k">else</span>
+    <span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span> <span class="s">&quot;%s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">msg</span><span class="p">);</span>
+  <span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">);</span>
+<span class="p">}</span>
+
+<span class="k">static</span> <span class="kt">void</span> <span class="nf">usage</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">error</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">arg</span><span class="p">)</span>
+<span class="p">{</span>
+  <span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span> <span class="s">&quot;error: %s &#39;%s&#39;</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">error</span><span class="p">,</span> <span class="n">arg</span><span class="p">);</span>
+  <span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span> <span class="s">&quot;usage: init [-q | --quiet] [--bare] &quot;</span>
+      <span class="s">&quot;[--template=&lt;dir&gt;] [--shared[=perms]] &lt;directory&gt;</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+  <span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">);</span>
+<span class="p">}</span>
+
+<span class="cm">/* simple string prefix test used in argument parsing */</span>
+<span class="k">static</span> <span class="kt">size_t</span> <span class="nf">is_prefixed</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">arg</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">pfx</span><span class="p">)</span>
+<span class="p">{</span>
+  <span class="kt">size_t</span> <span class="n">len</span> <span class="o">=</span> <span class="n">strlen</span><span class="p">(</span><span class="n">pfx</span><span class="p">);</span>
+  <span class="k">return</span> <span class="o">!</span><span class="n">strncmp</span><span class="p">(</span><span class="n">arg</span><span class="p">,</span> <span class="n">pfx</span><span class="p">,</span> <span class="n">len</span><span class="p">)</span> <span class="o">?</span> <span class="n">len</span> <span class="o">:</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="cm">/* parse the tail of the --shared= argument */</span>
+<span class="k">static</span> <span class="kt">uint32_t</span> <span class="nf">parse_shared</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">shared</span><span class="p">)</span>
+<span class="p">{</span>
+  <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">strcmp</span><span class="p">(</span><span class="n">shared</span><span class="p">,</span> <span class="s">&quot;false&quot;</span><span class="p">)</span> <span class="o">||</span> <span class="o">!</span><span class="n">strcmp</span><span class="p">(</span><span class="n">shared</span><span class="p">,</span> <span class="s">&quot;umask&quot;</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">GIT_REPOSITORY_INIT_SHARED_UMASK</span><span class="p">;</span>
+
+  <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">strcmp</span><span class="p">(</span><span class="n">shared</span><span class="p">,</span> <span class="s">&quot;true&quot;</span><span class="p">)</span> <span class="o">||</span> <span class="o">!</span><span class="n">strcmp</span><span class="p">(</span><span class="n">shared</span><span class="p">,</span> <span class="s">&quot;group&quot;</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">GIT_REPOSITORY_INIT_SHARED_GROUP</span><span class="p">;</span>
+
+  <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">strcmp</span><span class="p">(</span><span class="n">shared</span><span class="p">,</span> <span class="s">&quot;all&quot;</span><span class="p">)</span> <span class="o">||</span> <span class="o">!</span><span class="n">strcmp</span><span class="p">(</span><span class="n">shared</span><span class="p">,</span> <span class="s">&quot;world&quot;</span><span class="p">)</span> <span class="o">||</span>
+       <span class="o">!</span><span class="n">strcmp</span><span class="p">(</span><span class="n">shared</span><span class="p">,</span> <span class="s">&quot;everybody&quot;</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">GIT_REPOSITORY_INIT_SHARED_ALL</span><span class="p">;</span>
+
+  <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">shared</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="sc">&#39;0&#39;</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kt">long</span> <span class="n">val</span><span class="p">;</span>
+    <span class="kt">char</span> <span class="o">*</span><span class="n">end</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
+    <span class="n">val</span> <span class="o">=</span> <span class="n">strtol</span><span class="p">(</span><span class="n">shared</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">end</span><span class="p">,</span> <span class="mi">8</span><span class="p">);</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">end</span> <span class="o">==</span> <span class="n">shared</span> <span class="o">+</span> <span class="mi">1</span> <span class="o">||</span> <span class="o">*</span><span class="n">end</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">)</span>
+      <span class="n">usage</span><span class="p">(</span><span class="s">&quot;invalid octal value for --shared&quot;</span><span class="p">,</span> <span class="n">shared</span><span class="p">);</span>
+    <span class="k">return</span> <span class="p">(</span><span class="kt">uint32_t</span><span class="p">)</span><span class="n">val</span><span class="p">;</span>
+  <span class="p">}</span>
+
+  <span class="k">else</span>
+    <span class="n">usage</span><span class="p">(</span><span class="s">&quot;unknown value for --shared&quot;</span><span class="p">,</span> <span class="n">shared</span><span class="p">);</span>
+
+  <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="cm">/* forward declaration of helper to make an empty parent-less commit */</span>
+<span class="k">static</span> <span class="kt">void</span> <span class="n">create_initial_commit</span><span class="p">(</span><span class="n">git_repository</span> <span class="o">*</span><span class="n">repo</span><span class="p">);</span>
+
+
+<span class="kt">int</span> <span class="nf">main</span><span class="p">(</span><span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">*</span><span class="n">argv</span><span class="p">[])</span>
+<span class="p">{</span>
+  <span class="n">git_repository</span> <span class="o">*</span><span class="n">repo</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
+  <span class="kt">int</span> <span class="n">no_options</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span> <span class="n">quiet</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">bare</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">initial_commit</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">i</span><span class="p">;</span>
+  <span class="kt">uint32_t</span> <span class="n">shared</span> <span class="o">=</span> <span class="n">GIT_REPOSITORY_INIT_SHARED_UMASK</span><span class="p">;</span>
+  <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">template</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">,</span> <span class="o">*</span><span class="n">gitdir</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">,</span> <span class="o">*</span><span class="n">dir</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
+  <span class="kt">size_t</span> <span class="n">pfxlen</span><span class="p">;</span>
+
+  <span class="n"><a name="git_threads_init-14" class="fnlink" href="../../#HEAD/group/threads/git_threads_init">git_threads_init</a></span><span class="p">();</span>
+
+  <span class="cm">/* Process arguments */</span>
+
+  <span class="k">for</span> <span class="p">(</span><span class="n">i</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">argc</span><span class="p">;</span> <span class="o">++</span><span class="n">i</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kt">char</span> <span class="o">*</span><span class="n">a</span> <span class="o">=</span> <span class="n">argv</span><span class="p">[</span><span class="n">i</span><span class="p">];</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="n">a</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="sc">&#39;-&#39;</span><span class="p">)</span>
+      <span class="n">no_options</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="n">a</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="sc">&#39;-&#39;</span><span class="p">)</span> <span class="p">{</span>
+      <span class="k">if</span> <span class="p">(</span><span class="n">dir</span> <span class="o">!=</span> <span class="nb">NULL</span><span class="p">)</span>
+        <span class="n">usage</span><span class="p">(</span><span class="s">&quot;extra argument&quot;</span><span class="p">,</span> <span class="n">a</span><span class="p">);</span>
+      <span class="n">dir</span> <span class="o">=</span> <span class="n">a</span><span class="p">;</span>
+    <span class="p">}</span>
+    <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">strcmp</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="s">&quot;-q&quot;</span><span class="p">)</span> <span class="o">||</span> <span class="o">!</span><span class="n">strcmp</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="s">&quot;--quiet&quot;</span><span class="p">))</span>
+      <span class="n">quiet</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+    <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">strcmp</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="s">&quot;--bare&quot;</span><span class="p">))</span>
+      <span class="n">bare</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+    <span class="k">else</span> <span class="k">if</span> <span class="p">((</span><span class="n">pfxlen</span> <span class="o">=</span> <span class="n">is_prefixed</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="s">&quot;--template=&quot;</span><span class="p">))</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span>
+      <span class="n">template</span> <span class="o">=</span> <span class="n">a</span> <span class="o">+</span> <span class="n">pfxlen</span><span class="p">;</span>
+    <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">strcmp</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="s">&quot;--separate-git-dir&quot;</span><span class="p">))</span>
+      <span class="n">gitdir</span> <span class="o">=</span> <span class="n">argv</span><span class="p">[</span><span class="o">++</span><span class="n">i</span><span class="p">];</span>
+    <span class="k">else</span> <span class="k">if</span> <span class="p">((</span><span class="n">pfxlen</span> <span class="o">=</span> <span class="n">is_prefixed</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="s">&quot;--separate-git-dir=&quot;</span><span class="p">))</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span>
+      <span class="n">gitdir</span> <span class="o">=</span> <span class="n">a</span> <span class="o">+</span> <span class="n">pfxlen</span><span class="p">;</span>
+    <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">strcmp</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="s">&quot;--shared&quot;</span><span class="p">))</span>
+      <span class="n">shared</span> <span class="o">=</span> <span class="n">GIT_REPOSITORY_INIT_SHARED_GROUP</span><span class="p">;</span>
+    <span class="k">else</span> <span class="k">if</span> <span class="p">((</span><span class="n">pfxlen</span> <span class="o">=</span> <span class="n">is_prefixed</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="s">&quot;--shared=&quot;</span><span class="p">))</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span>
+      <span class="n">shared</span> <span class="o">=</span> <span class="n">parse_shared</span><span class="p">(</span><span class="n">a</span> <span class="o">+</span> <span class="n">pfxlen</span><span class="p">);</span>
+    <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">strcmp</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="s">&quot;--initial-commit&quot;</span><span class="p">))</span>
+      <span class="n">initial_commit</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+    <span class="k">else</span>
+      <span class="n">usage</span><span class="p">(</span><span class="s">&quot;unknown option&quot;</span><span class="p">,</span> <span class="n">a</span><span class="p">);</span>
+  <span class="p">}</span>
+
+  <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">dir</span><span class="p">)</span>
+    <span class="n">usage</span><span class="p">(</span><span class="s">&quot;must specify directory to init&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+
+  <span class="cm">/* Initialize repository */</span>
+
+  <span class="k">if</span> <span class="p">(</span><span class="n">no_options</span><span class="p">)</span> <span class="p">{</span>
+    <span class="cm">/* No options were specified, so let&#39;s demonstrate the default</span>
+<span class="cm">     * simple case of <a name="git_repository_init-6" class="fnlink" href="../../#HEAD/group/repository/git_repository_init">git_repository_init</a>() API usage...</span>
+<span class="cm">     */</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="n"><a name="git_repository_init-7" class="fnlink" href="../../#HEAD/group/repository/git_repository_init">git_repository_init</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">repo</span><span class="p">,</span> <span class="n">dir</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
+      <span class="n">fail</span><span class="p">(</span><span class="s">&quot;Could not initialize repository&quot;</span><span class="p">,</span> <span class="n">dir</span><span class="p">);</span>
+  <span class="p">}</span>
+  <span class="k">else</span> <span class="p">{</span>
+    <span class="cm">/* Some command line options were specified, so we&#39;ll use the</span>
+<span class="cm">     * extended init API to handle them</span>
+<span class="cm">     */</span>
+    <span class="n">git_repository_init_options</span> <span class="n">opts</span> <span class="o">=</span> <span class="n">GIT_REPOSITORY_INIT_OPTIONS_INIT</span><span class="p">;</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="n">bare</span><span class="p">)</span>
+      <span class="n">opts</span><span class="p">.</span><span class="n">flags</span> <span class="o">|=</span> <span class="n">GIT_REPOSITORY_INIT_BARE</span><span class="p">;</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="n">template</span><span class="p">)</span> <span class="p">{</span>
+      <span class="n">opts</span><span class="p">.</span><span class="n">flags</span> <span class="o">|=</span> <span class="n">GIT_REPOSITORY_INIT_EXTERNAL_TEMPLATE</span><span class="p">;</span>
+      <span class="n">opts</span><span class="p">.</span><span class="n">template_path</span> <span class="o">=</span> <span class="n">template</span><span class="p">;</span>
+    <span class="p">}</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="n">gitdir</span><span class="p">)</span> <span class="p">{</span>
+      <span class="cm">/* if you specified a separate git directory, then initialize</span>
+<span class="cm">       * the repository at that path and use the second path as the</span>
+<span class="cm">       * working directory of the repository (with a git-link file)</span>
+<span class="cm">       */</span>
+      <span class="n">opts</span><span class="p">.</span><span class="n">workdir_path</span> <span class="o">=</span> <span class="n">dir</span><span class="p">;</span>
+      <span class="n">dir</span> <span class="o">=</span> <span class="n">gitdir</span><span class="p">;</span>
+    <span class="p">}</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="n">shared</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">)</span>
+      <span class="n">opts</span><span class="p">.</span><span class="n">mode</span> <span class="o">=</span> <span class="n">shared</span><span class="p">;</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="n"><a name="git_repository_init_ext-8" class="fnlink" href="../../#HEAD/group/repository/git_repository_init_ext">git_repository_init_ext</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">repo</span><span class="p">,</span> <span class="n">dir</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">opts</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
+      <span class="n">fail</span><span class="p">(</span><span class="s">&quot;Could not initialize repository&quot;</span><span class="p">,</span> <span class="n">dir</span><span class="p">);</span>
+  <span class="p">}</span>
+
+  <span class="cm">/* Print a message to stdout like &quot;git init&quot; does */</span>
+
+  <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">quiet</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">bare</span> <span class="o">||</span> <span class="n">gitdir</span><span class="p">)</span>
+      <span class="n">dir</span> <span class="o">=</span> <span class="n"><a name="git_repository_path-9" class="fnlink" href="../../#HEAD/group/repository/git_repository_path">git_repository_path</a></span><span class="p">(</span><span class="n">repo</span><span class="p">);</span>
+    <span class="k">else</span>
+      <span class="n">dir</span> <span class="o">=</span> <span class="n"><a name="git_repository_workdir-10" class="fnlink" href="../../#HEAD/group/repository/git_repository_workdir">git_repository_workdir</a></span><span class="p">(</span><span class="n">repo</span><span class="p">);</span>
+
+    <span class="n">printf</span><span class="p">(</span><span class="s">&quot;Initialized empty Git repository in %s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">dir</span><span class="p">);</span>
+  <span class="p">}</span>
+
+  <span class="cm">/* As an extension to the basic &quot;git init&quot; command, this example</span>
+<span class="cm">   * gives the option to create an empty initial commit.  This is</span>
+<span class="cm">   * mostly to demonstrate what it takes to do that, but also some</span>
+<span class="cm">   * people like to have that empty base commit in their repo.</span>
+<span class="cm">   */</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">initial_commit</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">create_initial_commit</span><span class="p">(</span><span class="n">repo</span><span class="p">);</span>
+    <span class="n">printf</span><span class="p">(</span><span class="s">&quot;Created empty initial commit</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+  <span class="p">}</span>
+
+  <span class="n"><a name="git_repository_free-5" class="fnlink" href="../../#HEAD/group/repository/git_repository_free">git_repository_free</a></span><span class="p">(</span><span class="n">repo</span><span class="p">);</span>
+  <span class="n"><a name="git_threads_shutdown-15" class="fnlink" href="../../#HEAD/group/threads/git_threads_shutdown">git_threads_shutdown</a></span><span class="p">();</span>
+
+  <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="cm">/* Unlike regular &quot;git init&quot;, this example shows how to create an initial</span>
+<span class="cm"> * empty commit in the repository.  This is the helper function that does</span>
+<span class="cm"> * that.</span>
+<span class="cm"> */</span>
+<span class="k">static</span> <span class="kt">void</span> <span class="nf">create_initial_commit</span><span class="p">(</span><span class="n">git_repository</span> <span class="o">*</span><span class="n">repo</span><span class="p">)</span>
+<span class="p">{</span>
+  <span class="n">git_signature</span> <span class="o">*</span><span class="n">sig</span><span class="p">;</span>
+  <span class="n">git_index</span> <span class="o">*</span><span class="n">index</span><span class="p">;</span>
+  <span class="n">git_oid</span> <span class="n">tree_id</span><span class="p">,</span> <span class="n">commit_id</span><span class="p">;</span>
+  <span class="n">git_tree</span> <span class="o">*</span><span class="n">tree</span><span class="p">;</span>
+
+  <span class="cm">/* First use the config to initialize a commit signature for the user */</span>
+
+  <span class="k">if</span> <span class="p">(</span><span class="n"><a name="git_signature_default-12" class="fnlink" href="../../#HEAD/group/signature/git_signature_default">git_signature_default</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">sig</span><span class="p">,</span> <span class="n">repo</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="n">fail</span><span class="p">(</span><span class="s">&quot;Unable to create a commit signature.&quot;</span><span class="p">,</span>
+       <span class="s">&quot;Perhaps &#39;user.name&#39; and &#39;user.email&#39; are not set&quot;</span><span class="p">);</span>
+
+  <span class="cm">/* Now let&#39;s create an empty tree for this commit */</span>
+
+  <span class="k">if</span> <span class="p">(</span><span class="n"><a name="git_repository_index-11" class="fnlink" href="../../#HEAD/group/repository/git_repository_index">git_repository_index</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">index</span><span class="p">,</span> <span class="n">repo</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="n">fail</span><span class="p">(</span><span class="s">&quot;Could not open repository index&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+
+  <span class="cm">/* Outside of this example, you could call <a name="git_index_add_bypath-4" class="fnlink" href="../../#HEAD/group/index/git_index_add_bypath">git_index_add_bypath</a>()</span>
+<span class="cm">   * here to put actual files into the index.  For our purposes, we&#39;ll</span>
+<span class="cm">   * leave it empty for now.</span>
+<span class="cm">   */</span>
+
+  <span class="k">if</span> <span class="p">(</span><span class="n"><a name="git_index_write_tree-3" class="fnlink" href="../../#HEAD/group/index/git_index_write_tree">git_index_write_tree</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">tree_id</span><span class="p">,</span> <span class="n">index</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="n">fail</span><span class="p">(</span><span class="s">&quot;Unable to write initial tree from index&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+
+  <span class="n"><a name="git_index_free-2" class="fnlink" href="../../#HEAD/group/index/git_index_free">git_index_free</a></span><span class="p">(</span><span class="n">index</span><span class="p">);</span>
+
+  <span class="k">if</span> <span class="p">(</span><span class="n"><a name="git_tree_lookup-16" class="fnlink" href="../../#HEAD/group/tree/git_tree_lookup">git_tree_lookup</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">tree</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">tree_id</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="n">fail</span><span class="p">(</span><span class="s">&quot;Could not look up initial tree&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+
+  <span class="cm">/* Ready to create the initial commit</span>
+<span class="cm">   *</span>
+<span class="cm">   * Normally creating a commit would involve looking up the current</span>
+<span class="cm">   * HEAD commit and making that be the parent of the initial commit,</span>
+<span class="cm">   * but here this is the first commit so there will be no parent.</span>
+<span class="cm">   */</span>
+
+  <span class="k">if</span> <span class="p">(</span><span class="n"><a name="git_commit_create_v-1" class="fnlink" href="../../#HEAD/group/commit/git_commit_create_v">git_commit_create_v</a></span><span class="p">(</span>
+      <span class="o">&amp;</span><span class="n">commit_id</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="s">&quot;HEAD&quot;</span><span class="p">,</span> <span class="n">sig</span><span class="p">,</span> <span class="n">sig</span><span class="p">,</span>
+      <span class="nb">NULL</span><span class="p">,</span> <span class="s">&quot;Initial commit&quot;</span><span class="p">,</span> <span class="n">tree</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="n">fail</span><span class="p">(</span><span class="s">&quot;Could not create the initial commit&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+
+  <span class="cm">/* Clean up so we don&#39;t leak memory */</span>
+
+  <span class="n"><a name="git_tree_free-17" class="fnlink" href="../../#HEAD/group/tree/git_tree_free">git_tree_free</a></span><span class="p">(</span><span class="n">tree</span><span class="p">);</span>
+  <span class="n"><a name="git_signature_free-13" class="fnlink" href="../../#HEAD/group/signature/git_signature_free">git_signature_free</a></span><span class="p">(</span><span class="n">sig</span><span class="p">);</span>
+<span class="p">}</span></pre></div>
+      </td>
+    </tr>
+  </table>
+</div>
+</body>
