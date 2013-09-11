@@ -10,6 +10,7 @@
 #include "hash.h"
 #include "filter.h"
 #include "repository.h"
+#include "global.h"
 #include "git2/sys/filter.h"
 #include "git2/config.h"
 #include "blob.h"
@@ -52,9 +53,63 @@ static int filter_def_priority_cmp(const void *a, const void *b)
 	return (pa < pb) ? -1 : (pa > pb) ? 1 : 0;
 }
 
-static git_vector git__filter_registry = {
-	0, filter_def_priority_cmp, NULL, 0, 0
+struct filter_registry {
+	git_vector filters;
 };
+
+static struct filter_registry *git__filter_registry = NULL;
+
+static void filter_registry_shutdown(void)
+{
+	struct filter_registry *reg = NULL;
+	size_t pos;
+	git_filter_def *fdef;
+
+	if ((reg = git__swap(git__filter_registry, NULL)) == NULL)
+		return;
+
+	git_vector_foreach(&reg->filters, pos, fdef) {
+		if (fdef->initialized && fdef->filter && fdef->filter->shutdown) {
+			fdef->filter->shutdown(fdef->filter);
+			fdef->initialized = false;
+		}
+
+		git__free(fdef->attrdata);
+		git__free(fdef);
+	}
+
+	git_vector_free(&reg->filters);
+	git__free(reg);
+}
+
+static int filter_registry_initialize(void)
+{
+	int error = 0;
+	struct filter_registry *reg;
+
+	if (git__filter_registry)
+		return 0;
+
+	reg = git__calloc(1, sizeof(struct filter_registry));
+	GITERR_CHECK_ALLOC(reg);
+
+	if ((error = git_vector_init(
+			&reg->filters, 2, filter_def_priority_cmp)) < 0)
+		goto cleanup;
+
+	reg = git__compare_and_swap(&git__filter_registry, NULL, reg);
+	if (reg != NULL)
+		goto cleanup;
+
+	git__on_shutdown(filter_registry_shutdown);
+
+	return git_filter_register(GIT_FILTER_CRLF, git_crlf_filter_new(), 0);
+
+cleanup:
+	git_vector_free(&reg->filters);
+	git__free(reg);
+	return error;
+}
 
 static int filter_def_scan_attrs(
 	git_buf *attrs, size_t *nattr, size_t *nmatch, const char *attr_str)
@@ -122,6 +177,29 @@ static void filter_def_set_attrs(git_filter_def *fdef)
 	}
 }
 
+static int filter_def_name_key_check(const void *key, const void *fdef)
+{
+	const char *name =
+		fdef ? ((const git_filter_def *)fdef)->filter_name : NULL;
+	return name ? -1 : git__strcmp(key, name);
+}
+
+static int filter_registry_find(size_t *pos, const char *name)
+{
+	return git_vector_search2(
+		pos, &git__filter_registry->filters, filter_def_name_key_check, name);
+}
+
+static git_filter_def *filter_registry_lookup(size_t *pos, const char *name)
+{
+	git_filter_def *fdef = NULL;
+
+	if (!filter_registry_find(pos, name))
+		fdef = git_vector_get(&git__filter_registry->filters, *pos);
+
+	return fdef;
+}
+
 int git_filter_register(
 	const char *name, git_filter *filter, int priority)
 {
@@ -129,7 +207,10 @@ int git_filter_register(
 	size_t nattr = 0, nmatch = 0;
 	git_buf attrs = GIT_BUF_INIT;
 
-	if (git_filter_lookup(name) != NULL) {
+	if (filter_registry_initialize() < 0)
+		return -1;
+
+	if (!filter_registry_find(NULL, name)) {
 		giterr_set(
 			GITERR_FILTER, "Attempt to reregister existing filter '%s'", name);
 		return -1;
@@ -151,48 +232,13 @@ int git_filter_register(
 
 	filter_def_set_attrs(fdef);
 
-	if (git_vector_insert(&git__filter_registry, fdef) < 0) {
+	if (git_vector_insert(&git__filter_registry->filters, fdef) < 0) {
 		git__free(fdef->attrdata);
 		git__free(fdef);
 		return -1;
 	}
 
-	git_vector_sort(&git__filter_registry);
-	return 0;
-}
-
-static int filter_def_name_key_check(const void *key, const void *fdef)
-{
-	const char *name =
-		fdef ? ((const git_filter_def *)fdef)->filter_name : NULL;
-	return name ? -1 : git__strcmp(key, name);
-}
-
-static git_filter_def *filter_find_by_name(size_t *pos, const char *name)
-{
-	git_filter_def *fdef = NULL;
-
-	if (!git_vector_search2(
-			pos, &git__filter_registry, filter_def_name_key_check, name))
-		fdef = git_vector_get(&git__filter_registry, *pos);
-
-	return fdef;
-}
-
-static int filter_initialize(git_filter_def *fdef)
-{
-	int error = 0;
-
-	if (!fdef->initialized &&
-		fdef->filter &&
-		fdef->filter->initialize &&
-		(error = fdef->filter->initialize(fdef->filter)) < 0)
-	{
-		git_filter_unregister(fdef->filter_name);
-		return error;
-	}
-
-	fdef->initialized = true;
+	git_vector_sort(&git__filter_registry->filters);
 	return 0;
 }
 
@@ -207,12 +253,12 @@ int git_filter_unregister(const char *name)
 		return -1;
 	}
 
-	if ((fdef = filter_find_by_name(&pos, name)) == NULL) {
+	if ((fdef = filter_registry_lookup(&pos, name)) == NULL) {
 		giterr_set(GITERR_FILTER, "Cannot find filter '%s' to unregister", name);
 		return GIT_ENOTFOUND;
 	}
 
-	(void)git_vector_remove(&git__filter_registry, pos);
+	(void)git_vector_remove(&git__filter_registry->filters, pos);
 
 	if (fdef->initialized && fdef->filter && fdef->filter->shutdown) {
 		fdef->filter->shutdown(fdef->filter);
@@ -225,26 +271,39 @@ int git_filter_unregister(const char *name)
 	return 0;
 }
 
+static int filter_initialize(git_filter_def *fdef)
+{
+	int error = 0;
+
+	if (!fdef->initialized &&
+		fdef->filter &&
+		fdef->filter->initialize &&
+		(error = fdef->filter->initialize(fdef->filter)) < 0)
+	{
+		/* auto-unregister if initialize fails */
+		git_filter_unregister(fdef->filter_name);
+		return error;
+	}
+
+	fdef->initialized = true;
+	return 0;
+}
+
 git_filter *git_filter_lookup(const char *name)
 {
 	size_t pos;
-	git_filter_def *fdef = filter_find_by_name(&pos, name);
+	git_filter_def *fdef;
 
-	if (!fdef)
+	if (filter_registry_initialize() < 0)
+		return NULL;
+
+	if ((fdef = filter_registry_lookup(&pos, name)) == NULL)
 		return NULL;
 
 	if (!fdef->initialized && filter_initialize(fdef) < 0)
 		return NULL;
 
 	return fdef->filter;
-}
-
-static int filter_load_defaults(void)
-{
-	if (!git_vector_length(&git__filter_registry))
-		return git_filter_register(GIT_FILTER_CRLF, git_crlf_filter_new(), 0);
-
-	return 0;
 }
 
 git_repository *git_filter_source_repo(const git_filter_source *src)
@@ -345,14 +404,14 @@ int git_filter_list_load(
 	size_t idx;
 	git_filter_def *fdef;
 
-	if (filter_load_defaults() < 0)
+	if (filter_registry_initialize() < 0)
 		return -1;
 
 	src.repo = repo;
 	src.path = path;
 	src.mode = mode;
 
-	git_vector_foreach(&git__filter_registry, idx, fdef) {
+	git_vector_foreach(&git__filter_registry->filters, idx, fdef) {
 		const char **values = NULL;
 		void *payload = NULL;
 
