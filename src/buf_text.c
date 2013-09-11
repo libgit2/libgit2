@@ -87,7 +87,7 @@ int git_buf_text_crlf_to_lf(git_buf *tgt, const git_buf *src)
 		}
 
 		/* Do not drop \r unless it is followed by \n */
-		if (next[1] != '\n')
+		if (next + 1 == scan_end || next[1] != '\n')
 			*out++ = '\r';
 	}
 
