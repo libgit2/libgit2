@@ -217,7 +217,7 @@ static int retrieve_oid_from_reflog(git_oid *oid, git_reference *ref, size_t ide
 		if (numentries < identifier + 1) {
 			giterr_set(
 				GITERR_REFERENCE,
-				"Reflog for '%s' has only "PRIuZ" entries, asked for "PRIuZ,
+				"Reflog for '%s' has only %"PRIuZ" entries, asked for %"PRIuZ,
 				git_reference_name(ref), numentries, identifier);
 
 			error = GIT_ENOTFOUND;

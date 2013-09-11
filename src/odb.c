@@ -445,7 +445,7 @@ int git_odb_get_backend(git_odb_backend **out, git_odb *odb, size_t pos)
 		return 0;
 	}
 
-	giterr_set(GITERR_ODB, "No ODB backend loaded at index " PRIuZ, pos);
+	giterr_set(GITERR_ODB, "No ODB backend loaded at index %" PRIuZ, pos);
 	return GIT_ENOTFOUND;
 }
 
