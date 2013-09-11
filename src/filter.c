@@ -181,7 +181,13 @@ static int filter_def_name_key_check(const void *key, const void *fdef)
 {
 	const char *name =
 		fdef ? ((const git_filter_def *)fdef)->filter_name : NULL;
-	return name ? -1 : git__strcmp(key, name);
+	return name ? git__strcmp(key, name) : -1;
+}
+
+static int filter_def_filter_key_check(const void *key, const void *fdef)
+{
+	const void *filter = fdef ? ((const git_filter_def *)fdef)->filter : NULL;
+	return (key == filter) ? 0 : -1;
 }
 
 static int filter_registry_find(size_t *pos, const char *name)
@@ -331,7 +337,7 @@ git_filter_mode_t git_filter_source_mode(const git_filter_source *src)
 	return src->mode;
 }
 
-static int git_filter_list_new(
+static int filter_list_new(
 	git_filter_list **out, const git_filter_source *src)
 {
 	git_filter_list *fl = NULL;
@@ -391,6 +397,16 @@ static int filter_list_check_attributes(
 	return error;
 }
 
+int git_filter_list_new(
+	git_filter_list **out, git_repository *repo, git_filter_mode_t mode)
+{
+	git_filter_source src = { 0 };
+	src.repo = repo;
+	src.path = NULL;
+	src.mode = mode;
+	return filter_list_new(out, &src);
+}
+
 int git_filter_list_load(
 	git_filter_list **filters,
 	git_repository *repo,
@@ -441,7 +457,7 @@ int git_filter_list_load(
 		else if (error < 0)
 			break;
 		else {
-			if (!fl && (error = git_filter_list_new(&fl, &src)) < 0)
+			if (!fl && (error = filter_list_new(&fl, &src)) < 0)
 				return error;
 
 			fe = git_array_alloc(fl->filters);
@@ -476,6 +492,36 @@ void git_filter_list_free(git_filter_list *fl)
 
 	git_array_clear(fl->filters);
 	git__free(fl);
+}
+
+int git_filter_list_push(
+	git_filter_list *fl, git_filter *filter, void *payload)
+{
+	int error = 0;
+	size_t pos;
+	git_filter_def *fdef;
+	git_filter_entry *fe;
+
+	assert(fl && filter);
+
+	if (git_vector_search2(
+			&pos, &git__filter_registry->filters,
+			filter_def_filter_key_check, filter) < 0) {
+		giterr_set(GITERR_FILTER, "Cannot use an unregistered filter");
+		return -1;
+	}
+
+	fdef = git_vector_get(&git__filter_registry->filters, pos);
+
+	if (!fdef->initialized && (error = filter_initialize(fdef)) < 0)
+		return error;
+
+	fe = git_array_alloc(fl->filters);
+	GITERR_CHECK_ALLOC(fe);
+	fe->filter  = filter;
+	fe->payload = payload;
+
+	return 0;
 }
 
 static int filter_list_out_buffer_from_raw(

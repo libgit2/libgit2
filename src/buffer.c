@@ -548,9 +548,10 @@ int git_buffer_resize(git_buffer *buffer, size_t want_size)
 int git_buffer_copy(
 	git_buffer *buffer, const void *data, size_t datalen)
 {
-	if (git_buffer__resize(buffer, datalen, false) < 0)
+	if (git_buffer__resize(buffer, datalen + 1, false) < 0)
 		return -1;
 	memcpy(buffer->ptr, data, datalen);
+	buffer->ptr[datalen] = '\0';
 	buffer->size = datalen;
 	return 0;
 }

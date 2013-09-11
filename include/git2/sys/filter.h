@@ -19,6 +19,43 @@
 GIT_BEGIN_DECL
 
 /**
+ * Look up a filter by name
+ *
+ * @param name The name of the filter
+ * @return Pointer to the filter object or NULL if not found
+ */
+GIT_EXTERN(git_filter *) git_filter_lookup(const char *name);
+
+#define GIT_FILTER_CRLF "crlf"
+
+/**
+ * Create a new empty filter list
+ *
+ * Normally you won't use this because `git_filter_list_load` will create
+ * the filter list for you, but you can use this in combination with the
+ * `git_filter_lookup` and `git_filter_list_push` functions to assemble
+ * your own chains of filters.
+ */
+GIT_EXTERN(int) git_filter_list_new(
+	git_filter_list **out, git_repository *repo, git_filter_mode_t mode);
+
+/**
+ * Add a filter to a filter list with the given payload.
+ *
+ * Normally you won't have to do this because the filter list is created
+ * by calling the "check" function on registered filters when the filter
+ * attributes are set, but this does allow more direct manipulation of
+ * filter lists when desired.
+ *
+ * Note that normally the "check" function can set up a payload for the
+ * filter.  Using this function, you can either pass in a payload if you
+ * know the expected payload format, or you can pass NULL.  Some filters
+ * may fail with a NULL payload.  Good luck!
+ */
+GIT_EXTERN(int) git_filter_list_push(
+	git_filter_list *fl, git_filter *filter, void *payload);
+
+/**
  * A filter source represents a file/blob to be processed
  */
 typedef struct git_filter_source git_filter_source;

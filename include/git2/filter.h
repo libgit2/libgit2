@@ -63,23 +63,6 @@ typedef struct git_filter git_filter;
 typedef struct git_filter_list git_filter_list;
 
 /**
- * Look up a filter by name
- */
-GIT_EXTERN(git_filter *) git_filter_lookup(const char *name);
-
-#define GIT_FILTER_CRLF "crlf"
-
-/**
- * Apply a single filter to a buffer of data
- */
-GIT_EXTERN(int) git_filter_apply_to_buffer(
-	git_buffer *out,
-	git_filter *filter,
-	const git_buffer *input,
-	const char *as_path,
-	git_filter_mode_t mode);
-
-/**
  * Load the filter list for a given path.
  *
  * This will return 0 (success) but set the output git_filter_list to NULL

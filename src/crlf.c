@@ -86,6 +86,9 @@ static int has_cr_in_index(const git_filter_source *src)
 	git_off_t blobsize;
 	bool found_cr;
 
+	if (!path)
+		return false;
+
 	if (git_repository_index__weakptr(&index, repo) < 0) {
 		giterr_clear();
 		return false;
@@ -189,9 +192,7 @@ static const char *line_ending(struct crlf_attrs *ca)
 
 	switch (ca->eol) {
 	case GIT_EOL_UNSET:
-		return GIT_EOL_NATIVE == GIT_EOL_CRLF
-			? "\r\n"
-			: "\n";
+		return GIT_EOL_NATIVE == GIT_EOL_CRLF ? "\r\n" : "\n";
 
 	case GIT_EOL_CRLF:
 		return "\r\n";
@@ -302,7 +303,12 @@ static int crlf_apply(
 	const git_buffer  *from,
 	const git_filter_source *src)
 {
-	GIT_UNUSED(self);
+	/* initialize payload in case `check` was bypassed */
+	if (!*payload) {
+		int error = crlf_check(self, payload, src, NULL);
+		if (error < 0 && error != GIT_ENOTFOUND)
+			return error;
+	}
 
 	if (git_filter_source_mode(src) == GIT_FILTER_SMUDGE)
 		return crlf_apply_to_workdir(*payload, to, from);
