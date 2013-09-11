@@ -26,7 +26,11 @@ GIT_BEGIN_DECL
  */
 GIT_EXTERN(git_filter *) git_filter_lookup(const char *name);
 
-#define GIT_FILTER_CRLF "crlf"
+#define GIT_FILTER_CRLF  "crlf"
+#define GIT_FILTER_IDENT "ident"
+
+#define GIT_FILTER_CRLF_PRIORITY 0
+#define GIT_FILTER_IDENT_PRIORITY 100
 
 /**
  * Create a new empty filter list
@@ -199,8 +203,9 @@ struct git_filter {
  * issued in order of `priority` on smudge (to workdir), and in reverse
  * order of `priority` on clean (to odb).
  *
- * One filter will be preregistered with libgit2:
- * - GIT_FILTER_CRLF with priority of 0.
+ * Two filters are preregistered with libgit2:
+ * - GIT_FILTER_CRLF with priority 0
+ * - GIT_FILTER_IDENT with priority 100
  *
  * Currently the filter registry is not thread safe, so any registering or
  * deregistering of filters must be done outside of any possible usage of

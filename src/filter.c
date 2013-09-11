@@ -103,7 +103,23 @@ static int filter_registry_initialize(void)
 
 	git__on_shutdown(filter_registry_shutdown);
 
-	return git_filter_register(GIT_FILTER_CRLF, git_crlf_filter_new(), 0);
+	/* try to register both default filters */
+	{
+		git_filter *crlf = git_crlf_filter_new();
+		git_filter *ident = git_ident_filter_new();
+
+		if (crlf && git_filter_register(
+				GIT_FILTER_CRLF, crlf, GIT_FILTER_CRLF_PRIORITY) < 0)
+			crlf = NULL;
+		if (ident && git_filter_register(
+				GIT_FILTER_IDENT, ident, GIT_FILTER_IDENT_PRIORITY) < 0)
+			ident = NULL;
+
+		if (!crlf || !ident)
+			return -1;
+	}
+
+	return 0;
 
 cleanup:
 	git_vector_free(&reg->filters);
@@ -132,7 +148,7 @@ static int filter_def_scan_attrs(
 
 		if (scan > start) {
 			(*nattr)++;
-			if (has_eq || *scan == '-' || *scan == '+' || *scan == '!')
+			if (has_eq || *start == '-' || *start == '+' || *start == '!')
 				(*nmatch)++;
 
 			if (has_eq)
@@ -312,6 +328,11 @@ git_filter *git_filter_lookup(const char *name)
 	return fdef->filter;
 }
 
+void git_filter_free(git_filter *filter)
+{
+	git__free(filter);
+}
+
 git_repository *git_filter_source_repo(const git_filter_source *src)
 {
 	return src->repo;
@@ -410,6 +431,7 @@ int git_filter_list_new(
 int git_filter_list_load(
 	git_filter_list **filters,
 	git_repository *repo,
+	git_blob *blob, /* can be NULL */
 	const char *path,
 	git_filter_mode_t mode)
 {
@@ -426,6 +448,8 @@ int git_filter_list_load(
 	src.repo = repo;
 	src.path = path;
 	src.mode = mode;
+	if (blob)
+		git_oid_cpy(&src.oid, git_blob_id(blob));
 
 	git_vector_foreach(&git__filter_registry->filters, idx, fdef) {
 		const char **values = NULL;
@@ -629,6 +653,9 @@ int git_filter_list_apply_to_blob(
 	git_buffer in = {
 		(char *)git_blob_rawcontent(blob), git_blob_rawsize(blob), 0
 	};
+
+	if (filters)
+		git_oid_cpy(&filters->source.oid, git_blob_id(blob));
 
 	return git_filter_list_apply_to_data(out, filters, &in);
 }

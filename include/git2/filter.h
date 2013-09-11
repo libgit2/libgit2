@@ -42,11 +42,13 @@ typedef enum {
  * file data.  Libgit2 includes one built in filter and it is possible to
  * write your own (see git2/sys/filter.h for information on that).
  *
- * The built in filter is:
+ * The two builtin filters are:
  *
  * * "crlf" which uses the complex rules with the "text", "eol", and
  *   "crlf" file attributes to decide how to convert between LF and CRLF
  *   line endings
+ * * "ident" which replaces "$Id$" in a blob with "$Id: <blob OID>$" upon
+ *   checkout and replaced "$Id: <anything>$" with "$Id$" on checkin.
  */
 typedef struct git_filter git_filter;
 
@@ -70,6 +72,7 @@ typedef struct git_filter_list git_filter_list;
  *
  * @param filters Output newly created git_filter_list (or NULL)
  * @param repo Repository object that contains `path`
+ * @param blob The blob to which the filter will be applied (if known)
  * @param path Relative path of the file to be filtered
  * @param mode Filtering direction (WT->ODB or ODB->WT)
  * @return 0 on success (which could still return NULL if no filters are
@@ -78,6 +81,7 @@ typedef struct git_filter_list git_filter_list;
 GIT_EXTERN(int) git_filter_list_load(
 	git_filter_list **filters,
 	git_repository *repo,
+	git_blob *blob, /* can be NULL */
 	const char *path,
 	git_filter_mode_t mode);
 

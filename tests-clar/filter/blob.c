@@ -7,7 +7,12 @@ void test_filter_blob__initialize(void)
 {
 	g_repo = cl_git_sandbox_init("crlf");
 	cl_git_mkfile("crlf/.gitattributes",
-		"*.txt text\n*.bin binary\n*.crlf text eol=crlf\n*.lf text eol=lf\n");
+		"*.txt text\n*.bin binary\n"
+		"*.crlf text eol=crlf\n"
+		"*.lf text eol=lf\n"
+		"*.ident text ident\n"
+		"*.identcrlf ident text eol=crlf\n"
+		"*.identlf ident text eol.lf\n");
 }
 
 void test_filter_blob__cleanup(void)
@@ -40,4 +45,37 @@ void test_filter_blob__all_crlf(void)
 
 	git_buffer_free(&buf);
 	git_blob_free(blob);
+}
+
+void test_filter_blob__ident(void)
+{
+	git_oid id;
+	git_blob *blob;
+	git_buffer buf = GIT_BUFFER_INIT;
+
+	cl_git_mkfile("crlf/test.ident", "Some text\n$Id$\nGoes there\n");
+	cl_git_pass(git_blob_create_fromworkdir(&id, g_repo, "test.ident"));
+	cl_git_pass(git_blob_lookup(&blob, g_repo, &id));
+	cl_assert_equal_s(
+		"Some text\n$Id$\nGoes there\n", git_blob_rawcontent(blob));
+	git_blob_free(blob);
+
+	cl_git_mkfile("crlf/test.ident", "Some text\n$Id: Any old just you want$\nGoes there\n");
+	cl_git_pass(git_blob_create_fromworkdir(&id, g_repo, "test.ident"));
+	cl_git_pass(git_blob_lookup(&blob, g_repo, &id));
+	cl_assert_equal_s(
+		"Some text\n$Id$\nGoes there\n", git_blob_rawcontent(blob));
+
+	cl_git_pass(git_blob_filtered_content(&buf, blob, "filter.bin", 1));
+	cl_assert_equal_s(
+		"Some text\n$Id$\nGoes there\n", buf.ptr);
+
+	cl_git_pass(git_blob_filtered_content(&buf, blob, "filter.identcrlf", 1));
+	cl_assert_equal_s(
+		"Some text\r\n$Id: 3164f585d548ac68027d22b104f2d8100b2b6845$\r\nGoes there\r\n", buf.ptr);
+
+	cl_git_pass(git_blob_filtered_content(&buf, blob, "filter.identlf", 1));
+	cl_assert_equal_s(
+		"Some text\n$Id: 3164f585d548ac68027d22b104f2d8100b2b6845$\nGoes there\n", buf.ptr);
+
 }

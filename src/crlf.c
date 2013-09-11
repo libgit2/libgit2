@@ -324,11 +324,6 @@ static void crlf_cleanup(
 	git__free(payload);
 }
 
-static void crlf_shutdown(git_filter *self)
-{
-	git__free(self);
-}
-
 git_filter *git_crlf_filter_new(void)
 {
 	struct crlf_filter *f = git__calloc(1, sizeof(struct crlf_filter));
@@ -336,7 +331,7 @@ git_filter *git_crlf_filter_new(void)
 	f->f.version = GIT_FILTER_VERSION;
 	f->f.attributes = "crlf eol text";
 	f->f.initialize = NULL;
-	f->f.shutdown = crlf_shutdown;
+	f->f.shutdown = git_filter_free;
 	f->f.check    = crlf_check;
 	f->f.apply    = crlf_apply;
 	f->f.cleanup  = crlf_cleanup;

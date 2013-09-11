@@ -19,10 +19,13 @@ typedef enum {
 	GIT_CRLF_AUTO,
 } git_crlf_t;
 
+extern void git_filter_free(git_filter *filter);
+
 /*
  * Available filters
  */
 
 extern git_filter *git_crlf_filter_new(void);
+extern git_filter *git_ident_filter_new(void);
 
 #endif

@@ -570,7 +570,7 @@ int git_diff__oid_for_file(
 	} else {
 		git_filter_list *fl = NULL;
 
-		result = git_filter_list_load(&fl, repo, path, GIT_FILTER_TO_ODB);
+		result = git_filter_list_load(&fl, repo, NULL, path, GIT_FILTER_TO_ODB);
 		if (!result) {
 			int fd = git_futils_open_ro(full_path.ptr);
 			if (fd < 0)

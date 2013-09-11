@@ -718,7 +718,7 @@ static int blob_content_to_file(
 
 	if (!opts->disable_filters && !git_blob_is_binary(blob))
 		error = git_filter_list_load(
-			&fl, git_blob_owner(blob), path, GIT_FILTER_TO_WORKTREE);
+			&fl, git_blob_owner(blob), blob, path, GIT_FILTER_TO_WORKTREE);
 
 	if (!error)
 		error = git_filter_list_apply_to_blob(&out, fl, blob);
