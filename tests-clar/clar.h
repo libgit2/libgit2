@@ -68,6 +68,7 @@ void cl_fixture_cleanup(const char *fixture_name);
 
 #define cl_assert_equal_p(p1,p2) clar__assert_equal(__FILE__,__LINE__,"Pointer mismatch: " #p1 " != " #p2, 1, "%p", (p1), (p2))
 
+#define cl_assert_equal_sz(sz1,sz2) clar__assert_equal(__FILE__,__LINE__,#sz1 " != " #sz2, 1, "%"PRIuZ, (size_t)(sz1), (size_t)(sz2))
 
 void clar__fail(
 	const char *file,
