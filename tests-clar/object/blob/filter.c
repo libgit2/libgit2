@@ -104,7 +104,7 @@ void test_object_blob_filter__to_odb(void)
 	git_config *cfg;
 	int i;
 	git_blob *blob;
-	git_buffer out = GIT_BUFFER_INIT;
+	git_buf out = GIT_BUF_INIT;
 
 	cl_git_pass(git_repository_config(&cfg, g_repo));
 	cl_assert(cfg);
@@ -129,7 +129,7 @@ void test_object_blob_filter__to_odb(void)
 	}
 
 	git_filter_list_free(fl);
-	git_buffer_free(&out);
+	git_buf_free(&out);
 	git_config_free(cfg);
 }
 

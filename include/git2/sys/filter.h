@@ -4,8 +4,8 @@
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
  */
-#ifndef INCLUDE_sys_git_config_backend_h__
-#define INCLUDE_sys_git_config_backend_h__
+#ifndef INCLUDE_sys_git_filter_h__
+#define INCLUDE_sys_git_filter_h__
 
 #include "git2/filter.h"
 
@@ -117,19 +117,19 @@ typedef void (*git_filter_shutdown_fn)(git_filter *self);
  * Callback to decide if a given source needs this filter
  */
 typedef int (*git_filter_check_fn)(
-	git_filter        *self,
-	void              **payload, /* points to NULL ptr on entry, may be set */
+	git_filter  *self,
+	void       **payload, /* points to NULL ptr on entry, may be set */
 	const git_filter_source *src,
-	const char        **attr_values);
+	const char **attr_values);
 
 /**
  * Callback to actually perform the data filtering
  */
 typedef int (*git_filter_apply_fn)(
-	git_filter        *self,
-	void              **payload, /* may be read and/or set */
-	git_buffer        *to,
-	const git_buffer  *from,
+	git_filter    *self,
+	void         **payload, /* may be read and/or set */
+	git_buf       *to,
+	const git_buf *from,
 	const git_filter_source *src);
 
 /**

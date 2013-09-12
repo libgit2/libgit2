@@ -192,16 +192,16 @@ int git_odb__hashfd_filtered(
 	 */
 
 	if (!(error = git_futils_readbuffer_fd(&raw, fd, size))) {
-		git_buffer pre = GIT_BUFFER_FROM_BUF(&raw), post = GIT_BUFFER_INIT;
+		git_buf post = GIT_BUF_INIT;
 
-		error = git_filter_list_apply_to_data(&post, fl, &pre);
+		error = git_filter_list_apply_to_data(&post, fl, &raw);
 
-		git_buffer_free(&pre);
+		git_buf_free(&raw);
 
 		if (!error)
 			error = git_odb_hash(out, post.ptr, post.size, type);
 
-		git_buffer_free(&post);
+		git_buf_free(&post);
 	}
 
 	return error;

@@ -4,8 +4,8 @@
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
  */
-#ifndef INCLUDE_git_buffer_h__
-#define INCLUDE_git_buffer_h__
+#ifndef INCLUDE_git_buf_h__
+#define INCLUDE_git_buf_h__
 
 #include "common.h"
 
@@ -25,59 +25,69 @@ GIT_BEGIN_DECL
  * caller and have the caller take responsibility for freeing that memory.
  * This can be awkward if the caller does not have easy access to the same
  * allocation functions that libgit2 is using.  In those cases, libgit2
- * will instead fill in a `git_buffer` and the caller can use
- * `git_buffer_free()` to release it when they are done.
+ * will fill in a `git_buf` and the caller can use `git_buf_free()` to
+ * release it when they are done.
  *
- * * `ptr` refers to the start of the allocated memory.
- * * `size` contains the size of the data in `ptr` that is actually used.
- * * `available` refers to the known total amount of allocated memory. It
- *   may be larger than the `size` actually in use.
+ * A `git_buf` may also be used for the caller to pass in a reference to
+ * a block of memory they hold.  In this case, libgit2 will not resize or
+ * free the memory, but will read from it as needed.
  *
- * In a few cases, for uniformity and simplicity, an API may populate a
- * `git_buffer` with data that should *not* be freed (i.e. the lifetime of
- * the data buffer is actually tied to another libgit2 object).  These
- * cases will be clearly documented in the APIs that use the `git_buffer`.
- * In those cases, the `available` field will be set to zero even though
- * the `ptr` and `size` will be valid.
+ * A `git_buf` is a public structure with three fields:
+ *
+ * - `ptr` points to the start of the allocated memory.  If it is NULL,
+ *   then the `git_buf` is considered empty and libgit2 will feel free
+ *   to overwrite it with new data.
+ *
+ * - `size` holds the size (in bytes) of the data that is actually used.
+ *
+ * - `asize` holds the known total amount of allocated memory if the `ptr`
+ *    was allocated by libgit2.  It may be larger than `size`.  If `ptr`
+ *    was not allocated by libgit2 and should not be resized and/or freed,
+ *    then `asize` will be set to zero.
+ *
+ * Some APIs may occasionally do something slightly unusual with a buffer,
+ * such as setting `ptr` to a value that was passed in by the user.  In
+ * those cases, the behavior will be clearly documented by the API.
  */
-typedef struct git_buffer {
+typedef struct {
 	char   *ptr;
-	size_t size;
-	size_t available;
-} git_buffer;
+	size_t asize, size;
+} git_buf;
 
 /**
- * Use to initialize buffer structure when git_buffer is on stack
- */
-#define GIT_BUFFER_INIT { NULL, 0, 0 }
-
-/**
- * Free the memory referred to by the git_buffer.
+ * Free the memory referred to by the git_buf.
  *
- * Note that this does not free the `git_buffer` itself, just the memory
- * pointed to by `buffer->ptr`.  If that memory was not allocated by
- * libgit2 itself, be careful with using this function because it could
- * cause problems.
+ * Note that this does not free the `git_buf` itself, just the memory
+ * pointed to by `buffer->ptr`.  This will not free the memory if it looks
+ * like it was not allocated internally, but it will clear the buffer back
+ * to the empty state.
  *
- * @param buffer The buffer with allocated memory
+ * @param buffer The buffer to deallocate
  */
-GIT_EXTERN(void) git_buffer_free(git_buffer *buffer);
+GIT_EXTERN(void) git_buf_free(git_buf *buffer);
 
 /**
  * Resize the buffer allocation to make more space.
  *
- * This will update `buffer->available` with the new size (which will be
- * at least `want_size` and may be larger).  This may or may not change
- * `buffer->ptr` depending on whether there is an existing allocation and
- * whether that allocation can be increased in place.
+ * This will attempt to grow the buffer to accomodate the target size.
  *
- * Currently, this will never shrink the buffer, only expand it.
+ * If the buffer refers to memory that was not allocated by libgit2 (i.e.
+ * the `asize` field is zero), then `ptr` will be replaced with a newly
+ * allocated block of data.  Be careful so that memory allocated by the
+ * caller is not lost.  As a special variant, if you pass `target_size` as
+ * 0 and the memory is not allocated by libgit2, this will allocate a new
+ * buffer of size `size` and copy the external data into it.
+ *
+ * Currently, this will never shrink a buffer, only expand it.
+ *
+ * If the allocation fails, this will return an error and the buffer will be
+ * marked as invalid for future operations, invaliding the contents.
  *
  * @param buffer The buffer to be resized; may or may not be allocated yet
- * @param want_size The desired available size
- * @return 0 on success, negative error code on allocation failure
+ * @param target_size The desired available size
+ * @return 0 on success, -1 on allocation failure
  */
-GIT_EXTERN(int) git_buffer_resize(git_buffer *buffer, size_t want_size);
+GIT_EXTERN(int) git_buf_grow(git_buf *buffer, size_t target_size);
 
 /**
  * Set buffer to a copy of some raw data.
@@ -85,10 +95,10 @@ GIT_EXTERN(int) git_buffer_resize(git_buffer *buffer, size_t want_size);
  * @param buffer The buffer to set
  * @param data The data to copy into the buffer
  * @param datalen The length of the data to copy into the buffer
- * @return 0 on success, negative error code on allocation failure
+ * @return 0 on success, -1 on allocation failure
  */
-GIT_EXTERN(int) git_buffer_copy(
-	git_buffer *buffer, const void *data, size_t datalen);
+GIT_EXTERN(int) git_buf_set(
+	git_buf *buffer, const void *data, size_t datalen);
 
 GIT_END_DECL
 

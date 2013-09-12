@@ -119,15 +119,12 @@ static int has_cr_in_index(const git_filter_source *src)
 
 static int crlf_apply_to_odb(
 	struct crlf_attrs *ca,
-	git_buffer *to,
-	const git_buffer *from,
+	git_buf *to,
+	const git_buf *from,
 	const git_filter_source *src)
 {
-	const git_buf from_buf = GIT_BUF_FROM_BUFFER(from);
-	git_buf to_buf = GIT_BUF_FROM_BUFFER(to);
-
 	/* Empty file? Nothing to do */
-	if (!git_buf_len(&from_buf))
+	if (!git_buf_len(from))
 		return 0;
 
 	/* Heuristics to see if we can skip the conversion.
@@ -137,7 +134,7 @@ static int crlf_apply_to_odb(
 		git_buf_text_stats stats;
 
 		/* Check heuristics for binary vs text... */
-		if (git_buf_text_gather_stats(&stats, &from_buf, false))
+		if (git_buf_text_gather_stats(&stats, from, false))
 			return -1;
 
 		/*
@@ -162,13 +159,7 @@ static int crlf_apply_to_odb(
 	}
 
 	/* Actually drop the carriage returns */
-	if (git_buf_text_crlf_to_lf(&to_buf, &from_buf) < 0)
-		return -1;
-
-	/* Overwrite "to" buffer in case data was resized */
-	git_buffer_from_buf(to, &to_buf);
-
-	return 0;
+	return git_buf_text_crlf_to_lf(to, from);
 }
 
 static const char *line_ending(struct crlf_attrs *ca)
@@ -210,14 +201,12 @@ line_ending_error:
 }
 
 static int crlf_apply_to_workdir(
-	struct crlf_attrs *ca, git_buffer *to, const git_buffer *from)
+	struct crlf_attrs *ca, git_buf *to, const git_buf *from)
 {
-	const git_buf from_buf = GIT_BUF_FROM_BUFFER(from);
-	git_buf to_buf = GIT_BUF_FROM_BUFFER(to);
 	const char *workdir_ending = NULL;
 
 	/* Empty file? Nothing to do. */
-	if (git_buf_len(&from_buf) == 0)
+	if (git_buf_len(from) == 0)
 		return 0;
 
 	/* Determine proper line ending */
@@ -229,21 +218,18 @@ static int crlf_apply_to_workdir(
 		if (ca->crlf_action == GIT_CRLF_GUESS && ca->auto_crlf)
 			return GIT_ENOTFOUND;
 
-		if (git_buf_find(&from_buf, '\r') < 0)
+		if (git_buf_find(from, '\r') < 0)
 			return GIT_ENOTFOUND;
 
-		if (git_buf_text_crlf_to_lf(&to_buf, &from_buf) < 0)
+		if (git_buf_text_crlf_to_lf(to, from) < 0)
 			return -1;
 	} else {
 		/* only other supported option is lf->crlf conversion */
 		assert(!strcmp("\r\n", workdir_ending));
 
-		if (git_buf_text_lf_to_crlf(&to_buf, &from_buf) < 0)
+		if (git_buf_text_lf_to_crlf(to, from) < 0)
 			return -1;
 	}
-
-	/* Overwrite "to" buffer in case data was resized */
-	git_buffer_from_buf(to, &to_buf);
 
 	return 0;
 }
@@ -297,10 +283,10 @@ static int crlf_check(
 }
 
 static int crlf_apply(
-	git_filter        *self,
-	void              **payload, /* may be read and/or set */
-	git_buffer        *to,
-	const git_buffer  *from,
+	git_filter    *self,
+	void         **payload, /* may be read and/or set */
+	git_buf       *to,
+	const git_buf *from,
 	const git_filter_source *src)
 {
 	/* initialize payload in case `check` was bypassed */

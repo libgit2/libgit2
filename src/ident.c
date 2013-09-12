@@ -9,7 +9,7 @@
 #include "filter.h"
 #include "buffer.h"
 
-int ident_find_id(
+static int ident_find_id(
 	const char **id_start, const char **id_end, const char *start, size_t len)
 {
 	const char *found;
@@ -36,12 +36,11 @@ int ident_find_id(
 }
 
 static int ident_insert_id(
-	git_buffer *to, const git_buffer *from, const git_filter_source *src)
+	git_buf *to, const git_buf *from, const git_filter_source *src)
 {
 	char oid[GIT_OID_HEXSZ+1];
 	const char *id_start, *id_end, *from_end = from->ptr + from->size;
 	size_t need_size;
-	git_buf to_buf = GIT_BUF_FROM_BUFFER(to);
 
 	/* replace $Id$ with blob id */
 
@@ -57,28 +56,23 @@ static int ident_insert_id(
 		5 /* "$Id: " */ + GIT_OID_HEXSZ + 1 /* "$" */ +
 		(size_t)(from_end - id_end);
 
-	if (git_buf_grow(&to_buf, need_size) < 0)
+	if (git_buf_grow(to, need_size) < 0)
 		return -1;
 
-	git_buf_set(&to_buf, from->ptr, (size_t)(id_start - from->ptr));
-	git_buf_put(&to_buf, "$Id: ", 5);
-	git_buf_put(&to_buf, oid, GIT_OID_HEXSZ);
-	git_buf_putc(&to_buf, '$');
-	git_buf_put(&to_buf, id_end, (size_t)(from_end - id_end));
+	git_buf_set(to, from->ptr, (size_t)(id_start - from->ptr));
+	git_buf_put(to, "$Id: ", 5);
+	git_buf_put(to, oid, GIT_OID_HEXSZ);
+	git_buf_putc(to, '$');
+	git_buf_put(to, id_end, (size_t)(from_end - id_end));
 
-	if (git_buf_oom(&to_buf))
-		return -1;
-
-	git_buffer_from_buf(to, &to_buf);
-	return 0;
+	return git_buf_oom(to) ? -1 : 0;
 }
 
 static int ident_remove_id(
-	git_buffer *to, const git_buffer *from)
+	git_buf *to, const git_buf *from)
 {
 	const char *id_start, *id_end, *from_end = from->ptr + from->size;
 	size_t need_size;
-	git_buf to_buf = GIT_BUF_FROM_BUFFER(to);
 
 	if (ident_find_id(&id_start, &id_end, from->ptr, from->size) < 0)
 		return GIT_ENOTFOUND;
@@ -86,25 +80,21 @@ static int ident_remove_id(
 	need_size = (size_t)(id_start - from->ptr) +
 		4 /* "$Id$" */ + (size_t)(from_end - id_end);
 
-	if (git_buf_grow(&to_buf, need_size) < 0)
+	if (git_buf_grow(to, need_size) < 0)
 		return -1;
 
-	git_buf_set(&to_buf, from->ptr, (size_t)(id_start - from->ptr));
-	git_buf_put(&to_buf, "$Id$", 4);
-	git_buf_put(&to_buf, id_end, (size_t)(from_end - id_end));
+	git_buf_set(to, from->ptr, (size_t)(id_start - from->ptr));
+	git_buf_put(to, "$Id$", 4);
+	git_buf_put(to, id_end, (size_t)(from_end - id_end));
 
-	if (git_buf_oom(&to_buf))
-		return -1;
-
-	git_buffer_from_buf(to, &to_buf);
-	return 0;
+	return git_buf_oom(to) ? -1 : 0;
 }
 
 static int ident_apply(
-	git_filter        *self,
-	void              **payload,
-	git_buffer        *to,
-	const git_buffer  *from,
+	git_filter     *self,
+	void          **payload,
+	git_buf        *to,
+	const git_buf  *from,
 	const git_filter_source *src)
 {
 	GIT_UNUSED(self); GIT_UNUSED(payload);

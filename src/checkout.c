@@ -678,20 +678,19 @@ fail:
 
 static int buffer_to_file(
 	struct stat *st,
-	git_buffer *buffer,
+	git_buf *buf,
 	const char *path,
 	mode_t dir_mode,
 	int file_open_flags,
 	mode_t file_mode)
 {
 	int error;
-	git_buf buf = GIT_BUF_FROM_BUFFER(buffer);
 
 	if ((error = git_futils_mkpath2file(path, dir_mode)) < 0)
 		return error;
 
 	if ((error = git_futils_writebuffer(
-			&buf, path, file_open_flags, file_mode)) < 0)
+			buf, path, file_open_flags, file_mode)) < 0)
 		return error;
 
 	if (st != NULL && (error = p_stat(path, st)) < 0)
@@ -713,7 +712,7 @@ static int blob_content_to_file(
 {
 	int error = 0;
 	mode_t file_mode = opts->file_mode ? opts->file_mode : entry_filemode;
-	git_buffer out = GIT_BUFFER_INIT;
+	git_buf out = GIT_BUF_INIT;
 	git_filter_list *fl = NULL;
 
 	if (!opts->disable_filters && !git_blob_is_binary(blob))
@@ -731,7 +730,7 @@ static int blob_content_to_file(
 
 		st->st_mode = entry_filemode;
 
-		git_buffer_free(&out);
+		git_buf_free(&out);
 	}
 
 	return error;

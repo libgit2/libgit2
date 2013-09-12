@@ -23,7 +23,7 @@ void test_filter_blob__cleanup(void)
 void test_filter_blob__all_crlf(void)
 {
 	git_blob *blob;
-	git_buffer buf = GIT_BUFFER_INIT;
+	git_buf buf = { 0 };
 
 	cl_git_pass(git_revparse_single(
 		(git_object **)&blob, g_repo, "a9a2e891")); /* all-crlf */
@@ -43,7 +43,7 @@ void test_filter_blob__all_crlf(void)
 
 	cl_assert_equal_s(ALL_CRLF_TEXT_AS_LF, buf.ptr);
 
-	git_buffer_free(&buf);
+	git_buf_free(&buf);
 	git_blob_free(blob);
 }
 
@@ -51,7 +51,7 @@ void test_filter_blob__ident(void)
 {
 	git_oid id;
 	git_blob *blob;
-	git_buffer buf = GIT_BUFFER_INIT;
+	git_buf buf = { 0 };
 
 	cl_git_mkfile("crlf/test.ident", "Some text\n$Id$\nGoes there\n");
 	cl_git_pass(git_blob_create_fromworkdir(&id, g_repo, "test.ident"));
@@ -77,5 +77,8 @@ void test_filter_blob__ident(void)
 	cl_git_pass(git_blob_filtered_content(&buf, blob, "filter.identlf", 1));
 	cl_assert_equal_s(
 		"Some text\n$Id: 3164f585d548ac68027d22b104f2d8100b2b6845$\nGoes there\n", buf.ptr);
+
+	git_buf_free(&buf);
+	git_blob_free(blob);
 
 }

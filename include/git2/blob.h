@@ -104,17 +104,17 @@ GIT_EXTERN(git_off_t) git_blob_rawsize(const git_blob *blob);
  * CRLF filtering or other types of changes depending on the file
  * attributes set for the blob and the content detected in it.
  *
- * The output is written into a `git_buffer` which the caller must free
- * when done (via `git_buffer_free`).
+ * The output is written into a `git_buf` which the caller must free
+ * when done (via `git_buf_free`).
  *
  * If no filters need to be applied, then the `out` buffer will just be
  * populated with a pointer to the raw content of the blob.  In that case,
  * be careful to *not* free the blob until done with the buffer.  To keep
- * the data detached from the blob, call `git_buffer_resize` on the buffer
+ * the data detached from the blob, call `git_buf_grow` on the buffer
  * with a `want_size` of 0 and the buffer will be reallocated to be
  * detached from the blob.
  *
- * @param out The git_buffer to be filled in
+ * @param out The git_buf to be filled in
  * @param blob Pointer to the blob
  * @param as_path Path used for file attribute lookups, etc.
  * @param check_for_binary_data Should this test if blob content contains
@@ -122,7 +122,7 @@ GIT_EXTERN(git_off_t) git_blob_rawsize(const git_blob *blob);
  * @return 0 on success or an error code
  */
 GIT_EXTERN(int) git_blob_filtered_content(
-	git_buffer *out,
+	git_buf *out,
 	git_blob *blob,
 	const char *as_path,
 	int check_for_binary_data);

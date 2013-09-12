@@ -88,16 +88,17 @@ GIT_EXTERN(int) git_filter_list_load(
 /**
  * Apply filter list to a data buffer.
  *
- * See `git2/buffer.h` for background on `git_buffer` objects.
+ * See `git2/buffer.h` for background on `git_buf` objects.
  *
- * If the `in` buffer refers to data managed by libgit2
- * (i.e. `in->available` is not zero), then it will be overwritten when
- * applying the filters.  If not, then it will be left untouched.
+ * If the `in` buffer holds data allocated by libgit2 (i.e. `in->asize` is
+ * not zero), then it will be overwritten when applying the filters.  If
+ * not, then it will be left untouched.
  *
  * If there are no filters to apply (or `filters` is NULL), then the `out`
- * buffer will reference the `in` buffer data (with `available` set to
- * zero) instead of allocating data.  This keeps allocations to a minimum,
- * but it means you have to be careful about freeing the `in` data.
+ * buffer will reference the `in` buffer data (with `asize` set to zero)
+ * instead of allocating data.  This keeps allocations to a minimum, but
+ * it means you have to be careful about freeing the `in` data since `out`
+ * may be pointing to it!
  *
  * @param out Buffer to store the result of the filtering
  * @param filters A loaded git_filter_list (or NULL)
@@ -105,15 +106,15 @@ GIT_EXTERN(int) git_filter_list_load(
  * @return 0 on success, an error code otherwise
  */
 GIT_EXTERN(int) git_filter_list_apply_to_data(
-	git_buffer *out,
+	git_buf *out,
 	git_filter_list *filters,
-	git_buffer *in);
+	git_buf *in);
 
 /**
  * Apply filter list to the contents of a file on disk
  */
 GIT_EXTERN(int) git_filter_list_apply_to_file(
-	git_buffer *out,
+	git_buf *out,
 	git_filter_list *filters,
 	git_repository *repo,
 	const char *path);
@@ -122,7 +123,7 @@ GIT_EXTERN(int) git_filter_list_apply_to_file(
  * Apply filter list to the contents of a blob
  */
 GIT_EXTERN(int) git_filter_list_apply_to_blob(
-	git_buffer *out,
+	git_buf *out,
 	git_filter_list *filters,
 	git_blob *blob);
 

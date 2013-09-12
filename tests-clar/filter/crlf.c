@@ -20,7 +20,7 @@ void test_filter_crlf__to_worktree(void)
 {
 	git_filter_list *fl;
 	git_filter *crlf;
-	git_buffer in = GIT_BUFFER_INIT, out = GIT_BUFFER_INIT;
+	git_buf in = { 0 }, out = { 0 };
 
 	{
 		git_config *cfg;
@@ -48,14 +48,14 @@ void test_filter_crlf__to_worktree(void)
 #endif
 
 	git_filter_list_free(fl);
-	git_buffer_free(&out);
+	git_buf_free(&out);
 }
 
 void test_filter_crlf__to_odb(void)
 {
 	git_filter_list *fl;
 	git_filter *crlf;
-	git_buffer in = GIT_BUFFER_INIT, out = GIT_BUFFER_INIT;
+	git_buf in = { 0 }, out = { 0 };
 
 	{
 		git_config *cfg;
@@ -79,5 +79,5 @@ void test_filter_crlf__to_odb(void)
 	cl_assert_equal_s("Some text\nRight here\n", out.ptr);
 
 	git_filter_list_free(fl);
-	git_buffer_free(&out);
+	git_buf_free(&out);
 }

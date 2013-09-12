@@ -549,23 +549,28 @@ int git_filter_list_push(
 }
 
 static int filter_list_out_buffer_from_raw(
-	git_buffer *out, const void *ptr, size_t size)
+	git_buf *out, const void *ptr, size_t size)
 {
-	if (git_buffer_is_allocated(out))
-		git_buffer_free(out);
+	if (git_buf_is_allocated(out))
+		git_buf_free(out);
 
-	out->ptr  = (char *)ptr;
-	out->size = size;
-	out->available = 0;
+	if (!size) {
+		git_buf_init(out, 0);
+	} else {
+		out->ptr   = (char *)ptr;
+		out->asize = 0;
+		out->size  = size;
+	}
+
 	return 0;
 }
 
 int git_filter_list_apply_to_data(
-	git_buffer *tgt, git_filter_list *fl, git_buffer *src)
+	git_buf *tgt, git_filter_list *fl, git_buf *src)
 {
 	int error = 0;
 	uint32_t i;
-	git_buffer *dbuffer[2], local = GIT_BUFFER_INIT;
+	git_buf *dbuffer[2], local = GIT_BUF_INIT;
 	unsigned int si = 0;
 
 	if (!fl)
@@ -575,8 +580,8 @@ int git_filter_list_apply_to_data(
 	dbuffer[1] = tgt;
 
 	/* if `src` buffer is reallocable, then use it, otherwise copy it */
-	if (!git_buffer_is_allocated(src)) {
-		if (git_buffer_copy(&local, src->ptr, src->size) < 0)
+	if (!git_buf_is_allocated(src)) {
+		if (git_buf_set(&local, src->ptr, src->size) < 0)
 			return -1;
 		dbuffer[0] = &local;
 	}
@@ -610,19 +615,16 @@ int git_filter_list_apply_to_data(
 	}
 
 	/* Ensure that the output ends up in dbuffer[1] (i.e. the dest) */
-	if (si != 1) {
-		git_buffer sw = *dbuffer[1];
-		*dbuffer[1] = *dbuffer[0];
-		*dbuffer[0] = sw;
-	}
+	if (si != 1)
+		git_buf_swap(dbuffer[0], dbuffer[1]);
 
-	git_buffer_free(&local); /* don't leak if we allocated locally */
+	git_buf_free(&local); /* don't leak if we allocated locally */
 
 	return 0;
 }
 
 int git_filter_list_apply_to_file(
-	git_buffer *out,
+	git_buf *out,
 	git_filter_list *filters,
 	git_repository *repo,
 	const char *path)
@@ -634,11 +636,9 @@ int git_filter_list_apply_to_file(
 	if (!(error = git_path_join_unrooted(&abspath, path, base, NULL)) &&
 		!(error = git_futils_readbuffer(&raw, abspath.ptr)))
 	{
-		git_buffer in = GIT_BUFFER_FROM_BUF(&raw);
+		error = git_filter_list_apply_to_data(out, filters, &raw);
 
-		error = git_filter_list_apply_to_data(out, filters, &in);
-
-		git_buffer_free(&in);
+		git_buf_free(&raw);
 	}
 
 	git_buf_free(&abspath);
@@ -646,12 +646,12 @@ int git_filter_list_apply_to_file(
 }
 
 int git_filter_list_apply_to_blob(
-	git_buffer *out,
+	git_buf *out,
 	git_filter_list *filters,
 	git_blob *blob)
 {
-	git_buffer in = {
-		(char *)git_blob_rawcontent(blob), git_blob_rawsize(blob), 0
+	git_buf in = {
+		(char *)git_blob_rawcontent(blob), 0, git_blob_rawsize(blob)
 	};
 
 	if (filters)

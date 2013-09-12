@@ -111,7 +111,7 @@ static int write_file_filtered(
 	git_filter_list *fl)
 {
 	int error;
-	git_buffer tgt = GIT_BUFFER_INIT;
+	git_buf tgt = GIT_BUF_INIT;
 
 	error = git_filter_list_apply_to_file(&tgt, fl, NULL, full_path);
 
@@ -122,7 +122,7 @@ static int write_file_filtered(
 		error = git_odb_write(oid, odb, tgt.ptr, tgt.size, GIT_OBJ_BLOB);
 	}
 
-	git_buffer_free(&tgt);
+	git_buf_free(&tgt);
 	return error;
 }
 
@@ -329,7 +329,7 @@ int git_blob_is_binary(git_blob *blob)
 }
 
 int git_blob_filtered_content(
-	git_buffer *out,
+	git_buf *out,
 	git_blob *blob,
 	const char *path,
 	int check_for_binary_data)
