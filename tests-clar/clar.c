@@ -468,7 +468,7 @@ void clar__assert_equal(
 			}
 		}
 	}
-	else if (!strcmp(PRIuZ, fmt) || !strcmp(PRIxZ, fmt)) {
+	else if (!strcmp("%"PRIuZ, fmt) || !strcmp("%"PRIxZ, fmt)) {
 		size_t sz1 = va_arg(args, size_t), sz2 = va_arg(args, size_t);
 		is_equal = (sz1 == sz2);
 		if (!is_equal) {
