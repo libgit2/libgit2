@@ -22,5 +22,4 @@
 #define MORE_CRLF_TEXT_AS_LF	"crlf\ncrlf\nlf\ncrlf\ncrlf\n"
 #define MORE_LF_TEXT_AS_LF		"lf\nlf\ncrlf\nlf\nlf\n"
 
-
 #endif

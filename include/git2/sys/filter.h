@@ -60,6 +60,19 @@ GIT_EXTERN(int) git_filter_list_push(
 	git_filter_list *fl, git_filter *filter, void *payload);
 
 /**
+ * Look up how many filters are in the list
+ *
+ * We will attempt to apply all of these filters to any data passed in,
+ * but note that the filter apply action still has the option of skipping
+ * data that is passed in (for example, the CRLF filter will skip data
+ * that appears to be binary).
+ *
+ * @param fl A filter list
+ * @return The number of filters in the list
+ */
+GIT_EXTERN(size_t) git_filter_list_length(const git_filter_list *fl);
+
+/**
  * A filter source represents a file/blob to be processed
  */
 typedef struct git_filter_source git_filter_source;

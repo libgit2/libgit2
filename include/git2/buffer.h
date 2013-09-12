@@ -55,6 +55,11 @@ typedef struct {
 } git_buf;
 
 /**
+ * Static initializer for git_buf from static buffer
+ */
+#define GIT_BUF_INIT_CONST(STR,LEN) { (char *)(STR), 0, (size_t)(LEN) }
+
+/**
  * Free the memory referred to by the git_buf.
  *
  * Note that this does not free the `git_buf` itself, just the memory

@@ -548,6 +548,11 @@ int git_filter_list_push(
 	return 0;
 }
 
+size_t git_filter_list_length(const git_filter_list *fl)
+{
+	return fl ? git_array_size(fl->filters) : 0;
+}
+
 static int filter_list_out_buffer_from_raw(
 	git_buf *out, const void *ptr, size_t size)
 {

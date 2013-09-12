@@ -5,10 +5,16 @@ static git_repository *g_repo = NULL;
 
 void test_filter_crlf__initialize(void)
 {
+	git_config *cfg;
+
 	g_repo = cl_git_sandbox_init("crlf");
 
 	cl_git_mkfile("crlf/.gitattributes",
 		"*.txt text\n*.bin binary\n*.crlf text eol=crlf\n*.lf text eol=lf\n");
+
+	cl_git_pass(git_repository_config(&cfg, g_repo));
+	cl_git_pass(git_config_set_string(cfg, "core.autocrlf", "true"));
+	git_config_free(cfg);
 }
 
 void test_filter_crlf__cleanup(void)
@@ -21,13 +27,6 @@ void test_filter_crlf__to_worktree(void)
 	git_filter_list *fl;
 	git_filter *crlf;
 	git_buf in = { 0 }, out = { 0 };
-
-	{
-		git_config *cfg;
-		cl_git_pass(git_repository_config(&cfg, g_repo));
-		cl_git_pass(git_config_set_string(cfg, "core.autocrlf", "true"));
-		git_config_free(cfg);
-	}
 
 	cl_git_pass(git_filter_list_new(&fl, g_repo, GIT_FILTER_TO_WORKTREE));
 
@@ -56,13 +55,6 @@ void test_filter_crlf__to_odb(void)
 	git_filter_list *fl;
 	git_filter *crlf;
 	git_buf in = { 0 }, out = { 0 };
-
-	{
-		git_config *cfg;
-		cl_git_pass(git_repository_config(&cfg, g_repo));
-		cl_git_pass(git_config_set_string(cfg, "core.autocrlf", "true"));
-		git_config_free(cfg);
-	}
 
 	cl_git_pass(git_filter_list_new(&fl, g_repo, GIT_FILTER_TO_ODB));
 
