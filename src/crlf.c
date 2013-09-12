@@ -209,6 +209,10 @@ static int crlf_apply_to_workdir(
 	if (git_buf_len(from) == 0)
 		return 0;
 
+	/* Don't filter binary files */
+	if (git_buf_text_is_binary(from))
+		return GIT_ENOTFOUND;
+
 	/* Determine proper line ending */
 	workdir_ending = line_ending(ca);
 	if (!workdir_ending)
