@@ -11,7 +11,6 @@ void test_diff_submodules__initialize(void)
 
 void test_diff_submodules__cleanup(void)
 {
-	cleanup_fixture_submodules();
 }
 
 static void check_diff_patches_at_line(
