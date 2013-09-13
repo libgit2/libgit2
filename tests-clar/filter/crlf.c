@@ -5,16 +5,12 @@ static git_repository *g_repo = NULL;
 
 void test_filter_crlf__initialize(void)
 {
-	git_config *cfg;
-
 	g_repo = cl_git_sandbox_init("crlf");
 
 	cl_git_mkfile("crlf/.gitattributes",
 		"*.txt text\n*.bin binary\n*.crlf text eol=crlf\n*.lf text eol=lf\n");
 
-	cl_git_pass(git_repository_config(&cfg, g_repo));
-	cl_git_pass(git_config_set_string(cfg, "core.autocrlf", "true"));
-	git_config_free(cfg);
+	cl_repo_set_bool(g_repo, "core.autocrlf", true);
 }
 
 void test_filter_crlf__cleanup(void)
