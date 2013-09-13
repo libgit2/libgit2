@@ -12,7 +12,7 @@ void test_filter_blob__initialize(void)
 		"*.lf text eol=lf\n"
 		"*.ident text ident\n"
 		"*.identcrlf ident text eol=crlf\n"
-		"*.identlf ident text eol.lf\n");
+		"*.identlf ident text eol=lf\n");
 }
 
 void test_filter_blob__cleanup(void)

@@ -50,7 +50,8 @@ void test_filter_custom__initialize(void)
 		"empty_standard_repo/.gitattributes",
 		"hero* bitflip reverse\n"
 		"herofile text\n"
-		"heroflip -reverse\n");
+		"heroflip -reverse binary\n"
+		"*.bin binary\n");
 }
 
 void test_filter_custom__cleanup(void)
@@ -229,6 +230,15 @@ void test_filter_custom__can_register_a_custom_filter_in_the_repository(void)
 
 	cl_git_pass(git_filter_list_load(
 		&fl, g_repo, NULL, "herocorp", GIT_FILTER_TO_WORKTREE));
+	/* expect: bitflip, reverse - possibly crlf depending on global config */
+	{
+		size_t flen = git_filter_list_length(fl);
+		cl_assert(flen == 2 || flen == 3);
+	}
+	git_filter_list_free(fl);
+
+	cl_git_pass(git_filter_list_load(
+		&fl, g_repo, NULL, "hero.bin", GIT_FILTER_TO_WORKTREE));
 	/* expect: bitflip, reverse */
 	cl_assert_equal_sz(2, git_filter_list_length(fl));
 	git_filter_list_free(fl);
@@ -240,7 +250,7 @@ void test_filter_custom__can_register_a_custom_filter_in_the_repository(void)
 	git_filter_list_free(fl);
 
 	cl_git_pass(git_filter_list_load(
-		&fl, g_repo, NULL, "doesntapplytome", GIT_FILTER_TO_WORKTREE));
+		&fl, g_repo, NULL, "doesntapplytome.bin", GIT_FILTER_TO_WORKTREE));
 	/* expect: none */
 	cl_assert_equal_sz(0, git_filter_list_length(fl));
 	git_filter_list_free(fl);
