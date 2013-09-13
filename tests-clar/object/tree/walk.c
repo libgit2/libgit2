@@ -101,3 +101,77 @@ void test_object_tree_walk__1(void)
 
 	git_tree_free(tree);
 }
+
+
+struct treewalk_skip_data {
+	int files;
+	int dirs;
+	const char *skip;
+	const char *stop;
+};
+
+static int treewalk_skip_de_cb(
+	const char *root, const git_tree_entry *entry, void *payload)
+{
+	struct treewalk_skip_data *data = payload;
+	const char *name = git_tree_entry_name(entry);
+
+	GIT_UNUSED(root);
+
+	if (git_tree_entry_type(entry) == GIT_OBJ_TREE)
+		data->dirs++;
+	else
+		data->files++;
+
+	if (data->skip && !strcmp(name, data->skip))
+		return 1;
+	else if (data->stop && !strcmp(name, data->stop))
+		return -1;
+	else
+		return 0;
+}
+
+void test_object_tree_walk__2(void)
+{
+	git_oid id;
+	git_tree *tree;
+	struct treewalk_skip_data data;
+
+	/* look up a deep tree */
+	git_oid_fromstr(&id, "ae90f12eea699729ed24555e40b9fd669da12a12");
+	cl_git_pass(git_tree_lookup(&tree, g_repo, &id));
+
+	memset(&data, 0, sizeof(data));
+	data.skip = "de";
+
+	cl_assert_equal_i(0, git_tree_walk(
+		tree, GIT_TREEWALK_PRE, treewalk_skip_de_cb, &data));
+	cl_assert_equal_i(5, data.files);
+	cl_assert_equal_i(3, data.dirs);
+
+	memset(&data, 0, sizeof(data));
+	data.stop = "3.txt";
+
+	cl_assert_equal_i(GIT_EUSER, git_tree_walk(
+		tree, GIT_TREEWALK_PRE, treewalk_skip_de_cb, &data));
+	cl_assert_equal_i(3, data.files);
+	cl_assert_equal_i(2, data.dirs);
+
+	memset(&data, 0, sizeof(data));
+	data.skip = "new.txt";
+
+	cl_assert_equal_i(0, git_tree_walk(
+		tree, GIT_TREEWALK_PRE, treewalk_skip_de_cb, &data));
+	cl_assert_equal_i(7, data.files);
+	cl_assert_equal_i(4, data.dirs);
+
+	memset(&data, 0, sizeof(data));
+	data.stop = "new.txt";
+
+	cl_assert_equal_i(GIT_EUSER, git_tree_walk(
+		tree, GIT_TREEWALK_PRE, treewalk_skip_de_cb, &data));
+	cl_assert_equal_i(7, data.files);
+	cl_assert_equal_i(4, data.dirs);
+
+	git_tree_free(tree);
+}
