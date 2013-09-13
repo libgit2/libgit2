@@ -391,7 +391,7 @@ static int filter_list_check_attributes(
 	/* if no values were found but no matches are needed, it's okay! */
 	if (error == GIT_ENOTFOUND && !fdef->nmatches) {
 		giterr_clear();
-		git__free(strs);
+		git__free((void *)strs);
 		return 0;
 	}
 
@@ -411,7 +411,7 @@ static int filter_list_check_attributes(
 	}
 
 	if (error)
-		git__free(strs);
+		git__free((void *)strs);
 	else
 		*out = strs;
 
@@ -474,7 +474,7 @@ int git_filter_list_load(
 			error = fdef->filter->check(
 				fdef->filter, &payload, &src, values);
 
-		git__free(values);
+		git__free((void *)values);
 
 		if (error == GIT_ENOTFOUND)
 			error = 0;
