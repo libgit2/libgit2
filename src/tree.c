@@ -881,8 +881,10 @@ static int tree_walk(
 	git_vector_foreach(&tree->entries, i, entry) {
 		if (preorder) {
 			error = callback(path->ptr, entry, payload);
-			if (error > 0)
+			if (error > 0) {
+				error = 0;
 				continue;
+			}
 			if (error < 0) {
 				giterr_clear();
 				return GIT_EUSER;
@@ -905,11 +907,12 @@ static int tree_walk(
 				return -1;
 
 			error = tree_walk(subtree, callback, path, payload, preorder);
+			git_tree_free(subtree);
+
 			if (error != 0)
 				break;
 
 			git_buf_truncate(path, path_len);
-			git_tree_free(subtree);
 		}
 
 		if (!preorder && callback(path->ptr, entry, payload) < 0) {
