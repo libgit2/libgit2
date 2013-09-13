@@ -907,11 +907,12 @@ static int tree_walk(
 				return -1;
 
 			error = tree_walk(subtree, callback, path, payload, preorder);
+			git_tree_free(subtree);
+
 			if (error != 0)
 				break;
 
 			git_buf_truncate(path, path_len);
-			git_tree_free(subtree);
 		}
 
 		if (!preorder && callback(path->ptr, entry, payload) < 0) {
