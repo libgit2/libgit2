@@ -46,6 +46,20 @@ GIT_INLINE(void) clar__assert_in_range(
 #define cl_assert_in_range(L,V,H) \
 	clar__assert_in_range((L),(V),(H),__FILE__,__LINE__,"Range check: " #V " in [" #L "," #H "]", 1)
 
+#define cl_assert_equal_file(DATA,SIZE,PATH) \
+	clar__assert_equal_file(DATA,SIZE,0,PATH,__FILE__,__LINE__)
+
+#define cl_assert_equal_file_ignore_cr(DATA,SIZE,PATH) \
+	clar__assert_equal_file(DATA,SIZE,1,PATH,__FILE__,__LINE__)
+
+void clar__assert_equal_file(
+	const char *expected_data,
+	size_t expected_size,
+	int ignore_cr,
+	const char *path,
+	const char *file,
+	size_t line);
+
 /*
  * Some utility macros for building long strings
  */

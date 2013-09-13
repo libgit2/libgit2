@@ -56,18 +56,8 @@ int git_futils_creat_withpath(const char *path, const mode_t dirmode, const mode
 
 int git_futils_creat_locked(const char *path, const mode_t mode)
 {
-	int fd;
-
-#ifdef GIT_WIN32
-	git_win32_path buf;
-
-	git_win32_path_from_c(buf, path);
-	fd = _wopen(buf, O_WRONLY | O_CREAT | O_TRUNC |
+	int fd = p_open(path, O_WRONLY | O_CREAT | O_TRUNC |
 		O_EXCL | O_BINARY | O_CLOEXEC, mode);
-#else
-	fd = open(path, O_WRONLY | O_CREAT | O_TRUNC |
-		O_EXCL | O_BINARY | O_CLOEXEC, mode);
-#endif
 
 	if (fd < 0) {
 		giterr_set(GITERR_OS, "Failed to create locked file '%s'", path);

@@ -354,3 +354,58 @@ int cl_repo_get_bool(git_repository *repo, const char *cfg)
 	git_config_free(config);
 	return val;
 }
+
+/* this is essentially the code from git__unescape modified slightly */
+static size_t strip_cr_from_buf(char *start, size_t len)
+{
+	char *scan, *trail, *end = start + len;
+
+	for (scan = trail = start; scan < end; trail++, scan++) {
+		while (*scan == '\r')
+			scan++; /* skip '\r' */
+
+		if (trail != scan)
+			*trail = *scan;
+	}
+
+	*trail = '\0';
+
+	return (trail - start);
+}
+
+void clar__assert_equal_file(
+	const char *expected_data,
+	size_t expected_bytes,
+	int ignore_cr,
+	const char *path,
+	const char *file,
+	size_t line)
+{
+	char buf[4000];
+	ssize_t bytes, total_bytes = 0;
+	int fd = p_open(path, O_RDONLY | O_BINARY);
+	cl_assert(fd >= 0);
+
+	if (expected_data && !expected_bytes)
+		expected_bytes = strlen(expected_data);
+
+	while ((bytes = p_read(fd, buf, sizeof(buf))) != 0) {
+		clar__assert(
+			bytes > 0, file, line, "error reading from file", path, 1);
+
+		if (ignore_cr)
+			bytes = strip_cr_from_buf(buf, bytes);
+
+		clar__assert(memcmp(expected_data, buf, bytes) == 0,
+			file, line, "file content mismatch", path, 1);
+
+		expected_data += bytes;
+		total_bytes   += bytes;
+	}
+
+	p_close(fd);
+
+	clar__assert(!bytes, file, line, "error reading from file", path, 1);
+	clar__assert_equal(file, line, "mismatched file length", 1, "%"PRIuZ,
+		(size_t)expected_bytes, (size_t)total_bytes);
+}
