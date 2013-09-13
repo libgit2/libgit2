@@ -1,5 +1,10 @@
 #include "clar_libgit2.h"
 
+void test_revwalk_simplify__cleanup(void)
+{
+	cl_git_sandbox_cleanup();
+}
+
 /*
 	*   a4a7dce [0] Merge branch 'master' into br2
 	|\
@@ -47,5 +52,4 @@ void test_revwalk_simplify__first_parent(void)
 	cl_assert_equal_i(error, GIT_ITEROVER);
 
 	git_revwalk_free(walk);
-	git_repository_free(repo);
 }
