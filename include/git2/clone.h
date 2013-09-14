@@ -67,6 +67,7 @@ typedef struct git_clone_options {
 	unsigned int version;
 
 	git_checkout_opts checkout_opts;
+	git_repository_init_options *init_options;
 	int bare;
 	git_transfer_progress_callback fetch_progress_cb;
 	void *fetch_progress_payload;
