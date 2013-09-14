@@ -455,8 +455,15 @@ void clar__assert_equal_file(
 		if (ignore_cr)
 			bytes = strip_cr_from_buf(buf, bytes);
 
-		clar__assert(memcmp(expected_data, buf, bytes) == 0,
-			file, line, "file content mismatch", path, 1);
+		if (memcmp(expected_data, buf, bytes) != 0) {
+			int pos;
+			for (pos = 0; pos < bytes && expected_data[pos] == buf[pos]; ++pos)
+				/* find differing byte offset */;
+			p_snprintf(
+				buf, sizeof(buf), "file content mismatch at byte %d",
+				(int)(total_bytes + pos));
+			clar__fail(file, line, buf, path, 1);
+		}
 
 		expected_data += bytes;
 		total_bytes   += bytes;

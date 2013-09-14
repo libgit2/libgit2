@@ -593,7 +593,7 @@ int git_filter_list_apply_to_data(
 
 	for (i = 0; i < git_array_size(fl->filters); ++i) {
 		unsigned int di = 1 - si;
-		uint32_t fidx = (fl->source.mode == GIT_FILTER_TO_ODB) ?
+		uint32_t fidx = (fl->source.mode == GIT_FILTER_TO_WORKTREE) ?
 			i : git_array_size(fl->filters) - 1 - i;
 		git_filter_entry *fe = git_array_get(fl->filters, fidx);
 
