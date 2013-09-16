@@ -118,6 +118,8 @@ GIT_EXTERN(int) git_cred_ssh_keyfile_passphrase_new(
 /**
  * Creates a new ssh public key credential object.
  * The supplied credential parameter will be internally duplicated.
+ * You're supposed to sign the data `sign_fn` will provide you with
+ * the user's private key.
  *
  * @param out The newly created credential object.
  * @param username username to use to authenticate
@@ -131,9 +133,9 @@ GIT_EXTERN(int) git_cred_ssh_publickey_new(
 	git_cred **out,
 	const char *username,
 	const char *publickey,
-    size_t publickey_len,
-    git_cred_sign_callback sign_fn,
-    void *sign_data);
+	size_t publickey_len,
+	git_cred_sign_callback sign_fn,
+	void *sign_data);
 
 /**
  * Signature of a function which acquires a credential object.
