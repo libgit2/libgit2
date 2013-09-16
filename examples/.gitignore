@@ -2,4 +2,5 @@ general
 showindex
 diff
 rev-list
+blame
 *.dSYM
