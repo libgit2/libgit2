@@ -257,17 +257,9 @@ GIT_EXTERN(int) git_remote_ls(git_remote *remote, git_headlist_cb list_cb, void 
  * The .idx file will be created and both it and the packfile with be
  * renamed to their final name.
  *
- * @param remote the remote to download from
- * @param progress_cb function to call with progress information.  Be aware that
- * this is called inline with network and indexing operations, so performance
- * may be affected.
- * @param payload payload for the progress callback
  * @return 0 or an error code
  */
-GIT_EXTERN(int) git_remote_download(
-		git_remote *remote,
-		git_transfer_progress_callback progress_cb,
-		void *payload);
+GIT_EXTERN(int) git_remote_download(git_remote *remote);
 
 /**
  * Check whether the remote is connected
@@ -403,6 +395,7 @@ struct git_remote_callbacks {
 	unsigned int version;
 	void (*progress)(const char *str, int len, void *data);
 	int (*completion)(git_remote_completion_type type, void *data);
+	int (*transfer_progress)(const git_transfer_progress *stats, void *data);
 	int (*update_tips)(const char *refname, const git_oid *a, const git_oid *b, void *data);
 	void *payload;
 };

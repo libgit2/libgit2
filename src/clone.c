@@ -380,8 +380,7 @@ static int setup_remotes_and_fetch(
 	if ((retcode = git_remote_connect(origin, GIT_DIRECTION_FETCH)) < 0)
 		goto on_error;
 
-	if ((retcode = git_remote_download(origin, options->fetch_progress_cb,
-		options->fetch_progress_payload)) < 0)
+	if ((retcode = git_remote_download(origin)) < 0)
 		goto on_error;
 
 	/* Create "origin/foo" branches for all remote branches */

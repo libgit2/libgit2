@@ -742,10 +742,7 @@ static int remote_head_cmp(const void *_a, const void *_b)
 	return git__strcmp_cb(a->name, b->name);
 }
 
-int git_remote_download(
-		git_remote *remote,
-		git_transfer_progress_callback progress_cb,
-		void *progress_payload)
+int git_remote_download(git_remote *remote)
 {
 	int error;
 	git_vector refs;
@@ -767,7 +764,7 @@ int git_remote_download(
 	if ((error = git_fetch_negotiate(remote)) < 0)
 		return error;
 
-	return git_fetch_download_pack(remote, progress_cb, progress_payload);
+	return git_fetch_download_pack(remote);
 }
 
 static int remote_head_for_fetchspec_src(git_remote_head **out, git_vector *update_heads, const char *fetchspec_src)

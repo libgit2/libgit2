@@ -100,11 +100,15 @@ void test_online_clone__can_checkout_a_cloned_repo(void)
 	bool checkout_progress_cb_was_called = false,
 		  fetch_progress_cb_was_called = false;
 
+	git_remote_callbacks callbacks = GIT_REMOTE_CALLBACKS_INIT;
+
 	g_options.checkout_opts.checkout_strategy = GIT_CHECKOUT_SAFE_CREATE;
 	g_options.checkout_opts.progress_cb = &checkout_progress;
 	g_options.checkout_opts.progress_payload = &checkout_progress_cb_was_called;
-	g_options.fetch_progress_cb = &fetch_progress;
-	g_options.fetch_progress_payload = &fetch_progress_cb_was_called;
+
+	callbacks.transfer_progress = &fetch_progress;
+	callbacks.payload = &fetch_progress_cb_was_called;
+	g_options.remote_callbacks = &callbacks;
 
 	cl_git_pass(git_clone(&g_repo, LIVE_REPO_URL, "./foo", &g_options));
 
@@ -199,6 +203,16 @@ static int cancel_at_half(const git_transfer_progress *stats, void *payload)
 
 void test_online_clone__can_cancel(void)
 {
-	g_options.fetch_progress_cb = cancel_at_half;
+	git_remote_callbacks callbacks = GIT_REMOTE_CALLBACKS_INIT;
+
+	callbacks.transfer_progress = cancel_at_half;
+	g_options.remote_callbacks = &callbacks;
+
 	cl_git_fail_with(git_clone(&g_repo, LIVE_REPO_URL, "./foo", &g_options), GIT_EUSER);
 }
+
+
+
+
+
+
