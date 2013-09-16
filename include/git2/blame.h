@@ -36,6 +36,8 @@ typedef enum {
 	/** Track lines that have been copied from another file that exists in *any*
 	 * commit (like `git blame -CCC`) */
 	GIT_BLAME_TRACK_COPIES_ANY_COMMIT_COPIES = (1<<1 | 1<<2 | 1<<3),
+  /** Track through file renames */
+  GIT_BLAME_TRACK_FILE_RENAMES = (1<<4),
 } git_blame_flag_t;
 
 /**
@@ -51,15 +53,14 @@ typedef enum {
  *   associate those lines with the parent commit. The default value is 20.
  *   This value only takes effect if any of the `GIT_BLAME_TRACK_COPIES_*`
  *   flags are specified.
- * - `newest_commit` is a rev-parse spec that resolves to the most recent
- *   commit to consider.  The default is HEAD.
- * - `newest_commit` is the newest commit to consider.  The default is HEAD.
- * - `oldest_commit` is the oldest commit to consider.  The default is the
- *   first commit encountered with a NULL parent.
+ * - `newest_commit` is the id of the newest commit to consider.  The default
+ *                   is HEAD.
+ * - `oldest_commit` is the id of the oldest commit to consider.  The default
+ *                   is the first commit encountered with a NULL parent.
  *	- `min_line` is the first line in the file to blame.  The default is 1 (line
- *	  numbers start with 1).
+ *	             numbers start with 1).
  *	- `max_line` is the last line in the file to blame.  The default is the last
- *	  line of the file.
+ *	             line of the file.
  */
 
 typedef struct git_blame_options {
@@ -67,8 +68,8 @@ typedef struct git_blame_options {
 
 	uint32_t flags;
 	uint16_t min_match_characters;
-	git_commit *newest_commit;
-	git_commit *oldest_commit;
+	git_oid newest_commit;
+	git_oid oldest_commit;
 	uint32_t min_line;
 	uint32_t max_line;
 } git_blame_options;
@@ -105,39 +106,40 @@ typedef struct git_blame_hunk {
 } git_blame_hunk;
 
 
-typedef struct git_blame_results git_blame_results;
+/* Opaque structure to hold blame results */
+typedef struct git_blame git_blame;
 
 /**
- * Gets the number of hunks that exist in the results structure.
+ * Gets the number of hunks that exist in the blame structure.
  */
-GIT_EXTERN(uint32_t) git_blame_results_hunk_count(git_blame_results *results);
+GIT_EXTERN(uint32_t) git_blame_get_hunk_count(git_blame *blame);
 
 /**
  * Gets the blame hunk at the given index.
  *
- * @param results the results structure to query
+ * @param blame the blame structure to query
  * @param index index of the hunk to retrieve
  * @return the hunk at the given index, or NULL on error
  */
-GIT_EXTERN(const git_blame_hunk*) git_blame_results_hunk_byindex(
-		git_blame_results *results,
+GIT_EXTERN(const git_blame_hunk*) git_blame_get_hunk_byindex(
+		git_blame *blame,
 		uint32_t index);
 
 /**
  * Gets the hunk that relates to the given line number in the newest commit.
  *
- * @param results the results structure to query
+ * @param blame the blame structure to query
  * @param lineno the (1-based) line number to find a hunk for
  * @return the hunk that contains the given line, or NULL on error
  */
-GIT_EXTERN(const git_blame_hunk*) git_blame_results_hunk_byline(
-		git_blame_results *results,
+GIT_EXTERN(const git_blame_hunk*) git_blame_get_hunk_byline(
+		git_blame *blame,
 		uint32_t lineno);
 
 /**
  * Get the blame for a single file.
  *
- * @param out pointer that will receive the results object
+ * @param out pointer that will receive the blame object
  * @param repo repository whose history is to be walked
  * @param path path to file to consider
  * @param options options for the blame operation.  If NULL, this is treated as
@@ -146,32 +148,41 @@ GIT_EXTERN(const git_blame_hunk*) git_blame_results_hunk_byline(
  *         about the error.)
  */
 GIT_EXTERN(int) git_blame_file(
-		git_blame_results **out,
+		git_blame **out,
 		git_repository *repo,
 		const char *path,
 		git_blame_options *options);
 
 
 /**
- * Get blame data for a file that has been modified.
+ * Get blame data for a file that has been modified in memory. The `reference`
+ * parameter is a pre-calculated blame for the in-odb history of the file. This
+ * means that once a file blame is completed (which can be expensive), updating
+ * the buffer blame is very fast.
  *
- * @param out pointer that will receive the results object
- * @param reference output from git_blame_file for the file in question
+ * Lines that differ between the buffer and the committed version are marked as
+ * having a zero OID for their final_commit_id.
+ *
+ * @param out pointer that will receive the resulting blame data
+ * @param reference cached blame from the history of the file (usually the output
+ *                  from git_blame_file)
  * @param buffer the (possibly) modified contents of the file
+ * @param buffer_len number of valid bytes in the buffer
  * @return 0 on success, or an error code. (use giterr_last for information
  *         about the error)
  */
 GIT_EXTERN(int) git_blame_buffer(
-		git_blame_results **out,
-		git_blame_results *reference,
-		const char *buffer);
+		git_blame **out,
+		git_blame *reference,
+		const char *buffer,
+		size_t buffer_len);
 
 /**
- * Free memory allocated by git_blame.
+ * Free memory allocated by git_blame_file or git_blame_buffer.
  *
- * @param results results structure to free
+ * @param blame the blame structure to free
  */
-GIT_EXTERN(void) git_blame_free(git_blame_results *results);
+GIT_EXTERN(void) git_blame_free(git_blame *blame);
 
 /** @} */
 GIT_END_DECL
