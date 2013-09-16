@@ -29,8 +29,22 @@ GIT_EXTERN(git_filter *) git_filter_lookup(const char *name);
 #define GIT_FILTER_CRLF  "crlf"
 #define GIT_FILTER_IDENT "ident"
 
+/**
+ * This is priority that the internal CRLF filter will be registered with
+ */
 #define GIT_FILTER_CRLF_PRIORITY 0
+
+/**
+ * This is priority that the internal ident filter will be registered with
+ */
 #define GIT_FILTER_IDENT_PRIORITY 100
+
+/**
+ * This is priority to use with a custom filter to imitate a core Git
+ * filter driver, so that it will be run last on checkout and first on
+ * checkin.  You do not have to use this, but it helps compatibility.
+ */
+#define GIT_FILTER_DRIVER_PRIORITY 200
 
 /**
  * Create a new empty filter list

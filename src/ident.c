@@ -8,6 +8,7 @@
 #include "git2/sys/filter.h"
 #include "filter.h"
 #include "buffer.h"
+#include "buf_text.h"
 
 static int ident_find_id(
 	const char **id_start, const char **id_end, const char *start, size_t len)
@@ -24,7 +25,7 @@ static int ident_find_id(
 		len = remaining - 1;
 	}
 
-	if (len < 3)
+	if (!found || len < 3)
 		return GIT_ENOTFOUND;
 	*id_start = found;
 
@@ -98,6 +99,10 @@ static int ident_apply(
 	const git_filter_source *src)
 {
 	GIT_UNUSED(self); GIT_UNUSED(payload);
+
+	/* Don't filter binary files */
+	if (git_buf_text_is_binary(from))
+		return GIT_ENOTFOUND;
 
 	if (git_filter_source_mode(src) == GIT_FILTER_SMUDGE)
 		return ident_insert_id(to, from, src);
