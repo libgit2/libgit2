@@ -76,9 +76,9 @@ int do_clone(git_repository *repo, int argc, char **argv)
 	checkout_opts.progress_payload = &pd;
 	clone_opts.checkout_opts = checkout_opts;
 	callbacks.transfer_progress = &fetch_progress;
+	callbacks.credentials = cred_acquire_cb;
 	callbacks.payload = &pd;
 	clone_opts.remote_callbacks = &callbacks;
-	clone_opts.cred_acquire_cb = cred_acquire_cb;
 
 	// Do the clone
 	error = git_clone(&cloned_repo, url, path, &clone_opts);

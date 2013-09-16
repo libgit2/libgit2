@@ -48,9 +48,6 @@ GIT_BEGIN_DECL
  *   results in the same behavior as GIT_REMOTE_DEFAULT_FETCH.
  * - `push_spec` is the fetch specification to be used for pushing.  NULL means
  *   use the same spec as for fetching.
- * - `cred_acquire_cb` is a callback to be used if credentials are required
- *   during the initial fetch.
- * - `cred_acquire_payload` is the payload for the above callback.
  * - `transport_flags` is flags used to create transport if no transport is
  *   provided.
  * - `transport` is a custom transport to be used for the initial fetch.  NULL
@@ -74,8 +71,6 @@ typedef struct git_clone_options {
 	const char *pushurl;
 	const char *fetch_spec;
 	const char *push_spec;
-	git_cred_acquire_cb cred_acquire_cb;
-	void *cred_acquire_payload;
     git_transport_flags_t transport_flags;
 	git_transport *transport;
 	git_remote_callbacks *remote_callbacks;

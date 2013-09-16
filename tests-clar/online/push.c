@@ -17,6 +17,8 @@ static char *_remote_url;
 static char *_remote_user;
 static char *_remote_pass;
 
+static int cred_acquire_cb(git_cred **,	const char *, const char *, unsigned int, void *);
+
 static git_remote *_remote;
 static bool _cred_acquire_called;
 static record_callbacks_data _record_cbs_data = {{ 0 }};
@@ -294,7 +296,6 @@ void test_online_push__initialize(void)
 	if (_remote_url) {
 		cl_git_pass(git_remote_create(&_remote, _repo, "test", _remote_url));
 
-		git_remote_set_cred_acquire_cb(_remote, cred_acquire_cb, &_cred_acquire_called);
 		record_callbacks_data_clear(&_record_cbs_data);
 		git_remote_set_callbacks(_remote, &_record_cbs);
 

@@ -310,8 +310,6 @@ static int create_and_configure_origin(
 	if ((error = git_remote_create(&origin, repo, options->remote_name, url)) < 0)
 		goto on_error;
 
-	git_remote_set_cred_acquire_cb(origin, options->cred_acquire_cb,
-			options->cred_acquire_payload);
 	git_remote_set_autotag(origin, options->remote_autotag);
 	/*
 	 * Don't write FETCH_HEAD, we'll check out the remote tracking

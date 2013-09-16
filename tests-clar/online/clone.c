@@ -155,11 +155,13 @@ void test_online_clone__credentials(void)
 		cl_getenv("GITTEST_REMOTE_USER"),
 		cl_getenv("GITTEST_REMOTE_PASS")
 	};
+	git_remote_callbacks callbacks = GIT_REMOTE_CALLBACKS_INIT;
 
 	if (!remote_url) return;
 
-	g_options.cred_acquire_cb = git_cred_userpass;
-	g_options.cred_acquire_payload = &user_pass;
+	callbacks.credentials = git_cred_userpass;
+	callbacks.payload = &user_pass;
+	g_options.remote_callbacks = &callbacks;
 
 	cl_git_pass(git_clone(&g_repo, remote_url, "./foo", &g_options));
 	git_repository_free(g_repo); g_repo = NULL;
@@ -172,8 +174,11 @@ void test_online_clone__bitbucket_style(void)
 		"libgit2", "libgit2"
 	};
 
-	g_options.cred_acquire_cb = git_cred_userpass;
-	g_options.cred_acquire_payload = &user_pass;
+	git_remote_callbacks callbacks = GIT_REMOTE_CALLBACKS_INIT;
+
+	callbacks.credentials = git_cred_userpass;
+	callbacks.payload = &user_pass;
+	g_options.remote_callbacks = &callbacks;
 
 	cl_git_pass(git_clone(&g_repo, BB_REPO_URL, "./foo", &g_options));
 	git_repository_free(g_repo); g_repo = NULL;

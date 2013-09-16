@@ -18,6 +18,7 @@ static int use_remote(git_repository *repo, char *name)
 {
 	git_remote *remote = NULL;
 	int error;
+	git_remote_callbacks callbacks = GIT_REMOTE_CALLBACKS_INIT;
 
 	// Find the remote by name
 	error = git_remote_load(&remote, repo, name);
@@ -27,7 +28,8 @@ static int use_remote(git_repository *repo, char *name)
 			goto cleanup;
 	}
 
-	git_remote_set_cred_acquire_cb(remote, &cred_acquire_cb, NULL);
+	callbacks.credentials = cred_acquire_cb;
+	git_remote_set_callbacks(remote, &callbacks);
 
 	error = git_remote_connect(remote, GIT_DIRECTION_FETCH);
 	if (error < 0)

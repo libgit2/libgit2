@@ -395,6 +395,7 @@ struct git_remote_callbacks {
 	unsigned int version;
 	void (*progress)(const char *str, int len, void *data);
 	int (*completion)(git_remote_completion_type type, void *data);
+	int (*credentials)(git_cred **cred, const char *url, const char *username_from_url, unsigned int allowed_types,	void *data);
 	int (*transfer_progress)(const git_transfer_progress *stats, void *data);
 	int (*update_tips)(const char *refname, const git_oid *a, const git_oid *b, void *data);
 	void *payload;
