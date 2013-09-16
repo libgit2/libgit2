@@ -350,24 +350,6 @@ on_error:
 	return error;
 }
 
-static int do_fetch(git_remote *origin)
-{
-	int retcode;
-
-	/* Connect and download everything */
-	if ((retcode = git_remote_connect(origin, GIT_DIRECTION_FETCH)) < 0)
-		return retcode;
-
-	if ((retcode = git_remote_download(origin)) < 0)
-		return retcode;
-
-	/* Create "origin/foo" branches for all remote branches */
-	if ((retcode = git_remote_update_tips(origin)) < 0)
-		return retcode;
-
-	return 0;
-}
-
 static int setup_remotes_and_fetch(
 		git_repository *repo,
 		const char *url,
@@ -391,7 +373,7 @@ static int setup_remotes_and_fetch(
 		((retcode = git_remote_add_fetch(origin, "refs/tags/*:refs/tags/*")) < 0))
 		goto on_error;
 
-	if ((retcode = do_fetch(origin)) < 0)
+	if ((retcode = git_remote_fetch(origin)) < 0)
 		goto on_error;
 
 	/* Point HEAD to the requested branch */
@@ -459,7 +441,7 @@ int git_clone_into(git_repository *repo, git_remote *remote, git_checkout_opts *
 	old_fetchhead = git_remote_update_fetchhead(remote);
 	git_remote_set_update_fetchhead(remote, 0);
 
-	if ((error = do_fetch(remote)) < 0)
+	if ((error = git_remote_fetch(remote)) < 0)
 		goto cleanup;
 
 	if (branch)

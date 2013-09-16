@@ -311,6 +311,17 @@ GIT_EXTERN(void) git_remote_free(git_remote *remote);
 GIT_EXTERN(int) git_remote_update_tips(git_remote *remote);
 
 /**
+ * Download new data and update tips
+ *
+ * Convenience function to connect to a remote, download the data,
+ * disconnect and update the remote-tracking branches.
+ *
+ * @param remote the remote to fetch from
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_remote_fetch(git_remote *remote);
+
+/**
  * Return whether a string is a valid remote URL
  *
  * @param url the url to check
