@@ -310,7 +310,6 @@ static int create_and_configure_origin(
 	if ((error = git_remote_create(&origin, repo, options->remote_name, url)) < 0)
 		goto on_error;
 
-	git_remote_set_autotag(origin, options->remote_autotag);
 	/*
 	 * Don't write FETCH_HEAD, we'll check out the remote tracking
 	 * branch ourselves based on the server's default.
@@ -364,13 +363,11 @@ static int setup_remotes_and_fetch(
 
 	git_remote_set_update_fetchhead(origin, 0);
 
-	/* If the download_tags value has not been specified, then make sure to
-		* download tags as well. It is set here because we want to download tags
-		* on the initial clone, but do not want to persist the value in the
-		* configuration file.
-		*/
-	if (origin->download_tags == GIT_REMOTE_DOWNLOAD_TAGS_AUTO &&
-		((retcode = git_remote_add_fetch(origin, "refs/tags/*:refs/tags/*")) < 0))
+	/* Make sure to download all tags as well. It is set here because
+	 * we want to download tags on the initial clone, but do not
+	 * want to persist the value in the configuration file.
+	 */
+	if((retcode = git_remote_add_fetch(origin, "refs/tags/*:refs/tags/*")) < 0)
 		goto on_error;
 
 	if ((retcode = git_remote_fetch(origin)) < 0)

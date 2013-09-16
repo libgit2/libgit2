@@ -54,8 +54,6 @@ GIT_BEGIN_DECL
  *   means use the transport autodetected from the URL.
  * - `remote_callbacks` may be used to specify custom progress callbacks for
  *   the origin remote before the fetch is initiated.
- * - `remote_autotag` may be used to specify the autotag setting before the
- *   initial fetch.  The default is GIT_REMOTE_DOWNLOAD_TAGS_ALL.
  * - `checkout_branch` gives the name of the branch to checkout. NULL means
  *   use the remote's HEAD.
  */
@@ -74,7 +72,6 @@ typedef struct git_clone_options {
     git_transport_flags_t transport_flags;
 	git_transport *transport;
 	git_remote_callbacks *remote_callbacks;
-	git_remote_autotag_option_t remote_autotag;
 	const char* checkout_branch;
 } git_clone_options;
 
