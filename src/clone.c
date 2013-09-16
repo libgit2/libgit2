@@ -418,7 +418,7 @@ static bool should_checkout(
 	return !git_repository_head_orphan(repo);
 }
 
-static void normalize_options(git_clone_options *dst, const git_clone_options *src)
+static void normalize_options(git_clone_options *dst, const git_clone_options *src, git_repository_init_options *initOptions)
 {
 	git_clone_options default_options = GIT_CLONE_OPTIONS_INIT;
 	if (!src) src = &default_options;
@@ -427,6 +427,13 @@ static void normalize_options(git_clone_options *dst, const git_clone_options *s
 
 	/* Provide defaults for null pointers */
 	if (!dst->remote_name) dst->remote_name = "origin";
+	if (!dst->init_options)
+	{
+		dst->init_options = initOptions;
+		initOptions->flags = GIT_REPOSITORY_INIT_MKPATH;
+		if (dst->bare)
+			initOptions->flags |= GIT_REPOSITORY_INIT_BARE;
+	}
 }
 
 int git_clone(
@@ -439,10 +446,11 @@ int git_clone(
 	git_repository *repo = NULL;
 	git_clone_options normOptions;
 	int remove_directory_on_failure = 0;
+	git_repository_init_options initOptions = GIT_REPOSITORY_INIT_OPTIONS_INIT;
 
 	assert(out && url && local_path);
 
-	normalize_options(&normOptions, options);
+	normalize_options(&normOptions, options, &initOptions);
 	GITERR_CHECK_VERSION(&normOptions, GIT_CLONE_OPTIONS_VERSION, "git_clone_options");
 
 	/* Only clone to a new directory or an empty directory */
@@ -455,7 +463,7 @@ int git_clone(
 	/* Only remove the directory on failure if we create it */
 	remove_directory_on_failure = !git_path_exists(local_path);
 
-	if (!(retcode = git_repository_init(&repo, local_path, normOptions.bare))) {
+	if (!(retcode = git_repository_init_ext(&repo, local_path, normOptions.init_options))) {
 		if ((retcode = setup_remotes_and_fetch(repo, url, &normOptions)) < 0) {
 			/* Failed to fetch; clean up */
 			git_repository_free(repo);
