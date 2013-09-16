@@ -270,23 +270,23 @@ cleanup:
 
 static int update_head_to_branch(
 		git_repository *repo,
-		const git_clone_options *options)
+		const char *remote_name,
+		const char *branch)
 {
 	int retcode;
 	git_buf remote_branch_name = GIT_BUF_INIT;
 	git_reference* remote_ref = NULL;
 
-	assert(options->checkout_branch);
+	assert(remote_name && branch);
 
 	if ((retcode = git_buf_printf(&remote_branch_name, GIT_REFS_REMOTES_DIR "%s/%s",
-		options->remote_name, options->checkout_branch)) < 0 )
+		remote_name, branch)) < 0 )
 		goto cleanup;
 
 	if ((retcode = git_reference_lookup(&remote_ref, repo, git_buf_cstr(&remote_branch_name))) < 0)
 		goto cleanup;
 
-	retcode = update_head_to_new_branch(repo, git_reference_target(remote_ref),
-		options->checkout_branch);
+	retcode = update_head_to_new_branch(repo, git_reference_target(remote_ref), branch);
 
 cleanup:
 	git_reference_free(remote_ref);
@@ -350,6 +350,23 @@ on_error:
 	return error;
 }
 
+static int do_fetch(git_remote *origin)
+{
+	int retcode;
+
+	/* Connect and download everything */
+	if ((retcode = git_remote_connect(origin, GIT_DIRECTION_FETCH)) < 0)
+		return retcode;
+
+	if ((retcode = git_remote_download(origin)) < 0)
+		return retcode;
+
+	/* Create "origin/foo" branches for all remote branches */
+	if ((retcode = git_remote_update_tips(origin)) < 0)
+		return retcode;
+
+	return 0;
+}
 
 static int setup_remotes_and_fetch(
 		git_repository *repo,
@@ -374,20 +391,12 @@ static int setup_remotes_and_fetch(
 		((retcode = git_remote_add_fetch(origin, "refs/tags/*:refs/tags/*")) < 0))
 		goto on_error;
 
-	/* Connect and download everything */
-	if ((retcode = git_remote_connect(origin, GIT_DIRECTION_FETCH)) < 0)
-		goto on_error;
-
-	if ((retcode = git_remote_download(origin)) < 0)
-		goto on_error;
-
-	/* Create "origin/foo" branches for all remote branches */
-	if ((retcode = git_remote_update_tips(origin)) < 0)
+	if ((retcode = do_fetch(origin)) < 0)
 		goto on_error;
 
 	/* Point HEAD to the requested branch */
 	if (options->checkout_branch)
-		retcode = update_head_to_branch(repo, options);
+		retcode = update_head_to_branch(repo, options->remote_name, options->checkout_branch);
 	/* Point HEAD to the same ref as the remote's head */
 	else
 		retcode = update_head_to_remote(repo, origin);
@@ -430,6 +439,45 @@ static void normalize_options(git_clone_options *dst, const git_clone_options *s
 		if (dst->bare)
 			initOptions->flags |= GIT_REPOSITORY_INIT_BARE;
 	}
+}
+
+int git_clone_into(git_repository *repo, git_remote *remote, git_checkout_opts *co_opts, const char *branch)
+{
+	int error = 0, old_fetchhead;
+	size_t nspecs;
+
+	assert(repo && remote);
+
+	if (!git_repository_is_empty(repo)) {
+		giterr_set(GITERR_INVALID, "the repository is not empty");
+		return -1;
+	}
+
+	if ((error = git_remote_add_fetch(remote, "refs/tags/*:refs/tags/*")) < 0)
+		return error;
+
+	old_fetchhead = git_remote_update_fetchhead(remote);
+	git_remote_set_update_fetchhead(remote, 0);
+
+	if ((error = do_fetch(remote)) < 0)
+		goto cleanup;
+
+	if (branch)
+		error = update_head_to_branch(repo, git_remote_name(remote), branch);
+	/* Point HEAD to the same ref as the remote's head */
+	else
+		error = update_head_to_remote(repo, remote);
+
+	if (!error && should_checkout(repo, git_repository_is_bare(repo), co_opts))
+		error = git_checkout_head(repo, co_opts);
+
+cleanup:
+	git_remote_set_update_fetchhead(remote, old_fetchhead);
+	/* Remove the tags refspec */
+	nspecs = git_remote_refspec_count(remote);
+	git_remote_remove_refspec(remote, nspecs);
+
+	return error;
 }
 
 int git_clone(

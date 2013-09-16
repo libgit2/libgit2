@@ -99,6 +99,22 @@ GIT_EXTERN(int) git_clone(
 		const char *local_path,
 		const git_clone_options *options);
 
+/**
+ * Clone into a repository
+ *
+ * After creating the repository and remote and configuring them for
+ * paths and callbacks respectively, you can call this function to
+ * perform the clone operation and optionally checkout files.
+ *
+ * @param repo the repository to use
+ * @param remote the remote repository to clone from
+ * @param co_opts options to use during checkout
+ * @param branch the branch to checkout after the clone, pass NULL for the remote's
+ * default branch
+ * @return 0 on success or an error code
+ */
+GIT_EXTERN(int) git_clone_into(git_repository *repo, git_remote *remote, git_checkout_opts *co_opts, const char *branch);
+
 /** @} */
 GIT_END_DECL
 #endif
