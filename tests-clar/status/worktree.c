@@ -40,6 +40,48 @@ void test_status_worktree__whole_repository(void)
 	cl_assert_equal_i(0, counts.wrong_sorted_path);
 }
 
+void assert_show(const int entry_counts, const char *entry_paths[],
+				 const unsigned int entry_statuses[], git_status_show_t show)
+{
+	status_entry_counts counts;
+	git_repository *repo = cl_git_sandbox_init("status");
+	git_status_options opts = GIT_STATUS_OPTIONS_INIT;
+
+	memset(&counts, 0x0, sizeof(status_entry_counts));
+	counts.expected_entry_count = entry_counts;
+	counts.expected_paths = entry_paths;
+	counts.expected_statuses = entry_statuses;
+
+	opts.flags = GIT_STATUS_OPT_DEFAULTS;
+	opts.show = show;
+
+	cl_git_pass(
+		git_status_foreach_ext(repo, &opts, cb_status__normal, &counts)
+	);
+
+	cl_assert_equal_i(counts.expected_entry_count, counts.entry_count);
+	cl_assert_equal_i(0, counts.wrong_status_flags_count);
+	cl_assert_equal_i(0, counts.wrong_sorted_path);
+}
+
+void test_status_worktree__show_index_and_workdir(void)
+{
+	assert_show(entry_count0, entry_paths0, entry_statuses0,
+		GIT_STATUS_SHOW_INDEX_AND_WORKDIR);
+}
+
+void test_status_worktree__show_index_only(void)
+{
+	assert_show(entry_count5, entry_paths5, entry_statuses5,
+		GIT_STATUS_SHOW_INDEX_ONLY);
+}
+
+void test_status_worktree__show_workdir_only(void)
+{
+	assert_show(entry_count6, entry_paths6, entry_statuses6,
+		GIT_STATUS_SHOW_WORKDIR_ONLY);
+}
+
 /* this test is equivalent to t18-status.c:statuscb1 */
 void test_status_worktree__empty_repository(void)
 {
@@ -695,3 +737,163 @@ void test_status_worktree__file_status_honors_case_ignorecase_regarding_untracke
     /* Actually returns GIT_STATUS_IGNORED on Windows */
     cl_git_fail_with(git_status_file(&status, repo, "NEW_FILE"), GIT_ENOTFOUND);
 }
+
+void test_status_worktree__simple_delete(void)
+{
+    git_repository *repo = cl_git_sandbox_init("renames");
+	git_status_options opts = GIT_STATUS_OPTIONS_INIT;
+	int count;
+
+	opts.flags = GIT_STATUS_OPT_INCLUDE_UNTRACKED |
+		GIT_STATUS_OPT_DISABLE_PATHSPEC_MATCH |
+		GIT_STATUS_OPT_EXCLUDE_SUBMODULES |
+		GIT_STATUS_OPT_RECURSE_UNTRACKED_DIRS;
+
+	count = 0;
+	cl_git_pass(
+		git_status_foreach_ext(repo, &opts, cb_status__count, &count) );
+	cl_assert_equal_i(0, count);
+
+	cl_must_pass(p_unlink("renames/untimely.txt"));
+
+	count = 0;
+	cl_git_pass(
+		git_status_foreach_ext(repo, &opts, cb_status__count, &count) );
+	cl_assert_equal_i(1, count);
+}
+
+void test_status_worktree__simple_delete_indexed(void)
+{
+	git_repository *repo = cl_git_sandbox_init("renames");
+	git_status_options opts = GIT_STATUS_OPTIONS_INIT;
+	git_status_list *status;
+
+	opts.flags = GIT_STATUS_OPT_INCLUDE_UNTRACKED |
+		GIT_STATUS_OPT_DISABLE_PATHSPEC_MATCH |
+		GIT_STATUS_OPT_EXCLUDE_SUBMODULES |
+		GIT_STATUS_OPT_RECURSE_UNTRACKED_DIRS;
+
+	cl_git_pass(git_status_list_new(&status, repo, &opts));
+	cl_assert_equal_sz(0, git_status_list_entrycount(status));
+	git_status_list_free(status);
+
+	cl_must_pass(p_unlink("renames/untimely.txt"));
+
+	cl_git_pass(git_status_list_new(&status, repo, &opts));
+	cl_assert_equal_sz(1, git_status_list_entrycount(status));
+	cl_assert_equal_i(
+		GIT_STATUS_WT_DELETED, git_status_byindex(status, 0)->status);
+	git_status_list_free(status);
+}
+
+static const char *icase_paths[] = { "B", "c", "g", "H" };
+static unsigned int icase_statuses[] = {
+	GIT_STATUS_WT_MODIFIED, GIT_STATUS_WT_DELETED,
+	GIT_STATUS_WT_MODIFIED, GIT_STATUS_WT_DELETED,
+};
+
+static const char *case_paths[] = { "B", "H", "c", "g" };
+static unsigned int case_statuses[] = {
+	GIT_STATUS_WT_MODIFIED, GIT_STATUS_WT_DELETED,
+	GIT_STATUS_WT_DELETED, GIT_STATUS_WT_MODIFIED,
+};
+
+void test_status_worktree__sorting_by_case(void)
+{
+	git_repository *repo = cl_git_sandbox_init("icase");
+	git_index *index;
+	git_status_options opts = GIT_STATUS_OPTIONS_INIT;
+	bool native_ignore_case;
+	status_entry_counts counts;
+
+	cl_git_pass(git_repository_index(&index, repo));
+	native_ignore_case =
+		(git_index_caps(index) & GIT_INDEXCAP_IGNORE_CASE) != 0;
+	git_index_free(index);
+
+	memset(&counts, 0, sizeof(counts));
+	counts.expected_entry_count = 0;
+	counts.expected_paths = NULL;
+	counts.expected_statuses = NULL;
+	cl_git_pass(
+		git_status_foreach_ext(repo, &opts, cb_status__normal, &counts));
+	cl_assert_equal_i(counts.expected_entry_count, counts.entry_count);
+	cl_assert_equal_i(0, counts.wrong_status_flags_count);
+	cl_assert_equal_i(0, counts.wrong_sorted_path);
+
+	cl_git_rewritefile("icase/B", "new stuff");
+	cl_must_pass(p_unlink("icase/c"));
+	cl_git_rewritefile("icase/g", "new stuff");
+	cl_must_pass(p_unlink("icase/H"));
+
+	memset(&counts, 0, sizeof(counts));
+	counts.expected_entry_count = 4;
+	if (native_ignore_case) {
+		counts.expected_paths = icase_paths;
+		counts.expected_statuses = icase_statuses;
+	} else {
+		counts.expected_paths = case_paths;
+		counts.expected_statuses = case_statuses;
+	}
+	cl_git_pass(
+		git_status_foreach_ext(repo, &opts, cb_status__normal, &counts));
+	cl_assert_equal_i(counts.expected_entry_count, counts.entry_count);
+	cl_assert_equal_i(0, counts.wrong_status_flags_count);
+	cl_assert_equal_i(0, counts.wrong_sorted_path);
+
+	opts.flags = GIT_STATUS_OPT_SORT_CASE_SENSITIVELY;
+
+	memset(&counts, 0, sizeof(counts));
+	counts.expected_entry_count = 4;
+	counts.expected_paths = case_paths;
+	counts.expected_statuses = case_statuses;
+	cl_git_pass(
+		git_status_foreach_ext(repo, &opts, cb_status__normal, &counts));
+	cl_assert_equal_i(counts.expected_entry_count, counts.entry_count);
+	cl_assert_equal_i(0, counts.wrong_status_flags_count);
+	cl_assert_equal_i(0, counts.wrong_sorted_path);
+
+	opts.flags = GIT_STATUS_OPT_SORT_CASE_INSENSITIVELY;
+
+	memset(&counts, 0, sizeof(counts));
+	counts.expected_entry_count = 4;
+	counts.expected_paths = icase_paths;
+	counts.expected_statuses = icase_statuses;
+	cl_git_pass(
+		git_status_foreach_ext(repo, &opts, cb_status__normal, &counts));
+	cl_assert_equal_i(counts.expected_entry_count, counts.entry_count);
+	cl_assert_equal_i(0, counts.wrong_status_flags_count);
+	cl_assert_equal_i(0, counts.wrong_sorted_path);
+}
+
+void test_status_worktree__long_filenames(void)
+{
+	char path[260*4+1];
+	const char *expected_paths[] = {path};
+	const unsigned int expected_statuses[] = {GIT_STATUS_WT_NEW};
+
+	git_repository *repo = cl_git_sandbox_init("empty_standard_repo");
+	git_status_options opts = GIT_STATUS_OPTIONS_INIT;
+	status_entry_counts counts = {0};
+
+	// Create directory with amazingly long filename
+	sprintf(path, "empty_standard_repo/%s", longname);
+	cl_git_pass(git_futils_mkdir_r(path, NULL, 0777));
+	sprintf(path, "empty_standard_repo/%s/foo", longname);
+	cl_git_mkfile(path, "dummy");
+
+	sprintf(path, "%s/foo", longname);
+	counts.expected_entry_count = 1;
+	counts.expected_paths = expected_paths;
+	counts.expected_statuses = expected_statuses;
+
+	opts.show = GIT_STATUS_SHOW_WORKDIR_ONLY;
+	opts.flags = GIT_STATUS_OPT_DEFAULTS;
+
+	cl_git_pass(
+		git_status_foreach_ext(repo, &opts, cb_status__normal, &counts) );
+	cl_assert_equal_i(counts.expected_entry_count, counts.entry_count);
+	cl_assert_equal_i(0, counts.wrong_status_flags_count);
+	cl_assert_equal_i(0, counts.wrong_sorted_path);
+}
+

@@ -33,6 +33,9 @@ int git_libgit2_capabilities()
 #if defined(GIT_SSL) || defined(GIT_WINHTTP)
 		| GIT_CAP_HTTPS
 #endif
+#if defined(GIT_SSH)
+		| GIT_CAP_SSH
+#endif
 	;
 }
 
@@ -277,6 +280,28 @@ int git__strcasecmp(const char *a, const char *b)
 	while (*a && *b && tolower(*a) == tolower(*b))
 		++a, ++b;
 	return (tolower(*a) - tolower(*b));
+}
+
+int git__strcasesort_cmp(const char *a, const char *b)
+{
+	int cmp = 0;
+
+	while (*a && *b) {
+		if (*a != *b) {
+			if (tolower(*a) != tolower(*b))
+				break;
+			/* use case in sort order even if not in equivalence */
+			if (!cmp)
+				cmp = (int)(*(const uint8_t *)a) - (int)(*(const uint8_t *)b);
+		}
+
+		++a, ++b;
+	}
+
+	if (*a || *b)
+		return tolower(*a) - tolower(*b);
+
+	return cmp;
 }
 
 int git__strncmp(const char *a, const char *b, size_t sz)
@@ -686,7 +711,7 @@ void git__qsort_r(
 	void *els, size_t nel, size_t elsize, git__sort_r_cmp cmp, void *payload)
 {
 #if defined(__MINGW32__) || defined(__OpenBSD__) || defined(AMIGA) || \
-	defined(__gnu_hurd__) || \
+	defined(__gnu_hurd__) || defined(__ANDROID_API__) || \
 	(__GLIBC__ == 2 && __GLIBC_MINOR__ < 8)
 	git__insertsort_r(els, nel, elsize, NULL, cmp, payload);
 #elif defined(GIT_WIN32)
@@ -721,13 +746,4 @@ void git__insertsort_r(
 
 	if (freeswap)
 		git__free(swapel);
-}
-
-void git__memzero(volatile void *data, size_t size)
-{
-	volatile uint8_t *scan = data;
-	uint8_t *end = scan + size;
-
-	while (scan < end)
-		*scan++ = 0x0;
 }

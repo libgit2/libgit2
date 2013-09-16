@@ -16,8 +16,8 @@
 
 int p_unlink(const char *path)
 {
-	wchar_t buf[GIT_WIN_PATH];
-	git__utf8_to_16(buf, GIT_WIN_PATH, path);
+	git_win32_path buf;
+	git_win32_path_from_c(buf, path);
 	_wchmod(buf, 0666);
 	return _wunlink(buf);
 }
@@ -59,10 +59,11 @@ static int do_lstat(
 	const char *file_name, struct stat *buf, int posix_enotdir)
 {
 	WIN32_FILE_ATTRIBUTE_DATA fdata;
-	wchar_t fbuf[GIT_WIN_PATH], lastch;
+	git_win32_path fbuf;
+	wchar_t lastch;
 	int flen;
 
-	flen = git__utf8_to_16(fbuf, GIT_WIN_PATH, file_name);
+	flen = git_win32_path_from_c(fbuf, file_name);
 
 	/* truncate trailing slashes */
 	for (; flen > 0; --flen) {
@@ -90,6 +91,9 @@ static int do_lstat(
 		if (fdata.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT)
 			fMode |= S_IFLNK;
 
+		if ((fMode & (S_IFDIR | S_IFLNK)) == (S_IFDIR | S_IFLNK)) // junction
+			fMode ^= S_IFLNK;
+
 		buf->st_ino = 0;
 		buf->st_gid = 0;
 		buf->st_uid = 0;
@@ -105,10 +109,10 @@ static int do_lstat(
 		 * the length of the path pointed to, which we expect everywhere else
 		 */
 		if (S_ISLNK(fMode)) {
-			char target[GIT_WIN_PATH];
+			git_win32_path_as_utf8 target;
 			int readlink_result;
 
-			readlink_result = p_readlink(file_name, target, GIT_WIN_PATH);
+			readlink_result = p_readlink(file_name, target, sizeof(target));
 
 			if (readlink_result == -1)
 				return -1;
@@ -156,13 +160,22 @@ int p_lstat_posixly(const char *filename, struct stat *buf)
 	return do_lstat(filename, buf, 1);
 }
 
+
+/*
+ * Parts of the The p_readlink function are heavily inspired by the php 
+ * readlink function in link_win32.c
+ *
+ * Copyright (c) 1999 - 2012 The PHP Group. All rights reserved.
+ *
+ * For details of the PHP license see http://www.php.net/license/3_01.txt
+ */
 int p_readlink(const char *link, char *target, size_t target_len)
 {
 	typedef DWORD (WINAPI *fpath_func)(HANDLE, LPWSTR, DWORD, DWORD);
 	static fpath_func pGetFinalPath = NULL;
 	HANDLE hFile;
 	DWORD dwRet;
-	wchar_t link_w[GIT_WIN_PATH];
+	git_win32_path link_w;
 	wchar_t* target_w;
 	int error = 0;
 
@@ -185,7 +198,7 @@ int p_readlink(const char *link, char *target, size_t target_len)
 		}
 	}
 
-	git__utf8_to_16(link_w, GIT_WIN_PATH, link);
+	git_win32_path_from_c(link_w, link);
 
 	hFile = CreateFileW(link_w,			// file to open
 			GENERIC_READ,			// open for reading
@@ -251,10 +264,10 @@ int p_symlink(const char *old, const char *new)
 
 int p_open(const char *path, int flags, ...)
 {
-	wchar_t buf[GIT_WIN_PATH];
+	git_win32_path buf;
 	mode_t mode = 0;
 
-	git__utf8_to_16(buf, GIT_WIN_PATH, path);
+	git_win32_path_from_c(buf, path);
 
 	if (flags & O_CREAT) {
 		va_list arg_list;
@@ -269,8 +282,8 @@ int p_open(const char *path, int flags, ...)
 
 int p_creat(const char *path, mode_t mode)
 {
-	wchar_t buf[GIT_WIN_PATH];
-	git__utf8_to_16(buf, GIT_WIN_PATH, path);
+	git_win32_path buf;
+	git_win32_path_from_c(buf, path);
 	return _wopen(buf, _O_WRONLY | _O_CREAT | _O_TRUNC | _O_BINARY, mode);
 }
 
@@ -296,7 +309,7 @@ int p_getcwd(char *buffer_out, size_t size)
 
 int p_stat(const char* path, struct stat* buf)
 {
-	char target[GIT_WIN_PATH];
+	git_win32_path_as_utf8 target;
 	int error = 0;
 
 	error = do_lstat(path, buf, 0);
@@ -304,7 +317,7 @@ int p_stat(const char* path, struct stat* buf)
 	/* We need not do this in a loop to unwind chains of symlinks since
 	 * p_readlink calls GetFinalPathNameByHandle which does it for us. */
 	if (error >= 0 && S_ISLNK(buf->st_mode) &&
-		(error = p_readlink(path, target, GIT_WIN_PATH)) >= 0)
+		(error = p_readlink(path, target, sizeof(target))) >= 0)
 		error = do_lstat(target, buf, 0);
 
 	return error;
@@ -312,23 +325,23 @@ int p_stat(const char* path, struct stat* buf)
 
 int p_chdir(const char* path)
 {
-	wchar_t buf[GIT_WIN_PATH];
-	git__utf8_to_16(buf, GIT_WIN_PATH, path);
+	git_win32_path buf;
+	git_win32_path_from_c(buf, path);
 	return _wchdir(buf);
 }
 
 int p_chmod(const char* path, mode_t mode)
 {
-	wchar_t buf[GIT_WIN_PATH];
-	git__utf8_to_16(buf, GIT_WIN_PATH, path);
+	git_win32_path buf;
+	git_win32_path_from_c(buf, path);
 	return _wchmod(buf, mode);
 }
 
 int p_rmdir(const char* path)
 {
 	int error;
-	wchar_t buf[GIT_WIN_PATH];
-	git__utf8_to_16(buf, GIT_WIN_PATH, path);
+	git_win32_path buf;
+	git_win32_path_from_c(buf, path);
 
 	error = _wrmdir(buf);
 
@@ -344,24 +357,24 @@ int p_rmdir(const char* path)
 
 int p_hide_directory__w32(const char *path)
 {
-	wchar_t buf[GIT_WIN_PATH];
-	git__utf8_to_16(buf, GIT_WIN_PATH, path);
+	git_win32_path buf;
+	git_win32_path_from_c(buf, path);
 	return (SetFileAttributesW(buf, FILE_ATTRIBUTE_HIDDEN) != 0) ? 0 : -1;
 }
 
 char *p_realpath(const char *orig_path, char *buffer)
 {
 	int ret;
-	wchar_t orig_path_w[GIT_WIN_PATH];
-	wchar_t buffer_w[GIT_WIN_PATH];
+	git_win32_path orig_path_w;
+	git_win32_path buffer_w;
 
-	git__utf8_to_16(orig_path_w, GIT_WIN_PATH, orig_path);
+	git_win32_path_from_c(orig_path_w, orig_path);
 
 	/* Implicitly use GetCurrentDirectory which can be a threading issue */
-	ret = GetFullPathNameW(orig_path_w, GIT_WIN_PATH, buffer_w, NULL);
+	ret = GetFullPathNameW(orig_path_w, GIT_WIN_PATH_UTF16, buffer_w, NULL);
 
 	/* According to MSDN, a return value equals to zero means a failure. */
-	if (ret == 0 || ret > GIT_WIN_PATH)
+	if (ret == 0 || ret > GIT_WIN_PATH_UTF16)
 		buffer = NULL;
 
 	else if (GetFileAttributesW(buffer_w) == INVALID_FILE_ATTRIBUTES) {
@@ -445,18 +458,18 @@ int p_setenv(const char* name, const char* value, int overwrite)
 
 int p_access(const char* path, mode_t mode)
 {
-	wchar_t buf[GIT_WIN_PATH];
-	git__utf8_to_16(buf, GIT_WIN_PATH, path);
+	git_win32_path buf;
+	git_win32_path_from_c(buf, path);
 	return _waccess(buf, mode);
 }
 
 int p_rename(const char *from, const char *to)
 {
-	wchar_t wfrom[GIT_WIN_PATH];
-	wchar_t wto[GIT_WIN_PATH];
+	git_win32_path wfrom;
+	git_win32_path wto;
 
-	git__utf8_to_16(wfrom, GIT_WIN_PATH, from);
-	git__utf8_to_16(wto, GIT_WIN_PATH, to);
+	git_win32_path_from_c(wfrom, from);
+	git_win32_path_from_c(wto, to);
 	return MoveFileExW(wfrom, wto, MOVEFILE_REPLACE_EXISTING | MOVEFILE_COPY_ALLOWED) ? 0 : -1;
 }
 
@@ -505,94 +518,40 @@ p_gmtime_r (const time_t *timer, struct tm *result)
 	return result;
 }
 
-#if defined(_MSC_VER) || defined(_MSC_EXTENSIONS)
-#define DELTA_EPOCH_IN_MICROSECS  11644473600000000Ui64
-#else
-#define DELTA_EPOCH_IN_MICROSECS  11644473600000000ULL
-#endif
- 
-#ifndef _TIMEZONE_DEFINED
-#define _TIMEZONE_DEFINED
-struct timezone 
+int p_inet_pton(int af, const char *src, void *dst)
 {
-	int  tz_minuteswest; /* minutes W of Greenwich */
-	int  tz_dsttime;     /* type of dst correction */
-};
-#endif
+	struct sockaddr_storage sin;
+	void *addr;
+	int sin_len = sizeof(struct sockaddr_storage), addr_len;
+	int error = 0;
 
-int p_gettimeofday(struct timeval *tv, struct timezone *tz)
-{
-	FILETIME ft;
-	unsigned __int64 tmpres = 0;
-	static int tzflag;
-
-	if (NULL != tv)
-	{
-		GetSystemTimeAsFileTime(&ft);
-
-		tmpres |= ft.dwHighDateTime;
-		tmpres <<= 32;
-		tmpres |= ft.dwLowDateTime;
-
-		/*converting file time to unix epoch*/
-		tmpres /= 10;  /*convert into microseconds*/
-		tmpres -= DELTA_EPOCH_IN_MICROSECS;
-		tv->tv_sec = (long)(tmpres / 1000000UL);
-		tv->tv_usec = (long)(tmpres % 1000000UL);
-	}
-
-	if (NULL != tz)
-	{
-		 if (!tzflag)
-		{
-			_tzset();
-			tzflag++;
-		}
-		tz->tz_minuteswest = _timezone / 60;
-		tz->tz_dsttime = _daylight;
-	}
-
-	return 0;
-}
-
-int p_inet_pton(int af, const char* src, void* dst)
-{
-	union {
-		struct sockaddr_in6 sin6;
-		struct sockaddr_in sin;
-	} sa;
-	int srcsize;
-
-	switch(af)
-	{
-		case AF_INET:
-			sa.sin.sin_family = AF_INET;
-			srcsize = (int)sizeof(sa.sin);
-		break;
-		case AF_INET6:
-			sa.sin6.sin6_family = AF_INET6;
-			srcsize = (int)sizeof(sa.sin6);
-		break;
-		default:
-			errno = WSAEPFNOSUPPORT;
-			return -1;
-	}
-
-	if (WSAStringToAddress((LPSTR)src, af, NULL, (struct sockaddr *) &sa, &srcsize) != 0)
-	{
-		errno = WSAGetLastError();
+	if (af == AF_INET) {
+		addr = &((struct sockaddr_in *)&sin)->sin_addr;
+		addr_len = sizeof(struct in_addr);
+	} else if (af == AF_INET6) {
+		addr = &((struct sockaddr_in6 *)&sin)->sin6_addr;
+		addr_len = sizeof(struct in6_addr);
+	} else {
+		errno = EAFNOSUPPORT;
 		return -1;
 	}
 
-	switch(af)
-	{
-		case AF_INET:
-			memcpy(dst, &sa.sin.sin_addr, sizeof(sa.sin.sin_addr));
-		break;
-		case AF_INET6:
-			memcpy(dst, &sa.sin6.sin6_addr, sizeof(sa.sin6.sin6_addr));
-		break;
+	if ((error = WSAStringToAddressA((LPSTR)src, af, NULL, (LPSOCKADDR)&sin, &sin_len)) == 0) {
+		memcpy(dst, addr, addr_len);
+		return 1;
 	}
 
-	return 1;
+	switch(WSAGetLastError()) {
+	case WSAEINVAL:
+		return 0;
+	case WSAEFAULT:
+		errno = ENOSPC;
+		return -1;
+	case WSA_NOT_ENOUGH_MEMORY:
+		errno = ENOMEM;
+		return -1;
+	}
+
+	errno = EINVAL;
+	return -1;
 }

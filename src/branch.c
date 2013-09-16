@@ -132,7 +132,7 @@ int git_branch_foreach(
 {
 	git_reference_iterator *iter;
 	git_reference *ref;
-	int error;
+	int error = 0;
 
 	if (git_reference_iterator_new(&iter, repo) < 0)
 		return -1;
@@ -143,7 +143,6 @@ int git_branch_foreach(
 			if (callback(ref->name + strlen(GIT_REFS_HEADS_DIR),
 					GIT_BRANCH_LOCAL, payload)) {
 				error = GIT_EUSER;
-				break;
 			}
 		}
 
@@ -152,11 +151,14 @@ int git_branch_foreach(
 			if (callback(ref->name + strlen(GIT_REFS_REMOTES_DIR),
 					GIT_BRANCH_REMOTE, payload)) {
 				error = GIT_EUSER;
-				break;
 			}
 		}
 
 		git_reference_free(ref);
+
+		/* check if the callback has cancelled iteration */
+		if (error == GIT_EUSER)
+			break;
 	}
 
 	if (error == GIT_ITEROVER)

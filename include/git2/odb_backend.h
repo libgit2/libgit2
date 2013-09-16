@@ -7,8 +7,8 @@
 #ifndef INCLUDE_git_odb_backend_h__
 #define INCLUDE_git_odb_backend_h__
 
-#include "git2/common.h"
-#include "git2/types.h"
+#include "common.h"
+#include "types.h"
 
 /**
  * @file git2/backend.h
@@ -65,14 +65,50 @@ typedef enum {
 	GIT_STREAM_RW = (GIT_STREAM_RDONLY | GIT_STREAM_WRONLY),
 } git_odb_stream_t;
 
-/** A stream to read/write from a backend */
+/**
+ * A stream to read/write from a backend.
+ *
+ * This represents a stream of data being written to or read from a
+ * backend. When writing, the frontend functions take care of
+ * calculating the object's id and all `finalize_write` needs to do is
+ * store the object with the id it is passed.
+ */
 struct git_odb_stream {
 	git_odb_backend *backend;
 	unsigned int mode;
+	void *hash_ctx;
 
+	size_t declared_size;
+	size_t received_bytes;
+
+	/**
+	 * Write at most `len` bytes into `buffer` and advance the stream.
+	 */
 	int (*read)(git_odb_stream *stream, char *buffer, size_t len);
+
+	/**
+	 * Write `len` bytes from `buffer` into the stream.
+	 */
 	int (*write)(git_odb_stream *stream, const char *buffer, size_t len);
-	int (*finalize_write)(git_oid *oid_p, git_odb_stream *stream);
+
+	/**
+	 * Store the contents of the stream as an object with the id
+	 * specified in `oid`.
+	 *
+	 * This method might not be invoked if:
+	 * - an error occurs earlier with the `write` callback,
+	 * - the object referred to by `oid` already exists in any backend, or
+	 * - the final number of received bytes differs from the size declared
+	 *   with `git_odb_open_wstream()`
+	 */
+	int (*finalize_write)(git_odb_stream *stream, const git_oid *oid);
+
+	/**
+	 * Free the stream's memory.
+	 *
+	 * This method might be called without a call to `finalize_write` if
+	 * an error occurs or if the object is already present in the ODB.
+	 */
 	void (*free)(git_odb_stream *stream);
 };
 

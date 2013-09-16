@@ -24,17 +24,24 @@ GIT_BEGIN_DECL
 /**
  * Lookup a commit object from a repository.
  *
+ * The returned object should be released with `git_commit_free` when no
+ * longer needed.
+ *
  * @param commit pointer to the looked up commit
  * @param repo the repo to use when locating the commit.
  * @param id identity of the commit to locate. If the object is
  *		an annotated tag it will be peeled back to the commit.
  * @return 0 or an error code
  */
-GIT_EXTERN(int) git_commit_lookup(git_commit **commit, git_repository *repo, const git_oid *id);
+GIT_EXTERN(int) git_commit_lookup(
+	git_commit **commit, git_repository *repo, const git_oid *id);
 
 /**
- * Lookup a commit object from a repository,
- * given a prefix of its identifier (short id).
+ * Lookup a commit object from a repository, given a prefix of its
+ * identifier (short id).
+ *
+ * The returned object should be released with `git_commit_free` when no
+ * longer needed.
  *
  * @see git_object_lookup_prefix
  *
@@ -45,7 +52,8 @@ GIT_EXTERN(int) git_commit_lookup(git_commit **commit, git_repository *repo, con
  * @param len the length of the short identifier
  * @return 0 or an error code
  */
-GIT_EXTERN(int) git_commit_lookup_prefix(git_commit **commit, git_repository *repo, const git_oid *id, size_t len);
+GIT_EXTERN(int) git_commit_lookup_prefix(
+	git_commit **commit, git_repository *repo, const git_oid *id, size_t len);
 
 /**
  * Close an open commit
@@ -128,6 +136,14 @@ GIT_EXTERN(const git_signature *) git_commit_committer(const git_commit *commit)
  * @return the author of a commit
  */
 GIT_EXTERN(const git_signature *) git_commit_author(const git_commit *commit);
+
+/**
+ * Get the full raw text of the commit header.
+ *
+ * @param commit a previously loaded commit
+ * @return the header text of the commit
+ */
+GIT_EXTERN(const char *) git_commit_raw_header(const git_commit *commit);
 
 /**
  * Get the tree pointed to by a commit.
@@ -235,7 +251,7 @@ GIT_EXTERN(int) git_commit_nth_gen_ancestor(
  *
  * @param parent_count Number of parents for this commit
  *
- * @param parents[] Array of `parent_count` pointers to `git_commit`
+ * @param parents Array of `parent_count` pointers to `git_commit`
  *  objects that will be used as the parents for this commit. This
  *  array may be NULL if `parent_count` is 0 (root commit). All the
  *  given commits must be owned by the `repo`.

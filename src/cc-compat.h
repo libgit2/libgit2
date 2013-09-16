@@ -54,8 +54,12 @@
 
 #if defined (_MSC_VER)
 	typedef unsigned char bool;
-#	define true 1
-#	define false 0
+#	ifndef true
+#		define true 1
+#	endif
+#	ifndef false
+#		define false 0
+#	endif
 #else
 #	include <stdbool.h>
 #endif

@@ -1902,8 +1902,10 @@ static int write_merge_msg(
 	entries = git__calloc(heads_len, sizeof(struct merge_msg_entry));
 	GITERR_CHECK_ALLOC(entries); 
 
-	if (git_vector_init(&matching, heads_len, NULL) < 0)
+	if (git_vector_init(&matching, heads_len, NULL) < 0) {
+		git__free(entries);
 		return -1;
+	}
 
 	for (i = 0; i < heads_len; i++)
 		entries[i].merge_head = heads[i];

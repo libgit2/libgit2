@@ -25,13 +25,6 @@
 GIT_BEGIN_DECL
 
 typedef int (*git_remote_rename_problem_cb)(const char *problematic_refspec, void *payload);
-/*
- * TODO: This functions still need to be implemented:
- * - _listcb/_foreach
- * - _add
- * - _rename
- * - _del (needs support from config)
- */
 
 /**
  * Add a remote with the default fetch refspec to the repository's configuration.  This
@@ -94,6 +87,14 @@ GIT_EXTERN(int) git_remote_load(git_remote **out, git_repository *repo, const ch
  * @return 0, GIT_EINVALIDSPEC or an error code
  */
 GIT_EXTERN(int) git_remote_save(const git_remote *remote);
+
+/**
+ * Get the remote's repository
+ *
+ * @param remote the remote
+ * @return a pointer to the repository
+ */
+GIT_EXTERN(git_repository *) git_remote_owner(const git_remote *remote);
 
 /**
  * Get the remote's name
@@ -247,19 +248,20 @@ GIT_EXTERN(int) git_remote_connect(git_remote *remote, git_direction direction);
 GIT_EXTERN(int) git_remote_ls(git_remote *remote, git_headlist_cb list_cb, void *payload);
 
 /**
- * Download the packfile
+ * Download and index the packfile
  *
- * Negotiate what objects should be downloaded and download the
- * packfile with those objects. The packfile is downloaded with a
- * temporary filename, as it's final name is not known yet. If there
- * was no packfile needed (all the objects were available locally),
- * filename will be NULL and the function will return success.
+ * Connect to the remote if it hasn't been done yet, negotiate with
+ * the remote git which objects are missing, download and index the
+ * packfile.
+ *
+ * The .idx file will be created and both it and the packfile with be
+ * renamed to their final name.
  *
  * @param remote the remote to download from
  * @param progress_cb function to call with progress information.  Be aware that
  * this is called inline with network and indexing operations, so performance
  * may be affected.
- * @param progress_payload payload for the progress callback
+ * @param payload payload for the progress callback
  * @return 0 or an error code
  */
 GIT_EXTERN(int) git_remote_download(
@@ -320,7 +322,7 @@ GIT_EXTERN(int) git_remote_update_tips(git_remote *remote);
  * Return whether a string is a valid remote URL
  *
  * @param url the url to check
- * @param 1 if the url is valid, 0 otherwise
+ * @return 1 if the url is valid, 0 otherwise
  */
 GIT_EXTERN(int) git_remote_valid_url(const char *url);
 

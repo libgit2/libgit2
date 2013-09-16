@@ -36,14 +36,15 @@ typedef enum {
 } git_credtype_t;
 
 /* The base structure for all credential types */
-typedef struct git_cred {
+typedef struct git_cred git_cred;
+
+struct git_cred {
 	git_credtype_t credtype;
-	void (*free)(
-		struct git_cred *cred);
-} git_cred;
+	void (*free)(git_cred *cred);
+};
 
 /* A plaintext username and password */
-typedef struct git_cred_userpass_plaintext {
+typedef struct {
 	git_cred parent;
 	char *username;
 	char *password;
@@ -51,10 +52,14 @@ typedef struct git_cred_userpass_plaintext {
 
 #ifdef GIT_SSH
 typedef LIBSSH2_USERAUTH_PUBLICKEY_SIGN_FUNC((*git_cred_sign_callback));
+#else
+typedef int (*git_cred_sign_callback)(void *, ...);
+#endif
 
 /* A ssh key file and passphrase */
 typedef struct git_cred_ssh_keyfile_passphrase {
 	git_cred parent;
+	char *username;
 	char *publickey;
 	char *privatekey;
 	char *passphrase;
@@ -63,12 +68,20 @@ typedef struct git_cred_ssh_keyfile_passphrase {
 /* A ssh public key and authentication callback */
 typedef struct git_cred_ssh_publickey {
 	git_cred parent;
+	char *username;
 	char *publickey;
-    size_t publickey_len;
+	size_t publickey_len;
 	void *sign_callback;
 	void *sign_data;
 } git_cred_ssh_publickey;
-#endif
+
+/**
+ * Check whether a credential object contains username information.
+ *
+ * @param cred object to check
+ * @return 1 if the credential object has non-NULL username, 0 otherwise
+ */
+GIT_EXTERN(int) git_cred_has_username(git_cred *cred);
 
 /**
  * Creates a new plain-text username and password credential object.
@@ -84,12 +97,12 @@ GIT_EXTERN(int) git_cred_userpass_plaintext_new(
 	const char *username,
 	const char *password);
 
-#ifdef GIT_SSH
 /**
  * Creates a new ssh key file and passphrase credential object.
  * The supplied credential parameter will be internally duplicated.
  *
  * @param out The newly created credential object.
+ * @param username username to use to authenticate
  * @param publickey The path to the public key of the credential.
  * @param privatekey The path to the private key of the credential.
  * @param passphrase The passphrase of the credential.
@@ -97,6 +110,7 @@ GIT_EXTERN(int) git_cred_userpass_plaintext_new(
  */
 GIT_EXTERN(int) git_cred_ssh_keyfile_passphrase_new(
 	git_cred **out,
+	const char *username,
 	const char *publickey,
 	const char *privatekey,
     const char *passphrase);
@@ -106,19 +120,20 @@ GIT_EXTERN(int) git_cred_ssh_keyfile_passphrase_new(
  * The supplied credential parameter will be internally duplicated.
  *
  * @param out The newly created credential object.
+ * @param username username to use to authenticate
  * @param publickey The bytes of the public key.
  * @param publickey_len The length of the public key in bytes.
- * @param sign_callback The callback method for authenticating.
+ * @param sign_fn The callback method for authenticating.
  * @param sign_data The abstract data sent to the sign_callback method.
  * @return 0 for success or an error code for failure
  */
 GIT_EXTERN(int) git_cred_ssh_publickey_new(
 	git_cred **out,
+	const char *username,
 	const char *publickey,
     size_t publickey_len,
-    git_cred_sign_callback,
+    git_cred_sign_callback sign_fn,
     void *sign_data);
-#endif
 
 /**
  * Signature of a function which acquires a credential object.
@@ -152,17 +167,21 @@ typedef enum {
 
 typedef void (*git_transport_message_cb)(const char *str, int len, void *data);
 
-typedef struct git_transport {
+typedef struct git_transport git_transport;
+
+struct git_transport {
 	unsigned int version;
 	/* Set progress and error callbacks */
-	int (*set_callbacks)(struct git_transport *transport,
+	int (*set_callbacks)(
+		git_transport *transport,
 		git_transport_message_cb progress_cb,
 		git_transport_message_cb error_cb,
 		void *payload);
 
 	/* Connect the transport to the remote repository, using the given
 	 * direction. */
-	int (*connect)(struct git_transport *transport,
+	int (*connect)(
+		git_transport *transport,
 		const char *url,
 		git_cred_acquire_cb cred_acquire_cb,
 		void *cred_acquire_payload,
@@ -172,17 +191,19 @@ typedef struct git_transport {
 	/* This function may be called after a successful call to connect(). The
 	 * provided callback is invoked for each ref discovered on the remote
 	 * end. */
-	int (*ls)(struct git_transport *transport,
+	int (*ls)(
+		git_transport *transport,
 		git_headlist_cb list_cb,
 		void *payload);
 
 	/* Executes the push whose context is in the git_push object. */
-	int (*push)(struct git_transport *transport, git_push *push);
+	int (*push)(git_transport *transport, git_push *push);
 
 	/* This function may be called after a successful call to connect(), when
 	 * the direction is FETCH. The function performs a negotiation to calculate
 	 * the wants list for the fetch. */
-	int (*negotiate_fetch)(struct git_transport *transport,
+	int (*negotiate_fetch)(
+		git_transport *transport,
 		git_repository *repo,
 		const git_remote_head * const *refs,
 		size_t count);
@@ -190,28 +211,29 @@ typedef struct git_transport {
 	/* This function may be called after a successful call to negotiate_fetch(),
 	 * when the direction is FETCH. This function retrieves the pack file for
 	 * the fetch from the remote end. */
-	int (*download_pack)(struct git_transport *transport,
+	int (*download_pack)(
+		git_transport *transport,
 		git_repository *repo,
 		git_transfer_progress *stats,
 		git_transfer_progress_callback progress_cb,
 		void *progress_payload);
 
 	/* Checks to see if the transport is connected */
-	int (*is_connected)(struct git_transport *transport);
+	int (*is_connected)(git_transport *transport);
 
 	/* Reads the flags value previously passed into connect() */
-	int (*read_flags)(struct git_transport *transport, int *flags);
+	int (*read_flags)(git_transport *transport, int *flags);
 
 	/* Cancels any outstanding transport operation */
-	void (*cancel)(struct git_transport *transport);
+	void (*cancel)(git_transport *transport);
 
 	/* This function is the reverse of connect() -- it terminates the
 	 * connection to the remote end. */
-	int (*close)(struct git_transport *transport);
+	int (*close)(git_transport *transport);
 
 	/* Frees/destructs the git_transport object. */
-	void (*free)(struct git_transport *transport);
-} git_transport;
+	void (*free)(git_transport *transport);
+};
 
 #define GIT_TRANSPORT_VERSION 1
 #define GIT_TRANSPORT_INIT {GIT_TRANSPORT_VERSION}
@@ -299,35 +321,36 @@ typedef enum {
 	GIT_SERVICE_RECEIVEPACK = 4,
 } git_smart_service_t;
 
-struct git_smart_subtransport;
+typedef struct git_smart_subtransport git_smart_subtransport;
+typedef struct git_smart_subtransport_stream git_smart_subtransport_stream;
 
 /* A stream used by the smart transport to read and write data
  * from a subtransport */
-typedef struct git_smart_subtransport_stream {
+struct git_smart_subtransport_stream {
 	/* The owning subtransport */
-	struct git_smart_subtransport *subtransport;
+	git_smart_subtransport *subtransport;
 
 	int (*read)(
-			struct git_smart_subtransport_stream *stream,
-			char *buffer,
-			size_t buf_size,
-			size_t *bytes_read);
+		git_smart_subtransport_stream *stream,
+		char *buffer,
+		size_t buf_size,
+		size_t *bytes_read);
 
 	int (*write)(
-			struct git_smart_subtransport_stream *stream,
-			const char *buffer,
-			size_t len);
+		git_smart_subtransport_stream *stream,
+		const char *buffer,
+		size_t len);
 
 	void (*free)(
-			struct git_smart_subtransport_stream *stream);
-} git_smart_subtransport_stream;
+		git_smart_subtransport_stream *stream);
+};
 
 /* An implementation of a subtransport which carries data for the
  * smart transport */
-typedef struct git_smart_subtransport {
+struct git_smart_subtransport {
 	int (* action)(
 			git_smart_subtransport_stream **out,
-			struct git_smart_subtransport *transport,
+			git_smart_subtransport *transport,
 			const char *url,
 			git_smart_service_t action);
 
@@ -337,10 +360,10 @@ typedef struct git_smart_subtransport {
 	 *
 	 * 1. UPLOADPACK_LS -> UPLOADPACK
 	 * 2. RECEIVEPACK_LS -> RECEIVEPACK */
-	int (* close)(struct git_smart_subtransport *transport);
+	int (*close)(git_smart_subtransport *transport);
 
-	void (* free)(struct git_smart_subtransport *transport);
-} git_smart_subtransport;
+	void (*free)(git_smart_subtransport *transport);
+};
 
 /* A function which creates a new subtransport for the smart transport */
 typedef int (*git_smart_subtransport_cb)(

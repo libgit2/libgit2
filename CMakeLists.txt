@@ -29,17 +29,16 @@ OPTION( PROFILE				"Generate profiling information"		OFF )
 OPTION( ENABLE_TRACE		"Enables tracing support"				OFF )
 OPTION( LIBGIT2_FILENAME	"Name of the produced binary" OFF )
 
+OPTION( ANDROID				"Build for android NDK" OFF )
+
 IF(MSVC)
-	# This option is only availalbe when building with MSVC. By default,
-	# libgit2 is build using the stdcall calling convention, as that's what
-	# the CLR expects by default and how the Windows API is built.
+	# This option is only available when building with MSVC. By default, libgit2
+	# is build using the cdecl calling convention, which is useful if you're
+	# writing C. However, the CLR and Win32 API both expect stdcall.
 	#
-	# If you are writing a C or C++ program and want to link to libgit2, you
-	# have to either:
-	# - Add /Gz to the compiler options of _your_ program / library.
-	# - Turn this off by invoking CMake with the "-DSTDCALL=Off" argument.
-	#
-	OPTION( STDCALL			"Build libgit2 with the __stdcall convention"	ON  )
+	# If you are writing a CLR program and want to link to libgit2, you'll want
+	# to turn this on by invoking CMake with the "-DSTDCALL=ON" argument.
+	OPTION( STDCALL			"Build libgit2 with the __stdcall convention"	OFF  )
 
 	# This option must match the settings used in your program, in particular if you
 	# are linking statically
@@ -110,7 +109,7 @@ ELSE ()
 	ELSE()
 		MESSAGE("http-parser was not found or is too old; using bundled 3rd-party sources.")
 		INCLUDE_DIRECTORIES(deps/http-parser)
-		FILE(GLOB SRC_HTTP deps/http-parser/*.c)
+		FILE(GLOB SRC_HTTP deps/http-parser/*.c deps/http-parser/*.h)
 	ENDIF()
 ENDIF()
 
@@ -130,30 +129,28 @@ IF (ENABLE_TRACE STREQUAL "ON")
 ENDIF()
 
 # Include POSIX regex when it is required
-IF(WIN32 OR AMIGA)
+IF(WIN32 OR AMIGA OR ANDROID)
 	INCLUDE_DIRECTORIES(deps/regex)
 	SET(SRC_REGEX deps/regex/regex.c)
 ENDIF()
 
 # Optional external dependency: zlib
-IF(NOT ZLIB_LIBRARY)
-	# It's optional, but FIND_PACKAGE gives a warning that looks more like an
-	# error.
-	FIND_PACKAGE(ZLIB QUIET)
-ENDIF()
+# It's optional, but FIND_PACKAGE gives a warning that looks more like an
+# error.
+FIND_PACKAGE(ZLIB QUIET)
 IF (ZLIB_FOUND)
 	INCLUDE_DIRECTORIES(${ZLIB_INCLUDE_DIRS})
 	LINK_LIBRARIES(${ZLIB_LIBRARIES})
 	# Fake the message CMake would have shown
 	MESSAGE("-- Found zlib: ${ZLIB_LIBRARY}")
-ELSEIF (NOT ZLIB_LIBRARY)
+ELSE()
 	MESSAGE( "zlib was not found; using bundled 3rd-party sources." )
 	INCLUDE_DIRECTORIES(deps/zlib)
 	ADD_DEFINITIONS(-DNO_VIZ -DSTDC -DNO_GZIP)
-	FILE(GLOB SRC_ZLIB deps/zlib/*.c)
+	FILE(GLOB SRC_ZLIB deps/zlib/*.c deps/zlib/*.h)
 ENDIF()
 
-IF(NOT LIBSSH2_LIBRARY)
+IF (NOT MINGW)
 	FIND_PACKAGE(LIBSSH2 QUIET)
 ENDIF()
 IF (LIBSSH2_FOUND)
@@ -161,6 +158,7 @@ IF (LIBSSH2_FOUND)
 	INCLUDE_DIRECTORIES(${LIBSSH2_INCLUDE_DIR})
 	SET(SSH_LIBRARIES ${LIBSSH2_LIBRARIES})
 ENDIF()
+
 
 # Platform specific compilation flags
 IF (MSVC)
@@ -287,19 +285,19 @@ ENDIF()
 ADD_DEFINITIONS(-D_FILE_OFFSET_BITS=64)
 
 # Collect sourcefiles
-FILE(GLOB SRC_H include/git2/*.h)
+FILE(GLOB SRC_H include/git2.h include/git2/*.h include/git2/sys/*.h)
 
 # On Windows use specific platform sources
 IF (WIN32 AND NOT CYGWIN)
 	ADD_DEFINITIONS(-DWIN32 -D_WIN32_WINNT=0x0501)
-	FILE(GLOB SRC_OS src/win32/*.c)
+	FILE(GLOB SRC_OS src/win32/*.c src/win32/*.h)
 ELSEIF (AMIGA)
 	ADD_DEFINITIONS(-DNO_ADDRINFO -DNO_READDIR_R)
-	FILE(GLOB SRC_OS src/amiga/*.c)
+	FILE(GLOB SRC_OS src/amiga/*.c src/amiga/*.h)
 ELSE()
-	FILE(GLOB SRC_OS src/unix/*.c)
+	FILE(GLOB SRC_OS src/unix/*.c src/unix/*.h)
 ENDIF()
-FILE(GLOB SRC_GIT2 src/*.c src/transports/*.c src/xdiff/*.c)
+FILE(GLOB SRC_GIT2 src/*.c src/*.h src/transports/*.c src/transports/*.h src/xdiff/*.c src/xdiff/*.h)
 
 # Determine architecture of the machine
 IF (CMAKE_SIZEOF_VOID_P EQUAL 8)
@@ -311,7 +309,7 @@ ELSE()
 ENDIF()
 
 # Compile and link libgit2
-ADD_LIBRARY(git2 ${SRC_GIT2} ${SRC_OS} ${SRC_ZLIB} ${SRC_HTTP} ${SRC_REGEX} ${SRC_SHA1} ${WIN_RC})
+ADD_LIBRARY(git2 ${SRC_H} ${SRC_GIT2} ${SRC_OS} ${SRC_ZLIB} ${SRC_HTTP} ${SRC_REGEX} ${SRC_SHA1} ${WIN_RC})
 TARGET_LINK_LIBRARIES(git2 ${SSL_LIBRARIES})
 TARGET_LINK_LIBRARIES(git2 ${SSH_LIBRARIES})
 TARGET_OS_LIBRARIES(git2)
@@ -361,12 +359,12 @@ IF (BUILD_CLAR)
 	ADD_DEFINITIONS(-DCLAR_RESOURCES=\"${TEST_RESOURCES}\")
 
 	INCLUDE_DIRECTORIES(${CLAR_PATH})
-	FILE(GLOB_RECURSE SRC_TEST ${CLAR_PATH}/*/*.c)
+	FILE(GLOB_RECURSE SRC_TEST ${CLAR_PATH}/*/*.c ${CLAR_PATH}/*/*.h)
 	SET(SRC_CLAR "${CLAR_PATH}/main.c" "${CLAR_PATH}/clar_libgit2.c" "${CLAR_PATH}/clar.c")
 
 	ADD_CUSTOM_COMMAND(
 		OUTPUT ${CLAR_PATH}/clar.suite
-		COMMAND ${PYTHON_EXECUTABLE} generate.py -f -xonline .
+		COMMAND ${PYTHON_EXECUTABLE} generate.py -f -xonline -xstress .
 		DEPENDS ${SRC_TEST}
 		WORKING_DIRECTORY ${CLAR_PATH}
 	)
@@ -375,7 +373,7 @@ IF (BUILD_CLAR)
 		${CLAR_PATH}/clar.c
 		PROPERTIES OBJECT_DEPENDS ${CLAR_PATH}/clar.suite)
 
-	ADD_EXECUTABLE(libgit2_clar ${SRC_GIT2} ${SRC_OS} ${SRC_CLAR} ${SRC_TEST} ${SRC_ZLIB} ${SRC_HTTP} ${SRC_REGEX} ${SRC_SHA1})
+	ADD_EXECUTABLE(libgit2_clar ${SRC_H} ${SRC_GIT2} ${SRC_OS} ${SRC_CLAR} ${SRC_TEST} ${SRC_ZLIB} ${SRC_HTTP} ${SRC_REGEX} ${SRC_SHA1})
 
 	TARGET_LINK_LIBRARIES(libgit2_clar ${SSL_LIBRARIES})
 	TARGET_LINK_LIBRARIES(libgit2_clar ${SSH_LIBRARIES})
@@ -411,23 +409,5 @@ IF (TAGS)
 ENDIF ()
 
 IF (BUILD_EXAMPLES)
-	FILE(GLOB_RECURSE EXAMPLE_SRC examples/network/*.c)
-	ADD_EXECUTABLE(cgit2 ${EXAMPLE_SRC})
-	IF(WIN32)
-		TARGET_LINK_LIBRARIES(cgit2 git2)
-	ELSE()
-		TARGET_LINK_LIBRARIES(cgit2 git2 pthread)
-	ENDIF()
-
-	ADD_EXECUTABLE(git-diff examples/diff.c)
-	TARGET_LINK_LIBRARIES(git-diff git2)
-
-	ADD_EXECUTABLE(git-general examples/general.c)
-	TARGET_LINK_LIBRARIES(git-general git2)
-
-	ADD_EXECUTABLE(git-showindex examples/showindex.c)
-	TARGET_LINK_LIBRARIES(git-showindex git2)
-
-	ADD_EXECUTABLE(git-rev-list examples/rev-list.c)
-	TARGET_LINK_LIBRARIES(git-rev-list git2)
+	ADD_SUBDIRECTORY(examples)
 ENDIF ()

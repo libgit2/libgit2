@@ -81,6 +81,31 @@ static int ensure_remote_name_is_valid(const char *name)
 	return error;
 }
 
+static int get_check_cert(git_repository *repo)
+{
+	git_config *cfg;
+	const char *val;
+	int check_cert;
+
+	assert(repo);
+
+	/* Go through the possible sources for SSL verification settings, from
+	 * most specific to least specific. */
+
+	/* GIT_SSL_NO_VERIFY environment variable */
+	if ((val = getenv("GIT_SSL_NO_VERIFY")) &&
+		!git_config_parse_bool(&check_cert, val))
+		return !check_cert;
+
+	/* http.sslVerify config setting */
+	if (!git_repository_config__weakptr(&cfg, repo) &&
+		!git_config_get_bool(&check_cert, cfg, "http.sslVerify"))
+		return check_cert;
+
+	/* By default, we *DO* want to verify the certificate. */
+	return 1;
+}
+
 static int create_internal(git_remote **out, git_repository *repo, const char *name, const char *url, const char *fetch)
 {
 	git_remote *remote;
@@ -94,7 +119,7 @@ static int create_internal(git_remote **out, git_repository *repo, const char *n
 	GITERR_CHECK_ALLOC(remote);
 
 	remote->repo = repo;
-	remote->check_cert = 1;
+	remote->check_cert = (unsigned)get_check_cert(repo);
 	remote->update_fetchhead = 1;
 
 	if (git_vector_init(&remote->refs, 32, NULL) < 0)
@@ -208,7 +233,8 @@ static int refspec_cb(const git_config_entry *entry, void *payload)
 }
 
 static int get_optional_config(
-	git_config *config, git_buf *buf, git_config_foreach_cb cb, void *payload)
+	bool *found, git_config *config, git_buf *buf,
+	git_config_foreach_cb cb, void *payload)
 {
 	int error = 0;
 	const char *key = git_buf_cstr(buf);
@@ -217,9 +243,12 @@ static int get_optional_config(
 		return -1;
 
 	if (cb != NULL)
-		error = git_config_get_multivar(config, key, NULL, cb, payload);
+		error = git_config_get_multivar_foreach(config, key, NULL, cb, payload);
 	else
 		error = git_config_get_string(payload, config, key);
+
+	if (found)
+		*found = !error;
 
 	if (error == GIT_ENOTFOUND) {
 		giterr_clear();
@@ -240,6 +269,7 @@ int git_remote_load(git_remote **out, git_repository *repo, const char *name)
 	int error = 0;
 	git_config *config;
 	struct refspec_cb_data data;
+	bool optional_setting_found = false, found;
 
 	assert(out && repo && name);
 
@@ -253,7 +283,7 @@ int git_remote_load(git_remote **out, git_repository *repo, const char *name)
 	GITERR_CHECK_ALLOC(remote);
 
 	memset(remote, 0x0, sizeof(git_remote));
-	remote->check_cert = 1;
+	remote->check_cert = (unsigned)get_check_cert(repo);
 	remote->update_fetchhead = 1;
 	remote->name = git__strdup(name);
 	GITERR_CHECK_ALLOC(remote->name);
@@ -269,27 +299,33 @@ int git_remote_load(git_remote **out, git_repository *repo, const char *name)
 		goto cleanup;
 	}
 
-	if ((error = git_config_get_string(&val, config, git_buf_cstr(&buf))) < 0)
+	if ((error = get_optional_config(&found, config, &buf, NULL, (void *)&val)) < 0)
 		goto cleanup;
 
-	if (strlen(val) == 0) {
-		giterr_set(GITERR_INVALID, "Malformed remote '%s' - missing URL", name);
-		error = -1;
-		goto cleanup;
-	}
+	optional_setting_found |= found;
 
 	remote->repo = repo;
-	remote->url = git__strdup(val);
-	GITERR_CHECK_ALLOC(remote->url);
+
+	if (found && strlen(val) > 0) {
+		remote->url = git__strdup(val);
+		GITERR_CHECK_ALLOC(remote->url);
+	}
 
 	val = NULL;
 	git_buf_clear(&buf);
 	git_buf_printf(&buf, "remote.%s.pushurl", name);
 
-	if ((error = get_optional_config(config, &buf, NULL, (void *)&val)) < 0)
+	if ((error = get_optional_config(&found, config, &buf, NULL, (void *)&val)) < 0)
 		goto cleanup;
 
-	if (val) {
+	optional_setting_found |= found;
+
+	if (!optional_setting_found) {
+		error = GIT_ENOTFOUND;
+		goto cleanup;
+	}
+
+	if (found && strlen(val) > 0) {
 		remote->pushurl = git__strdup(val);
 		GITERR_CHECK_ALLOC(remote->pushurl);
 	}
@@ -299,14 +335,14 @@ int git_remote_load(git_remote **out, git_repository *repo, const char *name)
 	git_buf_clear(&buf);
 	git_buf_printf(&buf, "remote.%s.fetch", name);
 
-	if ((error = get_optional_config(config, &buf, refspec_cb, &data)) < 0)
+	if ((error = get_optional_config(NULL, config, &buf, refspec_cb, &data)) < 0)
 		goto cleanup;
 
 	data.fetch = false;
 	git_buf_clear(&buf);
 	git_buf_printf(&buf, "remote.%s.push", name);
 
-	if ((error = get_optional_config(config, &buf, refspec_cb, &data)) < 0)
+	if ((error = get_optional_config(NULL, config, &buf, refspec_cb, &data)) < 0)
 		goto cleanup;
 
 	if (download_tags_value(remote, config) < 0)
@@ -467,6 +503,12 @@ const char *git_remote_name(const git_remote *remote)
 	return remote->name;
 }
 
+git_repository *git_remote_owner(const git_remote *remote)
+{
+	assert(remote);
+	return remote->repo;
+}
+
 const char *git_remote_url(const git_remote *remote)
 {
 	assert(remote);
@@ -509,6 +551,8 @@ const char* git_remote__urlfordirection(git_remote *remote, int direction)
 {
 	assert(remote);
 
+	assert(direction == GIT_DIRECTION_FETCH || direction == GIT_DIRECTION_PUSH);
+
 	if (direction == GIT_DIRECTION_FETCH) {
 		return remote->url;
 	}
@@ -531,8 +575,11 @@ int git_remote_connect(git_remote *remote, git_direction direction)
 	t = remote->transport;
 
 	url = git_remote__urlfordirection(remote, direction);
-	if (url == NULL )
+	if (url == NULL ) {
+		giterr_set(GITERR_INVALID,
+			"Malformed remote '%s' - missing URL", remote->name);
 		return -1;
+	}
 
 	/* A transport could have been supplied in advance with
 	 * git_remote_set_transport */
@@ -1062,10 +1109,10 @@ int git_remote_list(git_strarray *remotes_list, git_repository *repo)
 	if (git_repository_config__weakptr(&cfg, repo) < 0)
 		return -1;
 
-	if (git_vector_init(&list, 4, NULL) < 0)
+	if (git_vector_init(&list, 4, git__strcmp_cb) < 0)
 		return -1;
 
-	if (regcomp(&preg, "^remote\\.(.*)\\.url$", REG_EXTENDED) < 0) {
+	if (regcomp(&preg, "^remote\\.(.*)\\.(push)?url$", REG_EXTENDED) < 0) {
 		giterr_set(GITERR_OS, "Remote catch regex failed to compile");
 		return -1;
 	}
@@ -1089,6 +1136,8 @@ int git_remote_list(git_strarray *remotes_list, git_repository *repo)
 
 		return error;
 	}
+
+	git_vector_uniq(&list, git__free);
 
 	remotes_list->strings = (char **)list.contents;
 	remotes_list->count = list.length;

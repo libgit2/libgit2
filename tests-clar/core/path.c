@@ -446,16 +446,15 @@ void test_core_path__14_apply_relative(void)
 	cl_git_pass(git_path_apply_relative(&p, "../../../../../.."));
 	cl_assert_equal_s("/this/", p.ptr);
 
-	cl_git_pass(git_path_apply_relative(&p, "../../../../../"));
+	cl_git_pass(git_path_apply_relative(&p, "../"));
 	cl_assert_equal_s("/", p.ptr);
 
-	cl_git_pass(git_path_apply_relative(&p, "../../../../.."));
-	cl_assert_equal_s("/", p.ptr);
+	cl_git_fail(git_path_apply_relative(&p, "../../.."));
 
 
 	cl_git_pass(git_buf_sets(&p, "d:/another/test"));
 
-	cl_git_pass(git_path_apply_relative(&p, "../../../../.."));
+	cl_git_pass(git_path_apply_relative(&p, "../.."));
 	cl_assert_equal_s("d:/", p.ptr);
 
 	cl_git_pass(git_path_apply_relative(&p, "from/here/to/../and/./back/."));
@@ -473,8 +472,112 @@ void test_core_path__14_apply_relative(void)
 	cl_git_pass(git_path_apply_relative(&p, ".."));
 	cl_assert_equal_s("https://my.url.com/full/path/", p.ptr);
 
-	cl_git_pass(git_path_apply_relative(&p, "../../../../../"));
+	cl_git_pass(git_path_apply_relative(&p, "../../../"));
 	cl_assert_equal_s("https://", p.ptr);
 
+
+	cl_git_pass(git_buf_sets(&p, "../../this/is/relative"));
+
+	cl_git_pass(git_path_apply_relative(&p, "../../preserves/the/prefix"));
+	cl_assert_equal_s("../../this/preserves/the/prefix", p.ptr);
+
+	cl_git_pass(git_path_apply_relative(&p, "../../../../that"));
+	cl_assert_equal_s("../../that", p.ptr);
+
+	cl_git_pass(git_path_apply_relative(&p, "../there"));
+	cl_assert_equal_s("../../there", p.ptr);
 	git_buf_free(&p);
+}
+
+static void assert_resolve_relative(
+	git_buf *buf, const char *expected, const char *path)
+{
+	cl_git_pass(git_buf_sets(buf, path));
+	cl_git_pass(git_path_resolve_relative(buf, 0));
+	cl_assert_equal_s(expected, buf->ptr);
+}
+
+void test_core_path__15_resolve_relative(void)
+{
+	git_buf buf = GIT_BUF_INIT;
+
+	assert_resolve_relative(&buf, "", "");
+	assert_resolve_relative(&buf, "", ".");
+	assert_resolve_relative(&buf, "", "./");
+	assert_resolve_relative(&buf, "..", "..");
+	assert_resolve_relative(&buf, "../", "../");
+	assert_resolve_relative(&buf, "..", "./..");
+	assert_resolve_relative(&buf, "../", "./../");
+	assert_resolve_relative(&buf, "../", "../.");
+	assert_resolve_relative(&buf, "../", ".././");
+	assert_resolve_relative(&buf, "../..", "../..");
+	assert_resolve_relative(&buf, "../../", "../../");
+
+	assert_resolve_relative(&buf, "/", "/");
+	assert_resolve_relative(&buf, "/", "/.");
+
+	assert_resolve_relative(&buf, "", "a/..");
+	assert_resolve_relative(&buf, "", "a/../");
+	assert_resolve_relative(&buf, "", "a/../.");
+
+	assert_resolve_relative(&buf, "/a", "/a");
+	assert_resolve_relative(&buf, "/a/", "/a/.");
+	assert_resolve_relative(&buf, "/", "/a/../");
+	assert_resolve_relative(&buf, "/", "/a/../.");
+	assert_resolve_relative(&buf, "/", "/a/.././");
+
+	assert_resolve_relative(&buf, "a", "a");
+	assert_resolve_relative(&buf, "a/", "a/");
+	assert_resolve_relative(&buf, "a/", "a/.");
+	assert_resolve_relative(&buf, "a/", "a/./");
+
+	assert_resolve_relative(&buf, "a/b", "a//b");
+	assert_resolve_relative(&buf, "a/b/c", "a/b/c");
+	assert_resolve_relative(&buf, "b/c", "./b/c");
+	assert_resolve_relative(&buf, "a/c", "a/./c");
+	assert_resolve_relative(&buf, "a/b/", "a/b/.");
+
+	assert_resolve_relative(&buf, "/a/b/c", "///a/b/c");
+	assert_resolve_relative(&buf, "/", "////");
+	assert_resolve_relative(&buf, "/a", "///a");
+	assert_resolve_relative(&buf, "/", "///.");
+	assert_resolve_relative(&buf, "/", "///a/..");
+
+	assert_resolve_relative(&buf, "../../path", "../../test//../././path");
+	assert_resolve_relative(&buf, "../d", "a/b/../../../c/../d");
+
+	cl_git_pass(git_buf_sets(&buf, "/.."));
+	cl_git_fail(git_path_resolve_relative(&buf, 0));
+
+	cl_git_pass(git_buf_sets(&buf, "/./.."));
+	cl_git_fail(git_path_resolve_relative(&buf, 0));
+
+	cl_git_pass(git_buf_sets(&buf, "/.//.."));
+	cl_git_fail(git_path_resolve_relative(&buf, 0));
+
+	cl_git_pass(git_buf_sets(&buf, "/../."));
+	cl_git_fail(git_path_resolve_relative(&buf, 0));
+
+	cl_git_pass(git_buf_sets(&buf, "/../.././../a"));
+	cl_git_fail(git_path_resolve_relative(&buf, 0));
+
+	cl_git_pass(git_buf_sets(&buf, "////.."));
+	cl_git_fail(git_path_resolve_relative(&buf, 0));
+
+	/* things that start with Windows network paths */
+#ifdef GIT_WIN32
+	assert_resolve_relative(&buf, "//a/b/c", "//a/b/c");
+	assert_resolve_relative(&buf, "//a/", "//a/b/..");
+	assert_resolve_relative(&buf, "//a/b/c", "//a/Q/../b/x/y/../../c");
+
+	cl_git_pass(git_buf_sets(&buf, "//a/b/../.."));
+	cl_git_fail(git_path_resolve_relative(&buf, 0));
+#else
+	assert_resolve_relative(&buf, "/a/b/c", "//a/b/c");
+	assert_resolve_relative(&buf, "/a/", "//a/b/..");
+	assert_resolve_relative(&buf, "/a/b/c", "//a/Q/../b/x/y/../../c");
+	assert_resolve_relative(&buf, "/", "//a/b/../..");
+#endif
+
+	git_buf_free(&buf);
 }

@@ -69,14 +69,23 @@ void test_repo_open__open_with_discover(void)
 	cl_fixture_cleanup("attr");
 }
 
+static void make_gitlink_dir(const char *dir, const char *linktext)
+{
+	git_buf path = GIT_BUF_INIT;
+
+	cl_git_pass(git_futils_mkdir(dir, NULL, 0777, GIT_MKDIR_VERIFY_DIR));
+	cl_git_pass(git_buf_joinpath(&path, dir, ".git"));
+	cl_git_rewritefile(path.ptr, linktext);
+	git_buf_free(&path);
+}
+
 void test_repo_open__gitlinked(void)
 {
 	/* need to have both repo dir and workdir set up correctly */
 	git_repository *repo = cl_git_sandbox_init("empty_standard_repo");
 	git_repository *repo2;
 
-	cl_must_pass(p_mkdir("alternate", 0777));
-	cl_git_mkfile("alternate/.git", "gitdir: ../empty_standard_repo/.git");
+	make_gitlink_dir("alternate", "gitdir: ../empty_standard_repo/.git");
 
 	cl_git_pass(git_repository_open(&repo2, "alternate"));
 
@@ -193,12 +202,11 @@ void test_repo_open__bad_gitlinks(void)
 
 	cl_git_sandbox_init("attr");
 
-	cl_git_pass(p_mkdir("alternate", 0777));
 	cl_git_pass(p_mkdir("invalid", 0777));
 	cl_git_pass(git_futils_mkdir_r("invalid2/.git", NULL, 0777));
 
 	for (scan = bad_links; *scan != NULL; scan++) {
-		cl_git_rewritefile("alternate/.git", *scan);
+		make_gitlink_dir("alternate", *scan);
 		cl_git_fail(git_repository_open_ext(&repo, "alternate", 0, NULL));
 	}
 
@@ -314,4 +322,53 @@ void test_repo_open__no_config(void)
 	git_config_free(config);
 	git_repository_free(repo);
 	cl_fixture_cleanup("empty_standard_repo");
+}
+
+void test_repo_open__force_bare(void)
+{
+	/* need to have both repo dir and workdir set up correctly */
+	git_repository *repo = cl_git_sandbox_init("empty_standard_repo");
+	git_repository *barerepo;
+
+	make_gitlink_dir("alternate", "gitdir: ../empty_standard_repo/.git");
+
+	cl_assert(!git_repository_is_bare(repo));
+
+	cl_git_pass(git_repository_open(&barerepo, "alternate"));
+	cl_assert(!git_repository_is_bare(barerepo));
+	git_repository_free(barerepo);
+
+	cl_git_pass(git_repository_open_bare(
+		&barerepo, "empty_standard_repo/.git"));
+	cl_assert(git_repository_is_bare(barerepo));
+	git_repository_free(barerepo);
+
+	cl_git_fail(git_repository_open_bare(&barerepo, "alternate/.git"));
+
+	cl_git_pass(git_repository_open_ext(
+		&barerepo, "alternate/.git", GIT_REPOSITORY_OPEN_BARE, NULL));
+	cl_assert(git_repository_is_bare(barerepo));
+	git_repository_free(barerepo);
+
+	cl_git_pass(p_mkdir("empty_standard_repo/subdir", 0777));
+	cl_git_mkfile("empty_standard_repo/subdir/something.txt", "something");
+
+	cl_git_fail(git_repository_open_bare(
+		&barerepo, "empty_standard_repo/subdir"));
+
+	cl_git_pass(git_repository_open_ext(
+		&barerepo, "empty_standard_repo/subdir", GIT_REPOSITORY_OPEN_BARE, NULL));
+	cl_assert(git_repository_is_bare(barerepo));
+	git_repository_free(barerepo);
+
+	cl_git_pass(p_mkdir("alternate/subdir", 0777));
+	cl_git_pass(p_mkdir("alternate/subdir/sub2", 0777));
+	cl_git_mkfile("alternate/subdir/sub2/something.txt", "something");
+
+	cl_git_fail(git_repository_open_bare(&barerepo, "alternate/subdir/sub2"));
+
+	cl_git_pass(git_repository_open_ext(
+		&barerepo, "alternate/subdir/sub2", GIT_REPOSITORY_OPEN_BARE, NULL));
+	cl_assert(git_repository_is_bare(barerepo));
+	git_repository_free(barerepo);
 }

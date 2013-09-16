@@ -88,6 +88,17 @@ git_reference *git_reference__alloc(
 	return ref;
 }
 
+git_reference *git_reference__set_name(
+	git_reference *ref, const char *name)
+{
+	size_t namelen = strlen(name);
+	git_reference *rewrite =
+		git__realloc(ref, sizeof(git_reference) + namelen + 1);
+	if (rewrite != NULL)
+		memcpy(rewrite->name, name, namelen + 1);
+	return rewrite;
+}
+
 void git_reference_free(git_reference *reference)
 {
 	if (reference == NULL)
@@ -950,6 +961,17 @@ int git_reference_is_remote(git_reference *ref)
 {
 	assert(ref);
 	return git_reference__is_remote(ref->name);
+}
+
+int git_reference__is_tag(const char *ref_name)
+{
+	return git__prefixcmp(ref_name, GIT_REFS_TAGS_DIR) == 0;
+}
+
+int git_reference_is_tag(git_reference *ref)
+{
+	assert(ref);
+	return git_reference__is_tag(ref->name);
 }
 
 static int peel_error(int error, git_reference *ref, const char* msg)

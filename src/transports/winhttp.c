@@ -511,7 +511,7 @@ replay:
 
 			/* Check for Windows 7. This workaround is only necessary on
 			 * Windows Vista and earlier. Windows 7 is version 6.1. */
-			if (!git_has_win32_version(6, 1)) {
+			if (!git_has_win32_version(6, 1, 0)) {
 				wchar_t *location;
 				DWORD location_length;
 				int redirect_cmp;
@@ -893,7 +893,7 @@ static int winhttp_connect(
 	const char *url)
 {
 	wchar_t *ua = L"git/1.0 (libgit2 " WIDEN(LIBGIT2_VERSION) L")";
-	wchar_t host[GIT_WIN_PATH];
+	git_win32_path host;
 	int32_t port;
 	const char *default_port = "80";
 	int ret;
@@ -920,7 +920,7 @@ static int winhttp_connect(
 		return -1;
 
 	/* Prepare host */
-	git__utf8_to_16(host, GIT_WIN_PATH, t->host);
+	git_win32_path_from_c(host, t->host);
 
 	/* Establish session */
 	t->session = WinHttpOpen(
@@ -934,7 +934,7 @@ static int winhttp_connect(
 		giterr_set(GITERR_OS, "Failed to init WinHTTP");
 		return -1;
 	}
-	
+
 	/* Establish connection */
 	t->connection = WinHttpConnect(
 			t->session,
@@ -989,7 +989,7 @@ static int winhttp_receivepack(
 {
 	/* WinHTTP only supports Transfer-Encoding: chunked
 	 * on Windows Vista (NT 6.0) and higher. */
-	s->chunked = git_has_win32_version(6, 0);
+	s->chunked = git_has_win32_version(6, 0, 0);
 
 	if (s->chunked)
 		s->parent.write = winhttp_stream_write_chunked;

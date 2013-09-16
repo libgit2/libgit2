@@ -79,15 +79,26 @@ extern int git_iterator_for_index(
 	const char *start,
 	const char *end);
 
+extern int git_iterator_for_workdir_ext(
+	git_iterator **out,
+	git_repository *repo,
+	const char *repo_workdir,
+	git_iterator_flag_t flags,
+	const char *start,
+	const char *end);
+
 /* workdir iterators will match the ignore_case value from the index of the
  * repository, unless you override with a non-zero flag value
  */
-extern int git_iterator_for_workdir(
+GIT_INLINE(int) git_iterator_for_workdir(
 	git_iterator **out,
 	git_repository *repo,
 	git_iterator_flag_t flags,
 	const char *start,
-	const char *end);
+	const char *end)
+{
+	return git_iterator_for_workdir_ext(out, repo, NULL, flags, start, end);
+}
 
 /* for filesystem iterators, you have to explicitly pass in the ignore_case
  * behavior that you desire

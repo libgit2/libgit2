@@ -57,7 +57,7 @@ typedef enum {
 GIT_EXTERN(int) git_stash_save(
 	git_oid *out,
 	git_repository *repo,
-	git_signature *stasher,
+	const git_signature *stasher,
 	const char *message,
 	unsigned int flags);
 
@@ -89,7 +89,7 @@ typedef int (*git_stash_cb)(
  *
  * @param repo Repository where to find the stash.
  *
- * @param callabck Callback to invoke per found stashed state. The most recent
+ * @param callback Callback to invoke per found stashed state. The most recent
  * stash state will be enumerated first.
  *
  * @param payload Extra parameter to callback function.

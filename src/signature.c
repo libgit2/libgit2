@@ -74,7 +74,7 @@ int git_signature_new(git_signature **sig_out, const char *name, const char *ema
 		git_signature_free(p);
 		return signature_error("Signature cannot have an empty name");
 	}
-		
+
 	p->when.time = time;
 	p->when.offset = offset;
 
@@ -127,6 +127,23 @@ int git_signature_now(git_signature **sig_out, const char *name, const char *ema
 	*sig_out = sig;
 
 	return 0;
+}
+
+int git_signature_default(git_signature **out, git_repository *repo)
+{
+	int error;
+	git_config *cfg;
+	const char *user_name, *user_email;
+
+	if ((error = git_repository_config(&cfg, repo)) < 0)
+		return error;
+
+	if (!(error = git_config_get_string(&user_name, cfg, "user.name")) &&
+		!(error = git_config_get_string(&user_email, cfg, "user.email")))
+		error = git_signature_now(out, user_name, user_email);
+
+	git_config_free(cfg);
+	return error;
 }
 
 int git_signature__parse(git_signature *sig, const char **buffer_out,

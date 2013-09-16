@@ -25,6 +25,9 @@
 #if !defined(O_BINARY)
 #define O_BINARY 0
 #endif
+#if !defined(O_CLOEXEC)
+#define O_CLOEXEC 0
+#endif
 
 typedef int git_file;
 
@@ -68,16 +71,12 @@ typedef int GIT_SOCKET;
 
 #define p_localtime_r localtime_r
 #define p_gmtime_r gmtime_r
-#define p_gettimeofday gettimeofday
 
 #else
 
 typedef SOCKET GIT_SOCKET;
-struct timezone;
 extern struct tm * p_localtime_r (const time_t *timer, struct tm *result);
 extern struct tm * p_gmtime_r (const time_t *timer, struct tm *result);
-extern int p_gettimeofday(struct timeval *tv, struct timezone *tz);
-
 
 #endif
 
@@ -88,6 +87,10 @@ extern int p_gettimeofday(struct timeval *tv, struct timezone *tz);
 #	include "win32/posix.h"
 #else
 #	include "unix/posix.h"
+#endif
+
+#ifndef __MINGW32__
+# define p_strnlen strnlen
 #endif
 
 #ifdef NO_READDIR_R

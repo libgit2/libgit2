@@ -220,8 +220,10 @@ static int checkout_action_no_wd(
 		action = CHECKOUT_ACTION_IF(SAFE_CREATE, UPDATE_BLOB, NONE);
 		break;
 	case GIT_DELTA_ADDED:    /* case 2 or 28 (and 5 but not really) */
-	case GIT_DELTA_MODIFIED: /* case 13 (and 35 but not really) */
 		action = CHECKOUT_ACTION_IF(SAFE, UPDATE_BLOB, NONE);
+		break;
+	case GIT_DELTA_MODIFIED: /* case 13 (and 35 but not really) */
+		action = CHECKOUT_ACTION_IF(SAFE_CREATE, UPDATE_BLOB, CONFLICT);
 		break;
 	case GIT_DELTA_TYPECHANGE: /* case 21 (B->T) and 28 (T->B)*/
 		if (delta->new_file.mode == GIT_FILEMODE_TREE)
@@ -244,10 +246,10 @@ static int checkout_action_wd_only(
 	bool remove = false;
 	git_checkout_notify_t notify = GIT_CHECKOUT_NOTIFY_NONE;
 
-	if (!git_pathspec_match_path(
+	if (!git_pathspec__match(
 			pathspec, wd->path,
 			(data->strategy & GIT_CHECKOUT_DISABLE_PATHSPEC_MATCH) != 0,
-			git_iterator_ignore_case(workdir), NULL))
+			git_iterator_ignore_case(workdir), NULL, NULL))
 		return 0;
 
 	/* check if item is tracked in the index but not in the checkout diff */
@@ -605,7 +607,7 @@ static int checkout_get_actions(
 	uint32_t *actions = NULL;
 
 	if (data->opts.paths.count > 0 &&
-		git_pathspec_init(&pathspec, &data->opts.paths, &pathpool) < 0)
+		git_pathspec__vinit(&pathspec, &data->opts.paths, &pathpool) < 0)
 		return -1;
 
 	if ((error = git_iterator_current(&wditem, workdir)) < 0 &&
@@ -657,7 +659,7 @@ static int checkout_get_actions(
 		goto fail;
 	}
 
-	git_pathspec_free(&pathspec);
+	git_pathspec__vfree(&pathspec);
 	git_pool_clear(&pathpool);
 
 	return 0;
@@ -668,7 +670,7 @@ fail:
 	*actions_ptr = NULL;
 	git__free(actions);
 
-	git_pathspec_free(&pathspec);
+	git_pathspec__vfree(&pathspec);
 	git_pool_clear(&pathpool);
 
 	return error;
@@ -691,17 +693,14 @@ static int buffer_to_file(
 			buffer, path, file_open_flags, file_mode)) < 0)
 		return error;
 
-	if (st != NULL && (error = p_stat(path, st)) < 0) {
-		giterr_set(GITERR_OS, "Error while statting '%s'", path);
-		return error;
-	}
+	if (st != NULL && (error = p_stat(path, st)) < 0)
+		giterr_set(GITERR_OS, "Error statting '%s'", path);
 
-	if ((file_mode & 0100) != 0 && (error = p_chmod(path, file_mode)) < 0) {
+	else if (GIT_PERMS_IS_EXEC(file_mode) &&
+			(error = p_chmod(path, file_mode)) < 0)
 		giterr_set(GITERR_OS, "Failed to set permissions on '%s'", path);
-		return error;
-	}
 
-	return 0;
+	return error;
 }
 
 static int blob_content_to_file(
@@ -856,7 +855,7 @@ static int checkout_submodule(
 		return 0;
 
 	if ((error = git_futils_mkdir(
-			file->path, git_repository_workdir(data->repo),
+			file->path, data->opts.target_directory,
 			data->opts.dir_mode, GIT_MKDIR_PATH)) < 0)
 		return error;
 
@@ -1028,7 +1027,7 @@ static int checkout_deferred_remove(git_repository *repo, const char *path)
 {
 #if 0
 	int error = git_futils_rmdir_r(
-		path, git_repository_workdir(repo), GIT_RMDIR_EMPTY_PARENTS);
+		path, data->opts.target_directory, GIT_RMDIR_EMPTY_PARENTS);
 
 	if (error == GIT_ENOTFOUND) {
 		error = 0;
@@ -1161,7 +1160,8 @@ static int checkout_data_init(
 		return -1;
 	}
 
-	if ((error = git_repository__ensure_not_bare(repo, "checkout")) < 0)
+	if ((!proposed || !proposed->target_directory) &&
+		(error = git_repository__ensure_not_bare(repo, "checkout")) < 0)
 		return error;
 
 	data->repo = repo;
@@ -1173,6 +1173,13 @@ static int checkout_data_init(
 		GIT_INIT_STRUCTURE(&data->opts, GIT_CHECKOUT_OPTS_VERSION);
 	else
 		memmove(&data->opts, proposed, sizeof(git_checkout_opts));
+
+	if (!data->opts.target_directory)
+		data->opts.target_directory = git_repository_workdir(repo);
+	else if (!git_path_isdir(data->opts.target_directory) &&
+			 (error = git_futils_mkdir(data->opts.target_directory, NULL,
+					GIT_DIR_MODE, GIT_MKDIR_VERIFY_DIR)) < 0)
+		goto cleanup;
 
 	/* refresh config and index content unless NO_REFRESH is given */
 	if ((data->opts.checkout_strategy & GIT_CHECKOUT_NO_REFRESH) == 0) {
@@ -1236,7 +1243,8 @@ static int checkout_data_init(
 
 	if ((error = git_vector_init(&data->removes, 0, git__strcmp_cb)) < 0 ||
 		(error = git_pool_init(&data->pool, 1, 0)) < 0 ||
-		(error = git_buf_puts(&data->path, git_repository_workdir(repo))) < 0)
+		(error = git_buf_puts(&data->path, data->opts.target_directory)) < 0 ||
+		(error = git_path_to_dir(&data->path)) < 0)
 		goto cleanup;
 
 	data->workdir_len = git_buf_len(&data->path);
@@ -1284,11 +1292,13 @@ int git_checkout_iterator(
 		GIT_ITERATOR_IGNORE_CASE : GIT_ITERATOR_DONT_IGNORE_CASE;
 
 	if ((error = git_iterator_reset(target, data.pfx, data.pfx)) < 0 ||
-		(error = git_iterator_for_workdir(
-			&workdir, data.repo, iterflags | GIT_ITERATOR_DONT_AUTOEXPAND,
+		(error = git_iterator_for_workdir_ext(
+			&workdir, data.repo, data.opts.target_directory,
+			iterflags | GIT_ITERATOR_DONT_AUTOEXPAND,
 			data.pfx, data.pfx)) < 0 ||
 		(error = git_iterator_for_tree(
-			&baseline, data.opts.baseline, iterflags, data.pfx, data.pfx)) < 0)
+			&baseline, data.opts.baseline,
+			iterflags, data.pfx, data.pfx)) < 0)
 		goto cleanup;
 
 	/* Should not have case insensitivity mismatch */
@@ -1356,8 +1366,19 @@ int git_checkout_index(
 	int error;
 	git_iterator *index_i;
 
-	if ((error = git_repository__ensure_not_bare(repo, "checkout index")) < 0)
-		return error;
+	if (!index && !repo) {
+		giterr_set(GITERR_CHECKOUT,
+			"Must provide either repository or index to checkout");
+		return -1;
+	}
+	if (index && repo && git_index_owner(index) != repo) {
+		giterr_set(GITERR_CHECKOUT,
+			"Index to checkout does not match repository");
+		return -1;
+	}
+
+	if (!repo)
+		repo = git_index_owner(index);
 
 	if (!index && (error = git_repository_index__weakptr(&index, repo)) < 0)
 		return error;
@@ -1381,8 +1402,19 @@ int git_checkout_tree(
 	git_tree *tree = NULL;
 	git_iterator *tree_i = NULL;
 
-	if ((error = git_repository__ensure_not_bare(repo, "checkout tree")) < 0)
-		return error;
+	if (!treeish && !repo) {
+		giterr_set(GITERR_CHECKOUT,
+			"Must provide either repository or tree to checkout");
+		return -1;
+	}
+	if (treeish && repo && git_object_owner(treeish) != repo) {
+		giterr_set(GITERR_CHECKOUT,
+			"Object to checkout does not match repository");
+		return -1;
+	}
+
+	if (!repo)
+		repo = git_object_owner(treeish);
 
 	if (git_object_peel((git_object **)&tree, treeish, GIT_OBJ_TREE) < 0) {
 		giterr_set(
@@ -1407,8 +1439,7 @@ int git_checkout_head(
 	git_tree *head = NULL;
 	git_iterator *head_i = NULL;
 
-	if ((error = git_repository__ensure_not_bare(repo, "checkout head")) < 0)
-		return error;
+	assert(repo);
 
 	if (!(error = checkout_lookup_head_tree(&head, repo)) &&
 		!(error = git_iterator_for_tree(&head_i, head, 0, NULL, NULL)))

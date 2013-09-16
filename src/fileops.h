@@ -223,9 +223,13 @@ extern int git_futils_open_ro(const char *path);
  */
 extern git_off_t git_futils_filesize(git_file fd);
 
+#define GIT_PERMS_IS_EXEC(MODE)		(((MODE) & 0111) != 0)
+#define GIT_PERMS_CANONICAL(MODE)	(GIT_PERMS_IS_EXEC(MODE) ? 0755 : 0644)
+#define GIT_PERMS_FOR_WRITE(MODE)   (GIT_PERMS_IS_EXEC(MODE) ? 0777 : 0666)
+
 #define GIT_MODE_PERMS_MASK			0777
-#define GIT_CANONICAL_PERMS(MODE)	(((MODE) & 0100) ? 0755 : 0644)
-#define GIT_MODE_TYPE(MODE)			((MODE) & ~GIT_MODE_PERMS_MASK)
+#define GIT_MODE_TYPE_MASK			0170000
+#define GIT_MODE_TYPE(MODE)			((MODE) & GIT_MODE_TYPE_MASK)
 #define GIT_MODE_ISBLOB(MODE)		(GIT_MODE_TYPE(MODE) == GIT_MODE_TYPE(GIT_FILEMODE_BLOB))
 
 /**
@@ -244,7 +248,7 @@ extern mode_t git_futils_canonical_mode(mode_t raw_mode);
  * @param out buffer to populate with the mapping information.
  * @param fd open descriptor to configure the mapping from.
  * @param begin first byte to map, this should be page aligned.
- * @param end number of bytes to map.
+ * @param len number of bytes to map.
  * @return
  * - 0 on success;
  * - -1 on error.
@@ -278,7 +282,7 @@ extern void git_futils_mmap_free(git_map *map);
 /**
  * Find a "global" file (i.e. one in a user's home directory).
  *
- * @param pathbuf buffer to write the full path into
+ * @param path buffer to write the full path into
  * @param filename name of file to find in the home directory
  * @return 0 if found, GIT_ENOTFOUND if not found, or -1 on other OS error
  */
@@ -287,7 +291,7 @@ extern int git_futils_find_global_file(git_buf *path, const char *filename);
 /**
  * Find an "XDG" file (i.e. one in user's XDG config path).
  *
- * @param pathbuf buffer to write the full path into
+ * @param path buffer to write the full path into
  * @param filename name of file to find in the home directory
  * @return 0 if found, GIT_ENOTFOUND if not found, or -1 on other OS error
  */
@@ -296,7 +300,7 @@ extern int git_futils_find_xdg_file(git_buf *path, const char *filename);
 /**
  * Find a "system" file (i.e. one shared for all users of the system).
  *
- * @param pathbuf buffer to write the full path into
+ * @param path buffer to write the full path into
  * @param filename name of file to find in the home directory
  * @return 0 if found, GIT_ENOTFOUND if not found, or -1 on other OS error
  */
@@ -308,6 +312,13 @@ typedef enum {
 	GIT_FUTILS_DIR_XDG    = 2,
 	GIT_FUTILS_DIR__MAX   = 3,
 } git_futils_dir_t;
+
+/**
+ * Configures global data for configuration file search paths.
+ *
+ * @return 0 on success, <0 on failure
+ */
+extern int git_futils_dirs_global_init(void);
 
 /**
  * Get the search path for global/system/xdg files

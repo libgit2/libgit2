@@ -119,14 +119,23 @@ on_error:
 
 static int store_refs(transport_local *t)
 {
-	unsigned int i;
+	size_t i;
+	git_remote_head *head;
 	git_strarray ref_names = {0};
 
 	assert(t);
 
-	if (git_reference_list(&ref_names, t->repo) < 0 ||
-		git_vector_init(&t->refs, ref_names.count, NULL) < 0)
+	if (git_reference_list(&ref_names, t->repo) < 0)
 		goto on_error;
+
+	/* Clear all heads we might have fetched in a previous connect */
+	git_vector_foreach(&t->refs, i, head) {
+		git__free(head->name);
+		git__free(head);
+	}
+
+	/* Clear the vector so we can reuse it */
+	git_vector_clear(&t->refs);
 
 	/* Sort the references first */
 	git__tsort((void **)ref_names.strings, ref_names.count, &git__strcmp_cb);
@@ -278,9 +287,9 @@ static int local_push_copy_object(
 		odb_obj_size, odb_obj_type)) < 0)
 		goto on_error;
 
-	if (odb_stream->write(odb_stream, (char *)git_odb_object_data(odb_obj),
+	if (git_odb_stream_write(odb_stream, (char *)git_odb_object_data(odb_obj),
 		odb_obj_size) < 0 ||
-		odb_stream->finalize_write(&remote_odb_obj_oid, odb_stream) < 0) {
+		git_odb_stream_finalize_write(&remote_odb_obj_oid, odb_stream) < 0) {
 		error = -1;
 	} else if (git_oid__cmp(&obj->id, &remote_odb_obj_oid) != 0) {
 		giterr_set(GITERR_ODB, "Error when writing object to remote odb "
@@ -289,7 +298,7 @@ static int local_push_copy_object(
 		error = -1;
 	}
 
-	odb_stream->free(odb_stream);
+	git_odb_stream_free(odb_stream);
 
 on_error:
 	git_odb_object_free(odb_obj);
@@ -352,7 +361,8 @@ static int local_push(
 	   non-bare repo push support would require checking configs to see if
 	   we should override the default 'don't let this happen' behavior */
 	if (!remote_repo->is_bare) {
-		error = -1;
+		error = GIT_EBAREREPO;
+		giterr_set(GITERR_INVALID, "Local push doesn't (yet) support pushing to non-bare repos.");
 		goto on_error;
 	}
 
@@ -593,15 +603,15 @@ static void local_free(git_transport *transport)
 	size_t i;
 	git_remote_head *head;
 
-	/* Close the transport, if it's still open. */
-	local_close(transport);
-
 	git_vector_foreach(&t->refs, i, head) {
 		git__free(head->name);
 		git__free(head);
 	}
 
 	git_vector_free(&t->refs);
+
+	/* Close the transport, if it's still open. */
+	local_close(transport);
 
 	/* Free the transport */
 	git__free(t);
@@ -632,6 +642,7 @@ int git_transport_local(git_transport **out, git_remote *owner, void *param)
 	t->parent.read_flags = local_read_flags;
 	t->parent.cancel = local_cancel;
 
+	git_vector_init(&t->refs, 0, NULL);
 	t->owner = owner;
 
 	*out = (git_transport *) t;

@@ -544,6 +544,37 @@ void test_refs_revparse__a_too_short_objectid_returns_EAMBIGUOUS(void)
 		GIT_EAMBIGUOUS, git_revparse_single(&g_obj, g_repo, "e90"));
 }
 
+/*
+ * $ echo "aabqhq" | git hash-object -t blob --stdin
+ * dea509d0b3cb8ee0650f6ca210bc83f4678851ba
+ * 
+ * $ echo "aaazvc" | git hash-object -t blob --stdin
+ * dea509d097ce692e167dfc6a48a7a280cc5e877e
+ */
+void test_refs_revparse__a_not_precise_enough_objectid_returns_EAMBIGUOUS(void)
+{
+	git_repository *repo;
+	git_index *index;
+	git_object *obj;
+
+	repo = cl_git_sandbox_init("testrepo");
+
+	cl_git_mkfile("testrepo/one.txt", "aabqhq\n");
+	cl_git_mkfile("testrepo/two.txt", "aaazvc\n");
+	
+	cl_git_pass(git_repository_index(&index, repo));
+	cl_git_pass(git_index_add_bypath(index, "one.txt"));
+	cl_git_pass(git_index_add_bypath(index, "two.txt"));
+	
+	cl_git_fail_with(git_revparse_single(&obj, repo, "dea509d0"), GIT_EAMBIGUOUS);
+
+	cl_git_pass(git_revparse_single(&obj, repo, "dea509d09"));
+
+	git_object_free(obj);
+	git_index_free(index);
+	cl_git_sandbox_cleanup();
+}
+
 void test_refs_revparse__issue_994(void)
 {
 	git_repository *repo;
@@ -738,4 +769,45 @@ void test_refs_revparse__ext_can_expand_short_reference_names(void)
 		"master",
 		"a65fedf39aefe402d3bb6e24df4d4f5fe4547750",
 		"refs/heads/master");
+
+	test_object_and_ref(
+		"HEAD",
+		"a65fedf39aefe402d3bb6e24df4d4f5fe4547750",
+		"refs/heads/master");
+
+    test_object_and_ref(
+		"tags/test",
+		"b25fa35b38051e4ae45d4222e795f9df2e43f1d1",
+        "refs/tags/test");
+}
+
+void test_refs_revparse__ext_returns_NULL_reference_when_expression_points_at_a_revision(void)
+{
+    test_object_and_ref(
+        "HEAD~3",
+        "4a202b346bb0fb0db7eff3cffeb3c70babbd2045",
+        NULL);
+
+    test_object_and_ref(
+        "HEAD~0",
+        "a65fedf39aefe402d3bb6e24df4d4f5fe4547750",
+        NULL);
+
+    test_object_and_ref(
+        "HEAD^0",
+        "a65fedf39aefe402d3bb6e24df4d4f5fe4547750",
+        NULL);
+
+    test_object_and_ref(
+		"@{-1}@{0}",
+		"a4a7dce85cf63874e984719f4fdd239f5145052f",
+		NULL);
+}
+
+void test_refs_revparse__ext_returns_NULL_reference_when_expression_points_at_a_tree_content(void)
+{
+    test_object_and_ref(
+		"tags/test:readme.txt",
+		"0266163a49e280c4f5ed1e08facd36a2bd716bcf",
+        NULL);
 }

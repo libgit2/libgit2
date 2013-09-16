@@ -259,6 +259,15 @@ void git_buf_truncate(git_buf *buf, size_t len)
 	}
 }
 
+void git_buf_shorten(git_buf *buf, size_t amount)
+{
+	if (amount > buf->size)
+		amount = buf->size;
+
+	buf->size = buf->size - amount;
+	buf->ptr[buf->size] = '\0';
+}
+
 void git_buf_rtruncate_at_char(git_buf *buf, char separator)
 {
 	ssize_t idx = git_buf_rfind_next(buf, separator);

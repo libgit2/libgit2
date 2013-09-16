@@ -56,6 +56,7 @@
 #include "git2/message.h"
 #include "git2/pack.h"
 #include "git2/stash.h"
+#include "git2/pathspec.h"
 #include "git2/blame.h"
 
 #endif

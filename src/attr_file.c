@@ -79,9 +79,13 @@ int git_attr_file__parse_buffer(
 
 	while (!error && *scan) {
 		/* allocate rule if needed */
-		if (!rule && !(rule = git__calloc(1, sizeof(git_attr_rule)))) {
-			error = -1;
-			break;
+		if (!rule) {
+			if (!(rule = git__calloc(1, sizeof(git_attr_rule)))) {
+				error = -1;
+				break;
+			}
+			rule->match.flags = GIT_ATTR_FNMATCH_ALLOWNEG |
+				GIT_ATTR_FNMATCH_ALLOWMACRO;
 		}
 
 		/* parse the next "pattern attr attr attr" line */
@@ -351,8 +355,8 @@ int git_attr_fnmatch__parse(
 	if (parse_optimized_patterns(spec, pool, *base))
 		return 0;
 
-	spec->flags = (spec->flags & GIT_ATTR_FNMATCH_ALLOWSPACE);
-	allow_space = (spec->flags != 0);
+	spec->flags = (spec->flags & GIT_ATTR_FNMATCH__INCOMING);
+	allow_space = ((spec->flags & GIT_ATTR_FNMATCH_ALLOWSPACE) != 0);
 
 	pattern = *base;
 
@@ -362,7 +366,7 @@ int git_attr_fnmatch__parse(
 		return GIT_ENOTFOUND;
 	}
 
-	if (*pattern == '[') {
+	if (*pattern == '[' && (spec->flags & GIT_ATTR_FNMATCH_ALLOWMACRO) != 0) {
 		if (strncmp(pattern, "[attr]", 6) == 0) {
 			spec->flags = spec->flags | GIT_ATTR_FNMATCH_MACRO;
 			pattern += 6;
@@ -370,7 +374,7 @@ int git_attr_fnmatch__parse(
 		/* else a character range like [a-e]* which is accepted */
 	}
 
-	if (*pattern == '!') {
+	if (*pattern == '!' && (spec->flags & GIT_ATTR_FNMATCH_ALLOWNEG) != 0) {
 		spec->flags = spec->flags | GIT_ATTR_FNMATCH_NEGATIVE;
 		pattern++;
 	}
@@ -498,7 +502,7 @@ int git_attr_assignment__parse(
 
 	assert(assigns && !assigns->length);
 
-	assigns->_cmp = sort_by_hash_and_name;
+	git_vector_set_cmp(assigns, sort_by_hash_and_name);
 
 	while (*scan && *scan != '\n') {
 		const char *name_start, *value_start;

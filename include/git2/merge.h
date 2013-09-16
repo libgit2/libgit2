@@ -7,11 +7,11 @@
 #ifndef INCLUDE_git_merge_h__
 #define INCLUDE_git_merge_h__
 
-#include "git2/common.h"
-#include "git2/types.h"
-#include "git2/oid.h"
-#include "git2/checkout.h"
-#include "git2/index.h"
+#include "common.h"
+#include "types.h"
+#include "oid.h"
+#include "checkout.h"
+#include "index.h"
 
 /**
  * @file git2/merge.h
@@ -141,7 +141,7 @@ GIT_EXTERN(int) git_merge_head_from_oid(
 /**
  * Frees a `git_merge_head`
  *
- * @param the merge head to free
+ * @param head merge head to free
  */
 GIT_EXTERN(void) git_merge_head_free(
 	git_merge_head *head);

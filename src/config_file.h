@@ -42,7 +42,7 @@ GIT_INLINE(int) git_config_file_foreach(
 	int (*fn)(const git_config_entry *entry, void *data),
 	void *data)
 {
-	return cfg->foreach(cfg, NULL, fn, data);
+	return git_config_backend_foreach_match(cfg, NULL, fn, data);
 }
 
 GIT_INLINE(int) git_config_file_foreach_match(
@@ -51,7 +51,7 @@ GIT_INLINE(int) git_config_file_foreach_match(
 	int (*fn)(const git_config_entry *entry, void *data),
 	void *data)
 {
-	return cfg->foreach(cfg, regexp, fn, data);
+	return git_config_backend_foreach_match(cfg, regexp, fn, data);
 }
 
 extern int git_config_file_normalize_section(char *start, char *end);

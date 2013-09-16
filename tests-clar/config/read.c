@@ -245,6 +245,37 @@ void test_config_read__foreach(void)
 	git_config_free(cfg);
 }
 
+void test_config_read__iterator(void)
+{
+	git_config *cfg;
+	git_config_iterator *iter;
+	git_config_entry *entry;
+	int count, ret;
+
+	cl_git_pass(git_config_new(&cfg));
+	cl_git_pass(git_config_add_file_ondisk(cfg, cl_fixture("config/config9"),
+		GIT_CONFIG_LEVEL_SYSTEM, 0));
+	cl_git_pass(git_config_add_file_ondisk(cfg, cl_fixture("config/config15"),
+		GIT_CONFIG_LEVEL_GLOBAL, 0));
+
+	count = 0;
+	cl_git_pass(git_config_iterator_new(&iter, cfg));
+
+	while ((ret = git_config_next(&entry, iter)) == 0) {
+		count++;
+	}
+
+	git_config_iterator_free(iter);
+	cl_assert_equal_i(GIT_ITEROVER, ret);
+	cl_assert_equal_i(7, count);
+
+	count = 3;
+	cl_git_pass(git_config_iterator_new(&iter, cfg));
+
+	git_config_iterator_free(iter);
+	git_config_free(cfg);
+}
+
 static int count_cfg_entries(const git_config_entry *entry, void *payload)
 {
 	int *count = payload;
@@ -284,6 +315,38 @@ void test_config_read__foreach_match(void)
 	cl_git_pass(
 		git_config_foreach_match(cfg, ".*nomatch.*", count_cfg_entries, &count));
 	cl_assert_equal_i(0, count);
+
+	git_config_free(cfg);
+}
+
+static void check_glob_iter(git_config *cfg, const char *regexp, int expected)
+{
+	git_config_iterator *iter;
+	git_config_entry *entry;
+	int count, error;
+
+	cl_git_pass(git_config_iterator_glob_new(&iter, cfg, regexp));
+
+	count = 0;
+	while ((error = git_config_next(&entry, iter)) == 0)
+		count++;
+
+	cl_assert_equal_i(GIT_ITEROVER, error);
+	cl_assert_equal_i(expected, count);
+	git_config_iterator_free(iter);
+}
+
+void test_config_read__iterator_glob(void)
+{
+	git_config *cfg;
+
+	cl_git_pass(git_config_open_ondisk(&cfg, cl_fixture("config/config9")));
+
+	check_glob_iter(cfg, "core.*", 3);
+	check_glob_iter(cfg, "remote\\.ab.*", 2);
+	check_glob_iter(cfg, ".*url$", 2);
+	check_glob_iter(cfg, ".*dummy.*", 2);
+	check_glob_iter(cfg, ".*nomatch.*", 0);
 
 	git_config_free(cfg);
 }
@@ -431,10 +494,10 @@ void test_config_read__simple_read_from_specific_level(void)
 	git_config_free(cfg);
 }
 
-static void clean_empty_config(void *unused)
+static void clean_test_config(void *unused)
 {
 	GIT_UNUSED(unused);
-	cl_fixture_cleanup("./empty");
+	cl_fixture_cleanup("./testconfig");
 }
 
 void test_config_read__can_load_and_parse_an_empty_config_file(void)
@@ -442,10 +505,21 @@ void test_config_read__can_load_and_parse_an_empty_config_file(void)
 	git_config *cfg;
 	int i;
 
-	cl_set_cleanup(&clean_empty_config, NULL);
-	cl_git_mkfile("./empty", "");
-	cl_git_pass(git_config_open_ondisk(&cfg, "./empty"));
+	cl_set_cleanup(&clean_test_config, NULL);
+	cl_git_mkfile("./testconfig", "");
+	cl_git_pass(git_config_open_ondisk(&cfg, "./testconfig"));
 	cl_assert_equal_i(GIT_ENOTFOUND, git_config_get_int32(&i, cfg, "nope.neither"));
+
+	git_config_free(cfg);
+}
+
+void test_config_read__corrupt_header(void)
+{
+	git_config *cfg;
+
+	cl_set_cleanup(&clean_test_config, NULL);
+	cl_git_mkfile("./testconfig", "[sneaky ] \"quoted closing quote mark\\\"");
+	cl_git_fail(git_config_open_ondisk(&cfg, "./testconfig"));
 
 	git_config_free(cfg);
 }

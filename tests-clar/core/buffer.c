@@ -718,6 +718,8 @@ void test_core_buffer__classify_with_utf8(void)
 	size_t data1len = 31;
 	char *data2 = "Internal NUL!!!\000\n\nI see you!\n";
 	size_t data2len = 29;
+	char *data3 = "\xef\xbb\xbfThis is UTF-8 with a BOM.\n";
+	size_t data3len = 20;
 	git_buf b;
 
 	b.ptr = data0; b.size = b.asize = data0len;
@@ -731,13 +733,18 @@ void test_core_buffer__classify_with_utf8(void)
 	b.ptr = data2; b.size = b.asize = data2len;
 	cl_assert(git_buf_text_is_binary(&b));
 	cl_assert(git_buf_text_contains_nul(&b));
+
+	b.ptr = data3; b.size = b.asize = data3len;
+	cl_assert(!git_buf_text_is_binary(&b));
+	cl_assert(!git_buf_text_contains_nul(&b));
 }
 
 #define SIMILARITY_TEST_DATA_1 \
-	"test data\nright here\ninline\ntada\nneeds more data\nlots of data\n" \
-	"is this enough?\nthere has to be enough data to fill the hash array!\n" \
-	"Apparently 191 bytes is the minimum amount of data needed.\nHere goes!\n" \
-	"Let's make sure we've got plenty to go with here.\n   smile   \n"
+	"000\n001\n002\n003\n004\n005\n006\n007\n008\n009\n" \
+	"010\n011\n012\n013\n014\n015\n016\n017\n018\n019\n" \
+	"020\n021\n022\n023\n024\n025\n026\n027\n028\n029\n" \
+	"030\n031\n032\n033\n034\n035\n036\n037\n038\n039\n" \
+	"040\n041\n042\n043\n044\n045\n046\n047\n048\n049\n"
 
 void test_core_buffer__similarity_metric(void)
 {
@@ -761,15 +768,17 @@ void test_core_buffer__similarity_metric(void)
 	cl_git_pass(git_buf_sets(&buf, SIMILARITY_TEST_DATA_1));
 	cl_git_pass(git_hashsig_create(&a, buf.ptr, buf.size, GIT_HASHSIG_NORMAL));
 	cl_git_pass(git_buf_sets(&buf,
-		"Test data\nright here\ninline\ntada\nneeds more data\nlots of data\n"
-		"is this enough?\nthere has to be enough data to fill the hash array!\n"
-		"Apparently 191 bytes is the minimum amount of data needed.\nHere goes!\n"
-		 "Let's make sure we've got plenty to go with here.\n   smile   \n"));
+		"000\n001\n002\n003\n004\n005\n006\n007\n008\n009\n" \
+		"010\n011\n012\n013\n014\n015\n016\n017\n018\n019\n" \
+		"x020x\n021\n022\n023\n024\n025\n026\n027\n028\n029\n" \
+		"030\n031\n032\n033\n034\n035\n036\n037\n038\n039\n" \
+		"040\n041\n042\n043\n044\n045\n046\n047\n048\n049\n"
+		));
 	cl_git_pass(git_hashsig_create(&b, buf.ptr, buf.size, GIT_HASHSIG_NORMAL));
 
 	sim = git_hashsig_compare(a, b);
 
-	cl_assert(95 < sim && sim < 100); /* expect >95% similarity */
+	cl_assert_in_range(95, sim, 100); /* expect >95% similarity */
 
 	git_hashsig_free(a);
 	git_hashsig_free(b);
@@ -779,12 +788,13 @@ void test_core_buffer__similarity_metric(void)
 	cl_git_pass(git_buf_sets(&buf, SIMILARITY_TEST_DATA_1));
 	cl_git_pass(git_hashsig_create(&a, buf.ptr, buf.size, GIT_HASHSIG_NORMAL));
 	cl_git_pass(git_buf_sets(&buf, SIMILARITY_TEST_DATA_1
-		"and if I add some more, it should still be pretty similar, yes?\n"));
+		"050\n051\n052\n053\n054\n055\n056\n057\n058\n059\n"));
 	cl_git_pass(git_hashsig_create(&b, buf.ptr, buf.size, GIT_HASHSIG_NORMAL));
 
 	sim = git_hashsig_compare(a, b);
+	/* 20% lines added ~= 10% lines changed */
 
-	cl_assert(70 < sim && sim < 80); /* expect in the 70-80% similarity range */
+	cl_assert_in_range(85, sim, 95); /* expect similarity around 90% */
 
 	git_hashsig_free(a);
 	git_hashsig_free(b);
@@ -794,15 +804,19 @@ void test_core_buffer__similarity_metric(void)
 	cl_git_pass(git_buf_sets(&buf, SIMILARITY_TEST_DATA_1));
 	cl_git_pass(git_hashsig_create(&a, buf.ptr, buf.size, GIT_HASHSIG_NORMAL));
 	cl_git_pass(git_buf_sets(&buf,
-		"test data\nright here\ninline\ntada\nneeds more data\nlots of data\n"
-		"is this enough?\nthere has to be enough data to fill the hash array!\n"
-		"okay, that's half the original\nwhat else can we add?\nmore data\n"
-		 "one more line will complete this\nshort\nlines\ndon't\nmatter\n"));
+		"000\n001\n002\n003\n004\n005\n006\n007\n008\n009\n" \
+		"010\n011\n012\n013\n014\n015\n016\n017\n018\n019\n" \
+		"020x\n021\n022\n023\n024\n" \
+		"x25\nx26\nx27\nx28\nx29\n" \
+		"x30\nx31\nx32\nx33\nx34\nx35\nx36\nx37\nx38\nx39\n" \
+		"x40\nx41\nx42\nx43\nx44\nx45\nx46\nx47\nx48\nx49\n"
+		));
 	cl_git_pass(git_hashsig_create(&b, buf.ptr, buf.size, GIT_HASHSIG_NORMAL));
 
 	sim = git_hashsig_compare(a, b);
+	/* 50% lines changed */
 
-	cl_assert(40 < sim && sim < 60); /* expect in the 40-60% similarity range */
+	cl_assert_in_range(40, sim, 60); /* expect in the 40-60% similarity range */
 
 	git_hashsig_free(a);
 	git_hashsig_free(b);
@@ -891,7 +905,7 @@ void test_core_buffer__similarity_metric_whitespace(void)
 					if (i == j)
 						cl_assert_equal_i(100, sim);
 					else
-						cl_assert(sim < 30); /* expect pretty different */
+						cl_assert_in_range(0, sim, 30); /* pretty different */
 				} else {
 					cl_assert_equal_i(100, sim);
 				}

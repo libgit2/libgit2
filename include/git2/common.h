@@ -105,7 +105,8 @@ GIT_EXTERN(void) git_libgit2_version(int *major, int *minor, int *rev);
  */
 typedef enum {
 	GIT_CAP_THREADS			= ( 1 << 0 ),
-	GIT_CAP_HTTPS			= ( 1 << 1 )
+	GIT_CAP_HTTPS			= ( 1 << 1 ),
+	GIT_CAP_SSH				= ( 1 << 2 ),
 } git_cap_t;
 
 /**

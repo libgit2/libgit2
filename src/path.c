@@ -8,7 +8,6 @@
 #include "path.h"
 #include "posix.h"
 #ifdef GIT_WIN32
-#include "win32/dir.h"
 #include "win32/posix.h"
 #else
 #include <dirent.h>
@@ -243,8 +242,8 @@ int git_path_root(const char *path)
 
 #ifdef GIT_WIN32
 	/* Are we dealing with a windows network path? */
-	else if ((path[0] == '/' && path[1] == '/') ||
-		(path[0] == '\\' && path[1] == '\\'))
+	else if ((path[0] == '/' && path[1] == '/' && path[2] != '/') ||
+		(path[0] == '\\' && path[1] == '\\' && path[2] != '\\'))
 	{
 		offset += 2;
 
@@ -486,24 +485,26 @@ bool git_path_is_empty_dir(const char *path)
 {
 	git_buf pathbuf = GIT_BUF_INIT;
 	HANDLE hFind = INVALID_HANDLE_VALUE;
-	wchar_t wbuf[GIT_WIN_PATH];
+	git_win32_path wbuf;
 	WIN32_FIND_DATAW ffd;
 	bool retval = true;
 
 	if (!git_path_isdir(path)) return false;
 
 	git_buf_printf(&pathbuf, "%s\\*", path);
-	git__utf8_to_16(wbuf, GIT_WIN_PATH, git_buf_cstr(&pathbuf));
+	git_win32_path_from_c(wbuf, git_buf_cstr(&pathbuf));
 
 	hFind = FindFirstFileW(wbuf, &ffd);
 	if (INVALID_HANDLE_VALUE == hFind) {
 		giterr_set(GITERR_OS, "Couldn't open '%s'", path);
+		git_buf_free(&pathbuf);
 		return false;
 	}
 
 	do {
 		if (!git_path_is_dot_or_dotdotW(ffd.cFileName)) {
 			retval = false;
+			break;
 		}
 	} while (FindNextFileW(hFind, &ffd) != 0);
 
@@ -603,7 +604,7 @@ int git_path_find_dir(git_buf *dir, const char *path, const char *base)
 	}
 
 	/* call dirname if this is not a directory */
-	if (!error && git_path_isdir(dir->ptr) == false)
+	if (!error) /* && git_path_isdir(dir->ptr) == false) */
 		error = git_path_dirname_r(dir, dir->ptr);
 
 	if (!error)
@@ -645,12 +646,33 @@ int git_path_resolve_relative(git_buf *path, size_t ceiling)
 			/* do nothing with singleton dot */;
 
 		else if (len == 2 && from[0] == '.' && from[1] == '.') {
-			while (to > base && to[-1] == '/') to--;
-			while (to > base && to[-1] != '/') to--;
-		}
+			/* error out if trying to up one from a hard base */
+			if (to == base && ceiling != 0) {
+				giterr_set(GITERR_INVALID,
+					"Cannot strip root component off url");
+				return -1;
+			}
 
-		else {
-			if (*next == '/')
+			/* no more path segments to strip,
+			 * use '../' as a new base path */
+			if (to == base) {
+				if (*next == '/')
+					len++;
+
+				if (to != from)
+					memmove(to, from, len);
+
+				to += len;
+				/* this is now the base, can't back up from a
+				 * relative prefix */
+				base = to;
+			} else {
+				/* back up a path segment */
+				while (to > base && to[-1] == '/') to--;
+				while (to > base && to[-1] != '/') to--;
+			}
+		} else {
+			if (*next == '/' && *from != '/')
 				len++;
 
 			if (to != from)
@@ -743,10 +765,10 @@ int git_path_direach(
 
 		git_buf_truncate(path, wd_len); /* restore path */
 
-		if (result < 0) {
+		if (result) {
 			closedir(dir);
 			git__free(de_buf);
-			return -1;
+			return GIT_EUSER;
 		}
 	}
 

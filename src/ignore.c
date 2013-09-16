@@ -37,7 +37,7 @@ static int parse_ignore_file(
 			GITERR_CHECK_ALLOC(match);
 		}
 
-		match->flags = GIT_ATTR_FNMATCH_ALLOWSPACE;
+		match->flags = GIT_ATTR_FNMATCH_ALLOWSPACE | GIT_ATTR_FNMATCH_ALLOWNEG;
 
 		if (!(error = git_attr_fnmatch__parse(
 			match, ignores->pool, context, &scan)))
@@ -159,17 +159,36 @@ int git_ignore__push_dir(git_ignores *ign, const char *dir)
 {
 	if (git_buf_joinpath(&ign->dir, ign->dir.ptr, dir) < 0)
 		return -1;
-	else
-		return push_ignore_file(
-			ign->repo, ign, &ign->ign_path, ign->dir.ptr, GIT_IGNORE_FILE);
+
+	return push_ignore_file(
+		ign->repo, ign, &ign->ign_path, ign->dir.ptr, GIT_IGNORE_FILE);
 }
 
 int git_ignore__pop_dir(git_ignores *ign)
 {
 	if (ign->ign_path.length > 0) {
 		git_attr_file *file = git_vector_last(&ign->ign_path);
-		if (git__suffixcmp(ign->dir.ptr, file->key + 2) == 0)
+		const char *start, *end, *scan;
+		size_t keylen;
+
+		/* - ign->dir looks something like "a/b" (or "a/b/c/d")
+		 * - file->key looks something like "0#a/b/.gitignore
+		 *
+		 * We are popping the last directory off ign->dir.  We also want to
+		 * remove the file from the vector if the directory part of the key
+		 * matches the ign->dir path.  We need to test if the "a/b" part of
+		 * the file key matches the path we are about to pop.
+		 */
+
+		for (start = end = scan = &file->key[2]; *scan; ++scan)
+			if (*scan == '/')
+				end = scan; /* point 'end' to last '/' in key */
+		keylen = (end - start) + 1;
+
+		if (ign->dir.size >= keylen &&
+			!memcmp(ign->dir.ptr + ign->dir.size - keylen, start, keylen))
 			git_vector_pop(&ign->ign_path);
+
 		git_buf_rtruncate_at_char(&ign->dir, '/');
 	}
 	return 0;
@@ -298,12 +317,9 @@ int git_ignore_path_is_ignored(
 		path.full.size = (tail - path.full.ptr);
 		path.is_dir = (tail == end) ? full_is_dir : true;
 
-		/* update ignores for new path fragment */
-		if (path.basename == path.path)
-			error = git_ignore__for_path(repo, path.path, &ignores);
-		else
-			error = git_ignore__push_dir(&ignores, path.basename);
-		if (error < 0)
+		/* initialize ignores the first time through */
+		if (path.basename == path.path &&
+			(error = git_ignore__for_path(repo, path.path, &ignores)) < 0)
 			break;
 
 		/* first process builtins - success means path was found */
@@ -327,6 +343,10 @@ int git_ignore_path_is_ignored(
 		if (tail == end)
 			break;
 
+		/* now add this directory to list of ignores */
+		if ((error = git_ignore__push_dir(&ignores, path.path)) < 0)
+			break;
+
 		/* reinstate divider in path */
 		*tail = '/';
 		while (*tail == '/') tail++;
@@ -337,6 +357,64 @@ int git_ignore_path_is_ignored(
 cleanup:
 	git_attr_path__free(&path);
 	git_ignore__free(&ignores);
+	return error;
+}
+
+
+int git_ignore__check_pathspec_for_exact_ignores(
+	git_repository *repo,
+	git_vector *vspec,
+	bool no_fnmatch)
+{
+	int error = 0;
+	size_t i;
+	git_attr_fnmatch *match;
+	int ignored;
+	git_buf path = GIT_BUF_INIT;
+	const char *wd, *filename;
+	git_index *idx;
+
+	if ((error = git_repository__ensure_not_bare(
+			repo, "validate pathspec")) < 0 ||
+		(error = git_repository_index(&idx, repo)) < 0)
+		return error;
+
+	wd = git_repository_workdir(repo);
+
+	git_vector_foreach(vspec, i, match) {
+		/* skip wildcard matches (if they are being used) */
+		if ((match->flags & GIT_ATTR_FNMATCH_HASWILD) != 0 &&
+			!no_fnmatch)
+			continue;
+
+		filename = match->pattern;
+
+		/* if file is already in the index, it's fine */
+		if (git_index_get_bypath(idx, filename, 0) != NULL)
+			continue;
+
+		if ((error = git_buf_joinpath(&path, wd, filename)) < 0)
+			break;
+
+		/* is there a file on disk that matches this exactly? */
+		if (!git_path_isfile(path.ptr))
+			continue;
+
+		/* is that file ignored? */
+		if ((error = git_ignore_path_is_ignored(&ignored, repo, filename)) < 0)
+			break;
+
+		if (ignored) {
+			giterr_set(GITERR_INVALID, "pathspec contains ignored file '%s'",
+				filename);
+			error = GIT_EINVALIDSPEC;
+			break;
+		}
+	}
+
+	git_index_free(idx);
+	git_buf_free(&path);
+
 	return error;
 }
 

@@ -32,7 +32,7 @@ static void packall(void)
 
 void test_refs_pack__empty(void)
 {
-   // create a packfile for an empty folder
+	/* create a packfile for an empty folder */
 	git_buf temp_path = GIT_BUF_INIT;
 
 	cl_git_pass(git_buf_join_n(&temp_path, '/', 3, git_repository_path(g_repo), GIT_REFS_HEADS_DIR, "empty_dir"));
@@ -44,7 +44,7 @@ void test_refs_pack__empty(void)
 
 void test_refs_pack__loose(void)
 {
-   // create a packfile from all the loose rn a repo
+	/* create a packfile from all the loose refs in a repo */
 	git_reference *reference;
 	git_buf temp_path = GIT_BUF_INIT;
 
@@ -76,4 +76,30 @@ void test_refs_pack__loose(void)
 
 	git_reference_free(reference);
 	git_buf_free(&temp_path);
+}
+
+void test_refs_pack__symbolic(void)
+{
+	/* create a packfile from loose refs skipping symbolic refs */
+	int i;
+	git_oid head;
+	git_reference *ref;
+	char name[128];
+
+	cl_git_pass(git_reference_name_to_id(&head, g_repo, "HEAD"));
+
+	/* make a bunch of references */
+
+	for (i = 0; i < 100; ++i) {
+		snprintf(name, sizeof(name), "refs/heads/symbolic-%03d", i);
+		cl_git_pass(git_reference_symbolic_create(
+			&ref, g_repo, name, "refs/heads/master", 0));
+		git_reference_free(ref);
+
+		snprintf(name, sizeof(name), "refs/heads/direct-%03d", i);
+		cl_git_pass(git_reference_create(&ref, g_repo, name, &head, 0));
+		git_reference_free(ref);
+	}
+
+	packall();
 }

@@ -32,7 +32,7 @@ GIT_BEGIN_DECL
  * @param out pointer to the looked-up reference
  * @param repo the repository to look up the reference
  * @param name the long name for the reference (e.g. HEAD, refs/heads/master, refs/tags/v0.1.0, ...)
- * @return 0 on success, ENOTFOUND, EINVALIDSPEC or an error code.
+ * @return 0 on success, GIT_ENOTFOUND, GIT_EINVALIDSPEC or an error code.
  */
 GIT_EXTERN(int) git_reference_lookup(git_reference **out, git_repository *repo, const char *name);
 
@@ -49,7 +49,7 @@ GIT_EXTERN(int) git_reference_lookup(git_reference **out, git_repository *repo, 
  * @param out Pointer to oid to be filled in
  * @param repo The repository in which to look up the reference
  * @param name The long name for the reference (e.g. HEAD, refs/heads/master, refs/tags/v0.1.0, ...)
- * @return 0 on success, ENOTFOUND, EINVALIDSPEC or an error code.
+ * @return 0 on success, GIT_ENOTFOUND, GIT_EINVALIDSPEC or an error code.
  */
 GIT_EXTERN(int) git_reference_name_to_id(
 	git_oid *out, git_repository *repo, const char *name);
@@ -62,7 +62,7 @@ GIT_EXTERN(int) git_reference_name_to_id(
  *
  * @param out pointer in which to store the reference
  * @param repo the repository in which to look
- * @param shrothand the short name for the reference
+ * @param shorthand the short name for the reference
  * @return 0 or an error code
  */
 GIT_EXTERN(int) git_reference_dwim(git_reference **out, git_repository *repo, const char *shorthand);
@@ -94,7 +94,7 @@ GIT_EXTERN(int) git_reference_dwim(git_reference **out, git_repository *repo, co
  * @param name The name of the reference
  * @param target The target of the reference
  * @param force Overwrite existing references
- * @return 0 on success, EEXISTS, EINVALIDSPEC or an error code
+ * @return 0 on success, GIT_EEXISTS, GIT_EINVALIDSPEC or an error code
  */
 GIT_EXTERN(int) git_reference_symbolic_create(git_reference **out, git_repository *repo, const char *name, const char *target, int force);
 
@@ -126,7 +126,7 @@ GIT_EXTERN(int) git_reference_symbolic_create(git_reference **out, git_repositor
  * @param name The name of the reference
  * @param id The object id pointed to by the reference.
  * @param force Overwrite existing references
- * @return 0 on success, EEXISTS, EINVALIDSPEC or an error code
+ * @return 0 on success, GIT_EEXISTS, GIT_EINVALIDSPEC or an error code
  */
 GIT_EXTERN(int) git_reference_create(git_reference **out, git_repository *repo, const char *name, const git_oid *id, int force);
 
@@ -198,7 +198,7 @@ GIT_EXTERN(const char *) git_reference_name(const git_reference *ref);
  * If a direct reference is passed as an argument, a copy of that
  * reference is returned. This copy must be manually freed too.
  *
- * @param resolved_ref Pointer to the peeled reference
+ * @param out Pointer to the peeled reference
  * @param ref The reference
  * @return 0 or an error code
  */
@@ -225,7 +225,7 @@ GIT_EXTERN(git_repository *) git_reference_owner(const git_reference *ref);
  * @param out Pointer to the newly created reference
  * @param ref The reference
  * @param target The new target for the reference
- * @return 0 on success, EINVALIDSPEC or an error code
+ * @return 0 on success, GIT_EINVALIDSPEC or an error code
  */
 GIT_EXTERN(int) git_reference_symbolic_set_target(
 	git_reference **out,
@@ -266,9 +266,9 @@ GIT_EXTERN(int) git_reference_set_target(
  * the reflog if it exists.
  *
  * @param ref The reference to rename
- * @param name The new name for the reference
+ * @param new_name The new name for the reference
  * @param force Overwrite an existing reference
- * @return 0 on success, EINVALIDSPEC, EEXISTS or an error code
+ * @return 0 on success, GIT_EINVALIDSPEC, GIT_EEXISTS or an error code
  *
  */
 GIT_EXTERN(int) git_reference_rename(
@@ -375,7 +375,7 @@ GIT_EXTERN(int) git_reference_iterator_glob_new(
  *
  * @param out pointer in which to store the reference
  * @param iter the iterator
- * @param 0, GIT_ITEROVER if there are no more; or an error code
+ * @return 0, GIT_ITEROVER if there are no more; or an error code
  */
 GIT_EXTERN(int) git_reference_next(git_reference **out, git_reference_iterator *iter);
 
@@ -442,6 +442,15 @@ GIT_EXTERN(int) git_reference_is_branch(git_reference *ref);
  */
 GIT_EXTERN(int) git_reference_is_remote(git_reference *ref);
 
+/**
+ * Check if a reference is a tag
+ *
+ * @param ref A git reference
+ *
+ * @return 1 when the reference lives in the refs/tags
+ * namespace; 0 otherwise.
+ */
+GIT_EXTERN(int) git_reference_is_tag(git_reference *ref);
 
 typedef enum {
 	GIT_REF_FORMAT_NORMAL = 0,
@@ -488,7 +497,7 @@ typedef enum {
  * @param name Reference name to be checked.
  * @param flags Flags to constrain name validation rules - see the
  *              GIT_REF_FORMAT constants above.
- * @return 0 on success, GIT_EBUFS if buffer is too small, EINVALIDSPEC
+ * @return 0 on success, GIT_EBUFS if buffer is too small, GIT_EINVALIDSPEC
  * or an error code.
  */
 GIT_EXTERN(int) git_reference_normalize_name(
@@ -506,9 +515,9 @@ GIT_EXTERN(int) git_reference_normalize_name(
  * If you pass `GIT_OBJ_ANY` as the target type, then the object
  * will be peeled until a non-tag object is met.
  *
- * @param peeled Pointer to the peeled git_object
+ * @param out Pointer to the peeled git_object
  * @param ref The reference to be processed
- * @param target_type The type of the requested object (GIT_OBJ_COMMIT,
+ * @param type The type of the requested object (GIT_OBJ_COMMIT,
  * GIT_OBJ_TAG, GIT_OBJ_TREE, GIT_OBJ_BLOB or GIT_OBJ_ANY).
  * @return 0 on success, GIT_EAMBIGUOUS, GIT_ENOTFOUND or an error code
  */

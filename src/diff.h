@@ -16,6 +16,7 @@
 #include "iterator.h"
 #include "repository.h"
 #include "pool.h"
+#include "odb.h"
 
 #define DIFF_OLD_PREFIX_DEFAULT "a/"
 #define DIFF_NEW_PREFIX_DEFAULT "b/"
@@ -74,9 +75,19 @@ extern void git_diff__cleanup_modes(
 extern void git_diff_list_addref(git_diff_list *diff);
 
 extern int git_diff_delta__cmp(const void *a, const void *b);
+extern int git_diff_delta__casecmp(const void *a, const void *b);
+
+extern const char *git_diff_delta__path(const git_diff_delta *delta);
 
 extern bool git_diff_delta__should_skip(
 	const git_diff_options *opts, const git_diff_delta *delta);
+
+extern int git_diff_delta__format_file_header(
+	git_buf *out,
+	const git_diff_delta *delta,
+	const char *oldpfx,
+	const char *newpfx,
+	int oid_strlen);
 
 extern int git_diff__oid_for_file(
 	git_repository *, const char *, uint16_t, git_off_t, git_oid *);
@@ -94,17 +105,44 @@ extern int git_diff__paired_foreach(
 	int (*cb)(git_diff_delta *i2h, git_diff_delta *w2i, void *payload),
 	void *payload);
 
-int git_diff_find_similar__hashsig_for_file(
+extern int git_diff_find_similar__hashsig_for_file(
 	void **out, const git_diff_file *f, const char *path, void *p);
 
-int git_diff_find_similar__hashsig_for_buf(
+extern int git_diff_find_similar__hashsig_for_buf(
 	void **out, const git_diff_file *f, const char *buf, size_t len, void *p);
 
-void git_diff_find_similar__hashsig_free(void *sig, void *payload);
+extern void git_diff_find_similar__hashsig_free(void *sig, void *payload);
 
-int git_diff_find_similar__calc_similarity(
+extern int git_diff_find_similar__calc_similarity(
 	int *score, void *siga, void *sigb, void *payload);
 
+/*
+ * Sometimes a git_diff_file will have a zero size; this attempts to
+ * fill in the size without loading the blob if possible.  If that is
+ * not possible, then it will return the git_odb_object that had to be
+ * loaded and the caller can use it or dispose of it as needed.
+ */
+GIT_INLINE(int) git_diff_file__resolve_zero_size(
+	git_diff_file *file, git_odb_object **odb_obj, git_repository *repo)
+{
+	int error;
+	git_odb *odb;
+	size_t len;
+	git_otype type;
+
+	if ((error = git_repository_odb(&odb, repo)) < 0)
+		return error;
+
+	error = git_odb__read_header_or_object(
+		odb_obj, &len, &type, odb, &file->oid);
+
+	git_odb_free(odb);
+
+	if (!error)
+		file->size = (git_off_t)len;
+
+	return error;
+}
 
 #endif
 

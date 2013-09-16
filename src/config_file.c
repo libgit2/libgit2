@@ -27,6 +27,13 @@ typedef struct cvar_t {
 	git_config_entry *entry;
 } cvar_t;
 
+typedef struct git_config_file_iter {
+	git_config_iterator parent;
+	git_strmap_iter iter;
+	cvar_t* next_var;
+} git_config_file_iter;
+
+
 #define CVAR_LIST_HEAD(list) ((list)->head)
 
 #define CVAR_LIST_TAIL(list) ((list)->tail)
@@ -129,41 +136,6 @@ int git_config_file_normalize_section(char *start, char *end)
 	return 0;
 }
 
-/* Take something the user gave us and make it nice for our hash function */
-static int normalize_name(const char *in, char **out)
-{
-	char *name, *fdot, *ldot;
-
-	assert(in && out);
-
-	name = git__strdup(in);
-	GITERR_CHECK_ALLOC(name);
-
-	fdot = strchr(name, '.');
-	ldot = strrchr(name, '.');
-
-	if (fdot == NULL || fdot == name || ldot == NULL || !ldot[1])
-		goto invalid;
-
-	/* Validate and downcase up to first dot and after last dot */
-	if (git_config_file_normalize_section(name, fdot) < 0 ||
-		git_config_file_normalize_section(ldot + 1, NULL) < 0)
-		goto invalid;
-
-	/* If there is a middle range, make sure it doesn't have newlines */
-	while (fdot < ldot)
-		if (*fdot++ == '\n')
-			goto invalid;
-
-	*out = name;
-	return 0;
-
-invalid:
-	git__free(name);
-	giterr_set(GITERR_CONFIG, "Invalid config item name '%s'", in);
-	return GIT_EINVALIDSPEC;
-}
-
 static void free_vars(git_strmap *values)
 {
 	cvar_t *var = NULL;
@@ -247,51 +219,56 @@ static void backend_free(git_config_backend *_backend)
 	git__free(backend);
 }
 
-static int file_foreach(
-	git_config_backend *backend,
-	const char *regexp,
-	int (*fn)(const git_config_entry *, void *),
-	void *data)
+static void config_iterator_free(
+	git_config_iterator* iter)
 {
-	diskfile_backend *b = (diskfile_backend *)backend;
-	cvar_t *var, *next_var;
-	const char *key;
-	regex_t regex;
-	int result = 0;
+	git__free(iter);
+}
 
-	if (!b->values)
-		return 0;
+static int config_iterator_next(
+	git_config_entry **entry,
+	git_config_iterator *iter)
+{
+	git_config_file_iter *it = (git_config_file_iter *) iter;
+	diskfile_backend *b = (diskfile_backend *) it->parent.backend;
+	int err = 0;
+	cvar_t * var;
 
-	if (regexp != NULL) {
-		if ((result = regcomp(&regex, regexp, REG_EXTENDED)) < 0) {
-			giterr_set_regex(&regex, result);
-			regfree(&regex);
-			return -1;
-		}
+	if (it->next_var == NULL) {
+		err = git_strmap_next((void**) &var, &(it->iter), b->values);
+	} else {
+		var = it->next_var;
 	}
 
-	git_strmap_foreach(b->values, key, var,
-		for (; var != NULL; var = next_var) {
-			next_var = CVAR_LIST_NEXT(var);
+	if (err < 0) {
+		it->next_var = NULL;
+		return err;
+	}
 
-			/* skip non-matching keys if regexp was provided */
-			if (regexp && regexec(&regex, key, 0, NULL, 0) != 0)
-				continue;
+	*entry = var->entry;
+	it->next_var = CVAR_LIST_NEXT(var);
 
-			/* abort iterator on non-zero return value */
-			if (fn(var->entry, data)) {
-				giterr_clear();
-				result = GIT_EUSER;
-				goto cleanup;
-			}
-		}
-	);
+	return 0;
+}
 
-cleanup:
-	if (regexp != NULL)
-		regfree(&regex);
+static int config_iterator_new(
+	git_config_iterator **iter,
+	struct git_config_backend* backend)
+{
+	diskfile_backend *b = (diskfile_backend *)backend;
+	git_config_file_iter *it = git__calloc(1, sizeof(git_config_file_iter));
 
-	return result;
+	GITERR_CHECK_ALLOC(it);
+
+	it->parent.backend = backend;
+	it->iter = git_strmap_begin(b->values);
+	it->next_var = NULL;
+
+	it->parent.next = config_iterator_next;
+	it->parent.free = config_iterator_free;
+	*iter = (git_config_iterator *) it;
+
+	return 0;
 }
 
 static int config_set(git_config_backend *cfg, const char *name, const char *value)
@@ -302,7 +279,7 @@ static int config_set(git_config_backend *cfg, const char *name, const char *val
 	khiter_t pos;
 	int rval, ret;
 
-	if ((rval = normalize_name(name, &key)) < 0)
+	if ((rval = git_config__normalize_name(name, &key)) < 0)
 		return rval;
 
 	/*
@@ -385,7 +362,7 @@ static int config_get(const git_config_backend *cfg, const char *name, const git
 	khiter_t pos;
 	int error;
 
-	if ((error = normalize_name(name, &key)) < 0)
+	if ((error = git_config__normalize_name(name, &key)) < 0)
 		return error;
 
 	pos = git_strmap_lookup_index(b->values, key);
@@ -396,70 +373,6 @@ static int config_get(const git_config_backend *cfg, const char *name, const git
 		return GIT_ENOTFOUND;
 
 	*out = ((cvar_t *)git_strmap_value_at(b->values, pos))->entry;
-
-	return 0;
-}
-
-static int config_get_multivar(
-	git_config_backend *cfg,
-	const char *name,
-	const char *regex_str,
-	int (*fn)(const git_config_entry *, void *),
-	void *data)
-{
-	cvar_t *var;
-	diskfile_backend *b = (diskfile_backend *)cfg;
-	char *key;
-	khiter_t pos;
-	int error;
-
-	if ((error = normalize_name(name, &key)) < 0)
-		return error;
-
-	pos = git_strmap_lookup_index(b->values, key);
-	git__free(key);
-
-	if (!git_strmap_valid_index(b->values, pos))
-		return GIT_ENOTFOUND;
-
-	var = git_strmap_value_at(b->values, pos);
-
-	if (regex_str != NULL) {
-		regex_t regex;
-		int result;
-
-		/* regex matching; build the regex */
-		result = regcomp(&regex, regex_str, REG_EXTENDED);
-		if (result < 0) {
-			giterr_set_regex(&regex, result);
-			regfree(&regex);
-			return -1;
-		}
-
-		/* and throw the callback only on the variables that
-		 * match the regex */
-		do {
-			if (regexec(&regex, var->entry->value, 0, NULL, 0) == 0) {
-				/* early termination by the user is not an error;
-				 * just break and return successfully */
-				if (fn(var->entry, data) < 0)
-					break;
-			}
-
-			var = var->next;
-		} while (var != NULL);
-		regfree(&regex);
-	} else {
-		/* no regex; go through all the variables */
-		do {
-			/* early termination by the user is not an error;
-			 * just break and return successfully */
-			if (fn(var->entry, data) < 0)
-				break;
-
-			var = var->next;
-		} while (var != NULL);
-	}
 
 	return 0;
 }
@@ -477,7 +390,7 @@ static int config_set_multivar(
 
 	assert(regexp);
 
-	if ((result = normalize_name(name, &key)) < 0)
+	if ((result = git_config__normalize_name(name, &key)) < 0)
 		return result;
 
 	pos = git_strmap_lookup_index(b->values, key);
@@ -550,7 +463,7 @@ static int config_delete(git_config_backend *cfg, const char *name)
 	int result;
 	khiter_t pos;
 
-	if ((result = normalize_name(name, &key)) < 0)
+	if ((result = git_config__normalize_name(name, &key)) < 0)
 		return result;
 
 	pos = git_strmap_lookup_index(b->values, key);
@@ -590,11 +503,10 @@ int git_config_file__ondisk(git_config_backend **out, const char *path)
 
 	backend->parent.open = config_open;
 	backend->parent.get = config_get;
-	backend->parent.get_multivar = config_get_multivar;
 	backend->parent.set = config_set;
 	backend->parent.set_multivar = config_set_multivar;
 	backend->parent.del = config_delete;
-	backend->parent.foreach = file_foreach;
+	backend->parent.iterator = config_iterator_new;
 	backend->parent.refresh = config_refresh;
 	backend->parent.free = backend_free;
 
@@ -792,6 +704,11 @@ static int parse_section_header_ext(diskfile_backend *cfg, const char *line, con
 		}
 
 		switch (c) {
+		case 0:
+			set_parse_error(cfg, 0, "Unexpected end-of-line in section header");
+			git_buf_free(&buf);
+			return -1;
+
 		case '"':
 			++quote_marks;
 			continue;
@@ -801,6 +718,12 @@ static int parse_section_header_ext(diskfile_backend *cfg, const char *line, con
 
 			switch (c) {
 			case '"':
+				if (&line[rpos-1] == last_quote) {
+					set_parse_error(cfg, 0, "Missing closing quotation mark in section header");
+					git_buf_free(&buf);
+					return -1;
+				}
+
 			case '\\':
 				break;
 
@@ -1293,6 +1216,9 @@ static char *escape_value(const char *ptr)
 	assert(ptr);
 
 	len = strlen(ptr);
+	if (!len)
+		return git__calloc(1, sizeof(char));
+
 	git_buf_grow(&buf, len);
 
 	while (*ptr != '\0') {
@@ -1395,7 +1321,7 @@ static int parse_multiline_variable(diskfile_backend *cfg, git_buf *value, int i
 	 * standard, this character **has** to be last one in the buf, with
 	 * no whitespace after it */
 	assert(is_multiline_var(value->ptr));
-	git_buf_truncate(value, git_buf_len(value) - 1);
+	git_buf_shorten(value, 1);
 
 	proc_line = fixup_line(line, in_quotes);
 	if (proc_line == NULL) {

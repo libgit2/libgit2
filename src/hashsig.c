@@ -13,12 +13,15 @@ typedef uint64_t hashsig_state;
 
 #define HASHSIG_SCALE 100
 
-#define HASHSIG_HASH_WINDOW 32
-#define HASHSIG_HASH_START	0
+#define HASHSIG_MAX_RUN 80
+#define HASHSIG_HASH_START	0x012345678ABCDEF0LL
 #define HASHSIG_HASH_SHIFT  5
-#define HASHSIG_HASH_MASK   0x7FFFFFFF
+
+#define HASHSIG_HASH_MIX(S,CH) \
+	(S) = ((S) << HASHSIG_HASH_SHIFT) - (S) + (hashsig_state)(CH)
 
 #define HASHSIG_HEAP_SIZE ((1 << 7) - 1)
+#define HASHSIG_HEAP_MIN_SIZE 4
 
 typedef int (*hashsig_cmp)(const void *a, const void *b, void *);
 
@@ -28,14 +31,6 @@ typedef struct {
 	hashsig_t values[HASHSIG_HEAP_SIZE];
 } hashsig_heap;
 
-typedef struct {
-	hashsig_state state, shift_n;
-	char window[HASHSIG_HASH_WINDOW];
-	int win_len, win_pos, saw_lf;
-} hashsig_in_progress;
-
-#define HASHSIG_IN_PROGRESS_INIT { HASHSIG_HASH_START, 1, {0}, 0, 0, 1 }
-
 struct git_hashsig {
 	hashsig_heap mins;
 	hashsig_heap maxs;
@@ -43,8 +38,8 @@ struct git_hashsig {
 	int considered;
 };
 
-#define HEAP_LCHILD_OF(I) (((I)*2)+1)
-#define HEAP_RCHILD_OF(I) (((I)*2)+2)
+#define HEAP_LCHILD_OF(I) (((I)<<1)+1)
+#define HEAP_RCHILD_OF(I) (((I)<<1)+2)
 #define HEAP_PARENT_OF(I) (((I)-1)>>1)
 
 static void hashsig_heap_init(hashsig_heap *h, hashsig_cmp cmp)
@@ -115,134 +110,109 @@ static void hashsig_heap_sort(hashsig_heap *h)
 
 static void hashsig_heap_insert(hashsig_heap *h, hashsig_t val)
 {
-	/* if heap is full, pop top if new element should replace it */
-	if (h->size == h->asize && h->cmp(&val, &h->values[0], NULL) > 0) {
-		h->size--;
-		h->values[0] = h->values[h->size];
-		hashsig_heap_down(h, 0);
-	}
-
 	/* if heap is not full, insert new element */
 	if (h->size < h->asize) {
 		h->values[h->size++] = val;
 		hashsig_heap_up(h, h->size - 1);
 	}
+
+	/* if heap is full, pop top if new element should replace it */
+	else if (h->cmp(&val, &h->values[0], NULL) > 0) {
+		h->size--;
+		h->values[0] = h->values[h->size];
+		hashsig_heap_down(h, 0);
+	}
+
 }
 
-GIT_INLINE(bool) hashsig_include_char(
-	char ch, git_hashsig_option_t opt, int *saw_lf)
+typedef struct {
+	int use_ignores;
+	uint8_t ignore_ch[256];
+} hashsig_in_progress;
+
+static void hashsig_in_progress_init(
+	hashsig_in_progress *prog, git_hashsig *sig)
 {
-	if ((opt & GIT_HASHSIG_IGNORE_WHITESPACE) && git__isspace(ch))
-		return false;
+	int i;
 
-	if (opt & GIT_HASHSIG_SMART_WHITESPACE) {
-		if (ch == '\r' || (*saw_lf && git__isspace(ch)))
-			return false;
-
-		*saw_lf = (ch == '\n');
+	switch (sig->opt) {
+	case GIT_HASHSIG_IGNORE_WHITESPACE:
+		for (i = 0; i < 256; ++i)
+			prog->ignore_ch[i] = git__isspace_nonlf(i);
+		prog->use_ignores = 1;
+		break;
+	case GIT_HASHSIG_SMART_WHITESPACE:
+		for (i = 0; i < 256; ++i)
+			prog->ignore_ch[i] = git__isspace(i);
+		prog->use_ignores = 1;
+		break;
+	default:
+		memset(prog, 0, sizeof(*prog));
+		break;
 	}
-
-	return true;
 }
 
-static void hashsig_initial_window(
-	git_hashsig *sig,
-	const char **data,
-	size_t size,
-	hashsig_in_progress *prog)
-{
-	hashsig_state state, shift_n;
-	int win_len;
-	const char *scan, *end;
-
-	/* init until we have processed at least HASHSIG_HASH_WINDOW data */
-
-	if (prog->win_len >= HASHSIG_HASH_WINDOW)
-		return;
-
-	state   = prog->state;
-	win_len = prog->win_len;
-	shift_n = prog->shift_n;
-
-	scan = *data;
-	end  = scan + size;
-
-	while (scan < end && win_len < HASHSIG_HASH_WINDOW) {
-		char ch = *scan++;
-
-		if (!hashsig_include_char(ch, sig->opt, &prog->saw_lf))
-			continue;
-
-		state = (state * HASHSIG_HASH_SHIFT + ch) & HASHSIG_HASH_MASK;
-
-		if (!win_len)
-			shift_n = 1;
-		else
-			shift_n = (shift_n * HASHSIG_HASH_SHIFT) & HASHSIG_HASH_MASK;
-
-		prog->window[win_len++] = ch;
-	}
-
-	/* insert initial hash if we just finished */
-
-	if (win_len == HASHSIG_HASH_WINDOW) {
-		hashsig_heap_insert(&sig->mins, (hashsig_t)state);
-		hashsig_heap_insert(&sig->maxs, (hashsig_t)state);
-		sig->considered = 1;
-	}
-
-	prog->state   = state;
-	prog->win_len = win_len;
-	prog->shift_n = shift_n;
-
-	*data = scan;
-}
+#define HASHSIG_IN_PROGRESS_INIT { 1 }
 
 static int hashsig_add_hashes(
 	git_hashsig *sig,
-	const char *data,
+	const uint8_t *data,
 	size_t size,
 	hashsig_in_progress *prog)
 {
-	const char *scan = data, *end = data + size;
-	hashsig_state state, shift_n, rmv;
+	const uint8_t *scan = data, *end = data + size;
+	hashsig_state state = HASHSIG_HASH_START;
+	int use_ignores = prog->use_ignores, len;
+	uint8_t ch;
 
-	if (prog->win_len < HASHSIG_HASH_WINDOW)
-		hashsig_initial_window(sig, &scan, size, prog);
+	while (scan < end) {
+		state = HASHSIG_HASH_START;
 
-	state   = prog->state;
-	shift_n = prog->shift_n;
+		for (len = 0; scan < end && len < HASHSIG_MAX_RUN; ) {
+			ch = *scan;
 
-	/* advance window, adding new chars and removing old */
+			if (use_ignores)
+				for (; scan < end && git__isspace_nonlf(ch); ch = *scan)
+					++scan;
+			else if (sig->opt != GIT_HASHSIG_NORMAL)
+				for (; scan < end && ch == '\r'; ch = *scan)
+					++scan;
 
-	for (; scan < end; ++scan) {
-		char ch = *scan;
+			/* peek at next character to decide what to do next */
+			if (sig->opt == GIT_HASHSIG_SMART_WHITESPACE)
+				use_ignores = (ch == '\n');
 
-		if (!hashsig_include_char(ch, sig->opt, &prog->saw_lf))
-			continue;
+			if (scan >= end)
+				break;
+			++scan;
 
-		rmv = shift_n * prog->window[prog->win_pos];
+			/* check run terminator */
+			if (ch == '\n' || ch == '\0')
+				break;
 
-		state = (state - rmv) & HASHSIG_HASH_MASK;
-		state = (state * HASHSIG_HASH_SHIFT) & HASHSIG_HASH_MASK;
-		state = (state + ch) & HASHSIG_HASH_MASK;
+			++len;
+			HASHSIG_HASH_MIX(state, ch);
+		}
 
-		hashsig_heap_insert(&sig->mins, (hashsig_t)state);
-		hashsig_heap_insert(&sig->maxs, (hashsig_t)state);
-		sig->considered++;
+		if (len > 0) {
+			hashsig_heap_insert(&sig->mins, (hashsig_t)state);
+			hashsig_heap_insert(&sig->maxs, (hashsig_t)state);
 
-		prog->window[prog->win_pos] = ch;
-		prog->win_pos = (prog->win_pos + 1) % HASHSIG_HASH_WINDOW;
+			sig->considered++;
+
+			while (scan < end && (*scan == '\n' || !*scan))
+				++scan;
+		}
 	}
 
-	prog->state = state;
+	prog->use_ignores = use_ignores;
 
 	return 0;
 }
 
 static int hashsig_finalize_hashes(git_hashsig *sig)
 {
-	if (sig->mins.size < HASHSIG_HEAP_SIZE) {
+	if (sig->mins.size < HASHSIG_HEAP_MIN_SIZE) {
 		giterr_set(GITERR_INVALID,
 			"File too small for similarity signature calculation");
 		return GIT_EBUFS;
@@ -274,11 +244,13 @@ int git_hashsig_create(
 	git_hashsig_option_t opts)
 {
 	int error;
-	hashsig_in_progress prog = HASHSIG_IN_PROGRESS_INIT;
+	hashsig_in_progress prog;
 	git_hashsig *sig = hashsig_alloc(opts);
 	GITERR_CHECK_ALLOC(sig);
 
-	error = hashsig_add_hashes(sig, buf, buflen, &prog);
+	hashsig_in_progress_init(&prog, sig);
+
+	error = hashsig_add_hashes(sig, (const uint8_t *)buf, buflen, &prog);
 
 	if (!error)
 		error = hashsig_finalize_hashes(sig);
@@ -296,10 +268,10 @@ int git_hashsig_create_fromfile(
 	const char *path,
 	git_hashsig_option_t opts)
 {
-	char buf[4096];
+	uint8_t buf[0x1000];
 	ssize_t buflen = 0;
 	int error = 0, fd;
-	hashsig_in_progress prog = HASHSIG_IN_PROGRESS_INIT;
+	hashsig_in_progress prog;
 	git_hashsig *sig = hashsig_alloc(opts);
 	GITERR_CHECK_ALLOC(sig);
 
@@ -307,6 +279,8 @@ int git_hashsig_create_fromfile(
 		git__free(sig);
 		return fd;
 	}
+
+	hashsig_in_progress_init(&prog, sig);
 
 	while (!error) {
 		if ((buflen = p_read(fd, buf, sizeof(buf))) <= 0) {
@@ -362,6 +336,12 @@ static int hashsig_heap_compare(const hashsig_heap *a, const hashsig_heap *b)
 
 int git_hashsig_compare(const git_hashsig *a, const git_hashsig *b)
 {
-	return (hashsig_heap_compare(&a->mins, &b->mins) +
-			hashsig_heap_compare(&a->maxs, &b->maxs)) / 2;
+	/* if we have fewer than the maximum number of elements, then just use
+	 * one array since the two arrays will be the same
+	 */
+	if (a->mins.size < HASHSIG_HEAP_SIZE)
+		return hashsig_heap_compare(&a->mins, &b->mins);
+	else
+		return (hashsig_heap_compare(&a->mins, &b->mins) +
+				hashsig_heap_compare(&a->maxs, &b->maxs)) / 2;
 }

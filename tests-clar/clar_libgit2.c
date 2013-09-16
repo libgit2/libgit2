@@ -56,23 +56,24 @@ void cl_git_rewritefile(const char *filename, const char *new_content)
 
 char *cl_getenv(const char *name)
 {
-	wchar_t name_utf16[GIT_WIN_PATH];
+	git_win32_path name_utf16;
 	DWORD alloc_len;
 	wchar_t *value_utf16;
 	char *value_utf8;
 
-	git__utf8_to_16(name_utf16, GIT_WIN_PATH, name);
+	git_win32_path_from_c(name_utf16, name);
 	alloc_len = GetEnvironmentVariableW(name_utf16, NULL, 0);
 	if (alloc_len <= 0)
 		return NULL;
 
-	alloc_len = GIT_WIN_PATH;
 	cl_assert(value_utf16 = git__calloc(alloc_len, sizeof(wchar_t)));
 
 	GetEnvironmentVariableW(name_utf16, value_utf16, alloc_len);
 
-	cl_assert(value_utf8 = git__malloc(alloc_len));
-	git__utf16_to_8(value_utf8, value_utf16);
+	alloc_len = alloc_len * 4 + 1; /* worst case UTF16->UTF8 growth */
+	cl_assert(value_utf8 = git__calloc(alloc_len, 1));
+
+	git__utf16_to_8(value_utf8, alloc_len, value_utf16);
 
 	git__free(value_utf16);
 
@@ -81,13 +82,13 @@ char *cl_getenv(const char *name)
 
 int cl_setenv(const char *name, const char *value)
 {
-	wchar_t name_utf16[GIT_WIN_PATH];
-	wchar_t value_utf16[GIT_WIN_PATH];
+	git_win32_path name_utf16;
+	git_win32_path value_utf16;
 
-	git__utf8_to_16(name_utf16, GIT_WIN_PATH, name);
+	git_win32_path_from_c(name_utf16, name);
 
 	if (value) {
-		git__utf8_to_16(value_utf16, GIT_WIN_PATH, value);
+		git_win32_path_from_c(value_utf16, value);
 		cl_assert(SetEnvironmentVariableW(name_utf16, value_utf16));
 	} else {
 		/* Windows XP returns 0 (failed) when passing NULL for lpValue when
@@ -107,12 +108,12 @@ int cl_setenv(const char *name, const char *value)
  * the source is a directory, a child of the source). */
 int cl_rename(const char *source, const char *dest)
 {
-	wchar_t source_utf16[GIT_WIN_PATH];
-	wchar_t dest_utf16[GIT_WIN_PATH];
+	git_win32_path source_utf16;
+	git_win32_path dest_utf16;
 	unsigned retries = 1;
 
-	git__utf8_to_16(source_utf16, GIT_WIN_PATH, source);
-	git__utf8_to_16(dest_utf16, GIT_WIN_PATH, dest);
+	git_win32_path_from_c(source_utf16, source);
+	git_win32_path_from_c(dest_utf16, dest);
 
 	while (!MoveFileW(source_utf16, dest_utf16)) {
 		/* Only retry if the error is ERROR_ACCESS_DENIED;
@@ -342,4 +343,14 @@ void cl_repo_set_bool(git_repository *repo, const char *cfg, int value)
 	cl_git_pass(git_repository_config(&config, repo));
 	cl_git_pass(git_config_set_bool(config, cfg, value != 0));
 	git_config_free(config);
+}
+
+int cl_repo_get_bool(git_repository *repo, const char *cfg)
+{
+	int val = 0;
+	git_config *config;
+	cl_git_pass(git_repository_config(&config, repo));
+	cl_git_pass(git_config_get_bool(&val, config, cfg));;
+	git_config_free(config);
+	return val;
 }

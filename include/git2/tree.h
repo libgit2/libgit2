@@ -38,7 +38,7 @@ GIT_EXTERN(int) git_tree_lookup(
  *
  * @see git_object_lookup_prefix
  *
- * @param tree pointer to the looked up tree
+ * @param out pointer to the looked up tree
  * @param repo the repo to use when locating the tree.
  * @param id identity of the tree to locate.
  * @param len the length of the short identifier
@@ -136,7 +136,7 @@ GIT_EXTERN(const git_tree_entry *) git_tree_entry_byoid(
  *
  * @param out Pointer where to store the tree entry
  * @param root Previously loaded tree which is the root of the relative path
- * @param subtree_path Path to the contained entry
+ * @param path Path to the contained entry
  * @return 0 on success; GIT_ENOTFOUND if the path does not exist
  */
 GIT_EXTERN(int) git_tree_entry_bypath(
@@ -208,11 +208,11 @@ GIT_EXTERN(git_filemode_t) git_tree_entry_filemode(const git_tree_entry *entry);
 GIT_EXTERN(int) git_tree_entry_cmp(const git_tree_entry *e1, const git_tree_entry *e2);
 
 /**
- * Convert a tree entry to the git_object it points too.
+ * Convert a tree entry to the git_object it points to.
  *
  * You must call `git_object_free()` on the object when you are done with it.
  *
- * @param object pointer to the converted object
+ * @param object_out pointer to the converted object
  * @param repo repository where to lookup the pointed object
  * @param entry a tree entry
  * @return 0 or an error code
@@ -251,7 +251,7 @@ GIT_EXTERN(void) git_treebuilder_clear(git_treebuilder *bld);
 /**
  * Get the number of entries listed in a treebuilder
  *
- * @param tree a previously loaded treebuilder.
+ * @param bld a previously loaded treebuilder.
  * @return the number of entries in the treebuilder
  */
 GIT_EXTERN(unsigned int) git_treebuilder_entrycount(git_treebuilder *bld);

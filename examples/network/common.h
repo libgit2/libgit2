@@ -12,6 +12,12 @@ int fetch(git_repository *repo, int argc, char **argv);
 int index_pack(git_repository *repo, int argc, char **argv);
 int do_clone(git_repository *repo, int argc, char **argv);
 
+int cred_acquire_cb(git_cred **out,
+		const char * url,
+		const char * username_from_url,
+		unsigned int allowed_types,
+		void *payload);
+
 #ifndef PRIuZ
 /* Define the printf format specifer to use for size_t output */
 #if defined(_MSC_VER) || defined(__MINGW32__)

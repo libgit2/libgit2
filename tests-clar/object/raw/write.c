@@ -31,9 +31,9 @@ static void streaming_write(git_oid *oid, git_odb *odb, git_rawobj *raw)
    int error;
 
    cl_git_pass(git_odb_open_wstream(&stream, odb, raw->len, raw->type));
-   stream->write(stream, raw->data, raw->len);
-   error = stream->finalize_write(oid, stream);
-   stream->free(stream);
+   git_odb_stream_write(stream, raw->data, raw->len);
+   error = git_odb_stream_finalize_write(oid, stream);
+   git_odb_stream_free(stream);
    cl_git_pass(error);
 }
 

@@ -505,8 +505,10 @@ static git_pobject **compute_write_order(git_packbuilder *pb)
 	/*
 	 * Mark objects that are at the tip of tags.
 	 */
-	if (git_tag_foreach(pb->repo, &cb_tag_foreach, pb) < 0)
+	if (git_tag_foreach(pb->repo, &cb_tag_foreach, pb) < 0) {
+		git__free(wo);
 		return NULL;
+	}
 
 	/*
 	 * Give the objects in the original recency order until

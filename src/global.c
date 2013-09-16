@@ -65,26 +65,28 @@ int git_threads_init(void)
 		return -1;
 
 	/* Initialize any other subsystems that have global state */
-	if ((error = git_hash_global_init()) >= 0)
-		_tls_init = 1;
-
-	if (error == 0)
+	if ((error = git_hash_global_init()) >= 0 &&
+		(error = git_futils_dirs_global_init()) >= 0)
 		_tls_init = 1;
 
 	GIT_MEMORY_BARRIER;
+
+	win32_pthread_initialize();
 
 	return error;
 }
 
 void git_threads_shutdown(void)
 {
+	/* Shut down any subsystems that have global state */
+	win32_pthread_shutdown();
+	git_futils_dirs_free();
+	git_hash_global_shutdown();
+
 	TlsFree(_tls_index);
 	_tls_init = 0;
-	git_mutex_free(&git__mwindow_mutex);
 
-	/* Shut down any subsystems that have global state */
-	git_hash_global_shutdown();
-	git_futils_dirs_free();
+	git_mutex_free(&git__mwindow_mutex);
 }
 
 git_global_st *git__global_state(void)
@@ -127,7 +129,8 @@ int git_threads_init(void)
 	pthread_key_create(&_tls_key, &cb__free_status);
 
 	/* Initialize any other subsystems that have global state */
-	if ((error = git_hash_global_init()) >= 0)
+	if ((error = git_hash_global_init()) >= 0 &&
+		(error = git_futils_dirs_global_init()) >= 0)
 		_tls_init = 1;
 
 	GIT_MEMORY_BARRIER;

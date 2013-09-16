@@ -266,7 +266,7 @@ static int find_ceiling_dir_offset(
 			buf[--len] = '\0';
 
 		if (!strncmp(path, buf2, len) &&
-			path[len] == '/' &&
+			(path[len] == '/' || !path[len]) &&
 			len > max_len)
 		{
 			max_len = len;
@@ -322,17 +322,18 @@ static int find_repo(
 	git_buf path = GIT_BUF_INIT;
 	struct stat st;
 	dev_t initial_device = 0;
-	bool try_with_dot_git = false;
+	bool try_with_dot_git = ((flags & GIT_REPOSITORY_OPEN_BARE) != 0);
 	int ceiling_offset;
 
 	git_buf_free(repo_path);
 
-	if ((error = git_path_prettify_dir(&path, start_path, NULL)) < 0)
+	if ((error = git_path_prettify(&path, start_path, NULL)) < 0)
 		return error;
 
 	ceiling_offset = find_ceiling_dir_offset(path.ptr, ceiling_dirs);
 
-	if ((error = git_buf_joinpath(&path, path.ptr, DOT_GIT)) < 0)
+	if (!try_with_dot_git &&
+		(error = git_buf_joinpath(&path, path.ptr, DOT_GIT)) < 0)
 		return error;
 
 	while (!error && !git_buf_len(repo_path)) {
@@ -384,7 +385,7 @@ static int find_repo(
 		try_with_dot_git = !try_with_dot_git;
 	}
 
-	if (!error && parent_path != NULL) {
+	if (!error && parent_path && !(flags & GIT_REPOSITORY_OPEN_BARE)) {
 		if (!git_buf_len(repo_path))
 			git_buf_clear(parent_path);
 		else {
@@ -460,7 +461,9 @@ int git_repository_open_ext(
 	repo->path_repository = git_buf_detach(&path);
 	GITERR_CHECK_ALLOC(repo->path_repository);
 
-	if ((error = load_config_data(repo)) < 0 ||
+	if ((flags & GIT_REPOSITORY_OPEN_BARE) != 0)
+		repo->is_bare = 1;
+	else if ((error = load_config_data(repo)) < 0 ||
 		(error = load_workdir(repo, &parent)) < 0)
 	{
 		git_repository_free(repo);
@@ -1492,24 +1495,20 @@ static int repo_contains_no_reference(git_repository *repo)
 int git_repository_is_empty(git_repository *repo)
 {
 	git_reference *head = NULL;
-	int error;
+	int is_empty = 0;
 
 	if (git_reference_lookup(&head, repo, GIT_HEAD_FILE) < 0)
 		return -1;
 
-	if (!(error = git_reference_type(head) == GIT_REF_SYMBOLIC))
-		goto cleanup;
+	if (git_reference_type(head) == GIT_REF_SYMBOLIC)
+		is_empty =
+			(strcmp(git_reference_symbolic_target(head),
+					GIT_REFS_HEADS_DIR "master") == 0) &&
+			repo_contains_no_reference(repo);
 
-	if (!(error = strcmp(
-		git_reference_symbolic_target(head),
-		GIT_REFS_HEADS_DIR "master") == 0))
-			goto cleanup;
-
-	error = repo_contains_no_reference(repo);
-
-cleanup:
 	git_reference_free(head);
-	return error < 0 ? -1 : error;
+
+	return is_empty;
 }
 
 const char *git_repository_path(git_repository *repo)

@@ -1321,9 +1321,10 @@ static void workdir_iterator__free(git_iterator *self)
 	git_ignore__free(&wi->ignores);
 }
 
-int git_iterator_for_workdir(
+int git_iterator_for_workdir_ext(
 	git_iterator **out,
 	git_repository *repo,
+	const char *repo_workdir,
 	git_iterator_flag_t flags,
 	const char *start,
 	const char *end)
@@ -1331,8 +1332,11 @@ int git_iterator_for_workdir(
 	int error;
 	workdir_iterator *wi;
 
-	if (git_repository__ensure_not_bare(repo, "scan working directory") < 0)
-		return GIT_EBAREREPO;
+	if (!repo_workdir) {
+		if (git_repository__ensure_not_bare(repo, "scan working directory") < 0)
+			return GIT_EBAREREPO;
+		repo_workdir = git_repository_workdir(repo);
+	}
 
 	/* initialize as an fs iterator then do overrides */
 	wi = git__calloc(1, sizeof(workdir_iterator));
@@ -1346,13 +1350,13 @@ int git_iterator_for_workdir(
 	wi->fi.update_entry_cb = workdir_iterator__update_entry;
 
 	if ((error = iterator__update_ignore_case((git_iterator *)wi, flags)) < 0 ||
-		(error = git_ignore__for_path(repo, "", &wi->ignores)) < 0)
+		(error = git_ignore__for_path(repo, ".gitignore", &wi->ignores)) < 0)
 	{
 		git_iterator_free((git_iterator *)wi);
 		return error;
 	}
 
-	return fs_iterator__initialize(out, &wi->fi, git_repository_workdir(repo));
+	return fs_iterator__initialize(out, &wi->fi, repo_workdir);
 }
 
 

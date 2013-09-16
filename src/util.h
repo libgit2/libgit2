@@ -55,6 +55,9 @@ GIT_INLINE(char *) git__strndup(const char *str, size_t n)
 
 	ptr = (char*)git__malloc(length + 1);
 
+	if (!ptr)
+		return NULL;
+
 	if (length)
 		memcpy(ptr, str, length);
 
@@ -79,7 +82,10 @@ GIT_INLINE(void *) git__realloc(void *ptr, size_t size)
 	return new_ptr;
 }
 
-#define git__free(ptr) free(ptr)
+GIT_INLINE(void) git__free(void *ptr)
+{
+	free(ptr);
+}
 
 #define STRCMP_CASESELECT(IGNORE_CASE, STR1, STR2) \
 	((IGNORE_CASE) ? strcasecmp((STR1), (STR2)) : strcmp((STR1), (STR2)))
@@ -194,6 +200,8 @@ extern int git__strcasecmp(const char *a, const char *b);
 extern int git__strncmp(const char *a, const char *b, size_t sz);
 extern int git__strncasecmp(const char *a, const char *b, size_t sz);
 
+extern int git__strcasesort_cmp(const char *a, const char *b);
+
 #include "thread-utils.h"
 
 typedef struct {
@@ -218,6 +226,9 @@ typedef void (*git_refcount_freeptr)(void *r);
 }
 
 #define GIT_REFCOUNT_OWNER(r) (((git_refcount *)(r))->owner)
+
+#define GIT_REFCOUNT_VAL(r) git_atomic_get(&((git_refcount *)(r))->refcount)
+
 
 static signed char from_hex[] = {
 -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, /* 00 */
@@ -289,6 +300,11 @@ GIT_INLINE(bool) git__isspace(int c)
 	return (c == ' ' || c == '\t' || c == '\n' || c == '\f' || c == '\r' || c == '\v' || c == 0x85 /* Unicode CR+LF */);
 }
 
+GIT_INLINE(bool) git__isspace_nonlf(int c)
+{
+	return (c == ' ' || c == '\t' || c == '\f' || c == '\r' || c == '\v' || c == 0x85 /* Unicode CR+LF */);
+}
+
 GIT_INLINE(bool) git__iswildcard(int c)
 {
 	return (c == '*' || c == '?' || c == '[');
@@ -325,6 +341,16 @@ extern size_t git__unescape(char *str);
  * Safely zero-out memory, making sure that the compiler
  * doesn't optimize away the operation.
  */
-extern void git__memzero(volatile void *data, size_t size);
+GIT_INLINE(void) git__memzero(void *data, size_t size)
+{
+#ifdef _MSC_VER
+	SecureZeroMemory((PVOID)data, size);
+#else
+	volatile uint8_t *scan = (volatile uint8_t *)data;
+
+	while (size--)
+		*scan++ = 0x0;
+#endif
+}
 
 #endif /* INCLUDE_util_h__ */

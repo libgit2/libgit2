@@ -19,30 +19,19 @@
 
 #include <stdarg.h>
 
-static void clear_parents(git_commit *commit)
-{
-	size_t i;
-
-	for (i = 0; i < commit->parent_ids.length; ++i) {
-		git_oid *parent = git_vector_get(&commit->parent_ids, i);
-		git__free(parent);
-	}
-
-	git_vector_clear(&commit->parent_ids);
-}
-
 void git_commit__free(void *_commit)
 {
 	git_commit *commit = _commit;
 
-	clear_parents(commit);
-	git_vector_free(&commit->parent_ids);
+	git_array_clear(commit->parent_ids);
 
 	git_signature_free(commit->author);
 	git_signature_free(commit->committer);
 
+	git__free(commit->raw_header);
 	git__free(commit->message);
 	git__free(commit->message_encoding);
+
 	git__free(commit);
 }
 
@@ -171,12 +160,35 @@ int git_commit_create(
 int git_commit__parse(void *_commit, git_odb_object *odb_obj)
 {
 	git_commit *commit = _commit;
-	const char *buffer = git_odb_object_data(odb_obj);
-	const char *buffer_end = buffer + git_odb_object_size(odb_obj);
+	const char *buffer_start = git_odb_object_data(odb_obj), *buffer;
+	const char *buffer_end = buffer_start + git_odb_object_size(odb_obj);
 	git_oid parent_id;
+	uint32_t parent_count = 0;
+	size_t header_len;
 
-	if (git_vector_init(&commit->parent_ids, 4, NULL) < 0)
-		return -1;
+	/* find end-of-header (counting parents as we go) */
+	for (buffer = buffer_start; buffer < buffer_end; ++buffer) {
+		if (!strncmp("\n\n", buffer, 2)) {
+			++buffer;
+			break;
+		}
+		if (!strncmp("\nparent ", buffer, strlen("\nparent ")))
+			++parent_count;
+	}
+
+	header_len = buffer - buffer_start;
+	commit->raw_header = git__strndup(buffer_start, header_len);
+	GITERR_CHECK_ALLOC(commit->raw_header);
+
+	/* point "buffer" to header data */
+	buffer = commit->raw_header;
+	buffer_end = commit->raw_header + header_len;
+
+	if (parent_count < 1)
+		parent_count = 1;
+
+	git_array_init_to_size(commit->parent_ids, parent_count);
+	GITERR_CHECK_ARRAY(commit->parent_ids);
 
 	if (git_oid__parse(&commit->tree_id, &buffer, buffer_end, "tree ") < 0)
 		goto bad_buffer;
@@ -186,13 +198,10 @@ int git_commit__parse(void *_commit, git_odb_object *odb_obj)
 	 */
 
 	while (git_oid__parse(&parent_id, &buffer, buffer_end, "parent ") == 0) {
-		git_oid *new_id = git__malloc(sizeof(git_oid));
+		git_oid *new_id = git_array_alloc(commit->parent_ids);
 		GITERR_CHECK_ALLOC(new_id);
 
 		git_oid_cpy(new_id, &parent_id);
-
-		if (git_vector_insert(&commit->parent_ids, new_id) < 0)
-			return -1;
 	}
 
 	commit->author = git__malloc(sizeof(git_signature));
@@ -208,8 +217,8 @@ int git_commit__parse(void *_commit, git_odb_object *odb_obj)
 	if (git_signature__parse(commit->committer, &buffer, buffer_end, "committer ", '\n') < 0)
 		return -1;
 
-	/* Parse add'l header entries until blank line found */
-	while (buffer < buffer_end && *buffer != '\n') {
+	/* Parse add'l header entries */
+	while (buffer < buffer_end) {
 		const char *eoln = buffer;
 		while (eoln < buffer_end && *eoln != '\n')
 			++eoln;
@@ -223,15 +232,18 @@ int git_commit__parse(void *_commit, git_odb_object *odb_obj)
 
 		if (eoln < buffer_end && *eoln == '\n')
 			++eoln;
-
 		buffer = eoln;
 	}
 
-	/* buffer is now at the end of the header, double-check and move forward into the message */
-	if (buffer < buffer_end && *buffer == '\n')
-		buffer++;
+	/* point "buffer" to data after header */
+	buffer = git_odb_object_data(odb_obj);
+	buffer_end = buffer + git_odb_object_size(odb_obj);
 
-	/* parse commit message */
+	buffer += header_len;
+	if (*buffer == '\n')
+		++buffer;
+
+	/* extract commit message */
 	if (buffer <= buffer_end) {
 		commit->message = git__strndup(buffer, buffer_end - buffer);
 		GITERR_CHECK_ALLOC(commit->message);
@@ -255,9 +267,10 @@ GIT_COMMIT_GETTER(const git_signature *, author, commit->author)
 GIT_COMMIT_GETTER(const git_signature *, committer, commit->committer)
 GIT_COMMIT_GETTER(const char *, message, commit->message)
 GIT_COMMIT_GETTER(const char *, message_encoding, commit->message_encoding)
+GIT_COMMIT_GETTER(const char *, raw_header, commit->raw_header)
 GIT_COMMIT_GETTER(git_time_t, time, commit->committer->when.time)
 GIT_COMMIT_GETTER(int, time_offset, commit->committer->when.offset)
-GIT_COMMIT_GETTER(unsigned int, parentcount, (unsigned int)commit->parent_ids.length)
+GIT_COMMIT_GETTER(unsigned int, parentcount, (unsigned int)git_array_size(commit->parent_ids))
 GIT_COMMIT_GETTER(const git_oid *, tree_id, &commit->tree_id);
 
 int git_commit_tree(git_tree **tree_out, const git_commit *commit)
@@ -271,7 +284,7 @@ const git_oid *git_commit_parent_id(
 {
 	assert(commit);
 
-	return git_vector_get(&commit->parent_ids, n);
+	return git_array_get(commit->parent_ids, n);
 }
 
 int git_commit_parent(

@@ -85,7 +85,7 @@ GIT_EXTERN(void) git_oid_fromraw(git_oid *out, const unsigned char *raw);
  *		needed for an oid encoded in hex (40 bytes). Only the
  *		oid digits are written; a '\\0' terminator must be added
  *		by the caller if it is required.
- * @param oid oid structure to format.
+ * @param id oid structure to format.
  */
 GIT_EXTERN(void) git_oid_fmt(char *out, const git_oid *id);
 
@@ -96,7 +96,7 @@ GIT_EXTERN(void) git_oid_fmt(char *out, const git_oid *id);
  *		If the number of bytes is > GIT_OID_HEXSZ, extra bytes
  *		will be zeroed; if not, a '\0' terminator is NOT added.
  * @param n number of characters to write into out string
- * @param oid oid structure to format.
+ * @param id oid structure to format.
  */
 GIT_EXTERN(void) git_oid_nfmt(char *out, size_t n, const git_oid *id);
 
@@ -118,7 +118,7 @@ GIT_EXTERN(void) git_oid_pathfmt(char *out, const git_oid *id);
 /**
  * Format a git_oid into a newly allocated c-string.
  *
- * @param oid the oid structure to format
+ * @param id the oid structure to format
  * @return the c-string; NULL if memory is exhausted. Caller must
  *			deallocate the string with git__free().
  */
@@ -188,8 +188,7 @@ GIT_EXTERN(int) git_oid_ncmp(const git_oid *a, const git_oid *b, size_t len);
  *
  * @param id oid structure.
  * @param str input hex string of an object id.
- * @return GIT_ENOTOID if str is not a valid hex string,
- * 0 in case of a match, GIT_ERROR otherwise.
+ * @return 0 in case of a match, -1 otherwise.
  */
 GIT_EXTERN(int) git_oid_streq(const git_oid *id, const char *str);
 
@@ -241,13 +240,13 @@ GIT_EXTERN(git_oid_shorten *) git_oid_shorten_new(size_t min_length);
  * or freed.
  *
  * For performance reasons, there is a hard-limit of how many
- * OIDs can be added to a single set (around ~22000, assuming
+ * OIDs can be added to a single set (around ~32000, assuming
  * a mostly randomized distribution), which should be enough
  * for any kind of program, and keeps the algorithm fast and
  * memory-efficient.
  *
  * Attempting to add more than those OIDs will result in a
- * GIT_ENOMEM error
+ * GITERR_INVALID error
  *
  * @param os a `git_oid_shorten` instance
  * @param text_id an OID in text form

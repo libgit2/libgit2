@@ -776,6 +776,7 @@ void test_diff_workdir__submodules(void)
 
 	opts.flags =
 		GIT_DIFF_INCLUDE_UNTRACKED |
+		GIT_DIFF_INCLUDE_IGNORED |
 		GIT_DIFF_RECURSE_UNTRACKED_DIRS |
 		GIT_DIFF_INCLUDE_UNTRACKED_CONTENT;
 
@@ -806,7 +807,7 @@ void test_diff_workdir__submodules(void)
 	 * only significant difference is that those Added items will show up
 	 * as Untracked items in the pure libgit2 diff.
 	 *
-	 * Then add in the two extra untracked items "not" and "not-submodule"
+	 * Then add in the two extra ignored items "not" and "not-submodule"
 	 * to get the 12 files reported here.
 	 */
 
@@ -815,8 +816,8 @@ void test_diff_workdir__submodules(void)
 	cl_assert_equal_i(0, exp.file_status[GIT_DELTA_ADDED]);
 	cl_assert_equal_i(0, exp.file_status[GIT_DELTA_DELETED]);
 	cl_assert_equal_i(2, exp.file_status[GIT_DELTA_MODIFIED]);
-	cl_assert_equal_i(0, exp.file_status[GIT_DELTA_IGNORED]);
-	cl_assert_equal_i(10, exp.file_status[GIT_DELTA_UNTRACKED]);
+	cl_assert_equal_i(2, exp.file_status[GIT_DELTA_IGNORED]);
+	cl_assert_equal_i(8, exp.file_status[GIT_DELTA_UNTRACKED]);
 
 	/* the following numbers match "git diff 873585" exactly */
 
@@ -1092,6 +1093,26 @@ void test_diff_workdir__untracked_directory_scenarios(void)
 	/* empty directory */
 
 	cl_git_pass(p_mkdir("status/subdir/directory", 0777));
+
+	memset(&exp, 0, sizeof(exp));
+	exp.names = files1;
+
+	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, NULL, &opts));
+
+	cl_git_pass(git_diff_foreach(diff, diff_file_cb, NULL, NULL, &exp));
+
+	cl_assert_equal_i(4, exp.files);
+	cl_assert_equal_i(0, exp.file_status[GIT_DELTA_ADDED]);
+	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_DELETED]);
+	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_MODIFIED]);
+	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_IGNORED]);
+	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_UNTRACKED]);
+
+	git_diff_list_free(diff);
+
+	/* empty directory in empty directory */
+
+	cl_git_pass(p_mkdir("status/subdir/directory/empty", 0777));
 
 	memset(&exp, 0, sizeof(exp));
 	exp.names = files1;
