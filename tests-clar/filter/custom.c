@@ -6,9 +6,11 @@
 #include "git2/sys/filter.h"
 #include "git2/sys/repository.h"
 
-/* picked these to be >= GIT_FILTER_DRIVER_PRIORITY */
-#define BITFLIP_FILTER_PRIORITY 200
-#define REVERSE_FILTER_PRIORITY 250
+/* going TO_WORKDIR, filters are executed low to high
+ * going TO_ODB, filters are executed high to low
+ */
+#define BITFLIP_FILTER_PRIORITY -1
+#define REVERSE_FILTER_PRIORITY -2
 
 #define VERY_SECURE_ENCRYPTION(b) ((b) ^ 0xff)
 
@@ -149,13 +151,13 @@ static void reverse_filter_free(git_filter *f)
 	git__free(f);
 }
 
-static git_filter *create_reverse_filter(void)
+static git_filter *create_reverse_filter(const char *attrs)
 {
 	git_filter *filter = git__calloc(1, sizeof(git_filter));
 	cl_assert(filter);
 
 	filter->version = GIT_FILTER_VERSION;
-	filter->attributes = "+reverse";
+	filter->attributes = attrs;
 	filter->shutdown = reverse_filter_free;
 	filter->apply = reverse_filter_apply;
 
@@ -171,7 +173,14 @@ static void register_custom_filters(void)
 			"bitflip", create_bitflip_filter(), BITFLIP_FILTER_PRIORITY));
 
 		cl_git_pass(git_filter_register(
-			"reverse", create_reverse_filter(), REVERSE_FILTER_PRIORITY));
+			"reverse", create_reverse_filter("+reverse"),
+			REVERSE_FILTER_PRIORITY));
+
+		/* re-register reverse filter with standard filter=xyz priority */
+		cl_git_pass(git_filter_register(
+			"pre-reverse",
+			create_reverse_filter("+prereverse"),
+			GIT_FILTER_DRIVER_PRIORITY));
 
 		filters_registered = 1;
 	}
@@ -273,7 +282,7 @@ void test_filter_custom__order_dependency(void)
 
 	cl_git_mkfile(
 		"empty_standard_repo/.gitattributes",
-		"hero.*.rev-ident text ident reverse eol=lf\n");
+		"hero.*.rev-ident text ident prereverse eol=lf\n");
 
 	cl_git_mkfile(
 		"empty_standard_repo/hero.1.rev-ident",
@@ -314,4 +323,15 @@ void test_filter_custom__order_dependency(void)
 	git_blob_free(blob);
 
 	git_buf_free(&buf);
+}
+
+void test_filter_custom__filter_registry_failure_cases(void)
+{
+	git_filter fake = { GIT_FILTER_VERSION, 0 };
+
+	cl_assert_equal_i(GIT_EEXISTS, git_filter_register("bitflip", &fake, 0));
+
+	cl_git_fail(git_filter_unregister(GIT_FILTER_CRLF));
+	cl_git_fail(git_filter_unregister(GIT_FILTER_IDENT));
+	cl_assert_equal_i(GIT_ENOTFOUND, git_filter_unregister("not-a-filter"));
 }

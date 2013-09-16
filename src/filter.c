@@ -235,7 +235,7 @@ int git_filter_register(
 	if (!filter_registry_find(NULL, name)) {
 		giterr_set(
 			GITERR_FILTER, "Attempt to reregister existing filter '%s'", name);
-		return -1;
+		return GIT_EEXISTS;
 	}
 
 	if (filter_def_scan_attrs(&attrs, &nattr, &nmatch, filter->attributes) < 0)
@@ -270,7 +270,7 @@ int git_filter_unregister(const char *name)
 	git_filter_def *fdef;
 
 	/* cannot unregister default filters */
-	if (!strcmp(GIT_FILTER_CRLF, name)) {
+	if (!strcmp(GIT_FILTER_CRLF, name) || !strcmp(GIT_FILTER_IDENT, name)) {
 		giterr_set(GITERR_FILTER, "Cannot unregister filter '%s'", name);
 		return -1;
 	}
@@ -476,7 +476,7 @@ int git_filter_list_load(
 
 		git__free((void *)values);
 
-		if (error == GIT_ENOTFOUND)
+		if (error == GIT_PASSTHROUGH)
 			error = 0;
 		else if (error < 0)
 			break;
@@ -609,11 +609,13 @@ int git_filter_list_apply_to_data(
 		error = fe->filter->apply(
 			fe->filter, &fe->payload, dbuffer[di], dbuffer[si], &fl->source);
 
-		if (error == GIT_ENOTFOUND)
+		if (error == GIT_PASSTHROUGH) {
+			/* PASSTHROUGH means filter decided not to process the buffer */
 			error = 0;
-		else if (!error)
+		} else if (!error) {
+			git_buf_shorten(dbuffer[di], 0); /* force NUL termination */
 			si = di; /* swap buffers */
-		else {
+		} else {
 			tgt->size = 0;
 			return error;
 		}

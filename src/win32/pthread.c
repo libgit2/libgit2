@@ -6,6 +6,7 @@
  */
 
 #include "pthread.h"
+#include "../global.h"
 
 int pthread_create(
 	pthread_t *GIT_RESTRICT thread,

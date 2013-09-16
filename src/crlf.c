@@ -143,7 +143,7 @@ static int crlf_apply_to_odb(
 		 * stuff?
 		 */
 		if (stats.cr != stats.crlf)
-			return GIT_ENOTFOUND;
+			return GIT_PASSTHROUGH;
 
 		if (ca->crlf_action == GIT_CRLF_GUESS) {
 			/*
@@ -151,11 +151,11 @@ static int crlf_apply_to_odb(
 			 * This is the new safer autocrlf handling.
 			 */
 			if (has_cr_in_index(src))
-				return GIT_ENOTFOUND;
+				return GIT_PASSTHROUGH;
 		}
 
 		if (!stats.cr)
-			return GIT_ENOTFOUND;
+			return GIT_PASSTHROUGH;
 	}
 
 	/* Actually drop the carriage returns */
@@ -211,7 +211,7 @@ static int crlf_apply_to_workdir(
 
 	/* Don't filter binary files */
 	if (git_buf_text_is_binary(from))
-		return GIT_ENOTFOUND;
+		return GIT_PASSTHROUGH;
 
 	/* Determine proper line ending */
 	workdir_ending = line_ending(ca);
@@ -220,10 +220,10 @@ static int crlf_apply_to_workdir(
 
 	if (!strcmp("\n", workdir_ending)) {
 		if (ca->crlf_action == GIT_CRLF_GUESS && ca->auto_crlf)
-			return GIT_ENOTFOUND;
+			return GIT_PASSTHROUGH;
 
 		if (git_buf_find(from, '\r') < 0)
-			return GIT_ENOTFOUND;
+			return GIT_PASSTHROUGH;
 
 		if (git_buf_text_crlf_to_lf(to, from) < 0)
 			return -1;
@@ -267,7 +267,7 @@ static int crlf_check(
 	ca.crlf_action = crlf_input_action(&ca);
 
 	if (ca.crlf_action == GIT_CRLF_BINARY)
-		return GIT_ENOTFOUND;
+		return GIT_PASSTHROUGH;
 
 	if (ca.crlf_action == GIT_CRLF_GUESS) {
 		error = git_repository__cvar(
@@ -276,7 +276,7 @@ static int crlf_check(
 			return error;
 
 		if (ca.auto_crlf == GIT_AUTO_CRLF_FALSE)
-			return GIT_ENOTFOUND;
+			return GIT_PASSTHROUGH;
 	}
 
 	*payload = git__malloc(sizeof(ca));
@@ -296,7 +296,7 @@ static int crlf_apply(
 	/* initialize payload in case `check` was bypassed */
 	if (!*payload) {
 		int error = crlf_check(self, payload, src, NULL);
-		if (error < 0 && error != GIT_ENOTFOUND)
+		if (error < 0 && error != GIT_PASSTHROUGH)
 			return error;
 	}
 

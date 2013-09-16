@@ -13,23 +13,25 @@
 static int ident_find_id(
 	const char **id_start, const char **id_end, const char *start, size_t len)
 {
-	const char *found;
+	const char *end = start + len, *found = NULL;
 
-	while (len > 0 && (found = memchr(start, '$', len)) != NULL) {
-		size_t remaining = len - (size_t)(found - start);
+	while (len > 3 && (found = memchr(start, '$', len)) != NULL) {
+		size_t remaining = (size_t)(end - found) - 1;
 		if (remaining < 3)
 			return GIT_ENOTFOUND;
-		if (found[1] == 'I' && found[2] == 'd')
-			break;
+
 		start = found + 1;
-		len = remaining - 1;
+		len   = remaining;
+
+		if (start[0] == 'I' && start[1] == 'd')
+			break;
 	}
 
-	if (!found || len < 3)
+	if (len < 3 || !found)
 		return GIT_ENOTFOUND;
 	*id_start = found;
 
-	if ((found = memchr(found + 3, '$', len - 3)) == NULL)
+	if ((found = memchr(start + 2, '$', len - 2)) == NULL)
 		return GIT_ENOTFOUND;
 
 	*id_end = found + 1;
@@ -46,12 +48,12 @@ static int ident_insert_id(
 	/* replace $Id$ with blob id */
 
 	if (!git_filter_source_id(src))
-		return GIT_ENOTFOUND;
+		return GIT_PASSTHROUGH;
 
 	git_oid_tostr(oid, sizeof(oid), git_filter_source_id(src));
 
 	if (ident_find_id(&id_start, &id_end, from->ptr, from->size) < 0)
-		return GIT_ENOTFOUND;
+		return GIT_PASSTHROUGH;
 
 	need_size = (size_t)(id_start - from->ptr) +
 		5 /* "$Id: " */ + GIT_OID_HEXSZ + 1 /* "$" */ +
@@ -76,7 +78,7 @@ static int ident_remove_id(
 	size_t need_size;
 
 	if (ident_find_id(&id_start, &id_end, from->ptr, from->size) < 0)
-		return GIT_ENOTFOUND;
+		return GIT_PASSTHROUGH;
 
 	need_size = (size_t)(id_start - from->ptr) +
 		4 /* "$Id$" */ + (size_t)(from_end - id_end);
@@ -102,7 +104,7 @@ static int ident_apply(
 
 	/* Don't filter binary files */
 	if (git_buf_text_is_binary(from))
-		return GIT_ENOTFOUND;
+		return GIT_PASSTHROUGH;
 
 	if (git_filter_source_mode(src) == GIT_FILTER_SMUDGE)
 		return ident_insert_id(to, from, src);

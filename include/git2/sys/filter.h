@@ -125,23 +125,54 @@ GIT_EXTERN(git_filter_mode_t) git_filter_source_mode(const git_filter_source *sr
  * The filter lifecycle:
  * - initialize - first use of filter
  * - shutdown   - filter removed/unregistered from system
- * - check      - considering for file
- * - apply      - applied to file
+ * - check      - considering filter for file
+ * - apply      - apply filter to file contents
  * - cleanup    - done with file
  */
 
 /**
  * Initialize callback on filter
+ *
+ * Specified as `filter.initialize`, this is an optional callback invoked
+ * before a filter is first used.  It will be called once at most.
+ *
+ * If non-NULL, the filter's `initialize` callback will be invoked right
+ * before the first use of the filter, so you can defer expensive
+ * initialization operations (in case libgit2 is being used in a way that
+ * doesn't need the filter).
  */
 typedef int (*git_filter_init_fn)(git_filter *self);
 
 /**
  * Shutdown callback on filter
+ *
+ * Specified as `filter.shutdown`, this is an optional callback invoked
+ * when the filter is unregistered or when libgit2 is shutting down.  It
+ * will be called once at most and should release resources as needed.
+ *
+ * Typically this function will free the `git_filter` object itself.
  */
 typedef void (*git_filter_shutdown_fn)(git_filter *self);
 
 /**
  * Callback to decide if a given source needs this filter
+ *
+ * Specified as `filter.check`, this is an optional callback that checks
+ * if filtering is needed for a given source.
+ *
+ * It should return 0 if the filter should be applied (i.e. success),
+ * GIT_PASSTHROUGH if the filter should not be applied, or an error code
+ * to fail out of the filter processing pipeline and return to the caller.
+ *
+ * The `attr_values` will be set to the values of any attributes given in
+ * the filter definition.  See `git_filter` below for more detail.
+ *
+ * The `payload` will be a pointer to a reference payload for the filter.
+ * This will start as NULL, but `check` can assign to this pointer for
+ * later use by the `apply` callback.  Note that the value should be heap
+ * allocated (not stack), so that it doesn't go away before the `apply`
+ * callback can use it.  If a filter allocates and assigns a value to the
+ * `payload`, it will need a `cleanup` callback to free the payload.
  */
 typedef int (*git_filter_check_fn)(
 	git_filter  *self,
@@ -151,6 +182,15 @@ typedef int (*git_filter_check_fn)(
 
 /**
  * Callback to actually perform the data filtering
+ *
+ * Specified as `filter.apply`, this is the callback that actually filters
+ * data.  If it successfully writes the output, it should return 0.  Like
+ * `check`, it can return GIT_PASSTHROUGH to indicate that the filter
+ * doesn't want to run.  Other error codes will stop filter processing and
+ * return to the caller.
+ *
+ * The `payload` value will refer to any payload that was set by the
+ * `check` callback.  It may be read from or written to as needed.
  */
 typedef int (*git_filter_apply_fn)(
 	git_filter    *self,
@@ -161,18 +201,22 @@ typedef int (*git_filter_apply_fn)(
 
 /**
  * Callback to clean up after filtering has been applied
+ *
+ * Specified as `filter.cleanup`, this is an optional callback invoked
+ * after the filter has been applied.  If the `check` or `apply` callbacks
+ * allocated a `payload` to keep per-source filter state, use this
+ * callback to free that payload and release resources as required.
  */
 typedef void (*git_filter_cleanup_fn)(
 	git_filter *self,
 	void       *payload);
 
 /**
- * Filter structure used to register a new filter.
+ * Filter structure used to register custom filters.
  *
- * To associate extra data with a filter, simply allocate extra data
- * and put the `git_filter` struct at the start of your data buffer,
- * then cast the `self` pointer to your larger structure when your
- * callback is invoked.
+ * To associate extra data with a filter, allocate extra data and put the
+ * `git_filter` struct at the start of your data buffer, then cast the
+ * `self` pointer to your larger structure when your callback is invoked.
  *
  * `version` should be set to GIT_FILTER_VERSION
  *
@@ -182,28 +226,8 @@ typedef void (*git_filter_cleanup_fn)(
  * a value (i.e. "name=value"), the attribute must match that value for
  * the filter to be applied.
  *
- * `initialize` is an optional callback invoked before a filter is first
- * used.  It will be called once at most.
- *
- * `shutdown` is an optional callback invoked when the filter is
- * unregistered or when libgit2 is shutting down.  It will be called once
- * at most and should free any memory as needed.
- *
- * `check` is an optional callback that checks if filtering is needed for
- * a given source.  It should return 0 if the filter should be applied
- * (i.e. success), GIT_ENOTFOUND if the filter should not be applied, or
- * an other error code to fail out of the filter processing pipeline and
- * return to the caller.
- *
- * `apply` is the callback that actually filters data.  If it successfully
- * writes the output, it should return 0.  Like `check`, it can return
- * GIT_ENOTFOUND to indicate that the filter doesn't actually want to run.
- * Other error codes will stop filter processing and return to the caller.
- *
- * `cleanup` is an optional callback that is made after the filter has
- * been applied.  Both the `check` and `apply` callbacks are able to
- * allocate a `payload` to keep per-source filter state, and this callback
- * is given that value and can clean up as needed.
+ * The `initialize`, `shutdown`, `check`, `apply`, and `cleanup` callbacks
+ * are all documented above with the respective function pointer typedefs.
  */
 struct git_filter {
 	unsigned int           version;
@@ -222,9 +246,8 @@ struct git_filter {
 /**
  * Register a filter under a given name with a given priority.
  *
- * If non-NULL, the filter's initialize callback will be invoked before
- * the first use of the filter, so you can defer expensive operations (in
- * case libgit2 is being used in a way that doesn't need the filter).
+ * As mentioned elsewhere, the initialize callback will not be invoked
+ * immediately.  It is deferred until the filter is used in some way.
  *
  * A filter's attribute checks and `check` and `apply` callbacks will be
  * issued in order of `priority` on smudge (to workdir), and in reverse
@@ -237,6 +260,14 @@ struct git_filter {
  * Currently the filter registry is not thread safe, so any registering or
  * deregistering of filters must be done outside of any possible usage of
  * the filters (i.e. during application setup or shutdown).
+ *
+ * @param name A name by which the filter can be referenced.  Attempting
+ * 			to register with an in-use name will return GIT_EEXISTS.
+ * @param filter The filter definition.  This pointer will be stored as is
+ * 			by libgit2 so it must be a durable allocation (either static
+ * 			or on the heap).
+ * @param priority The priority for filter application
+ * @return 0 on successful registry, error code <0 on failure
  */
 GIT_EXTERN(int) git_filter_register(
 	const char *name, git_filter *filter, int priority);
@@ -244,11 +275,15 @@ GIT_EXTERN(int) git_filter_register(
 /**
  * Remove the filter with the given name
  *
- * It is not allowed to remove the builtin libgit2 filters.
+ * Attempting to remove the builtin libgit2 filters is not permitted and
+ * will return an error.
  *
  * Currently the filter registry is not thread safe, so any registering or
  * deregistering of filters must be done outside of any possible usage of
  * the filters (i.e. during application setup or shutdown).
+ *
+ * @param name The name under which the filter was registered
+ * @return 0 on success, error code <0 on failure
  */
 GIT_EXTERN(int) git_filter_unregister(const char *name);
 
