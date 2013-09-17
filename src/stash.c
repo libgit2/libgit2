@@ -27,7 +27,7 @@ static int retrieve_head(git_reference **out, git_repository *repo)
 {
 	int error = git_repository_head(out, repo);
 
-	if (error == GIT_EORPHANEDHEAD)
+	if (error == GIT_EUNBORNBRANCH)
 		return create_error(error, "You do not have the initial commit yet.");
 
 	return error;

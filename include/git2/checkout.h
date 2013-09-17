@@ -249,7 +249,7 @@ typedef struct git_checkout_opts {
  *
  * @param repo repository to check out (must be non-bare)
  * @param opts specifies checkout options (may be NULL)
- * @return 0 on success, GIT_EORPHANEDHEAD when HEAD points to a non existing
+ * @return 0 on success, GIT_EUNBORNBRANCH when HEAD points to a non existing
  * branch, GIT_ERROR otherwise (use giterr_last for information
  * about the error)
  */

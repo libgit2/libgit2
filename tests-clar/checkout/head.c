@@ -16,11 +16,11 @@ void test_checkout_head__cleanup(void)
 	cl_git_sandbox_cleanup();
 }
 
-void test_checkout_head__orphaned_head_returns_GIT_EORPHANEDHEAD(void)
+void test_checkout_head__unborn_head_returns_GIT_EUNBORNBRANCH(void)
 {
-	make_head_orphaned(g_repo, NON_EXISTING_HEAD);
+	make_head_unborn(g_repo, NON_EXISTING_HEAD);
 
-	cl_assert_equal_i(GIT_EORPHANEDHEAD, git_checkout_head(g_repo, NULL));
+	cl_assert_equal_i(GIT_EUNBORNBRANCH, git_checkout_head(g_repo, NULL));
 }
 
 void test_checkout_head__with_index_only_tree(void)

@@ -1451,10 +1451,10 @@ int git_repository_head(git_reference **head_out, git_repository *repo)
 	error = git_reference_lookup_resolved(head_out, repo, git_reference_symbolic_target(head), -1);
 	git_reference_free(head);
 
-	return error == GIT_ENOTFOUND ? GIT_EORPHANEDHEAD : error;
+	return error == GIT_ENOTFOUND ? GIT_EUNBORNBRANCH : error;
 }
 
-int git_repository_head_orphan(git_repository *repo)
+int git_repository_head_unborn(git_repository *repo)
 {
 	git_reference *ref = NULL;
 	int error;
@@ -1462,7 +1462,7 @@ int git_repository_head_orphan(git_repository *repo)
 	error = git_repository_head(&ref, repo);
 	git_reference_free(ref);
 
-	if (error == GIT_EORPHANEDHEAD)
+	if (error == GIT_EUNBORNBRANCH)
 		return 1;
 
 	if (error < 0)

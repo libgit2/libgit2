@@ -1232,7 +1232,7 @@ static int checkout_data_init(
 
 		error = checkout_lookup_head_tree(&data->opts.baseline, repo);
 
-		if (error == GIT_EORPHANEDHEAD) {
+		if (error == GIT_EUNBORNBRANCH) {
 			error = 0;
 			giterr_clear();
 		}

@@ -806,7 +806,7 @@ static int remote_head_for_ref(git_remote_head **out, git_refspec *spec, git_vec
 		(!git_reference_is_branch(resolved_ref)) ||
 		(error = git_branch_upstream(&tracking_ref, resolved_ref)) < 0 ||
 		(error = git_refspec_transform_l(&remote_name, spec, git_reference_name(tracking_ref))) < 0) {
-		/* Not an error if HEAD is orphaned or no tracking branch */
+		/* Not an error if HEAD is unborn or no tracking branch */
 		if (error == GIT_ENOTFOUND)
 			error = 0;
 

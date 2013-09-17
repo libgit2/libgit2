@@ -57,11 +57,11 @@ void test_refs_branches_delete__can_delete_a_branch_even_if_HEAD_is_missing(void
 	git_reference_free(branch);
 }
 
-void test_refs_branches_delete__can_delete_a_branch_when_HEAD_is_orphaned(void)
+void test_refs_branches_delete__can_delete_a_branch_when_HEAD_is_unborn(void)
 {
 	git_reference *branch;
 
-	make_head_orphaned(repo, NON_EXISTING_HEAD);
+	make_head_unborn(repo, NON_EXISTING_HEAD);
 
 	cl_git_pass(git_branch_lookup(&branch, repo, "br2", GIT_BRANCH_LOCAL));
 	cl_git_pass(git_branch_delete(branch));

@@ -297,7 +297,7 @@ GIT_EXTERN(int) git_repository_init_ext(
  * @param out pointer to the reference which will be retrieved
  * @param repo a repository object
  *
- * @return 0 on success, GIT_EORPHANEDHEAD when HEAD points to a non existing
+ * @return 0 on success, GIT_EUNBORNBRANCH when HEAD points to a non existing
  * branch, GIT_ENOTFOUND when HEAD is missing; an error code otherwise
  */
 GIT_EXTERN(int) git_repository_head(git_reference **out, git_repository *repo);
@@ -315,16 +315,16 @@ GIT_EXTERN(int) git_repository_head(git_reference **out, git_repository *repo);
 GIT_EXTERN(int) git_repository_head_detached(git_repository *repo);
 
 /**
- * Check if the current branch is an orphan
+ * Check if the current branch is unborn
  *
- * An orphan branch is one named from HEAD but which doesn't exist in
+ * An unborn branch is one named from HEAD but which doesn't exist in
  * the refs namespace, because it doesn't have any commit to point to.
  *
  * @param repo Repo to test
- * @return 1 if the current branch is an orphan, 0 if it's not; error
+ * @return 1 if the current branch is unborn, 0 if it's not; error
  * code if there was an error
  */
-GIT_EXTERN(int) git_repository_head_orphan(git_repository *repo);
+GIT_EXTERN(int) git_repository_head_unborn(git_repository *repo);
 
 /**
  * Check if a repository is empty
@@ -611,7 +611,7 @@ GIT_EXTERN(int) git_repository_set_head_detached(
  * Otherwise, the HEAD will be detached and point to the peeled Commit.
  *
  * @param repo Repository pointer
- * @return 0 on success, GIT_EORPHANEDHEAD when HEAD points to a non existing
+ * @return 0 on success, GIT_EUNBORNBRANCH when HEAD points to a non existing
  * branch or an error code
  */
 GIT_EXTERN(int) git_repository_detach_head(
