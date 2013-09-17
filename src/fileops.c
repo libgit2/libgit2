@@ -583,7 +583,7 @@ clean_up:
 static int git_futils_guess_system_dirs(git_buf *out)
 {
 #ifdef GIT_WIN32
-	return git_win32__find_system_dirs(out);
+	return git_win32__find_system_dirs(out, L"etc\\");
 #else
 	return git_buf_sets(out, "/etc");
 #endif
@@ -615,15 +615,25 @@ static int git_futils_guess_xdg_dirs(git_buf *out)
 #endif
 }
 
+static int git_futils_guess_template_dirs(git_buf *out)
+{
+#ifdef GIT_WIN32
+	return git_win32__find_system_dirs(out, L"share\\git-core\\templates");
+#else
+	return git_buf_sets(out, "/usr/share/git-core/templates");
+#endif
+}
+
 typedef int (*git_futils_dirs_guess_cb)(git_buf *out);
 
 static git_buf git_futils__dirs[GIT_FUTILS_DIR__MAX] =
-	{ GIT_BUF_INIT, GIT_BUF_INIT, GIT_BUF_INIT };
+	{ GIT_BUF_INIT, GIT_BUF_INIT, GIT_BUF_INIT, GIT_BUF_INIT };
 
 static git_futils_dirs_guess_cb git_futils__dir_guess[GIT_FUTILS_DIR__MAX] = {
 	git_futils_guess_system_dirs,
 	git_futils_guess_global_dirs,
 	git_futils_guess_xdg_dirs,
+	git_futils_guess_template_dirs,
 };
 
 static void git_futils_dirs_global_shutdown(void)
@@ -746,7 +756,8 @@ static int git_futils_find_in_dirlist(
 			continue;
 
 		GITERR_CHECK_ERROR(git_buf_set(path, scan, len));
-		GITERR_CHECK_ERROR(git_buf_joinpath(path, path->ptr, name));
+		if (name)
+			GITERR_CHECK_ERROR(git_buf_joinpath(path, path->ptr, name));
 
 		if (git_path_exists(path->ptr))
 			return 0;
@@ -773,6 +784,12 @@ int git_futils_find_xdg_file(git_buf *path, const char *filename)
 {
 	return git_futils_find_in_dirlist(
 		path, filename, GIT_FUTILS_DIR_XDG, "global/xdg");
+}
+
+int git_futils_find_template_dir(git_buf *path)
+{
+	return git_futils_find_in_dirlist(
+		path, NULL, GIT_FUTILS_DIR_TEMPLATE, "template");
 }
 
 int git_futils_fake_symlink(const char *old, const char *new)
