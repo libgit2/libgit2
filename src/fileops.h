@@ -306,11 +306,20 @@ extern int git_futils_find_xdg_file(git_buf *path, const char *filename);
  */
 extern int git_futils_find_system_file(git_buf *path, const char *filename);
 
+/**
+ * Find template directory.
+ *
+ * @param path buffer to write the full path into
+ * @return 0 if found, GIT_ENOTFOUND if not found, or -1 on other OS error
+ */
+extern int git_futils_find_template_dir(git_buf *path);
+
 typedef enum {
 	GIT_FUTILS_DIR_SYSTEM = 0,
 	GIT_FUTILS_DIR_GLOBAL = 1,
 	GIT_FUTILS_DIR_XDG    = 2,
-	GIT_FUTILS_DIR__MAX   = 3,
+	GIT_FUTILS_DIR_TEMPLATE = 3,
+	GIT_FUTILS_DIR__MAX   = 4,
 } git_futils_dir_t;
 
 /**

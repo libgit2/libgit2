@@ -33,8 +33,6 @@
 
 #define GIT_REPO_VERSION 0
 
-#define GIT_TEMPLATE_DIR "/usr/share/git-core/templates"
-
 static void set_odb(git_repository *repo, git_odb *odb)
 {
 	if (odb) {
@@ -1136,6 +1134,9 @@ static int repo_init_structure(
 	if (external_tpl) {
 		git_config *cfg;
 		const char *tdir;
+		git_buf template_buf = GIT_BUF_INIT;
+
+		git_futils_find_template_dir(&template_buf);
 
 		if (opts->template_path)
 			tdir = opts->template_path;
@@ -1150,7 +1151,7 @@ static int repo_init_structure(
 				return error;
 
 			giterr_clear();
-			tdir = GIT_TEMPLATE_DIR;
+			tdir = template_buf.ptr;
 		}
 
 		error = git_futils_cp_r(tdir, repo_dir,
@@ -1158,14 +1159,17 @@ static int repo_init_structure(
 			GIT_CPDIR_SIMPLE_TO_MODE, dmode);
 
 		if (error < 0) {
-			if (strcmp(tdir, GIT_TEMPLATE_DIR) != 0)
+			if (strcmp(tdir, template_buf.ptr) != 0) {
+				git_buf_free(&template_buf);
 				return error;
+			}
 
 			/* if template was default, ignore error and use internal */
 			giterr_clear();
 			external_tpl = false;
 			error = 0;
 		}
+		git_buf_free(&template_buf);
 	}
 
 	/* Copy internal template
