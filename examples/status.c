@@ -71,7 +71,7 @@ static void show_branch(git_repository *repo, int format)
 
 	error = git_repository_head(&head, repo);
 
-	if (error == GIT_EORPHANEDHEAD || error == GIT_ENOTFOUND)
+	if (error == GIT_EUNBORNBRANCH || error == GIT_ENOTFOUND)
 		branch = NULL;
 	else if (!error) {
 		branch = git_reference_name(head);

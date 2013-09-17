@@ -415,7 +415,7 @@ static bool should_checkout(
 	if (opts->checkout_strategy == GIT_CHECKOUT_NONE)
 		return false;
 
-	return !git_repository_head_orphan(repo);
+	return !git_repository_head_unborn(repo);
 }
 
 static void normalize_options(git_clone_options *dst, const git_clone_options *src, git_repository_init_options *initOptions)
