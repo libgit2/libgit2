@@ -374,9 +374,9 @@ static struct origin* find_origin(struct scoreboard *sb, git_commit *parent,
 	git_tree *otree=NULL, *ptree=NULL;
 
 	/* Get the trees from this commit and its parent */
-	// TODO: check errors
-	git_commit_tree(&otree, origin->commit);
-	git_commit_tree(&ptree, parent);
+	if (0 != git_commit_tree(&otree, origin->commit) ||
+	    0 != git_commit_tree(&ptree, parent))
+		goto cleanup;
 
 	/* Configure the diff */
 	diffopts.context_lines = 0;
@@ -385,12 +385,11 @@ static struct origin* find_origin(struct scoreboard *sb, git_commit *parent,
 	/* Check to see if files we're interested have changed */
 	diffopts.pathspec.count = sb->blame->paths.length;
 	diffopts.pathspec.strings = (char**)sb->blame->paths.contents;
-	// TODO: check error
-	git_diff_tree_to_tree(&difflist, sb->blame->repository, ptree, otree, &diffopts);
+	if (0 != git_diff_tree_to_tree(&difflist, sb->blame->repository, ptree, otree, &diffopts))
+			goto cleanup;
 
 	if (!git_diff_num_deltas(difflist)) {
 		/* No changes; copy data */
-		// TODO: check error
 		get_origin(&porigin, sb, parent, origin->path);
 	} else {
 		git_diff_find_options findopts = GIT_DIFF_FIND_OPTIONS_INIT;
@@ -399,13 +398,13 @@ static struct origin* find_origin(struct scoreboard *sb, git_commit *parent,
 		/* Generate a full diff between the two trees */
 		git_diff_list_free(difflist);
 		diffopts.pathspec.count = 0;
-		// TODO: check error
-		git_diff_tree_to_tree(&difflist, sb->blame->repository, ptree, otree, &diffopts);
+		if (0 != git_diff_tree_to_tree(&difflist, sb->blame->repository, ptree, otree, &diffopts))
+			goto cleanup;
 
 		/* Let diff find renames */
 		findopts.flags = GIT_DIFF_FIND_RENAMES;
-		// TODO: check error
-		git_diff_find_similar(difflist, &findopts);
+		if (0 != git_diff_find_similar(difflist, &findopts))
+			goto cleanup;
 
 		/* Find one that matches */
 		for (i=0; i<(int)git_diff_num_deltas(difflist); i++) {
@@ -415,16 +414,15 @@ static struct origin* find_origin(struct scoreboard *sb, git_commit *parent,
 				continue;
 
 			git_vector_insert_sorted(&sb->blame->paths, (void*)git__strdup(delta->old_file.path), paths_on_dup);
-			// TODO: check error
 			make_origin(&porigin, parent, delta->old_file.path);
 		}
 	}
 
+cleanup:
 	git_diff_list_free(difflist);
 	git_tree_free(otree);
 	git_tree_free(ptree);
 	return porigin;
-
 }
 
 /*
@@ -472,7 +470,6 @@ static void pass_blame(struct scoreboard *sb, struct origin *origin, uint32_t op
 		if (sg_origin[i])
 			continue;
 
-		// TODO: check error
 		git_commit_parent(&p, origin->commit, i);
 		porigin = find_origin(sb, p, origin);
 
