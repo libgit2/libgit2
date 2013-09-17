@@ -7,6 +7,8 @@ static git_repository *g_repo = NULL;
 void test_diff_rename__initialize(void)
 {
 	g_repo = cl_git_sandbox_init("renames");
+
+	cl_repo_set_bool(g_repo, "core.autocrlf", false);
 }
 
 void test_diff_rename__cleanup(void)

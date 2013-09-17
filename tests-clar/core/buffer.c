@@ -919,6 +919,8 @@ void test_core_buffer__similarity_metric_whitespace(void)
 	git_buf_free(&buf);
 }
 
+#include "../filter/crlf.h"
+
 #define check_buf(expected,buf) do { \
 	cl_assert_equal_s(expected, buf.ptr); \
 	cl_assert_equal_sz(strlen(expected), buf.size); } while (0)
@@ -934,16 +936,16 @@ void test_core_buffer__lf_and_crlf_conversions(void)
 	cl_git_pass(git_buf_text_lf_to_crlf(&tgt, &src));
 	check_buf("lf\r\nlf\r\nlf\r\nlf\r\n", tgt);
 
-	cl_assert_equal_i(GIT_ENOTFOUND, git_buf_text_crlf_to_lf(&tgt, &src));
-	/* no conversion needed if all LFs already */
+	cl_git_pass(git_buf_text_crlf_to_lf(&tgt, &src));
+	check_buf(src.ptr, tgt);
 
 	git_buf_sets(&src, "\nlf\nlf\nlf\nlf\nlf");
 
 	cl_git_pass(git_buf_text_lf_to_crlf(&tgt, &src));
 	check_buf("\r\nlf\r\nlf\r\nlf\r\nlf\r\nlf", tgt);
 
-	cl_assert_equal_i(GIT_ENOTFOUND, git_buf_text_crlf_to_lf(&tgt, &src));
-	/* no conversion needed if all LFs already */
+	cl_git_pass(git_buf_text_crlf_to_lf(&tgt, &src));
+	check_buf(src.ptr, tgt);
 
 	/* CRLF source */
 
@@ -993,10 +995,45 @@ void test_core_buffer__lf_and_crlf_conversions(void)
 	check_buf("\rcrlf\nlf\nlf\ncr\rcrlf\nlf\ncr\r", tgt);
 
 	git_buf_sets(&src, "\rcr\r");
-	cl_assert_equal_i(GIT_ENOTFOUND, git_buf_text_lf_to_crlf(&tgt, &src));
+	cl_git_pass(git_buf_text_lf_to_crlf(&tgt, &src));
+	check_buf(src.ptr, tgt);
 	cl_git_pass(git_buf_text_crlf_to_lf(&tgt, &src));
 	check_buf("\rcr\r", tgt);
 
+	git_buf_free(&src);
+	git_buf_free(&tgt);
+
+	/* blob correspondence tests */
+
+	git_buf_sets(&src, ALL_CRLF_TEXT_RAW);
+	cl_git_pass(git_buf_text_lf_to_crlf(&tgt, &src));
+	check_buf(ALL_CRLF_TEXT_AS_CRLF, tgt);
+	cl_git_pass(git_buf_text_crlf_to_lf(&tgt, &src));
+	check_buf(ALL_CRLF_TEXT_AS_LF, tgt);
+	git_buf_free(&src);
+	git_buf_free(&tgt);
+
+	git_buf_sets(&src, ALL_LF_TEXT_RAW);
+	cl_git_pass(git_buf_text_lf_to_crlf(&tgt, &src));
+	check_buf(ALL_LF_TEXT_AS_CRLF, tgt);
+	cl_git_pass(git_buf_text_crlf_to_lf(&tgt, &src));
+	check_buf(ALL_LF_TEXT_AS_LF, tgt);
+	git_buf_free(&src);
+	git_buf_free(&tgt);
+
+	git_buf_sets(&src, MORE_CRLF_TEXT_RAW);
+	cl_git_pass(git_buf_text_lf_to_crlf(&tgt, &src));
+	check_buf(MORE_CRLF_TEXT_AS_CRLF, tgt);
+	cl_git_pass(git_buf_text_crlf_to_lf(&tgt, &src));
+	check_buf(MORE_CRLF_TEXT_AS_LF, tgt);
+	git_buf_free(&src);
+	git_buf_free(&tgt);
+
+	git_buf_sets(&src, MORE_LF_TEXT_RAW);
+	cl_git_pass(git_buf_text_lf_to_crlf(&tgt, &src));
+	check_buf(MORE_LF_TEXT_AS_CRLF, tgt);
+	cl_git_pass(git_buf_text_crlf_to_lf(&tgt, &src));
+	check_buf(MORE_LF_TEXT_AS_LF, tgt);
 	git_buf_free(&src);
 	git_buf_free(&tgt);
 }

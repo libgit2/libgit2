@@ -632,35 +632,12 @@ void test_status_worktree__conflicted_item(void)
 
 static void stage_and_commit(git_repository *repo, const char *path)
 {
-	git_oid tree_oid, commit_oid;
-	git_tree *tree;
-	git_signature *signature;
 	git_index *index;
 
 	cl_git_pass(git_repository_index(&index, repo));
 	cl_git_pass(git_index_add_bypath(index, path));
-	cl_git_pass(git_index_write(index));
-
-	cl_git_pass(git_index_write_tree(&tree_oid, index));
+	cl_repo_commit_from_index(NULL, repo, NULL, 1323847743, "Initial commit\n");
 	git_index_free(index);
-
-	cl_git_pass(git_tree_lookup(&tree, repo, &tree_oid));
-
-	cl_git_pass(git_signature_new(&signature, "nulltoken", "emeric.fermas@gmail.com", 1323847743, 60));
-
-	cl_git_pass(git_commit_create_v(
-		&commit_oid,
-		repo,
-		"HEAD",
-		signature,
-		signature,
-		NULL,
-		"Initial commit\n\0",
-		tree,
-		0));
-
-	git_tree_free(tree);
-	git_signature_free(signature);
 }
 
 static void assert_ignore_case(

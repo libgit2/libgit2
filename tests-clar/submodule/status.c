@@ -14,7 +14,6 @@ void test_submodule_status__initialize(void)
 
 void test_submodule_status__cleanup(void)
 {
-	cleanup_fixture_submodules();
 }
 
 void test_submodule_status__unchanged(void)

@@ -568,21 +568,21 @@ int git_diff__oid_for_file(
 		giterr_set(GITERR_OS, "File size overflow (for 32-bits) on '%s'", path);
 		result = -1;
 	} else {
-		git_vector filters = GIT_VECTOR_INIT;
+		git_filter_list *fl = NULL;
 
-		result = git_filters_load(&filters, repo, path, GIT_FILTER_TO_ODB);
-		if (result >= 0) {
+		result = git_filter_list_load(&fl, repo, NULL, path, GIT_FILTER_TO_ODB);
+		if (!result) {
 			int fd = git_futils_open_ro(full_path.ptr);
 			if (fd < 0)
 				result = fd;
 			else {
 				result = git_odb__hashfd_filtered(
-					oid, fd, (size_t)size, GIT_OBJ_BLOB, &filters);
+					oid, fd, (size_t)size, GIT_OBJ_BLOB, fl);
 				p_close(fd);
 			}
-		}
 
-		git_filters_free(&filters);
+			git_filter_list_free(fl);
+		}
 	}
 
 cleanup:

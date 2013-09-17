@@ -565,6 +565,11 @@ void test_repo_init__init_with_initial_commit(void)
 	cl_git_pass(git_index_add_bypath(index, "file.txt"));
 	cl_git_pass(git_index_write(index));
 
+	/* Intentionally not using cl_repo_commit_from_index here so this code
+	 * can be used as an example of how an initial commit is typically
+	 * made to a repository...
+	 */
+
 	/* Make sure we're ready to use git_signature_default :-) */
 	{
 		git_config *cfg, *local;

@@ -12,6 +12,8 @@ int main (int argc, char** argv)
 	char out[41];
 	out[40] = '\0';
 
+	git_threads_init();
+
 	if (argc > 1)
 		dir = argv[1];
 	if (!dir || argc > 2) {
@@ -61,6 +63,8 @@ int main (int argc, char** argv)
 
 	git_index_free(index);
 	git_repository_free(repo);
+
+	git_threads_shutdown();
 
 	return 0;
 }

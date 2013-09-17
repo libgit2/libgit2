@@ -69,6 +69,5 @@ int pthread_rwlock_wrunlock(pthread_rwlock_t *);
 int pthread_rwlock_destroy(pthread_rwlock_t *);
 
 extern int win32_pthread_initialize(void);
-extern int win32_pthread_shutdown(void);
 
 #endif

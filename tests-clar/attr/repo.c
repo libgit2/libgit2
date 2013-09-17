@@ -100,6 +100,22 @@ void test_attr_repo__get_many(void)
 	cl_assert_equal_s("yes", values[3]);
 }
 
+void test_attr_repo__get_many_in_place(void)
+{
+	const char *vals[4] = { "repoattr", "rootattr", "missingattr", "subattr" };
+
+	/* it should be legal to look up values into the same array that has
+	 * the attribute names, overwriting each name as the value is found.
+	 */
+
+	cl_git_pass(git_attr_get_many(vals, g_repo, 0, "sub/subdir_test1", 4, vals));
+
+	cl_assert(GIT_ATTR_TRUE(vals[0]));
+	cl_assert(GIT_ATTR_TRUE(vals[1]));
+	cl_assert(GIT_ATTR_UNSPECIFIED(vals[2]));
+	cl_assert_equal_s("yes", vals[3]);
+}
+
 static int count_attrs(
 	const char *name,
 	const char *value,

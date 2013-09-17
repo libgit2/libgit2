@@ -108,29 +108,21 @@ static int write_file_filtered(
 	git_off_t *size,
 	git_odb *odb,
 	const char *full_path,
-	git_vector *filters)
+	git_filter_list *fl)
 {
 	int error;
-	git_buf source = GIT_BUF_INIT;
-	git_buf dest = GIT_BUF_INIT;
+	git_buf tgt = GIT_BUF_INIT;
 
-	if ((error = git_futils_readbuffer(&source, full_path)) < 0)
-		return error;
-
-	error = git_filters_apply(&dest, &source, filters);
-
-	/* Free the source as soon as possible. This can be big in memory,
-	 * and we don't want to ODB write to choke */
-	git_buf_free(&source);
+	error = git_filter_list_apply_to_file(&tgt, fl, NULL, full_path);
 
 	/* Write the file to disk if it was properly filtered */
 	if (!error) {
-		*size = dest.size;
+		*size = tgt.size;
 
-		error = git_odb_write(oid, odb, dest.ptr, dest.size, GIT_OBJ_BLOB);
+		error = git_odb_write(oid, odb, tgt.ptr, tgt.size, GIT_OBJ_BLOB);
 	}
 
-	git_buf_free(&dest);
+	git_buf_free(&tgt);
 	return error;
 }
 
@@ -198,29 +190,25 @@ int git_blob__create_from_paths(
 	if (S_ISLNK(mode)) {
 		error = write_symlink(oid, odb, content_path, (size_t)size);
 	} else {
-		git_vector write_filters = GIT_VECTOR_INIT;
-		int filter_count = 0;
+		git_filter_list *fl = NULL;
 
-		if (try_load_filters) {
+		if (try_load_filters)
 			/* Load the filters for writing this file to the ODB */
-			filter_count = git_filters_load(
-				&write_filters, repo, hint_path, GIT_FILTER_TO_ODB);
-		}
+			error = git_filter_list_load(
+				&fl, repo, NULL, hint_path, GIT_FILTER_TO_ODB);
 
-		if (filter_count < 0) {
-			/* Negative value means there was a critical error */
-			error = filter_count;
-		} else if (filter_count == 0) {
+		if (error < 0)
+			/* well, that didn't work */;
+		else if (fl == NULL)
 			/* No filters need to be applied to the document: we can stream
 			 * directly from disk */
 			error = write_file_stream(oid, odb, content_path, size);
-		} else {
+		else {
 			/* We need to apply one or more filters */
-			error = write_file_filtered(
-				oid, &size, odb, content_path, &write_filters);
-		}
+			error = write_file_filtered(oid, &size, odb, content_path, fl);
 
-		git_filters_free(&write_filters);
+			git_filter_list_free(fl);
+		}
 
 		/*
 		 * TODO: eventually support streaming filtered files, for files
@@ -333,8 +321,34 @@ int git_blob_is_binary(git_blob *blob)
 
 	assert(blob);
 
-	content.ptr = blob->odb_object->buffer;
-	content.size = min(blob->odb_object->cached.size, 4000);
+	content.ptr   = blob->odb_object->buffer;
+	content.size  = min(blob->odb_object->cached.size, 4000);
+	content.asize = 0;
 
 	return git_buf_text_is_binary(&content);
+}
+
+int git_blob_filtered_content(
+	git_buf *out,
+	git_blob *blob,
+	const char *path,
+	int check_for_binary_data)
+{
+	int error = 0;
+	git_filter_list *fl = NULL;
+
+	assert(blob && path && out);
+
+	if (check_for_binary_data && git_blob_is_binary(blob))
+		return 0;
+
+	if (!(error = git_filter_list_load(
+			&fl, git_blob_owner(blob), blob, path, GIT_FILTER_TO_WORKTREE))) {
+
+		error = git_filter_list_apply_to_blob(out, fl, blob);
+
+		git_filter_list_free(fl);
+	}
+
+	return error;
 }
