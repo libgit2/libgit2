@@ -310,7 +310,8 @@ typedef enum {
 	GIT_FUTILS_DIR_SYSTEM = 0,
 	GIT_FUTILS_DIR_GLOBAL = 1,
 	GIT_FUTILS_DIR_XDG    = 2,
-	GIT_FUTILS_DIR__MAX   = 3,
+	GIT_FUTILS_DIR_TEMPLATE = 3,
+	GIT_FUTILS_DIR__MAX   = 4,
 } git_futils_dir_t;
 
 /**

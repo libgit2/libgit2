@@ -624,15 +624,25 @@ static int git_futils_guess_xdg_dirs(git_buf *out)
 #endif
 }
 
+static int git_futils_guess_template_dirs(git_buf *out)
+{
+#ifdef GIT_WIN32
+	return git_win32__find_system_dirs(out, L"share\\git-core\\templates");
+#else
+	return git_buf_sets(out, "/usr/share/git-core/templates");
+#endif
+}
+
 typedef int (*git_futils_dirs_guess_cb)(git_buf *out);
 
 static git_buf git_futils__dirs[GIT_FUTILS_DIR__MAX] =
-	{ GIT_BUF_INIT, GIT_BUF_INIT, GIT_BUF_INIT };
+	{ GIT_BUF_INIT, GIT_BUF_INIT, GIT_BUF_INIT, GIT_BUF_INIT };
 
 static git_futils_dirs_guess_cb git_futils__dir_guess[GIT_FUTILS_DIR__MAX] = {
 	git_futils_guess_system_dirs,
 	git_futils_guess_global_dirs,
 	git_futils_guess_xdg_dirs,
+	git_futils_guess_template_dirs,
 };
 
 int git_futils_dirs_global_init(void)
