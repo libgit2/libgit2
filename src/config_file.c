@@ -15,6 +15,7 @@
 #include "git2/sys/config.h"
 #include "git2/types.h"
 #include "strmap.h"
+#include "array.h"
 
 #include <ctype.h>
 #include <sys/types.h>
@@ -25,6 +26,7 @@ GIT__USE_STRMAP;
 typedef struct cvar_t {
 	struct cvar_t *next;
 	git_config_entry *entry;
+	int included; /* whether this is part of [include] */
 } cvar_t;
 
 typedef struct git_config_file_iter {
@@ -33,6 +35,8 @@ typedef struct git_config_file_iter {
 	cvar_t* next_var;
 } git_config_file_iter;
 
+/* Max depth for [include] directives */
+#define MAX_INCLUDE_DEPTH 10
 
 #define CVAR_LIST_HEAD(list) ((list)->head)
 
@@ -72,34 +76,37 @@ typedef struct git_config_file_iter {
 		 (iter) && (((tmp) = CVAR_LIST_NEXT(iter) || 1));\
 		 (iter) = (tmp))
 
+struct reader {
+	time_t file_mtime;
+	size_t file_size;
+	char *file_path;
+	git_buf buffer;
+	char *read_ptr;
+	int line_number;
+	int eof;
+};
+
 typedef struct {
 	git_config_backend parent;
 
 	git_strmap *values;
 
-	struct {
-		git_buf buffer;
-		char *read_ptr;
-		int line_number;
-		int eof;
-	} reader;
+	git_array_t(struct reader) readers;
 
 	char  *file_path;
-	time_t file_mtime;
-	size_t file_size;
 
 	git_config_level_t level;
 } diskfile_backend;
 
-static int config_parse(diskfile_backend *cfg_file, git_config_level_t level);
-static int parse_variable(diskfile_backend *cfg, char **var_name, char **var_value);
+static int config_parse(diskfile_backend *cfg_file, struct reader *reader, git_config_level_t level, int depth);
+static int parse_variable(struct reader *reader, char **var_name, char **var_value);
 static int config_write(diskfile_backend *cfg, const char *key, const regex_t *preg, const char *value);
 static char *escape_value(const char *ptr);
 
-static void set_parse_error(diskfile_backend *backend, int col, const char *error_str)
+static void set_parse_error(struct reader *reader, int col, const char *error_str)
 {
 	giterr_set(GITERR_CONFIG, "Failed to parse config file: %s (in %s:%d, column %d)",
-		error_str, backend->file_path, backend->reader.line_number, col);
+		error_str, reader->file_path, reader->line_number, col);
 }
 
 static void cvar_free(cvar_t *var)
@@ -156,6 +163,7 @@ static void free_vars(git_strmap *values)
 static int config_open(git_config_backend *cfg, git_config_level_t level)
 {
 	int res;
+	struct reader *reader;
 	diskfile_backend *b = (diskfile_backend *)cfg;
 
 	b->level = level;
@@ -163,32 +171,52 @@ static int config_open(git_config_backend *cfg, git_config_level_t level)
 	b->values = git_strmap_alloc();
 	GITERR_CHECK_ALLOC(b->values);
 
-	git_buf_init(&b->reader.buffer, 0);
+	git_array_init(b->readers);
+	reader = git_array_alloc(b->readers);
+	memset(reader, 0, sizeof(struct reader));
+
+	reader->file_path = git__strdup(b->file_path);
+	GITERR_CHECK_ALLOC(reader->file_path);
+
+	git_buf_init(&reader->buffer, 0);
 	res = git_futils_readbuffer_updated(
-		&b->reader.buffer, b->file_path, &b->file_mtime, &b->file_size, NULL);
+		&reader->buffer, b->file_path, &reader->file_mtime, &reader->file_size, NULL);
 
 	/* It's fine if the file doesn't exist */
 	if (res == GIT_ENOTFOUND)
 		return 0;
 
-	if (res < 0 || (res = config_parse(b, level)) < 0) {
+	if (res < 0 || (res = config_parse(b, reader, level, 0)) < 0) {
 		free_vars(b->values);
 		b->values = NULL;
 	}
 
-	git_buf_free(&b->reader.buffer);
+	reader = git_array_get(b->readers, 0);
+	git_buf_free(&reader->buffer);
 	return res;
 }
 
 static int config_refresh(git_config_backend *cfg)
 {
-	int res, updated = 0;
+	int res = 0, updated = 0, any_updated = 0;
 	diskfile_backend *b = (diskfile_backend *)cfg;
 	git_strmap *old_values;
+	struct reader *reader;
+	uint32_t i;
 
-	res = git_futils_readbuffer_updated(
-		&b->reader.buffer, b->file_path, &b->file_mtime, &b->file_size, &updated);
-	if (res < 0 || !updated)
+	for (i = 0; i < git_array_size(b->readers); i++) {
+		reader = git_array_get(b->readers, i);
+		res = git_futils_readbuffer_updated(
+			&reader->buffer, reader->file_path, &reader->file_mtime, &reader->file_size, &updated);
+
+		if (res < 0)
+			return (res == GIT_ENOTFOUND) ? 0 : res;
+
+		if (updated)
+			any_updated = 1;
+	}
+
+	if (!any_updated)
 		return (res == GIT_ENOTFOUND) ? 0 : res;
 
 	/* need to reload - store old values and prep for reload */
@@ -196,23 +224,30 @@ static int config_refresh(git_config_backend *cfg)
 	b->values = git_strmap_alloc();
 	GITERR_CHECK_ALLOC(b->values);
 
-	if ((res = config_parse(b, b->level)) < 0) {
+	if ((res = config_parse(b, reader, b->level, 0)) < 0) {
 		free_vars(b->values);
 		b->values = old_values;
 	} else {
 		free_vars(old_values);
 	}
 
-	git_buf_free(&b->reader.buffer);
+	git_buf_free(&reader->buffer);
 	return res;
 }
 
 static void backend_free(git_config_backend *_backend)
 {
 	diskfile_backend *backend = (diskfile_backend *)_backend;
+	uint32_t i;
 
 	if (backend == NULL)
 		return;
+
+	for (i = 0; i < git_array_size(backend->readers); i++) {
+		struct reader *r = git_array_get(backend->readers, i);
+		git__free(r->file_path);
+	}
+	git_array_clear(backend->readers);
 
 	git__free(backend->file_path);
 	free_vars(backend->values);
@@ -361,6 +396,7 @@ static int config_get(const git_config_backend *cfg, const char *name, const git
 	char *key;
 	khiter_t pos;
 	int error;
+	cvar_t *var;
 
 	if ((error = git_config__normalize_name(name, &key)) < 0)
 		return error;
@@ -372,7 +408,11 @@ static int config_get(const git_config_backend *cfg, const char *name, const git
 	if (!git_strmap_valid_index(b->values, pos))
 		return GIT_ENOTFOUND;
 
-	*out = ((cvar_t *)git_strmap_value_at(b->values, pos))->entry;
+	var = git_strmap_value_at(b->values, pos);
+	while (var->next)
+		var = var->next;
+
+	*out = var->entry;
 
 	return 0;
 }
@@ -515,26 +555,26 @@ int git_config_file__ondisk(git_config_backend **out, const char *path)
 	return 0;
 }
 
-static int cfg_getchar_raw(diskfile_backend *cfg)
+static int reader_getchar_raw(struct reader *reader)
 {
 	int c;
 
-	c = *cfg->reader.read_ptr++;
+	c = *reader->read_ptr++;
 
 	/*
 	Win 32 line breaks: if we find a \r\n sequence,
 	return only the \n as a newline
 	*/
-	if (c == '\r' && *cfg->reader.read_ptr == '\n') {
-		cfg->reader.read_ptr++;
+	if (c == '\r' && *reader->read_ptr == '\n') {
+		reader->read_ptr++;
 		c = '\n';
 	}
 
 	if (c == '\n')
-		cfg->reader.line_number++;
+		reader->line_number++;
 
 	if (c == 0) {
-		cfg->reader.eof = 1;
+		reader->eof = 1;
 		c = '\n';
 	}
 
@@ -544,21 +584,23 @@ static int cfg_getchar_raw(diskfile_backend *cfg)
 #define SKIP_WHITESPACE (1 << 1)
 #define SKIP_COMMENTS (1 << 2)
 
-static int cfg_getchar(diskfile_backend *cfg_file, int flags)
+static int reader_getchar(struct reader *reader, int flags)
 {
 	const int skip_whitespace = (flags & SKIP_WHITESPACE);
 	const int skip_comments = (flags & SKIP_COMMENTS);
 	int c;
 
-	assert(cfg_file->reader.read_ptr);
+	assert(reader->read_ptr);
 
-	do c = cfg_getchar_raw(cfg_file);
-	while (skip_whitespace && git__isspace(c) &&
-	       !cfg_file->reader.eof);
+	do {
+		c = reader_getchar_raw(reader);
+	} while (skip_whitespace && git__isspace(c) &&
+	       !reader->eof);
 
 	if (skip_comments && (c == '#' || c == ';')) {
-		do c = cfg_getchar_raw(cfg_file);
-		while (c != '\n');
+		do {
+			c = reader_getchar_raw(reader);
+		} while (c != '\n');
 	}
 
 	return c;
@@ -567,23 +609,23 @@ static int cfg_getchar(diskfile_backend *cfg_file, int flags)
 /*
  * Read the next char, but don't move the reading pointer.
  */
-static int cfg_peek(diskfile_backend *cfg, int flags)
+static int reader_peek(struct reader *reader, int flags)
 {
 	void *old_read_ptr;
 	int old_lineno, old_eof;
 	int ret;
 
-	assert(cfg->reader.read_ptr);
+	assert(reader->read_ptr);
 
-	old_read_ptr = cfg->reader.read_ptr;
-	old_lineno = cfg->reader.line_number;
-	old_eof = cfg->reader.eof;
+	old_read_ptr = reader->read_ptr;
+	old_lineno = reader->line_number;
+	old_eof = reader->eof;
 
-	ret = cfg_getchar(cfg, flags);
+	ret = reader_getchar(reader, flags);
 
-	cfg->reader.read_ptr = old_read_ptr;
-	cfg->reader.line_number = old_lineno;
-	cfg->reader.eof = old_eof;
+	reader->read_ptr = old_read_ptr;
+	reader->line_number = old_lineno;
+	reader->eof = old_eof;
 
 	return ret;
 }
@@ -591,13 +633,13 @@ static int cfg_peek(diskfile_backend *cfg, int flags)
 /*
  * Read and consume a line, returning it in newly-allocated memory.
  */
-static char *cfg_readline(diskfile_backend *cfg, bool skip_whitespace)
+static char *reader_readline(struct reader *reader, bool skip_whitespace)
 {
 	char *line = NULL;
 	char *line_src, *line_end;
 	size_t line_len;
 
-	line_src = cfg->reader.read_ptr;
+	line_src = reader->read_ptr;
 
 	if (skip_whitespace) {
 		/* Skip empty empty lines */
@@ -626,10 +668,10 @@ static char *cfg_readline(diskfile_backend *cfg, bool skip_whitespace)
 		line_end++;
 
 	if (*line_end == '\0')
-		cfg->reader.eof = 1;
+		reader->eof = 1;
 
-	cfg->reader.line_number++;
-	cfg->reader.read_ptr = line_end;
+	reader->line_number++;
+	reader->read_ptr = line_end;
 
 	return line;
 }
@@ -637,11 +679,11 @@ static char *cfg_readline(diskfile_backend *cfg, bool skip_whitespace)
 /*
  * Consume a line, without storing it anywhere
  */
-static void cfg_consume_line(diskfile_backend *cfg)
+static void reader_consume_line(struct reader *reader)
 {
 	char *line_start, *line_end;
 
-	line_start = cfg->reader.read_ptr;
+	line_start = reader->read_ptr;
 	line_end = strchr(line_start, '\n');
 	/* No newline at EOF */
 	if(line_end == NULL){
@@ -652,10 +694,10 @@ static void cfg_consume_line(diskfile_backend *cfg)
 		line_end++;
 
 	if (*line_end == '\0')
-		cfg->reader.eof = 1;
+		reader->eof = 1;
 
-	cfg->reader.line_number++;
-	cfg->reader.read_ptr = line_end;
+	reader->line_number++;
+	reader->read_ptr = line_end;
 }
 
 GIT_INLINE(int) config_keychar(int c)
@@ -663,7 +705,7 @@ GIT_INLINE(int) config_keychar(int c)
 	return isalnum(c) || c == '-';
 }
 
-static int parse_section_header_ext(diskfile_backend *cfg, const char *line, const char *base_name, char **section_name)
+static int parse_section_header_ext(struct reader *reader, const char *line, const char *base_name, char **section_name)
 {
 	int c, rpos;
 	char *first_quote, *last_quote;
@@ -679,7 +721,7 @@ static int parse_section_header_ext(diskfile_backend *cfg, const char *line, con
 	last_quote = strrchr(line, '"');
 
 	if (last_quote - first_quote == 0) {
-		set_parse_error(cfg, 0, "Missing closing quotation mark in section header");
+		set_parse_error(reader, 0, "Missing closing quotation mark in section header");
 		return -1;
 	}
 
@@ -698,14 +740,14 @@ static int parse_section_header_ext(diskfile_backend *cfg, const char *line, con
 	 */
 	do {
 		if (quote_marks == 2) {
-			set_parse_error(cfg, rpos, "Unexpected text after closing quotes");
+			set_parse_error(reader, rpos, "Unexpected text after closing quotes");
 			git_buf_free(&buf);
 			return -1;
 		}
 
 		switch (c) {
 		case 0:
-			set_parse_error(cfg, 0, "Unexpected end-of-line in section header");
+			set_parse_error(reader, 0, "Unexpected end-of-line in section header");
 			git_buf_free(&buf);
 			return -1;
 
@@ -719,7 +761,7 @@ static int parse_section_header_ext(diskfile_backend *cfg, const char *line, con
 			switch (c) {
 			case '"':
 				if (&line[rpos-1] == last_quote) {
-					set_parse_error(cfg, 0, "Missing closing quotation mark in section header");
+					set_parse_error(reader, 0, "Missing closing quotation mark in section header");
 					git_buf_free(&buf);
 					return -1;
 				}
@@ -728,7 +770,7 @@ static int parse_section_header_ext(diskfile_backend *cfg, const char *line, con
 				break;
 
 			default:
-				set_parse_error(cfg, rpos, "Unsupported escape sequence");
+				set_parse_error(reader, rpos, "Unsupported escape sequence");
 				git_buf_free(&buf);
 				return -1;
 			}
@@ -744,14 +786,14 @@ static int parse_section_header_ext(diskfile_backend *cfg, const char *line, con
 	return 0;
 }
 
-static int parse_section_header(diskfile_backend *cfg, char **section_out)
+static int parse_section_header(struct reader *reader, char **section_out)
 {
 	char *name, *name_end;
 	int name_length, c, pos;
 	int result;
 	char *line;
 
-	line = cfg_readline(cfg, true);
+	line = reader_readline(reader, true);
 	if (line == NULL)
 		return -1;
 
@@ -759,7 +801,7 @@ static int parse_section_header(diskfile_backend *cfg, char **section_out)
 	name_end = strchr(line, ']');
 	if (name_end == NULL) {
 		git__free(line);
-		set_parse_error(cfg, 0, "Missing ']' in section header");
+		set_parse_error(reader, 0, "Missing ']' in section header");
 		return -1;
 	}
 
@@ -778,14 +820,14 @@ static int parse_section_header(diskfile_backend *cfg, char **section_out)
 	do {
 		if (git__isspace(c)){
 			name[name_length] = '\0';
-			result = parse_section_header_ext(cfg, line, name, section_out);
+			result = parse_section_header_ext(reader, line, name, section_out);
 			git__free(line);
 			git__free(name);
 			return result;
 		}
 
 		if (!config_keychar(c) && c != '.') {
-			set_parse_error(cfg, pos, "Unexpected character in header");
+			set_parse_error(reader, pos, "Unexpected character in header");
 			goto fail_parse;
 		}
 
@@ -794,7 +836,7 @@ static int parse_section_header(diskfile_backend *cfg, char **section_out)
 	} while ((c = line[pos++]) != ']');
 
 	if (line[pos - 1] != ']') {
-		set_parse_error(cfg, pos, "Unexpected end of file");
+		set_parse_error(reader, pos, "Unexpected end of file");
 		goto fail_parse;
 	}
 
@@ -811,14 +853,14 @@ fail_parse:
 	return -1;
 }
 
-static int skip_bom(diskfile_backend *cfg)
+static int skip_bom(struct reader *reader)
 {
 	git_bom_t bom;
 	int bom_offset = git_buf_text_detect_bom(&bom,
-		&cfg->reader.buffer, cfg->reader.read_ptr - cfg->reader.buffer.ptr);
+		&reader->buffer, reader->read_ptr - reader->buffer.ptr);
 
 	if (bom == GIT_BOM_UTF8)
-		cfg->reader.read_ptr += bom_offset;
+		reader->read_ptr += bom_offset;
 
 	/* TODO: reference implementation is pretty stupid with BoM */
 
@@ -888,7 +930,16 @@ static int strip_comments(char *line, int in_quotes)
 	return quote_count;
 }
 
-static int config_parse(diskfile_backend *cfg_file, git_config_level_t level)
+static int included_path(git_buf *out, const char *dir, const char *path)
+{
+	/* From the user's home */
+	if (path[0] == '~' && path[1] == '/')
+		return git_futils_find_global_file(out, &path[1]);
+
+	return git_path_join_unrooted(out, path, dir, NULL);
+}
+
+static int config_parse(diskfile_backend *cfg_file, struct reader *reader, git_config_level_t level, int depth)
 {
 	int c;
 	char *current_section = NULL;
@@ -898,39 +949,46 @@ static int config_parse(diskfile_backend *cfg_file, git_config_level_t level)
 	git_buf buf = GIT_BUF_INIT;
 	int result = 0;
 	khiter_t pos;
+	uint32_t reader_idx;
 
+	if (depth >= MAX_INCLUDE_DEPTH) {
+		giterr_set(GITERR_CONFIG, "Maximum config include depth reached");
+		return -1;
+	}
+
+	reader_idx = git_array_size(cfg_file->readers) - 1;
 	/* Initialize the reading position */
-	cfg_file->reader.read_ptr = cfg_file->reader.buffer.ptr;
-	cfg_file->reader.eof = 0;
+	reader->read_ptr = reader->buffer.ptr;
+	reader->eof = 0;
 
 	/* If the file is empty, there's nothing for us to do */
-	if (*cfg_file->reader.read_ptr == '\0')
+	if (*reader->read_ptr == '\0')
 		return 0;
 
-	skip_bom(cfg_file);
+	skip_bom(reader);
 
-	while (result == 0 && !cfg_file->reader.eof) {
+	while (result == 0 && !reader->eof) {
 
-		c = cfg_peek(cfg_file, SKIP_WHITESPACE);
+		c = reader_peek(reader, SKIP_WHITESPACE);
 
 		switch (c) {
 		case '\n': /* EOF when peeking, set EOF in the reader to exit the loop */
-			cfg_file->reader.eof = 1;
+			reader->eof = 1;
 			break;
 
 		case '[': /* section header, new section begins */
 			git__free(current_section);
 			current_section = NULL;
-			result = parse_section_header(cfg_file, &current_section);
+			result = parse_section_header(reader, &current_section);
 			break;
 
 		case ';':
 		case '#':
-			cfg_consume_line(cfg_file);
+			reader_consume_line(reader);
 			break;
 
 		default: /* assume variable declaration */
-			result = parse_variable(cfg_file, &var_name, &var_value);
+			result = parse_variable(reader, &var_name, &var_value);
 			if (result < 0)
 				break;
 
@@ -951,6 +1009,7 @@ static int config_parse(diskfile_backend *cfg_file, git_config_level_t level)
 			var->entry->name = git_buf_detach(&buf);
 			var->entry->value = var_value;
 			var->entry->level = level;
+			var->included = !!depth;
 
 			/* Add or append the new config option */
 			pos = git_strmap_lookup_index(cfg_file->values, var->entry->name);
@@ -965,6 +1024,42 @@ static int config_parse(diskfile_backend *cfg_file, git_config_level_t level)
 					existing = existing->next;
 				}
 				existing->next = var;
+			}
+
+			if (!git__strcmp(var->entry->name, "include.path")) {
+				struct reader *r;
+				git_buf path = GIT_BUF_INIT;
+				char *dir;
+				uint32_t index;
+
+				r = git_array_alloc(cfg_file->readers);
+				/* The reader may have been reallocated */
+				reader = git_array_get(cfg_file->readers, reader_idx);
+				memset(r, 0, sizeof(struct reader));
+				if ((result = git_path_dirname_r(&path, reader->file_path)) < 0)
+					break;
+
+				/* We need to know out index in the array, as the next config_parse call may realloc */
+				index = git_array_size(cfg_file->readers) - 1;
+				dir = git_buf_detach(&path);
+				result = included_path(&path, dir, var->entry->value);
+				git__free(dir);
+
+				if (result < 0)
+					break;
+
+				r->file_path = git_buf_detach(&path);
+				git_buf_init(&r->buffer, 0);
+				if ((result = git_futils_readbuffer_updated(&r->buffer, r->file_path, &r->file_mtime,
+									    &r->file_size, NULL)) < 0)
+					break;
+
+				result = config_parse(cfg_file, r, level, depth+1);
+				r = git_array_get(cfg_file->readers, index);
+				git_buf_free(&r->buffer);
+
+				if (result < 0)
+					break;
 			}
 
 			break;
@@ -1015,20 +1110,21 @@ static int config_write(diskfile_backend *cfg, const char *key, const regex_t *p
 	const char *pre_end = NULL, *post_start = NULL, *data_start;
 	char *current_section = NULL, *section, *name, *ldot;
 	git_filebuf file = GIT_FILEBUF_INIT;
+	struct reader *reader = git_array_get(cfg->readers, 0);
 
 	/* We need to read in our own config file */
-	result = git_futils_readbuffer(&cfg->reader.buffer, cfg->file_path);
+	result = git_futils_readbuffer(&reader->buffer, cfg->file_path);
 
 	/* Initialise the reading position */
 	if (result == GIT_ENOTFOUND) {
-		cfg->reader.read_ptr = NULL;
-		cfg->reader.eof = 1;
+		reader->read_ptr = NULL;
+		reader->eof = 1;
 		data_start = NULL;
-		git_buf_clear(&cfg->reader.buffer);
+		git_buf_clear(&reader->buffer);
 	} else if (result == 0) {
-		cfg->reader.read_ptr = cfg->reader.buffer.ptr;
-		cfg->reader.eof = 0;
-		data_start = cfg->reader.read_ptr;
+		reader->read_ptr = reader->buffer.ptr;
+		reader->eof = 0;
+		data_start = reader->read_ptr;
 	} else {
 		return -1; /* OS error when reading the file */
 	}
@@ -1037,13 +1133,13 @@ static int config_write(diskfile_backend *cfg, const char *key, const regex_t *p
 	if (git_filebuf_open(&file, cfg->file_path, 0) < 0)
 		return -1;
 
-	skip_bom(cfg);
+	skip_bom(reader);
 	ldot = strrchr(key, '.');
 	name = ldot + 1;
 	section = git__strndup(key, ldot - key);
 
-	while (!cfg->reader.eof) {
-		c = cfg_peek(cfg, SKIP_WHITESPACE);
+	while (!reader->eof) {
+		c = reader_peek(reader, SKIP_WHITESPACE);
 
 		if (c == '\0') { /* We've arrived at the end of the file */
 			break;
@@ -1056,11 +1152,11 @@ static int config_write(diskfile_backend *cfg, const char *key, const regex_t *p
 			 * new section. If we actually want to replace it, the
 			 * default case will take care of updating them.
 			 */
-			pre_end = post_start = cfg->reader.read_ptr;
+			pre_end = post_start = reader->read_ptr;
 
 			git__free(current_section);
 			current_section = NULL;
-			if (parse_section_header(cfg, &current_section) < 0)
+			if (parse_section_header(reader, &current_section) < 0)
 				goto rewrite_fail;
 
 			/* Keep track of when it stops matching */
@@ -1069,7 +1165,7 @@ static int config_write(diskfile_backend *cfg, const char *key, const regex_t *p
 		}
 
 		else if (c == ';' || c == '#') {
-			cfg_consume_line(cfg);
+			reader_consume_line(reader);
 		}
 
 		else {
@@ -1085,15 +1181,15 @@ static int config_write(diskfile_backend *cfg, const char *key, const regex_t *p
 			 */
 			if (!section_matches) {
 				if (!last_section_matched) {
-					cfg_consume_line(cfg);
+					reader_consume_line(reader);
 					continue;
 				}
 			} else {
 				int has_matched = 0;
 				char *var_name, *var_value;
 
-				pre_end = cfg->reader.read_ptr;
-				if (parse_variable(cfg, &var_name, &var_value) < 0)
+				pre_end = reader->read_ptr;
+				if (parse_variable(reader, &var_name, &var_value) < 0)
 					goto rewrite_fail;
 
 				/* First try to match the name of the variable */
@@ -1112,7 +1208,7 @@ static int config_write(diskfile_backend *cfg, const char *key, const regex_t *p
 				if (!has_matched)
 					continue;
 
-				post_start = cfg->reader.read_ptr;
+				post_start = reader->read_ptr;
 			}
 
 			/* We've found the variable we wanted to change, so
@@ -1155,12 +1251,12 @@ static int config_write(diskfile_backend *cfg, const char *key, const regex_t *p
 	 */
 	if (write_trailer) {
 		/* Write out rest of the file */
-		git_filebuf_write(&file, post_start, cfg->reader.buffer.size - (post_start - data_start));
+		git_filebuf_write(&file, post_start, reader->buffer.size - (post_start - data_start));
 	} else {
 		if (preg_replaced) {
 			git_filebuf_printf(&file, "\n%s", data_start);
 		} else {
-			git_filebuf_write(&file, cfg->reader.buffer.ptr, cfg->reader.buffer.size);
+			git_filebuf_write(&file, reader->buffer.ptr, reader->buffer.size);
 
 			/* And now if we just need to add a variable */
 			if (!section_matches && write_section(&file, section) < 0)
@@ -1176,7 +1272,7 @@ static int config_write(diskfile_backend *cfg, const char *key, const regex_t *p
 			}
 
 			/* If we are here, there is at least a section line */
-			if (cfg->reader.buffer.size > 0 && *(cfg->reader.buffer.ptr + cfg->reader.buffer.size - 1) != '\n')
+			if (reader->buffer.size > 0 && *(reader->buffer.ptr + reader->buffer.size - 1) != '\n')
 				git_filebuf_write(&file, "\n", 1);
 
 			git_filebuf_printf(&file, "\t%s = %s\n", name, value);
@@ -1187,10 +1283,10 @@ static int config_write(diskfile_backend *cfg, const char *key, const regex_t *p
 	git__free(current_section);
 
 	/* refresh stats - if this errors, then commit will error too */
-	(void)git_filebuf_stats(&cfg->file_mtime, &cfg->file_size, &file);
+	(void)git_filebuf_stats(&reader->file_mtime, &reader->file_size, &file);
 
 	result = git_filebuf_commit(&file, GIT_CONFIG_FILE_MODE);
-	git_buf_free(&cfg->reader.buffer);
+	git_buf_free(&reader->buffer);
 
 	return result;
 
@@ -1199,7 +1295,7 @@ rewrite_fail:
 	git__free(current_section);
 
 	git_filebuf_cleanup(&file);
-	git_buf_free(&cfg->reader.buffer);
+	git_buf_free(&reader->buffer);
 	return -1;
 }
 
@@ -1291,19 +1387,19 @@ static int is_multiline_var(const char *str)
 	return (end > str) && (count & 1);
 }
 
-static int parse_multiline_variable(diskfile_backend *cfg, git_buf *value, int in_quotes)
+static int parse_multiline_variable(struct reader *reader, git_buf *value, int in_quotes)
 {
 	char *line = NULL, *proc_line = NULL;
 	int quote_count;
 
 	/* Check that the next line exists */
-	line = cfg_readline(cfg, false);
+	line = reader_readline(reader, false);
 	if (line == NULL)
 		return -1;
 
 	/* We've reached the end of the file, there is input missing */
 	if (line[0] == '\0') {
-		set_parse_error(cfg, 0, "Unexpected end of file while parsing multine var");
+		set_parse_error(reader, 0, "Unexpected end of file while parsing multine var");
 		git__free(line);
 		return -1;
 	}
@@ -1313,7 +1409,7 @@ static int parse_multiline_variable(diskfile_backend *cfg, git_buf *value, int i
 	/* If it was just a comment, pretend it didn't exist */
 	if (line[0] == '\0') {
 		git__free(line);
-		return parse_multiline_variable(cfg, value, quote_count);
+		return parse_multiline_variable(reader, value, quote_count);
 		/* TODO: unbounded recursion. This **could** be exploitable */
 	}
 
@@ -1338,19 +1434,19 @@ static int parse_multiline_variable(diskfile_backend *cfg, git_buf *value, int i
 	 * keep putting stuff in the buffer
 	 */
 	if (is_multiline_var(value->ptr))
-		return parse_multiline_variable(cfg, value, quote_count);
+		return parse_multiline_variable(reader, value, quote_count);
 
 	return 0;
 }
 
-static int parse_variable(diskfile_backend *cfg, char **var_name, char **var_value)
+static int parse_variable(struct reader *reader, char **var_name, char **var_value)
 {
 	const char *var_end = NULL;
 	const char *value_start = NULL;
 	char *line;
 	int quote_count;
 
-	line = cfg_readline(cfg, true);
+	line = reader_readline(reader, true);
 	if (line == NULL)
 		return -1;
 
@@ -1385,7 +1481,7 @@ static int parse_variable(diskfile_backend *cfg, char **var_name, char **var_val
 			GITERR_CHECK_ALLOC(proc_line);
 			git_buf_puts(&multi_value, proc_line);
 			git__free(proc_line);
-			if (parse_multiline_variable(cfg, &multi_value, quote_count) < 0 || git_buf_oom(&multi_value)) {
+			if (parse_multiline_variable(reader, &multi_value, quote_count) < 0 || git_buf_oom(&multi_value)) {
 				git__free(*var_name);
 				git__free(line);
 				git_buf_free(&multi_value);

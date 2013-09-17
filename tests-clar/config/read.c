@@ -523,3 +523,18 @@ void test_config_read__corrupt_header(void)
 
 	git_config_free(cfg);
 }
+
+void test_config_read__override_variable(void)
+{
+	git_config *cfg;
+	const char *str;
+
+	cl_set_cleanup(&clean_test_config, NULL);
+	cl_git_mkfile("./testconfig", "[some] var = one\nvar = two");
+	cl_git_pass(git_config_open_ondisk(&cfg, "./testconfig"));
+
+	cl_git_pass(git_config_get_string(&str, cfg, "some.var"));
+	cl_assert_equal_s(str, "two");
+
+	git_config_free(cfg);
+}
