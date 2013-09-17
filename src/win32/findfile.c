@@ -130,7 +130,7 @@ static int win32_find_git_in_registry(
 
 	assert(buf);
 
-	path16.len = 0;
+	path16.len = MAX_PATH;
 
 	if (RegOpenKeyExW(hieve, key, 0, KEY_ALL_ACCESS, &hKey) == ERROR_SUCCESS) {
 		if (RegQueryValueExW(hKey, L"InstallLocation", NULL, &dwType,
