@@ -763,7 +763,8 @@ static int git_futils_find_in_dirlist(
 			continue;
 
 		GITERR_CHECK_ERROR(git_buf_set(path, scan, len));
-		GITERR_CHECK_ERROR(git_buf_joinpath(path, path->ptr, name));
+		if (name)
+			GITERR_CHECK_ERROR(git_buf_joinpath(path, path->ptr, name));
 
 		if (git_path_exists(path->ptr))
 			return 0;
@@ -790,6 +791,12 @@ int git_futils_find_xdg_file(git_buf *path, const char *filename)
 {
 	return git_futils_find_in_dirlist(
 		path, filename, GIT_FUTILS_DIR_XDG, "global/xdg");
+}
+
+int git_futils_find_template_dir(git_buf *path)
+{
+	return git_futils_find_in_dirlist(
+		path, NULL, GIT_FUTILS_DIR_TEMPLATE, "template");
 }
 
 int git_futils_fake_symlink(const char *old, const char *new)
