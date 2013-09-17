@@ -293,6 +293,8 @@ static int config_iterator_new(
 	diskfile_backend *b = (diskfile_backend *)backend;
 	git_config_file_iter *it = git__calloc(1, sizeof(git_config_file_iter));
 
+	GIT_UNUSED(b);
+
 	GITERR_CHECK_ALLOC(it);
 
 	it->parent.backend = backend;

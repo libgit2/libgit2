@@ -54,27 +54,9 @@ static void test_with_many(int expected_new)
 
 	git_diff_list_free(diff);
 
-	{
-		git_object *parent;
-		git_signature *sig;
-		git_oid tree_id, commit_id;
-		git_reference *ref;
-
-		cl_git_pass(git_index_write_tree(&tree_id, index));
-		cl_git_pass(git_tree_lookup(&new_tree, g_repo, &tree_id));
-
-		cl_git_pass(git_revparse_ext(&parent, &ref, g_repo, "HEAD"));
-		cl_git_pass(git_signature_new(
-			&sig, "Sm Test", "sm@tester.test", 1372350000, 480));
-
-		cl_git_pass(git_commit_create_v(
-			&commit_id, g_repo, git_reference_name(ref), sig, sig,
-			NULL, "yoyoyo", new_tree, 1, parent));
-
-		git_object_free(parent);
-		git_reference_free(ref);
-		git_signature_free(sig);
-	}
+	cl_repo_commit_from_index(NULL, g_repo, NULL, 1372350000, "yoyoyo");
+	cl_git_pass(git_revparse_single(
+		(git_object **)&new_tree, g_repo, "HEAD^{tree}"));
 
 	cl_git_pass(git_diff_tree_to_tree(
 		&diff, g_repo, tree, new_tree, &diffopts));

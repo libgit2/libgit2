@@ -59,7 +59,7 @@ GIT_INLINE(void *) git_array_grow(void *_a, size_t item_size)
 #define git_array_alloc(a) \
 	((a).size >= (a).asize) ? \
 	git_array_grow(&(a), sizeof(*(a).ptr)) : \
-	(a).ptr ? &(a).ptr[(a).size++] : NULL
+	((a).ptr ? &(a).ptr[(a).size++] : NULL)
 
 #define git_array_last(a) ((a).size ? &(a).ptr[(a).size - 1] : NULL)
 

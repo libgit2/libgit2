@@ -11,6 +11,7 @@
 #include "types.h"
 #include "oid.h"
 #include "object.h"
+#include "buffer.h"
 
 /**
  * @file git2/blob.h
@@ -94,6 +95,37 @@ GIT_EXTERN(const void *) git_blob_rawcontent(const git_blob *blob);
  * @return size on bytes
  */
 GIT_EXTERN(git_off_t) git_blob_rawsize(const git_blob *blob);
+
+/**
+ * Get a buffer with the filtered content of a blob.
+ *
+ * This applies filters as if the blob was being checked out to the
+ * working directory under the specified filename.  This may apply
+ * CRLF filtering or other types of changes depending on the file
+ * attributes set for the blob and the content detected in it.
+ *
+ * The output is written into a `git_buf` which the caller must free
+ * when done (via `git_buf_free`).
+ *
+ * If no filters need to be applied, then the `out` buffer will just be
+ * populated with a pointer to the raw content of the blob.  In that case,
+ * be careful to *not* free the blob until done with the buffer.  To keep
+ * the data detached from the blob, call `git_buf_grow` on the buffer
+ * with a `want_size` of 0 and the buffer will be reallocated to be
+ * detached from the blob.
+ *
+ * @param out The git_buf to be filled in
+ * @param blob Pointer to the blob
+ * @param as_path Path used for file attribute lookups, etc.
+ * @param check_for_binary_data Should this test if blob content contains
+ *        NUL bytes / looks like binary data before applying filters?
+ * @return 0 on success or an error code
+ */
+GIT_EXTERN(int) git_blob_filtered_content(
+	git_buf *out,
+	git_blob *blob,
+	const char *as_path,
+	int check_for_binary_data);
 
 /**
  * Read a file from the working folder of a repository

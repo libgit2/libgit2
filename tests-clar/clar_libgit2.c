@@ -337,6 +337,65 @@ int cl_git_remove_placeholders(const char *directory_path, const char *filename)
 	return error;
 }
 
+#define CL_COMMIT_NAME "Libgit2 Tester"
+#define CL_COMMIT_EMAIL "libgit2-test@github.com"
+#define CL_COMMIT_MSG "Test commit of tree "
+
+void cl_repo_commit_from_index(
+	git_oid *out,
+	git_repository *repo,
+	git_signature *sig,
+	git_time_t time,
+	const char *msg)
+{
+	git_index *index;
+	git_oid commit_id, tree_id;
+	git_object *parent = NULL;
+	git_reference *ref = NULL;
+	git_tree *tree = NULL;
+	char buf[128];
+	int free_sig = (sig == NULL);
+
+	/* it is fine if looking up HEAD fails - we make this the first commit */
+	git_revparse_ext(&parent, &ref, repo, "HEAD");
+
+	/* write the index content as a tree */
+	cl_git_pass(git_repository_index(&index, repo));
+	cl_git_pass(git_index_write_tree(&tree_id, index));
+	cl_git_pass(git_index_write(index));
+	git_index_free(index);
+
+	cl_git_pass(git_tree_lookup(&tree, repo, &tree_id));
+
+	if (sig)
+		cl_assert(sig->name && sig->email);
+	else if (!time)
+		cl_git_pass(git_signature_now(&sig, CL_COMMIT_NAME, CL_COMMIT_EMAIL));
+	else
+		cl_git_pass(git_signature_new(
+			&sig, CL_COMMIT_NAME, CL_COMMIT_EMAIL, time, 0));
+
+	if (!msg) {
+		strcpy(buf, CL_COMMIT_MSG);
+		git_oid_tostr(buf + strlen(CL_COMMIT_MSG),
+			sizeof(buf) - strlen(CL_COMMIT_MSG), &tree_id);
+		msg = buf;
+	}
+
+	cl_git_pass(git_commit_create_v(
+		&commit_id, repo, ref ? git_reference_name(ref) : "HEAD",
+		sig, sig, NULL, msg, tree, parent ? 1 : 0, parent));
+
+	if (out)
+		git_oid_cpy(out, &commit_id);
+
+	git_object_free(parent);
+	git_reference_free(ref);
+	if (free_sig)
+		git_signature_free(sig);
+	git_tree_free(tree);
+}
+
 void cl_repo_set_bool(git_repository *repo, const char *cfg, int value)
 {
 	git_config *config;
@@ -353,4 +412,66 @@ int cl_repo_get_bool(git_repository *repo, const char *cfg)
 	cl_git_pass(git_config_get_bool(&val, config, cfg));;
 	git_config_free(config);
 	return val;
+}
+
+/* this is essentially the code from git__unescape modified slightly */
+static size_t strip_cr_from_buf(char *start, size_t len)
+{
+	char *scan, *trail, *end = start + len;
+
+	for (scan = trail = start; scan < end; trail++, scan++) {
+		while (*scan == '\r')
+			scan++; /* skip '\r' */
+
+		if (trail != scan)
+			*trail = *scan;
+	}
+
+	*trail = '\0';
+
+	return (trail - start);
+}
+
+void clar__assert_equal_file(
+	const char *expected_data,
+	size_t expected_bytes,
+	int ignore_cr,
+	const char *path,
+	const char *file,
+	size_t line)
+{
+	char buf[4000];
+	ssize_t bytes, total_bytes = 0;
+	int fd = p_open(path, O_RDONLY | O_BINARY);
+	cl_assert(fd >= 0);
+
+	if (expected_data && !expected_bytes)
+		expected_bytes = strlen(expected_data);
+
+	while ((bytes = p_read(fd, buf, sizeof(buf))) != 0) {
+		clar__assert(
+			bytes > 0, file, line, "error reading from file", path, 1);
+
+		if (ignore_cr)
+			bytes = strip_cr_from_buf(buf, bytes);
+
+		if (memcmp(expected_data, buf, bytes) != 0) {
+			int pos;
+			for (pos = 0; pos < bytes && expected_data[pos] == buf[pos]; ++pos)
+				/* find differing byte offset */;
+			p_snprintf(
+				buf, sizeof(buf), "file content mismatch at byte %d",
+				(int)(total_bytes + pos));
+			clar__fail(file, line, buf, path, 1);
+		}
+
+		expected_data += bytes;
+		total_bytes   += bytes;
+	}
+
+	p_close(fd);
+
+	clar__assert(!bytes, file, line, "error reading from file", path, 1);
+	clar__assert_equal(file, line, "mismatched file length", 1, "%"PRIuZ,
+		(size_t)expected_bytes, (size_t)total_bytes);
 }

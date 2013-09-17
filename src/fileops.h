@@ -354,11 +354,6 @@ extern int git_futils_dirs_get_str(
 extern int git_futils_dirs_set(git_futils_dir_t which, const char *paths);
 
 /**
- * Release / reset all search paths
- */
-extern void git_futils_dirs_free(void);
-
-/**
  * Create a "fake" symlink (text file containing the target path).
  *
  * @param new symlink file to be created

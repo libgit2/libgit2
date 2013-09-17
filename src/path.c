@@ -565,7 +565,7 @@ static bool _check_dir_contents(
 	size_t sub_size = strlen(sub);
 
 	/* leave base valid even if we could not make space for subdir */
-	if (git_buf_try_grow(dir, dir_size + sub_size + 2, false) < 0)
+	if (git_buf_try_grow(dir, dir_size + sub_size + 2, false, false) < 0)
 		return false;
 
 	/* save excursion */

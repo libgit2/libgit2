@@ -1649,7 +1649,7 @@ int git_repository_hashfile(
 	const char *as_path)
 {
 	int error;
-	git_vector filters = GIT_VECTOR_INIT;
+	git_filter_list *fl = NULL;
 	git_file fd = -1;
 	git_off_t len;
 	git_buf full_path = GIT_BUF_INIT;
@@ -1671,7 +1671,8 @@ int git_repository_hashfile(
 
 	/* passing empty string for "as_path" indicated --no-filters */
 	if (strlen(as_path) > 0) {
-		error = git_filters_load(&filters, repo, as_path, GIT_FILTER_TO_ODB);
+		error = git_filter_list_load(
+			&fl, repo, NULL, as_path, GIT_FILTER_TO_ODB);
 		if (error < 0)
 			return error;
 	} else {
@@ -1698,12 +1699,12 @@ int git_repository_hashfile(
 		goto cleanup;
 	}
 
-	error = git_odb__hashfd_filtered(out, fd, (size_t)len, type, &filters);
+	error = git_odb__hashfd_filtered(out, fd, (size_t)len, type, fl);
 
 cleanup:
 	if (fd >= 0)
 		p_close(fd);
-	git_filters_free(&filters);
+	git_filter_list_free(fl);
 	git_buf_free(&full_path);
 
 	return error;

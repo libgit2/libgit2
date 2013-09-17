@@ -43,8 +43,27 @@ GIT_INLINE(void) clar__assert_in_range(
 	}
 }
 
+#define cl_assert_equal_sz(sz1,sz2) do { \
+	size_t __sz1 = (sz1), __sz2 = (sz2); \
+	clar__assert_equal(__FILE__,__LINE__,#sz1 " != " #sz2, 1, "%"PRIuZ, __sz1, __sz2); \
+} while (0)
+
 #define cl_assert_in_range(L,V,H) \
 	clar__assert_in_range((L),(V),(H),__FILE__,__LINE__,"Range check: " #V " in [" #L "," #H "]", 1)
+
+#define cl_assert_equal_file(DATA,SIZE,PATH) \
+	clar__assert_equal_file(DATA,SIZE,0,PATH,__FILE__,__LINE__)
+
+#define cl_assert_equal_file_ignore_cr(DATA,SIZE,PATH) \
+	clar__assert_equal_file(DATA,SIZE,1,PATH,__FILE__,__LINE__)
+
+void clar__assert_equal_file(
+	const char *expected_data,
+	size_t expected_size,
+	int ignore_cr,
+	const char *path,
+	const char *file,
+	size_t line);
 
 /*
  * Some utility macros for building long strings
@@ -83,6 +102,14 @@ const char* cl_git_path_url(const char *path);
 
 /* Test repository cleaner */
 int cl_git_remove_placeholders(const char *directory_path, const char *filename);
+
+/* commit creation helpers */
+void cl_repo_commit_from_index(
+	git_oid *out,
+	git_repository *repo,
+	git_signature *sig,
+	git_time_t time,
+	const char *msg);
 
 /* config setting helpers */
 void cl_repo_set_bool(git_repository *repo, const char *cfg, int value);
