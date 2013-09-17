@@ -592,7 +592,7 @@ clean_up:
 static int git_futils_guess_system_dirs(git_buf *out)
 {
 #ifdef GIT_WIN32
-	return git_win32__find_system_dirs(out);
+	return git_win32__find_system_dirs(out, L"etc\\");
 #else
 	return git_buf_sets(out, "/etc");
 #endif
