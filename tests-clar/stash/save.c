@@ -194,7 +194,7 @@ void test_stash_save__cannot_stash_against_an_unborn_branch(void)
 
 	cl_git_pass(git_reference_symbolic_create(&head, repo, "HEAD", "refs/heads/unborn", 1));
 
-	cl_assert_equal_i(GIT_EORPHANEDHEAD,
+	cl_assert_equal_i(GIT_EUNBORNBRANCH,
 		git_stash_save(&stash_tip_oid, repo, signature, NULL, GIT_STASH_DEFAULT));
 
 	git_reference_free(head);

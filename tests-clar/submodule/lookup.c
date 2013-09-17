@@ -114,15 +114,15 @@ void test_submodule_lookup__foreach(void)
 	cl_assert_equal_i(8, data.count);
 }
 
-void test_submodule_lookup__lookup_even_with_orphaned_head(void)
+void test_submodule_lookup__lookup_even_with_unborn_head(void)
 {
-	git_reference *orphan;
+	git_reference *head;
 	git_submodule *sm;
 
-	/* orphan the head */
+	/* put us on an unborn branch */
 	cl_git_pass(git_reference_symbolic_create(
-		&orphan, g_repo, "HEAD", "refs/heads/garbage", 1));
-	git_reference_free(orphan);
+		&head, g_repo, "HEAD", "refs/heads/garbage", 1));
+	git_reference_free(head);
 
 	/* lookup existing */
 	cl_git_pass(git_submodule_lookup(&sm, g_repo, "sm_unchanged"));
