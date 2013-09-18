@@ -1132,44 +1132,39 @@ static int repo_init_structure(
 
 	/* Copy external template if requested */
 	if (external_tpl) {
-		git_config *cfg;
-		const char *tdir;
+		git_config *cfg = NULL;
+		const char *tdir = NULL;
+		bool default_template = false;
 		git_buf template_buf = GIT_BUF_INIT;
-
-		git_futils_find_template_dir(&template_buf);
 
 		if (opts->template_path)
 			tdir = opts->template_path;
-		else if ((error = git_config_open_default(&cfg)) < 0)
-			return error;
-		else {
+		else if ((error = git_config_open_default(&cfg)) >= 0) {
 			error = git_config_get_string(&tdir, cfg, "init.templatedir");
-
-			git_config_free(cfg);
-
-			if (error && error != GIT_ENOTFOUND)
-				return error;
-
 			giterr_clear();
+		}
+
+		if (!tdir) {
+			git_futils_find_template_dir(&template_buf);
 			tdir = template_buf.ptr;
+			default_template = true;
 		}
 
 		error = git_futils_cp_r(tdir, repo_dir,
 			GIT_CPDIR_COPY_SYMLINKS | GIT_CPDIR_CHMOD_DIRS |
 			GIT_CPDIR_SIMPLE_TO_MODE, dmode);
 
+		git_buf_free(&template_buf);
+		git_config_free(cfg);
 		if (error < 0) {
-			if (strcmp(tdir, template_buf.ptr) != 0) {
-				git_buf_free(&template_buf);
+			if (!default_template)
 				return error;
-			}
 
 			/* if template was default, ignore error and use internal */
 			giterr_clear();
 			external_tpl = false;
 			error = 0;
 		}
-		git_buf_free(&template_buf);
 	}
 
 	/* Copy internal template
