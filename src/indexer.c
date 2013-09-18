@@ -376,7 +376,7 @@ static int do_progress_callback(git_indexer_stream *idx, git_transfer_progress *
 }
 
 /* Hash everything but the last 20B of input */
-static void hash_partially(git_indexer_stream *idx, const void *data, size_t size)
+static void hash_partially(git_indexer_stream *idx, const uint8_t *data, size_t size)
 {
 	int to_expell, to_keep;
 
