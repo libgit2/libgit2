@@ -630,7 +630,7 @@ int git_indexer_stream_finalize(git_indexer_stream *idx, git_transfer_progress *
 
 	/* Test for this before resolve_deltas(), as it plays with idx->off */
 	if (idx->off < idx->pack->mwf.size - 20) {
-		giterr_set(GITERR_INDEXER, "Indexing error: unexpected data at the end of the pack");
+		giterr_set(GITERR_INDEXER, "unexpected data at the end of the pack");
 		return -1;
 	}
 
@@ -646,7 +646,7 @@ int git_indexer_stream_finalize(git_indexer_stream *idx, git_transfer_progress *
 
 	git_hash_final(&trailer_hash, &idx->trailer);
 	if (git_oid_cmp(&file_hash, &trailer_hash)) {
-		giterr_set(GITERR_INDEXER, "Indexing error: packfile trailer mismatch");
+		giterr_set(GITERR_INDEXER, "packfile trailer mismatch");
 		return -1;
 	}
 
@@ -655,7 +655,7 @@ int git_indexer_stream_finalize(git_indexer_stream *idx, git_transfer_progress *
 			return -1;
 
 	if (stats->indexed_objects != stats->total_objects) {
-		giterr_set(GITERR_INDEXER, "Indexing error: early EOF");
+		giterr_set(GITERR_INDEXER, "early EOF");
 		return -1;
 	}
 
