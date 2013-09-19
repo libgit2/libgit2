@@ -201,4 +201,72 @@ void test_blame_simple__trivial_libgit2(void)
 	git_repository_free(repo);
 }
 
+
+/*
+ * $ git blame -n b.txt -L 8
+ *    orig line no                          final line no
+ * commit    V  author     timestamp                  V
+ * 63d671eb  8 (Ben Straub 2013-02-12 15:13:04 -0800  8
+ * 63d671eb  9 (Ben Straub 2013-02-12 15:13:04 -0800  9
+ * 63d671eb 10 (Ben Straub 2013-02-12 15:13:04 -0800 10
+ * aa06ecca  6 (Ben Straub 2013-02-12 15:14:46 -0800 11
+ * aa06ecca  7 (Ben Straub 2013-02-12 15:14:46 -0800 12
+ * aa06ecca  8 (Ben Straub 2013-02-12 15:14:46 -0800 13
+ * aa06ecca  9 (Ben Straub 2013-02-12 15:14:46 -0800 14
+ * aa06ecca 10 (Ben Straub 2013-02-12 15:14:46 -0800 15
+ *
+ * $ git blame -n b.txt -L ,6
+ *    orig line no                          final line no
+ * commit    V  author     timestamp                  V
+ * da237394  1 (Ben Straub 2013-02-12 15:11:30 -0800  1
+ * da237394  2 (Ben Straub 2013-02-12 15:11:30 -0800  2
+ * da237394  3 (Ben Straub 2013-02-12 15:11:30 -0800  3
+ * da237394  4 (Ben Straub 2013-02-12 15:11:30 -0800  4
+ * ^b99f7ac  1 (Ben Straub 2013-02-12 15:10:12 -0800  5
+ * 63d671eb  6 (Ben Straub 2013-02-12 15:13:04 -0800  6
+ *
+ * $ git blame -n b.txt -L 2,7
+ *    orig line no                          final line no
+ * commit   V  author     timestamp                 V
+ * da237394 2 (Ben Straub 2013-02-12 15:11:30 -0800 2
+ * da237394 3 (Ben Straub 2013-02-12 15:11:30 -0800 3
+ * da237394 4 (Ben Straub 2013-02-12 15:11:30 -0800 4
+ * ^b99f7ac 1 (Ben Straub 2013-02-12 15:10:12 -0800 5
+ * 63d671eb 6 (Ben Straub 2013-02-12 15:13:04 -0800 6
+ * 63d671eb 7 (Ben Straub 2013-02-12 15:13:04 -0800 7
+ */
+void test_blame_simple__can_restrict_to_lines(void)
+{
+	git_blame *blame = NULL;
+	git_repository *repo;
+	git_blame_options opts = GIT_BLAME_OPTIONS_INIT;
+
+	cl_git_pass(git_repository_open(&repo, cl_fixture("blametest.git")));
+
+	opts.min_line = 8;
+	cl_git_pass(git_blame_file(&blame, repo, "b.txt", &opts));
+	cl_assert_equal_i(2, git_blame_get_hunk_count(blame));
+	check_blame_hunk_index(repo, blame, 0,  8, 3, "63d671eb", "b.txt");
+	check_blame_hunk_index(repo, blame, 1, 11, 5, "aa06ecca", "b.txt");
+
+	opts.min_line = 0;
+	opts.max_line = 6;
+	cl_git_pass(git_blame_file(&blame, repo, "b.txt", &opts));
+	cl_assert_equal_i(3, git_blame_get_hunk_count(blame));
+	check_blame_hunk_index(repo, blame, 0,  1, 4, "da237394", "b.txt");
+	check_blame_hunk_index(repo, blame, 1,  5, 1, "b99f7ac0", "b.txt");
+	check_blame_hunk_index(repo, blame, 2,  6, 1, "63d671eb", "b.txt");
+
+	opts.min_line = 2;
+	opts.max_line = 7;
+	cl_git_pass(git_blame_file(&blame, repo, "b.txt", &opts));
+	cl_assert_equal_i(3, git_blame_get_hunk_count(blame));
+	check_blame_hunk_index(repo, blame, 0,  2, 3, "da237394", "b.txt");
+	check_blame_hunk_index(repo, blame, 1,  5, 1, "b99f7ac0", "b.txt");
+	check_blame_hunk_index(repo, blame, 2,  6, 2, "63d671eb", "b.txt");
+
+	git_blame_free(blame);
+	git_repository_free(repo);
+}
+
 /* TODO: no newline at end of file? */

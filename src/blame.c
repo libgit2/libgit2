@@ -179,6 +179,10 @@ static void normalize_options(
 	if (git_oid_iszero(&out->newest_commit)) {
 		git_reference_name_to_id(&out->newest_commit, repo, "HEAD");
 	}
+
+	/* min_line 0 really means 1 */
+	if (!out->min_line) out->min_line = 1;
+	/* max_line 0 really means N, but we don't know N yet */
 }
 
 static git_blame_hunk *split_hunk_in_vector(
@@ -265,7 +269,14 @@ static int walk_and_mark(git_blame *blame)
 
 	ent = git__calloc(1, sizeof(*ent));
 	ent->num_lines = prepare_lines(&sb);
+	ent->lno = blame->options.min_line - 1;
+	ent->num_lines = ent->num_lines - blame->options.min_line + 1;
+	if (blame->options.max_line > 0) {
+		ent->num_lines = blame->options.max_line - blame->options.min_line + 1;
+	}
+	ent->s_lno = ent->lno;
 	ent->suspect = o;
+
 	sb.ent = ent;
 	sb.path = blame->path;
 	sb.blame = blame;
