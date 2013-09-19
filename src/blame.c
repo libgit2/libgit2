@@ -246,21 +246,6 @@ static git_blame_hunk* hunk_from_entry(struct blame_entry *e)
 	return h;
 }
 
-static void free_if_not_already_freed(git_vector *already, struct origin *o)
-{
-	size_t i;
-
-	if (!o) return;
-	if (!git_vector_search(&i, already, o))
-		return;
-
-	git_vector_insert(already, o);
-	free_if_not_already_freed(already, o->previous);
-	git_blob_free(o->blob);
-	git_commit_free(o->commit);
-	git__free(o);
-}
-
 static int walk_and_mark(git_blame *blame)
 {
 	int error;
@@ -269,7 +254,6 @@ static int walk_and_mark(git_blame *blame)
 	struct blame_entry *ent = NULL;
 	git_blob *blob = NULL;
 	struct origin *o;
-	git_vector already = GIT_VECTOR_INIT;
 
 	if ((error = git_commit_lookup(&sb.final, blame->repository, &blame->options.newest_commit)) < 0 ||
 		 (error = git_object_lookup_bypath((git_object**)&blob, (git_object*)sb.final, blame->path, GIT_OBJ_BLOB)) < 0)
@@ -289,26 +273,18 @@ static int walk_and_mark(git_blame *blame)
 	assign_blame(&sb, blame->options.flags);
 	coalesce(&sb);
 
-	for (ent = sb.ent; ent; ) {
-		git_vector_insert(&blame->hunks, hunk_from_entry(ent));
-		ent = ent->next;
-	}
-
 cleanup:
 	for (ent = sb.ent; ent; ) {
 		struct blame_entry *e = ent->next;
 		struct origin *o = ent->suspect;
 
-		/* Linkages might not be ordered, so we only free pointers we haven't
-		 * seen before. */
-		free_if_not_already_freed(&already, o);
+		git_vector_insert(&blame->hunks, hunk_from_entry(ent));
 
+		origin_decref(o);
 		git__free(ent);
 		ent = e;
 	}
 
-	git_vector_free(&already);
-	git_commit_free(sb.final);
 	git_blob_free(blob);
 	return error;
 }
