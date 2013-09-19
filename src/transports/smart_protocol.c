@@ -13,8 +13,11 @@
 #include "push.h"
 #include "pack-objects.h"
 #include "remote.h"
+#include "util.h"
 
 #define NETWORK_XFER_THRESHOLD (100*1024)
+/* The minimal interval between progress updates (in seconds). */
+#define MIN_PROGRESS_UPDATE_INTERVAL 0.5
 
 int git_smart__store_refs(transport_smart *t, int flushes)
 {
@@ -801,21 +804,52 @@ static int update_refs_from_report(
 	return 0;
 }
 
+struct push_packbuilder_payload
+{
+	git_smart_subtransport_stream *stream;
+	git_packbuilder *pb;
+	git_push_transfer_progress cb;
+	void *cb_payload;
+	size_t last_bytes;
+	double last_progress_report_time;
+};
+
 static int stream_thunk(void *buf, size_t size, void *data)
 {
-	git_smart_subtransport_stream *s = (git_smart_subtransport_stream *)data;
+	int error = 0;
+	struct push_packbuilder_payload *payload = data;
 
-	return s->write(s, (const char *)buf, size);
+	if ((error = payload->stream->write(payload->stream, (const char *)buf, size)) < 0)
+		return error;
+
+	if (payload->cb) {
+		double current_time = git__timer();
+		payload->last_bytes += size;
+
+		if ((current_time - payload->last_progress_report_time) >= MIN_PROGRESS_UPDATE_INTERVAL) {
+			payload->last_progress_report_time = current_time;
+			payload->cb(payload->pb->nr_written, payload->pb->nr_objects, payload->last_bytes, payload->cb_payload);
+		}
+	}
+
+	return error;
 }
 
 int git_smart__push(git_transport *transport, git_push *push)
 {
 	transport_smart *t = (transport_smart *)transport;
-	git_smart_subtransport_stream *s;
+	struct push_packbuilder_payload packbuilder_payload = {0};
 	git_buf pktline = GIT_BUF_INIT;
 	int error = -1, need_pack = 0;
 	push_spec *spec;
 	unsigned int i;
+
+	packbuilder_payload.pb = push->pb;
+
+	if (push->transfer_progress_cb) {
+		packbuilder_payload.cb = push->transfer_progress_cb;
+		packbuilder_payload.cb_payload = push->transfer_progress_cb_payload;
+	}
 
 #ifdef PUSH_DEBUG
 {
@@ -848,12 +882,12 @@ int git_smart__push(git_transport *transport, git_push *push)
 		}
 	}
 
-	if (git_smart__get_push_stream(t, &s) < 0 ||
+	if (git_smart__get_push_stream(t, &packbuilder_payload.stream) < 0 ||
 		gen_pktline(&pktline, push) < 0 ||
-		s->write(s, git_buf_cstr(&pktline), git_buf_len(&pktline)) < 0)
+		packbuilder_payload.stream->write(packbuilder_payload.stream, git_buf_cstr(&pktline), git_buf_len(&pktline)) < 0)
 		goto on_error;
 
-	if (need_pack && git_packbuilder_foreach(push->pb, &stream_thunk, s) < 0)
+	if (need_pack && git_packbuilder_foreach(push->pb, &stream_thunk, &packbuilder_payload) < 0)
 		goto on_error;
 
 	/* If we sent nothing or the server doesn't support report-status, then
@@ -862,6 +896,11 @@ int git_smart__push(git_transport *transport, git_push *push)
 		push->unpack_ok = 1;
 	else if (parse_report(&t->buffer, push) < 0)
 		goto on_error;
+
+	/* If progress is being reported write the final report */
+	if (push->transfer_progress_cb) {
+		push->transfer_progress_cb(push->pb->nr_written, push->pb->nr_objects, packbuilder_payload.last_bytes, push->transfer_progress_cb_payload);
+	}
 
 	if (push->status.length &&
 		update_refs_from_report(&t->refs, &push->specs, &push->status) < 0)
