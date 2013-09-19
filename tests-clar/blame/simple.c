@@ -1,5 +1,20 @@
 #include "blame_helpers.h"
 
+static git_repository *g_repo;
+static git_blame *g_blame;
+
+void test_blame_simple__initialize(void)
+{
+	g_repo = NULL;
+	g_blame = NULL;
+}
+
+void test_blame_simple__cleanup(void)
+{
+	git_blame_free(g_blame);
+	git_repository_free(g_repo);
+}
+
 /*
  * $ git blame -s branch_file.txt
  *    orig line no                        final line no
@@ -9,17 +24,12 @@
  */
 void test_blame_simple__trivial_testrepo(void)
 {
-	git_blame *blame = NULL;
-	git_repository *repo;
-	cl_git_pass(git_repository_open(&repo, cl_fixture("testrepo/.gitted")));
-	cl_git_pass(git_blame_file(&blame, repo, "branch_file.txt", NULL));
+	cl_git_pass(git_repository_open(&g_repo, cl_fixture("testrepo/.gitted")));
+	cl_git_pass(git_blame_file(&g_blame, g_repo, "branch_file.txt", NULL));
 
-	cl_assert_equal_i(2, git_blame_get_hunk_count(blame));
-	check_blame_hunk_index(repo, blame, 0, 1, 1, "c47800c7", "branch_file.txt");
-	check_blame_hunk_index(repo, blame, 1, 2, 1, "a65fedf3", "branch_file.txt");
-
-	git_blame_free(blame);
-	git_repository_free(repo);
+	cl_assert_equal_i(2, git_blame_get_hunk_count(g_blame));
+	check_blame_hunk_index(g_repo, g_blame, 0, 1, 1, "c47800c7", "branch_file.txt");
+	check_blame_hunk_index(g_repo, g_blame, 1, 2, 1, "a65fedf3", "branch_file.txt");
 }
 
 /*
@@ -44,19 +54,14 @@ void test_blame_simple__trivial_testrepo(void)
  */
 void test_blame_simple__trivial_blamerepo(void)
 {
-	git_blame *blame = NULL;
-	git_repository *repo;
-	cl_git_pass(git_repository_open(&repo, cl_fixture("blametest.git")));
-	cl_git_pass(git_blame_file(&blame, repo, "b.txt", NULL));
+	cl_git_pass(git_repository_open(&g_repo, cl_fixture("blametest.git")));
+	cl_git_pass(git_blame_file(&g_blame, g_repo, "b.txt", NULL));
 
-	cl_assert_equal_i(4, git_blame_get_hunk_count(blame));
-	check_blame_hunk_index(repo, blame, 0,  1, 4, "da237394", "b.txt");
-	check_blame_hunk_index(repo, blame, 1,  5, 1, "b99f7ac0", "b.txt");
-	check_blame_hunk_index(repo, blame, 2,  6, 5, "63d671eb", "b.txt");
-	check_blame_hunk_index(repo, blame, 3, 11, 5, "aa06ecca", "b.txt");
-
-	git_blame_free(blame);
-	git_repository_free(repo);
+	cl_assert_equal_i(4, git_blame_get_hunk_count(g_blame));
+	check_blame_hunk_index(g_repo, g_blame, 0,  1, 4, "da237394", "b.txt");
+	check_blame_hunk_index(g_repo, g_blame, 1,  5, 1, "b99f7ac0", "b.txt");
+	check_blame_hunk_index(g_repo, g_blame, 2,  6, 5, "63d671eb", "b.txt");
+	check_blame_hunk_index(g_repo, g_blame, 3, 11, 5, "aa06ecca", "b.txt");
 }
 
 
@@ -127,78 +132,71 @@ void test_blame_simple__trivial_blamerepo(void)
  */
 void test_blame_simple__trivial_libgit2(void)
 {
-	git_repository *repo;
-	git_blame *blame;
 	git_blame_options opts = GIT_BLAME_OPTIONS_INIT;
 	git_object *obj;
 
-	cl_git_pass(git_repository_open(&repo, cl_fixture("../..")));
+	cl_git_pass(git_repository_open(&g_repo, cl_fixture("../..")));
 
 	/* This test can't work on a shallow clone */
-	if (git_repository_is_shallow(repo)) {
-		git_repository_free(repo);
+	if (git_repository_is_shallow(g_repo))
 		return;
-	}
 
-	cl_git_pass(git_revparse_single(&obj, repo, "359fc2d"));
+	cl_git_pass(git_revparse_single(&obj, g_repo, "359fc2d"));
 	git_oid_cpy(&opts.newest_commit, git_object_id(obj));
 	git_object_free(obj);
 
-	cl_git_pass(git_blame_file(&blame, repo, "include/git2.h", &opts));
+	cl_git_pass(git_blame_file(&g_blame, g_repo, "include/git2.h", &opts));
 
-	check_blame_hunk_index(repo, blame,  0,  1, 1, "d12299fe", "src/git.h");
-	check_blame_hunk_index(repo, blame,  1,  2, 1, "359fc2d2", "include/git2.h");
-	check_blame_hunk_index(repo, blame,  2,  3, 1, "d12299fe", "src/git.h");
-	check_blame_hunk_index(repo, blame,  3,  4, 2, "bb742ede", "include/git2.h");
-	check_blame_hunk_index(repo, blame,  4,  6, 5, "d12299fe", "src/git.h");
-	check_blame_hunk_index(repo, blame,  5, 11, 1, "96fab093", "include/git2.h");
-	check_blame_hunk_index(repo, blame,  6, 12, 1, "9d1dcca2", "src/git2.h");
-	check_blame_hunk_index(repo, blame,  7, 13, 1, "44908fe7", "src/git2.h");
-	check_blame_hunk_index(repo, blame,  8, 14, 1, "a15c550d", "include/git2.h");
-	check_blame_hunk_index(repo, blame,  9, 15, 1, "44908fe7", "src/git2.h");
-	check_blame_hunk_index(repo, blame, 10, 16, 1, "d12299fe", "src/git.h");
-	check_blame_hunk_index(repo, blame, 11, 17, 1, "44908fe7", "src/git2.h");
-	check_blame_hunk_index(repo, blame, 12, 18, 1, "d12299fe", "src/git.h");
-	check_blame_hunk_index(repo, blame, 13, 19, 1, "44908fe7", "src/git2.h");
-	check_blame_hunk_index(repo, blame, 14, 20, 1, "638c2ca4", "src/git2.h");
-	check_blame_hunk_index(repo, blame, 15, 21, 1, "44908fe7", "src/git2.h");
-	check_blame_hunk_index(repo, blame, 16, 22, 1, "d12299fe", "src/git.h");
-	check_blame_hunk_index(repo, blame, 17, 23, 2, "44908fe7", "src/git2.h");
-	check_blame_hunk_index(repo, blame, 18, 25, 1, "bf787bd8", "include/git2.h");
-	check_blame_hunk_index(repo, blame, 19, 26, 1, "0984c876", "include/git2.h");
-	check_blame_hunk_index(repo, blame, 20, 27, 1, "2f8a8ab2", "src/git2.h");
-	check_blame_hunk_index(repo, blame, 21, 28, 1, "27df4275", "include/git2.h");
-	check_blame_hunk_index(repo, blame, 22, 29, 1, "a346992f", "include/git2.h");
-	check_blame_hunk_index(repo, blame, 23, 30, 1, "d12299fe", "src/git.h");
-	check_blame_hunk_index(repo, blame, 24, 31, 5, "44908fe7", "src/git2.h");
-	check_blame_hunk_index(repo, blame, 25, 36, 1, "65b09b1d", "include/git2.h");
-	check_blame_hunk_index(repo, blame, 26, 37, 1, "d12299fe", "src/git.h");
-	check_blame_hunk_index(repo, blame, 27, 38, 1, "44908fe7", "src/git2.h");
-	check_blame_hunk_index(repo, blame, 28, 39, 1, "5d4cd003", "include/git2.h");
-	check_blame_hunk_index(repo, blame, 29, 40, 1, "41fb1ca0", "include/git2.h");
-	check_blame_hunk_index(repo, blame, 30, 41, 1, "2dc31040", "include/git2.h");
-	check_blame_hunk_index(repo, blame, 31, 42, 1, "764df57e", "include/git2.h");
-	check_blame_hunk_index(repo, blame, 32, 43, 1, "5280f4e6", "include/git2.h");
-	check_blame_hunk_index(repo, blame, 33, 44, 1, "613d5eb9", "include/git2.h");
-	check_blame_hunk_index(repo, blame, 34, 45, 1, "d12299fe", "src/git.h");
-	check_blame_hunk_index(repo, blame, 35, 46, 1, "111ee3fe", "include/git2.h");
-	check_blame_hunk_index(repo, blame, 36, 47, 1, "f004c4a8", "include/git2.h");
-	check_blame_hunk_index(repo, blame, 37, 48, 1, "111ee3fe", "include/git2.h");
-	check_blame_hunk_index(repo, blame, 38, 49, 1, "9c82357b", "include/git2.h");
-	check_blame_hunk_index(repo, blame, 39, 50, 1, "d6258deb", "include/git2.h");
-	check_blame_hunk_index(repo, blame, 40, 51, 1, "b311e313", "include/git2.h");
-	check_blame_hunk_index(repo, blame, 41, 52, 1, "3412391d", "include/git2.h");
-	check_blame_hunk_index(repo, blame, 42, 53, 1, "bfc9ca59", "include/git2.h");
-	check_blame_hunk_index(repo, blame, 43, 54, 1, "bf477ed4", "include/git2.h");
-	check_blame_hunk_index(repo, blame, 44, 55, 1, "edebceff", "include/git2.h");
-	check_blame_hunk_index(repo, blame, 45, 56, 1, "743a4b3b", "include/git2.h");
-	check_blame_hunk_index(repo, blame, 46, 57, 1, "0a32dca5", "include/git2.h");
-	check_blame_hunk_index(repo, blame, 47, 58, 1, "590fb68b", "include/git2.h");
-	check_blame_hunk_index(repo, blame, 48, 59, 1, "bf477ed4", "include/git2.h");
-	check_blame_hunk_index(repo, blame, 49, 60, 1, "d12299fe", "src/git.h");
-
-	git_blame_free(blame);
-	git_repository_free(repo);
+	check_blame_hunk_index(g_repo, g_blame,  0,  1, 1, "d12299fe", "src/git.h");
+	check_blame_hunk_index(g_repo, g_blame,  1,  2, 1, "359fc2d2", "include/git2.h");
+	check_blame_hunk_index(g_repo, g_blame,  2,  3, 1, "d12299fe", "src/git.h");
+	check_blame_hunk_index(g_repo, g_blame,  3,  4, 2, "bb742ede", "include/git2.h");
+	check_blame_hunk_index(g_repo, g_blame,  4,  6, 5, "d12299fe", "src/git.h");
+	check_blame_hunk_index(g_repo, g_blame,  5, 11, 1, "96fab093", "include/git2.h");
+	check_blame_hunk_index(g_repo, g_blame,  6, 12, 1, "9d1dcca2", "src/git2.h");
+	check_blame_hunk_index(g_repo, g_blame,  7, 13, 1, "44908fe7", "src/git2.h");
+	check_blame_hunk_index(g_repo, g_blame,  8, 14, 1, "a15c550d", "include/git2.h");
+	check_blame_hunk_index(g_repo, g_blame,  9, 15, 1, "44908fe7", "src/git2.h");
+	check_blame_hunk_index(g_repo, g_blame, 10, 16, 1, "d12299fe", "src/git.h");
+	check_blame_hunk_index(g_repo, g_blame, 11, 17, 1, "44908fe7", "src/git2.h");
+	check_blame_hunk_index(g_repo, g_blame, 12, 18, 1, "d12299fe", "src/git.h");
+	check_blame_hunk_index(g_repo, g_blame, 13, 19, 1, "44908fe7", "src/git2.h");
+	check_blame_hunk_index(g_repo, g_blame, 14, 20, 1, "638c2ca4", "src/git2.h");
+	check_blame_hunk_index(g_repo, g_blame, 15, 21, 1, "44908fe7", "src/git2.h");
+	check_blame_hunk_index(g_repo, g_blame, 16, 22, 1, "d12299fe", "src/git.h");
+	check_blame_hunk_index(g_repo, g_blame, 17, 23, 2, "44908fe7", "src/git2.h");
+	check_blame_hunk_index(g_repo, g_blame, 18, 25, 1, "bf787bd8", "include/git2.h");
+	check_blame_hunk_index(g_repo, g_blame, 19, 26, 1, "0984c876", "include/git2.h");
+	check_blame_hunk_index(g_repo, g_blame, 20, 27, 1, "2f8a8ab2", "src/git2.h");
+	check_blame_hunk_index(g_repo, g_blame, 21, 28, 1, "27df4275", "include/git2.h");
+	check_blame_hunk_index(g_repo, g_blame, 22, 29, 1, "a346992f", "include/git2.h");
+	check_blame_hunk_index(g_repo, g_blame, 23, 30, 1, "d12299fe", "src/git.h");
+	check_blame_hunk_index(g_repo, g_blame, 24, 31, 5, "44908fe7", "src/git2.h");
+	check_blame_hunk_index(g_repo, g_blame, 25, 36, 1, "65b09b1d", "include/git2.h");
+	check_blame_hunk_index(g_repo, g_blame, 26, 37, 1, "d12299fe", "src/git.h");
+	check_blame_hunk_index(g_repo, g_blame, 27, 38, 1, "44908fe7", "src/git2.h");
+	check_blame_hunk_index(g_repo, g_blame, 28, 39, 1, "5d4cd003", "include/git2.h");
+	check_blame_hunk_index(g_repo, g_blame, 29, 40, 1, "41fb1ca0", "include/git2.h");
+	check_blame_hunk_index(g_repo, g_blame, 30, 41, 1, "2dc31040", "include/git2.h");
+	check_blame_hunk_index(g_repo, g_blame, 31, 42, 1, "764df57e", "include/git2.h");
+	check_blame_hunk_index(g_repo, g_blame, 32, 43, 1, "5280f4e6", "include/git2.h");
+	check_blame_hunk_index(g_repo, g_blame, 33, 44, 1, "613d5eb9", "include/git2.h");
+	check_blame_hunk_index(g_repo, g_blame, 34, 45, 1, "d12299fe", "src/git.h");
+	check_blame_hunk_index(g_repo, g_blame, 35, 46, 1, "111ee3fe", "include/git2.h");
+	check_blame_hunk_index(g_repo, g_blame, 36, 47, 1, "f004c4a8", "include/git2.h");
+	check_blame_hunk_index(g_repo, g_blame, 37, 48, 1, "111ee3fe", "include/git2.h");
+	check_blame_hunk_index(g_repo, g_blame, 38, 49, 1, "9c82357b", "include/git2.h");
+	check_blame_hunk_index(g_repo, g_blame, 39, 50, 1, "d6258deb", "include/git2.h");
+	check_blame_hunk_index(g_repo, g_blame, 40, 51, 1, "b311e313", "include/git2.h");
+	check_blame_hunk_index(g_repo, g_blame, 41, 52, 1, "3412391d", "include/git2.h");
+	check_blame_hunk_index(g_repo, g_blame, 42, 53, 1, "bfc9ca59", "include/git2.h");
+	check_blame_hunk_index(g_repo, g_blame, 43, 54, 1, "bf477ed4", "include/git2.h");
+	check_blame_hunk_index(g_repo, g_blame, 44, 55, 1, "edebceff", "include/git2.h");
+	check_blame_hunk_index(g_repo, g_blame, 45, 56, 1, "743a4b3b", "include/git2.h");
+	check_blame_hunk_index(g_repo, g_blame, 46, 57, 1, "0a32dca5", "include/git2.h");
+	check_blame_hunk_index(g_repo, g_blame, 47, 58, 1, "590fb68b", "include/git2.h");
+	check_blame_hunk_index(g_repo, g_blame, 48, 59, 1, "bf477ed4", "include/git2.h");
+	check_blame_hunk_index(g_repo, g_blame, 49, 60, 1, "d12299fe", "src/git.h");
 }
 
 
@@ -214,7 +212,21 @@ void test_blame_simple__trivial_libgit2(void)
  * aa06ecca  8 (Ben Straub 2013-02-12 15:14:46 -0800 13
  * aa06ecca  9 (Ben Straub 2013-02-12 15:14:46 -0800 14
  * aa06ecca 10 (Ben Straub 2013-02-12 15:14:46 -0800 15
- *
+ */
+void test_blame_simple__can_restrict_lines_min(void)
+{
+	git_blame_options opts = GIT_BLAME_OPTIONS_INIT;
+
+	cl_git_pass(git_repository_open(&g_repo, cl_fixture("blametest.git")));
+
+	opts.min_line = 8;
+	cl_git_pass(git_blame_file(&g_blame, g_repo, "b.txt", &opts));
+	cl_assert_equal_i(2, git_blame_get_hunk_count(g_blame));
+	check_blame_hunk_index(g_repo, g_blame, 0,  8, 3, "63d671eb", "b.txt");
+	check_blame_hunk_index(g_repo, g_blame, 1, 11, 5, "aa06ecca", "b.txt");
+}
+
+/*
  * $ git blame -n b.txt -L ,6
  *    orig line no                          final line no
  * commit    V  author     timestamp                  V
@@ -235,38 +247,42 @@ void test_blame_simple__trivial_libgit2(void)
  * 63d671eb 6 (Ben Straub 2013-02-12 15:13:04 -0800 6
  * 63d671eb 7 (Ben Straub 2013-02-12 15:13:04 -0800 7
  */
-void test_blame_simple__can_restrict_to_lines(void)
+void test_blame_simple__can_restrict_lines_max(void)
 {
-	git_blame *blame = NULL;
-	git_repository *repo;
 	git_blame_options opts = GIT_BLAME_OPTIONS_INIT;
 
-	cl_git_pass(git_repository_open(&repo, cl_fixture("blametest.git")));
+	cl_git_pass(git_repository_open(&g_repo, cl_fixture("blametest.git")));
 
-	opts.min_line = 8;
-	cl_git_pass(git_blame_file(&blame, repo, "b.txt", &opts));
-	cl_assert_equal_i(2, git_blame_get_hunk_count(blame));
-	check_blame_hunk_index(repo, blame, 0,  8, 3, "63d671eb", "b.txt");
-	check_blame_hunk_index(repo, blame, 1, 11, 5, "aa06ecca", "b.txt");
-
-	opts.min_line = 0;
 	opts.max_line = 6;
-	cl_git_pass(git_blame_file(&blame, repo, "b.txt", &opts));
-	cl_assert_equal_i(3, git_blame_get_hunk_count(blame));
-	check_blame_hunk_index(repo, blame, 0,  1, 4, "da237394", "b.txt");
-	check_blame_hunk_index(repo, blame, 1,  5, 1, "b99f7ac0", "b.txt");
-	check_blame_hunk_index(repo, blame, 2,  6, 1, "63d671eb", "b.txt");
+	cl_git_pass(git_blame_file(&g_blame, g_repo, "b.txt", &opts));
+	cl_assert_equal_i(3, git_blame_get_hunk_count(g_blame));
+	check_blame_hunk_index(g_repo, g_blame, 0,  1, 4, "da237394", "b.txt");
+	check_blame_hunk_index(g_repo, g_blame, 1,  5, 1, "b99f7ac0", "b.txt");
+	check_blame_hunk_index(g_repo, g_blame, 2,  6, 1, "63d671eb", "b.txt");
+}
+
+/*
+ * $ git blame -n b.txt -L 2,7
+ *    orig line no                          final line no
+ * commit   V  author     timestamp                 V
+ * da237394 2 (Ben Straub 2013-02-12 15:11:30 -0800 2
+ * da237394 3 (Ben Straub 2013-02-12 15:11:30 -0800 3
+ * da237394 4 (Ben Straub 2013-02-12 15:11:30 -0800 4
+ * ^b99f7ac 1 (Ben Straub 2013-02-12 15:10:12 -0800 5
+ * 63d671eb 6 (Ben Straub 2013-02-12 15:13:04 -0800 6
+ * 63d671eb 7 (Ben Straub 2013-02-12 15:13:04 -0800 7
+ */
+void test_blame_simple__can_restrict_lines_both(void)
+{
+	git_blame_options opts = GIT_BLAME_OPTIONS_INIT;
+
+	cl_git_pass(git_repository_open(&g_repo, cl_fixture("blametest.git")));
 
 	opts.min_line = 2;
 	opts.max_line = 7;
-	cl_git_pass(git_blame_file(&blame, repo, "b.txt", &opts));
-	cl_assert_equal_i(3, git_blame_get_hunk_count(blame));
-	check_blame_hunk_index(repo, blame, 0,  2, 3, "da237394", "b.txt");
-	check_blame_hunk_index(repo, blame, 1,  5, 1, "b99f7ac0", "b.txt");
-	check_blame_hunk_index(repo, blame, 2,  6, 2, "63d671eb", "b.txt");
-
-	git_blame_free(blame);
-	git_repository_free(repo);
+	cl_git_pass(git_blame_file(&g_blame, g_repo, "b.txt", &opts));
+	cl_assert_equal_i(3, git_blame_get_hunk_count(g_blame));
+	check_blame_hunk_index(g_repo, g_blame, 0,  2, 3, "da237394", "b.txt");
+	check_blame_hunk_index(g_repo, g_blame, 1,  5, 1, "b99f7ac0", "b.txt");
+	check_blame_hunk_index(g_repo, g_blame, 2,  6, 2, "63d671eb", "b.txt");
 }
-
-/* TODO: no newline at end of file? */
