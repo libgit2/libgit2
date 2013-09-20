@@ -63,6 +63,7 @@ typedef struct git_clone_options {
 
 	git_checkout_opts checkout_opts;
 	int bare;
+	int ignore_cert_errors;
 
 	git_remote_callbacks *remote_callbacks;
 	const char* checkout_branch;
