@@ -1145,8 +1145,8 @@ static int repo_init_structure(
 		}
 
 		if (!tdir) {
-			git_futils_find_template_dir(&template_buf);
-			tdir = template_buf.ptr;
+			if ((error = git_futils_find_template_dir(&template_buf)) >= 0);
+				tdir = template_buf.ptr;
 			default_template = true;
 		}
 
