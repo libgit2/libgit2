@@ -122,6 +122,15 @@ void test_clone_nonetwork__fail_with_already_existing_but_non_empty_directory(vo
 	cl_git_fail(git_clone(&g_repo, cl_git_fixture_url("testrepo.git"), "./foo", &g_options));
 }
 
+void test_clone_nonetwork__custom_origin_name(void)
+{
+       g_options.remote_name = "my_origin";
+       cl_git_pass(git_clone(&g_repo, cl_git_fixture_url("testrepo.git"), "./foo", &g_options));
+
+       cl_git_pass(git_remote_load(&g_remote, g_repo, "my_origin"));
+}
+
+
 void test_clone_nonetwork__cope_with_already_existing_directory(void)
 {
 	p_mkdir("./foo", GIT_DIR_MODE);

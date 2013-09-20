@@ -306,8 +306,10 @@ static int create_and_configure_origin(
 {
 	int error;
 	git_remote *origin = NULL;
+	const char *name;
 
-	if ((error = git_remote_create(&origin, repo, "origin", url)) < 0)
+	name = options->remote_name ? options->remote_name : "origin";
+	if ((error = git_remote_create(&origin, repo, name, url)) < 0)
 		goto on_error;
 
 	if (options->ignore_cert_errors)

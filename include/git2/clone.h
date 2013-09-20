@@ -35,25 +35,12 @@ GIT_BEGIN_DECL
  *   set the `checkout_strategy` to GIT_CHECKOUT_DEFAULT.
  * - `bare` should be set to zero to create a standard repo, non-zero for
  *   a bare repo
- * - `fetch_progress_cb` is optional callback for fetch progress. Be aware that
- *   this is called inline with network and indexing operations, so performance
- *   may be affected.
- * - `fetch_progress_payload` is payload for fetch_progress_cb
+ * - `ignore_cert_errors` should be set to 1 if errors validating the remote host's
+ *   certificate should be ignored.
  *
  *   ** "origin" remote options: **
  * - `remote_name` is the name given to the "origin" remote.  The default is
  *   "origin".
- * - `pushurl` is a URL to be used for pushing.  NULL means use the fetch url.
- * - `fetch_spec` is the fetch specification to be used for fetching.  NULL
- *   results in the same behavior as GIT_REMOTE_DEFAULT_FETCH.
- * - `push_spec` is the fetch specification to be used for pushing.  NULL means
- *   use the same spec as for fetching.
- * - `transport_flags` is flags used to create transport if no transport is
- *   provided.
- * - `transport` is a custom transport to be used for the initial fetch.  NULL
- *   means use the transport autodetected from the URL.
- * - `remote_callbacks` may be used to specify custom progress callbacks for
- *   the origin remote before the fetch is initiated.
  * - `checkout_branch` gives the name of the branch to checkout. NULL means
  *   use the remote's HEAD.
  */
@@ -62,10 +49,11 @@ typedef struct git_clone_options {
 	unsigned int version;
 
 	git_checkout_opts checkout_opts;
+	git_remote_callbacks *remote_callbacks;
+
 	int bare;
 	int ignore_cert_errors;
-
-	git_remote_callbacks *remote_callbacks;
+	const char *remote_name;
 	const char* checkout_branch;
 } git_clone_options;
 
