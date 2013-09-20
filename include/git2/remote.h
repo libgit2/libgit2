@@ -400,15 +400,47 @@ typedef enum git_remote_completion_type {
 /**
  * The callback settings structure
  *
- * Set the calbacks to be called by the remote.
+ * Set the callbacks to be called by the remote when informing the user
+ * about the progress of the network operations.
  */
 struct git_remote_callbacks {
 	unsigned int version;
+	/**
+	 * Textual progress from the remote. Text send over the
+	 * progress side-band will be passed to this function (this is
+	 * the 'counting objects' output.
+	 */
 	void (*progress)(const char *str, int len, void *data);
+
+	/**
+	 * Completion is called when different parts of the download
+	 * process are done (currently unused).
+	 */
 	int (*completion)(git_remote_completion_type type, void *data);
+
+	/**
+	 * This will be called if the remote host requires
+	 * authentication in order to connect to it.
+	 */
 	int (*credentials)(git_cred **cred, const char *url, const char *username_from_url, unsigned int allowed_types,	void *data);
+
+	/**
+	 * During the download of new data, this will be regularly
+	 * called with the current count of progress done by the
+	 * indexer.
+	 */
 	int (*transfer_progress)(const git_transfer_progress *stats, void *data);
+
+	/**
+	 * Each time a reference is updated locally, this function
+	 * will be called with information about it.
+	 */
 	int (*update_tips)(const char *refname, const git_oid *a, const git_oid *b, void *data);
+
+	/**
+	 * This will be passed to each of the callbacks in this struct
+	 * as the last parameter.
+	 */
 	void *payload;
 };
 
