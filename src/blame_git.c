@@ -11,13 +11,15 @@
 /*
  * Locate an existing origin or create a new one.
  */
-int get_origin(struct origin **out, struct scoreboard *sb, git_commit *commit, const char *path)
+int get_origin(git_blame__origin **out, git_blame__scoreboard *sb, git_commit *commit, const char *path)
 {
-	struct blame_entry *e;
+	git_blame__entry *e;
 
-	for (e = sb->ent; e; e = e->next)
-		if (e->suspect->commit == commit && !strcmp(e->suspect->path, path))
+	for (e = sb->ent; e; e = e->next) {
+		if (e->suspect->commit == commit && !strcmp(e->suspect->path, path)) {
 			*out = origin_incref(e->suspect);
+		}
+	}
 	return make_origin(out, commit, path);
 }
 
@@ -27,10 +29,11 @@ int get_origin(struct origin **out, struct scoreboard *sb, git_commit *commit, c
  * get_origin() to obtain shared, refcounted copy instead of calling
  * this function directly.
  */
-int make_origin(struct origin **out, git_commit *commit, const char *path)
+int make_origin(git_blame__origin **out, git_commit *commit, const char *path)
 {
 	int error = 0;
-	struct origin *o;
+	git_blame__origin *o;
+
 	o = git__calloc(1, sizeof(*o) + strlen(path) + 1);
 	GITERR_CHECK_ALLOC(o);
 	o->commit = commit;
@@ -38,22 +41,23 @@ int make_origin(struct origin **out, git_commit *commit, const char *path)
 	strcpy(o->path, path);
 
 	if (!(error = git_object_lookup_bypath((git_object**)&o->blob, (git_object*)commit,
-			path, GIT_OBJ_BLOB)))
+			path, GIT_OBJ_BLOB))) {
 		*out = o;
-	else
+	} else {
 		origin_decref(o);
+	}
 	return error;
 }
 
 struct blame_chunk_cb_data {
-	struct scoreboard *sb;
-	struct origin *target;
-	struct origin *parent;
-	long plno;
+	git_blame__scoreboard *sb;
+	git_blame__origin *target;
+	git_blame__origin *parent;
 	long tlno;
+	long plno;
 };
 
-static bool same_suspect(struct origin *a, struct origin *b)
+static bool same_suspect(git_blame__origin *a, git_blame__origin *b)
 {
 	if (a == b)
 		return true;
@@ -63,9 +67,9 @@ static bool same_suspect(struct origin *a, struct origin *b)
 }
 
 /* Find the line number of the last line the target is suspected for */
-static int find_last_in_target(struct scoreboard *sb, struct origin *target)
+static int find_last_in_target(git_blame__scoreboard *sb, git_blame__origin *target)
 {
-	struct blame_entry *e;
+	git_blame__entry *e;
 	int last_in_target = -1;
 
 	for (e=sb->ent; e; e=e->next) {
@@ -91,8 +95,8 @@ static int find_last_in_target(struct scoreboard *sb, struct origin *target)
  * Split e into potentially three parts; before this chunk, the chunk
  * to be blamed for the parent, and after that portion.
  */
-static void split_overlap(struct blame_entry *split, struct blame_entry *e,
-		int tlno, int plno, int same, struct origin *parent)
+static void split_overlap(git_blame__entry *split, git_blame__entry *e,
+		int tlno, int plno, int same, git_blame__origin *parent)
 {
 	int chunk_end_lno;
 
@@ -134,9 +138,9 @@ static void split_overlap(struct blame_entry *split, struct blame_entry *e,
  * Link in a new blame entry to the scoreboard. Entries that cover the same
  * line range have been removed from the scoreboard previously.
  */
-static void add_blame_entry(struct scoreboard *sb, struct blame_entry *e)
+static void add_blame_entry(git_blame__scoreboard *sb, git_blame__entry *e)
 {
-	struct blame_entry *ent, *prev = NULL;
+	git_blame__entry *ent, *prev = NULL;
 
 	origin_incref(e->suspect);
 
@@ -161,9 +165,9 @@ static void add_blame_entry(struct scoreboard *sb, struct blame_entry *e)
  * a malloced blame_entry that is already on the linked list of the scoreboard.
  * The origin of dst loses a refcnt while the origin of src gains one.
  */
-static void dup_entry(struct blame_entry *dst, struct blame_entry *src)
+static void dup_entry(git_blame__entry *dst, git_blame__entry *src)
 {
-	struct blame_entry *p, *n;
+	git_blame__entry *p, *n;
 
 	p = dst->prev;
 	n = dst->next;
@@ -179,9 +183,9 @@ static void dup_entry(struct blame_entry *dst, struct blame_entry *src)
  * split_overlap() divided an existing blame e into up to three parts in split.
  * Adjust the linked list of blames in the scoreboard to reflect the split.
  */
-static void split_blame(struct scoreboard *sb, struct blame_entry *split, struct blame_entry *e)
+static void split_blame(git_blame__scoreboard *sb, git_blame__entry *split, git_blame__entry *e)
 {
-	struct blame_entry *new_entry;
+	git_blame__entry *new_entry;
 
 	if (split[0].suspect && split[2].suspect) {
 		/* The first part (reuse storage for the existing entry e */
@@ -189,12 +193,12 @@ static void split_blame(struct scoreboard *sb, struct blame_entry *split, struct
 
 		/* The last part -- me */
 		new_entry = git__malloc(sizeof(*new_entry));
-		memcpy(new_entry, &(split[2]), sizeof(struct blame_entry));
+		memcpy(new_entry, &(split[2]), sizeof(git_blame__entry));
 		add_blame_entry(sb, new_entry);
 
 		/* ... and the middle part -- parent */
 		new_entry = git__malloc(sizeof(*new_entry));
-		memcpy(new_entry, &(split[1]), sizeof(struct blame_entry));
+		memcpy(new_entry, &(split[1]), sizeof(git_blame__entry));
 		add_blame_entry(sb, new_entry);
 	} else if (!split[0].suspect && !split[2].suspect) {
 		/*
@@ -206,13 +210,13 @@ static void split_blame(struct scoreboard *sb, struct blame_entry *split, struct
 		/* me and then parent */
 		dup_entry(e, &split[0]);
 		new_entry = git__malloc(sizeof(*new_entry));
-		memcpy(new_entry, &(split[1]), sizeof(struct blame_entry));
+		memcpy(new_entry, &(split[1]), sizeof(git_blame__entry));
 		add_blame_entry(sb, new_entry);
 	} else {
 		/* parent and then me */
 		dup_entry(e, &split[1]);
 		new_entry = git__malloc(sizeof(*new_entry));
-		memcpy(new_entry, &(split[2]), sizeof(struct blame_entry));
+		memcpy(new_entry, &(split[2]), sizeof(git_blame__entry));
 		add_blame_entry(sb, new_entry);
 	}
 }
@@ -221,7 +225,7 @@ static void split_blame(struct scoreboard *sb, struct blame_entry *split, struct
  * After splitting the blame, the origins used by the on-stack blame_entry
  * should lose one refcnt each.
  */
-static void decref_split(struct blame_entry *split)
+static void decref_split(git_blame__entry *split)
 {
 	int i;
 	for (i=0; i<3; i++)
@@ -232,9 +236,9 @@ static void decref_split(struct blame_entry *split)
  * Helper for blame_chunk(). blame_entry e is known to overlap with the patch
  * hunk; split it and pass blame to the parent.
  */
-static void blame_overlap(struct scoreboard *sb, struct blame_entry *e, int tlno, int plno, int same, struct origin *parent)
+static void blame_overlap(git_blame__scoreboard *sb, git_blame__entry *e, int tlno, int plno, int same, git_blame__origin *parent)
 {
-	struct blame_entry split[3] = {{0}};
+	git_blame__entry split[3] = {{0}};
 
 	split_overlap(split, e, tlno, plno, same, parent);
 	if (split[1].suspect)
@@ -247,9 +251,9 @@ static void blame_overlap(struct scoreboard *sb, struct blame_entry *e, int tlno
  * e and its parent. Find and split the overlap, and pass blame to the
  * overlapping part to the parent.
  */
-static void blame_chunk(struct scoreboard *sb, int tlno, int plno, int same, struct origin *target, struct origin *parent)
+static void blame_chunk(git_blame__scoreboard *sb, int tlno, int plno, int same, git_blame__origin *target, git_blame__origin *parent)
 {
-	struct blame_entry *e;
+	git_blame__entry *e;
 
 	for (e = sb->ent; e; e = e->next) {
 		if (e->guilty || !same_suspect(e->suspect, target))
@@ -328,7 +332,7 @@ static int diff_hunks(mmfile_t *file_a, mmfile_t *file_b, void *cb_data)
 	return xdi_diff(file_a, file_b, &xpp, &xecfg, &ecb);
 }
 
-static void fill_origin_blob(struct origin *o, mmfile_t *file)
+static void fill_origin_blob(git_blame__origin *o, mmfile_t *file)
 {
 	memset(file, 0, sizeof(*file));
 	if (o->blob) {
@@ -337,9 +341,9 @@ static void fill_origin_blob(struct origin *o, mmfile_t *file)
 	}
 }
 
-static int pass_blame_to_parent(struct scoreboard *sb,
-				struct origin *target,
-				struct origin *parent)
+static int pass_blame_to_parent(git_blame__scoreboard *sb,
+				git_blame__origin *target,
+				git_blame__origin *parent)
 {
 	int last_in_target;
 	mmfile_t file_p, file_o;
@@ -365,10 +369,10 @@ static int paths_on_dup(void **old, void *new)
 	git__free(new);
 	return -1;
 }
-static struct origin* find_origin(struct scoreboard *sb, git_commit *parent,
-		struct origin *origin)
+static git_blame__origin* find_origin(git_blame__scoreboard *sb, git_commit *parent,
+		git_blame__origin *origin)
 {
-	struct origin *porigin = NULL;
+	git_blame__origin *porigin = NULL;
 	git_diff_list *difflist = NULL;
 	git_diff_options diffopts = GIT_DIFF_OPTIONS_INIT;
 	git_tree *otree=NULL, *ptree=NULL;
@@ -429,10 +433,10 @@ cleanup:
  * The blobs of origin and porigin exactly match, so everything origin is
  * suspected for can be blamed on the parent.
  */
-static void pass_whole_blame(struct scoreboard *sb,
-		struct origin *origin, struct origin *porigin)
+static void pass_whole_blame(git_blame__scoreboard *sb,
+		git_blame__origin *origin, git_blame__origin *porigin)
 {
-	struct blame_entry *e;
+	git_blame__entry *e;
 
 	if (!porigin->blob)
 		git_object_lookup((git_object**)&porigin->blob, sb->blame->repository, git_blob_id(origin->blob),
@@ -446,12 +450,12 @@ static void pass_whole_blame(struct scoreboard *sb,
 	}
 }
 
-static void pass_blame(struct scoreboard *sb, struct origin *origin, uint32_t opt)
+static void pass_blame(git_blame__scoreboard *sb, git_blame__origin *origin, uint32_t opt)
 {
 	git_commit *commit = origin->commit;
 	int i, num_sg;
-	struct origin *sg_buf[16];
-	struct origin *porigin, **sg_origin = sg_buf;
+	git_blame__origin *sg_buf[16];
+	git_blame__origin *porigin, **sg_origin = sg_buf;
 
 	GIT_UNUSED(opt);
 
@@ -498,7 +502,7 @@ static void pass_blame(struct scoreboard *sb, struct origin *origin, uint32_t op
 	}
 
 	for (i=0; i<num_sg; i++) {
-		struct origin *porigin = sg_origin[i];
+		git_blame__origin *porigin = sg_origin[i];
 		if (!porigin)
 			continue;
 		if (!origin->previous) {
@@ -526,14 +530,14 @@ finish:
  * Origin is refcounted and usually we keep the blob contents to be
  * reused.
  */
-struct origin *origin_incref(struct origin *o)
+git_blame__origin *origin_incref(git_blame__origin *o)
 {
 	if (o)
 		o->refcnt++;
 	return o;
 }
 
-void origin_decref(struct origin *o)
+void origin_decref(git_blame__origin *o)
 {
 	if (o && --o->refcnt <= 0) {
 		if (o->previous)
@@ -544,11 +548,11 @@ void origin_decref(struct origin *o)
 	}
 }
 
-void assign_blame(struct scoreboard *sb, uint32_t opt)
+void assign_blame(git_blame__scoreboard *sb, uint32_t opt)
 {
 	while (true) {
-		struct blame_entry *ent;
-		struct origin *suspect = NULL;
+		git_blame__entry *ent;
+		git_blame__origin *suspect = NULL;
 
 		/* Find a suspect to break down */
 		for (ent = sb->ent; !suspect && ent; ent = ent->next)
@@ -574,9 +578,9 @@ void assign_blame(struct scoreboard *sb, uint32_t opt)
 	}
 }
 
-void coalesce(struct scoreboard *sb)
+void coalesce(git_blame__scoreboard *sb)
 {
-	struct blame_entry *ent, *next;
+	git_blame__entry *ent, *next;
 
 	for (ent=sb->ent; ent && (next = ent->next); ent = next) {
 		if (same_suspect(ent->suspect, next->suspect) &&

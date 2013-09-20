@@ -9,22 +9,22 @@
 /*
  * One blob in a commit that is being suspected
  */
-struct origin {
+typedef struct git_blame__origin {
 	int refcnt;
-	struct origin *previous;
+	struct git_blame__origin *previous;
 	git_commit *commit;
 	git_blob *blob;
 	char path[];
-};
+} git_blame__origin;
 
 /*
- * Each group of lines is described by a blame_entry; it can be split
+ * Each group of lines is described by a git_blame__entry; it can be split
  * as we pass blame to the parents.  They form a linked list in the
  * scoreboard structure, sorted by the target line number.
  */
-struct blame_entry {
-	struct blame_entry *prev;
-	struct blame_entry *next;
+typedef struct git_blame__entry {
+	struct git_blame__entry *prev;
+	struct git_blame__entry *next;
 
 	/* the first line of this group in the final image;
 	 * internally all line numbers are 0 based.
@@ -35,7 +35,7 @@ struct blame_entry {
 	int num_lines;
 
 	/* the commit that introduced this group into the final image */
-	struct origin *suspect;
+	git_blame__origin *suspect;
 
 	/* true if the suspect is truly guilty; false while we have not
 	 * checked if the group came from one of its parents.
@@ -59,12 +59,12 @@ struct blame_entry {
 	/* Whether this entry has been tracked to a boundary commit.
 	 */
 	bool is_boundary;
-};
+} git_blame__entry;
 
 /*
  * The current state of the blame assignment.
  */
-struct scoreboard {
+typedef struct git_blame__scoreboard {
 	/* the final commit (i.e. where we started digging from) */
 	git_commit *final;
 	const char *path;
@@ -78,20 +78,20 @@ struct scoreboard {
 	git_off_t final_buf_size;
 
 	/* linked list of blames */
-	struct blame_entry *ent;
+	git_blame__entry *ent;
 
 	/* look-up a line in the final buffer */
 	int num_lines;
 
 	git_blame *blame;
-};
+} git_blame__scoreboard;
 
 
-int get_origin(struct origin **out, struct scoreboard *sb, git_commit *commit, const char *path);
-int make_origin(struct origin **out, git_commit *commit, const char *path);
-struct origin *origin_incref(struct origin *o);
-void origin_decref(struct origin *o);
-void assign_blame(struct scoreboard *sb, uint32_t flags);
-void coalesce(struct scoreboard *sb);
+int get_origin(git_blame__origin **out, git_blame__scoreboard *sb, git_commit *commit, const char *path);
+int make_origin(git_blame__origin **out, git_commit *commit, const char *path);
+git_blame__origin *origin_incref(git_blame__origin *o);
+void origin_decref(git_blame__origin *o);
+void assign_blame(git_blame__scoreboard *sb, uint32_t flags);
+void coalesce(git_blame__scoreboard *sb);
 
 #endif

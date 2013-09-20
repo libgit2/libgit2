@@ -221,7 +221,7 @@ static git_blame_hunk *split_hunk_in_vector(
  * To allow quick access to the contents of nth line in the
  * final image, prepare an index in the scoreboard.
  */
-static int prepare_lines(struct scoreboard *sb)
+static int prepare_lines(git_blame__scoreboard *sb)
 {
 	const char *buf = sb->final_buf;
 	git_off_t len = sb->final_buf_size;
@@ -242,7 +242,7 @@ static int prepare_lines(struct scoreboard *sb)
 	return sb->num_lines;
 }
 
-static git_blame_hunk* hunk_from_entry(struct blame_entry *e)
+static git_blame_hunk* hunk_from_entry(git_blame__entry *e)
 {
 	git_blame_hunk *h = new_hunk(
 			e->lno+1, e->num_lines, e->s_lno+1, e->suspect->path);
@@ -255,10 +255,10 @@ static int walk_and_mark(git_blame *blame)
 {
 	int error;
 
-	struct scoreboard sb = {0};
-	struct blame_entry *ent = NULL;
+	git_blame__scoreboard sb = {0};
+	git_blame__entry *ent = NULL;
 	git_blob *blob = NULL;
-	struct origin *o;
+	git_blame__origin *o;
 
 	if ((error = git_commit_lookup(&sb.final, blame->repository, &blame->options.newest_commit)) < 0 ||
 		 (error = git_object_lookup_bypath((git_object**)&blob, (git_object*)sb.final, blame->path, GIT_OBJ_BLOB)) < 0)
@@ -287,8 +287,8 @@ static int walk_and_mark(git_blame *blame)
 
 cleanup:
 	for (ent = sb.ent; ent; ) {
-		struct blame_entry *e = ent->next;
-		struct origin *o = ent->suspect;
+		git_blame__entry *e = ent->next;
+		git_blame__origin *o = ent->suspect;
 
 		git_vector_insert(&blame->hunks, hunk_from_entry(ent));
 
