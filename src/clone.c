@@ -390,16 +390,20 @@ int git_clone(
 	git_repository **out,
 	const char *url,
 	const char *local_path,
-	const git_clone_options *options)
+	const git_clone_options *_options)
 {
 	int retcode = GIT_ERROR;
 	git_repository *repo = NULL;
 	git_remote *origin;
+	git_clone_options options = GIT_CLONE_OPTIONS_INIT;
 	int remove_directory_on_failure = 0;
 
 	assert(out && url && local_path);
 
-	GITERR_CHECK_VERSION(options, GIT_CLONE_OPTIONS_VERSION, "git_clone_options");
+	if (_options)
+		memcpy(&options, _options, sizeof(git_clone_options));
+
+	GITERR_CHECK_VERSION(&options, GIT_CLONE_OPTIONS_VERSION, "git_clone_options");
 
 	/* Only clone to a new directory or an empty directory */
 	if (git_path_exists(local_path) && !git_path_is_empty_dir(local_path)) {
@@ -411,13 +415,13 @@ int git_clone(
 	/* Only remove the directory on failure if we create it */
 	remove_directory_on_failure = !git_path_exists(local_path);
 
-	if ((retcode = git_repository_init(&repo, local_path, options->bare)) < 0)
+	if ((retcode = git_repository_init(&repo, local_path, options.bare)) < 0)
 		return retcode;
 
-	if ((retcode = create_and_configure_origin(&origin, repo, url, options)) < 0)
+	if ((retcode = create_and_configure_origin(&origin, repo, url, &options)) < 0)
 		goto cleanup;
 
-	retcode = git_clone_into(repo, origin, &options->checkout_opts, options->checkout_branch);
+	retcode = git_clone_into(repo, origin, &options.checkout_opts, options.checkout_branch);
 	git_remote_free(origin);
 
 	if (retcode < 0)
