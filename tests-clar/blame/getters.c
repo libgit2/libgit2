@@ -20,7 +20,7 @@ void test_blame_getters__initialize(void)
 	g_blame = git_blame__alloc(NULL, opts, "");
 
 	for (i=0; i<5; i++) {
-		git_blame_hunk *h = git_blame__alloc_hunk();
+		git_blame_hunk *h = git__calloc(1, sizeof(git_blame_hunk));
 		h->final_start_line_number = hunks[i].final_start_line_number;
 		h->orig_path = git__strdup(hunks[i].orig_path);
 		h->lines_in_hunk = hunks[i].lines_in_hunk;

@@ -62,11 +62,6 @@ static git_blame_hunk* new_hunk(uint16_t start, uint16_t lines, uint16_t orig_st
 	return hunk;
 }
 
-git_blame_hunk* git_blame__alloc_hunk()
-{
-	return new_hunk(0,0,0,NULL);
-}
-
 static git_blame_hunk* dup_hunk(git_blame_hunk *hunk)
 {
 	git_blame_hunk *newhunk = new_hunk(hunk->final_start_line_number, hunk->lines_in_hunk, hunk->orig_start_line_number, hunk->orig_path);
@@ -106,13 +101,11 @@ git_blame* git_blame__alloc(
 		return NULL;
 	}
 	git_vector_init(&gbr->hunks, 8, hunk_sort_cmp_by_start_line);
-	git_vector_init(&gbr->unclaimed_hunks, 8, hunk_sort_cmp_by_start_line);
 	git_vector_init(&gbr->paths, 8, paths_cmp);
 	gbr->repository = repo;
 	gbr->options = opts;
 	gbr->path = git__strdup(path);
 	git_vector_insert(&gbr->paths, git__strdup(path));
-	gbr->final_blob = NULL;
 	return gbr;
 }
 
@@ -127,10 +120,6 @@ void git_blame_free(git_blame *blame)
 	git_vector_foreach(&blame->hunks, i, hunk)
 		free_hunk(hunk);
 	git_vector_free(&blame->hunks);
-
-	git_vector_foreach(&blame->unclaimed_hunks, i, hunk)
-		free_hunk(hunk);
-	git_vector_free(&blame->unclaimed_hunks);
 
 	git_vector_foreach(&blame->paths, i, path)
 		git__free(path);
