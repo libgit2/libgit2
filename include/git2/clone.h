@@ -62,15 +62,8 @@ typedef struct git_clone_options {
 	unsigned int version;
 
 	git_checkout_opts checkout_opts;
-	git_repository_init_options *init_options;
 	int bare;
 
-	const char *remote_name;
-	const char *pushurl;
-	const char *fetch_spec;
-	const char *push_spec;
-    git_transport_flags_t transport_flags;
-	git_transport *transport;
 	git_remote_callbacks *remote_callbacks;
 	const char* checkout_branch;
 } git_clone_options;

@@ -307,30 +307,12 @@ static int create_and_configure_origin(
 	int error;
 	git_remote *origin = NULL;
 
-	if ((error = git_remote_create(&origin, repo, options->remote_name, url)) < 0)
+	if ((error = git_remote_create(&origin, repo, "origin", url)) < 0)
 		goto on_error;
 
 	if (options->remote_callbacks &&
 	    (error = git_remote_set_callbacks(origin, options->remote_callbacks)) < 0)
 		goto on_error;
-
-	if (options->fetch_spec) {
-		git_remote_clear_refspecs(origin);
-		if ((error = git_remote_add_fetch(origin, options->fetch_spec)) < 0)
-			goto on_error;
-	}
-
-	if (options->push_spec &&
-	    (error = git_remote_add_push(origin, options->push_spec)) < 0)
-		goto on_error;
-
-	if (options->pushurl &&
-	    (error = git_remote_set_pushurl(origin, options->pushurl)) < 0)
-		goto on_error;
-
-	if (options->transport_flags == GIT_TRANSPORTFLAGS_NO_CHECK_CERT) {
-        git_remote_check_cert(origin, 0);
-    }
 
 	if ((error = git_remote_save(origin)) < 0)
 		goto on_error;
@@ -358,23 +340,6 @@ static bool should_checkout(
 		return false;
 
 	return !git_repository_head_unborn(repo);
-}
-
-static void normalize_options(git_clone_options *dst, const git_clone_options *src, git_repository_init_options *initOptions)
-{
-	git_clone_options default_options = GIT_CLONE_OPTIONS_INIT;
-	if (!src) src = &default_options;
-
-	*dst = *src;
-
-	/* Provide defaults for null pointers */
-	if (!dst->remote_name) dst->remote_name = "origin";
-	if (!dst->init_options) {
-		dst->init_options = initOptions;
-		initOptions->flags = GIT_REPOSITORY_INIT_MKPATH;
-		if (dst->bare)
-			initOptions->flags |= GIT_REPOSITORY_INIT_BARE;
-	}
 }
 
 int git_clone_into(git_repository *repo, git_remote *remote, git_checkout_opts *co_opts, const char *branch)
@@ -425,14 +390,11 @@ int git_clone(
 	int retcode = GIT_ERROR;
 	git_repository *repo = NULL;
 	git_remote *origin;
-	git_clone_options normOptions;
 	int remove_directory_on_failure = 0;
-	git_repository_init_options initOptions = GIT_REPOSITORY_INIT_OPTIONS_INIT;
 
 	assert(out && url && local_path);
 
-	normalize_options(&normOptions, options, &initOptions);
-	GITERR_CHECK_VERSION(&normOptions, GIT_CLONE_OPTIONS_VERSION, "git_clone_options");
+	GITERR_CHECK_VERSION(options, GIT_CLONE_OPTIONS_VERSION, "git_clone_options");
 
 	/* Only clone to a new directory or an empty directory */
 	if (git_path_exists(local_path) && !git_path_is_empty_dir(local_path)) {
@@ -444,13 +406,13 @@ int git_clone(
 	/* Only remove the directory on failure if we create it */
 	remove_directory_on_failure = !git_path_exists(local_path);
 
-	if ((retcode = git_repository_init_ext(&repo, local_path, normOptions.init_options)) < 0)
+	if ((retcode = git_repository_init(&repo, local_path, options->bare)) < 0)
 		return retcode;
 
-	if ((retcode = create_and_configure_origin(&origin, repo, url, &normOptions)) < 0)
+	if ((retcode = create_and_configure_origin(&origin, repo, url, options)) < 0)
 		goto cleanup;
 
-	retcode = git_clone_into(repo, origin, &normOptions.checkout_opts, normOptions.checkout_branch);
+	retcode = git_clone_into(repo, origin, &options->checkout_opts, options->checkout_branch);
 	git_remote_free(origin);
 
 	if (retcode < 0)
