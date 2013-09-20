@@ -211,7 +211,7 @@ int git_oid_strcmp(const git_oid *oid_a, const char *str)
 	for (a = oid_a->id; *str && (a - oid_a->id) < GIT_OID_RAWSZ; ++a) {
 		if ((hexval = git__fromhex(*str++)) < 0)
 			return -1;
-		strval = hexval << 4;
+		strval = (unsigned char)(hexval << 4);
 		if (*str) {
 			if ((hexval = git__fromhex(*str++)) < 0)
 				return -1;
