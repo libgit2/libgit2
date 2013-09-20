@@ -255,7 +255,7 @@ typedef struct git_checkout_opts {
  */
 GIT_EXTERN(int) git_checkout_head(
 	git_repository *repo,
-	git_checkout_opts *opts);
+	const git_checkout_opts *opts);
 
 /**
  * Updates files in the working tree to match the content of the index.

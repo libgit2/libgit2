@@ -104,7 +104,7 @@ GIT_EXTERN(int) git_clone(
  * default branch
  * @return 0 on success or an error code
  */
-GIT_EXTERN(int) git_clone_into(git_repository *repo, git_remote *remote, git_checkout_opts *co_opts, const char *branch);
+GIT_EXTERN(int) git_clone_into(git_repository *repo, git_remote *remote, const git_checkout_opts *co_opts, const char *branch);
 
 /** @} */
 GIT_END_DECL
