@@ -210,10 +210,10 @@ static git_blame_hunk *split_hunk_in_vector(
  * To allow quick access to the contents of nth line in the
  * final image, prepare an index in the scoreboard.
  */
-static int prepare_lines(git_blame__scoreboard *sb)
+static int prepare_lines(git_blame *blame)
 {
-	const char *buf = sb->final_buf;
-	git_off_t len = sb->final_buf_size;
+	const char *buf = blame->final_buf;
+	git_off_t len = blame->final_buf_size;
 	int num = 0, incomplete = 0, bol = 1;
 
 	if (len && buf[len-1] != '\n')
@@ -227,8 +227,8 @@ static int prepare_lines(git_blame__scoreboard *sb)
 			bol = 1;
 		}
 	}
-	sb->num_lines = num + incomplete;
-	return sb->num_lines;
+	blame->num_lines = num + incomplete;
+	return blame->num_lines;
 }
 
 static git_blame_hunk* hunk_from_entry(git_blame__entry *e)
@@ -244,21 +244,20 @@ static int walk_and_mark(git_blame *blame)
 {
 	int error;
 
-	git_blame__scoreboard sb = {0};
 	git_blame__entry *ent = NULL;
 	git_blob *blob = NULL;
 	git_blame__origin *o;
 
-	if ((error = git_commit_lookup(&sb.final, blame->repository, &blame->options.newest_commit)) < 0 ||
-		 (error = git_object_lookup_bypath((git_object**)&blob, (git_object*)sb.final, blame->path, GIT_OBJ_BLOB)) < 0)
+	if ((error = git_commit_lookup(&blame->final, blame->repository, &blame->options.newest_commit)) < 0 ||
+		 (error = git_object_lookup_bypath((git_object**)&blob, (git_object*)blame->final, blame->path, GIT_OBJ_BLOB)) < 0)
 		goto cleanup;
-	sb.final_buf = git_blob_rawcontent(blob);
-	sb.final_buf_size = git_blob_rawsize(blob);
-	if ((error = get_origin(&o, &sb, sb.final, blame->path)) < 0)
+	blame->final_buf = git_blob_rawcontent(blob);
+	blame->final_buf_size = git_blob_rawsize(blob);
+	if ((error = get_origin(&o, blame, blame->final, blame->path)) < 0)
 		goto cleanup;
 
 	ent = git__calloc(1, sizeof(*ent));
-	ent->num_lines = prepare_lines(&sb);
+	ent->num_lines = prepare_lines(blame);
 	ent->lno = blame->options.min_line - 1;
 	ent->num_lines = ent->num_lines - blame->options.min_line + 1;
 	if (blame->options.max_line > 0) {
@@ -267,15 +266,14 @@ static int walk_and_mark(git_blame *blame)
 	ent->s_lno = ent->lno;
 	ent->suspect = o;
 
-	sb.ent = ent;
-	sb.path = blame->path;
-	sb.blame = blame;
+	blame->ent = ent;
+	blame->path = blame->path;
 
-	assign_blame(&sb, blame->options.flags);
-	coalesce(&sb);
+	assign_blame(blame, blame->options.flags);
+	coalesce(blame);
 
 cleanup:
-	for (ent = sb.ent; ent; ) {
+	for (ent = blame->ent; ent; ) {
 		git_blame__entry *e = ent->next;
 		git_blame__origin *o = ent->suspect;
 
