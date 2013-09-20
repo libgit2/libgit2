@@ -61,8 +61,11 @@ typedef struct git_clone_options {
 #define GIT_CLONE_OPTIONS_INIT {GIT_CLONE_OPTIONS_VERSION, {GIT_CHECKOUT_OPTS_VERSION, GIT_CHECKOUT_SAFE_CREATE}}
 
 /**
- * Clone a remote repository, and checkout the branch pointed to by the remote
- * HEAD.
+ * Clone a remote repository.
+ *
+ * This version handles the simple case. If you'd like to create the
+ * repository or remote with non-default settings, you can create and
+ * configure them and then use `git_clone_into()`.
  *
  * @param out pointer that will receive the resulting repository object
  * @param url the remote repository to clone
