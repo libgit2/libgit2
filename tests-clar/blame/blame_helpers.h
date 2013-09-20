@@ -9,6 +9,7 @@ void check_blame_hunk_index(
 		int idx,
 		int start_line,
 		int len,
+		char boundary,
 		const char *commit_id,
 		const char *orig_path);
 

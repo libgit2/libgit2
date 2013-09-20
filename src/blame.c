@@ -247,6 +247,7 @@ static git_blame_hunk* hunk_from_entry(struct blame_entry *e)
 	git_blame_hunk *h = new_hunk(
 			e->lno+1, e->num_lines, e->s_lno+1, e->suspect->path);
 	git_oid_cpy(&h->final_commit_id, git_commit_id(e->suspect->commit));
+	h->boundary = e->is_boundary ? 1 : 0;
 	return h;
 }
 

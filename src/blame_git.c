@@ -456,8 +456,12 @@ static void pass_blame(struct scoreboard *sb, struct origin *origin, uint32_t op
 	GIT_UNUSED(opt);
 
 	num_sg = git_commit_parentcount(commit);
-	if (!num_sg)
+	if (!git_oid_cmp(git_commit_id(commit), &sb->blame->options.oldest_commit))
+		num_sg = 0;
+	if (!num_sg) {
+		git_oid_cpy(&sb->blame->options.oldest_commit, git_commit_id(commit));
 		goto finish;
+	}
 	else if (num_sg < (int)ARRAY_SIZE(sg_buf))
 		memset(sg_buf, 0, sizeof(sg_buf));
 	else
@@ -558,9 +562,14 @@ void assign_blame(struct scoreboard *sb, uint32_t opt)
 		pass_blame(sb, suspect, opt);
 
 		/* Take responsibility for the remaining entries */
-		for (ent = sb->ent; ent; ent = ent->next)
-			if (same_suspect(ent->suspect, suspect))
+		for (ent = sb->ent; ent; ent = ent->next) {
+			if (same_suspect(ent->suspect, suspect)) {
 				ent->guilty = 1;
+				ent->is_boundary = !git_oid_cmp(
+						git_commit_id(suspect->commit),
+						&sb->blame->options.oldest_commit);
+			}
+		}
 		origin_decref(suspect);
 	}
 }

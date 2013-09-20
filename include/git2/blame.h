@@ -93,6 +93,8 @@ typedef struct git_blame_options {
  * - `orig_start_line_number` is the 1-based line number where this hunk begins
  *   in the file named by `orig_path` in the commit specified by
  *   `orig_commit_id`.
+ * - `boundary` is 1 iff the hunk has been tracked to a boundary commit (the
+ *   root, or the commit specified in git_blame_options.oldest_commit)
  */
 typedef struct git_blame_hunk {
 	uint16_t lines_in_hunk;
@@ -103,6 +105,8 @@ typedef struct git_blame_hunk {
 	git_oid orig_commit_id;
 	const char *orig_path;
 	uint16_t orig_start_line_number;
+
+	char boundary;
 } git_blame_hunk;
 
 

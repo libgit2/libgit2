@@ -55,6 +55,10 @@ struct blame_entry {
 	 * scanning the lines over and over.
 	 */
 	unsigned score;
+
+	/* Whether this entry has been tracked to a boundary commit.
+	 */
+	bool is_boundary;
 };
 
 /*

@@ -15,7 +15,7 @@ void hunk_message(size_t idx, const git_blame_hunk *hunk, const char *fmt, ...)
 }
 
 void check_blame_hunk_index(git_repository *repo, git_blame *blame, int idx,
-		int start_line, int len, const char *commit_id, const char *orig_path)
+		int start_line, int len, char boundary, const char *commit_id, const char *orig_path)
 {
 	char expected[41] = {0}, actual[41] = {0};
 	const git_blame_hunk *hunk = git_blame_get_hunk_byindex(blame, idx);
@@ -53,6 +53,12 @@ void check_blame_hunk_index(git_repository *repo, git_blame *blame, int idx,
 				hunk->orig_path, orig_path);
 	}
 	cl_assert_equal_s(hunk->orig_path, orig_path);
+
+	if (hunk->boundary != boundary) {
+		hunk_message(idx, hunk, "doesn't match boundary flag (got %d, expected %d)\n",
+				hunk->boundary, boundary);
+	}
+	cl_assert_equal_i(boundary, hunk->boundary);
 }
 
 

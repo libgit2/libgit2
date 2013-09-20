@@ -38,7 +38,7 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 
 	cl_git_pass(git_blame_buffer(&g_bufferblame, g_fileblame, buffer, strlen(buffer)));
 	cl_assert_equal_i(5, git_blame_get_hunk_count(g_bufferblame));
-	check_blame_hunk_index(g_repo, g_bufferblame, 2, 6, 1, "000000", "b.txt");
+	check_blame_hunk_index(g_repo, g_bufferblame, 2, 6, 1, 0, "000000", "b.txt");
 }
 
 void test_blame_buffer__deleted_line(void)
@@ -59,9 +59,9 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC\n\n";
 
 	cl_git_pass(git_blame_buffer(&g_bufferblame, g_fileblame, buffer, strlen(buffer)));
-	check_blame_hunk_index(g_repo, g_bufferblame, 2,  6, 3, "63d671eb", "b.txt");
-	check_blame_hunk_index(g_repo, g_bufferblame, 3,  9, 1, "63d671eb", "b.txt");
-	check_blame_hunk_index(g_repo, g_bufferblame, 4, 10, 5, "aa06ecca", "b.txt");
+	check_blame_hunk_index(g_repo, g_bufferblame, 2,  6, 3, 0, "63d671eb", "b.txt");
+	check_blame_hunk_index(g_repo, g_bufferblame, 3,  9, 1, 0, "63d671eb", "b.txt");
+	check_blame_hunk_index(g_repo, g_bufferblame, 4, 10, 5, 0, "aa06ecca", "b.txt");
 }
 
 void test_blame_buffer__add_splits_hunk(void)
@@ -84,9 +84,9 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC\n\n";
 
 	cl_git_pass(git_blame_buffer(&g_bufferblame, g_fileblame, buffer, strlen(buffer)));
-	check_blame_hunk_index(g_repo, g_bufferblame, 2, 6, 2, "63d671eb", "b.txt");
-	check_blame_hunk_index(g_repo, g_bufferblame, 3, 8, 1, "00000000", "b.txt");
-	check_blame_hunk_index(g_repo, g_bufferblame, 4, 9, 3, "63d671eb", "b.txt");
+	check_blame_hunk_index(g_repo, g_bufferblame, 2, 6, 2, 0, "63d671eb", "b.txt");
+	check_blame_hunk_index(g_repo, g_bufferblame, 3, 8, 1, 0, "00000000", "b.txt");
+	check_blame_hunk_index(g_repo, g_bufferblame, 4, 9, 3, 0, "63d671eb", "b.txt");
 }
 
 void test_blame_buffer__delete_crosses_hunk_boundary(void)
@@ -101,8 +101,8 @@ BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC\n\n";
 
 	cl_git_pass(git_blame_buffer(&g_bufferblame, g_fileblame, buffer, strlen(buffer)));
-	check_blame_hunk_index(g_repo, g_bufferblame, 2, 6, 1, "63d671eb", "b.txt");
-	check_blame_hunk_index(g_repo, g_bufferblame, 3, 7, 2, "aa06ecca", "b.txt");
+	check_blame_hunk_index(g_repo, g_bufferblame, 2, 6, 1, 0, "63d671eb", "b.txt");
+	check_blame_hunk_index(g_repo, g_bufferblame, 3, 7, 2, 0, "aa06ecca", "b.txt");
 }
 
 void test_blame_buffer__replace_line(void)
@@ -124,7 +124,7 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC\n\n";
 
 	cl_git_pass(git_blame_buffer(&g_bufferblame, g_fileblame, buffer, strlen(buffer)));
-	check_blame_hunk_index(g_repo, g_bufferblame, 2, 6, 1, "63d671eb", "b.txt");
-	check_blame_hunk_index(g_repo, g_bufferblame, 3, 7, 1, "00000000", "b.txt");
-	check_blame_hunk_index(g_repo, g_bufferblame, 4, 8, 3, "63d671eb", "b.txt");
+	check_blame_hunk_index(g_repo, g_bufferblame, 2, 6, 1, 0, "63d671eb", "b.txt");
+	check_blame_hunk_index(g_repo, g_bufferblame, 3, 7, 1, 0, "00000000", "b.txt");
+	check_blame_hunk_index(g_repo, g_bufferblame, 4, 8, 3, 0, "63d671eb", "b.txt");
 }
