@@ -99,8 +99,14 @@ int git_stopwatch_query(double *out_elapsed_seconds, git_stopwatch *s)
 
 int git_stopwatch_start(git_stopwatch *s)
 {
-	if (clock_gettime(CLOCK_MONOTONIC, &s->start)) {
-		giterr_set(GITERR_OS, "Unable to get the monotonic timer");
+	s->clk_id = GIT_PREFERRED_CLOCK;
+
+	/* On EINVAL for the preferred clock, fall back to CLOCK_REALTIME */
+	if (clock_gettime(s->clk_id, &s->start) &&
+		(CLOCK_REALTIME == GIT_PREFERRED_CLOCK || errno != EINVAL ||
+		 clock_gettime(s->clk_id = CLOCK_REALTIME, &s->start))) {
+		giterr_set(GITERR_OS, "Unable to read the clock");
+		s->running = 0;
 		return -1;
 	}
 
@@ -119,8 +125,8 @@ int git_stopwatch_query(double *out_elapsed_seconds, git_stopwatch *s)
 		return -1;
 	}
 
-	if (clock_gettime(CLOCK_MONOTONIC, &end)) {
-		giterr_set(GITERR_OS, "Unable to get the monotonic timer");
+	if (clock_gettime(s->clk_id, &end)) {
+		giterr_set(GITERR_OS, "Unable to read the clock");
 		return -1;
 	}
 
