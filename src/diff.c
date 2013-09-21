@@ -440,7 +440,8 @@ static int diff_list_apply_options(
 
 	/* If not given explicit `opts`, check `diff.xyz` configs */
 	if (!opts) {
-		diff->opts.context_lines = config_int(cfg, "diff.context", 3);
+		int context = config_int(cfg, "diff.context", 3);
+		diff->opts.context_lines = context >= 0 ? (uint16_t)context : 3;
 
 		/* add other defaults here */
 	}
