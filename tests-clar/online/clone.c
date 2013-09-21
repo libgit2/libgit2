@@ -5,6 +5,7 @@
 #include "remote.h"
 #include "fileops.h"
 #include "refs.h"
+#include "timing.h"
 
 #define LIVE_REPO_URL "http://github.com/libgit2/TestGitRepository"
 #define LIVE_EMPTYREPO_URL "http://github.com/libgit2/TestEmptyRepository"
@@ -39,7 +40,10 @@ void test_online_clone__cleanup(void)
 void test_online_clone__network_full(void)
 {
 	git_remote *origin;
+	git_stopwatch s;
+	double elapsed_seconds;
 
+	cl_git_pass(git_stopwatch_start(&s));
 	cl_git_pass(git_clone(&g_repo, LIVE_REPO_URL, "./foo", &g_options));
 	cl_assert(!git_repository_is_bare(g_repo));
 	cl_git_pass(git_remote_load(&origin, g_repo, "origin"));
@@ -47,6 +51,9 @@ void test_online_clone__network_full(void)
 	cl_assert_equal_i(GIT_REMOTE_DOWNLOAD_TAGS_AUTO, origin->download_tags);
 
 	git_remote_free(origin);
+	
+	cl_git_pass(git_stopwatch_query(&elapsed_seconds, &s));
+	cl_assert(elapsed_seconds > 0);
 }
 
 void test_online_clone__network_bare(void)
