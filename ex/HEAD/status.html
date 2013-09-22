@@ -17,6 +17,7 @@
     <div id="jump_wrapper">
       <div id="jump_page">
         <a class="source" href="../../#HEAD">API Docs</a>
+          <a class="source" href="add.html">add.c</a>
           <a class="source" href="cat-file.html">cat-file.c</a>
           <a class="source" href="diff.html">diff.c</a>
           <a class="source" href="general.html">general.c</a>
@@ -125,7 +126,7 @@
 
   <span class="n">error</span> <span class="o">=</span> <span class="n"><a name="git_repository_head-6" class="fnlink" href="../../#HEAD/group/repository/git_repository_head">git_repository_head</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">head</span><span class="p">,</span> <span class="n">repo</span><span class="p">);</span>
 
-  <span class="k">if</span> <span class="p">(</span><span class="n">error</span> <span class="o">==</span> <span class="n">GIT_EORPHANEDHEAD</span> <span class="o">||</span> <span class="n">error</span> <span class="o">==</span> <span class="n">GIT_ENOTFOUND</span><span class="p">)</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">error</span> <span class="o">==</span> <span class="n">GIT_EUNBORNBRANCH</span> <span class="o">||</span> <span class="n">error</span> <span class="o">==</span> <span class="n">GIT_ENOTFOUND</span><span class="p">)</span>
     <span class="n">branch</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
   <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">error</span><span class="p">)</span> <span class="p">{</span>
     <span class="n">branch</span> <span class="o">=</span> <span class="n"><a name="git_reference_name-2" class="fnlink" href="../../#HEAD/group/reference/git_reference_name">git_reference_name</a></span><span class="p">(</span><span class="n">head</span><span class="p">);</span>
