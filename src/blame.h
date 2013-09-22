@@ -72,6 +72,7 @@ struct git_blame {
 	git_vector paths;
 
 	git_blob *final_blob;
+	git_array_t(size_t) line_index;
 
 	size_t current_diff_line;
 	git_blame_hunk *current_hunk;
