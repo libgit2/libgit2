@@ -260,6 +260,8 @@ static int load_blob(git_blame *blame)
 {
 	int error;
 
+	if (blame->final_blob) return 0;
+
 	error = git_commit_lookup(&blame->final, blame->repository, &blame->options.newest_commit);
 	if (error < 0)
 		goto cleanup;
@@ -276,20 +278,13 @@ static int blame_internal(git_blame *blame)
 {
 	int error;
 	git_blame__entry *ent = NULL;
-	git_blob *blob = NULL;
 	git_blame__origin *o;
 
-	if ((error = git_commit_lookup(&blame->final, blame->repository,
-											 &blame->options.newest_commit))
-	    < 0 ||
-	    (error = git_object_lookup_bypath((git_object**)&blob, (git_object*)blame->final,
-													  blame->path, GIT_OBJ_BLOB))
-	    < 0)
+	if ((error = load_blob(blame)) < 0 ||
+	    (error = git_blame__get_origin(&o, blame, blame->final, blame->path)) < 0)
 		goto cleanup;
-	blame->final_buf = git_blob_rawcontent(blob);
-	blame->final_buf_size = git_blob_rawsize(blob);
-	if ((error = get_origin(&o, blame, blame->final, blame->path)) < 0)
-		goto cleanup;
+	blame->final_buf = git_blob_rawcontent(blame->final_blob);
+	blame->final_buf_size = git_blob_rawsize(blame->final_blob);
 
 	ent = git__calloc(1, sizeof(git_blame__entry));
 	ent->num_lines = index_blob_lines(blame);
@@ -303,8 +298,7 @@ static int blame_internal(git_blame *blame)
 	blame->ent = ent;
 	blame->path = blame->path;
 
-	assign_blame(blame, blame->options.flags);
-	coalesce(blame);
+	git_blame__like_git(blame, blame->options.flags);
 
 cleanup:
 	for (ent = blame->ent; ent; ) {
@@ -312,12 +306,10 @@ cleanup:
 
 		git_vector_insert(&blame->hunks, hunk_from_entry(ent));
 
-		origin_decref(ent->suspect);
-		git__free(ent);
+		git_blame__free_entry(ent);
 		ent = e;
 	}
 
-	git_blob_free(blob);
 	return error;
 }
 
