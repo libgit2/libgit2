@@ -39,7 +39,7 @@ typedef int git_file;
  *
  * Some of the methods are slightly wrapped to provide
  * saner defaults. Some of these methods are emulated
- * in Windows platforns.
+ * in Windows platforms.
  *
  * Use your manpages to check the docs on these.
  */

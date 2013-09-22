@@ -212,7 +212,7 @@ typedef enum {
  *		> Get the current bytes in cache and the maximum that would be
  *		> allowed in the cache.
  *
- *	* opts(GIT_OPT_GET_SEARCH_PATH, char *out, size_t len)
+ *	* opts(GIT_OPT_GET_TEMPLATE_PATH, char *out, size_t len)
  *
  *		> Get the default template path.
  *		> The path is written to the `out`
