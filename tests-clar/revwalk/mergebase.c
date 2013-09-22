@@ -172,9 +172,9 @@ static void assert_mergebase_many(const char *expected_sha, int count, ...)
 	va_end(ap);
 
 	if (expected_sha == NULL)
-		cl_assert_equal_i(GIT_ENOTFOUND, git_merge_base_many(&oid, _repo, oids, count));
+		cl_assert_equal_i(GIT_ENOTFOUND, git_merge_base_many(&oid, _repo, count, oids));
 	else {
-		cl_git_pass(git_merge_base_many(&oid, _repo, oids, count));
+		cl_git_pass(git_merge_base_many(&oid, _repo, count, oids));
 		cl_git_pass(git_oid_fromstr(&expected, expected_sha));
 
 		cl_assert(git_oid_cmp(&expected, &oid) == 0);
