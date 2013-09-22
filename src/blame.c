@@ -256,6 +256,22 @@ static git_blame_hunk* hunk_from_entry(git_blame__entry *e)
 	return h;
 }
 
+static int load_blob(git_blame *blame)
+{
+	int error;
+
+	error = git_commit_lookup(&blame->final, blame->repository, &blame->options.newest_commit);
+	if (error < 0)
+		goto cleanup;
+	error = git_object_lookup_bypath((git_object**)&blame->final_blob,
+			(git_object*)blame->final, blame->path, GIT_OBJ_BLOB);
+	if (error < 0)
+		goto cleanup;
+
+cleanup:
+	return error;
+}
+
 static int blame_internal(git_blame *blame)
 {
 	int error;
@@ -309,27 +325,6 @@ cleanup:
  * File blaming
  ******************************************************************************/
 
-static int load_blob(git_blame *blame, git_repository *repo, git_oid *commit_id, const char *path)
-{
-	int retval = -1;
-	git_commit *commit = NULL;
-	git_tree *tree = NULL;
-	git_tree_entry *tree_entry = NULL;
-	git_object *obj = NULL;
-
-	if (((retval = git_commit_lookup(&commit, repo, commit_id)) < 0) ||
-		 ((retval = git_object_lookup_bypath(&obj, (git_object*)commit, path, GIT_OBJ_BLOB)) < 0) ||
-	    ((retval = git_object_type(obj)) != GIT_OBJ_BLOB))
-		goto cleanup;
-	blame->final_blob = (git_blob*)obj;
-
-cleanup:
-	git_tree_entry_free(tree_entry);
-	git_tree_free(tree);
-	git_commit_free(commit);
-	return retval;
-}
-
 int git_blame_file(
 		git_blame **out,
 		git_repository *repo,
@@ -346,7 +341,7 @@ int git_blame_file(
 	blame = git_blame__alloc(repo, normOptions, path);
 	GITERR_CHECK_ALLOC(blame);
 
-	if ((error = load_blob(blame, repo, &normOptions.newest_commit, path)) < 0)
+	if ((error = load_blob(blame)) < 0)
 		goto on_error;
 
 	if ((error = blame_internal(blame)) < 0)
