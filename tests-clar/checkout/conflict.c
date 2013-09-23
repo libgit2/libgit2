@@ -1022,3 +1022,103 @@ void test_checkout_conflict__update_only(void)
 	cl_assert(!git_path_exists("merge-resolve/directory_file-one~ours"));
 	cl_assert(!git_path_exists("merge-resolve/directory_file-two~theirs"));
 }
+
+void test_checkout_conflict__path_filters(void)
+{
+	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
+	char *paths[] = { "conflicting-1.txt", "conflicting-3.txt" };
+	git_strarray patharray = {0};
+
+	struct checkout_index_entry checkout_index_entries[] = {
+		{ 0100644, CONFLICTING_ANCESTOR_OID, 1, "conflicting-1.txt" },
+		{ 0100644, CONFLICTING_OURS_OID, 2, "conflicting-1.txt" },
+		{ 0100644, CONFLICTING_THEIRS_OID, 3, "conflicting-1.txt" },
+
+		{ 0100644, CONFLICTING_ANCESTOR_OID, 1, "conflicting-2.txt" },
+		{ 0100644, CONFLICTING_OURS_OID, 2, "conflicting-2.txt" },
+		{ 0100644, CONFLICTING_THEIRS_OID, 3, "conflicting-2.txt" },
+
+		{ 0100644, AUTOMERGEABLE_ANCESTOR_OID, 1, "conflicting-3.txt" },
+		{ 0100644, AUTOMERGEABLE_OURS_OID, 2, "conflicting-3.txt" },
+		{ 0100644, AUTOMERGEABLE_THEIRS_OID, 3, "conflicting-3.txt" },
+
+		{ 0100644, AUTOMERGEABLE_ANCESTOR_OID, 1, "conflicting-4.txt" },
+		{ 0100644, AUTOMERGEABLE_OURS_OID, 2, "conflicting-4.txt" },
+		{ 0100644, AUTOMERGEABLE_THEIRS_OID, 3, "conflicting-4.txt" },
+	};
+
+	patharray.count = 2;
+	patharray.strings = paths;
+
+	opts.paths = patharray;
+
+	create_index(checkout_index_entries, 12);
+	git_index_write(g_index);
+
+	cl_git_pass(git_checkout_index(g_repo, g_index, &opts));
+
+	ensure_workdir_contents("conflicting-1.txt", CONFLICTING_DIFF3_FILE);
+	cl_assert(!git_path_exists("merge-resolve/conflicting-2.txt"));
+	ensure_workdir_contents("conflicting-3.txt", AUTOMERGEABLE_MERGED_FILE);
+	cl_assert(!git_path_exists("merge-resolve/conflicting-4.txt"));
+}
+
+static void collect_progress(
+	const char *path,
+	size_t completed_steps,
+	size_t total_steps,
+	void *payload)
+{
+	git_vector *paths = payload;
+
+	if (path == NULL)
+		return;
+
+	git_vector_insert(paths, strdup(path));
+}
+
+void test_checkout_conflict__report_progress(void)
+{
+	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
+	git_vector paths = GIT_VECTOR_INIT;
+	char *path;
+	size_t i;
+
+	struct checkout_index_entry checkout_index_entries[] = {
+		{ 0100644, CONFLICTING_ANCESTOR_OID, 1, "conflicting-1.txt" },
+		{ 0100644, CONFLICTING_OURS_OID, 2, "conflicting-1.txt" },
+		{ 0100644, CONFLICTING_THEIRS_OID, 3, "conflicting-1.txt" },
+
+		{ 0100644, CONFLICTING_ANCESTOR_OID, 1, "conflicting-2.txt" },
+		{ 0100644, CONFLICTING_OURS_OID, 2, "conflicting-2.txt" },
+		{ 0100644, CONFLICTING_THEIRS_OID, 3, "conflicting-2.txt" },
+
+		{ 0100644, AUTOMERGEABLE_ANCESTOR_OID, 1, "conflicting-3.txt" },
+		{ 0100644, AUTOMERGEABLE_OURS_OID, 2, "conflicting-3.txt" },
+		{ 0100644, AUTOMERGEABLE_THEIRS_OID, 3, "conflicting-3.txt" },
+
+		{ 0100644, AUTOMERGEABLE_ANCESTOR_OID, 1, "conflicting-4.txt" },
+		{ 0100644, AUTOMERGEABLE_OURS_OID, 2, "conflicting-4.txt" },
+		{ 0100644, AUTOMERGEABLE_THEIRS_OID, 3, "conflicting-4.txt" },
+	};
+
+	opts.progress_cb = collect_progress;
+	opts.progress_payload = &paths;
+
+
+	create_index(checkout_index_entries, 12);
+	git_index_write(g_index);
+
+	cl_git_pass(git_checkout_index(g_repo, g_index, &opts));
+
+	cl_assert_equal_i(4, git_vector_length(&paths));
+	cl_assert_equal_s("conflicting-1.txt", git_vector_get(&paths, 0));
+	cl_assert_equal_s("conflicting-2.txt", git_vector_get(&paths, 1));
+	cl_assert_equal_s("conflicting-3.txt", git_vector_get(&paths, 2));
+	cl_assert_equal_s("conflicting-4.txt", git_vector_get(&paths, 3));
+
+	git_vector_foreach(&paths, i, path)
+		git__free(path);
+
+	git_vector_free(&paths);
+}
