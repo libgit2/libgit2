@@ -303,15 +303,28 @@ static int on_headers_complete(http_parser *parser)
 		 parser->status_code == 307) &&
 		t->location) {
 
+		char *host=NULL, *port=NULL, *user=NULL, *pass=NULL;
+
 		if (s->redirect_count >= 7) {
 			giterr_set(GITERR_NET, "Too many redirects");
 			return t->parse_error = PARSE_ERROR_GENERIC;
 		}
 
-		if (t->location[0] != '/') {
-			giterr_set(GITERR_NET, "Only relative redirects are supported");
+		if (gitno_extract_url_parts(&host, &port, &user, &pass, t->location, "") < 0) {
+			giterr_set(GITERR_NET, "Redirect to unparseable url '%s'", t->location);
 			return t->parse_error = PARSE_ERROR_GENERIC;
 		}
+		git__free(port);
+		git__free(user);
+		git__free(pass);
+
+		/* Allow '/'-led urls, or a change of protocol */
+		if (strcmp(t->host, host) && t->location[0] != '/') {
+			git__free(host);
+			giterr_set(GITERR_NET, "Only same-host redirects are supported");
+			return t->parse_error = PARSE_ERROR_GENERIC;
+		}
+		git__free(host);
 
 		/* Set the redirect URL on the stream. This is a transfer of
 		 * ownership of the memory. */
