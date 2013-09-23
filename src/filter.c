@@ -657,9 +657,17 @@ int git_filter_list_apply_to_blob(
 	git_filter_list *filters,
 	git_blob *blob)
 {
-	git_buf in = {
-		(char *)git_blob_rawcontent(blob), 0, git_blob_rawsize(blob)
-	};
+	git_buf in = GIT_BUF_INIT;
+	git_off_t rawsize = git_blob_rawsize(blob);
+
+	if (!git__is_sizet(rawsize)) {
+		giterr_set(GITERR_OS, "Blob is too large to filter");
+		return -1;
+	}
+
+	in.ptr   = (char *)git_blob_rawcontent(blob);
+	in.asize = 0;
+	in.size  = (size_t)rawsize;
 
 	if (filters)
 		git_oid_cpy(&filters->source.oid, git_blob_id(blob));
