@@ -211,6 +211,8 @@ int git_buf_vprintf(git_buf *buf, const char *format, va_list ap)
 			format, args
 		);
 
+		va_end(args);
+
 		if (len < 0) {
 			git__free(buf->ptr);
 			buf->ptr = git_buf__oom;

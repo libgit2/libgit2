@@ -1145,17 +1145,19 @@ static int repo_init_structure(
 		}
 
 		if (!tdir) {
-			if ((error = git_futils_find_template_dir(&template_buf)) >= 0);
+			if (!(error = git_futils_find_template_dir(&template_buf)))
 				tdir = template_buf.ptr;
 			default_template = true;
 		}
 
-		error = git_futils_cp_r(tdir, repo_dir,
-			GIT_CPDIR_COPY_SYMLINKS | GIT_CPDIR_CHMOD_DIRS |
-			GIT_CPDIR_SIMPLE_TO_MODE, dmode);
+		if (tdir)
+			error = git_futils_cp_r(tdir, repo_dir,
+				GIT_CPDIR_COPY_SYMLINKS | GIT_CPDIR_CHMOD_DIRS |
+				GIT_CPDIR_SIMPLE_TO_MODE, dmode);
 
 		git_buf_free(&template_buf);
 		git_config_free(cfg);
+
 		if (error < 0) {
 			if (!default_template)
 				return error;

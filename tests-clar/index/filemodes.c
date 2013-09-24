@@ -44,7 +44,8 @@ static void replace_file_with_mode(
 
 	cl_git_pass(p_rename(path.ptr, backup));
 	cl_git_write2file(
-		path.ptr, content.ptr, O_WRONLY|O_CREAT|O_TRUNC, create_mode);
+		path.ptr, content.ptr, content.size,
+		O_WRONLY|O_CREAT|O_TRUNC, create_mode);
 
 	git_buf_free(&path);
 	git_buf_free(&content);
@@ -91,7 +92,7 @@ void test_index_filemodes__untrusted(void)
 	add_and_check_mode(index, "exec_on", GIT_FILEMODE_BLOB_EXECUTABLE);
 
 	/*  5 - add new 0644 -> expect 0644 */
-	cl_git_write2file("filemodes/new_off", "blah",
+	cl_git_write2file("filemodes/new_off", "blah", 0,
 		O_WRONLY | O_CREAT | O_TRUNC, 0644);
 	add_and_check_mode(index, "new_off", GIT_FILEMODE_BLOB);
 
@@ -100,7 +101,7 @@ void test_index_filemodes__untrusted(void)
 	 */
 	if (can_filemode) {
 		/* 6 - add 0755 -> expect 0755 */
-		cl_git_write2file("filemodes/new_on", "blah",
+		cl_git_write2file("filemodes/new_on", "blah", 0,
 			O_WRONLY | O_CREAT | O_TRUNC, 0755);
 		add_and_check_mode(index, "new_on", GIT_FILEMODE_BLOB_EXECUTABLE);
 	}
@@ -140,12 +141,12 @@ void test_index_filemodes__trusted(void)
 	add_and_check_mode(index, "exec_on", GIT_FILEMODE_BLOB_EXECUTABLE);
 
 	/*  5 - add new 0644 -> expect 0644 */
-	cl_git_write2file("filemodes/new_off", "blah",
+	cl_git_write2file("filemodes/new_off", "blah", 0,
 		O_WRONLY | O_CREAT | O_TRUNC, 0644);
 	add_and_check_mode(index, "new_off", GIT_FILEMODE_BLOB);
 
 	/* 6 - add 0755 -> expect 0755 */
-	cl_git_write2file("filemodes/new_on", "blah",
+	cl_git_write2file("filemodes/new_on", "blah", 0,
 		O_WRONLY | O_CREAT | O_TRUNC, 0755);
 	add_and_check_mode(index, "new_on", GIT_FILEMODE_BLOB_EXECUTABLE);
 

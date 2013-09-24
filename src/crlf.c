@@ -133,9 +133,9 @@ static int crlf_apply_to_odb(
 	if (ca->crlf_action == GIT_CRLF_AUTO || ca->crlf_action == GIT_CRLF_GUESS) {
 		git_buf_text_stats stats;
 
-		/* Check heuristics for binary vs text... */
+		/* Check heuristics for binary vs text - returns true if binary */
 		if (git_buf_text_gather_stats(&stats, from, false))
-			return -1;
+			return GIT_PASSTHROUGH;
 
 		/*
 		 * We're currently not going to even try to convert stuff
