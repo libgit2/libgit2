@@ -581,16 +581,12 @@ int gitno_extract_url_parts(
 		const char *url,
 		const char *default_port)
 {
-	char *colon, *dblslash, *slash, *at, *end;
+	char *colon, *slash, *at, *end;
 	const char *start;
 
 	/*
-	 *
 	 * ==> [user[:pass]@]hostname.tld[:port]/resource
 	 */
-
-	dblslash = strstr(url, "://");
-	if (dblslash) url = dblslash+3;
 
 	colon = strchr(url, ':');
 	slash = strchr(url, '/');
