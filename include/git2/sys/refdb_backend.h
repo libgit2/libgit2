@@ -103,7 +103,7 @@ struct git_refdb_backend {
 	 * Deletes the given reference from the refdb.  A refdb implementation
 	 * must provide this function.
 	 */
-	int (*delete)(git_refdb_backend *backend, const char *ref_name);
+	int (*del)(git_refdb_backend *backend, const char *ref_name);
 
 	/**
 	 * Suggests that the given refdb compress or optimize its references.
