@@ -303,25 +303,22 @@ static int on_headers_complete(http_parser *parser)
 		 parser->status_code == 307) &&
 		t->location) {
 
-		char *host=NULL, *port=NULL, *user=NULL, *pass=NULL;
+		char *host=NULL;
 
 		if (s->redirect_count >= 7) {
 			giterr_set(GITERR_NET, "Too many redirects");
 			return t->parse_error = PARSE_ERROR_GENERIC;
 		}
 
-		if (gitno_extract_url_parts(&host, &port, &user, &pass, t->location, "") < 0) {
+		if (gitno_extract_url_parts(NULL, &host, NULL, NULL, NULL, t->location, NULL) < 0) {
 			giterr_set(GITERR_NET, "Redirect to unparseable url '%s'", t->location);
 			return t->parse_error = PARSE_ERROR_GENERIC;
 		}
-		git__free(port);
-		git__free(user);
-		git__free(pass);
 
 		/* Allow '/'-led urls, or a change of protocol */
 		if (strcmp(t->host, host) && t->location[0] != '/') {
+			giterr_set(GITERR_NET, "Redirect to different host ('%s' -> '%s')", t->host, host);
 			git__free(host);
-			giterr_set(GITERR_NET, "Only same-host redirects are supported");
 			return t->parse_error = PARSE_ERROR_GENERIC;
 		}
 		git__free(host);
@@ -856,7 +853,7 @@ static int http_action(
 		if (!default_port)
 			return -1;
 
-		if ((ret = gitno_extract_url_parts(&t->host, &t->port,
+		if ((ret = gitno_extract_url_parts(NULL, &t->host, &t->port,
 						&t->user_from_url, &t->pass_from_url, url, default_port)) < 0)
 			return ret;
 

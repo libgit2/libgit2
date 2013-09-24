@@ -909,7 +909,7 @@ static int winhttp_connect(
 		t->use_ssl = 1;
 	}
 
-	if ((ret = gitno_extract_url_parts(&t->host, &t->port, &t->user_from_url,
+	if ((ret = gitno_extract_url_parts(NULL, &t->host, &t->port, &t->user_from_url,
 					&t->pass_from_url, url, default_port)) < 0)
 		return ret;
 

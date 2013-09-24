@@ -574,6 +574,7 @@ int gitno_select_in(gitno_buffer *buf, long int sec, long int usec)
 }
 
 int gitno_extract_url_parts(
+		char **protocol,
 		char **host,
 		char **port,
 		char **username,
@@ -582,7 +583,16 @@ int gitno_extract_url_parts(
 		const char *default_port)
 {
 	char *colon, *dblslash, *slash, *at, *end;
+	char *_prot, *_host, *_port, *_user, *_pass, *_default_port;
 	const char *start;
+
+	/* Allow nulls */
+	if (!protocol) protocol = &_prot;
+	if (!host) host = &_host;
+	if (!port) port = &_port;
+	if (!username) username = &_user;
+	if (!password) password = &_pass;
+	if (!default_port) default_port = "";
 
 	/*
 	 *
@@ -590,7 +600,10 @@ int gitno_extract_url_parts(
 	 */
 
 	dblslash = strstr(url, "://");
-	if (dblslash) url = dblslash+3;
+	if (dblslash) {
+		*protocol = git__substrdup(url, dblslash-url);
+		url = dblslash+3;
+	}
 
 	colon = strchr(url, ':');
 	slash = strchr(url, '/');
