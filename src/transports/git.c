@@ -192,7 +192,7 @@ static int _git_uploadpack_ls(
 
 	s = (git_stream *)*stream;
 
-	if (gitno_extract_url_parts(&host, &port, &user, &pass, url, GIT_DEFAULT_PORT) < 0)
+	if (gitno_extract_url_parts(NULL, &host, &port, &user, &pass, url, GIT_DEFAULT_PORT) < 0)
 		goto on_error;
 
 	if (gitno_connect(&s->socket, host, port, 0) < 0)
@@ -248,7 +248,7 @@ static int _git_receivepack_ls(
 
 	s = (git_stream *)*stream;
 
-	if (gitno_extract_url_parts(&host, &port, &user, &pass, url, GIT_DEFAULT_PORT) < 0)
+	if (gitno_extract_url_parts(NULL, &host, &port, &user, &pass, url, GIT_DEFAULT_PORT) < 0)
 		goto on_error;
 
 	if (gitno_connect(&s->socket, host, port, 0) < 0)

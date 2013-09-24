@@ -67,6 +67,7 @@ int gitno_close(gitno_socket *s);
 int gitno_select_in(gitno_buffer *buf, long int sec, long int usec);
 
 int gitno_extract_url_parts(
+		char **protocol,
 		char **host,
 		char **port,
 		char **username,
