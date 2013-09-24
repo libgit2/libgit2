@@ -255,6 +255,36 @@ static int on_header_value(http_parser *parser, const char *str, size_t len)
 	return 0;
 }
 
+static int parse_url(
+		char **host,
+		char **port,
+		char **user,
+		char **pass,
+		const char **path,
+		bool *use_ssl,
+		const char *url)
+{
+	const char *default_port = NULL;
+	int ret;
+
+	if (!git__prefixcmp(url, prefix_http)) {
+		*use_ssl = 1;
+		default_port = "443";
+		url += strlen(prefix_http);
+	} else if (!git__prefixcmp(url, prefix_https)) {
+		*use_ssl = 0;
+		default_port = "80";
+		url += strlen(prefix_https);
+	} else
+		return -1;
+
+	if ((ret = gitno_extract_url_parts(NULL, host, port, user, pass, url, default_port)) < 0)
+		return ret;
+
+	*path = strchr(url, '/');
+	return 0;
+}
+
 static int on_headers_complete(http_parser *parser)
 {
 	parser_context *ctx = (parser_context *) parser->data;
@@ -303,14 +333,15 @@ static int on_headers_complete(http_parser *parser)
 		 parser->status_code == 307) &&
 		t->location) {
 
-		char *host=NULL;
+		char *host=NULL, *protocol=NULL;
+		bool use_ssl;
 
 		if (s->redirect_count >= 7) {
 			giterr_set(GITERR_NET, "Too many redirects");
 			return t->parse_error = PARSE_ERROR_GENERIC;
 		}
 
-		if (gitno_extract_url_parts(NULL, &host, NULL, NULL, NULL, t->location, NULL) < 0) {
+		if (gitno_extract_url_parts(&protocol, &host, NULL, NULL, NULL, t->location, NULL) < 0) {
 			giterr_set(GITERR_NET, "Redirect to unparseable url '%s'", t->location);
 			return t->parse_error = PARSE_ERROR_GENERIC;
 		}
@@ -319,9 +350,26 @@ static int on_headers_complete(http_parser *parser)
 		if (strcmp(t->host, host) && t->location[0] != '/') {
 			giterr_set(GITERR_NET, "Redirect to different host ('%s' -> '%s')", t->host, host);
 			git__free(host);
+			git__free(protocol);
 			return t->parse_error = PARSE_ERROR_GENERIC;
 		}
 		git__free(host);
+
+		/* Restrict the change of protocol to be a http variant */
+		if (protocol) {
+			if (git__prefixcmp(protocol, "http")) {
+				giterr_set(GITERR_NET, "Redirect to bad protocol: %s", t->location);
+				git__free(protocol);
+				return t->parse_error = PARSE_ERROR_GENERIC;
+			}
+		}
+		git__free(protocol);
+
+		/* Re-initialize the transport with the new URL */
+		if (parse_url(&t->host, &t->port, &t->user_from_url, &t->pass_from_url,
+					&t->path, &use_ssl, t->location) < 0)
+			return t->parse_error = PARSE_ERROR_GENERIC;
+		t->use_ssl = use_ssl;
 
 		/* Set the redirect URL on the stream. This is a transfer of
 		 * ownership of the memory. */
@@ -832,32 +880,17 @@ static int http_action(
 	git_smart_service_t action)
 {
 	http_subtransport *t = (http_subtransport *)subtransport;
-	const char *default_port = NULL;
+	bool use_ssl;
 	int ret;
 
 	if (!stream)
 		return -1;
 
 	if (!t->host || !t->port || !t->path) {
-		if (!git__prefixcmp(url, prefix_http)) {
-			url = url + strlen(prefix_http);
-			default_port = "80";
-		}
-
-		if (!git__prefixcmp(url, prefix_https)) {
-			url += strlen(prefix_https);
-			default_port = "443";
-			t->use_ssl = 1;
-		}
-
-		if (!default_port)
-			return -1;
-
-		if ((ret = gitno_extract_url_parts(NULL, &t->host, &t->port,
-						&t->user_from_url, &t->pass_from_url, url, default_port)) < 0)
+		if ((ret = parse_url(&t->host, &t->port, &t->user_from_url, &t->pass_from_url,
+						&t->path, &use_ssl, url)) < 0)
 			return ret;
-
-		t->path = strchr(url, '/');
+		t->use_ssl = use_ssl;
 	}
 
 	if (http_connect(t) < 0)
