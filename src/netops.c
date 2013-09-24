@@ -585,7 +585,6 @@ int gitno_extract_url_parts(
 	const char *start;
 
 	/*
-	 *
 	 * ==> [user[:pass]@]hostname.tld[:port]/resource
 	 */
 
