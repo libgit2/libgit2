@@ -268,12 +268,12 @@ static int parse_url(
 	int ret;
 
 	if (!git__prefixcmp(url, prefix_http)) {
-		*use_ssl = 1;
-		default_port = "443";
-		url += strlen(prefix_http);
-	} else if (!git__prefixcmp(url, prefix_https)) {
 		*use_ssl = 0;
 		default_port = "80";
+		url += strlen(prefix_http);
+	} else if (!git__prefixcmp(url, prefix_https)) {
+		*use_ssl = 1;
+		default_port = "443";
 		url += strlen(prefix_https);
 	} else
 		return -1;
