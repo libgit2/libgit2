@@ -31,7 +31,7 @@ CC:=$(PREFIX)$(CC)
 INCLUDES= -I. -Isrc -Iinclude -Ideps/http-parser -Ideps/zlib
 
 DEFINES= $(INCLUDES) -DNO_VIZ -DSTDC -DNO_GZIP -D_FILE_OFFSET_BITS=64 -D_GNU_SOURCE $(EXTRA_DEFINES)
-CFLAGS= -g $(DEFINES) -Wall -Wextra -O2 $(EXTRA_CFLAGS)
+CFLAGS= -g $(DEFINES) -Wall -Wextra -Wno-missing-field-initializers -O2 $(EXTRA_CFLAGS)
 
 SRCS = $(wildcard src/*.c) $(wildcard src/transports/*.c) $(wildcard src/xdiff/*.c) $(wildcard deps/http-parser/*.c) $(wildcard deps/zlib/*.c) src/hash/hash_generic.c
 
