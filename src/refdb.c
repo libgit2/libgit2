@@ -201,5 +201,5 @@ int git_refdb_rename(
 int git_refdb_delete(struct git_refdb *db, const char *ref_name)
 {
 	assert(db && db->backend);
-	return db->backend->delete(db->backend, ref_name);
+	return db->backend->del(db->backend, ref_name);
 }
