@@ -287,6 +287,11 @@ static int set_connection_data_from_url(
 	if (!git__prefixcmp(url, prefix_http)) {
 		url = url + strlen(prefix_http);
 		default_port = "80";
+
+		if (t->use_ssl) {
+			giterr_set(GITERR_NET, "Redirect from HTTPS to HTTP not allowed");
+			return -1;
+		}
 	}
 
 	if (!git__prefixcmp(url, prefix_https)) {
@@ -324,7 +329,7 @@ static int set_connection_data_from_url(
 		/* Allow '/'-led urls, or a change of protocol */
 		if (original_host != NULL) {
 			if (strcmp(original_host, t->host) && t->location[0] != '/') {
-				giterr_set(GITERR_NET, "Only same-host redirects are supported");
+				giterr_set(GITERR_NET, "Cross host redirect not allowed");
 				error = -1;
 			}
 
