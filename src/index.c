@@ -408,7 +408,7 @@ static int create_index_error(int error, const char *msg)
 	return error;
 }
 
-int git_index_set_caps(git_index *index, int caps)
+int git_index_set_caps(git_index *index, unsigned int caps)
 {
 	unsigned int old_ignore_case;
 

@@ -382,7 +382,7 @@ static void assert_hooks_match(
 	cl_git_pass(git_buf_joinpath(&actual, repo_dir, hook_path));
 	cl_git_pass(git_path_lstat(actual.ptr, &st));
 
-	cl_assert_equal_sz(expected_st.st_size, st.st_size);
+	cl_assert(expected_st.st_size == st.st_size);
 
 	if (GIT_MODE_TYPE(expected_st.st_mode) != GIT_FILEMODE_LINK) {
 		mode_t expected_mode =

@@ -24,17 +24,15 @@ void test_core_filebuf__0(void)
 void test_core_filebuf__1(void)
 {
 	git_filebuf file = GIT_FILEBUF_INIT;
-	int fd;
 	char test[] = "test";
 
-	fd = p_creat(test, 0666); //-V536
-	cl_must_pass(fd);
-	cl_must_pass(p_write(fd, "libgit2 rocks\n", 14));
-	cl_must_pass(p_close(fd));
+	cl_git_mkfile(test, "libgit2 rocks\n");
 
 	cl_git_pass(git_filebuf_open(&file, test, GIT_FILEBUF_APPEND));
 	cl_git_pass(git_filebuf_printf(&file, "%s\n", "libgit2 rocks"));
 	cl_git_pass(git_filebuf_commit(&file, 0666));
+
+	cl_assert_equal_file("libgit2 rocks\nlibgit2 rocks\n", 0, test);
 
 	cl_must_pass(p_unlink(test));
 }
@@ -52,6 +50,8 @@ void test_core_filebuf__2(void)
 	cl_git_pass(git_filebuf_open(&file, test, 0));
 	cl_git_pass(git_filebuf_write(&file, buf, sizeof(buf)));
 	cl_git_pass(git_filebuf_commit(&file, 0666));
+
+	cl_assert_equal_file((char *)buf, sizeof(buf), test);
 
 	cl_must_pass(p_unlink(test));
 }
