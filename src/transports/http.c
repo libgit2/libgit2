@@ -355,13 +355,11 @@ static int on_headers_complete(http_parser *parser)
 		}
 		git__free(host);
 
-		/* Restrict the change of protocol to be a http variant */
-		if (protocol) {
-			if (git__prefixcmp(protocol, "http")) {
-				giterr_set(GITERR_NET, "Redirect to bad protocol: %s", t->location);
-				git__free(protocol);
-				return t->parse_error = PARSE_ERROR_GENERIC;
-			}
+		/* Restrict the change of protocol to be http->https */
+		if (protocol && git__prefixcmp(t->location, prefix_https)) {
+			giterr_set(GITERR_NET, "Redirect to bad protocol: %s", t->location);
+			git__free(protocol);
+			return t->parse_error = PARSE_ERROR_GENERIC;
 		}
 		git__free(protocol);
 
