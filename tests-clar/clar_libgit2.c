@@ -30,24 +30,26 @@ void cl_git_mkfile(const char *filename, const char *content)
 }
 
 void cl_git_write2file(
-	const char *filename, const char *new_content, int flags, unsigned int mode)
+	const char *path, const char *content, size_t content_len,
+	int flags, unsigned int mode)
 {
-	int fd = p_open(filename, flags, mode);
-	cl_assert(fd >= 0);
-	if (!new_content)
-		new_content = "\n";
-	cl_must_pass(p_write(fd, new_content, strlen(new_content)));
+	int fd;
+	cl_assert(path && content);
+	cl_assert((fd = p_open(path, flags, mode)) >= 0);
+	if (!content_len)
+		content_len = strlen(content);
+	cl_must_pass(p_write(fd, content, content_len));
 	cl_must_pass(p_close(fd));
 }
 
-void cl_git_append2file(const char *filename, const char *new_content)
+void cl_git_append2file(const char *path, const char *content)
 {
-	cl_git_write2file(filename, new_content, O_WRONLY | O_CREAT | O_APPEND, 0644);
+	cl_git_write2file(path, content, 0, O_WRONLY | O_CREAT | O_APPEND, 0644);
 }
 
-void cl_git_rewritefile(const char *filename, const char *new_content)
+void cl_git_rewritefile(const char *path, const char *content)
 {
-	cl_git_write2file(filename, new_content, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+	cl_git_write2file(path, content, 0, O_WRONLY | O_CREAT | O_TRUNC, 0644);
 }
 
 #ifdef GIT_WIN32

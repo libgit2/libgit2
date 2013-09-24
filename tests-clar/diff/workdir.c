@@ -1266,3 +1266,28 @@ void test_diff_workdir__untracked_directory_comes_last(void)
 
 	git_diff_list_free(diff);
 }
+
+void test_diff_workdir__untracked_with_bom(void)
+{
+	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
+	git_diff_list *diff = NULL;
+	const git_diff_delta *delta;
+
+	g_repo = cl_git_sandbox_init("empty_standard_repo");
+	cl_repo_set_bool(g_repo, "core.autocrlf", true);
+
+	cl_git_write2file("empty_standard_repo/bom.txt",
+		"\xFF\xFE\x31\x00\x32\x00\x33\x00\x34\x00", 10, O_WRONLY|O_CREAT, 0664);
+
+	opts.flags =
+		GIT_DIFF_INCLUDE_UNTRACKED | GIT_DIFF_INCLUDE_UNTRACKED_CONTENT;
+
+	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, NULL, &opts));
+
+	cl_assert_equal_i(1, git_diff_num_deltas(diff));
+	cl_git_pass(git_diff_get_patch(NULL, &delta, diff, 0));
+	cl_assert_equal_i(GIT_DELTA_UNTRACKED, delta->status);
+	cl_assert((delta->flags & GIT_DIFF_FLAG_BINARY) != 0);
+
+	git_diff_list_free(diff);
+}
