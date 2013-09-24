@@ -1096,7 +1096,7 @@ int git_refdb_backend_fs(
 	backend->parent.lookup = &refdb_fs_backend__lookup;
 	backend->parent.iterator = &refdb_fs_backend__iterator;
 	backend->parent.write = &refdb_fs_backend__write;
-	backend->parent.delete = &refdb_fs_backend__delete;
+	backend->parent.del = &refdb_fs_backend__delete;
 	backend->parent.rename = &refdb_fs_backend__rename;
 	backend->parent.compress = &refdb_fs_backend__compress;
 	backend->parent.free = &refdb_fs_backend__free;
