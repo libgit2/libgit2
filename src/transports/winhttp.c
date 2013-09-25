@@ -245,6 +245,9 @@ static int winhttp_stream_connect(winhttp_stream *s)
 		git__free(proxy_wide);
 	}
 
+	/* Disable WinHTTP redirects so we can handle them manually. Why, you ask?
+	 * http://social.msdn.microsoft.com/Forums/windowsdesktop/en-US/b2ff8879-ab9f-4218-8f09-16d25dff87ae
+	 */
 	if (!WinHttpSetOption(s->request,
 		WINHTTP_OPTION_DISABLE_FEATURE,
 		&disable_redirects,
