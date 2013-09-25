@@ -26,18 +26,20 @@ GIT_BEGIN_DECL
 typedef enum {
 	/** Normal blame, the default */
 	GIT_BLAME_NORMAL = 0,
-	/** Track lines that have moved within a file (like `git blame -M`) */
+	/** Track lines that have moved within a file (like `git blame -M`).
+	 * NOT IMPLEMENTED. */
 	GIT_BLAME_TRACK_COPIES_SAME_FILE = (1<<0),
-	/** Track lines that have moved across files in the same commit (like `git blame -C`) */
+	/** Track lines that have moved across files in the same commit (like `git blame -C`).
+	 * NOT IMPLEMENTED. */
 	GIT_BLAME_TRACK_COPIES_SAME_COMMIT_MOVES = (1<<1),
 	/** Track lines that have been copied from another file that exists in the
-	 * same commit (like `git blame -CC`) */
+	 * same commit (like `git blame -CC`).
+	 * NOT IMPLEMENTED. */
 	GIT_BLAME_TRACK_COPIES_SAME_COMMIT_COPIES = (1<<1 | 1<<2),
 	/** Track lines that have been copied from another file that exists in *any*
-	 * commit (like `git blame -CCC`) */
+	 * commit (like `git blame -CCC`).
+	 * NOT IMPLEMENTED. */
 	GIT_BLAME_TRACK_COPIES_ANY_COMMIT_COPIES = (1<<1 | 1<<2 | 1<<3),
-  /** Track through file renames */
-  GIT_BLAME_TRACK_FILE_RENAMES = (1<<4),
 } git_blame_flag_t;
 
 /**
