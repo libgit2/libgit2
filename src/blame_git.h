@@ -8,7 +8,6 @@
 #define INCLUDE_blame_git__
 
 #include "blame.h"
-#include "xdiff/xinclude.h"
 
 int git_blame__get_origin(
 		git_blame__origin **out,

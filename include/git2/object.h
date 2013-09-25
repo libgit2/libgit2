@@ -36,7 +36,7 @@ GIT_BEGIN_DECL
  * @param repo the repository to look up the object
  * @param id the unique identifier for the object
  * @param type the type of the object
- * @return a reference to the object
+ * @return 0 or an error code
  */
 GIT_EXTERN(int) git_object_lookup(
 		git_object **object,

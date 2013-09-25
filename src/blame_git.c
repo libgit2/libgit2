@@ -8,6 +8,7 @@
 #include "blame_git.h"
 #include "commit.h"
 #include "blob.h"
+#include "xdiff/xinclude.h"
 
 /*
  * Origin is refcounted and usually we keep the blob contents to be
@@ -108,9 +109,9 @@ static int find_last_in_target(git_blame *blame, git_blame__origin *target)
  *
  *                <---- e ----->
  *                   <------>         (entirely within)
- *                   <------------>   (overlaps after)
- *             <------------>         (overlaps before)
- *             <------------------>   (overlaps both)
+ *                   <------------>   (extends past)
+ *             <------------>         (starts before)
+ *             <------------------>   (entirely encloses)
  *
  * Split e into potentially three parts; before this chunk, the chunk
  * to be blamed for the parent, and after that portion.
