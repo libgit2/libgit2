@@ -71,19 +71,19 @@ Key
 Diff with 2 non-workdir iterators
 ---------------------------------
 
-    Old New
-    --- ---
-  0   x   x - nothing
-  1   x  B1 - added blob
-  2   x  T1 - added tree
-  3  B1   x - removed blob
-  4  B1  B1 - unmodified blob
-  5  B1  B2 - modified blob
-  6  B1  T1 - typechange blob -> tree
-  7  T1   x - removed tree
-  8  T1  B1 - typechange tree -> blob
-  9  T1  T1 - unmodified tree
- 10  T1  T2 - modified tree (implies modified/added/removed blob inside)
+|    | Old | New |                                                            |
+|----|-----|-----|------------------------------------------------------------|
+|  0 |   x |   x | nothing                                                    |
+|  1 |   x |  B1 | added blob                                                 |
+|  2 |   x |  T1 | added tree                                                 |
+|  3 |  B1 |   x | removed blob                                               |
+|  4 |  B1 |  B1 | unmodified blob                                            |
+|  5 |  B1 |  B2 | modified blob                                              |
+|  6 |  B1 |  T1 | typechange blob -> tree                                    |
+|  7 |  T1 |   x | removed tree                                               |
+|  8 |  T1 |  B1 | typechange tree -> blob                                    |
+|  9 |  T1 |  T1 | unmodified tree                                            |
+| 10 |  T1 |  T2 | modified tree (implies modified/added/removed blob inside) |
 
 
 Now, let's make the "New" iterator into a working directory iterator, so
@@ -92,23 +92,23 @@ we replace "added" items with either untracked or ignored, like this:
 Diff with non-work & workdir iterators
 --------------------------------------
 
-    Old New-WD
-    --- ------
-  0   x   x - nothing
-  1   x  B1 - untracked blob
-  2   x  Bi - ignored file
-  3   x  T1 - untracked tree
-  4   x  Ti - ignored tree
-  5  B1   x - removed blob
-  6  B1  B1 - unmodified blob
-  7  B1  B2 - modified blob
-  8  B1  T1 - typechange blob -> tree
-  9  B1  Ti - removed blob AND ignored tree as separate items
- 10  T1   x - removed tree
- 11  T1  B1 - typechange tree -> blob
- 12  T1  Bi - removed tree AND ignored blob as separate items
- 13  T1  T1 - unmodified tree
- 14  T1  T2 - modified tree (implies modified/added/removed blob inside)
+|    | Old | New |                                                            |
+|----|-----|-----|------------------------------------------------------------|
+|  0 |  x  | x   | nothing                                                    |
+|  1 |  x  | B1  | untracked blob                                             |
+|  2 |  x  | Bi  | ignored file                                               |
+|  3 |  x  | T1  | untracked tree                                             |
+|  4 |  x  | Ti  | ignored tree                                               |
+|  5 | B1  | x   | removed blob                                               |
+|  6 | B1  | B1  | unmodified blob                                            |
+|  7 | B1  | B2  | modified blob                                              |
+|  8 | B1  | T1  | typechange blob -> tree                                    |
+|  9 | B1  | Ti  | removed blob AND ignored tree as separate items            |
+| 10 | T1  | x   | removed tree                                               |
+| 11 | T1  | B1  | typechange tree -> blob                                    |
+| 12 | T1  | Bi  | removed tree AND ignored blob as separate items            |
+| 13 | T1  | T1  | unmodified tree                                            |
+| 14 | T1  | T2  | modified tree (implies modified/added/removed blob inside) |
 
 Note: if there is a corresponding entry in the old tree, then a working
 directory item won't be ignored (i.e. no Bi or Ti for tracked items).
@@ -122,46 +122,47 @@ Checkout From 3 Iterators (2 not workdir, 1 workdir)
 
 (base == old HEAD; target == what to checkout; actual == working dir)
 
-      base target actual/workdir
-      ---- ------ ------
-  0      x      x      x - nothing
-  1      x      x B1/Bi/T1/Ti - untracked/ignored blob/tree (SAFE)
-  2+     x     B1      x - add blob (SAFE)
-  3      x     B1     B1 - independently added blob (FORCEABLE-2)
-  4*     x     B1 B2/Bi/T1/Ti - add blob with content conflict (FORCEABLE-2)
-  5+     x     T1      x - add tree (SAFE)
-  6*     x     T1  B1/Bi - add tree with blob conflict (FORCEABLE-2)
-  7      x     T1   T1/i - independently added tree (SAFE+MISSING)
-  8     B1      x      x - independently deleted blob (SAFE+MISSING)
-  9-    B1      x     B1 - delete blob (SAFE)
- 10-    B1      x     B2 - delete of modified blob (FORCEABLE-1)
- 11     B1      x  T1/Ti - independently deleted blob AND untrack/ign tree (SAFE+MISSING !!!)
- 12     B1     B1      x - locally deleted blob (DIRTY || SAFE+CREATE)
- 13+    B1     B2      x - update to deleted blob (SAFE+MISSING)
- 14     B1     B1     B1 - unmodified file (SAFE)
- 15     B1     B1     B2 - locally modified file (DIRTY)
- 16+    B1     B2     B1 - update unmodified blob (SAFE)
- 17     B1     B2     B2 - independently updated blob (FORCEABLE-1)
- 18+    B1     B2     B3 - update to modified blob (FORCEABLE-1)
- 19     B1     B1  T1/Ti - locally deleted blob AND untrack/ign tree (DIRTY)
- 20*    B1     B2  T1/Ti - update to deleted blob AND untrack/ign tree (F-1)
- 21+    B1     T1      x - add tree with locally deleted blob (SAFE+MISSING)
- 22*    B1     T1     B1 - add tree AND deleted blob (SAFE)
- 23*    B1     T1     B2 - add tree with delete of modified blob (F-1)
- 24     B1     T1     T1 - add tree with deleted blob (F-1)
- 25     T1      x      x - independently deleted tree (SAFE+MISSING)
- 26     T1      x  B1/Bi - independently deleted tree AND untrack/ign blob (F-1)
- 27-    T1      x     T1 - deleted tree (MAYBE SAFE)
- 28+    T1     B1      x - deleted tree AND added blob (SAFE+MISSING)
- 29     T1     B1     B1 - independently typechanged tree -> blob (F-1)
- 30+    T1     B1     B2 - typechange tree->blob with conflicting blob (F-1)
- 31*    T1     B1  T1/T2 - typechange tree->blob (MAYBE SAFE)
- 32+    T1     T1      x - restore locally deleted tree (SAFE+MISSING)
- 33     T1     T1  B1/Bi - locally typechange tree->untrack/ign blob (DIRTY)
- 34     T1     T1  T1/T2 - unmodified tree (MAYBE SAFE)
- 35+    T1     T2      x - update locally deleted tree (SAFE+MISSING)
- 36*    T1     T2  B1/Bi - update to tree with typechanged tree->blob conflict (F-1)
- 37     T1     T2 T1/T2/T3 - update to existing tree (MAYBE SAFE)
+|     |base | target | actual/workdir |                                                                    |
+|-----|-----|------- |----------------|--------------------------------------------------------------------|
+|  0  |   x |      x |      x         | nothing                                                            |
+|  1  |   x |      x | B1/Bi/T1/Ti    | untracked/ignored blob/tree (SAFE)                                 |
+|  2+ |   x |     B1 |      x         | add blob (SAFE)                                                    |
+|  3  |   x |     B1 |     B1         | independently added blob (FORCEABLE-2)                             |
+|  4* |   x |     B1 | B2/Bi/T1/Ti    | add blob with content conflict (FORCEABLE-2)                       |
+|  5+ |   x |     T1 |      x         | add tree (SAFE)                                                    |
+|  6* |   x |     T1 |  B1/Bi         | add tree with blob conflict (FORCEABLE-2)                          |
+|  7  |   x |     T1 |   T1/i         | independently added tree (SAFE+MISSING)                            |
+|  8  |  B1 |      x |      x         | independently deleted blob (SAFE+MISSING)                          |
+|  9- |  B1 |      x |     B1         | delete blob (SAFE)                                                 |
+| 10- |  B1 |      x |     B2         | delete of modified blob (FORCEABLE-1)                              |
+| 11  |  B1 |      x |  T1/Ti         | independently deleted blob AND untrack/ign tree (SAFE+MISSING !!!) |
+| 12  |  B1 |     B1 |      x         | locally deleted blob (DIRTY || SAFE+CREATE)                        |
+| 13+ |  B1 |     B2 |      x         | update to deleted blob (SAFE+MISSING)                              |
+| 14  |  B1 |     B1 |     B1         | unmodified file (SAFE)                                             |
+| 15  |  B1 |     B1 |     B2         | locally modified file (DIRTY)                                      |
+| 16+ |  B1 |     B2 |     B1         | update unmodified blob (SAFE)                                      |
+| 17  |  B1 |     B2 |     B2         | independently updated blob (FORCEABLE-1)                           |
+| 18+ |  B1 |     B2 |     B3         | update to modified blob (FORCEABLE-1)                              |
+| 19  |  B1 |     B1 |  T1/Ti         | locally deleted blob AND untrack/ign tree (DIRTY)                  |
+| 20* |  B1 |     B2 |  T1/Ti         | update to deleted blob AND untrack/ign tree (F-1)                  |
+| 21+ |  B1 |     T1 |      x         | add tree with locally deleted blob (SAFE+MISSING)                  |
+| 22* |  B1 |     T1 |     B1         | add tree AND deleted blob (SAFE)                                   |
+| 23* |  B1 |     T1 |     B2         | add tree with delete of modified blob (F-1)                        |
+| 24  |  B1 |     T1 |     T1         | add tree with deleted blob (F-1)                                   |
+| 25  |  T1 |      x |      x         | independently deleted tree (SAFE+MISSING)                          |
+| 26  |  T1 |      x |  B1/Bi         | independently deleted tree AND untrack/ign blob (F-1)              |
+| 27- |  T1 |      x |     T1         | deleted tree (MAYBE SAFE)                                          |
+| 28+ |  T1 |     B1 |      x         | deleted tree AND added blob (SAFE+MISSING)                         |
+| 29  |  T1 |     B1 |     B1         | independently typechanged tree -> blob (F-1)                       |
+| 30+ |  T1 |     B1 |     B2         | typechange tree->blob with conflicting blob (F-1)                  |
+| 31* |  T1 |     B1 |  T1/T2         | typechange tree->blob (MAYBE SAFE)                                 |
+| 32+ |  T1 |     T1 |      x         | restore locally deleted tree (SAFE+MISSING)                        |
+| 33  |  T1 |     T1 |  B1/Bi         | locally typechange tree->untrack/ign blob (DIRTY)                  |
+| 34  |  T1 |     T1 |  T1/T2         | unmodified tree (MAYBE SAFE)                                       |
+| 35+ |  T1 |     T2 |      x         | update locally deleted tree (SAFE+MISSING)                         |
+| 36* |  T1 |     T2 |  B1/Bi         | update to tree with typechanged tree->blob conflict (F-1)          |
+| 37  |  T1 |     T2 | T1/T2/T3       | update to existing tree (MAYBE SAFE)                               |
+
 
 The number is followed by ' ' if no change is needed or '+' if the case
 needs to write to disk or '-' if something must be deleted and '*' if
@@ -169,34 +170,34 @@ there should be a delete followed by an write.
 
 There are four tiers of safe cases:
 
-- SAFE         == completely safe to update
-- SAFE+MISSING == safe except the workdir is missing the expect content
-- MAYBE SAFE   == safe if workdir tree matches (or is missing) baseline
+* SAFE         == completely safe to update
+* SAFE+MISSING == safe except the workdir is missing the expect content
+* MAYBE SAFE   == safe if workdir tree matches (or is missing) baseline
                   content, which is unknown at this point
-- FORCEABLE == conflict unless FORCE is given
-- DIRTY     == no conflict but change is not applied unless FORCE
+* FORCEABLE == conflict unless FORCE is given
+* DIRTY     == no conflict but change is not applied unless FORCE
 
 Some slightly unusual circumstances:
 
-  8 - parent dir is only deleted when file is, so parent will be left if
-      empty even though it would be deleted if the file were present
- 11 - core git does not consider this a conflict but attempts to delete T1
-      and gives "unable to unlink file" error yet does not skip the rest
-      of the operation
- 12 - without FORCE file is left deleted (i.e. not restored) so new wd is
-      dirty (and warning message "D file" is printed), with FORCE, file is
-      restored.
- 24 - This should be considered MAYBE SAFE since effectively it is 7 and 8
-      combined, but core git considers this a conflict unless forced.
- 26 - This combines two cases (1 & 25) (and also implied 8 for tree content)
-      which are ok on their own, but core git treat this as a conflict.
-      If not forced, this is a conflict.  If forced, this actually doesn't
-      have to write anything and leaves the new blob as an untracked file.
- 32 - This is the only case where the baseline and target values match
-      and yet we will still write to the working directory.  In all other
-      cases, if baseline == target, we don't touch the workdir (it is
-      either already right or is "dirty").  However, since this case also
-      implies that a ?/B1/x case will exist as well, it can be skipped.
+* 8 - parent dir is only deleted when file is, so parent will be left if
+    empty even though it would be deleted if the file were present
+* 11 - core git does not consider this a conflict but attempts to delete T1
+    and gives "unable to unlink file" error yet does not skip the rest
+    of the operation
+* 12 - without FORCE file is left deleted (i.e. not restored) so new wd is
+    dirty (and warning message "D file" is printed), with FORCE, file is
+    restored.
+* 24 - This should be considered MAYBE SAFE since effectively it is 7 and 8
+    combined, but core git considers this a conflict unless forced.
+* 26 - This combines two cases (1 & 25) (and also implied 8 for tree content)
+    which are ok on their own, but core git treat this as a conflict.
+    If not forced, this is a conflict.  If forced, this actually doesn't
+    have to write anything and leaves the new blob as an untracked file.
+* 32 - This is the only case where the baseline and target values match
+    and yet we will still write to the working directory.  In all other
+    cases, if baseline == target, we don't touch the workdir (it is
+    either already right or is "dirty").  However, since this case also
+    implies that a ?/B1/x case will exist as well, it can be skipped.
 
 Cases 3, 17, 24, 26, and 29 are all considered conflicts even though
 none of them will require making any updates to the working directory.
