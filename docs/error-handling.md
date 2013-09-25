@@ -1,111 +1,270 @@
 Error reporting in libgit2
 ==========================
 
-Error reporting is performed on an explicit `git_error **` argument, which appears at the end of all API calls that can return an error. Yes, this does clutter the API.
+Libgit2 tries to follow the POSIX style: functions return an `int` value
+with 0 (zero) indicating success and negative values indicating an error.
+There are specific negative error codes for each "expected failure"
+(e.g. `GIT_ENOTFOUND` for files that take a path which might be missing)
+and a generic error code (-1) for all critical or non-specific failures
+(e.g. running out of memory or system corruption).
 
-When a function fails, an error is set on the error variable **and** returns one of the generic error codes.
+When a negative value is returned, an error message is also set.  The
+message can be accessed via the `giterr_last` function which will return a
+pointer to a `git_error` structure containing the error message text and
+the class of error (i.e. what part of the library generated the error).
+
+For instance: An object lookup by SHA prefix (`git_object_lookup_prefix`)
+has two expected failure cases: the SHA is not found at all which returns
+`GIT_ENOTFOUND` or the SHA prefix is ambiguous (i.e. two or more objects
+share the prefix) which returns `GIT_EAMBIGUOUS`.  There are any number of
+critical failures (such as a packfile being corrupted, a loose object
+having the wrong access permissions, etc.) all of which will return -1.
+When the object lookup is successful, it will return 0.
+
+If libgit2 was compiled with threads enabled (`-DTHREADSAFE=ON` when using
+CMake), then the error message will be kept in thread-local storage, so it
+will not be modified by other threads.  If threads are not enabled, then
+the error message is in global data.
+
+All of the error return codes, the `git_error` type, the error access
+functions, and the error classes are defined in `include/git2/errors.h`.
+See the documentation there for details on the APIs for accessing,
+clearing, and even setting error codes.
+
+When writing libgit2 code, please be smart and conservative when returning
+error codes.  Functions usually have a maximum of two or three "expected
+errors" and in most cases only one.  If you feel there are more possible
+expected error scenarios, then the API you are writing may be at too high
+a level for core libgit2.
+
+Example usage
+-------------
+
+When using libgit2, you will typically capture the return value from
+functions using an `int` variable and check to see if it is negative.
+When that happens, you can, if you wish, look at the specific value or
+look at the error message that was generated.
 
 ~~~c
-int git_repository_open(git_repository **repository, const char *path, git_error **error)
 {
-	// perform some opening
-	if (p_exists(path) < 0) {
-		giterr_set(error, GITERR_REPOSITORY, "The path '%s' doesn't exist", path);
-		return GIT_ENOTFOUND;
+	git_repository *repo;
+	int error = git_repository_open(&repo, "path/to/repo");
+
+	if (error < 0) {
+		fprintf(stderr, "Could not open repository: %s\n", giterr_last()->message);
+		exit(1);
 	}
 
-	...
+	... use `repo` here ...
 
-	if (try_to_parse(path, error) < 0)
-		return GIT_ERROR;
+	git_repository_free(repo); /* void function - no error return code */
+}
+~~~
+
+Some of the error return values do have meaning.  Optionally, you can look
+at the specific error values to decide what to do.
+
+~~~c
+{
+	git_repository *repo;
+	const char *path = "path/to/repo";
+	int error = git_repository_open(&repo, path);
+
+	if (error < 0) {
+		if (error == GIT_ENOTFOUND)
+			fprintf(stderr, "Could not find repository at path '%s'\n", path);
+		else
+			fprintf(stderr, "Unable to open repository: %s\n",
+				giterr_last()->message);
+		exit(1);
+	}
+
+	... happy ...
+}
+~~~
+
+Some of the higher-level language bindings may use a range of information
+from libgit2 to convert error return codes into exceptions, including the
+specific error return codes and even the class of error and the error
+message returned by `giterr_last`, but the full range of that logic is
+beyond the scope of this document.
+
+Example internal implementation
+-------------------------------
+
+Internally, libgit2 detects error scenarios, records error messages, and
+returns error values.  Errors from low-level functions are generally
+passed upwards (unless the higher level can either handle the error or
+wants to translate the error into something more meaningful).
+
+~~~c
+int git_repository_open(git_repository **repository, const char *path)
+{
+	/* perform some logic to open the repository */
+	if (p_exists(path) < 0) {
+		giterr_set(GITERR_REPOSITORY, "The path '%s' doesn't exist", path);
+		return GIT_ENOTFOUND;
+	}
 
 	...
 }
 ~~~
 
-The simple error API
+The public error API
 --------------------
 
-- `void giterr_set(git_error **, int, const char *, ...)`: the main function used to set an error. It allocates a new error object and stores it in the passed error pointer. It has no return value. The arguments for `giterr_set` are as follows:
+- `const git_error *giterr_last(void)`: The main function used to look up
+  the last error.  This may return NULL if no error has occurred.
+  Otherwise this should return a `git_error` object indicating the class
+  of error and the error message that was generated by the library.
 
-	- `git_error **error_ptr`: the pointer where the error will be created.
-	- `int error_class`: the class for the error. This is **not** an error code: this is an specific enum that specifies the error family. The point is to map these families 1-1 with Exception types on higher level languages (e.g. GitRepositoryException)
-	- `const char *error_str, ...`: the error string, with optional formatting arguments
+  The last error is stored in thread-local storage when libgit2 is
+  compiled with thread support, so you do not have to worry about another
+  thread overwriting the value.  When thread support is off, the last
+  error is a global value.
 
-- `void giterr_free(git_error *)`: takes an error and frees it. This function is available in the external API.
+  _Note_ There are some known bugs in the library where this may return
+  NULL even when an error code was generated.  Please report these as
+  bugs, but in the meantime, please code defensively and check for NULL
+  when calling this function.
 
-- `void giterr_clear(git_error **)`: clears an error previously set in an error pointer, setting it to NULL and calling `giterr_free` on it.
+- `void geterr_clear(void)`: This function clears the last error.  The
+  library will call this when an error is generated by low level function
+  and the higher level function handles the error.
 
-- `void giterr_propagate(git_error **, git_error *)`: moves an error to a given error pointer, handling the case when the error pointer is NULL (in that case the error gets freed, because it cannot be propagated).
+  _Note_ There are some known bugs in the library where a low level
+  function's error message is not cleared by higher level code that
+  handles the error and returns zero.  Please report these as bugs, but in
+  the meantime, a zero return value from a libgit2 API does not guarantee
+  that `giterr_last()` will return NULL.
 
-The new error code return values
---------------------------------
+- `void giterr_set_str(int error_class, const char *message)`: This
+  function can be used when writing a custom backend module to set the
+  libgit2 error message.  See the documentation on this function for its
+  use.  Normal usage of libgit2 will probably never need to call this API.
 
-We are doing this the POSIX way: one error code for each "expected failure", and a generic error code for all the critical failures.
+- `void giterr_set_oom(void)`: This is a standard function for reporting
+  an out-of-memory error.  It is written in a manner that it doesn't have
+  to allocate any extra memory in order to record the error, so this is
+  the best way to report that scenario.
 
-For instance: A reference lookup can have an expected failure (which is when the reference cannot be found), and a critical failure (which could be any of a long list of things that could go wrong, such as the refs packfile being corrupted, a loose ref being written with the wrong permissions, etc). We cannot have distinct error codes for every single error in the library, hence `git_reference_lookup` would return GIT_SUCCESS if the operation was successful, GIT_ENOTFOUND when the reference doesn't exist, and GIT_ERROR when an error happens -- **the error is then detailed in the `git_error` parameter**.
+Deviations from the standard
+----------------------------
 
-Please be smart when returning error codes. Functions have max two "expected errors", and in most cases only one.
+There are some public functions that do not return `int` values.  There
+are two primary cases:
+
+* `void` return values: If a function has a `void` return, then it will
+  never fail.  This primary will be used for object destructors.
+
+* `git_xyz *` return values: These are simple accessor functions where the
+  only meaningful error would typically be looking something up by index
+  and having the index be out of bounds.  In those cases, the function
+  will typically return NULL.
+
+* Boolean return values: There are some cases where a function cannot fail
+  and wants to return a boolean value.  In those cases, we try to return 1
+  for true and 0 for false.  These cases are rare and the return value for
+  the function should probably be an `unsigned int` to denote these cases.
+  If you find an exception, please open an issue and let's fix it.
+
+There are a few other exceptions to these rules here and there in the
+library, but those are extremely rare and should probably be converted
+over to other to more standard patterns for usage.  Feel free to open
+issues pointing these out.
+
+There are some known bugs in the library where some functions may return a
+negative value but not set an error message and some other functions may
+return zero (no error) and yet leave an error message set.  Please report
+these cases as issues and they will be fixed.  In the meanwhile, please
+code defensively, checking that the return value of `giterr_last` is not
+NULL before using it, and not relying on `giterr_last` to return NULL when
+a function returns 0 for success.
+
+The internal error API
+----------------------
+
+- `void giterr_set(int error_class, const char *fmt, ...)`: This is the
+  main internal function for setting an error.  It works like `printf` to
+  format the error message.  See the notes of `giterr_set_str` for a
+  general description of how error messages are stored (and also about
+  special handling for `error_class` of `GITERR_OS`).
 
 Writing error messages
 ----------------------
 
 Here are some guidelines when writing error messages:
 
-- Use proper English, and an impersonal or past tenses: *The given path does not exist*, *Failed to lookup object in ODB*
+- Use proper English, and an impersonal or past tenses: *The given path
+  does not exist*, *Failed to lookup object in ODB*
 
-- Use short, direct and objective messages. **One line, max**. libgit2 is a low level library: think that all the messages reported will be thrown as Ruby or Python exceptions. Think how long are common exception messages in those languages.
+- Use short, direct and objective messages. **One line, max**. libgit2 is
+  a low level library: think that all the messages reported will be thrown
+  as Ruby or Python exceptions. Think how long are common exception
+  messages in those languages.
 
-- **Do not add redundant information to the error message**, specially information that can be inferred from the context.
+- **Do not add redundant information to the error message**, specially
+  information that can be inferred from the context.
 
-	E.g. in `git_repository_open`, do not report a message like "Failed to open repository: path not found". Somebody is
-	calling that function. If it fails, he already knows that the repository failed to open!
+	E.g. in `git_repository_open`, do not report a message like "Failed to
+	open repository: path not found". Somebody is calling that
+	function. If it fails, they already know that the repository failed to
+	open!
 
 General guidelines for error reporting
 --------------------------------------
 
-- We never handle programming errors with these functions. Programming errors are `assert`ed, and when their source is internal, fixed as soon as possible. This is C, people.
+- Libgit2 does not handle programming errors with these
+  functions. Programming errors are `assert`ed, and when their source is
+  internal, fixed as soon as possible. This is C, people.
 
-	Example of programming errors that would **not** be handled: passing NULL to a function that expects a valid pointer; passing a `git_tree` to a function that expects a `git_commit`. All these cases need to be identified with `assert` and fixed asap.
+	Example of programming errors that would **not** be handled: passing
+    NULL to a function that expects a valid pointer; passing a `git_tree`
+    to a function that expects a `git_commit`. All these cases need to be
+    identified with `assert` and fixed asap.
 
-	Example of a runtime error: failing to parse a `git_tree` because it contains invalid data. Failing to open a file because it doesn't exist on disk. These errors would be handled, and a `git_error` would be set.
+	Example of a runtime error: failing to parse a `git_tree` because it
+    contains invalid data. Failing to open a file because it doesn't exist
+    on disk. These errors are handled, a meaningful error message is set,
+    and an error code is returned.
 
-- The `git_error **` argument is always the last in the signature of all API calls. No exceptions.
+- In general, *do not* try to overwrite errors internally and *do*
+  propagate error codes from lower level functions to the higher level.
+  There are some cases where propagating an error code will be more
+  confusing rather than less, so there are some exceptions to this rule,
+  but the default behavior should be to simply clean up and pass the error
+  on up to the caller.
 
-- When the programmer (or us, internally) doesn't need error handling, he can pass `NULL` to the `git_error **` param. This means that the errors won't be *reported*, but obviously they still will be handled (i.e. the failing function will interrupt and return cleanly). This is transparently handled by `giterr_set`
-
-- `git_error *` **must be initialized to `NULL` before passing its value to a function!!**
-
-	~~~c
-	git_error *err;
-	git_error *good_error = NULL;
-
-	git_foo_func(arg1, arg2, &error); // invalid: `error` is not initialized
-	git_foo_func2(arg1, arg2, &good_error); // OK!
-	git_foo_func3(arg1, arg2, NULL); // OK! But no error reporting!
-	~~~
-
-- Piling up errors is an error! Don't do this! Errors must always be free'd when a function returns.
-
-	~~~c
-	git_error *error = NULL;
-
-	git_foo_func1(arg1, &error);
-	git_foo_func2(arg2, &error); // WRONG! What if func1 failed? `error` would leak!
-	~~~
-
-- Likewise: do not rethrow errors internally!
+    **WRONG**
 
 	~~~c
-	int git_commit_create(..., git_error **error)
+	int git_commit_parent(...)
 	{
-		if (git_reference_exists("HEAD", error) < 0) {
-			/* HEAD does not exist; create it so we can commit... */
-			if (git_reference_create("HEAD", error) < 0) {
-				/* error could be rethrown */
-			}
+		...
+
+		if (git_commit_lookup(parent, repo, parent_id) < 0) {
+			giterr_set(GITERR_COMMIT, "Overwrite lookup error message");
+			return -1; /* mask error code */
 		}
 
-- Remember that errors are now allocated, and hence they need to be free'd after they've been used. Failure to do so internally (e.g. in the already seen examples of error piling) will be reported by Valgrind, so we can easily find where are we rethrowing errors.
+		...
+	}
+	~~~
 
-- Remember that any function that fails **will set an error object**, and that object will be freed.
+	**RIGHT**
+
+	~~~c
+	int git_commit_parent(...)
+	{
+		...
+
+		error = git_commit_lookup(parent, repo, parent_id);
+		if (error < 0) {
+			/* cleanup intermediate objects if necessary */
+			/* leave error message and propagate error code */
+			return error;
+		}
+
+		...
+	}
+	~~~
