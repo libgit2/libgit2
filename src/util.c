@@ -117,6 +117,19 @@ int git_libgit2_opts(int key, ...)
 		*(va_arg(ap, ssize_t *)) = git_cache__current_storage.val;
 		*(va_arg(ap, ssize_t *)) = git_cache__max_storage;
 		break;
+
+	case GIT_OPT_GET_TEMPLATE_PATH:
+		{
+			char *out = va_arg(ap, char *);
+			size_t outlen = va_arg(ap, size_t);
+
+			error = git_futils_dirs_get_str(out, outlen, GIT_FUTILS_DIR_TEMPLATE);
+		}
+		break;
+
+	case GIT_OPT_SET_TEMPLATE_PATH:
+		error = git_futils_dirs_set(GIT_FUTILS_DIR_TEMPLATE, va_arg(ap, const char *));
+		break;
 	}
 
 	va_end(ap);
@@ -678,6 +691,9 @@ int git__parse_bool(int *out, const char *value)
 size_t git__unescape(char *str)
 {
 	char *scan, *pos = str;
+
+	if (!str)
+		return 0;
 
 	for (scan = str; *scan; pos++, scan++) {
 		if (*scan == '\\' && *(scan + 1) != '\0')

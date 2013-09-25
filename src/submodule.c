@@ -1557,7 +1557,7 @@ static void submodule_get_wd_status(
 	if (ign == GIT_SUBMODULE_IGNORE_NONE)
 		opt.flags |= GIT_DIFF_INCLUDE_UNTRACKED;
 
-	/* if we don't have an orphaned head, check diff with index */
+	/* if we don't have an unborn head, check diff with index */
 	if (git_repository_head_tree(&sm_head, sm_repo) < 0)
 		giterr_clear();
 	else {

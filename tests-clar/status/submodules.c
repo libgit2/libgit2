@@ -13,7 +13,6 @@ void test_status_submodules__initialize(void)
 
 void test_status_submodules__cleanup(void)
 {
-	cleanup_fixture_submodules();
 }
 
 void test_status_submodules__api(void)

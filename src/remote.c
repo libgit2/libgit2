@@ -18,8 +18,6 @@
 #include "refspec.h"
 #include "fetchhead.h"
 
-#include <regex.h>
-
 static int add_refspec(git_remote *remote, const char *string, bool is_fetch)
 {
 	git_refspec *spec;
@@ -362,7 +360,7 @@ cleanup:
 static int update_config_refspec(const git_remote *remote, git_config *config, int direction)
 {
 	git_buf name = GIT_BUF_INIT;
-	int push;
+	unsigned int push;
 	const char *dir;
 	size_t i;
 	int error = 0;
@@ -806,7 +804,7 @@ static int remote_head_for_ref(git_remote_head **out, git_refspec *spec, git_vec
 		(!git_reference_is_branch(resolved_ref)) ||
 		(error = git_branch_upstream(&tracking_ref, resolved_ref)) < 0 ||
 		(error = git_refspec_transform_l(&remote_name, spec, git_reference_name(tracking_ref))) < 0) {
-		/* Not an error if HEAD is orphaned or no tracking branch */
+		/* Not an error if HEAD is unborn or no tracking branch */
 		if (error == GIT_ENOTFOUND)
 			error = 0;
 
@@ -1075,35 +1073,28 @@ void git_remote_free(git_remote *remote)
 	git__free(remote);
 }
 
-struct cb_data {
-	git_vector *list;
-	regex_t *preg;
-};
-
-static int remote_list_cb(const git_config_entry *entry, void *data_)
+static int remote_list_cb(const git_config_entry *entry, void *payload)
 {
-	struct cb_data *data = (struct cb_data *)data_;
-	size_t nmatch = 2;
-	regmatch_t pmatch[2];
-	const char *name = entry->name;
+	git_vector *list = payload;
+	const char *name = entry->name + strlen("remote.");
+	size_t namelen = strlen(name);
+	char *remote_name;
 
-	if (!regexec(data->preg, name, nmatch, pmatch, 0)) {
-		char *remote_name = git__strndup(&name[pmatch[1].rm_so], pmatch[1].rm_eo - pmatch[1].rm_so);
-		GITERR_CHECK_ALLOC(remote_name);
+	/* we know name matches "remote.<stuff>.(push)?url" */
 
-		if (git_vector_insert(data->list, remote_name) < 0)
-			return -1;
-	}
+	if (!strcmp(&name[namelen - 4], ".url"))
+		remote_name = git__strndup(name, namelen - 4); /* strip ".url" */
+	else
+		remote_name = git__strndup(name, namelen - 8); /* strip ".pushurl" */
+	GITERR_CHECK_ALLOC(remote_name);
 
-	return 0;
+	return git_vector_insert(list, remote_name);
 }
 
 int git_remote_list(git_strarray *remotes_list, git_repository *repo)
 {
 	git_config *cfg;
 	git_vector list;
-	regex_t preg;
-	struct cb_data data;
 	int error;
 
 	if (git_repository_config__weakptr(&cfg, repo) < 0)
@@ -1112,18 +1103,13 @@ int git_remote_list(git_strarray *remotes_list, git_repository *repo)
 	if (git_vector_init(&list, 4, git__strcmp_cb) < 0)
 		return -1;
 
-	if (regcomp(&preg, "^remote\\.(.*)\\.(push)?url$", REG_EXTENDED) < 0) {
-		giterr_set(GITERR_OS, "Remote catch regex failed to compile");
-		return -1;
-	}
+	error = git_config_foreach_match(
+		cfg, "^remote\\..*\\.(push)?url$", remote_list_cb, &list);
 
-	data.list = &list;
-	data.preg = &preg;
-	error = git_config_foreach(cfg, remote_list_cb, &data);
-	regfree(&preg);
 	if (error < 0) {
 		size_t i;
 		char *elem;
+
 		git_vector_foreach(&list, i, elem) {
 			git__free(elem);
 		}
@@ -1549,7 +1535,7 @@ int git_remote_add_push(git_remote *remote, const char *refspec)
 	return add_refspec(remote, refspec, false);
 }
 
-static int copy_refspecs(git_strarray *array, git_remote *remote, int push)
+static int copy_refspecs(git_strarray *array, git_remote *remote, unsigned int push)
 {
 	size_t i;
 	git_vector refspecs;

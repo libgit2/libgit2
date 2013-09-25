@@ -194,7 +194,7 @@ void test_stash_save__cannot_stash_against_an_unborn_branch(void)
 
 	cl_git_pass(git_reference_symbolic_create(&head, repo, "HEAD", "refs/heads/unborn", 1));
 
-	cl_assert_equal_i(GIT_EORPHANEDHEAD,
+	cl_assert_equal_i(GIT_EUNBORNBRANCH,
 		git_stash_save(&stash_tip_oid, repo, signature, NULL, GIT_STASH_DEFAULT));
 
 	git_reference_free(head);
@@ -241,7 +241,7 @@ void test_stash_save__stashing_updates_the_reflog(void)
 void test_stash_save__cannot_stash_when_there_are_no_local_change(void)
 {
 	git_index *index;
-	git_oid commit_oid, stash_tip_oid;
+	git_oid stash_tip_oid;
 
 	cl_git_pass(git_repository_index(&index, repo));
 
@@ -251,8 +251,7 @@ void test_stash_save__cannot_stash_when_there_are_no_local_change(void)
 	 */
 	cl_git_pass(git_index_add_bypath(index, "what"));
 	cl_git_pass(git_index_add_bypath(index, "who"));
-	cl_git_pass(git_index_write(index));
-	commit_staged_files(&commit_oid, index, signature);
+	cl_repo_commit_from_index(NULL, repo, signature, 0, "Initial commit");
 	git_index_free(index);
 
 	cl_assert_equal_i(GIT_ENOTFOUND,

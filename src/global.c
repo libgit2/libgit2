@@ -14,6 +14,28 @@
 
 git_mutex git__mwindow_mutex;
 
+#define MAX_SHUTDOWN_CB 8
+
+git_global_shutdown_fn git__shutdown_callbacks[MAX_SHUTDOWN_CB];
+git_atomic git__n_shutdown_callbacks;
+
+void git__on_shutdown(git_global_shutdown_fn callback)
+{
+	int count = git_atomic_inc(&git__n_shutdown_callbacks);
+	assert(count <= MAX_SHUTDOWN_CB);
+	git__shutdown_callbacks[count - 1] = callback;
+}
+
+static void git__shutdown(void)
+{
+	int pos;
+
+	while ((pos = git_atomic_dec(&git__n_shutdown_callbacks)) >= 0) {
+		if (git__shutdown_callbacks[pos])
+			git__shutdown_callbacks[pos]();
+	}
+}
+
 /**
  * Handle the global state with TLS
  *
@@ -79,9 +101,7 @@ int git_threads_init(void)
 void git_threads_shutdown(void)
 {
 	/* Shut down any subsystems that have global state */
-	win32_pthread_shutdown();
-	git_futils_dirs_free();
-	git_hash_global_shutdown();
+	git__shutdown();
 
 	TlsFree(_tls_index);
 	_tls_init = 0;
@@ -140,6 +160,9 @@ int git_threads_init(void)
 
 void git_threads_shutdown(void)
 {
+	/* Shut down any subsystems that have global state */
+	git__shutdown();
+
 	if (_tls_init) {
 		void *ptr = pthread_getspecific(_tls_key);
 		pthread_setspecific(_tls_key, NULL);
@@ -149,10 +172,6 @@ void git_threads_shutdown(void)
 	pthread_key_delete(_tls_key);
 	_tls_init = 0;
 	git_mutex_free(&git__mwindow_mutex);
-
-	/* Shut down any subsystems that have global state */
-	git_hash_global_shutdown();
-	git_futils_dirs_free();
 }
 
 git_global_st *git__global_state(void)
@@ -179,15 +198,14 @@ static git_global_st __state;
 
 int git_threads_init(void)
 {
-	/* noop */ 
+	/* noop */
 	return 0;
 }
 
 void git_threads_shutdown(void)
 {
 	/* Shut down any subsystems that have global state */
-	git_hash_global_shutdown();
-	git_futils_dirs_free();
+	git__shutdown();
 }
 
 git_global_st *git__global_state(void)

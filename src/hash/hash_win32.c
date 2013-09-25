@@ -89,7 +89,15 @@ GIT_INLINE(void) hash_cryptoapi_prov_shutdown(void)
 	hash_prov.type = INVALID;
 }
 
-int git_hash_global_init()
+static void git_hash_global_shutdown(void)
+{
+	if (hash_prov.type == CNG)
+		hash_cng_prov_shutdown();
+	else if(hash_prov.type == CRYPTOAPI)
+		hash_cryptoapi_prov_shutdown();
+}
+
+int git_hash_global_init(void)
 {
 	int error = 0;
 
@@ -99,15 +107,9 @@ int git_hash_global_init()
 	if ((error = hash_cng_prov_init()) < 0)
 		error = hash_cryptoapi_prov_init();
 
-	return error;	
-}
+	git__on_shutdown(git_hash_global_shutdown);
 
-void git_hash_global_shutdown()
-{
-	if (hash_prov.type == CNG)
-		hash_cng_prov_shutdown();
-	else if(hash_prov.type == CRYPTOAPI)
-		hash_cryptoapi_prov_shutdown();
+	return error;
 }
 
 /* CryptoAPI: available in Windows XP and newer */

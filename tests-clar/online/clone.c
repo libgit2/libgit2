@@ -69,7 +69,7 @@ void test_online_clone__empty_repository(void)
 	cl_git_pass(git_clone(&g_repo, LIVE_EMPTYREPO_URL, "./foo", &g_options));
 
 	cl_assert_equal_i(true, git_repository_is_empty(g_repo));
-	cl_assert_equal_i(true, git_repository_head_orphan(g_repo));
+	cl_assert_equal_i(true, git_repository_head_unborn(g_repo));
 
 	cl_git_pass(git_reference_lookup(&head, g_repo, GIT_HEAD_FILE));
 	cl_assert_equal_i(GIT_REF_SYMBOLIC, git_reference_type(head));

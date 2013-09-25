@@ -33,8 +33,6 @@
 
 #define GIT_REPO_VERSION 0
 
-#define GIT_TEMPLATE_DIR "/usr/share/git-core/templates"
-
 static void set_odb(git_repository *repo, git_odb *odb)
 {
 	if (odb) {
@@ -1134,31 +1132,34 @@ static int repo_init_structure(
 
 	/* Copy external template if requested */
 	if (external_tpl) {
-		git_config *cfg;
-		const char *tdir;
+		git_config *cfg = NULL;
+		const char *tdir = NULL;
+		bool default_template = false;
+		git_buf template_buf = GIT_BUF_INIT;
 
 		if (opts->template_path)
 			tdir = opts->template_path;
-		else if ((error = git_config_open_default(&cfg)) < 0)
-			return error;
-		else {
+		else if ((error = git_config_open_default(&cfg)) >= 0) {
 			error = git_config_get_string(&tdir, cfg, "init.templatedir");
-
-			git_config_free(cfg);
-
-			if (error && error != GIT_ENOTFOUND)
-				return error;
-
 			giterr_clear();
-			tdir = GIT_TEMPLATE_DIR;
 		}
 
-		error = git_futils_cp_r(tdir, repo_dir,
-			GIT_CPDIR_COPY_SYMLINKS | GIT_CPDIR_CHMOD_DIRS |
-			GIT_CPDIR_SIMPLE_TO_MODE, dmode);
+		if (!tdir) {
+			if (!(error = git_futils_find_template_dir(&template_buf)))
+				tdir = template_buf.ptr;
+			default_template = true;
+		}
+
+		if (tdir)
+			error = git_futils_cp_r(tdir, repo_dir,
+				GIT_CPDIR_COPY_SYMLINKS | GIT_CPDIR_CHMOD_DIRS |
+				GIT_CPDIR_SIMPLE_TO_MODE, dmode);
+
+		git_buf_free(&template_buf);
+		git_config_free(cfg);
 
 		if (error < 0) {
-			if (strcmp(tdir, GIT_TEMPLATE_DIR) != 0)
+			if (!default_template)
 				return error;
 
 			/* if template was default, ignore error and use internal */
@@ -1451,10 +1452,10 @@ int git_repository_head(git_reference **head_out, git_repository *repo)
 	error = git_reference_lookup_resolved(head_out, repo, git_reference_symbolic_target(head), -1);
 	git_reference_free(head);
 
-	return error == GIT_ENOTFOUND ? GIT_EORPHANEDHEAD : error;
+	return error == GIT_ENOTFOUND ? GIT_EUNBORNBRANCH : error;
 }
 
-int git_repository_head_orphan(git_repository *repo)
+int git_repository_head_unborn(git_repository *repo)
 {
 	git_reference *ref = NULL;
 	int error;
@@ -1462,7 +1463,7 @@ int git_repository_head_orphan(git_repository *repo)
 	error = git_repository_head(&ref, repo);
 	git_reference_free(ref);
 
-	if (error == GIT_EORPHANEDHEAD)
+	if (error == GIT_EUNBORNBRANCH)
 		return 1;
 
 	if (error < 0)
@@ -1649,7 +1650,7 @@ int git_repository_hashfile(
 	const char *as_path)
 {
 	int error;
-	git_vector filters = GIT_VECTOR_INIT;
+	git_filter_list *fl = NULL;
 	git_file fd = -1;
 	git_off_t len;
 	git_buf full_path = GIT_BUF_INIT;
@@ -1671,7 +1672,8 @@ int git_repository_hashfile(
 
 	/* passing empty string for "as_path" indicated --no-filters */
 	if (strlen(as_path) > 0) {
-		error = git_filters_load(&filters, repo, as_path, GIT_FILTER_TO_ODB);
+		error = git_filter_list_load(
+			&fl, repo, NULL, as_path, GIT_FILTER_TO_ODB);
 		if (error < 0)
 			return error;
 	} else {
@@ -1698,12 +1700,12 @@ int git_repository_hashfile(
 		goto cleanup;
 	}
 
-	error = git_odb__hashfd_filtered(out, fd, (size_t)len, type, &filters);
+	error = git_odb__hashfd_filtered(out, fd, (size_t)len, type, fl);
 
 cleanup:
 	if (fd >= 0)
 		p_close(fd);
-	git_filters_free(&filters);
+	git_filter_list_free(fl);
 	git_buf_free(&full_path);
 
 	return error;

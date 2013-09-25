@@ -6,6 +6,7 @@
  */
 #include "buffer.h"
 #include "posix.h"
+#include "git2/buffer.h"
 #include <stdarg.h>
 #include <ctype.h>
 
@@ -31,13 +32,17 @@ void git_buf_init(git_buf *buf, size_t initial_size)
 		git_buf_grow(buf, initial_size);
 }
 
-int git_buf_try_grow(git_buf *buf, size_t target_size, bool mark_oom)
+int git_buf_try_grow(
+	git_buf *buf, size_t target_size, bool mark_oom, bool preserve_external)
 {
 	char *new_ptr;
 	size_t new_size;
 
 	if (buf->ptr == git_buf__oom)
 		return -1;
+
+	if (!target_size)
+		target_size = buf->size;
 
 	if (target_size <= buf->asize)
 		return 0;
@@ -66,6 +71,9 @@ int git_buf_try_grow(git_buf *buf, size_t target_size, bool mark_oom)
 		return -1;
 	}
 
+	if (preserve_external && !buf->asize && buf->ptr != NULL && buf->size > 0)
+		memcpy(new_ptr, buf->ptr, min(buf->size, new_size));
+
 	buf->asize = new_size;
 	buf->ptr   = new_ptr;
 
@@ -77,11 +85,16 @@ int git_buf_try_grow(git_buf *buf, size_t target_size, bool mark_oom)
 	return 0;
 }
 
+int git_buf_grow(git_buf *buffer, size_t target_size)
+{
+	return git_buf_try_grow(buffer, target_size, true, true);
+}
+
 void git_buf_free(git_buf *buf)
 {
 	if (!buf) return;
 
-	if (buf->ptr != git_buf__initbuf && buf->ptr != git_buf__oom)
+	if (buf->asize > 0 && buf->ptr != NULL && buf->ptr != git_buf__oom)
 		git__free(buf->ptr);
 
 	git_buf_init(buf, 0);
@@ -90,11 +103,15 @@ void git_buf_free(git_buf *buf)
 void git_buf_clear(git_buf *buf)
 {
 	buf->size = 0;
+
+	if (!buf->ptr)
+		buf->ptr = git_buf__initbuf;
+
 	if (buf->asize > 0)
 		buf->ptr[0] = '\0';
 }
 
-int git_buf_set(git_buf *buf, const char *data, size_t len)
+int git_buf_set(git_buf *buf, const void *data, size_t len)
 {
 	if (len == 0 || data == NULL) {
 		git_buf_clear(buf);
@@ -137,7 +154,7 @@ int git_buf_puts(git_buf *buf, const char *string)
 	return git_buf_put(buf, string, strlen(string));
 }
 
-static const char b64str[64] =
+static const char b64str[] =
 	"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
 int git_buf_put_base64(git_buf *buf, const char *data, size_t len)
@@ -193,6 +210,8 @@ int git_buf_vprintf(git_buf *buf, const char *format, va_list ap)
 			buf->asize - buf->size,
 			format, args
 		);
+
+		va_end(args);
 
 		if (len < 0) {
 			git__free(buf->ptr);

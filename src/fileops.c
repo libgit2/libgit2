@@ -6,6 +6,7 @@
  */
 #include "common.h"
 #include "fileops.h"
+#include "global.h"
 #include <ctype.h>
 #if GIT_WIN32
 #include "win32/findfile.h"
@@ -55,18 +56,8 @@ int git_futils_creat_withpath(const char *path, const mode_t dirmode, const mode
 
 int git_futils_creat_locked(const char *path, const mode_t mode)
 {
-	int fd;
-
-#ifdef GIT_WIN32
-	git_win32_path buf;
-
-	git_win32_path_from_c(buf, path);
-	fd = _wopen(buf, O_WRONLY | O_CREAT | O_TRUNC |
+	int fd = p_open(path, O_WRONLY | O_CREAT | O_TRUNC |
 		O_EXCL | O_BINARY | O_CLOEXEC, mode);
-#else
-	fd = open(path, O_WRONLY | O_CREAT | O_TRUNC |
-		O_EXCL | O_BINARY | O_CLOEXEC, mode);
-#endif
 
 	if (fd < 0) {
 		giterr_set(GITERR_OS, "Failed to create locked file '%s'", path);
@@ -592,7 +583,7 @@ clean_up:
 static int git_futils_guess_system_dirs(git_buf *out)
 {
 #ifdef GIT_WIN32
-	return git_win32__find_system_dirs(out);
+	return git_win32__find_system_dirs(out, L"etc\\");
 #else
 	return git_buf_sets(out, "/etc");
 #endif
@@ -624,16 +615,33 @@ static int git_futils_guess_xdg_dirs(git_buf *out)
 #endif
 }
 
+static int git_futils_guess_template_dirs(git_buf *out)
+{
+#ifdef GIT_WIN32
+	return git_win32__find_system_dirs(out, L"share\\git-core\\templates");
+#else
+	return git_buf_sets(out, "/usr/share/git-core/templates");
+#endif
+}
+
 typedef int (*git_futils_dirs_guess_cb)(git_buf *out);
 
 static git_buf git_futils__dirs[GIT_FUTILS_DIR__MAX] =
-	{ GIT_BUF_INIT, GIT_BUF_INIT, GIT_BUF_INIT };
+	{ GIT_BUF_INIT, GIT_BUF_INIT, GIT_BUF_INIT, GIT_BUF_INIT };
 
 static git_futils_dirs_guess_cb git_futils__dir_guess[GIT_FUTILS_DIR__MAX] = {
 	git_futils_guess_system_dirs,
 	git_futils_guess_global_dirs,
 	git_futils_guess_xdg_dirs,
+	git_futils_guess_template_dirs,
 };
+
+static void git_futils_dirs_global_shutdown(void)
+{
+	int i;
+	for (i = 0; i < GIT_FUTILS_DIR__MAX; ++i)
+		git_buf_free(&git_futils__dirs[i]);
+}
 
 int git_futils_dirs_global_init(void)
 {
@@ -643,6 +651,8 @@ int git_futils_dirs_global_init(void)
 
 	for (i = 0; !error && i < GIT_FUTILS_DIR__MAX; i++)
 		error = git_futils_dirs_get(&path, i);
+
+	git__on_shutdown(git_futils_dirs_global_shutdown);
 
 	return error;
 }
@@ -726,13 +736,6 @@ int git_futils_dirs_set(git_futils_dir_t which, const char *search_path)
 	return git_buf_oom(&git_futils__dirs[which]) ? -1 : 0;
 }
 
-void git_futils_dirs_free(void)
-{
-	int i;
-	for (i = 0; i < GIT_FUTILS_DIR__MAX; ++i)
-		git_buf_free(&git_futils__dirs[i]);
-}
-
 static int git_futils_find_in_dirlist(
 	git_buf *path, const char *name, git_futils_dir_t which, const char *label)
 {
@@ -753,7 +756,8 @@ static int git_futils_find_in_dirlist(
 			continue;
 
 		GITERR_CHECK_ERROR(git_buf_set(path, scan, len));
-		GITERR_CHECK_ERROR(git_buf_joinpath(path, path->ptr, name));
+		if (name)
+			GITERR_CHECK_ERROR(git_buf_joinpath(path, path->ptr, name));
 
 		if (git_path_exists(path->ptr))
 			return 0;
@@ -780,6 +784,12 @@ int git_futils_find_xdg_file(git_buf *path, const char *filename)
 {
 	return git_futils_find_in_dirlist(
 		path, filename, GIT_FUTILS_DIR_XDG, "global/xdg");
+}
+
+int git_futils_find_template_dir(git_buf *path)
+{
+	return git_futils_find_in_dirlist(
+		path, NULL, GIT_FUTILS_DIR_TEMPLATE, "template");
 }
 
 int git_futils_fake_symlink(const char *old, const char *new)

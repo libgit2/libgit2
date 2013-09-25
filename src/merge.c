@@ -58,7 +58,7 @@ struct merge_diff_df_data {
 
 /* Merge base computation */
 
-int git_merge_base_many(git_oid *out, git_repository *repo, const git_oid input_array[], size_t length)
+int git_merge_base_many(git_oid *out, git_repository *repo, size_t length, const git_oid input_array[])
 {
 	git_revwalk *walk;
 	git_vector list;

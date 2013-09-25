@@ -14,8 +14,6 @@
 #include "git2/revparse.h"
 #include "merge.h"
 
-#include <regex.h>
-
 git_commit_list_node *git_revwalk__commit_lookup(
 	git_revwalk *walk, const git_oid *oid)
 {
@@ -181,48 +179,35 @@ static int push_glob_cb(const char *refname, void *data_)
 
 static int push_glob(git_revwalk *walk, const char *glob, int hide)
 {
+	int error = 0;
 	git_buf buf = GIT_BUF_INIT;
 	struct push_cb_data data;
-	regex_t preg;
+	size_t wildcard;
 
 	assert(walk && glob);
 
 	/* refs/ is implied if not given in the glob */
-	if (strncmp(glob, GIT_REFS_DIR, strlen(GIT_REFS_DIR))) {
-		git_buf_printf(&buf, GIT_REFS_DIR "%s", glob);
-	} else {
+	if (git__prefixcmp(glob, GIT_REFS_DIR) != 0)
+		git_buf_joinpath(&buf, GIT_REFS_DIR, glob);
+	else
 		git_buf_puts(&buf, glob);
-	}
 
 	/* If no '?', '*' or '[' exist, we append '/ *' to the glob */
-	memset(&preg, 0x0, sizeof(regex_t));
-	if (regcomp(&preg, "[?*[]", REG_EXTENDED)) {
-		giterr_set(GITERR_OS, "Regex failed to compile");
-		git_buf_free(&buf);
-		return -1;
-	}
-
-	if (regexec(&preg, glob, 0, NULL, 0))
-		git_buf_puts(&buf, "/*");
-
-	if (git_buf_oom(&buf))
-		goto on_error;
+	wildcard = strcspn(glob, "?*[");
+	if (!glob[wildcard])
+		git_buf_put(&buf, "/*", 2);
 
 	data.walk = walk;
 	data.hide = hide;
 
-	if (git_reference_foreach_glob(
-		walk->repo, git_buf_cstr(&buf), push_glob_cb, &data) < 0)
-		goto on_error;
+	if (git_buf_oom(&buf))
+		error = -1;
+	else
+		error = git_reference_foreach_glob(
+			walk->repo, git_buf_cstr(&buf), push_glob_cb, &data);
 
-	regfree(&preg);
 	git_buf_free(&buf);
-	return 0;
-
-on_error:
-	regfree(&preg);
-	git_buf_free(&buf);
-	return -1;
+	return error;
 }
 
 int git_revwalk_push_glob(git_revwalk *walk, const char *glob)

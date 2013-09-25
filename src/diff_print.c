@@ -336,7 +336,7 @@ static int diff_print_patch_hunk(
 		return 0;
 
 	git_buf_clear(pi->buf);
-	if (git_buf_printf(pi->buf, "%.*s", (int)header_len, header) < 0)
+	if (git_buf_put(pi->buf, header, header_len) < 0)
 		return -1;
 
 	if (pi->print_cb(d, r, GIT_DIFF_LINE_HUNK_HDR,
@@ -360,13 +360,14 @@ static int diff_print_patch_line(
 		return 0;
 
 	git_buf_clear(pi->buf);
+	git_buf_grow(pi->buf, content_len + 2);
 
 	if (line_origin == GIT_DIFF_LINE_ADDITION ||
 		line_origin == GIT_DIFF_LINE_DELETION ||
 		line_origin == GIT_DIFF_LINE_CONTEXT)
-		git_buf_printf(pi->buf, "%c%.*s", line_origin, (int)content_len, content);
-	else if (content_len > 0)
-		git_buf_printf(pi->buf, "%.*s", (int)content_len, content);
+		git_buf_putc(pi->buf, line_origin);
+
+	git_buf_put(pi->buf, content, content_len);
 
 	if (git_buf_oom(pi->buf))
 		return -1;

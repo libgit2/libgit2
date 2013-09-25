@@ -3,7 +3,7 @@
 #include "repo_helpers.h"
 #include "posix.h"
 
-void make_head_orphaned(git_repository* repo, const char *target)
+void make_head_unborn(git_repository* repo, const char *target)
 {
 	git_reference *head;
 

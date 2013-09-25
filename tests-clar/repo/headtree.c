@@ -36,13 +36,13 @@ void test_repo_headtree__can_retrieve_the_root_tree_from_a_non_detached_head(voi
 	cl_assert(git_oid_streq(git_tree_id(tree), "az"));
 }
 
-void test_repo_headtree__when_head_is_orphaned_returns_EORPHANEDHEAD(void)
+void test_repo_headtree__when_head_is_unborn_returns_EUNBORNBRANCH(void)
 {
-	make_head_orphaned(repo, NON_EXISTING_HEAD);
+	make_head_unborn(repo, NON_EXISTING_HEAD);
 
-	cl_assert_equal_i(true, git_repository_head_orphan(repo));
+	cl_assert_equal_i(true, git_repository_head_unborn(repo));
 
-	cl_assert_equal_i(GIT_EORPHANEDHEAD, git_repository_head_tree(&tree, repo));
+	cl_assert_equal_i(GIT_EUNBORNBRANCH, git_repository_head_tree(&tree, repo));
 }
 
 void test_repo_headtree__when_head_is_missing_returns_ENOTFOUND(void)

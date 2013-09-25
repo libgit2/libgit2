@@ -11,7 +11,6 @@ void test_diff_submodules__initialize(void)
 
 void test_diff_submodules__cleanup(void)
 {
-	cleanup_fixture_submodules();
 }
 
 static void check_diff_patches_at_line(
@@ -229,11 +228,11 @@ void test_diff_submodules__invalid_cache(void)
 		"<END>"
 	};
 	static const char *expected_moved[] = {
-		"diff --git a/sm_changed_head b/sm_changed_head\nindex 3d9386c..0910a13 160000\n--- a/sm_changed_head\n+++ b/sm_changed_head\n@@ -1 +1 @@\n-Subproject commit 3d9386c507f6b093471a3e324085657a3c2b4247\n+Subproject commit 0910a13dfa2210496f6c590d75bc360dd11b2a1b\n",
+		"diff --git a/sm_changed_head b/sm_changed_head\nindex 3d9386c..7002348 160000\n--- a/sm_changed_head\n+++ b/sm_changed_head\n@@ -1 +1 @@\n-Subproject commit 3d9386c507f6b093471a3e324085657a3c2b4247\n+Subproject commit 700234833f6ccc20d744b238612646be071acaae\n",
 		"<END>"
 	};
 	static const char *expected_moved_dirty[] = {
-		"diff --git a/sm_changed_head b/sm_changed_head\nindex 3d9386c..0910a13 160000\n--- a/sm_changed_head\n+++ b/sm_changed_head\n@@ -1 +1 @@\n-Subproject commit 3d9386c507f6b093471a3e324085657a3c2b4247\n+Subproject commit 0910a13dfa2210496f6c590d75bc360dd11b2a1b-dirty\n",
+		"diff --git a/sm_changed_head b/sm_changed_head\nindex 3d9386c..7002348 160000\n--- a/sm_changed_head\n+++ b/sm_changed_head\n@@ -1 +1 @@\n-Subproject commit 3d9386c507f6b093471a3e324085657a3c2b4247\n+Subproject commit 700234833f6ccc20d744b238612646be071acaae-dirty\n",
 		"<END>"
 	};
 
@@ -310,26 +309,7 @@ void test_diff_submodules__invalid_cache(void)
 	git_diff_list_free(diff);
 
 	/* commit changed index of submodule */
-	{
-		git_object *parent;
-		git_oid tree_id, commit_id;
-		git_tree *tree;
-		git_signature *sig;
-		git_reference *ref;
-
-		cl_git_pass(git_revparse_ext(&parent, &ref, smrepo, "HEAD"));
-		cl_git_pass(git_index_write_tree(&tree_id, smindex));
-		cl_git_pass(git_index_write(smindex));
-		cl_git_pass(git_tree_lookup(&tree, smrepo, &tree_id));
-		cl_git_pass(git_signature_new(&sig, "Sm Test", "sm@tester.test", 1372350000, 480));
-		cl_git_pass(git_commit_create_v(
-			&commit_id, smrepo, git_reference_name(ref), sig, sig,
-			NULL, "Move it", tree, 1, parent));
-		git_object_free(parent);
-		git_tree_free(tree);
-		git_reference_free(ref);
-		git_signature_free(sig);
-	}
+	cl_repo_commit_from_index(NULL, smrepo, NULL, 1372350000, "Move it");
 
 	git_submodule_set_ignore(sm, GIT_SUBMODULE_IGNORE_DIRTY);
 

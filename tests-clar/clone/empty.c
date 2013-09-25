@@ -44,7 +44,7 @@ void test_clone_empty__can_clone_an_empty_local_repo_barely(void)
 	g_options.bare = true;
 	cl_git_pass(git_clone(&g_repo_cloned, "./empty_bare.git", "./empty", &g_options));
 
-	/* Although the HEAD is orphaned... */
+	/* Although the HEAD is unborn... */
 	cl_assert_equal_i(GIT_ENOTFOUND, git_reference_lookup(&ref, g_repo_cloned, local_name));
 
 	/* ...one can still retrieve the name of the remote tracking reference */
@@ -59,7 +59,7 @@ void test_clone_empty__can_clone_an_empty_local_repo_barely(void)
 
 	cl_assert_equal_s(expected_remote_name, buffer);
 
-	/* ...even when the remote HEAD is orphaned as well */
+	/* ...even when the remote HEAD is unborn as well */
 	cl_assert_equal_i(GIT_ENOTFOUND, git_reference_lookup(&ref, g_repo_cloned,
 		expected_tracked_branch_name));
 }

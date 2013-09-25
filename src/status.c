@@ -252,7 +252,7 @@ int git_status_list_new(
 
 	/* if there is no HEAD, that's okay - we'll make an empty iterator */
 	if (((error = git_repository_head_tree(&head, repo)) < 0) &&
-		error != GIT_ENOTFOUND && error != GIT_EORPHANEDHEAD) {
+		error != GIT_ENOTFOUND && error != GIT_EUNBORNBRANCH) {
 		git_index_free(index); /* release index */
 		return error;
 	}

@@ -26,13 +26,13 @@ void test_refs_branches_ishead__can_tell_if_a_branch_is_pointed_at_by_HEAD(void)
 	cl_assert_equal_i(true, git_branch_is_head(branch));
 }
 
-void test_refs_branches_ishead__can_properly_handle_orphaned_HEAD(void)
+void test_refs_branches_ishead__can_properly_handle_unborn_HEAD(void)
 {
 	git_repository_free(repo);
 
 	repo = cl_git_sandbox_init("testrepo.git");
 
-	make_head_orphaned(repo, NON_EXISTING_HEAD);
+	make_head_unborn(repo, NON_EXISTING_HEAD);
 
 	cl_git_pass(git_reference_lookup(&branch, repo, "refs/heads/master"));
 

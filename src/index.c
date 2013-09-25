@@ -410,7 +410,7 @@ static int create_index_error(int error, const char *msg)
 
 int git_index_set_caps(git_index *index, unsigned int caps)
 {
-	int old_ignore_case;
+	unsigned int old_ignore_case;
 
 	assert(index);
 
@@ -438,7 +438,7 @@ int git_index_set_caps(git_index *index, unsigned int caps)
 	}
 
 	if (old_ignore_case != index->ignore_case) {
-		git_index__set_ignore_case(index, index->ignore_case);
+		git_index__set_ignore_case(index, (bool)index->ignore_case);
 	}
 
 	return 0;
@@ -2092,7 +2092,7 @@ int git_index_add_all(
 
 		/* check if path actually matches */
 		if (!git_pathspec__match(
-				&ps.pathspec, wd->path, no_fnmatch, ignorecase, &match, NULL))
+				&ps.pathspec, wd->path, no_fnmatch, (bool)ignorecase, &match, NULL))
 			continue;
 
 		/* skip ignored items that are not already in the index */
@@ -2184,7 +2184,7 @@ static int index_apply_to_all(
 
 		/* check if path actually matches */
 		if (!git_pathspec__match(
-				&ps.pathspec, entry->path, false, index->ignore_case,
+				&ps.pathspec, entry->path, false, (bool)index->ignore_case,
 				&match, NULL))
 			continue;
 

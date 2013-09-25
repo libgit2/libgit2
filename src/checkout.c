@@ -678,7 +678,7 @@ fail:
 
 static int buffer_to_file(
 	struct stat *st,
-	git_buf *buffer,
+	git_buf *buf,
 	const char *path,
 	mode_t dir_mode,
 	int file_open_flags,
@@ -690,7 +690,7 @@ static int buffer_to_file(
 		return error;
 
 	if ((error = git_futils_writebuffer(
-			buffer, path, file_open_flags, file_mode)) < 0)
+			buf, path, file_open_flags, file_mode)) < 0)
 		return error;
 
 	if (st != NULL && (error = p_stat(path, st)) < 0)
@@ -710,57 +710,28 @@ static int blob_content_to_file(
 	mode_t entry_filemode,
 	git_checkout_opts *opts)
 {
-	int error = -1, nb_filters = 0;
-	mode_t file_mode = opts->file_mode;
-	bool dont_free_filtered;
-	git_buf unfiltered = GIT_BUF_INIT, filtered = GIT_BUF_INIT;
-	git_vector filters = GIT_VECTOR_INIT;
+	int error = 0;
+	mode_t file_mode = opts->file_mode ? opts->file_mode : entry_filemode;
+	git_buf out = GIT_BUF_INIT;
+	git_filter_list *fl = NULL;
 
-	/* Create a fake git_buf from the blob raw data... */
-	filtered.ptr  = (void *)git_blob_rawcontent(blob);
-	filtered.size = (size_t)git_blob_rawsize(blob);
-	/* ... and make sure it doesn't get unexpectedly freed */
-	dont_free_filtered = true;
-
-	if (!opts->disable_filters &&
-		!git_buf_text_is_binary(&filtered) &&
-		(nb_filters = git_filters_load(
-			&filters,
-			git_object_owner((git_object *)blob),
-			path,
-			GIT_FILTER_TO_WORKTREE)) > 0)
-	{
-		/* reset 'filtered' so it can be a filter target */
-		git_buf_init(&filtered, 0);
-		dont_free_filtered = false;
-	}
-
-	if (nb_filters < 0)
-		return nb_filters;
-
-	if (nb_filters > 0)	 {
-		if ((error = git_blob__getbuf(&unfiltered, blob)) < 0)
-			goto cleanup;
-
-		if ((error = git_filters_apply(&filtered, &unfiltered, &filters)) < 0)
-			goto cleanup;
-	}
-
-	/* Allow overriding of file mode */
-	if (!file_mode)
-		file_mode = entry_filemode;
-
-	error = buffer_to_file(
-		st, &filtered, path, opts->dir_mode, opts->file_open_flags, file_mode);
+	if (!opts->disable_filters)
+		error = git_filter_list_load(
+			&fl, git_blob_owner(blob), blob, path, GIT_FILTER_TO_WORKTREE);
 
 	if (!error)
+		error = git_filter_list_apply_to_blob(&out, fl, blob);
+
+	git_filter_list_free(fl);
+
+	if (!error) {
+		error = buffer_to_file(
+			st, &out, path, opts->dir_mode, opts->file_open_flags, file_mode);
+
 		st->st_mode = entry_filemode;
 
-cleanup:
-	git_filters_free(&filters);
-	git_buf_free(&unfiltered);
-	if (!dont_free_filtered)
-		git_buf_free(&filtered);
+		git_buf_free(&out);
+	}
 
 	return error;
 }
@@ -1232,7 +1203,7 @@ static int checkout_data_init(
 
 		error = checkout_lookup_head_tree(&data->opts.baseline, repo);
 
-		if (error == GIT_EORPHANEDHEAD) {
+		if (error == GIT_EUNBORNBRANCH) {
 			error = 0;
 			giterr_clear();
 		}

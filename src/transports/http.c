@@ -59,7 +59,7 @@ typedef struct {
 	git_smart_subtransport parent;
 	transport_smart *owner;
 	gitno_socket socket;
-	const char *path;
+	char *path;
 	char *host;
 	char *port;
 	char *user_from_url;
@@ -125,15 +125,9 @@ static int gen_request(
 	size_t content_length)
 {
 	http_subtransport *t = OWNING_SUBTRANSPORT(s);
+	const char *path = t->path ? t->path : "/";
 
-	if (!t->path)
-		t->path = "/";
-
-	/* If we were redirected, make sure to respect that here */
-	if (s->redirect_url)
-		git_buf_printf(buf, "%s %s HTTP/1.1\r\n", s->verb, s->redirect_url);
-	else
-		git_buf_printf(buf, "%s %s%s HTTP/1.1\r\n", s->verb, t->path, s->service_url);
+	git_buf_printf(buf, "%s %s%s HTTP/1.1\r\n", s->verb, path, s->service_url);
 
 	git_buf_puts(buf, "User-Agent: git/1.0 (libgit2 " LIBGIT2_VERSION ")\r\n");
 	git_buf_printf(buf, "Host: %s\r\n", t->host);
@@ -209,7 +203,7 @@ static int on_header_ready(http_subtransport *t)
 	}
 	else if (!strcasecmp("Location", git_buf_cstr(name))) {
 		if (!t->location) {
-			t->location= git__strdup(git_buf_cstr(value));
+			t->location = git__strdup(git_buf_cstr(value));
 			GITERR_CHECK_ALLOC(t->location);
 		}
 	}
@@ -254,6 +248,98 @@ static int on_header_value(http_parser *parser, const char *str, size_t len)
 	t->last_cb = VALUE;
 	return 0;
 }
+
+static void free_connection_data(http_subtransport *t)
+{
+	if (t->host) {
+		git__free(t->host);
+		t->host = NULL;
+	}
+
+	if (t->port) {
+		git__free(t->port);
+		t->port = NULL;
+	}
+
+	if (t->user_from_url) {
+		git__free(t->user_from_url);
+		t->user_from_url = NULL;
+	}
+
+	if (t->pass_from_url) {
+		git__free(t->pass_from_url);
+		t->pass_from_url = NULL;
+	}
+
+	if (t->path) {
+		git__free(t->path);
+		t->path = NULL;
+	}
+}
+
+static int set_connection_data_from_url(
+	http_subtransport *t, const char *url, const char *service_suffix)
+{
+	int error = 0;
+	const char *default_port = NULL;
+	char *original_host = NULL;
+
+	if (!git__prefixcmp(url, prefix_http)) {
+		url = url + strlen(prefix_http);
+		default_port = "80";
+
+		if (t->use_ssl) {
+			giterr_set(GITERR_NET, "Redirect from HTTPS to HTTP not allowed");
+			return -1;
+		}
+	}
+
+	if (!git__prefixcmp(url, prefix_https)) {
+		url += strlen(prefix_https);
+		default_port = "443";
+		t->use_ssl = 1;
+	}
+
+	if (!default_port) {
+		giterr_set(GITERR_NET, "Unrecognized URL prefix");
+		return -1;
+	}
+
+	/* preserve original host name for checking */
+	original_host = t->host;
+	t->host = NULL;
+
+	free_connection_data(t);
+
+	error = gitno_extract_url_parts(
+		&t->host, &t->port, &t->user_from_url, &t->pass_from_url,
+		url, default_port);
+
+	if (!error) {
+		const char *path = strchr(url, '/');
+		size_t pathlen = strlen(path);
+		size_t suffixlen = service_suffix ? strlen(service_suffix) : 0;
+
+		if (suffixlen &&
+			!memcmp(path + pathlen - suffixlen, service_suffix, suffixlen))
+			t->path = git__strndup(path, pathlen - suffixlen);
+		else
+			t->path = git__strdup(path);
+
+		/* Allow '/'-led urls, or a change of protocol */
+		if (original_host != NULL) {
+			if (strcmp(original_host, t->host) && t->location[0] != '/') {
+				giterr_set(GITERR_NET, "Cross host redirect not allowed");
+				error = -1;
+			}
+
+			git__free(original_host);
+		}
+	}
+
+	return error;
+}
+
 
 static int on_headers_complete(http_parser *parser)
 {
@@ -308,10 +394,8 @@ static int on_headers_complete(http_parser *parser)
 			return t->parse_error = PARSE_ERROR_GENERIC;
 		}
 
-		if (t->location[0] != '/') {
-			giterr_set(GITERR_NET, "Only relative redirects are supported");
+		if (set_connection_data_from_url(t, t->location, s->service_url) < 0)
 			return t->parse_error = PARSE_ERROR_GENERIC;
-		}
 
 		/* Set the redirect URL on the stream. This is a transfer of
 		 * ownership of the memory. */
@@ -822,50 +906,31 @@ static int http_action(
 	git_smart_service_t action)
 {
 	http_subtransport *t = (http_subtransport *)subtransport;
-	const char *default_port = NULL;
 	int ret;
 
 	if (!stream)
 		return -1;
 
 	if (!t->host || !t->port || !t->path) {
-		if (!git__prefixcmp(url, prefix_http)) {
-			url = url + strlen(prefix_http);
-			default_port = "80";
-		}
-
-		if (!git__prefixcmp(url, prefix_https)) {
-			url += strlen(prefix_https);
-			default_port = "443";
-			t->use_ssl = 1;
-		}
-
-		if (!default_port)
-			return -1;
-
-		if ((ret = gitno_extract_url_parts(&t->host, &t->port,
-						&t->user_from_url, &t->pass_from_url, url, default_port)) < 0)
+		if ((ret = set_connection_data_from_url(t, url, NULL)) < 0)
 			return ret;
-
-		t->path = strchr(url, '/');
 	}
 
 	if (http_connect(t) < 0)
 		return -1;
 
-	switch (action)
-	{
-		case GIT_SERVICE_UPLOADPACK_LS:
-			return http_uploadpack_ls(t, stream);
+	switch (action) {
+	case GIT_SERVICE_UPLOADPACK_LS:
+		return http_uploadpack_ls(t, stream);
 
-		case GIT_SERVICE_UPLOADPACK:
-			return http_uploadpack(t, stream);
+	case GIT_SERVICE_UPLOADPACK:
+		return http_uploadpack(t, stream);
 
-		case GIT_SERVICE_RECEIVEPACK_LS:
-			return http_receivepack_ls(t, stream);
+	case GIT_SERVICE_RECEIVEPACK_LS:
+		return http_receivepack_ls(t, stream);
 
-		case GIT_SERVICE_RECEIVEPACK:
-			return http_receivepack(t, stream);
+	case GIT_SERVICE_RECEIVEPACK:
+		return http_receivepack(t, stream);
 	}
 
 	*stream = NULL;
@@ -893,25 +958,7 @@ static int http_close(git_smart_subtransport *subtransport)
 		t->url_cred = NULL;
 	}
 
-	if (t->host) {
-		git__free(t->host);
-		t->host = NULL;
-	}
-
-	if (t->port) {
-		git__free(t->port);
-		t->port = NULL;
-	}
-
-	if (t->user_from_url) {
-		git__free(t->user_from_url);
-		t->user_from_url = NULL;
-	}
-
-	if (t->pass_from_url) {
-		git__free(t->pass_from_url);
-		t->pass_from_url = NULL;
-	}
+	free_connection_data(t);
 
 	return 0;
 }

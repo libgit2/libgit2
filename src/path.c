@@ -565,7 +565,7 @@ static bool _check_dir_contents(
 	size_t sub_size = strlen(sub);
 
 	/* leave base valid even if we could not make space for subdir */
-	if (git_buf_try_grow(dir, dir_size + sub_size + 2, false) < 0)
+	if (git_buf_try_grow(dir, dir_size + sub_size + 2, false, false) < 0)
 		return false;
 
 	/* save excursion */
@@ -902,8 +902,16 @@ int git_path_dirload_with_stat(
 		git_buf_truncate(&full, prefix_len);
 
 		if ((error = git_buf_joinpath(&full, full.ptr, ps->path)) < 0 ||
-			(error = git_path_lstat(full.ptr, &ps->st)) < 0)
+			(error = git_path_lstat(full.ptr, &ps->st)) < 0) {
+			if (error == GIT_ENOTFOUND) {
+				giterr_clear();
+				error = 0;
+				git_vector_remove(contents, i--);
+				continue;
+			}
+
 			break;
+		}
 
 		if (S_ISDIR(ps->st.st_mode)) {
 			if ((error = git_buf_joinpath(&full, full.ptr, ".git")) < 0)

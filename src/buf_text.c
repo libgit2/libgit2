@@ -70,10 +70,10 @@ int git_buf_text_crlf_to_lf(git_buf *tgt, const git_buf *src)
 	assert(tgt != src);
 
 	if (!next)
-		return GIT_ENOTFOUND;
+		return git_buf_set(tgt, src->ptr, src->size);
 
 	/* reduce reallocs while in the loop */
-	if (git_buf_grow(tgt, src->size) < 0)
+	if (git_buf_grow(tgt, src->size + 1) < 0)
 		return -1;
 	out = tgt->ptr;
 	tgt->size = 0;
@@ -81,20 +81,25 @@ int git_buf_text_crlf_to_lf(git_buf *tgt, const git_buf *src)
 	/* Find the next \r and copy whole chunk up to there to tgt */
 	for (; next; scan = next + 1, next = memchr(scan, '\r', scan_end - scan)) {
 		if (next > scan) {
-			size_t copylen = next - scan;
+			size_t copylen = (size_t)(next - scan);
 			memcpy(out, scan, copylen);
 			out += copylen;
 		}
 
 		/* Do not drop \r unless it is followed by \n */
-		if (next[1] != '\n')
+		if (next + 1 == scan_end || next[1] != '\n')
 			*out++ = '\r';
 	}
 
 	/* Copy remaining input into dest */
-	memcpy(out, scan, scan_end - scan + 1); /* +1 for NUL byte */
-	out += (scan_end - scan);
-	tgt->size = out - tgt->ptr;
+	if (scan < scan_end) {
+		size_t remaining = (size_t)(scan_end - scan);
+		memcpy(out, scan, remaining);
+		out += remaining;
+	}
+
+	tgt->size = (size_t)(out - tgt->ptr);
+	tgt->ptr[tgt->size] = '\0';
 
 	return 0;
 }
@@ -109,7 +114,7 @@ int git_buf_text_lf_to_crlf(git_buf *tgt, const git_buf *src)
 	assert(tgt != src);
 
 	if (!next)
-		return GIT_ENOTFOUND;
+		return git_buf_set(tgt, src->ptr, src->size);
 
 	/* attempt to reduce reallocs while in the loop */
 	if (git_buf_grow(tgt, src->size + (src->size >> 4) + 1) < 0)

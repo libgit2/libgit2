@@ -59,4 +59,7 @@
 #include "git2/pathspec.h"
 #include "git2/blame.h"
 
+#include "git2/buffer.h"
+#include "git2/filter.h"
+
 #endif

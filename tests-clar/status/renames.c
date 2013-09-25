@@ -11,6 +11,8 @@ static git_repository *g_repo = NULL;
 void test_status_renames__initialize(void)
 {
 	g_repo = cl_git_sandbox_init("renames");
+
+	cl_repo_set_bool(g_repo, "core.autocrlf", false);
 }
 
 void test_status_renames__cleanup(void)
@@ -67,7 +69,7 @@ static void test_status(
 		actual = git_status_byindex(status_list, i);
 		expected = &expected_list[i];
 
-		cl_assert_equal_i((int)expected->status, (int)actual->status);
+		cl_assert_equal_i_fmt(expected->status, actual->status, "%04x");
 
 		oldname = actual->head_to_index ? actual->head_to_index->old_file.path :
 			actual->index_to_workdir ? actual->index_to_workdir->old_file.path : NULL;

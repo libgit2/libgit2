@@ -382,7 +382,7 @@ static void assert_hooks_match(
 	cl_git_pass(git_buf_joinpath(&actual, repo_dir, hook_path));
 	cl_git_pass(git_path_lstat(actual.ptr, &st));
 
-	cl_assert_equal_sz(expected_st.st_size, st.st_size);
+	cl_assert(expected_st.st_size == st.st_size);
 
 	if (GIT_MODE_TYPE(expected_st.st_mode) != GIT_FILEMODE_LINK) {
 		mode_t expected_mode =
@@ -564,6 +564,11 @@ void test_repo_init__init_with_initial_commit(void)
 	/* Add file to the index */
 	cl_git_pass(git_index_add_bypath(index, "file.txt"));
 	cl_git_pass(git_index_write(index));
+
+	/* Intentionally not using cl_repo_commit_from_index here so this code
+	 * can be used as an example of how an initial commit is typically
+	 * made to a repository...
+	 */
 
 	/* Make sure we're ready to use git_signature_default :-) */
 	{

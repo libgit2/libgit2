@@ -85,15 +85,15 @@ GIT_EXTERN(int) git_merge_base(
  *
  * @param out the OID of a merge base considering all the commits
  * @param repo the repository where the commits exist
- * @param input_array oids of the commits
  * @param length The number of commits in the provided `input_array`
+ * @param input_array oids of the commits
  * @return Zero on success; GIT_ENOTFOUND or -1 on failure.
  */
 GIT_EXTERN(int) git_merge_base_many(
 	git_oid *out,
 	git_repository *repo,
-	const git_oid input_array[],
-	size_t length);
+	size_t length,
+	const git_oid input_array[]);
 
 /**
  * Creates a `git_merge_head` from the given reference
