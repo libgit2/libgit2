@@ -45,44 +45,48 @@ Internal Objects
 * `git_diff_file_content` is an internal structure that represents the
   data on one side of an item to be diffed; it is an augmented
   `git_diff_file` with more flags and the actual file data.
-** it is created from a repository plus a) a git_diff_file, b) a git_blob,
+
+    * it is created from a repository plus a) a git_diff_file, b) a git_blob,
    or c) raw data and size
-** there are three main operations on git_diff_file_content:
-*** _initialization_ sets up the data structure and does what it can up to,
-    but not including loading and looking at the actual data
-*** _loading_ loads the data, preprocesses it (i.e. applies filters) and
-    potentially analyzes it (to decide if binary)
-*** _free_ releases loaded data and frees any allocated memory
+    * there are three main operations on git_diff_file_content:
+    
+        * _initialization_ sets up the data structure and does what it can up to,
+          but not including loading and looking at the actual data
+        * _loading_ loads the data, preprocesses it (i.e. applies filters) and
+          potentially analyzes it (to decide if binary)
+        * _free_ releases loaded data and frees any allocated memory
 
 * The internal structure of a `git_diff_patch` stores the actual diff
   between a pair of `git_diff_file_content` items
-** it may be "unset" if the items are not diffable
-** "empty" if the items are the same
-** otherwise it will consist of a set of hunks each of which covers some
-   number of lines of context, additions and deletions
-** a patch is created from two git_diff_file_content items
-** a patch is fully instantiated in three phases:
-*** initial creation and initialization
-*** loading of data and preliminary data examination
-*** diffing of data and optional storage of diffs
-** (TBD) if a patch is asked to store the diffs and the size of the diff
-   is significantly smaller than the raw data of the two sides, then the
-   patch may be flattened using a pool of string data
+
+    * it may be "unset" if the items are not diffable
+    * "empty" if the items are the same
+    * otherwise it will consist of a set of hunks each of which covers some
+      number of lines of context, additions and deletions
+    * a patch is created from two git_diff_file_content items
+    * a patch is fully instantiated in three phases:
+    
+        * initial creation and initialization
+        * loading of data and preliminary data examination
+        * diffing of data and optional storage of diffs
+    * (TBD) if a patch is asked to store the diffs and the size of the diff
+      is significantly smaller than the raw data of the two sides, then the
+      patch may be flattened using a pool of string data
 
 * `git_diff_output` is an internal structure that represents an output
   target for a `git_diff_patch`
-** It consists of file, hunk, and line callbacks, plus a payload
-** There is a standard flattened output that can be used for plain text output
-** Typically we use a `git_xdiff_output` which drives the callbacks via the
-   xdiff code taken from core Git.
+    * It consists of file, hunk, and line callbacks, plus a payload
+    * There is a standard flattened output that can be used for plain text output
+    * Typically we use a `git_xdiff_output` which drives the callbacks via the
+      xdiff code taken from core Git.
 
 * `git_diff_driver` is an internal structure that encapsulates the logic
   for a given type of file
-** a driver is looked up based on the name and mode of a file.
-** the driver can then be used to:
-*** determine if a file is binary (by attributes, by git_diff_options
-    settings, or by examining the content)
-*** give you a function pointer that is used to evaluate function context
-    for hunk headers
-** At some point, the logic for getting a filtered version of file content
-   or calculating the OID of a file may be moved into the driver.
+    * a driver is looked up based on the name and mode of a file.
+    * the driver can then be used to:
+        * determine if a file is binary (by attributes, by git_diff_options
+          settings, or by examining the content)
+        * give you a function pointer that is used to evaluate function context
+          for hunk headers
+    * At some point, the logic for getting a filtered version of file content
+      or calculating the OID of a file may be moved into the driver.
