@@ -121,8 +121,8 @@ struct git_refdb_backend {
 	void (*free)(git_refdb_backend *backend);
 };
 
-#define GIT_ODB_BACKEND_VERSION 1
-#define GIT_ODB_BACKEND_INIT {GIT_ODB_BACKEND_VERSION}
+#define GIT_REFDB_BACKEND_VERSION 1
+#define GIT_REFDB_BACKEND_INIT {GIT_REFDB_BACKEND_VERSION}
 
 /**
  * Constructors for default filesystem-based refdb backend
