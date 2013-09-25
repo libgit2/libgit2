@@ -309,6 +309,11 @@ $(function() {
       content.append($('<h1>').addClass('funcTitle').append(tname).append($("<small>").append(data.type)))
 
       content.append($('<p>').append(data.value))
+
+      if(data.comments) {
+	content.append($('<div>').append(data.comments))
+      }
+
       if(data.block) {
         content.append($('<pre>').append(data.block))
       }
