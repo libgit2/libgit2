@@ -295,8 +295,7 @@ static int on_headers_complete(http_parser *parser)
 			return t->parse_error = PARSE_ERROR_GENERIC;
 		}
 
-		if (gitno_connection_data_from_url(&t->connection_data, t->location,
-					s->service_url, t->connection_data.host, t->connection_data.use_ssl) < 0)
+		if (gitno_connection_data_from_url(&t->connection_data, t->location, s->service_url) < 0)
 			return t->parse_error = PARSE_ERROR_GENERIC;
 
 		/* Set the redirect URL on the stream. This is a transfer of
@@ -814,7 +813,7 @@ static int http_action(
 		return -1;
 
 	if ((!t->connection_data.host || !t->connection_data.port || !t->connection_data.path) &&
-		 (ret = gitno_connection_data_from_url(&t->connection_data, url, NULL, NULL, false)) < 0)
+		 (ret = gitno_connection_data_from_url(&t->connection_data, url, NULL)) < 0)
 		return ret;
 
 	if (http_connect(t) < 0)
