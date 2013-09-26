@@ -124,3 +124,12 @@ void test_network_urlparse__connection_data_http_downgrade(void)
 				"http://foo.com/bar/baz", NULL),
 			-1);
 }
+
+/* Run this under valgrind */
+void test_network_urlparse__connection_data_cleanup(void)
+{
+	cl_git_pass(gitno_connection_data_from_url(&conndata,
+				"http://foo.com/bar/baz/biff", "baz/biff"));
+	cl_git_pass(gitno_connection_data_from_url(&conndata,
+				"https://foo.com/bar/baz/biff", "baz/biff"));
+}
