@@ -584,15 +584,13 @@ int gitno_connection_data_from_url(
 	int error = -1;
 	const char *default_port = NULL;
 	char *original_host = NULL;
-	bool original_use_ssl;
 
 	/* service_suffix is optional */
 	assert(data && url);
 
 	/* Save these for comparison later */
-	if (data->host)
-		original_host = git__strdup(data->host);
-	original_use_ssl = data->use_ssl;
+	original_host = data->host;
+	data->host = NULL;
 	gitno_connection_data_free_ptrs(data);
 
 	if (!git__prefixcmp(url, prefix_http)) {
@@ -632,10 +630,6 @@ int gitno_connection_data_from_url(
 			data->path = git__strdup(path);
 
 		/* Check for errors in the resulting data */
-		if (original_use_ssl && !data->use_ssl) {
-			giterr_set(GITERR_NET, "Redirect from HTTPS to HTTP not allowed");
-			error = -1;
-		}
 		if (original_host && url[0] != '/' && strcmp(original_host, data->host)) {
 			giterr_set(GITERR_NET, "Cross host redirect not allowed");
 			error = -1;
