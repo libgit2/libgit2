@@ -573,6 +573,81 @@ int gitno_select_in(gitno_buffer *buf, long int sec, long int usec)
 	return select((int)buf->socket->socket + 1, &fds, NULL, NULL, &tv);
 }
 
+static const char *prefix_http = "http://";
+static const char *prefix_https = "https://";
+
+int gitno_connection_data_from_url(
+		gitno_connection_data *data,
+		const char *url,
+		const char *service_suffix,
+		const char *original_host,
+		bool original_use_ssl)
+{
+	int error = 0;
+	const char *default_port = NULL;
+
+	/* service_suffix is optional */
+	assert(data && url);
+
+	if (!git__prefixcmp(url, prefix_http)) {
+		url = url + strlen(prefix_http);
+		default_port = "80";
+
+		if (data->use_ssl) {
+			giterr_set(GITERR_NET, "Redirect from HTTPS to HTTP is not allowed");
+			return -1;
+		}
+	}
+
+	if (!git__prefixcmp(url, prefix_https)) {
+		url += strlen(prefix_https);
+		default_port = "443";
+		data->use_ssl = true;
+	}
+
+	if (!default_port) {
+		giterr_set(GITERR_NET, "Unrecognized URL prefix");
+		return -1;
+	}
+
+	error = gitno_extract_url_parts(
+		&data->host, &data->port, &data->user, &data->pass,
+		url, default_port);
+
+	if (!error) {
+		const char *path = strchr(url, '/');
+		size_t pathlen = strlen(path);
+		size_t suffixlen = service_suffix ? strlen(service_suffix) : 0;
+
+		if (suffixlen &&
+			!memcmp(path + pathlen - suffixlen, service_suffix, suffixlen))
+			data->path = git__strndup(path, pathlen - suffixlen);
+		else
+			data->path = git__strdup(path);
+
+		/* Check for errors in the resulting data */
+		if (original_use_ssl && !data->use_ssl) {
+			giterr_set(GITERR_NET, "Redirect from HTTPS to HTTP not allowed");
+			error = -1;
+		}
+		if (original_host && url[0] != '/' && strcmp(original_host, data->host)) {
+			giterr_set(GITERR_NET, "Cross host redirect not allowed");
+			error = -1;
+		}
+	}
+
+	return error;
+}
+
+void gitno_connection_data_free_ptrs(gitno_connection_data *d)
+{
+	git__free(d->host); d->host = NULL;
+	git__free(d->port); d->port = NULL;
+	git__free(d->path); d->path = NULL;
+	git__free(d->user); d->user = NULL;
+	git__free(d->pass); d->pass = NULL;
+}
+
 int gitno_extract_url_parts(
 		char **host,
 		char **port,

@@ -67,8 +67,8 @@ typedef struct {
 	git_cred *cred;
 	git_cred *url_cred;
 	http_authmechanism_t auth_mechanism;
-	unsigned connected : 1,
-		use_ssl : 1;
+	bool connected,
+		  use_ssl;
 
 	/* Parser structures */
 	http_parser parser;
@@ -277,70 +277,6 @@ static void free_connection_data(http_subtransport *t)
 	}
 }
 
-static int set_connection_data_from_url(
-	http_subtransport *t, const char *url, const char *service_suffix)
-{
-	int error = 0;
-	const char *default_port = NULL;
-	char *original_host = NULL;
-
-	if (!git__prefixcmp(url, prefix_http)) {
-		url = url + strlen(prefix_http);
-		default_port = "80";
-
-		if (t->use_ssl) {
-			giterr_set(GITERR_NET, "Redirect from HTTPS to HTTP not allowed");
-			return -1;
-		}
-	}
-
-	if (!git__prefixcmp(url, prefix_https)) {
-		url += strlen(prefix_https);
-		default_port = "443";
-		t->use_ssl = 1;
-	}
-
-	if (!default_port) {
-		giterr_set(GITERR_NET, "Unrecognized URL prefix");
-		return -1;
-	}
-
-	/* preserve original host name for checking */
-	original_host = t->host;
-	t->host = NULL;
-
-	free_connection_data(t);
-
-	error = gitno_extract_url_parts(
-		&t->host, &t->port, &t->user_from_url, &t->pass_from_url,
-		url, default_port);
-
-	if (!error) {
-		const char *path = strchr(url, '/');
-		size_t pathlen = strlen(path);
-		size_t suffixlen = service_suffix ? strlen(service_suffix) : 0;
-
-		if (suffixlen &&
-			!memcmp(path + pathlen - suffixlen, service_suffix, suffixlen))
-			t->path = git__strndup(path, pathlen - suffixlen);
-		else
-			t->path = git__strdup(path);
-
-		/* Allow '/'-led urls, or a change of protocol */
-		if (original_host != NULL) {
-			if (strcmp(original_host, t->host) && t->location[0] != '/') {
-				giterr_set(GITERR_NET, "Cross host redirect not allowed");
-				error = -1;
-			}
-
-			git__free(original_host);
-		}
-	}
-
-	return error;
-}
-
-
 static int on_headers_complete(http_parser *parser)
 {
 	parser_context *ctx = (parser_context *) parser->data;
@@ -384,18 +320,30 @@ static int on_headers_complete(http_parser *parser)
 	/* Check for a redirect.
 	 * Right now we only permit a redirect to the same hostname. */
 	if ((parser->status_code == 301 ||
-		 parser->status_code == 302 ||
-		 (parser->status_code == 303 && get_verb == s->verb) ||
-		 parser->status_code == 307) &&
-		t->location) {
+	     parser->status_code == 302 ||
+	     (parser->status_code == 303 && get_verb == s->verb) ||
+	     parser->status_code == 307) &&
+	    t->location) {
+		gitno_connection_data connection_data = {0};
 
 		if (s->redirect_count >= 7) {
 			giterr_set(GITERR_NET, "Too many redirects");
 			return t->parse_error = PARSE_ERROR_GENERIC;
 		}
 
-		if (set_connection_data_from_url(t, t->location, s->service_url) < 0)
+		if (gitno_connection_data_from_url(&connection_data, t->location,
+					s->service_url, t->host, t->use_ssl) < 0) {
+			gitno_connection_data_free_ptrs(&connection_data);
 			return t->parse_error = PARSE_ERROR_GENERIC;
+		}
+
+		free_connection_data(t);
+		t->host = connection_data.host;
+		t->port = connection_data.port;
+		t->path = connection_data.path;
+		t->user_from_url = connection_data.user;
+		t->pass_from_url = connection_data.pass;
+		t->use_ssl = connection_data.use_ssl;
 
 		/* Set the redirect URL on the stream. This is a transfer of
 		 * ownership of the memory. */
@@ -912,8 +860,18 @@ static int http_action(
 		return -1;
 
 	if (!t->host || !t->port || !t->path) {
-		if ((ret = set_connection_data_from_url(t, url, NULL)) < 0)
+		gitno_connection_data data = {0};
+		if ((ret = gitno_connection_data_from_url(&data,
+						url, NULL, NULL, false)) < 0) {
+			gitno_connection_data_free_ptrs(&data);
 			return ret;
+		}
+		t->host = data.host;
+		t->port = data.port;
+		t->path = data.path;
+		t->user_from_url = data.user;
+		t->pass_from_url = data.pass;
+		t->use_ssl = data.use_ssl;
 	}
 
 	if (http_connect(t) < 0)
