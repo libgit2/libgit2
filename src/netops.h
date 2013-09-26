@@ -84,9 +84,7 @@ typedef struct gitno_connection_data {
 int gitno_connection_data_from_url(
 		gitno_connection_data *data,
 		const char *url,
-		const char *service_suffix,
-		const char *original_host,
-		bool original_use_ssl);
+		const char *service_suffix);
 
 /* This frees all the pointers IN the struct, but not the struct itself. */
 void gitno_connection_data_free_ptrs(gitno_connection_data *data);

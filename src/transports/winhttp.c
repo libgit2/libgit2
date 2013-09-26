@@ -73,17 +73,12 @@ typedef struct {
 typedef struct {
 	git_smart_subtransport parent;
 	transport_smart *owner;
-	char *path;
-	char *host;
-	char *port;
-	char *user_from_url;
-	char *pass_from_url;
+	gitno_connection_data connection_data;
 	git_cred *cred;
 	git_cred *url_cred;
 	int auth_mechanism;
 	HINTERNET session;
 	HINTERNET connection;
-	unsigned use_ssl : 1;
 } winhttp_subtransport;
 
 static int apply_basic_credential(HINTERNET request, git_cred *cred)
@@ -155,7 +150,7 @@ static int winhttp_stream_connect(winhttp_stream *s)
 	unsigned long disable_redirects = WINHTTP_DISABLE_REDIRECTS;
 
 	/* Prepare URL */
-	git_buf_printf(&buf, "%s%s", t->path, s->service_url);
+	git_buf_printf(&buf, "%s%s", t->connection_data.path, s->service_url);
 
 	if (git_buf_oom(&buf))
 		return -1;
@@ -188,7 +183,7 @@ static int winhttp_stream_connect(winhttp_stream *s)
 			NULL,
 			WINHTTP_NO_REFERER,
 			types,
-			t->use_ssl ? WINHTTP_FLAG_SECURE : 0);
+			t->connection_data.use_ssl ? WINHTTP_FLAG_SECURE : 0);
 
 	if (!s->request) {
 		giterr_set(GITERR_OS, "Failed to open request");
@@ -196,7 +191,7 @@ static int winhttp_stream_connect(winhttp_stream *s)
 	}
 
 	/* Set proxy if necessary */
-	if (git_remote__get_http_proxy(t->owner->owner, !!t->use_ssl, &proxy_url) < 0)
+	if (git_remote__get_http_proxy(t->owner->owner, !!t->connection_data.use_ssl, &proxy_url) < 0)
 		goto on_error;
 
 	if (proxy_url) {
@@ -285,7 +280,7 @@ static int winhttp_stream_connect(winhttp_stream *s)
 	}
 
 	/* If requested, disable certificate validation */
-	if (t->use_ssl) {
+	if (t->connection_data.use_ssl) {
 		int flags;
 
 		if (t->owner->parent.read_flags(&t->owner->parent, &flags) < 0)
@@ -308,9 +303,9 @@ static int winhttp_stream_connect(winhttp_stream *s)
 
 	/* If no other credentials have been applied and the URL has username and
 	 * password, use those */
-	if (!t->cred && t->user_from_url && t->pass_from_url) {
+	if (!t->cred && t->connection_data.user && t->connection_data.pass) {
 		if (!t->url_cred &&
-			 git_cred_userpass_plaintext_new(&t->url_cred, t->user_from_url, t->pass_from_url) < 0)
+			git_cred_userpass_plaintext_new(&t->url_cred, t->connection_data.user, t->connection_data.pass) < 0)
 			goto on_error;
 		if (apply_basic_credential(s->request, t->url_cred) < 0)
 			goto on_error;
@@ -392,34 +387,6 @@ static int write_chunk(HINTERNET request, const char *buffer, size_t len)
 	return 0;
 }
 
-static void free_connection_data(winhttp_subtransport *t)
-{
-	if (t->host) {
-		git__free(t->host);
-		t->host = NULL;
-	}
-
-	if (t->port) {
-		git__free(t->port);
-		t->port = NULL;
-	}
-
-	if (t->user_from_url) {
-		git__free(t->user_from_url);
-		t->user_from_url = NULL;
-	}
-
-	if (t->pass_from_url) {
-		git__free(t->pass_from_url);
-		t->pass_from_url = NULL;
-	}
-
-	if (t->path) {
-		git__free(t->path);
-		t->path = NULL;
-	}
-}
-
 static int winhttp_connect(
 	winhttp_subtransport *t,
 	const char *url)
@@ -430,11 +397,11 @@ static int winhttp_connect(
 	const char *default_port = "80";
 
 	/* Prepare port */
-	if (git__strtol32(&port, t->port, NULL, 10) < 0)
+	if (git__strtol32(&port, t->connection_data.port, NULL, 10) < 0)
 		return -1;
 
 	/* Prepare host */
-	git_win32_path_from_c(host, t->host);
+	git_win32_path_from_c(host, t->connection_data.host);
 
 	/* Establish session */
 	t->session = WinHttpOpen(
@@ -636,17 +603,8 @@ replay:
 			if (!git__prefixcmp_icase(location8, prefix_https)) {
 				/* Upgrade to secure connection; disconnect and start over */
 				gitno_connection_data data = { 0 };
-				if (gitno_connection_data_from_url(&data, location8, s->service_url, t->host, t->use_ssl) < 0) {
-					gitno_connection_data_free_ptrs(&data);
+				if (gitno_connection_data_from_url(&data, location8, s->service_url) < 0)
 					return -1;
-				}
-				free_connection_data(t);
-				t->host = data.host;
-				t->port = data.port;
-				t->path = data.path;
-				t->user_from_url = data.user;
-				t->pass_from_url = data.pass;
-				t->use_ssl = data.use_ssl;
 				winhttp_connect(t, location8);
 			}
 
@@ -665,7 +623,8 @@ replay:
 			if (allowed_types &&
 				(!t->cred || 0 == (t->cred->credtype & allowed_types))) {
 
-				if (t->owner->cred_acquire_cb(&t->cred, t->owner->url, t->user_from_url, allowed_types, t->owner->cred_acquire_payload) < 0)
+				if (t->owner->cred_acquire_cb(&t->cred, t->owner->url, t->connection_data.user, allowed_types, 
+								t->owner->cred_acquire_payload) < 0)
 					return -1;
 
 				assert(t->cred);
@@ -1048,22 +1007,10 @@ static int winhttp_action(
 	winhttp_stream *s;
 	int ret = -1;
 
-	if (!t->connection) {
-		gitno_connection_data data = { 0 };
-		if (gitno_connection_data_from_url(&data, url, NULL, NULL, false) < 0) {
-			gitno_connection_data_free_ptrs(&data);
+	if (!t->connection)
+		if (gitno_connection_data_from_url(&t->connection_data, url, NULL) < 0 ||
+			 winhttp_connect(t, url) < 0)
 			return -1;
-		}
-		free_connection_data(t);
-		t->host = data.host;
-		t->port = data.port;
-		t->path = data.path;
-		t->user_from_url = data.user;
-		t->pass_from_url = data.pass;
-		t->use_ssl = data.use_ssl;
-		if (winhttp_connect(t, url) < 0)
-			return -1;
-	}
 
 	if (winhttp_stream_alloc(t, &s) < 0)
 		return -1;
@@ -1104,7 +1051,7 @@ static int winhttp_close(git_smart_subtransport *subtransport)
 	winhttp_subtransport *t = (winhttp_subtransport *)subtransport;
 	int ret = 0;
 
-	free_connection_data(t);
+	gitno_connection_data_free_ptrs(&t->connection_data);
 
 	if (t->cred) {
 		t->cred->free(t->cred);

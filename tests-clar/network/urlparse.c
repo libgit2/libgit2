@@ -88,7 +88,7 @@ void test_network_urlparse__user_pass_port(void)
 void test_network_urlparse__connection_data_http(void)
 {
 	cl_git_pass(gitno_connection_data_from_url(&conndata,
-				"http://example.com/foo/bar/baz", "bar/baz", NULL, false));
+				"http://example.com/foo/bar/baz", "bar/baz"));
 	cl_assert_equal_s(conndata.host, "example.com");
 	cl_assert_equal_s(conndata.port, "80");
 	cl_assert_equal_s(conndata.path, "/foo/");
@@ -100,7 +100,7 @@ void test_network_urlparse__connection_data_http(void)
 void test_network_urlparse__connection_data_ssl(void)
 {
 	cl_git_pass(gitno_connection_data_from_url(&conndata,
-				"https://example.com/foo/bar/baz", "bar/baz", NULL, false));
+				"https://example.com/foo/bar/baz", "bar/baz"));
 	cl_assert_equal_s(conndata.host, "example.com");
 	cl_assert_equal_s(conndata.port, "443");
 	cl_assert_equal_s(conndata.path, "/foo/");
@@ -111,14 +111,16 @@ void test_network_urlparse__connection_data_ssl(void)
 
 void test_network_urlparse__connection_data_cross_host_redirect(void)
 {
+	conndata.host = git__strdup("bar.com");
 	cl_git_fail_with(gitno_connection_data_from_url(&conndata,
-				"https://foo.com/bar/baz", NULL, "bar.com", true),
+				"https://foo.com/bar/baz", NULL),
 			-1);
 }
 
 void test_network_urlparse__connection_data_http_downgrade(void)
 {
+	conndata.use_ssl = true;
 	cl_git_fail_with(gitno_connection_data_from_url(&conndata,
-				"http://foo.com/bar/baz", NULL, NULL, true),
+				"http://foo.com/bar/baz", NULL),
 			-1);
 }

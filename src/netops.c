@@ -579,15 +579,21 @@ static const char *prefix_https = "https://";
 int gitno_connection_data_from_url(
 		gitno_connection_data *data,
 		const char *url,
-		const char *service_suffix,
-		const char *original_host,
-		bool original_use_ssl)
+		const char *service_suffix)
 {
-	int error = 0;
+	int error = -1;
 	const char *default_port = NULL;
+	char *original_host = NULL;
+	bool original_use_ssl;
 
 	/* service_suffix is optional */
 	assert(data && url);
+
+	/* Save these for comparison later */
+	if (data->host)
+		original_host = git__strdup(data->host);
+	original_use_ssl = data->use_ssl;
+	gitno_connection_data_free_ptrs(data);
 
 	if (!git__prefixcmp(url, prefix_http)) {
 		url = url + strlen(prefix_http);
@@ -595,7 +601,7 @@ int gitno_connection_data_from_url(
 
 		if (data->use_ssl) {
 			giterr_set(GITERR_NET, "Redirect from HTTPS to HTTP is not allowed");
-			return -1;
+			goto cleanup;
 		}
 	}
 
@@ -607,7 +613,7 @@ int gitno_connection_data_from_url(
 
 	if (!default_port) {
 		giterr_set(GITERR_NET, "Unrecognized URL prefix");
-		return -1;
+		goto cleanup;
 	}
 
 	error = gitno_extract_url_parts(
@@ -620,7 +626,7 @@ int gitno_connection_data_from_url(
 		size_t suffixlen = service_suffix ? strlen(service_suffix) : 0;
 
 		if (suffixlen &&
-			!memcmp(path + pathlen - suffixlen, service_suffix, suffixlen))
+			 !memcmp(path + pathlen - suffixlen, service_suffix, suffixlen))
 			data->path = git__strndup(path, pathlen - suffixlen);
 		else
 			data->path = git__strdup(path);
@@ -636,6 +642,8 @@ int gitno_connection_data_from_url(
 		}
 	}
 
+cleanup:
+	if (original_host) git__free(original_host);
 	return error;
 }
 
