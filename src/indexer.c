@@ -426,7 +426,7 @@ int git_indexer_stream_add(git_indexer_stream *idx, const void *data, size_t siz
 	if (git_filebuf_write(&idx->pack_file, data, size) < 0)
 		return -1;
 
-	hash_partially(idx, data, size);
+	hash_partially(idx, data, (int)size);
 
 	/* Make sure we set the new size of the pack */
 	if (idx->opened_pack) {
