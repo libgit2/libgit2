@@ -602,8 +602,7 @@ replay:
 
 			if (!git__prefixcmp_icase(location8, prefix_https)) {
 				/* Upgrade to secure connection; disconnect and start over */
-				gitno_connection_data data = { 0 };
-				if (gitno_connection_data_from_url(&data, location8, s->service_url) < 0)
+				if (gitno_connection_data_from_url(&t->connection_data, location8, s->service_url) < 0)
 					return -1;
 				winhttp_connect(t, location8);
 			}
