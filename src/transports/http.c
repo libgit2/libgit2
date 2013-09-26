@@ -12,8 +12,6 @@
 #include "netops.h"
 #include "smart.h"
 
-static const char *prefix_http = "http://";
-static const char *prefix_https = "https://";
 static const char *upload_pack_service = "upload-pack";
 static const char *upload_pack_ls_service_url = "/info/refs?service=git-upload-pack";
 static const char *upload_pack_service_url = "/git-upload-pack";
@@ -59,16 +57,11 @@ typedef struct {
 	git_smart_subtransport parent;
 	transport_smart *owner;
 	gitno_socket socket;
-	char *path;
-	char *host;
-	char *port;
-	char *user_from_url;
-	char *pass_from_url;
+	gitno_connection_data connection_data;
 	git_cred *cred;
 	git_cred *url_cred;
 	http_authmechanism_t auth_mechanism;
-	bool connected,
-		  use_ssl;
+	bool connected;
 
 	/* Parser structures */
 	http_parser parser;
@@ -125,12 +118,12 @@ static int gen_request(
 	size_t content_length)
 {
 	http_subtransport *t = OWNING_SUBTRANSPORT(s);
-	const char *path = t->path ? t->path : "/";
+	const char *path = t->connection_data.path ? t->connection_data.path : "/";
 
 	git_buf_printf(buf, "%s %s%s HTTP/1.1\r\n", s->verb, path, s->service_url);
 
 	git_buf_puts(buf, "User-Agent: git/1.0 (libgit2 " LIBGIT2_VERSION ")\r\n");
-	git_buf_printf(buf, "Host: %s\r\n", t->host);
+	git_buf_printf(buf, "Host: %s\r\n", t->connection_data.host);
 
 	if (s->chunked || content_length > 0) {
 		git_buf_printf(buf, "Accept: application/x-git-%s-result\r\n", s->service);
@@ -150,9 +143,9 @@ static int gen_request(
 		return -1;
 
 	/* Use url-parsed basic auth if username and password are both provided */
-	if (!t->cred && t->user_from_url && t->pass_from_url) {
-		if (!t->url_cred &&
-			 git_cred_userpass_plaintext_new(&t->url_cred, t->user_from_url, t->pass_from_url) < 0)
+	if (!t->cred && t->connection_data.user && t->connection_data.pass) {
+		if (!t->url_cred && git_cred_userpass_plaintext_new(&t->url_cred,
+					t->connection_data.user, t->connection_data.pass) < 0)
 			return -1;
 		if (apply_basic_credential(buf, t->url_cred) < 0) return -1;
 	}
@@ -249,34 +242,6 @@ static int on_header_value(http_parser *parser, const char *str, size_t len)
 	return 0;
 }
 
-static void free_connection_data(http_subtransport *t)
-{
-	if (t->host) {
-		git__free(t->host);
-		t->host = NULL;
-	}
-
-	if (t->port) {
-		git__free(t->port);
-		t->port = NULL;
-	}
-
-	if (t->user_from_url) {
-		git__free(t->user_from_url);
-		t->user_from_url = NULL;
-	}
-
-	if (t->pass_from_url) {
-		git__free(t->pass_from_url);
-		t->pass_from_url = NULL;
-	}
-
-	if (t->path) {
-		git__free(t->path);
-		t->path = NULL;
-	}
-}
-
 static int on_headers_complete(http_parser *parser)
 {
 	parser_context *ctx = (parser_context *) parser->data;
@@ -305,7 +270,7 @@ static int on_headers_complete(http_parser *parser)
 
 			if (t->owner->cred_acquire_cb(&t->cred,
 					t->owner->url,
-					t->user_from_url,
+					t->connection_data.user,
 					allowed_types,
 					t->owner->cred_acquire_payload) < 0)
 				return PARSE_ERROR_GENERIC;
@@ -324,26 +289,15 @@ static int on_headers_complete(http_parser *parser)
 	     (parser->status_code == 303 && get_verb == s->verb) ||
 	     parser->status_code == 307) &&
 	    t->location) {
-		gitno_connection_data connection_data = {0};
 
 		if (s->redirect_count >= 7) {
 			giterr_set(GITERR_NET, "Too many redirects");
 			return t->parse_error = PARSE_ERROR_GENERIC;
 		}
 
-		if (gitno_connection_data_from_url(&connection_data, t->location,
-					s->service_url, t->host, t->use_ssl) < 0) {
-			gitno_connection_data_free_ptrs(&connection_data);
+		if (gitno_connection_data_from_url(&t->connection_data, t->location,
+					s->service_url, t->connection_data.host, t->connection_data.use_ssl) < 0)
 			return t->parse_error = PARSE_ERROR_GENERIC;
-		}
-
-		free_connection_data(t);
-		t->host = connection_data.host;
-		t->port = connection_data.port;
-		t->path = connection_data.path;
-		t->user_from_url = connection_data.user;
-		t->pass_from_url = connection_data.pass;
-		t->use_ssl = connection_data.use_ssl;
 
 		/* Set the redirect URL on the stream. This is a transfer of
 		 * ownership of the memory. */
@@ -500,7 +454,7 @@ static int http_connect(http_subtransport *t)
 	if (t->socket.socket)
 		gitno_close(&t->socket);
 
-	if (t->use_ssl) {
+	if (t->connection_data.use_ssl) {
 		int tflags;
 
 		if (t->owner->parent.read_flags(&t->owner->parent, &tflags) < 0)
@@ -512,7 +466,7 @@ static int http_connect(http_subtransport *t)
 			flags |= GITNO_CONNECT_SSL_NO_CHECK_CERT;
 	}
 
-	if (gitno_connect(&t->socket, t->host, t->port, flags) < 0)
+	if (gitno_connect(&t->socket, t->connection_data.host, t->connection_data.port, flags) < 0)
 		return -1;
 
 	t->connected = 1;
@@ -859,20 +813,9 @@ static int http_action(
 	if (!stream)
 		return -1;
 
-	if (!t->host || !t->port || !t->path) {
-		gitno_connection_data data = {0};
-		if ((ret = gitno_connection_data_from_url(&data,
-						url, NULL, NULL, false)) < 0) {
-			gitno_connection_data_free_ptrs(&data);
-			return ret;
-		}
-		t->host = data.host;
-		t->port = data.port;
-		t->path = data.path;
-		t->user_from_url = data.user;
-		t->pass_from_url = data.pass;
-		t->use_ssl = data.use_ssl;
-	}
+	if ((!t->connection_data.host || !t->connection_data.port || !t->connection_data.path) &&
+		 (ret = gitno_connection_data_from_url(&t->connection_data, url, NULL, NULL, false)) < 0)
+		return ret;
 
 	if (http_connect(t) < 0)
 		return -1;
@@ -916,7 +859,7 @@ static int http_close(git_smart_subtransport *subtransport)
 		t->url_cred = NULL;
 	}
 
-	free_connection_data(t);
+	gitno_connection_data_free_ptrs(&t->connection_data);
 
 	return 0;
 }
