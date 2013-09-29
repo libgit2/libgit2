@@ -21,7 +21,7 @@ static void usage(const char *msg, const char *arg)
 	fprintf(stderr, "\n");
 	fprintf(stderr, "   <commit range>      example: `HEAD~10..HEAD`, or `1234abcd`\n");
 	fprintf(stderr, "   -L <n,m>            process only line range n-m, counting from 1\n");
-	fprintf(stderr, "   -M                  fine line moves within and across files\n");
+	fprintf(stderr, "   -M                  find line moves within and across files\n");
 	fprintf(stderr, "   -C                  find line copies within and across files\n");
 	fprintf(stderr, "\n");
 	exit(1);
