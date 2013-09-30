@@ -241,6 +241,16 @@ void test_repo_init__detect_ignorecase(void)
 #endif
 }
 
+void test_repo_init__detect_precompose_unicode_required(void)
+{
+#ifdef __APPLE__
+	/* hard to test "true" case without SAMBA or VFAT file system available */
+	assert_config_entry_on_init("core.precomposeunicode", false);
+#else
+	assert_config_entry_on_init("core.precomposeunicode", GIT_ENOTFOUND);
+#endif
+}
+
 void test_repo_init__reinit_doesnot_overwrite_ignorecase(void)
 {
 	git_config *config;
