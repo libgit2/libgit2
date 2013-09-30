@@ -44,7 +44,7 @@ GIT_INLINE(void) clar__assert_in_range(
 }
 
 #define cl_assert_equal_sz(sz1,sz2) do { \
-	size_t __sz1 = (sz1), __sz2 = (sz2); \
+	size_t __sz1 = (size_t)(sz1), __sz2 = (size_t)(sz2); \
 	clar__assert_equal(__FILE__,__LINE__,#sz1 " != " #sz2, 1, "%"PRIuZ, __sz1, __sz2); \
 } while (0)
 
@@ -52,10 +52,10 @@ GIT_INLINE(void) clar__assert_in_range(
 	clar__assert_in_range((L),(V),(H),__FILE__,__LINE__,"Range check: " #V " in [" #L "," #H "]", 1)
 
 #define cl_assert_equal_file(DATA,SIZE,PATH) \
-	clar__assert_equal_file(DATA,SIZE,0,PATH,__FILE__,__LINE__)
+	clar__assert_equal_file(DATA,SIZE,0,PATH,__FILE__,(int)__LINE__)
 
 #define cl_assert_equal_file_ignore_cr(DATA,SIZE,PATH) \
-	clar__assert_equal_file(DATA,SIZE,1,PATH,__FILE__,__LINE__)
+	clar__assert_equal_file(DATA,SIZE,1,PATH,__FILE__,(int)__LINE__)
 
 void clar__assert_equal_file(
 	const char *expected_data,
@@ -63,7 +63,7 @@ void clar__assert_equal_file(
 	int ignore_cr,
 	const char *path,
 	const char *file,
-	size_t line);
+	int line);
 
 /*
  * Some utility macros for building long strings
