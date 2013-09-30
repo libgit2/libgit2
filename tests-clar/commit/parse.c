@@ -349,7 +349,6 @@ void test_commit_parse__details0(void) {
 		cl_assert_equal_s("Scott Chacon", committer->name);
 		cl_assert_equal_s("schacon@gmail.com", committer->email);
 		cl_assert(message != NULL);
-		cl_assert(strchr(message, '\n') != NULL);
 		cl_assert(commit_time > 0);
 		cl_assert(parents <= 2);
 		for (p = 0;p < parents;p++) {
@@ -382,9 +381,25 @@ committer Vicent Marti <tanoku@gmail.com> 1273848544 +0200\n\
 \n\
 This commit has a few LF at the start of the commit message";
 	const char *message =
-"\n\
+"This commit has a few LF at the start of the commit message";
+
+	cl_git_pass(parse_commit(&commit, buffer));
+	cl_assert_equal_s(message, git_commit_message(commit));
+	git_commit__free(commit);
+}
+
+void test_commit_parse__only_lf(void)
+{
+	git_commit *commit;
+	const char *buffer =
+"tree 1810dff58d8a660512d4832e740f692884338ccd\n\
+parent e90810b8df3e80c413d903f631643c716887138d\n\
+author Vicent Marti <tanoku@gmail.com> 1273848544 +0200\n\
+committer Vicent Marti <tanoku@gmail.com> 1273848544 +0200\n\
 \n\
-This commit has a few LF at the start of the commit message";
+\n\
+\n";
+	const char *message = "";
 
 	cl_git_pass(parse_commit(&commit, buffer));
 	cl_assert_equal_s(message, git_commit_message(commit));

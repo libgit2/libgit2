@@ -240,7 +240,7 @@ int git_commit__parse(void *_commit, git_odb_object *odb_obj)
 	buffer_end = buffer + git_odb_object_size(odb_obj);
 
 	buffer += header_len;
-	if (*buffer == '\n')
+	while (buffer < buffer_end && *buffer == '\n')
 		++buffer;
 
 	/* extract commit message */
