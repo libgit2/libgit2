@@ -66,6 +66,29 @@ int gitno_send(gitno_socket *socket, const char *msg, size_t len, int flags);
 int gitno_close(gitno_socket *s);
 int gitno_select_in(gitno_buffer *buf, long int sec, long int usec);
 
+typedef struct gitno_connection_data {
+	char *host;
+	char *port;
+	char *path;
+	char *user;
+	char *pass;
+	bool use_ssl;
+} gitno_connection_data;
+
+/*
+ * This replaces all the pointers in `data` with freshly-allocated strings,
+ * that the caller is responsible for freeing.
+ * `gitno_connection_data_free_ptrs` is good for this.
+ */
+
+int gitno_connection_data_from_url(
+		gitno_connection_data *data,
+		const char *url,
+		const char *service_suffix);
+
+/* This frees all the pointers IN the struct, but not the struct itself. */
+void gitno_connection_data_free_ptrs(gitno_connection_data *data);
+
 int gitno_extract_url_parts(
 		char **host,
 		char **port,
