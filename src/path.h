@@ -290,6 +290,11 @@ extern int git_path_walk_up(
 	int (*fn)(void *state, git_buf *),
 	void *state);
 
+enum {
+	GIT_PATH_DIRLOAD_IGNORE_CASE = (1u << 0),
+	GIT_PATH_DIRLOAD_PRECOMPOSE_UNICODE = (1u << 1),
+};
+
 /**
  * Load all directory entries (except '.' and '..') into a vector.
  *
@@ -310,6 +315,7 @@ extern int git_path_dirload(
 	const char *path,
 	size_t prefix_len,
 	size_t alloc_extra,
+	unsigned int flags,
 	git_vector *contents);
 
 
@@ -336,7 +342,7 @@ extern int git_path_with_stat_cmp_icase(const void *a, const void *b);
  *
  * @param path The directory to read from
  * @param prefix_len The trailing part of path to prefix to entry paths
- * @param ignore_case How to sort and compare paths with start/end limits
+ * @param flags GIT_PATH_DIRLOAD flags from above
  * @param start_stat As optimization, only stat values after this prefix
  * @param end_stat As optimization, only stat values before this prefix
  * @param contents Vector to fill with git_path_with_stat structures
@@ -344,7 +350,7 @@ extern int git_path_with_stat_cmp_icase(const void *a, const void *b);
 extern int git_path_dirload_with_stat(
 	const char *path,
 	size_t prefix_len,
-	bool ignore_case,
+	unsigned int flags,
 	const char *start_stat,
 	const char *end_stat,
 	git_vector *contents);

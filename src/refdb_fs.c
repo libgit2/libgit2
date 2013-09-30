@@ -458,17 +458,23 @@ static void refdb_fs_backend__iterator_free(git_reference_iterator *_iter)
 
 static int iter_load_loose_paths(refdb_fs_backend *backend, refdb_fs_iter *iter)
 {
-	int error = 0;
+	int error = 0, t;
 	git_buf path = GIT_BUF_INIT;
+	git_iterator_flag_t flags = 0;
 	git_iterator *fsit = NULL;
 	const git_index_entry *entry = NULL;
 
 	if (!backend->path) /* do nothing if no path for loose refs */
 		return 0;
 
+	if (!git_repository__cvar(&t, backend->repo, GIT_CVAR_IGNORECASE) && t)
+		flags |= GIT_ITERATOR_IGNORE_CASE;
+	if (!git_repository__cvar(&t, backend->repo, GIT_CVAR_PRECOMPOSE) && t)
+		flags |= GIT_ITERATOR_PRECOMPOSE_UNICODE;
+
 	if ((error = git_buf_printf(&path, "%s/refs", backend->path)) < 0 ||
 		(error = git_iterator_for_filesystem(
-			&fsit, git_buf_cstr(&path), 0, NULL, NULL)) < 0) {
+			&fsit, git_buf_cstr(&path), flags, NULL, NULL)) < 0) {
 		git_buf_free(&path);
 		return error;
 	}

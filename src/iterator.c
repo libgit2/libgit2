@@ -986,7 +986,10 @@ static int fs_iterator__expand_dir(fs_iterator *fi)
 	GITERR_CHECK_ALLOC(ff);
 
 	error = git_path_dirload_with_stat(
-		fi->path.ptr, fi->root_len, iterator__ignore_case(fi),
+		fi->path.ptr, fi->root_len,
+		(iterator__ignore_case(fi) ? GIT_PATH_DIRLOAD_IGNORE_CASE : 0) |
+		(iterator__flag(fi, PRECOMPOSE_UNICODE) ?
+			GIT_PATH_DIRLOAD_PRECOMPOSE_UNICODE : 0),
 		fi->base.start, fi->base.end, &ff->entries);
 
 	if (error < 0) {
@@ -1354,6 +1357,15 @@ int git_iterator_for_workdir_ext(
 	{
 		git_iterator_free((git_iterator *)wi);
 		return error;
+	}
+
+	/* try to look up precompose and set flag if appropriate */
+	{
+		int precompose = 0;
+		if (git_repository__cvar(&precompose, repo, GIT_CVAR_PRECOMPOSE) < 0)
+			giterr_clear();
+		else if (precompose)
+			wi->fi.base.flags |= GIT_ITERATOR_PRECOMPOSE_UNICODE;
 	}
 
 	return fs_iterator__initialize(out, &wi->fi, repo_workdir);

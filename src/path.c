@@ -781,6 +781,7 @@ int git_path_dirload(
 	const char *path,
 	size_t prefix_len,
 	size_t alloc_extra,
+	unsigned int flags,
 	git_vector *contents)
 {
 	int error, need_slash;
@@ -815,6 +816,12 @@ int git_path_dirload(
 			continue;
 
 		entry_len = strlen(de->d_name);
+
+		/* if we read decomposed unicode and precompose flag is set,
+		 * then precompose it now so app code sees it as precomposed
+		 */
+		if ((flags & GIT_PATH_DIRLOAD_PRECOMPOSE_UNICODE) != 0) {
+		}
 
 		entry_path = git__malloc(
 			path_len + need_slash + entry_len + 1 + alloc_extra);
@@ -858,7 +865,7 @@ int git_path_with_stat_cmp_icase(const void *a, const void *b)
 int git_path_dirload_with_stat(
 	const char *path,
 	size_t prefix_len,
-	bool ignore_case,
+	unsigned int flags,
 	const char *start_stat,
 	const char *end_stat,
 	git_vector *contents)
@@ -875,13 +882,14 @@ int git_path_dirload_with_stat(
 		return -1;
 
 	error = git_path_dirload(
-		path, prefix_len, sizeof(git_path_with_stat) + 1, contents);
+		path, prefix_len, sizeof(git_path_with_stat) + 1, flags, contents);
 	if (error < 0) {
 		git_buf_free(&full);
 		return error;
 	}
 
-	strncomp = ignore_case ? git__strncasecmp : git__strncmp;
+	strncomp = (flags & GIT_PATH_DIRLOAD_IGNORE_CASE) != 0 ?
+		git__strncasecmp : git__strncmp;
 
 	/* stat struct at start of git_path_with_stat, so shift path text */
 	git_vector_foreach(contents, i, ps) {
