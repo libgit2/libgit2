@@ -6,9 +6,7 @@ static git_repository *repo;
 static git_signature *signature;
 static git_oid stash_tip_oid;
 
-static git_index *smindex;
 static git_submodule *sm;
-static git_repository *smrepo;
 
 void test_stash_submodules__initialize(void)
 {
@@ -17,8 +15,6 @@ void test_stash_submodules__initialize(void)
 	repo = setup_fixture_submodules();
 
 	cl_git_pass(git_submodule_lookup(&sm, repo, "testrepo"));
-	cl_git_pass(git_submodule_open(&smrepo, sm));
-	cl_git_pass(git_repository_index(&smindex, smrepo));
 }
 
 void test_stash_submodules__cleanup(void)
@@ -29,6 +25,9 @@ void test_stash_submodules__cleanup(void)
 
 void test_stash_submodules__does_not_stash_modified_submodules(void)
 {
+	static git_index *smindex;
+	static git_repository *smrepo;
+
 	assert_status(repo, "modified", GIT_STATUS_WT_MODIFIED);
 
 	/* modify file in submodule */
@@ -36,6 +35,8 @@ void test_stash_submodules__does_not_stash_modified_submodules(void)
 	assert_status(repo, "testrepo", GIT_STATUS_WT_MODIFIED);
 
 	/* add file to index in submodule */
+	cl_git_pass(git_submodule_open(&smrepo, sm));
+	cl_git_pass(git_repository_index(&smindex, smrepo));
 	cl_git_pass(git_index_add_bypath(smindex, "README"));
 
 	/* commit changed index of submodule */
@@ -46,10 +47,16 @@ void test_stash_submodules__does_not_stash_modified_submodules(void)
 
 	assert_status(repo, "testrepo", GIT_STATUS_WT_MODIFIED);
 	assert_status(repo, "modified", GIT_STATUS_CURRENT);
+
+	git_index_free(smindex);
+	git_repository_free(smrepo);
 }
 
 void test_stash_submodules__stash_is_empty_with_modified_submodules(void)
 {
+	static git_index *smindex;
+	static git_repository *smrepo;
+
 	cl_git_pass(git_stash_save(&stash_tip_oid, repo, signature, NULL, GIT_STASH_DEFAULT));
 	assert_status(repo, "modified", GIT_STATUS_CURRENT);
 
@@ -58,6 +65,8 @@ void test_stash_submodules__stash_is_empty_with_modified_submodules(void)
 	assert_status(repo, "testrepo", GIT_STATUS_WT_MODIFIED);
 
 	/* add file to index in submodule */
+	cl_git_pass(git_submodule_open(&smrepo, sm));
+	cl_git_pass(git_repository_index(&smindex, smrepo));
 	cl_git_pass(git_index_add_bypath(smindex, "README"));
 
 	/* commit changed index of submodule */
@@ -65,4 +74,7 @@ void test_stash_submodules__stash_is_empty_with_modified_submodules(void)
 	assert_status(repo, "testrepo", GIT_STATUS_WT_MODIFIED);
 
 	cl_git_fail_with(git_stash_save(&stash_tip_oid, repo, signature, NULL, GIT_STASH_DEFAULT), GIT_ENOTFOUND);
+
+	git_index_free(smindex);
+	git_repository_free(smrepo);
 }
