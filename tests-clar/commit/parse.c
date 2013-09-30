@@ -7,77 +7,77 @@
 static git_repository *g_repo;
 void test_commit_parse__initialize(void)
 {
-   g_repo = cl_git_sandbox_init("testrepo");
+	g_repo = cl_git_sandbox_init("testrepo");
 }
 void test_commit_parse__cleanup(void)
 {
-   cl_git_sandbox_cleanup();
+	cl_git_sandbox_cleanup();
 }
 
 
 // Header parsing
 typedef struct {
-   const char *line;
-   const char *header;
+	const char *line;
+	const char *header;
 } parse_test_case;
 
 static parse_test_case passing_header_cases[] = {
-   { "parent 05452d6349abcd67aa396dfb28660d765d8b2a36\n", "parent " },
-   { "tree 05452d6349abcd67aa396dfb28660d765d8b2a36\n", "tree " },
-   { "random_heading 05452d6349abcd67aa396dfb28660d765d8b2a36\n", "random_heading " },
-   { "stuck_heading05452d6349abcd67aa396dfb28660d765d8b2a36\n", "stuck_heading" },
-   { "tree 5F4BEFFC0759261D015AA63A3A85613FF2F235DE\n", "tree " },
-   { "tree 1A669B8AB81B5EB7D9DB69562D34952A38A9B504\n", "tree " },
-   { "tree 5B20DCC6110FCC75D31C6CEDEBD7F43ECA65B503\n", "tree " },
-   { "tree 173E7BF00EA5C33447E99E6C1255954A13026BE4\n", "tree " },
-   { NULL, NULL }
+	{ "parent 05452d6349abcd67aa396dfb28660d765d8b2a36\n", "parent " },
+	{ "tree 05452d6349abcd67aa396dfb28660d765d8b2a36\n", "tree " },
+	{ "random_heading 05452d6349abcd67aa396dfb28660d765d8b2a36\n", "random_heading " },
+	{ "stuck_heading05452d6349abcd67aa396dfb28660d765d8b2a36\n", "stuck_heading" },
+	{ "tree 5F4BEFFC0759261D015AA63A3A85613FF2F235DE\n", "tree " },
+	{ "tree 1A669B8AB81B5EB7D9DB69562D34952A38A9B504\n", "tree " },
+	{ "tree 5B20DCC6110FCC75D31C6CEDEBD7F43ECA65B503\n", "tree " },
+	{ "tree 173E7BF00EA5C33447E99E6C1255954A13026BE4\n", "tree " },
+	{ NULL, NULL }
 };
 
 static parse_test_case failing_header_cases[] = {
-   { "parent 05452d6349abcd67aa396dfb28660d765d8b2a36", "parent " },
-   { "05452d6349abcd67aa396dfb28660d765d8b2a36\n", "tree " },
-   { "parent05452d6349abcd67aa396dfb28660d765d8b2a6a\n", "parent " },
-   { "parent 05452d6349abcd67aa396dfb280d765d8b2a6\n", "parent " },
-   { "tree  05452d6349abcd67aa396dfb28660d765d8b2a36\n", "tree " },
-   { "parent 0545xd6349abcd67aa396dfb28660d765d8b2a36\n", "parent " },
-   { "parent 0545xd6349abcd67aa396dfb28660d765d8b2a36FF\n", "parent " },
-   { "", "tree " },
-   { "", "" },
-   { NULL, NULL }
+	{ "parent 05452d6349abcd67aa396dfb28660d765d8b2a36", "parent " },
+	{ "05452d6349abcd67aa396dfb28660d765d8b2a36\n", "tree " },
+	{ "parent05452d6349abcd67aa396dfb28660d765d8b2a6a\n", "parent " },
+	{ "parent 05452d6349abcd67aa396dfb280d765d8b2a6\n", "parent " },
+	{ "tree  05452d6349abcd67aa396dfb28660d765d8b2a36\n", "tree " },
+	{ "parent 0545xd6349abcd67aa396dfb28660d765d8b2a36\n", "parent " },
+	{ "parent 0545xd6349abcd67aa396dfb28660d765d8b2a36FF\n", "parent " },
+	{ "", "tree " },
+	{ "", "" },
+	{ NULL, NULL }
 };
 
 void test_commit_parse__header(void)
 {
-   git_oid oid;
+	git_oid oid;
 
-   parse_test_case *testcase;
-   for (testcase = passing_header_cases; testcase->line != NULL; testcase++)
-   {
-      const char *line = testcase->line;
-      const char *line_end = line + strlen(line);
+	parse_test_case *testcase;
+	for (testcase = passing_header_cases; testcase->line != NULL; testcase++)
+	{
+		const char *line = testcase->line;
+		const char *line_end = line + strlen(line);
 
-      cl_git_pass(git_oid__parse(&oid, &line, line_end, testcase->header));
-      cl_assert(line == line_end);
-   }
+		cl_git_pass(git_oid__parse(&oid, &line, line_end, testcase->header));
+		cl_assert(line == line_end);
+	}
 
-   for (testcase = failing_header_cases; testcase->line != NULL; testcase++)
-   {
-      const char *line = testcase->line;
-      const char *line_end = line + strlen(line);
+	for (testcase = failing_header_cases; testcase->line != NULL; testcase++)
+	{
+		const char *line = testcase->line;
+		const char *line_end = line + strlen(line);
 
-      cl_git_fail(git_oid__parse(&oid, &line, line_end, testcase->header));
-   }
+		cl_git_fail(git_oid__parse(&oid, &line, line_end, testcase->header));
+	}
 }
 
 
 // Signature parsing
 typedef struct {
-   const char *string;
-   const char *header;
-   const char *name;
-   const char *email;
-   git_time_t time;
-   int offset;
+	const char *string;
+	const char *header;
+	const char *name;
+	const char *email;
+	git_time_t time;
+	int offset;
 } passing_signature_test_case;
 
 passing_signature_test_case passing_signature_cases[] = {
@@ -122,12 +122,12 @@ passing_signature_test_case passing_signature_cases[] = {
 	{"author Vicent Marti <tanoku@gmail.com> 4294967296 \n", "author ", "Vicent Marti", "tanoku@gmail.com", 4294967296, 0},
 	{"author Vicent Marti <tanoku@gmail.com> 8589934592 \n", "author ", "Vicent Marti", "tanoku@gmail.com", 8589934592, 0},
 
-   {NULL,NULL,NULL,NULL,0,0}
+	{NULL,NULL,NULL,NULL,0,0}
 };
 
 typedef struct {
-   const char *string;
-   const char *header;
+	const char *string;
+	const char *header;
 } failing_signature_test_case;
 
 failing_signature_test_case failing_signature_cases[] = {
@@ -143,31 +143,31 @@ failing_signature_test_case failing_signature_cases[] = {
 
 void test_commit_parse__signature(void)
 {
-   passing_signature_test_case *passcase;
-   failing_signature_test_case *failcase;
+	passing_signature_test_case *passcase;
+	failing_signature_test_case *failcase;
 
-   for (passcase = passing_signature_cases; passcase->string != NULL; passcase++)
-   {
-      const char *str = passcase->string;
-      size_t len = strlen(passcase->string);
-      struct git_signature person = {0};
+	for (passcase = passing_signature_cases; passcase->string != NULL; passcase++)
+	{
+		const char *str = passcase->string;
+		size_t len = strlen(passcase->string);
+		struct git_signature person = {0};
 
-      cl_git_pass(git_signature__parse(&person, &str, str + len, passcase->header, '\n'));
-      cl_assert_equal_s(passcase->name, person.name);
-      cl_assert_equal_s(passcase->email, person.email);
-      cl_assert_equal_i((int)passcase->time, (int)person.when.time);
-      cl_assert_equal_i(passcase->offset, person.when.offset);
-      git__free(person.name); git__free(person.email);
-   }
+		cl_git_pass(git_signature__parse(&person, &str, str + len, passcase->header, '\n'));
+		cl_assert_equal_s(passcase->name, person.name);
+		cl_assert_equal_s(passcase->email, person.email);
+		cl_assert_equal_i((int)passcase->time, (int)person.when.time);
+		cl_assert_equal_i(passcase->offset, person.when.offset);
+		git__free(person.name); git__free(person.email);
+	}
 
-   for (failcase = failing_signature_cases; failcase->string != NULL; failcase++)
-   {
-      const char *str = failcase->string;
-      size_t len = strlen(failcase->string);
-      git_signature person = {0};
-      cl_git_fail(git_signature__parse(&person, &str, str + len, failcase->header, '\n'));
-      git__free(person.name); git__free(person.email);
-   }
+	for (failcase = failing_signature_cases; failcase->string != NULL; failcase++)
+	{
+		const char *str = failcase->string;
+		size_t len = strlen(failcase->string);
+		git_signature person = {0};
+		cl_git_fail(git_signature__parse(&person, &str, str + len, failcase->header, '\n'));
+		git__free(person.name); git__free(person.email);
+	}
 }
 
 
@@ -312,17 +312,17 @@ void test_commit_parse__entire_commit(void)
 
 // query the details on a parsed commit
 void test_commit_parse__details0(void) {
-   static const char *commit_ids[] = {
-      "a4a7dce85cf63874e984719f4fdd239f5145052f", /* 0 */
-      "9fd738e8f7967c078dceed8190330fc8648ee56a", /* 1 */
-      "4a202b346bb0fb0db7eff3cffeb3c70babbd2045", /* 2 */
-      "c47800c7266a2be04c571c04d5a6614691ea99bd", /* 3 */
-      "8496071c1b46c854b31185ea97743be6a8774479", /* 4 */
-      "5b5b025afb0b4c913b4c338a42934a3863bf3644", /* 5 */
-      "a65fedf39aefe402d3bb6e24df4d4f5fe4547750", /* 6 */
-   };
+	static const char *commit_ids[] = {
+		"a4a7dce85cf63874e984719f4fdd239f5145052f", /* 0 */
+		"9fd738e8f7967c078dceed8190330fc8648ee56a", /* 1 */
+		"4a202b346bb0fb0db7eff3cffeb3c70babbd2045", /* 2 */
+		"c47800c7266a2be04c571c04d5a6614691ea99bd", /* 3 */
+		"8496071c1b46c854b31185ea97743be6a8774479", /* 4 */
+		"5b5b025afb0b4c913b4c338a42934a3863bf3644", /* 5 */
+		"a65fedf39aefe402d3bb6e24df4d4f5fe4547750", /* 6 */
+	};
 	const size_t commit_count = sizeof(commit_ids) / sizeof(const char *);
-   unsigned int i;
+	unsigned int i;
 
 	for (i = 0; i < commit_count; ++i) {
 		git_oid id;
