@@ -164,6 +164,13 @@ void test_config_read__empty_files(void)
 	git_config_free(cfg);
 }
 
+void test_config_read__symbol_headers(void)
+{
+	git_config *cfg;
+	cl_git_pass(git_config_open_ondisk(&cfg, cl_fixture("config/config20")));
+	git_config_free(cfg);
+}
+
 void test_config_read__header_in_last_line(void)
 {
 	git_config *cfg;
