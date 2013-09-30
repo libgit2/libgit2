@@ -113,33 +113,15 @@ $ git status --short
 	cl_assert_equal_i(GIT_STATUS_WT_NEW, status);
 }
 
-static void assert_status(
-	const char *path,
-	int status_flags)
-{
-	unsigned int status;
-	int error;
-
-	error = git_status_file(&status, repo, path);
-
-	if (status_flags < 0) {
-		cl_assert_equal_i(status_flags, error);
-		return;
-	}
-
-	cl_assert_equal_i(0, error);
-	cl_assert_equal_i((unsigned int)status_flags, status);
-}
-
 void test_stash_save__can_keep_index(void)
 {
 	cl_git_pass(git_stash_save(&stash_tip_oid, repo, signature, NULL, GIT_STASH_KEEP_INDEX));
 
-	assert_status("what", GIT_STATUS_INDEX_MODIFIED);
-	assert_status("how", GIT_STATUS_INDEX_MODIFIED);
-	assert_status("who", GIT_STATUS_CURRENT);
-	assert_status("when", GIT_STATUS_WT_NEW);
-	assert_status("just.ignore", GIT_STATUS_IGNORED);
+	assert_status(repo, "what", GIT_STATUS_INDEX_MODIFIED);
+	assert_status(repo, "how", GIT_STATUS_INDEX_MODIFIED);
+	assert_status(repo, "who", GIT_STATUS_CURRENT);
+	assert_status(repo, "when", GIT_STATUS_WT_NEW);
+	assert_status(repo, "just.ignore", GIT_STATUS_IGNORED);
 }
 
 static void assert_commit_message_contains(const char *revision, const char *fragment)
@@ -308,25 +290,25 @@ void test_stash_save__can_stage_normal_then_stage_untracked(void)
 	 * 100644 blob b6ed15e81e2593d7bb6265eb4a991d29dc3e628b    when
 	*/
 
-	assert_status("what", GIT_STATUS_WT_MODIFIED | GIT_STATUS_INDEX_MODIFIED);
-	assert_status("how", GIT_STATUS_INDEX_MODIFIED);
-	assert_status("who", GIT_STATUS_WT_MODIFIED);
-	assert_status("when", GIT_STATUS_WT_NEW);
-	assert_status("just.ignore", GIT_STATUS_IGNORED);
+	assert_status(repo, "what", GIT_STATUS_WT_MODIFIED | GIT_STATUS_INDEX_MODIFIED);
+	assert_status(repo, "how", GIT_STATUS_INDEX_MODIFIED);
+	assert_status(repo, "who", GIT_STATUS_WT_MODIFIED);
+	assert_status(repo, "when", GIT_STATUS_WT_NEW);
+	assert_status(repo, "just.ignore", GIT_STATUS_IGNORED);
 
 	cl_git_pass(git_stash_save(&stash_tip_oid, repo, signature, NULL, GIT_STASH_DEFAULT));
-	assert_status("what", GIT_STATUS_CURRENT);
-	assert_status("how", GIT_STATUS_CURRENT);
-	assert_status("who", GIT_STATUS_CURRENT);
-	assert_status("when", GIT_STATUS_WT_NEW);
-	assert_status("just.ignore", GIT_STATUS_IGNORED);
+	assert_status(repo, "what", GIT_STATUS_CURRENT);
+	assert_status(repo, "how", GIT_STATUS_CURRENT);
+	assert_status(repo, "who", GIT_STATUS_CURRENT);
+	assert_status(repo, "when", GIT_STATUS_WT_NEW);
+	assert_status(repo, "just.ignore", GIT_STATUS_IGNORED);
 
 	cl_git_pass(git_stash_save(&stash_tip_oid, repo, signature, NULL, GIT_STASH_INCLUDE_UNTRACKED));
-	assert_status("what", GIT_STATUS_CURRENT);
-	assert_status("how", GIT_STATUS_CURRENT);
-	assert_status("who", GIT_STATUS_CURRENT);
-	assert_status("when", GIT_ENOTFOUND);
-	assert_status("just.ignore", GIT_STATUS_IGNORED);
+	assert_status(repo, "what", GIT_STATUS_CURRENT);
+	assert_status(repo, "how", GIT_STATUS_CURRENT);
+	assert_status(repo, "who", GIT_STATUS_CURRENT);
+	assert_status(repo, "when", GIT_ENOTFOUND);
+	assert_status(repo, "just.ignore", GIT_STATUS_IGNORED);
 
 
 	assert_blob_oid("stash@{1}^0:what", "bc99dc98b3eba0e9157e94769cd4d49cb49de449");	/* see you later */
@@ -360,11 +342,11 @@ void test_stash_save__including_untracked_without_any_untracked_file_creates_an_
 {
 	cl_git_pass(p_unlink("stash/when"));
 
-	assert_status("what", GIT_STATUS_WT_MODIFIED | GIT_STATUS_INDEX_MODIFIED);
-	assert_status("how", GIT_STATUS_INDEX_MODIFIED);
-	assert_status("who", GIT_STATUS_WT_MODIFIED);
-	assert_status("when", GIT_ENOTFOUND);
-	assert_status("just.ignore", GIT_STATUS_IGNORED);
+	assert_status(repo, "what", GIT_STATUS_WT_MODIFIED | GIT_STATUS_INDEX_MODIFIED);
+	assert_status(repo, "how", GIT_STATUS_INDEX_MODIFIED);
+	assert_status(repo, "who", GIT_STATUS_WT_MODIFIED);
+	assert_status(repo, "when", GIT_ENOTFOUND);
+	assert_status(repo, "just.ignore", GIT_STATUS_IGNORED);
 
 	cl_git_pass(git_stash_save(&stash_tip_oid, repo, signature, NULL, GIT_STASH_INCLUDE_UNTRACKED));
 
