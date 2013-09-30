@@ -8,6 +8,7 @@
 #define INCLUDE_git_push_h__
 
 #include "common.h"
+#include "pack.h"
 
 /**
  * @file git2/push.h
@@ -38,6 +39,13 @@ typedef struct {
 #define GIT_PUSH_OPTIONS_VERSION 1
 #define GIT_PUSH_OPTIONS_INIT { GIT_PUSH_OPTIONS_VERSION }
 
+/** Push network progress notification function */
+typedef void (*git_push_transfer_progress)(
+	unsigned int current,
+	unsigned int total,
+	size_t bytes,
+	void* payload);
+
 /**
  * Create a new push object
  *
@@ -59,6 +67,27 @@ GIT_EXTERN(int) git_push_new(git_push **out, git_remote *remote);
 GIT_EXTERN(int) git_push_set_options(
 	git_push *push,
 	const git_push_options *opts);
+
+/**
+ * Set the callbacks for a push
+ *
+ * @param push The push object
+ * @param pack_progress_cb Function to call with progress information during
+ * pack building. Be aware that this is called inline with pack building
+ * operations, so performance may be affected.
+ * @param pack_progress_cb_payload Payload for the pack progress callback.
+ * @param transfer_progress_cb Function to call with progress information during
+ * the upload portion of a push. Be aware that this is called inline with
+ * pack building operations, so performance may be affected.
+ * @param transfer_progress_cb_payload Payload for the network progress callback.
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_push_set_callbacks(
+	git_push *push,
+	git_packbuilder_progress pack_progress_cb,
+	void *pack_progress_cb_payload,
+	git_push_transfer_progress transfer_progress_cb,
+	void *transfer_progress_cb_payload);
 
 /**
  * Add a refspec to be pushed

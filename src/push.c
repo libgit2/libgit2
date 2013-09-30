@@ -70,6 +70,25 @@ int git_push_set_options(git_push *push, const git_push_options *opts)
 	return 0;
 }
 
+int git_push_set_callbacks(
+	git_push *push,
+	git_packbuilder_progress pack_progress_cb,
+	void *pack_progress_cb_payload,
+	git_push_transfer_progress transfer_progress_cb,
+	void *transfer_progress_cb_payload)
+{
+	if (!push)
+		return -1;
+
+	push->pack_progress_cb = pack_progress_cb;
+	push->pack_progress_cb_payload = pack_progress_cb_payload;
+
+	push->transfer_progress_cb = transfer_progress_cb;
+	push->transfer_progress_cb_payload = transfer_progress_cb_payload;
+
+	return 0;
+}
+
 static void free_refspec(push_spec *spec)
 {
 	if (spec == NULL)
@@ -582,6 +601,10 @@ static int do_push(git_push *push)
 		goto on_error;
 
 	git_packbuilder_set_threads(push->pb, push->pb_parallelism);
+
+	if (push->pack_progress_cb)
+		if ((error = git_packbuilder_set_callbacks(push->pb, push->pack_progress_cb, push->pack_progress_cb_payload)) < 0)
+			goto on_error;
 
 	if ((error = calculate_work(push)) < 0 ||
 		(error = queue_objects(push)) < 0 ||

@@ -16,6 +16,7 @@
 #include "netops.h"
 
 #include "git2/oid.h"
+#include "git2/pack.h"
 
 #define GIT_PACK_WINDOW 10 /* number of objects to possibly delta against */
 #define GIT_PACK_DEPTH 50 /* max delta depth */
@@ -78,6 +79,10 @@ struct git_packbuilder {
 	uint64_t window_memory_limit;
 
 	int nr_threads; /* nr of threads to use */
+
+	git_packbuilder_progress progress_cb;
+	void *progress_cb_payload;
+	double last_progress_report_time; /* the time progress was last reported */
 
 	bool done;
 };
