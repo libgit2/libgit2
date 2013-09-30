@@ -440,7 +440,7 @@ void clar__assert_equal_file(
 	int ignore_cr,
 	const char *path,
 	const char *file,
-	size_t line)
+	int line)
 {
 	char buf[4000];
 	ssize_t bytes, total_bytes = 0;
