@@ -531,6 +531,28 @@ void test_config_read__corrupt_header(void)
 	git_config_free(cfg);
 }
 
+void test_config_read__corrupt_header2(void)
+{
+	git_config *cfg;
+
+	cl_set_cleanup(&clean_test_config, NULL);
+	cl_git_mkfile("./testconfig", "[unclosed \"bracket\"\n    lib = git2\n");
+	cl_git_fail(git_config_open_ondisk(&cfg, "./testconfig"));
+
+	git_config_free(cfg);
+}
+
+void test_config_read__corrupt_header3(void)
+{
+	git_config *cfg;
+
+	cl_set_cleanup(&clean_test_config, NULL);
+	cl_git_mkfile("./testconfig", "[unclosed \"slash\\\"]\n    lib = git2\n");
+	cl_git_fail(git_config_open_ondisk(&cfg, "./testconfig"));
+
+	git_config_free(cfg);
+}
+
 void test_config_read__override_variable(void)
 {
 	git_config *cfg;
