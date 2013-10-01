@@ -694,30 +694,59 @@ void test_status_worktree__file_status_honors_core_ignorecase_false(void)
 
 void test_status_worktree__file_status_honors_case_ignorecase_regarding_untracked_files(void)
 {
-    git_repository *repo = cl_git_sandbox_init("status");
-    unsigned int status;
-    git_index *index;
+	git_repository *repo = cl_git_sandbox_init("status");
+	unsigned int status;
+	git_index *index;
 
-    cl_repo_set_bool(repo, "core.ignorecase", false);
+	cl_repo_set_bool(repo, "core.ignorecase", false);
 
 	repo = cl_git_sandbox_reopen();
 
-    /* Actually returns GIT_STATUS_IGNORED on Windows */
-    cl_git_fail_with(git_status_file(&status, repo, "NEW_FILE"), GIT_ENOTFOUND);
+	cl_git_fail_with(git_status_file(&status, repo, "NEW_FILE"), GIT_ENOTFOUND);
 
-    cl_git_pass(git_repository_index(&index, repo));
+	cl_git_pass(git_repository_index(&index, repo));
 
-    cl_git_pass(git_index_add_bypath(index, "new_file"));
-    cl_git_pass(git_index_write(index));
-    git_index_free(index);
+	cl_git_pass(git_index_add_bypath(index, "new_file"));
+	cl_git_pass(git_index_write(index));
+	git_index_free(index);
 
-    /* Actually returns GIT_STATUS_IGNORED on Windows */
-    cl_git_fail_with(git_status_file(&status, repo, "NEW_FILE"), GIT_ENOTFOUND);
+	cl_git_fail_with(git_status_file(&status, repo, "NEW_FILE"), GIT_ENOTFOUND);
+}
+
+void test_status_worktree__file_status_honors_case_ignorecase_on_case_insensitive_platforms(void)
+{
+#ifdef CASE_INSENSITIVE_FILESYSTEM
+	git_repository *repo = cl_git_sandbox_init("status");
+	unsigned int status;
+	git_index *index;
+
+	cl_repo_set_bool(repo, "core.ignorecase", true);
+
+	repo = cl_git_sandbox_reopen();
+
+	cl_git_pass(git_status_file(&status, repo, "NEW_FILE"));
+	cl_assert_equal_i(GIT_STATUS_WT_NEW, status);
+
+	cl_git_pass(git_status_file(&status, repo, "new_file"));
+	cl_assert_equal_i(GIT_STATUS_WT_NEW, status);
+
+	cl_git_pass(git_repository_index(&index, repo));
+
+	cl_git_pass(git_index_add_bypath(index, "new_file"));
+	cl_git_pass(git_index_write(index));
+	git_index_free(index);
+
+	cl_git_pass(git_status_file(&status, repo, "new_file"));
+	cl_assert_equal_i(GIT_STATUS_INDEX_NEW, status);
+
+	cl_git_pass(git_status_file(&status, repo, "NEW_FILE"));
+	cl_assert_equal_i(GIT_STATUS_INDEX_NEW, status);
+#endif
 }
 
 void test_status_worktree__simple_delete(void)
 {
-    git_repository *repo = cl_git_sandbox_init("renames");
+	git_repository *repo = cl_git_sandbox_init("renames");
 	git_status_options opts = GIT_STATUS_OPTIONS_INIT;
 	int count;
 

@@ -230,8 +230,6 @@ void test_repo_init__detect_filemode(void)
 #endif
 }
 
-#define CASE_INSENSITIVE_FILESYSTEM (defined GIT_WIN32 || defined __APPLE__)
-
 void test_repo_init__detect_ignorecase(void)
 {
 #if CASE_INSENSITIVE_FILESYSTEM
