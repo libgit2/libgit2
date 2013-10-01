@@ -379,7 +379,7 @@ GIT_INLINE(double) git__timer(void)
 
 #include <mach/mach_time.h>
 
-double git__timer(void)
+GIT_INLINE(double) git__timer(void)
 {
    uint64_t time = mach_absolute_time();
    static double scaling_factor = 0;
