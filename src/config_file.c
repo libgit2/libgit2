@@ -712,7 +712,6 @@ static int parse_section_header_ext(struct reader *reader, const char *line, con
 	int c, rpos;
 	char *first_quote, *last_quote;
 	git_buf buf = GIT_BUF_INIT;
-	int quote_marks;
 	/*
 	 * base_name is what came before the space. We should be at the
 	 * first quotation mark, except for now, line isn't being kept in
@@ -731,21 +730,15 @@ static int parse_section_header_ext(struct reader *reader, const char *line, con
 	git_buf_printf(&buf, "%s.", base_name);
 
 	rpos = 0;
-	quote_marks = 0;
 
 	line = first_quote;
-	c = line[rpos++];
+	c = line[++rpos];
 
 	/*
 	 * At the end of each iteration, whatever is stored in c will be
 	 * added to the string. In case of error, jump to out
 	 */
 	do {
-		if (quote_marks == 2) {
-			set_parse_error(reader, rpos, "Unexpected text after closing quotes");
-			git_buf_free(&buf);
-			return -1;
-		}
 
 		switch (c) {
 		case 0:
@@ -754,25 +747,13 @@ static int parse_section_header_ext(struct reader *reader, const char *line, con
 			return -1;
 
 		case '"':
-			++quote_marks;
-			continue;
+			goto end_parse;
 
 		case '\\':
-			c = line[rpos++];
+			c = line[++rpos];
 
-			switch (c) {
-			case '"':
-				if (&line[rpos-1] == last_quote) {
-					set_parse_error(reader, 0, "Missing closing quotation mark in section header");
-					git_buf_free(&buf);
-					return -1;
-				}
-
-			case '\\':
-				break;
-
-			default:
-				set_parse_error(reader, rpos, "Unsupported escape sequence");
+			if (c == 0) {
+				set_parse_error(reader, rpos, "Unexpected end-of-line in section header");
 				git_buf_free(&buf);
 				return -1;
 			}
@@ -782,7 +763,15 @@ static int parse_section_header_ext(struct reader *reader, const char *line, con
 		}
 
 		git_buf_putc(&buf, (char)c);
-	} while ((c = line[rpos++]) != ']');
+		c = line[++rpos];
+	} while (line + rpos < last_quote);
+
+end_parse:
+	if (line[rpos] != '"' || line[rpos + 1] != ']') {
+		set_parse_error(reader, rpos, "Unexpected text after closing quotes");
+		git_buf_free(&buf);
+		return -1;
+	}
 
 	*section_name = git_buf_detach(&buf);
 	return 0;
@@ -800,7 +789,7 @@ static int parse_section_header(struct reader *reader, char **section_out)
 		return -1;
 
 	/* find the end of the variable's name */
-	name_end = strchr(line, ']');
+	name_end = strrchr(line, ']');
 	if (name_end == NULL) {
 		git__free(line);
 		set_parse_error(reader, 0, "Missing ']' in section header");
