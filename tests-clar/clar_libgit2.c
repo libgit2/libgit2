@@ -301,7 +301,7 @@ static int remove_placeholders_recurs(void *_data, git_buf *path)
 	size_t pathlen;
 
 	if (git_path_isdir(path->ptr) == true)
-		return git_path_direach(path, remove_placeholders_recurs, data);
+		return git_path_direach(path, 0, remove_placeholders_recurs, data);
 
 	pathlen = path->size;
 

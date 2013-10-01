@@ -391,11 +391,11 @@ int git_clone(
 	const char *local_path,
 	const git_clone_options *_options)
 {
-	int retcode = GIT_ERROR;
+	int error = 0;
 	git_repository *repo = NULL;
 	git_remote *origin;
 	git_clone_options options = GIT_CLONE_OPTIONS_INIT;
-	int remove_directory_on_failure = 0;
+	uint32_t rmdir_flags = GIT_RMDIR_REMOVE_FILES;
 
 	assert(out && url && local_path);
 
@@ -408,33 +408,29 @@ int git_clone(
 	if (git_path_exists(local_path) && !git_path_is_empty_dir(local_path)) {
 		giterr_set(GITERR_INVALID,
 			"'%s' exists and is not an empty directory", local_path);
-		return GIT_ERROR;
+		return GIT_EEXISTS;
 	}
 
-	/* Only remove the directory on failure if we create it */
-	remove_directory_on_failure = !git_path_exists(local_path);
+	/* Only remove the root directory on failure if we create it */
+	if (git_path_exists(local_path))
+		rmdir_flags |= GIT_RMDIR_SKIP_ROOT;
 
-	if ((retcode = git_repository_init(&repo, local_path, options.bare)) < 0)
-		return retcode;
+	if ((error = git_repository_init(&repo, local_path, options.bare)) < 0)
+		return error;
 
-	if ((retcode = create_and_configure_origin(&origin, repo, url, &options)) < 0)
-		goto cleanup;
+	if (!(error = create_and_configure_origin(&origin, repo, url, &options))) {
+		error = git_clone_into(
+			repo, origin, &options.checkout_opts, options.checkout_branch);
 
-	retcode = git_clone_into(repo, origin, &options.checkout_opts, options.checkout_branch);
-	git_remote_free(origin);
+		git_remote_free(origin);
+	}
 
-	if (retcode < 0)
-		goto cleanup;
+	if (error < 0) {
+		git_repository_free(repo);
+		repo = NULL;
+		(void)git_futils_rmdir_r(local_path, NULL, rmdir_flags);
+	}
 
 	*out = repo;
-	return 0;
-
-cleanup:
-	git_repository_free(repo);
-	if (remove_directory_on_failure)
-		git_futils_rmdir_r(local_path, NULL, GIT_RMDIR_REMOVE_FILES);
-	else
-		git_futils_cleanupdir_r(local_path);
-
-	return retcode;
+	return error;
 }

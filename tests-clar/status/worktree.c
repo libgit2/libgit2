@@ -119,7 +119,7 @@ void test_status_worktree__purged_worktree(void)
 
 	/* first purge the contents of the worktree */
 	cl_git_pass(git_buf_sets(&workdir, git_repository_workdir(repo)));
-	cl_git_pass(git_path_direach(&workdir, remove_file_cb, NULL));
+	cl_git_pass(git_path_direach(&workdir, 0, remove_file_cb, NULL));
 	git_buf_free(&workdir);
 
 	/* now get status */
