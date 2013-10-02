@@ -436,7 +436,7 @@ static int network_packetsize(size_t received, void *payload)
 	if ((npp->stats->received_bytes - npp->last_fired_bytes) > NETWORK_XFER_THRESHOLD) {
 		npp->last_fired_bytes = npp->stats->received_bytes;
 
-		if(npp->callback(npp->stats, npp->payload))
+		if (npp->callback(npp->stats, npp->payload))
 			return GIT_EUSER;
 	}
 
@@ -468,7 +468,7 @@ int git_smart__download_pack(
 
 		/* We might have something in the buffer already from negotiate_fetch */
 		if (t->buffer.offset > 0 && !t->cancelled.val)
-			if(t->packetsize_cb(t->buffer.offset, t->packetsize_payload))
+			if (t->packetsize_cb(t->buffer.offset, t->packetsize_payload))
 				git_atomic_set(&t->cancelled, 1);
 	}
 
@@ -526,8 +526,7 @@ int git_smart__download_pack(
 		}
 	} while (1);
 
-	if ((error = writepack->commit(writepack, stats)) < 0)
-		goto done;
+	error = writepack->commit(writepack, stats);
 
 done:
 	if (writepack)
@@ -836,7 +835,7 @@ static int stream_thunk(void *buf, size_t size, void *data)
 
 		if ((current_time - payload->last_progress_report_time) >= MIN_PROGRESS_UPDATE_INTERVAL) {
 			payload->last_progress_report_time = current_time;
-			if(payload->cb(payload->pb->nr_written, payload->pb->nr_objects, payload->last_bytes, payload->cb_payload)) {
+			if (payload->cb(payload->pb->nr_written, payload->pb->nr_objects, payload->last_bytes, payload->cb_payload)) {
 				giterr_clear();
 				error = GIT_EUSER;
 			}
@@ -914,9 +913,8 @@ int git_smart__push(git_transport *transport, git_push *push)
 		push->transfer_progress_cb(push->pb->nr_written, push->pb->nr_objects, packbuilder_payload.last_bytes, push->transfer_progress_cb_payload);
 	}
 
-	if (push->status.length &&
-		(error = update_refs_from_report(&t->refs, &push->specs, &push->status)) < 0)
-		goto done;
+	if (push->status.length)
+		error = update_refs_from_report(&t->refs, &push->specs, &push->status);
 
 done:
 	git_buf_free(&pktline);
