@@ -20,7 +20,6 @@ static char *_remote_pass;
 static int cred_acquire_cb(git_cred **,	const char *, const char *, unsigned int, void *);
 
 static git_remote *_remote;
-static bool _cred_acquire_called;
 static record_callbacks_data _record_cbs_data = {{ 0 }};
 static git_remote_callbacks _record_cbs = RECORD_CALLBACKS_INIT(&_record_cbs_data);
 
@@ -46,8 +45,6 @@ static int cred_acquire_cb(
 {
 	GIT_UNUSED(url);
 	GIT_UNUSED(user_from_url);
-
-	*((bool*)payload) = true;
 
 	if (GIT_CREDTYPE_SSH_PUBLICKEY & allowed_types)
 		return git_cred_ssh_keyfile_passphrase_new(cred, _remote_user, _remote_ssh_pubkey, _remote_ssh_key, _remote_ssh_passphrase);
@@ -251,7 +248,6 @@ void test_online_push__initialize(void)
 	git_vector delete_specs = GIT_VECTOR_INIT;
 	size_t i;
 	char *curr_del_spec;
-	_cred_acquire_called = false;
 
 	_repo = cl_git_sandbox_init("push_src");
 
