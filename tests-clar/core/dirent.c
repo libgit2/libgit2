@@ -88,14 +88,6 @@ static int one_entry(void *state, git_buf *path)
 	return GIT_ERROR;
 }
 
-static int dont_call_me(void *state, git_buf *path)
-{
-	GIT_UNUSED(state);
-	GIT_UNUSED(path);
-	return GIT_ERROR;
-}
-
-
 
 static name_data dot_names[] = {
 	{ 0, "./a" },
@@ -183,7 +175,7 @@ void test_core_dirent__dont_traverse_empty_folders(void)
 	check_counts(&empty);
 
 	/* make sure callback not called */
-	cl_git_pass(git_path_direach(&empty.path, 0, dont_call_me, &empty));
+	cl_assert(git_path_is_empty_dir(empty.path.ptr));
 }
 
 static name_data odd_names[] = {
@@ -219,5 +211,26 @@ void test_core_dirent__length_limits(void)
 	big_filename[FILENAME_MAX] = 0;
 
 	cl_must_fail(p_creat(big_filename, 0666));
+
 	git__free(big_filename);
+}
+
+void test_core_dirent__empty_dir(void)
+{
+	cl_must_pass(p_mkdir("empty_dir", 0777));
+	cl_assert(git_path_is_empty_dir("empty_dir"));
+
+	cl_git_mkfile("empty_dir/content", "whatever\n");
+	cl_assert(!git_path_is_empty_dir("empty_dir"));
+	cl_assert(!git_path_is_empty_dir("empty_dir/content"));
+
+	cl_must_pass(p_unlink("empty_dir/content"));
+
+	cl_must_pass(p_mkdir("empty_dir/content", 0777));
+	cl_assert(!git_path_is_empty_dir("empty_dir"));
+	cl_assert(git_path_is_empty_dir("empty_dir/content"));
+
+	cl_must_pass(p_rmdir("empty_dir/content"));
+
+	cl_must_pass(p_rmdir("empty_dir"));
 }

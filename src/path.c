@@ -489,23 +489,23 @@ bool git_path_isfile(const char *path)
 
 bool git_path_is_empty_dir(const char *path)
 {
-	git_buf pathbuf = GIT_BUF_INIT;
 	HANDLE hFind = INVALID_HANDLE_VALUE;
 	git_win32_path wbuf;
+	int wbufsz;
 	WIN32_FIND_DATAW ffd;
 	bool retval = true;
 
-	if (!git_path_isdir(path)) return false;
+	if (!git_path_isdir(path))
+		return false;
 
-	git_buf_printf(&pathbuf, "%s\\*", path);
-	git_win32_path_from_c(wbuf, git_buf_cstr(&pathbuf));
+	wbufsz = git_win32_path_from_c(wbuf, path);
+	if (!wbufsz || wbufsz + 2 > GIT_WIN_PATH_UTF16)
+		return false;
+	memcpy(&wbuf[wbufsz - 1], L"\\*", 3 * sizeof(wchar_t));
 
 	hFind = FindFirstFileW(wbuf, &ffd);
-	if (INVALID_HANDLE_VALUE == hFind) {
-		giterr_set(GITERR_OS, "Couldn't open '%s'", path);
-		git_buf_free(&pathbuf);
+	if (INVALID_HANDLE_VALUE == hFind)
 		return false;
-	}
 
 	do {
 		if (!git_path_is_dot_or_dotdotW(ffd.cFileName)) {
@@ -515,38 +515,33 @@ bool git_path_is_empty_dir(const char *path)
 	} while (FindNextFileW(hFind, &ffd) != 0);
 
 	FindClose(hFind);
-	git_buf_free(&pathbuf);
 	return retval;
 }
 
 #else
 
+static int path_found_entry(void *payload, git_buf *path)
+{
+	GIT_UNUSED(payload);
+	return !git_path_is_dot_or_dotdot(path->ptr);
+}
+
 bool git_path_is_empty_dir(const char *path)
 {
-	DIR *dir = NULL;
-	struct dirent *e;
-	bool retval = true;
+	int error;
+	git_buf dir = GIT_BUF_INIT;
 
-	if (!git_path_isdir(path)) return false;
-
-	dir = opendir(path);
-	if (!dir) {
-		giterr_set(GITERR_OS, "Couldn't open '%s'", path);
+	if (!git_path_isdir(path))
 		return false;
-	}
 
-	while ((e = readdir(dir)) != NULL) {
-		if (!git_path_is_dot_or_dotdot(e->d_name)) {
-			giterr_set(GITERR_INVALID,
-						  "'%s' exists and is not an empty directory", path);
-			retval = false;
-			break;
-		}
-	}
-	closedir(dir);
+	if (!(error = git_buf_sets(&dir, path)))
+		error = git_path_direach(&dir, 0, path_found_entry, NULL);
 
-	return retval;
+	git_buf_free(&dir);
+
+	return !error;
 }
+
 #endif
 
 int git_path_lstat(const char *path, struct stat *st)

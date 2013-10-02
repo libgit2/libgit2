@@ -56,34 +56,18 @@ void test_clone_nonetwork__bad_url(void)
 	cl_assert(!git_path_exists("./foo"));
 }
 
-static int dont_call_me(void *state, git_buf *path)
-{
-	GIT_UNUSED(state);
-	GIT_UNUSED(path);
-	return GIT_ERROR;
-}
-
-static void assert_empty_directory(const char *path)
-{
-	git_buf buf = GIT_BUF_INIT;
-	cl_assert(git_path_exists(path));
-	cl_git_pass(git_buf_sets(&buf, path));
-	cl_git_pass(git_path_direach(&buf, 0, dont_call_me, NULL));
-	git_buf_free(&buf);
-}
-
 void test_clone_nonetwork__do_not_clean_existing_directory(void)
 {
 	/* Clone should not remove the directory if it already exists, but
 	 * Should clean up entries it creates. */
 	p_mkdir("./foo", GIT_DIR_MODE);
 	cl_git_fail(git_clone(&g_repo, "not_a_repo", "./foo", &g_options));
-	assert_empty_directory("./foo");
+	cl_assert(git_path_is_empty_dir("./foo"));
 
 	/* Try again with a bare repository. */
 	g_options.bare = true;
 	cl_git_fail(git_clone(&g_repo, "not_a_repo", "./foo", &g_options));
-	assert_empty_directory("./foo");
+	cl_assert(git_path_is_empty_dir("./foo"));
 }
 
 void test_clone_nonetwork__local(void)
