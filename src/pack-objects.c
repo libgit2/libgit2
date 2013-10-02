@@ -1253,7 +1253,7 @@ int git_packbuilder_write(
 	PREPARE_PACK;
 
 	if (git_indexer_stream_new(
-		&indexer, path, progress_cb, progress_cb_payload) < 0)
+		&indexer, path, pb->odb, progress_cb, progress_cb_payload) < 0)
 		return -1;
 
 	ctx.indexer = indexer;

@@ -217,6 +217,7 @@ typedef struct git_transfer_progress {
 	unsigned int total_objects;
 	unsigned int indexed_objects;
 	unsigned int received_objects;
+	unsigned int local_objects;
 	size_t received_bytes;
 } git_transfer_progress;
 
