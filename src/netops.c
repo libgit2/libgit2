@@ -609,6 +609,9 @@ int gitno_connection_data_from_url(
 		data->use_ssl = true;
 	}
 
+	if (url[0] == '/')
+		default_port = data->use_ssl ? "443" : "80";
+
 	if (!default_port) {
 		giterr_set(GITERR_NET, "Unrecognized URL prefix");
 		goto cleanup;
@@ -617,6 +620,13 @@ int gitno_connection_data_from_url(
 	error = gitno_extract_url_parts(
 		&data->host, &data->port, &data->user, &data->pass,
 		url, default_port);
+
+	if (url[0] == '/') {
+		/* Relative redirect; reuse original host name and port */
+		git__free(data->host);
+		data->host = original_host;
+		original_host = NULL;
+	}
 
 	if (!error) {
 		const char *path = strchr(url, '/');
