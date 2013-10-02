@@ -358,4 +358,56 @@ extern int git_path_dirload_with_stat(
 	const char *end_stat,
 	git_vector *contents);
 
+/* check if non-ascii characters are present in filename */
+extern bool git_path_has_non_ascii(const char *path, size_t pathlen);
+
+/* only enable iconv on Mac for now */
+#ifdef __APPLE__
+#define GIT_USE_ICONV 1
+#endif
+
+#define GIT_PATH_REPO_ENCODING "UTF-8"
+
+#ifdef __APPLE__
+#define GIT_PATH_NATIVE_ENCODING "UTF-8-MAC"
+#else
+#define GIT_PATH_NATIVE_ENCODING "UTF-8"
+#endif
+
+#ifdef GIT_USE_ICONV
+
+#include <iconv.h>
+
+typedef struct {
+	iconv_t map;
+	git_buf buf;
+} git_path_iconv_t;
+
+#define GIT_PATH_ICONV_INIT { (iconv_t)-1, GIT_BUF_INIT }
+
+/* Init iconv data for converting decomposed UTF-8 to precomposed */
+extern int git_path_iconv_init_precompose(git_path_iconv_t *ic);
+
+/* Clear allocated iconv data */
+extern void git_path_iconv_clear(git_path_iconv_t *ic);
+
+/*
+ * Rewrite `in` buffer using iconv map if necessary, replacing `in`
+ * pointer internal iconv buffer if rewrite happened.  The `in` pointer
+ * will be left unchanged if no rewrite was needed.
+ */
+extern int git_path_iconv(git_path_iconv_t *ic, char **in, size_t *inlen);
+
+#else
+
+typedef struct {
+	int unused;
+} git_path_iconv_t;
+#define GIT_PATH_ICONV_INIT { 0 }
+#define git_path_iconv_init_precompose(X) 0
+#define git_path_iconv_clear(X) (void)(X)
+#define git_path_iconv(X,Y,Z) 0
+
+#endif /* GIT_USE_ICONV */
+
 #endif

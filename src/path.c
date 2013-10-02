@@ -18,12 +18,6 @@
 
 #define LOOKS_LIKE_DRIVE_PREFIX(S) (git__isalpha((S)[0]) && (S)[1] == ':')
 
-#if __APPLE__
-#include <iconv.h>
-#endif
-#define ICONV_REPO_ENCODING "UTF-8"
-#define ICONV_PATH_ENCODING "UTF-8-MAC"
-
 #ifdef GIT_WIN32
 static bool looks_like_network_computer_name(const char *path, int pos)
 {
@@ -725,7 +719,7 @@ int git_path_cmp(
 	return (c1 < c2) ? -1 : (c1 > c2) ? 1 : 0;
 }
 
-static bool path_has_non_ascii(const char *path, size_t pathlen)
+bool git_path_has_non_ascii(const char *path, size_t pathlen)
 {
 	const uint8_t *scan = (const uint8_t *)path, *end;
 
@@ -736,49 +730,72 @@ static bool path_has_non_ascii(const char *path, size_t pathlen)
 	return false;
 }
 
-#ifdef __APPLE__
-static int path_iconv(iconv_t map, git_buf *out, char **in, size_t *inlen)
+#ifdef GIT_USE_ICONV
+
+int git_path_iconv_init_precompose(git_path_iconv_t *ic)
+{
+	git_buf_init(&ic->buf, 0);
+	ic->map = iconv_open(GIT_PATH_REPO_ENCODING, GIT_PATH_NATIVE_ENCODING);
+	return 0;
+}
+
+void git_path_iconv_clear(git_path_iconv_t *ic)
+{
+	if (ic) {
+		if (ic->map != (iconv_t)-1)
+			iconv_close(ic->map);
+		git_buf_free(&ic->buf);
+	}
+}
+
+int git_path_iconv(git_path_iconv_t *ic, char **in, size_t *inlen)
 {
 	char *nfd = *in, *nfc;
 	size_t nfdlen = *inlen, nfclen, wantlen = nfdlen, rv;
 	int retry = 1;
 
-	if (!path_has_non_ascii(*in, *inlen))
+	if (!ic || ic->map == (iconv_t)-1 ||
+		!git_path_has_non_ascii(*in, *inlen))
 		return 0;
 
 	while (1) {
-		if (git_buf_grow(out, wantlen) < 0)
+		if (git_buf_grow(&ic->buf, wantlen) < 0)
 			return -1;
 
-		nfc    = out->ptr   + out->size;
-		nfclen = out->asize - out->size;
+		nfc    = ic->buf.ptr   + ic->buf.size;
+		nfclen = ic->buf.asize - ic->buf.size;
 
-		rv = iconv(map, &nfd, &nfdlen, &nfc, &nfclen);
+		rv = iconv(ic->map, &nfd, &nfdlen, &nfc, &nfclen);
 
-		out->size = (nfc - out->ptr);
+		ic->buf.size = (nfc - ic->buf.ptr);
 
 		if (rv != (size_t)-1)
 			break;
 
 		if (errno != E2BIG)
-			return -1;
+			goto fail;
 
 		/* make space for 2x the remaining data to be converted
 		 * (with per retry overhead to avoid infinite loops)
 		 */
-		wantlen = out->size + max(nfclen, nfdlen) * 2 + (size_t)(retry * 4);
+		wantlen = ic->buf.size + max(nfclen, nfdlen) * 2 + (size_t)(retry * 4);
 
 		if (retry++ > 4)
-			return -1;
+			goto fail;
 	}
 
-	out->ptr[out->size] = '\0';
+	ic->buf.ptr[ic->buf.size] = '\0';
 
-	*in    = out->ptr;
-	*inlen = out->size;
+	*in    = ic->buf.ptr;
+	*inlen = ic->buf.size;
 
 	return 0;
+
+fail:
+	giterr_set(GITERR_OS, "Unable to convert unicode path data");
+	return -1;
 }
+
 #endif
 
 #if defined(__sun) || defined(__GNU__)
@@ -798,10 +815,7 @@ int git_path_direach(
 	DIR *dir;
 	path_dirent_data de_data;
 	struct dirent *de, *de_buf = (struct dirent *)&de_data;
-#ifdef __APPLE__
-	iconv_t nfd2nfc = (iconv_t)-1;
-	git_buf nfc_path = GIT_BUF_INIT;
-#endif
+	git_path_iconv_t ic = GIT_PATH_ICONV_INIT;
 
 	if (git_path_to_dir(path) < 0)
 		return -1;
@@ -813,10 +827,8 @@ int git_path_direach(
 		return -1;
 	}
 
-#ifdef __APPLE__
 	if ((flags & GIT_PATH_DIR_PRECOMPOSE_UNICODE) != 0)
-		nfd2nfc = iconv_open(ICONV_REPO_ENCODING, ICONV_PATH_ENCODING);
-#endif
+		(void)git_path_iconv_init_precompose(&ic);
 
 	while (p_readdir_r(dir, de_buf, &de) == 0 && de != NULL) {
 		char *de_path = de->d_name;
@@ -825,13 +837,8 @@ int git_path_direach(
 		if (git_path_is_dot_or_dotdot(de_path))
 			continue;
 
-#if __APPLE__
-		if (nfd2nfc != (iconv_t)-1 &&
-			(error = path_iconv(nfd2nfc, &nfc_path, &de_path, &de_len)) < 0)
-			break;
-#endif
-
-		if ((error = git_buf_put(path, de_path, de_len)) < 0)
+		if ((error = git_path_iconv(&ic, &de_path, &de_len)) < 0 ||
+			(error = git_buf_put(path, de_path, de_len)) < 0)
 			break;
 
 		error = fn(arg, path);
@@ -845,12 +852,7 @@ int git_path_direach(
 	}
 
 	closedir(dir);
-
-#ifdef __APPLE__
-	if (nfd2nfc != (iconv_t)-1)
-		iconv_close(nfd2nfc);
-	git_buf_free(&nfc_path);
-#endif
+	git_path_iconv_clear(&ic);
 
 	return error;
 }
@@ -867,10 +869,7 @@ int git_path_dirload(
 	size_t path_len;
 	path_dirent_data de_data;
 	struct dirent *de, *de_buf = (struct dirent *)&de_data;
-#ifdef __APPLE__
-	iconv_t nfd2nfc = (iconv_t)-1;
-	git_buf nfc_path = GIT_BUF_INIT;
-#endif
+	git_path_iconv_t ic = GIT_PATH_ICONV_INIT;
 
 	assert(path && contents);
 
@@ -885,10 +884,8 @@ int git_path_dirload(
 		return -1;
 	}
 
-#ifdef __APPLE__
 	if ((flags & GIT_PATH_DIR_PRECOMPOSE_UNICODE) != 0)
-		nfd2nfc = iconv_open(ICONV_REPO_ENCODING, ICONV_PATH_ENCODING);
-#endif
+		(void)git_path_iconv_init_precompose(&ic);
 
 	path += prefix_len;
 	path_len -= prefix_len;
@@ -901,11 +898,8 @@ int git_path_dirload(
 		if (git_path_is_dot_or_dotdot(de_path))
 			continue;
 
-#if __APPLE__
-		if (nfd2nfc != (iconv_t)-1 &&
-			(error = path_iconv(nfd2nfc, &nfc_path, &de_path, &de_len)) < 0)
+		if ((error = git_path_iconv(&ic, &de_path, &de_len)) < 0)
 			break;
-#endif
 
 		alloc_size = path_len + need_slash + de_len + 1 + alloc_extra;
 		if ((entry_path = git__calloc(alloc_size, 1)) == NULL) {
@@ -924,12 +918,7 @@ int git_path_dirload(
 	}
 
 	closedir(dir);
-
-#ifdef __APPLE__
-	if (nfd2nfc != (iconv_t)-1)
-		iconv_close(nfd2nfc);
-	git_buf_free(&nfc_path);
-#endif
+	git_path_iconv_clear(&ic);
 
 	if (error != 0)
 		giterr_set(GITERR_OS, "Failed to process directory entry in '%s'", path);
