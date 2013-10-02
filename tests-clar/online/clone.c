@@ -18,6 +18,7 @@ static git_clone_options g_options;
 void test_online_clone__initialize(void)
 {
 	git_checkout_opts dummy_opts = GIT_CHECKOUT_OPTS_INIT;
+	git_remote_callbacks dummy_callbacks = GIT_REMOTE_CALLBACKS_INIT;
 
 	g_repo = NULL;
 
@@ -25,6 +26,7 @@ void test_online_clone__initialize(void)
 	g_options.version = GIT_CLONE_OPTIONS_VERSION;
 	g_options.checkout_opts = dummy_opts;
 	g_options.checkout_opts.checkout_strategy = GIT_CHECKOUT_SAFE;
+	g_options.remote_callbacks = dummy_callbacks;
 }
 
 void test_online_clone__cleanup(void)
@@ -100,15 +102,11 @@ void test_online_clone__can_checkout_a_cloned_repo(void)
 	bool checkout_progress_cb_was_called = false,
 		  fetch_progress_cb_was_called = false;
 
-	git_remote_callbacks callbacks = GIT_REMOTE_CALLBACKS_INIT;
-
 	g_options.checkout_opts.checkout_strategy = GIT_CHECKOUT_SAFE_CREATE;
 	g_options.checkout_opts.progress_cb = &checkout_progress;
 	g_options.checkout_opts.progress_payload = &checkout_progress_cb_was_called;
-
-	callbacks.transfer_progress = &fetch_progress;
-	callbacks.payload = &fetch_progress_cb_was_called;
-	g_options.remote_callbacks = &callbacks;
+	g_options.remote_callbacks.transfer_progress = &fetch_progress;
+	g_options.remote_callbacks.payload = &fetch_progress_cb_was_called;
 
 	cl_git_pass(git_clone(&g_repo, LIVE_REPO_URL, "./foo", &g_options));
 
@@ -175,12 +173,10 @@ static int update_tips(const char *refname, const git_oid *a, const git_oid *b, 
 
 void test_online_clone__custom_remote_callbacks(void)
 {
-	git_remote_callbacks remote_callbacks = GIT_REMOTE_CALLBACKS_INIT;
 	int callcount = 0;
 
-	g_options.remote_callbacks = &remote_callbacks;
-	remote_callbacks.update_tips = update_tips;
-	remote_callbacks.payload = &callcount;
+	g_options.remote_callbacks.update_tips = update_tips;
+	g_options.remote_callbacks.payload = &callcount;
 
 	cl_git_pass(git_clone(&g_repo, LIVE_REPO_URL, "./foo", &g_options));
 	cl_assert(callcount > 0);
@@ -194,13 +190,11 @@ void test_online_clone__credentials(void)
 		cl_getenv("GITTEST_REMOTE_USER"),
 		cl_getenv("GITTEST_REMOTE_PASS")
 	};
-	git_remote_callbacks callbacks = GIT_REMOTE_CALLBACKS_INIT;
 
 	if (!remote_url) return;
 
-	callbacks.credentials = git_cred_userpass;
-	callbacks.payload = &user_pass;
-	g_options.remote_callbacks = &callbacks;
+	g_options.remote_callbacks.credentials = git_cred_userpass;
+	g_options.remote_callbacks.payload = &user_pass;
 
 	cl_git_pass(git_clone(&g_repo, remote_url, "./foo", &g_options));
 	git_repository_free(g_repo); g_repo = NULL;
@@ -213,11 +207,8 @@ void test_online_clone__bitbucket_style(void)
 		"libgit2", "libgit2"
 	};
 
-	git_remote_callbacks callbacks = GIT_REMOTE_CALLBACKS_INIT;
-
-	callbacks.credentials = git_cred_userpass;
-	callbacks.payload = &user_pass;
-	g_options.remote_callbacks = &callbacks;
+	g_options.remote_callbacks.credentials = git_cred_userpass;
+	g_options.remote_callbacks.payload = &user_pass;
 
 	cl_git_pass(git_clone(&g_repo, BB_REPO_URL, "./foo", &g_options));
 	git_repository_free(g_repo); g_repo = NULL;
@@ -247,10 +238,7 @@ static int cancel_at_half(const git_transfer_progress *stats, void *payload)
 
 void test_online_clone__can_cancel(void)
 {
-	git_remote_callbacks callbacks = GIT_REMOTE_CALLBACKS_INIT;
-
-	callbacks.transfer_progress = cancel_at_half;
-	g_options.remote_callbacks = &callbacks;
+	g_options.remote_callbacks.transfer_progress = cancel_at_half;
 
 	cl_git_fail_with(git_clone(&g_repo, LIVE_REPO_URL, "./foo", &g_options), GIT_EUSER);
 }

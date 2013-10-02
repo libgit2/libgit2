@@ -49,7 +49,7 @@ typedef struct git_clone_options {
 	unsigned int version;
 
 	git_checkout_opts checkout_opts;
-	git_remote_callbacks *remote_callbacks;
+	git_remote_callbacks remote_callbacks;
 
 	int bare;
 	int ignore_cert_errors;
@@ -58,7 +58,7 @@ typedef struct git_clone_options {
 } git_clone_options;
 
 #define GIT_CLONE_OPTIONS_VERSION 1
-#define GIT_CLONE_OPTIONS_INIT {GIT_CLONE_OPTIONS_VERSION, {GIT_CHECKOUT_OPTS_VERSION, GIT_CHECKOUT_SAFE_CREATE}}
+#define GIT_CLONE_OPTIONS_INIT {GIT_CLONE_OPTIONS_VERSION, {GIT_CHECKOUT_OPTS_VERSION, GIT_CHECKOUT_SAFE_CREATE}, GIT_REMOTE_CALLBACKS_INIT}
 
 /**
  * Clone a remote repository.

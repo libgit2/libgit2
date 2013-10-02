@@ -12,10 +12,12 @@ static git_clone_options g_options;
 
 void test_online_fetchhead__initialize(void)
 {
+	git_remote_callbacks dummy_callbacks = GIT_REMOTE_CALLBACKS_INIT;
 	g_repo = NULL;
 
 	memset(&g_options, 0, sizeof(git_clone_options));
 	g_options.version = GIT_CLONE_OPTIONS_VERSION;
+	g_options.remote_callbacks = dummy_callbacks;
 }
 
 void test_online_fetchhead__cleanup(void)

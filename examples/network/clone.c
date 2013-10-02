@@ -57,7 +57,6 @@ int do_clone(git_repository *repo, int argc, char **argv)
 	git_repository *cloned_repo = NULL;
 	git_clone_options clone_opts = GIT_CLONE_OPTIONS_INIT;
 	git_checkout_opts checkout_opts = GIT_CHECKOUT_OPTS_INIT;
-	git_remote_callbacks callbacks = GIT_REMOTE_CALLBACKS_INIT;
 	const char *url = argv[1];
 	const char *path = argv[2];
 	int error;
@@ -75,10 +74,9 @@ int do_clone(git_repository *repo, int argc, char **argv)
 	checkout_opts.progress_cb = checkout_progress;
 	checkout_opts.progress_payload = &pd;
 	clone_opts.checkout_opts = checkout_opts;
-	callbacks.transfer_progress = &fetch_progress;
-	callbacks.credentials = cred_acquire_cb;
-	callbacks.payload = &pd;
-	clone_opts.remote_callbacks = &callbacks;
+	clone_opts.remote_callbacks.transfer_progress = &fetch_progress;
+	clone_opts.remote_callbacks.credentials = cred_acquire_cb;
+	clone_opts.remote_callbacks.payload = &pd;
 
 	// Do the clone
 	error = git_clone(&cloned_repo, url, path, &clone_opts);

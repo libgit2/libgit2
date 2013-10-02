@@ -1153,7 +1153,7 @@ void git_remote_check_cert(git_remote *remote, int check)
 	remote->check_cert = check;
 }
 
-int git_remote_set_callbacks(git_remote *remote, git_remote_callbacks *callbacks)
+int git_remote_set_callbacks(git_remote *remote, const git_remote_callbacks *callbacks)
 {
 	assert(remote && callbacks);
 
@@ -1162,7 +1162,7 @@ int git_remote_set_callbacks(git_remote *remote, git_remote_callbacks *callbacks
 	memcpy(&remote->callbacks, callbacks, sizeof(git_remote_callbacks));
 
 	if (remote->transport && remote->transport->set_callbacks)
-		remote->transport->set_callbacks(remote->transport,
+		return remote->transport->set_callbacks(remote->transport,
 			remote->callbacks.progress,
 			NULL,
 			remote->callbacks.payload);

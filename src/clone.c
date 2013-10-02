@@ -315,8 +315,7 @@ static int create_and_configure_origin(
 	if (options->ignore_cert_errors)
 		git_remote_check_cert(origin, 0);
 
-	if (options->remote_callbacks &&
-	    (error = git_remote_set_callbacks(origin, options->remote_callbacks)) < 0)
+	if ((error = git_remote_set_callbacks(origin, &options->remote_callbacks)) < 0)
 		goto on_error;
 
 	if ((error = git_remote_save(origin)) < 0)
