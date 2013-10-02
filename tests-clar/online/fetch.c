@@ -38,14 +38,16 @@ static void do_fetch(const char *url, git_remote_autotag_option_t flag, int n)
 	git_remote_callbacks callbacks = GIT_REMOTE_CALLBACKS_INIT;
 	size_t bytes_received = 0;
 
+	callbacks.transfer_progress = progress;
 	callbacks.update_tips = update_tips;
+	callbacks.payload = &bytes_received;
 	counter = 0;
 
 	cl_git_pass(git_remote_create(&remote, _repo, "test", url));
 	git_remote_set_callbacks(remote, &callbacks);
 	git_remote_set_autotag(remote, flag);
 	cl_git_pass(git_remote_connect(remote, GIT_DIRECTION_FETCH));
-	cl_git_pass(git_remote_download(remote, progress, &bytes_received));
+	cl_git_pass(git_remote_download(remote));
 	cl_git_pass(git_remote_update_tips(remote));
 	git_remote_disconnect(remote);
 	cl_assert_equal_i(counter, n);
@@ -93,6 +95,7 @@ void test_online_fetch__doesnt_retrieve_a_pack_when_the_repository_is_up_to_date
 	git_repository *_repository;
 	bool invoked = false;
 	git_remote *remote;
+	git_remote_callbacks callbacks = GIT_REMOTE_CALLBACKS_INIT;
 	git_clone_options opts = GIT_CLONE_OPTIONS_INIT;
 	opts.bare = true;
 
@@ -107,7 +110,10 @@ void test_online_fetch__doesnt_retrieve_a_pack_when_the_repository_is_up_to_date
 
 	cl_assert_equal_i(false, invoked);
 
-	cl_git_pass(git_remote_download(remote, &transferProgressCallback, &invoked));
+	callbacks.transfer_progress = &transferProgressCallback;
+	callbacks.payload = &invoked;
+	git_remote_set_callbacks(remote, &callbacks);
+	cl_git_pass(git_remote_download(remote));
 
 	cl_assert_equal_i(false, invoked);
 
@@ -131,11 +137,17 @@ void test_online_fetch__can_cancel(void)
 {
 	git_remote *remote;
 	size_t bytes_received = 0;
+	git_remote_callbacks callbacks = GIT_REMOTE_CALLBACKS_INIT;
 
 	cl_git_pass(git_remote_create(&remote, _repo, "test",
 				"http://github.com/libgit2/TestGitRepository.git"));
+
+	callbacks.transfer_progress = cancel_at_half;
+	callbacks.payload = &bytes_received;
+	git_remote_set_callbacks(remote, &callbacks);
+
 	cl_git_pass(git_remote_connect(remote, GIT_DIRECTION_FETCH));
-	cl_git_fail_with(git_remote_download(remote, cancel_at_half, &bytes_received), GIT_EUSER);
+	cl_git_fail_with(git_remote_download(remote), GIT_EUSER);
 	git_remote_disconnect(remote);
 	git_remote_free(remote);
 }

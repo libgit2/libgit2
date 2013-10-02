@@ -591,7 +591,7 @@ int git_remote_connect(git_remote *remote, git_direction direction)
 	if (!remote->check_cert)
 		flags |= GIT_TRANSPORTFLAGS_NO_CHECK_CERT;
 
-	if (t->connect(t, url, remote->cred_acquire_cb, remote->cred_acquire_payload, direction, flags) < 0)
+	if (t->connect(t, url, remote->callbacks.credentials, remote->callbacks.payload, direction, flags) < 0)
 		goto on_error;
 
 	remote->transport = t;
@@ -742,10 +742,7 @@ static int remote_head_cmp(const void *_a, const void *_b)
 	return git__strcmp_cb(a->name, b->name);
 }
 
-int git_remote_download(
-		git_remote *remote,
-		git_transfer_progress_callback progress_cb,
-		void *progress_payload)
+int git_remote_download(git_remote *remote)
 {
 	int error;
 	git_vector refs;
@@ -767,7 +764,25 @@ int git_remote_download(
 	if ((error = git_fetch_negotiate(remote)) < 0)
 		return error;
 
-	return git_fetch_download_pack(remote, progress_cb, progress_payload);
+	return git_fetch_download_pack(remote);
+}
+
+int git_remote_fetch(git_remote *remote)
+{
+	int error;
+
+	/* Connect and download everything */
+	if ((error = git_remote_connect(remote, GIT_DIRECTION_FETCH)) < 0)
+		return error;
+
+	if ((error = git_remote_download(remote)) < 0)
+		return error;
+
+	/* We don't need to be connected anymore */
+	git_remote_disconnect(remote);
+
+	/* Create "remote/foo" branches for all remote branches */
+	return git_remote_update_tips(remote);
 }
 
 static int remote_head_for_fetchspec_src(git_remote_head **out, git_vector *update_heads, const char *fetchspec_src)
@@ -1138,7 +1153,7 @@ void git_remote_check_cert(git_remote *remote, int check)
 	remote->check_cert = check;
 }
 
-int git_remote_set_callbacks(git_remote *remote, git_remote_callbacks *callbacks)
+int git_remote_set_callbacks(git_remote *remote, const git_remote_callbacks *callbacks)
 {
 	assert(remote && callbacks);
 
@@ -1147,23 +1162,12 @@ int git_remote_set_callbacks(git_remote *remote, git_remote_callbacks *callbacks
 	memcpy(&remote->callbacks, callbacks, sizeof(git_remote_callbacks));
 
 	if (remote->transport && remote->transport->set_callbacks)
-		remote->transport->set_callbacks(remote->transport,
+		return remote->transport->set_callbacks(remote->transport,
 			remote->callbacks.progress,
 			NULL,
 			remote->callbacks.payload);
 
 	return 0;
-}
-
-void git_remote_set_cred_acquire_cb(
-	git_remote *remote,
-	git_cred_acquire_cb cred_acquire_cb,
-	void *payload)
-{
-	assert(remote);
-
-	remote->cred_acquire_cb = cred_acquire_cb;
-	remote->cred_acquire_payload = payload;
 }
 
 int git_remote_set_transport(git_remote *remote, git_transport *transport)

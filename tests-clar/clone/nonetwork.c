@@ -15,6 +15,7 @@ static git_remote* g_remote;
 void test_clone_nonetwork__initialize(void)
 {
 	git_checkout_opts dummy_opts = GIT_CHECKOUT_OPTS_INIT;
+	git_remote_callbacks dummy_callbacks = GIT_REMOTE_CALLBACKS_INIT;
 
 	g_repo = NULL;
 
@@ -22,6 +23,7 @@ void test_clone_nonetwork__initialize(void)
 	g_options.version = GIT_CLONE_OPTIONS_VERSION;
 	g_options.checkout_opts = dummy_opts;
 	g_options.checkout_opts.checkout_strategy = GIT_CHECKOUT_SAFE;
+	g_options.remote_callbacks = dummy_callbacks;
 }
 
 void test_clone_nonetwork__cleanup(void)
@@ -124,84 +126,17 @@ void test_clone_nonetwork__fail_with_already_existing_but_non_empty_directory(vo
 
 void test_clone_nonetwork__custom_origin_name(void)
 {
-	g_options.remote_name = "my_origin";
-	cl_git_pass(git_clone(&g_repo, cl_git_fixture_url("testrepo.git"), "./foo", &g_options));
+       g_options.remote_name = "my_origin";
+       cl_git_pass(git_clone(&g_repo, cl_git_fixture_url("testrepo.git"), "./foo", &g_options));
 
-	cl_git_pass(git_remote_load(&g_remote, g_repo, "my_origin"));
+       cl_git_pass(git_remote_load(&g_remote, g_repo, "my_origin"));
 }
 
-void test_clone_nonetwork__custom_push_url(void)
+void test_clone_nonetwork__defaults(void)
 {
-	const char *url = "http://example.com";
-
-	g_options.pushurl = url;
-	cl_git_pass(git_clone(&g_repo, cl_git_fixture_url("testrepo.git"), "./foo", &g_options));
-
+	cl_git_pass(git_clone(&g_repo, cl_git_fixture_url("testrepo.git"), "./foo", NULL));
+	cl_assert(g_repo);
 	cl_git_pass(git_remote_load(&g_remote, g_repo, "origin"));
-	cl_assert_equal_s(url, git_remote_pushurl(g_remote));
-}
-
-void test_clone_nonetwork__custom_fetch_spec(void)
-{
-	const git_refspec *actual_fs;
-	const char *spec = "+refs/heads/master:refs/heads/foo";
-
-	g_options.fetch_spec = spec;
-	cl_git_pass(git_clone(&g_repo, cl_git_fixture_url("testrepo.git"), "./foo", &g_options));
-
-	cl_git_pass(git_remote_load(&g_remote, g_repo, "origin"));
-	actual_fs = git_remote_get_refspec(g_remote, 0);
-	cl_assert_equal_s("refs/heads/master", git_refspec_src(actual_fs));
-	cl_assert_equal_s("refs/heads/foo", git_refspec_dst(actual_fs));
-
-	cl_git_pass(git_reference_lookup(&g_ref, g_repo, "refs/heads/foo"));
-}
-
-void test_clone_nonetwork__custom_push_spec(void)
-{
-	const git_refspec *actual_fs;
-	const char *spec = "+refs/heads/master:refs/heads/foo";
-
-	g_options.push_spec = spec;
-	cl_git_pass(git_clone(&g_repo, cl_git_fixture_url("testrepo.git"), "./foo", &g_options));
-
-	cl_git_pass(git_remote_load(&g_remote, g_repo, "origin"));
-	actual_fs = git_remote_get_refspec(g_remote, git_remote_refspec_count(g_remote) - 1);
-	cl_assert_equal_s("refs/heads/master", git_refspec_src(actual_fs));
-	cl_assert_equal_s("refs/heads/foo", git_refspec_dst(actual_fs));
-}
-
-void test_clone_nonetwork__custom_autotag(void)
-{
-	git_remote *origin;
-	git_strarray tags = {0};
-
-	g_options.remote_autotag = GIT_REMOTE_DOWNLOAD_TAGS_NONE;
-	cl_git_pass(git_clone(&g_repo, cl_git_fixture_url("testrepo.git"), "./foo", &g_options));
-
-	cl_git_pass(git_tag_list(&tags, g_repo));
-	cl_assert_equal_sz(0, tags.count);
-
-	cl_git_pass(git_remote_load(&origin, g_repo, "origin"));
-	cl_assert_equal_i(GIT_REMOTE_DOWNLOAD_TAGS_NONE, origin->download_tags);
-
-	git_strarray_free(&tags);
-	git_remote_free(origin);
-}
-
-void test_clone_nonetwork__custom_autotag_tags_all(void)
-{
-	git_strarray tags = {0};
-	git_remote *origin;
-
-	g_options.remote_autotag = GIT_REMOTE_DOWNLOAD_TAGS_ALL;
-	cl_git_pass(git_clone(&g_repo, cl_git_fixture_url("testrepo.git"), "./foo", &g_options));
-
-	cl_git_pass(git_remote_load(&origin, g_repo, "origin"));
-	cl_assert_equal_i(GIT_REMOTE_DOWNLOAD_TAGS_ALL, origin->download_tags);
-
-	git_strarray_free(&tags);
-	git_remote_free(origin);
 }
 
 void test_clone_nonetwork__cope_with_already_existing_directory(void)

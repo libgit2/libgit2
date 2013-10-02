@@ -123,7 +123,7 @@ void test_network_remote_local__shorthand_fetch_refspec0(void)
 	cl_git_pass(git_remote_add_fetch(remote, refspec));
 	cl_git_pass(git_remote_add_fetch(remote, refspec2));
 
-	cl_git_pass(git_remote_download(remote, NULL, NULL));
+	cl_git_pass(git_remote_download(remote));
 	cl_git_pass(git_remote_update_tips(remote));
 
 	cl_git_pass(git_reference_lookup(&ref, repo, "refs/remotes/sloppy/master"));
@@ -145,7 +145,7 @@ void test_network_remote_local__shorthand_fetch_refspec1(void)
 	cl_git_pass(git_remote_add_fetch(remote, refspec));
 	cl_git_pass(git_remote_add_fetch(remote, refspec2));
 
-	cl_git_pass(git_remote_download(remote, NULL, NULL));
+	cl_git_pass(git_remote_download(remote));
 	cl_git_pass(git_remote_update_tips(remote));
 
 	cl_git_fail(git_reference_lookup(&ref, repo, "refs/remotes/master"));
@@ -160,7 +160,7 @@ void test_network_remote_local__tagopt(void)
 	connect_to_local_repository(cl_fixture("testrepo.git"));
 	git_remote_set_autotag(remote, GIT_REMOTE_DOWNLOAD_TAGS_ALL);
 
-	cl_git_pass(git_remote_download(remote, NULL, NULL));
+	cl_git_pass(git_remote_download(remote));
 	cl_git_pass(git_remote_update_tips(remote));
 
 
@@ -179,7 +179,7 @@ void test_network_remote_local__push_to_bare_remote(void)
 	/* Get some commits */
 	connect_to_local_repository(cl_fixture("testrepo.git"));
 	cl_git_pass(git_remote_add_fetch(remote, "master:master"));
-	cl_git_pass(git_remote_download(remote, NULL, NULL));
+	cl_git_pass(git_remote_download(remote));
 	cl_git_pass(git_remote_update_tips(remote));
 	git_remote_disconnect(remote);
 
@@ -215,7 +215,7 @@ void test_network_remote_local__push_to_non_bare_remote(void)
 	/* Get some commits */
 	connect_to_local_repository(cl_fixture("testrepo.git"));
 	cl_git_pass(git_remote_add_fetch(remote, "master:master"));
-	cl_git_pass(git_remote_download(remote, NULL, NULL));
+	cl_git_pass(git_remote_download(remote));
 	cl_git_pass(git_remote_update_tips(remote));
 	git_remote_disconnect(remote);
 

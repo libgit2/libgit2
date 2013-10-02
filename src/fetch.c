@@ -119,15 +119,13 @@ int git_fetch_negotiate(git_remote *remote)
 		remote->refs.length);
 }
 
-int git_fetch_download_pack(
-	git_remote *remote,
-	git_transfer_progress_callback progress_cb,
-	void *progress_payload)
+int git_fetch_download_pack(git_remote *remote)
 {
 	git_transport *t = remote->transport;
 
 	if(!remote->need_pack)
 		return 0;
 
-	return t->download_pack(t, remote->repo, &remote->stats, progress_cb, progress_payload);
+	return t->download_pack(t, remote->repo, &remote->stats,
+				remote->callbacks.transfer_progress, remote->callbacks.payload);
 }
