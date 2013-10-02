@@ -594,20 +594,38 @@ static int resolve_deltas(git_indexer_stream *idx, git_transfer_progress *stats)
 {
 	unsigned int i;
 	struct delta_info *delta;
+	int progressed = 0;
 
-	git_vector_foreach(&idx->deltas, i, delta) {
-		git_rawobj obj;
+	while (idx->deltas.length > 0) {
+		progressed = 0;
+		git_vector_foreach(&idx->deltas, i, delta) {
+			git_rawobj obj;
 
-		idx->off = delta->delta_off;
-		if (git_packfile_unpack(&obj, idx->pack, &idx->off) < 0)
+			idx->off = delta->delta_off;
+			if (git_packfile_unpack(&obj, idx->pack, &idx->off) < 0)
+				continue;
+
+			if (hash_and_save(idx, &obj, delta->delta_off) < 0)
+				continue;
+
+			git__free(obj.data);
+			stats->indexed_objects++;
+			progressed = 1;
+			do_progress_callback(idx, stats);
+
+			/*
+			 * Remove this delta from the list and
+			 * decrease i so we don't skip over the next
+			 * delta.
+			 */
+			git_vector_remove(&idx->deltas, i);
+			i--;
+		}
+
+		if (!progressed) {
+			giterr_set(GITERR_INDEXER, "the packfile is missing bases");
 			return -1;
-
-		if (hash_and_save(idx, &obj, delta->delta_off) < 0)
-			return -1;
-
-		git__free(obj.data);
-		stats->indexed_objects++;
-		do_progress_callback(idx, stats);
+		}
 	}
 
 	return 0;
