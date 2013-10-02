@@ -349,16 +349,18 @@ void test_online_push__cleanup(void)
 	cl_git_sandbox_cleanup();
 }
 
-static void push_pack_progress_cb(int stage, unsigned int current, unsigned int total, void* payload)
+static int push_pack_progress_cb(int stage, unsigned int current, unsigned int total, void* payload)
 {
 	int *was_called = (int *) payload;
 	*was_called = 1;
+	return 0;
 }
 
-static void push_transfer_progress_cb(unsigned int current, unsigned int total, size_t bytes, void* payload)
+static int push_transfer_progress_cb(unsigned int current, unsigned int total, size_t bytes, void* payload)
 {
 	int *was_called = (int *) payload;
 	*was_called = 1;
+	return 0;
 }
 
 /**

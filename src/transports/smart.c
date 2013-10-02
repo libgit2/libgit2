@@ -23,8 +23,13 @@ static int git_smart__recv_cb(gitno_buffer *buf)
 
 	buf->offset += bytes_read;
 
-	if (t->packetsize_cb)
-		t->packetsize_cb(bytes_read, t->packetsize_payload);
+	if (t->packetsize_cb && !t->cancelled.val)
+		if (t->packetsize_cb(bytes_read, t->packetsize_payload)) {
+			git_atomic_set(&t->cancelled, 1);
+
+			giterr_clear();
+			return GIT_EUSER;
+		}
 
 	return (int)(buf->offset - old_len);
 }
