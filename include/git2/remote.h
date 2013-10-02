@@ -257,17 +257,9 @@ GIT_EXTERN(int) git_remote_ls(git_remote *remote, git_headlist_cb list_cb, void 
  * The .idx file will be created and both it and the packfile with be
  * renamed to their final name.
  *
- * @param remote the remote to download from
- * @param progress_cb function to call with progress information.  Be aware that
- * this is called inline with network and indexing operations, so performance
- * may be affected.
- * @param payload payload for the progress callback
  * @return 0 or an error code
  */
-GIT_EXTERN(int) git_remote_download(
-		git_remote *remote,
-		git_transfer_progress_callback progress_cb,
-		void *payload);
+GIT_EXTERN(int) git_remote_download(git_remote *remote);
 
 /**
  * Check whether the remote is connected
@@ -317,6 +309,17 @@ GIT_EXTERN(void) git_remote_free(git_remote *remote);
  * @return 0 or an error code
  */
 GIT_EXTERN(int) git_remote_update_tips(git_remote *remote);
+
+/**
+ * Download new data and update tips
+ *
+ * Convenience function to connect to a remote, download the data,
+ * disconnect and update the remote-tracking branches.
+ *
+ * @param remote the remote to fetch from
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_remote_fetch(git_remote *remote);
 
 /**
  * Return whether a string is a valid remote URL
@@ -397,13 +400,47 @@ typedef enum git_remote_completion_type {
 /**
  * The callback settings structure
  *
- * Set the calbacks to be called by the remote.
+ * Set the callbacks to be called by the remote when informing the user
+ * about the progress of the network operations.
  */
 struct git_remote_callbacks {
 	unsigned int version;
+	/**
+	 * Textual progress from the remote. Text send over the
+	 * progress side-band will be passed to this function (this is
+	 * the 'counting objects' output.
+	 */
 	void (*progress)(const char *str, int len, void *data);
+
+	/**
+	 * Completion is called when different parts of the download
+	 * process are done (currently unused).
+	 */
 	int (*completion)(git_remote_completion_type type, void *data);
+
+	/**
+	 * This will be called if the remote host requires
+	 * authentication in order to connect to it.
+	 */
+	int (*credentials)(git_cred **cred, const char *url, const char *username_from_url, unsigned int allowed_types,	void *data);
+
+	/**
+	 * During the download of new data, this will be regularly
+	 * called with the current count of progress done by the
+	 * indexer.
+	 */
+	int (*transfer_progress)(const git_transfer_progress *stats, void *data);
+
+	/**
+	 * Each time a reference is updated locally, this function
+	 * will be called with information about it.
+	 */
 	int (*update_tips)(const char *refname, const git_oid *a, const git_oid *b, void *data);
+
+	/**
+	 * This will be passed to each of the callbacks in this struct
+	 * as the last parameter.
+	 */
 	void *payload;
 };
 
@@ -420,7 +457,7 @@ struct git_remote_callbacks {
  * @param callbacks a pointer to the user's callback settings
  * @return 0 or an error code
  */
-GIT_EXTERN(int) git_remote_set_callbacks(git_remote *remote, git_remote_callbacks *callbacks);
+GIT_EXTERN(int) git_remote_set_callbacks(git_remote *remote, const git_remote_callbacks *callbacks);
 
 /**
  * Get the statistics structure that is filled in by the fetch operation.

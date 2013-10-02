@@ -434,7 +434,7 @@ static int local_push(
 
 		if (!url || t->parent.close(&t->parent) < 0 ||
 			t->parent.connect(&t->parent, url,
-			push->remote->cred_acquire_cb, NULL, GIT_DIRECTION_PUSH, flags))
+			push->remote->callbacks.credentials, NULL, GIT_DIRECTION_PUSH, flags))
 			goto on_error;
 	}
 
