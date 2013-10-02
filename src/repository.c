@@ -890,6 +890,8 @@ static bool are_symlinks_supported(const char *wd_path)
 	return symlinks_supported;
 }
 
+#ifdef GIT_USE_ICONV
+
 static const char *nfc_file = "\xC3\x85\x73\x74\x72\xC3\xB6\x6D.XXXXXX";
 static const char *nfd_file = "\x41\xCC\x8A\x73\x74\x72\x6F\xCC\x88\x6D.XXXXXX";
 
@@ -937,6 +939,8 @@ fail:
 	git_buf_free(&path);
 	return need_precompose;
 }
+
+#endif
 
 static int create_empty_file(const char *path, mode_t mode)
 {
@@ -994,7 +998,7 @@ static int repo_init_config(
 	SET_REPO_CONFIG(
 		bool, "core.filemode", is_chmod_supported(git_buf_cstr(&cfg_path)));
 
-#if __APPLE__
+#ifdef GIT_USE_ICONV
 	SET_REPO_CONFIG(
 		bool, "core.precomposeunicode",
 		should_precompose_unicode_paths(is_bare ? repo_dir : work_dir));

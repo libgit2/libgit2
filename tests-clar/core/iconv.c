@@ -21,6 +21,7 @@ void test_core_iconv__unchanged(void)
 	size_t datalen = strlen(data);
 
 	cl_git_pass(git_path_iconv(&ic, &data, &datalen));
+	GIT_UNUSED(datalen);
 
 	/* There are no high bits set, so this should leave data untouched */
 	cl_assert(data == original);
@@ -32,6 +33,7 @@ void test_core_iconv__decomposed_to_precomposed(void)
 	size_t datalen = strlen(nfd);
 
 	cl_git_pass(git_path_iconv(&ic, &data, &datalen));
+	GIT_UNUSED(datalen);
 
 	/* The decomposed nfd string should be transformed to the nfc form
 	 * (on platforms where iconv is enabled, of course).
@@ -49,6 +51,7 @@ void test_core_iconv__precomposed_is_unmodified(void)
 	size_t datalen = strlen(nfc);
 
 	cl_git_pass(git_path_iconv(&ic, &data, &datalen));
+	GIT_UNUSED(datalen);
 
 	/* data is already in precomposed form, so even though some bytes have
 	 * the high-bit set, the iconv transform should result in no change.
