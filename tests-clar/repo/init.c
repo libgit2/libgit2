@@ -179,41 +179,32 @@ void test_repo_init__additional_templates(void)
 	git_buf_free(&path);
 }
 
-static void assert_config_entry_on_init_bytype(const char *config_key, int expected_value, bool is_bare)
+static void assert_config_entry_on_init_bytype(
+	const char *config_key, int expected_value, bool is_bare)
 {
 	git_config *config;
-	int current_value;
-	git_buf repo_path = GIT_BUF_INIT;
+	int error, current_value;
+	const char *repo_path = is_bare ?
+		"config_entry/test.bare.git" : "config_entry/test.non.bare.git";
 
 	cl_set_cleanup(&cleanup_repository, "config_entry");
 
-	cl_git_pass(git_buf_puts(&repo_path, "config_entry/test."));
+	cl_git_pass(git_repository_init(&_repo, repo_path, is_bare));
 
-	if (!is_bare)
-		cl_git_pass(git_buf_puts(&repo_path, "non."));
-
-	cl_git_pass(git_buf_puts(&repo_path, "bare.git"));
-
-	cl_git_pass(git_repository_init(&_repo, git_buf_cstr(&repo_path), is_bare));
-
-	git_buf_free(&repo_path);
-
-	git_repository_config(&config, _repo);
+	cl_git_pass(git_repository_config(&config, _repo));
+	error = git_config_get_bool(&current_value, config, config_key);
+	git_config_free(config);
 
 	if (expected_value >= 0) {
-		cl_git_pass(git_config_get_bool(&current_value, config, config_key));
-
+		cl_assert_equal_i(0, error);
 		cl_assert_equal_i(expected_value, current_value);
 	} else {
-		int error = git_config_get_bool(&current_value, config, config_key);
-
 		cl_assert_equal_i(expected_value, error);
 	}
-
-	git_config_free(config);
 }
 
-static void assert_config_entry_on_init(const char *config_key, int expected_value)
+static void assert_config_entry_on_init(
+	const char *config_key, int expected_value)
 {
 	assert_config_entry_on_init_bytype(config_key, expected_value, true);
 	git_repository_free(_repo);
@@ -221,31 +212,47 @@ static void assert_config_entry_on_init(const char *config_key, int expected_val
 	assert_config_entry_on_init_bytype(config_key, expected_value, false);
 }
 
-void test_repo_init__detect_filemode(void)
+static int expect_filemode_support(void)
 {
-#ifdef GIT_WIN32
-	assert_config_entry_on_init("core.filemode", false);
-#else
-	assert_config_entry_on_init("core.filemode", true);
-#endif
+	struct stat st;
+
+	cl_git_write2file("testmode", "whatever\n", 0, O_CREAT | O_WRONLY, 0767);
+	cl_must_pass(p_stat("testmode", &st));
+	cl_must_pass(p_unlink("testmode"));
+
+	return (st.st_mode & 0111) == 0101;
 }
 
-#define CASE_INSENSITIVE_FILESYSTEM (defined GIT_WIN32 || defined __APPLE__)
+void test_repo_init__detect_filemode(void)
+{
+	assert_config_entry_on_init("core.filemode", expect_filemode_support());
+}
 
 void test_repo_init__detect_ignorecase(void)
 {
-#if CASE_INSENSITIVE_FILESYSTEM
-	assert_config_entry_on_init("core.ignorecase", true);
-#else
-	assert_config_entry_on_init("core.ignorecase", GIT_ENOTFOUND);
-#endif
+	struct stat st;
+	bool found_without_match;
+
+	cl_git_write2file("testCAPS", "whatever\n", 0, O_CREAT | O_WRONLY, 0666);
+	found_without_match = (p_stat("Testcaps", &st) == 0);
+	cl_must_pass(p_unlink("testCAPS"));
+
+	assert_config_entry_on_init(
+		"core.ignorecase", found_without_match ? true : GIT_ENOTFOUND);
 }
 
 void test_repo_init__detect_precompose_unicode_required(void)
 {
-#ifdef __APPLE__
-	/* hard to test "true" case without SAMBA or VFAT file system available */
-	assert_config_entry_on_init("core.precomposeunicode", false);
+	char *composed = "ḱṷṓn", *decomposed = "ḱṷṓn";
+	struct stat st;
+	bool found_with_nfd;
+
+	cl_git_write2file(composed, "whatever\n", 0, O_CREAT | O_WRONLY, 0666);
+	found_with_nfd = (p_stat(decomposed, &st) == 0);
+	cl_must_pass(p_unlink(composed));
+
+#ifdef GIT_USE_ICONV
+	assert_config_entry_on_init("core.precomposeunicode", found_with_nfd);
 #else
 	assert_config_entry_on_init("core.precomposeunicode", GIT_ENOTFOUND);
 #endif
@@ -280,13 +287,7 @@ void test_repo_init__reinit_doesnot_overwrite_ignorecase(void)
 
 void test_repo_init__reinit_overwrites_filemode(void)
 {
-	int expected, current_value;
-
-#ifdef GIT_WIN32
-	expected = false;
-#else
-	expected = true;
-#endif
+	int expected = expect_filemode_support(), current_value;
 
 	/* Init a new repo */
 	cl_set_cleanup(&cleanup_repository, "overwrite.git");
@@ -358,7 +359,10 @@ void test_repo_init__extended_1(void)
 
 	cl_git_pass(git_path_lstat(git_repository_path(_repo), &st));
 	cl_assert(S_ISDIR(st.st_mode));
-	cl_assert((S_ISGID & st.st_mode) == S_ISGID);
+	if (expect_filemode_support())
+		cl_assert((S_ISGID & st.st_mode) == S_ISGID);
+	else
+		cl_assert((S_ISGID & st.st_mode) == 0);
 
 	cl_git_pass(git_reference_lookup(&ref, _repo, "HEAD"));
 	cl_assert(git_reference_type(ref) == GIT_REF_SYMBOLIC);
