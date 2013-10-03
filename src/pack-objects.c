@@ -216,15 +216,19 @@ int git_packbuilder_insert(git_packbuilder *pb, const git_oid *oid,
 	assert(ret != 0);
 	kh_value(pb->object_ix, pos) = po;
 
+	pb->done = false;
+
 	if (pb->progress_cb) {
 		double current_time = git__timer();
 		if ((current_time - pb->last_progress_report_time) >= MIN_PROGRESS_UPDATE_INTERVAL) {
 			pb->last_progress_report_time = current_time;
-			pb->progress_cb(GIT_PACKBUILDER_ADDING_OBJECTS, pb->nr_objects, 0, pb->progress_cb_payload);
+			if (pb->progress_cb(GIT_PACKBUILDER_ADDING_OBJECTS, pb->nr_objects, 0, pb->progress_cb_payload)) {
+				giterr_clear();
+				return GIT_EUSER;
+			}
 		}
 	}
 
-	pb->done = false;
 	return 0;
 }
 
@@ -591,49 +595,50 @@ static int write_pack(git_packbuilder *pb,
 	enum write_one_status status;
 	struct git_pack_header ph;
 	unsigned int i = 0;
+	int error = 0;
 
 	write_order = compute_write_order(pb);
-	if (write_order == NULL)
-		goto on_error;
+	if (write_order == NULL) {
+		error = -1;
+		goto done;
+	}
 
 	/* Write pack header */
 	ph.hdr_signature = htonl(PACK_SIGNATURE);
 	ph.hdr_version = htonl(PACK_VERSION);
 	ph.hdr_entries = htonl(pb->nr_objects);
 
-	if (cb(&ph, sizeof(ph), data) < 0)
-		goto on_error;
+	if ((error = cb(&ph, sizeof(ph), data)) < 0)
+		goto done;
 
-	if (git_hash_update(&pb->ctx, &ph, sizeof(ph)) < 0)
-		goto on_error;
+	if ((error = git_hash_update(&pb->ctx, &ph, sizeof(ph))) < 0)
+		goto done;
 
 	pb->nr_remaining = pb->nr_objects;
 	do {
 		pb->nr_written = 0;
 		for ( ; i < pb->nr_objects; ++i) {
 			po = write_order[i];
-			if (write_one(&buf, pb, po, &status) < 0)
-				goto on_error;
-			if (cb(buf.ptr, buf.size, data) < 0)
-				goto on_error;
+			if ((error = write_one(&buf, pb, po, &status)) < 0)
+				goto done;
+			if ((error = cb(buf.ptr, buf.size, data)) < 0)
+				goto done;
 			git_buf_clear(&buf);
 		}
 
 		pb->nr_remaining -= pb->nr_written;
 	} while (pb->nr_remaining && i < pb->nr_objects);
 
+
+	if ((error = git_hash_final(&pb->pack_oid, &pb->ctx)) < 0)
+		goto done;
+
+	error = cb(pb->pack_oid.id, GIT_OID_RAWSZ, data);
+
+done:
 	git__free(write_order);
 	git_buf_free(&buf);
-
-	if (git_hash_final(&pb->pack_oid, &pb->ctx) < 0)
-		goto on_error;
-
-	return cb(pb->pack_oid.id, GIT_OID_RAWSZ, data);
-
-on_error:
-	git__free(write_order);
-	git_buf_free(&buf);
-	return -1;
+	return error;
 }
 
 static int write_pack_buf(void *buf, size_t size, void *data)
