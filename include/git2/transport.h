@@ -253,6 +253,40 @@ GIT_EXTERN(int) git_transport_new(git_transport **out, git_remote *owner, const 
 /* Signature of a function which creates a transport */
 typedef int (*git_transport_cb)(git_transport **out, git_remote *owner, void *param);
 
+/**
+ * Add a custom transport definition, to be used in addition to the built-in
+ * set of transports that come with libgit2.
+ *
+ * The caller is responsible for synchronizing calls to git_transport_register
+ * and git_transport_unregister with other calls to the library that
+ * instantiate transports.
+ *
+ * @param prefix The scheme (ending in "://") to match, i.e. "git://"
+ * @param priority The priority of this transport relative to others with
+ *		the same prefix. Built-in transports have a priority of 1.
+ * @param cb The callback used to create an instance of the transport
+ * @param param A fixed parameter to pass to cb at creation time
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_transport_register(
+	const char *prefix,
+	unsigned priority,
+	git_transport_cb cb,
+	void *param);
+
+/**
+ *
+ * Unregister a custom transport definition which was previously registered
+ * with git_transport_register.
+ *
+ * @param prefix From the previous call to git_transport_register
+ * @param priority From the previous call to git_transport_register
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_transport_unregister(
+	const char *prefix,
+	unsigned priority);
+
 /* Transports which come with libgit2 (match git_transport_cb). The expected
  * value for "param" is listed in-line below. */
 

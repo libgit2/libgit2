@@ -35,3 +35,22 @@ void setup_stash(git_repository *repo, git_signature *signature)
 
 	git_index_free(index);
 }
+
+void assert_status(
+	git_repository *repo,
+	const char *path,
+	int status_flags)
+{
+	unsigned int status;
+	int error;
+
+	error = git_status_file(&status, repo, path);
+
+	if (status_flags < 0) {
+		cl_assert_equal_i(status_flags, error);
+		return;
+	}
+
+	cl_assert_equal_i(0, error);
+	cl_assert_equal_i((unsigned int)status_flags, status);
+}

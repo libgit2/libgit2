@@ -100,10 +100,21 @@ GIT_EXTERN(const char *) git_commit_message_encoding(const git_commit *commit);
 /**
  * Get the full message of a commit.
  *
+ * The returned message will be slightly prettified by removing any
+ * potential leading newlines.
+ *
  * @param commit a previously loaded commit.
  * @return the message of a commit
  */
 GIT_EXTERN(const char *) git_commit_message(const git_commit *commit);
+
+/**
+ * Get the full raw message of a commit.
+ *
+ * @param commit a previously loaded commit.
+ * @return the raw message of a commit
+ */
+GIT_EXTERN(const char *) git_commit_message_raw(const git_commit *commit);
 
 /**
  * Get the commit time (i.e. committer time) of a commit.

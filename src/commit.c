@@ -29,7 +29,7 @@ void git_commit__free(void *_commit)
 	git_signature_free(commit->committer);
 
 	git__free(commit->raw_header);
-	git__free(commit->message);
+	git__free(commit->raw_message);
 	git__free(commit->message_encoding);
 
 	git__free(commit);
@@ -245,8 +245,8 @@ int git_commit__parse(void *_commit, git_odb_object *odb_obj)
 
 	/* extract commit message */
 	if (buffer <= buffer_end) {
-		commit->message = git__strndup(buffer, buffer_end - buffer);
-		GITERR_CHECK_ALLOC(commit->message);
+		commit->raw_message = git__strndup(buffer, buffer_end - buffer);
+		GITERR_CHECK_ALLOC(commit->raw_message);
 	}
 
 	return 0;
@@ -265,13 +265,26 @@ bad_buffer:
 
 GIT_COMMIT_GETTER(const git_signature *, author, commit->author)
 GIT_COMMIT_GETTER(const git_signature *, committer, commit->committer)
-GIT_COMMIT_GETTER(const char *, message, commit->message)
+GIT_COMMIT_GETTER(const char *, message_raw, commit->raw_message)
 GIT_COMMIT_GETTER(const char *, message_encoding, commit->message_encoding)
 GIT_COMMIT_GETTER(const char *, raw_header, commit->raw_header)
 GIT_COMMIT_GETTER(git_time_t, time, commit->committer->when.time)
 GIT_COMMIT_GETTER(int, time_offset, commit->committer->when.offset)
 GIT_COMMIT_GETTER(unsigned int, parentcount, (unsigned int)git_array_size(commit->parent_ids))
 GIT_COMMIT_GETTER(const git_oid *, tree_id, &commit->tree_id);
+
+const char *git_commit_message(const git_commit *commit)
+{
+	const char *message = commit->raw_message;
+
+	assert(commit);
+
+	/* trim leading newlines from raw message */
+	while (*message && *message == '\n')
+		++message;
+
+	return message;
+}
 
 int git_commit_tree(git_tree **tree_out, const git_commit *commit)
 {

@@ -46,6 +46,14 @@
 GIT_BEGIN_DECL
 
 /**
+ * Stages that are reported by the packbuilder progress callback.
+ */
+typedef enum {
+	GIT_PACKBUILDER_ADDING_OBJECTS = 0,
+	GIT_PACKBUILDER_DELTAFICATION = 1,
+} git_packbuilder_stage_t;
+	
+/**
  * Initialize a new packbuilder
  *
  * @param out The new packbuilder object
@@ -148,6 +156,28 @@ GIT_EXTERN(uint32_t) git_packbuilder_object_count(git_packbuilder *pb);
  * @return the number of objects which have already been written
  */
 GIT_EXTERN(uint32_t) git_packbuilder_written(git_packbuilder *pb);
+
+/** Packbuilder progress notification function */
+typedef void (*git_packbuilder_progress)(
+	int stage,
+	unsigned int current,
+	unsigned int total,
+	void *payload);
+
+/**
+ * Set the callbacks for a packbuilder
+ *
+ * @param pb The packbuilder object
+ * @param progress_cb Function to call with progress information during
+ * pack building. Be aware that this is called inline with pack building
+ * operations, so performance may be affected.
+ * @param progress_cb_payload Payload for progress callback.
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_packbuilder_set_callbacks(
+	git_packbuilder *pb,
+	git_packbuilder_progress progress_cb,
+	void *progress_cb_payload);
 
 /**
  * Free the packbuilder and all associated data

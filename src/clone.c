@@ -270,23 +270,23 @@ cleanup:
 
 static int update_head_to_branch(
 		git_repository *repo,
-		const git_clone_options *options)
+		const char *remote_name,
+		const char *branch)
 {
 	int retcode;
 	git_buf remote_branch_name = GIT_BUF_INIT;
 	git_reference* remote_ref = NULL;
 
-	assert(options->checkout_branch);
+	assert(remote_name && branch);
 
 	if ((retcode = git_buf_printf(&remote_branch_name, GIT_REFS_REMOTES_DIR "%s/%s",
-		options->remote_name, options->checkout_branch)) < 0 )
+		remote_name, branch)) < 0 )
 		goto cleanup;
 
 	if ((retcode = git_reference_lookup(&remote_ref, repo, git_buf_cstr(&remote_branch_name))) < 0)
 		goto cleanup;
 
-	retcode = update_head_to_new_branch(repo, git_reference_target(remote_ref),
-		options->checkout_branch);
+	retcode = update_head_to_new_branch(repo, git_reference_target(remote_ref), branch);
 
 cleanup:
 	git_reference_free(remote_ref);
@@ -306,40 +306,17 @@ static int create_and_configure_origin(
 {
 	int error;
 	git_remote *origin = NULL;
+	const char *name;
 
-	if ((error = git_remote_create(&origin, repo, options->remote_name, url)) < 0)
+	name = options->remote_name ? options->remote_name : "origin";
+	if ((error = git_remote_create(&origin, repo, name, url)) < 0)
 		goto on_error;
 
-	git_remote_set_cred_acquire_cb(origin, options->cred_acquire_cb,
-			options->cred_acquire_payload);
-	git_remote_set_autotag(origin, options->remote_autotag);
-	/*
-	 * Don't write FETCH_HEAD, we'll check out the remote tracking
-	 * branch ourselves based on the server's default.
-	 */
-	git_remote_set_update_fetchhead(origin, 0);
+	if (options->ignore_cert_errors)
+		git_remote_check_cert(origin, 0);
 
-	if (options->remote_callbacks &&
-	    (error = git_remote_set_callbacks(origin, options->remote_callbacks)) < 0)
+	if ((error = git_remote_set_callbacks(origin, &options->remote_callbacks)) < 0)
 		goto on_error;
-
-	if (options->fetch_spec) {
-		git_remote_clear_refspecs(origin);
-		if ((error = git_remote_add_fetch(origin, options->fetch_spec)) < 0)
-			goto on_error;
-	}
-
-	if (options->push_spec &&
-	    (error = git_remote_add_push(origin, options->push_spec)) < 0)
-		goto on_error;
-
-	if (options->pushurl &&
-	    (error = git_remote_set_pushurl(origin, options->pushurl)) < 0)
-		goto on_error;
-
-	if (options->transport_flags == GIT_TRANSPORTFLAGS_NO_CHECK_CERT) {
-        git_remote_check_cert(origin, 0);
-    }
 
 	if ((error = git_remote_save(origin)) < 0)
 		goto on_error;
@@ -352,59 +329,10 @@ on_error:
 	return error;
 }
 
-
-static int setup_remotes_and_fetch(
-		git_repository *repo,
-		const char *url,
-		const git_clone_options *options)
-{
-	int retcode = GIT_ERROR;
-	git_remote *origin = NULL;
-
-	/* Construct an origin remote */
-	if ((retcode = create_and_configure_origin(&origin, repo, url, options)) < 0)
-		goto on_error;
-
-	git_remote_set_update_fetchhead(origin, 0);
-
-	/* If the download_tags value has not been specified, then make sure to
-		* download tags as well. It is set here because we want to download tags
-		* on the initial clone, but do not want to persist the value in the
-		* configuration file.
-		*/
-	if (origin->download_tags == GIT_REMOTE_DOWNLOAD_TAGS_AUTO &&
-		((retcode = git_remote_add_fetch(origin, "refs/tags/*:refs/tags/*")) < 0))
-		goto on_error;
-
-	/* Connect and download everything */
-	if ((retcode = git_remote_connect(origin, GIT_DIRECTION_FETCH)) < 0)
-		goto on_error;
-
-	if ((retcode = git_remote_download(origin, options->fetch_progress_cb,
-		options->fetch_progress_payload)) < 0)
-		goto on_error;
-
-	/* Create "origin/foo" branches for all remote branches */
-	if ((retcode = git_remote_update_tips(origin)) < 0)
-		goto on_error;
-
-	/* Point HEAD to the requested branch */
-	if (options->checkout_branch)
-		retcode = update_head_to_branch(repo, options);
-	/* Point HEAD to the same ref as the remote's head */
-	else
-		retcode = update_head_to_remote(repo, origin);
-
-on_error:
-	git_remote_free(origin);
-	return retcode;
-}
-
-
 static bool should_checkout(
 	git_repository *repo,
 	bool is_bare,
-	git_checkout_opts *opts)
+	const git_checkout_opts *opts)
 {
 	if (is_bare)
 		return false;
@@ -418,39 +346,63 @@ static bool should_checkout(
 	return !git_repository_head_unborn(repo);
 }
 
-static void normalize_options(git_clone_options *dst, const git_clone_options *src, git_repository_init_options *initOptions)
+int git_clone_into(git_repository *repo, git_remote *remote, const git_checkout_opts *co_opts, const char *branch)
 {
-	git_clone_options default_options = GIT_CLONE_OPTIONS_INIT;
-	if (!src) src = &default_options;
+	int error = 0, old_fetchhead;
+	size_t nspecs;
 
-	*dst = *src;
+	assert(repo && remote);
 
-	/* Provide defaults for null pointers */
-	if (!dst->remote_name) dst->remote_name = "origin";
-	if (!dst->init_options) {
-		dst->init_options = initOptions;
-		initOptions->flags = GIT_REPOSITORY_INIT_MKPATH;
-		if (dst->bare)
-			initOptions->flags |= GIT_REPOSITORY_INIT_BARE;
+	if (!git_repository_is_empty(repo)) {
+		giterr_set(GITERR_INVALID, "the repository is not empty");
+		return -1;
 	}
+
+	if ((error = git_remote_add_fetch(remote, "refs/tags/*:refs/tags/*")) < 0)
+		return error;
+
+	old_fetchhead = git_remote_update_fetchhead(remote);
+	git_remote_set_update_fetchhead(remote, 0);
+
+	if ((error = git_remote_fetch(remote)) < 0)
+		goto cleanup;
+
+	if (branch)
+		error = update_head_to_branch(repo, git_remote_name(remote), branch);
+	/* Point HEAD to the same ref as the remote's head */
+	else
+		error = update_head_to_remote(repo, remote);
+
+	if (!error && should_checkout(repo, git_repository_is_bare(repo), co_opts))
+		error = git_checkout_head(repo, co_opts);
+
+cleanup:
+	git_remote_set_update_fetchhead(remote, old_fetchhead);
+	/* Remove the tags refspec */
+	nspecs = git_remote_refspec_count(remote);
+	git_remote_remove_refspec(remote, nspecs);
+
+	return error;
 }
 
 int git_clone(
 	git_repository **out,
 	const char *url,
 	const char *local_path,
-	const git_clone_options *options)
+	const git_clone_options *_options)
 {
 	int retcode = GIT_ERROR;
 	git_repository *repo = NULL;
-	git_clone_options normOptions;
+	git_remote *origin;
+	git_clone_options options = GIT_CLONE_OPTIONS_INIT;
 	int remove_directory_on_failure = 0;
-	git_repository_init_options initOptions = GIT_REPOSITORY_INIT_OPTIONS_INIT;
 
 	assert(out && url && local_path);
 
-	normalize_options(&normOptions, options, &initOptions);
-	GITERR_CHECK_VERSION(&normOptions, GIT_CLONE_OPTIONS_VERSION, "git_clone_options");
+	if (_options)
+		memcpy(&options, _options, sizeof(git_clone_options));
+
+	GITERR_CHECK_VERSION(&options, GIT_CLONE_OPTIONS_VERSION, "git_clone_options");
 
 	/* Only clone to a new directory or an empty directory */
 	if (git_path_exists(local_path) && !git_path_is_empty_dir(local_path)) {
@@ -462,24 +414,27 @@ int git_clone(
 	/* Only remove the directory on failure if we create it */
 	remove_directory_on_failure = !git_path_exists(local_path);
 
-	if (!(retcode = git_repository_init_ext(&repo, local_path, normOptions.init_options))) {
-		if ((retcode = setup_remotes_and_fetch(repo, url, &normOptions)) < 0) {
-			/* Failed to fetch; clean up */
-			git_repository_free(repo);
+	if ((retcode = git_repository_init(&repo, local_path, options.bare)) < 0)
+		return retcode;
 
-			if (remove_directory_on_failure)
-				git_futils_rmdir_r(local_path, NULL, GIT_RMDIR_REMOVE_FILES);
-			else
-				git_futils_cleanupdir_r(local_path);
+	if ((retcode = create_and_configure_origin(&origin, repo, url, &options)) < 0)
+		goto cleanup;
 
-		} else {
-			*out = repo;
-			retcode = 0;
-		}
-	}
+	retcode = git_clone_into(repo, origin, &options.checkout_opts, options.checkout_branch);
+	git_remote_free(origin);
 
-	if (!retcode && should_checkout(repo, normOptions.bare, &normOptions.checkout_opts))
-		retcode = git_checkout_head(*out, &normOptions.checkout_opts);
+	if (retcode < 0)
+		goto cleanup;
+
+	*out = repo;
+	return 0;
+
+cleanup:
+	git_repository_free(repo);
+	if (remove_directory_on_failure)
+		git_futils_rmdir_r(local_path, NULL, GIT_RMDIR_REMOVE_FILES);
+	else
+		git_futils_cleanupdir_r(local_path);
 
 	return retcode;
 }

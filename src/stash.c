@@ -316,6 +316,8 @@ static int build_workdir_tree(
 	struct cb_data data = {0};
 	int error;
 
+	opts.flags = GIT_DIFF_IGNORE_SUBMODULES;
+
 	if ((error = git_commit_tree(&b_tree, b_commit)) < 0)
 		goto cleanup;
 
@@ -474,12 +476,14 @@ static int ensure_there_are_changes_to_stash(
 	git_status_options opts = GIT_STATUS_OPTIONS_INIT;
 
 	opts.show  = GIT_STATUS_SHOW_INDEX_AND_WORKDIR;
+	opts.flags = GIT_STATUS_OPT_EXCLUDE_SUBMODULES;
+
 	if (include_untracked_files)
-		opts.flags = GIT_STATUS_OPT_INCLUDE_UNTRACKED |
+		opts.flags |= GIT_STATUS_OPT_INCLUDE_UNTRACKED |
 		GIT_STATUS_OPT_RECURSE_UNTRACKED_DIRS;
 
 	if (include_ignored_files)
-		opts.flags = GIT_STATUS_OPT_INCLUDE_IGNORED;
+		opts.flags |= GIT_STATUS_OPT_INCLUDE_IGNORED;
 
 	error = git_status_foreach_ext(repo, &opts, is_dirty_cb, NULL);
 

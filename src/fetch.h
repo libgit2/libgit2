@@ -11,10 +11,7 @@
 
 int git_fetch_negotiate(git_remote *remote);
 
-int git_fetch_download_pack(
-		git_remote *remote,
-		git_transfer_progress_callback progress_cb,
-		void *progress_payload);
+int git_fetch_download_pack(git_remote *remote);
 
 int git_fetch__download_pack(
 		git_transport *t,

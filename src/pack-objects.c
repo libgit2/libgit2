@@ -14,6 +14,7 @@
 #include "pack.h"
 #include "thread-utils.h"
 #include "tree.h"
+#include "util.h"
 
 #include "git2/pack.h"
 #include "git2/commit.h"
@@ -56,6 +57,9 @@ struct pack_write_context {
 #define git_packbuilder__cache_unlock(pb) GIT_PACKBUILDER__MUTEX_OP(pb, cache_mutex, unlock)
 #define git_packbuilder__progress_lock(pb) GIT_PACKBUILDER__MUTEX_OP(pb, progress_mutex, lock)
 #define git_packbuilder__progress_unlock(pb) GIT_PACKBUILDER__MUTEX_OP(pb, progress_mutex, unlock)
+
+/* The minimal interval between progress updates (in seconds). */
+#define MIN_PROGRESS_UPDATE_INTERVAL 0.5
 
 static unsigned name_hash(const char *name)
 {
@@ -211,6 +215,14 @@ int git_packbuilder_insert(git_packbuilder *pb, const git_oid *oid,
 	pos = kh_put(oid, pb->object_ix, &po->id, &ret);
 	assert(ret != 0);
 	kh_value(pb->object_ix, pos) = po;
+
+	if (pb->progress_cb) {
+		double current_time = git__timer();
+		if ((current_time - pb->last_progress_report_time) >= MIN_PROGRESS_UPDATE_INTERVAL) {
+			pb->last_progress_report_time = current_time;
+			pb->progress_cb(GIT_PACKBUILDER_ADDING_OBJECTS, pb->nr_objects, 0, pb->progress_cb_payload);
+		}
+	}
 
 	pb->done = false;
 	return 0;
@@ -1207,6 +1219,13 @@ static int prepare_pack(git_packbuilder *pb)
 	if (pb->nr_objects == 0 || pb->done)
 		return 0; /* nothing to do */
 
+	/*
+	 * Although we do not report progress during deltafication, we
+	 * at least report that we are in the deltafication stage
+	 */
+	if (pb->progress_cb)
+			pb->progress_cb(GIT_PACKBUILDER_DELTAFICATION, 0, pb->nr_objects, pb->progress_cb_payload);
+
 	delta_list = git__malloc(pb->nr_objects * sizeof(*delta_list));
 	GITERR_CHECK_ALLOC(delta_list);
 
@@ -1346,6 +1365,17 @@ uint32_t git_packbuilder_object_count(git_packbuilder *pb)
 uint32_t git_packbuilder_written(git_packbuilder *pb)
 {
 	return pb->nr_written;
+}
+
+int git_packbuilder_set_callbacks(git_packbuilder *pb, git_packbuilder_progress progress_cb, void *progress_cb_payload)
+{
+	if (!pb)
+		return -1;
+
+	pb->progress_cb = progress_cb;
+	pb->progress_cb_payload = progress_cb_payload;
+
+	return 0;
 }
 
 void git_packbuilder_free(git_packbuilder *pb)

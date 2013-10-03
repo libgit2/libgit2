@@ -35,7 +35,7 @@ static void *download(void *ptr)
 	// Download the packfile and index it. This function updates the
 	// amount of received data and the indexer stats which lets you
 	// inform the user about progress.
-	if (git_remote_download(data->remote, NULL, NULL) < 0) {
+	if (git_remote_download(data->remote) < 0) {
 		data->ret = -1;
 		goto exit;
 	}
@@ -91,8 +91,8 @@ int fetch(git_repository *repo, int argc, char **argv)
 	// Set up the callbacks (only update_tips for now)
 	callbacks.update_tips = &update_cb;
 	callbacks.progress = &progress_cb;
+	callbacks.credentials = cred_acquire_cb;
 	git_remote_set_callbacks(remote, &callbacks);
-	git_remote_set_cred_acquire_cb(remote, &cred_acquire_cb, NULL);
 
 	// Set up the information for the background worker thread
 	data.remote = remote;

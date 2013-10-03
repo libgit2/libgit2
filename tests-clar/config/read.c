@@ -164,6 +164,13 @@ void test_config_read__empty_files(void)
 	git_config_free(cfg);
 }
 
+void test_config_read__symbol_headers(void)
+{
+	git_config *cfg;
+	cl_git_pass(git_config_open_ondisk(&cfg, cl_fixture("config/config20")));
+	git_config_free(cfg);
+}
+
 void test_config_read__header_in_last_line(void)
 {
 	git_config *cfg;
@@ -519,6 +526,28 @@ void test_config_read__corrupt_header(void)
 
 	cl_set_cleanup(&clean_test_config, NULL);
 	cl_git_mkfile("./testconfig", "[sneaky ] \"quoted closing quote mark\\\"");
+	cl_git_fail(git_config_open_ondisk(&cfg, "./testconfig"));
+
+	git_config_free(cfg);
+}
+
+void test_config_read__corrupt_header2(void)
+{
+	git_config *cfg;
+
+	cl_set_cleanup(&clean_test_config, NULL);
+	cl_git_mkfile("./testconfig", "[unclosed \"bracket\"\n    lib = git2\n");
+	cl_git_fail(git_config_open_ondisk(&cfg, "./testconfig"));
+
+	git_config_free(cfg);
+}
+
+void test_config_read__corrupt_header3(void)
+{
+	git_config *cfg;
+
+	cl_set_cleanup(&clean_test_config, NULL);
+	cl_git_mkfile("./testconfig", "[unclosed \"slash\\\"]\n    lib = git2\n");
 	cl_git_fail(git_config_open_ondisk(&cfg, "./testconfig"));
 
 	git_config_free(cfg);
