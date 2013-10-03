@@ -212,20 +212,9 @@ static void assert_config_entry_on_init(
 	assert_config_entry_on_init_bytype(config_key, expected_value, false);
 }
 
-static int expect_filemode_support(void)
-{
-	struct stat st;
-
-	cl_git_write2file("testmode", "whatever\n", 0, O_CREAT | O_WRONLY, 0767);
-	cl_must_pass(p_stat("testmode", &st));
-	cl_must_pass(p_unlink("testmode"));
-
-	return (st.st_mode & 0111) == 0101;
-}
-
 void test_repo_init__detect_filemode(void)
 {
-	assert_config_entry_on_init("core.filemode", expect_filemode_support());
+	assert_config_entry_on_init("core.filemode", cl_is_chmod_supported());
 }
 
 void test_repo_init__detect_ignorecase(void)
@@ -287,7 +276,7 @@ void test_repo_init__reinit_doesnot_overwrite_ignorecase(void)
 
 void test_repo_init__reinit_overwrites_filemode(void)
 {
-	int expected = expect_filemode_support(), current_value;
+	int expected = cl_is_chmod_supported(), current_value;
 
 	/* Init a new repo */
 	cl_set_cleanup(&cleanup_repository, "overwrite.git");
@@ -359,7 +348,7 @@ void test_repo_init__extended_1(void)
 
 	cl_git_pass(git_path_lstat(git_repository_path(_repo), &st));
 	cl_assert(S_ISDIR(st.st_mode));
-	if (expect_filemode_support())
+	if (cl_is_chmod_supported())
 		cl_assert((S_ISGID & st.st_mode) == S_ISGID);
 	else
 		cl_assert((S_ISGID & st.st_mode) == 0);
