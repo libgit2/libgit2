@@ -24,7 +24,7 @@ struct git_commit {
 	git_signature *committer;
 
 	char *message_encoding;
-	char *message;
+	char *raw_message;
 	char *raw_header;
 };
 
