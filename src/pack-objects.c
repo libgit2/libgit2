@@ -228,40 +228,6 @@ int git_packbuilder_insert(git_packbuilder *pb, const git_oid *oid,
 	return 0;
 }
 
-/*
- * The per-object header is a pretty dense thing, which is
- *  - first byte: low four bits are "size",
- *    then three bits of "type",
- *    with the high bit being "size continues".
- *  - each byte afterwards: low seven bits are size continuation,
- *    with the high bit being "size continues"
- */
-static int gen_pack_object_header(
-		unsigned char *hdr,
-		unsigned long size,
-		git_otype type)
-{
-	unsigned char *hdr_base;
-	unsigned char c;
-
-	assert(type >= GIT_OBJ_COMMIT && type <= GIT_OBJ_REF_DELTA);
-
-	/* TODO: add support for chunked objects; see git.git 6c0d19b1 */
-
-	c = (unsigned char)((type << 4) | (size & 15));
-	size >>= 4;
-	hdr_base = hdr;
-
-	while (size) {
-		*hdr++ = c | 0x80;
-		c = size & 0x7f;
-		size >>= 7;
-	}
-	*hdr++ = c;
-
-	return (int)(hdr - hdr_base);
-}
-
 static int get_delta(void **out, git_odb *odb, git_pobject *po)
 {
 	git_odb_object *src = NULL, *trg = NULL;
@@ -323,7 +289,7 @@ static int write_object(git_buf *buf, git_packbuilder *pb, git_pobject *po)
 	}
 
 	/* Write header */
-	hdr_len = gen_pack_object_header(hdr, size, type);
+	hdr_len = git_packfile__object_header(hdr, size, type);
 
 	if (git_buf_put(buf, (char *)hdr, hdr_len) < 0)
 		goto on_error;
