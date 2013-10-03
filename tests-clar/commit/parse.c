@@ -382,9 +382,13 @@ committer Vicent Marti <tanoku@gmail.com> 1273848544 +0200\n\
 This commit has a few LF at the start of the commit message";
 	const char *message =
 "This commit has a few LF at the start of the commit message";
-
+	const char *raw_message =
+"\n\
+\n\
+This commit has a few LF at the start of the commit message";
 	cl_git_pass(parse_commit(&commit, buffer));
 	cl_assert_equal_s(message, git_commit_message(commit));
+	cl_assert_equal_s(raw_message, git_commit_message_raw(commit));
 	git_commit__free(commit);
 }
 
@@ -400,8 +404,10 @@ committer Vicent Marti <tanoku@gmail.com> 1273848544 +0200\n\
 \n\
 \n";
 	const char *message = "";
+	const char *raw_message = "\n\n";
 
 	cl_git_pass(parse_commit(&commit, buffer));
 	cl_assert_equal_s(message, git_commit_message(commit));
+	cl_assert_equal_s(raw_message, git_commit_message_raw(commit));
 	git_commit__free(commit);
 }
