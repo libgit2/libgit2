@@ -20,7 +20,6 @@ static char *_remote_pass;
 static int cred_acquire_cb(git_cred **,	const char *, const char *, unsigned int, void *);
 
 static git_remote *_remote;
-static bool _cred_acquire_called;
 static record_callbacks_data _record_cbs_data = {{ 0 }};
 static git_remote_callbacks _record_cbs = RECORD_CALLBACKS_INIT(&_record_cbs_data);
 
@@ -46,8 +45,6 @@ static int cred_acquire_cb(
 {
 	GIT_UNUSED(url);
 	GIT_UNUSED(user_from_url);
-
-	*((bool*)payload) = true;
 
 	if (GIT_CREDTYPE_SSH_PUBLICKEY & allowed_types)
 		return git_cred_ssh_keyfile_passphrase_new(cred, _remote_user, _remote_ssh_pubkey, _remote_ssh_key, _remote_ssh_passphrase);
@@ -251,7 +248,6 @@ void test_online_push__initialize(void)
 	git_vector delete_specs = GIT_VECTOR_INIT;
 	size_t i;
 	char *curr_del_spec;
-	_cred_acquire_called = false;
 
 	_repo = cl_git_sandbox_init("push_src");
 
@@ -349,16 +345,20 @@ void test_online_push__cleanup(void)
 	cl_git_sandbox_cleanup();
 }
 
-static void push_pack_progress_cb(int stage, unsigned int current, unsigned int total, void* payload)
+static int push_pack_progress_cb(int stage, unsigned int current, unsigned int total, void* payload)
 {
 	int *was_called = (int *) payload;
+	GIT_UNUSED(stage); GIT_UNUSED(current); GIT_UNUSED(total);
 	*was_called = 1;
+	return 0;
 }
 
-static void push_transfer_progress_cb(unsigned int current, unsigned int total, size_t bytes, void* payload)
+static int push_transfer_progress_cb(unsigned int current, unsigned int total, size_t bytes, void* payload)
 {
 	int *was_called = (int *) payload;
+	GIT_UNUSED(current); GIT_UNUSED(total); GIT_UNUSED(bytes); 
 	*was_called = 1;
+	return 0;
 }
 
 /**
