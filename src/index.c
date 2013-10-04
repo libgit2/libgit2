@@ -461,9 +461,10 @@ int git_index_read(git_index *index)
 		return create_index_error(-1,
 			"Failed to read index: The index is in-memory only");
 
-	if (!index->on_disk || git_path_exists(index->index_file_path) == false) {
+	index->on_disk = git_path_exists(index->index_file_path);
+
+	if (!index->on_disk) {
 		git_index_clear(index);
-		index->on_disk = 0;
 		return 0;
 	}
 
