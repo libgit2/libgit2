@@ -74,32 +74,11 @@ static void git__shutdown(void)
 #if defined(GIT_THREADS) && defined(GIT_WIN32)
 
 static DWORD _tls_index;
-static HANDLE _init_mutex = NULL;
-static HANDLE _initialized_event = NULL;
-
-static int synchronized_init_and_claim_mutex(volatile HANDLE *m)
-{
-	if (*m == NULL) {
-		HANDLE nm = CreateMutex(NULL, FALSE, NULL);
-		if (InterlockedCompareExchangePointer(m, nm, NULL) != NULL) {
-			CloseHandle(nm);
-		}
-	}
-	return WaitForSingleObject(*m, INFINITE) == WAIT_FAILED;
-}
+static DWORD _mutex = 0;
 
 static int synchronized_threads_init()
 {
 	int error;
-
-	if (synchronized_init_and_claim_mutex(&_init_mutex) != WAIT_OBJECT_0) {
-		giterr_set(GITERR_OS, "git_threads_init: WaitForSingleObject failed");
-		return -1;
-	}
-
-	if (!_initialized_event) {
-		_initialized_event = CreateEvent(NULL, TRUE, FALSE, NULL);
-	}
 
 	_tls_index = TlsAlloc();
 	if (git_mutex_init(&git__mwindow_mutex))
@@ -110,56 +89,46 @@ static int synchronized_threads_init()
 		error = git_futils_dirs_global_init();
 
 	win32_pthread_initialize();
-	SetEvent(_initialized_event);
-	ReleaseMutex(_init_mutex);
+
 	return error;
 }
 
 int git_threads_init(void)
 {
-	int error = -1,
-	    n_inits = git_atomic_inc(&git__n_inits);
+	int error = 0;
 
-	if (n_inits == 1)
+	/* Enter the lock */
+	while (InterlockedCompareExchange(&_mutex, 1, 0)) { Sleep(0); }
+
+	/* Only do work on a 0 -> 1 transition of the refcount */
+	if (1 == ++git__n_inits.val)
 		error = synchronized_threads_init();
-	else {
-		while (!_initialized_event); /* SPIN */
-		error = (WaitForSingleObject(_initialized_event, INFINITE) == WAIT_OBJECT_0) ? 0 : -1;
-	}
 
-	GIT_MEMORY_BARRIER;
+	/* Exit the lock */
+	InterlockedExchange(&_mutex, 0);
+
 	return error;
 }
 
 static void synchronized_threads_shutdown()
 {
-	if (WaitForSingleObject(_init_mutex, INFINITE) != WAIT_OBJECT_0) {
-		giterr_set(GITERR_OS, "git_threads_shutdown: WaitForSingleObject failed");
-		return;
-	}
-
-	if (git__n_inits.val != 0) {
-		/* Someone else initialized while we were waiting */
-		ReleaseMutex(_init_mutex);
-		return;
-	}
-	ResetEvent(_initialized_event);
-
 	/* Shut down any subsystems that have global state */
 	git__shutdown();
 	TlsFree(_tls_index);
 	git_mutex_free(&git__mwindow_mutex);
-
-	ReleaseMutex(_init_mutex);
 }
 
 void git_threads_shutdown(void)
 {
-	int n_inits = git_atomic_dec(&git__n_inits);
+	/* Enter the lock */
+	while (InterlockedCompareExchange(&_mutex, 1, 0)) { Sleep(0); }
 
-	if (n_inits == 0)
+	/* Only do work on a 1 -> 0 transition of the refcount */
+	if (0 == --git__n_inits.val)
 		synchronized_threads_shutdown();
-	GIT_MEMORY_BARRIER;
+
+	/* Exit the lock */
+	InterlockedExchange(&_mutex, 0);
 }
 
 git_global_st *git__global_state(void)
