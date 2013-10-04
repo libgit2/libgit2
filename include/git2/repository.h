@@ -288,6 +288,23 @@ GIT_EXTERN(int) git_repository_init_ext(
 	git_repository_init_options *opts);
 
 /**
+ * Update the filesystem config settings for an open repository
+ *
+ * When a repository is initialized, config values are set based on the
+ * properties of the filesystem that the repository is on, such as
+ * "core.ignorecase", "core.filemode", "core.symlinks", etc.  If the
+ * repository is moved to a new filesystem, these properties may no
+ * longer be correct and API calls may not behave as expected.  This
+ * call reruns the phase of repository initialization that sets those
+ * properties to compensate for the current filesystem of the repo.
+ *
+ * @param repo A repository object
+ * @returrn 0 on success, < 0 on error
+ */
+GIT_EXTERN(int) git_repository_reset_filesystem(
+	git_repository *repo);
+
+/**
  * Retrieve and resolve the reference pointed at by HEAD.
  *
  * The returned `git_reference` will be owned by caller and

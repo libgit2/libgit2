@@ -190,6 +190,9 @@ git_repository *cl_git_sandbox_init(const char *sandbox)
 	/* Now open the sandbox repository and make it available for tests */
 	cl_git_pass(git_repository_open(&_cl_repo, sandbox));
 
+	/* Adjust configs after copying to new filesystem */
+	cl_git_pass(git_repository_reset_filesystem(_cl_repo));
+
 	return _cl_repo;
 }
 

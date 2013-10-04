@@ -51,18 +51,24 @@ static void replace_file_with_mode(
 	git_buf_free(&content);
 }
 
-static void add_and_check_mode(
-	git_index *index, const char *filename, unsigned int expect_mode)
+#define add_and_check_mode(I,F,X) add_and_check_mode_(I,F,X,__FILE__,__LINE__)
+
+static void add_and_check_mode_(
+	git_index *index, const char *filename, unsigned int expect_mode,
+	const char *file, int line)
 {
 	size_t pos;
 	const git_index_entry *entry;
 
 	cl_git_pass(git_index_add_bypath(index, filename));
 
-	cl_assert(!git_index_find(&pos, index, filename));
+	clar__assert(!git_index_find(&pos, index, filename),
+		file, line, "Cannot find index entry", NULL, 1);
 
 	entry = git_index_get_byindex(index, pos);
-	cl_assert(entry->mode == expect_mode);
+
+	clar__assert_equal(file, line, "Expected mode does not match index",
+		1, "%07o", (unsigned int)entry->mode, (unsigned int)expect_mode);
 }
 
 void test_index_filemodes__untrusted(void)
@@ -91,16 +97,16 @@ void test_index_filemodes__untrusted(void)
 	replace_file_with_mode("exec_on", "filemodes/exec_on.1", 0755);
 	add_and_check_mode(index, "exec_on", GIT_FILEMODE_BLOB_EXECUTABLE);
 
-	/*  5 - add new 0644 -> expect 0644 */
-	cl_git_write2file("filemodes/new_off", "blah", 0,
-		O_WRONLY | O_CREAT | O_TRUNC, 0644);
-	add_and_check_mode(index, "new_off", GIT_FILEMODE_BLOB);
-
-	/* this test won't give predictable results on a platform
-	 * that doesn't support filemodes correctly, so skip it.
+	/* these tests of newly added files won't give predictable results on
+	 * filesystems without actual filemode support, so skip them.
 	 */
 	if (can_filemode) {
-		/* 6 - add 0755 -> expect 0755 */
+		/*  5 - add new 0644 -> expect 0644 */
+		cl_git_write2file("filemodes/new_off", "blah", 0,
+			O_WRONLY | O_CREAT | O_TRUNC, 0644);
+		add_and_check_mode(index, "new_off", GIT_FILEMODE_BLOB);
+
+		/* 6 - add new 0755 -> expect 0755 */
 		cl_git_write2file("filemodes/new_on", "blah", 0,
 			O_WRONLY | O_CREAT | O_TRUNC, 0755);
 		add_and_check_mode(index, "new_on", GIT_FILEMODE_BLOB_EXECUTABLE);

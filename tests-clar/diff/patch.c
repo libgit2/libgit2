@@ -238,6 +238,9 @@ void test_diff_patch__hunks_have_correct_line_numbers(void)
 
 	cl_git_pass(git_config_new(&cfg));
 	git_repository_set_config(g_repo, cfg);
+	git_config_free(cfg);
+
+	git_repository_reset_filesystem(g_repo);
 
 	cl_git_pass(
 		git_futils_readbuffer(&old_content, "renames/songof7cities.txt"));
@@ -408,7 +411,6 @@ void test_diff_patch__hunks_have_correct_line_numbers(void)
 	git_buf_free(&actual);
 	git_buf_free(&old_content);
 	git_tree_free(head);
-	git_config_free(cfg);
 }
 
 static void check_single_patch_stats(
@@ -520,6 +522,9 @@ void test_diff_patch__line_counts_with_eofnl(void)
 
 	cl_git_pass(git_config_new(&cfg));
 	git_repository_set_config(g_repo, cfg);
+	git_config_free(cfg);
+
+	git_repository_reset_filesystem(g_repo);
 
 	cl_git_pass(git_futils_readbuffer(&content, "renames/songof7cities.txt"));
 
@@ -574,5 +579,4 @@ void test_diff_patch__line_counts_with_eofnl(void)
 		g_repo, 1, 1, 1, 6, expected_sizes, expected);
 
 	git_buf_free(&content);
-	git_config_free(cfg);
 }

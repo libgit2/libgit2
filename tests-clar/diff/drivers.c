@@ -147,6 +147,13 @@ void test_diff_drivers__long_lines(void)
 	cl_git_pass(git_diff_get_patch(&patch, NULL, diff, 0));
 	cl_git_pass(git_diff_patch_to_str(&actual, patch));
 
+	/* if chmod not supported, overwrite mode bits since anything is possible */
+	if (!cl_is_chmod_supported()) {
+		size_t actual_len = strlen(actual);
+		if (actual_len > 72 && memcmp(&actual[66], "100644", 6) != 0)
+			memcpy(&actual[66], "100644", 6);
+	}
+
 	cl_assert_equal_s(expected, actual);
 
 	free(actual);
