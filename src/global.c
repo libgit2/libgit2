@@ -73,47 +73,69 @@ static void git__shutdown(void)
 #if defined(GIT_THREADS) && defined(GIT_WIN32)
 
 static DWORD _tls_index;
-static int _tls_init = 0;
+static DWORD _mutex = 0;
+static DWORD _n_inits = 0;
 
-int git_threads_init(void)
+static int synchronized_threads_init()
 {
 	int error;
-
-	if (_tls_init)
-		return 0;
 
 	_tls_index = TlsAlloc();
 	if (git_mutex_init(&git__mwindow_mutex))
 		return -1;
 
 	/* Initialize any other subsystems that have global state */
-	if ((error = git_hash_global_init()) >= 0 &&
-		(error = git_futils_dirs_global_init()) >= 0)
-		_tls_init = 1;
-
-	GIT_MEMORY_BARRIER;
+	if ((error = git_hash_global_init()) >= 0)
+		error = git_futils_dirs_global_init();
 
 	win32_pthread_initialize();
 
 	return error;
 }
 
-void git_threads_shutdown(void)
+int git_threads_init(void)
+{
+	int error = 0;
+
+	/* Enter the lock */
+	while (InterlockedCompareExchange(&_mutex, 1, 0)) { Sleep(0); }
+
+	/* Only do work on a 0 -> 1 transition of the refcount */
+	if (1 == ++_n_inits)
+		error = synchronized_threads_init();
+
+	/* Exit the lock */
+	InterlockedExchange(&_mutex, 0);
+
+	return error;
+}
+
+static void synchronized_threads_shutdown()
 {
 	/* Shut down any subsystems that have global state */
 	git__shutdown();
-
 	TlsFree(_tls_index);
-	_tls_init = 0;
-
 	git_mutex_free(&git__mwindow_mutex);
+}
+
+void git_threads_shutdown(void)
+{
+	/* Enter the lock */
+	while (InterlockedCompareExchange(&_mutex, 1, 0)) { Sleep(0); }
+
+	/* Only do work on a 1 -> 0 transition of the refcount */
+	if (0 == --_n_inits)
+		synchronized_threads_shutdown();
+
+	/* Exit the lock */
+	InterlockedExchange(&_mutex, 0);
 }
 
 git_global_st *git__global_state(void)
 {
 	void *ptr;
 
-	assert(_tls_init);
+	assert(_n_inits);
 
 	if ((ptr = TlsGetValue(_tls_index)) != NULL)
 		return ptr;
@@ -130,55 +152,58 @@ git_global_st *git__global_state(void)
 #elif defined(GIT_THREADS) && defined(_POSIX_THREADS)
 
 static pthread_key_t _tls_key;
-static int _tls_init = 0;
+static pthread_once_t _once_init = PTHREAD_ONCE_INIT;
+static git_atomic git__n_inits;
+int init_error = 0;
 
 static void cb__free_status(void *st)
 {
 	git__free(st);
 }
 
-int git_threads_init(void)
+static void init_once(void)
 {
-	int error = 0;
-
-	if (_tls_init)
-		return 0;
-
-	if (git_mutex_init(&git__mwindow_mutex))
-		return -1;
+	if ((init_error = git_mutex_init(&git__mwindow_mutex)) != 0)
+		return;
 	pthread_key_create(&_tls_key, &cb__free_status);
 
 	/* Initialize any other subsystems that have global state */
-	if ((error = git_hash_global_init()) >= 0 &&
-		(error = git_futils_dirs_global_init()) >= 0)
-		_tls_init = 1;
+	if ((init_error = git_hash_global_init()) >= 0)
+		init_error = git_futils_dirs_global_init();
 
 	GIT_MEMORY_BARRIER;
+}
 
-	return error;
+int git_threads_init(void)
+{
+	pthread_once(&_once_init, init_once);
+	git_atomic_inc(&git__n_inits);
+	return init_error;
 }
 
 void git_threads_shutdown(void)
 {
+	pthread_once_t new_once = PTHREAD_ONCE_INIT;
+
+	if (git_atomic_dec(&git__n_inits) > 0) return;
+
 	/* Shut down any subsystems that have global state */
 	git__shutdown();
 
-	if (_tls_init) {
-		void *ptr = pthread_getspecific(_tls_key);
-		pthread_setspecific(_tls_key, NULL);
-		git__free(ptr);
-	}
+	void *ptr = pthread_getspecific(_tls_key);
+	pthread_setspecific(_tls_key, NULL);
+	git__free(ptr);
 
 	pthread_key_delete(_tls_key);
-	_tls_init = 0;
 	git_mutex_free(&git__mwindow_mutex);
+	_once_init = new_once;
 }
 
 git_global_st *git__global_state(void)
 {
 	void *ptr;
 
-	assert(_tls_init);
+	assert(git__n_inits.val);
 
 	if ((ptr = pthread_getspecific(_tls_key)) != NULL)
 		return ptr;
