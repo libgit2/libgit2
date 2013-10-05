@@ -18,7 +18,6 @@ git_mutex git__mwindow_mutex;
 
 git_global_shutdown_fn git__shutdown_callbacks[MAX_SHUTDOWN_CB];
 git_atomic git__n_shutdown_callbacks;
-git_atomic git__n_inits;
 
 void git__on_shutdown(git_global_shutdown_fn callback)
 {
@@ -75,6 +74,7 @@ static void git__shutdown(void)
 
 static DWORD _tls_index;
 static DWORD _mutex = 0;
+static DWORD _n_inits = 0;
 
 static int synchronized_threads_init()
 {
@@ -101,7 +101,7 @@ int git_threads_init(void)
 	while (InterlockedCompareExchange(&_mutex, 1, 0)) { Sleep(0); }
 
 	/* Only do work on a 0 -> 1 transition of the refcount */
-	if (1 == ++git__n_inits.val)
+	if (1 == ++_n_inits)
 		error = synchronized_threads_init();
 
 	/* Exit the lock */
@@ -124,7 +124,7 @@ void git_threads_shutdown(void)
 	while (InterlockedCompareExchange(&_mutex, 1, 0)) { Sleep(0); }
 
 	/* Only do work on a 1 -> 0 transition of the refcount */
-	if (0 == --git__n_inits.val)
+	if (0 == --_n_inits)
 		synchronized_threads_shutdown();
 
 	/* Exit the lock */
@@ -135,7 +135,7 @@ git_global_st *git__global_state(void)
 {
 	void *ptr;
 
-	assert(git__n_inits.val);
+	assert(_n_inits);
 
 	if ((ptr = TlsGetValue(_tls_index)) != NULL)
 		return ptr;
@@ -153,6 +153,7 @@ git_global_st *git__global_state(void)
 
 static pthread_key_t _tls_key;
 static pthread_once_t _once_init = PTHREAD_ONCE_INIT;
+static git_atomic git__n_inits;
 int init_error = 0;
 
 static void cb__free_status(void *st)
