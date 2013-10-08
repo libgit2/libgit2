@@ -683,50 +683,58 @@ cleanup:
 
 static int fix_thin_pack(git_indexer_stream *idx, git_transfer_progress *stats)
 {
-	int error;
+	int error, found_ref_delta = 0;
 	unsigned int i;
 	struct delta_info *delta;
+	size_t size;
+	git_otype type;
+	git_mwindow *w = NULL;
+	git_off_t curpos;
+	unsigned char *base_info;
+	unsigned int left = 0;
+	git_oid base;
+
+	assert(git_vector_length(&idx->deltas) > 0);
 
 	if (idx->odb == NULL) {
 		giterr_set(GITERR_INDEXER, "cannot fix a thin pack without an ODB");
 		return -1;
 	}
 
+	/* Loop until we find the first REF delta */
 	git_vector_foreach(&idx->deltas, i, delta) {
-		size_t size;
-		git_otype type;
-		git_mwindow *w = NULL;
-		git_off_t curpos = delta->delta_off;
-		unsigned char *base_info;
-		unsigned int left = 0;
-		git_oid base;
-
+		curpos = delta->delta_off;
 		error = git_packfile_unpack_header(&size, &type, &idx->pack->mwf, &w, &curpos);
 		git_mwindow_close(&w);
 		if (error < 0)
 			return error;
 
-		if (type != GIT_OBJ_REF_DELTA) {
-			giterr_set(GITERR_INDEXER, "delta with missing base is not REF_DELTA");
-			return -1;
+		if (type == GIT_OBJ_REF_DELTA) {
+			found_ref_delta = 1;
+			break;
 		}
-
-		/* curpos now points to the base information, which is an OID */
-		base_info = git_mwindow_open(&idx->pack->mwf, &w, curpos, GIT_OID_RAWSZ, &left);
-		if (base_info == NULL) {
-			giterr_set(GITERR_INDEXER, "failed to map delta information");
-			return -1;
-		}
-
-		git_oid_fromraw(&base, base_info);
-		git_mwindow_close(&w);
-
-		if (inject_object(idx, &base) < 0)
-			return -1;
-
-		stats->total_objects++;
-		stats->local_objects++;
 	}
+
+	if (!found_ref_delta) {
+		giterr_set(GITERR_INDEXER, "no REF_DELTA found, cannot inject object");
+		return -1;
+	}
+
+	/* curpos now points to the base information, which is an OID */
+	base_info = git_mwindow_open(&idx->pack->mwf, &w, curpos, GIT_OID_RAWSZ, &left);
+	if (base_info == NULL) {
+		giterr_set(GITERR_INDEXER, "failed to map delta information");
+		return -1;
+	}
+
+	git_oid_fromraw(&base, base_info);
+	git_mwindow_close(&w);
+
+	if (inject_object(idx, &base) < 0)
+		return -1;
+
+	stats->total_objects++;
+	stats->local_objects++;
 
 	return 0;
 }
@@ -764,8 +772,10 @@ static int resolve_deltas(git_indexer_stream *idx, git_transfer_progress *stats)
 			i--;
 		}
 
-		if (!progressed && (fix_thin_pack(idx, stats) < 0))
-		    return -1;
+		if (!progressed && (fix_thin_pack(idx, stats) < 0)) {
+			giterr_set(GITERR_INDEXER, "missing delta bases");
+			return -1;
+		}
 	}
 
 	return 0;
