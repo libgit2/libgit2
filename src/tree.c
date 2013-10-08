@@ -237,7 +237,12 @@ void git_tree__free(void *_tree)
 
 git_filemode_t git_tree_entry_filemode(const git_tree_entry *entry)
 {
-	return (git_filemode_t)entry->attr;
+	return normalize_filemode(entry->attr);
+}
+
+git_filemode_t git_tree_entry_filemode_raw(const git_tree_entry *entry)
+{
+	return entry->attr;
 }
 
 const char *git_tree_entry_name(const git_tree_entry *entry)
@@ -385,8 +390,6 @@ int git_tree__parse(void *_tree, git_odb_object *odb_obj)
 
 		if (git__strtol32(&attr, buffer, &buffer, 8) < 0 || !buffer)
 			return tree_error("Failed to parse tree. Can't parse filemode", NULL);
-
-		attr = normalize_filemode(attr); /* make sure to normalize the filemode */
 
 		if (*buffer++ != ' ')
 			return tree_error("Failed to parse tree. Object is corrupted", NULL);
