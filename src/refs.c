@@ -138,6 +138,22 @@ int git_reference_name_to_id(
 	return 0;
 }
 
+static int reference_normalize_for_repo(
+	char *out,
+	size_t out_size,
+	git_repository *repo,
+	const char *name)
+{
+	int precompose;
+	unsigned int flags = GIT_REF_FORMAT_ALLOW_ONELEVEL;
+
+	if (!git_repository__cvar(&precompose, repo, GIT_CVAR_PRECOMPOSE) &&
+		precompose)
+		flags |= GIT_REF_FORMAT__PRECOMPOSE_UNICODE;
+
+	return git_reference_normalize_name(out, out_size, name, flags);
+}
+
 int git_reference_lookup_resolved(
 	git_reference **ref_out,
 	git_repository *repo,
@@ -159,13 +175,13 @@ int git_reference_lookup_resolved(
 	else if (max_nesting < 0)
 		max_nesting = DEFAULT_NESTING_LEVEL;
 
-	strncpy(scan_name, name, GIT_REFNAME_MAX);
 	scan_type = GIT_REF_SYMBOLIC;
 
-	if ((error = git_repository_refdb__weakptr(&refdb, repo)) < 0)
-		return -1;
+	if ((error = reference_normalize_for_repo(
+			scan_name, sizeof(scan_name), repo, name)) < 0)
+		return error;
 
-	if ((error = git_reference__normalize_name_lax(scan_name, GIT_REFNAME_MAX, name)) < 0)
+	if ((error = git_repository_refdb__weakptr(&refdb, repo)) < 0)
 		return error;
 
 	for (nesting = max_nesting;
@@ -173,7 +189,7 @@ int git_reference_lookup_resolved(
 		 nesting--)
 	{
 		if (nesting != max_nesting) {
-			strncpy(scan_name, ref->target.symbolic, GIT_REFNAME_MAX);
+			strncpy(scan_name, ref->target.symbolic, sizeof(scan_name));
 			git_reference_free(ref);
 		}
 
@@ -711,17 +727,18 @@ static bool is_all_caps_and_underscore(const char *name, size_t len)
 	return true;
 }
 
+/* Inspired from https://github.com/git/git/blob/f06d47e7e0d9db709ee204ed13a8a7486149f494/refs.c#L36-100 */
 int git_reference__normalize_name(
 	git_buf *buf,
 	const char *name,
 	unsigned int flags)
 {
-	// Inspired from https://github.com/git/git/blob/f06d47e7e0d9db709ee204ed13a8a7486149f494/refs.c#L36-100
-
 	char *current;
 	int segment_len, segments_count = 0, error = GIT_EINVALIDSPEC;
 	unsigned int process_flags;
 	bool normalize = (buf != NULL);
+	git_path_iconv_t ic = GIT_PATH_ICONV_INIT;
+
 	assert(name);
 
 	process_flags = flags;
@@ -732,6 +749,13 @@ int git_reference__normalize_name(
 
 	if (normalize)
 		git_buf_clear(buf);
+
+	if ((flags & GIT_REF_FORMAT__PRECOMPOSE_UNICODE) != 0) {
+		size_t namelen = strlen(current);
+		if ((error = git_path_iconv_init_precompose(&ic)) < 0 ||
+			(error = git_path_iconv(&ic, &current, &namelen)) < 0)
+			goto cleanup;
+	}
 
 	while (true) {
 		segment_len = ensure_segment_validity(current);
@@ -808,6 +832,8 @@ cleanup:
 
 	if (error && normalize)
 		git_buf_free(buf);
+
+	git_path_iconv_clear(&ic);
 
 	return error;
 }
@@ -983,9 +1009,9 @@ static int peel_error(int error, git_reference *ref, const char* msg)
 }
 
 int git_reference_peel(
-		git_object **peeled,
-		git_reference *ref,
-		git_otype target_type)
+	git_object **peeled,
+	git_reference *ref,
+	git_otype target_type)
 {
 	git_reference *resolved = NULL;
 	git_object *target = NULL;
@@ -1027,24 +1053,19 @@ cleanup:
 	return error;
 }
 
-int git_reference__is_valid_name(
-	const char *refname,
-	unsigned int flags)
+int git_reference__is_valid_name(const char *refname, unsigned int flags)
 {
-	int error;
+	if (git_reference__normalize_name(NULL, refname, flags) < 0) {
+		giterr_clear();
+		return false;
+	}
 
-	error = git_reference__normalize_name(NULL, refname, flags) == 0;
-	giterr_clear();
-
-	return error;
+	return true;
 }
 
-int git_reference_is_valid_name(
-	const char *refname)
+int git_reference_is_valid_name(const char *refname)
 {
-	return git_reference__is_valid_name(
-		refname,
-		GIT_REF_FORMAT_ALLOW_ONELEVEL);
+	return git_reference__is_valid_name(refname, GIT_REF_FORMAT_ALLOW_ONELEVEL);
 }
 
 const char *git_reference_shorthand(git_reference *ref)

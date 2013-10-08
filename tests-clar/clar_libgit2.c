@@ -1,6 +1,7 @@
 #include "clar_libgit2.h"
 #include "posix.h"
 #include "path.h"
+#include "git2/sys/repository.h"
 
 void cl_git_report_failure(
 	int error, const char *file, int line, const char *fncall)

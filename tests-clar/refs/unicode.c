@@ -4,17 +4,13 @@ static git_repository *repo;
 
 void test_refs_unicode__initialize(void)
 {
-	cl_fixture_sandbox("testrepo.git");
-
-	cl_git_pass(git_repository_open(&repo, "testrepo.git"));
+	repo = cl_git_sandbox_init("testrepo.git");
 }
 
 void test_refs_unicode__cleanup(void)
 {
-	git_repository_free(repo);
+	cl_git_sandbox_cleanup();
 	repo = NULL;
-
-	cl_fixture_cleanup("testrepo.git");
 }
 
 void test_refs_unicode__create_and_lookup(void)
@@ -23,13 +19,12 @@ void test_refs_unicode__create_and_lookup(void)
 	git_repository *repo2;
 
 	const char *REFNAME = "refs/heads/" "\303\205" "ngstr" "\303\266" "m";
-	const char *REFNAME_DECOMPOSED =
-		"refs/heads/" "A" "\314\212" "ngstro" "\314\210" "m";
 	const char *master = "refs/heads/master";
 
 	/* Create the reference */
 	cl_git_pass(git_reference_lookup(&ref0, repo, master));
-	cl_git_pass(git_reference_create(&ref1, repo, REFNAME, git_reference_target(ref0), 0));
+	cl_git_pass(git_reference_create(
+		&ref1, repo, REFNAME, git_reference_target(ref0), 0));
 	cl_assert_equal_s(REFNAME, git_reference_name(ref1));
 	git_reference_free(ref0);
 
@@ -44,6 +39,8 @@ void test_refs_unicode__create_and_lookup(void)
 
 #if GIT_USE_ICONV
 	/* Lookup reference by decomposed unicode name */
+
+#define REFNAME_DECOMPOSED "refs/heads/" "A" "\314\212" "ngstro" "\314\210" "m"
 
 	cl_git_pass(git_reference_lookup(&ref2, repo2, REFNAME_DECOMPOSED));
 	cl_assert_equal_i(

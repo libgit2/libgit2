@@ -46,6 +46,8 @@
 #define GIT_STASH_FILE "stash"
 #define GIT_REFS_STASH_FILE GIT_REFS_DIR GIT_STASH_FILE
 
+#define GIT_REF_FORMAT__PRECOMPOSE_UNICODE	(1u << 16)
+
 #define GIT_REFNAME_MAX 1024
 
 struct git_reference {

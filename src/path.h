@@ -365,11 +365,6 @@ extern int git_path_set_error(
 /* check if non-ascii characters are present in filename */
 extern bool git_path_has_non_ascii(const char *path, size_t pathlen);
 
-/* only enable iconv on Mac for now */
-#ifdef __APPLE__
-#define GIT_USE_ICONV 1
-#endif
-
 #define GIT_PATH_REPO_ENCODING "UTF-8"
 
 #ifdef __APPLE__
