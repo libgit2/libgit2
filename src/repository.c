@@ -1097,20 +1097,20 @@ cleanup:
 	return error;
 }
 
-static int repo_reset_submodule_fs(git_submodule *sm, const char *n, void *p)
+static int repo_reinit_submodule_fs(git_submodule *sm, const char *n, void *p)
 {
 	git_repository *smrepo = NULL;
 	GIT_UNUSED(n); GIT_UNUSED(p);
 
 	if (git_submodule_open(&smrepo, sm) < 0 ||
-		git_repository_reset_filesystem(smrepo, true) < 0)
+		git_repository_reinit_filesystem(smrepo, true) < 0)
 		giterr_clear();
 	git_repository_free(smrepo);
 
 	return 0;
 }
 
-int git_repository_reset_filesystem(git_repository *repo, int recurse)
+int git_repository_reinit_filesystem(git_repository *repo, int recurse)
 {
 	int error = 0;
 	git_buf path = GIT_BUF_INIT;
@@ -1127,7 +1127,7 @@ int git_repository_reset_filesystem(git_repository *repo, int recurse)
 	git_repository__cvar_cache_clear(repo);
 
 	if (!repo->is_bare && recurse)
-		(void)git_submodule_foreach(repo, repo_reset_submodule_fs, NULL);
+		(void)git_submodule_foreach(repo, repo_reinit_submodule_fs, NULL);
 
 	return error;
 }

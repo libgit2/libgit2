@@ -240,7 +240,7 @@ void test_diff_patch__hunks_have_correct_line_numbers(void)
 	git_repository_set_config(g_repo, cfg);
 	git_config_free(cfg);
 
-	git_repository_reset_filesystem(g_repo, false);
+	git_repository_reinit_filesystem(g_repo, false);
 
 	cl_git_pass(
 		git_futils_readbuffer(&old_content, "renames/songof7cities.txt"));
@@ -524,7 +524,7 @@ void test_diff_patch__line_counts_with_eofnl(void)
 	git_repository_set_config(g_repo, cfg);
 	git_config_free(cfg);
 
-	git_repository_reset_filesystem(g_repo, false);
+	git_repository_reinit_filesystem(g_repo, false);
 
 	cl_git_pass(git_futils_readbuffer(&content, "renames/songof7cities.txt"));
 

@@ -52,10 +52,10 @@ GIT_EXTERN(void) git_repository__cleanup(git_repository *repo);
  * properties to compensate for the current filesystem of the repo.
  *
  * @param repo A repository object
- * @param recurse_submodules Should submodules be reset recursively
+ * @param recurse_submodules Should submodules be updated recursively
  * @returrn 0 on success, < 0 on error
  */
-GIT_EXTERN(int) git_repository_reset_filesystem(
+GIT_EXTERN(int) git_repository_reinit_filesystem(
 	git_repository *repo,
 	int recurse_submodules);
 

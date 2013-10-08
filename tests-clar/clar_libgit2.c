@@ -192,7 +192,7 @@ git_repository *cl_git_sandbox_init(const char *sandbox)
 	cl_git_pass(git_repository_open(&_cl_repo, sandbox));
 
 	/* Adjust configs after copying to new filesystem */
-	cl_git_pass(git_repository_reset_filesystem(_cl_repo, 0));
+	cl_git_pass(git_repository_reinit_filesystem(_cl_repo, 0));
 
 	return _cl_repo;
 }

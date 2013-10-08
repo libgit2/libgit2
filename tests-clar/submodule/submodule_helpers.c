@@ -4,6 +4,7 @@
 #include "util.h"
 #include "posix.h"
 #include "submodule_helpers.h"
+#include "git2/sys/repository.h"
 
 /* rewrite gitmodules -> .gitmodules
  * rewrite the empty or relative urls inside each module
@@ -102,7 +103,7 @@ git_repository *setup_fixture_submodules(void)
 
 	cl_set_cleanup(cleanup_fixture_submodules, "testrepo.git");
 
-	cl_git_pass(git_repository_reset_filesystem(repo, 1));
+	cl_git_pass(git_repository_reinit_filesystem(repo, 1));
 
 	return repo;
 }
@@ -120,7 +121,7 @@ git_repository *setup_fixture_submod2(void)
 
 	cl_set_cleanup(cleanup_fixture_submodules, "submod2_target");
 
-	cl_git_pass(git_repository_reset_filesystem(repo, 1));
+	cl_git_pass(git_repository_reinit_filesystem(repo, 1));
 
 	return repo;
 }
