@@ -358,6 +358,10 @@ extern int git_path_dirload_with_stat(
 	const char *end_stat,
 	git_vector *contents);
 
+/* translate errno to libgit2 error code and set error message */
+extern int git_path_set_error(
+	int errno_value, const char *path, const char *action);
+
 /* check if non-ascii characters are present in filename */
 extern bool git_path_has_non_ascii(const char *path, size_t pathlen);
 

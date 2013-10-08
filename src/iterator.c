@@ -1175,7 +1175,7 @@ static int fs_iterator__update_entry(fs_iterator *fi)
 		return GIT_ITEROVER;
 
 	fi->entry.path = ps->path;
-	git_index_entry__init_from_stat(&fi->entry, &ps->st);
+	git_index_entry__init_from_stat(&fi->entry, &ps->st, true);
 
 	/* need different mode here to keep directories during iteration */
 	fi->entry.mode = git_futils_canonical_mode(ps->st.st_mode);

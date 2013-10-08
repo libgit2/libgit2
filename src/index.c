@@ -579,7 +579,8 @@ const git_index_entry *git_index_get_bypath(
 	return git_index_get_byindex(index, pos);
 }
 
-void git_index_entry__init_from_stat(git_index_entry *entry, struct stat *st)
+void git_index_entry__init_from_stat(
+	git_index_entry *entry, struct stat *st, bool trust_mode)
 {
 	entry->ctime.seconds = (git_time_t)st->st_ctime;
 	entry->mtime.seconds = (git_time_t)st->st_mtime;
@@ -587,7 +588,8 @@ void git_index_entry__init_from_stat(git_index_entry *entry, struct stat *st)
 	/* entry->ctime.nanoseconds = st->st_ctimensec; */
 	entry->dev  = st->st_rdev;
 	entry->ino  = st->st_ino;
-	entry->mode = index_create_mode(st->st_mode);
+	entry->mode = (!trust_mode && S_ISREG(st->st_mode)) ?
+		index_create_mode(0666) : index_create_mode(st->st_mode);
 	entry->uid  = st->st_uid;
 	entry->gid  = st->st_gid;
 	entry->file_size = st->st_size;
@@ -631,7 +633,7 @@ static int index_entry_init(
 	entry = git__calloc(1, sizeof(git_index_entry));
 	GITERR_CHECK_ALLOC(entry);
 
-	git_index_entry__init_from_stat(entry, &st);
+	git_index_entry__init_from_stat(entry, &st, !index->distrust_filemode);
 
 	entry->oid = oid;
 	entry->path = git__strdup(rel_path);

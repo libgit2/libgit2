@@ -299,10 +299,12 @@ GIT_EXTERN(int) git_repository_init_ext(
  * properties to compensate for the current filesystem of the repo.
  *
  * @param repo A repository object
+ * @param recurse_submodules Should submodules be reset recursively
  * @returrn 0 on success, < 0 on error
  */
 GIT_EXTERN(int) git_repository_reset_filesystem(
-	git_repository *repo);
+	git_repository *repo,
+	int recurse_submodules);
 
 /**
  * Retrieve and resolve the reference pointed at by HEAD.

@@ -538,16 +538,35 @@ bool git_path_is_empty_dir(const char *path)
 
 #endif
 
+int git_path_set_error(int errno_value, const char *path, const char *action)
+{
+	switch (errno_value) {
+	case ENOENT:
+	case ENOTDIR:
+		giterr_set(GITERR_OS, "Could not find '%s' to %s", path, action);
+		return GIT_ENOTFOUND;
+
+	case EINVAL:
+	case ENAMETOOLONG:
+		giterr_set(GITERR_OS, "Invalid path for filesystem '%s'", path);
+		return GIT_EINVALIDSPEC;
+
+	case EEXIST:
+		giterr_set(GITERR_OS, "Failed %s - '%s' already exists", action, path);
+		return GIT_EEXISTS;
+
+	default:
+		giterr_set(GITERR_OS, "Could not %s '%s'", action, path);
+		return -1;
+	}
+}
+
 int git_path_lstat(const char *path, struct stat *st)
 {
-	int err = 0;
+	if (p_lstat(path, st) == 0)
+		return 0;
 
-	if (p_lstat(path, st) < 0) {
-		err = (errno == ENOENT) ? GIT_ENOTFOUND : -1;
-		giterr_set(GITERR_OS, "Failed to stat file '%s'", path);
-	}
-
-	return err;
+	return git_path_set_error(errno, path, "stat");
 }
 
 static bool _check_dir_contents(

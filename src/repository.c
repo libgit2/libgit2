@@ -961,80 +961,121 @@ static int create_empty_file(const char *path, mode_t mode)
 	return 0;
 }
 
+static int repo_local_config(
+	git_config **out,
+	git_buf *config_dir,
+	git_repository *repo,
+	const char *repo_dir)
+{
+	int error = 0;
+	git_config *parent;
+	const char *cfg_path;
+
+	if (git_buf_joinpath(config_dir, repo_dir, GIT_CONFIG_FILENAME_INREPO) < 0)
+		return -1;
+	cfg_path = git_buf_cstr(config_dir);
+
+	/* make LOCAL config if missing */
+	if (!git_path_isfile(cfg_path) &&
+		(error = create_empty_file(cfg_path, GIT_CONFIG_FILE_MODE)) < 0)
+		return error;
+
+	/* if no repo, just open that file directly */
+	if (!repo)
+		return git_config_open_ondisk(out, cfg_path);
+
+	/* otherwise, open parent config and get that level */
+	if ((error = git_repository_config__weakptr(&parent, repo)) < 0)
+		return error;
+
+	if (git_config_open_level(out, parent, GIT_CONFIG_LEVEL_LOCAL) < 0) {
+		giterr_clear();
+
+		if (!(error = git_config_add_file_ondisk(
+				parent, cfg_path, GIT_CONFIG_LEVEL_LOCAL, false)))
+			error = git_config_open_level(out, parent, GIT_CONFIG_LEVEL_LOCAL);
+	}
+
+	git_config_free(parent);
+
+	return error;
+}
+
+static int repo_init_fs_configs(
+	git_config *cfg,
+	const char *cfg_path,
+	const char *repo_dir,
+	const char *work_dir,
+	bool update_ignorecase)
+{
+	int error = 0;
+
+	if (!work_dir)
+		work_dir = repo_dir;
+
+	if ((error = git_config_set_bool(
+			cfg, "core.filemode", is_chmod_supported(cfg_path))) < 0)
+		return error;
+
+	if (!are_symlinks_supported(work_dir)) {
+		if ((error = git_config_set_bool(cfg, "core.symlinks", false)) < 0)
+			return error;
+	} else if (git_config_delete_entry(cfg, "core.symlinks") < 0)
+		giterr_clear();
+
+	if (update_ignorecase) {
+		if (is_filesystem_case_insensitive(repo_dir)) {
+			if ((error = git_config_set_bool(cfg, "core.ignorecase", true)) < 0)
+				return error;
+		} else if (git_config_delete_entry(cfg, "core.ignorecase") < 0)
+			giterr_clear();
+	}
+
+#ifdef GIT_USE_ICONV
+	if ((error = git_config_set_bool(
+			cfg, "core.precomposeunicode",
+			does_fs_decompose_unicode_paths(work_dir))) < 0)
+		return error;
+#endif
+
+	return 0;
+}
+
 static int repo_init_config(
-	git_config *parent,
 	const char *repo_dir,
 	const char *work_dir,
 	uint32_t flags,
 	uint32_t mode)
 {
 	int error = 0;
-	git_buf buf = GIT_BUF_INIT;
-	const char *cfg_path = NULL;
+	git_buf cfg_path = GIT_BUF_INIT;
 	git_config *config = NULL;
 	bool is_bare = ((flags & GIT_REPOSITORY_INIT_BARE) != 0);
+	bool is_reinit = ((flags & GIT_REPOSITORY_INIT__IS_REINIT) != 0);
 
-#define SET_REPO_CONFIG(TYPE, NAME, VAL) do {\
+	if ((error = repo_local_config(&config, &cfg_path, NULL, repo_dir)) < 0)
+		goto cleanup;
+
+	if (is_reinit && (error = check_repositoryformatversion(config)) < 0)
+		goto cleanup;
+
+#define SET_REPO_CONFIG(TYPE, NAME, VAL) do { \
 	if ((error = git_config_set_##TYPE(config, NAME, VAL)) < 0) \
 		goto cleanup; } while (0)
 
-	if (git_buf_joinpath(&buf, repo_dir, GIT_CONFIG_FILENAME_INREPO) < 0)
-		return -1;
-	cfg_path = git_buf_cstr(&buf);
+	SET_REPO_CONFIG(bool, "core.bare", is_bare);
+	SET_REPO_CONFIG(int32, "core.repositoryformatversion", GIT_REPO_VERSION);
 
-	if (!git_path_isfile(cfg_path) &&
-		(error = create_empty_file(cfg_path, GIT_CONFIG_FILE_MODE)) < 0)
+	if ((error = repo_init_fs_configs(
+			config, cfg_path.ptr, repo_dir, work_dir, !is_reinit)) < 0)
 		goto cleanup;
-
-	if (!parent)
-		error = git_config_open_ondisk(&config, cfg_path);
-	else if ((error = git_config_open_level(
-		&config, parent, GIT_CONFIG_LEVEL_LOCAL)) < 0)
-	{
-		giterr_clear();
-
-		if (!(error = git_config_add_file_ondisk(
-				parent, cfg_path, GIT_CONFIG_LEVEL_LOCAL, false)))
-			error = git_config_open_level(
-				&config, parent, GIT_CONFIG_LEVEL_LOCAL);
-	}
-	if (error < 0)
-		goto cleanup;
-
-	if ((flags & GIT_REPOSITORY_INIT__IS_REINIT) != 0 &&
-		(error = check_repositoryformatversion(config)) < 0)
-		goto cleanup;
-
-	SET_REPO_CONFIG(
-		bool, "core.bare", is_bare);
-	SET_REPO_CONFIG(
-		int32, "core.repositoryformatversion", GIT_REPO_VERSION);
-	SET_REPO_CONFIG(
-		bool, "core.filemode", is_chmod_supported(cfg_path));
-
-#ifdef GIT_USE_ICONV
-	SET_REPO_CONFIG(
-		bool, "core.precomposeunicode",
-		does_fs_decompose_unicode_paths(is_bare ? repo_dir : work_dir));
-#endif
-
-	if (!are_symlinks_supported(is_bare ? repo_dir : work_dir))
-		SET_REPO_CONFIG(bool, "core.symlinks", false);
-
-	/* core git does not do this on a reinit, but it is a property of
-	 * the filesystem, so I think we should...
-	 */
-	if (!(flags & GIT_REPOSITORY_INIT__IS_REINIT) &&
-		is_filesystem_case_insensitive(repo_dir))
-		SET_REPO_CONFIG(bool, "core.ignorecase", true);
 
 	if (!is_bare) {
 		SET_REPO_CONFIG(bool, "core.logallrefupdates", true);
 
-		if (!(flags & GIT_REPOSITORY_INIT__NATURAL_WD)) {
+		if (!(flags & GIT_REPOSITORY_INIT__NATURAL_WD))
 			SET_REPO_CONFIG(string, "core.worktree", work_dir);
-		}
-		else if ((flags & GIT_REPOSITORY_INIT__IS_REINIT) != 0) {
+		else if (is_reinit) {
 			if (git_config_delete_entry(config, "core.worktree") < 0)
 				giterr_clear();
 		}
@@ -1050,37 +1091,43 @@ static int repo_init_config(
 	}
 
 cleanup:
-	git_buf_free(&buf);
+	git_buf_free(&cfg_path);
 	git_config_free(config);
 
 	return error;
 }
 
-int git_repository_reset_filesystem(git_repository *repo)
+static int repo_reset_submodule_fs(git_submodule *sm, const char *n, void *p)
+{
+	git_repository *smrepo = NULL;
+	GIT_UNUSED(n); GIT_UNUSED(p);
+
+	if (git_submodule_open(&smrepo, sm) < 0 ||
+		git_repository_reset_filesystem(smrepo, true) < 0)
+		giterr_clear();
+	git_repository_free(smrepo);
+
+	return 0;
+}
+
+int git_repository_reset_filesystem(git_repository *repo, int recurse)
 {
 	int error = 0;
-	uint32_t flags = 0;
-	const char *repo_dir, *work_dir;
-	git_config *cfg;
+	git_buf path = GIT_BUF_INIT;
+	git_config *config = NULL;
+	const char *repo_dir = git_repository_path(repo);
 
-	assert(repo);
+	if (!(error = repo_local_config(&config, &path, repo, repo_dir)))
+		error = repo_init_fs_configs(
+			config, path.ptr, repo_dir, git_repository_workdir(repo), true);
 
-	repo_dir = git_repository_path(repo);
-	work_dir = git_repository_workdir(repo);
+	git_config_free(config);
+	git_buf_free(&path);
 
-	if (git_repository_is_bare(repo))
-		flags |= GIT_REPOSITORY_INIT_BARE;
-	else if (!git__prefixcmp(repo_dir, work_dir) &&
-		!strcmp(repo_dir + strlen(work_dir), DOT_GIT "/"))
-		flags |= GIT_REPOSITORY_INIT__NATURAL_WD;
-
-	if ((error = git_repository_config(&cfg, repo)) < 0)
-		return error;
-
-	error = repo_init_config(cfg, repo_dir, work_dir, flags, 0);
-
-	git_config_free(cfg);
 	git_repository__cvar_cache_clear(repo);
+
+	if (!repo->is_bare && recurse)
+		(void)git_submodule_foreach(repo, repo_reset_submodule_fs, NULL);
 
 	return error;
 }
@@ -1473,7 +1520,7 @@ int git_repository_init_ext(
 		opts->flags |= GIT_REPOSITORY_INIT__IS_REINIT;
 
 		error = repo_init_config(
-			NULL, repo_path.ptr, wd_path.ptr, opts->flags, opts->mode);
+			repo_path.ptr, wd_path.ptr, opts->flags, opts->mode);
 
 		/* TODO: reinitialize the templates */
 	}
@@ -1481,7 +1528,7 @@ int git_repository_init_ext(
 		if (!(error = repo_init_structure(
 				repo_path.ptr, wd_path.ptr, opts)) &&
 			!(error = repo_init_config(
-				NULL, repo_path.ptr, wd_path.ptr, opts->flags, opts->mode)))
+				repo_path.ptr, wd_path.ptr, opts->flags, opts->mode)))
 			error = repo_init_create_head(
 				repo_path.ptr, opts->initial_head);
 	}

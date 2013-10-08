@@ -102,6 +102,8 @@ git_repository *setup_fixture_submodules(void)
 
 	cl_set_cleanup(cleanup_fixture_submodules, "testrepo.git");
 
+	cl_git_pass(git_repository_reset_filesystem(repo, 1));
+
 	return repo;
 }
 
@@ -117,6 +119,8 @@ git_repository *setup_fixture_submod2(void)
 	p_rename("submod2/not/.gitted", "submod2/not/.git");
 
 	cl_set_cleanup(cleanup_fixture_submodules, "submod2_target");
+
+	cl_git_pass(git_repository_reset_filesystem(repo, 1));
 
 	return repo;
 }

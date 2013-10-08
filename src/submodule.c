@@ -372,7 +372,8 @@ int git_submodule_add_to_index(git_submodule *sm, int write_index)
 
 	memset(&entry, 0, sizeof(entry));
 	entry.path = sm->path;
-	git_index_entry__init_from_stat(&entry, &st);
+	git_index_entry__init_from_stat(
+		&entry, &st, !(git_index_caps(index) & GIT_INDEXCAP_NO_FILEMODE));
 
 	/* calling git_submodule_open will have set sm->wd_oid if possible */
 	if ((sm->flags & GIT_SUBMODULE_STATUS__WD_OID_VALID) == 0) {

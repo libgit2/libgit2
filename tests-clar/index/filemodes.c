@@ -74,7 +74,6 @@ static void add_and_check_mode_(
 void test_index_filemodes__untrusted(void)
 {
 	git_index *index;
-	bool can_filemode = cl_is_chmod_supported();
 
 	cl_repo_set_bool(g_repo, "core.filemode", false);
 
@@ -97,20 +96,15 @@ void test_index_filemodes__untrusted(void)
 	replace_file_with_mode("exec_on", "filemodes/exec_on.1", 0755);
 	add_and_check_mode(index, "exec_on", GIT_FILEMODE_BLOB_EXECUTABLE);
 
-	/* these tests of newly added files won't give predictable results on
-	 * filesystems without actual filemode support, so skip them.
-	 */
-	if (can_filemode) {
-		/*  5 - add new 0644 -> expect 0644 */
-		cl_git_write2file("filemodes/new_off", "blah", 0,
-			O_WRONLY | O_CREAT | O_TRUNC, 0644);
-		add_and_check_mode(index, "new_off", GIT_FILEMODE_BLOB);
+	/*  5 - add new 0644 -> expect 0644 */
+	cl_git_write2file("filemodes/new_off", "blah", 0,
+		O_WRONLY | O_CREAT | O_TRUNC, 0644);
+	add_and_check_mode(index, "new_off", GIT_FILEMODE_BLOB);
 
-		/* 6 - add new 0755 -> expect 0755 */
-		cl_git_write2file("filemodes/new_on", "blah", 0,
-			O_WRONLY | O_CREAT | O_TRUNC, 0755);
-		add_and_check_mode(index, "new_on", GIT_FILEMODE_BLOB_EXECUTABLE);
-	}
+	/* 6 - add new 0755 -> expect 0644 if core.filemode == false */
+	cl_git_write2file("filemodes/new_on", "blah", 0,
+		O_WRONLY | O_CREAT | O_TRUNC, 0755);
+	add_and_check_mode(index, "new_on", GIT_FILEMODE_BLOB);
 
 	git_index_free(index);
 }

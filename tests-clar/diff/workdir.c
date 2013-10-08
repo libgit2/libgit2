@@ -761,16 +761,7 @@ void test_diff_workdir__submodules(void)
 	git_diff_list *diff = NULL;
 	diff_expects exp;
 
-	g_repo = cl_git_sandbox_init("submod2");
-
-	cl_fixture_sandbox("submod2_target");
-	p_rename("submod2_target/.gitted", "submod2_target/.git");
-
-	rewrite_gitmodules(git_repository_workdir(g_repo));
-	p_rename("submod2/not-submodule/.gitted", "submod2/not-submodule/.git");
-	p_rename("submod2/not/.gitted", "submod2/not/.git");
-
-	cl_fixture_cleanup("submod2_target");
+	g_repo = setup_fixture_submod2();
 
 	a = resolve_commit_oid_to_tree(g_repo, a_commit);
 
