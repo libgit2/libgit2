@@ -16,6 +16,7 @@
 
 #define GIT_CAP_OFS_DELTA "ofs-delta"
 #define GIT_CAP_MULTI_ACK "multi_ack"
+#define GIT_CAP_MULTI_ACK_DETAILED "multi_ack_detailed"
 #define GIT_CAP_SIDE_BAND "side-band"
 #define GIT_CAP_SIDE_BAND_64K "side-band-64k"
 #define GIT_CAP_INCLUDE_TAG "include-tag"
@@ -40,7 +41,7 @@ enum git_pkt_type {
 	GIT_PKT_UNPACK,
 };
 
-/* Used for multi-ack */
+/* Used for multi_ack and mutli_ack_detailed */
 enum git_ack_status {
 	GIT_ACK_NONE,
 	GIT_ACK_CONTINUE,
@@ -113,6 +114,7 @@ typedef struct transport_smart_caps {
 	int common:1,
 		ofs_delta:1,
 		multi_ack: 1,
+		multi_ack_detailed: 1,
 		side_band:1,
 		side_band_64k:1,
 		include_tag:1,
