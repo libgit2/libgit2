@@ -32,13 +32,11 @@ int main(int argc, char *argv[])
 	int i, line;
 	char *path = NULL, *a;
 	const char *rawdata, *commitspec=NULL;
+	char spec[1024] = {0};
 	git_repository *repo = NULL;
 	git_revspec revspec = {0};
 	git_blame_options opts = GIT_BLAME_OPTIONS_INIT;
 	git_blame *blame = NULL;
-	git_commit *commit;
-	git_tree *tree;
-	git_tree_entry *entry;
 	git_blob *blob;
 
 	git_threads_init();
@@ -86,16 +84,19 @@ int main(int argc, char *argv[])
 	check(git_blame_file(&blame, repo, path, &opts), "Blame error");
 
 	/* Get the raw data for output */
-	if (git_oid_iszero(&opts.newest_commit)) {
+	if (git_oid_iszero(&opts.newest_commit))
+		strcpy(spec, "HEAD");
+	else
+		git_oid_tostr(spec, sizeof(spec), &opts.newest_commit);
+	strcat(spec, ":");
+	strcat(spec, path);
+
+	{
 		git_object *obj;
-		check(git_revparse_single(&obj, repo, "HEAD"), "Can't find HEAD");
-		git_oid_cpy(&opts.newest_commit, git_object_id(obj));
+		check(git_revparse_single(&obj, repo, spec), "Object lookup error");
+		check(git_blob_lookup(&blob, repo, git_object_id(obj)), "Blob lookup error");
 		git_object_free(obj);
 	}
-	check(git_commit_lookup(&commit, repo, &opts.newest_commit), "Commit lookup error");
-	check(git_commit_tree(&tree, commit), "Commit tree lookup error");
-	check(git_tree_entry_bypath(&entry, tree, path), "Tree entry lookup error");
-	check(git_blob_lookup(&blob, repo, git_tree_entry_id(entry)), "Blob lookup error");
 	rawdata = git_blob_rawcontent(blob);
 
 	/* Produce the output */
@@ -126,9 +127,6 @@ int main(int argc, char *argv[])
 
 	/* Cleanup */
 	git_blob_free(blob);
-	git_tree_entry_free(entry);
-	git_tree_free(tree);
-	git_commit_free(commit);
 	git_blame_free(blame);
 	git_repository_free(repo);
 	git_threads_shutdown();
