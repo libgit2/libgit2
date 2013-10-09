@@ -115,12 +115,7 @@ extern int git_futils_mkpath2file(const char *path, const mode_t mode);
  * * GIT_RMDIR_EMPTY_PARENTS   - remove containing directories up to base
  *       if removing this item leaves them empty
  * * GIT_RMDIR_REMOVE_BLOCKERS - remove blocking file that causes ENOTDIR
- *
- * The old values translate into the new as follows:
- *
- * * GIT_DIRREMOVAL_EMPTY_HIERARCHY == GIT_RMDIR_EMPTY_HIERARCHY
- * * GIT_DIRREMOVAL_FILES_AND_DIRS  ~= GIT_RMDIR_REMOVE_FILES
- * * GIT_DIRREMOVAL_ONLY_EMPTY_DIRS == GIT_RMDIR_SKIP_NONEMPTY
+ * * GIT_RMDIR_SKIP_ROOT       - don't remove root directory itself
  */
 typedef enum {
 	GIT_RMDIR_EMPTY_HIERARCHY = 0,
@@ -128,6 +123,7 @@ typedef enum {
 	GIT_RMDIR_SKIP_NONEMPTY   = (1 << 1),
 	GIT_RMDIR_EMPTY_PARENTS   = (1 << 2),
 	GIT_RMDIR_REMOVE_BLOCKERS = (1 << 3),
+	GIT_RMDIR_SKIP_ROOT       = (1 << 4),
 } git_futils_rmdir_flags;
 
 /**
@@ -139,14 +135,6 @@ typedef enum {
  * @return 0 on success; -1 on error.
  */
 extern int git_futils_rmdir_r(const char *path, const char *base, uint32_t flags);
-
-/**
- * Remove all files and directories beneath the specified path.
- *
- * @param path Path to the top level directory to process.
- * @return 0 on success; -1 on error.
- */
-extern int git_futils_cleanupdir_r(const char *path);
 
 /**
  * Create and open a temporary file with a `_git2_` suffix.

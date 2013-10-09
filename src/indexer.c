@@ -50,7 +50,7 @@ struct git_indexer_stream {
 
 	/* Fields for calculating the packfile trailer (hash of everything before it) */
 	char inbuf[GIT_OID_RAWSZ];
-	int inbuf_len;
+	size_t inbuf_len;
 	git_hash_ctx trailer;
 };
 
@@ -378,13 +378,13 @@ static int do_progress_callback(git_indexer_stream *idx, git_transfer_progress *
 /* Hash everything but the last 20B of input */
 static void hash_partially(git_indexer_stream *idx, const uint8_t *data, size_t size)
 {
-	int to_expell, to_keep;
+	size_t to_expell, to_keep;
 
 	if (size == 0)
 		return;
 
 	/* Easy case, dump the buffer and the data minus the last 20 bytes */
-	if (size >= 20) {
+	if (size >= GIT_OID_RAWSZ) {
 		git_hash_update(&idx->trailer, idx->inbuf, idx->inbuf_len);
 		git_hash_update(&idx->trailer, data, size - GIT_OID_RAWSZ);
 
@@ -402,8 +402,8 @@ static void hash_partially(git_indexer_stream *idx, const uint8_t *data, size_t 
 	}
 
 	/* We need to partially drain the buffer and then append */
-	to_expell = abs(size - (GIT_OID_RAWSZ - idx->inbuf_len));
-	to_keep = abs(idx->inbuf_len - to_expell);
+	to_keep   = GIT_OID_RAWSZ - size;
+	to_expell = idx->inbuf_len - to_keep;
 
 	git_hash_update(&idx->trailer, idx->inbuf, to_expell);
 

@@ -47,7 +47,7 @@ extern int git_config_rename_section(
  * @param out the new backend
  * @param path where the config file is located
  */
-extern int git_config_file__ondisk(struct git_config_backend **out, const char *path);
+extern int git_config_file__ondisk(git_config_backend **out, const char *path);
 
 extern int git_config__normalize_name(const char *in, char **out);
 

@@ -453,7 +453,7 @@ GIT_EXTERN(int) git_reference_is_remote(git_reference *ref);
 GIT_EXTERN(int) git_reference_is_tag(git_reference *ref);
 
 typedef enum {
-	GIT_REF_FORMAT_NORMAL = 0,
+	GIT_REF_FORMAT_NORMAL = 0u,
 
 	/**
 	 * Control whether one-level refnames are accepted
@@ -461,7 +461,7 @@ typedef enum {
 	 * components). Those are expected to be written only using
 	 * uppercase letters and underscore (FETCH_HEAD, ...)
 	 */
-	GIT_REF_FORMAT_ALLOW_ONELEVEL = (1 << 0),
+	GIT_REF_FORMAT_ALLOW_ONELEVEL = (1u << 0),
 
 	/**
 	 * Interpret the provided name as a reference pattern for a
@@ -470,14 +470,14 @@ typedef enum {
 	 * in place of a one full pathname component
 	 * (e.g., foo/<star>/bar but not foo/bar<star>).
 	 */
-	GIT_REF_FORMAT_REFSPEC_PATTERN = (1 << 1),
+	GIT_REF_FORMAT_REFSPEC_PATTERN = (1u << 1),
 
 	/**
 	 * Interpret the name as part of a refspec in shorthand form
 	 * so the `ONELEVEL` naming rules aren't enforced and 'master'
 	 * becomes a valid name.
 	 */
-	GIT_REF_FORMAT_REFSPEC_SHORTHAND = (1 << 2),
+	GIT_REF_FORMAT_REFSPEC_SHORTHAND = (1u << 2),
 } git_reference_normalize_t;
 
 /**

@@ -27,9 +27,14 @@ OPTION( BUILD_EXAMPLES		"Build library usage example apps"		OFF )
 OPTION( TAGS				"Generate tags"							OFF )
 OPTION( PROFILE				"Generate profiling information"		OFF )
 OPTION( ENABLE_TRACE		"Enables tracing support"				OFF )
-OPTION( LIBGIT2_FILENAME	"Name of the produced binary" OFF )
+OPTION( LIBGIT2_FILENAME	"Name of the produced binary"			OFF )
 
-OPTION( ANDROID				"Build for android NDK" OFF )
+OPTION( ANDROID				"Build for android NDK"	 				OFF )
+
+OPTION( USE_ICONV			"Link with and use iconv library" 		OFF )
+IF(APPLE)
+	SET( USE_ICONV ON )
+ENDIF()
 
 IF(MSVC)
 	# This option is only available when building with MSVC. By default, libgit2
@@ -58,7 +63,13 @@ FUNCTION(TARGET_OS_LIBRARIES target)
 		TARGET_LINK_LIBRARIES(${target} socket nsl)
 	ELSEIF(CMAKE_SYSTEM_NAME MATCHES "Linux")
 		TARGET_LINK_LIBRARIES(${target} rt)
-	ENDIF ()
+	ENDIF()
+
+	IF(USE_ICONV)
+		TARGET_LINK_LIBRARIES(${target} iconv)
+		ADD_DEFINITIONS(-DGIT_USE_ICONV)
+	ENDIF()
+
 	IF(THREADSAFE)
 		TARGET_LINK_LIBRARIES(${target} ${CMAKE_THREAD_LIBS_INIT})
 	ENDIF()
