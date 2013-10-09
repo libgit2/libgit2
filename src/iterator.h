@@ -24,13 +24,15 @@ typedef enum {
 
 typedef enum {
 	/** ignore case for entry sort order */
-	GIT_ITERATOR_IGNORE_CASE = (1 << 0),
+	GIT_ITERATOR_IGNORE_CASE = (1u << 0),
 	/** force case sensitivity for entry sort order */
-	GIT_ITERATOR_DONT_IGNORE_CASE = (1 << 1),
+	GIT_ITERATOR_DONT_IGNORE_CASE = (1u << 1),
 	/** return tree items in addition to blob items */
-	GIT_ITERATOR_INCLUDE_TREES    = (1 << 2),
+	GIT_ITERATOR_INCLUDE_TREES    = (1u << 2),
 	/** don't flatten trees, requiring advance_into (implies INCLUDE_TREES) */
-	GIT_ITERATOR_DONT_AUTOEXPAND  = (1 << 3),
+	GIT_ITERATOR_DONT_AUTOEXPAND  = (1u << 3),
+	/** convert precomposed unicode to decomposed unicode */
+	GIT_ITERATOR_PRECOMPOSE_UNICODE = (1u << 4),
 } git_iterator_flag_t;
 
 typedef struct {

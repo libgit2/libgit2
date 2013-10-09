@@ -48,7 +48,7 @@ struct git_index_conflict_iterator {
 };
 
 extern void git_index_entry__init_from_stat(
-	git_index_entry *entry, struct stat *st);
+	git_index_entry *entry, struct stat *st, bool trust_mode);
 
 extern size_t git_index__prefix_position(git_index *index, const char *path);
 

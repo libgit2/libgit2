@@ -69,13 +69,13 @@ static void test_status(
 		actual = git_status_byindex(status_list, i);
 		expected = &expected_list[i];
 
-		cl_assert_equal_i_fmt(expected->status, actual->status, "%04x");
-
 		oldname = actual->head_to_index ? actual->head_to_index->old_file.path :
 			actual->index_to_workdir ? actual->index_to_workdir->old_file.path : NULL;
 
 		newname = actual->index_to_workdir ? actual->index_to_workdir->new_file.path :
 			actual->head_to_index ? actual->head_to_index->new_file.path : NULL;
+
+		cl_assert_equal_i_fmt(expected->status, actual->status, "%04x");
 
 		if (oldname)
 			cl_assert(git__strcmp(oldname, expected->oldname) == 0);
@@ -507,14 +507,14 @@ void test_status_renames__both_casechange_two(void)
 		  "untimely.txt", "untimeliest.txt" }
 	};
 	struct status_entry expected_case[] = {
-		{ GIT_STATUS_INDEX_RENAMED | GIT_STATUS_INDEX_MODIFIED |
-		  GIT_STATUS_WT_RENAMED | GIT_STATUS_WT_MODIFIED,
-		  "ikeepsix.txt", "ikeepsix.txt" },
-		{ GIT_STATUS_INDEX_MODIFIED | GIT_STATUS_WT_RENAMED,
-		  "sixserving.txt", "SixServing.txt" },
 		{ GIT_STATUS_INDEX_RENAMED |
 		  GIT_STATUS_WT_MODIFIED | GIT_STATUS_WT_RENAMED,
 		  "songof7cities.txt", "SONGOF7.txt" },
+		{ GIT_STATUS_INDEX_MODIFIED | GIT_STATUS_WT_RENAMED,
+		  "sixserving.txt", "SixServing.txt" },
+		{ GIT_STATUS_INDEX_RENAMED | GIT_STATUS_INDEX_MODIFIED |
+		  GIT_STATUS_WT_RENAMED | GIT_STATUS_WT_MODIFIED,
+		  "ikeepsix.txt", "ikeepsix.txt" },
 		{ GIT_STATUS_INDEX_RENAMED | GIT_STATUS_WT_RENAMED,
 		  "untimely.txt", "untimeliest.txt" }
 	};

@@ -27,25 +27,25 @@ void test_diff_diffiter__create(void)
 	git_diff_list_free(diff);
 }
 
-void test_diff_diffiter__iterate_files(void)
+void test_diff_diffiter__iterate_files_1(void)
 {
 	git_repository *repo = cl_git_sandbox_init("attr");
 	git_diff_list *diff;
 	size_t d, num_d;
-	int count = 0;
+	diff_expects exp = { 0 };
 
 	cl_git_pass(git_diff_index_to_workdir(&diff, repo, NULL, NULL));
 
 	num_d = git_diff_num_deltas(diff);
-	cl_assert_equal_i(6, (int)num_d);
 
 	for (d = 0; d < num_d; ++d) {
 		const git_diff_delta *delta;
 		cl_git_pass(git_diff_get_patch(NULL, &delta, diff, d));
 		cl_assert(delta != NULL);
-		count++;
+
+		diff_file_cb(delta, (float)d / (float)num_d, &exp);
 	}
-	cl_assert_equal_i(6, count);
+	cl_assert_equal_sz(6, exp.files);
 
 	git_diff_list_free(diff);
 }

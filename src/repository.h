@@ -37,6 +37,7 @@ typedef enum {
 	GIT_CVAR_IGNORESTAT,    /* core.ignorestat */
 	GIT_CVAR_TRUSTCTIME,    /* core.trustctime */
 	GIT_CVAR_ABBREV,        /* core.abbrev */
+	GIT_CVAR_PRECOMPOSE,    /* core.precomposeunicode */
 	GIT_CVAR_CACHE_MAX
 } git_cvar_cached;
 
@@ -86,6 +87,8 @@ typedef enum {
 	GIT_TRUSTCTIME_DEFAULT = GIT_CVAR_TRUE,
 	/* core.abbrev */
 	GIT_ABBREV_DEFAULT = 7,
+	/* core.precomposeunicode */
+	GIT_PRECOMPOSE_DEFAULT = GIT_CVAR_FALSE,
 
 } git_cvar_value;
 

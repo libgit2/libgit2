@@ -56,6 +56,8 @@ typedef struct refdb_fs_backend {
 
 	git_sortedcache *refcache;
 	int peeling_mode;
+	git_iterator_flag_t iterator_flags;
+	uint32_t direach_flags;
 } refdb_fs_backend;
 
 static int packref_cmp(const void *a_, const void *b_)
@@ -269,7 +271,8 @@ static int _dirent_loose_load(void *data, git_buf *full_path)
 		return 0;
 
 	if (git_path_isdir(full_path->ptr))
-		return git_path_direach(full_path, _dirent_loose_load, backend);
+		return git_path_direach(
+			full_path, backend->direach_flags, _dirent_loose_load, backend);
 
 	file_path = full_path->ptr + strlen(backend->path);
 
@@ -295,7 +298,8 @@ static int packed_loadloose(refdb_fs_backend *backend)
 	 * This will overwrite any old packed entries with their
 	 * updated loose versions
 	 */
-	error = git_path_direach(&refs_path, _dirent_loose_load, backend);
+	error = git_path_direach(
+		&refs_path, backend->direach_flags, _dirent_loose_load, backend);
 
 	git_buf_free(&refs_path);
 
@@ -468,7 +472,7 @@ static int iter_load_loose_paths(refdb_fs_backend *backend, refdb_fs_iter *iter)
 
 	if ((error = git_buf_printf(&path, "%s/refs", backend->path)) < 0 ||
 		(error = git_iterator_for_filesystem(
-			&fsit, git_buf_cstr(&path), 0, NULL, NULL)) < 0) {
+			&fsit, path.ptr, backend->iterator_flags, NULL, NULL)) < 0) {
 		git_buf_free(&path);
 		return error;
 	}
@@ -1071,6 +1075,7 @@ int git_refdb_backend_fs(
 	git_refdb_backend **backend_out,
 	git_repository *repository)
 {
+	int t = 0;
 	git_buf path = GIT_BUF_INIT;
 	refdb_fs_backend *backend;
 
@@ -1091,6 +1096,15 @@ int git_refdb_backend_fs(
 		goto fail;
 
 	git_buf_free(&path);
+
+	if (!git_repository__cvar(&t, backend->repo, GIT_CVAR_IGNORECASE) && t) {
+		backend->iterator_flags |= GIT_ITERATOR_IGNORE_CASE;
+		backend->direach_flags  |= GIT_PATH_DIR_IGNORE_CASE;
+	}
+	if (!git_repository__cvar(&t, backend->repo, GIT_CVAR_PRECOMPOSE) && t) {
+		backend->iterator_flags |= GIT_ITERATOR_PRECOMPOSE_UNICODE;
+		backend->direach_flags  |= GIT_PATH_DIR_PRECOMPOSE_UNICODE;
+	}
 
 	backend->parent.exists = &refdb_fs_backend__exists;
 	backend->parent.lookup = &refdb_fs_backend__lookup;

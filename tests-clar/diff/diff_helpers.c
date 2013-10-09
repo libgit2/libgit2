@@ -21,6 +21,35 @@ git_tree *resolve_commit_oid_to_tree(
 	return tree;
 }
 
+static char diff_pick_suffix(int mode)
+{
+	if (S_ISDIR(mode))
+		return '/';
+	else if (GIT_PERMS_IS_EXEC(mode))
+		return '*';
+	else
+		return ' ';
+}
+
+static void fprintf_delta(FILE *fp, const git_diff_delta *delta, float progress)
+{
+	char code = git_diff_status_char(delta->status);
+	char old_suffix = diff_pick_suffix(delta->old_file.mode);
+	char new_suffix = diff_pick_suffix(delta->new_file.mode);
+
+	fprintf(fp, "%c\t%s", code, delta->old_file.path);
+
+	if ((delta->old_file.path != delta->new_file.path &&
+		 strcmp(delta->old_file.path, delta->new_file.path) != 0) ||
+		(delta->old_file.mode != delta->new_file.mode &&
+		 delta->old_file.mode != 0 && delta->new_file.mode != 0))
+		fprintf(fp, "%c %s%c", old_suffix, delta->new_file.path, new_suffix);
+	else if (old_suffix != ' ')
+		fprintf(fp, "%c", old_suffix);
+
+	fprintf(fp, "\t[%.2f]\n", progress);
+}
+
 int diff_file_cb(
 	const git_diff_delta *delta,
 	float progress,
@@ -29,9 +58,7 @@ int diff_file_cb(
 	diff_expects *e = payload;
 
 	if (e->debug)
-		fprintf(stderr, "%c %s (%.3f)\n",
-			git_diff_status_char(delta->status),
-			delta->old_file.path, progress);
+		fprintf_delta(stderr, delta, progress);
 
 	if (e->names)
 		cl_assert_equal_s(e->names[e->files], delta->old_file.path);
@@ -55,8 +82,14 @@ int diff_print_file_cb(
 	float progress,
 	void *payload)
 {
-	fprintf(stderr, "%c %s\n",
-		git_diff_status_char(delta->status), delta->old_file.path);
+	if (!payload) {
+		fprintf_delta(stderr, delta, progress);
+		return 0;
+	}
+
+	if (!((diff_expects *)payload)->debug)
+		fprintf_delta(stderr, delta, progress);
+
 	return diff_file_cb(delta, progress, payload);
 }
 

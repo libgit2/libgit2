@@ -125,8 +125,8 @@ static int do_lstat(
 
 	errno = ENOENT;
 
-	/* We need POSIX behavior, then ENOTDIR must set when any of the folders in the
-	 * file path is a regular file,otherwise ENOENT must be set.
+	/* To match POSIX behavior, set ENOTDIR when any of the folders in the
+	 * file path is a regular file, otherwise set ENOENT.
 	 */
 	if (posix_enotdir) {
 		/* scan up path until we find an existing item */

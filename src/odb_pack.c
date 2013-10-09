@@ -331,7 +331,7 @@ static int pack_backend__refresh(git_odb_backend *_backend)
 	git_buf_sets(&path, backend->pack_folder);
 
 	/* reload all packs */
-	error = git_path_direach(&path, packfile_load__cb, (void *)backend);
+	error = git_path_direach(&path, 0, packfile_load__cb, backend);
 
 	git_buf_free(&path);
 

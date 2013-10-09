@@ -111,8 +111,9 @@ static void check_stat_data(git_index *index, const char *path, bool match)
 		cl_assert(st.st_gid  == entry->gid);
 		cl_assert_equal_i_fmt(
 			GIT_MODE_TYPE(st.st_mode), GIT_MODE_TYPE(entry->mode), "%07o");
-		cl_assert_equal_b(
-			GIT_PERMS_IS_EXEC(st.st_mode), GIT_PERMS_IS_EXEC(entry->mode));
+		if (cl_is_chmod_supported())
+			cl_assert_equal_b(
+				GIT_PERMS_IS_EXEC(st.st_mode), GIT_PERMS_IS_EXEC(entry->mode));
 	} else {
 		/* most things will still match */
 		cl_assert(st.st_size != entry->file_size);

@@ -388,7 +388,8 @@ void test_submodule_status__iterator(void)
 	opts.flags = GIT_STATUS_OPT_INCLUDE_UNTRACKED |
 		GIT_STATUS_OPT_INCLUDE_UNMODIFIED |
 		GIT_STATUS_OPT_INCLUDE_IGNORED |
-		GIT_STATUS_OPT_RECURSE_UNTRACKED_DIRS;
+		GIT_STATUS_OPT_RECURSE_UNTRACKED_DIRS |
+		GIT_STATUS_OPT_SORT_CASE_INSENSITIVELY;
 
 	cl_git_pass(git_status_foreach_ext(
 		g_repo, &opts, confirm_submodule_status, &exp));

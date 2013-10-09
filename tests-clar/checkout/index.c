@@ -224,12 +224,14 @@ void test_checkout_index__options_disable_filters(void)
 
 void test_checkout_index__options_dir_modes(void)
 {
-#ifndef GIT_WIN32
 	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
 	struct stat st;
 	git_oid oid;
 	git_commit *commit;
 	mode_t um;
+
+	if (!cl_is_chmod_supported())
+		return;
 
 	cl_git_pass(git_reference_name_to_id(&oid, g_repo, "refs/heads/dir"));
 	cl_git_pass(git_commit_lookup(&commit, g_repo, &oid));
@@ -252,14 +254,15 @@ void test_checkout_index__options_dir_modes(void)
 	cl_assert_equal_i_fmt(st.st_mode, GIT_FILEMODE_BLOB_EXECUTABLE, "%07o");
 
 	git_commit_free(commit);
-#endif
 }
 
 void test_checkout_index__options_override_file_modes(void)
 {
-#ifndef GIT_WIN32
 	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
 	struct stat st;
+
+	if (!cl_is_chmod_supported())
+		return;
 
 	opts.checkout_strategy = GIT_CHECKOUT_SAFE_CREATE;
 	opts.file_mode = 0700;
@@ -268,7 +271,6 @@ void test_checkout_index__options_override_file_modes(void)
 
 	cl_git_pass(p_stat("./testrepo/new.txt", &st));
 	cl_assert_equal_i_fmt(st.st_mode & GIT_MODE_PERMS_MASK, 0700, "%07o");
-#endif
 }
 
 void test_checkout_index__options_open_flags(void)

@@ -116,4 +116,3 @@ const git_error *giterr_last(void)
 {
 	return GIT_GLOBAL->last_error;
 }
-
