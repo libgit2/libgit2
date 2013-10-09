@@ -29,7 +29,7 @@ static void usage(const char *msg, const char *arg)
 
 int main(int argc, char *argv[])
 {
-	int i;
+	int i, line;
 	char *path = NULL, *a;
 	const char *rawdata, *commitspec=NULL;
 	git_repository *repo = NULL;
@@ -99,11 +99,12 @@ int main(int argc, char *argv[])
 	rawdata = git_blob_rawcontent(blob);
 
 	/* Produce the output */
-	i = 1;
-	while (rawdata[0]) {
-		const char *eol = strchr(rawdata, '\n');
+	line = 1;
+	i = 0;
+	while (i < git_blob_rawsize(blob)) {
+		const char *eol = strchr(rawdata+i, '\n');
 		char oid[10] = {0};
-		const git_blame_hunk *hunk = git_blame_get_hunk_byline(blame, i);
+		const git_blame_hunk *hunk = git_blame_get_hunk_byline(blame, line);
 		git_commit *hunkcommit;
 		const git_signature *sig;
 
@@ -114,13 +115,13 @@ int main(int argc, char *argv[])
 		printf("%s ( %-30s %3d) %.*s\n",
 				oid,
 				sig->name,
-				i,
-				(int)(eol-rawdata),
-				rawdata);
+				line,
+				(int)(eol-rawdata-i),
+				rawdata+i);
 
 		git_commit_free(hunkcommit);
-		rawdata = eol+1;
-		i++;
+		i = eol - rawdata + 1;
+		line++;
 	}
 
 	/* Cleanup */
