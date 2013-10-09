@@ -27,6 +27,7 @@
 #include "pathspec.h"
 #include "buf_text.h"
 #include "merge_file.h"
+#include "path.h"
 
 /* See docs/checkout-internals.md for more information */
 
@@ -887,29 +888,6 @@ done:
 	return error;
 }
 
-GIT_INLINE(void) path_equal_or_prefixed(
-	bool *path_eq,
-	bool *path_prefixed,
-	const char *parent,
-	const char *child)
-{
-	const char *p, *c;
-
-	*path_eq = 0;
-	*path_prefixed = 0;
-
-	for (p = parent, c = child; *p && *c; p++, c++) {
-		if (*p != *c)
-			return;
-	}
-
-	if (!*p)
-		*path_prefixed = (*c == '/');
-
-	if (!*p && !*c)
-		*path_eq = 1;
-}
-
 static int checkout_conflicts_mark_directoryfile(
 	checkout_data *data)
 {
@@ -917,8 +895,7 @@ static int checkout_conflicts_mark_directoryfile(
 	const git_index_entry *entry;
 	size_t i, j, len;
 	const char *path;
-	bool eq, prefixed;
-	int error = 0;
+	int prefixed, error = 0;
 
 	len = git_index_entrycount(data->index);
 
@@ -947,12 +924,12 @@ static int checkout_conflicts_mark_directoryfile(
 				goto done;
 			}
 
-			path_equal_or_prefixed(&eq, &prefixed, path, entry->path);
+			prefixed = git_path_equal_or_prefixed(path, entry->path);
 
-			if (eq)
+			if (prefixed == GIT_PATH_EQUAL)
 				continue;
 
-			if (prefixed)
+			if (prefixed == GIT_PATH_PREFIX)
 				conflict->directoryfile = 1;
 
 			break;
@@ -1054,8 +1031,6 @@ static int checkout_get_actions(
 		goto fail;
 
 	counts[CHECKOUT_ACTION__UPDATE_CONFLICT] = git_vector_length(&data->conflicts);
-
-	/* HERE */
 
 	git_pathspec__vfree(&pathspec);
 	git_pool_clear(&pathpool);
@@ -1257,7 +1232,7 @@ static int checkout_submodule(
 	return checkout_submodule_update_index(data, file);
 }
 
-void report_progress(
+static void report_progress(
 	checkout_data *data,
 	const char *path)
 {
@@ -1267,7 +1242,7 @@ void report_progress(
 			data->opts.progress_payload);
 }
 
-int git_checkout__safe_for_update_only(const char *path, mode_t expected_mode)
+static int checkout_safe_for_update_only(const char *path, mode_t expected_mode)
 {
 	struct stat st;
 
@@ -1288,7 +1263,7 @@ int git_checkout__safe_for_update_only(const char *path, mode_t expected_mode)
 	return 0;
 }
 
-int git_checkout__write_content(
+static int checkout_write_content(
 	checkout_data *data,
 	const git_oid *oid,
 	const char *full_path,
@@ -1337,13 +1312,13 @@ static int checkout_blob(
 		return -1;
 
 	if ((data->strategy & GIT_CHECKOUT_UPDATE_ONLY) != 0) {
-		int rval = git_checkout__safe_for_update_only(
+		int rval = checkout_safe_for_update_only(
 			git_buf_cstr(&data->path), file->mode);
 		if (rval <= 0)
 			return rval;
 	}
 
-	error = git_checkout__write_content(
+	error = checkout_write_content(
 		data, &file->oid, git_buf_cstr(&data->path), NULL, file->mode, &st);
 
 	/* update the index unless prevented */
@@ -1593,10 +1568,10 @@ static int checkout_write_entry(
 	}
 
 	if ((data->strategy & GIT_CHECKOUT_UPDATE_ONLY) != 0 &&
-		(error = git_checkout__safe_for_update_only(git_buf_cstr(&data->path), side->mode)) <= 0)
+		(error = checkout_safe_for_update_only(git_buf_cstr(&data->path), side->mode)) <= 0)
 		return error;
 
-	return git_checkout__write_content(data,
+	return checkout_write_content(data,
 		&side->oid, git_buf_cstr(&data->path), hint_path, side->mode, &st);
 }
 
@@ -1694,7 +1669,7 @@ static int checkout_write_merge(
 		goto done;
 
 	if ((data->strategy & GIT_CHECKOUT_UPDATE_ONLY) != 0 &&
-		(error = git_checkout__safe_for_update_only(git_buf_cstr(&path_workdir), result.mode)) <= 0)
+		(error = checkout_safe_for_update_only(git_buf_cstr(&path_workdir), result.mode)) <= 0)
 		goto done;
 
 	if ((error = git_futils_mkpath2file(path_workdir.ptr, 0755)) < 0 ||
