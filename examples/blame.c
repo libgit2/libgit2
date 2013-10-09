@@ -41,6 +41,8 @@ int main(int argc, char *argv[])
 	git_tree_entry *entry;
 	git_blob *blob;
 
+	git_threads_init();
+
 	if (argc < 2) usage(NULL, NULL);
 	path = argv[1];
 
@@ -51,7 +53,7 @@ int main(int argc, char *argv[])
 			opts.flags |= GIT_BLAME_TRACK_COPIES_SAME_COMMIT_MOVES;
 		else if (!strcmp(a, "-C"))
 			opts.flags |= GIT_BLAME_TRACK_COPIES_SAME_COMMIT_COPIES;
-		else if (!strncmp(a, "-L", 3)) {
+		else if (!strcmp(a, "-L")) {
 			i++; a = argv[i];
 			if (i >= argc) check(-1, "Not enough arguments to -L");
 			check(sscanf(a, "%d,%d", &opts.min_line, &opts.max_line)-2, "-L format error");
@@ -128,4 +130,5 @@ int main(int argc, char *argv[])
 	git_commit_free(commit);
 	git_blame_free(blame);
 	git_repository_free(repo);
+	git_threads_shutdown();
 }
