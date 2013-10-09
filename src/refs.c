@@ -755,6 +755,7 @@ int git_reference__normalize_name(
 		if ((error = git_path_iconv_init_precompose(&ic)) < 0 ||
 			(error = git_path_iconv(&ic, &current, &namelen)) < 0)
 			goto cleanup;
+		error = GIT_EINVALIDSPEC;
 	}
 
 	while (true) {
