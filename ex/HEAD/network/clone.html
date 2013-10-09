@@ -144,9 +144,9 @@
   <span class="n">checkout_opts</span><span class="p">.</span><span class="n">progress_cb</span> <span class="o">=</span> <span class="n">checkout_progress</span><span class="p">;</span>
   <span class="n">checkout_opts</span><span class="p">.</span><span class="n">progress_payload</span> <span class="o">=</span> <span class="o">&amp;</span><span class="n">pd</span><span class="p">;</span>
   <span class="n">clone_opts</span><span class="p">.</span><span class="n">checkout_opts</span> <span class="o">=</span> <span class="n">checkout_opts</span><span class="p">;</span>
-  <span class="n">clone_opts</span><span class="p">.</span><span class="n">fetch_progress_cb</span> <span class="o">=</span> <span class="o">&amp;</span><span class="n">fetch_progress</span><span class="p">;</span>
-  <span class="n">clone_opts</span><span class="p">.</span><span class="n">fetch_progress_payload</span> <span class="o">=</span> <span class="o">&amp;</span><span class="n">pd</span><span class="p">;</span>
-  <span class="n">clone_opts</span><span class="p">.</span><span class="n">cred_acquire_cb</span> <span class="o">=</span> <span class="n">cred_acquire_cb</span><span class="p">;</span></pre></div>
+  <span class="n">clone_opts</span><span class="p">.</span><span class="n">remote_callbacks</span><span class="p">.</span><span class="n">transfer_progress</span> <span class="o">=</span> <span class="o">&amp;</span><span class="n">fetch_progress</span><span class="p">;</span>
+  <span class="n">clone_opts</span><span class="p">.</span><span class="n">remote_callbacks</span><span class="p">.</span><span class="n">credentials</span> <span class="o">=</span> <span class="n">cred_acquire_cb</span><span class="p">;</span>
+  <span class="n">clone_opts</span><span class="p">.</span><span class="n">remote_callbacks</span><span class="p">.</span><span class="n">payload</span> <span class="o">=</span> <span class="o">&amp;</span><span class="n">pd</span><span class="p">;</span></pre></div>
       </td>
     </tr>
     <tr id='section-4'>
