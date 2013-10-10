@@ -103,10 +103,12 @@ typedef struct git_blame_hunk {
 
 	git_oid final_commit_id;
 	uint16_t final_start_line_number;
+	git_signature *final_signature;
 
 	git_oid orig_commit_id;
 	const char *orig_path;
 	uint16_t orig_start_line_number;
+	git_signature *orig_signature;
 
 	char boundary;
 } git_blame_hunk;

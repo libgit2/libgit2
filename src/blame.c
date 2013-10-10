@@ -12,6 +12,7 @@
 #include "git2/tree.h"
 #include "git2/diff.h"
 #include "git2/blob.h"
+#include "git2/signature.h"
 #include "util.h"
 #include "repository.h"
 #include "blame_git.h"
@@ -80,6 +81,8 @@ static git_blame_hunk* dup_hunk(git_blame_hunk *hunk)
 static void free_hunk(git_blame_hunk *hunk)
 {
 	git__free((void*)hunk->orig_path);
+	git_signature_free(hunk->final_signature);
+	git_signature_free(hunk->orig_signature);
 	git__free(hunk);
 }
 
@@ -252,6 +255,7 @@ static git_blame_hunk* hunk_from_entry(git_blame__entry *e)
 	git_blame_hunk *h = new_hunk(
 			e->lno+1, e->num_lines, e->s_lno+1, e->suspect->path);
 	git_oid_cpy(&h->final_commit_id, git_commit_id(e->suspect->commit));
+	h->final_signature = git_signature_dup(git_commit_author(e->suspect->commit));
 	h->boundary = e->is_boundary ? 1 : 0;
 	return h;
 }
