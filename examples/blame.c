@@ -17,7 +17,7 @@ static void usage(const char *msg, const char *arg)
 		fprintf(stderr, "%s: %s\n", msg, arg);
 	else if (msg)
 		fprintf(stderr, "%s\n", msg);
-	fprintf(stderr, "usage: blame <path> [options] [<commit range>]\n");
+	fprintf(stderr, "usage: blame [options] [<commit range>] <path>\n");
 	fprintf(stderr, "\n");
 	fprintf(stderr, "   <commit range>      example: `HEAD~10..HEAD`, or `1234abcd`\n");
 	fprintf(stderr, "   -L <n,m>            process only line range n-m, counting from 1\n");
@@ -30,8 +30,8 @@ static void usage(const char *msg, const char *arg)
 int main(int argc, char *argv[])
 {
 	int i, line;
-	char *path = NULL, *a;
-	const char *rawdata, *commitspec=NULL;
+	const char *path = NULL, *a;
+	const char *rawdata, *commitspec=NULL, *bare_args[3] = {0};
 	char spec[1024] = {0};
 	git_repository *repo = NULL;
 	git_revspec revspec = {0};
@@ -42,16 +42,24 @@ int main(int argc, char *argv[])
 	git_threads_init();
 
 	if (argc < 2) usage(NULL, NULL);
-	path = argv[1];
 
-	for (i=2; i<argc; i++) {
+	for (i=1; i<argc; i++) {
 		a = argv[i];
 
-		if (!strcmp(a, "-M"))
+		if (a[0] != '-') {
+			int i=0;
+			while (bare_args[i] && i < 3) ++i;
+			if (i >= 3)
+				usage("Invalid argument set", NULL);
+			bare_args[i] = a;
+		}
+		else if (!strcmp(a, "--"))
+			continue;
+		else if (!strcasecmp(a, "-M"))
 			opts.flags |= GIT_BLAME_TRACK_COPIES_SAME_COMMIT_MOVES;
-		else if (!strcmp(a, "-C"))
+		else if (!strcasecmp(a, "-C"))
 			opts.flags |= GIT_BLAME_TRACK_COPIES_SAME_COMMIT_COPIES;
-		else if (!strcmp(a, "-L")) {
+		else if (!strcasecmp(a, "-L")) {
 			i++; a = argv[i];
 			if (i >= argc) check(-1, "Not enough arguments to -L");
 			check(sscanf(a, "%d,%d", &opts.min_line, &opts.max_line)-2, "-L format error");
@@ -61,6 +69,21 @@ int main(int argc, char *argv[])
 			if (commitspec) check(-1, "Only one commit spec allowed");
 			commitspec = a;
 		}
+	}
+
+	/* Handle the bare arguments */
+	if (!bare_args[0]) usage("Please specify a path", NULL);
+	path = bare_args[0];
+	if (bare_args[1]) {
+		/* <commitspec> <path> */
+		path = bare_args[1];
+		commitspec = bare_args[0];
+	}
+	if (bare_args[2]) {
+		/* <oldcommit> <newcommit> <path> */
+		path = bare_args[2];
+		sprintf(spec, "%s..%s", bare_args[0], bare_args[1]);
+		commitspec = spec;
 	}
 
 	/* Open the repo */
