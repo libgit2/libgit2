@@ -128,22 +128,24 @@ int main(int argc, char *argv[])
 	while (i < git_blob_rawsize(blob)) {
 		const char *eol = strchr(rawdata+i, '\n');
 		char oid[10] = {0};
-		const git_blame_hunk *hunk = git_blame_get_hunk_byline(blame, line);
 		git_commit *hunkcommit;
 		const git_signature *sig;
+		const git_blame_hunk *hunk = git_blame_get_hunk_byline(blame, line);
 
-		git_oid_tostr(oid, 10, &hunk->final_commit_id);
-		check(git_commit_lookup(&hunkcommit, repo, &hunk->final_commit_id), "Commit lookup error");
-		sig = git_commit_author(hunkcommit);
+		if (hunk) {
+			git_oid_tostr(oid, 10, &hunk->final_commit_id);
+			check(git_commit_lookup(&hunkcommit, repo, &hunk->final_commit_id), "Commit lookup error");
+			sig = git_commit_author(hunkcommit);
 
-		printf("%s ( %-30s %3d) %.*s\n",
-				oid,
-				sig->name,
-				line,
-				(int)(eol-rawdata-i),
-				rawdata+i);
+			printf("%s ( %-30s %3d) %.*s\n",
+					oid,
+					sig->name,
+					line,
+					(int)(eol-rawdata-i),
+					rawdata+i);
+			git_commit_free(hunkcommit);
+		}
 
-		git_commit_free(hunkcommit);
 		i = eol - rawdata + 1;
 		line++;
 	}
