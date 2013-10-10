@@ -33,13 +33,13 @@ typedef enum {
 	 * NOT IMPLEMENTED. */
 	GIT_BLAME_TRACK_COPIES_SAME_COMMIT_MOVES = (1<<1),
 	/** Track lines that have been copied from another file that exists in the
-	 * same commit (like `git blame -CC`).
+	 * same commit (like `git blame -CC`). Implies SAME_FILE.
 	 * NOT IMPLEMENTED. */
-	GIT_BLAME_TRACK_COPIES_SAME_COMMIT_COPIES = (1<<1 | 1<<2),
+	GIT_BLAME_TRACK_COPIES_SAME_COMMIT_COPIES = (1<<2),
 	/** Track lines that have been copied from another file that exists in *any*
-	 * commit (like `git blame -CCC`).
+	 * commit (like `git blame -CCC`). Implies SAME_COMMIT_COPIES.
 	 * NOT IMPLEMENTED. */
-	GIT_BLAME_TRACK_COPIES_ANY_COMMIT_COPIES = (1<<1 | 1<<2 | 1<<3),
+	GIT_BLAME_TRACK_COPIES_ANY_COMMIT_COPIES = (1<<3),
 } git_blame_flag_t;
 
 /**

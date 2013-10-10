@@ -184,6 +184,14 @@ static void normalize_options(
 	/* min_line 0 really means 1 */
 	if (!out->min_line) out->min_line = 1;
 	/* max_line 0 really means N, but we don't know N yet */
+
+	/* Fix up option implications */
+	if (out->flags & GIT_BLAME_TRACK_COPIES_ANY_COMMIT_COPIES)
+		out->flags |= GIT_BLAME_TRACK_COPIES_SAME_COMMIT_COPIES;
+	if (out->flags & GIT_BLAME_TRACK_COPIES_SAME_COMMIT_COPIES)
+		out->flags |= GIT_BLAME_TRACK_COPIES_SAME_COMMIT_MOVES;
+	if (out->flags & GIT_BLAME_TRACK_COPIES_SAME_COMMIT_MOVES)
+		out->flags |= GIT_BLAME_TRACK_COPIES_SAME_FILE;
 }
 
 static git_blame_hunk *split_hunk_in_vector(
