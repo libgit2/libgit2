@@ -29,7 +29,7 @@ static void usage(const char *msg, const char *arg)
 
 int main(int argc, char *argv[])
 {
-	int i, line;
+	int i, line, break_on_null_hunk;
 	const char *path = NULL, *a;
 	const char *rawdata, *commitspec=NULL, *bare_args[3] = {0};
 	char spec[1024] = {0};
@@ -125,12 +125,16 @@ int main(int argc, char *argv[])
 	/* Produce the output */
 	line = 1;
 	i = 0;
+	break_on_null_hunk = 0;
 	while (i < git_blob_rawsize(blob)) {
 		const char *eol = strchr(rawdata+i, '\n');
 		char oid[10] = {0};
 		const git_blame_hunk *hunk = git_blame_get_hunk_byline(blame, line);
 
+		if (break_on_null_hunk && !hunk) break;
+
 		if (hunk) {
+			break_on_null_hunk = 1;
 			char sig[128] = {0};
 
 			git_oid_tostr(oid, 10, &hunk->final_commit_id);
