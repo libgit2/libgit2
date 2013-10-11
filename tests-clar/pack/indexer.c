@@ -79,7 +79,7 @@ void test_pack_indexer__fix_thin(void)
 	cl_git_pass(git_indexer_stream_add(idx, thin_pack, thin_pack_len, &stats));
 	cl_git_pass(git_indexer_stream_finalize(idx, &stats));
 
-	cl_assert_equal_i(stats.total_objects, 3);
+	cl_assert_equal_i(stats.total_objects, 2);
 	cl_assert_equal_i(stats.received_objects, 2);
 	cl_assert_equal_i(stats.indexed_objects, 2);
 	cl_assert_equal_i(stats.local_objects, 1);

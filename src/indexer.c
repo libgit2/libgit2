@@ -733,7 +733,6 @@ static int fix_thin_pack(git_indexer_stream *idx, git_transfer_progress *stats)
 	if (inject_object(idx, &base) < 0)
 		return -1;
 
-	stats->total_objects++;
 	stats->local_objects++;
 
 	return 0;
@@ -798,7 +797,7 @@ static int update_header_and_rehash(git_indexer_stream *idx, git_transfer_progre
 	git_mwindow_free_all(mwf);
 
 	/* Update the header to include the numer of local objects we injected */
-	idx->hdr.hdr_entries = htonl(stats->total_objects);
+	idx->hdr.hdr_entries = htonl(stats->total_objects + stats->local_objects);
 	if (p_lseek(idx->pack_file.fd, 0, SEEK_SET) < 0) {
 		giterr_set(GITERR_OS, "failed to seek to the beginning of the pack");
 		return -1;
@@ -870,7 +869,7 @@ int git_indexer_stream_finalize(git_indexer_stream *idx, git_transfer_progress *
 	if (resolve_deltas(idx, stats) < 0)
 		return -1;
 
-	if (stats->indexed_objects + stats->local_objects != stats->total_objects) {
+	if (stats->indexed_objects != stats->total_objects) {
 		giterr_set(GITERR_INDEXER, "early EOF");
 		return -1;
 	}
