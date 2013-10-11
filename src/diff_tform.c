@@ -97,8 +97,8 @@ static git_diff_delta *diff_delta__merge_like_cgit(
 }
 
 int git_diff_merge(
-	git_diff_list *onto,
-	const git_diff_list *from)
+	git_diff *onto,
+	const git_diff *from)
 {
 	int error = 0;
 	git_pool onto_pool;
@@ -230,7 +230,7 @@ int git_diff_find_similar__calc_similarity(
 #define DEFAULT_RENAME_LIMIT 200
 
 static int normalize_find_opts(
-	git_diff_list *diff,
+	git_diff *diff,
 	git_diff_find_options *opts,
 	git_diff_find_options *given)
 {
@@ -328,7 +328,7 @@ static int normalize_find_opts(
 }
 
 static int apply_splits_and_deletes(
-	git_diff_list *diff, size_t expected_size, bool actually_split)
+	git_diff *diff, size_t expected_size, bool actually_split)
 {
 	git_vector onto = GIT_VECTOR_INIT;
 	size_t i;
@@ -402,7 +402,7 @@ on_error:
 	return -1;
 }
 
-GIT_INLINE(git_diff_file *) similarity_get_file(git_diff_list *diff, size_t idx)
+GIT_INLINE(git_diff_file *) similarity_get_file(git_diff *diff, size_t idx)
 {
 	git_diff_delta *delta = git_vector_get(&diff->deltas, idx / 2);
 	return (idx & 1) ? &delta->new_file : &delta->old_file;
@@ -419,7 +419,7 @@ typedef struct {
 } similarity_info;
 
 static int similarity_init(
-	similarity_info *info, git_diff_list *diff, size_t file_idx)
+	similarity_info *info, git_diff *diff, size_t file_idx)
 {
 	info->idx  = file_idx;
 	info->src  = (file_idx & 1) ? diff->new_src : diff->old_src;
@@ -509,7 +509,7 @@ static void similarity_unload(similarity_info *info)
  */
 static int similarity_measure(
 	int *score,
-	git_diff_list *diff,
+	git_diff *diff,
 	const git_diff_find_options *opts,
 	void **cache,
 	size_t a_idx,
@@ -595,7 +595,7 @@ cleanup:
 }
 
 static int calc_self_similarity(
-	git_diff_list *diff,
+	git_diff *diff,
 	const git_diff_find_options *opts,
 	size_t delta_idx,
 	void **cache)
@@ -620,7 +620,7 @@ static int calc_self_similarity(
 }
 
 static bool is_rename_target(
-	git_diff_list *diff,
+	git_diff *diff,
 	const git_diff_find_options *opts,
 	size_t delta_idx,
 	void **cache)
@@ -675,7 +675,7 @@ static bool is_rename_target(
 }
 
 static bool is_rename_source(
-	git_diff_list *diff,
+	git_diff *diff,
 	const git_diff_find_options *opts,
 	size_t delta_idx,
 	void **cache)
@@ -759,7 +759,7 @@ typedef struct {
 } diff_find_match;
 
 int git_diff_find_similar(
-	git_diff_list *diff,
+	git_diff *diff,
 	git_diff_find_options *given_opts)
 {
 	size_t s, t;

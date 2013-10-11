@@ -26,7 +26,7 @@ void test_diff_patch__cleanup(void)
 
 static int check_removal_cb(
 	const git_diff_delta *delta,
-	const git_diff_range *range,
+	const git_diff_hunk *range,
 	char line_origin,
 	const char *formatted_output,
 	size_t output_len,
@@ -86,7 +86,7 @@ void test_diff_patch__can_properly_display_the_removal_of_a_file(void)
 	const char *one_sha = "26a125e";
 	const char *another_sha = "735b6a2";
 	git_tree *one, *another;
-	git_diff_list *diff;
+	git_diff *diff;
 
 	g_repo = cl_git_sandbox_init("status");
 
@@ -97,7 +97,7 @@ void test_diff_patch__can_properly_display_the_removal_of_a_file(void)
 
 	cl_git_pass(git_diff_print_patch(diff, check_removal_cb, NULL));
 
-	git_diff_list_free(diff);
+	git_diff_free(diff);
 
 	git_tree_free(another);
 	git_tree_free(one);
@@ -108,8 +108,8 @@ void test_diff_patch__to_string(void)
 	const char *one_sha = "26a125e";
 	const char *another_sha = "735b6a2";
 	git_tree *one, *another;
-	git_diff_list *diff;
-	git_diff_patch *patch;
+	git_diff *diff;
+	git_patch *patch;
 	char *text;
 	const char *expected = "diff --git a/subdir.txt b/subdir.txt\ndeleted file mode 100644\nindex e8ee89e..0000000\n--- a/subdir.txt\n+++ /dev/null\n@@ -1,2 +0,0 @@\n-Is it a bird?\n-Is it a plane?\n";
 
@@ -122,20 +122,20 @@ void test_diff_patch__to_string(void)
 
 	cl_assert_equal_i(1, (int)git_diff_num_deltas(diff));
 
-	cl_git_pass(git_diff_get_patch(&patch, NULL, diff, 0));
+	cl_git_pass(git_patch_from_diff(&patch, NULL, diff, 0));
 
-	cl_git_pass(git_diff_patch_to_str(&text, patch));
+	cl_git_pass(git_patch_to_str(&text, patch));
 
 	cl_assert_equal_s(expected, text);
 
-	cl_assert_equal_sz(31, git_diff_patch_size(patch, 0, 0, 0));
-	cl_assert_equal_sz(31, git_diff_patch_size(patch, 1, 0, 0));
-	cl_assert_equal_sz(31 + 16, git_diff_patch_size(patch, 1, 1, 0));
-	cl_assert_equal_sz(strlen(expected), git_diff_patch_size(patch, 1, 1, 1));
+	cl_assert_equal_sz(31, git_patch_size(patch, 0, 0, 0));
+	cl_assert_equal_sz(31, git_patch_size(patch, 1, 0, 0));
+	cl_assert_equal_sz(31 + 16, git_patch_size(patch, 1, 1, 0));
+	cl_assert_equal_sz(strlen(expected), git_patch_size(patch, 1, 1, 1));
 
 	git__free(text);
-	git_diff_patch_free(patch);
-	git_diff_list_free(diff);
+	git_patch_free(patch);
+	git_diff_free(diff);
 	git_tree_free(another);
 	git_tree_free(one);
 }
@@ -145,8 +145,8 @@ void test_diff_patch__config_options(void)
 	const char *one_sha = "26a125e"; /* current HEAD */
 	git_tree *one;
 	git_config *cfg;
-	git_diff_list *diff;
-	git_diff_patch *patch;
+	git_diff *diff;
+	git_patch *patch;
 	char *text;
 	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
 	char *onefile = "staged_changes_modified_file";
@@ -167,24 +167,24 @@ void test_diff_patch__config_options(void)
 	cl_git_pass(git_diff_tree_to_index(&diff, g_repo, one, NULL, &opts));
 
 	cl_assert_equal_i(1, (int)git_diff_num_deltas(diff));
-	cl_git_pass(git_diff_get_patch(&patch, NULL, diff, 0));
-	cl_git_pass(git_diff_patch_to_str(&text, patch));
+	cl_git_pass(git_patch_from_diff(&patch, NULL, diff, 0));
+	cl_git_pass(git_patch_to_str(&text, patch));
 	cl_assert_equal_s(expected1, text);
 
 	git__free(text);
-	git_diff_patch_free(patch);
-	git_diff_list_free(diff);
+	git_patch_free(patch);
+	git_diff_free(diff);
 
 	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, NULL, &opts));
 
 	cl_assert_equal_i(1, (int)git_diff_num_deltas(diff));
-	cl_git_pass(git_diff_get_patch(&patch, NULL, diff, 0));
-	cl_git_pass(git_diff_patch_to_str(&text, patch));
+	cl_git_pass(git_patch_from_diff(&patch, NULL, diff, 0));
+	cl_git_pass(git_patch_to_str(&text, patch));
 	cl_assert_equal_s(expected2, text);
 
 	git__free(text);
-	git_diff_patch_free(patch);
-	git_diff_list_free(diff);
+	git_patch_free(patch);
+	git_diff_free(diff);
 
 
 	cl_git_pass(git_config_set_string(cfg, "diff.noprefix", "true"));
@@ -192,13 +192,13 @@ void test_diff_patch__config_options(void)
 	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, NULL, &opts));
 
 	cl_assert_equal_i(1, (int)git_diff_num_deltas(diff));
-	cl_git_pass(git_diff_get_patch(&patch, NULL, diff, 0));
-	cl_git_pass(git_diff_patch_to_str(&text, patch));
+	cl_git_pass(git_patch_from_diff(&patch, NULL, diff, 0));
+	cl_git_pass(git_patch_to_str(&text, patch));
 	cl_assert_equal_s(expected3, text);
 
 	git__free(text);
-	git_diff_patch_free(patch);
-	git_diff_list_free(diff);
+	git_patch_free(patch);
+	git_diff_free(diff);
 
 
 	cl_git_pass(git_config_set_int32(cfg, "core.abbrev", 12));
@@ -206,13 +206,13 @@ void test_diff_patch__config_options(void)
 	cl_git_pass(git_diff_tree_to_index(&diff, g_repo, one, NULL, &opts));
 
 	cl_assert_equal_i(1, (int)git_diff_num_deltas(diff));
-	cl_git_pass(git_diff_get_patch(&patch, NULL, diff, 0));
-	cl_git_pass(git_diff_patch_to_str(&text, patch));
+	cl_git_pass(git_patch_from_diff(&patch, NULL, diff, 0));
+	cl_git_pass(git_patch_to_str(&text, patch));
 	cl_assert_equal_s(expected4, text);
 
 	git__free(text);
-	git_diff_patch_free(patch);
-	git_diff_list_free(diff);
+	git_patch_free(patch);
+	git_diff_free(diff);
 
 	git_tree_free(one);
 	git_config_free(cfg);
@@ -223,10 +223,10 @@ void test_diff_patch__hunks_have_correct_line_numbers(void)
 	git_config *cfg;
 	git_tree *head;
 	git_diff_options opt = GIT_DIFF_OPTIONS_INIT;
-	git_diff_list *diff;
-	git_diff_patch *patch;
+	git_diff *diff;
+	git_patch *patch;
 	const git_diff_delta *delta;
-	const git_diff_range *range;
+	const git_diff_hunk *range;
 	const char *hdr, *text;
 	size_t hdrlen, hunklen, textlen;
 	char origin;
@@ -253,15 +253,15 @@ void test_diff_patch__hunks_have_correct_line_numbers(void)
 
 	cl_assert_equal_i(1, (int)git_diff_num_deltas(diff));
 
-	cl_git_pass(git_diff_get_patch(&patch, &delta, diff, 0));
+	cl_git_pass(git_patch_from_diff(&patch, &delta, diff, 0));
 
 	cl_assert_equal_i(GIT_DELTA_MODIFIED, (int)delta->status);
-	cl_assert_equal_i(2, (int)git_diff_patch_num_hunks(patch));
+	cl_assert_equal_i(2, (int)git_patch_num_hunks(patch));
 
 	/* check hunk 0 */
 
 	cl_git_pass(
-		git_diff_patch_get_hunk(&range, &hdr, &hdrlen, &hunklen, patch, 0));
+		git_patch_get_hunk(&range, &hdr, &hdrlen, &hunklen, patch, 0));
 
 	cl_assert_equal_i(18, (int)hunklen);
 
@@ -270,9 +270,9 @@ void test_diff_patch__hunks_have_correct_line_numbers(void)
 	cl_assert_equal_i(6, (int)range->new_start);
 	cl_assert_equal_i(9, (int)range->new_lines);
 
-	cl_assert_equal_i(18, (int)git_diff_patch_num_lines_in_hunk(patch, 0));
+	cl_assert_equal_i(18, (int)git_patch_num_lines_in_hunk(patch, 0));
 
-	cl_git_pass(git_diff_patch_get_line_in_hunk(
+	cl_git_pass(git_patch_get_line_in_hunk(
 		&origin, &text, &textlen, &oldno, &newno, patch, 0, 0));
 	cl_assert_equal_i(GIT_DIFF_LINE_CONTEXT, (int)origin);
 	cl_git_pass(git_buf_set(&actual, text, textlen));
@@ -280,7 +280,7 @@ void test_diff_patch__hunks_have_correct_line_numbers(void)
 	cl_assert_equal_i(6, oldno);
 	cl_assert_equal_i(6, newno);
 
-	cl_git_pass(git_diff_patch_get_line_in_hunk(
+	cl_git_pass(git_patch_get_line_in_hunk(
 		&origin, &text, &textlen, &oldno, &newno, patch, 0, 3));
 	cl_assert_equal_i(GIT_DIFF_LINE_DELETION, (int)origin);
 	cl_git_pass(git_buf_set(&actual, text, textlen));
@@ -288,7 +288,7 @@ void test_diff_patch__hunks_have_correct_line_numbers(void)
 	cl_assert_equal_i(9, oldno);
 	cl_assert_equal_i(-1, newno);
 
-	cl_git_pass(git_diff_patch_get_line_in_hunk(
+	cl_git_pass(git_patch_get_line_in_hunk(
 		&origin, &text, &textlen, &oldno, &newno, patch, 0, 12));
 	cl_assert_equal_i(GIT_DIFF_LINE_ADDITION, (int)origin);
 	cl_git_pass(git_buf_set(&actual, text, textlen));
@@ -299,7 +299,7 @@ void test_diff_patch__hunks_have_correct_line_numbers(void)
 	/* check hunk 1 */
 
 	cl_git_pass(
-		git_diff_patch_get_hunk(&range, &hdr, &hdrlen, &hunklen, patch, 1));
+		git_patch_get_hunk(&range, &hdr, &hdrlen, &hunklen, patch, 1));
 
 	cl_assert_equal_i(18, (int)hunklen);
 
@@ -308,9 +308,9 @@ void test_diff_patch__hunks_have_correct_line_numbers(void)
 	cl_assert_equal_i(25, (int)range->new_start);
 	cl_assert_equal_i(9, (int)range->new_lines);
 
-	cl_assert_equal_i(18, (int)git_diff_patch_num_lines_in_hunk(patch, 1));
+	cl_assert_equal_i(18, (int)git_patch_num_lines_in_hunk(patch, 1));
 
-	cl_git_pass(git_diff_patch_get_line_in_hunk(
+	cl_git_pass(git_patch_get_line_in_hunk(
 		&origin, &text, &textlen, &oldno, &newno, patch, 1, 0));
 	cl_assert_equal_i(GIT_DIFF_LINE_CONTEXT, (int)origin);
 	cl_git_pass(git_buf_set(&actual, text, textlen));
@@ -318,7 +318,7 @@ void test_diff_patch__hunks_have_correct_line_numbers(void)
 	cl_assert_equal_i(31, oldno);
 	cl_assert_equal_i(25, newno);
 
-	cl_git_pass(git_diff_patch_get_line_in_hunk(
+	cl_git_pass(git_patch_get_line_in_hunk(
 		&origin, &text, &textlen, &oldno, &newno, patch, 1, 3));
 	cl_assert_equal_i(GIT_DIFF_LINE_DELETION, (int)origin);
 	cl_git_pass(git_buf_set(&actual, text, textlen));
@@ -326,7 +326,7 @@ void test_diff_patch__hunks_have_correct_line_numbers(void)
 	cl_assert_equal_i(34, oldno);
 	cl_assert_equal_i(-1, newno);
 
-	cl_git_pass(git_diff_patch_get_line_in_hunk(
+	cl_git_pass(git_patch_get_line_in_hunk(
 		&origin, &text, &textlen, &oldno, &newno, patch, 1, 12));
 	cl_assert_equal_i(GIT_DIFF_LINE_ADDITION, (int)origin);
 	cl_git_pass(git_buf_set(&actual, text, textlen));
@@ -334,8 +334,8 @@ void test_diff_patch__hunks_have_correct_line_numbers(void)
 	cl_assert_equal_i(-1, oldno);
 	cl_assert_equal_i(28, newno);
 
-	git_diff_patch_free(patch);
-	git_diff_list_free(diff);
+	git_patch_free(patch);
+	git_diff_free(diff);
 
 	/* Let's check line numbers when there is no newline */
 
@@ -346,15 +346,15 @@ void test_diff_patch__hunks_have_correct_line_numbers(void)
 
 	cl_assert_equal_i(1, (int)git_diff_num_deltas(diff));
 
-	cl_git_pass(git_diff_get_patch(&patch, &delta, diff, 0));
+	cl_git_pass(git_patch_from_diff(&patch, &delta, diff, 0));
 
 	cl_assert_equal_i(GIT_DELTA_MODIFIED, (int)delta->status);
-	cl_assert_equal_i(1, (int)git_diff_patch_num_hunks(patch));
+	cl_assert_equal_i(1, (int)git_patch_num_hunks(patch));
 
 	/* check hunk 0 */
 
 	cl_git_pass(
-		git_diff_patch_get_hunk(&range, &hdr, &hdrlen, &hunklen, patch, 0));
+		git_patch_get_hunk(&range, &hdr, &hdrlen, &hunklen, patch, 0));
 
 	cl_assert_equal_i(6, (int)hunklen);
 
@@ -363,9 +363,9 @@ void test_diff_patch__hunks_have_correct_line_numbers(void)
 	cl_assert_equal_i(46, (int)range->new_start);
 	cl_assert_equal_i(4, (int)range->new_lines);
 
-	cl_assert_equal_i(6, (int)git_diff_patch_num_lines_in_hunk(patch, 0));
+	cl_assert_equal_i(6, (int)git_patch_num_lines_in_hunk(patch, 0));
 
-	cl_git_pass(git_diff_patch_get_line_in_hunk(
+	cl_git_pass(git_patch_get_line_in_hunk(
 		&origin, &text, &textlen, &oldno, &newno, patch, 0, 1));
 	cl_assert_equal_i(GIT_DIFF_LINE_CONTEXT, (int)origin);
 	cl_git_pass(git_buf_set(&actual, text, textlen));
@@ -373,7 +373,7 @@ void test_diff_patch__hunks_have_correct_line_numbers(void)
 	cl_assert_equal_i(47, oldno);
 	cl_assert_equal_i(47, newno);
 
-	cl_git_pass(git_diff_patch_get_line_in_hunk(
+	cl_git_pass(git_patch_get_line_in_hunk(
 		&origin, &text, &textlen, &oldno, &newno, patch, 0, 2));
 	cl_assert_equal_i(GIT_DIFF_LINE_CONTEXT, (int)origin);
 	cl_git_pass(git_buf_set(&actual, text, textlen));
@@ -381,7 +381,7 @@ void test_diff_patch__hunks_have_correct_line_numbers(void)
 	cl_assert_equal_i(48, oldno);
 	cl_assert_equal_i(48, newno);
 
-	cl_git_pass(git_diff_patch_get_line_in_hunk(
+	cl_git_pass(git_patch_get_line_in_hunk(
 		&origin, &text, &textlen, &oldno, &newno, patch, 0, 3));
 	cl_assert_equal_i(GIT_DIFF_LINE_DELETION, (int)origin);
 	cl_git_pass(git_buf_set(&actual, text, textlen));
@@ -389,7 +389,7 @@ void test_diff_patch__hunks_have_correct_line_numbers(void)
 	cl_assert_equal_i(49, oldno);
 	cl_assert_equal_i(-1, newno);
 
-	cl_git_pass(git_diff_patch_get_line_in_hunk(
+	cl_git_pass(git_patch_get_line_in_hunk(
 		&origin, &text, &textlen, &oldno, &newno, patch, 0, 4));
 	cl_assert_equal_i(GIT_DIFF_LINE_ADDITION, (int)origin);
 	cl_git_pass(git_buf_set(&actual, text, textlen));
@@ -397,7 +397,7 @@ void test_diff_patch__hunks_have_correct_line_numbers(void)
 	cl_assert_equal_i(-1, oldno);
 	cl_assert_equal_i(49, newno);
 
-	cl_git_pass(git_diff_patch_get_line_in_hunk(
+	cl_git_pass(git_patch_get_line_in_hunk(
 		&origin, &text, &textlen, &oldno, &newno, patch, 0, 5));
 	cl_assert_equal_i(GIT_DIFF_LINE_DEL_EOFNL, (int)origin);
 	cl_git_pass(git_buf_set(&actual, text, textlen));
@@ -405,8 +405,8 @@ void test_diff_patch__hunks_have_correct_line_numbers(void)
 	cl_assert_equal_i(-1, oldno);
 	cl_assert_equal_i(49, newno);
 
-	git_diff_patch_free(patch);
-	git_diff_list_free(diff);
+	git_patch_free(patch);
+	git_diff_free(diff);
 
 	git_buf_free(&actual);
 	git_buf_free(&old_content);
@@ -418,8 +418,8 @@ static void check_single_patch_stats(
 	size_t adds, size_t dels, size_t ctxt, size_t *sizes,
 	const char *expected)
 {
-	git_diff_list *diff;
-	git_diff_patch *patch;
+	git_diff *diff;
+	git_patch *patch;
 	const git_diff_delta *delta;
 	size_t actual_ctxt, actual_adds, actual_dels;
 
@@ -427,12 +427,12 @@ static void check_single_patch_stats(
 
 	cl_assert_equal_i(1, (int)git_diff_num_deltas(diff));
 
-	cl_git_pass(git_diff_get_patch(&patch, &delta, diff, 0));
+	cl_git_pass(git_patch_from_diff(&patch, &delta, diff, 0));
 	cl_assert_equal_i(GIT_DELTA_MODIFIED, (int)delta->status);
 
-	cl_assert_equal_i((int)hunks, (int)git_diff_patch_num_hunks(patch));
+	cl_assert_equal_i((int)hunks, (int)git_patch_num_hunks(patch));
 
-	cl_git_pass( git_diff_patch_line_stats(
+	cl_git_pass( git_patch_line_stats(
 		&actual_ctxt, &actual_adds, &actual_dels, patch) );
 
 	cl_assert_equal_sz(ctxt, actual_ctxt);
@@ -441,21 +441,21 @@ static void check_single_patch_stats(
 
 	if (expected != NULL) {
 		char *text;
-		cl_git_pass(git_diff_patch_to_str(&text, patch));
+		cl_git_pass(git_patch_to_str(&text, patch));
 		cl_assert_equal_s(expected, text);
 		git__free(text);
 
 		cl_assert_equal_sz(
-			strlen(expected), git_diff_patch_size(patch, 1, 1, 1));
+			strlen(expected), git_patch_size(patch, 1, 1, 1));
 	}
 
 	if (sizes) {
 		if (sizes[0])
-			cl_assert_equal_sz(sizes[0], git_diff_patch_size(patch, 0, 0, 0));
+			cl_assert_equal_sz(sizes[0], git_patch_size(patch, 0, 0, 0));
 		if (sizes[1])
-			cl_assert_equal_sz(sizes[1], git_diff_patch_size(patch, 1, 0, 0));
+			cl_assert_equal_sz(sizes[1], git_patch_size(patch, 1, 0, 0));
 		if (sizes[2])
-			cl_assert_equal_sz(sizes[2], git_diff_patch_size(patch, 1, 1, 0));
+			cl_assert_equal_sz(sizes[2], git_patch_size(patch, 1, 1, 0));
 	}
 
 	/* walk lines in hunk with basic sanity checks */
@@ -464,12 +464,12 @@ static void check_single_patch_stats(
 		int lastoldno = -1, oldno, lastnewno = -1, newno;
 		char origin;
 
-		max_i = git_diff_patch_num_lines_in_hunk(patch, hunks - 1);
+		max_i = git_patch_num_lines_in_hunk(patch, hunks - 1);
 
 		for (i = 0; i < max_i; ++i) {
 			int expected = 1;
 
-			cl_git_pass(git_diff_patch_get_line_in_hunk(
+			cl_git_pass(git_patch_get_line_in_hunk(
 				&origin, NULL, NULL, &oldno, &newno, patch, hunks - 1, i));
 
 			if (origin == GIT_DIFF_LINE_ADD_EOFNL ||
@@ -490,8 +490,8 @@ static void check_single_patch_stats(
 		}
 	}
 
-	git_diff_patch_free(patch);
-	git_diff_list_free(diff);
+	git_patch_free(patch);
+	git_diff_free(diff);
 }
 
 void test_diff_patch__line_counts_with_eofnl(void)

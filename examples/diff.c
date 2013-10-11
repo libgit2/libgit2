@@ -45,7 +45,7 @@ char *colors[] = {
 
 static int printer(
 	const git_diff_delta *delta,
-	const git_diff_range *range,
+	const git_diff_hunk *range,
 	char usage,
 	const char *line,
 	size_t line_len,
@@ -126,7 +126,7 @@ int main(int argc, char *argv[])
 	git_tree *t1 = NULL, *t2 = NULL;
 	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
 	git_diff_find_options findopts = GIT_DIFF_FIND_OPTIONS_INIT;
-	git_diff_list *diff;
+	git_diff *diff;
 	int i, color = -1, format = FORMAT_PATCH, cached = 0;
 	char *a, *treeish1 = NULL, *treeish2 = NULL;
 	const char *dir = ".";
@@ -218,11 +218,11 @@ int main(int argc, char *argv[])
 	else if (t1 && cached)
 		check(git_diff_tree_to_index(&diff, repo, t1, NULL, &opts), "Diff");
 	else if (t1) {
-		git_diff_list *diff2;
+		git_diff *diff2;
 		check(git_diff_tree_to_index(&diff, repo, t1, NULL, &opts), "Diff");
 		check(git_diff_index_to_workdir(&diff2, repo, NULL, &opts), "Diff");
 		check(git_diff_merge(diff, diff2), "Merge diffs");
-		git_diff_list_free(diff2);
+		git_diff_free(diff2);
 	}
 	else if (cached) {
 		check(resolve_to_tree(repo, "HEAD", &t1), "looking up HEAD");
@@ -253,7 +253,7 @@ int main(int argc, char *argv[])
 	if (color >= 0)
 		fputs(colors[0], stdout);
 
-	git_diff_list_free(diff);
+	git_diff_free(diff);
 	git_tree_free(t1);
 	git_tree_free(t2);
 	git_repository_free(repo);

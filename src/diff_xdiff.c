@@ -24,26 +24,26 @@ static int git_xdiff_scan_int(const char **str, int *value)
 	return (digits > 0) ? 0 : -1;
 }
 
-static int git_xdiff_parse_hunk(git_diff_range *range, const char *header)
+static int git_xdiff_parse_hunk(git_diff_hunk *hunk, const char *header)
 {
 	/* expect something of the form "@@ -%d[,%d] +%d[,%d] @@" */
 	if (*header != '@')
 		return -1;
-	if (git_xdiff_scan_int(&header, &range->old_start) < 0)
+	if (git_xdiff_scan_int(&header, &hunk->old_start) < 0)
 		return -1;
 	if (*header == ',') {
-		if (git_xdiff_scan_int(&header, &range->old_lines) < 0)
+		if (git_xdiff_scan_int(&header, &hunk->old_lines) < 0)
 			return -1;
 	} else
-		range->old_lines = 1;
-	if (git_xdiff_scan_int(&header, &range->new_start) < 0)
+		hunk->old_lines = 1;
+	if (git_xdiff_scan_int(&header, &hunk->new_start) < 0)
 		return -1;
 	if (*header == ',') {
-		if (git_xdiff_scan_int(&header, &range->new_lines) < 0)
+		if (git_xdiff_scan_int(&header, &hunk->new_lines) < 0)
 			return -1;
 	} else
-		range->new_lines = 1;
-	if (range->old_start < 0 || range->new_start < 0)
+		hunk->new_lines = 1;
+	if (hunk->old_start < 0 || hunk->new_start < 0)
 		return -1;
 
 	return 0;
@@ -51,24 +51,24 @@ static int git_xdiff_parse_hunk(git_diff_range *range, const char *header)
 
 typedef struct {
 	git_xdiff_output *xo;
-	git_diff_patch *patch;
-	git_diff_range range;
+	git_patch *patch;
+	git_diff_hunk hunk;
 } git_xdiff_info;
 
 static int git_xdiff_cb(void *priv, mmbuffer_t *bufs, int len)
 {
 	git_xdiff_info *info = priv;
-	git_diff_patch *patch = info->patch;
-	const git_diff_delta *delta = git_diff_patch_delta(patch);
+	git_patch *patch = info->patch;
+	const git_diff_delta *delta = git_patch_delta(patch);
 	git_diff_output *output = &info->xo->output;
 
 	if (len == 1) {
-		output->error = git_xdiff_parse_hunk(&info->range, bufs[0].ptr);
+		output->error = git_xdiff_parse_hunk(&info->hunk, bufs[0].ptr);
 		if (output->error < 0)
 			return output->error;
 
 		if (output->hunk_cb != NULL &&
-			output->hunk_cb(delta, &info->range,
+			output->hunk_cb(delta, &info->hunk,
 				bufs[0].ptr, bufs[0].size, output->payload))
 			output->error = GIT_EUSER;
 	}
@@ -81,7 +81,7 @@ static int git_xdiff_cb(void *priv, mmbuffer_t *bufs, int len)
 			GIT_DIFF_LINE_CONTEXT;
 
 		if (output->data_cb != NULL &&
-			output->data_cb(delta, &info->range,
+			output->data_cb(delta, &info->hunk,
 				origin, bufs[1].ptr, bufs[1].size, output->payload))
 			output->error = GIT_EUSER;
 	}
@@ -98,7 +98,7 @@ static int git_xdiff_cb(void *priv, mmbuffer_t *bufs, int len)
 			GIT_DIFF_LINE_CONTEXT_EOFNL;
 
 		if (output->data_cb != NULL &&
-			output->data_cb(delta, &info->range,
+			output->data_cb(delta, &info->hunk,
 				origin, bufs[2].ptr, bufs[2].size, output->payload))
 			output->error = GIT_EUSER;
 	}
@@ -106,7 +106,7 @@ static int git_xdiff_cb(void *priv, mmbuffer_t *bufs, int len)
 	return output->error;
 }
 
-static int git_xdiff(git_diff_output *output, git_diff_patch *patch)
+static int git_xdiff(git_diff_output *output, git_patch *patch)
 {
 	git_xdiff_output *xo = (git_xdiff_output *)output;
 	git_xdiff_info info;
@@ -120,7 +120,7 @@ static int git_xdiff(git_diff_output *output, git_diff_patch *patch)
 	xo->callback.priv = &info;
 
 	git_diff_find_context_init(
-		&xo->config.find_func, &findctxt, git_diff_patch__driver(patch));
+		&xo->config.find_func, &findctxt, git_patch__driver(patch));
 	xo->config.find_func_priv = &findctxt;
 
 	if (xo->config.find_func != NULL)
@@ -132,8 +132,8 @@ static int git_xdiff(git_diff_output *output, git_diff_patch *patch)
 	 * updates are needed to xo->params.flags
 	 */
 
-	git_diff_patch__old_data(&xd_old_data.ptr, &xd_old_data.size, patch);
-	git_diff_patch__new_data(&xd_new_data.ptr, &xd_new_data.size, patch);
+	git_patch__old_data(&xd_old_data.ptr, &xd_old_data.size, patch);
+	git_patch__new_data(&xd_new_data.ptr, &xd_new_data.size, patch);
 
 	xdl_diff(&xd_old_data, &xd_new_data,
 		&xo->params, &xo->config, &xo->callback);

@@ -52,7 +52,7 @@ static unsigned int index_delta2status(const git_diff_delta *head2idx)
 }
 
 static unsigned int workdir_delta2status(
-	git_diff_list *diff, git_diff_delta *idx2wd)
+	git_diff *diff, git_diff_delta *idx2wd)
 {
 	git_status_t st = GIT_STATUS_CURRENT;
 
@@ -361,8 +361,8 @@ void git_status_list_free(git_status_list *status)
 	if (status == NULL)
 		return;
 
-	git_diff_list_free(status->head2idx);
-	git_diff_list_free(status->idx2wd);
+	git_diff_free(status->head2idx);
+	git_diff_free(status->idx2wd);
 
 	git_vector_foreach(&status->paired, i, status_entry)
 		git__free(status_entry);

@@ -44,25 +44,25 @@ extern int diff_print_file_cb(
 
 extern int diff_hunk_cb(
 	const git_diff_delta *delta,
-	const git_diff_range *range,
+	const git_diff_hunk *range,
 	const char *header,
 	size_t header_len,
 	void *cb_data);
 
 extern int diff_line_cb(
 	const git_diff_delta *delta,
-	const git_diff_range *range,
+	const git_diff_hunk *range,
 	char line_origin,
 	const char *content,
 	size_t content_len,
 	void *cb_data);
 
 extern int diff_foreach_via_iterator(
-	git_diff_list *diff,
+	git_diff *diff,
 	git_diff_file_cb file_cb,
 	git_diff_hunk_cb hunk_cb,
-	git_diff_data_cb line_cb,
+	git_diff_line_cb line_cb,
 	void *data);
 
-extern void diff_print(FILE *fp, git_diff_list *diff);
-extern void diff_print_raw(FILE *fp, git_diff_list *diff);
+extern void diff_print(FILE *fp, git_diff *diff);
+extern void diff_print_raw(FILE *fp, git_diff *diff);

@@ -43,7 +43,7 @@ enum {
 
 typedef struct {
 	git_repository *repo;
-	git_diff_list *diff;
+	git_diff *diff;
 	git_checkout_opts opts;
 	bool opts_free_baseline;
 	char *pfx;
@@ -1320,7 +1320,7 @@ cleanup:
 		(data.strategy & GIT_CHECKOUT_DONT_UPDATE_INDEX) == 0)
 		error = git_index_write(data.index);
 
-	git_diff_list_free(data.diff);
+	git_diff_free(data.diff);
 	git_iterator_free(workdir);
 	git_iterator_free(baseline);
 	git__free(actions);

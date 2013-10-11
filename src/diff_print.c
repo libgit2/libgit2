@@ -10,8 +10,8 @@
 #include "fileops.h"
 
 typedef struct {
-	git_diff_list *diff;
-	git_diff_data_cb print_cb;
+	git_diff *diff;
+	git_diff_line_cb print_cb;
 	void *payload;
 	git_buf *buf;
 	int oid_strlen;
@@ -19,7 +19,7 @@ typedef struct {
 
 static int diff_print_info_init(
 	diff_print_info *pi,
-	git_buf *out, git_diff_list *diff, git_diff_data_cb cb, void *payload)
+	git_buf *out, git_diff *diff, git_diff_line_cb cb, void *payload)
 {
 	pi->diff     = diff;
 	pi->print_cb = cb;
@@ -119,10 +119,10 @@ static int diff_print_one_compact(
 	return 0;
 }
 
-/* print a git_diff_list to a print callback in compact format */
+/* print a git_diff to a print callback in compact format */
 int git_diff_print_compact(
-	git_diff_list *diff,
-	git_diff_data_cb print_cb,
+	git_diff *diff,
+	git_diff_line_cb print_cb,
 	void *payload)
 {
 	int error;
@@ -180,10 +180,10 @@ static int diff_print_one_raw(
 	return 0;
 }
 
-/* print a git_diff_list to a print callback in raw output format */
+/* print a git_diff to a print callback in raw output format */
 int git_diff_print_raw(
-	git_diff_list *diff,
-	git_diff_data_cb print_cb,
+	git_diff *diff,
+	git_diff_line_cb print_cb,
 	void *payload)
 {
 	int error;
@@ -325,7 +325,7 @@ static int diff_print_patch_file(
 
 static int diff_print_patch_hunk(
 	const git_diff_delta *d,
-	const git_diff_range *r,
+	const git_diff_hunk *r,
 	const char *header,
 	size_t header_len,
 	void *data)
@@ -348,7 +348,7 @@ static int diff_print_patch_hunk(
 
 static int diff_print_patch_line(
 	const git_diff_delta *delta,
-	const git_diff_range *range,
+	const git_diff_hunk *range,
 	char line_origin, /* GIT_DIFF_LINE value from above */
 	const char *content,
 	size_t content_len,
@@ -379,10 +379,10 @@ static int diff_print_patch_line(
 	return 0;
 }
 
-/* print a git_diff_list to an output callback in patch format */
+/* print a git_diff to an output callback in patch format */
 int git_diff_print_patch(
-	git_diff_list *diff,
-	git_diff_data_cb print_cb,
+	git_diff *diff,
+	git_diff_line_cb print_cb,
 	void *payload)
 {
 	int error;
@@ -399,10 +399,10 @@ int git_diff_print_patch(
 	return error;
 }
 
-/* print a git_diff_patch to an output callback */
-int git_diff_patch_print(
-	git_diff_patch *patch,
-	git_diff_data_cb print_cb,
+/* print a git_patch to an output callback */
+int git_patch_print(
+	git_patch *patch,
+	git_diff_line_cb print_cb,
 	void *payload)
 {
 	int error;
@@ -412,8 +412,8 @@ int git_diff_patch_print(
 	assert(patch && print_cb);
 
 	if (!(error = diff_print_info_init(
-			&pi, &temp, git_diff_patch__diff(patch), print_cb, payload)))
-		error = git_diff_patch__invoke_callbacks(
+			&pi, &temp, git_patch__diff(patch), print_cb, payload)))
+		error = git_patch__invoke_callbacks(
 			patch, diff_print_patch_file, diff_print_patch_hunk,
 			diff_print_patch_line, &pi);
 
@@ -424,7 +424,7 @@ int git_diff_patch_print(
 
 static int diff_print_to_buffer_cb(
 	const git_diff_delta *delta,
-	const git_diff_range *range,
+	const git_diff_hunk *range,
 	char line_origin,
 	const char *content,
 	size_t content_len,
@@ -435,15 +435,15 @@ static int diff_print_to_buffer_cb(
 	return git_buf_put(output, content, content_len);
 }
 
-/* print a git_diff_patch to a string buffer */
-int git_diff_patch_to_str(
+/* print a git_patch to a string buffer */
+int git_patch_to_str(
 	char **string,
-	git_diff_patch *patch)
+	git_patch *patch)
 {
 	int error;
 	git_buf output = GIT_BUF_INIT;
 
-	error = git_diff_patch_print(patch, diff_print_to_buffer_cb, &output);
+	error = git_patch_print(patch, diff_print_to_buffer_cb, &output);
 
 	/* GIT_EUSER means git_buf_put in print_to_buffer_cb returned -1,
 	 * meaning a memory allocation failure, so just map to -1...

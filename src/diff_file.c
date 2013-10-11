@@ -88,7 +88,7 @@ static int diff_file_content_init_common(
 
 int git_diff_file_content__init_from_diff(
 	git_diff_file_content *fc,
-	git_diff_list *diff,
+	git_diff *diff,
 	size_t delta_index,
 	bool use_old)
 {

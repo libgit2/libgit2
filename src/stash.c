@@ -221,7 +221,7 @@ static int build_untracked_tree(
 	uint32_t flags)
 {
 	git_tree *i_tree = NULL;
-	git_diff_list *diff = NULL;
+	git_diff *diff = NULL;
 	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
 	struct cb_data data = {0};
 	int error;
@@ -259,7 +259,7 @@ static int build_untracked_tree(
 	error = build_tree_from_index(tree_out, index);
 
 cleanup:
-	git_diff_list_free(diff);
+	git_diff_free(diff);
 	git_tree_free(i_tree);
 	return error;
 }
@@ -311,7 +311,7 @@ static int build_workdir_tree(
 {
 	git_repository *repo = git_index_owner(index);
 	git_tree *b_tree = NULL;
-	git_diff_list *diff = NULL, *diff2 = NULL;
+	git_diff *diff = NULL, *diff2 = NULL;
 	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
 	struct cb_data data = {0};
 	int error;
@@ -346,8 +346,8 @@ static int build_workdir_tree(
 		goto cleanup;
 
 cleanup:
-	git_diff_list_free(diff);
-	git_diff_list_free(diff2);
+	git_diff_free(diff);
+	git_diff_free(diff2);
 	git_tree_free(b_tree);
 
 	return error;

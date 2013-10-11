@@ -3,7 +3,7 @@
 
 static git_repository *g_repo = NULL;
 static git_diff_options opts;
-static git_diff_list *diff;
+static git_diff *diff;
 static git_tree *a, *b;
 static diff_expects expect;
 
@@ -22,7 +22,7 @@ void test_diff_tree__initialize(void)
 
 void test_diff_tree__cleanup(void)
 {
-	git_diff_list_free(diff);
+	git_diff_free(diff);
 	git_tree_free(a);
 	git_tree_free(b);
 
@@ -65,7 +65,7 @@ void test_diff_tree__0(void)
 	cl_assert_equal_i(24 + 1 + 5 + 5, expect.line_adds);
 	cl_assert_equal_i(7 + 1, expect.line_dels);
 
-	git_diff_list_free(diff);
+	git_diff_free(diff);
 	diff = NULL;
 
 	memset(&expect, 0, sizeof(expect));
@@ -168,7 +168,7 @@ void test_diff_tree__options(void)
 		cl_assert_equal_i(actual.line_adds, expected->line_adds);
 		cl_assert_equal_i(actual.line_dels, expected->line_dels);
 
-		git_diff_list_free(diff);
+		git_diff_free(diff);
 		diff = NULL;
 	}
 
@@ -214,7 +214,7 @@ void test_diff_tree__merge(void)
 	const char *b_commit = "370fe9ec22";
 	const char *c_commit = "f5b0af1fb4f5c";
 	git_tree *c;
-	git_diff_list *diff1 = NULL, *diff2 = NULL;
+	git_diff *diff1 = NULL, *diff2 = NULL;
 
 	g_repo = cl_git_sandbox_init("attr");
 
@@ -230,7 +230,7 @@ void test_diff_tree__merge(void)
 
 	cl_git_pass(git_diff_merge(diff1, diff2));
 
-	git_diff_list_free(diff2);
+	git_diff_free(diff2);
 
 	cl_git_pass(git_diff_foreach(
 		diff1, diff_file_cb, diff_hunk_cb, diff_line_cb, &expect));
@@ -247,7 +247,7 @@ void test_diff_tree__merge(void)
 	cl_assert_equal_i(36, expect.line_adds);
 	cl_assert_equal_i(22, expect.line_dels);
 
-	git_diff_list_free(diff1);
+	git_diff_free(diff1);
 }
 
 void test_diff_tree__larger_hunks(void)
@@ -256,8 +256,8 @@ void test_diff_tree__larger_hunks(void)
 	const char *b_commit = "7a9e0b02e63179929fed24f0a3e0f19168114d10";
 	size_t d, num_d, h, num_h, l, num_l, header_len, line_len;
 	const git_diff_delta *delta;
-	git_diff_patch *patch;
-	const git_diff_range *range;
+	git_patch *patch;
+	const git_diff_hunk *range;
 	const char *header, *line;
 	char origin;
 
@@ -273,31 +273,31 @@ void test_diff_tree__larger_hunks(void)
 
 	num_d = git_diff_num_deltas(diff);
 	for (d = 0; d < num_d; ++d) {
-		cl_git_pass(git_diff_get_patch(&patch, &delta, diff, d));
+		cl_git_pass(git_patch_from_diff(&patch, &delta, diff, d));
 		cl_assert(patch && delta);
 
-		num_h = git_diff_patch_num_hunks(patch);
+		num_h = git_patch_num_hunks(patch);
 		for (h = 0; h < num_h; h++) {
-			cl_git_pass(git_diff_patch_get_hunk(
+			cl_git_pass(git_patch_get_hunk(
 				&range, &header, &header_len, &num_l, patch, h));
 
 			for (l = 0; l < num_l; ++l) {
-				cl_git_pass(git_diff_patch_get_line_in_hunk(
+				cl_git_pass(git_patch_get_line_in_hunk(
 					&origin, &line, &line_len, NULL, NULL, patch, h, l));
 				cl_assert(line);
 			}
 
-			cl_git_fail(git_diff_patch_get_line_in_hunk(
+			cl_git_fail(git_patch_get_line_in_hunk(
 				&origin, &line, &line_len, NULL, NULL, patch, h, num_l));
 		}
 
-		cl_git_fail(git_diff_patch_get_hunk(
+		cl_git_fail(git_patch_get_hunk(
 			&range, &header, &header_len, &num_l, patch, num_h));
 
-		git_diff_patch_free(patch);
+		git_patch_free(patch);
 	}
 
-	cl_git_fail(git_diff_get_patch(&patch, &delta, diff, num_d));
+	cl_git_fail(git_patch_from_diff(&patch, &delta, diff, num_d));
 
 	cl_assert_equal_i(2, (int)num_d);
 }
@@ -487,7 +487,7 @@ void test_diff_tree__diff_configs(void)
 	cl_assert_equal_i(7, expect.line_adds);
 	cl_assert_equal_i(15, expect.line_dels);
 
-	git_diff_list_free(diff);
+	git_diff_free(diff);
 	diff = NULL;
 
 	set_config_int(g_repo, "diff.context", 1);
@@ -507,7 +507,7 @@ void test_diff_tree__diff_configs(void)
 	cl_assert_equal_i(7, expect.line_adds);
 	cl_assert_equal_i(15, expect.line_dels);
 
-	git_diff_list_free(diff);
+	git_diff_free(diff);
 	diff = NULL;
 
 	set_config_int(g_repo, "diff.context", 0);

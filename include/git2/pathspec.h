@@ -187,7 +187,7 @@ GIT_EXTERN(int) git_pathspec_match_tree(
  */
 GIT_EXTERN(int) git_pathspec_match_diff(
 	git_pathspec_match_list **out,
-	git_diff_list *diff,
+	git_diff *diff,
 	uint32_t flags,
 	git_pathspec *ps);
 

@@ -1528,7 +1528,7 @@ static void submodule_get_wd_status(
 		(sm->flags & GIT_SUBMODULE_STATUS__WD_OID_VALID) ? &sm->wd_oid : NULL;
 	git_tree *sm_head = NULL;
 	git_diff_options opt = GIT_DIFF_OPTIONS_INIT;
-	git_diff_list *diff;
+	git_diff *diff;
 
 	*status = *status & ~GIT_SUBMODULE_STATUS__WD_FLAGS;
 
@@ -1568,7 +1568,7 @@ static void submodule_get_wd_status(
 		else {
 			if (git_diff_num_deltas(diff) > 0)
 				*status |= GIT_SUBMODULE_STATUS_WD_INDEX_MODIFIED;
-			git_diff_list_free(diff);
+			git_diff_free(diff);
 			diff = NULL;
 		}
 
@@ -1588,7 +1588,7 @@ static void submodule_get_wd_status(
 		if (git_diff_num_deltas(diff) != untracked)
 			*status |= GIT_SUBMODULE_STATUS_WD_WD_MODIFIED;
 
-		git_diff_list_free(diff);
+		git_diff_free(diff);
 		diff = NULL;
 	}
 }

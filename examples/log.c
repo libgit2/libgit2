@@ -184,7 +184,7 @@ static void print_commit(git_commit *commit)
 
 static int print_diff(
 	const git_diff_delta *delta,
-	const git_diff_range *range,
+	const git_diff_hunk *range,
 	char usage,
 	const char *line,
 	size_t line_len,
@@ -218,7 +218,7 @@ static int match_with_parent(
 {
 	git_commit *parent;
 	git_tree *a, *b;
-	git_diff_list *diff;
+	git_diff *diff;
 	int ndeltas;
 
 	check(git_commit_parent(&parent, commit, (size_t)i), "Get parent", NULL);
@@ -229,7 +229,7 @@ static int match_with_parent(
 
 	ndeltas = (int)git_diff_num_deltas(diff);
 
-	git_diff_list_free(diff);
+	git_diff_free(diff);
 	git_tree_free(a);
 	git_tree_free(b);
 	git_commit_free(parent);
@@ -373,7 +373,7 @@ int main(int argc, char *argv[])
 
 		if (opt.show_diff) {
 			git_tree *a = NULL, *b = NULL;
-			git_diff_list *diff = NULL;
+			git_diff *diff = NULL;
 
 			if (parents > 1)
 				continue;
@@ -391,7 +391,7 @@ int main(int argc, char *argv[])
 			check(git_diff_print_patch(diff, print_diff, NULL),
 				"Displaying diff", NULL);
 
-			git_diff_list_free(diff);
+			git_diff_free(diff);
 			git_tree_free(a);
 			git_tree_free(b);
 		}

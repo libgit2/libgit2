@@ -24,7 +24,7 @@ int git_reset_default(
 {
 	git_object *commit = NULL;
 	git_tree *tree = NULL;
-	git_diff_list *diff = NULL;
+	git_diff *diff = NULL;
 	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
 	size_t i;
 	git_diff_delta *delta;
@@ -85,7 +85,7 @@ cleanup:
 	git_object_free(commit);
 	git_tree_free(tree);
 	git_index_free(index);
-	git_diff_list_free(diff);
+	git_diff_free(diff);
 
 	return error;
 }

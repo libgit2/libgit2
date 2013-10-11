@@ -32,6 +32,7 @@
 #include "git2/odb.h"
 #include "git2/oid.h"
 #include "git2/pack.h"
+#include "git2/patch.h"
 #include "git2/pathspec.h"
 #include "git2/push.h"
 #include "git2/refdb.h"
