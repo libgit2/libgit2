@@ -153,65 +153,61 @@ cleanup:
 	return error;
 }
 
-struct cb_data {
-	git_index *index;
-
-	int error;
-
+struct stash_update_rules {
 	bool include_changed;
 	bool include_untracked;
 	bool include_ignored;
 };
 
-static int update_index_cb(
-	const git_diff_delta *delta,
-	float progress,
-	void *payload)
+static int stash_update_index_from_diff(
+	git_index *index,
+	const git_diff *diff,
+	struct stash_update_rules *data)
 {
-	struct cb_data *data = (struct cb_data *)payload;
-	const char *add_path = NULL;
+	int error = 0;
+	size_t d, max_d = git_diff_num_deltas(diff);
 
-	GIT_UNUSED(progress);
+	for (d = 0; !error && d < max_d; ++d) {
+		const char *add_path = NULL;
+		const git_diff_delta *delta = git_diff_get_delta(diff, d);
 
-	switch (delta->status) {
-	case GIT_DELTA_IGNORED:
-		if (data->include_ignored)
-			add_path = delta->new_file.path;
-		break;
-
-	case GIT_DELTA_UNTRACKED:
-		if (data->include_untracked)
-			add_path = delta->new_file.path;
-		break;
-
-	case GIT_DELTA_ADDED:
-	case GIT_DELTA_MODIFIED:
-		if (data->include_changed)
-			add_path = delta->new_file.path;
-		break;
-
-	case GIT_DELTA_DELETED:
-		if (!data->include_changed)
+		switch (delta->status) {
+		case GIT_DELTA_IGNORED:
+			if (data->include_ignored)
+				add_path = delta->new_file.path;
 			break;
-		if (git_index_find(NULL, data->index, delta->old_file.path) == 0)
-			data->error = git_index_remove(
-				data->index, delta->old_file.path, 0);
-		break;
 
-	default:
-		/* Unimplemented */
-		giterr_set(
-			GITERR_INVALID,
-			"Cannot update index. Unimplemented status (%d)",
-			delta->status);
-		data->error = -1;
-		break;
+		case GIT_DELTA_UNTRACKED:
+			if (data->include_untracked)
+				add_path = delta->new_file.path;
+			break;
+
+		case GIT_DELTA_ADDED:
+		case GIT_DELTA_MODIFIED:
+			if (data->include_changed)
+				add_path = delta->new_file.path;
+			break;
+
+		case GIT_DELTA_DELETED:
+			if (data->include_changed &&
+				!git_index_find(NULL, index, delta->old_file.path))
+				error = git_index_remove(index, delta->old_file.path, 0);
+			break;
+
+		default:
+			/* Unimplemented */
+			giterr_set(
+				GITERR_INVALID,
+				"Cannot update index. Unimplemented status (%d)",
+				delta->status);
+			return -1;
+		}
+
+		if (add_path != NULL)
+			error = git_index_add_bypath(index, add_path);
 	}
 
-	if (add_path != NULL)
-		data->error = git_index_add_bypath(data->index, add_path);
-
-	return data->error;
+	return error;
 }
 
 static int build_untracked_tree(
@@ -223,12 +219,10 @@ static int build_untracked_tree(
 	git_tree *i_tree = NULL;
 	git_diff *diff = NULL;
 	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
-	struct cb_data data = {0};
+	struct stash_update_rules data = {0};
 	int error;
 
 	git_index_clear(index);
-
-	data.index = index;
 
 	if (flags & GIT_STASH_INCLUDE_UNTRACKED) {
 		opts.flags |= GIT_DIFF_INCLUDE_UNTRACKED |
@@ -248,13 +242,8 @@ static int build_untracked_tree(
 			&diff, git_index_owner(index), i_tree, &opts)) < 0)
 		goto cleanup;
 
-	if ((error = git_diff_foreach(
-			diff, update_index_cb, NULL, NULL, &data)) < 0)
-	{
-		if (error == GIT_EUSER)
-			error = data.error;
+	if ((error = stash_update_index_from_diff(index, diff, &data)) < 0)
 		goto cleanup;
-	}
 
 	error = build_tree_from_index(tree_out, index);
 
@@ -311,9 +300,9 @@ static int build_workdir_tree(
 {
 	git_repository *repo = git_index_owner(index);
 	git_tree *b_tree = NULL;
-	git_diff *diff = NULL, *diff2 = NULL;
+	git_diff *diff = NULL;
 	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
-	struct cb_data data = {0};
+	struct stash_update_rules data = {0};
 	int error;
 
 	opts.flags = GIT_DIFF_IGNORE_SUBMODULES;
@@ -321,33 +310,19 @@ static int build_workdir_tree(
 	if ((error = git_commit_tree(&b_tree, b_commit)) < 0)
 		goto cleanup;
 
-	if ((error = git_diff_tree_to_index(&diff, repo, b_tree, NULL, &opts)) < 0)
+	if ((error = git_diff_tree_to_workdir_with_index(
+			&diff, repo, b_tree, &opts)) < 0)
 		goto cleanup;
 
-	if ((error = git_diff_index_to_workdir(&diff2, repo, NULL, &opts)) < 0)
-		goto cleanup;
-
-	if ((error = git_diff_merge(diff, diff2)) < 0)
-		goto cleanup;
-
-	data.index = index;
 	data.include_changed = true;
 
-	if ((error = git_diff_foreach(
-			diff, update_index_cb, NULL, NULL, &data)) < 0)
-	{
-		if (error == GIT_EUSER)
-			error = data.error;
+	if ((error = stash_update_index_from_diff(index, diff, &data)) < 0)
 		goto cleanup;
-	}
 
-
-	if ((error = build_tree_from_index(tree_out, index)) < 0)
-		goto cleanup;
+	error = build_tree_from_index(tree_out, index);
 
 cleanup:
 	git_diff_free(diff);
-	git_diff_free(diff2);
 	git_tree_free(b_tree);
 
 	return error;

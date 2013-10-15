@@ -22,7 +22,8 @@ static void check_diff_patches_at_line(
 	char *patch_text;
 
 	for (d = 0; d < num_d; ++d, git_patch_free(patch)) {
-		cl_git_pass(git_patch_from_diff(&patch, &delta, diff, d));
+		cl_git_pass(git_patch_from_diff(&patch, diff, d));
+		cl_assert((delta = git_patch_get_delta(patch)) != NULL);
 
 		if (delta->status == GIT_DELTA_UNMODIFIED) {
 			cl_assert_at_line(expected[d] == NULL, file, line);
@@ -123,7 +124,7 @@ void test_diff_submodules__dirty_submodule_2(void)
 	cl_git_pass(git_submodule_reload_all(g_repo));
 
 	opts.flags = GIT_DIFF_INCLUDE_UNTRACKED |
-		GIT_DIFF_INCLUDE_UNTRACKED_CONTENT |
+		GIT_DIFF_SHOW_UNTRACKED_CONTENT |
 		GIT_DIFF_RECURSE_UNTRACKED_DIRS |
 		GIT_DIFF_DISABLE_PATHSPEC_MATCH;
 	opts.old_prefix = "a"; opts.new_prefix = "b";

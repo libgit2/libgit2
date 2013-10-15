@@ -114,12 +114,6 @@ static void usage(const char *message, const char *arg)
 	exit(1);
 }
 
-enum {
-	FORMAT_PATCH = 0,
-	FORMAT_COMPACT = 1,
-	FORMAT_RAW = 2
-};
-
 int main(int argc, char *argv[])
 {
 	git_repository *repo = NULL;
@@ -127,7 +121,8 @@ int main(int argc, char *argv[])
 	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
 	git_diff_find_options findopts = GIT_DIFF_FIND_OPTIONS_INIT;
 	git_diff *diff;
-	int i, color = -1, format = FORMAT_PATCH, cached = 0;
+	int i, color = -1, cached = 0;
+	git_diff_format_t format = GIT_DIFF_FORMAT_PATCH;
 	char *a, *treeish1 = NULL, *treeish2 = NULL;
 	const char *dir = ".";
 
@@ -148,13 +143,15 @@ int main(int argc, char *argv[])
 		}
 		else if (!strcmp(a, "-p") || !strcmp(a, "-u") ||
 			!strcmp(a, "--patch"))
-			format = FORMAT_PATCH;
+			format = GIT_DIFF_FORMAT_PATCH;
 		else if (!strcmp(a, "--cached"))
 			cached = 1;
+		else if (!strcmp(a, "--name-only"))
+			format = GIT_DIFF_FORMAT_NAME_ONLY;
 		else if (!strcmp(a, "--name-status"))
-			format = FORMAT_COMPACT;
+			format = GIT_DIFF_FORMAT_NAME_STATUS;
 		else if (!strcmp(a, "--raw"))
-			format = FORMAT_RAW;
+			format = GIT_DIFF_FORMAT_RAW;
 		else if (!strcmp(a, "--color"))
 			color = 0;
 		else if (!strcmp(a, "--no-color"))
@@ -238,17 +235,7 @@ int main(int argc, char *argv[])
 	if (color >= 0)
 		fputs(colors[0], stdout);
 
-	switch (format) {
-	case FORMAT_PATCH:
-		check(git_diff_print_patch(diff, printer, &color), "Displaying diff");
-		break;
-	case FORMAT_COMPACT:
-		check(git_diff_print_compact(diff, printer, &color), "Displaying diff");
-		break;
-	case FORMAT_RAW:
-		check(git_diff_print_raw(diff, printer, &color), "Displaying diff");
-		break;
-	}
+	check(git_diff_print(diff, format, printer, &color), "Displaying diff");
 
 	if (color >= 0)
 		fputs(colors[0], stdout);

@@ -90,6 +90,9 @@ void test_diff_tree__0(void)
 	git_tree_free(c);
 }
 
+#define DIFF_OPTS(FLAGS, CTXT) \
+	{GIT_DIFF_OPTIONS_VERSION, (FLAGS), 0, {NULL,0}, NULL, NULL, (CTXT), 1}
+
 void test_diff_tree__options(void)
 {
 	/* grabbed a couple of commit oids from the history of the attr repo */
@@ -102,16 +105,16 @@ void test_diff_tree__options(void)
 	int test_ab_or_cd[] = { 0, 0, 0, 0, 1, 1, 1, 1, 1 };
 	git_diff_options test_options[] = {
 		/* a vs b tests */
-		{ 1, GIT_DIFF_NORMAL, 1, 1, NULL, NULL, {0} },
-		{ 1, GIT_DIFF_NORMAL, 3, 1, NULL, NULL, {0} },
-		{ 1, GIT_DIFF_REVERSE, 2, 1, NULL, NULL, {0} },
-		{ 1, GIT_DIFF_FORCE_TEXT, 2, 1, NULL, NULL, {0} },
+		DIFF_OPTS(GIT_DIFF_NORMAL, 1),
+		DIFF_OPTS(GIT_DIFF_NORMAL, 3),
+		DIFF_OPTS(GIT_DIFF_REVERSE, 2),
+		DIFF_OPTS(GIT_DIFF_FORCE_TEXT, 2),
 		/* c vs d tests */
-		{ 1, GIT_DIFF_NORMAL, 3, 1, NULL, NULL, {0} },
-		{ 1, GIT_DIFF_IGNORE_WHITESPACE, 3, 1, NULL, NULL, {0} },
-		{ 1, GIT_DIFF_IGNORE_WHITESPACE_CHANGE, 3, 1, NULL, NULL, {0} },
-		{ 1, GIT_DIFF_IGNORE_WHITESPACE_EOL, 3, 1, NULL, NULL, {0} },
-		{ 1, GIT_DIFF_IGNORE_WHITESPACE | GIT_DIFF_REVERSE, 1, 1, NULL, NULL, {0} },
+		DIFF_OPTS(GIT_DIFF_NORMAL, 3),
+		DIFF_OPTS(GIT_DIFF_IGNORE_WHITESPACE, 3),
+		DIFF_OPTS(GIT_DIFF_IGNORE_WHITESPACE_CHANGE, 3),
+		DIFF_OPTS(GIT_DIFF_IGNORE_WHITESPACE_EOL, 3),
+		DIFF_OPTS(GIT_DIFF_IGNORE_WHITESPACE | GIT_DIFF_REVERSE, 1),
 	};
 
 	/* to generate these values:
@@ -255,7 +258,6 @@ void test_diff_tree__larger_hunks(void)
 	const char *a_commit = "d70d245ed97ed2aa596dd1af6536e4bfdb047b69";
 	const char *b_commit = "7a9e0b02e63179929fed24f0a3e0f19168114d10";
 	size_t d, num_d, h, num_h, l, num_l, header_len, line_len;
-	const git_diff_delta *delta;
 	git_patch *patch;
 	const git_diff_hunk *range;
 	const char *header, *line;
@@ -273,8 +275,8 @@ void test_diff_tree__larger_hunks(void)
 
 	num_d = git_diff_num_deltas(diff);
 	for (d = 0; d < num_d; ++d) {
-		cl_git_pass(git_patch_from_diff(&patch, &delta, diff, d));
-		cl_assert(patch && delta);
+		cl_git_pass(git_patch_from_diff(&patch, diff, d));
+		cl_assert(patch);
 
 		num_h = git_patch_num_hunks(patch);
 		for (h = 0; h < num_h; h++) {
@@ -297,7 +299,7 @@ void test_diff_tree__larger_hunks(void)
 		git_patch_free(patch);
 	}
 
-	cl_git_fail(git_patch_from_diff(&patch, &delta, diff, num_d));
+	cl_git_fail(git_patch_from_diff(&patch, diff, num_d));
 
 	cl_assert_equal_i(2, (int)num_d);
 }

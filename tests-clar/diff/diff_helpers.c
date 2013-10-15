@@ -162,8 +162,8 @@ int diff_foreach_via_iterator(
 		const git_diff_delta *delta;
 		size_t h, num_h;
 
-		cl_git_pass(git_patch_from_diff(&patch, &delta, diff, d));
-		cl_assert(delta);
+		cl_git_pass(git_patch_from_diff(&patch, diff, d));
+		cl_assert((delta = git_patch_get_delta(patch)) != NULL);
 
 		/* call file_cb for this file */
 		if (file_cb != NULL && file_cb(delta, (float)d / num_d, data) != 0) {
@@ -245,10 +245,12 @@ static int diff_print_cb(
 
 void diff_print(FILE *fp, git_diff *diff)
 {
-	cl_git_pass(git_diff_print_patch(diff, diff_print_cb, fp ? fp : stderr));
+	cl_git_pass(git_diff_print(
+		diff, GIT_DIFF_FORMAT_PATCH, diff_print_cb, fp ? fp : stderr));
 }
 
 void diff_print_raw(FILE *fp, git_diff *diff)
 {
-	cl_git_pass(git_diff_print_raw(diff, diff_print_cb, fp ? fp : stderr));
+	cl_git_pass(git_diff_print(
+		diff, GIT_DIFF_FORMAT_RAW, diff_print_cb, fp ? fp : stderr));
 }

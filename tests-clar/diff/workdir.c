@@ -707,7 +707,7 @@ void test_diff_workdir__larger_hunks(void)
 		cl_assert_equal_i(2, (int)num_d);
 
 		for (d = 0; d < num_d; ++d) {
-			cl_git_pass(git_patch_from_diff(&patch, NULL, diff, d));
+			cl_git_pass(git_patch_from_diff(&patch, diff, d));
 			cl_assert(patch);
 
 			num_h = git_patch_num_hunks(patch);
@@ -769,7 +769,7 @@ void test_diff_workdir__submodules(void)
 		GIT_DIFF_INCLUDE_UNTRACKED |
 		GIT_DIFF_INCLUDE_IGNORED |
 		GIT_DIFF_RECURSE_UNTRACKED_DIRS |
-		GIT_DIFF_INCLUDE_UNTRACKED_CONTENT;
+		GIT_DIFF_SHOW_UNTRACKED_CONTENT;
 
 	cl_git_pass(git_diff_tree_to_workdir(&diff, g_repo, a, &opts));
 
@@ -912,7 +912,7 @@ void test_diff_workdir__can_diff_empty_file(void)
 	cl_git_pass(git_diff_tree_to_workdir(&diff, g_repo, tree, &opts));
 	cl_assert_equal_i(3, (int)git_diff_num_deltas(diff));
 	/* diffs are: .gitattributes, README.txt, sub/sub/.gitattributes */
-	cl_git_pass(git_patch_from_diff(&patch, NULL, diff, 1));
+	cl_git_pass(git_patch_from_diff(&patch, diff, 1));
 	git_patch_free(patch);
 	git_diff_free(diff);
 
@@ -923,7 +923,7 @@ void test_diff_workdir__can_diff_empty_file(void)
 
 	cl_git_pass(git_diff_tree_to_workdir(&diff, g_repo, tree, &opts));
 	cl_assert_equal_i(3, (int)git_diff_num_deltas(diff));
-	cl_git_pass(git_patch_from_diff(&patch, NULL, diff, 1));
+	cl_git_pass(git_patch_from_diff(&patch, diff, 1));
 	git_patch_free(patch);
 	git_diff_free(diff);
 
@@ -1170,7 +1170,7 @@ void test_diff_workdir__untracked_directory_scenarios(void)
 
 	/* quick version avoids directory scan */
 
-	opts.flags = opts.flags | GIT_DIFF_FAST_UNTRACKED_DIRS;
+	opts.flags = opts.flags | GIT_DIFF_ENABLE_FAST_UNTRACKED_DIRS;
 
 	memset(&exp, 0, sizeof(exp));
 	exp.names = files1;
@@ -1190,7 +1190,7 @@ void test_diff_workdir__untracked_directory_scenarios(void)
 
 	/* directory with nested non-ignored content */
 
-	opts.flags = opts.flags & ~GIT_DIFF_FAST_UNTRACKED_DIRS;
+	opts.flags = opts.flags & ~GIT_DIFF_ENABLE_FAST_UNTRACKED_DIRS;
 
 	cl_git_mkfile("status/subdir/directory/more/notignored",
 		"not ignored deep under untracked\n");
@@ -1271,14 +1271,17 @@ void test_diff_workdir__untracked_with_bom(void)
 		"\xFF\xFE\x31\x00\x32\x00\x33\x00\x34\x00", 10, O_WRONLY|O_CREAT, 0664);
 
 	opts.flags =
-		GIT_DIFF_INCLUDE_UNTRACKED | GIT_DIFF_INCLUDE_UNTRACKED_CONTENT;
+		GIT_DIFF_INCLUDE_UNTRACKED | GIT_DIFF_SHOW_UNTRACKED_CONTENT;
 
 	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, NULL, &opts));
 
 	cl_assert_equal_i(1, git_diff_num_deltas(diff));
-	cl_git_pass(git_patch_from_diff(NULL, &delta, diff, 0));
+	cl_assert((delta = git_diff_get_delta(diff, 0)) != NULL);
 	cl_assert_equal_i(GIT_DELTA_UNTRACKED, delta->status);
-	cl_assert((delta->flags & GIT_DIFF_FLAG_BINARY) != 0);
+
+	/* not known at this point
+	 * cl_assert((delta->flags & GIT_DIFF_FLAG_BINARY) != 0);
+	 */
 
 	git_diff_free(diff);
 }

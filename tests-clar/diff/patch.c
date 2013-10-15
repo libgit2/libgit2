@@ -95,7 +95,8 @@ void test_diff_patch__can_properly_display_the_removal_of_a_file(void)
 
 	cl_git_pass(git_diff_tree_to_tree(&diff, g_repo, one, another, NULL));
 
-	cl_git_pass(git_diff_print_patch(diff, check_removal_cb, NULL));
+	cl_git_pass(git_diff_print(
+		diff, GIT_DIFF_FORMAT_PATCH, check_removal_cb, NULL));
 
 	git_diff_free(diff);
 
@@ -122,7 +123,7 @@ void test_diff_patch__to_string(void)
 
 	cl_assert_equal_i(1, (int)git_diff_num_deltas(diff));
 
-	cl_git_pass(git_patch_from_diff(&patch, NULL, diff, 0));
+	cl_git_pass(git_patch_from_diff(&patch, diff, 0));
 
 	cl_git_pass(git_patch_to_str(&text, patch));
 
@@ -167,7 +168,7 @@ void test_diff_patch__config_options(void)
 	cl_git_pass(git_diff_tree_to_index(&diff, g_repo, one, NULL, &opts));
 
 	cl_assert_equal_i(1, (int)git_diff_num_deltas(diff));
-	cl_git_pass(git_patch_from_diff(&patch, NULL, diff, 0));
+	cl_git_pass(git_patch_from_diff(&patch, diff, 0));
 	cl_git_pass(git_patch_to_str(&text, patch));
 	cl_assert_equal_s(expected1, text);
 
@@ -178,7 +179,7 @@ void test_diff_patch__config_options(void)
 	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, NULL, &opts));
 
 	cl_assert_equal_i(1, (int)git_diff_num_deltas(diff));
-	cl_git_pass(git_patch_from_diff(&patch, NULL, diff, 0));
+	cl_git_pass(git_patch_from_diff(&patch, diff, 0));
 	cl_git_pass(git_patch_to_str(&text, patch));
 	cl_assert_equal_s(expected2, text);
 
@@ -192,7 +193,7 @@ void test_diff_patch__config_options(void)
 	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, NULL, &opts));
 
 	cl_assert_equal_i(1, (int)git_diff_num_deltas(diff));
-	cl_git_pass(git_patch_from_diff(&patch, NULL, diff, 0));
+	cl_git_pass(git_patch_from_diff(&patch, diff, 0));
 	cl_git_pass(git_patch_to_str(&text, patch));
 	cl_assert_equal_s(expected3, text);
 
@@ -206,7 +207,7 @@ void test_diff_patch__config_options(void)
 	cl_git_pass(git_diff_tree_to_index(&diff, g_repo, one, NULL, &opts));
 
 	cl_assert_equal_i(1, (int)git_diff_num_deltas(diff));
-	cl_git_pass(git_patch_from_diff(&patch, NULL, diff, 0));
+	cl_git_pass(git_patch_from_diff(&patch, diff, 0));
 	cl_git_pass(git_patch_to_str(&text, patch));
 	cl_assert_equal_s(expected4, text);
 
@@ -253,7 +254,8 @@ void test_diff_patch__hunks_have_correct_line_numbers(void)
 
 	cl_assert_equal_i(1, (int)git_diff_num_deltas(diff));
 
-	cl_git_pass(git_patch_from_diff(&patch, &delta, diff, 0));
+	cl_git_pass(git_patch_from_diff(&patch, diff, 0));
+	cl_assert((delta = git_patch_get_delta(patch)) != NULL);
 
 	cl_assert_equal_i(GIT_DELTA_MODIFIED, (int)delta->status);
 	cl_assert_equal_i(2, (int)git_patch_num_hunks(patch));
@@ -346,7 +348,8 @@ void test_diff_patch__hunks_have_correct_line_numbers(void)
 
 	cl_assert_equal_i(1, (int)git_diff_num_deltas(diff));
 
-	cl_git_pass(git_patch_from_diff(&patch, &delta, diff, 0));
+	cl_git_pass(git_patch_from_diff(&patch, diff, 0));
+	cl_assert((delta = git_patch_get_delta(patch)) != NULL);
 
 	cl_assert_equal_i(GIT_DELTA_MODIFIED, (int)delta->status);
 	cl_assert_equal_i(1, (int)git_patch_num_hunks(patch));
@@ -427,7 +430,8 @@ static void check_single_patch_stats(
 
 	cl_assert_equal_i(1, (int)git_diff_num_deltas(diff));
 
-	cl_git_pass(git_patch_from_diff(&patch, &delta, diff, 0));
+	cl_git_pass(git_patch_from_diff(&patch, diff, 0));
+	cl_assert((delta = git_patch_get_delta(patch)) != NULL);
 	cl_assert_equal_i(GIT_DELTA_MODIFIED, (int)delta->status);
 
 	cl_assert_equal_i((int)hunks, (int)git_patch_num_hunks(patch));

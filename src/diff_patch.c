@@ -17,7 +17,9 @@ typedef struct diff_patch_line diff_patch_line;
 struct diff_patch_line {
 	const char *ptr;
 	size_t len;
-	size_t lines, oldno, newno;
+	size_t lines;
+	size_t oldno;
+	size_t newno;
 	char origin;
 };
 
@@ -109,9 +111,7 @@ static int diff_patch_init_from_diff(
 }
 
 static int diff_patch_alloc_from_diff(
-	git_patch **out,
-	git_diff *diff,
-	size_t delta_index)
+	git_patch **out, git_diff *diff, size_t delta_index)
 {
 	int error;
 	git_patch *patch = git__calloc(1, sizeof(git_patch));
@@ -605,10 +605,7 @@ int git_patch_from_blob_and_buffer(
 }
 
 int git_patch_from_diff(
-	git_patch **patch_ptr,
-	const git_diff_delta **delta_ptr,
-	git_diff *diff,
-	size_t idx)
+	git_patch **patch_ptr, git_diff *diff, size_t idx)
 {
 	int error = 0;
 	git_xdiff_output xo;
@@ -616,7 +613,6 @@ int git_patch_from_diff(
 	git_patch *patch = NULL;
 
 	if (patch_ptr) *patch_ptr = NULL;
-	if (delta_ptr) *delta_ptr = NULL;
 
 	if (diff_required(diff, "git_patch_from_diff") < 0)
 		return -1;
@@ -626,9 +622,6 @@ int git_patch_from_diff(
 		giterr_set(GITERR_INVALID, "Index out of range for delta in diff");
 		return GIT_ENOTFOUND;
 	}
-
-	if (delta_ptr)
-		*delta_ptr = delta;
 
 	if (git_diff_delta__should_skip(&diff->opts, delta))
 		return 0;
@@ -671,7 +664,7 @@ void git_patch_free(git_patch *patch)
 		GIT_REFCOUNT_DEC(patch, diff_patch_free);
 }
 
-const git_diff_delta *git_patch_delta(git_patch *patch)
+const git_diff_delta *git_patch_get_delta(git_patch *patch)
 {
 	assert(patch);
 	return patch->delta;

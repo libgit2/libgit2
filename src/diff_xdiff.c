@@ -59,7 +59,7 @@ static int git_xdiff_cb(void *priv, mmbuffer_t *bufs, int len)
 {
 	git_xdiff_info *info = priv;
 	git_patch *patch = info->patch;
-	const git_diff_delta *delta = git_patch_delta(patch);
+	const git_diff_delta *delta = git_patch_get_delta(patch);
 	git_diff_output *output = &info->xo->output;
 
 	if (len == 1) {
@@ -145,7 +145,7 @@ static int git_xdiff(git_diff_output *output, git_patch *patch)
 
 void git_xdiff_init(git_xdiff_output *xo, const git_diff_options *opts)
 {
-	uint32_t flags = opts ? opts->flags : GIT_DIFF_NORMAL;
+	uint32_t flags = opts ? opts->flags : 0;
 
 	xo->output.diff_cb = git_xdiff;
 

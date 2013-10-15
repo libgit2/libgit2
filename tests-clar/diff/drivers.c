@@ -44,7 +44,7 @@ void test_diff_drivers__patterns(void)
 	cl_git_pass(git_diff_tree_to_workdir(&diff, g_repo, one, NULL));
 	cl_assert_equal_i(1, (int)git_diff_num_deltas(diff));
 
-	cl_git_pass(git_patch_from_diff(&patch, NULL, diff, 0));
+	cl_git_pass(git_patch_from_diff(&patch, diff, 0));
 	cl_git_pass(git_patch_to_str(&text, patch));
 	cl_assert_equal_s(expected0, text);
 
@@ -59,7 +59,7 @@ void test_diff_drivers__patterns(void)
 	cl_git_pass(git_diff_tree_to_workdir(&diff, g_repo, one, NULL));
 	cl_assert_equal_i(1, (int)git_diff_num_deltas(diff));
 
-	cl_git_pass(git_patch_from_diff(&patch, NULL, diff, 0));
+	cl_git_pass(git_patch_from_diff(&patch, diff, 0));
 	cl_git_pass(git_patch_to_str(&text, patch));
 	cl_assert_equal_s(expected1, text);
 
@@ -74,7 +74,7 @@ void test_diff_drivers__patterns(void)
 	cl_git_pass(git_diff_tree_to_workdir(&diff, g_repo, one, NULL));
 	cl_assert_equal_i(1, (int)git_diff_num_deltas(diff));
 
-	cl_git_pass(git_patch_from_diff(&patch, NULL, diff, 0));
+	cl_git_pass(git_patch_from_diff(&patch, diff, 0));
 	cl_git_pass(git_patch_to_str(&text, patch));
 	cl_assert_equal_s(expected0, text);
 
@@ -91,7 +91,7 @@ void test_diff_drivers__patterns(void)
 	cl_git_pass(git_diff_tree_to_workdir(&diff, g_repo, one, NULL));
 	cl_assert_equal_i(1, (int)git_diff_num_deltas(diff));
 
-	cl_git_pass(git_patch_from_diff(&patch, NULL, diff, 0));
+	cl_git_pass(git_patch_from_diff(&patch, diff, 0));
 	cl_git_pass(git_patch_to_str(&text, patch));
 	cl_assert_equal_s(expected1, text);
 
@@ -112,7 +112,7 @@ void test_diff_drivers__patterns(void)
 	cl_git_pass(git_diff_tree_to_workdir(&diff, g_repo, one, NULL));
 	cl_assert_equal_i(1, (int)git_diff_num_deltas(diff));
 
-	cl_git_pass(git_patch_from_diff(&patch, NULL, diff, 0));
+	cl_git_pass(git_patch_from_diff(&patch, diff, 0));
 	cl_git_pass(git_patch_to_str(&text, patch));
 	cl_assert_equal_s(expected2, text);
 
@@ -144,7 +144,7 @@ void test_diff_drivers__long_lines(void)
 
 	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, NULL, NULL));
 	cl_assert_equal_sz(1, git_diff_num_deltas(diff));
-	cl_git_pass(git_patch_from_diff(&patch, NULL, diff, 0));
+	cl_git_pass(git_patch_from_diff(&patch, diff, 0));
 	cl_git_pass(git_patch_to_str(&actual, patch));
 
 	/* if chmod not supported, overwrite mode bits since anything is possible */

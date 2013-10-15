@@ -117,15 +117,15 @@ int git_diff_merge(
 		git_pool_init(&onto_pool, 1, 0) < 0)
 		return -1;
 
-	if ((onto->opts.flags & GIT_DIFF_DELTAS_ARE_ICASE) != 0 ||
-		(from->opts.flags & GIT_DIFF_DELTAS_ARE_ICASE) != 0)
+	if ((onto->opts.flags & GIT_DIFF_IGNORE_CASE) != 0 ||
+		(from->opts.flags & GIT_DIFF_IGNORE_CASE) != 0)
 	{
 		ignore_case = true;
 
 		/* This function currently only supports merging diff lists that
 		 * are sorted identically. */
-		assert((onto->opts.flags & GIT_DIFF_DELTAS_ARE_ICASE) != 0 &&
-				(from->opts.flags & GIT_DIFF_DELTAS_ARE_ICASE) != 0);
+		assert((onto->opts.flags & GIT_DIFF_IGNORE_CASE) != 0 &&
+				(from->opts.flags & GIT_DIFF_IGNORE_CASE) != 0);
 	}
 
 	for (i = 0, j = 0; i < onto->deltas.length || j < from->deltas.length; ) {
@@ -232,7 +232,7 @@ int git_diff_find_similar__calc_similarity(
 static int normalize_find_opts(
 	git_diff *diff,
 	git_diff_find_options *opts,
-	git_diff_find_options *given)
+	const git_diff_find_options *given)
 {
 	git_config *cfg = NULL;
 
@@ -760,7 +760,7 @@ typedef struct {
 
 int git_diff_find_similar(
 	git_diff *diff,
-	git_diff_find_options *given_opts)
+	const git_diff_find_options *given_opts)
 {
 	size_t s, t;
 	int error = 0, similarity;

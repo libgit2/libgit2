@@ -388,7 +388,7 @@ int main(int argc, char *argv[])
 			check(git_diff_tree_to_tree(
 				&diff, git_commit_owner(commit), a, b, &diffopts),
 				"Diff commit with parent", NULL);
-			check(git_diff_print_patch(diff, print_diff, NULL),
+			check(git_diff_print(diff, GIT_DIFF_FORMAT_PATCH, print_diff, NULL),
 				"Displaying diff", NULL);
 
 			git_diff_free(diff);

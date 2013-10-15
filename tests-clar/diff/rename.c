@@ -584,7 +584,8 @@ void test_diff_rename__patch(void)
 
 	cl_assert_equal_i(4, (int)git_diff_num_deltas(diff));
 
-	cl_git_pass(git_patch_from_diff(&patch, &delta, diff, 0));
+	cl_git_pass(git_patch_from_diff(&patch, diff, 0));
+	cl_assert((delta = git_patch_get_delta(patch)) != NULL);
 	cl_assert_equal_i(GIT_DELTA_COPIED, (int)delta->status);
 
 	cl_git_pass(git_patch_to_str(&text, patch));
@@ -593,13 +594,13 @@ void test_diff_rename__patch(void)
 
 	git_patch_free(patch);
 
-	cl_git_pass(git_patch_from_diff(NULL, &delta, diff, 1));
+	cl_assert((delta = git_diff_get_delta(diff, 1)) != NULL);
 	cl_assert_equal_i(GIT_DELTA_UNMODIFIED, (int)delta->status);
 
-	cl_git_pass(git_patch_from_diff(NULL, &delta, diff, 2));
+	cl_assert((delta = git_diff_get_delta(diff, 2)) != NULL);
 	cl_assert_equal_i(GIT_DELTA_MODIFIED, (int)delta->status);
 
-	cl_git_pass(git_patch_from_diff(NULL, &delta, diff, 3));
+	cl_assert((delta = git_diff_get_delta(diff, 3)) != NULL);
 	cl_assert_equal_i(GIT_DELTA_MODIFIED, (int)delta->status);
 
 	git_diff_free(diff);

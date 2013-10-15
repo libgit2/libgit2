@@ -47,17 +47,13 @@ typedef struct git_patch git_patch;
  * It is okay to pass NULL for either of the output parameters; if you pass
  * NULL for the `git_patch`, then the text diff will not be calculated.
  *
- * @param patch_out Output parameter for the delta patch object
- * @param delta_out Output parameter for the delta object
+ * @param out Output parameter for the delta patch object
  * @param diff Diff list object
  * @param idx Index into diff list
  * @return 0 on success, other value < 0 on error
  */
 GIT_EXTERN(int) git_patch_from_diff(
-	git_patch **patch_out,
-	const git_diff_delta **delta_out,
-	git_diff *diff,
-	size_t idx);
+	git_patch **out, git_diff *diff, size_t idx);
 
 /**
  * Directly generate a patch from the difference between two blobs.
@@ -112,20 +108,17 @@ GIT_EXTERN(int) git_patch_from_blob_and_buffer(
 /**
  * Free a git_patch object.
  */
-GIT_EXTERN(void) git_patch_free(
-	git_patch *patch);
+GIT_EXTERN(void) git_patch_free(git_patch *patch);
 
 /**
  * Get the delta associated with a patch
  */
-GIT_EXTERN(const git_diff_delta *) git_patch_delta(
-	git_patch *patch);
+GIT_EXTERN(const git_diff_delta *) git_patch_get_delta(git_patch *patch);
 
 /**
  * Get the number of hunks in a patch
  */
-GIT_EXTERN(size_t) git_patch_num_hunks(
-	git_patch *patch);
+GIT_EXTERN(size_t) git_patch_num_hunks(git_patch *patch);
 
 /**
  * Get line counts of each type in a patch.

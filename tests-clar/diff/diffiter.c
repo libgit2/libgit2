@@ -20,9 +20,11 @@ void test_diff_diffiter__create(void)
 
 	num_d = git_diff_num_deltas(diff);
 	for (d = 0; d < num_d; ++d) {
-		const git_diff_delta *delta;
-		cl_git_pass(git_patch_from_diff(NULL, &delta, diff, d));
+		const git_diff_delta *delta = git_diff_get_delta(diff, d);
+		cl_assert(delta != NULL);
 	}
+
+	cl_assert(!git_diff_get_delta(diff, num_d));
 
 	git_diff_free(diff);
 }
@@ -39,8 +41,7 @@ void test_diff_diffiter__iterate_files_1(void)
 	num_d = git_diff_num_deltas(diff);
 
 	for (d = 0; d < num_d; ++d) {
-		const git_diff_delta *delta;
-		cl_git_pass(git_patch_from_diff(NULL, &delta, diff, d));
+		const git_diff_delta *delta = git_diff_get_delta(diff, d);
 		cl_assert(delta != NULL);
 
 		diff_file_cb(delta, (float)d / (float)num_d, &exp);
@@ -63,8 +64,7 @@ void test_diff_diffiter__iterate_files_2(void)
 	cl_assert_equal_i(8, (int)num_d);
 
 	for (d = 0; d < num_d; ++d) {
-		const git_diff_delta *delta;
-		cl_git_pass(git_patch_from_diff(NULL, &delta, diff, d));
+		const git_diff_delta *delta = git_diff_get_delta(diff, d);
 		cl_assert(delta != NULL);
 		count++;
 	}
@@ -91,12 +91,9 @@ void test_diff_diffiter__iterate_files_and_hunks(void)
 
 	for (d = 0; d < num_d; ++d) {
 		git_patch *patch;
-		const git_diff_delta *delta;
 		size_t h, num_h;
 
-		cl_git_pass(git_patch_from_diff(&patch, &delta, diff, d));
-
-		cl_assert(delta);
+		cl_git_pass(git_patch_from_diff(&patch, diff, d));
 		cl_assert(patch);
 
 		file_count++;
@@ -145,9 +142,10 @@ void test_diff_diffiter__max_size_threshold(void)
 		git_patch *patch;
 		const git_diff_delta *delta;
 
-		cl_git_pass(git_patch_from_diff(&patch, &delta, diff, d));
-		cl_assert(delta);
+		cl_git_pass(git_patch_from_diff(&patch, diff, d));
 		cl_assert(patch);
+		delta = git_patch_get_delta(patch);
+		cl_assert(delta);
 
 		file_count++;
 		hunk_count += (int)git_patch_num_hunks(patch);
@@ -180,7 +178,8 @@ void test_diff_diffiter__max_size_threshold(void)
 		git_patch *patch;
 		const git_diff_delta *delta;
 
-		cl_git_pass(git_patch_from_diff(&patch, &delta, diff, d));
+		cl_git_pass(git_patch_from_diff(&patch, diff, d));
+		delta = git_patch_get_delta(patch);
 
 		file_count++;
 		hunk_count += (int)git_patch_num_hunks(patch);
@@ -221,11 +220,10 @@ void test_diff_diffiter__iterate_all(void)
 	num_d = git_diff_num_deltas(diff);
 	for (d = 0; d < num_d; ++d) {
 		git_patch *patch;
-		const git_diff_delta *delta;
 		size_t h, num_h;
 
-		cl_git_pass(git_patch_from_diff(&patch, &delta, diff, d));
-		cl_assert(patch && delta);
+		cl_git_pass(git_patch_from_diff(&patch, diff, d));
+		cl_assert(patch);
 		exp.files++;
 
 		num_h = git_patch_num_hunks(patch);
@@ -312,7 +310,7 @@ void test_diff_diffiter__iterate_randomly_while_saving_state(void)
 		patches[p] = NULL;
 
 		/* cache new patch */
-		cl_git_pass(git_patch_from_diff(&patches[p], NULL, diff, d));
+		cl_git_pass(git_patch_from_diff(&patches[p], diff, d));
 		cl_assert(patches[p] != NULL);
 
 		/* process old patch if non-NULL */
@@ -428,7 +426,7 @@ void test_diff_diffiter__iterate_and_generate_patch_text(void)
 		git_patch *patch;
 		char *text;
 
-		cl_git_pass(git_patch_from_diff(&patch, NULL, diff, d));
+		cl_git_pass(git_patch_from_diff(&patch, diff, d));
 		cl_assert(patch != NULL);
 
 		cl_git_pass(git_patch_to_str(&text, patch));

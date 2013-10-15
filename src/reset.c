@@ -26,8 +26,7 @@ int git_reset_default(
 	git_tree *tree = NULL;
 	git_diff *diff = NULL;
 	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
-	size_t i;
-	git_diff_delta *delta;
+	size_t i, max_i;
 	git_index_entry entry;
 	int error;
 	git_index *index = NULL;
@@ -58,7 +57,9 @@ int git_reset_default(
 		&diff, repo, tree, index, &opts)) < 0)
 			goto cleanup;
 
-	git_vector_foreach(&diff->deltas, i, delta) {
+	for (i = 0, max_i = git_diff_num_deltas(diff); i < max_i; ++i) {
+		const git_diff_delta *delta = git_diff_get_delta(diff, i);
+
 		if ((error = git_index_conflict_remove(index, delta->old_file.path)) < 0)
 			goto cleanup;
 
