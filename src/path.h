@@ -358,6 +358,34 @@ extern int git_path_dirload_with_stat(
 	const char *end_stat,
 	git_vector *contents);
 
+enum { GIT_PATH_NOTEQUAL = 0, GIT_PATH_EQUAL = 1, GIT_PATH_PREFIX = 2 };
+
+/*
+ * Determines if a path is equal to or potentially a child of another.
+ * @param parent The possible parent
+ * @param child The possible child
+ */
+GIT_INLINE(int) git_path_equal_or_prefixed(
+	const char *parent,
+	const char *child)
+{
+	const char *p = parent, *c = child;
+
+	while (*p && *c) {
+		if (*p++ != *c++)
+			return GIT_PATH_NOTEQUAL;
+	}
+
+	if (*p != '\0')
+		return GIT_PATH_NOTEQUAL;
+	if (*c == '\0')
+		return GIT_PATH_EQUAL;
+	if (*c == '/')
+		return GIT_PATH_PREFIX;
+
+	return GIT_PATH_NOTEQUAL;
+}
+
 /* translate errno to libgit2 error code and set error message */
 extern int git_path_set_error(
 	int errno_value, const char *path, const char *action);
