@@ -696,3 +696,47 @@ void test_checkout_tree__extremely_long_file_name(void)
 	cl_git_pass(git_checkout_tree(g_repo, g_object, &g_opts));
 	cl_assert(!git_path_exists(path));
 }
+
+static void create_conflict(void)
+{
+	git_index *index;
+	git_index_entry entry;
+
+	cl_git_pass(git_repository_index(&index, g_repo));
+
+	memset(&entry, 0x0, sizeof(git_index_entry));
+	entry.mode = 0100644;
+	entry.flags = 1 << GIT_IDXENTRY_STAGESHIFT;
+	git_oid_fromstr(&entry.oid, "d427e0b2e138501a3d15cc376077a3631e15bd46");
+	entry.path = "conflicts.txt";
+	cl_git_pass(git_index_add(index, &entry));
+
+	entry.flags = 2 << GIT_IDXENTRY_STAGESHIFT;
+	git_oid_fromstr(&entry.oid, "ee3fa1b8c00aff7fe02065fdb50864bb0d932ccf");
+	cl_git_pass(git_index_add(index, &entry));
+
+	entry.flags = 3 << GIT_IDXENTRY_STAGESHIFT;
+	git_oid_fromstr(&entry.oid, "2bd0a343aeef7a2cf0d158478966a6e587ff3863");
+	cl_git_pass(git_index_add(index, &entry));
+
+	git_index_write(index);
+	git_index_free(index);
+}
+
+void test_checkout_tree__fails_when_conflicts_exist_in_index(void)
+{
+	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
+	git_oid oid;
+	git_object *obj = NULL;
+
+	opts.checkout_strategy = GIT_CHECKOUT_SAFE;
+
+	cl_git_pass(git_reference_name_to_id(&oid, g_repo, "HEAD"));
+	cl_git_pass(git_object_lookup(&obj, g_repo, &oid, GIT_OBJ_ANY));
+
+	create_conflict();
+
+	cl_git_fail(git_checkout_tree(g_repo, obj, &opts));
+
+	git_object_free(obj);
+}
