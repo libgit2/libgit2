@@ -17,6 +17,7 @@ typedef struct {
 	git_buf *buf;
 	uint32_t flags;
 	int oid_strlen;
+	git_diff_line line;
 } diff_print_info;
 
 static int diff_print_info_init(
@@ -50,6 +51,11 @@ static int diff_print_info_init(
 		pi->oid_strlen = 2;
 	else if (pi->oid_strlen > GIT_OID_HEXSZ + 1)
 		pi->oid_strlen = GIT_OID_HEXSZ + 1;
+
+	memset(&pi->line, 0, sizeof(pi->line));
+	pi->line.old_lineno = -1;
+	pi->line.new_lineno = -1;
+	pi->line.num_lines  = 1;
 
 	return 0;
 }
@@ -107,8 +113,11 @@ static int diff_print_one_name_only(
 		git_buf_putc(out, '\n'))
 		return -1;
 
-	if (pi->print_cb(delta, NULL, GIT_DIFF_LINE_FILE_HDR,
-			git_buf_cstr(out), git_buf_len(out), pi->payload))
+	pi->line.origin      = GIT_DIFF_LINE_FILE_HDR;
+	pi->line.content     = git_buf_cstr(out);
+	pi->line.content_len = git_buf_len(out);
+
+	if (pi->print_cb(delta, NULL, &pi->line, pi->payload))
 		return callback_error();
 
 	return 0;
@@ -149,8 +158,11 @@ static int diff_print_one_name_status(
 	if (git_buf_oom(out))
 		return -1;
 
-	if (pi->print_cb(delta, NULL, GIT_DIFF_LINE_FILE_HDR,
-			git_buf_cstr(out), git_buf_len(out), pi->payload))
+	pi->line.origin      = GIT_DIFF_LINE_FILE_HDR;
+	pi->line.content     = git_buf_cstr(out);
+	pi->line.content_len = git_buf_len(out);
+
+	if (pi->print_cb(delta, NULL, &pi->line, pi->payload))
 		return callback_error();
 
 	return 0;
@@ -192,8 +204,11 @@ static int diff_print_one_raw(
 	if (git_buf_oom(out))
 		return -1;
 
-	if (pi->print_cb(delta, NULL, GIT_DIFF_LINE_FILE_HDR,
-			git_buf_cstr(out), git_buf_len(out), pi->payload))
+	pi->line.origin      = GIT_DIFF_LINE_FILE_HDR;
+	pi->line.content     = git_buf_cstr(out);
+	pi->line.content_len = git_buf_len(out);
+
+	if (pi->print_cb(delta, NULL, &pi->line, pi->payload))
 		return callback_error();
 
 	return 0;
@@ -302,8 +317,11 @@ static int diff_print_patch_file(
 			pi->buf, delta, oldpfx, newpfx, pi->oid_strlen) < 0)
 		return -1;
 
-	if (pi->print_cb(delta, NULL, GIT_DIFF_LINE_FILE_HDR,
-			git_buf_cstr(pi->buf), git_buf_len(pi->buf), pi->payload))
+	pi->line.origin      = GIT_DIFF_LINE_FILE_HDR;
+	pi->line.content     = git_buf_cstr(pi->buf);
+	pi->line.content_len = git_buf_len(pi->buf);
+
+	if (pi->print_cb(delta, NULL, &pi->line, pi->payload))
 		return callback_error();
 
 	if ((delta->flags & GIT_DIFF_FLAG_BINARY) == 0)
@@ -316,8 +334,12 @@ static int diff_print_patch_file(
 			"Binary files %s%s and %s%s differ\n") < 0)
 		return -1;
 
-	if (pi->print_cb(delta, NULL, GIT_DIFF_LINE_BINARY,
-			git_buf_cstr(pi->buf), git_buf_len(pi->buf), pi->payload))
+	pi->line.origin      = GIT_DIFF_LINE_BINARY;
+	pi->line.content     = git_buf_cstr(pi->buf);
+	pi->line.content_len = git_buf_len(pi->buf);
+	pi->line.num_lines   = 1;
+
+	if (pi->print_cb(delta, NULL, &pi->line, pi->payload))
 		return callback_error();
 
 	return 0;
@@ -325,9 +347,7 @@ static int diff_print_patch_file(
 
 static int diff_print_patch_hunk(
 	const git_diff_delta *d,
-	const git_diff_hunk *r,
-	const char *header,
-	size_t header_len,
+	const git_diff_hunk *h,
 	void *data)
 {
 	diff_print_info *pi = data;
@@ -335,12 +355,11 @@ static int diff_print_patch_hunk(
 	if (S_ISDIR(d->new_file.mode))
 		return 0;
 
-	git_buf_clear(pi->buf);
-	if (git_buf_put(pi->buf, header, header_len) < 0)
-		return -1;
+	pi->line.origin      = GIT_DIFF_LINE_HUNK_HDR;
+	pi->line.content     = h->header;
+	pi->line.content_len = h->header_len;
 
-	if (pi->print_cb(d, r, GIT_DIFF_LINE_HUNK_HDR,
-			git_buf_cstr(pi->buf), git_buf_len(pi->buf), pi->payload))
+	if (pi->print_cb(d, h, &pi->line, pi->payload))
 		return callback_error();
 
 	return 0;
@@ -348,10 +367,8 @@ static int diff_print_patch_hunk(
 
 static int diff_print_patch_line(
 	const git_diff_delta *delta,
-	const git_diff_hunk *range,
-	char line_origin, /* GIT_DIFF_LINE value from above */
-	const char *content,
-	size_t content_len,
+	const git_diff_hunk *hunk,
+	const git_diff_line *line,
 	void *data)
 {
 	diff_print_info *pi = data;
@@ -359,21 +376,7 @@ static int diff_print_patch_line(
 	if (S_ISDIR(delta->new_file.mode))
 		return 0;
 
-	git_buf_clear(pi->buf);
-	git_buf_grow(pi->buf, content_len + 2);
-
-	if (line_origin == GIT_DIFF_LINE_ADDITION ||
-		line_origin == GIT_DIFF_LINE_DELETION ||
-		line_origin == GIT_DIFF_LINE_CONTEXT)
-		git_buf_putc(pi->buf, line_origin);
-
-	git_buf_put(pi->buf, content, content_len);
-
-	if (git_buf_oom(pi->buf))
-		return -1;
-
-	if (pi->print_cb(delta, range, line_origin,
-			git_buf_cstr(pi->buf), git_buf_len(pi->buf), pi->payload))
+	if (pi->print_cb(delta, hunk, line, pi->payload))
 		return callback_error();
 
 	return 0;
@@ -452,15 +455,19 @@ int git_patch_print(
 
 static int diff_print_to_buffer_cb(
 	const git_diff_delta *delta,
-	const git_diff_hunk *range,
-	char line_origin,
-	const char *content,
-	size_t content_len,
+	const git_diff_hunk *hunk,
+	const git_diff_line *line,
 	void *payload)
 {
 	git_buf *output = payload;
-	GIT_UNUSED(delta); GIT_UNUSED(range); GIT_UNUSED(line_origin);
-	return git_buf_put(output, content, content_len);
+	GIT_UNUSED(delta); GIT_UNUSED(hunk);
+
+	if (line->origin == GIT_DIFF_LINE_ADDITION ||
+		line->origin == GIT_DIFF_LINE_DELETION ||
+		line->origin == GIT_DIFF_LINE_CONTEXT)
+		git_buf_putc(output, line->origin);
+
+	return git_buf_put(output, line->content, line->content_len);
 }
 
 /* print a git_patch to a string buffer */

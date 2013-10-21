@@ -45,25 +45,23 @@ char *colors[] = {
 
 static int printer(
 	const git_diff_delta *delta,
-	const git_diff_hunk *range,
-	char usage,
-	const char *line,
-	size_t line_len,
+	const git_diff_hunk *hunk,
+	const git_diff_line *line,
 	void *data)
 {
 	int *last_color = data, color = 0;
 
-	(void)delta; (void)range; (void)line_len;
+	(void)delta; (void)hunk;
 
 	if (*last_color >= 0) {
-		switch (usage) {
-		case GIT_DIFF_LINE_ADDITION: color = 3; break;
-		case GIT_DIFF_LINE_DELETION: color = 2; break;
+		switch (line->origin) {
+		case GIT_DIFF_LINE_ADDITION:  color = 3; break;
+		case GIT_DIFF_LINE_DELETION:  color = 2; break;
 		case GIT_DIFF_LINE_ADD_EOFNL: color = 3; break;
 		case GIT_DIFF_LINE_DEL_EOFNL: color = 2; break;
-		case GIT_DIFF_LINE_FILE_HDR: color = 1; break;
-		case GIT_DIFF_LINE_HUNK_HDR: color = 4; break;
-		default: color = 0;
+		case GIT_DIFF_LINE_FILE_HDR:  color = 1; break;
+		case GIT_DIFF_LINE_HUNK_HDR:  color = 4; break;
+		default: break;
 		}
 		if (color != *last_color) {
 			if (*last_color == 1 || color == 1)
@@ -73,7 +71,13 @@ static int printer(
 		}
 	}
 
-	fputs(line, stdout);
+	if (line->origin == GIT_DIFF_LINE_CONTEXT ||
+		line->origin == GIT_DIFF_LINE_ADDITION ||
+		line->origin == GIT_DIFF_LINE_DELETION)
+		fputc(line->origin, stdout);
+
+	fwrite(line->content, 1, line->content_len, stdout);
+
 	return 0;
 }
 

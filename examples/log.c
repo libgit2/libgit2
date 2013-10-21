@@ -184,14 +184,18 @@ static void print_commit(git_commit *commit)
 
 static int print_diff(
 	const git_diff_delta *delta,
-	const git_diff_hunk *range,
-	char usage,
-	const char *line,
-	size_t line_len,
+	const git_diff_hunk *hunk,
+	const git_diff_line *line,
 	void *data)
 {
-	(void)delta; (void)range; (void)usage; (void)line_len; (void)data;
-	fputs(line, stdout);
+	(void)delta; (void)hunk; (void)data;
+
+	if (line->origin == GIT_DIFF_LINE_CONTEXT ||
+		line->origin == GIT_DIFF_LINE_ADDITION ||
+		line->origin == GIT_DIFF_LINE_DELETION)
+		fputc(line->origin, stdout);
+
+	fwrite(line->content, 1, line->content_len, stdout);
 	return 0;
 }
 

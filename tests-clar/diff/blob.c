@@ -319,8 +319,8 @@ void test_diff_blob__can_compare_against_null_blobs_with_patch(void)
 	git_blob *e = NULL;
 	git_patch *p;
 	const git_diff_delta *delta;
-	int line;
-	char origin;
+	const git_diff_line *line;
+	int l, max_l;
 
 	cl_git_pass(git_patch_from_blobs(&p, d, NULL, e, NULL, &opts));
 
@@ -337,10 +337,10 @@ void test_diff_blob__can_compare_against_null_blobs_with_patch(void)
 	cl_assert_equal_i(1, (int)git_patch_num_hunks(p));
 	cl_assert_equal_i(14, git_patch_num_lines_in_hunk(p, 0));
 
-	for (line = 0; line < git_patch_num_lines_in_hunk(p, 0); ++line) {
-		cl_git_pass(git_patch_get_line_in_hunk(
-			&origin, NULL, NULL, NULL, NULL, p, 0, line));
-		cl_assert_equal_i(GIT_DIFF_LINE_DELETION, (int)origin);
+	max_l = git_patch_num_lines_in_hunk(p, 0);
+	for (l = 0; l < max_l; ++l) {
+		cl_git_pass(git_patch_get_line_in_hunk(&line, p, 0, l));
+		cl_assert_equal_i(GIT_DIFF_LINE_DELETION, (int)line->origin);
 	}
 
 	git_patch_free(p);
@@ -362,10 +362,10 @@ void test_diff_blob__can_compare_against_null_blobs_with_patch(void)
 	cl_assert_equal_i(1, (int)git_patch_num_hunks(p));
 	cl_assert_equal_i(14, git_patch_num_lines_in_hunk(p, 0));
 
-	for (line = 0; line < git_patch_num_lines_in_hunk(p, 0); ++line) {
-		cl_git_pass(git_patch_get_line_in_hunk(
-			&origin, NULL, NULL, NULL, NULL, p, 0, line));
-		cl_assert_equal_i(GIT_DIFF_LINE_ADDITION, (int)origin);
+	max_l = git_patch_num_lines_in_hunk(p, 0);
+	for (l = 0; l < max_l; ++l) {
+		cl_git_pass(git_patch_get_line_in_hunk(&line, p, 0, l));
+		cl_assert_equal_i(GIT_DIFF_LINE_ADDITION, (int)line->origin);
 	}
 
 	git_patch_free(p);

@@ -150,9 +150,6 @@ GIT_EXTERN(int) git_patch_line_stats(
  * as NULL if you don't care about that particular piece of information.
  *
  * @param out Output pointer to git_diff_hunk of hunk
- * @param header Output pointer to header string for hunk.  Unlike the
- *               content pointer for each line, this will be NUL-terminated
- * @param header_len Output value of characters in header string
  * @param lines_in_hunk Output count of total lines in this hunk
  * @param patch Input pointer to patch object
  * @param hunk_idx Input index of hunk to get information about
@@ -160,8 +157,6 @@ GIT_EXTERN(int) git_patch_line_stats(
  */
 GIT_EXTERN(int) git_patch_get_hunk(
 	const git_diff_hunk **out,
-	const char **header,
-	size_t *header_len,
 	size_t *lines_in_hunk,
 	git_patch *patch,
 	size_t hunk_idx);
@@ -185,22 +180,14 @@ GIT_EXTERN(int) git_patch_num_lines_in_hunk(
  * index larger than the number of hunks or a line index larger than
  * the number of lines in the hunk, this will return -1.
  *
- * @param line_origin A GIT_DIFF_LINE constant from above
- * @param content Pointer to content of diff line, not NUL-terminated
- * @param content_len Number of characters in content
- * @param old_lineno Line number in old file or -1 if line is added
- * @param new_lineno Line number in new file or -1 if line is deleted
+ * @param out The git_diff_line data for this line
  * @param patch The patch to look in
  * @param hunk_idx The index of the hunk
  * @param line_of_hunk The index of the line in the hunk
  * @return 0 on success, <0 on failure
  */
 GIT_EXTERN(int) git_patch_get_line_in_hunk(
-	char *line_origin,
-	const char **content,
-	size_t *content_len,
-	int *old_lineno,
-	int *new_lineno,
+	const git_diff_line **out,
 	git_patch *patch,
 	size_t hunk_idx,
 	size_t line_of_hunk);

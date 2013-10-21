@@ -673,7 +673,7 @@ void test_diff_workdir__larger_hunks(void)
 	const char *b_commit = "7a9e0b02e63179929fed24f0a3e0f19168114d10";
 	git_tree *a, *b;
 	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
-	size_t i, d, num_d, h, num_h, l, num_l, header_len, line_len;
+	size_t i, d, num_d, h, num_h, l, num_l;
 
 	g_repo = cl_git_sandbox_init("diff");
 
@@ -686,9 +686,8 @@ void test_diff_workdir__larger_hunks(void)
 	for (i = 0; i <= 2; ++i) {
 		git_diff *diff = NULL;
 		git_patch *patch;
-		const git_diff_hunk *range;
-		const char *header, *line;
-		char origin;
+		const git_diff_hunk *hunk;
+		const git_diff_line *line;
 
 		/* okay, this is a bit silly, but oh well */
 		switch (i) {
@@ -712,23 +711,21 @@ void test_diff_workdir__larger_hunks(void)
 
 			num_h = git_patch_num_hunks(patch);
 			for (h = 0; h < num_h; h++) {
-				cl_git_pass(git_patch_get_hunk(
-					&range, &header, &header_len, &num_l, patch, h));
+				cl_git_pass(git_patch_get_hunk(&hunk, &num_l, patch, h));
 
 				for (l = 0; l < num_l; ++l) {
-					cl_git_pass(git_patch_get_line_in_hunk(
-						&origin, &line, &line_len, NULL, NULL, patch, h, l));
+					cl_git_pass(
+						git_patch_get_line_in_hunk(&line, patch, h, l));
 					cl_assert(line);
 				}
 
 				/* confirm fail after the last item */
-				cl_git_fail(git_patch_get_line_in_hunk(
-					&origin, &line, &line_len, NULL, NULL, patch, h, num_l));
+				cl_git_fail(
+					git_patch_get_line_in_hunk(&line, patch, h, num_l));
 			}
 
 			/* confirm fail after the last item */
-			cl_git_fail(git_patch_get_hunk(
-				&range, &header, &header_len, &num_l, patch, num_h));
+			cl_git_fail(git_patch_get_hunk(&hunk, &num_l, patch, num_h));
 
 			git_patch_free(patch);
 		}

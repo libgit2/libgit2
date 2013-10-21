@@ -101,15 +101,10 @@ void test_diff_diffiter__iterate_files_and_hunks(void)
 		num_h = git_patch_num_hunks(patch);
 
 		for (h = 0; h < num_h; h++) {
-			const git_diff_hunk *range;
-			const char *header;
-			size_t header_len, num_l;
+			const git_diff_hunk *hunk;
 
-			cl_git_pass(git_patch_get_hunk(
-				&range, &header, &header_len, &num_l, patch, h));
-
-			cl_assert(range);
-			cl_assert(header);
+			cl_git_pass(git_patch_get_hunk(&hunk, NULL, patch, h));
+			cl_assert(hunk);
 
 			hunk_count++;
 		}
@@ -229,22 +224,17 @@ void test_diff_diffiter__iterate_all(void)
 		num_h = git_patch_num_hunks(patch);
 		for (h = 0; h < num_h; h++) {
 			const git_diff_hunk *range;
-			const char *header;
-			size_t header_len, l, num_l;
+			size_t l, num_l;
 
-			cl_git_pass(git_patch_get_hunk(
-				&range, &header, &header_len, &num_l, patch, h));
-			cl_assert(range && header);
+			cl_git_pass(git_patch_get_hunk(&range, &num_l, patch, h));
+			cl_assert(range);
 			exp.hunks++;
 
 			for (l = 0; l < num_l; ++l) {
-				char origin;
-				const char *content;
-				size_t content_len;
+				const git_diff_line *line;
 
-				cl_git_pass(git_patch_get_line_in_hunk(
-					&origin, &content, &content_len, NULL, NULL, patch, h, l));
-				cl_assert(content);
+				cl_git_pass(git_patch_get_line_in_hunk(&line, patch, h, l));
+				cl_assert(line && line->content);
 				exp.lines++;
 			}
 		}

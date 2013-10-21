@@ -53,7 +53,53 @@ typedef struct {
 	git_xdiff_output *xo;
 	git_patch *patch;
 	git_diff_hunk hunk;
+	size_t old_lineno, new_lineno;
 } git_xdiff_info;
+
+static int diff_update_lines(
+	git_xdiff_info *info,
+	git_diff_line *line,
+	const char *content,
+	size_t content_len)
+{
+	const char *scan = content, *scan_end = content + content_len;
+
+	for (line->num_lines = 0; scan < scan_end; ++scan)
+		if (*scan == '\n')
+			++line->num_lines;
+
+	line->content     = content;
+	line->content_len = content_len;
+
+	/* expect " "/"-"/"+", then data */
+	switch (line->origin) {
+	case GIT_DIFF_LINE_ADDITION:
+	case GIT_DIFF_LINE_DEL_EOFNL:
+		line->old_lineno = -1;
+		line->new_lineno = info->new_lineno;
+		info->new_lineno += line->num_lines;
+		break;
+	case GIT_DIFF_LINE_DELETION:
+	case GIT_DIFF_LINE_ADD_EOFNL:
+		line->old_lineno = info->old_lineno;
+		line->new_lineno = -1;
+		info->old_lineno += line->num_lines;
+		break;
+	case GIT_DIFF_LINE_CONTEXT:
+	case GIT_DIFF_LINE_CONTEXT_EOFNL:
+		line->old_lineno = info->old_lineno;
+		line->new_lineno = info->new_lineno;
+		info->old_lineno += line->num_lines;
+		info->new_lineno += line->num_lines;
+		break;
+	default:
+		giterr_set(GITERR_INVALID, "Unknown diff line origin %02x",
+			(unsigned int)line->origin);
+		return -1;
+	}
+
+	return 0;
+}
 
 static int git_xdiff_cb(void *priv, mmbuffer_t *bufs, int len)
 {
@@ -61,28 +107,40 @@ static int git_xdiff_cb(void *priv, mmbuffer_t *bufs, int len)
 	git_patch *patch = info->patch;
 	const git_diff_delta *delta = git_patch_get_delta(patch);
 	git_diff_output *output = &info->xo->output;
+	git_diff_line line;
 
 	if (len == 1) {
 		output->error = git_xdiff_parse_hunk(&info->hunk, bufs[0].ptr);
 		if (output->error < 0)
 			return output->error;
 
+		info->hunk.header_len = bufs[0].size;
+		if (info->hunk.header_len >= sizeof(info->hunk.header))
+			info->hunk.header_len = sizeof(info->hunk.header) - 1;
+		memcpy(info->hunk.header, bufs[0].ptr, info->hunk.header_len);
+		info->hunk.header[info->hunk.header_len] = '\0';
+
 		if (output->hunk_cb != NULL &&
-			output->hunk_cb(delta, &info->hunk,
-				bufs[0].ptr, bufs[0].size, output->payload))
+			output->hunk_cb(delta, &info->hunk, output->payload))
 			output->error = GIT_EUSER;
+
+		info->old_lineno = info->hunk.old_start;
+		info->new_lineno = info->hunk.new_start;
 	}
 
 	if (len == 2 || len == 3) {
 		/* expect " "/"-"/"+", then data */
-		char origin =
+		line.origin =
 			(*bufs[0].ptr == '+') ? GIT_DIFF_LINE_ADDITION :
 			(*bufs[0].ptr == '-') ? GIT_DIFF_LINE_DELETION :
 			GIT_DIFF_LINE_CONTEXT;
 
-		if (output->data_cb != NULL &&
-			output->data_cb(delta, &info->hunk,
-				origin, bufs[1].ptr, bufs[1].size, output->payload))
+		output->error = diff_update_lines(
+			info, &line, bufs[1].ptr, bufs[1].size);
+
+		if (!output->error &&
+			output->data_cb != NULL &&
+			output->data_cb(delta, &info->hunk, &line, output->payload))
 			output->error = GIT_EUSER;
 	}
 
@@ -92,14 +150,17 @@ static int git_xdiff_cb(void *priv, mmbuffer_t *bufs, int len)
 		 * If we have a '-' and a third buf, then we have removed a line
 		 * with out a newline but added a blank line, so ADD_EOFNL.
 		 */
-		char origin =
+		line.origin =
 			(*bufs[0].ptr == '+') ? GIT_DIFF_LINE_DEL_EOFNL :
 			(*bufs[0].ptr == '-') ? GIT_DIFF_LINE_ADD_EOFNL :
 			GIT_DIFF_LINE_CONTEXT_EOFNL;
 
-		if (output->data_cb != NULL &&
-			output->data_cb(delta, &info->hunk,
-				origin, bufs[2].ptr, bufs[2].size, output->payload))
+		output->error = diff_update_lines(
+			info, &line, bufs[2].ptr, bufs[2].size);
+
+		if (!output->error &&
+			output->data_cb != NULL &&
+			output->data_cb(delta, &info->hunk, &line, output->payload))
 			output->error = GIT_EUSER;
 	}
 

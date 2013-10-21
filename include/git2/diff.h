@@ -385,10 +385,12 @@ typedef int (*git_diff_file_cb)(
  */
 typedef struct git_diff_hunk git_diff_hunk;
 struct git_diff_hunk {
-	int old_start; /** Starting line number in old_file */
-	int old_lines; /** Number of lines in old_file */
-	int new_start; /** Starting line number in new_file */
-	int new_lines; /** Number of lines in new_file */
+	int    old_start;     /** Starting line number in old_file */
+	int    old_lines;     /** Number of lines in old_file */
+	int    new_start;     /** Starting line number in new_file */
+	int    new_lines;     /** Number of lines in new_file */
+	size_t header_len;    /** Number of bytes in header text */
+	char   header[128];   /** Header text, NUL-byte terminated */
 };
 
 /**
@@ -397,8 +399,6 @@ struct git_diff_hunk {
 typedef int (*git_diff_hunk_cb)(
 	const git_diff_delta *delta,
 	const git_diff_hunk *hunk,
-	const char *header,
-	size_t header_len,
 	void *payload);
 
 /**
@@ -429,6 +429,19 @@ typedef enum {
 } git_diff_line_t;
 
 /**
+ * Structure describing a line (or data span) of a diff.
+ */
+typedef struct git_diff_line git_diff_line;
+struct git_diff_line {
+	char   origin;       /** A git_diff_line_t value */
+	int    old_lineno;   /** Line number in old file or -1 for added line */
+	int    new_lineno;   /** Line number in new file or -1 for deleted line */
+	int    num_lines;    /** Number of newline characters in content */
+	size_t content_len;  /** Number of bytes of data */
+	const char *content; /** Pointer to diff text, not NUL-byte terminated */
+};
+
+/**
  * When iterating over a diff, callback that will be made per text diff
  * line. In this context, the provided range will be NULL.
  *
@@ -438,10 +451,8 @@ typedef enum {
  */
 typedef int (*git_diff_line_cb)(
 	const git_diff_delta *delta, /** delta that contains this data */
-	const git_diff_hunk *hunk,   /** range of lines containing this data */
-	char line_origin,            /** git_diff_t value from above */
-	const char *content,         /** diff data - not NUL terminated */
-	size_t content_len,          /** number of bytes of diff data */
+	const git_diff_hunk *hunk,   /** hunk containing this data */
+	const git_diff_line *line,   /** line data */
 	void *payload);              /** user reference data */
 
 /**

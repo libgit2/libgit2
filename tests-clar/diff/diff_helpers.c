@@ -95,41 +95,37 @@ int diff_print_file_cb(
 
 int diff_hunk_cb(
 	const git_diff_delta *delta,
-	const git_diff_hunk *range,
-	const char *header,
-	size_t header_len,
+	const git_diff_hunk *hunk,
 	void *payload)
 {
 	diff_expects *e = payload;
+	const char *scan = hunk->header, *scan_end = scan + hunk->header_len;
 
 	GIT_UNUSED(delta);
 
 	/* confirm no NUL bytes in header text */
-	while (header_len--) cl_assert('\0' != *header++);
+	while (scan < scan_end)
+		cl_assert('\0' != *scan++);
 
 	e->hunks++;
-	e->hunk_old_lines += range->old_lines;
-	e->hunk_new_lines += range->new_lines;
+	e->hunk_old_lines += hunk->old_lines;
+	e->hunk_new_lines += hunk->new_lines;
 	return 0;
 }
 
 int diff_line_cb(
 	const git_diff_delta *delta,
-	const git_diff_hunk *range,
-	char line_origin,
-	const char *content,
-	size_t content_len,
+	const git_diff_hunk *hunk,
+	const git_diff_line *line,
 	void *payload)
 {
 	diff_expects *e = payload;
 
 	GIT_UNUSED(delta);
-	GIT_UNUSED(range);
-	GIT_UNUSED(content);
-	GIT_UNUSED(content_len);
+	GIT_UNUSED(hunk);
 
 	e->lines++;
-	switch (line_origin) {
+	switch (line->origin) {
 	case GIT_DIFF_LINE_CONTEXT:
 	case GIT_DIFF_LINE_CONTEXT_EOFNL: /* techically not a line */
 		e->line_ctxt++;
@@ -186,30 +182,23 @@ int diff_foreach_via_iterator(
 		num_h = git_patch_num_hunks(patch);
 
 		for (h = 0; h < num_h; h++) {
-			const git_diff_hunk *range;
-			const char *hdr;
-			size_t hdr_len, l, num_l;
+			const git_diff_hunk *hunk;
+			size_t l, num_l;
 
-			cl_git_pass(git_patch_get_hunk(
-				&range, &hdr, &hdr_len, &num_l, patch, h));
+			cl_git_pass(git_patch_get_hunk(&hunk, &num_l, patch, h));
 
-			if (hunk_cb && hunk_cb(delta, range, hdr, hdr_len, data) != 0) {
+			if (hunk_cb && hunk_cb(delta, hunk, data) != 0) {
 				git_patch_free(patch);
 				goto abort;
 			}
 
 			for (l = 0; l < num_l; ++l) {
-				char origin;
-				const char *line;
-				size_t line_len;
-				int old_lineno, new_lineno;
+				const git_diff_line *line;
 
-				cl_git_pass(git_patch_get_line_in_hunk(
-					&origin, &line, &line_len, &old_lineno, &new_lineno,
-					patch, h, l));
+				cl_git_pass(git_patch_get_line_in_hunk(&line, patch, h, l));
 
 				if (line_cb &&
-					line_cb(delta, range, origin, line, line_len, data) != 0) {
+					line_cb(delta, hunk, line, data) != 0) {
 					git_patch_free(patch);
 					goto abort;
 				}
@@ -228,18 +217,15 @@ abort:
 
 static int diff_print_cb(
 	const git_diff_delta *delta,
-	const git_diff_hunk *range,
-	char line_origin, /**< GIT_DIFF_LINE_... value from above */
-	const char *content,
-	size_t content_len,
+	const git_diff_hunk *hunk,
+	const git_diff_line *line,
 	void *payload)
 {
 	GIT_UNUSED(payload);
 	GIT_UNUSED(delta);
-	GIT_UNUSED(range);
-	GIT_UNUSED(line_origin);
-	GIT_UNUSED(content_len);
-	fputs(content, (FILE *)payload);
+	GIT_UNUSED(hunk);
+	fprintf((FILE *)payload, "%c%.*s",
+		line->origin, (int)line->content_len, line->content);
 	return 0;
 }
 

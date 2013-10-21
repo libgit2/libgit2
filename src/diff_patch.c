@@ -12,23 +12,10 @@
 #include "diff_xdiff.h"
 #include "fileops.h"
 
-/* cached information about a single span in a diff */
-typedef struct diff_patch_line diff_patch_line;
-struct diff_patch_line {
-	const char *ptr;
-	size_t len;
-	size_t lines;
-	size_t oldno;
-	size_t newno;
-	char origin;
-};
-
 /* cached information about a hunk in a diff */
 typedef struct diff_patch_hunk diff_patch_hunk;
 struct diff_patch_hunk {
 	git_diff_hunk hunk;
-	char   header[128];
-	size_t header_len;
 	size_t line_start;
 	size_t line_count;
 };
@@ -42,8 +29,7 @@ struct git_patch {
 	git_diff_file_content nfile;
 	uint32_t flags;
 	git_array_t(diff_patch_hunk) hunks;
-	git_array_t(diff_patch_line) lines;
-	size_t oldno, newno;
+	git_array_t(git_diff_line)   lines;
 	size_t content_size, context_size, header_size;
 	git_pool flattened;
 };
@@ -57,7 +43,8 @@ enum {
 	GIT_DIFF_PATCH_FLATTENED   = (1 << 5),
 };
 
-static void diff_output_init(git_diff_output*, const git_diff_options*,
+static void diff_output_init(
+	git_diff_output*, const git_diff_options*,
 	git_diff_file_cb, git_diff_hunk_cb, git_diff_line_cb, void*);
 
 static void diff_output_to_patch(git_diff_output *, git_patch *);
@@ -81,7 +68,7 @@ static void diff_patch_init_common(git_patch *patch)
 	diff_patch_update_binary(patch);
 
 	if ((patch->delta->flags & GIT_DIFF_FLAG_BINARY) != 0)
-		patch->flags |= GIT_DIFF_PATCH_LOADED; /* set LOADED but not DIFFABLE */
+		patch->flags |= GIT_DIFF_PATCH_LOADED; /* LOADED but not DIFFABLE */
 
 	patch->flags |= GIT_DIFF_PATCH_INITIALIZED;
 
@@ -687,7 +674,7 @@ int git_patch_line_stats(
 	memset(totals, 0, sizeof(totals));
 
 	for (idx = 0; idx < git_array_size(patch->lines); ++idx) {
-		diff_patch_line *line = git_array_get(patch->lines, idx);
+		git_diff_line *line = git_array_get(patch->lines, idx);
 		if (!line)
 			continue;
 
@@ -721,8 +708,6 @@ static int diff_error_outofrange(const char *thing)
 
 int git_patch_get_hunk(
 	const git_diff_hunk **out,
-	const char **header,
-	size_t *header_len,
 	size_t *lines_in_hunk,
 	git_patch *patch,
 	size_t hunk_idx)
@@ -734,15 +719,11 @@ int git_patch_get_hunk(
 
 	if (!hunk) {
 		if (out) *out = NULL;
-		if (header) *header = NULL;
-		if (header_len) *header_len = 0;
 		if (lines_in_hunk) *lines_in_hunk = 0;
 		return diff_error_outofrange("hunk");
 	}
 
 	if (out) *out = &hunk->hunk;
-	if (header) *header = hunk->header;
-	if (header_len) *header_len = hunk->header_len;
 	if (lines_in_hunk) *lines_in_hunk = hunk->line_count;
 	return 0;
 }
@@ -758,49 +739,30 @@ int git_patch_num_lines_in_hunk(git_patch *patch, size_t hunk_idx)
 }
 
 int git_patch_get_line_in_hunk(
-	char *line_origin,
-	const char **content,
-	size_t *content_len,
-	int *old_lineno,
-	int *new_lineno,
+	const git_diff_line **out,
 	git_patch *patch,
 	size_t hunk_idx,
 	size_t line_of_hunk)
 {
 	diff_patch_hunk *hunk;
-	diff_patch_line *line;
-	const char *thing;
+	git_diff_line *line;
 
 	assert(patch);
 
 	if (!(hunk = git_array_get(patch->hunks, hunk_idx))) {
-		thing = "hunk";
-		goto notfound;
+		if (out) *out = NULL;
+		return diff_error_outofrange("hunk");
 	}
 
 	if (line_of_hunk >= hunk->line_count ||
 		!(line = git_array_get(
 			patch->lines, hunk->line_start + line_of_hunk))) {
-		thing = "line";
-		goto notfound;
+		if (out) *out = NULL;
+		return diff_error_outofrange("line");
 	}
 
-	if (line_origin) *line_origin = line->origin;
-	if (content) *content = line->ptr;
-	if (content_len) *content_len = line->len;
-	if (old_lineno) *old_lineno = (int)line->oldno;
-	if (new_lineno) *new_lineno = (int)line->newno;
-
+	if (out) *out = line;
 	return 0;
-
-notfound:
-	if (line_origin) *line_origin = GIT_DIFF_LINE_CONTEXT;
-	if (content) *content = NULL;
-	if (content_len) *content_len = 0;
-	if (old_lineno) *old_lineno = -1;
-	if (new_lineno) *new_lineno = -1;
-
-	return diff_error_outofrange(thing);
 }
 
 size_t git_patch_size(
@@ -880,18 +842,16 @@ int git_patch__invoke_callbacks(
 	for (i = 0; !error && i < git_array_size(patch->hunks); ++i) {
 		diff_patch_hunk *h = git_array_get(patch->hunks, i);
 
-		error = hunk_cb(
-			patch->delta, &h->hunk, h->header, h->header_len, payload);
+		error = hunk_cb(patch->delta, &h->hunk, payload);
 
 		if (!line_cb)
 			continue;
 
 		for (j = 0; !error && j < h->line_count; ++j) {
-			diff_patch_line *l =
+			git_diff_line *l =
 				git_array_get(patch->lines, h->line_start + j);
 
-			error = line_cb(
-				patch->delta, &h->hunk, l->origin, l->ptr, l->len, payload);
+			error = line_cb(patch->delta, &h->hunk, l, payload);
 		}
 	}
 
@@ -911,8 +871,6 @@ static int diff_patch_file_cb(
 static int diff_patch_hunk_cb(
 	const git_diff_delta *delta,
 	const git_diff_hunk *hunk_,
-	const char *header,
-	size_t header_len,
 	void *payload)
 {
 	git_patch *patch = payload;
@@ -925,18 +883,10 @@ static int diff_patch_hunk_cb(
 
 	memcpy(&hunk->hunk, hunk_, sizeof(hunk->hunk));
 
-	assert(header_len + 1 < sizeof(hunk->header));
-	memcpy(&hunk->header, header, header_len);
-	hunk->header[header_len] = '\0';
-	hunk->header_len = header_len;
-
-	patch->header_size += header_len;
+	patch->header_size += hunk_->header_len;
 
 	hunk->line_start = git_array_size(patch->lines);
 	hunk->line_count = 0;
-
-	patch->oldno = hunk_->old_start;
-	patch->newno = hunk_->new_start;
 
 	return 0;
 }
@@ -944,15 +894,12 @@ static int diff_patch_hunk_cb(
 static int diff_patch_line_cb(
 	const git_diff_delta *delta,
 	const git_diff_hunk *hunk_,
-	char line_origin,
-	const char *content,
-	size_t content_len,
+	const git_diff_line *line_,
 	void *payload)
 {
 	git_patch *patch = payload;
 	diff_patch_hunk *hunk;
-	diff_patch_line *line;
-	const char *content_end = content + content_len;
+	git_diff_line   *line;
 
 	GIT_UNUSED(delta);
 	GIT_UNUSED(hunk_);
@@ -963,48 +910,20 @@ static int diff_patch_line_cb(
 	line = git_array_alloc(patch->lines);
 	GITERR_CHECK_ALLOC(line);
 
-	line->ptr = content;
-	line->len = content_len;
-	line->origin = line_origin;
+	memcpy(line, line_, sizeof(*line));
 
 	/* do some bookkeeping so we can provide old/new line numbers */
 
-	line->lines = 0;
-	while (content < content_end)
-		if (*content++ == '\n')
-			++line->lines;
+	patch->content_size += line->content_len;
 
-	patch->content_size += content_len;
-
-	switch (line_origin) {
-	case GIT_DIFF_LINE_ADDITION:
+	if (line->origin == GIT_DIFF_LINE_ADDITION ||
+		line->origin == GIT_DIFF_LINE_DELETION)
 		patch->content_size += 1;
-	case GIT_DIFF_LINE_DEL_EOFNL:
-		line->oldno = -1;
-		line->newno = patch->newno;
-		patch->newno += line->lines;
-		break;
-	case GIT_DIFF_LINE_DELETION:
+	else if (line->origin == GIT_DIFF_LINE_CONTEXT) {
 		patch->content_size += 1;
-	case GIT_DIFF_LINE_ADD_EOFNL:
-		line->oldno = patch->oldno;
-		line->newno = -1;
-		patch->oldno += line->lines;
-		break;
-	case GIT_DIFF_LINE_CONTEXT:
-		patch->content_size += 1;
-		patch->context_size += 1;
-	case GIT_DIFF_LINE_CONTEXT_EOFNL:
-		patch->context_size += content_len;
-		line->oldno = patch->oldno;
-		line->newno = patch->newno;
-		patch->oldno += line->lines;
-		patch->newno += line->lines;
-		break;
-	default:
-		assert(false);
-		break;
-	}
+		patch->context_size += line->content_len + 1;
+	} else if (line->origin == GIT_DIFF_LINE_CONTEXT_EOFNL)
+		patch->context_size += line->content_len;
 
 	hunk->line_count++;
 

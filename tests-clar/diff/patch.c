@@ -26,40 +26,37 @@ void test_diff_patch__cleanup(void)
 
 static int check_removal_cb(
 	const git_diff_delta *delta,
-	const git_diff_hunk *range,
-	char line_origin,
-	const char *formatted_output,
-	size_t output_len,
+	const git_diff_hunk *hunk,
+	const git_diff_line *line,
 	void *payload)
 {
 	GIT_UNUSED(payload);
-	GIT_UNUSED(output_len);
 
-	switch (line_origin) {
+	switch (line->origin) {
 	case GIT_DIFF_LINE_FILE_HDR:
-		cl_assert_equal_s(EXPECTED_HEADER, formatted_output);
-		cl_assert(range == NULL);
+		cl_assert_equal_s(EXPECTED_HEADER, line->content);
+		cl_assert(hunk == NULL);
 		goto check_delta;
 
 	case GIT_DIFF_LINE_HUNK_HDR:
-		cl_assert_equal_s(EXPECTED_HUNK, formatted_output);
+		cl_assert_equal_s(EXPECTED_HUNK, line->content);
 		/* Fall through */
 
 	case GIT_DIFF_LINE_CONTEXT:
 	case GIT_DIFF_LINE_DELETION:
-		goto check_range;
+		goto check_hunk;
 
 	default:
 		/* unexpected code path */
 		return -1;
 	}
 
-check_range:
-	cl_assert(range != NULL);
-	cl_assert_equal_i(1, range->old_start);
-	cl_assert_equal_i(2, range->old_lines);
-	cl_assert_equal_i(0, range->new_start);
-	cl_assert_equal_i(0, range->new_lines);
+check_hunk:
+	cl_assert(hunk != NULL);
+	cl_assert_equal_i(1, hunk->old_start);
+	cl_assert_equal_i(2, hunk->old_lines);
+	cl_assert_equal_i(0, hunk->new_start);
+	cl_assert_equal_i(0, hunk->new_lines);
 
 check_delta:
 	cl_assert_equal_s("subdir.txt", delta->old_file.path);
@@ -227,11 +224,9 @@ void test_diff_patch__hunks_have_correct_line_numbers(void)
 	git_diff *diff;
 	git_patch *patch;
 	const git_diff_delta *delta;
-	const git_diff_hunk *range;
-	const char *hdr, *text;
-	size_t hdrlen, hunklen, textlen;
-	char origin;
-	int oldno, newno;
+	const git_diff_hunk *hunk;
+	const git_diff_line *line;
+	size_t hunklen;
 	git_buf old_content = GIT_BUF_INIT, actual = GIT_BUF_INIT;
 	const char *new_content = "The Song of Seven Cities\n------------------------\n\nI WAS Lord of Cities very sumptuously builded.\nSeven roaring Cities paid me tribute from afar.\nIvory their outposts were--the guardrooms of them gilded,\nAnd garrisoned with Amazons invincible in war.\n\nThis is some new text;\nNot as good as the old text;\nBut here it is.\n\nSo they warred and trafficked only yesterday, my Cities.\nTo-day there is no mark or mound of where my Cities stood.\nFor the River rose at midnight and it washed away my Cities.\nThey are evened with Atlantis and the towns before the Flood.\n\nRain on rain-gorged channels raised the water-levels round them,\nFreshet backed on freshet swelled and swept their world from sight,\nTill the emboldened floods linked arms and, flashing forward, drowned them--\nDrowned my Seven Cities and their peoples in one night!\n\nLow among the alders lie their derelict foundations,\nThe beams wherein they trusted and the plinths whereon they built--\nMy rulers and their treasure and their unborn populations,\nDead, destroyed, aborted, and defiled with mud and silt!\n\nAnother replacement;\nBreaking up the poem;\nGenerating some hunks.\n\nTo the sound of trumpets shall their seed restore my Cities\nWealthy and well-weaponed, that once more may I behold\nAll the world go softly when it walks before my Cities,\nAnd the horses and the chariots fleeing from them as of old!\n\n  -- Rudyard Kipling\n";
 
@@ -263,78 +258,71 @@ void test_diff_patch__hunks_have_correct_line_numbers(void)
 	/* check hunk 0 */
 
 	cl_git_pass(
-		git_patch_get_hunk(&range, &hdr, &hdrlen, &hunklen, patch, 0));
+		git_patch_get_hunk(&hunk, &hunklen, patch, 0));
 
 	cl_assert_equal_i(18, (int)hunklen);
 
-	cl_assert_equal_i(6, (int)range->old_start);
-	cl_assert_equal_i(15, (int)range->old_lines);
-	cl_assert_equal_i(6, (int)range->new_start);
-	cl_assert_equal_i(9, (int)range->new_lines);
+	cl_assert_equal_i(6, (int)hunk->old_start);
+	cl_assert_equal_i(15, (int)hunk->old_lines);
+	cl_assert_equal_i(6, (int)hunk->new_start);
+	cl_assert_equal_i(9, (int)hunk->new_lines);
 
 	cl_assert_equal_i(18, (int)git_patch_num_lines_in_hunk(patch, 0));
 
-	cl_git_pass(git_patch_get_line_in_hunk(
-		&origin, &text, &textlen, &oldno, &newno, patch, 0, 0));
-	cl_assert_equal_i(GIT_DIFF_LINE_CONTEXT, (int)origin);
-	cl_git_pass(git_buf_set(&actual, text, textlen));
+	cl_git_pass(git_patch_get_line_in_hunk(&line, patch, 0, 0));
+	cl_assert_equal_i(GIT_DIFF_LINE_CONTEXT, (int)line->origin);
+	cl_git_pass(git_buf_set(&actual, line->content, line->content_len));
 	cl_assert_equal_s("Ivory their outposts were--the guardrooms of them gilded,\n", actual.ptr);
-	cl_assert_equal_i(6, oldno);
-	cl_assert_equal_i(6, newno);
+	cl_assert_equal_i(6, line->old_lineno);
+	cl_assert_equal_i(6, line->new_lineno);
 
-	cl_git_pass(git_patch_get_line_in_hunk(
-		&origin, &text, &textlen, &oldno, &newno, patch, 0, 3));
-	cl_assert_equal_i(GIT_DIFF_LINE_DELETION, (int)origin);
-	cl_git_pass(git_buf_set(&actual, text, textlen));
+	cl_git_pass(git_patch_get_line_in_hunk(&line, patch, 0, 3));
+	cl_assert_equal_i(GIT_DIFF_LINE_DELETION, (int)line->origin);
+	cl_git_pass(git_buf_set(&actual, line->content, line->content_len));
 	cl_assert_equal_s("All the world went softly when it walked before my Cities--\n", actual.ptr);
-	cl_assert_equal_i(9, oldno);
-	cl_assert_equal_i(-1, newno);
+	cl_assert_equal_i(9, line->old_lineno);
+	cl_assert_equal_i(-1, line->new_lineno);
 
-	cl_git_pass(git_patch_get_line_in_hunk(
-		&origin, &text, &textlen, &oldno, &newno, patch, 0, 12));
-	cl_assert_equal_i(GIT_DIFF_LINE_ADDITION, (int)origin);
-	cl_git_pass(git_buf_set(&actual, text, textlen));
+	cl_git_pass(git_patch_get_line_in_hunk(&line, patch, 0, 12));
+	cl_assert_equal_i(GIT_DIFF_LINE_ADDITION, (int)line->origin);
+	cl_git_pass(git_buf_set(&actual, line->content, line->content_len));
 	cl_assert_equal_s("This is some new text;\n", actual.ptr);
-	cl_assert_equal_i(-1, oldno);
-	cl_assert_equal_i(9, newno);
+	cl_assert_equal_i(-1, line->old_lineno);
+	cl_assert_equal_i(9, line->new_lineno);
 
 	/* check hunk 1 */
 
-	cl_git_pass(
-		git_patch_get_hunk(&range, &hdr, &hdrlen, &hunklen, patch, 1));
+	cl_git_pass(git_patch_get_hunk(&hunk, &hunklen, patch, 1));
 
 	cl_assert_equal_i(18, (int)hunklen);
 
-	cl_assert_equal_i(31, (int)range->old_start);
-	cl_assert_equal_i(15, (int)range->old_lines);
-	cl_assert_equal_i(25, (int)range->new_start);
-	cl_assert_equal_i(9, (int)range->new_lines);
+	cl_assert_equal_i(31, (int)hunk->old_start);
+	cl_assert_equal_i(15, (int)hunk->old_lines);
+	cl_assert_equal_i(25, (int)hunk->new_start);
+	cl_assert_equal_i(9, (int)hunk->new_lines);
 
 	cl_assert_equal_i(18, (int)git_patch_num_lines_in_hunk(patch, 1));
 
-	cl_git_pass(git_patch_get_line_in_hunk(
-		&origin, &text, &textlen, &oldno, &newno, patch, 1, 0));
-	cl_assert_equal_i(GIT_DIFF_LINE_CONTEXT, (int)origin);
-	cl_git_pass(git_buf_set(&actual, text, textlen));
+	cl_git_pass(git_patch_get_line_in_hunk(&line, patch, 1, 0));
+	cl_assert_equal_i(GIT_DIFF_LINE_CONTEXT, (int)line->origin);
+	cl_git_pass(git_buf_set(&actual, line->content, line->content_len));
 	cl_assert_equal_s("My rulers and their treasure and their unborn populations,\n", actual.ptr);
-	cl_assert_equal_i(31, oldno);
-	cl_assert_equal_i(25, newno);
+	cl_assert_equal_i(31, line->old_lineno);
+	cl_assert_equal_i(25, line->new_lineno);
 
-	cl_git_pass(git_patch_get_line_in_hunk(
-		&origin, &text, &textlen, &oldno, &newno, patch, 1, 3));
-	cl_assert_equal_i(GIT_DIFF_LINE_DELETION, (int)origin);
-	cl_git_pass(git_buf_set(&actual, text, textlen));
+	cl_git_pass(git_patch_get_line_in_hunk(&line, patch, 1, 3));
+	cl_assert_equal_i(GIT_DIFF_LINE_DELETION, (int)line->origin);
+	cl_git_pass(git_buf_set(&actual, line->content, line->content_len));
 	cl_assert_equal_s("The Daughters of the Palace whom they cherished in my Cities,\n", actual.ptr);
-	cl_assert_equal_i(34, oldno);
-	cl_assert_equal_i(-1, newno);
+	cl_assert_equal_i(34, line->old_lineno);
+	cl_assert_equal_i(-1, line->new_lineno);
 
-	cl_git_pass(git_patch_get_line_in_hunk(
-		&origin, &text, &textlen, &oldno, &newno, patch, 1, 12));
-	cl_assert_equal_i(GIT_DIFF_LINE_ADDITION, (int)origin);
-	cl_git_pass(git_buf_set(&actual, text, textlen));
+	cl_git_pass(git_patch_get_line_in_hunk(&line, patch, 1, 12));
+	cl_assert_equal_i(GIT_DIFF_LINE_ADDITION, (int)line->origin);
+	cl_git_pass(git_buf_set(&actual, line->content, line->content_len));
 	cl_assert_equal_s("Another replacement;\n", actual.ptr);
-	cl_assert_equal_i(-1, oldno);
-	cl_assert_equal_i(28, newno);
+	cl_assert_equal_i(-1, line->old_lineno);
+	cl_assert_equal_i(28, line->new_lineno);
 
 	git_patch_free(patch);
 	git_diff_free(diff);
@@ -356,57 +344,51 @@ void test_diff_patch__hunks_have_correct_line_numbers(void)
 
 	/* check hunk 0 */
 
-	cl_git_pass(
-		git_patch_get_hunk(&range, &hdr, &hdrlen, &hunklen, patch, 0));
+	cl_git_pass(git_patch_get_hunk(&hunk, &hunklen, patch, 0));
 
 	cl_assert_equal_i(6, (int)hunklen);
 
-	cl_assert_equal_i(46, (int)range->old_start);
-	cl_assert_equal_i(4, (int)range->old_lines);
-	cl_assert_equal_i(46, (int)range->new_start);
-	cl_assert_equal_i(4, (int)range->new_lines);
+	cl_assert_equal_i(46, (int)hunk->old_start);
+	cl_assert_equal_i(4, (int)hunk->old_lines);
+	cl_assert_equal_i(46, (int)hunk->new_start);
+	cl_assert_equal_i(4, (int)hunk->new_lines);
 
 	cl_assert_equal_i(6, (int)git_patch_num_lines_in_hunk(patch, 0));
 
-	cl_git_pass(git_patch_get_line_in_hunk(
-		&origin, &text, &textlen, &oldno, &newno, patch, 0, 1));
-	cl_assert_equal_i(GIT_DIFF_LINE_CONTEXT, (int)origin);
-	cl_git_pass(git_buf_set(&actual, text, textlen));
+	cl_git_pass(git_patch_get_line_in_hunk(&line, patch, 0, 1));
+	cl_assert_equal_i(GIT_DIFF_LINE_CONTEXT, (int)line->origin);
+	cl_git_pass(git_buf_set(&actual, line->content, line->content_len));
 	cl_assert_equal_s("And the horses and the chariots fleeing from them as of old!\n", actual.ptr);
-	cl_assert_equal_i(47, oldno);
-	cl_assert_equal_i(47, newno);
+	cl_assert_equal_i(47, line->old_lineno);
+	cl_assert_equal_i(47, line->new_lineno);
 
-	cl_git_pass(git_patch_get_line_in_hunk(
-		&origin, &text, &textlen, &oldno, &newno, patch, 0, 2));
-	cl_assert_equal_i(GIT_DIFF_LINE_CONTEXT, (int)origin);
-	cl_git_pass(git_buf_set(&actual, text, textlen));
+	cl_git_pass(git_patch_get_line_in_hunk(&line, patch, 0, 2));
+	cl_assert_equal_i(GIT_DIFF_LINE_CONTEXT, (int)line->origin);
+	cl_git_pass(git_buf_set(&actual, line->content, line->content_len));
 	cl_assert_equal_s("\n", actual.ptr);
-	cl_assert_equal_i(48, oldno);
-	cl_assert_equal_i(48, newno);
+	cl_assert_equal_i(48, line->old_lineno);
+	cl_assert_equal_i(48, line->new_lineno);
 
-	cl_git_pass(git_patch_get_line_in_hunk(
-		&origin, &text, &textlen, &oldno, &newno, patch, 0, 3));
-	cl_assert_equal_i(GIT_DIFF_LINE_DELETION, (int)origin);
-	cl_git_pass(git_buf_set(&actual, text, textlen));
+	cl_git_pass(git_patch_get_line_in_hunk(&line, patch, 0, 3));
+	cl_assert_equal_i(GIT_DIFF_LINE_DELETION, (int)line->origin);
+	cl_git_pass(git_buf_set(&actual, line->content, line->content_len));
 	cl_assert_equal_s("  -- Rudyard Kipling\n", actual.ptr);
-	cl_assert_equal_i(49, oldno);
-	cl_assert_equal_i(-1, newno);
+	cl_assert_equal_i(49, line->old_lineno);
+	cl_assert_equal_i(-1, line->new_lineno);
 
-	cl_git_pass(git_patch_get_line_in_hunk(
-		&origin, &text, &textlen, &oldno, &newno, patch, 0, 4));
-	cl_assert_equal_i(GIT_DIFF_LINE_ADDITION, (int)origin);
-	cl_git_pass(git_buf_set(&actual, text, textlen));
+	cl_git_pass(git_patch_get_line_in_hunk(&line, patch, 0, 4));
+	cl_assert_equal_i(GIT_DIFF_LINE_ADDITION, (int)line->origin);
+	cl_git_pass(git_buf_set(&actual, line->content, line->content_len));
 	cl_assert_equal_s("  -- Rudyard Kipling", actual.ptr);
-	cl_assert_equal_i(-1, oldno);
-	cl_assert_equal_i(49, newno);
+	cl_assert_equal_i(-1, line->old_lineno);
+	cl_assert_equal_i(49, line->new_lineno);
 
-	cl_git_pass(git_patch_get_line_in_hunk(
-		&origin, &text, &textlen, &oldno, &newno, patch, 0, 5));
-	cl_assert_equal_i(GIT_DIFF_LINE_DEL_EOFNL, (int)origin);
-	cl_git_pass(git_buf_set(&actual, text, textlen));
+	cl_git_pass(git_patch_get_line_in_hunk(&line, patch, 0, 5));
+	cl_assert_equal_i(GIT_DIFF_LINE_DEL_EOFNL, (int)line->origin);
+	cl_git_pass(git_buf_set(&actual, line->content, line->content_len));
 	cl_assert_equal_s("\n\\ No newline at end of file\n", actual.ptr);
-	cl_assert_equal_i(-1, oldno);
-	cl_assert_equal_i(49, newno);
+	cl_assert_equal_i(-1, line->old_lineno);
+	cl_assert_equal_i(49, line->new_lineno);
 
 	git_patch_free(patch);
 	git_diff_free(diff);
@@ -465,31 +447,34 @@ static void check_single_patch_stats(
 	/* walk lines in hunk with basic sanity checks */
 	for (; hunks > 0; --hunks) {
 		size_t i, max_i;
-		int lastoldno = -1, oldno, lastnewno = -1, newno;
-		char origin;
+		const git_diff_line *line;
+		int last_new_lineno = -1, last_old_lineno = -1;
 
 		max_i = git_patch_num_lines_in_hunk(patch, hunks - 1);
 
 		for (i = 0; i < max_i; ++i) {
 			int expected = 1;
 
-			cl_git_pass(git_patch_get_line_in_hunk(
-				&origin, NULL, NULL, &oldno, &newno, patch, hunks - 1, i));
+			cl_git_pass(
+				git_patch_get_line_in_hunk(&line, patch, hunks - 1, i));
 
-			if (origin == GIT_DIFF_LINE_ADD_EOFNL ||
-				origin == GIT_DIFF_LINE_DEL_EOFNL ||
-				origin == GIT_DIFF_LINE_CONTEXT_EOFNL)
+			if (line->origin == GIT_DIFF_LINE_ADD_EOFNL ||
+				line->origin == GIT_DIFF_LINE_DEL_EOFNL ||
+				line->origin == GIT_DIFF_LINE_CONTEXT_EOFNL)
 				expected = 0;
 
-			if (oldno >= 0) {
-				if (lastoldno >= 0)
-					cl_assert_equal_i(expected, oldno - lastoldno);
-				lastoldno = oldno;
+			if (line->old_lineno >= 0) {
+				if (last_old_lineno >= 0)
+					cl_assert_equal_i(
+						expected, line->old_lineno - last_old_lineno);
+				last_old_lineno = line->old_lineno;
 			}
-			if (newno >= 0) {
-				if (lastnewno >= 0)
-					cl_assert_equal_i(expected, newno - lastnewno);
-				lastnewno = newno;
+
+			if (line->new_lineno >= 0) {
+				if (last_new_lineno >= 0)
+					cl_assert_equal_i(
+						expected, line->new_lineno - last_new_lineno);
+				last_new_lineno = line->new_lineno;
 			}
 		}
 	}
