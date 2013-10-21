@@ -175,8 +175,11 @@ typedef enum {
 	 */
 	GIT_DIFF_SHOW_UNMODIFIED = (1u << 26),
 
-	/** Use the "patience diff" algorithm (currently unimplemented) */
+	/** Use the "patience diff" algorithm */
 	GIT_DIFF_PATIENCE = (1u << 28),
+	/** Take extra time to find minimal diff */
+	GIT_DIFF_MINIMAL = (1 << 29),
+
 } git_diff_option_t;
 
 /**

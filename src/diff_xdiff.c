@@ -222,6 +222,11 @@ void git_xdiff_init(git_xdiff_output *xo, const git_diff_options *opts)
 	if (flags & GIT_DIFF_IGNORE_WHITESPACE_EOL)
 		xo->params.flags |= XDF_IGNORE_WHITESPACE_AT_EOL;
 
+	if (flags & GIT_DIFF_PATIENCE)
+		xo->params.flags |= XDF_PATIENCE_DIFF;
+	if (flags & GIT_DIFF_MINIMAL)
+		xo->params.flags |= XDF_NEED_MINIMAL;
+
 	memset(&xo->callback, 0, sizeof(xo->callback));
 	xo->callback.outf = git_xdiff_cb;
 }
