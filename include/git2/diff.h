@@ -292,8 +292,9 @@ typedef struct {
  */
 typedef struct {
 	git_delta_t   status;
-	uint32_t      similarity; /**< for RENAMED and COPIED, value 0-100 */
-	uint32_t      flags;
+	uint32_t      flags;	   /**< git_diff_flag_t values */
+	uint16_t      similarity;  /**< for RENAMED and COPIED, value 0-100 */
+	uint16_t      nfiles;	   /**< number of files in this delta */
 	git_diff_file old_file;
 	git_diff_file new_file;
 } git_diff_delta;

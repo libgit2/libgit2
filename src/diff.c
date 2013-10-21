@@ -90,6 +90,7 @@ static int diff_delta__from_one(
 
 	/* This fn is just for single-sided diffs */
 	assert(status != GIT_DELTA_MODIFIED);
+	delta->nfiles = 1;
 
 	if (delta->status == GIT_DELTA_DELETED) {
 		delta->old_file.mode = entry->mode;
@@ -148,6 +149,7 @@ static int diff_delta__from_two(
 
 	delta = diff_delta__alloc(diff, status, canonical_path);
 	GITERR_CHECK_ALLOC(delta);
+	delta->nfiles = 2;
 
 	git_oid_cpy(&delta->old_file.oid, &old_entry->oid);
 	delta->old_file.size = old_entry->file_size;
