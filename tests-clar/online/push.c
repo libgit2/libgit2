@@ -37,23 +37,34 @@ static git_oid _tag_lightweight;
 static git_oid _tag_tag;
 
 static int cred_acquire_cb(
-		git_cred **cred,
-		const char *url,
-		const char *user_from_url,
-		unsigned int allowed_types,
-		void *payload)
+	git_cred **cred,
+	const char *url,
+	const char *user_from_url,
+	unsigned int allowed_types,
+	void *payload)
 {
 	GIT_UNUSED(url);
 	GIT_UNUSED(user_from_url);
+	GIT_UNUSED(payload);
 
-	if (GIT_CREDTYPE_SSH_PUBLICKEY & allowed_types)
+	if (GIT_CREDTYPE_SSH_KEYFILE_PASSPHRASE & allowed_types) {
+		if (!_remote_user || !_remote_ssh_pubkey || !_remote_ssh_key || !_remote_ssh_passphrase) {
+			printf("GITTEST_REMOTE_USER, GITTEST_REMOTE_SSH_PUBKEY, GITTEST_REMOTE_SSH_KEY and GITTEST_REMOTE_SSH_PASSPHRASE must be set\n");
+			return -1;
+		}
 		return git_cred_ssh_keyfile_passphrase_new(cred, _remote_user, _remote_ssh_pubkey, _remote_ssh_key, _remote_ssh_passphrase);
+	}
 
-	if ((GIT_CREDTYPE_USERPASS_PLAINTEXT & allowed_types) == 0 ||
-		git_cred_userpass_plaintext_new(cred, _remote_user, _remote_pass) < 0)
-		return -1;
+	if (GIT_CREDTYPE_USERPASS_PLAINTEXT & allowed_types) {
+		if (!_remote_user || !_remote_pass) {
+			printf("GITTEST_REMOTE_USER and GITTEST_REMOTE_PASS must be set\n");
+			return -1;
+		}
 
-	return 0;
+		return git_cred_userpass_plaintext_new(cred, _remote_user, _remote_pass);
+	}
+
+	return -1;
 }
 
 typedef struct {

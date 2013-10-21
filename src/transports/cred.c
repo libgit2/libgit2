@@ -58,7 +58,7 @@ int git_cred_userpass_plaintext_new(
 {
 	git_cred_userpass_plaintext *c;
 
-	assert(cred);
+	assert(cred && username && password);
 
 	c = git__malloc(sizeof(git_cred_userpass_plaintext));
 	GITERR_CHECK_ALLOC(c);
