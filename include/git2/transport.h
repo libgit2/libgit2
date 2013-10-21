@@ -28,11 +28,16 @@ GIT_BEGIN_DECL
  *** Begin interface for credentials acquisition ***
  */
 
+/** Authentication type requested */
 typedef enum {
 	/* git_cred_userpass_plaintext */
-	GIT_CREDTYPE_USERPASS_PLAINTEXT = 1,
-	GIT_CREDTYPE_SSH_KEYFILE_PASSPHRASE = 2,
-	GIT_CREDTYPE_SSH_PUBLICKEY = 3,
+	GIT_CREDTYPE_USERPASS_PLAINTEXT =     (1u << 0),
+
+	/* git_cred_ssh_keyfile_passphrase */
+	GIT_CREDTYPE_SSH_KEYFILE_PASSPHRASE = (1u << 1),
+
+	/* git_cred_ssh_publickey */
+	GIT_CREDTYPE_SSH_PUBLICKEY =          (1u << 2),
 } git_credtype_t;
 
 /* The base structure for all credential types */
@@ -56,7 +61,7 @@ typedef LIBSSH2_USERAUTH_PUBLICKEY_SIGN_FUNC((*git_cred_sign_callback));
 typedef int (*git_cred_sign_callback)(void *, ...);
 #endif
 
-/* A ssh key file and passphrase */
+/* An ssh key file and passphrase */
 typedef struct git_cred_ssh_keyfile_passphrase {
 	git_cred parent;
 	char *username;
@@ -65,7 +70,7 @@ typedef struct git_cred_ssh_keyfile_passphrase {
 	char *passphrase;
 } git_cred_ssh_keyfile_passphrase;
 
-/* A ssh public key and authentication callback */
+/* An ssh public key and authentication callback */
 typedef struct git_cred_ssh_publickey {
 	git_cred parent;
 	char *username;
@@ -123,17 +128,17 @@ GIT_EXTERN(int) git_cred_ssh_keyfile_passphrase_new(
  * @param username username to use to authenticate
  * @param publickey The bytes of the public key.
  * @param publickey_len The length of the public key in bytes.
- * @param sign_fn The callback method for authenticating.
- * @param sign_data The abstract data sent to the sign_callback method.
+ * @param sign_fn The callback method to sign the data during the challenge.
+ * @param sign_data The data to pass to the sign function.
  * @return 0 for success or an error code for failure
  */
 GIT_EXTERN(int) git_cred_ssh_publickey_new(
 	git_cred **out,
 	const char *username,
 	const char *publickey,
-    size_t publickey_len,
-    git_cred_sign_callback sign_fn,
-    void *sign_data);
+	size_t publickey_len,
+	git_cred_sign_callback sign_fn,
+	void *sign_data);
 
 /**
  * Signature of a function which acquires a credential object.
