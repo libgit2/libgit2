@@ -53,7 +53,7 @@ typedef struct {
 	git_xdiff_output *xo;
 	git_patch *patch;
 	git_diff_hunk hunk;
-	size_t old_lineno, new_lineno;
+	int old_lineno, new_lineno;
 } git_xdiff_info;
 
 static int diff_update_lines(
@@ -77,20 +77,20 @@ static int diff_update_lines(
 	case GIT_DIFF_LINE_DEL_EOFNL:
 		line->old_lineno = -1;
 		line->new_lineno = info->new_lineno;
-		info->new_lineno += line->num_lines;
+		info->new_lineno += (int)line->num_lines;
 		break;
 	case GIT_DIFF_LINE_DELETION:
 	case GIT_DIFF_LINE_ADD_EOFNL:
 		line->old_lineno = info->old_lineno;
 		line->new_lineno = -1;
-		info->old_lineno += line->num_lines;
+		info->old_lineno += (int)line->num_lines;
 		break;
 	case GIT_DIFF_LINE_CONTEXT:
 	case GIT_DIFF_LINE_CONTEXT_EOFNL:
 		line->old_lineno = info->old_lineno;
 		line->new_lineno = info->new_lineno;
-		info->old_lineno += line->num_lines;
-		info->new_lineno += line->num_lines;
+		info->old_lineno += (int)line->num_lines;
+		info->new_lineno += (int)line->num_lines;
 		break;
 	default:
 		giterr_set(GITERR_INVALID, "Unknown diff line origin %02x",
