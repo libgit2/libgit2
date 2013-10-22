@@ -358,6 +358,20 @@ GIT_EXTERN(int) git_odb_hash(git_oid *out, const void *data, size_t len, git_oty
 GIT_EXTERN(int) git_odb_hashfile(git_oid *out, const char *path, git_otype type);
 
 /**
+ * Create a copy of an odb_object
+ *
+ * The returned copy must be manually freed with `git_odb_object_free`.
+ * Note that because of an implementation detail, the returned copy will be
+ * the same pointer as `source`: the object is internally refcounted, so the
+ * copy still needs to be freed twice.
+ *
+ * @param dest pointer where to store the copy
+ * @param source object to copy
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_odb_object_dup(git_odb_object **dest, git_odb_object *source);
+
+/**
  * Close an ODB object
  *
  * This method must always be called once a `git_odb_object` is no
