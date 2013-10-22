@@ -21,7 +21,7 @@ void test_diff_index__0(void)
 	git_tree *a = resolve_commit_oid_to_tree(g_repo, a_commit);
 	git_tree *b = resolve_commit_oid_to_tree(g_repo, b_commit);
 	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
-	git_diff_list *diff = NULL;
+	git_diff *diff = NULL;
 	diff_expects exp;
 
 	cl_assert(a);
@@ -56,7 +56,7 @@ void test_diff_index__0(void)
 	cl_assert_equal_i(6, exp.line_adds);
 	cl_assert_equal_i(2, exp.line_dels);
 
-	git_diff_list_free(diff);
+	git_diff_free(diff);
 	diff = NULL;
 	memset(&exp, 0, sizeof(exp));
 
@@ -84,7 +84,7 @@ void test_diff_index__0(void)
 	cl_assert_equal_i(11, exp.line_adds);
 	cl_assert_equal_i(2, exp.line_dels);
 
-	git_diff_list_free(diff);
+	git_diff_free(diff);
 	diff = NULL;
 
 	git_tree_free(a);
@@ -114,7 +114,7 @@ void test_diff_index__1(void)
 	git_tree *a = resolve_commit_oid_to_tree(g_repo, a_commit);
 	git_tree *b = resolve_commit_oid_to_tree(g_repo, b_commit);
 	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
-	git_diff_list *diff = NULL;
+	git_diff *diff = NULL;
 	diff_expects exp;
 
 	cl_assert(a);
@@ -134,7 +134,7 @@ void test_diff_index__1(void)
 
 	cl_assert_equal_i(2, exp.files);
 
-	git_diff_list_free(diff);
+	git_diff_free(diff);
 	diff = NULL;
 
 	git_tree_free(a);
@@ -146,7 +146,7 @@ void test_diff_index__checks_options_version(void)
 	const char *a_commit = "26a125ee1bf";
 	git_tree *a = resolve_commit_oid_to_tree(g_repo, a_commit);
 	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
-	git_diff_list *diff = NULL;
+	git_diff *diff = NULL;
 	const git_error *err;
 
 	opts.version = 0;

@@ -43,7 +43,7 @@ void test_diff_rename__match_oid(void)
 	const char *old_sha = "31e47d8c1fa36d7f8d537b96158e3f024de0a9f2";
 	const char *new_sha = "2bc7f351d20b53f1c72c16c4b036e491c478c49a";
 	git_tree *old_tree, *new_tree;
-	git_diff_list *diff;
+	git_diff *diff;
 	git_diff_options diffopts = GIT_DIFF_OPTIONS_INIT;
 	git_diff_find_options opts = GIT_DIFF_FIND_OPTIONS_INIT;
 	diff_expects exp;
@@ -88,7 +88,7 @@ void test_diff_rename__match_oid(void)
 	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_ADDED]);
 	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_RENAMED]);
 
-	git_diff_list_free(diff);
+	git_diff_free(diff);
 
 	cl_git_pass(git_diff_tree_to_tree(
 		&diff, g_repo, old_tree, new_tree, &diffopts));
@@ -109,7 +109,7 @@ void test_diff_rename__match_oid(void)
 	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_COPIED]);
 	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_RENAMED]);
 
-	git_diff_list_free(diff);
+	git_diff_free(diff);
 
 	git_tree_free(old_tree);
 	git_tree_free(new_tree);
@@ -120,7 +120,7 @@ void test_diff_rename__checks_options_version(void)
 	const char *old_sha = "31e47d8c1fa36d7f8d537b96158e3f024de0a9f2";
 	const char *new_sha = "2bc7f351d20b53f1c72c16c4b036e491c478c49a";
 	git_tree *old_tree, *new_tree;
-	git_diff_list *diff;
+	git_diff *diff;
 	git_diff_options diffopts = GIT_DIFF_OPTIONS_INIT;
 	git_diff_find_options opts = GIT_DIFF_FIND_OPTIONS_INIT;
 	const git_error *err;
@@ -142,7 +142,7 @@ void test_diff_rename__checks_options_version(void)
 	err = giterr_last();
 	cl_assert_equal_i(GITERR_INVALID, err->klass);
 
-	git_diff_list_free(diff);
+	git_diff_free(diff);
 	git_tree_free(old_tree);
 	git_tree_free(new_tree);
 }
@@ -153,7 +153,7 @@ void test_diff_rename__not_exact_match(void)
 	const char *sha1 = "1c068dee5790ef1580cfc4cd670915b48d790084";
 	const char *sha2 = "19dd32dfb1520a64e5bbaae8dce6ef423dfa2f13";
 	git_tree *old_tree, *new_tree;
-	git_diff_list *diff;
+	git_diff *diff;
 	git_diff_options diffopts = GIT_DIFF_OPTIONS_INIT;
 	git_diff_find_options opts = GIT_DIFF_FIND_OPTIONS_INIT;
 	diff_expects exp;
@@ -207,7 +207,7 @@ void test_diff_rename__not_exact_match(void)
 	cl_assert_equal_i(2, exp.file_status[GIT_DELTA_MODIFIED]);
 	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_ADDED]);
 
-	git_diff_list_free(diff);
+	git_diff_free(diff);
 
 	/* git diff -M -C \
 	 *          2bc7f351d20b53f1c72c16c4b036e491c478c49a \
@@ -228,7 +228,7 @@ void test_diff_rename__not_exact_match(void)
 	cl_assert_equal_i(2, exp.file_status[GIT_DELTA_MODIFIED]);
 	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_COPIED]);
 
-	git_diff_list_free(diff);
+	git_diff_free(diff);
 
 	/* git diff -M -C --find-copies-harder --break-rewrites \
 	 *          2bc7f351d20b53f1c72c16c4b036e491c478c49a \
@@ -253,7 +253,7 @@ void test_diff_rename__not_exact_match(void)
 	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_DELETED]);
 	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_COPIED]);
 
-	git_diff_list_free(diff);
+	git_diff_free(diff);
 
 	/* == Changes =====================================================
 	 * songofseven.txt -> untimely.txt    (rename, convert to crlf)
@@ -281,7 +281,7 @@ void test_diff_rename__not_exact_match(void)
 	cl_assert_equal_i(2, exp.file_status[GIT_DELTA_MODIFIED]);
 	cl_assert_equal_i(2, exp.file_status[GIT_DELTA_ADDED]);
 	cl_assert_equal_i(2, exp.file_status[GIT_DELTA_DELETED]);
-	git_diff_list_free(diff);
+	git_diff_free(diff);
 
 	/* git diff -M -C \
 	 *          1c068dee5790ef1580cfc4cd670915b48d790084 \
@@ -301,7 +301,7 @@ void test_diff_rename__not_exact_match(void)
 	cl_assert_equal_i(2, exp.file_status[GIT_DELTA_MODIFIED]);
 	cl_assert_equal_i(2, exp.file_status[GIT_DELTA_RENAMED]);
 
-	git_diff_list_free(diff);
+	git_diff_free(diff);
 
 	/* git diff -M -C --find-copies-harder --break-rewrites \
 	 *          1c068dee5790ef1580cfc4cd670915b48d790084 \
@@ -330,7 +330,7 @@ void test_diff_rename__not_exact_match(void)
 	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_DELETED]);
 	cl_assert_equal_i(2, exp.file_status[GIT_DELTA_RENAMED]);
 
-	git_diff_list_free(diff);
+	git_diff_free(diff);
 
 	/* git diff -M -C --find-copies-harder --break-rewrites \
 	 *          1c068dee5790ef1580cfc4cd670915b48d790084 \
@@ -353,7 +353,7 @@ void test_diff_rename__not_exact_match(void)
 	cl_assert_equal_i(2, exp.file_status[GIT_DELTA_MODIFIED]);
 	cl_assert_equal_i(2, exp.file_status[GIT_DELTA_RENAMED]);
 
-	git_diff_list_free(diff);
+	git_diff_free(diff);
 
 	git_tree_free(old_tree);
 	git_tree_free(new_tree);
@@ -364,7 +364,7 @@ void test_diff_rename__handles_small_files(void)
 	const char *tree_sha = "2bc7f351d20b53f1c72c16c4b036e491c478c49a";
 	git_index *index;
 	git_tree *tree;
-	git_diff_list *diff;
+	git_diff *diff;
 	git_diff_options diffopts = GIT_DIFF_OPTIONS_INIT;
 	git_diff_find_options opts = GIT_DIFF_FIND_OPTIONS_INIT;
 
@@ -388,7 +388,7 @@ void test_diff_rename__handles_small_files(void)
 		GIT_DIFF_FIND_AND_BREAK_REWRITES;
 	cl_git_pass(git_diff_find_similar(diff, &opts));
 
-	git_diff_list_free(diff);
+	git_diff_free(diff);
 	git_tree_free(tree);
 	git_index_free(index);
 }
@@ -400,7 +400,7 @@ void test_diff_rename__working_directory_changes(void)
 	git_oid id;
 	git_tree *tree;
 	git_blob *blob;
-	git_diff_list *diff;
+	git_diff *diff;
 	git_diff_options diffopts = GIT_DIFF_OPTIONS_INIT;
 	git_diff_find_options opts = GIT_DIFF_FIND_OPTIONS_INIT;
 	diff_expects exp;
@@ -451,7 +451,7 @@ void test_diff_rename__working_directory_changes(void)
 	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_DELETED]);
 	cl_assert_equal_i(2, exp.file_status[GIT_DELTA_UNTRACKED]);
 
-	git_diff_list_free(diff);
+	git_diff_free(diff);
 
 	/* rewrite files in the working directory with / without CRLF changes */
 
@@ -477,7 +477,7 @@ void test_diff_rename__working_directory_changes(void)
 	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_DELETED]);
 	cl_assert_equal_i(2, exp.file_status[GIT_DELTA_UNTRACKED]);
 
-	git_diff_list_free(diff);
+	git_diff_free(diff);
 
 	/* try a different whitespace option */
 
@@ -496,7 +496,7 @@ void test_diff_rename__working_directory_changes(void)
 	cl_assert_equal_i(2, exp.file_status[GIT_DELTA_DELETED]);
 	cl_assert_equal_i(3, exp.file_status[GIT_DELTA_UNTRACKED]);
 
-	git_diff_list_free(diff);
+	git_diff_free(diff);
 
 	/* try a different matching option */
 
@@ -514,7 +514,7 @@ void test_diff_rename__working_directory_changes(void)
 	cl_assert_equal_i(3, exp.file_status[GIT_DELTA_UNTRACKED]);
 	cl_assert_equal_i(2, exp.file_status[GIT_DELTA_DELETED]);
 
-	git_diff_list_free(diff);
+	git_diff_free(diff);
 
 	/* again with exact match blob */
 
@@ -545,7 +545,7 @@ void test_diff_rename__working_directory_changes(void)
 	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_RENAMED]);
 	cl_assert_equal_i(2, exp.file_status[GIT_DELTA_UNTRACKED]);
 
-	git_diff_list_free(diff);
+	git_diff_free(diff);
 
 	git_tree_free(tree);
 	git_buf_free(&content);
@@ -557,10 +557,10 @@ void test_diff_rename__patch(void)
 	const char *sha0 = "2bc7f351d20b53f1c72c16c4b036e491c478c49a";
 	const char *sha1 = "1c068dee5790ef1580cfc4cd670915b48d790084";
 	git_tree *old_tree, *new_tree;
-	git_diff_list *diff;
+	git_diff *diff;
 	git_diff_options diffopts = GIT_DIFF_OPTIONS_INIT;
 	git_diff_find_options opts = GIT_DIFF_FIND_OPTIONS_INIT;
-	git_diff_patch *patch;
+	git_patch *patch;
 	const git_diff_delta *delta;
 	char *text;
 	const char *expected = "diff --git a/sixserving.txt b/ikeepsix.txt\nindex ad0a8e5..36020db 100644\n--- a/sixserving.txt\n+++ b/ikeepsix.txt\n@@ -1,3 +1,6 @@\n+I Keep Six Honest Serving-Men\n+=============================\n+\n I KEEP six honest serving-men\n  (They taught me all I knew);\n Their names are What and Why and When\n@@ -21,4 +24,4 @@ She sends'em abroad on her own affairs,\n One million Hows, two million Wheres,\n And seven million Whys!\n \n-                -- Rudyard Kipling\n+  -- Rudyard Kipling\n";
@@ -584,25 +584,26 @@ void test_diff_rename__patch(void)
 
 	cl_assert_equal_i(4, (int)git_diff_num_deltas(diff));
 
-	cl_git_pass(git_diff_get_patch(&patch, &delta, diff, 0));
+	cl_git_pass(git_patch_from_diff(&patch, diff, 0));
+	cl_assert((delta = git_patch_get_delta(patch)) != NULL);
 	cl_assert_equal_i(GIT_DELTA_COPIED, (int)delta->status);
 
-	cl_git_pass(git_diff_patch_to_str(&text, patch));
+	cl_git_pass(git_patch_to_str(&text, patch));
 	cl_assert_equal_s(expected, text);
 	git__free(text);
 
-	git_diff_patch_free(patch);
+	git_patch_free(patch);
 
-	cl_git_pass(git_diff_get_patch(NULL, &delta, diff, 1));
+	cl_assert((delta = git_diff_get_delta(diff, 1)) != NULL);
 	cl_assert_equal_i(GIT_DELTA_UNMODIFIED, (int)delta->status);
 
-	cl_git_pass(git_diff_get_patch(NULL, &delta, diff, 2));
+	cl_assert((delta = git_diff_get_delta(diff, 2)) != NULL);
 	cl_assert_equal_i(GIT_DELTA_MODIFIED, (int)delta->status);
 
-	cl_git_pass(git_diff_get_patch(NULL, &delta, diff, 3));
+	cl_assert((delta = git_diff_get_delta(diff, 3)) != NULL);
 	cl_assert_equal_i(GIT_DELTA_MODIFIED, (int)delta->status);
 
-	git_diff_list_free(diff);
+	git_diff_free(diff);
 	git_tree_free(old_tree);
 	git_tree_free(new_tree);
 }
@@ -612,7 +613,7 @@ void test_diff_rename__file_exchange(void)
 	git_buf c1 = GIT_BUF_INIT, c2 = GIT_BUF_INIT;
 	git_index *index;
 	git_tree *tree;
-	git_diff_list *diff;
+	git_diff *diff;
 	git_diff_options diffopts = GIT_DIFF_OPTIONS_INIT;
 	git_diff_find_options opts = GIT_DIFF_FIND_OPTIONS_INIT;
 	diff_expects exp;
@@ -647,7 +648,7 @@ void test_diff_rename__file_exchange(void)
 	cl_assert_equal_i(2, exp.files);
 	cl_assert_equal_i(2, exp.file_status[GIT_DELTA_RENAMED]);
 
-	git_diff_list_free(diff);
+	git_diff_free(diff);
 	git_tree_free(tree);
 	git_index_free(index);
 
@@ -660,7 +661,7 @@ void test_diff_rename__file_exchange_three(void)
 	git_buf c1 = GIT_BUF_INIT, c2 = GIT_BUF_INIT, c3 = GIT_BUF_INIT;
 	git_index *index;
 	git_tree *tree;
-	git_diff_list *diff;
+	git_diff *diff;
 	git_diff_options diffopts = GIT_DIFF_OPTIONS_INIT;
 	git_diff_find_options opts = GIT_DIFF_FIND_OPTIONS_INIT;
 	diff_expects exp;
@@ -699,7 +700,7 @@ void test_diff_rename__file_exchange_three(void)
 	cl_assert_equal_i(3, exp.files);
 	cl_assert_equal_i(3, exp.file_status[GIT_DELTA_RENAMED]);
 
-	git_diff_list_free(diff);
+	git_diff_free(diff);
 	git_tree_free(tree);
 	git_index_free(index);
 
@@ -713,7 +714,7 @@ void test_diff_rename__file_partial_exchange(void)
 	git_buf c1 = GIT_BUF_INIT, c2 = GIT_BUF_INIT;
 	git_index *index;
 	git_tree *tree;
-	git_diff_list *diff;
+	git_diff *diff;
 	git_diff_options diffopts = GIT_DIFF_OPTIONS_INIT;
 	git_diff_find_options opts = GIT_DIFF_FIND_OPTIONS_INIT;
 	diff_expects exp;
@@ -752,7 +753,7 @@ void test_diff_rename__file_partial_exchange(void)
 	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_ADDED]);
 	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_DELETED]);
 
-	git_diff_list_free(diff);
+	git_diff_free(diff);
 	git_tree_free(tree);
 	git_index_free(index);
 
@@ -765,7 +766,7 @@ void test_diff_rename__rename_and_copy_from_same_source(void)
 	git_buf c1 = GIT_BUF_INIT, c2 = GIT_BUF_INIT;
 	git_index *index;
 	git_tree *tree;
-	git_diff_list *diff;
+	git_diff *diff;
 	git_diff_options diffopts = GIT_DIFF_OPTIONS_INIT;
 	git_diff_find_options opts = GIT_DIFF_FIND_OPTIONS_INIT;
 	diff_expects exp;
@@ -809,7 +810,7 @@ void test_diff_rename__rename_and_copy_from_same_source(void)
 	cl_assert_equal_i(2, exp.file_status[GIT_DELTA_COPIED]);
 	cl_assert_equal_i(4, exp.file_status[GIT_DELTA_UNMODIFIED]);
 
-	git_diff_list_free(diff);
+	git_diff_free(diff);
 	git_tree_free(tree);
 	git_index_free(index);
 
@@ -822,7 +823,7 @@ void test_diff_rename__from_deleted_to_split(void)
 	git_buf c1 = GIT_BUF_INIT;
 	git_index *index;
 	git_tree *tree;
-	git_diff_list *diff;
+	git_diff *diff;
 	git_diff_options diffopts = GIT_DIFF_OPTIONS_INIT;
 	git_diff_find_options opts = GIT_DIFF_FIND_OPTIONS_INIT;
 	diff_expects exp;
@@ -863,7 +864,7 @@ void test_diff_rename__from_deleted_to_split(void)
 	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_RENAMED]);
 	cl_assert_equal_i(2, exp.file_status[GIT_DELTA_UNMODIFIED]);
 
-	git_diff_list_free(diff);
+	git_diff_free(diff);
 	git_tree_free(tree);
 	git_index_free(index);
 
@@ -907,7 +908,7 @@ void test_diff_rename__rejected_match_can_match_others(void)
 	git_index *index;
 	git_tree *tree;
 	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
-	git_diff_list *diff;
+	git_diff *diff;
 	git_diff_options diffopts = GIT_DIFF_OPTIONS_INIT;
 	git_diff_find_options findopts = GIT_DIFF_FIND_OPTIONS_INIT;
 	git_buf one = GIT_BUF_INIT, two = GIT_BUF_INIT;
@@ -961,7 +962,7 @@ void test_diff_rename__rejected_match_can_match_others(void)
 	cl_git_pass(
 		git_diff_foreach(diff, test_names_expected, NULL, NULL, &expect));
 
-	git_diff_list_free(diff);
+	git_diff_free(diff);
 	git_tree_free(tree);
 	git_index_free(index);
 	git_reference_free(head);
@@ -993,7 +994,7 @@ void test_diff_rename__rejected_match_can_match_others_two(void)
 	git_index *index;
 	git_tree *tree;
 	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
-	git_diff_list *diff;
+	git_diff *diff;
 	git_diff_options diffopts = GIT_DIFF_OPTIONS_INIT;
 	git_diff_find_options findopts = GIT_DIFF_FIND_OPTIONS_INIT;
 	unsigned int status[] = { GIT_DELTA_RENAMED, GIT_DELTA_RENAMED };
@@ -1035,7 +1036,7 @@ void test_diff_rename__rejected_match_can_match_others_two(void)
 		git_diff_foreach(diff, test_names_expected, NULL, NULL, &expect));
 	cl_assert(expect.idx > 0);
 
-	git_diff_list_free(diff);
+	git_diff_free(diff);
 	git_tree_free(tree);
 	git_index_free(index);
 	git_reference_free(head);
@@ -1048,7 +1049,7 @@ void test_diff_rename__rejected_match_can_match_others_three(void)
 	git_index *index;
 	git_tree *tree;
 	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
-	git_diff_list *diff;
+	git_diff *diff;
 	git_diff_options diffopts = GIT_DIFF_OPTIONS_INIT;
 	git_diff_find_options findopts = GIT_DIFF_FIND_OPTIONS_INIT;
 
@@ -1091,7 +1092,7 @@ void test_diff_rename__rejected_match_can_match_others_three(void)
 
 	cl_assert(expect.idx == expect.len);
 
-	git_diff_list_free(diff);
+	git_diff_free(diff);
 	git_tree_free(tree);
 	git_index_free(index);
 	git_reference_free(head);
@@ -1102,7 +1103,7 @@ void test_diff_rename__can_rename_from_rewrite(void)
 {
 	git_index *index;
 	git_tree *tree;
-	git_diff_list *diff;
+	git_diff *diff;
 	git_diff_options diffopts = GIT_DIFF_OPTIONS_INIT;
 	git_diff_find_options findopts = GIT_DIFF_FIND_OPTIONS_INIT;
 
@@ -1140,7 +1141,7 @@ void test_diff_rename__can_rename_from_rewrite(void)
 
 	cl_assert(expect.idx == expect.len);
 
-	git_diff_list_free(diff);
+	git_diff_free(diff);
 	git_tree_free(tree);
 	git_index_free(index);
 }
@@ -1149,7 +1150,7 @@ void test_diff_rename__case_changes_are_split(void)
 {
 	git_index *index;
 	git_tree *tree;
-	git_diff_list *diff = NULL;
+	git_diff *diff = NULL;
 	diff_expects exp;
 	git_diff_find_options opts = GIT_DIFF_FIND_OPTIONS_INIT;
 
@@ -1182,7 +1183,7 @@ void test_diff_rename__case_changes_are_split(void)
 	cl_assert_equal_i(1, exp.files);
 	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_RENAMED]);
 
-	git_diff_list_free(diff);
+	git_diff_free(diff);
 	git_index_free(index);
 	git_tree_free(tree);
 }
@@ -1191,7 +1192,7 @@ void test_diff_rename__unmodified_can_be_renamed(void)
 {
 	git_index *index;
 	git_tree *tree;
-	git_diff_list *diff = NULL;
+	git_diff *diff = NULL;
 	diff_expects exp;
 	git_diff_options diffopts = GIT_DIFF_OPTIONS_INIT;
 	git_diff_find_options opts = GIT_DIFF_FIND_OPTIONS_INIT;
@@ -1230,7 +1231,7 @@ void test_diff_rename__unmodified_can_be_renamed(void)
 	cl_assert_equal_i(1, exp.files);
 	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_RENAMED]);
 
-	git_diff_list_free(diff);
+	git_diff_free(diff);
 	git_index_free(index);
 	git_tree_free(tree);
 }
@@ -1238,7 +1239,7 @@ void test_diff_rename__unmodified_can_be_renamed(void)
 void test_diff_rename__rewrite_on_single_file(void)
 {
 	git_index *index;
-	git_diff_list *diff = NULL;
+	git_diff *diff = NULL;
 	diff_expects exp;
 	git_diff_options diffopts = GIT_DIFF_OPTIONS_INIT;
 	git_diff_find_options findopts = GIT_DIFF_FIND_OPTIONS_INIT;
@@ -1280,6 +1281,6 @@ void test_diff_rename__rewrite_on_single_file(void)
 	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_DELETED]);
 	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_UNTRACKED]);
 
-	git_diff_list_free(diff);
+	git_diff_free(diff);
 	git_index_free(index);
 }

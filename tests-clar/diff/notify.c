@@ -13,7 +13,7 @@ void test_diff_notify__cleanup(void)
 }
 
 static int assert_called_notifications(
-	const git_diff_list *diff_so_far,
+	const git_diff *diff_so_far,
 	const git_diff_delta *delta_to_add,
 	const char *matched_pathspec,
 	void *payload)
@@ -45,7 +45,7 @@ static void test_notify(
 	int expected_diffed_files_count)
 {
 	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
-	git_diff_list *diff = NULL;
+	git_diff *diff = NULL;
 	diff_expects exp;
 
 	g_repo = cl_git_sandbox_init("status");
@@ -63,7 +63,7 @@ static void test_notify(
 
 	cl_assert_equal_i(expected_diffed_files_count, exp.files);
 
-	git_diff_list_free(diff);
+	git_diff_free(diff);
 }
 
 void test_diff_notify__notify_single_pathspec(void)
@@ -155,7 +155,7 @@ void test_diff_notify__notify_catchall(void)
 }
 
 static int abort_diff(
-	const git_diff_list *diff_so_far,
+	const git_diff *diff_so_far,
 	const git_diff_delta *delta_to_add,
 	const char *matched_pathspec,
 	void *payload)
@@ -171,7 +171,7 @@ static int abort_diff(
 void test_diff_notify__notify_cb_can_abort_diff(void)
 {
 	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
-	git_diff_list *diff = NULL;
+	git_diff *diff = NULL;
 	char *pathspec = NULL;
 
 	g_repo = cl_git_sandbox_init("status");
@@ -189,7 +189,7 @@ void test_diff_notify__notify_cb_can_abort_diff(void)
 }
 
 static int filter_all(
-	const git_diff_list *diff_so_far,
+	const git_diff *diff_so_far,
 	const git_diff_delta *delta_to_add,
 	const char *matched_pathspec,
 	void *payload)
@@ -205,7 +205,7 @@ static int filter_all(
 void test_diff_notify__notify_cb_can_be_used_as_filtering_function(void)
 {
 	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
-	git_diff_list *diff = NULL;
+	git_diff *diff = NULL;
 	char *pathspec = NULL;
 	diff_expects exp;
 
@@ -224,5 +224,5 @@ void test_diff_notify__notify_cb_can_be_used_as_filtering_function(void)
 
 	cl_assert_equal_i(0, exp.files);
 
-	git_diff_list_free(diff);
+	git_diff_free(diff);
 }

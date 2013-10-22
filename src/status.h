@@ -14,8 +14,8 @@
 struct git_status_list {
 	git_status_options opts;
 
-	git_diff_list *head2idx;
-	git_diff_list *idx2wd;
+	git_diff *head2idx;
+	git_diff *idx2wd;
 
 	git_vector paired;
 };

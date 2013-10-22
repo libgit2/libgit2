@@ -19,7 +19,7 @@ static void test_with_many(int expected_new)
 {
 	git_index *index;
 	git_tree *tree, *new_tree;
-	git_diff_list *diff = NULL;
+	git_diff *diff = NULL;
 	diff_expects exp;
 	git_diff_options diffopts = GIT_DIFF_OPTIONS_INIT;
 	git_diff_find_options opts = GIT_DIFF_FIND_OPTIONS_INIT;
@@ -52,7 +52,7 @@ static void test_with_many(int expected_new)
 	cl_assert_equal_i(expected_new, exp.file_status[GIT_DELTA_ADDED]);
 	cl_assert_equal_i(expected_new + 1, exp.files);
 
-	git_diff_list_free(diff);
+	git_diff_free(diff);
 
 	cl_repo_commit_from_index(NULL, g_repo, NULL, 1372350000, "yoyoyo");
 	cl_git_pass(git_revparse_single(
@@ -78,7 +78,7 @@ static void test_with_many(int expected_new)
 	cl_assert_equal_i(expected_new, exp.file_status[GIT_DELTA_ADDED]);
 	cl_assert_equal_i(expected_new + 1, exp.files);
 
-	git_diff_list_free(diff);
+	git_diff_free(diff);
 
 	git_tree_free(new_tree);
 	git_tree_free(tree);

@@ -21,7 +21,7 @@
 	(VAL) ? ((DIFF)->opts.flags | (FLAG)) : ((DIFF)->opts.flags & ~(VAL))
 
 static git_diff_delta *diff_delta__alloc(
-	git_diff_list *diff,
+	git_diff *diff,
 	git_delta_t status,
 	const char *path)
 {
@@ -50,7 +50,7 @@ static git_diff_delta *diff_delta__alloc(
 }
 
 static int diff_notify(
-	const git_diff_list *diff,
+	const git_diff *diff,
 	const git_diff_delta *delta,
 	const char *matched_pathspec)
 {
@@ -62,7 +62,7 @@ static int diff_notify(
 }
 
 static int diff_delta__from_one(
-	git_diff_list *diff,
+	git_diff *diff,
 	git_delta_t   status,
 	const git_index_entry *entry)
 {
@@ -81,7 +81,7 @@ static int diff_delta__from_one(
 	if (!git_pathspec__match(
 			&diff->pathspec, entry->path,
 			DIFF_FLAG_IS_SET(diff, GIT_DIFF_DISABLE_PATHSPEC_MATCH),
-			DIFF_FLAG_IS_SET(diff, GIT_DIFF_DELTAS_ARE_ICASE),
+			DIFF_FLAG_IS_SET(diff, GIT_DIFF_IGNORE_CASE),
 			&matched_pathspec, NULL))
 		return 0;
 
@@ -90,6 +90,7 @@ static int diff_delta__from_one(
 
 	/* This fn is just for single-sided diffs */
 	assert(status != GIT_DELTA_MODIFIED);
+	delta->nfiles = 1;
 
 	if (delta->status == GIT_DELTA_DELETED) {
 		delta->old_file.mode = entry->mode;
@@ -120,7 +121,7 @@ static int diff_delta__from_one(
 }
 
 static int diff_delta__from_two(
-	git_diff_list *diff,
+	git_diff *diff,
 	git_delta_t   status,
 	const git_index_entry *old_entry,
 	uint32_t old_mode,
@@ -148,6 +149,7 @@ static int diff_delta__from_two(
 
 	delta = diff_delta__alloc(diff, status, canonical_path);
 	GITERR_CHECK_ALLOC(delta);
+	delta->nfiles = 2;
 
 	git_oid_cpy(&delta->old_file.oid, &old_entry->oid);
 	delta->old_file.size = old_entry->file_size;
@@ -181,7 +183,7 @@ static int diff_delta__from_two(
 }
 
 static git_diff_delta *diff_delta__last_for_item(
-	git_diff_list *diff,
+	git_diff *diff,
 	const git_index_entry *item)
 {
 	git_diff_delta *delta = git_vector_last(&diff->deltas);
@@ -340,13 +342,13 @@ static const char *diff_mnemonic_prefix(
 	return pfx;
 }
 
-static git_diff_list *diff_list_alloc(
+static git_diff *diff_list_alloc(
 	git_repository *repo,
 	git_iterator *old_iter,
 	git_iterator *new_iter)
 {
 	git_diff_options dflt = GIT_DIFF_OPTIONS_INIT;
-	git_diff_list *diff = git__calloc(1, sizeof(git_diff_list));
+	git_diff *diff = git__calloc(1, sizeof(git_diff));
 	if (!diff)
 		return NULL;
 
@@ -360,7 +362,7 @@ static git_diff_list *diff_list_alloc(
 
 	if (git_vector_init(&diff->deltas, 0, git_diff_delta__cmp) < 0 ||
 		git_pool_init(&diff->pool, 1, 0) < 0) {
-		git_diff_list_free(diff);
+		git_diff_free(diff);
 		return NULL;
 	}
 
@@ -368,14 +370,14 @@ static git_diff_list *diff_list_alloc(
 	 * the ignore_case bit set */
 	if (!git_iterator_ignore_case(old_iter) &&
 		!git_iterator_ignore_case(new_iter)) {
-		diff->opts.flags &= ~GIT_DIFF_DELTAS_ARE_ICASE;
+		diff->opts.flags &= ~GIT_DIFF_IGNORE_CASE;
 
 		diff->strcomp    = git__strcmp;
 		diff->strncomp   = git__strncmp;
 		diff->pfxcomp    = git__prefixcmp;
 		diff->entrycomp  = git_index_entry__cmp;
 	} else {
-		diff->opts.flags |= GIT_DIFF_DELTAS_ARE_ICASE;
+		diff->opts.flags |= GIT_DIFF_IGNORE_CASE;
 
 		diff->strcomp    = git__strcasecmp;
 		diff->strncomp   = git__strncasecmp;
@@ -389,7 +391,7 @@ static git_diff_list *diff_list_alloc(
 }
 
 static int diff_list_apply_options(
-	git_diff_list *diff,
+	git_diff *diff,
 	const git_diff_options *opts)
 {
 	git_config *cfg;
@@ -399,9 +401,9 @@ static int diff_list_apply_options(
 
 	if (opts) {
 		/* copy user options (except case sensitivity info from iterators) */
-		bool icase = DIFF_FLAG_IS_SET(diff, GIT_DIFF_DELTAS_ARE_ICASE);
+		bool icase = DIFF_FLAG_IS_SET(diff, GIT_DIFF_IGNORE_CASE);
 		memcpy(&diff->opts, opts, sizeof(diff->opts));
-		DIFF_FLAG_SET(diff, GIT_DIFF_DELTAS_ARE_ICASE, icase);
+		DIFF_FLAG_SET(diff, GIT_DIFF_IGNORE_CASE, icase);
 
 		/* initialize pathspec from options */
 		if (git_pathspec__vinit(&diff->pathspec, &opts->pathspec, pool) < 0)
@@ -413,7 +415,7 @@ static int diff_list_apply_options(
 		diff->opts.flags |= GIT_DIFF_INCLUDE_TYPECHANGE;
 
 	/* flag INCLUDE_UNTRACKED_CONTENT implies INCLUDE_UNTRACKED */
-	if (DIFF_FLAG_IS_SET(diff, GIT_DIFF_INCLUDE_UNTRACKED_CONTENT))
+	if (DIFF_FLAG_IS_SET(diff, GIT_DIFF_SHOW_UNTRACKED_CONTENT))
 		diff->opts.flags |= GIT_DIFF_INCLUDE_UNTRACKED;
 
 	/* load config values that affect diff behavior */
@@ -490,7 +492,7 @@ static int diff_list_apply_options(
 	return 0;
 }
 
-static void diff_list_free(git_diff_list *diff)
+static void diff_list_free(git_diff *diff)
 {
 	git_diff_delta *delta;
 	unsigned int i;
@@ -508,7 +510,7 @@ static void diff_list_free(git_diff_list *diff)
 	git__free(diff);
 }
 
-void git_diff_list_free(git_diff_list *diff)
+void git_diff_free(git_diff *diff)
 {
 	if (!diff)
 		return;
@@ -516,7 +518,7 @@ void git_diff_list_free(git_diff_list *diff)
 	GIT_REFCOUNT_DEC(diff, diff_list_free);
 }
 
-void git_diff_list_addref(git_diff_list *diff)
+void git_diff_addref(git_diff *diff)
 {
 	GIT_REFCOUNT_INC(diff);
 }
@@ -612,7 +614,7 @@ typedef struct {
 static int maybe_modified_submodule(
 	git_delta_t *status,
 	git_oid *found_oid,
-	git_diff_list *diff,
+	git_diff *diff,
 	diff_in_progress *info)
 {
 	int error = 0;
@@ -659,7 +661,7 @@ static int maybe_modified_submodule(
 }
 
 static int maybe_modified(
-	git_diff_list *diff,
+	git_diff *diff,
 	diff_in_progress *info)
 {
 	git_oid noid;
@@ -674,7 +676,7 @@ static int maybe_modified(
 	if (!git_pathspec__match(
 			&diff->pathspec, oitem->path,
 			DIFF_FLAG_IS_SET(diff, GIT_DIFF_DISABLE_PATHSPEC_MATCH),
-			DIFF_FLAG_IS_SET(diff, GIT_DIFF_DELTAS_ARE_ICASE),
+			DIFF_FLAG_IS_SET(diff, GIT_DIFF_IGNORE_CASE),
 			&matched_pathspec, NULL))
 		return 0;
 
@@ -778,7 +780,7 @@ static int maybe_modified(
 }
 
 static bool entry_is_prefixed(
-	git_diff_list *diff,
+	git_diff *diff,
 	const git_index_entry *item,
 	const git_index_entry *prefix_item)
 {
@@ -795,7 +797,7 @@ static bool entry_is_prefixed(
 }
 
 static int diff_scan_inside_untracked_dir(
-	git_diff_list *diff, diff_in_progress *info, git_delta_t *delta_type)
+	git_diff *diff, diff_in_progress *info, git_delta_t *delta_type)
 {
 	int error = 0;
 	git_buf base = GIT_BUF_INIT;
@@ -861,7 +863,7 @@ done:
 }
 
 static int handle_unmatched_new_item(
-	git_diff_list *diff, diff_in_progress *info)
+	git_diff *diff, diff_in_progress *info)
 {
 	int error = 0;
 	const git_index_entry *nitem = info->nitem;
@@ -910,7 +912,7 @@ static int handle_unmatched_new_item(
 		 */
 		if (!recurse_into_dir &&
 			delta_type == GIT_DELTA_UNTRACKED &&
-			DIFF_FLAG_ISNT_SET(diff, GIT_DIFF_FAST_UNTRACKED_DIRS))
+			DIFF_FLAG_ISNT_SET(diff, GIT_DIFF_ENABLE_FAST_UNTRACKED_DIRS))
 		{
 			git_diff_delta *last;
 
@@ -1016,7 +1018,7 @@ static int handle_unmatched_new_item(
 }
 
 static int handle_unmatched_old_item(
-	git_diff_list *diff, diff_in_progress *info)
+	git_diff *diff, diff_in_progress *info)
 {
 	int error = diff_delta__from_one(diff, GIT_DELTA_DELETED, info->oitem);
 	if (error < 0)
@@ -1048,7 +1050,7 @@ static int handle_unmatched_old_item(
 }
 
 static int handle_matched_item(
-	git_diff_list *diff, diff_in_progress *info)
+	git_diff *diff, diff_in_progress *info)
 {
 	int error = 0;
 
@@ -1063,7 +1065,7 @@ static int handle_matched_item(
 }
 
 int git_diff__from_iterators(
-	git_diff_list **diff_ptr,
+	git_diff **diff_ptr,
 	git_repository *repo,
 	git_iterator *old_iter,
 	git_iterator *new_iter,
@@ -1071,7 +1073,7 @@ int git_diff__from_iterators(
 {
 	int error = 0;
 	diff_in_progress info;
-	git_diff_list *diff;
+	git_diff *diff;
 
 	*diff_ptr = NULL;
 
@@ -1084,7 +1086,7 @@ int git_diff__from_iterators(
 	git_buf_init(&info.ignore_prefix, 0);
 
 	/* make iterators have matching icase behavior */
-	if (DIFF_FLAG_IS_SET(diff, GIT_DIFF_DELTAS_ARE_ICASE)) {
+	if (DIFF_FLAG_IS_SET(diff, GIT_DIFF_IGNORE_CASE)) {
 		if ((error = git_iterator_set_ignore_case(old_iter, true)) < 0 ||
 			(error = git_iterator_set_ignore_case(new_iter, true)) < 0)
 			goto cleanup;
@@ -1132,7 +1134,7 @@ cleanup:
 	if (!error)
 		*diff_ptr = diff;
 	else
-		git_diff_list_free(diff);
+		git_diff_free(diff);
 
 	git_buf_free(&info.ignore_prefix);
 
@@ -1149,7 +1151,7 @@ cleanup:
 } while (0)
 
 int git_diff_tree_to_tree(
-	git_diff_list **diff,
+	git_diff **diff,
 	git_repository *repo,
 	git_tree *old_tree,
 	git_tree *new_tree,
@@ -1164,7 +1166,7 @@ int git_diff_tree_to_tree(
 	 * currently case insensitive, unless the user explicitly asked
 	 * for case insensitivity
 	 */
-	if (opts && (opts->flags & GIT_DIFF_DELTAS_ARE_ICASE) != 0)
+	if (opts && (opts->flags & GIT_DIFF_IGNORE_CASE) != 0)
 		iflag = GIT_ITERATOR_IGNORE_CASE;
 
 	DIFF_FROM_ITERATORS(
@@ -1176,7 +1178,7 @@ int git_diff_tree_to_tree(
 }
 
 int git_diff_tree_to_index(
-	git_diff_list **diff,
+	git_diff **diff,
 	git_repository *repo,
 	git_tree *old_tree,
 	git_index *index,
@@ -1204,9 +1206,9 @@ int git_diff_tree_to_index(
 		git_index__set_ignore_case(index, true);
 
 		if (!error) {
-			git_diff_list *d = *diff;
+			git_diff *d = *diff;
 
-			d->opts.flags |= GIT_DIFF_DELTAS_ARE_ICASE;
+			d->opts.flags |= GIT_DIFF_IGNORE_CASE;
 			d->strcomp    = git__strcasecmp;
 			d->strncomp   = git__strncasecmp;
 			d->pfxcomp    = git__prefixcmp_icase;
@@ -1221,7 +1223,7 @@ int git_diff_tree_to_index(
 }
 
 int git_diff_index_to_workdir(
-	git_diff_list **diff,
+	git_diff **diff,
 	git_repository *repo,
 	git_index *index,
 	const git_diff_options *opts)
@@ -1242,9 +1244,8 @@ int git_diff_index_to_workdir(
 	return error;
 }
 
-
 int git_diff_tree_to_workdir(
-	git_diff_list **diff,
+	git_diff **diff,
 	git_repository *repo,
 	git_tree *old_tree,
 	const git_diff_options *opts)
@@ -1262,16 +1263,43 @@ int git_diff_tree_to_workdir(
 	return error;
 }
 
-size_t git_diff_num_deltas(git_diff_list *diff)
+int git_diff_tree_to_workdir_with_index(
+	git_diff **diff,
+	git_repository *repo,
+	git_tree *old_tree,
+	const git_diff_options *opts)
 {
-	assert(diff);
-	return (size_t)diff->deltas.length;
+	int error = 0;
+	git_diff *d1 = NULL, *d2 = NULL;
+
+	assert(diff && repo);
+
+	if (!(error = git_diff_tree_to_index(&d1, repo, old_tree, NULL, opts)) &&
+		!(error = git_diff_index_to_workdir(&d2, repo, NULL, opts)))
+		error = git_diff_merge(d1, d2);
+
+	git_diff_free(d2);
+
+	if (error) {
+		git_diff_free(d1);
+		d1 = NULL;
+	}
+
+	*diff = d1;
+	return error;
 }
 
-size_t git_diff_num_deltas_of_type(git_diff_list *diff, git_delta_t type)
+
+size_t git_diff_num_deltas(const git_diff *diff)
+{
+	assert(diff);
+	return diff->deltas.length;
+}
+
+size_t git_diff_num_deltas_of_type(const git_diff *diff, git_delta_t type)
 {
 	size_t i, count = 0;
-	git_diff_delta *delta;
+	const git_diff_delta *delta;
 
 	assert(diff);
 
@@ -1282,14 +1310,20 @@ size_t git_diff_num_deltas_of_type(git_diff_list *diff, git_delta_t type)
 	return count;
 }
 
-int git_diff_is_sorted_icase(const git_diff_list *diff)
+const git_diff_delta *git_diff_get_delta(const git_diff *diff, size_t idx)
 {
-	return (diff->opts.flags & GIT_DIFF_DELTAS_ARE_ICASE) != 0;
+	assert(diff);
+	return git_vector_get(&diff->deltas, idx);
+}
+
+int git_diff_is_sorted_icase(const git_diff *diff)
+{
+	return (diff->opts.flags & GIT_DIFF_IGNORE_CASE) != 0;
 }
 
 int git_diff__paired_foreach(
-	git_diff_list *head2idx,
-	git_diff_list *idx2wd,
+	git_diff *head2idx,
+	git_diff *idx2wd,
 	int (*cb)(git_diff_delta *h2i, git_diff_delta *i2w, void *payload),
 	void *payload)
 {
@@ -1318,10 +1352,10 @@ int git_diff__paired_foreach(
 	 * always sort by the old name in the i2w list.
 	 */
 	h2i_icase = head2idx != NULL &&
-		(head2idx->opts.flags & GIT_DIFF_DELTAS_ARE_ICASE) != 0;
+		(head2idx->opts.flags & GIT_DIFF_IGNORE_CASE) != 0;
 
 	i2w_icase = idx2wd != NULL &&
-		(idx2wd->opts.flags & GIT_DIFF_DELTAS_ARE_ICASE) != 0;
+		(idx2wd->opts.flags & GIT_DIFF_IGNORE_CASE) != 0;
 
 	icase_mismatch =
 		(head2idx != NULL && idx2wd != NULL && h2i_icase != i2w_icase);
