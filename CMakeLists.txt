@@ -50,6 +50,15 @@ IF(MSVC)
 	OPTION( STATIC_CRT		"Link the static CRT libraries"	ON  )
 ENDIF()
 
+# This variable will contain the libraries we need to put into
+# libgit2.pc's Requires.private. That is, what we're linking to or
+# what someone who's statically linking us needs to link to.
+SET(LIBGIT2_PC_REQUIRES "")
+# This will be set later if we use the system's http-parser library or
+# use iconv (OSX) and will be written to the Libs.private field in the
+# pc file.
+SET(LIBGIT2_PC_LIBS "")
+
 # Installation paths
 #
 SET(BIN_INSTALL_DIR bin CACHE PATH "Where to install binaries to.")
@@ -68,6 +77,7 @@ FUNCTION(TARGET_OS_LIBRARIES target)
 	IF(USE_ICONV)
 		TARGET_LINK_LIBRARIES(${target} iconv)
 		ADD_DEFINITIONS(-DGIT_USE_ICONV)
+		SET(LIBGIT2_PC_LIBS "${LIBGIT2_PC_LIBS} -liconv")
 	ENDIF()
 
 	IF(THREADSAFE)
@@ -119,6 +129,7 @@ ELSE ()
 	IF (HTTP_PARSER_FOUND AND HTTP_PARSER_VERSION_MAJOR EQUAL 2)
 		INCLUDE_DIRECTORIES(${HTTP_PARSER_INCLUDE_DIRS})
 		LINK_LIBRARIES(${HTTP_PARSER_LIBRARIES})
+		SET(LIBGIT2_PC_LIBS "${LIBGIT2_PC_LIBS} -lhttp_parser")
 	ELSE()
 		MESSAGE("http-parser was not found or is too old; using bundled 3rd-party sources.")
 		INCLUDE_DIRECTORIES(deps/http-parser)
@@ -132,6 +143,7 @@ IF (WIN32 AND NOT MINGW AND NOT SHA1_TYPE STREQUAL "builtin")
 	FILE(GLOB SRC_SHA1 src/hash/hash_win32.c)
 ELSEIF (OPENSSL_FOUND AND NOT SHA1_TYPE STREQUAL "builtin")
 	ADD_DEFINITIONS(-DOPENSSL_SHA1)
+	SET(LIBGIT2_PC_REQUIRES "${LIBGIT2_PC_REQUIRES} openssl")
 ELSE()
 	FILE(GLOB SRC_SHA1 src/hash/hash_generic.c)
 ENDIF()
@@ -154,6 +166,7 @@ FIND_PACKAGE(ZLIB QUIET)
 IF (ZLIB_FOUND)
 	INCLUDE_DIRECTORIES(${ZLIB_INCLUDE_DIRS})
 	LINK_LIBRARIES(${ZLIB_LIBRARIES})
+	SET(LIBGIT2_PC_REQUIRES "${LIBGIT2_PC_REQUIRES} zlib")
 	# Fake the message CMake would have shown
 	MESSAGE("-- Found zlib: ${ZLIB_LIBRARY}")
 ELSE()
@@ -169,6 +182,7 @@ ENDIF()
 IF (LIBSSH2_FOUND)
 	ADD_DEFINITIONS(-DGIT_SSH)
 	INCLUDE_DIRECTORIES(${LIBSSH2_INCLUDE_DIR})
+	SET(LIBGIT2_PC_REQUIRES "${LIBGIT2_PC_REQUIRES} libssh2")
 	SET(SSH_LIBRARIES ${LIBSSH2_LIBRARIES})
 ENDIF()
 

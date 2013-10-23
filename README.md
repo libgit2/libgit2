@@ -43,6 +43,17 @@ and also powering Microsoft's Visual Studio tools for Git.  The library provides
 * descriptive and detailed error messages
 * ...and more (over 175 different API calls)
 
+Optional dependencies
+=====================
+
+While the library provides git functionality without the need for
+dependencies, it can make use of a few libraries to add to it:
+
+- pthreads (non-Windows) to enable threadsafe access as well as multi-threaded pack generation
+- OpenSSL (non-Windows) to talk over HTTPS and provide the SHA-1 functions
+- LibSSH2 to enable the ssh transport
+- iconv (OSX) to handle the HFS+ path encoding peculiarities
+
 Building libgit2 - Using CMake
 ==============================
 
