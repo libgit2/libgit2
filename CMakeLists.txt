@@ -258,9 +258,10 @@ ELSE ()
 		# automatically, but forks like mingw-w64 still want
 		# us to define this in order to use them
 		ADD_DEFINITIONS(-D__USE_MINGW_ANSI_STDIO=1)
-
 	ELSEIF (BUILD_SHARED_LIBS)
 		SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fvisibility=hidden -fPIC")
+	ELSE ()
+		SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
 	ENDIF ()
 	IF (APPLE) # Apple deprecated OpenSSL
 		SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-deprecated-declarations")
