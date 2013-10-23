@@ -125,8 +125,13 @@ int fetch(git_repository *repo, int argc, char **argv)
 	pthread_join(worker, NULL);
 #endif
 
-	printf("\rReceived %d/%d objects in %zu bytes\n",
+	if (stats->local_objects > 0) {
+		printf("\rReceived %d/%d objects in %zu bytes (used %d local objects)\n",
+		       stats->indexed_objects, stats->total_objects, stats->received_bytes, stats->local_objects);
+	} else{
+		printf("\rReceived %d/%d objects in %zu bytes\n",
 			stats->indexed_objects, stats->total_objects, stats->received_bytes);
+	}
 
 	// Disconnect the underlying connection to prevent from idling.
 	git_remote_disconnect(remote);
