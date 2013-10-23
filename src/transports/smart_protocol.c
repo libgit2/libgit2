@@ -509,7 +509,10 @@ int git_smart__download_pack(
 		if (pkt->type == GIT_PKT_PROGRESS) {
 			if (t->progress_cb) {
 				git_pkt_progress *p = (git_pkt_progress *) pkt;
-				t->progress_cb(p->data, p->len, t->message_cb_payload);
+				if (t->progress_cb(p->data, p->len, t->message_cb_payload)) {
+					giterr_set(GITERR_NET, "The fetch was cancelled by the user");
+					return GIT_EUSER;
+				}
 			}
 			git__free(pkt);
 		} else if (pkt->type == GIT_PKT_DATA) {

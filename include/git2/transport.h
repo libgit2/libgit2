@@ -170,7 +170,7 @@ typedef enum {
 	GIT_TRANSPORTFLAGS_NO_CHECK_CERT = 1
 } git_transport_flags_t;
 
-typedef void (*git_transport_message_cb)(const char *str, int len, void *data);
+typedef int (*git_transport_message_cb)(const char *str, int len, void *data);
 
 typedef struct git_transport git_transport;
 
