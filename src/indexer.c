@@ -483,6 +483,8 @@ int git_indexer_stream_add(git_indexer_stream *idx, const void *data, size_t siz
 
 		stats->received_objects = 0;
 		stats->local_objects = 0;
+		stats->total_deltas = 0;
+		stats->indexed_deltas = 0;
 		processed = stats->indexed_objects = 0;
 		stats->total_objects = total_objects;
 		do_progress_callback(idx, stats);
@@ -758,6 +760,7 @@ static int resolve_deltas(git_indexer_stream *idx, git_transfer_progress *stats)
 
 			git__free(obj.data);
 			stats->indexed_objects++;
+			stats->indexed_deltas++;
 			progressed = 1;
 			do_progress_callback(idx, stats);
 
@@ -865,6 +868,9 @@ int git_indexer_stream_finalize(git_indexer_stream *idx, git_transfer_progress *
 		giterr_set(GITERR_INDEXER, "packfile trailer mismatch");
 		return -1;
 	}
+
+	/* Freeze the number of deltas */
+	stats->total_deltas = stats->total_objects - stats->indexed_objects;
 
 	if (resolve_deltas(idx, stats) < 0)
 		return -1;
