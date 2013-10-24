@@ -123,8 +123,8 @@ Android
 -------
 
 Extract toolchain from NDK using, `make-standalone-toolchain.sh` script.
-Optionaly, crosscompile and install OpenSSL inside of it. Then create CMake
-toolchain file that configures paths to your crosscompiler (substitude `{PATH}`
+Optionally, crosscompile and install OpenSSL inside of it. Then create CMake
+toolchain file that configures paths to your crosscompiler (substitute `{PATH}`
 with full path to the toolchain):
 
 	SET(CMAKE_SYSTEM_NAME Linux)
@@ -166,7 +166,7 @@ Here are the bindings to libgit2 that are currently available:
     * luagit2 <https://github.com/libgit2/luagit2>
 * .NET
     * libgit2sharp <https://github.com/libgit2/libgit2sharp>
-    * libgit2net, low level bindings superceeded by libgit2sharp <https://github.com/txdv/libgit2net>
+    * libgit2net, low level bindings superseded by libgit2sharp <https://github.com/txdv/libgit2net>
 * Node.js
     * node-gitteh <https://github.com/libgit2/node-gitteh>
     * nodegit <https://github.com/tbranyen/nodegit>
