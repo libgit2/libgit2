@@ -141,3 +141,28 @@ void test_object_blob_filter__to_odb(void)
 	git_buf_free(&out);
 	git_config_free(cfg);
 }
+
+void test_object_blob_filter__honor_core_autocrlf(void)
+{
+	git_blob *blob;
+	git_buf buf = GIT_BUF_INIT;
+	git_config *config;
+
+	cl_git_pass(git_repository_config(&config, g_repo));
+
+	cl_git_pass(git_blob_lookup(&blob, g_repo, &g_crlf_oids[1]));
+
+	cl_git_pass(git_config_set_string(config, "core.autocrlf", "true"));
+
+	cl_git_pass(git_blob_filtered_content(&buf, blob, "foo.txt", false));
+	cl_assert_equal_s("foo\r\nbar\r\n", git_buf_cstr(&buf));
+
+	cl_git_pass(git_config_set_string(config, "core.autocrlf", "input"));
+
+	cl_git_pass(git_blob_filtered_content(&buf, blob, "foo.txt", false));
+	cl_assert_equal_s("foo\nbar\n", git_buf_cstr(&buf));
+
+	git_config_free(config);
+	git_buf_free(&buf);
+	git_blob_free(blob);
+}
