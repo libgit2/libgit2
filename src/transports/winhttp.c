@@ -269,14 +269,27 @@ static int winhttp_stream_connect(winhttp_stream *s)
 		/* Send Content-Type and Accept headers -- only necessary on a POST */
 		git_buf_clear(&buf);
 		if (git_buf_printf(&buf,
-			"Content-Type: application/x-git-%s-request\r\n"
-			"Accept: application/x-git-%s-result\r\n",
-			s->service, s->service) < 0)
+			"Content-Type: application/x-git-%s-request",
+			s->service) < 0)
 			goto on_error;
 
 		git__utf8_to_16(ct, MAX_CONTENT_TYPE_LEN, git_buf_cstr(&buf));
 
-		if (!WinHttpAddRequestHeaders(s->request, ct, (ULONG) -1L,
+		if (!WinHttpAddRequestHeaders(s->request, ct, (ULONG)-1L,
+			WINHTTP_ADDREQ_FLAG_ADD | WINHTTP_ADDREQ_FLAG_REPLACE)) {
+			giterr_set(GITERR_OS, "Failed to add a header to the request");
+			goto on_error;
+		}
+
+		git_buf_clear(&buf);
+		if (git_buf_printf(&buf,
+			"Accept: application/x-git-%s-result",
+			s->service) < 0)
+			goto on_error;
+
+		git__utf8_to_16(ct, MAX_CONTENT_TYPE_LEN, git_buf_cstr(&buf));
+
+		if (!WinHttpAddRequestHeaders(s->request, ct, (ULONG)-1L,
 			WINHTTP_ADDREQ_FLAG_ADD | WINHTTP_ADDREQ_FLAG_REPLACE)) {
 			giterr_set(GITERR_OS, "Failed to add a header to the request");
 			goto on_error;
