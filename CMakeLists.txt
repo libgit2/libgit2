@@ -48,6 +48,10 @@ IF(MSVC)
 	# This option must match the settings used in your program, in particular if you
 	# are linking statically
 	OPTION( STATIC_CRT		"Link the static CRT libraries"	ON  )
+
+	# By default, libgit2 is built with WinHTTP.  To use the built-in
+	# HTTP transport, invoke CMake with the "-DWINHTTP=OFF" argument.
+	OPTION( WINHTTP			"Use Win32 WinHTTP routines"	ON  )
 ENDIF()
 
 # This variable will contain the libraries we need to put into
@@ -120,7 +124,7 @@ SET(LIBGIT2_VERSION_STRING "${LIBGIT2_VERSION_MAJOR}.${LIBGIT2_VERSION_MINOR}.${
 # Find required dependencies
 INCLUDE_DIRECTORIES(src include)
 
-IF (WIN32 AND NOT MINGW)
+IF (WIN32 AND WINHTTP AND NOT MINGW)
 	ADD_DEFINITIONS(-DGIT_WINHTTP)
 ELSE ()
 	IF (NOT AMIGA)
