@@ -239,14 +239,18 @@
 
 <span class="k">static</span> <span class="kt">int</span> <span class="nf">print_diff</span><span class="p">(</span>
   <span class="k">const</span> <span class="n">git_diff_delta</span> <span class="o">*</span><span class="n">delta</span><span class="p">,</span>
-  <span class="k">const</span> <span class="n">git_diff_range</span> <span class="o">*</span><span class="n">range</span><span class="p">,</span>
-  <span class="kt">char</span> <span class="n">usage</span><span class="p">,</span>
-  <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">line</span><span class="p">,</span>
-  <span class="kt">size_t</span> <span class="n">line_len</span><span class="p">,</span>
+  <span class="k">const</span> <span class="n">git_diff_hunk</span> <span class="o">*</span><span class="n">hunk</span><span class="p">,</span>
+  <span class="k">const</span> <span class="n">git_diff_line</span> <span class="o">*</span><span class="n">line</span><span class="p">,</span>
   <span class="kt">void</span> <span class="o">*</span><span class="n">data</span><span class="p">)</span>
 <span class="p">{</span>
-  <span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="n">delta</span><span class="p">;</span> <span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="n">range</span><span class="p">;</span> <span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="n">usage</span><span class="p">;</span> <span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="n">line_len</span><span class="p">;</span> <span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="n">data</span><span class="p">;</span>
-  <span class="n">fputs</span><span class="p">(</span><span class="n">line</span><span class="p">,</span> <span class="n">stdout</span><span class="p">);</span>
+  <span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="n">delta</span><span class="p">;</span> <span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="n">hunk</span><span class="p">;</span> <span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="n">data</span><span class="p">;</span>
+
+  <span class="k">if</span> <span class="p">(</span><span class="n">line</span><span class="o">-&gt;</span><span class="n">origin</span> <span class="o">==</span> <span class="n">GIT_DIFF_LINE_CONTEXT</span> <span class="o">||</span>
+    <span class="n">line</span><span class="o">-&gt;</span><span class="n">origin</span> <span class="o">==</span> <span class="n">GIT_DIFF_LINE_ADDITION</span> <span class="o">||</span>
+    <span class="n">line</span><span class="o">-&gt;</span><span class="n">origin</span> <span class="o">==</span> <span class="n">GIT_DIFF_LINE_DELETION</span><span class="p">)</span>
+    <span class="n">fputc</span><span class="p">(</span><span class="n">line</span><span class="o">-&gt;</span><span class="n">origin</span><span class="p">,</span> <span class="n">stdout</span><span class="p">);</span>
+
+  <span class="n">fwrite</span><span class="p">(</span><span class="n">line</span><span class="o">-&gt;</span><span class="n">content</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">line</span><span class="o">-&gt;</span><span class="n">content_len</span><span class="p">,</span> <span class="n">stdout</span><span class="p">);</span>
   <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
 <span class="p">}</span>
 
@@ -273,7 +277,7 @@
 <span class="p">{</span>
   <span class="n">git_commit</span> <span class="o">*</span><span class="n">parent</span><span class="p">;</span>
   <span class="n">git_tree</span> <span class="o">*</span><span class="n">a</span><span class="p">,</span> <span class="o">*</span><span class="n">b</span><span class="p">;</span>
-  <span class="n">git_diff_list</span> <span class="o">*</span><span class="n">diff</span><span class="p">;</span>
+  <span class="n">git_diff</span> <span class="o">*</span><span class="n">diff</span><span class="p">;</span>
   <span class="kt">int</span> <span class="n">ndeltas</span><span class="p">;</span>
 
   <span class="n">check</span><span class="p">(</span><span class="n"><a name="git_commit_parent-18" class="fnlink" href="../../#HEAD/group/commit/git_commit_parent">git_commit_parent</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">parent</span><span class="p">,</span> <span class="n">commit</span><span class="p">,</span> <span class="p">(</span><span class="kt">size_t</span><span class="p">)</span><span class="n">i</span><span class="p">),</span> <span class="s">&quot;Get parent&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
@@ -282,9 +286,9 @@
   <span class="n">check</span><span class="p">(</span><span class="n"><a name="git_diff_tree_to_tree-23" class="fnlink" href="../../#HEAD/group/diff/git_diff_tree_to_tree">git_diff_tree_to_tree</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">diff</span><span class="p">,</span> <span class="n"><a name="git_commit_owner-7" class="fnlink" href="../../#HEAD/group/commit/git_commit_owner">git_commit_owner</a></span><span class="p">(</span><span class="n">commit</span><span class="p">),</span> <span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">opts</span><span class="p">),</span>
       <span class="s">&quot;Checking diff between parent and commit&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
 
-  <span class="n">ndeltas</span> <span class="o">=</span> <span class="p">(</span><span class="kt">int</span><span class="p">)</span><span class="n"><a name="git_diff_num_deltas-26" class="fnlink" href="../../#HEAD/group/diff/git_diff_num_deltas">git_diff_num_deltas</a></span><span class="p">(</span><span class="n">diff</span><span class="p">);</span>
+  <span class="n">ndeltas</span> <span class="o">=</span> <span class="p">(</span><span class="kt">int</span><span class="p">)</span><span class="n"><a name="git_diff_num_deltas-25" class="fnlink" href="../../#HEAD/group/diff/git_diff_num_deltas">git_diff_num_deltas</a></span><span class="p">(</span><span class="n">diff</span><span class="p">);</span>
 
-  <span class="n"><a name="git_diff_list_free-21" class="fnlink" href="../../#HEAD/group/diff/git_diff_list_free">git_diff_list_free</a></span><span class="p">(</span><span class="n">diff</span><span class="p">);</span>
+  <span class="n"><a name="git_diff_free-21" class="fnlink" href="../../#HEAD/group/diff/git_diff_free">git_diff_free</a></span><span class="p">(</span><span class="n">diff</span><span class="p">);</span>
   <span class="n"><a name="git_tree_free-55" class="fnlink" href="../../#HEAD/group/tree/git_tree_free">git_tree_free</a></span><span class="p">(</span><span class="n">a</span><span class="p">);</span>
   <span class="n"><a name="git_tree_free-56" class="fnlink" href="../../#HEAD/group/tree/git_tree_free">git_tree_free</a></span><span class="p">(</span><span class="n">b</span><span class="p">);</span>
   <span class="n"><a name="git_commit_free-2" class="fnlink" href="../../#HEAD/group/commit/git_commit_free">git_commit_free</a></span><span class="p">(</span><span class="n">parent</span><span class="p">);</span>
@@ -428,7 +432,7 @@
 
     <span class="k">if</span> <span class="p">(</span><span class="n">opt</span><span class="p">.</span><span class="n">show_diff</span><span class="p">)</span> <span class="p">{</span>
       <span class="n">git_tree</span> <span class="o">*</span><span class="n">a</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">,</span> <span class="o">*</span><span class="n">b</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
-      <span class="n">git_diff_list</span> <span class="o">*</span><span class="n">diff</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
+      <span class="n">git_diff</span> <span class="o">*</span><span class="n">diff</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
 
       <span class="k">if</span> <span class="p">(</span><span class="n">parents</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">)</span>
         <span class="k">continue</span><span class="p">;</span>
@@ -443,10 +447,10 @@
       <span class="n">check</span><span class="p">(</span><span class="n"><a name="git_diff_tree_to_tree-24" class="fnlink" href="../../#HEAD/group/diff/git_diff_tree_to_tree">git_diff_tree_to_tree</a></span><span class="p">(</span>
         <span class="o">&amp;</span><span class="n">diff</span><span class="p">,</span> <span class="n"><a name="git_commit_owner-8" class="fnlink" href="../../#HEAD/group/commit/git_commit_owner">git_commit_owner</a></span><span class="p">(</span><span class="n">commit</span><span class="p">),</span> <span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">diffopts</span><span class="p">),</span>
         <span class="s">&quot;Diff commit with parent&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
-      <span class="n">check</span><span class="p">(</span><span class="n"><a name="git_diff_print_patch-25" class="fnlink" href="../../#HEAD/group/diff/git_diff_print_patch">git_diff_print_patch</a></span><span class="p">(</span><span class="n">diff</span><span class="p">,</span> <span class="n">print_diff</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">),</span>
+      <span class="n">check</span><span class="p">(</span><span class="n"><a name="git_diff_print-26" class="fnlink" href="../../#HEAD/group/diff/git_diff_print">git_diff_print</a></span><span class="p">(</span><span class="n">diff</span><span class="p">,</span> <span class="n">GIT_DIFF_FORMAT_PATCH</span><span class="p">,</span> <span class="n">print_diff</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">),</span>
         <span class="s">&quot;Displaying diff&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
 
-      <span class="n"><a name="git_diff_list_free-22" class="fnlink" href="../../#HEAD/group/diff/git_diff_list_free">git_diff_list_free</a></span><span class="p">(</span><span class="n">diff</span><span class="p">);</span>
+      <span class="n"><a name="git_diff_free-22" class="fnlink" href="../../#HEAD/group/diff/git_diff_free">git_diff_free</a></span><span class="p">(</span><span class="n">diff</span><span class="p">);</span>
       <span class="n"><a name="git_tree_free-58" class="fnlink" href="../../#HEAD/group/tree/git_tree_free">git_tree_free</a></span><span class="p">(</span><span class="n">a</span><span class="p">);</span>
       <span class="n"><a name="git_tree_free-59" class="fnlink" href="../../#HEAD/group/tree/git_tree_free">git_tree_free</a></span><span class="p">(</span><span class="n">b</span><span class="p">);</span>
     <span class="p">}</span>
