@@ -279,19 +279,20 @@ int git_smart__negotiate_fetch(git_transport *transport, git_repository *repo, c
 	unsigned int i;
 	git_oid oid;
 
-	/* No own logic, do our thing */
 	if ((error = git_pkt_buffer_wants(refs, count, &t->caps, &data)) < 0)
 		return error;
 
 	if ((error = fetch_setup_walk(&walk, repo)) < 0)
 		goto on_error;
+
 	/*
-	 * We don't support any kind of ACK extensions, so the negotiation
-	 * boils down to sending what we have and listening for an ACK
-	 * every once in a while.
+	 * Our support for ACK extensions is simply to parse them. On
+	 * the first ACK we will accept that as enough common
+	 * objects. We give up if we haven't found an answer in the
+	 * first 256 we send.
 	 */
 	i = 0;
-	while (true) {
+	while (i < 256) {
 		error = git_revwalk_next(&oid, walk);
 
 		if (error < 0) {
