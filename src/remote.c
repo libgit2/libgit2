@@ -1032,6 +1032,27 @@ int git_remote_update_tips(git_remote *remote)
 			goto out;
 	}
 
+	/* If we have no refspecs, update HEAD -> FETCH_HEAD manually */
+	if (remote->refspecs.length == 0 && refs.length > 0 && git_remote_update_fetchhead(remote)) {
+		git_vector vec;
+		git_refspec headspec;
+
+		if (git_refspec__parse(&headspec, "HEAD", true) < 0)
+			goto out;
+
+		if (git_vector_init(&vec, 1, NULL) < 0) {
+			goto out;
+		}
+
+		if (git_vector_insert(&vec, git_vector_get(&refs, 0)) < 0) {
+			git_vector_free(&vec);
+			goto out;
+		}
+
+		error = git_remote_write_fetchhead(remote, &headspec, &vec);
+		git_vector_free(&vec);
+	}
+
 out:
 	git_refspec__free(&tagspec);
 	git_vector_free(&refs);
