@@ -23,7 +23,7 @@ struct filter_payload {
 	git_remote *remote;
 	const git_refspec *spec, *tagspec;
 	git_odb *odb;
-	int found_head;
+	int want_head;
 };
 
 static int filter_ref__cb(git_remote_head *head, void *payload)
@@ -34,9 +34,9 @@ static int filter_ref__cb(git_remote_head *head, void *payload)
 	if (!git_reference_is_valid_name(head->name))
 		return 0;
 
-	if (!p->found_head && strcmp(head->name, GIT_HEAD_FILE) == 0)
-		p->found_head = 1;
-	else if (p->remote->download_tags == GIT_REMOTE_DOWNLOAD_TAGS_ALL) {
+	if ((strcmp(head->name, GIT_HEAD_FILE) == 0) && p->want_head) {
+		match = 1;
+	} else if (p->remote->download_tags == GIT_REMOTE_DOWNLOAD_TAGS_ALL) {
 		/*
 		 * If tagopt is --tags, then we only use the default
 		 * tags refspec and ignore the remote's
@@ -77,8 +77,9 @@ static int filter_wants(git_remote *remote)
 	 * HEAD, which will be stored in FETCH_HEAD after the fetch.
 	 */
 	p.tagspec = &tagspec;
-	p.found_head = 0;
 	p.remote = remote;
+	if (remote->refspecs.length == 0)
+		p.want_head = 1;
 
 	if (git_repository_odb__weakptr(&p.odb, remote->repo) < 0)
 		goto cleanup;
