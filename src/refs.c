@@ -483,7 +483,7 @@ int git_reference_rename(
 	if (reference_has_log < 0)
 		return reference_has_log;
 
-	if (reference_has_log && (error = git_reflog_rename(ref, new_name)) < 0)
+	if (reference_has_log && (error = git_reflog_rename(git_reference_owner(ref), git_reference_name(ref), new_name)) < 0)
 		return error;
 
 	return 0;

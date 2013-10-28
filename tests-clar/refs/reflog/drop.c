@@ -8,15 +8,10 @@ static size_t entrycount;
 
 void test_refs_reflog_drop__initialize(void)
 {
-	git_reference *ref;
-
 	g_repo = cl_git_sandbox_init("testrepo.git");
-	cl_git_pass(git_reference_lookup(&ref, g_repo, "HEAD"));
 
-	git_reflog_read(&g_reflog, ref);
+	git_reflog_read(&g_reflog, g_repo, "HEAD");
 	entrycount = git_reflog_entrycount(g_reflog);
-
-	git_reference_free(ref);
 }
 
 void test_refs_reflog_drop__cleanup(void)
@@ -106,19 +101,15 @@ void test_refs_reflog_drop__can_drop_all_the_entries(void)
 
 void test_refs_reflog_drop__can_persist_deletion_on_disk(void)
 {
-	git_reference *ref;
-
 	cl_assert(entrycount > 2);
 
-	cl_git_pass(git_reference_lookup(&ref, g_repo, g_reflog->ref_name));
 	cl_git_pass(git_reflog_drop(g_reflog, 0, 1));
 	cl_assert_equal_sz(entrycount - 1, git_reflog_entrycount(g_reflog));
 	cl_git_pass(git_reflog_write(g_reflog));
 
 	git_reflog_free(g_reflog);
 
-	git_reflog_read(&g_reflog, ref);
-	git_reference_free(ref);
+	git_reflog_read(&g_reflog, g_repo, "HEAD");
 
 	cl_assert_equal_sz(entrycount - 1, git_reflog_entrycount(g_reflog));
 }

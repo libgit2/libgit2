@@ -102,7 +102,7 @@ void test_stash_drop__dropping_an_entry_rewrites_reflog_history(void)
 
 	cl_git_pass(git_reference_lookup(&stash, repo, GIT_REFS_STASH_FILE));
 
-	cl_git_pass(git_reflog_read(&reflog, stash));
+	cl_git_pass(git_reflog_read(&reflog, repo, GIT_REFS_STASH_FILE));
 	entry = git_reflog_entry_byindex(reflog, 1);
 
 	git_oid_cpy(&oid, git_reflog_entry_id_old(entry));
@@ -112,7 +112,7 @@ void test_stash_drop__dropping_an_entry_rewrites_reflog_history(void)
 
 	cl_git_pass(git_stash_drop(repo, 1));
 
-	cl_git_pass(git_reflog_read(&reflog, stash));
+	cl_git_pass(git_reflog_read(&reflog, repo, GIT_REFS_STASH_FILE));
 	entry = git_reflog_entry_byindex(reflog, 0);
 
 	cl_assert_equal_i(0, git_oid_cmp(&oid, git_reflog_entry_id_old(entry)));
