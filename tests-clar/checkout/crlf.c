@@ -62,11 +62,7 @@ void test_checkout_crlf__detect_crlf_autocrlf_true(void)
 
 	git_checkout_head(g_repo, &opts);
 
-	if (GIT_EOL_NATIVE == GIT_EOL_LF)
-		check_file_contents("./crlf/all-lf", ALL_LF_TEXT_RAW);
-	else
-		check_file_contents("./crlf/all-lf", ALL_LF_TEXT_AS_CRLF);
-
+	check_file_contents("./crlf/all-lf", ALL_LF_TEXT_AS_CRLF);
 	check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_RAW);
 }
 
@@ -79,10 +75,7 @@ void test_checkout_crlf__more_lf_autocrlf_true(void)
 
 	git_checkout_head(g_repo, &opts);
 
-	if (GIT_EOL_NATIVE == GIT_EOL_LF)
-		check_file_contents("./crlf/more-lf", MORE_LF_TEXT_RAW);
-	else
-		check_file_contents("./crlf/more-lf", MORE_LF_TEXT_AS_CRLF);
+	check_file_contents("./crlf/more-lf", MORE_LF_TEXT_AS_CRLF);
 }
 
 void test_checkout_crlf__more_crlf_autocrlf_true(void)
@@ -94,10 +87,7 @@ void test_checkout_crlf__more_crlf_autocrlf_true(void)
 
 	git_checkout_head(g_repo, &opts);
 
-	if (GIT_EOL_NATIVE == GIT_EOL_LF)
-		check_file_contents("./crlf/more-crlf", MORE_CRLF_TEXT_RAW);
-	else
-		check_file_contents("./crlf/more-crlf", MORE_CRLF_TEXT_AS_CRLF);
+	check_file_contents("./crlf/more-crlf", MORE_CRLF_TEXT_AS_CRLF);
 }
 
 void test_checkout_crlf__all_crlf_autocrlf_true(void)
@@ -126,11 +116,7 @@ void test_checkout_crlf__autocrlf_true_index_size_is_filtered_size(void)
 	git_repository_index(&index, g_repo);
 
 	cl_assert((entry = git_index_get_bypath(index, "all-lf", 0)) != NULL);
-
-	if (GIT_EOL_NATIVE == GIT_EOL_LF)
-		cl_assert_equal_sz(strlen(ALL_LF_TEXT_RAW), entry->file_size);
-	else
-		cl_assert_equal_sz(strlen(ALL_LF_TEXT_AS_CRLF), entry->file_size);
+	cl_assert_equal_sz(strlen(ALL_LF_TEXT_AS_CRLF), entry->file_size);
 
 	cl_assert((entry = git_index_get_bypath(index, "all-crlf", 0)) != NULL);
 	cl_assert_equal_sz(strlen(ALL_CRLF_TEXT_RAW), entry->file_size);
