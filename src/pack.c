@@ -364,6 +364,38 @@ static unsigned char *pack_window_open(
 	return git_mwindow_open(&p->mwf, w_cursor, offset, 20, left);
  }
 
+/*
+ * The per-object header is a pretty dense thing, which is
+ *  - first byte: low four bits are "size",
+ *    then three bits of "type",
+ *    with the high bit being "size continues".
+ *  - each byte afterwards: low seven bits are size continuation,
+ *    with the high bit being "size continues"
+ */
+int git_packfile__object_header(unsigned char *hdr, unsigned long size, git_otype type)
+{
+	unsigned char *hdr_base;
+	unsigned char c;
+
+	assert(type >= GIT_OBJ_COMMIT && type <= GIT_OBJ_REF_DELTA);
+
+	/* TODO: add support for chunked objects; see git.git 6c0d19b1 */
+
+	c = (unsigned char)((type << 4) | (size & 15));
+	size >>= 4;
+	hdr_base = hdr;
+
+	while (size) {
+		*hdr++ = c | 0x80;
+		c = size & 0x7f;
+		size >>= 7;
+	}
+	*hdr++ = c;
+
+	return (int)(hdr - hdr_base);
+}
+
+
 static int packfile_unpack_header1(
 		unsigned long *usedp,
 		size_t *sizep,

@@ -92,7 +92,7 @@ void test_pack_packbuilder__create_pack(void)
 
 	seed_packbuilder();
 
-	cl_git_pass(git_indexer_stream_new(&_indexer, ".", NULL, NULL));
+	cl_git_pass(git_indexer_stream_new(&_indexer, ".", NULL, NULL, NULL));
 	cl_git_pass(git_packbuilder_foreach(_packbuilder, feed_indexer, &stats));
 	cl_git_pass(git_indexer_stream_finalize(_indexer, &stats));
 
@@ -141,7 +141,7 @@ void test_pack_packbuilder__foreach(void)
 	git_indexer_stream *idx;
 
 	seed_packbuilder();
-	cl_git_pass(git_indexer_stream_new(&idx, ".", NULL, NULL));
+	cl_git_pass(git_indexer_stream_new(&idx, ".", NULL, NULL, NULL));
 	cl_git_pass(git_packbuilder_foreach(_packbuilder, foreach_cb, idx));
 	cl_git_pass(git_indexer_stream_finalize(idx, &stats));
 	git_indexer_stream_free(idx);

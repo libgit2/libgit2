@@ -72,6 +72,7 @@ int fetch(git_repository *repo, int argc, char **argv)
 	const git_transfer_progress *stats;
 	struct dl_data data;
 	git_remote_callbacks callbacks = GIT_REMOTE_CALLBACKS_INIT;
+	int resolve_deltas_ln = 0;
 #ifndef _WIN32
 	pthread_t worker;
 #endif
@@ -113,10 +114,14 @@ int fetch(git_repository *repo, int argc, char **argv)
 	do {
 		usleep(10000);
 
-		if (stats->total_objects > 0)
+		if (stats->received_objects == stats->total_objects) {
+			printf("Resolving deltas %d/%d\r",
+			       stats->indexed_deltas, stats->total_deltas);
+		} else if (stats->total_objects > 0) {
 			printf("Received %d/%d objects (%d) in %" PRIuZ " bytes\r",
 			       stats->received_objects, stats->total_objects,
 				   stats->indexed_objects, stats->received_bytes);
+		}
 	} while (!data.finished);
 
 	if (data.ret < 0)
@@ -125,8 +130,13 @@ int fetch(git_repository *repo, int argc, char **argv)
 	pthread_join(worker, NULL);
 #endif
 
-	printf("\rReceived %d/%d objects in %zu bytes\n",
+	if (stats->local_objects > 0) {
+		printf("\rReceived %d/%d objects in %zu bytes (used %d local objects)\n",
+		       stats->indexed_objects, stats->total_objects, stats->received_bytes, stats->local_objects);
+	} else{
+		printf("\rReceived %d/%d objects in %zu bytes\n",
 			stats->indexed_objects, stats->total_objects, stats->received_bytes);
+	}
 
 	// Disconnect the underlying connection to prevent from idling.
 	git_remote_disconnect(remote);

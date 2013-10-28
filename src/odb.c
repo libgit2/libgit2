@@ -995,7 +995,7 @@ int git_odb_write_pack(struct git_odb_writepack **out, git_odb *db, git_transfer
 
 		if (b->writepack != NULL) {
 			++writes;
-			error = b->writepack(out, b, progress_cb, progress_payload);
+			error = b->writepack(out, b, db, progress_cb, progress_payload);
 		}
 	}
 
