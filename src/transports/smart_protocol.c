@@ -269,7 +269,7 @@ static int wait_while_ack(gitno_buffer *buf)
 	return 0;
 }
 
-int git_smart__negotiate_fetch(git_transport *transport, git_repository *repo, const git_remote_head * const *refs, size_t count)
+int git_smart__negotiate_fetch(git_transport *transport, git_repository *repo, const git_remote_head * const *wants, size_t count)
 {
 	transport_smart *t = (transport_smart *)transport;
 	gitno_buffer *buf = &t->buffer;
@@ -279,7 +279,7 @@ int git_smart__negotiate_fetch(git_transport *transport, git_repository *repo, c
 	unsigned int i;
 	git_oid oid;
 
-	if ((error = git_pkt_buffer_wants(refs, count, &t->caps, &data)) < 0)
+	if ((error = git_pkt_buffer_wants(wants, count, &t->caps, &data)) < 0)
 		return error;
 
 	if ((error = fetch_setup_walk(&walk, repo)) < 0)
@@ -350,7 +350,7 @@ int git_smart__negotiate_fetch(git_transport *transport, git_repository *repo, c
 			git_pkt_ack *pkt;
 			unsigned int i;
 
-			if ((error = git_pkt_buffer_wants(refs, count, &t->caps, &data)) < 0)
+			if ((error = git_pkt_buffer_wants(wants, count, &t->caps, &data)) < 0)
 				goto on_error;
 
 			git_vector_foreach(&t->common, i, pkt) {
@@ -370,7 +370,7 @@ int git_smart__negotiate_fetch(git_transport *transport, git_repository *repo, c
 		git_pkt_ack *pkt;
 		unsigned int i;
 
-		if ((error = git_pkt_buffer_wants(refs, count, &t->caps, &data)) < 0)
+		if ((error = git_pkt_buffer_wants(wants, count, &t->caps, &data)) < 0)
 			goto on_error;
 
 		git_vector_foreach(&t->common, i, pkt) {

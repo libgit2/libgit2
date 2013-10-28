@@ -23,7 +23,6 @@ struct filter_payload {
 	git_remote *remote;
 	const git_refspec *spec, *tagspec;
 	git_odb *odb;
-	int want_head;
 };
 
 static int filter_ref__cb(git_remote_head *head, void *payload)
@@ -34,9 +33,7 @@ static int filter_ref__cb(git_remote_head *head, void *payload)
 	if (!git_reference_is_valid_name(head->name))
 		return 0;
 
-	if ((strcmp(head->name, GIT_HEAD_FILE) == 0) && p->want_head) {
-		match = 1;
-	} else if (p->remote->download_tags == GIT_REMOTE_DOWNLOAD_TAGS_ALL) {
+	if (p->remote->download_tags == GIT_REMOTE_DOWNLOAD_TAGS_ALL) {
 		/*
 		 * If tagopt is --tags, then we only use the default
 		 * tags refspec and ignore the remote's
@@ -63,10 +60,10 @@ static int filter_ref__cb(git_remote_head *head, void *payload)
 static int filter_wants(git_remote *remote)
 {
 	struct filter_payload p;
-	git_refspec tagspec;
+	git_refspec tagspec, head;
 	int error = -1;
 
-	git_vector_clear(&remote->refs);
+	//git_vector_clear(&remote->refs);
 	if (git_refspec__parse(&tagspec, GIT_REFSPEC_TAGS, true) < 0)
 		return error;
 
@@ -78,8 +75,15 @@ static int filter_wants(git_remote *remote)
 	 */
 	p.tagspec = &tagspec;
 	p.remote = remote;
-	if (remote->refspecs.length == 0)
-		p.want_head = 1;
+	if (remote->active_refspecs.length == 0) {
+		if ((error = git_refspec__parse(&head, "HEAD", true)) < 0)
+			goto cleanup;
+
+		if ((error = git_refspec__dwim_one(&remote->active_refspecs, &head, &remote->refs)) < 0)
+			goto cleanup;
+	}
+
+	git_vector_clear(&remote->refs);
 
 	if (git_repository_odb__weakptr(&p.odb, remote->repo) < 0)
 		goto cleanup;
@@ -107,7 +111,7 @@ int git_fetch_negotiate(git_remote *remote)
 	}
 
 	/* Don't try to negotiate when we don't want anything */
-	if (remote->refs.length == 0 || !remote->need_pack)
+	if (!remote->need_pack)
 		return 0;
 
 	/*

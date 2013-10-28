@@ -9,6 +9,7 @@
 
 #include "git2/refspec.h"
 #include "buffer.h"
+#include "vector.h"
 
 struct git_refspec {
 	char *string;
@@ -17,7 +18,6 @@ struct git_refspec {
 	unsigned int force :1,
 		push : 1,
 		pattern :1,
-		dwim :1,
 		matching :1;
 };
 
@@ -62,5 +62,11 @@ int git_refspec__serialize(git_buf *out, const git_refspec *refspec);
  * @return 1 if the refspec is a wildcard, 0 otherwise
  */
 int git_refspec_is_wildcard(const git_refspec *spec);
+
+/**
+ * DWIM `spec` with `refs` existing on the remote, append the dwim'ed
+ * result in `out`.
+ */
+int git_refspec__dwim_one(git_vector *out, git_refspec *spec, git_vector *refs);
 
 #endif
