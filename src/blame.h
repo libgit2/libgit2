@@ -42,11 +42,11 @@ typedef struct git_blame__entry {
 	/* true if the suspect is truly guilty; false while we have not
 	 * checked if the group came from one of its parents.
 	 */
-	char guilty;
+	bool guilty;
 
 	/* true if the entry has been scanned for copies in the current parent
 	 */
-	char scanned;
+	bool scanned;
 
 	/* the line number of the first line of this group in the
 	 * suspect's file; internally all line numbers are 0 based.

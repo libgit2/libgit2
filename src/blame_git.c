@@ -602,7 +602,7 @@ void git_blame__like_git(git_blame *blame, uint32_t opt)
 		/* Take responsibility for the remaining entries */
 		for (ent = blame->ent; ent; ent = ent->next) {
 			if (same_suspect(ent->suspect, suspect)) {
-				ent->guilty = 1;
+				ent->guilty = true;
 				ent->is_boundary = !git_oid_cmp(
 						git_commit_id(suspect->commit),
 						&blame->options.oldest_commit);
