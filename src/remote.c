@@ -10,6 +10,7 @@
 #include "git2/oid.h"
 #include "git2/net.h"
 
+#include "common.h"
 #include "config.h"
 #include "repository.h"
 #include "remote.h"
