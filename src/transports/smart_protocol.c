@@ -128,6 +128,12 @@ int git_smart__detect_caps(git_pkt_ref *pkt, transport_smart_caps *caps)
 			continue;
 		}
 
+		if (!git__prefixcmp(ptr, GIT_CAP_THIN_PACK)) {
+			caps->common = caps->thin_pack = 1;
+			ptr += strlen(GIT_CAP_THIN_PACK);
+			continue;
+		}
+
 		/* We don't know this capability, so skip it */
 		ptr = strchr(ptr, ' ');
 	}
@@ -425,7 +431,7 @@ struct network_packetsize_payload
 	size_t last_fired_bytes;
 };
 
-static void network_packetsize(size_t received, void *payload)
+static int network_packetsize(size_t received, void *payload)
 {
 	struct network_packetsize_payload *npp = (struct network_packetsize_payload*)payload;
 
@@ -435,8 +441,12 @@ static void network_packetsize(size_t received, void *payload)
 	/* Fire notification if the threshold is reached */
 	if ((npp->stats->received_bytes - npp->last_fired_bytes) > NETWORK_XFER_THRESHOLD) {
 		npp->last_fired_bytes = npp->stats->received_bytes;
-		npp->callback(npp->stats, npp->payload);
+
+		if (npp->callback(npp->stats, npp->payload))
+			return GIT_EUSER;
 	}
+
+	return 0;
 }
 
 int git_smart__download_pack(
@@ -450,7 +460,7 @@ int git_smart__download_pack(
 	gitno_buffer *buf = &t->buffer;
 	git_odb *odb;
 	struct git_odb_writepack *writepack = NULL;
-	int error = -1;
+	int error = 0;
 	struct network_packetsize_payload npp = {0};
 
 	memset(stats, 0, sizeof(git_transfer_progress));
@@ -463,13 +473,14 @@ int git_smart__download_pack(
 		t->packetsize_payload = &npp;
 
 		/* We might have something in the buffer already from negotiate_fetch */
-		if (t->buffer.offset > 0)
-			t->packetsize_cb(t->buffer.offset, t->packetsize_payload);
+		if (t->buffer.offset > 0 && !t->cancelled.val)
+			if (t->packetsize_cb(t->buffer.offset, t->packetsize_payload))
+				git_atomic_set(&t->cancelled, 1);
 	}
 
 	if ((error = git_repository_odb__weakptr(&odb, repo)) < 0 ||
 		((error = git_odb_write_pack(&writepack, odb, progress_cb, progress_payload)) < 0))
-		goto on_error;
+		goto done;
 
 	/*
 	 * If the remote doesn't support the side-band, we can feed
@@ -477,28 +488,37 @@ int git_smart__download_pack(
 	 * check which one belongs there.
 	 */
 	if (!t->caps.side_band && !t->caps.side_band_64k) {
-		if (no_sideband(t, writepack, buf, stats) < 0)
-			goto on_error;
-
-		goto on_success;
+		error = no_sideband(t, writepack, buf, stats);
+		goto done;
 	}
 
 	do {
 		git_pkt *pkt;
 
+		/* Check cancellation before network call */
 		if (t->cancelled.val) {
 			giterr_set(GITERR_NET, "The fetch was cancelled by the user");
 			error = GIT_EUSER;
-			goto on_error;
+			goto done;
 		}
 
-		if (recv_pkt(&pkt, buf) < 0)
-			goto on_error;
+		if ((error = recv_pkt(&pkt, buf)) < 0)
+			goto done;
+
+		/* Check cancellation after network call */
+		if (t->cancelled.val) {
+			giterr_set(GITERR_NET, "The fetch was cancelled by the user");
+			error = GIT_EUSER;
+			goto done;
+		}
 
 		if (pkt->type == GIT_PKT_PROGRESS) {
 			if (t->progress_cb) {
 				git_pkt_progress *p = (git_pkt_progress *) pkt;
-				t->progress_cb(p->data, p->len, t->message_cb_payload);
+				if (t->progress_cb(p->data, p->len, t->message_cb_payload)) {
+					giterr_set(GITERR_NET, "The fetch was cancelled by the user");
+					return GIT_EUSER;
+				}
 			}
 			git__free(pkt);
 		} else if (pkt->type == GIT_PKT_DATA) {
@@ -507,7 +527,7 @@ int git_smart__download_pack(
 
 			git__free(pkt);
 			if (error < 0)
-				goto on_error;
+				goto done;
 		} else if (pkt->type == GIT_PKT_FLUSH) {
 			/* A flush indicates the end of the packfile */
 			git__free(pkt);
@@ -515,13 +535,9 @@ int git_smart__download_pack(
 		}
 	} while (1);
 
-	if (writepack->commit(writepack, stats) < 0)
-		goto on_error;
+	error = writepack->commit(writepack, stats);
 
-on_success:
-	error = 0;
-
-on_error:
+done:
 	if (writepack)
 		writepack->free(writepack);
 
@@ -828,7 +844,10 @@ static int stream_thunk(void *buf, size_t size, void *data)
 
 		if ((current_time - payload->last_progress_report_time) >= MIN_PROGRESS_UPDATE_INTERVAL) {
 			payload->last_progress_report_time = current_time;
-			payload->cb(payload->pb->nr_written, payload->pb->nr_objects, payload->last_bytes, payload->cb_payload);
+			if (payload->cb(payload->pb->nr_written, payload->pb->nr_objects, payload->last_bytes, payload->cb_payload)) {
+				giterr_clear();
+				error = GIT_EUSER;
+			}
 		}
 	}
 
@@ -840,7 +859,7 @@ int git_smart__push(git_transport *transport, git_push *push)
 	transport_smart *t = (transport_smart *)transport;
 	struct push_packbuilder_payload packbuilder_payload = {0};
 	git_buf pktline = GIT_BUF_INIT;
-	int error = -1, need_pack = 0;
+	int error = 0, need_pack = 0;
 	push_spec *spec;
 	unsigned int i;
 
@@ -882,34 +901,31 @@ int git_smart__push(git_transport *transport, git_push *push)
 		}
 	}
 
-	if (git_smart__get_push_stream(t, &packbuilder_payload.stream) < 0 ||
-		gen_pktline(&pktline, push) < 0 ||
-		packbuilder_payload.stream->write(packbuilder_payload.stream, git_buf_cstr(&pktline), git_buf_len(&pktline)) < 0)
-		goto on_error;
+	if ((error = git_smart__get_push_stream(t, &packbuilder_payload.stream)) < 0 ||
+		(error = gen_pktline(&pktline, push)) < 0 ||
+		(error = packbuilder_payload.stream->write(packbuilder_payload.stream, git_buf_cstr(&pktline), git_buf_len(&pktline))) < 0)
+		goto done;
 
-	if (need_pack && git_packbuilder_foreach(push->pb, &stream_thunk, &packbuilder_payload) < 0)
-		goto on_error;
+	if (need_pack &&
+		(error = git_packbuilder_foreach(push->pb, &stream_thunk, &packbuilder_payload)) < 0)
+		goto done;
 
 	/* If we sent nothing or the server doesn't support report-status, then
 	 * we consider the pack to have been unpacked successfully */
 	if (!push->specs.length || !push->report_status)
 		push->unpack_ok = 1;
-	else if (parse_report(&t->buffer, push) < 0)
-		goto on_error;
+	else if ((error = parse_report(&t->buffer, push)) < 0)
+		goto done;
 
 	/* If progress is being reported write the final report */
 	if (push->transfer_progress_cb) {
 		push->transfer_progress_cb(push->pb->nr_written, push->pb->nr_objects, packbuilder_payload.last_bytes, push->transfer_progress_cb_payload);
 	}
 
-	if (push->status.length &&
-		update_refs_from_report(&t->refs, &push->specs, &push->status) < 0)
-		goto on_error;
+	if (push->status.length)
+		error = update_refs_from_report(&t->refs, &push->specs, &push->status);
 
-	error = 0;
-
-on_error:
+done:
 	git_buf_free(&pktline);
-
 	return error;
 }

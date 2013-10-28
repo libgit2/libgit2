@@ -11,6 +11,7 @@
 #define BB_REPO_URL "https://libgit2@bitbucket.org/libgit2/testgitrepository.git"
 #define BB_REPO_URL_WITH_PASS "https://libgit2:libgit2@bitbucket.org/libgit2/testgitrepository.git"
 #define BB_REPO_URL_WITH_WRONG_PASS "https://libgit2:wrong@bitbucket.org/libgit2/testgitrepository.git"
+#define ASSEMBLA_REPO_URL "https://libgit2:_Libgit2@git.assembla.com/libgit2-test-repos.git"
 
 static git_repository *g_repo;
 static git_clone_options g_options;
@@ -225,6 +226,11 @@ void test_online_clone__bitbucket_style(void)
 	cl_git_pass(git_clone(&g_repo, BB_REPO_URL_WITH_WRONG_PASS, "./foo", &g_options));
 	git_repository_free(g_repo); g_repo = NULL;
 	cl_fixture_cleanup("./foo");
+}
+
+void test_online_clone__assembla_style(void)
+{
+	cl_git_pass(git_clone(&g_repo, ASSEMBLA_REPO_URL, "./foo", NULL));
 }
 
 static int cancel_at_half(const git_transfer_progress *stats, void *payload)

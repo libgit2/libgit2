@@ -111,14 +111,20 @@ static void cleanup_chmod_root(void *ref)
 	git_futils_rmdir_r("r", NULL, GIT_RMDIR_EMPTY_HIERARCHY);
 }
 
-static void check_mode(mode_t expected, mode_t actual)
+#define check_mode(X,A) check_mode_at_line((X), (A), __FILE__, __LINE__)
+
+static void check_mode_at_line(
+	mode_t expected, mode_t actual, const char *file, int line)
 {
-#ifdef GIT_WIN32
-	/* chmod on Win32 doesn't support exec bit, not group/world bits */
-	cl_assert_equal_i_fmt((expected & 0600), (actual & 0777), "%07o");
-#else
-	cl_assert_equal_i_fmt(expected, (actual & 0777), "%07o");
-#endif
+	/* FAT filesystems don't support exec bit, nor group/world bits */
+	if (!cl_is_chmod_supported()) {
+		expected &= 0600;
+		actual &= 0600;
+	}
+
+	clar__assert_equal(
+		file, line, "expected_mode != actual_mode", 1,
+		"%07o", (int)expected, (int)(actual & 0777));
 }
 
 void test_core_mkdir__chmods(void)

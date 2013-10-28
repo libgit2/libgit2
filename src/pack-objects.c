@@ -216,50 +216,20 @@ int git_packbuilder_insert(git_packbuilder *pb, const git_oid *oid,
 	assert(ret != 0);
 	kh_value(pb->object_ix, pos) = po;
 
+	pb->done = false;
+
 	if (pb->progress_cb) {
 		double current_time = git__timer();
 		if ((current_time - pb->last_progress_report_time) >= MIN_PROGRESS_UPDATE_INTERVAL) {
 			pb->last_progress_report_time = current_time;
-			pb->progress_cb(GIT_PACKBUILDER_ADDING_OBJECTS, pb->nr_objects, 0, pb->progress_cb_payload);
+			if (pb->progress_cb(GIT_PACKBUILDER_ADDING_OBJECTS, pb->nr_objects, 0, pb->progress_cb_payload)) {
+				giterr_clear();
+				return GIT_EUSER;
+			}
 		}
 	}
 
-	pb->done = false;
 	return 0;
-}
-
-/*
- * The per-object header is a pretty dense thing, which is
- *  - first byte: low four bits are "size",
- *    then three bits of "type",
- *    with the high bit being "size continues".
- *  - each byte afterwards: low seven bits are size continuation,
- *    with the high bit being "size continues"
- */
-static int gen_pack_object_header(
-		unsigned char *hdr,
-		unsigned long size,
-		git_otype type)
-{
-	unsigned char *hdr_base;
-	unsigned char c;
-
-	assert(type >= GIT_OBJ_COMMIT && type <= GIT_OBJ_REF_DELTA);
-
-	/* TODO: add support for chunked objects; see git.git 6c0d19b1 */
-
-	c = (unsigned char)((type << 4) | (size & 15));
-	size >>= 4;
-	hdr_base = hdr;
-
-	while (size) {
-		*hdr++ = c | 0x80;
-		c = size & 0x7f;
-		size >>= 7;
-	}
-	*hdr++ = c;
-
-	return (int)(hdr - hdr_base);
 }
 
 static int get_delta(void **out, git_odb *odb, git_pobject *po)
@@ -323,7 +293,7 @@ static int write_object(git_buf *buf, git_packbuilder *pb, git_pobject *po)
 	}
 
 	/* Write header */
-	hdr_len = gen_pack_object_header(hdr, size, type);
+	hdr_len = git_packfile__object_header(hdr, size, type);
 
 	if (git_buf_put(buf, (char *)hdr, hdr_len) < 0)
 		goto on_error;
@@ -591,49 +561,50 @@ static int write_pack(git_packbuilder *pb,
 	enum write_one_status status;
 	struct git_pack_header ph;
 	unsigned int i = 0;
+	int error = 0;
 
 	write_order = compute_write_order(pb);
-	if (write_order == NULL)
-		goto on_error;
+	if (write_order == NULL) {
+		error = -1;
+		goto done;
+	}
 
 	/* Write pack header */
 	ph.hdr_signature = htonl(PACK_SIGNATURE);
 	ph.hdr_version = htonl(PACK_VERSION);
 	ph.hdr_entries = htonl(pb->nr_objects);
 
-	if (cb(&ph, sizeof(ph), data) < 0)
-		goto on_error;
+	if ((error = cb(&ph, sizeof(ph), data)) < 0)
+		goto done;
 
-	if (git_hash_update(&pb->ctx, &ph, sizeof(ph)) < 0)
-		goto on_error;
+	if ((error = git_hash_update(&pb->ctx, &ph, sizeof(ph))) < 0)
+		goto done;
 
 	pb->nr_remaining = pb->nr_objects;
 	do {
 		pb->nr_written = 0;
 		for ( ; i < pb->nr_objects; ++i) {
 			po = write_order[i];
-			if (write_one(&buf, pb, po, &status) < 0)
-				goto on_error;
-			if (cb(buf.ptr, buf.size, data) < 0)
-				goto on_error;
+			if ((error = write_one(&buf, pb, po, &status)) < 0)
+				goto done;
+			if ((error = cb(buf.ptr, buf.size, data)) < 0)
+				goto done;
 			git_buf_clear(&buf);
 		}
 
 		pb->nr_remaining -= pb->nr_written;
 	} while (pb->nr_remaining && i < pb->nr_objects);
 
+
+	if ((error = git_hash_final(&pb->pack_oid, &pb->ctx)) < 0)
+		goto done;
+
+	error = cb(pb->pack_oid.id, GIT_OID_RAWSZ, data);
+
+done:
 	git__free(write_order);
 	git_buf_free(&buf);
-
-	if (git_hash_final(&pb->pack_oid, &pb->ctx) < 0)
-		goto on_error;
-
-	return cb(pb->pack_oid.id, GIT_OID_RAWSZ, data);
-
-on_error:
-	git__free(write_order);
-	git_buf_free(&buf);
-	return -1;
+	return error;
 }
 
 static int write_pack_buf(void *buf, size_t size, void *data)
@@ -1287,7 +1258,7 @@ int git_packbuilder_write(
 	PREPARE_PACK;
 
 	if (git_indexer_stream_new(
-		&indexer, path, progress_cb, progress_cb_payload) < 0)
+		&indexer, path, pb->odb, progress_cb, progress_cb_payload) < 0)
 		return -1;
 
 	ctx.indexer = indexer;

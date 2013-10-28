@@ -544,7 +544,7 @@ static int locate_object_short_oid(
 
 	/* Explore directory to find a unique object matching short_oid */
 	error = git_path_direach(
-		object_location, fn_locate_object_short_oid, &state);
+		object_location, 0, fn_locate_object_short_oid, &state);
 
 	if (error && error != GIT_EUSER)
 		return error;
@@ -745,7 +745,7 @@ static int foreach_cb(void *_state, git_buf *path)
 {
 	struct foreach_state *state = (struct foreach_state *) _state;
 
-	return git_path_direach(path, foreach_object_dir_cb, state);
+	return git_path_direach(path, 0, foreach_object_dir_cb, state);
 }
 
 static int loose_backend__foreach(git_odb_backend *_backend, git_odb_foreach_cb cb, void *data)
@@ -768,7 +768,7 @@ static int loose_backend__foreach(git_odb_backend *_backend, git_odb_foreach_cb 
 	state.data = data;
 	state.dir_len = git_buf_len(&buf);
 
-	error = git_path_direach(&buf, foreach_cb, &state);
+	error = git_path_direach(&buf, 0, foreach_cb, &state);
 
 	git_buf_free(&buf);
 

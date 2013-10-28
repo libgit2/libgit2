@@ -160,7 +160,7 @@ static int retrieve_previously_checked_out_branch_or_revision(git_object **out, 
 	if (git_reference_lookup(&ref, repo, GIT_HEAD_FILE) < 0)
 		goto cleanup;
 
-	if (git_reflog_read(&reflog, ref) < 0)
+	if (git_reflog_read(&reflog, repo, GIT_HEAD_FILE) < 0)
 		goto cleanup;
 
 	numentries  = git_reflog_entrycount(reflog);
@@ -208,7 +208,7 @@ static int retrieve_oid_from_reflog(git_oid *oid, git_reference *ref, size_t ide
 	const git_reflog_entry *entry;
 	bool search_by_pos = (identifier <= 100000000);
 
-	if (git_reflog_read(&reflog, ref) < 0)
+	if (git_reflog_read(&reflog, git_reference_owner(ref), git_reference_name(ref)) < 0)
 		return -1;
 
 	numentries = git_reflog_entrycount(reflog);

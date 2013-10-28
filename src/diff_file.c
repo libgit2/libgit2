@@ -88,7 +88,7 @@ static int diff_file_content_init_common(
 
 int git_diff_file_content__init_from_diff(
 	git_diff_file_content *fc,
-	git_diff_list *diff,
+	git_diff *diff,
 	size_t delta_index,
 	bool use_old)
 {
@@ -110,7 +110,7 @@ int git_diff_file_content__init_from_diff(
 		has_data = use_old; break;
 	case GIT_DELTA_UNTRACKED:
 		has_data = !use_old &&
-			(diff->opts.flags & GIT_DIFF_INCLUDE_UNTRACKED_CONTENT) != 0;
+			(diff->opts.flags & GIT_DIFF_SHOW_UNTRACKED_CONTENT) != 0;
 		break;
 	case GIT_DELTA_MODIFIED:
 	case GIT_DELTA_COPIED:

@@ -372,7 +372,8 @@ int git_submodule_add_to_index(git_submodule *sm, int write_index)
 
 	memset(&entry, 0, sizeof(entry));
 	entry.path = sm->path;
-	git_index_entry__init_from_stat(&entry, &st);
+	git_index_entry__init_from_stat(
+		&entry, &st, !(git_index_caps(index) & GIT_INDEXCAP_NO_FILEMODE));
 
 	/* calling git_submodule_open will have set sm->wd_oid if possible */
 	if ((sm->flags & GIT_SUBMODULE_STATUS__WD_OID_VALID) == 0) {
@@ -1527,7 +1528,7 @@ static void submodule_get_wd_status(
 		(sm->flags & GIT_SUBMODULE_STATUS__WD_OID_VALID) ? &sm->wd_oid : NULL;
 	git_tree *sm_head = NULL;
 	git_diff_options opt = GIT_DIFF_OPTIONS_INIT;
-	git_diff_list *diff;
+	git_diff *diff;
 
 	*status = *status & ~GIT_SUBMODULE_STATUS__WD_FLAGS;
 
@@ -1567,7 +1568,7 @@ static void submodule_get_wd_status(
 		else {
 			if (git_diff_num_deltas(diff) > 0)
 				*status |= GIT_SUBMODULE_STATUS_WD_INDEX_MODIFIED;
-			git_diff_list_free(diff);
+			git_diff_free(diff);
 			diff = NULL;
 		}
 
@@ -1587,7 +1588,7 @@ static void submodule_get_wd_status(
 		if (git_diff_num_deltas(diff) != untracked)
 			*status |= GIT_SUBMODULE_STATUS_WD_WD_MODIFIED;
 
-		git_diff_list_free(diff);
+		git_diff_free(diff);
 		diff = NULL;
 	}
 }

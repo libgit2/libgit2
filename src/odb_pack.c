@@ -331,7 +331,7 @@ static int pack_backend__refresh(git_odb_backend *_backend)
 	git_buf_sets(&path, backend->pack_folder);
 
 	/* reload all packs */
-	error = git_path_direach(&path, packfile_load__cb, (void *)backend);
+	error = git_path_direach(&path, 0, packfile_load__cb, backend);
 
 	git_buf_free(&path);
 
@@ -541,6 +541,7 @@ static void pack_backend__writepack_free(struct git_odb_writepack *_writepack)
 
 static int pack_backend__writepack(struct git_odb_writepack **out,
 	git_odb_backend *_backend,
+        git_odb *odb,
 	git_transfer_progress_callback progress_cb,
 	void *progress_payload)
 {
@@ -557,7 +558,7 @@ static int pack_backend__writepack(struct git_odb_writepack **out,
 	GITERR_CHECK_ALLOC(writepack);
 
 	if (git_indexer_stream_new(&writepack->indexer_stream,
-		backend->pack_folder, progress_cb, progress_payload) < 0) {
+		backend->pack_folder, odb, progress_cb, progress_payload) < 0) {
 		git__free(writepack);
 		return -1;
 	}

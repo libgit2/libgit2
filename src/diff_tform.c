@@ -97,8 +97,8 @@ static git_diff_delta *diff_delta__merge_like_cgit(
 }
 
 int git_diff_merge(
-	git_diff_list *onto,
-	const git_diff_list *from)
+	git_diff *onto,
+	const git_diff *from)
 {
 	int error = 0;
 	git_pool onto_pool;
@@ -117,15 +117,15 @@ int git_diff_merge(
 		git_pool_init(&onto_pool, 1, 0) < 0)
 		return -1;
 
-	if ((onto->opts.flags & GIT_DIFF_DELTAS_ARE_ICASE) != 0 ||
-		(from->opts.flags & GIT_DIFF_DELTAS_ARE_ICASE) != 0)
+	if ((onto->opts.flags & GIT_DIFF_IGNORE_CASE) != 0 ||
+		(from->opts.flags & GIT_DIFF_IGNORE_CASE) != 0)
 	{
 		ignore_case = true;
 
 		/* This function currently only supports merging diff lists that
 		 * are sorted identically. */
-		assert((onto->opts.flags & GIT_DIFF_DELTAS_ARE_ICASE) != 0 &&
-				(from->opts.flags & GIT_DIFF_DELTAS_ARE_ICASE) != 0);
+		assert((onto->opts.flags & GIT_DIFF_IGNORE_CASE) != 0 &&
+				(from->opts.flags & GIT_DIFF_IGNORE_CASE) != 0);
 	}
 
 	for (i = 0, j = 0; i < onto->deltas.length || j < from->deltas.length; ) {
@@ -230,9 +230,9 @@ int git_diff_find_similar__calc_similarity(
 #define DEFAULT_RENAME_LIMIT 200
 
 static int normalize_find_opts(
-	git_diff_list *diff,
+	git_diff *diff,
 	git_diff_find_options *opts,
-	git_diff_find_options *given)
+	const git_diff_find_options *given)
 {
 	git_config *cfg = NULL;
 
@@ -328,7 +328,7 @@ static int normalize_find_opts(
 }
 
 static int apply_splits_and_deletes(
-	git_diff_list *diff, size_t expected_size, bool actually_split)
+	git_diff *diff, size_t expected_size, bool actually_split)
 {
 	git_vector onto = GIT_VECTOR_INIT;
 	size_t i;
@@ -350,6 +350,7 @@ static int apply_splits_and_deletes(
 				goto on_error;
 
 			deleted->status = GIT_DELTA_DELETED;
+			deleted->nfiles = 1;
 			memset(&deleted->new_file, 0, sizeof(deleted->new_file));
 			deleted->new_file.path = deleted->old_file.path;
 			deleted->new_file.flags |= GIT_DIFF_FLAG_VALID_OID;
@@ -361,6 +362,7 @@ static int apply_splits_and_deletes(
 				delta->status = GIT_DELTA_UNTRACKED;
 			else
 				delta->status = GIT_DELTA_ADDED;
+			delta->nfiles = 1;
 			memset(&delta->old_file, 0, sizeof(delta->old_file));
 			delta->old_file.path = delta->new_file.path;
 			delta->old_file.flags |= GIT_DIFF_FLAG_VALID_OID;
@@ -402,7 +404,7 @@ on_error:
 	return -1;
 }
 
-GIT_INLINE(git_diff_file *) similarity_get_file(git_diff_list *diff, size_t idx)
+GIT_INLINE(git_diff_file *) similarity_get_file(git_diff *diff, size_t idx)
 {
 	git_diff_delta *delta = git_vector_get(&diff->deltas, idx / 2);
 	return (idx & 1) ? &delta->new_file : &delta->old_file;
@@ -419,7 +421,7 @@ typedef struct {
 } similarity_info;
 
 static int similarity_init(
-	similarity_info *info, git_diff_list *diff, size_t file_idx)
+	similarity_info *info, git_diff *diff, size_t file_idx)
 {
 	info->idx  = file_idx;
 	info->src  = (file_idx & 1) ? diff->new_src : diff->old_src;
@@ -509,7 +511,7 @@ static void similarity_unload(similarity_info *info)
  */
 static int similarity_measure(
 	int *score,
-	git_diff_list *diff,
+	git_diff *diff,
 	const git_diff_find_options *opts,
 	void **cache,
 	size_t a_idx,
@@ -595,7 +597,7 @@ cleanup:
 }
 
 static int calc_self_similarity(
-	git_diff_list *diff,
+	git_diff *diff,
 	const git_diff_find_options *opts,
 	size_t delta_idx,
 	void **cache)
@@ -612,7 +614,7 @@ static int calc_self_similarity(
 		return error;
 
 	if (similarity >= 0) {
-		delta->similarity = (uint32_t)similarity;
+		delta->similarity = (uint16_t)similarity;
 		delta->flags |= GIT_DIFF_FLAG__HAS_SELF_SIMILARITY;
 	}
 
@@ -620,7 +622,7 @@ static int calc_self_similarity(
 }
 
 static bool is_rename_target(
-	git_diff_list *diff,
+	git_diff *diff,
 	const git_diff_find_options *opts,
 	size_t delta_idx,
 	void **cache)
@@ -675,7 +677,7 @@ static bool is_rename_target(
 }
 
 static bool is_rename_source(
-	git_diff_list *diff,
+	git_diff *diff,
 	const git_diff_find_options *opts,
 	size_t delta_idx,
 	void **cache)
@@ -745,25 +747,27 @@ GIT_INLINE(bool) delta_is_new_only(git_diff_delta *delta)
 }
 
 GIT_INLINE(void) delta_make_rename(
-	git_diff_delta *to, const git_diff_delta *from, uint32_t similarity)
+	git_diff_delta *to, const git_diff_delta *from, uint16_t similarity)
 {
 	to->status     = GIT_DELTA_RENAMED;
 	to->similarity = similarity;
+	to->nfiles     = 2;
 	memcpy(&to->old_file, &from->old_file, sizeof(to->old_file));
 	to->flags &= ~GIT_DIFF_FLAG__TO_SPLIT;
 }
 
 typedef struct {
-	uint32_t idx;
-	uint32_t similarity;
+	size_t   idx;
+	uint16_t similarity;
 } diff_find_match;
 
 int git_diff_find_similar(
-	git_diff_list *diff,
-	git_diff_find_options *given_opts)
+	git_diff *diff,
+	const git_diff_find_options *given_opts)
 {
 	size_t s, t;
-	int error = 0, similarity;
+	int error = 0, result;
+	uint16_t similarity;
 	git_diff_delta *src, *tgt;
 	git_diff_find_options opts;
 	size_t num_deltas, num_srcs = 0, num_tgts = 0;
@@ -839,17 +843,18 @@ find_best_matches:
 
 			/* calculate similarity for this pair and find best match */
 			if (s == t)
-				similarity = -1; /* don't measure self-similarity here */
+				result = -1; /* don't measure self-similarity here */
 			else if ((error = similarity_measure(
-				&similarity, diff, &opts, sigcache, 2 * s, 2 * t + 1)) < 0)
+				&result, diff, &opts, sigcache, 2 * s, 2 * t + 1)) < 0)
 				goto cleanup;
 
-			if (similarity < 0)
+			if (result < 0)
 				continue;
+			similarity = (uint16_t)result;
 
 			/* is this a better rename? */
-			if (tgt2src[t].similarity < (uint32_t)similarity &&
-				src2tgt[s].similarity < (uint32_t)similarity)
+			if (tgt2src[t].similarity < similarity &&
+				src2tgt[s].similarity < similarity)
 			{
 				/* eject old mapping */
 				if (src2tgt[s].similarity > 0) {
@@ -862,18 +867,18 @@ find_best_matches:
 				}
 
 				/* write new mapping */
-				tgt2src[t].idx = (uint32_t)s;
-				tgt2src[t].similarity = (uint32_t)similarity;
-				src2tgt[s].idx = (uint32_t)t;
-				src2tgt[s].similarity = (uint32_t)similarity;
+				tgt2src[t].idx = s;
+				tgt2src[t].similarity = similarity;
+				src2tgt[s].idx = t;
+				src2tgt[s].similarity = similarity;
 			}
 
 			/* keep best absolute match for copies */
 			if (tgt2src_copy != NULL &&
-				tgt2src_copy[t].similarity < (uint32_t)similarity)
+				tgt2src_copy[t].similarity < similarity)
 			{
-				tgt2src_copy[t].idx = (uint32_t)s;
-				tgt2src_copy[t].similarity = (uint32_t)similarity;
+				tgt2src_copy[t].idx = s;
+				tgt2src_copy[t].similarity = similarity;
 			}
 
 			if (++tried_srcs >= num_srcs)
@@ -943,7 +948,7 @@ find_best_matches:
 				delta_make_rename(tgt, src, best_match->similarity);
 				num_rewrites--;
 
-				src->status = GIT_DELTA_DELETED;
+				assert(src->status == GIT_DELTA_DELETED);
 				memcpy(&src->old_file, &swap, sizeof(src->old_file));
 				memset(&src->new_file, 0, sizeof(src->new_file));
 				src->new_file.path = src->old_file.path;
@@ -953,7 +958,7 @@ find_best_matches:
 
 				if (src2tgt[t].similarity > 0 && src2tgt[t].idx > t) {
 					/* what used to be at src t is now at src s */
-					tgt2src[src2tgt[t].idx].idx = (uint32_t)s;
+					tgt2src[src2tgt[t].idx].idx = s;
 				}
 			}
 		}
@@ -969,6 +974,7 @@ find_best_matches:
 
 				src->status = (diff->new_src == GIT_ITERATOR_TYPE_WORKDIR) ?
 					GIT_DELTA_UNTRACKED : GIT_DELTA_ADDED;
+				src->nfiles = 1;
 				memset(&src->old_file, 0, sizeof(src->old_file));
 				src->old_file.path = src->new_file.path;
 				src->old_file.flags |= GIT_DIFF_FLAG_VALID_OID;
@@ -1006,7 +1012,7 @@ find_best_matches:
 				/* otherwise, if we just overwrote a source, update mapping */
 				else if (src2tgt[t].similarity > 0 && src2tgt[t].idx > t) {
 					/* what used to be at src t is now at src s */
-					tgt2src[src2tgt[t].idx].idx = (uint32_t)s;
+					tgt2src[src2tgt[t].idx].idx = s;
 				}
 
 				num_updates++;
@@ -1026,6 +1032,7 @@ find_best_matches:
 
 			tgt->status     = GIT_DELTA_COPIED;
 			tgt->similarity = best_match->similarity;
+			tgt->nfiles     = 2;
 			memcpy(&tgt->old_file, &src->old_file, sizeof(tgt->old_file));
 
 			num_updates++;

@@ -11,20 +11,7 @@ static git_repository *g_repo = NULL;
 
 void test_submodule_modify__initialize(void)
 {
-	g_repo = cl_git_sandbox_init("submod2");
-
-	cl_fixture_sandbox("submod2_target");
-	p_rename("submod2_target/.gitted", "submod2_target/.git");
-
-	/* must create submod2_target before rewrite so prettify will work */
-	rewrite_gitmodules(git_repository_workdir(g_repo));
-	p_rename("submod2/not-submodule/.gitted", "submod2/not-submodule/.git");
-}
-
-void test_submodule_modify__cleanup(void)
-{
-	cl_git_sandbox_cleanup();
-	cl_fixture_cleanup("submod2_target");
+	g_repo = setup_fixture_submod2();
 }
 
 void test_submodule_modify__add(void)

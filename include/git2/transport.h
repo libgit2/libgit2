@@ -28,11 +28,16 @@ GIT_BEGIN_DECL
  *** Begin interface for credentials acquisition ***
  */
 
+/** Authentication type requested */
 typedef enum {
 	/* git_cred_userpass_plaintext */
-	GIT_CREDTYPE_USERPASS_PLAINTEXT = 1,
-	GIT_CREDTYPE_SSH_KEYFILE_PASSPHRASE = 2,
-	GIT_CREDTYPE_SSH_PUBLICKEY = 3,
+	GIT_CREDTYPE_USERPASS_PLAINTEXT =     (1u << 0),
+
+	/* git_cred_ssh_key */
+	GIT_CREDTYPE_SSH_KEY = (1u << 1),
+
+	/* git_cred_ssh_custom */
+	GIT_CREDTYPE_SSH_CUSTOM =          (1u << 2),
 } git_credtype_t;
 
 /* The base structure for all credential types */
@@ -56,24 +61,28 @@ typedef LIBSSH2_USERAUTH_PUBLICKEY_SIGN_FUNC((*git_cred_sign_callback));
 typedef int (*git_cred_sign_callback)(void *, ...);
 #endif
 
-/* A ssh key file and passphrase */
-typedef struct git_cred_ssh_keyfile_passphrase {
+/**
+ * A ssh key from disk
+ */
+typedef struct git_cred_ssh_key {
 	git_cred parent;
 	char *username;
 	char *publickey;
 	char *privatekey;
 	char *passphrase;
-} git_cred_ssh_keyfile_passphrase;
+} git_cred_ssh_key;
 
-/* A ssh public key and authentication callback */
-typedef struct git_cred_ssh_publickey {
+/**
+ * A key with a custom signature function
+ */
+typedef struct git_cred_ssh_custom {
 	git_cred parent;
 	char *username;
 	char *publickey;
 	size_t publickey_len;
 	void *sign_callback;
 	void *sign_data;
-} git_cred_ssh_publickey;
+} git_cred_ssh_custom;
 
 /**
  * Check whether a credential object contains username information.
@@ -84,7 +93,7 @@ typedef struct git_cred_ssh_publickey {
 GIT_EXTERN(int) git_cred_has_username(git_cred *cred);
 
 /**
- * Creates a new plain-text username and password credential object.
+ * Create a new plain-text username and password credential object.
  * The supplied credential parameter will be internally duplicated.
  *
  * @param out The newly created credential object.
@@ -98,7 +107,7 @@ GIT_EXTERN(int) git_cred_userpass_plaintext_new(
 	const char *password);
 
 /**
- * Creates a new ssh key file and passphrase credential object.
+ * Create a new passphrase-protected ssh key credential object.
  * The supplied credential parameter will be internally duplicated.
  *
  * @param out The newly created credential object.
@@ -108,32 +117,38 @@ GIT_EXTERN(int) git_cred_userpass_plaintext_new(
  * @param passphrase The passphrase of the credential.
  * @return 0 for success or an error code for failure
  */
-GIT_EXTERN(int) git_cred_ssh_keyfile_passphrase_new(
+GIT_EXTERN(int) git_cred_ssh_key_new(
 	git_cred **out,
 	const char *username,
 	const char *publickey,
 	const char *privatekey,
-    const char *passphrase);
+	const char *passphrase);
 
 /**
- * Creates a new ssh public key credential object.
+ * Create an ssh key credential with a custom signing function.
+ *
+ * This lets you use your own function to sign the challenge.
+ *
+ * This function and its credential type is provided for completeness
+ * and wraps `libssh2_userauth_publickey()`, which is undocumented.
+ *
  * The supplied credential parameter will be internally duplicated.
  *
  * @param out The newly created credential object.
  * @param username username to use to authenticate
  * @param publickey The bytes of the public key.
  * @param publickey_len The length of the public key in bytes.
- * @param sign_fn The callback method for authenticating.
- * @param sign_data The abstract data sent to the sign_callback method.
+ * @param sign_fn The callback method to sign the data during the challenge.
+ * @param sign_data The data to pass to the sign function.
  * @return 0 for success or an error code for failure
  */
-GIT_EXTERN(int) git_cred_ssh_publickey_new(
+GIT_EXTERN(int) git_cred_ssh_custom_new(
 	git_cred **out,
 	const char *username,
 	const char *publickey,
-    size_t publickey_len,
-    git_cred_sign_callback sign_fn,
-    void *sign_data);
+	size_t publickey_len,
+	git_cred_sign_callback sign_fn,
+	void *sign_data);
 
 /**
  * Signature of a function which acquires a credential object.
@@ -165,7 +180,7 @@ typedef enum {
 	GIT_TRANSPORTFLAGS_NO_CHECK_CERT = 1
 } git_transport_flags_t;
 
-typedef void (*git_transport_message_cb)(const char *str, int len, void *data);
+typedef int (*git_transport_message_cb)(const char *str, int len, void *data);
 
 typedef struct git_transport git_transport;
 

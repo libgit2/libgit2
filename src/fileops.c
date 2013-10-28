@@ -78,11 +78,8 @@ int git_futils_creat_locked_withpath(const char *path, const mode_t dirmode, con
 int git_futils_open_ro(const char *path)
 {
 	int fd = p_open(path, O_RDONLY);
-	if (fd < 0) {
-		if (errno == ENOENT || errno == ENOTDIR)
-			fd = GIT_ENOTFOUND;
-		giterr_set(GITERR_OS, "Failed to open '%s'", path);
-	}
+	if (fd < 0)
+		return git_path_set_error(errno, path, "open");
 	return fd;
 }
 
@@ -138,7 +135,6 @@ int git_futils_readbuffer_fd(git_buf *buf, git_file fd, size_t len)
 int git_futils_readbuffer_updated(
 	git_buf *buf, const char *path, time_t *mtime, size_t *size, int *updated)
 {
-	int error = 0;
 	git_file fd;
 	struct stat st;
 	bool changed = false;
@@ -148,15 +144,16 @@ int git_futils_readbuffer_updated(
 	if (updated != NULL)
 		*updated = 0;
 
-	if (p_stat(path, &st) < 0) {
-		error = errno;
-		giterr_set(GITERR_OS, "Failed to stat '%s'", path);
-		if (error == ENOENT || error == ENOTDIR)
-			return GIT_ENOTFOUND;
-		return -1;
+	if (p_stat(path, &st) < 0)
+		return git_path_set_error(errno, path, "stat");
+
+
+	if (S_ISDIR(st.st_mode)) {
+		giterr_set(GITERR_INVALID, "requested file is a directory");
+		return GIT_ENOTFOUND;
 	}
 
-	if (S_ISDIR(st.st_mode) || !git__is_sizet(st.st_size+1)) {
+	if (!git__is_sizet(st.st_size+1)) {
 		giterr_set(GITERR_OS, "Invalid regular file stat for '%s'", path);
 		return -1;
 	}
@@ -398,7 +395,10 @@ typedef struct {
 	size_t baselen;
 	uint32_t flags;
 	int error;
+	int depth;
 } futils__rmdir_data;
+
+#define FUTILS_MAX_DEPTH 100
 
 static int futils__error_cannot_rmdir(const char *path, const char *filemsg)
 {
@@ -438,51 +438,60 @@ static int futils__rm_first_parent(git_buf *path, const char *ceiling)
 
 static int futils__rmdir_recurs_foreach(void *opaque, git_buf *path)
 {
-	struct stat st;
 	futils__rmdir_data *data = opaque;
+	int error = data->error;
+	struct stat st;
 
-	if ((data->error = p_lstat_posixly(path->ptr, &st)) < 0) {
+	if (data->depth > FUTILS_MAX_DEPTH)
+		error = futils__error_cannot_rmdir(
+			path->ptr, "directory nesting too deep");
+
+	else if ((error = p_lstat_posixly(path->ptr, &st)) < 0) {
 		if (errno == ENOENT)
-			data->error = 0;
+			error = 0;
 		else if (errno == ENOTDIR) {
 			/* asked to remove a/b/c/d/e and a/b is a normal file */
 			if ((data->flags & GIT_RMDIR_REMOVE_BLOCKERS) != 0)
-				data->error = futils__rm_first_parent(path, data->base);
+				error = futils__rm_first_parent(path, data->base);
 			else
 				futils__error_cannot_rmdir(
 					path->ptr, "parent is not directory");
 		}
 		else
-			futils__error_cannot_rmdir(path->ptr, "cannot access");
+			error = git_path_set_error(errno, path->ptr, "rmdir");
 	}
 
 	else if (S_ISDIR(st.st_mode)) {
-		int error = git_path_direach(path, futils__rmdir_recurs_foreach, data);
+		data->depth++;
+
+		error = git_path_direach(path, 0, futils__rmdir_recurs_foreach, data);
 		if (error < 0)
 			return (error == GIT_EUSER) ? data->error : error;
 
-		data->error = p_rmdir(path->ptr);
+		data->depth--;
 
-		if (data->error < 0) {
+		if (data->depth == 0 && (data->flags & GIT_RMDIR_SKIP_ROOT) != 0)
+			return data->error;
+
+		if ((error = p_rmdir(path->ptr)) < 0) {
 			if ((data->flags & GIT_RMDIR_SKIP_NONEMPTY) != 0 &&
 				(errno == ENOTEMPTY || errno == EEXIST || errno == EBUSY))
-				data->error = 0;
+				error = 0;
 			else
-				futils__error_cannot_rmdir(path->ptr, NULL);
+				error = git_path_set_error(errno, path->ptr, "rmdir");
 		}
 	}
 
 	else if ((data->flags & GIT_RMDIR_REMOVE_FILES) != 0) {
-		data->error = p_unlink(path->ptr);
-
-		if (data->error < 0)
-			futils__error_cannot_rmdir(path->ptr, "cannot be removed");
+		if (p_unlink(path->ptr) < 0)
+			error = git_path_set_error(errno, path->ptr, "remove");
 	}
 
 	else if ((data->flags & GIT_RMDIR_SKIP_NONEMPTY) == 0)
-		data->error = futils__error_cannot_rmdir(path->ptr, "still present");
+		error = futils__error_cannot_rmdir(path->ptr, "still present");
 
-	return data->error;
+	data->error = error;
+	return error;
 }
 
 static int futils__rmdir_empty_parent(void *opaque, git_buf *path)
@@ -505,7 +514,7 @@ static int futils__rmdir_empty_parent(void *opaque, git_buf *path)
 			giterr_clear();
 			error = GIT_ITEROVER;
 		} else {
-			futils__error_cannot_rmdir(git_buf_cstr(path), NULL);
+			error = git_path_set_error(errno, git_buf_cstr(path), "rmdir");
 		}
 	}
 
@@ -517,7 +526,7 @@ int git_futils_rmdir_r(
 {
 	int error;
 	git_buf fullpath = GIT_BUF_INIT;
-	futils__rmdir_data data;
+	futils__rmdir_data data = { 0 };
 
 	/* build path and find "root" where we should start calling mkdir */
 	if (git_path_join_unrooted(&fullpath, path, base, NULL) < 0)
@@ -526,7 +535,6 @@ int git_futils_rmdir_r(
 	data.base    = base ? base : "";
 	data.baselen = base ? strlen(base) : 0;
 	data.flags   = flags;
-	data.error   = 0;
 
 	error = futils__rmdir_recurs_foreach(&data, &fullpath);
 
@@ -541,41 +549,6 @@ int git_futils_rmdir_r(
 
 	git_buf_free(&fullpath);
 
-	return error;
-}
-
-int git_futils_cleanupdir_r(const char *path)
-{
-	int error;
-	git_buf fullpath = GIT_BUF_INIT;
-	futils__rmdir_data data;
-
-	if ((error = git_buf_put(&fullpath, path, strlen(path))) < 0)
-		goto clean_up;
-
-	data.base    = "";
-	data.baselen = 0;
-	data.flags   = GIT_RMDIR_REMOVE_FILES;
-	data.error   = 0;
-
-	if (!git_path_exists(path)) {
-		giterr_set(GITERR_OS, "Path does not exist: %s" , path);
-		error = GIT_ERROR;
-		goto clean_up;
-	}
-
-	if (!git_path_isdir(path)) {
-		giterr_set(GITERR_OS, "Path is not a directory: %s" , path);
-		error = GIT_ERROR;
-		goto clean_up;
-	}
-
-	error = git_path_direach(&fullpath, futils__rmdir_recurs_foreach, &data);
-	if (error == GIT_EUSER)
-		error = data.error;
-
-clean_up:
-	git_buf_free(&fullpath);
 	return error;
 }
 
@@ -836,11 +809,8 @@ int git_futils_cp(const char *from, const char *to, mode_t filemode)
 		return ifd;
 
 	if ((ofd = p_open(to, O_WRONLY | O_CREAT | O_EXCL, filemode)) < 0) {
-		if (errno == ENOENT || errno == ENOTDIR)
-			ofd = GIT_ENOTFOUND;
-		giterr_set(GITERR_OS, "Failed to open '%s' for writing", to);
 		p_close(ifd);
-		return ofd;
+		return git_path_set_error(errno, to, "open for writing");
 	}
 
 	return cp_by_fd(ifd, ofd, true);
@@ -923,15 +893,14 @@ static int _cp_r_callback(void *ref, git_buf *from)
 		goto exit;
 	}
 
-	if (p_lstat(info->to.ptr, &to_st) < 0) {
-		if (errno != ENOENT && errno != ENOTDIR) {
-			giterr_set(GITERR_OS,
-				"Could not access %s while copying files", info->to.ptr);
-			error = -1;
-			goto exit;
-		}
-	} else
+	if (!(error = git_path_lstat(info->to.ptr, &to_st)))
 		exists = true;
+	else if (error != GIT_ENOTFOUND)
+		goto exit;
+	else {
+		giterr_clear();
+		error = 0;
+	}
 
 	if ((error = git_path_lstat(from->ptr, &from_st)) < 0)
 		goto exit;
@@ -948,9 +917,12 @@ static int _cp_r_callback(void *ref, git_buf *from)
 			error = _cp_r_mkdir(info, from);
 
 		/* recurse onto target directory */
-		if (!error && (!exists || S_ISDIR(to_st.st_mode)) &&
-			((error = git_path_direach(from, _cp_r_callback, info)) == GIT_EUSER))
-			error = info->error;
+		if (!error && (!exists || S_ISDIR(to_st.st_mode))) {
+			error = git_path_direach(from, 0, _cp_r_callback, info);
+
+			if (error == GIT_EUSER)
+				error = info->error;
+		}
 
 		if (oldmode != 0)
 			info->dirmode = oldmode;

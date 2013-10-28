@@ -1,21 +1,21 @@
 libgit2 - the Git linkable library
-======================
+==================================
 
 [![Build Status](https://secure.travis-ci.org/libgit2/libgit2.png?branch=development)](http://travis-ci.org/libgit2/libgit2)
 
-libgit2 is a portable, pure C implementation of the Git core methods provided as a
+`libgit2` is a portable, pure C implementation of the Git core methods provided as a
 re-entrant linkable library with a solid API, allowing you to write native
 speed custom Git applications in any language with bindings.
 
-libgit2 is licensed under a **very permissive license** (GPLv2 with a special Linking Exception).
+`libgit2` is licensed under a **very permissive license** (GPLv2 with a special Linking Exception).
 This basically means that you can link it (unmodified) with any kind of software without having to
 release its source code.
 
-* Website: <http://libgit2.github.com>
+* Website: [libgit2.github.com](http://libgit2.github.com)
 * StackOverflow Tag: [libgit2](http://stackoverflow.com/questions/tagged/libgit2)
-* Issues: <https://github.com/libgit2/libgit2/issues>
+* Issues: [GitHub Issues](https://github.com/libgit2/libgit2/issues) (Right here!)
 * API documentation: <http://libgit2.github.com/libgit2>
-* IRC: #libgit2 on irc.freenode.net.
+* IRC: [#libgit2](irc://irc.freenode.net/libgit2) on irc.freenode.net.
 * Mailing list: The libgit2 mailing list was
     traditionally hosted in Librelist but has been deprecated. We encourage you to 
     [use StackOverflow](http://stackoverflow.com/questions/tagged/libgit2) instead for any questions regarding
@@ -25,9 +25,9 @@ release its source code.
 
 
 What It Can Do
-==================================
+==============
 
-libgit2 is already very usable and is being used in production for many applications including the GitHub.com site, in Plastic SCM 
+`libgit2` is already very usable and is being used in production for many applications including the GitHub.com site, in Plastic SCM 
 and also powering Microsoft's Visual Studio tools for Git.  The library provides:
 
 * SHA conversions, formatting and shortening
@@ -43,15 +43,26 @@ and also powering Microsoft's Visual Studio tools for Git.  The library provides
 * descriptive and detailed error messages
 * ...and more (over 175 different API calls)
 
+Optional dependencies
+=====================
+
+While the library provides git functionality without the need for
+dependencies, it can make use of a few libraries to add to it:
+
+- pthreads (non-Windows) to enable threadsafe access as well as multi-threaded pack generation
+- OpenSSL (non-Windows) to talk over HTTPS and provide the SHA-1 functions
+- LibSSH2 to enable the ssh transport
+- iconv (OSX) to handle the HFS+ path encoding peculiarities
+
 Building libgit2 - Using CMake
 ==============================
 
-libgit2 builds cleanly on most platforms without any external dependencies.
+`libgit2` builds cleanly on most platforms without any external dependencies.
 Under Unix-like systems, like Linux, \*BSD and Mac OS X, libgit2 expects `pthreads` to be available;
 they should be installed by default on all systems. Under Windows, libgit2 uses the native Windows API
 for threading.
 
-The libgit2 library is built using CMake 2.6+ (<http://www.cmake.org>) on all platforms.
+The `libgit2` library is built using `CMake 2.6+` (<http://www.cmake.org>) on all platforms.
 
 On most systems you can build the library using the following commands
 
@@ -112,8 +123,8 @@ Android
 -------
 
 Extract toolchain from NDK using, `make-standalone-toolchain.sh` script.
-Optionaly, crosscompile and install OpenSSL inside of it. Then create CMake
-toolchain file that configures paths to your crosscompiler (substitude `{PATH}`
+Optionally, crosscompile and install OpenSSL inside of it. Then create CMake
+toolchain file that configures paths to your crosscompiler (substitute `{PATH}`
 with full path to the toolchain):
 
 	SET(CMAKE_SYSTEM_NAME Linux)
@@ -155,7 +166,7 @@ Here are the bindings to libgit2 that are currently available:
     * luagit2 <https://github.com/libgit2/luagit2>
 * .NET
     * libgit2sharp <https://github.com/libgit2/libgit2sharp>
-    * libgit2net, low level bindings superceeded by libgit2sharp <https://github.com/txdv/libgit2net>
+    * libgit2net, low level bindings superseded by libgit2sharp <https://github.com/txdv/libgit2net>
 * Node.js
     * node-gitteh <https://github.com/libgit2/node-gitteh>
     * nodegit <https://github.com/tbranyen/nodegit>
@@ -187,9 +198,9 @@ Check the [contribution guidelines](CONTRIBUTING.md).
 
 License
 ==================================
-libgit2 is under GPL2 **with linking exemption**. This means you
-can link to the library with any program, commercial, open source or
-other.  However, you cannot modify libgit2 and distribute it without
+`libgit2` is under GPL2 **with linking exemption**. This means you
+can link to and use the library from any program, proprietary or open source; paid
+or gratis.  However, you cannot modify libgit2 and distribute it without
 supplying the source.
 
 See the COPYING file for the full license text.

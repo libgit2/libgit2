@@ -47,7 +47,7 @@ GIT_INLINE(int) merge_file_best_mode(
 	 * assume executable.  Otherwise, if any mode changed from the ancestor,
 	 * use that one.
 	 */
-	if (GIT_MERGE_FILE_SIDE_EXISTS(ancestor)) {
+	if (!GIT_MERGE_FILE_SIDE_EXISTS(ancestor)) {
 		if (ours->mode == GIT_FILEMODE_BLOB_EXECUTABLE ||
 			theirs->mode == GIT_FILEMODE_BLOB_EXECUTABLE)
 			return GIT_FILEMODE_BLOB_EXECUTABLE;

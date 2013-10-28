@@ -52,7 +52,7 @@ enum {
 
 #define GIT_DIFF__VERBOSE  (1 << 30)
 
-struct git_diff_list {
+struct git_diff {
 	git_refcount     rc;
 	git_repository   *repo;
 	git_diff_options opts;
@@ -72,7 +72,7 @@ struct git_diff_list {
 extern void git_diff__cleanup_modes(
 	uint32_t diffcaps, uint32_t *omode, uint32_t *nmode);
 
-extern void git_diff_list_addref(git_diff_list *diff);
+extern void git_diff_addref(git_diff *diff);
 
 extern int git_diff_delta__cmp(const void *a, const void *b);
 extern int git_diff_delta__casecmp(const void *a, const void *b);
@@ -93,15 +93,15 @@ extern int git_diff__oid_for_file(
 	git_repository *, const char *, uint16_t, git_off_t, git_oid *);
 
 extern int git_diff__from_iterators(
-	git_diff_list **diff_ptr,
+	git_diff **diff_ptr,
 	git_repository *repo,
 	git_iterator *old_iter,
 	git_iterator *new_iter,
 	const git_diff_options *opts);
 
 extern int git_diff__paired_foreach(
-	git_diff_list *idx2head,
-	git_diff_list *wd2idx,
+	git_diff *idx2head,
+	git_diff *wd2idx,
 	int (*cb)(git_diff_delta *i2h, git_diff_delta *w2i, void *payload),
 	void *payload);
 

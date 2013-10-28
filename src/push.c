@@ -582,7 +582,7 @@ static int calculate_work(git_push *push)
 
 static int do_push(git_push *push)
 {
-	int error;
+	int error = 0;
 	git_transport *transport = push->remote->transport;
 
 	if (!transport->push) {
@@ -610,8 +610,6 @@ static int do_push(git_push *push)
 		(error = queue_objects(push)) < 0 ||
 		(error = transport->push(transport, push)) < 0)
 		goto on_error;
-
-	error = 0;
 
 on_error:
 	git_packbuilder_free(push->pb);

@@ -45,25 +45,23 @@ char *colors[] = {
 
 static int printer(
 	const git_diff_delta *delta,
-	const git_diff_range *range,
-	char usage,
-	const char *line,
-	size_t line_len,
+	const git_diff_hunk *hunk,
+	const git_diff_line *line,
 	void *data)
 {
 	int *last_color = data, color = 0;
 
-	(void)delta; (void)range; (void)line_len;
+	(void)delta; (void)hunk;
 
 	if (*last_color >= 0) {
-		switch (usage) {
-		case GIT_DIFF_LINE_ADDITION: color = 3; break;
-		case GIT_DIFF_LINE_DELETION: color = 2; break;
+		switch (line->origin) {
+		case GIT_DIFF_LINE_ADDITION:  color = 3; break;
+		case GIT_DIFF_LINE_DELETION:  color = 2; break;
 		case GIT_DIFF_LINE_ADD_EOFNL: color = 3; break;
 		case GIT_DIFF_LINE_DEL_EOFNL: color = 2; break;
-		case GIT_DIFF_LINE_FILE_HDR: color = 1; break;
-		case GIT_DIFF_LINE_HUNK_HDR: color = 4; break;
-		default: color = 0;
+		case GIT_DIFF_LINE_FILE_HDR:  color = 1; break;
+		case GIT_DIFF_LINE_HUNK_HDR:  color = 4; break;
+		default: break;
 		}
 		if (color != *last_color) {
 			if (*last_color == 1 || color == 1)
@@ -73,7 +71,13 @@ static int printer(
 		}
 	}
 
-	fputs(line, stdout);
+	if (line->origin == GIT_DIFF_LINE_CONTEXT ||
+		line->origin == GIT_DIFF_LINE_ADDITION ||
+		line->origin == GIT_DIFF_LINE_DELETION)
+		fputc(line->origin, stdout);
+
+	fwrite(line->content, 1, line->content_len, stdout);
+
 	return 0;
 }
 
@@ -114,20 +118,15 @@ static void usage(const char *message, const char *arg)
 	exit(1);
 }
 
-enum {
-	FORMAT_PATCH = 0,
-	FORMAT_COMPACT = 1,
-	FORMAT_RAW = 2
-};
-
 int main(int argc, char *argv[])
 {
 	git_repository *repo = NULL;
 	git_tree *t1 = NULL, *t2 = NULL;
 	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
 	git_diff_find_options findopts = GIT_DIFF_FIND_OPTIONS_INIT;
-	git_diff_list *diff;
-	int i, color = -1, format = FORMAT_PATCH, cached = 0;
+	git_diff *diff;
+	int i, color = -1, cached = 0;
+	git_diff_format_t format = GIT_DIFF_FORMAT_PATCH;
 	char *a, *treeish1 = NULL, *treeish2 = NULL;
 	const char *dir = ".";
 
@@ -148,13 +147,15 @@ int main(int argc, char *argv[])
 		}
 		else if (!strcmp(a, "-p") || !strcmp(a, "-u") ||
 			!strcmp(a, "--patch"))
-			format = FORMAT_PATCH;
+			format = GIT_DIFF_FORMAT_PATCH;
 		else if (!strcmp(a, "--cached"))
 			cached = 1;
+		else if (!strcmp(a, "--name-only"))
+			format = GIT_DIFF_FORMAT_NAME_ONLY;
 		else if (!strcmp(a, "--name-status"))
-			format = FORMAT_COMPACT;
+			format = GIT_DIFF_FORMAT_NAME_STATUS;
 		else if (!strcmp(a, "--raw"))
-			format = FORMAT_RAW;
+			format = GIT_DIFF_FORMAT_RAW;
 		else if (!strcmp(a, "--color"))
 			color = 0;
 		else if (!strcmp(a, "--no-color"))
@@ -218,11 +219,11 @@ int main(int argc, char *argv[])
 	else if (t1 && cached)
 		check(git_diff_tree_to_index(&diff, repo, t1, NULL, &opts), "Diff");
 	else if (t1) {
-		git_diff_list *diff2;
+		git_diff *diff2;
 		check(git_diff_tree_to_index(&diff, repo, t1, NULL, &opts), "Diff");
 		check(git_diff_index_to_workdir(&diff2, repo, NULL, &opts), "Diff");
 		check(git_diff_merge(diff, diff2), "Merge diffs");
-		git_diff_list_free(diff2);
+		git_diff_free(diff2);
 	}
 	else if (cached) {
 		check(resolve_to_tree(repo, "HEAD", &t1), "looking up HEAD");
@@ -238,22 +239,12 @@ int main(int argc, char *argv[])
 	if (color >= 0)
 		fputs(colors[0], stdout);
 
-	switch (format) {
-	case FORMAT_PATCH:
-		check(git_diff_print_patch(diff, printer, &color), "Displaying diff");
-		break;
-	case FORMAT_COMPACT:
-		check(git_diff_print_compact(diff, printer, &color), "Displaying diff");
-		break;
-	case FORMAT_RAW:
-		check(git_diff_print_raw(diff, printer, &color), "Displaying diff");
-		break;
-	}
+	check(git_diff_print(diff, format, printer, &color), "Displaying diff");
 
 	if (color >= 0)
 		fputs(colors[0], stdout);
 
-	git_diff_list_free(diff);
+	git_diff_free(diff);
 	git_tree_free(t1);
 	git_tree_free(t2);
 	git_repository_free(repo);

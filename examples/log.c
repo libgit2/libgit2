@@ -184,14 +184,18 @@ static void print_commit(git_commit *commit)
 
 static int print_diff(
 	const git_diff_delta *delta,
-	const git_diff_range *range,
-	char usage,
-	const char *line,
-	size_t line_len,
+	const git_diff_hunk *hunk,
+	const git_diff_line *line,
 	void *data)
 {
-	(void)delta; (void)range; (void)usage; (void)line_len; (void)data;
-	fputs(line, stdout);
+	(void)delta; (void)hunk; (void)data;
+
+	if (line->origin == GIT_DIFF_LINE_CONTEXT ||
+		line->origin == GIT_DIFF_LINE_ADDITION ||
+		line->origin == GIT_DIFF_LINE_DELETION)
+		fputc(line->origin, stdout);
+
+	fwrite(line->content, 1, line->content_len, stdout);
 	return 0;
 }
 
@@ -218,7 +222,7 @@ static int match_with_parent(
 {
 	git_commit *parent;
 	git_tree *a, *b;
-	git_diff_list *diff;
+	git_diff *diff;
 	int ndeltas;
 
 	check(git_commit_parent(&parent, commit, (size_t)i), "Get parent", NULL);
@@ -229,7 +233,7 @@ static int match_with_parent(
 
 	ndeltas = (int)git_diff_num_deltas(diff);
 
-	git_diff_list_free(diff);
+	git_diff_free(diff);
 	git_tree_free(a);
 	git_tree_free(b);
 	git_commit_free(parent);
@@ -373,7 +377,7 @@ int main(int argc, char *argv[])
 
 		if (opt.show_diff) {
 			git_tree *a = NULL, *b = NULL;
-			git_diff_list *diff = NULL;
+			git_diff *diff = NULL;
 
 			if (parents > 1)
 				continue;
@@ -388,10 +392,10 @@ int main(int argc, char *argv[])
 			check(git_diff_tree_to_tree(
 				&diff, git_commit_owner(commit), a, b, &diffopts),
 				"Diff commit with parent", NULL);
-			check(git_diff_print_patch(diff, print_diff, NULL),
+			check(git_diff_print(diff, GIT_DIFF_FORMAT_PATCH, print_diff, NULL),
 				"Displaying diff", NULL);
 
-			git_diff_list_free(diff);
+			git_diff_free(diff);
 			git_tree_free(a);
 			git_tree_free(b);
 		}

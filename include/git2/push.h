@@ -40,7 +40,7 @@ typedef struct {
 #define GIT_PUSH_OPTIONS_INIT { GIT_PUSH_OPTIONS_VERSION }
 
 /** Push network progress notification function */
-typedef void (*git_push_transfer_progress)(
+typedef int (*git_push_transfer_progress)(
 	unsigned int current,
 	unsigned int total,
 	size_t bytes,

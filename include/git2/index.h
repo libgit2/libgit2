@@ -225,6 +225,9 @@ GIT_EXTERN(int) git_index_set_caps(git_index *index, unsigned int caps);
  * Update the contents of an existing index object in memory
  * by reading from the hard disk.
  *
+ * If the file doesn't exist on the filesystem, the index
+ * will be cleared from its current content.
+ *
  * @param index an existing index object
  * @return 0 or an error code
  */

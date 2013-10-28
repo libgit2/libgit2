@@ -14,15 +14,16 @@ void test_diff_submodules__cleanup(void)
 }
 
 static void check_diff_patches_at_line(
-	git_diff_list *diff, const char **expected, const char *file, int line)
+	git_diff *diff, const char **expected, const char *file, int line)
 {
 	const git_diff_delta *delta;
-	git_diff_patch *patch = NULL;
+	git_patch *patch = NULL;
 	size_t d, num_d = git_diff_num_deltas(diff);
 	char *patch_text;
 
-	for (d = 0; d < num_d; ++d, git_diff_patch_free(patch)) {
-		cl_git_pass(git_diff_get_patch(&patch, &delta, diff, d));
+	for (d = 0; d < num_d; ++d, git_patch_free(patch)) {
+		cl_git_pass(git_patch_from_diff(&patch, diff, d));
+		cl_assert((delta = git_patch_get_delta(patch)) != NULL);
 
 		if (delta->status == GIT_DELTA_UNMODIFIED) {
 			cl_assert_at_line(expected[d] == NULL, file, line);
@@ -32,11 +33,11 @@ static void check_diff_patches_at_line(
 		if (expected[d] && !strcmp(expected[d], "<SKIP>"))
 			continue;
 		if (expected[d] && !strcmp(expected[d], "<END>")) {
-			cl_git_pass(git_diff_patch_to_str(&patch_text, patch));
+			cl_git_pass(git_patch_to_str(&patch_text, patch));
 			cl_assert_at_line(!strcmp(expected[d], "<END>"), file, line);
 		}
 
-		cl_git_pass(git_diff_patch_to_str(&patch_text, patch));
+		cl_git_pass(git_patch_to_str(&patch_text, patch));
 
 		clar__assert_equal(
 			file, line, "expected diff did not match actual diff", 1,
@@ -53,7 +54,7 @@ static void check_diff_patches_at_line(
 void test_diff_submodules__unmodified_submodule(void)
 {
 	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
-	git_diff_list *diff = NULL;
+	git_diff *diff = NULL;
 	static const char *expected[] = {
 		"<SKIP>", /* .gitmodules */
 		NULL, /* added */
@@ -74,13 +75,13 @@ void test_diff_submodules__unmodified_submodule(void)
 
 	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, NULL, &opts));
 	check_diff_patches(diff, expected);
-	git_diff_list_free(diff);
+	git_diff_free(diff);
 }
 
 void test_diff_submodules__dirty_submodule(void)
 {
 	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
-	git_diff_list *diff = NULL;
+	git_diff *diff = NULL;
 	static const char *expected[] = {
 		"<SKIP>", /* .gitmodules */
 		NULL, /* added */
@@ -104,13 +105,13 @@ void test_diff_submodules__dirty_submodule(void)
 
 	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, NULL, &opts));
 	check_diff_patches(diff, expected);
-	git_diff_list_free(diff);
+	git_diff_free(diff);
 }
 
 void test_diff_submodules__dirty_submodule_2(void)
 {
 	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
-	git_diff_list *diff = NULL, *diff2 = NULL;
+	git_diff *diff = NULL, *diff2 = NULL;
 	char *smpath = "testrepo";
 	static const char *expected_none[] = { "<END>" };
 	static const char *expected_dirty[] = {
@@ -123,7 +124,7 @@ void test_diff_submodules__dirty_submodule_2(void)
 	cl_git_pass(git_submodule_reload_all(g_repo));
 
 	opts.flags = GIT_DIFF_INCLUDE_UNTRACKED |
-		GIT_DIFF_INCLUDE_UNTRACKED_CONTENT |
+		GIT_DIFF_SHOW_UNTRACKED_CONTENT |
 		GIT_DIFF_RECURSE_UNTRACKED_DIRS |
 		GIT_DIFF_DISABLE_PATHSPEC_MATCH;
 	opts.old_prefix = "a"; opts.new_prefix = "b";
@@ -132,7 +133,7 @@ void test_diff_submodules__dirty_submodule_2(void)
 
 	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, NULL, &opts));
 	check_diff_patches(diff, expected_none);
-	git_diff_list_free(diff);
+	git_diff_free(diff);
 
 	cl_git_rewritefile("submodules/testrepo/README", "heyheyhey");
 	cl_git_mkfile("submodules/testrepo/all_new.txt", "never seen before");
@@ -146,25 +147,25 @@ void test_diff_submodules__dirty_submodule_2(void)
 		cl_git_pass(git_repository_head_tree(&head, g_repo));
 		cl_git_pass(git_diff_tree_to_index(&diff2, g_repo, head, NULL, &opts));
 		cl_git_pass(git_diff_merge(diff, diff2));
-		git_diff_list_free(diff2);
+		git_diff_free(diff2);
 		git_tree_free(head);
 
 		check_diff_patches(diff, expected_dirty);
 	}
 
-	git_diff_list_free(diff);
+	git_diff_free(diff);
 
 	cl_git_pass(git_submodule_reload_all(g_repo));
 
 	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, NULL, &opts));
 	check_diff_patches(diff, expected_dirty);
-	git_diff_list_free(diff);
+	git_diff_free(diff);
 }
 
 void test_diff_submodules__submod2_index_to_wd(void)
 {
 	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
-	git_diff_list *diff = NULL;
+	git_diff *diff = NULL;
 	static const char *expected[] = {
 		"<SKIP>", /* .gitmodules */
 		"diff --git a/sm_changed_file b/sm_changed_file\nindex 4800958..4800958 160000\n--- a/sm_changed_file\n+++ b/sm_changed_file\n@@ -1 +1 @@\n-Subproject commit 480095882d281ed676fe5b863569520e54a7d5c0\n+Subproject commit 480095882d281ed676fe5b863569520e54a7d5c0-dirty\n", /* sm_changed_file */
@@ -182,14 +183,14 @@ void test_diff_submodules__submod2_index_to_wd(void)
 
 	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, NULL, &opts));
 	check_diff_patches(diff, expected);
-	git_diff_list_free(diff);
+	git_diff_free(diff);
 }
 
 void test_diff_submodules__submod2_head_to_index(void)
 {
 	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
 	git_tree *head;
-	git_diff_list *diff = NULL;
+	git_diff *diff = NULL;
 	static const char *expected[] = {
 		"<SKIP>", /* .gitmodules */
 		"diff --git a/sm_added_and_uncommited b/sm_added_and_uncommited\nnew file mode 160000\nindex 0000000..4800958\n--- /dev/null\n+++ b/sm_added_and_uncommited\n@@ -0,0 +1 @@\n+Subproject commit 480095882d281ed676fe5b863569520e54a7d5c0\n", /* sm_added_and_uncommited */
@@ -205,7 +206,7 @@ void test_diff_submodules__submod2_head_to_index(void)
 
 	cl_git_pass(git_diff_tree_to_index(&diff, g_repo, head, NULL, &opts));
 	check_diff_patches(diff, expected);
-	git_diff_list_free(diff);
+	git_diff_free(diff);
 
 	git_tree_free(head);
 }
@@ -213,7 +214,7 @@ void test_diff_submodules__submod2_head_to_index(void)
 void test_diff_submodules__invalid_cache(void)
 {
 	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
-	git_diff_list *diff = NULL;
+	git_diff *diff = NULL;
 	git_submodule *sm;
 	char *smpath = "sm_changed_head";
 	git_repository *smrepo;
@@ -246,7 +247,7 @@ void test_diff_submodules__invalid_cache(void)
 	/* baseline */
 	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, NULL, &opts));
 	check_diff_patches(diff, expected_baseline);
-	git_diff_list_free(diff);
+	git_diff_free(diff);
 
 	/* update index with new HEAD */
 	cl_git_pass(git_submodule_lookup(&sm, g_repo, smpath));
@@ -254,7 +255,7 @@ void test_diff_submodules__invalid_cache(void)
 
 	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, NULL, &opts));
 	check_diff_patches(diff, expected_unchanged);
-	git_diff_list_free(diff);
+	git_diff_free(diff);
 
 	/* create untracked file in submodule working directory */
 	cl_git_mkfile("submod2/sm_changed_head/new_around_here", "hello");
@@ -262,13 +263,13 @@ void test_diff_submodules__invalid_cache(void)
 
 	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, NULL, &opts));
 	check_diff_patches(diff, expected_dirty);
-	git_diff_list_free(diff);
+	git_diff_free(diff);
 
 	git_submodule_set_ignore(sm, GIT_SUBMODULE_IGNORE_UNTRACKED);
 
 	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, NULL, &opts));
 	check_diff_patches(diff, expected_unchanged);
-	git_diff_list_free(diff);
+	git_diff_free(diff);
 
 	/* modify tracked file in submodule working directory */
 	cl_git_append2file(
@@ -276,20 +277,20 @@ void test_diff_submodules__invalid_cache(void)
 
 	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, NULL, &opts));
 	check_diff_patches(diff, expected_dirty);
-	git_diff_list_free(diff);
+	git_diff_free(diff);
 
 	cl_git_pass(git_submodule_reload_all(g_repo));
 	cl_git_pass(git_submodule_lookup(&sm, g_repo, smpath));
 
 	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, NULL, &opts));
 	check_diff_patches(diff, expected_dirty);
-	git_diff_list_free(diff);
+	git_diff_free(diff);
 
 	git_submodule_set_ignore(sm, GIT_SUBMODULE_IGNORE_DIRTY);
 
 	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, NULL, &opts));
 	check_diff_patches(diff, expected_unchanged);
-	git_diff_list_free(diff);
+	git_diff_free(diff);
 
 	/* add file to index in submodule */
 	cl_git_pass(git_submodule_open(&smrepo, sm));
@@ -300,13 +301,13 @@ void test_diff_submodules__invalid_cache(void)
 
 	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, NULL, &opts));
 	check_diff_patches(diff, expected_dirty);
-	git_diff_list_free(diff);
+	git_diff_free(diff);
 
 	git_submodule_set_ignore(sm, GIT_SUBMODULE_IGNORE_DIRTY);
 
 	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, NULL, &opts));
 	check_diff_patches(diff, expected_unchanged);
-	git_diff_list_free(diff);
+	git_diff_free(diff);
 
 	/* commit changed index of submodule */
 	cl_repo_commit_from_index(NULL, smrepo, NULL, 1372350000, "Move it");
@@ -315,25 +316,25 @@ void test_diff_submodules__invalid_cache(void)
 
 	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, NULL, &opts));
 	check_diff_patches(diff, expected_moved);
-	git_diff_list_free(diff);
+	git_diff_free(diff);
 
 	git_submodule_set_ignore(sm, GIT_SUBMODULE_IGNORE_ALL);
 
 	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, NULL, &opts));
 	check_diff_patches(diff, expected_unchanged);
-	git_diff_list_free(diff);
+	git_diff_free(diff);
 
 	git_submodule_set_ignore(sm, GIT_SUBMODULE_IGNORE_NONE);
 
 	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, NULL, &opts));
 	check_diff_patches(diff, expected_moved_dirty);
-	git_diff_list_free(diff);
+	git_diff_free(diff);
 
 	p_unlink("submod2/sm_changed_head/new_around_here");
 
 	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, NULL, &opts));
 	check_diff_patches(diff, expected_moved);
-	git_diff_list_free(diff);
+	git_diff_free(diff);
 
 	git_index_free(smindex);
 	git_repository_free(smrepo);
@@ -342,7 +343,7 @@ void test_diff_submodules__invalid_cache(void)
 void test_diff_submodules__diff_ignore_options(void)
 {
 	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
-	git_diff_list *diff = NULL;
+	git_diff *diff = NULL;
 	git_config *cfg;
 	static const char *expected_normal[] = {
 		"<SKIP>", /* .gitmodules */
@@ -371,26 +372,26 @@ void test_diff_submodules__diff_ignore_options(void)
 
 	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, NULL, &opts));
 	check_diff_patches(diff, expected_normal);
-	git_diff_list_free(diff);
+	git_diff_free(diff);
 
 	opts.flags |= GIT_DIFF_IGNORE_SUBMODULES;
 
 	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, NULL, &opts));
 	check_diff_patches(diff, expected_ignore_all);
-	git_diff_list_free(diff);
+	git_diff_free(diff);
 
 	opts.flags &= ~GIT_DIFF_IGNORE_SUBMODULES;
 	opts.ignore_submodules = GIT_SUBMODULE_IGNORE_ALL;
 
 	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, NULL, &opts));
 	check_diff_patches(diff, expected_ignore_all);
-	git_diff_list_free(diff);
+	git_diff_free(diff);
 
 	opts.ignore_submodules = GIT_SUBMODULE_IGNORE_DIRTY;
 
 	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, NULL, &opts));
 	check_diff_patches(diff, expected_ignore_dirty);
-	git_diff_list_free(diff);
+	git_diff_free(diff);
 
 	opts.ignore_submodules = 0;
 	cl_git_pass(git_repository_config(&cfg, g_repo));
@@ -398,25 +399,25 @@ void test_diff_submodules__diff_ignore_options(void)
 
 	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, NULL, &opts));
 	check_diff_patches(diff, expected_normal);
-	git_diff_list_free(diff);
+	git_diff_free(diff);
 
 	cl_git_pass(git_config_set_bool(cfg, "diff.ignoreSubmodules", true));
 
 	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, NULL, &opts));
 	check_diff_patches(diff, expected_ignore_all);
-	git_diff_list_free(diff);
+	git_diff_free(diff);
 
 	cl_git_pass(git_config_set_string(cfg, "diff.ignoreSubmodules", "none"));
 
 	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, NULL, &opts));
 	check_diff_patches(diff, expected_normal);
-	git_diff_list_free(diff);
+	git_diff_free(diff);
 
 	cl_git_pass(git_config_set_string(cfg, "diff.ignoreSubmodules", "dirty"));
 
 	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, NULL, &opts));
 	check_diff_patches(diff, expected_ignore_dirty);
-	git_diff_list_free(diff);
+	git_diff_free(diff);
 
 	git_config_free(cfg);
 }

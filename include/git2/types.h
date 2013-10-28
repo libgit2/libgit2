@@ -212,11 +212,21 @@ typedef struct git_remote_callbacks git_remote_callbacks;
 /**
  * This is passed as the first argument to the callback to allow the
  * user to see the progress.
+ *
+ * - total_objects: number of objects in the packfile being downloaded
+ * - indexed_objects: received objects that have been hashed
+ * - received_objects: objects which have been downloaded
+ * - local_objects: locally-available objects that have been injected
+ *    in order to fix a thin pack.
+ * - received-bytes: size of the packfile received up to now
  */
 typedef struct git_transfer_progress {
 	unsigned int total_objects;
 	unsigned int indexed_objects;
 	unsigned int received_objects;
+	unsigned int local_objects;
+	unsigned int total_deltas;
+	unsigned int indexed_deltas;
 	size_t received_bytes;
 } git_transfer_progress;
 

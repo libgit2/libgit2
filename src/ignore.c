@@ -1,4 +1,5 @@
 #include "git2/ignore.h"
+#include "common.h"
 #include "ignore.h"
 #include "attr.h"
 #include "path.h"

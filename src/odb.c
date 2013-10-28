@@ -124,6 +124,13 @@ git_otype git_odb_object_type(git_odb_object *object)
 	return object->cached.type;
 }
 
+int git_odb_object_dup(git_odb_object **dest, git_odb_object *source)
+{
+	git_cached_obj_incref(source);
+	*dest = source;
+	return 0;
+}
+
 void git_odb_object_free(git_odb_object *object)
 {
 	if (object == NULL)
@@ -988,7 +995,7 @@ int git_odb_write_pack(struct git_odb_writepack **out, git_odb *db, git_transfer
 
 		if (b->writepack != NULL) {
 			++writes;
-			error = b->writepack(out, b, progress_cb, progress_payload);
+			error = b->writepack(out, b, db, progress_cb, progress_payload);
 		}
 	}
 

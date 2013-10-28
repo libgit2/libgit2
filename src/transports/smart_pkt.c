@@ -472,6 +472,9 @@ static int buffer_want_with_caps(const git_remote_head *head, transport_smart_ca
 	if (caps->include_tag)
 		git_buf_puts(&str, GIT_CAP_INCLUDE_TAG " ");
 
+	if (caps->thin_pack)
+		git_buf_puts(&str, GIT_CAP_THIN_PACK " ");
+
 	if (git_buf_oom(&str))
 		return -1;
 

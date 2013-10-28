@@ -158,7 +158,7 @@ GIT_EXTERN(uint32_t) git_packbuilder_object_count(git_packbuilder *pb);
 GIT_EXTERN(uint32_t) git_packbuilder_written(git_packbuilder *pb);
 
 /** Packbuilder progress notification function */
-typedef void (*git_packbuilder_progress)(
+typedef int (*git_packbuilder_progress)(
 	int stage,
 	unsigned int current,
 	unsigned int total,

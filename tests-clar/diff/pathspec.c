@@ -20,7 +20,7 @@ void test_diff_pathspec__0(void)
 	git_tree *a = resolve_commit_oid_to_tree(g_repo, a_commit);
 	git_tree *b = resolve_commit_oid_to_tree(g_repo, b_commit);
 	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
-	git_diff_list *diff = NULL;
+	git_diff *diff = NULL;
 	git_strarray paths = { NULL, 1 };
 	char *path;
 	git_pathspec *ps;
@@ -52,7 +52,7 @@ void test_diff_pathspec__0(void)
 		(int)git_pathspec_match_list_diff_entry(matches,0)->status);
 	git_pathspec_match_list_free(matches);
 
-	git_diff_list_free(diff);
+	git_diff_free(diff);
 	diff = NULL;
 
 	cl_git_pass(git_diff_tree_to_tree(&diff, g_repo, a, b, &opts));
@@ -68,7 +68,7 @@ void test_diff_pathspec__0(void)
 		(int)git_pathspec_match_list_diff_entry(matches,0)->status);
 	git_pathspec_match_list_free(matches);
 
-	git_diff_list_free(diff);
+	git_diff_free(diff);
 	diff = NULL;
 
 	cl_git_pass(git_diff_tree_to_workdir(&diff, g_repo, a, &opts));
@@ -84,7 +84,7 @@ void test_diff_pathspec__0(void)
 		(int)git_pathspec_match_list_diff_entry(matches,0)->status);
 	git_pathspec_match_list_free(matches);
 
-	git_diff_list_free(diff);
+	git_diff_free(diff);
 	diff = NULL;
 
 	git_tree_free(a);

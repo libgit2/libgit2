@@ -249,15 +249,15 @@ static int _git_ssh_authenticate_session(
 			rc = libssh2_userauth_password(session, user, c->password);
 			break;
 		}
-		case GIT_CREDTYPE_SSH_KEYFILE_PASSPHRASE: {
-			git_cred_ssh_keyfile_passphrase *c = (git_cred_ssh_keyfile_passphrase *)cred;
+		case GIT_CREDTYPE_SSH_KEY: {
+			git_cred_ssh_key *c = (git_cred_ssh_key *)cred;
 			user = c->username ? c->username : user;
 			rc = libssh2_userauth_publickey_fromfile(
 				session, c->username, c->publickey, c->privatekey, c->passphrase);
 			break;
 		}
-		case GIT_CREDTYPE_SSH_PUBLICKEY: {
-			git_cred_ssh_publickey *c = (git_cred_ssh_publickey *)cred;
+		case GIT_CREDTYPE_SSH_CUSTOM: {
+			git_cred_ssh_custom *c = (git_cred_ssh_custom *)cred;
 
 			user = c->username ? c->username : user;
 			rc = libssh2_userauth_publickey(
@@ -349,7 +349,8 @@ static int _git_ssh_setup_conn(
 		if (t->owner->cred_acquire_cb(
 				&t->cred, t->owner->url, user,
 				GIT_CREDTYPE_USERPASS_PLAINTEXT |
-				GIT_CREDTYPE_SSH_KEYFILE_PASSPHRASE,
+				GIT_CREDTYPE_SSH_KEY |
+				GIT_CREDTYPE_SSH_CUSTOM,
 				t->owner->cred_acquire_payload) < 0)
 			goto on_error;
 

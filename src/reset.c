@@ -24,10 +24,9 @@ int git_reset_default(
 {
 	git_object *commit = NULL;
 	git_tree *tree = NULL;
-	git_diff_list *diff = NULL;
+	git_diff *diff = NULL;
 	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
-	size_t i;
-	git_diff_delta *delta;
+	size_t i, max_i;
 	git_index_entry entry;
 	int error;
 	git_index *index = NULL;
@@ -58,7 +57,9 @@ int git_reset_default(
 		&diff, repo, tree, index, &opts)) < 0)
 			goto cleanup;
 
-	git_vector_foreach(&diff->deltas, i, delta) {
+	for (i = 0, max_i = git_diff_num_deltas(diff); i < max_i; ++i) {
+		const git_diff_delta *delta = git_diff_get_delta(diff, i);
+
 		if ((error = git_index_conflict_remove(index, delta->old_file.path)) < 0)
 			goto cleanup;
 
@@ -85,7 +86,7 @@ cleanup:
 	git_object_free(commit);
 	git_tree_free(tree);
 	git_index_free(index);
-	git_diff_list_free(diff);
+	git_diff_free(diff);
 
 	return error;
 }
@@ -135,7 +136,7 @@ int git_reset(
 
 	if (reset_type == GIT_RESET_HARD) {
 		/* overwrite working directory with HEAD */
-		opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+		opts.checkout_strategy = GIT_CHECKOUT_FORCE | GIT_CHECKOUT_SKIP_UNMERGED;
 
 		if ((error = git_checkout_tree(repo, (git_object *)tree, &opts)) < 0)
 			goto cleanup;

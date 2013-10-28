@@ -1,6 +1,7 @@
 #include "clar_libgit2.h"
 #include "posix.h"
 #include "path.h"
+#include "git2/sys/repository.h"
 
 void cl_git_report_failure(
 	int error, const char *file, int line, const char *fncall)
@@ -190,6 +191,9 @@ git_repository *cl_git_sandbox_init(const char *sandbox)
 	/* Now open the sandbox repository and make it available for tests */
 	cl_git_pass(git_repository_open(&_cl_repo, sandbox));
 
+	/* Adjust configs after copying to new filesystem */
+	cl_git_pass(git_repository_reinit_filesystem(_cl_repo, 0));
+
 	return _cl_repo;
 }
 
@@ -301,7 +305,7 @@ static int remove_placeholders_recurs(void *_data, git_buf *path)
 	size_t pathlen;
 
 	if (git_path_isdir(path->ptr) == true)
-		return git_path_direach(path, remove_placeholders_recurs, data);
+		return git_path_direach(path, 0, remove_placeholders_recurs, data);
 
 	pathlen = path->size;
 
