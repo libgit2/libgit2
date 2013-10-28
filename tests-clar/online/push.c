@@ -47,12 +47,12 @@ static int cred_acquire_cb(
 	GIT_UNUSED(user_from_url);
 	GIT_UNUSED(payload);
 
-	if (GIT_CREDTYPE_SSH_KEYFILE_PASSPHRASE & allowed_types) {
+	if (GIT_CREDTYPE_SSH_KEY & allowed_types) {
 		if (!_remote_user || !_remote_ssh_pubkey || !_remote_ssh_key || !_remote_ssh_passphrase) {
 			printf("GITTEST_REMOTE_USER, GITTEST_REMOTE_SSH_PUBKEY, GITTEST_REMOTE_SSH_KEY and GITTEST_REMOTE_SSH_PASSPHRASE must be set\n");
 			return -1;
 		}
-		return git_cred_ssh_keyfile_passphrase_new(cred, _remote_user, _remote_ssh_pubkey, _remote_ssh_key, _remote_ssh_passphrase);
+		return git_cred_ssh_key_new(cred, _remote_user, _remote_ssh_pubkey, _remote_ssh_key, _remote_ssh_passphrase);
 	}
 
 	if (GIT_CREDTYPE_USERPASS_PLAINTEXT & allowed_types) {
