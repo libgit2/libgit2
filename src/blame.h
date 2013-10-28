@@ -16,7 +16,7 @@ typedef struct git_blame__origin {
 	struct git_blame__origin *previous;
 	git_commit *commit;
 	git_blob *blob;
-	char path[];
+	char path[GIT_FLEX_ARRAY];
 } git_blame__origin;
 
 /*
