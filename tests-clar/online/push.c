@@ -67,8 +67,11 @@ static int cred_acquire_cb(
 	return -1;
 }
 
+/* the results of a push status.  when used for expected values, msg may be NULL
+ * to indicate that it should not be matched. */
 typedef struct {
 	const char *ref;
+	int success;
 	const char *msg;
 } push_status;
 
@@ -83,6 +86,7 @@ static int record_push_status_cb(const char *ref, const char *msg, void *data)
 
 	cl_assert(s = git__malloc(sizeof(*s)));
 	s->ref = ref;
+	s->success = (msg == NULL);
 	s->msg = msg;
 
 	git_vector_insert(statuses, s);
@@ -104,9 +108,8 @@ static void do_verify_push_status(git_push *push, const push_status expected[], 
 	else
 		git_vector_foreach(&actual, i, iter)
 			if (strcmp(expected[i].ref, iter->ref) ||
-				(expected[i].msg && !iter->msg) ||
-				(!expected[i].msg && iter->msg) ||
-				(expected[i].msg && iter->msg && strcmp(expected[i].msg, iter->msg))) {
+				(expected[i].success != iter->success) ||
+				(expected[i].msg && (!iter->msg || strcmp(expected[i].msg, iter->msg)))) {
 				failed = true;
 				break;
 			}
@@ -119,13 +122,17 @@ static void do_verify_push_status(git_push *push, const push_status expected[], 
 		for(i = 0; i < expected_len; i++) {
 			git_buf_printf(&msg, "%s: %s\n",
 				expected[i].ref,
-				expected[i].msg ? expected[i].msg : "<NULL>");
+				expected[i].success ? "success" : "failed");
 		}
 
 		git_buf_puts(&msg, "\nACTUAL:\n");
 
-		git_vector_foreach(&actual, i, iter)
-			git_buf_printf(&msg, "%s: %s\n", iter->ref, iter->msg);
+		git_vector_foreach(&actual, i, iter) {
+			if (iter->success)
+				git_buf_printf(&msg, "%s: success\n", iter->ref);
+			else
+				git_buf_printf(&msg, "%s: failed with message: %s", iter->ref, iter->msg);
+		}
 
 		cl_fail(git_buf_cstr(&msg));
 
@@ -445,7 +452,7 @@ void test_online_push__noop(void)
 void test_online_push__b1(void)
 {
 	const char *specs[] = { "refs/heads/b1:refs/heads/b1" };
-	push_status exp_stats[] = { { "refs/heads/b1", NULL } };
+	push_status exp_stats[] = { { "refs/heads/b1", 1 } };
 	expected_ref exp_refs[] = { { "refs/heads/b1", &_oid_b1 } };
 	do_push(specs, ARRAY_SIZE(specs),
 		exp_stats, ARRAY_SIZE(exp_stats),
@@ -455,7 +462,7 @@ void test_online_push__b1(void)
 void test_online_push__b2(void)
 {
 	const char *specs[] = { "refs/heads/b2:refs/heads/b2" };
-	push_status exp_stats[] = { { "refs/heads/b2", NULL } };
+	push_status exp_stats[] = { { "refs/heads/b2", 1 } };
 	expected_ref exp_refs[] = { { "refs/heads/b2", &_oid_b2 } };
 	do_push(specs, ARRAY_SIZE(specs),
 		exp_stats, ARRAY_SIZE(exp_stats),
@@ -465,7 +472,7 @@ void test_online_push__b2(void)
 void test_online_push__b3(void)
 {
 	const char *specs[] = { "refs/heads/b3:refs/heads/b3" };
-	push_status exp_stats[] = { { "refs/heads/b3", NULL } };
+	push_status exp_stats[] = { { "refs/heads/b3", 1 } };
 	expected_ref exp_refs[] = { { "refs/heads/b3", &_oid_b3 } };
 	do_push(specs, ARRAY_SIZE(specs),
 		exp_stats, ARRAY_SIZE(exp_stats),
@@ -475,7 +482,7 @@ void test_online_push__b3(void)
 void test_online_push__b4(void)
 {
 	const char *specs[] = { "refs/heads/b4:refs/heads/b4" };
-	push_status exp_stats[] = { { "refs/heads/b4", NULL } };
+	push_status exp_stats[] = { { "refs/heads/b4", 1 } };
 	expected_ref exp_refs[] = { { "refs/heads/b4", &_oid_b4 } };
 	do_push(specs, ARRAY_SIZE(specs),
 		exp_stats, ARRAY_SIZE(exp_stats),
@@ -485,7 +492,7 @@ void test_online_push__b4(void)
 void test_online_push__b5(void)
 {
 	const char *specs[] = { "refs/heads/b5:refs/heads/b5" };
-	push_status exp_stats[] = { { "refs/heads/b5", NULL } };
+	push_status exp_stats[] = { { "refs/heads/b5", 1 } };
 	expected_ref exp_refs[] = { { "refs/heads/b5", &_oid_b5 } };
 	do_push(specs, ARRAY_SIZE(specs),
 		exp_stats, ARRAY_SIZE(exp_stats),
@@ -502,11 +509,11 @@ void test_online_push__multi(void)
 		"refs/heads/b5:refs/heads/b5"
 	};
 	push_status exp_stats[] = {
-		{ "refs/heads/b1", NULL },
-		{ "refs/heads/b2", NULL },
-		{ "refs/heads/b3", NULL },
-		{ "refs/heads/b4", NULL },
-		{ "refs/heads/b5", NULL }
+		{ "refs/heads/b1", 1 },
+		{ "refs/heads/b2", 1 },
+		{ "refs/heads/b3", 1 },
+		{ "refs/heads/b4", 1 },
+		{ "refs/heads/b5", 1 }
 	};
 	expected_ref exp_refs[] = {
 		{ "refs/heads/b1", &_oid_b1 },
@@ -523,11 +530,11 @@ void test_online_push__multi(void)
 void test_online_push__implicit_tgt(void)
 {
 	const char *specs1[] = { "refs/heads/b1:" };
-	push_status exp_stats1[] = { { "refs/heads/b1", NULL } };
+	push_status exp_stats1[] = { { "refs/heads/b1", 1 } };
 	expected_ref exp_refs1[] = { { "refs/heads/b1", &_oid_b1 } };
 
 	const char *specs2[] = { "refs/heads/b2:" };
-	push_status exp_stats2[] = { { "refs/heads/b2", NULL } };
+	push_status exp_stats2[] = { { "refs/heads/b2", 1 } };
 	expected_ref exp_refs2[] = {
 	{ "refs/heads/b1", &_oid_b1 },
 	{ "refs/heads/b2", &_oid_b2 }
@@ -546,11 +553,11 @@ void test_online_push__fast_fwd(void)
 	/* Fast forward b1 in tgt from _oid_b1 to _oid_b6. */
 
 	const char *specs_init[] = { "refs/heads/b1:refs/heads/b1" };
-	push_status exp_stats_init[] = { { "refs/heads/b1", NULL } };
+	push_status exp_stats_init[] = { { "refs/heads/b1", 1 } };
 	expected_ref exp_refs_init[] = { { "refs/heads/b1", &_oid_b1 } };
 
 	const char *specs_ff[] = { "refs/heads/b6:refs/heads/b1" };
-	push_status exp_stats_ff[] = { { "refs/heads/b1", NULL } };
+	push_status exp_stats_ff[] = { { "refs/heads/b1", 1 } };
 	expected_ref exp_refs_ff[] = { { "refs/heads/b1", &_oid_b6 } };
 
 	/* Do a force push to reset b1 in target back to _oid_b1 */
@@ -578,7 +585,7 @@ void test_online_push__fast_fwd(void)
 void test_online_push__tag_commit(void)
 {
 	const char *specs[] = { "refs/tags/tag-commit:refs/tags/tag-commit" };
-	push_status exp_stats[] = { { "refs/tags/tag-commit", NULL } };
+	push_status exp_stats[] = { { "refs/tags/tag-commit", 1 } };
 	expected_ref exp_refs[] = { { "refs/tags/tag-commit", &_tag_commit } };
 	do_push(specs, ARRAY_SIZE(specs),
 		exp_stats, ARRAY_SIZE(exp_stats),
@@ -588,7 +595,7 @@ void test_online_push__tag_commit(void)
 void test_online_push__tag_tree(void)
 {
 	const char *specs[] = { "refs/tags/tag-tree:refs/tags/tag-tree" };
-	push_status exp_stats[] = { { "refs/tags/tag-tree", NULL } };
+	push_status exp_stats[] = { { "refs/tags/tag-tree", 1 } };
 	expected_ref exp_refs[] = { { "refs/tags/tag-tree", &_tag_tree } };
 	do_push(specs, ARRAY_SIZE(specs),
 		exp_stats, ARRAY_SIZE(exp_stats),
@@ -598,7 +605,7 @@ void test_online_push__tag_tree(void)
 void test_online_push__tag_blob(void)
 {
 	const char *specs[] = { "refs/tags/tag-blob:refs/tags/tag-blob" };
-	push_status exp_stats[] = { { "refs/tags/tag-blob", NULL } };
+	push_status exp_stats[] = { { "refs/tags/tag-blob", 1 } };
 	expected_ref exp_refs[] = { { "refs/tags/tag-blob", &_tag_blob } };
 	do_push(specs, ARRAY_SIZE(specs),
 		exp_stats, ARRAY_SIZE(exp_stats),
@@ -608,7 +615,7 @@ void test_online_push__tag_blob(void)
 void test_online_push__tag_lightweight(void)
 {
 	const char *specs[] = { "refs/tags/tag-lightweight:refs/tags/tag-lightweight" };
-	push_status exp_stats[] = { { "refs/tags/tag-lightweight", NULL } };
+	push_status exp_stats[] = { { "refs/tags/tag-lightweight", 1 } };
 	expected_ref exp_refs[] = { { "refs/tags/tag-lightweight", &_tag_lightweight } };
 	do_push(specs, ARRAY_SIZE(specs),
 		exp_stats, ARRAY_SIZE(exp_stats),
@@ -618,7 +625,7 @@ void test_online_push__tag_lightweight(void)
 void test_online_push__tag_to_tag(void)
 {
 	const char *specs[] = { "refs/tags/tag-tag:refs/tags/tag-tag" };
-	push_status exp_stats[] = { { "refs/tags/tag-tag", NULL } };
+	push_status exp_stats[] = { { "refs/tags/tag-tag", 1 } };
 	expected_ref exp_refs[] = { { "refs/tags/tag-tag", &_tag_tag } };
 	do_push(specs, ARRAY_SIZE(specs),
 		exp_stats, ARRAY_SIZE(exp_stats),
@@ -628,13 +635,13 @@ void test_online_push__tag_to_tag(void)
 void test_online_push__force(void)
 {
 	const char *specs1[] = {"refs/heads/b3:refs/heads/tgt"};
-	push_status exp_stats1[] = { { "refs/heads/tgt", NULL } };
+	push_status exp_stats1[] = { { "refs/heads/tgt", 1 } };
 	expected_ref exp_refs1[] = { { "refs/heads/tgt", &_oid_b3 } };
 
 	const char *specs2[] = {"refs/heads/b4:refs/heads/tgt"};
 
 	const char *specs2_force[] = {"+refs/heads/b4:refs/heads/tgt"};
-	push_status exp_stats2_force[] = { { "refs/heads/tgt", NULL } };
+	push_status exp_stats2_force[] = { { "refs/heads/tgt", 1 } };
 	expected_ref exp_refs2_force[] = { { "refs/heads/tgt", &_oid_b4 } };
 
 	do_push(specs1, ARRAY_SIZE(specs1),
@@ -658,8 +665,8 @@ void test_online_push__delete(void)
 		"refs/heads/b1:refs/heads/tgt2"
 	};
 	push_status exp_stats1[] = {
-		{ "refs/heads/tgt1", NULL },
-		{ "refs/heads/tgt2", NULL }
+		{ "refs/heads/tgt1", 1 },
+		{ "refs/heads/tgt2", 1 }
 	};
 	expected_ref exp_refs1[] = {
 		{ "refs/heads/tgt1", &_oid_b1 },
@@ -669,10 +676,10 @@ void test_online_push__delete(void)
 	const char *specs_del_fake[] = { ":refs/heads/fake" };
 	/* Force has no effect for delete. */
 	const char *specs_del_fake_force[] = { "+:refs/heads/fake" };
-	push_status exp_stats_fake[] = { { "refs/heads/fake", NULL } };
+	push_status exp_stats_fake[] = { { "refs/heads/fake", 1 } };
 
 	const char *specs_delete[] = { ":refs/heads/tgt1" };
-	push_status exp_stats_delete[] = { { "refs/heads/tgt1", NULL } };
+	push_status exp_stats_delete[] = { { "refs/heads/tgt1", 1 } };
 	expected_ref exp_refs_delete[] = { { "refs/heads/tgt2", &_oid_b1 } };
 	/* Force has no effect for delete. */
 	const char *specs_delete_force[] = { "+:refs/heads/tgt1" };
@@ -731,8 +738,10 @@ void test_online_push__expressions(void)
 	/* TODO: Expressions in refspecs doesn't actually work yet */
 	const char *specs_left_expr[] = { "refs/heads/b2~1:refs/heads/b2" };
 
+	/* expect not NULL to indicate failure (core git replies "funny refname",
+	 * other servers may be less pithy. */
 	const char *specs_right_expr[] = { "refs/heads/b2:refs/heads/b2~1" };
-	push_status exp_stats_right_expr[] = { { "refs/heads/b2~1", "funny refname" } };
+	push_status exp_stats_right_expr[] = { { "refs/heads/b2~1", 0 } };
 
 	/* TODO: Find a more precise way of checking errors than a exit code of -1. */
 	do_push(specs_left_expr, ARRAY_SIZE(specs_left_expr),
@@ -749,7 +758,7 @@ void test_online_push__notes(void)
 	git_oid note_oid, *target_oid, expected_oid;
 	git_signature *signature;
 	const char *specs[] = { "refs/notes/commits:refs/notes/commits" };
-	push_status exp_stats[] = { { "refs/notes/commits", NULL } };
+	push_status exp_stats[] = { { "refs/notes/commits", 1 } };
 	expected_ref exp_refs[] = { { "refs/notes/commits", &expected_oid } };
 	git_oid_fromstr(&expected_oid, "8461a99b27b7043e58ff6e1f5d2cf07d282534fb");
 
