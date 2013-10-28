@@ -370,19 +370,15 @@ static bool hunk_is_bufferblame(git_blame_hunk *hunk)
 
 static int buffer_hunk_cb(
 	const git_diff_delta *delta,
-	const git_diff_range *range,
-	const char *header,
-	size_t header_len,
+	const git_diff_hunk *hunk,
 	void *payload)
 {
 	git_blame *blame = (git_blame*)payload;
 	size_t wedge_line;
 
 	GIT_UNUSED(delta);
-	GIT_UNUSED(header);
-	GIT_UNUSED(header_len);
 
-	wedge_line = (range->old_lines == 0) ? range->new_start : range->old_start;
+	wedge_line = (hunk->old_lines == 0) ? hunk->new_start : hunk->old_start;
 	blame->current_diff_line = wedge_line;
 
 	/* If this hunk doesn't start between existing hunks, split a hunk up so it does */
@@ -398,18 +394,15 @@ static int buffer_hunk_cb(
 static int ptrs_equal_cmp(const void *a, const void *b) { return a<b ? -1 : a>b ? 1 : 0; }
 static int buffer_line_cb(
 	const git_diff_delta *delta,
-	const git_diff_range *range,
-	char line_origin,
-	const char *content,
-	size_t content_len,
+	const git_diff_hunk *hunk,
+	const git_diff_line *line,
 	void *payload)
 {
 	git_blame *blame = (git_blame*)payload;
 
 	GIT_UNUSED(delta);
-	GIT_UNUSED(range);
-	GIT_UNUSED(content);
-	GIT_UNUSED(content_len);
+	GIT_UNUSED(hunk);
+	GIT_UNUSED(line);
 
 #ifdef DO_DEBUG
 	{
@@ -418,7 +411,7 @@ static int buffer_line_cb(
 	}
 #endif
 
-	if (line_origin == GIT_DIFF_LINE_ADDITION) {
+	if (line->origin == GIT_DIFF_LINE_ADDITION) {
 		if (hunk_is_bufferblame(blame->current_hunk) &&
 		    hunk_ends_at_or_before_line(blame->current_hunk, blame->current_diff_line)) {
 			/* Append to the current buffer-blame hunk */
@@ -433,7 +426,7 @@ static int buffer_line_cb(
 		blame->current_diff_line++;
 	}
 
-	if (line_origin == GIT_DIFF_LINE_DELETION) {
+	if (line->origin == GIT_DIFF_LINE_DELETION) {
 		/* Trim the line from the current hunk; remove it if it's now empty */
 		size_t shift_base = blame->current_diff_line + blame->current_hunk->lines_in_hunk+1;
 

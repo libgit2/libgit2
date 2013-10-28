@@ -400,7 +400,7 @@ static git_blame__origin* find_origin(
 		git_blame__origin *origin)
 {
 	git_blame__origin *porigin = NULL;
-	git_diff_list *difflist = NULL;
+	git_diff *difflist = NULL;
 	git_diff_options diffopts = GIT_DIFF_OPTIONS_INIT;
 	git_tree *otree=NULL, *ptree=NULL;
 
@@ -427,7 +427,7 @@ static git_blame__origin* find_origin(
 		int i;
 
 		/* Generate a full diff between the two trees */
-		git_diff_list_free(difflist);
+		git_diff_free(difflist);
 		diffopts.pathspec.count = 0;
 		if (0 != git_diff_tree_to_tree(&difflist, blame->repository, ptree, otree, &diffopts))
 			goto cleanup;
@@ -439,19 +439,19 @@ static git_blame__origin* find_origin(
 
 		/* Find one that matches */
 		for (i=0; i<(int)git_diff_num_deltas(difflist); i++) {
-			const git_diff_delta *delta;
-			git_diff_get_patch(NULL, &delta, difflist, i);
-			if (git_vector_bsearch(NULL, &blame->paths, delta->new_file.path) != 0)
-				continue;
+			const git_diff_delta *delta = git_diff_get_delta(difflist, i);
 
-			git_vector_insert_sorted(&blame->paths, (void*)git__strdup(delta->old_file.path),
-					paths_on_dup);
-			make_origin(&porigin, parent, delta->old_file.path);
+			if (!git_vector_bsearch(NULL, &blame->paths, delta->new_file.path))
+			{
+				git_vector_insert_sorted(&blame->paths, (void*)git__strdup(delta->old_file.path),
+						paths_on_dup);
+				make_origin(&porigin, parent, delta->old_file.path);
+			}
 		}
 	}
 
 cleanup:
-	git_diff_list_free(difflist);
+	git_diff_free(difflist);
 	git_tree_free(otree);
 	git_tree_free(ptree);
 	return porigin;
