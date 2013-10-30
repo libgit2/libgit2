@@ -1,10 +1,14 @@
-#include <git2.h>
-#include <stdio.h>
-#include <string.h>
+/*
+ * Copyright (C) the libgit2 contributors. All rights reserved.
+ *
+ * This file is part of libgit2, distributed under the GNU GPL v2 with
+ * a Linking Exception. For full terms see the included COPYING file.
+ */
+
+#include "common.h"
 
 int main (int argc, char** argv)
 {
-	git_repository *repo = NULL;
 	git_index *index;
 	unsigned int i, ecount;
 	char *dir = ".";
@@ -14,28 +18,19 @@ int main (int argc, char** argv)
 
 	git_threads_init();
 
+	if (argc > 2)
+		fatal("usage: showindex [<repo-dir>]", NULL);
 	if (argc > 1)
 		dir = argv[1];
-	if (!dir || argc > 2) {
-		fprintf(stderr, "usage: showindex [<repo-dir>]\n");
-		return 1;
-	}
 
 	dirlen = strlen(dir);
 	if (dirlen > 5 && strcmp(dir + dirlen - 5, "index") == 0) {
-		if (git_index_open(&index, dir) < 0) {
-			fprintf(stderr, "could not open index: %s\n", dir);
-			return 1;
-		}
+		check_lg2(git_index_open(&index, dir), "could not open index", dir);
 	} else {
-		if (git_repository_open_ext(&repo, dir, 0, NULL) < 0) {
-			fprintf(stderr, "could not open repository: %s\n", dir);
-			return 1;
-		}
-		if (git_repository_index(&index, repo) < 0) {
-			fprintf(stderr, "could not open repository index\n");
-			return 1;
-		}
+		git_repository *repo;
+		check_lg2(git_repository_open_ext(&repo, dir, 0, NULL), "could not open repository", dir);
+		check_lg2(git_repository_index(&index, repo), "could not open repository index", NULL);
+		git_repository_free(repo);
 	}
 
 	git_index_read(index);
@@ -62,10 +57,7 @@ int main (int argc, char** argv)
 	}
 
 	git_index_free(index);
-	git_repository_free(repo);
-
 	git_threads_shutdown();
 
 	return 0;
 }
-
