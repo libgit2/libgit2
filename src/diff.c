@@ -448,6 +448,13 @@ static int diff_list_apply_options(
 		/* add other defaults here */
 	}
 
+	/* Reverse src info if diff is reversed */
+	if (DIFF_FLAG_IS_SET(diff, GIT_DIFF_REVERSE)) {
+		git_iterator_type_t tmp_src = diff->old_src;
+		diff->old_src = diff->new_src;
+		diff->new_src = tmp_src;
+	}
+
 	/* if ignore_submodules not explicitly set, check diff config */
 	if (diff->opts.ignore_submodules <= 0) {
 		const char *str;
@@ -484,9 +491,9 @@ static int diff_list_apply_options(
 		return -1;
 
 	if (DIFF_FLAG_IS_SET(diff, GIT_DIFF_REVERSE)) {
-		const char *swap = diff->opts.old_prefix;
-		diff->opts.old_prefix = diff->opts.new_prefix;
-		diff->opts.new_prefix = swap;
+		const char *tmp_prefix = diff->opts.old_prefix;
+		diff->opts.old_prefix  = diff->opts.new_prefix;
+		diff->opts.new_prefix  = tmp_prefix;
 	}
 
 	return 0;

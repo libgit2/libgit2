@@ -46,7 +46,10 @@ fail:
 }
 
 static git_diff_delta *diff_delta__merge_like_cgit(
-	const git_diff_delta *a, const git_diff_delta *b, git_pool *pool)
+	uint16_t flags,
+	const git_diff_delta *a,
+	const git_diff_delta *b,
+	git_pool *pool)
 {
 	git_diff_delta *dup;
 
@@ -112,26 +115,28 @@ int git_diff_merge(
 	if (!from->deltas.length)
 		return 0;
 
+	if ((onto->opts.flags & GIT_DIFF_IGNORE_CASE) !=
+		(from->opts.flags & GIT_DIFF_IGNORE_CASE) ||
+		(onto->opts.flags & GIT_DIFF_REVERSE) !=
+		(from->opts.flags & GIT_DIFF_REVERSE))
+	{
+		giterr_set(GITERR_INVALID,
+			"Attempt to merge diffs created with conflicting options");
+		return -1;
+	}
+
 	if (git_vector_init(
 			&onto_new, onto->deltas.length, git_diff_delta__cmp) < 0 ||
 		git_pool_init(&onto_pool, 1, 0) < 0)
 		return -1;
 
-	if ((onto->opts.flags & GIT_DIFF_IGNORE_CASE) != 0 ||
-		(from->opts.flags & GIT_DIFF_IGNORE_CASE) != 0)
-	{
-		ignore_case = true;
-
-		/* This function currently only supports merging diff lists that
-		 * are sorted identically. */
-		assert((onto->opts.flags & GIT_DIFF_IGNORE_CASE) != 0 &&
-				(from->opts.flags & GIT_DIFF_IGNORE_CASE) != 0);
-	}
+	ignore_case = ((onto->opts.flags & GIT_DIFF_IGNORE_CASE) != 0);
 
 	for (i = 0, j = 0; i < onto->deltas.length || j < from->deltas.length; ) {
 		git_diff_delta *o = GIT_VECTOR_GET(&onto->deltas, i);
 		const git_diff_delta *f = GIT_VECTOR_GET(&from->deltas, j);
-		int cmp = !f ? -1 : !o ? 1 : STRCMP_CASESELECT(ignore_case, o->old_file.path, f->old_file.path);
+		int cmp = !f ? -1 : !o ? 1 :
+			STRCMP_CASESELECT(ignore_case, o->old_file.path, f->old_file.path);
 
 		if (cmp < 0) {
 			delta = diff_delta__dup(o, &onto_pool);
@@ -140,7 +145,8 @@ int git_diff_merge(
 			delta = diff_delta__dup(f, &onto_pool);
 			j++;
 		} else {
-			delta = diff_delta__merge_like_cgit(o, f, &onto_pool);
+			delta = diff_delta__merge_like_cgit(
+				onto->opts.flags, o, f, &onto_pool);
 			i++;
 			j++;
 		}
@@ -160,7 +166,11 @@ int git_diff_merge(
 	if (!error) {
 		git_vector_swap(&onto->deltas, &onto_new);
 		git_pool_swap(&onto->pool, &onto_pool);
-		onto->new_src = from->new_src;
+
+		if ((onto->opts.flags & GIT_DIFF_REVERSE) != 0)
+			onto->old_src = from->old_src;
+		else
+			onto->new_src = from->new_src;
 
 		/* prefix strings also come from old pool, so recreate those.*/
 		onto->opts.old_prefix =
