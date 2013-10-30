@@ -38,7 +38,7 @@ void test_refs_createwithlog__creating_a_direct_reference_adds_a_reflog_entry(vo
 	cl_git_pass(
 		git_reference_create_with_log(&reference, g_repo, name, &id, 0, signature, message));
 
-	cl_git_pass(git_reflog_read(&reflog, reference));
+	cl_git_pass(git_reflog_read(&reflog, g_repo, name));
 	cl_assert_equal_sz(1, git_reflog_entrycount(reflog));
 
 	entry = git_reflog_entry_byindex(reflog, 0);
@@ -69,7 +69,7 @@ void test_refs_createwithlog__creating_a_symbolic_reference_adds_a_reflog_entry(
 	cl_git_pass(git_reference_symbolic_create_with_log(&reference, g_repo,
 		name, current_head_target, 0, signature, message));
 
-	cl_git_pass(git_reflog_read(&reflog, reference));
+	cl_git_pass(git_reflog_read(&reflog, g_repo, name));
 	cl_assert_equal_sz(1, git_reflog_entrycount(reflog));
 
 	entry = git_reflog_entry_byindex(reflog, 0);
