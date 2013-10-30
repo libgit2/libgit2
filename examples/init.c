@@ -47,9 +47,8 @@ int main(int argc, char *argv[])
 		/* No options were specified, so let's demonstrate the default
 		 * simple case of git_repository_init() API usage...
 		 */
-
-		if (git_repository_init(&repo, o.dir, 0) < 0)
-			fatal("Could not initialize repository", o.dir);
+		check_lg2(git_repository_init(&repo, o.dir, 0),
+			"Could not initialize repository", NULL);
 	}
 	else {
 		/* Some command line options were specified, so we'll use the
@@ -78,10 +77,8 @@ int main(int argc, char *argv[])
 		if (o.shared != 0)
 			initopts.mode = o.shared;
 
-		if (git_repository_init_ext(&repo, o.dir, &initopts) < 0) {
-			const git_error *err = giterr_last();
-			fatal("Could not initialize repository:", err->message);
-		}
+		check_lg2(git_repository_init_ext(&repo, o.dir, &initopts),
+				"Could not initialize repository", NULL);
 	}
 
 	/* Print a message to stdout like "git init" does */
