@@ -29,7 +29,7 @@ struct entry {
 	uint64_t offset_long;
 };
 
-struct git_indexer_stream {
+struct git_indexer {
 	unsigned int parsed_header :1,
 		opened_pack :1,
 		have_stream :1,
@@ -63,7 +63,7 @@ struct delta_info {
 	git_off_t delta_off;
 };
 
-const git_oid *git_indexer_stream_hash(const git_indexer_stream *idx)
+const git_oid *git_indexer_hash(const git_indexer *idx)
 {
 	return &idx->hash;
 }
@@ -116,19 +116,19 @@ static int objects_cmp(const void *a, const void *b)
 	return git_oid__cmp(&entrya->oid, &entryb->oid);
 }
 
-int git_indexer_stream_new(
-		git_indexer_stream **out,
+int git_indexer_new(
+		git_indexer **out,
 		const char *prefix,
 		git_odb *odb,
 		git_transfer_progress_callback progress_cb,
 		void *progress_payload)
 {
-	git_indexer_stream *idx;
+	git_indexer *idx;
 	git_buf path = GIT_BUF_INIT;
 	static const char suff[] = "/pack";
 	int error;
 
-	idx = git__calloc(1, sizeof(git_indexer_stream));
+	idx = git__calloc(1, sizeof(git_indexer));
 	GITERR_CHECK_ALLOC(idx);
 	idx->odb = odb;
 	idx->progress_cb = progress_cb;
@@ -156,7 +156,7 @@ cleanup:
 }
 
 /* Try to store the delta so we can try to resolve it later */
-static int store_delta(git_indexer_stream *idx)
+static int store_delta(git_indexer *idx)
 {
 	struct delta_info *delta;
 
@@ -179,7 +179,7 @@ static void hash_header(git_hash_ctx *ctx, git_off_t len, git_otype type)
 	git_hash_update(ctx, buffer, hdrlen);
 }
 
-static int hash_object_stream(git_indexer_stream *idx, git_packfile_stream *stream)
+static int hash_object_stream(git_indexer*idx, git_packfile_stream *stream)
 {
 	ssize_t read;
 
@@ -199,7 +199,7 @@ static int hash_object_stream(git_indexer_stream *idx, git_packfile_stream *stre
 }
 
 /* In order to create the packfile stream, we need to skip over the delta base description */
-static int advance_delta_offset(git_indexer_stream *idx, git_otype type)
+static int advance_delta_offset(git_indexer *idx, git_otype type)
 {
 	git_mwindow *w = NULL;
 
@@ -218,7 +218,7 @@ static int advance_delta_offset(git_indexer_stream *idx, git_otype type)
 }
 
 /* Read from the stream and discard any output */
-static int read_object_stream(git_indexer_stream *idx, git_packfile_stream *stream)
+static int read_object_stream(git_indexer *idx, git_packfile_stream *stream)
 {
 	ssize_t read;
 
@@ -258,7 +258,7 @@ static int crc_object(uint32_t *crc_out, git_mwindow_file *mwf, git_off_t start,
 	return 0;
 }
 
-static int store_object(git_indexer_stream *idx)
+static int store_object(git_indexer *idx)
 {
 	int i, error;
 	khiter_t k;
@@ -316,7 +316,7 @@ on_error:
 	return -1;
 }
 
-static int save_entry(git_indexer_stream *idx, struct entry *entry, struct git_pack_entry *pentry, git_off_t entry_start)
+static int save_entry(git_indexer *idx, struct entry *entry, struct git_pack_entry *pentry, git_off_t entry_start)
 {
 	int i, error;
 	khiter_t k;
@@ -346,7 +346,7 @@ static int save_entry(git_indexer_stream *idx, struct entry *entry, struct git_p
 	return 0;
 }
 
-static int hash_and_save(git_indexer_stream *idx, git_rawobj *obj, git_off_t entry_start)
+static int hash_and_save(git_indexer *idx, git_rawobj *obj, git_off_t entry_start)
 {
 	git_oid oid;
 	size_t entry_size;
@@ -380,14 +380,14 @@ on_error:
 	return -1;
 }
 
-static int do_progress_callback(git_indexer_stream *idx, git_transfer_progress *stats)
+static int do_progress_callback(git_indexer *idx, git_transfer_progress *stats)
 {
 	if (!idx->progress_cb) return 0;
 	return idx->progress_cb(stats, idx->progress_payload);
 }
 
 /* Hash everything but the last 20B of input */
-static void hash_partially(git_indexer_stream *idx, const uint8_t *data, size_t size)
+static void hash_partially(git_indexer *idx, const uint8_t *data, size_t size)
 {
 	size_t to_expell, to_keep;
 
@@ -423,7 +423,7 @@ static void hash_partially(git_indexer_stream *idx, const uint8_t *data, size_t 
 	idx->inbuf_len += size - to_expell;
 }
 
-int git_indexer_stream_add(git_indexer_stream *idx, const void *data, size_t size, git_transfer_progress *stats)
+int git_indexer_append(git_indexer *idx, const void *data, size_t size, git_transfer_progress *stats)
 {
 	int error = -1;
 	size_t processed;
@@ -583,7 +583,7 @@ on_error:
 	return error;
 }
 
-static int index_path_stream(git_buf *path, git_indexer_stream *idx, const char *suffix)
+static int index_path(git_buf *path, git_indexer *idx, const char *suffix)
 {
 	const char prefix[] = "pack-";
 	size_t slash = (size_t)path->size;
@@ -609,7 +609,7 @@ static int index_path_stream(git_buf *path, git_indexer_stream *idx, const char 
  * Rewind the packfile by the trailer, as we might need to fix the
  * packfile by injecting objects at the tail and must overwrite it.
  */
-static git_off_t seek_back_trailer(git_indexer_stream *idx)
+static git_off_t seek_back_trailer(git_indexer *idx)
 {
 	git_off_t off;
 
@@ -622,7 +622,7 @@ static git_off_t seek_back_trailer(git_indexer_stream *idx)
 	return off;
 }
 
-static int inject_object(git_indexer_stream *idx, git_oid *id)
+static int inject_object(git_indexer *idx, git_oid *id)
 {
 	git_odb_object *obj;
 	struct entry *entry;
@@ -684,7 +684,7 @@ cleanup:
 	return error;
 }
 
-static int fix_thin_pack(git_indexer_stream *idx, git_transfer_progress *stats)
+static int fix_thin_pack(git_indexer *idx, git_transfer_progress *stats)
 {
 	int error, found_ref_delta = 0;
 	unsigned int i;
@@ -741,7 +741,7 @@ static int fix_thin_pack(git_indexer_stream *idx, git_transfer_progress *stats)
 	return 0;
 }
 
-static int resolve_deltas(git_indexer_stream *idx, git_transfer_progress *stats)
+static int resolve_deltas(git_indexer *idx, git_transfer_progress *stats)
 {
 	unsigned int i;
 	struct delta_info *delta;
@@ -784,7 +784,7 @@ static int resolve_deltas(git_indexer_stream *idx, git_transfer_progress *stats)
 	return 0;
 }
 
-static int update_header_and_rehash(git_indexer_stream *idx, git_transfer_progress *stats)
+static int update_header_and_rehash(git_indexer *idx, git_transfer_progress *stats)
 {
 	void *ptr;
 	size_t chunk = 1024*1024;
@@ -833,7 +833,7 @@ static int update_header_and_rehash(git_indexer_stream *idx, git_transfer_progre
 	return 0;
 }
 
-int git_indexer_stream_finalize(git_indexer_stream *idx, git_transfer_progress *stats)
+int git_indexer_commit(git_indexer *idx, git_transfer_progress *stats)
 {
 	git_mwindow *w = NULL;
 	unsigned int i, long_offsets = 0, left;
@@ -965,7 +965,7 @@ int git_indexer_stream_finalize(git_indexer_stream *idx, git_transfer_progress *
 	git_filebuf_write(&index_file, &trailer_hash, sizeof(git_oid));
 
 	/* Figure out what the final name should be */
-	if (index_path_stream(&filename, idx, ".idx") < 0)
+	if (index_path(&filename, idx, ".idx") < 0)
 		goto on_error;
 
 	/* Commit file */
@@ -977,7 +977,7 @@ int git_indexer_stream_finalize(git_indexer_stream *idx, git_transfer_progress *
 	p_close(idx->pack->mwf.fd);
 	idx->pack->mwf.fd = -1;
 
-	if (index_path_stream(&filename, idx, ".pack") < 0)
+	if (index_path(&filename, idx, ".pack") < 0)
 		goto on_error;
 	/* And don't forget to rename the packfile to its new place. */
 	if (git_filebuf_commit_at(&idx->pack_file, filename.ptr, GIT_PACK_FILE_MODE) < 0)
@@ -994,7 +994,7 @@ on_error:
 	return -1;
 }
 
-void git_indexer_stream_free(git_indexer_stream *idx)
+void git_indexer_free(git_indexer *idx)
 {
 	khiter_t k;
 	unsigned int i;

@@ -408,7 +408,7 @@ static int no_sideband(transport_smart *t, struct git_odb_writepack *writepack, 
 			return GIT_EUSER;
 		}
 
-		if (writepack->add(writepack, buf->data, buf->offset, stats) < 0)
+		if (writepack->append(writepack, buf->data, buf->offset, stats) < 0)
 			return -1;
 
 		gitno_consume_n(buf, buf->offset);
@@ -523,7 +523,7 @@ int git_smart__download_pack(
 			git__free(pkt);
 		} else if (pkt->type == GIT_PKT_DATA) {
 			git_pkt_data *p = (git_pkt_data *) pkt;
-			error = writepack->add(writepack, p->data, p->len, stats);
+			error = writepack->append(writepack, p->data, p->len, stats);
 
 			git__free(pkt);
 			if (error < 0)

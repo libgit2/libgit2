@@ -45,23 +45,23 @@ unsigned int base_obj_len = 2;
 
 void test_pack_indexer__out_of_order(void)
 {
-	git_indexer_stream *idx;
+	git_indexer *idx;
 	git_transfer_progress stats;
 
-	cl_git_pass(git_indexer_stream_new(&idx, ".", NULL, NULL, NULL));
-	cl_git_pass(git_indexer_stream_add(idx, out_of_order_pack, out_of_order_pack_len, &stats));
-	cl_git_pass(git_indexer_stream_finalize(idx, &stats));
+	cl_git_pass(git_indexer_new(&idx, ".", NULL, NULL, NULL));
+	cl_git_pass(git_indexer_append(idx, out_of_order_pack, out_of_order_pack_len, &stats));
+	cl_git_pass(git_indexer_commit(idx, &stats));
 
 	cl_assert_equal_i(stats.total_objects, 3);
 	cl_assert_equal_i(stats.received_objects, 3);
 	cl_assert_equal_i(stats.indexed_objects, 3);
 
-	git_indexer_stream_free(idx);
+	git_indexer_free(idx);
 }
 
 void test_pack_indexer__fix_thin(void)
 {
-	git_indexer_stream *idx;
+	git_indexer *idx;
 	git_transfer_progress stats;
 	git_repository *repo;
 	git_odb *odb;
@@ -75,9 +75,9 @@ void test_pack_indexer__fix_thin(void)
 	git_oid_fromstr(&should_id, "e68fe8129b546b101aee9510c5328e7f21ca1d18");
 	cl_assert(!git_oid_cmp(&id, &should_id));
 
-	cl_git_pass(git_indexer_stream_new(&idx, ".", odb, NULL, NULL));
-	cl_git_pass(git_indexer_stream_add(idx, thin_pack, thin_pack_len, &stats));
-	cl_git_pass(git_indexer_stream_finalize(idx, &stats));
+	cl_git_pass(git_indexer_new(&idx, ".", odb, NULL, NULL));
+	cl_git_pass(git_indexer_append(idx, thin_pack, thin_pack_len, &stats));
+	cl_git_pass(git_indexer_commit(idx, &stats));
 
 	cl_assert_equal_i(stats.total_objects, 2);
 	cl_assert_equal_i(stats.received_objects, 2);
@@ -85,9 +85,9 @@ void test_pack_indexer__fix_thin(void)
 	cl_assert_equal_i(stats.local_objects, 1);
 
 	git_oid_fromstr(&should_id, "11f0f69b334728fdd8bc86b80499f22f29d85b15");
-	cl_assert(!git_oid_cmp(git_indexer_stream_hash(idx), &should_id));
+	cl_assert(!git_oid_cmp(git_indexer_hash(idx), &should_id));
 
-	git_indexer_stream_free(idx);
+	git_indexer_free(idx);
 	git_odb_free(odb);
 	git_repository_free(repo);
 
@@ -110,19 +110,19 @@ void test_pack_indexer__fix_thin(void)
 		cl_git_pass(p_stat(name, &st));
 		left = st.st_size;
 
-		cl_git_pass(git_indexer_stream_new(&idx, ".", NULL, NULL, NULL));
+		cl_git_pass(git_indexer_new(&idx, ".", NULL, NULL, NULL));
 		read = p_read(fd, buffer, sizeof(buffer));
 		cl_assert(read != -1);
 		p_close(fd);
 
-		cl_git_pass(git_indexer_stream_add(idx, buffer, read, &stats));
-		cl_git_pass(git_indexer_stream_finalize(idx, &stats));
+		cl_git_pass(git_indexer_append(idx, buffer, read, &stats));
+		cl_git_pass(git_indexer_commit(idx, &stats));
 
 		cl_assert_equal_i(stats.total_objects, 3);
 		cl_assert_equal_i(stats.received_objects, 3);
 		cl_assert_equal_i(stats.indexed_objects, 3);
 		cl_assert_equal_i(stats.local_objects, 0);
 
-		git_indexer_stream_free(idx);
+		git_indexer_free(idx);
 	}
 }

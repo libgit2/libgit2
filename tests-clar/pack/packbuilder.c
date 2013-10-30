@@ -8,7 +8,7 @@
 static git_repository *_repo;
 static git_revwalk *_revwalker;
 static git_packbuilder *_packbuilder;
-static git_indexer_stream *_indexer;
+static git_indexer *_indexer;
 static git_vector _commits;
 static int _commits_is_initialized;
 
@@ -40,7 +40,7 @@ void test_pack_packbuilder__cleanup(void)
 	git_revwalk_free(_revwalker);
 	_revwalker = NULL;
 
-	git_indexer_stream_free(_indexer);
+	git_indexer_free(_indexer);
 	_indexer = NULL;
 
 	cl_git_sandbox_cleanup();
@@ -79,7 +79,7 @@ static int feed_indexer(void *ptr, size_t len, void *payload)
 {
 	git_transfer_progress *stats = (git_transfer_progress *)payload;
 
-	return git_indexer_stream_add(_indexer, ptr, len, stats);
+	return git_indexer_append(_indexer, ptr, len, stats);
 }
 
 void test_pack_packbuilder__create_pack(void)
@@ -92,11 +92,11 @@ void test_pack_packbuilder__create_pack(void)
 
 	seed_packbuilder();
 
-	cl_git_pass(git_indexer_stream_new(&_indexer, ".", NULL, NULL, NULL));
+	cl_git_pass(git_indexer_new(&_indexer, ".", NULL, NULL, NULL));
 	cl_git_pass(git_packbuilder_foreach(_packbuilder, feed_indexer, &stats));
-	cl_git_pass(git_indexer_stream_finalize(_indexer, &stats));
+	cl_git_pass(git_indexer_commit(_indexer, &stats));
 
-	git_oid_fmt(hex, git_indexer_stream_hash(_indexer));
+	git_oid_fmt(hex, git_indexer_hash(_indexer));
 	git_buf_printf(&path, "pack-%s.pack", hex);
 
 	/*
@@ -131,18 +131,18 @@ void test_pack_packbuilder__create_pack(void)
 static git_transfer_progress stats;
 static int foreach_cb(void *buf, size_t len, void *payload)
 {
-	git_indexer_stream *idx = (git_indexer_stream *) payload;
-	cl_git_pass(git_indexer_stream_add(idx, buf, len, &stats));
+	git_indexer *idx = (git_indexer *) payload;
+	cl_git_pass(git_indexer_append(idx, buf, len, &stats));
 	return 0;
 }
 
 void test_pack_packbuilder__foreach(void)
 {
-	git_indexer_stream *idx;
+	git_indexer *idx;
 
 	seed_packbuilder();
-	cl_git_pass(git_indexer_stream_new(&idx, ".", NULL, NULL, NULL));
+	cl_git_pass(git_indexer_new(&idx, ".", NULL, NULL, NULL));
 	cl_git_pass(git_packbuilder_foreach(_packbuilder, foreach_cb, idx));
-	cl_git_pass(git_indexer_stream_finalize(idx, &stats));
-	git_indexer_stream_free(idx);
+	cl_git_pass(git_indexer_commit(idx, &stats));
+	git_indexer_free(idx);
 }
