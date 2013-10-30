@@ -1,6 +1,11 @@
-#include <git2.h>
-#include <stdio.h>
-#include <string.h>
+/*
+ * Copyright (C) the libgit2 contributors. All rights reserved.
+ *
+ * This file is part of libgit2, distributed under the GNU GPL v2 with
+ * a Linking Exception. For full terms see the included COPYING file.
+ */
+
+#include "common.h"
 #include <assert.h>
 
 enum print_options {
