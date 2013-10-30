@@ -285,7 +285,7 @@ int git_repository_mergehead_foreach(git_repository *repo,
 		if ((error = git_oid_fromstr(&oid, line)) < 0)
 			goto cleanup;
 
-		if (cb(&oid, payload) < 0) {
+		if (cb(&oid, payload) != 0) {
 			error = GIT_EUSER;
 			goto cleanup;
 		}
