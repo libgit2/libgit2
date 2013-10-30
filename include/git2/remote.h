@@ -357,21 +357,6 @@ GIT_EXTERN(int) git_remote_list(git_strarray *out, git_repository *repo);
 GIT_EXTERN(void) git_remote_check_cert(git_remote *remote, int check);
 
 /**
- * Set a credentials acquisition callback for this remote. If the remote is
- * not available for anonymous access, then you must set this callback in order
- * to provide credentials to the transport at the time of authentication
- * failure so that retry can be performed.
- *
- * @param remote the remote to configure
- * @param cred_acquire_cb The credentials acquisition callback to use (defaults
- * to NULL)
- */
-GIT_EXTERN(void) git_remote_set_cred_acquire_cb(
-	git_remote *remote,
-	git_cred_acquire_cb cred_acquire_cb,
-	void *payload);
-
-/**
  * Sets a custom transport for the remote. The caller can use this function
  * to bypass the automatic discovery of a transport by URL scheme (i.e.
  * http://, https://, git://) and supply their own transport to be used
