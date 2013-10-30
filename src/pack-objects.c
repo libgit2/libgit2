@@ -824,7 +824,7 @@ static unsigned long free_unpacked(struct unpacked *n)
 
 static int find_deltas(git_packbuilder *pb, git_pobject **list,
 		       unsigned int *list_size, unsigned int window,
-		       unsigned int depth)
+		       int depth)
 {
 	git_pobject *po;
 	git_buf zbuf = GIT_BUF_INIT;
@@ -839,8 +839,7 @@ static int find_deltas(git_packbuilder *pb, git_pobject **list,
 
 	for (;;) {
 		struct unpacked *n = array + idx;
-		unsigned int max_depth;
-		int j, best_base = -1;
+		int max_depth, j, best_base = -1;
 
 		git_packbuilder__progress_lock(pb);
 		if (!*list_size) {
@@ -1033,7 +1032,7 @@ static void *threaded_find_deltas(void *arg)
 
 static int ll_find_deltas(git_packbuilder *pb, git_pobject **list,
 			  unsigned int list_size, unsigned int window,
-			  unsigned int depth)
+			  int depth)
 {
 	struct thread_params *p;
 	int i, ret, active_threads = 0;
