@@ -145,8 +145,11 @@ GIT_EXTERN(int) git_remote_set_pushurl(git_remote *remote, const char* url);
 /**
  * Add a fetch refspec to the remote
  *
+ * Convenience function for adding a single fetch refspec to the
+ * current list in the remote.
+ *
  * @param remote the remote
- * @apram refspec the new fetch refspec
+ * @param refspec the new fetch refspec
  * @return 0 or an error value
  */
 GIT_EXTERN(int) git_remote_add_fetch(git_remote *remote, const char *refspec);
@@ -163,7 +166,20 @@ GIT_EXTERN(int) git_remote_add_fetch(git_remote *remote, const char *refspec);
 GIT_EXTERN(int) git_remote_get_fetch_refspecs(git_strarray *array, git_remote *remote);
 
 /**
+ * Set the remote's list of fetch refspecs
+ *
+ * The contents of the string array are copied.
+ *
+ * @param remote the remote to modify
+ * @param array the new list of fetch resfpecs
+ */
+GIT_EXTERN(int) git_remote_set_fetch_refspecs(git_remote *remote, git_strarray *array);
+
+/**
  * Add a push refspec to the remote
+ *
+ * Convenience function for adding a single push refspec to the
+ * current list in the remote.
  *
  * @param remote the remote
  * @param refspec the new push refspec
@@ -181,6 +197,16 @@ GIT_EXTERN(int) git_remote_add_push(git_remote *remote, const char *refspec);
  * @param remote the remote to query
  */
 GIT_EXTERN(int) git_remote_get_push_refspecs(git_strarray *array, git_remote *remote);
+
+/**
+ * Set the remote's list of push refspecs
+ *
+ * The contents of the string array are copied.
+ *
+ * @param remote the remote to modify
+ * @param array the new list of push resfpecs
+ */
+GIT_EXTERN(int) git_remote_set_push_refspecs(git_remote *remote, git_strarray *array);
 
 /**
  * Clear the refspecs
@@ -207,15 +233,6 @@ GIT_EXTERN(size_t) git_remote_refspec_count(git_remote *remote);
  * @return the nth refspec
  */
 GIT_EXTERN(const git_refspec *)git_remote_get_refspec(git_remote *remote, size_t n);
-
-/**
- * Remove a refspec from the remote
- *
- * @param remote the remote to query
- * @param n the refspec to remove
- * @return 0 or GIT_ENOTFOUND
- */
-GIT_EXTERN(int) git_remote_remove_refspec(git_remote *remote, size_t n);
 
 /**
  * Open a connection to a remote

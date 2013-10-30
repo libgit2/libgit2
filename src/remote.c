@@ -1047,9 +1047,6 @@ void git_remote_disconnect(git_remote *remote)
 
 void git_remote_free(git_remote *remote)
 {
-	git_refspec *spec;
-	size_t i;
-
 	if (remote == NULL)
 		return;
 
@@ -1515,14 +1512,68 @@ void git_remote_clear_refspecs(git_remote *remote)
 	git_vector_clear(&remote->refspecs);
 }
 
+static int add_and_dwim(git_remote *remote, const char *str, int push)
+{
+	git_refspec *spec;
+	git_vector *vec;
+
+	if (add_refspec(remote, str, !push) < 0)
+		return -1;
+
+	vec = &remote->refspecs;
+	spec = git_vector_get(vec, vec->length - 1);
+	return git_refspec__dwim_one(&remote->active_refspecs, spec, &remote->refs);
+}
+
 int git_remote_add_fetch(git_remote *remote, const char *refspec)
 {
-	return add_refspec(remote, refspec, true);
+	return add_and_dwim(remote, refspec, false);
 }
 
 int git_remote_add_push(git_remote *remote, const char *refspec)
 {
-	return add_refspec(remote, refspec, false);
+	return add_and_dwim(remote, refspec, true);
+}
+
+static int set_refspecs(git_remote *remote, git_strarray *array, int push)
+{
+	git_vector *vec = &remote->refspecs;
+	git_refspec *spec;
+	size_t i;
+
+	/* Start by removing any refspecs of the same type */
+	for (i = 0; i < vec->length; i++) {
+		spec = git_vector_get(vec, i);
+		if (spec->push != push)
+			continue;
+
+		git_refspec__free(spec);
+		git__free(spec);
+		git_vector_remove(vec, i);
+		i--;
+	}
+
+	/* And now we add the new ones */
+
+	for (i = 0; i < array->count; i++) {
+		if (add_refspec(remote, array->strings[i], !push) < 0)
+			return -1;
+	}
+
+	free_refspecs(&remote->active_refspecs);
+	git_vector_clear(&remote->active_refspecs);
+
+	return dwim_refspecs(&remote->active_refspecs, &remote->refspecs, &remote->refs);
+}
+
+int git_remote_set_fetch_refspecs(git_remote *remote, git_strarray *array)
+{
+	return set_refspecs(remote, array, false);
+}
+
+int git_remote_set_push_refspecs(git_remote *remote, git_strarray *array)
+{
+	return set_refspecs(remote, array, true);
 }
 
 static int copy_refspecs(git_strarray *array, git_remote *remote, unsigned int push)
@@ -1579,19 +1630,4 @@ size_t git_remote_refspec_count(git_remote *remote)
 const git_refspec *git_remote_get_refspec(git_remote *remote, size_t n)
 {
 	return git_vector_get(&remote->refspecs, n);
-}
-
-int git_remote_remove_refspec(git_remote *remote, size_t n)
-{
-	git_refspec *spec;
-
-	assert(remote);
-
-	spec = git_vector_get(&remote->refspecs, n);
-	if (spec) {
-		git_refspec__free(spec);
-		git__free(spec);
-	}
-
-	return git_vector_remove(&remote->refspecs, n);
 }
