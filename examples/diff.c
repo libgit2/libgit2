@@ -1,41 +1,24 @@
-#include <stdio.h>
-#include <git2.h>
-#include <stdlib.h>
-#include <string.h>
+/*
+ * Copyright (C) the libgit2 contributors. All rights reserved.
+ *
+ * This file is part of libgit2, distributed under the GNU GPL v2 with
+ * a Linking Exception. For full terms see the included COPYING file.
+ */
 
-static void check(int error, const char *message)
-{
-	if (error) {
-		fprintf(stderr, "%s (%d)\n", message, error);
-		exit(1);
-	}
-}
+#include "common.h"
 
-static int resolve_to_tree(
-	git_repository *repo, const char *identifier, git_tree **tree)
-{
-	int err = 0;
-	git_object *obj = NULL;
+/*
+ * This example demonstrates the use of the libgit2 diff APIs to
+ * create `git_diff` objects and display them, emulating a number of
+ * core Git `diff` command line options.
+ *
+ * This covers on a portion of the core Git diff options and doesn't
+ * have particularly good error handling, but it should show most of
+ * the core libgit2 diff APIs, including various types of diffs and
+ * how to do renaming detection and patch formatting.
+ */
 
-	if ((err = git_revparse_single(&obj, repo, identifier)) < 0)
-		return err;
-
-	switch (git_object_type(obj)) {
-	case GIT_OBJ_TREE:
-		*tree = (git_tree *)obj;
-		break;
-	case GIT_OBJ_COMMIT:
-		err = git_commit_tree(tree, (git_commit *)obj);
-		git_object_free(obj);
-		break;
-	default:
-		err = GIT_ENOTFOUND;
-	}
-
-	return err;
-}
-
-char *colors[] = {
+static const char *colors[] = {
 	"\033[m", /* reset */
 	"\033[1m", /* bold */
 	"\033[31m", /* red */
@@ -43,7 +26,122 @@ char *colors[] = {
 	"\033[36m" /* cyan */
 };
 
-static int printer(
+/* this implements very rudimentary colorized output */
+static int color_printer(
+	const git_diff_delta*, const git_diff_hunk*, const git_diff_line*, void*);
+
+/* the 'opts' struct captures all the various parsed command line options */
+struct opts {
+	git_diff_options diffopts;
+	git_diff_find_options findopts;
+	int color;
+	int cached;
+	git_diff_format_t format;
+	const char *treeish1;
+	const char *treeish2;
+	const char *dir;
+};
+
+static void parse_opts(struct opts *o, int argc, char *argv[]);
+
+int main(int argc, char *argv[])
+{
+	git_repository *repo = NULL;
+	git_tree *t1 = NULL, *t2 = NULL;
+	git_diff *diff;
+	struct opts o = {
+		GIT_DIFF_OPTIONS_INIT, GIT_DIFF_FIND_OPTIONS_INIT,
+		-1, 0, GIT_DIFF_FORMAT_PATCH, NULL, NULL, "."
+	};
+
+	git_threads_init();
+
+	parse_opts(&o, argc, argv);
+
+	check_lg2(git_repository_open_ext(&repo, o.dir, 0, NULL),
+		"Could not open repository", o.dir);
+
+	/* Possible argument patterns:
+	 *   <sha1> <sha2>
+	 *   <sha1> --cached
+	 *   <sha1>
+	 *   --cached
+	 *   nothing
+	 *
+	 * Currently ranged arguments like <sha1>..<sha2> and <sha1>...<sha2>
+	 * are not supported in this example
+	 */
+
+	if (o.treeish1)
+		treeish_to_tree(&t1, repo, o.treeish1);
+	if (o.treeish2)
+		treeish_to_tree(&t2, repo, o.treeish2);
+
+	if (t1 && t2)
+		check_lg2(
+			git_diff_tree_to_tree(&diff, repo, t1, t2, &o.diffopts),
+			"diff trees", NULL);
+	else if (t1 && o.cached)
+		check_lg2(
+			git_diff_tree_to_index(&diff, repo, t1, NULL, &o.diffopts),
+			"diff tree to index", NULL);
+	else if (t1)
+		check_lg2(
+			git_diff_tree_to_workdir_with_index(&diff, repo, t1, &o.diffopts),
+			"diff tree to working directory", NULL);
+	else if (o.cached) {
+		treeish_to_tree(&t1, repo, "HEAD");
+		check_lg2(
+			git_diff_tree_to_index(&diff, repo, t1, NULL, &o.diffopts),
+			"diff tree to index", NULL);
+	}
+	else
+		check_lg2(
+			git_diff_index_to_workdir(&diff, repo, NULL, &o.diffopts),
+			"diff index to working directory", NULL);
+
+	/* apply rename and copy detection if requested */
+
+	if ((o.findopts.flags & GIT_DIFF_FIND_ALL) != 0)
+		check_lg2(
+			git_diff_find_similar(diff, &o.findopts),
+			"finding renames and copies", NULL);
+
+	/* generate simple output using libgit2 display helper */
+
+	if (o.color >= 0)
+		fputs(colors[0], stdout);
+
+	check_lg2(
+		git_diff_print(diff, o.format, color_printer, &o.color),
+		"displaying diff", NULL);
+
+	if (o.color >= 0)
+		fputs(colors[0], stdout);
+
+	/* cleanup before exiting */
+
+	git_diff_free(diff);
+	git_tree_free(t1);
+	git_tree_free(t2);
+	git_repository_free(repo);
+
+	git_threads_shutdown();
+
+	return 0;
+}
+
+static void usage(const char *message, const char *arg)
+{
+	if (message && arg)
+		fprintf(stderr, "%s: %s\n", message, arg);
+	else if (message)
+		fprintf(stderr, "%s\n", message);
+	fprintf(stderr, "usage: diff [<tree-oid> [<tree-oid>]]\n");
+	exit(1);
+}
+
+static int color_printer(
 	const git_diff_delta *delta,
 	const git_diff_hunk *hunk,
 	const git_diff_line *line,
@@ -63,6 +161,7 @@ static int printer(
 		case GIT_DIFF_LINE_HUNK_HDR:  color = 4; break;
 		default: break;
 		}
+
 		if (color != *last_color) {
 			if (*last_color == 1 || color == 1)
 				fputs(colors[0], stdout);
@@ -71,186 +170,79 @@ static int printer(
 		}
 	}
 
-	if (line->origin == GIT_DIFF_LINE_CONTEXT ||
-		line->origin == GIT_DIFF_LINE_ADDITION ||
-		line->origin == GIT_DIFF_LINE_DELETION)
-		fputc(line->origin, stdout);
-
-	fwrite(line->content, 1, line->content_len, stdout);
-
-	return 0;
+	return diff_output(delta, hunk, line, stdout);
 }
 
-static int check_uint16_param(const char *arg, const char *pattern, uint16_t *val)
+static void parse_opts(struct opts *o, int argc, char *argv[])
 {
-	size_t len = strlen(pattern);
-	uint16_t strval;
-	char *endptr = NULL;
-	if (strncmp(arg, pattern, len))
-		return 0;
-	if (arg[len] == '\0' && pattern[len - 1] != '=')
-		return 1;
-	if (arg[len] == '=')
-		len++;
-	strval = strtoul(arg + len, &endptr, 0);
-	if (endptr == arg)
-		return 0;
-	*val = strval;
-	return 1;
-}
-
-static int check_str_param(const char *arg, const char *pattern, const char **val)
-{
-	size_t len = strlen(pattern);
-	if (strncmp(arg, pattern, len))
-		return 0;
-	*val = (const char *)(arg + len);
-	return 1;
-}
-
-static void usage(const char *message, const char *arg)
-{
-	if (message && arg)
-		fprintf(stderr, "%s: %s\n", message, arg);
-	else if (message)
-		fprintf(stderr, "%s\n", message);
-	fprintf(stderr, "usage: diff [<tree-oid> [<tree-oid>]]\n");
-	exit(1);
-}
-
-int main(int argc, char *argv[])
-{
-	git_repository *repo = NULL;
-	git_tree *t1 = NULL, *t2 = NULL;
-	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
-	git_diff_find_options findopts = GIT_DIFF_FIND_OPTIONS_INIT;
-	git_diff *diff;
-	int i, color = -1, cached = 0;
-	git_diff_format_t format = GIT_DIFF_FORMAT_PATCH;
-	char *a, *treeish1 = NULL, *treeish2 = NULL;
-	const char *dir = ".";
-
-	git_threads_init();
+	struct args_info args = ARGS_INFO_INIT;
 
 	/* parse arguments as copied from git-diff */
 
-	for (i = 1; i < argc; ++i) {
-		a = argv[i];
+	for (args.pos = 1; args.pos < argc; ++args.pos) {
+		const char *a = argv[args.pos];
 
 		if (a[0] != '-') {
-			if (treeish1 == NULL)
-				treeish1 = a;
-			else if (treeish2 == NULL)
-				treeish2 = a;
+			if (o->treeish1 == NULL)
+				o->treeish1 = a;
+			else if (o->treeish2 == NULL)
+				o->treeish2 = a;
 			else
 				usage("Only one or two tree identifiers can be provided", NULL);
 		}
 		else if (!strcmp(a, "-p") || !strcmp(a, "-u") ||
 			!strcmp(a, "--patch"))
-			format = GIT_DIFF_FORMAT_PATCH;
+			o->format = GIT_DIFF_FORMAT_PATCH;
 		else if (!strcmp(a, "--cached"))
-			cached = 1;
+			o->cached = 1;
 		else if (!strcmp(a, "--name-only"))
-			format = GIT_DIFF_FORMAT_NAME_ONLY;
+			o->format = GIT_DIFF_FORMAT_NAME_ONLY;
 		else if (!strcmp(a, "--name-status"))
-			format = GIT_DIFF_FORMAT_NAME_STATUS;
+			o->format = GIT_DIFF_FORMAT_NAME_STATUS;
 		else if (!strcmp(a, "--raw"))
-			format = GIT_DIFF_FORMAT_RAW;
+			o->format = GIT_DIFF_FORMAT_RAW;
 		else if (!strcmp(a, "--color"))
-			color = 0;
+			o->color = 0;
 		else if (!strcmp(a, "--no-color"))
-			color = -1;
+			o->color = -1;
 		else if (!strcmp(a, "-R"))
-			opts.flags |= GIT_DIFF_REVERSE;
+			o->diffopts.flags |= GIT_DIFF_REVERSE;
 		else if (!strcmp(a, "-a") || !strcmp(a, "--text"))
-			opts.flags |= GIT_DIFF_FORCE_TEXT;
+			o->diffopts.flags |= GIT_DIFF_FORCE_TEXT;
 		else if (!strcmp(a, "--ignore-space-at-eol"))
-			opts.flags |= GIT_DIFF_IGNORE_WHITESPACE_EOL;
+			o->diffopts.flags |= GIT_DIFF_IGNORE_WHITESPACE_EOL;
 		else if (!strcmp(a, "-b") || !strcmp(a, "--ignore-space-change"))
-			opts.flags |= GIT_DIFF_IGNORE_WHITESPACE_CHANGE;
+			o->diffopts.flags |= GIT_DIFF_IGNORE_WHITESPACE_CHANGE;
 		else if (!strcmp(a, "-w") || !strcmp(a, "--ignore-all-space"))
-			opts.flags |= GIT_DIFF_IGNORE_WHITESPACE;
+			o->diffopts.flags |= GIT_DIFF_IGNORE_WHITESPACE;
 		else if (!strcmp(a, "--ignored"))
-			opts.flags |= GIT_DIFF_INCLUDE_IGNORED;
+			o->diffopts.flags |= GIT_DIFF_INCLUDE_IGNORED;
 		else if (!strcmp(a, "--untracked"))
-			opts.flags |= GIT_DIFF_INCLUDE_UNTRACKED;
-		else if (check_uint16_param(a, "-M", &findopts.rename_threshold) ||
-				 check_uint16_param(a, "--find-renames",
-					&findopts.rename_threshold))
-			findopts.flags |= GIT_DIFF_FIND_RENAMES;
-		else if (check_uint16_param(a, "-C", &findopts.copy_threshold) ||
-				 check_uint16_param(a, "--find-copies",
-					&findopts.copy_threshold))
-			findopts.flags |= GIT_DIFF_FIND_COPIES;
+			o->diffopts.flags |= GIT_DIFF_INCLUDE_UNTRACKED;
+		else if (match_uint16_arg(
+				&o->findopts.rename_threshold, &args, "-M") ||
+			match_uint16_arg(
+				&o->findopts.rename_threshold, &args, "--find-renames"))
+			o->findopts.flags |= GIT_DIFF_FIND_RENAMES;
+		else if (match_uint16_arg(
+				&o->findopts.copy_threshold, &args, "-C") ||
+			match_uint16_arg(
+				&o->findopts.copy_threshold, &args, "--find-copies"))
+			o->findopts.flags |= GIT_DIFF_FIND_COPIES;
 		else if (!strcmp(a, "--find-copies-harder"))
-			findopts.flags |= GIT_DIFF_FIND_COPIES_FROM_UNMODIFIED;
-		else if (!strncmp(a, "-B", 2) || !strncmp(a, "--break-rewrites", 16)) {
+			o->findopts.flags |= GIT_DIFF_FIND_COPIES_FROM_UNMODIFIED;
+		else if (is_prefixed(a, "-B") || is_prefixed(a, "--break-rewrites"))
 			/* TODO: parse thresholds */
-			findopts.flags |= GIT_DIFF_FIND_REWRITES;
-		}
-		else if (!check_uint16_param(a, "-U", &opts.context_lines) &&
-			!check_uint16_param(a, "--unified=", &opts.context_lines) &&
-			!check_uint16_param(a, "--inter-hunk-context=",
-				&opts.interhunk_lines) &&
-			!check_str_param(a, "--src-prefix=", &opts.old_prefix) &&
-			!check_str_param(a, "--dst-prefix=", &opts.new_prefix) &&
-			!check_str_param(a, "--git-dir=", &dir))
-			usage("Unknown arg", a);
+			o->findopts.flags |= GIT_DIFF_FIND_REWRITES;
+		else if (!match_uint16_arg(
+				&o->diffopts.context_lines, &args, "-U") &&
+			!match_uint16_arg(
+				&o->diffopts.context_lines, &args, "--unified") &&
+			!match_uint16_arg(
+				&o->diffopts.interhunk_lines, &args, "--inter-hunk-context") &&
+			!match_str_arg(&o->diffopts.old_prefix, &args, "--src-prefix") &&
+			!match_str_arg(&o->diffopts.new_prefix, &args, "--dst-prefix") &&
+			!match_str_arg(&o->dir, &args, "--git-dir"))
+			usage("Unknown command line argument", a);
 	}
-
-	/* open repo */
-
-	check(git_repository_open_ext(&repo, dir, 0, NULL),
-		"Could not open repository");
-
-	if (treeish1)
-		check(resolve_to_tree(repo, treeish1, &t1), "Looking up first tree");
-	if (treeish2)
-		check(resolve_to_tree(repo, treeish2, &t2), "Looking up second tree");
-
-	/* <sha1> <sha2> */
-	/* <sha1> --cached */
-	/* <sha1> */
-	/* --cached */
-	/* nothing */
-
-	if (t1 && t2)
-		check(git_diff_tree_to_tree(&diff, repo, t1, t2, &opts), "Diff");
-	else if (t1 && cached)
-		check(git_diff_tree_to_index(&diff, repo, t1, NULL, &opts), "Diff");
-	else if (t1) {
-		git_diff *diff2;
-		check(git_diff_tree_to_index(&diff, repo, t1, NULL, &opts), "Diff");
-		check(git_diff_index_to_workdir(&diff2, repo, NULL, &opts), "Diff");
-		check(git_diff_merge(diff, diff2), "Merge diffs");
-		git_diff_free(diff2);
-	}
-	else if (cached) {
-		check(resolve_to_tree(repo, "HEAD", &t1), "looking up HEAD");
-		check(git_diff_tree_to_index(&diff, repo, t1, NULL, &opts), "Diff");
-	}
-	else
-		check(git_diff_index_to_workdir(&diff, repo, NULL, &opts), "Diff");
-
-	if ((findopts.flags & GIT_DIFF_FIND_ALL) != 0)
-		check(git_diff_find_similar(diff, &findopts),
-			"finding renames and copies ");
-
-	if (color >= 0)
-		fputs(colors[0], stdout);
-
-	check(git_diff_print(diff, format, printer, &color), "Displaying diff");
-
-	if (color >= 0)
-		fputs(colors[0], stdout);
-
-	git_diff_free(diff);
-	git_tree_free(t1);
-	git_tree_free(t2);
-	git_repository_free(repo);
-
-	git_threads_shutdown();
-
-	return 0;
 }
-
