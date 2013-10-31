@@ -46,13 +46,22 @@ void test_clone_nonetwork__cleanup(void)
 	cl_fixture_cleanup("./foo");
 }
 
-void test_clone_nonetwork__bad_url(void)
+void test_clone_nonetwork__bad_urls(void)
 {
 	/* Clone should clean up the mess if the URL isn't a git repository */
 	cl_git_fail(git_clone(&g_repo, "not_a_repo", "./foo", &g_options));
 	cl_assert(!git_path_exists("./foo"));
 	g_options.bare = true;
 	cl_git_fail(git_clone(&g_repo, "not_a_repo", "./foo", &g_options));
+	cl_assert(!git_path_exists("./foo"));
+
+	cl_git_fail(git_clone(&g_repo, "git://example.com:asdf", "./foo", &g_options));
+	cl_assert(!git_path_exists("./foo"));
+	cl_git_fail(git_clone(&g_repo, "git://example.com:asdf/foo", "./foo", &g_options));
+	cl_assert(!git_path_exists("./foo"));
+	cl_git_fail(git_clone(&g_repo, "https://example.com:asdf", "./foo", &g_options));
+	cl_assert(!git_path_exists("./foo"));
+	cl_git_fail(git_clone(&g_repo, "https://example.com:asdf/foo", "./foo", &g_options));
 	cl_assert(!git_path_exists("./foo"));
 }
 
