@@ -7,17 +7,19 @@
 
 #include "common.h"
 
-/*
+/**
  * This example demonstrates the use of the libgit2 status APIs,
  * particularly the `git_status_list` object, to roughly simulate the
  * output of running `git status`.  It serves as a simple example of
  * using those APIs to get basic status information.
  *
  * This does not have:
+ *
  * - Robust error handling
  * - Colorized or paginated output formatting
  *
  * This does have:
+ *
  * - Examples of translating command line arguments to the status
  *   options settings to mimic `git status` results.
  * - A sample status formatter that matches the default "long" format
@@ -64,7 +66,7 @@ int main(int argc, char *argv[])
 
 	parse_opts(&o, argc, argv);
 
-	/*
+	/**
 	 * Try to open the repository at the given path (or at the current
 	 * directory if none was given).
 	 */
@@ -75,7 +77,7 @@ int main(int argc, char *argv[])
 		fatal("Cannot report status on bare repository",
 			git_repository_path(repo));
 
-	/*
+	/**
 	 * Run status on the repository
 	 *
 	 * Because we want to simluate a full "git status" run and want to
@@ -140,7 +142,7 @@ static void print_long(git_repository *repo, git_status_list *status)
 
 	(void)repo;
 
-	/* print index changes */
+	/** Print index changes. */
 
 	for (i = 0; i < maxi; ++i) {
 		char *istatus = NULL;
@@ -189,7 +191,7 @@ static void print_long(git_repository *repo, git_status_list *status)
 	}
 	header = 0;
 
-	/* print workdir changes to tracked files */
+	/** Print workdir changes to tracked files. */
 
 	for (i = 0; i < maxi; ++i) {
 		char *wstatus = NULL;
@@ -234,7 +236,7 @@ static void print_long(git_repository *repo, git_status_list *status)
 	}
 	header = 0;
 
-	/* print untracked files */
+	/** Print untracked files. */
 
 	header = 0;
 
@@ -256,7 +258,7 @@ static void print_long(git_repository *repo, git_status_list *status)
 
 	header = 0;
 
-	/* print ignored files */
+	/** Print ignored files. */
 
 	for (i = 0; i < maxi; ++i) {
 		s = git_status_byindex(status, i);

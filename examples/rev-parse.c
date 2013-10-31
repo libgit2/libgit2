@@ -7,8 +7,7 @@
 
 #include "common.h"
 
-
-/* Forward declarations for helpers */
+/** Forward declarations for helpers. */
 struct parse_state {
 	git_repository *repo;
 	const char *repodir;

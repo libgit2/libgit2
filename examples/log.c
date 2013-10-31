@@ -7,23 +7,25 @@
 
 #include "common.h"
 
-/*
+/**
  * This example demonstrates the libgit2 rev walker APIs to roughly
  * simulate the output of `git log` and a few of command line arguments.
  * `git log` has many many options and this only shows a few of them.
  *
  * This does not have:
+ *
  * - Robust error handling
  * - Colorized or paginated output formatting
  * - Most of the `git log` options
  *
  * This does have:
+ *
  * - Examples of translating command line arguments to equivalent libgit2
  *   revwalker configuration calls
  * - Simplified options to apply pathspec limits and to show basic diffs
  */
 
-/* log_state represents walker being configured while handling options */
+/** log_state represents walker being configured while handling options */
 struct log_state {
 	git_repository *repo;
 	const char *repodir;
@@ -33,12 +35,12 @@ struct log_state {
 	int revisions;
 };
 
-/* utility functions that are called to configure the walker */
+/** utility functions that are called to configure the walker */
 static void set_sorting(struct log_state *s, unsigned int sort_mode);
 static void push_rev(struct log_state *s, git_object *obj, int hide);
 static int add_revision(struct log_state *s, const char *revstr);
 
-/* log_options holds other command line options that affect log output */
+/** log_options holds other command line options that affect log output */
 struct log_options {
 	int show_diff;
 	int skip, limit;
@@ -49,7 +51,7 @@ struct log_options {
 	char *committer;
 };
 
-/* utility functions that parse options and help with log output */
+/** utility functions that parse options and help with log output */
 static int parse_options(
 	struct log_state *s, struct log_options *opt, int argc, char **argv);
 static void print_time(const git_time *intime, const char *prefix);
@@ -69,7 +71,7 @@ int main(int argc, char *argv[])
 
 	git_threads_init();
 
-	/* parse arguments and set up revwalker */
+	/** Parse arguments and set up revwalker. */
 
 	last_arg = parse_options(&s, &opt, argc, argv);
 
@@ -82,7 +84,7 @@ int main(int argc, char *argv[])
 	if (!s.revisions)
 		add_revision(&s, NULL);
 
-	/* use the revwalker to traverse the history */
+	/** Use the revwalker to traverse the history. */
 
 	printed = count = 0;
 
@@ -163,12 +165,12 @@ int main(int argc, char *argv[])
 	return 0;
 }
 
-/* push object (for hide or show) onto revwalker */
+/** Push object (for hide or show) onto revwalker. */
 static void push_rev(struct log_state *s, git_object *obj, int hide)
 {
 	hide = s->hide ^ hide;
 
-	/* create revwalker on demand if it doesn't already exist */
+	/** Create revwalker on demand if it doesn't already exist. */
 	if (!s->walker) {
 		check_lg2(git_revwalk_new(&s->walker, s->repo),
 			"Could not create revision walker", NULL);
@@ -188,13 +190,13 @@ static void push_rev(struct log_state *s, git_object *obj, int hide)
 	git_object_free(obj);
 }
 
-/* parse revision string and add revs to walker */
+/** Parse revision string and add revs to walker. */
 static int add_revision(struct log_state *s, const char *revstr)
 {
 	git_revspec revs;
 	int hide = 0;
 
-	/* open repo on demand if it isn't already open */
+	/** Open repo on demand if it isn't already open. */
 	if (!s->repo) {
 		if (!s->repodir) s->repodir = ".";
 		check_lg2(git_repository_open_ext(&s->repo, s->repodir, 0, NULL),
@@ -238,17 +240,17 @@ static int add_revision(struct log_state *s, const char *revstr)
 	return 0;
 }
 
-/* update revwalker with sorting mode */
+/** Update revwalker with sorting mode. */
 static void set_sorting(struct log_state *s, unsigned int sort_mode)
 {
-	/* open repo on demand if it isn't already open */
+	/** Open repo on demand if it isn't already open. */
 	if (!s->repo) {
 		if (!s->repodir) s->repodir = ".";
 		check_lg2(git_repository_open_ext(&s->repo, s->repodir, 0, NULL),
 			"Could not open repository", s->repodir);
 	}
 
-	/* create revwalker on demand if it doesn't already exist */
+	/** Create revwalker on demand if it doesn't already exist. */
 	if (!s->walker)
 		check_lg2(git_revwalk_new(&s->walker, s->repo),
 			"Could not create revision walker", NULL);
@@ -261,7 +263,7 @@ static void set_sorting(struct log_state *s, unsigned int sort_mode)
 	git_revwalk_sorting(s->walker, s->sorting);
 }
 
-/* helper to format a git_time value like Git */
+/** Helper to format a git_time value like Git. */
 static void print_time(const git_time *intime, const char *prefix)
 {
 	char sign, out[32];
@@ -288,7 +290,7 @@ static void print_time(const git_time *intime, const char *prefix)
 	printf("%s%s %c%02d%02d\n", prefix, out, sign, hours, minutes);
 }
 
-/* helper to print a commit object */
+/** Helper to print a commit object. */
 static void print_commit(git_commit *commit)
 {
 	char buf[GIT_OID_HEXSZ + 1];
@@ -323,7 +325,7 @@ static void print_commit(git_commit *commit)
 	printf("\n");
 }
 
-/* helper to find how many files in a commit changed from its nth parent */
+/** Helper to find how many files in a commit changed from its nth parent. */
 static int match_with_parent(git_commit *commit, int i, git_diff_options *opts)
 {
 	git_commit *parent;
@@ -349,7 +351,7 @@ static int match_with_parent(git_commit *commit, int i, git_diff_options *opts)
 	return ndeltas > 0;
 }
 
-/* print a usage message for the program */
+/** Print a usage message for the program. */
 static void usage(const char *message, const char *arg)
 {
 	if (message && arg)
@@ -360,7 +362,7 @@ static void usage(const char *message, const char *arg)
 	exit(1);
 }
 
-/* parse some log command line options */
+/** Parse some log command line options. */
 static int parse_options(
 	struct log_state *s, struct log_options *opt, int argc, char **argv)
 {
@@ -379,7 +381,8 @@ static int parse_options(
 		if (a[0] != '-') {
 			if (!add_revision(s, a))
 				s->revisions++;
-			else /* try failed revision parse as filename */
+			else
+				/** Try failed revision parse as filename. */
 				break;
 		} else if (!strcmp(a, "--")) {
 			++args.pos;
@@ -392,15 +395,15 @@ static int parse_options(
 		else if (!strcmp(a, "--reverse"))
 			set_sorting(s, GIT_SORT_REVERSE);
 		else if (match_str_arg(&s->repodir, &args, "--git-dir"))
-			/* found git-dir */;
+			/** Found git-dir. */;
 		else if (match_int_arg(&opt->skip, &args, "--skip", 0))
-			/* found valid --skip */;
+			/** Found valid --skip. */;
 		else if (match_int_arg(&opt->limit, &args, "--max-count", 0))
-			/* found valid --max-count */;
+			/** Found valid --max-count. */;
 		else if (a[1] >= '0' && a[1] <= '9')
 			is_integer(&opt->limit, a + 1, 0);
 		else if (match_int_arg(&opt->limit, &args, "-n", 0))
-			/* found valid -n */;
+			/** Found valid -n. */;
 		else if (!strcmp(a, "--merges"))
 			opt->min_parents = 2;
 		else if (!strcmp(a, "--no-merges"))
@@ -410,9 +413,9 @@ static int parse_options(
 		else if (!strcmp(a, "--no-max-parents"))
 			opt->max_parents = -1;
 		else if (match_int_arg(&opt->max_parents, &args, "--max-parents=", 1))
-			/* found valid --max-parents */;
+			/** Found valid --max-parents. */;
 		else if (match_int_arg(&opt->min_parents, &args, "--min-parents=", 0))
-			/* found valid --min_parents */;
+			/** Found valid --min_parents. */;
 		else if (!strcmp(a, "-p") || !strcmp(a, "-u") || !strcmp(a, "--patch"))
 			opt->show_diff = 1;
 		else

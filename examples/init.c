@@ -1,4 +1,13 @@
 /*
+ * Copyright (C) the libgit2 contributors. All rights reserved.
+ *
+ * This file is part of libgit2, distributed under the GNU GPL v2 with
+ * a Linking Exception. For full terms see the included COPYING file.
+ */
+
+#include "common.h"
+
+/**
  * This is a sample program that is similar to "git init".  See the
  * documentation for that (try "git help init") to understand what this
  * program is emulating.
@@ -8,16 +17,9 @@
  * This also contains a special additional option that regular "git init"
  * does not support which is "--initial-commit" to make a first empty commit.
  * That is demonstrated in the "create_initial_commit" helper function.
- *
- * Copyright (C) the libgit2 contributors. All rights reserved.
- *
- * This file is part of libgit2, distributed under the GNU GPL v2 with
- * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include "common.h"
-
-/* forward declarations of helpers */
+/** Forward declarations of helpers */
 struct opts {
 	int no_options;
 	int quiet;
@@ -41,17 +43,19 @@ int main(int argc, char *argv[])
 
 	parse_opts(&o, argc, argv);
 
-	/* Initialize repository */
+	/* Initialize repository. */
 
 	if (o.no_options) {
-		/* No options were specified, so let's demonstrate the default
+		/**
+		 * No options were specified, so let's demonstrate the default
 		 * simple case of git_repository_init() API usage...
 		 */
 		check_lg2(git_repository_init(&repo, o.dir, 0),
 			"Could not initialize repository", NULL);
 	}
 	else {
-		/* Some command line options were specified, so we'll use the
+		/**
+		 * Some command line options were specified, so we'll use the
 		 * extended init API to handle them
 		 */
 		git_repository_init_options initopts = GIT_REPOSITORY_INIT_OPTIONS_INIT;
@@ -66,7 +70,8 @@ int main(int argc, char *argv[])
 		}
 
 		if (o.gitdir) {
-			/* if you specified a separate git directory, then initialize
+			/**
+			 * If you specified a separate git directory, then initialize
 			 * the repository at that path and use the second path as the
 			 * working directory of the repository (with a git-link file)
 			 */
@@ -81,7 +86,7 @@ int main(int argc, char *argv[])
 				"Could not initialize repository", NULL);
 	}
 
-	/* Print a message to stdout like "git init" does */
+	/** Print a message to stdout like "git init" does. */
 
 	if (!o.quiet) {
 		if (o.bare || o.gitdir)
@@ -92,7 +97,8 @@ int main(int argc, char *argv[])
 		printf("Initialized empty Git repository in %s\n", o.dir);
 	}
 
-	/* As an extension to the basic "git init" command, this example
+	/**
+	 * As an extension to the basic "git init" command, this example
 	 * gives the option to create an empty initial commit.  This is
 	 * mostly to demonstrate what it takes to do that, but also some
 	 * people like to have that empty base commit in their repo.
@@ -108,7 +114,8 @@ int main(int argc, char *argv[])
 	return 0;
 }
 
-/* Unlike regular "git init", this example shows how to create an initial
+/**
+ * Unlike regular "git init", this example shows how to create an initial
  * empty commit in the repository.  This is the helper function that does
  * that.
  */
@@ -119,7 +126,7 @@ static void create_initial_commit(git_repository *repo)
 	git_oid tree_id, commit_id;
 	git_tree *tree;
 
-	/* First use the config to initialize a commit signature for the user */
+	/** First use the config to initialize a commit signature for the user. */
 
 	if (git_signature_default(&sig, repo) < 0)
 		fatal("Unable to create a commit signature.",
@@ -130,7 +137,8 @@ static void create_initial_commit(git_repository *repo)
 	if (git_repository_index(&index, repo) < 0)
 		fatal("Could not open repository index", NULL);
 
-	/* Outside of this example, you could call git_index_add_bypath()
+	/**
+	 * Outside of this example, you could call git_index_add_bypath()
 	 * here to put actual files into the index.  For our purposes, we'll
 	 * leave it empty for now.
 	 */
@@ -143,7 +151,8 @@ static void create_initial_commit(git_repository *repo)
 	if (git_tree_lookup(&tree, repo, &tree_id) < 0)
 		fatal("Could not look up initial tree", NULL);
 
-	/* Ready to create the initial commit
+	/**
+	 * Ready to create the initial commit.
 	 *
 	 * Normally creating a commit would involve looking up the current
 	 * HEAD commit and making that be the parent of the initial commit,
@@ -155,7 +164,7 @@ static void create_initial_commit(git_repository *repo)
 			NULL, "Initial commit", tree, 0) < 0)
 		fatal("Could not create the initial commit", NULL);
 
-	/* Clean up so we don't leak memory */
+	/** Clean up so we don't leak memory. */
 
 	git_tree_free(tree);
 	git_signature_free(sig);
@@ -171,7 +180,7 @@ static void usage(const char *error, const char *arg)
 	exit(1);
 }
 
-/* parse the tail of the --shared= argument */
+/** Parse the tail of the --shared= argument. */
 static uint32_t parse_shared(const char *shared)
 {
 	if (!strcmp(shared, "false") || !strcmp(shared, "umask"))
@@ -204,7 +213,7 @@ static void parse_opts(struct opts *o, int argc, char *argv[])
 	struct args_info args = ARGS_INFO_INIT;
 	const char *sharedarg;
 
-	/* Process arguments */
+	/** Process arguments. */
 
 	for (args.pos = 1; args.pos < argc; ++args.pos) {
 		char *a = argv[args.pos];

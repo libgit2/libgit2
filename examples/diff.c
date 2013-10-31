@@ -7,7 +7,7 @@
 
 #include "common.h"
 
-/*
+/**
  * This example demonstrates the use of the libgit2 diff APIs to
  * create `git_diff` objects and display them, emulating a number of
  * core Git `diff` command line options.
@@ -26,11 +26,7 @@ static const char *colors[] = {
 	"\033[36m" /* cyan */
 };
 
-/* this implements very rudimentary colorized output */
-static int color_printer(
-	const git_diff_delta*, const git_diff_hunk*, const git_diff_line*, void*);
-
-/* the 'opts' struct captures all the various parsed command line options */
+/** The 'opts' struct captures all the various parsed command line options. */
 struct opts {
 	git_diff_options diffopts;
 	git_diff_find_options findopts;
@@ -43,6 +39,8 @@ struct opts {
 };
 
 static void parse_opts(struct opts *o, int argc, char *argv[]);
+static int color_printer(
+	const git_diff_delta*, const git_diff_hunk*, const git_diff_line*, void*);
 
 int main(int argc, char *argv[])
 {
@@ -61,12 +59,14 @@ int main(int argc, char *argv[])
 	check_lg2(git_repository_open_ext(&repo, o.dir, 0, NULL),
 		"Could not open repository", o.dir);
 
-	/* Possible argument patterns:
-	 *   <sha1> <sha2>
-	 *   <sha1> --cached
-	 *   <sha1>
-	 *   --cached
-	 *   nothing
+	/**
+	 * Possible argument patterns:
+	 *
+	 *  * <sha1> <sha2>
+	 *  * <sha1> --cached
+	 *  * <sha1>
+	 *  * --cached
+	 *  * nothing
 	 *
 	 * Currently ranged arguments like <sha1>..<sha2> and <sha1>...<sha2>
 	 * are not supported in this example
@@ -100,14 +100,14 @@ int main(int argc, char *argv[])
 			git_diff_index_to_workdir(&diff, repo, NULL, &o.diffopts),
 			"diff index to working directory", NULL);
 
-	/* apply rename and copy detection if requested */
+	/** Apply rename and copy detection if requested. */
 
 	if ((o.findopts.flags & GIT_DIFF_FIND_ALL) != 0)
 		check_lg2(
 			git_diff_find_similar(diff, &o.findopts),
 			"finding renames and copies", NULL);
 
-	/* generate simple output using libgit2 display helper */
+	/** Generate simple output using libgit2 display helper. */
 
 	if (o.color >= 0)
 		fputs(colors[0], stdout);
@@ -119,7 +119,7 @@ int main(int argc, char *argv[])
 	if (o.color >= 0)
 		fputs(colors[0], stdout);
 
-	/* cleanup before exiting */
+	/** Cleanup before exiting. */
 
 	git_diff_free(diff);
 	git_tree_free(t1);
@@ -141,6 +141,7 @@ static void usage(const char *message, const char *arg)
 	exit(1);
 }
 
+/** This implements very rudimentary colorized output. */
 static int color_printer(
 	const git_diff_delta *delta,
 	const git_diff_hunk *hunk,
@@ -177,7 +178,7 @@ static void parse_opts(struct opts *o, int argc, char *argv[])
 {
 	struct args_info args = ARGS_INFO_INIT;
 
-	/* parse arguments as copied from git-diff */
+	/* Parse arguments as copied from git-diff. */
 
 	for (args.pos = 1; args.pos < argc; ++args.pos) {
 		const char *a = argv[args.pos];
