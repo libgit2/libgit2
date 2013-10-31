@@ -5,10 +5,11 @@
 
 static void check_error(int error_code, const char *action)
 {
+	const git_error *error;
 	if (!error_code)
 		return;
 
-	const git_error *error = giterr_last();
+	error = giterr_last();
 	fprintf(stderr, "Error %d %s: %s\n", -error_code, action,
 	        (error && error->message) ? error->message : "???");
 	exit(1);
