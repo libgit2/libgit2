@@ -38,6 +38,7 @@ struct opts {
 	const char *dir;
 };
 
+/** These functions are implemented at the end */
 static void parse_opts(struct opts *o, int argc, char *argv[]);
 static int color_printer(
 	const git_diff_delta*, const git_diff_hunk*, const git_diff_line*, void*);
@@ -62,13 +63,13 @@ int main(int argc, char *argv[])
 	/**
 	 * Possible argument patterns:
 	 *
-	 *  * <sha1> <sha2>
-	 *  * <sha1> --cached
-	 *  * <sha1>
+	 *  * &lt;sha1&gt; &lt;sha2&gt;
+	 *  * &lt;sha1&gt; --cached
+	 *  * &lt;sha1&gt;
 	 *  * --cached
 	 *  * nothing
 	 *
-	 * Currently ranged arguments like <sha1>..<sha2> and <sha1>...<sha2>
+	 * Currently ranged arguments like &lt;sha1&gt;..&lt;sha2&gt; and &lt;sha1&gt;...&lt;sha2&gt;
 	 * are not supported in this example
 	 */
 
@@ -174,11 +175,11 @@ static int color_printer(
 	return diff_output(delta, hunk, line, stdout);
 }
 
+/** Parse arguments as copied from git-diff. */
 static void parse_opts(struct opts *o, int argc, char *argv[])
 {
 	struct args_info args = ARGS_INFO_INIT;
 
-	/* Parse arguments as copied from git-diff. */
 
 	for (args.pos = 1; args.pos < argc; ++args.pos) {
 		const char *a = argv[args.pos];

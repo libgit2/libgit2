@@ -47,6 +47,11 @@ exit:
 	return &data->ret;
 }
 
+/**
+ * This function gets called for each remote-trackinb branch that gets
+ * updated. The message we output depends on whether it's a new one or
+ * an update.
+ */
 static int update_cb(const char *refname, const git_oid *a, const git_oid *b, void *data)
 {
 	char a_str[GIT_OID_HEXSZ+1], b_str[GIT_OID_HEXSZ+1];
@@ -66,6 +71,7 @@ static int update_cb(const char *refname, const git_oid *a, const git_oid *b, vo
 	return 0;
 }
 
+/** Entry point for this command */
 int fetch(git_repository *repo, int argc, char **argv)
 {
 	git_remote *remote = NULL;
@@ -130,6 +136,11 @@ int fetch(git_repository *repo, int argc, char **argv)
 	pthread_join(worker, NULL);
 #endif
 
+	/**
+	 * If there are local objects (we got a thin pack), then tell
+	 * the use how many objets we saved from having to cross the
+	 * network.
+	 */
 	if (stats->local_objects > 0) {
 		printf("\rReceived %d/%d objects in %zu bytes (used %d local objects)\n",
 		       stats->indexed_objects, stats->total_objects, stats->received_bytes, stats->local_objects);

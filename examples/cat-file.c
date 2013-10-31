@@ -31,12 +31,14 @@ static void print_signature(const char *header, const git_signature *sig)
 		   sign, hours, minutes);
 }
 
+/** Printint out a blob is simple, get the contents and print */
 static void show_blob(const git_blob *blob)
 {
 	/* ? Does this need crlf filtering? */
 	fwrite(git_blob_rawcontent(blob), git_blob_rawsize(blob), 1, stdout);
 }
 
+/** Show each entry with its type, id and attributes */
 static void show_tree(const git_tree *tree)
 {
 	size_t i, max_i = (int)git_tree_entrycount(tree);
@@ -55,6 +57,9 @@ static void show_tree(const git_tree *tree)
 	}
 }
 
+/**
+ * Commits and tags have a few interesting fields in their header.
+ */
 static void show_commit(const git_commit *commit)
 {
 	unsigned int i, max_i;
@@ -107,6 +112,7 @@ struct opts {
 static void parse_opts(struct opts *o, int argc, char *argv[]);
 
 
+/** Entry point for this command */
 int main(int argc, char *argv[])
 {
 	git_repository *repo;
@@ -182,6 +188,7 @@ int main(int argc, char *argv[])
 	return 0;
 }
 
+/** Print out usage information */
 static void usage(const char *message, const char *arg)
 {
 	if (message && arg)
@@ -194,6 +201,7 @@ static void usage(const char *message, const char *arg)
 	exit(1);
 }
 
+/** Parse the command-line options taken from git */
 static void parse_opts(struct opts *o, int argc, char *argv[])
 {
 	struct args_info args = ARGS_INFO_INIT;

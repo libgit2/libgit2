@@ -4,6 +4,7 @@
 #include <string.h>
 #include "common.h"
 
+/** Callback to show each item */
 static int show_ref__cb(git_remote_head *head, void *payload)
 {
 	char oid[GIT_OID_HEXSZ + 1] = {0};
@@ -28,6 +29,10 @@ static int use_remote(git_repository *repo, char *name)
 			goto cleanup;
 	}
 
+	/**
+	 * Connect to the remote and call the printing function for
+	 * each of the remote references.
+	 */
 	callbacks.credentials = cred_acquire_cb;
 	git_remote_set_callbacks(remote, &callbacks);
 
@@ -42,9 +47,7 @@ cleanup:
 	return error;
 }
 
-// This gets called to do the work. The remote can be given either as
-// the name of a configured remote or an URL.
-
+/** Entry point for this command */
 int ls_remote(git_repository *repo, int argc, char **argv)
 {
 	int error;
