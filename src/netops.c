@@ -680,7 +680,7 @@ int gitno_extract_url_parts(
 	at = strchr(url, '@');
 
 	if (!slash ||
-	    (colon && slash < colon)) {
+	    (colon && (slash < colon))) {
 		giterr_set(GITERR_NET, "Malformed URL");
 		return GIT_EINVALIDSPEC;
 	}

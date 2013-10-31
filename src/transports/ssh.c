@@ -213,10 +213,6 @@ static int git_ssh_extract_url_parts(
 
 	colon = strchr(url, ':');
 
-	if (colon == NULL) {
-		giterr_set(GITERR_NET, "Malformed URL: missing :");
-		return -1;
-	}
 
 	at = strchr(url, '@');
 	if (at) {
@@ -226,6 +222,11 @@ static int git_ssh_extract_url_parts(
 	} else {
 		start = url;
 		*username = NULL;
+	}
+
+	if (colon == NULL || (colon < start)) {
+		giterr_set(GITERR_NET, "Malformed URL");
+		return -1;
 	}
 
 	*host = git__substrdup(start, colon - start);
@@ -316,7 +317,7 @@ static int _git_ssh_setup_conn(
 	const char *cmd,
 	git_smart_subtransport_stream **stream)
 {
-	char *host, *port=NULL, *user=NULL, *pass=NULL;
+	char *host=NULL, *port=NULL, *user=NULL, *pass=NULL;
 	const char *default_port="22";
 	ssh_stream *s;
 	LIBSSH2_SESSION* session=NULL;
