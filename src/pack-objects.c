@@ -26,7 +26,7 @@ struct unpacked {
 	git_pobject *object;
 	void *data;
 	struct git_delta_index *index;
-	unsigned int depth;
+	int depth;
 };
 
 struct tree_walk_context {
@@ -659,7 +659,7 @@ static int delta_cacheable(git_packbuilder *pb, unsigned long src_size,
 }
 
 static int try_delta(git_packbuilder *pb, struct unpacked *trg,
-		     struct unpacked *src, unsigned int max_depth,
+		     struct unpacked *src, int max_depth,
 		     unsigned long *mem_usage, int *ret)
 {
 	git_pobject *trg_object = trg->object;
