@@ -387,8 +387,11 @@ static int update_config_refspec(const git_remote *remote, git_config *config, i
 		if (spec->push != push)
 			continue;
 
+		// "$^" is a unmatcheable regexp: it will not match anything at all, so
+		// all values will be considered new and we will not replace any
+		// present value.
 		if ((error = git_config_set_multivar(
-				config, cname, "", spec->string)) < 0) {
+				config, cname, "$^", spec->string)) < 0) {
 			goto cleanup;
 		}
 	}
