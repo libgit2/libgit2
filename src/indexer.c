@@ -632,7 +632,8 @@ static int inject_object(git_indexer_stream *idx, git_oid *id)
 	git_buf buf = GIT_BUF_INIT;
 	git_off_t entry_start;
 	const void *data;
-	size_t len, hdr_len;
+	size_t len;
+	int hdr_len;
 	int error;
 
 	entry = git__calloc(1, sizeof(*entry));
@@ -660,7 +661,7 @@ static int inject_object(git_indexer_stream *idx, git_oid *id)
 	/* And then the compressed object */
 	git_filebuf_write(&idx->pack_file, buf.ptr, buf.size);
 	idx->pack->mwf.size += buf.size;
-	entry->crc = htonl(crc32(entry->crc, (unsigned char *)buf.ptr, buf.size));
+	entry->crc = htonl(crc32(entry->crc, (unsigned char *)buf.ptr, (uInt)buf.size));
 	git_buf_free(&buf);
 
 	/* Write a fake trailer so the pack functions play ball */

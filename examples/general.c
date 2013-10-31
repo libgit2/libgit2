@@ -415,7 +415,7 @@ int main (int argc, char** argv)
   printf("\n*Index Walking*\n");
 
   git_index *index;
-  unsigned int i, ecount;
+  size_t i, ecount;
 
   // You can either open the index from the standard location in an open
   // repository, as we're doing here, or you can open and manipulate any

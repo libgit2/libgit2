@@ -6,7 +6,7 @@ int main (int argc, char** argv)
 {
 	git_repository *repo = NULL;
 	git_index *index;
-	unsigned int i, ecount;
+	size_t i, ecount;
 	char *dir = ".";
 	size_t dirlen;
 	char out[41];
