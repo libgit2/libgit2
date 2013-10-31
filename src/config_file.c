@@ -615,6 +615,8 @@ static int config_delete_multivar(git_config_backend *cfg, const char *name, con
 		cvar_free(to_delete[to_delete_idx]);
 
 	git__free(key);
+	git__free(to_delete);
+	regfree(&preg);
 	return result;
 }
 
