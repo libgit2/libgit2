@@ -435,6 +435,17 @@ GIT_EXTERN(int) git_config_set_multivar(git_config *cfg, const char *name, const
 GIT_EXTERN(int) git_config_delete_entry(git_config *cfg, const char *name);
 
 /**
+ * Deletes one or several entries from a multivar in the local config file.
+ *
+ * @param cfg where to look for the variables
+ * @param name the variable's name
+ * @param regexp a regular expression to indicate which values to delete
+ *
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_config_delete_multivar(git_config *cfg, const char *name, const char *regexp);
+
+/**
  * Perform an operation on each config variable.
  *
  * The callback receives the normalized name and value of each variable
