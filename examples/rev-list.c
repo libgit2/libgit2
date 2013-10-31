@@ -8,10 +8,12 @@ static void check_error(int error_code, const char *action)
 	if (!error_code)
 		return;
 
+	{
 	const git_error *error = giterr_last();
 	fprintf(stderr, "Error %d %s: %s\n", -error_code, action,
 	        (error && error->message) ? error->message : "???");
 	exit(1);
+	}
 }
 
 static int push_commit(git_revwalk *walk, const git_oid *oid, int hide)
