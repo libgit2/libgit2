@@ -1837,7 +1837,7 @@ static int checkout_data_init(
 		} else {
 			/* otherwise, grab and reload the index */
 			if ((error = git_repository_index(&data->index, data->repo)) < 0 ||
-				(error = git_index_read(data->index)) < 0)
+				(error = git_index_read(data->index, false)) < 0)
 				goto cleanup;
 
 			/* cannot checkout if unresolved conflicts exist */

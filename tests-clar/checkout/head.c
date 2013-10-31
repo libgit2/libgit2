@@ -54,7 +54,6 @@ void test_checkout_head__with_index_only_tree(void)
 	cl_git_pass(git_checkout_head(g_repo, &opts));
 
 	cl_git_pass(git_repository_index(&index, g_repo));
-	cl_git_pass(git_index_read(index)); /* reload if needed */
 
 	cl_assert(!git_path_isfile("testrepo/newdir/newfile.txt"));
 	cl_assert(git_index_get_bypath(index, "newdir/newfile.txt", 0) == NULL);

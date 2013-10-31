@@ -1184,6 +1184,17 @@ int git_diff_tree_to_tree(
 	return error;
 }
 
+static int diff_load_index(git_index **index, git_repository *repo)
+{
+	int error = git_repository_index__weakptr(index, repo);
+
+	/* reload the repository index when user did not pass one in */
+	if (!error && git_index_read(*index, true) < 0)
+		giterr_clear();
+
+	return error;
+}
+
 int git_diff_tree_to_index(
 	git_diff **diff,
 	git_repository *repo,
@@ -1196,7 +1207,7 @@ int git_diff_tree_to_index(
 
 	assert(diff && repo);
 
-	if (!index && (error = git_repository_index__weakptr(&index, repo)) < 0)
+	if (!index && (error = diff_load_index(&index, repo)) < 0)
 		return error;
 
 	if (index->ignore_case) {
@@ -1239,7 +1250,7 @@ int git_diff_index_to_workdir(
 
 	assert(diff && repo);
 
-	if (!index && (error = git_repository_index__weakptr(&index, repo)) < 0)
+	if (!index && (error = diff_load_index(&index, repo)) < 0)
 		return error;
 
 	DIFF_FROM_ITERATORS(
@@ -1278,11 +1289,15 @@ int git_diff_tree_to_workdir_with_index(
 {
 	int error = 0;
 	git_diff *d1 = NULL, *d2 = NULL;
+	git_index *index = NULL;
 
 	assert(diff && repo);
 
-	if (!(error = git_diff_tree_to_index(&d1, repo, old_tree, NULL, opts)) &&
-		!(error = git_diff_index_to_workdir(&d2, repo, NULL, opts)))
+	if ((error = diff_load_index(&index, repo)) < 0)
+		return error;
+
+	if (!(error = git_diff_tree_to_index(&d1, repo, old_tree, index, opts)) &&
+		!(error = git_diff_index_to_workdir(&d2, repo, index, opts)))
 		error = git_diff_merge(d1, d2);
 
 	git_diff_free(d2);

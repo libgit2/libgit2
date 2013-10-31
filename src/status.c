@@ -251,11 +251,16 @@ int git_status_list_new(
 		return error;
 
 	/* if there is no HEAD, that's okay - we'll make an empty iterator */
-	if (((error = git_repository_head_tree(&head, repo)) < 0) &&
-		error != GIT_ENOTFOUND && error != GIT_EUNBORNBRANCH) {
-		git_index_free(index); /* release index */
-		return error;
+	if ((error = git_repository_head_tree(&head, repo)) < 0) {
+		if (error != GIT_ENOTFOUND && error != GIT_EUNBORNBRANCH)
+			goto done;
+		giterr_clear();
 	}
+
+	/* refresh index from disk unless prevented */
+	if ((flags & GIT_STATUS_OPT_NO_REFRESH) == 0 &&
+		git_index_read(index, true) < 0)
+		giterr_clear();
 
 	status = git_status_list_alloc(index);
 	GITERR_CHECK_ALLOC(status);
@@ -291,7 +296,7 @@ int git_status_list_new(
 
 	if (show != GIT_STATUS_SHOW_WORKDIR_ONLY) {
 		if ((error = git_diff_tree_to_index(
-				&status->head2idx, repo, head, NULL, &diffopt)) < 0)
+				&status->head2idx, repo, head, index, &diffopt)) < 0)
 			goto done;
 
 		if ((flags & GIT_STATUS_OPT_RENAMES_HEAD_TO_INDEX) != 0 &&
@@ -301,7 +306,7 @@ int git_status_list_new(
 
 	if (show != GIT_STATUS_SHOW_INDEX_ONLY) {
 		if ((error = git_diff_index_to_workdir(
-				&status->idx2wd, repo, NULL, &diffopt)) < 0)
+				&status->idx2wd, repo, index, &diffopt)) < 0)
 			goto done;
 
 		if ((flags & GIT_STATUS_OPT_RENAMES_INDEX_TO_WORKDIR) != 0 &&

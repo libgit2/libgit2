@@ -276,8 +276,6 @@ void test_index_reuc__write(void)
 		0100644, &their_oid));
 
 	cl_git_pass(git_index_write(repo_index));
-
-	cl_git_pass(git_index_read(repo_index));
 	cl_assert_equal_i(2, git_index_reuc_entrycount(repo_index));
 
 	/* ensure sort order was round-tripped correct */

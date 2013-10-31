@@ -349,14 +349,14 @@ void test_index_tests__remove_entry(void)
 	cl_git_pass(git_index_add_bypath(index, "hello"));
 	cl_git_pass(git_index_write(index));
 
-	cl_git_pass(git_index_read(index)); /* reload */
+	cl_git_pass(git_index_read(index, false)); /* reload */
 	cl_assert(git_index_entrycount(index) == 1);
 	cl_assert(git_index_get_bypath(index, "hello", 0) != NULL);
 
 	cl_git_pass(git_index_remove(index, "hello", 0));
 	cl_git_pass(git_index_write(index));
 
-	cl_git_pass(git_index_read(index)); /* reload */
+	cl_git_pass(git_index_read(index, false)); /* reload */
 	cl_assert(git_index_entrycount(index) == 0);
 	cl_assert(git_index_get_bypath(index, "hello", 0) == NULL);
 
@@ -388,7 +388,7 @@ void test_index_tests__remove_directory(void)
 	cl_git_pass(git_index_add_bypath(index, "b.txt"));
 	cl_git_pass(git_index_write(index));
 
-	cl_git_pass(git_index_read(index)); /* reload */
+	cl_git_pass(git_index_read(index, false)); /* reload */
 	cl_assert_equal_i(4, (int)git_index_entrycount(index));
 	cl_assert(git_index_get_bypath(index, "a/1.txt", 0) != NULL);
 	cl_assert(git_index_get_bypath(index, "a/2.txt", 0) != NULL);
@@ -397,7 +397,7 @@ void test_index_tests__remove_directory(void)
 	cl_git_pass(git_index_remove(index, "a/1.txt", 0));
 	cl_git_pass(git_index_write(index));
 
-	cl_git_pass(git_index_read(index)); /* reload */
+	cl_git_pass(git_index_read(index, false)); /* reload */
 	cl_assert_equal_i(3, (int)git_index_entrycount(index));
 	cl_assert(git_index_get_bypath(index, "a/1.txt", 0) == NULL);
 	cl_assert(git_index_get_bypath(index, "a/2.txt", 0) != NULL);
@@ -406,7 +406,7 @@ void test_index_tests__remove_directory(void)
 	cl_git_pass(git_index_remove_directory(index, "a", 0));
 	cl_git_pass(git_index_write(index));
 
-	cl_git_pass(git_index_read(index)); /* reload */
+	cl_git_pass(git_index_read(index, false)); /* reload */
 	cl_assert_equal_i(1, (int)git_index_entrycount(index));
 	cl_assert(git_index_get_bypath(index, "a/1.txt", 0) == NULL);
 	cl_assert(git_index_get_bypath(index, "a/2.txt", 0) == NULL);
@@ -517,7 +517,7 @@ void test_index_tests__reload_from_disk(void)
 	/* Sync the changes back into the read_index */
 	cl_assert_equal_sz(0, git_index_entrycount(read_index));
 
-	cl_git_pass(git_index_read(read_index));
+	cl_git_pass(git_index_read(read_index, false));
 	cl_assert_equal_i(true, read_index->on_disk);
 
 	cl_assert_equal_sz(2, git_index_entrycount(read_index));
@@ -526,7 +526,7 @@ void test_index_tests__reload_from_disk(void)
 	cl_git_pass(p_unlink(write_index->index_file_path));
 
 	/* Sync the changes back into the read_index */
-	cl_git_pass(git_index_read(read_index));
+	cl_git_pass(git_index_read(read_index, false));
 	cl_assert_equal_i(false, read_index->on_disk);
 	cl_assert_equal_sz(0, git_index_entrycount(read_index));
 

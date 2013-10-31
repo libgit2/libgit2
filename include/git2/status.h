@@ -118,6 +118,9 @@ typedef enum {
  *   case-insensitive order
  * - GIT_STATUS_OPT_RENAMES_FROM_REWRITES indicates that rename detection
  *   should include rewritten files
+ * - GIT_STATUS_OPT_NO_REFRESH bypasses the default status behavior of
+ *   doing a "soft" index reload (i.e. reloading the index data if the
+ *   file on disk has been modified outside libgit2).
  *
  * Calling `git_status_foreach()` is like calling the extended version
  * with: GIT_STATUS_OPT_INCLUDE_IGNORED, GIT_STATUS_OPT_INCLUDE_UNTRACKED,
@@ -137,6 +140,7 @@ typedef enum {
 	GIT_STATUS_OPT_SORT_CASE_SENSITIVELY    = (1u << 9),
 	GIT_STATUS_OPT_SORT_CASE_INSENSITIVELY  = (1u << 10),
 	GIT_STATUS_OPT_RENAMES_FROM_REWRITES    = (1u << 11),
+	GIT_STATUS_OPT_NO_REFRESH               = (1u << 12),
 } git_status_opt_t;
 
 #define GIT_STATUS_OPT_DEFAULTS \

@@ -607,6 +607,10 @@ GIT_EXTERN(int) git_diff_tree_to_tree(
  * The tree you pass will be used for the "old_file" side of the delta, and
  * the index will be used for the "new_file" side of the delta.
  *
+ * If you pass NULL for the index, then the existing index of the `repo`
+ * will be used.  In this case, the index will be refreshed from disk
+ * (if it has changed) before the diff is generated.
+ *
  * @param diff Output pointer to a git_diff pointer to be allocated.
  * @param repo The repository containing the tree and index.
  * @param old_tree A git_tree object to diff from, or NULL for empty tree.
@@ -630,6 +634,10 @@ GIT_EXTERN(int) git_diff_tree_to_index(
  *
  * The index will be used for the "old_file" side of the delta, and the
  * working directory will be used for the "new_file" side of the delta.
+ *
+ * If you pass NULL for the index, then the existing index of the `repo`
+ * will be used.  In this case, the index will be refreshed from disk
+ * (if it has changed) before the diff is generated.
  *
  * @param diff Output pointer to a git_diff pointer to be allocated.
  * @param repo The repository.

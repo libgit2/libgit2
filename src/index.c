@@ -349,7 +349,7 @@ int git_index_open(git_index **index_out, const char *index_path)
 	*index_out = index;
 	GIT_REFCOUNT_INC(index);
 
-	return (index_path != NULL) ? git_index_read(index) : 0;
+	return (index_path != NULL) ? git_index_read(index, false) : 0;
 }
 
 int git_index_new(git_index **out)
@@ -451,11 +451,11 @@ unsigned int git_index_caps(const git_index *index)
 			(index->no_symlinks ? GIT_INDEXCAP_NO_SYMLINKS : 0));
 }
 
-int git_index_read(git_index *index)
+int git_index_read(git_index *index, int only_if_changed)
 {
 	int error = 0, updated;
 	git_buf buffer = GIT_BUF_INIT;
-	git_futils_filestamp stamp = {0};
+	git_futils_filestamp stamp = index->stamp;
 
 	if (!index->index_file_path)
 		return create_index_error(-1,
@@ -464,12 +464,13 @@ int git_index_read(git_index *index)
 	index->on_disk = git_path_exists(index->index_file_path);
 
 	if (!index->on_disk) {
-		git_index_clear(index);
+		if (!only_if_changed)
+			git_index_clear(index);
 		return 0;
 	}
 
 	updated = git_futils_filestamp_check(&stamp, index->index_file_path);
-	if (updated <= 0)
+	if (updated < 0 || (only_if_changed && !updated))
 		return updated;
 
 	error = git_futils_readbuffer(&buffer, index->index_file_path);

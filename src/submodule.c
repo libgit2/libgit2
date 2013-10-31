@@ -1527,6 +1527,7 @@ static void submodule_get_wd_status(
 	const git_oid *wd_oid =
 		(sm->flags & GIT_SUBMODULE_STATUS__WD_OID_VALID) ? &sm->wd_oid : NULL;
 	git_tree *sm_head = NULL;
+	git_index *index = NULL;
 	git_diff_options opt = GIT_DIFF_OPTIONS_INIT;
 	git_diff *diff;
 
@@ -1558,12 +1559,14 @@ static void submodule_get_wd_status(
 	if (ign == GIT_SUBMODULE_IGNORE_NONE)
 		opt.flags |= GIT_DIFF_INCLUDE_UNTRACKED;
 
+	(void)git_repository_index__weakptr(&index, sm_repo);
+
 	/* if we don't have an unborn head, check diff with index */
 	if (git_repository_head_tree(&sm_head, sm_repo) < 0)
 		giterr_clear();
 	else {
 		/* perform head to index diff on submodule */
-		if (git_diff_tree_to_index(&diff, sm_repo, sm_head, NULL, &opt) < 0)
+		if (git_diff_tree_to_index(&diff, sm_repo, sm_head, index, &opt) < 0)
 			giterr_clear();
 		else {
 			if (git_diff_num_deltas(diff) > 0)
@@ -1576,7 +1579,7 @@ static void submodule_get_wd_status(
 	}
 
 	/* perform index-to-workdir diff on submodule */
-	if (git_diff_index_to_workdir(&diff, sm_repo, NULL, &opt) < 0)
+	if (git_diff_index_to_workdir(&diff, sm_repo, index, &opt) < 0)
 		giterr_clear();
 	else {
 		size_t untracked =

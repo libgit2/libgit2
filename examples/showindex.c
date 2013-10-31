@@ -33,7 +33,7 @@ int main (int argc, char** argv)
 		git_repository_free(repo);
 	}
 
-	git_index_read(index);
+	git_index_read(index, 0);
 
 	ecount = git_index_entrycount(index);
 	if (!ecount)

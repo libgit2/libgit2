@@ -222,16 +222,23 @@ GIT_EXTERN(unsigned int) git_index_caps(const git_index *index);
 GIT_EXTERN(int) git_index_set_caps(git_index *index, unsigned int caps);
 
 /**
- * Update the contents of an existing index object in memory
- * by reading from the hard disk.
+ * Update the contents of an existing index object in memory by reading
+ * from the hard disk.
  *
- * If the file doesn't exist on the filesystem, the index
- * will be cleared from its current content.
+ * Pass 0 for `only_if_changed` to perform a "hard" read that discards
+ * in-memory changes and always reloads the on-disk index data.  If there
+ * is no on-disk version, the index will be cleared.
+ *
+ * Pass non-zero for `only_if_changed` to perform a "soft" read that only
+ * reloads the index data if it has changed since the last time it was
+ * loaded.  In-memory index data will be untouched.  Be aware: if there
+ * are changes on disk, unwritten in-memory changes will be discarded.
  *
  * @param index an existing index object
+ * @param only_if_changed only read if on-disk file is newer than last read
  * @return 0 or an error code
  */
-GIT_EXTERN(int) git_index_read(git_index *index);
+GIT_EXTERN(int) git_index_read(git_index *index, int only_if_changed);
 
 /**
  * Write an existing index object from memory back to disk
