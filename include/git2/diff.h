@@ -352,10 +352,10 @@ typedef struct {
 
 	/* options controlling which files are in the diff */
 
-	git_submodule_ignore_t ignore_submodules; /** << submodule ignore rule */
-	git_strarray pathspec;     /**< defaults to include all paths */
+	git_submodule_ignore_t ignore_submodules; /**< submodule ignore rule */
+	git_strarray       pathspec;     /**< defaults to include all paths */
 	git_diff_notify_cb notify_cb;
-	void *notify_payload;
+	void              *notify_payload;
 
 	/* options controlling how to diff text is generated */
 
@@ -367,9 +367,14 @@ typedef struct {
 	const char *new_prefix;       /**< defaults to "b" */
 } git_diff_options;
 
+/* The current version of the diff options structure */
 #define GIT_DIFF_OPTIONS_VERSION 1
+
+/* Stack initializer for diff options.  Alternatively use
+ * `git_diff_options_init` programmatic initialization.
+ */
 #define GIT_DIFF_OPTIONS_INIT \
-	{GIT_DIFF_OPTIONS_VERSION, 0, 0, {NULL,0}, NULL, NULL, 3}
+	{GIT_DIFF_OPTIONS_VERSION, 0, GIT_SUBMODULE_IGNORE_DEFAULT, {NULL,0}, NULL, NULL, 3}
 
 /**
  * When iterating over a diff, callback that will be made per file.
@@ -737,6 +742,23 @@ GIT_EXTERN(int) git_diff_merge(
 GIT_EXTERN(int) git_diff_find_similar(
 	git_diff *diff,
 	const git_diff_find_options *options);
+
+/**
+ * Initialize diff options structure
+ *
+ * In most cases, you can probably just use `GIT_DIFF_OPTIONS_INIT` to
+ * initialize the diff options structure, but in some cases that is not
+ * going to work.  You can call this function instead.  Note that you
+ * must pass both a pointer to the structure to be initialized and the
+ * `GIT_DIFF_OPTIONS_VERSION` value from the header you compiled with.
+ *
+ * @param options Pointer to git_diff_options memory to be initialized
+ * @param version Should be `GIT_DIFF_OPTIONS_VERSION`
+ * @return 0 on success, negative on failure (such as unsupported version)
+ */
+GIT_EXTERN(int) git_diff_options_init(
+	git_diff_options *options,
+	unsigned int version);
 
 /**@}*/
 

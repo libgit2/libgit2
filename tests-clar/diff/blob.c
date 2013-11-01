@@ -26,9 +26,8 @@ void test_diff_blob__initialize(void)
 
 	g_repo = cl_git_sandbox_init("attr");
 
-	GIT_INIT_STRUCTURE(&opts, GIT_DIFF_OPTIONS_VERSION);
+	cl_git_pass(git_diff_options_init(&opts, GIT_DIFF_OPTIONS_VERSION));
 	opts.context_lines = 1;
-	opts.interhunk_lines = 0;
 
 	memset(&expected, 0, sizeof(expected));
 
