@@ -365,16 +365,18 @@ static int update_config_refspec(const git_remote *remote, git_config *config, i
 	const char *dir;
 	size_t i;
 	int error = 0;
+	const char *cname;
 
 	push = direction == GIT_DIRECTION_PUSH;
 	dir = push ? "push" : "fetch";
 
 	if (git_buf_printf(&name, "remote.%s.%s", remote->name, dir) < 0)
 		return -1;
+	cname = git_buf_cstr(&name);
 
 	/* Clear out the existing config */
 	while (!error)
-		error = git_config_delete_entry(config, git_buf_cstr(&name));
+		error = git_config_delete_multivar(config, cname, ".*");
 
 	if (error != GIT_ENOTFOUND)
 		return error;
@@ -385,8 +387,11 @@ static int update_config_refspec(const git_remote *remote, git_config *config, i
 		if (spec->push != push)
 			continue;
 
+		// "$^" is a unmatcheable regexp: it will not match anything at all, so
+		// all values will be considered new and we will not replace any
+		// present value.
 		if ((error = git_config_set_multivar(
-				config, git_buf_cstr(&name), "", spec->string)) < 0) {
+				config, cname, "$^", spec->string)) < 0) {
 			goto cleanup;
 		}
 	}

@@ -120,6 +120,18 @@ static void cvar_free(cvar_t *var)
 	git__free(var);
 }
 
+static int cvar_length(cvar_t *var)
+{
+	int length = 0;
+
+	while (var) {
+		length += 1;
+		var = var->next;
+	}
+
+	return length;
+}
+
 int git_config_file_normalize_section(char *start, char *end)
 {
 	char *scan;
@@ -531,6 +543,83 @@ static int config_delete(git_config_backend *cfg, const char *name)
 	return result;
 }
 
+static int config_delete_multivar(git_config_backend *cfg, const char *name, const char *regexp)
+{
+	cvar_t *var, *prev = NULL, *new_head = NULL;
+	cvar_t **to_delete;
+	int to_delete_idx;
+	diskfile_backend *b = (diskfile_backend *)cfg;
+	char *key;
+	regex_t preg;
+	int result;
+	khiter_t pos;
+
+	if ((result = git_config__normalize_name(name, &key)) < 0)
+		return result;
+
+	pos = git_strmap_lookup_index(b->values, key);
+
+	if (!git_strmap_valid_index(b->values, pos)) {
+		giterr_set(GITERR_CONFIG, "Could not find key '%s' to delete", name);
+		git__free(key);
+		return GIT_ENOTFOUND;
+	}
+
+	var = git_strmap_value_at(b->values, pos);
+
+	result = regcomp(&preg, regexp, REG_EXTENDED);
+	if (result < 0) {
+		git__free(key);
+		giterr_set_regex(&preg, result);
+		regfree(&preg);
+		return -1;
+	}
+
+	to_delete = git__calloc(cvar_length(var), sizeof(cvar_t *));
+	GITERR_CHECK_ALLOC(to_delete);
+	to_delete_idx = 0;
+
+	for (;;) {
+		cvar_t *var_next = var->next;
+
+		if (regexec(&preg, var->entry->value, 0, NULL, 0) == 0) {
+			// If we are past the head, reattach previous node to next one,
+			// otherwise set the new head for the strmap.
+			if (prev != NULL) {
+				prev->next = var_next;
+			} else {
+				new_head = var_next;
+			}
+
+			to_delete[to_delete_idx++] = var;
+		} else {
+			prev = var;
+		}
+
+		if (var_next == NULL)
+			break;
+
+		var = var_next;
+	}
+
+	if (new_head != NULL) {
+		git_strmap_set_value_at(b->values, pos, new_head);
+	} else {
+		git_strmap_delete_at(b->values, pos);
+	}
+
+	if (to_delete_idx > 0)
+		result = config_write(b, key, &preg, NULL);
+
+	while (to_delete_idx-- > 0)
+		cvar_free(to_delete[to_delete_idx]);
+
+	git__free(key);
+	git__free(to_delete);
+	regfree(&preg);
+	return result;
+}
+
 int git_config_file__ondisk(git_config_backend **out, const char *path)
 {
 	diskfile_backend *backend;
@@ -548,6 +637,7 @@ int git_config_file__ondisk(git_config_backend **out, const char *path)
 	backend->parent.set = config_set;
 	backend->parent.set_multivar = config_set_multivar;
 	backend->parent.del = config_delete;
+	backend->parent.del_multivar = config_delete_multivar;
 	backend->parent.iterator = config_iterator_new;
 	backend->parent.refresh = config_refresh;
 	backend->parent.free = backend_free;
@@ -1214,7 +1304,7 @@ static int config_write(diskfile_backend *cfg, const char *key, const regex_t *p
 			}
 
 			/* multiline variable? we need to keep reading lines to match */
-			if (preg != NULL) {
+			if (preg != NULL && section_matches) {
 				data_start = post_start;
 				continue;
 			}
