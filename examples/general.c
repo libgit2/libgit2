@@ -36,12 +36,14 @@ static void check_error(int error_code, const char *action)
 	if (!error_code)
 		return;
 
+	{
 	const git_error *error = giterr_last();
 
 	printf("Error %d %s - %s\n", error_code, action,
 		   (error && error->message) ? error->message : "???");
 
 	exit(1);
+	}
 }
 
 int main (int argc, char** argv)
@@ -67,12 +69,15 @@ int main (int argc, char** argv)
   // For our first example, we will convert a 40 character hex value to the
   // 20 byte raw SHA1 value.
   printf("*Hex to Raw*\n");
+  {
+  git_oid oid;
+  char out[41];
+  {
   char hex[] = "4a202b346bb0fb0db7eff3cffeb3c70babbd2045";
 
   // The `git_oid` is the structure that keeps the SHA value. We will use
   // this throughout the example for storing the value of the current SHA
   // key we're working with.
-  git_oid oid;
   git_oid_fromstr(&oid, hex);
 
   // Once we've converted the string into the oid value, we can get the raw
@@ -81,12 +86,12 @@ int main (int argc, char** argv)
   // Next we will convert the 20 byte raw SHA1 value to a human readable 40
   // char hex value.
   printf("\n*Raw to Hex*\n");
-  char out[41];
   out[40] = '\0';
 
   // If you have a oid, you can easily get the hex value of the SHA as well.
   git_oid_fmt(out, &oid);
   printf("SHA hex string: %s\n", out);
+  }
 
   // ### Working with the Object Database
 
@@ -96,12 +101,14 @@ int main (int argc, char** argv)
   // repository.
   //
   // [odb]: http://libgit2.github.com/libgit2/#HEAD/group/odb
+  {
   git_odb *odb;
   git_repository_odb(&odb, repo);
 
   // #### Raw Object Reading
 
   printf("\n*Raw Object Read*\n");
+  {
   git_odb_object *obj;
   git_otype otype;
   const unsigned char *data;
@@ -132,7 +139,7 @@ int main (int argc, char** argv)
   // For proper memory management, close the object when you are done with
   // it or it will leak memory.
   git_odb_object_free(obj);
-
+  }
   // #### Raw Object Writing
 
   printf("\n*Raw Object Write*\n");
@@ -147,6 +154,8 @@ int main (int argc, char** argv)
   // generated when the object was written to our database.
   git_oid_fmt(out, &oid);
   printf("Written Object: %s\n", out);
+  }
+  }
 
   // ### Object Parsing
 
@@ -163,13 +172,15 @@ int main (int argc, char** argv)
   // [pco]: http://libgit2.github.com/libgit2/#HEAD/group/commit
 
   printf("\n*Commit Parsing*\n");
-
+  {
   git_commit *commit;
+  git_oid oid;
   git_oid_fromstr(&oid, "8496071c1b46c854b31185ea97743be6a8774479");
 
   error = git_commit_lookup(&commit, repo, &oid);
   check_error(error, "looking up commit");
 
+  {
   const git_signature *author, *cmtter;
   const char *message;
   time_t ctime;
@@ -196,15 +207,18 @@ int main (int argc, char** argv)
   parents  = git_commit_parentcount(commit);
   for (p = 0;p < parents;p++) {
     git_commit *parent;
+    char out[41];
     git_commit_parent(&parent, commit, p);
     git_oid_fmt(out, git_commit_id(parent));
     printf("Parent: %s\n", out);
     git_commit_free(parent);
   }
+  }
 
   // Don't forget to close the object to prevent memory leaks. You will have
   // to do this for all the objects you open and parse.
   git_commit_free(commit);
+  }
 
   // #### Writing Commits
 
@@ -216,9 +230,12 @@ int main (int argc, char** argv)
   // [cd]: http://libgit2.github.com/libgit2/#HEAD/group/commit
 
   printf("\n*Commit Writing*\n");
+  {
+  git_signature *author, *cmtter;
   git_oid tree_id, parent_id, commit_id;
   git_tree *tree;
   git_commit *parent;
+  char out[41];
 
   // Creating signatures for an authoring identity and time is simple.  You
   // will need to do this to specify who created a commit and when.  Default
@@ -255,6 +272,7 @@ int main (int argc, char** argv)
   // Now we can take a look at the commit SHA we've generated.
   git_oid_fmt(out, &commit_id);
   printf("New Commit: %s\n", out);
+  }
 
   // #### Tag Parsing
 
@@ -264,9 +282,12 @@ int main (int argc, char** argv)
   //
   // [tm]: http://libgit2.github.com/libgit2/#HEAD/group/tag
   printf("\n*Tag Parsing*\n");
+  {
   git_tag *tag;
   const char *tmessage, *tname;
   git_otype ttype;
+  git_oid oid;
+  git_commit *commit;
 
   // We create an oid for the tag object if we know the SHA and look it up
   // the same way that we would a commit (or any other object).
@@ -286,6 +307,7 @@ int main (int argc, char** argv)
   printf("Tag Message: %s\n", tmessage);
 
   git_commit_free(commit);
+  }
 
   // #### Tree Parsing
 
@@ -297,8 +319,12 @@ int main (int argc, char** argv)
   // [tp]: http://libgit2.github.com/libgit2/#HEAD/group/tree
   printf("\n*Tree Parsing*\n");
 
+  {
   const git_tree_entry *entry;
   git_object *objt;
+  git_tree *tree;
+  git_oid oid;
+  size_t cnt;
 
   // Create the oid and lookup the tree object just like the other objects.
   git_oid_fromstr(&oid, "2a741c18ac5ff082a7caaec6e74db3075a1906b5");
@@ -306,7 +332,7 @@ int main (int argc, char** argv)
 
   // Getting the count of entries in the tree so you can iterate over them
   // if you want to.
-  size_t cnt = git_tree_entrycount(tree); // 3
+  cnt = git_tree_entrycount(tree); // 3
   printf("tree entries: %d\n", (int)cnt);
 
   entry = git_tree_entry_byindex(tree, 0);
@@ -324,6 +350,7 @@ int main (int argc, char** argv)
 
   // Remember to close the looked-up object once you are done using it
   git_object_free(objt);
+  }
 
   // #### Blob Parsing
 
@@ -338,7 +365,9 @@ int main (int argc, char** argv)
   // [ba]: http://libgit2.github.com/libgit2/#HEAD/group/blob
 
   printf("\n*Blob Parsing*\n");
+  {
   git_blob *blob;
+  git_oid oid;
 
   git_oid_fromstr(&oid, "1385f264afb75a56a5bec74243be9b367ba4ca08");
   git_blob_lookup(&blob, repo, &oid);
@@ -350,6 +379,7 @@ int main (int argc, char** argv)
   // size in bytes
   printf("Blob Size: %ld\n", (long)git_blob_rawsize(blob)); // 8
   git_blob_rawcontent(blob); // "content"
+  }
 
   // ### Revwalking
 
@@ -363,8 +393,10 @@ int main (int argc, char** argv)
   // [rw]: http://libgit2.github.com/libgit2/#HEAD/group/revwalk
 
   printf("\n*Revwalking*\n");
+  {
   git_revwalk *walk;
   git_commit *wcommit;
+  git_oid oid;
 
   git_oid_fromstr(&oid, "5b5b025afb0b4c913b4c338a42934a3863bf3644");
 
@@ -380,6 +412,7 @@ int main (int argc, char** argv)
   git_revwalk_sorting(walk, GIT_SORT_TOPOLOGICAL | GIT_SORT_REVERSE);
   git_revwalk_push(walk, &oid);
 
+  {
   const git_signature *cauth;
   const char *cmsg;
 
@@ -398,12 +431,14 @@ int main (int argc, char** argv)
 
     git_commit_free(wcommit);
   }
+  }
 
   // Like the other objects, be sure to free the revwalker when you're done
   // to prevent memory leaks.  Also, make sure that the repository being
   // walked it not deallocated while the walk is in progress, or it will
   // result in undefined behavior
   git_revwalk_free(walk);
+  }
 
   // ### Index File Manipulation
 
@@ -414,6 +449,7 @@ int main (int argc, char** argv)
 
   printf("\n*Index Walking*\n");
 
+  {
   git_index *index;
   unsigned int i, ecount;
 
@@ -439,6 +475,7 @@ int main (int argc, char** argv)
   }
 
   git_index_free(index);
+  }
 
   // ### References
 
@@ -450,13 +487,15 @@ int main (int argc, char** argv)
 
   printf("\n*Reference Listing*\n");
 
+  {
   // Here we will implement something like `git for-each-ref` simply listing
   // out all available references and the object SHA they resolve to.
   git_strarray ref_list;
-  git_reference_list(&ref_list, repo);
-
   const char *refname;
   git_reference *ref;
+  size_t i;
+  char out[41];
+  git_reference_list(&ref_list, repo);
 
   // Now that we have the list of reference names, we can lookup each ref
   // one at a time and resolve them to the SHA, then print both values out.
@@ -480,6 +519,7 @@ int main (int argc, char** argv)
   }
 
   git_strarray_free(&ref_list);
+  }
 
   // ### Config Files
 
@@ -490,6 +530,7 @@ int main (int argc, char** argv)
 
   printf("\n*Config Listing*\n");
 
+  {
   const char *email;
   int32_t j;
 
@@ -505,6 +546,7 @@ int main (int argc, char** argv)
 
   git_config_get_string(&email, cfg, "user.email");
   printf("Email: %s\n", email);
+  }
 
   // Finally, when you're done with the repository, you can free it as well.
   git_repository_free(repo);
