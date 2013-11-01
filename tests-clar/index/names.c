@@ -63,7 +63,7 @@ void test_index_names__roundtrip(void)
 	git_index_clear(repo_index);
 	cl_assert(git_index_name_entrycount(repo_index) == 0);
 
-	cl_git_pass(git_index_read(repo_index, 0));
+	cl_git_pass(git_index_read(repo_index, true));
 	cl_assert(git_index_name_entrycount(repo_index) == 3);
 
 	conflict_name = git_index_name_get_byindex(repo_index, 0);

@@ -1189,7 +1189,7 @@ static int diff_load_index(git_index **index, git_repository *repo)
 	int error = git_repository_index__weakptr(index, repo);
 
 	/* reload the repository index when user did not pass one in */
-	if (!error && git_index_read(*index, true) < 0)
+	if (!error && git_index_read(*index, false) < 0)
 		giterr_clear();
 
 	return error;

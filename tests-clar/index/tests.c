@@ -8,7 +8,7 @@ static const size_t index_entry_count_2 = 1437;
 #define TEST_INDEXBIG_PATH cl_fixture("big.index")
 
 
-// Suite data
+/* Suite data */
 struct test_entry {
    size_t index;
    char path[128];
@@ -24,7 +24,7 @@ static struct test_entry test_entries[] = {
    {48, "src/revobject.h", 1448, 0x4C3F7FE2}
 };
 
-// Helpers
+/* Helpers */
 static void copy_file(const char *src, const char *dst)
 {
 	git_buf source_buf = GIT_BUF_INIT;
@@ -32,7 +32,7 @@ static void copy_file(const char *src, const char *dst)
 
 	cl_git_pass(git_futils_readbuffer(&source_buf, src));
 
-	dst_fd = git_futils_creat_withpath(dst, 0777, 0666); //-V536
+	dst_fd = git_futils_creat_withpath(dst, 0777, 0666); /* -V536 */
 	if (dst_fd < 0)
 		goto cleanup;
 
@@ -66,7 +66,7 @@ static void files_are_equal(const char *a, const char *b)
 }
 
 
-// Fixture setup and teardown
+/* Fixture setup and teardown */
 void test_index_tests__initialize(void)
 {
 }
@@ -173,7 +173,8 @@ void test_index_tests__write(void)
 
 void test_index_tests__sort0(void)
 {
-   // sort the entires in an index
+	/* sort the entires in an index */
+
    /*
    * TODO: This no longer applies:
    * index sorting in Git uses some specific changes to the way
@@ -187,7 +188,7 @@ void test_index_tests__sort0(void)
 
 void test_index_tests__sort1(void)
 {
-   // sort the entires in an empty index
+   /* sort the entires in an empty index */
    git_index *index;
 
    cl_git_pass(git_index_open(&index, "fake-index"));
@@ -349,14 +350,14 @@ void test_index_tests__remove_entry(void)
 	cl_git_pass(git_index_add_bypath(index, "hello"));
 	cl_git_pass(git_index_write(index));
 
-	cl_git_pass(git_index_read(index, false)); /* reload */
+	cl_git_pass(git_index_read(index, true)); /* reload */
 	cl_assert(git_index_entrycount(index) == 1);
 	cl_assert(git_index_get_bypath(index, "hello", 0) != NULL);
 
 	cl_git_pass(git_index_remove(index, "hello", 0));
 	cl_git_pass(git_index_write(index));
 
-	cl_git_pass(git_index_read(index, false)); /* reload */
+	cl_git_pass(git_index_read(index, true)); /* reload */
 	cl_assert(git_index_entrycount(index) == 0);
 	cl_assert(git_index_get_bypath(index, "hello", 0) == NULL);
 
@@ -388,7 +389,7 @@ void test_index_tests__remove_directory(void)
 	cl_git_pass(git_index_add_bypath(index, "b.txt"));
 	cl_git_pass(git_index_write(index));
 
-	cl_git_pass(git_index_read(index, false)); /* reload */
+	cl_git_pass(git_index_read(index, true)); /* reload */
 	cl_assert_equal_i(4, (int)git_index_entrycount(index));
 	cl_assert(git_index_get_bypath(index, "a/1.txt", 0) != NULL);
 	cl_assert(git_index_get_bypath(index, "a/2.txt", 0) != NULL);
@@ -397,7 +398,7 @@ void test_index_tests__remove_directory(void)
 	cl_git_pass(git_index_remove(index, "a/1.txt", 0));
 	cl_git_pass(git_index_write(index));
 
-	cl_git_pass(git_index_read(index, false)); /* reload */
+	cl_git_pass(git_index_read(index, true)); /* reload */
 	cl_assert_equal_i(3, (int)git_index_entrycount(index));
 	cl_assert(git_index_get_bypath(index, "a/1.txt", 0) == NULL);
 	cl_assert(git_index_get_bypath(index, "a/2.txt", 0) != NULL);
@@ -406,7 +407,7 @@ void test_index_tests__remove_directory(void)
 	cl_git_pass(git_index_remove_directory(index, "a", 0));
 	cl_git_pass(git_index_write(index));
 
-	cl_git_pass(git_index_read(index, false)); /* reload */
+	cl_git_pass(git_index_read(index, true)); /* reload */
 	cl_assert_equal_i(1, (int)git_index_entrycount(index));
 	cl_assert(git_index_get_bypath(index, "a/1.txt", 0) == NULL);
 	cl_assert(git_index_get_bypath(index, "a/2.txt", 0) == NULL);
@@ -517,7 +518,7 @@ void test_index_tests__reload_from_disk(void)
 	/* Sync the changes back into the read_index */
 	cl_assert_equal_sz(0, git_index_entrycount(read_index));
 
-	cl_git_pass(git_index_read(read_index, false));
+	cl_git_pass(git_index_read(read_index, true));
 	cl_assert_equal_i(true, read_index->on_disk);
 
 	cl_assert_equal_sz(2, git_index_entrycount(read_index));
@@ -526,7 +527,7 @@ void test_index_tests__reload_from_disk(void)
 	cl_git_pass(p_unlink(write_index->index_file_path));
 
 	/* Sync the changes back into the read_index */
-	cl_git_pass(git_index_read(read_index, false));
+	cl_git_pass(git_index_read(read_index, true));
 	cl_assert_equal_i(false, read_index->on_disk);
 	cl_assert_equal_sz(0, git_index_entrycount(read_index));
 
