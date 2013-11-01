@@ -3,6 +3,12 @@
 We're making it easy to do interesting things with git, and we'd love to have
 your help.
 
+## Licensing
+
+By contributing to libgit2, you agree to release your contribution under the terms of the license.
+For code under `examples`, this is governed by the [CC0 Public Domain Dedication](examples/COPYING).
+All other code is released under the [GPL v2 with linking exception](COPYING).
+
 ## Discussion & Chat
 
 We hang out in the #libgit2 channel on irc.freenode.net.
@@ -70,7 +76,7 @@ you're porting code *from* to see what you need to do.  As a general rule,
 MIT and BSD (3-clause) licenses are typically no problem.  Apache 2.0
 license typically doesn't work due to GPL incompatibility.
 
-If you are pulling in code from core Git, another project or code you've pulled from 
+If you are pulling in code from core Git, another project or code you've pulled from
 a forum / Stack Overflow then please flag this in your PR and also make sure you've
 given proper credit to the original author in the code snippet.
 
