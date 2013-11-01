@@ -31,6 +31,13 @@ void test_network_urlparse__trivial(void)
 	cl_assert_equal_p(pass, NULL);
 }
 
+void test_network_urlparse__bad_url(void)
+{
+	cl_git_fail_with(gitno_extract_url_parts(&host, &port, &user, &pass,
+				"github.com/git://github.com/foo/bar.git.git", "443"),
+			GIT_EINVALIDSPEC);
+}
+
 void test_network_urlparse__user(void)
 {
 	cl_git_pass(gitno_extract_url_parts(&host, &port, &user, &pass,

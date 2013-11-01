@@ -56,13 +56,11 @@ void test_clone_nonetwork__bad_urls(void)
 	cl_assert(!git_path_exists("./foo"));
 
 	cl_git_fail(git_clone(&g_repo, "git://example.com:asdf", "./foo", &g_options));
-	cl_assert(!git_path_exists("./foo"));
-	cl_git_fail(git_clone(&g_repo, "git://example.com:asdf/foo", "./foo", &g_options));
-	cl_assert(!git_path_exists("./foo"));
-	cl_git_fail(git_clone(&g_repo, "https://example.com:asdf", "./foo", &g_options));
-	cl_assert(!git_path_exists("./foo"));
 	cl_git_fail(git_clone(&g_repo, "https://example.com:asdf/foo", "./foo", &g_options));
-	cl_assert(!git_path_exists("./foo"));
+	cl_git_fail(git_clone(&g_repo, "git://github.com/git://github.com/foo/bar.git.git",
+				"./foo", &g_options));
+	cl_git_fail(git_clone(&g_repo, "arrbee:my/bad:password@github.com:1111/strange:words.git",
+				"./foo", &g_options));
 }
 
 void test_clone_nonetwork__do_not_clean_existing_directory(void)

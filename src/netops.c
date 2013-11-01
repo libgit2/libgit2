@@ -679,9 +679,10 @@ int gitno_extract_url_parts(
 	slash = strchr(url, '/');
 	at = strchr(url, '@');
 
-	if (slash == NULL) {
-		giterr_set(GITERR_NET, "Malformed URL: missing /");
-		return -1;
+	if (!slash ||
+	    (colon && (slash < colon))) {
+		giterr_set(GITERR_NET, "Malformed URL");
+		return GIT_EINVALIDSPEC;
 	}
 
 	start = url;
