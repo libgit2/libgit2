@@ -32,6 +32,7 @@ int git_smart__store_refs(transport_smart *t, int flushes)
 	/* Clear existing refs in case git_remote_connect() is called again
 	 * after git_remote_disconnect().
 	 */
+	git_vector_clear(&t->heads);
 	git_vector_foreach(refs, i, ref) {
 		git__free(ref->head.name);
 		git__free(ref);

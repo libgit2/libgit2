@@ -620,11 +620,11 @@ on_error:
 	return -1;
 }
 
-int git_remote_ls(git_remote *remote, git_headlist_cb list_cb, void *payload)
+int git_remote_ls(const git_remote_head ***out, size_t *size, git_remote *remote)
 {
 	assert(remote);
 
-	return remote->transport->ls(remote->transport, list_cb, payload);
+	return remote->transport->ls(out, size, remote->transport);
 }
 
 int git_remote__get_http_proxy(git_remote *remote, bool use_ssl, char **proxy_url)
@@ -684,13 +684,6 @@ int git_remote__get_http_proxy(git_remote *remote, bool use_ssl, char **proxy_ur
 	return 0;
 }
 
-static int store_refs(git_remote_head *head, void *payload)
-{
-	git_vector *refs = (git_vector *)payload;
-
-	return git_vector_insert(refs, head);
-}
-
 /* DWIM `refspecs` based on `refs` and append the output to `out` */
 static int dwim_refspecs(git_vector *out, git_vector *refspecs, git_vector *refs)
 {
@@ -736,15 +729,12 @@ int git_remote_download(git_remote *remote)
 	if (git_vector_init(&refs, 8, remote_head_cmp) < 0)
 		return -1;
 
-	if (git_remote_ls(remote, store_refs, &refs) < 0) {
+	if (git_remote_ls((const git_remote_head ***)&refs.contents, &refs.length, remote) < 0)
 		return -1;
-	}
 
 	free_refspecs(&remote->active_refspecs);
 
-	error = dwim_refspecs(&remote->active_refspecs, &remote->refspecs, &refs);
-	git_vector_free(&refs);
-	if (error < 0)
+	if (dwim_refspecs(&remote->active_refspecs, &remote->refspecs, &refs) < 0)
 		return -1;
 
 	if ((error = git_fetch_negotiate(remote)) < 0)
@@ -996,7 +986,7 @@ int git_remote_update_tips(git_remote *remote)
 	if (git_vector_init(&refs, 16, NULL) < 0)
 		return -1;
 
-	if ((error = git_remote_ls(remote, store_refs, &refs)) < 0)
+	if ((error = git_remote_ls((const git_remote_head ***)&refs.contents, &refs.length, remote)) < 0)
 		goto out;
 
 	if (remote->download_tags == GIT_REMOTE_DOWNLOAD_TAGS_ALL) {
@@ -1014,7 +1004,6 @@ int git_remote_update_tips(git_remote *remote)
 
 out:
 	git_refspec__free(&tagspec);
-	git_vector_free(&refs);
 	return error;
 }
 

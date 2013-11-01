@@ -254,15 +254,16 @@ GIT_EXTERN(int) git_remote_connect(git_remote *remote, git_direction direction);
  * The remote (or more exactly its transport) must be connected. The
  * memory belongs to the remote.
  *
- * If you a return a non-zero value from the callback, this will stop
- * looping over the refs.
+ * The array will stay valid as long as the remote object exists and
+ * its transport isn't changed, but a copy is recommended for usage of
+ * the data.
  *
+ * @param out pointer to the array
+ * @param size the number of remote heads
  * @param remote the remote
- * @param list_cb function to call with each ref discovered at the remote
- * @param payload additional data to pass to the callback
- * @return 0 on success, GIT_EUSER on non-zero callback, or error code
+ * @return 0 on success, or an error code
  */
-GIT_EXTERN(int) git_remote_ls(git_remote *remote, git_headlist_cb list_cb, void *payload);
+GIT_EXTERN(int) git_remote_ls(const git_remote_head ***out,  size_t *size, git_remote *remote);
 
 /**
  * Download and index the packfile

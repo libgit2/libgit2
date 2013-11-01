@@ -19,52 +19,47 @@
 #include "repository.h"
 #include "refs.h"
 
-struct filter_payload {
-	git_remote *remote;
-	const git_refspec *spec, *tagspec;
-	git_odb *odb;
-};
-
-static int filter_ref__cb(git_remote_head *head, void *payload)
+static int maybe_want(git_remote *remote, git_remote_head *head, git_odb *odb, git_refspec *tagspec)
 {
-	struct filter_payload *p = payload;
 	int match = 0;
 
 	if (!git_reference_is_valid_name(head->name))
 		return 0;
 
-	if (p->remote->download_tags == GIT_REMOTE_DOWNLOAD_TAGS_ALL) {
+	if (remote->download_tags == GIT_REMOTE_DOWNLOAD_TAGS_ALL) {
 		/*
 		 * If tagopt is --tags, then we only use the default
 		 * tags refspec and ignore the remote's
 		 */
-		if (git_refspec_src_matches(p->tagspec, head->name))
+		if (git_refspec_src_matches(tagspec, head->name))
 			match = 1;
 		else
 			return 0;
-	} else if (git_remote__matching_refspec(p->remote, head->name))
+	} else if (git_remote__matching_refspec(remote, head->name))
 			match = 1;
 
 	if (!match)
 		return 0;
 
 	/* If we have the object, mark it so we don't ask for it */
-	if (git_odb_exists(p->odb, &head->oid))
+	if (git_odb_exists(odb, &head->oid))
 		head->local = 1;
 	else
-		p->remote->need_pack = 1;
+		remote->need_pack = 1;
 
-	return git_vector_insert(&p->remote->refs, head);
+	return git_vector_insert(&remote->refs, head);
 }
 
 static int filter_wants(git_remote *remote)
 {
-	struct filter_payload p;
+	git_remote_head **heads;
 	git_refspec tagspec, head;
-	int error = -1;
+	int error = 0;
+	git_odb *odb;
+	size_t i, heads_len;
 
-	//git_vector_clear(&remote->refs);
-	if (git_refspec__parse(&tagspec, GIT_REFSPEC_TAGS, true) < 0)
+	git_vector_clear(&remote->refs);
+	if ((error = git_refspec__parse(&tagspec, GIT_REFSPEC_TAGS, true)) < 0)
 		return error;
 
 	/*
@@ -73,8 +68,6 @@ static int filter_wants(git_remote *remote)
 	 * not interested in any particular branch but just the remote's
 	 * HEAD, which will be stored in FETCH_HEAD after the fetch.
 	 */
-	p.tagspec = &tagspec;
-	p.remote = remote;
 	if (remote->active_refspecs.length == 0) {
 		if ((error = git_refspec__parse(&head, "HEAD", true)) < 0)
 			goto cleanup;
@@ -83,12 +76,16 @@ static int filter_wants(git_remote *remote)
 			goto cleanup;
 	}
 
-	git_vector_clear(&remote->refs);
-
-	if (git_repository_odb__weakptr(&p.odb, remote->repo) < 0)
+	if (git_repository_odb__weakptr(&odb, remote->repo) < 0)
 		goto cleanup;
 
-	error = git_remote_ls(remote, filter_ref__cb, &p);
+	if (git_remote_ls((const git_remote_head ***)&heads, &heads_len, remote) < 0)
+		goto cleanup;
+
+	for (i = 0; i < heads_len; i++) {
+		if ((error = maybe_want(remote, heads[i], odb, &tagspec)) < 0)
+			break;
+	}
 
 cleanup:
 	git_refspec__free(&tagspec);

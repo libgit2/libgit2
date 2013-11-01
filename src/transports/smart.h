@@ -140,6 +140,7 @@ typedef struct {
 	git_smart_subtransport_stream *current_stream;
 	transport_smart_caps caps;
 	git_vector refs;
+	git_vector heads;
 	git_vector common;
 	git_atomic cancelled;
 	packetsize_cb packetsize_cb;
