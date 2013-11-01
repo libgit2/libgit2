@@ -632,8 +632,7 @@ static int inject_object(git_indexer_stream *idx, git_oid *id)
 	git_buf buf = GIT_BUF_INIT;
 	git_off_t entry_start;
 	const void *data;
-	size_t len;
-	int hdr_len;
+	size_t len, hdr_len;
 	int error;
 
 	entry = git__calloc(1, sizeof(*entry));
