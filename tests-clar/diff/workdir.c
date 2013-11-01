@@ -196,6 +196,38 @@ void test_diff_workdir__to_tree(void)
 
 	git_diff_free(diff);
 
+	/* Let's try that once more with a reversed diff */
+
+	opts.flags |= GIT_DIFF_REVERSE;
+
+	cl_git_pass(git_diff_tree_to_index(&diff, g_repo, b, NULL, &opts));
+	cl_git_pass(git_diff_index_to_workdir(&diff2, g_repo, NULL, &opts));
+	cl_git_pass(git_diff_merge(diff, diff2));
+	git_diff_free(diff2);
+
+	memset(&exp, 0, sizeof(exp));
+
+	cl_git_pass(git_diff_foreach(
+		diff, diff_file_cb, diff_hunk_cb, diff_line_cb, &exp));
+
+	cl_assert_equal_i(16, exp.files);
+	cl_assert_equal_i(5, exp.file_status[GIT_DELTA_DELETED]);
+	cl_assert_equal_i(4, exp.file_status[GIT_DELTA_ADDED]);
+	cl_assert_equal_i(3, exp.file_status[GIT_DELTA_MODIFIED]);
+	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_IGNORED]);
+	cl_assert_equal_i(3, exp.file_status[GIT_DELTA_UNTRACKED]);
+
+	cl_assert_equal_i(12, exp.hunks);
+
+	cl_assert_equal_i(19, exp.lines);
+	cl_assert_equal_i(3, exp.line_ctxt);
+	cl_assert_equal_i(12, exp.line_dels);
+	cl_assert_equal_i(4, exp.line_adds);
+
+	git_diff_free(diff);
+
+	/* all done now */
+
 	git_tree_free(a);
 	git_tree_free(b);
 }
