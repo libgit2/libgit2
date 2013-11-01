@@ -72,7 +72,10 @@ static int filter_wants(git_remote *remote)
 		if ((error = git_refspec__parse(&head, "HEAD", true)) < 0)
 			goto cleanup;
 
-		if ((error = git_refspec__dwim_one(&remote->active_refspecs, &head, &remote->refs)) < 0)
+		error = git_refspec__dwim_one(&remote->active_refspecs, &head, &remote->refs);
+		git_refspec__free(&head);
+
+		if (error < 0)
 			goto cleanup;
 	}
 

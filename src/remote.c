@@ -726,9 +726,6 @@ int git_remote_download(git_remote *remote)
 
 	assert(remote);
 
-	if (git_vector_init(&refs, 8, remote_head_cmp) < 0)
-		return -1;
-
 	if (git_remote_ls((const git_remote_head ***)&refs.contents, &refs.length, remote) < 0)
 		return -1;
 
@@ -981,9 +978,6 @@ int git_remote_update_tips(git_remote *remote)
 
 
 	if (git_refspec__parse(&tagspec, GIT_REFSPEC_TAGS, true) < 0)
-		return -1;
-
-	if (git_vector_init(&refs, 16, NULL) < 0)
 		return -1;
 
 	if ((error = git_remote_ls((const git_remote_head ***)&refs.contents, &refs.length, remote)) < 0)
