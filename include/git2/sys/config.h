@@ -61,6 +61,7 @@ struct git_config_backend {
 	int (*set)(struct git_config_backend *, const char *key, const char *value);
 	int (*set_multivar)(git_config_backend *cfg, const char *name, const char *regexp, const char *value);
 	int (*del)(struct git_config_backend *, const char *key);
+	int (*del_multivar)(struct git_config_backend *, const char *key, const char *regexp);
 	int (*iterator)(git_config_iterator **, struct git_config_backend *);
 	int (*refresh)(struct git_config_backend *);
 	void (*free)(struct git_config_backend *);
