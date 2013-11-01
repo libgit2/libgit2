@@ -48,7 +48,7 @@ exit:
 }
 
 /**
- * This function gets called for each remote-trackinb branch that gets
+ * This function gets called for each remote-tracking branch that gets
  * updated. The message we output depends on whether it's a new one or
  * an update.
  */
@@ -138,7 +138,7 @@ int fetch(git_repository *repo, int argc, char **argv)
 
 	/**
 	 * If there are local objects (we got a thin pack), then tell
-	 * the use how many objets we saved from having to cross the
+	 * the user how many objects we saved from having to cross the
 	 * network.
 	 */
 	if (stats->local_objects > 0) {

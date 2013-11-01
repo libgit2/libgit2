@@ -31,7 +31,7 @@ static void print_signature(const char *header, const git_signature *sig)
 		   sign, hours, minutes);
 }
 
-/** Printint out a blob is simple, get the contents and print */
+/** Printing out a blob is simple, get the contents and print */
 static void show_blob(const git_blob *blob)
 {
 	/* ? Does this need crlf filtering? */
