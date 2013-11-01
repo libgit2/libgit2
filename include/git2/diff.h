@@ -369,7 +369,7 @@ typedef struct {
 
 #define GIT_DIFF_OPTIONS_VERSION 1
 #define GIT_DIFF_OPTIONS_INIT \
-	{GIT_DIFF_OPTIONS_VERSION, 0, 0, {NULL,0}, NULL, NULL, 3}
+	{GIT_DIFF_OPTIONS_VERSION, 0, (git_submodule_ignore_t)0, {NULL,0}, NULL, NULL, 3}
 
 /**
  * When iterating over a diff, callback that will be made per file.
