@@ -459,7 +459,7 @@ static int foreach_cb(void *buf, size_t len, void *payload)
 	foreach_data *data = (foreach_data*)payload;
 
 	data->stats->received_bytes += len;
-	return data->writepack->add(data->writepack, buf, len, data->stats);
+	return data->writepack->append(data->writepack, buf, len, data->stats);
 }
 
 static int local_download_pack(

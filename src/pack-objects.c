@@ -35,7 +35,7 @@ struct tree_walk_context {
 };
 
 struct pack_write_context {
-	git_indexer_stream *indexer;
+	git_indexer *indexer;
 	git_transfer_progress *stats;
 };
 
@@ -1241,7 +1241,7 @@ int git_packbuilder_write_buf(git_buf *buf, git_packbuilder *pb)
 static int write_cb(void *buf, size_t len, void *payload)
 {
 	struct pack_write_context *ctx = payload;
-	return git_indexer_stream_add(ctx->indexer, buf, len, ctx->stats);
+	return git_indexer_append(ctx->indexer, buf, len, ctx->stats);
 }
 
 int git_packbuilder_write(
@@ -1250,13 +1250,13 @@ int git_packbuilder_write(
 	git_transfer_progress_callback progress_cb,
 	void *progress_cb_payload)
 {
-	git_indexer_stream *indexer;
+	git_indexer *indexer;
 	git_transfer_progress stats;
 	struct pack_write_context ctx;
 
 	PREPARE_PACK;
 
-	if (git_indexer_stream_new(
+	if (git_indexer_new(
 		&indexer, path, pb->odb, progress_cb, progress_cb_payload) < 0)
 		return -1;
 
@@ -1264,12 +1264,12 @@ int git_packbuilder_write(
 	ctx.stats = &stats;
 
 	if (git_packbuilder_foreach(pb, write_cb, &ctx) < 0 ||
-		git_indexer_stream_finalize(indexer, &stats) < 0) {
-		git_indexer_stream_free(indexer);
+		git_indexer_commit(indexer, &stats) < 0) {
+		git_indexer_free(indexer);
 		return -1;
 	}
 
-	git_indexer_stream_free(indexer);
+	git_indexer_free(indexer);
 	return 0;
 }
 

@@ -29,7 +29,7 @@ struct pack_backend {
 
 struct pack_writepack {
 	struct git_odb_writepack parent;
-	git_indexer_stream *indexer_stream;
+	git_indexer *indexer;
 };
 
 /**
@@ -511,13 +511,13 @@ static int pack_backend__foreach(git_odb_backend *_backend, git_odb_foreach_cb c
 	return 0;
 }
 
-static int pack_backend__writepack_add(struct git_odb_writepack *_writepack, const void *data, size_t size, git_transfer_progress *stats)
+static int pack_backend__writepack_append(struct git_odb_writepack *_writepack, const void *data, size_t size, git_transfer_progress *stats)
 {
 	struct pack_writepack *writepack = (struct pack_writepack *)_writepack;
 
 	assert(writepack);
 
-	return git_indexer_stream_add(writepack->indexer_stream, data, size, stats);
+	return git_indexer_append(writepack->indexer, data, size, stats);
 }
 
 static int pack_backend__writepack_commit(struct git_odb_writepack *_writepack, git_transfer_progress *stats)
@@ -526,7 +526,7 @@ static int pack_backend__writepack_commit(struct git_odb_writepack *_writepack, 
 
 	assert(writepack);
 
-	return git_indexer_stream_finalize(writepack->indexer_stream, stats);
+	return git_indexer_commit(writepack->indexer, stats);
 }
 
 static void pack_backend__writepack_free(struct git_odb_writepack *_writepack)
@@ -535,7 +535,7 @@ static void pack_backend__writepack_free(struct git_odb_writepack *_writepack)
 
 	assert(writepack);
 
-	git_indexer_stream_free(writepack->indexer_stream);
+	git_indexer_free(writepack->indexer);
 	git__free(writepack);
 }
 
@@ -557,14 +557,14 @@ static int pack_backend__writepack(struct git_odb_writepack **out,
 	writepack = git__calloc(1, sizeof(struct pack_writepack));
 	GITERR_CHECK_ALLOC(writepack);
 
-	if (git_indexer_stream_new(&writepack->indexer_stream,
+	if (git_indexer_new(&writepack->indexer,
 		backend->pack_folder, odb, progress_cb, progress_payload) < 0) {
 		git__free(writepack);
 		return -1;
 	}
 
 	writepack->parent.backend = _backend;
-	writepack->parent.add = pack_backend__writepack_add;
+	writepack->parent.append = pack_backend__writepack_append;
 	writepack->parent.commit = pack_backend__writepack_commit;
 	writepack->parent.free = pack_backend__writepack_free;
 
