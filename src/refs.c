@@ -737,7 +737,10 @@ int git_reference__normalize_name(
 	int segment_len, segments_count = 0, error = GIT_EINVALIDSPEC;
 	unsigned int process_flags;
 	bool normalize = (buf != NULL);
+
+#ifdef GIT_USE_ICONV
 	git_path_iconv_t ic = GIT_PATH_ICONV_INIT;
+#endif
 
 	assert(name);
 
@@ -750,6 +753,7 @@ int git_reference__normalize_name(
 	if (normalize)
 		git_buf_clear(buf);
 
+#ifdef GIT_USE_ICONV
 	if ((flags & GIT_REF_FORMAT__PRECOMPOSE_UNICODE) != 0) {
 		size_t namelen = strlen(current);
 		if ((error = git_path_iconv_init_precompose(&ic)) < 0 ||
@@ -757,6 +761,7 @@ int git_reference__normalize_name(
 			goto cleanup;
 		error = GIT_EINVALIDSPEC;
 	}
+#endif
 
 	while (true) {
 		segment_len = ensure_segment_validity(current);
@@ -834,7 +839,9 @@ cleanup:
 	if (error && normalize)
 		git_buf_free(buf);
 
+#ifdef GIT_USE_ICONV
 	git_path_iconv_clear(&ic);
+#endif
 
 	return error;
 }

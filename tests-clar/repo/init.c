@@ -232,6 +232,7 @@ void test_repo_init__detect_ignorecase(void)
 
 void test_repo_init__detect_precompose_unicode_required(void)
 {
+#ifdef GIT_USE_ICONV
 	char *composed = "ḱṷṓn", *decomposed = "ḱṷṓn";
 	struct stat st;
 	bool found_with_nfd;
@@ -240,7 +241,6 @@ void test_repo_init__detect_precompose_unicode_required(void)
 	found_with_nfd = (p_stat(decomposed, &st) == 0);
 	cl_must_pass(p_unlink(composed));
 
-#ifdef GIT_USE_ICONV
 	assert_config_entry_on_init("core.precomposeunicode", found_with_nfd);
 #else
 	assert_config_entry_on_init("core.precomposeunicode", GIT_ENOTFOUND);
