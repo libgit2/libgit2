@@ -203,13 +203,13 @@ struct git_transport {
 		int direction,
 		int flags);
 
-	/* This function may be called after a successful call to connect(). The
-	 * provided callback is invoked for each ref discovered on the remote
-	 * end. */
+	/* This function may be called after a successful call to
+	 * connect(). The array returned is owned by the transport and
+	 * is guranteed until the next call of a transport function. */
 	int (*ls)(
-		git_transport *transport,
-		git_headlist_cb list_cb,
-		void *payload);
+		const git_remote_head ***out,
+		size_t *size,
+		git_transport *transport);
 
 	/* Executes the push whose context is in the git_push object. */
 	int (*push)(git_transport *transport, git_push *push);

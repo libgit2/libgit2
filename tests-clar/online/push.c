@@ -155,10 +155,11 @@ static void do_verify_push_status(git_push *push, const push_status expected[], 
  */
 static void verify_refs(git_remote *remote, expected_ref expected_refs[], size_t expected_refs_len)
 {
-	git_vector actual_refs = GIT_VECTOR_INIT;
+	const git_remote_head **actual_refs;
+	size_t actual_refs_len;
 
-	git_remote_ls(remote, record_ref_cb, &actual_refs);
-	verify_remote_refs(&actual_refs, expected_refs, expected_refs_len);
+	git_remote_ls(&actual_refs, &actual_refs_len, remote);
+	verify_remote_refs(actual_refs, actual_refs_len, expected_refs, expected_refs_len);
 
 	git_vector_free(&actual_refs);
 }
