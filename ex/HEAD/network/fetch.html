@@ -3,7 +3,7 @@
 <head>
   <meta http-equiv="content-type" content="text/html;charset=utf-8">
   <title>fetch.c</title>
-  <link rel="stylesheet" href="https://raw.github.com/jashkenas/docco/c640fda9b0b1d09d2b7236f655b3663dc06c63d6/resources/docco.css">
+  <link rel="stylesheet" href="http://jashkenas.github.io/docco/resources/linear/docco.css">
   <style type="text/css">
     a.fnlink {text-decoration: none}
     a.fnlink:hover {text-decoration: underline}
@@ -19,6 +19,7 @@
         <a class="source" href="../../#HEAD">API Docs</a>
           <a class="source" href="../add.html">add.c</a>
           <a class="source" href="../cat-file.html">cat-file.c</a>
+          <a class="source" href="../common.html">common.c</a>
           <a class="source" href="../diff.html">diff.c</a>
           <a class="source" href="../general.html">general.c</a>
           <a class="source" href="../init.html">init.c</a>
@@ -115,9 +116,20 @@ inform the user about progress.</p>
 <span class="nl">exit:</span>
   <span class="n">data</span><span class="o">-&gt;</span><span class="n">finished</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
   <span class="k">return</span> <span class="o">&amp;</span><span class="n">data</span><span class="o">-&gt;</span><span class="n">ret</span><span class="p">;</span>
-<span class="p">}</span>
-
-<span class="k">static</span> <span class="kt">int</span> <span class="nf">update_cb</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">refname</span><span class="p">,</span> <span class="k">const</span> <span class="n">git_oid</span> <span class="o">*</span><span class="n">a</span><span class="p">,</span> <span class="k">const</span> <span class="n">git_oid</span> <span class="o">*</span><span class="n">b</span><span class="p">,</span> <span class="kt">void</span> <span class="o">*</span><span class="n">data</span><span class="p">)</span>
+<span class="p">}</span></pre></div>
+      </td>
+    </tr>
+    <tr id='section-4'>
+      <td class=docs>
+        <div class="pilwrap">
+          <a class="pilcrow" href="#section-4">&#182;</a>
+        </div>
+        <p>This function gets called for each remote-tracking branch that gets
+updated. The message we output depends on whether it&#39;s a new one or
+an update.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><span class="k">static</span> <span class="kt">int</span> <span class="nf">update_cb</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">refname</span><span class="p">,</span> <span class="k">const</span> <span class="n">git_oid</span> <span class="o">*</span><span class="n">a</span><span class="p">,</span> <span class="k">const</span> <span class="n">git_oid</span> <span class="o">*</span><span class="n">b</span><span class="p">,</span> <span class="kt">void</span> <span class="o">*</span><span class="n">data</span><span class="p">)</span>
 <span class="p">{</span>
   <span class="kt">char</span> <span class="n">a_str</span><span class="p">[</span><span class="n">GIT_OID_HEXSZ</span><span class="o">+</span><span class="mi">1</span><span class="p">],</span> <span class="n">b_str</span><span class="p">[</span><span class="n">GIT_OID_HEXSZ</span><span class="o">+</span><span class="mi">1</span><span class="p">];</span>
   <span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="n">data</span><span class="p">;</span>
@@ -134,9 +146,18 @@ inform the user about progress.</p>
   <span class="p">}</span>
 
   <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
-<span class="p">}</span>
-
-<span class="kt">int</span> <span class="nf">fetch</span><span class="p">(</span><span class="n">git_repository</span> <span class="o">*</span><span class="n">repo</span><span class="p">,</span> <span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">**</span><span class="n">argv</span><span class="p">)</span>
+<span class="p">}</span></pre></div>
+      </td>
+    </tr>
+    <tr id='section-5'>
+      <td class=docs>
+        <div class="pilwrap">
+          <a class="pilcrow" href="#section-5">&#182;</a>
+        </div>
+        <p>Entry point for this command</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><span class="kt">int</span> <span class="nf">fetch</span><span class="p">(</span><span class="n">git_repository</span> <span class="o">*</span><span class="n">repo</span><span class="p">,</span> <span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">**</span><span class="n">argv</span><span class="p">)</span>
 <span class="p">{</span>
   <span class="n">git_remote</span> <span class="o">*</span><span class="n">remote</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
   <span class="k">const</span> <span class="n">git_transfer_progress</span> <span class="o">*</span><span class="n">stats</span><span class="p">;</span>
@@ -144,7 +165,7 @@ inform the user about progress.</p>
   <span class="n">git_remote_callbacks</span> <span class="n">callbacks</span> <span class="o">=</span> <span class="n">GIT_REMOTE_CALLBACKS_INIT</span><span class="p">;</span>
   <span class="kt">int</span> <span class="n">resolve_deltas_ln</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
 <span class="cp">#ifndef _WIN32</span>
-  <span class="kt">pthread_t</span> <span class="n">worker</span><span class="p">;</span>
+  <span class="n">pthread_t</span> <span class="n">worker</span><span class="p">;</span>
 <span class="cp">#endif</span>
 
   <span class="k">if</span> <span class="p">(</span><span class="n">argc</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">)</span> <span class="p">{</span>
@@ -153,12 +174,12 @@ inform the user about progress.</p>
   <span class="p">}</span></pre></div>
       </td>
     </tr>
-    <tr id='section-4'>
+    <tr id='section-6'>
       <td class=docs>
         <div class="pilwrap">
-          <a class="pilcrow" href="#section-4">&#182;</a>
+          <a class="pilcrow" href="#section-6">&#182;</a>
         </div>
-        <p>Figure out whether it&rsquo;s a named remote or a URL</p>
+        <p>Figure out whether it&#39;s a named remote or a URL</p>
       </td>
       <td class=code>
         <div class='highlight'><pre>  <span class="n">printf</span><span class="p">(</span><span class="s">&quot;Fetching %s for repo %p</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">repo</span><span class="p">);</span>
@@ -168,10 +189,10 @@ inform the user about progress.</p>
   <span class="p">}</span></pre></div>
       </td>
     </tr>
-    <tr id='section-5'>
+    <tr id='section-7'>
       <td class=docs>
         <div class="pilwrap">
-          <a class="pilcrow" href="#section-5">&#182;</a>
+          <a class="pilcrow" href="#section-7">&#182;</a>
         </div>
         <p>Set up the callbacks (only update_tips for now)</p>
       </td>
@@ -182,10 +203,10 @@ inform the user about progress.</p>
   <span class="n"><a name="git_remote_set_callbacks-12" class="fnlink" href="../../#HEAD/group/remote/git_remote_set_callbacks">git_remote_set_callbacks</a></span><span class="p">(</span><span class="n">remote</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">callbacks</span><span class="p">);</span></pre></div>
       </td>
     </tr>
-    <tr id='section-6'>
+    <tr id='section-8'>
       <td class=docs>
         <div class="pilwrap">
-          <a class="pilcrow" href="#section-6">&#182;</a>
+          <a class="pilcrow" href="#section-8">&#182;</a>
         </div>
         <p>Set up the information for the background worker thread</p>
       </td>
@@ -202,10 +223,10 @@ inform the user about progress.</p>
   <span class="n">pthread_create</span><span class="p">(</span><span class="o">&amp;</span><span class="n">worker</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">,</span> <span class="n">download</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">data</span><span class="p">);</span></pre></div>
       </td>
     </tr>
-    <tr id='section-7'>
+    <tr id='section-9'>
       <td class=docs>
         <div class="pilwrap">
-          <a class="pilcrow" href="#section-7">&#182;</a>
+          <a class="pilcrow" href="#section-9">&#182;</a>
         </div>
         <p>Loop while the worker thread is still running. Here we show processed
 and total objects in the pack and the amount of received
@@ -230,9 +251,20 @@ the download rate.</p>
     <span class="k">goto</span> <span class="n">on_error</span><span class="p">;</span>
 
   <span class="n">pthread_join</span><span class="p">(</span><span class="n">worker</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
-<span class="cp">#endif</span>
-
-  <span class="k">if</span> <span class="p">(</span><span class="n">stats</span><span class="o">-&gt;</span><span class="n">local_objects</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+<span class="cp">#endif</span></pre></div>
+      </td>
+    </tr>
+    <tr id='section-10'>
+      <td class=docs>
+        <div class="pilwrap">
+          <a class="pilcrow" href="#section-10">&#182;</a>
+        </div>
+        <p>If there are local objects (we got a thin pack), then tell
+the user how many objects we saved from having to cross the
+network.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre>  <span class="k">if</span> <span class="p">(</span><span class="n">stats</span><span class="o">-&gt;</span><span class="n">local_objects</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
     <span class="n">printf</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\r</span><span class="s">Received %d/%d objects in %zu bytes (used %d local objects)</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span>
            <span class="n">stats</span><span class="o">-&gt;</span><span class="n">indexed_objects</span><span class="p">,</span> <span class="n">stats</span><span class="o">-&gt;</span><span class="n">total_objects</span><span class="p">,</span> <span class="n">stats</span><span class="o">-&gt;</span><span class="n">received_bytes</span><span class="p">,</span> <span class="n">stats</span><span class="o">-&gt;</span><span class="n">local_objects</span><span class="p">);</span>
   <span class="p">}</span> <span class="k">else</span><span class="p">{</span>
@@ -241,10 +273,10 @@ the download rate.</p>
   <span class="p">}</span></pre></div>
       </td>
     </tr>
-    <tr id='section-8'>
+    <tr id='section-11'>
       <td class=docs>
         <div class="pilwrap">
-          <a class="pilcrow" href="#section-8">&#182;</a>
+          <a class="pilcrow" href="#section-11">&#182;</a>
         </div>
         <p>Disconnect the underlying connection to prevent from idling.</p>
       </td>
@@ -252,12 +284,12 @@ the download rate.</p>
         <div class='highlight'><pre>  <span class="n"><a name="git_remote_disconnect-8" class="fnlink" href="../../#HEAD/group/remote/git_remote_disconnect">git_remote_disconnect</a></span><span class="p">(</span><span class="n">remote</span><span class="p">);</span></pre></div>
       </td>
     </tr>
-    <tr id='section-9'>
+    <tr id='section-12'>
       <td class=docs>
         <div class="pilwrap">
-          <a class="pilcrow" href="#section-9">&#182;</a>
+          <a class="pilcrow" href="#section-12">&#182;</a>
         </div>
-        <p>Update the references in the remote&rsquo;s namespace to point to the
+        <p>Update the references in the remote&#39;s namespace to point to the
 right commits. This may be needed even if there was no packfile
 to download, which can happen e.g. when the branches have been
 changed but all the neede objects are available locally.</p>

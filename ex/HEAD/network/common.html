@@ -3,7 +3,7 @@
 <head>
   <meta http-equiv="content-type" content="text/html;charset=utf-8">
   <title>common.c</title>
-  <link rel="stylesheet" href="https://raw.github.com/jashkenas/docco/c640fda9b0b1d09d2b7236f655b3663dc06c63d6/resources/docco.css">
+  <link rel="stylesheet" href="http://jashkenas.github.io/docco/resources/linear/docco.css">
   <style type="text/css">
     a.fnlink {text-decoration: none}
     a.fnlink:hover {text-decoration: underline}
@@ -19,6 +19,7 @@
         <a class="source" href="../../#HEAD">API Docs</a>
           <a class="source" href="../add.html">add.c</a>
           <a class="source" href="../cat-file.html">cat-file.c</a>
+          <a class="source" href="../common.html">common.c</a>
           <a class="source" href="../diff.html">diff.c</a>
           <a class="source" href="../general.html">general.c</a>
           <a class="source" href="../init.html">init.c</a>
@@ -44,51 +45,6 @@
     </tr>
   </thead>
   <tbody>
-    <tr id='section-1'>
-      <td class=docs>
-        <div class="pilwrap">
-          <a class="pilcrow" href="#section-1">&#182;</a>
-        </div>
-        
-
-      </td>
-      <td class=code>
-        <div class='highlight'><pre><span class="cp">#include &quot;common.h&quot;</span>
-<span class="cp">#include &lt;stdio.h&gt;</span>
-
-<span class="cm">/* Shamelessly borrowed from http://stackoverflow.com/questions/3417837/</span>
-<span class="cm"> * with permission of the original author, Martin Pool.</span>
-<span class="cm"> * http://sourcefrog.net/weblog/software/languages/C/unused.html</span>
-<span class="cm"> */</span>
-<span class="cp">#ifdef UNUSED</span>
-<span class="cp">#elif defined(__GNUC__)</span>
-<span class="cp"># define UNUSED(x) UNUSED_ ## x __attribute__((unused))</span>
-<span class="cp">#elif defined(__LCLINT__)</span>
-<span class="cp"># define UNUSED(x) </span><span class="cm">/*@unused@*/</span><span class="cp"> x</span>
-<span class="cp">#else</span>
-<span class="cp"># define UNUSED(x) x</span>
-<span class="cp">#endif</span>
-
-<span class="kt">int</span> <span class="nf">cred_acquire_cb</span><span class="p">(</span><span class="n">git_cred</span> <span class="o">**</span><span class="n">out</span><span class="p">,</span>
-    <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span> <span class="n">UNUSED</span><span class="p">(</span><span class="n">url</span><span class="p">),</span>
-    <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span> <span class="n">UNUSED</span><span class="p">(</span><span class="n">username_from_url</span><span class="p">),</span>
-    <span class="kt">unsigned</span> <span class="kt">int</span> <span class="n">UNUSED</span><span class="p">(</span><span class="n">allowed_types</span><span class="p">),</span>
-    <span class="kt">void</span> <span class="o">*</span> <span class="n">UNUSED</span><span class="p">(</span><span class="n">payload</span><span class="p">))</span>
-<span class="p">{</span>
-  <span class="kt">char</span> <span class="n">username</span><span class="p">[</span><span class="mi">128</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">};</span>
-  <span class="kt">char</span> <span class="n">password</span><span class="p">[</span><span class="mi">128</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">};</span>
-
-  <span class="n">printf</span><span class="p">(</span><span class="s">&quot;Username: &quot;</span><span class="p">);</span>
-  <span class="n">scanf</span><span class="p">(</span><span class="s">&quot;%s&quot;</span><span class="p">,</span> <span class="n">username</span><span class="p">);</span>
-
-  <span class="cm">/* Yup. Right there on your terminal. Careful where you copy/paste output. */</span>
-  <span class="n">printf</span><span class="p">(</span><span class="s">&quot;Password: &quot;</span><span class="p">);</span>
-  <span class="n">scanf</span><span class="p">(</span><span class="s">&quot;%s&quot;</span><span class="p">,</span> <span class="n">password</span><span class="p">);</span>
-
-  <span class="k">return</span> <span class="n"><a name="git_cred_userpass_plaintext_new-1" class="fnlink" href="../../#HEAD/group/cred/git_cred_userpass_plaintext_new">git_cred_userpass_plaintext_new</a></span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="n">username</span><span class="p">,</span> <span class="n">password</span><span class="p">);</span>
-<span class="p">}</span></pre></div>
-      </td>
-    </tr>
   </table>
 </div>
 </body>

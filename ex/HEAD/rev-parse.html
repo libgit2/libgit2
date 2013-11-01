@@ -3,7 +3,7 @@
 <head>
   <meta http-equiv="content-type" content="text/html;charset=utf-8">
   <title>rev-parse.c</title>
-  <link rel="stylesheet" href="https://raw.github.com/jashkenas/docco/c640fda9b0b1d09d2b7236f655b3663dc06c63d6/resources/docco.css">
+  <link rel="stylesheet" href="http://jashkenas.github.io/docco/resources/linear/docco.css">
   <style type="text/css">
     a.fnlink {text-decoration: none}
     a.fnlink:hover {text-decoration: underline}
@@ -19,6 +19,7 @@
         <a class="source" href="../../#HEAD">API Docs</a>
           <a class="source" href="add.html">add.c</a>
           <a class="source" href="cat-file.html">cat-file.c</a>
+          <a class="source" href="common.html">common.c</a>
           <a class="source" href="diff.html">diff.c</a>
           <a class="source" href="general.html">general.c</a>
           <a class="source" href="init.html">init.c</a>
@@ -50,23 +51,50 @@
           <a class="pilcrow" href="#section-1">&#182;</a>
         </div>
         
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><span class="cm">/*</span>
+<span class="cm"> * Copyright (C) the libgit2 contributors. All rights reserved.</span>
+<span class="cm"> *</span>
+<span class="cm"> * This file is part of libgit2, distributed under the GNU GPL v2 with</span>
+<span class="cm"> * a Linking Exception. For full terms see the included COPYING file.</span>
+<span class="cm"> */</span>
+
+<span class="cp">#include &quot;common.h&quot;</span></pre></div>
+      </td>
+    </tr>
+    <tr id='section-2'>
+      <td class=docs>
+        <div class="pilwrap">
+          <a class="pilcrow" href="#section-2">&#182;</a>
+        </div>
+        <p>Forward declarations for helpers.</p>
 
       </td>
       <td class=code>
-        <div class='highlight'><pre><span class="cp">#include &lt;stdio.h&gt;</span>
-<span class="cp">#include &lt;git2.h&gt;</span>
-<span class="cp">#include &lt;stdlib.h&gt;</span>
-<span class="cp">#include &lt;string.h&gt;</span>
+        <div class='highlight'><pre><span class="k">struct</span> <span class="n">parse_state</span> <span class="p">{</span>
+  <span class="n">git_repository</span> <span class="o">*</span><span class="n">repo</span><span class="p">;</span>
+  <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">repodir</span><span class="p">;</span>
+  <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">spec</span><span class="p">;</span>
+  <span class="kt">int</span> <span class="n">not</span><span class="p">;</span>
+<span class="p">};</span>
+<span class="k">static</span> <span class="kt">void</span> <span class="n">parse_opts</span><span class="p">(</span><span class="k">struct</span> <span class="n">parse_state</span> <span class="o">*</span><span class="n">ps</span><span class="p">,</span> <span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">*</span><span class="n">argv</span><span class="p">[]);</span>
+<span class="k">static</span> <span class="kt">int</span> <span class="n">parse_revision</span><span class="p">(</span><span class="k">struct</span> <span class="n">parse_state</span> <span class="o">*</span><span class="n">ps</span><span class="p">);</span>
 
-<span class="k">static</span> <span class="kt">void</span> <span class="nf">check</span><span class="p">(</span><span class="kt">int</span> <span class="n">error</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">message</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">arg</span><span class="p">)</span>
+
+<span class="kt">int</span> <span class="nf">main</span><span class="p">(</span><span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">*</span><span class="n">argv</span><span class="p">[])</span>
 <span class="p">{</span>
-  <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">error</span><span class="p">)</span>
-    <span class="k">return</span><span class="p">;</span>
-  <span class="k">if</span> <span class="p">(</span><span class="n">arg</span><span class="p">)</span>
-    <span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span> <span class="s">&quot;%s %s (%d)</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">message</span><span class="p">,</span> <span class="n">arg</span><span class="p">,</span> <span class="n">error</span><span class="p">);</span>
-  <span class="k">else</span>
-    <span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span> <span class="s">&quot;%s(%d)</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">message</span><span class="p">,</span> <span class="n">error</span><span class="p">);</span>
-  <span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">);</span>
+  <span class="k">struct</span> <span class="n">parse_state</span> <span class="n">ps</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">};</span>
+
+  <span class="n"><a name="git_threads_init-18" class="fnlink" href="../../#HEAD/group/threads/git_threads_init">git_threads_init</a></span><span class="p">();</span>
+  <span class="n">parse_opts</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ps</span><span class="p">,</span> <span class="n">argc</span><span class="p">,</span> <span class="n">argv</span><span class="p">);</span>
+
+  <span class="n">check_lg2</span><span class="p">(</span><span class="n">parse_revision</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ps</span><span class="p">),</span> <span class="s">&quot;Parsing&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+
+  <span class="n"><a name="git_repository_free-15" class="fnlink" href="../../#HEAD/group/repository/git_repository_free">git_repository_free</a></span><span class="p">(</span><span class="n">ps</span><span class="p">.</span><span class="n">repo</span><span class="p">);</span>
+  <span class="n"><a name="git_threads_shutdown-19" class="fnlink" href="../../#HEAD/group/threads/git_threads_shutdown">git_threads_shutdown</a></span><span class="p">();</span>
+
+  <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
 <span class="p">}</span>
 
 <span class="k">static</span> <span class="kt">void</span> <span class="nf">usage</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">message</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">arg</span><span class="p">)</span>
@@ -79,13 +107,25 @@
   <span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">);</span>
 <span class="p">}</span>
 
-<span class="k">struct</span> <span class="n">parse_state</span> <span class="p">{</span>
-  <span class="n">git_repository</span> <span class="o">*</span><span class="n">repo</span><span class="p">;</span>
-  <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">repodir</span><span class="p">;</span>
-  <span class="kt">int</span> <span class="n">not</span><span class="p">;</span>
-<span class="p">};</span>
+<span class="k">static</span> <span class="kt">void</span> <span class="nf">parse_opts</span><span class="p">(</span><span class="k">struct</span> <span class="n">parse_state</span> <span class="o">*</span><span class="n">ps</span><span class="p">,</span> <span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">*</span><span class="n">argv</span><span class="p">[])</span>
+<span class="p">{</span>
+  <span class="k">struct</span> <span class="n">args_info</span> <span class="n">args</span> <span class="o">=</span> <span class="n">ARGS_INFO_INIT</span><span class="p">;</span>
 
-<span class="k">static</span> <span class="kt">int</span> <span class="nf">parse_revision</span><span class="p">(</span><span class="k">struct</span> <span class="n">parse_state</span> <span class="o">*</span><span class="n">ps</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">revstr</span><span class="p">)</span>
+  <span class="k">for</span> <span class="p">(</span><span class="n">args</span><span class="p">.</span><span class="n">pos</span><span class="o">=</span><span class="mi">1</span><span class="p">;</span> <span class="n">args</span><span class="p">.</span><span class="n">pos</span> <span class="o">&lt;</span> <span class="n">argc</span><span class="p">;</span> <span class="o">++</span><span class="n">args</span><span class="p">.</span><span class="n">pos</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">a</span> <span class="o">=</span> <span class="n">argv</span><span class="p">[</span><span class="n">args</span><span class="p">.</span><span class="n">pos</span><span class="p">];</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="n">a</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="sc">&#39;-&#39;</span><span class="p">)</span> <span class="p">{</span>
+      <span class="k">if</span> <span class="p">(</span><span class="n">ps</span><span class="o">-&gt;</span><span class="n">spec</span><span class="p">)</span>
+        <span class="n">usage</span><span class="p">(</span><span class="s">&quot;Too many specs&quot;</span><span class="p">,</span> <span class="n">a</span><span class="p">);</span>
+      <span class="n">ps</span><span class="o">-&gt;</span><span class="n">spec</span> <span class="o">=</span> <span class="n">a</span><span class="p">;</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">strcmp</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="s">&quot;--not&quot;</span><span class="p">))</span>
+      <span class="n">ps</span><span class="o">-&gt;</span><span class="n">not</span> <span class="o">=</span> <span class="o">!</span><span class="n">ps</span><span class="o">-&gt;</span><span class="n">not</span><span class="p">;</span>
+    <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">match_str_arg</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ps</span><span class="o">-&gt;</span><span class="n">repodir</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">args</span><span class="p">,</span> <span class="s">&quot;--git-dir&quot;</span><span class="p">))</span>
+      <span class="n">usage</span><span class="p">(</span><span class="s">&quot;Cannot handle argument&quot;</span><span class="p">,</span> <span class="n">a</span><span class="p">);</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="k">static</span> <span class="kt">int</span> <span class="nf">parse_revision</span><span class="p">(</span><span class="k">struct</span> <span class="n">parse_state</span> <span class="o">*</span><span class="n">ps</span><span class="p">)</span>
 <span class="p">{</span>
   <span class="n">git_revspec</span> <span class="n">rs</span><span class="p">;</span>
   <span class="kt">char</span> <span class="n">str</span><span class="p">[</span><span class="n">GIT_OID_HEXSZ</span> <span class="o">+</span> <span class="mi">1</span><span class="p">];</span>
@@ -93,11 +133,11 @@
   <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">ps</span><span class="o">-&gt;</span><span class="n">repo</span><span class="p">)</span> <span class="p">{</span>
     <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">ps</span><span class="o">-&gt;</span><span class="n">repodir</span><span class="p">)</span>
       <span class="n">ps</span><span class="o">-&gt;</span><span class="n">repodir</span> <span class="o">=</span> <span class="s">&quot;.&quot;</span><span class="p">;</span>
-    <span class="n">check</span><span class="p">(</span><span class="n"><a name="git_repository_open_ext-14" class="fnlink" href="../../#HEAD/group/repository/git_repository_open_ext">git_repository_open_ext</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">ps</span><span class="o">-&gt;</span><span class="n">repo</span><span class="p">,</span> <span class="n">ps</span><span class="o">-&gt;</span><span class="n">repodir</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">),</span>
+    <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_repository_open_ext-14" class="fnlink" href="../../#HEAD/group/repository/git_repository_open_ext">git_repository_open_ext</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">ps</span><span class="o">-&gt;</span><span class="n">repo</span><span class="p">,</span> <span class="n">ps</span><span class="o">-&gt;</span><span class="n">repodir</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">),</span>
       <span class="s">&quot;Could not open repository from&quot;</span><span class="p">,</span> <span class="n">ps</span><span class="o">-&gt;</span><span class="n">repodir</span><span class="p">);</span>
   <span class="p">}</span>
 
-  <span class="n">check</span><span class="p">(</span><span class="n"><a name="git_revparse-16" class="fnlink" href="../../#HEAD/group/revparse/git_revparse">git_revparse</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">rs</span><span class="p">,</span> <span class="n">ps</span><span class="o">-&gt;</span><span class="n">repo</span><span class="p">,</span> <span class="n">revstr</span><span class="p">),</span> <span class="s">&quot;Could not parse&quot;</span><span class="p">,</span> <span class="n">revstr</span><span class="p">);</span>
+  <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_revparse-16" class="fnlink" href="../../#HEAD/group/revparse/git_revparse">git_revparse</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">rs</span><span class="p">,</span> <span class="n">ps</span><span class="o">-&gt;</span><span class="n">repo</span><span class="p">,</span> <span class="n">ps</span><span class="o">-&gt;</span><span class="n">spec</span><span class="p">),</span> <span class="s">&quot;Could not parse&quot;</span><span class="p">,</span> <span class="n">ps</span><span class="o">-&gt;</span><span class="n">spec</span><span class="p">);</span>
 
   <span class="k">if</span> <span class="p">((</span><span class="n">rs</span><span class="p">.</span><span class="n">flags</span> <span class="o">&amp;</span> <span class="n">GIT_REVPARSE_SINGLE</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
     <span class="n"><a name="git_oid_tostr-10" class="fnlink" href="../../#HEAD/group/oid/git_oid_tostr">git_oid_tostr</a></span><span class="p">(</span><span class="n">str</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">str</span><span class="p">),</span> <span class="n"><a name="git_object_id-2" class="fnlink" href="../../#HEAD/group/object/git_object_id">git_object_id</a></span><span class="p">(</span><span class="n">rs</span><span class="p">.</span><span class="n">from</span><span class="p">));</span>
@@ -111,9 +151,9 @@
 
     <span class="k">if</span> <span class="p">((</span><span class="n">rs</span><span class="p">.</span><span class="n">flags</span> <span class="o">&amp;</span> <span class="n">GIT_REVPARSE_MERGE_BASE</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
       <span class="n">git_oid</span> <span class="n">base</span><span class="p">;</span>
-      <span class="n">check</span><span class="p">(</span><span class="n"><a name="git_merge_base-1" class="fnlink" href="../../#HEAD/group/merge/git_merge_base">git_merge_base</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">base</span><span class="p">,</span> <span class="n">ps</span><span class="o">-&gt;</span><span class="n">repo</span><span class="p">,</span>
-        <span class="n"><a name="git_object_id-4" class="fnlink" href="../../#HEAD/group/object/git_object_id">git_object_id</a></span><span class="p">(</span><span class="n">rs</span><span class="p">.</span><span class="n">from</span><span class="p">),</span> <span class="n"><a name="git_object_id-5" class="fnlink" href="../../#HEAD/group/object/git_object_id">git_object_id</a></span><span class="p">(</span><span class="n">rs</span><span class="p">.</span><span class="n">to</span><span class="p">)),</span>
-        <span class="s">&quot;Could not find merge base&quot;</span><span class="p">,</span> <span class="n">revstr</span><span class="p">);</span>
+      <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_merge_base-1" class="fnlink" href="../../#HEAD/group/merge/git_merge_base">git_merge_base</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">base</span><span class="p">,</span> <span class="n">ps</span><span class="o">-&gt;</span><span class="n">repo</span><span class="p">,</span>
+            <span class="n"><a name="git_object_id-4" class="fnlink" href="../../#HEAD/group/object/git_object_id">git_object_id</a></span><span class="p">(</span><span class="n">rs</span><span class="p">.</span><span class="n">from</span><span class="p">),</span> <span class="n"><a name="git_object_id-5" class="fnlink" href="../../#HEAD/group/object/git_object_id">git_object_id</a></span><span class="p">(</span><span class="n">rs</span><span class="p">.</span><span class="n">to</span><span class="p">)),</span>
+          <span class="s">&quot;Could not find merge base&quot;</span><span class="p">,</span> <span class="n">ps</span><span class="o">-&gt;</span><span class="n">spec</span><span class="p">);</span>
 
       <span class="n"><a name="git_oid_tostr-12" class="fnlink" href="../../#HEAD/group/oid/git_oid_tostr">git_oid_tostr</a></span><span class="p">(</span><span class="n">str</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">str</span><span class="p">),</span> <span class="o">&amp;</span><span class="n">base</span><span class="p">);</span>
       <span class="n">printf</span><span class="p">(</span><span class="s">&quot;%s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">str</span><span class="p">);</span>
@@ -124,38 +164,8 @@
     <span class="n"><a name="git_object_free-9" class="fnlink" href="../../#HEAD/group/object/git_object_free">git_object_free</a></span><span class="p">(</span><span class="n">rs</span><span class="p">.</span><span class="n">from</span><span class="p">);</span>
   <span class="p">}</span>
   <span class="k">else</span> <span class="p">{</span>
-    <span class="n">check</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="s">&quot;Invalid results from <a name="git_revparse-17" class="fnlink" href="../../#HEAD/group/revparse/git_revparse">git_revparse</a>&quot;</span><span class="p">,</span> <span class="n">revstr</span><span class="p">);</span>
+    <span class="n">fatal</span><span class="p">(</span><span class="s">&quot;Invalid results from <a name="git_revparse-17" class="fnlink" href="../../#HEAD/group/revparse/git_revparse">git_revparse</a>&quot;</span><span class="p">,</span> <span class="n">ps</span><span class="o">-&gt;</span><span class="n">spec</span><span class="p">);</span>
   <span class="p">}</span>
-
-  <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
-<span class="p">}</span>
-
-<span class="kt">int</span> <span class="nf">main</span><span class="p">(</span><span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">*</span><span class="n">argv</span><span class="p">[])</span>
-<span class="p">{</span>
-  <span class="kt">int</span> <span class="n">i</span><span class="p">;</span>
-  <span class="kt">char</span> <span class="o">*</span><span class="n">a</span><span class="p">;</span>
-  <span class="k">struct</span> <span class="n">parse_state</span> <span class="n">ps</span><span class="p">;</span>
-
-  <span class="n"><a name="git_threads_init-18" class="fnlink" href="../../#HEAD/group/threads/git_threads_init">git_threads_init</a></span><span class="p">();</span>
-
-  <span class="n">memset</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ps</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">ps</span><span class="p">));</span>
-
-  <span class="k">for</span> <span class="p">(</span><span class="n">i</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">argc</span><span class="p">;</span> <span class="o">++</span><span class="n">i</span><span class="p">)</span> <span class="p">{</span>
-    <span class="n">a</span> <span class="o">=</span> <span class="n">argv</span><span class="p">[</span><span class="n">i</span><span class="p">];</span>
-
-    <span class="k">if</span> <span class="p">(</span><span class="n">a</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="sc">&#39;-&#39;</span><span class="p">)</span> <span class="p">{</span>
-      <span class="k">if</span> <span class="p">(</span><span class="n">parse_revision</span><span class="p">(</span><span class="o">&amp;</span><span class="n">ps</span><span class="p">,</span> <span class="n">a</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">)</span>
-        <span class="k">break</span><span class="p">;</span>
-    <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">strcmp</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="s">&quot;--not&quot;</span><span class="p">))</span>
-      <span class="n">ps</span><span class="p">.</span><span class="n">not</span> <span class="o">=</span> <span class="o">!</span><span class="n">ps</span><span class="p">.</span><span class="n">not</span><span class="p">;</span>
-    <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">strncmp</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="s">&quot;--git-dir=&quot;</span><span class="p">,</span> <span class="n">strlen</span><span class="p">(</span><span class="s">&quot;--git-dir=&quot;</span><span class="p">)))</span>
-      <span class="n">ps</span><span class="p">.</span><span class="n">repodir</span> <span class="o">=</span> <span class="n">a</span> <span class="o">+</span> <span class="n">strlen</span><span class="p">(</span><span class="s">&quot;--git-dir=&quot;</span><span class="p">);</span>
-    <span class="k">else</span>
-      <span class="n">usage</span><span class="p">(</span><span class="s">&quot;Cannot handle argument&quot;</span><span class="p">,</span> <span class="n">a</span><span class="p">);</span>
-  <span class="p">}</span>
-
-  <span class="n"><a name="git_repository_free-15" class="fnlink" href="../../#HEAD/group/repository/git_repository_free">git_repository_free</a></span><span class="p">(</span><span class="n">ps</span><span class="p">.</span><span class="n">repo</span><span class="p">);</span>
-  <span class="n"><a name="git_threads_shutdown-19" class="fnlink" href="../../#HEAD/group/threads/git_threads_shutdown">git_threads_shutdown</a></span><span class="p">();</span>
 
   <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
 <span class="p">}</span></pre></div>
