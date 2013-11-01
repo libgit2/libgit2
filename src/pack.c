@@ -372,7 +372,7 @@ static unsigned char *pack_window_open(
  *  - each byte afterwards: low seven bits are size continuation,
  *    with the high bit being "size continues"
  */
-int git_packfile__object_header(unsigned char *hdr, unsigned long size, git_otype type)
+size_t git_packfile__object_header(unsigned char *hdr, size_t size, git_otype type)
 {
 	unsigned char *hdr_base;
 	unsigned char c;
@@ -392,7 +392,7 @@ int git_packfile__object_header(unsigned char *hdr, unsigned long size, git_otyp
 	}
 	*hdr++ = c;
 
-	return (int)(hdr - hdr_base);
+	return (hdr - hdr_base);
 }
 
 

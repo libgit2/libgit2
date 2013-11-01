@@ -425,16 +425,6 @@ extern void git_path_iconv_clear(git_path_iconv_t *ic);
  */
 extern int git_path_iconv(git_path_iconv_t *ic, char **in, size_t *inlen);
 
-#else
-
-typedef struct {
-	int unused;
-} git_path_iconv_t;
-#define GIT_PATH_ICONV_INIT { 0 }
-#define git_path_iconv_init_precompose(X) 0
-#define git_path_iconv_clear(X) (void)(X)
-#define git_path_iconv(X,Y,Z) 0
-
 #endif /* GIT_USE_ICONV */
 
 #endif

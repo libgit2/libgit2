@@ -660,7 +660,7 @@ static int inject_object(git_indexer *idx, git_oid *id)
 	/* And then the compressed object */
 	git_filebuf_write(&idx->pack_file, buf.ptr, buf.size);
 	idx->pack->mwf.size += buf.size;
-	entry->crc = htonl(crc32(entry->crc, (unsigned char *)buf.ptr, buf.size));
+	entry->crc = htonl(crc32(entry->crc, (unsigned char *)buf.ptr, (uInt)buf.size));
 	git_buf_free(&buf);
 
 	/* Write a fake trailer so the pack functions play ball */

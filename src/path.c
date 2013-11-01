@@ -834,7 +834,12 @@ int git_path_direach(
 	DIR *dir;
 	path_dirent_data de_data;
 	struct dirent *de, *de_buf = (struct dirent *)&de_data;
+
+	(void)flags;
+
+#ifdef GIT_USE_ICONV
 	git_path_iconv_t ic = GIT_PATH_ICONV_INIT;
+#endif
 
 	if (git_path_to_dir(path) < 0)
 		return -1;
@@ -846,8 +851,10 @@ int git_path_direach(
 		return -1;
 	}
 
+#ifdef GIT_USE_ICONV
 	if ((flags & GIT_PATH_DIR_PRECOMPOSE_UNICODE) != 0)
 		(void)git_path_iconv_init_precompose(&ic);
+#endif
 
 	while (p_readdir_r(dir, de_buf, &de) == 0 && de != NULL) {
 		char *de_path = de->d_name;
@@ -856,8 +863,12 @@ int git_path_direach(
 		if (git_path_is_dot_or_dotdot(de_path))
 			continue;
 
-		if ((error = git_path_iconv(&ic, &de_path, &de_len)) < 0 ||
-			(error = git_buf_put(path, de_path, de_len)) < 0)
+#ifdef GIT_USE_ICONV
+		if ((error = git_path_iconv(&ic, &de_path, &de_len)) < 0)
+			break;
+#endif
+				
+		if ((error = git_buf_put(path, de_path, de_len)) < 0)
 			break;
 
 		error = fn(arg, path);
@@ -871,7 +882,10 @@ int git_path_direach(
 	}
 
 	closedir(dir);
+
+#ifdef GIT_USE_ICONV
 	git_path_iconv_clear(&ic);
+#endif
 
 	return error;
 }
@@ -888,7 +902,12 @@ int git_path_dirload(
 	size_t path_len;
 	path_dirent_data de_data;
 	struct dirent *de, *de_buf = (struct dirent *)&de_data;
+
+	(void)flags;
+
+#ifdef GIT_USE_ICONV
 	git_path_iconv_t ic = GIT_PATH_ICONV_INIT;
+#endif
 
 	assert(path && contents);
 
@@ -903,8 +922,10 @@ int git_path_dirload(
 		return -1;
 	}
 
+#ifdef GIT_USE_ICONV
 	if ((flags & GIT_PATH_DIR_PRECOMPOSE_UNICODE) != 0)
 		(void)git_path_iconv_init_precompose(&ic);
+#endif
 
 	path += prefix_len;
 	path_len -= prefix_len;
@@ -917,8 +938,10 @@ int git_path_dirload(
 		if (git_path_is_dot_or_dotdot(de_path))
 			continue;
 
+#ifdef GIT_USE_ICONV
 		if ((error = git_path_iconv(&ic, &de_path, &de_len)) < 0)
 			break;
+#endif
 
 		alloc_size = path_len + need_slash + de_len + 1 + alloc_extra;
 		if ((entry_path = git__calloc(alloc_size, 1)) == NULL) {
@@ -937,7 +960,10 @@ int git_path_dirload(
 	}
 
 	closedir(dir);
+
+#ifdef GIT_USE_ICONV
 	git_path_iconv_clear(&ic);
+#endif
 
 	if (error != 0)
 		giterr_set(GITERR_OS, "Failed to process directory entry in '%s'", path);

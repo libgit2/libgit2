@@ -1694,7 +1694,6 @@ done:
 
 static int checkout_create_conflicts(checkout_data *data)
 {
-	git_vector conflicts = GIT_VECTOR_INIT;
 	checkout_conflictdata *conflict;
 	size_t i;
 	int error = 0;
