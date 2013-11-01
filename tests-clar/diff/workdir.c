@@ -63,6 +63,60 @@ void test_diff_workdir__to_index(void)
 	git_diff_free(diff);
 }
 
+void test_diff_workdir__to_index_with_assume_unchanged(void)
+{
+	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
+	git_diff *diff = NULL;
+	git_index *idx = NULL;
+	diff_expects exp;
+	const git_index_entry *iep;
+	git_index_entry ie;
+
+	g_repo = cl_git_sandbox_init("status");
+
+	/* do initial diff */
+
+	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, NULL, &opts));
+	memset(&exp, 0, sizeof(exp));
+	cl_git_pass(git_diff_foreach(
+		diff, diff_file_cb, diff_hunk_cb, diff_line_cb, &exp));
+	cl_assert_equal_i(8, exp.files);
+	cl_assert_equal_i(0, exp.file_status[GIT_DELTA_ADDED]);
+	cl_assert_equal_i(4, exp.file_status[GIT_DELTA_DELETED]);
+	cl_assert_equal_i(4, exp.file_status[GIT_DELTA_MODIFIED]);
+	git_diff_free(diff);
+
+	/* mark a couple of entries with ASSUME_UNCHANGED */
+
+	cl_git_pass(git_repository_index(&idx, g_repo));
+
+	cl_assert((iep = git_index_get_bypath(idx, "modified_file", 0)) != NULL);
+	memcpy(&ie, iep, sizeof(ie));
+	ie.flags |= GIT_IDXENTRY_VALID;
+	cl_git_pass(git_index_add(idx, &ie));
+
+	cl_assert((iep = git_index_get_bypath(idx, "file_deleted", 0)) != NULL);
+	memcpy(&ie, iep, sizeof(ie));
+	ie.flags |= GIT_IDXENTRY_VALID;
+	cl_git_pass(git_index_add(idx, &ie));
+
+	cl_git_pass(git_index_write(idx));
+	git_index_free(idx);
+
+	/* redo diff and see that entries are skipped */
+
+	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, NULL, &opts));
+	memset(&exp, 0, sizeof(exp));
+	cl_git_pass(git_diff_foreach(
+		diff, diff_file_cb, diff_hunk_cb, diff_line_cb, &exp));
+	cl_assert_equal_i(6, exp.files);
+	cl_assert_equal_i(0, exp.file_status[GIT_DELTA_ADDED]);
+	cl_assert_equal_i(3, exp.file_status[GIT_DELTA_DELETED]);
+	cl_assert_equal_i(3, exp.file_status[GIT_DELTA_MODIFIED]);
+	git_diff_free(diff);
+
+}
+
 void test_diff_workdir__to_tree(void)
 {
 	/* grabbed a couple of commit oids from the history of the attr repo */

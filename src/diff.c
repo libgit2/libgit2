@@ -63,12 +63,15 @@ static int diff_notify(
 
 static int diff_delta__from_one(
 	git_diff *diff,
-	git_delta_t   status,
+	git_delta_t status,
 	const git_index_entry *entry)
 {
 	git_diff_delta *delta;
 	const char *matched_pathspec;
 	int notify_res;
+
+	if ((entry->flags & GIT_IDXENTRY_VALID) != 0)
+		return 0;
 
 	if (status == GIT_DELTA_IGNORED &&
 		DIFF_FLAG_ISNT_SET(diff, GIT_DIFF_INCLUDE_IGNORED))
@@ -426,7 +429,7 @@ static int diff_list_apply_options(
 		diff->diffcaps = diff->diffcaps | GIT_DIFFCAPS_HAS_SYMLINKS;
 
 	if (!git_repository__cvar(&val, repo, GIT_CVAR_IGNORESTAT) && val)
-		diff->diffcaps = diff->diffcaps | GIT_DIFFCAPS_ASSUME_UNCHANGED;
+		diff->diffcaps = diff->diffcaps | GIT_DIFFCAPS_IGNORE_STAT;
 
 	if ((diff->opts.flags & GIT_DIFF_IGNORE_FILEMODE) == 0 &&
 		!git_repository__cvar(&val, repo, GIT_CVAR_FILEMODE) && val)
@@ -701,9 +704,8 @@ static int maybe_modified(
 		nmode = (nmode & ~MODE_BITS_MASK) | (omode & MODE_BITS_MASK);
 
 	/* support "assume unchanged" (poorly, b/c we still stat everything) */
-	if ((diff->diffcaps & GIT_DIFFCAPS_ASSUME_UNCHANGED) != 0)
-		status = (oitem->flags_extended & GIT_IDXENTRY_INTENT_TO_ADD) ?
-			GIT_DELTA_MODIFIED : GIT_DELTA_UNMODIFIED;
+	if ((oitem->flags & GIT_IDXENTRY_VALID) != 0)
+		status = GIT_DELTA_UNMODIFIED;
 
 	/* support "skip worktree" index bit */
 	else if ((oitem->flags_extended & GIT_IDXENTRY_SKIP_WORKTREE) != 0)
