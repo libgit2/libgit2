@@ -92,7 +92,7 @@ static int check_uint16_param(const char *arg, const char *pattern, uint16_t *va
 		return 1;
 	if (arg[len] == '=')
 		len++;
-	strval = strtoul(arg + len, &endptr, 0);
+	strval = (uint16_t)strtoul(arg + len, &endptr, 0);
 	if (endptr == arg)
 		return 0;
 	*val = strval;

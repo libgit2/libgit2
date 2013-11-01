@@ -23,7 +23,7 @@ static void print_progress(const progress_data *pd)
 	int checkout_percent = pd->total_steps > 0
 		? (100 * pd->completed_steps) / pd->total_steps
 		: 0.f;
-	int kbytes = pd->fetch_progress.received_bytes / 1024;
+	int kbytes = (int)(pd->fetch_progress.received_bytes / 1024);
 
 	if (pd->fetch_progress.received_objects == pd->fetch_progress.total_objects) {
 		printf("Resolving deltas %d/%d\r",
