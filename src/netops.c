@@ -668,47 +668,47 @@ int gitno_extract_url_parts(
 		const char *url,
 		const char *default_port)
 {
-	char *colon, *slash, *at, *end;
-	const char *start;
+	char *colon, *slash, *at;
 
 	/*
 	 * ==> [user[:pass]@]hostname.tld[:port]/resource
 	 */
 
-	colon = strchr(url, ':');
-	slash = strchr(url, '/');
+	/* Check for user and maybe password */
 	at = strchr(url, '@');
+	if (at) {
+		colon = strchr(url, ':');
+		if (colon && colon < at) {
+			/* user:pass */
+			*username = git__substrdup(url, colon-url);
+			*password = git__substrdup(colon+1, at-colon-1);
+			GITERR_CHECK_ALLOC(*password);
+		} else {
+			*username = git__substrdup(url, at-url);
+		}
+		GITERR_CHECK_ALLOC(*username);
+		url = at + 1;
+	}
 
+	/* Validate URL format. Colons shouldn't be in the path part. */
+	slash = strchr(url, '/');
+	colon = strchr(url, ':');
 	if (!slash ||
 	    (colon && (slash < colon))) {
 		giterr_set(GITERR_NET, "Malformed URL");
 		return GIT_EINVALIDSPEC;
 	}
 
-	start = url;
-	if (at && at < slash) {
-		start = at+1;
-		*username = git__substrdup(url, at - url);
-	}
-
-	if (colon && colon < at) {
-		git__free(*username);
-		*username = git__substrdup(url, colon-url);
-		*password = git__substrdup(colon+1, at-colon-1);
-		colon = strchr(at, ':');
-	}
-
-	if (colon == NULL) {
-		*port = git__strdup(default_port);
+	/* Check for hostname and maybe port */
+	if (colon) {
+		*host = git__substrdup(url, colon-url);
+		*port = git__substrdup(colon+1, slash-colon-1);
 	} else {
-		*port = git__substrdup(colon + 1, slash - colon - 1);
+		*host = git__substrdup(url, slash-url);
+		*port = git__strdup(default_port);
 	}
-	GITERR_CHECK_ALLOC(*port);
-
-	end = colon == NULL ? slash : colon;
-
-	*host = git__substrdup(start, end - start);
 	GITERR_CHECK_ALLOC(*host);
+	GITERR_CHECK_ALLOC(*port);
 
 	return 0;
 }

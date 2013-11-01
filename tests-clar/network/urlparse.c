@@ -38,6 +38,16 @@ void test_network_urlparse__bad_url(void)
 			GIT_EINVALIDSPEC);
 }
 
+void test_network_urlparse__weird_url(void)
+{
+	cl_git_pass(gitno_extract_url_parts(&host, &port, &user, &pass,
+				"arrbee:my/bad:password@github.com:1111/strange/words.git", "1"));
+	cl_assert_equal_s(host, "github.com");
+	cl_assert_equal_s(port, "1111");
+	cl_assert_equal_s(user, "arrbee");
+	cl_assert_equal_s(pass, "my/bad:password");
+}
+
 void test_network_urlparse__user(void)
 {
 	cl_git_pass(gitno_extract_url_parts(&host, &port, &user, &pass,
