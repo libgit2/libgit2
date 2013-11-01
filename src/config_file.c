@@ -125,7 +125,7 @@ static int cvar_length(cvar_t *var)
 	int length = 0;
 
 	while (var) {
-		length += 1;
+		length++;
 		var = var->next;
 	}
 
@@ -579,16 +579,16 @@ static int config_delete_multivar(git_config_backend *cfg, const char *name, con
 	GITERR_CHECK_ALLOC(to_delete);
 	to_delete_idx = 0;
 
-	for (;;) {
-		cvar_t *var_next = var->next;
+	while (var != NULL) {
+		cvar_t *next = var->next;
 
 		if (regexec(&preg, var->entry->value, 0, NULL, 0) == 0) {
 			// If we are past the head, reattach previous node to next one,
 			// otherwise set the new head for the strmap.
 			if (prev != NULL) {
-				prev->next = var_next;
+				prev->next = next;
 			} else {
-				new_head = var_next;
+				new_head = next;
 			}
 
 			to_delete[to_delete_idx++] = var;
@@ -596,10 +596,7 @@ static int config_delete_multivar(git_config_backend *cfg, const char *name, con
 			prev = var;
 		}
 
-		if (var_next == NULL)
-			break;
-
-		var = var_next;
+		var = next;
 	}
 
 	if (new_head != NULL) {
