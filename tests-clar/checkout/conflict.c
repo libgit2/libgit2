@@ -1071,6 +1071,9 @@ static void collect_progress(
 {
 	git_vector *paths = payload;
 
+	(void)completed_steps;
+	(void)total_steps;
+
 	if (path == NULL)
 		return;
 

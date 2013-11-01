@@ -100,7 +100,6 @@ void test_pack_indexer__fix_thin(void)
 		unsigned char buffer[128];
 		int fd;
 		ssize_t read;
-		git_off_t left;
 		struct stat st;
 		const char *name = "pack-11f0f69b334728fdd8bc86b80499f22f29d85b15.pack";
 
@@ -108,7 +107,6 @@ void test_pack_indexer__fix_thin(void)
 		cl_assert(fd != -1);
 
 		cl_git_pass(p_stat(name, &st));
-		left = st.st_size;
 
 		cl_git_pass(git_indexer_stream_new(&idx, ".", NULL, NULL, NULL));
 		read = p_read(fd, buffer, sizeof(buffer));

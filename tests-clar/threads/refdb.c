@@ -147,12 +147,15 @@ static void *delete_refs(void *arg)
 void test_threads_refdb__edit_while_iterate(void)
 {
 	int r, t;
-	git_thread th[THREADS];
 	int id[THREADS];
 	git_oid head;
 	git_reference *ref;
 	char name[128];
 	git_refdb *refdb;
+
+#ifdef GIT_THREADS
+	git_thread th[THREADS];
+#endif
 
 	g_repo = cl_git_sandbox_init("testrepo2");
 
@@ -187,7 +190,6 @@ void test_threads_refdb__edit_while_iterate(void)
 #ifdef GIT_THREADS
 		cl_git_pass(git_thread_create(&th[t], NULL, fn, &id[t]));
 #else
-		th[t] = t;
 		fn(&id[t]);
 #endif
 	}
