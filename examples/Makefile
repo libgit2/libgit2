@@ -8,7 +8,7 @@ APPS = general showindex diff rev-list cat-file status log rev-parse init
 all: $(APPS)
 
 % : %.c
-	$(CC) -o $@ $(CFLAGS) $< $(LFLAGS)
+	$(CC) -o $@ common.c $(CFLAGS) $< $(LFLAGS)
 
 clean:
 	$(RM) $(APPS)

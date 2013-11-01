@@ -1,37 +1,11 @@
-#include <stdio.h>
-#include <git2.h>
-#include <stdlib.h>
-#include <string.h>
+/*
+ * Copyright (C) the libgit2 contributors. All rights reserved.
+ *
+ * This file is part of libgit2, distributed under the GNU GPL v2 with
+ * a Linking Exception. For full terms see the included COPYING file.
+ */
 
-static git_repository *g_repo;
-
-static void check(int error, const char *message)
-{
-	if (error) {
-		fprintf(stderr, "%s (%d)\n", message, error);
-		exit(1);
-	}
-}
-
-static void usage(const char *message, const char *arg)
-{
-	if (message && arg)
-		fprintf(stderr, "%s: %s\n", message, arg);
-	else if (message)
-		fprintf(stderr, "%s\n", message);
-	fprintf(stderr, "usage: cat-file (-t | -s | -e | -p) [<options>] <object>\n");
-	exit(1);
-}
-
-static int check_str_param(
-	const char *arg, const char *pattern, const char **val)
-{
-	size_t len = strlen(pattern);
-	if (strncmp(arg, pattern, len))
-		return 0;
-	*val = (const char *)(arg + len);
-	return 1;
-}
+#include "common.h"
 
 static void print_signature(const char *header, const git_signature *sig)
 {
@@ -57,12 +31,14 @@ static void print_signature(const char *header, const git_signature *sig)
 		   sign, hours, minutes);
 }
 
+/** Printing out a blob is simple, get the contents and print */
 static void show_blob(const git_blob *blob)
 {
 	/* ? Does this need crlf filtering? */
 	fwrite(git_blob_rawcontent(blob), git_blob_rawsize(blob), 1, stdout);
 }
 
+/** Show each entry with its type, id and attributes */
 static void show_tree(const git_tree *tree)
 {
 	size_t i, max_i = (int)git_tree_entrycount(tree);
@@ -81,6 +57,9 @@ static void show_tree(const git_tree *tree)
 	}
 }
 
+/**
+ * Commits and tags have a few interesting fields in their header.
+ */
 static void show_commit(const git_commit *commit)
 {
 	unsigned int i, max_i;
@@ -123,53 +102,34 @@ enum {
 	SHOW_PRETTY = 4
 };
 
+/* Forward declarations for option-parsing helper */
+struct opts {
+	const char *dir;
+	const char *rev;
+	int action;
+	int verbose;
+};
+static void parse_opts(struct opts *o, int argc, char *argv[]);
+
+
+/** Entry point for this command */
 int main(int argc, char *argv[])
 {
-	const char *dir = ".", *rev = NULL;
-	int i, action = 0, verbose = 0;
+	git_repository *repo;
+	struct opts o = { ".", NULL, 0, 0 };
 	git_object *obj = NULL;
 	char oidstr[GIT_OID_HEXSZ + 1];
 
 	git_threads_init();
 
-	for (i = 1; i < argc; ++i) {
-		char *a = argv[i];
+	parse_opts(&o, argc, argv);
 
-		if (a[0] != '-') {
-			if (rev != NULL)
-				usage("Only one rev should be provided", NULL);
-			else
-				rev = a;
-		}
-		else if (!strcmp(a, "-t"))
-			action = SHOW_TYPE;
-		else if (!strcmp(a, "-s"))
-			action = SHOW_SIZE;
-		else if (!strcmp(a, "-e"))
-			action = SHOW_NONE;
-		else if (!strcmp(a, "-p"))
-			action = SHOW_PRETTY;
-		else if (!strcmp(a, "-q"))
-			verbose = 0;
-		else if (!strcmp(a, "-v"))
-			verbose = 1;
-		else if (!strcmp(a, "--help") || !strcmp(a, "-h"))
-			usage(NULL, NULL);
-		else if (!check_str_param(a, "--git-dir=", &dir))
-			usage("Unknown option", a);
-	}
+	check_lg2(git_repository_open_ext(&repo, o.dir, 0, NULL),
+			"Could not open repository", NULL);
+	check_lg2(git_revparse_single(&obj, repo, o.rev),
+			"Could not resolve", o.rev);
 
-	if (!action || !rev)
-		usage(NULL, NULL);
-
-	check(git_repository_open_ext(&g_repo, dir, 0, NULL),
-		"Could not open repository");
-
-	if (git_revparse_single(&obj, g_repo, rev) < 0) {
-		fprintf(stderr, "Could not resolve '%s'\n", rev);
-		exit(1);
-	}
-	if (verbose) {
+	if (o.verbose) {
 		char oidstr[GIT_OID_HEXSZ + 1];
 		git_oid_tostr(oidstr, sizeof(oidstr), git_object_id(obj));
 
@@ -177,7 +137,7 @@ int main(int argc, char *argv[])
 			git_object_type2string(git_object_type(obj)), oidstr);
 	}
 
-	switch (action) {
+	switch (o.action) {
 	case SHOW_TYPE:
 		printf("%s\n", git_object_type2string(git_object_type(obj)));
 		break;
@@ -185,9 +145,9 @@ int main(int argc, char *argv[])
 		git_odb *odb;
 		git_odb_object *odbobj;
 
-		check(git_repository_odb(&odb, g_repo), "Could not open ODB");
-		check(git_odb_read(&odbobj, odb, git_object_id(obj)),
-			"Could not find obj");
+		check_lg2(git_repository_odb(&odb, repo), "Could not open ODB", NULL);
+		check_lg2(git_odb_read(&odbobj, odb, git_object_id(obj)),
+			"Could not find obj", NULL);
 
 		printf("%ld\n", (long)git_odb_object_size(odbobj));
 
@@ -221,9 +181,59 @@ int main(int argc, char *argv[])
 	}
 
 	git_object_free(obj);
-	git_repository_free(g_repo);
+	git_repository_free(repo);
 
 	git_threads_shutdown();
 
 	return 0;
+}
+
+/** Print out usage information */
+static void usage(const char *message, const char *arg)
+{
+	if (message && arg)
+		fprintf(stderr, "%s: %s\n", message, arg);
+	else if (message)
+		fprintf(stderr, "%s\n", message);
+	fprintf(stderr,
+			"usage: cat-file (-t | -s | -e | -p) [-v] [-q] "
+			"[-h|--help] [--git-dir=<dir>] <object>\n");
+	exit(1);
+}
+
+/** Parse the command-line options taken from git */
+static void parse_opts(struct opts *o, int argc, char *argv[])
+{
+	struct args_info args = ARGS_INFO_INIT;
+
+	for (args.pos = 1; args.pos < argc; ++args.pos) {
+		char *a = argv[args.pos];
+
+		if (a[0] != '-') {
+			if (o->rev != NULL)
+				usage("Only one rev should be provided", NULL);
+			else
+				o->rev = a;
+		}
+		else if (!strcmp(a, "-t"))
+			o->action = SHOW_TYPE;
+		else if (!strcmp(a, "-s"))
+			o->action = SHOW_SIZE;
+		else if (!strcmp(a, "-e"))
+			o->action = SHOW_NONE;
+		else if (!strcmp(a, "-p"))
+			o->action = SHOW_PRETTY;
+		else if (!strcmp(a, "-q"))
+			o->verbose = 0;
+		else if (!strcmp(a, "-v"))
+			o->verbose = 1;
+		else if (!strcmp(a, "--help") || !strcmp(a, "-h"))
+			usage(NULL, NULL);
+		else if (!match_str_arg(&o->dir, &args, "--git-dir"))
+			usage("Unknown option", a);
+	}
+
+	if (!o->action || !o->rev)
+		usage(NULL, NULL);
+
 }

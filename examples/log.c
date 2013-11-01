@@ -1,88 +1,205 @@
-#include <stdio.h>
-#include <git2.h>
-#include <stdlib.h>
-#include <string.h>
+/*
+ * Copyright (C) the libgit2 contributors. All rights reserved.
+ *
+ * This file is part of libgit2, distributed under the GNU GPL v2 with
+ * a Linking Exception. For full terms see the included COPYING file.
+ */
 
-static void check(int error, const char *message, const char *arg)
-{
-	if (!error)
-		return;
-	if (arg)
-		fprintf(stderr, "%s '%s' (%d)\n", message, arg, error);
-	else
-		fprintf(stderr, "%s (%d)\n", message, error);
-	exit(1);
-}
+#include "common.h"
 
-static void usage(const char *message, const char *arg)
-{
-	if (message && arg)
-		fprintf(stderr, "%s: %s\n", message, arg);
-	else if (message)
-		fprintf(stderr, "%s\n", message);
-	fprintf(stderr, "usage: log [<options>]\n");
-	exit(1);
-}
+/**
+ * This example demonstrates the libgit2 rev walker APIs to roughly
+ * simulate the output of `git log` and a few of command line arguments.
+ * `git log` has many many options and this only shows a few of them.
+ *
+ * This does not have:
+ *
+ * - Robust error handling
+ * - Colorized or paginated output formatting
+ * - Most of the `git log` options
+ *
+ * This does have:
+ *
+ * - Examples of translating command line arguments to equivalent libgit2
+ *   revwalker configuration calls
+ * - Simplified options to apply pathspec limits and to show basic diffs
+ */
 
+/** log_state represents walker being configured while handling options */
 struct log_state {
 	git_repository *repo;
 	const char *repodir;
 	git_revwalk *walker;
 	int hide;
 	int sorting;
+	int revisions;
 };
 
-static void set_sorting(struct log_state *s, unsigned int sort_mode)
+/** utility functions that are called to configure the walker */
+static void set_sorting(struct log_state *s, unsigned int sort_mode);
+static void push_rev(struct log_state *s, git_object *obj, int hide);
+static int add_revision(struct log_state *s, const char *revstr);
+
+/** log_options holds other command line options that affect log output */
+struct log_options {
+	int show_diff;
+	int skip, limit;
+	int min_parents, max_parents;
+	git_time_t before;
+	git_time_t after;
+	char *author;
+	char *committer;
+};
+
+/** utility functions that parse options and help with log output */
+static int parse_options(
+	struct log_state *s, struct log_options *opt, int argc, char **argv);
+static void print_time(const git_time *intime, const char *prefix);
+static void print_commit(git_commit *commit);
+static int match_with_parent(git_commit *commit, int i, git_diff_options *);
+
+
+int main(int argc, char *argv[])
 {
-	if (!s->repo) {
-		if (!s->repodir) s->repodir = ".";
-		check(git_repository_open_ext(&s->repo, s->repodir, 0, NULL),
-			"Could not open repository", s->repodir);
+	int i, count = 0, printed = 0, parents, last_arg;
+	struct log_state s;
+	struct log_options opt;
+	git_diff_options diffopts = GIT_DIFF_OPTIONS_INIT;
+	git_oid oid;
+	git_commit *commit = NULL;
+	git_pathspec *ps = NULL;
+
+	git_threads_init();
+
+	/** Parse arguments and set up revwalker. */
+
+	last_arg = parse_options(&s, &opt, argc, argv);
+
+	diffopts.pathspec.strings = &argv[last_arg];
+	diffopts.pathspec.count	  = argc - last_arg;
+	if (diffopts.pathspec.count > 0)
+		check_lg2(git_pathspec_new(&ps, &diffopts.pathspec),
+			"Building pathspec", NULL);
+
+	if (!s.revisions)
+		add_revision(&s, NULL);
+
+	/** Use the revwalker to traverse the history. */
+
+	printed = count = 0;
+
+	for (; !git_revwalk_next(&oid, s.walker); git_commit_free(commit)) {
+		check_lg2(git_commit_lookup(&commit, s.repo, &oid),
+			"Failed to look up commit", NULL);
+
+		parents = (int)git_commit_parentcount(commit);
+		if (parents < opt.min_parents)
+			continue;
+		if (opt.max_parents > 0 && parents > opt.max_parents)
+			continue;
+
+		if (diffopts.pathspec.count > 0) {
+			int unmatched = parents;
+
+			if (parents == 0) {
+				git_tree *tree;
+				check_lg2(git_commit_tree(&tree, commit), "Get tree", NULL);
+				if (git_pathspec_match_tree(
+						NULL, tree, GIT_PATHSPEC_NO_MATCH_ERROR, ps) != 0)
+					unmatched = 1;
+				git_tree_free(tree);
+			} else if (parents == 1) {
+				unmatched = match_with_parent(commit, 0, &diffopts) ? 0 : 1;
+			} else {
+				for (i = 0; i < parents; ++i) {
+					if (match_with_parent(commit, i, &diffopts))
+						unmatched--;
+				}
+			}
+
+			if (unmatched > 0)
+				continue;
+		}
+
+		if (count++ < opt.skip)
+			continue;
+		if (opt.limit != -1 && printed++ >= opt.limit) {
+			git_commit_free(commit);
+			break;
+		}
+
+		print_commit(commit);
+
+		if (opt.show_diff) {
+			git_tree *a = NULL, *b = NULL;
+			git_diff *diff = NULL;
+
+			if (parents > 1)
+				continue;
+			check_lg2(git_commit_tree(&b, commit), "Get tree", NULL);
+			if (parents == 1) {
+				git_commit *parent;
+				check_lg2(git_commit_parent(&parent, commit, 0), "Get parent", NULL);
+				check_lg2(git_commit_tree(&a, parent), "Tree for parent", NULL);
+				git_commit_free(parent);
+			}
+
+			check_lg2(git_diff_tree_to_tree(
+				&diff, git_commit_owner(commit), a, b, &diffopts),
+				"Diff commit with parent", NULL);
+			check_lg2(
+                git_diff_print(diff, GIT_DIFF_FORMAT_PATCH, diff_output, NULL),
+				"Displaying diff", NULL);
+
+			git_diff_free(diff);
+			git_tree_free(a);
+			git_tree_free(b);
+		}
 	}
 
-	if (!s->walker)
-		check(git_revwalk_new(&s->walker, s->repo),
-			"Could not create revision walker", NULL);
+	git_pathspec_free(ps);
+	git_revwalk_free(s.walker);
+	git_repository_free(s.repo);
+	git_threads_shutdown();
 
-	if (sort_mode == GIT_SORT_REVERSE)
-		s->sorting = s->sorting ^ GIT_SORT_REVERSE;
-	else
-		s->sorting = sort_mode | (s->sorting & GIT_SORT_REVERSE);
-
-	git_revwalk_sorting(s->walker, s->sorting);
+	return 0;
 }
 
+/** Push object (for hide or show) onto revwalker. */
 static void push_rev(struct log_state *s, git_object *obj, int hide)
 {
 	hide = s->hide ^ hide;
 
+	/** Create revwalker on demand if it doesn't already exist. */
 	if (!s->walker) {
-		check(git_revwalk_new(&s->walker, s->repo),
+		check_lg2(git_revwalk_new(&s->walker, s->repo),
 			"Could not create revision walker", NULL);
 		git_revwalk_sorting(s->walker, s->sorting);
 	}
 
 	if (!obj)
-		check(git_revwalk_push_head(s->walker),
+		check_lg2(git_revwalk_push_head(s->walker),
 			"Could not find repository HEAD", NULL);
 	else if (hide)
-		check(git_revwalk_hide(s->walker, git_object_id(obj)),
+		check_lg2(git_revwalk_hide(s->walker, git_object_id(obj)),
 			"Reference does not refer to a commit", NULL);
 	else
-		check(git_revwalk_push(s->walker, git_object_id(obj)),
+		check_lg2(git_revwalk_push(s->walker, git_object_id(obj)),
 			"Reference does not refer to a commit", NULL);
 
 	git_object_free(obj);
 }
 
+/** Parse revision string and add revs to walker. */
 static int add_revision(struct log_state *s, const char *revstr)
 {
 	git_revspec revs;
 	int hide = 0;
 
+	/** Open repo on demand if it isn't already open. */
 	if (!s->repo) {
 		if (!s->repodir) s->repodir = ".";
-		check(git_repository_open_ext(&s->repo, s->repodir, 0, NULL),
+		check_lg2(git_repository_open_ext(&s->repo, s->repodir, 0, NULL),
 			"Could not open repository", s->repodir);
 	}
 
@@ -107,10 +224,11 @@ static int add_revision(struct log_state *s, const char *revstr)
 
 		if ((revs.flags & GIT_REVPARSE_MERGE_BASE) != 0) {
 			git_oid base;
-			check(git_merge_base(&base, s->repo,
+			check_lg2(git_merge_base(&base, s->repo,
 				git_object_id(revs.from), git_object_id(revs.to)),
 				"Could not find merge base", revstr);
-			check(git_object_lookup(&revs.to, s->repo, &base, GIT_OBJ_COMMIT),
+			check_lg2(
+				git_object_lookup(&revs.to, s->repo, &base, GIT_OBJ_COMMIT),
 				"Could not find merge base commit", NULL);
 
 			push_rev(s, revs.to, hide);
@@ -122,6 +240,30 @@ static int add_revision(struct log_state *s, const char *revstr)
 	return 0;
 }
 
+/** Update revwalker with sorting mode. */
+static void set_sorting(struct log_state *s, unsigned int sort_mode)
+{
+	/** Open repo on demand if it isn't already open. */
+	if (!s->repo) {
+		if (!s->repodir) s->repodir = ".";
+		check_lg2(git_repository_open_ext(&s->repo, s->repodir, 0, NULL),
+			"Could not open repository", s->repodir);
+	}
+
+	/** Create revwalker on demand if it doesn't already exist. */
+	if (!s->walker)
+		check_lg2(git_revwalk_new(&s->walker, s->repo),
+			"Could not create revision walker", NULL);
+
+	if (sort_mode == GIT_SORT_REVERSE)
+		s->sorting = s->sorting ^ GIT_SORT_REVERSE;
+	else
+		s->sorting = sort_mode | (s->sorting & GIT_SORT_REVERSE);
+
+	git_revwalk_sorting(s->walker, s->sorting);
+}
+
+/** Helper to format a git_time value like Git. */
 static void print_time(const git_time *intime, const char *prefix)
 {
 	char sign, out[32];
@@ -148,6 +290,7 @@ static void print_time(const git_time *intime, const char *prefix)
 	printf("%s%s %c%02d%02d\n", prefix, out, sign, hours, minutes);
 }
 
+/** Helper to print a commit object. */
 static void print_commit(git_commit *commit)
 {
 	char buf[GIT_OID_HEXSZ + 1];
@@ -182,54 +325,21 @@ static void print_commit(git_commit *commit)
 	printf("\n");
 }
 
-static int print_diff(
-	const git_diff_delta *delta,
-	const git_diff_hunk *hunk,
-	const git_diff_line *line,
-	void *data)
-{
-	(void)delta; (void)hunk; (void)data;
-
-	if (line->origin == GIT_DIFF_LINE_CONTEXT ||
-		line->origin == GIT_DIFF_LINE_ADDITION ||
-		line->origin == GIT_DIFF_LINE_DELETION)
-		fputc(line->origin, stdout);
-
-	fwrite(line->content, 1, line->content_len, stdout);
-	return 0;
-}
-
-static int match_int(int *value, const char *arg, int allow_negative)
-{
-	char *found;
-	*value = (int)strtol(arg, &found, 10);
-	return (found && *found == '\0' && (allow_negative || *value >= 0));
-}
-
-static int match_int_arg(
-	int *value, const char *arg, const char *pfx, int allow_negative)
-{
-	size_t pfxlen = strlen(pfx);
-	if (strncmp(arg, pfx, pfxlen) != 0)
-		return 0;
-	if (!match_int(value, arg + pfxlen, allow_negative))
-		usage("Invalid value after argument", arg);
-	return 1;
-}
-
-static int match_with_parent(
-	git_commit *commit, int i, git_diff_options *opts)
+/** Helper to find how many files in a commit changed from its nth parent. */
+static int match_with_parent(git_commit *commit, int i, git_diff_options *opts)
 {
 	git_commit *parent;
 	git_tree *a, *b;
 	git_diff *diff;
 	int ndeltas;
 
-	check(git_commit_parent(&parent, commit, (size_t)i), "Get parent", NULL);
-	check(git_commit_tree(&a, parent), "Tree for parent", NULL);
-	check(git_commit_tree(&b, commit), "Tree for commit", NULL);
-	check(git_diff_tree_to_tree(&diff, git_commit_owner(commit), a, b, opts),
-		  "Checking diff between parent and commit", NULL);
+	check_lg2(
+		git_commit_parent(&parent, commit, (size_t)i), "Get parent", NULL);
+	check_lg2(git_commit_tree(&a, parent), "Tree for parent", NULL);
+	check_lg2(git_commit_tree(&b, commit), "Tree for commit", NULL);
+	check_lg2(
+		git_diff_tree_to_tree(&diff, git_commit_owner(commit), a, b, opts),
+		"Checking diff between parent and commit", NULL);
 
 	ndeltas = (int)git_diff_num_deltas(diff);
 
@@ -241,170 +351,77 @@ static int match_with_parent(
 	return ndeltas > 0;
 }
 
-struct log_options {
-	int show_diff;
-	int skip, limit;
-	int min_parents, max_parents;
-	git_time_t before;
-	git_time_t after;
-	char *author;
-	char *committer;
-};
-
-int main(int argc, char *argv[])
+/** Print a usage message for the program. */
+static void usage(const char *message, const char *arg)
 {
-	int i, count = 0, printed = 0, parents;
-	char *a;
-	struct log_state s;
-	struct log_options opt;
-	git_diff_options diffopts = GIT_DIFF_OPTIONS_INIT;
-	git_oid oid;
-	git_commit *commit = NULL;
-	git_pathspec *ps = NULL;
+	if (message && arg)
+		fprintf(stderr, "%s: %s\n", message, arg);
+	else if (message)
+		fprintf(stderr, "%s\n", message);
+	fprintf(stderr, "usage: log [<options>]\n");
+	exit(1);
+}
 
-	git_threads_init();
+/** Parse some log command line options. */
+static int parse_options(
+	struct log_state *s, struct log_options *opt, int argc, char **argv)
+{
+	struct args_info args = ARGS_INFO_INIT;
 
-	memset(&s, 0, sizeof(s));
-	s.sorting = GIT_SORT_TIME;
+	memset(s, 0, sizeof(*s));
+	s->sorting = GIT_SORT_TIME;
 
-	memset(&opt, 0, sizeof(opt));
-	opt.max_parents = -1;
- 	opt.limit = -1;
+	memset(opt, 0, sizeof(*opt));
+	opt->max_parents = -1;
+	opt->limit = -1;
 
-	for (i = 1; i < argc; ++i) {
-		a = argv[i];
+	for (args.pos = 1; args.pos < argc; ++args.pos) {
+		const char *a = argv[args.pos];
 
 		if (a[0] != '-') {
-			if (!add_revision(&s, a))
-				++count;
-			else /* try failed revision parse as filename */
+			if (!add_revision(s, a))
+				s->revisions++;
+			else
+				/** Try failed revision parse as filename. */
 				break;
 		} else if (!strcmp(a, "--")) {
-			++i;
+			++args.pos;
 			break;
 		}
 		else if (!strcmp(a, "--date-order"))
-			set_sorting(&s, GIT_SORT_TIME);
+			set_sorting(s, GIT_SORT_TIME);
 		else if (!strcmp(a, "--topo-order"))
-			set_sorting(&s, GIT_SORT_TOPOLOGICAL);
+			set_sorting(s, GIT_SORT_TOPOLOGICAL);
 		else if (!strcmp(a, "--reverse"))
-			set_sorting(&s, GIT_SORT_REVERSE);
-		else if (!strncmp(a, "--git-dir=", strlen("--git-dir=")))
-			s.repodir = a + strlen("--git-dir=");
-		else if (match_int_arg(&opt.skip, a, "--skip=", 0))
-			/* found valid --skip */;
-		else if (match_int_arg(&opt.limit, a, "--max-count=", 0))
-			/* found valid --max-count */;
-		else if (a[1] >= '0' && a[1] <= '9') {
-			if (!match_int(&opt.limit, a + 1, 0))
-				usage("Invalid limit on number of commits", a);
-		} else if (!strcmp(a, "-n")) {
-			if (i + 1 == argc || !match_int(&opt.limit, argv[i + 1], 0))
-				usage("Argument -n not followed by valid count", argv[i + 1]);
-			else
-				++i;
-		}
+			set_sorting(s, GIT_SORT_REVERSE);
+		else if (match_str_arg(&s->repodir, &args, "--git-dir"))
+			/** Found git-dir. */;
+		else if (match_int_arg(&opt->skip, &args, "--skip", 0))
+			/** Found valid --skip. */;
+		else if (match_int_arg(&opt->limit, &args, "--max-count", 0))
+			/** Found valid --max-count. */;
+		else if (a[1] >= '0' && a[1] <= '9')
+			is_integer(&opt->limit, a + 1, 0);
+		else if (match_int_arg(&opt->limit, &args, "-n", 0))
+			/** Found valid -n. */;
 		else if (!strcmp(a, "--merges"))
-			opt.min_parents = 2;
+			opt->min_parents = 2;
 		else if (!strcmp(a, "--no-merges"))
-			opt.max_parents = 1;
+			opt->max_parents = 1;
 		else if (!strcmp(a, "--no-min-parents"))
-			opt.min_parents = 0;
+			opt->min_parents = 0;
 		else if (!strcmp(a, "--no-max-parents"))
-			opt.max_parents = -1;
-		else if (match_int_arg(&opt.max_parents, a, "--max-parents=", 1))
-			/* found valid --max-parents */;
-		else if (match_int_arg(&opt.min_parents, a, "--min-parents=", 0))
-			/* found valid --min_parents */;
+			opt->max_parents = -1;
+		else if (match_int_arg(&opt->max_parents, &args, "--max-parents=", 1))
+			/** Found valid --max-parents. */;
+		else if (match_int_arg(&opt->min_parents, &args, "--min-parents=", 0))
+			/** Found valid --min_parents. */;
 		else if (!strcmp(a, "-p") || !strcmp(a, "-u") || !strcmp(a, "--patch"))
-			opt.show_diff = 1;
+			opt->show_diff = 1;
 		else
 			usage("Unsupported argument", a);
 	}
 
-	if (!count)
-		add_revision(&s, NULL);
-
-	diffopts.pathspec.strings = &argv[i];
-	diffopts.pathspec.count   = argc - i;
-	if (diffopts.pathspec.count > 0)
-		check(git_pathspec_new(&ps, &diffopts.pathspec),
-			"Building pathspec", NULL);
-
-	printed = count = 0;
-
-	for (; !git_revwalk_next(&oid, s.walker); git_commit_free(commit)) {
-		check(git_commit_lookup(&commit, s.repo, &oid),
-			"Failed to look up commit", NULL);
-
-		parents = (int)git_commit_parentcount(commit);
-		if (parents < opt.min_parents)
-			continue;
-		if (opt.max_parents > 0 && parents > opt.max_parents)
-			continue;
-
-		if (diffopts.pathspec.count > 0) {
-			int unmatched = parents;
-
-			if (parents == 0) {
-				git_tree *tree;
-				check(git_commit_tree(&tree, commit), "Get tree", NULL);
-				if (git_pathspec_match_tree(
-						NULL, tree, GIT_PATHSPEC_NO_MATCH_ERROR, ps) != 0)
-					unmatched = 1;
-				git_tree_free(tree);
-			} else if (parents == 1) {
-				unmatched = match_with_parent(commit, 0, &diffopts) ? 0 : 1;
-			} else {
-				for (i = 0; i < parents; ++i) {
-					if (match_with_parent(commit, i, &diffopts))
-						unmatched--;
-				}
-			}
-
-			if (unmatched > 0)
-				continue;
-		}
-
-		if (count++ < opt.skip)
-			continue;
-		if (opt.limit != -1 && printed++ >= opt.limit) {
-			git_commit_free(commit);
-			break;
-		}
-
-		print_commit(commit);
-
-		if (opt.show_diff) {
-			git_tree *a = NULL, *b = NULL;
-			git_diff *diff = NULL;
-
-			if (parents > 1)
-				continue;
-			check(git_commit_tree(&b, commit), "Get tree", NULL);
-			if (parents == 1) {
-				git_commit *parent;
-				check(git_commit_parent(&parent, commit, 0), "Get parent", NULL);
-				check(git_commit_tree(&a, parent), "Tree for parent", NULL);
-				git_commit_free(parent);
-			}
-
-			check(git_diff_tree_to_tree(
-				&diff, git_commit_owner(commit), a, b, &diffopts),
-				"Diff commit with parent", NULL);
-			check(git_diff_print(diff, GIT_DIFF_FORMAT_PATCH, print_diff, NULL),
-				"Displaying diff", NULL);
-
-			git_diff_free(diff);
-			git_tree_free(a);
-			git_tree_free(b);
-		}
-	}
-
-	git_pathspec_free(ps);
-	git_revwalk_free(s.walker);
-	git_repository_free(s.repo);
-	git_threads_shutdown();
-
-	return 0;
+	return args.pos;
 }
+

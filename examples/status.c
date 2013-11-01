@@ -4,30 +4,22 @@
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
  */
-#include <git2.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 
-enum {
-	FORMAT_DEFAULT   = 0,
-	FORMAT_LONG      = 1,
-	FORMAT_SHORT     = 2,
-	FORMAT_PORCELAIN = 3,
-};
-#define MAX_PATHSPEC 8
+#include "common.h"
 
-/*
+/**
  * This example demonstrates the use of the libgit2 status APIs,
  * particularly the `git_status_list` object, to roughly simulate the
  * output of running `git status`.  It serves as a simple example of
  * using those APIs to get basic status information.
  *
  * This does not have:
+ *
  * - Robust error handling
  * - Colorized or paginated output formatting
  *
  * This does have:
+ *
  * - Examples of translating command line arguments to the status
  *   options settings to mimic `git status` results.
  * - A sample status formatter that matches the default "long" format
@@ -35,32 +27,83 @@ enum {
  * - A sample status formatter that matches the "short" format
  */
 
-static void check(int error, const char *message, const char *extra)
+enum {
+	FORMAT_DEFAULT   = 0,
+	FORMAT_LONG      = 1,
+	FORMAT_SHORT     = 2,
+	FORMAT_PORCELAIN = 3,
+};
+
+#define MAX_PATHSPEC 8
+
+struct opts {
+    git_status_options statusopt;
+    char *repodir;
+    char *pathspec[MAX_PATHSPEC];
+    int npaths;
+    int format;
+    int zterm;
+    int showbranch;
+};
+
+static void parse_opts(struct opts *o, int argc, char *argv[]);
+static void show_branch(git_repository *repo, int format);
+static void print_long(git_repository *repo, git_status_list *status);
+static void print_short(git_repository *repo, git_status_list *status);
+
+int main(int argc, char *argv[])
 {
-	const git_error *lg2err;
-	const char *lg2msg = "", *lg2spacer = "";
+	git_repository *repo = NULL;
+	git_status_list *status;
+	struct opts o = { GIT_STATUS_OPTIONS_INIT, "." };
 
-	if (!error)
-		return;
+	git_threads_init();
 
-	if ((lg2err = giterr_last()) != NULL && lg2err->message != NULL) {
-		lg2msg = lg2err->message;
-		lg2spacer = " - ";
-	}
+	o.statusopt.show  = GIT_STATUS_SHOW_INDEX_AND_WORKDIR;
+	o.statusopt.flags = GIT_STATUS_OPT_INCLUDE_UNTRACKED |
+		GIT_STATUS_OPT_RENAMES_HEAD_TO_INDEX |
+		GIT_STATUS_OPT_SORT_CASE_SENSITIVELY;
 
-	if (extra)
-		fprintf(stderr, "%s '%s' [%d]%s%s\n",
-			message, extra, error, lg2spacer, lg2msg);
+	parse_opts(&o, argc, argv);
+
+	/**
+	 * Try to open the repository at the given path (or at the current
+	 * directory if none was given).
+	 */
+	check_lg2(git_repository_open_ext(&repo, o.repodir, 0, NULL),
+		  "Could not open repository", o.repodir);
+
+	if (git_repository_is_bare(repo))
+		fatal("Cannot report status on bare repository",
+			git_repository_path(repo));
+
+	/**
+	 * Run status on the repository
+	 *
+	 * Because we want to simluate a full "git status" run and want to
+	 * support some command line options, we use `git_status_foreach_ext()`
+	 * instead of just the plain status call.  This allows (a) iterating
+	 * over the index and then the workdir and (b) extra flags that control
+	 * which files are included.  If you just want simple status (e.g. to
+	 * enumerate files that are modified) then you probably don't need the
+	 * extended API.
+	 */
+	check_lg2(git_status_list_new(&status, repo, &o.statusopt),
+		  "Could not get status", NULL);
+
+	if (o.showbranch)
+		show_branch(repo, o.format);
+
+	if (o.format == FORMAT_LONG)
+		print_long(repo, status);
 	else
-		fprintf(stderr, "%s [%d]%s%s\n",
-			message, error, lg2spacer, lg2msg);
+		print_short(repo, status);
 
-	exit(1);
-}
+	git_status_list_free(status);
+	git_repository_free(repo);
+	git_threads_shutdown();
 
-static void fail(const char *message)
-{
-	check(-1, message, NULL);
+	return 0;
 }
 
 static void show_branch(git_repository *repo, int format)
@@ -78,7 +121,7 @@ static void show_branch(git_repository *repo, int format)
 		if (!strncmp(branch, "refs/heads/", strlen("refs/heads/")))
 			branch += strlen("refs/heads/");
 	} else
-		check(error, "failed to get current branch", NULL);
+		check_lg2(error, "failed to get current branch", NULL);
 
 	if (format == FORMAT_LONG)
 		printf("# On branch %s\n",
@@ -99,7 +142,7 @@ static void print_long(git_repository *repo, git_status_list *status)
 
 	(void)repo;
 
-	/* print index changes */
+	/** Print index changes. */
 
 	for (i = 0; i < maxi; ++i) {
 		char *istatus = NULL;
@@ -148,7 +191,7 @@ static void print_long(git_repository *repo, git_status_list *status)
 	}
 	header = 0;
 
-	/* print workdir changes to tracked files */
+	/** Print workdir changes to tracked files. */
 
 	for (i = 0; i < maxi; ++i) {
 		char *wstatus = NULL;
@@ -193,7 +236,7 @@ static void print_long(git_repository *repo, git_status_list *status)
 	}
 	header = 0;
 
-	/* print untracked files */
+	/** Print untracked files. */
 
 	header = 0;
 
@@ -215,7 +258,7 @@ static void print_long(git_repository *repo, git_status_list *status)
 
 	header = 0;
 
-	/* print ignored files */
+	/** Print ignored files. */
 
 	for (i = 0; i < maxi; ++i) {
 		s = git_status_byindex(status, i);
@@ -341,103 +384,58 @@ static void print_short(git_repository *repo, git_status_list *status)
 	}
 }
 
-int main(int argc, char *argv[])
+static void parse_opts(struct opts *o, int argc, char *argv[])
 {
-	git_repository *repo = NULL;
-	int i, npaths = 0, format = FORMAT_DEFAULT, zterm = 0, showbranch = 0;
-	git_status_options opt = GIT_STATUS_OPTIONS_INIT;
-	git_status_list *status;
-	char *repodir = ".", *pathspec[MAX_PATHSPEC];
+	struct args_info args = ARGS_INFO_INIT;
 
-	opt.show  = GIT_STATUS_SHOW_INDEX_AND_WORKDIR;
-	opt.flags = GIT_STATUS_OPT_INCLUDE_UNTRACKED |
-		GIT_STATUS_OPT_RENAMES_HEAD_TO_INDEX |
-		GIT_STATUS_OPT_SORT_CASE_SENSITIVELY;
+	for (args.pos = 1; args.pos < argc; ++args.pos) {
+		char *a = argv[args.pos];
 
-	for (i = 1; i < argc; ++i) {
-		if (argv[i][0] != '-') {
-			if (npaths < MAX_PATHSPEC)
-				pathspec[npaths++] = argv[i];
+		if (a[0] != '-') {
+			if (o->npaths < MAX_PATHSPEC)
+				o->pathspec[o->npaths++] = a;
 			else
-				fail("Example only supports a limited pathspec");
+				fatal("Example only supports a limited pathspec", NULL);
 		}
-		else if (!strcmp(argv[i], "-s") || !strcmp(argv[i], "--short"))
-			format = FORMAT_SHORT;
-		else if (!strcmp(argv[i], "--long"))
-			format = FORMAT_LONG;
-		else if (!strcmp(argv[i], "--porcelain"))
-			format = FORMAT_PORCELAIN;
-		else if (!strcmp(argv[i], "-b") || !strcmp(argv[i], "--branch"))
-			showbranch = 1;
-		else if (!strcmp(argv[i], "-z")) {
-			zterm = 1;
-			if (format == FORMAT_DEFAULT)
-				format = FORMAT_PORCELAIN;
+		else if (!strcmp(a, "-s") || !strcmp(a, "--short"))
+			o->format = FORMAT_SHORT;
+		else if (!strcmp(a, "--long"))
+			o->format = FORMAT_LONG;
+		else if (!strcmp(a, "--porcelain"))
+			o->format = FORMAT_PORCELAIN;
+		else if (!strcmp(a, "-b") || !strcmp(a, "--branch"))
+			o->showbranch = 1;
+		else if (!strcmp(a, "-z")) {
+			o->zterm = 1;
+			if (o->format == FORMAT_DEFAULT)
+				o->format = FORMAT_PORCELAIN;
 		}
-		else if (!strcmp(argv[i], "--ignored"))
-			opt.flags |= GIT_STATUS_OPT_INCLUDE_IGNORED;
-		else if (!strcmp(argv[i], "-uno") ||
-				 !strcmp(argv[i], "--untracked-files=no"))
-			opt.flags &= ~GIT_STATUS_OPT_INCLUDE_UNTRACKED;
-		else if (!strcmp(argv[i], "-unormal") ||
-				 !strcmp(argv[i], "--untracked-files=normal"))
-			opt.flags |= GIT_STATUS_OPT_INCLUDE_UNTRACKED;
-		else if (!strcmp(argv[i], "-uall") ||
-				 !strcmp(argv[i], "--untracked-files=all"))
-			opt.flags |= GIT_STATUS_OPT_INCLUDE_UNTRACKED |
+		else if (!strcmp(a, "--ignored"))
+			o->statusopt.flags |= GIT_STATUS_OPT_INCLUDE_IGNORED;
+		else if (!strcmp(a, "-uno") ||
+				 !strcmp(a, "--untracked-files=no"))
+			o->statusopt.flags &= ~GIT_STATUS_OPT_INCLUDE_UNTRACKED;
+		else if (!strcmp(a, "-unormal") ||
+				 !strcmp(a, "--untracked-files=normal"))
+			o->statusopt.flags |= GIT_STATUS_OPT_INCLUDE_UNTRACKED;
+		else if (!strcmp(a, "-uall") ||
+				 !strcmp(a, "--untracked-files=all"))
+			o->statusopt.flags |= GIT_STATUS_OPT_INCLUDE_UNTRACKED |
 				GIT_STATUS_OPT_RECURSE_UNTRACKED_DIRS;
-		else if (!strcmp(argv[i], "--ignore-submodules=all"))
-			opt.flags |= GIT_STATUS_OPT_EXCLUDE_SUBMODULES;
-		else if (!strncmp(argv[i], "--git-dir=", strlen("--git-dir=")))
-			repodir = argv[i] + strlen("--git-dir=");
+		else if (!strcmp(a, "--ignore-submodules=all"))
+			o->statusopt.flags |= GIT_STATUS_OPT_EXCLUDE_SUBMODULES;
+		else if (!strncmp(a, "--git-dir=", strlen("--git-dir=")))
+			o->repodir = a + strlen("--git-dir=");
 		else
-			check(-1, "Unsupported option", argv[i]);
+			check_lg2(-1, "Unsupported option", a);
 	}
 
-	if (format == FORMAT_DEFAULT)
-		format = FORMAT_LONG;
-	if (format == FORMAT_LONG)
-		showbranch = 1;
-	if (npaths > 0) {
-		opt.pathspec.strings = pathspec;
-		opt.pathspec.count   = npaths;
+	if (o->format == FORMAT_DEFAULT)
+		o->format = FORMAT_LONG;
+	if (o->format == FORMAT_LONG)
+		o->showbranch = 1;
+	if (o->npaths > 0) {
+		o->statusopt.pathspec.strings = o->pathspec;
+		o->statusopt.pathspec.count   = o->npaths;
 	}
-
-	/*
-	 * Try to open the repository at the given path (or at the current
-	 * directory if none was given).
-	 */
-	check(git_repository_open_ext(&repo, repodir, 0, NULL),
-		  "Could not open repository", repodir);
-
-	if (git_repository_is_bare(repo))
-		fail("Cannot report status on bare repository");
-
-	/*
-	 * Run status on the repository
-	 *
-	 * Because we want to simluate a full "git status" run and want to
-	 * support some command line options, we use `git_status_foreach_ext()`
-	 * instead of just the plain status call.  This allows (a) iterating
-	 * over the index and then the workdir and (b) extra flags that control
-	 * which files are included.  If you just want simple status (e.g. to
-	 * enumerate files that are modified) then you probably don't need the
-	 * extended API.
-	 */
-	check(git_status_list_new(&status, repo, &opt),
-		  "Could not get status", NULL);
-
-	if (showbranch)
-		show_branch(repo, format);
-
-	if (format == FORMAT_LONG)
-		print_long(repo, status);
-	else
-		print_short(repo, status);
-
-	git_status_list_free(status);
-	git_repository_free(repo);
-
-	return 0;
 }
-

@@ -1,4 +1,13 @@
 /*
+ * Copyright (C) the libgit2 contributors. All rights reserved.
+ *
+ * This file is part of libgit2, distributed under the GNU GPL v2 with
+ * a Linking Exception. For full terms see the included COPYING file.
+ */
+
+#include "common.h"
+
+/**
  * This is a sample program that is similar to "git init".  See the
  * documentation for that (try "git help init") to understand what this
  * program is emulating.
@@ -8,45 +17,170 @@
  * This also contains a special additional option that regular "git init"
  * does not support which is "--initial-commit" to make a first empty commit.
  * That is demonstrated in the "create_initial_commit" helper function.
- *
- * Copyright (C) the libgit2 contributors. All rights reserved.
- *
- * This file is part of libgit2, distributed under the GNU GPL v2 with
- * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include <stdio.h>
-#include <git2.h>
-#include <stdlib.h>
-#include <string.h>
-#include <time.h>
+/** Forward declarations of helpers */
+struct opts {
+	int no_options;
+	int quiet;
+	int bare;
+	int initial_commit;
+	uint32_t shared;
+	const char *template;
+	const char *gitdir;
+	const char *dir;
+};
+static void create_initial_commit(git_repository *repo);
+static void parse_opts(struct opts *o, int argc, char *argv[]);
 
-/* not actually good error handling */
-static void fail(const char *msg, const char *arg)
+
+int main(int argc, char *argv[])
 {
-	if (arg)
-		fprintf(stderr, "%s %s\n", msg, arg);
-	else
-		fprintf(stderr, "%s\n", msg);
-	exit(1);
+	git_repository *repo = NULL;
+	struct opts o = { 1, 0, 0, 0, GIT_REPOSITORY_INIT_SHARED_UMASK, 0, 0, 0 };
+
+	git_threads_init();
+
+	parse_opts(&o, argc, argv);
+
+	/* Initialize repository. */
+
+	if (o.no_options) {
+		/**
+		 * No options were specified, so let's demonstrate the default
+		 * simple case of git_repository_init() API usage...
+		 */
+		check_lg2(git_repository_init(&repo, o.dir, 0),
+			"Could not initialize repository", NULL);
+	}
+	else {
+		/**
+		 * Some command line options were specified, so we'll use the
+		 * extended init API to handle them
+		 */
+		git_repository_init_options initopts = GIT_REPOSITORY_INIT_OPTIONS_INIT;
+		initopts.flags = GIT_REPOSITORY_INIT_MKPATH;
+
+		if (o.bare)
+			initopts.flags |= GIT_REPOSITORY_INIT_BARE;
+
+		if (o.template) {
+			initopts.flags |= GIT_REPOSITORY_INIT_EXTERNAL_TEMPLATE;
+			initopts.template_path = o.template;
+		}
+
+		if (o.gitdir) {
+			/**
+			 * If you specified a separate git directory, then initialize
+			 * the repository at that path and use the second path as the
+			 * working directory of the repository (with a git-link file)
+			 */
+			initopts.workdir_path = o.dir;
+			o.dir = o.gitdir;
+		}
+
+		if (o.shared != 0)
+			initopts.mode = o.shared;
+
+		check_lg2(git_repository_init_ext(&repo, o.dir, &initopts),
+				"Could not initialize repository", NULL);
+	}
+
+	/** Print a message to stdout like "git init" does. */
+
+	if (!o.quiet) {
+		if (o.bare || o.gitdir)
+			o.dir = git_repository_path(repo);
+		else
+			o.dir = git_repository_workdir(repo);
+
+		printf("Initialized empty Git repository in %s\n", o.dir);
+	}
+
+	/**
+	 * As an extension to the basic "git init" command, this example
+	 * gives the option to create an empty initial commit.  This is
+	 * mostly to demonstrate what it takes to do that, but also some
+	 * people like to have that empty base commit in their repo.
+	 */
+	if (o.initial_commit) {
+		create_initial_commit(repo);
+		printf("Created empty initial commit\n");
+	}
+
+	git_repository_free(repo);
+	git_threads_shutdown();
+
+	return 0;
+}
+
+/**
+ * Unlike regular "git init", this example shows how to create an initial
+ * empty commit in the repository.  This is the helper function that does
+ * that.
+ */
+static void create_initial_commit(git_repository *repo)
+{
+	git_signature *sig;
+	git_index *index;
+	git_oid tree_id, commit_id;
+	git_tree *tree;
+
+	/** First use the config to initialize a commit signature for the user. */
+
+	if (git_signature_default(&sig, repo) < 0)
+		fatal("Unable to create a commit signature.",
+		      "Perhaps 'user.name' and 'user.email' are not set");
+
+	/* Now let's create an empty tree for this commit */
+
+	if (git_repository_index(&index, repo) < 0)
+		fatal("Could not open repository index", NULL);
+
+	/**
+	 * Outside of this example, you could call git_index_add_bypath()
+	 * here to put actual files into the index.  For our purposes, we'll
+	 * leave it empty for now.
+	 */
+
+	if (git_index_write_tree(&tree_id, index) < 0)
+		fatal("Unable to write initial tree from index", NULL);
+
+	git_index_free(index);
+
+	if (git_tree_lookup(&tree, repo, &tree_id) < 0)
+		fatal("Could not look up initial tree", NULL);
+
+	/**
+	 * Ready to create the initial commit.
+	 *
+	 * Normally creating a commit would involve looking up the current
+	 * HEAD commit and making that be the parent of the initial commit,
+	 * but here this is the first commit so there will be no parent.
+	 */
+
+	if (git_commit_create_v(
+			&commit_id, repo, "HEAD", sig, sig,
+			NULL, "Initial commit", tree, 0) < 0)
+		fatal("Could not create the initial commit", NULL);
+
+	/** Clean up so we don't leak memory. */
+
+	git_tree_free(tree);
+	git_signature_free(sig);
 }
 
 static void usage(const char *error, const char *arg)
 {
 	fprintf(stderr, "error: %s '%s'\n", error, arg);
-	fprintf(stderr, "usage: init [-q | --quiet] [--bare] "
-			"[--template=<dir>] [--shared[=perms]] <directory>\n");
+	fprintf(stderr,
+			"usage: init [-q | --quiet] [--bare] [--template=<dir>]\n"
+			"            [--shared[=perms]] [--initial-commit]\n"
+			"            [--separate-git-dir] <directory>\n");
 	exit(1);
 }
 
-/* simple string prefix test used in argument parsing */
-static size_t is_prefixed(const char *arg, const char *pfx)
-{
-	size_t len = strlen(pfx);
-	return !strncmp(arg, pfx, len) ? len : 0;
-}
-
-/* parse the tail of the --shared= argument */
+/** Parse the tail of the --shared= argument. */
 static uint32_t parse_shared(const char *shared)
 {
 	if (!strcmp(shared, "false") || !strcmp(shared, "umask"))
@@ -74,172 +208,39 @@ static uint32_t parse_shared(const char *shared)
 	return 0;
 }
 
-/* forward declaration of helper to make an empty parent-less commit */
-static void create_initial_commit(git_repository *repo);
-
-
-int main(int argc, char *argv[])
+static void parse_opts(struct opts *o, int argc, char *argv[])
 {
-	git_repository *repo = NULL;
-	int no_options = 1, quiet = 0, bare = 0, initial_commit = 0, i;
-	uint32_t shared = GIT_REPOSITORY_INIT_SHARED_UMASK;
-	const char *template = NULL, *gitdir = NULL, *dir = NULL;
-	size_t pfxlen;
+	struct args_info args = ARGS_INFO_INIT;
+	const char *sharedarg;
 
-	git_threads_init();
+	/** Process arguments. */
 
-	/* Process arguments */
-
-	for (i = 1; i < argc; ++i) {
-		char *a = argv[i];
+	for (args.pos = 1; args.pos < argc; ++args.pos) {
+		char *a = argv[args.pos];
 
 		if (a[0] == '-')
-			no_options = 0;
+			o->no_options = 0;
 
 		if (a[0] != '-') {
-			if (dir != NULL)
+			if (o->dir != NULL)
 				usage("extra argument", a);
-			dir = a;
+			o->dir = a;
 		}
 		else if (!strcmp(a, "-q") || !strcmp(a, "--quiet"))
-			quiet = 1;
+			o->quiet = 1;
 		else if (!strcmp(a, "--bare"))
-			bare = 1;
-		else if ((pfxlen = is_prefixed(a, "--template=")) > 0)
-			template = a + pfxlen;
-		else if (!strcmp(a, "--separate-git-dir"))
-			gitdir = argv[++i];
-		else if ((pfxlen = is_prefixed(a, "--separate-git-dir=")) > 0)
-			gitdir = a + pfxlen;
+			o->bare = 1;
 		else if (!strcmp(a, "--shared"))
-			shared = GIT_REPOSITORY_INIT_SHARED_GROUP;
-		else if ((pfxlen = is_prefixed(a, "--shared=")) > 0)
-			shared = parse_shared(a + pfxlen);
+			o->shared = GIT_REPOSITORY_INIT_SHARED_GROUP;
 		else if (!strcmp(a, "--initial-commit"))
-			initial_commit = 1;
-		else
+			o->initial_commit = 1;
+		else if (match_str_arg(&sharedarg, &args, "--shared"))
+			o->shared = parse_shared(sharedarg);
+		else if (!match_str_arg(&o->template, &args, "--template") ||
+		         !match_str_arg(&o->gitdir, &args, "--separate-git-dir"))
 			usage("unknown option", a);
 	}
 
-	if (!dir)
+	if (!o->dir)
 		usage("must specify directory to init", NULL);
-
-	/* Initialize repository */
-
-	if (no_options) {
-		/* No options were specified, so let's demonstrate the default
-		 * simple case of git_repository_init() API usage...
-		 */
-
-		if (git_repository_init(&repo, dir, 0) < 0)
-			fail("Could not initialize repository", dir);
-	}
-	else {
-		/* Some command line options were specified, so we'll use the
-		 * extended init API to handle them
-		 */
-		git_repository_init_options opts = GIT_REPOSITORY_INIT_OPTIONS_INIT;
-
-		if (bare)
-			opts.flags |= GIT_REPOSITORY_INIT_BARE;
-
-		if (template) {
-			opts.flags |= GIT_REPOSITORY_INIT_EXTERNAL_TEMPLATE;
-			opts.template_path = template;
-		}
-
-		if (gitdir) {
-			/* if you specified a separate git directory, then initialize
-			 * the repository at that path and use the second path as the
-			 * working directory of the repository (with a git-link file)
-			 */
-			opts.workdir_path = dir;
-			dir = gitdir;
-		}
-
-		if (shared != 0)
-			opts.mode = shared;
-
-		if (git_repository_init_ext(&repo, dir, &opts) < 0)
-			fail("Could not initialize repository", dir);
-	}
-
-	/* Print a message to stdout like "git init" does */
-
-	if (!quiet) {
-		if (bare || gitdir)
-			dir = git_repository_path(repo);
-		else
-			dir = git_repository_workdir(repo);
-
-		printf("Initialized empty Git repository in %s\n", dir);
-	}
-
-	/* As an extension to the basic "git init" command, this example
-	 * gives the option to create an empty initial commit.  This is
-	 * mostly to demonstrate what it takes to do that, but also some
-	 * people like to have that empty base commit in their repo.
-	 */
-	if (initial_commit) {
-		create_initial_commit(repo);
-		printf("Created empty initial commit\n");
-	}
-
-	git_repository_free(repo);
-	git_threads_shutdown();
-
-	return 0;
-}
-
-/* Unlike regular "git init", this example shows how to create an initial
- * empty commit in the repository.  This is the helper function that does
- * that.
- */
-static void create_initial_commit(git_repository *repo)
-{
-	git_signature *sig;
-	git_index *index;
-	git_oid tree_id, commit_id;
-	git_tree *tree;
-
-	/* First use the config to initialize a commit signature for the user */
-
-	if (git_signature_default(&sig, repo) < 0)
-		fail("Unable to create a commit signature.",
-			 "Perhaps 'user.name' and 'user.email' are not set");
-
-	/* Now let's create an empty tree for this commit */
-
-	if (git_repository_index(&index, repo) < 0)
-		fail("Could not open repository index", NULL);
-
-	/* Outside of this example, you could call git_index_add_bypath()
-	 * here to put actual files into the index.  For our purposes, we'll
-	 * leave it empty for now.
-	 */
-
-	if (git_index_write_tree(&tree_id, index) < 0)
-		fail("Unable to write initial tree from index", NULL);
-
-	git_index_free(index);
-
-	if (git_tree_lookup(&tree, repo, &tree_id) < 0)
-		fail("Could not look up initial tree", NULL);
-
-	/* Ready to create the initial commit
-	 *
-	 * Normally creating a commit would involve looking up the current
-	 * HEAD commit and making that be the parent of the initial commit,
-	 * but here this is the first commit so there will be no parent.
-	 */
-
-	if (git_commit_create_v(
-			&commit_id, repo, "HEAD", sig, sig,
-			NULL, "Initial commit", tree, 0) < 0)
-		fail("Could not create the initial commit", NULL);
-
-	/* Clean up so we don't leak memory */
-
-	git_tree_free(tree);
-	git_signature_free(sig);
 }
