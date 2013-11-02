@@ -1185,7 +1185,7 @@ static int config_write(diskfile_backend *cfg, const char *key, const regex_t *p
 {
 	int result, c;
 	int section_matches = 0, last_section_matched = 0, preg_replaced = 0, write_trailer = 0;
-	const char *pre_end = NULL, *post_start = NULL, *data_start;
+	const char *pre_end = NULL, *post_start = NULL, *data_start, *write_start;
 	char *current_section = NULL, *section, *name, *ldot;
 	git_filebuf file = GIT_FILEBUF_INIT;
 	struct reader *reader = git_array_get(cfg->readers, 0);
@@ -1206,6 +1206,8 @@ static int config_write(diskfile_backend *cfg, const char *key, const regex_t *p
 	} else {
 		return -1; /* OS error when reading the file */
 	}
+
+	write_start = data_start;
 
 	/* Lock the file */
 	if (git_filebuf_open(&file, cfg->file_path, 0) < 0)
@@ -1291,7 +1293,7 @@ static int config_write(diskfile_backend *cfg, const char *key, const regex_t *p
 
 			/* We've found the variable we wanted to change, so
 			 * write anything up to it */
-			git_filebuf_write(&file, data_start, pre_end - data_start);
+			git_filebuf_write(&file, write_start, pre_end - write_start);
 			preg_replaced = 1;
 
 			/* Then replace the variable. If the value is NULL, it
@@ -1300,9 +1302,13 @@ static int config_write(diskfile_backend *cfg, const char *key, const regex_t *p
 				git_filebuf_printf(&file, "\t%s = %s\n", name, value);
 			}
 
-			/* multiline variable? we need to keep reading lines to match */
-			if (preg != NULL && section_matches) {
-				data_start = post_start;
+			/*
+			 * If we have a multivar, we should keep looking for entries,
+			 * but only if we're in the right section. Otherwise we'll end up
+			 * looping on the edge of a matching and a non-matching section.
+			 */
+			if (section_matches && preg != NULL) {
+				write_start = post_start;
 				continue;
 			}
 
@@ -1332,7 +1338,7 @@ static int config_write(diskfile_backend *cfg, const char *key, const regex_t *p
 		git_filebuf_write(&file, post_start, reader->buffer.size - (post_start - data_start));
 	} else {
 		if (preg_replaced) {
-			git_filebuf_printf(&file, "\n%s", data_start);
+			git_filebuf_printf(&file, "\n%s", write_start);
 		} else {
 			git_filebuf_write(&file, reader->buffer.ptr, reader->buffer.size);
 
