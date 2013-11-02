@@ -1302,6 +1302,7 @@ void test_diff_workdir__patience_diff(void)
 		"When I wrote this\nI did not know\nhow to create\na patience diff\nI did not know\nhow to create\nanother problem\nI did not know\nhow to create\na minimal diff\n");
 	cl_git_pass(git_index_add_bypath(index, "test.txt"));
 	cl_repo_commit_from_index(NULL, g_repo, NULL, 1372350000, "Base");
+	git_index_free(index);
 
 	cl_git_rewritefile(
 		"empty_standard_repo/test.txt",
