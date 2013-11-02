@@ -2018,7 +2018,7 @@ cleanup:
 int git_checkout_index(
 	git_repository *repo,
 	git_index *index,
-	git_checkout_opts *opts)
+	const git_checkout_opts *opts)
 {
 	int error;
 	git_iterator *index_i;
@@ -2053,7 +2053,7 @@ int git_checkout_index(
 int git_checkout_tree(
 	git_repository *repo,
 	const git_object *treeish,
-	git_checkout_opts *opts)
+	const git_checkout_opts *opts)
 {
 	int error;
 	git_tree *tree = NULL;
