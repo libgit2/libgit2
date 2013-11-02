@@ -4,7 +4,7 @@
 static git_repository *repo;
 static git_reference *fake_remote;
 
-void test_refs_branches_foreach__initialize(void)
+void test_refs_branches_iterator__initialize(void)
 {
 	git_oid id;
 
@@ -15,7 +15,7 @@ void test_refs_branches_foreach__initialize(void)
 	cl_git_pass(git_reference_create(&fake_remote, repo, "refs/remotes/nulltoken/master", &id, 0));
 }
 
-void test_refs_branches_foreach__cleanup(void)
+void test_refs_branches_iterator__cleanup(void)
 {
 	git_reference_free(fake_remote);
 	fake_remote = NULL;
@@ -28,39 +28,35 @@ void test_refs_branches_foreach__cleanup(void)
 	cl_git_sandbox_cleanup();
 }
 
-static int count_branch_list_cb(const char *branch_name, git_branch_t branch_type, void *payload)
-{
-	int *count;
-
-	GIT_UNUSED(branch_type);
-	GIT_UNUSED(branch_name);
-
-	count = (int *)payload;
-	(*count)++;
-
-	return 0;
-}
-
 static void assert_retrieval(unsigned int flags, unsigned int expected_count)
 {
-	int count = 0;
+	git_branch_iterator *iter;
+	git_reference *ref;
+	int count = 0, error;
+	unsigned int type;
 
-	cl_git_pass(git_branch_foreach(repo, flags, count_branch_list_cb, &count));
+	cl_git_pass(git_branch_iterator_new(&iter, repo, flags));
+	while ((error = git_branch_next(&ref, &type, iter)) == 0) {
+		count++;
+		git_reference_free(ref);
+	}
 
+	git_branch_iterator_free(iter);
+	cl_assert_equal_i(error, GIT_ITEROVER);
 	cl_assert_equal_i(expected_count, count);
 }
 
-void test_refs_branches_foreach__retrieve_all_branches(void)
+void test_refs_branches_iterator__retrieve_all_branches(void)
 {
 	assert_retrieval(GIT_BRANCH_LOCAL | GIT_BRANCH_REMOTE, 14);
 }
 
-void test_refs_branches_foreach__retrieve_remote_branches(void)
+void test_refs_branches_iterator__retrieve_remote_branches(void)
 {
 	assert_retrieval(GIT_BRANCH_REMOTE, 2);
 }
 
-void test_refs_branches_foreach__retrieve_local_branches(void)
+void test_refs_branches_iterator__retrieve_local_branches(void)
 {
 	assert_retrieval(GIT_BRANCH_LOCAL, 12);
 }
@@ -84,21 +80,22 @@ static void assert_branch_has_been_found(struct expectations *findings, const ch
 	cl_fail("expected branch not found in list.");
 }
 
-static int contains_branch_list_cb(const char *branch_name, git_branch_t branch_type, void *payload)
+static void contains_branches(struct expectations exp[], git_branch_iterator *iter)
 {
-	int pos = 0;
-	struct expectations *exp;
+	git_reference *ref;
+	unsigned int type;
+	int error, pos = 0;
 
-	GIT_UNUSED(branch_type);
+	while ((error = git_branch_next(&ref, &type, iter)) == 0) {
+		for (pos = 0; exp[pos].branch_name; ++pos) {
+			if (strcmp(git_reference_shorthand(ref), exp[pos].branch_name) == 0)
+				exp[pos].encounters++;
+		}
 
-	exp = (struct expectations *)payload;
-
-	for (pos = 0; exp[pos].branch_name; ++pos) {
-		if (strcmp(branch_name, exp[pos].branch_name) == 0)
-			exp[pos].encounters++;
+		git_reference_free(ref);
 	}
 
-	return 0;
+	cl_assert_equal_i(error, GIT_ITEROVER);
 }
 
 /*
@@ -106,8 +103,9 @@ static int contains_branch_list_cb(const char *branch_name, git_branch_t branch_
  *  nulltoken/HEAD -> nulltoken/master
  *  nulltoken/master
  */
-void test_refs_branches_foreach__retrieve_remote_symbolic_HEAD_when_present(void)
+void test_refs_branches_iterator__retrieve_remote_symbolic_HEAD_when_present(void)
 {
+	git_branch_iterator *iter;
 	struct expectations exp[] = {
 		{ "nulltoken/HEAD", 0 },
 		{ "nulltoken/master", 0 },
@@ -119,39 +117,17 @@ void test_refs_branches_foreach__retrieve_remote_symbolic_HEAD_when_present(void
 
 	assert_retrieval(GIT_BRANCH_REMOTE, 3);
 
-	cl_git_pass(git_branch_foreach(repo, GIT_BRANCH_REMOTE, contains_branch_list_cb, &exp));
+	cl_git_pass(git_branch_iterator_new(&iter, repo, GIT_BRANCH_REMOTE));
+	contains_branches(exp, iter);
+	git_branch_iterator_free(iter);
 
 	assert_branch_has_been_found(exp, "nulltoken/HEAD");
 	assert_branch_has_been_found(exp, "nulltoken/master");
 }
 
-static int branch_list_interrupt_cb(
-	const char *branch_name, git_branch_t branch_type, void *payload)
+void test_refs_branches_iterator__mix_of_packed_and_loose(void)
 {
-	int *count;
-
-	GIT_UNUSED(branch_type);
-	GIT_UNUSED(branch_name);
-
-	count = (int *)payload;
-	(*count)++;
-
-	return (*count == 5);
-}
-
-void test_refs_branches_foreach__can_cancel(void)
-{
-	int count = 0;
-
-	cl_assert_equal_i(GIT_EUSER,
-		git_branch_foreach(repo, GIT_BRANCH_LOCAL | GIT_BRANCH_REMOTE,
-			branch_list_interrupt_cb, &count));
-
-	cl_assert_equal_i(5, count);
-}
-
-void test_refs_branches_foreach__mix_of_packed_and_loose(void)
-{
+	git_branch_iterator *iter;
 	struct expectations exp[] = {
 		{ "master", 0 },
 		{ "origin/HEAD", 0 },
@@ -163,8 +139,10 @@ void test_refs_branches_foreach__mix_of_packed_and_loose(void)
 
 	r2 = cl_git_sandbox_init("testrepo2");
 
-	cl_git_pass(git_branch_foreach(r2, GIT_BRANCH_LOCAL | GIT_BRANCH_REMOTE,
-		contains_branch_list_cb, &exp));
+	cl_git_pass(git_branch_iterator_new(&iter, r2, GIT_BRANCH_LOCAL | GIT_BRANCH_REMOTE));
+	contains_branches(exp, iter);
+
+	git_branch_iterator_free(iter);
 
 	assert_branch_has_been_found(exp, "master");
 	assert_branch_has_been_found(exp, "origin/HEAD");

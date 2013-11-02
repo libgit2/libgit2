@@ -66,33 +66,41 @@ GIT_EXTERN(int) git_branch_create(
  */
 GIT_EXTERN(int) git_branch_delete(git_reference *branch);
 
-typedef int (*git_branch_foreach_cb)(
-	const char *branch_name,
-	git_branch_t branch_type,
-	void *payload);
+/** Iterator type for branches */
+typedef struct git_branch_iterator git_branch_iterator;
 
 /**
- * Loop over all the branches and issue a callback for each one.
+ * Create an iterator which loops over the requested branches.
  *
- * If the callback returns a non-zero value, this will stop looping.
- *
+ * @param out the iterator
  * @param repo Repository where to find the branches.
- *
  * @param list_flags Filtering flags for the branch
  * listing. Valid values are GIT_BRANCH_LOCAL, GIT_BRANCH_REMOTE
  * or a combination of the two.
  *
- * @param branch_cb Callback to invoke per found branch.
- *
- * @param payload Extra parameter to callback function.
- *
- * @return 0 on success, GIT_EUSER on non-zero callback, or error code
+ * @return 0 on success  or an error code
  */
-GIT_EXTERN(int) git_branch_foreach(
+GIT_EXTERN(int) git_branch_iterator_new(
+	git_branch_iterator **out,
 	git_repository *repo,
-	unsigned int list_flags,
-	git_branch_foreach_cb branch_cb,
-	void *payload);
+	unsigned int list_flags);
+
+/**
+ * Retrieve the next branch from the iterator
+ *
+ * @param out the reference
+ * @param out_type the type of branch (local or remote-tracking)
+ * @param iter the branch iterator
+ * @return 0 on success, GIT_ITEROVER if there are no more branches or an error code.
+ */
+GIT_EXTERN(int) git_branch_next(git_reference **out, unsigned int *out_type, git_branch_iterator *iter);
+
+/**
+ * Free a branch iterator
+ *
+ * @param iter the iterator to free
+ */
+GIT_EXTERN(void) git_branch_iterator_free(git_branch_iterator *iter);
 
 /**
  * Move/rename an existing local branch reference.
