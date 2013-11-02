@@ -674,7 +674,8 @@ int gitno_extract_url_parts(
 	 * ==> [user[:pass]@]hostname.tld[:port]/resource
 	 */
 
-	/* Check for user and maybe password */
+	/* Check for user and maybe password. Note that this deviates from RFC-1738
+	 * in that it allows non-encoded colons in the password field. */
 	at = strchr(url, '@');
 	if (at) {
 		colon = strchr(url, ':');
@@ -695,7 +696,7 @@ int gitno_extract_url_parts(
 	colon = strchr(url, ':');
 	if (!slash ||
 	    (colon && (slash < colon))) {
-		giterr_set(GITERR_NET, "Malformed URL");
+		giterr_set(GITERR_NET, "Malformed URL: %s", url);
 		return GIT_EINVALIDSPEC;
 	}
 
