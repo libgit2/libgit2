@@ -719,6 +719,25 @@ static int remote_head_cmp(const void *_a, const void *_b)
 	return git__strcmp_cb(a->name, b->name);
 }
 
+static int ls_to_vector(git_vector *out, git_remote *remote)
+{
+	git_remote_head **heads;
+	size_t heads_len, i;
+
+	if (git_remote_ls((const git_remote_head ***)&heads, &heads_len, remote) < 0)
+		return -1;
+
+	if (git_vector_init(out, heads_len, remote_head_cmp) < 0)
+		return -1;
+
+	for (i = 0; i < heads_len; i++) {
+		if (git_vector_insert(out, heads[i]) < 0)
+			return -1;
+	}
+
+	return 0;
+}
+
 int git_remote_download(git_remote *remote)
 {
 	int error;
@@ -726,12 +745,15 @@ int git_remote_download(git_remote *remote)
 
 	assert(remote);
 
-	if (git_remote_ls((const git_remote_head ***)&refs.contents, &refs.length, remote) < 0)
+	if (ls_to_vector(&refs, remote) < 0)
 		return -1;
 
 	free_refspecs(&remote->active_refspecs);
 
-	if (dwim_refspecs(&remote->active_refspecs, &remote->refspecs, &refs) < 0)
+	error = dwim_refspecs(&remote->active_refspecs, &remote->refspecs, &refs);
+	git_vector_free(&refs);
+
+	if (error < 0)
 		return -1;
 
 	if ((error = git_fetch_negotiate(remote)) < 0)
@@ -980,7 +1002,8 @@ int git_remote_update_tips(git_remote *remote)
 	if (git_refspec__parse(&tagspec, GIT_REFSPEC_TAGS, true) < 0)
 		return -1;
 
-	if ((error = git_remote_ls((const git_remote_head ***)&refs.contents, &refs.length, remote)) < 0)
+
+	if ((error = ls_to_vector(&refs, remote)) < 0)
 		goto out;
 
 	if (remote->download_tags == GIT_REMOTE_DOWNLOAD_TAGS_ALL) {
@@ -997,6 +1020,7 @@ int git_remote_update_tips(git_remote *remote)
 	}
 
 out:
+	git_vector_free(&refs);
 	git_refspec__free(&tagspec);
 	return error;
 }
