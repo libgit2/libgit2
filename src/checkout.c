@@ -2103,18 +2103,6 @@ int git_checkout_head(
 	git_repository *repo,
 	const git_checkout_opts *opts)
 {
-	int error;
-	git_tree *head = NULL;
-	git_iterator *head_i = NULL;
-
 	assert(repo);
-
-	if (!(error = checkout_lookup_head_tree(&head, repo)) &&
-		!(error = git_iterator_for_tree(&head_i, head, 0, NULL, NULL)))
-		error = git_checkout_iterator(head_i, opts);
-
-	git_iterator_free(head_i);
-	git_tree_free(head);
-
-	return error;
+	return git_checkout_tree(repo, NULL, opts);
 }
