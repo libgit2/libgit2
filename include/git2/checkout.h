@@ -280,7 +280,7 @@ GIT_EXTERN(int) git_checkout_index(
  *
  * @param repo repository to check out (must be non-bare)
  * @param treeish a commit, tag or tree which content will be used to update
- * the working directory
+ * the working directory (or NULL to use HEAD)
  * @param opts specifies checkout options (may be NULL)
  * @return 0 on success, GIT_ERROR otherwise (use giterr_last for information
  * about the error)

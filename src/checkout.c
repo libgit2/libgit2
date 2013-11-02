@@ -2073,10 +2073,21 @@ int git_checkout_tree(
 	if (!repo)
 		repo = git_object_owner(treeish);
 
-	if (git_object_peel((git_object **)&tree, treeish, GIT_OBJ_TREE) < 0) {
-		giterr_set(
-			GITERR_CHECKOUT, "Provided object cannot be peeled to a tree");
-		return -1;
+	if (treeish) {
+		if (git_object_peel((git_object **)&tree, treeish, GIT_OBJ_TREE) < 0) {
+			giterr_set(
+				GITERR_CHECKOUT, "Provided object cannot be peeled to a tree");
+			return -1;
+		}
+	}
+	else {
+		if ((error = checkout_lookup_head_tree(&tree, repo)) < 0) {
+			if (error != GIT_EUNBORNBRANCH)
+				giterr_set(
+					GITERR_CHECKOUT,
+					"HEAD could not be peeled to a tree and no treeish given");
+			return error;
+		}
 	}
 
 	if (!(error = git_iterator_for_tree(&tree_i, tree, 0, NULL, NULL)))
