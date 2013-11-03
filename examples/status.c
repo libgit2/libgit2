@@ -48,7 +48,7 @@ struct opts {
 
 static void parse_opts(struct opts *o, int argc, char *argv[]);
 static void show_branch(git_repository *repo, int format);
-static void print_long(git_repository *repo, git_status_list *status);
+static void print_long(git_status_list *status);
 static void print_short(git_repository *repo, git_status_list *status);
 
 int main(int argc, char *argv[])
@@ -80,13 +80,15 @@ int main(int argc, char *argv[])
 	/**
 	 * Run status on the repository
 	 *
-	 * Because we want to simluate a full "git status" run and want to
-	 * support some command line options, we use `git_status_foreach_ext()`
-	 * instead of just the plain status call.  This allows (a) iterating
-	 * over the index and then the workdir and (b) extra flags that control
-	 * which files are included.  If you just want simple status (e.g. to
-	 * enumerate files that are modified) then you probably don't need the
-	 * extended API.
+	 * We use `git_status_list_new()` to generate a list of status
+	 * information which lets us iterate over it at our
+	 * convenience and extract the data we want to show out of
+	 * each entry.
+	 *
+	 * You can use `git_status_foreach()` or
+	 * `git_status_foreach_ext()` if you'd prefer to execute a
+	 * callback for each entry. The latter gives you more control
+	 * about what results are presented.
 	 */
 	check_lg2(git_status_list_new(&status, repo, &o.statusopt),
 		  "Could not get status", NULL);
@@ -95,7 +97,7 @@ int main(int argc, char *argv[])
 		show_branch(repo, o.format);
 
 	if (o.format == FORMAT_LONG)
-		print_long(repo, status);
+		print_long(status);
 	else
 		print_short(repo, status);
 
@@ -106,6 +108,10 @@ int main(int argc, char *argv[])
 	return 0;
 }
 
+/**
+ * If the user asked for the branch, let's show the short name of the
+ * branch.
+ */
 static void show_branch(git_repository *repo, int format)
 {
 	int error = 0;
@@ -117,9 +123,7 @@ static void show_branch(git_repository *repo, int format)
 	if (error == GIT_EUNBORNBRANCH || error == GIT_ENOTFOUND)
 		branch = NULL;
 	else if (!error) {
-		branch = git_reference_name(head);
-		if (!strncmp(branch, "refs/heads/", strlen("refs/heads/")))
-			branch += strlen("refs/heads/");
+		branch = git_reference_shorthand(head);
 	} else
 		check_lg2(error, "failed to get current branch", NULL);
 
@@ -132,15 +136,17 @@ static void show_branch(git_repository *repo, int format)
 	git_reference_free(head);
 }
 
-static void print_long(git_repository *repo, git_status_list *status)
+/**
+ * This function print out an output similar to git's status command
+ * in long form, including the command-line hints.
+ */
+static void print_long(git_status_list *status)
 {
 	size_t i, maxi = git_status_list_entrycount(status);
 	const git_status_entry *s;
 	int header = 0, changes_in_index = 0;
 	int changed_in_workdir = 0, rm_in_workdir = 0;
 	const char *old_path, *new_path;
-
-	(void)repo;
 
 	/** Print index changes. */
 
@@ -198,9 +204,15 @@ static void print_long(git_repository *repo, git_status_list *status)
 
 		s = git_status_byindex(status, i);
 
+		/**
+		 * With `GIT_STATUS_OPT_INCLUDE_UNMODIFIED` (not used in this example)
+		 * `index_to_workdir` may not be `NULL` even if there are
+		 * no differences, in which case it will be a `GIT_DELTA_UNMODIFIED`.
+		 */
 		if (s->status == GIT_STATUS_CURRENT || s->index_to_workdir == NULL)
 			continue;
 
+		/** Print out the output since we know the file has some changes */
 		if (s->status & GIT_STATUS_WT_MODIFIED)
 			wstatus = "modified: ";
 		if (s->status & GIT_STATUS_WT_DELETED)
@@ -234,7 +246,6 @@ static void print_long(git_repository *repo, git_status_list *status)
 		changed_in_workdir = 1;
 		printf("#\n");
 	}
-	header = 0;
 
 	/** Print untracked files. */
 
@@ -280,6 +291,10 @@ static void print_long(git_repository *repo, git_status_list *status)
 		printf("no changes added to commit (use \"git add\" and/or \"git commit -a\")\n");
 }
 
+/**
+ * This version of the output prefixes each path with two status
+ * columns and shows submodule status information.
+ */
 static void print_short(git_repository *repo, git_status_list *status)
 {
 	size_t i, maxi = git_status_list_entrycount(status);
@@ -330,6 +345,10 @@ static void print_short(git_repository *repo, git_status_list *status)
 		if (istatus == '?' && wstatus == '?')
 			continue;
 
+		/**
+		 * A commit in a tree is how submodules are stored, so
+		 * let's go take a look at its status.
+		 */
 		if (s->index_to_workdir &&
 			s->index_to_workdir->new_file.mode == GIT_FILEMODE_COMMIT)
 		{
@@ -350,6 +369,10 @@ static void print_short(git_repository *repo, git_status_list *status)
 					extra = " (untracked content)";
 			}
 		}
+
+		/**
+		 * Now that we have all the information, it's time to format the output.
+		 */
 
 		if (s->head_to_index) {
 			a = s->head_to_index->old_file.path;
@@ -384,6 +407,9 @@ static void print_short(git_repository *repo, git_status_list *status)
 	}
 }
 
+/**
+ * Parse options that git's status command supports.
+ */
 static void parse_opts(struct opts *o, int argc, char *argv[])
 {
 	struct args_info args = ARGS_INFO_INIT;
