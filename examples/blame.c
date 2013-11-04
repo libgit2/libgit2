@@ -128,6 +128,7 @@ int main(int argc, char *argv[])
 	return 0;
 }
 
+/** Tell the user how to make this thing work. */
 static void usage(const char *msg, const char *arg)
 {
 	if (msg && arg)
