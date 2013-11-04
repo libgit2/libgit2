@@ -1,31 +1,25 @@
-#include <stdio.h>
-#include <git2.h>
-#include <stdlib.h>
-#include <string.h>
+/*
+ * libgit2 "blame" example - shows how to use the blame API
+ *
+ * Written by the libgit2 contributors
+ *
+ * To the extent possible under law, the author(s) have dedicated all copyright
+ * and related and neighboring rights to this software to the public domain
+ * worldwide. This software is distributed without any warranty.
+ *
+ * You should have received a copy of the CC0 Public Domain Dedication along
+ * with this software. If not, see
+ * <http://creativecommons.org/publicdomain/zero/1.0/>.
+ */
 
-static void check(int error, const char *msg)
-{
-	if (error) {
-		fprintf(stderr, "%s (%d)\n", msg, error);
-		exit(error);
-	}
-}
+#include "common.h"
 
-static void usage(const char *msg, const char *arg)
-{
-	if (msg && arg)
-		fprintf(stderr, "%s: %s\n", msg, arg);
-	else if (msg)
-		fprintf(stderr, "%s\n", msg);
-	fprintf(stderr, "usage: blame [options] [<commit range>] <path>\n");
-	fprintf(stderr, "\n");
-	fprintf(stderr, "   <commit range>      example: `HEAD~10..HEAD`, or `1234abcd`\n");
-	fprintf(stderr, "   -L <n,m>            process only line range n-m, counting from 1\n");
-	fprintf(stderr, "   -M                  find line moves within and across files\n");
-	fprintf(stderr, "   -C                  find line copies within and across files\n");
-	fprintf(stderr, "\n");
-	exit(1);
-}
+/**
+ * This example demonstrates how to invoke the libgit2 blame API to roughly
+ * simulate the output of `git blame` and a few of its command line arguments.
+ */
+
+static void usage(const char *msg, const char *arg);
 
 int main(int argc, char *argv[])
 {
@@ -61,12 +55,12 @@ int main(int argc, char *argv[])
 			opts.flags |= GIT_BLAME_TRACK_COPIES_SAME_COMMIT_COPIES;
 		else if (!strcasecmp(a, "-L")) {
 			i++; a = argv[i];
-			if (i >= argc) check(-1, "Not enough arguments to -L");
-			check(sscanf(a, "%d,%d", &opts.min_line, &opts.max_line)-2, "-L format error");
+			if (i >= argc) fatal("Not enough arguments to -L", NULL);
+			check_lg2(sscanf(a, "%d,%d", &opts.min_line, &opts.max_line)-2, "-L format error", NULL);
 		}
 		else {
 			/* commit range */
-			if (commitspec) check(-1, "Only one commit spec allowed");
+			if (commitspec) fatal("Only one commit spec allowed", NULL);
 			commitspec = a;
 		}
 	}
@@ -87,11 +81,11 @@ int main(int argc, char *argv[])
 	}
 
 	/* Open the repo */
-	check(git_repository_open_ext(&repo, ".", 0, NULL), "Couldn't open repository");
+	check_lg2(git_repository_open_ext(&repo, ".", 0, NULL), "Couldn't open repository", NULL);
 
 	/* Parse the end points */
 	if (commitspec) {
-		check(git_revparse(&revspec, repo, commitspec), "Couldn't parse commit spec");
+		check_lg2(git_revparse(&revspec, repo, commitspec), "Couldn't parse commit spec", NULL);
 		if (revspec.flags & GIT_REVPARSE_SINGLE) {
 			git_oid_cpy(&opts.newest_commit, git_object_id(revspec.from));
 			git_object_free(revspec.from);
@@ -104,7 +98,7 @@ int main(int argc, char *argv[])
 	}
 
 	/* Run the blame */
-	check(git_blame_file(&blame, repo, path, &opts), "Blame error");
+	check_lg2(git_blame_file(&blame, repo, path, &opts), "Blame error", NULL);
 
 	/* Get the raw data for output */
 	if (git_oid_iszero(&opts.newest_commit))
@@ -116,8 +110,8 @@ int main(int argc, char *argv[])
 
 	{
 		git_object *obj;
-		check(git_revparse_single(&obj, repo, spec), "Object lookup error");
-		check(git_blob_lookup(&blob, repo, git_object_id(obj)), "Blob lookup error");
+		check_lg2(git_revparse_single(&obj, repo, spec), "Object lookup error", NULL);
+		check_lg2(git_blob_lookup(&blob, repo, git_object_id(obj)), "Blob lookup error", NULL);
 		git_object_free(obj);
 	}
 	rawdata = git_blob_rawcontent(blob);
@@ -158,3 +152,20 @@ int main(int argc, char *argv[])
 	git_repository_free(repo);
 	git_threads_shutdown();
 }
+
+static void usage(const char *msg, const char *arg)
+{
+	if (msg && arg)
+		fprintf(stderr, "%s: %s\n", msg, arg);
+	else if (msg)
+		fprintf(stderr, "%s\n", msg);
+	fprintf(stderr, "usage: blame [options] [<commit range>] <path>\n");
+	fprintf(stderr, "\n");
+	fprintf(stderr, "   <commit range>      example: `HEAD~10..HEAD`, or `1234abcd`\n");
+	fprintf(stderr, "   -L <n,m>            process only line range n-m, counting from 1\n");
+	fprintf(stderr, "   -M                  find line moves within and across files\n");
+	fprintf(stderr, "   -C                  find line copies within and across files\n");
+	fprintf(stderr, "\n");
+	exit(1);
+}
+
