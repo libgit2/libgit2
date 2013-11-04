@@ -1,5 +1,6 @@
 #include "clar_libgit2.h"
 #include "odb.h"
+#include "git2/odb_backend.h"
 #include "posix.h"
 #include "loose_data.h"
 
@@ -91,4 +92,55 @@ void test_odb_loose__simple_reads(void)
 	test_read_object(&one);
 	test_read_object(&two);
 	test_read_object(&some);
+}
+
+void test_write_object_permission(
+	mode_t dir_mode, mode_t file_mode,
+	mode_t expected_dir_mode, mode_t expected_file_mode)
+{
+	git_odb *odb;
+	git_odb_backend *backend;
+	git_oid oid;
+	struct stat statbuf;
+	mode_t mask, os_mask;
+
+	/* Windows does not return group/user bits from stat,
+	* files are never executable.
+	*/
+#ifdef GIT_WIN32
+	os_mask = 0600;
+#else
+	os_mask = 0777;
+#endif
+
+	mask = p_umask(0);
+	p_umask(mask);
+
+	cl_git_pass(git_odb_new(&odb));
+	cl_git_pass(git_odb_backend_loose(&backend, "test-objects", -1, 0, dir_mode, file_mode));
+	cl_git_pass(git_odb_add_backend(odb, backend, 1));
+	cl_git_pass(git_odb_write(&oid, odb, "Test data\n", 10, GIT_OBJ_BLOB));
+
+	cl_git_pass(p_stat("test-objects/67", &statbuf));
+	cl_assert_equal_i(statbuf.st_mode & os_mask, (expected_dir_mode & ~mask) & os_mask);
+
+	cl_git_pass(p_stat("test-objects/67/b808feb36201507a77f85e6d898f0a2836e4a5", &statbuf));
+	cl_assert_equal_i(statbuf.st_mode & os_mask, (expected_file_mode & ~mask) & os_mask);
+
+	git_odb_free(odb);
+}
+
+void test_odb_loose__permissions_standard(void)
+{
+	test_write_object_permission(0, 0, GIT_OBJECT_DIR_MODE, GIT_OBJECT_FILE_MODE);
+}
+
+void test_odb_loose_permissions_readonly(void)
+{
+	test_write_object_permission(0777, 0444, 0777, 0444);
+}
+
+void test_odb_loose__permissions_readwrite(void)
+{
+	test_write_object_permission(0777, 0666, 0777, 0666);
 }

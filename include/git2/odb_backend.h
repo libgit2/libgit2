@@ -40,10 +40,18 @@ GIT_EXTERN(int) git_odb_backend_pack(git_odb_backend **out, const char *objects_
  * @param objects_dir the Git repository's objects directory
  * @param compression_level zlib compression level to use
  * @param do_fsync whether to do an fsync() after writing (currently ignored)
+ * @param dir_mode permissions to use creating a directory or 0 for defaults
+ * @param file_mode permissions to use creating a file or 0 for defaults
  *
  * @return 0 or an error code
  */
-GIT_EXTERN(int) git_odb_backend_loose(git_odb_backend **out, const char *objects_dir, int compression_level, int do_fsync);
+GIT_EXTERN(int) git_odb_backend_loose(
+	git_odb_backend **out,
+	const char *objects_dir,
+	int compression_level,
+	int do_fsync,
+	mode_t dir_mode,
+	mode_t file_mode);
 
 /**
  * Create a backend out of a single packfile
