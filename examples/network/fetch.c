@@ -14,11 +14,12 @@ struct dl_data {
 	int finished;
 };
 
-static void progress_cb(const char *str, int len, void *data)
+static int progress_cb(const char *str, int len, void *data)
 {
 	(void)data;
 	printf("remote: %.*s", len, str);
 	fflush(stdout); /* We don't have the \n to force the flush */
+	return 0;
 }
 
 static void *download(void *ptr)
@@ -78,7 +79,6 @@ int fetch(git_repository *repo, int argc, char **argv)
 	const git_transfer_progress *stats;
 	struct dl_data data;
 	git_remote_callbacks callbacks = GIT_REMOTE_CALLBACKS_INIT;
-	int resolve_deltas_ln = 0;
 #ifndef _WIN32
 	pthread_t worker;
 #endif
