@@ -70,11 +70,12 @@
   <span class="kt">int</span> <span class="n">finished</span><span class="p">;</span>
 <span class="p">};</span>
 
-<span class="k">static</span> <span class="kt">void</span> <span class="nf">progress_cb</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">str</span><span class="p">,</span> <span class="kt">int</span> <span class="n">len</span><span class="p">,</span> <span class="kt">void</span> <span class="o">*</span><span class="n">data</span><span class="p">)</span>
+<span class="k">static</span> <span class="kt">int</span> <span class="nf">progress_cb</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">str</span><span class="p">,</span> <span class="kt">int</span> <span class="n">len</span><span class="p">,</span> <span class="kt">void</span> <span class="o">*</span><span class="n">data</span><span class="p">)</span>
 <span class="p">{</span>
   <span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="n">data</span><span class="p">;</span>
   <span class="n">printf</span><span class="p">(</span><span class="s">&quot;remote: %.*s&quot;</span><span class="p">,</span> <span class="n">len</span><span class="p">,</span> <span class="n">str</span><span class="p">);</span>
   <span class="n">fflush</span><span class="p">(</span><span class="n">stdout</span><span class="p">);</span> <span class="cm">/* We don&#39;t have the \n to force the flush */</span>
+  <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
 <span class="p">}</span>
 
 <span class="k">static</span> <span class="kt">void</span> <span class="o">*</span><span class="nf">download</span><span class="p">(</span><span class="kt">void</span> <span class="o">*</span><span class="n">ptr</span><span class="p">)</span>
@@ -164,7 +165,6 @@ an update.</p>
   <span class="k">const</span> <span class="n">git_transfer_progress</span> <span class="o">*</span><span class="n">stats</span><span class="p">;</span>
   <span class="k">struct</span> <span class="n">dl_data</span> <span class="n">data</span><span class="p">;</span>
   <span class="n">git_remote_callbacks</span> <span class="n">callbacks</span> <span class="o">=</span> <span class="n">GIT_REMOTE_CALLBACKS_INIT</span><span class="p">;</span>
-  <span class="kt">int</span> <span class="n">resolve_deltas_ln</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
 <span class="cp">#ifndef _WIN32</span>
   <span class="n">pthread_t</span> <span class="n">worker</span><span class="p">;</span>
 <span class="cp">#endif</span>
