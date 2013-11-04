@@ -14,11 +14,12 @@ struct dl_data {
 	int finished;
 };
 
-static void progress_cb(const char *str, int len, void *data)
+static int progress_cb(const char *str, int len, void *data)
 {
 	(void)data;
 	printf("remote: %.*s", len, str);
 	fflush(stdout); /* We don't have the \n to force the flush */
+	return 0;
 }
 
 static void *download(void *ptr)
