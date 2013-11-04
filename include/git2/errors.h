@@ -8,6 +8,7 @@
 #define INCLUDE_git_errors_h__
 
 #include "common.h"
+#include "buffer.h"
 
 /**
  * @file git2/errors.h
@@ -45,6 +46,7 @@ typedef struct {
 
 /** Error classes */
 typedef enum {
+	GITERR_NONE = 0,
 	GITERR_NOMEMORY,
 	GITERR_OS,
 	GITERR_INVALID,
@@ -83,6 +85,21 @@ GIT_EXTERN(const git_error *) giterr_last(void);
  * Clear the last library error that occurred for this thread.
  */
 GIT_EXTERN(void) giterr_clear(void);
+
+/**
+ * Get the last error data and clear it.
+ *
+ * This copies the last error message into the given `git_buf` and returns
+ * the associated `git_error_t`, leaving the error cleared as if
+ * `giterr_clear` had been called.  You must call `git_buf_free` on the
+ * message to release the memory.
+ *
+ * Note: it is possible that this will return `GITERR_NONE` and set the
+ * buffer to NULL, so be prepared for that condition.  Also, if the last
+ * error was an out-of-memory error, this will return `GITERR_NOMEMORY`
+ * but also leave the buffer set to NULL (to avoid allocation).
+ */
+GIT_EXTERN(git_error_t) giterr_detach(git_buf *message);
 
 /**
  * Set the error message string for this thread.
