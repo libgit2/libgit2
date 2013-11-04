@@ -320,8 +320,12 @@ int git_filebuf_commit_at(git_filebuf *file, const char *path, mode_t mode)
 
 int git_filebuf_commit(git_filebuf *file, mode_t mode)
 {
+	mode_t mask;
+
 	/* temporary files cannot be committed */
 	assert(file && file->path_original);
+
+	p_umask(mask = p_umask(0));
 
 	file->flush_mode = Z_FINISH;
 	flush_buffer(file);
@@ -338,7 +342,7 @@ int git_filebuf_commit(git_filebuf *file, mode_t mode)
 
 	file->fd = -1;
 
-	if (p_chmod(file->path_lock, mode)) {
+	if (p_chmod(file->path_lock, (mode & ~mask))) {
 		giterr_set(GITERR_OS, "Failed to set attributes for file at '%s'", file->path_lock);
 		goto on_error;
 	}

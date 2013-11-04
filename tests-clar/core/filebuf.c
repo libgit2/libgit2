@@ -90,3 +90,37 @@ void test_core_filebuf__5(void)
 
 	cl_must_pass(p_unlink(test));
 }
+
+
+/* make sure git_filebuf_commit takes umask into account */
+void test_core_filebuf__umask(void)
+{
+	git_filebuf file = GIT_FILEBUF_INIT;
+	char test[] = "test";
+	struct stat statbuf;
+	mode_t mask, os_mask;
+
+#ifdef GIT_WIN32
+	os_mask = 0600;
+#else
+	os_mask = 0777;
+#endif
+
+	p_umask(mask = p_umask(0));
+
+	cl_assert(file.buffer == NULL);
+
+	cl_git_pass(git_filebuf_open(&file, test, 0));
+	cl_assert(file.buffer != NULL);
+	cl_git_pass(git_filebuf_printf(&file, "%s\n", "libgit2 rocks"));
+	cl_assert(file.buffer != NULL);
+
+	cl_git_pass(git_filebuf_commit(&file, 0666));
+	cl_assert(file.buffer == NULL);
+
+	cl_must_pass(p_stat("test", &statbuf));
+	cl_assert_equal_i(statbuf.st_mode & os_mask, (0666 & ~mask) & os_mask);
+
+	cl_must_pass(p_unlink(test));
+}
+

@@ -902,8 +902,8 @@ int git_odb_backend_loose(
 	const char *objects_dir,
 	int compression_level,
 	int do_fsync,
-	mode_t dir_mode,
-	mode_t file_mode)
+	unsigned int dir_mode,
+	unsigned int file_mode)
 {
 	loose_backend *backend;
 	size_t objects_dirlen;
