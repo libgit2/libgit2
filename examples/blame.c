@@ -19,104 +19,76 @@
  * simulate the output of `git blame` and a few of its command line arguments.
  */
 
-static void usage(const char *msg, const char *arg);
+struct opts {
+	char *path;
+	char *commitspec;
+	int C;
+	int M;
+	int start_line;
+	int end_line;
+};
+static void parse_opts(struct opts *o, int argc, char *argv[]);
 
 int main(int argc, char *argv[])
 {
 	int i, line, break_on_null_hunk;
-	const char *path = NULL, *a;
-	const char *rawdata, *commitspec=NULL, *bare_args[3] = {0};
 	char spec[1024] = {0};
+	struct opts o = {0};
+	const char *rawdata;
 	git_repository *repo = NULL;
 	git_revspec revspec = {0};
-	git_blame_options opts = GIT_BLAME_OPTIONS_INIT;
+	git_blame_options blameopts = GIT_BLAME_OPTIONS_INIT;
 	git_blame *blame = NULL;
 	git_blob *blob;
+	git_object *obj;
 
 	git_threads_init();
 
-	if (argc < 2) usage(NULL, NULL);
+	parse_opts(&o, argc, argv);
+	if (o.M) blameopts.flags |= GIT_BLAME_TRACK_COPIES_SAME_COMMIT_MOVES;
+	if (o.C) blameopts.flags |= GIT_BLAME_TRACK_COPIES_SAME_COMMIT_COPIES;
 
-	for (i=1; i<argc; i++) {
-		a = argv[i];
-
-		if (a[0] != '-') {
-			int i=0;
-			while (bare_args[i] && i < 3) ++i;
-			if (i >= 3)
-				usage("Invalid argument set", NULL);
-			bare_args[i] = a;
-		}
-		else if (!strcmp(a, "--"))
-			continue;
-		else if (!strcasecmp(a, "-M"))
-			opts.flags |= GIT_BLAME_TRACK_COPIES_SAME_COMMIT_MOVES;
-		else if (!strcasecmp(a, "-C"))
-			opts.flags |= GIT_BLAME_TRACK_COPIES_SAME_COMMIT_COPIES;
-		else if (!strcasecmp(a, "-L")) {
-			i++; a = argv[i];
-			if (i >= argc) fatal("Not enough arguments to -L", NULL);
-			check_lg2(sscanf(a, "%d,%d", &opts.min_line, &opts.max_line)-2, "-L format error", NULL);
-		}
-		else {
-			/* commit range */
-			if (commitspec) fatal("Only one commit spec allowed", NULL);
-			commitspec = a;
-		}
-	}
-
-	/* Handle the bare arguments */
-	if (!bare_args[0]) usage("Please specify a path", NULL);
-	path = bare_args[0];
-	if (bare_args[1]) {
-		/* <commitspec> <path> */
-		path = bare_args[1];
-		commitspec = bare_args[0];
-	}
-	if (bare_args[2]) {
-		/* <oldcommit> <newcommit> <path> */
-		path = bare_args[2];
-		sprintf(spec, "%s..%s", bare_args[0], bare_args[1]);
-		commitspec = spec;
-	}
-
-	/* Open the repo */
+	/** Open the repository. */
 	check_lg2(git_repository_open_ext(&repo, ".", 0, NULL), "Couldn't open repository", NULL);
 
-	/* Parse the end points */
-	if (commitspec) {
-		check_lg2(git_revparse(&revspec, repo, commitspec), "Couldn't parse commit spec", NULL);
+	/**
+	 * The commit range comes in "commitish" form. Use the rev-parse API to
+	 * nail down the end points.
+	 */
+	if (o.commitspec) {
+		check_lg2(git_revparse(&revspec, repo, o.commitspec), "Couldn't parse commit spec", NULL);
 		if (revspec.flags & GIT_REVPARSE_SINGLE) {
-			git_oid_cpy(&opts.newest_commit, git_object_id(revspec.from));
+			git_oid_cpy(&blameopts.newest_commit, git_object_id(revspec.from));
 			git_object_free(revspec.from);
 		} else {
-			git_oid_cpy(&opts.oldest_commit, git_object_id(revspec.from));
-			git_oid_cpy(&opts.newest_commit, git_object_id(revspec.to));
+			git_oid_cpy(&blameopts.oldest_commit, git_object_id(revspec.from));
+			git_oid_cpy(&blameopts.newest_commit, git_object_id(revspec.to));
 			git_object_free(revspec.from);
 			git_object_free(revspec.to);
 		}
 	}
 
-	/* Run the blame */
-	check_lg2(git_blame_file(&blame, repo, path, &opts), "Blame error", NULL);
+	/** Run the blame. */
+	check_lg2(git_blame_file(&blame, repo, o.path, &blameopts), "Blame error", NULL);
 
-	/* Get the raw data for output */
-	if (git_oid_iszero(&opts.newest_commit))
+	/**
+	 * Get the raw data inside the blob for output. We use the
+	 * `commitish:path/to/file.txt` format to find it.
+	 */
+	if (git_oid_iszero(&blameopts.newest_commit))
 		strcpy(spec, "HEAD");
 	else
-		git_oid_tostr(spec, sizeof(spec), &opts.newest_commit);
+		git_oid_tostr(spec, sizeof(spec), &blameopts.newest_commit);
 	strcat(spec, ":");
-	strcat(spec, path);
+	strcat(spec, o.path);
 
-	{
-		git_object *obj;
-		check_lg2(git_revparse_single(&obj, repo, spec), "Object lookup error", NULL);
-		check_lg2(git_blob_lookup(&blob, repo, git_object_id(obj)), "Blob lookup error", NULL);
-		git_object_free(obj);
-	}
+	check_lg2(git_revparse_single(&obj, repo, spec), "Object lookup error", NULL);
+	check_lg2(git_blob_lookup(&blob, repo, git_object_id(obj)), "Blob lookup error", NULL);
+	git_object_free(obj);
+
 	rawdata = git_blob_rawcontent(blob);
 
-	/* Produce the output */
+	/** Produce the output. */
 	line = 1;
 	i = 0;
 	break_on_null_hunk = 0;
@@ -146,11 +118,14 @@ int main(int argc, char *argv[])
 		line++;
 	}
 
-	/* Cleanup */
+	/** Cleanup. */
 	git_blob_free(blob);
 	git_blame_free(blame);
 	git_repository_free(repo);
+
 	git_threads_shutdown();
+
+	return 0;
 }
 
 static void usage(const char *msg, const char *arg)
@@ -169,3 +144,55 @@ static void usage(const char *msg, const char *arg)
 	exit(1);
 }
 
+/** Parse the arguments. */
+static void parse_opts(struct opts *o, int argc, char *argv[])
+{
+	int i;
+	char *bare_args[3] = {0};
+
+	if (argc < 2) usage(NULL, NULL);
+
+	for (i=1; i<argc; i++) {
+		char *a = argv[i];
+
+		if (a[0] != '-') {
+			int i=0;
+			while (bare_args[i] && i < 3) ++i;
+			if (i >= 3)
+				usage("Invalid argument set", NULL);
+			bare_args[i] = a;
+		}
+		else if (!strcmp(a, "--"))
+			continue;
+		else if (!strcasecmp(a, "-M"))
+			o->M = 1;
+		else if (!strcasecmp(a, "-C"))
+			o->C = 1;
+		else if (!strcasecmp(a, "-L")) {
+			i++; a = argv[i];
+			if (i >= argc) fatal("Not enough arguments to -L", NULL);
+			check_lg2(sscanf(a, "%d,%d", &o->start_line, &o->end_line)-2, "-L format error", NULL);
+		}
+		else {
+			/* commit range */
+			if (o->commitspec) fatal("Only one commit spec allowed", NULL);
+			o->commitspec = a;
+		}
+	}
+
+	/* Handle the bare arguments */
+	if (!bare_args[0]) usage("Please specify a path", NULL);
+	o->path = bare_args[0];
+	if (bare_args[1]) {
+		/* <commitspec> <path> */
+		o->path = bare_args[1];
+		o->commitspec = bare_args[0];
+	}
+	if (bare_args[2]) {
+		/* <oldcommit> <newcommit> <path> */
+		char spec[128] = {0};
+		o->path = bare_args[2];
+		sprintf(spec, "%s..%s", bare_args[0], bare_args[1]);
+		o->commitspec = spec;
+	}
+}
