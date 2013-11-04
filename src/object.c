@@ -364,3 +364,38 @@ int git_object_dup(git_object **dest, git_object *source)
 	*dest = source;
 	return 0;
 }
+
+int git_object_lookup_bypath(
+		git_object **out,
+		const git_object *treeish,
+		const char *path,
+		git_otype type)
+{
+	int error = -1;
+	git_tree *tree = NULL;
+	git_tree_entry *entry = NULL;
+
+	assert(out && treeish && path);
+
+	if ((error = git_object_peel((git_object**)&tree, treeish, GIT_OBJ_TREE) < 0) ||
+		 (error = git_tree_entry_bypath(&entry, tree, path)) < 0)
+	{
+		goto cleanup;
+	}
+
+	if (type != GIT_OBJ_ANY && git_tree_entry_type(entry) != type)
+	{
+		giterr_set(GITERR_OBJECT,
+				"object at path '%s' is not of the asked-for type %d",
+				path, type);
+		error = GIT_EINVALIDSPEC;
+		goto cleanup;
+	}
+
+	error = git_tree_entry_to_object(out, git_object_owner(treeish), entry);
+
+cleanup:
+	git_tree_entry_free(entry);
+	git_tree_free(tree);
+	return error;
+}
