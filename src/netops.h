@@ -92,6 +92,7 @@ void gitno_connection_data_free_ptrs(gitno_connection_data *data);
 int gitno_extract_url_parts(
 		char **host,
 		char **port,
+		char **path,
 		char **username,
 		char **password,
 		const char *url,

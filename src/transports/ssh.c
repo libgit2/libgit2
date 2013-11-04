@@ -330,7 +330,6 @@ static int _git_ssh_setup_conn(
 	s = (ssh_stream *)*stream;
 
 	if (!git__prefixcmp(url, prefix_ssh)) {
-		url = url + strlen(prefix_ssh);
 		if (gitno_extract_url_parts(&host, &port, &user, &pass, url, default_port) < 0)
 			goto on_error;
 	} else {
