@@ -7,9 +7,11 @@ libgit2 - the Git linkable library
 re-entrant linkable library with a solid API, allowing you to write native
 speed custom Git applications in any language with bindings.
 
-`libgit2` is licensed under a **very permissive license** (GPLv2 with a special Linking Exception).
-This basically means that you can link it (unmodified) with any kind of software without having to
-release its source code.
+`libgit2` is licensed under a **very permissive license** (GPLv2 with a special
+Linking Exception).  This basically means that you can link it (unmodified)
+with any kind of software without having to release its source code.
+Additionally, the example code has been released to the public domain (see the
+[separate license](examples/COPYING) for more information).
 
 * Website: [libgit2.github.com](http://libgit2.github.com)
 * StackOverflow Tag: [libgit2](http://stackoverflow.com/questions/tagged/libgit2)
