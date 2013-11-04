@@ -33,7 +33,7 @@ void test_network_urlparse__trivial(void)
 	cl_assert_equal_p(pass, NULL);
 }
 
-void test_network_urlparse__weird_url(void)
+void test_network_urlparse__encoded_password(void)
 {
 	cl_git_pass(gitno_extract_url_parts(&host, &port, &path, &user, &pass,
 				"https://user:pass%2fis%40bad@hostname.com:1234/", "1"));
@@ -41,7 +41,7 @@ void test_network_urlparse__weird_url(void)
 	cl_assert_equal_s(port, "1234");
 	cl_assert_equal_s(path, "/");
 	cl_assert_equal_s(user, "user");
-	cl_assert_equal_s(pass, "pass%2fis%40bad");
+	cl_assert_equal_s(pass, "pass/is@bad");
 }
 
 void test_network_urlparse__user(void)
@@ -124,6 +124,18 @@ void test_network_urlparse__connection_data_ssl(void)
 	cl_assert_equal_s(conndata.path, "/foo/");
 	cl_assert_equal_p(conndata.user, NULL);
 	cl_assert_equal_p(conndata.pass, NULL);
+	cl_assert_equal_i(conndata.use_ssl, true);
+}
+
+void test_network_urlparse__encoded_username_password(void)
+{
+	cl_git_pass(gitno_connection_data_from_url(&conndata,
+				"https://user%2fname:pass%40word@example.com/foo/bar/baz", "bar/baz"));
+	cl_assert_equal_s(conndata.host, "example.com");
+	cl_assert_equal_s(conndata.port, "443");
+	cl_assert_equal_s(conndata.path, "/foo/");
+	cl_assert_equal_s(conndata.user, "user/name");
+	cl_assert_equal_s(conndata.pass, "pass@word");
 	cl_assert_equal_i(conndata.use_ssl, true);
 }
 

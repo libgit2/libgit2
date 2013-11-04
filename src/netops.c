@@ -658,6 +658,29 @@ void gitno_connection_data_free_ptrs(gitno_connection_data *d)
 	git__free(d->pass); d->pass = NULL;
 }
 
+static char unescape_hex(char *x)
+{
+	char digit;
+	digit =  ((x[0] >= 'A') ? ((x[0] & 0xdf) - 'A')+10 : (x[0] - '0'));
+	digit *= 16;
+	digit += ((x[1] >= 'A') ? ((x[1] & 0xdf) - 'A')+10 : (x[1] - '0'));
+	return digit;
+}
+
+static char* unescape(char *str)
+{
+	int x, y;
+
+	for (x=y=0; str[x]; ++x, ++y) {
+		if ((str[x] = str[y]) == '%') {
+			str[x] = unescape_hex(str+y+1);
+			y += 2;
+		}
+	}
+	str[x] = '\0';
+	return str;
+}
+
 int gitno_extract_url_parts(
 		char **host,
 		char **port,
@@ -699,13 +722,14 @@ int gitno_extract_url_parts(
 	if (u.field_data[UF_USERINFO].len) {
 		const char *colon = strchr(_userinfo, ':');
 		if (colon && (colon - _userinfo) < u.field_data[UF_USERINFO].len) {
-			*username = git__substrdup(_userinfo, colon - _userinfo);
-			*password = git__substrdup(colon+1, u.field_data[UF_USERINFO].len - (colon+1-_userinfo));
+			*username = unescape(git__substrdup(_userinfo, colon - _userinfo));
+			*password = unescape(git__substrdup(colon+1, u.field_data[UF_USERINFO].len - (colon+1-_userinfo)));
 			GITERR_CHECK_ALLOC(*password);
 		} else {
 			*username = git__substrdup(_userinfo, u.field_data[UF_USERINFO].len);
 		}
 		GITERR_CHECK_ALLOC(*username);
+
 	}
 
 	return 0;
