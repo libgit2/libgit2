@@ -991,8 +991,20 @@ static int fs_iterator__expand_dir(fs_iterator *fi)
 		fi->base.start, fi->base.end, &ff->entries);
 
 	if (error < 0) {
+		git_buf     msg = GIT_BUF_INIT;
+		git_error_t errt = giterr_detach(&msg);
+
+		/* these callbacks may clear the error message */
 		fs_iterator__free_frame(ff);
 		fs_iterator__advance_over(NULL, (git_iterator *)fi);
+		/* next time return value we skipped to */
+		fi->base.flags &= ~GIT_ITERATOR_FIRST_ACCESS;
+
+		if (msg.ptr) {
+			giterr_set_str(errt, msg.ptr);
+			git_buf_free(&msg);
+		}
+
 		return error;
 	}
 
