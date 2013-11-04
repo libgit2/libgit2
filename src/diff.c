@@ -63,12 +63,15 @@ static int diff_notify(
 
 static int diff_delta__from_one(
 	git_diff *diff,
-	git_delta_t   status,
+	git_delta_t status,
 	const git_index_entry *entry)
 {
 	git_diff_delta *delta;
 	const char *matched_pathspec;
 	int notify_res;
+
+	if ((entry->flags & GIT_IDXENTRY_VALID) != 0)
+		return 0;
 
 	if (status == GIT_DELTA_IGNORED &&
 		DIFF_FLAG_ISNT_SET(diff, GIT_DIFF_INCLUDE_IGNORED))
@@ -426,7 +429,7 @@ static int diff_list_apply_options(
 		diff->diffcaps = diff->diffcaps | GIT_DIFFCAPS_HAS_SYMLINKS;
 
 	if (!git_repository__cvar(&val, repo, GIT_CVAR_IGNORESTAT) && val)
-		diff->diffcaps = diff->diffcaps | GIT_DIFFCAPS_ASSUME_UNCHANGED;
+		diff->diffcaps = diff->diffcaps | GIT_DIFFCAPS_IGNORE_STAT;
 
 	if ((diff->opts.flags & GIT_DIFF_IGNORE_FILEMODE) == 0 &&
 		!git_repository__cvar(&val, repo, GIT_CVAR_FILEMODE) && val)
@@ -446,6 +449,13 @@ static int diff_list_apply_options(
 		diff->opts.context_lines = context >= 0 ? (uint16_t)context : 3;
 
 		/* add other defaults here */
+	}
+
+	/* Reverse src info if diff is reversed */
+	if (DIFF_FLAG_IS_SET(diff, GIT_DIFF_REVERSE)) {
+		git_iterator_type_t tmp_src = diff->old_src;
+		diff->old_src = diff->new_src;
+		diff->new_src = tmp_src;
 	}
 
 	/* if ignore_submodules not explicitly set, check diff config */
@@ -484,9 +494,9 @@ static int diff_list_apply_options(
 		return -1;
 
 	if (DIFF_FLAG_IS_SET(diff, GIT_DIFF_REVERSE)) {
-		const char *swap = diff->opts.old_prefix;
-		diff->opts.old_prefix = diff->opts.new_prefix;
-		diff->opts.new_prefix = swap;
+		const char *tmp_prefix = diff->opts.old_prefix;
+		diff->opts.old_prefix  = diff->opts.new_prefix;
+		diff->opts.new_prefix  = tmp_prefix;
 	}
 
 	return 0;
@@ -694,9 +704,8 @@ static int maybe_modified(
 		nmode = (nmode & ~MODE_BITS_MASK) | (omode & MODE_BITS_MASK);
 
 	/* support "assume unchanged" (poorly, b/c we still stat everything) */
-	if ((diff->diffcaps & GIT_DIFFCAPS_ASSUME_UNCHANGED) != 0)
-		status = (oitem->flags_extended & GIT_IDXENTRY_INTENT_TO_ADD) ?
-			GIT_DELTA_MODIFIED : GIT_DELTA_UNMODIFIED;
+	if ((oitem->flags & GIT_IDXENTRY_VALID) != 0)
+		status = GIT_DELTA_UNMODIFIED;
 
 	/* support "skip worktree" index bit */
 	else if ((oitem->flags_extended & GIT_IDXENTRY_SKIP_WORKTREE) != 0)
@@ -1177,6 +1186,17 @@ int git_diff_tree_to_tree(
 	return error;
 }
 
+static int diff_load_index(git_index **index, git_repository *repo)
+{
+	int error = git_repository_index__weakptr(index, repo);
+
+	/* reload the repository index when user did not pass one in */
+	if (!error && git_index_read(*index, false) < 0)
+		giterr_clear();
+
+	return error;
+}
+
 int git_diff_tree_to_index(
 	git_diff **diff,
 	git_repository *repo,
@@ -1189,7 +1209,7 @@ int git_diff_tree_to_index(
 
 	assert(diff && repo);
 
-	if (!index && (error = git_repository_index__weakptr(&index, repo)) < 0)
+	if (!index && (error = diff_load_index(&index, repo)) < 0)
 		return error;
 
 	if (index->ignore_case) {
@@ -1232,7 +1252,7 @@ int git_diff_index_to_workdir(
 
 	assert(diff && repo);
 
-	if (!index && (error = git_repository_index__weakptr(&index, repo)) < 0)
+	if (!index && (error = diff_load_index(&index, repo)) < 0)
 		return error;
 
 	DIFF_FROM_ITERATORS(
@@ -1271,11 +1291,15 @@ int git_diff_tree_to_workdir_with_index(
 {
 	int error = 0;
 	git_diff *d1 = NULL, *d2 = NULL;
+	git_index *index = NULL;
 
 	assert(diff && repo);
 
-	if (!(error = git_diff_tree_to_index(&d1, repo, old_tree, NULL, opts)) &&
-		!(error = git_diff_index_to_workdir(&d2, repo, NULL, opts)))
+	if ((error = diff_load_index(&index, repo)) < 0)
+		return error;
+
+	if (!(error = git_diff_tree_to_index(&d1, repo, old_tree, index, opts)) &&
+		!(error = git_diff_index_to_workdir(&d2, repo, index, opts)))
 		error = git_diff_merge(d1, d2);
 
 	git_diff_free(d2);
@@ -1289,6 +1313,19 @@ int git_diff_tree_to_workdir_with_index(
 	return error;
 }
 
+int git_diff_options_init(git_diff_options *options, unsigned int version)
+{
+	git_diff_options template = GIT_DIFF_OPTIONS_INIT;
+
+	if (version != template.version) {
+		giterr_set(GITERR_INVALID,
+			"Invalid version %d for git_diff_options", (int)version);
+		return -1;
+	}
+
+	memcpy(options, &template, sizeof(*options));
+	return 0;
+}
 
 size_t git_diff_num_deltas(const git_diff *diff)
 {

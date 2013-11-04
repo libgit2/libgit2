@@ -23,7 +23,7 @@
 
 enum {
 	GIT_DIFFCAPS_HAS_SYMLINKS     = (1 << 0), /* symlinks on platform? */
-	GIT_DIFFCAPS_ASSUME_UNCHANGED = (1 << 1), /* use stat? */
+	GIT_DIFFCAPS_IGNORE_STAT      = (1 << 1), /* use stat? */
 	GIT_DIFFCAPS_TRUST_MODE_BITS  = (1 << 2), /* use st_mode? */
 	GIT_DIFFCAPS_TRUST_CTIME      = (1 << 3), /* use st_ctime? */
 	GIT_DIFFCAPS_USE_DEV          = (1 << 4), /* use st_dev? */

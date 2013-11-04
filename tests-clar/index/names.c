@@ -63,7 +63,7 @@ void test_index_names__roundtrip(void)
 	git_index_clear(repo_index);
 	cl_assert(git_index_name_entrycount(repo_index) == 0);
 
-	cl_git_pass(git_index_read(repo_index));
+	cl_git_pass(git_index_read(repo_index, true));
 	cl_assert(git_index_name_entrycount(repo_index) == 3);
 
 	conflict_name = git_index_name_get_byindex(repo_index, 0);
@@ -120,7 +120,7 @@ void test_index_names__cleaned_on_checkout_tree(void)
 	git_reference_name_to_id(&oid, repo, "refs/heads/master");
 	git_object_lookup(&obj, repo, &oid, GIT_OBJ_ANY);
 	git_checkout_tree(repo, obj, &opts);
-	cl_assert(git_index_name_entrycount(repo_index) == 0);
+	cl_assert_equal_sz(0, git_index_name_entrycount(repo_index));
 
 	git_object_free(obj);
 }
@@ -133,7 +133,7 @@ void test_index_names__cleaned_on_checkout_head(void)
 
 	test_index_names__add();
 	git_checkout_head(repo, &opts);
-	cl_assert(git_index_name_entrycount(repo_index) == 0);
+	cl_assert_equal_sz(0, git_index_name_entrycount(repo_index));
 }
 
 void test_index_names__retained_on_checkout_index(void)

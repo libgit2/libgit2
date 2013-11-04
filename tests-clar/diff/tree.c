@@ -9,9 +9,7 @@ static diff_expects expect;
 
 void test_diff_tree__initialize(void)
 {
-	GIT_INIT_STRUCTURE(&opts, GIT_DIFF_OPTIONS_VERSION);
-	/* The default context lines is set by _INIT which we can't use here */
-	opts.context_lines = 3;
+	cl_git_pass(git_diff_options_init(&opts, GIT_DIFF_OPTIONS_VERSION));
 
 	memset(&expect, 0, sizeof(expect));
 
@@ -91,7 +89,8 @@ void test_diff_tree__0(void)
 }
 
 #define DIFF_OPTS(FLAGS, CTXT) \
-	{GIT_DIFF_OPTIONS_VERSION, (FLAGS), 0, {NULL,0}, NULL, NULL, (CTXT), 1}
+	{GIT_DIFF_OPTIONS_VERSION, (FLAGS), GIT_SUBMODULE_IGNORE_DEFAULT, \
+	{NULL,0}, NULL, NULL, (CTXT), 1}
 
 void test_diff_tree__options(void)
 {

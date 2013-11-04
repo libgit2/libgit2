@@ -470,16 +470,15 @@ void test_status_worktree__conflict_with_diff3(void)
 	cl_assert_equal_i(GIT_STATUS_WT_MODIFIED, status);
 
 	cl_git_pass(git_repository_index(&index, repo));
-
 	cl_git_pass(git_index_remove(index, "modified_file", 0));
-	cl_git_pass(git_index_conflict_add(index, &ancestor_entry,
-		&our_entry, &their_entry));
+	cl_git_pass(git_index_conflict_add(
+		index, &ancestor_entry, &our_entry, &their_entry));
+	cl_git_pass(git_index_write(index));
+	git_index_free(index);
 
 	cl_git_pass(git_status_file(&status, repo, "modified_file"));
 
 	cl_assert_equal_i(GIT_STATUS_INDEX_DELETED | GIT_STATUS_WT_NEW, status);
-
-	git_index_free(index);
 }
 
 static const char *filemode_paths[] = {

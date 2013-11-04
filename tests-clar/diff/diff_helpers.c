@@ -221,11 +221,15 @@ static int diff_print_cb(
 	const git_diff_line *line,
 	void *payload)
 {
-	GIT_UNUSED(payload);
-	GIT_UNUSED(delta);
-	GIT_UNUSED(hunk);
-	fprintf((FILE *)payload, "%c%.*s",
-		line->origin, (int)line->content_len, line->content);
+	FILE *fp = payload;
+
+	GIT_UNUSED(delta); GIT_UNUSED(hunk);
+
+	if (line->origin == GIT_DIFF_LINE_CONTEXT ||
+		line->origin == GIT_DIFF_LINE_ADDITION ||
+		line->origin == GIT_DIFF_LINE_DELETION)
+		fputc(line->origin, fp);
+	fwrite(line->content, 1, line->content_len, fp);
 	return 0;
 }
 

@@ -268,13 +268,18 @@ typedef struct git_submodule git_submodule;
  *   superproject into the current checkout out branch of the submodule.
  * - GIT_SUBMODULE_UPDATE_NONE: do not update this submodule even when
  *   the commit in the superproject is updated.
+ * - GIT_SUBMODULE_UPDATE_DEFAULT: not used except as static initializer
+ *   when we don't want any particular update rule to be specified.
  */
 typedef enum {
-	GIT_SUBMODULE_UPDATE_RESET = -1,
+	GIT_SUBMODULE_UPDATE_RESET    = -1,
+
 	GIT_SUBMODULE_UPDATE_CHECKOUT = 1,
-	GIT_SUBMODULE_UPDATE_REBASE = 2,
-	GIT_SUBMODULE_UPDATE_MERGE = 3,
-	GIT_SUBMODULE_UPDATE_NONE = 4
+	GIT_SUBMODULE_UPDATE_REBASE   = 2,
+	GIT_SUBMODULE_UPDATE_MERGE    = 3,
+	GIT_SUBMODULE_UPDATE_NONE     = 4,
+
+	GIT_SUBMODULE_UPDATE_DEFAULT  = 0
 } git_submodule_update_t;
 
 /**
@@ -301,13 +306,18 @@ typedef enum {
  *   only considering changes if the HEAD of submodule has moved from the
  *   value in the superproject.
  * - GIT_SUBMODULE_IGNORE_ALL: never check if the submodule is dirty
+ * - GIT_SUBMODULE_IGNORE_DEFAULT: not used except as static initializer
+ *   when we don't want any particular ignore rule to be specified.
  */
 typedef enum {
-	GIT_SUBMODULE_IGNORE_RESET = -1,    /* reset to on-disk value */
-	GIT_SUBMODULE_IGNORE_NONE = 1,      /* any change or untracked == dirty */
-	GIT_SUBMODULE_IGNORE_UNTRACKED = 2, /* dirty if tracked files change */
-	GIT_SUBMODULE_IGNORE_DIRTY = 3,     /* only dirty if HEAD moved */
-	GIT_SUBMODULE_IGNORE_ALL = 4        /* never dirty */
+	GIT_SUBMODULE_IGNORE_RESET     = -1, /* reset to on-disk value */
+
+	GIT_SUBMODULE_IGNORE_NONE      = 1,  /* any change or untracked == dirty */
+	GIT_SUBMODULE_IGNORE_UNTRACKED = 2,  /* dirty if tracked files change */
+	GIT_SUBMODULE_IGNORE_DIRTY     = 3,  /* only dirty if HEAD moved */
+	GIT_SUBMODULE_IGNORE_ALL       = 4,  /* never dirty */
+
+	GIT_SUBMODULE_IGNORE_DEFAULT   = 0
 } git_submodule_ignore_t;
 
 /** @} */
