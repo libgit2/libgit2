@@ -284,7 +284,7 @@ int git_blob_create_fromchunks(
 	content = git__malloc(BUFFER_SIZE);
 	GITERR_CHECK_ALLOC(content);
 
-	if (git_filebuf_open(&file, git_buf_cstr(&path), GIT_FILEBUF_TEMPORARY) < 0)
+	if (git_filebuf_open(&file, git_buf_cstr(&path), GIT_FILEBUF_TEMPORARY, 0666) < 0)
 		goto cleanup;
 
 	while (1) {

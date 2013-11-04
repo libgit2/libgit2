@@ -702,7 +702,7 @@ static int loose_write(refdb_fs_backend *backend, const git_reference *ref)
 	if (git_buf_joinpath(&ref_path, backend->path, ref->name) < 0)
 		return -1;
 
-	if (git_filebuf_open(&file, ref_path.ptr, GIT_FILEBUF_FORCE) < 0) {
+	if (git_filebuf_open(&file, ref_path.ptr, GIT_FILEBUF_FORCE, GIT_REFS_FILE_MODE) < 0) {
 		git_buf_free(&ref_path);
 		return -1;
 	}
@@ -720,7 +720,7 @@ static int loose_write(refdb_fs_backend *backend, const git_reference *ref)
 		assert(0); /* don't let this happen */
 	}
 
-	return git_filebuf_commit(&file, GIT_REFS_FILE_MODE);
+	return git_filebuf_commit(&file);
 }
 
 /*
@@ -865,7 +865,7 @@ static int packed_write(refdb_fs_backend *backend)
 		return -1;
 
 	/* Open the file! */
-	if (git_filebuf_open(&pack_file, git_sortedcache_path(refcache), 0) < 0)
+	if (git_filebuf_open(&pack_file, git_sortedcache_path(refcache), 0, GIT_PACKEDREFS_FILE_MODE) < 0)
 		goto fail;
 
 	/* Packfiles have a header... apparently
@@ -886,7 +886,7 @@ static int packed_write(refdb_fs_backend *backend)
 
 	/* if we've written all the references properly, we can commit
 	 * the packfile to make the changes effective */
-	if (git_filebuf_commit(&pack_file, GIT_PACKEDREFS_FILE_MODE) < 0)
+	if (git_filebuf_commit(&pack_file) < 0)
 		goto fail;
 
 	/* when and only when the packfile has been properly written,
@@ -1289,7 +1289,7 @@ static int refdb_reflog_fs__write(git_refdb_backend *_backend, git_reflog *reflo
 		goto cleanup;
 	}
 
-	if ((error = git_filebuf_open(&fbuf, git_buf_cstr(&log_path), 0)) < 0)
+	if ((error = git_filebuf_open(&fbuf, git_buf_cstr(&log_path), 0, GIT_REFLOG_FILE_MODE)) < 0)
 		goto cleanup;
 
 	git_vector_foreach(&reflog->entries, i, entry) {
@@ -1300,7 +1300,7 @@ static int refdb_reflog_fs__write(git_refdb_backend *_backend, git_reflog *reflo
 			goto cleanup;
 	}
 
-	error = git_filebuf_commit(&fbuf, GIT_REFLOG_FILE_MODE);
+	error = git_filebuf_commit(&fbuf);
 	goto success;
 
 cleanup:
@@ -1350,7 +1350,7 @@ static int refdb_reflog_fs__rename(git_refdb_backend *_backend, const char *old_
 	if (git_buf_joinpath(&temp_path, git_buf_cstr(&temp_path), "temp_reflog") < 0)
 		return -1;
 
-	if ((fd = git_futils_mktmp(&temp_path, git_buf_cstr(&temp_path))) < 0) {
+	if ((fd = git_futils_mktmp(&temp_path, git_buf_cstr(&temp_path), GIT_REFLOG_FILE_MODE)) < 0) {
 		error = -1;
 		goto cleanup;
 	}

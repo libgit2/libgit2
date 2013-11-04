@@ -13,7 +13,7 @@ void test_core_filebuf__0(void)
 	cl_must_pass(fd);
 	cl_must_pass(p_close(fd));
 
-	cl_git_fail(git_filebuf_open(&file, test, 0));
+	cl_git_fail(git_filebuf_open(&file, test, 0, 0666));
 	cl_assert(git_path_exists(testlock));
 
 	cl_must_pass(p_unlink(testlock));
@@ -28,9 +28,9 @@ void test_core_filebuf__1(void)
 
 	cl_git_mkfile(test, "libgit2 rocks\n");
 
-	cl_git_pass(git_filebuf_open(&file, test, GIT_FILEBUF_APPEND));
+	cl_git_pass(git_filebuf_open(&file, test, GIT_FILEBUF_APPEND, 0666));
 	cl_git_pass(git_filebuf_printf(&file, "%s\n", "libgit2 rocks"));
-	cl_git_pass(git_filebuf_commit(&file, 0666));
+	cl_git_pass(git_filebuf_commit(&file));
 
 	cl_assert_equal_file("libgit2 rocks\nlibgit2 rocks\n", 0, test);
 
@@ -47,9 +47,9 @@ void test_core_filebuf__2(void)
 
 	memset(buf, 0xfe, sizeof(buf));
 
-	cl_git_pass(git_filebuf_open(&file, test, 0));
+	cl_git_pass(git_filebuf_open(&file, test, 0, 0666));
 	cl_git_pass(git_filebuf_write(&file, buf, sizeof(buf)));
-	cl_git_pass(git_filebuf_commit(&file, 0666));
+	cl_git_pass(git_filebuf_commit(&file));
 
 	cl_assert_equal_file((char *)buf, sizeof(buf), test);
 
@@ -64,7 +64,7 @@ void test_core_filebuf__4(void)
 
 	cl_assert(file.buffer == NULL);
 
-	cl_git_pass(git_filebuf_open(&file, test, 0));
+	cl_git_pass(git_filebuf_open(&file, test, 0, 0666));
 	cl_assert(file.buffer != NULL);
 
 	git_filebuf_cleanup(&file);
@@ -80,12 +80,12 @@ void test_core_filebuf__5(void)
 
 	cl_assert(file.buffer == NULL);
 
-	cl_git_pass(git_filebuf_open(&file, test, 0));
+	cl_git_pass(git_filebuf_open(&file, test, 0, 0666));
 	cl_assert(file.buffer != NULL);
 	cl_git_pass(git_filebuf_printf(&file, "%s\n", "libgit2 rocks"));
 	cl_assert(file.buffer != NULL);
 
-	cl_git_pass(git_filebuf_commit(&file, 0666));
+	cl_git_pass(git_filebuf_commit(&file));
 	cl_assert(file.buffer == NULL);
 
 	cl_must_pass(p_unlink(test));
@@ -110,12 +110,12 @@ void test_core_filebuf__umask(void)
 
 	cl_assert(file.buffer == NULL);
 
-	cl_git_pass(git_filebuf_open(&file, test, 0));
+	cl_git_pass(git_filebuf_open(&file, test, 0, 0666));
 	cl_assert(file.buffer != NULL);
 	cl_git_pass(git_filebuf_printf(&file, "%s\n", "libgit2 rocks"));
 	cl_assert(file.buffer != NULL);
 
-	cl_git_pass(git_filebuf_commit(&file, 0666));
+	cl_git_pass(git_filebuf_commit(&file));
 	cl_assert(file.buffer == NULL);
 
 	cl_must_pass(p_stat("test", &statbuf));

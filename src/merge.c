@@ -1623,9 +1623,9 @@ static int write_orig_head(
 	git_oid_tostr(orig_oid_str, GIT_OID_HEXSZ+1, &our_head->oid);
 
 	if ((error = git_buf_joinpath(&file_path, repo->path_repository, GIT_ORIG_HEAD_FILE)) == 0 &&
-		(error = git_filebuf_open(&file, file_path.ptr, GIT_FILEBUF_FORCE)) == 0 &&
+		(error = git_filebuf_open(&file, file_path.ptr, GIT_FILEBUF_FORCE, GIT_MERGE_FILE_MODE)) == 0 &&
 		(error = git_filebuf_printf(&file, "%s\n", orig_oid_str)) == 0)
-		error = git_filebuf_commit(&file, 0666);
+		error = git_filebuf_commit(&file);
 
 	if (error < 0)
 		git_filebuf_cleanup(&file);
@@ -1649,7 +1649,7 @@ static int write_merge_head(
 	assert(repo && heads);
 
 	if ((error = git_buf_joinpath(&file_path, repo->path_repository, GIT_MERGE_HEAD_FILE)) < 0 ||
-		(error = git_filebuf_open(&file, file_path.ptr, GIT_FILEBUF_FORCE)) < 0)
+		(error = git_filebuf_open(&file, file_path.ptr, GIT_FILEBUF_FORCE, GIT_MERGE_FILE_MODE)) < 0)
 		goto cleanup;
 
 	for (i = 0; i < heads_len; i++) {
@@ -1659,7 +1659,7 @@ static int write_merge_head(
 			goto cleanup;
 	}
 
-	error = git_filebuf_commit(&file, 0666);
+	error = git_filebuf_commit(&file);
 
 cleanup:
 	if (error < 0)
@@ -1682,10 +1682,10 @@ static int write_merge_mode(git_repository *repo, unsigned int flags)
 	assert(repo);
 
 	if ((error = git_buf_joinpath(&file_path, repo->path_repository, GIT_MERGE_MODE_FILE)) < 0 ||
-		(error = git_filebuf_open(&file, file_path.ptr, GIT_FILEBUF_FORCE)) < 0)
+		(error = git_filebuf_open(&file, file_path.ptr, GIT_FILEBUF_FORCE, GIT_MERGE_FILE_MODE)) < 0)
 		goto cleanup;
 
-	error = git_filebuf_commit(&file, 0666);
+	error = git_filebuf_commit(&file);
 
 cleanup:
 	if (error < 0)
@@ -1911,7 +1911,7 @@ static int write_merge_msg(
 		entries[i].merge_head = heads[i];
 
 	if ((error = git_buf_joinpath(&file_path, repo->path_repository, GIT_MERGE_MSG_FILE)) < 0 ||
-		(error = git_filebuf_open(&file, file_path.ptr, GIT_FILEBUF_FORCE)) < 0 ||
+		(error = git_filebuf_open(&file, file_path.ptr, GIT_FILEBUF_FORCE, GIT_MERGE_FILE_MODE)) < 0 ||
 		(error = git_filebuf_write(&file, "Merge ", 6)) < 0)
 		goto cleanup;
 
@@ -1988,7 +1988,7 @@ static int write_merge_msg(
 	}
 
 	if ((error = git_filebuf_printf(&file, "\n")) < 0 ||
-		(error = git_filebuf_commit(&file, 0666)) < 0)
+		(error = git_filebuf_commit(&file)) < 0)
 		goto cleanup;
 
 cleanup:

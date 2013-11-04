@@ -1210,7 +1210,7 @@ static int config_write(diskfile_backend *cfg, const char *key, const regex_t *p
 	write_start = data_start;
 
 	/* Lock the file */
-	if (git_filebuf_open(&file, cfg->file_path, 0) < 0)
+	if (git_filebuf_open(&file, cfg->file_path, 0, GIT_CONFIG_FILE_MODE) < 0)
 		return -1;
 
 	skip_bom(reader);
@@ -1369,7 +1369,7 @@ static int config_write(diskfile_backend *cfg, const char *key, const regex_t *p
 	/* refresh stats - if this errors, then commit will error too */
 	(void)git_filebuf_stats(&reader->file_mtime, &reader->file_size, &file);
 
-	result = git_filebuf_commit(&file, GIT_CONFIG_FILE_MODE);
+	result = git_filebuf_commit(&file);
 	git_buf_free(&reader->buffer);
 
 	return result;

@@ -1673,9 +1673,9 @@ static int checkout_write_merge(
 		goto done;
 
 	if ((error = git_futils_mkpath2file(path_workdir.ptr, 0755)) < 0 ||
-		(error = git_filebuf_open(&output, path_workdir.ptr, GIT_FILEBUF_DO_NOT_BUFFER)) < 0 ||
+		(error = git_filebuf_open(&output, path_workdir.ptr, GIT_FILEBUF_DO_NOT_BUFFER, result.mode)) < 0 ||
 		(error = git_filebuf_write(&output, result.data, result.len)) < 0 ||
-		(error = git_filebuf_commit(&output, result.mode)) < 0)
+		(error = git_filebuf_commit(&output)) < 0)
 		goto done;
 
 done:

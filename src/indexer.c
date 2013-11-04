@@ -140,7 +140,8 @@ int git_indexer_new(
 		goto cleanup;
 
 	error = git_filebuf_open(&idx->pack_file, path.ptr,
-				 GIT_FILEBUF_TEMPORARY | GIT_FILEBUF_DO_NOT_BUFFER);
+		GIT_FILEBUF_TEMPORARY | GIT_FILEBUF_DO_NOT_BUFFER,
+		GIT_PACK_FILE_MODE);
 	git_buf_free(&path);
 	if (error < 0)
 		goto cleanup;
@@ -903,7 +904,8 @@ int git_indexer_commit(git_indexer *idx, git_transfer_progress *stats)
 	if (git_buf_oom(&filename))
 		return -1;
 
-	if (git_filebuf_open(&index_file, filename.ptr, GIT_FILEBUF_HASH_CONTENTS) < 0)
+	if (git_filebuf_open(&index_file, filename.ptr,
+		GIT_FILEBUF_HASH_CONTENTS, GIT_PACK_FILE_MODE) < 0)
 		goto on_error;
 
 	/* Write out the header */
@@ -969,7 +971,7 @@ int git_indexer_commit(git_indexer *idx, git_transfer_progress *stats)
 		goto on_error;
 
 	/* Commit file */
-	if (git_filebuf_commit_at(&index_file, filename.ptr, GIT_PACK_FILE_MODE) < 0)
+	if (git_filebuf_commit_at(&index_file, filename.ptr) < 0)
 		goto on_error;
 
 	git_mwindow_free_all(&idx->pack->mwf);
@@ -980,7 +982,7 @@ int git_indexer_commit(git_indexer *idx, git_transfer_progress *stats)
 	if (index_path(&filename, idx, ".pack") < 0)
 		goto on_error;
 	/* And don't forget to rename the packfile to its new place. */
-	if (git_filebuf_commit_at(&idx->pack_file, filename.ptr, GIT_PACK_FILE_MODE) < 0)
+	if (git_filebuf_commit_at(&idx->pack_file, filename.ptr) < 0)
 		return -1;
 
 	git_buf_free(&filename);
