@@ -163,18 +163,6 @@ static void verify_refs(git_remote *remote, expected_ref expected_refs[], size_t
 	git_vector_free(&actual_refs);
 }
 
-static int tracking_branch_list_cb(const char *branch_name, git_branch_t branch_type, void *payload)
-{
-	git_vector *tracking = (git_vector *)payload;
-
-	if (branch_type == GIT_BRANCH_REMOTE)
-		git_vector_insert(tracking, git__strdup(branch_name));
-	else
-		GIT_UNUSED(branch_name);
-
-	return 0;
-}
-
 /**
  * Verifies that after git_push_update_tips(), remote tracking branches have the expected
  * names and oids.
@@ -189,14 +177,24 @@ static void verify_tracking_branches(git_remote *remote, expected_ref expected_r
 	size_t i, j;
 	git_buf msg = GIT_BUF_INIT;
 	git_buf ref_name = GIT_BUF_INIT;
-	git_buf canonical_ref_name = GIT_BUF_INIT;
 	git_vector actual_refs = GIT_VECTOR_INIT;
+	git_branch_iterator *iter;
 	char *actual_ref;
 	git_oid oid;
-	int failed = 0;
+	int failed = 0, error;
+	unsigned int branch_type;
+	git_reference *ref;
 
 	/* Get current remote branches */
-	cl_git_pass(git_branch_foreach(remote->repo, GIT_BRANCH_REMOTE, tracking_branch_list_cb, &actual_refs));
+	cl_git_pass(git_branch_iterator_new(&iter, remote->repo, GIT_BRANCH_REMOTE));
+
+	while ((error = git_branch_next(&ref, &branch_type, iter)) == 0) {
+		cl_assert_equal_i(branch_type, GIT_BRANCH_REMOTE);
+
+		cl_git_pass(git_vector_insert(&actual_refs, git__strdup(git_reference_name(ref))));
+	}
+
+	cl_assert_equal_i(error, GIT_ITEROVER);
 
 	/* Loop through expected refs, make sure they exist */
 	for (i = 0; i < expected_refs_len; i++) {
@@ -212,11 +210,7 @@ static void verify_tracking_branches(git_remote *remote, expected_ref expected_r
 
 		/* Find matching remote branch */
 		git_vector_foreach(&actual_refs, j, actual_ref) {
-
-			/* Construct canonical ref name from the actual_ref name */
-			git_buf_clear(&canonical_ref_name);
-			cl_git_pass(git_buf_printf(&canonical_ref_name, "refs/remotes/%s", actual_ref));
-			if (!strcmp(git_buf_cstr(&ref_name), git_buf_cstr(&canonical_ref_name)))
+			if (!strcmp(git_buf_cstr(&ref_name), actual_ref))
 				break;
 		}
 
@@ -227,7 +221,7 @@ static void verify_tracking_branches(git_remote *remote, expected_ref expected_r
 		}
 
 		/* Make sure tracking branch is at expected commit ID */
-		cl_git_pass(git_reference_name_to_id(&oid, remote->repo, git_buf_cstr(&canonical_ref_name)));
+		cl_git_pass(git_reference_name_to_id(&oid, remote->repo, actual_ref));
 
 		if (git_oid_cmp(expected_refs[i].oid, &oid) != 0) {
 			git_buf_puts(&msg, "Tracking branch commit does not match expected ID.");
@@ -256,7 +250,6 @@ failed:
 
 	git_vector_free(&actual_refs);
 	git_buf_free(&msg);
-	git_buf_free(&canonical_ref_name);
 	git_buf_free(&ref_name);
 	return;
 }
