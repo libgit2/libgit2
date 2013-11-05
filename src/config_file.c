@@ -1210,8 +1210,11 @@ static int config_write(diskfile_backend *cfg, const char *key, const regex_t *p
 	write_start = data_start;
 
 	/* Lock the file */
-	if ((result = git_filebuf_open(&file, cfg->file_path, 0, GIT_CONFIG_FILE_MODE)) < 0)
-		return result;
+	if ((result = git_filebuf_open(
+		&file, cfg->file_path, 0, GIT_CONFIG_FILE_MODE)) < 0) {
+			git_buf_free(&reader->buffer);
+			return result;
+	}
 
 	skip_bom(reader);
 	ldot = strrchr(key, '.');
