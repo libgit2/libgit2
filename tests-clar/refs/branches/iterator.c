@@ -33,7 +33,7 @@ static void assert_retrieval(unsigned int flags, unsigned int expected_count)
 	git_branch_iterator *iter;
 	git_reference *ref;
 	int count = 0, error;
-	unsigned int type;
+	git_branch_t type;
 
 	cl_git_pass(git_branch_iterator_new(&iter, repo, flags));
 	while ((error = git_branch_next(&ref, &type, iter)) == 0) {
@@ -83,7 +83,7 @@ static void assert_branch_has_been_found(struct expectations *findings, const ch
 static void contains_branches(struct expectations exp[], git_branch_iterator *iter)
 {
 	git_reference *ref;
-	unsigned int type;
+	git_branch_t type;
 	int error, pos = 0;
 
 	while ((error = git_branch_next(&ref, &type, iter)) == 0) {

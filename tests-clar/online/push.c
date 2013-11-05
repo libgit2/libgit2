@@ -182,7 +182,7 @@ static void verify_tracking_branches(git_remote *remote, expected_ref expected_r
 	char *actual_ref;
 	git_oid oid;
 	int failed = 0, error;
-	unsigned int branch_type;
+	git_branch_t branch_type;
 	git_reference *ref;
 
 	/* Get current remote branches */
