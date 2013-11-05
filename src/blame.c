@@ -448,7 +448,7 @@ int git_blame_buffer(
 		git_blame **out,
 		git_blame *reference,
 		const char *buffer,
-		size_t buffer_len)
+		uint32_t buffer_len)
 {
 	git_blame *blame;
 	git_diff_options diffopts = GIT_DIFF_OPTIONS_INIT;
