@@ -52,6 +52,29 @@ int merge_trees_from_branches(
 	return 0;
 }
 
+int merge_branches(git_merge_result **result, git_repository *repo, const char *ours_branch, const char *theirs_branch, git_merge_opts *opts)
+{
+	git_reference *head_ref, *theirs_ref;
+	git_merge_head *theirs_head;
+	git_checkout_opts head_checkout_opts = GIT_CHECKOUT_OPTS_INIT;
+
+	head_checkout_opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+
+	cl_git_pass(git_reference_symbolic_create(&head_ref, repo, "HEAD", ours_branch, 1));
+	cl_git_pass(git_checkout_head(repo, &head_checkout_opts));
+
+	cl_git_pass(git_reference_lookup(&theirs_ref, repo, theirs_branch));
+	cl_git_pass(git_merge_head_from_ref(&theirs_head, repo, theirs_ref));
+
+	cl_git_pass(git_merge(result, repo, (const git_merge_head **)&theirs_head, 1, opts));
+
+	git_reference_free(head_ref);
+	git_reference_free(theirs_ref);
+	git_merge_head_free(theirs_head);
+
+	return 0;
+}
+
 void merge__dump_index_entries(git_vector *index_entries)
 {
 	size_t i;
