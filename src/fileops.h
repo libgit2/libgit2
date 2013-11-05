@@ -399,4 +399,9 @@ extern int git_futils_filestamp_check(
 extern void git_futils_filestamp_set(
 	git_futils_filestamp *tgt, const git_futils_filestamp *src);
 
+/**
+ * Free the configuration file search paths.
+ */
+extern void git_futils_dirs_global_shutdown(void);
+
 #endif /* INCLUDE_fileops_h__ */
