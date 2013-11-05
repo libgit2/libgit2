@@ -129,7 +129,7 @@ typedef struct {
 	unsigned int flags;
 } branch_iter;
 
-int git_branch_next(git_reference **out, unsigned int *out_type, git_branch_iterator *_iter)
+int git_branch_next(git_reference **out, git_branch_t *out_type, git_branch_iterator *_iter)
 {
 	branch_iter *iter = (branch_iter *) _iter;
 	git_reference *ref;
@@ -159,7 +159,7 @@ int git_branch_next(git_reference **out, unsigned int *out_type, git_branch_iter
 int git_branch_iterator_new(
 	git_branch_iterator **out,
 	git_repository *repo,
-	unsigned int list_flags)
+	git_branch_t list_flags)
 {
 	branch_iter *iter;
 

@@ -83,7 +83,7 @@ typedef struct git_branch_iterator git_branch_iterator;
 GIT_EXTERN(int) git_branch_iterator_new(
 	git_branch_iterator **out,
 	git_repository *repo,
-	unsigned int list_flags);
+	git_branch_t list_flags);
 
 /**
  * Retrieve the next branch from the iterator
@@ -93,7 +93,7 @@ GIT_EXTERN(int) git_branch_iterator_new(
  * @param iter the branch iterator
  * @return 0 on success, GIT_ITEROVER if there are no more branches or an error code.
  */
-GIT_EXTERN(int) git_branch_next(git_reference **out, unsigned int *out_type, git_branch_iterator *iter);
+GIT_EXTERN(int) git_branch_next(git_reference **out, git_branch_t *out_type, git_branch_iterator *iter);
 
 /**
  * Free a branch iterator
