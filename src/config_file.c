@@ -385,10 +385,10 @@ static int config_set(git_config_backend *cfg, const char *name, const char *val
 		GITERR_CHECK_ALLOC(esc_value);
 	}
 
-	if (config_write(b, key, NULL, esc_value) < 0) {
+	if ((ret = config_write(b, key, NULL, esc_value)) < 0) {
 		git__free(esc_value);
 		cvar_free(var);
-		return -1;
+		return ret;
 	}
 
 	git__free(esc_value);
@@ -1210,8 +1210,8 @@ static int config_write(diskfile_backend *cfg, const char *key, const regex_t *p
 	write_start = data_start;
 
 	/* Lock the file */
-	if (git_filebuf_open(&file, cfg->file_path, 0, GIT_CONFIG_FILE_MODE) < 0)
-		return -1;
+	if ((result = git_filebuf_open(&file, cfg->file_path, 0, GIT_CONFIG_FILE_MODE)) < 0)
+		return result;
 
 	skip_bom(reader);
 	ldot = strrchr(key, '.');
