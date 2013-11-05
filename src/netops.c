@@ -721,7 +721,7 @@ int gitno_extract_url_parts(
 
 	if (u.field_set & (1 << UF_USERINFO)) {
 		const char *colon = memchr(_userinfo, ':', u.field_data[UF_USERINFO].len);
-		if (colon && (colon - _userinfo) < u.field_data[UF_USERINFO].len) {
+		if (colon) {
 			*username = unescape(git__substrdup(_userinfo, colon - _userinfo));
 			*password = unescape(git__substrdup(colon+1, u.field_data[UF_USERINFO].len - (colon+1-_userinfo)));
 			GITERR_CHECK_ALLOC(*password);
