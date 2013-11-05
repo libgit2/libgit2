@@ -261,7 +261,7 @@ static int wait_while_ack(gitno_buffer *buf)
 		    (pkt->status != GIT_ACK_CONTINUE ||
 		     pkt->status != GIT_ACK_COMMON)) {
 			git__free(pkt);
-			break;
+			return 0;
 		}
 	}
 
