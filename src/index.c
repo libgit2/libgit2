@@ -500,7 +500,7 @@ int git_index_write(git_index *index)
 	git_vector_sort(&index->reuc);
 
 	if ((error = git_filebuf_open(
-		     &file, index->index_file_path, GIT_FILEBUF_HASH_CONTENTS)) < 0) {
+		&file, index->index_file_path, GIT_FILEBUF_HASH_CONTENTS, GIT_INDEX_FILE_MODE)) < 0) {
 		if (error == GIT_ELOCKED)
 			giterr_set(GITERR_INDEX, "The index is locked. This might be due to a concurrrent or crashed process");
 
@@ -512,7 +512,7 @@ int git_index_write(git_index *index)
 		return error;
 	}
 
-	if ((error = git_filebuf_commit(&file, GIT_INDEX_FILE_MODE)) < 0)
+	if ((error = git_filebuf_commit(&file)) < 0)
 		return error;
 
 	error = git_futils_filestamp_check(&index->stamp, index->index_file_path);

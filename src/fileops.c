@@ -19,9 +19,12 @@ int git_futils_mkpath2file(const char *file_path, const mode_t mode)
 		GIT_MKDIR_PATH | GIT_MKDIR_SKIP_LAST | GIT_MKDIR_VERIFY_DIR);
 }
 
-int git_futils_mktmp(git_buf *path_out, const char *filename)
+int git_futils_mktmp(git_buf *path_out, const char *filename, mode_t mode)
 {
 	int fd;
+	mode_t mask;
+
+	p_umask(mask = p_umask(0));
 
 	git_buf_sets(path_out, filename);
 	git_buf_puts(path_out, "_git2_XXXXXX");
@@ -32,6 +35,12 @@ int git_futils_mktmp(git_buf *path_out, const char *filename)
 	if ((fd = p_mkstemp(path_out->ptr)) < 0) {
 		giterr_set(GITERR_OS,
 			"Failed to create temporary file '%s'", path_out->ptr);
+		return -1;
+	}
+
+	if (p_chmod(path_out->ptr, (mode & ~mask))) {
+		giterr_set(GITERR_OS,
+			"Failed to set permissions on file '%s'", path_out->ptr);
 		return -1;
 	}
 

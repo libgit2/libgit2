@@ -816,7 +816,7 @@ static int repo_init_create_head(const char *git_dir, const char *ref_name)
 	const char *fmt;
 
 	if (git_buf_joinpath(&ref_path, git_dir, GIT_HEAD_FILE) < 0 ||
-		git_filebuf_open(&ref, ref_path.ptr, 0) < 0)
+		git_filebuf_open(&ref, ref_path.ptr, 0, GIT_REFS_FILE_MODE) < 0)
 		goto fail;
 
 	if (!ref_name)
@@ -828,7 +828,7 @@ static int repo_init_create_head(const char *git_dir, const char *ref_name)
 		fmt = "ref: " GIT_REFS_HEADS_DIR "%s\n";
 
 	if (git_filebuf_printf(&ref, fmt, ref_name) < 0 ||
-		git_filebuf_commit(&ref, GIT_REFS_FILE_MODE) < 0)
+		git_filebuf_commit(&ref) < 0)
 		goto fail;
 
 	git_buf_free(&ref_path);
@@ -875,7 +875,7 @@ static bool are_symlinks_supported(const char *wd_path)
 	struct stat st;
 	int symlinks_supported = -1;
 
-	if ((fd = git_futils_mktmp(&path, wd_path)) < 0 ||
+	if ((fd = git_futils_mktmp(&path, wd_path, 0666)) < 0 ||
 		p_close(fd) < 0 ||
 		p_unlink(path.ptr) < 0 ||
 		p_symlink("testing", path.ptr) < 0 ||
