@@ -259,3 +259,16 @@ void test_config_write__can_set_an_empty_value(void)
 	git_config_free(config);
 	cl_git_sandbox_cleanup();
 }
+
+void test_config_write__updating_a_locked_config_file_returns_ELOCKED(void)
+{
+	git_config *cfg;
+
+	cl_git_pass(git_config_open_ondisk(&cfg, "config9"));
+
+	cl_git_mkfile("config9.lock", "[core]\n");
+
+	cl_git_fail_with(git_config_set_string(cfg, "core.dump", "boom"), GIT_ELOCKED);
+
+	git_config_free(cfg);
+}
