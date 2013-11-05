@@ -1019,6 +1019,7 @@ void test_merge_workdir_setup__retained_after_success(void)
 
 	git_merge_head_free(our_head);
 	git_merge_head_free(their_heads[0]);
+	git_merge_result_free(result);
 }
 
 void test_merge_workdir_setup__removed_after_failure(void)
@@ -1051,4 +1052,5 @@ void test_merge_workdir_setup__removed_after_failure(void)
 
 	git_merge_head_free(our_head);
 	git_merge_head_free(their_heads[0]);
+	git_merge_result_free(result);
 }
