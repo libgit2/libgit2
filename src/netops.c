@@ -703,24 +703,24 @@ int gitno_extract_url_parts(
 	_path = url+u.field_data[UF_PATH].off;
 	_userinfo = url+u.field_data[UF_USERINFO].off;
 
-	if (u.field_data[UF_HOST].len) {
+	if (u.field_set & (1 << UF_HOST)) {
 		*host = git__substrdup(_host, u.field_data[UF_HOST].len);
 		GITERR_CHECK_ALLOC(*host);
 	}
 
-	if (u.field_data[UF_PORT].len)
+	if (u.field_set & (1 << UF_PORT))
 		*port = git__substrdup(_port, u.field_data[UF_PORT].len);
 	else
 		*port = git__strdup(default_port);
 	GITERR_CHECK_ALLOC(*port);
 
-	if (u.field_data[UF_PATH].len) {
+	if (u.field_set & (1 << UF_PATH)) {
 		*path = git__substrdup(_path, u.field_data[UF_PATH].len);
 		GITERR_CHECK_ALLOC(*path);
 	}
 
-	if (u.field_data[UF_USERINFO].len) {
-		const char *colon = strchr(_userinfo, ':');
+	if (u.field_set & (1 << UF_USERINFO)) {
+		const char *colon = memchr(_userinfo, ':', u.field_data[UF_USERINFO].len);
 		if (colon && (colon - _userinfo) < u.field_data[UF_USERINFO].len) {
 			*username = unescape(git__substrdup(_userinfo, colon - _userinfo));
 			*password = unescape(git__substrdup(colon+1, u.field_data[UF_USERINFO].len - (colon+1-_userinfo)));
