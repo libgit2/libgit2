@@ -658,23 +658,18 @@ void gitno_connection_data_free_ptrs(gitno_connection_data *d)
 	git__free(d->pass); d->pass = NULL;
 }
 
-static char unescape_hex(char *x)
-{
-	char digit;
-	digit =  ((x[0] >= 'A') ? ((x[0] & 0xdf) - 'A')+10 : (x[0] - '0'));
-	digit *= 16;
-	digit += ((x[1] >= 'A') ? ((x[1] & 0xdf) - 'A')+10 : (x[1] - '0'));
-	return digit;
-}
-
+#define hex2c(c) ((c | 32) % 39 - 9)
 static char* unescape(char *str)
 {
 	int x, y;
+	int len = strlen(str);
 
-	for (x=y=0; str[x]; ++x, ++y) {
+	for (x=y=0; str[y]; ++x, ++y) {
 		if ((str[x] = str[y]) == '%') {
-			str[x] = unescape_hex(str+y+1);
-			y += 2;
+			if (y < len-2 && isxdigit(str[y+1]) && isxdigit(str[y+2])) {
+				str[x] = (hex2c(str[y+1]) << 4) + hex2c(str[y+2]);
+				y += 2;
+			}
 		}
 	}
 	str[x] = '\0';

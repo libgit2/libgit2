@@ -130,12 +130,12 @@ void test_network_urlparse__connection_data_ssl(void)
 void test_network_urlparse__encoded_username_password(void)
 {
 	cl_git_pass(gitno_connection_data_from_url(&conndata,
-				"https://user%2fname:pass%40word@example.com/foo/bar/baz", "bar/baz"));
+				"https://user%2fname:pass%40word%zyx%v@example.com/foo/bar/baz", "bar/baz"));
 	cl_assert_equal_s(conndata.host, "example.com");
 	cl_assert_equal_s(conndata.port, "443");
 	cl_assert_equal_s(conndata.path, "/foo/");
 	cl_assert_equal_s(conndata.user, "user/name");
-	cl_assert_equal_s(conndata.pass, "pass@word");
+	cl_assert_equal_s(conndata.pass, "pass@word%zyx%v");
 	cl_assert_equal_i(conndata.use_ssl, true);
 }
 
