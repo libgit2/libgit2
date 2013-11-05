@@ -1477,6 +1477,8 @@ void test_diff_workdir__with_stale_index(void)
 	cl_git_pass(git_diff_foreach(
 		diff, diff_file_cb, diff_hunk_cb, diff_line_cb, &exp));
 
+	git_diff_free(diff);
+
 	cl_assert_equal_i(16, exp.files);
 	cl_assert_equal_i(0, exp.file_status[GIT_DELTA_ADDED]);
 	cl_assert_equal_i(3, exp.file_status[GIT_DELTA_DELETED]);
