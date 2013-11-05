@@ -2451,6 +2451,7 @@ int git_merge(
 on_error:
 	git_repository_merge_cleanup(repo);
 
+	git_index_free(index_new);
 	git__free(result);
 
 done:
