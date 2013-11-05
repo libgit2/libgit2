@@ -926,3 +926,37 @@ void test_repo_iterator__fs2(void)
 	expect_iterator_items(i, 12, expect_base, 12, expect_base);
 	git_iterator_free(i);
 }
+
+void test_repo_iterator__fs_preserves_error(void)
+{
+	git_iterator *i;
+	const git_index_entry *e;
+
+	if (!cl_is_chmod_supported())
+		return;
+
+	g_repo = cl_git_sandbox_init("empty_standard_repo");
+
+	cl_must_pass(p_mkdir("empty_standard_repo/r", 0777));
+	cl_git_mkfile("empty_standard_repo/r/a", "hello");
+	cl_must_pass(p_mkdir("empty_standard_repo/r/b", 0777));
+	cl_git_mkfile("empty_standard_repo/r/b/problem", "not me");
+	cl_must_pass(p_chmod("empty_standard_repo/r/b", 0000));
+	cl_must_pass(p_mkdir("empty_standard_repo/r/c", 0777));
+	cl_git_mkfile("empty_standard_repo/r/d", "final");
+
+	cl_git_pass(git_iterator_for_filesystem(
+		&i, "empty_standard_repo/r", 0, NULL, NULL));
+
+	cl_git_pass(git_iterator_advance(&e, i)); /* a */
+	cl_git_fail(git_iterator_advance(&e, i)); /* b */
+	cl_assert(giterr_last());
+	cl_assert(giterr_last()->message != NULL);
+	/* skip 'c/' empty directory */
+	cl_git_pass(git_iterator_advance(&e, i)); /* d */
+	cl_assert_equal_i(GIT_ITEROVER, git_iterator_advance(&e, i));
+
+	cl_must_pass(p_chmod("empty_standard_repo/r/b", 0777));
+
+	git_iterator_free(i);
+}
