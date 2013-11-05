@@ -32,6 +32,8 @@ OPTION( LIBGIT2_FILENAME	"Name of the produced binary"			OFF )
 OPTION( ANDROID				"Build for android NDK"	 				OFF )
 
 OPTION( USE_ICONV			"Link with and use iconv library" 		OFF )
+OPTION( USE_SSH				"Link with libssh to enable SSH support" ON )
+
 IF(APPLE)
 	SET( USE_ICONV ON )
 ENDIF()
@@ -186,7 +188,7 @@ ELSE()
 	FILE(GLOB SRC_ZLIB deps/zlib/*.c deps/zlib/*.h)
 ENDIF()
 
-IF (NOT MINGW)
+IF (USE_SSH AND NOT MINGW)
 	FIND_PACKAGE(LIBSSH2 QUIET)
 ENDIF()
 IF (LIBSSH2_FOUND)
