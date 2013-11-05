@@ -112,27 +112,22 @@ void giterr_clear(void)
 #endif
 }
 
-git_error_t giterr_detach(git_buf *message)
+int giterr_detach(git_error *cpy)
 {
-	git_error_t rval;
 	git_error *error = GIT_GLOBAL->last_error;
 
-	assert(message);
-
-	git_buf_free(message);
+	assert(cpy);
 
 	if (!error)
-		return GITERR_NONE;
+		return -1;
 
-	rval = error->klass;
-
-	if (error != &g_git_oom_error)
-		git_buf_attach(message, error->message, 0);
+	cpy->message = error->message;
+	cpy->klass = error->klass;
 
 	error->message = NULL;
 	giterr_clear();
 
-	return rval;
+	return 0;
 }
 
 const git_error *giterr_last(void)

@@ -89,17 +89,14 @@ GIT_EXTERN(void) giterr_clear(void);
 /**
  * Get the last error data and clear it.
  *
- * This copies the last error message into the given `git_buf` and returns
- * the associated `git_error_t`, leaving the error cleared as if
- * `giterr_clear` had been called.  You must call `git_buf_free` on the
- * message to release the memory.
+ * This copies the last error into the given `git_error` struct
+ * and returns 0 if the copy was successful, leaving the error 
+ * cleared as if `giterr_clear` had been called.
  *
- * Note: it is possible that this will return `GITERR_NONE` and set the
- * buffer to NULL, so be prepared for that condition.  Also, if the last
- * error was an out-of-memory error, this will return `GITERR_NOMEMORY`
- * but also leave the buffer set to NULL (to avoid allocation).
+ * If there was no existing error in the library, -1 will be returned
+ * and the contents of `cpy` will be left unmodified.
  */
-GIT_EXTERN(git_error_t) giterr_detach(git_buf *message);
+GIT_EXTERN(int) giterr_detach(git_error *cpy);
 
 /**
  * Set the error message string for this thread.
