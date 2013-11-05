@@ -322,6 +322,8 @@ void test_repo_open__no_config(void)
 	git_config_free(config);
 	git_repository_free(repo);
 	cl_fixture_cleanup("empty_standard_repo");
+
+	git_futils_dirs_global_shutdown();
 }
 
 void test_repo_open__force_bare(void)

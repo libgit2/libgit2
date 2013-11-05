@@ -618,7 +618,7 @@ static git_futils_dirs_guess_cb git_futils__dir_guess[GIT_FUTILS_DIR__MAX] = {
 	git_futils_guess_template_dirs,
 };
 
-static void git_futils_dirs_global_shutdown(void)
+void git_futils_dirs_global_shutdown(void)
 {
 	int i;
 	for (i = 0; i < GIT_FUTILS_DIR__MAX; ++i)
