@@ -324,7 +324,7 @@ static void trim_common_tail(mmfile_t *a, mmfile_t *b, long ctx)
 	long trimmed = 0, recovered = 0;
 	char *ap = a->ptr + a->size;
 	char *bp = b->ptr + b->size;
-	long smaller = (a->size < b->size) ? a->size : b->size;
+	long smaller = (long)((a->size < b->size) ? a->size : b->size);
 
 	if (ctx)
 		return;

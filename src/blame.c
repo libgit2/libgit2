@@ -20,7 +20,7 @@
 
 static int hunk_byfinalline_search_cmp(const void *key, const void *entry)
 {
-	uint32_t lineno = *(size_t*)key;
+	uint16_t lineno = (uint16_t)*(size_t*)key;
 	git_blame_hunk *hunk = (git_blame_hunk*)entry;
 
 	if (lineno < hunk->final_start_line_number)
@@ -145,7 +145,7 @@ void git_blame_free(git_blame *blame)
 uint32_t git_blame_get_hunk_count(git_blame *blame)
 {
 	assert(blame);
-	return blame->hunks.length;
+	return (uint32_t)blame->hunks.length;
 }
 
 const git_blame_hunk *git_blame_get_hunk_byindex(git_blame *blame, uint32_t index)
@@ -160,7 +160,7 @@ const git_blame_hunk *git_blame_get_hunk_byline(git_blame *blame, uint32_t linen
 	assert(blame);
 
 	if (!git_vector_bsearch2( &i, &blame->hunks, hunk_byfinalline_search_cmp, &lineno)) {
-		return git_blame_get_hunk_byindex(blame, i);
+		return git_blame_get_hunk_byindex(blame, (uint32_t)i);
 	}
 
 	return NULL;
@@ -211,13 +211,13 @@ static git_blame_hunk *split_hunk_in_vector(
 	}
 
 	new_line_count = hunk->lines_in_hunk - rel_line;
-	nh = new_hunk(hunk->final_start_line_number+rel_line, new_line_count,
-			hunk->orig_start_line_number+rel_line, hunk->orig_path);
+	nh = new_hunk((uint16_t)(hunk->final_start_line_number+rel_line), (uint16_t)new_line_count,
+			(uint16_t)(hunk->orig_start_line_number+rel_line), hunk->orig_path);
 	git_oid_cpy(&nh->final_commit_id, &hunk->final_commit_id);
 	git_oid_cpy(&nh->orig_commit_id, &hunk->orig_commit_id);
 
 	/* Adjust hunk that was split */
-	hunk->lines_in_hunk -= new_line_count;
+	hunk->lines_in_hunk -= (uint16_t)new_line_count;
 	git_vector_insert_sorted(vec, nh, NULL);
 	{
 		git_blame_hunk *ret = return_new ? nh : hunk;
@@ -374,7 +374,7 @@ static int buffer_hunk_cb(
 	void *payload)
 {
 	git_blame *blame = (git_blame*)payload;
-	size_t wedge_line;
+	uint32_t wedge_line;
 
 	GIT_UNUSED(delta);
 
@@ -420,7 +420,7 @@ static int buffer_line_cb(
 		} else {
 			/* Create a new buffer-blame hunk with this line */
 			shift_hunks_by(&blame->hunks, blame->current_diff_line, 1);
-			blame->current_hunk = new_hunk(blame->current_diff_line, 1, 0, blame->path);
+			blame->current_hunk = new_hunk((uint16_t)blame->current_diff_line, 1, 0, blame->path);
 			git_vector_insert_sorted(&blame->hunks, blame->current_hunk, NULL);
 		}
 		blame->current_diff_line++;
@@ -436,7 +436,7 @@ static int buffer_line_cb(
 			if (!git_vector_search2(&i, &blame->hunks, ptrs_equal_cmp, blame->current_hunk)) {
 				git_vector_remove(&blame->hunks, i);
 				free_hunk(blame->current_hunk);
-				blame->current_hunk = (git_blame_hunk*)git_blame_get_hunk_byindex(blame, i);
+				blame->current_hunk = (git_blame_hunk*)git_blame_get_hunk_byindex(blame, (uint32_t)i);
 			}
 		}
 		shift_hunks_by(&blame->hunks, shift_base, -1);
