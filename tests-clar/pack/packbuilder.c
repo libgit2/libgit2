@@ -1,5 +1,6 @@
 #include "clar_libgit2.h"
 #include "fileops.h"
+#include "pack.h"
 #include "hash.h"
 #include "iterator.h"
 #include "vector.h"
@@ -92,7 +93,7 @@ void test_pack_packbuilder__create_pack(void)
 
 	seed_packbuilder();
 
-	cl_git_pass(git_indexer_new(&_indexer, ".", NULL, NULL, NULL));
+	cl_git_pass(git_indexer_new(&_indexer, ".", 0, NULL, NULL, NULL));
 	cl_git_pass(git_packbuilder_foreach(_packbuilder, feed_indexer, &stats));
 	cl_git_pass(git_indexer_commit(_indexer, &stats));
 
@@ -134,10 +135,53 @@ void test_pack_packbuilder__get_hash(void)
 
 	seed_packbuilder();
 
-	git_packbuilder_write(_packbuilder, ".", NULL, NULL);
+	git_packbuilder_write(_packbuilder, ".", 0, NULL, NULL);
 	git_oid_fmt(hex, git_packbuilder_hash(_packbuilder));
 
 	cl_assert_equal_s(hex, "80e61eb315239ef3c53033e37fee43b744d57122");
+}
+
+static void test_write_pack_permission(mode_t given, mode_t expected)
+{
+	struct stat statbuf;
+	mode_t mask, os_mask;
+
+	seed_packbuilder();
+
+	git_packbuilder_write(_packbuilder, ".", given, NULL, NULL);
+
+	/* Windows does not return group/user bits from stat,
+	* files are never executable.
+	*/
+#ifdef GIT_WIN32
+	os_mask = 0600;
+#else
+	os_mask = 0777;
+#endif
+
+	mask = p_umask(0);
+	p_umask(mask);
+
+	cl_git_pass(p_stat("pack-80e61eb315239ef3c53033e37fee43b744d57122.idx", &statbuf));
+	cl_assert_equal_i(statbuf.st_mode & os_mask, (expected & ~mask) & os_mask);
+
+	cl_git_pass(p_stat("pack-80e61eb315239ef3c53033e37fee43b744d57122.pack", &statbuf));
+	cl_assert_equal_i(statbuf.st_mode & os_mask, (expected & ~mask) & os_mask);
+}
+
+void test_pack_packbuilder__permissions_standard(void)
+{
+	test_write_pack_permission(0, GIT_PACK_FILE_MODE);
+}
+
+void test_pack_packbuilder__permissions_readonly(void)
+{
+	test_write_pack_permission(0444, 0444);
+}
+
+void test_pack_packbuilder__permissions_readwrite(void)
+{
+	test_write_pack_permission(0666, 0666);
 }
 
 static git_transfer_progress stats;
@@ -153,7 +197,7 @@ void test_pack_packbuilder__foreach(void)
 	git_indexer *idx;
 
 	seed_packbuilder();
-	cl_git_pass(git_indexer_new(&idx, ".", NULL, NULL, NULL));
+	cl_git_pass(git_indexer_new(&idx, ".", 0, NULL, NULL, NULL));
 	cl_git_pass(git_packbuilder_foreach(_packbuilder, foreach_cb, idx));
 	cl_git_pass(git_indexer_commit(idx, &stats));
 	git_indexer_free(idx);

@@ -20,6 +20,7 @@ typedef struct git_indexer git_indexer;
  *
  * @param out where to store the indexer instance
  * @param path to the directory where the packfile should be stored
+ * @param mode permissions to use creating packfile or 0 for defaults
  * @param odb object database from which to read base objects when
  * fixing thin packs. Pass NULL if no thin pack is expected (an error
  * will be returned if there are bases missing)
@@ -29,6 +30,7 @@ typedef struct git_indexer git_indexer;
 GIT_EXTERN(int) git_indexer_new(
 		git_indexer **out,
 		const char *path,
+		unsigned int mode,
 		git_odb *odb,
 		git_transfer_progress_callback progress_cb,
 		void *progress_cb_payload);
