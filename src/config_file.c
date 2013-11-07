@@ -1178,7 +1178,7 @@ static int write_section(git_filebuf *file, const char *key)
 	return result;
 }
 
-static int needsQuote(const char *value)
+static int value_needs_surrounding_quote(const char *value)
 {
 	const char *ptr = value;
 	if (*value == ' ')
@@ -1315,7 +1315,7 @@ static int config_write(diskfile_backend *cfg, const char *key, const regex_t *p
 			/* Then replace the variable. If the value is NULL, it
 			 * means we want to delete it, so don't write anything. */
 			if (value != NULL) {
-				if (needsQuote(value))
+				if (value_needs_surrounding_quote(value))
 					git_filebuf_printf(&file, "\t%s = \"%s\"\n", name, value);
 				else
 					git_filebuf_printf(&file, "\t%s = %s\n", name, value);
@@ -1378,7 +1378,7 @@ static int config_write(diskfile_backend *cfg, const char *key, const regex_t *p
 			if (reader->buffer.size > 0 && *(reader->buffer.ptr + reader->buffer.size - 1) != '\n')
 				git_filebuf_write(&file, "\n", 1);
 
-			if (needsQuote(value))
+			if (value_needs_surrounding_quote(value))
 				git_filebuf_printf(&file, "\t%s = \"%s\"\n", name, value);
 			else
 				git_filebuf_printf(&file, "\t%s = %s\n", name, value);
