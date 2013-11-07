@@ -128,6 +128,18 @@ void test_pack_packbuilder__create_pack(void)
 	cl_assert_equal_s(hex, "5d410bdf97cf896f9007681b92868471d636954b");
 }
 
+void test_pack_packbuilder__get_hash(void)
+{
+	char hex[41]; hex[40] = '\0';
+
+	seed_packbuilder();
+
+	git_packbuilder_write(_packbuilder, ".", NULL, NULL);
+	git_oid_fmt(hex, git_packbuilder_hash(_packbuilder));
+
+	cl_assert_equal_s(hex, "80e61eb315239ef3c53033e37fee43b744d57122");
+}
+
 static git_transfer_progress stats;
 static int foreach_cb(void *buf, size_t len, void *payload)
 {

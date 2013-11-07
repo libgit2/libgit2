@@ -130,6 +130,16 @@ GIT_EXTERN(int) git_packbuilder_write(
 	git_transfer_progress_callback progress_cb,
 	void *progress_cb_payload);
 
+/**
+* Get the packfile's hash
+*
+* A packfile's name is derived from the sorted hashing of all object
+* names. This is only correct after the packfile has been written.
+*
+* @param pb The packbuilder object
+*/
+GIT_EXTERN(const git_oid *) git_packbuilder_hash(git_packbuilder *pb);
+
 typedef int (*git_packbuilder_foreach_cb)(void *buf, size_t size, void *payload);
 /**
  * Create the new pack and pass each object to the callback

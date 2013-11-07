@@ -560,6 +560,7 @@ static int write_pack(git_packbuilder *pb,
 	git_buf buf = GIT_BUF_INIT;
 	enum write_one_status status;
 	struct git_pack_header ph;
+	git_oid entry_oid;
 	unsigned int i = 0;
 	int error = 0;
 
@@ -596,10 +597,10 @@ static int write_pack(git_packbuilder *pb,
 	} while (pb->nr_remaining && i < pb->nr_objects);
 
 
-	if ((error = git_hash_final(&pb->pack_oid, &pb->ctx)) < 0)
+	if ((error = git_hash_final(&entry_oid, &pb->ctx)) < 0)
 		goto done;
 
-	error = cb(pb->pack_oid.id, GIT_OID_RAWSZ, data);
+	error = cb(entry_oid.id, GIT_OID_RAWSZ, data);
 
 done:
 	git__free(write_order);
@@ -1269,11 +1270,18 @@ int git_packbuilder_write(
 		return -1;
 	}
 
+	git_oid_cpy(&pb->pack_oid, git_indexer_hash(indexer));
+
 	git_indexer_free(indexer);
 	return 0;
 }
 
 #undef PREPARE_PACK
+
+const git_oid *git_packbuilder_hash(git_packbuilder *pb)
+{
+	return &pb->pack_oid;
+}
 
 static int cb_tree_walk(const char *root, const git_tree_entry *entry, void *payload)
 {
