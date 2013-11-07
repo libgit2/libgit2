@@ -1473,7 +1473,7 @@ static int repo_init_create_origin(git_repository *repo, const char *url)
 	int error;
 	git_remote *remote;
 
-	if (!(error = git_remote_create(&remote, repo, GIT_REMOTE_ORIGIN, url))) {
+	if (!(error = git_remote_create(&remote, repo, GIT_REMOTE_ORIGIN, url, NULL))) {
 		git_remote_free(remote);
 	}
 

@@ -301,7 +301,7 @@ void test_online_push__initialize(void)
 	_remote = NULL;
 
 	if (_remote_url) {
-		cl_git_pass(git_remote_create(&_remote, _repo, "test", _remote_url));
+		cl_git_pass(git_remote_create(&_remote, _repo, "test", _remote_url, NULL));
 
 		record_callbacks_data_clear(&_record_cbs_data);
 		git_remote_set_callbacks(_remote, &_record_cbs);

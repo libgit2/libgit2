@@ -40,7 +40,8 @@ GIT_EXTERN(int) git_remote_create(
 		git_remote **out,
 		git_repository *repo,
 		const char *name,
-		const char *url);
+		const char *url,
+		const char *fetch);
 
 /**
  * Create a remote in memory

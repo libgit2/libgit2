@@ -43,7 +43,7 @@ static void do_fetch(const char *url, git_remote_autotag_option_t flag, int n)
 	callbacks.payload = &bytes_received;
 	counter = 0;
 
-	cl_git_pass(git_remote_create(&remote, _repo, "test", url));
+	cl_git_pass(git_remote_create(&remote, _repo, "test", url, NULL));
 	git_remote_set_callbacks(remote, &callbacks);
 	git_remote_set_autotag(remote, flag);
 	cl_git_pass(git_remote_connect(remote, GIT_DIRECTION_FETCH));
@@ -140,7 +140,7 @@ void test_online_fetch__can_cancel(void)
 	git_remote_callbacks callbacks = GIT_REMOTE_CALLBACKS_INIT;
 
 	cl_git_pass(git_remote_create(&remote, _repo, "test",
-				"http://github.com/libgit2/TestGitRepository.git"));
+				"http://github.com/libgit2/TestGitRepository.git", NULL));
 
 	callbacks.transfer_progress = cancel_at_half;
 	callbacks.payload = &bytes_received;
@@ -168,7 +168,7 @@ void test_online_fetch__ls_disconnected(void)
 	int nr_before = 0, nr_after = 0;
 
 	cl_git_pass(git_remote_create(&remote, _repo, "test",
-				"http://github.com/libgit2/TestGitRepository.git"));
+				"http://github.com/libgit2/TestGitRepository.git", NULL));
 	cl_git_pass(git_remote_connect(remote, GIT_DIRECTION_FETCH));
 	cl_git_pass(git_remote_ls(remote, ls_cb, &nr_before));
 	git_remote_disconnect(remote);

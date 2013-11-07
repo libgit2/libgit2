@@ -174,7 +174,7 @@ static int ensure_remote_doesnot_exist(git_repository *repo, const char *name)
 }
 
 
-int git_remote_create(git_remote **out, git_repository *repo, const char *name, const char *url)
+int git_remote_create(git_remote **out, git_repository *repo, const char *name, const char *url, const char *fetch)
 {
 	git_buf buf = GIT_BUF_INIT;
 	git_remote *remote = NULL;
@@ -186,10 +186,13 @@ int git_remote_create(git_remote **out, git_repository *repo, const char *name, 
 	if ((error = ensure_remote_doesnot_exist(repo, name)) < 0)
 		return error;
 
-	if (git_buf_printf(&buf, "+refs/heads/*:refs/remotes/%s/*", name) < 0)
-		return -1;
+	if (fetch == NULL) {
+		if (git_buf_printf(&buf, "+refs/heads/*:refs/remotes/%s/*", name) < 0)
+			return -1;
+		fetch = git_buf_cstr(&buf);
+	}
 
-	if (create_internal(&remote, repo, name, url, git_buf_cstr(&buf)) < 0)
+	if (create_internal(&remote, repo, name, url, fetch) < 0)
 		goto on_error;
 
 	git_buf_free(&buf);
