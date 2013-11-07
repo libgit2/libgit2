@@ -1248,6 +1248,7 @@ static int write_cb(void *buf, size_t len, void *payload)
 int git_packbuilder_write(
 	git_packbuilder *pb,
 	const char *path,
+	unsigned int mode,
 	git_transfer_progress_callback progress_cb,
 	void *progress_cb_payload)
 {
@@ -1258,7 +1259,7 @@ int git_packbuilder_write(
 	PREPARE_PACK;
 
 	if (git_indexer_new(
-		&indexer, path, pb->odb, progress_cb, progress_cb_payload) < 0)
+		&indexer, path, mode, pb->odb, progress_cb, progress_cb_payload) < 0)
 		return -1;
 
 	ctx.indexer = indexer;

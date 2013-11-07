@@ -48,7 +48,7 @@ void test_pack_indexer__out_of_order(void)
 	git_indexer *idx;
 	git_transfer_progress stats;
 
-	cl_git_pass(git_indexer_new(&idx, ".", NULL, NULL, NULL));
+	cl_git_pass(git_indexer_new(&idx, ".", 0, NULL, NULL, NULL));
 	cl_git_pass(git_indexer_append(idx, out_of_order_pack, out_of_order_pack_len, &stats));
 	cl_git_pass(git_indexer_commit(idx, &stats));
 
@@ -75,7 +75,7 @@ void test_pack_indexer__fix_thin(void)
 	git_oid_fromstr(&should_id, "e68fe8129b546b101aee9510c5328e7f21ca1d18");
 	cl_assert(!git_oid_cmp(&id, &should_id));
 
-	cl_git_pass(git_indexer_new(&idx, ".", odb, NULL, NULL));
+	cl_git_pass(git_indexer_new(&idx, ".", 0, odb, NULL, NULL));
 	cl_git_pass(git_indexer_append(idx, thin_pack, thin_pack_len, &stats));
 	cl_git_pass(git_indexer_commit(idx, &stats));
 
@@ -108,7 +108,7 @@ void test_pack_indexer__fix_thin(void)
 
 		cl_git_pass(p_stat(name, &st));
 
-		cl_git_pass(git_indexer_new(&idx, ".", NULL, NULL, NULL));
+		cl_git_pass(git_indexer_new(&idx, ".", 0, NULL, NULL, NULL));
 		read = p_read(fd, buffer, sizeof(buffer));
 		cl_assert(read != -1);
 		p_close(fd);
