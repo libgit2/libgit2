@@ -1178,6 +1178,22 @@ static int write_section(git_filebuf *file, const char *key)
 	return result;
 }
 
+static int needsQuote(const char *value)
+{
+	const char *ptr = value;
+	if (*value == ' ')
+		return 1;
+	while (*ptr) {
+		if (*ptr == ';' || *ptr == '#')
+			return 1;
+		++ptr;
+	}
+	if (ptr != value && *(--ptr) == ' ')
+		return 1;
+
+	return 0;
+}
+
 /*
  * This is pretty much the parsing, except we write out anything we don't have
  */
@@ -1299,7 +1315,10 @@ static int config_write(diskfile_backend *cfg, const char *key, const regex_t *p
 			/* Then replace the variable. If the value is NULL, it
 			 * means we want to delete it, so don't write anything. */
 			if (value != NULL) {
-				git_filebuf_printf(&file, "\t%s = %s\n", name, value);
+				if (needsQuote(value))
+					git_filebuf_printf(&file, "\t%s = \"%s\"\n", name, value);
+				else
+					git_filebuf_printf(&file, "\t%s = %s\n", name, value);
 			}
 
 			/*
@@ -1359,7 +1378,10 @@ static int config_write(diskfile_backend *cfg, const char *key, const regex_t *p
 			if (reader->buffer.size > 0 && *(reader->buffer.ptr + reader->buffer.size - 1) != '\n')
 				git_filebuf_write(&file, "\n", 1);
 
-			git_filebuf_printf(&file, "\t%s = %s\n", name, value);
+			if (needsQuote(value))
+				git_filebuf_printf(&file, "\t%s = \"%s\"\n", name, value);
+			else
+				git_filebuf_printf(&file, "\t%s = %s\n", name, value);
 		}
 	}
 
