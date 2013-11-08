@@ -141,7 +141,7 @@ void test_online_clone__clone_into(void)
 	checkout_opts.progress_payload = &checkout_progress_cb_was_called;
 
 	cl_git_pass(git_repository_init(&g_repo, "./foo", false));
-	cl_git_pass(git_remote_create(&remote, g_repo, "origin", LIVE_REPO_URL, NULL));
+	cl_git_pass(git_remote_create(&remote, g_repo, "origin", LIVE_REPO_URL));
 
 	callbacks.transfer_progress = &fetch_progress;
 	callbacks.payload = &fetch_progress_cb_was_called;

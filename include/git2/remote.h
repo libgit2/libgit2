@@ -27,6 +27,22 @@ GIT_BEGIN_DECL
 typedef int (*git_remote_rename_problem_cb)(const char *problematic_refspec, void *payload);
 
 /**
+ * Add a remote with the default fetch refsspec to the repository's configuration.  This
+ * calls git_remote_save before returning.
+ *
+ * @param out the resulting remote
+ * @param repo the repository in which to create the remote
+ * @param name the remote's name
+ * @param url the remote's url
+ * @return 0, GIT_EINVALIDSPEC, GIT_EEXISTS or an error code
+ */
+GIT_EXTERN(int) git_remote_create(
+		git_remote **out,
+		git_repository *repo,
+		const char *name,
+		const char *url);
+
+/**
  * Add a remote with the provided fetch refspec (or default if NULL) to the repository's
  * configuration.  This
  * calls git_remote_save before returning.
@@ -38,7 +54,7 @@ typedef int (*git_remote_rename_problem_cb)(const char *problematic_refspec, voi
  * @param fetch the remote fetch value
  * @return 0, GIT_EINVALIDSPEC, GIT_EEXISTS or an error code
  */
-GIT_EXTERN(int) git_remote_create(
+GIT_EXTERN(int) git_remote_create_with_fetchspec(
 		git_remote **out,
 		git_repository *repo,
 		const char *name,

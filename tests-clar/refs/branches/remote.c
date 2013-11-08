@@ -70,7 +70,7 @@ void test_refs_branches_remote__ambiguous_remote_returns_error(void)
 	git_remote *remote;
 
 	/* Create the remote */
-	cl_git_pass(git_remote_create(&remote, g_repo, "addtest", "http://github.com/libgit2/libgit2", NULL));
+	cl_git_pass(git_remote_create(&remote, g_repo, "addtest", "http://github.com/libgit2/libgit2"));
 
 	/* Update the remote fetch spec */
 	git_remote_clear_refspecs(remote);
