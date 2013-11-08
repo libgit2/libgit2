@@ -27,7 +27,7 @@ GIT_BEGIN_DECL
 typedef int (*git_remote_rename_problem_cb)(const char *problematic_refspec, void *payload);
 
 /**
- * Add a remote with the default fetch refsspec to the repository's configuration.  This
+ * Add a remote with the default fetch refspec to the repository's configuration.  This
  * calls git_remote_save before returning.
  *
  * @param out the resulting remote
