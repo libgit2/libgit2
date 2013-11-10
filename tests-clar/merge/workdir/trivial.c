@@ -62,7 +62,7 @@ static int merge_trivial(const char *ours, const char *theirs, bool automerge)
 	return 0;
 }
 
-static int merge_trivial_conflict_entrycount(void)
+static size_t merge_trivial_conflict_entrycount(void)
 {
 	const git_index_entry *entry;
 	size_t count = 0;
