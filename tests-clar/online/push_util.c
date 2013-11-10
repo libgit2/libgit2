@@ -44,20 +44,23 @@ int record_update_tips_cb(const char *refname, const git_oid *a, const git_oid *
 	return 0;
 }
 
-int delete_ref_cb(git_remote_head *head, void *payload)
+int create_deletion_refspecs(git_vector *out, const git_remote_head **heads, size_t heads_len)
 {
-	git_vector *delete_specs = (git_vector *)payload;
 	git_buf del_spec = GIT_BUF_INIT;
+	size_t i;
 
-	/* Ignore malformed ref names (which also saves us from tag^{} */
-	if (!git_reference_is_valid_name(head->name))
-		return 0;
+	for (i = 0; i < heads_len; i++) {
+		const git_remote_head *head = heads[i];
+		/* Ignore malformed ref names (which also saves us from tag^{} */
+		if (!git_reference_is_valid_name(head->name))
+			return 0;
 
-	/* Create a refspec that deletes a branch in the remote */
-	if (strcmp(head->name, "refs/heads/master")) {
-		cl_git_pass(git_buf_putc(&del_spec, ':'));
-		cl_git_pass(git_buf_puts(&del_spec, head->name));
-		cl_git_pass(git_vector_insert(delete_specs, git_buf_detach(&del_spec)));
+		/* Create a refspec that deletes a branch in the remote */
+		if (strcmp(head->name, "refs/heads/master")) {
+			cl_git_pass(git_buf_putc(&del_spec, ':'));
+			cl_git_pass(git_buf_puts(&del_spec, head->name));
+			cl_git_pass(git_vector_insert(out, git_buf_detach(&del_spec)));
+		}
 	}
 
 	return 0;
