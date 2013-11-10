@@ -1178,20 +1178,22 @@ static int write_section(git_filebuf *file, const char *key)
 	return result;
 }
 
-static int value_needs_surrounding_quote(const char *value)
+static const char *quotes_for_value(const char *value)
 {
-	const char *ptr = value;
-	if (*value == ' ')
-		return 1;
-	while (*ptr) {
-		if (*ptr == ';' || *ptr == '#')
-			return 1;
-		++ptr;
-	}
-	if (ptr != value && *(--ptr) == ' ')
-		return 1;
+	const char *ptr;
 
-	return 0;
+	if (value[0] == ' ' || value[0] == '\0')
+		return "\"";
+
+	for (ptr = value; *ptr; ++ptr) {
+		if (*ptr == ';' || *ptr == '#')
+			return "\"";
+	}
+
+	if (ptr[-1] == ' ')
+		return "\"";
+
+	return "";
 }
 
 /*
@@ -1318,10 +1320,8 @@ static int config_write(diskfile_backend *cfg, const char *key, const regex_t *p
 			/* Then replace the variable. If the value is NULL, it
 			 * means we want to delete it, so don't write anything. */
 			if (value != NULL) {
-				if (value_needs_surrounding_quote(value))
-					git_filebuf_printf(&file, "\t%s = \"%s\"\n", name, value);
-				else
-					git_filebuf_printf(&file, "\t%s = %s\n", name, value);
+				const char *q = quotes_for_value(value);
+				git_filebuf_printf(&file, "\t%s = %s%s%s\n", name, q, value, q);
 			}
 
 			/*
@@ -1362,6 +1362,8 @@ static int config_write(diskfile_backend *cfg, const char *key, const regex_t *p
 		if (preg_replaced) {
 			git_filebuf_printf(&file, "\n%s", write_start);
 		} else {
+			const char *q;
+
 			git_filebuf_write(&file, reader->buffer.ptr, reader->buffer.size);
 
 			/* And now if we just need to add a variable */
@@ -1381,10 +1383,8 @@ static int config_write(diskfile_backend *cfg, const char *key, const regex_t *p
 			if (reader->buffer.size > 0 && *(reader->buffer.ptr + reader->buffer.size - 1) != '\n')
 				git_filebuf_write(&file, "\n", 1);
 
-			if (value_needs_surrounding_quote(value))
-				git_filebuf_printf(&file, "\t%s = \"%s\"\n", name, value);
-			else
-				git_filebuf_printf(&file, "\t%s = %s\n", name, value);
+			q = quotes_for_value(value);
+			git_filebuf_printf(&file, "\t%s = %s%s%s\n", name, q, value, q);
 		}
 	}
 
