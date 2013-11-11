@@ -32,7 +32,6 @@ int git_smart__store_refs(transport_smart *t, int flushes)
 	/* Clear existing refs in case git_remote_connect() is called again
 	 * after git_remote_disconnect().
 	 */
-	git_vector_clear(&t->heads);
 	git_vector_foreach(refs, i, ref) {
 		git__free(ref->head.name);
 		git__free(ref);
@@ -945,8 +944,13 @@ int git_smart__push(git_transport *transport, git_push *push)
 		push->transfer_progress_cb(push->pb->nr_written, push->pb->nr_objects, packbuilder_payload.last_bytes, push->transfer_progress_cb_payload);
 	}
 
-	if (push->status.length)
+	if (push->status.length) {
 		error = update_refs_from_report(&t->refs, &push->specs, &push->status);
+		if (error < 0)
+			goto done;
+
+		error = git_smart__update_heads(t);
+	}
 
 done:
 	git_buf_free(&pktline);

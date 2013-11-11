@@ -63,6 +63,24 @@ static int git_smart__set_callbacks(
 	return 0;
 }
 
+int git_smart__update_heads(transport_smart *t)
+{
+	size_t i;
+	git_pkt *pkt;
+
+	git_vector_clear(&t->heads);
+	git_vector_foreach(&t->refs, i, pkt) {
+		git_pkt_ref *ref = (git_pkt_ref *) pkt;
+		if (pkt->type != GIT_PKT_REF)
+			continue;
+
+		if (git_vector_insert(&t->heads, &ref->head) < 0)
+			return -1;
+	}
+
+	return 0;
+}
+
 static int git_smart__connect(
 	git_transport *transport,
 	const char *url,
@@ -74,7 +92,6 @@ static int git_smart__connect(
 	transport_smart *t = (transport_smart *)transport;
 	git_smart_subtransport_stream *stream;
 	int error;
-	size_t i;
 	git_pkt *pkt;
 	git_pkt_ref *first;
 	git_smart_service_t service;
@@ -142,14 +159,7 @@ static int git_smart__connect(
 	}
 
 	/* Keep a list of heads for _ls */
-	git_vector_foreach(&t->refs, i, pkt) {
-		git_pkt_ref *ref = (git_pkt_ref *) pkt;
-		if (pkt->type != GIT_PKT_REF)
-			continue;
-
-		if (git_vector_insert(&t->heads, &ref->head) < 0)
-			return -1;
-	}
+	git_smart__update_heads(t);
 
 	if (t->rpc && git_smart__reset_stream(t, false) < 0)
 		return -1;
