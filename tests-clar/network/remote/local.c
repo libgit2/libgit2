@@ -26,26 +26,6 @@ void test_network_remote_local__cleanup(void)
 	cl_fixture_cleanup("remotelocal");
 }
 
-static int count_ref__cb(git_remote_head *head, void *payload)
-{
-	int *count = (int *)payload;
-
-	(void)head;
-	(*count)++;
-
-	return 0;
-}
-
-static int ensure_peeled__cb(git_remote_head *head, void *payload)
-{
-	GIT_UNUSED(payload);
-
-	if(strcmp(head->name, "refs/tags/test^{}") != 0)
-		return 0;
-
-	return git_oid_streq(&head->oid, "e90810b8df3e80c413d903f631643c716887138d");
-}
-
 static void connect_to_local_repository(const char *local_repository)
 {
 	git_buf_sets(&file_path_buf, cl_git_path_url(local_repository));
@@ -65,39 +45,42 @@ void test_network_remote_local__connected(void)
 
 void test_network_remote_local__retrieve_advertised_references(void)
 {
-	int how_many_refs = 0;
+	const git_remote_head **refs;
+	size_t refs_len;
 
 	connect_to_local_repository(cl_fixture("testrepo.git"));
 
-	cl_git_pass(git_remote_ls(remote, &count_ref__cb, &how_many_refs));
+	cl_git_pass(git_remote_ls(&refs, &refs_len, remote));
 
-	cl_assert_equal_i(how_many_refs, 28);
+	cl_assert_equal_i(refs_len, 28);
 }
 
 void test_network_remote_local__retrieve_advertised_references_after_disconnect(void)
 {
-	int how_many_refs = 0;
+	const git_remote_head **refs;
+	size_t refs_len;
 
 	connect_to_local_repository(cl_fixture("testrepo.git"));
 	git_remote_disconnect(remote);
 
-	cl_git_pass(git_remote_ls(remote, &count_ref__cb, &how_many_refs));
+	cl_git_pass(git_remote_ls(&refs, &refs_len, remote));
 
-	cl_assert_equal_i(how_many_refs, 28);
+	cl_assert_equal_i(refs_len, 28);
 }
 
 void test_network_remote_local__retrieve_advertised_references_from_spaced_repository(void)
 {
-	int how_many_refs = 0;
+	const git_remote_head **refs;
+	size_t refs_len;
 
 	cl_fixture_sandbox("testrepo.git");
 	cl_git_pass(p_rename("testrepo.git", "spaced testrepo.git"));
 
 	connect_to_local_repository("spaced testrepo.git");
 
-	cl_git_pass(git_remote_ls(remote, &count_ref__cb, &how_many_refs));
+	cl_git_pass(git_remote_ls(&refs, &refs_len, remote));
 
-	cl_assert_equal_i(how_many_refs, 28);
+	cl_assert_equal_i(refs_len, 28);
 
 	git_remote_free(remote);	/* Disconnect from the "spaced repo" before the cleanup */
 	remote = NULL;
@@ -107,9 +90,17 @@ void test_network_remote_local__retrieve_advertised_references_from_spaced_repos
 
 void test_network_remote_local__nested_tags_are_completely_peeled(void)
 {
+	const git_remote_head **refs;
+	size_t refs_len, i;
+
 	connect_to_local_repository(cl_fixture("testrepo.git"));
 
-	cl_git_pass(git_remote_ls(remote, &ensure_peeled__cb, NULL));
+	cl_git_pass(git_remote_ls(&refs, &refs_len, remote));
+
+	for (i = 0; i < refs_len; i++) {
+		if (!strcmp(refs[i]->name, "refs/tags/test^{}"))
+			cl_git_pass(git_oid_streq(&refs[i]->oid, "e90810b8df3e80c413d903f631643c716887138d"));
+	}
 }
 
 void test_network_remote_local__shorthand_fetch_refspec0(void)

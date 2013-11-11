@@ -269,7 +269,7 @@ static int wait_while_ack(gitno_buffer *buf)
 	return 0;
 }
 
-int git_smart__negotiate_fetch(git_transport *transport, git_repository *repo, const git_remote_head * const *refs, size_t count)
+int git_smart__negotiate_fetch(git_transport *transport, git_repository *repo, const git_remote_head * const *wants, size_t count)
 {
 	transport_smart *t = (transport_smart *)transport;
 	gitno_buffer *buf = &t->buffer;
@@ -279,19 +279,20 @@ int git_smart__negotiate_fetch(git_transport *transport, git_repository *repo, c
 	unsigned int i;
 	git_oid oid;
 
-	/* No own logic, do our thing */
-	if ((error = git_pkt_buffer_wants(refs, count, &t->caps, &data)) < 0)
+	if ((error = git_pkt_buffer_wants(wants, count, &t->caps, &data)) < 0)
 		return error;
 
 	if ((error = fetch_setup_walk(&walk, repo)) < 0)
 		goto on_error;
+
 	/*
-	 * We don't support any kind of ACK extensions, so the negotiation
-	 * boils down to sending what we have and listening for an ACK
-	 * every once in a while.
+	 * Our support for ACK extensions is simply to parse them. On
+	 * the first ACK we will accept that as enough common
+	 * objects. We give up if we haven't found an answer in the
+	 * first 256 we send.
 	 */
 	i = 0;
-	while (true) {
+	while (i < 256) {
 		error = git_revwalk_next(&oid, walk);
 
 		if (error < 0) {
@@ -349,7 +350,7 @@ int git_smart__negotiate_fetch(git_transport *transport, git_repository *repo, c
 			git_pkt_ack *pkt;
 			unsigned int i;
 
-			if ((error = git_pkt_buffer_wants(refs, count, &t->caps, &data)) < 0)
+			if ((error = git_pkt_buffer_wants(wants, count, &t->caps, &data)) < 0)
 				goto on_error;
 
 			git_vector_foreach(&t->common, i, pkt) {
@@ -369,7 +370,7 @@ int git_smart__negotiate_fetch(git_transport *transport, git_repository *repo, c
 		git_pkt_ack *pkt;
 		unsigned int i;
 
-		if ((error = git_pkt_buffer_wants(refs, count, &t->caps, &data)) < 0)
+		if ((error = git_pkt_buffer_wants(wants, count, &t->caps, &data)) < 0)
 			goto on_error;
 
 		git_vector_foreach(&t->common, i, pkt) {
@@ -943,8 +944,13 @@ int git_smart__push(git_transport *transport, git_push *push)
 		push->transfer_progress_cb(push->pb->nr_written, push->pb->nr_objects, packbuilder_payload.last_bytes, push->transfer_progress_cb_payload);
 	}
 
-	if (push->status.length)
+	if (push->status.length) {
 		error = update_refs_from_report(&t->refs, &push->specs, &push->status);
+		if (error < 0)
+			goto done;
+
+		error = git_smart__update_heads(t);
+	}
 
 done:
 	git_buf_free(&pktline);

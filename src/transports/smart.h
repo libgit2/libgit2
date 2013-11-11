@@ -140,6 +140,7 @@ typedef struct {
 	git_smart_subtransport_stream *current_stream;
 	transport_smart_caps caps;
 	git_vector refs;
+	git_vector heads;
 	git_vector common;
 	git_atomic cancelled;
 	packetsize_cb packetsize_cb;
@@ -172,6 +173,8 @@ int git_smart__download_pack(
 /* smart.c */
 int git_smart__negotiation_step(git_transport *transport, void *data, size_t len);
 int git_smart__get_push_stream(transport_smart *t, git_smart_subtransport_stream **out);
+
+int git_smart__update_heads(transport_smart *t);
 
 /* smart_pkt.c */
 int git_pkt_parse_line(git_pkt **head, const char *line, const char **out, size_t len);

@@ -74,6 +74,7 @@ static int fetchhead_ref_write(
 {
 	char oid[GIT_OID_HEXSZ + 1];
 	const char *type, *name;
+	int head = 0;
 
 	assert(file && fetchhead_ref);
 
@@ -87,10 +88,15 @@ static int fetchhead_ref_write(
 		GIT_REFS_TAGS_DIR) == 0) {
 		type = "tag ";
 		name = fetchhead_ref->ref_name + strlen(GIT_REFS_TAGS_DIR);
+	} else if (!git__strcmp(fetchhead_ref->ref_name, GIT_HEAD_FILE)) {
+		head = 1;
 	} else {
 		type = "";
 		name = fetchhead_ref->ref_name;
 	}
+
+	if (head)
+		return git_filebuf_printf(file, "%s\t\t%s\n", oid, fetchhead_ref->remote_url);
 
 	return git_filebuf_printf(file, "%s\t%s\t%s'%s' of %s\n",
 		oid,

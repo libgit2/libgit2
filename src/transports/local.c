@@ -213,21 +213,17 @@ static int local_connect(
 	return 0;
 }
 
-static int local_ls(git_transport *transport, git_headlist_cb list_cb, void *payload)
+static int local_ls(const git_remote_head ***out, size_t *size, git_transport *transport)
 {
 	transport_local *t = (transport_local *)transport;
-	unsigned int i;
-	git_remote_head *head = NULL;
 
 	if (!t->have_refs) {
 		giterr_set(GITERR_NET, "The transport has not yet loaded the refs");
 		return -1;
 	}
 
-	git_vector_foreach(&t->refs, i, head) {
-		if (list_cb(head, payload))
-			return GIT_EUSER;
-	}
+	*out = (const git_remote_head **) t->refs.contents;
+	*size = t->refs.length;
 
 	return 0;
 }

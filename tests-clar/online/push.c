@@ -155,12 +155,11 @@ static void do_verify_push_status(git_push *push, const push_status expected[], 
  */
 static void verify_refs(git_remote *remote, expected_ref expected_refs[], size_t expected_refs_len)
 {
-	git_vector actual_refs = GIT_VECTOR_INIT;
+	const git_remote_head **actual_refs;
+	size_t actual_refs_len;
 
-	git_remote_ls(remote, record_ref_cb, &actual_refs);
-	verify_remote_refs(&actual_refs, expected_refs, expected_refs_len);
-
-	git_vector_free(&actual_refs);
+	git_remote_ls(&actual_refs, &actual_refs_len, remote);
+	verify_remote_refs(actual_refs, actual_refs_len, expected_refs, expected_refs_len);
 }
 
 /**
@@ -257,7 +256,8 @@ failed:
 void test_online_push__initialize(void)
 {
 	git_vector delete_specs = GIT_VECTOR_INIT;
-	size_t i;
+	const git_remote_head **heads;
+	size_t i, heads_len;
 	char *curr_del_spec;
 
 	_repo = cl_git_sandbox_init("push_src");
@@ -314,7 +314,8 @@ void test_online_push__initialize(void)
 		 * order to delete the remote branch pointed to by HEAD (usually master).
 		 * See: https://raw.github.com/git/git/master/Documentation/RelNotes/1.7.0.txt
 		 */
-		cl_git_pass(git_remote_ls(_remote, delete_ref_cb, &delete_specs));
+		cl_git_pass(git_remote_ls(&heads, &heads_len, _remote));
+		cl_git_pass(create_deletion_refspecs(&delete_specs, heads, heads_len));
 		if (delete_specs.length) {
 			git_push *push;
 

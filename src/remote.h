@@ -21,6 +21,7 @@ struct git_remote {
 	char *pushurl;
 	git_vector refs;
 	git_vector refspecs;
+	git_vector active_refspecs;
 	git_transport *transport;
 	git_repository *repo;
 	git_remote_callbacks callbacks;

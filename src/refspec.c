@@ -12,6 +12,7 @@
 #include "util.h"
 #include "posix.h"
 #include "refs.h"
+#include "vector.h"
 
 int git_refspec__parse(git_refspec *refspec, const char *input, bool is_fetch)
 {
@@ -286,4 +287,71 @@ git_direction git_refspec_direction(const git_refspec *spec)
 	assert(spec);
 
 	return spec->push;
+}
+
+int git_refspec__dwim_one(git_vector *out, git_refspec *spec, git_vector *refs)
+{
+	git_buf buf = GIT_BUF_INIT;
+	size_t j, pos;
+	git_remote_head key;
+
+	const char* formatters[] = {
+		GIT_REFS_DIR "%s",
+		GIT_REFS_TAGS_DIR "%s",
+		GIT_REFS_HEADS_DIR "%s",
+		NULL
+	};
+
+	git_refspec *cur = git__calloc(1, sizeof(git_refspec));
+	GITERR_CHECK_ALLOC(cur);
+
+	cur->force = spec->force;
+	cur->push = spec->push;
+	cur->pattern = spec->pattern;
+	cur->matching = spec->matching;
+	cur->string = git__strdup(spec->string);
+
+	/* shorthand on the lhs */
+	if (git__prefixcmp(spec->src, GIT_REFS_DIR)) {
+		for (j = 0; formatters[j]; j++) {
+			git_buf_clear(&buf);
+			if (git_buf_printf(&buf, formatters[j], spec->src) < 0)
+				return -1;
+
+			key.name = (char *) git_buf_cstr(&buf);
+			if (!git_vector_search(&pos, refs, &key)) {
+				/* we found something to match the shorthand, set src to that */
+				cur->src = git_buf_detach(&buf);
+			}
+		}
+	}
+
+	/* No shorthands found, copy over the name */
+	if (cur->src == NULL && spec->src != NULL) {
+		cur->src = git__strdup(spec->src);
+		GITERR_CHECK_ALLOC(cur->src);
+	}
+
+	if (spec->dst && git__prefixcmp(spec->dst, GIT_REFS_DIR)) {
+		/* if it starts with "remotes" then we just prepend "refs/" */
+		if (!git__prefixcmp(spec->dst, "remotes/")) {
+			git_buf_puts(&buf, GIT_REFS_DIR);
+		} else {
+			git_buf_puts(&buf, GIT_REFS_HEADS_DIR);
+		}
+
+		if (git_buf_puts(&buf, spec->dst) < 0)
+			return -1;
+
+		cur->dst = git_buf_detach(&buf);
+	}
+
+	git_buf_free(&buf);
+
+	if (cur->dst == NULL && spec->dst != NULL) {
+		cur->dst = git__strdup(spec->dst);
+		GITERR_CHECK_ALLOC(cur->dst);
+	}
+
+	return git_vector_insert(out, cur);
 }

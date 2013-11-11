@@ -41,12 +41,13 @@ void record_callbacks_data_clear(record_callbacks_data *data);
 int record_update_tips_cb(const char *refname, const git_oid *a, const git_oid *b, void *data);
 
 /**
- * Callback for git_remote_list that adds refspecs to delete each ref
+ * Create a set of refspecs that deletes each of the inputs
  *
- * @param head a ref on the remote
- * @param payload a git_push instance
+ * @param out the vector in which to store the refspecs
+ * @param heads the remote heads
+ * @param heads_len the size of the array
  */
-int delete_ref_cb(git_remote_head *head, void *payload);
+int create_deletion_refspecs(git_vector *out, const git_remote_head **heads, size_t heads_len);
 
 /**
  * Callback for git_remote_list that adds refspecs to vector
@@ -60,10 +61,11 @@ int record_ref_cb(git_remote_head *head, void *payload);
  * Verifies that refs on remote stored by record_ref_cb match the expected
  * names, oids, and order.
  *
- * @param actual_refs actual refs stored by record_ref_cb()
+ * @param actual_refs actual refs in the remote
+ * @param actual_refs_len length of actual_refs
  * @param expected_refs expected remote refs
  * @param expected_refs_len length of expected_refs
  */
-void verify_remote_refs(git_vector *actual_refs, const expected_ref expected_refs[], size_t expected_refs_len);
+void verify_remote_refs(const git_remote_head *actual_refs[], size_t actual_refs_len, const expected_ref expected_refs[], size_t expected_refs_len);
 
 #endif /* INCLUDE_cl_push_util_h__ */

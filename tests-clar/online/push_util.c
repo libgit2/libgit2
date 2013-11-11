@@ -44,20 +44,23 @@ int record_update_tips_cb(const char *refname, const git_oid *a, const git_oid *
 	return 0;
 }
 
-int delete_ref_cb(git_remote_head *head, void *payload)
+int create_deletion_refspecs(git_vector *out, const git_remote_head **heads, size_t heads_len)
 {
-	git_vector *delete_specs = (git_vector *)payload;
 	git_buf del_spec = GIT_BUF_INIT;
+	size_t i;
 
-	/* Ignore malformed ref names (which also saves us from tag^{} */
-	if (!git_reference_is_valid_name(head->name))
-		return 0;
+	for (i = 0; i < heads_len; i++) {
+		const git_remote_head *head = heads[i];
+		/* Ignore malformed ref names (which also saves us from tag^{} */
+		if (!git_reference_is_valid_name(head->name))
+			return 0;
 
-	/* Create a refspec that deletes a branch in the remote */
-	if (strcmp(head->name, "refs/heads/master")) {
-		cl_git_pass(git_buf_putc(&del_spec, ':'));
-		cl_git_pass(git_buf_puts(&del_spec, head->name));
-		cl_git_pass(git_vector_insert(delete_specs, git_buf_detach(&del_spec)));
+		/* Create a refspec that deletes a branch in the remote */
+		if (strcmp(head->name, "refs/heads/master")) {
+			cl_git_pass(git_buf_putc(&del_spec, ':'));
+			cl_git_pass(git_buf_puts(&del_spec, head->name));
+			cl_git_pass(git_vector_insert(out, git_buf_detach(&del_spec)));
+		}
 	}
 
 	return 0;
@@ -69,26 +72,28 @@ int record_ref_cb(git_remote_head *head, void *payload)
 	return git_vector_insert(refs, head);
 }
 
-void verify_remote_refs(git_vector *actual_refs, const expected_ref expected_refs[], size_t expected_refs_len)
+void verify_remote_refs(const git_remote_head *actual_refs[], size_t actual_refs_len, const expected_ref expected_refs[], size_t expected_refs_len)
 {
 	size_t i, j = 0;
 	git_buf msg = GIT_BUF_INIT;
-	git_remote_head *actual;
+	const git_remote_head *actual;
 	char *oid_str;
 	bool master_present = false;
 
 	/* We don't care whether "master" is present on the other end or not */
-	git_vector_foreach(actual_refs, i, actual) {
+	for (i = 0; i < actual_refs_len; i++) {
+		actual = actual_refs[i];
 		if (!strcmp(actual->name, "refs/heads/master")) {
 			master_present = true;
 			break;
 		}
 	}
 
-	if (expected_refs_len + (master_present ? 1 : 0) != actual_refs->length)
+	if (expected_refs_len + (master_present ? 1 : 0) != actual_refs_len)
 		goto failed;
 
-	git_vector_foreach(actual_refs, i, actual) {
+	for (i = 0; i < actual_refs_len; i++) {
+		actual = actual_refs[i];
 		if (master_present && !strcmp(actual->name, "refs/heads/master"))
 			continue;
 
@@ -111,7 +116,8 @@ failed:
 	}
 
 	git_buf_puts(&msg, "\nACTUAL:\n");
-	git_vector_foreach(actual_refs, i, actual) {
+	for (i = 0; i < actual_refs_len; i++) {
+		actual = actual_refs[i];
 		if (master_present && !strcmp(actual->name, "refs/heads/master"))
 			continue;
 

@@ -176,25 +176,20 @@ static int update_head_to_new_branch(
 	return error;
 }
 
-static int get_head_callback(git_remote_head *head, void *payload)
-{
-	git_remote_head **destination = (git_remote_head **)payload;
-
-	/* Save the first entry, and terminate the enumeration */
-	*destination = head;
-	return 1;
-}
-
 static int update_head_to_remote(git_repository *repo, git_remote *remote)
 {
 	int retcode = -1;
+	size_t refs_len;
 	git_refspec dummy_spec;
-	git_remote_head *remote_head;
+	const git_remote_head *remote_head, **refs;
 	struct head_info head_info;
 	git_buf remote_master_name = GIT_BUF_INIT;
 
+	if (git_remote_ls(&refs, &refs_len, remote) < 0)
+		return -1;
+
 	/* Did we just clone an empty repository? */
-	if (remote->refs.length == 0) {
+	if (refs_len == 0) {
 		return setup_tracking_config(
 			repo,
 			"master",
@@ -202,12 +197,8 @@ static int update_head_to_remote(git_repository *repo, git_remote *remote)
 			GIT_REFS_HEADS_MASTER_FILE);
 	}
 
-	/* Get the remote's HEAD. This is always the first ref in remote->refs. */
-	remote_head = NULL;
-
-	if (!remote->transport->ls(remote->transport, get_head_callback, &remote_head))
-		return -1;
-
+	/* Get the remote's HEAD. This is always the first ref in the list. */
+	remote_head = refs[0];
 	assert(remote_head);
 
 	git_oid_cpy(&head_info.remote_head_oid, &remote_head->oid);
@@ -349,7 +340,7 @@ static bool should_checkout(
 int git_clone_into(git_repository *repo, git_remote *remote, const git_checkout_opts *co_opts, const char *branch)
 {
 	int error = 0, old_fetchhead;
-	size_t nspecs;
+	git_strarray refspecs;
 
 	assert(repo && remote);
 
@@ -357,6 +348,10 @@ int git_clone_into(git_repository *repo, git_remote *remote, const git_checkout_
 		giterr_set(GITERR_INVALID, "the repository is not empty");
 		return -1;
 	}
+
+
+	if ((error = git_remote_get_fetch_refspecs(&refspecs, remote)) < 0)
+		return error;
 
 	if ((error = git_remote_add_fetch(remote, "refs/tags/*:refs/tags/*")) < 0)
 		return error;
@@ -378,9 +373,13 @@ int git_clone_into(git_repository *repo, git_remote *remote, const git_checkout_
 
 cleanup:
 	git_remote_set_update_fetchhead(remote, old_fetchhead);
-	/* Remove the tags refspec */
-	nspecs = git_remote_refspec_count(remote);
-	git_remote_remove_refspec(remote, nspecs);
+	/* Go back to the original refspecs */
+	if (git_remote_set_fetch_refspecs(remote, &refspecs) < 0) {
+		git_strarray_free(&refspecs);
+		return -1;
+	}
+
+	git_strarray_free(&refspecs);
 
 	return error;
 }
