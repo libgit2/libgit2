@@ -114,7 +114,7 @@ int main(int argc, char *argv[])
 					rawdata+i);
 		}
 
-		i = eol - rawdata + 1;
+		i = (int)(eol - rawdata + 1);
 		line++;
 	}
 

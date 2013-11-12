@@ -272,7 +272,7 @@ static int write_object(git_buf *buf, git_packbuilder *pb, git_pobject *po)
 	git_buf zbuf = GIT_BUF_INIT;
 	git_otype type;
 	unsigned char hdr[10];
-	unsigned int hdr_len;
+	size_t hdr_len;
 	unsigned long size;
 	void *data;
 

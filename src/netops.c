@@ -662,7 +662,7 @@ void gitno_connection_data_free_ptrs(gitno_connection_data *d)
 static char* unescape(char *str)
 {
 	int x, y;
-	int len = strlen(str);
+	size_t len = strlen(str);
 
 	for (x=y=0; str[y]; ++x, ++y) {
 		if ((str[x] = str[y]) == '%') {

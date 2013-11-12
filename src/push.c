@@ -618,7 +618,7 @@ on_error:
 
 static int filter_refs(git_remote *remote)
 {
-	const git_remote_head **heads;
+	git_remote_head **heads;
 	size_t heads_len, i;
 
 	git_vector_clear(&remote->refs);
