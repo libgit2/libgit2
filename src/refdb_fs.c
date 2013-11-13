@@ -910,7 +910,8 @@ fail:
 static int refdb_fs_backend__write(
 	git_refdb_backend *_backend,
 	const git_reference *ref,
-	int force)
+	int force,
+	const char *message)
 {
 	refdb_fs_backend *backend = (refdb_fs_backend *)_backend;
 	int error;
@@ -974,7 +975,8 @@ static int refdb_fs_backend__rename(
 	git_refdb_backend *_backend,
 	const char *old_name,
 	const char *new_name,
-	int force)
+	int force,
+	const char *message)
 {
 	refdb_fs_backend *backend = (refdb_fs_backend *)_backend;
 	git_reference *old, *new;
@@ -1264,6 +1266,32 @@ static int serialize_reflog_entry(
 	return git_buf_oom(buf);
 }
 
+static int lock_reflog(git_filebuf *file, refdb_fs_backend *backend, const char *refname)
+{
+	git_repository *repo;
+	git_buf log_path = GIT_BUF_INIT;
+	int error;
+
+	repo = backend->repo;
+
+	if (retrieve_reflog_path(&log_path, repo, refname) < 0)
+		return -1;
+
+	if (!git_path_isfile(git_buf_cstr(&log_path))) {
+		giterr_set(GITERR_INVALID,
+			"Log file for reference '%s' doesn't exist.", refname);
+		error = -1;
+		goto cleanup;
+	}
+
+	error = git_filebuf_open(file, git_buf_cstr(&log_path), 0, GIT_REFLOG_FILE_MODE);
+
+cleanup:
+	git_buf_free(&log_path);
+
+	return error;
+}
+
 static int refdb_reflog_fs__write(git_refdb_backend *_backend, git_reflog *reflog)
 {
 	int error = -1;
@@ -1271,7 +1299,6 @@ static int refdb_reflog_fs__write(git_refdb_backend *_backend, git_reflog *reflo
 	git_reflog_entry *entry;
 	git_repository *repo;
 	refdb_fs_backend *backend;
-	git_buf log_path = GIT_BUF_INIT;
 	git_buf log = GIT_BUF_INIT;
 	git_filebuf fbuf = GIT_FILEBUF_INIT;
 
@@ -1280,17 +1307,8 @@ static int refdb_reflog_fs__write(git_refdb_backend *_backend, git_reflog *reflo
 	backend = (refdb_fs_backend *) _backend;
 	repo = backend->repo;
 
-	if (retrieve_reflog_path(&log_path, repo, reflog->ref_name) < 0)
+	if ((error = lock_reflog(&fbuf, backend, reflog->ref_name)) < 0)
 		return -1;
-
-	if (!git_path_isfile(git_buf_cstr(&log_path))) {
-		giterr_set(GITERR_INVALID,
-			"Log file for reference '%s' doesn't exist.", reflog->ref_name);
-		goto cleanup;
-	}
-
-	if ((error = git_filebuf_open(&fbuf, git_buf_cstr(&log_path), 0, GIT_REFLOG_FILE_MODE)) < 0)
-		goto cleanup;
 
 	git_vector_foreach(&reflog->entries, i, entry) {
 		if (serialize_reflog_entry(&log, &(entry->oid_old), &(entry->oid_cur), entry->committer, entry->msg) < 0)
@@ -1308,7 +1326,7 @@ cleanup:
 
 success:
 	git_buf_free(&log);
-	git_buf_free(&log_path);
+
 	return error;
 }
 

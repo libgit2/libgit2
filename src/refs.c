@@ -396,7 +396,7 @@ static int reference__create(
 
 	GITERR_CHECK_ALLOC(ref);
 
-	if ((error = git_refdb_write(refdb, ref, force)) < 0) {
+	if ((error = git_refdb_write(refdb, ref, force, log_message)) < 0) {
 		git_reference_free(ref);
 		return error;
 	}
@@ -579,7 +579,7 @@ int git_reference_rename(
 
 	should_head_be_updated = (error > 0);
 
-	if ((error = git_refdb_rename(out, ref->db, ref->name, new_name, force)) < 0)
+	if ((error = git_refdb_rename(out, ref->db, ref->name, new_name, force, NULL)) < 0)
 		return error;
 
 	/* Update HEAD it was poiting to the reference being renamed. */
