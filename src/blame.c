@@ -76,10 +76,8 @@ static git_blame_hunk* dup_hunk(git_blame_hunk *hunk)
 	git_oid_cpy(&newhunk->orig_commit_id, &hunk->orig_commit_id);
 	git_oid_cpy(&newhunk->final_commit_id, &hunk->final_commit_id);
 	newhunk->boundary = hunk->boundary;
-	if (hunk->final_signature)
-		newhunk->final_signature = git_signature_dup(hunk->final_signature);
-	if (hunk->orig_signature)
-		newhunk->orig_signature = git_signature_dup(hunk->orig_signature);
+	newhunk->final_signature = git_signature_dup(hunk->final_signature);
+	newhunk->orig_signature = git_signature_dup(hunk->orig_signature);
 	return newhunk;
 }
 
