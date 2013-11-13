@@ -2,7 +2,7 @@
 #include "fileops.h"
 #include <ctype.h>
 
-git_buf path = GIT_BUF_INIT;
+static git_buf path = GIT_BUF_INIT;
 
 void test_repo_config__initialize(void)
 {

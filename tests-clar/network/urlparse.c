@@ -1,8 +1,8 @@
 #include "clar_libgit2.h"
 #include "netops.h"
 
-char *host, *port, *path, *user, *pass;
-gitno_connection_data conndata;
+static char *host, *port, *path, *user, *pass;
+static gitno_connection_data conndata;
 
 void test_network_urlparse__initialize(void)
 {
