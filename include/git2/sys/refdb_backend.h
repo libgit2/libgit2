@@ -94,12 +94,12 @@ struct git_refdb_backend {
 	 */
 	int (*write)(git_refdb_backend *backend,
 		     const git_reference *ref, int force,
-		     const char *message);
+		     const git_signature *who, const char *message);
 
 	int (*rename)(
 		git_reference **out, git_refdb_backend *backend,
 		const char *old_name, const char *new_name, int force,
-		const char *message);
+		const git_signature *who, const char *message);
 
 	/**
 	 * Deletes the given reference from the refdb.  A refdb implementation

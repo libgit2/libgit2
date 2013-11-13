@@ -49,17 +49,20 @@ static void assert_appends(const git_signature *committer, const git_oid *oid)
 
 	/* Read and parse the reflog for this branch */
 	cl_git_pass(git_reflog_read(&reflog, repo2, new_ref));
-	cl_assert_equal_i(2, (int)git_reflog_entrycount(reflog));
+	cl_assert_equal_i(3, (int)git_reflog_entrycount(reflog));
+
+	/* The first one was the creation of the branch */
+	entry = git_reflog_entry_byindex(reflog, 2);
+	cl_assert(git_oid_streq(&entry->oid_old, GIT_OID_HEX_ZERO) == 0);
 
 	entry = git_reflog_entry_byindex(reflog, 1);
 	assert_signature(committer, entry->committer);
-	cl_assert(git_oid_streq(&entry->oid_old, GIT_OID_HEX_ZERO) == 0);
+	cl_assert(git_oid_cmp(oid, &entry->oid_old) == 0);
 	cl_assert(git_oid_cmp(oid, &entry->oid_cur) == 0);
 	cl_assert(entry->msg == NULL);
 
 	entry = git_reflog_entry_byindex(reflog, 0);
 	assert_signature(committer, entry->committer);
-	cl_assert(git_oid_cmp(oid, &entry->oid_old) == 0);
 	cl_assert(git_oid_cmp(oid, &entry->oid_cur) == 0);
 	cl_assert_equal_s(commit_msg, entry->msg);
 

@@ -21,6 +21,7 @@
 #include <git2/refs.h>
 #include <git2/refdb.h>
 #include <git2/sys/refs.h>
+#include <git2/signature.h>
 
 GIT__USE_STRMAP;
 
@@ -322,23 +323,6 @@ const char *git_reference_symbolic_target(const git_reference *ref)
 	return ref->target.symbolic;
 }
 
-static int feed_reflog(
-	const git_reference *ref,
-	const git_signature *signature,
-	const char *log_message)
-{
-
-	git_oid peeled_ref_oid;
-	int error;
-
-	if ((error = git_reference_name_to_id(&peeled_ref_oid,
-		git_reference_owner(ref), git_reference_name(ref))) < 0)
-		return error;
-
-	return git_reflog_append_to(git_reference_owner(ref), git_reference_name(ref),
-				    &peeled_ref_oid, signature, log_message);
-}
-
 static int reference__create(
 	git_reference **ref_out,
 	git_repository *repo,
@@ -355,7 +339,7 @@ static int reference__create(
 	int error = 0;
 
 	assert(repo && name);
-	assert(!((signature == NULL) ^ (log_message == NULL)));
+	assert(symbolic || signature);
 
 	if (ref_out)
 		*ref_out = NULL;
@@ -396,12 +380,7 @@ static int reference__create(
 
 	GITERR_CHECK_ALLOC(ref);
 
-	if ((error = git_refdb_write(refdb, ref, force, log_message)) < 0) {
-		git_reference_free(ref);
-		return error;
-	}
-
-	if (log_message && (error = feed_reflog(ref, signature, log_message)) < 0) {
+	if ((error = git_refdb_write(refdb, ref, force, signature, log_message)) < 0) {
 		git_reference_free(ref);
 		return error;
 	}
@@ -421,9 +400,22 @@ int git_reference_create(
 	const git_oid *oid,
 	int force)
 {
+	git_signature *who;
+	int error;
+
 	assert(oid);
 
-	return reference__create(ref_out, repo, name, oid, NULL, force, NULL, NULL);
+	/* Should we return an error if there is no default? */
+	if (((error = git_signature_default(&who, repo)) < 0) &&
+	    ((error = git_signature_now(&who, "unknown", "unknown")) < 0)) {
+		return error;
+	}
+
+	error = reference__create(ref_out, repo, name, oid, NULL, force, who, NULL);
+
+	git_signature_free(who);
+
+	return error;
 }
 
 int git_reference_create_with_log(
@@ -449,23 +441,7 @@ int git_reference_symbolic_create(
 	int force)
 {
 	assert(target);
-
 	return reference__create(ref_out, repo, name, NULL, target, force, NULL, NULL);
-}
-
-int git_reference_symbolic_create_with_log(
-	git_reference **ref_out,
-	git_repository *repo,
-	const char *name,
-	const char *target,
-	int force,
-	const git_signature *signature,
-	const char* log_message)
-{
-	assert(target && signature && log_message);
-
-	return reference__create(
-		ref_out, repo, name, NULL, target, force, signature, log_message);
 }
 
 static int ensure_is_an_updatable_direct_reference(git_reference *ref)
@@ -535,36 +511,15 @@ int git_reference_symbolic_set_target(
 	return git_reference_symbolic_create(out, ref->db->repo, ref->name, target, 1);
 }
 
-int git_reference_symbolic_set_target_with_log(
-	git_reference **out,
-	git_reference *ref,
-	const char *target,
-	const git_signature *signature,
-	const char *log_message)
-{
-	int error;
-
-	assert(out && ref && target);
-	assert(signature && log_message);
-
-	if ((error = ensure_is_an_updatable_symbolic_reference(ref)) < 0)
-		return error;
-
-	return git_reference_symbolic_create_with_log(
-		out, ref->db->repo, ref->name, target, 1, signature, log_message);
-}
-
-int git_reference_rename(
-	git_reference **out,
-	git_reference *ref,
-	const char *new_name,
-	int force)
+static int reference__rename(git_reference **out, git_reference *ref, const char *new_name, int force,
+				 const git_signature *signature, const char *message)
 {
 	unsigned int normalization_flags;
 	char normalized[GIT_REFNAME_MAX];
 	bool should_head_be_updated = false;
 	int error = 0;
-	int reference_has_log;
+
+	assert(ref && new_name && signature);
 
 	normalization_flags = ref->type == GIT_REF_SYMBOLIC ?
 		GIT_REF_FORMAT_ALLOW_ONELEVEL : GIT_REF_FORMAT_NORMAL;
@@ -573,13 +528,14 @@ int git_reference_rename(
 			normalized, sizeof(normalized), new_name, normalization_flags)) < 0)
 		return error;
 
+
 	/* Check if we have to update HEAD. */
 	if ((error = git_branch_is_head(ref)) < 0)
 		return error;
 
 	should_head_be_updated = (error > 0);
 
-	if ((error = git_refdb_rename(out, ref->db, ref->name, new_name, force, NULL)) < 0)
+	if ((error = git_refdb_rename(out, ref->db, ref->name, new_name, force, signature, message)) < 0)
 		return error;
 
 	/* Update HEAD it was poiting to the reference being renamed. */
@@ -589,15 +545,41 @@ int git_reference_rename(
 		return error;
 	}
 
-	/* Rename the reflog file, if it exists. */
-	reference_has_log = git_reference_has_log(ref);
-	if (reference_has_log < 0)
-		return reference_has_log;
-
-	if (reference_has_log && (error = git_reflog_rename(git_reference_owner(ref), git_reference_name(ref), new_name)) < 0)
-		return error;
-
 	return 0;
+}
+
+
+int git_reference_rename(
+	git_reference **out,
+	git_reference *ref,
+	const char *new_name,
+	int force)
+{
+	git_signature *who;
+	int error;
+
+	/* Should we return an error if there is no default? */
+	if (((error = git_signature_default(&who, ref->db->repo)) < 0) &&
+	    ((error = git_signature_now(&who, "unknown", "unknown")) < 0)) {
+		return error;
+	}
+
+	error = reference__rename(out, ref, new_name, force, who, NULL);
+
+	git_signature_free(who);
+
+	return error;
+}
+
+int git_reference_rename_with_log(
+	git_reference **out,
+	git_reference *ref,
+	const char *new_name,
+	int force,
+	const git_signature *who,
+	const char * message)
+{
+	return reference__rename(out, ref, new_name, force, who, message);
 }
 
 int git_reference_resolve(git_reference **ref_out, const git_reference *ref)
