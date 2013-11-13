@@ -386,9 +386,13 @@ static int buffer_hunk_cb(
 	wedge_line = (hunk->old_lines == 0) ? hunk->new_start : hunk->old_start;
 	blame->current_diff_line = wedge_line;
 
-	/* If this hunk doesn't start between existing hunks, split a hunk up so it does */
 	blame->current_hunk = (git_blame_hunk*)git_blame_get_hunk_byline(blame, wedge_line);
-	if (!hunk_starts_at_or_after_line(blame->current_hunk, wedge_line)){
+	if (!blame->current_hunk) {
+		/* Line added at the end of the file */
+		blame->current_hunk = new_hunk(wedge_line, 0, wedge_line, blame->path);
+		git_vector_insert(&blame->hunks, blame->current_hunk);
+	} else if (!hunk_starts_at_or_after_line(blame->current_hunk, wedge_line)){
+		/* If this hunk doesn't start between existing hunks, split a hunk up so it does */
 		blame->current_hunk = split_hunk_in_vector(&blame->hunks, blame->current_hunk,
 				wedge_line - blame->current_hunk->orig_start_line_number, true);
 	}
@@ -408,13 +412,6 @@ static int buffer_line_cb(
 	GIT_UNUSED(delta);
 	GIT_UNUSED(hunk);
 	GIT_UNUSED(line);
-
-#ifdef DO_DEBUG
-	{
-		char *str = git__substrdup(content, content_len);
-		git__free(str);
-	}
-#endif
 
 	if (line->origin == GIT_DIFF_LINE_ADDITION) {
 		if (hunk_is_bufferblame(blame->current_hunk) &&
