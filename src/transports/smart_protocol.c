@@ -49,7 +49,7 @@ int git_smart__store_refs(transport_smart *t, int flushes)
 
 		if (error == GIT_EBUFS) {
 			if ((recvd = gitno_recv(buf)) < 0)
-				return -1;
+				return recvd;
 
 			if (recvd == 0 && !flush) {
 				giterr_set(GITERR_NET, "Early EOF");
@@ -164,10 +164,10 @@ static int recv_pkt(git_pkt **out, gitno_buffer *buf)
 			break; /* return the pkt */
 
 		if (error < 0 && error != GIT_EBUFS)
-			return -1;
+			return error;
 
 		if ((ret = gitno_recv(buf)) < 0)
-			return -1;
+			return ret;
 	} while (error);
 
 	gitno_consume(buf, line_end);
@@ -184,10 +184,11 @@ static int store_common(transport_smart *t)
 {
 	git_pkt *pkt = NULL;
 	gitno_buffer *buf = &t->buffer;
+	int error;
 
 	do {
-		if (recv_pkt(&pkt, buf) < 0)
-			return -1;
+		if ((error = recv_pkt(&pkt, buf)) < 0)
+			return error;
 
 		if (pkt->type == GIT_PKT_ACK) {
 			if (git_vector_insert(&t->common, pkt) < 0)
@@ -227,6 +228,7 @@ static int fetch_setup_walk(git_revwalk **out, git_repository *repo)
 
 		if (git_reference_type(ref) == GIT_REF_SYMBOLIC)
 			continue;
+
 		if (git_revwalk_push(walk, git_reference_target(ref)) < 0)
 			goto on_error;
 
@@ -436,10 +438,10 @@ static int no_sideband(transport_smart *t, struct git_odb_writepack *writepack, 
 		gitno_consume_n(buf, buf->offset);
 
 		if ((recvd = gitno_recv(buf)) < 0)
-			return -1;
+			return recvd;
 	} while(recvd > 0);
 
-	if (writepack->commit(writepack, stats))
+	if (writepack->commit(writepack, stats) < 0)
 		return -1;
 
 	return 0;
@@ -697,7 +699,7 @@ static int parse_report(gitno_buffer *buf, git_push *push)
 
 		if (error == GIT_EBUFS) {
 			if ((recvd = gitno_recv(buf)) < 0)
-				return -1;
+				return recvd;
 
 			if (recvd == 0) {
 				giterr_set(GITERR_NET, "Early EOF");

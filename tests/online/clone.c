@@ -183,6 +183,39 @@ void test_online_clone__custom_remote_callbacks(void)
 	cl_assert(callcount > 0);
 }
 
+static int cred_failure_cb(
+	git_cred **cred,
+	const char *url,
+	const char *username_from_url,
+	unsigned int allowed_types,
+	void *data)
+{
+	return -1;
+}
+
+void test_online_clone__cred_callback_failure_is_euser(void)
+{
+	const char *remote_url = cl_getenv("GITTEST_REMOTE_URL");
+	const char *remote_user = cl_getenv("GITTEST_REMOTE_USER");
+	const char *remote_default = cl_getenv("GITTEST_REMOTE_DEFAULT");
+	int error;
+
+	if (!remote_url) {
+		printf("GITTEST_REMOTE_URL unset; skipping clone test\n");
+		return;
+	}
+
+	if (!remote_user && !remote_default) {
+		printf("GITTEST_REMOTE_USER and GITTEST_REMOTE_DEFAULT unset; skipping clone test\n");
+		return;
+	}
+
+	g_options.remote_callbacks.credentials = cred_failure_cb;
+
+	cl_git_fail(error = git_clone(&g_repo, remote_url, "./foo", &g_options));
+	cl_assert_equal_i(error, GIT_EUSER);
+}
+
 void test_online_clone__credentials(void)
 {
 	/* Remote URL environment variable must be set.  User and password are optional.  */

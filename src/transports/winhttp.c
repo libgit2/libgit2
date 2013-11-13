@@ -640,8 +640,8 @@ replay:
 				(!t->cred || 0 == (t->cred->credtype & allowed_types))) {
 
 				if (t->owner->cred_acquire_cb(&t->cred, t->owner->url, t->connection_data.user, allowed_types, 
-								t->owner->cred_acquire_payload) < 0)
-					return -1;
+					t->owner->cred_acquire_payload) < 0)
+					return GIT_EUSER;
 
 				assert(t->cred);
 
