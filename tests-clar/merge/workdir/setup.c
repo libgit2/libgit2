@@ -1041,7 +1041,8 @@ void test_merge_workdir_setup__removed_after_failure(void)
 	cl_git_rewritefile("merge-resolve/new-in-octo1.txt",
 		"Conflicting file!\n\nMerge will fail!\n");
 
-	cl_git_fail(git_merge(&result, repo, &their_heads[0], 1, &opts));
+	cl_git_fail(git_merge(
+		&result, repo, (const git_merge_head **)&their_heads[0], 1, &opts));
 
 	cl_assert(!git_path_exists("merge-resolve/" GIT_MERGE_HEAD_FILE));
 	cl_assert(!git_path_exists("merge-resolve/" GIT_ORIG_HEAD_FILE));

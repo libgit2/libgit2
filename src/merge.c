@@ -1649,7 +1649,7 @@ static int write_merge_head(
 		goto cleanup;
 
 	for (i = 0; i < heads_len; i++) {
-		if ((error = git_filebuf_printf(&file, "%s\n", &heads[i]->oid_str)) < 0)
+		if ((error = git_filebuf_printf(&file, "%s\n", heads[i]->oid_str)) < 0)
 			goto cleanup;
 	}
 
@@ -2239,6 +2239,8 @@ static int merge_check_workdir(size_t *conflicts, git_repository *repo, git_inde
 	git_diff *wd_diff_list = NULL;
 	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
 	int error = 0;
+
+	GIT_UNUSED(index_new);
 
 	*conflicts = 0;
 
