@@ -84,8 +84,12 @@ int git_signature_new(git_signature **sig_out, const char *name, const char *ema
 
 git_signature *git_signature_dup(const git_signature *sig)
 {
-	git_signature *new = git__calloc(1, sizeof(git_signature));
+	git_signature *new;
 
+	if (sig == NULL)
+		return NULL;
+
+	new = git__calloc(1, sizeof(git_signature));
 	if (new == NULL)
 		return NULL;
 
