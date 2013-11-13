@@ -19,7 +19,7 @@ void test_blame_buffer__cleanup(void)
 
 void test_blame_buffer__added_line(void)
 {
-	git_blame_hunk *hunk;
+	const git_blame_hunk *hunk;
 
 	const char *buffer = "\
 EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE\n\
@@ -135,7 +135,7 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 	check_blame_hunk_index(g_repo, g_bufferblame, 4, 8, 3, 0, "63d671eb", "b.txt");
 }
 
-void test_blame_buffer__add_line_at_end(void)
+void test_blame_buffer__add_lines_at_end(void)
 {
 	const char *buffer = "\
 EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE\n\
@@ -163,5 +163,4 @@ def\n";
 	check_blame_hunk_index(g_repo, g_bufferblame, 2,  6, 5, 0, "63d671eb", "b.txt");
 	check_blame_hunk_index(g_repo, g_bufferblame, 3, 11, 5, 0, "aa06ecca", "b.txt");
 	check_blame_hunk_index(g_repo, g_bufferblame, 4, 16, 2, 0, "00000000", "b.txt");
-
 }
