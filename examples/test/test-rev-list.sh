@@ -4,7 +4,7 @@ THIS_FILE="$(readlink -f "$0")"
 ROOT="$(dirname "$(dirname "$(dirname "$THIS_FILE")")")"
 PROGRAM="$ROOT"/examples/rev-list
 LIBDIR="$ROOT"/build
-REPO="$ROOT"/tests-clar/resources/testrepo.git
+REPO="$ROOT"/tests/resources/testrepo.git
 
 cd "$REPO"
 
