@@ -97,7 +97,7 @@ ENDFUNCTION()
 # explorer does. This is esp. useful with the libgit2_clar project, were
 # usually 2 or more files share the same name.  Sadly, this file grouping
 # is a per-directory option in cmake and not per-target, resulting in
-# empty virtual folders "tests-clar" for the git2.dll
+# empty virtual folders "tests" for the git2.dll
 FUNCTION(MSVC_SPLIT_SOURCES target)
 	IF(MSVC_IDE)
 		GET_TARGET_PROPERTY(sources ${target} SOURCES)
@@ -393,9 +393,9 @@ INSTALL(FILES include/git2.h DESTINATION ${INCLUDE_INSTALL_DIR} )
 IF (BUILD_CLAR)
 	FIND_PACKAGE(PythonInterp REQUIRED)
 
-	SET(CLAR_FIXTURES "${CMAKE_CURRENT_SOURCE_DIR}/tests-clar/resources/")
-	SET(CLAR_PATH "${CMAKE_CURRENT_SOURCE_DIR}/tests-clar")
-	SET(CLAR_RESOURCES "${CMAKE_CURRENT_SOURCE_DIR}/tests-clar/resources" CACHE PATH "Path to test resources.")
+	SET(CLAR_FIXTURES "${CMAKE_CURRENT_SOURCE_DIR}/tests/resources/")
+	SET(CLAR_PATH "${CMAKE_CURRENT_SOURCE_DIR}/tests")
+	SET(CLAR_RESOURCES "${CMAKE_CURRENT_SOURCE_DIR}/tests/resources" CACHE PATH "Path to test resources.")
 	ADD_DEFINITIONS(-DCLAR_FIXTURE_PATH=\"${CLAR_FIXTURES}\")
 	ADD_DEFINITIONS(-DCLAR_RESOURCES=\"${TEST_RESOURCES}\")
 

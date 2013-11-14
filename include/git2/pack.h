@@ -38,7 +38,7 @@
  *   `git_packbuilder_set_threads` can be used to adjust the number of
  *   threads used for the process.
  *
- * See tests-clar/pack/packbuilder.c for an example.
+ * See tests/pack/packbuilder.c for an example.
  *
  * @ingroup Git
  * @{

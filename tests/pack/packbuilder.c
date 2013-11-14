@@ -106,7 +106,7 @@ void test_pack_packbuilder__create_pack(void)
 	 * we create exactly the same pack as git.git does when *not*
 	 * reusing existing deltas (as libgit2).
 	 *
-	 * $ cd tests-clar/resources/testrepo.git
+	 * $ cd tests/resources/testrepo.git
 	 * $ git rev-list --objects HEAD | \
 	 * 	git pack-objects -q --no-reuse-delta --threads=1 pack
 	 * $ sha1sum git-80e61eb315239ef3c53033e37fee43b744d57122.pack

@@ -27,7 +27,7 @@ static int foreach_cb(const git_oid *oid, void *data)
 }
 
 /*
- * $ git --git-dir tests-clar/resources/testrepo.git count-objects --verbose
+ * $ git --git-dir tests/resources/testrepo.git count-objects --verbose
  * count: 47
  * size: 4
  * in-pack: 1640
