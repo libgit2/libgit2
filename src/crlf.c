@@ -183,7 +183,8 @@ static const char *line_ending(struct crlf_attrs *ca)
 
 	switch (ca->eol) {
 	case GIT_EOL_UNSET:
-		return GIT_EOL_NATIVE == GIT_EOL_CRLF ? "\r\n" : "\n";
+		return (ca->auto_crlf == GIT_AUTO_CRLF_TRUE) ? "\r\n" :
+			(GIT_EOL_NATIVE == GIT_EOL_CRLF) ? "\r\n" : "\n";
 
 	case GIT_EOL_CRLF:
 		return "\r\n";
