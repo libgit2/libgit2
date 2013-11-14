@@ -450,13 +450,23 @@ void test_network_remote_remotes__cannot_create_a_remote_which_name_conflicts_wi
 	assert_cannot_create_remote("test", GIT_EEXISTS);
 }
 
-
 void test_network_remote_remotes__cannot_create_a_remote_which_name_is_invalid(void)
 {
 	assert_cannot_create_remote("/", GIT_EINVALIDSPEC);
 	assert_cannot_create_remote("//", GIT_EINVALIDSPEC);
 	assert_cannot_create_remote(".lock", GIT_EINVALIDSPEC);
 	assert_cannot_create_remote("a.lock", GIT_EINVALIDSPEC);
+}
+
+void test_network_remote_remote__git_remote_create_with_fetchspec(void)
+{
+	git_remote *remote;
+	git_strarray array;
+
+	cl_git_pass(git_remote_create_with_fetchspec(&remote, _repo, "test-new", "git://github.com/libgit2/libgit2", "+refs/*:refs/*"));
+	git_remote_get_fetch_refspecs(&array, remote);
+	cl_assert_equal_s("+refs/*:refs/*", array.strings[0]);
+	git_remote_free(remote);
 }
 
 static const char *fetch_refspecs[] = {
