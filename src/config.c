@@ -1205,6 +1205,8 @@ int git_config_rename_section(
 	int error = 0;
 	struct rename_data data;
 
+	assert(repo && old_section_name); 
+
 	git_buf_text_puts_escape_regex(&pattern, old_section_name);
 
 	if ((error = git_buf_puts(&pattern, "\\..+")) < 0)
@@ -1235,6 +1237,15 @@ int git_config_rename_section(
 
 	if (error == GIT_EUSER)
 		error = data.actual_error;
+
+	if (error < 0) {
+		if (!new_section_name)
+			giterr_set(GITERR_CONFIG, "Cannot remove config section '%s'",
+			old_section_name);
+		else
+			giterr_set(GITERR_CONFIG, "Cannot rename config section '%s' to '%s'",
+			old_section_name, new_section_name);
+	}
 
 cleanup:
 	git_buf_free(&pattern);
