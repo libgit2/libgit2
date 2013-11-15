@@ -1303,13 +1303,14 @@ static int rename_remote_config_section(
 	if (git_buf_printf(&old_section_name, "remote.%s", old_name) < 0)
 		goto cleanup;
 
-	if (git_buf_printf(&new_section_name, "remote.%s", new_name) < 0)
-		goto cleanup;
+	if (new_name &&
+		(git_buf_printf(&new_section_name, "remote.%s", new_name) < 0))
+			goto cleanup;
 
 	error = git_config_rename_section(
 		repo,
 		git_buf_cstr(&old_section_name),
-		git_buf_cstr(&new_section_name));
+		new_name ? git_buf_cstr(&new_section_name) : NULL);
 
 cleanup:
 	git_buf_free(&old_section_name);
@@ -1746,4 +1747,114 @@ int git_remote_init_callbacks(git_remote_callbacks* opts, int version)
 		memcpy(opts, &o, sizeof(o));
 		return 0;
 	}
+}
+
+struct branch_removal_data {
+	git_vector branches;
+	const char *name;
+};
+
+static int retrieve_branches_cb(
+	const git_config_entry *entry,
+	void *payload)
+{
+	int error;
+	struct branch_removal_data *data = (struct branch_removal_data *)payload;
+
+	if (strcmp(data->name, entry->value))
+		return 0;
+
+	error = git_vector_insert(
+		&data->branches,
+		git__strndup(
+		entry->name + strlen("branch."),
+		strlen(entry->name) - strlen("branch.") - strlen(".remote")));
+
+	return error;
+}
+
+static int delete_branch_remote_config_entry(
+	git_config *config,
+	const char *branch_name)
+{
+	int error;
+
+	git_buf config_entry = GIT_BUF_INIT;
+
+	if (git_buf_printf(&config_entry, "branch.%s.%s", branch_name, "remote") < 0)
+		return -1;
+
+	if ((error = git_config_delete_entry(config, git_buf_cstr(&config_entry))) < 0)
+		goto cleanup;
+
+	git_buf_clear(&config_entry);
+
+	if (git_buf_printf(&config_entry, "branch.%s.%s", branch_name, "merge") < 0)
+		return -1;
+
+	error = git_config_delete_entry(config, git_buf_cstr(&config_entry));
+
+cleanup:
+	git_buf_free(&config_entry);
+
+	return error;
+}
+
+static int remove_branch_config_related_entries(
+	git_repository *repo,
+	const char *remote_name)
+{
+	int error;
+	git_config *config;
+	size_t i;
+	char *branch_name;
+	struct branch_removal_data data;
+
+	if ((error = git_repository_config__weakptr(&config, repo)) < 0)
+		return error;
+
+	if ((error = git_vector_init(&data.branches, 4, git__strcmp_cb)) < 0)
+		return error;
+
+	data.name = remote_name;
+
+	error = git_config_foreach_match(
+		config, "branch\\..+\\.remote", retrieve_branches_cb, &data);
+
+	git_vector_foreach(&data.branches, i, branch_name) {
+		if (!error)
+			error = delete_branch_remote_config_entry(config, branch_name);
+
+		git__free(branch_name);
+	}
+
+	git_vector_free(&data.branches);
+	return error;
+}
+
+int git_remote_delete(git_remote *remote)
+{
+	int error;
+	git_repository *repo;
+
+	assert(remote);
+
+	if (!remote->name) {
+		giterr_set(GITERR_INVALID, "Can't delete an anonymous remote.");
+		return -1;
+	}
+
+	repo = git_remote_owner(remote);
+
+	if ((error = rename_remote_config_section(
+		repo, git_remote_name(remote), NULL)) < 0)
+		return error;
+
+	if ((error = remove_branch_config_related_entries(repo,
+		git_remote_name(remote))) < 0)
+		return error;
+
+	git_remote_free(remote);
+
+	return 0;
 }
