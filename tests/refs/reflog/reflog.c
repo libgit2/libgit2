@@ -187,3 +187,39 @@ void test_refs_reflog_reflog__renaming_with_an_invalid_name_returns_EINVALIDSPEC
 	cl_assert_equal_i(GIT_EINVALIDSPEC,
 			  git_reflog_rename(g_repo, "refs/heads/master", "refs/heads/Inv@{id"));
 }
+
+void test_refs_reflog_reflog__write_only_std_locations(void)
+{
+	git_reference *ref;
+	git_oid id;
+
+	git_oid_fromstr(&id, current_master_tip);
+
+	cl_git_pass(git_reference_create(&ref, g_repo, "refs/heads/foo", &id, 1));
+	git_reference_free(ref);
+	cl_git_pass(git_reference_create(&ref, g_repo, "refs/tags/foo", &id, 1));
+	git_reference_free(ref);
+	cl_git_pass(git_reference_create(&ref, g_repo, "refs/notes/foo", &id, 1));
+	git_reference_free(ref);
+
+	assert_has_reflog(true, "refs/heads/foo");
+	assert_has_reflog(false, "refs/tags/foo");
+	assert_has_reflog(true, "refs/notes/foo");
+
+}
+
+void test_refs_reflog_reflog__write_when_explicitly_active(void)
+{
+	git_reference *ref;
+	git_oid id;
+	git_buf path = GIT_BUF_INIT;
+
+	git_oid_fromstr(&id, current_master_tip);
+	cl_git_pass(git_buf_join(&path, '/', git_repository_path(g_repo), "logs/refs/tags/foo"));
+	cl_git_pass(git_futils_mkpath2file(git_buf_cstr(&path), 0777));
+	cl_git_mkfile(git_buf_cstr(&path), "");
+
+	cl_git_pass(git_reference_create(&ref, g_repo, "refs/tags/foo", &id, 1));
+	git_reference_free(ref);
+	assert_has_reflog(true, "refs/tags/foo");
+}

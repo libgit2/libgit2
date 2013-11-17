@@ -911,6 +911,22 @@ fail:
 }
 
 static int reflog_append(refdb_fs_backend *backend, const git_reference *ref, const git_signature *author, const char *message);
+static int has_reflog(git_repository *repo, const char *name);
+
+/* We only write if it's under heads/, remotes/ or notes/ or if it already has a log */
+static bool should_write_reflog(git_repository *repo, const char *name)
+{
+	if (has_reflog(repo, name))
+		return 1;
+
+	if (!git__prefixcmp(name, GIT_REFS_HEADS_DIR) ||
+	    !git__strcmp(name, GIT_HEAD_FILE) ||
+	    !git__prefixcmp(name, GIT_REFS_REMOTES_DIR) ||
+	    !git__prefixcmp(name, GIT_REFS_NOTES_DIR))
+		return 1;
+
+	return 0;
+}
 
 static int refdb_fs_backend__write(
 	git_refdb_backend *_backend,
@@ -933,7 +949,8 @@ static int refdb_fs_backend__write(
 	if ((error = loose_lock(&file, backend, ref)) < 0)
 		return error;
 
-	if ((error = reflog_append(backend, ref, who, message)) < 0) {
+	if (should_write_reflog(backend->repo, ref->name) &&
+	    (error = reflog_append(backend, ref, who, message)) < 0) {
 		git_filebuf_cleanup(&file);
 		return error;
 	}
@@ -1228,6 +1245,21 @@ GIT_INLINE(int) retrieve_reflog_path(git_buf *path, git_repository *repo, const 
 	return git_buf_join_n(path, '/', 3, repo->path_repository, GIT_REFLOG_DIR, name);
 }
 
+static int has_reflog(git_repository *repo, const char *name)
+{
+	int ret = 0;
+	git_buf path = GIT_BUF_INIT;
+
+	if (retrieve_reflog_path(&path, repo, name) < 0)
+		goto cleanup;
+
+	ret = git_path_isfile(git_buf_cstr(&path));
+
+cleanup:
+	git_buf_free(&path);
+	return ret;
+}
+
 static int refdb_reflog_fs__read(git_reflog **out, git_refdb_backend *_backend, const char *name)
 {
 	int error = -1;
@@ -1338,7 +1370,6 @@ static int refdb_reflog_fs__write(git_refdb_backend *_backend, git_reflog *reflo
 	int error = -1;
 	unsigned int i;
 	git_reflog_entry *entry;
-	git_repository *repo;
 	refdb_fs_backend *backend;
 	git_buf log = GIT_BUF_INIT;
 	git_filebuf fbuf = GIT_FILEBUF_INIT;
@@ -1346,7 +1377,6 @@ static int refdb_reflog_fs__write(git_refdb_backend *_backend, git_reflog *reflo
 	assert(_backend && reflog);
 
 	backend = (refdb_fs_backend *) _backend;
-	repo = backend->repo;
 
 	if ((error = lock_reflog(&fbuf, backend, reflog->ref_name)) < 0)
 		return -1;
