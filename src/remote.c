@@ -82,29 +82,35 @@ static int ensure_remote_name_is_valid(const char *name)
 	return error;
 }
 
-static int get_check_cert(git_repository *repo)
+static int get_check_cert(int *out, git_repository *repo)
 {
 	git_config *cfg;
 	const char *val;
-	int check_cert;
+	int error = 0;
 
-	assert(repo);
+	assert(out && repo);
+
+	/* By default, we *DO* want to verify the certificate. */
+	*out = 1;
 
 	/* Go through the possible sources for SSL verification settings, from
 	 * most specific to least specific. */
 
 	/* GIT_SSL_NO_VERIFY environment variable */
-	if ((val = getenv("GIT_SSL_NO_VERIFY")) &&
-		!git_config_parse_bool(&check_cert, val))
-		return !check_cert;
+	if (val = getenv("GIT_SSL_NO_VERIFY"))
+		return git_config_parse_bool(out, val);
 
 	/* http.sslVerify config setting */
-	if (!git_repository_config__weakptr(&cfg, repo) &&
-		!git_config_get_bool(&check_cert, cfg, "http.sslVerify"))
-		return check_cert;
+	if ((error = git_repository_config__weakptr(&cfg, repo)) < 0)
+		return error;
 
-	/* By default, we *DO* want to verify the certificate. */
-	return 1;
+	if ((error = git_config_get_bool(out, cfg, "http.sslVerify")) == 0)
+		return 0;
+	else if (error != GIT_ENOTFOUND)
+		return error;
+
+	giterr_clear();
+	return 0;
 }
 
 static int create_internal(git_remote **out, git_repository *repo, const char *name, const char *url, const char *fetch)
@@ -120,8 +126,10 @@ static int create_internal(git_remote **out, git_repository *repo, const char *n
 	GITERR_CHECK_ALLOC(remote);
 
 	remote->repo = repo;
-	remote->check_cert = (unsigned)get_check_cert(repo);
 	remote->update_fetchhead = 1;
+
+	if (get_check_cert(&remote->check_cert, repo) < 0)
+		goto on_error;
 
 	if (git_vector_init(&remote->refs, 32, NULL) < 0)
 		goto on_error;
@@ -314,10 +322,12 @@ int git_remote_load(git_remote **out, git_repository *repo, const char *name)
 	GITERR_CHECK_ALLOC(remote);
 
 	memset(remote, 0x0, sizeof(git_remote));
-	remote->check_cert = (unsigned)get_check_cert(repo);
 	remote->update_fetchhead = 1;
 	remote->name = git__strdup(name);
 	GITERR_CHECK_ALLOC(remote->name);
+
+	if ((error = get_check_cert(&remote->check_cert, repo)) < 0)
+		goto cleanup;
 
 	if ((git_vector_init(&remote->refs, 32, NULL) < 0) ||
 	    (git_vector_init(&remote->refspecs, 2, NULL) < 0) ||
@@ -610,13 +620,14 @@ int git_remote_connect(git_remote *remote, git_direction direction)
 	git_transport *t;
 	const char *url;
 	int flags = GIT_TRANSPORTFLAGS_NONE;
+	int error;
 
 	assert(remote);
 
 	t = remote->transport;
 
 	url = git_remote__urlfordirection(remote, direction);
-	if (url == NULL ) {
+	if (url == NULL) {
 		giterr_set(GITERR_INVALID,
 			"Malformed remote '%s' - missing URL", remote->name);
 		return -1;
@@ -624,17 +635,17 @@ int git_remote_connect(git_remote *remote, git_direction direction)
 
 	/* A transport could have been supplied in advance with
 	 * git_remote_set_transport */
-	if (!t && git_transport_new(&t, remote, url) < 0)
-		return -1;
+	if (!t && (error = git_transport_new(&t, remote, url)) < 0)
+		return error;
 
 	if (t->set_callbacks &&
-		t->set_callbacks(t, remote->callbacks.progress, NULL, remote->callbacks.payload) < 0)
+		(error = t->set_callbacks(t, remote->callbacks.progress, NULL, remote->callbacks.payload)) < 0)
 		goto on_error;
 
 	if (!remote->check_cert)
 		flags |= GIT_TRANSPORTFLAGS_NO_CHECK_CERT;
 
-	if (t->connect(t, url, remote->callbacks.credentials, remote->callbacks.payload, direction, flags) < 0)
+	if ((error = t->connect(t, url, remote->callbacks.credentials, remote->callbacks.payload, direction, flags)) < 0)
 		goto on_error;
 
 	remote->transport = t;
@@ -647,7 +658,7 @@ on_error:
 	if (t == remote->transport)
 		remote->transport = NULL;
 
-	return -1;
+	return error;
 }
 
 int git_remote_ls(const git_remote_head ***out, size_t *size, git_remote *remote)
@@ -661,6 +672,7 @@ int git_remote__get_http_proxy(git_remote *remote, bool use_ssl, char **proxy_ur
 {
 	git_config *cfg;
 	const char *val;
+	int error;
 
 	assert(remote);
 
@@ -669,8 +681,8 @@ int git_remote__get_http_proxy(git_remote *remote, bool use_ssl, char **proxy_ur
 
 	*proxy_url = NULL;
 
-	if (git_repository_config__weakptr(&cfg, remote->repo) < 0)
-		return -1;
+	if ((error = git_repository_config__weakptr(&cfg, remote->repo)) < 0)
+		return error;
 
 	/* Go through the possible sources for proxy configuration, from most specific
 	 * to least specific. */
@@ -679,28 +691,33 @@ int git_remote__get_http_proxy(git_remote *remote, bool use_ssl, char **proxy_ur
 	if (remote->name && 0 != *(remote->name)) {
 		git_buf buf = GIT_BUF_INIT;
 
-		if (git_buf_printf(&buf, "remote.%s.proxy", remote->name) < 0)
-			return -1;
+		if ((error = git_buf_printf(&buf, "remote.%s.proxy", remote->name)) < 0)
+			return error;
 
-		if (!git_config_get_string(&val, cfg, git_buf_cstr(&buf)) &&
+		if ((error = git_config_get_string(&val, cfg, git_buf_cstr(&buf))) == 0 &&
 			val && ('\0' != *val)) {
 			git_buf_free(&buf);
 
 			*proxy_url = git__strdup(val);
 			GITERR_CHECK_ALLOC(*proxy_url);
 			return 0;
-		}
+		} else if (error != GIT_ENOTFOUND)
+			return error;
 
+		giterr_clear();
 		git_buf_free(&buf);
 	}
 
 	/* http.proxy config setting */
-	if (!git_config_get_string(&val, cfg, "http.proxy") &&
+	if ((error = git_config_get_string(&val, cfg, "http.proxy")) == 0 &&
 		val && ('\0' != *val)) {
 		*proxy_url = git__strdup(val);
 		GITERR_CHECK_ALLOC(*proxy_url);
 		return 0;
-	}
+	} else if (error != GIT_ENOTFOUND)
+		return error;
+
+	giterr_clear();
 
 	/* HTTP_PROXY / HTTPS_PROXY environment variables */
 	val = use_ssl ? getenv("HTTPS_PROXY") : getenv("HTTP_PROXY");

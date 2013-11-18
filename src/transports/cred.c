@@ -29,6 +29,10 @@ int git_cred_has_username(git_cred *cred)
 		ret = !!c->username;
 		break;
 	}
+	case GIT_CREDTYPE_DEFAULT: {
+		ret = 0;
+		break;
+	}
 	}
 
 	return ret;
@@ -115,6 +119,13 @@ static void ssh_custom_free(struct git_cred *cred)
 	git__free(c);
 }
 
+static void default_free(struct git_cred *cred)
+{
+	git_cred_default *c = (git_cred_default *)cred;
+
+	git__free(c);
+}
+
 int git_cred_ssh_key_new(
 	git_cred **cred,
 	const char *username,
@@ -189,5 +200,21 @@ int git_cred_ssh_custom_new(
 	c->sign_data = sign_data;
 
 	*cred = &c->parent;
+	return 0;
+}
+
+int git_cred_default_new(git_cred **cred)
+{
+	git_cred_default *c;
+
+	assert(cred);
+
+	c = git__calloc(1, sizeof(git_cred_default));
+	GITERR_CHECK_ALLOC(c);
+
+	c->credtype = GIT_CREDTYPE_DEFAULT;
+	c->free = default_free;
+
+	*cred = c;
 	return 0;
 }

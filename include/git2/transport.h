@@ -31,13 +31,16 @@ GIT_BEGIN_DECL
 /** Authentication type requested */
 typedef enum {
 	/* git_cred_userpass_plaintext */
-	GIT_CREDTYPE_USERPASS_PLAINTEXT =     (1u << 0),
+	GIT_CREDTYPE_USERPASS_PLAINTEXT = (1u << 0),
 
 	/* git_cred_ssh_key */
 	GIT_CREDTYPE_SSH_KEY = (1u << 1),
 
 	/* git_cred_ssh_custom */
-	GIT_CREDTYPE_SSH_CUSTOM =          (1u << 2),
+	GIT_CREDTYPE_SSH_CUSTOM = (1u << 2),
+
+	/* git_cred_default */
+	GIT_CREDTYPE_DEFAULT = (1u << 3),
 } git_credtype_t;
 
 /* The base structure for all credential types */
@@ -48,7 +51,7 @@ struct git_cred {
 	void (*free)(git_cred *cred);
 };
 
-/* A plaintext username and password */
+/** A plaintext username and password */
 typedef struct {
 	git_cred parent;
 	char *username;
@@ -83,6 +86,9 @@ typedef struct git_cred_ssh_custom {
 	void *sign_callback;
 	void *sign_data;
 } git_cred_ssh_custom;
+
+/** A key for NTLM/Kerberos "default" credentials */
+typedef struct git_cred git_cred_default;
 
 /**
  * Check whether a credential object contains username information.
@@ -149,6 +155,14 @@ GIT_EXTERN(int) git_cred_ssh_custom_new(
 	size_t publickey_len,
 	git_cred_sign_callback sign_fn,
 	void *sign_data);
+
+/**
+ * Create a "default" credential usable for Negotiate mechanisms like NTLM
+ * or Kerberos authentication.
+ *
+ * @return 0 for success or an error code for failure
+ */
+GIT_EXTERN(int) git_cred_default_new(git_cred **out);
 
 /**
  * Signature of a function which acquires a credential object.

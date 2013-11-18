@@ -9,13 +9,16 @@
 
 static git_repository *_repo;
 
+static char *_remote_url;
+
 static char *_remote_ssh_key;
 static char *_remote_ssh_pubkey;
 static char *_remote_ssh_passphrase;
 
-static char *_remote_url;
 static char *_remote_user;
 static char *_remote_pass;
+
+static char *_remote_default;
 
 static int cred_acquire_cb(git_cred **,	const char *, const char *, unsigned int, void *);
 
@@ -47,11 +50,21 @@ static int cred_acquire_cb(
 	GIT_UNUSED(user_from_url);
 	GIT_UNUSED(payload);
 
+	if (GIT_CREDTYPE_DEFAULT & allowed_types) {
+		if (!_remote_default) {
+			printf("GITTEST_REMOTE_DEFAULT must be set to use NTLM/Negotiate credentials\n");
+			return -1;
+		}
+
+		return git_cred_default_new(cred);
+	}
+
 	if (GIT_CREDTYPE_SSH_KEY & allowed_types) {
 		if (!_remote_user || !_remote_ssh_pubkey || !_remote_ssh_key || !_remote_ssh_passphrase) {
 			printf("GITTEST_REMOTE_USER, GITTEST_REMOTE_SSH_PUBKEY, GITTEST_REMOTE_SSH_KEY and GITTEST_REMOTE_SSH_PASSPHRASE must be set\n");
 			return -1;
 		}
+
 		return git_cred_ssh_key_new(cred, _remote_user, _remote_ssh_pubkey, _remote_ssh_key, _remote_ssh_passphrase);
 	}
 
@@ -298,6 +311,7 @@ void test_online_push__initialize(void)
 	_remote_ssh_key = cl_getenv("GITTEST_REMOTE_SSH_KEY");
 	_remote_ssh_pubkey = cl_getenv("GITTEST_REMOTE_SSH_PUBKEY");
 	_remote_ssh_passphrase = cl_getenv("GITTEST_REMOTE_SSH_PASSPHRASE");
+	_remote_default = cl_getenv("GITTEST_REMOTE_DEFAULT");
 	_remote = NULL;
 
 	if (_remote_url) {

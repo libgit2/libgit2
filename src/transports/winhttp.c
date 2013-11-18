@@ -52,6 +52,7 @@ static const int no_check_cert_flags = SECURITY_FLAG_IGNORE_CERT_CN_INVALID |
 
 typedef enum {
 	GIT_WINHTTP_AUTH_BASIC = 1,
+	GIT_WINHTTP_AUTH_NEGOTIATE = 2,
 } winhttp_authmechanism_t;
 
 typedef struct {
@@ -136,6 +137,22 @@ on_error:
 	git_buf_free(&buf);
 	git_buf_free(&raw);
 	return error;
+}
+
+static int apply_default_credentials(HINTERNET request)
+{
+	/* If we are explicitly asked to deliver default credentials, turn set
+	 * the security level to low which will guarantee they are delivered.
+	 * The default is "medium" which applies to the intranet and sounds
+	 * like it would correspond to Internet Explorer security zones, but
+	 * in fact does not.
+	 */
+	DWORD data = WINHTTP_AUTOLOGON_SECURITY_LEVEL_LOW;
+
+	if (!WinHttpSetOption(request, WINHTTP_OPTION_AUTOLOGON_POLICY, &data, sizeof(DWORD)))
+		return -1;
+
+	return 0;
 }
 
 static int winhttp_stream_connect(winhttp_stream *s)
@@ -317,6 +334,11 @@ static int winhttp_stream_connect(winhttp_stream *s)
 		t->auth_mechanism == GIT_WINHTTP_AUTH_BASIC &&
 		apply_basic_credential(s->request, t->cred) < 0)
 		goto on_error;
+	else if (t->cred &&
+		t->cred->credtype == GIT_CREDTYPE_DEFAULT &&
+		t->auth_mechanism == GIT_WINHTTP_AUTH_NEGOTIATE &&
+		apply_default_credentials(s->request) < 0)
+		goto on_error;
 
 	/* If no other credentials have been applied and the URL has username and
 	 * password, use those */
@@ -359,6 +381,12 @@ static int parse_unauthorized_response(
 	if (WINHTTP_AUTH_SCHEME_BASIC & supported) {
 		*allowed_types |= GIT_CREDTYPE_USERPASS_PLAINTEXT;
 		*auth_mechanism = GIT_WINHTTP_AUTH_BASIC;
+	}
+
+	if ((WINHTTP_AUTH_SCHEME_NTLM & supported) ||
+		(WINHTTP_AUTH_SCHEME_NEGOTIATE & supported)) {
+		*allowed_types |= GIT_CREDTYPE_DEFAULT;
+		*auth_mechanism = GIT_WINHTTP_AUTH_NEGOTIATE;
 	}
 
 	return 0;
@@ -640,8 +668,8 @@ replay:
 				(!t->cred || 0 == (t->cred->credtype & allowed_types))) {
 
 				if (t->owner->cred_acquire_cb(&t->cred, t->owner->url, t->connection_data.user, allowed_types, 
-								t->owner->cred_acquire_payload) < 0)
-					return -1;
+					t->owner->cred_acquire_payload) < 0)
+					return GIT_EUSER;
 
 				assert(t->cred);
 
