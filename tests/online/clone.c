@@ -190,6 +190,8 @@ static int cred_failure_cb(
 	unsigned int allowed_types,
 	void *data)
 {
+	GIT_UNUSED(cred); GIT_UNUSED(url); GIT_UNUSED(username_from_url);
+	GIT_UNUSED(allowed_types); GIT_UNUSED(data);
 	return -1;
 }
 

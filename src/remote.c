@@ -97,7 +97,7 @@ static int get_check_cert(int *out, git_repository *repo)
 	 * most specific to least specific. */
 
 	/* GIT_SSL_NO_VERIFY environment variable */
-	if (val = getenv("GIT_SSL_NO_VERIFY"))
+	if ((val = getenv("GIT_SSL_NO_VERIFY")) != NULL)
 		return git_config_parse_bool(out, val);
 
 	/* http.sslVerify config setting */
@@ -1494,12 +1494,12 @@ int git_remote_rename(
 
 int git_remote_update_fetchhead(git_remote *remote)
 {
-	return remote->update_fetchhead;
+	return (remote->update_fetchhead != 0);
 }
 
 void git_remote_set_update_fetchhead(git_remote *remote, int value)
 {
-	remote->update_fetchhead = value;
+	remote->update_fetchhead = (value != 0);
 }
 
 int git_remote_is_valid_name(
