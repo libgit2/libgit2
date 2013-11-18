@@ -632,10 +632,13 @@ int gitno_connection_data_from_url(
 		size_t suffixlen = service_suffix ? strlen(service_suffix) : 0;
 
 		if (suffixlen &&
-			 !memcmp(path + pathlen - suffixlen, service_suffix, suffixlen))
+		    !memcmp(path + pathlen - suffixlen, service_suffix, suffixlen)) {
+			git__free(data->path);
 			data->path = git__strndup(path, pathlen - suffixlen);
-		else
+		} else {
+			git__free(data->path);
 			data->path = git__strdup(path);
+		}
 
 		/* Check for errors in the resulting data */
 		if (original_host && url[0] != '/' && strcmp(original_host, data->host)) {
