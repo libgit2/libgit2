@@ -54,6 +54,7 @@ typedef struct {
 	git_patch *patch;
 	git_diff_hunk hunk;
 	int old_lineno, new_lineno;
+	mmfile_t xd_old_data, xd_new_data;
 } git_xdiff_info;
 
 static int diff_update_lines(
@@ -135,6 +136,13 @@ static int git_xdiff_cb(void *priv, mmbuffer_t *bufs, int len)
 			(*bufs[0].ptr == '-') ? GIT_DIFF_LINE_DELETION :
 			GIT_DIFF_LINE_CONTEXT;
 
+		if (line.origin == GIT_DIFF_LINE_ADDITION)
+			line.content_offset = bufs[1].ptr - info->xd_new_data.ptr;
+		else if (line.origin == GIT_DIFF_LINE_DELETION)
+			line.content_offset = bufs[1].ptr - info->xd_old_data.ptr;
+		else
+			line.content_offset = -1;
+
 		output->error = diff_update_lines(
 			info, &line, bufs[1].ptr, bufs[1].size);
 
@@ -155,6 +163,8 @@ static int git_xdiff_cb(void *priv, mmbuffer_t *bufs, int len)
 			(*bufs[0].ptr == '-') ? GIT_DIFF_LINE_ADD_EOFNL :
 			GIT_DIFF_LINE_CONTEXT_EOFNL;
 
+		line.content_offset = -1;
+
 		output->error = diff_update_lines(
 			info, &line, bufs[2].ptr, bufs[2].size);
 
@@ -172,7 +182,6 @@ static int git_xdiff(git_diff_output *output, git_patch *patch)
 	git_xdiff_output *xo = (git_xdiff_output *)output;
 	git_xdiff_info info;
 	git_diff_find_context_payload findctxt;
-	mmfile_t xd_old_data, xd_new_data;
 
 	memset(&info, 0, sizeof(info));
 	info.patch = patch;
@@ -193,10 +202,10 @@ static int git_xdiff(git_diff_output *output, git_patch *patch)
 	 * updates are needed to xo->params.flags
 	 */
 
-	git_patch__old_data(&xd_old_data.ptr, &xd_old_data.size, patch);
-	git_patch__new_data(&xd_new_data.ptr, &xd_new_data.size, patch);
+	git_patch__old_data(&info.xd_old_data.ptr, &info.xd_old_data.size, patch);
+	git_patch__new_data(&info.xd_new_data.ptr, &info.xd_new_data.size, patch);
 
-	xdl_diff(&xd_old_data, &xd_new_data,
+	xdl_diff(&info.xd_old_data, &info.xd_new_data,
 		&xo->params, &xo->config, &xo->callback);
 
 	git_diff_find_context_clear(&findctxt);

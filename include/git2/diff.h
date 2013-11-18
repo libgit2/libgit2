@@ -446,6 +446,7 @@ struct git_diff_line {
 	int    new_lineno;   /** Line number in new file or -1 for deleted line */
 	int    num_lines;    /** Number of newline characters in content */
 	size_t content_len;  /** Number of bytes of data */
+	git_off_t content_offset; /** Offset in the original file to the content */
 	const char *content; /** Pointer to diff text, not NUL-byte terminated */
 };
 
