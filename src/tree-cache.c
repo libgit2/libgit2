@@ -140,7 +140,7 @@ static int read_tree_internal(git_tree_cache **out,
 
 		for (i = 0; i < tree->children_count; ++i) {
 			if (read_tree_internal(&tree->children[i], &buffer, buffer_end, tree) < 0)
-				return -1;
+				goto corrupted;
 		}
 	}
 
