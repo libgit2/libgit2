@@ -138,6 +138,8 @@ static int read_tree_internal(git_tree_cache **out,
 		tree->children = git__malloc(tree->children_count * sizeof(git_tree_cache *));
 		GITERR_CHECK_ALLOC(tree->children);
 
+		memset(tree->children, 0x0, tree->children_count * sizeof(git_tree_cache *));
+
 		for (i = 0; i < tree->children_count; ++i) {
 			if (read_tree_internal(&tree->children[i], &buffer, buffer_end, tree) < 0)
 				goto corrupted;
