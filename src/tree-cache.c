@@ -178,9 +178,12 @@ void git_tree_cache_free(git_tree_cache *tree)
 	if (tree == NULL)
 		return;
 
-	for (i = 0; i < tree->children_count; ++i)
-		git_tree_cache_free(tree->children[i]);
+	if (tree->children != NULL) {
+		for (i = 0; i < tree->children_count; ++i)
+			git_tree_cache_free(tree->children[i]);
 
-	git__free(tree->children);
+		git__free(tree->children);
+	}
+
 	git__free(tree);
 }
