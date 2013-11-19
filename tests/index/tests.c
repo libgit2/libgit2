@@ -6,6 +6,7 @@ static const size_t index_entry_count_2 = 1437;
 #define TEST_INDEX_PATH cl_fixture("testrepo.git/index")
 #define TEST_INDEX2_PATH cl_fixture("gitgit.index")
 #define TEST_INDEXBIG_PATH cl_fixture("big.index")
+#define TEST_INDEXBAD_PATH cl_fixture("bad.index")
 
 
 /* Suite data */
@@ -534,4 +535,12 @@ void test_index_tests__reload_from_disk(void)
 	git_index_free(read_index);
 	git_index_free(write_index);
 	git_repository_free(repo);
+}
+
+void test_index_tests__corrupted_extension(void)
+{
+	/* sort the entires in an empty index */
+	git_index *index;
+
+	cl_git_fail_with(git_index_open(&index, TEST_INDEXBAD_PATH), GIT_ERROR);
 }

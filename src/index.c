@@ -321,6 +321,7 @@ void git_index__set_ignore_case(git_index *index, bool ignore_case)
 int git_index_open(git_index **index_out, const char *index_path)
 {
 	git_index *index;
+	int error;
 
 	assert(index_out);
 
@@ -346,10 +347,15 @@ int git_index_open(git_index **index_out, const char *index_path)
 	index->entries_search_path = index_srch_path;
 	index->reuc_search = reuc_srch;
 
+	if ((index_path != NULL) && ((error = git_index_read(index, true)) < 0)) {
+		git_index_free(index);
+		return error;
+	}
+
 	*index_out = index;
 	GIT_REFCOUNT_INC(index);
 
-	return (index_path != NULL) ? git_index_read(index, true) : 0;
+	return 0;
 }
 
 int git_index_new(git_index **out)
