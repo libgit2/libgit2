@@ -726,7 +726,8 @@ static int GIT_STDLIB_CALL git__qsort_r_glue_cmp(
 void git__qsort_r(
 	void *els, size_t nel, size_t elsize, git__sort_r_cmp cmp, void *payload)
 {
-#if defined(__MINGW32__) || defined(__OpenBSD__) || defined(AMIGA) || \
+#if defined(__MINGW32__) || defined(AMIGA) || \
+	defined(__OpenBSD__) || defined(__NetBSD__) || \
 	defined(__gnu_hurd__) || defined(__ANDROID_API__) || \
 	(__GLIBC__ == 2 && __GLIBC_MINOR__ < 8)
 	git__insertsort_r(els, nel, elsize, NULL, cmp, payload);
