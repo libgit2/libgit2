@@ -539,7 +539,6 @@ void test_index_tests__reload_from_disk(void)
 
 void test_index_tests__corrupted_extension(void)
 {
-	/* sort the entires in an empty index */
 	git_index *index;
 
 	cl_git_fail_with(git_index_open(&index, TEST_INDEXBAD_PATH), GIT_ERROR);
