@@ -211,7 +211,6 @@ on_error:
 
 int git_remote_create_with_fetchspec(git_remote **out, git_repository *repo, const char *name, const char *url, const char *fetch)
 {
-	git_buf buf = GIT_BUF_INIT;
 	git_remote *remote = NULL;
 	int error;
 
@@ -224,8 +223,6 @@ int git_remote_create_with_fetchspec(git_remote **out, git_repository *repo, con
 	if (create_internal(&remote, repo, name, url, fetch) < 0)
 		goto on_error;
 
-	git_buf_free(&buf);
-
 	if (git_remote_save(remote) < 0)
 		goto on_error;
 
@@ -234,7 +231,6 @@ int git_remote_create_with_fetchspec(git_remote **out, git_repository *repo, con
 	return 0;
 
 on_error:
-	git_buf_free(&buf);
 	git_remote_free(remote);
 	return -1;
 }
