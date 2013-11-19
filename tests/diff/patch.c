@@ -275,6 +275,7 @@ void test_diff_patch__hunks_have_correct_line_numbers(void)
 	cl_assert_equal_s("Ivory their outposts were--the guardrooms of them gilded,\n", actual.ptr);
 	cl_assert_equal_i(6, line->old_lineno);
 	cl_assert_equal_i(6, line->new_lineno);
+	cl_assert_equal_i(-1, line->content_offset);
 
 	cl_git_pass(git_patch_get_line_in_hunk(&line, patch, 0, 3));
 	cl_assert_equal_i(GIT_DIFF_LINE_DELETION, (int)line->origin);
@@ -282,6 +283,7 @@ void test_diff_patch__hunks_have_correct_line_numbers(void)
 	cl_assert_equal_s("All the world went softly when it walked before my Cities--\n", actual.ptr);
 	cl_assert_equal_i(9, line->old_lineno);
 	cl_assert_equal_i(-1, line->new_lineno);
+	cl_assert_equal_i(252, line->content_offset);
 
 	cl_git_pass(git_patch_get_line_in_hunk(&line, patch, 0, 12));
 	cl_assert_equal_i(GIT_DIFF_LINE_ADDITION, (int)line->origin);
@@ -289,6 +291,7 @@ void test_diff_patch__hunks_have_correct_line_numbers(void)
 	cl_assert_equal_s("This is some new text;\n", actual.ptr);
 	cl_assert_equal_i(-1, line->old_lineno);
 	cl_assert_equal_i(9, line->new_lineno);
+	cl_assert_equal_i(252, line->content_offset);
 
 	/* check hunk 1 */
 
@@ -309,6 +312,7 @@ void test_diff_patch__hunks_have_correct_line_numbers(void)
 	cl_assert_equal_s("My rulers and their treasure and their unborn populations,\n", actual.ptr);
 	cl_assert_equal_i(31, line->old_lineno);
 	cl_assert_equal_i(25, line->new_lineno);
+	cl_assert_equal_i(-1, line->content_offset);
 
 	cl_git_pass(git_patch_get_line_in_hunk(&line, patch, 1, 3));
 	cl_assert_equal_i(GIT_DIFF_LINE_DELETION, (int)line->origin);
@@ -316,6 +320,7 @@ void test_diff_patch__hunks_have_correct_line_numbers(void)
 	cl_assert_equal_s("The Daughters of the Palace whom they cherished in my Cities,\n", actual.ptr);
 	cl_assert_equal_i(34, line->old_lineno);
 	cl_assert_equal_i(-1, line->new_lineno);
+	cl_assert_equal_i(1468, line->content_offset);
 
 	cl_git_pass(git_patch_get_line_in_hunk(&line, patch, 1, 12));
 	cl_assert_equal_i(GIT_DIFF_LINE_ADDITION, (int)line->origin);
@@ -323,6 +328,7 @@ void test_diff_patch__hunks_have_correct_line_numbers(void)
 	cl_assert_equal_s("Another replacement;\n", actual.ptr);
 	cl_assert_equal_i(-1, line->old_lineno);
 	cl_assert_equal_i(28, line->new_lineno);
+	cl_assert_equal_i(1066, line->content_offset);
 
 	git_patch_free(patch);
 	git_diff_free(diff);
