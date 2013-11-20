@@ -167,13 +167,13 @@ GIT_EXTERN(int) git_cred_default_new(git_cred **out);
 /**
  * Signature of a function which acquires a credential object.
  *
- * @param cred The newly created credential object.
- * @param url The resource for which we are demanding a credential.
- * @param username_from_url The username that was embedded in a "user@host"
+ * - cred: The newly created credential object.
+ * - url: The resource for which we are demanding a credential.
+ * - username_from_url: The username that was embedded in a "user@host"
  *                          remote url, or NULL if not included.
- * @param allowed_types A bitmask stating which cred types are OK to return.
- * @param payload The payload provided when specifying this callback.
- * @return 0 for success or an error code for failure
+ * - allowed_types: A bitmask stating which cred types are OK to return.
+ * - payload: The payload provided when specifying this callback.
+ * - returns 0 for success or non-zero to indicate an error
  */
 typedef int (*git_cred_acquire_cb)(
 	git_cred **cred,
