@@ -131,6 +131,18 @@ GIT_EXTERN(int) git_cred_ssh_key_new(
 	const char *passphrase);
 
 /**
+ * Create a new ssh key credential object used for querying an ssh-agent.
+ * The supplied credential parameter will be internally duplicated.
+ *
+ * @param out The newly created credential object.
+ * @param username username to use to authenticate
+ * @return 0 for success or an error code for failure
+ */
+GIT_EXTERN(int) git_cred_ssh_key_from_agent(
+	git_cred **out,
+	const char *username);
+
+/**
  * Create an ssh key credential with a custom signing function.
  *
  * This lets you use your own function to sign the challenge.

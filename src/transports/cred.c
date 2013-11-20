@@ -165,6 +165,28 @@ int git_cred_ssh_key_new(
 	return 0;
 }
 
+int git_cred_ssh_key_from_agent(git_cred **cred, const char *username) {
+	git_cred_ssh_key *c;
+
+	assert(cred);
+
+	c = git__calloc(1, sizeof(git_cred_ssh_key));
+	GITERR_CHECK_ALLOC(c);
+
+	c->parent.credtype = GIT_CREDTYPE_SSH_KEY;
+	c->parent.free = ssh_key_free;
+
+	if (username) {
+		c->username = git__strdup(username);
+		GITERR_CHECK_ALLOC(c->username);
+	}
+
+	c->privatekey = NULL;
+
+	*cred = &c->parent;
+	return 0;
+}
+
 int git_cred_ssh_custom_new(
 	git_cred **cred,
 	const char *username,
