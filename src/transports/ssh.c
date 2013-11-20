@@ -235,6 +235,50 @@ static int git_ssh_extract_url_parts(
 	return 0;
 }
 
+static int ssh_agent_auth(LIBSSH2_SESSION *session, git_cred_ssh_key *c) {
+	int rc = LIBSSH2_ERROR_NONE;
+
+	struct libssh2_agent_publickey *curr, *prev = NULL;
+
+	LIBSSH2_AGENT *agent = libssh2_agent_init(session);
+
+	if (agent == NULL)
+		return -1;
+
+	rc = libssh2_agent_connect(agent);
+
+	if (rc != LIBSSH2_ERROR_NONE)
+		goto shutdown;
+
+	rc = libssh2_agent_list_identities(agent);
+
+	if (rc != LIBSSH2_ERROR_NONE)
+		goto shutdown;
+
+	while (1) {
+		rc = libssh2_agent_get_identity(agent, &curr, prev);
+
+		if (rc < 0)
+			goto shutdown;
+
+		if (rc == 1)
+			goto shutdown;
+
+		rc = libssh2_agent_userauth(agent, c->username, curr);
+
+		if (rc == 0)
+			break;
+
+		prev = curr;
+	}
+
+shutdown:
+	libssh2_agent_disconnect(agent);
+	libssh2_agent_free(agent);
+
+	return rc;
+}
+
 static int _git_ssh_authenticate_session(
 	LIBSSH2_SESSION* session,
 	const char *user,
@@ -253,8 +297,14 @@ static int _git_ssh_authenticate_session(
 		case GIT_CREDTYPE_SSH_KEY: {
 			git_cred_ssh_key *c = (git_cred_ssh_key *)cred;
 			user = c->username ? c->username : user;
-			rc = libssh2_userauth_publickey_fromfile(
-				session, c->username, c->publickey, c->privatekey, c->passphrase);
+
+			if (c->privatekey)
+				rc = libssh2_userauth_publickey_fromfile(
+					session, c->username, c->publickey,
+					c->privatekey, c->passphrase);
+			else
+				rc = ssh_agent_auth(session, c);
+
 			break;
 		}
 		case GIT_CREDTYPE_SSH_CUSTOM: {
