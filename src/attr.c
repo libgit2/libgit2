@@ -1,3 +1,4 @@
+#include "common.h"
 #include "repository.h"
 #include "fileops.h"
 #include "config.h"
@@ -25,7 +26,6 @@ git_attr_t git_attr_value(const char *attr)
 
 	return GIT_ATTR_VALUE_T;
 }
-
 
 static int collect_attr_files(
 	git_repository *repo,
@@ -103,8 +103,6 @@ int git_attr_get_many(
 	attr_get_many_info *info = NULL;
 	size_t num_found = 0;
 
-	memset((void *)values, 0, sizeof(const char *) * num_attr);
-
 	if (git_attr_path__init(&path, pathname, git_repository_workdir(repo)) < 0)
 		return -1;
 
@@ -139,6 +137,11 @@ int git_attr_get_many(
 				}
 			}
 		}
+	}
+
+	for (k = 0; k < num_attr; k++) {
+		if (!info[k].found)
+			values[k] = NULL;
 	}
 
 cleanup:

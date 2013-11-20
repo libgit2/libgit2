@@ -187,7 +187,7 @@ static int git_diff_driver_load(
 
 	git_buf_truncate(&name, namelen + strlen("diff.."));
 	git_buf_put(&name, "xfuncname", strlen("xfuncname"));
-	if ((error = git_config_get_multivar(
+	if ((error = git_config_get_multivar_foreach(
 			cfg, name.ptr, NULL, diff_driver_xfuncname, drv)) < 0) {
 		if (error != GIT_ENOTFOUND)
 			goto done;
@@ -196,7 +196,7 @@ static int git_diff_driver_load(
 
 	git_buf_truncate(&name, namelen + strlen("diff.."));
 	git_buf_put(&name, "funcname", strlen("funcname"));
-	if ((error = git_config_get_multivar(
+	if ((error = git_config_get_multivar_foreach(
 			cfg, name.ptr, NULL, diff_driver_funcname, drv)) < 0) {
 		if (error != GIT_ENOTFOUND)
 			goto done;
@@ -373,10 +373,11 @@ static long diff_context_find(
 		!ctxt->match_line(ctxt->driver, ctxt->line.ptr, ctxt->line.size))
 		return -1;
 
-	git_buf_truncate(&ctxt->line, (size_t)out_size);
-	git_buf_copy_cstr(out, (size_t)out_size, &ctxt->line);
+	if (out_size > (long)ctxt->line.size)
+		out_size = (long)ctxt->line.size;
+	memcpy(out, ctxt->line.ptr, (size_t)out_size);
 
-	return (long)ctxt->line.size;
+	return out_size;
 }
 
 void git_diff_find_context_init(

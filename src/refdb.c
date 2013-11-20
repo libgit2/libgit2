@@ -16,6 +16,7 @@
 #include "hash.h"
 #include "refdb.h"
 #include "refs.h"
+#include "reflog.h"
 
 int git_refdb_new(git_refdb **out, git_repository *repo)
 {
@@ -201,5 +202,20 @@ int git_refdb_rename(
 int git_refdb_delete(struct git_refdb *db, const char *ref_name)
 {
 	assert(db && db->backend);
-	return db->backend->delete(db->backend, ref_name);
+	return db->backend->del(db->backend, ref_name);
+}
+
+int git_refdb_reflog_read(git_reflog **out, git_refdb *db,  const char *name)
+{
+	int error;
+
+	assert(db && db->backend);
+
+	if ((error = db->backend->reflog_read(out, db->backend, name)) < 0)
+		return error;
+
+	GIT_REFCOUNT_INC(db);
+	(*out)->db = db;
+
+	return 0;
 }

@@ -55,6 +55,11 @@ GIT_INLINE(void *) git_vector_get(const git_vector *v, size_t position)
 
 #define GIT_VECTOR_GET(V,I) ((I) < (V)->length ? (V)->contents[(I)] : NULL)
 
+GIT_INLINE(size_t) git_vector_length(const git_vector *v)
+{
+	return v->length;
+}
+
 GIT_INLINE(void *) git_vector_last(const git_vector *v)
 {
 	return (v->length > 0) ? git_vector_get(v, v->length - 1) : NULL;
@@ -71,7 +76,7 @@ int git_vector_insert_sorted(git_vector *v, void *element,
 	int (*on_dup)(void **old, void *new));
 int git_vector_remove(git_vector *v, size_t idx);
 void git_vector_pop(git_vector *v);
-void git_vector_uniq(git_vector *v);
+void git_vector_uniq(git_vector *v, void  (*git_free_cb)(void *));
 void git_vector_remove_matching(
 	git_vector *v, int (*match)(const git_vector *v, size_t idx));
 

@@ -4,65 +4,52 @@
 #include <string.h>
 #include "common.h"
 
-static int show_ref__cb(git_remote_head *head, void *payload)
-{
-	char oid[GIT_OID_HEXSZ + 1] = {0};
-
-	(void)payload;
-	git_oid_fmt(oid, &head->oid);
-	printf("%s\t%s\n", oid, head->name);
-	return 0;
-}
-
-static int use_unnamed(git_repository *repo, const char *url)
-{
-	git_remote *remote = NULL;
-	int error;
-
-	// Create an instance of a remote from the URL. The transport to use
-	// is detected from the URL
-	error = git_remote_create_inmemory(&remote, repo, NULL, url);
-	if (error < 0)
-		goto cleanup;
-
-	// When connecting, the underlying code needs to know wether we
-	// want to push or fetch
-	error = git_remote_connect(remote, GIT_DIRECTION_FETCH);
-	if (error < 0)
-		goto cleanup;
-
-	// With git_remote_ls we can retrieve the advertised heads
-	error = git_remote_ls(remote, &show_ref__cb, NULL);
-
-cleanup:
-	git_remote_free(remote);
-	return error;
-}
-
 static int use_remote(git_repository *repo, char *name)
 {
 	git_remote *remote = NULL;
 	int error;
+	const git_remote_head **refs;
+	size_t refs_len, i;
+	git_remote_callbacks callbacks = GIT_REMOTE_CALLBACKS_INIT;
 
 	// Find the remote by name
 	error = git_remote_load(&remote, repo, name);
-	if (error < 0)
-		goto cleanup;
+	if (error < 0) {
+		error = git_remote_create_inmemory(&remote, repo, NULL, name);
+		if (error < 0)
+			goto cleanup;
+	}
+
+	/**
+	 * Connect to the remote and call the printing function for
+	 * each of the remote references.
+	 */
+	callbacks.credentials = cred_acquire_cb;
+	git_remote_set_callbacks(remote, &callbacks);
 
 	error = git_remote_connect(remote, GIT_DIRECTION_FETCH);
 	if (error < 0)
 		goto cleanup;
 
-	error = git_remote_ls(remote, &show_ref__cb, NULL);
+	/**
+	 * Get the list of references on the remote and print out
+	 * their name next to what they point to.
+	 */
+	if (git_remote_ls(&refs, &refs_len, remote) < 0)
+		goto cleanup;
+
+	for (i = 0; i < refs_len; i++) {
+		char oid[GIT_OID_HEXSZ + 1] = {0};
+		git_oid_fmt(oid, &refs[i]->oid);
+		printf("%s\t%s\n", oid, refs[i]->name);
+	}
 
 cleanup:
 	git_remote_free(remote);
 	return error;
 }
 
-// This gets called to do the work. The remote can be given either as
-// the name of a configured remote or an URL.
-
+/** Entry point for this command */
 int ls_remote(git_repository *repo, int argc, char **argv)
 {
 	int error;
@@ -72,12 +59,7 @@ int ls_remote(git_repository *repo, int argc, char **argv)
 		return EXIT_FAILURE;
 	}
 
-	/* If there's a ':' in the name, assume it's an URL */
-	if (strchr(argv[1], ':') != NULL) {
-		error = use_unnamed(repo, argv[1]);
-	} else {
-		error = use_remote(repo, argv[1]);
-	}
+	error = use_remote(repo, argv[1]);
 
 	return error;
 }

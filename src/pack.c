@@ -329,8 +329,10 @@ static int pack_index_open(struct git_pack_file *p)
 	memcpy(idx_name, p->pack_name, base_len);
 	memcpy(idx_name + base_len, ".idx", sizeof(".idx"));
 
-	if ((error = git_mutex_lock(&p->lock)) < 0)
+	if ((error = git_mutex_lock(&p->lock)) < 0) {
+		git__free(idx_name);
 		return error;
+	}
 
 	if (p->index_version == -1)
 		error = pack_index_check(idx_name, p);
@@ -361,6 +363,38 @@ static unsigned char *pack_window_open(
 
 	return git_mwindow_open(&p->mwf, w_cursor, offset, 20, left);
  }
+
+/*
+ * The per-object header is a pretty dense thing, which is
+ *  - first byte: low four bits are "size",
+ *    then three bits of "type",
+ *    with the high bit being "size continues".
+ *  - each byte afterwards: low seven bits are size continuation,
+ *    with the high bit being "size continues"
+ */
+size_t git_packfile__object_header(unsigned char *hdr, size_t size, git_otype type)
+{
+	unsigned char *hdr_base;
+	unsigned char c;
+
+	assert(type >= GIT_OBJ_COMMIT && type <= GIT_OBJ_REF_DELTA);
+
+	/* TODO: add support for chunked objects; see git.git 6c0d19b1 */
+
+	c = (unsigned char)((type << 4) | (size & 15));
+	size >>= 4;
+	hdr_base = hdr;
+
+	while (size) {
+		*hdr++ = c | 0x80;
+		c = size & 0x7f;
+		size >>= 7;
+	}
+	*hdr++ = c;
+
+	return (hdr - hdr_base);
+}
+
 
 static int packfile_unpack_header1(
 		unsigned long *usedp,
@@ -820,7 +854,7 @@ void git_packfile_free(struct git_pack_file *p)
 
 	git_mwindow_free_all(&p->mwf);
 
-	if (p->mwf.fd != -1)
+	if (p->mwf.fd >= 0)
 		p_close(p->mwf.fd);
 
 	pack_index_free(p);
@@ -903,7 +937,8 @@ static int packfile_open(struct git_pack_file *p)
 cleanup:
 	giterr_set(GITERR_OS, "Invalid packfile '%s'", p->pack_name);
 
-	p_close(p->mwf.fd);
+	if (p->mwf.fd >= 0)
+		p_close(p->mwf.fd);
 	p->mwf.fd = -1;
 
 	git_mutex_unlock(&p->lock);
@@ -1107,8 +1142,11 @@ static int pack_entry_find_offset(
 		short_oid->id[0], short_oid->id[1], short_oid->id[2], lo, hi, p->num_objects);
 #endif
 
-	/* Use git.git lookup code */
+#ifdef GIT_USE_LOOKUP
 	pos = sha1_entry_pos(index, stride, 0, lo, hi, p->num_objects, short_oid->id);
+#else
+	pos = sha1_position(index, stride, lo, hi, short_oid->id);
+#endif
 
 	if (pos >= 0) {
 		/* An object matching exactly the oid was found */

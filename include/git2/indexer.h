@@ -13,19 +13,25 @@
 
 GIT_BEGIN_DECL
 
-typedef struct git_indexer_stream git_indexer_stream;
+typedef struct git_indexer git_indexer;
 
 /**
- * Create a new streaming indexer instance
+ * Create a new indexer instance
  *
  * @param out where to store the indexer instance
  * @param path to the directory where the packfile should be stored
+ * @param mode permissions to use creating packfile or 0 for defaults
+ * @param odb object database from which to read base objects when
+ * fixing thin packs. Pass NULL if no thin pack is expected (an error
+ * will be returned if there are bases missing)
  * @param progress_cb function to call with progress information
  * @param progress_cb_payload payload for the progress callback
  */
-GIT_EXTERN(int) git_indexer_stream_new(
-		git_indexer_stream **out,
+GIT_EXTERN(int) git_indexer_new(
+		git_indexer **out,
 		const char *path,
+		unsigned int mode,
+		git_odb *odb,
 		git_transfer_progress_callback progress_cb,
 		void *progress_cb_payload);
 
@@ -37,7 +43,7 @@ GIT_EXTERN(int) git_indexer_stream_new(
  * @param size the size of the data in bytes
  * @param stats stat storage
  */
-GIT_EXTERN(int) git_indexer_stream_add(git_indexer_stream *idx, const void *data, size_t size, git_transfer_progress *stats);
+GIT_EXTERN(int) git_indexer_append(git_indexer *idx, const void *data, size_t size, git_transfer_progress *stats);
 
 /**
  * Finalize the pack and index
@@ -46,7 +52,7 @@ GIT_EXTERN(int) git_indexer_stream_add(git_indexer_stream *idx, const void *data
  *
  * @param idx the indexer
  */
-GIT_EXTERN(int) git_indexer_stream_finalize(git_indexer_stream *idx, git_transfer_progress *stats);
+GIT_EXTERN(int) git_indexer_commit(git_indexer *idx, git_transfer_progress *stats);
 
 /**
  * Get the packfile's hash
@@ -56,14 +62,14 @@ GIT_EXTERN(int) git_indexer_stream_finalize(git_indexer_stream *idx, git_transfe
  *
  * @param idx the indexer instance
  */
-GIT_EXTERN(const git_oid *) git_indexer_stream_hash(const git_indexer_stream *idx);
+GIT_EXTERN(const git_oid *) git_indexer_hash(const git_indexer *idx);
 
 /**
  * Free the indexer and its resources
  *
  * @param idx the indexer to free
  */
-GIT_EXTERN(void) git_indexer_stream_free(git_indexer_stream *idx);
+GIT_EXTERN(void) git_indexer_free(git_indexer *idx);
 
 GIT_END_DECL
 

@@ -39,7 +39,7 @@ static int flush_pkt(git_pkt **out)
 	return 0;
 }
 
-/* the rest of the line will be useful for multi_ack */
+/* the rest of the line will be useful for multi_ack and multi_ack_detailed */
 static int ack_pkt(git_pkt **out, const char *line, size_t len)
 {
 	git_pkt_ack *pkt;
@@ -62,6 +62,10 @@ static int ack_pkt(git_pkt **out, const char *line, size_t len)
 	if (len >= 7) {
 		if (!git__prefixcmp(line + 1, "continue"))
 			pkt->status = GIT_ACK_CONTINUE;
+		if (!git__prefixcmp(line + 1, "common"))
+			pkt->status = GIT_ACK_COMMON;
+		if (!git__prefixcmp(line + 1, "ready"))
+			pkt->status = GIT_ACK_READY;
 	}
 
 	*out = (git_pkt *) pkt;
@@ -456,21 +460,26 @@ static int buffer_want_with_caps(const git_remote_head *head, transport_smart_ca
 	char oid[GIT_OID_HEXSZ +1] = {0};
 	unsigned int len;
 
-	/* Prefer side-band-64k if the server supports both */
-	if (caps->side_band) {
-		if (caps->side_band_64k)
-			git_buf_printf(&str, "%s ", GIT_CAP_SIDE_BAND_64K);
-		else
-			git_buf_printf(&str, "%s ", GIT_CAP_SIDE_BAND);
-	}
-	if (caps->ofs_delta)
-		git_buf_puts(&str, GIT_CAP_OFS_DELTA " ");
-
-	if (caps->multi_ack)
+	/* Prefer multi_ack_detailed */
+	if (caps->multi_ack_detailed)
+		git_buf_puts(&str, GIT_CAP_MULTI_ACK_DETAILED " ");
+	else if (caps->multi_ack)
 		git_buf_puts(&str, GIT_CAP_MULTI_ACK " ");
+
+	/* Prefer side-band-64k if the server supports both */
+	if (caps->side_band_64k)
+		git_buf_printf(&str, "%s ", GIT_CAP_SIDE_BAND_64K);
+	else if (caps->side_band)
+		git_buf_printf(&str, "%s ", GIT_CAP_SIDE_BAND);
 
 	if (caps->include_tag)
 		git_buf_puts(&str, GIT_CAP_INCLUDE_TAG " ");
+
+	if (caps->thin_pack)
+		git_buf_puts(&str, GIT_CAP_THIN_PACK " ");
+
+	if (caps->ofs_delta)
+		git_buf_puts(&str, GIT_CAP_OFS_DELTA " ");
 
 	if (git_buf_oom(&str))
 		return -1;

@@ -8,7 +8,16 @@
 #define INCLUDE_posix__w32_h__
 
 #include "common.h"
+#include "../posix.h"
 #include "utf-conv.h"
+#include "dir.h"
+
+/* define some standard errnos that the runtime may be missing.  for example,
+ * mingw lacks EAFNOSUPPORT. */
+
+#ifndef EAFNOSUPPORT
+# define EAFNOSUPPORT (INT_MAX-1)
+#endif
 
 GIT_INLINE(int) p_link(const char *old, const char *new)
 {
@@ -20,9 +29,9 @@ GIT_INLINE(int) p_link(const char *old, const char *new)
 
 GIT_INLINE(int) p_mkdir(const char *path, mode_t mode)
 {
-	wchar_t buf[GIT_WIN_PATH];
+	git_win32_path buf;
 	GIT_UNUSED(mode);
-	git__utf8_to_16(buf, GIT_WIN_PATH, path);
+	git_win32_path_from_c(buf, path);
 	return _wmkdir(buf);
 }
 

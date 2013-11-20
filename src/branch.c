@@ -124,48 +124,66 @@ on_error:
 	return error;
 }
 
-int git_branch_foreach(
-	git_repository *repo,
-	unsigned int list_flags,
-	git_branch_foreach_cb callback,
-	void *payload)
-{
+typedef struct {
 	git_reference_iterator *iter;
+	unsigned int flags;
+} branch_iter;
+
+int git_branch_next(git_reference **out, git_branch_t *out_type, git_branch_iterator *_iter)
+{
+	branch_iter *iter = (branch_iter *) _iter;
 	git_reference *ref;
-	int error = 0;
+	int error;
 
-	if (git_reference_iterator_new(&iter, repo) < 0)
-		return -1;
+	while ((error = git_reference_next(&ref, iter->iter)) == 0) {
+		if ((iter->flags & GIT_BRANCH_LOCAL) &&
+		    !git__prefixcmp(ref->name, GIT_REFS_HEADS_DIR)) {
+			*out = ref;
+			*out_type = GIT_BRANCH_LOCAL;
 
-	while ((error = git_reference_next(&ref, iter)) == 0) {
-		if (list_flags & GIT_BRANCH_LOCAL &&
-		    git__prefixcmp(ref->name, GIT_REFS_HEADS_DIR) == 0) {
-			if (callback(ref->name + strlen(GIT_REFS_HEADS_DIR),
-					GIT_BRANCH_LOCAL, payload)) {
-				error = GIT_EUSER;
-			}
+			return 0;
+		} else  if ((iter->flags & GIT_BRANCH_REMOTE) &&
+			    !git__prefixcmp(ref->name, GIT_REFS_REMOTES_DIR)) {
+			*out = ref;
+			*out_type = GIT_BRANCH_REMOTE;
+
+			return 0;
+		} else {
+			git_reference_free(ref);
 		}
-
-		if (list_flags & GIT_BRANCH_REMOTE &&
-		    git__prefixcmp(ref->name, GIT_REFS_REMOTES_DIR) == 0) {
-			if (callback(ref->name + strlen(GIT_REFS_REMOTES_DIR),
-					GIT_BRANCH_REMOTE, payload)) {
-				error = GIT_EUSER;
-			}
-		}
-
-		git_reference_free(ref);
-
-		/* check if the callback has cancelled iteration */
-		if (error == GIT_EUSER)
-			break;
 	}
 
-	if (error == GIT_ITEROVER)
-		error = 0;
-
-	git_reference_iterator_free(iter);
 	return error;
+}
+
+int git_branch_iterator_new(
+	git_branch_iterator **out,
+	git_repository *repo,
+	git_branch_t list_flags)
+{
+	branch_iter *iter;
+
+	iter = git__calloc(1, sizeof(branch_iter));
+	GITERR_CHECK_ALLOC(iter);
+
+	iter->flags = list_flags;
+
+	if (git_reference_iterator_new(&iter->iter, repo) < 0) {
+		git__free(iter);
+		return -1;
+	}
+
+	*out = (git_branch_iterator *) iter;
+
+	return 0;
+}
+
+void git_branch_iterator_free(git_branch_iterator *_iter)
+{
+	branch_iter *iter = (branch_iter *) _iter;
+
+	git_reference_iterator_free(iter->iter);
+	git__free(iter);
 }
 
 int git_branch_move(
@@ -585,7 +603,7 @@ int git_branch_is_head(
 
 	error = git_repository_head(&head, git_reference_owner(branch));
 
-	if (error == GIT_EORPHANEDHEAD || error == GIT_ENOTFOUND)
+	if (error == GIT_EUNBORNBRANCH || error == GIT_ENOTFOUND)
 		return false;
 
 	if (error < 0)

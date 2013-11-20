@@ -1,3 +1,17 @@
+/*
+ * libgit2 "general" example - shows basic libgit2 concepts
+ *
+ * Written by the libgit2 contributors
+ *
+ * To the extent possible under law, the author(s) have dedicated all copyright
+ * and related and neighboring rights to this software to the public domain
+ * worldwide. This software is distributed without any warranty.
+ *
+ * You should have received a copy of the CC0 Public Domain Dedication along
+ * with this software. If not, see
+ * <http://creativecommons.org/publicdomain/zero/1.0/>.
+ */
+
 // [**libgit2**][lg] is a portable, pure C implementation of the Git core
 // methods provided as a re-entrant linkable library with a solid API,
 // allowing you to write native speed custom Git applications in any
@@ -52,7 +66,7 @@ int main (int argc, char** argv)
   // simplest.  There are also [methods][me] for specifying the index file
   // and work tree locations, here we assume they are in the normal places.
 	//
-	// (Try running this program against tests-clar/resources/testrepo.git.)
+	// (Try running this program against tests/resources/testrepo.git.)
   //
   // [me]: http://libgit2.github.com/libgit2/#HEAD/group/repository
   int error;

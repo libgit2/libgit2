@@ -188,8 +188,7 @@ GIT_EXTERN(int) git_oid_ncmp(const git_oid *a, const git_oid *b, size_t len);
  *
  * @param id oid structure.
  * @param str input hex string of an object id.
- * @return GIT_ENOTOID if str is not a valid hex string,
- * 0 in case of a match, GIT_ERROR otherwise.
+ * @return 0 in case of a match, -1 otherwise.
  */
 GIT_EXTERN(int) git_oid_streq(const git_oid *id, const char *str);
 
@@ -241,13 +240,13 @@ GIT_EXTERN(git_oid_shorten *) git_oid_shorten_new(size_t min_length);
  * or freed.
  *
  * For performance reasons, there is a hard-limit of how many
- * OIDs can be added to a single set (around ~22000, assuming
+ * OIDs can be added to a single set (around ~32000, assuming
  * a mostly randomized distribution), which should be enough
  * for any kind of program, and keeps the algorithm fast and
  * memory-efficient.
  *
  * Attempting to add more than those OIDs will result in a
- * GIT_ENOMEM error
+ * GITERR_INVALID error
  *
  * @param os a `git_oid_shorten` instance
  * @param text_id an OID in text form

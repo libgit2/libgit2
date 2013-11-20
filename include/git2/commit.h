@@ -24,17 +24,24 @@ GIT_BEGIN_DECL
 /**
  * Lookup a commit object from a repository.
  *
+ * The returned object should be released with `git_commit_free` when no
+ * longer needed.
+ *
  * @param commit pointer to the looked up commit
  * @param repo the repo to use when locating the commit.
  * @param id identity of the commit to locate. If the object is
  *		an annotated tag it will be peeled back to the commit.
  * @return 0 or an error code
  */
-GIT_EXTERN(int) git_commit_lookup(git_commit **commit, git_repository *repo, const git_oid *id);
+GIT_EXTERN(int) git_commit_lookup(
+	git_commit **commit, git_repository *repo, const git_oid *id);
 
 /**
- * Lookup a commit object from a repository,
- * given a prefix of its identifier (short id).
+ * Lookup a commit object from a repository, given a prefix of its
+ * identifier (short id).
+ *
+ * The returned object should be released with `git_commit_free` when no
+ * longer needed.
  *
  * @see git_object_lookup_prefix
  *
@@ -45,7 +52,8 @@ GIT_EXTERN(int) git_commit_lookup(git_commit **commit, git_repository *repo, con
  * @param len the length of the short identifier
  * @return 0 or an error code
  */
-GIT_EXTERN(int) git_commit_lookup_prefix(git_commit **commit, git_repository *repo, const git_oid *id, size_t len);
+GIT_EXTERN(int) git_commit_lookup_prefix(
+	git_commit **commit, git_repository *repo, const git_oid *id, size_t len);
 
 /**
  * Close an open commit
@@ -92,10 +100,21 @@ GIT_EXTERN(const char *) git_commit_message_encoding(const git_commit *commit);
 /**
  * Get the full message of a commit.
  *
+ * The returned message will be slightly prettified by removing any
+ * potential leading newlines.
+ *
  * @param commit a previously loaded commit.
  * @return the message of a commit
  */
 GIT_EXTERN(const char *) git_commit_message(const git_commit *commit);
+
+/**
+ * Get the full raw message of a commit.
+ *
+ * @param commit a previously loaded commit.
+ * @return the raw message of a commit
+ */
+GIT_EXTERN(const char *) git_commit_message_raw(const git_commit *commit);
 
 /**
  * Get the commit time (i.e. committer time) of a commit.
@@ -128,6 +147,14 @@ GIT_EXTERN(const git_signature *) git_commit_committer(const git_commit *commit)
  * @return the author of a commit
  */
 GIT_EXTERN(const git_signature *) git_commit_author(const git_commit *commit);
+
+/**
+ * Get the full raw text of the commit header.
+ *
+ * @param commit a previously loaded commit
+ * @return the header text of the commit
+ */
+GIT_EXTERN(const char *) git_commit_raw_header(const git_commit *commit);
 
 /**
  * Get the tree pointed to by a commit.

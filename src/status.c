@@ -52,7 +52,7 @@ static unsigned int index_delta2status(const git_diff_delta *head2idx)
 }
 
 static unsigned int workdir_delta2status(
-	git_diff_list *diff, git_diff_delta *idx2wd)
+	git_diff *diff, git_diff_delta *idx2wd)
 {
 	git_status_t st = GIT_STATUS_CURRENT;
 
@@ -225,24 +225,6 @@ static git_status_list *git_status_list_alloc(git_index *index)
 	return status;
 }
 
-/*
-static int newfile_cmp(const void *a, const void *b)
-{
-	const git_diff_delta *delta_a = a;
-	const git_diff_delta *delta_b = b;
-
-	return git__strcmp(delta_a->new_file.path, delta_b->new_file.path);
-}
-
-static int newfile_casecmp(const void *a, const void *b)
-{
-	const git_diff_delta *delta_a = a;
-	const git_diff_delta *delta_b = b;
-
-	return git__strcasecmp(delta_a->new_file.path, delta_b->new_file.path);
-}
-*/
-
 int git_status_list_new(
 	git_status_list **out,
 	git_repository *repo,
@@ -251,14 +233,14 @@ int git_status_list_new(
 	git_index *index = NULL;
 	git_status_list *status = NULL;
 	git_diff_options diffopt = GIT_DIFF_OPTIONS_INIT;
-	git_diff_find_options findopts_i2w = GIT_DIFF_FIND_OPTIONS_INIT;
+	git_diff_find_options findopt = GIT_DIFF_FIND_OPTIONS_INIT;
 	git_tree *head = NULL;
 	git_status_show_t show =
 		opts ? opts->show : GIT_STATUS_SHOW_INDEX_AND_WORKDIR;
 	int error = 0;
 	unsigned int flags = opts ? opts->flags : GIT_STATUS_OPT_DEFAULTS;
 
-	assert(show <= GIT_STATUS_SHOW_INDEX_THEN_WORKDIR);
+	assert(show <= GIT_STATUS_SHOW_WORKDIR_ONLY);
 
 	*out = NULL;
 
@@ -269,11 +251,16 @@ int git_status_list_new(
 		return error;
 
 	/* if there is no HEAD, that's okay - we'll make an empty iterator */
-	if (((error = git_repository_head_tree(&head, repo)) < 0) &&
-		error != GIT_ENOTFOUND && error != GIT_EORPHANEDHEAD) {
-		git_index_free(index); /* release index */
-		return error;
+	if ((error = git_repository_head_tree(&head, repo)) < 0) {
+		if (error != GIT_ENOTFOUND && error != GIT_EUNBORNBRANCH)
+			goto done;
+		giterr_clear();
 	}
+
+	/* refresh index from disk unless prevented */
+	if ((flags & GIT_STATUS_OPT_NO_REFRESH) == 0 &&
+		git_index_read(index, false) < 0)
+		giterr_clear();
 
 	status = git_status_list_alloc(index);
 	GITERR_CHECK_ALLOC(status);
@@ -284,6 +271,7 @@ int git_status_list_new(
 	}
 
 	diffopt.flags = GIT_DIFF_INCLUDE_TYPECHANGE;
+	findopt.flags = GIT_DIFF_FIND_FOR_UNTRACKED;
 
 	if ((flags & GIT_STATUS_OPT_INCLUDE_UNTRACKED) != 0)
 		diffopt.flags = diffopt.flags | GIT_DIFF_INCLUDE_UNTRACKED;
@@ -300,35 +288,30 @@ int git_status_list_new(
 	if ((flags & GIT_STATUS_OPT_EXCLUDE_SUBMODULES) != 0)
 		diffopt.flags = diffopt.flags | GIT_DIFF_IGNORE_SUBMODULES;
 
-	findopts_i2w.flags |= GIT_DIFF_FIND_FOR_UNTRACKED;
+	if ((flags & GIT_STATUS_OPT_RENAMES_FROM_REWRITES) != 0)
+		findopt.flags = findopt.flags |
+			GIT_DIFF_FIND_AND_BREAK_REWRITES |
+			GIT_DIFF_FIND_RENAMES_FROM_REWRITES |
+			GIT_DIFF_BREAK_REWRITES_FOR_RENAMES_ONLY;
 
 	if (show != GIT_STATUS_SHOW_WORKDIR_ONLY) {
 		if ((error = git_diff_tree_to_index(
-				&status->head2idx, repo, head, NULL, &diffopt)) < 0)
+				&status->head2idx, repo, head, index, &diffopt)) < 0)
 			goto done;
 
 		if ((flags & GIT_STATUS_OPT_RENAMES_HEAD_TO_INDEX) != 0 &&
-			(error = git_diff_find_similar(status->head2idx, NULL)) < 0)
+			(error = git_diff_find_similar(status->head2idx, &findopt)) < 0)
 			goto done;
 	}
 
 	if (show != GIT_STATUS_SHOW_INDEX_ONLY) {
 		if ((error = git_diff_index_to_workdir(
-				&status->idx2wd, repo, NULL, &diffopt)) < 0)
+				&status->idx2wd, repo, index, &diffopt)) < 0)
 			goto done;
 
 		if ((flags & GIT_STATUS_OPT_RENAMES_INDEX_TO_WORKDIR) != 0 &&
-			(error = git_diff_find_similar(status->idx2wd, &findopts_i2w)) < 0)
+			(error = git_diff_find_similar(status->idx2wd, &findopt)) < 0)
 			goto done;
-	}
-
-	if (show == GIT_STATUS_SHOW_INDEX_THEN_WORKDIR) {
-		if ((error = git_diff__paired_foreach(
-				status->head2idx, NULL, status_collect, status)) < 0)
-			goto done;
-
-		git_diff_list_free(status->head2idx);
-		status->head2idx = NULL;
 	}
 
 	if ((error = git_diff__paired_foreach(
@@ -383,8 +366,8 @@ void git_status_list_free(git_status_list *status)
 	if (status == NULL)
 		return;
 
-	git_diff_list_free(status->head2idx);
-	git_diff_list_free(status->idx2wd);
+	git_diff_free(status->head2idx);
+	git_diff_free(status->idx2wd);
 
 	git_vector_foreach(&status->paired, i, status_entry)
 		git__free(status_entry);

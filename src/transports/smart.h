@@ -16,11 +16,13 @@
 
 #define GIT_CAP_OFS_DELTA "ofs-delta"
 #define GIT_CAP_MULTI_ACK "multi_ack"
+#define GIT_CAP_MULTI_ACK_DETAILED "multi_ack_detailed"
 #define GIT_CAP_SIDE_BAND "side-band"
 #define GIT_CAP_SIDE_BAND_64K "side-band-64k"
 #define GIT_CAP_INCLUDE_TAG "include-tag"
 #define GIT_CAP_DELETE_REFS "delete-refs"
 #define GIT_CAP_REPORT_STATUS "report-status"
+#define GIT_CAP_THIN_PACK "thin-pack"
 
 enum git_pkt_type {
 	GIT_PKT_CMD,
@@ -39,7 +41,7 @@ enum git_pkt_type {
 	GIT_PKT_UNPACK,
 };
 
-/* Used for multi-ack */
+/* Used for multi_ack and mutli_ack_detailed */
 enum git_ack_status {
 	GIT_ACK_NONE,
 	GIT_ACK_CONTINUE,
@@ -112,14 +114,16 @@ typedef struct transport_smart_caps {
 	int common:1,
 		ofs_delta:1,
 		multi_ack: 1,
+		multi_ack_detailed: 1,
 		side_band:1,
 		side_band_64k:1,
 		include_tag:1,
 		delete_refs:1,
-		report_status:1;
+		report_status:1,
+		thin_pack:1;
 } transport_smart_caps;
 
-typedef void (*packetsize_cb)(size_t received, void *payload);
+typedef int (*packetsize_cb)(size_t received, void *payload);
 
 typedef struct {
 	git_transport parent;
@@ -136,6 +140,7 @@ typedef struct {
 	git_smart_subtransport_stream *current_stream;
 	transport_smart_caps caps;
 	git_vector refs;
+	git_vector heads;
 	git_vector common;
 	git_atomic cancelled;
 	packetsize_cb packetsize_cb;
@@ -168,6 +173,8 @@ int git_smart__download_pack(
 /* smart.c */
 int git_smart__negotiation_step(git_transport *transport, void *data, size_t len);
 int git_smart__get_push_stream(transport_smart *t, git_smart_subtransport_stream **out);
+
+int git_smart__update_heads(transport_smart *t);
 
 /* smart_pkt.c */
 int git_pkt_parse_line(git_pkt **head, const char *line, const char **out, size_t len);

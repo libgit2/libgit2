@@ -10,7 +10,7 @@
 #include "tree.h"
 #include "git2/repository.h"
 #include "git2/object.h"
-#include "path.h"
+#include "fileops.h"
 #include "tree-cache.h"
 #include "index.h"
 
@@ -29,19 +29,19 @@ static bool valid_filemode(const int filemode)
 GIT_INLINE(git_filemode_t) normalize_filemode(git_filemode_t filemode)
 {
 	/* Tree bits set, but it's not a commit */
-	if (filemode & GIT_FILEMODE_TREE && !(filemode & 0100000))
+	if (GIT_MODE_TYPE(filemode) == GIT_FILEMODE_TREE)
 		return GIT_FILEMODE_TREE;
 
-	/* If any of the x bits is set */
-	if (filemode & 0111)
+	/* If any of the x bits are set */
+	if (GIT_PERMS_IS_EXEC(filemode))
 		return GIT_FILEMODE_BLOB_EXECUTABLE;
 
 	/* 16XXXX means commit */
-	if ((filemode & GIT_FILEMODE_COMMIT) == GIT_FILEMODE_COMMIT)
+	if (GIT_MODE_TYPE(filemode) == GIT_FILEMODE_COMMIT)
 		return GIT_FILEMODE_COMMIT;
 
 	/* 12XXXX means commit */
-	if ((filemode & GIT_FILEMODE_LINK) == GIT_FILEMODE_LINK)
+	if (GIT_MODE_TYPE(filemode) == GIT_FILEMODE_LINK)
 		return GIT_FILEMODE_LINK;
 
 	/* Otherwise, return a blob */
@@ -237,7 +237,12 @@ void git_tree__free(void *_tree)
 
 git_filemode_t git_tree_entry_filemode(const git_tree_entry *entry)
 {
-	return (git_filemode_t)entry->attr;
+	return normalize_filemode(entry->attr);
+}
+
+git_filemode_t git_tree_entry_filemode_raw(const git_tree_entry *entry)
+{
+	return entry->attr;
 }
 
 const char *git_tree_entry_name(const git_tree_entry *entry)
@@ -385,8 +390,6 @@ int git_tree__parse(void *_tree, git_odb_object *odb_obj)
 
 		if (git__strtol32(&attr, buffer, &buffer, 8) < 0 || !buffer)
 			return tree_error("Failed to parse tree. Can't parse filemode", NULL);
-
-		attr = normalize_filemode(attr); /* make sure to normalize the filemode */
 
 		if (*buffer++ != ' ')
 			return tree_error("Failed to parse tree. Object is corrupted", NULL);
@@ -881,8 +884,10 @@ static int tree_walk(
 	git_vector_foreach(&tree->entries, i, entry) {
 		if (preorder) {
 			error = callback(path->ptr, entry, payload);
-			if (error > 0)
+			if (error > 0) {
+				error = 0;
 				continue;
+			}
 			if (error < 0) {
 				giterr_clear();
 				return GIT_EUSER;
@@ -905,11 +910,12 @@ static int tree_walk(
 				return -1;
 
 			error = tree_walk(subtree, callback, path, payload, preorder);
+			git_tree_free(subtree);
+
 			if (error != 0)
 				break;
 
 			git_buf_truncate(path, path_len);
-			git_tree_free(subtree);
 		}
 
 		if (!preorder && callback(path->ptr, entry, payload) < 0) {

@@ -232,6 +232,14 @@ GIT_EXTERN(void) git_revwalk_sorting(git_revwalk *walk, unsigned int sort_mode);
 GIT_EXTERN(int) git_revwalk_push_range(git_revwalk *walk, const char *range);
 
 /**
+ * Simplify the history by first-parent
+ *
+ * No parents other than the first for each commit will be enqueued.
+ */
+GIT_EXTERN(void) git_revwalk_simplify_first_parent(git_revwalk *walk);
+
+
+/**
  * Free a revision walker previously allocated.
  *
  * @param walk traversal handle to close. If NULL nothing occurs.

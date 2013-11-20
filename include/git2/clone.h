@@ -35,30 +35,12 @@ GIT_BEGIN_DECL
  *   set the `checkout_strategy` to GIT_CHECKOUT_DEFAULT.
  * - `bare` should be set to zero to create a standard repo, non-zero for
  *   a bare repo
- * - `fetch_progress_cb` is optional callback for fetch progress. Be aware that
- *   this is called inline with network and indexing operations, so performance
- *   may be affected.
- * - `fetch_progress_payload` is payload for fetch_progress_cb
+ * - `ignore_cert_errors` should be set to 1 if errors validating the remote host's
+ *   certificate should be ignored.
  *
  *   ** "origin" remote options: **
  * - `remote_name` is the name given to the "origin" remote.  The default is
  *   "origin".
- * - `pushurl` is a URL to be used for pushing.  NULL means use the fetch url.
- * - `fetch_spec` is the fetch specification to be used for fetching.  NULL
- *   results in the same behavior as GIT_REMOTE_DEFAULT_FETCH.
- * - `push_spec` is the fetch specification to be used for pushing.  NULL means
- *   use the same spec as for fetching.
- * - `cred_acquire_cb` is a callback to be used if credentials are required
- *   during the initial fetch.
- * - `cred_acquire_payload` is the payload for the above callback.
- * - `transport_flags` is flags used to create transport if no transport is
- *   provided.
- * - `transport` is a custom transport to be used for the initial fetch.  NULL
- *   means use the transport autodetected from the URL.
- * - `remote_callbacks` may be used to specify custom progress callbacks for
- *   the origin remote before the fetch is initiated.
- * - `remote_autotag` may be used to specify the autotag setting before the
- *   initial fetch.  The default is GIT_REMOTE_DOWNLOAD_TAGS_ALL.
  * - `checkout_branch` gives the name of the branch to checkout. NULL means
  *   use the remote's HEAD.
  */
@@ -67,29 +49,23 @@ typedef struct git_clone_options {
 	unsigned int version;
 
 	git_checkout_opts checkout_opts;
-	int bare;
-	git_transfer_progress_callback fetch_progress_cb;
-	void *fetch_progress_payload;
+	git_remote_callbacks remote_callbacks;
 
+	int bare;
+	int ignore_cert_errors;
 	const char *remote_name;
-	const char *pushurl;
-	const char *fetch_spec;
-	const char *push_spec;
-	git_cred_acquire_cb cred_acquire_cb;
-	void *cred_acquire_payload;
-    git_transport_flags_t transport_flags;
-	git_transport *transport;
-	git_remote_callbacks *remote_callbacks;
-	git_remote_autotag_option_t remote_autotag;
 	const char* checkout_branch;
 } git_clone_options;
 
 #define GIT_CLONE_OPTIONS_VERSION 1
-#define GIT_CLONE_OPTIONS_INIT {GIT_CLONE_OPTIONS_VERSION, {GIT_CHECKOUT_OPTS_VERSION, GIT_CHECKOUT_SAFE_CREATE}}
+#define GIT_CLONE_OPTIONS_INIT {GIT_CLONE_OPTIONS_VERSION, {GIT_CHECKOUT_OPTS_VERSION, GIT_CHECKOUT_SAFE_CREATE}, GIT_REMOTE_CALLBACKS_INIT}
 
 /**
- * Clone a remote repository, and checkout the branch pointed to by the remote
- * HEAD.
+ * Clone a remote repository.
+ *
+ * This version handles the simple case. If you'd like to create the
+ * repository or remote with non-default settings, you can create and
+ * configure them and then use `git_clone_into()`.
  *
  * @param out pointer that will receive the resulting repository object
  * @param url the remote repository to clone
@@ -104,6 +80,22 @@ GIT_EXTERN(int) git_clone(
 		const char *url,
 		const char *local_path,
 		const git_clone_options *options);
+
+/**
+ * Clone into a repository
+ *
+ * After creating the repository and remote and configuring them for
+ * paths and callbacks respectively, you can call this function to
+ * perform the clone operation and optionally checkout files.
+ *
+ * @param repo the repository to use
+ * @param remote the remote repository to clone from
+ * @param co_opts options to use during checkout
+ * @param branch the branch to checkout after the clone, pass NULL for the remote's
+ * default branch
+ * @return 0 on success or an error code
+ */
+GIT_EXTERN(int) git_clone_into(git_repository *repo, git_remote *remote, const git_checkout_opts *co_opts, const char *branch);
 
 /** @} */
 GIT_END_DECL

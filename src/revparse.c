@@ -93,11 +93,7 @@ static int revparse_lookup_object(
 	int error;
 	git_reference *ref;
 
-	error = maybe_sha(object_out, repo, spec);
-	if (!error)
-		return 0;
-
-	if (error < 0 && error != GIT_ENOTFOUND)
+	if ((error = maybe_sha(object_out, repo, spec)) != GIT_ENOTFOUND)
 		return error;
 
 	error = git_reference_dwim(&ref, repo, spec);
@@ -112,24 +108,17 @@ static int revparse_lookup_object(
 		return error;
 	}
 
-	if (error < 0 && error != GIT_ENOTFOUND)
+	if (error != GIT_ENOTFOUND)
 		return error;
 
-	error = maybe_abbrev(object_out, repo, spec);
-	if (!error)
-		return 0;
+	if ((strlen(spec) < GIT_OID_HEXSZ) &&
+		((error = maybe_abbrev(object_out, repo, spec)) != GIT_ENOTFOUND))
+			return error;
 
-	if (error < 0 && error != GIT_ENOTFOUND)
+	if ((error = maybe_describe(object_out, repo, spec)) != GIT_ENOTFOUND)
 		return error;
 
-	error = maybe_describe(object_out, repo, spec);
-	if (!error)
-		return 0;
-
-	if (error < 0 && error != GIT_ENOTFOUND)
-		return error;
-
-	giterr_set(GITERR_REFERENCE, "Refspec '%s' not found.", spec);
+	giterr_set(GITERR_REFERENCE, "Revspec '%s' not found.", spec);
 	return GIT_ENOTFOUND;
 }
 
@@ -171,7 +160,7 @@ static int retrieve_previously_checked_out_branch_or_revision(git_object **out, 
 	if (git_reference_lookup(&ref, repo, GIT_HEAD_FILE) < 0)
 		goto cleanup;
 
-	if (git_reflog_read(&reflog, ref) < 0)
+	if (git_reflog_read(&reflog, repo, GIT_HEAD_FILE) < 0)
 		goto cleanup;
 
 	numentries  = git_reflog_entrycount(reflog);
@@ -219,7 +208,7 @@ static int retrieve_oid_from_reflog(git_oid *oid, git_reference *ref, size_t ide
 	const git_reflog_entry *entry;
 	bool search_by_pos = (identifier <= 100000000);
 
-	if (git_reflog_read(&reflog, ref) < 0)
+	if (git_reflog_read(&reflog, git_reference_owner(ref), git_reference_name(ref)) < 0)
 		return -1;
 
 	numentries = git_reflog_entrycount(reflog);
@@ -228,7 +217,7 @@ static int retrieve_oid_from_reflog(git_oid *oid, git_reference *ref, size_t ide
 		if (numentries < identifier + 1) {
 			giterr_set(
 				GITERR_REFERENCE,
-				"Reflog for '%s' has only "PRIuZ" entries, asked for "PRIuZ,
+				"Reflog for '%s' has only %"PRIuZ" entries, asked for %"PRIuZ,
 				git_reference_name(ref), numentries, identifier);
 
 			error = GIT_ENOTFOUND;
@@ -685,6 +674,8 @@ int revparse__ext(
 	git_reference *reference = NULL;
 	git_object *base_rev = NULL;
 
+	bool should_return_reference = true;
+
 	assert(object_out && reference_out && repo && spec);
 
 	*object_out = NULL;
@@ -693,6 +684,8 @@ int revparse__ext(
 	while (spec[pos]) {
 		switch (spec[pos]) {
 		case '^':
+			should_return_reference = false;
+
 			if ((error = ensure_base_rev_loaded(&base_rev, &reference, spec, identifier_len, repo, false)) < 0)
 				goto cleanup;
 
@@ -725,6 +718,8 @@ int revparse__ext(
 		{
 			git_object *temp_object = NULL;
 
+			should_return_reference = false;
+
 			if ((error = extract_how_many(&n, spec, &pos)) < 0)
 				goto cleanup;
 
@@ -742,6 +737,8 @@ int revparse__ext(
 		case ':':
 		{
 			git_object *temp_object = NULL;
+
+			should_return_reference = false;
 
 			if ((error = extract_path(&buf, spec, &pos)) < 0)
 				goto cleanup;
@@ -806,6 +803,11 @@ int revparse__ext(
 
 	if ((error = ensure_base_rev_loaded(&base_rev, &reference, spec, identifier_len, repo, false)) < 0)
 		goto cleanup;
+
+	if (!should_return_reference) {
+		git_reference_free(reference);
+		reference = NULL;
+	}
 
 	*object_out = base_rev;
 	*reference_out = reference;
@@ -899,13 +901,9 @@ int git_revparse(
 			rstr++;
 		}
 
-		if ((error = git_revparse_single(&revspec->from, repo, lstr)) < 0) {
-			return error;
-		}
-
-		if ((error = git_revparse_single(&revspec->to, repo, rstr)) < 0) {
-			return error;
-		}
+		error = git_revparse_single(&revspec->from, repo, lstr);
+		if (!error)
+			error = git_revparse_single(&revspec->to, repo, rstr);
 
 		git__free((void*)lstr);
 	} else {

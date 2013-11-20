@@ -23,11 +23,11 @@ int git_win32__expand_path(struct git_win32__path *s_root, const wchar_t *templ)
 	return s_root->len ? 0 : -1;
 }
 
-static int win32_path_utf16_to_8(git_buf *path_utf8, const wchar_t *path_utf16)
+static int win32_path_to_8(git_buf *path_utf8, const wchar_t *path)
 {
 	char temp_utf8[GIT_PATH_MAX];
 
-	git__utf16_to_8(temp_utf8, path_utf16);
+	git__utf16_to_8(temp_utf8, GIT_PATH_MAX, path);
 	git_path_mkposix(temp_utf8);
 
 	return git_buf_sets(path_utf8, temp_utf8);
@@ -53,7 +53,7 @@ int git_win32__find_file(
 	if (*filename == '/' || *filename == '\\')
 		filename++;
 
-	git__utf8_to_16(file_utf16 + root->len - 1, alloc_len, filename);
+	git__utf8_to_16(file_utf16 + root->len - 1, alloc_len - root->len, filename);
 
 	/* check access */
 	if (_waccess(file_utf16, F_OK) < 0) {
@@ -61,7 +61,7 @@ int git_win32__find_file(
 		return GIT_ENOTFOUND;
 	}
 
-	win32_path_utf16_to_8(path, file_utf16);
+	win32_path_to_8(path, file_utf16);
 	git__free(file_utf16);
 
 	return 0;
@@ -86,7 +86,7 @@ static wchar_t* win32_walkpath(wchar_t *path, wchar_t *buf, size_t buflen)
 	return (path != base) ? path : NULL;
 }
 
-static int win32_find_git_in_path(git_buf *buf, const wchar_t *gitexe)
+static int win32_find_git_in_path(git_buf *buf, const wchar_t *gitexe, const wchar_t *subdir)
 {
 	wchar_t *env = _wgetenv(L"PATH"), lastch;
 	struct git_win32__path root;
@@ -110,10 +110,10 @@ static int win32_find_git_in_path(git_buf *buf, const wchar_t *gitexe)
 		wcscpy(&root.path[root.len], gitexe);
 
 		if (_waccess(root.path, F_OK) == 0 && root.len > 5) {
-			/* replace "bin\\" or "cmd\\" with "etc\\" */
-			wcscpy(&root.path[root.len - 4], L"etc\\");
+			/* replace "bin\\" or "cmd\\" with subdir */
+			wcscpy(&root.path[root.len - 4], subdir);
 
-			win32_path_utf16_to_8(buf, root.path);
+			win32_path_to_8(buf, root.path);
 			return 0;
 		}
 	}
@@ -122,7 +122,7 @@ static int win32_find_git_in_path(git_buf *buf, const wchar_t *gitexe)
 }
 
 static int win32_find_git_in_registry(
-	git_buf *buf, const HKEY hieve, const wchar_t *key)
+	git_buf *buf, const HKEY hieve, const wchar_t *key, const wchar_t *subdir)
 {
 	HKEY hKey;
 	DWORD dwType = REG_SZ;
@@ -130,9 +130,9 @@ static int win32_find_git_in_registry(
 
 	assert(buf);
 
-	path16.len = 0;
+	path16.len = MAX_PATH;
 
-	if (RegOpenKeyExW(hieve, key, 0, KEY_ALL_ACCESS, &hKey) == ERROR_SUCCESS) {
+	if (RegOpenKeyExW(hieve, key, 0, KEY_READ, &hKey) == ERROR_SUCCESS) {
 		if (RegQueryValueExW(hKey, L"InstallLocation", NULL, &dwType,
 			(LPBYTE)&path16.path, &path16.len) == ERROR_SUCCESS)
 		{
@@ -143,10 +143,10 @@ static int win32_find_git_in_registry(
 				return -1;
 			}
 
-			wcscat(path16.path, L"etc\\");
+			wcscat(path16.path, subdir);
 			path16.len += 4;
 
-			win32_path_utf16_to_8(buf, path16.path);
+			win32_path_to_8(buf, path16.path);
 		}
 
 		RegCloseKey(hKey);
@@ -156,7 +156,7 @@ static int win32_find_git_in_registry(
 }
 
 static int win32_find_existing_dirs(
-	git_buf *out, const wchar_t *tmpl[], char *temp[])
+	git_buf *out, const wchar_t *tmpl[])
 {
 	struct git_win32__path path16;
 	git_buf buf = GIT_BUF_INIT;
@@ -168,7 +168,7 @@ static int win32_find_existing_dirs(
 			path16.path[0] != L'%' &&
 			!_waccess(path16.path, F_OK))
 		{
-			win32_path_utf16_to_8(&buf, path16.path);
+			win32_path_to_8(&buf, path16.path);
 
 			if (buf.size)
 				git_buf_join(out, GIT_PATH_LIST_SEPARATOR, out->ptr, buf.ptr);
@@ -180,26 +180,26 @@ static int win32_find_existing_dirs(
 	return (git_buf_oom(out) ? -1 : 0);
 }
 
-int git_win32__find_system_dirs(git_buf *out)
+int git_win32__find_system_dirs(git_buf *out, const wchar_t *subdir)
 {
 	git_buf buf = GIT_BUF_INIT;
 
 	/* directories where git.exe & git.cmd are found */
-	if (!win32_find_git_in_path(&buf, L"git.exe") && buf.size)
+	if (!win32_find_git_in_path(&buf, L"git.exe", subdir) && buf.size)
 		git_buf_set(out, buf.ptr, buf.size);
 	else
 		git_buf_clear(out);
 
-	if (!win32_find_git_in_path(&buf, L"git.cmd") && buf.size)
+	if (!win32_find_git_in_path(&buf, L"git.cmd", subdir) && buf.size)
 		git_buf_join(out, GIT_PATH_LIST_SEPARATOR, out->ptr, buf.ptr);
 
 	/* directories where git is installed according to registry */
 	if (!win32_find_git_in_registry(
-			&buf, HKEY_CURRENT_USER, REG_MSYSGIT_INSTALL_LOCAL) && buf.size)
+			&buf, HKEY_CURRENT_USER, REG_MSYSGIT_INSTALL_LOCAL, subdir) && buf.size)
 		git_buf_join(out, GIT_PATH_LIST_SEPARATOR, out->ptr, buf.ptr);
 
 	if (!win32_find_git_in_registry(
-			&buf, HKEY_LOCAL_MACHINE, REG_MSYSGIT_INSTALL) && buf.size)
+			&buf, HKEY_LOCAL_MACHINE, REG_MSYSGIT_INSTALL, subdir) && buf.size)
 		git_buf_join(out, GIT_PATH_LIST_SEPARATOR, out->ptr, buf.ptr);
 
 	git_buf_free(&buf);
@@ -209,7 +209,6 @@ int git_win32__find_system_dirs(git_buf *out)
 
 int git_win32__find_global_dirs(git_buf *out)
 {
-	char *temp[3];
 	static const wchar_t *global_tmpls[4] = {
 		L"%HOME%\\",
 		L"%HOMEDRIVE%%HOMEPATH%\\",
@@ -217,12 +216,11 @@ int git_win32__find_global_dirs(git_buf *out)
 		NULL,
 	};
 
-	return win32_find_existing_dirs(out, global_tmpls, temp);
+	return win32_find_existing_dirs(out, global_tmpls);
 }
 
 int git_win32__find_xdg_dirs(git_buf *out)
 {
-	char *temp[6];
 	static const wchar_t *global_tmpls[7] = {
 		L"%XDG_CONFIG_HOME%\\git",
 		L"%APPDATA%\\git",
@@ -233,5 +231,5 @@ int git_win32__find_xdg_dirs(git_buf *out)
 		NULL,
 	};
 
-	return win32_find_existing_dirs(out, global_tmpls, temp);
+	return win32_find_existing_dirs(out, global_tmpls);
 }

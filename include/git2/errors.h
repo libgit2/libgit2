@@ -8,6 +8,7 @@
 #define INCLUDE_git_errors_h__
 
 #include "common.h"
+#include "buffer.h"
 
 /**
  * @file git2/errors.h
@@ -27,11 +28,12 @@ typedef enum {
 	GIT_EBUFS = -6,
 	GIT_EUSER = -7,
 	GIT_EBAREREPO = -8,
-	GIT_EORPHANEDHEAD = -9,
+	GIT_EUNBORNBRANCH = -9,
 	GIT_EUNMERGED = -10,
 	GIT_ENONFASTFORWARD = -11,
 	GIT_EINVALIDSPEC = -12,
 	GIT_EMERGECONFLICT = -13,
+	GIT_ELOCKED = -14,
 
 	GIT_PASSTHROUGH = -30,
 	GIT_ITEROVER = -31,
@@ -44,6 +46,7 @@ typedef struct {
 
 /** Error classes */
 typedef enum {
+	GITERR_NONE = 0,
 	GITERR_NOMEMORY,
 	GITERR_OS,
 	GITERR_INVALID,
@@ -66,6 +69,8 @@ typedef enum {
 	GITERR_CHECKOUT,
 	GITERR_FETCHHEAD,
 	GITERR_MERGE,
+	GITERR_SSH,
+	GITERR_FILTER,
 } git_error_t;
 
 /**
@@ -80,6 +85,18 @@ GIT_EXTERN(const git_error *) giterr_last(void);
  * Clear the last library error that occurred for this thread.
  */
 GIT_EXTERN(void) giterr_clear(void);
+
+/**
+ * Get the last error data and clear it.
+ *
+ * This copies the last error into the given `git_error` struct
+ * and returns 0 if the copy was successful, leaving the error 
+ * cleared as if `giterr_clear` had been called.
+ *
+ * If there was no existing error in the library, -1 will be returned
+ * and the contents of `cpy` will be left unmodified.
+ */
+GIT_EXTERN(int) giterr_detach(git_error *cpy);
 
 /**
  * Set the error message string for this thread.

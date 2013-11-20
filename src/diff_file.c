@@ -88,7 +88,7 @@ static int diff_file_content_init_common(
 
 int git_diff_file_content__init_from_diff(
 	git_diff_file_content *fc,
-	git_diff_list *diff,
+	git_diff *diff,
 	size_t delta_index,
 	bool use_old)
 {
@@ -110,7 +110,7 @@ int git_diff_file_content__init_from_diff(
 		has_data = use_old; break;
 	case GIT_DELTA_UNTRACKED:
 		has_data = !use_old &&
-			(diff->opts.flags & GIT_DIFF_INCLUDE_UNTRACKED_CONTENT) != 0;
+			(diff->opts.flags & GIT_DIFF_SHOW_UNTRACKED_CONTENT) != 0;
 		break;
 	case GIT_DELTA_MODIFIED:
 	case GIT_DELTA_COPIED:
@@ -241,19 +241,9 @@ static int diff_file_content_load_blob(git_diff_file_content *fc)
 
 	/* if we don't know size, try to peek at object header first */
 	if (!fc->file->size) {
-		git_odb *odb;
-		size_t len;
-		git_otype type;
-
-		if (!(error = git_repository_odb__weakptr(&odb, fc->repo))) {
-			error = git_odb__read_header_or_object(
-				&odb_obj, &len, &type, odb, &fc->file->oid);
-			git_odb_free(odb);
-		}
-		if (error)
+		if ((error = git_diff_file__resolve_zero_size(
+				fc->file, &odb_obj, fc->repo)) < 0)
 			return error;
-
-		fc->file->size = len;
 	}
 
 	if (diff_file_content_binary_by_size(fc))
@@ -306,9 +296,9 @@ static int diff_file_content_load_workdir_file(
 	git_diff_file_content *fc, git_buf *path)
 {
 	int error = 0;
-	git_vector filters = GIT_VECTOR_INIT;
-	git_buf raw = GIT_BUF_INIT, filtered = GIT_BUF_INIT;
+	git_filter_list *fl = NULL;
 	git_file fd = git_futils_open_ro(git_buf_cstr(path));
+	git_buf raw = GIT_BUF_INIT;
 
 	if (fd < 0)
 		return fd;
@@ -320,41 +310,38 @@ static int diff_file_content_load_workdir_file(
 	if (diff_file_content_binary_by_size(fc))
 		goto cleanup;
 
-	if ((error = git_filters_load(
-			&filters, fc->repo, fc->file->path, GIT_FILTER_TO_ODB)) < 0)
+	if ((error = git_filter_list_load(
+			&fl, fc->repo, NULL, fc->file->path, GIT_FILTER_TO_ODB)) < 0)
 		goto cleanup;
-	/* error >= is a filter count */
 
-	if (error == 0) {
+	/* if there are no filters, try to mmap the file */
+	if (fl == NULL) {
 		if (!(error = git_futils_mmap_ro(
-				&fc->map, fd, 0, (size_t)fc->file->size)))
+				&fc->map, fd, 0, (size_t)fc->file->size))) {
 			fc->flags |= GIT_DIFF_FLAG__UNMAP_DATA;
-		else /* fall through to try readbuffer below */
-			giterr_clear();
-	}
-
-	if (error != 0) {
-		error = git_futils_readbuffer_fd(&raw, fd, (size_t)fc->file->size);
-		if (error < 0)
 			goto cleanup;
-
-		if (!filters.length)
-			git_buf_swap(&filtered, &raw);
-		else
-			error = git_filters_apply(&filtered, &raw, &filters);
-
-		if (!error) {
-			fc->map.len  = git_buf_len(&filtered);
-			fc->map.data = git_buf_detach(&filtered);
-			fc->flags |= GIT_DIFF_FLAG__FREE_DATA;
 		}
 
+		/* if mmap failed, fall through to try readbuffer below */
+		giterr_clear();
+	}
+
+	if (!(error = git_futils_readbuffer_fd(&raw, fd, (size_t)fc->file->size))) {
+		git_buf out = GIT_BUF_INIT;
+
+		error = git_filter_list_apply_to_data(&out, fl, &raw);
+
 		git_buf_free(&raw);
-		git_buf_free(&filtered);
+
+		if (!error) {
+			fc->map.len  = out.size;
+			fc->map.data = out.ptr;
+			fc->flags |= GIT_DIFF_FLAG__FREE_DATA;
+		}
 	}
 
 cleanup:
-	git_filters_free(&filters);
+	git_filter_list_free(fl);
 	p_close(fd);
 
 	return error;
@@ -417,6 +404,9 @@ int git_diff_file_content__load(git_diff_file_content *fc)
 
 void git_diff_file_content__unload(git_diff_file_content *fc)
 {
+	if ((fc->flags & GIT_DIFF_FLAG__LOADED) == 0)
+		return;
+
 	if (fc->flags & GIT_DIFF_FLAG__FREE_DATA) {
 		git__free(fc->map.data);
 		fc->map.data = "";

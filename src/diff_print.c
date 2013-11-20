@@ -7,26 +7,39 @@
 #include "common.h"
 #include "diff.h"
 #include "diff_patch.h"
-#include "buffer.h"
+#include "fileops.h"
 
 typedef struct {
-	git_diff_list *diff;
-	git_diff_data_cb print_cb;
+	git_diff *diff;
+	git_diff_format_t format;
+	git_diff_line_cb print_cb;
 	void *payload;
 	git_buf *buf;
+	uint32_t flags;
 	int oid_strlen;
+	git_diff_line line;
 } diff_print_info;
 
 static int diff_print_info_init(
 	diff_print_info *pi,
-	git_buf *out, git_diff_list *diff, git_diff_data_cb cb, void *payload)
+	git_buf *out,
+	git_diff *diff,
+	git_diff_format_t format,
+	git_diff_line_cb cb,
+	void *payload)
 {
 	pi->diff     = diff;
+	pi->format   = format;
 	pi->print_cb = cb;
 	pi->payload  = payload;
 	pi->buf      = out;
 
-	if (!diff || !diff->repo)
+	if (diff)
+		pi->flags = diff->opts.flags;
+
+	if (diff && diff->opts.oid_abbrev != 0)
+		pi->oid_strlen = diff->opts.oid_abbrev;
+	else if (!diff || !diff->repo)
 		pi->oid_strlen = GIT_ABBREV_DEFAULT;
 	else if (git_repository__cvar(
 		&pi->oid_strlen, diff->repo, GIT_CVAR_ABBREV) < 0)
@@ -39,6 +52,11 @@ static int diff_print_info_init(
 	else if (pi->oid_strlen > GIT_OID_HEXSZ + 1)
 		pi->oid_strlen = GIT_OID_HEXSZ + 1;
 
+	memset(&pi->line, 0, sizeof(pi->line));
+	pi->line.old_lineno = -1;
+	pi->line.new_lineno = -1;
+	pi->line.num_lines  = 1;
+
 	return 0;
 }
 
@@ -46,7 +64,7 @@ static char diff_pick_suffix(int mode)
 {
 	if (S_ISDIR(mode))
 		return '/';
-	else if (mode & 0100) /* -V536 */
+	else if (GIT_PERMS_IS_EXEC(mode)) /* -V536 */
 		/* in git, modes are very regular, so we must have 0100755 mode */
 		return '*';
 	else
@@ -77,7 +95,35 @@ static int callback_error(void)
 	return GIT_EUSER;
 }
 
-static int diff_print_one_compact(
+static int diff_print_one_name_only(
+	const git_diff_delta *delta, float progress, void *data)
+{
+	diff_print_info *pi = data;
+	git_buf *out = pi->buf;
+
+	GIT_UNUSED(progress);
+
+	if ((pi->flags & GIT_DIFF_SHOW_UNMODIFIED) == 0 &&
+		delta->status == GIT_DELTA_UNMODIFIED)
+		return 0;
+
+	git_buf_clear(out);
+
+	if (git_buf_puts(out, delta->new_file.path) < 0 ||
+		git_buf_putc(out, '\n'))
+		return -1;
+
+	pi->line.origin      = GIT_DIFF_LINE_FILE_HDR;
+	pi->line.content     = git_buf_cstr(out);
+	pi->line.content_len = git_buf_len(out);
+
+	if (pi->print_cb(delta, NULL, &pi->line, pi->payload))
+		return callback_error();
+
+	return 0;
+}
+
+static int diff_print_one_name_status(
 	const git_diff_delta *delta, float progress, void *data)
 {
 	diff_print_info *pi = data;
@@ -88,7 +134,7 @@ static int diff_print_one_compact(
 
 	GIT_UNUSED(progress);
 
-	if (code == ' ')
+	if ((pi->flags & GIT_DIFF_SHOW_UNMODIFIED) == 0 && code == ' ')
 		return 0;
 
 	old_suffix = diff_pick_suffix(delta->old_file.mode);
@@ -98,12 +144,12 @@ static int diff_print_one_compact(
 
 	if (delta->old_file.path != delta->new_file.path &&
 		strcomp(delta->old_file.path,delta->new_file.path) != 0)
-		git_buf_printf(out, "%c\t%s%c -> %s%c\n", code,
+		git_buf_printf(out, "%c\t%s%c %s%c\n", code,
 			delta->old_file.path, old_suffix, delta->new_file.path, new_suffix);
 	else if (delta->old_file.mode != delta->new_file.mode &&
 		delta->old_file.mode != 0 && delta->new_file.mode != 0)
-		git_buf_printf(out, "%c\t%s%c (%o -> %o)\n", code,
-			delta->old_file.path, new_suffix, delta->old_file.mode, delta->new_file.mode);
+		git_buf_printf(out, "%c\t%s%c %s%c\n", code,
+			delta->old_file.path, old_suffix, delta->new_file.path, new_suffix);
 	else if (old_suffix != ' ')
 		git_buf_printf(out, "%c\t%s%c\n", code, delta->old_file.path, old_suffix);
 	else
@@ -112,29 +158,14 @@ static int diff_print_one_compact(
 	if (git_buf_oom(out))
 		return -1;
 
-	if (pi->print_cb(delta, NULL, GIT_DIFF_LINE_FILE_HDR,
-			git_buf_cstr(out), git_buf_len(out), pi->payload))
+	pi->line.origin      = GIT_DIFF_LINE_FILE_HDR;
+	pi->line.content     = git_buf_cstr(out);
+	pi->line.content_len = git_buf_len(out);
+
+	if (pi->print_cb(delta, NULL, &pi->line, pi->payload))
 		return callback_error();
 
 	return 0;
-}
-
-/* print a git_diff_list to a print callback in compact format */
-int git_diff_print_compact(
-	git_diff_list *diff,
-	git_diff_data_cb print_cb,
-	void *payload)
-{
-	int error;
-	git_buf buf = GIT_BUF_INIT;
-	diff_print_info pi;
-
-	if (!(error = diff_print_info_init(&pi, &buf, diff, print_cb, payload)))
-		error = git_diff_foreach(diff, diff_print_one_compact, NULL, NULL, &pi);
-
-	git_buf_free(&buf);
-
-	return error;
 }
 
 static int diff_print_one_raw(
@@ -147,7 +178,7 @@ static int diff_print_one_raw(
 
 	GIT_UNUSED(progress);
 
-	if (code == ' ')
+	if ((pi->flags & GIT_DIFF_SHOW_UNMODIFIED) == 0 && code == ' ')
 		return 0;
 
 	git_buf_clear(out);
@@ -173,38 +204,23 @@ static int diff_print_one_raw(
 	if (git_buf_oom(out))
 		return -1;
 
-	if (pi->print_cb(delta, NULL, GIT_DIFF_LINE_FILE_HDR,
-			git_buf_cstr(out), git_buf_len(out), pi->payload))
+	pi->line.origin      = GIT_DIFF_LINE_FILE_HDR;
+	pi->line.content     = git_buf_cstr(out);
+	pi->line.content_len = git_buf_len(out);
+
+	if (pi->print_cb(delta, NULL, &pi->line, pi->payload))
 		return callback_error();
 
 	return 0;
 }
 
-/* print a git_diff_list to a print callback in raw output format */
-int git_diff_print_raw(
-	git_diff_list *diff,
-	git_diff_data_cb print_cb,
-	void *payload)
+static int diff_print_oid_range(
+	git_buf *out, const git_diff_delta *delta, int oid_strlen)
 {
-	int error;
-	git_buf buf = GIT_BUF_INIT;
-	diff_print_info pi;
-
-	if (!(error = diff_print_info_init(&pi, &buf, diff, print_cb, payload)))
-		error = git_diff_foreach(diff, diff_print_one_raw, NULL, NULL, &pi);
-
-	git_buf_free(&buf);
-
-	return error;
-}
-
-static int diff_print_oid_range(diff_print_info *pi, const git_diff_delta *delta)
-{
-	git_buf *out = pi->buf;
 	char start_oid[GIT_OID_HEXSZ+1], end_oid[GIT_OID_HEXSZ+1];
 
-	git_oid_tostr(start_oid, pi->oid_strlen, &delta->old_file.oid);
-	git_oid_tostr(end_oid, pi->oid_strlen, &delta->new_file.oid);
+	git_oid_tostr(start_oid, oid_strlen, &delta->old_file.oid);
+	git_oid_tostr(end_oid, oid_strlen, &delta->new_file.oid);
 
 	/* TODO: Match git diff more closely */
 	if (delta->old_file.mode == delta->new_file.mode) {
@@ -228,36 +244,15 @@ static int diff_print_oid_range(diff_print_info *pi, const git_diff_delta *delta
 	return 0;
 }
 
-static int diff_print_patch_file(
-	const git_diff_delta *delta, float progress, void *data)
+static int diff_delta_format_with_paths(
+	git_buf *out,
+	const git_diff_delta *delta,
+	const char *oldpfx,
+	const char *newpfx,
+	const char *template)
 {
-	diff_print_info *pi = data;
-	const char *oldpfx = pi->diff ? pi->diff->opts.old_prefix : NULL;
 	const char *oldpath = delta->old_file.path;
-	const char *newpfx = pi->diff ? pi->diff->opts.new_prefix : NULL;
 	const char *newpath = delta->new_file.path;
-	uint32_t opts_flags = pi->diff ? pi->diff->opts.flags : GIT_DIFF_NORMAL;
-
-	GIT_UNUSED(progress);
-
-	if (S_ISDIR(delta->new_file.mode) ||
-		delta->status == GIT_DELTA_UNMODIFIED ||
-		delta->status == GIT_DELTA_IGNORED ||
-		(delta->status == GIT_DELTA_UNTRACKED &&
-		 (opts_flags & GIT_DIFF_INCLUDE_UNTRACKED_CONTENT) == 0))
-		return 0;
-
-	if (!oldpfx)
-		oldpfx = DIFF_OLD_PREFIX_DEFAULT;
-	if (!newpfx)
-		newpfx = DIFF_NEW_PREFIX_DEFAULT;
-
-	git_buf_clear(pi->buf);
-	git_buf_printf(pi->buf, "diff --git %s%s %s%s\n",
-		oldpfx, delta->old_file.path, newpfx, delta->new_file.path);
-
-	if (diff_print_oid_range(pi, delta) < 0)
-		return -1;
 
 	if (git_oid_iszero(&delta->old_file.oid)) {
 		oldpfx = "";
@@ -268,30 +263,83 @@ static int diff_print_patch_file(
 		newpath = "/dev/null";
 	}
 
-	if ((delta->flags & GIT_DIFF_FLAG_BINARY) == 0) {
-		git_buf_printf(pi->buf, "--- %s%s\n", oldpfx, oldpath);
-		git_buf_printf(pi->buf, "+++ %s%s\n", newpfx, newpath);
-	}
+	return git_buf_printf(out, template, oldpfx, oldpath, newpfx, newpath);
+}
 
-	if (git_buf_oom(pi->buf))
+int git_diff_delta__format_file_header(
+	git_buf *out,
+	const git_diff_delta *delta,
+	const char *oldpfx,
+	const char *newpfx,
+	int oid_strlen)
+{
+	if (!oldpfx)
+		oldpfx = DIFF_OLD_PREFIX_DEFAULT;
+	if (!newpfx)
+		newpfx = DIFF_NEW_PREFIX_DEFAULT;
+	if (!oid_strlen)
+		oid_strlen = GIT_ABBREV_DEFAULT + 1;
+
+	git_buf_clear(out);
+
+	git_buf_printf(out, "diff --git %s%s %s%s\n",
+		oldpfx, delta->old_file.path, newpfx, delta->new_file.path);
+
+	if (diff_print_oid_range(out, delta, oid_strlen) < 0)
 		return -1;
 
-	if (pi->print_cb(delta, NULL, GIT_DIFF_LINE_FILE_HDR,
-			git_buf_cstr(pi->buf), git_buf_len(pi->buf), pi->payload))
+	if ((delta->flags & GIT_DIFF_FLAG_BINARY) == 0)
+		diff_delta_format_with_paths(
+			out, delta, oldpfx, newpfx, "--- %s%s\n+++ %s%s\n");
+
+	return git_buf_oom(out) ? -1 : 0;
+}
+
+static int diff_print_patch_file(
+	const git_diff_delta *delta, float progress, void *data)
+{
+	diff_print_info *pi = data;
+	const char *oldpfx =
+		pi->diff ? pi->diff->opts.old_prefix : DIFF_OLD_PREFIX_DEFAULT;
+	const char *newpfx =
+		pi->diff ? pi->diff->opts.new_prefix : DIFF_NEW_PREFIX_DEFAULT;
+
+	GIT_UNUSED(progress);
+
+	if (S_ISDIR(delta->new_file.mode) ||
+		delta->status == GIT_DELTA_UNMODIFIED ||
+		delta->status == GIT_DELTA_IGNORED ||
+		(delta->status == GIT_DELTA_UNTRACKED &&
+		 (pi->flags & GIT_DIFF_SHOW_UNTRACKED_CONTENT) == 0))
+		return 0;
+
+	if (git_diff_delta__format_file_header(
+			pi->buf, delta, oldpfx, newpfx, pi->oid_strlen) < 0)
+		return -1;
+
+	pi->line.origin      = GIT_DIFF_LINE_FILE_HDR;
+	pi->line.content     = git_buf_cstr(pi->buf);
+	pi->line.content_len = git_buf_len(pi->buf);
+
+	if (pi->print_cb(delta, NULL, &pi->line, pi->payload))
 		return callback_error();
 
 	if ((delta->flags & GIT_DIFF_FLAG_BINARY) == 0)
 		return 0;
 
 	git_buf_clear(pi->buf);
-	git_buf_printf(
-		pi->buf, "Binary files %s%s and %s%s differ\n",
-		oldpfx, oldpath, newpfx, newpath);
-	if (git_buf_oom(pi->buf))
+
+	if (diff_delta_format_with_paths(
+			pi->buf, delta, oldpfx, newpfx,
+			"Binary files %s%s and %s%s differ\n") < 0)
 		return -1;
 
-	if (pi->print_cb(delta, NULL, GIT_DIFF_LINE_BINARY,
-			git_buf_cstr(pi->buf), git_buf_len(pi->buf), pi->payload))
+	pi->line.origin      = GIT_DIFF_LINE_BINARY;
+	pi->line.content     = git_buf_cstr(pi->buf);
+	pi->line.content_len = git_buf_len(pi->buf);
+	pi->line.num_lines   = 1;
+
+	if (pi->print_cb(delta, NULL, &pi->line, pi->payload))
 		return callback_error();
 
 	return 0;
@@ -299,9 +347,7 @@ static int diff_print_patch_file(
 
 static int diff_print_patch_hunk(
 	const git_diff_delta *d,
-	const git_diff_range *r,
-	const char *header,
-	size_t header_len,
+	const git_diff_hunk *h,
 	void *data)
 {
 	diff_print_info *pi = data;
@@ -309,12 +355,11 @@ static int diff_print_patch_hunk(
 	if (S_ISDIR(d->new_file.mode))
 		return 0;
 
-	git_buf_clear(pi->buf);
-	if (git_buf_printf(pi->buf, "%.*s", (int)header_len, header) < 0)
-		return -1;
+	pi->line.origin      = GIT_DIFF_LINE_HUNK_HDR;
+	pi->line.content     = h->header;
+	pi->line.content_len = h->header_len;
 
-	if (pi->print_cb(d, r, GIT_DIFF_LINE_HUNK_HDR,
-			git_buf_cstr(pi->buf), git_buf_len(pi->buf), pi->payload))
+	if (pi->print_cb(d, h, &pi->line, pi->payload))
 		return callback_error();
 
 	return 0;
@@ -322,10 +367,8 @@ static int diff_print_patch_hunk(
 
 static int diff_print_patch_line(
 	const git_diff_delta *delta,
-	const git_diff_range *range,
-	char line_origin, /* GIT_DIFF_LINE value from above */
-	const char *content,
-	size_t content_len,
+	const git_diff_hunk *hunk,
+	const git_diff_line *line,
 	void *data)
 {
 	diff_print_info *pi = data;
@@ -333,49 +376,63 @@ static int diff_print_patch_line(
 	if (S_ISDIR(delta->new_file.mode))
 		return 0;
 
-	git_buf_clear(pi->buf);
-
-	if (line_origin == GIT_DIFF_LINE_ADDITION ||
-		line_origin == GIT_DIFF_LINE_DELETION ||
-		line_origin == GIT_DIFF_LINE_CONTEXT)
-		git_buf_printf(pi->buf, "%c%.*s", line_origin, (int)content_len, content);
-	else if (content_len > 0)
-		git_buf_printf(pi->buf, "%.*s", (int)content_len, content);
-
-	if (git_buf_oom(pi->buf))
-		return -1;
-
-	if (pi->print_cb(delta, range, line_origin,
-			git_buf_cstr(pi->buf), git_buf_len(pi->buf), pi->payload))
+	if (pi->print_cb(delta, hunk, line, pi->payload))
 		return callback_error();
 
 	return 0;
 }
 
-/* print a git_diff_list to an output callback in patch format */
-int git_diff_print_patch(
-	git_diff_list *diff,
-	git_diff_data_cb print_cb,
+/* print a git_diff to an output callback */
+int git_diff_print(
+	git_diff *diff,
+	git_diff_format_t format,
+	git_diff_line_cb print_cb,
 	void *payload)
 {
 	int error;
 	git_buf buf = GIT_BUF_INIT;
 	diff_print_info pi;
+	git_diff_file_cb print_file = NULL;
+	git_diff_hunk_cb print_hunk = NULL;
+	git_diff_line_cb print_line = NULL;
 
-	if (!(error = diff_print_info_init(&pi, &buf, diff, print_cb, payload)))
+	switch (format) {
+	case GIT_DIFF_FORMAT_PATCH:
+		print_file = diff_print_patch_file;
+		print_hunk = diff_print_patch_hunk;
+		print_line = diff_print_patch_line;
+		break;
+	case GIT_DIFF_FORMAT_PATCH_HEADER:
+		print_file = diff_print_patch_file;
+		break;
+	case GIT_DIFF_FORMAT_RAW:
+		print_file = diff_print_one_raw;
+		break;
+	case GIT_DIFF_FORMAT_NAME_ONLY:
+		print_file = diff_print_one_name_only;
+		break;
+	case GIT_DIFF_FORMAT_NAME_STATUS:
+		print_file = diff_print_one_name_status;
+		break;
+	default:
+		giterr_set(GITERR_INVALID, "Unknown diff output format (%d)", format);
+		return -1;
+	}
+
+	if (!(error = diff_print_info_init(
+			&pi, &buf, diff, format, print_cb, payload)))
 		error = git_diff_foreach(
-			diff, diff_print_patch_file, diff_print_patch_hunk,
-			diff_print_patch_line, &pi);
+			diff, print_file, print_hunk, print_line, &pi);
 
 	git_buf_free(&buf);
 
 	return error;
 }
 
-/* print a git_diff_patch to an output callback */
-int git_diff_patch_print(
-	git_diff_patch *patch,
-	git_diff_data_cb print_cb,
+/* print a git_patch to an output callback */
+int git_patch_print(
+	git_patch *patch,
+	git_diff_line_cb print_cb,
 	void *payload)
 {
 	int error;
@@ -385,8 +442,9 @@ int git_diff_patch_print(
 	assert(patch && print_cb);
 
 	if (!(error = diff_print_info_init(
-			&pi, &temp, git_diff_patch__diff(patch), print_cb, payload)))
-		error = git_diff_patch__invoke_callbacks(
+			&pi, &temp, git_patch__diff(patch),
+			GIT_DIFF_FORMAT_PATCH, print_cb, payload)))
+		error = git_patch__invoke_callbacks(
 			patch, diff_print_patch_file, diff_print_patch_hunk,
 			diff_print_patch_line, &pi);
 
@@ -397,26 +455,30 @@ int git_diff_patch_print(
 
 static int diff_print_to_buffer_cb(
 	const git_diff_delta *delta,
-	const git_diff_range *range,
-	char line_origin,
-	const char *content,
-	size_t content_len,
+	const git_diff_hunk *hunk,
+	const git_diff_line *line,
 	void *payload)
 {
 	git_buf *output = payload;
-	GIT_UNUSED(delta); GIT_UNUSED(range); GIT_UNUSED(line_origin);
-	return git_buf_put(output, content, content_len);
+	GIT_UNUSED(delta); GIT_UNUSED(hunk);
+
+	if (line->origin == GIT_DIFF_LINE_ADDITION ||
+		line->origin == GIT_DIFF_LINE_DELETION ||
+		line->origin == GIT_DIFF_LINE_CONTEXT)
+		git_buf_putc(output, line->origin);
+
+	return git_buf_put(output, line->content, line->content_len);
 }
 
-/* print a git_diff_patch to a string buffer */
-int git_diff_patch_to_str(
+/* print a git_patch to a string buffer */
+int git_patch_to_str(
 	char **string,
-	git_diff_patch *patch)
+	git_patch *patch)
 {
 	int error;
 	git_buf output = GIT_BUF_INIT;
 
-	error = git_diff_patch_print(patch, diff_print_to_buffer_cb, &output);
+	error = git_patch_print(patch, diff_print_to_buffer_cb, &output);
 
 	/* GIT_EUSER means git_buf_put in print_to_buffer_cb returned -1,
 	 * meaning a memory allocation failure, so just map to -1...

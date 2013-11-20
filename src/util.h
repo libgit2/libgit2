@@ -55,6 +55,9 @@ GIT_INLINE(char *) git__strndup(const char *str, size_t n)
 
 	ptr = (char*)git__malloc(length + 1);
 
+	if (!ptr)
+		return NULL;
+
 	if (length)
 		memcpy(ptr, str, length);
 
@@ -79,7 +82,10 @@ GIT_INLINE(void *) git__realloc(void *ptr, size_t size)
 	return new_ptr;
 }
 
-#define git__free(ptr) free(ptr)
+GIT_INLINE(void) git__free(void *ptr)
+{
+	free(ptr);
+}
 
 #define STRCMP_CASESELECT(IGNORE_CASE, STR1, STR2) \
 	((IGNORE_CASE) ? strcasecmp((STR1), (STR2)) : strcmp((STR1), (STR2)))
@@ -221,6 +227,9 @@ typedef void (*git_refcount_freeptr)(void *r);
 
 #define GIT_REFCOUNT_OWNER(r) (((git_refcount *)(r))->owner)
 
+#define GIT_REFCOUNT_VAL(r) git_atomic_get(&((git_refcount *)(r))->refcount)
+
+
 static signed char from_hex[] = {
 -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, /* 00 */
 -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, /* 10 */
@@ -291,6 +300,11 @@ GIT_INLINE(bool) git__isspace(int c)
 	return (c == ' ' || c == '\t' || c == '\n' || c == '\f' || c == '\r' || c == '\v' || c == 0x85 /* Unicode CR+LF */);
 }
 
+GIT_INLINE(bool) git__isspace_nonlf(int c)
+{
+	return (c == ' ' || c == '\t' || c == '\f' || c == '\r' || c == '\v' || c == 0x85 /* Unicode CR+LF */);
+}
+
 GIT_INLINE(bool) git__iswildcard(int c)
 {
 	return (c == '*' || c == '?' || c == '[');
@@ -338,5 +352,66 @@ GIT_INLINE(void) git__memzero(void *data, size_t size)
 		*scan++ = 0x0;
 #endif
 }
+
+#ifdef GIT_WIN32
+
+GIT_INLINE(double) git__timer(void)
+{
+	/* We need the initial tick count to detect if the tick
+	 * count has rolled over. */
+	static DWORD initial_tick_count = 0;
+
+	/* GetTickCount returns the number of milliseconds that have
+	 * elapsed since the system was started. */
+	DWORD count = GetTickCount();
+
+	if(initial_tick_count == 0) {
+		initial_tick_count = count;
+	} else if (count < initial_tick_count) {
+		/* The tick count has rolled over - adjust for it. */
+		count = (0xFFFFFFFF - initial_tick_count) + count;
+	}
+
+	return (double) count / (double) 1000;
+}
+
+#elif __APPLE__
+
+#include <mach/mach_time.h>
+
+GIT_INLINE(double) git__timer(void)
+{
+   uint64_t time = mach_absolute_time();
+   static double scaling_factor = 0;
+
+   if (scaling_factor == 0) {
+       mach_timebase_info_data_t info;
+       (void)mach_timebase_info(&info);
+       scaling_factor = (double)info.numer / (double)info.denom;
+   }
+
+   return (double)time * scaling_factor / 1.0E-9;
+}
+
+#else
+
+#include <sys/time.h>
+
+GIT_INLINE(double) git__timer(void)
+{
+	struct timespec tp;
+
+	if (clock_gettime(CLOCK_MONOTONIC, &tp) == 0) {
+		return (double) tp.tv_sec + (double) tp.tv_nsec / 1E-9;
+	} else {
+		/* Fall back to using gettimeofday */
+		struct timeval tv;
+		struct timezone tz;
+		gettimeofday(&tv, &tz);
+		return (double)tv.tv_sec + (double)tv.tv_usec / 1E-6;
+	}
+}
+
+#endif
 
 #endif /* INCLUDE_util_h__ */

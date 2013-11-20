@@ -1,7 +1,6 @@
 # Travis-CI Build for libgit2
 # see travis-ci.org for details
 
-# As CMake is not officially supported we use erlang VMs
 language: c
 
 compiler:
@@ -18,26 +17,18 @@ matrix:
    - compiler: i586-mingw32msvc-gcc
      env: OPTIONS="-DBUILD_CLAR=OFF -DWIN32=ON -DMINGW=ON"
 
-# Make sure CMake is installed
 install:
- - sudo apt-get update >/dev/null
- - sudo apt-get -q install cmake valgrind
+ - sudo apt-get -qq update
+ - sudo apt-get -qq install cmake libssh2-1-dev openssh-client openssh-server
 
-# Run the Build script
+# Run the Build script and tests
 script:
- - mkdir _temp
- - git init --bare _temp/test.git
- - git daemon --listen=localhost --export-all --enable=receive-pack --base-path=_temp _temp 2>/dev/null &
- - export GITTEST_REMOTE_URL="git://localhost/test.git"
- - mkdir _build
- - cd _build
- - cmake .. -DCMAKE_INSTALL_PREFIX=../_install $OPTIONS
- - cmake --build . --target install
- - ctest -V .
+ - script/cibuild.sh
 
 # Run Tests
 after_success:
- - valgrind --leak-check=full --show-reachable=yes --suppressions=../libgit2_clar.supp ./libgit2_clar -ionline
+ - sudo apt-get -qq install valgrind
+ - valgrind --leak-check=full --show-reachable=yes --suppressions=./libgit2_clar.supp _build/libgit2_clar -ionline
 
 # Only watch the development branch
 branches:

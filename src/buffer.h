@@ -9,17 +9,25 @@
 
 #include "common.h"
 #include "git2/strarray.h"
+#include "git2/buffer.h"
 #include <stdarg.h>
 
-typedef struct {
-	char *ptr;
-	size_t asize, size;
-} git_buf;
+/* typedef struct {
+ *  	char   *ptr;
+ *  	size_t asize, size;
+ * } git_buf;
+ */
 
 extern char git_buf__initbuf[];
 extern char git_buf__oom[];
 
+/* Use to initialize buffer structure when git_buf is on stack */
 #define GIT_BUF_INIT { git_buf__initbuf, 0, 0 }
+
+GIT_INLINE(bool) git_buf_is_allocated(const git_buf *buf)
+{
+	return (buf->ptr != NULL && buf->asize > 0);
+}
 
 /**
  * Initialize a git_buf structure.
@@ -32,27 +40,16 @@ extern void git_buf_init(git_buf *buf, size_t initial_size);
 /**
  * Attempt to grow the buffer to hold at least `target_size` bytes.
  *
- * If the allocation fails, this will return an error.  If mark_oom is true,
+ * If the allocation fails, this will return an error.  If `mark_oom` is true,
  * this will mark the buffer as invalid for future operations; if false,
  * existing buffer content will be preserved, but calling code must handle
- * that buffer was not expanded.
+ * that buffer was not expanded.  If `preserve_external` is true, then any
+ * existing data pointed to be `ptr` even if `asize` is zero will be copied
+ * into the newly allocated buffer.
  */
-extern int git_buf_try_grow(git_buf *buf, size_t target_size, bool mark_oom);
+extern int git_buf_try_grow(
+	git_buf *buf, size_t target_size, bool mark_oom, bool preserve_external);
 
-/**
- * Grow the buffer to hold at least `target_size` bytes.
- *
- * If the allocation fails, this will return an error and the buffer will be
- * marked as invalid for future operations, invaliding contents.
- *
- * @return 0 on success or -1 on failure
- */
-GIT_INLINE(int) git_buf_grow(git_buf *buf, size_t target_size)
-{
-	return git_buf_try_grow(buf, target_size, true);
-}
-
-extern void git_buf_free(git_buf *buf);
 extern void git_buf_swap(git_buf *buf_a, git_buf *buf_b);
 extern char *git_buf_detach(git_buf *buf);
 extern void git_buf_attach(git_buf *buf, char *ptr, size_t asize);
@@ -81,7 +78,6 @@ GIT_INLINE(bool) git_buf_oom(const git_buf *buf)
  * return code of these functions and call them in a series then just call
  * git_buf_oom at the end.
  */
-int git_buf_set(git_buf *buf, const char *data, size_t len);
 int git_buf_sets(git_buf *buf, const char *string);
 int git_buf_putc(git_buf *buf, char c);
 int git_buf_put(git_buf *buf, const char *data, size_t len);
@@ -91,6 +87,7 @@ int git_buf_vprintf(git_buf *buf, const char *format, va_list ap);
 void git_buf_clear(git_buf *buf);
 void git_buf_consume(git_buf *buf, const char *end);
 void git_buf_truncate(git_buf *buf, size_t len);
+void git_buf_shorten(git_buf *buf, size_t amount);
 void git_buf_rtruncate_at_char(git_buf *path, char separator);
 
 int git_buf_join_n(git_buf *buf, char separator, int nbuf, ...);

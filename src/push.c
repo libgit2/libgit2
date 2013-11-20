@@ -70,6 +70,25 @@ int git_push_set_options(git_push *push, const git_push_options *opts)
 	return 0;
 }
 
+int git_push_set_callbacks(
+	git_push *push,
+	git_packbuilder_progress pack_progress_cb,
+	void *pack_progress_cb_payload,
+	git_push_transfer_progress transfer_progress_cb,
+	void *transfer_progress_cb_payload)
+{
+	if (!push)
+		return -1;
+
+	push->pack_progress_cb = pack_progress_cb;
+	push->pack_progress_cb_payload = pack_progress_cb_payload;
+
+	push->transfer_progress_cb = transfer_progress_cb;
+	push->transfer_progress_cb_payload = transfer_progress_cb_payload;
+
+	return 0;
+}
+
 static void free_refspec(push_spec *spec)
 {
 	if (spec == NULL)
@@ -233,6 +252,37 @@ on_error:
 	return error;
 }
 
+/**
+ * Insert all tags until we find a non-tag object, which is returned
+ * in `out`.
+ */
+static int enqueue_tag(git_object **out, git_push *push, git_oid *id)
+{
+	git_object *obj = NULL, *target = NULL;
+	int error;
+
+	if ((error = git_object_lookup(&obj, push->repo, id, GIT_OBJ_TAG)) < 0)
+		return error;
+
+	while (git_object_type(obj) == GIT_OBJ_TAG) {
+		if ((error = git_packbuilder_insert(push->pb, git_object_id(obj), NULL)) < 0)
+			break;
+
+		if ((error = git_tag_target(&target, (git_tag *) obj)) < 0)
+			break;
+
+		git_object_free(obj);
+		obj = target;
+	}
+
+	if (error < 0)
+		git_object_free(obj);
+	else
+		*out = obj;
+
+	return error;
+}
+
 static int revwalk(git_vector *commits, git_push *push)
 {
 	git_remote_head *head;
@@ -265,20 +315,10 @@ static int revwalk(git_vector *commits, git_push *push)
 			goto on_error;
 
 		if (type == GIT_OBJ_TAG) {
-			git_tag *tag;
 			git_object *target;
 
-			if (git_packbuilder_insert(push->pb, &spec->loid, NULL) < 0)
+			if ((error = enqueue_tag(&target, push, &spec->loid)) < 0)
 				goto on_error;
-
-			if (git_tag_lookup(&tag, push->repo, &spec->loid) < 0)
-				goto on_error;
-
-			if (git_tag_peel(&target, tag) < 0) {
-				git_tag_free(tag);
-				goto on_error;
-			}
-			git_tag_free(tag);
 
 			if (git_object_type(target) == GIT_OBJ_COMMIT) {
 				if (git_revwalk_push(rw, git_object_id(target)) < 0) {
@@ -542,7 +582,7 @@ static int calculate_work(git_push *push)
 
 static int do_push(git_push *push)
 {
-	int error;
+	int error = 0;
 	git_transport *transport = push->remote->transport;
 
 	if (!transport->push) {
@@ -562,28 +602,36 @@ static int do_push(git_push *push)
 
 	git_packbuilder_set_threads(push->pb, push->pb_parallelism);
 
+	if (push->pack_progress_cb)
+		if ((error = git_packbuilder_set_callbacks(push->pb, push->pack_progress_cb, push->pack_progress_cb_payload)) < 0)
+			goto on_error;
+
 	if ((error = calculate_work(push)) < 0 ||
 		(error = queue_objects(push)) < 0 ||
 		(error = transport->push(transport, push)) < 0)
 		goto on_error;
-
-	error = 0;
 
 on_error:
 	git_packbuilder_free(push->pb);
 	return error;
 }
 
-static int cb_filter_refs(git_remote_head *ref, void *data)
-{
-	git_remote *remote = (git_remote *) data;
-	return git_vector_insert(&remote->refs, ref);
-}
-
 static int filter_refs(git_remote *remote)
 {
+	const git_remote_head **heads;
+	size_t heads_len, i;
+
 	git_vector_clear(&remote->refs);
-	return git_remote_ls(remote, cb_filter_refs, remote);
+
+	if (git_remote_ls(&heads, &heads_len, remote) < 0)
+		return -1;
+
+	for (i = 0; i < heads_len; i++) {
+		if (git_vector_insert(&remote->refs, (void *)heads[i]) < 0)
+			return -1;
+	}
+
+	return 0;
 }
 
 int git_push_finish(git_push *push)

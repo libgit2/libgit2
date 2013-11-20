@@ -23,8 +23,13 @@ static int git_smart__recv_cb(gitno_buffer *buf)
 
 	buf->offset += bytes_read;
 
-	if (t->packetsize_cb)
-		t->packetsize_cb(bytes_read, t->packetsize_payload);
+	if (t->packetsize_cb && !t->cancelled.val)
+		if (t->packetsize_cb(bytes_read, t->packetsize_payload)) {
+			git_atomic_set(&t->cancelled, 1);
+
+			giterr_clear();
+			return GIT_EUSER;
+		}
 
 	return (int)(buf->offset - old_len);
 }
@@ -54,6 +59,24 @@ static int git_smart__set_callbacks(
 	t->progress_cb = progress_cb;
 	t->error_cb = error_cb;
 	t->message_cb_payload = message_cb_payload;
+
+	return 0;
+}
+
+int git_smart__update_heads(transport_smart *t)
+{
+	size_t i;
+	git_pkt *pkt;
+
+	git_vector_clear(&t->heads);
+	git_vector_foreach(&t->refs, i, pkt) {
+		git_pkt_ref *ref = (git_pkt_ref *) pkt;
+		if (pkt->type != GIT_PKT_REF)
+			continue;
+
+		if (git_vector_insert(&t->heads, &ref->head) < 0)
+			return -1;
+	}
 
 	return 0;
 }
@@ -135,6 +158,9 @@ static int git_smart__connect(
 		git_pkt_free((git_pkt *)first);
 	}
 
+	/* Keep a list of heads for _ls */
+	git_smart__update_heads(t);
+
 	if (t->rpc && git_smart__reset_stream(t, false) < 0)
 		return -1;
 
@@ -144,28 +170,17 @@ static int git_smart__connect(
 	return 0;
 }
 
-static int git_smart__ls(git_transport *transport, git_headlist_cb list_cb, void *payload)
+static int git_smart__ls(const git_remote_head ***out, size_t *size, git_transport *transport)
 {
 	transport_smart *t = (transport_smart *)transport;
-	unsigned int i;
-	git_pkt *p = NULL;
 
 	if (!t->have_refs) {
 		giterr_set(GITERR_NET, "The transport has not yet loaded the refs");
 		return -1;
 	}
 
-	git_vector_foreach(&t->refs, i, p) {
-		git_pkt_ref *pkt = NULL;
-
-		if (p->type != GIT_PKT_REF)
-			continue;
-
-		pkt = (git_pkt_ref *)p;
-
-		if (list_cb(&pkt->head, payload))
-			return GIT_EUSER;
-	}
+	*out = (const git_remote_head **) t->heads.contents;
+	*size = t->heads.length;
 
 	return 0;
 }
@@ -288,6 +303,7 @@ static void git_smart__free(git_transport *transport)
 	/* Free the subtransport */
 	t->wrapped->free(t->wrapped);
 
+	git_vector_free(&t->heads);
 	git_vector_foreach(refs, i, p)
 		git_pkt_free(p);
 
@@ -331,6 +347,11 @@ int git_transport_smart(git_transport **out, git_remote *owner, void *param)
 	t->rpc = definition->rpc;
 
 	if (git_vector_init(&t->refs, 16, ref_name_cmp) < 0) {
+		git__free(t);
+		return -1;
+	}
+
+	if (git_vector_init(&t->heads, 16, ref_name_cmp) < 0) {
 		git__free(t);
 		return -1;
 	}

@@ -17,6 +17,7 @@
 
 __KHASH_TYPE(str, const char *, void *);
 typedef khash_t(str) git_strmap;
+typedef khiter_t git_strmap_iter;
 
 #define GIT__USE_STRMAP \
 	__KHASH_IMPL(str, static kh_inline, const char *, void *, 1, kh_str_hash_func, kh_str_hash_equal)
@@ -31,7 +32,9 @@ typedef khash_t(str) git_strmap;
 #define git_strmap_valid_index(h, idx) (idx != kh_end(h))
 
 #define git_strmap_exists(h, k) (kh_get(str, h, k) != kh_end(h))
+#define git_strmap_has_data(h, idx) kh_exist(h, idx)
 
+#define git_strmap_key(h, idx)             kh_key(h, idx)
 #define git_strmap_value_at(h, idx)        kh_val(h, idx)
 #define git_strmap_set_value_at(h, idx, v) kh_val(h, idx) = v
 #define git_strmap_delete_at(h, idx)       kh_del(str, h, idx)
@@ -60,5 +63,13 @@ typedef khash_t(str) git_strmap;
 
 #define git_strmap_foreach		kh_foreach
 #define git_strmap_foreach_value	kh_foreach_value
+
+#define git_strmap_begin		kh_begin
+#define git_strmap_end		kh_end
+
+int git_strmap_next(
+	void **data,
+	git_strmap_iter* iter,
+	git_strmap *map);
 
 #endif

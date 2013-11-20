@@ -48,7 +48,7 @@ typedef struct {
  *			should be preallocated
  * @param cmppri the callback function to compare two nodes of the queue
  *
- * @Return the handle or NULL for insufficent memory
+ * @return the handle or NULL for insufficent memory
  */
 int git_pqueue_init(git_pqueue *q, size_t n, git_pqueue_cmp cmppri);
 
@@ -83,8 +83,7 @@ int git_pqueue_insert(git_pqueue *q, void *d);
 
 /**
  * pop the highest-ranking item from the queue.
- * @param p the queue
- * @param d where to copy the entry to
+ * @param q the queue
  * @return NULL on error, otherwise the entry
  */
 void *git_pqueue_pop(git_pqueue *q);
@@ -93,7 +92,6 @@ void *git_pqueue_pop(git_pqueue *q);
 /**
  * access highest-ranking item without removing it.
  * @param q the queue
- * @param d the entry
  * @return NULL on error, otherwise the entry
  */
 void *git_pqueue_peek(git_pqueue *q);

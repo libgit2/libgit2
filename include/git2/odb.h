@@ -120,7 +120,7 @@ GIT_EXTERN(int) git_odb_read(git_odb_object **out, git_odb *db, const git_oid *i
  * @param db database to search for the object in.
  * @param short_id a prefix of the id of the object to read.
  * @param len the length of the prefix
- * @return 
+ * @return
  * - 0 if the object was read;
  * - GIT_ENOTFOUND if the object is not in the database.
  * - GIT_EAMBIGUOUS if the prefix is ambiguous (several objects match the prefix)
@@ -219,18 +219,12 @@ GIT_EXTERN(int) git_odb_write(git_oid *out, git_odb *odb, const void *data, size
  * The type and final length of the object must be specified
  * when opening the stream.
  *
- * The returned stream will be of type `GIT_STREAM_WRONLY` and
- * will have the following methods:
+ * The returned stream will be of type `GIT_STREAM_WRONLY`, and it
+ * won't be effective until `git_odb_stream_finalize_write` is called
+ * and returns without an error
  *
- *		- stream->write: write `n` bytes into the stream
- *		- stream->finalize_write: close the stream and store the object in
- *			the odb
- *		- stream->free: free the stream
- *
- * The streaming write won't be effective until `stream->finalize_write`
- * is called and returns without an error
- *
- * The stream must always be free'd or will leak memory.
+ * The stream must always be freed when done with `git_odb_stream_free` or
+ * will leak memory.
  *
  * @see git_odb_stream
  *
@@ -241,6 +235,48 @@ GIT_EXTERN(int) git_odb_write(git_oid *out, git_odb *odb, const void *data, size
  * @return 0 if the stream was created; error code otherwise
  */
 GIT_EXTERN(int) git_odb_open_wstream(git_odb_stream **out, git_odb *db, size_t size, git_otype type);
+
+/**
+ * Write to an odb stream
+ *
+ * This method will fail if the total number of received bytes exceeds the
+ * size declared with `git_odb_open_wstream()`
+ *
+ * @param stream the stream
+ * @param buffer the data to write
+ * @param len the buffer's length
+ * @return 0 if the write succeeded; error code otherwise
+ */
+GIT_EXTERN(int) git_odb_stream_write(git_odb_stream *stream, const char *buffer, size_t len);
+
+/**
+ * Finish writing to an odb stream
+ *
+ * The object will take its final name and will be available to the
+ * odb.
+ *
+ * This method will fail if the total number of received bytes
+ * differs from the size declared with `git_odb_open_wstream()`
+ *
+ * @param out pointer to store the resulting object's id
+ * @param stream the stream
+ * @return 0 on success; an error code otherwise
+ */
+GIT_EXTERN(int) git_odb_stream_finalize_write(git_oid *out, git_odb_stream *stream);
+
+/**
+ * Read from an odb stream
+ *
+ * Most backends don't implement streaming reads
+ */
+GIT_EXTERN(int) git_odb_stream_read(git_odb_stream *stream, char *buffer, size_t len);
+
+/**
+ * Free an odb stream
+ *
+ * @param stream the stream to free
+ */
+GIT_EXTERN(void) git_odb_stream_free(git_odb_stream *stream);
 
 /**
  * Open a stream to read an object from the ODB
@@ -320,6 +356,20 @@ GIT_EXTERN(int) git_odb_hash(git_oid *out, const void *data, size_t len, git_oty
  * @return 0 or an error code
  */
 GIT_EXTERN(int) git_odb_hashfile(git_oid *out, const char *path, git_otype type);
+
+/**
+ * Create a copy of an odb_object
+ *
+ * The returned copy must be manually freed with `git_odb_object_free`.
+ * Note that because of an implementation detail, the returned copy will be
+ * the same pointer as `source`: the object is internally refcounted, so the
+ * copy still needs to be freed twice.
+ *
+ * @param dest pointer where to store the copy
+ * @param source object to copy
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_odb_object_dup(git_odb_object **dest, git_odb_object *source);
 
 /**
  * Close an ODB object

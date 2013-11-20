@@ -38,13 +38,21 @@
  *   `git_packbuilder_set_threads` can be used to adjust the number of
  *   threads used for the process.
  *
- * See tests-clar/pack/packbuilder.c for an example.
+ * See tests/pack/packbuilder.c for an example.
  *
  * @ingroup Git
  * @{
  */
 GIT_BEGIN_DECL
 
+/**
+ * Stages that are reported by the packbuilder progress callback.
+ */
+typedef enum {
+	GIT_PACKBUILDER_ADDING_OBJECTS = 0,
+	GIT_PACKBUILDER_DELTAFICATION = 1,
+} git_packbuilder_stage_t;
+	
 /**
  * Initialize a new packbuilder
  *
@@ -111,6 +119,7 @@ GIT_EXTERN(int) git_packbuilder_insert_commit(git_packbuilder *pb, const git_oid
  *
  * @param pb The packbuilder
  * @param path to the directory where the packfile and index should be stored
+ * @param mode permissions to use creating a packfile or 0 for defaults
  * @param progress_cb function to call with progress information from the indexer (optional)
  * @param progress_cb_payload payload for the progress callback (optional)
  *
@@ -119,8 +128,19 @@ GIT_EXTERN(int) git_packbuilder_insert_commit(git_packbuilder *pb, const git_oid
 GIT_EXTERN(int) git_packbuilder_write(
 	git_packbuilder *pb,
 	const char *path,
+	unsigned int mode,
 	git_transfer_progress_callback progress_cb,
 	void *progress_cb_payload);
+
+/**
+* Get the packfile's hash
+*
+* A packfile's name is derived from the sorted hashing of all object
+* names. This is only correct after the packfile has been written.
+*
+* @param pb The packbuilder object
+*/
+GIT_EXTERN(const git_oid *) git_packbuilder_hash(git_packbuilder *pb);
 
 typedef int (*git_packbuilder_foreach_cb)(void *buf, size_t size, void *payload);
 /**
@@ -137,7 +157,7 @@ GIT_EXTERN(int) git_packbuilder_foreach(git_packbuilder *pb, git_packbuilder_for
  * Get the total number of objects the packbuilder will write out
  *
  * @param pb the packbuilder
- * @return
+ * @return the number of objects in the packfile
  */
 GIT_EXTERN(uint32_t) git_packbuilder_object_count(git_packbuilder *pb);
 
@@ -145,9 +165,31 @@ GIT_EXTERN(uint32_t) git_packbuilder_object_count(git_packbuilder *pb);
  * Get the number of objects the packbuilder has already written out
  *
  * @param pb the packbuilder
- * @return
+ * @return the number of objects which have already been written
  */
 GIT_EXTERN(uint32_t) git_packbuilder_written(git_packbuilder *pb);
+
+/** Packbuilder progress notification function */
+typedef int (*git_packbuilder_progress)(
+	int stage,
+	unsigned int current,
+	unsigned int total,
+	void *payload);
+
+/**
+ * Set the callbacks for a packbuilder
+ *
+ * @param pb The packbuilder object
+ * @param progress_cb Function to call with progress information during
+ * pack building. Be aware that this is called inline with pack building
+ * operations, so performance may be affected.
+ * @param progress_cb_payload Payload for progress callback.
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_packbuilder_set_callbacks(
+	git_packbuilder *pb,
+	git_packbuilder_progress progress_cb,
+	void *progress_cb_payload);
 
 /**
  * Free the packbuilder and all associated data

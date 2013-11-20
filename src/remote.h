@@ -21,16 +21,15 @@ struct git_remote {
 	char *pushurl;
 	git_vector refs;
 	git_vector refspecs;
-	git_cred_acquire_cb cred_acquire_cb;
-	void *cred_acquire_payload;
+	git_vector active_refspecs;
 	git_transport *transport;
 	git_repository *repo;
 	git_remote_callbacks callbacks;
 	git_transfer_progress stats;
 	unsigned int need_pack;
 	git_remote_autotag_option_t download_tags;
-	unsigned int check_cert;
-	unsigned int update_fetchhead;
+	int check_cert;
+	int update_fetchhead;
 };
 
 const char* git_remote__urlfordirection(struct git_remote *remote, int direction);

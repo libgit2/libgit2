@@ -27,24 +27,43 @@ OPTION( BUILD_EXAMPLES		"Build library usage example apps"		OFF )
 OPTION( TAGS				"Generate tags"							OFF )
 OPTION( PROFILE				"Generate profiling information"		OFF )
 OPTION( ENABLE_TRACE		"Enables tracing support"				OFF )
-OPTION( LIBGIT2_FILENAME	"Name of the produced binary" OFF )
+OPTION( LIBGIT2_FILENAME	"Name of the produced binary"			OFF )
+
+OPTION( ANDROID				"Build for android NDK"	 				OFF )
+
+OPTION( USE_ICONV			"Link with and use iconv library" 		OFF )
+OPTION( USE_SSH				"Link with libssh to enable SSH support" ON )
+
+IF(APPLE)
+	SET( USE_ICONV ON )
+ENDIF()
 
 IF(MSVC)
-	# This option is only availalbe when building with MSVC. By default,
-	# libgit2 is build using the stdcall calling convention, as that's what
-	# the CLR expects by default and how the Windows API is built.
+	# This option is only available when building with MSVC. By default, libgit2
+	# is build using the cdecl calling convention, which is useful if you're
+	# writing C. However, the CLR and Win32 API both expect stdcall.
 	#
-	# If you are writing a C or C++ program and want to link to libgit2, you
-	# have to either:
-	# - Add /Gz to the compiler options of _your_ program / library.
-	# - Turn this off by invoking CMake with the "-DSTDCALL=Off" argument.
-	#
-	OPTION( STDCALL			"Build libgit2 with the __stdcall convention"	ON  )
+	# If you are writing a CLR program and want to link to libgit2, you'll want
+	# to turn this on by invoking CMake with the "-DSTDCALL=ON" argument.
+	OPTION( STDCALL			"Build libgit2 with the __stdcall convention"	OFF  )
 
 	# This option must match the settings used in your program, in particular if you
 	# are linking statically
 	OPTION( STATIC_CRT		"Link the static CRT libraries"	ON  )
+
+	# By default, libgit2 is built with WinHTTP.  To use the built-in
+	# HTTP transport, invoke CMake with the "-DWINHTTP=OFF" argument.
+	OPTION( WINHTTP			"Use Win32 WinHTTP routines"	ON  )
 ENDIF()
+
+# This variable will contain the libraries we need to put into
+# libgit2.pc's Requires.private. That is, what we're linking to or
+# what someone who's statically linking us needs to link to.
+SET(LIBGIT2_PC_REQUIRES "")
+# This will be set later if we use the system's http-parser library or
+# use iconv (OSX) and will be written to the Libs.private field in the
+# pc file.
+SET(LIBGIT2_PC_LIBS "")
 
 # Installation paths
 #
@@ -57,7 +76,18 @@ FUNCTION(TARGET_OS_LIBRARIES target)
 		TARGET_LINK_LIBRARIES(${target} ws2_32)
 	ELSEIF(CMAKE_SYSTEM_NAME MATCHES "(Solaris|SunOS)")
 		TARGET_LINK_LIBRARIES(${target} socket nsl)
-	ENDIF ()
+		SET(LIBGIT2_PC_LIBS "${LIBGIT2_PC_LIBS} -lsocket -lnsl" PARENT_SCOPE)
+	ELSEIF(CMAKE_SYSTEM_NAME MATCHES "Linux")
+		TARGET_LINK_LIBRARIES(${target} rt)
+		SET(LIBGIT2_PC_LIBS "${LIBGIT2_PC_LIBS} -lrt" PARENT_SCOPE)
+	ENDIF()
+
+	IF(USE_ICONV)
+		TARGET_LINK_LIBRARIES(${target} iconv)
+		ADD_DEFINITIONS(-DGIT_USE_ICONV)
+		SET(LIBGIT2_PC_LIBS "${LIBGIT2_PC_LIBS} -liconv" PARENT_SCOPE)
+	ENDIF()
+
 	IF(THREADSAFE)
 		TARGET_LINK_LIBRARIES(${target} ${CMAKE_THREAD_LIBS_INIT})
 	ENDIF()
@@ -67,7 +97,7 @@ ENDFUNCTION()
 # explorer does. This is esp. useful with the libgit2_clar project, were
 # usually 2 or more files share the same name.  Sadly, this file grouping
 # is a per-directory option in cmake and not per-target, resulting in
-# empty virtual folders "tests-clar" for the git2.dll
+# empty virtual folders "tests" for the git2.dll
 FUNCTION(MSVC_SPLIT_SOURCES target)
 	IF(MSVC_IDE)
 		GET_TARGET_PROPERTY(sources ${target} SOURCES)
@@ -96,8 +126,10 @@ SET(LIBGIT2_VERSION_STRING "${LIBGIT2_VERSION_MAJOR}.${LIBGIT2_VERSION_MINOR}.${
 # Find required dependencies
 INCLUDE_DIRECTORIES(src include)
 
-IF (WIN32 AND NOT MINGW)
+IF (WIN32 AND WINHTTP AND NOT MINGW)
 	ADD_DEFINITIONS(-DGIT_WINHTTP)
+	INCLUDE_DIRECTORIES(deps/http-parser)
+	FILE(GLOB SRC_HTTP deps/http-parser/*.c deps/http-parser/*.h)
 ELSE ()
 	IF (NOT AMIGA)
 		FIND_PACKAGE(OpenSSL)
@@ -107,10 +139,11 @@ ELSE ()
 	IF (HTTP_PARSER_FOUND AND HTTP_PARSER_VERSION_MAJOR EQUAL 2)
 		INCLUDE_DIRECTORIES(${HTTP_PARSER_INCLUDE_DIRS})
 		LINK_LIBRARIES(${HTTP_PARSER_LIBRARIES})
+		SET(LIBGIT2_PC_LIBS "${LIBGIT2_PC_LIBS} -lhttp_parser")
 	ELSE()
 		MESSAGE("http-parser was not found or is too old; using bundled 3rd-party sources.")
 		INCLUDE_DIRECTORIES(deps/http-parser)
-		FILE(GLOB SRC_HTTP deps/http-parser/*.c)
+		FILE(GLOB SRC_HTTP deps/http-parser/*.c deps/http-parser/*.h)
 	ENDIF()
 ENDIF()
 
@@ -120,6 +153,7 @@ IF (WIN32 AND NOT MINGW AND NOT SHA1_TYPE STREQUAL "builtin")
 	FILE(GLOB SRC_SHA1 src/hash/hash_win32.c)
 ELSEIF (OPENSSL_FOUND AND NOT SHA1_TYPE STREQUAL "builtin")
 	ADD_DEFINITIONS(-DOPENSSL_SHA1)
+	SET(LIBGIT2_PC_REQUIRES "${LIBGIT2_PC_REQUIRES} openssl")
 ELSE()
 	FILE(GLOB SRC_SHA1 src/hash/hash_generic.c)
 ENDIF()
@@ -130,7 +164,7 @@ IF (ENABLE_TRACE STREQUAL "ON")
 ENDIF()
 
 # Include POSIX regex when it is required
-IF(WIN32 OR AMIGA)
+IF(WIN32 OR AMIGA OR ANDROID)
 	INCLUDE_DIRECTORIES(deps/regex)
 	SET(SRC_REGEX deps/regex/regex.c)
 ENDIF()
@@ -142,23 +176,30 @@ FIND_PACKAGE(ZLIB QUIET)
 IF (ZLIB_FOUND)
 	INCLUDE_DIRECTORIES(${ZLIB_INCLUDE_DIRS})
 	LINK_LIBRARIES(${ZLIB_LIBRARIES})
+	IF(APPLE)
+		SET(LIBGIT2_PC_LIBS "${LIBGIT2_PC_LIBS} -lz")
+	ELSE()
+		SET(LIBGIT2_PC_REQUIRES "${LIBGIT2_PC_REQUIRES} zlib")
+	ENDIF()
 	# Fake the message CMake would have shown
 	MESSAGE("-- Found zlib: ${ZLIB_LIBRARY}")
 ELSE()
 	MESSAGE( "zlib was not found; using bundled 3rd-party sources." )
 	INCLUDE_DIRECTORIES(deps/zlib)
 	ADD_DEFINITIONS(-DNO_VIZ -DSTDC -DNO_GZIP)
-	FILE(GLOB SRC_ZLIB deps/zlib/*.c)
+	FILE(GLOB SRC_ZLIB deps/zlib/*.c deps/zlib/*.h)
 ENDIF()
 
-IF(NOT LIBSSH2_LIBRARY)
+IF (USE_SSH AND NOT MINGW)
 	FIND_PACKAGE(LIBSSH2 QUIET)
 ENDIF()
 IF (LIBSSH2_FOUND)
 	ADD_DEFINITIONS(-DGIT_SSH)
 	INCLUDE_DIRECTORIES(${LIBSSH2_INCLUDE_DIR})
+	SET(LIBGIT2_PC_REQUIRES "${LIBGIT2_PC_REQUIRES} libssh2")
 	SET(SSH_LIBRARIES ${LIBSSH2_LIBRARIES})
 ENDIF()
+
 
 # Platform specific compilation flags
 IF (MSVC)
@@ -285,19 +326,19 @@ ENDIF()
 ADD_DEFINITIONS(-D_FILE_OFFSET_BITS=64)
 
 # Collect sourcefiles
-FILE(GLOB SRC_H include/git2/*.h)
+FILE(GLOB SRC_H include/git2.h include/git2/*.h include/git2/sys/*.h)
 
 # On Windows use specific platform sources
 IF (WIN32 AND NOT CYGWIN)
 	ADD_DEFINITIONS(-DWIN32 -D_WIN32_WINNT=0x0501)
-	FILE(GLOB SRC_OS src/win32/*.c)
+	FILE(GLOB SRC_OS src/win32/*.c src/win32/*.h)
 ELSEIF (AMIGA)
 	ADD_DEFINITIONS(-DNO_ADDRINFO -DNO_READDIR_R)
-	FILE(GLOB SRC_OS src/amiga/*.c)
+	FILE(GLOB SRC_OS src/amiga/*.c src/amiga/*.h)
 ELSE()
-	FILE(GLOB SRC_OS src/unix/*.c)
+	FILE(GLOB SRC_OS src/unix/*.c src/unix/*.h)
 ENDIF()
-FILE(GLOB SRC_GIT2 src/*.c src/transports/*.c src/xdiff/*.c)
+FILE(GLOB SRC_GIT2 src/*.c src/*.h src/transports/*.c src/transports/*.h src/xdiff/*.c src/xdiff/*.h)
 
 # Determine architecture of the machine
 IF (CMAKE_SIZEOF_VOID_P EQUAL 8)
@@ -309,7 +350,7 @@ ELSE()
 ENDIF()
 
 # Compile and link libgit2
-ADD_LIBRARY(git2 ${SRC_GIT2} ${SRC_OS} ${SRC_ZLIB} ${SRC_HTTP} ${SRC_REGEX} ${SRC_SHA1} ${WIN_RC})
+ADD_LIBRARY(git2 ${SRC_H} ${SRC_GIT2} ${SRC_OS} ${SRC_ZLIB} ${SRC_HTTP} ${SRC_REGEX} ${SRC_SHA1} ${WIN_RC})
 TARGET_LINK_LIBRARIES(git2 ${SSL_LIBRARIES})
 TARGET_LINK_LIBRARIES(git2 ${SSH_LIBRARIES})
 TARGET_OS_LIBRARIES(git2)
@@ -352,19 +393,19 @@ INSTALL(FILES include/git2.h DESTINATION ${INCLUDE_INSTALL_DIR} )
 IF (BUILD_CLAR)
 	FIND_PACKAGE(PythonInterp REQUIRED)
 
-	SET(CLAR_FIXTURES "${CMAKE_CURRENT_SOURCE_DIR}/tests-clar/resources/")
-	SET(CLAR_PATH "${CMAKE_CURRENT_SOURCE_DIR}/tests-clar")
-	SET(CLAR_RESOURCES "${CMAKE_CURRENT_SOURCE_DIR}/tests-clar/resources" CACHE PATH "Path to test resources.")
+	SET(CLAR_FIXTURES "${CMAKE_CURRENT_SOURCE_DIR}/tests/resources/")
+	SET(CLAR_PATH "${CMAKE_CURRENT_SOURCE_DIR}/tests")
+	SET(CLAR_RESOURCES "${CMAKE_CURRENT_SOURCE_DIR}/tests/resources" CACHE PATH "Path to test resources.")
 	ADD_DEFINITIONS(-DCLAR_FIXTURE_PATH=\"${CLAR_FIXTURES}\")
 	ADD_DEFINITIONS(-DCLAR_RESOURCES=\"${TEST_RESOURCES}\")
 
 	INCLUDE_DIRECTORIES(${CLAR_PATH})
-	FILE(GLOB_RECURSE SRC_TEST ${CLAR_PATH}/*/*.c)
+	FILE(GLOB_RECURSE SRC_TEST ${CLAR_PATH}/*/*.c ${CLAR_PATH}/*/*.h)
 	SET(SRC_CLAR "${CLAR_PATH}/main.c" "${CLAR_PATH}/clar_libgit2.c" "${CLAR_PATH}/clar.c")
 
 	ADD_CUSTOM_COMMAND(
 		OUTPUT ${CLAR_PATH}/clar.suite
-		COMMAND ${PYTHON_EXECUTABLE} generate.py -f -xonline .
+		COMMAND ${PYTHON_EXECUTABLE} generate.py -f -xonline -xstress .
 		DEPENDS ${SRC_TEST}
 		WORKING_DIRECTORY ${CLAR_PATH}
 	)
@@ -373,7 +414,7 @@ IF (BUILD_CLAR)
 		${CLAR_PATH}/clar.c
 		PROPERTIES OBJECT_DEPENDS ${CLAR_PATH}/clar.suite)
 
-	ADD_EXECUTABLE(libgit2_clar ${SRC_GIT2} ${SRC_OS} ${SRC_CLAR} ${SRC_TEST} ${SRC_ZLIB} ${SRC_HTTP} ${SRC_REGEX} ${SRC_SHA1})
+	ADD_EXECUTABLE(libgit2_clar ${SRC_H} ${SRC_GIT2} ${SRC_OS} ${SRC_CLAR} ${SRC_TEST} ${SRC_ZLIB} ${SRC_HTTP} ${SRC_REGEX} ${SRC_SHA1})
 
 	TARGET_LINK_LIBRARIES(libgit2_clar ${SSL_LIBRARIES})
 	TARGET_LINK_LIBRARIES(libgit2_clar ${SSH_LIBRARIES})
@@ -409,23 +450,5 @@ IF (TAGS)
 ENDIF ()
 
 IF (BUILD_EXAMPLES)
-	FILE(GLOB_RECURSE EXAMPLE_SRC examples/network/*.c)
-	ADD_EXECUTABLE(cgit2 ${EXAMPLE_SRC})
-	IF(WIN32)
-		TARGET_LINK_LIBRARIES(cgit2 git2)
-	ELSE()
-		TARGET_LINK_LIBRARIES(cgit2 git2 pthread)
-	ENDIF()
-
-	ADD_EXECUTABLE(git-diff examples/diff.c)
-	TARGET_LINK_LIBRARIES(git-diff git2)
-
-	ADD_EXECUTABLE(git-general examples/general.c)
-	TARGET_LINK_LIBRARIES(git-general git2)
-
-	ADD_EXECUTABLE(git-showindex examples/showindex.c)
-	TARGET_LINK_LIBRARIES(git-showindex git2)
-
-	ADD_EXECUTABLE(git-rev-list examples/rev-list.c)
-	TARGET_LINK_LIBRARIES(git-rev-list git2)
+	ADD_SUBDIRECTORY(examples)
 ENDIF ()

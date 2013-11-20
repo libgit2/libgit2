@@ -60,25 +60,24 @@ typedef int (*git_status_cb)(
 	const char *path, unsigned int status_flags, void *payload);
 
 /**
- * For extended status, select the files on which to report status.
+ * Select the files on which to report status.
+ *
+ * With `git_status_foreach_ext`, this will control which changes get
+ * callbacks.  With `git_status_list_new`, these will control which
+ * changes are included in the list.
  *
  * - GIT_STATUS_SHOW_INDEX_AND_WORKDIR is the default.  This roughly
- *   matches `git status --porcelain` where each file gets a callback
- *   indicating its status in the index and in the working directory.
+ *   matches `git status --porcelain` regarding which files are
+ *   included and in what order.
  * - GIT_STATUS_SHOW_INDEX_ONLY only gives status based on HEAD to index
  *   comparison, not looking at working directory changes.
  * - GIT_STATUS_SHOW_WORKDIR_ONLY only gives status based on index to
  *   working directory comparison, not comparing the index to the HEAD.
- * - GIT_STATUS_SHOW_INDEX_THEN_WORKDIR runs index-only then workdir-only,
- *   issuing (up to) two callbacks per file (first index, then workdir).
- *   This is slightly more efficient than separate calls and can make it
- *   easier to emulate plain `git status` text output.
  */
 typedef enum {
 	GIT_STATUS_SHOW_INDEX_AND_WORKDIR = 0,
 	GIT_STATUS_SHOW_INDEX_ONLY = 1,
 	GIT_STATUS_SHOW_WORKDIR_ONLY = 2,
-	GIT_STATUS_SHOW_INDEX_THEN_WORKDIR = 3,
 } git_status_show_t;
 
 /**
@@ -108,7 +107,7 @@ typedef enum {
  * - GIT_STATUS_OPT_RENAMES_HEAD_TO_INDEX indicates that rename detection
  *   should be processed between the head and the index and enables
  *   the GIT_STATUS_INDEX_RENAMED as a possible status flag.
- * - GIT_STATUS_OPT_RENAMES_INDEX_TO_WORKDIR indicates tha rename
+ * - GIT_STATUS_OPT_RENAMES_INDEX_TO_WORKDIR indicates that rename
  *   detection should be run between the index and the working directory
  *   and enabled GIT_STATUS_WT_RENAMED as a possible status flag.
  * - GIT_STATUS_OPT_SORT_CASE_SENSITIVELY overrides the native case
@@ -117,6 +116,11 @@ typedef enum {
  * - GIT_STATUS_OPT_SORT_CASE_INSENSITIVELY overrides the native case
  *   sensitivity for the file system and forces the output to be in
  *   case-insensitive order
+ * - GIT_STATUS_OPT_RENAMES_FROM_REWRITES indicates that rename detection
+ *   should include rewritten files
+ * - GIT_STATUS_OPT_NO_REFRESH bypasses the default status behavior of
+ *   doing a "soft" index reload (i.e. reloading the index data if the
+ *   file on disk has been modified outside libgit2).
  *
  * Calling `git_status_foreach()` is like calling the extended version
  * with: GIT_STATUS_OPT_INCLUDE_IGNORED, GIT_STATUS_OPT_INCLUDE_UNTRACKED,
@@ -135,6 +139,8 @@ typedef enum {
 	GIT_STATUS_OPT_RENAMES_INDEX_TO_WORKDIR = (1u << 8),
 	GIT_STATUS_OPT_SORT_CASE_SENSITIVELY    = (1u << 9),
 	GIT_STATUS_OPT_SORT_CASE_INSENSITIVELY  = (1u << 10),
+	GIT_STATUS_OPT_RENAMES_FROM_REWRITES    = (1u << 11),
+	GIT_STATUS_OPT_NO_REFRESH               = (1u << 12),
 } git_status_opt_t;
 
 #define GIT_STATUS_OPT_DEFAULTS \
@@ -235,12 +241,12 @@ GIT_EXTERN(int) git_status_foreach_ext(
  * This is not quite the same as calling `git_status_foreach_ext()` with
  * the pathspec set to the specified path.
  *
- * @param status_flags The status value for the file
+ * @param status_flags Output combination of git_status_t values for file
  * @param repo A repository object
- * @param path The file to retrieve status for, rooted at the repo's workdir
+ * @param path The file to retrieve status for relative to the repo workdir
  * @return 0 on success, GIT_ENOTFOUND if the file is not found in the HEAD,
- *      index, and work tree, GIT_EINVALIDPATH if `path` points at a folder,
- *      GIT_EAMBIGUOUS if "path" matches multiple files, -1 on other error.
+ *      index, and work tree, GIT_EAMBIGUOUS if `path` matches multiple files
+ *      or if it refers to a folder, and -1 on other errors.
  */
 GIT_EXTERN(int) git_status_file(
 	unsigned int *status_flags,

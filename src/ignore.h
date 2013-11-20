@@ -24,14 +24,15 @@
  */
 typedef struct {
 	git_repository *repo;
-	git_buf dir;
+	git_buf dir; /* current directory reflected in ign_path */
 	git_attr_file *ign_internal;
 	git_vector ign_path;
 	git_vector ign_global;
 	int ignore_case;
 } git_ignores;
 
-extern int git_ignore__for_path(git_repository *repo, const char *path, git_ignores *ign);
+extern int git_ignore__for_path(
+	git_repository *repo, const char *path, git_ignores *ign);
 
 extern int git_ignore__push_dir(git_ignores *ign, const char *dir);
 

@@ -16,6 +16,7 @@
 
 #define GIT_MERGE_MSG_FILE		"MERGE_MSG"
 #define GIT_MERGE_MODE_FILE		"MERGE_MODE"
+#define GIT_MERGE_FILE_MODE		0666
 
 #define GIT_MERGE_TREE_RENAME_THRESHOLD	50
 #define GIT_MERGE_TREE_TARGET_LIMIT		1000
@@ -113,7 +114,18 @@ struct git_merge_head {
 	char *remote_url;
 
 	git_oid oid;
+	char oid_str[GIT_OID_HEXSZ+1];
 	git_commit *commit;
+};
+
+/** Internal structure for merge results */
+struct git_merge_result {
+	bool is_uptodate;
+
+	bool is_fastforward;
+	git_oid fastforward_oid;
+
+	git_index *index;
 };
 
 int git_merge__bases_many(

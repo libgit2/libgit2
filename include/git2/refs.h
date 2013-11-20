@@ -32,7 +32,7 @@ GIT_BEGIN_DECL
  * @param out pointer to the looked-up reference
  * @param repo the repository to look up the reference
  * @param name the long name for the reference (e.g. HEAD, refs/heads/master, refs/tags/v0.1.0, ...)
- * @return 0 on success, ENOTFOUND, EINVALIDSPEC or an error code.
+ * @return 0 on success, GIT_ENOTFOUND, GIT_EINVALIDSPEC or an error code.
  */
 GIT_EXTERN(int) git_reference_lookup(git_reference **out, git_repository *repo, const char *name);
 
@@ -49,7 +49,7 @@ GIT_EXTERN(int) git_reference_lookup(git_reference **out, git_repository *repo, 
  * @param out Pointer to oid to be filled in
  * @param repo The repository in which to look up the reference
  * @param name The long name for the reference (e.g. HEAD, refs/heads/master, refs/tags/v0.1.0, ...)
- * @return 0 on success, ENOTFOUND, EINVALIDSPEC or an error code.
+ * @return 0 on success, GIT_ENOTFOUND, GIT_EINVALIDSPEC or an error code.
  */
 GIT_EXTERN(int) git_reference_name_to_id(
 	git_oid *out, git_repository *repo, const char *name);
@@ -94,7 +94,7 @@ GIT_EXTERN(int) git_reference_dwim(git_reference **out, git_repository *repo, co
  * @param name The name of the reference
  * @param target The target of the reference
  * @param force Overwrite existing references
- * @return 0 on success, EEXISTS, EINVALIDSPEC or an error code
+ * @return 0 on success, GIT_EEXISTS, GIT_EINVALIDSPEC or an error code
  */
 GIT_EXTERN(int) git_reference_symbolic_create(git_reference **out, git_repository *repo, const char *name, const char *target, int force);
 
@@ -126,7 +126,7 @@ GIT_EXTERN(int) git_reference_symbolic_create(git_reference **out, git_repositor
  * @param name The name of the reference
  * @param id The object id pointed to by the reference.
  * @param force Overwrite existing references
- * @return 0 on success, EEXISTS, EINVALIDSPEC or an error code
+ * @return 0 on success, GIT_EEXISTS, GIT_EINVALIDSPEC or an error code
  */
 GIT_EXTERN(int) git_reference_create(git_reference **out, git_repository *repo, const char *name, const git_oid *id, int force);
 
@@ -225,7 +225,7 @@ GIT_EXTERN(git_repository *) git_reference_owner(const git_reference *ref);
  * @param out Pointer to the newly created reference
  * @param ref The reference
  * @param target The new target for the reference
- * @return 0 on success, EINVALIDSPEC or an error code
+ * @return 0 on success, GIT_EINVALIDSPEC or an error code
  */
 GIT_EXTERN(int) git_reference_symbolic_set_target(
 	git_reference **out,
@@ -268,7 +268,7 @@ GIT_EXTERN(int) git_reference_set_target(
  * @param ref The reference to rename
  * @param new_name The new name for the reference
  * @param force Overwrite an existing reference
- * @return 0 on success, EINVALIDSPEC, EEXISTS or an error code
+ * @return 0 on success, GIT_EINVALIDSPEC, GIT_EEXISTS or an error code
  *
  */
 GIT_EXTERN(int) git_reference_rename(
@@ -442,9 +442,18 @@ GIT_EXTERN(int) git_reference_is_branch(git_reference *ref);
  */
 GIT_EXTERN(int) git_reference_is_remote(git_reference *ref);
 
+/**
+ * Check if a reference is a tag
+ *
+ * @param ref A git reference
+ *
+ * @return 1 when the reference lives in the refs/tags
+ * namespace; 0 otherwise.
+ */
+GIT_EXTERN(int) git_reference_is_tag(git_reference *ref);
 
 typedef enum {
-	GIT_REF_FORMAT_NORMAL = 0,
+	GIT_REF_FORMAT_NORMAL = 0u,
 
 	/**
 	 * Control whether one-level refnames are accepted
@@ -452,7 +461,7 @@ typedef enum {
 	 * components). Those are expected to be written only using
 	 * uppercase letters and underscore (FETCH_HEAD, ...)
 	 */
-	GIT_REF_FORMAT_ALLOW_ONELEVEL = (1 << 0),
+	GIT_REF_FORMAT_ALLOW_ONELEVEL = (1u << 0),
 
 	/**
 	 * Interpret the provided name as a reference pattern for a
@@ -461,14 +470,14 @@ typedef enum {
 	 * in place of a one full pathname component
 	 * (e.g., foo/<star>/bar but not foo/bar<star>).
 	 */
-	GIT_REF_FORMAT_REFSPEC_PATTERN = (1 << 1),
+	GIT_REF_FORMAT_REFSPEC_PATTERN = (1u << 1),
 
 	/**
 	 * Interpret the name as part of a refspec in shorthand form
 	 * so the `ONELEVEL` naming rules aren't enforced and 'master'
 	 * becomes a valid name.
 	 */
-	GIT_REF_FORMAT_REFSPEC_SHORTHAND = (1 << 2),
+	GIT_REF_FORMAT_REFSPEC_SHORTHAND = (1u << 2),
 } git_reference_normalize_t;
 
 /**
@@ -488,7 +497,7 @@ typedef enum {
  * @param name Reference name to be checked.
  * @param flags Flags to constrain name validation rules - see the
  *              GIT_REF_FORMAT constants above.
- * @return 0 on success, GIT_EBUFS if buffer is too small, EINVALIDSPEC
+ * @return 0 on success, GIT_EBUFS if buffer is too small, GIT_EINVALIDSPEC
  * or an error code.
  */
 GIT_EXTERN(int) git_reference_normalize_name(

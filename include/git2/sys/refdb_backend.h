@@ -103,7 +103,7 @@ struct git_refdb_backend {
 	 * Deletes the given reference from the refdb.  A refdb implementation
 	 * must provide this function.
 	 */
-	int (*delete)(git_refdb_backend *backend, const char *ref_name);
+	int (*del)(git_refdb_backend *backend, const char *ref_name);
 
 	/**
 	 * Suggests that the given refdb compress or optimize its references.
@@ -119,10 +119,30 @@ struct git_refdb_backend {
 	 * provide this function; if it is not provided, nothing will be done.
 	 */
 	void (*free)(git_refdb_backend *backend);
+
+	/**
+	 * Read the reflog for the given reference name.
+	 */
+	int (*reflog_read)(git_reflog **out, git_refdb_backend *backend, const char *name);
+
+	/**
+	 * Write a reflog to disk.
+	 */
+	int (*reflog_write)(git_refdb_backend *backend, git_reflog *reflog);
+
+	/**
+	 * Rename a reflog
+	 */
+	int (*reflog_rename)(git_refdb_backend *_backend, const char *old_name, const char *new_name);
+
+	/**
+	 * Remove a reflog.
+	 */
+	int (*reflog_delete)(git_refdb_backend *backend, const char *name);
 };
 
-#define GIT_ODB_BACKEND_VERSION 1
-#define GIT_ODB_BACKEND_INIT {GIT_ODB_BACKEND_VERSION}
+#define GIT_REFDB_BACKEND_VERSION 1
+#define GIT_REFDB_BACKEND_INIT {GIT_REFDB_BACKEND_VERSION}
 
 /**
  * Constructors for default filesystem-based refdb backend

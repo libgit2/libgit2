@@ -138,9 +138,11 @@ static int read_tree_internal(git_tree_cache **out,
 		tree->children = git__malloc(tree->children_count * sizeof(git_tree_cache *));
 		GITERR_CHECK_ALLOC(tree->children);
 
+		memset(tree->children, 0x0, tree->children_count * sizeof(git_tree_cache *));
+
 		for (i = 0; i < tree->children_count; ++i) {
 			if (read_tree_internal(&tree->children[i], &buffer, buffer_end, tree) < 0)
-				return -1;
+				goto corrupted;
 		}
 	}
 
@@ -150,7 +152,7 @@ static int read_tree_internal(git_tree_cache **out,
 
  corrupted:
 	git_tree_cache_free(tree);
-	giterr_set(GITERR_INDEX, "Corruped TREE extension in index");
+	giterr_set(GITERR_INDEX, "Corrupted TREE extension in index");
 	return -1;
 }
 
@@ -162,7 +164,7 @@ int git_tree_cache_read(git_tree_cache **tree, const char *buffer, size_t buffer
 		return -1;
 
 	if (buffer < buffer_end) {
-		giterr_set(GITERR_INDEX, "Corruped TREE extension in index (unexpected trailing data)");
+		giterr_set(GITERR_INDEX, "Corrupted TREE extension in index (unexpected trailing data)");
 		return -1;
 	}
 
@@ -176,9 +178,12 @@ void git_tree_cache_free(git_tree_cache *tree)
 	if (tree == NULL)
 		return;
 
-	for (i = 0; i < tree->children_count; ++i)
-		git_tree_cache_free(tree->children[i]);
+	if (tree->children != NULL) {
+		for (i = 0; i < tree->children_count; ++i)
+			git_tree_cache_free(tree->children[i]);
 
-	git__free(tree->children);
+		git__free(tree->children);
+	}
+
 	git__free(tree);
 }

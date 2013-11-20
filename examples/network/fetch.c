@@ -14,11 +14,12 @@ struct dl_data {
 	int finished;
 };
 
-static void progress_cb(const char *str, int len, void *data)
+static int progress_cb(const char *str, int len, void *data)
 {
 	(void)data;
 	printf("remote: %.*s", len, str);
 	fflush(stdout); /* We don't have the \n to force the flush */
+	return 0;
 }
 
 static void *download(void *ptr)
@@ -35,7 +36,7 @@ static void *download(void *ptr)
 	// Download the packfile and index it. This function updates the
 	// amount of received data and the indexer stats which lets you
 	// inform the user about progress.
-	if (git_remote_download(data->remote, NULL, NULL) < 0) {
+	if (git_remote_download(data->remote) < 0) {
 		data->ret = -1;
 		goto exit;
 	}
@@ -47,6 +48,11 @@ exit:
 	return &data->ret;
 }
 
+/**
+ * This function gets called for each remote-tracking branch that gets
+ * updated. The message we output depends on whether it's a new one or
+ * an update.
+ */
 static int update_cb(const char *refname, const git_oid *a, const git_oid *b, void *data)
 {
 	char a_str[GIT_OID_HEXSZ+1], b_str[GIT_OID_HEXSZ+1];
@@ -66,6 +72,7 @@ static int update_cb(const char *refname, const git_oid *a, const git_oid *b, vo
 	return 0;
 }
 
+/** Entry point for this command */
 int fetch(git_repository *repo, int argc, char **argv)
 {
 	git_remote *remote = NULL;
@@ -91,6 +98,7 @@ int fetch(git_repository *repo, int argc, char **argv)
 	// Set up the callbacks (only update_tips for now)
 	callbacks.update_tips = &update_cb;
 	callbacks.progress = &progress_cb;
+	callbacks.credentials = cred_acquire_cb;
 	git_remote_set_callbacks(remote, &callbacks);
 
 	// Set up the information for the background worker thread
@@ -112,10 +120,14 @@ int fetch(git_repository *repo, int argc, char **argv)
 	do {
 		usleep(10000);
 
-		if (stats->total_objects > 0)
+		if (stats->received_objects == stats->total_objects) {
+			printf("Resolving deltas %d/%d\r",
+			       stats->indexed_deltas, stats->total_deltas);
+		} else if (stats->total_objects > 0) {
 			printf("Received %d/%d objects (%d) in %" PRIuZ " bytes\r",
 			       stats->received_objects, stats->total_objects,
 				   stats->indexed_objects, stats->received_bytes);
+		}
 	} while (!data.finished);
 
 	if (data.ret < 0)
@@ -124,8 +136,18 @@ int fetch(git_repository *repo, int argc, char **argv)
 	pthread_join(worker, NULL);
 #endif
 
-	printf("\rReceived %d/%d objects in %zu bytes\n",
+	/**
+	 * If there are local objects (we got a thin pack), then tell
+	 * the user how many objects we saved from having to cross the
+	 * network.
+	 */
+	if (stats->local_objects > 0) {
+		printf("\rReceived %d/%d objects in %zu bytes (used %d local objects)\n",
+		       stats->indexed_objects, stats->total_objects, stats->received_bytes, stats->local_objects);
+	} else{
+		printf("\rReceived %d/%d objects in %zu bytes\n",
 			stats->indexed_objects, stats->total_objects, stats->received_bytes);
+	}
 
 	// Disconnect the underlying connection to prevent from idling.
 	git_remote_disconnect(remote);

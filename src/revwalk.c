@@ -14,8 +14,6 @@
 #include "git2/revparse.h"
 #include "merge.h"
 
-#include <regex.h>
-
 git_commit_list_node *git_revwalk__commit_lookup(
 	git_revwalk *walk, const git_oid *oid)
 {
@@ -41,28 +39,50 @@ git_commit_list_node *git_revwalk__commit_lookup(
 	return commit;
 }
 
-static void mark_uninteresting(git_commit_list_node *commit)
+static int mark_uninteresting(git_commit_list_node *commit)
 {
 	unsigned short i;
+	git_array_t(git_commit_list_node *) pending = GIT_ARRAY_INIT;
+	git_commit_list_node **tmp;
+
 	assert(commit);
 
-	commit->uninteresting = 1;
+	git_array_alloc(pending);
+	GITERR_CHECK_ARRAY(pending);
 
-	/* This means we've reached a merge base, so there's no need to walk any more */
-	if ((commit->flags & (RESULT | STALE)) == RESULT)
-		return;
+	do {
+		commit->uninteresting = 1;
 
-	for (i = 0; i < commit->out_degree; ++i)
-		if (!commit->parents[i]->uninteresting)
-			mark_uninteresting(commit->parents[i]);
+		/* This means we've reached a merge base, so there's no need to walk any more */
+		if ((commit->flags & (RESULT | STALE)) == RESULT) {
+			tmp = git_array_pop(pending);
+			commit = tmp ? *tmp : NULL;
+			continue;
+		}
+
+		for (i = 0; i < commit->out_degree; ++i)
+			if (!commit->parents[i]->uninteresting) {
+				git_commit_list_node **node = git_array_alloc(pending);
+				GITERR_CHECK_ALLOC(node);
+				*node = commit->parents[i];
+			}
+
+		tmp = git_array_pop(pending);
+		commit = tmp ? *tmp : NULL;
+
+	} while (git_array_size(pending) > 0);
+
+	git_array_clear(pending);
+
+	return 0;
 }
 
 static int process_commit(git_revwalk *walk, git_commit_list_node *commit, int hide)
 {
 	int error;
 
-	if (hide)
-		mark_uninteresting(commit);
+	if (hide && mark_uninteresting(commit) < 0)
+		return -1;
 
 	if (commit->seen)
 		return 0;
@@ -77,10 +97,14 @@ static int process_commit(git_revwalk *walk, git_commit_list_node *commit, int h
 
 static int process_commit_parents(git_revwalk *walk, git_commit_list_node *commit)
 {
-	unsigned short i;
+	unsigned short i, max;
 	int error = 0;
 
-	for (i = 0; i < commit->out_degree && !error; ++i)
+	max = commit->out_degree;
+	if (walk->first_parent && commit->out_degree)
+		max = 1;
+
+	for (i = 0; i < max && !error; ++i)
 		error = process_commit(walk, commit->parents[i], commit->uninteresting);
 
 	return error;
@@ -155,48 +179,35 @@ static int push_glob_cb(const char *refname, void *data_)
 
 static int push_glob(git_revwalk *walk, const char *glob, int hide)
 {
+	int error = 0;
 	git_buf buf = GIT_BUF_INIT;
 	struct push_cb_data data;
-	regex_t preg;
+	size_t wildcard;
 
 	assert(walk && glob);
 
 	/* refs/ is implied if not given in the glob */
-	if (strncmp(glob, GIT_REFS_DIR, strlen(GIT_REFS_DIR))) {
-		git_buf_printf(&buf, GIT_REFS_DIR "%s", glob);
-	} else {
+	if (git__prefixcmp(glob, GIT_REFS_DIR) != 0)
+		git_buf_joinpath(&buf, GIT_REFS_DIR, glob);
+	else
 		git_buf_puts(&buf, glob);
-	}
 
 	/* If no '?', '*' or '[' exist, we append '/ *' to the glob */
-	memset(&preg, 0x0, sizeof(regex_t));
-	if (regcomp(&preg, "[?*[]", REG_EXTENDED)) {
-		giterr_set(GITERR_OS, "Regex failed to compile");
-		git_buf_free(&buf);
-		return -1;
-	}
-
-	if (regexec(&preg, glob, 0, NULL, 0))
-		git_buf_puts(&buf, "/*");
-
-	if (git_buf_oom(&buf))
-		goto on_error;
+	wildcard = strcspn(glob, "?*[");
+	if (!glob[wildcard])
+		git_buf_put(&buf, "/*", 2);
 
 	data.walk = walk;
 	data.hide = hide;
 
-	if (git_reference_foreach_glob(
-		walk->repo, git_buf_cstr(&buf), push_glob_cb, &data) < 0)
-		goto on_error;
+	if (git_buf_oom(&buf))
+		error = -1;
+	else
+		error = git_reference_foreach_glob(
+			walk->repo, git_buf_cstr(&buf), push_glob_cb, &data);
 
-	regfree(&preg);
 	git_buf_free(&buf);
-	return 0;
-
-on_error:
-	regfree(&preg);
-	git_buf_free(&buf);
-	return -1;
+	return error;
 }
 
 int git_revwalk_push_glob(git_revwalk *walk, const char *glob)
@@ -311,7 +322,7 @@ static int revwalk_next_unsorted(git_commit_list_node **object_out, git_revwalk 
 static int revwalk_next_toposort(git_commit_list_node **object_out, git_revwalk *walk)
 {
 	git_commit_list_node *next;
-	unsigned short i;
+	unsigned short i, max;
 
 	for (;;) {
 		next = git_commit_list_pop(&walk->iterator_topo);
@@ -325,7 +336,12 @@ static int revwalk_next_toposort(git_commit_list_node **object_out, git_revwalk 
 			continue;
 		}
 
-		for (i = 0; i < next->out_degree; ++i) {
+
+		max = next->out_degree;
+		if (walk->first_parent && next->out_degree)
+			max = 1;
+
+		for (i = 0; i < max; ++i) {
 			git_commit_list_node *parent = next->parents[i];
 
 			if (--parent->in_degree == 0 && parent->topo_delay) {
@@ -481,6 +497,11 @@ void git_revwalk_sorting(git_revwalk *walk, unsigned int sort_mode)
 		walk->get_next = &revwalk_next_unsorted;
 		walk->enqueue = &revwalk_enqueue_unsorted;
 	}
+}
+
+void git_revwalk_simplify_first_parent(git_revwalk *walk)
+{
+	walk->first_parent = 1;
 }
 
 int git_revwalk_next(git_oid *oid, git_revwalk *walk)

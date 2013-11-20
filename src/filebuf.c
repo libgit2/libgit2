@@ -10,8 +10,6 @@
 #include "filebuf.h"
 #include "fileops.h"
 
-#define GIT_LOCK_FILE_MODE 0644
-
 static const size_t WRITE_BUFFER_SIZE = (4096 * 2);
 
 enum buferr_t {
@@ -44,7 +42,7 @@ static int verify_last_error(git_filebuf *file)
 	}
 }
 
-static int lock_file(git_filebuf *file, int flags)
+static int lock_file(git_filebuf *file, int flags, mode_t mode)
 {
 	if (git_path_exists(file->path_lock) == true) {
 		if (flags & GIT_FILEBUF_FORCE)
@@ -53,20 +51,20 @@ static int lock_file(git_filebuf *file, int flags)
 			giterr_clear(); /* actual OS error code just confuses */
 			giterr_set(GITERR_OS,
 				"Failed to lock file '%s' for writing", file->path_lock);
-			return -1;
+			return GIT_ELOCKED;
 		}
 	}
 
 	/* create path to the file buffer is required */
 	if (flags & GIT_FILEBUF_FORCE) {
 		/* XXX: Should dirmode here be configurable? Or is 0777 always fine? */
-		file->fd = git_futils_creat_locked_withpath(file->path_lock, 0777, GIT_LOCK_FILE_MODE);
+		file->fd = git_futils_creat_locked_withpath(file->path_lock, 0777, mode);
 	} else {
-		file->fd = git_futils_creat_locked(file->path_lock, GIT_LOCK_FILE_MODE);
+		file->fd = git_futils_creat_locked(file->path_lock, mode);
 	}
 
 	if (file->fd < 0)
-		return -1;
+		return file->fd;
 
 	file->fd_is_open = true;
 
@@ -195,9 +193,9 @@ static int write_deflate(git_filebuf *file, void *source, size_t len)
 	return 0;
 }
 
-int git_filebuf_open(git_filebuf *file, const char *path, int flags)
+int git_filebuf_open(git_filebuf *file, const char *path, int flags, mode_t mode)
 {
-	int compression;
+	int compression, error = -1;
 	size_t path_len;
 
 	/* opening an already open buffer is a programming error;
@@ -255,7 +253,7 @@ int git_filebuf_open(git_filebuf *file, const char *path, int flags)
 		git_buf tmp_path = GIT_BUF_INIT;
 
 		/* Open the file as temporary for locking */
-		file->fd = git_futils_mktmp(&tmp_path, path);
+		file->fd = git_futils_mktmp(&tmp_path, path, mode);
 
 		if (file->fd < 0) {
 			git_buf_free(&tmp_path);
@@ -282,7 +280,7 @@ int git_filebuf_open(git_filebuf *file, const char *path, int flags)
 		memcpy(file->path_lock + path_len, GIT_FILELOCK_EXTENSION, GIT_FILELOCK_EXTLENGTH);
 
 		/* open the file for locking */
-		if (lock_file(file, flags) < 0)
+		if ((error = lock_file(file, flags, mode)) < 0)
 			goto cleanup;
 	}
 
@@ -290,7 +288,7 @@ int git_filebuf_open(git_filebuf *file, const char *path, int flags)
 
 cleanup:
 	git_filebuf_cleanup(file);
-	return -1;
+	return error;
 }
 
 int git_filebuf_hash(git_oid *oid, git_filebuf *file)
@@ -309,16 +307,16 @@ int git_filebuf_hash(git_oid *oid, git_filebuf *file)
 	return 0;
 }
 
-int git_filebuf_commit_at(git_filebuf *file, const char *path, mode_t mode)
+int git_filebuf_commit_at(git_filebuf *file, const char *path)
 {
 	git__free(file->path_original);
 	file->path_original = git__strdup(path);
 	GITERR_CHECK_ALLOC(file->path_original);
 
-	return git_filebuf_commit(file, mode);
+	return git_filebuf_commit(file);
 }
 
-int git_filebuf_commit(git_filebuf *file, mode_t mode)
+int git_filebuf_commit(git_filebuf *file)
 {
 	/* temporary files cannot be committed */
 	assert(file && file->path_original);
@@ -337,11 +335,6 @@ int git_filebuf_commit(git_filebuf *file, mode_t mode)
 	}
 
 	file->fd = -1;
-
-	if (p_chmod(file->path_lock, mode)) {
-		giterr_set(GITERR_OS, "Failed to set attributes for file at '%s'", file->path_lock);
-		goto on_error;
-	}
 
 	p_unlink(file->path_original);
 

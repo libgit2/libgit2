@@ -16,13 +16,14 @@
 #include "iterator.h"
 #include "repository.h"
 #include "pool.h"
+#include "odb.h"
 
 #define DIFF_OLD_PREFIX_DEFAULT "a/"
 #define DIFF_NEW_PREFIX_DEFAULT "b/"
 
 enum {
 	GIT_DIFFCAPS_HAS_SYMLINKS     = (1 << 0), /* symlinks on platform? */
-	GIT_DIFFCAPS_ASSUME_UNCHANGED = (1 << 1), /* use stat? */
+	GIT_DIFFCAPS_IGNORE_STAT      = (1 << 1), /* use stat? */
 	GIT_DIFFCAPS_TRUST_MODE_BITS  = (1 << 2), /* use st_mode? */
 	GIT_DIFFCAPS_TRUST_CTIME      = (1 << 3), /* use st_ctime? */
 	GIT_DIFFCAPS_USE_DEV          = (1 << 4), /* use st_dev? */
@@ -51,7 +52,7 @@ enum {
 
 #define GIT_DIFF__VERBOSE  (1 << 30)
 
-struct git_diff_list {
+struct git_diff {
 	git_refcount     rc;
 	git_repository   *repo;
 	git_diff_options opts;
@@ -71,27 +72,36 @@ struct git_diff_list {
 extern void git_diff__cleanup_modes(
 	uint32_t diffcaps, uint32_t *omode, uint32_t *nmode);
 
-extern void git_diff_list_addref(git_diff_list *diff);
+extern void git_diff_addref(git_diff *diff);
 
 extern int git_diff_delta__cmp(const void *a, const void *b);
 extern int git_diff_delta__casecmp(const void *a, const void *b);
 
+extern const char *git_diff_delta__path(const git_diff_delta *delta);
+
 extern bool git_diff_delta__should_skip(
 	const git_diff_options *opts, const git_diff_delta *delta);
+
+extern int git_diff_delta__format_file_header(
+	git_buf *out,
+	const git_diff_delta *delta,
+	const char *oldpfx,
+	const char *newpfx,
+	int oid_strlen);
 
 extern int git_diff__oid_for_file(
 	git_repository *, const char *, uint16_t, git_off_t, git_oid *);
 
 extern int git_diff__from_iterators(
-	git_diff_list **diff_ptr,
+	git_diff **diff_ptr,
 	git_repository *repo,
 	git_iterator *old_iter,
 	git_iterator *new_iter,
 	const git_diff_options *opts);
 
 extern int git_diff__paired_foreach(
-	git_diff_list *idx2head,
-	git_diff_list *wd2idx,
+	git_diff *idx2head,
+	git_diff *wd2idx,
 	int (*cb)(git_diff_delta *i2h, git_diff_delta *w2i, void *payload),
 	void *payload);
 
@@ -105,6 +115,34 @@ extern void git_diff_find_similar__hashsig_free(void *sig, void *payload);
 
 extern int git_diff_find_similar__calc_similarity(
 	int *score, void *siga, void *sigb, void *payload);
+
+/*
+ * Sometimes a git_diff_file will have a zero size; this attempts to
+ * fill in the size without loading the blob if possible.  If that is
+ * not possible, then it will return the git_odb_object that had to be
+ * loaded and the caller can use it or dispose of it as needed.
+ */
+GIT_INLINE(int) git_diff_file__resolve_zero_size(
+	git_diff_file *file, git_odb_object **odb_obj, git_repository *repo)
+{
+	int error;
+	git_odb *odb;
+	size_t len;
+	git_otype type;
+
+	if ((error = git_repository_odb(&odb, repo)) < 0)
+		return error;
+
+	error = git_odb__read_header_or_object(
+		odb_obj, &len, &type, odb, &file->oid);
+
+	git_odb_free(odb);
+
+	if (!error)
+		file->size = (git_off_t)len;
+
+	return error;
+}
 
 #endif
 

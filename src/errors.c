@@ -112,8 +112,25 @@ void giterr_clear(void)
 #endif
 }
 
+int giterr_detach(git_error *cpy)
+{
+	git_error *error = GIT_GLOBAL->last_error;
+
+	assert(cpy);
+
+	if (!error)
+		return -1;
+
+	cpy->message = error->message;
+	cpy->klass = error->klass;
+
+	error->message = NULL;
+	giterr_clear();
+
+	return 0;
+}
+
 const git_error *giterr_last(void)
 {
 	return GIT_GLOBAL->last_error;
 }
-

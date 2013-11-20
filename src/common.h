@@ -74,6 +74,30 @@ void giterr_set(int error_class, const char *string, ...);
 int giterr_set_regex(const regex_t *regex, int error_code);
 
 /**
+ * Gets the system error code for this thread.
+ */
+GIT_INLINE(int) giterr_system_last(void)
+{
+#ifdef GIT_WIN32
+	return GetLastError();
+#else
+	return errno;
+#endif
+}
+
+/**
+ * Sets the system error code for this thread.
+ */
+GIT_INLINE(void) giterr_system_set(int code)
+{
+#ifdef GIT_WIN32
+	SetLastError(code);
+#else
+	errno = code;
+#endif
+}
+
+/**
  * Check a versioned structure for validity
  */
 GIT_INLINE(int) giterr__check_version(const void *structure, unsigned int expected_max, const char *name)

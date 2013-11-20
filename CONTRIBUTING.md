@@ -3,6 +3,12 @@
 We're making it easy to do interesting things with git, and we'd love to have
 your help.
 
+## Licensing
+
+By contributing to libgit2, you agree to release your contribution under the terms of the license.
+For code under `examples`, this is governed by the [CC0 Public Domain Dedication](examples/COPYING).
+All other code is released under the [GPL v2 with linking exception](COPYING).
+
 ## Discussion & Chat
 
 We hang out in the #libgit2 channel on irc.freenode.net.
@@ -48,6 +54,12 @@ Please include a nice description of your changes with your PR; if we have
 to read the whole diff to figure out why you're contributing in the first
 place, you're less likely to get feedback and have your change merged in.
 
+If you are working on a particular area then feel free to submit a PR that
+highlights your work in progress (and flag in the PR title that it's not
+ready to merge). This will help in getting visibility for your fix, allow
+others to comment early on the changes and also let others know that you
+are currently working on something.
+
 ## Porting Code From Other Open-Source Projects
 
 `libgit2` is licensed under the terms of the GPL v2 with a linking
@@ -57,13 +69,16 @@ The most common case is porting code from core Git.  Git is a pure GPL
 project, which means that in order to port code to this project, we need the
 explicit permission of the author.  Check the
 [`git.git-authors`](https://github.com/libgit2/libgit2/blob/development/git.git-authors)
-file for authors who have already consented; feel free to add someone if
-you've obtained their consent.
+file for authors who have already consented.
 
 Other licenses have other requirements; check the license of the library
 you're porting code *from* to see what you need to do.  As a general rule,
 MIT and BSD (3-clause) licenses are typically no problem.  Apache 2.0
 license typically doesn't work due to GPL incompatibility.
+
+If you are pulling in code from core Git, another project or code you've pulled from
+a forum / Stack Overflow then please flag this in your PR and also make sure you've
+given proper credit to the original author in the code snippet.
 
 ## Style Guide
 

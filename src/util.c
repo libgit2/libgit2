@@ -33,6 +33,9 @@ int git_libgit2_capabilities()
 #if defined(GIT_SSL) || defined(GIT_WINHTTP)
 		| GIT_CAP_HTTPS
 #endif
+#if defined(GIT_SSH)
+		| GIT_CAP_SSH
+#endif
 	;
 }
 
@@ -113,6 +116,19 @@ int git_libgit2_opts(int key, ...)
 	case GIT_OPT_GET_CACHED_MEMORY:
 		*(va_arg(ap, ssize_t *)) = git_cache__current_storage.val;
 		*(va_arg(ap, ssize_t *)) = git_cache__max_storage;
+		break;
+
+	case GIT_OPT_GET_TEMPLATE_PATH:
+		{
+			char *out = va_arg(ap, char *);
+			size_t outlen = va_arg(ap, size_t);
+
+			error = git_futils_dirs_get_str(out, outlen, GIT_FUTILS_DIR_TEMPLATE);
+		}
+		break;
+
+	case GIT_OPT_SET_TEMPLATE_PATH:
+		error = git_futils_dirs_set(GIT_FUTILS_DIR_TEMPLATE, va_arg(ap, const char *));
 		break;
 	}
 
@@ -676,6 +692,9 @@ size_t git__unescape(char *str)
 {
 	char *scan, *pos = str;
 
+	if (!str)
+		return 0;
+
 	for (scan = str; *scan; pos++, scan++) {
 		if (*scan == '\\' && *(scan + 1) != '\0')
 			scan++; /* skip '\' but include next char */
@@ -707,8 +726,9 @@ static int GIT_STDLIB_CALL git__qsort_r_glue_cmp(
 void git__qsort_r(
 	void *els, size_t nel, size_t elsize, git__sort_r_cmp cmp, void *payload)
 {
-#if defined(__MINGW32__) || defined(__OpenBSD__) || defined(AMIGA) || \
-	defined(__gnu_hurd__) || \
+#if defined(__MINGW32__) || defined(AMIGA) || \
+	defined(__OpenBSD__) || defined(__NetBSD__) || \
+	defined(__gnu_hurd__) || defined(__ANDROID_API__) || \
 	(__GLIBC__ == 2 && __GLIBC_MINOR__ < 8)
 	git__insertsort_r(els, nel, elsize, NULL, cmp, payload);
 #elif defined(GIT_WIN32)
