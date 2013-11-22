@@ -155,9 +155,14 @@ void *git_pqueue_pop(git_pqueue *q)
 }
 
 
+void *git_pqueue_peek_ahead(git_pqueue *q, size_t index)
+{
+	if (!q || (index + 1) > q->size - 1)
+		return NULL;
+	return q->d[index + 1];
+}
+
 void *git_pqueue_peek(git_pqueue *q)
 {
-	if (!q || q->size == 1)
-		return NULL;
-	return q->d[1];
+	return git_pqueue_peek_ahead(q, 0);
 }

@@ -96,6 +96,15 @@ void *git_pqueue_pop(git_pqueue *q);
  */
 void *git_pqueue_peek(git_pqueue *q);
 
+/**
+ * access n-th highest-ranking item without removing it.
+ * @param q the queue
+ * @param index index of the item to retrieve; 0 will return
+ * the highest-ranking_one
+ * @return NULL on error, otherwise the entry
+ */
+void *git_pqueue_peek_ahead(git_pqueue *q, size_t index);
+
 #endif /* PQUEUE_H */
 /** @} */
 
