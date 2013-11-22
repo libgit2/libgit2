@@ -488,13 +488,13 @@ GIT_EXTERN(int) git_repository_message(char *out, size_t len, git_repository *re
 GIT_EXTERN(int) git_repository_message_remove(git_repository *repo);
 
 /**
- * Remove all the metadata associated with an ongoing git merge, including
- * MERGE_HEAD, MERGE_MSG, etc.
+ * Remove all the metadata associated with an ongoing command like merge,
+ * revert, cherry-pick, etc.  For example: MERGE_HEAD, MERGE_MSG, etc.
  *
  * @param repo A repository object
  * @return 0 on success, or error
  */
-GIT_EXTERN(int) git_repository_merge_cleanup(git_repository *repo);
+GIT_EXTERN(int) git_repository_state_cleanup(git_repository *repo);
 
 typedef int (*git_repository_fetchhead_foreach_cb)(const char *ref_name,
 	const char *remote_url,

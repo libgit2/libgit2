@@ -9,7 +9,6 @@
 #include "repository.h"
 #include "filebuf.h"
 #include "merge.h"
-#include "revert.h"
 
 #include "git2/types.h"
 #include "git2/merge.h"
@@ -103,6 +102,13 @@ static int revert_normalize_opts(
 	return error;
 }
 
+static int revert_state_cleanup(git_repository *repo)
+{
+	const char *state_files[] = { GIT_REVERT_HEAD_FILE, GIT_MERGE_MSG_FILE };
+
+	return git_repository__cleanup_files(repo, state_files, ARRAY_SIZE(state_files));
+}
+
 int git_revert(
 	git_repository *repo,
 	git_commit *commit,
@@ -175,7 +181,7 @@ int git_revert(
 	goto done;
 
 on_error:
-	git_revert__cleanup(repo);
+	revert_state_cleanup(repo);
 
 done:
 	git_index_free(index_new);
@@ -185,33 +191,6 @@ done:
 	git_tree_free(revert_tree);
 	git_commit_free(parent_commit);
 	git_buf_free(&their_label);
-
-	return error;
-}
-
-int git_revert__cleanup(git_repository *repo)
-{
-	int error = 0;
-	git_buf revert_head_path = GIT_BUF_INIT,
-		merge_msg_path = GIT_BUF_INIT;
-
-	assert(repo);
-
-	if (git_buf_joinpath(&revert_head_path, repo->path_repository, GIT_REVERT_HEAD_FILE) < 0 ||
-		git_buf_joinpath(&merge_msg_path, repo->path_repository, GIT_MERGE_MSG_FILE) < 0)
-		return -1;
-
-	if (git_path_isfile(revert_head_path.ptr)) {
-		if ((error = p_unlink(revert_head_path.ptr)) < 0)
-			goto cleanup;
-	}
-
-	if (git_path_isfile(merge_msg_path.ptr))
-		(void)p_unlink(merge_msg_path.ptr);
-
-cleanup:
-	git_buf_free(&merge_msg_path);
-	git_buf_free(&revert_head_path);
 
 	return error;
 }

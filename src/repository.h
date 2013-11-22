@@ -169,4 +169,6 @@ GIT_INLINE(int) git_repository__ensure_not_bare(
 	return GIT_EBAREREPO;
 }
 
+int git_repository__cleanup_files(git_repository *repo, const char *files[], size_t files_len);
+
 #endif
