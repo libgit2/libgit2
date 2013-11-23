@@ -117,6 +117,12 @@ struct git_refdb_backend {
 	int (*compress)(git_refdb_backend *backend);
 
 	/**
+	 * Make sure a particular reference will have a reflog which
+	 * will be appended to on writes.
+	 */
+	int (*ensure_log)(git_refdb_backend *backend, const char *refname);
+
+	/**
 	 * Frees any resources held by the refdb.  A refdb implementation may
 	 * provide this function; if it is not provided, nothing will be done.
 	 */

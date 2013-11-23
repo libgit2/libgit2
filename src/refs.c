@@ -1068,6 +1068,19 @@ int git_reference_has_log(
 	return result;
 }
 
+int git_reference_ensure_log(git_repository *repo, const char *refname)
+{
+	int error;
+	git_refdb *refdb;
+
+	assert(repo && refname);
+
+	if ((error = git_repository_refdb__weakptr(&refdb, repo)) < 0)
+		return error;
+
+	return git_refdb_ensure_log(refdb, refname);
+}
+
 int git_reference__is_branch(const char *ref_name)
 {
 	return git__prefixcmp(ref_name, GIT_REFS_HEADS_DIR) == 0;

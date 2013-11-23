@@ -556,6 +556,18 @@ GIT_EXTERN(int) git_reference_foreach_glob(
 GIT_EXTERN(int) git_reference_has_log(git_reference *ref);
 
 /**
+ * Ensure there is a reflog for a particular reference.
+ *
+ * Make sure that successive updates to the reference will append to
+ * its log.
+ *
+ * @param repo the repository
+ * @param refname the reference's name
+ * @return 0 or an error code.
+ */
+GIT_EXTERN(int) git_reference_ensure_log(git_repository *repo, const char *refname);
+
+/**
  * Check if a reference is a local branch.
  *
  * @param ref A git reference

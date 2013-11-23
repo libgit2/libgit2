@@ -414,6 +414,9 @@ static int update_reflog(
 	git_reference *stash;
 	int error;
 
+	if ((error = git_reference_ensure_log(repo, GIT_REFS_STASH_FILE)) < 0)
+		return error;
+
 	error = git_reference_create_with_log(&stash, repo, GIT_REFS_STASH_FILE, w_commit_oid, 1, stasher, message);
 
 	git_reference_free(stash);

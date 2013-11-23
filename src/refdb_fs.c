@@ -1233,7 +1233,7 @@ static int create_new_reflog_file(const char *filepath)
 		return error;
 
 	if ((fd = p_open(filepath,
-			O_WRONLY | O_CREAT | O_TRUNC,
+			O_WRONLY | O_CREAT,
 			GIT_REFLOG_FILE_MODE)) < 0)
 		return -1;
 
@@ -1243,6 +1243,24 @@ static int create_new_reflog_file(const char *filepath)
 GIT_INLINE(int) retrieve_reflog_path(git_buf *path, git_repository *repo, const char *name)
 {
 	return git_buf_join_n(path, '/', 3, repo->path_repository, GIT_REFLOG_DIR, name);
+}
+
+static int refdb_reflog_fs__ensure_log(git_refdb_backend *_backend, const char *name)
+{
+	refdb_fs_backend *backend;
+	git_repository *repo;
+	git_buf path = GIT_BUF_INIT;
+	int error;
+
+	assert(_backend && name);
+
+	backend = (refdb_fs_backend *) _backend;
+	repo = backend->repo;
+
+	if ((error = retrieve_reflog_path(&path, repo, name)) < 0)
+		return error;
+
+	return create_new_reflog_file(git_buf_cstr(&path));
 }
 
 static int has_reflog(git_repository *repo, const char *name)
@@ -1590,6 +1608,7 @@ int git_refdb_backend_fs(
 	backend->parent.del = &refdb_fs_backend__delete;
 	backend->parent.rename = &refdb_fs_backend__rename;
 	backend->parent.compress = &refdb_fs_backend__compress;
+	backend->parent.ensure_log = &refdb_reflog_fs__ensure_log;
 	backend->parent.free = &refdb_fs_backend__free;
 	backend->parent.reflog_read = &refdb_reflog_fs__read;
 	backend->parent.reflog_write = &refdb_reflog_fs__write;
