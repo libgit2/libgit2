@@ -548,12 +548,12 @@ GIT_EXTERN(int) git_reference_foreach_glob(
 /**
  * Check if a reflog exists for the specified reference.
  *
- * @param ref A git reference
- *
+ * @param repo the repository
+ * @param refname the reference's name
  * @return 0 when no reflog can be found, 1 when it exists;
  * otherwise an error code.
  */
-GIT_EXTERN(int) git_reference_has_log(git_reference *ref);
+GIT_EXTERN(int) git_reference_has_log(git_repository *repo, const char *refname);
 
 /**
  * Ensure there is a reflog for a particular reference.

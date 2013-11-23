@@ -48,6 +48,7 @@ int git_refdb_delete(git_refdb *refdb, const char *ref_name);
 int git_refdb_reflog_read(git_reflog **out, git_refdb *db,  const char *name);
 int git_refdb_reflog_write(git_reflog *reflog);
 
+int git_refdb_has_log(git_refdb *db, const char *refname);
 int git_refdb_ensure_log(git_refdb *refdb, const char *refname);
 
 

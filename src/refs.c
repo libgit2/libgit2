@@ -1050,22 +1050,17 @@ int git_reference__update_terminal(
 	return reference__update_terminal(repo, ref_name, oid, 0);
 }
 
-int git_reference_has_log(
-	git_reference *ref)
+int git_reference_has_log(git_repository *repo, const char *refname)
 {
-	git_buf path = GIT_BUF_INIT;
-	int result;
+	int error;
+	git_refdb *refdb;
 
-	assert(ref);
+	assert(repo && refname);
 
-	if (git_buf_join_n(&path, '/', 3, ref->db->repo->path_repository,
-		GIT_REFLOG_DIR, ref->name) < 0)
-		return -1;
+	if ((error = git_repository_refdb__weakptr(&refdb, repo)) < 0)
+		return error;
 
-	result = git_path_isfile(git_buf_cstr(&path));
-	git_buf_free(&path);
-
-	return result;
+	return git_refdb_has_log(refdb, refname);
 }
 
 int git_reference_ensure_log(git_repository *repo, const char *refname)

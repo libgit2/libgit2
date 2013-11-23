@@ -222,6 +222,13 @@ int git_refdb_reflog_read(git_reflog **out, git_refdb *db,  const char *name)
 	return 0;
 }
 
+int git_refdb_has_log(git_refdb *db, const char *refname)
+{
+	assert(db && refname);
+
+	return db->backend->has_log(db->backend, refname);
+}
+
 int git_refdb_ensure_log(git_refdb *db, const char *refname)
 {
 	assert(db && refname);

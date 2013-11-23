@@ -127,13 +127,7 @@ void test_refs_reflog_reflog__renaming_the_reference_moves_the_reflog(void)
 
 static void assert_has_reflog(bool expected_result, const char *name)
 {
-	git_reference *ref;
-
-	cl_git_pass(git_reference_lookup(&ref, g_repo, name));
-
-	cl_assert_equal_i(expected_result, git_reference_has_log(ref));
-
-	git_reference_free(ref);
+	cl_assert_equal_i(expected_result, git_reference_has_log(g_repo, name));
 }
 
 void test_refs_reflog_reflog__reference_has_reflog(void)

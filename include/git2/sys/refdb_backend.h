@@ -117,6 +117,11 @@ struct git_refdb_backend {
 	int (*compress)(git_refdb_backend *backend);
 
 	/**
+	 * Query whether a particular reference has a log (may be empty)
+	 */
+	int (*has_log)(git_refdb_backend *backend, const char *refname);
+
+	/**
 	 * Make sure a particular reference will have a reflog which
 	 * will be appended to on writes.
 	 */

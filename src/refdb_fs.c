@@ -1278,6 +1278,17 @@ cleanup:
 	return ret;
 }
 
+static int refdb_reflog_fs__has_log(git_refdb_backend *_backend, const char *name)
+{
+	refdb_fs_backend *backend;
+
+	assert(_backend && name);
+
+	backend = (refdb_fs_backend *) _backend;
+
+	return has_reflog(backend->repo, name);
+}
+
 static int refdb_reflog_fs__read(git_reflog **out, git_refdb_backend *_backend, const char *name)
 {
 	int error = -1;
@@ -1608,6 +1619,7 @@ int git_refdb_backend_fs(
 	backend->parent.del = &refdb_fs_backend__delete;
 	backend->parent.rename = &refdb_fs_backend__rename;
 	backend->parent.compress = &refdb_fs_backend__compress;
+	backend->parent.has_log = &refdb_reflog_fs__has_log;
 	backend->parent.ensure_log = &refdb_reflog_fs__ensure_log;
 	backend->parent.free = &refdb_fs_backend__free;
 	backend->parent.reflog_read = &refdb_reflog_fs__read;
