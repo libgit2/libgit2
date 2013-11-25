@@ -378,20 +378,11 @@ cleanup:
 
 static int note_get_default_ref(const char **out, git_repository *repo)
 {
-	int ret;
 	git_config *cfg;
+	int ret = git_repository_config__weakptr(&cfg, repo);
 
-	*out = NULL;
-
-	if (git_repository_config__weakptr(&cfg, repo) < 0)
-		return -1;
-
-	ret = git_config_get_string(out, cfg, "core.notesRef");
-	if (ret == GIT_ENOTFOUND) {
-		giterr_clear();
-		*out = GIT_NOTES_DEFAULT_REF;
-		return 0;
-	}
+	*out = (ret != 0) ? NULL : git_config__get_string_force(
+		cfg, "core.notesref", GIT_NOTES_DEFAULT_REF);
 
 	return ret;
 }

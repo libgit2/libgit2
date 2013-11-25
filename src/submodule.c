@@ -1468,7 +1468,7 @@ static int submodule_update_config(
 	int error;
 	git_config *config;
 	git_buf key = GIT_BUF_INIT;
-	const char *old = NULL;
+	const git_config_entry *ce = NULL;
 
 	assert(submodule);
 
@@ -1480,14 +1480,16 @@ static int submodule_update_config(
 	if (error < 0)
 		goto cleanup;
 
-	if (git_config_get_string(&old, config, key.ptr) < 0)
-		giterr_clear();
+	if ((error = git_config__lookup_entry(&ce, config, key.ptr, false)) < 0)
+		goto cleanup;
 
-	if (!old && only_existing)
+	if (!ce && only_existing)
 		goto cleanup;
-	if (old && !overwrite)
+	if (ce && !overwrite)
 		goto cleanup;
-	if ((!old && !value) || (old && value && strcmp(old, value) == 0))
+	if (value && ce && ce->value && !strcmp(ce->value, value))
+		goto cleanup;
+	if (!value && (!ce || !ce->value))
 		goto cleanup;
 
 	if (!value)

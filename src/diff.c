@@ -304,26 +304,6 @@ bool git_diff_delta__should_skip(
 }
 
 
-static int config_bool(git_config *cfg, const char *name, int defvalue)
-{
-	int val = defvalue;
-
-	if (git_config_get_bool(&val, cfg, name) < 0)
-		giterr_clear();
-
-	return val;
-}
-
-static int config_int(git_config *cfg, const char *name, int defvalue)
-{
-	int val = defvalue;
-
-	if (git_config_get_int32(&val, cfg, name) < 0)
-		giterr_clear();
-
-	return val;
-}
-
 static const char *diff_mnemonic_prefix(
 	git_iterator_type_t type, bool left_side)
 {
@@ -422,8 +402,8 @@ static int diff_list_apply_options(
 		diff->opts.flags |= GIT_DIFF_INCLUDE_UNTRACKED;
 
 	/* load config values that affect diff behavior */
-	if (git_repository_config__weakptr(&cfg, repo) < 0)
-		return -1;
+	if ((val = git_repository_config__weakptr(&cfg, repo)) < 0)
+		return val;
 
 	if (!git_repository__cvar(&val, repo, GIT_CVAR_SYMLINKS) && val)
 		diff->diffcaps = diff->diffcaps | GIT_DIFFCAPS_HAS_SYMLINKS;
@@ -445,7 +425,7 @@ static int diff_list_apply_options(
 
 	/* If not given explicit `opts`, check `diff.xyz` configs */
 	if (!opts) {
-		int context = config_int(cfg, "diff.context", 3);
+		int context = git_config__get_int_force(cfg, "diff.context", 3);
 		diff->opts.context_lines = context >= 0 ? (uint16_t)context : 3;
 
 		/* add other defaults here */
@@ -460,12 +440,11 @@ static int diff_list_apply_options(
 
 	/* if ignore_submodules not explicitly set, check diff config */
 	if (diff->opts.ignore_submodules <= 0) {
-		const char *str;
+		const git_config_entry *entry;
+		git_config__lookup_entry(&entry, cfg, "diff.ignoresubmodules", true);
 
-		if (git_config_get_string(&str , cfg, "diff.ignoreSubmodules") < 0)
-			giterr_clear();
-		else if (str != NULL &&
-			git_submodule_parse_ignore(&diff->opts.ignore_submodules, str) < 0)
+		if (entry && git_submodule_parse_ignore(
+				&diff->opts.ignore_submodules, entry->value) < 0)
 			giterr_clear();
 	}
 
@@ -474,9 +453,9 @@ static int diff_list_apply_options(
 		const char *use_old = DIFF_OLD_PREFIX_DEFAULT;
 		const char *use_new = DIFF_NEW_PREFIX_DEFAULT;
 
-		if (config_bool(cfg, "diff.noprefix", 0)) {
+		if (git_config__get_bool_force(cfg, "diff.noprefix", 0))
 			use_old = use_new = "";
-		} else if (config_bool(cfg, "diff.mnemonicprefix", 0)) {
+		else if (git_config__get_bool_force(cfg, "diff.mnemonicprefix", 0)) {
 			use_old = diff_mnemonic_prefix(diff->old_src, true);
 			use_new = diff_mnemonic_prefix(diff->new_src, false);
 		}

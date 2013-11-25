@@ -603,11 +603,15 @@ static int attr_cache__lookup_path(
 {
 	git_buf buf = GIT_BUF_INIT;
 	int error;
-	const char *cfgval = NULL;
+	const git_config_entry *entry = NULL;
 
 	*out = NULL;
 
-	if (!(error = git_config_get_string(&cfgval, cfg, key))) {
+	if ((error = git_config__lookup_entry(&entry, cfg, key, false)) < 0)
+		return error;
+
+	if (entry) {
+		const char *cfgval = entry->value;
 
 		/* expand leading ~/ as needed */
 		if (cfgval && cfgval[0] == '~' && cfgval[1] == '/' &&
@@ -616,13 +620,9 @@ static int attr_cache__lookup_path(
 		else if (cfgval)
 			*out = git__strdup(cfgval);
 
-	} else if (error == GIT_ENOTFOUND) {
-		giterr_clear();
-		error = 0;
-
-		if (!git_futils_find_xdg_file(&buf, fallback))
-			*out = git_buf_detach(&buf);
 	}
+	else if (!git_futils_find_xdg_file(&buf, fallback))
+		*out = git_buf_detach(&buf);
 
 	git_buf_free(&buf);
 

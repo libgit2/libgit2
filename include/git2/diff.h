@@ -468,7 +468,7 @@ typedef int (*git_diff_line_cb)(
  * Flags to control the behavior of diff rename/copy detection.
  */
 typedef enum {
-	/** Obey `diff.renames`. This is overridden by any other GIT_DIFF_FIND_ALL flag. */
+	/** Obey `diff.renames`. Overridden by any other GIT_DIFF_FIND_... flag. */
 	GIT_DIFF_FIND_BY_CONFIG = 0,
 
 	/** Look for renames? (`--find-renames`) */
@@ -577,9 +577,9 @@ typedef struct {
 	unsigned int version;
 
 	/**
-	 * Combination of git_diff_find_t values (default FIND_BY_CONFIG).
-	 * Note that if you don't explicitly set this, `diff.renames` could be set
-	 * to false, resulting in `git_diff_find_similar` doing nothing. 
+	 * Combination of git_diff_find_t values (default GIT_DIFF_FIND_BY_CONFIG).
+	 * NOTE: if you don't explicitly set this, `diff.renames` could be set
+	 * to false, resulting in `git_diff_find_similar` doing nothing.
 	 */
 	uint32_t flags;
 

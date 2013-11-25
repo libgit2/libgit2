@@ -404,19 +404,11 @@ static int config_set(git_config_backend *cfg, const char *name, const char *val
 /*
  * Internal function that actually gets the value in string form
  */
-static int config_get(const git_config_backend *cfg, const char *name, const git_config_entry **out)
+static int config_get(const git_config_backend *cfg, const char *key, const git_config_entry **out)
 {
 	diskfile_backend *b = (diskfile_backend *)cfg;
-	char *key;
-	khiter_t pos;
-	int error;
+	khiter_t pos = git_strmap_lookup_index(b->values, key);
 	cvar_t *var;
-
-	if ((error = git_config__normalize_name(name, &key)) < 0)
-		return error;
-
-	pos = git_strmap_lookup_index(b->values, key);
-	git__free(key);
 
 	/* no error message; the config system will write one */
 	if (!git_strmap_valid_index(b->values, pos))
@@ -427,7 +419,6 @@ static int config_get(const git_config_backend *cfg, const char *name, const git
 		var = var->next;
 
 	*out = var->entry;
-
 	return 0;
 }
 

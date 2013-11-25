@@ -13,6 +13,7 @@
 #include "hashsig.h"
 #include "path.h"
 #include "fileops.h"
+#include "config.h"
 
 static git_diff_delta *diff_delta__dup(
 	const git_diff_delta *d, git_pool *pool)
@@ -290,19 +291,16 @@ static int normalize_find_opts(
 	if (!given ||
 		 (given->flags & GIT_DIFF_FIND_ALL) == GIT_DIFF_FIND_BY_CONFIG)
 	{
-		const char *val = NULL;
+		const char *rule =
+			git_config__get_string_force(cfg, "diff.renames", "true");
+		int boolval;
 
-		if (git_config_get_string(&val, cfg, "diff.renames") < 0)
-			giterr_clear();
-		else if (val) {
-			int boolval;
-			if (!git__parse_bool(&boolval, val) && !boolval) {
-				/* do nothing */
-			} else if (!strcasecmp(val, "copies") || !strcasecmp(val, "copy"))
-				opts->flags |= (GIT_DIFF_FIND_RENAMES | GIT_DIFF_FIND_COPIES);
-			else
-				opts->flags |= GIT_DIFF_FIND_RENAMES;
-		}
+		if (!git__parse_bool(&boolval, rule) && !boolval)
+			/* don't set FIND_RENAMES if bool value is false */;
+		else if (!strcasecmp(rule, "copies") || !strcasecmp(rule, "copy"))
+			opts->flags |= GIT_DIFF_FIND_RENAMES | GIT_DIFF_FIND_COPIES;
+		else
+			opts->flags |= GIT_DIFF_FIND_RENAMES;
 	}
 
 	/* some flags imply others */
@@ -343,14 +341,11 @@ static int normalize_find_opts(
 #undef USE_DEFAULT
 
 	if (!opts->rename_limit) {
-		int32_t limit = 0;
+		opts->rename_limit = git_config__get_int_force(
+			cfg, "diff.renamelimit", DEFAULT_RENAME_LIMIT);
 
-		opts->rename_limit = DEFAULT_RENAME_LIMIT;
-
-		if (git_config_get_int32(&limit, cfg, "diff.renameLimit") < 0)
-			giterr_clear();
-		else if (limit > 0)
-			opts->rename_limit = limit;
+		if (opts->rename_limit <= 0)
+			opts->rename_limit = DEFAULT_RENAME_LIMIT;
 	}
 
 	/* assign the internal metric with whitespace flag as payload */

@@ -26,6 +26,7 @@
 #include "oid.h"
 #include "index.h"
 #include "filebuf.h"
+#include "config.h"
 
 #include "git2/types.h"
 #include "git2/repository.h"
@@ -1396,19 +1397,13 @@ static int merge_tree_normalize_opts(
 	}
 
 	if (!opts->target_limit) {
-		int32_t limit = 0;
+		int limit = git_config__get_int_force(cfg, "merge.renamelimit", 0);
 
-		opts->target_limit = GIT_MERGE_TREE_TARGET_LIMIT;
+		if (!limit)
+			limit = git_config__get_int_force(cfg, "diff.renamelimit", 0);
 
-		if (git_config_get_int32(&limit, cfg, "merge.renameLimit") < 0) {
-			giterr_clear();
-
-			if (git_config_get_int32(&limit, cfg, "diff.renameLimit") < 0)
-				giterr_clear();
-		}
-
-		if (limit > 0)
-			opts->target_limit = limit;
+		opts->target_limit = (limit <= 0) ?
+			GIT_MERGE_TREE_TARGET_LIMIT : (unsigned int)limit;
 	}
 
 	/* assign the internal metric with whitespace flag as payload */

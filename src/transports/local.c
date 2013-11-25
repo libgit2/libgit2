@@ -250,8 +250,9 @@ static int local_negotiate_fetch(
 			git_oid_cpy(&rhead->loid, git_object_id(obj));
 		else if (error != GIT_ENOTFOUND)
 			return error;
+		else
+			giterr_clear();
 		git_object_free(obj);
-		giterr_clear();
 	}
 
 	return 0;

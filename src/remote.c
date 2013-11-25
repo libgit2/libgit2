@@ -45,7 +45,7 @@ static int add_refspec(git_remote *remote, const char *string, bool is_fetch)
 
 static int download_tags_value(git_remote *remote, git_config *cfg)
 {
-	const char *val;
+	const git_config_entry *ce;
 	git_buf buf = GIT_BUF_INIT;
 	int error;
 
@@ -53,16 +53,14 @@ static int download_tags_value(git_remote *remote, git_config *cfg)
 	if (git_buf_printf(&buf, "remote.%s.tagopt", remote->name) < 0)
 		return -1;
 
-	error = git_config_get_string(&val, cfg, git_buf_cstr(&buf));
+	error = git_config__lookup_entry(&ce, cfg, git_buf_cstr(&buf), false);
 	git_buf_free(&buf);
-	if (!error && !strcmp(val, "--no-tags"))
-		remote->download_tags = GIT_REMOTE_DOWNLOAD_TAGS_NONE;
-	else if (!error && !strcmp(val, "--tags"))
-		remote->download_tags = GIT_REMOTE_DOWNLOAD_TAGS_ALL;
 
-	if (error == GIT_ENOTFOUND) {
-		giterr_clear();
-		error = 0;
+	if (!error && ce && ce->value) {
+		if (!strcmp(ce->value, "--no-tags"))
+			remote->download_tags = GIT_REMOTE_DOWNLOAD_TAGS_NONE;
+		else if (!strcmp(ce->value, "--tags"))
+			remote->download_tags = GIT_REMOTE_DOWNLOAD_TAGS_ALL;
 	}
 
 	return error;
@@ -104,12 +102,7 @@ static int get_check_cert(int *out, git_repository *repo)
 	if ((error = git_repository_config__weakptr(&cfg, repo)) < 0)
 		return error;
 
-	if ((error = git_config_get_bool(out, cfg, "http.sslVerify")) == 0)
-		return 0;
-	else if (error != GIT_ENOTFOUND)
-		return error;
-
-	giterr_clear();
+	*out = git_config__get_bool_force(cfg, "http.sslverify", 1);
 	return 0;
 }
 
@@ -493,7 +486,7 @@ int git_remote_save(const git_remote *remote)
 		}
 		if (error < 0) {
 			git_buf_free(&buf);
-			return -1;
+			return error;
 		}
 	}
 
@@ -667,7 +660,8 @@ int git_remote_ls(const git_remote_head ***out, size_t *size, git_remote *remote
 int git_remote__get_http_proxy(git_remote *remote, bool use_ssl, char **proxy_url)
 {
 	git_config *cfg;
-	const char *val;
+	const git_config_entry *ce;
+	const char *val = NULL;
 	int error;
 
 	assert(remote);
@@ -684,44 +678,39 @@ int git_remote__get_http_proxy(git_remote *remote, bool use_ssl, char **proxy_ur
 	 * to least specific. */
 
 	/* remote.<name>.proxy config setting */
-	if (remote->name && 0 != *(remote->name)) {
+	if (remote->name && remote->name[0]) {
 		git_buf buf = GIT_BUF_INIT;
 
 		if ((error = git_buf_printf(&buf, "remote.%s.proxy", remote->name)) < 0)
 			return error;
 
-		if ((error = git_config_get_string(&val, cfg, git_buf_cstr(&buf))) == 0 &&
-			val && ('\0' != *val)) {
-			git_buf_free(&buf);
+		error = git_config__lookup_entry(&ce, cfg, git_buf_cstr(&buf), false);
+		git_buf_free(&buf);
 
-			*proxy_url = git__strdup(val);
-			GITERR_CHECK_ALLOC(*proxy_url);
-			return 0;
-		} else if (error != GIT_ENOTFOUND)
+		if (error < 0)
 			return error;
 
-		giterr_clear();
-		git_buf_free(&buf);
+		if (ce && ce->value) {
+			val = ce->value;
+			goto found;
+		}
 	}
 
 	/* http.proxy config setting */
-	if ((error = git_config_get_string(&val, cfg, "http.proxy")) == 0 &&
-		val && ('\0' != *val)) {
-		*proxy_url = git__strdup(val);
-		GITERR_CHECK_ALLOC(*proxy_url);
-		return 0;
-	} else if (error != GIT_ENOTFOUND)
+	if ((error = git_config__lookup_entry(&ce, cfg, "http.proxy", false)) < 0)
 		return error;
-
-	giterr_clear();
+	if (ce && ce->value) {
+		val = ce->value;
+		goto found;
+	}
 
 	/* HTTP_PROXY / HTTPS_PROXY environment variables */
 	val = use_ssl ? getenv("HTTPS_PROXY") : getenv("HTTP_PROXY");
 
-	if (val && ('\0' != *val)) {
+found:
+	if (val && val[0]) {
 		*proxy_url = git__strdup(val);
 		GITERR_CHECK_ALLOC(*proxy_url);
-		return 0;
 	}
 
 	return 0;
