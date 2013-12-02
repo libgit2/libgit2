@@ -525,14 +525,14 @@ typedef enum {
 	 */
 	GIT_DIFF_BREAK_REWRITES_FOR_RENAMES_ONLY  = (1u << 15),
 
-	/** Delete any UNMODIFIED records after find_similar is done.
+	/** Remove any UNMODIFIED deltas after find_similar is done.
 	 *
 	 * Using GIT_DIFF_FIND_COPIES_FROM_UNMODIFIED to emulate the
 	 * --find-copies-harder behavior requires building a diff with the
 	 * GIT_DIFF_INCLUDE_UNMODIFIED flag.  If you do not want UNMODIFIED
 	 * records in the final result, pass this flag to have them removed.
 	 */
-	GIT_DIFF_FIND_DELETE_UNMODIFIED = (1u << 16),
+	GIT_DIFF_FIND_REMOVE_UNMODIFIED = (1u << 16),
 } git_diff_find_t;
 
 /**

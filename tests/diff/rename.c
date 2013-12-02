@@ -1365,7 +1365,7 @@ void test_diff_rename__can_delete_unmodified_deltas(void)
 	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_MODIFIED]);
 	cl_assert_equal_i(3, exp.file_status[GIT_DELTA_UNMODIFIED]);
 
-	opts.flags = GIT_DIFF_FIND_ALL | GIT_DIFF_FIND_DELETE_UNMODIFIED;
+	opts.flags = GIT_DIFF_FIND_ALL | GIT_DIFF_FIND_REMOVE_UNMODIFIED;
 	cl_git_pass(git_diff_find_similar(diff, &opts));
 
 	memset(&exp, 0, sizeof(exp));
