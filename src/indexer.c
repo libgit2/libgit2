@@ -386,8 +386,13 @@ on_error:
 
 static int do_progress_callback(git_indexer *idx, git_transfer_progress *stats)
 {
-	if (!idx->progress_cb) return 0;
-	return idx->progress_cb(stats, idx->progress_payload);
+	if (idx->progress_cb &&
+		idx->progress_cb(stats, idx->progress_payload)) {
+			giterr_clear();
+			return GIT_EUSER;
+	}
+
+	return 0;
 }
 
 /* Hash everything but the last 20B of input */
@@ -491,7 +496,9 @@ int git_indexer_append(git_indexer *idx, const void *data, size_t size, git_tran
 		stats->indexed_deltas = 0;
 		processed = stats->indexed_objects = 0;
 		stats->total_objects = total_objects;
-		do_progress_callback(idx, stats);
+
+		if ((error = do_progress_callback(idx, stats)) < 0)
+			return error;
 	}
 
 	/* Now that we have data in the pack, let's try to parse it */
@@ -573,11 +580,8 @@ int git_indexer_append(git_indexer *idx, const void *data, size_t size, git_tran
 		}
 		stats->received_objects++;
 
-		if (do_progress_callback(idx, stats) != 0) {
-			giterr_clear();
-			error = GIT_EUSER;
+		if ((error = do_progress_callback(idx, stats)) < 0)
 			goto on_error;
-		}
 	}
 
 	return 0;
@@ -749,7 +753,7 @@ static int resolve_deltas(git_indexer *idx, git_transfer_progress *stats)
 {
 	unsigned int i;
 	struct delta_info *delta;
-	int progressed = 0;
+	int progressed = 0, progress_cb_result;
 
 	while (idx->deltas.length > 0) {
 		progressed = 0;
@@ -767,7 +771,8 @@ static int resolve_deltas(git_indexer *idx, git_transfer_progress *stats)
 			stats->indexed_objects++;
 			stats->indexed_deltas++;
 			progressed = 1;
-			do_progress_callback(idx, stats);
+			if ((progress_cb_result = do_progress_callback(idx, stats)) < 0)
+				return progress_cb_result;
 
 			/*
 			 * Remove this delta from the list and
@@ -841,6 +846,7 @@ int git_indexer_commit(git_indexer *idx, git_transfer_progress *stats)
 {
 	git_mwindow *w = NULL;
 	unsigned int i, long_offsets = 0, left;
+	int error;
 	struct git_pack_idx_header hdr;
 	git_buf filename = GIT_BUF_INIT;
 	struct entry *entry;
@@ -877,8 +883,8 @@ int git_indexer_commit(git_indexer *idx, git_transfer_progress *stats)
 	/* Freeze the number of deltas */
 	stats->total_deltas = stats->total_objects - stats->indexed_objects;
 
-	if (resolve_deltas(idx, stats) < 0)
-		return -1;
+	if ((error = resolve_deltas(idx, stats)) < 0)
+		return error;
 
 	if (stats->indexed_objects != stats->total_objects) {
 		giterr_set(GITERR_INDEXER, "early EOF");
