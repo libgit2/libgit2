@@ -746,6 +746,8 @@ static bool is_rename_source(
 	case GIT_DELTA_UNMODIFIED:
 		if (!FLAG_SET(opts, GIT_DIFF_FIND_COPIES_FROM_UNMODIFIED))
 			return false;
+		if (FLAG_SET(opts, GIT_DIFF_FIND_DELETE_UNMODIFIED))
+			delta->flags |= GIT_DIFF_FLAG__TO_DELETE;
 		break;
 
 	default: /* MODIFIED, RENAMED, COPIED */
