@@ -1206,7 +1206,7 @@ static git_merge_diff *merge_diff_from_index_entries(
 
 /* Merge trees */
 
-static int merge_index_insert_conflict(
+static int merge_diff_list_insert_conflict(
 	git_merge_diff_list *diff_list,
 	struct merge_diff_df_data *merge_df_data,
 	const git_index_entry *tree_items[3])
@@ -1222,7 +1222,7 @@ static int merge_index_insert_conflict(
 	return 0;
 }
 
-static int merge_index_insert_unmodified(
+static int merge_diff_list_insert_unmodified(
 	git_merge_diff_list *diff_list,
 	const git_index_entry *tree_items[3])
 {
@@ -1252,7 +1252,7 @@ int git_merge_diff_list__find_differences(
 	size_t i, j;
 	int error = 0;
 
-	assert(diff_list && our_tree && their_tree);
+	assert(diff_list && (our_tree || their_tree));
 
 	if ((error = git_iterator_for_tree(&iterators[TREE_IDX_ANCESTOR], (git_tree *)ancestor_tree, GIT_ITERATOR_DONT_IGNORE_CASE, NULL, NULL)) < 0 ||
 		(error = git_iterator_for_tree(&iterators[TREE_IDX_OURS], (git_tree *)our_tree, GIT_ITERATOR_DONT_IGNORE_CASE, NULL, NULL)) < 0 ||
@@ -1262,6 +1262,7 @@ int git_merge_diff_list__find_differences(
 	/* Set up the iterators */
 	for (i = 0; i < 3; i++) {
 		error = git_iterator_current(&items[i], iterators[i]);
+
 		if (error < 0 && error != GIT_ITEROVER)
 			goto done;
 	}
@@ -1313,9 +1314,9 @@ int git_merge_diff_list__find_differences(
 			break;
 
 		if (cur_item_modified)
-			error = merge_index_insert_conflict(diff_list, &df_data, cur_items);
+			error = merge_diff_list_insert_conflict(diff_list, &df_data, cur_items);
 		else
-			error = merge_index_insert_unmodified(diff_list, cur_items);
+			error = merge_diff_list_insert_unmodified(diff_list, cur_items);
 		if (error < 0)
 			goto done;
 
@@ -1325,6 +1326,7 @@ int git_merge_diff_list__find_differences(
 				continue;
 
 			error = git_iterator_advance(&items[i], iterators[i]);
+
 			if (error < 0 && error != GIT_ITEROVER)
 				goto done;
 		}
@@ -1569,7 +1571,7 @@ int git_merge_trees(
 	size_t i;
 	int error = 0;
 
-	assert(out && repo && our_tree && their_tree);
+	assert(out && repo && (our_tree || their_tree));
 
 	*out = NULL;
 
@@ -2268,7 +2270,7 @@ done:
 	return error;
 }
 
-static int merge_indexes(git_repository *repo, git_index *index_new)
+int git_merge__indexes(git_repository *repo, git_index *index_new)
 {
 	git_index *index_repo;
 	unsigned int index_repo_caps;
@@ -2440,7 +2442,7 @@ int git_merge(
 	/* TODO: recursive, octopus, etc... */
 
 	if ((error = git_merge_trees(&index_new, repo, ancestor_tree, our_tree, their_trees[0], &opts.merge_tree_opts)) < 0 ||
-		(error = merge_indexes(repo, index_new)) < 0 ||
+		(error = git_merge__indexes(repo, index_new)) < 0 ||
 		(error = git_repository_index(&index_repo, repo)) < 0 ||
 		(error = git_checkout_index(repo, index_repo, &opts.checkout_opts)) < 0)
 		goto on_error;

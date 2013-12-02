@@ -158,4 +158,6 @@ int git_merge__setup(
 	size_t their_heads_len,
 	unsigned int flags);
 
+int git_merge__indexes(git_repository *repo, git_index *index_new);
+
 #endif
