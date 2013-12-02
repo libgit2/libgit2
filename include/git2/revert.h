@@ -34,13 +34,36 @@ typedef struct {
 #define GIT_REVERT_OPTS_INIT {GIT_REVERT_OPTS_VERSION, 0, GIT_MERGE_TREE_OPTS_INIT, GIT_CHECKOUT_OPTS_INIT}
 
 /**
-* Reverts the given commits, producing changes in the working directory.
-*
-* @param repo the repository to revert
-* @param commits the commits to revert
-* @param commits_len the number of commits to revert
-* @param flags merge flags
-*/
+ * Reverts the given commit against the given "our" commit, producing an
+ * index that reflects the result of the revert.
+ *
+ * The returned index must be freed explicitly with `git_index_free`.
+ *
+ * @param out pointer to store the index result in
+ * @param repo the repository that contains the given commits
+ * @param revert_commit the commit to revert
+ * @param our_commit the commit to revert against (eg, HEAD)
+ * @param mainline the parent of the revert commit, if it is a merge
+ * @param merge_tree_opts the merge tree options (or null for defaults)
+ * @return zero on success, -1 on failure.
+ */
+int git_revert_commit(
+	git_index **out,
+	git_repository *repo,
+	git_commit *revert_commit,
+	git_commit *our_commit,
+	unsigned int mainline,
+	const git_merge_tree_opts *merge_tree_opts);
+
+/**
+ * Reverts the given commit, producing changes in the working directory.
+ *
+ * @param repo the repository to revert
+ * @param commits the commits to revert
+ * @param commits_len the number of commits to revert
+ * @param flags merge flags
+ * @return zero on success, -1 on failure.
+ */
 GIT_EXTERN(int) git_revert(
 	git_repository *repo,
 	git_commit *commit,

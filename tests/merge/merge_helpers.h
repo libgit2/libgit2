@@ -44,6 +44,11 @@ int merge_trees_from_branches(
 	const char *ours_name, const char *theirs_name,
 	git_merge_tree_opts *opts);
 
+int merge_commits_from_branches(
+	git_index **index, git_repository *repo,
+	const char *ours_name, const char *theirs_name,
+	git_merge_tree_opts *opts);
+
 int merge_branches(git_merge_result **result, git_repository *repo,
 	const char *ours_branch, const char *theirs_branch, git_merge_opts *opts);
 

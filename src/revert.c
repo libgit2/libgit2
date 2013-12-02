@@ -109,20 +109,79 @@ static int revert_state_cleanup(git_repository *repo)
 	return git_repository__cleanup_files(repo, state_files, ARRAY_SIZE(state_files));
 }
 
+static int revert_seterr(git_commit *commit, const char *fmt)
+{
+	char commit_oidstr[GIT_OID_HEXSZ + 1];
+
+	git_oid_fmt(commit_oidstr, git_commit_id(commit));
+	commit_oidstr[GIT_OID_HEXSZ] = '\0';
+
+	giterr_set(GITERR_REVERT, fmt, commit_oidstr);
+
+	return -1;
+}
+
+int git_revert_commit(
+	git_index **out,
+	git_repository *repo,
+	git_commit *revert_commit,
+	git_commit *our_commit,
+	unsigned int mainline,
+	const git_merge_tree_opts *merge_tree_opts)
+{
+	git_commit *parent_commit = NULL;
+	git_tree *parent_tree = NULL, *our_tree = NULL, *revert_tree = NULL;
+	int parent = 0, error = 0;
+
+	assert(out && repo && revert_commit && our_commit);
+
+	if (git_commit_parentcount(revert_commit) > 1) {
+		if (!mainline)
+			return revert_seterr(revert_commit,
+				"Mainline branch is not specified but %s is a merge commit");
+
+		parent = mainline;
+	} else {
+		if (mainline)
+			return revert_seterr(revert_commit,
+				"Mainline branch specified but %s is not a merge commit");
+
+		parent = git_commit_parentcount(revert_commit);
+	}
+
+	if (parent &&
+		((error = git_commit_parent(&parent_commit, revert_commit, (parent - 1))) < 0 ||
+		(error = git_commit_tree(&parent_tree, parent_commit)) < 0))
+		goto done;
+
+	if ((error = git_commit_tree(&revert_tree, revert_commit)) < 0 ||
+		(error = git_commit_tree(&our_tree, our_commit)) < 0)
+		goto done;
+
+	error = git_merge_trees(out, repo, revert_tree, our_tree, parent_tree, merge_tree_opts);
+
+done:
+	git_tree_free(parent_tree);
+	git_tree_free(our_tree);
+	git_tree_free(revert_tree);
+	git_commit_free(parent_commit);
+
+	return error;
+}
+
 int git_revert(
 	git_repository *repo,
 	git_commit *commit,
 	const git_revert_opts *given_opts)
 {
 	git_revert_opts opts;
-	git_commit *parent_commit = NULL;
-	git_tree *parent_tree = NULL, *our_tree = NULL, *revert_tree = NULL;
-	git_index *index_new = NULL, *index_repo = NULL;
+	git_reference *our_ref = NULL;
+	git_commit *our_commit = NULL;
 	char commit_oidstr[GIT_OID_HEXSZ + 1];
 	const char *commit_msg;
 	git_buf their_label = GIT_BUF_INIT;
-	int parent = 0;
-	int error = 0;
+	git_index *index_new = NULL, *index_repo = NULL;
+	int error;
 
 	assert(repo && commit);
 
@@ -141,38 +200,9 @@ int git_revert(
 		(error = revert_normalize_opts(repo, &opts, given_opts, git_buf_cstr(&their_label))) < 0 ||
 		(error = write_revert_head(repo, commit, commit_oidstr)) < 0 ||
 		(error = write_merge_msg(repo, commit, commit_oidstr, commit_msg)) < 0 ||
-		(error = git_repository_head_tree(&our_tree, repo)) < 0 ||
-		(error = git_commit_tree(&revert_tree, commit)) < 0)
-		goto on_error;
-
-	if (git_commit_parentcount(commit) > 1) {
-		if (!opts.mainline) {
-			giterr_set(GITERR_REVERT,
-				"Mainline branch is not specified but %s is a merge commit",
-				commit_oidstr);
-			error = -1;
-			goto on_error;
-		}
-
-		parent = opts.mainline;
-	} else {
-		if (opts.mainline) {
-			giterr_set(GITERR_REVERT,
-				"Mainline branch was specified but %s is not a merge",
-				commit_oidstr);
-			error = -1;
-			goto on_error;
-		}
-
-		parent = git_commit_parentcount(commit);
-	}
-
-	if (parent &&
-		((error = git_commit_parent(&parent_commit, commit, (parent - 1))) < 0 ||
-		(error = git_commit_tree(&parent_tree, parent_commit)) < 0))
-		goto on_error;
-
-	if ((error = git_merge_trees(&index_new, repo, revert_tree, our_tree, parent_tree, &opts.merge_tree_opts)) < 0 ||
+		(error = git_repository_head(&our_ref, repo)) < 0 ||
+		(error = git_reference_peel((git_object **)&our_commit, our_ref, GIT_OBJ_COMMIT)) < 0 ||
+		(error = git_revert_commit(&index_new, repo, commit, our_commit, opts.mainline, &opts.merge_tree_opts)) < 0 ||
 		(error = git_merge__indexes(repo, index_new)) < 0 ||
 		(error = git_repository_index(&index_repo, repo)) < 0 ||
 		(error = git_checkout_index(repo, index_repo, &opts.checkout_opts)) < 0)
@@ -186,10 +216,8 @@ on_error:
 done:
 	git_index_free(index_new);
 	git_index_free(index_repo);
-	git_tree_free(parent_tree);
-	git_tree_free(our_tree);
-	git_tree_free(revert_tree);
-	git_commit_free(parent_commit);
+	git_commit_free(our_commit);
+	git_reference_free(our_ref);
 	git_buf_free(&their_label);
 
 	return error;
