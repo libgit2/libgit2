@@ -43,6 +43,7 @@
 #include "git2/remote.h"
 #include "git2/repository.h"
 #include "git2/reset.h"
+#include "git2/revert.h"
 #include "git2/revparse.h"
 #include "git2/revwalk.h"
 #include "git2/signature.h"
