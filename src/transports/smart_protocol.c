@@ -521,7 +521,7 @@ int git_smart__download_pack(
 
 		/* Check cancellation before network call */
 		if (t->cancelled.val) {
-			giterr_set(GITERR_NET, "The fetch was cancelled by the user");
+			giterr_clear();
 			error = GIT_EUSER;
 			goto done;
 		}
@@ -531,7 +531,7 @@ int git_smart__download_pack(
 
 		/* Check cancellation after network call */
 		if (t->cancelled.val) {
-			giterr_set(GITERR_NET, "The fetch was cancelled by the user");
+			giterr_clear();
 			error = GIT_EUSER;
 			goto done;
 		}
@@ -540,8 +540,9 @@ int git_smart__download_pack(
 			if (t->progress_cb) {
 				git_pkt_progress *p = (git_pkt_progress *) pkt;
 				if (t->progress_cb(p->data, p->len, t->message_cb_payload)) {
-					giterr_set(GITERR_NET, "The fetch was cancelled by the user");
-					return GIT_EUSER;
+					giterr_clear();
+					error = GIT_EUSER;
+					goto done;
 				}
 			}
 			git__free(pkt);
@@ -559,15 +560,28 @@ int git_smart__download_pack(
 		}
 	} while (1);
 
+	/*
+	 * Trailing execution of progress_cb, if necessary...
+	 * Only the callback through the npp datastructure currently
+	 * updates the last_fired_bytes value. It is possible that
+	 * progress has already been reported with the correct 
+	 * "received_bytes" value, but until (if?) this is unified
+	 * then we will report progress again to be sure that the
+	 * correct last received_bytes value is reported.
+	 */
+	if (npp.callback && npp.stats->received_bytes > npp.last_fired_bytes) {
+		if (npp.callback(npp.stats, npp.payload) < 0) {
+			giterr_clear();
+			error = GIT_EUSER;
+			goto done;
+		}
+	}
+
 	error = writepack->commit(writepack, stats);
 
 done:
 	if (writepack)
 		writepack->free(writepack);
-
-	/* Trailing execution of progress_cb, if necessary */
-	if (npp.callback && npp.stats->received_bytes > npp.last_fired_bytes)
-		npp.callback(npp.stats, npp.payload);
 
 	return error;
 }
