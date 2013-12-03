@@ -13,13 +13,13 @@ static git_repository *repo;
 static git_index *repo_index;
 
 // Fixture setup and teardown
-void test_revert_revert__initialize(void)
+void test_revert_workdir__initialize(void)
 {
 	repo = cl_git_sandbox_init(TEST_REPO_PATH);
 	git_repository_index(&repo_index, repo);
 }
 
-void test_revert_revert__cleanup(void)
+void test_revert_workdir__cleanup(void)
 {
 	git_index_free(repo_index);
 	cl_git_sandbox_cleanup();
@@ -27,7 +27,7 @@ void test_revert_revert__cleanup(void)
 
 /* git reset --hard 72333f47d4e83616630ff3b0ffe4c0faebcc3c45
  * git revert --no-commit d1d403d22cbe24592d725f442835cf46fe60c8ac */
-void test_revert_revert__automerge(void)
+void test_revert_workdir__automerge(void)
 {
 	git_commit *head, *commit;
 	git_oid head_oid, revert_oid;
@@ -54,7 +54,7 @@ void test_revert_revert__automerge(void)
 }
 
 /* git revert --no-commit 72333f47d4e83616630ff3b0ffe4c0faebcc3c45 */
-void test_revert_revert__conflicts(void)
+void test_revert_workdir__conflicts(void)
 {
 	git_reference *head_ref;
 	git_commit *head, *commit;
@@ -114,7 +114,7 @@ void test_revert_revert__conflicts(void)
 /* git reset --hard 39467716290f6df775a91cdb9a4eb39295018145
  * git revert --no-commit ebb03002cee5d66c7732dd06241119fe72ab96a5
 */
-void test_revert_revert__orphan(void)
+void test_revert_workdir__orphan(void)
 {
 	git_commit *head, *commit;
 	git_oid head_oid, revert_oid;
@@ -139,7 +139,7 @@ void test_revert_revert__orphan(void)
 
 /* git reset --hard 72333f47d4e83616630ff3b0ffe4c0faebcc3c45
  * git revert --no-commit d1d403d22cbe24592d725f442835cf46fe60c8ac */
-void test_revert_revert__conflict_use_ours(void)
+void test_revert_workdir__conflict_use_ours(void)
 {
 	git_commit *head, *commit;
 	git_oid head_oid, revert_oid;
@@ -182,7 +182,7 @@ void test_revert_revert__conflict_use_ours(void)
 /* git reset --hard cef56612d71a6af8d8015691e4865f7fece905b5
  * git revert --no-commit 55568c8de5322ff9a95d72747a239cdb64a19965
  */
-void test_revert_revert__rename_1_of_2(void)
+void test_revert_workdir__rename_1_of_2(void)
 {
 	git_commit *head, *commit;
 	git_oid head_oid, revert_oid;
@@ -216,7 +216,7 @@ void test_revert_revert__rename_1_of_2(void)
 
 /* git reset --hard 55568c8de5322ff9a95d72747a239cdb64a19965
  * git revert --no-commit HEAD~1 */
-void test_revert_revert__rename(void)
+void test_revert_workdir__rename(void)
 {
 	git_commit *head, *commit;
 	git_oid head_oid, revert_oid;
@@ -250,7 +250,7 @@ void test_revert_revert__rename(void)
 }
 
 /* git revert --no-commit HEAD */
-void test_revert_revert__head(void)
+void test_revert_workdir__head(void)
 {
 	git_reference *head;
 	git_commit *commit;
@@ -275,7 +275,7 @@ void test_revert_revert__head(void)
 	git_commit_free(commit);
 }
 
-void test_revert_revert__nonmerge_fails_mainline_specified(void)
+void test_revert_workdir__nonmerge_fails_mainline_specified(void)
 {
 	git_reference *head;
 	git_commit *commit;
@@ -295,7 +295,7 @@ void test_revert_revert__nonmerge_fails_mainline_specified(void)
 
 /* git reset --hard 5acdc74af27172ec491d213ee36cea7eb9ef2579
  * git revert HEAD */
-void test_revert_revert__merge_fails_without_mainline_specified(void)
+void test_revert_workdir__merge_fails_without_mainline_specified(void)
 {
 	git_commit *head;
 	git_oid head_oid;
@@ -313,7 +313,7 @@ void test_revert_revert__merge_fails_without_mainline_specified(void)
 
 /* git reset --hard 5acdc74af27172ec491d213ee36cea7eb9ef2579
  * git revert HEAD -m1 --no-commit */
-void test_revert_revert__merge_first_parent(void)
+void test_revert_workdir__merge_first_parent(void)
 {
 	git_commit *head;
 	git_oid head_oid;
@@ -338,7 +338,7 @@ void test_revert_revert__merge_first_parent(void)
 	git_commit_free(head);
 }
 
-void test_revert_revert__merge_second_parent(void)
+void test_revert_workdir__merge_second_parent(void)
 {
 	git_commit *head;
 	git_oid head_oid;

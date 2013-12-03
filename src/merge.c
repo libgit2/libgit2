@@ -1609,6 +1609,40 @@ done:
 	return error;
 }
 
+int git_merge_commits(
+	git_index **out,
+	git_repository *repo,
+	const git_commit *our_commit,
+	const git_commit *their_commit,
+	const git_merge_tree_opts *opts)
+{
+	git_oid ancestor_oid;
+	git_commit *ancestor_commit = NULL;
+	git_tree *our_tree = NULL, *their_tree = NULL, *ancestor_tree = NULL;
+	int error = 0;
+
+	if ((error = git_merge_base(&ancestor_oid, repo, git_commit_id(our_commit), git_commit_id(their_commit))) < 0 &&
+		error == GIT_ENOTFOUND)
+		giterr_clear();
+	else if (error < 0 ||
+		(error = git_commit_lookup(&ancestor_commit, repo, &ancestor_oid)) < 0 ||
+		(error = git_commit_tree(&ancestor_tree, ancestor_commit)) < 0)
+		goto done;
+
+	if ((error = git_commit_tree(&our_tree, our_commit)) < 0 ||
+		(error = git_commit_tree(&their_tree, their_commit)) < 0 ||
+		(error = git_merge_trees(out, repo, ancestor_tree, our_tree, their_tree, opts)) < 0)
+		goto done;
+
+done:
+	git_commit_free(ancestor_commit);
+	git_tree_free(our_tree);
+	git_tree_free(their_tree);
+	git_tree_free(ancestor_tree);
+
+	return error;
+}
+
 /* Merge setup / cleanup */
 
 static int write_orig_head(

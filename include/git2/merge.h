@@ -192,6 +192,26 @@ GIT_EXTERN(int) git_merge_trees(
 	const git_merge_tree_opts *opts);
 
 /**
+ * Merge two commits, producing a `git_index` that reflects the result of
+ * the merge.
+ *
+ * The returned index must be freed explicitly with `git_index_free`.
+ *
+ * @param out pointer to store the index result in
+ * @param repo repository that contains the given trees
+ * @param our_commit the commit that reflects the destination tree
+ * @param their_commit the commit to merge in to `our_commit`
+ * @param opts the merge tree options (or null for defaults)
+ * @return zero on success, -1 on failure.
+ */
+GIT_EXTERN(int) git_merge_commits(
+	git_index **out,
+	git_repository *repo,
+	const git_commit *our_commit,
+	const git_commit *their_commit,
+	const git_merge_tree_opts *opts);
+
+/**
  * Merges the given commits into HEAD, producing a new commit.
  *
  * @param out the results of the merge
