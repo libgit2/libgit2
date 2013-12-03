@@ -1965,6 +1965,42 @@ int git_repository_state(git_repository *repo)
 	return state;
 }
 
+int git_repository__cleanup_files(git_repository *repo, const char *files[], size_t files_len)
+{
+	git_buf path = GIT_BUF_INIT;
+	size_t i;
+	int error = 0;
+
+	for (i = 0; i < files_len; ++i) {
+		git_buf_clear(&path);
+
+		if ((error = git_buf_joinpath(&path, repo->path_repository, files[i])) < 0 ||
+			(git_path_isfile(git_buf_cstr(&path)) &&
+			(error = p_unlink(git_buf_cstr(&path))) < 0))
+			goto done;
+	}
+
+done:
+	git_buf_free(&path);
+
+	return error;
+}
+
+static const char *state_files[] = {
+	GIT_MERGE_HEAD_FILE,
+	GIT_MERGE_MODE_FILE,
+	GIT_MERGE_MSG_FILE,
+	GIT_REVERT_HEAD_FILE,
+	GIT_CHERRY_PICK_HEAD_FILE,
+};
+
+int git_repository_state_cleanup(git_repository *repo)
+{
+	assert(repo);
+
+	return git_repository__cleanup_files(repo, state_files, ARRAY_SIZE(state_files));
+}
+
 int git_repository_is_shallow(git_repository *repo)
 {
 	git_buf path = GIT_BUF_INIT;
