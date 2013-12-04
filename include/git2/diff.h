@@ -468,6 +468,9 @@ typedef int (*git_diff_line_cb)(
  * Flags to control the behavior of diff rename/copy detection.
  */
 typedef enum {
+	/** Obey `diff.renames`. This is overridden by any other GIT_DIFF_FIND_ALL flag. */
+	GIT_DIFF_FIND_BY_CONFIG = 0,
+
 	/** Look for renames? (`--find-renames`) */
 	GIT_DIFF_FIND_RENAMES = (1u << 0),
 
