@@ -120,7 +120,7 @@ static int diff_delta__from_one(
 		return -1;
 	}
 
-	return notify_res < 0 ? GIT_EUSER : 0;
+	return notify_res < 0 ? giterr_user_cancel() : 0;
 }
 
 static int diff_delta__from_two(
@@ -182,7 +182,7 @@ static int diff_delta__from_two(
 		return -1;
 	}
 
-	return notify_res < 0 ? GIT_EUSER : 0;
+	return notify_res < 0 ? giterr_user_cancel() : 0;
 }
 
 static git_diff_delta *diff_delta__last_for_item(
@@ -1343,7 +1343,7 @@ int git_diff__paired_foreach(
 	int (*cb)(git_diff_delta *h2i, git_diff_delta *i2w, void *payload),
 	void *payload)
 {
-	int cmp;
+	int cmp, error = 0;
 	git_diff_delta *h2i, *i2w;
 	size_t i, j, i_max, j_max;
 	int (*strcomp)(const char *, const char *) = git__strcmp;
@@ -1399,17 +1399,16 @@ int git_diff__paired_foreach(
 			strcomp(h2i->new_file.path, i2w->old_file.path);
 
 		if (cmp < 0) {
-			if (cb(h2i, NULL, payload))
-				return GIT_EUSER;
-			i++;
+			i++; i2w = NULL;
 		} else if (cmp > 0) {
-			if (cb(NULL, i2w, payload))
-				return GIT_EUSER;
-			j++;
+			j++; h2i = NULL;
 		} else {
-			if (cb(h2i, i2w, payload))
-				return GIT_EUSER;
 			i++; j++;
+		}
+
+		if (cb(h2i, i2w, payload)) {
+			error = giterr_user_cancel();
+			break;
 		}
 	}
 
@@ -1426,5 +1425,5 @@ int git_diff__paired_foreach(
 		git_vector_sort(&idx2wd->deltas);
 	}
 
-	return 0;
+	return error;
 }

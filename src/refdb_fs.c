@@ -264,9 +264,14 @@ done:
 	return error;
 }
 
-static int _dirent_loose_load(void *data, git_buf *full_path)
+struct packed_loadloose_data {
+	refdb_fs_backend *backend;
+	git_error_state error;
+};
+
+static int _dirent_loose_load(void *data_, git_buf *full_path)
 {
-	refdb_fs_backend *backend = (refdb_fs_backend *)data;
+	struct packed_loadloose_data *data = data_;
 	const char *file_path;
 
 	if (git__suffixcmp(full_path->ptr, ".lock") == 0)
@@ -274,11 +279,12 @@ static int _dirent_loose_load(void *data, git_buf *full_path)
 
 	if (git_path_isdir(full_path->ptr))
 		return git_path_direach(
-			full_path, backend->direach_flags, _dirent_loose_load, backend);
+			full_path, data->backend->direach_flags, _dirent_loose_load, data);
 
-	file_path = full_path->ptr + strlen(backend->path);
+	file_path = full_path->ptr + strlen(data->backend->path);
 
-	return loose_lookup_to_packfile(backend, file_path);
+	return giterr_capture(
+		&data->error, loose_lookup_to_packfile(data->backend, file_path));
 }
 
 /*
@@ -291,9 +297,13 @@ static int packed_loadloose(refdb_fs_backend *backend)
 {
 	int error;
 	git_buf refs_path = GIT_BUF_INIT;
+	struct packed_loadloose_data data;
 
 	if (git_buf_joinpath(&refs_path, backend->path, GIT_REFS_DIR) < 0)
 		return -1;
+
+	memset(&data, 0, sizeof(data));
+	data.backend = backend;
 
 	/*
 	 * Load all the loose files from disk into the Packfile table.
@@ -301,11 +311,14 @@ static int packed_loadloose(refdb_fs_backend *backend)
 	 * updated loose versions
 	 */
 	error = git_path_direach(
-		&refs_path, backend->direach_flags, _dirent_loose_load, backend);
+		&refs_path, backend->direach_flags, _dirent_loose_load, &data);
 
 	git_buf_free(&refs_path);
 
-	return (error == GIT_EUSER) ? -1 : error;
+	if (error == GIT_EUSER)
+		error = giterr_restore(&data.error);
+
+	return error;
 }
 
 static int refdb_fs_backend__exists(

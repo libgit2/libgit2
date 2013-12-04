@@ -216,7 +216,7 @@ static int checkout_action_common(
 
 	if (notify != GIT_CHECKOUT_NOTIFY_NONE &&
 		checkout_notify(data, notify, delta, wd) != 0)
-		return GIT_EUSER;
+		return giterr_user_cancel();
 
 	return action;
 }
@@ -230,7 +230,7 @@ static int checkout_action_no_wd(
 	switch (delta->status) {
 	case GIT_DELTA_UNMODIFIED: /* case 12 */
 		if (checkout_notify(data, GIT_CHECKOUT_NOTIFY_DIRTY, delta, NULL))
-			return GIT_EUSER;
+			return giterr_user_cancel();
 		action = CHECKOUT_ACTION_IF(SAFE_CREATE, UPDATE_BLOB, NONE);
 		break;
 	case GIT_DELTA_ADDED:    /* case 2 or 28 (and 5 but not really) */
@@ -302,7 +302,7 @@ static int checkout_action_wd_only(
 	}
 
 	if (checkout_notify(data, notify, NULL, wd))
-		return GIT_EUSER;
+		return giterr_user_cancel();
 
 	if (remove) {
 		char *path = git_pool_strdup(&data->pool, wd->path);
@@ -342,7 +342,7 @@ static int checkout_action_with_wd(
 		if (checkout_is_workdir_modified(data, &delta->old_file, wd)) {
 			if (checkout_notify(
 					data, GIT_CHECKOUT_NOTIFY_DIRTY, delta, wd))
-				return GIT_EUSER;
+				return giterr_user_cancel();
 			action = CHECKOUT_ACTION_IF(FORCE, UPDATE_BLOB, NONE);
 		}
 		break;
@@ -406,7 +406,7 @@ static int checkout_action_with_wd_blocker(
 	case GIT_DELTA_UNMODIFIED:
 		/* should show delta as dirty / deleted */
 		if (checkout_notify(data, GIT_CHECKOUT_NOTIFY_DIRTY, delta, wd))
-			return GIT_EUSER;
+			return giterr_user_cancel();
 		action = CHECKOUT_ACTION_IF(FORCE, REMOVE_AND_UPDATE, NONE);
 		break;
 	case GIT_DELTA_ADDED:
@@ -439,7 +439,7 @@ static int checkout_action_with_wd_dir(
 		if (checkout_notify(data, GIT_CHECKOUT_NOTIFY_DIRTY, delta, NULL) ||
 			checkout_notify(
 				data, GIT_CHECKOUT_NOTIFY_UNTRACKED, NULL, wd))
-			return GIT_EUSER;
+			return giterr_user_cancel();
 		break;
 	case GIT_DELTA_ADDED:/* case 4 (and 7 for dir) */
 	case GIT_DELTA_MODIFIED: /* case 20 (or 37 but not really) */
@@ -452,7 +452,7 @@ static int checkout_action_with_wd_dir(
 		if (delta->old_file.mode != GIT_FILEMODE_TREE &&
 			checkout_notify(
 				data, GIT_CHECKOUT_NOTIFY_UNTRACKED, NULL, wd))
-			return GIT_EUSER;
+			return giterr_user_cancel();
 		break;
 	case GIT_DELTA_TYPECHANGE: /* case 24 or 31 */
 		if (delta->old_file.mode == GIT_FILEMODE_TREE) {
@@ -1998,9 +1998,6 @@ int git_checkout_iterator(
 	assert(data.completed_steps == data.total_steps);
 
 cleanup:
-	if (error == GIT_EUSER)
-		giterr_clear();
-
 	if (!error && data.index != NULL &&
 		(data.strategy & GIT_CHECKOUT_DONT_UPDATE_INDEX) == 0)
 		error = git_index_write(data.index);

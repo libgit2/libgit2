@@ -217,7 +217,14 @@ char *git_pool_strdup(git_pool *pool, const char *str)
 
 char *git_pool_strdup_safe(git_pool *pool, const char *str)
 {
-	return str ? git_pool_strdup(pool, str) : NULL;
+	if (!str)
+		return NULL;
+	else {
+		char *result = git_pool_strdup(pool, str);
+		if (!result)
+			giterr_clear();
+		return result;
+	}
 }
 
 char *git_pool_strcat(git_pool *pool, const char *a, const char *b)

@@ -8,7 +8,6 @@
 #define INCLUDE_git_errors_h__
 
 #include "common.h"
-#include "buffer.h"
 
 /**
  * @file git2/errors.h
@@ -91,7 +90,7 @@ GIT_EXTERN(void) giterr_clear(void);
  * Get the last error data and clear it.
  *
  * This copies the last error into the given `git_error` struct
- * and returns 0 if the copy was successful, leaving the error 
+ * and returns 0 if the copy was successful, leaving the error
  * cleared as if `giterr_clear` had been called.
  *
  * If there was no existing error in the library, -1 will be returned

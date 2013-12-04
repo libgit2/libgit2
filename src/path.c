@@ -434,7 +434,8 @@ int git_path_walk_up(
 	iter.asize = path->asize;
 
 	while (scan >= stop) {
-		error = cb(data, &iter);
+		if (cb(data, &iter))
+			error = giterr_user_cancel();
 		iter.ptr[scan] = oldc;
 		if (error < 0)
 			break;
@@ -528,7 +529,9 @@ bool git_path_is_empty_dir(const char *path)
 	if (!git_path_isdir(path))
 		return false;
 
-	if (!(error = git_buf_sets(&dir, path)))
+	if ((error = git_buf_sets(&dir, path)) != 0)
+		giterr_clear();
+	else
 		error = git_path_direach(&dir, 0, path_found_entry, NULL);
 
 	git_buf_free(&dir);
@@ -867,7 +870,7 @@ int git_path_direach(
 		if ((error = git_path_iconv(&ic, &de_path, &de_len)) < 0)
 			break;
 #endif
-				
+
 		if ((error = git_buf_put(path, de_path, de_len)) < 0)
 			break;
 
@@ -876,7 +879,7 @@ int git_path_direach(
 		git_buf_truncate(path, wd_len); /* restore path */
 
 		if (error) {
-			error = GIT_EUSER;
+			error = giterr_user_cancel();
 			break;
 		}
 	}

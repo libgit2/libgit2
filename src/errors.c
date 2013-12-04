@@ -23,7 +23,8 @@ static void set_error(int error_class, char *string)
 {
 	git_error *error = &GIT_GLOBAL->error_t;
 
-	git__free(error->message);
+	if (error->message != string)
+		git__free(error->message);
 
 	error->message = string;
 	error->klass = error_class;
@@ -103,8 +104,10 @@ int giterr_set_regex(const regex_t *regex, int error_code)
 
 void giterr_clear(void)
 {
-	set_error(0, NULL);
-	GIT_GLOBAL->last_error = NULL;
+	if (GIT_GLOBAL->last_error != NULL) {
+		set_error(0, NULL);
+		GIT_GLOBAL->last_error = NULL;
+	}
 
 	errno = 0;
 #ifdef GIT_WIN32
@@ -133,4 +136,40 @@ int giterr_detach(git_error *cpy)
 const git_error *giterr_last(void)
 {
 	return GIT_GLOBAL->last_error;
+}
+
+int giterr_capture(git_error_state *state, int error_code)
+{
+	state->error_code = error_code;
+	if (error_code)
+		giterr_detach(&state->error_msg);
+	return error_code;
+}
+
+int giterr_restore(git_error_state *state)
+{
+	if (state && state->error_code && state->error_msg.message)
+		set_error(state->error_msg.klass, state->error_msg.message);
+	else
+		giterr_clear();
+
+	return state ? state->error_code : 0;
+}
+
+int giterr_system_last(void)
+{
+#ifdef GIT_WIN32
+	return GetLastError();
+#else
+	return errno;
+#endif
+}
+
+void giterr_system_set(int code)
+{
+#ifdef GIT_WIN32
+	SetLastError(code);
+#else
+	errno = code;
+#endif
 }

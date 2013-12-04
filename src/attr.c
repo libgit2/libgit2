@@ -193,8 +193,7 @@ int git_attr_foreach(
 
 				error = callback(assign->name, assign->value, payload);
 				if (error) {
-					giterr_clear();
-					error = GIT_EUSER;
+					error = giterr_user_cancel();
 					goto cleanup;
 				}
 			}

@@ -90,29 +90,28 @@ int git_branch_delete(git_reference *branch)
 
 	assert(branch);
 
-	if (!git_reference_is_branch(branch) &&
-		!git_reference_is_remote(branch)) {
-		giterr_set(GITERR_INVALID, "Reference '%s' is not a valid branch.", git_reference_name(branch));
-		return -1;
+	if (!git_reference_is_branch(branch) && !git_reference_is_remote(branch)) {
+		giterr_set(GITERR_INVALID, "Reference '%s' is not a valid branch.",
+			git_reference_name(branch));
+		return GIT_ENOTFOUND;
 	}
 
 	if ((is_head = git_branch_is_head(branch)) < 0)
 		return is_head;
 
 	if (is_head) {
-		giterr_set(GITERR_REFERENCE,
-				"Cannot delete branch '%s' as it is the current HEAD of the repository.", git_reference_name(branch));
+		giterr_set(GITERR_REFERENCE, "Cannot delete branch '%s' as it is "
+			"the current HEAD of the repository.", git_reference_name(branch));
 		return -1;
 	}
 
-	if (git_buf_printf(&config_section, "branch.%s", git_reference_name(branch) + strlen(GIT_REFS_HEADS_DIR)) < 0)
+	if (git_buf_join(&config_section, '.', "branch",
+			git_reference_name(branch) + strlen(GIT_REFS_HEADS_DIR)) < 0)
 		goto on_error;
 
 	if (git_config_rename_section(
-		git_reference_owner(branch), 
-		git_buf_cstr(&config_section),
-		NULL) < 0)
-			goto on_error;
+		git_reference_owner(branch), git_buf_cstr(&config_section), NULL) < 0)
+		goto on_error;
 
 	if (git_reference_delete(branch) < 0)
 		goto on_error;
@@ -206,17 +205,21 @@ int git_branch_move(
 	if (error < 0)
 		goto done;
 
-	git_buf_printf(&old_config_section,
-		"branch.%s", git_reference_name(branch) + strlen(GIT_REFS_HEADS_DIR));
+	/* first update ref then config so failure won't trash config */
 
-	git_buf_printf(&new_config_section, "branch.%s", new_branch_name);
-
-	if ((error = git_config_rename_section(git_reference_owner(branch),
-		git_buf_cstr(&old_config_section),
-		git_buf_cstr(&new_config_section))) < 0)
+	error = git_reference_rename(
+		out, branch, git_buf_cstr(&new_reference_name), force);
+	if (error < 0)
 		goto done;
 
-	error = git_reference_rename(out, branch, git_buf_cstr(&new_reference_name), force);
+	git_buf_join(&old_config_section, '.', "branch",
+		git_reference_name(branch) + strlen(GIT_REFS_HEADS_DIR));
+	git_buf_join(&new_config_section, '.', "branch", new_branch_name);
+
+	error = git_config_rename_section(
+		git_reference_owner(branch),
+		git_buf_cstr(&old_config_section),
+		git_buf_cstr(&new_config_section));
 
 done:
 	git_buf_free(&new_reference_name);

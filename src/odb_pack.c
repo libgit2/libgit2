@@ -190,31 +190,45 @@ static int packfile_sort__cb(const void *a_, const void *b_)
 }
 
 
+struct packfile_load_data {
+	struct pack_backend *backend;
+	git_error_state error;
+};
 
 static int packfile_load__cb(void *_data, git_buf *path)
 {
-	struct pack_backend *backend = (struct pack_backend *)_data;
+	struct packfile_load_data *data = _data;
+	struct pack_backend *backend = data->backend;
 	struct git_pack_file *pack;
+	const char *path_str = git_buf_cstr(path);
+	size_t i, cmp_len = git_buf_len(path);
 	int error;
-	size_t i;
 
-	if (git__suffixcmp(path->ptr, ".idx") != 0)
+	if (cmp_len <= strlen(".idx") || git__suffixcmp(path_str, ".idx") != 0)
 		return 0; /* not an index */
+
+	cmp_len -= strlen(".idx");
 
 	for (i = 0; i < backend->packs.length; ++i) {
 		struct git_pack_file *p = git_vector_get(&backend->packs, i);
-		if (memcmp(p->pack_name, git_buf_cstr(path), git_buf_len(path) - strlen(".idx")) == 0)
+
+		if (memcmp(p->pack_name, path_str, cmp_len) == 0)
 			return 0;
 	}
 
 	error = git_packfile_alloc(&pack, path->ptr);
-	if (error == GIT_ENOTFOUND)
-		/* ignore missing .pack file as git does */
-		return 0;
-	else if (error < 0)
-		return error;
 
-	return git_vector_insert(&backend->packs, pack);
+	/* ignore missing .pack file as git does */
+	if (error == GIT_ENOTFOUND) {
+		giterr_clear();
+		return 0;
+	}
+
+	if (!error)
+		error = git_vector_insert(&backend->packs, pack);
+
+	return giterr_capture(&data->error, error);
+
 }
 
 static int pack_entry_find_inner(
@@ -314,32 +328,34 @@ static int pack_entry_find_prefix(
  * Implement the git_odb_backend API calls
  *
  ***********************************************************/
-static int pack_backend__refresh(git_odb_backend *_backend)
+static int pack_backend__refresh(git_odb_backend *backend)
 {
-	struct pack_backend *backend = (struct pack_backend *)_backend;
-
+	struct packfile_load_data data;
 	int error;
 	struct stat st;
 	git_buf path = GIT_BUF_INIT;
 
-	if (backend->pack_folder == NULL)
+	memset(&data, 0, sizeof(data));
+	data.backend = (struct pack_backend *)backend;
+
+	if (data.backend->pack_folder == NULL)
 		return 0;
 
-	if (p_stat(backend->pack_folder, &st) < 0 || !S_ISDIR(st.st_mode))
+	if (p_stat(data.backend->pack_folder, &st) < 0 || !S_ISDIR(st.st_mode))
 		return git_odb__error_notfound("failed to refresh packfiles", NULL);
 
-	git_buf_sets(&path, backend->pack_folder);
+	git_buf_sets(&path, data.backend->pack_folder);
 
 	/* reload all packs */
-	error = git_path_direach(&path, 0, packfile_load__cb, backend);
+	error = git_path_direach(&path, 0, packfile_load__cb, &data);
+
+	if (error == GIT_EUSER)
+		error = giterr_restore(&data.error);
 
 	git_buf_free(&path);
+	git_vector_sort(&data.backend->packs);
 
-	if (error < 0)
-		return -1;
-
-	git_vector_sort(&backend->packs);
-	return 0;
+	return error;
 }
 
 static int pack_backend__read_header_internal(

@@ -251,13 +251,14 @@ int git_remote_create_inmemory(git_remote **out, git_repository *repo, const cha
 struct refspec_cb_data {
 	git_remote *remote;
 	int fetch;
+	git_error_state error;
 };
 
 static int refspec_cb(const git_config_entry *entry, void *payload)
 {
-	const struct refspec_cb_data *data = (struct refspec_cb_data *)payload;
-
-	return add_refspec(data->remote, entry->value, data->fetch);
+	struct refspec_cb_data *data = (struct refspec_cb_data *)payload;
+	return giterr_capture(
+		&data->error, add_refspec(data->remote, entry->value, data->fetch));
 }
 
 static int get_optional_config(
@@ -283,9 +284,6 @@ static int get_optional_config(
 		error = 0;
 	}
 
-	if (error < 0)
-		error = -1;
-
 	return error;
 }
 
@@ -296,7 +294,7 @@ int git_remote_load(git_remote **out, git_repository *repo, const char *name)
 	const char *val;
 	int error = 0;
 	git_config *config;
-	struct refspec_cb_data data;
+	struct refspec_cb_data data = { NULL };
 	bool optional_setting_found = false, found;
 
 	assert(out && repo && name);
@@ -363,6 +361,7 @@ int git_remote_load(git_remote **out, git_repository *repo, const char *name)
 
 	data.remote = remote;
 	data.fetch = true;
+
 	git_buf_clear(&buf);
 	git_buf_printf(&buf, "remote.%s.fetch", name);
 
@@ -387,6 +386,9 @@ int git_remote_load(git_remote **out, git_repository *repo, const char *name)
 
 cleanup:
 	git_buf_free(&buf);
+
+	if (error == GIT_EUSER)
+		error = giterr_restore(&data.error);
 
 	if (error < 0)
 		git_remote_free(remote);
@@ -1110,9 +1112,14 @@ void git_remote_free(git_remote *remote)
 	git__free(remote);
 }
 
+struct remote_list_data {
+	git_vector list;
+	git_error_state error;
+};
+
 static int remote_list_cb(const git_config_entry *entry, void *payload)
 {
-	git_vector *list = payload;
+	struct remote_list_data *data = payload;
 	const char *name = entry->name + strlen("remote.");
 	size_t namelen = strlen(name);
 	char *remote_name;
@@ -1123,47 +1130,50 @@ static int remote_list_cb(const git_config_entry *entry, void *payload)
 		remote_name = git__strndup(name, namelen - 4); /* strip ".url" */
 	else
 		remote_name = git__strndup(name, namelen - 8); /* strip ".pushurl" */
-	GITERR_CHECK_ALLOC(remote_name);
+	if (!remote_name)
+		return giterr_capture(&data->error, -1);
 
-	return git_vector_insert(list, remote_name);
+	return giterr_capture(
+		&data->error, git_vector_insert(&data->list, remote_name));
 }
 
 int git_remote_list(git_strarray *remotes_list, git_repository *repo)
 {
-	git_config *cfg;
-	git_vector list;
 	int error;
+	git_config *cfg;
+	struct remote_list_data data;
 
-	if (git_repository_config__weakptr(&cfg, repo) < 0)
-		return -1;
+	if ((error = git_repository_config__weakptr(&cfg, repo)) < 0)
+		return error;
 
-	if (git_vector_init(&list, 4, git__strcmp_cb) < 0)
-		return -1;
+	memset(&data, 0, sizeof(data));
+	if ((error = git_vector_init(&data.list, 4, git__strcmp_cb)) < 0)
+		return error;
 
 	error = git_config_foreach_match(
-		cfg, "^remote\\..*\\.(push)?url$", remote_list_cb, &list);
+		cfg, "^remote\\..*\\.(push)?url$", remote_list_cb, &data);
+
+	/* cb error is converted to GIT_EUSER by git_config_foreach */
+	if (error == GIT_EUSER)
+		error = giterr_restore(&data.error);
 
 	if (error < 0) {
 		size_t i;
 		char *elem;
 
-		git_vector_foreach(&list, i, elem) {
+		git_vector_foreach(&data.list, i, elem) {
 			git__free(elem);
 		}
 
-		git_vector_free(&list);
-
-		/* cb error is converted to GIT_EUSER by git_config_foreach */
-		if (error == GIT_EUSER)
-			error = -1;
+		git_vector_free(&data.list);
 
 		return error;
 	}
 
-	git_vector_uniq(&list, git__free);
+	git_vector_uniq(&data.list, git__free);
 
-	remotes_list->strings = (char **)list.contents;
-	remotes_list->count = list.length;
+	remotes_list->strings = (char **)data.list.contents;
+	remotes_list->count = data.list.length;
 
 	return 0;
 }
@@ -1250,11 +1260,11 @@ cleanup:
 	return error;
 }
 
-struct update_data
-{
+struct update_data {
 	git_config *config;
 	const char *old_remote_name;
 	const char *new_remote_name;
+	git_error_state error;
 };
 
 static int update_config_entries_cb(
@@ -1266,10 +1276,9 @@ static int update_config_entries_cb(
 	if (strcmp(entry->value, data->old_remote_name))
 		return 0;
 
-	return git_config_set_string(
-		data->config,
-		entry->name,
-		data->new_remote_name);
+	return giterr_capture(
+		&data->error, git_config_set_string(
+			data->config, entry->name, data->new_remote_name));
 }
 
 static int update_branch_remote_config_entry(
@@ -1277,20 +1286,22 @@ static int update_branch_remote_config_entry(
 	const char *old_name,
 	const char *new_name)
 {
-	git_config *config;
-	struct update_data data;
+	int error;
+	struct update_data data = { NULL };
 
-	if (git_repository_config__weakptr(&config, repo) < 0)
-		return -1;
+	if ((error = git_repository_config__weakptr(&data.config, repo)) < 0)
+		return error;
 
-	data.config = config;
 	data.old_remote_name = old_name;
 	data.new_remote_name = new_name;
 
-	return git_config_foreach_match(
-		config,
-		"branch\\..+\\.remote",
-		update_config_entries_cb, &data);
+	error = git_config_foreach_match(
+		data.config, "branch\\..+\\.remote", update_config_entries_cb, &data);
+
+	if (error == GIT_EUSER)
+		error = giterr_restore(&data.error);
+
+	return error;
 }
 
 static int rename_one_remote_reference(
@@ -1298,18 +1309,20 @@ static int rename_one_remote_reference(
 	const char *old_remote_name,
 	const char *new_remote_name)
 {
-	int error = -1;
+	int error;
 	git_buf new_name = GIT_BUF_INIT;
 
-	if (git_buf_printf(
+	error = git_buf_printf(
 		&new_name,
 		GIT_REFS_REMOTES_DIR "%s%s",
 		new_remote_name,
-		reference->name + strlen(GIT_REFS_REMOTES_DIR) + strlen(old_remote_name)) < 0)
-			return -1;
+		reference->name + strlen(GIT_REFS_REMOTES_DIR) + strlen(old_remote_name));
 
-	error = git_reference_rename(NULL, reference, git_buf_cstr(&new_name), 0);
-	git_reference_free(reference);
+	if (!error) {
+		error = git_reference_rename(
+			NULL, reference, git_buf_cstr(&new_name), 0);
+		git_reference_free(reference);
+	}
 
 	git_buf_free(&new_name);
 	return error;
@@ -1320,12 +1333,12 @@ static int rename_remote_references(
 	const char *old_name,
 	const char *new_name)
 {
-	int error = -1;
+	int error;
 	git_reference *ref;
 	git_reference_iterator *iter;
 
-	if (git_reference_iterator_new(&iter, repo) < 0)
-		return -1;
+	if ((error = git_reference_iterator_new(&iter, repo)) < 0)
+		return error;
 
 	while ((error = git_reference_next(&ref, iter)) == 0) {
 		if (git__prefixcmp(ref->name, GIT_REFS_REMOTES_DIR)) {
@@ -1333,18 +1346,13 @@ static int rename_remote_references(
 			continue;
 		}
 
-		if ((error = rename_one_remote_reference(ref, old_name, new_name)) < 0) {
-			git_reference_iterator_free(iter);
-			return error;
-		}
+		if ((error = rename_one_remote_reference(ref, old_name, new_name)) < 0)
+			break;
 	}
 
 	git_reference_iterator_free(iter);
 
-	if (error == GIT_ITEROVER)
-		return 0;
-
-	return error;
+	return (error == GIT_ITEROVER) ? 0 : error;
 }
 
 static int rename_fetch_refspecs(

@@ -18,6 +18,7 @@ typedef struct {
 	uint32_t flags;
 	int oid_strlen;
 	git_diff_line line;
+	git_error_state error;
 } diff_print_info;
 
 static int diff_print_info_init(
@@ -33,6 +34,7 @@ static int diff_print_info_init(
 	pi->print_cb = cb;
 	pi->payload  = payload;
 	pi->buf      = out;
+	memset(&pi->error, 0, sizeof(pi->error));
 
 	if (diff)
 		pi->flags = diff->opts.flags;
@@ -89,12 +91,6 @@ char git_diff_status_char(git_delta_t status)
 	return code;
 }
 
-static int callback_error(void)
-{
-	giterr_clear();
-	return GIT_EUSER;
-}
-
 static int diff_print_one_name_only(
 	const git_diff_delta *delta, float progress, void *data)
 {
@@ -111,14 +107,14 @@ static int diff_print_one_name_only(
 
 	if (git_buf_puts(out, delta->new_file.path) < 0 ||
 		git_buf_putc(out, '\n'))
-		return -1;
+		return giterr_capture(&pi->error, -1);
 
 	pi->line.origin      = GIT_DIFF_LINE_FILE_HDR;
 	pi->line.content     = git_buf_cstr(out);
 	pi->line.content_len = git_buf_len(out);
 
 	if (pi->print_cb(delta, NULL, &pi->line, pi->payload))
-		return callback_error();
+		return giterr_user_cancel();
 
 	return 0;
 }
@@ -156,14 +152,14 @@ static int diff_print_one_name_status(
 		git_buf_printf(out, "%c\t%s\n", code, delta->old_file.path);
 
 	if (git_buf_oom(out))
-		return -1;
+		return giterr_capture(&pi->error, -1);
 
 	pi->line.origin      = GIT_DIFF_LINE_FILE_HDR;
 	pi->line.content     = git_buf_cstr(out);
 	pi->line.content_len = git_buf_len(out);
 
 	if (pi->print_cb(delta, NULL, &pi->line, pi->payload))
-		return callback_error();
+		return giterr_user_cancel();
 
 	return 0;
 }
@@ -202,14 +198,14 @@ static int diff_print_one_raw(
 			delta->old_file.path : delta->new_file.path);
 
 	if (git_buf_oom(out))
-		return -1;
+		return giterr_capture(&pi->error, -1);
 
 	pi->line.origin      = GIT_DIFF_LINE_FILE_HDR;
 	pi->line.content     = git_buf_cstr(out);
 	pi->line.content_len = git_buf_len(out);
 
 	if (pi->print_cb(delta, NULL, &pi->line, pi->payload))
-		return callback_error();
+		return giterr_user_cancel();
 
 	return 0;
 }
@@ -315,14 +311,14 @@ static int diff_print_patch_file(
 
 	if (git_diff_delta__format_file_header(
 			pi->buf, delta, oldpfx, newpfx, pi->oid_strlen) < 0)
-		return -1;
+		return giterr_capture(&pi->error, -1);
 
 	pi->line.origin      = GIT_DIFF_LINE_FILE_HDR;
 	pi->line.content     = git_buf_cstr(pi->buf);
 	pi->line.content_len = git_buf_len(pi->buf);
 
 	if (pi->print_cb(delta, NULL, &pi->line, pi->payload))
-		return callback_error();
+		return giterr_user_cancel();
 
 	if ((delta->flags & GIT_DIFF_FLAG_BINARY) == 0)
 		return 0;
@@ -332,7 +328,7 @@ static int diff_print_patch_file(
 	if (diff_delta_format_with_paths(
 			pi->buf, delta, oldpfx, newpfx,
 			"Binary files %s%s and %s%s differ\n") < 0)
-		return -1;
+		return giterr_capture(&pi->error, -1);
 
 	pi->line.origin      = GIT_DIFF_LINE_BINARY;
 	pi->line.content     = git_buf_cstr(pi->buf);
@@ -340,7 +336,7 @@ static int diff_print_patch_file(
 	pi->line.num_lines   = 1;
 
 	if (pi->print_cb(delta, NULL, &pi->line, pi->payload))
-		return callback_error();
+		return giterr_user_cancel();
 
 	return 0;
 }
@@ -360,7 +356,7 @@ static int diff_print_patch_hunk(
 	pi->line.content_len = h->header_len;
 
 	if (pi->print_cb(d, h, &pi->line, pi->payload))
-		return callback_error();
+		return giterr_user_cancel();
 
 	return 0;
 }
@@ -377,7 +373,7 @@ static int diff_print_patch_line(
 		return 0;
 
 	if (pi->print_cb(delta, hunk, line, pi->payload))
-		return callback_error();
+		return giterr_user_cancel();
 
 	return 0;
 }
@@ -421,8 +417,13 @@ int git_diff_print(
 
 	if (!(error = diff_print_info_init(
 			&pi, &buf, diff, format, print_cb, payload)))
+	{
 		error = git_diff_foreach(
 			diff, print_file, print_hunk, print_line, &pi);
+
+		if (error == GIT_EUSER && pi.error.error_code)
+			error = giterr_restore(&pi.error);
+	}
 
 	git_buf_free(&buf);
 
@@ -444,9 +445,14 @@ int git_patch_print(
 	if (!(error = diff_print_info_init(
 			&pi, &temp, git_patch__diff(patch),
 			GIT_DIFF_FORMAT_PATCH, print_cb, payload)))
+	{
 		error = git_patch__invoke_callbacks(
 			patch, diff_print_patch_file, diff_print_patch_hunk,
 			diff_print_patch_line, &pi);
+
+		if (error && error != GIT_EUSER)
+			error = giterr_restore(&pi.error);
+	}
 
 	git_buf_free(&temp);
 
@@ -483,8 +489,10 @@ int git_patch_to_str(
 	/* GIT_EUSER means git_buf_put in print_to_buffer_cb returned -1,
 	 * meaning a memory allocation failure, so just map to -1...
 	 */
-	if (error == GIT_EUSER)
+	if (error == GIT_EUSER) {
+		giterr_set_oom();
 		error = -1;
+	}
 
 	*string = git_buf_detach(&output);
 

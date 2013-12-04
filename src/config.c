@@ -501,20 +501,18 @@ int git_config_backend_foreach_match(
 		return -1;
 	}
 
-	while(!(iter->next(&entry, iter) < 0)) {
+	while (!(iter->next(&entry, iter) < 0)) {
 		/* skip non-matching keys if regexp was provided */
 		if (regexp && regexec(&regex, entry->name, 0, NULL, 0) != 0)
 			continue;
 
 		/* abort iterator on non-zero return value */
 		if (fn(entry, data)) {
-			giterr_clear();
-			result = GIT_EUSER;
-			goto cleanup;
+			result = giterr_user_cancel();
+			break;
 		}
 	}
 
-cleanup:
 	if (regexp != NULL)
 		regfree(&regex);
 
@@ -537,9 +535,8 @@ int git_config_foreach_match(
 		return error;
 
 	while ((error = git_config_next(&entry, iter)) == 0) {
-		if(cb(entry, payload)) {
-			giterr_clear();
-			error = GIT_EUSER;
+		if (cb(entry, payload)) {
+			error = giterr_user_cancel();
 			break;
 		}
 	}
@@ -800,9 +797,10 @@ int git_config_get_multivar_foreach(
 	found = 0;
 	while ((err = iter->next(&entry, iter)) == 0) {
 		found = 1;
-		if(cb(entry, payload)) {
+
+		if (cb(entry, payload)) {
 			iter->free(iter);
-			return GIT_EUSER;
+			return giterr_user_cancel();
 		}
 	}
 
@@ -1214,7 +1212,7 @@ struct rename_data {
 	git_config *config;
 	git_buf *name;
 	size_t old_len;
-	int actual_error;
+	git_error_state error;
 };
 
 static int rename_config_entries_cb(
@@ -1237,9 +1235,8 @@ static int rename_config_entries_cb(
 	if (!error)
 		error = git_config_delete_entry(data->config, entry->name);
 
-	data->actual_error = error; /* preserve actual error code */
-
-	return error;
+	/* capture error message as needed, since it will become EUSER */
+	return giterr_capture(&data->error, error);
 }
 
 int git_config_rename_section(
@@ -1260,10 +1257,10 @@ int git_config_rename_section(
 	if ((error = git_repository_config__weakptr(&config, repo)) < 0)
 		goto cleanup;
 
+	memset(&data, 0, sizeof(data));
 	data.config  = config;
 	data.name    = &replace;
 	data.old_len = strlen(old_section_name) + 1;
-	data.actual_error = 0;
 
 	if ((error = git_buf_join(&replace, '.', new_section_name, "")) < 0)
 		goto cleanup;
@@ -1281,7 +1278,7 @@ int git_config_rename_section(
 		config, git_buf_cstr(&pattern), rename_config_entries_cb, &data);
 
 	if (error == GIT_EUSER)
-		error = data.actual_error;
+		error = giterr_restore(&data.error);
 
 cleanup:
 	git_buf_free(&pattern);

@@ -78,26 +78,40 @@ int giterr_set_regex(const regex_t *regex, int error_code);
 /**
  * Gets the system error code for this thread.
  */
-GIT_INLINE(int) giterr_system_last(void)
-{
-#ifdef GIT_WIN32
-	return GetLastError();
-#else
-	return errno;
-#endif
-}
+int giterr_system_last(void);
 
 /**
  * Sets the system error code for this thread.
  */
-GIT_INLINE(void) giterr_system_set(int code)
+void giterr_system_set(int code);
+
+/**
+ * Note that a user cancelled an operation with GIT_EUSER
+ */
+GIT_INLINE(int) giterr_user_cancel(void)
 {
-#ifdef GIT_WIN32
-	SetLastError(code);
-#else
-	errno = code;
-#endif
+	giterr_clear();
+	return GIT_EUSER;
 }
+
+/**
+ * Structure to preserve libgit2 error state
+ */
+typedef struct {
+	int       error_code;
+	git_error error_msg;
+} git_error_state;
+
+/**
+ * Capture current error state to restore later, returning error code.
+ * If `error_code` is zero, this does nothing and returns zero.
+ */
+int giterr_capture(git_error_state *state, int error_code);
+
+/**
+ * Restore error state to a previous value, returning saved error code.
+ */
+int giterr_restore(git_error_state *state);
 
 /**
  * Check a versioned structure for validity

@@ -28,25 +28,29 @@ static int git_xdiff_parse_hunk(git_diff_hunk *hunk, const char *header)
 {
 	/* expect something of the form "@@ -%d[,%d] +%d[,%d] @@" */
 	if (*header != '@')
-		return -1;
+		goto fail;
 	if (git_xdiff_scan_int(&header, &hunk->old_start) < 0)
-		return -1;
+		goto fail;
 	if (*header == ',') {
 		if (git_xdiff_scan_int(&header, &hunk->old_lines) < 0)
-			return -1;
+			goto fail;
 	} else
 		hunk->old_lines = 1;
 	if (git_xdiff_scan_int(&header, &hunk->new_start) < 0)
-		return -1;
+		goto fail;
 	if (*header == ',') {
 		if (git_xdiff_scan_int(&header, &hunk->new_lines) < 0)
-			return -1;
+			goto fail;
 	} else
 		hunk->new_lines = 1;
 	if (hunk->old_start < 0 || hunk->new_start < 0)
-		return -1;
+		goto fail;
 
 	return 0;
+
+fail:
+	giterr_set(GITERR_INVALID, "Malformed hunk header from xdiff");
+	return -1;
 }
 
 typedef struct {
@@ -123,7 +127,7 @@ static int git_xdiff_cb(void *priv, mmbuffer_t *bufs, int len)
 
 		if (output->hunk_cb != NULL &&
 			output->hunk_cb(delta, &info->hunk, output->payload))
-			output->error = GIT_EUSER;
+			return (output->error = giterr_user_cancel());
 
 		info->old_lineno = info->hunk.old_start;
 		info->new_lineno = info->hunk.new_start;
@@ -149,7 +153,7 @@ static int git_xdiff_cb(void *priv, mmbuffer_t *bufs, int len)
 		if (!output->error &&
 			output->data_cb != NULL &&
 			output->data_cb(delta, &info->hunk, &line, output->payload))
-			output->error = GIT_EUSER;
+			output->error = giterr_user_cancel();
 	}
 
 	if (len == 3 && !output->error) {
@@ -171,7 +175,7 @@ static int git_xdiff_cb(void *priv, mmbuffer_t *bufs, int len)
 		if (!output->error &&
 			output->data_cb != NULL &&
 			output->data_cb(delta, &info->hunk, &line, output->payload))
-			output->error = GIT_EUSER;
+			output->error = giterr_user_cancel();
 	}
 
 	return output->error;
@@ -219,11 +223,9 @@ void git_xdiff_init(git_xdiff_output *xo, const git_diff_options *opts)
 
 	xo->output.diff_cb = git_xdiff;
 
-	memset(&xo->config, 0, sizeof(xo->config));
 	xo->config.ctxlen = opts ? opts->context_lines : 3;
 	xo->config.interhunkctxlen = opts ? opts->interhunk_lines : 0;
 
-	memset(&xo->params, 0, sizeof(xo->params));
 	if (flags & GIT_DIFF_IGNORE_WHITESPACE)
 		xo->params.flags |= XDF_WHITESPACE_FLAGS;
 	if (flags & GIT_DIFF_IGNORE_WHITESPACE_CHANGE)
@@ -236,6 +238,5 @@ void git_xdiff_init(git_xdiff_output *xo, const git_diff_options *opts)
 	if (flags & GIT_DIFF_MINIMAL)
 		xo->params.flags |= XDF_NEED_MINIMAL;
 
-	memset(&xo->callback, 0, sizeof(xo->callback));
 	xo->callback.outf = git_xdiff_cb;
 }
