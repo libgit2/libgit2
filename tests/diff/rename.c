@@ -1381,3 +1381,141 @@ void test_diff_rename__can_delete_unmodified_deltas(void)
 
 	git_buf_free(&c1);
 }
+
+void test_diff_rename__matches_config_behavior(void)
+{
+	const char *sha0 = "31e47d8c1fa36d7f8d537b96158e3f024de0a9f2";
+	const char *sha1 = "2bc7f351d20b53f1c72c16c4b036e491c478c49a";
+	const char *sha2 = "1c068dee5790ef1580cfc4cd670915b48d790084";
+
+	git_tree *tree0, *tree1, *tree2;
+	git_config *cfg;
+	git_diff *diff;
+	git_diff_options diffopts = GIT_DIFF_OPTIONS_INIT;
+	git_diff_find_options opts = GIT_DIFF_FIND_OPTIONS_INIT;
+	diff_expects exp;
+
+	opts.flags = GIT_DIFF_FIND_BY_CONFIG;
+	tree0 = resolve_commit_oid_to_tree(g_repo, sha0);
+	tree1 = resolve_commit_oid_to_tree(g_repo, sha1);
+	tree2 = resolve_commit_oid_to_tree(g_repo, sha2);
+
+	diffopts.flags |= GIT_DIFF_INCLUDE_UNMODIFIED;
+	cl_git_pass(git_repository_config(&cfg, g_repo));
+
+	/* diff.renames = false; no rename detection should happen */
+	cl_git_pass(git_config_set_bool(cfg, "diff.renames", false));
+	cl_git_pass(git_diff_tree_to_tree(
+				&diff, g_repo, tree0, tree1, &diffopts));
+	memset(&exp, 0, sizeof(exp));
+	cl_git_pass(git_diff_find_similar(diff, &opts));
+	cl_git_pass(git_diff_foreach(diff,
+				diff_file_cb, diff_hunk_cb, diff_line_cb, &exp));
+	cl_assert_equal_i(4, exp.files);
+	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_UNMODIFIED]);
+	cl_assert_equal_i(2, exp.file_status[GIT_DELTA_ADDED]);
+	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_DELETED]);
+	git_diff_free(diff);
+
+	/* diff.renames = true; should act like -M */
+	cl_git_pass(git_config_set_bool(cfg, "diff.renames", true));
+	cl_git_pass(git_diff_tree_to_tree(
+				&diff, g_repo, tree0, tree1, &diffopts));
+	memset(&exp, 0, sizeof(exp));
+	cl_git_pass(git_diff_find_similar(diff, &opts));
+	cl_git_pass(git_diff_foreach(diff,
+				diff_file_cb, diff_hunk_cb, diff_line_cb, &exp));
+	cl_assert_equal_i(3, exp.files);
+	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_UNMODIFIED]);
+	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_ADDED]);
+	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_RENAMED]);
+	git_diff_free(diff);
+
+	/* diff.renames = copies; should act like -M -C */
+	cl_git_pass(git_config_set_string(cfg, "diff.renames", "copies"));
+	cl_git_pass(git_diff_tree_to_tree(
+				&diff, g_repo, tree1, tree2, &diffopts));
+	memset(&exp, 0, sizeof(exp));
+	cl_git_pass(git_diff_find_similar(diff, &opts));
+	cl_git_pass(git_diff_foreach(diff,
+				diff_file_cb, diff_hunk_cb, diff_line_cb, &exp));
+	cl_assert_equal_i(4, exp.files);
+	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_UNMODIFIED]);
+	cl_assert_equal_i(2, exp.file_status[GIT_DELTA_MODIFIED]);
+	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_COPIED]);
+	git_diff_free(diff);
+
+	/* NULL find options is the same as GIT_DIFF_FIND_BY_CONFIG */
+	cl_git_pass(git_diff_tree_to_tree(
+				&diff, g_repo, tree1, tree2, &diffopts));
+	memset(&exp, 0, sizeof(exp));
+	cl_git_pass(git_diff_find_similar(diff, NULL));
+	cl_git_pass(git_diff_foreach(diff,
+				diff_file_cb, diff_hunk_cb, diff_line_cb, &exp));
+	cl_assert_equal_i(4, exp.files);
+	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_UNMODIFIED]);
+	cl_assert_equal_i(2, exp.file_status[GIT_DELTA_MODIFIED]);
+	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_COPIED]);
+	git_diff_free(diff);
+
+	/* Cleanup */
+	git_tree_free(tree0);
+	git_tree_free(tree1);
+	git_tree_free(tree2);
+	git_config_free(cfg);
+}
+
+void test_diff_rename__can_override_thresholds_when_obeying_config(void)
+{
+	const char *sha1 = "2bc7f351d20b53f1c72c16c4b036e491c478c49a";
+	const char *sha2 = "1c068dee5790ef1580cfc4cd670915b48d790084";
+
+	git_tree *tree1, *tree2;
+	git_config *cfg;
+	git_diff *diff;
+	git_diff_options diffopts = GIT_DIFF_OPTIONS_INIT;
+	git_diff_find_options opts = GIT_DIFF_FIND_OPTIONS_INIT;
+	diff_expects exp;
+
+	tree1 = resolve_commit_oid_to_tree(g_repo, sha1);
+	tree2 = resolve_commit_oid_to_tree(g_repo, sha2);
+
+	diffopts.flags |= GIT_DIFF_INCLUDE_UNMODIFIED;
+	opts.flags = GIT_DIFF_FIND_BY_CONFIG;
+
+	cl_git_pass(git_repository_config(&cfg, g_repo));
+	cl_git_pass(git_config_set_string(cfg, "diff.renames", "copies"));
+	git_config_free(cfg);
+
+	/* copy threshold = 96%, should see creation of ikeepsix.txt */
+	opts.copy_threshold = 96;
+	cl_git_pass(git_diff_tree_to_tree(
+				&diff, g_repo, tree1, tree2, &diffopts));
+	memset(&exp, 0, sizeof(exp));
+	cl_git_pass(git_diff_find_similar(diff, &opts));
+	cl_git_pass(git_diff_foreach(diff,
+				diff_file_cb, diff_hunk_cb, diff_line_cb, &exp));
+	cl_assert_equal_i(4, exp.files);
+	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_UNMODIFIED]);
+	cl_assert_equal_i(2, exp.file_status[GIT_DELTA_MODIFIED]);
+	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_ADDED]);
+	git_diff_free(diff);
+
+	/* copy threshold = 20%, should see sixserving.txt => ikeepsix.txt */
+	opts.copy_threshold = 20;
+	cl_git_pass(git_diff_tree_to_tree(
+				&diff, g_repo, tree1, tree2, &diffopts));
+	memset(&exp, 0, sizeof(exp));
+	cl_git_pass(git_diff_find_similar(diff, &opts));
+	cl_git_pass(git_diff_foreach(diff,
+				diff_file_cb, diff_hunk_cb, diff_line_cb, &exp));
+	cl_assert_equal_i(4, exp.files);
+	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_UNMODIFIED]);
+	cl_assert_equal_i(2, exp.file_status[GIT_DELTA_MODIFIED]);
+	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_COPIED]);
+	git_diff_free(diff);
+
+	/* Cleanup */
+	git_tree_free(tree1);
+	git_tree_free(tree2);
+}
