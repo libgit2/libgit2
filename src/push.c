@@ -663,7 +663,7 @@ int git_push_status_foreach(git_push *push,
 
 	git_vector_foreach(&push->status, i, status) {
 		if (cb(status->ref, status->msg, data) < 0)
-			return GIT_EUSER;
+			return giterr_user_cancel();
 	}
 
 	return 0;

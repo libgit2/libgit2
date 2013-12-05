@@ -584,7 +584,7 @@ int git_note_foreach(
 
 	while (!(error = git_note_next(&note_id, &annotated_id, iter))) {
 		if (note_cb(&note_id, &annotated_id, payload)) {
-			error = GIT_EUSER;
+			error = giterr_user_cancel();
 			break;
 		}
 	}

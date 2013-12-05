@@ -269,8 +269,8 @@ int git_repository_fetchhead_foreach(git_repository *repo,
 		else
 			ref_name = NULL;
 
-		if ((cb(ref_name, remote_url, &oid, is_merge, payload)) != 0) {
-			error = GIT_EUSER;
+		if (cb(ref_name, remote_url, &oid, is_merge, payload) != 0) {
+			error = giterr_user_cancel();
 			goto done;
 		}
 	}

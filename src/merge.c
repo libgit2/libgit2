@@ -254,7 +254,8 @@ int git_merge__bases_many(git_commit_list **out, git_revwalk *walk, git_commit_l
 	return 0;
 }
 
-int git_repository_mergehead_foreach(git_repository *repo,
+int git_repository_mergehead_foreach(
+	git_repository *repo,
 	git_repository_mergehead_foreach_cb cb,
 	void *payload)
 {
@@ -287,7 +288,7 @@ int git_repository_mergehead_foreach(git_repository *repo,
 			goto cleanup;
 
 		if (cb(&oid, payload) != 0) {
-			error = GIT_EUSER;
+			error = giterr_user_cancel();
 			goto cleanup;
 		}
 

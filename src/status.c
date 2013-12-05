@@ -414,8 +414,7 @@ int git_status_foreach_ext(
 			status_entry->index_to_workdir->old_file.path;
 
 		if (cb(path, status_entry->status, payload) != 0) {
-			error = GIT_EUSER;
-			giterr_clear();
+			error = giterr_user_cancel();
 			break;
 		}
 	}

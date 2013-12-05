@@ -586,8 +586,8 @@ int git_stash_foreach(
 			git_reflog_entry_message(entry),
 			git_reflog_entry_id_new(entry),
 			payload)) {
-				error = GIT_EUSER;
-				break;
+			error = giterr_user_cancel();
+			break;
 		}
 	}
 

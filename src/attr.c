@@ -480,6 +480,7 @@ typedef struct {
 	const char *workdir;
 	git_index *index;
 	git_vector *files;
+	git_error_state error;
 } attr_walk_up_info;
 
 int git_attr_cache__decide_sources(
@@ -523,7 +524,7 @@ static int push_one_attr(void *ref, git_buf *path)
 			info->repo, path->ptr, GIT_ATTR_FILE, src[i],
 			git_attr_file__parse_buffer, NULL, info->files);
 
-	return error;
+	return giterr_capture(&info->error, error);
 }
 
 static int collect_attr_files(
@@ -535,7 +536,7 @@ static int collect_attr_files(
 	int error;
 	git_buf dir = GIT_BUF_INIT;
 	const char *workdir = git_repository_workdir(repo);
-	attr_walk_up_info info;
+	attr_walk_up_info info = { NULL };
 
 	if (git_attr_cache__init(repo) < 0 ||
 		git_vector_init(files, 4, NULL) < 0)
@@ -569,6 +570,8 @@ static int collect_attr_files(
 	info.files = files;
 
 	error = git_path_walk_up(&dir, workdir, push_one_attr, &info);
+	if (error == GIT_EUSER)
+		error = giterr_restore(&info.error);
 	if (error < 0)
 		goto cleanup;
 

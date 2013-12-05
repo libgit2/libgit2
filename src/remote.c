@@ -1370,45 +1370,42 @@ static int rename_fetch_refspecs(
 	if (git_buf_printf(&base, "+refs/heads/*:refs/remotes/%s/*", remote->name) < 0)
 		goto cleanup;
 
+	if ((error = git_repository_config__weakptr(&config, remote->repo)) < 0)
+		goto cleanup;
+
 	git_vector_foreach(&remote->refspecs, i, spec) {
 		if (spec->push)
 			continue;
 
-		/* Every refspec is a problem refspec for an in-memory remote */
-		if (!remote->name) {
+		/* Every refspec is a problem refspec for an in-memory remote, OR */
+		/* Does the dst part of the refspec follow the expected format? */
+		if (!remote->name ||
+			strcmp(git_buf_cstr(&base), spec->string)) {
+
 			if (callback(spec->string, payload) < 0) {
-				error = GIT_EUSER;
+				error = giterr_user_cancel();
 				goto cleanup;
 			}
-
-			continue;
-		}
-
-		/* Does the dst part of the refspec follow the extected standard format? */
-		if (strcmp(git_buf_cstr(&base), spec->string)) {
-			if (callback(spec->string, payload) < 0) {
-				error = GIT_EUSER;
-				goto cleanup;
-			}
-
 			continue;
 		}
 
 		/* If we do want to move it to the new section */
-		if (git_buf_printf(&val, "+refs/heads/*:refs/remotes/%s/*", new_name) < 0)
-			goto cleanup;
 
-		if (git_buf_printf(&var, "remote.%s.fetch", new_name) < 0)
-			goto cleanup;
+		git_buf_clear(&val);
+		git_buf_clear(&var);
 
-		if (git_repository_config__weakptr(&config, remote->repo) < 0)
+		if (git_buf_printf(
+				&val, "+refs/heads/*:refs/remotes/%s/*", new_name) < 0 ||
+			git_buf_printf(&var, "remote.%s.fetch", new_name) < 0)
+		{
+			error = -1;
 			goto cleanup;
+		}
 
-		if (git_config_set_string(config, git_buf_cstr(&var), git_buf_cstr(&val)) < 0)
+		if ((error = git_config_set_string(
+				config, git_buf_cstr(&var), git_buf_cstr(&val))) < 0)
 			goto cleanup;
 	}
-
-	error = 0;
 
 cleanup:
 	git_buf_free(&base);
@@ -1445,11 +1442,11 @@ int git_remote_rename(
 				new_name,
 				callback,
 				payload)) < 0)
-				return error;
+					return error;
 
 			remote->name = git__strdup(new_name);
+			GITERR_CHECK_ALLOC(remote->name);
 
-			if (!remote->name) return 0;
 			return git_remote_save(remote);
 		}
 
@@ -1476,11 +1473,13 @@ int git_remote_rename(
 			new_name,
 			callback,
 			payload)) < 0)
-			return error;
+				return error;
 	}
 
 	git__free(remote->name);
+
 	remote->name = git__strdup(new_name);
+	GITERR_CHECK_ALLOC(remote->name);
 
 	return 0;
 }

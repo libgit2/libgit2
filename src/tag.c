@@ -414,24 +414,29 @@ typedef struct {
 	git_repository *repo;
 	git_tag_foreach_cb cb;
 	void *cb_data;
+	git_error_state error;
 } tag_cb_data;
 
 static int tags_cb(const char *ref, void *data)
 {
+	int error;
 	git_oid oid;
 	tag_cb_data *d = (tag_cb_data *)data;
 
 	if (git__prefixcmp(ref, GIT_REFS_TAGS_DIR) != 0)
 		return 0; /* no tag */
 
-	if (git_reference_name_to_id(&oid, d->repo, ref) < 0)
-		return -1;
+	if (!(error = git_reference_name_to_id(&oid, d->repo, ref))) {
+		if (d->cb(ref, &oid, d->cb_data))
+			error = giterr_user_cancel();
+	}
 
-	return d->cb(ref, &oid, d->cb_data);
+	return giterr_capture(&d->error, error);
 }
 
 int git_tag_foreach(git_repository *repo, git_tag_foreach_cb cb, void *cb_data)
 {
+	int error;
 	tag_cb_data data;
 
 	assert(repo && cb);
@@ -439,8 +444,14 @@ int git_tag_foreach(git_repository *repo, git_tag_foreach_cb cb, void *cb_data)
 	data.cb = cb;
 	data.cb_data = cb_data;
 	data.repo = repo;
+	memset(&data.error, 0, sizeof(data.error));
 
-	return git_reference_foreach_name(repo, &tags_cb, &data);
+	error = git_reference_foreach_name(repo, &tags_cb, &data);
+
+	if (error == GIT_EUSER)
+		error = giterr_restore(&data.error);
+
+	return error;
 }
 
 typedef struct {
@@ -455,8 +466,14 @@ static int tag_list_cb(const char *tag_name, git_oid *oid, void *data)
 	tag_filter_data *filter = (tag_filter_data *)data;
 	GIT_UNUSED(oid);
 
-	if (!*filter->pattern || p_fnmatch(filter->pattern, tag_name + GIT_REFS_TAGS_DIR_LEN, 0) == 0)
-		return git_vector_insert(filter->taglist, git__strdup(tag_name + GIT_REFS_TAGS_DIR_LEN));
+	if (!*filter->pattern ||
+		p_fnmatch(filter->pattern, tag_name + GIT_REFS_TAGS_DIR_LEN, 0) == 0)
+	{
+		char *matched = git__strdup(tag_name + GIT_REFS_TAGS_DIR_LEN);
+		if (!matched)
+			return -1;
+		return git_vector_insert(filter->taglist, matched);
+	}
 
 	return 0;
 }
@@ -469,16 +486,23 @@ int git_tag_list_match(git_strarray *tag_names, const char *pattern, git_reposit
 
 	assert(tag_names && repo && pattern);
 
-	if (git_vector_init(&taglist, 8, NULL) < 0)
-		return -1;
+	if ((error = git_vector_init(&taglist, 8, NULL)) < 0)
+		return error;
 
 	filter.taglist = &taglist;
 	filter.pattern = pattern;
 
 	error = git_tag_foreach(repo, &tag_list_cb, (void *)&filter);
+
+	/* the only case where callback will return an error is oom */
+	if (error == GIT_EUSER) {
+		giterr_set_oom();
+		error = -1;
+	}
+
 	if (error < 0) {
 		git_vector_free(&taglist);
-		return -1;
+		return error;
 	}
 
 	tag_names->strings = (char **)taglist.contents;

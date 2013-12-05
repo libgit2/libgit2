@@ -387,10 +387,8 @@ on_error:
 static int do_progress_callback(git_indexer *idx, git_transfer_progress *stats)
 {
 	if (idx->progress_cb &&
-		idx->progress_cb(stats, idx->progress_payload)) {
-			giterr_clear();
-			return GIT_EUSER;
-	}
+		idx->progress_cb(stats, idx->progress_payload))
+		return giterr_user_cancel();
 
 	return 0;
 }
