@@ -293,8 +293,9 @@ static int normalize_find_opts(
 		if (git_config_get_string(&val, cfg, "diff.renames") < 0)
 			giterr_clear();
 		else if (val) {
-			if (!strcasecmp(val, "false"))
-				return GIT_PASSTHROUGH;
+			int boolval;
+			if (!git__parse_bool(&boolval, val) && !boolval)
+				opts->flags = 0;
 			else if (!strcasecmp(val, "copies") || !strcasecmp(val, "copy"))
 				opts->flags = GIT_DIFF_FIND_RENAMES | GIT_DIFF_FIND_COPIES;
 			else
@@ -834,7 +835,11 @@ int git_diff_find_similar(
 	git_diff_file swap;
 
 	if ((error = normalize_find_opts(diff, &opts, given_opts)) < 0)
-		return (error == GIT_PASSTHROUGH) ? 0 : error;
+		return error;
+
+	/* No flags set; nothing to do */
+	if ((opts.flags & GIT_DIFF_FIND_ALL) == 0)
+		return 0;
 
 	num_deltas = diff->deltas.length;
 

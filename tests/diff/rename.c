@@ -919,6 +919,7 @@ void test_diff_rename__rejected_match_can_match_others(void)
 	char *ptr;
 
 	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+	findopts.flags = GIT_DIFF_FIND_RENAMES;
 
 	cl_git_pass(git_reference_lookup(&head, g_repo, "HEAD"));
 	cl_git_pass(git_reference_symbolic_set_target(
@@ -1003,6 +1004,7 @@ void test_diff_rename__rejected_match_can_match_others_two(void)
 	struct rename_expected expect = { 2, status, sources, targets };
 
 	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+	findopts.flags = GIT_DIFF_FIND_RENAMES;
 
 	cl_git_pass(git_reference_lookup(&head, g_repo, "HEAD"));
 	cl_git_pass(git_reference_symbolic_set_target(
@@ -1060,6 +1062,7 @@ void test_diff_rename__rejected_match_can_match_others_three(void)
 	struct rename_expected expect = { 2, status, sources, targets };
 
 	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+	findopts.flags = GIT_DIFF_FIND_RENAMES;
 
 	cl_git_pass(git_reference_lookup(&head, g_repo, "HEAD"));
 	cl_git_pass(git_reference_symbolic_set_target(
