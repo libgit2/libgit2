@@ -79,12 +79,8 @@ static int transport_find_fn(const char *url, git_transport_cb *callback, void *
 	/* Check to see if the path points to a file on the local file system */
 	if (!definition && git_path_exists(url) && git_path_isdir(url))
 		definition = &local_transport_definition;
+#endif
 
-	/* It could be a SSH remote path. Check to see if there's a :
-	 * SSH is an unsupported transport mechanism in this version of libgit2 */
-	if (!definition && strrchr(url, ':'))
-		definition = &dummy_transport_definition;
-#else
 	/* For other systems, perform the SSH check first, to avoid going to the
 	 * filesystem if it is not necessary */
 
@@ -97,6 +93,7 @@ static int transport_find_fn(const char *url, git_transport_cb *callback, void *
         definition = &dummy_transport_definition;
 #endif
 
+#ifndef GIT_WIN32
 	/* Check to see if the path points to a file on the local file system */
 	if (!definition && git_path_exists(url) && git_path_isdir(url))
 		definition = &local_transport_definition;
