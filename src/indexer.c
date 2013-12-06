@@ -1005,30 +1005,20 @@ on_error:
 
 void git_indexer_free(git_indexer *idx)
 {
-	khiter_t k;
-	unsigned int i;
-	struct entry *e;
-	struct delta_info *delta;
-
 	if (idx == NULL)
 		return;
 
-	git_vector_foreach(&idx->objects, i, e)
-		git__free(e);
-	git_vector_free(&idx->objects);
+	git_vector_free_all(&idx->objects);
 
 	if (idx->pack) {
-		for (k = kh_begin(idx->pack->idx_cache); k != kh_end(idx->pack->idx_cache); k++) {
-			if (kh_exist(idx->pack->idx_cache, k))
-				git__free(kh_value(idx->pack->idx_cache, k));
-		}
+		struct git_pack_entry *pentry;
+		kh_foreach_value(
+			idx->pack->idx_cache, pentry, { git__free(pentry); });
 
 		git_oidmap_free(idx->pack->idx_cache);
 	}
 
-	git_vector_foreach(&idx->deltas, i, delta)
-		git__free(delta);
-	git_vector_free(&idx->deltas);
+	git_vector_free_all(&idx->deltas);
 	git_packfile_free(idx->pack);
 	git_filebuf_cleanup(&idx->pack_file);
 	git__free(idx);

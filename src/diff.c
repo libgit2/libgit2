@@ -483,14 +483,7 @@ static int diff_list_apply_options(
 
 static void diff_list_free(git_diff *diff)
 {
-	git_diff_delta *delta;
-	unsigned int i;
-
-	git_vector_foreach(&diff->deltas, i, delta) {
-		git__free(delta);
-		diff->deltas.contents[i] = NULL;
-	}
-	git_vector_free(&diff->deltas);
+	git_vector_free_all(&diff->deltas);
 
 	git_pathspec__vfree(&diff->pathspec);
 	git_pool_clear(&diff->pool);

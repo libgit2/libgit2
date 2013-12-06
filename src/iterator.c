@@ -920,12 +920,7 @@ static fs_iterator_frame *fs_iterator__alloc_frame(fs_iterator *fi)
 
 static void fs_iterator__free_frame(fs_iterator_frame *ff)
 {
-	size_t i;
-	git_path_with_stat *path;
-
-	git_vector_foreach(&ff->entries, i, path)
-		git__free(path);
-	git_vector_free(&ff->entries);
+	git_vector_free_all(&ff->entries);
 	git__free(ff);
 }
 

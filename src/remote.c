@@ -1158,15 +1158,7 @@ int git_remote_list(git_strarray *remotes_list, git_repository *repo)
 		error = giterr_restore(&data.error);
 
 	if (error < 0) {
-		size_t i;
-		char *elem;
-
-		git_vector_foreach(&data.list, i, elem) {
-			git__free(elem);
-		}
-
-		git_vector_free(&data.list);
-
+		git_vector_free_all(&data.list);
 		return error;
 	}
 
@@ -1651,9 +1643,7 @@ static int copy_refspecs(git_strarray *array, git_remote *remote, unsigned int p
 	return 0;
 
 on_error:
-	git_vector_foreach(&refspecs, i, dup)
-		git__free(dup);
-	git_vector_free(&refspecs);
+	git_vector_free_all(&refspecs);
 
 	return -1;
 }

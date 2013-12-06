@@ -376,19 +376,13 @@ const git_status_entry *git_status_byindex(git_status_list *status, size_t i)
 
 void git_status_list_free(git_status_list *status)
 {
-	git_status_entry *status_entry;
-	size_t i;
-
 	if (status == NULL)
 		return;
 
 	git_diff_free(status->head2idx);
 	git_diff_free(status->idx2wd);
 
-	git_vector_foreach(&status->paired, i, status_entry)
-		git__free(status_entry);
-
-	git_vector_free(&status->paired);
+	git_vector_free_all(&status->paired);
 
 	git__memzero(status, sizeof(*status));
 	git__free(status);

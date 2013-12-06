@@ -541,10 +541,7 @@ static int queue_objects(git_push *push)
 	error = 0;
 
 on_error:
-	git_vector_foreach(&commits, i, oid)
-		git__free(oid);
-
-	git_vector_free(&commits);
+	git_vector_free_all(&commits);
 	return error;
 }
 

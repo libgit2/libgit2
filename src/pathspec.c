@@ -102,15 +102,7 @@ int git_pathspec__vinit(
 /* free data from the pathspec vector */
 void git_pathspec__vfree(git_vector *vspec)
 {
-	git_attr_fnmatch *match;
-	unsigned int i;
-
-	git_vector_foreach(vspec, i, match) {
-		git__free(match);
-		vspec->contents[i] = NULL;
-	}
-
-	git_vector_free(vspec);
+	git_vector_free_all(vspec);
 }
 
 struct pathspec_match_context {

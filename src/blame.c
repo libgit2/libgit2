@@ -132,7 +132,6 @@ void git_blame_free(git_blame *blame)
 {
 	size_t i;
 	git_blame_hunk *hunk;
-	char *path;
 
 	if (!blame) return;
 
@@ -140,9 +139,7 @@ void git_blame_free(git_blame *blame)
 		free_hunk(hunk);
 	git_vector_free(&blame->hunks);
 
-	git_vector_foreach(&blame->paths, i, path)
-		git__free(path);
-	git_vector_free(&blame->paths);
+	git_vector_free_all(&blame->paths);
 
 	git_array_clear(blame->line_index);
 

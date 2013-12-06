@@ -77,6 +77,20 @@ void git_vector_free(git_vector *v)
 	v->_alloc_size = 0;
 }
 
+void git_vector_free_all(git_vector *v)
+{
+	size_t i;
+
+	assert(v);
+
+	for (i = 0; i < v->length; ++i) {
+		git__free(v->contents[i]);
+		v->contents[i] = NULL;
+	}
+
+	git_vector_free(v);
+}
+
 int git_vector_init(git_vector *v, size_t initial_size, git_vector_cmp cmp)
 {
 	assert(v);

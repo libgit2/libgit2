@@ -209,9 +209,7 @@ int git_diff_merge(git_diff *onto, const git_diff *from)
 			git_pool_strdup_safe(&onto->pool, onto->opts.new_prefix);
 	}
 
-	git_vector_foreach(&onto_new, i, delta)
-		git__free(delta);
-	git_vector_free(&onto_new);
+	git_vector_free_all(&onto_new);
 	git_pool_clear(&onto_pool);
 
 	return error;
@@ -445,9 +443,7 @@ static int apply_splits_and_deletes(
 	return 0;
 
 on_error:
-	git_vector_foreach(&onto, i, delta)
-		git__free(delta);
-	git_vector_free(&onto);
+	git_vector_free_all(&onto);
 
 	return -1;
 }

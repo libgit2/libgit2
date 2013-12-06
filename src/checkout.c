@@ -846,7 +846,7 @@ static int checkout_conflicts_coalesce_renames(
 
 	/* Juggle entries based on renames */
 	names = git_index_name_entrycount(data->index);
-	
+
 	for (i = 0; i < names; i++) {
 		name_entry = git_index_name_get_byindex(data->index, i);
 
@@ -1760,9 +1760,6 @@ static int checkout_create_conflicts(checkout_data *data)
 
 static void checkout_data_clear(checkout_data *data)
 {
-	checkout_conflictdata *conflict;
-	size_t i;
-
 	if (data->opts_free_baseline) {
 		git_tree_free(data->opts.baseline);
 		data->opts.baseline = NULL;
@@ -1771,10 +1768,7 @@ static void checkout_data_clear(checkout_data *data)
 	git_vector_free(&data->removes);
 	git_pool_clear(&data->pool);
 
-	git_vector_foreach(&data->conflicts, i, conflict)
-		git__free(conflict);
-
-	git_vector_free(&data->conflicts);
+	git_vector_free_all(&data->conflicts);
 
 	git__free(data->pfx);
 	data->pfx = NULL;
