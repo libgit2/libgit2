@@ -577,9 +577,9 @@ typedef struct {
 	unsigned int version;
 
 	/**
-	 * Combination of git_diff_find_t values (default FIND_BY_CONFIG).  Note
-	 * that if the configuration value is falsy, this will result in
-	 * `git_diff_find_similar` doing nothing. 
+	 * Combination of git_diff_find_t values (default FIND_BY_CONFIG).
+	 * Note that if you don't explicitly set this, `diff.renames` could be set
+	 * to false, resulting in `git_diff_find_similar` doing nothing. 
 	 */
 	uint32_t flags;
 
