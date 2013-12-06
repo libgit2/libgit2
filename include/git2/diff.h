@@ -576,7 +576,11 @@ typedef struct {
 typedef struct {
 	unsigned int version;
 
-	/** Combination of git_diff_find_t values (default FIND_RENAMES) */
+	/**
+	 * Combination of git_diff_find_t values (default FIND_BY_CONFIG).  Note
+	 * that if the configuration value is falsy, this will result in
+	 * `git_diff_find_similar` doing nothing. 
+	 */
 	uint32_t flags;
 
 	/** Similarity to consider a file renamed (default 50) */
