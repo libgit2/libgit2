@@ -507,9 +507,10 @@ int git_config_backend_foreach_match(
 			continue;
 
 		/* abort iterator on non-zero return value */
-		error = GITERR_CALLBACK( cb(entry, payload) );
-		if (error)
+		if ((error = cb(entry, payload)) != 0) {
+			GITERR_CALLBACK(error);
 			break;
+		}
 	}
 
 	if (regexp != NULL)
@@ -533,9 +534,12 @@ int git_config_foreach_match(
 	if ((error = git_config_iterator_glob_new(&iter, cfg, regexp)) < 0)
 		return error;
 
-	while (!(error = git_config_next(&entry, iter)) &&
-		   !(error = GITERR_CALLBACK( cb(entry, payload) )))
-		/* make callback on each config */;
+	while (!(error = git_config_next(&entry, iter))) {
+		if ((error = cb(entry, payload)) != 0) {
+			GITERR_CALLBACK(error);
+			break;
+		}
+	}
 
 	git_config_iterator_free(iter);
 
@@ -794,8 +798,10 @@ int git_config_get_multivar_foreach(
 	while ((err = iter->next(&entry, iter)) == 0) {
 		found = 1;
 
-		if ((err = GITERR_CALLBACK( cb(entry, payload) )) != 0)
+		if ((err = cb(entry, payload)) != 0) {
+			GITERR_CALLBACK(err);
 			break;
+		}
 	}
 
 	iter->free(iter);

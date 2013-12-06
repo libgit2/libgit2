@@ -516,9 +516,12 @@ int git_reference_foreach(
 	if ((error = git_reference_iterator_new(&iter, repo)) < 0)
 		return error;
 
-	while (!(error = git_reference_next(&ref, iter)) &&
-		   !(error = GITERR_CALLBACK( callback(ref, payload) )))
-		/* callback on each reference */;
+	while (!(error = git_reference_next(&ref, iter))) {
+		if ((error = callback(ref, payload)) != 0) {
+			GITERR_CALLBACK(error);
+			break;
+		}
+	}
 
 	if (error == GIT_ITEROVER)
 		error = 0;
@@ -539,9 +542,12 @@ int git_reference_foreach_name(
 	if ((error = git_reference_iterator_new(&iter, repo)) < 0)
 		return error;
 
-	while (!(error = git_reference_next_name(&refname, iter)) &&
-		   !(error = GITERR_CALLBACK( callback(refname, payload) )))
-		/* callback on each reference name */;
+	while (!(error = git_reference_next_name(&refname, iter))) {
+		if ((error = callback(refname, payload)) != 0) {
+			GITERR_CALLBACK(error);
+			break;
+		}
+	}
 
 	if (error == GIT_ITEROVER)
 		error = 0;
@@ -563,9 +569,12 @@ int git_reference_foreach_glob(
 	if ((error = git_reference_iterator_glob_new(&iter, repo, glob)) < 0)
 		return error;
 
-	while (!(error = git_reference_next_name(&refname, iter)) &&
-		   !(error = GITERR_CALLBACK( callback(refname, payload) )))
-		/* callback on each matching reference name */;
+	while (!(error = git_reference_next_name(&refname, iter))) {
+		if ((error = callback(refname, payload)) != 0) {
+			GITERR_CALLBACK(error);
+			break;
+		}
+	}
 
 	if (error == GIT_ITEROVER)
 		error = 0;

@@ -582,10 +582,12 @@ int git_note_foreach(
 	if ((error = git_note_iterator_new(&iter, repo, notes_ref)) < 0)
 		return error;
 
-	while (!(error = git_note_next(&note_id, &annotated_id, iter)) &&
-		   !(error = GITERR_CALLBACK(
-				note_cb(&note_id, &annotated_id, payload))))
-		/* callback for each note */;
+	while (!(error = git_note_next(&note_id, &annotated_id, iter))) {
+		if ((error = note_cb(&note_id, &annotated_id, payload)) != 0) {
+			GITERR_CALLBACK(error);
+			break;
+		}
+	}
 
 	if (error == GIT_ITEROVER)
 		error = 0;
