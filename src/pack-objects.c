@@ -32,7 +32,6 @@ struct unpacked {
 struct tree_walk_context {
 	git_packbuilder *pb;
 	git_buf buf;
-	git_error_state error;
 };
 
 struct pack_write_context {
@@ -206,14 +205,18 @@ int git_packbuilder_insert(git_packbuilder *pb, const git_oid *oid,
 	po = pb->object_list + pb->nr_objects;
 	memset(po, 0x0, sizeof(*po));
 
-	if (git_odb_read_header(&po->size, &po->type, pb->odb, oid) < 0)
-		return -1;
+	if ((ret = git_odb_read_header(&po->size, &po->type, pb->odb, oid)) < 0)
+		return ret;
 
 	pb->nr_objects++;
 	git_oid_cpy(&po->id, oid);
 	po->hash = name_hash(name);
 
 	pos = kh_put(oid, pb->object_ix, &po->id, &ret);
+	if (ret < 0) {
+		giterr_set_oom();
+		return ret;
+	}
 	assert(ret != 0);
 	kh_value(pb->object_ix, pos) = po;
 
@@ -226,10 +229,9 @@ int git_packbuilder_insert(git_packbuilder *pb, const git_oid *oid,
 		if (elapsed >= MIN_PROGRESS_UPDATE_INTERVAL) {
 			pb->last_progress_report_time = current_time;
 
-			if (pb->progress_cb(
-					GIT_PACKBUILDER_ADDING_OBJECTS,
-					pb->nr_objects, 0, pb->progress_cb_payload))
-				return giterr_user_cancel();
+			return GITERR_CALLBACK( pb->progress_cb(
+				GIT_PACKBUILDER_ADDING_OBJECTS,
+				pb->nr_objects, 0, pb->progress_cb_payload) );
 		}
 	}
 
@@ -1303,7 +1305,7 @@ static int cb_tree_walk(
 		error = git_packbuilder_insert(
 			ctx->pb, git_tree_entry_id(entry), git_buf_cstr(&ctx->buf));
 
-	return giterr_capture(&ctx->error, error);
+	return error;
 }
 
 int git_packbuilder_insert_commit(git_packbuilder *pb, const git_oid *oid)
@@ -1330,9 +1332,6 @@ int git_packbuilder_insert_tree(git_packbuilder *pb, const git_oid *oid)
 	if (!(error = git_tree_lookup(&tree, pb->repo, oid)) &&
 	    !(error = git_packbuilder_insert(pb, oid, NULL)))
 		error = git_tree_walk(tree, GIT_TREEWALK_PRE, cb_tree_walk, &context);
-
-	if (error == GIT_EUSER)
-		error = giterr_restore(&context.error);
 
 	git_tree_free(tree);
 	git_buf_free(&context.buf);

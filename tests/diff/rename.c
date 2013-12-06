@@ -111,6 +111,28 @@ void test_diff_rename__match_oid(void)
 
 	git_diff_free(diff);
 
+	cl_git_pass(git_diff_tree_to_tree(
+		&diff, g_repo, old_tree, new_tree, &diffopts));
+
+	/* git diff --find-copies-harder -M100 -B100 \
+	 *          31e47d8c1fa36d7f8d537b96158e3f024de0a9f2 \
+	 *          2bc7f351d20b53f1c72c16c4b036e491c478c49a
+	 */
+	opts.flags = GIT_DIFF_FIND_COPIES_FROM_UNMODIFIED |
+		GIT_DIFF_FIND_EXACT_MATCH_ONLY;
+	cl_git_pass(git_diff_find_similar(diff, &opts));
+
+	memset(&exp, 0, sizeof(exp));
+	cl_git_pass(git_diff_foreach(
+		diff, diff_file_cb, diff_hunk_cb, diff_line_cb, &exp));
+
+	cl_assert_equal_i(3, exp.files);
+	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_UNMODIFIED]);
+	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_COPIED]);
+	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_RENAMED]);
+
+	git_diff_free(diff);
+
 	git_tree_free(old_tree);
 	git_tree_free(new_tree);
 }

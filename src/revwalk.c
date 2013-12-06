@@ -169,15 +169,12 @@ static int push_ref(git_revwalk *walk, const char *refname, int hide)
 struct push_cb_data {
 	git_revwalk *walk;
 	int hide;
-	git_error_state error;
 };
 
 static int push_glob_cb(const char *refname, void *data_)
 {
 	struct push_cb_data *data = (struct push_cb_data *)data_;
-
-	return giterr_capture(
-		&data->error, push_ref(data->walk, refname, data->hide) );
+	return push_ref(data->walk, refname, data->hide);
 }
 
 static int push_glob(git_revwalk *walk, const char *glob, int hide)
@@ -204,12 +201,9 @@ static int push_glob(git_revwalk *walk, const char *glob, int hide)
 
 	data.walk = walk;
 	data.hide = hide;
-	memset(&data.error, 0, sizeof(data.error));
 
 	error = git_reference_foreach_glob(
 		walk->repo, git_buf_cstr(&buf), push_glob_cb, &data);
-	if (error == GIT_EUSER)
-		error = giterr_restore(&data.error);
 
 	git_buf_free(&buf);
 	return error;

@@ -32,7 +32,6 @@ struct git_patch {
 	git_array_t(git_diff_line)   lines;
 	size_t content_size, context_size, header_size;
 	git_pool flattened;
-	git_error_state error;
 };
 
 enum {
@@ -200,11 +199,12 @@ static int diff_patch_invoke_file_callback(
 	float progress = patch->diff ?
 		((float)patch->delta_index / patch->diff->deltas.length) : 1.0f;
 
-	if (output->file_cb &&
-		output->file_cb(patch->delta, progress, output->payload) != 0)
-		return giterr_user_cancel();
+	if (!output->file_cb)
+		return 0;
 
-	return 0;
+	return giterr_set_callback(
+		output->file_cb(patch->delta, progress, output->payload),
+		"git_patch");
 }
 
 static int diff_patch_generate(git_patch *patch, git_diff_output *output)
@@ -291,7 +291,7 @@ int git_diff_foreach(
 
 		git_patch_free(&patch);
 
-		if (error < 0)
+		if (error)
 			break;
 	}
 
@@ -330,9 +330,6 @@ static int diff_single_generate(diff_patch_with_delta *pd, git_xdiff_output *xo)
 
 	if (!error)
 		error = diff_patch_generate(patch, (git_diff_output *)xo);
-
-	if (error == GIT_EUSER)
-		giterr_clear(); /* don't leave error message set invalidly */
 
 	return error;
 }
@@ -462,9 +459,6 @@ int git_patch_from_blobs(
 	error = diff_patch_from_blobs(
 		pd, &xo, old_blob, old_path, new_blob, new_path, opts);
 
-	if (error == GIT_EUSER)
-		error = giterr_restore(&pd->patch.error);
-
 	if (!error)
 		*out = (git_patch *)pd;
 	else
@@ -576,9 +570,6 @@ int git_patch_from_blob_and_buffer(
 	error = diff_patch_from_blob_and_buffer(
 		pd, &xo, old_blob, old_path, buf, buflen, buf_path, opts);
 
-	if (error == GIT_EUSER)
-		error = giterr_restore(&pd->patch.error);
-
 	if (!error)
 		*out = (git_patch *)pd;
 	else
@@ -627,12 +618,9 @@ int git_patch_from_diff(
 	if (!error)
 		error = diff_patch_generate(patch, &xo.output);
 
-	if (error == GIT_EUSER)
-		error = giterr_restore(&patch->error);
-
 	if (!error) {
-		/* if cumulative diff size is < 0.5 total size, flatten the patch */
-		/* unload the file content */
+		/* TODO: if cumulative diff size is < 0.5 total size, flatten patch */
+		/* TODO: and unload the file content */
 	}
 
 	if (error || !patch_ptr)
@@ -640,8 +628,6 @@ int git_patch_from_diff(
 	else
 		*patch_ptr = patch;
 
-	if (error == GIT_EUSER)
-		giterr_clear(); /* don't leave error message set invalidly */
 	return error;
 }
 
@@ -879,8 +865,7 @@ static int diff_patch_hunk_cb(
 	GIT_UNUSED(delta);
 
 	hunk = git_array_alloc(patch->hunks);
-	if (!hunk)
-		return giterr_capture(&patch->error, -1);
+	GITERR_CHECK_ALLOC(hunk);
 
 	memcpy(&hunk->hunk, hunk_, sizeof(hunk->hunk));
 
@@ -909,8 +894,7 @@ static int diff_patch_line_cb(
 	assert(hunk); /* programmer error if no hunk is available */
 
 	line = git_array_alloc(patch->lines);
-	if (!line)
-		return giterr_capture(&patch->error, -1);
+	GITERR_CHECK_ALLOC(line);
 
 	memcpy(line, line_, sizeof(*line));
 

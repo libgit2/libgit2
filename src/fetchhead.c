@@ -269,10 +269,10 @@ int git_repository_fetchhead_foreach(git_repository *repo,
 		else
 			ref_name = NULL;
 
-		if (cb(ref_name, remote_url, &oid, is_merge, payload) != 0) {
-			error = giterr_user_cancel();
+		error = GITERR_CALLBACK(
+			cb(ref_name, remote_url, &oid, is_merge, payload) );
+		if (error)
 			goto done;
-		}
 	}
 
 	if (*buffer) {

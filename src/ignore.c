@@ -74,20 +74,12 @@ static int parse_ignore_file(
 #define push_ignore_file(R,IGN,S,B,F) \
 	git_attr_cache__push_file((R),(B),(F),GIT_ATTR_FILE_FROM_FILE,parse_ignore_file,(IGN),(S))
 
-struct ignores_walk_up_data {
-	git_ignores *ign;
-	git_error_state error;
-};
-
-static int push_one_ignore(void *ref, git_buf *path)
+static int push_one_ignore(void *payload, git_buf *path)
 {
-	struct ignores_walk_up_data *data = ref;
+	git_ignores *ign = payload;
 
-	return giterr_capture(
-		&data->error,
-		push_ignore_file(
-			data->ign->repo, data->ign, &data->ign->ign_path,
-			path->ptr, GIT_IGNORE_FILE) );
+	return push_ignore_file(
+		ign->repo, ign, &ign->ign_path, path->ptr, GIT_IGNORE_FILE);
 }
 
 static int get_internal_ignores(git_attr_file **ign, git_repository *repo)
@@ -142,13 +134,8 @@ int git_ignore__for_path(
 
 	/* load .gitignore up the path */
 	if (workdir != NULL) {
-		struct ignores_walk_up_data data = { ignores };
-
 		error = git_path_walk_up(
-			&ignores->dir, workdir, push_one_ignore, &data);
-
-		if (error == GIT_EUSER)
-			error = giterr_restore(&data.error);
+			&ignores->dir, workdir, push_one_ignore, ignores);
 		if (error < 0)
 			goto cleanup;
 	}

@@ -104,6 +104,22 @@ int git_vector_init(git_vector *v, size_t initial_size, git_vector_cmp cmp)
 	return resize_vector(v, max(initial_size, MIN_ALLOCSIZE));
 }
 
+void **git_vector_detach(size_t *size, size_t *asize, git_vector *v)
+{
+	void **data = v->contents;
+
+	if (size)
+		*size = v->length;
+	if (asize)
+		*asize = v->_alloc_size;
+
+	v->_alloc_size = 0;
+	v->length   = 0;
+	v->contents = NULL;
+
+	return data;
+}
+
 int git_vector_insert(git_vector *v, void *element)
 {
 	assert(v);

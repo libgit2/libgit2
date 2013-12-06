@@ -255,9 +255,10 @@ enum {
  * @param flags Combination of GIT_PATH_DIR flags.
  * @param callback Callback for each entry. Passed the `payload` and each
  *		successive path inside the directory as a full path.  This may
- *		safely append text to the pathbuf if needed.
+ *		safely append text to the pathbuf if needed.  Return non-zero to
+ *		cancel iteration (and return value will be propagated back).
  * @param payload Passed to callback as first argument.
- * @return 0 on success, GIT_EUSER on non-zero callback, or error code
+ * @return 0 on success or error code from OS error or from callback
  */
 extern int git_path_direach(
 	git_buf *pathbuf,
@@ -288,7 +289,7 @@ extern int git_path_cmp(
  *		original input path.
  * @param callback Function to invoke on each path.  Passed the `payload`
  *		and the buffer containing the current path.  The path should not
- *		be modified in any way.
+ *		be modified in any way. Return non-zero to stop iteration.
  * @param state Passed to fn as the first ath.
  */
 extern int git_path_walk_up(

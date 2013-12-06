@@ -516,12 +516,9 @@ int git_reference_foreach(
 	if ((error = git_reference_iterator_new(&iter, repo)) < 0)
 		return error;
 
-	while ((error = git_reference_next(&ref, iter)) == 0) {
-		if (callback(ref, payload)) {
-			error = giterr_user_cancel();
-			break;
-		}
-	}
+	while (!(error = git_reference_next(&ref, iter)) &&
+		   !(error = GITERR_CALLBACK( callback(ref, payload) )))
+		/* callback on each reference */;
 
 	if (error == GIT_ITEROVER)
 		error = 0;
@@ -542,12 +539,9 @@ int git_reference_foreach_name(
 	if ((error = git_reference_iterator_new(&iter, repo)) < 0)
 		return error;
 
-	while ((error = git_reference_next_name(&refname, iter)) == 0) {
-		if (callback(refname, payload)) {
-			error = giterr_user_cancel();
-			break;
-		}
-	}
+	while (!(error = git_reference_next_name(&refname, iter)) &&
+		   !(error = GITERR_CALLBACK( callback(refname, payload) )))
+		/* callback on each reference name */;
 
 	if (error == GIT_ITEROVER)
 		error = 0;
@@ -569,12 +563,9 @@ int git_reference_foreach_glob(
 	if ((error = git_reference_iterator_glob_new(&iter, repo, glob)) < 0)
 		return error;
 
-	while ((error = git_reference_next_name(&refname, iter)) == 0) {
-		if (callback(refname, payload)) {
-			error = giterr_user_cancel();
-			break;
-		}
-	}
+	while (!(error = git_reference_next_name(&refname, iter)) &&
+		   !(error = GITERR_CALLBACK( callback(refname, payload) )))
+		/* callback on each matching reference name */;
 
 	if (error == GIT_ITEROVER)
 		error = 0;
@@ -621,7 +612,9 @@ void git_reference_iterator_free(git_reference_iterator *iter)
 
 static int cb__reflist_add(const char *ref, void *data)
 {
-	return git_vector_insert((git_vector *)data, git__strdup(ref));
+	char *name = git__strdup(ref);
+	GITERR_CHECK_ALLOC(name);
+	return git_vector_insert((git_vector *)data, name);
 }
 
 int git_reference_list(
@@ -644,8 +637,8 @@ int git_reference_list(
 		return -1;
 	}
 
-	array->strings = (char **)ref_list.contents;
-	array->count = ref_list.length;
+	array->strings = (char **)git_vector_detach(&array->count, NULL, &ref_list);
+
 	return 0;
 }
 

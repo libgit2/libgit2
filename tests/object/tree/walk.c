@@ -59,7 +59,7 @@ static int treewalk_stop_cb(
 
 	(*count) += 1;
 
-	return (*count == 2) ? -1 : 0;
+	return (*count == 2) ? -123 : 0;
 }
 
 static int treewalk_stop_immediately_cb(
@@ -83,20 +83,20 @@ void test_object_tree_walk__1(void)
 
 	ct = 0;
 	cl_assert_equal_i(
-		GIT_EUSER, git_tree_walk(tree, GIT_TREEWALK_PRE, treewalk_stop_cb, &ct));
+		-123, git_tree_walk(tree, GIT_TREEWALK_PRE, treewalk_stop_cb, &ct));
 	cl_assert_equal_i(2, ct);
 
 	ct = 0;
 	cl_assert_equal_i(
-		GIT_EUSER, git_tree_walk(tree, GIT_TREEWALK_POST, treewalk_stop_cb, &ct));
+		-123, git_tree_walk(tree, GIT_TREEWALK_POST, treewalk_stop_cb, &ct));
 	cl_assert_equal_i(2, ct);
 
 	cl_assert_equal_i(
-		GIT_EUSER, git_tree_walk(
+		-100, git_tree_walk(
 			tree, GIT_TREEWALK_PRE, treewalk_stop_immediately_cb, NULL));
 
 	cl_assert_equal_i(
-		GIT_EUSER, git_tree_walk(
+		-100, git_tree_walk(
 			tree, GIT_TREEWALK_POST, treewalk_stop_immediately_cb, NULL));
 
 	git_tree_free(tree);
@@ -152,7 +152,7 @@ void test_object_tree_walk__2(void)
 	memset(&data, 0, sizeof(data));
 	data.stop = "3.txt";
 
-	cl_assert_equal_i(GIT_EUSER, git_tree_walk(
+	cl_assert_equal_i(-1, git_tree_walk(
 		tree, GIT_TREEWALK_PRE, treewalk_skip_de_cb, &data));
 	cl_assert_equal_i(3, data.files);
 	cl_assert_equal_i(2, data.dirs);
@@ -168,7 +168,7 @@ void test_object_tree_walk__2(void)
 	memset(&data, 0, sizeof(data));
 	data.stop = "new.txt";
 
-	cl_assert_equal_i(GIT_EUSER, git_tree_walk(
+	cl_assert_equal_i(-1, git_tree_walk(
 		tree, GIT_TREEWALK_PRE, treewalk_skip_de_cb, &data));
 	cl_assert_equal_i(7, data.files);
 	cl_assert_equal_i(4, data.dirs);

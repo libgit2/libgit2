@@ -386,10 +386,10 @@ on_error:
 
 static int do_progress_callback(git_indexer *idx, git_transfer_progress *stats)
 {
-	if (idx->progress_cb &&
-		idx->progress_cb(stats, idx->progress_payload))
-		return giterr_user_cancel();
-
+	if (idx->progress_cb)
+		return giterr_set_callback(
+			idx->progress_cb(stats, idx->progress_payload),
+			"indexer progress");
 	return 0;
 }
 
@@ -495,7 +495,7 @@ int git_indexer_append(git_indexer *idx, const void *data, size_t size, git_tran
 		processed = stats->indexed_objects = 0;
 		stats->total_objects = total_objects;
 
-		if ((error = do_progress_callback(idx, stats)) < 0)
+		if ((error = do_progress_callback(idx, stats)) != 0)
 			return error;
 	}
 
@@ -520,7 +520,7 @@ int git_indexer_append(git_indexer *idx, const void *data, size_t size, git_tran
 				return 0;
 			}
 			if (error < 0)
-				return -1;
+				return error;
 
 			git_mwindow_close(&w);
 			idx->entry_start = entry_start;
@@ -533,7 +533,7 @@ int git_indexer_append(git_indexer *idx, const void *data, size_t size, git_tran
 					return 0;
 				}
 				if (error < 0)
-					return -1;
+					return error;
 
 				idx->have_delta = 1;
 			} else {
@@ -578,7 +578,7 @@ int git_indexer_append(git_indexer *idx, const void *data, size_t size, git_tran
 		}
 		stats->received_objects++;
 
-		if ((error = do_progress_callback(idx, stats)) < 0)
+		if ((error = do_progress_callback(idx, stats)) != 0)
 			goto on_error;
 	}
 

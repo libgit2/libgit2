@@ -62,7 +62,7 @@
  * Check a return value and propogate result if non-zero.
  */
 #define GITERR_CHECK_ERROR(code) \
-	do { int _err = (code); if (_err < 0) return _err; } while (0)
+	do { int _err = (code); if (_err) return _err; } while (0)
 
 /**
  * Set the error message for this thread, formatting as needed.
@@ -76,6 +76,27 @@ void giterr_set(int error_class, const char *string, ...);
 int giterr_set_regex(const regex_t *regex, int error_code);
 
 /**
+ * Set error message for user callback if needed.
+ *
+ * If the error code in non-zero and no error message is set, this
+ * sets a generic error message.
+ *
+ * @return This always returns the `error_code` parameter.
+ */
+GIT_INLINE(int) giterr_set_callback(int error_code, const char *action)
+{
+	if (error_code) {
+		const git_error *e = giterr_last();
+		if (!e || !e->message)
+			giterr_set(e ? e->klass : GITERR_CALLBACK,
+				"%s callback returned %d", action, error_code);
+	}
+	return error_code;
+}
+
+#define GITERR_CALLBACK(code) giterr_set_callback((code), __func__)
+
+/**
  * Gets the system error code for this thread.
  */
 int giterr_system_last(void);
@@ -84,15 +105,6 @@ int giterr_system_last(void);
  * Sets the system error code for this thread.
  */
 void giterr_system_set(int code);
-
-/**
- * Note that a user cancelled an operation with GIT_EUSER
- */
-GIT_INLINE(int) giterr_user_cancel(void)
-{
-	giterr_clear();
-	return GIT_EUSER;
-}
 
 /**
  * Structure to preserve libgit2 error state

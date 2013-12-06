@@ -1082,15 +1082,16 @@ int git_pack_foreach_entry(
 			git_vector_foreach(&offsets, i, current)
 				git_vector_insert(&oids, (void*)&current[4]);
 		}
+
 		git_vector_free(&offsets);
-		p->oids = (git_oid **)oids.contents;
+		p->oids = (git_oid **)git_vector_detach(NULL, NULL, &oids);
 	}
 
 	for (i = 0; i < p->num_objects; i++)
-		if (cb(p->oids[i], data))
-			return giterr_user_cancel();
+		if ((error = GITERR_CALLBACK( cb(p->oids[i], data) )) != 0)
+			break;
 
-	return 0;
+	return error;
 }
 
 static int pack_entry_find_offset(

@@ -71,6 +71,7 @@ typedef enum {
 	GITERR_SSH,
 	GITERR_FILTER,
 	GITERR_REVERT,
+	GITERR_CALLBACK,
 } git_error_t;
 
 /**

@@ -71,11 +71,6 @@ __KHASH_IMPL(
 	str, static kh_inline, const char *, void *, 1,
 	str_hash_no_trailing_slash, str_equal_no_trailing_slash);
 
-struct submodule_callback_payload {
-	git_repository *repo;
-	git_error_state error;
-};
-
 static int load_submodule_config(git_repository *repo);
 static git_config_backend *open_gitmodules(git_repository *, bool, const git_oid *);
 static int lookup_head_remote(git_buf *url, git_repository *repo);
@@ -173,10 +168,8 @@ int git_submodule_foreach(
 				break;
 		}
 
-		if (callback(sm, sm->name, payload)) {
-			error = giterr_user_cancel();
+		if ((error = GITERR_CALLBACK(callback(sm, sm->name, payload))) != 0)
 			break;
-		}
 	});
 
 	git_vector_free(&seen);
@@ -825,7 +818,6 @@ int git_submodule_reload(git_submodule *submodule)
 {
 	int error = 0;
 	git_config_backend *mods;
-	struct submodule_callback_payload p;
 
 	assert(submodule);
 
@@ -838,9 +830,6 @@ int git_submodule_reload(git_submodule *submodule)
 		return error;
 
 	/* refresh config data */
-	memset(&p, 0, sizeof(p));
-	p.repo = submodule->repo;
-
 	mods = open_gitmodules(submodule->repo, false, NULL);
 	if (mods != NULL) {
 		git_buf path = GIT_BUF_INIT;
@@ -851,13 +840,9 @@ int git_submodule_reload(git_submodule *submodule)
 
 		if (git_buf_oom(&path))
 			error = -1;
-		else {
+		else
 			error = git_config_file_foreach_match(
-				mods, path.ptr, submodule_load_from_config, &p);
-
-			if (error == GIT_EUSER)
-				error = giterr_restore(&p.error);
-		}
+				mods, path.ptr, submodule_load_from_config, submodule->repo);
 
 		git_buf_free(&path);
 		git_config_file_free(mods);
@@ -867,15 +852,11 @@ int git_submodule_reload(git_submodule *submodule)
 	}
 
 	/* refresh wd data */
-
 	submodule->flags = submodule->flags &
 		~(GIT_SUBMODULE_STATUS_IN_WD | GIT_SUBMODULE_STATUS__WD_OID_VALID);
 
-	error = submodule_load_from_wd_lite(submodule, submodule->path, &p);
-	if (error)
-		error = giterr_restore(&p.error);
-
-	return error;
+	return submodule_load_from_wd_lite(
+		submodule, submodule->path, submodule->repo);
 }
 
 static void submodule_copy_oid_maybe(
@@ -1100,8 +1081,8 @@ int git_submodule_parse_update(git_submodule_update_t *out, const char *value)
 static int submodule_load_from_config(
 	const git_config_entry *entry, void *payload)
 {
-	struct submodule_callback_payload *p = payload;
-	git_strmap *smcfg = p->repo->submodules;
+	git_repository *repo = payload;
+	git_strmap *smcfg = repo->submodules;
 	const char *namestart, *property, *alternate = NULL;
 	const char *key = entry->name, *value = entry->value, *path;
 	git_buf name = GIT_BUF_INIT;
@@ -1121,7 +1102,7 @@ static int submodule_load_from_config(
 	path = !strcasecmp(property, "path") ? value : NULL;
 
 	if ((error = git_buf_set(&name, namestart, property - namestart - 1)) < 0 ||
-		(error = submodule_get(&sm, p->repo, name.ptr, path)) < 0)
+		(error = submodule_get(&sm, repo, name.ptr, path)) < 0)
 		goto done;
 
 	sm->flags |= GIT_SUBMODULE_STATUS_IN_CONFIG;
@@ -1197,22 +1178,21 @@ static int submodule_load_from_config(
 
 done:
 	git_buf_free(&name);
-	return giterr_capture(&p->error, error);
+	return error;
 }
 
 static int submodule_load_from_wd_lite(
 	git_submodule *sm, const char *name, void *payload)
 {
-	struct submodule_callback_payload *p = payload;
 	git_buf path = GIT_BUF_INIT;
 
-	GIT_UNUSED(name);
+	GIT_UNUSED(name); GIT_UNUSED(payload);
 
 	if (git_repository_is_bare(sm->repo))
 		return 0;
 
 	if (git_buf_joinpath(&path, git_repository_workdir(sm->repo), sm->path) < 0)
-		return giterr_capture(&p->error, -1);
+		return -1;
 
 	if (git_path_isdir(path.ptr))
 		sm->flags |= GIT_SUBMODULE_STATUS__WD_SCANNED;
@@ -1355,14 +1335,11 @@ static int load_submodule_config(git_repository *repo)
 	int error;
 	git_oid gitmodules_oid;
 	git_config_backend *mods = NULL;
-	struct submodule_callback_payload p;
 
 	if (repo->submodules)
 		return 0;
 
 	memset(&gitmodules_oid, 0, sizeof(gitmodules_oid));
-	memset(&p, 0, sizeof(p));
-	p.repo = repo;
 
 	/* Submodule data is kept in a hashtable keyed by both name and path.
 	 * These are usually the same, but that is not guaranteed.
@@ -1386,20 +1363,17 @@ static int load_submodule_config(git_repository *repo)
 
 	if ((mods = open_gitmodules(repo, false, &gitmodules_oid)) != NULL &&
 		(error = git_config_file_foreach(
-			mods, submodule_load_from_config, &p)) < 0)
+			mods, submodule_load_from_config, repo)) < 0)
 		goto cleanup;
 
 	/* shallow scan submodules in work tree */
 
 	if (!git_repository_is_bare(repo))
-		error = git_submodule_foreach(repo, submodule_load_from_wd_lite, &p);
+		error = git_submodule_foreach(repo, submodule_load_from_wd_lite, NULL);
 
 cleanup:
 	if (mods != NULL)
 		git_config_file_free(mods);
-
-	if (error == GIT_EUSER)
-		error = giterr_restore(&p.error);
 
 	if (error)
 		git_submodule_config_free(repo);

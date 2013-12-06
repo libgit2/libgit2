@@ -45,7 +45,7 @@ int git_smart__store_refs(transport_smart *t, int flushes)
 			error = GIT_EBUFS;
 
 		if (error < 0 && error != GIT_EBUFS)
-			return -1;
+			return error;
 
 		if (error == GIT_EBUFS) {
 			if ((recvd = gitno_recv(buf)) < 0)
@@ -209,12 +209,13 @@ static int fetch_setup_walk(git_revwalk **out, git_repository *repo)
 	git_strarray refs;
 	unsigned int i;
 	git_reference *ref;
+	int error;
 
-	if (git_reference_list(&refs, repo) < 0)
-		return -1;
+	if ((error = git_reference_list(&refs, repo)) < 0)
+		return error;
 
-	if (git_revwalk_new(&walk, repo) < 0)
-		return -1;
+	if ((error = git_revwalk_new(&walk, repo)) < 0)
+		return error;
 
 	git_revwalk_sorting(walk, GIT_SORT_TIME);
 
@@ -223,13 +224,13 @@ static int fetch_setup_walk(git_revwalk **out, git_repository *repo)
 		if (!git__prefixcmp(refs.strings[i], GIT_REFS_TAGS_DIR))
 			continue;
 
-		if (git_reference_lookup(&ref, repo, refs.strings[i]) < 0)
+		if ((error = git_reference_lookup(&ref, repo, refs.strings[i])) < 0)
 			goto on_error;
 
 		if (git_reference_type(ref) == GIT_REF_SYMBOLIC)
 			continue;
 
-		if (git_revwalk_push(walk, git_reference_target(ref)) < 0)
+		if ((error = git_revwalk_push(walk, git_reference_target(ref))) < 0)
 			goto on_error;
 
 		git_reference_free(ref);
@@ -242,7 +243,7 @@ static int fetch_setup_walk(git_revwalk **out, git_repository *repo)
 on_error:
 	git_reference_free(ref);
 	git_strarray_free(&refs);
-	return -1;
+	return error;
 }
 
 static int wait_while_ack(gitno_buffer *buf)
@@ -503,7 +504,7 @@ int git_smart__download_pack(
 	}
 
 	if ((error = git_repository_odb__weakptr(&odb, repo)) < 0 ||
-		((error = git_odb_write_pack(&writepack, odb, progress_cb, progress_payload)) < 0))
+		((error = git_odb_write_pack(&writepack, odb, progress_cb, progress_payload)) != 0))
 		goto done;
 
 	/*
@@ -539,11 +540,9 @@ int git_smart__download_pack(
 		if (pkt->type == GIT_PKT_PROGRESS) {
 			if (t->progress_cb) {
 				git_pkt_progress *p = (git_pkt_progress *) pkt;
-				if (t->progress_cb(p->data, p->len, t->message_cb_payload)) {
-					giterr_clear();
-					error = GIT_EUSER;
+				error = t->progress_cb(p->data, p->len, t->message_cb_payload);
+				if (error)
 					goto done;
-				}
 			}
 			git__free(pkt);
 		} else if (pkt->type == GIT_PKT_DATA) {
@@ -551,7 +550,7 @@ int git_smart__download_pack(
 			error = writepack->append(writepack, p->data, p->len, stats);
 
 			git__free(pkt);
-			if (error < 0)
+			if (error != 0)
 				goto done;
 		} else if (pkt->type == GIT_PKT_FLUSH) {
 			/* A flush indicates the end of the packfile */
@@ -564,17 +563,15 @@ int git_smart__download_pack(
 	 * Trailing execution of progress_cb, if necessary...
 	 * Only the callback through the npp datastructure currently
 	 * updates the last_fired_bytes value. It is possible that
-	 * progress has already been reported with the correct 
+	 * progress has already been reported with the correct
 	 * "received_bytes" value, but until (if?) this is unified
 	 * then we will report progress again to be sure that the
 	 * correct last received_bytes value is reported.
 	 */
 	if (npp.callback && npp.stats->received_bytes > npp.last_fired_bytes) {
-		if (npp.callback(npp.stats, npp.payload) < 0) {
-			giterr_clear();
-			error = GIT_EUSER;
+		error = npp.callback(npp.stats, npp.payload);
+		if (error != 0)
 			goto done;
-		}
 	}
 
 	error = writepack->commit(writepack, stats);

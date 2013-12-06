@@ -44,7 +44,6 @@ void test_config_rename__can_rename(void)
 void test_config_rename__prevent_overwrite(void)
 {
 	const git_config_entry *ce;
-	const git_error *err;
 
 	cl_git_pass(git_config_set_string(
 		g_config, "branch.local-track.remote", "yellow"));
@@ -60,8 +59,12 @@ void test_config_rename__prevent_overwrite(void)
 		&ce, g_config, "branch.local-track.remote"));
 	cl_assert_equal_s(".", ce->value);
 
-//	cl_assert((err = giterr_last()) != NULL);
-//	cl_assert(err->message != NULL);
+	/* so, we don't currently prevent overwrite... */
+	/* {
+		const git_error *err;
+		cl_assert((err = giterr_last()) != NULL);
+		cl_assert(err->message != NULL);
+	} */
 }
 
 static void assert_invalid_config_section_name(

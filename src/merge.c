@@ -287,10 +287,8 @@ int git_repository_mergehead_foreach(
 		if ((error = git_oid_fromstr(&oid, line)) < 0)
 			goto cleanup;
 
-		if (cb(&oid, payload) != 0) {
-			error = giterr_user_cancel();
+		if ((error = GITERR_CALLBACK( cb(&oid, payload) )) != 0)
 			goto cleanup;
-		}
 
 		++line_num;
 	}

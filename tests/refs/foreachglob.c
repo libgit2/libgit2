@@ -81,14 +81,14 @@ static int interrupt_cb(const char *reference_name, void *payload)
 
 	(*count)++;
 
-	return (*count == 11);
+	return (*count == 11) ? -1000 : 0;
 }
 
 void test_refs_foreachglob__can_cancel(void)
 {
 	int count = 0;
 
-	cl_assert_equal_i(GIT_EUSER, git_reference_foreach_glob(
+	cl_assert_equal_i(-1000, git_reference_foreach_glob(
 		repo, "*", interrupt_cb, &count) );
 
 	cl_assert_equal_i(11, count);

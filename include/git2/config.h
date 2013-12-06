@@ -612,8 +612,8 @@ GIT_EXTERN(int) git_config_parse_int64(int64_t *out, const char *value);
 GIT_EXTERN(int) git_config_backend_foreach_match(
 	git_config_backend *backend,
 	const char *regexp,
-	int (*fn)(const git_config_entry *, void *),
-	void *data);
+	git_config_foreach_cb callback,
+	void *payload);
 
 
 /** @} */

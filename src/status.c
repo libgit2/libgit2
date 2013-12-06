@@ -152,32 +152,25 @@ static git_status_t status_compute(
 	return st;
 }
 
-struct status_data {
-	git_status_list *status;
-	git_error_state err;
-};
-
 static int status_collect(
 	git_diff_delta *head2idx,
 	git_diff_delta *idx2wd,
 	void *payload)
 {
-	struct status_data *data = payload;
+	git_status_list *status = payload;
 	git_status_entry *status_entry;
 
-	if (!status_is_included(data->status, head2idx, idx2wd))
+	if (!status_is_included(status, head2idx, idx2wd))
 		return 0;
 
 	status_entry = git__malloc(sizeof(git_status_entry));
-	if (!status_entry)
-		return giterr_capture(&data->err, -1);
+	GITERR_CHECK_ALLOC(status_entry);
 
-	status_entry->status = status_compute(data->status, head2idx, idx2wd);
+	status_entry->status = status_compute(status, head2idx, idx2wd);
 	status_entry->head_to_index = head2idx;
 	status_entry->index_to_workdir = idx2wd;
 
-	return giterr_capture(
-		&data->err, git_vector_insert(&data->status->paired, status_entry));
+	return git_vector_insert(&status->paired, status_entry);
 }
 
 GIT_INLINE(int) status_entry_cmp_base(
@@ -321,18 +314,10 @@ int git_status_list_new(
 			goto done;
 	}
 
-	{
-		struct status_data data = { 0 };
-		data.status = status;
-
-		error = git_diff__paired_foreach(
-			status->head2idx, status->idx2wd, status_collect, &data);
-
-		if (error == GIT_EUSER)
-			error = giterr_restore(&data.err);
-		if (error < 0)
-			goto done;
-	}
+	error = git_diff__paired_foreach(
+		status->head2idx, status->idx2wd, status_collect, status);
+	if (error < 0)
+		goto done;
 
 	if (flags & GIT_STATUS_OPT_SORT_CASE_SENSITIVELY)
 		git_vector_set_cmp(&status->paired, status_entry_cmp);
@@ -407,10 +392,9 @@ int git_status_foreach_ext(
 			status_entry->head_to_index->old_file.path :
 			status_entry->index_to_workdir->old_file.path;
 
-		if (cb(path, status_entry->status, payload) != 0) {
-			error = giterr_user_cancel();
+		error = GITERR_CALLBACK( cb(path, status_entry->status, payload) );
+		if (error)
 			break;
-		}
 	}
 
 	git_status_list_free(status);

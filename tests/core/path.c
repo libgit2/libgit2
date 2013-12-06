@@ -354,13 +354,15 @@ typedef struct {
 	char **expect;
 } check_walkup_info;
 
+#define CANCEL_VALUE 1234
+
 static int check_one_walkup_step(void *ref, git_buf *path)
 {
 	check_walkup_info *info = (check_walkup_info *)ref;
 
 	if (!info->cancel_after) {
 		cl_assert_equal_s(info->expect[info->expect_idx], "[CANCEL]");
-		return -1;
+		return CANCEL_VALUE;
 	}
 	info->cancel_after--;
 
@@ -435,7 +437,7 @@ void test_core_path__11a_walkup_cancel(void)
 		info.expect_idx = i;
 
 		cl_assert_equal_i(
-			GIT_EUSER,
+			CANCEL_VALUE,
 			git_path_walk_up(&p, root[j], check_one_walkup_step, &info)
 		);
 

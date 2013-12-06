@@ -83,10 +83,8 @@ static int checkout_notify(
 	const git_diff_file *baseline = NULL, *target = NULL, *workdir = NULL;
 	const char *path = NULL;
 
-	if (!data->opts.notify_cb)
-		return 0;
-
-	if ((why & data->opts.notify_flags) == 0)
+	if (!data->opts.notify_cb ||
+		(why & data->opts.notify_flags) == 0)
 		return 0;
 
 	if (wditem) {
@@ -125,8 +123,10 @@ static int checkout_notify(
 		path = delta->old_file.path;
 	}
 
-	return data->opts.notify_cb(
-		why, path, baseline, target, workdir, data->opts.notify_payload);
+	return giterr_set_callback(
+		data->opts.notify_cb(
+			why, path, baseline, target, workdir, data->opts.notify_payload),
+		"git_checkout notification");
 }
 
 static bool checkout_is_workdir_modified(
@@ -186,69 +186,66 @@ static bool checkout_is_workdir_modified(
 	((data->strategy & GIT_CHECKOUT_##FLAG) ? CHECKOUT_ACTION__##YES : CHECKOUT_ACTION__##NO)
 
 static int checkout_action_common(
+	int *action,
 	checkout_data *data,
-	int action,
 	const git_diff_delta *delta,
 	const git_index_entry *wd)
 {
 	git_checkout_notify_t notify = GIT_CHECKOUT_NOTIFY_NONE;
 
-	if (action <= 0)
-		return action;
-
 	if ((data->strategy & GIT_CHECKOUT_UPDATE_ONLY) != 0)
-		action = (action & ~CHECKOUT_ACTION__REMOVE);
+		*action = (*action & ~CHECKOUT_ACTION__REMOVE);
 
-	if ((action & CHECKOUT_ACTION__UPDATE_BLOB) != 0) {
+	if ((*action & CHECKOUT_ACTION__UPDATE_BLOB) != 0) {
 		if (S_ISGITLINK(delta->new_file.mode))
-			action = (action & ~CHECKOUT_ACTION__UPDATE_BLOB) |
+			*action = (*action & ~CHECKOUT_ACTION__UPDATE_BLOB) |
 				CHECKOUT_ACTION__UPDATE_SUBMODULE;
 
 		/* to "update" a symlink, we must remove the old one first */
 		if (delta->new_file.mode == GIT_FILEMODE_LINK && wd != NULL)
-			action |= CHECKOUT_ACTION__REMOVE;
+			*action |= CHECKOUT_ACTION__REMOVE;
 
 		notify = GIT_CHECKOUT_NOTIFY_UPDATED;
 	}
 
-	if ((action & CHECKOUT_ACTION__CONFLICT) != 0)
+	if ((*action & CHECKOUT_ACTION__CONFLICT) != 0)
 		notify = GIT_CHECKOUT_NOTIFY_CONFLICT;
 
-	if (notify != GIT_CHECKOUT_NOTIFY_NONE &&
-		checkout_notify(data, notify, delta, wd) != 0)
-		return giterr_user_cancel();
-
-	return action;
+	return checkout_notify(data, notify, delta, wd);
 }
 
 static int checkout_action_no_wd(
+	int *action,
 	checkout_data *data,
 	const git_diff_delta *delta)
 {
-	int action = CHECKOUT_ACTION__NONE;
+	int error = 0;
+
+	*action = CHECKOUT_ACTION__NONE;
 
 	switch (delta->status) {
 	case GIT_DELTA_UNMODIFIED: /* case 12 */
-		if (checkout_notify(data, GIT_CHECKOUT_NOTIFY_DIRTY, delta, NULL))
-			return giterr_user_cancel();
-		action = CHECKOUT_ACTION_IF(SAFE_CREATE, UPDATE_BLOB, NONE);
+		error = checkout_notify(data, GIT_CHECKOUT_NOTIFY_DIRTY, delta, NULL);
+		if (error)
+			return error;
+		*action = CHECKOUT_ACTION_IF(SAFE_CREATE, UPDATE_BLOB, NONE);
 		break;
 	case GIT_DELTA_ADDED:    /* case 2 or 28 (and 5 but not really) */
-		action = CHECKOUT_ACTION_IF(SAFE, UPDATE_BLOB, NONE);
+		*action = CHECKOUT_ACTION_IF(SAFE, UPDATE_BLOB, NONE);
 		break;
 	case GIT_DELTA_MODIFIED: /* case 13 (and 35 but not really) */
-		action = CHECKOUT_ACTION_IF(SAFE_CREATE, UPDATE_BLOB, CONFLICT);
+		*action = CHECKOUT_ACTION_IF(SAFE_CREATE, UPDATE_BLOB, CONFLICT);
 		break;
 	case GIT_DELTA_TYPECHANGE: /* case 21 (B->T) and 28 (T->B)*/
 		if (delta->new_file.mode == GIT_FILEMODE_TREE)
-			action = CHECKOUT_ACTION_IF(SAFE, UPDATE_BLOB, NONE);
+			*action = CHECKOUT_ACTION_IF(SAFE, UPDATE_BLOB, NONE);
 		break;
 	case GIT_DELTA_DELETED: /* case 8 or 25 */
 	default: /* impossible */
 		break;
 	}
 
-	return checkout_action_common(data, action, delta, NULL);
+	return checkout_action_common(action, data, delta, NULL);
 }
 
 static int checkout_action_wd_only(
@@ -257,6 +254,7 @@ static int checkout_action_wd_only(
 	const git_index_entry *wd,
 	git_vector *pathspec)
 {
+	int error = 0;
 	bool remove = false;
 	git_checkout_notify_t notify = GIT_CHECKOUT_NOTIFY_NONE;
 
@@ -269,13 +267,13 @@ static int checkout_action_wd_only(
 	/* check if item is tracked in the index but not in the checkout diff */
 	if (data->index != NULL) {
 		if (wd->mode != GIT_FILEMODE_TREE) {
-			int error;
-
-			if ((error = git_index_find(NULL, data->index, wd->path)) == 0) {
+			if (!(error = git_index_find(NULL, data->index, wd->path))) {
 				notify = GIT_CHECKOUT_NOTIFY_DIRTY;
 				remove = ((data->strategy & GIT_CHECKOUT_FORCE) != 0);
 			} else if (error != GIT_ENOTFOUND)
 				return error;
+			else
+				giterr_clear();
 		} else {
 			/* for tree entries, we have to see if there are any index
 			 * entries that are contained inside that tree
@@ -301,18 +299,16 @@ static int checkout_action_wd_only(
 		remove = ((data->strategy & GIT_CHECKOUT_REMOVE_UNTRACKED) != 0);
 	}
 
-	if (checkout_notify(data, notify, NULL, wd))
-		return giterr_user_cancel();
+	error = checkout_notify(data, notify, NULL, wd);
 
-	if (remove) {
+	if (!error && remove) {
 		char *path = git_pool_strdup(&data->pool, wd->path);
 		GITERR_CHECK_ALLOC(path);
 
-		if (git_vector_insert(&data->removes, path) < 0)
-			return -1;
+		error = git_vector_insert(&data->removes, path);
 	}
 
-	return 0;
+	return error;
 }
 
 static bool submodule_is_config_only(
@@ -331,35 +327,35 @@ static bool submodule_is_config_only(
 }
 
 static int checkout_action_with_wd(
+	int *action,
 	checkout_data *data,
 	const git_diff_delta *delta,
 	const git_index_entry *wd)
 {
-	int action = CHECKOUT_ACTION__NONE;
+	*action = CHECKOUT_ACTION__NONE;
 
 	switch (delta->status) {
 	case GIT_DELTA_UNMODIFIED: /* case 14/15 or 33 */
 		if (checkout_is_workdir_modified(data, &delta->old_file, wd)) {
-			if (checkout_notify(
-					data, GIT_CHECKOUT_NOTIFY_DIRTY, delta, wd))
-				return giterr_user_cancel();
-			action = CHECKOUT_ACTION_IF(FORCE, UPDATE_BLOB, NONE);
+			GITERR_CHECK_ERROR(
+				checkout_notify(data, GIT_CHECKOUT_NOTIFY_DIRTY, delta, wd) );
+			*action = CHECKOUT_ACTION_IF(FORCE, UPDATE_BLOB, NONE);
 		}
 		break;
 	case GIT_DELTA_ADDED: /* case 3, 4 or 6 */
-		action = CHECKOUT_ACTION_IF(FORCE, UPDATE_BLOB, CONFLICT);
+		*action = CHECKOUT_ACTION_IF(FORCE, UPDATE_BLOB, CONFLICT);
 		break;
 	case GIT_DELTA_DELETED: /* case 9 or 10 (or 26 but not really) */
 		if (checkout_is_workdir_modified(data, &delta->old_file, wd))
-			action = CHECKOUT_ACTION_IF(FORCE, REMOVE, CONFLICT);
+			*action = CHECKOUT_ACTION_IF(FORCE, REMOVE, CONFLICT);
 		else
-			action = CHECKOUT_ACTION_IF(SAFE, REMOVE, NONE);
+			*action = CHECKOUT_ACTION_IF(SAFE, REMOVE, NONE);
 		break;
 	case GIT_DELTA_MODIFIED: /* case 16, 17, 18 (or 36 but not really) */
 		if (checkout_is_workdir_modified(data, &delta->old_file, wd))
-			action = CHECKOUT_ACTION_IF(FORCE, UPDATE_BLOB, CONFLICT);
+			*action = CHECKOUT_ACTION_IF(FORCE, UPDATE_BLOB, CONFLICT);
 		else
-			action = CHECKOUT_ACTION_IF(SAFE, UPDATE_BLOB, NONE);
+			*action = CHECKOUT_ACTION_IF(SAFE, UPDATE_BLOB, NONE);
 		break;
 	case GIT_DELTA_TYPECHANGE: /* case 22, 23, 29, 30 */
 		if (delta->old_file.mode == GIT_FILEMODE_TREE) {
@@ -367,92 +363,93 @@ static int checkout_action_with_wd(
 				/* either deleting items in old tree will delete the wd dir,
 				 * or we'll get a conflict when we attempt blob update...
 				 */
-				action = CHECKOUT_ACTION_IF(SAFE, UPDATE_BLOB, NONE);
+				*action = CHECKOUT_ACTION_IF(SAFE, UPDATE_BLOB, NONE);
 			else if (wd->mode == GIT_FILEMODE_COMMIT) {
 				/* workdir is possibly a "phantom" submodule - treat as a
 				 * tree if the only submodule info came from the config
 				 */
 				if (submodule_is_config_only(data, wd->path))
-					action = CHECKOUT_ACTION_IF(SAFE, UPDATE_BLOB, NONE);
+					*action = CHECKOUT_ACTION_IF(SAFE, UPDATE_BLOB, NONE);
 				else
-					action = CHECKOUT_ACTION_IF(FORCE, REMOVE_AND_UPDATE, CONFLICT);
+					*action = CHECKOUT_ACTION_IF(FORCE, REMOVE_AND_UPDATE, CONFLICT);
 			} else
-				action = CHECKOUT_ACTION_IF(FORCE, REMOVE, CONFLICT);
+				*action = CHECKOUT_ACTION_IF(FORCE, REMOVE, CONFLICT);
 		}
 		else if (checkout_is_workdir_modified(data, &delta->old_file, wd))
-			action = CHECKOUT_ACTION_IF(FORCE, REMOVE_AND_UPDATE, CONFLICT);
+			*action = CHECKOUT_ACTION_IF(FORCE, REMOVE_AND_UPDATE, CONFLICT);
 		else
-			action = CHECKOUT_ACTION_IF(SAFE, REMOVE_AND_UPDATE, NONE);
+			*action = CHECKOUT_ACTION_IF(SAFE, REMOVE_AND_UPDATE, NONE);
 
 		/* don't update if the typechange is to a tree */
 		if (delta->new_file.mode == GIT_FILEMODE_TREE)
-			action = (action & ~CHECKOUT_ACTION__UPDATE_BLOB);
+			*action = (*action & ~CHECKOUT_ACTION__UPDATE_BLOB);
 		break;
 	default: /* impossible */
 		break;
 	}
 
-	return checkout_action_common(data, action, delta, wd);
+	return checkout_action_common(action, data, delta, wd);
 }
 
 static int checkout_action_with_wd_blocker(
+	int *action,
 	checkout_data *data,
 	const git_diff_delta *delta,
 	const git_index_entry *wd)
 {
-	int action = CHECKOUT_ACTION__NONE;
+	*action = CHECKOUT_ACTION__NONE;
 
 	switch (delta->status) {
 	case GIT_DELTA_UNMODIFIED:
 		/* should show delta as dirty / deleted */
-		if (checkout_notify(data, GIT_CHECKOUT_NOTIFY_DIRTY, delta, wd))
-			return giterr_user_cancel();
-		action = CHECKOUT_ACTION_IF(FORCE, REMOVE_AND_UPDATE, NONE);
+		GITERR_CHECK_ERROR(
+			checkout_notify(data, GIT_CHECKOUT_NOTIFY_DIRTY, delta, wd) );
+		*action = CHECKOUT_ACTION_IF(FORCE, REMOVE_AND_UPDATE, NONE);
 		break;
 	case GIT_DELTA_ADDED:
 	case GIT_DELTA_MODIFIED:
-		action = CHECKOUT_ACTION_IF(FORCE, REMOVE_AND_UPDATE, CONFLICT);
+		*action = CHECKOUT_ACTION_IF(FORCE, REMOVE_AND_UPDATE, CONFLICT);
 		break;
 	case GIT_DELTA_DELETED:
-		action = CHECKOUT_ACTION_IF(FORCE, REMOVE, CONFLICT);
+		*action = CHECKOUT_ACTION_IF(FORCE, REMOVE, CONFLICT);
 		break;
 	case GIT_DELTA_TYPECHANGE:
 		/* not 100% certain about this... */
-		action = CHECKOUT_ACTION_IF(FORCE, REMOVE_AND_UPDATE, CONFLICT);
+		*action = CHECKOUT_ACTION_IF(FORCE, REMOVE_AND_UPDATE, CONFLICT);
 		break;
 	default: /* impossible */
 		break;
 	}
 
-	return checkout_action_common(data, action, delta, wd);
+	return checkout_action_common(action, data, delta, wd);
 }
 
 static int checkout_action_with_wd_dir(
+	int *action,
 	checkout_data *data,
 	const git_diff_delta *delta,
 	const git_index_entry *wd)
 {
-	int action = CHECKOUT_ACTION__NONE;
+	*action = CHECKOUT_ACTION__NONE;
 
 	switch (delta->status) {
 	case GIT_DELTA_UNMODIFIED: /* case 19 or 24 (or 34 but not really) */
-		if (checkout_notify(data, GIT_CHECKOUT_NOTIFY_DIRTY, delta, NULL) ||
-			checkout_notify(
-				data, GIT_CHECKOUT_NOTIFY_UNTRACKED, NULL, wd))
-			return giterr_user_cancel();
+		GITERR_CHECK_ERROR(
+			checkout_notify(data, GIT_CHECKOUT_NOTIFY_DIRTY, delta, NULL));
+		GITERR_CHECK_ERROR(
+			checkout_notify(data, GIT_CHECKOUT_NOTIFY_UNTRACKED, NULL, wd));
 		break;
 	case GIT_DELTA_ADDED:/* case 4 (and 7 for dir) */
 	case GIT_DELTA_MODIFIED: /* case 20 (or 37 but not really) */
 		if (delta->old_file.mode == GIT_FILEMODE_COMMIT)
 			/* expected submodule (and maybe found one) */;
 		else if (delta->new_file.mode != GIT_FILEMODE_TREE)
-			action = CHECKOUT_ACTION_IF(FORCE, REMOVE_AND_UPDATE, CONFLICT);
+			*action = CHECKOUT_ACTION_IF(FORCE, REMOVE_AND_UPDATE, CONFLICT);
 		break;
 	case GIT_DELTA_DELETED: /* case 11 (and 27 for dir) */
-		if (delta->old_file.mode != GIT_FILEMODE_TREE &&
-			checkout_notify(
-				data, GIT_CHECKOUT_NOTIFY_UNTRACKED, NULL, wd))
-			return giterr_user_cancel();
+		if (delta->old_file.mode != GIT_FILEMODE_TREE)
+			GITERR_CHECK_ERROR(
+				checkout_notify(data, GIT_CHECKOUT_NOTIFY_UNTRACKED, NULL, wd));
 		break;
 	case GIT_DELTA_TYPECHANGE: /* case 24 or 31 */
 		if (delta->old_file.mode == GIT_FILEMODE_TREE) {
@@ -462,39 +459,41 @@ static int checkout_action_with_wd_dir(
 			 * directory if is it left empty, so we can defer removing the
 			 * dir and it will succeed if no children are left.
 			 */
-			action = CHECKOUT_ACTION_IF(SAFE, UPDATE_BLOB, NONE);
-			if (action != CHECKOUT_ACTION__NONE)
-				action |= CHECKOUT_ACTION__DEFER_REMOVE;
+			*action = CHECKOUT_ACTION_IF(SAFE, UPDATE_BLOB, NONE);
+			if (*action != CHECKOUT_ACTION__NONE)
+				*action |= CHECKOUT_ACTION__DEFER_REMOVE;
 		}
 		else if (delta->new_file.mode != GIT_FILEMODE_TREE)
 			/* For typechange to dir, dir is already created so no action */
-			action = CHECKOUT_ACTION_IF(FORCE, REMOVE_AND_UPDATE, CONFLICT);
+			*action = CHECKOUT_ACTION_IF(FORCE, REMOVE_AND_UPDATE, CONFLICT);
 		break;
 	default: /* impossible */
 		break;
 	}
 
-	return checkout_action_common(data, action, delta, wd);
+	return checkout_action_common(action, data, delta, wd);
 }
 
 static int checkout_action(
+	int *action,
 	checkout_data *data,
 	git_diff_delta *delta,
 	git_iterator *workdir,
-	const git_index_entry **wditem_ptr,
+	const git_index_entry **wditem,
 	git_vector *pathspec)
 {
-	const git_index_entry *wd = *wditem_ptr;
-	int cmp = -1, act;
+	int cmp = -1, error;
 	int (*strcomp)(const char *, const char *) = data->diff->strcomp;
 	int (*pfxcomp)(const char *str, const char *pfx) = data->diff->pfxcomp;
-	int error;
+	int (*advance)(const git_index_entry **, git_iterator *) = NULL;
 
 	/* move workdir iterator to follow along with deltas */
 
 	while (1) {
+		const git_index_entry *wd = *wditem;
+
 		if (!wd)
-			return checkout_action_no_wd(data, delta);
+			return checkout_action_no_wd(action, data, delta);
 
 		cmp = strcomp(wd->path, delta->old_file.path);
 
@@ -512,79 +511,77 @@ static int checkout_action(
 			if (cmp == 0) {
 				if (wd->mode == GIT_FILEMODE_TREE) {
 					/* case 2 - entry prefixed by workdir tree */
-					error = git_iterator_advance_into_or_over(&wd, workdir);
-					if (error && error != GIT_ITEROVER)
-						goto fail;
-					*wditem_ptr = wd;
+					error = git_iterator_advance_into_or_over(wditem, workdir);
+					if (error < 0 && error != GIT_ITEROVER)
+						goto done;
 					continue;
 				}
 
 				/* case 3 maybe - wd contains non-dir where dir expected */
 				if (delta->old_file.path[strlen(wd->path)] == '/') {
-					act = checkout_action_with_wd_blocker(data, delta, wd);
-					*wditem_ptr =
-						git_iterator_advance(&wd, workdir) ? NULL : wd;
-					return act;
+					error = checkout_action_with_wd_blocker(
+						action, data, delta, wd);
+					advance = git_iterator_advance;
+					goto done;
 				}
 			}
 
 			/* case 1 - handle wd item (if it matches pathspec) */
-			if (checkout_action_wd_only(data, workdir, wd, pathspec) < 0)
-				goto fail;
-			if ((error = git_iterator_advance(&wd, workdir)) < 0 &&
+			error = checkout_action_wd_only(data, workdir, wd, pathspec);
+			if (error)
+				goto done;
+			if ((error = git_iterator_advance(wditem, workdir)) < 0 &&
 				error != GIT_ITEROVER)
-				goto fail;
-
-			*wditem_ptr = wd;
+				goto done;
 			continue;
 		}
 
 		if (cmp == 0) {
 			/* case 4 */
-			act = checkout_action_with_wd(data, delta, wd);
-			*wditem_ptr = git_iterator_advance(&wd, workdir) ? NULL : wd;
-			return act;
+			error = checkout_action_with_wd(action, data, delta, wd);
+			advance = git_iterator_advance;
+			goto done;
 		}
 
 		cmp = pfxcomp(wd->path, delta->old_file.path);
 
 		if (cmp == 0) { /* case 5 */
 			if (wd->path[strlen(delta->old_file.path)] != '/')
-				return checkout_action_no_wd(data, delta);
+				return checkout_action_no_wd(action, data, delta);
 
 			if (delta->status == GIT_DELTA_TYPECHANGE) {
 				if (delta->old_file.mode == GIT_FILEMODE_TREE) {
-					act = checkout_action_with_wd(data, delta, wd);
-					if ((error = git_iterator_advance_into(&wd, workdir)) < 0 &&
-						error != GIT_ENOTFOUND)
-						goto fail;
-					*wditem_ptr = wd;
-					return act;
+					error = checkout_action_with_wd(action, data, delta, wd);
+					advance = git_iterator_advance_into;
+					goto done;
 				}
 
 				if (delta->new_file.mode == GIT_FILEMODE_TREE ||
 					delta->new_file.mode == GIT_FILEMODE_COMMIT ||
 					delta->old_file.mode == GIT_FILEMODE_COMMIT)
 				{
-					act = checkout_action_with_wd(data, delta, wd);
-					if ((error = git_iterator_advance(&wd, workdir)) < 0 &&
-						error != GIT_ITEROVER)
-						goto fail;
-					*wditem_ptr = wd;
-					return act;
+					error = checkout_action_with_wd(action, data, delta, wd);
+					advance = git_iterator_advance;
+					goto done;
 				}
 			}
 
-			return checkout_action_with_wd_dir(data, delta, wd);
+			return checkout_action_with_wd_dir(action, data, delta, wd);
 		}
 
 		/* case 6 - wd is after delta */
-		return checkout_action_no_wd(data, delta);
+		return checkout_action_no_wd(action, data, delta);
 	}
 
-fail:
-	*wditem_ptr = NULL;
-	return -1;
+done:
+	if (!error && advance != NULL &&
+		(error = advance(wditem, workdir)) < 0) {
+		*wditem = NULL;
+		if (error == GIT_ITEROVER)
+			error = 0;
+	}
+
+	return error;
 }
 
 static int checkout_remaining_wd_items(
@@ -965,7 +962,7 @@ static int checkout_get_actions(
 	checkout_data *data,
 	git_iterator *workdir)
 {
-	int error = 0;
+	int error = 0, act;
 	const git_index_entry *wditem;
 	git_vector pathspec = GIT_VECTOR_INIT, *deltas;
 	git_pool pathpool = GIT_POOL_INIT_STRINGPOOL;
@@ -992,12 +989,9 @@ static int checkout_get_actions(
 	}
 
 	git_vector_foreach(deltas, i, delta) {
-		int act = checkout_action(data, delta, workdir, &wditem, &pathspec);
-
-		if (act < 0) {
-			error = act;
+		error = checkout_action(&act, data, delta, workdir, &wditem, &pathspec);
+		if (error)
 			goto fail;
-		}
 
 		actions[i] = act;
 
@@ -1012,7 +1006,7 @@ static int checkout_get_actions(
 	}
 
 	error = checkout_remaining_wd_items(data, workdir, wditem, &pathspec);
-	if (error < 0)
+	if (error)
 		goto fail;
 
 	counts[CHECKOUT_ACTION__REMOVE] += data->removes.length;

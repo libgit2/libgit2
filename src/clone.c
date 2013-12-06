@@ -107,7 +107,6 @@ struct head_info {
 	git_buf branchname;
 	const git_refspec *refspec;
 	bool found;
-	git_error_state error;
 };
 
 static int reference_matches_remote_head(
@@ -147,7 +146,7 @@ static int reference_matches_remote_head(
 		}
 	}
 
-	return giterr_capture(&head_info->error, error);
+	return error;
 }
 
 static int update_head_to_new_branch(
@@ -209,12 +208,8 @@ static int update_head_to_remote(git_repository *repo, git_remote *remote)
 	/* Check to see if the remote HEAD points to the remote master */
 	error = reference_matches_remote_head(
 		git_buf_cstr(&remote_master_name), &head_info);
-
-	if (error < 0) {
-		error = giterr_restore(&head_info.error);
-		if (error < 0 && error != GIT_ITEROVER)
-			goto cleanup;
-	}
+	if (error < 0 && error != GIT_ITEROVER)
+		goto cleanup;
 
 	if (head_info.found) {
 		error = update_head_to_new_branch(
@@ -227,9 +222,6 @@ static int update_head_to_remote(git_repository *repo, git_remote *remote)
 	/* Not master. Check all the other refs. */
 	error = git_reference_foreach_name(
 		repo, reference_matches_remote_head, &head_info);
-
-	if (error == GIT_EUSER)
-		error = giterr_restore(&head_info.error);
 	if (error < 0 && error != GIT_ITEROVER)
 		goto cleanup;
 
@@ -349,7 +341,7 @@ int git_clone_into(git_repository *repo, git_remote *remote, const git_checkout_
 	old_fetchhead = git_remote_update_fetchhead(remote);
 	git_remote_set_update_fetchhead(remote, 0);
 
-	if ((error = git_remote_fetch(remote)) < 0)
+	if ((error = git_remote_fetch(remote)) != 0)
 		goto cleanup;
 
 	if (branch)
@@ -363,10 +355,12 @@ int git_clone_into(git_repository *repo, git_remote *remote, const git_checkout_
 
 cleanup:
 	git_remote_set_update_fetchhead(remote, old_fetchhead);
+
 	/* Go back to the original refspecs */
-	if (git_remote_set_fetch_refspecs(remote, &refspecs) < 0) {
-		git_strarray_free(&refspecs);
-		return -1;
+	{
+		int error_alt = git_remote_set_fetch_refspecs(remote, &refspecs);
+		if (!error)
+			error = error_alt;
 	}
 
 	git_strarray_free(&refspecs);

@@ -43,10 +43,22 @@ typedef struct {
 static int add_ref(transport_local *t, const char *name)
 {
 	const char peeled[] = "^{}";
+	git_oid head_oid;
 	git_remote_head *head;
 	git_object *obj = NULL, *target = NULL;
 	git_buf buf = GIT_BUF_INIT;
 	int error;
+
+	error = git_reference_name_to_id(&head_oid, t->repo, name);
+	if (error < 0) {
+		if (!strcmp(name, GIT_HEAD_FILE) && error == GIT_ENOTFOUND) {
+			/* This is actually okay.  Empty repos often have a HEAD that
+			 * points to a nonexistent "refs/heads/master". */
+			giterr_clear();
+			return 0;
+		}
+		return error;
+	}
 
 	head = git__calloc(1, sizeof(git_remote_head));
 	GITERR_CHECK_ALLOC(head);
@@ -54,32 +66,20 @@ static int add_ref(transport_local *t, const char *name)
 	head->name = git__strdup(name);
 	GITERR_CHECK_ALLOC(head->name);
 
-	error = git_reference_name_to_id(&head->oid, t->repo, name);
-	if (error < 0) {
-		git__free(head->name);
-		git__free(head);
-		if (!strcmp(name, GIT_HEAD_FILE) && error == GIT_ENOTFOUND) {
-			/* This is actually okay.  Empty repos often have a HEAD that points to
-			 * a nonexistent "refs/heads/master". */
-			giterr_clear();
-			return 0;
-		}
-		return error;
-	}
+	git_oid_cpy(&head->oid, &head_oid);
 
-	if (git_vector_insert(&t->refs, head) < 0)
-	{
+	if ((error = git_vector_insert(&t->refs, head)) < 0) {
 		git__free(head->name);
 		git__free(head);
-		return -1;
+		return error;
 	}
 
 	/* If it's not a tag, we don't need to try to peel it */
 	if (git__prefixcmp(name, GIT_REFS_TAGS_DIR))
 		return 0;
 
-	if (git_object_lookup(&obj, t->repo, &head->oid, GIT_OBJ_ANY) < 0)
-		return -1;
+	if ((error = git_object_lookup(&obj, t->repo, &head->oid, GIT_OBJ_ANY)) < 0)
+		return error;
 
 	head = NULL;
 
@@ -94,27 +94,24 @@ static int add_ref(transport_local *t, const char *name)
 	/* And if it's a tag, peel it, and add it to the list */
 	head = git__calloc(1, sizeof(git_remote_head));
 	GITERR_CHECK_ALLOC(head);
+
 	if (git_buf_join(&buf, 0, name, peeled) < 0)
 		return -1;
-
 	head->name = git_buf_detach(&buf);
 
-	if (git_tag_peel(&target, (git_tag *) obj) < 0)
-		goto on_error;
+	if (!(error = git_tag_peel(&target, (git_tag *)obj))) {
+		git_oid_cpy(&head->oid, git_object_id(target));
 
-	git_oid_cpy(&head->oid, git_object_id(target));
+		if ((error = git_vector_insert(&t->refs, head)) < 0) {
+			git__free(head->name);
+			git__free(head);
+		}
+	}
+
 	git_object_free(obj);
 	git_object_free(target);
 
-	if (git_vector_insert(&t->refs, head) < 0)
-		return -1;
-
-	return 0;
-
-on_error:
-	git_object_free(obj);
-	git_object_free(target);
-	return -1;
+	return error;
 }
 
 static int store_refs(transport_local *t)
@@ -222,7 +219,7 @@ static int local_ls(const git_remote_head ***out, size_t *size, git_transport *t
 		return -1;
 	}
 
-	*out = (const git_remote_head **) t->refs.contents;
+	*out = (const git_remote_head **)t->refs.contents;
 	*size = t->refs.length;
 
 	return 0;
@@ -529,7 +526,7 @@ static int local_download_pack(
 		}
 	}
 
-	if ((error = git_odb_write_pack(&writepack, odb, progress_cb, progress_payload)) < 0)
+	if ((error = git_odb_write_pack(&writepack, odb, progress_cb, progress_payload)) != 0)
 		goto cleanup;
 
 	/* Write the data to the ODB */
@@ -540,7 +537,7 @@ static int local_download_pack(
 		data.progress_payload = progress_payload;
 		data.writepack = writepack;
 
-		if ((error = git_packbuilder_foreach(pack, foreach_cb, &data)) < 0)
+		if ((error = git_packbuilder_foreach(pack, foreach_cb, &data)) != 0)
 			goto cleanup;
 	}
 	error = writepack->commit(writepack, stats);

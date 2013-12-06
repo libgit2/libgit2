@@ -20,7 +20,7 @@ static int assert_called_notifications(
 {
 	bool found = false;
 	notify_expected *exp = (notify_expected*)payload;
-	notify_expected *e;;
+	notify_expected *e;
 
 	GIT_UNUSED(diff_so_far);
 

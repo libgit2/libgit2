@@ -547,8 +547,7 @@ static int locate_object_short_oid(
 	/* Explore directory to find a unique object matching short_oid */
 	error = git_path_direach(
 		object_location, 0, fn_locate_object_short_oid, &state);
-
-	if (error && error != GIT_EUSER)
+	if (error < 0 && error != GIT_EAMBIGUOUS)
 		return error;
 
 	if (!state.found)
@@ -696,7 +695,6 @@ struct foreach_state {
 	size_t dir_len;
 	git_odb_foreach_cb cb;
 	void *data;
-	git_error_state cb_error;
 };
 
 GIT_INLINE(int) filename_to_oid(git_oid *oid, const char *ptr)
@@ -735,19 +733,15 @@ static int foreach_object_dir_cb(void *_state, git_buf *path)
 	if (filename_to_oid(&oid, path->ptr + state->dir_len) < 0)
 		return 0;
 
-	if (state->cb(&oid, state->data))
-		return giterr_user_cancel();
-
-	return 0;
+	return giterr_set_callback(
+		state->cb(&oid, state->data), "git_odb_foreach");
 }
 
 static int foreach_cb(void *_state, git_buf *path)
 {
 	struct foreach_state *state = (struct foreach_state *) _state;
 
-	return giterr_capture(
-		&state->cb_error,
-		git_path_direach(path, 0, foreach_object_dir_cb, state));
+	return git_path_direach(path, 0, foreach_object_dir_cb, state);
 }
 
 static int loose_backend__foreach(git_odb_backend *_backend, git_odb_foreach_cb cb, void *data)
@@ -762,9 +756,10 @@ static int loose_backend__foreach(git_odb_backend *_backend, git_odb_foreach_cb 
 
 	objects_dir = backend->objects_dir;
 
-	if (git_buf_sets(&buf, objects_dir) < 0)
-		return -1;
+	git_buf_sets(&buf, objects_dir);
 	git_path_to_dir(&buf);
+	if (git_buf_oom(&buf))
+		return -1;
 
 	memset(&state, 0, sizeof(state));
 	state.cb = cb;
@@ -772,9 +767,6 @@ static int loose_backend__foreach(git_odb_backend *_backend, git_odb_foreach_cb 
 	state.dir_len = git_buf_len(&buf);
 
 	error = git_path_direach(&buf, 0, foreach_cb, &state);
-
-	if (error == GIT_EUSER)
-		error = giterr_restore(&state.cb_error);
 
 	git_buf_free(&buf);
 

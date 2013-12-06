@@ -191,11 +191,10 @@ int git_attr_foreach(
 				if (error < 0)
 					goto cleanup;
 
-				error = callback(assign->name, assign->value, payload);
-				if (error) {
-					error = giterr_user_cancel();
+				error = GITERR_CALLBACK(
+					callback(assign->name, assign->value, payload) );
+				if (error)
 					goto cleanup;
-				}
 			}
 		}
 	}
@@ -480,7 +479,6 @@ typedef struct {
 	const char *workdir;
 	git_index *index;
 	git_vector *files;
-	git_error_state error;
 } attr_walk_up_info;
 
 int git_attr_cache__decide_sources(
@@ -524,7 +522,7 @@ static int push_one_attr(void *ref, git_buf *path)
 			info->repo, path->ptr, GIT_ATTR_FILE, src[i],
 			git_attr_file__parse_buffer, NULL, info->files);
 
-	return giterr_capture(&info->error, error);
+	return error;
 }
 
 static int collect_attr_files(
@@ -570,8 +568,6 @@ static int collect_attr_files(
 	info.files = files;
 
 	error = git_path_walk_up(&dir, workdir, push_one_attr, &info);
-	if (error == GIT_EUSER)
-		error = giterr_restore(&info.error);
 	if (error < 0)
 		goto cleanup;
 

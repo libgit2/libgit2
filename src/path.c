@@ -434,11 +434,11 @@ int git_path_walk_up(
 	iter.asize = path->asize;
 
 	while (scan >= stop) {
-		if (cb(data, &iter))
-			error = giterr_user_cancel();
+		error = GITERR_CALLBACK( cb(data, &iter) );
 		iter.ptr[scan] = oldc;
-		if (error < 0)
+		if (error)
 			break;
+
 		scan = git_buf_rfind_next(&iter, '/');
 		if (scan >= 0) {
 			scan++;
@@ -874,14 +874,12 @@ int git_path_direach(
 		if ((error = git_buf_put(path, de_path, de_len)) < 0)
 			break;
 
-		error = fn(arg, path);
+		error = GITERR_CALLBACK( fn(arg, path) );
 
 		git_buf_truncate(path, wd_len); /* restore path */
 
-		if (error) {
-			error = giterr_user_cancel();
+		if (error)
 			break;
-		}
 	}
 
 	closedir(dir);

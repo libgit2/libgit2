@@ -480,23 +480,23 @@ int git_config_foreach(
 int git_config_backend_foreach_match(
 	git_config_backend *backend,
 	const char *regexp,
-	int (*fn)(const git_config_entry *, void *),
-	void *data)
+	git_config_foreach_cb cb,
+	void *payload)
 {
 	git_config_entry *entry;
 	git_config_iterator* iter;
 	regex_t regex;
-	int result = 0;
+	int error = 0;
 
 	if (regexp != NULL) {
-		if ((result = regcomp(&regex, regexp, REG_EXTENDED)) < 0) {
-			giterr_set_regex(&regex, result);
+		if ((error = regcomp(&regex, regexp, REG_EXTENDED)) < 0) {
+			giterr_set_regex(&regex, error);
 			regfree(&regex);
 			return -1;
 		}
 	}
 
-	if ((result = backend->iterator(&iter, backend)) < 0) {
+	if ((error = backend->iterator(&iter, backend)) < 0) {
 		iter = NULL;
 		return -1;
 	}
@@ -507,10 +507,9 @@ int git_config_backend_foreach_match(
 			continue;
 
 		/* abort iterator on non-zero return value */
-		if (fn(entry, data)) {
-			result = giterr_user_cancel();
+		error = GITERR_CALLBACK( cb(entry, payload) );
+		if (error)
 			break;
-		}
 	}
 
 	if (regexp != NULL)
@@ -518,7 +517,7 @@ int git_config_backend_foreach_match(
 
 	iter->free(iter);
 
-	return result;
+	return error;
 }
 
 int git_config_foreach_match(
@@ -534,12 +533,9 @@ int git_config_foreach_match(
 	if ((error = git_config_iterator_glob_new(&iter, cfg, regexp)) < 0)
 		return error;
 
-	while ((error = git_config_next(&entry, iter)) == 0) {
-		if (cb(entry, payload)) {
-			error = giterr_user_cancel();
-			break;
-		}
-	}
+	while (!(error = git_config_next(&entry, iter)) &&
+		   !(error = GITERR_CALLBACK( cb(entry, payload) )))
+		/* make callback on each config */;
 
 	git_config_iterator_free(iter);
 
@@ -798,10 +794,8 @@ int git_config_get_multivar_foreach(
 	while ((err = iter->next(&entry, iter)) == 0) {
 		found = 1;
 
-		if (cb(entry, payload)) {
-			iter->free(iter);
-			return giterr_user_cancel();
-		}
+		if ((err = GITERR_CALLBACK( cb(entry, payload) )) != 0)
+			break;
 	}
 
 	iter->free(iter);
@@ -1212,7 +1206,6 @@ struct rename_data {
 	git_config *config;
 	git_buf *name;
 	size_t old_len;
-	git_error_state error;
 };
 
 static int rename_config_entries_cb(
@@ -1235,8 +1228,7 @@ static int rename_config_entries_cb(
 	if (!error)
 		error = git_config_delete_entry(data->config, entry->name);
 
-	/* capture error message as needed, since it will become EUSER */
-	return giterr_capture(&data->error, error);
+	return error;
 }
 
 int git_config_rename_section(
@@ -1257,7 +1249,6 @@ int git_config_rename_section(
 	if ((error = git_repository_config__weakptr(&config, repo)) < 0)
 		goto cleanup;
 
-	memset(&data, 0, sizeof(data));
 	data.config  = config;
 	data.name    = &replace;
 	data.old_len = strlen(old_section_name) + 1;
@@ -1276,9 +1267,6 @@ int git_config_rename_section(
 
 	error = git_config_foreach_match(
 		config, git_buf_cstr(&pattern), rename_config_entries_cb, &data);
-
-	if (error == GIT_EUSER)
-		error = giterr_restore(&data.error);
 
 cleanup:
 	git_buf_free(&pattern);

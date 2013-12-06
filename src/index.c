@@ -2036,17 +2036,12 @@ int git_index_read_tree(git_index *index, const git_tree *tree)
 
 	error = git_tree_walk(tree, GIT_TREEWALK_POST, read_tree_cb, &data);
 
-	if (error == GIT_EUSER) {
-		giterr_set_oom();
-		git_vector_free(&entries);
-		return -1;
+	if (!error) {
+		git_vector_sort(&entries);
+		git_index_clear(index);
+		git_vector_swap(&entries, &index->entries);
 	}
 
-	git_vector_sort(&entries);
-
-	git_index_clear(index);
-
-	git_vector_swap(&entries, &index->entries);
 	git_vector_free(&entries);
 
 	return error;
@@ -2122,7 +2117,7 @@ int git_index_add_all(
 			if (error > 0) /* return > 0 means skip this one */
 				continue;
 			if (error < 0) { /* return < 0 means abort */
-				error = giterr_user_cancel();
+				GITERR_CALLBACK(error);
 				break;
 			}
 		}
@@ -2210,7 +2205,7 @@ static int index_apply_to_all(
 				continue;
 			}
 			if (error < 0) { /* return < 0 means abort */
-				error = giterr_user_cancel();
+				giterr_set_callback(error, "git_index_matched_path");
 				break;
 			}
 		}

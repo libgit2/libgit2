@@ -659,8 +659,8 @@ int git_push_status_foreach(git_push *push,
 	unsigned int i;
 
 	git_vector_foreach(&push->status, i, status) {
-		if (cb(status->ref, status->msg, data) < 0)
-			return giterr_user_cancel();
+		GITERR_CHECK_ERROR(
+			GITERR_CALLBACK( cb(status->ref, status->msg, data) ) );
 	}
 
 	return 0;

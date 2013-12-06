@@ -414,7 +414,6 @@ typedef struct {
 	git_repository *repo;
 	git_tag_foreach_cb cb;
 	void *cb_data;
-	git_error_state error;
 } tag_cb_data;
 
 static int tags_cb(const char *ref, void *data)
@@ -427,16 +426,15 @@ static int tags_cb(const char *ref, void *data)
 		return 0; /* no tag */
 
 	if (!(error = git_reference_name_to_id(&oid, d->repo, ref))) {
-		if (d->cb(ref, &oid, d->cb_data))
-			error = giterr_user_cancel();
+		error = d->cb(ref, &oid, d->cb_data);
+		giterr_set_callback(error, "git_tag_foreach");
 	}
 
-	return giterr_capture(&d->error, error);
+	return error;
 }
 
 int git_tag_foreach(git_repository *repo, git_tag_foreach_cb cb, void *cb_data)
 {
-	int error;
 	tag_cb_data data;
 
 	assert(repo && cb);
@@ -444,14 +442,8 @@ int git_tag_foreach(git_repository *repo, git_tag_foreach_cb cb, void *cb_data)
 	data.cb = cb;
 	data.cb_data = cb_data;
 	data.repo = repo;
-	memset(&data.error, 0, sizeof(data.error));
 
-	error = git_reference_foreach_name(repo, &tags_cb, &data);
-
-	if (error == GIT_EUSER)
-		error = giterr_restore(&data.error);
-
-	return error;
+	return git_reference_foreach_name(repo, &tags_cb, &data);
 }
 
 typedef struct {
@@ -470,8 +462,8 @@ static int tag_list_cb(const char *tag_name, git_oid *oid, void *data)
 		p_fnmatch(filter->pattern, tag_name + GIT_REFS_TAGS_DIR_LEN, 0) == 0)
 	{
 		char *matched = git__strdup(tag_name + GIT_REFS_TAGS_DIR_LEN);
-		if (!matched)
-			return -1;
+		GITERR_CHECK_ALLOC(matched);
+
 		return git_vector_insert(filter->taglist, matched);
 	}
 
@@ -494,19 +486,12 @@ int git_tag_list_match(git_strarray *tag_names, const char *pattern, git_reposit
 
 	error = git_tag_foreach(repo, &tag_list_cb, (void *)&filter);
 
-	/* the only case where callback will return an error is oom */
-	if (error == GIT_EUSER) {
-		giterr_set_oom();
-		error = -1;
-	}
-
-	if (error < 0) {
+	if (error < 0)
 		git_vector_free(&taglist);
-		return error;
-	}
 
-	tag_names->strings = (char **)taglist.contents;
-	tag_names->count = taglist.length;
+	tag_names->strings =
+		(char **)git_vector_detach(&tag_names->count, NULL, &taglist);
+
 	return 0;
 }
 

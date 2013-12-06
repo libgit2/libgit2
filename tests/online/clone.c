@@ -273,7 +273,7 @@ static int cancel_at_half(const git_transfer_progress *stats, void *payload)
 	GIT_UNUSED(payload);
 
 	if (stats->received_objects > (stats->total_objects/2))
-		return 1;
+		return 4321;
 	return 0;
 }
 
@@ -281,7 +281,8 @@ void test_online_clone__can_cancel(void)
 {
 	g_options.remote_callbacks.transfer_progress = cancel_at_half;
 
-	cl_git_fail_with(git_clone(&g_repo, LIVE_REPO_URL, "./foo", &g_options), GIT_EUSER);
+	cl_git_fail_with(
+		git_clone(&g_repo, LIVE_REPO_URL, "./foo", &g_options), 4321);
 }
 
 

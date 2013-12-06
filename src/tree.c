@@ -883,9 +883,8 @@ static int tree_walk(
 
 	git_vector_foreach(&tree->entries, i, entry) {
 		if (preorder) {
-			error = callback(path->ptr, entry, payload);
-			if (error < 0)
-				return giterr_user_cancel();
+			if ((error = callback(path->ptr, entry, payload)) < 0)
+				return giterr_set_callback(error, "git_tree_walk");
 			if (error > 0) {
 				error = 0;
 				continue;
@@ -896,8 +895,8 @@ static int tree_walk(
 			git_tree *subtree;
 			size_t path_len = git_buf_len(path);
 
-			if ((error = git_tree_lookup(
-				&subtree, tree->object.repo, &entry->oid)) < 0)
+			error = git_tree_lookup(&subtree, tree->object.repo, &entry->oid);
+			if (error < 0)
 				break;
 
 			/* append the next entry to the path */
@@ -905,19 +904,22 @@ static int tree_walk(
 			git_buf_putc(path, '/');
 
 			if (git_buf_oom(path))
-				return -1;
+				error = -1;
+			else
+				error = tree_walk(subtree, callback, path, payload, preorder);
 
-			error = tree_walk(subtree, callback, path, payload, preorder);
 			git_tree_free(subtree);
-
 			if (error != 0)
 				break;
 
 			git_buf_truncate(path, path_len);
 		}
 
-		if (!preorder && callback(path->ptr, entry, payload) < 0)
-			return giterr_user_cancel();
+		if (!preorder) {
+			if ((error = callback(path->ptr, entry, payload)) < 0)
+				return giterr_set_callback(error, "git_tree_walk");
+			error = 0;
+		}
 	}
 
 	return error;

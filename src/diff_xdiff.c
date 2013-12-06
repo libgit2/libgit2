@@ -126,8 +126,9 @@ static int git_xdiff_cb(void *priv, mmbuffer_t *bufs, int len)
 		info->hunk.header[info->hunk.header_len] = '\0';
 
 		if (output->hunk_cb != NULL &&
-			output->hunk_cb(delta, &info->hunk, output->payload))
-			return (output->error = giterr_user_cancel());
+			(output->error = output->hunk_cb(
+				delta, &info->hunk, output->payload)))
+			return output->error;
 
 		info->old_lineno = info->hunk.old_start;
 		info->new_lineno = info->hunk.new_start;
@@ -150,10 +151,9 @@ static int git_xdiff_cb(void *priv, mmbuffer_t *bufs, int len)
 		output->error = diff_update_lines(
 			info, &line, bufs[1].ptr, bufs[1].size);
 
-		if (!output->error &&
-			output->data_cb != NULL &&
-			output->data_cb(delta, &info->hunk, &line, output->payload))
-			output->error = giterr_user_cancel();
+		if (!output->error && output->data_cb != NULL)
+			output->error = output->data_cb(
+				delta, &info->hunk, &line, output->payload);
 	}
 
 	if (len == 3 && !output->error) {
@@ -172,10 +172,9 @@ static int git_xdiff_cb(void *priv, mmbuffer_t *bufs, int len)
 		output->error = diff_update_lines(
 			info, &line, bufs[2].ptr, bufs[2].size);
 
-		if (!output->error &&
-			output->data_cb != NULL &&
-			output->data_cb(delta, &info->hunk, &line, output->payload))
-			output->error = giterr_user_cancel();
+		if (!output->error && output->data_cb != NULL)
+			output->error = output->data_cb(
+				delta, &info->hunk, &line, output->payload);
 	}
 
 	return output->error;

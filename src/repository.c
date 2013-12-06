@@ -1608,15 +1608,14 @@ static int at_least_one_cb(const char *refname, void *payload)
 {
 	GIT_UNUSED(refname);
 	GIT_UNUSED(payload);
-
-	return GIT_EUSER;
+	return GIT_PASSTHROUGH;
 }
 
 static int repo_contains_no_reference(git_repository *repo)
 {
 	int error = git_reference_foreach_name(repo, &at_least_one_cb, NULL);
 
-	if (error == GIT_EUSER)
+	if (error == GIT_PASSTHROUGH)
 		return 0;
 
 	if (!error)
