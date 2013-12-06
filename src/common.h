@@ -94,7 +94,11 @@ GIT_INLINE(int) giterr_set_callback(int error_code, const char *action)
 	return error_code;
 }
 
+#ifdef GIT_WIN32
+#define GITERR_CALLBACK(code) giterr_set_callback((code), __FUNCTION__)
+#else
 #define GITERR_CALLBACK(code) giterr_set_callback((code), __func__)
+#endif
 
 /**
  * Gets the system error code for this thread.
