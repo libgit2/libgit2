@@ -659,8 +659,9 @@ int git_push_status_foreach(git_push *push,
 	unsigned int i;
 
 	git_vector_foreach(&push->status, i, status) {
-		GITERR_CHECK_ERROR(
-			GITERR_CALLBACK( cb(status->ref, status->msg, data) ) );
+		int error = cb(status->ref, status->msg, data);
+		if (error)
+			return GITERR_CALLBACK(error);
 	}
 
 	return 0;

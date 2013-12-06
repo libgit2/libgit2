@@ -287,8 +287,10 @@ int git_repository_mergehead_foreach(
 		if ((error = git_oid_fromstr(&oid, line)) < 0)
 			goto cleanup;
 
-		if ((error = GITERR_CALLBACK( cb(&oid, payload) )) != 0)
+		if ((error = cb(&oid, payload)) != 0) {
+			GITERR_CALLBACK(error);
 			goto cleanup;
+		}
 
 		++line_num;
 	}

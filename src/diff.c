@@ -1388,8 +1388,10 @@ int git_diff__paired_foreach(
 			i++; j++;
 		}
 
-		if ((error = GITERR_CALLBACK( cb(h2i, i2w, payload) )) != 0)
+		if ((error = cb(h2i, i2w, payload)) != 0) {
+			GITERR_CALLBACK(error);
 			break;
+		}
 	}
 
 	/* restore case-insensitive delta sort */

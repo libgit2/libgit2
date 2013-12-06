@@ -229,9 +229,12 @@ int git_packbuilder_insert(git_packbuilder *pb, const git_oid *oid,
 		if (elapsed >= MIN_PROGRESS_UPDATE_INTERVAL) {
 			pb->last_progress_report_time = current_time;
 
-			return GITERR_CALLBACK( pb->progress_cb(
+			ret = pb->progress_cb(
 				GIT_PACKBUILDER_ADDING_OBJECTS,
-				pb->nr_objects, 0, pb->progress_cb_payload) );
+				pb->nr_objects, 0, pb->progress_cb_payload);
+
+			if (ret)
+				return GITERR_CALLBACK(ret);
 		}
 	}
 

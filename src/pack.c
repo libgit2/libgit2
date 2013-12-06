@@ -1088,8 +1088,10 @@ int git_pack_foreach_entry(
 	}
 
 	for (i = 0; i < p->num_objects; i++)
-		if ((error = GITERR_CALLBACK( cb(p->oids[i], data) )) != 0)
+		if ((error = cb(p->oids[i], data)) != 0) {
+			GITERR_CALLBACK(error);
 			break;
+		}
 
 	return error;
 }

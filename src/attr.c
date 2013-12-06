@@ -191,10 +191,11 @@ int git_attr_foreach(
 				if (error < 0)
 					goto cleanup;
 
-				error = GITERR_CALLBACK(
-					callback(assign->name, assign->value, payload) );
-				if (error)
+				error = callback(assign->name, assign->value, payload);
+				if (error) {
+					GITERR_CALLBACK(error);
 					goto cleanup;
+				}
 			}
 		}
 	}

@@ -582,13 +582,15 @@ int git_stash_foreach(
 	for (i = 0; i < max; i++) {
 		entry = git_reflog_entry_byindex(reflog, i);
 
-		error = GITERR_CALLBACK(
-			callback(i,
-				git_reflog_entry_message(entry),
-				git_reflog_entry_id_new(entry),
-				payload) );
-		if (error)
+		error = callback(i,
+			git_reflog_entry_message(entry),
+			git_reflog_entry_id_new(entry),
+			payload);
+
+		if (error) {
+			GITERR_CALLBACK(error);
 			break;
+		}
 	}
 
 cleanup:

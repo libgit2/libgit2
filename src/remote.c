@@ -1348,9 +1348,11 @@ static int rename_fetch_refspecs(
 		if (!remote->name ||
 			strcmp(git_buf_cstr(&base), spec->string)) {
 
-			error = GITERR_CALLBACK( callback(spec->string, payload) );
-			if (error)
+			if ((error = callback(spec->string, payload)) != 0) {
+				GITERR_CALLBACK(error);
 				break;
+			}
+
 			continue;
 		}
 

@@ -168,8 +168,10 @@ int git_submodule_foreach(
 				break;
 		}
 
-		if ((error = GITERR_CALLBACK(callback(sm, sm->name, payload))) != 0)
+		if ((error = callback(sm, sm->name, payload)) != 0) {
+			GITERR_CALLBACK(error);
 			break;
+		}
 	});
 
 	git_vector_free(&seen);

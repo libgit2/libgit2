@@ -260,8 +260,8 @@ int git_repository_fetchhead_foreach(git_repository *repo,
 	while ((line = git__strsep(&buffer, "\n")) != NULL) {
 		++line_num;
 
-		if ((error = fetchhead_ref_parse(&oid, &is_merge, &name, &remote_url,
-			line, line_num)) < 0)
+		if ((error = fetchhead_ref_parse(
+				&oid, &is_merge, &name, &remote_url, line, line_num)) < 0)
 			goto done;
 
 		if (git_buf_len(&name) > 0)
@@ -269,10 +269,11 @@ int git_repository_fetchhead_foreach(git_repository *repo,
 		else
 			ref_name = NULL;
 
-		error = GITERR_CALLBACK(
-			cb(ref_name, remote_url, &oid, is_merge, payload) );
-		if (error)
+		error = cb(ref_name, remote_url, &oid, is_merge, payload);
+		if (error) {
+			GITERR_CALLBACK(error);
 			goto done;
+		}
 	}
 
 	if (*buffer) {

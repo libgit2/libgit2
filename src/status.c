@@ -392,9 +392,10 @@ int git_status_foreach_ext(
 			status_entry->head_to_index->old_file.path :
 			status_entry->index_to_workdir->old_file.path;
 
-		error = GITERR_CALLBACK( cb(path, status_entry->status, payload) );
-		if (error)
+		if ((error = cb(path, status_entry->status, payload)) != 0) {
+			GITERR_CALLBACK(error);
 			break;
+		}
 	}
 
 	git_status_list_free(status);
