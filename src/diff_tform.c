@@ -294,12 +294,12 @@ static int normalize_find_opts(
 			giterr_clear();
 		else if (val) {
 			int boolval;
-			if (!git__parse_bool(&boolval, val) && !boolval)
-				opts->flags = 0;
-			else if (!strcasecmp(val, "copies") || !strcasecmp(val, "copy"))
-				opts->flags = GIT_DIFF_FIND_RENAMES | GIT_DIFF_FIND_COPIES;
+			if (!git__parse_bool(&boolval, val) && !boolval) {
+				/* do nothing */
+			} else if (!strcasecmp(val, "copies") || !strcasecmp(val, "copy"))
+				opts->flags |= (GIT_DIFF_FIND_RENAMES | GIT_DIFF_FIND_COPIES);
 			else
-				opts->flags = GIT_DIFF_FIND_RENAMES;
+				opts->flags |= GIT_DIFF_FIND_RENAMES;
 		}
 	}
 	GITERR_CHECK_VERSION(given, GIT_DIFF_FIND_OPTIONS_VERSION, "git_diff_find_options");

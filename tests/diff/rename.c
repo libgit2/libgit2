@@ -1522,3 +1522,45 @@ void test_diff_rename__can_override_thresholds_when_obeying_config(void)
 	git_tree_free(tree1);
 	git_tree_free(tree2);
 }
+
+void test_diff_rename__by_config_doesnt_mess_with_whitespace_settings(void)
+{
+	const char *sha1 = "1c068dee5790ef1580cfc4cd670915b48d790084";
+	const char *sha2 = "19dd32dfb1520a64e5bbaae8dce6ef423dfa2f13";
+
+	git_tree *tree1, *tree2;
+	git_config *cfg;
+	git_diff *diff;
+	git_diff_options diffopts = GIT_DIFF_OPTIONS_INIT;
+	git_diff_find_options opts = GIT_DIFF_FIND_OPTIONS_INIT;
+	diff_expects exp;
+
+	tree1 = resolve_commit_oid_to_tree(g_repo, sha1);
+	tree2 = resolve_commit_oid_to_tree(g_repo, sha2);
+
+	diffopts.flags |= GIT_DIFF_INCLUDE_UNMODIFIED;
+	opts.flags = GIT_DIFF_FIND_BY_CONFIG;
+
+	cl_git_pass(git_repository_config(&cfg, g_repo));
+	cl_git_pass(git_config_set_string(cfg, "diff.renames", "copies"));
+	git_config_free(cfg);
+
+	/* Don't ignore whitespace; this should find a change in sixserving.txt */
+	opts.flags |= 0 | GIT_DIFF_FIND_DONT_IGNORE_WHITESPACE;
+	cl_git_pass(git_diff_tree_to_tree(
+				&diff, g_repo, tree1, tree2, &diffopts));
+	memset(&exp, 0, sizeof(exp));
+	cl_git_pass(git_diff_find_similar(diff, &opts));
+	cl_git_pass(git_diff_foreach(diff,
+				diff_file_cb, diff_hunk_cb, diff_line_cb, &exp));
+	cl_assert_equal_i(5, exp.files);
+	cl_assert_equal_i(2, exp.file_status[GIT_DELTA_MODIFIED]);
+	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_RENAMED]);
+	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_DELETED]);
+	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_ADDED]);
+	git_diff_free(diff);
+
+	/* Cleanup */
+	git_tree_free(tree1);
+	git_tree_free(tree2);
+}
