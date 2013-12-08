@@ -276,9 +276,11 @@ GIT_COMMIT_GETTER(const git_oid *, tree_id, &commit->tree_id);
 
 const char *git_commit_message(const git_commit *commit)
 {
-	const char *message = commit->raw_message;
+	const char *message;
 
 	assert(commit);
+
+	message = commit->raw_message;
 
 	/* trim leading newlines from raw message */
 	while (*message && *message == '\n')
