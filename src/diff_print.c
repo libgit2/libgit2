@@ -398,7 +398,7 @@ int git_diff_print(
 			diff, print_file, print_hunk, print_line, &pi);
 
 		if (error) /* make sure error message is set */
-			giterr_set_callback(error, "git_diff_print");
+			giterr_set_after_callback_function(error, "git_diff_print");
 	}
 
 	git_buf_free(&buf);
@@ -427,7 +427,7 @@ int git_patch_print(
 			diff_print_patch_line, &pi);
 
 		if (error) /* make sure error message is set */
-			giterr_set_callback(error, "git_patch_print");
+			giterr_set_after_callback_function(error, "git_patch_print");
 	}
 
 	git_buf_free(&temp);

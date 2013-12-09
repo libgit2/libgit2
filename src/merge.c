@@ -288,7 +288,7 @@ int git_repository_mergehead_foreach(
 			goto cleanup;
 
 		if ((error = cb(&oid, payload)) != 0) {
-			GITERR_CALLBACK(error);
+			giterr_set_after_callback(error);
 			goto cleanup;
 		}
 

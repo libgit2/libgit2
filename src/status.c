@@ -393,7 +393,7 @@ int git_status_foreach_ext(
 			status_entry->index_to_workdir->old_file.path;
 
 		if ((error = cb(path, status_entry->status, payload)) != 0) {
-			GITERR_CALLBACK(error);
+			giterr_set_after_callback(error);
 			break;
 		}
 	}

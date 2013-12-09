@@ -193,7 +193,7 @@ int git_attr_foreach(
 
 				error = callback(assign->name, assign->value, payload);
 				if (error) {
-					GITERR_CALLBACK(error);
+					giterr_set_after_callback(error);
 					goto cleanup;
 				}
 			}

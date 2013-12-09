@@ -588,7 +588,7 @@ int git_stash_foreach(
 			payload);
 
 		if (error) {
-			GITERR_CALLBACK(error);
+			giterr_set_after_callback(error);
 			break;
 		}
 	}

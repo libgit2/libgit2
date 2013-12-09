@@ -123,10 +123,13 @@ static int checkout_notify(
 		path = delta->old_file.path;
 	}
 
-	return giterr_set_callback(
-		data->opts.notify_cb(
-			why, path, baseline, target, workdir, data->opts.notify_payload),
-		"git_checkout notification");
+	{
+		int error = data->opts.notify_cb(
+			why, path, baseline, target, workdir, data->opts.notify_payload);
+
+		return giterr_set_after_callback_function(
+			error, "git_checkout notification");
+	}
 }
 
 static bool checkout_is_workdir_modified(

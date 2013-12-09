@@ -83,7 +83,8 @@ int giterr_set_regex(const regex_t *regex, int error_code);
  *
  * @return This always returns the `error_code` parameter.
  */
-GIT_INLINE(int) giterr_set_callback(int error_code, const char *action)
+GIT_INLINE(int) giterr_set_after_callback_function(
+	int error_code, const char *action)
 {
 	if (error_code) {
 		const git_error *e = giterr_last();
@@ -95,9 +96,11 @@ GIT_INLINE(int) giterr_set_callback(int error_code, const char *action)
 }
 
 #ifdef GIT_WIN32
-#define GITERR_CALLBACK(code) giterr_set_callback((code), __FUNCTION__)
+#define giterr_set_after_callback(code) \
+	giterr_set_after_callback_function((code), __FUNCTION__)
 #else
-#define GITERR_CALLBACK(code) giterr_set_callback((code), __func__)
+#define giterr_set_after_callback(code) \
+	giterr_set_after_callback_function((code), __func__)
 #endif
 
 /**

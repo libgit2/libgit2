@@ -733,7 +733,7 @@ static int foreach_object_dir_cb(void *_state, git_buf *path)
 	if (filename_to_oid(&oid, path->ptr + state->dir_len) < 0)
 		return 0;
 
-	return giterr_set_callback(
+	return giterr_set_after_callback_function(
 		state->cb(&oid, state->data), "git_odb_foreach");
 }
 

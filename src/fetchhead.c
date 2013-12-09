@@ -271,7 +271,7 @@ int git_repository_fetchhead_foreach(git_repository *repo,
 
 		error = cb(ref_name, remote_url, &oid, is_merge, payload);
 		if (error) {
-			GITERR_CALLBACK(error);
+			giterr_set_after_callback(error);
 			goto done;
 		}
 	}

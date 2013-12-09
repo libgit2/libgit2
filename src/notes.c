@@ -584,7 +584,7 @@ int git_note_foreach(
 
 	while (!(error = git_note_next(&note_id, &annotated_id, iter))) {
 		if ((error = note_cb(&note_id, &annotated_id, payload)) != 0) {
-			GITERR_CALLBACK(error);
+			giterr_set_after_callback(error);
 			break;
 		}
 	}

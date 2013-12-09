@@ -438,7 +438,7 @@ int git_path_walk_up(
 		iter.ptr[scan] = oldc;
 
 		if (error) {
-			GITERR_CALLBACK(error);
+			giterr_set_after_callback(error);
 			break;
 		}
 
@@ -882,7 +882,7 @@ int git_path_direach(
 		git_buf_truncate(path, wd_len); /* restore path */
 
 		if (error != 0) {
-			GITERR_CALLBACK(error);
+			giterr_set_after_callback(error);
 			break;
 		}
 	}

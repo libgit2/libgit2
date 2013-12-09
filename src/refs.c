@@ -518,7 +518,7 @@ int git_reference_foreach(
 
 	while (!(error = git_reference_next(&ref, iter))) {
 		if ((error = callback(ref, payload)) != 0) {
-			GITERR_CALLBACK(error);
+			giterr_set_after_callback(error);
 			break;
 		}
 	}
@@ -544,7 +544,7 @@ int git_reference_foreach_name(
 
 	while (!(error = git_reference_next_name(&refname, iter))) {
 		if ((error = callback(refname, payload)) != 0) {
-			GITERR_CALLBACK(error);
+			giterr_set_after_callback(error);
 			break;
 		}
 	}
@@ -571,7 +571,7 @@ int git_reference_foreach_glob(
 
 	while (!(error = git_reference_next_name(&refname, iter))) {
 		if ((error = callback(refname, payload)) != 0) {
-			GITERR_CALLBACK(error);
+			giterr_set_after_callback(error);
 			break;
 		}
 	}

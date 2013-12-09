@@ -60,7 +60,11 @@ static int diff_insert_delta(
 
 		if (error) {
 			git__free(delta);
-			return (error > 0) ? 0 : giterr_set_callback(error, "git_diff");
+
+			if (error > 0)	/* positive value means to skip this delta */
+				return 0;
+			else			/* negative value means to cancel diff */
+				return giterr_set_after_callback_function(error, "git_diff");
 		}
 	}
 
@@ -1389,7 +1393,7 @@ int git_diff__paired_foreach(
 		}
 
 		if ((error = cb(h2i, i2w, payload)) != 0) {
-			GITERR_CALLBACK(error);
+			giterr_set_after_callback(error);
 			break;
 		}
 	}

@@ -387,7 +387,7 @@ on_error:
 static int do_progress_callback(git_indexer *idx, git_transfer_progress *stats)
 {
 	if (idx->progress_cb)
-		return giterr_set_callback(
+		return giterr_set_after_callback_function(
 			idx->progress_cb(stats, idx->progress_payload),
 			"indexer progress");
 	return 0;

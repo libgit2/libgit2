@@ -169,7 +169,7 @@ int git_submodule_foreach(
 		}
 
 		if ((error = callback(sm, sm->name, payload)) != 0) {
-			GITERR_CALLBACK(error);
+			giterr_set_after_callback(error);
 			break;
 		}
 	});

@@ -234,7 +234,7 @@ int git_packbuilder_insert(git_packbuilder *pb, const git_oid *oid,
 				pb->nr_objects, 0, pb->progress_cb_payload);
 
 			if (ret)
-				return GITERR_CALLBACK(ret);
+				return giterr_set_after_callback(ret);
 		}
 	}
 

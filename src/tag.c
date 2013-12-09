@@ -426,8 +426,8 @@ static int tags_cb(const char *ref, void *data)
 		return 0; /* no tag */
 
 	if (!(error = git_reference_name_to_id(&oid, d->repo, ref))) {
-		error = d->cb(ref, &oid, d->cb_data);
-		giterr_set_callback(error, "git_tag_foreach");
+		if ((error = d->cb(ref, &oid, d->cb_data)) != 0)
+			giterr_set_after_callback_function(error, "git_tag_foreach");
 	}
 
 	return error;

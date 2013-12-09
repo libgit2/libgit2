@@ -883,9 +883,12 @@ static int tree_walk(
 
 	git_vector_foreach(&tree->entries, i, entry) {
 		if (preorder) {
-			if ((error = callback(path->ptr, entry, payload)) < 0)
-				return giterr_set_callback(error, "git_tree_walk");
-			if (error > 0) {
+			error = callback(path->ptr, entry, payload);
+			if (error < 0) { /* negative value stops iteration */
+				giterr_set_after_callback_function(error, "git_tree_walk");
+				break;
+			}
+			if (error > 0) { /* positive value skips this entry */
 				error = 0;
 				continue;
 			}
@@ -916,8 +919,11 @@ static int tree_walk(
 		}
 
 		if (!preorder) {
-			if ((error = callback(path->ptr, entry, payload)) < 0)
-				return giterr_set_callback(error, "git_tree_walk");
+			error = callback(path->ptr, entry, payload);
+			if (error < 0) { /* negative value stops iteration */
+				giterr_set_after_callback_function(error, "git_tree_walk");
+				break;
+			}
 			error = 0;
 		}
 	}

@@ -2117,7 +2117,7 @@ int git_index_add_all(
 			if (error > 0) /* return > 0 means skip this one */
 				continue;
 			if (error < 0) { /* return < 0 means abort */
-				GITERR_CALLBACK(error);
+				giterr_set_after_callback(error);
 				break;
 			}
 		}
@@ -2204,10 +2204,8 @@ static int index_apply_to_all(
 				error = 0;
 				continue;
 			}
-			if (error < 0) { /* return < 0 means abort */
-				giterr_set_callback(error, "git_index_matched_path");
+			if (error < 0)   /* return < 0 means abort */
 				break;
-			}
 		}
 
 		/* index manipulation may alter entry, so don't depend on it */
@@ -2252,8 +2250,13 @@ int git_index_remove_all(
 	git_index_matched_path_cb cb,
 	void *payload)
 {
-	return index_apply_to_all(
+	int error = index_apply_to_all(
 		index, INDEX_ACTION_REMOVE, pathspec, cb, payload);
+
+	if (error) /* make sure error is set if callback stopped iteration */
+		giterr_set_after_callback(error);
+
+	return error;
 }
 
 int git_index_update_all(
@@ -2262,6 +2265,11 @@ int git_index_update_all(
 	git_index_matched_path_cb cb,
 	void *payload)
 {
-	return index_apply_to_all(
+	int error = index_apply_to_all(
 		index, INDEX_ACTION_UPDATE, pathspec, cb, payload);
+
+	if (error) /* make sure error is set if callback stopped iteration */
+		giterr_set_after_callback(error);
+
+	return error;
 }

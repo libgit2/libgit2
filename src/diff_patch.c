@@ -202,7 +202,7 @@ static int diff_patch_invoke_file_callback(
 	if (!output->file_cb)
 		return 0;
 
-	return giterr_set_callback(
+	return giterr_set_after_callback_function(
 		output->file_cb(patch->delta, progress, output->payload),
 		"git_patch");
 }

@@ -508,7 +508,7 @@ int git_config_backend_foreach_match(
 
 		/* abort iterator on non-zero return value */
 		if ((error = cb(entry, payload)) != 0) {
-			GITERR_CALLBACK(error);
+			giterr_set_after_callback(error);
 			break;
 		}
 	}
@@ -536,7 +536,7 @@ int git_config_foreach_match(
 
 	while (!(error = git_config_next(&entry, iter))) {
 		if ((error = cb(entry, payload)) != 0) {
-			GITERR_CALLBACK(error);
+			giterr_set_after_callback(error);
 			break;
 		}
 	}
@@ -799,7 +799,7 @@ int git_config_get_multivar_foreach(
 		found = 1;
 
 		if ((err = cb(entry, payload)) != 0) {
-			GITERR_CALLBACK(err);
+			giterr_set_after_callback(err);
 			break;
 		}
 	}
