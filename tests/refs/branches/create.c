@@ -74,3 +74,4 @@ void test_refs_branches_create__creating_a_branch_with_an_invalid_name_returns_E
 	cl_assert_equal_i(GIT_EINVALIDSPEC,
 		git_branch_create(&branch, repo, "inv@{id", target, 0));
 }
+

@@ -2306,8 +2306,8 @@ done:
 
 int git_merge__indexes(git_repository *repo, git_index *index_new)
 {
-	git_index *index_repo;
-	unsigned int index_repo_caps;
+	git_index *index_repo = NULL;
+	unsigned int index_repo_caps = 0;
 	git_vector paths = GIT_VECTOR_INIT;
 	size_t index_conflicts = 0, wd_conflicts = 0, conflicts, i;
 	char *path;

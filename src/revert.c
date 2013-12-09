@@ -20,14 +20,11 @@
 
 static int write_revert_head(
 	git_repository *repo,
-	const git_commit *commit,
 	const char *commit_oidstr)
 {
 	git_filebuf file = GIT_FILEBUF_INIT;
 	git_buf file_path = GIT_BUF_INIT;
 	int error = 0;
-
-	assert(repo && commit);
 
 	if ((error = git_buf_joinpath(&file_path, repo->path_repository, GIT_REVERT_HEAD_FILE)) >= 0 &&
 		(error = git_filebuf_open(&file, file_path.ptr, GIT_FILEBUF_FORCE, GIT_REVERT_FILE_MODE)) >= 0 &&
@@ -44,15 +41,12 @@ static int write_revert_head(
 
 static int write_merge_msg(
 	git_repository *repo,
-	const git_commit *commit,
 	const char *commit_oidstr,
 	const char *commit_msgline)
 {
 	git_filebuf file = GIT_FILEBUF_INIT;
 	git_buf file_path = GIT_BUF_INIT;
 	int error = 0;
-
-	assert(repo && commit);
 
 	if ((error = git_buf_joinpath(&file_path, repo->path_repository, GIT_MERGE_MSG_FILE)) < 0 ||
 		(error = git_filebuf_open(&file, file_path.ptr, GIT_FILEBUF_FORCE, GIT_REVERT_FILE_MODE)) < 0 ||
@@ -198,8 +192,8 @@ int git_revert(
 
 	if ((error = git_buf_printf(&their_label, "parent of %.7s... %s", commit_oidstr, commit_msg)) < 0 ||
 		(error = revert_normalize_opts(repo, &opts, given_opts, git_buf_cstr(&their_label))) < 0 ||
-		(error = write_revert_head(repo, commit, commit_oidstr)) < 0 ||
-		(error = write_merge_msg(repo, commit, commit_oidstr, commit_msg)) < 0 ||
+		(error = write_revert_head(repo, commit_oidstr)) < 0 ||
+		(error = write_merge_msg(repo, commit_oidstr, commit_msg)) < 0 ||
 		(error = git_repository_head(&our_ref, repo)) < 0 ||
 		(error = git_reference_peel((git_object **)&our_commit, our_ref, GIT_OBJ_COMMIT)) < 0 ||
 		(error = git_revert_commit(&index_new, repo, commit, our_commit, opts.mainline, &opts.merge_tree_opts)) < 0 ||

@@ -29,28 +29,6 @@ void test_merge_trees_commits__cleanup(void)
 	cl_git_sandbox_cleanup();
 }
 
-static void merge_commits(
-	git_index **out,
-	git_repository *repo,
-	const char *our_oidstr,
-	const char *their_oidstr,
-	const git_merge_tree_opts *opts)
-{
-	git_oid our_oid, their_oid;
-	git_commit *our_commit, *their_commit;
-
-	cl_git_pass(git_oid_fromstr(&our_oid, our_oidstr));
-	cl_git_pass(git_oid_fromstr(&their_oid, their_oidstr));
-
-	cl_git_pass(git_commit_lookup(&our_commit, repo, &our_oid));
-	cl_git_pass(git_commit_lookup(&their_commit, repo, &their_oid));
-
-	cl_git_pass(git_merge_commits(out, repo, our_commit, their_commit, opts));
-
-	git_commit_free(our_commit);
-	git_commit_free(their_commit);
-}
-
 void test_merge_trees_commits__automerge(void)
 {
 	git_index *index;
