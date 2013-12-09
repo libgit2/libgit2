@@ -42,6 +42,8 @@
 # endif
 #define GIT_STDLIB_CALL
 
+# include <arpa/inet.h>
+
 #endif
 
 #include "git2/types.h"

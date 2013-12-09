@@ -60,7 +60,6 @@ int merge_commits_from_branches(
 	git_commit *our_commit, *their_commit;
 	git_oid our_oid, their_oid;
 	git_buf branch_buf = GIT_BUF_INIT;
-	int error;
 
 	git_buf_printf(&branch_buf, "%s%s", GIT_REFS_HEADS_DIR, ours_name);
 	cl_git_pass(git_reference_name_to_id(&our_oid, repo, branch_buf.ptr));
