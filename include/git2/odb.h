@@ -189,7 +189,7 @@ GIT_EXTERN(int) git_odb_refresh(struct git_odb *db);
  * @param db database to use
  * @param cb the callback to call for each object
  * @param payload data to pass to the callback
- * @return 0 on success, GIT_EUSER on non-zero callback, or error code
+ * @return 0 on success, non-zero callback return value, or error code
  */
 GIT_EXTERN(int) git_odb_foreach(git_odb *db, git_odb_foreach_cb cb, void *payload);
 

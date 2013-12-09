@@ -132,17 +132,19 @@ GIT_EXTERN(int) git_push_finish(git_push *push);
 GIT_EXTERN(int) git_push_unpack_ok(git_push *push);
 
 /**
- * Call callback `cb' on each status
+ * Invoke callback `cb' on each status entry
  *
  * For each of the updated references, we receive a status report in the
  * form of `ok refs/heads/master` or `ng refs/heads/master <msg>`.
  * `msg != NULL` means the reference has not been updated for the given
  * reason.
  *
+ * Return a non-zero value from the callback to stop the loop.
+ *
  * @param push The push object
  * @param cb The callback to call on each object
  *
- * @return 0 on success, GIT_EUSER on non-zero callback, or error code
+ * @return 0 on success, non-zero callback return value, or error code
  */
 GIT_EXTERN(int) git_push_status_foreach(git_push *push,
 			int (*cb)(const char *ref, const char *msg, void *data),

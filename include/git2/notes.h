@@ -189,7 +189,7 @@ GIT_EXTERN(int) git_note_default_ref(const char **out, git_repository *repo);
  *
  * @param payload Extra parameter to callback function.
  *
- * @return 0 on success, GIT_EUSER on non-zero callback, or error code
+ * @return 0 on success, non-zero callback return value, or error code
  */
 GIT_EXTERN(int) git_note_foreach(
 	git_repository *repo,

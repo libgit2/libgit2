@@ -450,13 +450,13 @@ GIT_EXTERN(int) git_config_delete_multivar(git_config *cfg, const char *name, co
  *
  * The callback receives the normalized name and value of each variable
  * in the config backend, and the data pointer passed to this function.
- * As soon as one of the callback functions returns something other than 0,
- * this function stops iterating and returns `GIT_EUSER`.
+ * If the callback returns a non-zero value, the function stops iterating
+ * and returns that value to the caller.
  *
  * @param cfg where to get the variables from
  * @param callback the function to call on each variable
  * @param payload the data to pass to the callback
- * @return 0 on success, GIT_EUSER on non-zero callback, or error code
+ * @return 0 on success, non-zero callback return value, or error code
  */
 GIT_EXTERN(int) git_config_foreach(
 	const git_config *cfg,

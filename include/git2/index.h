@@ -493,7 +493,7 @@ GIT_EXTERN(int) git_index_remove_bypath(git_index *index, const char *path);
  * item in the working directory immediately *before* it is added to /
  * updated in the index.  Returning zero will add the item to the index,
  * greater than zero will skip the item, and less than zero will abort the
- * scan and cause GIT_EUSER to be returned.
+ * scan and return that value to the caller.
  *
  * @param index an existing index object
  * @param pathspec array of path patterns
@@ -502,7 +502,7 @@ GIT_EXTERN(int) git_index_remove_bypath(git_index *index, const char *path);
  *                 gets index of matching pathspec entry); can be NULL;
  *                 return 0 to add, >0 to skip, <0 to abort scan.
  * @param payload payload passed through to callback function
- * @return 0 or an error code
+ * @return 0 on success, negative callback return value, or error code
  */
 GIT_EXTERN(int) git_index_add_all(
 	git_index *index,
@@ -524,7 +524,7 @@ GIT_EXTERN(int) git_index_add_all(
  *                 gets index of matching pathspec entry); can be NULL;
  *                 return 0 to add, >0 to skip, <0 to abort scan.
  * @param payload payload passed through to callback function
- * @return 0 or an error code
+ * @return 0 on success, negative callback return value, or error code
  */
 GIT_EXTERN(int) git_index_remove_all(
 	git_index *index,
@@ -553,7 +553,7 @@ GIT_EXTERN(int) git_index_remove_all(
  *                 gets index of matching pathspec entry); can be NULL;
  *                 return 0 to add, >0 to skip, <0 to abort scan.
  * @param payload payload passed through to callback function
- * @return 0 or an error code
+ * @return 0 on success, negative callback return value, or error code
  */
 GIT_EXTERN(int) git_index_update_all(
 	git_index *index,
