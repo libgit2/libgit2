@@ -272,37 +272,44 @@ int git_blob_create_fromchunks(
 	int (*source_cb)(char *content, size_t max_length, void *payload),
 	void *payload)
 {
-	int error = -1, read_bytes;
+	int error;
 	char *content = NULL;
 	git_filebuf file = GIT_FILEBUF_INIT;
 	git_buf path = GIT_BUF_INIT;
 
-	if (git_buf_joinpath(
-			&path, git_repository_path(repo), GIT_OBJECTS_DIR "streamed") < 0)
+	assert(oid && repo && source_cb);
+
+	if ((error = git_buf_joinpath(
+			&path, git_repository_path(repo), GIT_OBJECTS_DIR "streamed")) < 0)
 		goto cleanup;
 
 	content = git__malloc(BUFFER_SIZE);
 	GITERR_CHECK_ALLOC(content);
 
-	if (git_filebuf_open(&file, git_buf_cstr(&path), GIT_FILEBUF_TEMPORARY, 0666) < 0)
+	if ((error = git_filebuf_open(
+			&file, git_buf_cstr(&path), GIT_FILEBUF_TEMPORARY, 0666)) < 0)
 		goto cleanup;
 
 	while (1) {
-		read_bytes = source_cb(content, BUFFER_SIZE, payload);
+		int read_bytes = source_cb(content, BUFFER_SIZE, payload);
 
-		assert(read_bytes <= BUFFER_SIZE);
-
-		if (read_bytes <= 0)
+		if (!read_bytes)
 			break;
 
-		if (git_filebuf_write(&file, content, read_bytes) < 0)
+		if (read_bytes > BUFFER_SIZE) {
+			giterr_set(GITERR_OBJECT, "Invalid chunk size while creating blob");
+			error = GIT_EBUFS;
+		} else if (read_bytes < 0) {
+			error = giterr_set_after_callback(read_bytes);
+		} else {
+			error = git_filebuf_write(&file, content, read_bytes);
+		}
+
+		if (error < 0)
 			goto cleanup;
 	}
 
-	if (read_bytes < 0)
-		goto cleanup;
-
-	if (git_filebuf_flush(&file) < 0)
+	if ((error = git_filebuf_flush(&file)) < 0)
 		goto cleanup;
 
 	error = git_blob__create_from_paths(
@@ -312,6 +319,7 @@ cleanup:
 	git_buf_free(&path);
 	git_filebuf_cleanup(&file);
 	git__free(content);
+
 	return error;
 }
 

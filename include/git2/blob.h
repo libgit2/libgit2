@@ -159,37 +159,32 @@ typedef int (*git_blob_chunk_cb)(char *content, size_t max_length, void *payload
  * Write a loose blob to the Object Database from a
  * provider of chunks of data.
  *
- * Provided the `hintpath` parameter is filled, its value
- * will help to determine what git filters should be applied
- * to the object before it can be placed to the object database.
+ * If the `hintpath` parameter is filled, it will be used to determine
+ * what git filters should be applied to the object before it is written
+ * to the object database.
  *
+ * The implementation of the callback MUST respect the following rules:
  *
- * The implementation of the callback has to respect the
- * following rules:
+ *  - `content` must be filled by the callback. The maximum number of
+ *    bytes that the buffer can accept per call is defined by the
+ *    `max_length` parameter. Allocation and freeing of the buffer will
+ *    be taken care of by libgit2.
  *
- *  - `content` will have to be filled by the consumer. The maximum number
- * of bytes that the buffer can accept per call is defined by the
- * `max_length` parameter. Allocation and freeing of the buffer will be taken
- * care of by the function.
+ *  - The `callback` must return the number of bytes that have been
+ *    written to the `content` buffer.
  *
- *  - The callback is expected to return the number of bytes
- * that `content` have been filled with.
+ *  - When there is no more data to stream, `callback` should return
+ *    0. This will prevent it from being invoked anymore.
  *
- *  - When there is no more data to stream, the callback should
- * return 0. This will prevent it from being invoked anymore.
- *
- *  - When an error occurs, the callback should return -1.
- *
+ *  - If an error occurs, the callback should return a negative value.
+ *    This value will be returned to the caller.
  *
  * @param id Return the id of the written blob
- *
- * @param repo repository where the blob will be written.
- * This repository can be bare or not.
- *
- * @param hintpath if not NULL, will help selecting the filters
- * to apply onto the content of the blob to be created.
- *
- * @return 0 or an error code
+ * @param repo Repository where the blob will be written.
+ *        This repository can be bare or not.
+ * @param hintpath If not NULL, will be used to select data filters
+ *        to apply onto the content of the blob to be created.
+ * @return 0 or error code (from either libgit2 or callback function)
  */
 GIT_EXTERN(int) git_blob_create_fromchunks(
 	git_oid *id,
