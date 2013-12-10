@@ -993,7 +993,7 @@ static int checkout_get_actions(
 
 	git_vector_foreach(deltas, i, delta) {
 		error = checkout_action(&act, data, delta, workdir, &wditem, &pathspec);
-		if (error)
+		if (error != 0)
 			goto fail;
 
 		actions[i] = act;
@@ -1957,7 +1957,7 @@ int git_checkout_iterator(
 	 * actions to be taken, plus look for conflicts and send notifications,
 	 * then loop through conflicts.
 	 */
-	if ((error = checkout_get_actions(&actions, &counts, &data, workdir)) < 0)
+	if ((error = checkout_get_actions(&actions, &counts, &data, workdir)) != 0)
 		goto cleanup;
 
 	data.total_steps = counts[CHECKOUT_ACTION__REMOVE] +

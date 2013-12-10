@@ -174,7 +174,12 @@ typedef enum {
  * - GIT_CHECKOUT_NOTIFY_IGNORED notifies about ignored files.
  *
  * Returning a non-zero value from this callback will cancel the checkout.
- * Notification callbacks are made prior to modifying any files on disk.
+ * The non-zero return value will be propagated back and returned by the
+ * git_checkout_... call.
+ *
+ * Notification callbacks are made prior to modifying any files on disk,
+ * so canceling on any notification will still happen prior to any files
+ * being modified.
  */
 typedef enum {
 	GIT_CHECKOUT_NOTIFY_NONE      = 0,
@@ -252,9 +257,9 @@ typedef struct git_checkout_opts {
  *
  * @param repo repository to check out (must be non-bare)
  * @param opts specifies checkout options (may be NULL)
- * @return 0 on success, GIT_EUNBORNBRANCH when HEAD points to a non existing
- * branch, GIT_ERROR otherwise (use giterr_last for information
- * about the error)
+ * @return 0 on success, GIT_EUNBORNBRANCH if HEAD points to a non
+ *         existing branch, non-zero value returned by `notify_cb`, or
+ *         other error code < 0 (use giterr_last for error details)
  */
 GIT_EXTERN(int) git_checkout_head(
 	git_repository *repo,
@@ -266,8 +271,8 @@ GIT_EXTERN(int) git_checkout_head(
  * @param repo repository into which to check out (must be non-bare)
  * @param index index to be checked out (or NULL to use repository index)
  * @param opts specifies checkout options (may be NULL)
- * @return 0 on success, GIT_ERROR otherwise (use giterr_last for information
- * about the error)
+ * @return 0 on success, non-zero return value from `notify_cb`, or error
+ *         code < 0 (use giterr_last for error details)
  */
 GIT_EXTERN(int) git_checkout_index(
 	git_repository *repo,
@@ -282,8 +287,8 @@ GIT_EXTERN(int) git_checkout_index(
  * @param treeish a commit, tag or tree which content will be used to update
  * the working directory (or NULL to use HEAD)
  * @param opts specifies checkout options (may be NULL)
- * @return 0 on success, GIT_ERROR otherwise (use giterr_last for information
- * about the error)
+ * @return 0 on success, non-zero return value from `notify_cb`, or error
+ *         code < 0 (use giterr_last for error details)
  */
 GIT_EXTERN(int) git_checkout_tree(
 	git_repository *repo,
