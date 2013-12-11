@@ -275,6 +275,8 @@ static int normalize_find_opts(
 {
 	git_config *cfg = NULL;
 
+	GITERR_CHECK_VERSION(given, GIT_DIFF_FIND_OPTIONS_VERSION, "git_diff_find_options");
+
 	if (diff->repo != NULL &&
 		git_repository_config__weakptr(&cfg, diff->repo) < 0)
 		return -1;
@@ -302,7 +304,6 @@ static int normalize_find_opts(
 				opts->flags |= GIT_DIFF_FIND_RENAMES;
 		}
 	}
-	GITERR_CHECK_VERSION(given, GIT_DIFF_FIND_OPTIONS_VERSION, "git_diff_find_options");
 
 	/* some flags imply others */
 
