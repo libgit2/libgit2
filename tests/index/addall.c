@@ -4,6 +4,7 @@
 #include "fileops.h"
 
 git_repository *g_repo = NULL;
+#define TEST_DIR "addall"
 
 void test_index_addall__initialize(void)
 {
@@ -13,6 +14,8 @@ void test_index_addall__cleanup(void)
 {
 	git_repository_free(g_repo);
 	g_repo = NULL;
+
+	cl_fixture_cleanup(TEST_DIR);
 }
 
 #define STATUS_INDEX_FLAGS \
@@ -132,6 +135,25 @@ static void check_stat_data(git_index *index, const char *path, bool match)
 	}
 }
 
+static void addall_create_test_repo(bool check_every_step)
+{
+	cl_git_pass(git_repository_init(&g_repo, TEST_DIR, false));
+	if (check_every_step)
+		check_status(g_repo, 0, 0, 0, 0, 0, 0, 0);
+
+	cl_git_mkfile(TEST_DIR "/file.foo", "a file");
+	if (check_every_step)
+		check_status(g_repo, 0, 0, 0, 1, 0, 0, 0);
+
+	cl_git_mkfile(TEST_DIR "/.gitignore", "*.foo\n");
+	if (check_every_step)
+		check_status(g_repo, 0, 0, 0, 1, 0, 0, 1);
+
+	cl_git_mkfile(TEST_DIR "/file.bar", "another file");
+	if (check_every_step)
+		check_status(g_repo, 0, 0, 0, 2, 0, 0, 1);
+}
+
 void test_index_addall__repo_lifecycle(void)
 {
 	int error;
@@ -139,43 +161,33 @@ void test_index_addall__repo_lifecycle(void)
 	git_strarray paths = { NULL, 0 };
 	char *strs[1];
 
-	cl_git_pass(git_repository_init(&g_repo, "addall", false));
-	check_status(g_repo, 0, 0, 0, 0, 0, 0, 0);
+	addall_create_test_repo(true);
 
 	cl_git_pass(git_repository_index(&index, g_repo));
-
-	cl_git_mkfile("addall/file.foo", "a file");
-	check_status(g_repo, 0, 0, 0, 1, 0, 0, 0);
-
-	cl_git_mkfile("addall/.gitignore", "*.foo\n");
-	check_status(g_repo, 0, 0, 0, 1, 0, 0, 1);
-
-	cl_git_mkfile("addall/file.bar", "another file");
-	check_status(g_repo, 0, 0, 0, 2, 0, 0, 1);
 
 	strs[0] = "file.*";
 	paths.strings = strs;
 	paths.count   = 1;
 
 	cl_git_pass(git_index_add_all(index, &paths, 0, NULL, NULL));
-	check_stat_data(index, "addall/file.bar", true);
+	check_stat_data(index, TEST_DIR "/file.bar", true);
 	check_status(g_repo, 1, 0, 0, 1, 0, 0, 1);
 
-	cl_git_rewritefile("addall/file.bar", "new content for file");
-	check_stat_data(index, "addall/file.bar", false);
+	cl_git_rewritefile(TEST_DIR "/file.bar", "new content for file");
+	check_stat_data(index, TEST_DIR "/file.bar", false);
 	check_status(g_repo, 1, 0, 0, 1, 0, 1, 1);
 
-	cl_git_mkfile("addall/file.zzz", "yet another one");
-	cl_git_mkfile("addall/other.zzz", "yet another one");
-	cl_git_mkfile("addall/more.zzz", "yet another one");
+	cl_git_mkfile(TEST_DIR "/file.zzz", "yet another one");
+	cl_git_mkfile(TEST_DIR "/other.zzz", "yet another one");
+	cl_git_mkfile(TEST_DIR "/more.zzz", "yet another one");
 	check_status(g_repo, 1, 0, 0, 4, 0, 1, 1);
 
 	cl_git_pass(git_index_update_all(index, NULL, NULL, NULL));
-	check_stat_data(index, "addall/file.bar", true);
+	check_stat_data(index, TEST_DIR "/file.bar", true);
 	check_status(g_repo, 1, 0, 0, 4, 0, 0, 1);
 
 	cl_git_pass(git_index_add_all(index, &paths, 0, NULL, NULL));
-	check_stat_data(index, "addall/file.zzz", true);
+	check_stat_data(index, TEST_DIR "/file.zzz", true);
 	check_status(g_repo, 2, 0, 0, 3, 0, 0, 1);
 
 	cl_repo_commit_from_index(NULL, g_repo, NULL, 0, "first commit");
@@ -195,27 +207,27 @@ void test_index_addall__repo_lifecycle(void)
 	/* add with force - should allow */
 	cl_git_pass(git_index_add_all(
 		index, &paths, GIT_INDEX_ADD_FORCE, NULL, NULL));
-	check_stat_data(index, "addall/file.foo", true);
+	check_stat_data(index, TEST_DIR "/file.foo", true);
 	check_status(g_repo, 1, 0, 0, 3, 0, 0, 0);
 
 	/* now it's in the index, so regular add should work */
-	cl_git_rewritefile("addall/file.foo", "new content for file");
-	check_stat_data(index, "addall/file.foo", false);
+	cl_git_rewritefile(TEST_DIR "/file.foo", "new content for file");
+	check_stat_data(index, TEST_DIR "/file.foo", false);
 	check_status(g_repo, 1, 0, 0, 3, 0, 1, 0);
 
 	cl_git_pass(git_index_add_all(index, &paths, 0, NULL, NULL));
-	check_stat_data(index, "addall/file.foo", true);
+	check_stat_data(index, TEST_DIR "/file.foo", true);
 	check_status(g_repo, 1, 0, 0, 3, 0, 0, 0);
 
 	cl_git_pass(git_index_add_bypath(index, "more.zzz"));
-	check_stat_data(index, "addall/more.zzz", true);
+	check_stat_data(index, TEST_DIR "/more.zzz", true);
 	check_status(g_repo, 2, 0, 0, 2, 0, 0, 0);
 
-	cl_git_rewritefile("addall/file.zzz", "new content for file");
+	cl_git_rewritefile(TEST_DIR "/file.zzz", "new content for file");
 	check_status(g_repo, 2, 0, 0, 2, 0, 1, 0);
 
 	cl_git_pass(git_index_add_bypath(index, "file.zzz"));
-	check_stat_data(index, "addall/file.zzz", true);
+	check_stat_data(index, TEST_DIR "/file.zzz", true);
 	check_status(g_repo, 2, 0, 1, 2, 0, 0, 0);
 
 	strs[0] = "*.zzz";
@@ -228,7 +240,7 @@ void test_index_addall__repo_lifecycle(void)
 	cl_repo_commit_from_index(NULL, g_repo, NULL, 0, "second commit");
 	check_status(g_repo, 0, 0, 0, 3, 0, 0, 0);
 
-	cl_must_pass(p_unlink("addall/file.zzz"));
+	cl_must_pass(p_unlink(TEST_DIR "/file.zzz"));
 	check_status(g_repo, 0, 0, 0, 3, 1, 0, 0);
 
 	/* update_all should be able to remove entries */
@@ -240,9 +252,9 @@ void test_index_addall__repo_lifecycle(void)
 	check_status(g_repo, 3, 1, 0, 0, 0, 0, 0);
 
 	/* must be able to remove at any position while still updating other files */
-	cl_must_pass(p_unlink("addall/.gitignore"));
-	cl_git_rewritefile("addall/file.zzz", "reconstructed file");
-	cl_git_rewritefile("addall/more.zzz", "altered file reality");
+	cl_must_pass(p_unlink(TEST_DIR "/.gitignore"));
+	cl_git_rewritefile(TEST_DIR "/file.zzz", "reconstructed file");
+	cl_git_rewritefile(TEST_DIR "/more.zzz", "altered file reality");
 	check_status(g_repo, 3, 1, 0, 1, 1, 1, 0);
 
 	cl_git_pass(git_index_update_all(index, NULL, NULL, NULL));
@@ -253,6 +265,92 @@ void test_index_addall__repo_lifecycle(void)
 	 * as a DELETE when comparing HEAD to index and as an ADD comparing
 	 * index to worktree
 	 */
+
+	git_index_free(index);
+}
+
+static int addall_match_prefix(
+	const char *path, const char *matched_pathspec, void *payload)
+{
+	GIT_UNUSED(matched_pathspec);
+	return !git__prefixcmp(path, payload) ? 0 : 1;
+}
+
+static int addall_match_suffix(
+	const char *path, const char *matched_pathspec, void *payload)
+{
+	GIT_UNUSED(matched_pathspec);
+	return !git__suffixcmp(path, payload) ? 0 : 1;
+}
+
+static int addall_cancel_at(
+	const char *path, const char *matched_pathspec, void *payload)
+{
+	GIT_UNUSED(matched_pathspec);
+	return !strcmp(path, payload) ? -123 : 0;
+}
+
+void test_index_addall__callback_filtering(void)
+{
+	git_index *index;
+
+	addall_create_test_repo(false);
+
+	cl_git_pass(git_repository_index(&index, g_repo));
+
+	cl_git_pass(
+		git_index_add_all(index, NULL, 0, addall_match_prefix, "file."));
+	check_stat_data(index, TEST_DIR "/file.bar", true);
+	check_status(g_repo, 1, 0, 0, 1, 0, 0, 1);
+
+	cl_git_mkfile(TEST_DIR "/file.zzz", "yet another one");
+	cl_git_mkfile(TEST_DIR "/more.zzz", "yet another one");
+	cl_git_mkfile(TEST_DIR "/other.zzz", "yet another one");
+
+	cl_git_pass(git_index_update_all(index, NULL, NULL, NULL));
+	check_stat_data(index, TEST_DIR "/file.bar", true);
+	check_status(g_repo, 1, 0, 0, 4, 0, 0, 1);
+
+	cl_git_pass(
+		git_index_add_all(index, NULL, 0, addall_match_prefix, "other"));
+	check_stat_data(index, TEST_DIR "/other.zzz", true);
+	check_status(g_repo, 2, 0, 0, 3, 0, 0, 1);
+
+	cl_git_pass(
+		git_index_add_all(index, NULL, 0, addall_match_suffix, ".zzz"));
+	check_status(g_repo, 4, 0, 0, 1, 0, 0, 1);
+
+	cl_git_pass(
+		git_index_remove_all(index, NULL, addall_match_suffix, ".zzz"));
+	check_status(g_repo, 1, 0, 0, 4, 0, 0, 1);
+
+	cl_git_fail_with(
+		git_index_add_all(index, NULL, 0, addall_cancel_at, "more.zzz"), -123);
+	check_status(g_repo, 3, 0, 0, 2, 0, 0, 1);
+
+	cl_git_fail_with(
+		git_index_add_all(index, NULL, 0, addall_cancel_at, "other.zzz"), -123);
+	check_status(g_repo, 4, 0, 0, 1, 0, 0, 1);
+
+	cl_git_pass(
+		git_index_add_all(index, NULL, 0, addall_match_suffix, ".zzz"));
+	check_status(g_repo, 5, 0, 0, 0, 0, 0, 1);
+
+	cl_must_pass(p_unlink(TEST_DIR "/file.zzz"));
+	cl_must_pass(p_unlink(TEST_DIR "/more.zzz"));
+	cl_must_pass(p_unlink(TEST_DIR "/other.zzz"));
+
+	cl_git_fail_with(
+		git_index_update_all(index, NULL, addall_cancel_at, "more.zzz"), -123);
+	/* file.zzz removed from index (so Index Adds 5 -> 4) and
+	 * more.zzz + other.zzz removed (so Worktree Dels 0 -> 2) */
+	check_status(g_repo, 4, 0, 0, 0, 2, 0, 1);
+
+	cl_git_fail_with(
+		git_index_update_all(index, NULL, addall_cancel_at, "other.zzz"), -123);
+	/* more.zzz removed from index (so Index Adds 4 -> 3) and
+	 * Just other.zzz removed (so Worktree Dels 2 -> 1) */
+	check_status(g_repo, 3, 0, 0, 0, 1, 0, 1);
 
 	git_index_free(index);
 }

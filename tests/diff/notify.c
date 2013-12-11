@@ -182,10 +182,12 @@ void test_diff_notify__notify_cb_can_abort_diff(void)
 	opts.pathspec.count   = 1;
 
 	pathspec = "file_deleted";
-	cl_git_fail(git_diff_index_to_workdir(&diff, g_repo, NULL, &opts));
+	cl_git_fail_with(
+		git_diff_index_to_workdir(&diff, g_repo, NULL, &opts), -42);
 
 	pathspec = "staged_changes_modified_file";
-	cl_git_fail(git_diff_index_to_workdir(&diff, g_repo, NULL, &opts));
+	cl_git_fail_with(
+		git_diff_index_to_workdir(&diff, g_repo, NULL, &opts), -42);
 }
 
 static int filter_all(
