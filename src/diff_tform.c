@@ -275,27 +275,35 @@ static int normalize_find_opts(
 {
 	git_config *cfg = NULL;
 
+	GITERR_CHECK_VERSION(given, GIT_DIFF_FIND_OPTIONS_VERSION, "git_diff_find_options");
+
 	if (diff->repo != NULL &&
 		git_repository_config__weakptr(&cfg, diff->repo) < 0)
 		return -1;
 
-	if (given != NULL)
+	if (given) {
 		memcpy(opts, given, sizeof(*opts));
-	else {
-		const char *val = NULL;
-
+	} else {
 		GIT_INIT_STRUCTURE(opts, GIT_DIFF_FIND_OPTIONS_VERSION);
+	}
 
-		opts->flags = GIT_DIFF_FIND_RENAMES;
+	if (!given ||
+		 (given->flags & GIT_DIFF_FIND_ALL) == GIT_DIFF_FIND_BY_CONFIG)
+	{
+		const char *val = NULL;
 
 		if (git_config_get_string(&val, cfg, "diff.renames") < 0)
 			giterr_clear();
-		else if (val &&
-			(!strcasecmp(val, "copies") || !strcasecmp(val, "copy")))
-			opts->flags = GIT_DIFF_FIND_RENAMES | GIT_DIFF_FIND_COPIES;
+		else if (val) {
+			int boolval;
+			if (!git__parse_bool(&boolval, val) && !boolval) {
+				/* do nothing */
+			} else if (!strcasecmp(val, "copies") || !strcasecmp(val, "copy"))
+				opts->flags |= (GIT_DIFF_FIND_RENAMES | GIT_DIFF_FIND_COPIES);
+			else
+				opts->flags |= GIT_DIFF_FIND_RENAMES;
+		}
 	}
-
-	GITERR_CHECK_VERSION(opts, GIT_DIFF_FIND_OPTIONS_VERSION, "git_diff_find_options");
 
 	/* some flags imply others */
 
@@ -829,6 +837,10 @@ int git_diff_find_similar(
 
 	if ((error = normalize_find_opts(diff, &opts, given_opts)) < 0)
 		return error;
+
+	/* No flags set; nothing to do */
+	if ((opts.flags & GIT_DIFF_FIND_ALL) == 0)
+		return 0;
 
 	num_deltas = diff->deltas.length;
 
