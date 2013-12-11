@@ -408,9 +408,10 @@ int git_clone(
 		git_remote_free(origin);
 	}
 
-	if (error < 0) {
+	if (error != 0) {
 		git_repository_free(repo);
 		repo = NULL;
+
 		(void)git_futils_rmdir_r(local_path, NULL, rmdir_flags);
 	}
 

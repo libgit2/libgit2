@@ -22,7 +22,7 @@ void test_clone_nonetwork__initialize(void)
 	memset(&g_options, 0, sizeof(git_clone_options));
 	g_options.version = GIT_CLONE_OPTIONS_VERSION;
 	g_options.checkout_opts = dummy_opts;
-	g_options.checkout_opts.checkout_strategy = GIT_CHECKOUT_SAFE;
+	g_options.checkout_opts.checkout_strategy = GIT_CHECKOUT_SAFE_CREATE;
 	g_options.remote_callbacks = dummy_callbacks;
 }
 
@@ -151,6 +151,61 @@ void test_clone_nonetwork__can_checkout_given_branch(void)
 
 	cl_git_pass(git_repository_head(&g_ref, g_repo));
 	cl_assert_equal_s(git_reference_name(g_ref), "refs/heads/test");
+
+	cl_assert(git_path_exists("foo/readme.txt"));
+}
+
+static int clone_cancel_fetch_transfer_progress_cb(
+	const git_transfer_progress *stats, void *data)
+{
+	GIT_UNUSED(stats); GIT_UNUSED(data);
+	return -54321;
+}
+
+void test_clone_nonetwork__can_cancel_clone_in_fetch(void)
+{
+	g_options.checkout_branch = "test";
+
+	g_options.remote_callbacks.transfer_progress =
+		clone_cancel_fetch_transfer_progress_cb;
+
+	cl_git_fail_with(git_clone(
+		&g_repo, cl_git_fixture_url("testrepo.git"), "./foo", &g_options),
+		-54321);
+
+	cl_assert(!g_repo);
+	cl_assert(!git_path_exists("foo/readme.txt"));
+}
+
+static int clone_cancel_checkout_cb(
+	git_checkout_notify_t why,
+	const char *path,
+	const git_diff_file *b,
+	const git_diff_file *t,
+	const git_diff_file *w,
+	void *payload)
+{
+	const char *at_file = payload;
+	GIT_UNUSED(why); GIT_UNUSED(b); GIT_UNUSED(t); GIT_UNUSED(w);
+	if (!strcmp(path, at_file))
+		return -12345;
+	return 0;
+}
+
+void test_clone_nonetwork__can_cancel_clone_in_checkout(void)
+{
+	g_options.checkout_branch = "test";
+
+	g_options.checkout_opts.notify_flags = GIT_CHECKOUT_NOTIFY_UPDATED;
+	g_options.checkout_opts.notify_cb = clone_cancel_checkout_cb;
+	g_options.checkout_opts.notify_payload = "readme.txt";
+
+	cl_git_fail_with(git_clone(
+		&g_repo, cl_git_fixture_url("testrepo.git"), "./foo", &g_options),
+		-12345);
+
+	cl_assert(!g_repo);
+	cl_assert(!git_path_exists("foo/readme.txt"));
 }
 
 void test_clone_nonetwork__can_detached_head(void)
