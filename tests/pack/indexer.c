@@ -11,7 +11,7 @@
  * This is a packfile with three objects. The second is a delta which
  * depends on the third, which is also a delta.
  */
-unsigned char out_of_order_pack[] = {
+static const unsigned char out_of_order_pack[] = {
   0x50, 0x41, 0x43, 0x4b, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x03,
   0x32, 0x78, 0x9c, 0x63, 0x67, 0x00, 0x00, 0x00, 0x10, 0x00, 0x08, 0x76,
   0xe6, 0x8f, 0xe8, 0x12, 0x9b, 0x54, 0x6b, 0x10, 0x1a, 0xee, 0x95, 0x10,
@@ -23,13 +23,13 @@ unsigned char out_of_order_pack[] = {
   0x19, 0x87, 0x58, 0x80, 0x61, 0x09, 0x9a, 0x33, 0xca, 0x7a, 0x31, 0x92,
   0x6f, 0xae, 0x66, 0x75
 };
-unsigned int out_of_order_pack_len = 112;
+static const unsigned int out_of_order_pack_len = 112;
 
 /*
  * Packfile with two objects. The second is a delta against an object
  * which is not in the packfile
  */
-unsigned char thin_pack[] = {
+static const unsigned char thin_pack[] = {
   0x50, 0x41, 0x43, 0x4b, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x02,
   0x32, 0x78, 0x9c, 0x63, 0x67, 0x00, 0x00, 0x00, 0x10, 0x00, 0x08, 0x76,
   0xe6, 0x8f, 0xe8, 0x12, 0x9b, 0x54, 0x6b, 0x10, 0x1a, 0xee, 0x95, 0x10,
@@ -38,18 +38,19 @@ unsigned char thin_pack[] = {
   0x3a, 0x6f, 0x39, 0xd1, 0xfe, 0x66, 0x68, 0x6b, 0xa5, 0xe5, 0xe2, 0x97,
   0xac, 0x94, 0x6c, 0x76, 0x0b, 0x04
 };
-unsigned int thin_pack_len = 78;
+static const unsigned int thin_pack_len = 78;
 
-unsigned char base_obj[] = { 07, 076 };
-unsigned int base_obj_len = 2;
+static const unsigned char base_obj[] = { 07, 076 };
+static const unsigned int base_obj_len = 2;
 
 void test_pack_indexer__out_of_order(void)
 {
-	git_indexer *idx;
-	git_transfer_progress stats;
+	git_indexer *idx = 0;
+	git_transfer_progress stats = { 0 };
 
 	cl_git_pass(git_indexer_new(&idx, ".", 0, NULL, NULL, NULL));
-	cl_git_pass(git_indexer_append(idx, out_of_order_pack, out_of_order_pack_len, &stats));
+	cl_git_pass(git_indexer_append(
+		idx, out_of_order_pack, out_of_order_pack_len, &stats));
 	cl_git_pass(git_indexer_commit(idx, &stats));
 
 	cl_assert_equal_i(stats.total_objects, 3);
@@ -61,8 +62,8 @@ void test_pack_indexer__out_of_order(void)
 
 void test_pack_indexer__fix_thin(void)
 {
-	git_indexer *idx;
-	git_transfer_progress stats;
+	git_indexer *idx = NULL;
+	git_transfer_progress stats = { 0 };
 	git_repository *repo;
 	git_odb *odb;
 	git_oid id, should_id;

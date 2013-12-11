@@ -12,6 +12,7 @@ static git_packbuilder *_packbuilder;
 static git_indexer *_indexer;
 static git_vector _commits;
 static int _commits_is_initialized;
+static git_transfer_progress _stats;
 
 void test_pack_packbuilder__initialize(void)
 {
@@ -20,6 +21,7 @@ void test_pack_packbuilder__initialize(void)
 	cl_git_pass(git_packbuilder_new(&_packbuilder, _repo));
 	cl_git_pass(git_vector_init(&_commits, 0, NULL));
 	_commits_is_initialized = 1;
+	memset(&_stats, 0, sizeof(_stats));
 }
 
 void test_pack_packbuilder__cleanup(void)
@@ -184,11 +186,10 @@ void test_pack_packbuilder__permissions_readwrite(void)
 	test_write_pack_permission(0666, 0666);
 }
 
-static git_transfer_progress stats;
 static int foreach_cb(void *buf, size_t len, void *payload)
 {
 	git_indexer *idx = (git_indexer *) payload;
-	cl_git_pass(git_indexer_append(idx, buf, len, &stats));
+	cl_git_pass(git_indexer_append(idx, buf, len, &_stats));
 	return 0;
 }
 
@@ -199,6 +200,24 @@ void test_pack_packbuilder__foreach(void)
 	seed_packbuilder();
 	cl_git_pass(git_indexer_new(&idx, ".", 0, NULL, NULL, NULL));
 	cl_git_pass(git_packbuilder_foreach(_packbuilder, foreach_cb, idx));
-	cl_git_pass(git_indexer_commit(idx, &stats));
+	cl_git_pass(git_indexer_commit(idx, &_stats));
+	git_indexer_free(idx);
+}
+
+static int foreach_cancel_cb(void *buf, size_t len, void *payload)
+{
+	git_indexer *idx = (git_indexer *)payload;
+	cl_git_pass(git_indexer_append(idx, buf, len, &_stats));
+	return (_stats.total_objects > 2) ? -1111 : 0;
+}
+
+void test_pack_packbuilder__foreach_with_cancel(void)
+{
+	git_indexer *idx;
+
+	seed_packbuilder();
+	cl_git_pass(git_indexer_new(&idx, ".", 0, NULL, NULL, NULL));
+	cl_git_fail_with(
+		git_packbuilder_foreach(_packbuilder, foreach_cancel_cb, idx), -1111);
 	git_indexer_free(idx);
 }
