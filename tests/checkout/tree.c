@@ -542,7 +542,7 @@ void test_checkout_tree__can_cancel_checkout_from_notify(void)
 	/* on case-insensitive FS = a/b.txt, branch_file.txt, new.txt */
 	/* on case-sensitive FS   = README, then above */
 
-	if (cl_repo_get_bool(g_repo, "core.ignorecase"))
+	if (git_path_exists("testrepo/.git/CoNfIg")) /* case insensitive */
 		cl_assert_equal_i(3, ca.count);
 	else
 		cl_assert_equal_i(4, ca.count);
@@ -556,7 +556,7 @@ void test_checkout_tree__can_cancel_checkout_from_notify(void)
 
 	cl_assert(!git_path_exists("testrepo/new.txt"));
 
-	if (cl_repo_get_bool(g_repo, "core.ignorecase"))
+	if (git_path_exists("testrepo/.git/CoNfIg")) /* case insensitive */
 		cl_assert_equal_i(4, ca.count);
 	else
 		cl_assert_equal_i(1, ca.count);
