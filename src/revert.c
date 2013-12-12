@@ -179,6 +179,8 @@ int git_revert(
 
 	assert(repo && commit);
 
+	GITERR_CHECK_VERSION(given_opts, GIT_REVERT_OPTS_VERSION, "git_revert_opts");
+
 	if ((error = git_repository__ensure_not_bare(repo, "revert")) < 0)
 		return error;
 

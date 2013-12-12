@@ -1575,6 +1575,8 @@ int git_merge_trees(
 
 	*out = NULL;
 
+	GITERR_CHECK_VERSION(given_opts, GIT_MERGE_TREE_OPTS_VERSION, "git_merge_tree_opts");
+
 	if ((error = merge_tree_normalize_opts(repo, &opts, given_opts)) < 0)
 		return error;
 
@@ -2426,6 +2428,8 @@ int git_merge(
 	assert(out && repo && their_heads);
 
 	*out = NULL;
+
+	GITERR_CHECK_VERSION(given_opts, GIT_MERGE_OPTS_VERSION, "git_merge_opts");
 
 	if (their_heads_len != 1) {
 		giterr_set(GITERR_MERGE, "Can only merge a single branch");
