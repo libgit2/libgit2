@@ -99,6 +99,11 @@ GIT_BEGIN_DECL
  *   files with unmerged index entries instead.  GIT_CHECKOUT_USE_OURS and
  *   GIT_CHECKOUT_USE_THEIRS to proceed with the checkout using either the
  *   stage 2 ("ours") or stage 3 ("theirs") version of files in the index.
+ *
+ * - GIT_CHECKOUT_DONT_OVERWRITE_IGNORED prevents ignored files from being
+ *   overwritten.  Normally, files that are ignored in the working directory
+ *   are not considered "precious" and may be overwritten if the checkout
+ *   target contains that file.
  */
 typedef enum {
 	GIT_CHECKOUT_NONE = 0, /** default is a dry run, no actual updates */
@@ -143,6 +148,9 @@ typedef enum {
 
 	/** Ignore directories in use, they will be left empty */
 	GIT_CHECKOUT_SKIP_LOCKED_DIRECTORIES = (1u << 18),
+
+	/** Don't overwrite ignored files that exist in the checkout target */
+	GIT_CHECKOUT_DONT_OVERWRITE_IGNORED = (1u << 19),
 
 	/**
 	 * THE FOLLOWING OPTIONS ARE NOT YET IMPLEMENTED

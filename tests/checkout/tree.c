@@ -235,6 +235,80 @@ void test_checkout_tree__can_remove_ignored(void)
 	cl_assert(!git_path_isfile("testrepo/ignored_file"));
 }
 
+static int checkout_tree_with_blob_ignored_in_workdir(int strategy)
+{
+	git_oid oid;
+	git_object *obj = NULL;
+	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
+	int ignored = 0, error;
+
+	assert_on_branch(g_repo, "master");
+
+	/* do first checkout with FORCE because we don't know if testrepo
+	 * base data is clean for a checkout or not
+	 */
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+
+	cl_git_pass(git_reference_name_to_id(&oid, g_repo, "refs/heads/dir"));
+	cl_git_pass(git_object_lookup(&obj, g_repo, &oid, GIT_OBJ_ANY));
+
+	cl_git_pass(git_checkout_tree(g_repo, obj, &opts));
+	cl_git_pass(git_repository_set_head(g_repo, "refs/heads/dir"));
+
+	cl_assert(git_path_isfile("testrepo/README"));
+	cl_assert(git_path_isfile("testrepo/branch_file.txt"));
+	cl_assert(git_path_isfile("testrepo/new.txt"));
+	cl_assert(git_path_isfile("testrepo/a/b.txt"));
+
+	cl_assert(!git_path_isdir("testrepo/ab"));
+
+	assert_on_branch(g_repo, "dir");
+
+	git_object_free(obj);
+
+	opts.checkout_strategy = strategy;
+
+	cl_must_pass(p_mkdir("testrepo/ab", 0777));
+	cl_git_mkfile("testrepo/ab/4.txt", "as you wish");
+
+	cl_git_pass(git_ignore_add_rule(g_repo, "ab/4.txt\n"));
+
+	cl_git_pass(git_ignore_path_is_ignored(&ignored, g_repo, "ab/4.txt"));
+	cl_assert_equal_i(1, ignored);
+
+	cl_assert(git_path_isfile("testrepo/ab/4.txt"));
+
+	cl_git_pass(git_reference_name_to_id(&oid, g_repo, "refs/heads/subtrees"));
+	cl_git_pass(git_object_lookup(&obj, g_repo, &oid, GIT_OBJ_ANY));
+
+	error = git_checkout_tree(g_repo, obj, &opts);
+
+	git_object_free(obj);
+
+	return error;
+}
+
+void test_checkout_tree__conflict_on_ignored_when_not_overwriting(void)
+{
+	int error;
+
+	cl_git_fail(error = checkout_tree_with_blob_ignored_in_workdir(
+		GIT_CHECKOUT_SAFE | GIT_CHECKOUT_DONT_OVERWRITE_IGNORED));
+
+	cl_assert_equal_i(GIT_EMERGECONFLICT, error);
+}
+
+void test_checkout_tree__can_overwrite_ignored_by_default(void)
+{
+	cl_git_pass(checkout_tree_with_blob_ignored_in_workdir(GIT_CHECKOUT_SAFE));
+
+	cl_git_pass(git_repository_set_head(g_repo, "refs/heads/subtrees"));
+
+	cl_assert(git_path_isfile("testrepo/ab/4.txt"));
+
+	assert_on_branch(g_repo, "subtrees");
+}
+
 void test_checkout_tree__can_update_only(void)
 {
 	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
