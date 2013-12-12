@@ -332,8 +332,10 @@ static int write_object(git_buf *buf, git_packbuilder *pb, git_pobject *po)
 		git_hash_update(&pb->ctx, data, size) < 0)
 		goto on_error;
 
-	if (po->delta_data)
+	if (po->delta_data) {
 		git__free(po->delta_data);
+		po->delta_data = NULL;
+	}
 
 	git_odb_object_free(obj);
 	git_buf_free(&zbuf);
@@ -612,6 +614,15 @@ static int write_pack(git_packbuilder *pb,
 	error = cb(entry_oid.id, GIT_OID_RAWSZ, data);
 
 done:
+	/* if callback cancelled writing, we must still free delta_data */
+	for ( ; i < pb->nr_objects; ++i) {
+		po = write_order[i];
+		if (po->delta_data) {
+			git__free(po->delta_data);
+			po->delta_data = NULL;
+		}
+	}
+
 	git__free(write_order);
 	git_buf_free(&buf);
 	return error;

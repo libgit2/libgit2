@@ -1148,7 +1148,7 @@ static int submodule_load_from_config(
 	 */
 
 	if (path)
-		return 0;
+		goto done;
 
 	/* copy other properties into submodule entry */
 	if (strcasecmp(property, "url") == 0) {

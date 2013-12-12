@@ -784,7 +784,7 @@ int git_path_iconv(git_path_iconv_t *ic, char **in, size_t *inlen)
 		return 0;
 
 	while (1) {
-		if (git_buf_grow(&ic->buf, wantlen) < 0)
+		if (git_buf_grow(&ic->buf, wantlen + 1) < 0)
 			return -1;
 
 		nfc    = ic->buf.ptr   + ic->buf.size;

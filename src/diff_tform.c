@@ -280,11 +280,8 @@ static int normalize_find_opts(
 		git_repository_config__weakptr(&cfg, diff->repo) < 0)
 		return -1;
 
-	if (given) {
+	if (given)
 		memcpy(opts, given, sizeof(*opts));
-	} else {
-		GIT_INIT_STRUCTURE(opts, GIT_DIFF_FIND_OPTIONS_VERSION);
-	}
 
 	if (!given ||
 		 (given->flags & GIT_DIFF_FIND_ALL) == GIT_DIFF_FIND_BY_CONFIG)
@@ -815,11 +812,11 @@ int git_diff_find_similar(
 	int error = 0, result;
 	uint16_t similarity;
 	git_diff_delta *src, *tgt;
-	git_diff_find_options opts;
+	git_diff_find_options opts = GIT_DIFF_FIND_OPTIONS_INIT;
 	size_t num_deltas, num_srcs = 0, num_tgts = 0;
 	size_t tried_srcs = 0, tried_tgts = 0;
 	size_t num_rewrites = 0, num_updates = 0, num_bumped = 0;
-	void **sigcache; /* cache of similarity metric file signatures */
+	void **sigcache = NULL; /* cache of similarity metric file signatures */
 	diff_find_match *tgt2src = NULL;
 	diff_find_match *src2tgt = NULL;
 	diff_find_match *tgt2src_copy = NULL;
@@ -829,15 +826,15 @@ int git_diff_find_similar(
 	if ((error = normalize_find_opts(diff, &opts, given_opts)) < 0)
 		return error;
 
-	/* No flags set; nothing to do */
-	if ((opts.flags & GIT_DIFF_FIND_ALL) == 0)
-		return 0;
-
 	num_deltas = diff->deltas.length;
 
 	/* TODO: maybe abort if deltas.length > rename_limit ??? */
 	if (!git__is_uint32(num_deltas))
-		return 0;
+		goto cleanup;
+
+	/* No flags set; nothing to do */
+	if ((opts.flags & GIT_DIFF_FIND_ALL) == 0)
+		goto cleanup;
 
 	sigcache = git__calloc(num_deltas * 2, sizeof(void *));
 	GITERR_CHECK_ALLOC(sigcache);
@@ -1112,11 +1109,13 @@ cleanup:
 	git__free(src2tgt);
 	git__free(tgt2src_copy);
 
-	for (t = 0; t < num_deltas * 2; ++t) {
-		if (sigcache[t] != NULL)
-			opts.metric->free_signature(sigcache[t], opts.metric->payload);
+	if (sigcache) {
+		for (t = 0; t < num_deltas * 2; ++t) {
+			if (sigcache[t] != NULL)
+				opts.metric->free_signature(sigcache[t], opts.metric->payload);
+		}
+		git__free(sigcache);
 	}
-	git__free(sigcache);
 
 	if (!given_opts || !given_opts->metric)
 		git__free(opts.metric);
