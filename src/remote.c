@@ -1138,7 +1138,7 @@ int git_remote_list(git_strarray *remotes_list, git_repository *repo)
 		cfg, "^remote\\..*\\.(push)?url$", remote_list_cb, &list);
 
 	if (error < 0) {
-		git_vector_free_all(&list);
+		git_vector_free_deep(&list);
 		return error;
 	}
 
@@ -1617,7 +1617,7 @@ static int copy_refspecs(git_strarray *array, git_remote *remote, unsigned int p
 	return 0;
 
 on_error:
-	git_vector_free_all(&refspecs);
+	git_vector_free_deep(&refspecs);
 
 	return -1;
 }

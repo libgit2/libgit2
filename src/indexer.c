@@ -1010,7 +1010,7 @@ void git_indexer_free(git_indexer *idx)
 	if (idx == NULL)
 		return;
 
-	git_vector_free_all(&idx->objects);
+	git_vector_free_deep(&idx->objects);
 
 	if (idx->pack) {
 		struct git_pack_entry *pentry;
@@ -1020,7 +1020,7 @@ void git_indexer_free(git_indexer *idx)
 		git_oidmap_free(idx->pack->idx_cache);
 	}
 
-	git_vector_free_all(&idx->deltas);
+	git_vector_free_deep(&idx->deltas);
 	git_packfile_free(idx->pack);
 	git_filebuf_cleanup(&idx->pack_file);
 	git__free(idx);

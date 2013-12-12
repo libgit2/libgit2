@@ -367,7 +367,7 @@ void git_status_list_free(git_status_list *status)
 	git_diff_free(status->head2idx);
 	git_diff_free(status->idx2wd);
 
-	git_vector_free_all(&status->paired);
+	git_vector_free_deep(&status->paired);
 
 	git__memzero(status, sizeof(*status));
 	git__free(status);

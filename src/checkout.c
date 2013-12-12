@@ -1765,7 +1765,7 @@ static void checkout_data_clear(checkout_data *data)
 	git_vector_free(&data->removes);
 	git_pool_clear(&data->pool);
 
-	git_vector_free_all(&data->conflicts);
+	git_vector_free_deep(&data->conflicts);
 
 	git__free(data->pfx);
 	data->pfx = NULL;

@@ -404,7 +404,7 @@ static void clear_parser_state(http_subtransport *t)
 	git__free(t->location);
 	t->location = NULL;
 
-	git_vector_free_all(&t->www_authenticate);
+	git_vector_free_deep(&t->www_authenticate);
 }
 
 static int write_chunk(gitno_socket *socket, const char *buffer, size_t len)

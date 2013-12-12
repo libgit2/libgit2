@@ -615,6 +615,8 @@ static git_futils_dirs_guess_cb git_futils__dir_guess[GIT_FUTILS_DIR__MAX] = {
 	git_futils_guess_template_dirs,
 };
 
+static int git_futils__dirs_shutdown_set = 0;
+
 void git_futils_dirs_global_shutdown(void)
 {
 	int i;
@@ -630,8 +632,6 @@ int git_futils_dirs_global_init(void)
 
 	for (i = 0; !error && i < GIT_FUTILS_DIR__MAX; i++)
 		error = git_futils_dirs_get(&path, i);
-
-	git__on_shutdown(git_futils_dirs_global_shutdown);
 
 	return error;
 }
@@ -652,9 +652,16 @@ int git_futils_dirs_get(const git_buf **out, git_futils_dir_t which)
 
 	GITERR_CHECK_ERROR(git_futils_check_selector(which));
 
-	if (!git_buf_len(&git_futils__dirs[which]))
+	if (!git_buf_len(&git_futils__dirs[which])) {
+		/* prepare shutdown if we're going to need it */
+		if (!git_futils__dirs_shutdown_set) {
+			git__on_shutdown(git_futils_dirs_global_shutdown);
+			git_futils__dirs_shutdown_set = 1;
+		}
+
 		GITERR_CHECK_ERROR(
 			git_futils__dir_guess[which](&git_futils__dirs[which]));
+	}
 
 	*out = &git_futils__dirs[which];
 	return 0;

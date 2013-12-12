@@ -77,7 +77,7 @@ void git_vector_free(git_vector *v)
 	v->_alloc_size = 0;
 }
 
-void git_vector_free_all(git_vector *v)
+void git_vector_free_deep(git_vector *v)
 {
 	size_t i;
 

@@ -476,7 +476,7 @@ static int diff_list_apply_options(
 
 static void diff_list_free(git_diff *diff)
 {
-	git_vector_free_all(&diff->deltas);
+	git_vector_free_deep(&diff->deltas);
 
 	git_pathspec__vfree(&diff->pathspec);
 	git_pool_clear(&diff->pool);

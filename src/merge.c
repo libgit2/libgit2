@@ -2383,7 +2383,7 @@ done:
         git_index_set_caps(index_repo, index_repo_caps);
 
 	git_index_free(index_repo);
-	git_vector_free_all(&paths);
+	git_vector_free_deep(&paths);
 
 	return error;
 }
