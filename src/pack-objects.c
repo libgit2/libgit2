@@ -7,7 +7,7 @@
 
 #include "pack-objects.h"
 
-#include "compress.h"
+#include "zstream.h"
 #include "delta.h"
 #include "iterator.h"
 #include "netops.h"
@@ -319,7 +319,7 @@ static int write_object(git_buf *buf, git_packbuilder *pb, git_pobject *po)
 	/* Write data */
 	if (po->z_delta_size)
 		size = po->z_delta_size;
-	else if (git__compress(&zbuf, data, size) < 0)
+	else if (git_zstream_deflatebuf(&zbuf, data, size) < 0)
 		goto on_error;
 	else {
 		if (po->delta)
@@ -931,7 +931,7 @@ static int find_deltas(git_packbuilder *pb, git_pobject **list,
 		 * between writes at that moment.
 		 */
 		if (po->delta_data) {
-			if (git__compress(&zbuf, po->delta_data, po->delta_size) < 0)
+			if (git_zstream_deflatebuf(&zbuf, po->delta_data, po->delta_size) < 0)
 				goto on_error;
 
 			git__free(po->delta_data);
