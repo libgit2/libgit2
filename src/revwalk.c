@@ -112,12 +112,13 @@ static int process_commit_parents(git_revwalk *walk, git_commit_list_node *commi
 
 static int push_commit(git_revwalk *walk, const git_oid *oid, int uninteresting)
 {
+	int error;
 	git_object *obj;
 	git_otype type;
 	git_commit_list_node *commit;
 
-	if (git_object_lookup(&obj, walk->repo, oid, GIT_OBJ_ANY) < 0)
-		return -1;
+	if ((error = git_object_lookup(&obj, walk->repo, oid, GIT_OBJ_ANY)) < 0)
+		return error;
 
 	type = git_object_type(obj);
 	git_object_free(obj);
@@ -173,7 +174,6 @@ struct push_cb_data {
 static int push_glob_cb(const char *refname, void *data_)
 {
 	struct push_cb_data *data = (struct push_cb_data *)data_;
-
 	return push_ref(data->walk, refname, data->hide);
 }
 
@@ -191,6 +191,8 @@ static int push_glob(git_revwalk *walk, const char *glob, int hide)
 		git_buf_joinpath(&buf, GIT_REFS_DIR, glob);
 	else
 		git_buf_puts(&buf, glob);
+	if (git_buf_oom(&buf))
+		return -1;
 
 	/* If no '?', '*' or '[' exist, we append '/ *' to the glob */
 	wildcard = strcspn(glob, "?*[");
@@ -200,11 +202,8 @@ static int push_glob(git_revwalk *walk, const char *glob, int hide)
 	data.walk = walk;
 	data.hide = hide;
 
-	if (git_buf_oom(&buf))
-		error = -1;
-	else
-		error = git_reference_foreach_glob(
-			walk->repo, git_buf_cstr(&buf), push_glob_cb, &data);
+	error = git_reference_foreach_glob(
+		walk->repo, git_buf_cstr(&buf), push_glob_cb, &data);
 
 	git_buf_free(&buf);
 	return error;

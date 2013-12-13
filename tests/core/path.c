@@ -350,15 +350,26 @@ void test_core_path__10_fromurl(void)
 
 typedef struct {
 	int expect_idx;
+	int cancel_after;
 	char **expect;
 } check_walkup_info;
+
+#define CANCEL_VALUE 1234
 
 static int check_one_walkup_step(void *ref, git_buf *path)
 {
 	check_walkup_info *info = (check_walkup_info *)ref;
+
+	if (!info->cancel_after) {
+		cl_assert_equal_s(info->expect[info->expect_idx], "[CANCEL]");
+		return CANCEL_VALUE;
+	}
+	info->cancel_after--;
+
 	cl_assert(info->expect[info->expect_idx] != NULL);
 	cl_assert_equal_s(info->expect[info->expect_idx], path->ptr);
 	info->expect_idx++;
+
 	return 0;
 }
 
@@ -381,6 +392,7 @@ void test_core_path__11_walkup(void)
 	check_walkup_info info;
 
 	info.expect = expect;
+	info.cancel_after = -1;
 
 	for (i = 0, j = 0; expect[i] != NULL; i++, j++) {
 
@@ -392,6 +404,42 @@ void test_core_path__11_walkup(void)
 		);
 
 		cl_assert_equal_s(p.ptr, expect[i]);
+
+		/* skip to next run of expectations */
+		while (expect[i] != NULL) i++;
+	}
+
+	git_buf_free(&p);
+}
+
+void test_core_path__11a_walkup_cancel(void)
+{
+	git_buf p = GIT_BUF_INIT;
+	int cancel[] = { 3, 2, 1, 0 };
+	char *expect[] = {
+		"/a/b/c/d/e/", "/a/b/c/d/", "/a/b/c/", "[CANCEL]", NULL,
+		"/a/b/c/d/e", "/a/b/c/d/", "[CANCEL]", NULL,
+		"/a/b/c/d/e", "[CANCEL]", NULL,
+		"[CANCEL]", NULL,
+		NULL
+	};
+	char *root[] = { NULL, NULL, "/", "", NULL };
+	int i, j;
+	check_walkup_info info;
+
+	info.expect = expect;
+
+	for (i = 0, j = 0; expect[i] != NULL; i++, j++) {
+
+		git_buf_sets(&p, expect[i]);
+
+		info.cancel_after = cancel[j];
+		info.expect_idx = i;
+
+		cl_assert_equal_i(
+			CANCEL_VALUE,
+			git_path_walk_up(&p, root[j], check_one_walkup_step, &info)
+		);
 
 		/* skip to next run of expectations */
 		while (expect[i] != NULL) i++;

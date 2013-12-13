@@ -52,7 +52,7 @@ typedef enum {
 	GIT_PACKBUILDER_ADDING_OBJECTS = 0,
 	GIT_PACKBUILDER_DELTAFICATION = 1,
 } git_packbuilder_stage_t;
-	
+
 /**
  * Initialize a new packbuilder
  *
@@ -143,6 +143,7 @@ GIT_EXTERN(int) git_packbuilder_write(
 GIT_EXTERN(const git_oid *) git_packbuilder_hash(git_packbuilder *pb);
 
 typedef int (*git_packbuilder_foreach_cb)(void *buf, size_t size, void *payload);
+
 /**
  * Create the new pack and pass each object to the callback
  *

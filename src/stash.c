@@ -440,7 +440,7 @@ static int is_dirty_cb(const char *path, unsigned int status, void *payload)
 	GIT_UNUSED(status);
 	GIT_UNUSED(payload);
 
-	return 1;
+	return GIT_PASSTHROUGH;
 }
 
 static int ensure_there_are_changes_to_stash(
@@ -463,7 +463,7 @@ static int ensure_there_are_changes_to_stash(
 
 	error = git_status_foreach_ext(repo, &opts, is_dirty_cb, NULL);
 
-	if (error == GIT_EUSER)
+	if (error == GIT_PASSTHROUGH)
 		return 0;
 
 	if (!error)
@@ -582,12 +582,14 @@ int git_stash_foreach(
 	for (i = 0; i < max; i++) {
 		entry = git_reflog_entry_byindex(reflog, i);
 
-		if (callback(i,
+		error = callback(i,
 			git_reflog_entry_message(entry),
 			git_reflog_entry_id_new(entry),
-			payload)) {
-				error = GIT_EUSER;
-				break;
+			payload);
+
+		if (error) {
+			giterr_set_after_callback(error);
+			break;
 		}
 	}
 

@@ -6,7 +6,7 @@
  */
 #include <git2/common.h>
 
-#ifndef GIT_WIN32
+#if !defined(GIT_WIN32) && !defined(NO_MMAP)
 
 #include "map.h"
 #include <sys/mman.h>

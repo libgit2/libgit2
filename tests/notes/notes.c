@@ -129,7 +129,7 @@ void test_notes_notes__can_cancel_foreach(void)
 	create_note(&note_oid4, "refs/notes/i-can-see-dead-notes", "4a202b346bb0fb0db7eff3cffeb3c70babbd2045", "I decorate 9fd7 and 4a20\n");
 
 	cl_assert_equal_i(
-		GIT_EUSER,
+		1,
 		git_note_foreach(_repo, "refs/notes/i-can-see-dead-notes",
 			note_cancel_cb, &retrieved_notes));
 }

@@ -303,3 +303,4 @@ void test_config_write__updating_a_locked_config_file_returns_ELOCKED(void)
 
 	git_config_free(cfg);
 }
+

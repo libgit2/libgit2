@@ -382,9 +382,6 @@ static int on_body_fill_buffer(http_parser *parser, const char *str, size_t len)
 
 static void clear_parser_state(http_subtransport *t)
 {
-	unsigned i;
-	char *entry;
-
 	http_parser_init(&t->parser, HTTP_RESPONSE);
 	gitno_buffer_setup(&t->socket,
 		&t->parse_buffer,
@@ -407,10 +404,7 @@ static void clear_parser_state(http_subtransport *t)
 	git__free(t->location);
 	t->location = NULL;
 
-	git_vector_foreach(&t->www_authenticate, i, entry)
-		git__free(entry);
-
-	git_vector_free(&t->www_authenticate);
+	git_vector_free_deep(&t->www_authenticate);
 }
 
 static int write_chunk(gitno_socket *socket, const char *buffer, size_t len)

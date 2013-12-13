@@ -310,20 +310,33 @@ typedef int (*git_reference_foreach_name_cb)(const char *name, void *payload);
  * Perform a callback on each reference in the repository.
  *
  * The `callback` function will be called for each reference in the
- * repository, receiving the name of the reference and the `payload` value
+ * repository, receiving the reference object and the `payload` value
  * passed to this method.  Returning a non-zero value from the callback
  * will terminate the iteration.
  *
  * @param repo Repository where to find the refs
  * @param callback Function which will be called for every listed ref
  * @param payload Additional data to pass to the callback
- * @return 0 on success, GIT_EUSER on non-zero callback, or error code
+ * @return 0 on success, non-zero callback return value, or error code
  */
 GIT_EXTERN(int) git_reference_foreach(
 	git_repository *repo,
 	git_reference_foreach_cb callback,
 	void *payload);
 
+/**
+ * Perform a callback on the fully-qualified name of each reference.
+ *
+ * The `callback` function will be called for each reference in the
+ * repository, receiving the name of the reference and the `payload` value
+ * passed to this method.  Returning a non-zero value from the callback
+ * will terminate the iteration.
+ *
+ * @param repo Repository where to find the refs
+ * @param callback Function which will be called for every listed ref name
+ * @param payload Additional data to pass to the callback
+ * @return 0 on success, non-zero callback return value, or error code
+ */
 GIT_EXTERN(int) git_reference_foreach_name(
 	git_repository *repo,
 	git_reference_foreach_name_cb callback,

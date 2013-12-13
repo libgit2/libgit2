@@ -89,12 +89,6 @@ char git_diff_status_char(git_delta_t status)
 	return code;
 }
 
-static int callback_error(void)
-{
-	giterr_clear();
-	return GIT_EUSER;
-}
-
 static int diff_print_one_name_only(
 	const git_diff_delta *delta, float progress, void *data)
 {
@@ -108,19 +102,16 @@ static int diff_print_one_name_only(
 		return 0;
 
 	git_buf_clear(out);
-
-	if (git_buf_puts(out, delta->new_file.path) < 0 ||
-		git_buf_putc(out, '\n'))
+	git_buf_puts(out, delta->new_file.path);
+	git_buf_putc(out, '\n');
+	if (git_buf_oom(out))
 		return -1;
 
 	pi->line.origin      = GIT_DIFF_LINE_FILE_HDR;
 	pi->line.content     = git_buf_cstr(out);
 	pi->line.content_len = git_buf_len(out);
 
-	if (pi->print_cb(delta, NULL, &pi->line, pi->payload))
-		return callback_error();
-
-	return 0;
+	return pi->print_cb(delta, NULL, &pi->line, pi->payload);
 }
 
 static int diff_print_one_name_status(
@@ -154,7 +145,6 @@ static int diff_print_one_name_status(
 		git_buf_printf(out, "%c\t%s%c\n", code, delta->old_file.path, old_suffix);
 	else
 		git_buf_printf(out, "%c\t%s\n", code, delta->old_file.path);
-
 	if (git_buf_oom(out))
 		return -1;
 
@@ -162,10 +152,7 @@ static int diff_print_one_name_status(
 	pi->line.content     = git_buf_cstr(out);
 	pi->line.content_len = git_buf_len(out);
 
-	if (pi->print_cb(delta, NULL, &pi->line, pi->payload))
-		return callback_error();
-
-	return 0;
+	return pi->print_cb(delta, NULL, &pi->line, pi->payload);
 }
 
 static int diff_print_one_raw(
@@ -208,10 +195,7 @@ static int diff_print_one_raw(
 	pi->line.content     = git_buf_cstr(out);
 	pi->line.content_len = git_buf_len(out);
 
-	if (pi->print_cb(delta, NULL, &pi->line, pi->payload))
-		return callback_error();
-
-	return 0;
+	return pi->print_cb(delta, NULL, &pi->line, pi->payload);
 }
 
 static int diff_print_oid_range(
@@ -238,10 +222,7 @@ static int diff_print_oid_range(
 		git_buf_printf(out, "index %s..%s\n", start_oid, end_oid);
 	}
 
-	if (git_buf_oom(out))
-		return -1;
-
-	return 0;
+	return git_buf_oom(out) ? -1 : 0;
 }
 
 static int diff_delta_format_with_paths(
@@ -285,8 +266,7 @@ int git_diff_delta__format_file_header(
 	git_buf_printf(out, "diff --git %s%s %s%s\n",
 		oldpfx, delta->old_file.path, newpfx, delta->new_file.path);
 
-	if (diff_print_oid_range(out, delta, oid_strlen) < 0)
-		return -1;
+	GITERR_CHECK_ERROR(diff_print_oid_range(out, delta, oid_strlen));
 
 	if ((delta->flags & GIT_DIFF_FLAG_BINARY) == 0)
 		diff_delta_format_with_paths(
@@ -298,6 +278,7 @@ int git_diff_delta__format_file_header(
 static int diff_print_patch_file(
 	const git_diff_delta *delta, float progress, void *data)
 {
+	int error;
 	diff_print_info *pi = data;
 	const char *oldpfx =
 		pi->diff ? pi->diff->opts.old_prefix : DIFF_OLD_PREFIX_DEFAULT;
@@ -313,36 +294,33 @@ static int diff_print_patch_file(
 		 (pi->flags & GIT_DIFF_SHOW_UNTRACKED_CONTENT) == 0))
 		return 0;
 
-	if (git_diff_delta__format_file_header(
-			pi->buf, delta, oldpfx, newpfx, pi->oid_strlen) < 0)
-		return -1;
+	if ((error = git_diff_delta__format_file_header(
+			pi->buf, delta, oldpfx, newpfx, pi->oid_strlen)) < 0)
+		return error;
 
 	pi->line.origin      = GIT_DIFF_LINE_FILE_HDR;
 	pi->line.content     = git_buf_cstr(pi->buf);
 	pi->line.content_len = git_buf_len(pi->buf);
 
-	if (pi->print_cb(delta, NULL, &pi->line, pi->payload))
-		return callback_error();
+	if ((error = pi->print_cb(delta, NULL, &pi->line, pi->payload)) != 0)
+		return error;
 
 	if ((delta->flags & GIT_DIFF_FLAG_BINARY) == 0)
 		return 0;
 
 	git_buf_clear(pi->buf);
 
-	if (diff_delta_format_with_paths(
+	if ((error = diff_delta_format_with_paths(
 			pi->buf, delta, oldpfx, newpfx,
-			"Binary files %s%s and %s%s differ\n") < 0)
-		return -1;
+			"Binary files %s%s and %s%s differ\n")) < 0)
+		return error;
 
 	pi->line.origin      = GIT_DIFF_LINE_BINARY;
 	pi->line.content     = git_buf_cstr(pi->buf);
 	pi->line.content_len = git_buf_len(pi->buf);
 	pi->line.num_lines   = 1;
 
-	if (pi->print_cb(delta, NULL, &pi->line, pi->payload))
-		return callback_error();
-
-	return 0;
+	return pi->print_cb(delta, NULL, &pi->line, pi->payload);
 }
 
 static int diff_print_patch_hunk(
@@ -359,10 +337,7 @@ static int diff_print_patch_hunk(
 	pi->line.content     = h->header;
 	pi->line.content_len = h->header_len;
 
-	if (pi->print_cb(d, h, &pi->line, pi->payload))
-		return callback_error();
-
-	return 0;
+	return pi->print_cb(d, h, &pi->line, pi->payload);
 }
 
 static int diff_print_patch_line(
@@ -376,10 +351,7 @@ static int diff_print_patch_line(
 	if (S_ISDIR(delta->new_file.mode))
 		return 0;
 
-	if (pi->print_cb(delta, hunk, line, pi->payload))
-		return callback_error();
-
-	return 0;
+	return pi->print_cb(delta, hunk, line, pi->payload);
 }
 
 /* print a git_diff to an output callback */
@@ -421,8 +393,13 @@ int git_diff_print(
 
 	if (!(error = diff_print_info_init(
 			&pi, &buf, diff, format, print_cb, payload)))
+	{
 		error = git_diff_foreach(
 			diff, print_file, print_hunk, print_line, &pi);
+
+		if (error) /* make sure error message is set */
+			giterr_set_after_callback_function(error, "git_diff_print");
+	}
 
 	git_buf_free(&buf);
 
@@ -444,9 +421,14 @@ int git_patch_print(
 	if (!(error = diff_print_info_init(
 			&pi, &temp, git_patch__diff(patch),
 			GIT_DIFF_FORMAT_PATCH, print_cb, payload)))
+	{
 		error = git_patch__invoke_callbacks(
 			patch, diff_print_patch_file, diff_print_patch_hunk,
 			diff_print_patch_line, &pi);
+
+		if (error) /* make sure error message is set */
+			giterr_set_after_callback_function(error, "git_patch_print");
+	}
 
 	git_buf_free(&temp);
 
@@ -478,15 +460,12 @@ int git_patch_to_str(
 	int error;
 	git_buf output = GIT_BUF_INIT;
 
-	error = git_patch_print(patch, diff_print_to_buffer_cb, &output);
-
-	/* GIT_EUSER means git_buf_put in print_to_buffer_cb returned -1,
-	 * meaning a memory allocation failure, so just map to -1...
-	 */
-	if (error == GIT_EUSER)
-		error = -1;
-
-	*string = git_buf_detach(&output);
+	if (!(error = git_patch_print(patch, diff_print_to_buffer_cb, &output)))
+		*string = git_buf_detach(&output);
+	else {
+		git_buf_free(&output);
+		*string = NULL;
+	}
 
 	return error;
 }

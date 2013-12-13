@@ -207,6 +207,7 @@ static void verify_tracking_branches(git_remote *remote, expected_ref expected_r
 	}
 
 	cl_assert_equal_i(error, GIT_ITEROVER);
+	git_branch_iterator_free(iter);
 
 	/* Loop through expected refs, make sure they exist */
 	for (i = 0; i < expected_refs_len; i++) {
@@ -371,19 +372,25 @@ void test_online_push__cleanup(void)
 	cl_git_sandbox_cleanup();
 }
 
-static int push_pack_progress_cb(int stage, unsigned int current, unsigned int total, void* payload)
+static int push_pack_progress_cb(
+	int stage, unsigned int current, unsigned int total, void* payload)
 {
-	int *was_called = (int *) payload;
+	int *calls = (int *)payload;
 	GIT_UNUSED(stage); GIT_UNUSED(current); GIT_UNUSED(total);
-	*was_called = 1;
+	if (*calls < 0)
+		return *calls;
+	(*calls)++;
 	return 0;
 }
 
-static int push_transfer_progress_cb(unsigned int current, unsigned int total, size_t bytes, void* payload)
+static int push_transfer_progress_cb(
+	unsigned int current, unsigned int total, size_t bytes, void* payload)
 {
-	int *was_called = (int *) payload;
+	int *calls = (int *)payload;
 	GIT_UNUSED(current); GIT_UNUSED(total); GIT_UNUSED(bytes);
-	*was_called = 1;
+	if (*calls < 0)
+		return *calls;
+	(*calls)++;
 	return 0;
 }
 
@@ -397,15 +404,16 @@ static int push_transfer_progress_cb(unsigned int current, unsigned int total, s
  * @param expected_ret expected return value from git_push_finish()
  * @param check_progress_cb Check that the push progress callbacks are called
  */
-static void do_push(const char *refspecs[], size_t refspecs_len,
+static void do_push(
+	const char *refspecs[], size_t refspecs_len,
 	push_status expected_statuses[], size_t expected_statuses_len,
-	expected_ref expected_refs[], size_t expected_refs_len, int expected_ret, int check_progress_cb)
+	expected_ref expected_refs[], size_t expected_refs_len,
+	int expected_ret, int check_progress_cb)
 {
 	git_push *push;
 	git_push_options opts = GIT_PUSH_OPTIONS_INIT;
 	size_t i;
-	int ret;
-	int pack_progress_called = 0, transfer_progress_called = 0;
+	int pack_progress_calls = 0, transfer_progress_calls = 0;
 
 	if (_remote) {
 		/* Auto-detect the number of threads to use */
@@ -416,29 +424,34 @@ static void do_push(const char *refspecs[], size_t refspecs_len,
 		cl_git_pass(git_push_new(&push, _remote));
 		cl_git_pass(git_push_set_options(push, &opts));
 
-		if (check_progress_cb)
-			cl_git_pass(git_push_set_callbacks(push, push_pack_progress_cb, &pack_progress_called, push_transfer_progress_cb, &transfer_progress_called));
+		if (check_progress_cb) {
+			/* if EUSER, then abort in transfer */
+			if (expected_ret == GIT_EUSER)
+				transfer_progress_calls = GIT_EUSER;
+
+			cl_git_pass(
+				git_push_set_callbacks(
+					push, push_pack_progress_cb, &pack_progress_calls,
+					push_transfer_progress_cb, &transfer_progress_calls));
+		}
 
 		for (i = 0; i < refspecs_len; i++)
 			cl_git_pass(git_push_add_refspec(push, refspecs[i]));
 
 		if (expected_ret < 0) {
-			cl_git_fail(ret = git_push_finish(push));
+			cl_git_fail_with(git_push_finish(push), expected_ret);
 			cl_assert_equal_i(0, git_push_unpack_ok(push));
-		}
-		else {
-			cl_git_pass(ret = git_push_finish(push));
+		} else {
+			cl_git_pass(git_push_finish(push));
 			cl_assert_equal_i(1, git_push_unpack_ok(push));
 		}
 
-		if (check_progress_cb) {
-			cl_assert_equal_i(1, pack_progress_called);
-			cl_assert_equal_i(1, transfer_progress_called);
+		if (check_progress_cb && !expected_ret) {
+			cl_assert(pack_progress_calls > 0);
+			cl_assert(transfer_progress_calls > 0);
 		}
 
 		do_verify_push_status(push, expected_statuses, expected_statuses_len);
-
-		cl_assert_equal_i(expected_ret, ret);
 
 		verify_refs(_remote, expected_refs, expected_refs_len);
 
@@ -505,6 +518,12 @@ void test_online_push__b5(void)
 	do_push(specs, ARRAY_SIZE(specs),
 		exp_stats, ARRAY_SIZE(exp_stats),
 		exp_refs, ARRAY_SIZE(exp_refs), 0, 1);
+}
+
+void test_online_push__b5_cancel(void)
+{
+	const char *specs[] = { "refs/heads/b5:refs/heads/b5" };
+	do_push(specs, ARRAY_SIZE(specs), NULL, 0, NULL, 0, GIT_EUSER, 1);
 }
 
 void test_online_push__multi(void)
@@ -731,7 +750,7 @@ void test_online_push__bad_refspecs(void)
 	git_push *push;
 
 	if (_remote) {
-//		cl_git_pass(git_remote_connect(_remote, GIT_DIRECTION_PUSH));
+/*		cl_git_pass(git_remote_connect(_remote, GIT_DIRECTION_PUSH)); */
 		cl_git_pass(git_push_new(&push, _remote));
 
 		/* Unexpanded branch names not supported */

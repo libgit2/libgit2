@@ -13,6 +13,7 @@
 #include "hashsig.h"
 #include "path.h"
 #include "fileops.h"
+#include "config.h"
 
 static git_diff_delta *diff_delta__dup(
 	const git_diff_delta *d, git_pool *pool)
@@ -208,9 +209,7 @@ int git_diff_merge(git_diff *onto, const git_diff *from)
 			git_pool_strdup_safe(&onto->pool, onto->opts.new_prefix);
 	}
 
-	git_vector_foreach(&onto_new, i, delta)
-		git__free(delta);
-	git_vector_free(&onto_new);
+	git_vector_free_deep(&onto_new);
 	git_pool_clear(&onto_pool);
 
 	return error;
@@ -281,28 +280,22 @@ static int normalize_find_opts(
 		git_repository_config__weakptr(&cfg, diff->repo) < 0)
 		return -1;
 
-	if (given) {
+	if (given)
 		memcpy(opts, given, sizeof(*opts));
-	} else {
-		GIT_INIT_STRUCTURE(opts, GIT_DIFF_FIND_OPTIONS_VERSION);
-	}
 
 	if (!given ||
 		 (given->flags & GIT_DIFF_FIND_ALL) == GIT_DIFF_FIND_BY_CONFIG)
 	{
-		const char *val = NULL;
+		const char *rule =
+			git_config__get_string_force(cfg, "diff.renames", "true");
+		int boolval;
 
-		if (git_config_get_string(&val, cfg, "diff.renames") < 0)
-			giterr_clear();
-		else if (val) {
-			int boolval;
-			if (!git__parse_bool(&boolval, val) && !boolval) {
-				/* do nothing */
-			} else if (!strcasecmp(val, "copies") || !strcasecmp(val, "copy"))
-				opts->flags |= (GIT_DIFF_FIND_RENAMES | GIT_DIFF_FIND_COPIES);
-			else
-				opts->flags |= GIT_DIFF_FIND_RENAMES;
-		}
+		if (!git__parse_bool(&boolval, rule) && !boolval)
+			/* don't set FIND_RENAMES if bool value is false */;
+		else if (!strcasecmp(rule, "copies") || !strcasecmp(rule, "copy"))
+			opts->flags |= GIT_DIFF_FIND_RENAMES | GIT_DIFF_FIND_COPIES;
+		else
+			opts->flags |= GIT_DIFF_FIND_RENAMES;
 	}
 
 	/* some flags imply others */
@@ -343,14 +336,11 @@ static int normalize_find_opts(
 #undef USE_DEFAULT
 
 	if (!opts->rename_limit) {
-		int32_t limit = 0;
+		opts->rename_limit = git_config__get_int_force(
+			cfg, "diff.renamelimit", DEFAULT_RENAME_LIMIT);
 
-		opts->rename_limit = DEFAULT_RENAME_LIMIT;
-
-		if (git_config_get_int32(&limit, cfg, "diff.renameLimit") < 0)
-			giterr_clear();
-		else if (limit > 0)
-			opts->rename_limit = limit;
+		if (opts->rename_limit <= 0)
+			opts->rename_limit = DEFAULT_RENAME_LIMIT;
 	}
 
 	/* assign the internal metric with whitespace flag as payload */
@@ -450,9 +440,7 @@ static int apply_splits_and_deletes(
 	return 0;
 
 on_error:
-	git_vector_foreach(&onto, i, delta)
-		git__free(delta);
-	git_vector_free(&onto);
+	git_vector_free_deep(&onto);
 
 	return -1;
 }
@@ -824,11 +812,11 @@ int git_diff_find_similar(
 	int error = 0, result;
 	uint16_t similarity;
 	git_diff_delta *src, *tgt;
-	git_diff_find_options opts;
+	git_diff_find_options opts = GIT_DIFF_FIND_OPTIONS_INIT;
 	size_t num_deltas, num_srcs = 0, num_tgts = 0;
 	size_t tried_srcs = 0, tried_tgts = 0;
 	size_t num_rewrites = 0, num_updates = 0, num_bumped = 0;
-	void **sigcache; /* cache of similarity metric file signatures */
+	void **sigcache = NULL; /* cache of similarity metric file signatures */
 	diff_find_match *tgt2src = NULL;
 	diff_find_match *src2tgt = NULL;
 	diff_find_match *tgt2src_copy = NULL;
@@ -838,15 +826,15 @@ int git_diff_find_similar(
 	if ((error = normalize_find_opts(diff, &opts, given_opts)) < 0)
 		return error;
 
-	/* No flags set; nothing to do */
-	if ((opts.flags & GIT_DIFF_FIND_ALL) == 0)
-		return 0;
-
 	num_deltas = diff->deltas.length;
 
 	/* TODO: maybe abort if deltas.length > rename_limit ??? */
 	if (!git__is_uint32(num_deltas))
-		return 0;
+		goto cleanup;
+
+	/* No flags set; nothing to do */
+	if ((opts.flags & GIT_DIFF_FIND_ALL) == 0)
+		goto cleanup;
 
 	sigcache = git__calloc(num_deltas * 2, sizeof(void *));
 	GITERR_CHECK_ALLOC(sigcache);
@@ -1121,11 +1109,13 @@ cleanup:
 	git__free(src2tgt);
 	git__free(tgt2src_copy);
 
-	for (t = 0; t < num_deltas * 2; ++t) {
-		if (sigcache[t] != NULL)
-			opts.metric->free_signature(sigcache[t], opts.metric->payload);
+	if (sigcache) {
+		for (t = 0; t < num_deltas * 2; ++t) {
+			if (sigcache[t] != NULL)
+				opts.metric->free_signature(sigcache[t], opts.metric->payload);
+		}
+		git__free(sigcache);
 	}
-	git__free(sigcache);
 
 	if (!given_opts || !given_opts->metric)
 		git__free(opts.metric);

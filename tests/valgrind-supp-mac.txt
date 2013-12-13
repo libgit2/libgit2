@@ -103,14 +103,6 @@
 	fun:ssl23_connect
 }
 {
-	mac-ssl-uninitialized-4
-	Memcheck:Param
-	...
-	obj:/usr/lib/libcrypto.0.9.8.dylib
-	...
-	fun:ssl23_connect
-}
-{
 	mac-ssl-leak-1
 	Memcheck:Leak
 	...

@@ -541,10 +541,7 @@ static int queue_objects(git_push *push)
 	error = 0;
 
 on_error:
-	git_vector_foreach(&commits, i, oid)
-		git__free(oid);
-
-	git_vector_free(&commits);
+	git_vector_free_deep(&commits);
 	return error;
 }
 
@@ -662,8 +659,9 @@ int git_push_status_foreach(git_push *push,
 	unsigned int i;
 
 	git_vector_foreach(&push->status, i, status) {
-		if (cb(status->ref, status->msg, data) < 0)
-			return GIT_EUSER;
+		int error = cb(status->ref, status->msg, data);
+		if (error)
+			return giterr_set_after_callback(error);
 	}
 
 	return 0;

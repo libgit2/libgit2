@@ -129,7 +129,7 @@ static int cancel_at_half(const git_transfer_progress *stats, void *payload)
 	GIT_UNUSED(payload);
 
 	if (stats->received_objects > (stats->total_objects/2))
-		return -1;
+		return -4321;
 	return 0;
 }
 
@@ -147,7 +147,7 @@ void test_online_fetch__can_cancel(void)
 	git_remote_set_callbacks(remote, &callbacks);
 
 	cl_git_pass(git_remote_connect(remote, GIT_DIRECTION_FETCH));
-	cl_git_fail_with(git_remote_download(remote), GIT_EUSER);
+	cl_git_fail_with(git_remote_download(remote), -4321);
 	git_remote_disconnect(remote);
 	git_remote_free(remote);
 }

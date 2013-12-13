@@ -168,9 +168,8 @@ int git_submodule_foreach(
 				break;
 		}
 
-		if (callback(sm, sm->name, payload)) {
-			giterr_clear();
-			error = GIT_EUSER;
+		if ((error = callback(sm, sm->name, payload)) != 0) {
+			giterr_set_after_callback(error);
 			break;
 		}
 	});
@@ -825,17 +824,14 @@ int git_submodule_reload(git_submodule *submodule)
 	assert(submodule);
 
 	/* refresh index data */
-
-	if (submodule_update_index(submodule) < 0)
-		return -1;
+	if ((error = submodule_update_index(submodule)) < 0)
+		return error;
 
 	/* refresh HEAD tree data */
-
-	if (submodule_update_head(submodule) < 0)
-		return -1;
+	if ((error = submodule_update_head(submodule)) < 0)
+		return error;
 
 	/* refresh config data */
-
 	mods = open_gitmodules(submodule->repo, false, NULL);
 	if (mods != NULL) {
 		git_buf path = GIT_BUF_INIT;
@@ -852,19 +848,17 @@ int git_submodule_reload(git_submodule *submodule)
 
 		git_buf_free(&path);
 		git_config_file_free(mods);
+
+		if (error < 0)
+			return error;
 	}
 
-	if (error < 0)
-		return error;
-
 	/* refresh wd data */
-
 	submodule->flags = submodule->flags &
 		~(GIT_SUBMODULE_STATUS_IN_WD | GIT_SUBMODULE_STATUS__WD_OID_VALID);
 
-	error = submodule_load_from_wd_lite(submodule, submodule->path, NULL);
-
-	return error;
+	return submodule_load_from_wd_lite(
+		submodule, submodule->path, submodule->repo);
 }
 
 static void submodule_copy_oid_maybe(
@@ -1087,15 +1081,14 @@ int git_submodule_parse_update(git_submodule_update_t *out, const char *value)
 }
 
 static int submodule_load_from_config(
-	const git_config_entry *entry, void *data)
+	const git_config_entry *entry, void *payload)
 {
-	git_repository *repo = data;
+	git_repository *repo = payload;
 	git_strmap *smcfg = repo->submodules;
 	const char *namestart, *property, *alternate = NULL;
-	const char *key = entry->name, *value = entry->value;
+	const char *key = entry->name, *value = entry->value, *path;
 	git_buf name = GIT_BUF_INIT;
 	git_submodule *sm;
-	bool is_path;
 	int error = 0;
 
 	if (git__prefixcmp(key, "submodule.") != 0)
@@ -1108,15 +1101,11 @@ static int submodule_load_from_config(
 		return 0;
 
 	property++;
-	is_path = (strcasecmp(property, "path") == 0);
+	path = !strcasecmp(property, "path") ? value : NULL;
 
-	if (git_buf_set(&name, namestart, property - namestart - 1) < 0)
-		return -1;
-
-	if (submodule_get(&sm, repo, name.ptr, is_path ? value : NULL) < 0) {
-		git_buf_free(&name);
-		return -1;
-	}
+	if ((error = git_buf_set(&name, namestart, property - namestart - 1)) < 0 ||
+		(error = submodule_get(&sm, repo, name.ptr, path)) < 0)
+		goto done;
 
 	sm->flags |= GIT_SUBMODULE_STATUS_IN_CONFIG;
 
@@ -1130,15 +1119,20 @@ static int submodule_load_from_config(
 
 	if (strcmp(sm->name, name.ptr) != 0) {
 		alternate = sm->name = git_buf_detach(&name);
-	} else if (is_path && value && strcmp(sm->path, value) != 0) {
+	} else if (path && strcmp(path, sm->path) != 0) {
 		alternate = sm->path = git__strdup(value);
-		if (!sm->path)
+		if (!sm->path) {
 			error = -1;
+			goto done;
+		}
 	}
+
 	if (alternate) {
 		void *old_sm = NULL;
 		git_strmap_insert2(smcfg, alternate, sm, old_sm, error);
 
+		if (error < 0)
+			goto done;
 		if (error >= 0)
 			GIT_REFCOUNT_INC(sm); /* inserted under a new key */
 
@@ -1149,42 +1143,44 @@ static int submodule_load_from_config(
 		}
 	}
 
-	git_buf_free(&name);
-	if (error < 0)
-		return error;
-
 	/* TODO: Look up path in index and if it is present but not a GITLINK
 	 * then this should be deleted (at least to match git's behavior)
 	 */
 
-	if (is_path)
-		return 0;
+	if (path)
+		goto done;
 
 	/* copy other properties into submodule entry */
 	if (strcasecmp(property, "url") == 0) {
 		git__free(sm->url);
 		sm->url = NULL;
 
-		if (value != NULL && (sm->url = git__strdup(value)) == NULL)
-			return -1;
+		if (value != NULL && (sm->url = git__strdup(value)) == NULL) {
+			error = -1;
+			goto done;
+		}
 	}
 	else if (strcasecmp(property, "update") == 0) {
-		if (git_submodule_parse_update(&sm->update, value) < 0)
-			return -1;
+		if ((error = git_submodule_parse_update(&sm->update, value)) < 0)
+			goto done;
 		sm->update_default = sm->update;
 	}
 	else if (strcasecmp(property, "fetchRecurseSubmodules") == 0) {
-		if (git__parse_bool(&sm->fetch_recurse, value) < 0)
-			return submodule_config_error("fetchRecurseSubmodules", value);
+		if (git__parse_bool(&sm->fetch_recurse, value) < 0) {
+			error = submodule_config_error("fetchRecurseSubmodules", value);
+			goto done;
+		}
 	}
 	else if (strcasecmp(property, "ignore") == 0) {
-		if (git_submodule_parse_ignore(&sm->ignore, value) < 0)
-			return -1;
+		if ((error = git_submodule_parse_ignore(&sm->ignore, value)) < 0)
+			goto done;
 		sm->ignore_default = sm->ignore;
 	}
 	/* ignore other unknown submodule properties */
 
-	return 0;
+done:
+	git_buf_free(&name);
+	return error;
 }
 
 static int submodule_load_from_wd_lite(
@@ -1192,8 +1188,7 @@ static int submodule_load_from_wd_lite(
 {
 	git_buf path = GIT_BUF_INIT;
 
-	GIT_UNUSED(name);
-	GIT_UNUSED(payload);
+	GIT_UNUSED(name); GIT_UNUSED(payload);
 
 	if (git_repository_is_bare(sm->repo))
 		return 0;
@@ -1208,7 +1203,6 @@ static int submodule_load_from_wd_lite(
 		sm->flags |= GIT_SUBMODULE_STATUS_IN_WD;
 
 	git_buf_free(&path);
-
 	return 0;
 }
 
@@ -1342,7 +1336,6 @@ static int load_submodule_config(git_repository *repo)
 {
 	int error;
 	git_oid gitmodules_oid;
-	git_buf path = GIT_BUF_INIT;
 	git_config_backend *mods = NULL;
 
 	if (repo->submodules)
@@ -1370,10 +1363,9 @@ static int load_submodule_config(git_repository *repo)
 
 	/* add submodule information from .gitmodules */
 
-	if ((mods = open_gitmodules(repo, false, &gitmodules_oid)) != NULL)
-		error = git_config_file_foreach(mods, submodule_load_from_config, repo);
-
-	if (error != 0)
+	if ((mods = open_gitmodules(repo, false, &gitmodules_oid)) != NULL &&
+		(error = git_config_file_foreach(
+			mods, submodule_load_from_config, repo)) < 0)
 		goto cleanup;
 
 	/* shallow scan submodules in work tree */
@@ -1382,8 +1374,6 @@ static int load_submodule_config(git_repository *repo)
 		error = git_submodule_foreach(repo, submodule_load_from_wd_lite, NULL);
 
 cleanup:
-	git_buf_free(&path);
-
 	if (mods != NULL)
 		git_config_file_free(mods);
 
@@ -1468,7 +1458,7 @@ static int submodule_update_config(
 	int error;
 	git_config *config;
 	git_buf key = GIT_BUF_INIT;
-	const char *old = NULL;
+	const git_config_entry *ce = NULL;
 
 	assert(submodule);
 
@@ -1480,14 +1470,16 @@ static int submodule_update_config(
 	if (error < 0)
 		goto cleanup;
 
-	if (git_config_get_string(&old, config, key.ptr) < 0)
-		giterr_clear();
+	if ((error = git_config__lookup_entry(&ce, config, key.ptr, false)) < 0)
+		goto cleanup;
 
-	if (!old && only_existing)
+	if (!ce && only_existing)
 		goto cleanup;
-	if (old && !overwrite)
+	if (ce && !overwrite)
 		goto cleanup;
-	if ((!old && !value) || (old && value && strcmp(old, value) == 0))
+	if (value && ce && ce->value && !strcmp(ce->value, value))
+		goto cleanup;
+	if (!value && (!ce || !ce->value))
 		goto cleanup;
 
 	if (!value)

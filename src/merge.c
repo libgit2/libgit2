@@ -26,6 +26,7 @@
 #include "oid.h"
 #include "index.h"
 #include "filebuf.h"
+#include "config.h"
 
 #include "git2/types.h"
 #include "git2/repository.h"
@@ -253,7 +254,8 @@ int git_merge__bases_many(git_commit_list **out, git_revwalk *walk, git_commit_l
 	return 0;
 }
 
-int git_repository_mergehead_foreach(git_repository *repo,
+int git_repository_mergehead_foreach(
+	git_repository *repo,
 	git_repository_mergehead_foreach_cb cb,
 	void *payload)
 {
@@ -285,8 +287,8 @@ int git_repository_mergehead_foreach(git_repository *repo,
 		if ((error = git_oid_fromstr(&oid, line)) < 0)
 			goto cleanup;
 
-		if (cb(&oid, payload) != 0) {
-			error = GIT_EUSER;
+		if ((error = cb(&oid, payload)) != 0) {
+			giterr_set_after_callback(error);
 			goto cleanup;
 		}
 
@@ -1396,19 +1398,13 @@ static int merge_tree_normalize_opts(
 	}
 
 	if (!opts->target_limit) {
-		int32_t limit = 0;
+		int limit = git_config__get_int_force(cfg, "merge.renamelimit", 0);
 
-		opts->target_limit = GIT_MERGE_TREE_TARGET_LIMIT;
+		if (!limit)
+			limit = git_config__get_int_force(cfg, "diff.renamelimit", 0);
 
-		if (git_config_get_int32(&limit, cfg, "merge.renameLimit") < 0) {
-			giterr_clear();
-
-			if (git_config_get_int32(&limit, cfg, "diff.renameLimit") < 0)
-				giterr_clear();
-		}
-
-		if (limit > 0)
-			opts->target_limit = limit;
+		opts->target_limit = (limit <= 0) ?
+			GIT_MERGE_TREE_TARGET_LIMIT : (unsigned int)limit;
 	}
 
 	/* assign the internal metric with whitespace flag as payload */
@@ -2389,11 +2385,7 @@ done:
         git_index_set_caps(index_repo, index_repo_caps);
 
 	git_index_free(index_repo);
-
-	git_vector_foreach(&paths, i, path)
-		git__free(path);
-
-	git_vector_free(&paths);
+	git_vector_free_deep(&paths);
 
 	return error;
 }

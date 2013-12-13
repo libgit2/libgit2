@@ -503,14 +503,18 @@ typedef int (*git_repository_fetchhead_foreach_cb)(const char *ref_name,
 	void *payload);
 
 /**
- * Call callback 'callback' for each entry in the given FETCH_HEAD file.
+ * Invoke 'callback' for each entry in the given FETCH_HEAD file.
+ *
+ * Return a non-zero value from the callback to stop the loop.
  *
  * @param repo A repository object
  * @param callback Callback function
  * @param payload Pointer to callback data (optional)
- * @return 0 on success, GIT_ENOTFOUND, GIT_EUSER or error
+ * @return 0 on success, non-zero callback return value, GIT_ENOTFOUND if
+ *         there is no FETCH_HEAD file, or other error code.
  */
-GIT_EXTERN(int) git_repository_fetchhead_foreach(git_repository *repo,
+GIT_EXTERN(int) git_repository_fetchhead_foreach(
+	git_repository *repo,
 	git_repository_fetchhead_foreach_cb callback,
 	void *payload);
 
@@ -518,15 +522,19 @@ typedef int (*git_repository_mergehead_foreach_cb)(const git_oid *oid,
 	void *payload);
 
 /**
- * If a merge is in progress, call callback 'cb' for each commit ID in the
+ * If a merge is in progress, invoke 'callback' for each commit ID in the
  * MERGE_HEAD file.
+ *
+ * Return a non-zero value from the callback to stop the loop.
  *
  * @param repo A repository object
  * @param callback Callback function
  * @param payload Pointer to callback data (optional)
- * @return 0 on success, GIT_ENOTFOUND, GIT_EUSER or error
+ * @return 0 on success, non-zero callback return value, GIT_ENOTFOUND if
+ *         there is no MERGE_HEAD file, or other error code.
  */
-GIT_EXTERN(int) git_repository_mergehead_foreach(git_repository *repo,
+GIT_EXTERN(int) git_repository_mergehead_foreach(
+	git_repository *repo,
 	git_repository_mergehead_foreach_cb callback,
 	void *payload);
 

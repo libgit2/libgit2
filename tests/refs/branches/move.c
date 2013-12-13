@@ -66,12 +66,54 @@ void test_refs_branches_move__can_move_a_local_branch_to_a_partially_colliding_n
 void test_refs_branches_move__can_not_move_a_branch_if_its_destination_name_collide_with_an_existing_one(void)
 {
 	git_reference *original_ref, *new_ref;
+	git_config *config;
+	const git_config_entry *ce;
+	char *original_remote, *original_merge;
+
+	cl_git_pass(git_repository_config(&config, repo));
+
+	cl_git_pass(git_config_get_entry(&ce, config, "branch.master.remote"));
+	original_remote = strdup(ce->value);
+	cl_git_pass(git_config_get_entry(&ce, config, "branch.master.merge"));
+	original_merge  = strdup(ce->value);
+
 
 	cl_git_pass(git_reference_lookup(&original_ref, repo, "refs/heads/br2"));
 
-	cl_assert_equal_i(GIT_EEXISTS, git_branch_move(&new_ref, original_ref, "master", 0));
+	cl_assert_equal_i(GIT_EEXISTS,
+		git_branch_move(&new_ref, original_ref, "master", 0));
+
+	cl_assert(giterr_last()->message != NULL);
+	cl_git_pass(git_config_get_entry(&ce, config, "branch.master.remote"));
+	cl_assert_equal_s(original_remote, ce->value);
+	cl_git_pass(git_config_get_entry(&ce, config, "branch.master.merge"));
+	cl_assert_equal_s(original_merge,  ce->value);
+
+
+	cl_assert_equal_i(GIT_EEXISTS,
+		git_branch_move(&new_ref, original_ref, "cannot-fetch", 0));
+
+	cl_assert(giterr_last()->message != NULL);
+	cl_git_pass(git_config_get_entry(&ce, config, "branch.master.remote"));
+	cl_assert_equal_s(original_remote, ce->value);
+	cl_git_pass(git_config_get_entry(&ce, config, "branch.master.merge"));
+	cl_assert_equal_s(original_merge,  ce->value);
 
 	git_reference_free(original_ref);
+	cl_git_pass(git_reference_lookup(&original_ref, repo, "refs/heads/track-local"));
+
+	cl_assert_equal_i(GIT_EEXISTS,
+		git_branch_move(&new_ref, original_ref, "master", 0));
+
+	cl_assert(giterr_last()->message != NULL);
+	cl_git_pass(git_config_get_entry(&ce, config, "branch.master.remote"));
+	cl_assert_equal_s(original_remote, ce->value);
+	cl_git_pass(git_config_get_entry(&ce, config, "branch.master.merge"));
+	cl_assert_equal_s(original_merge,  ce->value);
+
+	free(original_remote); free(original_merge);
+	git_reference_free(original_ref);
+	git_config_free(config);
 }
 
 void test_refs_branches_move__moving_a_branch_with_an_invalid_name_returns_EINVALIDSPEC(void)

@@ -552,7 +552,7 @@ static int cb_status__interrupt(const char *p, unsigned int s, void *payload)
 
 	(*count)++;
 
-	return (*count == 8);
+	return (*count == 8) ? -111 : 0;
 }
 
 void test_status_worktree__interruptable_foreach(void)
@@ -561,7 +561,7 @@ void test_status_worktree__interruptable_foreach(void)
 	git_repository *repo = cl_git_sandbox_init("status");
 
 	cl_assert_equal_i(
-		GIT_EUSER, git_status_foreach(repo, cb_status__interrupt, &count)
+		-111, git_status_foreach(repo, cb_status__interrupt, &count)
 	);
 
 	cl_assert_equal_i(8, count);

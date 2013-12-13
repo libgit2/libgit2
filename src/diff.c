@@ -49,16 +49,29 @@ static git_diff_delta *diff_delta__alloc(
 	return delta;
 }
 
-static int diff_notify(
-	const git_diff *diff,
-	const git_diff_delta *delta,
-	const char *matched_pathspec)
+static int diff_insert_delta(
+	git_diff *diff, git_diff_delta *delta, const char *matched_pathspec)
 {
-	if (!diff->opts.notify_cb)
-		return 0;
+	int error = 0;
 
-	return diff->opts.notify_cb(
-		diff, delta, matched_pathspec, diff->opts.notify_payload);
+	if (diff->opts.notify_cb) {
+		error = diff->opts.notify_cb(
+			diff, delta, matched_pathspec, diff->opts.notify_payload);
+
+		if (error) {
+			git__free(delta);
+
+			if (error > 0)	/* positive value means to skip this delta */
+				return 0;
+			else			/* negative value means to cancel diff */
+				return giterr_set_after_callback_function(error, "git_diff");
+		}
+	}
+
+	if ((error = git_vector_insert(&diff->deltas, delta)) < 0)
+		git__free(delta);
+
+	return error;
 }
 
 static int diff_delta__from_one(
@@ -68,7 +81,6 @@ static int diff_delta__from_one(
 {
 	git_diff_delta *delta;
 	const char *matched_pathspec;
-	int notify_res;
 
 	if ((entry->flags & GIT_IDXENTRY_VALID) != 0)
 		return 0;
@@ -111,21 +123,12 @@ static int diff_delta__from_one(
 		!git_oid_iszero(&delta->new_file.oid))
 		delta->new_file.flags |= GIT_DIFF_FLAG_VALID_OID;
 
-	notify_res = diff_notify(diff, delta, matched_pathspec);
-
-	if (notify_res)
-		git__free(delta);
-	else if (git_vector_insert(&diff->deltas, delta) < 0) {
-		git__free(delta);
-		return -1;
-	}
-
-	return notify_res < 0 ? GIT_EUSER : 0;
+	return diff_insert_delta(diff, delta, matched_pathspec);
 }
 
 static int diff_delta__from_two(
 	git_diff *diff,
-	git_delta_t   status,
+	git_delta_t status,
 	const git_index_entry *old_entry,
 	uint32_t old_mode,
 	const git_index_entry *new_entry,
@@ -134,7 +137,6 @@ static int diff_delta__from_two(
 	const char *matched_pathspec)
 {
 	git_diff_delta *delta;
-	int notify_res;
 	const char *canonical_path = old_entry->path;
 
 	if (status == GIT_DELTA_UNMODIFIED &&
@@ -173,16 +175,7 @@ static int diff_delta__from_two(
 	if (new_oid || !git_oid_iszero(&new_entry->oid))
 		delta->new_file.flags |= GIT_DIFF_FLAG_VALID_OID;
 
-	notify_res = diff_notify(diff, delta, matched_pathspec);
-
-	if (notify_res)
-		git__free(delta);
-	else if (git_vector_insert(&diff->deltas, delta) < 0) {
-		git__free(delta);
-		return -1;
-	}
-
-	return notify_res < 0 ? GIT_EUSER : 0;
+	return diff_insert_delta(diff, delta, matched_pathspec);
 }
 
 static git_diff_delta *diff_delta__last_for_item(
@@ -304,26 +297,6 @@ bool git_diff_delta__should_skip(
 }
 
 
-static int config_bool(git_config *cfg, const char *name, int defvalue)
-{
-	int val = defvalue;
-
-	if (git_config_get_bool(&val, cfg, name) < 0)
-		giterr_clear();
-
-	return val;
-}
-
-static int config_int(git_config *cfg, const char *name, int defvalue)
-{
-	int val = defvalue;
-
-	if (git_config_get_int32(&val, cfg, name) < 0)
-		giterr_clear();
-
-	return val;
-}
-
 static const char *diff_mnemonic_prefix(
 	git_iterator_type_t type, bool left_side)
 {
@@ -422,8 +395,8 @@ static int diff_list_apply_options(
 		diff->opts.flags |= GIT_DIFF_INCLUDE_UNTRACKED;
 
 	/* load config values that affect diff behavior */
-	if (git_repository_config__weakptr(&cfg, repo) < 0)
-		return -1;
+	if ((val = git_repository_config__weakptr(&cfg, repo)) < 0)
+		return val;
 
 	if (!git_repository__cvar(&val, repo, GIT_CVAR_SYMLINKS) && val)
 		diff->diffcaps = diff->diffcaps | GIT_DIFFCAPS_HAS_SYMLINKS;
@@ -445,7 +418,7 @@ static int diff_list_apply_options(
 
 	/* If not given explicit `opts`, check `diff.xyz` configs */
 	if (!opts) {
-		int context = config_int(cfg, "diff.context", 3);
+		int context = git_config__get_int_force(cfg, "diff.context", 3);
 		diff->opts.context_lines = context >= 0 ? (uint16_t)context : 3;
 
 		/* add other defaults here */
@@ -460,12 +433,11 @@ static int diff_list_apply_options(
 
 	/* if ignore_submodules not explicitly set, check diff config */
 	if (diff->opts.ignore_submodules <= 0) {
-		const char *str;
+		const git_config_entry *entry;
+		git_config__lookup_entry(&entry, cfg, "diff.ignoresubmodules", true);
 
-		if (git_config_get_string(&str , cfg, "diff.ignoreSubmodules") < 0)
-			giterr_clear();
-		else if (str != NULL &&
-			git_submodule_parse_ignore(&diff->opts.ignore_submodules, str) < 0)
+		if (entry && git_submodule_parse_ignore(
+				&diff->opts.ignore_submodules, entry->value) < 0)
 			giterr_clear();
 	}
 
@@ -474,9 +446,9 @@ static int diff_list_apply_options(
 		const char *use_old = DIFF_OLD_PREFIX_DEFAULT;
 		const char *use_new = DIFF_NEW_PREFIX_DEFAULT;
 
-		if (config_bool(cfg, "diff.noprefix", 0)) {
+		if (git_config__get_bool_force(cfg, "diff.noprefix", 0))
 			use_old = use_new = "";
-		} else if (config_bool(cfg, "diff.mnemonicprefix", 0)) {
+		else if (git_config__get_bool_force(cfg, "diff.mnemonicprefix", 0)) {
 			use_old = diff_mnemonic_prefix(diff->old_src, true);
 			use_new = diff_mnemonic_prefix(diff->new_src, false);
 		}
@@ -504,14 +476,7 @@ static int diff_list_apply_options(
 
 static void diff_list_free(git_diff *diff)
 {
-	git_diff_delta *delta;
-	unsigned int i;
-
-	git_vector_foreach(&diff->deltas, i, delta) {
-		git__free(delta);
-		diff->deltas.contents[i] = NULL;
-	}
-	git_vector_free(&diff->deltas);
+	git_vector_free_deep(&diff->deltas);
 
 	git_pathspec__vfree(&diff->pathspec);
 	git_pool_clear(&diff->pool);
@@ -682,6 +647,7 @@ static int maybe_modified(
 	unsigned int nmode = nitem->mode;
 	bool new_is_workdir = (info->new_iter->type == GIT_ITERATOR_TYPE_WORKDIR);
 	const char *matched_pathspec;
+	int error = 0;
 
 	if (!git_pathspec__match(
 			&diff->pathspec, oitem->path,
@@ -716,10 +682,9 @@ static int maybe_modified(
 		if (DIFF_FLAG_IS_SET(diff, GIT_DIFF_INCLUDE_TYPECHANGE))
 			status = GIT_DELTA_TYPECHANGE;
 		else {
-			if (diff_delta__from_one(diff, GIT_DELTA_DELETED, oitem) < 0 ||
-				diff_delta__from_one(diff, GIT_DELTA_ADDED, nitem) < 0)
-				return -1;
-			return 0;
+			if (!(error = diff_delta__from_one(diff, GIT_DELTA_DELETED, oitem)))
+				error = diff_delta__from_one(diff, GIT_DELTA_ADDED, nitem);
+			return error;
 		}
 	}
 
@@ -741,8 +706,8 @@ static int maybe_modified(
 		/* TODO: add check against index file st_mtime to avoid racy-git */
 
 		if (S_ISGITLINK(nmode)) {
-			if (maybe_modified_submodule(&status, &noid, diff, info) < 0)
-				return -1;
+			if ((error = maybe_modified_submodule(&status, &noid, diff, info)) < 0)
+				return error;
 		}
 
 		/* if the stat data looks different, then mark modified - this just
@@ -769,9 +734,9 @@ static int maybe_modified(
 	 */
 	if (status == GIT_DELTA_MODIFIED && git_oid_iszero(&nitem->oid)) {
 		if (git_oid_iszero(&noid)) {
-			if (git_diff__oid_for_file(diff->repo,
-					nitem->path, nitem->mode, nitem->file_size, &noid) < 0)
-				return -1;
+			if ((error = git_diff__oid_for_file(diff->repo,
+					nitem->path, nitem->mode, nitem->file_size, &noid)) < 0)
+				return error;
 		}
 
 		/* if oid matches, then mark unmodified (except submodules, where
@@ -926,7 +891,7 @@ static int handle_unmatched_new_item(
 			git_diff_delta *last;
 
 			/* attempt to insert record for this directory */
-			if ((error = diff_delta__from_one(diff, delta_type, nitem)) < 0)
+			if ((error = diff_delta__from_one(diff, delta_type, nitem)) != 0)
 				return error;
 
 			/* if delta wasn't created (because of rules), just skip ahead */
@@ -1005,7 +970,7 @@ static int handle_unmatched_new_item(
 	}
 
 	/* Actually create the record for this item if necessary */
-	if ((error = diff_delta__from_one(diff, delta_type, nitem)) < 0)
+	if ((error = diff_delta__from_one(diff, delta_type, nitem)) != 0)
 		return error;
 
 	/* If user requested TYPECHANGE records, then check for that instead of
@@ -1030,7 +995,7 @@ static int handle_unmatched_old_item(
 	git_diff *diff, diff_in_progress *info)
 {
 	int error = diff_delta__from_one(diff, GIT_DELTA_DELETED, info->oitem);
-	if (error < 0)
+	if (error != 0)
 		return error;
 
 	/* if we are generating TYPECHANGE records then check for that
@@ -1364,7 +1329,7 @@ int git_diff__paired_foreach(
 	int (*cb)(git_diff_delta *h2i, git_diff_delta *i2w, void *payload),
 	void *payload)
 {
-	int cmp;
+	int cmp, error = 0;
 	git_diff_delta *h2i, *i2w;
 	size_t i, j, i_max, j_max;
 	int (*strcomp)(const char *, const char *) = git__strcmp;
@@ -1420,17 +1385,16 @@ int git_diff__paired_foreach(
 			strcomp(h2i->new_file.path, i2w->old_file.path);
 
 		if (cmp < 0) {
-			if (cb(h2i, NULL, payload))
-				return GIT_EUSER;
-			i++;
+			i++; i2w = NULL;
 		} else if (cmp > 0) {
-			if (cb(NULL, i2w, payload))
-				return GIT_EUSER;
-			j++;
+			j++; h2i = NULL;
 		} else {
-			if (cb(h2i, i2w, payload))
-				return GIT_EUSER;
 			i++; j++;
+		}
+
+		if ((error = cb(h2i, i2w, payload)) != 0) {
+			giterr_set_after_callback(error);
+			break;
 		}
 	}
 
@@ -1447,5 +1411,5 @@ int git_diff__paired_foreach(
 		git_vector_sort(&idx2wd->deltas);
 	}
 
-	return 0;
+	return error;
 }

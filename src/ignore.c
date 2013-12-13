@@ -74,10 +74,12 @@ static int parse_ignore_file(
 #define push_ignore_file(R,IGN,S,B,F) \
 	git_attr_cache__push_file((R),(B),(F),GIT_ATTR_FILE_FROM_FILE,parse_ignore_file,(IGN),(S))
 
-static int push_one_ignore(void *ref, git_buf *path)
+static int push_one_ignore(void *payload, git_buf *path)
 {
-	git_ignores *ign = (git_ignores *)ref;
-	return push_ignore_file(ign->repo, ign, &ign->ign_path, path->ptr, GIT_IGNORE_FILE);
+	git_ignores *ign = payload;
+
+	return push_ignore_file(
+		ign->repo, ign, &ign->ign_path, path->ptr, GIT_IGNORE_FILE);
 }
 
 static int get_internal_ignores(git_attr_file **ign, git_repository *repo)

@@ -314,8 +314,9 @@ int git_status_list_new(
 			goto done;
 	}
 
-	if ((error = git_diff__paired_foreach(
-			status->head2idx, status->idx2wd, status_collect, status)) < 0)
+	error = git_diff__paired_foreach(
+		status->head2idx, status->idx2wd, status_collect, status);
+	if (error < 0)
 		goto done;
 
 	if (flags & GIT_STATUS_OPT_SORT_CASE_SENSITIVELY)
@@ -360,19 +361,13 @@ const git_status_entry *git_status_byindex(git_status_list *status, size_t i)
 
 void git_status_list_free(git_status_list *status)
 {
-	git_status_entry *status_entry;
-	size_t i;
-
 	if (status == NULL)
 		return;
 
 	git_diff_free(status->head2idx);
 	git_diff_free(status->idx2wd);
 
-	git_vector_foreach(&status->paired, i, status_entry)
-		git__free(status_entry);
-
-	git_vector_free(&status->paired);
+	git_vector_free_deep(&status->paired);
 
 	git__memzero(status, sizeof(*status));
 	git__free(status);
@@ -397,9 +392,8 @@ int git_status_foreach_ext(
 			status_entry->head_to_index->old_file.path :
 			status_entry->index_to_workdir->old_file.path;
 
-		if (cb(path, status_entry->status, payload) != 0) {
-			error = GIT_EUSER;
-			giterr_clear();
+		if ((error = cb(path, status_entry->status, payload)) != 0) {
+			giterr_set_after_callback(error);
 			break;
 		}
 	}

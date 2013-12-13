@@ -129,6 +129,8 @@ static int count_attrs(
 	return 0;
 }
 
+#define CANCEL_VALUE 12345
+
 static int cancel_iteration(
 	const char *name,
 	const char *value,
@@ -140,7 +142,7 @@ static int cancel_iteration(
 	*((int *)payload) -= 1;
 
 	if (*((int *)payload) < 0)
-		return -1;
+		return CANCEL_VALUE;
 
 	return 0;
 }
@@ -166,7 +168,7 @@ void test_attr_repo__foreach(void)
 
 	count = 2;
 	cl_assert_equal_i(
-		GIT_EUSER, git_attr_foreach(
+		CANCEL_VALUE, git_attr_foreach(
 			g_repo, 0, "sub/subdir_test1", &cancel_iteration, &count)
 	);
 }

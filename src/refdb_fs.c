@@ -264,9 +264,9 @@ done:
 	return error;
 }
 
-static int _dirent_loose_load(void *data, git_buf *full_path)
+static int _dirent_loose_load(void *payload, git_buf *full_path)
 {
-	refdb_fs_backend *backend = (refdb_fs_backend *)data;
+	refdb_fs_backend *backend = payload;
 	const char *file_path;
 
 	if (git__suffixcmp(full_path->ptr, ".lock") == 0)
@@ -305,7 +305,7 @@ static int packed_loadloose(refdb_fs_backend *backend)
 
 	git_buf_free(&refs_path);
 
-	return (error == GIT_EUSER) ? -1 : error;
+	return error;
 }
 
 static int refdb_fs_backend__exists(

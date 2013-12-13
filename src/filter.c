@@ -69,7 +69,7 @@ static void filter_registry_shutdown(void)
 		return;
 
 	git_vector_foreach(&reg->filters, pos, fdef) {
-		if (fdef->initialized && fdef->filter && fdef->filter->shutdown) {
+		if (fdef->filter && fdef->filter->shutdown) {
 			fdef->filter->shutdown(fdef->filter);
 			fdef->initialized = false;
 		}

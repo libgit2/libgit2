@@ -436,8 +436,12 @@ int git_path_walk_up(
 	while (scan >= stop) {
 		error = cb(data, &iter);
 		iter.ptr[scan] = oldc;
-		if (error < 0)
+
+		if (error) {
+			giterr_set_after_callback(error);
 			break;
+		}
+
 		scan = git_buf_rfind_next(&iter, '/');
 		if (scan >= 0) {
 			scan++;
@@ -528,7 +532,9 @@ bool git_path_is_empty_dir(const char *path)
 	if (!git_path_isdir(path))
 		return false;
 
-	if (!(error = git_buf_sets(&dir, path)))
+	if ((error = git_buf_sets(&dir, path)) != 0)
+		giterr_clear();
+	else
 		error = git_path_direach(&dir, 0, path_found_entry, NULL);
 
 	git_buf_free(&dir);
@@ -778,7 +784,7 @@ int git_path_iconv(git_path_iconv_t *ic, char **in, size_t *inlen)
 		return 0;
 
 	while (1) {
-		if (git_buf_grow(&ic->buf, wantlen) < 0)
+		if (git_buf_grow(&ic->buf, wantlen + 1) < 0)
 			return -1;
 
 		nfc    = ic->buf.ptr   + ic->buf.size;
@@ -867,7 +873,7 @@ int git_path_direach(
 		if ((error = git_path_iconv(&ic, &de_path, &de_len)) < 0)
 			break;
 #endif
-				
+
 		if ((error = git_buf_put(path, de_path, de_len)) < 0)
 			break;
 
@@ -875,8 +881,8 @@ int git_path_direach(
 
 		git_buf_truncate(path, wd_len); /* restore path */
 
-		if (error) {
-			error = GIT_EUSER;
+		if (error != 0) {
+			giterr_set_after_callback(error);
 			break;
 		}
 	}

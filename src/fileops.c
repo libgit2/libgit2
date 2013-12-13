@@ -403,7 +403,6 @@ typedef struct {
 	const char *base;
 	size_t baselen;
 	uint32_t flags;
-	int error;
 	int depth;
 } futils__rmdir_data;
 
@@ -447,8 +446,8 @@ static int futils__rm_first_parent(git_buf *path, const char *ceiling)
 
 static int futils__rmdir_recurs_foreach(void *opaque, git_buf *path)
 {
+	int error = 0;
 	futils__rmdir_data *data = opaque;
-	int error = data->error;
 	struct stat st;
 
 	if (data->depth > FUTILS_MAX_DEPTH)
@@ -474,13 +473,14 @@ static int futils__rmdir_recurs_foreach(void *opaque, git_buf *path)
 		data->depth++;
 
 		error = git_path_direach(path, 0, futils__rmdir_recurs_foreach, data);
-		if (error < 0)
-			return (error == GIT_EUSER) ? data->error : error;
 
 		data->depth--;
 
+		if (error < 0)
+			return error;
+
 		if (data->depth == 0 && (data->flags & GIT_RMDIR_SKIP_ROOT) != 0)
-			return data->error;
+			return error;
 
 		if ((error = p_rmdir(path->ptr)) < 0) {
 			if ((data->flags & GIT_RMDIR_SKIP_NONEMPTY) != 0 &&
@@ -499,28 +499,23 @@ static int futils__rmdir_recurs_foreach(void *opaque, git_buf *path)
 	else if ((data->flags & GIT_RMDIR_SKIP_NONEMPTY) == 0)
 		error = futils__error_cannot_rmdir(path->ptr, "still present");
 
-	data->error = error;
 	return error;
 }
 
 static int futils__rmdir_empty_parent(void *opaque, git_buf *path)
 {
 	futils__rmdir_data *data = opaque;
-	int error;
+	int error = 0;
 
 	if (git_buf_len(path) <= data->baselen)
-		return GIT_ITEROVER;
+		error = GIT_ITEROVER;
 
-	error = p_rmdir(git_buf_cstr(path));
-
-	if (error) {
+	else if (p_rmdir(git_buf_cstr(path)) < 0) {
 		int en = errno;
 
 		if (en == ENOENT || en == ENOTDIR) {
-			giterr_clear();
-			error = 0;
+			/* do nothing */
 		} else if (en == ENOTEMPTY || en == EEXIST || en == EBUSY) {
-			giterr_clear();
 			error = GIT_ITEROVER;
 		} else {
 			error = git_path_set_error(errno, git_buf_cstr(path), "rmdir");
@@ -535,12 +530,13 @@ int git_futils_rmdir_r(
 {
 	int error;
 	git_buf fullpath = GIT_BUF_INIT;
-	futils__rmdir_data data = { 0 };
+	futils__rmdir_data data;
 
 	/* build path and find "root" where we should start calling mkdir */
 	if (git_path_join_unrooted(&fullpath, path, base, NULL) < 0)
 		return -1;
 
+	memset(&data, 0, sizeof(data));
 	data.base    = base ? base : "";
 	data.baselen = base ? strlen(base) : 0;
 	data.flags   = flags;
@@ -548,12 +544,13 @@ int git_futils_rmdir_r(
 	error = futils__rmdir_recurs_foreach(&data, &fullpath);
 
 	/* remove now-empty parents if requested */
-	if (!error && (flags & GIT_RMDIR_EMPTY_PARENTS) != 0) {
+	if (!error && (flags & GIT_RMDIR_EMPTY_PARENTS) != 0)
 		error = git_path_walk_up(
 			&fullpath, base, futils__rmdir_empty_parent, &data);
 
-		if (error == GIT_ITEROVER)
-			error = 0;
+	if (error == GIT_ITEROVER) {
+		giterr_clear();
+		error = 0;
 	}
 
 	git_buf_free(&fullpath);
@@ -618,6 +615,8 @@ static git_futils_dirs_guess_cb git_futils__dir_guess[GIT_FUTILS_DIR__MAX] = {
 	git_futils_guess_template_dirs,
 };
 
+static int git_futils__dirs_shutdown_set = 0;
+
 void git_futils_dirs_global_shutdown(void)
 {
 	int i;
@@ -633,8 +632,6 @@ int git_futils_dirs_global_init(void)
 
 	for (i = 0; !error && i < GIT_FUTILS_DIR__MAX; i++)
 		error = git_futils_dirs_get(&path, i);
-
-	git__on_shutdown(git_futils_dirs_global_shutdown);
 
 	return error;
 }
@@ -655,9 +652,16 @@ int git_futils_dirs_get(const git_buf **out, git_futils_dir_t which)
 
 	GITERR_CHECK_ERROR(git_futils_check_selector(which));
 
-	if (!git_buf_len(&git_futils__dirs[which]))
+	if (!git_buf_len(&git_futils__dirs[which])) {
+		/* prepare shutdown if we're going to need it */
+		if (!git_futils__dirs_shutdown_set) {
+			git__on_shutdown(git_futils_dirs_global_shutdown);
+			git_futils__dirs_shutdown_set = 1;
+		}
+
 		GITERR_CHECK_ERROR(
 			git_futils__dir_guess[which](&git_futils__dirs[which]));
+	}
 
 	*out = &git_futils__dirs[which];
 	return 0;
@@ -858,7 +862,6 @@ typedef struct {
 	uint32_t flags;
 	uint32_t mkdir_flags;
 	mode_t dirmode;
-	int error;
 } cp_r_info;
 
 #define GIT_CPDIR__MKDIR_DONE_FOR_TO_ROOT (1u << 10)
@@ -896,23 +899,21 @@ static int _cp_r_callback(void *ref, git_buf *from)
 		from->ptr[git_path_basename_offset(from)] == '.')
 		return 0;
 
-	if (git_buf_joinpath(
-			&info->to, info->to_root, from->ptr + info->from_prefix) < 0) {
-		error = -1;
-		goto exit;
-	}
+	if ((error = git_buf_joinpath(
+			&info->to, info->to_root, from->ptr + info->from_prefix)) < 0)
+		return error;
 
 	if (!(error = git_path_lstat(info->to.ptr, &to_st)))
 		exists = true;
 	else if (error != GIT_ENOTFOUND)
-		goto exit;
+		return error;
 	else {
 		giterr_clear();
 		error = 0;
 	}
 
 	if ((error = git_path_lstat(from->ptr, &from_st)) < 0)
-		goto exit;
+		return error;
 
 	if (S_ISDIR(from_st.st_mode)) {
 		mode_t oldmode = info->dirmode;
@@ -926,17 +927,13 @@ static int _cp_r_callback(void *ref, git_buf *from)
 			error = _cp_r_mkdir(info, from);
 
 		/* recurse onto target directory */
-		if (!error && (!exists || S_ISDIR(to_st.st_mode))) {
+		if (!error && (!exists || S_ISDIR(to_st.st_mode)))
 			error = git_path_direach(from, 0, _cp_r_callback, info);
-
-			if (error == GIT_EUSER)
-				error = info->error;
-		}
 
 		if (oldmode != 0)
 			info->dirmode = oldmode;
 
-		goto exit;
+		return error;
 	}
 
 	if (exists) {
@@ -946,8 +943,7 @@ static int _cp_r_callback(void *ref, git_buf *from)
 		if (p_unlink(info->to.ptr) < 0) {
 			giterr_set(GITERR_OS, "Cannot overwrite existing file '%s'",
 				info->to.ptr);
-			error = -1;
-			goto exit;
+			return GIT_EEXISTS;
 		}
 	}
 
@@ -960,7 +956,7 @@ static int _cp_r_callback(void *ref, git_buf *from)
 	/* Make container directory on demand if needed */
 	if ((info->flags & GIT_CPDIR_CREATE_EMPTY_DIRS) == 0 &&
 		(error = _cp_r_mkdir(info, from)) < 0)
-		goto exit;
+		return error;
 
 	/* make symlink or regular file */
 	if (S_ISLNK(from_st.st_mode))
@@ -974,8 +970,6 @@ static int _cp_r_callback(void *ref, git_buf *from)
 		error = git_futils_cp(from->ptr, info->to.ptr, usemode);
 	}
 
-exit:
-	info->error = error;
 	return error;
 }
 
@@ -992,11 +986,11 @@ int git_futils_cp_r(
 	if (git_buf_joinpath(&path, from, "") < 0) /* ensure trailing slash */
 		return -1;
 
+	memset(&info, 0, sizeof(info));
 	info.to_root = to;
 	info.flags   = flags;
 	info.dirmode = dirmode;
 	info.from_prefix = path.size;
-	info.error = 0;
 	git_buf_init(&info.to, 0);
 
 	/* precalculate mkdir flags */
@@ -1017,9 +1011,6 @@ int git_futils_cp_r(
 
 	git_buf_free(&path);
 	git_buf_free(&info.to);
-
-	if (error == GIT_EUSER)
-		error = info.error;
 
 	return error;
 }

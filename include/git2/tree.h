@@ -332,11 +332,18 @@ GIT_EXTERN(int) git_treebuilder_insert(
 GIT_EXTERN(int) git_treebuilder_remove(
 	git_treebuilder *bld, const char *filename);
 
+/**
+ * Callback for git_treebuilder_filter
+ *
+ * The return value is treated as a boolean, with zero indicating that the
+ * entry should be left alone and any non-zero value meaning that the
+ * entry should be removed from the treebuilder list (i.e. filtered out).
+ */
 typedef int (*git_treebuilder_filter_cb)(
 	const git_tree_entry *entry, void *payload);
 
 /**
- * Filter the entries in the tree
+ * Selectively remove entries in the tree
  *
  * The `filter` callback will be called for each entry in the tree with a
  * pointer to the entry and the provided `payload`; if the callback returns
@@ -344,7 +351,7 @@ typedef int (*git_treebuilder_filter_cb)(
  *
  * @param bld Tree builder
  * @param filter Callback to filter entries
- * @param payload Extra data to pass to filter
+ * @param payload Extra data to pass to filter callback
  */
 GIT_EXTERN(void) git_treebuilder_filter(
 	git_treebuilder *bld,

@@ -115,43 +115,38 @@ static int reference_matches_remote_head(
 {
 	struct head_info *head_info = (struct head_info *)payload;
 	git_oid oid;
+	int error;
 
 	/* TODO: Should we guard against references
 	 * which name doesn't start with refs/heads/ ?
 	 */
 
-	/* Stop looking if we've already found a match */
-	if (head_info->found)
+	error = git_reference_name_to_id(&oid, head_info->repo, reference_name);
+	if (error == GIT_ENOTFOUND) {
+		/* If the reference doesn't exists, it obviously cannot match the
+		 * expected oid. */
+		giterr_clear();
 		return 0;
-
-	if (git_reference_name_to_id(
-		&oid,
-		head_info->repo,
-		reference_name) < 0) {
-			/* If the reference doesn't exists, it obviously cannot match the expected oid. */
-			giterr_clear();
-			return 0;
 	}
 
-	if (git_oid__cmp(&head_info->remote_head_oid, &oid) == 0) {
+	if (!error && !git_oid__cmp(&head_info->remote_head_oid, &oid)) {
 		/* Determine the local reference name from the remote tracking one */
-		if (git_refspec_transform_l(
-			&head_info->branchname,
-			head_info->refspec,
-			reference_name) < 0)
-				return -1;
+		error = git_refspec_transform_l(
+			&head_info->branchname, head_info->refspec, reference_name);
 
-		if (git_buf_len(&head_info->branchname) > 0) {
-			if (git_buf_sets(
+		if (!error &&
+			git_buf_len(&head_info->branchname) > 0 &&
+			!(error = git_buf_sets(
 				&head_info->branchname,
-				git_buf_cstr(&head_info->branchname) + strlen(GIT_REFS_HEADS_DIR)) < 0)
-					return -1;
-
-			head_info->found = 1;
+				git_buf_cstr(&head_info->branchname) +
+				strlen(GIT_REFS_HEADS_DIR))))
+		{
+			head_info->found = true;
+			error = GIT_ITEROVER;
 		}
 	}
 
-	return 0;
+	return error;
 }
 
 static int update_head_to_new_branch(
@@ -160,16 +155,11 @@ static int update_head_to_new_branch(
 	const char *name)
 {
 	git_reference *tracking_branch = NULL;
-	int error;
+	int error = create_tracking_branch(&tracking_branch, repo, target, name);
 
-	if ((error = create_tracking_branch(
-		&tracking_branch,
-		repo,
-		target,
-		name)) < 0)
-			return error;
-
-	error = git_repository_set_head(repo, git_reference_name(tracking_branch));
+	if (!error)
+		error = git_repository_set_head(
+			repo, git_reference_name(tracking_branch));
 
 	git_reference_free(tracking_branch);
 
@@ -178,34 +168,30 @@ static int update_head_to_new_branch(
 
 static int update_head_to_remote(git_repository *repo, git_remote *remote)
 {
-	int retcode = -1;
+	int error = 0;
 	size_t refs_len;
 	git_refspec dummy_spec;
 	const git_remote_head *remote_head, **refs;
 	struct head_info head_info;
 	git_buf remote_master_name = GIT_BUF_INIT;
 
-	if (git_remote_ls(&refs, &refs_len, remote) < 0)
-		return -1;
+	if ((error = git_remote_ls(&refs, &refs_len, remote)) < 0)
+		return error;
 
 	/* Did we just clone an empty repository? */
-	if (refs_len == 0) {
+	if (refs_len == 0)
 		return setup_tracking_config(
-			repo,
-			"master",
-			GIT_REMOTE_ORIGIN,
-			GIT_REFS_HEADS_MASTER_FILE);
-	}
+			repo, "master", GIT_REMOTE_ORIGIN, GIT_REFS_HEADS_MASTER_FILE);
 
 	/* Get the remote's HEAD. This is always the first ref in the list. */
 	remote_head = refs[0];
 	assert(remote_head);
 
+	memset(&head_info, 0, sizeof(head_info));
 	git_oid_cpy(&head_info.remote_head_oid, &remote_head->oid);
-	git_buf_init(&head_info.branchname, 16);
 	head_info.repo = repo;
-	head_info.refspec = git_remote__matching_refspec(remote, GIT_REFS_HEADS_MASTER_FILE);
-	head_info.found = 0;
+	head_info.refspec =
+		git_remote__matching_refspec(remote, GIT_REFS_HEADS_MASTER_FILE);
 
 	if (head_info.refspec == NULL) {
 		memset(&dummy_spec, 0, sizeof(git_refspec));
@@ -213,50 +199,46 @@ static int update_head_to_remote(git_repository *repo, git_remote *remote)
 	}
 
 	/* Determine the remote tracking reference name from the local master */
-	if (git_refspec_transform_r(
+	if ((error = git_refspec_transform_r(
 		&remote_master_name,
 		head_info.refspec,
-		GIT_REFS_HEADS_MASTER_FILE) < 0)
-			return -1;
+		GIT_REFS_HEADS_MASTER_FILE)) < 0)
+		return error;
 
 	/* Check to see if the remote HEAD points to the remote master */
-	if (reference_matches_remote_head(git_buf_cstr(&remote_master_name), &head_info) < 0)
+	error = reference_matches_remote_head(
+		git_buf_cstr(&remote_master_name), &head_info);
+	if (error < 0 && error != GIT_ITEROVER)
 		goto cleanup;
 
 	if (head_info.found) {
-		retcode = update_head_to_new_branch(
+		error = update_head_to_new_branch(
 			repo,
 			&head_info.remote_head_oid,
 			git_buf_cstr(&head_info.branchname));
-
 		goto cleanup;
 	}
 
 	/* Not master. Check all the other refs. */
-	if (git_reference_foreach_name(
-		repo,
-		reference_matches_remote_head,
-		&head_info) < 0)
-			goto cleanup;
+	error = git_reference_foreach_name(
+		repo, reference_matches_remote_head, &head_info);
+	if (error < 0 && error != GIT_ITEROVER)
+		goto cleanup;
 
 	if (head_info.found) {
-		retcode = update_head_to_new_branch(
+		error = update_head_to_new_branch(
 			repo,
 			&head_info.remote_head_oid,
 			git_buf_cstr(&head_info.branchname));
-
-		goto cleanup;
 	} else {
-		retcode = git_repository_set_head_detached(
-			repo,
-			&head_info.remote_head_oid);
-		goto cleanup;
+		error = git_repository_set_head_detached(
+			repo, &head_info.remote_head_oid);
 	}
 
 cleanup:
 	git_buf_free(&remote_master_name);
 	git_buf_free(&head_info.branchname);
-	return retcode;
+	return error;
 }
 
 static int update_head_to_branch(
@@ -359,7 +341,7 @@ int git_clone_into(git_repository *repo, git_remote *remote, const git_checkout_
 	old_fetchhead = git_remote_update_fetchhead(remote);
 	git_remote_set_update_fetchhead(remote, 0);
 
-	if ((error = git_remote_fetch(remote)) < 0)
+	if ((error = git_remote_fetch(remote)) != 0)
 		goto cleanup;
 
 	if (branch)
@@ -373,10 +355,12 @@ int git_clone_into(git_repository *repo, git_remote *remote, const git_checkout_
 
 cleanup:
 	git_remote_set_update_fetchhead(remote, old_fetchhead);
+
 	/* Go back to the original refspecs */
-	if (git_remote_set_fetch_refspecs(remote, &refspecs) < 0) {
-		git_strarray_free(&refspecs);
-		return -1;
+	{
+		int error_alt = git_remote_set_fetch_refspecs(remote, &refspecs);
+		if (!error)
+			error = error_alt;
 	}
 
 	git_strarray_free(&refspecs);
@@ -424,9 +408,10 @@ int git_clone(
 		git_remote_free(origin);
 	}
 
-	if (error < 0) {
+	if (error != 0) {
 		git_repository_free(repo);
 		repo = NULL;
+
 		(void)git_futils_rmdir_r(local_path, NULL, rmdir_flags);
 	}
 

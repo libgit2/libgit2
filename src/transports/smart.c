@@ -23,13 +23,13 @@ static int git_smart__recv_cb(gitno_buffer *buf)
 
 	buf->offset += bytes_read;
 
-	if (t->packetsize_cb && !t->cancelled.val)
-		if (t->packetsize_cb(bytes_read, t->packetsize_payload)) {
+	if (t->packetsize_cb && !t->cancelled.val) {
+		error = t->packetsize_cb(bytes_read, t->packetsize_payload);
+		if (error) {
 			git_atomic_set(&t->cancelled, 1);
-
-			giterr_clear();
 			return GIT_EUSER;
 		}
+	}
 
 	return (int)(buf->offset - old_len);
 }
@@ -342,7 +342,7 @@ int git_transport_smart(git_transport **out, git_remote *owner, void *param)
 	t->parent.is_connected = git_smart__is_connected;
 	t->parent.read_flags = git_smart__read_flags;
 	t->parent.cancel = git_smart__cancel;
-	
+
 	t->owner = owner;
 	t->rpc = definition->rpc;
 
@@ -359,7 +359,7 @@ int git_transport_smart(git_transport **out, git_remote *owner, void *param)
 	if (definition->callback(&t->wrapped, &t->parent) < 0) {
 		git__free(t);
 		return -1;
-	}	
+	}
 
 	*out = (git_transport *) t;
 	return 0;

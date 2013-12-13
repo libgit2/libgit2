@@ -471,7 +471,7 @@ int git_reference_rename(
 	if ((error = git_refdb_rename(out, ref->db, ref->name, new_name, force)) < 0)
 		return error;
 
-	/* Update HEAD it was poiting to the reference being renamed. */
+	/* Update HEAD it was pointing to the reference being renamed */
 	if (should_head_be_updated &&
 		(error = git_repository_set_head(ref->db->repo, new_name)) < 0) {
 		giterr_set(GITERR_REFERENCE, "Failed to update HEAD after renaming reference");
@@ -513,20 +513,19 @@ int git_reference_foreach(
 	git_reference *ref;
 	int error;
 
-	if (git_reference_iterator_new(&iter, repo) < 0)
-		return -1;
+	if ((error = git_reference_iterator_new(&iter, repo)) < 0)
+		return error;
 
-	while ((error = git_reference_next(&ref, iter)) == 0) {
-		if (callback(ref, payload)) {
-			error = GIT_EUSER;
-			goto out;
+	while (!(error = git_reference_next(&ref, iter))) {
+		if ((error = callback(ref, payload)) != 0) {
+			giterr_set_after_callback(error);
+			break;
 		}
 	}
 
 	if (error == GIT_ITEROVER)
 		error = 0;
 
-out:
 	git_reference_iterator_free(iter);
 	return error;
 }
@@ -540,20 +539,19 @@ int git_reference_foreach_name(
 	const char *refname;
 	int error;
 
-	if (git_reference_iterator_new(&iter, repo) < 0)
-		return -1;
+	if ((error = git_reference_iterator_new(&iter, repo)) < 0)
+		return error;
 
-	while ((error = git_reference_next_name(&refname, iter)) == 0) {
-		if (callback(refname, payload)) {
-			error = GIT_EUSER;
-			goto out;
+	while (!(error = git_reference_next_name(&refname, iter))) {
+		if ((error = callback(refname, payload)) != 0) {
+			giterr_set_after_callback(error);
+			break;
 		}
 	}
 
 	if (error == GIT_ITEROVER)
 		error = 0;
 
-out:
 	git_reference_iterator_free(iter);
 	return error;
 }
@@ -568,20 +566,19 @@ int git_reference_foreach_glob(
 	const char *refname;
 	int error;
 
-	if (git_reference_iterator_glob_new(&iter, repo, glob) < 0)
-		return -1;
+	if ((error = git_reference_iterator_glob_new(&iter, repo, glob)) < 0)
+		return error;
 
-	while ((error = git_reference_next_name(&refname, iter)) == 0) {
-		if (callback(refname, payload)) {
-			error = GIT_EUSER;
-			goto out;
+	while (!(error = git_reference_next_name(&refname, iter))) {
+		if ((error = callback(refname, payload)) != 0) {
+			giterr_set_after_callback(error);
+			break;
 		}
 	}
 
 	if (error == GIT_ITEROVER)
 		error = 0;
 
-out:
 	git_reference_iterator_free(iter);
 	return error;
 }
@@ -624,7 +621,9 @@ void git_reference_iterator_free(git_reference_iterator *iter)
 
 static int cb__reflist_add(const char *ref, void *data)
 {
-	return git_vector_insert((git_vector *)data, git__strdup(ref));
+	char *name = git__strdup(ref);
+	GITERR_CHECK_ALLOC(name);
+	return git_vector_insert((git_vector *)data, name);
 }
 
 int git_reference_list(
@@ -647,8 +646,8 @@ int git_reference_list(
 		return -1;
 	}
 
-	array->strings = (char **)ref_list.contents;
-	array->count = ref_list.length;
+	array->strings = (char **)git_vector_detach(&array->count, NULL, &ref_list);
+
 	return 0;
 }
 

@@ -1042,10 +1042,9 @@ int git_pack_foreach_entry(
 {
 	const unsigned char *index = p->index_map.data, *current;
 	uint32_t i;
+	int error = 0;
 
 	if (index == NULL) {
-		int error;
-
 		if ((error = pack_index_open(p)) < 0)
 			return error;
 
@@ -1062,7 +1061,6 @@ int git_pack_foreach_entry(
 
 	if (p->oids == NULL) {
 		git_vector offsets, oids;
-		int error;
 
 		if ((error = git_vector_init(&oids, p->num_objects, NULL)))
 			return error;
@@ -1084,15 +1082,16 @@ int git_pack_foreach_entry(
 			git_vector_foreach(&offsets, i, current)
 				git_vector_insert(&oids, (void*)&current[4]);
 		}
+
 		git_vector_free(&offsets);
-		p->oids = (git_oid **)oids.contents;
+		p->oids = (git_oid **)git_vector_detach(NULL, NULL, &oids);
 	}
 
 	for (i = 0; i < p->num_objects; i++)
-		if (cb(p->oids[i], data))
-			return GIT_EUSER;
+		if ((error = cb(p->oids[i], data)) != 0)
+			return giterr_set_after_callback(error);
 
-	return 0;
+	return error;
 }
 
 static int pack_entry_find_offset(

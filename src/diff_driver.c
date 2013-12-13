@@ -14,6 +14,7 @@
 #include "strmap.h"
 #include "map.h"
 #include "buf_text.h"
+#include "config.h"
 #include "repository.h"
 
 GIT__USE_STRMAP;
@@ -130,14 +131,14 @@ static git_diff_driver_registry *git_repository_driver_registry(
 static int git_diff_driver_load(
 	git_diff_driver **out, git_repository *repo, const char *driver_name)
 {
-	int error = 0, bval;
+	int error = 0;
 	git_diff_driver_registry *reg;
 	git_diff_driver *drv;
 	size_t namelen = strlen(driver_name);
 	khiter_t pos;
 	git_config *cfg;
 	git_buf name = GIT_BUF_INIT;
-	const char *val;
+	const git_config_entry *ce;
 	bool found_driver = false;
 
 	reg = git_repository_driver_registry(repo);
@@ -164,23 +165,21 @@ static int git_diff_driver_load(
 
 	if ((error = git_buf_printf(&name, "diff.%s.binary", driver_name)) < 0)
 		goto done;
-	if ((error = git_config_get_string(&val, cfg, name.ptr)) < 0) {
-		if (error != GIT_ENOTFOUND)
-			goto done;
-		/* diff.<driver>.binary unspecified, so just continue */
-		giterr_clear();
-	} else if (git_config_parse_bool(&bval, val) < 0) {
-		/* TODO: warn that diff.<driver>.binary has invalid value */
-		giterr_clear();
-	} else if (bval) {
+
+	switch (git_config__get_bool_force(cfg, name.ptr, -1)) {
+	case true:
 		/* if diff.<driver>.binary is true, just return the binary driver */
 		*out = &global_drivers[DIFF_DRIVER_BINARY];
 		goto done;
-	} else {
+	case false:
 		/* if diff.<driver>.binary is false, force binary checks off */
 		/* but still may have custom function context patterns, etc. */
 		drv->binary_flags = GIT_DIFF_FORCE_TEXT;
 		found_driver = true;
+		break;
+	default:
+		/* diff.<driver>.binary unspecified, so just continue */
+		break;
 	}
 
 	/* TODO: warn if diff.<name>.command or diff.<name>.textconv are set */
@@ -211,16 +210,16 @@ static int git_diff_driver_load(
 
 	git_buf_truncate(&name, namelen + strlen("diff.."));
 	git_buf_put(&name, "wordregex", strlen("wordregex"));
-	if ((error = git_config_get_string(&val, cfg, name.ptr)) < 0) {
-		if (error != GIT_ENOTFOUND)
-			goto done;
-		giterr_clear(); /* no diff.<driver>.wordregex, so just continue */
-	} else if ((error = regcomp(&drv->word_pattern, val, REG_EXTENDED)) != 0) {
-		/* TODO: warning about bad regex instead of failure */
+	if ((error = git_config__lookup_entry(&ce, cfg, name.ptr, false)) < 0)
+		goto done;
+	if (!ce || !ce->value)
+		/* no diff.<driver>.wordregex, so just continue */;
+	else if (!(error = regcomp(&drv->word_pattern, ce->value, REG_EXTENDED)))
+		found_driver = true;
+	else {
+		/* TODO: warn about bad regex instead of failure */
 		error = giterr_set_regex(&drv->word_pattern, error);
 		goto done;
-	} else {
-		found_driver = true;
 	}
 
 	/* TODO: look up diff.<driver>.algorithm to turn on minimal / patience

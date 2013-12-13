@@ -77,6 +77,20 @@ void git_vector_free(git_vector *v)
 	v->_alloc_size = 0;
 }
 
+void git_vector_free_deep(git_vector *v)
+{
+	size_t i;
+
+	assert(v);
+
+	for (i = 0; i < v->length; ++i) {
+		git__free(v->contents[i]);
+		v->contents[i] = NULL;
+	}
+
+	git_vector_free(v);
+}
+
 int git_vector_init(git_vector *v, size_t initial_size, git_vector_cmp cmp)
 {
 	assert(v);
@@ -88,6 +102,22 @@ int git_vector_init(git_vector *v, size_t initial_size, git_vector_cmp cmp)
 	v->contents = NULL;
 
 	return resize_vector(v, max(initial_size, MIN_ALLOCSIZE));
+}
+
+void **git_vector_detach(size_t *size, size_t *asize, git_vector *v)
+{
+	void **data = v->contents;
+
+	if (size)
+		*size = v->length;
+	if (asize)
+		*asize = v->_alloc_size;
+
+	v->_alloc_size = 0;
+	v->length   = 0;
+	v->contents = NULL;
+
+	return data;
 }
 
 int git_vector_insert(git_vector *v, void *element)

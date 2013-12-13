@@ -2036,11 +2036,12 @@ int git_index_read_tree(git_index *index, const git_tree *tree)
 
 	error = git_tree_walk(tree, GIT_TREEWALK_POST, read_tree_cb, &data);
 
-	git_vector_sort(&entries);
+	if (!error) {
+		git_vector_sort(&entries);
+		git_index_clear(index);
+		git_vector_swap(&entries, &index->entries);
+	}
 
-	git_index_clear(index);
-
-	git_vector_swap(&entries, &index->entries);
 	git_vector_free(&entries);
 
 	return error;
@@ -2116,8 +2117,7 @@ int git_index_add_all(
 			if (error > 0) /* return > 0 means skip this one */
 				continue;
 			if (error < 0) { /* return < 0 means abort */
-				giterr_clear();
-				error = GIT_EUSER;
+				giterr_set_after_callback(error);
 				break;
 			}
 		}
@@ -2204,11 +2204,8 @@ static int index_apply_to_all(
 				error = 0;
 				continue;
 			}
-			if (error < 0) { /* return < 0 means abort */
-				giterr_clear();
-				error = GIT_EUSER;
+			if (error < 0)   /* return < 0 means abort */
 				break;
-			}
 		}
 
 		/* index manipulation may alter entry, so don't depend on it */
@@ -2253,8 +2250,13 @@ int git_index_remove_all(
 	git_index_matched_path_cb cb,
 	void *payload)
 {
-	return index_apply_to_all(
+	int error = index_apply_to_all(
 		index, INDEX_ACTION_REMOVE, pathspec, cb, payload);
+
+	if (error) /* make sure error is set if callback stopped iteration */
+		giterr_set_after_callback(error);
+
+	return error;
 }
 
 int git_index_update_all(
@@ -2263,6 +2265,11 @@ int git_index_update_all(
 	git_index_matched_path_cb cb,
 	void *payload)
 {
-	return index_apply_to_all(
+	int error = index_apply_to_all(
 		index, INDEX_ACTION_UPDATE, pathspec, cb, payload);
+
+	if (error) /* make sure error is set if callback stopped iteration */
+		giterr_set_after_callback(error);
+
+	return error;
 }

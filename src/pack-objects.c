@@ -205,14 +205,18 @@ int git_packbuilder_insert(git_packbuilder *pb, const git_oid *oid,
 	po = pb->object_list + pb->nr_objects;
 	memset(po, 0x0, sizeof(*po));
 
-	if (git_odb_read_header(&po->size, &po->type, pb->odb, oid) < 0)
-		return -1;
+	if ((ret = git_odb_read_header(&po->size, &po->type, pb->odb, oid)) < 0)
+		return ret;
 
 	pb->nr_objects++;
 	git_oid_cpy(&po->id, oid);
 	po->hash = name_hash(name);
 
 	pos = kh_put(oid, pb->object_ix, &po->id, &ret);
+	if (ret < 0) {
+		giterr_set_oom();
+		return ret;
+	}
 	assert(ret != 0);
 	kh_value(pb->object_ix, pos) = po;
 
@@ -220,12 +224,17 @@ int git_packbuilder_insert(git_packbuilder *pb, const git_oid *oid,
 
 	if (pb->progress_cb) {
 		double current_time = git__timer();
-		if ((current_time - pb->last_progress_report_time) >= MIN_PROGRESS_UPDATE_INTERVAL) {
+		double elapsed = current_time - pb->last_progress_report_time;
+
+		if (elapsed >= MIN_PROGRESS_UPDATE_INTERVAL) {
 			pb->last_progress_report_time = current_time;
-			if (pb->progress_cb(GIT_PACKBUILDER_ADDING_OBJECTS, pb->nr_objects, 0, pb->progress_cb_payload)) {
-				giterr_clear();
-				return GIT_EUSER;
-			}
+
+			ret = pb->progress_cb(
+				GIT_PACKBUILDER_ADDING_OBJECTS,
+				pb->nr_objects, 0, pb->progress_cb_payload);
+
+			if (ret)
+				return giterr_set_after_callback(ret);
 		}
 	}
 
@@ -323,8 +332,10 @@ static int write_object(git_buf *buf, git_packbuilder *pb, git_pobject *po)
 		git_hash_update(&pb->ctx, data, size) < 0)
 		goto on_error;
 
-	if (po->delta_data)
+	if (po->delta_data) {
 		git__free(po->delta_data);
+		po->delta_data = NULL;
+	}
 
 	git_odb_object_free(obj);
 	git_buf_free(&zbuf);
@@ -603,6 +614,15 @@ static int write_pack(git_packbuilder *pb,
 	error = cb(entry_oid.id, GIT_OID_RAWSZ, data);
 
 done:
+	/* if callback cancelled writing, we must still free delta_data */
+	for ( ; i < pb->nr_objects; ++i) {
+		po = write_order[i];
+		if (po->delta_data) {
+			git__free(po->delta_data);
+			po->delta_data = NULL;
+		}
+	}
+
 	git__free(write_order);
 	git_buf_free(&buf);
 	return error;
@@ -1284,21 +1304,22 @@ const git_oid *git_packbuilder_hash(git_packbuilder *pb)
 	return &pb->pack_oid;
 }
 
-static int cb_tree_walk(const char *root, const git_tree_entry *entry, void *payload)
+static int cb_tree_walk(
+	const char *root, const git_tree_entry *entry, void *payload)
 {
+	int error;
 	struct tree_walk_context *ctx = payload;
 
 	/* A commit inside a tree represents a submodule commit and should be skipped. */
 	if (git_tree_entry_type(entry) == GIT_OBJ_COMMIT)
 		return 0;
 
-	if (git_buf_sets(&ctx->buf, root) < 0 ||
-		git_buf_puts(&ctx->buf, git_tree_entry_name(entry)) < 0)
-		return -1;
+	if (!(error = git_buf_sets(&ctx->buf, root)) &&
+		!(error = git_buf_puts(&ctx->buf, git_tree_entry_name(entry))))
+		error = git_packbuilder_insert(
+			ctx->pb, git_tree_entry_id(entry), git_buf_cstr(&ctx->buf));
 
-	return git_packbuilder_insert(ctx->pb,
-		git_tree_entry_id(entry),
-		git_buf_cstr(&ctx->buf));
+	return error;
 }
 
 int git_packbuilder_insert_commit(git_packbuilder *pb, const git_oid *oid)
@@ -1318,22 +1339,17 @@ int git_packbuilder_insert_commit(git_packbuilder *pb, const git_oid *oid)
 
 int git_packbuilder_insert_tree(git_packbuilder *pb, const git_oid *oid)
 {
-	git_tree *tree;
+	int error;
+	git_tree *tree = NULL;
 	struct tree_walk_context context = { pb, GIT_BUF_INIT };
 
-	if (git_tree_lookup(&tree, pb->repo, oid) < 0 ||
-	    git_packbuilder_insert(pb, oid, NULL) < 0)
-		return -1;
-
-	if (git_tree_walk(tree, GIT_TREEWALK_PRE, cb_tree_walk, &context) < 0) {
-		git_tree_free(tree);
-		git_buf_free(&context.buf);
-		return -1;
-	}
+	if (!(error = git_tree_lookup(&tree, pb->repo, oid)) &&
+	    !(error = git_packbuilder_insert(pb, oid, NULL)))
+		error = git_tree_walk(tree, GIT_TREEWALK_PRE, cb_tree_walk, &context);
 
 	git_tree_free(tree);
 	git_buf_free(&context.buf);
-	return 0;
+	return error;
 }
 
 uint32_t git_packbuilder_object_count(git_packbuilder *pb)

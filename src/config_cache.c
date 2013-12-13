@@ -78,22 +78,22 @@ int git_repository__cvar(int *out, git_repository *repo, git_cvar_cached cvar)
 		struct map_data *data = &_cvar_maps[(int)cvar];
 		git_config *config;
 		int error;
+		const git_config_entry *entry;
 
-		error = git_repository_config__weakptr(&config, repo);
-		if (error < 0)
+		if ((error = git_repository_config__weakptr(&config, repo)) < 0)
 			return error;
 
-		if (data->maps)
-			error = git_config_get_mapped(
-				out, config, data->cvar_name, data->maps, data->map_count);
-		else
-			error = git_config_get_bool(out, config, data->cvar_name);
+		git_config__lookup_entry(&entry, config, data->cvar_name, false);
 
-		if (error == GIT_ENOTFOUND) {
-			giterr_clear();
+		if (!entry)
 			*out = data->default_value;
-		}
-		else if (error < 0)
+		else if (data->maps)
+			error = git_config_lookup_map_value(
+				out, data->maps, data->map_count, entry->value);
+		else
+			error = git_config_parse_bool(out, entry->value);
+
+		if (error < 0)
 			return error;
 
 		repo->cvar_cache[(int)cvar] = *out;

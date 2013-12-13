@@ -203,12 +203,12 @@ typedef struct {
  * into this function.
  *
  * If the callback returns a non-zero value, this function will stop looping
- * and return GIT_EUSER.
+ * and return that value to caller.
  *
  * @param repo A repository object
  * @param callback The function to call on each file
  * @param payload Pointer to pass through to callback function
- * @return 0 on success, GIT_EUSER on non-zero callback, or error code
+ * @return 0 on success, non-zero callback return value, or error code
  */
 GIT_EXTERN(int) git_status_foreach(
 	git_repository *repo,
@@ -227,7 +227,7 @@ GIT_EXTERN(int) git_status_foreach(
  * @param opts Status options structure
  * @param callback The function to call on each file
  * @param payload Pointer to pass through to callback function
- * @return 0 on success, GIT_EUSER on non-zero callback, or error code
+ * @return 0 on success, non-zero callback return value, or error code
  */
 GIT_EXTERN(int) git_status_foreach_ext(
 	git_repository *repo,

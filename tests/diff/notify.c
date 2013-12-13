@@ -20,7 +20,7 @@ static int assert_called_notifications(
 {
 	bool found = false;
 	notify_expected *exp = (notify_expected*)payload;
-	notify_expected *e;;
+	notify_expected *e;
 
 	GIT_UNUSED(diff_so_far);
 
@@ -182,10 +182,12 @@ void test_diff_notify__notify_cb_can_abort_diff(void)
 	opts.pathspec.count   = 1;
 
 	pathspec = "file_deleted";
-	cl_git_fail(git_diff_index_to_workdir(&diff, g_repo, NULL, &opts));
+	cl_git_fail_with(
+		git_diff_index_to_workdir(&diff, g_repo, NULL, &opts), -42);
 
 	pathspec = "staged_changes_modified_file";
-	cl_git_fail(git_diff_index_to_workdir(&diff, g_repo, NULL, &opts));
+	cl_git_fail_with(
+		git_diff_index_to_workdir(&diff, g_repo, NULL, &opts), -42);
 }
 
 static int filter_all(

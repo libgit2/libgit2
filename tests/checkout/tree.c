@@ -486,6 +486,84 @@ void test_checkout_tree__donot_update_deleted_file_by_default(void)
 	git_index_free(index);
 }
 
+struct checkout_cancel_at {
+	const char *filename;
+	int error;
+	int count;
+};
+
+static int checkout_cancel_cb(
+	git_checkout_notify_t why,
+	const char *path,
+	const git_diff_file *b,
+	const git_diff_file *t,
+	const git_diff_file *w,
+	void *payload)
+{
+	struct checkout_cancel_at *ca = payload;
+
+	GIT_UNUSED(why); GIT_UNUSED(b); GIT_UNUSED(t); GIT_UNUSED(w);
+
+	ca->count++;
+
+	if (!strcmp(path, ca->filename))
+		return ca->error;
+
+	return 0;
+}
+
+void test_checkout_tree__can_cancel_checkout_from_notify(void)
+{
+	struct checkout_cancel_at ca;
+	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
+	git_oid oid;
+	git_object *obj = NULL;
+
+	assert_on_branch(g_repo, "master");
+
+	cl_git_pass(git_reference_name_to_id(&oid, g_repo, "refs/heads/dir"));
+	cl_git_pass(git_object_lookup(&obj, g_repo, &oid, GIT_OBJ_ANY));
+
+	ca.filename = "new.txt";
+	ca.error = -5555;
+	ca.count = 0;
+
+	opts.notify_flags = GIT_CHECKOUT_NOTIFY_UPDATED;
+	opts.notify_cb = checkout_cancel_cb;
+	opts.notify_payload = &ca;
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+
+	cl_assert(!git_path_exists("testrepo/new.txt"));
+
+	cl_git_fail_with(git_checkout_tree(g_repo, obj, &opts), -5555);
+
+	cl_assert(!git_path_exists("testrepo/new.txt"));
+
+	/* on case-insensitive FS = a/b.txt, branch_file.txt, new.txt */
+	/* on case-sensitive FS   = README, then above */
+
+	if (git_path_exists("testrepo/.git/CoNfIg")) /* case insensitive */
+		cl_assert_equal_i(3, ca.count);
+	else
+		cl_assert_equal_i(4, ca.count);
+
+	/* and again with a different stopping point and return code */
+	ca.filename = "README";
+	ca.error = 123;
+	ca.count = 0;
+
+	cl_git_fail_with(git_checkout_tree(g_repo, obj, &opts), 123);
+
+	cl_assert(!git_path_exists("testrepo/new.txt"));
+
+	if (git_path_exists("testrepo/.git/CoNfIg")) /* case insensitive */
+		cl_assert_equal_i(4, ca.count);
+	else
+		cl_assert_equal_i(1, ca.count);
+
+	git_object_free(obj);
+}
+
 void test_checkout_tree__can_checkout_with_last_workdir_item_missing(void)
 {
 	git_index *index = NULL;

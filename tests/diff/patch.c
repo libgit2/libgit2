@@ -30,8 +30,6 @@ static int check_removal_cb(
 	const git_diff_line *line,
 	void *payload)
 {
-	GIT_UNUSED(payload);
-
 	switch (line->origin) {
 	case GIT_DIFF_LINE_FILE_HDR:
 		cl_assert_equal_s(EXPECTED_HEADER, line->content);
@@ -40,10 +38,12 @@ static int check_removal_cb(
 
 	case GIT_DIFF_LINE_HUNK_HDR:
 		cl_assert_equal_s(EXPECTED_HUNK, line->content);
-		/* Fall through */
+		goto check_hunk;
 
 	case GIT_DIFF_LINE_CONTEXT:
 	case GIT_DIFF_LINE_DELETION:
+		if (payload != NULL)
+			return *(int *)payload;
 		goto check_hunk;
 
 	default:
@@ -94,6 +94,39 @@ void test_diff_patch__can_properly_display_the_removal_of_a_file(void)
 
 	cl_git_pass(git_diff_print(
 		diff, GIT_DIFF_FORMAT_PATCH, check_removal_cb, NULL));
+
+	git_diff_free(diff);
+
+	git_tree_free(another);
+	git_tree_free(one);
+}
+
+void test_diff_patch__can_cancel_diff_print(void)
+{
+	const char *one_sha = "26a125e";
+	const char *another_sha = "735b6a2";
+	git_tree *one, *another;
+	git_diff *diff;
+	int fail_with;
+
+	g_repo = cl_git_sandbox_init("status");
+
+	one = resolve_commit_oid_to_tree(g_repo, one_sha);
+	another = resolve_commit_oid_to_tree(g_repo, another_sha);
+
+	cl_git_pass(git_diff_tree_to_tree(&diff, g_repo, one, another, NULL));
+
+	fail_with = -2323;
+
+	cl_git_fail_with(git_diff_print(
+		diff, GIT_DIFF_FORMAT_PATCH, check_removal_cb, &fail_with),
+		fail_with);
+
+	fail_with = 45;
+
+	cl_git_fail_with(git_diff_print(
+		diff, GIT_DIFF_FORMAT_PATCH, check_removal_cb, &fail_with),
+		fail_with);
 
 	git_diff_free(diff);
 

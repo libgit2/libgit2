@@ -218,13 +218,13 @@ GIT_EXTERN(size_t) git_patch_size(
  * Serialize the patch to text via callback.
  *
  * Returning a non-zero value from the callback will terminate the iteration
- * and cause this return `GIT_EUSER`.
+ * and return that value to the caller.
  *
  * @param patch A git_patch representing changes to one file
  * @param print_cb Callback function to output lines of the patch.  Will be
  *                 called for file headers, hunk headers, and diff lines.
  * @param payload Reference pointer that will be passed to your callbacks.
- * @return 0 on success, GIT_EUSER on non-zero callback, or error code
+ * @return 0 on success, non-zero callback return value, or error code
  */
 GIT_EXTERN(int) git_patch_print(
 	git_patch *patch,

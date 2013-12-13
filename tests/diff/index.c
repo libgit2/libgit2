@@ -128,9 +128,7 @@ void test_diff_index__1(void)
 	cl_git_pass(git_diff_tree_to_index(&diff, g_repo, a, NULL, &opts));
 
 	cl_assert_equal_i(
-		GIT_EUSER,
-		git_diff_foreach(diff, diff_stop_after_2_files, NULL, NULL, &exp)
-	);
+		1, git_diff_foreach(diff, diff_stop_after_2_files, NULL, NULL, &exp) );
 
 	cl_assert_equal_i(2, exp.files);
 
