@@ -333,6 +333,7 @@ static int checkout_action_with_wd(
 	int *action,
 	checkout_data *data,
 	const git_diff_delta *delta,
+	git_iterator *workdir,
 	const git_index_entry *wd)
 {
 	*action = CHECKOUT_ACTION__NONE;
@@ -346,7 +347,10 @@ static int checkout_action_with_wd(
 		}
 		break;
 	case GIT_DELTA_ADDED: /* case 3, 4 or 6 */
-		*action = CHECKOUT_ACTION_IF(FORCE, UPDATE_BLOB, CONFLICT);
+		if (git_iterator_current_is_ignored(workdir))
+			*action = CHECKOUT_ACTION_IF(DONT_OVERWRITE_IGNORED, CONFLICT, UPDATE_BLOB);
+		else
+			*action = CHECKOUT_ACTION_IF(FORCE, UPDATE_BLOB, CONFLICT);
 		break;
 	case GIT_DELTA_DELETED: /* case 9 or 10 (or 26 but not really) */
 		if (checkout_is_workdir_modified(data, &delta->old_file, wd))
@@ -431,6 +435,7 @@ static int checkout_action_with_wd_dir(
 	int *action,
 	checkout_data *data,
 	const git_diff_delta *delta,
+	git_iterator *workdir,
 	const git_index_entry *wd)
 {
 	*action = CHECKOUT_ACTION__NONE;
@@ -447,7 +452,9 @@ static int checkout_action_with_wd_dir(
 		if (delta->old_file.mode == GIT_FILEMODE_COMMIT)
 			/* expected submodule (and maybe found one) */;
 		else if (delta->new_file.mode != GIT_FILEMODE_TREE)
-			*action = CHECKOUT_ACTION_IF(FORCE, REMOVE_AND_UPDATE, CONFLICT);
+			*action = git_iterator_current_is_ignored(workdir) ?
+				CHECKOUT_ACTION_IF(DONT_OVERWRITE_IGNORED, CONFLICT, REMOVE_AND_UPDATE) :
+				CHECKOUT_ACTION_IF(FORCE, REMOVE_AND_UPDATE, CONFLICT);
 		break;
 	case GIT_DELTA_DELETED: /* case 11 (and 27 for dir) */
 		if (delta->old_file.mode != GIT_FILEMODE_TREE)
@@ -541,7 +548,7 @@ static int checkout_action(
 
 		if (cmp == 0) {
 			/* case 4 */
-			error = checkout_action_with_wd(action, data, delta, wd);
+			error = checkout_action_with_wd(action, data, delta, workdir, wd);
 			advance = git_iterator_advance;
 			goto done;
 		}
@@ -554,7 +561,7 @@ static int checkout_action(
 
 			if (delta->status == GIT_DELTA_TYPECHANGE) {
 				if (delta->old_file.mode == GIT_FILEMODE_TREE) {
-					error = checkout_action_with_wd(action, data, delta, wd);
+					error = checkout_action_with_wd(action, data, delta, workdir, wd);
 					advance = git_iterator_advance_into;
 					goto done;
 				}
@@ -563,13 +570,13 @@ static int checkout_action(
 					delta->new_file.mode == GIT_FILEMODE_COMMIT ||
 					delta->old_file.mode == GIT_FILEMODE_COMMIT)
 				{
-					error = checkout_action_with_wd(action, data, delta, wd);
+					error = checkout_action_with_wd(action, data, delta, workdir, wd);
 					advance = git_iterator_advance;
 					goto done;
 				}
 			}
 
-			return checkout_action_with_wd_dir(action, data, delta, wd);
+			return checkout_action_with_wd_dir(action, data, delta, workdir, wd);
 		}
 
 		/* case 6 - wd is after delta */
@@ -1017,8 +1024,10 @@ static int checkout_get_actions(
 	if (counts[CHECKOUT_ACTION__CONFLICT] > 0 &&
 		(data->strategy & GIT_CHECKOUT_ALLOW_CONFLICTS) == 0)
 	{
-		giterr_set(GITERR_CHECKOUT, "%d conflicts prevent checkout",
-			(int)counts[CHECKOUT_ACTION__CONFLICT]);
+		giterr_set(GITERR_CHECKOUT, "%d %s checkout",
+			(int)counts[CHECKOUT_ACTION__CONFLICT],
+			counts[CHECKOUT_ACTION__CONFLICT] == 1 ?
+			"conflict prevents" : "conflicts prevent");
 		error = GIT_EMERGECONFLICT;
 		goto fail;
 	}
