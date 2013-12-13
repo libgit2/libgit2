@@ -190,19 +190,15 @@ void *git_pool_malloc(git_pool *pool, uint32_t items)
 
 char *git_pool_strndup(git_pool *pool, const char *str, size_t n)
 {
-	void *ptr = NULL;
+	char *ptr = NULL;
 
 	assert(pool && str && pool->item_size == sizeof(char));
 
-	if (n + 1 == 0) {
-		giterr_set_oom();
-		return NULL;
-	}
-
 	if ((ptr = git_pool_malloc(pool, (uint32_t)(n + 1))) != NULL) {
 		memcpy(ptr, str, n);
-		*(((char *)ptr) + n) = '\0';
+		ptr[n] = '\0';
 	}
+
 	pool->has_string_alloc = 1;
 
 	return ptr;
@@ -217,14 +213,7 @@ char *git_pool_strdup(git_pool *pool, const char *str)
 
 char *git_pool_strdup_safe(git_pool *pool, const char *str)
 {
-	if (!str)
-		return NULL;
-	else {
-		char *result = git_pool_strdup(pool, str);
-		if (!result)
-			giterr_clear();
-		return result;
-	}
+	return str ? git_pool_strdup(pool, str) : NULL;
 }
 
 char *git_pool_strcat(git_pool *pool, const char *a, const char *b)
