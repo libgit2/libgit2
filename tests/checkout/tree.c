@@ -235,7 +235,7 @@ void test_checkout_tree__can_remove_ignored(void)
 	cl_assert(!git_path_isfile("testrepo/ignored_file"));
 }
 
-static int checkout_tree_with_blob_ignored_in_workdir(int strategy)
+static int checkout_tree_with_blob_ignored_in_workdir(int strategy, bool isdir)
 {
 	git_oid oid;
 	git_object *obj = NULL;
@@ -268,15 +268,26 @@ static int checkout_tree_with_blob_ignored_in_workdir(int strategy)
 
 	opts.checkout_strategy = strategy;
 
-	cl_must_pass(p_mkdir("testrepo/ab", 0777));
-	cl_git_mkfile("testrepo/ab/4.txt", "as you wish");
+	if (isdir) {
+		cl_must_pass(p_mkdir("testrepo/ab", 0777));
+		cl_must_pass(p_mkdir("testrepo/ab/4.txt", 0777));
+
+		cl_git_mkfile("testrepo/ab/4.txt/file1.txt", "as you wish");
+		cl_git_mkfile("testrepo/ab/4.txt/file2.txt", "foo bar foo");
+		cl_git_mkfile("testrepo/ab/4.txt/file3.txt", "inky blinky pinky clyde");
+
+		cl_assert(git_path_isdir("testrepo/ab/4.txt"));
+	} else {
+		cl_must_pass(p_mkdir("testrepo/ab", 0777));
+		cl_git_mkfile("testrepo/ab/4.txt", "as you wish");
+
+		cl_assert(git_path_isfile("testrepo/ab/4.txt"));
+	}
 
 	cl_git_pass(git_ignore_add_rule(g_repo, "ab/4.txt\n"));
 
 	cl_git_pass(git_ignore_path_is_ignored(&ignored, g_repo, "ab/4.txt"));
 	cl_assert_equal_i(1, ignored);
-
-	cl_assert(git_path_isfile("testrepo/ab/4.txt"));
 
 	cl_git_pass(git_reference_name_to_id(&oid, g_repo, "refs/heads/subtrees"));
 	cl_git_pass(git_object_lookup(&obj, g_repo, &oid, GIT_OBJ_ANY));
@@ -293,20 +304,42 @@ void test_checkout_tree__conflict_on_ignored_when_not_overwriting(void)
 	int error;
 
 	cl_git_fail(error = checkout_tree_with_blob_ignored_in_workdir(
-		GIT_CHECKOUT_SAFE | GIT_CHECKOUT_DONT_OVERWRITE_IGNORED));
+		GIT_CHECKOUT_SAFE | GIT_CHECKOUT_DONT_OVERWRITE_IGNORED, false));
 
 	cl_assert_equal_i(GIT_EMERGECONFLICT, error);
 }
 
 void test_checkout_tree__can_overwrite_ignored_by_default(void)
 {
-	cl_git_pass(checkout_tree_with_blob_ignored_in_workdir(GIT_CHECKOUT_SAFE));
+	cl_git_pass(checkout_tree_with_blob_ignored_in_workdir(GIT_CHECKOUT_SAFE, false));
 
 	cl_git_pass(git_repository_set_head(g_repo, "refs/heads/subtrees"));
 
 	cl_assert(git_path_isfile("testrepo/ab/4.txt"));
 
 	assert_on_branch(g_repo, "subtrees");
+}
+
+void test_checkout_tree__conflict_on_ignored_folder_when_not_overwriting(void)
+{
+	int error;
+
+	cl_git_fail(error = checkout_tree_with_blob_ignored_in_workdir(
+		GIT_CHECKOUT_SAFE | GIT_CHECKOUT_DONT_OVERWRITE_IGNORED, true));
+
+	cl_assert_equal_i(GIT_EMERGECONFLICT, error);
+}
+
+void test_checkout_tree__can_overwrite_ignored_folder_by_default(void)
+{
+	cl_git_pass(checkout_tree_with_blob_ignored_in_workdir(GIT_CHECKOUT_SAFE, true));
+
+	cl_git_pass(git_repository_set_head(g_repo, "refs/heads/subtrees"));
+
+	cl_assert(git_path_isfile("testrepo/ab/4.txt"));
+
+	assert_on_branch(g_repo, "subtrees");
+
 }
 
 void test_checkout_tree__can_update_only(void)
