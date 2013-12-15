@@ -1,0 +1,33 @@
+@PACKAGE_INIT@
+
+# Config file for LibGit2
+# The following variables are defined:
+# LibGit2_FOUND        - True if LibGit2 has been found.
+# LibGit2_INCLUDE_DIRS - The include directory.
+# LibGit2_LIBRARY_DIRS - The libraries directory.
+# LibGit2_LIBRARIES    - Libraries needed to use Git2.
+
+########## The LibGit2 version ##########
+set(LibGit2_VERSION_MAJOR @LIBGIT2_VERSION_MAJOR@)
+set(LibGit2_VERSION_MINOR @LIBGIT2_VERSION_MINOR@)
+set(LibGit2_VERSION_PATCH @LIBGIT2_VERSION_REV@)
+set(LibGit2_VERSION       @LIBGIT2_VERSION_STRING@)
+#########################################
+
+########## Install dirs ##########
+set_and_check(LibGit2_INCLUDE_DIRS "@PACKAGE_INCLUDE_INSTALL_DIR@")
+set_and_check(LibGit2_LIBRARY_DIRS "@PACKAGE_LIB_INSTALL_DIR@")
+##################################
+
+########## The LibGit2 libraries ##########
+# Load the exported targets.
+include("${CMAKE_CURRENT_LIST_DIR}/LibGit2Targets.cmake")
+set(LibGit2_LIBRARIES        LibGit2::git2)
+###########################################
+
+# The following variables are kept for compatibility purpose
+set(LIBGIT2_INCLUDE_DIR ${LibGit2_INCLUDE_DIRS})
+set(LIBGIT2_LIBRARY_DIRS ${LibGit2_LIBRARY_DIRS})
+set(LIBGIT2_FOUND ${LibGit2_FOUND})
+set(LIBGIT2_LIBRARIES ${LibGit2_LIBRARIES})
+
