@@ -83,7 +83,6 @@ static int lookup_head_remote(git_buf *url, git_repository *repo);
 static int submodule_get(git_submodule **, git_repository *, const char *, const char *);
 static int submodule_load_from_config(const git_config_entry *, void *);
 static int submodule_load_from_wd_lite(git_submodule *);
-static int submodule_update_config(git_submodule *, const char *, const char *, bool, bool);
 static void submodule_get_index_status(unsigned int *, git_submodule *);
 static void submodule_get_wd_status(unsigned int *, git_submodule *, git_repository *, git_submodule_ignore_t);
 
@@ -716,46 +715,105 @@ git_submodule_recurse_t git_submodule_set_fetch_recurse_submodules(
 	return old;
 }
 
-int git_submodule_init(git_submodule *submodule, int overwrite)
+int git_submodule_init(git_submodule *sm, int overwrite)
 {
 	int error;
 	const char *val;
+	git_buf key = GIT_BUF_INIT;
+	git_config *cfg = NULL;
 
-	/* write "submodule.NAME.url" */
-
-	if (!submodule->url) {
+	if (!sm->url) {
 		giterr_set(GITERR_SUBMODULE,
-			"No URL configured for submodule '%s'", submodule->name);
+			"No URL configured for submodule '%s'", sm->name);
 		return -1;
 	}
 
-	error = submodule_update_config(
-		submodule, "url", submodule->url, overwrite != 0, false);
-	if (error < 0)
+	if ((error = git_repository_config(&cfg, sm->repo)) < 0)
 		return error;
+
+	/* write "submodule.NAME.url" */
+
+	if ((error = git_buf_printf(&key, "submodule.%s.url", sm->name)) < 0 ||
+		(error = git_config__update_entry(
+			cfg, key.ptr, sm->url, overwrite != 0, false)) < 0)
+		goto cleanup;
 
 	/* write "submodule.NAME.update" if not default */
 
-	val = (submodule->update == GIT_SUBMODULE_UPDATE_CHECKOUT) ?
-		NULL : git_submodule_update_to_str(submodule->update);
-	error = submodule_update_config(
-		submodule, "update", val, (overwrite != 0), false);
+	val = (sm->update == GIT_SUBMODULE_UPDATE_CHECKOUT) ?
+		NULL : git_submodule_update_to_str(sm->update);
+
+	if ((error = git_buf_printf(&key, "submodule.%s.update", sm->name)) < 0 ||
+		(error = git_config__update_entry(
+			cfg, key.ptr, val, overwrite != 0, false)) < 0)
+		goto cleanup;
+
+	/* success */
+
+cleanup:
+	git_config_free(cfg);
+	git_buf_free(&key);
 
 	return error;
 }
 
-int git_submodule_sync(git_submodule *submodule)
+int git_submodule_sync(git_submodule *sm)
 {
-	if (!submodule->url) {
+	int error = 0;
+	git_config *cfg = NULL;
+	git_buf key = GIT_BUF_INIT;
+
+	if (!sm->url) {
 		giterr_set(GITERR_SUBMODULE,
-			"No URL configured for submodule '%s'", submodule->name);
+			"No URL configured for submodule '%s'", sm->name);
 		return -1;
 	}
 
 	/* copy URL over to config only if it already exists */
 
-	return submodule_update_config(
-		submodule, "url", submodule->url, true, true);
+	if (!(error = git_repository_config__weakptr(&cfg, sm->repo)) &&
+		!(error = git_buf_printf(&key, "submodule.%s.url", sm->name)))
+		error = git_config__update_entry(cfg, key.ptr, sm->url, true, true);
+
+	/* if submodule exists in the working directory, update remote url */
+
+	if (!error && (sm->flags & GIT_SUBMODULE_STATUS_IN_WD) != 0) {
+		git_repository *smrepo = NULL;
+		git_reference *smhead = NULL;
+		const char *remote = "origin";
+
+		if ((error = git_submodule_open(&smrepo, sm)) < 0 ||
+			(error = git_repository_head(&smhead, smrepo)) < 0 ||
+			(error = git_repository_config__weakptr(&cfg, smrepo)) < 0)
+			goto smcleanup;
+
+		/* get remote for default branch and set remote.<name>.url */
+
+		if (git_reference_type(smhead) == GIT_REF_SYMBOLIC) {
+			const char *bname = git_reference_shorthand(smhead);
+			const git_config_entry *ce;
+
+			git_buf_clear(&key);
+			if ((error = git_buf_printf(&key, "branch.%s.remote", bname)) < 0 ||
+				(error = git_config__lookup_entry(&ce, cfg, key.ptr, 0)) < 0)
+				goto smcleanup;
+
+			if (ce && ce->value)
+				remote = ce->value;
+		}
+
+		git_buf_clear(&key);
+		if (!(error = git_buf_printf(&key, "remote.%s.url", remote)))
+			error = git_config__update_entry(cfg, key.ptr, sm->url, true, true);
+
+smcleanup:
+		git_reference_free(smhead);
+		git_repository_free(smrepo);
+	}
+
+	git_buf_free(&key);
+
+	return error;
 }
 
 static int git_submodule__open(
@@ -1637,50 +1695,6 @@ cleanup:
 	git_reference_free(head);
 	git_reference_free(remote);
 
-	return error;
-}
-
-static int submodule_update_config(
-	git_submodule *submodule,
-	const char *attr,
-	const char *value,
-	bool overwrite,
-	bool only_existing)
-{
-	int error;
-	git_config *config;
-	git_buf key = GIT_BUF_INIT;
-	const git_config_entry *ce = NULL;
-
-	assert(submodule);
-
-	error = git_repository_config__weakptr(&config, submodule->repo);
-	if (error < 0)
-		return error;
-
-	error = git_buf_printf(&key, "submodule.%s.%s", submodule->name, attr);
-	if (error < 0)
-		goto cleanup;
-
-	if ((error = git_config__lookup_entry(&ce, config, key.ptr, false)) < 0)
-		goto cleanup;
-
-	if (!ce && only_existing)
-		goto cleanup;
-	if (ce && !overwrite)
-		goto cleanup;
-	if (value && ce && ce->value && !strcmp(ce->value, value))
-		goto cleanup;
-	if (!value && (!ce || !ce->value))
-		goto cleanup;
-
-	if (!value)
-		error = git_config_delete_entry(config, key.ptr);
-	else
-		error = git_config_set_string(config, key.ptr, value);
-
-cleanup:
-	git_buf_free(&key);
 	return error;
 }
 

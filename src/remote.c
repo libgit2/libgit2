@@ -495,9 +495,10 @@ cleanup:
 int git_remote_save(const git_remote *remote)
 {
 	int error;
-	git_config *config;
+	git_config *cfg;
 	const char *tagopt = NULL;
 	git_buf buf = GIT_BUF_INIT;
+	const git_config_entry *existing;
 
 	assert(remote);
 
@@ -509,43 +510,31 @@ int git_remote_save(const git_remote *remote)
 	if ((error = ensure_remote_name_is_valid(remote->name)) < 0)
 		return error;
 
-	if (git_repository_config__weakptr(&config, remote->repo) < 0)
-		return -1;
+	if ((error = git_repository_config__weakptr(&cfg, remote->repo)) < 0)
+		return error;
 
-	if (git_buf_printf(&buf, "remote.%s.url", remote->name) < 0)
-		return -1;
+	if ((error = git_buf_printf(&buf, "remote.%s.url", remote->name)) < 0)
+		return error;
 
-	if (git_config_set_string(config, git_buf_cstr(&buf), remote->url) < 0) {
-		git_buf_free(&buf);
-		return -1;
-	}
+	/* after this point, buffer is allocated so end with cleanup */
+
+	if ((error = git_config_set_string(
+			cfg, git_buf_cstr(&buf), remote->url)) < 0)
+		goto cleanup;
 
 	git_buf_clear(&buf);
-	if (git_buf_printf(&buf, "remote.%s.pushurl", remote->name) < 0)
-		return -1;
+	if ((error = git_buf_printf(&buf, "remote.%s.pushurl", remote->name)) < 0)
+		goto cleanup;
 
-	if (remote->pushurl) {
-		if (git_config_set_string(config, git_buf_cstr(&buf), remote->pushurl) < 0) {
-			git_buf_free(&buf);
-			return -1;
-		}
-	} else {
-		int error = git_config_delete_entry(config, git_buf_cstr(&buf));
-		if (error == GIT_ENOTFOUND) {
-			error = 0;
-			giterr_clear();
-		}
-		if (error < 0) {
-			git_buf_free(&buf);
-			return error;
-		}
-	}
+	if ((error = git_config__update_entry(
+			cfg, git_buf_cstr(&buf), remote->pushurl, true, false)) < 0)
+		goto cleanup;
 
-	if (update_config_refspec(remote, config, GIT_DIRECTION_FETCH) < 0)
-		goto on_error;
+	if ((error = update_config_refspec(remote, cfg, GIT_DIRECTION_FETCH)) < 0)
+		goto cleanup;
 
-	if (update_config_refspec(remote, config, GIT_DIRECTION_PUSH) < 0)
-		goto on_error;
+	if ((error = update_config_refspec(remote, cfg, GIT_DIRECTION_PUSH)) < 0)
+		goto cleanup;
 
 	/*
 	 * What action to take depends on the old and new values. This
@@ -561,31 +550,26 @@ int git_remote_save(const git_remote *remote)
 	 */
 
 	git_buf_clear(&buf);
-	if (git_buf_printf(&buf, "remote.%s.tagopt", remote->name) < 0)
-		goto on_error;
+	if ((error = git_buf_printf(&buf, "remote.%s.tagopt", remote->name)) < 0)
+		goto cleanup;
 
-	error = git_config_get_string(&tagopt, config, git_buf_cstr(&buf));
-	if (error < 0 && error != GIT_ENOTFOUND)
-		goto on_error;
+	if ((error = git_config__lookup_entry(
+			&existing, cfg, git_buf_cstr(&buf), false)) < 0)
+		goto cleanup;
 
-	if (remote->download_tags == GIT_REMOTE_DOWNLOAD_TAGS_ALL) {
-		if (git_config_set_string(config, git_buf_cstr(&buf), "--tags") < 0)
-			goto on_error;
-	} else if (remote->download_tags == GIT_REMOTE_DOWNLOAD_TAGS_NONE) {
-		if (git_config_set_string(config, git_buf_cstr(&buf), "--no-tags") < 0)
-			goto on_error;
-	} else if (tagopt) {
-		if (git_config_delete_entry(config, git_buf_cstr(&buf)) < 0)
-			goto on_error;
-	}
+	if (remote->download_tags == GIT_REMOTE_DOWNLOAD_TAGS_ALL)
+		tagopt = "--tags";
+	else if (remote->download_tags == GIT_REMOTE_DOWNLOAD_TAGS_NONE)
+		tagopt = "--no-tags";
+	else if (existing != NULL)
+		tagopt = NULL;
 
+	error = git_config__update_entry(
+		cfg, git_buf_cstr(&buf), tagopt, true, false);
+
+cleanup:
 	git_buf_free(&buf);
-
-	return 0;
-
-on_error:
-	git_buf_free(&buf);
-	return -1;
+	return error;
 }
 
 const char *git_remote_name(const git_remote *remote)

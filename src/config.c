@@ -615,6 +615,36 @@ int git_config_set_string(git_config *cfg, const char *name, const char *value)
 	return error;
 }
 
+int git_config__update_entry(
+	git_config *config,
+	const char *key,
+	const char *value,
+	bool overwrite_existing,
+	bool only_if_existing)
+{
+	int error = 0;
+	const git_config_entry *ce = NULL;
+
+	if ((error = git_config__lookup_entry(&ce, config, key, false)) < 0)
+		return error;
+
+	if (!ce && only_if_existing) /* entry doesn't exist */
+		return 0;
+	if (ce && !overwrite_existing) /* entry would be overwritten */
+		return 0;
+	if (value && ce && ce->value && !strcmp(ce->value, value)) /* no change */
+		return 0;
+	if (!value && (!ce || !ce->value)) /* asked to delete absent entry */
+		return 0;
+
+	if (!value)
+		error = git_config_delete_entry(config, key);
+	else
+		error = git_config_set_string(config, key, value);
+
+	return error;
+}
+
 /***********
  * Getters
  ***********/
