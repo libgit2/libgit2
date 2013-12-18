@@ -690,7 +690,10 @@ static int reference_path_available(
 
 static int loose_lock(git_filebuf *file, refdb_fs_backend *backend, const git_reference *ref)
 {
+        int error;
 	git_buf ref_path = GIT_BUF_INIT;
+
+	assert(file && backend && ref);
 
 	/* Remove a possibly existing empty directory hierarchy
 	 * which name would collide with the reference name
@@ -701,17 +704,16 @@ static int loose_lock(git_filebuf *file, refdb_fs_backend *backend, const git_re
 	if (git_buf_joinpath(&ref_path, backend->path, ref->name) < 0)
 		return -1;
 
-	if (git_filebuf_open(file, ref_path.ptr, GIT_FILEBUF_FORCE, GIT_REFS_FILE_MODE) < 0) {
-		git_buf_free(&ref_path);
-		return -1;
-	}
+	error = git_filebuf_open(file, ref_path.ptr, GIT_FILEBUF_FORCE, GIT_REFS_FILE_MODE);
 
 	git_buf_free(&ref_path);
-	return 0;
+        return error;
 }
 
 static int loose_commit(git_filebuf *file, const git_reference *ref)
 {
+	assert(file && ref);
+
 	if (ref->type == GIT_REF_OID) {
 		char oid[GIT_OID_HEXSZ + 1];
 		git_oid_nfmt(oid, sizeof(oid), &ref->target.oid);
@@ -933,10 +935,12 @@ static int refdb_fs_backend__write(
 	const git_reference *ref,
 	int force,
 	const git_signature *who,
-	const char *message)
+	const char *message,
+	const git_oid *old_id)
 {
 	refdb_fs_backend *backend = (refdb_fs_backend *)_backend;
 	git_filebuf file = GIT_FILEBUF_INIT;
+	git_reference *old_ref;
 	int error;
 
 	assert(backend);
@@ -945,9 +949,27 @@ static int refdb_fs_backend__write(
 	if (error < 0)
 		return error;
 
-	/* We need to perform the reflog append under the ref's lock */
+	/* We need to perform the reflog append and old value check under the ref's lock */
 	if ((error = loose_lock(&file, backend, ref)) < 0)
 		return error;
+
+	if (old_id) {
+		if ((error = refdb_fs_backend__lookup(&old_ref, _backend, ref->name)) < 0) {
+			git_filebuf_cleanup(&file);
+			return error;
+		}
+
+		if (old_ref->type == GIT_REF_SYMBOLIC) {
+			giterr_set(GITERR_REFERENCE, "cannot compare id to symbolic reference target");
+			goto on_error;
+		}
+
+		/* Finally we can compare the ids */
+		if (git_oid_cmp(old_id, &old_ref->target.oid)) {
+			giterr_set(GITERR_REFERENCE, "old reference value does not match");
+			goto on_error;
+		}
+	}
 
 	if (should_write_reflog(backend->repo, ref->name) &&
 	    (error = reflog_append(backend, ref, who, message)) < 0) {
@@ -956,6 +978,11 @@ static int refdb_fs_backend__write(
 	}
 
 	return loose_commit(&file, ref);
+
+on_error:
+        git_filebuf_cleanup(&file);
+        git_reference_free(old_ref);
+        return -1;
 }
 
 static int refdb_fs_backend__delete(

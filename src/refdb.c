@@ -167,14 +167,14 @@ void git_refdb_iterator_free(git_reference_iterator *iter)
 	iter->free(iter);
 }
 
-int git_refdb_write(git_refdb *db, git_reference *ref, int force, const git_signature *who, const char *message)
+int git_refdb_write(git_refdb *db, git_reference *ref, int force, const git_signature *who, const char *message, const git_oid *old)
 {
 	assert(db && db->backend);
 
 	GIT_REFCOUNT_INC(db);
 	ref->db = db;
 
-	return db->backend->write(db->backend, ref, force, who, message);
+	return db->backend->write(db->backend, ref, force, who, message, old);
 }
 
 int git_refdb_rename(
