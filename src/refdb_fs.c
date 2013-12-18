@@ -688,9 +688,8 @@ static int reference_path_available(
 	return 0;
 }
 
-static int loose_write(refdb_fs_backend *backend, const git_reference *ref)
+static int loose_lock(git_filebuf *file, refdb_fs_backend *backend, const git_reference *ref)
 {
-	git_filebuf file = GIT_FILEBUF_INIT;
 	git_buf ref_path = GIT_BUF_INIT;
 
 	/* Remove a possibly existing empty directory hierarchy
@@ -702,25 +701,29 @@ static int loose_write(refdb_fs_backend *backend, const git_reference *ref)
 	if (git_buf_joinpath(&ref_path, backend->path, ref->name) < 0)
 		return -1;
 
-	if (git_filebuf_open(&file, ref_path.ptr, GIT_FILEBUF_FORCE, GIT_REFS_FILE_MODE) < 0) {
+	if (git_filebuf_open(file, ref_path.ptr, GIT_FILEBUF_FORCE, GIT_REFS_FILE_MODE) < 0) {
 		git_buf_free(&ref_path);
 		return -1;
 	}
 
 	git_buf_free(&ref_path);
+	return 0;
+}
 
+static int loose_commit(git_filebuf *file, const git_reference *ref)
+{
 	if (ref->type == GIT_REF_OID) {
 		char oid[GIT_OID_HEXSZ + 1];
 		git_oid_nfmt(oid, sizeof(oid), &ref->target.oid);
 
-		git_filebuf_printf(&file, "%s\n", oid);
+		git_filebuf_printf(file, "%s\n", oid);
 	} else if (ref->type == GIT_REF_SYMBOLIC) {
-		git_filebuf_printf(&file, GIT_SYMREF "%s\n", ref->target.symbolic);
+		git_filebuf_printf(file, GIT_SYMREF "%s\n", ref->target.symbolic);
 	} else {
 		assert(0); /* don't let this happen */
 	}
 
-	return git_filebuf_commit(&file);
+	return git_filebuf_commit(file);
 }
 
 /*
@@ -907,12 +910,33 @@ fail:
 	return -1;
 }
 
+static int reflog_append(refdb_fs_backend *backend, const git_reference *ref, const git_signature *author, const char *message);
+static int has_reflog(git_repository *repo, const char *name);
+
+/* We only write if it's under heads/, remotes/ or notes/ or if it already has a log */
+static bool should_write_reflog(git_repository *repo, const char *name)
+{
+	if (has_reflog(repo, name))
+		return 1;
+
+	if (!git__prefixcmp(name, GIT_REFS_HEADS_DIR) ||
+	    !git__strcmp(name, GIT_HEAD_FILE) ||
+	    !git__prefixcmp(name, GIT_REFS_REMOTES_DIR) ||
+	    !git__prefixcmp(name, GIT_REFS_NOTES_DIR))
+		return 1;
+
+	return 0;
+}
+
 static int refdb_fs_backend__write(
 	git_refdb_backend *_backend,
 	const git_reference *ref,
-	int force)
+	int force,
+	const git_signature *who,
+	const char *message)
 {
 	refdb_fs_backend *backend = (refdb_fs_backend *)_backend;
+	git_filebuf file = GIT_FILEBUF_INIT;
 	int error;
 
 	assert(backend);
@@ -921,7 +945,17 @@ static int refdb_fs_backend__write(
 	if (error < 0)
 		return error;
 
-	return loose_write(backend, ref);
+	/* We need to perform the reflog append under the ref's lock */
+	if ((error = loose_lock(&file, backend, ref)) < 0)
+		return error;
+
+	if (should_write_reflog(backend->repo, ref->name) &&
+	    (error = reflog_append(backend, ref, who, message)) < 0) {
+		git_filebuf_cleanup(&file);
+		return error;
+	}
+
+	return loose_commit(&file, ref);
 }
 
 static int refdb_fs_backend__delete(
@@ -969,15 +1003,20 @@ static int refdb_fs_backend__delete(
 	return packed_write(backend);
 }
 
+static int refdb_reflog_fs__rename(git_refdb_backend *_backend, const char *old_name, const char *new_name);
+
 static int refdb_fs_backend__rename(
 	git_reference **out,
 	git_refdb_backend *_backend,
 	const char *old_name,
 	const char *new_name,
-	int force)
+	int force,
+	const git_signature *who,
+	const char *message)
 {
 	refdb_fs_backend *backend = (refdb_fs_backend *)_backend;
 	git_reference *old, *new;
+	git_filebuf file = GIT_FILEBUF_INIT;
 	int error;
 
 	assert(backend);
@@ -998,7 +1037,28 @@ static int refdb_fs_backend__rename(
 		return -1;
 	}
 
-	if ((error = loose_write(backend, new)) < 0 || out == NULL) {
+	if ((error = loose_lock(&file, backend, new)) < 0) {
+		git_reference_free(new);
+		return error;
+	}
+
+	/* Try to rename the refog; it's ok if the old doesn't exist */
+	error = refdb_reflog_fs__rename(_backend, old_name, new_name);
+	if (((error == 0) || (error == GIT_ENOTFOUND)) &&
+	    ((error = reflog_append(backend, new, who, message)) < 0)) {
+		git_reference_free(new);
+		git_filebuf_cleanup(&file);
+		return error;
+	}
+
+	if (error < 0) {
+		git_reference_free(new);
+		git_filebuf_cleanup(&file);
+		return error;
+	}
+
+
+	if ((error = loose_commit(&file, new)) < 0 || out == NULL) {
 		git_reference_free(new);
 		return error;
 	}
@@ -1173,7 +1233,7 @@ static int create_new_reflog_file(const char *filepath)
 		return error;
 
 	if ((fd = p_open(filepath,
-			O_WRONLY | O_CREAT | O_TRUNC,
+			O_WRONLY | O_CREAT,
 			GIT_REFLOG_FILE_MODE)) < 0)
 		return -1;
 
@@ -1183,6 +1243,50 @@ static int create_new_reflog_file(const char *filepath)
 GIT_INLINE(int) retrieve_reflog_path(git_buf *path, git_repository *repo, const char *name)
 {
 	return git_buf_join_n(path, '/', 3, repo->path_repository, GIT_REFLOG_DIR, name);
+}
+
+static int refdb_reflog_fs__ensure_log(git_refdb_backend *_backend, const char *name)
+{
+	refdb_fs_backend *backend;
+	git_repository *repo;
+	git_buf path = GIT_BUF_INIT;
+	int error;
+
+	assert(_backend && name);
+
+	backend = (refdb_fs_backend *) _backend;
+	repo = backend->repo;
+
+	if ((error = retrieve_reflog_path(&path, repo, name)) < 0)
+		return error;
+
+	return create_new_reflog_file(git_buf_cstr(&path));
+}
+
+static int has_reflog(git_repository *repo, const char *name)
+{
+	int ret = 0;
+	git_buf path = GIT_BUF_INIT;
+
+	if (retrieve_reflog_path(&path, repo, name) < 0)
+		goto cleanup;
+
+	ret = git_path_isfile(git_buf_cstr(&path));
+
+cleanup:
+	git_buf_free(&path);
+	return ret;
+}
+
+static int refdb_reflog_fs__has_log(git_refdb_backend *_backend, const char *name)
+{
+	refdb_fs_backend *backend;
+
+	assert(_backend && name);
+
+	backend = (refdb_fs_backend *) _backend;
+
+	return has_reflog(backend->repo, name);
 }
 
 static int refdb_reflog_fs__read(git_reflog **out, git_refdb_backend *_backend, const char *name)
@@ -1264,33 +1368,47 @@ static int serialize_reflog_entry(
 	return git_buf_oom(buf);
 }
 
+static int lock_reflog(git_filebuf *file, refdb_fs_backend *backend, const char *refname)
+{
+	git_repository *repo;
+	git_buf log_path = GIT_BUF_INIT;
+	int error;
+
+	repo = backend->repo;
+
+	if (retrieve_reflog_path(&log_path, repo, refname) < 0)
+		return -1;
+
+	if (!git_path_isfile(git_buf_cstr(&log_path))) {
+		giterr_set(GITERR_INVALID,
+			"Log file for reference '%s' doesn't exist.", refname);
+		error = -1;
+		goto cleanup;
+	}
+
+	error = git_filebuf_open(file, git_buf_cstr(&log_path), 0, GIT_REFLOG_FILE_MODE);
+
+cleanup:
+	git_buf_free(&log_path);
+
+	return error;
+}
+
 static int refdb_reflog_fs__write(git_refdb_backend *_backend, git_reflog *reflog)
 {
 	int error = -1;
 	unsigned int i;
 	git_reflog_entry *entry;
-	git_repository *repo;
 	refdb_fs_backend *backend;
-	git_buf log_path = GIT_BUF_INIT;
 	git_buf log = GIT_BUF_INIT;
 	git_filebuf fbuf = GIT_FILEBUF_INIT;
 
 	assert(_backend && reflog);
 
 	backend = (refdb_fs_backend *) _backend;
-	repo = backend->repo;
 
-	if (retrieve_reflog_path(&log_path, repo, reflog->ref_name) < 0)
+	if ((error = lock_reflog(&fbuf, backend, reflog->ref_name)) < 0)
 		return -1;
-
-	if (!git_path_isfile(git_buf_cstr(&log_path))) {
-		giterr_set(GITERR_INVALID,
-			"Log file for reference '%s' doesn't exist.", reflog->ref_name);
-		goto cleanup;
-	}
-
-	if ((error = git_filebuf_open(&fbuf, git_buf_cstr(&log_path), 0, GIT_REFLOG_FILE_MODE)) < 0)
-		goto cleanup;
 
 	git_vector_foreach(&reflog->entries, i, entry) {
 		if (serialize_reflog_entry(&log, &(entry->oid_old), &(entry->oid_cur), entry->committer, entry->msg) < 0)
@@ -1308,7 +1426,49 @@ cleanup:
 
 success:
 	git_buf_free(&log);
-	git_buf_free(&log_path);
+
+	return error;
+}
+
+/* Append to the reflog, must be called under reference lock */
+static int reflog_append(refdb_fs_backend *backend, const git_reference *ref, const git_signature *who, const char *message)
+{
+	int error;
+	git_oid old_id, new_id;
+	git_buf buf = GIT_BUF_INIT, path = GIT_BUF_INIT;
+	git_repository *repo = backend->repo;
+
+	/* Creation of symbolic references doesn't get a reflog entry */
+	if (ref->type == GIT_REF_SYMBOLIC)
+		return 0;
+
+	error = git_reference_name_to_id(&old_id, repo, ref->name);
+	if (error == GIT_ENOTFOUND) {
+		memset(&old_id, 0, sizeof(git_oid));
+		error = 0;
+	}
+	if (error < 0)
+		return error;
+
+	git_oid_cpy(&new_id, git_reference_target(ref));
+
+	if ((error = serialize_reflog_entry(&buf, &old_id, &new_id, who, message)) < 0)
+		goto cleanup;
+
+	if ((error = retrieve_reflog_path(&path, repo, ref->name)) < 0)
+		goto cleanup;
+
+	if (((error = git_futils_mkpath2file(git_buf_cstr(&path), 0777)) < 0) &&
+	    (error != GIT_EEXISTS)) {
+		goto cleanup;
+	}
+
+	error = git_futils_writebuffer(&buf, git_buf_cstr(&path), O_WRONLY|O_CREAT|O_APPEND, GIT_REFLOG_FILE_MODE);
+
+cleanup:
+	git_buf_free(&buf);
+	git_buf_free(&path);
+
 	return error;
 }
 
@@ -1339,6 +1499,11 @@ static int refdb_reflog_fs__rename(git_refdb_backend *_backend, const char *old_
 
 	if (git_buf_joinpath(&new_path, git_buf_cstr(&temp_path), git_buf_cstr(&normalized)) < 0)
 		return -1;
+
+	if (!git_path_exists(git_buf_cstr(&old_path))) {
+		error = GIT_ENOTFOUND;
+		goto cleanup;
+	}
 
 	/*
 	 * Move the reflog to a temporary place. This two-phase renaming is required
@@ -1454,6 +1619,8 @@ int git_refdb_backend_fs(
 	backend->parent.del = &refdb_fs_backend__delete;
 	backend->parent.rename = &refdb_fs_backend__rename;
 	backend->parent.compress = &refdb_fs_backend__compress;
+	backend->parent.has_log = &refdb_reflog_fs__has_log;
+	backend->parent.ensure_log = &refdb_reflog_fs__ensure_log;
 	backend->parent.free = &refdb_fs_backend__free;
 	backend->parent.reflog_read = &refdb_reflog_fs__read;
 	backend->parent.reflog_write = &refdb_reflog_fs__write;

@@ -93,11 +93,13 @@ struct git_refdb_backend {
 	 * must provide this function.
 	 */
 	int (*write)(git_refdb_backend *backend,
-		const git_reference *ref, int force);
+		     const git_reference *ref, int force,
+		     const git_signature *who, const char *message);
 
 	int (*rename)(
 		git_reference **out, git_refdb_backend *backend,
-		const char *old_name, const char *new_name, int force);
+		const char *old_name, const char *new_name, int force,
+		const git_signature *who, const char *message);
 
 	/**
 	 * Deletes the given reference from the refdb.  A refdb implementation
@@ -113,6 +115,17 @@ struct git_refdb_backend {
 	 * nothing will be done.
 	 */
 	int (*compress)(git_refdb_backend *backend);
+
+	/**
+	 * Query whether a particular reference has a log (may be empty)
+	 */
+	int (*has_log)(git_refdb_backend *backend, const char *refname);
+
+	/**
+	 * Make sure a particular reference will have a reflog which
+	 * will be appended to on writes.
+	 */
+	int (*ensure_log)(git_refdb_backend *backend, const char *refname);
 
 	/**
 	 * Frees any resources held by the refdb.  A refdb implementation may

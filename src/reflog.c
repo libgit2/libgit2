@@ -230,22 +230,3 @@ int git_reflog_drop(git_reflog *reflog, size_t idx, int rewrite_previous_entry)
 
 	return 0;
 }
-
-int git_reflog_append_to(git_repository *repo, const char *name, const git_oid *id,
-			 const git_signature *committer, const char *msg)
-{
-	int error;
-	git_reflog *reflog;
-
-	if ((error = git_reflog_read(&reflog, repo, name)) < 0)
-		return error;
-
-	if ((error = git_reflog_append(reflog, id, committer, msg)) < 0)
-		goto cleanup;
-
-	error = git_reflog_write(reflog);
-
-cleanup:
-	git_reflog_free(reflog);
-	return error;
-}

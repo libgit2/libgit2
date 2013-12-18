@@ -167,14 +167,14 @@ void git_refdb_iterator_free(git_reference_iterator *iter)
 	iter->free(iter);
 }
 
-int git_refdb_write(git_refdb *db, git_reference *ref, int force)
+int git_refdb_write(git_refdb *db, git_reference *ref, int force, const git_signature *who, const char *message)
 {
 	assert(db && db->backend);
 
 	GIT_REFCOUNT_INC(db);
 	ref->db = db;
 
-	return db->backend->write(db->backend, ref, force);
+	return db->backend->write(db->backend, ref, force, who, message);
 }
 
 int git_refdb_rename(
@@ -182,12 +182,14 @@ int git_refdb_rename(
 	git_refdb *db,
 	const char *old_name,
 	const char *new_name,
-	int force)
+	int force,
+	const git_signature *who,
+	const char *message)
 {
 	int error;
 
 	assert(db && db->backend);
-	error = db->backend->rename(out, db->backend, old_name, new_name, force);
+	error = db->backend->rename(out, db->backend, old_name, new_name, force, who, message);
 	if (error < 0)
 		return error;
 
@@ -218,4 +220,18 @@ int git_refdb_reflog_read(git_reflog **out, git_refdb *db,  const char *name)
 	(*out)->db = db;
 
 	return 0;
+}
+
+int git_refdb_has_log(git_refdb *db, const char *refname)
+{
+	assert(db && refname);
+
+	return db->backend->has_log(db->backend, refname);
+}
+
+int git_refdb_ensure_log(git_refdb *db, const char *refname)
+{
+	assert(db && refname);
+
+	return db->backend->ensure_log(db->backend, refname);
 }
