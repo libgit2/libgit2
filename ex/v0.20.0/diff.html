@@ -108,7 +108,7 @@ how to do renaming detection and patch formatting.</p>
   <span class="n">git_diff_find_options</span> <span class="n">findopts</span><span class="p">;</span>
   <span class="kt">int</span> <span class="n">color</span><span class="p">;</span>
   <span class="kt">int</span> <span class="n">cached</span><span class="p">;</span>
-  <span class="n">git_diff_format_t</span> <span class="n">format</span><span class="p">;</span>
+  <span class="kt">git_diff_format_t</span> <span class="n">format</span><span class="p">;</span>
   <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">treeish1</span><span class="p">;</span>
   <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">treeish2</span><span class="p">;</span>
   <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">dir</span><span class="p">;</span>
@@ -123,8 +123,8 @@ how to do renaming detection and patch formatting.</p>
         <p>These functions are implemented at the end</p>
       </td>
       <td class=code>
-        <div class='highlight'><pre><span class="k">static</span> <span class="kt">void</span> <span class="n">parse_opts</span><span class="p">(</span><span class="k">struct</span> <span class="n">opts</span> <span class="o">*</span><span class="n">o</span><span class="p">,</span> <span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">*</span><span class="n">argv</span><span class="p">[]);</span>
-<span class="k">static</span> <span class="kt">int</span> <span class="n">color_printer</span><span class="p">(</span>
+        <div class='highlight'><pre><span class="k">static</span> <span class="kt">void</span> <span class="nf">parse_opts</span><span class="p">(</span><span class="k">struct</span> <span class="n">opts</span> <span class="o">*</span><span class="n">o</span><span class="p">,</span> <span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">*</span><span class="n">argv</span><span class="p">[]);</span>
+<span class="k">static</span> <span class="kt">int</span> <span class="nf">color_printer</span><span class="p">(</span>
   <span class="k">const</span> <span class="n">git_diff_delta</span><span class="o">*</span><span class="p">,</span> <span class="k">const</span> <span class="n">git_diff_hunk</span><span class="o">*</span><span class="p">,</span> <span class="k">const</span> <span class="n">git_diff_line</span><span class="o">*</span><span class="p">,</span> <span class="kt">void</span><span class="o">*</span><span class="p">);</span>
 
 <span class="kt">int</span> <span class="nf">main</span><span class="p">(</span><span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">*</span><span class="n">argv</span><span class="p">[])</span>

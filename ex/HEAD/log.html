@@ -126,9 +126,9 @@ revwalker configuration calls</li>
         <p>utility functions that are called to configure the walker</p>
       </td>
       <td class=code>
-        <div class='highlight'><pre><span class="k">static</span> <span class="kt">void</span> <span class="n">set_sorting</span><span class="p">(</span><span class="k">struct</span> <span class="n">log_state</span> <span class="o">*</span><span class="n">s</span><span class="p">,</span> <span class="kt">unsigned</span> <span class="kt">int</span> <span class="n">sort_mode</span><span class="p">);</span>
-<span class="k">static</span> <span class="kt">void</span> <span class="n">push_rev</span><span class="p">(</span><span class="k">struct</span> <span class="n">log_state</span> <span class="o">*</span><span class="n">s</span><span class="p">,</span> <span class="n">git_object</span> <span class="o">*</span><span class="n">obj</span><span class="p">,</span> <span class="kt">int</span> <span class="n">hide</span><span class="p">);</span>
-<span class="k">static</span> <span class="kt">int</span> <span class="n">add_revision</span><span class="p">(</span><span class="k">struct</span> <span class="n">log_state</span> <span class="o">*</span><span class="n">s</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">revstr</span><span class="p">);</span></pre></div>
+        <div class='highlight'><pre><span class="k">static</span> <span class="kt">void</span> <span class="nf">set_sorting</span><span class="p">(</span><span class="k">struct</span> <span class="n">log_state</span> <span class="o">*</span><span class="n">s</span><span class="p">,</span> <span class="kt">unsigned</span> <span class="kt">int</span> <span class="n">sort_mode</span><span class="p">);</span>
+<span class="k">static</span> <span class="kt">void</span> <span class="nf">push_rev</span><span class="p">(</span><span class="k">struct</span> <span class="n">log_state</span> <span class="o">*</span><span class="n">s</span><span class="p">,</span> <span class="n">git_object</span> <span class="o">*</span><span class="n">obj</span><span class="p">,</span> <span class="kt">int</span> <span class="n">hide</span><span class="p">);</span>
+<span class="k">static</span> <span class="kt">int</span> <span class="nf">add_revision</span><span class="p">(</span><span class="k">struct</span> <span class="n">log_state</span> <span class="o">*</span><span class="n">s</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">revstr</span><span class="p">);</span></pre></div>
       </td>
     </tr>
     <tr id='section-5'>
@@ -143,8 +143,8 @@ revwalker configuration calls</li>
   <span class="kt">int</span> <span class="n">show_diff</span><span class="p">;</span>
   <span class="kt">int</span> <span class="n">skip</span><span class="p">,</span> <span class="n">limit</span><span class="p">;</span>
   <span class="kt">int</span> <span class="n">min_parents</span><span class="p">,</span> <span class="n">max_parents</span><span class="p">;</span>
-  <span class="n">git_time_t</span> <span class="n">before</span><span class="p">;</span>
-  <span class="n">git_time_t</span> <span class="n">after</span><span class="p">;</span>
+  <span class="kt">git_time_t</span> <span class="n">before</span><span class="p">;</span>
+  <span class="kt">git_time_t</span> <span class="n">after</span><span class="p">;</span>
   <span class="kt">char</span> <span class="o">*</span><span class="n">author</span><span class="p">;</span>
   <span class="kt">char</span> <span class="o">*</span><span class="n">committer</span><span class="p">;</span>
 <span class="p">};</span></pre></div>
@@ -158,11 +158,11 @@ revwalker configuration calls</li>
         <p>utility functions that parse options and help with log output</p>
       </td>
       <td class=code>
-        <div class='highlight'><pre><span class="k">static</span> <span class="kt">int</span> <span class="n">parse_options</span><span class="p">(</span>
+        <div class='highlight'><pre><span class="k">static</span> <span class="kt">int</span> <span class="nf">parse_options</span><span class="p">(</span>
   <span class="k">struct</span> <span class="n">log_state</span> <span class="o">*</span><span class="n">s</span><span class="p">,</span> <span class="k">struct</span> <span class="n">log_options</span> <span class="o">*</span><span class="n">opt</span><span class="p">,</span> <span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">**</span><span class="n">argv</span><span class="p">);</span>
-<span class="k">static</span> <span class="kt">void</span> <span class="n">print_time</span><span class="p">(</span><span class="k">const</span> <span class="n">git_time</span> <span class="o">*</span><span class="n">intime</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">prefix</span><span class="p">);</span>
-<span class="k">static</span> <span class="kt">void</span> <span class="n">print_commit</span><span class="p">(</span><span class="n">git_commit</span> <span class="o">*</span><span class="n">commit</span><span class="p">);</span>
-<span class="k">static</span> <span class="kt">int</span> <span class="n">match_with_parent</span><span class="p">(</span><span class="n">git_commit</span> <span class="o">*</span><span class="n">commit</span><span class="p">,</span> <span class="kt">int</span> <span class="n">i</span><span class="p">,</span> <span class="n">git_diff_options</span> <span class="o">*</span><span class="p">);</span>
+<span class="k">static</span> <span class="kt">void</span> <span class="nf">print_time</span><span class="p">(</span><span class="k">const</span> <span class="n">git_time</span> <span class="o">*</span><span class="n">intime</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">prefix</span><span class="p">);</span>
+<span class="k">static</span> <span class="kt">void</span> <span class="nf">print_commit</span><span class="p">(</span><span class="n">git_commit</span> <span class="o">*</span><span class="n">commit</span><span class="p">);</span>
+<span class="k">static</span> <span class="kt">int</span> <span class="nf">match_with_parent</span><span class="p">(</span><span class="n">git_commit</span> <span class="o">*</span><span class="n">commit</span><span class="p">,</span> <span class="kt">int</span> <span class="n">i</span><span class="p">,</span> <span class="n">git_diff_options</span> <span class="o">*</span><span class="p">);</span>
 
 
 <span class="kt">int</span> <span class="nf">main</span><span class="p">(</span><span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">*</span><span class="n">argv</span><span class="p">[])</span>
