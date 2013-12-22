@@ -242,6 +242,15 @@ static int create_and_configure_origin(
 	int error;
 	git_remote *origin = NULL;
 	const char *name;
+	char buf[GIT_PATH_MAX];
+
+	/* If the path exists and is a dir, the url should be the absolute path */
+	if (git_path_root(url) < 0 && git_path_exists(url) && git_path_isdir(url)) {
+		if (p_realpath(url, buf) == NULL)
+			return -1;
+
+		url = buf;
+	}
 
 	name = options->remote_name ? options->remote_name : "origin";
 	if ((error = git_remote_create(&origin, repo, name, url)) < 0)
@@ -372,7 +381,7 @@ int git_clone(
 		return error;
 
 	if (!(error = create_and_configure_origin(&origin, repo, url, &options))) {
-		if (git__prefixcmp(url, "file://")) {
+		if (git_path_exists(url) && git_path_isdir(url)) {
 			error = git_clone_local_into(
 				repo, origin, &options.checkout_opts,
 				options.checkout_branch, options.signature);
