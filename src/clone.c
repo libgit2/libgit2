@@ -347,6 +347,29 @@ cleanup:
 	return error;
 }
 
+int git_clone__should_clone_local(const char *url, git_clone_local_t local)
+{
+	const char *path;
+	int is_url;
+
+	if (local == GIT_CLONE_NO_LOCAL)
+		return false;
+
+	is_url = !git__prefixcmp(url, "file://");
+
+	if (is_url && local != GIT_CLONE_LOCAL)
+		return false;
+
+	path = url;
+	if (is_url)
+		path = url + strlen("file://");
+
+	if ((git_path_exists(path) && git_path_isdir(path)) && local != GIT_CLONE_NO_LOCAL)
+		return true;
+
+	return false;
+}
+
 int git_clone(
 	git_repository **out,
 	const char *url,
@@ -381,7 +404,7 @@ int git_clone(
 		return error;
 
 	if (!(error = create_and_configure_origin(&origin, repo, url, &options))) {
-		if (git_path_exists(url) && git_path_isdir(url)) {
+		if (git_clone__should_clone_local(url, options.local)) {
 			error = git_clone_local_into(
 				repo, origin, &options.checkout_opts,
 				options.checkout_branch, options.signature);

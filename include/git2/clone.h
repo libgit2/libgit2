@@ -23,6 +23,12 @@
  */
 GIT_BEGIN_DECL
 
+typedef enum {
+	GIT_CLONE_LOCAL_AUTO,
+	GIT_CLONE_LOCAL,
+	GIT_CLONE_NO_LOCAL,
+} git_clone_local_t;
+
 /**
  * Clone options structure
  *
@@ -57,6 +63,7 @@ typedef struct git_clone_options {
 
 	int bare;
 	int ignore_cert_errors;
+	git_clone_local_t local;
 	const char *remote_name;
 	const char* checkout_branch;
 	git_signature *signature;
