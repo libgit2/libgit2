@@ -12,9 +12,107 @@
     <script src="js/underscore.js" type="text/javascript"></script> 
     <script src="js/backbone.js" type="text/javascript"></script> 
     <script src="js/docurium.js" type="text/javascript"></script> 
+
+    <!-- Changelog -->
+    <script type="text/template" id="changelog-item-template">
+      <p>
+	<ul>
+	  <% _.each(dels, function(elem) { %>
+	  <li class="deletes"><%= elem %></li>
+	  <% }) %>
+	</ul>
+      </p>
+      <p>
+	<ul>
+	  <% _.each(adds, function(elem) { %>
+	  <li class="adds"><a href="#<%= elem.link %>"><%= elem.text %></a></li>
+	  <% }) %>
+	</ul>
+      </p>
+    </script>
+
+    <script type="text/template" id="changelog-template">
+      <h1>Function Changelog</h1>
+      <% _.each(versions, function(version) { %>
+      <h3><%= version.title %></h3>
+      <div class="changelog">
+	<%= version.listing %>
+      </div>
+      <% }) %>
+    </script>
+
+    <!-- Version picker -->
+    <script type="text/template" id="version-picker-template">
+      <ul id="version-list">
+	<% _.each(versions, function(version) { %>
+	<li><a href="#<%= version %>"><%= version %></a></li>
+	<% }) %>
+	<li><a href="#p/changelog">Changelog</a></li>
+      </ul>
+    </script>
+
   </head>
 
   <body class="documentation">
+
+    <script type="text/template" id="file-list-template">
+     <li>
+       <h3><a href="#">Functions</a></h3>
+       <ul>
+	 <% _.each(funs, function(fun, i) { %>
+	 <li>
+	   <a href="#" ref="<%= i %>" class="group" id="groupItem<%= fun.name %>">
+	   <%= fun.name %>&nbsp;<small>(<%= fun.num %>)</small>
+	   </a>
+	 </li>
+	 <% }) %>
+       </ul>
+     </li>
+     <li>
+       <h3><a href="#">Types</a></h3>
+       <ul>
+	 <li><span class="divide">Enums</span></li>
+	 <% _.each(enums, function(e) { %>
+	 <li>
+	   <a href="#" ref="<%= e.ref %>" class="type", id="typeItem<%= e.name %>"><%= e.name %></a>
+	 </li>
+	 <% }) %>
+	 <li><span class="divide">Structs</span></li>
+	 <% _.each(structs, function(s) { %>
+	 <li>
+	   <a href="#" ref="<%= s.ref %>" class="type", id="typeItem<%= s.name %>"><%= s.name %></a>
+	 </li>
+	 <% }) %>
+	 <li><span class="divide">Opaque Structs</span></li>
+	 <% _.each(opaques, function(o) { %>
+	 <li>
+	   <a href="#" ref="<%= o.ref %>" class="type", id="typeItem<%= o.name %>"><%= o.name %></a>
+	 </li>
+	 <% }) %>
+       </ul>
+     </li>
+     <li>
+       <h3><a href="#">Files</a></h3>
+       <ul>
+	 <% _.each(files, function(file) { %>
+	 <li>
+	   <a target="github" href="<%= file.url %>"><%= file.name %></a>
+	 </li>
+	 <% }) %>
+       </ul>
+     </li>
+     <li>
+       <h3><a href="#">Examples</a></h3>
+       <ul>
+	 <% _.each(examples, function(example) { %>
+	 <li>
+	   <a href="<%= example.path %>"><%= example.name %></a>
+	 </li>
+	 <% }) %>
+       </ul>
+     </li>
+    </script>
+
     <div id="not-footer">
     <div id="header-wrapper">
       <div id="header">

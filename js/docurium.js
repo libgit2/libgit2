@@ -23,15 +23,10 @@ $(function() {
     setVersionPicker: function () {
       hideVersionList = function() { $('#version-list').hide(100) }
       vers = docurium.get('versions')
-      list = $('<ul>').attr('id', 'version-list').hide()
-      // add each of the versions first
-      vers.forEach(function(version) {
-        vlink = $('<a>').attr('href', '#' + version).append(version).click(hideVersionList)
-        list.append($('<li>').append(vlink))
-      })
-      // and then put the link to the ChangeLog at the end
-      vlink = $('<a>').attr('href', '#p/changelog').append("Changelog").click(hideVersionList)
-      list.append($('<li>').append(vlink))
+      template = _.template($('#version-picker-template').html())
+      // make sure this is a jquery object so we can use click()
+      list = $(template({versions: vers})).hide()
+      $('a', list).click(hideVersionList)
       $('#version-list').replaceWith(list)
     },
 
@@ -228,8 +223,9 @@ $(function() {
     },
 
     showChangeLog: function() {
-      content = $('<div>').addClass('content')
-      content.append($('<h1>').append("Function Changelog"))
+      template = _.template($('#changelog-template').html())
+      itemTemplate = _.template($('#changelog-item-template').html())
+
       // for every version, show which functions added, removed, changed - from HEAD down
       versions = docurium.get('versions')
       sigHist = docurium.get('signatures')
@@ -261,29 +257,21 @@ $(function() {
 	}
       })
 
-      _.forEach(versions, function(version) {
-        content.append($('<h3>').append(version))
-        cl = $('<div>').addClass('changelog')
+      vers = _.map(versions, function(version) {
+	deletes = changelog[version]['deletes']
+	deletes.sort()
 
-        _.forEach(changelog[version], function(adds, type) {
-          adds.sort()
-          elements = _.map(_.map(adds, function(add) {
-            if (type == 'deletes')
-              return add // no link, as it doesn't exist anymore
+	additions = changelog[version]['adds']
+	additions.sort()
+	adds = _.map(additions, function(add) {
+          gname = docurium.groupOf(add)
+	  return {link: groupLink(gname, add, version), text: add}
+	})
 
-            gname = docurium.groupOf(add)
-            return  $('<a>').attr('href', '#' + groupLink(gname, add, version)).append(add)
-          }), function(link) {
-            return $('<li>').addClass(type).append(link)
-          })
-
-          cl.append($('<p>').append(elements))
-        })
-
-        content.append(cl)
+	return {title: version, listing: itemTemplate({dels: deletes, adds: adds})}
       })
 
-      $('.content').replaceWith(content)
+      $('.content').html(template({versions: vers}))
     },
 
     showType: function(data, manual) {
@@ -427,94 +415,58 @@ $(function() {
     },
 
     refreshView: function() {
+      template = _.template($('#file-list-template').html())
       data = this.get('data')
-      menu = $('<li>')
 
-      // Function Groups
-      title = $('<h3><a href="#">Functions</a></h3>').click( this.collapseSection )
-      menu.append(title)
-
-      links = _.map(data['groups'], function(group, i) {
-        flink = $('<a>').attr('href', '#').attr('ref', i).attr('id', 'groupItem'+group[0])
-        flink.append(group[0], '&nbsp;', $('<small>').append('(' + group[1].length + ')'))
-	flink.click(this.showGroup)
-	return $('<li>').append(flink)
-      }, this)
-
-      menu.append($('<ul>').append(links))
+      // Function groups
+      funs = _.map(data['groups'], function(group, i) {
+	return {name: group[0], num: group[1].length}
+      })
 
       // Types
-      title = $('<h3><a href="#">Types</a></h3>').click( this.collapseSection )
-      menu.append(title)
-      list = $('<ul>')
-
-      fitem = $('<li>')
-      fitem.append($('<span>').addClass('divide').append("Enums"))
-      list.append(fitem)
-
-      var linkItem = function(group, i) {
-	flink = $('<a>').attr('href', '#').attr('ref', i).attr('id', 'typeItem'+group[0])
-	flink.append(group[0])
-	flink.click(this.showType)
-	return $('<li>').append(flink)
+      var getName = function(type) {
+	return {ref: type.ref, name: type.type[0]}
       }
 
-      enums = _.map(_.filter(data['types'], function(group) {
-	return group[1]['block'] && group[1]['type'] == 'enum';
-      }), linkItem, this)
+      // We need to keep the original index around in order to show
+      // the right one when clicking on the link
+      var types = _.map(data['types'], function(type, i) {
+	return {ref: i, type: type}
+      })
 
-      list.append(enums)
+      enums = types.filter(function(type) {
+	return type.type[1]['block'] && type.type[1]['type'] == 'enum';
+      }).map(getName)
 
-      fitem = $('<li>')
-      fitem.append($('<span>').addClass('divide').append("Structs"))
-      list.append(fitem)
+      structs = types.filter(function(type) {
+	return type.type[1]['block'] && type.type[1]['type'] != 'enum'
+      }).map(getName)
 
-      structs = _.map(_.filter(data['types'], function(group) {
-	return group[1]['block'] && group[1]['type'] != 'enum'
-      }), linkItem, this)
-
-      list.append(structs)
-
-      fitem = $('<li>')
-      fitem.append($('<span>').addClass('divide').append("Opaque Structs"))
-      list.append(fitem)
-
-      opaques = _.map(_.filter(data['types'], function(group) {
-	return !group[1]['block']
-      }), linkItem, this)
-
-      list.append(opaques)
-      list.hide()
-      menu.append(list)
+      opaques = types.filter(function(type) {
+	return !type.type[1]['block']
+      }).map(getName)
 
       // File Listing
-      title = $('<h3><a href="#">Files</a></h3>').click( this.collapseSection )
-      menu.append(title)
-
       files = _.map(data['files'], function(file) {
 	url = this.github_file(file['file'])
-	flink = $('<a>').attr('target', 'github').attr('href', url).append(file['file'])
-	return $('<li>').append(flink)
+	return {url: url, name: file['file']}
       }, this)
 
-      menu.append($('<ul>').hide().append(files))
-
-
       // Examples List
+      examples = []
       if(data['examples'] && (data['examples'].length > 0)) {
-        title = $('<h3><a href="#">Examples</a></h3>').click( this.collapseSection )
-        menu.append(title)
-
 	examples = _.map(data['examples'], function(file) {
-          fname = file[0]
-          fpath = file[1]
-          flink = $('<a>').attr('href', fpath).append(fname)
-          return $('<li>').append(flink)
+	  return {name: file[0], path: file[1]}
 	})
-
-	menu.append($('<ul>').append(examples))
       }
 
+      menu = $(template({funs: funs, enums: enums, structs: structs, opaques: opaques,
+			 files: files, examples: examples}))
+
+      $('a.group', menu).click(this.showGroup)
+      $('a.type', menu).click(this.showType)
+      $('h3', menu).click(this.collapseSection)
+     
       $('#files-list').html(menu)
     },
 
