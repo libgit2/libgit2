@@ -36,6 +36,7 @@ OPTION( USE_SSH				"Link with libssh to enable SSH support" ON )
 
 IF(APPLE)
 	SET( USE_ICONV ON )
+	ADD_DEFINITIONS(-DLIBICONV_PLUG)
 ENDIF()
 
 IF(MSVC)
