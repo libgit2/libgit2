@@ -168,7 +168,7 @@ void test_submodule_modify__edit_and_save(void)
 	git_submodule_ignore_t old_ignore;
 	git_submodule_update_t old_update;
 	git_repository *r2;
-	int old_fetchrecurse;
+	git_submodule_recurse_t old_fetchrecurse;
 
 	cl_git_pass(git_submodule_lookup(&sm1, g_repo, "sm_changed_head"));
 
@@ -178,14 +178,14 @@ void test_submodule_modify__edit_and_save(void)
 	cl_git_pass(git_submodule_set_url(sm1, SM_LIBGIT2_URL));
 	old_ignore = git_submodule_set_ignore(sm1, GIT_SUBMODULE_IGNORE_UNTRACKED);
 	old_update = git_submodule_set_update(sm1, GIT_SUBMODULE_UPDATE_REBASE);
-	old_fetchrecurse = git_submodule_set_fetch_recurse_submodules(sm1, 1);
+	old_fetchrecurse = git_submodule_set_fetch_recurse_submodules(sm1, GIT_SUBMODULE_RECURSE_YES);
 
 	cl_assert_equal_s(SM_LIBGIT2_URL, git_submodule_url(sm1));
 	cl_assert_equal_i(
 		(int)GIT_SUBMODULE_IGNORE_UNTRACKED, (int)git_submodule_ignore(sm1));
 	cl_assert_equal_i(
 		(int)GIT_SUBMODULE_UPDATE_REBASE, (int)git_submodule_update(sm1));
-	cl_assert_equal_i(1, git_submodule_fetch_recurse_submodules(sm1));
+	cl_assert_equal_i(GIT_SUBMODULE_RECURSE_YES, git_submodule_fetch_recurse_submodules(sm1));
 
 	/* revert without saving (and confirm setters return old value) */
 	cl_git_pass(git_submodule_set_url(sm1, old_url));
@@ -196,7 +196,7 @@ void test_submodule_modify__edit_and_save(void)
 		(int)GIT_SUBMODULE_UPDATE_REBASE,
 		(int)git_submodule_set_update(sm1, GIT_SUBMODULE_UPDATE_RESET));
 	cl_assert_equal_i(
-		1, git_submodule_set_fetch_recurse_submodules(sm1, old_fetchrecurse));
+		GIT_SUBMODULE_RECURSE_YES, git_submodule_set_fetch_recurse_submodules(sm1, old_fetchrecurse));
 
 	/* check that revert was successful */
 	cl_assert_equal_s(old_url, git_submodule_url(sm1));
@@ -209,7 +209,7 @@ void test_submodule_modify__edit_and_save(void)
 	cl_git_pass(git_submodule_set_url(sm1, SM_LIBGIT2_URL));
 	git_submodule_set_ignore(sm1, GIT_SUBMODULE_IGNORE_UNTRACKED);
 	git_submodule_set_update(sm1, GIT_SUBMODULE_UPDATE_REBASE);
-	git_submodule_set_fetch_recurse_submodules(sm1, 1);
+	git_submodule_set_fetch_recurse_submodules(sm1, GIT_SUBMODULE_RECURSE_YES);
 
 	/* call save */
 	cl_git_pass(git_submodule_save(sm1));
@@ -225,7 +225,7 @@ void test_submodule_modify__edit_and_save(void)
 		(int)GIT_SUBMODULE_IGNORE_UNTRACKED, (int)git_submodule_ignore(sm1));
 	cl_assert_equal_i(
 		(int)GIT_SUBMODULE_UPDATE_REBASE, (int)git_submodule_update(sm1));
-	cl_assert_equal_i(1, git_submodule_fetch_recurse_submodules(sm1));
+	cl_assert_equal_i(GIT_SUBMODULE_RECURSE_YES, git_submodule_fetch_recurse_submodules(sm1));
 
 	/* call reload and check that the new values are loaded */
 	cl_git_pass(git_submodule_reload(sm1));
@@ -235,7 +235,7 @@ void test_submodule_modify__edit_and_save(void)
 		(int)GIT_SUBMODULE_IGNORE_UNTRACKED, (int)git_submodule_ignore(sm1));
 	cl_assert_equal_i(
 		(int)GIT_SUBMODULE_UPDATE_REBASE, (int)git_submodule_update(sm1));
-	cl_assert_equal_i(1, git_submodule_fetch_recurse_submodules(sm1));
+	cl_assert_equal_i(GIT_SUBMODULE_RECURSE_YES, git_submodule_fetch_recurse_submodules(sm1));
 
 	/* open a second copy of the repo and compare submodule */
 	cl_git_pass(git_repository_open(&r2, "submod2"));
@@ -246,7 +246,16 @@ void test_submodule_modify__edit_and_save(void)
 		(int)GIT_SUBMODULE_IGNORE_UNTRACKED, (int)git_submodule_ignore(sm2));
 	cl_assert_equal_i(
 		(int)GIT_SUBMODULE_UPDATE_REBASE, (int)git_submodule_update(sm2));
-	cl_assert_equal_i(1, git_submodule_fetch_recurse_submodules(sm2));
+	cl_assert_equal_i(GIT_SUBMODULE_RECURSE_YES, git_submodule_fetch_recurse_submodules(sm2));
+
+	/* set fetchRecurseSubmodules on-demand */
+	cl_git_pass(git_submodule_reload(sm1));
+	git_submodule_set_fetch_recurse_submodules(sm1, GIT_SUBMODULE_RECURSE_ONDEMAND);
+	cl_assert_equal_i(GIT_SUBMODULE_RECURSE_ONDEMAND, git_submodule_fetch_recurse_submodules(sm1));
+	/* call save */
+	cl_git_pass(git_submodule_save(sm1));
+	cl_git_pass(git_submodule_reload(sm1));
+	cl_assert_equal_i(GIT_SUBMODULE_RECURSE_ONDEMAND, git_submodule_fetch_recurse_submodules(sm1));
 
 	git_repository_free(r2);
 	git__free(old_url);
