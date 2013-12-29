@@ -990,6 +990,7 @@ static git_submodule *submodule_alloc(git_repository *repo, const char *name)
 	GIT_REFCOUNT_INC(sm);
 	sm->ignore = sm->ignore_default = GIT_SUBMODULE_IGNORE_NONE;
 	sm->update = sm->update_default = GIT_SUBMODULE_UPDATE_CHECKOUT;
+	sm->fetch_recurse = sm->update_default = GIT_SUBMODULE_RECURSE_YES;
 	sm->repo   = repo;
 
 	return sm;
