@@ -168,7 +168,6 @@ Here are the bindings to libgit2 that are currently available:
     * luagit2 <https://github.com/libgit2/luagit2>
 * .NET
     * libgit2sharp <https://github.com/libgit2/libgit2sharp>
-    * libgit2net, low level bindings superseded by libgit2sharp <https://github.com/txdv/libgit2net>
 * Node.js
     * node-gitteh <https://github.com/libgit2/node-gitteh>
     * nodegit <https://github.com/tbranyen/nodegit>
