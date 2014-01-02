@@ -632,11 +632,11 @@ git_submodule_recurse_t git_submodule_fetch_recurse_submodules(
 	return submodule->fetch_recurse;
 }
 
-int git_submodule_set_fetch_recurse_submodules(
+git_submodule_recurse_t git_submodule_set_fetch_recurse_submodules(
 	git_submodule *submodule,
 	git_submodule_recurse_t fetch_recurse_submodules)
 {
-	int old;
+	git_submodule_recurse_t old;
 
 	assert(submodule);
 
@@ -990,7 +990,7 @@ static git_submodule *submodule_alloc(git_repository *repo, const char *name)
 	GIT_REFCOUNT_INC(sm);
 	sm->ignore = sm->ignore_default = GIT_SUBMODULE_IGNORE_NONE;
 	sm->update = sm->update_default = GIT_SUBMODULE_UPDATE_CHECKOUT;
-	sm->fetch_recurse = sm->update_default = GIT_SUBMODULE_RECURSE_YES;
+	sm->fetch_recurse = GIT_SUBMODULE_RECURSE_YES;
 	sm->repo   = repo;
 
 	return sm;

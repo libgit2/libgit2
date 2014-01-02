@@ -437,7 +437,7 @@ GIT_EXTERN(git_submodule_recurse_t) git_submodule_fetch_recurse_submodules(
  * @param fetch_recurse_submodules Boolean value
  * @return old value for fetchRecurseSubmodules
  */
-GIT_EXTERN(int) git_submodule_set_fetch_recurse_submodules(
+GIT_EXTERN(git_submodule_recurse_t) git_submodule_set_fetch_recurse_submodules(
 	git_submodule *submodule,
 	git_submodule_recurse_t fetch_recurse_submodules);
 
