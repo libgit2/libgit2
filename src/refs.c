@@ -444,6 +444,21 @@ int git_reference_symbolic_create(
 	return reference__create(ref_out, repo, name, NULL, target, force, NULL, NULL);
 }
 
+int git_reference_symbolic_create_with_log(
+	git_reference **ref_out,
+	git_repository *repo,
+	const char *name,
+	const char *target,
+	int force,
+	const git_signature *signature,
+	const char *log_message)
+{
+	assert(target && signature && log_message);
+
+	return reference__create(
+		ref_out, repo, name, NULL, target, force, signature, log_message);
+}
+
 static int ensure_is_an_updatable_direct_reference(git_reference *ref)
 {
 	if (ref->type == GIT_REF_OID)
