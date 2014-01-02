@@ -427,7 +427,7 @@ int git_reference_create_with_log(
 	const git_signature *signature,
 	const char *log_message)
 {
-	assert(oid && signature && log_message);
+	assert(oid && signature);
 
 	return reference__create(
 		ref_out, repo, name, oid, NULL, force, signature, log_message);
@@ -453,7 +453,7 @@ int git_reference_symbolic_create_with_log(
 	const git_signature *signature,
 	const char *log_message)
 {
-	assert(target && signature && log_message);
+	assert(target && signature);
 
 	return reference__create(
 		ref_out, repo, name, NULL, target, force, signature, log_message);
