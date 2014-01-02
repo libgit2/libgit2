@@ -43,6 +43,12 @@ static git_cvar_map _sm_ignore_map[] = {
 	{GIT_CVAR_TRUE, NULL, GIT_SUBMODULE_IGNORE_ALL},
 };
 
+static git_cvar_map _sm_recurse_map[] = {
+	{GIT_CVAR_STRING, "on-demand", GIT_SUBMODULE_RECURSE_ONDEMAND},
+	{GIT_CVAR_FALSE, NULL, GIT_SUBMODULE_RECURSE_NO},
+	{GIT_CVAR_TRUE, NULL, GIT_SUBMODULE_RECURSE_YES},
+};
+
 static kh_inline khint_t str_hash_no_trailing_slash(const char *s)
 {
 	khint_t h;
@@ -428,6 +434,15 @@ const char *git_submodule_update_to_str(git_submodule_update_t update)
 	return NULL;
 }
 
+const char *git_submodule_recurse_to_str(git_submodule_recurse_t recurse)
+{
+	int i;
+	for (i = 0; i < (int)ARRAY_SIZE(_sm_recurse_map); ++i)
+		if (_sm_recurse_map[i].map_value == recurse)
+			return _sm_recurse_map[i].str_match;
+	return NULL;
+}
+
 int git_submodule_save(git_submodule *submodule)
 {
 	int error = 0;
@@ -469,10 +484,10 @@ int git_submodule_save(git_submodule *submodule)
 	if (error < 0)
 		goto cleanup;
 
-	if ((error = submodule_config_key_trunc_puts(
-			&key, "fetchRecurseSubmodules")) < 0 ||
-		(error = git_config_file_set_string(
-			mods, key.ptr, submodule->fetch_recurse ? "true" : "false")) < 0)
+	if (!(error = submodule_config_key_trunc_puts(&key, "fetchRecurseSubmodules")) &&
+		(val = git_submodule_recurse_to_str(submodule->fetch_recurse)) != NULL)
+		error = git_config_file_set_string(mods, key.ptr, val);
+	if (error < 0)
 		goto cleanup;
 
 	/* update internal defaults */
@@ -610,7 +625,7 @@ git_submodule_update_t git_submodule_set_update(
 	return old;
 }
 
-int git_submodule_fetch_recurse_submodules(
+git_submodule_recurse_t git_submodule_fetch_recurse_submodules(
 	git_submodule *submodule)
 {
 	assert(submodule);
@@ -619,14 +634,14 @@ int git_submodule_fetch_recurse_submodules(
 
 int git_submodule_set_fetch_recurse_submodules(
 	git_submodule *submodule,
-	int fetch_recurse_submodules)
+	git_submodule_recurse_t fetch_recurse_submodules)
 {
 	int old;
 
 	assert(submodule);
 
 	old = submodule->fetch_recurse;
-	submodule->fetch_recurse = (fetch_recurse_submodules != 0);
+	submodule->fetch_recurse = fetch_recurse_submodules;
 	return old;
 }
 
@@ -975,6 +990,7 @@ static git_submodule *submodule_alloc(git_repository *repo, const char *name)
 	GIT_REFCOUNT_INC(sm);
 	sm->ignore = sm->ignore_default = GIT_SUBMODULE_IGNORE_NONE;
 	sm->update = sm->update_default = GIT_SUBMODULE_UPDATE_CHECKOUT;
+	sm->fetch_recurse = sm->update_default = GIT_SUBMODULE_RECURSE_YES;
 	sm->repo   = repo;
 
 	return sm;
@@ -1080,6 +1096,20 @@ int git_submodule_parse_update(git_submodule_update_t *out, const char *value)
 	return 0;
 }
 
+int git_submodule_parse_recurse(git_submodule_recurse_t *out, const char *value)
+{
+	int val;
+
+	if (git_config_lookup_map_value(
+			&val, _sm_recurse_map, ARRAY_SIZE(_sm_recurse_map), value) < 0) {
+		*out = GIT_SUBMODULE_RECURSE_YES;
+		return submodule_config_error("recurse", value);
+	}
+
+	*out = (git_submodule_recurse_t)val;
+	return 0;
+}
+
 static int submodule_load_from_config(
 	const git_config_entry *entry, void *payload)
 {
@@ -1166,10 +1196,8 @@ static int submodule_load_from_config(
 		sm->update_default = sm->update;
 	}
 	else if (strcasecmp(property, "fetchRecurseSubmodules") == 0) {
-		if (git__parse_bool(&sm->fetch_recurse, value) < 0) {
-			error = submodule_config_error("fetchRecurseSubmodules", value);
-			goto done;
-		}
+		if (git_submodule_parse_recurse(&sm->fetch_recurse, value) < 0)
+			return -1;
 	}
 	else if (strcasecmp(property, "ignore") == 0) {
 		if ((error = git_submodule_parse_ignore(&sm->ignore, value)) < 0)

@@ -85,7 +85,7 @@ struct git_submodule {
 	git_submodule_update_t update_default;
 	git_submodule_ignore_t ignore;
 	git_submodule_ignore_t ignore_default;
-	int fetch_recurse;
+	git_submodule_recurse_t fetch_recurse;
 
 	/* internal information */
 	git_repository *repo;
