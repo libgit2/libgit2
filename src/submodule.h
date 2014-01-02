@@ -81,6 +81,7 @@ struct git_submodule {
 	char *name;
 	char *path; /* important: may just point to "name" string */
 	char *url;
+	char *branch;
 	git_submodule_update_t update;
 	git_submodule_update_t update_default;
 	git_submodule_ignore_t ignore;

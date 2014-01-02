@@ -284,6 +284,14 @@ GIT_EXTERN(const char *) git_submodule_path(git_submodule *submodule);
 GIT_EXTERN(const char *) git_submodule_url(git_submodule *submodule);
 
 /**
+* Get the branch for the submodule.
+*
+* @param submodule Pointer to submodule object
+* @return Pointer to the submodule branch
+*/
+GIT_EXTERN(const char *) git_submodule_branch(git_submodule *submodule);
+
+/**
  * Set the URL for the submodule.
  *
  * This sets the URL in memory for the submodule. This will be used for
