@@ -89,13 +89,17 @@ extern struct tm * p_gmtime_r (const time_t *timer, struct tm *result);
 #	include "unix/posix.h"
 #endif
 
-#if defined(__MINGW32__) || defined(__sun)
+#if defined(__MINGW32__) || defined(__sun) || defined(__APPLE__)
+#   define NO_STRNLEN
+#endif
+
+#ifdef NO_STRNLEN
 GIT_INLINE(size_t) p_strnlen(const char *s, size_t maxlen) {
 	const char *end = memchr(s, 0, maxlen);
 	return end ? (size_t)(end - s) : maxlen;
 }
 #else
-# define p_strnlen strnlen
+#   define p_strnlen strnlen
 #endif
 
 #ifdef NO_READDIR_R
