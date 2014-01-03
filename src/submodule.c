@@ -472,6 +472,10 @@ int git_submodule_save(git_submodule *submodule)
 		(error = git_config_file_set_string(mods, key.ptr, submodule->url)) < 0)
 		goto cleanup;
 
+	if ((error = submodule_config_key_trunc_puts(&key, "branch")) < 0 ||
+		(error = git_config_file_set_string(mods, key.ptr, submodule->branch)) < 0)
+		goto cleanup;
+
 	if (!(error = submodule_config_key_trunc_puts(&key, "update")) &&
 		(val = git_submodule_update_to_str(submodule->update)) != NULL)
 		error = git_config_file_set_string(mods, key.ptr, val);
@@ -526,6 +530,12 @@ const char *git_submodule_url(git_submodule *submodule)
 {
 	assert(submodule);
 	return submodule->url;
+}
+
+const char *git_submodule_branch(git_submodule *submodule)
+{
+	assert(submodule);
+	return submodule->branch;
 }
 
 int git_submodule_set_url(git_submodule *submodule, const char *url)
@@ -992,6 +1002,7 @@ static git_submodule *submodule_alloc(git_repository *repo, const char *name)
 	sm->update = sm->update_default = GIT_SUBMODULE_UPDATE_CHECKOUT;
 	sm->fetch_recurse = GIT_SUBMODULE_RECURSE_YES;
 	sm->repo   = repo;
+	sm->branch = NULL;
 
 	return sm;
 }
@@ -1186,6 +1197,15 @@ static int submodule_load_from_config(
 		sm->url = NULL;
 
 		if (value != NULL && (sm->url = git__strdup(value)) == NULL) {
+			error = -1;
+			goto done;
+		}
+	}
+	else if (strcasecmp(property, "branch") == 0) {
+		git__free(sm->branch);
+		sm->branch = NULL;
+
+		if (value != NULL && (sm->branch = git__strdup(value)) == NULL) {
 			error = -1;
 			goto done;
 		}

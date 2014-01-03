@@ -213,7 +213,7 @@ static int config_refresh(git_config_backend *cfg)
 	int res = 0, updated = 0, any_updated = 0;
 	diskfile_backend *b = (diskfile_backend *)cfg;
 	git_strmap *old_values;
-	struct reader *reader;
+	struct reader *reader = NULL;
 	uint32_t i;
 
 	for (i = 0; i < git_array_size(b->readers); i++) {
