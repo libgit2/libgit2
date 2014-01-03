@@ -324,15 +324,20 @@ void test_object_tree_write__cruel_paths(void)
 		" : * ? \" \n < > |",
 		"a\\b",
 		"\\\\b\a",
+		":\\",
+		"COM1",
+		"foo.aux",
 		REP1024("1234"), /* 4096 char string */
 		REP1024("12345678"), /* 8192 char string */
+		"\xC5\xAA\x6E\xC4\xAD\x63\xC5\x8D\x64\x65\xCC\xBD", /* Ūnĭcōde̽ */
 		NULL
 	};
 	git_treebuilder *builder;
 	git_tree *tree;
-	git_oid id, bid;
+	git_oid id, bid, subid;
 	const char **scan;
-	int count = 0;
+	int count = 0, i, j;
+	git_tree_entry *te;
 
 	git_oid_fromstr(&bid, blob_oid);
 
@@ -348,17 +353,46 @@ void test_object_tree_write__cruel_paths(void)
 
 	/* check data is correct */
 	cl_git_pass(git_tree_lookup(&tree, g_repo, &id));
+
 	cl_assert_equal_i(count, git_tree_entrycount(tree));
+
 	for (scan = the_paths; *scan; ++scan) {
-		const git_tree_entry *te = git_tree_entry_byname(tree, *scan);
-		cl_assert(te != NULL);
-		cl_assert_equal_s(*scan, git_tree_entry_name(te));
+		const git_tree_entry *cte = git_tree_entry_byname(tree, *scan);
+		cl_assert(cte != NULL);
+		cl_assert_equal_s(*scan, git_tree_entry_name(cte));
 	}
 	for (scan = the_paths; *scan; ++scan) {
-		git_tree_entry *te;
 		cl_git_pass(git_tree_entry_bypath(&te, tree, *scan));
 		cl_assert_equal_s(*scan, git_tree_entry_name(te));
 		git_tree_entry_free(te);
 	}
+
+	git_tree_free(tree);
+
+	/* let's try longer paths */
+	cl_git_pass(git_treebuilder_create(&builder, NULL));
+	for (scan = the_paths; *scan; ++scan) {
+		cl_git_pass(git_treebuilder_insert(
+			NULL, builder, *scan, &id, GIT_FILEMODE_TREE));
+	}
+	cl_git_pass(git_treebuilder_write(&subid, g_repo, builder));
+	git_treebuilder_free(builder);
+
+	/* check data is correct */
+	cl_git_pass(git_tree_lookup(&tree, g_repo, &subid));
+
+	cl_assert_equal_i(count, git_tree_entrycount(tree));
+
+	for (i = 0; i < count; ++i) {
+		for (j = 0; j < count; ++j) {
+			git_buf b = GIT_BUF_INIT;
+			cl_git_pass(git_buf_joinpath(&b, the_paths[i], the_paths[j]));
+			cl_git_pass(git_tree_entry_bypath(&te, tree, b.ptr));
+			cl_assert_equal_s(the_paths[j], git_tree_entry_name(te));
+			git_tree_entry_free(te);
+			git_buf_free(&b);
+		}
+	}
+
 	git_tree_free(tree);
 }
