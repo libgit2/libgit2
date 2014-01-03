@@ -9,7 +9,7 @@ static const char *third_tree = "eb86d8b81d6adbd5290a935d6c9976882de98488";
 
 static git_repository *g_repo;
 
-// Fixture setup and teardown
+/* Fixture setup and teardown */
 void test_object_tree_write__initialize(void)
 {
    g_repo = cl_git_sandbox_init("testrepo");
@@ -22,7 +22,7 @@ void test_object_tree_write__cleanup(void)
 
 void test_object_tree_write__from_memory(void)
 {
-   // write a tree from a memory
+	/* write a tree from a memory */
 	git_treebuilder *builder;
 	git_tree *tree;
 	git_oid id, bid, rid, id2;
@@ -31,7 +31,9 @@ void test_object_tree_write__from_memory(void)
 	git_oid_fromstr(&id2, second_tree);
 	git_oid_fromstr(&bid, blob_oid);
 
-	//create a second tree from first tree using `git_treebuilder_insert` on REPOSITORY_FOLDER.
+	/* create a second tree from first tree using `git_treebuilder_insert`
+	 * on REPOSITORY_FOLDER.
+	 */
 	cl_git_pass(git_tree_lookup(&tree, g_repo, &id));
 	cl_git_pass(git_treebuilder_create(&builder, tree));
 
@@ -61,7 +63,7 @@ void test_object_tree_write__from_memory(void)
 
 void test_object_tree_write__subtree(void)
 {
-   // write a hierarchical tree from a memory
+	/* write a hierarchical tree from a memory */
 	git_treebuilder *builder;
 	git_tree *tree;
 	git_oid id, bid, subtree_id, id2, id3;
@@ -72,25 +74,25 @@ void test_object_tree_write__subtree(void)
 	git_oid_fromstr(&id3, third_tree);
 	git_oid_fromstr(&bid, blob_oid);
 
-	//create subtree
+	/* create subtree */
 	cl_git_pass(git_treebuilder_create(&builder, NULL));
 	cl_git_pass(git_treebuilder_insert(
-		NULL, builder, "new.txt", &bid, GIT_FILEMODE_BLOB)); //-V536
+		NULL, builder, "new.txt", &bid, GIT_FILEMODE_BLOB)); /* -V536 */
 	cl_git_pass(git_treebuilder_write(&subtree_id, g_repo, builder));
 	git_treebuilder_free(builder);
 
-	// create parent tree
+	/* create parent tree */
 	cl_git_pass(git_tree_lookup(&tree, g_repo, &id));
 	cl_git_pass(git_treebuilder_create(&builder, tree));
 	cl_git_pass(git_treebuilder_insert(
-		NULL, builder, "new", &subtree_id, GIT_FILEMODE_TREE)); //-V536
+		NULL, builder, "new", &subtree_id, GIT_FILEMODE_TREE)); /* -V536 */
 	cl_git_pass(git_treebuilder_write(&id_hiearar, g_repo, builder));
 	git_treebuilder_free(builder);
 	git_tree_free(tree);
 
 	cl_assert(git_oid_cmp(&id_hiearar, &id3) == 0);
 
-	// check data is correct
+	/* check data is correct */
 	cl_git_pass(git_tree_lookup(&tree, g_repo, &id_hiearar));
 	cl_assert(2 == git_tree_entrycount(tree));
 	git_tree_free(tree);
@@ -312,5 +314,51 @@ void test_object_tree_write__filtering(void)
 
 	cl_assert_equal_i(2, (int)git_tree_entrycount(tree));
 
+	git_tree_free(tree);
+}
+
+void test_object_tree_write__cruel_paths(void)
+{
+	static const char *the_paths[] = {
+		"C:\\",
+		" : * ? \" \n < > |",
+		"a\\b",
+		"\\\\b\a",
+		REP1024("1234"), /* 4096 char string */
+		REP1024("12345678"), /* 8192 char string */
+		NULL
+	};
+	git_treebuilder *builder;
+	git_tree *tree;
+	git_oid id, bid;
+	const char **scan;
+	int count = 0;
+
+	git_oid_fromstr(&bid, blob_oid);
+
+	/* create tree */
+	cl_git_pass(git_treebuilder_create(&builder, NULL));
+	for (scan = the_paths; *scan; ++scan) {
+		cl_git_pass(git_treebuilder_insert(
+			NULL, builder, *scan, &bid, GIT_FILEMODE_BLOB));
+		count++;
+	}
+	cl_git_pass(git_treebuilder_write(&id, g_repo, builder));
+	git_treebuilder_free(builder);
+
+	/* check data is correct */
+	cl_git_pass(git_tree_lookup(&tree, g_repo, &id));
+	cl_assert_equal_i(count, git_tree_entrycount(tree));
+	for (scan = the_paths; *scan; ++scan) {
+		const git_tree_entry *te = git_tree_entry_byname(tree, *scan);
+		cl_assert(te != NULL);
+		cl_assert_equal_s(*scan, git_tree_entry_name(te));
+	}
+	for (scan = the_paths; *scan; ++scan) {
+		git_tree_entry *te;
+		cl_git_pass(git_tree_entry_bypath(&te, tree, *scan));
+		cl_assert_equal_s(*scan, git_tree_entry_name(te));
+		git_tree_entry_free(te);
+	}
 	git_tree_free(tree);
 }
