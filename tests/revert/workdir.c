@@ -347,7 +347,7 @@ void test_revert_workdir__conflict_use_ours(void)
 {
 	git_commit *head, *commit;
 	git_oid head_oid, revert_oid;
-	git_revert_opts opts = GIT_REVERT_OPTS_INIT;
+	git_revert_options opts = GIT_REVERT_OPTIONS_INIT;
 
 	struct merge_index_entry merge_index_entries[] = {
 		{ 0100644, "caf99de3a49827117bb66721010eac461b06a80c", 0, "file1.txt" },
@@ -387,7 +387,7 @@ void test_revert_workdir__rename_1_of_2(void)
 {
 	git_commit *head, *commit;
 	git_oid head_oid, revert_oid;
-	git_revert_opts opts = GIT_REVERT_OPTS_INIT;
+	git_revert_options opts = GIT_REVERT_OPTIONS_INIT;
 
 	struct merge_index_entry merge_index_entries[] = {
 		{ 0100644, "747726e021bc5f44b86de60e3032fd6f9f1b8383", 0, "file1.txt" },
@@ -421,7 +421,7 @@ void test_revert_workdir__rename(void)
 {
 	git_commit *head, *commit;
 	git_oid head_oid, revert_oid;
-	git_revert_opts opts = GIT_REVERT_OPTS_INIT;
+	git_revert_options opts = GIT_REVERT_OPTIONS_INIT;
 
 	struct merge_index_entry merge_index_entries[] = {
 		{ 0100644, "55acf326a69f0aab7a974ec53ffa55a50bcac14e", 1, "file4.txt" },
@@ -480,7 +480,7 @@ void test_revert_workdir__nonmerge_fails_mainline_specified(void)
 {
 	git_reference *head;
 	git_commit *commit;
-	git_revert_opts opts = GIT_REVERT_OPTS_INIT;
+	git_revert_options opts = GIT_REVERT_OPTIONS_INIT;
 
 	cl_git_pass(git_repository_head(&head, repo));
 	cl_git_pass(git_reference_peel((git_object **)&commit, head, GIT_OBJ_COMMIT));
@@ -518,7 +518,7 @@ void test_revert_workdir__merge_first_parent(void)
 {
 	git_commit *head;
 	git_oid head_oid;
-	git_revert_opts opts = GIT_REVERT_OPTS_INIT;
+	git_revert_options opts = GIT_REVERT_OPTIONS_INIT;
 
 	struct merge_index_entry merge_index_entries[] = {
 		{ 0100644, "296a6d3be1dff05c5d1f631d2459389fa7b619eb", 0, "file-mainline.txt" },
@@ -543,7 +543,7 @@ void test_revert_workdir__merge_second_parent(void)
 {
 	git_commit *head;
 	git_oid head_oid;
-	git_revert_opts opts = GIT_REVERT_OPTS_INIT;
+	git_revert_options opts = GIT_REVERT_OPTIONS_INIT;
 
 	struct merge_index_entry merge_index_entries[] = {
 		{ 0100644, "33c6fd981c49a2abf2971482089350bfc5cda8ea", 0, "file-branch.txt" },

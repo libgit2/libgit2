@@ -28,22 +28,22 @@ typedef struct {
 
 	git_merge_tree_opts merge_tree_opts;
 	git_checkout_options checkout_opts;
-} git_revert_opts;
+} git_revert_options;
 
-#define GIT_REVERT_OPTS_VERSION 1
-#define GIT_REVERT_OPTS_INIT {GIT_REVERT_OPTS_VERSION, 0, GIT_MERGE_TREE_OPTS_INIT, GIT_CHECKOUT_OPTIONS_INIT}
+#define GIT_REVERT_OPTIONS_VERSION 1
+#define GIT_REVERT_OPTIONS_INIT {GIT_REVERT_OPTIONS_VERSION, 0, GIT_MERGE_TREE_OPTS_INIT, GIT_CHECKOUT_OPTIONS_INIT}
 
 /**
- * Initializes a `git_revert_opts` with default values. Equivalent to
- * creating an instance with GIT_REVERT_OPTS_INIT.
+ * Initializes a `git_revert_options` with default values. Equivalent to
+ * creating an instance with GIT_REVERT_OPTIONS_INIT.
  *
- * @param opts the `git_revert_opts` instance to initialize.
+ * @param opts the `git_revert_options` instance to initialize.
  * @param version the version of the struct; you should pass
- *        `GIT_REVERT_OPTS_VERSION` here.
+ *        `GIT_REVERT_OPTIONS_VERSION` here.
  * @return Zero on success; -1 on failure.
  */
 GIT_EXTERN(int) git_revert_init_opts(
-	git_revert_opts* opts,
+	git_revert_options* opts,
 	int version);
 
 /**
@@ -80,7 +80,7 @@ int git_revert_commit(
 GIT_EXTERN(int) git_revert(
 	git_repository *repo,
 	git_commit *commit,
-	const git_revert_opts *given_opts);
+	const git_revert_options *given_opts);
 
 /** @} */
 GIT_END_DECL
