@@ -43,7 +43,7 @@ void test_checkout_index__cannot_checkout_a_bare_repository(void)
 
 void test_checkout_index__can_create_missing_files(void)
 {
-	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 
 	cl_assert_equal_i(false, git_path_isfile("./testrepo/README"));
 	cl_assert_equal_i(false, git_path_isfile("./testrepo/branch_file.txt"));
@@ -60,7 +60,7 @@ void test_checkout_index__can_create_missing_files(void)
 
 void test_checkout_index__can_remove_untracked_files(void)
 {
-	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 
 	git_futils_mkdir("./testrepo/dir/subdir/subsubdir", NULL, 0755, GIT_MKDIR_PATH);
 	cl_git_mkfile("./testrepo/dir/one", "one\n");
@@ -78,7 +78,7 @@ void test_checkout_index__can_remove_untracked_files(void)
 
 void test_checkout_index__honor_the_specified_pathspecs(void)
 {
-	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 	char *entries[] = { "*.txt" };
 
 	opts.paths.strings = entries;
@@ -99,7 +99,7 @@ void test_checkout_index__honor_the_specified_pathspecs(void)
 
 void test_checkout_index__honor_the_gitattributes_directives(void)
 {
-	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 	const char *attributes =
 		"branch_file.txt text eol=crlf\n"
 		"new.txt text eol=lf\n";
@@ -119,7 +119,7 @@ void test_checkout_index__honor_the_gitattributes_directives(void)
 void test_checkout_index__honor_coreautocrlf_setting_set_to_true(void)
 {
 #ifdef GIT_WIN32
-	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 	const char *expected_readme_text = "hey there\r\n";
 
 	cl_git_pass(p_unlink("./testrepo/.gitattributes"));
@@ -135,7 +135,7 @@ void test_checkout_index__honor_coreautocrlf_setting_set_to_true(void)
 
 void test_checkout_index__honor_coresymlinks_setting_set_to_true(void)
 {
-	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 
 	cl_repo_set_bool(g_repo, "core.symlinks", true);
 
@@ -161,7 +161,7 @@ void test_checkout_index__honor_coresymlinks_setting_set_to_true(void)
 
 void test_checkout_index__honor_coresymlinks_setting_set_to_false(void)
 {
-	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 
 	cl_repo_set_bool(g_repo, "core.symlinks", false);
 
@@ -174,7 +174,7 @@ void test_checkout_index__honor_coresymlinks_setting_set_to_false(void)
 
 void test_checkout_index__donot_overwrite_modified_file_by_default(void)
 {
-	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 
 	cl_git_mkfile("./testrepo/new.txt", "This isn't what's stored!");
 
@@ -190,7 +190,7 @@ void test_checkout_index__donot_overwrite_modified_file_by_default(void)
 
 void test_checkout_index__can_overwrite_modified_file(void)
 {
-	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 
 	cl_git_mkfile("./testrepo/new.txt", "This isn't what's stored!");
 
@@ -203,7 +203,7 @@ void test_checkout_index__can_overwrite_modified_file(void)
 
 void test_checkout_index__options_disable_filters(void)
 {
-	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 
 	cl_git_mkfile("./testrepo/.gitattributes", "*.txt text eol=crlf\n");
 
@@ -224,7 +224,7 @@ void test_checkout_index__options_disable_filters(void)
 
 void test_checkout_index__options_dir_modes(void)
 {
-	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 	struct stat st;
 	git_oid oid;
 	git_commit *commit;
@@ -258,7 +258,7 @@ void test_checkout_index__options_dir_modes(void)
 
 void test_checkout_index__options_override_file_modes(void)
 {
-	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 	struct stat st;
 
 	if (!cl_is_chmod_supported())
@@ -275,7 +275,7 @@ void test_checkout_index__options_override_file_modes(void)
 
 void test_checkout_index__options_open_flags(void)
 {
-	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 
 	cl_git_mkfile("./testrepo/new.txt", "hi\n");
 
@@ -315,7 +315,7 @@ static int test_checkout_notify_cb(
 
 void test_checkout_index__can_notify_of_skipped_files(void)
 {
-	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 	struct notify_data data;
 
 	cl_git_mkfile("./testrepo/new.txt", "This isn't what's stored!");
@@ -360,7 +360,7 @@ static int dont_notify_cb(
 
 void test_checkout_index__wont_notify_of_expected_line_ending_changes(void)
 {
-	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 
 	cl_git_pass(p_unlink("./testrepo/.gitattributes"));
 	cl_repo_set_bool(g_repo, "core.autocrlf", true);
@@ -385,7 +385,7 @@ static void checkout_progress_counter(
 
 void test_checkout_index__calls_progress_callback(void)
 {
-	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 	int calls = 0;
 
 	opts.checkout_strategy = GIT_CHECKOUT_SAFE_CREATE;
@@ -398,7 +398,7 @@ void test_checkout_index__calls_progress_callback(void)
 
 void test_checkout_index__can_overcome_name_clashes(void)
 {
-	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 	git_index *index;
 
 	cl_git_pass(git_repository_index(&index, g_repo));
@@ -440,7 +440,7 @@ void test_checkout_index__can_overcome_name_clashes(void)
 
 void test_checkout_index__validates_struct_version(void)
 {
-	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 	const git_error *err;
 
 	opts.version = 1024;
@@ -459,7 +459,7 @@ void test_checkout_index__validates_struct_version(void)
 
 void test_checkout_index__can_update_prefixed_files(void)
 {
-	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 
 	cl_assert_equal_i(false, git_path_isfile("./testrepo/README"));
 	cl_assert_equal_i(false, git_path_isfile("./testrepo/branch_file.txt"));
@@ -502,7 +502,7 @@ void test_checkout_index__can_checkout_a_newly_initialized_repository(void)
 
 void test_checkout_index__issue_1397(void)
 {
-	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 
 	test_checkout_index__cleanup();
 
@@ -519,7 +519,7 @@ void test_checkout_index__issue_1397(void)
 
 void test_checkout_index__target_directory(void)
 {
-	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 	checkout_counts cts;
 	memset(&cts, 0, sizeof(cts));
 
@@ -551,7 +551,7 @@ void test_checkout_index__target_directory(void)
 
 void test_checkout_index__target_directory_from_bare(void)
 {
-	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 	git_index *index;
 	git_object *head = NULL;
 	checkout_counts cts;
@@ -600,7 +600,7 @@ void test_checkout_index__target_directory_from_bare(void)
 void test_checkout_index__can_get_repo_from_index(void)
 {
 	git_index *index;
-	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 
 	cl_assert_equal_i(false, git_path_isfile("./testrepo/README"));
 	cl_assert_equal_i(false, git_path_isfile("./testrepo/branch_file.txt"));

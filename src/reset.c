@@ -102,7 +102,7 @@ int git_reset(
 	git_index *index = NULL;
 	git_tree *tree = NULL;
 	int error = 0;
-	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 	git_buf log_message_buf = GIT_BUF_INIT;
 
 	assert(repo && target);

@@ -27,11 +27,11 @@ typedef struct {
 	unsigned int mainline;
 
 	git_merge_tree_opts merge_tree_opts;
-	git_checkout_opts checkout_opts;
+	git_checkout_options checkout_opts;
 } git_revert_opts;
 
 #define GIT_REVERT_OPTS_VERSION 1
-#define GIT_REVERT_OPTS_INIT {GIT_REVERT_OPTS_VERSION, 0, GIT_MERGE_TREE_OPTS_INIT, GIT_CHECKOUT_OPTS_INIT}
+#define GIT_REVERT_OPTS_INIT {GIT_REVERT_OPTS_VERSION, 0, GIT_MERGE_TREE_OPTS_INIT, GIT_CHECKOUT_OPTIONS_INIT}
 
 /**
  * Initializes a `git_revert_opts` with default values. Equivalent to

@@ -31,7 +31,7 @@ void test_merge_workdir_trivial__cleanup(void)
 static int merge_trivial(const char *ours, const char *theirs)
 {
 	git_buf branch_buf = GIT_BUF_INIT;
-	git_checkout_opts checkout_opts = GIT_CHECKOUT_OPTS_INIT;
+	git_checkout_options checkout_opts = GIT_CHECKOUT_OPTIONS_INIT;
 	git_reference *our_ref, *their_ref;
 	git_merge_head *their_heads[1];
 	git_merge_opts opts = GIT_MERGE_OPTS_INIT;

@@ -47,8 +47,8 @@ void test_structinit_structinit__compare(void)
 
 	/* checkout */
 	CHECK_MACRO_FUNC_INIT_EQUAL( \
-		git_checkout_opts, GIT_CHECKOUT_OPTS_VERSION, \
-		GIT_CHECKOUT_OPTS_INIT, git_checkout_init_opts);
+		git_checkout_options, GIT_CHECKOUT_OPTIONS_VERSION, \
+		GIT_CHECKOUT_OPTIONS_INIT, git_checkout_init_opts);
 
 	/* clone */
 	CHECK_MACRO_FUNC_INIT_EQUAL( \

@@ -929,7 +929,7 @@ void test_diff_rename__rejected_match_can_match_others(void)
 	git_reference *head, *selfsimilar;
 	git_index *index;
 	git_tree *tree;
-	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 	git_diff *diff;
 	git_diff_options diffopts = GIT_DIFF_OPTIONS_INIT;
 	git_diff_find_options findopts = GIT_DIFF_FIND_OPTIONS_INIT;
@@ -1016,7 +1016,7 @@ void test_diff_rename__rejected_match_can_match_others_two(void)
 	git_reference *head, *selfsimilar;
 	git_index *index;
 	git_tree *tree;
-	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 	git_diff *diff;
 	git_diff_options diffopts = GIT_DIFF_OPTIONS_INIT;
 	git_diff_find_options findopts = GIT_DIFF_FIND_OPTIONS_INIT;
@@ -1072,7 +1072,7 @@ void test_diff_rename__rejected_match_can_match_others_three(void)
 	git_reference *head, *selfsimilar;
 	git_index *index;
 	git_tree *tree;
-	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 	git_diff *diff;
 	git_diff_options diffopts = GIT_DIFF_OPTIONS_INIT;
 	git_diff_find_options findopts = GIT_DIFF_FIND_OPTIONS_INIT;

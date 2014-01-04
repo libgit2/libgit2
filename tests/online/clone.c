@@ -18,7 +18,7 @@ static git_clone_options g_options;
 
 void test_online_clone__initialize(void)
 {
-	git_checkout_opts dummy_opts = GIT_CHECKOUT_OPTS_INIT;
+	git_checkout_options dummy_opts = GIT_CHECKOUT_OPTIONS_INIT;
 	git_remote_callbacks dummy_callbacks = GIT_REMOTE_CALLBACKS_INIT;
 
 	g_repo = NULL;
@@ -130,7 +130,7 @@ void test_online_clone__clone_into(void)
 	git_buf path = GIT_BUF_INIT;
 	git_remote *remote;
 	git_reference *head;
-	git_checkout_opts checkout_opts = GIT_CHECKOUT_OPTS_INIT;
+	git_checkout_options checkout_opts = GIT_CHECKOUT_OPTIONS_INIT;
 	git_remote_callbacks callbacks = GIT_REMOTE_CALLBACKS_INIT;
 
 	bool checkout_progress_cb_was_called = false,

@@ -150,11 +150,11 @@ typedef struct {
 	git_merge_tree_opts merge_tree_opts;
 
 	/** Options for writing the merge result to the working directory. */
-	git_checkout_opts checkout_opts;
+	git_checkout_options checkout_opts;
 } git_merge_opts;
 
 #define GIT_MERGE_OPTS_VERSION 1
-#define GIT_MERGE_OPTS_INIT {GIT_MERGE_OPTS_VERSION, 0, GIT_MERGE_TREE_OPTS_INIT, GIT_CHECKOUT_OPTS_INIT}
+#define GIT_MERGE_OPTS_INIT {GIT_MERGE_OPTS_VERSION, 0, GIT_MERGE_TREE_OPTS_INIT, GIT_CHECKOUT_OPTIONS_INIT}
 
 /**
  * Initializes a `git_merge_opts` with default values. Equivalent to creating

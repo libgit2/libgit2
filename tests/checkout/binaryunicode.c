@@ -21,7 +21,7 @@ static void execute_test(void)
 	git_oid oid, check;
 	git_commit *commit;
 	git_tree *tree;
-	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 
 	cl_git_pass(git_reference_name_to_id(&oid, g_repo, "refs/heads/branch1"));
 	cl_git_pass(git_commit_lookup(&commit, g_repo, &oid));
