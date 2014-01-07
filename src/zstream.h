@@ -18,6 +18,7 @@
 
 int git_zstream_init(git_zstream *zstream);
 ssize_t git_zstream_deflate(void *out, size_t out_len, git_zstream *zstream, const void *in, size_t in_len);
+void git_zstream_reset(git_zstream *zstream);
 void git_zstream_free(git_zstream *zstream);
 
 int git_zstream_deflatebuf(git_buf *out, const void *in, size_t in_len);

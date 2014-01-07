@@ -130,6 +130,7 @@ int git_packbuilder_new(git_packbuilder **out, git_repository *repo)
 	pb->nr_threads = 1; /* do not spawn any thread by default */
 
 	if (git_hash_ctx_init(&pb->ctx) < 0 ||
+		git_zstream_init(&pb->zstream) < 0 ||
 		git_repository_odb(&pb->odb, repo) < 0 ||
 		packbuilder_config(pb) < 0)
 		goto on_error;
@@ -284,7 +285,6 @@ static int write_object(
 	int (*write_cb)(void *buf, size_t size, void *cb_data),
 	void *cb_data)
 {
-	git_zstream zstream = GIT_ZSTREAM_INIT;
 	git_odb_object *obj = NULL;
 	git_otype type;
 	unsigned char hdr[10], *zbuf = NULL;
@@ -334,10 +334,9 @@ static int write_object(
 		zbuf = git__malloc(zbuf_len);
 		GITERR_CHECK_ALLOC(zbuf);
 
-		if ((error = git_zstream_init(&zstream)) < 0)
-			goto done;
+		git_zstream_reset(&pb->zstream);
 
-		while ((written = git_zstream_deflate(zbuf, zbuf_len, &zstream, data, data_len)) > 0) {
+		while ((written = git_zstream_deflate(zbuf, zbuf_len, &pb->zstream, data, data_len)) > 0) {
 			if ((error = write_cb(zbuf, written, cb_data)) < 0 ||
 				(error = git_hash_update(&pb->ctx, zbuf, written)) < 0)
 				goto done;
@@ -364,7 +363,6 @@ static int write_object(
 
 done:
 	git__free(zbuf);
-	git_zstream_free(&zstream);
 	git_odb_object_free(obj);
 	return error;
 }
@@ -1413,6 +1411,7 @@ void git_packbuilder_free(git_packbuilder *pb)
 		git__free(pb->object_list);
 
 	git_hash_ctx_cleanup(&pb->ctx);
+	git_zstream_free(&pb->zstream);
 
 	git__free(pb);
 }

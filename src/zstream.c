@@ -52,6 +52,11 @@ ssize_t git_zstream_deflate(void *out, size_t out_len, git_zstream *zstream, con
 	return (out_len - zstream->avail_out);
 }
 
+void git_zstream_reset(git_zstream *zstream)
+{
+	deflateReset(zstream);
+}
+
 void git_zstream_free(git_zstream *zstream)
 {
 	deflateEnd(zstream);
