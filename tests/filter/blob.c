@@ -47,6 +47,38 @@ void test_filter_blob__all_crlf(void)
 	git_blob_free(blob);
 }
 
+void test_filter_blob__sanitizes(void)
+{
+	git_blob *blob;
+	git_buf buf;
+
+	cl_git_pass(git_revparse_single(
+		(git_object **)&blob, g_repo, "e69de29")); /* zero-byte */
+
+	cl_assert_equal_i(0, git_blob_rawsize(blob));
+	cl_assert_equal_s("", git_blob_rawcontent(blob));
+
+	memset(&buf, 0, sizeof(git_buf));
+	cl_git_pass(git_blob_filtered_content(&buf, blob, "file.bin", 1));
+	cl_assert_equal_sz(0, buf.size);
+	cl_assert_equal_s("", buf.ptr);
+	git_buf_free(&buf);
+
+	memset(&buf, 0, sizeof(git_buf));
+	cl_git_pass(git_blob_filtered_content(&buf, blob, "file.crlf", 1));
+	cl_assert_equal_sz(0, buf.size);
+	cl_assert_equal_s("", buf.ptr);
+	git_buf_free(&buf);
+
+	memset(&buf, 0, sizeof(git_buf));
+	cl_git_pass(git_blob_filtered_content(&buf, blob, "file.lf", 1));
+	cl_assert_equal_sz(0, buf.size);
+	cl_assert_equal_s("", buf.ptr);
+	git_buf_free(&buf);
+
+	git_blob_free(blob);
+}
+
 void test_filter_blob__ident(void)
 {
 	git_oid id;

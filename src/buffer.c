@@ -100,6 +100,14 @@ void git_buf_free(git_buf *buf)
 	git_buf_init(buf, 0);
 }
 
+void git_buf_sanitize(git_buf *buf)
+{
+	if (buf->ptr == NULL) {
+		assert (buf->size == 0 && buf->asize == 0);
+		buf->ptr = git_buf__initbuf;
+	}
+}
+
 void git_buf_clear(git_buf *buf)
 {
 	buf->size = 0;

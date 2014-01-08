@@ -347,6 +347,8 @@ int git_blob_filtered_content(
 
 	assert(blob && path && out);
 
+	git_buf_sanitize(out);
+
 	if (check_for_binary_data && git_blob_is_binary(blob))
 		return 0;
 
