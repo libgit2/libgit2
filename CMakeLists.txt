@@ -33,6 +33,7 @@ OPTION( ANDROID				"Build for android NDK"	 				OFF )
 
 OPTION( USE_ICONV			"Link with and use iconv library" 		OFF )
 OPTION( USE_SSH				"Link with libssh to enable SSH support" ON )
+OPTION( USE_ZLIB			"Link with and use zlib if available"	ON  )
 OPTION( VALGRIND			"Configure build for valgrind"			OFF )
 
 IF(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
@@ -167,7 +168,10 @@ ENDIF()
 # Optional external dependency: zlib
 # It's optional, but FIND_PACKAGE gives a warning that looks more like an
 # error.
+IF (NOT USE_ZLIB)
 FIND_PACKAGE(ZLIB QUIET)
+ENDIF()
+
 IF (ZLIB_FOUND)
 	INCLUDE_DIRECTORIES(${ZLIB_INCLUDE_DIRS})
 	LINK_LIBRARIES(${ZLIB_LIBRARIES})
@@ -179,7 +183,11 @@ IF (ZLIB_FOUND)
 	# Fake the message CMake would have shown
 	MESSAGE("-- Found zlib: ${ZLIB_LIBRARY}")
 ELSE()
-	MESSAGE( "zlib was not found; using bundled 3rd-party sources." )
+	IF (USE_ZLIB)
+		MESSAGE( "zlib was not found; using bundled 3rd-party sources." )
+	ELSE()
+		MESSAGE( "zlib support disabled; using bundled 3rd-party sources." )
+	ENDIF()
 	INCLUDE_DIRECTORIES(deps/zlib)
 	ADD_DEFINITIONS(-DNO_VIZ -DSTDC -DNO_GZIP)
 	FILE(GLOB SRC_ZLIB deps/zlib/*.c deps/zlib/*.h)
