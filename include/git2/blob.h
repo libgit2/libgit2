@@ -84,7 +84,7 @@ GIT_EXTERN(git_repository *) git_blob_owner(const git_blob *blob);
  * time.
  *
  * @param blob pointer to the blob
- * @return the pointer; NULL if the blob has no contents
+ * @return the pointer
  */
 GIT_EXTERN(const void *) git_blob_rawcontent(const git_blob *blob);
 

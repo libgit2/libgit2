@@ -51,6 +51,15 @@ extern void git_buf_init(git_buf *buf, size_t initial_size);
 extern int git_buf_try_grow(
 	git_buf *buf, size_t target_size, bool mark_oom, bool preserve_external);
 
+/**
+ * Sanitizes git_buf structures provided from user input.  Users of the
+ * library, when providing git_buf's, may wish to provide a NULL ptr for
+ * ease of handling.  The buffer routines, however, expect a non-NULL ptr
+ * always.  This helper method simply handles NULL input, converting to a
+ * git_buf__initbuf.
+ */
+extern void git_buf_sanitize(git_buf *buf);
+
 extern void git_buf_swap(git_buf *buf_a, git_buf *buf_b);
 extern char *git_buf_detach(git_buf *buf);
 extern void git_buf_attach(git_buf *buf, char *ptr, size_t asize);
