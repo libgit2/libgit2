@@ -242,7 +242,7 @@ static int index_blob_lines(git_blame *blame)
     git_off_t len = blame->final_buf_size;
     int num = 0, incomplete = 0, bol = 1;
     size_t *i;
- 
+
     if (len && buf[len-1] != '\n')
         incomplete++; /* incomplete line at the end */
     while (len--) {
@@ -263,13 +263,15 @@ static int index_blob_lines(git_blame *blame)
     blame->num_lines = num + incomplete;
     return blame->num_lines;
 }
- 
+
 static git_blame_hunk* hunk_from_entry(git_blame__entry *e)
 {
 	git_blame_hunk *h = new_hunk(
 			e->lno+1, e->num_lines, e->s_lno+1, e->suspect->path);
 	git_oid_cpy(&h->final_commit_id, git_commit_id(e->suspect->commit));
+	git_oid_cpy(&h->orig_commit_id, git_commit_id(e->suspect->commit));
 	h->final_signature = git_signature_dup(git_commit_author(e->suspect->commit));
+	h->orig_signature = git_signature_dup(git_commit_author(e->suspect->commit));
 	h->boundary = e->is_boundary ? 1 : 0;
 	return h;
 }
