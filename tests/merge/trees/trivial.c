@@ -33,7 +33,7 @@ static int merge_trivial(git_index **index, const char *ours, const char *theirs
 	git_buf branch_buf = GIT_BUF_INIT;
 	git_merge_tree_opts opts = GIT_MERGE_TREE_OPTS_INIT;
 
-	opts.automerge_flags |= automerge ? 0 : GIT_MERGE_AUTOMERGE_NONE;
+	opts.file_favor |= automerge ? 0 : GIT_MERGE_FILE_FAVOR_NO_MERGE;
 
 	git_buf_printf(&branch_buf, "%s%s", GIT_REFS_HEADS_DIR, ours);
 	cl_git_pass(git_reference_name_to_id(&our_oid, repo, branch_buf.ptr));

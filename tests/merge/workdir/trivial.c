@@ -39,7 +39,7 @@ static int merge_trivial(const char *ours, const char *theirs, bool automerge)
 
 	checkout_opts.checkout_strategy = GIT_CHECKOUT_FORCE;
 
-	opts.merge_tree_opts.automerge_flags |= automerge ? 0 : GIT_MERGE_AUTOMERGE_NONE;
+	opts.merge_tree_opts.file_favor |= automerge ? 0 : GIT_MERGE_FILE_FAVOR_NO_MERGE;
 
 	git_buf_printf(&branch_buf, "%s%s", GIT_REFS_HEADS_DIR, ours);
 	cl_git_pass(git_reference_symbolic_create(&our_ref, repo, "HEAD", branch_buf.ptr, 1, NULL, NULL));

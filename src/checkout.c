@@ -1626,6 +1626,7 @@ static int checkout_write_merge(
 {
 	git_buf our_label = GIT_BUF_INIT, their_label = GIT_BUF_INIT,
 		path_suffixed = GIT_BUF_INIT, path_workdir = GIT_BUF_INIT;
+	git_merge_file_options merge_file_opts = GIT_MERGE_FILE_OPTIONS_INIT;
 	git_merge_file_input ancestor = GIT_MERGE_FILE_INPUT_INIT,
 		ours = GIT_MERGE_FILE_INPUT_INIT,
 		theirs = GIT_MERGE_FILE_INPUT_INIT;
@@ -1662,7 +1663,7 @@ static int checkout_write_merge(
 		theirs.label = git_buf_cstr(&their_label);
 	}
 
-	if ((error = git_merge_files(&result, &ancestor, &ours, &theirs, 0)) < 0)
+	if ((error = git_merge_files(&result, &ancestor, &ours, &theirs, &merge_file_opts)) < 0)
 		goto done;
 
 	if (result.path == NULL || result.mode == 0) {

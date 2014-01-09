@@ -130,7 +130,7 @@ int git_merge_files(
 	git_merge_file_input *ancestor,
 	git_merge_file_input *ours,
 	git_merge_file_input *theirs,
-	git_merge_automerge_flags flags)
+	git_merge_file_options *opts)
 {
 	xmparam_t xmparam;
 	mmbuffer_t mmbuffer;
@@ -152,11 +152,14 @@ int git_merge_files(
 	out->path = merge_file_best_path(ancestor, ours, theirs);
 	out->mode = merge_file_best_mode(ancestor, ours, theirs);
 
-	if (flags == GIT_MERGE_AUTOMERGE_FAVOR_OURS)
+	if (opts && opts->favor == GIT_MERGE_FILE_FAVOR_OURS)
 		xmparam.favor = XDL_MERGE_FAVOR_OURS;
-
-	if (flags == GIT_MERGE_AUTOMERGE_FAVOR_THEIRS)
+	else if (opts && opts->favor == GIT_MERGE_FILE_FAVOR_THEIRS)
 		xmparam.favor = XDL_MERGE_FAVOR_THEIRS;
+
+	xmparam.level = 
+		(opts && (opts->flags & GIT_MERGE_FILE_SIMPLIFY_ALNUM)) ?
+		XDL_MERGE_ZEALOUS_ALNUM : XDL_MERGE_ZEALOUS;
 
 	if ((xdl_result = xdl_merge(&ancestor->mmfile, &ours->mmfile,
 		&theirs->mmfile, &xmparam, &mmbuffer)) < 0) {
