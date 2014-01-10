@@ -71,6 +71,11 @@ div.sidebar-shell {
 div.sidebar-module {
   width: 232px;
 }
+
+.hidden {
+    display: none;
+}
+
 .content {
   width: 660px;
 }

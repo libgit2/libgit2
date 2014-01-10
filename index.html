@@ -1,5 +1,5 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<!DOCTYPE html>
+<html>
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
     <title>API Documentation</title>
@@ -43,25 +43,36 @@
 
     <!-- Version picker -->
     <script type="text/template" id="version-picker-template">
-      <ul id="version-list">
-	<% _.each(versions, function(version) { %>
-	<li><a href="#<%= version %>"><%= version %></a></li>
-	<% }) %>
-	<li><a href="#p/changelog">Changelog</a></li>
-      </ul>
+      <% _.each(versions, function(version) { %>
+      <li><a href="#<%= version %>"><%= version %></a></li>
+      <% }) %>
+      <li><a href="#p/changelog">Changelog</a></li>
     </script>
 
   </head>
 
   <body class="documentation">
 
+    <!-- Sidebar where the groups and types appear -->
+    <script type="text/template" id="type-list-template">
+      <li>
+	<li><span class="divide"><%= title %></span></li>
+	<% _.each(elements, function(e) { %>
+	<li>
+	  <a href="#<%= e.link %>" ref="<%= e.ref %>" class="type", id="typeItem<%= e.name %>">
+	  <%= e.name %>
+	  </a>
+	</li>
+	<% }) %>
+      </li>
+    </script>
     <script type="text/template" id="file-list-template">
      <li>
        <h3><a href="#">Functions</a></h3>
        <ul>
 	 <% _.each(funs, function(fun, i) { %>
 	 <li>
-	   <a href="#" ref="<%= i %>" class="group" id="groupItem<%= fun.name %>">
+	   <a href="#<%= fun.link %>" ref="<%= i %>" class="group" id="groupItem<%= fun.name %>">
 	   <%= fun.name %>&nbsp;<small>(<%= fun.num %>)</small>
 	   </a>
 	 </li>
@@ -70,30 +81,11 @@
      </li>
      <li>
        <h3><a href="#">Types</a></h3>
-       <ul>
-	 <li><span class="divide">Enums</span></li>
-	 <% _.each(enums, function(e) { %>
-	 <li>
-	   <a href="#" ref="<%= e.ref %>" class="type", id="typeItem<%= e.name %>"><%= e.name %></a>
-	 </li>
-	 <% }) %>
-	 <li><span class="divide">Structs</span></li>
-	 <% _.each(structs, function(s) { %>
-	 <li>
-	   <a href="#" ref="<%= s.ref %>" class="type", id="typeItem<%= s.name %>"><%= s.name %></a>
-	 </li>
-	 <% }) %>
-	 <li><span class="divide">Opaque Structs</span></li>
-	 <% _.each(opaques, function(o) { %>
-	 <li>
-	   <a href="#" ref="<%= o.ref %>" class="type", id="typeItem<%= o.name %>"><%= o.name %></a>
-	 </li>
-	 <% }) %>
-       </ul>
+       <ul class="hidden" id="types-list" />
      </li>
      <li>
        <h3><a href="#">Files</a></h3>
-       <ul>
+       <ul class="hidden">
 	 <% _.each(files, function(file) { %>
 	 <li>
 	   <a target="github" href="<%= file.url %>"><%= file.name %></a>
@@ -113,6 +105,163 @@
      </li>
     </script>
 
+    <!-- Listing of the details of a single function -->
+    <script type="text/template" id="function-args-template">
+      <table class="funcTable">
+	<% _.each(args, function(arg) { %>
+	<tr>
+	  <td valign="top" nowrap="true"><%= arg.link %></td>
+	  <td valign="top" class="var"><%= arg.name %></td>
+	  <td class="comment"><%= arg.comment %></td>
+	</tr>
+	<% }) %>
+      </table>
+    </script>
+    <script type="text/template" id="function-template">
+     <h1 class="funcTitle"><%= name %></h1>
+     <h3 class="funcDesc"><%= data.description %></h3>
+     <!-- The args table -->
+     <%= argsTemplate({args: args}) %>
+     <div class="returns">
+       <h3>returns</h3>
+       <table class="funcTable">
+	 <tr>
+	   <td valign="top"><%= returns.link %></td>
+	   <td class="comment"><%= returns.comment %></td>
+	 </tr>
+       </table>
+     </div>
+     <div><%= data.comments %></div>
+     <!-- function signature -->
+     <div class="example">
+       <h3>signature</h3>
+       <code class="params"><%= sig %></code>
+     </div>
+     <!-- function history -->
+     <div class="signatures">
+       <h3>versions</h3>
+       <ul>
+	 <% _.each(sigs, function(sig) { %>
+	 <li><a href="<%= sig.url %>" class="<%= sig.klass %>"><%= sig.name %></a></li>
+	 <% }) %>
+       </ul>
+     </div>
+     <div class="fileLink">Defined in: <a href="<%= fileLink %>"> <%= data.file %></a></div>
+     <% if (data.examples) { %>
+     <div class="funcEx">Used in examples:
+     <ul>
+     <% _.each(data.examples, function(uses, filename) { %>
+     <li>
+       <strong><%= filename %></strong>
+       <% _.each(uses, function(use, i) { %>
+       <a href="<%= use %>">[<%= i + 1 %>]</a>
+       <% }) %> <!-- loop over the uses -->
+     </li>
+     <% }) %> <!-- loop over the files -->
+     </ul>
+     </div>
+     <% } %> <!-- if we have examples -->
+     <div class="also">
+       Also in <a href="<%= alsoGroup %>"><%= groupName %></a> group: <br/>
+       <% _.each(_.initial(alsoLinks), function(link) { %>
+       <a href="<%= link.url %>"><%= link.name %></a>, 
+       <% }) %>
+       <% var link = _.last(alsoLinks) %>
+       <a href="<%= link.url %>"><%= link.name %></a>
+     </div>
+    </script>
+
+    <!-- main page, list of groups and their functions -->
+    <script type="text/template" id="index-template">
+      <h1>Public API Functions</h1>
+      <% _.each(groups, function(group) { %>
+      <h2 class="funcGroup"><%= group.name %></h2>
+      <p class="functionList">
+	<% _.each(_.initial(group.funs), function(fun) { %>
+	<a href="<%= fun.url %>" class="<%= fun.klass %>"><%= fun.name %></a>
+	<% }) %> <!-- loop through all but the last function -->
+	<% var fun = _.last(group.funs) %>
+	<a href="<%= fun.url %>" class="<%= fun.klass %>"><%= fun.name %></a>
+      </p>
+      <% }) %> <!-- loop through the groups -->
+    </script>
+
+    <!-- listing for a particular type -->
+    <script type="text/template" id="type-template">
+      <h1 class="funcTitle"><%= tname %><small><%= data.type %></small></h1>
+      <p><%= data.value %></p>
+      <% if (data.comments) { %>
+      <div><%= data.comments %></div>
+      <% } %>
+      <% if (data.block) { %>
+      <pre><%= data.block %></pre>
+      <% } %>
+      <% if (returns.length > 0) { %>
+      <h3>Returns</h3>
+      <% _.each(_.initial(returns), function(fun) { %>
+      <a href="<%= fun.url %>"><%= fun.name %></a>
+      <% }) %> <!-- loop over each 'return' -->
+      <% var fun = _.last(returns) %>
+      <a href="<%= fun.url %>"><%= fun.name %></a>
+      <% } %> <!-- if we have 'returns' -->
+
+      <% if (needs.length > 0) { %>
+      <h3>Argument In</h3>
+      <% _.each(_.initial(needs), function(fun) { %>
+      <a href="<%= fun.url %>"><%= fun.name %></a>
+      <% }) %> <!-- loop over each 'need' -->
+      <% var fun = _.last(needs) %>
+      <a href="<%= fun.url %>"><%= fun.name %></a>
+      <% } %> <!-- if we have 'needs' -->
+
+      <div class="fileLink">
+	Defined in:
+	<a href="<%= fileLink.url %>"><%= fileLink.name %></a>
+      </div>
+    </script>
+
+    <script type="text/template" id="group-template">
+      <h1><%= gname %> functions</h1>
+      <!-- table with all the functions -->
+      <table class="methods">
+	<% _.each(functions, function(fun) { %>
+	<tr>
+	  <td valign="top" nowrap="true">
+	    <%= fun.returns %>
+	  </td>
+	  <td valign="top" class="methodName">
+	    <a href="<%= fun.url %>"><%= fun.name %></a>
+	  </td>
+	  <td>
+	    <% _.each(fun.args, function(arg) { %>
+	    <%= arg.type %> <%= arg.name %><br/>
+	    <% }) %> <!-- loop over the args of a function -->
+	  </td>
+	</tr>
+	<% }) %> <!-- loop over the functions -->
+      </table>
+      <!-- list of the functions with the descriptions -->
+      <% _.each(functions, function(fun) { %>
+      <h2><a href="<%= fun.url %>"><%= fun.name %></a><small>(<%= fun.argline %>)</small></h2>
+      <div class="description">
+	<%= fun.description %>
+	<%= fun.comments %>
+      </div>
+      <% }) %> <!-- loop over the functions -->
+    </script>
+
+    <script type="text/template" id="search-template">
+      <h1>Search Results</h1>
+      <table>
+	<% _.each(results, function(result) { %>
+	<tr>
+	  <td><a href="<%= result.url %>"><%= result.name %></a></td>
+	  <td><%= result.match %></td>
+	</tr>
+	<% }) %>
+      </table>
+    </script>
+
     <div id="not-footer">
     <div id="header-wrapper">
       <div id="header">
@@ -127,14 +276,14 @@
 
     <div id="wrapper">
 
-      <div class="content"></div>
+      <div id="content" class="content"></div>
 
       <div id="js-help-sidebar" class="sidebar-shell">
         <div class="sidebar-module">
           <ul class="subgroup" id="versions">
             <li>
               <h3 id="version-picker">Version: <span id="version"></span></h3>
-              <ul id="version-list"></ul>
+              <ul id="version-list" class="hidden"></ul>
             </li>
           </ul>
         </div> <!-- /sidebar-module -->
@@ -151,7 +300,7 @@
   <div id="footer-wrapper">
     <div id="footer">
       <div class="left-col">
-        Powered by <a href="https://github.com/schacon/docurium">Docurium</a><br/>
+        Powered by <a href="https://github.com/libgit2/docurium">Docurium</a><br/>
         Sponsored by GitHub<br/>
         <br/>
       </div>
