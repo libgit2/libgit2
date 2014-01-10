@@ -1938,7 +1938,7 @@ static int write_merge_msg(
 	assert(repo && heads);
 
 	entries = git__calloc(heads_len, sizeof(struct merge_msg_entry));
-	GITERR_CHECK_ALLOC(entries); 
+	GITERR_CHECK_ALLOC(entries);
 
 	if (git_vector_init(&matching, heads_len, NULL) < 0) {
 		git__free(entries);
@@ -1992,7 +1992,7 @@ static int write_merge_msg(
 
 	if (matching.length)
 		sep =',';
-	
+
 	if ((error = merge_msg_entries(&matching, entries, heads_len, msg_entry_is_tag)) < 0 ||
 		(error = merge_msg_write_tags(&file, &matching, sep)) < 0)
 		goto cleanup;
@@ -2540,6 +2540,15 @@ int git_merge__setup(
 
 /* Merge result data */
 
+int git_merge_result_get_index(git_index *out, git_merge_result *merge_result)
+{
+	assert(out && merge_result);
+
+	out = merge_result->index;
+	return 0;
+
+}
+
 int git_merge_result_is_uptodate(git_merge_result *merge_result)
 {
 	assert(merge_result);
@@ -2630,7 +2639,7 @@ int git_merge_head_from_ref(
 
 	if ((error = git_reference_resolve(&resolved, ref)) < 0)
 		return error;
-	
+
 	error = merge_head_init(out, repo, git_reference_name(ref), NULL,
 		git_reference_target(resolved));
 

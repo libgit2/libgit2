@@ -228,6 +228,11 @@ GIT_EXTERN(int) git_merge(
 	const git_merge_opts *opts);
 
 /**
+ * Gets result's index.
+ */
+GIT_EXTERN(int) git_merge_result_get_index(git_index *out, git_merge_result *merge_result);
+
+/**
  * Returns true if a merge is up-to-date (we were asked to merge the target
  * into itself.)
  */
