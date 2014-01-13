@@ -724,6 +724,9 @@ int git_reference_next_name(const char **out, git_reference_iterator *iter)
 
 void git_reference_iterator_free(git_reference_iterator *iter)
 {
+	if (iter == NULL)
+		return;
+
 	git_refdb_iterator_free(iter);
 }
 
