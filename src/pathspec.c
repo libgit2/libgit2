@@ -89,8 +89,10 @@ int git_pathspec__vinit(
 		if (ret == GIT_ENOTFOUND) {
 			git__free(match);
 			continue;
-		} else if (ret < 0)
+		} else if (ret < 0) {
+			git__free(match);
 			return ret;
+		}
 
 		if (git_vector_insert(vspec, match) < 0)
 			return -1;
