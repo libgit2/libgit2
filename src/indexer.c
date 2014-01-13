@@ -355,7 +355,7 @@ static int hash_and_save(git_indexer *idx, git_rawobj *obj, git_off_t entry_star
 	git_oid oid;
 	size_t entry_size;
 	struct entry *entry;
-	struct git_pack_entry *pentry;
+	struct git_pack_entry *pentry = NULL;
 
 	entry = git__calloc(1, sizeof(*entry));
 	GITERR_CHECK_ALLOC(entry);
@@ -373,14 +373,13 @@ static int hash_and_save(git_indexer *idx, git_rawobj *obj, git_off_t entry_star
 	entry->crc = crc32(0L, Z_NULL, 0);
 
 	entry_size = (size_t)(idx->off - entry_start);
-	if (crc_object(&entry->crc, &idx->pack->mwf, entry_start, entry_size) < 0) {
-		git__free(pentry);
+	if (crc_object(&entry->crc, &idx->pack->mwf, entry_start, entry_size) < 0)
 		goto on_error;
-	}
 
 	return save_entry(idx, entry, pentry, entry_start);
 
 on_error:
+	git__free(pentry);
 	git__free(entry);
 	git__free(obj->data);
 	return -1;
@@ -636,7 +635,7 @@ static int inject_object(git_indexer *idx, git_oid *id)
 {
 	git_odb_object *obj;
 	struct entry *entry;
-	struct git_pack_entry *pentry;
+	struct git_pack_entry *pentry = NULL;
 	git_oid foo = {{0}};
 	unsigned char hdr[64];
 	git_buf buf = GIT_BUF_INIT;
@@ -666,10 +665,8 @@ static int inject_object(git_indexer *idx, git_oid *id)
 	idx->pack->mwf.size += hdr_len;
 	entry->crc = crc32(entry->crc, hdr, hdr_len);
 
-	if ((error = git__compress(&buf, data, len)) < 0) {
-		git__free(entry);
-		goto cleanup;
-	}
+	if ((error = git__compress(&buf, data, len)) < 0)
+		goto error;
 
 	/* And then the compressed object */
 	git_filebuf_write(&idx->pack_file, buf.ptr, buf.size);
@@ -678,10 +675,8 @@ static int inject_object(git_indexer *idx, git_oid *id)
 	git_buf_free(&buf);
 
 	/* Write a fake trailer so the pack functions play ball */
-	if ((error = git_filebuf_write(&idx->pack_file, &foo, GIT_OID_RAWSZ)) < 0) {
-		git__free(entry);
-		goto cleanup;
-	}
+	if ((error = git_filebuf_write(&idx->pack_file, &foo, GIT_OID_RAWSZ)) < 0)
+		goto error;
 
 	idx->pack->mwf.size += GIT_OID_RAWSZ;
 
@@ -692,10 +687,14 @@ static int inject_object(git_indexer *idx, git_oid *id)
 	git_oid_cpy(&entry->oid, id);
 	idx->off = entry_start + hdr_len + len;
 
-	if ((error = save_entry(idx, entry, pentry, entry_start)) < 0)
-		git__free(pentry);
+	if (!(error = save_entry(idx, entry, pentry, entry_start)))
+		goto done;
 
-cleanup:
+error:
+	git__free(entry);
+	git__free(pentry);
+
+done:
 	git_odb_object_free(obj);
 	return error;
 }
