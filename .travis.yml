@@ -13,9 +13,15 @@ env:
   - OPTIONS="-DBUILD_CLAR=ON -DBUILD_EXAMPLES=ON"
 
 matrix:
+ fast_finish: true
  include:
    - compiler: i586-mingw32msvc-gcc
      env: OPTIONS="-DBUILD_CLAR=OFF -DWIN32=ON -DMINGW=ON"
+   - compiler: gcc
+     env: COVERITY=1
+     secure: "YnhS+8n6B+uoyaYfaJ3Lei7cSJqHDPiKJCKFIF2c87YDfmCvAJke8QtE7IzjYDs7UFkTCM4ox+ph2bERUrxZbSCyEkHdjIZpKuMJfYWja/jgMqTMxdyOH9y8JLFbZsSXDIXDwqBlC6vVyl1fP90M35wuWcNTs6tctfVWVofEFbs="
+ allow_failures:
+   - env: COVERITY=1
 
 install:
  - sudo apt-get -qq update

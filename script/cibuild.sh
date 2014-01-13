@@ -1,5 +1,11 @@
 #!/bin/sh
 
+if [ "$COVERITY" -eq 1 ];
+then
+	./script/coverity.sh;
+	exit $?;
+fi
+
 # Create a test repo which we can use for the online::push tests
 mkdir $HOME/_temp
 git init --bare $HOME/_temp/test.git
