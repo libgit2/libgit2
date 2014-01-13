@@ -1072,8 +1072,10 @@ static int config_parse(diskfile_backend *cfg_file, struct reader *reader, git_c
 			git_buf_printf(&buf, "%s.%s", current_section, var_name);
 			git__free(var_name);
 
-			if (git_buf_oom(&buf))
+			if (git_buf_oom(&buf)) {
+				git__free(var_value);
 				return -1;
+			}
 
 			var->entry->name = git_buf_detach(&buf);
 			var->entry->value = var_value;
