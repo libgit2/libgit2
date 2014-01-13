@@ -121,7 +121,6 @@ git_blame* git_blame__alloc(
 		git_vector_insert(&gbr->paths, git__strdup(path)) < 0)
 	{
 		git_blame_free(gbr);
-		git__free(gbr);
 		return NULL;
 	}
 
