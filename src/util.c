@@ -140,6 +140,10 @@ int git_libgit2_opts(int key, ...)
 void git_strarray_free(git_strarray *array)
 {
 	size_t i;
+
+	if (array == NULL)
+		return;
+
 	for (i = 0; i < array->count; ++i)
 		git__free(array->strings[i]);
 
