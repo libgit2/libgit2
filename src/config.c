@@ -927,6 +927,9 @@ int git_config_next(git_config_entry **entry, git_config_iterator *iter)
 
 void git_config_iterator_free(git_config_iterator *iter)
 {
+	if (iter == NULL)
+		return;
+
 	iter->free(iter);
 }
 
