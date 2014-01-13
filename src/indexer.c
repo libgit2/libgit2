@@ -373,8 +373,10 @@ static int hash_and_save(git_indexer *idx, git_rawobj *obj, git_off_t entry_star
 	entry->crc = crc32(0L, Z_NULL, 0);
 
 	entry_size = (size_t)(idx->off - entry_start);
-	if (crc_object(&entry->crc, &idx->pack->mwf, entry_start, entry_size) < 0)
+	if (crc_object(&entry->crc, &idx->pack->mwf, entry_start, entry_size) < 0) {
+		git__free(pentry);
 		goto on_error;
+	}
 
 	return save_entry(idx, entry, pentry, entry_start);
 
@@ -648,8 +650,10 @@ static int inject_object(git_indexer *idx, git_oid *id)
 
 	entry_start = seek_back_trailer(idx);
 
-	if (git_odb_read(&obj, idx->odb, id) < 0)
+	if (git_odb_read(&obj, idx->odb, id) < 0) {
+		git__free(entry);
 		return -1;
+	}
 
 	data = git_odb_object_data(obj);
 	len = git_odb_object_size(obj);
@@ -662,8 +666,10 @@ static int inject_object(git_indexer *idx, git_oid *id)
 	idx->pack->mwf.size += hdr_len;
 	entry->crc = crc32(entry->crc, hdr, hdr_len);
 
-	if ((error = git__compress(&buf, data, len)) < 0)
+	if ((error = git__compress(&buf, data, len)) < 0) {
+		git__free(entry);
 		goto cleanup;
+	}
 
 	/* And then the compressed object */
 	git_filebuf_write(&idx->pack_file, buf.ptr, buf.size);
@@ -672,8 +678,10 @@ static int inject_object(git_indexer *idx, git_oid *id)
 	git_buf_free(&buf);
 
 	/* Write a fake trailer so the pack functions play ball */
-	if ((error = git_filebuf_write(&idx->pack_file, &foo, GIT_OID_RAWSZ)) < 0)
+	if ((error = git_filebuf_write(&idx->pack_file, &foo, GIT_OID_RAWSZ)) < 0) {
+		git__free(entry);
 		goto cleanup;
+	}
 
 	idx->pack->mwf.size += GIT_OID_RAWSZ;
 
