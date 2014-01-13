@@ -2,6 +2,7 @@ libgit2 - the Git linkable library
 ==================================
 
 [![Build Status](https://secure.travis-ci.org/libgit2/libgit2.png?branch=development)](http://travis-ci.org/libgit2/libgit2)
+[![Coverity Scan Build Status](https://scan.coverity.com/projects/639/badge.svg)](https://scan.coverity.com/projects/639)
 
 `libgit2` is a portable, pure C implementation of the Git core methods provided as a
 re-entrant linkable library with a solid API, allowing you to write native
