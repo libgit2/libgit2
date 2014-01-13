@@ -314,6 +314,9 @@ git_oid_shorten *git_oid_shorten_new(size_t min_length)
 
 void git_oid_shorten_free(git_oid_shorten *os)
 {
+	if (os == NULL)
+		return;
+
 	git__free(os->nodes);
 	git__free(os);
 }

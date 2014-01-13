@@ -949,6 +949,9 @@ int git_odb_stream_read(git_odb_stream *stream, char *buffer, size_t len)
 
 void git_odb_stream_free(git_odb_stream *stream)
 {
+	if (stream == NULL)
+		return;
+
 	git__free(stream->hash_ctx);
 	stream->free(stream);
 }
