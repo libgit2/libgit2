@@ -254,8 +254,6 @@ int git_remote_dup(git_remote **dest, const git_remote *source)
 	git_remote *remote = git__calloc(1, sizeof(git_remote));
 	GITERR_CHECK_ALLOC(remote);
 
-	memset(remote, 0x0, sizeof(git_remote));
-
 	if (source->name != NULL) {
 		remote->name = git__strdup(source->name);
 		GITERR_CHECK_ALLOC(remote->name);
