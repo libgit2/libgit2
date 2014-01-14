@@ -76,8 +76,8 @@ static git_blame_hunk* dup_hunk(git_blame_hunk *hunk)
 	git_oid_cpy(&newhunk->orig_commit_id, &hunk->orig_commit_id);
 	git_oid_cpy(&newhunk->final_commit_id, &hunk->final_commit_id);
 	newhunk->boundary = hunk->boundary;
-	newhunk->final_signature = git_signature_dup(hunk->final_signature);
-	newhunk->orig_signature = git_signature_dup(hunk->orig_signature);
+	git_signature_dup(&newhunk->final_signature, hunk->final_signature);
+	git_signature_dup(&newhunk->orig_signature, hunk->orig_signature);
 	return newhunk;
 }
 
@@ -269,8 +269,8 @@ static git_blame_hunk* hunk_from_entry(git_blame__entry *e)
 			e->lno+1, e->num_lines, e->s_lno+1, e->suspect->path);
 	git_oid_cpy(&h->final_commit_id, git_commit_id(e->suspect->commit));
 	git_oid_cpy(&h->orig_commit_id, git_commit_id(e->suspect->commit));
-	h->final_signature = git_signature_dup(git_commit_author(e->suspect->commit));
-	h->orig_signature = git_signature_dup(git_commit_author(e->suspect->commit));
+	git_signature_dup(&h->final_signature, git_commit_author(e->suspect->commit));
+	git_signature_dup(&h->orig_signature, git_commit_author(e->suspect->commit));
 	h->boundary = e->is_boundary ? 1 : 0;
 	return h;
 }

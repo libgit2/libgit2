@@ -82,23 +82,28 @@ int git_signature_new(git_signature **sig_out, const char *name, const char *ema
 	return 0;
 }
 
-git_signature *git_signature_dup(const git_signature *sig)
+int git_signature_dup(git_signature **dest, const git_signature *source)
 {
-	git_signature *new;
+	git_signature *signature;
 
-	if (sig == NULL)
-		return NULL;
+	if (source == NULL)
+		return 0;
 
-	new = git__calloc(1, sizeof(git_signature));
-	if (new == NULL)
-		return NULL;
+	signature = git__calloc(1, sizeof(git_signature));
+	GITERR_CHECK_ALLOC(signature);
 
-	new->name = git__strdup(sig->name);
-	new->email = git__strdup(sig->email);
-	new->when.time = sig->when.time;
-	new->when.offset = sig->when.offset;
+	signature->name = git__strdup(source->name);
+	GITERR_CHECK_ALLOC(signature->name);
 
-	return new;
+	signature->email = git__strdup(source->email);
+	GITERR_CHECK_ALLOC(signature->email);
+
+	signature->when.time = source->when.time;
+	signature->when.offset = source->when.offset;
+
+	*dest = signature;
+
+	return 0;
 }
 
 int git_signature_now(git_signature **sig_out, const char *name, const char *email)

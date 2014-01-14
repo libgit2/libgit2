@@ -204,22 +204,22 @@ void git_tree_entry_free(git_tree_entry *entry)
 	git__free(entry);
 }
 
-git_tree_entry *git_tree_entry_dup(const git_tree_entry *entry)
+int git_tree_entry_dup(git_tree_entry **dest, const git_tree_entry *source)
 {
 	size_t total_size;
 	git_tree_entry *copy;
 
-	assert(entry);
+	assert(source);
 
-	total_size = sizeof(git_tree_entry) + entry->filename_len + 1;
+	total_size = sizeof(git_tree_entry) + source->filename_len + 1;
 
 	copy = git__malloc(total_size);
-	if (!copy)
-		return NULL;
+	GITERR_CHECK_ALLOC(copy);
 
-	memcpy(copy, entry, total_size);
+	memcpy(copy, source, total_size);
 
-	return copy;
+	*dest = copy;
+	return 0;
 }
 
 void git_tree__free(void *_tree)
@@ -853,8 +853,7 @@ int git_tree_entry_bypath(
 	case '\0':
 		/* If there are no more components in the path, return
 		 * this entry */
-		*entry_out = git_tree_entry_dup(entry);
-		return 0;
+		return git_tree_entry_dup(entry_out, entry);
 	}
 
 	if (git_tree_lookup(&subtree, root->object.repo, &entry->oid) < 0)

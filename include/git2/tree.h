@@ -150,10 +150,11 @@ GIT_EXTERN(int) git_tree_entry_bypath(
  * Create a copy of a tree entry. The returned copy is owned by the user,
  * and must be freed explicitly with `git_tree_entry_free()`.
  *
- * @param entry A tree entry to duplicate
- * @return a copy of the original entry or NULL on error (alloc failure)
+ * @param dest pointer where to store the copy
+ * @param entry tree entry to duplicate
+ * @return 0 or an error code
  */
-GIT_EXTERN(git_tree_entry *) git_tree_entry_dup(const git_tree_entry *entry);
+GIT_EXTERN(int) git_tree_entry_dup(git_tree_entry **dest, const git_tree_entry *source);
 
 /**
  * Free a user-owned tree entry
