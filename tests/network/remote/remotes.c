@@ -129,6 +129,27 @@ void test_network_remote_remotes__add_fetchspec(void)
 	cl_assert_equal_b(_refspec->push, false);
 }
 
+void test_network_remote_remotes__dup(void)
+{
+	git_strarray array;
+	git_remote *dup;
+
+	cl_git_pass(git_remote_dup(&dup, _remote));
+
+	cl_assert_equal_s(git_remote_name(dup), git_remote_name(_remote));
+	cl_assert_equal_s(git_remote_url(dup), git_remote_url(_remote));
+	cl_assert_equal_s(git_remote_pushurl(dup), git_remote_pushurl(_remote));
+
+	cl_git_pass(git_remote_get_fetch_refspecs(&array, _remote));
+	cl_assert_equal_i(1, (int)array.count);
+	cl_assert_equal_s("+refs/heads/*:refs/remotes/test/*", array.strings[0]);
+	git_strarray_free(&array);
+
+	cl_git_pass(git_remote_get_push_refspecs(&array, _remote));
+	cl_assert_equal_i(0, (int)array.count);
+	git_strarray_free(&array);
+}
+
 void test_network_remote_remotes__add_pushspec(void)
 {
 	size_t size;
