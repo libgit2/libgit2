@@ -184,7 +184,7 @@ GIT_EXTERN(int) git_reference_create(git_reference **out, git_repository *repo, 
  * @param old_id The old value which the reference should have
  * @return 0 on success, GIT_EEXISTS, GIT_EINVALIDSPEC or an error code
  */
-GIT_EXTERN(int) git_reference_create_if(git_reference **out, git_repository *repo, const char *name, const git_oid *id, int force, const git_signature *signature, const char *log_message, const git_oid *old_id);
+GIT_EXTERN(int) git_reference_create_matching(git_reference **out, git_repository *repo, const char *name, const git_oid *id, int force, const git_signature *signature, const char *log_message, const git_oid *old_id);
 
 /**
  * Get the OID pointed to by a direct reference.
