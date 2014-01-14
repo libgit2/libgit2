@@ -644,18 +644,16 @@ static int inject_object(git_indexer *idx, git_oid *id)
 	size_t len, hdr_len;
 	int error;
 
-	entry = git__calloc(1, sizeof(*entry));
-	GITERR_CHECK_ALLOC(entry);
-
 	entry_start = seek_back_trailer(idx);
 
-	if (git_odb_read(&obj, idx->odb, id) < 0) {
-		git__free(entry);
+	if (git_odb_read(&obj, idx->odb, id) < 0)
 		return -1;
-	}
 
 	data = git_odb_object_data(obj);
 	len = git_odb_object_size(obj);
+
+	entry = git__calloc(1, sizeof(*entry));
+	GITERR_CHECK_ALLOC(entry);
 
 	entry->crc = crc32(0L, Z_NULL, 0);
 
@@ -666,7 +664,7 @@ static int inject_object(git_indexer *idx, git_oid *id)
 	entry->crc = crc32(entry->crc, hdr, hdr_len);
 
 	if ((error = git__compress(&buf, data, len)) < 0)
-		goto error;
+		goto cleanup;
 
 	/* And then the compressed object */
 	git_filebuf_write(&idx->pack_file, buf.ptr, buf.size);
@@ -676,7 +674,7 @@ static int inject_object(git_indexer *idx, git_oid *id)
 
 	/* Write a fake trailer so the pack functions play ball */
 	if ((error = git_filebuf_write(&idx->pack_file, &foo, GIT_OID_RAWSZ)) < 0)
-		goto error;
+		goto cleanup;
 
 	idx->pack->mwf.size += GIT_OID_RAWSZ;
 
@@ -687,14 +685,14 @@ static int inject_object(git_indexer *idx, git_oid *id)
 	git_oid_cpy(&entry->oid, id);
 	idx->off = entry_start + hdr_len + len;
 
-	if (!(error = save_entry(idx, entry, pentry, entry_start)))
-		goto done;
+	error = save_entry(idx, entry, pentry, entry_start);
 
-error:
-	git__free(entry);
-	git__free(pentry);
+cleanup:
+	if (error) {
+		git__free(entry);
+		git__free(pentry);
+	}
 
-done:
 	git_odb_object_free(obj);
 	return error;
 }
