@@ -5,8 +5,6 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include <zlib.h>
-
 #include "git2/indexer.h"
 #include "git2/object.h"
 
@@ -18,7 +16,7 @@
 #include "filebuf.h"
 #include "oid.h"
 #include "oidmap.h"
-#include "compress.h"
+#include "zstream.h"
 
 #define UINT31_MAX (0x7FFFFFFF)
 
@@ -662,7 +660,7 @@ static int inject_object(git_indexer *idx, git_oid *id)
 	idx->pack->mwf.size += hdr_len;
 	entry->crc = crc32(entry->crc, hdr, hdr_len);
 
-	if ((error = git__compress(&buf, data, len)) < 0)
+	if ((error = git_zstream_deflatebuf(&buf, data, len)) < 0)
 		goto cleanup;
 
 	/* And then the compressed object */
