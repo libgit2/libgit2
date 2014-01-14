@@ -353,7 +353,7 @@ static int hash_and_save(git_indexer *idx, git_rawobj *obj, git_off_t entry_star
 	git_oid oid;
 	size_t entry_size;
 	struct entry *entry;
-	struct git_pack_entry *pentry;
+	struct git_pack_entry *pentry = NULL;
 
 	entry = git__calloc(1, sizeof(*entry));
 	GITERR_CHECK_ALLOC(entry);
@@ -377,6 +377,7 @@ static int hash_and_save(git_indexer *idx, git_rawobj *obj, git_off_t entry_star
 	return save_entry(idx, entry, pentry, entry_start);
 
 on_error:
+	git__free(pentry);
 	git__free(entry);
 	git__free(obj->data);
 	return -1;
@@ -632,7 +633,7 @@ static int inject_object(git_indexer *idx, git_oid *id)
 {
 	git_odb_object *obj;
 	struct entry *entry;
-	struct git_pack_entry *pentry;
+	struct git_pack_entry *pentry = NULL;
 	git_oid foo = {{0}};
 	unsigned char hdr[64];
 	git_buf buf = GIT_BUF_INIT;
@@ -641,9 +642,6 @@ static int inject_object(git_indexer *idx, git_oid *id)
 	size_t len, hdr_len;
 	int error;
 
-	entry = git__calloc(1, sizeof(*entry));
-	GITERR_CHECK_ALLOC(entry);
-
 	entry_start = seek_back_trailer(idx);
 
 	if (git_odb_read(&obj, idx->odb, id) < 0)
@@ -651,6 +649,9 @@ static int inject_object(git_indexer *idx, git_oid *id)
 
 	data = git_odb_object_data(obj);
 	len = git_odb_object_size(obj);
+
+	entry = git__calloc(1, sizeof(*entry));
+	GITERR_CHECK_ALLOC(entry);
 
 	entry->crc = crc32(0L, Z_NULL, 0);
 
@@ -682,10 +683,14 @@ static int inject_object(git_indexer *idx, git_oid *id)
 	git_oid_cpy(&entry->oid, id);
 	idx->off = entry_start + hdr_len + len;
 
-	if ((error = save_entry(idx, entry, pentry, entry_start)) < 0)
-		git__free(pentry);
+	error = save_entry(idx, entry, pentry, entry_start);
 
 cleanup:
+	if (error) {
+		git__free(entry);
+		git__free(pentry);
+	}
+
 	git_odb_object_free(obj);
 	return error;
 }

@@ -458,6 +458,7 @@ int git_config_iterator_glob_new(git_config_iterator **out, const git_config *cf
 	if ((result = regcomp(&iter->regex, regexp, REG_EXTENDED)) < 0) {
 		giterr_set_regex(&iter->regex, result);
 		regfree(&iter->regex);
+		git__free(iter);
 		return -1;
 	}
 
