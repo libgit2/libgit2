@@ -272,7 +272,6 @@ int git_remote_dup(git_remote **dest, const git_remote *source)
 	}
 
 	remote->repo = source->repo;
-	remote->need_pack = source->need_pack;
 	remote->download_tags = source->download_tags;
 	remote->check_cert = source->check_cert;
 	remote->update_fetchhead = source->update_fetchhead;
