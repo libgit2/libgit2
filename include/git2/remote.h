@@ -108,6 +108,18 @@ GIT_EXTERN(int) git_remote_load(git_remote **out, git_repository *repo, const ch
 GIT_EXTERN(int) git_remote_save(const git_remote *remote);
 
 /**
+ * Create a copy of an existing remote.  All internal strings are also
+ * duplicated. Callbacks are not duplicated.
+ *
+ * Call `git_remote_free` to free the data.
+ *
+ * @param dest pointer where to store the copy
+ * @param source object to copy
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_remote_dup(git_remote **dest, const git_remote *source);
+
+/**
  * Get the remote's repository
  *
  * @param remote the remote

@@ -248,6 +248,47 @@ int git_remote_create_inmemory(git_remote **out, git_repository *repo, const cha
 	return 0;
 }
 
+int git_remote_dup(git_remote **dest, const git_remote *source)
+{
+	int error;
+	git_remote *remote = git__calloc(1, sizeof(git_remote));
+	GITERR_CHECK_ALLOC(remote);
+
+	memset(remote, 0x0, sizeof(git_remote));
+
+	if (source->name != NULL) {
+		remote->name = git__strdup(source->name);
+		GITERR_CHECK_ALLOC(remote->name);
+	}
+
+	if (source->url != NULL) {
+		remote->url = git__strdup(source->url);
+		GITERR_CHECK_ALLOC(remote->url);		
+	}
+
+	if (source->pushurl != NULL) {
+		remote->pushurl = git__strdup(source->pushurl);
+		GITERR_CHECK_ALLOC(remote->pushurl);		
+	}
+
+	remote->repo = source->repo;
+	remote->need_pack = source->need_pack;
+	remote->download_tags = source->download_tags;
+	remote->check_cert = source->check_cert;
+	remote->update_fetchhead = source->update_fetchhead;
+
+	if ((error = git_vector_dup(&remote->refs, &source->refs, NULL)) < 0 ||
+		(error = git_vector_dup(&remote->refspecs, &source->refspecs, NULL)) < 0 ||
+		(error = git_vector_dup(&remote->active_refspecs, &source->active_refspecs, NULL))) {
+		git__free(remote);
+		return error;
+	}
+
+	*dest = remote;
+
+	return 0;
+}
+
 struct refspec_cb_data {
 	git_remote *remote;
 	int fetch;
