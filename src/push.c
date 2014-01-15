@@ -241,7 +241,7 @@ int git_push_update_tips(git_push *push)
 				giterr_clear();
 			else
 				goto on_error;
-		} else if ((error = git_reference_create(NULL, push->remote->repo, git_buf_cstr(&remote_ref_name), &push_spec->loid, 1)) < 0)
+		} else if ((error = git_reference_create(NULL, push->remote->repo, git_buf_cstr(&remote_ref_name), &push_spec->loid, 1, NULL, NULL)) < 0)
 			goto on_error;
 	}
 

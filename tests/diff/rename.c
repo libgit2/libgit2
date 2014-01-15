@@ -945,7 +945,7 @@ void test_diff_rename__rejected_match_can_match_others(void)
 
 	cl_git_pass(git_reference_lookup(&head, g_repo, "HEAD"));
 	cl_git_pass(git_reference_symbolic_set_target(
-		&selfsimilar, head, "refs/heads/renames_similar"));
+		&selfsimilar, head, "refs/heads/renames_similar", NULL, NULL));
 	cl_git_pass(git_checkout_head(g_repo, &opts));
 	cl_git_pass(git_repository_index(&index, g_repo));
 
@@ -1030,7 +1030,7 @@ void test_diff_rename__rejected_match_can_match_others_two(void)
 
 	cl_git_pass(git_reference_lookup(&head, g_repo, "HEAD"));
 	cl_git_pass(git_reference_symbolic_set_target(
-		&selfsimilar, head, "refs/heads/renames_similar_two"));
+		&selfsimilar, head, "refs/heads/renames_similar_two", NULL, NULL));
 	cl_git_pass(git_checkout_head(g_repo, &opts));
 	cl_git_pass(git_repository_index(&index, g_repo));
 
@@ -1088,7 +1088,7 @@ void test_diff_rename__rejected_match_can_match_others_three(void)
 
 	cl_git_pass(git_reference_lookup(&head, g_repo, "HEAD"));
 	cl_git_pass(git_reference_symbolic_set_target(
-		&selfsimilar, head, "refs/heads/renames_similar_two"));
+		&selfsimilar, head, "refs/heads/renames_similar_two", NULL, NULL));
 	cl_git_pass(git_checkout_head(g_repo, &opts));
 	cl_git_pass(git_repository_index(&index, g_repo));
 

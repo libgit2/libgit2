@@ -38,7 +38,7 @@ void test_refs_settargetwithlog__updating_a_direct_reference_adds_a_reflog_entry
 
 	cl_git_pass(git_signature_now(&signature, "foo", "foo@bar"));
 
-	cl_git_pass(git_reference_set_target_with_log(
+	cl_git_pass(git_reference_set_target(
 		&reference_out, reference, &target_id, signature, message));
 
 	cl_git_pass(git_reflog_read(&reflog, g_repo, br2_name));

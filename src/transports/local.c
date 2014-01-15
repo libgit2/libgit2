@@ -315,7 +315,7 @@ static int local_push_update_remote_ref(
 	if (lref) {
 		/* Create or update a ref */
 		if ((error = git_reference_create(NULL, remote_repo, rref, loid,
-				!git_oid_iszero(roid))) < 0)
+				!git_oid_iszero(roid), NULL, NULL)) < 0)
 			return error;
 	} else {
 		/* Delete a ref */

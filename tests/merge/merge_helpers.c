@@ -87,7 +87,7 @@ int merge_branches(git_merge_result **result, git_repository *repo, const char *
 
 	head_checkout_opts.checkout_strategy = GIT_CHECKOUT_FORCE;
 
-	cl_git_pass(git_reference_symbolic_create(&head_ref, repo, "HEAD", ours_branch, 1));
+	cl_git_pass(git_reference_symbolic_create(&head_ref, repo, "HEAD", ours_branch, 1, NULL, NULL));
 	cl_git_pass(git_checkout_head(repo, &head_checkout_opts));
 
 	cl_git_pass(git_reference_lookup(&theirs_ref, repo, theirs_branch));

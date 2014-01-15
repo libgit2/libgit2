@@ -35,7 +35,7 @@ void test_refs_createwithlog__creating_a_direct_reference_adds_a_reflog_entry(vo
 	cl_git_pass(git_signature_now(&signature, "foo", "foo@bar"));
 
 	cl_git_pass(
-		git_reference_create_with_log(&reference, g_repo, name, &id, 0, signature, message));
+		git_reference_create(&reference, g_repo, name, &id, 0, signature, message));
 
 	cl_git_pass(git_reflog_read(&reflog, g_repo, name));
 	cl_assert_equal_sz(1, git_reflog_entrycount(reflog));

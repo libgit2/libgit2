@@ -72,7 +72,7 @@ int git_branch_create(
 		goto cleanup;
 
 	error = git_reference_create(&branch, repository,
-		git_buf_cstr(&canonical_branch_name), git_commit_id(commit), force);
+		git_buf_cstr(&canonical_branch_name), git_commit_id(commit), force, NULL, NULL);
 
 	if (!error)
 		*ref_out = branch;

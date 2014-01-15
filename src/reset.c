@@ -131,7 +131,7 @@ int git_reset(
 
 	/* move HEAD to the new target */
 	if ((error = git_reference__update_terminal(repo, GIT_HEAD_FILE,
-		git_object_id(commit))) < 0)
+		git_object_id(commit), NULL, NULL)) < 0)
 		goto cleanup;
 
 	if (reset_type == GIT_RESET_HARD) {

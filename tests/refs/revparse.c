@@ -596,7 +596,8 @@ void test_refs_revparse__issue_994(void)
 		repo,
 		"refs/remotes/origin/bim_with_3d@11296",
 		git_reference_target(head),
-		0));
+		0,
+		NULL, NULL));
 
 	cl_git_pass(git_revparse_single(&target, repo, "origin/bim_with_3d@11296"));
 	git_object_free(target);
