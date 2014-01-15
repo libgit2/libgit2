@@ -1089,7 +1089,7 @@ out:
 	return error;
 }
 
-int git_remote_connected(git_remote *remote)
+int git_remote_connected(const git_remote *remote)
 {
 	assert(remote);
 
@@ -1233,7 +1233,7 @@ const git_transfer_progress* git_remote_stats(git_remote *remote)
 	return &remote->stats;
 }
 
-git_remote_autotag_option_t git_remote_autotag(git_remote *remote)
+git_remote_autotag_option_t git_remote_autotag(const git_remote *remote)
 {
 	return remote->download_tags;
 }
@@ -1626,7 +1626,7 @@ int git_remote_set_push_refspecs(git_remote *remote, git_strarray *array)
 	return set_refspecs(remote, array, true);
 }
 
-static int copy_refspecs(git_strarray *array, git_remote *remote, unsigned int push)
+static int copy_refspecs(git_strarray *array, const git_remote *remote, unsigned int push)
 {
 	size_t i;
 	git_vector refspecs;
@@ -1660,22 +1660,22 @@ on_error:
 	return -1;
 }
 
-int git_remote_get_fetch_refspecs(git_strarray *array, git_remote *remote)
+int git_remote_get_fetch_refspecs(git_strarray *array, const git_remote *remote)
 {
 	return copy_refspecs(array, remote, false);
 }
 
-int git_remote_get_push_refspecs(git_strarray *array, git_remote *remote)
+int git_remote_get_push_refspecs(git_strarray *array, const git_remote *remote)
 {
 	return copy_refspecs(array, remote, true);
 }
 
-size_t git_remote_refspec_count(git_remote *remote)
+size_t git_remote_refspec_count(const git_remote *remote)
 {
 	return remote->refspecs.length;
 }
 
-const git_refspec *git_remote_get_refspec(git_remote *remote, size_t n)
+const git_refspec *git_remote_get_refspec(const git_remote *remote, size_t n)
 {
 	return git_vector_get(&remote->refspecs, n);
 }
