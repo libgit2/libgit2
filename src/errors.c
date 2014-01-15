@@ -38,7 +38,7 @@ void giterr_panic(const char *message)
 	}
 
 	fprintf(stderr, "libgit2 panic: %s\n", message);
-	_Exit(255);
+	_exit(255);
 }
 
 void giterr_set(int error_class, const char *string, ...)
