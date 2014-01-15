@@ -557,8 +557,7 @@ static int merge_conflict_resolve_automerge(
 		(error = git_odb_write(&automerge_oid, odb, result.data, result.len, GIT_OBJ_BLOB)) < 0)
 		goto done;
 
-	if ((index_entry = git_pool_malloc(&diff_list->pool, sizeof(git_index_entry))) == NULL)
-
+	index_entry = git_pool_malloc(&diff_list->pool, sizeof(git_index_entry));
 	index_entry->path = git_pool_strdup(&diff_list->pool, result.path);
 
 	index_entry->file_size = result.len;
