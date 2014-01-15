@@ -6,7 +6,6 @@
  */
 
 #include "common.h"
-#include "repository.h"
 #include "vector.h"
 
 /* In elements, not bytes */
