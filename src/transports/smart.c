@@ -100,7 +100,6 @@ static int git_smart__connect(
 		return -1;
 
 	t->url = git__strdup(url);
-	GITERR_CHECK_ALLOC(t->url);
 
 	t->direction = direction;
 	t->flags = flags;
@@ -328,7 +327,6 @@ int git_transport_smart(git_transport **out, git_remote *owner, void *param)
 		return -1;
 
 	t = git__calloc(sizeof(transport_smart), 1);
-	GITERR_CHECK_ALLOC(t);
 
 	t->parent.version = GIT_TRANSPORT_VERSION;
 	t->parent.set_callbacks = git_smart__set_callbacks;

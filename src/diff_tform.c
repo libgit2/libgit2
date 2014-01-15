@@ -346,7 +346,6 @@ static int normalize_find_opts(
 	/* assign the internal metric with whitespace flag as payload */
 	if (!opts->metric) {
 		opts->metric = git__malloc(sizeof(git_diff_similarity_metric));
-		GITERR_CHECK_ALLOC(opts->metric);
 
 		opts->metric->file_signature = git_diff_find_similar__hashsig_for_file;
 		opts->metric->buffer_signature = git_diff_find_similar__hashsig_for_buf;
@@ -369,7 +368,6 @@ static int insert_delete_side_of_split(
 {
 	/* make new record for DELETED side of split */
 	git_diff_delta *deleted = diff_delta__dup(delta, &diff->pool);
-	GITERR_CHECK_ALLOC(deleted);
 
 	deleted->status = GIT_DELTA_DELETED;
 	deleted->nfiles = 1;
@@ -837,7 +835,6 @@ int git_diff_find_similar(
 		goto cleanup;
 
 	sigcache = git__calloc(num_deltas * 2, sizeof(void *));
-	GITERR_CHECK_ALLOC(sigcache);
 
 	/* Label rename sources and targets
 	 *
@@ -860,13 +857,10 @@ int git_diff_find_similar(
 		goto cleanup;
 
 	src2tgt = git__calloc(num_deltas, sizeof(diff_find_match));
-	GITERR_CHECK_ALLOC(src2tgt);
 	tgt2src = git__calloc(num_deltas, sizeof(diff_find_match));
-	GITERR_CHECK_ALLOC(tgt2src);
 
 	if (FLAG_SET(&opts, GIT_DIFF_FIND_COPIES)) {
 		tgt2src_copy = git__calloc(num_deltas, sizeof(diff_find_match));
-		GITERR_CHECK_ALLOC(tgt2src_copy);
 	}
 
 	/*

@@ -50,7 +50,6 @@ int git_fetchhead_ref_create(
 	*out = NULL;
 
 	fetchhead_ref = git__malloc(sizeof(git_fetchhead_ref));
-	GITERR_CHECK_ALLOC(fetchhead_ref);
 
 	memset(fetchhead_ref, 0x0, sizeof(git_fetchhead_ref));
 

@@ -94,7 +94,6 @@ static int cache_init(git_pack_cache *cache)
 	memset(cache, 0, sizeof(*cache));
 
 	cache->entries = git_offmap_alloc();
-	GITERR_CHECK_ALLOC(cache->entries);
 
 	cache->memory_limit = GIT_PACK_CACHE_MEMORY_LIMIT;
 
@@ -725,7 +724,6 @@ int packfile_unpack_compressed(
 	unsigned char *buffer, *in;
 
 	buffer = git__calloc(1, size + 1);
-	GITERR_CHECK_ALLOC(buffer);
 
 	memset(&stream, 0, sizeof(stream));
 	stream.next_out = buffer;
@@ -958,7 +956,6 @@ int git_packfile_alloc(struct git_pack_file **pack_out, const char *path)
 		return git_odb__error_notfound("invalid packfile path", NULL);
 
 	p = git__calloc(1, sizeof(*p) + path_len + 2);
-	GITERR_CHECK_ALLOC(p);
 
 	memcpy(p->pack_name, path, path_len + 1);
 

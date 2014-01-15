@@ -184,7 +184,6 @@ static int ssh_stream_alloc(
 	assert(stream);
 
 	s = git__calloc(sizeof(ssh_stream), 1);
-	GITERR_CHECK_ALLOC(s);
 
 	s->parent.subtransport = &t->parent;
 	s->parent.read = ssh_stream_read;
@@ -218,7 +217,6 @@ static int git_ssh_extract_url_parts(
 	if (at) {
 		start = at + 1;
 		*username = git__substrdup(url, at - url);
-		GITERR_CHECK_ALLOC(*username);
 	} else {
 		start = url;
 		*username = NULL;
@@ -230,7 +228,6 @@ static int git_ssh_extract_url_parts(
 	}
 
 	*host = git__substrdup(start, colon - start);
-	GITERR_CHECK_ALLOC(*host);
 
 	return 0;
 }
@@ -386,7 +383,6 @@ static int _git_ssh_setup_conn(
 		if (git_ssh_extract_url_parts(&host, &user, url) < 0)
 			goto on_error;
 		port = git__strdup(default_port);
-		GITERR_CHECK_ALLOC(port);
 	}
 
 	if (gitno_connect(&s->socket, host, port, 0) < 0)
@@ -574,7 +570,6 @@ int git_smart_subtransport_ssh(
 	assert(out);
 
 	t = git__calloc(sizeof(ssh_subtransport), 1);
-	GITERR_CHECK_ALLOC(t);
 
 	t->owner = (transport_smart *)owner;
 	t->parent.action = _ssh_action;

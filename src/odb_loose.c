@@ -322,7 +322,6 @@ static int inflate_packlike_loose_disk_obj(git_rawobj *out, git_buf *obj)
 	 * allocate a buffer and inflate the data into it
 	 */
 	buf = git__malloc(hdr.size + 1);
-	GITERR_CHECK_ALLOC(buf);
 
 	in = ((unsigned char *)obj->ptr) + used;
 	len = obj->size - used;
@@ -822,7 +821,6 @@ static int loose_backend__stream(git_odb_stream **stream_out, git_odb_backend *_
 	hdrlen = git_odb__format_object_header(hdr, sizeof(hdr), length, type);
 
 	stream = git__calloc(1, sizeof(loose_writestream));
-	GITERR_CHECK_ALLOC(stream);
 
 	stream->stream.backend = _backend;
 	stream->stream.read = NULL; /* read only */
@@ -911,7 +909,6 @@ int git_odb_backend_loose(
 	objects_dirlen = strlen(objects_dir);
 
 	backend = git__calloc(1, sizeof(loose_backend) + objects_dirlen + 2);
-	GITERR_CHECK_ALLOC(backend);
 
 	backend->parent.version = GIT_ODB_BACKEND_VERSION;
 	backend->objects_dirlen = objects_dirlen;

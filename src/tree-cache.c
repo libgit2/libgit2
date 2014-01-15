@@ -94,7 +94,6 @@ static int read_tree_internal(git_tree_cache **out,
 
 	name_len = strlen(name_start);
 	tree = git__malloc(sizeof(git_tree_cache) + name_len + 1);
-	GITERR_CHECK_ALLOC(tree);
 
 	memset(tree, 0x0, sizeof(git_tree_cache));
 	tree->parent = parent;
@@ -136,7 +135,6 @@ static int read_tree_internal(git_tree_cache **out,
 		unsigned int i;
 
 		tree->children = git__malloc(tree->children_count * sizeof(git_tree_cache *));
-		GITERR_CHECK_ALLOC(tree->children);
 
 		memset(tree->children, 0x0, tree->children_count * sizeof(git_tree_cache *));
 

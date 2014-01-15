@@ -129,7 +129,6 @@ int git_indexer_new(
 	int error;
 
 	idx = git__calloc(1, sizeof(git_indexer));
-	GITERR_CHECK_ALLOC(idx);
 	idx->odb = odb;
 	idx->progress_cb = progress_cb;
 	idx->progress_payload = progress_payload;
@@ -163,7 +162,6 @@ static int store_delta(git_indexer *idx)
 	struct delta_info *delta;
 
 	delta = git__calloc(1, sizeof(struct delta_info));
-	GITERR_CHECK_ALLOC(delta);
 	delta->delta_off = idx->entry_start;
 
 	if (git_vector_insert(&idx->deltas, delta) < 0)
@@ -272,10 +270,8 @@ static int store_object(git_indexer *idx)
 	git_off_t entry_start = idx->entry_start;
 
 	entry = git__calloc(1, sizeof(*entry));
-	GITERR_CHECK_ALLOC(entry);
 
 	pentry = git__calloc(1, sizeof(struct git_pack_entry));
-	GITERR_CHECK_ALLOC(pentry);
 
 	git_hash_final(&oid, ctx);
 	entry_size = idx->off - entry_start;
@@ -356,7 +352,6 @@ static int hash_and_save(git_indexer *idx, git_rawobj *obj, git_off_t entry_star
 	struct git_pack_entry *pentry = NULL;
 
 	entry = git__calloc(1, sizeof(*entry));
-	GITERR_CHECK_ALLOC(entry);
 
 	if (git_odb__hashobj(&oid, obj) < 0) {
 		giterr_set(GITERR_INDEXER, "Failed to hash object");
@@ -364,7 +359,6 @@ static int hash_and_save(git_indexer *idx, git_rawobj *obj, git_off_t entry_star
 	}
 
 	pentry = git__calloc(1, sizeof(struct git_pack_entry));
-	GITERR_CHECK_ALLOC(pentry);
 
 	git_oid_cpy(&pentry->sha1, &oid);
 	git_oid_cpy(&entry->oid, &oid);
@@ -478,7 +472,6 @@ int git_indexer_append(git_indexer *idx, const void *data, size_t size, git_tran
 			total_objects = UINT_MAX;
 
 		idx->pack->idx_cache = git_oidmap_alloc();
-		GITERR_CHECK_ALLOC(idx->pack->idx_cache);
 
 		idx->pack->has_cache = 1;
 		if (git_vector_init(&idx->objects, total_objects, objects_cmp) < 0)
@@ -651,7 +644,6 @@ static int inject_object(git_indexer *idx, git_oid *id)
 	len = git_odb_object_size(obj);
 
 	entry = git__calloc(1, sizeof(*entry));
-	GITERR_CHECK_ALLOC(entry);
 
 	entry->crc = crc32(0L, Z_NULL, 0);
 
@@ -677,7 +669,6 @@ static int inject_object(git_indexer *idx, git_oid *id)
 	idx->pack->mwf.size += GIT_OID_RAWSZ;
 
 	pentry = git__calloc(1, sizeof(struct git_pack_entry));
-	GITERR_CHECK_ALLOC(pentry);
 
 	git_oid_cpy(&pentry->sha1, id);
 	git_oid_cpy(&entry->oid, id);

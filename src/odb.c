@@ -234,7 +234,6 @@ int git_odb__hashlink(git_oid *out, const char *path)
 		ssize_t read_len;
 
 		link_data = git__malloc((size_t)(size + 1));
-		GITERR_CHECK_ALLOC(link_data);
 
 		read_len = p_readlink(path, link_data, (size_t)size);
 		link_data[size] = '\0';
@@ -330,7 +329,6 @@ static int init_fake_wstream(git_odb_stream **stream_p, git_odb_backend *backend
 	fake_wstream *stream;
 
 	stream = git__calloc(1, sizeof(fake_wstream));
-	GITERR_CHECK_ALLOC(stream);
 
 	stream->size = size;
 	stream->type = type;
@@ -373,7 +371,6 @@ static int backend_sort_cmp(const void *a, const void *b)
 int git_odb_new(git_odb **out)
 {
 	git_odb *db = git__calloc(1, sizeof(*db));
-	GITERR_CHECK_ALLOC(db);
 
 	if (git_cache_init(&db->own_cache) < 0 ||
 		git_vector_init(&db->backends, 4, backend_sort_cmp) < 0) {
@@ -400,7 +397,6 @@ static int add_backend_internal(
 	assert(!backend->odb || backend->odb == odb);
 
 	internal = git__malloc(sizeof(backend_internal));
-	GITERR_CHECK_ALLOC(internal);
 
 	internal->backend = backend;
 	internal->priority = priority;
@@ -889,7 +885,6 @@ int git_odb_open_wstream(
 		error = git_odb__error_unsupported_in_backend("write object");
 
 	ctx = git__malloc(sizeof(git_hash_ctx));
-	GITERR_CHECK_ALLOC(ctx);
 
 
 	git_hash_ctx_init(ctx);

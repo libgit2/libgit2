@@ -164,7 +164,6 @@ static int status_collect(
 		return 0;
 
 	status_entry = git__malloc(sizeof(git_status_entry));
-	GITERR_CHECK_ALLOC(status_entry);
 
 	status_entry->status = status_compute(status, head2idx, idx2wd);
 	status_entry->head_to_index = head2idx;
@@ -263,7 +262,6 @@ int git_status_list_new(
 		giterr_clear();
 
 	status = git_status_list_alloc(index);
-	GITERR_CHECK_ALLOC(status);
 
 	if (opts) {
 		memcpy(&status->opts, opts, sizeof(git_status_options));

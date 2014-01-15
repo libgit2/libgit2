@@ -38,7 +38,6 @@ static int append_abbreviated_oid(git_buf *out, const git_oid *b_commit)
 	char *formatted_oid;
 
 	formatted_oid = git_oid_allocfmt(b_commit);
-	GITERR_CHECK_ALLOC(formatted_oid);
 
 	git_buf_put(out, formatted_oid, 7);
 	git__free(formatted_oid);

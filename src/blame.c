@@ -247,7 +247,6 @@ static int index_blob_lines(git_blame *blame)
     while (len--) {
         if (bol) {
             i = git_array_alloc(blame->line_index);
-            GITERR_CHECK_ALLOC(i);
             *i = buf - blame->final_buf;
             bol = 0;
         }
@@ -257,7 +256,6 @@ static int index_blob_lines(git_blame *blame)
         }
     }
     i = git_array_alloc(blame->line_index);
-    GITERR_CHECK_ALLOC(i);
     *i = buf - blame->final_buf;
     blame->num_lines = num + incomplete;
     return blame->num_lines;
@@ -348,7 +346,6 @@ int git_blame_file(
 	normalize_options(&normOptions, options, repo);
 
 	blame = git_blame__alloc(repo, normOptions, path);
-	GITERR_CHECK_ALLOC(blame);
 
 	if ((error = load_blob(blame)) < 0)
 		goto on_error;

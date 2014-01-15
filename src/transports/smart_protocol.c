@@ -631,7 +631,6 @@ static int add_push_report_pkt(git_push *push, git_pkt *pkt)
 	switch (pkt->type) {
 		case GIT_PKT_OK:
 			status = git__calloc(1, sizeof(push_status));
-			GITERR_CHECK_ALLOC(status);
 			status->msg = NULL;
 			status->ref = git__strdup(((git_pkt_ok *)pkt)->ref);
 			if (!status->ref ||
@@ -642,7 +641,6 @@ static int add_push_report_pkt(git_push *push, git_pkt *pkt)
 			break;
 		case GIT_PKT_NG:
 			status = git__calloc(sizeof(push_status), 1);
-			GITERR_CHECK_ALLOC(status);
 			status->ref = git__strdup(((git_pkt_ng *)pkt)->ref);
 			status->msg = git__strdup(((git_pkt_ng *)pkt)->msg);
 			if (!status->ref || !status->msg ||
@@ -754,7 +752,6 @@ static int parse_report(gitno_buffer *buf, git_push *push)
 static int add_ref_from_push_spec(git_vector *refs, push_spec *push_spec)
 {
 	git_pkt_ref *added = git__calloc(1, sizeof(git_pkt_ref));
-	GITERR_CHECK_ALLOC(added);
 
 	added->type = GIT_PKT_REF;
 	git_oid_cpy(&added->head.oid, &push_spec->loid);

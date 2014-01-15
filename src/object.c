@@ -78,7 +78,6 @@ int git_object__from_odb_object(
 
 	/* Allocate and initialize base object */
 	object = git__calloc(1, object_size);
-	GITERR_CHECK_ALLOC(object);
 
 	git_oid_cpy(&object->cached.oid, &odb_obj->cached.oid);
 	object->cached.type = odb_obj->cached.type;

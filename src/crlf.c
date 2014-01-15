@@ -280,7 +280,6 @@ static int crlf_check(
 	}
 
 	*payload = git__malloc(sizeof(ca));
-	GITERR_CHECK_ALLOC(*payload);
 	memcpy(*payload, &ca, sizeof(ca));
 
 	return 0;

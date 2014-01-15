@@ -559,7 +559,6 @@ static int pack_backend__writepack(struct git_odb_writepack **out,
 	backend = (struct pack_backend *)_backend;
 
 	writepack = git__calloc(1, sizeof(struct pack_writepack));
-	GITERR_CHECK_ALLOC(writepack);
 
 	if (git_indexer_new(&writepack->indexer,
 		backend->pack_folder, 0, odb, progress_cb, progress_payload) < 0) {
@@ -599,7 +598,6 @@ static void pack_backend__free(git_odb_backend *_backend)
 static int pack_backend__alloc(struct pack_backend **out, size_t initial_size)
 {
 	struct pack_backend *backend = git__calloc(1, sizeof(struct pack_backend));
-	GITERR_CHECK_ALLOC(backend);
 
 	if (git_vector_init(&backend->packs, initial_size, packfile_sort__cb) < 0) {
 		git__free(backend);

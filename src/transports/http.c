@@ -185,19 +185,16 @@ static int on_header_ready(http_subtransport *t)
 	if (!strcasecmp("Content-Type", git_buf_cstr(name))) {
 		if (!t->content_type) {
 			t->content_type = git__strdup(git_buf_cstr(value));
-			GITERR_CHECK_ALLOC(t->content_type);
 		}
 	}
 	else if (!strcmp("WWW-Authenticate", git_buf_cstr(name))) {
 		char *dup = git__strdup(git_buf_cstr(value));
-		GITERR_CHECK_ALLOC(dup);
 
 		git_vector_insert(&t->www_authenticate, dup);
 	}
 	else if (!strcasecmp("Location", git_buf_cstr(name))) {
 		if (!t->location) {
 			t->location = git__strdup(git_buf_cstr(value));
-			GITERR_CHECK_ALLOC(t->location);
 		}
 	}
 
@@ -707,7 +704,6 @@ static int http_stream_alloc(http_subtransport *t,
 		return -1;
 
 	s = git__calloc(sizeof(http_stream), 1);
-	GITERR_CHECK_ALLOC(s);
 
 	s->parent.subtransport = &t->parent;
 	s->parent.read = http_stream_read;
@@ -874,7 +870,6 @@ int git_smart_subtransport_http(git_smart_subtransport **out, git_transport *own
 		return -1;
 
 	t = git__calloc(sizeof(http_subtransport), 1);
-	GITERR_CHECK_ALLOC(t);
 
 	t->owner = (transport_smart *)owner;
 	t->parent.action = http_action;

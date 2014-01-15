@@ -181,14 +181,12 @@ static int config_open(git_config_backend *cfg, git_config_level_t level)
 	b->level = level;
 
 	b->values = git_strmap_alloc();
-	GITERR_CHECK_ALLOC(b->values);
 
 	git_array_init(b->readers);
 	reader = git_array_alloc(b->readers);
 	memset(reader, 0, sizeof(struct reader));
 
 	reader->file_path = git__strdup(b->file_path);
-	GITERR_CHECK_ALLOC(reader->file_path);
 
 	git_buf_init(&reader->buffer, 0);
 	res = git_futils_readbuffer_updated(
@@ -234,7 +232,6 @@ static int config_refresh(git_config_backend *cfg)
 	/* need to reload - store old values and prep for reload */
 	old_values = b->values;
 	b->values = git_strmap_alloc();
-	GITERR_CHECK_ALLOC(b->values);
 
 	if ((res = config_parse(b, reader, b->level, 0)) < 0) {
 		free_vars(b->values);
@@ -307,7 +304,6 @@ static int config_iterator_new(
 
 	GIT_UNUSED(b);
 
-	GITERR_CHECK_ALLOC(it);
 
 	it->parent.backend = backend;
 	it->iter = git_strmap_begin(b->values);
@@ -354,9 +350,7 @@ static int config_set(git_config_backend *cfg, const char *name, const char *val
 
 		if (value) {
 			tmp = git__strdup(value);
-			GITERR_CHECK_ALLOC(tmp);
 			esc_value = escape_value(value);
-			GITERR_CHECK_ALLOC(esc_value);
 		}
 
 		git__free((void *)existing->entry->value);
@@ -369,10 +363,8 @@ static int config_set(git_config_backend *cfg, const char *name, const char *val
 	}
 
 	var = git__malloc(sizeof(cvar_t));
-	GITERR_CHECK_ALLOC(var);
 	memset(var, 0x0, sizeof(cvar_t));
 	var->entry = git__malloc(sizeof(git_config_entry));
-	GITERR_CHECK_ALLOC(var->entry);
 	memset(var->entry, 0x0, sizeof(git_config_entry));
 
 	var->entry->name = key;
@@ -380,9 +372,7 @@ static int config_set(git_config_backend *cfg, const char *name, const char *val
 
 	if (value) {
 		var->entry->value = git__strdup(value);
-		GITERR_CHECK_ALLOC(var->entry->value);
 		esc_value = escape_value(value);
-		GITERR_CHECK_ALLOC(esc_value);
 	}
 
 	if ((ret = config_write(b, key, NULL, esc_value)) < 0) {
@@ -459,7 +449,6 @@ static int config_set_multivar(
 	for (;;) {
 		if (regexec(&preg, var->entry->value, 0, NULL, 0) == 0) {
 			char *tmp = git__strdup(value);
-			GITERR_CHECK_ALLOC(tmp);
 
 			git__free((void *)var->entry->value);
 			var->entry->value = tmp;
@@ -475,17 +464,13 @@ static int config_set_multivar(
 	/* If we've reached the end of the variables and we haven't found it yet, we need to append it */
 	if (!replaced) {
 		newvar = git__malloc(sizeof(cvar_t));
-		GITERR_CHECK_ALLOC(newvar);
 		memset(newvar, 0x0, sizeof(cvar_t));
 		newvar->entry = git__malloc(sizeof(git_config_entry));
-		GITERR_CHECK_ALLOC(newvar->entry);
 		memset(newvar->entry, 0x0, sizeof(git_config_entry));
 
 		newvar->entry->name = git__strdup(var->entry->name);
-		GITERR_CHECK_ALLOC(newvar->entry->name);
 
 		newvar->entry->value = git__strdup(value);
-		GITERR_CHECK_ALLOC(newvar->entry->value);
 
 		newvar->entry->level = var->entry->level;
 
@@ -567,7 +552,6 @@ static int config_delete_multivar(git_config_backend *cfg, const char *name, con
 	}
 
 	to_delete = git__calloc(cvar_length(var), sizeof(cvar_t *));
-	GITERR_CHECK_ALLOC(to_delete);
 	to_delete_idx = 0;
 
 	while (var != NULL) {
@@ -613,12 +597,10 @@ int git_config_file__ondisk(git_config_backend **out, const char *path)
 	diskfile_backend *backend;
 
 	backend = git__calloc(1, sizeof(diskfile_backend));
-	GITERR_CHECK_ALLOC(backend);
 
 	backend->parent.version = GIT_CONFIG_BACKEND_VERSION;
 
 	backend->file_path = git__strdup(path);
-	GITERR_CHECK_ALLOC(backend->file_path);
 
 	backend->parent.open = config_open;
 	backend->parent.get = config_get;
@@ -875,7 +857,6 @@ static int parse_section_header(struct reader *reader, char **section_out)
 	}
 
 	name = (char *)git__malloc((size_t)(name_end - line) + 1);
-	GITERR_CHECK_ALLOC(name);
 
 	name_length = 0;
 	pos = 0;
@@ -1062,10 +1043,8 @@ static int config_parse(diskfile_backend *cfg_file, struct reader *reader, git_c
 				break;
 
 			var = git__malloc(sizeof(cvar_t));
-			GITERR_CHECK_ALLOC(var);
 			memset(var, 0x0, sizeof(cvar_t));
 			var->entry = git__malloc(sizeof(git_config_entry));
-			GITERR_CHECK_ALLOC(var->entry);
 			memset(var->entry, 0x0, sizeof(git_config_entry));
 
 			git__strtolower(var_name);
@@ -1156,7 +1135,6 @@ static int write_section(git_filebuf *file, const char *key)
 		char *escaped;
 		git_buf_put(&buf, key, dot - key);
 		escaped = escape_value(dot + 1);
-		GITERR_CHECK_ALLOC(escaped);
 		git_buf_printf(&buf, " \"%s\"", escaped);
 		git__free(escaped);
 	}
@@ -1565,7 +1543,6 @@ static int parse_variable(struct reader *reader, char **var_name, char **var_val
 	while (var_end>line && git__isspace(*var_end));
 
 	*var_name = git__strndup(line, var_end - line + 1);
-	GITERR_CHECK_ALLOC(*var_name);
 
 	/* If there is no value, boolean true is assumed */
 	*var_value = NULL;
@@ -1580,7 +1557,6 @@ static int parse_variable(struct reader *reader, char **var_name, char **var_val
 		if (is_multiline_var(value_start)) {
 			git_buf multi_value = GIT_BUF_INIT;
 			char *proc_line = fixup_line(value_start, 0);
-			GITERR_CHECK_ALLOC(proc_line);
 			git_buf_puts(&multi_value, proc_line);
 			git__free(proc_line);
 			if (parse_multiline_variable(reader, &multi_value, quote_count) < 0 || git_buf_oom(&multi_value)) {
@@ -1595,10 +1571,8 @@ static int parse_variable(struct reader *reader, char **var_name, char **var_val
 		}
 		else if (value_start[0] != '\0') {
 			*var_value = fixup_line(value_start, 0);
-			GITERR_CHECK_ALLOC(*var_value);
 		} else { /* equals sign but missing rhs */
 			*var_value = git__strdup("");
-			GITERR_CHECK_ALLOC(*var_value);
 		}
 	}
 

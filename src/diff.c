@@ -101,7 +101,6 @@ static int diff_delta__from_one(
 		return 0;
 
 	delta = diff_delta__alloc(diff, status, entry->path);
-	GITERR_CHECK_ALLOC(delta);
 
 	/* This fn is just for single-sided diffs */
 	assert(status != GIT_DELTA_MODIFIED);
@@ -153,7 +152,6 @@ static int diff_delta__from_two(
 	}
 
 	delta = diff_delta__alloc(diff, status, canonical_path);
-	GITERR_CHECK_ALLOC(delta);
 	delta->nfiles = 2;
 
 	git_oid_cpy(&delta->old_file.oid, &old_entry->oid);
@@ -1052,7 +1050,6 @@ int git_diff__from_iterators(
 	*diff_ptr = NULL;
 
 	diff = diff_list_alloc(repo, old_iter, new_iter);
-	GITERR_CHECK_ALLOC(diff);
 
 	info.repo = repo;
 	info.old_iter = old_iter;

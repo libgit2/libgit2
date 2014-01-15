@@ -91,7 +91,6 @@ static int filter_registry_initialize(void)
 		return 0;
 
 	reg = git__calloc(1, sizeof(struct filter_registry));
-	GITERR_CHECK_ALLOC(reg);
 
 	if ((error = git_vector_init(
 			&reg->filters, 2, filter_def_priority_cmp)) < 0)
@@ -243,7 +242,6 @@ int git_filter_register(
 
 	fdef = git__calloc(
 		sizeof(git_filter_def) + 2 * nattr * sizeof(char *), 1);
-	GITERR_CHECK_ALLOC(fdef);
 
 	fdef->filter_name = name;
 	fdef->filter      = filter;
@@ -365,7 +363,6 @@ static int filter_list_new(
 	size_t pathlen = src->path ? strlen(src->path) : 0;
 
 	fl = git__calloc(1, sizeof(git_filter_list) + pathlen + 1);
-	GITERR_CHECK_ALLOC(fl);
 
 	if (src->path)
 		memcpy(fl->path, src->path, pathlen);
@@ -383,7 +380,6 @@ static int filter_list_check_attributes(
 	int error;
 	size_t i;
 	const char **strs = git__calloc(fdef->nattrs, sizeof(const char *));
-	GITERR_CHECK_ALLOC(strs);
 
 	error = git_attr_get_many(
 		strs, src->repo, 0, src->path, fdef->nattrs, fdef->attrs);
@@ -485,7 +481,6 @@ int git_filter_list_load(
 				return error;
 
 			fe = git_array_alloc(fl->filters);
-			GITERR_CHECK_ALLOC(fe);
 			fe->filter  = fdef->filter;
 			fe->payload = payload;
 		}
@@ -541,7 +536,6 @@ int git_filter_list_push(
 		return error;
 
 	fe = git_array_alloc(fl->filters);
-	GITERR_CHECK_ALLOC(fe);
 	fe->filter  = filter;
 	fe->payload = payload;
 

@@ -61,10 +61,8 @@ static int add_ref(transport_local *t, const char *name)
 	}
 
 	head = git__calloc(1, sizeof(git_remote_head));
-	GITERR_CHECK_ALLOC(head);
 
 	head->name = git__strdup(name);
-	GITERR_CHECK_ALLOC(head->name);
 
 	git_oid_cpy(&head->oid, &head_oid);
 
@@ -93,7 +91,6 @@ static int add_ref(transport_local *t, const char *name)
 
 	/* And if it's a tag, peel it, and add it to the list */
 	head = git__calloc(1, sizeof(git_remote_head));
-	GITERR_CHECK_ALLOC(head);
 
 	if (git_buf_join(&buf, 0, name, peeled) < 0)
 		return -1;
@@ -177,7 +174,6 @@ static int local_connect(
 	GIT_UNUSED(cred_acquire_payload);
 
 	t->url = git__strdup(url);
-	GITERR_CHECK_ALLOC(t->url);
 	t->direction = direction;
 	t->flags = flags;
 
@@ -622,7 +618,6 @@ int git_transport_local(git_transport **out, git_remote *owner, void *param)
 	GIT_UNUSED(param);
 
 	t = git__calloc(1, sizeof(transport_local));
-	GITERR_CHECK_ALLOC(t);
 
 	t->parent.version = GIT_TRANSPORT_VERSION;
 	t->parent.connect = local_connect;

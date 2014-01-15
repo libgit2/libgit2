@@ -40,7 +40,6 @@ int git_pqueue_init(git_pqueue *q, size_t n, git_pqueue_cmp cmppri)
 
 	/* Need to allocate n+1 elements since element 0 isn't used. */
 	q->d = git__malloc((n + 1) * sizeof(void *));
-	GITERR_CHECK_ALLOC(q->d);
 
 	q->size = 1;
 	q->avail = q->step = (n + 1); /* see comment above about n+1 */
@@ -125,7 +124,6 @@ int git_pqueue_insert(git_pqueue *q, void *d)
 	if (q->size >= q->avail) {
 		newsize = q->size + q->step;
 		tmp = git__realloc(q->d, sizeof(void *) * newsize);
-		GITERR_CHECK_ALLOC(tmp);
 
 		q->d = tmp;
 		q->avail = newsize;

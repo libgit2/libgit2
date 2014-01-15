@@ -350,13 +350,11 @@ static int verify_server_cert(gitno_ssl *ssl, const char *host)
 
 		if (size > 0) {
 			peer_cn = OPENSSL_malloc(size + 1);
-			GITERR_CHECK_ALLOC(peer_cn);
 			memcpy(peer_cn, ASN1_STRING_data(str), size);
 			peer_cn[size] = '\0';
 		}
 	} else {
 		int size = ASN1_STRING_to_UTF8(&peer_cn, str);
-		GITERR_CHECK_ALLOC(peer_cn);
 		if (memchr(peer_cn, '\0', size))
 			goto cert_fail;
 	}
@@ -703,18 +701,15 @@ int gitno_extract_url_parts(
 
 	if (u.field_set & (1 << UF_HOST)) {
 		*host = git__substrdup(_host, u.field_data[UF_HOST].len);
-		GITERR_CHECK_ALLOC(*host);
 	}
 
 	if (u.field_set & (1 << UF_PORT))
 		*port = git__substrdup(_port, u.field_data[UF_PORT].len);
 	else
 		*port = git__strdup(default_port);
-	GITERR_CHECK_ALLOC(*port);
 
 	if (u.field_set & (1 << UF_PATH)) {
 		*path = git__substrdup(_path, u.field_data[UF_PATH].len);
-		GITERR_CHECK_ALLOC(*path);
 	}
 
 	if (u.field_set & (1 << UF_USERINFO)) {
@@ -722,11 +717,9 @@ int gitno_extract_url_parts(
 		if (colon) {
 			*username = unescape(git__substrdup(_userinfo, colon - _userinfo));
 			*password = unescape(git__substrdup(colon+1, u.field_data[UF_USERINFO].len - (colon+1-_userinfo)));
-			GITERR_CHECK_ALLOC(*password);
 		} else {
 			*username = git__substrdup(_userinfo, u.field_data[UF_USERINFO].len);
 		}
-		GITERR_CHECK_ALLOC(*username);
 
 	}
 

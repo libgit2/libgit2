@@ -34,10 +34,8 @@ GIT_INLINE(int) resize_vector(git_vector *v, size_t new_size)
 
 	/* Check for overflow */
 	if (new_bytes / sizeof(void *) != new_size)
-		GITERR_CHECK_ALLOC(NULL);
 
 	new_contents = git__realloc(v->contents, new_bytes);
-	GITERR_CHECK_ALLOC(new_contents);
 
 	v->_alloc_size = new_size;
 	v->contents = new_contents;
@@ -58,7 +56,6 @@ int git_vector_dup(git_vector *v, const git_vector *src, git_vector_cmp cmp)
 	v->length = src->length;
 	v->sorted = src->sorted && cmp == src->_cmp;
 	v->contents = git__malloc(bytes);
-	GITERR_CHECK_ALLOC(v->contents);
 
 	memcpy(v->contents, src->contents, bytes);
 

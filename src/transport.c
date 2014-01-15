@@ -151,7 +151,6 @@ int git_transport_register(
 	transport_definition *d;
 
 	d = git__calloc(sizeof(transport_definition), 1);
-	GITERR_CHECK_ALLOC(d);
 
 	d->prefix = git__strdup(prefix);
 

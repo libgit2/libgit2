@@ -311,11 +311,9 @@ static int note_new(git_note **out, git_oid *note_oid, git_blob *blob)
 	git_note *note = NULL;
 
 	note = (git_note *)git__malloc(sizeof(git_note));
-	GITERR_CHECK_ALLOC(note);
 
 	git_oid_cpy(&note->oid, note_oid);
 	note->message = git__strdup((char *)git_blob_rawcontent(blob));
-	GITERR_CHECK_ALLOC(note->message);
 
 	*out = note;
 
@@ -428,7 +426,6 @@ int git_note_read(git_note **out, git_repository *repo,
 	git_commit *commit = NULL;
 
 	target = git_oid_allocfmt(oid);
-	GITERR_CHECK_ALLOC(target);
 
 	if (!(error = retrieve_note_tree_and_commit(
 			&tree, &commit, repo, &notes_ref)))
@@ -456,7 +453,6 @@ int git_note_create(
 	git_tree *tree = NULL;
 
 	target = git_oid_allocfmt(oid);
-	GITERR_CHECK_ALLOC(target);
 
 	error = retrieve_note_tree_and_commit(&tree, &commit, repo, &notes_ref);
 
@@ -483,7 +479,6 @@ int git_note_remove(git_repository *repo, const char *notes_ref,
 	git_tree *tree = NULL;
 
 	target = git_oid_allocfmt(oid);
-	GITERR_CHECK_ALLOC(target);
 
 	if (!(error = retrieve_note_tree_and_commit(
 			&tree, &commit, repo, &notes_ref)))
