@@ -262,8 +262,7 @@ void test_repo_head__setting_head_updates_reflog(void)
 	cl_git_pass(git_repository_set_head_detached(repo, git_object_id(tag), sig, "message3"));
 	cl_git_pass(git_repository_set_head(repo, "refs/heads/haacked", sig, "message4"));
 
-	test_reflog(repo, 3, NULL, "refs/heads/haacked", "foo@example.com", "message1");
-	test_reflog(repo, 2, "refs/heads/haacked", NULL, "foo@example.com", "message2");
+	test_reflog(repo, 2, NULL, "refs/heads/haacked", "foo@example.com", "message1");
 	test_reflog(repo, 1, NULL, "tags/test^{commit}", "foo@example.com", "message3");
 	test_reflog(repo, 0, "tags/test^{commit}", "refs/heads/haacked", "foo@example.com", "message4");
 
