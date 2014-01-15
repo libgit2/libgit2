@@ -27,21 +27,21 @@
 GIT_INLINE(void *) git__malloc(size_t len)
 {
 	void *ptr = malloc(len);
-	if (!ptr) giterr_set_oom();
+	if (!ptr) giterr_panic("malloc() failed");
 	return ptr;
 }
 
 GIT_INLINE(void *) git__calloc(size_t nelem, size_t elsize)
 {
 	void *ptr = calloc(nelem, elsize);
-	if (!ptr) giterr_set_oom();
+	if (!ptr) giterr_panic("calloc() failed");
 	return ptr;
 }
 
 GIT_INLINE(char *) git__strdup(const char *str)
 {
 	char *ptr = strdup(str);
-	if (!ptr) giterr_set_oom();
+	if (!ptr) giterr_panic("strdup() failed");
 	return ptr;
 }
 
@@ -54,9 +54,6 @@ GIT_INLINE(char *) git__strndup(const char *str, size_t n)
 		++length;
 
 	ptr = (char*)git__malloc(length + 1);
-
-	if (!ptr)
-		return NULL;
 
 	if (length)
 		memcpy(ptr, str, length);
@@ -78,7 +75,7 @@ GIT_INLINE(char *) git__substrdup(const char *start, size_t n)
 GIT_INLINE(void *) git__realloc(void *ptr, size_t size)
 {
 	void *new_ptr = realloc(ptr, size);
-	if (!new_ptr) giterr_set_oom();
+	if (!new_ptr) giterr_panic("realloc() failed");
 	return new_ptr;
 }
 

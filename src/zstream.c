@@ -15,7 +15,7 @@
 static int zstream_seterr(int zerr, git_zstream *zstream)
 {
 	if (zerr == Z_MEM_ERROR)
-		giterr_set_oom();
+		giterr_panic("zstream out of memory");
 	else if (zstream->msg)
 		giterr_set(GITERR_ZLIB, zstream->msg);
 	else

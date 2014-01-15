@@ -7,15 +7,6 @@ void test_core_errors__public_api(void)
 	giterr_clear();
 	cl_assert(giterr_last() == NULL);
 
-	giterr_set_oom();
-
-	cl_assert(giterr_last() != NULL);
-	cl_assert(giterr_last()->klass == GITERR_NOMEMORY);
-	str_in_error = strstr(giterr_last()->message, "memory");
-	cl_assert(str_in_error != NULL);
-
-	giterr_clear();
-
 	giterr_set_str(GITERR_REPOSITORY, "This is a test");
 
 	cl_assert(giterr_last() != NULL);
@@ -36,15 +27,6 @@ void test_core_errors__new_school(void)
 
 	giterr_clear();
 	cl_assert(giterr_last() == NULL);
-
-	giterr_set_oom(); /* internal fn */
-
-	cl_assert(giterr_last() != NULL);
-	cl_assert(giterr_last()->klass == GITERR_NOMEMORY);
-	str_in_error = strstr(giterr_last()->message, "memory");
-	cl_assert(str_in_error != NULL);
-
-	giterr_clear();
 
 	giterr_set(GITERR_REPOSITORY, "This is a test"); /* internal fn */
 

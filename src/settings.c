@@ -125,6 +125,10 @@ int git_libgit2_opts(int key, ...)
 	case GIT_OPT_SET_TEMPLATE_PATH:
 		error = git_futils_dirs_set(GIT_FUTILS_DIR_TEMPLATE, va_arg(ap, const char *));
 		break;
+
+	case GIT_OPT_SET_PANIC_HANDLER:
+		git__on_panic = va_arg(ap, void *);
+		break;
 	}
 
 	va_end(ap);

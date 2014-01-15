@@ -29,7 +29,7 @@ static int verify_last_error(git_filebuf *file)
 		return -1;
 
 	case BUFERR_MEM:
-		giterr_set_oom();
+		giterr_panic("buffer out of memory");
 		return -1;
 
 	case BUFERR_ZLIB:

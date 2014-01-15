@@ -136,15 +136,9 @@ GIT_EXTERN(int) giterr_detach(git_error *cpy);
 GIT_EXTERN(void) giterr_set_str(int error_class, const char *string);
 
 /**
- * Set the error message to a special value for memory allocation failure.
- *
- * The normal `giterr_set_str()` function attempts to `strdup()` the string
- * that is passed in.  This is not a good idea when the error in question
- * is a memory allocation failure.  That circumstance has a special setter
- * function that sets the error string to a known and statically allocated
- * internal value.
+ * Panic
  */
-GIT_EXTERN(void) giterr_set_oom(void);
+GIT_EXTERN(void) giterr_panic(const char *error);
 
 /** @} */
 GIT_END_DECL

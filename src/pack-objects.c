@@ -217,10 +217,6 @@ int git_packbuilder_insert(git_packbuilder *pb, const git_oid *oid,
 	po->hash = name_hash(name);
 
 	pos = kh_put(oid, pb->object_ix, &po->id, &ret);
-	if (ret < 0) {
-		giterr_set_oom();
-		return ret;
-	}
 	assert(ret != 0);
 	kh_value(pb->object_ix, pos) = po;
 
