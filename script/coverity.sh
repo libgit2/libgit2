@@ -4,6 +4,9 @@ set -e
 # Environment check
 [ -z "$COVERITY_TOKEN" ] && echo "Need to set a coverity token" && exit 1
 
+# Only run this on development
+[ "$TRAVIS_BRANCH" != "development" ] && echo "Not development; bailing." && exit 0
+
 COV_VERSION=6.6.1
 case `uname -m` in
 	i?86)				BITS=32 ;;
