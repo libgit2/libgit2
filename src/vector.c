@@ -34,6 +34,7 @@ GIT_INLINE(int) resize_vector(git_vector *v, size_t new_size)
 
 	/* Check for overflow */
 	if (new_bytes / sizeof(void *) != new_size)
+		giterr_panic("malloc() overflow");
 
 	new_contents = git__realloc(v->contents, new_bytes);
 
