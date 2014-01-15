@@ -29,10 +29,12 @@ static void set_error(int error_class, char *string)
 
 void (*git__on_panic)(const char *) = NULL;
 
+/* coverity[+kill] */
 void giterr_panic(const char *message)
 {
 	if (git__on_panic != NULL) {
 		git__on_panic(message);
+		/* noreturn */
 	}
 
 	fprintf(stderr, "libgit2 panic: %s\n", message);
