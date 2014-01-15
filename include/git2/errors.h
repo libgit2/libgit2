@@ -136,7 +136,19 @@ GIT_EXTERN(int) giterr_detach(git_error *cpy);
 GIT_EXTERN(void) giterr_set_str(int error_class, const char *string);
 
 /**
- * Panic
+ * Crash the library on a non-recoverable error condition (out of memory)
+ *
+ * This function will _Exit() the current process after printing the
+ * given error message; it's supposed to be used on situations where the
+ * library cannot continue operating at all, such as out of memory.
+ *
+ * If a custom panic callback has been configured by the user, the
+ * callback will be issued.
+ *
+ * This function does *not* return.
+ *
+ * @see GIT_OPT_SET_PANIC_HANDLER
+ * @param error The error message that caused the panic
  */
 GIT_EXTERN(void) giterr_panic(const char *error);
 

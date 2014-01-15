@@ -225,6 +225,16 @@ typedef enum {
  *		>
  *		> - `path` directory of template.
  *
+ *	* opts(GIT_OPT_SET_PANIC_HANDLER, void (*handler)(const char *message))
+ *
+ *		> Set the panic handler. This callback is issued by libgit2
+ *		> during a critical (non-recoverable) error.
+ *		> This basically means Out-of-memory conditions, which shouldn't
+ *		> really happen on modern OSes because of overcommitment.
+ *		> The callback is not supposed to return: ensure to either crash
+ *		> the running process with the appropriate error message, or
+ *		> trampoline out of the callstack.
+ *
  * @param option Option key
  * @param ... value to set the option
  * @return 0 on success, <0 on failure
