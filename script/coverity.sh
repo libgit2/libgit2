@@ -4,8 +4,13 @@ set -e
 # Environment check
 [ -z "$COVERITY_TOKEN" ] && echo "Need to set a coverity token" && exit 1
 
-# Only run this on development
-[ "$TRAVIS_BRANCH" != "development" ] && echo "Not development; bailing." && exit 0
+# Only run this on our branches
+echo "Pull request: $TRAVIS_PULL_REQUEST  |  Slug: $TRAVIS_REPO_SLUG"
+if [ "$TRAVIS_PULL_REQUEST" != "false" -o "$TRAVIS_REPO_SLUG" != "libgit2/libgit2" ];
+then
+	echo "Only analyzing 'development' on the main repo."
+	exit 0
+fi
 
 COV_VERSION=6.6.1
 case `uname -m` in
