@@ -406,7 +406,7 @@ void test_merge_workdir_simple__directory_file(void)
 		{ 0100644, "f5504f36e6f4eb797a56fc5bac6c6c7f32969bf2", 3, "file-5/new" },
 	};
 
-	cl_git_pass(git_reference_symbolic_create(&head, repo, GIT_HEAD_FILE, GIT_REFS_HEADS_DIR OURS_DIRECTORY_FILE, 1));
+	cl_git_pass(git_reference_symbolic_create(&head, repo, GIT_HEAD_FILE, GIT_REFS_HEADS_DIR OURS_DIRECTORY_FILE, 1, NULL, NULL));
 	cl_git_pass(git_reference_name_to_id(&head_commit_id, repo, GIT_HEAD_FILE));
 	cl_git_pass(git_commit_lookup(&head_commit, repo, &head_commit_id));
 	cl_git_pass(git_reset(repo, (git_object *)head_commit, GIT_RESET_HARD));

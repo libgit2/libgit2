@@ -393,32 +393,20 @@ static int reference__create(
 	return 0;
 }
 
-int git_reference_create(
-	git_reference **ref_out,
-	git_repository *repo,
-	const char *name,
-	const git_oid *oid,
-	int force)
+static int log_signature(git_signature **out, git_repository *repo)
 {
-	git_signature *who;
 	int error;
+	git_signature *who;
 
-	assert(oid);
-
-	/* Should we return an error if there is no default? */
-	if (((error = git_signature_default(&who, repo)) < 0) &&
-	    ((error = git_signature_now(&who, "unknown", "unknown")) < 0)) {
+	if(((error = git_signature_default(&who, repo)) < 0) &&
+	   ((error = git_signature_now(&who, "unknown", "unknown")) < 0))
 		return error;
-	}
 
-	error = reference__create(ref_out, repo, name, oid, NULL, force, who, NULL);
-
-	git_signature_free(who);
-
-	return error;
+	*out = who;
+	return 0;
 }
 
-int git_reference_create_with_log(
+int git_reference_create(
 	git_reference **ref_out,
 	git_repository *repo,
 	const char *name,
@@ -427,10 +415,23 @@ int git_reference_create_with_log(
 	const git_signature *signature,
 	const char *log_message)
 {
-	assert(oid && signature);
+	int error;
+	git_signature *who = NULL;
+	
+	assert(oid);
 
-	return reference__create(
+	if (!signature) {
+		if ((error = log_signature(&who, repo)) < 0)
+			return error;
+		else
+			signature = who;
+	}
+
+	error = reference__create(
 		ref_out, repo, name, oid, NULL, force, signature, log_message);
+
+	git_signature_free(who);
+	return error;
 }
 
 int git_reference_symbolic_create(
@@ -438,25 +439,27 @@ int git_reference_symbolic_create(
 	git_repository *repo,
 	const char *name,
 	const char *target,
-	int force)
-{
-	assert(target);
-	return reference__create(ref_out, repo, name, NULL, target, force, NULL, NULL);
-}
-
-int git_reference_symbolic_create_with_log(
-	git_reference **ref_out,
-	git_repository *repo,
-	const char *name,
-	const char *target,
 	int force,
 	const git_signature *signature,
 	const char *log_message)
 {
-	assert(target && signature);
+	int error;
+	git_signature *who = NULL;
 
-	return reference__create(
+	assert(target);
+
+	if (!signature) {
+		if ((error = log_signature(&who, repo)) < 0)
+			return error;
+		else
+			signature = who;
+	}
+
+	error = reference__create(
 		ref_out, repo, name, NULL, target, force, signature, log_message);
+
+	git_signature_free(who);
+	return error;
 }
 
 static int ensure_is_an_updatable_direct_reference(git_reference *ref)
@@ -471,21 +474,6 @@ static int ensure_is_an_updatable_direct_reference(git_reference *ref)
 int git_reference_set_target(
 	git_reference **out,
 	git_reference *ref,
-	const git_oid *id)
-{
-	int error;
-
-	assert(out && ref && id);
-
-	if ((error = ensure_is_an_updatable_direct_reference(ref)) < 0)
-		return error;
-
-	return git_reference_create(out, ref->db->repo, ref->name, id, 1);
-}
-
-int git_reference_set_target_with_log(
-	git_reference **out,
-	git_reference *ref,
 	const git_oid *id,
 	const git_signature *signature,
 	const char *log_message)
@@ -493,12 +481,11 @@ int git_reference_set_target_with_log(
 	int error;
 
 	assert(out && ref && id);
-	assert(signature && log_message);
 
 	if ((error = ensure_is_an_updatable_direct_reference(ref)) < 0)
 		return error;
 
-	return git_reference_create_with_log(
+	return git_reference_create(
 		out, ref->db->repo, ref->name, id, 1, signature, log_message);
 }
 
@@ -514,7 +501,9 @@ static int ensure_is_an_updatable_symbolic_reference(git_reference *ref)
 int git_reference_symbolic_set_target(
 	git_reference **out,
 	git_reference *ref,
-	const char *target)
+	const char *target,
+	const git_signature *signature,
+	const char *log_message)
 {
 	int error;
 
@@ -523,7 +512,8 @@ int git_reference_symbolic_set_target(
 	if ((error = ensure_is_an_updatable_symbolic_reference(ref)) < 0)
 		return error;
 
-	return git_reference_symbolic_create(out, ref->db->repo, ref->name, target, 1);
+	return git_reference_symbolic_create(
+		out, ref->db->repo, ref->name, target, 1, signature, log_message);
 }
 
 static int reference__rename(git_reference **out, git_reference *ref, const char *new_name, int force,
@@ -1020,7 +1010,9 @@ static int reference__update_terminal(
 	git_repository *repo,
 	const char *ref_name,
 	const git_oid *oid,
-	int nesting)
+	int nesting,
+	const git_signature *signature,
+	const char *log_message)
 {
 	git_reference *ref;
 	int error = 0;
@@ -1035,7 +1027,7 @@ static int reference__update_terminal(
 	/* If we haven't found the reference at all, create a new reference. */
 	if (error == GIT_ENOTFOUND) {
 		giterr_clear();
-		return git_reference_create(NULL, repo, ref_name, oid, 0);
+		return git_reference_create(NULL, repo, ref_name, oid, 0, signature, log_message);
 	}
 
 	if (error < 0)
@@ -1044,11 +1036,11 @@ static int reference__update_terminal(
 	/* If the ref is a symbolic reference, follow its target. */
 	if (git_reference_type(ref) == GIT_REF_SYMBOLIC) {
 		error = reference__update_terminal(repo, git_reference_symbolic_target(ref), oid,
-			nesting+1);
+			nesting+1, signature, log_message);
 		git_reference_free(ref);
 	} else {
 		git_reference_free(ref);
-		error = git_reference_create(NULL, repo, ref_name, oid, 1);
+		error = git_reference_create(NULL, repo, ref_name, oid, 1, signature, log_message);
 	}
 
 	return error;
@@ -1062,9 +1054,11 @@ static int reference__update_terminal(
 int git_reference__update_terminal(
 	git_repository *repo,
 	const char *ref_name,
-	const git_oid *oid)
+	const git_oid *oid,
+	const git_signature *signature,
+	const char *log_message)
 {
-	return reference__update_terminal(repo, ref_name, oid, 0);
+	return reference__update_terminal(repo, ref_name, oid, 0, signature, log_message);
 }
 
 int git_reference_has_log(git_repository *repo, const char *refname)

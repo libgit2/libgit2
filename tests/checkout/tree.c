@@ -484,7 +484,7 @@ void assert_conflict(
 
 	/* Make HEAD point to this branch */
 	cl_git_pass(git_reference_symbolic_create(
-		&head, g_repo, "HEAD", git_reference_name(branch), 1));
+		&head, g_repo, "HEAD", git_reference_name(branch), 1, NULL, NULL));
 	git_reference_free(head);
 	git_reference_free(branch);
 

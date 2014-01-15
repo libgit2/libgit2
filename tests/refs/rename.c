@@ -268,15 +268,15 @@ void test_refs_rename__overwrite(void)
 	git_oid_cpy(&id, git_reference_target(ref));
 
 	/* Create loose references */
-	cl_git_pass(git_reference_create(&ref_one, g_repo, ref_one_name, &id, 0));
-	cl_git_pass(git_reference_create(&ref_two, g_repo, ref_two_name, &id, 0));
+	cl_git_pass(git_reference_create(&ref_one, g_repo, ref_one_name, &id, 0, NULL, NULL));
+	cl_git_pass(git_reference_create(&ref_two, g_repo, ref_two_name, &id, 0, NULL, NULL));
 
 	/* Pack everything */
 	cl_git_pass(git_repository_refdb(&refdb, g_repo));
 	cl_git_pass(git_refdb_compress(refdb));
 
 	/* Attempt to create illegal reference */
-	cl_git_fail(git_reference_create(&ref_one_new, g_repo, ref_one_name_new, &id, 0));
+	cl_git_fail(git_reference_create(&ref_one_new, g_repo, ref_one_name_new, &id, 0, NULL, NULL));
 
 	/* Illegal reference couldn't be created so this is supposed to fail */
 	cl_git_fail(git_reference_lookup(&ref_one_new, g_repo, ref_one_name_new));
@@ -301,7 +301,7 @@ void test_refs_rename__prefix(void)
 	git_oid_cpy(&id, git_reference_target(ref));
 
 	/* Create loose references */
-	cl_git_pass(git_reference_create(&ref_two, g_repo, ref_two_name, &id, 0));
+	cl_git_pass(git_reference_create(&ref_two, g_repo, ref_two_name, &id, 0, NULL, NULL));
 
 	/* An existing reference... */
 	cl_git_pass(git_reference_lookup(&looked_up_ref, g_repo, ref_two_name));
@@ -334,7 +334,7 @@ void test_refs_rename__move_up(void)
 	git_oid_cpy(&id, git_reference_target(ref));
 
 	/* Create loose references */
-	cl_git_pass(git_reference_create(&ref_two, g_repo, ref_two_name_new, &id, 0));
+	cl_git_pass(git_reference_create(&ref_two, g_repo, ref_two_name_new, &id, 0, NULL, NULL));
 	git_reference_free(ref_two);
 
 	/* An existing reference... */

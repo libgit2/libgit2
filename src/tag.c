@@ -271,7 +271,7 @@ static int git_tag_create__internal(
 	} else
 		git_oid_cpy(oid, git_object_id(target));
 
-	error = git_reference_create(&new_ref, repo, ref_name.ptr, oid, allow_ref_overwrite);
+	error = git_reference_create(&new_ref, repo, ref_name.ptr, oid, allow_ref_overwrite, NULL, NULL);
 
 cleanup:
 	git_reference_free(new_ref);
@@ -376,7 +376,7 @@ int git_tag_create_frombuffer(git_oid *oid, git_repository *repo, const char *bu
 		return -1;
 	}
 
-	error = git_reference_create(&new_ref, repo, ref_name.ptr, oid, allow_ref_overwrite);
+	error = git_reference_create(&new_ref, repo, ref_name.ptr, oid, allow_ref_overwrite, NULL, NULL);
 
 	git_reference_free(new_ref);
 	git_buf_free(&ref_name);

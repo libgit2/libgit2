@@ -108,7 +108,7 @@ void test_submodule_lookup__lookup_even_with_unborn_head(void)
 
 	/* put us on an unborn branch */
 	cl_git_pass(git_reference_symbolic_create(
-		&head, g_repo, "HEAD", "refs/heads/garbage", 1));
+		&head, g_repo, "HEAD", "refs/heads/garbage", 1, NULL, NULL));
 	git_reference_free(head);
 
 	/* lookup existing */

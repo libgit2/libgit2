@@ -1027,7 +1027,7 @@ static int update_tips_for_spec(git_remote *remote, git_refspec *spec, git_vecto
 			continue;
 
 		/* In autotag mode, don't overwrite any locally-existing tags */
-		error = git_reference_create(&ref, remote->repo, refname.ptr, &head->oid, !autotag);
+		error = git_reference_create(&ref, remote->repo, refname.ptr, &head->oid, !autotag, NULL, NULL);
 		if (error < 0 && error != GIT_EEXISTS)
 			goto on_error;
 
