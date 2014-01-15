@@ -164,6 +164,8 @@ Here are the bindings to libgit2 that are currently available:
     * libgit2-glib <https://live.gnome.org/Libgit2-glib>
 * Haskell
     * hgit2 <https://github.com/fpco/gitlib>
+* Java
+    * Jagged <https://github.com/ethomson/jagged>
 * Lua
     * luagit2 <https://github.com/libgit2/luagit2>
 * .NET
@@ -181,6 +183,8 @@ Here are the bindings to libgit2 that are currently available:
     * Git-Raw <https://github.com/ghedo/p5-Git-Raw>
 * PHP
     * php-git <https://github.com/libgit2/php-git>
+* PowerShell
+    * GitPowerShell <https://github.com/ethomson/gitpowershell>
 * Python
     * pygit2 <https://github.com/libgit2/pygit2>
 * Ruby
