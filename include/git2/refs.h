@@ -27,7 +27,7 @@ GIT_BEGIN_DECL
  * The returned reference must be freed by the user.
  *
  * The name will be checked for validity.
- * See `git_reference_create_symbolic()` for rules about valid names.
+ * See `git_reference_symbolic_create()` for rules about valid names.
  *
  * @param out pointer to the looked-up reference
  * @param repo the repository to look up the reference
@@ -91,7 +91,7 @@ GIT_EXTERN(int) git_reference_dwim(git_reference **out, git_repository *repo, co
  *
  * The signature and message for the reflog will be ignored if the
  * reference does not belong in the standard set (HEAD, branches and
- * remote-tracking branches) and and it does not have a reflog.
+ * remote-tracking branches) and it does not have a reflog.
  *
  * @param out Pointer to the newly created reference
  * @param repo Repository where that reference will live
@@ -192,7 +192,7 @@ GIT_EXTERN(git_ref_t) git_reference_type(const git_reference *ref);
 /**
  * Get the full name of a reference.
  *
- * See `git_reference_create_symbolic()` for rules about valid names.
+ * See `git_reference_symbolic_create()` for rules about valid names.
  *
  * @param ref The reference
  * @return the full name for the ref
@@ -233,7 +233,7 @@ GIT_EXTERN(git_repository *) git_reference_owner(const git_reference *ref);
  * The new reference will be written to disk, overwriting the given reference.
  *
  * The target name will be checked for validity.
- * See `git_reference_create_symbolic()` for rules about valid names.
+ * See `git_reference_symbolic_create()` for rules about valid names.
  *
  * The signature and message for the reflog will be ignored if the
  * reference does not belong in the standard set (HEAD, branches and
@@ -284,7 +284,7 @@ GIT_EXTERN(int) git_reference_set_target(
  * This method works for both direct and symbolic references.
  *
  * The new name will be checked for validity.
- * See `git_reference_create_symbolic()` for rules about valid names.
+ * See `git_reference_symbolic_create()` for rules about valid names.
  *
  * If the `force` flag is not enabled, and there's already
  * a reference with the given name, the renaming will fail.
@@ -544,7 +544,7 @@ typedef enum {
  * Once normalized, if the reference name is valid, it will be returned in
  * the user allocated buffer.
  *
- * See `git_reference_create_symbolic()` for rules about valid names.
+ * See `git_reference_symbolic_create()` for rules about valid names.
  *
  * @param buffer_out User allocated buffer to store normalized name
  * @param buffer_size Size of buffer_out
