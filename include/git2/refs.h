@@ -91,7 +91,7 @@ GIT_EXTERN(int) git_reference_dwim(git_reference **out, git_repository *repo, co
  *
  * The signature and message for the reflog will be ignored if the
  * reference does not belong in the standard set (HEAD, branches and
- * remote-tracking branches) or it does not have a reflog.
+ * remote-tracking branches) and it does not have a reflog.
  *
  * @param out Pointer to the newly created reference
  * @param repo Repository where that reference will live
