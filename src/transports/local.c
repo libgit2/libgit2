@@ -344,11 +344,29 @@ static int local_push(
 	git_repository *remote_repo = NULL;
 	push_spec *spec;
 	char *url = NULL;
+	const char *path;
+	git_buf buf = GIT_BUF_INIT;
 	int error;
 	unsigned int i;
 	size_t j;
 
-	if ((error = git_repository_open(&remote_repo, push->remote->url)) < 0)
+	/* The repo layer doesn't want the prefix */
+	if (!git__prefixcmp(push->remote->url, "file://")) {
+		if (git_path_fromurl(&buf, push->remote->url) < 0) {
+			git_buf_free(&buf);
+			return -1;
+		}
+		path = git_buf_cstr(&buf);
+
+	} else { /* We assume push->remote->url is already a path */
+		path = push->remote->url;
+	}
+
+	error = git_repository_open(&remote_repo, path);
+
+	git_buf_free(&buf);
+
+	if (error < 0)
 		return error;
 
 	/* We don't currently support pushing locally to non-bare repos. Proper
