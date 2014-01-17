@@ -218,7 +218,7 @@ void test_network_remote_local__push_to_bare_remote_with_file_url(void)
 	}
 
 	/* Create a file URL */
-	char *url = cl_git_path_url("./localbare.git");
+	const char *url = cl_git_path_url("./localbare.git");
 
 	/* Connect to the bare repo */
 	cl_git_pass(git_remote_create_inmemory(&localremote, repo, NULL, url));
