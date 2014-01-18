@@ -652,6 +652,7 @@ static int get_entry(
 		key = normalized;
 	}
 
+	res = GIT_ENOTFOUND;
 	git_vector_foreach(&cfg->files, i, internal) {
 		if (!internal || !internal->file)
 			continue;
