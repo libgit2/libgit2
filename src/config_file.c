@@ -619,6 +619,8 @@ int git_config_file__ondisk(git_config_backend **out, const char *path)
 
 	backend->file_path = git__strdup(path);
 	GITERR_CHECK_ALLOC(backend->file_path);
+	/* apparently on Windows, some people use backslashes in paths */
+	git_path_mkposix(backend->file_path);
 
 	backend->parent.open = config_open;
 	backend->parent.get = config_get;
