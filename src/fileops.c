@@ -689,6 +689,7 @@ int git_futils_dirs_set(git_futils_dir_t which, const char *search_path)
 {
 	const char *expand_path = NULL;
 	git_buf merge = GIT_BUF_INIT;
+	int ret;
 
 	GITERR_CHECK_ERROR(git_futils_check_selector(which));
 
@@ -702,7 +703,15 @@ int git_futils_dirs_set(git_futils_dir_t which, const char *search_path)
 
 	/* if $PATH is not referenced, then just set the path */
 	if (!expand_path)
-		return git_buf_sets(&git_futils__dirs[which], search_path);
+	{
+		ret = git_buf_sets(&git_futils__dirs[which], search_path);
+		if (!ret)
+		{
+			/* apparently on Windows, some people use backslashes in paths */
+			git_path_mkposix(git_futils__dirs[which].ptr);
+		}
+		return ret;
+	}
 
 	/* otherwise set to join(before $PATH, old value, after $PATH) */
 	if (expand_path > search_path)
@@ -719,7 +728,13 @@ int git_futils_dirs_set(git_futils_dir_t which, const char *search_path)
 	git_buf_swap(&git_futils__dirs[which], &merge);
 	git_buf_free(&merge);
 
-	return git_buf_oom(&git_futils__dirs[which]) ? -1 : 0;
+	ret = git_buf_oom(&git_futils__dirs[which]) ? -1 : 0;
+	if (!ret)
+	{
+		/* apparently on Windows, some people use backslashes in paths */
+		git_path_mkposix(git_futils__dirs[which].ptr);
+	}
+	return ret;
 }
 
 static int git_futils_find_in_dirlist(
