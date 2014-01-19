@@ -152,6 +152,12 @@ typedef enum {
 	/** Don't overwrite ignored files that exist in the checkout target */
 	GIT_CHECKOUT_DONT_OVERWRITE_IGNORED = (1u << 19),
 
+	/** Write normal merge files for conflicts */
+	GIT_CHECKOUT_CONFLICT_STYLE_MERGE = (1u << 20),
+
+	/** Include common ancestor data in diff3 format files for conflicts */
+	GIT_CHECKOUT_CONFLICT_STYLE_DIFF3 = (1u << 21),
+
 	/**
 	 * THE FOLLOWING OPTIONS ARE NOT YET IMPLEMENTED
 	 */
@@ -252,6 +258,7 @@ typedef struct git_checkout_opts {
 
 	const char *target_directory; /** alternative checkout path to workdir */
 
+	const char *ancestor_label; /** the name of the common ancestor side of conflicts */
 	const char *our_label; /** the name of the "our" side of conflicts */
 	const char *their_label; /** the name of the "their" side of conflicts */
 } git_checkout_opts;

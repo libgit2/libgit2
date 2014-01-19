@@ -2165,6 +2165,8 @@ static int merge_normalize_opts(
 	git_repository *repo,
 	git_merge_opts *opts,
 	const git_merge_opts *given,
+	const git_merge_head *ancestor_head,
+	const git_merge_head *our_head,
 	size_t their_heads_len,
 	const git_merge_head **their_heads)
 {
@@ -2184,8 +2186,20 @@ static int merge_normalize_opts(
 	if (!opts->checkout_opts.checkout_strategy)
 		opts->checkout_opts.checkout_strategy = default_checkout_strategy;
 
-	if (!opts->checkout_opts.our_label)
-		opts->checkout_opts.our_label = "HEAD";
+	/* TODO: for multiple ancestors in merge-recursive, this is "merged common ancestors" */
+	if (!opts->checkout_opts.ancestor_label) {
+		if (ancestor_head && ancestor_head->commit)
+			opts->checkout_opts.ancestor_label = git_commit_summary(ancestor_head->commit);
+		else
+			opts->checkout_opts.ancestor_label = "ancestor";
+	}
+
+	if (!opts->checkout_opts.our_label) {
+		if (our_head && our_head->ref_name)
+			opts->checkout_opts.our_label = our_head->ref_name;
+		else
+			opts->checkout_opts.our_label = "ours";
+	}
 
 	if (!opts->checkout_opts.their_label) {
 		if (their_heads_len == 1 && their_heads[0]->ref_name)
@@ -2480,9 +2494,6 @@ int git_merge(
 	their_trees = git__calloc(their_heads_len, sizeof(git_tree *));
 	GITERR_CHECK_ALLOC(their_trees);
 
-	if ((error = merge_normalize_opts(repo, &opts, given_opts, their_heads_len, their_heads)) < 0)
-		goto on_error;
-
 	if ((error = git_repository__ensure_not_bare(repo, "merge")) < 0)
 		goto on_error;
 
@@ -2492,6 +2503,9 @@ int git_merge(
 
 	if ((error = merge_ancestor_head(&ancestor_head, repo, our_head, their_heads, their_heads_len)) < 0 &&
 		error != GIT_ENOTFOUND)
+		goto on_error;
+
+	if ((error = merge_normalize_opts(repo, &opts, given_opts, ancestor_head, our_head, their_heads_len, their_heads)) < 0)
 		goto on_error;
 
 	if (their_heads_len == 1 &&

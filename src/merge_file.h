@@ -39,9 +39,18 @@ typedef enum {
 	GIT_MERGE_FILE_SIMPLIFY_ALNUM = (1 << 0),
 } git_merge_file_flags_t;
 
+typedef enum {
+	/* Create standard conflicted merge files */
+	GIT_MERGE_FILE_STYLE_MERGE = 0,
+
+	/* Create diff3-style files */
+	GIT_MERGE_FILE_STYLE_DIFF3 = 1,
+} git_merge_file_style_t;
+
 typedef struct {
 	git_merge_file_favor_t favor;
 	git_merge_file_flags_t flags;
+	git_merge_file_style_t style;
 } git_merge_file_options;
 
 #define GIT_MERGE_FILE_OPTIONS_INIT	{0}

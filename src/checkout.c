@@ -1672,6 +1672,9 @@ static int checkout_write_merge(
 	git_filebuf output = GIT_FILEBUF_INIT;
 	int error = 0;
 
+	if (data->opts.checkout_strategy & GIT_CHECKOUT_CONFLICT_STYLE_DIFF3)
+		merge_file_opts.style = GIT_MERGE_FILE_STYLE_DIFF3;
+
 	if ((conflict->ancestor &&
 		(error = git_merge_file_input_from_index_entry(
 		&ancestor, data->repo, conflict->ancestor)) < 0) ||
@@ -1681,7 +1684,7 @@ static int checkout_write_merge(
 		&theirs, data->repo, conflict->theirs)) < 0)
 		goto done;
 
-	ancestor.label = NULL;
+	ancestor.label = data->opts.ancestor_label ? data->opts.ancestor_label : "ancestor";
 	ours.label = data->opts.our_label ? data->opts.our_label : "ours";
 	theirs.label = data->opts.their_label ? data->opts.their_label : "theirs";
 

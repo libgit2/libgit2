@@ -93,9 +93,18 @@ static git_index *repo_index;
 	"this file is automergeable\r\n" \
 	"this file is changed in branch\r\n"
 
+#define CONFLICTING_MERGE_FILE \
+	"<<<<<<< HEAD\n" \
+	"this file is changed in master and branch\n" \
+	"=======\n" \
+	"this file is changed in branch and master\n" \
+	">>>>>>> 7cb63eed597130ba4abb87b3e544b85021905520\n"
+
 #define CONFLICTING_DIFF3_FILE \
 	"<<<<<<< HEAD\n" \
 	"this file is changed in master and branch\n" \
+	"||||||| initial\n" \
+	"this file is a conflict\n" \
 	"=======\n" \
 	"this file is changed in branch and master\n" \
 	">>>>>>> 7cb63eed597130ba4abb87b3e544b85021905520\n"
@@ -244,7 +253,7 @@ void test_merge_workdir_simple__automerge_crlf(void)
 #endif /* GIT_WIN32 */
 }
 
-void test_merge_workdir_simple__diff3(void)
+void test_merge_workdir_simple__mergefile(void)
 {
 	git_merge_result *result;
 	git_buf conflicting_buf = GIT_BUF_INIT;
@@ -269,6 +278,44 @@ void test_merge_workdir_simple__diff3(void)
 	};
 
 	cl_assert(result = merge_simple_branch(0, 0));
+	cl_assert(!git_merge_result_is_fastforward(result));
+
+	cl_git_pass(git_futils_readbuffer(&conflicting_buf,
+		TEST_REPO_PATH "/conflicting.txt"));
+	cl_assert(strcmp(conflicting_buf.ptr, CONFLICTING_MERGE_FILE) == 0);
+	git_buf_free(&conflicting_buf);
+
+	cl_assert(merge_test_index(repo_index, merge_index_entries, 8));
+	cl_assert(merge_test_reuc(repo_index, merge_reuc_entries, 3));
+
+	git_merge_result_free(result);
+}
+
+void test_merge_workdir_simple__diff3(void)
+{
+	git_merge_result *result;
+	git_buf conflicting_buf = GIT_BUF_INIT;
+
+	struct merge_index_entry merge_index_entries[] = {
+		ADDED_IN_MASTER_INDEX_ENTRY,
+		AUTOMERGEABLE_INDEX_ENTRY,
+		CHANGED_IN_BRANCH_INDEX_ENTRY,
+		CHANGED_IN_MASTER_INDEX_ENTRY,
+
+		{ 0100644, "d427e0b2e138501a3d15cc376077a3631e15bd46", 1, "conflicting.txt" },
+		{ 0100644, "4e886e602529caa9ab11d71f86634bd1b6e0de10", 2, "conflicting.txt" },
+		{ 0100644, "2bd0a343aeef7a2cf0d158478966a6e587ff3863", 3, "conflicting.txt" },
+
+		UNCHANGED_INDEX_ENTRY,
+	};
+
+	struct merge_reuc_entry merge_reuc_entries[] = {
+		AUTOMERGEABLE_REUC_ENTRY,
+		REMOVED_IN_BRANCH_REUC_ENTRY,
+		REMOVED_IN_MASTER_REUC_ENTRY
+	};
+
+	cl_assert(result = merge_simple_branch(0, GIT_CHECKOUT_CONFLICT_STYLE_DIFF3));
 	cl_assert(!git_merge_result_is_fastforward(result));
 
 	cl_git_pass(git_futils_readbuffer(&conflicting_buf,

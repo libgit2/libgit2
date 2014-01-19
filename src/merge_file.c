@@ -161,6 +161,9 @@ int git_merge_files(
 		(opts && (opts->flags & GIT_MERGE_FILE_SIMPLIFY_ALNUM)) ?
 		XDL_MERGE_ZEALOUS_ALNUM : XDL_MERGE_ZEALOUS;
 
+	if (opts && opts->style == GIT_MERGE_FILE_STYLE_DIFF3)
+		xmparam.style = XDL_MERGE_DIFF3;
+
 	if ((xdl_result = xdl_merge(&ancestor->mmfile, &ours->mmfile,
 		&theirs->mmfile, &xmparam, &mmbuffer)) < 0) {
 		giterr_set(GITERR_MERGE, "Failed to merge files.");
