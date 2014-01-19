@@ -551,6 +551,10 @@ static int merge_conflict_resolve_automerge(
 		strcmp(conflict->ancestor_entry.path, conflict->their_entry.path) != 0)
 		return 0;
 
+	/* Reject binary conflicts */
+	if (conflict->binary)
+		return 0;
+
 	if ((error = git_repository_odb(&odb, diff_list->repo)) < 0 ||
 		(error = git_merge_file_input_from_index_entry(&ancestor, diff_list->repo, &conflict->ancestor_entry)) < 0 ||
 		(error = git_merge_file_input_from_index_entry(&ours, diff_list->repo, &conflict->our_entry)) < 0 ||
@@ -1150,6 +1154,44 @@ GIT_INLINE(int) merge_diff_detect_type(
 	return 0;
 }
 
+GIT_INLINE(int) merge_diff_detect_binary(
+	git_repository *repo,
+	git_merge_diff *conflict)
+{
+	git_blob *ancestor_blob = NULL, *our_blob = NULL, *their_blob = NULL;
+	int error = 0;
+
+	if (GIT_MERGE_INDEX_ENTRY_EXISTS(conflict->ancestor_entry)) {
+		if ((error = git_blob_lookup(&ancestor_blob, repo, &conflict->ancestor_entry.oid)) < 0)
+			goto done;
+
+		conflict->binary = git_blob_is_binary(ancestor_blob);
+	}
+
+	if (!conflict->binary &&
+		GIT_MERGE_INDEX_ENTRY_EXISTS(conflict->our_entry)) {
+		if ((error = git_blob_lookup(&our_blob, repo, &conflict->our_entry.oid)) < 0)
+			goto done;
+
+		conflict->binary = git_blob_is_binary(our_blob);
+	}
+
+	if (!conflict->binary &&
+		GIT_MERGE_INDEX_ENTRY_EXISTS(conflict->their_entry)) {
+		if ((error = git_blob_lookup(&their_blob, repo, &conflict->their_entry.oid)) < 0)
+			goto done;
+
+		conflict->binary = git_blob_is_binary(their_blob);
+	}
+
+done:
+	git_blob_free(ancestor_blob);
+	git_blob_free(our_blob);
+	git_blob_free(their_blob);
+
+	return error;
+}
+
 GIT_INLINE(int) index_entry_dup(
 	git_index_entry *out,
 	git_pool *pool,
@@ -1221,6 +1263,7 @@ static int merge_diff_list_insert_conflict(
 	if ((conflict = merge_diff_from_index_entries(diff_list, tree_items)) == NULL ||
 		merge_diff_detect_type(conflict) < 0 ||
 		merge_diff_detect_df_conflict(merge_df_data, conflict) < 0 ||
+		merge_diff_detect_binary(diff_list->repo, conflict) < 0 ||
 		git_vector_insert(&diff_list->conflicts, conflict) < 0)
 		return -1;
 

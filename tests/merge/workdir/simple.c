@@ -489,3 +489,40 @@ void test_merge_workdir_simple__unrelated_with_conflicts(void)
 	git_merge_result_free(result);
 }
 
+void test_merge_workdir_simple__binary(void)
+{
+	git_oid our_oid, their_oid, our_file_oid;
+	git_commit *our_commit;
+	git_merge_head *their_head;
+	git_merge_result *result;
+	const git_index_entry *binary_entry;
+	git_merge_opts opts = GIT_MERGE_OPTS_INIT;
+
+	struct merge_index_entry merge_index_entries[] = {
+		{ 0100644, "1c51d885170f57a0c4e8c69ff6363d91a5b51f85", 1, "binary" },
+		{ 0100644, "23ed141a6ae1e798b2f721afedbe947c119111ba", 2, "binary" },
+		{ 0100644, "836b8b82b26cab22eaaed8820877c76d6c8bca19", 3, "binary" },
+	};
+
+	cl_git_pass(git_oid_fromstr(&our_oid, "cc338e4710c9b257106b8d16d82f86458d5beaf1"));
+	cl_git_pass(git_oid_fromstr(&their_oid, "ad01aebfdf2ac13145efafe3f9fcf798882f1730"));
+
+	cl_git_pass(git_commit_lookup(&our_commit, repo, &our_oid));
+	cl_git_pass(git_reset(repo, (git_object *)our_commit, GIT_RESET_HARD));
+
+	cl_git_pass(git_merge_head_from_oid(&their_head, repo, &their_oid));
+
+	cl_git_pass(git_merge(&result, repo, (const git_merge_head **)&their_head, 1, &opts));
+
+	cl_assert(merge_test_index(repo_index, merge_index_entries, 3));
+
+	cl_git_pass(git_index_add_bypath(repo_index, "binary"));
+	cl_assert((binary_entry = git_index_get_bypath(repo_index, "binary", 0)) != NULL);
+
+	cl_git_pass(git_oid_fromstr(&our_file_oid, "23ed141a6ae1e798b2f721afedbe947c119111ba"));
+	cl_assert(git_oid_cmp(&binary_entry->oid, &our_file_oid) == 0);
+
+	git_merge_head_free(their_head);
+	git_merge_result_free(result);
+	git_commit_free(our_commit);
+}
