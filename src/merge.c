@@ -42,6 +42,7 @@
 #include "git2/sys/index.h"
 
 #define GIT_MERGE_INDEX_ENTRY_EXISTS(X)	((X).mode != 0)
+#define GIT_MERGE_INDEX_ENTRY_ISFILE(X) S_ISREG((X).mode)
 
 typedef enum {
 	TREE_IDX_ANCESTOR = 0,
@@ -447,7 +448,6 @@ static int merge_conflict_resolve_one_removed(
 	return error;
 }
 
-
 static int merge_conflict_resolve_one_renamed(
 	int *resolved,
 	git_merge_diff_list *diff_list,
@@ -531,6 +531,12 @@ static int merge_conflict_resolve_automerge(
 
 	/* Reject D/F conflicts */
 	if (conflict->type == GIT_MERGE_DIFF_DIRECTORY_FILE)
+		return 0;
+
+	/* Reject submodules. */
+	if (S_ISGITLINK(conflict->ancestor_entry.mode) ||
+		S_ISGITLINK(conflict->our_entry.mode) ||
+		S_ISGITLINK(conflict->their_entry.mode))
 		return 0;
 
 	/* Reject link/file conflicts. */
@@ -1156,7 +1162,7 @@ GIT_INLINE(int) merge_diff_detect_binary(
 	git_blob *ancestor_blob = NULL, *our_blob = NULL, *their_blob = NULL;
 	int error = 0;
 
-	if (GIT_MERGE_INDEX_ENTRY_EXISTS(conflict->ancestor_entry)) {
+	if (GIT_MERGE_INDEX_ENTRY_ISFILE(conflict->ancestor_entry)) {
 		if ((error = git_blob_lookup(&ancestor_blob, repo, &conflict->ancestor_entry.oid)) < 0)
 			goto done;
 
@@ -1164,7 +1170,7 @@ GIT_INLINE(int) merge_diff_detect_binary(
 	}
 
 	if (!conflict->binary &&
-		GIT_MERGE_INDEX_ENTRY_EXISTS(conflict->our_entry)) {
+		GIT_MERGE_INDEX_ENTRY_ISFILE(conflict->our_entry)) {
 		if ((error = git_blob_lookup(&our_blob, repo, &conflict->our_entry.oid)) < 0)
 			goto done;
 
@@ -1172,7 +1178,7 @@ GIT_INLINE(int) merge_diff_detect_binary(
 	}
 
 	if (!conflict->binary &&
-		GIT_MERGE_INDEX_ENTRY_EXISTS(conflict->their_entry)) {
+		GIT_MERGE_INDEX_ENTRY_ISFILE(conflict->their_entry)) {
 		if ((error = git_blob_lookup(&their_blob, repo, &conflict->their_entry.oid)) < 0)
 			goto done;
 

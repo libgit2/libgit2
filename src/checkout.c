@@ -71,7 +71,8 @@ typedef struct {
 	int name_collision:1,
 		directoryfile:1,
 		one_to_two:1,
-		binary:1;
+		binary:1,
+		submodule:1;
 } checkout_conflictdata;
 
 static int checkout_notify(
@@ -682,10 +683,21 @@ GIT_INLINE(bool) conflict_pathspec_match(
 	return false;
 }
 
+GIT_INLINE(int) checkout_conflict_detect_submodule(checkout_conflictdata *conflict)
+{
+	conflict->submodule = ((conflict->ancestor && S_ISGITLINK(conflict->ancestor->mode)) ||
+		(conflict->ours && S_ISGITLINK(conflict->ours->mode)) ||
+		(conflict->theirs && S_ISGITLINK(conflict->theirs->mode)));
+	return 0;
+}
+
 GIT_INLINE(int) checkout_conflict_detect_binary(git_repository *repo, checkout_conflictdata *conflict)
 {
 	git_blob *ancestor_blob = NULL, *our_blob = NULL, *their_blob = NULL;
 	int error = 0;
+
+	if (conflict->submodule)
+		return 0;
 
 	if (conflict->ancestor) {
 		if ((error = git_blob_lookup(&ancestor_blob, repo, &conflict->ancestor->oid)) < 0)
@@ -740,7 +752,8 @@ static int checkout_conflicts_load(checkout_data *data, git_iterator *workdir, g
 		conflict->ours = ours;
 		conflict->theirs = theirs;
 
-		if ((error = checkout_conflict_detect_binary(data->repo, conflict)) < 0)
+		if ((error = checkout_conflict_detect_submodule(conflict)) < 0 ||
+			(error = checkout_conflict_detect_binary(data->repo, conflict)) < 0)
 			goto done;
 
 		git_vector_insert(&data->conflicts, conflict);
@@ -1790,6 +1803,10 @@ static int checkout_create_conflicts(checkout_data *data)
 			error = checkout_write_entry(data, conflict, conflict->theirs);
 		else if (S_ISLNK(conflict->theirs->mode))
 			error = checkout_write_entry(data, conflict, conflict->ours);
+
+		/* If any side is a gitlink, do nothing. */
+		else if (conflict->submodule)
+			error = 0;
 
 		/* If any side is binary, write the ours side */
 		else if (conflict->binary)
