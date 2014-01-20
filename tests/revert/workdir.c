@@ -343,22 +343,19 @@ void test_revert_workdir__conflict_use_ours(void)
 	git_revert_opts opts = GIT_REVERT_OPTS_INIT;
 
 	struct merge_index_entry merge_index_entries[] = {
-		{ 0100644, "3a3ef367eaf3fe79effbfb0a56b269c04c2b59fe", 1, "file1.txt" },
-		{ 0100644, "7731926a337c4eaba1e2187d90ebfa0a93659382", 2, "file1.txt" },
-		{ 0100644, "747726e021bc5f44b86de60e3032fd6f9f1b8383", 3, "file1.txt" },
+		{ 0100644, "caf99de3a49827117bb66721010eac461b06a80c", 0, "file1.txt" },
 		{ 0100644, "0ab09ea6d4c3634bdf6c221626d8b6f7dd890767", 0, "file2.txt" },
 		{ 0100644, "f4e107c230d08a60fb419d19869f1f282b272d9c", 0, "file3.txt" },
 		{ 0100644, "0f5bfcf58c558d865da6be0281d7795993646cee", 0, "file6.txt" },
 	};
 
 	struct merge_index_entry merge_filesystem_entries[] = {
-		{ 0100644, "7731926a337c4eaba1e2187d90ebfa0a93659382", 0, "file1.txt" },
+		{ 0100644, "caf99de3a49827117bb66721010eac461b06a80c", 0, "file1.txt" },
 		{ 0100644, "0ab09ea6d4c3634bdf6c221626d8b6f7dd890767", 0, "file2.txt" },
 		{ 0100644, "f4e107c230d08a60fb419d19869f1f282b272d9c", 0, "file3.txt" },
 		{ 0100644, "0f5bfcf58c558d865da6be0281d7795993646cee", 0, "file6.txt" },
 	};
 
-	opts.merge_tree_opts.file_favor = GIT_MERGE_FILE_FAVOR_NO_MERGE;
 	opts.checkout_opts.checkout_strategy = GIT_CHECKOUT_SAFE | GIT_CHECKOUT_USE_OURS;
 
 	git_oid_fromstr(&head_oid, "72333f47d4e83616630ff3b0ffe4c0faebcc3c45");
@@ -369,7 +366,7 @@ void test_revert_workdir__conflict_use_ours(void)
 	cl_git_pass(git_commit_lookup(&commit, repo, &revert_oid));
 	cl_git_pass(git_revert(repo, commit, &opts));
 
-	cl_assert(merge_test_index(repo_index, merge_index_entries, 6));
+	cl_assert(merge_test_index(repo_index, merge_index_entries, 4));
 	cl_assert(merge_test_workdir(repo, merge_filesystem_entries, 4));
 
 	git_commit_free(commit);

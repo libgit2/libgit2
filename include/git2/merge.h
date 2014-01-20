@@ -38,14 +38,11 @@ typedef enum {
 	/* Produce a conflict in a file when two similar regions are changed. */
 	GIT_MERGE_FILE_FAVOR_NORMAL = 0,
 
-	/* Do not attempt to produce an automerged file during tree merge. */
-	GIT_MERGE_FILE_FAVOR_NO_MERGE = 1,
-
 	/* Produce a file containing the "ours" side of conflicting regions. */
-	GIT_MERGE_FILE_FAVOR_OURS = 2,
+	GIT_MERGE_FILE_FAVOR_OURS = 1,
 
 	/* Produce a file containing the "theirs" side of conflicting regions. */
-	GIT_MERGE_FILE_FAVOR_THEIRS = 3,
+	GIT_MERGE_FILE_FAVOR_THEIRS = 2,
 } git_merge_file_favor_t;
 
 

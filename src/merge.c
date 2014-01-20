@@ -527,9 +527,6 @@ static int merge_conflict_resolve_automerge(
 
 	*resolved = 0;
 
-	if (merge_file_favor == GIT_MERGE_FILE_FAVOR_NO_MERGE)
-		return 0;
-
 	merge_file_opts.favor = merge_file_favor;
 
 	/* Reject D/F conflicts */
@@ -603,16 +600,14 @@ static int merge_conflict_resolve(
 	if ((error = merge_conflict_resolve_trivial(&resolved, diff_list, conflict)) < 0)
 		goto done;
 
-	if (merge_file_favor != GIT_MERGE_FILE_FAVOR_NO_MERGE) {
-		if (!resolved && (error = merge_conflict_resolve_one_removed(&resolved, diff_list, conflict)) < 0)
-			goto done;
+	if (!resolved && (error = merge_conflict_resolve_one_removed(&resolved, diff_list, conflict)) < 0)
+		goto done;
 
-		if (!resolved && (error = merge_conflict_resolve_one_renamed(&resolved, diff_list, conflict)) < 0)
-			goto done;
+	if (!resolved && (error = merge_conflict_resolve_one_renamed(&resolved, diff_list, conflict)) < 0)
+		goto done;
 
-		if (!resolved && (error = merge_conflict_resolve_automerge(&resolved, diff_list, conflict, merge_file_favor)) < 0)
-			goto done;
-	}
+	if (!resolved && (error = merge_conflict_resolve_automerge(&resolved, diff_list, conflict, merge_file_favor)) < 0)
+		goto done;
 
 	*out = resolved;
 
