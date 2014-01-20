@@ -66,8 +66,10 @@ int git_buf_try_grow(
 	new_ptr = git__realloc(new_ptr, new_size);
 
 	if (!new_ptr) {
-		if (mark_oom)
+		if (mark_oom) {
+			if (buf->ptr) git__free(buf->ptr);
 			buf->ptr = git_buf__oom;
+		}
 		return -1;
 	}
 
@@ -432,7 +434,7 @@ int git_buf_join(
 	ssize_t offset_a = -1;
 
 	/* not safe to have str_b point internally to the buffer */
-	assert(str_b < buf->ptr || str_b > buf->ptr + buf->size);
+	assert(str_b < buf->ptr || str_b >= buf->ptr + buf->size);
 
 	/* figure out if we need to insert a separator */
 	if (separator && strlen_a) {
@@ -447,13 +449,14 @@ int git_buf_join(
 
 	if (git_buf_grow(buf, strlen_a + strlen_b + need_sep + 1) < 0)
 		return -1;
+	assert(buf->ptr);
 
 	/* fix up internal pointers */
 	if (offset_a >= 0)
 		str_a = buf->ptr + offset_a;
 
 	/* do the actual copying */
-	if (offset_a != 0)
+	if (offset_a != 0 && str_a)
 		memmove(buf->ptr, str_a, strlen_a);
 	if (need_sep)
 		buf->ptr[strlen_a] = separator;
