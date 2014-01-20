@@ -168,6 +168,8 @@ static int retrieve_previously_checked_out_branch_or_revision(git_object **out, 
 	for (i = 0; i < numentries; i++) {
 		entry = git_reflog_entry_byindex(reflog, i);
 		msg = git_reflog_entry_message(entry);
+		if (!msg)
+			continue;
 
 		if (regexec(&preg, msg, 2, regexmatches, 0))
 			continue;
