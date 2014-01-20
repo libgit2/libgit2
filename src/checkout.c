@@ -1938,6 +1938,29 @@ static int checkout_data_init(
 			goto cleanup;
 	}
 
+	if ((data->opts.checkout_strategy &
+		(GIT_CHECKOUT_CONFLICT_STYLE_MERGE | GIT_CHECKOUT_CONFLICT_STYLE_DIFF3)) == 0) {
+		const char *conflict_style;
+		git_config *cfg = NULL;
+
+		if ((error = git_repository_config__weakptr(&cfg, repo)) < 0 ||
+			(error = git_config_get_string(&conflict_style, cfg, "merge.conflictstyle")) < 0 ||
+			error == GIT_ENOTFOUND)
+			;
+		else if (error)
+			goto cleanup;
+		else if (strcmp(conflict_style, "merge") == 0)
+			data->opts.checkout_strategy |= GIT_CHECKOUT_CONFLICT_STYLE_MERGE;
+		else if (strcmp(conflict_style, "diff3") == 0)
+			data->opts.checkout_strategy |= GIT_CHECKOUT_CONFLICT_STYLE_DIFF3;
+		else {
+			giterr_set(GITERR_CHECKOUT, "unknown style '%s' given for 'merge.conflictstyle'",
+				conflict_style);
+			error = -1;
+			goto cleanup;
+		}
+	}
+
 	if ((error = git_vector_init(&data->removes, 0, git__strcmp_cb)) < 0 ||
 		(error = git_vector_init(&data->conflicts, 0, NULL)) < 0 ||
 		(error = git_pool_init(&data->pool, 1, 0)) < 0 ||
