@@ -43,6 +43,9 @@ typedef enum {
 
 	/* Produce a file containing the "theirs" side of conflicting regions. */
 	GIT_MERGE_FILE_FAVOR_THEIRS = 2,
+
+	/* Produce a file blending the sides in a union of conflicting regions */
+	GIT_MERGE_FILE_FAVOR_UNION = 3,
 } git_merge_file_favor_t;
 
 

@@ -156,6 +156,8 @@ int git_merge_files(
 		xmparam.favor = XDL_MERGE_FAVOR_OURS;
 	else if (opts && opts->favor == GIT_MERGE_FILE_FAVOR_THEIRS)
 		xmparam.favor = XDL_MERGE_FAVOR_THEIRS;
+	else if (opts && opts->favor == GIT_MERGE_FILE_FAVOR_UNION)
+		xmparam.favor = XDL_MERGE_FAVOR_UNION;
 
 	xmparam.level = 
 		(opts && (opts->flags & GIT_MERGE_FILE_SIMPLIFY_ALNUM)) ?
