@@ -106,6 +106,8 @@ typedef struct {
 
 	git_index_entry their_entry;
 	git_delta_t their_status;
+
+	int binary:1;
 } git_merge_diff;
 
 /** Internal structure for merge inputs */

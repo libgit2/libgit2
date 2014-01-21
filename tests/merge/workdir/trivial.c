@@ -28,7 +28,7 @@ void test_merge_workdir_trivial__cleanup(void)
 }
 
 
-static int merge_trivial(const char *ours, const char *theirs, bool automerge)
+static int merge_trivial(const char *ours, const char *theirs)
 {
 	git_buf branch_buf = GIT_BUF_INIT;
 	git_checkout_opts checkout_opts = GIT_CHECKOUT_OPTS_INIT;
@@ -38,8 +38,6 @@ static int merge_trivial(const char *ours, const char *theirs, bool automerge)
 	git_merge_result *result;
 
 	checkout_opts.checkout_strategy = GIT_CHECKOUT_FORCE;
-
-	opts.merge_tree_opts.automerge_flags |= automerge ? 0 : GIT_MERGE_AUTOMERGE_NONE;
 
 	git_buf_printf(&branch_buf, "%s%s", GIT_REFS_HEADS_DIR, ours);
 	cl_git_pass(git_reference_symbolic_create(&our_ref, repo, "HEAD", branch_buf.ptr, 1, NULL, NULL));
@@ -83,7 +81,7 @@ void test_merge_workdir_trivial__2alt(void)
 {
 	const git_index_entry *entry;
 
-	cl_git_pass(merge_trivial("trivial-2alt", "trivial-2alt-branch", 0));
+	cl_git_pass(merge_trivial("trivial-2alt", "trivial-2alt-branch"));
 
 	cl_assert(entry = git_index_get_bypath(repo_index, "new-in-branch.txt", 0));
 	cl_assert(git_index_reuc_entrycount(repo_index) == 0);
@@ -95,7 +93,7 @@ void test_merge_workdir_trivial__3alt(void)
 {
 	const git_index_entry *entry;
 
-	cl_git_pass(merge_trivial("trivial-3alt", "trivial-3alt-branch", 0));
+	cl_git_pass(merge_trivial("trivial-3alt", "trivial-3alt-branch"));
 
 	cl_assert(entry = git_index_get_bypath(repo_index, "new-in-3alt.txt", 0));
 	cl_assert(git_index_reuc_entrycount(repo_index) == 0);
@@ -107,7 +105,7 @@ void test_merge_workdir_trivial__4(void)
 {
 	const git_index_entry *entry;
 
-	cl_git_pass(merge_trivial("trivial-4", "trivial-4-branch", 0));
+	cl_git_pass(merge_trivial("trivial-4", "trivial-4-branch"));
 
 	cl_assert((entry = git_index_get_bypath(repo_index, "new-and-different.txt", 0)) == NULL);
 	cl_assert(git_index_reuc_entrycount(repo_index) == 0);
@@ -122,7 +120,7 @@ void test_merge_workdir_trivial__5alt_1(void)
 {
 	const git_index_entry *entry;
 
-	cl_git_pass(merge_trivial("trivial-5alt-1", "trivial-5alt-1-branch", 0));
+	cl_git_pass(merge_trivial("trivial-5alt-1", "trivial-5alt-1-branch"));
 
 	cl_assert(entry = git_index_get_bypath(repo_index, "new-and-same.txt", 0));
 	cl_assert(git_index_reuc_entrycount(repo_index) == 0);
@@ -134,7 +132,7 @@ void test_merge_workdir_trivial__5alt_2(void)
 {
 	const git_index_entry *entry;
 
-	cl_git_pass(merge_trivial("trivial-5alt-2", "trivial-5alt-2-branch", 0));
+	cl_git_pass(merge_trivial("trivial-5alt-2", "trivial-5alt-2-branch"));
 
 	cl_assert(entry = git_index_get_bypath(repo_index, "modified-to-same.txt", 0));
 	cl_assert(git_index_reuc_entrycount(repo_index) == 0);
@@ -145,23 +143,9 @@ void test_merge_workdir_trivial__5alt_2(void)
 void test_merge_workdir_trivial__6(void)
 {
 	const git_index_entry *entry;
-
-	cl_git_pass(merge_trivial("trivial-6", "trivial-6-branch", 0));
-
-	cl_assert((entry = git_index_get_bypath(repo_index, "removed-in-both.txt", 0)) == NULL);
-	cl_assert(git_index_reuc_entrycount(repo_index) == 0);
-
-	cl_assert(merge_trivial_conflict_entrycount() == 1);
-	cl_assert(entry = git_index_get_bypath(repo_index, "removed-in-both.txt", 1));
-}
-
-/* 6: ancest:ancest+, head:(empty), remote:(empty) = result:no merge */
-void test_merge_workdir_trivial__6_automerge(void)
-{
-	const git_index_entry *entry;
 	const git_index_reuc_entry *reuc;
 
-	cl_git_pass(merge_trivial("trivial-6", "trivial-6-branch", 1));
+	cl_git_pass(merge_trivial("trivial-6", "trivial-6-branch"));
 
 	cl_assert((entry = git_index_get_bypath(repo_index, "removed-in-both.txt", 0)) == NULL);
 	cl_assert(git_index_reuc_entrycount(repo_index) == 1);
@@ -174,24 +158,9 @@ void test_merge_workdir_trivial__6_automerge(void)
 void test_merge_workdir_trivial__8(void)
 {
 	const git_index_entry *entry;
-
-	cl_git_pass(merge_trivial("trivial-8", "trivial-8-branch", 0));
-
-	cl_assert((entry = git_index_get_bypath(repo_index, "removed-in-8.txt", 0)) == NULL);
-	cl_assert(git_index_reuc_entrycount(repo_index) == 0);
-
-	cl_assert(merge_trivial_conflict_entrycount() == 2);
-	cl_assert(entry = git_index_get_bypath(repo_index, "removed-in-8.txt", 1));
-	cl_assert(entry = git_index_get_bypath(repo_index, "removed-in-8.txt", 3));
-}
-
-/* 8: ancest:ancest^, head:(empty), remote:ancest = result:no merge */
-void test_merge_workdir_trivial__8_automerge(void)
-{
-	const git_index_entry *entry;
 	const git_index_reuc_entry *reuc;
 
-	cl_git_pass(merge_trivial("trivial-8", "trivial-8-branch", 1));
+	cl_git_pass(merge_trivial("trivial-8", "trivial-8-branch"));
 
 	cl_assert((entry = git_index_get_bypath(repo_index, "removed-in-8.txt", 0)) == NULL);
 
@@ -206,22 +175,7 @@ void test_merge_workdir_trivial__7(void)
 {
 	const git_index_entry *entry;
 
-	cl_git_pass(merge_trivial("trivial-7", "trivial-7-branch", 0));
-
-	cl_assert((entry = git_index_get_bypath(repo_index, "removed-in-7.txt", 0)) == NULL);
-	cl_assert(git_index_reuc_entrycount(repo_index) == 0);
-
-	cl_assert(merge_trivial_conflict_entrycount() == 2);
-	cl_assert(entry = git_index_get_bypath(repo_index, "removed-in-7.txt", 1));
-	cl_assert(entry = git_index_get_bypath(repo_index, "removed-in-7.txt", 3));
-}
-
-/* 7: ancest:ancest+, head:(empty), remote:remote = result:no merge */
-void test_merge_workdir_trivial__7_automerge(void)
-{
-	const git_index_entry *entry;
-
-	cl_git_pass(merge_trivial("trivial-7", "trivial-7-branch", 0));
+	cl_git_pass(merge_trivial("trivial-7", "trivial-7-branch"));
 
 	cl_assert((entry = git_index_get_bypath(repo_index, "removed-in-7.txt", 0)) == NULL);
 	cl_assert(git_index_reuc_entrycount(repo_index) == 0);
@@ -235,24 +189,9 @@ void test_merge_workdir_trivial__7_automerge(void)
 void test_merge_workdir_trivial__10(void)
 {
 	const git_index_entry *entry;
-
-	cl_git_pass(merge_trivial("trivial-10", "trivial-10-branch", 0));
-
-	cl_assert((entry = git_index_get_bypath(repo_index, "removed-in-10-branch.txt", 0)) == NULL);
-	cl_assert(git_index_reuc_entrycount(repo_index) == 0);
-
-	cl_assert(merge_trivial_conflict_entrycount() == 2);
-	cl_assert(entry = git_index_get_bypath(repo_index, "removed-in-10-branch.txt", 1));
-	cl_assert(entry = git_index_get_bypath(repo_index, "removed-in-10-branch.txt", 2));
-}
-
-/* 10: ancest:ancest^, head:ancest, remote:(empty) = result:no merge */
-void test_merge_workdir_trivial__10_automerge(void)
-{
-	const git_index_entry *entry;
 	const git_index_reuc_entry *reuc;
 
-	cl_git_pass(merge_trivial("trivial-10", "trivial-10-branch", 1));
+	cl_git_pass(merge_trivial("trivial-10", "trivial-10-branch"));
 
 	cl_assert((entry = git_index_get_bypath(repo_index, "removed-in-10-branch.txt", 0)) == NULL);
 
@@ -267,22 +206,7 @@ void test_merge_workdir_trivial__9(void)
 {
 	const git_index_entry *entry;
 
-	cl_git_pass(merge_trivial("trivial-9", "trivial-9-branch", 0));
-
-	cl_assert((entry = git_index_get_bypath(repo_index, "removed-in-9-branch.txt", 0)) == NULL);
-	cl_assert(git_index_reuc_entrycount(repo_index) == 0);
-
-	cl_assert(merge_trivial_conflict_entrycount() == 2);
-	cl_assert(entry = git_index_get_bypath(repo_index, "removed-in-9-branch.txt", 1));
-	cl_assert(entry = git_index_get_bypath(repo_index, "removed-in-9-branch.txt", 2));
-}
-
-/* 9: ancest:ancest+, head:head, remote:(empty) = result:no merge */
-void test_merge_workdir_trivial__9_automerge(void)
-{
-	const git_index_entry *entry;
-
-	cl_git_pass(merge_trivial("trivial-9", "trivial-9-branch", 1));
+	cl_git_pass(merge_trivial("trivial-9", "trivial-9-branch"));
 
 	cl_assert((entry = git_index_get_bypath(repo_index, "removed-in-9-branch.txt", 0)) == NULL);
 	cl_assert(git_index_reuc_entrycount(repo_index) == 0);
@@ -298,7 +222,7 @@ void test_merge_workdir_trivial__13(void)
 	const git_index_entry *entry;
 	git_oid expected_oid;
 
-	cl_git_pass(merge_trivial("trivial-13", "trivial-13-branch", 0));
+	cl_git_pass(merge_trivial("trivial-13", "trivial-13-branch"));
 
 	cl_assert(entry = git_index_get_bypath(repo_index, "modified-in-13.txt", 0));
 	cl_git_pass(git_oid_fromstr(&expected_oid, "1cff9ec6a47a537380dedfdd17c9e76d74259a2b"));
@@ -314,7 +238,7 @@ void test_merge_workdir_trivial__14(void)
 	const git_index_entry *entry;
 	git_oid expected_oid;
 
-	cl_git_pass(merge_trivial("trivial-14", "trivial-14-branch", 0));
+	cl_git_pass(merge_trivial("trivial-14", "trivial-14-branch"));
 
 	cl_assert(entry = git_index_get_bypath(repo_index, "modified-in-14-branch.txt", 0));
 	cl_git_pass(git_oid_fromstr(&expected_oid, "26153a3ff3649b6c2bb652d3f06878c6e0a172f9"));
@@ -329,7 +253,7 @@ void test_merge_workdir_trivial__11(void)
 {
 	const git_index_entry *entry;
 
-	cl_git_pass(merge_trivial("trivial-11", "trivial-11-branch", 0));
+	cl_git_pass(merge_trivial("trivial-11", "trivial-11-branch"));
 
 	cl_assert((entry = git_index_get_bypath(repo_index, "modified-in-both.txt", 0)) == NULL);
 	cl_assert(git_index_reuc_entrycount(repo_index) == 0);

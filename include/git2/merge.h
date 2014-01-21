@@ -32,14 +32,21 @@ typedef enum {
 } git_merge_tree_flag_t;
 
 /**
- * Automerge options for `git_merge_trees_opts`.
+ * Merge file options for `git_merge_trees_opts`.
  */
 typedef enum {
-	GIT_MERGE_AUTOMERGE_NORMAL = 0,
-	GIT_MERGE_AUTOMERGE_NONE = 1,
-	GIT_MERGE_AUTOMERGE_FAVOR_OURS = 2,
-	GIT_MERGE_AUTOMERGE_FAVOR_THEIRS = 3,
-} git_merge_automerge_flags;
+	/* Produce a conflict in a file when two similar regions are changed. */
+	GIT_MERGE_FILE_FAVOR_NORMAL = 0,
+
+	/* Produce a file containing the "ours" side of conflicting regions. */
+	GIT_MERGE_FILE_FAVOR_OURS = 1,
+
+	/* Produce a file containing the "theirs" side of conflicting regions. */
+	GIT_MERGE_FILE_FAVOR_THEIRS = 2,
+
+	/* Produce a file blending the sides in a union of conflicting regions */
+	GIT_MERGE_FILE_FAVOR_UNION = 3,
+} git_merge_file_favor_t;
 
 
 typedef struct {
@@ -58,7 +65,7 @@ typedef struct {
 	git_diff_similarity_metric *metric;
 
 	/** Flags for automerging content. */
-	git_merge_automerge_flags automerge_flags;
+	git_merge_file_favor_t file_favor;
 } git_merge_tree_opts;
 
 #define GIT_MERGE_TREE_OPTS_VERSION 1

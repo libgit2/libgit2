@@ -70,7 +70,9 @@ typedef struct {
 
 	int name_collision:1,
 		directoryfile:1,
-		one_to_two:1;
+		one_to_two:1,
+		binary:1,
+		submodule:1;
 } checkout_conflictdata;
 
 static int checkout_notify(
@@ -681,6 +683,51 @@ GIT_INLINE(bool) conflict_pathspec_match(
 	return false;
 }
 
+GIT_INLINE(int) checkout_conflict_detect_submodule(checkout_conflictdata *conflict)
+{
+	conflict->submodule = ((conflict->ancestor && S_ISGITLINK(conflict->ancestor->mode)) ||
+		(conflict->ours && S_ISGITLINK(conflict->ours->mode)) ||
+		(conflict->theirs && S_ISGITLINK(conflict->theirs->mode)));
+	return 0;
+}
+
+GIT_INLINE(int) checkout_conflict_detect_binary(git_repository *repo, checkout_conflictdata *conflict)
+{
+	git_blob *ancestor_blob = NULL, *our_blob = NULL, *their_blob = NULL;
+	int error = 0;
+
+	if (conflict->submodule)
+		return 0;
+
+	if (conflict->ancestor) {
+		if ((error = git_blob_lookup(&ancestor_blob, repo, &conflict->ancestor->oid)) < 0)
+			goto done;
+
+		conflict->binary = git_blob_is_binary(ancestor_blob);
+	}
+
+	if (!conflict->binary && conflict->ours) {
+		if ((error = git_blob_lookup(&our_blob, repo, &conflict->ours->oid)) < 0)
+			goto done;
+
+		conflict->binary = git_blob_is_binary(our_blob);
+	}
+
+	if (!conflict->binary && conflict->theirs) {
+		if ((error = git_blob_lookup(&their_blob, repo, &conflict->theirs->oid)) < 0)
+			goto done;
+
+		conflict->binary = git_blob_is_binary(their_blob);
+	}
+
+done:
+	git_blob_free(ancestor_blob);
+	git_blob_free(our_blob);
+	git_blob_free(their_blob);
+
+	return error;
+}
+
 static int checkout_conflicts_load(checkout_data *data, git_iterator *workdir, git_vector *pathspec)
 {
 	git_index_conflict_iterator *iterator = NULL;
@@ -704,6 +751,10 @@ static int checkout_conflicts_load(checkout_data *data, git_iterator *workdir, g
 		conflict->ancestor = ancestor;
 		conflict->ours = ours;
 		conflict->theirs = theirs;
+
+		if ((error = checkout_conflict_detect_submodule(conflict)) < 0 ||
+			(error = checkout_conflict_detect_binary(data->repo, conflict)) < 0)
+			goto done;
 
 		git_vector_insert(&data->conflicts, conflict);
 	}
@@ -1626,12 +1677,16 @@ static int checkout_write_merge(
 {
 	git_buf our_label = GIT_BUF_INIT, their_label = GIT_BUF_INIT,
 		path_suffixed = GIT_BUF_INIT, path_workdir = GIT_BUF_INIT;
+	git_merge_file_options merge_file_opts = GIT_MERGE_FILE_OPTIONS_INIT;
 	git_merge_file_input ancestor = GIT_MERGE_FILE_INPUT_INIT,
 		ours = GIT_MERGE_FILE_INPUT_INIT,
 		theirs = GIT_MERGE_FILE_INPUT_INIT;
 	git_merge_file_result result = GIT_MERGE_FILE_RESULT_INIT;
 	git_filebuf output = GIT_FILEBUF_INIT;
 	int error = 0;
+
+	if (data->opts.checkout_strategy & GIT_CHECKOUT_CONFLICT_STYLE_DIFF3)
+		merge_file_opts.style = GIT_MERGE_FILE_STYLE_DIFF3;
 
 	if ((conflict->ancestor &&
 		(error = git_merge_file_input_from_index_entry(
@@ -1642,7 +1697,7 @@ static int checkout_write_merge(
 		&theirs, data->repo, conflict->theirs)) < 0)
 		goto done;
 
-	ancestor.label = NULL;
+	ancestor.label = data->opts.ancestor_label ? data->opts.ancestor_label : "ancestor";
 	ours.label = data->opts.our_label ? data->opts.our_label : "ours";
 	theirs.label = data->opts.their_label ? data->opts.their_label : "theirs";
 
@@ -1662,7 +1717,7 @@ static int checkout_write_merge(
 		theirs.label = git_buf_cstr(&their_label);
 	}
 
-	if ((error = git_merge_files(&result, &ancestor, &ours, &theirs, 0)) < 0)
+	if ((error = git_merge_files(&result, &ancestor, &ours, &theirs, &merge_file_opts)) < 0)
 		goto done;
 
 	if (result.path == NULL || result.mode == 0) {
@@ -1705,6 +1760,7 @@ static int checkout_create_conflicts(checkout_data *data)
 	int error = 0;
 
 	git_vector_foreach(&data->conflicts, i, conflict) {
+
 		/* Both deleted: nothing to do */
 		if (conflict->ours == NULL && conflict->theirs == NULL)
 			error = 0;
@@ -1748,7 +1804,15 @@ static int checkout_create_conflicts(checkout_data *data)
 		else if (S_ISLNK(conflict->theirs->mode))
 			error = checkout_write_entry(data, conflict, conflict->ours);
 
-		else
+		/* If any side is a gitlink, do nothing. */
+		else if (conflict->submodule)
+			error = 0;
+
+		/* If any side is binary, write the ours side */
+		else if (conflict->binary)
+			error = checkout_write_entry(data, conflict, conflict->ours);
+
+		else if (!error)
 			error = checkout_write_merge(data, conflict);
 
 		if (error)
@@ -1889,6 +1953,29 @@ static int checkout_data_init(
 
 		if (error < 0)
 			goto cleanup;
+	}
+
+	if ((data->opts.checkout_strategy &
+		(GIT_CHECKOUT_CONFLICT_STYLE_MERGE | GIT_CHECKOUT_CONFLICT_STYLE_DIFF3)) == 0) {
+		const char *conflict_style;
+		git_config *cfg = NULL;
+
+		if ((error = git_repository_config__weakptr(&cfg, repo)) < 0 ||
+			(error = git_config_get_string(&conflict_style, cfg, "merge.conflictstyle")) < 0 ||
+			error == GIT_ENOTFOUND)
+			;
+		else if (error)
+			goto cleanup;
+		else if (strcmp(conflict_style, "merge") == 0)
+			data->opts.checkout_strategy |= GIT_CHECKOUT_CONFLICT_STYLE_MERGE;
+		else if (strcmp(conflict_style, "diff3") == 0)
+			data->opts.checkout_strategy |= GIT_CHECKOUT_CONFLICT_STYLE_DIFF3;
+		else {
+			giterr_set(GITERR_CHECKOUT, "unknown style '%s' given for 'merge.conflictstyle'",
+				conflict_style);
+			error = -1;
+			goto cleanup;
+		}
 	}
 
 	if ((error = git_vector_init(&data->removes, 0, git__strcmp_cb)) < 0 ||

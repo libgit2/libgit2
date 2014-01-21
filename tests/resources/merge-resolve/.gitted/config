@@ -4,3 +4,5 @@
 	bare = false
 	logallrefupdates = true
 	ignorecase = true
+[submodule "submodule"]
+	url = ../submodule
