@@ -52,9 +52,37 @@ typedef struct {
 	int flags;
 } git_diff_driver_definition;
 
+#define WORD_DEFAULT "|[^[:space:]]|[\xc0-\xff][\x80-\xbf]+"
+
+/* builtin driver definition macros have same signature as in core git
+ * userdiff.c so that the data can be extracted verbatim
+ */
+#define PATTERNS(NAME, FN_PATS, WORD_PAT) \
+	{ NAME, FN_PATS, WORD_PAT WORD_DEFAULT, 0 }
+#define IPATTERN(NAME, FN_PATS, WORD_PAT) \
+	{ NAME, FN_PATS, WORD_PAT WORD_DEFAULT, REG_ICASE }
+
 static git_diff_driver_definition builtin_defs[] = {
-	{ "html", "^[ \t]*(<h[1-8]([ \t][^>]*)?>.*)$", "[^<> \t]+", REG_ICASE },
+PATTERNS("html", "^[ \t]*(<[Hh][1-6][ \t].*>.*)$",
+	 "[^<>= \t]+"),
+PATTERNS("java",
+	 "!^[ \t]*(catch|do|for|if|instanceof|new|return|switch|throw|while)\n"
+	 "^[ \t]*(([A-Za-z_][A-Za-z_0-9]*[ \t]+)+[A-Za-z_][A-Za-z_0-9]*[ \t]*\\([^;]*)$",
+	 /* -- */
+	 "[a-zA-Z_][a-zA-Z0-9_]*"
+	 "|[-+0-9.e]+[fFlL]?|0[xXbB]?[0-9a-fA-F]+[lL]?"
+	 "|[-+*/<>%&^|=!]="
+	 "|--|\\+\\+|<<=?|>>>?=?|&&|\\|\\|"),
+PATTERNS("ruby", "^[ \t]*((class|module|def)[ \t].*)$",
+	 /* -- */
+	 "(@|@@|\\$)?[a-zA-Z_][a-zA-Z0-9_]*"
+	 "|[-+0-9.e]+|0[xXbB]?[0-9a-fA-F]+|\\?(\\\\C-)?(\\\\M-)?."
+	 "|//=?|[-+*/<>%&^|=!]=|<<=?|>>=?|===|\\.{1,3}|::|[!=]~"),
 };
+
+#undef IPATTERN
+#undef PATTERNS
+#undef WORD_DEFAULT
 
 struct git_diff_driver_registry {
 	git_strmap *drivers;
@@ -208,14 +236,14 @@ static int git_diff_driver_builtin(
 	}
 
 	git_strmap_insert(reg->drivers, drv->name, drv, error);
+	if (error > 0)
+		error = 0;
 
 done:
-	if (error || !drv) {
+	if (error && drv)
 		git_diff_driver_free(drv);
-		*out = &global_drivers[DIFF_DRIVER_AUTO];
-	} else {
+	else
 		*out = drv;
-	}
 
 	return error;
 }
@@ -324,6 +352,7 @@ static int git_diff_driver_load(
 	git_strmap_insert(reg->drivers, drv->name, drv, error);
 	if (error < 0)
 		goto done;
+	error = 0;
 
 	*out = drv;
 
@@ -349,14 +378,13 @@ int git_diff_driver_lookup(
 	const char *value;
 
 	assert(out);
+	*out = NULL;
 
 	if (!repo || !path || !strlen(path))
-		goto use_auto;
-
-	if ((error = git_attr_get(&value, repo, 0, path, "diff")) < 0)
-		return error;
-
-	if (GIT_ATTR_UNSPECIFIED(value))
+		/* just use the auto value */;
+	else if ((error = git_attr_get(&value, repo, 0, path, "diff")) < 0)
+		/* return error below */;
+	else if (GIT_ATTR_UNSPECIFIED(value))
 		/* just use the auto value */;
 	else if (GIT_ATTR_FALSE(value))
 		*out = &global_drivers[DIFF_DRIVER_BINARY];
@@ -365,17 +393,16 @@ int git_diff_driver_lookup(
 
 	/* otherwise look for driver information in config and build driver */
 	else if ((error = git_diff_driver_load(out, repo, value)) < 0) {
-		if (error != GIT_ENOTFOUND)
-			return error;
-		else
+		if (error == GIT_ENOTFOUND) {
+			error = 0;
 			giterr_clear();
+		}
 	}
 
-use_auto:
 	if (!*out)
 		*out = &global_drivers[DIFF_DRIVER_AUTO];
 
-	return 0;
+	return error;
 }
 
 void git_diff_driver_free(git_diff_driver *driver)
