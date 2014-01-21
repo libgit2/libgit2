@@ -460,16 +460,21 @@ static int diff_context_line__simple(
 static int diff_context_line__pattern_match(
 	git_diff_driver *driver, git_buf *line)
 {
-	size_t i;
+	size_t i, maxi = git_array_size(driver->fn_patterns);
 	regmatch_t pmatch[2];
 
-	for (i = 0; i < git_array_size(driver->fn_patterns); ++i) {
+	for (i = 0; i < maxi; ++i) {
 		git_diff_driver_pattern *pat = git_array_get(driver->fn_patterns, i);
 
 		if (!regexec(&pat->re, line->ptr, 2, pmatch, 0)) {
 			if (pat->flags & REG_NEGATE)
 				return false;
-			/* TODO: use pmatch data to trim line data */
+
+			/* use pmatch data to trim line data */
+			i = (pmatch[1].rm_so >= 0) ? 1 : 0;
+			git_buf_consume(line, git_buf_cstr(line) + pmatch[i].rm_so);
+			git_buf_truncate(line, pmatch[i].rm_eo - pmatch[i].rm_so);
+
 			return true;
 		}
 	}

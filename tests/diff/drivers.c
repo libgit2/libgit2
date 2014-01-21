@@ -123,7 +123,7 @@ void test_diff_drivers__patterns(void)
 
 	cl_git_pass(git_repository_config(&cfg, g_repo));
 	cl_git_pass(git_config_set_bool(cfg, "diff.kipling0.binary", 0));
-	cl_git_pass(git_config_set_string(cfg, "diff.kipling0.xfuncname", "^H"));
+	cl_git_pass(git_config_set_string(cfg, "diff.kipling0.xfuncname", "^H.*$"));
 	git_config_free(cfg);
 
 	cl_git_pass(git_diff_tree_to_workdir(&diff, g_repo, one, NULL));
@@ -196,7 +196,7 @@ void test_diff_drivers__builtins(void)
 	const char *expected_nodriver =
 		"diff --git a/file.html b/file.html\nindex 97b34db..c7dbed3 100644\n--- a/file.html\n+++ b/file.html\n@@ -5,4 +5,4 @@\n     <li>item 1.1</li>\n-    <li>item 1.2</li>\n-    <li>item 1.3</li>\n+    <li>item 1.2 changed</li>\n+    <li>item 1.3 changed</li>\n     <li>item 1.4</li>\n@@ -13,2 +13,3 @@\n     <li>item 1.9</li>\n+  <li>item 1.10 added</li>\n   </ol>\n@@ -23,3 +24,4 @@\n     <li>item 2.6</li>\n-    <li>item 2.7</li>\n+    <li>item 2.7 changed</li>\n+    <li>item 2.7.1 added</li>\n     <li>item 2.8</li>\n@@ -35,4 +37,2 @@\n     <li>item 3.6</li>\n-    <li>item 3.7</li>\n-    <li>item 3.8</li>\n   </ol>\n";
 	const char *expected_driver =
-		"diff --git a/file.html b/file.html\nindex 97b34db..c7dbed3 100644\n--- a/file.html\n+++ b/file.html\n@@ -5,4 +5,4 @@   <h1 id=\"first section\">\n     <li>item 1.1</li>\n-    <li>item 1.2</li>\n-    <li>item 1.3</li>\n+    <li>item 1.2 changed</li>\n+    <li>item 1.3 changed</li>\n     <li>item 1.4</li>\n@@ -13,2 +13,3 @@   <h1 id=\"first section\">\n     <li>item 1.9</li>\n+  <li>item 1.10 added</li>\n   </ol>\n@@ -23,3 +24,4 @@   <h1 id=\"second section\">\n     <li>item 2.6</li>\n-    <li>item 2.7</li>\n+    <li>item 2.7 changed</li>\n+    <li>item 2.7.1 added</li>\n     <li>item 2.8</li>\n@@ -35,4 +37,2 @@   <h1 id=\"third section\">\n     <li>item 3.6</li>\n-    <li>item 3.7</li>\n-    <li>item 3.8</li>\n   </ol>\n";
+		"diff --git a/file.html b/file.html\nindex 97b34db..c7dbed3 100644\n--- a/file.html\n+++ b/file.html\n@@ -5,4 +5,4 @@ <h1 id=\"first section\">\n     <li>item 1.1</li>\n-    <li>item 1.2</li>\n-    <li>item 1.3</li>\n+    <li>item 1.2 changed</li>\n+    <li>item 1.3 changed</li>\n     <li>item 1.4</li>\n@@ -13,2 +13,3 @@ <h1 id=\"first section\">\n     <li>item 1.9</li>\n+  <li>item 1.10 added</li>\n   </ol>\n@@ -23,3 +24,4 @@ <h1 id=\"second section\">\n     <li>item 2.6</li>\n-    <li>item 2.7</li>\n+    <li>item 2.7 changed</li>\n+    <li>item 2.7.1 added</li>\n     <li>item 2.8</li>\n@@ -35,4 +37,2 @@ <h1 id=\"third section\">\n     <li>item 3.6</li>\n-    <li>item 3.7</li>\n-    <li>item 3.8</li>\n   </ol>\n";
 
 	g_repo = cl_git_sandbox_init("empty_standard_repo");
 
