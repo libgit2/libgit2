@@ -15,13 +15,21 @@ void test_diff_drivers__cleanup(void)
 	g_repo = NULL;
 }
 
-static void overwrite_chmod_at_offset(git_buf *buf, size_t offset)
+static void overwrite_filemode(const char *expected, git_buf *actual)
 {
-	if (cl_is_chmod_supported())
+	size_t offset;
+	char *found;
+
+	found = strstr(expected, "100644");
+	if (!found)
 		return;
 
-	if (buf->size > offset + 6 && memcmp(&buf->ptr[offset], "100644", 6) != 0)
-		memcpy(&buf->ptr[offset], "100644", 6);
+	offset = ((const char *)found) - expected;
+	if (actual->size < offset + 6)
+		return;
+
+	if (memcmp(&actual->ptr[offset], "100644", 6) != 0)
+		memcpy(&actual->ptr[offset], "100644", 6);
 }
 
 void test_diff_drivers__patterns(void)
@@ -157,7 +165,7 @@ void test_diff_drivers__long_lines(void)
 	cl_git_pass(git_patch_to_buf(&actual, patch));
 
 	/* if chmod not supported, overwrite mode bits since anything is possible */
-	overwrite_chmod_at_offset(&actual, 66);
+	overwrite_filemode(expected, &actual);
 
 	cl_assert_equal_s(expected, actual.ptr);
 
@@ -210,7 +218,7 @@ void test_diff_drivers__builtins(void)
 	cl_git_pass(git_patch_from_diff(&patch, diff, 0));
 	cl_git_pass(git_patch_to_buf(&actual, patch));
 
-	overwrite_chmod_at_offset(&actual, 59);
+	overwrite_filemode(expected_nodriver, &actual);
 
 	cl_assert_equal_s(expected_nodriver, actual.ptr);
 
@@ -227,7 +235,7 @@ void test_diff_drivers__builtins(void)
 	cl_git_pass(git_patch_from_diff(&patch, diff, 0));
 	cl_git_pass(git_patch_to_buf(&actual, patch));
 
-	overwrite_chmod_at_offset(&actual, 59);
+	overwrite_filemode(expected_driver, &actual);
 
 	cl_assert_equal_s(expected_driver, actual.ptr);
 
