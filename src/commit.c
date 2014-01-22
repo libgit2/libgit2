@@ -311,7 +311,10 @@ const char *git_commit_summary(git_commit *commit)
 				git_buf_putc(&summary, *msg);
 		}
 
-		commit->summary = git_buf_detach(&summary);
+		if (summary.asize == 0)
+			commit->summary = git__strdup("");
+		else
+			commit->summary = git_buf_detach(&summary);
 	}
 
 	return commit->summary;
