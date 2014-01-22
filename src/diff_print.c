@@ -452,20 +452,10 @@ static int diff_print_to_buffer_cb(
 	return git_buf_put(output, line->content, line->content_len);
 }
 
-/* print a git_patch to a string buffer */
-int git_patch_to_str(
-	char **string,
+/* print a git_patch to a git_buf */
+int git_patch_to_buf(
+	git_buf *out,
 	git_patch *patch)
 {
-	int error;
-	git_buf output = GIT_BUF_INIT;
-
-	if (!(error = git_patch_print(patch, diff_print_to_buffer_cb, &output)))
-		*string = git_buf_detach(&output);
-	else {
-		git_buf_free(&output);
-		*string = NULL;
-	}
-
-	return error;
+	return git_patch_print(patch, diff_print_to_buffer_cb, out);
 }

@@ -141,7 +141,7 @@ void test_diff_patch__to_string(void)
 	git_tree *one, *another;
 	git_diff *diff;
 	git_patch *patch;
-	char *text;
+	git_buf buf = GIT_BUF_INIT;
 	const char *expected = "diff --git a/subdir.txt b/subdir.txt\ndeleted file mode 100644\nindex e8ee89e..0000000\n--- a/subdir.txt\n+++ /dev/null\n@@ -1,2 +0,0 @@\n-Is it a bird?\n-Is it a plane?\n";
 
 	g_repo = cl_git_sandbox_init("status");
@@ -155,16 +155,16 @@ void test_diff_patch__to_string(void)
 
 	cl_git_pass(git_patch_from_diff(&patch, diff, 0));
 
-	cl_git_pass(git_patch_to_str(&text, patch));
+	cl_git_pass(git_patch_to_buf(&buf, patch));
 
-	cl_assert_equal_s(expected, text);
+	cl_assert_equal_s(expected, buf.ptr);
 
 	cl_assert_equal_sz(31, git_patch_size(patch, 0, 0, 0));
 	cl_assert_equal_sz(31, git_patch_size(patch, 1, 0, 0));
 	cl_assert_equal_sz(31 + 16, git_patch_size(patch, 1, 1, 0));
 	cl_assert_equal_sz(strlen(expected), git_patch_size(patch, 1, 1, 1));
 
-	git__free(text);
+	git_buf_free(&buf);
 	git_patch_free(patch);
 	git_diff_free(diff);
 	git_tree_free(another);
@@ -178,7 +178,7 @@ void test_diff_patch__config_options(void)
 	git_config *cfg;
 	git_diff *diff;
 	git_patch *patch;
-	char *text;
+	git_buf buf = GIT_BUF_INIT;
 	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
 	char *onefile = "staged_changes_modified_file";
 	const char *expected1 = "diff --git c/staged_changes_modified_file i/staged_changes_modified_file\nindex 70bd944..906ee77 100644\n--- c/staged_changes_modified_file\n+++ i/staged_changes_modified_file\n@@ -1 +1,2 @@\n staged_changes_modified_file\n+staged_changes_modified_file\n";
@@ -199,10 +199,10 @@ void test_diff_patch__config_options(void)
 
 	cl_assert_equal_i(1, (int)git_diff_num_deltas(diff));
 	cl_git_pass(git_patch_from_diff(&patch, diff, 0));
-	cl_git_pass(git_patch_to_str(&text, patch));
-	cl_assert_equal_s(expected1, text);
+	cl_git_pass(git_patch_to_buf(&buf, patch));
+	cl_assert_equal_s(expected1, buf.ptr);
 
-	git__free(text);
+	git_buf_clear(&buf);
 	git_patch_free(patch);
 	git_diff_free(diff);
 
@@ -210,10 +210,10 @@ void test_diff_patch__config_options(void)
 
 	cl_assert_equal_i(1, (int)git_diff_num_deltas(diff));
 	cl_git_pass(git_patch_from_diff(&patch, diff, 0));
-	cl_git_pass(git_patch_to_str(&text, patch));
-	cl_assert_equal_s(expected2, text);
+	cl_git_pass(git_patch_to_buf(&buf, patch));
+	cl_assert_equal_s(expected2, buf.ptr);
 
-	git__free(text);
+	git_buf_clear(&buf);
 	git_patch_free(patch);
 	git_diff_free(diff);
 
@@ -224,10 +224,10 @@ void test_diff_patch__config_options(void)
 
 	cl_assert_equal_i(1, (int)git_diff_num_deltas(diff));
 	cl_git_pass(git_patch_from_diff(&patch, diff, 0));
-	cl_git_pass(git_patch_to_str(&text, patch));
-	cl_assert_equal_s(expected3, text);
+	cl_git_pass(git_patch_to_buf(&buf, patch));
+	cl_assert_equal_s(expected3, buf.ptr);
 
-	git__free(text);
+	git_buf_clear(&buf);
 	git_patch_free(patch);
 	git_diff_free(diff);
 
@@ -238,13 +238,14 @@ void test_diff_patch__config_options(void)
 
 	cl_assert_equal_i(1, (int)git_diff_num_deltas(diff));
 	cl_git_pass(git_patch_from_diff(&patch, diff, 0));
-	cl_git_pass(git_patch_to_str(&text, patch));
-	cl_assert_equal_s(expected4, text);
+	cl_git_pass(git_patch_to_buf(&buf, patch));
+	cl_assert_equal_s(expected4, buf.ptr);
 
-	git__free(text);
+	git_buf_clear(&buf);
 	git_patch_free(patch);
 	git_diff_free(diff);
 
+	git_buf_free(&buf);
 	git_tree_free(one);
 	git_config_free(cfg);
 }
@@ -465,10 +466,10 @@ static void check_single_patch_stats(
 	cl_assert_equal_sz(dels, actual_dels);
 
 	if (expected != NULL) {
-		char *text;
-		cl_git_pass(git_patch_to_str(&text, patch));
-		cl_assert_equal_s(expected, text);
-		git__free(text);
+		git_buf buf = GIT_BUF_INIT;
+		cl_git_pass(git_patch_to_buf(&buf, patch));
+		cl_assert_equal_s(expected, buf.ptr);
+		git_buf_free(&buf);
 
 		cl_assert_equal_sz(
 			strlen(expected), git_patch_size(patch, 1, 1, 1));

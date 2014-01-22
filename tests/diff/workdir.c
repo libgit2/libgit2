@@ -1375,7 +1375,7 @@ void test_diff_workdir__patience_diff(void)
 	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
 	git_diff *diff = NULL;
 	git_patch *patch = NULL;
-	char *as_str = NULL;
+	git_buf buf = GIT_BUF_INIT;
 	const char *expected_normal = "diff --git a/test.txt b/test.txt\nindex 34a5acc..d52725f 100644\n--- a/test.txt\n+++ b/test.txt\n@@ -1,10 +1,7 @@\n When I wrote this\n I did not know\n-how to create\n-a patience diff\n I did not know\n how to create\n+a patience diff\n another problem\n-I did not know\n-how to create\n a minimal diff\n";
 	const char *expected_patience = "diff --git a/test.txt b/test.txt\nindex 34a5acc..d52725f 100644\n--- a/test.txt\n+++ b/test.txt\n@@ -1,10 +1,7 @@\n When I wrote this\n I did not know\n+I did not know\n how to create\n a patience diff\n-I did not know\n-how to create\n another problem\n-I did not know\n-how to create\n a minimal diff\n";
 
@@ -1397,10 +1397,10 @@ void test_diff_workdir__patience_diff(void)
 	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, NULL, &opts));
 	cl_assert_equal_i(1, git_diff_num_deltas(diff));
 	cl_git_pass(git_patch_from_diff(&patch, diff, 0));
-	cl_git_pass(git_patch_to_str(&as_str, patch));
+	cl_git_pass(git_patch_to_buf(&buf, patch));
 
-	cl_assert_equal_s(expected_normal, as_str);
-	git__free(as_str);
+	cl_assert_equal_s(expected_normal, buf.ptr);
+	git_buf_clear(&buf);
 	git_patch_free(patch);
 	git_diff_free(diff);
 
@@ -1409,10 +1409,12 @@ void test_diff_workdir__patience_diff(void)
 	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, NULL, &opts));
 	cl_assert_equal_i(1, git_diff_num_deltas(diff));
 	cl_git_pass(git_patch_from_diff(&patch, diff, 0));
-	cl_git_pass(git_patch_to_str(&as_str, patch));
+	cl_git_pass(git_patch_to_buf(&buf, patch));
 
-	cl_assert_equal_s(expected_patience, as_str);
-	git__free(as_str);
+	cl_assert_equal_s(expected_patience, buf.ptr);
+	git_buf_clear(&buf);
+
+	git_buf_free(&buf);
 	git_patch_free(patch);
 	git_diff_free(diff);
 }

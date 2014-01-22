@@ -13,13 +13,15 @@ void test_diff_submodules__cleanup(void)
 {
 }
 
+#define get_buf_ptr(buf) ((buf)->asize ? (buf)->ptr : NULL)
+
 static void check_diff_patches_at_line(
 	git_diff *diff, const char **expected, const char *file, int line)
 {
 	const git_diff_delta *delta;
 	git_patch *patch = NULL;
 	size_t d, num_d = git_diff_num_deltas(diff);
-	char *patch_text;
+	git_buf buf = GIT_BUF_INIT;
 
 	for (d = 0; d < num_d; ++d, git_patch_free(patch)) {
 		cl_git_pass(git_patch_from_diff(&patch, diff, d));
@@ -33,16 +35,16 @@ static void check_diff_patches_at_line(
 		if (expected[d] && !strcmp(expected[d], "<SKIP>"))
 			continue;
 		if (expected[d] && !strcmp(expected[d], "<END>")) {
-			cl_git_pass(git_patch_to_str(&patch_text, patch));
+			cl_git_pass(git_patch_to_buf(&buf, patch));
 			cl_assert_at_line(!strcmp(expected[d], "<END>"), file, line);
 		}
 
-		cl_git_pass(git_patch_to_str(&patch_text, patch));
+		cl_git_pass(git_patch_to_buf(&buf, patch));
 
 		clar__assert_equal(
 			file, line, "expected diff did not match actual diff", 1,
-			"%s", expected[d], patch_text);
-		git__free(patch_text);
+			"%s", expected[d], get_buf_ptr(&buf));
+		git_buf_free(&buf);
 	}
 
 	cl_assert_at_line(expected[d] && !strcmp(expected[d], "<END>"), file, line);
