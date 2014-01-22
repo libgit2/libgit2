@@ -753,8 +753,11 @@ static int checkout_conflicts_load(checkout_data *data, git_iterator *workdir, g
 		conflict->theirs = theirs;
 
 		if ((error = checkout_conflict_detect_submodule(conflict)) < 0 ||
-			(error = checkout_conflict_detect_binary(data->repo, conflict)) < 0)
+		    (error = checkout_conflict_detect_binary(data->repo, conflict)) < 0)
+		{
+			git__free(conflict);
 			goto done;
+		}
 
 		git_vector_insert(&data->conflicts, conflict);
 	}
