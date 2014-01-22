@@ -555,3 +555,31 @@ void test_status_renames__both_casechange_two(void)
 
 	git_index_free(index);
 }
+
+void test_status_renames__zero_byte_file_does_not_fail(void)
+{
+	git_status_list *statuslist;
+	git_status_options opts = GIT_STATUS_OPTIONS_INIT;
+	status_entry_counts counts = {0};
+
+	struct status_entry expected[] = {
+		{ GIT_STATUS_WT_DELETED, "ikeepsix.txt", "ikeepsix.txt" },
+		{ GIT_STATUS_WT_NEW, "zerobyte.txt", "zerobyte.txt" },
+	};
+
+	opts.flags |= GIT_STATUS_OPT_RENAMES_FROM_REWRITES |
+		GIT_STATUS_OPT_RENAMES_HEAD_TO_INDEX |
+		GIT_STATUS_OPT_RENAMES_INDEX_TO_WORKDIR |
+		GIT_STATUS_OPT_INCLUDE_IGNORED |
+		GIT_STATUS_OPT_INCLUDE_UNTRACKED |
+		GIT_STATUS_OPT_RECURSE_UNTRACKED_DIRS |
+		GIT_STATUS_SHOW_INDEX_AND_WORKDIR |
+		GIT_STATUS_OPT_RECURSE_IGNORED_DIRS;
+
+	p_unlink("renames/ikeepsix.txt");
+	cl_git_mkfile("renames/zerobyte.txt", "");
+
+	cl_git_pass(git_status_list_new(&statuslist, g_repo, &opts));
+	test_status(statuslist, expected, 2);
+	git_status_list_free(statuslist);
+}
