@@ -234,17 +234,6 @@ GIT_EXTERN(int) git_patch_print(
 /**
  * Get the content of a patch as a single diff text.
  *
- * @param string Allocated string; caller must free.
- * @param patch A git_patch representing changes to one file
- * @return 0 on success, <0 on failure.
- */
-GIT_EXTERN(int) git_patch_to_str(
-	char **string,
-	git_patch *patch);
-
-/**
- * Get the content of a patch as a single diff text.
- *
  * @param out The git_buf to be filled in
  * @param patch A git_patch representing changes to one file
  * @return 0 on success, <0 on failure.

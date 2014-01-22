@@ -459,21 +459,3 @@ int git_patch_to_buf(
 {
 	return git_patch_print(patch, diff_print_to_buffer_cb, out);
 }
-
-/* print a git_patch to a char* */
-int git_patch_to_str(
-	char **string,
-	git_patch *patch)
-{
-	int error;
-	git_buf output = GIT_BUF_INIT;
-
-	if (!(error = git_patch_to_buf(&output, patch)))
-		*string = git_buf_detach(&output);
-	else {
-		git_buf_free(&output);
-		*string = NULL;
-	}
-
-	return error;
-}

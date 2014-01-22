@@ -414,16 +414,16 @@ void test_diff_diffiter__iterate_and_generate_patch_text(void)
 
 	for (d = 0; d < num_d; ++d) {
 		git_patch *patch;
-		char *text;
+		git_buf buf = GIT_BUF_INIT;
 
 		cl_git_pass(git_patch_from_diff(&patch, diff, d));
 		cl_assert(patch != NULL);
 
-		cl_git_pass(git_patch_to_str(&text, patch));
+		cl_git_pass(git_patch_to_buf(&buf, patch));
 
-		cl_assert_equal_s(expected_patch_text[d], text);
+		cl_assert_equal_s(expected_patch_text[d], buf.ptr);
 
-		git__free(text);
+		git_buf_free(&buf);
 		git_patch_free(patch);
 	}
 

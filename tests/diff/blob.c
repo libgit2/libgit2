@@ -853,7 +853,7 @@ void test_diff_blob__using_path_and_attributes(void)
 	size_t bin_len = 33;
 	const char *changed;
 	git_patch *p;
-	char *pout;
+	git_buf buf = GIT_BUF_INIT;
 
 	/* set up custom diff drivers and 'diff' attribute mappings for them */
 
@@ -951,7 +951,7 @@ void test_diff_blob__using_path_and_attributes(void)
 
 	cl_git_pass(git_patch_from_blob_and_buffer(
 		&p, nonbin, "zzz.normal", changed, strlen(changed), NULL, &opts));
-	cl_git_pass(git_patch_to_str(&pout, p));
+	cl_git_pass(git_patch_to_buf(&buf, p));
 	cl_assert_equal_s(
 		"diff --git a/zzz.normal b/zzz.normal\n"
 		"index 45141a7..75b0dbb 100644\n"
@@ -960,23 +960,23 @@ void test_diff_blob__using_path_and_attributes(void)
 		"@@ -1,0 +2,3 @@ Hello from the root\n"
 		"+More lines\n"
 		"+And more\n"
-		"+Go here\n", pout);
-	git__free(pout);
+		"+Go here\n", buf.ptr);
+	git_buf_clear(&buf);
 	git_patch_free(p);
 
 	cl_git_pass(git_patch_from_blob_and_buffer(
 		&p, nonbin, "zzz.binary", changed, strlen(changed), NULL, &opts));
-	cl_git_pass(git_patch_to_str(&pout, p));
+	cl_git_pass(git_patch_to_buf(&buf, p));
 	cl_assert_equal_s(
 		"diff --git a/zzz.binary b/zzz.binary\n"
 		"index 45141a7..75b0dbb 100644\n"
-		"Binary files a/zzz.binary and b/zzz.binary differ\n", pout);
-	git__free(pout);
+		"Binary files a/zzz.binary and b/zzz.binary differ\n", buf.ptr);
+	git_buf_clear(&buf);
 	git_patch_free(p);
 
 	cl_git_pass(git_patch_from_blob_and_buffer(
 		&p, nonbin, "zzz.alphary", changed, strlen(changed), NULL, &opts));
-	cl_git_pass(git_patch_to_str(&pout, p));
+	cl_git_pass(git_patch_to_buf(&buf, p));
 	cl_assert_equal_s(
 		"diff --git a/zzz.alphary b/zzz.alphary\n"
 		"index 45141a7..75b0dbb 100644\n"
@@ -985,13 +985,13 @@ void test_diff_blob__using_path_and_attributes(void)
 		"@@ -1,0 +2,3 @@ Hello from the root\n"
 		"+More lines\n"
 		"+And more\n"
-		"+Go here\n", pout);
-	git__free(pout);
+		"+Go here\n", buf.ptr);
+	git_buf_clear(&buf);
 	git_patch_free(p);
 
 	cl_git_pass(git_patch_from_blob_and_buffer(
 		&p, nonbin, "zzz.numary", changed, strlen(changed), NULL, &opts));
-	cl_git_pass(git_patch_to_str(&pout, p));
+	cl_git_pass(git_patch_to_buf(&buf, p));
 	cl_assert_equal_s(
 		"diff --git a/zzz.numary b/zzz.numary\n"
 		"index 45141a7..75b0dbb 100644\n"
@@ -1000,8 +1000,8 @@ void test_diff_blob__using_path_and_attributes(void)
 		"@@ -1,0 +2,3 @@\n"
 		"+More lines\n"
 		"+And more\n"
-		"+Go here\n", pout);
-	git__free(pout);
+		"+Go here\n", buf.ptr);
+	git_buf_clear(&buf);
 	git_patch_free(p);
 
 	/* "0123456789\n\x01\x02\x03\x04\x05\x06\x07\x08\x09\x00\n0123456789\n"
@@ -1012,17 +1012,17 @@ void test_diff_blob__using_path_and_attributes(void)
 
 	cl_git_pass(git_patch_from_blob_and_buffer(
 		&p, bin, "zzz.normal", changed, 37, NULL, &opts));
-	cl_git_pass(git_patch_to_str(&pout, p));
+	cl_git_pass(git_patch_to_buf(&buf, p));
 	cl_assert_equal_s(
 		"diff --git a/zzz.normal b/zzz.normal\n"
 		"index b435cd5..1604519 100644\n"
-		"Binary files a/zzz.normal and b/zzz.normal differ\n", pout);
-	git__free(pout);
+		"Binary files a/zzz.normal and b/zzz.normal differ\n", buf.ptr);
+	git_buf_clear(&buf);
 	git_patch_free(p);
 
 	cl_git_pass(git_patch_from_blob_and_buffer(
 		&p, bin, "zzz.textary", changed, 37, NULL, &opts));
-	cl_git_pass(git_patch_to_str(&pout, p));
+	cl_git_pass(git_patch_to_buf(&buf, p));
 	cl_assert_equal_s(
 		"diff --git a/zzz.textary b/zzz.textary\n"
 		"index b435cd5..1604519 100644\n"
@@ -1030,13 +1030,13 @@ void test_diff_blob__using_path_and_attributes(void)
 		"+++ b/zzz.textary\n"
 		"@@ -3 +3 @@\n"
 		"-0123456789\n"
-		"+replace a line\n", pout);
-	git__free(pout);
+		"+replace a line\n", buf.ptr);
+	git_buf_clear(&buf);
 	git_patch_free(p);
 
 	cl_git_pass(git_patch_from_blob_and_buffer(
 		&p, bin, "zzz.textalphary", changed, 37, NULL, &opts));
-	cl_git_pass(git_patch_to_str(&pout, p));
+	cl_git_pass(git_patch_to_buf(&buf, p));
 	cl_assert_equal_s(
 		"diff --git a/zzz.textalphary b/zzz.textalphary\n"
 		"index b435cd5..1604519 100644\n"
@@ -1044,13 +1044,13 @@ void test_diff_blob__using_path_and_attributes(void)
 		"+++ b/zzz.textalphary\n"
 		"@@ -3 +3 @@\n"
 		"-0123456789\n"
-		"+replace a line\n", pout);
-	git__free(pout);
+		"+replace a line\n", buf.ptr);
+	git_buf_clear(&buf);
 	git_patch_free(p);
 
 	cl_git_pass(git_patch_from_blob_and_buffer(
 		&p, bin, "zzz.textnumary", changed, 37, NULL, &opts));
-	cl_git_pass(git_patch_to_str(&pout, p));
+	cl_git_pass(git_patch_to_buf(&buf, p));
 	cl_assert_equal_s(
 		"diff --git a/zzz.textnumary b/zzz.textnumary\n"
 		"index b435cd5..1604519 100644\n"
@@ -1058,10 +1058,11 @@ void test_diff_blob__using_path_and_attributes(void)
 		"+++ b/zzz.textnumary\n"
 		"@@ -3 +3 @@ 0123456789\n"
 		"-0123456789\n"
-		"+replace a line\n", pout);
-	git__free(pout);
+		"+replace a line\n", buf.ptr);
+	git_buf_clear(&buf);
 	git_patch_free(p);
 
+	git_buf_free(&buf);
 	git_blob_free(nonbin);
 	git_blob_free(bin);
 }
