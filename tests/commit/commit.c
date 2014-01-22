@@ -72,4 +72,8 @@ void test_commit_commit__summary(void)
 	assert_commit_summary("Trailing spaces  are removed", "Trailing spaces  are removed  ");
 	assert_commit_summary("Trailing tabs", "Trailing tabs\t\n\nare removed");
 	assert_commit_summary("Trailing spaces", "Trailing spaces \n\nare removed");
+	assert_commit_summary("", "");
+	assert_commit_summary("", " ");
+	assert_commit_summary("", "\n");
+	assert_commit_summary("", "\n \n");
 }
