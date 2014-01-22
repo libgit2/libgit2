@@ -925,3 +925,26 @@ void test_checkout_tree__fails_when_conflicts_exist_in_index(void)
 
 	git_object_free(obj);
 }
+
+void test_checkout_tree__filemode_preserved_in_index(void)
+{
+	git_oid executable_oid;
+	git_commit *commit;
+	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
+	git_index *index;
+	const git_index_entry *entry;
+
+	cl_git_pass(git_repository_index(&index, g_repo));
+
+	cl_git_pass(git_oid_fromstr(&executable_oid, "afe4393b2b2a965f06acf2ca9658eaa01e0cd6b6"));
+	cl_git_pass(git_commit_lookup(&commit, g_repo, &executable_oid));
+
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+
+	cl_git_pass(git_checkout_tree(g_repo, (const git_object *)commit, &opts));
+	cl_assert(entry = git_index_get_bypath(index, "executable.txt", 0));
+	cl_assert_equal_i(0100755, entry->mode);
+
+	git_commit_free(commit);
+	git_index_free(index);
+}

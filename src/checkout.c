@@ -1217,8 +1217,7 @@ static int checkout_update_index(
 
 	memset(&entry, 0, sizeof(entry));
 	entry.path = (char *)file->path; /* cast to prevent warning */
-	git_index_entry__init_from_stat(
-		&entry, st, !(git_index_caps(data->index) & GIT_INDEXCAP_NO_FILEMODE));
+	git_index_entry__init_from_stat(&entry, st, true);
 	git_oid_cpy(&entry.oid, &file->oid);
 
 	return git_index_add(data->index, &entry);
