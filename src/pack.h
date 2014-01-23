@@ -88,7 +88,6 @@ struct git_pack_file {
 	int index_version;
 	git_time_t mtime;
 	unsigned pack_local:1, pack_keep:1, has_cache:1;
-	git_oid sha1;
 	git_oidmap *idx_cache;
 	git_oid **oids;
 
