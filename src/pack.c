@@ -974,7 +974,7 @@ int git_packfile_alloc(struct git_pack_file **pack_out, const char *path)
 			p->pack_keep = 1;
 
 		memcpy(p->pack_name + root_len, ".pack", sizeof(".pack"));
-		path_len = path_len - strlen(".idx") + strlen(".pack");
+		path_len = root_len;
 	}
 
 	if (p_stat(p->pack_name, &st) < 0 || !S_ISREG(st.st_mode)) {
@@ -998,7 +998,7 @@ int git_packfile_alloc(struct git_pack_file **pack_out, const char *path)
 	}
 
 	/* see if we can parse the sha1 oid in the packfile name */
-	if (path_len < 40 ||
+	if (path_len < GIT_OID_HEXSZ ||
 		git_oid_fromstr(&p->sha1, path + path_len - GIT_OID_HEXSZ) < 0)
 		memset(&p->sha1, 0x0, GIT_OID_RAWSZ);
 
