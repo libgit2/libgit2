@@ -121,11 +121,11 @@ GIT_EXTERN(const git_tree_entry *) git_tree_entry_byindex(
  * Warning: this must examine every entry in the tree, so it is not fast.
  *
  * @param tree a previously loaded tree.
- * @param oid the sha being looked for
+ * @param id the sha being looked for
  * @return the tree entry; NULL if not found
  */
-GIT_EXTERN(const git_tree_entry *) git_tree_entry_byoid(
-	const git_tree *tree, const git_oid *oid);
+GIT_EXTERN(const git_tree_entry *) git_tree_entry_byid(
+	const git_tree *tree, const git_oid *id);
 
 /**
  * Retrieve a tree entry contained in a tree or in any of its subtrees,
