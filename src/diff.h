@@ -134,7 +134,7 @@ GIT_INLINE(int) git_diff_file__resolve_zero_size(
 		return error;
 
 	error = git_odb__read_header_or_object(
-		odb_obj, &len, &type, odb, &file->oid);
+		odb_obj, &len, &type, odb, &file->id);
 
 	git_odb_free(odb);
 

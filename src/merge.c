@@ -665,7 +665,7 @@ static int index_entry_similarity_calc(
 	if ((error = git_blob_lookup(&blob, repo, &entry->id)) < 0)
 		return error;
 
-	git_oid_cpy(&diff_file.oid, &entry->id);
+	git_oid_cpy(&diff_file.id, &entry->id);
 	diff_file.path = entry->path;
 	diff_file.size = entry->file_size;
 	diff_file.mode = entry->mode;

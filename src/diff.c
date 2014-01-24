@@ -110,18 +110,18 @@ static int diff_delta__from_one(
 	if (delta->status == GIT_DELTA_DELETED) {
 		delta->old_file.mode = entry->mode;
 		delta->old_file.size = entry->file_size;
-		git_oid_cpy(&delta->old_file.oid, &entry->id);
+		git_oid_cpy(&delta->old_file.id, &entry->id);
 	} else /* ADDED, IGNORED, UNTRACKED */ {
 		delta->new_file.mode = entry->mode;
 		delta->new_file.size = entry->file_size;
-		git_oid_cpy(&delta->new_file.oid, &entry->id);
+		git_oid_cpy(&delta->new_file.id, &entry->id);
 	}
 
-	delta->old_file.flags |= GIT_DIFF_FLAG_VALID_OID;
+	delta->old_file.flags |= GIT_DIFF_FLAG_VALID_ID;
 
 	if (delta->status == GIT_DELTA_DELETED ||
-		!git_oid_iszero(&delta->new_file.oid))
-		delta->new_file.flags |= GIT_DIFF_FLAG_VALID_OID;
+		!git_oid_iszero(&delta->new_file.id))
+		delta->new_file.flags |= GIT_DIFF_FLAG_VALID_ID;
 
 	return diff_insert_delta(diff, delta, matched_pathspec);
 }
@@ -156,24 +156,24 @@ static int diff_delta__from_two(
 	GITERR_CHECK_ALLOC(delta);
 	delta->nfiles = 2;
 
-	git_oid_cpy(&delta->old_file.oid, &old_entry->id);
+	git_oid_cpy(&delta->old_file.id, &old_entry->id);
 	delta->old_file.size = old_entry->file_size;
 	delta->old_file.mode = old_mode;
-	delta->old_file.flags |= GIT_DIFF_FLAG_VALID_OID;
+	delta->old_file.flags |= GIT_DIFF_FLAG_VALID_ID;
 
-	git_oid_cpy(&delta->new_file.oid, &new_entry->id);
+	git_oid_cpy(&delta->new_file.id, &new_entry->id);
 	delta->new_file.size = new_entry->file_size;
 	delta->new_file.mode = new_mode;
 
 	if (new_oid) {
 		if (DIFF_FLAG_IS_SET(diff, GIT_DIFF_REVERSE))
-			git_oid_cpy(&delta->old_file.oid, new_oid);
+			git_oid_cpy(&delta->old_file.id, new_oid);
 		else
-			git_oid_cpy(&delta->new_file.oid, new_oid);
+			git_oid_cpy(&delta->new_file.id, new_oid);
 	}
 
 	if (new_oid || !git_oid_iszero(&new_entry->id))
-		delta->new_file.flags |= GIT_DIFF_FLAG_VALID_OID;
+		delta->new_file.flags |= GIT_DIFF_FLAG_VALID_ID;
 
 	return diff_insert_delta(diff, delta, matched_pathspec);
 }
@@ -189,21 +189,21 @@ static git_diff_delta *diff_delta__last_for_item(
 	switch (delta->status) {
 	case GIT_DELTA_UNMODIFIED:
 	case GIT_DELTA_DELETED:
-		if (git_oid__cmp(&delta->old_file.oid, &item->id) == 0)
+		if (git_oid__cmp(&delta->old_file.id, &item->id) == 0)
 			return delta;
 		break;
 	case GIT_DELTA_ADDED:
-		if (git_oid__cmp(&delta->new_file.oid, &item->id) == 0)
+		if (git_oid__cmp(&delta->new_file.id, &item->id) == 0)
 			return delta;
 		break;
 	case GIT_DELTA_UNTRACKED:
 		if (diff->strcomp(delta->new_file.path, item->path) == 0 &&
-			git_oid__cmp(&delta->new_file.oid, &item->id) == 0)
+			git_oid__cmp(&delta->new_file.id, &item->id) == 0)
 			return delta;
 		break;
 	case GIT_DELTA_MODIFIED:
-		if (git_oid__cmp(&delta->old_file.oid, &item->id) == 0 ||
-			git_oid__cmp(&delta->new_file.oid, &item->id) == 0)
+		if (git_oid__cmp(&delta->old_file.id, &item->id) == 0 ||
+			git_oid__cmp(&delta->new_file.id, &item->id) == 0)
 			return delta;
 		break;
 	default:

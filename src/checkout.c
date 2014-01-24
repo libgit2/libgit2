@@ -92,10 +92,10 @@ static int checkout_notify(
 	if (wditem) {
 		memset(&wdfile, 0, sizeof(wdfile));
 
-		git_oid_cpy(&wdfile.oid, &wditem->id);
+		git_oid_cpy(&wdfile.id, &wditem->id);
 		wdfile.path = wditem->path;
 		wdfile.size = wditem->file_size;
-		wdfile.flags = GIT_DIFF_FLAG_VALID_OID;
+		wdfile.flags = GIT_DIFF_FLAG_VALID_ID;
 		wdfile.mode = wditem->mode;
 
 		workdir = &wdfile;
@@ -159,7 +159,7 @@ static bool checkout_is_workdir_modified(
 		if (!sm_oid)
 			return false;
 
-		return (git_oid__cmp(&baseitem->oid, sm_oid) != 0);
+		return (git_oid__cmp(&baseitem->id, sm_oid) != 0);
 	}
 
 	/* Look at the cache to decide if the workdir is modified.  If not,
@@ -170,7 +170,7 @@ static bool checkout_is_workdir_modified(
 		if (wditem->mtime.seconds == ie->mtime.seconds &&
 			wditem->mtime.nanoseconds == ie->mtime.nanoseconds &&
 			wditem->file_size == ie->file_size)
-			return (git_oid__cmp(&baseitem->oid, &ie->id) != 0);
+			return (git_oid__cmp(&baseitem->id, &ie->id) != 0);
 	}
 
 	/* depending on where base is coming from, we may or may not know
@@ -184,7 +184,7 @@ static bool checkout_is_workdir_modified(
 			wditem->file_size, &oid) < 0)
 		return false;
 
-	return (git_oid__cmp(&baseitem->oid, &oid) != 0);
+	return (git_oid__cmp(&baseitem->id, &oid) != 0);
 }
 
 #define CHECKOUT_ACTION_IF(FLAG,YES,NO) \
@@ -1221,7 +1221,7 @@ static int checkout_update_index(
 	memset(&entry, 0, sizeof(entry));
 	entry.path = (char *)file->path; /* cast to prevent warning */
 	git_index_entry__init_from_stat(&entry, st, true);
-	git_oid_cpy(&entry.id, &file->oid);
+	git_oid_cpy(&entry.id, &file->id);
 
 	return git_index_add(data->index, &entry);
 }
@@ -1378,7 +1378,7 @@ static int checkout_blob(
 	}
 
 	error = checkout_write_content(
-		data, &file->oid, git_buf_cstr(&data->path), NULL, file->mode, &st);
+		data, &file->id, git_buf_cstr(&data->path), NULL, file->mode, &st);
 
 	/* update the index unless prevented */
 	if (!error && (data->strategy & GIT_CHECKOUT_DONT_UPDATE_INDEX) == 0)
