@@ -39,8 +39,10 @@
 #  but has otherwise not contributed to git.)
 #
 ok	Adam Simpkins <adam@adamsimpkins.net> (http transport)
+ok	Adrian Johnson <ajohnson@redneon.com>
 ok	Andreas Ericsson <ae@op5.se>
 ok	Boyd Lynn Gerber <gerberb@zenez.com>
+ok	Brandon Casey <drafnel@gmail.com>
 ok	Brian Downing <bdowning@lavos.net>
 ok	Brian Gernhardt <benji@silverinsanity.com>
 ok	Christian Couder <chriscool@tuxfamily.org>
@@ -50,11 +52,13 @@ ok	Holger Weiss <holger@zedat.fu-berlin.de>
 ok	Jeff King <peff@peff.net>
 ok	Johannes Schindelin <Johannes.Schindelin@gmx.de>
 ok	Johannes Sixt <j6t@kdbg.org>
+ask	Jonathan Nieder <jrnieder@gmail.com>
 ok	Junio C Hamano <gitster@pobox.com>
 ok	Kristian Høgsberg <krh@redhat.com>
 ok	Linus Torvalds <torvalds@linux-foundation.org>
 ok	Lukas Sandström <lukass@etek.chalmers.se>
 ok	Matthieu Moy <Matthieu.Moy@imag.fr>
+ok	Michael Haggerty <mhagger@alum.mit.edu>
 ign	Mike McCormack <mike@codeweavers.com> (imap-send)
 ok	Nicolas Pitre <nico@fluxnic.net> <nico@cam.org>
 ok	Paolo Bonzini <bonzini@gnu.org>
@@ -68,4 +72,5 @@ ok	Sebastian Schuberth <sschuberth@gmail.com>
 ok	Shawn O. Pearce <spearce@spearce.org>
 ok	Steffen Prohaska <prohaska@zib.de>
 ok	Sven Verdoolaege <skimo@kotnet.org>
+ask	Thomas Rast <tr@thomasrast.ch> (ok before 6-Oct-2013)
 ok	Torsten Bögershausen <tboegi@web.de>

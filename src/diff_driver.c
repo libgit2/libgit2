@@ -45,44 +45,7 @@ struct git_diff_driver {
 	char name[GIT_FLEX_ARRAY];
 };
 
-typedef struct {
-	const char *name;
-	const char *fns;
-	const char *words;
-	int flags;
-} git_diff_driver_definition;
-
-#define WORD_DEFAULT "|[^[:space:]]|[\xc0-\xff][\x80-\xbf]+"
-
-/* builtin driver definition macros have same signature as in core git
- * userdiff.c so that the data can be extracted verbatim
- */
-#define PATTERNS(NAME, FN_PATS, WORD_PAT) \
-	{ NAME, FN_PATS, WORD_PAT WORD_DEFAULT, 0 }
-#define IPATTERN(NAME, FN_PATS, WORD_PAT) \
-	{ NAME, FN_PATS, WORD_PAT WORD_DEFAULT, REG_ICASE }
-
-static git_diff_driver_definition builtin_defs[] = {
-PATTERNS("html", "^[ \t]*(<[Hh][1-6][ \t].*>.*)$",
-	 "[^<>= \t]+"),
-PATTERNS("java",
-	 "!^[ \t]*(catch|do|for|if|instanceof|new|return|switch|throw|while)\n"
-	 "^[ \t]*(([A-Za-z_][A-Za-z_0-9]*[ \t]+)+[A-Za-z_][A-Za-z_0-9]*[ \t]*\\([^;]*)$",
-	 /* -- */
-	 "[a-zA-Z_][a-zA-Z0-9_]*"
-	 "|[-+0-9.e]+[fFlL]?|0[xXbB]?[0-9a-fA-F]+[lL]?"
-	 "|[-+*/<>%&^|=!]="
-	 "|--|\\+\\+|<<=?|>>>?=?|&&|\\|\\|"),
-PATTERNS("ruby", "^[ \t]*((class|module|def)[ \t].*)$",
-	 /* -- */
-	 "(@|@@|\\$)?[a-zA-Z_][a-zA-Z0-9_]*"
-	 "|[-+0-9.e]+|0[xXbB]?[0-9a-fA-F]+|\\?(\\\\C-)?(\\\\M-)?."
-	 "|//=?|[-+*/<>%&^|=!]=|<<=?|>>=?|===|\\.{1,3}|::|[!=]~"),
-};
-
-#undef IPATTERN
-#undef PATTERNS
-#undef WORD_DEFAULT
+#include "userdiff.h"
 
 struct git_diff_driver_registry {
 	git_strmap *drivers;
