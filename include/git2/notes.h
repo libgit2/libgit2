@@ -106,12 +106,12 @@ GIT_EXTERN(const char *) git_note_message(const git_note *note);
 
 
 /**
- * Get the note object OID
+ * Get the note object's id
  *
  * @param note the note
- * @return the note object OID
+ * @return the note object's id
  */
-GIT_EXTERN(const git_oid *) git_note_oid(const git_note *note);
+GIT_EXTERN(const git_oid *) git_note_id(const git_note *note);
 
 /**
  * Add a note for an object
