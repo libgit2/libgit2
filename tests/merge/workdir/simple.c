@@ -696,7 +696,7 @@ void test_merge_workdir_simple__binary(void)
 	cl_assert((binary_entry = git_index_get_bypath(repo_index, "binary", 0)) != NULL);
 
 	cl_git_pass(git_oid_fromstr(&our_file_oid, "23ed141a6ae1e798b2f721afedbe947c119111ba"));
-	cl_assert(git_oid_cmp(&binary_entry->oid, &our_file_oid) == 0);
+	cl_assert(git_oid_cmp(&binary_entry->id, &our_file_oid) == 0);
 
 	git_merge_head_free(their_head);
 	git_merge_result_free(result);

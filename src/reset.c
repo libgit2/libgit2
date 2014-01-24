@@ -72,7 +72,7 @@ int git_reset_default(
 				goto cleanup;
 		} else {
 			entry.mode = delta->new_file.mode;
-			git_oid_cpy(&entry.oid, &delta->new_file.oid);
+			git_oid_cpy(&entry.id, &delta->new_file.oid);
 			entry.path = (char *)delta->new_file.path;
 
 			if ((error = git_index_add(index, &entry)) < 0)

@@ -92,7 +92,7 @@ static int checkout_notify(
 	if (wditem) {
 		memset(&wdfile, 0, sizeof(wdfile));
 
-		git_oid_cpy(&wdfile.oid, &wditem->oid);
+		git_oid_cpy(&wdfile.oid, &wditem->id);
 		wdfile.path = wditem->path;
 		wdfile.size = wditem->file_size;
 		wdfile.flags = GIT_DIFF_FLAG_VALID_OID;
@@ -170,7 +170,7 @@ static bool checkout_is_workdir_modified(
 		if (wditem->mtime.seconds == ie->mtime.seconds &&
 			wditem->mtime.nanoseconds == ie->mtime.nanoseconds &&
 			wditem->file_size == ie->file_size)
-			return (git_oid__cmp(&baseitem->oid, &ie->oid) != 0);
+			return (git_oid__cmp(&baseitem->oid, &ie->id) != 0);
 	}
 
 	/* depending on where base is coming from, we may or may not know
@@ -700,21 +700,21 @@ GIT_INLINE(int) checkout_conflict_detect_binary(git_repository *repo, checkout_c
 		return 0;
 
 	if (conflict->ancestor) {
-		if ((error = git_blob_lookup(&ancestor_blob, repo, &conflict->ancestor->oid)) < 0)
+		if ((error = git_blob_lookup(&ancestor_blob, repo, &conflict->ancestor->id)) < 0)
 			goto done;
 
 		conflict->binary = git_blob_is_binary(ancestor_blob);
 	}
 
 	if (!conflict->binary && conflict->ours) {
-		if ((error = git_blob_lookup(&our_blob, repo, &conflict->ours->oid)) < 0)
+		if ((error = git_blob_lookup(&our_blob, repo, &conflict->ours->id)) < 0)
 			goto done;
 
 		conflict->binary = git_blob_is_binary(our_blob);
 	}
 
 	if (!conflict->binary && conflict->theirs) {
-		if ((error = git_blob_lookup(&their_blob, repo, &conflict->theirs->oid)) < 0)
+		if ((error = git_blob_lookup(&their_blob, repo, &conflict->theirs->id)) < 0)
 			goto done;
 
 		conflict->binary = git_blob_is_binary(their_blob);
@@ -1221,7 +1221,7 @@ static int checkout_update_index(
 	memset(&entry, 0, sizeof(entry));
 	entry.path = (char *)file->path; /* cast to prevent warning */
 	git_index_entry__init_from_stat(&entry, st, true);
-	git_oid_cpy(&entry.oid, &file->oid);
+	git_oid_cpy(&entry.id, &file->oid);
 
 	return git_index_add(data->index, &entry);
 }
@@ -1631,7 +1631,7 @@ static int checkout_write_entry(
 		return error;
 
 	return checkout_write_content(data,
-		&side->oid, git_buf_cstr(&data->path), hint_path, side->mode, &st);
+		&side->id, git_buf_cstr(&data->path), hint_path, side->mode, &st);
 }
 
 static int checkout_write_entries(

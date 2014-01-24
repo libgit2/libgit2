@@ -447,7 +447,7 @@ static int tree_iterator__update_entry(tree_iterator *ti)
     te = tf->entries[tf->current]->te;
 
 	ti->entry.mode = te->attr;
-	git_oid_cpy(&ti->entry.oid, &te->oid);
+	git_oid_cpy(&ti->entry.id, &te->oid);
 
 	ti->entry.path = tree_iterator__current_filename(ti, te);
 	GITERR_CHECK_ALLOC(ti->entry.path);

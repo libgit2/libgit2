@@ -77,7 +77,7 @@ int git_merge_file_input_from_index_entry(
 		return 0;
 
 	if ((error = git_repository_odb(&odb, repo)) < 0 ||
-		(error = git_odb_read(&input->odb_object, odb, &entry->oid)) < 0)
+		(error = git_odb_read(&input->odb_object, odb, &entry->id)) < 0)
 		goto done;
 
 	input->mode = entry->mode;

@@ -314,10 +314,10 @@ static int load_attr_blob_from_index(
 
 	entry = git_index_get_byindex(index, pos);
 
-	if (old_oid && git_oid__cmp(old_oid, &entry->oid) == 0)
+	if (old_oid && git_oid__cmp(old_oid, &entry->id) == 0)
 		return GIT_ENOTFOUND;
 
-	if ((error = git_blob_lookup(blob, repo, &entry->oid)) < 0)
+	if ((error = git_blob_lookup(blob, repo, &entry->id)) < 0)
 		return error;
 
 	*content = git_blob_rawcontent(*blob);

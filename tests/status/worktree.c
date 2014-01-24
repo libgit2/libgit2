@@ -455,15 +455,15 @@ void test_status_worktree__conflict_with_diff3(void)
 	memset(&their_entry, 0x0, sizeof(git_index_entry));
 
 	ancestor_entry.path = "modified_file";
-	git_oid_fromstr(&ancestor_entry.oid,
+	git_oid_fromstr(&ancestor_entry.id,
 		"452e4244b5d083ddf0460acf1ecc74db9dcfa11a");
 
 	our_entry.path = "modified_file";
-	git_oid_fromstr(&our_entry.oid,
+	git_oid_fromstr(&our_entry.id,
 		"452e4244b5d083ddf0460acf1ecc74db9dcfa11a");
 
 	their_entry.path = "modified_file";
-	git_oid_fromstr(&their_entry.oid,
+	git_oid_fromstr(&their_entry.id,
 		"452e4244b5d083ddf0460acf1ecc74db9dcfa11a");
 
 	cl_git_pass(git_status_file(&status, repo, "modified_file"));
@@ -605,15 +605,15 @@ void test_status_worktree__conflicted_item(void)
 	memset(&their_entry, 0x0, sizeof(git_index_entry));
 
 	ancestor_entry.path = "modified_file";
-	git_oid_fromstr(&ancestor_entry.oid,
+	git_oid_fromstr(&ancestor_entry.id,
 		"452e4244b5d083ddf0460acf1ecc74db9dcfa11a");
 
 	our_entry.path = "modified_file";
-	git_oid_fromstr(&our_entry.oid,
+	git_oid_fromstr(&our_entry.id,
 		"452e4244b5d083ddf0460acf1ecc74db9dcfa11a");
 
 	their_entry.path = "modified_file";
-	git_oid_fromstr(&their_entry.oid,
+	git_oid_fromstr(&their_entry.id,
 		"452e4244b5d083ddf0460acf1ecc74db9dcfa11a");
 
 	cl_git_pass(git_status_file(&status, repo, "modified_file"));

@@ -387,7 +387,7 @@ int git_submodule_add_to_index(git_submodule *sm, int write_index)
 		error = -1;
 		goto cleanup;
 	}
-	git_oid_cpy(&entry.oid, &sm->wd_oid);
+	git_oid_cpy(&entry.id, &sm->wd_oid);
 
 	if ((error = git_commit_lookup(&head, sm_repo, &sm->wd_oid)) < 0)
 		goto cleanup;
@@ -780,7 +780,7 @@ static void submodule_update_from_index_entry(
 		if (already_found)
 			sm->flags |= GIT_SUBMODULE_STATUS__INDEX_MULTIPLE_ENTRIES;
 		else
-			git_oid_cpy(&sm->index_oid, &ie->oid);
+			git_oid_cpy(&sm->index_oid, &ie->id);
 
 		sm->flags |= GIT_SUBMODULE_STATUS_IN_INDEX |
 			GIT_SUBMODULE_STATUS__INDEX_OID_VALID;
@@ -1281,7 +1281,7 @@ static int load_submodule_config_from_index(
 			if (!submodule_get(&sm, repo, entry->path, NULL))
 				submodule_update_from_index_entry(sm, entry);
 		} else if (strcmp(entry->path, GIT_MODULES_FILE) == 0)
-			git_oid_cpy(gitmodules_oid, &entry->oid);
+			git_oid_cpy(gitmodules_oid, &entry->id);
 	}
 
 	if (error == GIT_ITEROVER)
@@ -1320,16 +1320,16 @@ static int load_submodule_config_from_head(
 
 			if (S_ISGITLINK(entry->mode))
 				submodule_update_from_head_data(
-					sm, entry->mode, &entry->oid);
+					sm, entry->mode, &entry->id);
 			else
 				sm->flags |= GIT_SUBMODULE_STATUS__HEAD_NOT_SUBMODULE;
 		} else if (S_ISGITLINK(entry->mode)) {
 			if (!submodule_get(&sm, repo, entry->path, NULL))
 				submodule_update_from_head_data(
-					sm, entry->mode, &entry->oid);
+					sm, entry->mode, &entry->id);
 		} else if (strcmp(entry->path, GIT_MODULES_FILE) == 0 &&
 				   git_oid_iszero(gitmodules_oid)) {
-			git_oid_cpy(gitmodules_oid, &entry->oid);
+			git_oid_cpy(gitmodules_oid, &entry->id);
 		}
 	}
 

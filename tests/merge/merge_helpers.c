@@ -112,7 +112,7 @@ void merge__dump_index_entries(git_vector *index_entries)
 		index_entry = index_entries->contents[i];
 
 		printf("%o ", index_entry->mode);
-		printf("%s ", git_oid_allocfmt(&index_entry->oid));
+		printf("%s ", git_oid_allocfmt(&index_entry->id));
 		printf("%d ", git_index_entry_stage(index_entry));
 		printf("%s ", index_entry->path);
 		printf("\n");
@@ -166,7 +166,7 @@ static int index_entry_eq_merge_index_entry(const struct merge_index_entry *expe
 		test_oid = 0;
 
 	if (actual->mode != expected->mode ||
-		(test_oid && git_oid_cmp(&actual->oid, &expected_oid) != 0) ||
+		(test_oid && git_oid_cmp(&actual->id, &expected_oid) != 0) ||
 		git_index_entry_stage(actual) != expected->stage)
 		return 0;
 

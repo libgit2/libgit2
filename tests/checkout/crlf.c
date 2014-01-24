@@ -174,13 +174,13 @@ void test_checkout_crlf__with_ident(void)
 	/* check that blobs have $Id$ */
 
 	cl_git_pass(git_blob_lookup(&blob, g_repo,
-		& git_index_get_bypath(index, "lf.ident", 0)->oid));
+		& git_index_get_bypath(index, "lf.ident", 0)->id));
 	cl_assert_equal_s(
 		ALL_LF_TEXT_RAW "\n$Id$\n", git_blob_rawcontent(blob));
 	git_blob_free(blob);
 
 	cl_git_pass(git_blob_lookup(&blob, g_repo,
-		& git_index_get_bypath(index, "more2.identcrlf", 0)->oid));
+		& git_index_get_bypath(index, "more2.identcrlf", 0)->id));
 	cl_assert_equal_s(
 		"\n$Id$\n" MORE_CRLF_TEXT_AS_LF, git_blob_rawcontent(blob));
 	git_blob_free(blob);

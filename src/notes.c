@@ -640,7 +640,7 @@ int git_note_next(
 	if ((error = git_iterator_current(&item, it)) < 0)
 		return error;
 
-	git_oid_cpy(note_id, &item->oid);
+	git_oid_cpy(note_id, &item->id);
 
 	if (!(error = process_entry_path(item->path, annotated_id)))
 		git_iterator_advance(NULL, it);

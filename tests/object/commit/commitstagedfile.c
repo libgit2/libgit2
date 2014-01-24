@@ -77,7 +77,7 @@ void test_object_commit_commitstagedfile__generate_predictable_object_ids(void)
 
 	entry = git_index_get_byindex(index, 0);
 
-	cl_assert(git_oid_cmp(&expected_blob_oid, &entry->oid) == 0);
+	cl_assert(git_oid_cmp(&expected_blob_oid, &entry->id) == 0);
 
 	/*
 	 * Information about index entry should match test file

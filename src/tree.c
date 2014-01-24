@@ -551,7 +551,7 @@ static int write_tree(
 			if (error < 0)
 				goto on_error;
 		} else {
-			error = append_entry(bld, filename, &entry->oid, entry->mode);
+			error = append_entry(bld, filename, &entry->id, entry->mode);
 			if (error < 0)
 				goto on_error;
 		}
