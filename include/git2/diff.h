@@ -361,7 +361,7 @@ typedef struct {
 
 	uint16_t    context_lines;    /**< defaults to 3 */
 	uint16_t    interhunk_lines;  /**< defaults to 0 */
-	uint16_t    oid_abbrev;       /**< default 'core.abbrev' or 7 if unset */
+	uint16_t    id_abbrev;       /**< default 'core.abbrev' or 7 if unset */
 	git_off_t   max_size;         /**< defaults to 512MB */
 	const char *old_prefix;       /**< defaults to "a" */
 	const char *new_prefix;       /**< defaults to "b" */

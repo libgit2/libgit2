@@ -37,8 +37,8 @@ static int diff_print_info_init(
 	if (diff)
 		pi->flags = diff->opts.flags;
 
-	if (diff && diff->opts.oid_abbrev != 0)
-		pi->oid_strlen = diff->opts.oid_abbrev;
+	if (diff && diff->opts.id_abbrev != 0)
+		pi->oid_strlen = diff->opts.id_abbrev;
 	else if (!diff || !diff->repo)
 		pi->oid_strlen = GIT_ABBREV_DEFAULT;
 	else if (git_repository__cvar(
