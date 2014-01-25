@@ -134,7 +134,7 @@ static git_merge_result *merge_simple_branch(int merge_file_favor, int checkout_
 	git_merge_opts opts = GIT_MERGE_OPTS_INIT;
 
 	cl_git_pass(git_oid_fromstr(&their_oids[0], THEIRS_SIMPLE_OID));
-	cl_git_pass(git_merge_head_from_oid(&their_heads[0], repo, &their_oids[0]));
+	cl_git_pass(git_merge_head_from_id(&their_heads[0], repo, &their_oids[0]));
 
 	opts.merge_tree_opts.file_favor = merge_file_favor;
 	opts.checkout_opts.checkout_strategy = checkout_strategy;
@@ -588,7 +588,7 @@ void test_merge_workdir_simple__directory_file(void)
 	cl_git_pass(git_reset(repo, (git_object *)head_commit, GIT_RESET_HARD));
 
 	cl_git_pass(git_oid_fromstr(&their_oids[0], THEIRS_DIRECTORY_FILE));
-	cl_git_pass(git_merge_head_from_oid(&their_heads[0], repo, &their_oids[0]));
+	cl_git_pass(git_merge_head_from_id(&their_heads[0], repo, &their_oids[0]));
 
 	opts.merge_tree_opts.file_favor = 0;
 	cl_git_pass(git_merge(&result, repo, (const git_merge_head **)their_heads, 1, &opts));
@@ -621,7 +621,7 @@ void test_merge_workdir_simple__unrelated(void)
 	};
 
 	cl_git_pass(git_oid_fromstr(&their_oids[0], THEIRS_UNRELATED_PARENT));
-	cl_git_pass(git_merge_head_from_oid(&their_heads[0], repo, &their_oids[0]));
+	cl_git_pass(git_merge_head_from_id(&their_heads[0], repo, &their_oids[0]));
 
 	opts.merge_tree_opts.file_favor = 0;
 	cl_git_pass(git_merge(&result, repo, (const git_merge_head **)their_heads, 1, &opts));
@@ -654,7 +654,7 @@ void test_merge_workdir_simple__unrelated_with_conflicts(void)
 	};
 
 	cl_git_pass(git_oid_fromstr(&their_oids[0], THEIRS_UNRELATED_OID));
-	cl_git_pass(git_merge_head_from_oid(&their_heads[0], repo, &their_oids[0]));
+	cl_git_pass(git_merge_head_from_id(&their_heads[0], repo, &their_oids[0]));
 
 	opts.merge_tree_opts.file_favor = 0;
 	cl_git_pass(git_merge(&result, repo, (const git_merge_head **)their_heads, 1, &opts));
@@ -686,7 +686,7 @@ void test_merge_workdir_simple__binary(void)
 	cl_git_pass(git_commit_lookup(&our_commit, repo, &our_oid));
 	cl_git_pass(git_reset(repo, (git_object *)our_commit, GIT_RESET_HARD));
 
-	cl_git_pass(git_merge_head_from_oid(&their_head, repo, &their_oid));
+	cl_git_pass(git_merge_head_from_id(&their_head, repo, &their_oid));
 
 	cl_git_pass(git_merge(&result, repo, (const git_merge_head **)&their_head, 1, &opts));
 

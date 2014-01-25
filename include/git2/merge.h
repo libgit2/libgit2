@@ -160,13 +160,13 @@ GIT_EXTERN(int) git_merge_head_from_fetchhead(
  *
  * @param out pointer to store the git_merge_head result in
  * @param repo repository that contains the given commit
- * @param oid the commit object id to use as a merge input
+ * @param id the commit object id to use as a merge input
  * @return zero on success, -1 on failure.
  */
-GIT_EXTERN(int) git_merge_head_from_oid(
+GIT_EXTERN(int) git_merge_head_from_id(
 	git_merge_head **out,
 	git_repository *repo,
-	const git_oid *oid);
+	const git_oid *id);
 
 /**
  * Frees a `git_merge_head`
@@ -251,7 +251,7 @@ GIT_EXTERN(int) git_merge_result_is_fastforward(git_merge_result *merge_result);
  * @param out the OID of the fast-forward
  * @param merge_result the results of the merge
  */
-GIT_EXTERN(int) git_merge_result_fastforward_oid(git_oid *out, git_merge_result *merge_result);
+GIT_EXTERN(int) git_merge_result_fastforward_id(git_oid *out, git_merge_result *merge_result);
 
 GIT_EXTERN(void) git_merge_result_free(git_merge_result *merge_result);
 

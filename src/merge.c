@@ -2111,7 +2111,7 @@ static int merge_ancestor_head(
 	if ((error = git_merge_base_many(&ancestor_oid, repo, their_heads_len + 1, oids)) < 0)
 		goto on_error;
 
-	error = git_merge_head_from_oid(ancestor_head, repo, &ancestor_oid);
+	error = git_merge_head_from_id(ancestor_head, repo, &ancestor_oid);
 
 on_error:
 	git__free(oids);
@@ -2615,7 +2615,7 @@ int git_merge_result_is_fastforward(git_merge_result *merge_result)
 	return merge_result->is_fastforward;
 }
 
-int git_merge_result_fastforward_oid(git_oid *out, git_merge_result *merge_result)
+int git_merge_result_fastforward_id(git_oid *out, git_merge_result *merge_result)
 {
 	assert(out && merge_result);
 
@@ -2699,7 +2699,7 @@ int git_merge_head_from_ref(
 	return error;
 }
 
-int git_merge_head_from_oid(
+int git_merge_head_from_id(
 	git_merge_head **out,
 	git_repository *repo,
 	const git_oid *oid)
