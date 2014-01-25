@@ -545,7 +545,7 @@ static int reference__rename(git_reference **out, git_reference *ref, const char
 
 	/* Update HEAD it was pointing to the reference being renamed */
 	if (should_head_be_updated &&
-		(error = git_repository_set_head(ref->db->repo, new_name)) < 0) {
+		(error = git_repository_set_head(ref->db->repo, new_name, signature, message)) < 0) {
 		giterr_set(GITERR_REFERENCE, "Failed to update HEAD after renaming reference");
 		return error;
 	}

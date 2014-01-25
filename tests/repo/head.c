@@ -54,7 +54,7 @@ void test_repo_head__set_head_Attaches_HEAD_to_un_unborn_branch_when_the_branch_
 {
 	git_reference *head;
 
-	cl_git_pass(git_repository_set_head(repo, "refs/heads/doesnt/exist/yet"));
+	cl_git_pass(git_repository_set_head(repo, "refs/heads/doesnt/exist/yet", NULL, NULL));
 
 	cl_assert_equal_i(false, git_repository_head_detached(repo));
 
@@ -63,19 +63,19 @@ void test_repo_head__set_head_Attaches_HEAD_to_un_unborn_branch_when_the_branch_
 
 void test_repo_head__set_head_Returns_ENOTFOUND_when_the_reference_doesnt_exist(void)
 {
-	cl_assert_equal_i(GIT_ENOTFOUND, git_repository_set_head(repo, "refs/tags/doesnt/exist/yet"));
+	cl_assert_equal_i(GIT_ENOTFOUND, git_repository_set_head(repo, "refs/tags/doesnt/exist/yet", NULL, NULL));
 }
 
 void test_repo_head__set_head_Fails_when_the_reference_points_to_a_non_commitish(void)
 {
-	cl_git_fail(git_repository_set_head(repo, "refs/tags/point_to_blob"));
+	cl_git_fail(git_repository_set_head(repo, "refs/tags/point_to_blob", NULL, NULL));
 }
 
 void test_repo_head__set_head_Attaches_HEAD_when_the_reference_points_to_a_branch(void)
 {
 	git_reference *head;
 
-	cl_git_pass(git_repository_set_head(repo, "refs/heads/br2"));
+	cl_git_pass(git_repository_set_head(repo, "refs/heads/br2", NULL, NULL));
 
 	cl_assert_equal_i(false, git_repository_head_detached(repo));
 
@@ -102,7 +102,7 @@ static void assert_head_is_correctly_detached(void)
 
 void test_repo_head__set_head_Detaches_HEAD_when_the_reference_doesnt_point_to_a_branch(void)
 {
-	cl_git_pass(git_repository_set_head(repo, "refs/tags/test"));
+	cl_git_pass(git_repository_set_head(repo, "refs/tags/test", NULL, NULL));
 
 	cl_assert_equal_i(true, git_repository_head_detached(repo));
 
@@ -115,7 +115,7 @@ void test_repo_head__set_head_detached_Return_ENOTFOUND_when_the_object_doesnt_e
 
 	cl_git_pass(git_oid_fromstr(&oid, "deadbeefdeadbeefdeadbeefdeadbeefdeadbeef"));
 
-	cl_assert_equal_i(GIT_ENOTFOUND, git_repository_set_head_detached(repo, &oid));
+	cl_assert_equal_i(GIT_ENOTFOUND, git_repository_set_head_detached(repo, &oid, NULL, NULL));
 }
 
 void test_repo_head__set_head_detached_Fails_when_the_object_isnt_a_commitish(void)
@@ -124,7 +124,7 @@ void test_repo_head__set_head_detached_Fails_when_the_object_isnt_a_commitish(vo
 
 	cl_git_pass(git_revparse_single(&blob, repo, "point_to_blob"));
 
-	cl_git_fail(git_repository_set_head_detached(repo, git_object_id(blob)));
+	cl_git_fail(git_repository_set_head_detached(repo, git_object_id(blob), NULL, NULL));
 
 	git_object_free(blob);
 }
@@ -136,7 +136,7 @@ void test_repo_head__set_head_detached_Detaches_HEAD_and_make_it_point_to_the_pe
 	cl_git_pass(git_revparse_single(&tag, repo, "tags/test"));
 	cl_assert_equal_i(GIT_OBJ_TAG, git_object_type(tag));
 
-	cl_git_pass(git_repository_set_head_detached(repo, git_object_id(tag)));
+	cl_git_pass(git_repository_set_head_detached(repo, git_object_id(tag), NULL, NULL));
 
 	assert_head_is_correctly_detached();
 

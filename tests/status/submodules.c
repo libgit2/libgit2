@@ -140,7 +140,7 @@ void test_status_submodules__moved_head(void)
 	/* move submodule HEAD to c47800c7266a2be04c571c04d5a6614691ea99bd */
 	cl_git_pass(
 		git_oid_fromstr(&oid, "c47800c7266a2be04c571c04d5a6614691ea99bd"));
-	cl_git_pass(git_repository_set_head_detached(smrepo, &oid));
+	cl_git_pass(git_repository_set_head_detached(smrepo, &oid, NULL, NULL));
 
 	/* first do a normal status, which should now include the submodule */
 

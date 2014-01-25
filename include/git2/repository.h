@@ -567,11 +567,15 @@ GIT_EXTERN(int) git_repository_hashfile(
  *
  * @param repo Repository pointer
  * @param refname Canonical name of the reference the HEAD should point at
+ * @param signature The identity that will used to populate the reflog entry
+ * @param log_message The one line long message to be appended to the reflog
  * @return 0 on success, or an error code
  */
 GIT_EXTERN(int) git_repository_set_head(
 	git_repository* repo,
-	const char* refname);
+	const char* refname,
+	const git_signature *signature,
+	const char *log_message);
 
 /**
  * Make the repository HEAD directly point to the Commit.
@@ -587,11 +591,15 @@ GIT_EXTERN(int) git_repository_set_head(
  *
  * @param repo Repository pointer
  * @param commitish Object id of the Commit the HEAD should point to
+ * @param signature The identity that will used to populate the reflog entry
+ * @param log_message The one line long message to be appended to the reflog
  * @return 0 on success, or an error code
  */
 GIT_EXTERN(int) git_repository_set_head_detached(
 	git_repository* repo,
-	const git_oid* commitish);
+	const git_oid* commitish,
+	const git_signature *signature,
+	const char *log_message);
 
 /**
  * Detach the HEAD.

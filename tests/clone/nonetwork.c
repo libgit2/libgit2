@@ -217,7 +217,7 @@ void test_clone_nonetwork__can_detached_head(void)
 	cl_git_pass(git_clone(&g_repo, cl_git_fixture_url("testrepo.git"), "./foo", &g_options));
 
 	cl_git_pass(git_revparse_single(&obj, g_repo, "master~1"));
-	cl_git_pass(git_repository_set_head_detached(g_repo, git_object_id(obj)));
+	cl_git_pass(git_repository_set_head_detached(g_repo, git_object_id(obj), NULL, NULL));
 
 	cl_git_pass(git_clone(&cloned, "./foo", "./foo1", &g_options));
 

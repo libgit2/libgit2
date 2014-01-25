@@ -1830,7 +1830,9 @@ static bool looks_like_a_branch(const char *refname)
 
 int git_repository_set_head(
 	git_repository* repo,
-	const char* refname)
+	const char* refname,
+	const git_signature *signature,
+	const char *log_message)
 {
 	git_reference *ref,
 		*new_head = NULL;
@@ -1843,12 +1845,17 @@ int git_repository_set_head(
 		return error;
 
 	if (!error) {
-		if (git_reference_is_branch(ref))
-			error = git_reference_symbolic_create(&new_head, repo, GIT_HEAD_FILE, git_reference_name(ref), 1, NULL, NULL);
-		else
-			error = git_repository_set_head_detached(repo, git_reference_target(ref));
-	} else if (looks_like_a_branch(refname))
-		error = git_reference_symbolic_create(&new_head, repo, GIT_HEAD_FILE, refname, 1, NULL, NULL);
+		if (git_reference_is_branch(ref)) {
+			error = git_reference_symbolic_create(&new_head, repo, GIT_HEAD_FILE,
+					git_reference_name(ref), true, signature, log_message);
+		} else {
+			error = git_repository_set_head_detached(repo, git_reference_target(ref),
+					signature, log_message);
+		}
+	} else if (looks_like_a_branch(refname)) {
+		error = git_reference_symbolic_create(&new_head, repo, GIT_HEAD_FILE, refname,
+				true, signature, log_message);
+	}
 
 	git_reference_free(ref);
 	git_reference_free(new_head);
@@ -1857,7 +1864,9 @@ int git_repository_set_head(
 
 int git_repository_set_head_detached(
 	git_repository* repo,
-	const git_oid* commitish)
+	const git_oid* commitish,
+	const git_signature *signature,
+	const char *log_message)
 {
 	int error;
 	git_object *object,
@@ -1872,7 +1881,7 @@ int git_repository_set_head_detached(
 	if ((error = git_object_peel(&peeled, object, GIT_OBJ_COMMIT)) < 0)
 		goto cleanup;
 
-	error = git_reference_create(&new_head, repo, GIT_HEAD_FILE, git_object_id(peeled), 1, NULL, NULL);
+	error = git_reference_create(&new_head, repo, GIT_HEAD_FILE, git_object_id(peeled), true, signature, log_message);
 
 cleanup:
 	git_object_free(object);
