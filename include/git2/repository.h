@@ -10,6 +10,7 @@
 #include "common.h"
 #include "types.h"
 #include "oid.h"
+#include "buffer.h"
 
 /**
  * @file git2/repository.h
@@ -58,10 +59,8 @@ GIT_EXTERN(int) git_repository_wrap_odb(git_repository **out, git_odb *odb);
  * The method will automatically detect if the repository is bare
  * (if there is a repository).
  *
- * @param path_out The user allocated buffer which will
- * contain the found path.
- *
- * @param path_size repository_path size
+ * @param out A pointer to a user-allocated git_buf which will contain
+ * the found path.
  *
  * @param start_path The base path where the lookup starts.
  *
@@ -77,8 +76,7 @@ GIT_EXTERN(int) git_repository_wrap_odb(git_repository **out, git_odb *odb);
  * @return 0 or an error code
  */
 GIT_EXTERN(int) git_repository_discover(
-		char *path_out,
-		size_t path_size,
+		git_buf *out,
 		const char *start_path,
 		int across_fs,
 		const char *ceiling_dirs);
@@ -464,21 +462,11 @@ GIT_EXTERN(int) git_repository_index(git_index **out, git_repository *repo);
  * Use this function to get the contents of this file. Don't forget to
  * remove the file after you create the commit.
  *
- * If the repository message exists and there are no errors reading it, this
- * returns the bytes needed to store the message in memory (i.e. message
- * file size plus one terminating NUL byte).  That value is returned even if
- * `out` is NULL or `len` is shorter than the necessary size.
- *
- * The `out` buffer will *always* be NUL terminated, even if truncation
- * occurs.
- *
- * @param out Buffer to write data into or NULL to just read required size
- * @param len Length of `out` buffer in bytes
+ * @param out git_buf to write data into
  * @param repo Repository to read prepared message from
- * @return GIT_ENOTFOUND if no message exists, other value < 0 for other
- *         errors, or total bytes in message (may be > `len`) on success
+ * @return 0, GIT_ENOTFOUND if no message exists or an error code
  */
-GIT_EXTERN(int) git_repository_message(char *out, size_t len, git_repository *repo);
+GIT_EXTERN(int) git_repository_message(git_buf *out, git_repository *repo);
 
 /**
  * Remove git's prepared message.
