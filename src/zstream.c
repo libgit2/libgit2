@@ -70,7 +70,7 @@ int git_zstream_deflatebuf(git_buf *out, const void *in, size_t in_len)
 	int error = 0;
 
 	if ((error = git_zstream_init(&zstream)) < 0)
-		goto done;
+		return error;
 
 	do {
 		if (out->asize - out->size < BUFFER_SIZE)
@@ -89,7 +89,6 @@ int git_zstream_deflatebuf(git_buf *out, const void *in, size_t in_len)
 	if (written < 0)
 		error = written;
 
-done:
 	git_zstream_free(&zstream);
 	return error;
 }
