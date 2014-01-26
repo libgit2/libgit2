@@ -219,7 +219,7 @@ static void verify_tracking_branches(git_remote *remote, expected_ref expected_r
 		if (!fetch_spec)
 			continue;
 
-		cl_git_pass(git_refspec_transform_r(&ref_name, fetch_spec, expected_refs[i].name));
+		cl_git_pass(git_refspec_transform(&ref_name, fetch_spec, expected_refs[i].name));
 
 		/* Find matching remote branch */
 		git_vector_foreach(&actual_refs, j, actual_ref) {

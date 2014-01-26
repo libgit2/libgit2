@@ -131,7 +131,7 @@ static int reference_matches_remote_head(
 
 	if (!error && !git_oid__cmp(&head_info->remote_head_oid, &oid)) {
 		/* Determine the local reference name from the remote tracking one */
-		error = git_refspec_transform_l(
+		error = git_refspec_rtransform(
 			&head_info->branchname, head_info->refspec, reference_name);
 
 		if (!error &&
@@ -199,7 +199,7 @@ static int update_head_to_remote(git_repository *repo, git_remote *remote)
 	}
 
 	/* Determine the remote tracking reference name from the local master */
-	if ((error = git_refspec_transform_r(
+	if ((error = git_refspec_transform(
 		&remote_master_name,
 		head_info.refspec,
 		GIT_REFS_HEADS_MASTER_FILE)) < 0)

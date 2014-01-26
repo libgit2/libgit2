@@ -896,7 +896,7 @@ static int remote_head_for_ref(git_remote_head **out, git_refspec *spec, git_vec
 	if ((error = git_reference_resolve(&resolved_ref, ref)) < 0 ||
 		(!git_reference_is_branch(resolved_ref)) ||
 		(error = git_branch_upstream(&tracking_ref, resolved_ref)) < 0 ||
-		(error = git_refspec_transform_l(&remote_name, spec, git_reference_name(tracking_ref))) < 0) {
+		(error = git_refspec_rtransform(&remote_name, spec, git_reference_name(tracking_ref))) < 0) {
 		/* Not an error if HEAD is unborn or no tracking branch */
 		if (error == GIT_ENOTFOUND)
 			error = 0;
@@ -1011,7 +1011,7 @@ static int update_tips_for_spec(git_remote *remote, git_refspec *spec, git_vecto
 			continue;
 
 		if (git_refspec_src_matches(spec, head->name) && spec->dst) {
-			if (git_refspec_transform_r(&refname, spec, head->name) < 0)
+			if (git_refspec_transform(&refname, spec, head->name) < 0)
 				goto on_error;
 		} else if (remote->download_tags != GIT_REMOTE_DOWNLOAD_TAGS_NONE) {
 
