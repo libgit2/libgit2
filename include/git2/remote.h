@@ -117,7 +117,7 @@ GIT_EXTERN(int) git_remote_save(const git_remote *remote);
  * @param source object to copy
  * @return 0 or an error code
  */
-GIT_EXTERN(int) git_remote_dup(git_remote **dest, const git_remote *source);
+GIT_EXTERN(int) git_remote_dup(git_remote **dest, git_remote *source);
 
 /**
  * Get the remote's repository

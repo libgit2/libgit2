@@ -248,9 +248,10 @@ int git_remote_create_inmemory(git_remote **out, git_repository *repo, const cha
 	return 0;
 }
 
-int git_remote_dup(git_remote **dest, const git_remote *source)
+int git_remote_dup(git_remote **dest, git_remote *source)
 {
-	int error;
+	int error = 0;
+	git_strarray refspecs = { 0 };
 	git_remote *remote = git__calloc(1, sizeof(git_remote));
 	GITERR_CHECK_ALLOC(remote);
 
@@ -274,16 +275,33 @@ int git_remote_dup(git_remote **dest, const git_remote *source)
 	remote->check_cert = source->check_cert;
 	remote->update_fetchhead = source->update_fetchhead;
 
-	if ((error = git_vector_dup(&remote->refs, &source->refs, NULL)) < 0 ||
-		(error = git_vector_dup(&remote->refspecs, &source->refspecs, NULL)) < 0 ||
-		(error = git_vector_dup(&remote->active_refspecs, &source->active_refspecs, NULL))) {
-		git__free(remote);
-		return error;
+	if (git_vector_init(&remote->refs, 32, NULL) < 0 ||
+	    git_vector_init(&remote->refspecs, 2, NULL) < 0 ||
+	    git_vector_init(&remote->active_refspecs, 2, NULL) < 0) {
+		error = -1;
+		goto cleanup;
 	}
+
+	if ((error = git_remote_get_fetch_refspecs(&refspecs, source)) < 0 ||
+	    (error = git_remote_set_fetch_refspecs(remote, &refspecs)) < 0)
+		goto cleanup;
+
+	git_strarray_free(&refspecs);
+
+	if ((error = git_remote_get_push_refspecs(&refspecs, source)) < 0 ||
+	    (error = git_remote_set_push_refspecs(remote, &refspecs)) < 0)
+		goto cleanup;
 
 	*dest = remote;
 
-	return 0;
+cleanup:
+
+	git_strarray_free(&refspecs);
+
+	if (error < 0)
+		git__free(remote);
+
+	return error;
 }
 
 struct refspec_cb_data {

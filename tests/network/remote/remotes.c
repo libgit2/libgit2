@@ -148,6 +148,8 @@ void test_network_remote_remotes__dup(void)
 	cl_git_pass(git_remote_get_push_refspecs(&array, _remote));
 	cl_assert_equal_i(0, (int)array.count);
 	git_strarray_free(&array);
+
+	git_remote_free(dup);
 }
 
 void test_network_remote_remotes__add_pushspec(void)
