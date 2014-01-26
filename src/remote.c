@@ -248,9 +248,10 @@ int git_remote_create_inmemory(git_remote **out, git_repository *repo, const cha
 	return 0;
 }
 
-int git_remote_dup(git_remote **dest, const git_remote *source)
+int git_remote_dup(git_remote **dest, git_remote *source)
 {
-	int error;
+	int error = 0;
+	git_strarray refspecs = { 0 };
 	git_remote *remote = git__calloc(1, sizeof(git_remote));
 	GITERR_CHECK_ALLOC(remote);
 
@@ -274,16 +275,33 @@ int git_remote_dup(git_remote **dest, const git_remote *source)
 	remote->check_cert = source->check_cert;
 	remote->update_fetchhead = source->update_fetchhead;
 
-	if ((error = git_vector_dup(&remote->refs, &source->refs, NULL)) < 0 ||
-		(error = git_vector_dup(&remote->refspecs, &source->refspecs, NULL)) < 0 ||
-		(error = git_vector_dup(&remote->active_refspecs, &source->active_refspecs, NULL))) {
-		git__free(remote);
-		return error;
+	if (git_vector_init(&remote->refs, 32, NULL) < 0 ||
+	    git_vector_init(&remote->refspecs, 2, NULL) < 0 ||
+	    git_vector_init(&remote->active_refspecs, 2, NULL) < 0) {
+		error = -1;
+		goto cleanup;
 	}
+
+	if ((error = git_remote_get_fetch_refspecs(&refspecs, source)) < 0 ||
+	    (error = git_remote_set_fetch_refspecs(remote, &refspecs)) < 0)
+		goto cleanup;
+
+	git_strarray_free(&refspecs);
+
+	if ((error = git_remote_get_push_refspecs(&refspecs, source)) < 0 ||
+	    (error = git_remote_set_push_refspecs(remote, &refspecs)) < 0)
+		goto cleanup;
 
 	*dest = remote;
 
-	return 0;
+cleanup:
+
+	git_strarray_free(&refspecs);
+
+	if (error < 0)
+		git__free(remote);
+
+	return error;
 }
 
 struct refspec_cb_data {
@@ -1089,7 +1107,7 @@ out:
 	return error;
 }
 
-int git_remote_connected(git_remote *remote)
+int git_remote_connected(const git_remote *remote)
 {
 	assert(remote);
 
@@ -1233,7 +1251,7 @@ const git_transfer_progress* git_remote_stats(git_remote *remote)
 	return &remote->stats;
 }
 
-git_remote_autotag_option_t git_remote_autotag(git_remote *remote)
+git_remote_autotag_option_t git_remote_autotag(const git_remote *remote)
 {
 	return remote->download_tags;
 }
@@ -1626,7 +1644,7 @@ int git_remote_set_push_refspecs(git_remote *remote, git_strarray *array)
 	return set_refspecs(remote, array, true);
 }
 
-static int copy_refspecs(git_strarray *array, git_remote *remote, unsigned int push)
+static int copy_refspecs(git_strarray *array, const git_remote *remote, unsigned int push)
 {
 	size_t i;
 	git_vector refspecs;
@@ -1660,22 +1678,22 @@ on_error:
 	return -1;
 }
 
-int git_remote_get_fetch_refspecs(git_strarray *array, git_remote *remote)
+int git_remote_get_fetch_refspecs(git_strarray *array, const git_remote *remote)
 {
 	return copy_refspecs(array, remote, false);
 }
 
-int git_remote_get_push_refspecs(git_strarray *array, git_remote *remote)
+int git_remote_get_push_refspecs(git_strarray *array, const git_remote *remote)
 {
 	return copy_refspecs(array, remote, true);
 }
 
-size_t git_remote_refspec_count(git_remote *remote)
+size_t git_remote_refspec_count(const git_remote *remote)
 {
 	return remote->refspecs.length;
 }
 
-const git_refspec *git_remote_get_refspec(git_remote *remote, size_t n)
+const git_refspec *git_remote_get_refspec(const git_remote *remote, size_t n)
 {
 	return git_vector_get(&remote->refspecs, n);
 }
