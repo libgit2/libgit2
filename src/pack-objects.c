@@ -288,6 +288,7 @@ static int write_object(
 	git_odb_object *obj = NULL;
 	git_otype type;
 	unsigned char hdr[10], *zbuf = NULL;
+	void *delta_data = NULL;
 	void *data;
 	size_t hdr_len, zbuf_len = COMPRESS_BUFLEN, data_len;
 	ssize_t written;
@@ -295,10 +296,11 @@ static int write_object(
 
 	if (po->delta) {
 		if (po->delta_data)
-			data = po->delta_data;
-		else if ((error = get_delta(&data, pb->odb, po)) < 0)
+			delta_data = po->delta_data;
+		else if ((error = get_delta(&delta_data, pb->odb, po)) < 0)
 				goto done;
 
+		data = delta_data;
 		data_len = po->delta_size;
 		type = GIT_OBJ_REF_DELTA;
 	} else {
@@ -351,7 +353,7 @@ static int write_object(
 		}
 
 		if (po->delta)
-			git__free(data);
+			git__free(delta_data);
 	}
 
 	if (po->delta_data) {
