@@ -197,6 +197,46 @@ void test_network_remote_local__push_to_bare_remote(void)
 	cl_fixture_cleanup("localbare.git");
 }
 
+void test_network_remote_local__push_to_bare_remote_with_file_url(void)
+{
+	/* Should be able to push to a bare remote */
+	git_remote *localremote;
+	git_push *push;
+
+	/* Get some commits */
+	connect_to_local_repository(cl_fixture("testrepo.git"));
+	cl_git_pass(git_remote_add_fetch(remote, "master:master"));
+	cl_git_pass(git_remote_download(remote));
+	cl_git_pass(git_remote_update_tips(remote));
+	git_remote_disconnect(remote);
+
+	/* Set up an empty bare repo to push into */
+	{
+		git_repository *localbarerepo;
+		cl_git_pass(git_repository_init(&localbarerepo, "./localbare.git", 1));
+		git_repository_free(localbarerepo);
+	}
+
+	/* Create a file URL */
+	const char *url = cl_git_path_url("./localbare.git");
+
+	/* Connect to the bare repo */
+	cl_git_pass(git_remote_create_inmemory(&localremote, repo, NULL, url));
+	cl_git_pass(git_remote_connect(localremote, GIT_DIRECTION_PUSH));
+
+	/* Try to push */
+	cl_git_pass(git_push_new(&push, localremote));
+	cl_git_pass(git_push_add_refspec(push, "refs/heads/master:"));
+	cl_git_pass(git_push_finish(push));
+	cl_assert(git_push_unpack_ok(push));
+
+	/* Clean up */
+	git_push_free(push);
+	git_remote_free(localremote);
+	cl_fixture_cleanup("localbare.git");
+}
+
+
 void test_network_remote_local__push_to_non_bare_remote(void)
 {
 	/* Shouldn't be able to push to a non-bare remote */
