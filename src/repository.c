@@ -582,9 +582,9 @@ int git_repository_config__weakptr(git_config **out, git_repository *repo)
 		git_buf system_buf = GIT_BUF_INIT;
 		git_config *config;
 
-		git_config_find_global_r(&global_buf);
-		git_config_find_xdg_r(&xdg_buf);
-		git_config_find_system_r(&system_buf);
+		git_config_find_global(&global_buf);
+		git_config_find_xdg(&xdg_buf);
+		git_config_find_system(&system_buf);
 
 		/* If there is no global file, open a backend for it anyway */
 		if (git_buf_len(&global_buf) == 0)

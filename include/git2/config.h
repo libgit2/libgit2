@@ -9,6 +9,7 @@
 
 #include "common.h"
 #include "types.h"
+#include "buffer.h"
 
 /**
  * @file git2/config.h
@@ -90,11 +91,10 @@ typedef struct {
  * This method will not guess the path to the xdg compatible
  * config file (.config/git/config).
  *
- * @param out Buffer to store the path in
- * @param length size of the buffer in bytes
- * @return 0 if a global configuration file has been found. Its path will be stored in `buffer`.
+ * @param out Pointer to a user-allocated git_buf in which to store the path
+ * @return 0 if a global configuration file has been found. Its path will be stored in `out`.
  */
-GIT_EXTERN(int) git_config_find_global(char *out, size_t length);
+GIT_EXTERN(int) git_config_find_global(git_buf *out);
 
 /**
  * Locate the path to the global xdg compatible configuration file
@@ -107,25 +107,23 @@ GIT_EXTERN(int) git_config_find_global(char *out, size_t length);
  * may be used on any `git_config` call to load the
  * xdg compatible configuration file.
  *
- * @param out Buffer to store the path in
- * @param length size of the buffer in bytes
+ * @param out Pointer to a user-allocated git_buf in which to store the path
  * @return 0 if a xdg compatible configuration file has been
- *	found. Its path will be stored in `buffer`.
+ *	found. Its path will be stored in `out`.
  */
-GIT_EXTERN(int) git_config_find_xdg(char *out, size_t length);
+GIT_EXTERN(int) git_config_find_xdg(git_buf *out);
 
 /**
  * Locate the path to the system configuration file
  *
  * If /etc/gitconfig doesn't exist, it will look for
  * %PROGRAMFILES%\Git\etc\gitconfig.
-
- * @param out Buffer to store the path in
- * @param length size of the buffer in bytes
+ *
+ * @param out Pointer to a user-allocated git_buf in which to store the path
  * @return 0 if a system configuration file has been
- *	found. Its path will be stored in `buffer`.
+ *	found. Its path will be stored in `out`.
  */
-GIT_EXTERN(int) git_config_find_system(char *out, size_t length);
+GIT_EXTERN(int) git_config_find_system(git_buf *out);
 
 /**
  * Open the global, XDG and system configuration files
