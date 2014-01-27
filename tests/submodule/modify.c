@@ -172,7 +172,7 @@ void test_submodule_modify__edit_and_save(void)
 
 	cl_git_pass(git_submodule_lookup(&sm1, g_repo, "sm_changed_head"));
 
-	old_url = git__strdup(git_submodule_url(sm1));
+	git__strdup(&old_url, git_submodule_url(sm1));
 
 	/* modify properties of submodule */
 	cl_git_pass(git_submodule_set_url(sm1, SM_LIBGIT2_URL));

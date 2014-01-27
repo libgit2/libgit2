@@ -15,38 +15,43 @@
 #include "fileops.h"
 #include "config.h"
 
-static git_diff_delta *diff_delta__dup(
-	const git_diff_delta *d, git_pool *pool)
+static int diff_delta__dup(
+	git_diff_delta **out,
+	const git_diff_delta *d,
+	git_pool *pool)
 {
-	git_diff_delta *delta = git__malloc(sizeof(git_diff_delta));
-	if (!delta)
-		return NULL;
+	git_diff_delta *delta;
+
+	*out = NULL;
+
+	if (git__malloc(&delta, sizeof(git_diff_delta)) < 0)
+		return -1;
 
 	memcpy(delta, d, sizeof(git_diff_delta));
 	GIT_DIFF_FLAG__CLEAR_INTERNAL(delta->flags);
 
 	if (d->old_file.path != NULL) {
-		delta->old_file.path = git_pool_strdup(pool, d->old_file.path);
-		if (delta->old_file.path == NULL)
+		if (git_pool_strdup(&delta->old_file.path, pool, d->old_file.path) < 0)
 			goto fail;
 	}
 
 	if (d->new_file.path != d->old_file.path && d->new_file.path != NULL) {
-		delta->new_file.path = git_pool_strdup(pool, d->new_file.path);
-		if (delta->new_file.path == NULL)
+		if (git_pool_strdup(&delta->new_file.path, pool, d->new_file.path) < 0)
 			goto fail;
 	} else {
 		delta->new_file.path = delta->old_file.path;
 	}
 
-	return delta;
+	*out = delta;
+	return 0;
 
 fail:
 	git__free(delta);
-	return NULL;
+	return -1;
 }
 
-static git_diff_delta *diff_delta__merge_like_cgit(
+static int diff_delta__merge_like_cgit(
+	git_diff_delta **out,
 	const git_diff_delta *a,
 	const git_diff_delta *b,
 	git_pool *pool)
@@ -67,11 +72,15 @@ static git_diff_delta *diff_delta__merge_like_cgit(
 
 	/* if f2 == f3 or f2 is deleted, then just dup the 'a' diff */
 	if (b->status == GIT_DELTA_UNMODIFIED || a->status == GIT_DELTA_DELETED)
-		return diff_delta__dup(a, pool);
+		return diff_delta__dup(out, a, pool);
 
 	/* otherwise, base this diff on the 'b' diff */
-	if ((dup = diff_delta__dup(b, pool)) == NULL)
-		return NULL;
+	if (diff_delta__dup(&dup, b, pool) < 0) {
+		*out = NULL;
+		return -1;
+	}
+
+	*out = dup;
 
 	/* If 'a' status is uninteresting, then we're done */
 	if (a->status == GIT_DELTA_UNMODIFIED)
@@ -96,10 +105,11 @@ static git_diff_delta *diff_delta__merge_like_cgit(
 	dup->old_file.size  = a->old_file.size;
 	dup->old_file.flags = a->old_file.flags;
 
-	return dup;
+	return 0;
 }
 
-static git_diff_delta *diff_delta__merge_like_cgit_reversed(
+static int diff_delta__merge_like_cgit_reversed(
+	git_diff_delta **out,
 	const git_diff_delta *a,
 	const git_diff_delta *b,
 	git_pool *pool)
@@ -109,13 +119,17 @@ static git_diff_delta *diff_delta__merge_like_cgit_reversed(
 	/* reversed version of above logic */
 
 	if (a->status == GIT_DELTA_UNMODIFIED)
-		return diff_delta__dup(b, pool);
+		return diff_delta__dup(out, b, pool);
 
-	if ((dup = diff_delta__dup(a, pool)) == NULL)
-		return NULL;
+	if (diff_delta__dup(&dup, a, pool) < 0) {
+		*out = NULL;
+		return -1;
+	}
+
+	*out = dup;
 
 	if (b->status == GIT_DELTA_UNMODIFIED || b->status == GIT_DELTA_UNTRACKED)
-		return dup;
+		return 0;
 
 	if (dup->status == GIT_DELTA_DELETED) {
 		if (b->status == GIT_DELTA_ADDED)
@@ -129,7 +143,7 @@ static git_diff_delta *diff_delta__merge_like_cgit_reversed(
 	dup->old_file.size  = b->old_file.size;
 	dup->old_file.flags = b->old_file.flags;
 
-	return dup;
+	return 0;
 }
 
 int git_diff_merge(git_diff *onto, const git_diff *from)
@@ -168,18 +182,21 @@ int git_diff_merge(git_diff *onto, const git_diff *from)
 			STRCMP_CASESELECT(ignore_case, o->old_file.path, f->old_file.path);
 
 		if (cmp < 0) {
-			delta = diff_delta__dup(o, &onto_pool);
+			error = diff_delta__dup(&delta, o, &onto_pool);
 			i++;
 		} else if (cmp > 0) {
-			delta = diff_delta__dup(f, &onto_pool);
+			error = diff_delta__dup(&delta, f, &onto_pool);
 			j++;
 		} else {
-			delta = reversed ?
-				diff_delta__merge_like_cgit_reversed(o, f, &onto_pool) :
-				diff_delta__merge_like_cgit(o, f, &onto_pool);
+			error = reversed ?
+				diff_delta__merge_like_cgit_reversed(&delta, o, f, &onto_pool) :
+				diff_delta__merge_like_cgit(&delta, o, f, &onto_pool);
 			i++;
 			j++;
 		}
+
+		if (error)
+			break;
 
 		/* the ignore rules for the target may not match the source
 		 * or the result of a merged delta could be skippable...
@@ -203,10 +220,8 @@ int git_diff_merge(git_diff *onto, const git_diff *from)
 			onto->new_src = from->new_src;
 
 		/* prefix strings also come from old pool, so recreate those.*/
-		onto->opts.old_prefix =
-			git_pool_strdup_safe(&onto->pool, onto->opts.old_prefix);
-		onto->opts.new_prefix =
-			git_pool_strdup_safe(&onto->pool, onto->opts.new_prefix);
+		if ((error = git_pool_strdup_safe(&onto->opts.old_prefix, &onto->pool, onto->opts.old_prefix)) == 0)
+			error = git_pool_strdup_safe(&onto->opts.new_prefix, &onto->pool, onto->opts.new_prefix);
 	}
 
 	git_vector_free_deep(&onto_new);
@@ -345,8 +360,8 @@ static int normalize_find_opts(
 
 	/* assign the internal metric with whitespace flag as payload */
 	if (!opts->metric) {
-		opts->metric = git__malloc(sizeof(git_diff_similarity_metric));
-		GITERR_CHECK_ALLOC(opts->metric);
+		if (git__malloc(&opts->metric, sizeof(git_diff_similarity_metric)) < 0)
+			return -1;
 
 		opts->metric->file_signature = git_diff_find_similar__hashsig_for_file;
 		opts->metric->buffer_signature = git_diff_find_similar__hashsig_for_buf;
@@ -367,9 +382,11 @@ static int normalize_find_opts(
 static int insert_delete_side_of_split(
 	git_diff *diff, git_vector *onto, const git_diff_delta *delta)
 {
+	git_diff_delta *deleted;
+
 	/* make new record for DELETED side of split */
-	git_diff_delta *deleted = diff_delta__dup(delta, &diff->pool);
-	GITERR_CHECK_ALLOC(deleted);
+	if (diff_delta__dup(&deleted, delta, &diff->pool) < 0)
+		return -1;
 
 	deleted->status = GIT_DELTA_DELETED;
 	deleted->nfiles = 1;
@@ -836,8 +853,8 @@ int git_diff_find_similar(
 	if ((opts.flags & GIT_DIFF_FIND_ALL) == 0)
 		goto cleanup;
 
-	sigcache = git__calloc(num_deltas * 2, sizeof(void *));
-	GITERR_CHECK_ALLOC(sigcache);
+	if (git__calloc(&sigcache, num_deltas * 2, sizeof(void *)) < 0)
+		return -1;
 
 	/* Label rename sources and targets
 	 *
@@ -859,15 +876,11 @@ int git_diff_find_similar(
 	if (!num_srcs || !num_tgts)
 		goto cleanup;
 
-	src2tgt = git__calloc(num_deltas, sizeof(diff_find_match));
-	GITERR_CHECK_ALLOC(src2tgt);
-	tgt2src = git__calloc(num_deltas, sizeof(diff_find_match));
-	GITERR_CHECK_ALLOC(tgt2src);
-
-	if (FLAG_SET(&opts, GIT_DIFF_FIND_COPIES)) {
-		tgt2src_copy = git__calloc(num_deltas, sizeof(diff_find_match));
-		GITERR_CHECK_ALLOC(tgt2src_copy);
-	}
+	if ((error = git__calloc(&src2tgt, num_deltas, sizeof(diff_find_match))) < 0 ||
+		(error = git__calloc(&tgt2src, num_deltas, sizeof(diff_find_match))) < 0 ||
+		(FLAG_SET(&opts, GIT_DIFF_FIND_COPIES) &&
+		(error = git__calloc(&tgt2src_copy, num_deltas, sizeof(diff_find_match))) < 0))
+		goto cleanup;
 
 	/*
 	 * Find best-fit matches for rename / copy candidates

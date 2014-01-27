@@ -77,11 +77,12 @@ int git_pathspec__vinit(
 		return -1;
 
 	for (i = 0; i < strspec->count; ++i) {
-		int ret;
+		git_attr_fnmatch *match;
 		const char *pattern = strspec->strings[i];
-		git_attr_fnmatch *match = git__calloc(1, sizeof(git_attr_fnmatch));
-		if (!match)
-			return -1;
+		int ret;
+
+		if ((ret = git__calloc(&match, 1, sizeof(git_attr_fnmatch))) < 0)
+			return ret;
 
 		match->flags = GIT_ATTR_FNMATCH_ALLOWSPACE | GIT_ATTR_FNMATCH_ALLOWNEG;
 
@@ -254,11 +255,11 @@ void git_pathspec__clear(git_pathspec *ps)
 
 int git_pathspec_new(git_pathspec **out, const git_strarray *pathspec)
 {
+	git_pathspec *ps = NULL;
 	int error = 0;
-	git_pathspec *ps = git__malloc(sizeof(git_pathspec));
-	GITERR_CHECK_ALLOC(ps);
-
-	if ((error = git_pathspec__init(ps, pathspec)) < 0) {
+	
+	if ((error = git__malloc(&ps, sizeof(git_pathspec))) < 0 ||
+		(error = git_pathspec__init(ps, pathspec)) < 0) {
 		git__free(ps);
 		return error;
 	}
@@ -304,14 +305,19 @@ static void pathspec_match_free(git_pathspec_match_list *m)
 	git__free(m);
 }
 
-static git_pathspec_match_list *pathspec_match_alloc(
-	git_pathspec *ps, int datatype)
+static int pathspec_match_alloc(
+	git_pathspec_match_list **out,
+	git_pathspec *ps,
+	int datatype)
 {
-	git_pathspec_match_list *m = git__calloc(1, sizeof(git_pathspec_match_list));
+	git_pathspec_match_list *m;
 
-	if (m != NULL && git_pool_init(&m->pool, 1, 0) < 0) {
+	*out = NULL;
+	
+	if (git__calloc(&m, 1, sizeof(git_pathspec_match_list)) < 0 ||
+		git_pool_init(&m->pool, 1, 0) < 0) {
 		pathspec_match_free(m);
-		m = NULL;
+		return -1;
 	}
 
 	/* need to keep reference to pathspec and increment refcount because
@@ -322,7 +328,8 @@ static git_pathspec_match_list *pathspec_match_alloc(
 	m->pathspec = ps;
 	m->datatype = datatype;
 
-	return m;
+	*out = m;
+	return 0;
 }
 
 GIT_INLINE(size_t) pathspec_mark_pattern(git_bitvec *used, size_t pos)
@@ -382,7 +389,7 @@ static int pathspec_build_failure_array(
 
 		pat = git_vector_get(patterns, pos);
 
-		if ((*failed = git_pool_strdup(pool, pat->pattern)) == NULL)
+		if ((git_pool_strdup(failed, pool, pat->pattern)) < 0)
 			return -1;
 	}
 
@@ -407,15 +414,14 @@ static int pathspec_match_from_iterator(
 	git_bitvec used_patterns;
 	char **file;
 
+	if (out)
+		*out = NULL;
+
 	if (git_bitvec_init(&used_patterns, patterns->length) < 0)
 		return -1;
 
-	if (out) {
-		*out = m = pathspec_match_alloc(ps, PATHSPEC_DATATYPE_STRINGS);
-		GITERR_CHECK_ALLOC(m);
-	}
-
-	if ((error = git_iterator_reset(iter, ps->prefix, ps->prefix)) < 0)
+	if ((out && (error = pathspec_match_alloc(&m, ps, PATHSPEC_DATATYPE_STRINGS)) < 0) ||
+		(error = git_iterator_reset(iter, ps->prefix, ps->prefix)) < 0)
 		goto done;
 
 	if (git_iterator_type(iter) == GIT_ITERATOR_TYPE_WORKDIR &&
@@ -465,11 +471,13 @@ static int pathspec_match_from_iterator(
 		}
 
 		/* insert matched path into matches array */
-		if ((file = (char **)git_array_alloc(m->matches)) == NULL ||
-			(*file = git_pool_strdup(&m->pool, entry->path)) == NULL) {
+		if ((file = git_array_alloc(m->matches)) == NULL) {
 			error = -1;
 			goto done;
 		}
+
+		if ((error = git_pool_strdup(file, &m->pool, entry->path)) < 0)
+			goto done;
 	}
 
 	if (error < 0 && error != GIT_ITEROVER)
@@ -493,8 +501,11 @@ done:
 
 	if (error < 0) {
 		pathspec_match_free(m);
-		if (out) *out = NULL;
+		m = NULL;
 	}
+
+	if (out)
+		*out = m;
 
 	return error;
 }
@@ -599,8 +610,12 @@ int git_pathspec_match_diff(
 		return -1;
 
 	if (out) {
-		*out = m = pathspec_match_alloc(ps, PATHSPEC_DATATYPE_DIFF);
-		GITERR_CHECK_ALLOC(m);
+		if (pathspec_match_alloc(&m, ps, PATHSPEC_DATATYPE_DIFF) < 0) {
+			git_bitvec_clear(&used_patterns);
+			return -1;
+		}
+
+		*out = m;
 	}
 
 	pathspec_match_context_init(
@@ -639,12 +654,11 @@ int git_pathspec_match_diff(
 		}
 
 		/* insert matched delta into matches array */
-		if (!(match = (const git_diff_delta **)git_array_alloc(m->matches))) {
+		if ((match = git_array_alloc(m->matches)) == NULL) {
 			error = -1;
 			goto done;
-		} else {
+		} else
 			*match = delta;
-		}
 	}
 
 	/* insert patterns that had no matches into failures array */

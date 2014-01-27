@@ -544,10 +544,7 @@ int git_submodule_set_url(git_submodule *submodule, const char *url)
 
 	git__free(submodule->url);
 
-	submodule->url = git__strdup(url);
-	GITERR_CHECK_ALLOC(submodule->url);
-
-	return 0;
+	return git__strdup(&submodule->url, url);
 }
 
 const git_oid *git_submodule_index_id(git_submodule *submodule)
@@ -977,34 +974,34 @@ int git_submodule_location(unsigned int *location, git_submodule *sm)
  * INTERNAL FUNCTIONS
  */
 
-static git_submodule *submodule_alloc(git_repository *repo, const char *name)
+static int submodule_alloc(git_submodule **out, git_repository *repo, const char *name)
 {
 	size_t namelen;
 	git_submodule *sm;
 
+	*out = NULL;
+
 	if (!name || !(namelen = strlen(name))) {
 		giterr_set(GITERR_SUBMODULE, "Invalid submodule name");
-		return NULL;
+		return -1;
 	}
 
-	sm = git__calloc(1, sizeof(git_submodule));
-	if (sm == NULL)
-		return NULL;
-
-	sm->name = sm->path = git__strdup(name);
-	if (!sm->name) {
+	if (git__calloc(&sm, 1, sizeof(git_submodule)) < 0 ||
+		git__strdup(&sm->name, name) < 0) {
 		git__free(sm);
-		return NULL;
+		return -1;
 	}
 
 	GIT_REFCOUNT_INC(sm);
+	sm->path = sm->name;
 	sm->ignore = sm->ignore_default = GIT_SUBMODULE_IGNORE_NONE;
 	sm->update = sm->update_default = GIT_SUBMODULE_UPDATE_CHECKOUT;
 	sm->fetch_recurse = GIT_SUBMODULE_RECURSE_YES;
 	sm->repo   = repo;
 	sm->branch = NULL;
 
-	return sm;
+	*out = sm;
+	return 0;
 }
 
 static void submodule_release(git_submodule *sm)
@@ -1046,8 +1043,8 @@ static int submodule_get(
 		pos = git_strmap_lookup_index(smcfg, alternate);
 
 	if (!git_strmap_valid_index(smcfg, pos)) {
-		sm = submodule_alloc(repo, name);
-		GITERR_CHECK_ALLOC(sm);
+		if (submodule_alloc(&sm, repo, name) < 0)
+			return -1;
 
 		/* insert value at name - if another thread beats us to it, then use
 		 * their record and release our own.
@@ -1161,11 +1158,9 @@ static int submodule_load_from_config(
 	if (strcmp(sm->name, name.ptr) != 0) {
 		alternate = sm->name = git_buf_detach(&name);
 	} else if (path && strcmp(path, sm->path) != 0) {
-		alternate = sm->path = git__strdup(value);
-		if (!sm->path) {
-			error = -1;
+		if ((error = git__strdup(&sm->path, value)) < 0)
 			goto done;
-		}
+		alternate = sm->path;
 	}
 
 	if (alternate) {
@@ -1196,19 +1191,15 @@ static int submodule_load_from_config(
 		git__free(sm->url);
 		sm->url = NULL;
 
-		if (value != NULL && (sm->url = git__strdup(value)) == NULL) {
-			error = -1;
+		if (value != NULL && (error = git__strdup(&sm->url, value)) < 0)
 			goto done;
-		}
 	}
 	else if (strcasecmp(property, "branch") == 0) {
 		git__free(sm->branch);
 		sm->branch = NULL;
 
-		if (value != NULL && (sm->branch = git__strdup(value)) == NULL) {
-			error = -1;
+		if (value != NULL && (error = git__strdup(&sm->branch, value)) < 0)
 			goto done;
-		}
 	}
 	else if (strcasecmp(property, "update") == 0) {
 		if ((error = git_submodule_parse_update(&sm->update, value)) < 0)
@@ -1394,10 +1385,8 @@ static int load_submodule_config(git_repository *repo)
 	/* Submodule data is kept in a hashtable keyed by both name and path.
 	 * These are usually the same, but that is not guaranteed.
 	 */
-	if (!repo->submodules) {
-		repo->submodules = git_strmap_alloc();
-		GITERR_CHECK_ALLOC(repo->submodules);
-	}
+	if (!repo->submodules && (repo->submodules = git_strmap_alloc()) == NULL)
+		return -1;
 
 	/* add submodule information from index */
 

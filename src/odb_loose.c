@@ -258,19 +258,21 @@ static int inflate_buffer(void *in, size_t inlen, void *out, size_t outlen)
 	return 0;
 }
 
-static void *inflate_tail(z_stream *s, void *hb, size_t used, obj_hdr *hdr)
+static int inflate_tail(void **out, z_stream *s, void *hb, size_t used, obj_hdr *hdr)
 {
 	unsigned char *buf, *head = hb;
 	size_t tail;
+
+	*out = NULL;
 
 	/*
 	 * allocate a buffer to hold the inflated data and copy the
 	 * initial sequence of inflated data from the tail of the
 	 * head buffer, if any.
 	 */
-	if ((buf = git__malloc(hdr->size + 1)) == NULL) {
+	if (git__malloc(&buf, hdr->size + 1) < 0) {
 		inflateEnd(s);
-		return NULL;
+		return -1;
 	}
 	tail = s->total_out - used;
 	if (used > 0 && tail > 0) {
@@ -289,11 +291,12 @@ static void *inflate_tail(z_stream *s, void *hb, size_t used, obj_hdr *hdr)
 		set_stream_output(s, buf + used, hdr->size - used);
 		if (finish_inflate(s)) {
 			git__free(buf);
-			return NULL;
+			return -1;
 		}
 	}
 
-	return buf;
+	*out = buf;
+	return 0;
 }
 
 /*
@@ -321,8 +324,8 @@ static int inflate_packlike_loose_disk_obj(git_rawobj *out, git_buf *obj)
 	/*
 	 * allocate a buffer and inflate the data into it
 	 */
-	buf = git__malloc(hdr.size + 1);
-	GITERR_CHECK_ALLOC(buf);
+	if (git__malloc(&buf, hdr.size + 1) < 0)
+		return -1;
 
 	in = ((unsigned char *)obj->ptr) + used;
 	len = obj->size - used;
@@ -368,7 +371,7 @@ static int inflate_disk_obj(git_rawobj *out, git_buf *obj)
 	 * allocate a buffer and inflate the object data into it
 	 * (including the initial sequence in the head buffer).
 	 */
-	if ((buf = inflate_tail(&zs, head, used, &hdr)) == NULL)
+	if (inflate_tail(&buf, &zs, head, used, &hdr) < 0)
 		return -1;
 	buf[hdr.size] = '\0';
 
@@ -821,8 +824,8 @@ static int loose_backend__stream(git_odb_stream **stream_out, git_odb_backend *_
 
 	hdrlen = git_odb__format_object_header(hdr, sizeof(hdr), length, type);
 
-	stream = git__calloc(1, sizeof(loose_writestream));
-	GITERR_CHECK_ALLOC(stream);
+	if (git__calloc(&stream, 1, sizeof(loose_writestream)) < 0)
+		return -1;
 
 	stream->stream.backend = _backend;
 	stream->stream.read = NULL; /* read only */
@@ -908,10 +911,12 @@ int git_odb_backend_loose(
 
 	assert(backend_out && objects_dir);
 
+	*backend_out = NULL;
+
 	objects_dirlen = strlen(objects_dir);
 
-	backend = git__calloc(1, sizeof(loose_backend) + objects_dirlen + 2);
-	GITERR_CHECK_ALLOC(backend);
+	if (git__calloc(&backend, 1, sizeof(loose_backend) + objects_dirlen + 2) < 0)
+		return -1;
 
 	backend->parent.version = GIT_ODB_BACKEND_VERSION;
 	backend->objects_dirlen = objects_dirlen;

@@ -100,9 +100,13 @@ static int diff_patch_init_from_diff(
 static int diff_patch_alloc_from_diff(
 	git_patch **out, git_diff *diff, size_t delta_index)
 {
+	git_patch *patch;
 	int error;
-	git_patch *patch = git__calloc(1, sizeof(git_patch));
-	GITERR_CHECK_ALLOC(patch);
+
+	if (git__calloc(&patch, 1, sizeof(git_patch)) < 0) {
+		*out = NULL;
+		return -1;
+	}
 
 	if (!(error = diff_patch_init_from_diff(patch, diff, delta_index))) {
 		patch->flags |= GIT_DIFF_PATCH_ALLOCATED;
@@ -380,8 +384,10 @@ static int diff_patch_with_delta_alloc(
 	size_t old_len = *old_path ? strlen(*old_path) : 0;
 	size_t new_len = *new_path ? strlen(*new_path) : 0;
 
-	*out = pd = git__calloc(1, sizeof(*pd) + old_len + new_len + 2);
-	GITERR_CHECK_ALLOC(pd);
+	if (git__calloc(&pd, 1, sizeof(*pd) + old_len + new_len + 2) < 0) {
+		*out = NULL;
+		return -1;
+	}
 
 	pd->patch.flags = GIT_DIFF_PATCH_ALLOCATED;
 
@@ -397,6 +403,7 @@ static int diff_patch_with_delta_alloc(
 	} else if (*old_path)
 		*new_path = &pd->paths[0];
 
+	*out = pd;
 	return 0;
 }
 

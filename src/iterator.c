@@ -31,9 +31,8 @@
 	(P)->base.cb      = &(P)->cb; \
 	ITERATOR_SET_CB(P,NAME_LC); \
 	(P)->base.repo    = (REPO); \
-	(P)->base.start   = start ? git__strdup(start) : NULL; \
-	(P)->base.end     = end ? git__strdup(end) : NULL; \
-	if ((start && !(P)->base.start) || (end && !(P)->base.end)) { \
+	if ((start && git__strdup(&(P)->base.start, start) < 0) || \
+		(end && git__strdup(&(P)->base.end, end) < 0)) { \
 		git__free(P); return -1; } \
 	(P)->base.prefixcomp = git__prefixcmp; \
 	(P)->base.flags = flags & ~ITERATOR_CASE_FLAGS; \
@@ -61,15 +60,15 @@ static int iterator__reset_range(
 	if (start) {
 		if (iter->start)
 			git__free(iter->start);
-		iter->start = git__strdup(start);
-		GITERR_CHECK_ALLOC(iter->start);
+		if (git__strdup(&iter->start, start) < 0)
+			return -1;
 	}
 
 	if (end) {
 		if (iter->end)
 			git__free(iter->end);
-		iter->end = git__strdup(end);
-		GITERR_CHECK_ALLOC(iter->end);
+		if (git__strdup(&iter->end, end) < 0)
+			return -1;
 	}
 
 	iter->flags &= ~GIT_ITERATOR_FIRST_ACCESS;
@@ -152,8 +151,10 @@ int git_iterator_for_nothing(
 	const char *start,
 	const char *end)
 {
-	empty_iterator *i = git__calloc(1, sizeof(empty_iterator));
-	GITERR_CHECK_ALLOC(i);
+	empty_iterator *i;
+	
+	if (git__calloc(&i, 1, sizeof(empty_iterator)) < 0)
+		return -1;
 
 #define empty_iterator__current empty_iterator__noop
 #define empty_iterator__advance empty_iterator__noop
@@ -344,9 +345,9 @@ static int tree_iterator__push_frame(tree_iterator *ti)
 	for (i = head->current; i < head->next; ++i)
 		n_entries += git_tree_entrycount(head->entries[i]->tree);
 
-	tf = git__calloc(sizeof(tree_iterator_frame) +
-		n_entries * sizeof(tree_iterator_entry *), 1);
-	GITERR_CHECK_ALLOC(tf);
+	if (git__calloc(&tf, sizeof(tree_iterator_frame) +
+		n_entries * sizeof(tree_iterator_entry *), 1) < 0)
+		return -1;
 
 	tf->n_entries = n_entries;
 
@@ -359,8 +360,12 @@ static int tree_iterator__push_frame(tree_iterator *ti)
 		size_t j, max_j = git_tree_entrycount(tree);
 
 		for (j = 0; j < max_j; ++j) {
-			tree_iterator_entry *entry = git_pool_malloc(&ti->pool, 1);
-			GITERR_CHECK_ALLOC(entry);
+			tree_iterator_entry *entry;
+			
+			if (git_pool_malloc(&entry, &ti->pool, 1) < 0) {
+				git__free(tf);
+				return -1;
+			}
 
 			entry->parent = head->entries[i];
 			entry->te     = git_tree_entry_byindex(tree, j);
@@ -584,16 +589,20 @@ static void tree_iterator__free(git_iterator *self)
 
 static int tree_iterator__create_root_frame(tree_iterator *ti, git_tree *tree)
 {
+	tree_iterator_frame *root = NULL;
 	size_t sz = sizeof(tree_iterator_frame) + sizeof(tree_iterator_entry);
-	tree_iterator_frame *root = git__calloc(sz, sizeof(char));
-	GITERR_CHECK_ALLOC(root);
+	
+	if (git__calloc(&root, sz, sizeof(char)) < 0 ||
+		git_pool_calloc(&root->entries[0], &ti->pool, 1) < 0) {
+		git__free(root);
+		return -1;
+	}
 
 	root->n_entries  = 1;
 	root->next       = 1;
 	root->start      = ti->base.start;
 	root->startlen   = root->start ? strlen(root->start) : 0;
-	root->entries[0] = git_pool_mallocz(&ti->pool, 1);
-	GITERR_CHECK_ALLOC(root->entries[0]);
+
 	root->entries[0]->tree = tree;
 
 	ti->head = ti->root = root;
@@ -617,8 +626,8 @@ int git_iterator_for_tree(
 	if ((error = git_object_dup((git_object **)&tree, (git_object *)tree)) < 0)
 		return error;
 
-	ti = git__calloc(1, sizeof(tree_iterator));
-	GITERR_CHECK_ALLOC(ti);
+	if (git__calloc(&ti, 1, sizeof(tree_iterator)) < 0)
+		return -1;
 
 	ITERATOR_BASE_INIT(ti, tree, TREE, git_tree_owner(tree));
 
@@ -854,8 +863,10 @@ int git_iterator_for_index(
 	const char *start,
 	const char *end)
 {
-	index_iterator *ii = git__calloc(1, sizeof(index_iterator));
-	GITERR_CHECK_ALLOC(ii);
+	index_iterator *ii;
+
+	if (git__calloc(&ii, 1, sizeof(index_iterator)) < 0)
+		return -1;
 
 	ITERATOR_BASE_INIT(ii, index, INDEX, git_index_owner(index));
 
@@ -903,19 +914,26 @@ struct fs_iterator {
 
 #define FS_MAX_DEPTH 100
 
-static fs_iterator_frame *fs_iterator__alloc_frame(fs_iterator *fi)
+static int fs_iterator__alloc_frame(fs_iterator_frame **out, fs_iterator *fi)
 {
-	fs_iterator_frame *ff = git__calloc(1, sizeof(fs_iterator_frame));
+	fs_iterator_frame *ff;
+
 	git_vector_cmp entry_compare = CASESELECT(
 		iterator__ignore_case(fi),
 		git_path_with_stat_cmp_icase, git_path_with_stat_cmp);
 
+	*out = NULL;
+	
+	if (git__calloc(&ff, 1, sizeof(fs_iterator_frame)) < 0)
+		return -1;
+
 	if (ff && git_vector_init(&ff->entries, 0, entry_compare) < 0) {
 		git__free(ff);
-		ff = NULL;
+		return -1;
 	}
 
-	return ff;
+	*out = ff;
+	return 0;
 }
 
 static void fs_iterator__free_frame(fs_iterator_frame *ff)
@@ -978,8 +996,8 @@ static int fs_iterator__expand_dir(fs_iterator *fi)
 		return -1;
 	}
 
-	ff = fs_iterator__alloc_frame(fi);
-	GITERR_CHECK_ALLOC(ff);
+	if (fs_iterator__alloc_frame(&ff, fi) < 0)
+		return -1;
 
 	error = git_path_dirload_with_stat(
 		fi->path.ptr, fi->root_len, fi->dirload_flags,
@@ -1236,8 +1254,10 @@ int git_iterator_for_filesystem(
 	const char *start,
 	const char *end)
 {
-	fs_iterator *fi = git__calloc(1, sizeof(fs_iterator));
-	GITERR_CHECK_ALLOC(fi);
+	fs_iterator *fi;
+	
+	if (git__calloc(&fi, 1, sizeof(fs_iterator)) < 0)
+		return -1;
 
 	ITERATOR_BASE_INIT(fi, fs, FS, NULL);
 
@@ -1347,8 +1367,9 @@ int git_iterator_for_workdir_ext(
 	}
 
 	/* initialize as an fs iterator then do overrides */
-	wi = git__calloc(1, sizeof(workdir_iterator));
-	GITERR_CHECK_ALLOC(wi);
+	if (git__calloc(&wi, 1, sizeof(workdir_iterator)) < 0)
+		return -1;
+
 	ITERATOR_BASE_INIT((&wi->fi), fs, FS, repo);
 
 	wi->fi.base.type = GIT_ITERATOR_TYPE_WORKDIR;

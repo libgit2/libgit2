@@ -214,10 +214,8 @@ int git_filebuf_open(git_filebuf *file, const char *path, int flags, mode_t mode
 	file->last_error = BUFERR_OK;
 
 	/* Allocate the main cache buffer */
-	if (!file->do_not_buffer) {
-		file->buffer = git__malloc(file->buf_size);
-		GITERR_CHECK_ALLOC(file->buffer);
-	}
+	if (!file->do_not_buffer && git__malloc(&file->buffer, file->buf_size) < 0)
+		goto cleanup;
 
 	/* If we are hashing on-write, allocate a new hash context */
 	if (flags & GIT_FILEBUF_HASH_CONTENTS) {
@@ -238,8 +236,8 @@ int git_filebuf_open(git_filebuf *file, const char *path, int flags, mode_t mode
 		}
 
 		/* Allocate the Zlib cache buffer */
-		file->z_buf = git__malloc(file->buf_size);
-		GITERR_CHECK_ALLOC(file->z_buf);
+		if (git__malloc(&file->z_buf, file->buf_size) < 0)
+			goto cleanup;
 
 		/* Never flush */
 		file->flush_mode = Z_NO_FLUSH;
@@ -263,18 +261,19 @@ int git_filebuf_open(git_filebuf *file, const char *path, int flags, mode_t mode
 
 		/* No original path */
 		file->path_original = NULL;
-		file->path_lock = git_buf_detach(&tmp_path);
-		GITERR_CHECK_ALLOC(file->path_lock);
+
+		if ((file->path_lock = git_buf_detach(&tmp_path)) == NULL)
+			goto cleanup;
 	} else {
 		path_len = strlen(path);
 
 		/* Save the original path of the file */
-		file->path_original = git__strdup(path);
-		GITERR_CHECK_ALLOC(file->path_original);
+		if (git__strdup(&file->path_original, path) < 0)
+			goto cleanup;
 
 		/* create the locking path by appending ".lock" to the original */
-		file->path_lock = git__malloc(path_len + GIT_FILELOCK_EXTLENGTH);
-		GITERR_CHECK_ALLOC(file->path_lock);
+		if (git__malloc(&file->path_lock, path_len + GIT_FILELOCK_EXTLENGTH) < 0)
+			goto cleanup;
 
 		memcpy(file->path_lock, file->path_original, path_len);
 		memcpy(file->path_lock + path_len, GIT_FILELOCK_EXTENSION, GIT_FILELOCK_EXTLENGTH);
@@ -310,8 +309,9 @@ int git_filebuf_hash(git_oid *oid, git_filebuf *file)
 int git_filebuf_commit_at(git_filebuf *file, const char *path)
 {
 	git__free(file->path_original);
-	file->path_original = git__strdup(path);
-	GITERR_CHECK_ALLOC(file->path_original);
+	
+	if (git__strdup(&file->path_original, path) < 0)
+		return -1;
 
 	return git_filebuf_commit(file);
 }
@@ -441,8 +441,7 @@ int git_filebuf_printf(git_filebuf *file, const char *format, ...)
 
 	} while ((size_t)len + 1 <= space_left);
 
-	tmp_buffer = git__malloc(len + 1);
-	if (!tmp_buffer) {
+	if (git__malloc(&tmp_buffer, len + 1) < 0) {
 		file->last_error = BUFERR_MEM;
 		return -1;
 	}

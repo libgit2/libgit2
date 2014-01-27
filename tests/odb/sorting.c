@@ -10,9 +10,7 @@ static git_odb_backend *new_backend(size_t position)
 {
 	fake_backend *b;
 
-	b = git__calloc(1, sizeof(fake_backend));
-	if (b == NULL)
-		return NULL;
+	cl_git_pass(git__calloc(&b, 1, sizeof(fake_backend)));
 
 	b->base.version = GIT_ODB_BACKEND_VERSION;
 	b->position = position;

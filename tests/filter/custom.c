@@ -102,8 +102,9 @@ static void bitflip_filter_free(git_filter *f)
 
 static git_filter *create_bitflip_filter(void)
 {
-	git_filter *filter = git__calloc(1, sizeof(git_filter));
-	cl_assert(filter);
+	git_filter *filter;
+	
+	cl_git_pass(git__calloc(&filter, 1, sizeof(git_filter)));
 
 	filter->version = GIT_FILTER_VERSION;
 	filter->attributes = "+bitflip";
@@ -153,8 +154,9 @@ static void reverse_filter_free(git_filter *f)
 
 static git_filter *create_reverse_filter(const char *attrs)
 {
-	git_filter *filter = git__calloc(1, sizeof(git_filter));
-	cl_assert(filter);
+	git_filter *filter;
+	
+	cl_git_pass(git__calloc(&filter, 1, sizeof(git_filter)));
 
 	filter->version = GIT_FILTER_VERSION;
 	filter->attributes = attrs;

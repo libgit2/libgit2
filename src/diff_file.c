@@ -277,8 +277,8 @@ static int diff_file_content_load_workdir_symlink(
 	 */
 	alloc_len = (ssize_t)(fc->file->size * 2) + 1;
 
-	fc->map.data = git__calloc(alloc_len, sizeof(char));
-	GITERR_CHECK_ALLOC(fc->map.data);
+	if (git__calloc(fc->map.data, alloc_len, sizeof(char)) < 0)
+		return -1;
 
 	fc->flags |= GIT_DIFF_FLAG__FREE_DATA;
 

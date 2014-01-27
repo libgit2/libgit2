@@ -119,8 +119,10 @@ struct git_delta_index {
 	struct index_entry *hash[GIT_FLEX_ARRAY];
 };
 
-struct git_delta_index *
-git_delta_create_index(const void *buf, unsigned long bufsize)
+int git_delta_create_index(
+	struct git_delta_index **out,
+	const void *buf,
+	unsigned long bufsize)
 {
 	unsigned int i, hsize, hmask, entries, prev_val, *hash_count;
 	const unsigned char *data, *buffer = buf;
@@ -129,8 +131,12 @@ git_delta_create_index(const void *buf, unsigned long bufsize)
 	void *mem;
 	unsigned long memsize;
 
-	if (!buf || !bufsize)
-		return NULL;
+	*out = NULL;
+
+	if (!buf || !bufsize) {
+		giterr_set(GITERR_INVALID, "Invalid buffer");
+		return -1;
+	}
 
 	/* Determine index hash size.  Note that indexing skips the
 	   first byte to allow for optimizing the rabin polynomial
@@ -152,9 +158,10 @@ git_delta_create_index(const void *buf, unsigned long bufsize)
 	memsize = sizeof(*index) +
 		  sizeof(*hash) * hsize +
 		  sizeof(*entry) * entries;
-	mem = git__malloc(memsize);
-	if (!mem)
-		return NULL;
+
+	if (git__malloc(&mem, memsize) < 0)
+		return -1;
+
 	index = mem;
 	mem = index->hash;
 	hash = mem;
@@ -168,10 +175,9 @@ git_delta_create_index(const void *buf, unsigned long bufsize)
 	memset(hash, 0, hsize * sizeof(*hash));
 
 	/* allocate an array to count hash entries */
-	hash_count = git__calloc(hsize, sizeof(*hash_count));
-	if (!hash_count) {
+	if (git__calloc(&hash_count, hsize, sizeof(*hash_count)) < 0) {
 		git__free(index);
-		return NULL;
+		return -1;
 	}
 
 	/* then populate the index */
@@ -224,7 +230,8 @@ git_delta_create_index(const void *buf, unsigned long bufsize)
 	}
 	git__free(hash_count);
 
-	return index;
+	*out = index;
+	return 0;
 }
 
 void git_delta_free_index(struct git_delta_index *index)
@@ -246,12 +253,12 @@ unsigned long git_delta_sizeof_index(struct git_delta_index *index)
  */
 #define MAX_OP_SIZE	(5 + 5 + 1 + RABIN_WINDOW + 7)
 
-void *
-git_delta_create(
+int git_delta_create(
+	void **delta_out,
+	unsigned long *delta_size,
 	const struct git_delta_index *index,
 	const void *trg_buf,
 	unsigned long trg_size,
-	unsigned long *delta_size,
 	unsigned long max_size)
 {
 	unsigned int i, outpos, outsize, moff, msize, val;
@@ -259,16 +266,20 @@ git_delta_create(
 	const unsigned char *ref_data, *ref_top, *data, *top;
 	unsigned char *out;
 
-	if (!trg_buf || !trg_size)
-		return NULL;
+	*delta_out = NULL;
+
+	if (!trg_buf || !trg_size) {
+		giterr_set(GITERR_INVALID, "Invalid buffer");
+		return -1;
+	}
 
 	outpos = 0;
 	outsize = 8192;
 	if (max_size && outsize >= max_size)
 		outsize = (unsigned int)(max_size + MAX_OP_SIZE + 1);
-	out = git__malloc(outsize);
-	if (!out)
-		return NULL;
+
+	if (git__malloc(&out, outsize) < 0)
+		return -1;
 
 	/* store reference buffer size */
 	i = index->src_size;
@@ -403,10 +414,9 @@ git_delta_create(
 				outsize = max_size + MAX_OP_SIZE + 1;
 			if (max_size && outpos > max_size)
 				break;
-			out = git__realloc(out, outsize);
-			if (!out) {
+			if (git__realloc(&out, out, outsize) < 0) {
 				git__free(tmp);
-				return NULL;
+				return -1;
 			}
 		}
 	}
@@ -416,9 +426,10 @@ git_delta_create(
 
 	if (max_size && outpos > max_size) {
 		git__free(out);
-		return NULL;
+		return -1;
 	}
 
+	*delta_out = out;
 	*delta_size = outpos;
-	return out;
+	return 0;
 }

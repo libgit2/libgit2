@@ -150,7 +150,8 @@ static int git_mwindow_close_lru(git_mwindow_file *mwf)
 }
 
 /* This gets called under lock from git_mwindow_open */
-static git_mwindow *new_window(
+static int new_window(
+	git_mwindow **out,
 	git_mwindow_file *mwf,
 	git_file fd,
 	git_off_t size,
@@ -161,10 +162,10 @@ static git_mwindow *new_window(
 	git_off_t len;
 	git_mwindow *w;
 
-	w = git__malloc(sizeof(*w));
+	*out = NULL;
 
-	if (w == NULL)
-		return NULL;
+	if (git__malloc(&w, sizeof(*w)) < 0)
+		return -1;
 
 	memset(w, 0x0, sizeof(*w));
 	w->offset = (offset / walign) * walign;
@@ -186,7 +187,7 @@ static git_mwindow *new_window(
 
 	if (git_futils_mmap_ro(&w->window_map, fd, w->offset, (size_t)len) < 0) {
 		git__free(w);
-		return NULL;
+		return -1;
 	}
 
 	ctl->mmap_calls++;
@@ -198,7 +199,8 @@ static git_mwindow *new_window(
 	if (ctl->open_windows > ctl->peak_open_windows)
 		ctl->peak_open_windows = ctl->open_windows;
 
-	return w;
+	*out = w;
+	return 0;
 }
 
 /*
@@ -236,8 +238,7 @@ unsigned char *git_mwindow_open(
 		 * one.
 		 */
 		if (!w) {
-			w = new_window(mwf, mwf->fd, mwf->size, offset);
-			if (w == NULL) {
+			if (new_window(&w, mwf, mwf->fd, mwf->size, offset) < 0) {
 				git_mutex_unlock(&git__mwindow_mutex);
 				return NULL;
 			}

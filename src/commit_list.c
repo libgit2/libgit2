@@ -10,6 +10,7 @@
 #include "revwalk.h"
 #include "pool.h"
 #include "odb.h"
+#include "oid.h"
 
 int git_commit_list_time_cmp(void *a, void *b)
 {
@@ -19,18 +20,27 @@ int git_commit_list_time_cmp(void *a, void *b)
 	return (commit_a->time < commit_b->time);
 }
 
-git_commit_list *git_commit_list_insert(git_commit_list_node *item, git_commit_list **list_p)
+int git_commit_list_insert(
+	git_commit_list_node *item,
+	git_commit_list **list_p)
 {
-	git_commit_list *new_list = git__malloc(sizeof(git_commit_list));
-	if (new_list != NULL) {
-		new_list->item = item;
-		new_list->next = *list_p;
+	git_commit_list *new_list;
+
+	if (git__malloc(&new_list, sizeof(git_commit_list)) < 0) {
+		*list_p = NULL;
+		return -1;
 	}
+
+	new_list->item = item;
+	new_list->next = *list_p;
 	*list_p = new_list;
-	return new_list;
+
+	return 0;
 }
 
-git_commit_list *git_commit_list_insert_by_date(git_commit_list_node *item, git_commit_list **list_p)
+int git_commit_list_insert_by_date(
+	git_commit_list_node *item,
+	git_commit_list **list_p)
 {
 	git_commit_list **pp = list_p;
 	git_commit_list *p;
@@ -45,29 +55,31 @@ git_commit_list *git_commit_list_insert_by_date(git_commit_list_node *item, git_
 	return git_commit_list_insert(item, pp);
 }
 
-git_commit_list_node *git_commit_list_alloc_node(git_revwalk *walk)
+int git_commit_list_alloc_node(git_commit_list_node **out, git_revwalk *walk)
 {
-	return (git_commit_list_node *)git_pool_malloc(&walk->commit_pool, COMMIT_ALLOC);
+	return git_pool_malloc(out, &walk->commit_pool, COMMIT_ALLOC);
 }
 
 static int commit_error(git_commit_list_node *commit, const char *msg)
 {
 	char commit_oid[GIT_OID_HEXSZ + 1];
-	git_oid_fmt(commit_oid, &commit->oid);
-	commit_oid[GIT_OID_HEXSZ] = '\0';
+	git_oid__fmtz(commit_oid, &commit->oid);
 
 	giterr_set(GITERR_ODB, "Failed to parse commit %s - %s", commit_oid, msg);
 
 	return -1;
 }
 
-static git_commit_list_node **alloc_parents(
-	git_revwalk *walk, git_commit_list_node *commit, size_t n_parents)
+static int alloc_parents(
+	git_commit_list_node ***out,
+	git_revwalk *walk,
+	git_commit_list_node *commit,
+	size_t n_parents)
 {
 	if (n_parents <= PARENTS_PER_COMMIT)
-		return (git_commit_list_node **)((char *)commit + sizeof(git_commit_list_node));
+		*out = (git_commit_list_node **)((char *)commit + sizeof(git_commit_list_node));
 
-	return (git_commit_list_node **)git_pool_malloc(
+	return git_pool_malloc(out,
 		&walk->commit_pool, (uint32_t)(n_parents * sizeof(git_commit_list_node *)));
 }
 
@@ -120,8 +132,8 @@ static int commit_quick_parse(
 		buffer += parent_len;
 	}
 
-	commit->parents = alloc_parents(walk, commit, parents);
-	GITERR_CHECK_ALLOC(commit->parents);
+	if (alloc_parents(&commit->parents, walk, commit, parents) < 0)
+		return -1;
 
 	buffer = parents_start;
 	for (i = 0; i < parents; ++i) {
@@ -197,4 +209,3 @@ int git_commit_list_parse(git_revwalk *walk, git_commit_list_node *commit)
 	git_odb_object_free(obj);
 	return error;
 }
-

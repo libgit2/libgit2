@@ -33,7 +33,7 @@ struct git_remote {
 };
 
 const char* git_remote__urlfordirection(struct git_remote *remote, int direction);
-int git_remote__get_http_proxy(git_remote *remote, bool use_ssl, char **proxy_url);
+int git_remote__get_http_proxy(char **proxy_url, git_remote *remote, bool use_ssl);
 
 git_refspec *git_remote__matching_refspec(git_remote *remote, const char *refname);
 git_refspec *git_remote__matching_dst_refspec(git_remote *remote, const char *refname);

@@ -9,8 +9,7 @@ void test_object_raw_short__oid_shortener_no_duplicates(void)
 	git_oid_shorten *os;
 	int min_len;
 
-	os = git_oid_shorten_new(0);
-	cl_assert(os != NULL);
+	cl_git_pass(git_oid_shorten_new(&os, 0));
 
 	git_oid_shorten_add(os, "22596363b3de40b06f981fb85d82312e8c0ed511");
 	git_oid_shorten_add(os, "ce08fe4884650f067bd5703b6a59a8b3b3c99a09");
@@ -28,15 +27,15 @@ static int insert_sequential_oids(
 	int i, min_len = 0;
 	char numbuf[16];
 	git_oid oid;
-	char **oids = git__calloc(n, sizeof(char *));
-	cl_assert(oids != NULL);
+	char **oids;
+
+	cl_git_pass(git__calloc(&oids, n, sizeof(char *)));
 
 	for (i = 0; i < n; ++i) {
 		p_snprintf(numbuf, sizeof(numbuf), "%u", (unsigned int)i);
 		git_hash_buf(&oid, numbuf, strlen(numbuf));
 
-		oids[i] = git__malloc(GIT_OID_HEXSZ + 1);
-		cl_assert(oids[i]);
+		cl_git_pass(git__malloc(&oids[i], GIT_OID_HEXSZ + 1));
 		git_oid_nfmt(oids[i], GIT_OID_HEXSZ + 1, &oid);
 
 		min_len = git_oid_shorten_add(os, oids[i]);
@@ -72,8 +71,7 @@ void test_object_raw_short__oid_shortener_stresstest_git_oid_shorten(void)
 	int min_len = 0, found_collision;
 	char **oids;
 
-	os = git_oid_shorten_new(0);
-	cl_assert(os != NULL);
+	cl_git_pass(git_oid_shorten_new(&os, 0));
 
 	/*
 	 * Insert in the shortener 1000 unique SHA1 ids
@@ -125,8 +123,7 @@ void test_object_raw_short__oid_shortener_too_much_oids(void)
 	git_oid_shorten *os;
 	char **oids;
 
-	os = git_oid_shorten_new(0);
-	cl_assert(os != NULL);
+	cl_git_pass(git_oid_shorten_new(&os, 0));
 
 	cl_assert(insert_sequential_oids(&oids, os, MAX_OIDS, MAX_OIDS - 1) < 0);
 

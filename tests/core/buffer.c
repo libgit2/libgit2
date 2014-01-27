@@ -370,7 +370,7 @@ void test_core_buffer__7(void)
 
 	git_buf_free(&a);
 
-	b = git__strdup(fun);
+	cl_git_pass(git__strdup(&b, fun));
 	git_buf_attach(&a, b, 0);
 
 	cl_assert_equal_s(fun, a.ptr);
@@ -379,7 +379,7 @@ void test_core_buffer__7(void)
 
 	git_buf_free(&a);
 
-	b = git__strdup(fun);
+	cl_git_pass(git__strdup(&b, fun));
 	git_buf_attach(&a, b, strlen(fun) + 1);
 
 	cl_assert_equal_s(fun, a.ptr);

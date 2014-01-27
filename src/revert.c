@@ -9,6 +9,7 @@
 #include "repository.h"
 #include "filebuf.h"
 #include "merge.h"
+#include "oid.h"
 
 #include "git2/types.h"
 #include "git2/merge.h"
@@ -107,8 +108,7 @@ static int revert_seterr(git_commit *commit, const char *fmt)
 {
 	char commit_oidstr[GIT_OID_HEXSZ + 1];
 
-	git_oid_fmt(commit_oidstr, git_commit_id(commit));
-	commit_oidstr[GIT_OID_HEXSZ] = '\0';
+	git_oid__fmtz(commit_oidstr, git_commit_id(commit));
 
 	giterr_set(GITERR_REVERT, fmt, commit_oidstr);
 
@@ -184,8 +184,7 @@ int git_revert(
 	if ((error = git_repository__ensure_not_bare(repo, "revert")) < 0)
 		return error;
 
-	git_oid_fmt(commit_oidstr, git_commit_id(commit));
-	commit_oidstr[GIT_OID_HEXSZ] = '\0';
+	git_oid__fmtz(commit_oidstr, git_commit_id(commit));
 
 	if ((commit_msg = git_commit_summary(commit)) == NULL) {
 		error = -1;

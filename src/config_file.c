@@ -99,9 +99,9 @@ typedef struct {
 } diskfile_backend;
 
 static int config_parse(diskfile_backend *cfg_file, struct reader *reader, git_config_level_t level, int depth);
-static int parse_variable(struct reader *reader, char **var_name, char **var_value);
+static int parse_variable(char **var_name, char **var_value, struct reader *reader);
 static int config_write(diskfile_backend *cfg, const char *key, const regex_t *preg, const char *value);
-static char *escape_value(const char *ptr);
+static int escape_value(char **out, const char *ptr);
 
 static void set_parse_error(struct reader *reader, int col, const char *error_str)
 {
@@ -187,8 +187,8 @@ static int config_open(git_config_backend *cfg, git_config_level_t level)
 	reader = git_array_alloc(b->readers);
 	memset(reader, 0, sizeof(struct reader));
 
-	reader->file_path = git__strdup(b->file_path);
-	GITERR_CHECK_ALLOC(reader->file_path);
+	if (git__strdup(&reader->file_path, b->file_path) < 0)
+		return -1;
 
 	git_buf_init(&reader->buffer, 0);
 	res = git_futils_readbuffer_updated(
@@ -303,11 +303,14 @@ static int config_iterator_new(
 	struct git_config_backend* backend)
 {
 	diskfile_backend *b = (diskfile_backend *)backend;
-	git_config_file_iter *it = git__calloc(1, sizeof(git_config_file_iter));
+	git_config_file_iter *it;
 
 	GIT_UNUSED(b);
 
-	GITERR_CHECK_ALLOC(it);
+	if (git__calloc(&it, 1, sizeof(git_config_file_iter)) < 0) {
+		*iter = NULL;
+		return -1;
+	}
 
 	it->parent.backend = backend;
 	it->iter = git_strmap_begin(b->values);
@@ -353,10 +356,11 @@ static int config_set(git_config_backend *cfg, const char *name, const char *val
 			return 0;
 
 		if (value) {
-			tmp = git__strdup(value);
-			GITERR_CHECK_ALLOC(tmp);
-			esc_value = escape_value(value);
-			GITERR_CHECK_ALLOC(esc_value);
+			if (git__strdup(&tmp, value) < 0 ||
+				escape_value(&esc_value, value) < 0) {
+				git__free(tmp);
+				return -1;
+			}
 		}
 
 		git__free((void *)existing->entry->value);
@@ -368,37 +372,38 @@ static int config_set(git_config_backend *cfg, const char *name, const char *val
 		return ret;
 	}
 
-	var = git__malloc(sizeof(cvar_t));
-	GITERR_CHECK_ALLOC(var);
-	memset(var, 0x0, sizeof(cvar_t));
-	var->entry = git__malloc(sizeof(git_config_entry));
-	GITERR_CHECK_ALLOC(var->entry);
-	memset(var->entry, 0x0, sizeof(git_config_entry));
+	if (git__calloc(&var, 1, sizeof(cvar_t)) < 0 ||
+		git__calloc(&var->entry, 1, sizeof(git_config_entry)) < 0)
+		goto on_error;
 
 	var->entry->name = key;
 	var->entry->value = NULL;
 
 	if (value) {
-		var->entry->value = git__strdup(value);
-		GITERR_CHECK_ALLOC(var->entry->value);
-		esc_value = escape_value(value);
-		GITERR_CHECK_ALLOC(esc_value);
+		if (git__strdup(&var->entry->value, value) < 0 ||
+			escape_value(&esc_value, value) < 0)
+			goto on_error;
 	}
 
-	if ((ret = config_write(b, key, NULL, esc_value)) < 0) {
-		git__free(esc_value);
-		cvar_free(var);
-		return ret;
-	}
+	if ((ret = config_write(b, key, NULL, esc_value)) < 0)
+		goto on_error;
 
 	git__free(esc_value);
 	git_strmap_insert2(b->values, key, var, old_var, rval);
+
 	if (rval < 0)
 		return -1;
+
 	if (old_var != NULL)
 		cvar_free(old_var);
 
 	return 0;
+
+on_error:
+	git__free(esc_value);
+	cvar_free(var);
+
+	return ret;
 }
 
 /*
@@ -458,8 +463,10 @@ static int config_set_multivar(
 
 	for (;;) {
 		if (regexec(&preg, var->entry->value, 0, NULL, 0) == 0) {
-			char *tmp = git__strdup(value);
-			GITERR_CHECK_ALLOC(tmp);
+			char *tmp;
+			
+			if (git__strdup(&tmp, value) < 0)
+				return -1;
 
 			git__free((void *)var->entry->value);
 			var->entry->value = tmp;
@@ -474,18 +481,11 @@ static int config_set_multivar(
 
 	/* If we've reached the end of the variables and we haven't found it yet, we need to append it */
 	if (!replaced) {
-		newvar = git__malloc(sizeof(cvar_t));
-		GITERR_CHECK_ALLOC(newvar);
-		memset(newvar, 0x0, sizeof(cvar_t));
-		newvar->entry = git__malloc(sizeof(git_config_entry));
-		GITERR_CHECK_ALLOC(newvar->entry);
-		memset(newvar->entry, 0x0, sizeof(git_config_entry));
-
-		newvar->entry->name = git__strdup(var->entry->name);
-		GITERR_CHECK_ALLOC(newvar->entry->name);
-
-		newvar->entry->value = git__strdup(value);
-		GITERR_CHECK_ALLOC(newvar->entry->value);
+		if (git__calloc(&newvar, 1, sizeof(cvar_t)) < 0 ||
+			git__calloc(&newvar->entry, 1, sizeof(git_config_entry)) < 0 ||
+			git__strdup(&newvar->entry->name, var->entry->name) < 0 ||
+			git__strdup(&newvar->entry->value, value) < 0)
+			return -1;
 
 		newvar->entry->level = var->entry->level;
 
@@ -566,8 +566,9 @@ static int config_delete_multivar(git_config_backend *cfg, const char *name, con
 		return -1;
 	}
 
-	to_delete = git__calloc(cvar_length(var), sizeof(cvar_t *));
-	GITERR_CHECK_ALLOC(to_delete);
+	if (git__calloc(&to_delete, cvar_length(var), sizeof(cvar_t *)) < 0)
+		return -1;
+
 	to_delete_idx = 0;
 
 	while (var != NULL) {
@@ -612,13 +613,15 @@ int git_config_file__ondisk(git_config_backend **out, const char *path)
 {
 	diskfile_backend *backend;
 
-	backend = git__calloc(1, sizeof(diskfile_backend));
-	GITERR_CHECK_ALLOC(backend);
+	if (git__calloc(&backend, 1, sizeof(diskfile_backend)) < 0 ||
+		git__strdup(&backend->file_path, path) < 0) {
+		git__free(backend);
+
+		*out = NULL;
+		return -1;
+	}
 
 	backend->parent.version = GIT_CONFIG_BACKEND_VERSION;
-
-	backend->file_path = git__strdup(path);
-	GITERR_CHECK_ALLOC(backend->file_path);
 
 	backend->parent.open = config_open;
 	backend->parent.get = config_get;
@@ -713,7 +716,10 @@ static int reader_peek(struct reader *reader, int flags)
 /*
  * Read and consume a line, returning it in newly-allocated memory.
  */
-static char *reader_readline(struct reader *reader, bool skip_whitespace)
+static int reader_readline(
+	char **out,
+	struct reader *reader,
+	bool skip_whitespace)
 {
 	char *line = NULL;
 	char *line_src, *line_end;
@@ -735,9 +741,10 @@ static char *reader_readline(struct reader *reader, bool skip_whitespace)
 
 	line_len = line_end - line_src;
 
-	line = git__malloc(line_len + 1);
-	if (line == NULL)
-		return NULL;
+	if (git__malloc(&line, line_len + 1) < 0) {
+		*out = NULL;
+		return -1;
+	}
 
 	memcpy(line, line_src, line_len);
 
@@ -753,7 +760,8 @@ static char *reader_readline(struct reader *reader, bool skip_whitespace)
 	reader->line_number++;
 	reader->read_ptr = line_end;
 
-	return line;
+	*out = line;
+	return 0;
 }
 
 /*
@@ -862,8 +870,7 @@ static int parse_section_header(struct reader *reader, char **section_out)
 	int result;
 	char *line;
 
-	line = reader_readline(reader, true);
-	if (line == NULL)
+	if (reader_readline(&line, reader, true) < 0)
 		return -1;
 
 	/* find the end of the variable's name */
@@ -874,8 +881,10 @@ static int parse_section_header(struct reader *reader, char **section_out)
 		return -1;
 	}
 
-	name = (char *)git__malloc((size_t)(name_end - line) + 1);
-	GITERR_CHECK_ALLOC(name);
+	if (git__malloc(&name, (size_t)(name_end - line) + 1) < 0) {
+		git__free(line);
+		return -1;
+	}
 
 	name_length = 0;
 	pos = 0;
@@ -1057,16 +1066,15 @@ static int config_parse(diskfile_backend *cfg_file, struct reader *reader, git_c
 			break;
 
 		default: /* assume variable declaration */
-			result = parse_variable(reader, &var_name, &var_value);
+			result = parse_variable(&var_name, &var_value, reader);
 			if (result < 0)
 				break;
 
-			var = git__malloc(sizeof(cvar_t));
-			GITERR_CHECK_ALLOC(var);
-			memset(var, 0x0, sizeof(cvar_t));
-			var->entry = git__malloc(sizeof(git_config_entry));
-			GITERR_CHECK_ALLOC(var->entry);
-			memset(var->entry, 0x0, sizeof(git_config_entry));
+			if (git__calloc(&var, 1, sizeof(cvar_t)) < 0 ||
+				git__calloc(&var->entry, 1, sizeof(git_config_entry)) < 0) {
+				cvar_free(var);
+				return -1;
+			}
 
 			git__strtolower(var_name);
 			git_buf_printf(&buf, "%s.%s", current_section, var_name);
@@ -1154,9 +1162,12 @@ static int write_section(git_filebuf *file, const char *key)
 		git_buf_puts(&buf, key);
 	} else {
 		char *escaped;
+
 		git_buf_put(&buf, key, dot - key);
-		escaped = escape_value(dot + 1);
-		GITERR_CHECK_ALLOC(escaped);
+
+		if (escape_value(&escaped, dot + 1) < 0)
+			return -1;
+
 		git_buf_printf(&buf, " \"%s\"", escaped);
 		git__free(escaped);
 	}
@@ -1230,7 +1241,11 @@ static int config_write(diskfile_backend *cfg, const char *key, const regex_t *p
 	skip_bom(reader);
 	ldot = strrchr(key, '.');
 	name = ldot + 1;
-	section = git__strndup(key, ldot - key);
+
+	if (git__strndup(&section, key, ldot - key) < 0) {
+		git_buf_free(&reader->buffer);
+		return -1;
+	}
 
 	while (!reader->eof) {
 		c = reader_peek(reader, SKIP_WHITESPACE);
@@ -1283,7 +1298,7 @@ static int config_write(diskfile_backend *cfg, const char *key, const regex_t *p
 				char *var_name, *var_value;
 
 				pre_end = reader->read_ptr;
-				if (parse_variable(reader, &var_name, &var_value) < 0)
+				if (parse_variable(&var_name, &var_value, reader) < 0)
 					goto rewrite_fail;
 
 				/* First try to match the name of the variable */
@@ -1405,7 +1420,7 @@ static const char *escapes = "ntb\"\\";
 static const char *escaped = "\n\t\b\"\\";
 
 /* Escape the values to write them to the file */
-static char *escape_value(const char *ptr)
+static int escape_value(char **out, const char *ptr)
 {
 	git_buf buf = GIT_BUF_INIT;
 	size_t len;
@@ -1414,8 +1429,9 @@ static char *escape_value(const char *ptr)
 	assert(ptr);
 
 	len = strlen(ptr);
+
 	if (!len)
-		return git__calloc(1, sizeof(char));
+		return git__strdup(out, ptr);
 
 	git_buf_grow(&buf, len);
 
@@ -1430,21 +1446,25 @@ static char *escape_value(const char *ptr)
 	}
 
 	if (git_buf_oom(&buf)) {
-		git_buf_free(&buf);
-		return NULL;
+		*out = NULL;
+		return -1;
 	}
 
-	return git_buf_detach(&buf);
+	*out = git_buf_detach(&buf);
+	return 0;
 }
 
 /* '\"' -> '"' etc */
-static char *fixup_line(const char *ptr, int quote_count)
+static int fixup_line(char **line_out, const char *ptr, int quote_count)
 {
-	char *str = git__malloc(strlen(ptr) + 1);
-	char *out = str, *esc;
+	char *out, *str, *esc;
 
-	if (str == NULL)
-		return NULL;
+	if (git__malloc(&str, strlen(ptr) + 1) < 0) {
+		*line_out = NULL;
+		return -1;
+	}
+
+	out = str;
 
 	while (*ptr != '\0') {
 		if (*ptr == '"') {
@@ -1464,7 +1484,7 @@ static char *fixup_line(const char *ptr, int quote_count)
 			} else {
 				git__free(str);
 				giterr_set(GITERR_CONFIG, "Invalid escape at %s", ptr);
-				return NULL;
+				return -1;
 			}
 		}
 		ptr++;
@@ -1472,8 +1492,9 @@ static char *fixup_line(const char *ptr, int quote_count)
 
 out:
 	*out = '\0';
+	*line_out = str;
 
-	return str;
+	return 0;
 }
 
 static int is_multiline_var(const char *str)
@@ -1495,8 +1516,7 @@ static int parse_multiline_variable(struct reader *reader, git_buf *value, int i
 	int quote_count;
 
 	/* Check that the next line exists */
-	line = reader_readline(reader, false);
-	if (line == NULL)
+	if (reader_readline(&line, reader, false) < 0)
 		return -1;
 
 	/* We've reached the end of the file, there is input missing */
@@ -1521,8 +1541,7 @@ static int parse_multiline_variable(struct reader *reader, git_buf *value, int i
 	assert(is_multiline_var(value->ptr));
 	git_buf_shorten(value, 1);
 
-	proc_line = fixup_line(line, in_quotes);
-	if (proc_line == NULL) {
+	if (fixup_line(&proc_line, line, in_quotes) < 0) {
 		git__free(line);
 		return -1;
 	}
@@ -1541,15 +1560,18 @@ static int parse_multiline_variable(struct reader *reader, git_buf *value, int i
 	return 0;
 }
 
-static int parse_variable(struct reader *reader, char **var_name, char **var_value)
+static int parse_variable(char **out_name, char **out_value, struct reader *reader)
 {
 	const char *var_end = NULL;
 	const char *value_start = NULL;
-	char *line;
+	char *var_name = NULL, *var_value = NULL, *line = NULL, *proc_line = NULL;
 	int quote_count;
+	int error = 0;
 
-	line = reader_readline(reader, true);
-	if (line == NULL)
+	*out_name = NULL;
+	*out_value = NULL;
+
+	if (reader_readline(&line, reader, true) < 0)
 		return -1;
 
 	quote_count = strip_comments(line, 0);
@@ -1561,14 +1583,12 @@ static int parse_variable(struct reader *reader, char **var_name, char **var_val
 	else
 		value_start = var_end + 1;
 
-	do var_end--;
-	while (var_end>line && git__isspace(*var_end));
+	do
+		var_end--;
+	while (var_end > line && git__isspace(*var_end));
 
-	*var_name = git__strndup(line, var_end - line + 1);
-	GITERR_CHECK_ALLOC(*var_name);
-
-	/* If there is no value, boolean true is assumed */
-	*var_value = NULL;
+	if ((error = git__strndup(&var_name, line, var_end - line + 1)) < 0)
+		goto done;
 
 	/*
 	 * Now, let's try to parse the value
@@ -1579,29 +1599,34 @@ static int parse_variable(struct reader *reader, char **var_name, char **var_val
 
 		if (is_multiline_var(value_start)) {
 			git_buf multi_value = GIT_BUF_INIT;
-			char *proc_line = fixup_line(value_start, 0);
-			GITERR_CHECK_ALLOC(proc_line);
-			git_buf_puts(&multi_value, proc_line);
-			git__free(proc_line);
-			if (parse_multiline_variable(reader, &multi_value, quote_count) < 0 || git_buf_oom(&multi_value)) {
-				git__free(*var_name);
-				git__free(line);
+
+			if ((error = fixup_line(&proc_line, value_start, 0)) < 0 ||
+				(error = git_buf_puts(&multi_value, proc_line)) < 0 ||
+				(error = parse_multiline_variable(reader, &multi_value, quote_count)) < 0) {
 				git_buf_free(&multi_value);
-				return -1;
+				goto done;
 			}
 
-			*var_value = git_buf_detach(&multi_value);
-
+			var_value = git_buf_detach(&multi_value);
 		}
 		else if (value_start[0] != '\0') {
-			*var_value = fixup_line(value_start, 0);
-			GITERR_CHECK_ALLOC(*var_value);
+			error = fixup_line(&var_value, value_start, 0);
 		} else { /* equals sign but missing rhs */
-			*var_value = git__strdup("");
-			GITERR_CHECK_ALLOC(*var_value);
+			error = git__strdup(&var_value, "");
 		}
 	}
 
+done:
+	if (error) {
+		git__free(var_name);
+		git__free(var_value);
+	} else {
+		*out_name = var_name;
+		*out_value = var_value;
+	}
+
+	git__free(proc_line);
 	git__free(line);
-	return 0;
+
+	return error;
 }

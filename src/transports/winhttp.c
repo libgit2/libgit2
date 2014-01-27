@@ -104,7 +104,8 @@ static int apply_basic_credential(HINTERNET request, git_cred *cred)
 		goto on_error;
 	}
 
-	wide = git__malloc(wide_len * sizeof(wchar_t));
+	if (git__malloc(&wide, wide_len * sizeof(wchar_t)) < 0)
+		goto on_error;
 
 	if (!wide)
 		goto on_error;
@@ -181,9 +182,7 @@ static int winhttp_stream_connect(winhttp_stream *s)
 		goto on_error;
 	}
 
-	s->request_uri = git__malloc(wide_len * sizeof(wchar_t));
-
-	if (!s->request_uri)
+	if (git__malloc(&s->request_uri, wide_len * sizeof(wchar_t)) < 0)
 		goto on_error;
 
 	if (!MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS,
@@ -208,7 +207,7 @@ static int winhttp_stream_connect(winhttp_stream *s)
 	}
 
 	/* Set proxy if necessary */
-	if (git_remote__get_http_proxy(t->owner->owner, !!t->connection_data.use_ssl, &proxy_url) < 0)
+	if (git_remote__get_http_proxy(&proxy_url, t->owner->owner, !!t->connection_data.use_ssl) < 0)
 		goto on_error;
 
 	if (proxy_url) {
@@ -224,9 +223,7 @@ static int winhttp_stream_connect(winhttp_stream *s)
 			goto on_error;
 		}
 
-		proxy_wide = git__malloc(wide_len * sizeof(wchar_t));
-
-		if (!proxy_wide)
+		if (git__malloc(&proxy_wide, wide_len * sizeof(wchar_t)) < 0)
 			goto on_error;
 
 		if (!MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS,
@@ -544,7 +541,8 @@ replay:
 				return -1;
 			}
 
-			buffer = git__malloc(CACHED_POST_BODY_BUF_SIZE);
+			if (git__malloc(&buffer, CACHED_POST_BODY_BUF_SIZE) < 0)
+				return -1;
 
 			while (len > 0) {
 				DWORD bytes_written;
@@ -623,9 +621,9 @@ replay:
 				return -1;
 			}
 
-			location = git__malloc(location_length);
-			location8 = git__malloc(location_length);
-			GITERR_CHECK_ALLOC(location);
+			if (git__malloc(&location, location_length) < 0 ||
+				git__malloc(&location8, location_length) < 0)
+				return -1;
 
 			if (!WinHttpQueryHeaders(s->request,
 				WINHTTP_QUERY_LOCATION,
@@ -917,8 +915,10 @@ static int winhttp_stream_write_chunked(
 		/* Append as much to the buffer as we can */
 		int count = min(CACHED_POST_BODY_BUF_SIZE - s->chunk_buffer_len, (int)len);
 
-		if (!s->chunk_buffer)
-			s->chunk_buffer = git__malloc(CACHED_POST_BODY_BUF_SIZE);
+		if (!s->chunk_buffer) {
+			if (git__malloc(&s->chunk_buffer, CACHED_POST_BODY_BUF_SIZE) < 0)
+				return -1;
+		}
 
 		memcpy(s->chunk_buffer + s->chunk_buffer_len, buffer, count);
 		s->chunk_buffer_len += count;
@@ -970,15 +970,16 @@ static void winhttp_stream_free(git_smart_subtransport_stream *stream)
 	git__free(s);
 }
 
-static int winhttp_stream_alloc(winhttp_subtransport *t, winhttp_stream **stream)
+static int winhttp_stream_alloc(winhttp_stream **stream, winhttp_subtransport *t)
 {
 	winhttp_stream *s;
 
-	if (!stream)
-		return -1;
+	assert(stream);
 
-	s = git__calloc(sizeof(winhttp_stream), 1);
-	GITERR_CHECK_ALLOC(s);
+	if (git__calloc(&s, sizeof(winhttp_stream), 1) < 0) {
+		*stream = NULL;
+		return -1;
+	}
 
 	s->parent.subtransport = &t->parent;
 	s->parent.read = winhttp_stream_read;
@@ -1058,7 +1059,7 @@ static int winhttp_action(
 			 winhttp_connect(t, url) < 0)
 			return -1;
 
-	if (winhttp_stream_alloc(t, &s) < 0)
+	if (winhttp_stream_alloc(&s, t) < 0)
 		return -1;
 
 	if (!stream)
@@ -1143,11 +1144,12 @@ int git_smart_subtransport_http(git_smart_subtransport **out, git_transport *own
 {
 	winhttp_subtransport *t;
 
-	if (!out)
-		return -1;
+	assert(out);
 
-	t = git__calloc(sizeof(winhttp_subtransport), 1);
-	GITERR_CHECK_ALLOC(t);
+	if (git__calloc(&t, sizeof(winhttp_subtransport), 1) < 0) {
+		*out = NULL;
+		return -1;
+	}
 
 	t->owner = (transport_smart *)owner;
 	t->parent.action = winhttp_action;

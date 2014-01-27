@@ -128,8 +128,9 @@ int git_indexer_new(
 	static const char suff[] = "/pack";
 	int error;
 
-	idx = git__calloc(1, sizeof(git_indexer));
-	GITERR_CHECK_ALLOC(idx);
+	if (git__calloc(&idx ,1, sizeof(git_indexer)) < 0)
+		return -1;
+
 	idx->odb = odb;
 	idx->progress_cb = progress_cb;
 	idx->progress_payload = progress_payload;
@@ -162,12 +163,15 @@ static int store_delta(git_indexer *idx)
 {
 	struct delta_info *delta;
 
-	delta = git__calloc(1, sizeof(struct delta_info));
-	GITERR_CHECK_ALLOC(delta);
+	if (git__calloc(&delta, 1, sizeof(struct delta_info)) < 0)
+		return -1;
+
 	delta->delta_off = idx->entry_start;
 
-	if (git_vector_insert(&idx->deltas, delta) < 0)
+	if (git_vector_insert(&idx->deltas, delta) < 0) {
+		git__free(delta);
 		return -1;
+	}
 
 	return 0;
 }
@@ -265,20 +269,19 @@ static int store_object(git_indexer *idx)
 	int i, error;
 	khiter_t k;
 	git_oid oid;
-	struct entry *entry;
+	struct entry *entry = NULL;
 	git_off_t entry_size;
 	struct git_pack_entry *pentry;
 	git_hash_ctx *ctx = &idx->hash_ctx;
 	git_off_t entry_start = idx->entry_start;
 
-	entry = git__calloc(1, sizeof(*entry));
-	GITERR_CHECK_ALLOC(entry);
+	if ((error = git__calloc(&entry, 1, sizeof(*entry)) < 0 ||
+		(error = git__calloc(&pentry, 1, sizeof(struct git_pack_entry))) < 0 ||
+		(error = git_hash_final(&oid, ctx))) < 0)
+		goto on_error;
 
-	pentry = git__calloc(1, sizeof(struct git_pack_entry));
-	GITERR_CHECK_ALLOC(pentry);
-
-	git_hash_final(&oid, ctx);
 	entry_size = idx->off - entry_start;
+	
 	if (entry_start > UINT31_MAX) {
 		entry->offset = UINT32_MAX;
 		entry->offset_long = entry_start;
@@ -299,11 +302,11 @@ static int store_object(git_indexer *idx)
 
 	git_oid_cpy(&entry->oid, &oid);
 
-	if (crc_object(&entry->crc, &idx->pack->mwf, entry_start, entry_size) < 0)
+	if ((error = crc_object(&entry->crc, &idx->pack->mwf, entry_start, entry_size)) < 0)
 		goto on_error;
 
 	/* Add the object to the list */
-	if (git_vector_insert(&idx->objects, entry) < 0)
+	if ((error = git_vector_insert(&idx->objects, entry)) < 0)
 		goto on_error;
 
 	for (i = oid.id[0]; i < 256; ++i) {
@@ -315,7 +318,7 @@ static int store_object(git_indexer *idx)
 on_error:
 	git__free(entry);
 
-	return -1;
+	return error;
 }
 
 static int save_entry(git_indexer *idx, struct entry *entry, struct git_pack_entry *pentry, git_off_t entry_start)
@@ -352,26 +355,22 @@ static int hash_and_save(git_indexer *idx, git_rawobj *obj, git_off_t entry_star
 {
 	git_oid oid;
 	size_t entry_size;
-	struct entry *entry;
+	struct entry *entry = NULL;
 	struct git_pack_entry *pentry = NULL;
+	int error = 0;
 
-	entry = git__calloc(1, sizeof(*entry));
-	GITERR_CHECK_ALLOC(entry);
-
-	if (git_odb__hashobj(&oid, obj) < 0) {
-		giterr_set(GITERR_INDEXER, "Failed to hash object");
+	if ((error = git__calloc(&entry, 1, sizeof(*entry))) < 0 ||
+		(error = git_odb__hashobj(&oid, obj)) < 0 ||
+		(error = git__calloc(&pentry, 1, sizeof(struct git_pack_entry))) < 0)
 		goto on_error;
-	}
-
-	pentry = git__calloc(1, sizeof(struct git_pack_entry));
-	GITERR_CHECK_ALLOC(pentry);
 
 	git_oid_cpy(&pentry->sha1, &oid);
 	git_oid_cpy(&entry->oid, &oid);
 	entry->crc = crc32(0L, Z_NULL, 0);
 
 	entry_size = (size_t)(idx->off - entry_start);
-	if (crc_object(&entry->crc, &idx->pack->mwf, entry_start, entry_size) < 0)
+
+	if ((error = crc_object(&entry->crc, &idx->pack->mwf, entry_start, entry_size)) < 0)
 		goto on_error;
 
 	return save_entry(idx, entry, pentry, entry_start);
@@ -380,7 +379,7 @@ on_error:
 	git__free(pentry);
 	git__free(entry);
 	git__free(obj->data);
-	return -1;
+	return error;
 }
 
 static int do_progress_callback(git_indexer *idx, git_transfer_progress *stats)
@@ -632,7 +631,7 @@ static git_off_t seek_back_trailer(git_indexer *idx)
 static int inject_object(git_indexer *idx, git_oid *id)
 {
 	git_odb_object *obj;
-	struct entry *entry;
+	struct entry *entry = NULL;
 	struct git_pack_entry *pentry = NULL;
 	git_oid foo = {{0}};
 	unsigned char hdr[64];
@@ -650,8 +649,8 @@ static int inject_object(git_indexer *idx, git_oid *id)
 	data = git_odb_object_data(obj);
 	len = git_odb_object_size(obj);
 
-	entry = git__calloc(1, sizeof(*entry));
-	GITERR_CHECK_ALLOC(entry);
+	if ((error = git__calloc(&entry, 1, sizeof(*entry))) < 0)
+		goto cleanup;
 
 	entry->crc = crc32(0L, Z_NULL, 0);
 
@@ -676,8 +675,8 @@ static int inject_object(git_indexer *idx, git_oid *id)
 
 	idx->pack->mwf.size += GIT_OID_RAWSZ;
 
-	pentry = git__calloc(1, sizeof(struct git_pack_entry));
-	GITERR_CHECK_ALLOC(pentry);
+	if ((error = git__calloc(&pentry, 1, sizeof(struct git_pack_entry))) < 0)
+		goto cleanup;
 
 	git_oid_cpy(&pentry->sha1, id);
 	git_oid_cpy(&entry->oid, id);

@@ -950,10 +950,9 @@ int git_path_dirload(
 #endif
 
 		alloc_size = path_len + need_slash + de_len + 1 + alloc_extra;
-		if ((entry_path = git__calloc(alloc_size, 1)) == NULL) {
-			error = -1;
+
+		if ((error = git__calloc(&entry_path, alloc_size, 1)) < 0)
 			break;
-		}
 
 		if (path_len)
 			memcpy(entry_path, path, path_len);

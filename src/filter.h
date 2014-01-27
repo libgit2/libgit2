@@ -25,7 +25,7 @@ extern void git_filter_free(git_filter *filter);
  * Available filters
  */
 
-extern git_filter *git_crlf_filter_new(void);
-extern git_filter *git_ident_filter_new(void);
+extern int git_crlf_filter_new(git_filter **out);
+extern int git_ident_filter_new(git_filter **out);
 
 #endif

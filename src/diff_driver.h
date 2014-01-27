@@ -12,7 +12,7 @@
 
 typedef struct git_diff_driver_registry git_diff_driver_registry;
 
-git_diff_driver_registry *git_diff_driver_registry_new(void);
+int git_diff_driver_registry_new(git_diff_driver_registry **out);
 void git_diff_driver_registry_free(git_diff_driver_registry *);
 
 typedef struct git_diff_driver git_diff_driver;

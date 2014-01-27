@@ -73,17 +73,19 @@ extern void git_pool_swap(git_pool *a, git_pool *b);
 /**
  * Allocate space for one or more items from a pool.
  */
-extern void *git_pool_malloc(git_pool *pool, uint32_t items);
+extern int git_pool_malloc(void **out, git_pool *pool, uint32_t items);
 
 /**
  * Allocate space and zero it out.
  */
-GIT_INLINE(void *) git_pool_mallocz(git_pool *pool, uint32_t items)
+GIT_INLINE(int) git_pool_calloc(void **out, git_pool *pool, uint32_t items)
 {
-	void *ptr = git_pool_malloc(pool, items);
-	if (ptr)
-		memset(ptr, 0, (size_t)items * (size_t)pool->item_size);
-	return ptr;
+	int error;
+
+	if ((error = git_pool_malloc(out, pool, items)) == 0)
+		memset(*out, 0, (size_t)items * (size_t)pool->item_size);
+
+	return error;
 }
 
 /**
@@ -91,28 +93,28 @@ GIT_INLINE(void *) git_pool_mallocz(git_pool *pool, uint32_t items)
  *
  * This is allowed only for pools with item_size == sizeof(char)
  */
-extern char *git_pool_strndup(git_pool *pool, const char *str, size_t n);
+extern int git_pool_strndup(char **out, git_pool *pool, const char *str, size_t n);
 
 /**
  * Allocate space and duplicate a string into it.
  *
  * This is allowed only for pools with item_size == sizeof(char)
  */
-extern char *git_pool_strdup(git_pool *pool, const char *str);
+extern int git_pool_strdup(char **out, git_pool *pool, const char *str);
 
 /**
  * Allocate space and duplicate a string into it, NULL is no error.
  *
  * This is allowed only for pools with item_size == sizeof(char)
  */
-extern char *git_pool_strdup_safe(git_pool *pool, const char *str);
+extern int git_pool_strdup_safe(char **out, git_pool *pool, const char *str);
 
 /**
  * Allocate space for the concatenation of two strings.
  *
  * This is allowed only for pools with item_size == sizeof(char)
  */
-extern char *git_pool_strcat(git_pool *pool, const char *a, const char *b);
+extern int git_pool_strcat(char **out, git_pool *pool, const char *a, const char *b);
 
 /**
  * Push a block back onto the free list for the pool.

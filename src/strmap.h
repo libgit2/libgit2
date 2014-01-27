@@ -9,9 +9,9 @@
 
 #include "common.h"
 
-#define kmalloc git__malloc
-#define kcalloc git__calloc
-#define krealloc git__realloc
+#define kmalloc git__std_malloc
+#define kcalloc git__std_calloc
+#define krealloc git__std_realloc
 #define kfree git__free
 #include "khash.h"
 

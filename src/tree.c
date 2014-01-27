@@ -82,21 +82,23 @@ int git_tree_entry_icmp(const git_tree_entry *e1, const git_tree_entry *e2)
 		git__strncasecmp);
 }
 
-static git_tree_entry *alloc_entry(const char *filename)
+static int alloc_entry(git_tree_entry **out, const char *filename)
 {
 	git_tree_entry *entry = NULL;
 	size_t filename_len = strlen(filename);
 
-	entry = git__malloc(sizeof(git_tree_entry) + filename_len + 1);
-	if (!entry)
-		return NULL;
+	if (git__malloc(&entry, sizeof(git_tree_entry) + filename_len + 1) < 0) {
+		*out = NULL;
+		return -1;
+	}
 
 	memset(entry, 0x0, sizeof(git_tree_entry));
 	memcpy(entry->filename, filename, filename_len);
 	entry->filename[filename_len] = 0;
 	entry->filename_len = filename_len;
 
-	return entry;
+	*out = entry;
+	return 0;
 }
 
 struct tree_key_search {
@@ -213,8 +215,8 @@ int git_tree_entry_dup(git_tree_entry **dest, const git_tree_entry *source)
 
 	total_size = sizeof(git_tree_entry) + source->filename_len + 1;
 
-	copy = git__malloc(total_size);
-	GITERR_CHECK_ALLOC(copy);
+	if (git__malloc(&copy, total_size) < 0)
+		return -1;
 
 	memcpy(copy, source, total_size);
 
@@ -399,8 +401,8 @@ int git_tree__parse(void *_tree, git_odb_object *odb_obj)
 
 		/** Allocate the entry and store it in the entries vector */
 		{
-			entry = alloc_entry(buffer);
-			GITERR_CHECK_ALLOC(entry);
+			if (alloc_entry(&entry, buffer) < 0)
+				return -1;
 
 			if (git_vector_insert(&tree->entries, entry) < 0) {
 				git__free(entry);
@@ -452,8 +454,8 @@ static int append_entry(
 	if (!valid_entry_name(filename))
 		return tree_error("Failed to insert entry. Invalid name for a tree entry", filename);
 
-	entry = alloc_entry(filename);
-	GITERR_CHECK_ALLOC(entry);
+	if (alloc_entry(&entry, filename) < 0)
+		return -1;
 
 	git_oid_cpy(&entry->oid, id);
 	entry->attr = (uint16_t)filemode;
@@ -521,8 +523,8 @@ static int write_tree(
 			int written;
 			char *subdir, *last_comp;
 
-			subdir = git__strndup(entry->path, next_slash - entry->path);
-			GITERR_CHECK_ALLOC(subdir);
+			if (git__strndup(&subdir, entry->path, next_slash - entry->path) < 0)
+				return -1;
 
 			/* Write out the subtree */
 			written = write_tree(&sub_oid, repo, index, subdir, i);
@@ -612,8 +614,8 @@ int git_treebuilder_create(git_treebuilder **builder_p, const git_tree *source)
 
 	assert(builder_p);
 
-	bld = git__calloc(1, sizeof(git_treebuilder));
-	GITERR_CHECK_ALLOC(bld);
+	if (git__calloc(&bld, 1, sizeof(git_treebuilder)) < 0)
+		return -1;
 
 	if (source != NULL)
 		source_entries = source->entries.length;
@@ -666,10 +668,8 @@ int git_treebuilder_insert(
 			bld->entrycount++;
 		}
 	} else {
-		entry = alloc_entry(filename);
-		GITERR_CHECK_ALLOC(entry);
-
-		if (git_vector_insert(&bld->entries, entry) < 0) {
+		if (alloc_entry(&entry, filename) < 0 ||
+			git_vector_insert(&bld->entries, entry) < 0) {
 			git__free(entry);
 			return -1;
 		}

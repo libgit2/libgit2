@@ -122,7 +122,7 @@ GIT_EXTERN(void) git_oid_pathfmt(char *out, const git_oid *id);
  * @return the c-string; NULL if memory is exhausted. Caller must
  *			deallocate the string with git__free().
  */
-GIT_EXTERN(char *) git_oid_allocfmt(const git_oid *id);
+GIT_EXTERN(int) git_oid_allocfmt(char **out, const git_oid *id);
 
 /**
  * Format a git_oid into a buffer as a hex format c-string.
@@ -228,7 +228,7 @@ typedef struct git_oid_shorten git_oid_shorten;
  *		be unique.
  *	@return a `git_oid_shorten` instance, NULL if OOM
  */
-GIT_EXTERN(git_oid_shorten *) git_oid_shorten_new(size_t min_length);
+GIT_EXTERN(int) git_oid_shorten_new(git_oid_shorten **out, size_t min_length);
 
 /**
  * Add a new OID to set of shortened OIDs and calculate

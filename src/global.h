@@ -15,11 +15,9 @@ typedef struct {
 	git_error error_t;
 } git_global_st;
 
-git_global_st *git__global_state(void);
+extern int git__global_state(git_global_st **out);
 
 extern git_mutex git__mwindow_mutex;
-
-#define GIT_GLOBAL (git__global_state())
 
 typedef void (*git_global_shutdown_fn)(void);
 

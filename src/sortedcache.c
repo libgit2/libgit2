@@ -15,8 +15,8 @@ int git_sortedcache_new(
 
 	pathlen = path ? strlen(path) : 0;
 
-	sc = git__calloc(sizeof(git_sortedcache) + pathlen + 1, 1);
-	GITERR_CHECK_ALLOC(sc);
+	if (git__calloc(&sc, sizeof(git_sortedcache) + pathlen + 1, 1) < 0)
+		return -1;
 
 	if (git_pool_init(&sc->pool, 1, 0) < 0 ||
 		git_vector_init(&sc->items, 4, item_cmp) < 0 ||
@@ -271,11 +271,8 @@ int git_sortedcache_upsert(void **out, git_sortedcache *sc, const char *key)
 	itemlen = sc->item_path_offset + keylen + 1;
 	itemlen = (itemlen + 7) & ~7;
 
-	if ((item = git_pool_mallocz(&sc->pool, (uint32_t)itemlen)) == NULL) {
-		/* don't use GITERR_CHECK_ALLOC b/c of lock */
-		error = -1;
+	if ((error = git_pool_calloc(&item, &sc->pool, (uint32_t)itemlen)) < 0)
 		goto done;
-	}
 
 	/* one strange thing is that even if the vector or hash table insert
 	 * fail, there is no way to free the pool item so we just abandon it
@@ -377,4 +374,3 @@ int git_sortedcache_remove(git_sortedcache *sc, size_t pos)
 
 	return 0;
 }
-

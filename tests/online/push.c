@@ -97,7 +97,7 @@ static int record_push_status_cb(const char *ref, const char *msg, void *data)
 	git_vector *statuses = (git_vector *)data;
 	push_status *s;
 
-	cl_assert(s = git__malloc(sizeof(*s)));
+	cl_git_pass(git__malloc(&s, sizeof(*s)));
 	s->ref = ref;
 	s->success = (msg == NULL);
 	s->msg = msg;
@@ -191,7 +191,7 @@ static void verify_tracking_branches(git_remote *remote, expected_ref expected_r
 	git_buf ref_name = GIT_BUF_INIT;
 	git_vector actual_refs = GIT_VECTOR_INIT;
 	git_branch_iterator *iter;
-	char *actual_ref;
+	char *actual_ref, *name;
 	git_oid oid;
 	int failed = 0, error;
 	git_branch_t branch_type;
@@ -203,7 +203,8 @@ static void verify_tracking_branches(git_remote *remote, expected_ref expected_r
 	while ((error = git_branch_next(&ref, &branch_type, iter)) == 0) {
 		cl_assert_equal_i(branch_type, GIT_BRANCH_REMOTE);
 
-		cl_git_pass(git_vector_insert(&actual_refs, git__strdup(git_reference_name(ref))));
+		cl_git_pass(git__strdup(&name, git_reference_name(ref)));
+		cl_git_pass(git_vector_insert(&actual_refs, name));
 	}
 
 	cl_assert_equal_i(error, GIT_ITEROVER);

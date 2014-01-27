@@ -50,15 +50,19 @@ static int packfile_error(const char *message)
  * Delta base cache
  ********************/
 
-static git_pack_cache_entry *new_cache_object(git_rawobj *source)
+static int new_cache_object(git_pack_cache_entry **out, git_rawobj *source)
 {
-	git_pack_cache_entry *e = git__calloc(1, sizeof(git_pack_cache_entry));
-	if (!e)
-		return NULL;
+	git_pack_cache_entry *e;
+	
+	if (git__calloc(&e, 1, sizeof(git_pack_cache_entry)) < 0) {
+		*out = NULL;
+		return -1;
+	}
 
 	memcpy(&e->raw, source, sizeof(git_rawobj));
 
-	return e;
+	*out = e;
+	return 0;
 }
 
 static void free_cache_object(void *o)
@@ -158,29 +162,29 @@ static int cache_add(git_pack_cache *cache, git_rawobj *base, git_off_t offset)
 	if (base->len > GIT_PACK_CACHE_SIZE_LIMIT)
 		return -1;
 
-	entry = new_cache_object(base);
-	if (entry) {
-		if (git_mutex_lock(&cache->lock) < 0) {
-			giterr_set(GITERR_OS, "failed to lock cache");
-			return -1;
-		}
-		/* Add it to the cache if nobody else has */
-		exists = kh_get(off, cache->entries, offset) != kh_end(cache->entries);
-		if (!exists) {
-			while (cache->memory_used + base->len > cache->memory_limit)
-				free_lowest_entry(cache);
+	if (new_cache_object(&entry, base) < 0)
+		return -1;
 
-			k = kh_put(off, cache->entries, offset, &error);
-			assert(error != 0);
-			kh_value(cache->entries, k) = entry;
-			cache->memory_used += entry->raw.len;
-		}
-		git_mutex_unlock(&cache->lock);
-		/* Somebody beat us to adding it into the cache */
-		if (exists) {
-			git__free(entry);
-			return -1;
-		}
+	if (git_mutex_lock(&cache->lock) < 0) {
+		giterr_set(GITERR_OS, "failed to lock cache");
+		return -1;
+	}
+	/* Add it to the cache if nobody else has */
+	exists = kh_get(off, cache->entries, offset) != kh_end(cache->entries);
+	if (!exists) {
+		while (cache->memory_used + base->len > cache->memory_limit)
+			free_lowest_entry(cache);
+
+		k = kh_put(off, cache->entries, offset, &error);
+		assert(error != 0);
+		kh_value(cache->entries, k) = entry;
+		cache->memory_used += entry->raw.len;
+	}
+	git_mutex_unlock(&cache->lock);
+	/* Somebody beat us to adding it into the cache */
+	if (exists) {
+		git__free(entry);
+		return -1;
 	}
 
 	return 0;
@@ -322,7 +326,7 @@ static int pack_index_open(struct git_pack_file *p)
 	name_len = strlen(p->pack_name);
 	assert(name_len > strlen(".pack")); /* checked by git_pack_file alloc */
 
-	if ((idx_name = git__malloc(name_len)) == NULL)
+	if (git__malloc(&idx_name, name_len) < 0)
 		return -1;
 
 	base_len = name_len - strlen(".pack");
@@ -636,8 +640,10 @@ int git_packfile_unpack(
 
 static void *use_git_alloc(void *opaq, unsigned int count, unsigned int size)
 {
+	void *p;
+
 	GIT_UNUSED(opaq);
-	return git__calloc(count, size);
+	return git__calloc(&p, count, size) == 0 ? p : NULL;
 }
 
 static void use_git_free(void *opaq, void *ptr)
@@ -724,8 +730,8 @@ int packfile_unpack_compressed(
 	z_stream stream;
 	unsigned char *buffer, *in;
 
-	buffer = git__calloc(1, size + 1);
-	GITERR_CHECK_ALLOC(buffer);
+	if (git__calloc(&buffer, 1, size + 1) < 0)
+		return -1;
 
 	memset(&stream, 0, sizeof(stream));
 	stream.next_out = buffer;
@@ -957,8 +963,8 @@ int git_packfile_alloc(struct git_pack_file **pack_out, const char *path)
 	if (path_len < strlen(".idx"))
 		return git_odb__error_notfound("invalid packfile path", NULL);
 
-	p = git__calloc(1, sizeof(*p) + path_len + 2);
-	GITERR_CHECK_ALLOC(p);
+	if (git__calloc(&p, 1, sizeof(*p) + path_len + 2) < 0)
+		return -1;
 
 	memcpy(p->pack_name, path, path_len + 1);
 

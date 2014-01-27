@@ -34,9 +34,9 @@ git__DIR *git__opendir(const char *dir)
 
 	dirlen = strlen(dir);
 
-	new = git__calloc(sizeof(*new) + dirlen + 1, 1);
-	if (!new)
+	if (git__calloc(&new, sizeof(*new) + dirlen + 1, 1) < 0)
 		return NULL;
+
 	memcpy(new->dir, dir, dirlen);
 
 	git_win32_path_from_c(filter_w, filter);

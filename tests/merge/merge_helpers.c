@@ -109,10 +109,14 @@ void merge__dump_index_entries(git_vector *index_entries)
 
 	printf ("\nINDEX [%d]:\n", (int)index_entries->length);
 	for (i = 0; i < index_entries->length; i++) {
+		char id[GIT_OID_HEXSZ+1];
+
 		index_entry = index_entries->contents[i];
 
+		git_oid__fmtz(id, &index_entry->oid);
+
 		printf("%o ", index_entry->mode);
-		printf("%s ", git_oid_allocfmt(&index_entry->oid));
+		printf("%s ", id);
 		printf("%d ", git_index_entry_stage(index_entry));
 		printf("%s ", index_entry->path);
 		printf("\n");
@@ -140,15 +144,21 @@ void merge__dump_reuc(git_index *index)
 
 	printf ("\nREUC:\n");
 	for (i = 0; i < git_index_reuc_entrycount(index); i++) {
+		char id[GIT_OID_HEXSZ+1][3];
+
 		reuc = git_index_reuc_get_byindex(index, i);
+
+		git_oid__fmtz(id[0], &reuc->oid[0]);
+		git_oid__fmtz(id[1], &reuc->oid[1]);
+		git_oid__fmtz(id[2], &reuc->oid[2]);
 
 		printf("%s ", reuc->path);
 		printf("%o ", reuc->mode[0]);
-		printf("%s\n", git_oid_allocfmt(&reuc->oid[0]));
+		printf("%s\n", id[0]);
 		printf("          %o ", reuc->mode[1]);
-		printf("          %s\n", git_oid_allocfmt(&reuc->oid[1]));
+		printf("          %s\n", id[1]);
 		printf("          %o ", reuc->mode[2]);
-		printf("          %s ", git_oid_allocfmt(&reuc->oid[2]));
+		printf("          %s ", id[2]);
 		printf("\n");
 	}
 	printf("\n");

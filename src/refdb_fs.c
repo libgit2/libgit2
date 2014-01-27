@@ -371,13 +371,13 @@ static int loose_lookup(
 		if (!(target = loose_parse_symbolic(&ref_file)))
 			error = -1;
 		else if (out != NULL)
-			*out = git_reference__alloc_symbolic(ref_name, target);
+			error = git_reference__alloc_symbolic(out, ref_name, target);
 	} else {
 		git_oid oid;
 
 		if (!(error = loose_parse_oid(&oid, ref_name, &ref_file)) &&
 			out != NULL)
-			*out = git_reference__alloc(ref_name, &oid, NULL);
+			error = git_reference__alloc(out, ref_name, &oid, NULL);
 	}
 
 	git_buf_free(&ref_file);
@@ -405,13 +405,11 @@ static int packed_lookup(
 		return -1;
 
 	entry = git_sortedcache_lookup(backend->refcache, ref_name);
-	if (!entry) {
+	
+	if (!entry)
 		error = ref_error_notfound(ref_name);
-	} else {
-		*out = git_reference__alloc(ref_name, &entry->oid, &entry->peel);
-		if (!*out)
-			error = -1;
-	}
+	else
+		error = git_reference__alloc(out, ref_name, &entry->oid, &entry->peel);
 
 	git_sortedcache_runlock(backend->refcache);
 
@@ -427,6 +425,8 @@ static int refdb_fs_backend__lookup(
 	int error;
 
 	assert(backend);
+
+	*out = NULL;
 
 	if (!(error = loose_lookup(out, backend, ref_name)))
 		return 0;
@@ -474,14 +474,11 @@ static int iter_load_loose_paths(refdb_fs_backend *backend, refdb_fs_iter *iter)
 
 	if ((error = git_buf_printf(&path, "%s/refs", backend->path)) < 0 ||
 		(error = git_iterator_for_filesystem(
-			&fsit, path.ptr, backend->iterator_flags, NULL, NULL)) < 0) {
-		git_buf_free(&path);
-		return error;
-	}
+			&fsit, path.ptr, backend->iterator_flags, NULL, NULL)) < 0 ||
+		(error = git_buf_sets(&path, GIT_REFS_DIR)) < 0)
+		goto done;
 
-	error = git_buf_sets(&path, GIT_REFS_DIR);
-
-	while (!error && !git_iterator_advance(&entry, fsit)) {
+	while (!git_iterator_advance(&entry, fsit)) {
 		const char *ref_name;
 		struct packref *ref;
 		char *ref_dup;
@@ -500,13 +497,12 @@ static int iter_load_loose_paths(refdb_fs_backend *backend, refdb_fs_iter *iter)
 			ref->flags |= PACKREF_SHADOWED;
 		git_sortedcache_runlock(backend->refcache);
 
-		ref_dup = git_pool_strdup(&iter->pool, ref_name);
-		if (!ref_dup)
-			error = -1;
-		else
-			error = git_vector_insert(&iter->loose, ref_dup);
+		if ((error = git_pool_strdup(&ref_dup, &iter->pool, ref_name)) < 0 ||
+			(error = git_vector_insert(&iter->loose, ref_dup)) < 0)
+			break;
 	}
 
+done:
 	git_iterator_free(fsit);
 	git_buf_free(&path);
 
@@ -542,8 +538,7 @@ static int refdb_fs_backend__iterator_next(
 		if (iter->glob && p_fnmatch(iter->glob, ref->name, 0) != 0)
 			continue;
 
-		*out = git_reference__alloc(ref->name, &ref->oid, &ref->peel);
-		error = (*out != NULL) ? 0 : -1;
+		error = git_reference__alloc(out, ref->name, &ref->oid, &ref->peel);
 		break;
 	}
 
@@ -602,15 +597,10 @@ static int refdb_fs_backend__iterator(
 	if (packed_reload(backend) < 0)
 		return -1;
 
-	iter = git__calloc(1, sizeof(refdb_fs_iter));
-	GITERR_CHECK_ALLOC(iter);
-
-	if (git_pool_init(&iter->pool, 1, 0) < 0 ||
-		git_vector_init(&iter->loose, 8, NULL) < 0)
-		goto fail;
-
-	if (glob != NULL &&
-		(iter->glob = git_pool_strdup(&iter->pool, glob)) == NULL)
+	if (git__calloc(&iter, 1, sizeof(refdb_fs_iter)) < 0 ||
+		git_pool_init(&iter->pool, 1, 0) < 0 ||
+		git_vector_init(&iter->loose, 8, NULL) < 0 ||
+		(glob && git_pool_strdup(&iter->glob, &iter->pool, glob) < 0))
 		goto fail;
 
 	iter->parent.next = refdb_fs_backend__iterator_next;
@@ -1031,8 +1021,7 @@ static int refdb_fs_backend__rename(
 		return error;
 	}
 
-	new = git_reference__set_name(old, new_name);
-	if (!new) {
+	if (git_reference__set_name(&new, old, new_name) < 0) {
 		git_reference_free(old);
 		return -1;
 	}
@@ -1107,9 +1096,10 @@ static int setup_namespace(git_buf *path, git_repository *repo)
 	if (repo->namespace == NULL)
 		return 0;
 
-	parts = end = git__strdup(repo->namespace);
-	if (parts == NULL)
+	if (git__strdup(&parts, repo->namespace) < 0)
 		return -1;
+
+	end = parts;
 
 	/*
 	 * From `man gitnamespaces`:
@@ -1117,9 +1107,8 @@ static int setup_namespace(git_buf *path, git_repository *repo)
 	 *  of namespaces; for example, GIT_NAMESPACE=foo/bar will store
 	 *  refs under refs/namespaces/foo/refs/namespaces/bar/
 	 */
-	while ((start = git__strsep(&end, "/")) != NULL) {
+	while ((start = git__strsep(&end, "/")) != NULL)
 		git_buf_printf(path, "refs/namespaces/%s/", start);
-	}
 
 	git_buf_printf(path, "refs/namespaces/%s/refs", end);
 	git__free(parts);
@@ -1139,15 +1128,14 @@ static int reflog_alloc(git_reflog **reflog, const char *name)
 
 	*reflog = NULL;
 
-	log = git__calloc(1, sizeof(git_reflog));
-	GITERR_CHECK_ALLOC(log);
+	if (git__calloc(&log, 1, sizeof(git_reflog)) < 0 ||
+		git__strdup(&log->ref_name, name) < 0 ||
+		git_vector_init(&log->entries, 0, NULL) < 0) {
+		if (log) {
+			git__free(log->ref_name);
+			git__free(log);
+		}
 
-	log->ref_name = git__strdup(name);
-	GITERR_CHECK_ALLOC(log->ref_name);
-
-	if (git_vector_init(&log->entries, 0, NULL) < 0) {
-		git__free(log->ref_name);
-		git__free(log);
 		return -1;
 	}
 
@@ -1171,13 +1159,9 @@ static int reflog_parse(git_reflog *log, const char *buf, size_t buf_size)
 	} while (0)
 
 	while (buf_size > GIT_REFLOG_SIZE_MIN) {
-		entry = git__calloc(1, sizeof(git_reflog_entry));
-		GITERR_CHECK_ALLOC(entry);
-
-		entry->committer = git__malloc(sizeof(git_signature));
-		GITERR_CHECK_ALLOC(entry->committer);
-
-		if (git_oid_fromstrn(&entry->oid_old, buf, GIT_OID_HEXSZ) < 0)
+		if (git__calloc(&entry, 1, sizeof(git_reflog_entry)) < 0 ||
+			git__malloc(&entry->committer, sizeof(git_signature)) < 0 ||
+			git_oid_fromstrn(&entry->oid_old, buf, GIT_OID_HEXSZ) < 0)
 			goto fail;
 		seek_forward(GIT_OID_HEXSZ + 1);
 
@@ -1202,8 +1186,8 @@ static int reflog_parse(git_reflog *log, const char *buf, size_t buf_size)
 			while (*buf && *buf != '\n')
 				seek_forward(1);
 
-			entry->msg = git__strndup(ptr, buf - ptr);
-			GITERR_CHECK_ALLOC(entry->msg);
+			if (git__strndup(&entry->msg, ptr, buf - ptr) < 0)
+				goto fail;
 		} else
 			entry->msg = NULL;
 
@@ -1219,9 +1203,7 @@ static int reflog_parse(git_reflog *log, const char *buf, size_t buf_size)
 #undef seek_forward
 
 fail:
-	if (entry)
-		git_reflog_entry__free(entry);
-
+	git_reflog_entry__free(entry);
 	return -1;
 }
 
@@ -1583,10 +1565,10 @@ int git_refdb_backend_fs(
 {
 	int t = 0;
 	git_buf path = GIT_BUF_INIT;
-	refdb_fs_backend *backend;
+	refdb_fs_backend *backend = NULL;
 
-	backend = git__calloc(1, sizeof(refdb_fs_backend));
-	GITERR_CHECK_ALLOC(backend);
+	if (git__calloc(&backend, 1, sizeof(refdb_fs_backend)) < 0)
+		goto fail;
 
 	backend->repo = repository;
 
@@ -1634,5 +1616,7 @@ fail:
 	git_buf_free(&path);
 	git__free(backend->path);
 	git__free(backend);
+
+	*backend_out = NULL;
 	return -1;
 }

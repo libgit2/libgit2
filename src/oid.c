@@ -95,6 +95,12 @@ void git_oid_fmt(char *str, const git_oid *oid)
 	git_oid_nfmt(str, GIT_OID_HEXSZ, oid);
 }
 
+void git_oid__fmtz(char *str, const git_oid *oid)
+{
+	git_oid_nfmt(str, GIT_OID_HEXSZ, oid);
+	str[GIT_OID_HEXSZ] = '\0';
+}
+
 void git_oid_pathfmt(char *str, const git_oid *oid)
 {
 	size_t i;
@@ -105,13 +111,13 @@ void git_oid_pathfmt(char *str, const git_oid *oid)
 		str = fmt_one(str, oid->id[i]);
 }
 
-char *git_oid_allocfmt(const git_oid *oid)
+int git_oid_allocfmt(char **out, const git_oid *oid)
 {
-	char *str = git__malloc(GIT_OID_HEXSZ + 1);
-	if (!str)
-		return NULL;
-	git_oid_nfmt(str, GIT_OID_HEXSZ + 1, oid);
-	return str;
+	if (git__malloc(out, GIT_OID_HEXSZ + 1) < 0)
+		return -1;
+
+	git_oid_nfmt(*out, GIT_OID_HEXSZ + 1, oid);
+	return 0;
 }
 
 char *git_oid_tostr(char *out, size_t n, const git_oid *oid)
@@ -254,12 +260,15 @@ struct git_oid_shorten {
 
 static int resize_trie(git_oid_shorten *self, size_t new_size)
 {
-	self->nodes = git__realloc(self->nodes, new_size * sizeof(trie_node));
-	GITERR_CHECK_ALLOC(self->nodes);
+	trie_node *newnodes;
 
-	if (new_size > self->size) {
+	if (git__realloc(&newnodes, self->nodes, new_size * sizeof(trie_node)) < 0)
+		return -1;
+
+	self->nodes = newnodes;
+
+	if (new_size > self->size)
 		memset(&self->nodes[self->size], 0x0, (new_size - self->size) * sizeof(trie_node));
-	}
 
 	self->size = new_size;
 	return 0;
@@ -291,25 +300,27 @@ static trie_node *push_leaf(git_oid_shorten *os, node_index idx, int push_at, co
 	return node;
 }
 
-git_oid_shorten *git_oid_shorten_new(size_t min_length)
+int git_oid_shorten_new(git_oid_shorten **out, size_t min_length)
 {
 	git_oid_shorten *os;
 
+	*out = NULL;
+
 	assert((size_t)((int)min_length) == min_length);
 
-	os = git__calloc(1, sizeof(git_oid_shorten));
-	if (os == NULL)
-		return NULL;
+	if (git__calloc(&os, 1, sizeof(git_oid_shorten)) < 0)
+		return -1;
 
 	if (resize_trie(os, 16) < 0) {
 		git__free(os);
-		return NULL;
+		return -1;
 	}
 
 	os->node_count = 1;
 	os->min_length = (int)min_length;
 
-	return os;
+	*out = os;
+	return 0;
 }
 
 void git_oid_shorten_free(git_oid_shorten *os)

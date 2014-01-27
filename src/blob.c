@@ -133,8 +133,8 @@ static int write_symlink(
 	ssize_t read_len;
 	int error;
 
-	link_data = git__malloc(link_size);
-	GITERR_CHECK_ALLOC(link_data);
+	if (git__malloc(&link_data, link_size) < 0)
+		return -1;
 
 	read_len = p_readlink(path, link_data, link_size);
 	if (read_len != (ssize_t)link_size) {
@@ -279,15 +279,9 @@ int git_blob_create_fromchunks(
 
 	assert(oid && repo && source_cb);
 
-	if ((error = git_buf_joinpath(
-			&path, git_repository_path(repo), GIT_OBJECTS_DIR "streamed")) < 0)
-		goto cleanup;
-
-	content = git__malloc(BUFFER_SIZE);
-	GITERR_CHECK_ALLOC(content);
-
-	if ((error = git_filebuf_open(
-			&file, git_buf_cstr(&path), GIT_FILEBUF_TEMPORARY, 0666)) < 0)
+	if ((error = git_buf_joinpath(&path, git_repository_path(repo), GIT_OBJECTS_DIR "streamed")) < 0 ||
+		(error = git__malloc(&content, BUFFER_SIZE)) < 0 ||
+		(error = git_filebuf_open(&file, git_buf_cstr(&path), GIT_FILEBUF_TEMPORARY, 0666)) < 0)
 		goto cleanup;
 
 	while (1) {

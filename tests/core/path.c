@@ -210,8 +210,9 @@ check_string_to_dir(
     const char* expected)
 {
 	size_t len = strlen(path);
-	char *buf = git__malloc(len + 2);
-	cl_assert(buf);
+	char *buf;
+	
+	cl_git_pass(git__malloc(&buf, len + 2));
 
 	strncpy(buf, path, len + 2);
 

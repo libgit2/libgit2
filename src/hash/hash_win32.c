@@ -172,7 +172,7 @@ GIT_INLINE(void) hash_ctx_cryptoapi_cleanup(git_hash_ctx *ctx)
 
 GIT_INLINE(int) hash_ctx_cng_init(git_hash_ctx *ctx)
 {
-	if ((ctx->ctx.cng.hash_object = git__malloc(hash_prov.prov.cng.hash_object_size)) == NULL)
+	if (git__malloc(&ctx->ctx.cng.hash_object, hash_prov.prov.cng.hash_object_size) < 0)
 		return -1;
 
 	if (hash_prov.prov.cng.create_hash(hash_prov.prov.cng.handle, &ctx->ctx.cng.hash_handle, ctx->ctx.cng.hash_object, hash_prov.prov.cng.hash_object_size, NULL, 0, 0) < 0) {

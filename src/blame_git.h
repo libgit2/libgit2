@@ -15,6 +15,6 @@ int git_blame__get_origin(
 		git_commit *commit,
 		const char *path);
 void git_blame__free_entry(git_blame__entry *ent);
-void git_blame__like_git(git_blame *sb, uint32_t flags);
+int git_blame__like_git(git_blame *sb, uint32_t flags);
 
 #endif

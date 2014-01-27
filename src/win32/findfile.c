@@ -44,8 +44,9 @@ int git_win32__find_file(
 
 	/* allocate space for wchar_t path to file */
 	alloc_len = root->len + len + 2;
-	file_utf16 = git__calloc(alloc_len, sizeof(wchar_t));
-	GITERR_CHECK_ALLOC(file_utf16);
+
+	if (git__calloc(&file_utf16, alloc_len, sizeof(wchar_t)) < 0)
+		return -1;
 
 	/* append root + '\\' + filename as wchar_t */
 	memcpy(file_utf16, root->path, root->len * sizeof(wchar_t));

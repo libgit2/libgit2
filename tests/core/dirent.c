@@ -206,7 +206,9 @@ void test_core_dirent__traverse_weird_filenames(void)
 /* test filename length limits */
 void test_core_dirent__length_limits(void)
 {
-	char *big_filename = (char *)git__malloc(FILENAME_MAX + 1);
+	char *big_filename;
+	
+	cl_git_pass(git__malloc(&big_filename, FILENAME_MAX + 1));
 	memset(big_filename, 'a', FILENAME_MAX + 1);
 	big_filename[FILENAME_MAX] = 0;
 

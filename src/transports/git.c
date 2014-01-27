@@ -146,18 +146,17 @@ static void git_stream_free(git_smart_subtransport_stream *stream)
 }
 
 static int git_stream_alloc(
+	git_smart_subtransport_stream **stream,
 	git_subtransport *t,
 	const char *url,
-	const char *cmd,
-	git_smart_subtransport_stream **stream)
+	const char *cmd)
 {
 	git_stream *s;
 
-	if (!stream)
-		return -1;
+	assert(stream);
 
-	s = git__calloc(sizeof(git_stream), 1);
-	GITERR_CHECK_ALLOC(s);
+	if (git__calloc(&s, sizeof(git_stream), 1) < 0)
+		return -1;
 
 	s->parent.subtransport = &t->parent;
 	s->parent.read = git_stream_read;
@@ -165,9 +164,8 @@ static int git_stream_alloc(
 	s->parent.free = git_stream_free;
 
 	s->cmd = cmd;
-	s->url = git__strdup(url);
 
-	if (!s->url) {
+	if (git__strdup(&s->url, url) < 0) {
 		git__free(s);
 		return -1;
 	}
@@ -177,9 +175,9 @@ static int git_stream_alloc(
 }
 
 static int _git_uploadpack_ls(
+	git_smart_subtransport_stream **stream,
 	git_subtransport *t,
-	const char *url,
-	git_smart_subtransport_stream **stream)
+	const char *url)
 {
 	char *host=NULL, *port=NULL, *path=NULL, *user=NULL, *pass=NULL;
 	const char *stream_url = url;
@@ -191,7 +189,7 @@ static int _git_uploadpack_ls(
 	if (!git__prefixcmp(url, prefix_git))
 		stream_url += strlen(prefix_git);
 
-	if ((error = git_stream_alloc(t, stream_url, cmd_uploadpack, stream)) < 0)
+	if ((error = git_stream_alloc(stream, t, stream_url, cmd_uploadpack)) < 0)
 		return error;
 
 	s = (git_stream *)*stream;
@@ -214,9 +212,9 @@ static int _git_uploadpack_ls(
 }
 
 static int _git_uploadpack(
+	git_smart_subtransport_stream **stream,
 	git_subtransport *t,
-	const char *url,
-	git_smart_subtransport_stream **stream)
+	const char *url)
 {
 	GIT_UNUSED(url);
 
@@ -230,9 +228,9 @@ static int _git_uploadpack(
 }
 
 static int _git_receivepack_ls(
+	git_smart_subtransport_stream **stream,
 	git_subtransport *t,
-	const char *url,
-	git_smart_subtransport_stream **stream)
+	const char *url)
 {
 	char *host=NULL, *port=NULL, *path=NULL, *user=NULL, *pass=NULL;
 	const char *stream_url = url;
@@ -243,7 +241,7 @@ static int _git_receivepack_ls(
 	if (!git__prefixcmp(url, prefix_git))
 		stream_url += strlen(prefix_git);
 
-	if (git_stream_alloc(t, stream_url, cmd_receivepack, stream) < 0)
+	if (git_stream_alloc(stream, t, stream_url, cmd_receivepack) < 0)
 		return -1;
 
 	s = (git_stream *)*stream;
@@ -264,9 +262,9 @@ static int _git_receivepack_ls(
 }
 
 static int _git_receivepack(
+	git_smart_subtransport_stream **stream,
 	git_subtransport *t,
-	const char *url,
-	git_smart_subtransport_stream **stream)
+	const char *url)
 {
 	GIT_UNUSED(url);
 
@@ -289,16 +287,16 @@ static int _git_action(
 
 	switch (action) {
 		case GIT_SERVICE_UPLOADPACK_LS:
-			return _git_uploadpack_ls(t, url, stream);
+			return _git_uploadpack_ls(stream, t, url);
 
 		case GIT_SERVICE_UPLOADPACK:
-			return _git_uploadpack(t, url, stream);
+			return _git_uploadpack(stream, t, url);
 
 		case GIT_SERVICE_RECEIVEPACK_LS:
-			return _git_receivepack_ls(t, url, stream);
+			return _git_receivepack_ls(stream, t, url);
 
 		case GIT_SERVICE_RECEIVEPACK:
-			return _git_receivepack(t, url, stream);
+			return _git_receivepack(stream, t, url);
 	}
 
 	*stream = NULL;
@@ -329,11 +327,10 @@ int git_smart_subtransport_git(git_smart_subtransport **out, git_transport *owne
 {
 	git_subtransport *t;
 
-	if (!out)
-		return -1;
+	assert(out);
 
-	t = git__calloc(sizeof(git_subtransport), 1);
-	GITERR_CHECK_ALLOC(t);
+	if (git__calloc(&t, sizeof(git_subtransport), 1) < 0)
+		return -1;
 
 	t->owner = owner;
 	t->parent.action = _git_action;

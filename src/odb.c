@@ -63,11 +63,15 @@ int git_odb__hashobj(git_oid *id, git_rawobj *obj)
 
 	assert(id && obj);
 
-	if (!git_object_typeisloose(obj->type))
+	if (!git_object_typeisloose(obj->type)) {
+		giterr_set(GITERR_ODB, "Invalid object type");
 		return -1;
+	}
 
-	if (!obj->data && obj->len != 0)
+	if (!obj->data && obj->len != 0) {
+		giterr_set(GITERR_ODB, "Invalid object");
 		return -1;
+	}
 
 	hdrlen = git_odb__format_object_header(header, sizeof(header), obj->len, obj->type);
 
@@ -82,18 +86,22 @@ int git_odb__hashobj(git_oid *id, git_rawobj *obj)
 }
 
 
-static git_odb_object *odb_object__alloc(const git_oid *oid, git_rawobj *source)
+static int odb_object__alloc(git_odb_object **out, const git_oid *oid, git_rawobj *source)
 {
-	git_odb_object *object = git__calloc(1, sizeof(git_odb_object));
+	git_odb_object *object;
 
-	if (object != NULL) {
-		git_oid_cpy(&object->cached.oid, oid);
-		object->cached.type = source->type;
-		object->cached.size = source->len;
-		object->buffer      = source->data;
-	}
+	*out = NULL;
+	
+	if (git__calloc(&object, 1, sizeof(git_odb_object)) < 0)
+		return -1;
 
-	return object;
+	git_oid_cpy(&object->cached.oid, oid);
+	object->cached.type = source->type;
+	object->cached.size = source->len;
+	object->buffer      = source->data;
+
+	*out = object;
+	return 0;
 }
 
 void git_odb_object__free(void *object)
@@ -233,8 +241,8 @@ int git_odb__hashlink(git_oid *out, const char *path)
 		char *link_data;
 		ssize_t read_len;
 
-		link_data = git__malloc((size_t)(size + 1));
-		GITERR_CHECK_ALLOC(link_data);
+		if (git__malloc(&link_data, (size_t)(size + 1)) < 0)
+			return -1;
 
 		read_len = p_readlink(path, link_data, (size_t)size);
 		link_data[size] = '\0';
@@ -329,13 +337,13 @@ static int init_fake_wstream(git_odb_stream **stream_p, git_odb_backend *backend
 {
 	fake_wstream *stream;
 
-	stream = git__calloc(1, sizeof(fake_wstream));
-	GITERR_CHECK_ALLOC(stream);
+	if (git__calloc(&stream, 1, sizeof(fake_wstream)) < 0)
+		return -1;
 
 	stream->size = size;
 	stream->type = type;
-	stream->buffer = git__malloc(size);
-	if (stream->buffer == NULL) {
+
+	if (git__malloc(&stream->buffer, size) < 0) {
 		git__free(stream);
 		return -1;
 	}
@@ -372,8 +380,12 @@ static int backend_sort_cmp(const void *a, const void *b)
 
 int git_odb_new(git_odb **out)
 {
-	git_odb *db = git__calloc(1, sizeof(*db));
-	GITERR_CHECK_ALLOC(db);
+	git_odb *db;
+	
+	*out = NULL;
+
+	if (git__calloc(&db, 1, sizeof(*db)) < 0)
+		return -1;
 
 	if (git_cache_init(&db->own_cache) < 0 ||
 		git_vector_init(&db->backends, 4, backend_sort_cmp) < 0) {
@@ -399,8 +411,8 @@ static int add_backend_internal(
 	/* Check if the backend is already owned by another ODB */
 	assert(!backend->odb || backend->odb == odb);
 
-	internal = git__malloc(sizeof(backend_internal));
-	GITERR_CHECK_ALLOC(internal);
+	if (git__malloc(&internal, sizeof(backend_internal)) < 0)
+		return -1;
 
 	internal->backend = backend;
 	internal->priority = priority;
@@ -723,7 +735,7 @@ int git_odb_read(git_odb_object **out, git_odb *db, const git_oid *id)
 		return error;
 	}
 
-	if ((object = odb_object__alloc(id, &raw)) == NULL)
+	if (odb_object__alloc(&object, id, &raw) < 0)
 		return -1;
 
 	*out = git_cache_store_raw(odb_cache(db), object);
@@ -784,7 +796,7 @@ int git_odb_read_prefix(
 	if (!found)
 		return git_odb__error_notfound("no match for prefix", short_id);
 
-	if ((object = odb_object__alloc(&found_full_oid, &raw)) == NULL)
+	if (odb_object__alloc(&object, &found_full_oid, &raw) < 0)
 		return -1;
 
 	*out = git_cache_store_raw(odb_cache(db), object);
@@ -888,9 +900,8 @@ int git_odb_open_wstream(
 	if (error < 0 && !writes)
 		error = git_odb__error_unsupported_in_backend("write object");
 
-	ctx = git__malloc(sizeof(git_hash_ctx));
-	GITERR_CHECK_ALLOC(ctx);
-
+	if (git__malloc(&ctx, sizeof(git_hash_ctx)) < 0)
+		return -1;
 
 	git_hash_ctx_init(ctx);
 	hash_header(ctx, size, type);
@@ -1010,10 +1021,10 @@ int git_odb_write_pack(struct git_odb_writepack **out, git_odb *db, git_transfer
 	return error;
 }
 
-void *git_odb_backend_malloc(git_odb_backend *backend, size_t len)
+int git_odb_backend_malloc(void **out, git_odb_backend *backend, size_t len)
 {
 	GIT_UNUSED(backend);
-	return git__malloc(len);
+	return git__malloc(out, len);
 }
 
 int git_odb_refresh(struct git_odb *db)

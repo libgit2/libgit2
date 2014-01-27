@@ -142,27 +142,28 @@ static bool valid_repository_path(git_buf *repository_path)
 	return true;
 }
 
-static git_repository *repository_alloc(void)
+static int repository_alloc(git_repository **out)
 {
-	git_repository *repo = git__calloc(1, sizeof(git_repository));
-	if (!repo)
-		return NULL;
+	git_repository *repo;
 
-	if (git_cache_init(&repo->objects) < 0) {
+	if (git__calloc(&repo, 1, sizeof(git_repository)) < 0 ||
+		git_cache_init(&repo->objects) < 0) {
 		git__free(repo);
-		return NULL;
+
+		*out = NULL;
+		return -1;
 	}
 
 	/* set all the entries in the cvar cache to `unset` */
 	git_repository__cvar_cache_clear(repo);
 
-	return repo;
+	*out = repo;
+	return 0;
 }
 
 int git_repository_new(git_repository **out)
 {
-	*out = repository_alloc();
-	return 0;
+	return repository_alloc(out);
 }
 
 static int load_config_data(git_repository *repo)
@@ -424,11 +425,13 @@ int git_repository_open_bare(
 		return GIT_ENOTFOUND;
 	}
 
-	repo = repository_alloc();
-	GITERR_CHECK_ALLOC(repo);
+	if (repository_alloc(&repo) < 0)
+		return -1;
 
-	repo->path_repository = git_buf_detach(&path);
-	GITERR_CHECK_ALLOC(repo->path_repository);
+	if ((repo->path_repository = git_buf_detach(&path)) == NULL) {
+		git__free(repo);
+		return -1;
+	}
 
 	/* of course we're bare! */
 	repo->is_bare = 1;
@@ -455,11 +458,13 @@ int git_repository_open_ext(
 	if (error < 0 || !repo_ptr)
 		return error;
 
-	repo = repository_alloc();
-	GITERR_CHECK_ALLOC(repo);
+	if (repository_alloc(&repo) < 0)
+		return -1;
 
-	repo->path_repository = git_buf_detach(&path);
-	GITERR_CHECK_ALLOC(repo->path_repository);
+	if ((repo->path_repository = git_buf_detach(&path)) == NULL) {
+		git__free(repo);
+		return -1;
+	}
 
 	if ((flags & GIT_REPOSITORY_OPEN_BARE) != 0)
 		repo->is_bare = 1;
@@ -485,8 +490,8 @@ int git_repository_wrap_odb(git_repository **repo_out, git_odb *odb)
 {
 	git_repository *repo;
 
-	repo = repository_alloc();
-	GITERR_CHECK_ALLOC(repo);
+	if (repository_alloc(&repo) < 0)
+		return -1;
 
 	git_repository_set_odb(repo, odb);
 	*repo_out = repo;
@@ -786,7 +791,7 @@ int git_repository_set_namespace(git_repository *repo, const char *namespace)
 		return 0;
 	}
 
-	return (repo->namespace = git__strdup(namespace)) ? 0 : -1;
+	return git__strdup(&repo->namespace, namespace);
 }
 
 const char *git_repository_get_namespace(git_repository *repo)

@@ -150,12 +150,8 @@ int git_transport_register(
 {
 	transport_definition *d;
 
-	d = git__calloc(sizeof(transport_definition), 1);
-	GITERR_CHECK_ALLOC(d);
-
-	d->prefix = git__strdup(prefix);
-
-	if (!d->prefix)
+	if (git__calloc(&d ,sizeof(transport_definition), 1) < 0 ||
+		git__strdup(&d->prefix, prefix) < 0)
 		goto on_error;
 
 	d->priority = priority;
@@ -168,8 +164,11 @@ int git_transport_register(
 	return 0;
 
 on_error:
-	git__free(d->prefix);
-	git__free(d);
+	if (d) {
+		git__free(d->prefix);
+		git__free(d);
+	}
+
 	return -1;
 }
 

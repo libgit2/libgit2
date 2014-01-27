@@ -279,8 +279,9 @@ static int crlf_check(
 			return GIT_PASSTHROUGH;
 	}
 
-	*payload = git__malloc(sizeof(ca));
-	GITERR_CHECK_ALLOC(*payload);
+	if (git__malloc(payload, sizeof(ca)) < 0)
+		return -1;
+
 	memcpy(*payload, &ca, sizeof(ca));
 
 	return 0;
@@ -314,9 +315,14 @@ static void crlf_cleanup(
 	git__free(payload);
 }
 
-git_filter *git_crlf_filter_new(void)
+int git_crlf_filter_new(git_filter **out)
 {
-	struct crlf_filter *f = git__calloc(1, sizeof(struct crlf_filter));
+	struct crlf_filter *f;
+
+	if (git__calloc(&f, 1, sizeof(struct crlf_filter)) < 0) {
+		*out = NULL;
+		return -1;
+	}
 
 	f->f.version = GIT_FILTER_VERSION;
 	f->f.attributes = "crlf eol text";
@@ -326,5 +332,6 @@ git_filter *git_crlf_filter_new(void)
 	f->f.apply    = crlf_apply;
 	f->f.cleanup  = crlf_cleanup;
 
-	return (git_filter *)f;
+	*out = (git_filter *)f;
+	return 0;
 }

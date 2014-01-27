@@ -85,13 +85,13 @@ static void filter_registry_shutdown(void)
 static int filter_registry_initialize(void)
 {
 	int error = 0;
-	struct filter_registry *reg;
+	struct filter_registry *reg = NULL;
 
 	if (git__filter_registry)
 		return 0;
 
-	reg = git__calloc(1, sizeof(struct filter_registry));
-	GITERR_CHECK_ALLOC(reg);
+	if (git__calloc(&reg, 1, sizeof(struct filter_registry)) < 0)
+		return -1;
 
 	if ((error = git_vector_init(
 			&reg->filters, 2, filter_def_priority_cmp)) < 0)
@@ -105,18 +105,14 @@ static int filter_registry_initialize(void)
 
 	/* try to register both default filters */
 	{
-		git_filter *crlf = git_crlf_filter_new();
-		git_filter *ident = git_ident_filter_new();
+		git_filter *crlf;
+		git_filter *ident;
 
-		if (crlf && git_filter_register(
-				GIT_FILTER_CRLF, crlf, GIT_FILTER_CRLF_PRIORITY) < 0)
-			crlf = NULL;
-		if (ident && git_filter_register(
-				GIT_FILTER_IDENT, ident, GIT_FILTER_IDENT_PRIORITY) < 0)
-			ident = NULL;
-
-		if (!crlf || !ident)
-			return -1;
+		if ((error = git_crlf_filter_new(&crlf)) < 0 ||
+			(error = git_ident_filter_new(&ident)) < 0 ||
+			(error = git_filter_register(GIT_FILTER_CRLF, crlf, GIT_FILTER_CRLF_PRIORITY)) < 0 ||
+			(error = git_filter_register(GIT_FILTER_IDENT, ident, GIT_FILTER_IDENT_PRIORITY)) < 0)
+			goto cleanup;
 	}
 
 	return 0;
@@ -241,9 +237,9 @@ int git_filter_register(
 	if (filter_def_scan_attrs(&attrs, &nattr, &nmatch, filter->attributes) < 0)
 		return -1;
 
-	fdef = git__calloc(
-		sizeof(git_filter_def) + 2 * nattr * sizeof(char *), 1);
-	GITERR_CHECK_ALLOC(fdef);
+	if (git__calloc(&fdef, 
+		sizeof(git_filter_def) + 2 * nattr * sizeof(char *), 1) < 0)
+		return -1;
 
 	fdef->filter_name = name;
 	fdef->filter      = filter;
@@ -364,11 +360,14 @@ static int filter_list_new(
 	git_filter_list *fl = NULL;
 	size_t pathlen = src->path ? strlen(src->path) : 0;
 
-	fl = git__calloc(1, sizeof(git_filter_list) + pathlen + 1);
-	GITERR_CHECK_ALLOC(fl);
+	*out = NULL;
+
+	if (git__calloc(&fl, 1, sizeof(git_filter_list) + pathlen + 1) < 0)
+		return -1;
 
 	if (src->path)
 		memcpy(fl->path, src->path, pathlen);
+
 	fl->source.repo = src->repo;
 	fl->source.path = fl->path;
 	fl->source.mode = src->mode;
@@ -382,8 +381,12 @@ static int filter_list_check_attributes(
 {
 	int error;
 	size_t i;
-	const char **strs = git__calloc(fdef->nattrs, sizeof(const char *));
-	GITERR_CHECK_ALLOC(strs);
+	const char **strs;
+	
+	*out = NULL;
+
+	if (git__calloc(&strs, fdef->nattrs, sizeof(const char *)) < 0)
+		return -1;
 
 	error = git_attr_get_many(
 		strs, src->repo, 0, src->path, fdef->nattrs, fdef->attrs);

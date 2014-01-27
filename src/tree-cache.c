@@ -87,14 +87,15 @@ static int read_tree_internal(git_tree_cache **out,
 	buffer = name_start = *buffer_in;
 
 	if ((buffer = memchr(buffer, '\0', buffer_end - buffer)) == NULL)
-		goto corrupted;
+		goto corrupt;
 
 	if (++buffer >= buffer_end)
-		goto corrupted;
+		goto corrupt;
 
 	name_len = strlen(name_start);
-	tree = git__malloc(sizeof(git_tree_cache) + name_len + 1);
-	GITERR_CHECK_ALLOC(tree);
+
+	if (git__malloc(&tree, sizeof(git_tree_cache) + name_len + 1) < 0)
+		goto on_error;
 
 	memset(tree, 0x0, sizeof(git_tree_cache));
 	tree->parent = parent;
@@ -105,27 +106,27 @@ static int read_tree_internal(git_tree_cache **out,
 
 	/* Blank-terminated ASCII decimal number of entries in this tree */
 	if (git__strtol32(&count, buffer, &buffer, 10) < 0)
-		goto corrupted;
+		goto corrupt;
 
 	tree->entries = count;
 
 	if (*buffer != ' ' || ++buffer >= buffer_end)
-		goto corrupted;
+		goto corrupt;
 
 	 /* Number of children of the tree, newline-terminated */
 	if (git__strtol32(&count, buffer, &buffer, 10) < 0 || count < 0)
-		goto corrupted;
+		goto corrupt;
 
 	tree->children_count = count;
 
 	if (*buffer != '\n' || ++buffer > buffer_end)
-		goto corrupted;
+		goto corrupt;
 
 	/* The SHA1 is only there if it's not invalidated */
 	if (tree->entries >= 0) {
 		/* 160-bit SHA-1 for this tree and it's children */
 		if (buffer + GIT_OID_RAWSZ > buffer_end)
-			goto corrupted;
+			goto corrupt;
 
 		git_oid_fromraw(&tree->oid, (const unsigned char *)buffer);
 		buffer += GIT_OID_RAWSZ;
@@ -135,14 +136,14 @@ static int read_tree_internal(git_tree_cache **out,
 	if (tree->children_count > 0) {
 		unsigned int i;
 
-		tree->children = git__malloc(tree->children_count * sizeof(git_tree_cache *));
-		GITERR_CHECK_ALLOC(tree->children);
+		if (git__malloc(&tree->children, tree->children_count * sizeof(git_tree_cache *)) < 0)
+			goto on_error;
 
 		memset(tree->children, 0x0, tree->children_count * sizeof(git_tree_cache *));
 
 		for (i = 0; i < tree->children_count; ++i) {
 			if (read_tree_internal(&tree->children[i], &buffer, buffer_end, tree) < 0)
-				goto corrupted;
+				goto corrupt;
 		}
 	}
 
@@ -150,9 +151,11 @@ static int read_tree_internal(git_tree_cache **out,
 	*out = tree;
 	return 0;
 
- corrupted:
-	git_tree_cache_free(tree);
+corrupt:
 	giterr_set(GITERR_INDEX, "Corrupted TREE extension in index");
+
+on_error:
+	git_tree_cache_free(tree);
 	return -1;
 }
 

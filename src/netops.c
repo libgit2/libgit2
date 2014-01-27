@@ -634,10 +634,10 @@ int gitno_connection_data_from_url(
 		if (suffixlen &&
 		    !memcmp(path + pathlen - suffixlen, service_suffix, suffixlen)) {
 			git__free(data->path);
-			data->path = git__strndup(path, pathlen - suffixlen);
+			error = git__strndup(&data->path, path, pathlen - suffixlen);
 		} else {
 			git__free(data->path);
-			data->path = git__strdup(path);
+			error = git__strdup(&data->path, path);
 		}
 
 		/* Check for errors in the resulting data */
@@ -680,15 +680,16 @@ static char* unescape(char *str)
 }
 
 int gitno_extract_url_parts(
-		char **host,
-		char **port,
-		char **path,
-		char **username,
-		char **password,
-		const char *url,
-		const char *default_port)
+	char **host_out,
+	char **port_out,
+	char **path_out,
+	char **username_out,
+	char **password_out,
+	const char *url,
+	const char *default_port)
 {
 	struct http_parser_url u = {0};
+	char *host = NULL, *port = NULL, *path = NULL, *username = NULL, *password = NULL;
 	const char *_host, *_port, *_path, *_userinfo;
 
 	if (http_parser_parse_url(url, strlen(url), false, &u)) {
@@ -702,33 +703,58 @@ int gitno_extract_url_parts(
 	_userinfo = url+u.field_data[UF_USERINFO].off;
 
 	if (u.field_set & (1 << UF_HOST)) {
-		*host = git__substrdup(_host, u.field_data[UF_HOST].len);
-		GITERR_CHECK_ALLOC(*host);
+		if (git__substrdup(&host, _host, u.field_data[UF_HOST].len) < 0)
+			goto on_error;
 	}
 
-	if (u.field_set & (1 << UF_PORT))
-		*port = git__substrdup(_port, u.field_data[UF_PORT].len);
-	else
-		*port = git__strdup(default_port);
-	GITERR_CHECK_ALLOC(*port);
+	if (u.field_set & (1 << UF_PORT)) {
+		if (git__substrdup(&port, _port, u.field_data[UF_PORT].len) < 0)
+			goto on_error;
+	} else {
+		if (git__strdup(&port, default_port) < 0)
+			goto on_error;
+	}
 
 	if (u.field_set & (1 << UF_PATH)) {
-		*path = git__substrdup(_path, u.field_data[UF_PATH].len);
-		GITERR_CHECK_ALLOC(*path);
+		if (git__substrdup(&path, _path, u.field_data[UF_PATH].len) < 0)
+			goto on_error;
 	}
 
 	if (u.field_set & (1 << UF_USERINFO)) {
 		const char *colon = memchr(_userinfo, ':', u.field_data[UF_USERINFO].len);
 		if (colon) {
-			*username = unescape(git__substrdup(_userinfo, colon - _userinfo));
-			*password = unescape(git__substrdup(colon+1, u.field_data[UF_USERINFO].len - (colon+1-_userinfo)));
-			GITERR_CHECK_ALLOC(*password);
-		} else {
-			*username = git__substrdup(_userinfo, u.field_data[UF_USERINFO].len);
-		}
-		GITERR_CHECK_ALLOC(*username);
+			if (git__substrdup(&username, _userinfo, colon - _userinfo) < 0 ||
+				git__substrdup(&password, colon+1, u.field_data[UF_USERINFO].len - (colon+1-_userinfo)) < 0)
+				goto on_error;
 
+			username = unescape(username);
+			password = unescape(password);
+		} else {
+			if (git__substrdup(&username, _userinfo, u.field_data[UF_USERINFO].len) < 0)
+				goto on_error;
+		}
 	}
 
+	*host_out = host;
+	*port_out = port;
+	*path_out = path;
+	*username_out = username;
+	*password_out = password;
+
 	return 0;
+
+on_error:
+	git__free(host);
+	git__free(port);
+	git__free(path);
+	git__free(username);
+	git__free(password);
+
+	*host_out = NULL;
+	*port_out = NULL;
+	*path_out = NULL;
+	*username_out = NULL;
+	*password_out = NULL;
+
+	return -1;
 }

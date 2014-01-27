@@ -26,8 +26,7 @@ git_commit_list_node *git_revwalk__commit_lookup(
 	if (pos != kh_end(walk->commits))
 		return kh_value(walk->commits, pos);
 
-	commit = git_commit_list_alloc_node(walk);
-	if (commit == NULL)
+	if (git_commit_list_alloc_node(&commit, walk) < 0)
 		return NULL;
 
 	git_oid_cpy(&commit->oid, oid);
@@ -277,7 +276,7 @@ static int revwalk_enqueue_timesort(git_revwalk *walk, git_commit_list_node *com
 
 static int revwalk_enqueue_unsorted(git_revwalk *walk, git_commit_list_node *commit)
 {
-	return git_commit_list_insert(commit, &walk->iterator_rand) ? 0 : -1;
+	return git_commit_list_insert(commit, &walk->iterator_rand);
 }
 
 static int revwalk_next_timesort(git_commit_list_node **object_out, git_revwalk *walk)
@@ -345,7 +344,7 @@ static int revwalk_next_toposort(git_commit_list_node **object_out, git_revwalk 
 
 			if (--parent->in_degree == 0 && parent->topo_delay) {
 				parent->topo_delay = 0;
-				if (git_commit_list_insert(parent, &walk->iterator_topo) == NULL)
+				if (git_commit_list_insert(parent, &walk->iterator_topo) < 0)
 					return -1;
 			}
 		}
@@ -400,7 +399,7 @@ static int prepare_walk(git_revwalk *walk)
 				parent->in_degree++;
 			}
 
-			if (git_commit_list_insert(next, &walk->iterator_topo) == NULL)
+			if (git_commit_list_insert(next, &walk->iterator_topo) < 0)
 				return -1;
 		}
 
@@ -413,7 +412,7 @@ static int prepare_walk(git_revwalk *walk)
 	if (walk->sorting & GIT_SORT_REVERSE) {
 
 		while ((error = walk->get_next(&next, walk)) == 0)
-			if (git_commit_list_insert(next, &walk->iterator_reverse) == NULL)
+			if (git_commit_list_insert(next, &walk->iterator_reverse) < 0)
 				return -1;
 
 		if (error != GIT_ITEROVER)
@@ -431,19 +430,19 @@ int git_revwalk_new(git_revwalk **revwalk_out, git_repository *repo)
 {
 	git_revwalk *walk;
 
-	walk = git__malloc(sizeof(git_revwalk));
-	GITERR_CHECK_ALLOC(walk);
+	if (git__malloc(&walk, sizeof(git_revwalk)) < 0)
+		return -1;
 
 	memset(walk, 0x0, sizeof(git_revwalk));
 
-	walk->commits = git_oidmap_alloc();
-	GITERR_CHECK_ALLOC(walk->commits);
-
-	if (git_pqueue_init(&walk->iterator_time, 8, git_commit_list_time_cmp) < 0 ||
+	if ((walk->commits = git_oidmap_alloc()) == NULL ||
+		git_pqueue_init(&walk->iterator_time, 8, git_commit_list_time_cmp) < 0 ||
 		git_vector_init(&walk->twos, 4, NULL) < 0 ||
 		git_pool_init(&walk->commit_pool, 1,
-			git_pool__suggest_items_per_page(COMMIT_ALLOC) * COMMIT_ALLOC) < 0)
+			git_pool__suggest_items_per_page(COMMIT_ALLOC) * COMMIT_ALLOC) < 0) {
+		git_revwalk_free(walk);
 		return -1;
+	}
 
 	walk->get_next = &revwalk_next_unsorted;
 	walk->enqueue = &revwalk_enqueue_unsorted;

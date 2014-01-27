@@ -24,8 +24,8 @@ int git_refdb_new(git_refdb **out, git_repository *repo)
 
 	assert(out && repo);
 
-	db = git__calloc(1, sizeof(*db));
-	GITERR_CHECK_ALLOC(db);
+	if (git__calloc(&db, 1, sizeof(*db)) < 0)
+		return -1;
 
 	db->repo = repo;
 

@@ -89,7 +89,7 @@ static int mark_parents(git_revwalk *walk, git_commit_list_node *one,
 
 		/* Keep track of root commits, to make sure the path gets marked */
 		if (commit->out_degree == 0) {
-			if (git_commit_list_insert(commit, &roots) == NULL)
+			if (git_commit_list_insert(commit, &roots) < 0)
 				goto on_error;
 		}
 	}

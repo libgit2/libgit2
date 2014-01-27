@@ -40,8 +40,8 @@ void test_core_vector__2(void)
 	git_vector x;
 	int *ptrs[2];
 
-	ptrs[0] = git__malloc(sizeof(int));
-	ptrs[1] = git__malloc(sizeof(int));
+	cl_git_pass(git__malloc(&ptrs[0], sizeof(int)));
+	cl_git_pass(git__malloc(&ptrs[1], sizeof(int)));
 
 	*ptrs[0] = 2;
 	*ptrs[1] = 1;
@@ -148,7 +148,9 @@ static int merge_structs(void **old_raw, void *new)
 
 static my_struct *alloc_struct(int value)
 {
-	my_struct *st = git__malloc(sizeof(my_struct));
+	my_struct *st;
+	
+	cl_git_pass(git__malloc(&st, sizeof(my_struct)));
 	st->content = value;
 	st->count = 0;
 	_struct_count++;

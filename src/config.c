@@ -71,10 +71,10 @@ int git_config_new(git_config **out)
 {
 	git_config *cfg;
 
-	cfg = git__malloc(sizeof(git_config));
-	GITERR_CHECK_ALLOC(cfg);
+	*out = NULL;
 
-	memset(cfg, 0x0, sizeof(git_config));
+	if (git__calloc(&cfg, 1, sizeof(git_config)) < 0)
+		return -1;
 
 	if (git_vector_init(&cfg->files, 3, config_backend_cmp) < 0) {
 		git__free(cfg);
@@ -275,13 +275,9 @@ int git_config_add_backend(
 
 	GITERR_CHECK_VERSION(file, GIT_CONFIG_BACKEND_VERSION, "git_config_backend");
 
-	if ((result = file->open(file, level)) < 0)
+	if ((result = file->open(file, level)) < 0 ||
+		(result = git__calloc(&internal, 1, sizeof(file_internal))) < 0)
 		return result;
-
-	internal = git__malloc(sizeof(file_internal));
-	GITERR_CHECK_ALLOC(internal);
-
-	memset(internal, 0x0, sizeof(file_internal));
 
 	internal->file = file;
 	internal->level = level;
@@ -430,8 +426,8 @@ int git_config_iterator_new(git_config_iterator **out, const git_config *cfg)
 {
 	all_iter *iter;
 
-	iter = git__calloc(1, sizeof(all_iter));
-	GITERR_CHECK_ALLOC(iter);
+	if (git__calloc(&iter, 1, sizeof(all_iter)) < 0)
+		return -1;
 
 	iter->parent.free = all_iter_free;
 	iter->parent.next = all_iter_next;
@@ -452,8 +448,8 @@ int git_config_iterator_glob_new(git_config_iterator **out, const git_config *cf
 	if (regexp == NULL)
 		return git_config_iterator_new(out, cfg);
 
-	iter = git__calloc(1, sizeof(all_iter));
-	GITERR_CHECK_ALLOC(iter);
+	if (git__calloc(&iter, 1, sizeof(all_iter)) < 0)
+		return -1;
 
 	if ((result = regcomp(&iter->regex, regexp, REG_EXTENDED)) < 0) {
 		giterr_set_regex(&iter->regex, result);
@@ -860,11 +856,9 @@ int git_config_multivar_iterator_new(git_config_iterator **out, const git_config
 	git_config_iterator *inner = NULL;
 	int error;
 
-	if ((error = git_config_iterator_new(&inner, cfg)) < 0)
+	if ((error = git_config_iterator_new(&inner, cfg)) < 0 ||
+		(error = git__calloc(&iter, 1, sizeof(multivar_iter))) < 0)
 		return error;
-
-	iter = git__calloc(1, sizeof(multivar_iter));
-	GITERR_CHECK_ALLOC(iter);
 
 	if ((error = git_config__normalize_name(name, &iter->name)) < 0)
 		goto on_error;
@@ -1185,8 +1179,8 @@ int git_config__normalize_name(const char *in, char **out)
 
 	assert(in && out);
 
-	name = git__strdup(in);
-	GITERR_CHECK_ALLOC(name);
+	if (git__strdup(&name, in) < 0)
+		return -1;
 
 	fdot = strchr(name, '.');
 	ldot = strrchr(name, '.');

@@ -89,7 +89,7 @@ struct git_odb_backend {
 #define GIT_ODB_BACKEND_VERSION 1
 #define GIT_ODB_BACKEND_INIT {GIT_ODB_BACKEND_VERSION}
 
-GIT_EXTERN(void *) git_odb_backend_malloc(git_odb_backend *backend, size_t len);
+GIT_EXTERN(int) git_odb_backend_malloc(void **out, git_odb_backend *backend, size_t len);
 
 GIT_END_DECL
 

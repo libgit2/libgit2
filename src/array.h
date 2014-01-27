@@ -31,7 +31,7 @@
 	do { (a).size = (a).asize = 0; (a).ptr = NULL; } while (0)
 
 #define git_array_init_to_size(a, desired) \
-	do { (a).size = 0; (a).asize = desired; (a).ptr = git__calloc(desired, sizeof(*(a).ptr)); } while (0)
+	( (a).size = 0, (a).asize = desired, git__calloc(&(a).ptr, desired, sizeof(*(a).ptr)) )
 
 #define git_array_clear(a) \
 	do { git__free((a).ptr); git_array_init(a); } while (0)
@@ -46,8 +46,9 @@ GIT_INLINE(void *) git_array_grow(void *_a, size_t item_size)
 {
 	git_array_generic_t *a = _a;
 	uint32_t new_size = (a->size < 8) ? 8 : a->asize * 3 / 2;
-	char *new_array = git__realloc(a->ptr, new_size * item_size);
-	if (!new_array) {
+	char *new_array;
+	
+	if (git__realloc(&new_array, a->ptr, new_size * item_size) < 0) {
 		git_array_clear(*a);
 		return NULL;
 	} else {

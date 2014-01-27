@@ -224,17 +224,21 @@ static int hashsig_finalize_hashes(git_hashsig *sig)
 	return 0;
 }
 
-static git_hashsig *hashsig_alloc(git_hashsig_option_t opts)
+static int hashsig_alloc(git_hashsig **out, git_hashsig_option_t opts)
 {
-	git_hashsig *sig = git__calloc(1, sizeof(git_hashsig));
-	if (!sig)
-		return NULL;
+	git_hashsig *sig;
+	
+	*out = NULL;
+
+	if (git__calloc(&sig, 1, sizeof(git_hashsig)) < 0)
+		return -1;
 
 	hashsig_heap_init(&sig->mins, hashsig_cmp_min);
 	hashsig_heap_init(&sig->maxs, hashsig_cmp_max);
 	sig->opt = opts;
 
-	return sig;
+	*out = sig;
+	return 0;
 }
 
 int git_hashsig_create(
@@ -245,8 +249,12 @@ int git_hashsig_create(
 {
 	int error;
 	hashsig_in_progress prog;
-	git_hashsig *sig = hashsig_alloc(opts);
-	GITERR_CHECK_ALLOC(sig);
+	git_hashsig *sig;
+
+	*out = NULL;
+	
+	if (hashsig_alloc(&sig, opts) < 0)
+		return -1;
 
 	hashsig_in_progress_init(&prog, sig);
 
@@ -272,8 +280,12 @@ int git_hashsig_create_fromfile(
 	ssize_t buflen = 0;
 	int error = 0, fd;
 	hashsig_in_progress prog;
-	git_hashsig *sig = hashsig_alloc(opts);
-	GITERR_CHECK_ALLOC(sig);
+	git_hashsig *sig;
+
+	*out = NULL;
+	
+	if (hashsig_alloc(&sig, opts) < 0)
+		return -1;
 
 	if ((fd = git_futils_open_ro(path)) < 0) {
 		git__free(sig);

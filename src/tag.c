@@ -59,11 +59,12 @@ const char *git_tag_message(const git_tag *t)
 	return t->message;
 }
 
-static int tag_error(const char *str)
-{
-	giterr_set(GITERR_TAG, "Failed to parse tag. %s", str);
-	return -1;
-}
+#define TAG_PARSE_ERR(_str) \
+	do { \
+		giterr_set(GITERR_TAG, "Failed to parse tag. %s", _str); \
+		error = GITERR_INVALID; \
+		goto on_error; } \
+	while(0)
 
 static int tag_parse(git_tag *tag, const char *buffer, const char *buffer_end)
 {
@@ -74,15 +75,17 @@ static int tag_parse(git_tag *tag, const char *buffer, const char *buffer_end)
 	unsigned int i;
 	size_t text_len;
 	char *search;
+	int error = 0;
 
 	if (git_oid__parse(&tag->target, &buffer, buffer_end, "object ") < 0)
-		return tag_error("Object field invalid");
+		TAG_PARSE_ERR("Object field invalid");
 
 	if (buffer + 5 >= buffer_end)
-		return tag_error("Object too short");
+		TAG_PARSE_ERR("Object too short");
 
 	if (memcmp(buffer, "type ", 5) != 0)
-		return tag_error("Type field not found");
+		TAG_PARSE_ERR("Type field not found");
+
 	buffer += 5;
 
 	tag->type = GIT_OBJ_BAD;
@@ -91,7 +94,7 @@ static int tag_parse(git_tag *tag, const char *buffer, const char *buffer_end)
 		size_t type_length = strlen(tag_types[i]);
 
 		if (buffer + type_length >= buffer_end)
-			return tag_error("Object too short");
+			TAG_PARSE_ERR("Object too short");
 
 		if (memcmp(buffer, tag_types[i], type_length) == 0) {
 			tag->type = i;
@@ -101,24 +104,24 @@ static int tag_parse(git_tag *tag, const char *buffer, const char *buffer_end)
 	}
 
 	if (tag->type == GIT_OBJ_BAD)
-		return tag_error("Invalid object type");
+		TAG_PARSE_ERR("Invalid object type");
 
 	if (buffer + 4 >= buffer_end)
-		return tag_error("Object too short");
+		TAG_PARSE_ERR("Object too short");
 
 	if (memcmp(buffer, "tag ", 4) != 0)
-		return tag_error("Tag field not found");
+		TAG_PARSE_ERR("Tag field not found");
 
 	buffer += 4;
 
 	search = memchr(buffer, '\n', buffer_end - buffer);
 	if (search == NULL)
-		return tag_error("Object too short");
+		TAG_PARSE_ERR("Object too short");
 
 	text_len = search - buffer;
 
-	tag->tag_name = git__malloc(text_len + 1);
-	GITERR_CHECK_ALLOC(tag->tag_name);
+	if ((error = git__malloc(&tag->tag_name, text_len + 1)) < 0)
+		goto on_error;
 
 	memcpy(tag->tag_name, buffer, text_len);
 	tag->tag_name[text_len] = '\0';
@@ -127,28 +130,32 @@ static int tag_parse(git_tag *tag, const char *buffer, const char *buffer_end)
 
 	tag->tagger = NULL;
 	if (buffer < buffer_end && *buffer != '\n') {
-		tag->tagger = git__malloc(sizeof(git_signature));
-		GITERR_CHECK_ALLOC(tag->tagger);
-
-		if (git_signature__parse(tag->tagger, &buffer, buffer_end, "tagger ", '\n') < 0)
-			return -1;
+		if ((error = git__malloc(&tag->tagger, sizeof(git_signature))) < 0 ||
+			(error = git_signature__parse(tag->tagger, &buffer, buffer_end, "tagger ", '\n')) < 0)
+			goto on_error;
 	}
 
 	tag->message = NULL;
 	if (buffer < buffer_end) {
-		if( *buffer != '\n' )
-			return tag_error("No new line before message");
+		if (*buffer != '\n')
+			TAG_PARSE_ERR("No new line before message");
 
 		text_len = buffer_end - ++buffer;
 
-		tag->message = git__malloc(text_len + 1);
-		GITERR_CHECK_ALLOC(tag->message);
+		if ((error = git__malloc(&tag->message, text_len + 1)) < 0)
+			goto on_error;
 
 		memcpy(tag->message, buffer, text_len);
 		tag->message[text_len] = '\0';
 	}
 
 	return 0;
+
+on_error:
+	git__free(tag->tag_name);
+	git__free(tag->tagger);
+	git__free(tag->message);
+	return -1;
 }
 
 int git_tag__parse(void *_tag, git_odb_object *odb_obj)
@@ -455,14 +462,16 @@ typedef struct {
 
 static int tag_list_cb(const char *tag_name, git_oid *oid, void *data)
 {
+	char *matched;
+
 	tag_filter_data *filter = (tag_filter_data *)data;
 	GIT_UNUSED(oid);
 
 	if (!*filter->pattern ||
 		p_fnmatch(filter->pattern, tag_name + GIT_REFS_TAGS_DIR_LEN, 0) == 0)
 	{
-		char *matched = git__strdup(tag_name + GIT_REFS_TAGS_DIR_LEN);
-		GITERR_CHECK_ALLOC(matched);
+		if (git__strdup(&matched, tag_name + GIT_REFS_TAGS_DIR_LEN) < 0)
+			return -1;
 
 		return git_vector_insert(filter->taglist, matched);
 	}

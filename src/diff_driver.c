@@ -54,19 +54,22 @@ static git_diff_driver global_drivers[3] = {
 	{ DIFF_DRIVER_TEXT,   GIT_DIFF_FORCE_TEXT, 0 },
 };
 
-git_diff_driver_registry *git_diff_driver_registry_new()
+int git_diff_driver_registry_new(git_diff_driver_registry **out)
 {
-	git_diff_driver_registry *reg =
-		git__calloc(1, sizeof(git_diff_driver_registry));
-	if (!reg)
-		return NULL;
+	git_diff_driver_registry *reg;
+
+	*out = NULL;
+
+	if (git__calloc(&reg, 1, sizeof(git_diff_driver_registry)) < 0)
+		return -1;
 
 	if ((reg->drivers = git_strmap_alloc()) == NULL) {
 		git_diff_driver_registry_free(reg);
-		return NULL;
+		return -1;
 	}
 
-	return reg;
+	*out = reg;
+	return 0;
 }
 
 void git_diff_driver_registry_free(git_diff_driver_registry *reg)
@@ -115,7 +118,11 @@ static git_diff_driver_registry *git_repository_driver_registry(
 	git_repository *repo)
 {
 	if (!repo->diff_drivers) {
-		git_diff_driver_registry *reg = git_diff_driver_registry_new();
+		git_diff_driver_registry *reg;
+		
+		if (git_diff_driver_registry_new(&reg) < 0)
+			return NULL;
+
 		reg = git__compare_and_swap(&repo->diff_drivers, NULL, reg);
 
 		if (reg != NULL) /* if we race, free losing allocation */
@@ -158,8 +165,9 @@ static int git_diff_driver_load(
 		return GIT_ENOTFOUND;
 	}
 
-	drv = git__calloc(1, sizeof(git_diff_driver) + namelen + 1);
-	GITERR_CHECK_ALLOC(drv);
+	if (git__calloc(&drv, 1, sizeof(git_diff_driver) + namelen + 1) < 0)
+		return -1;
+
 	drv->type = DIFF_DRIVER_AUTO;
 	memcpy(drv->name, driver_name, namelen);
 
@@ -402,4 +410,3 @@ void git_diff_find_context_clear(git_diff_find_context_payload *payload)
 		payload->driver = NULL;
 	}
 }
-

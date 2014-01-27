@@ -270,8 +270,7 @@ static int parse_commit(git_commit **out, const char *buffer)
 	git_odb_object fake_odb_object;
 	int error;
 
-	commit = (git_commit*)git__malloc(sizeof(git_commit));
-	memset(commit, 0x0, sizeof(git_commit));
+	cl_git_pass(git__calloc(&commit, 1, sizeof(git_commit)));
 	commit->object.repo = g_repo;
 
 	memset(&fake_odb_object, 0x0, sizeof(git_odb_object));

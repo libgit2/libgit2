@@ -212,7 +212,7 @@ void test_object_cache__threadmania(void)
 		cl_git_pass(git_repository_open(&g_repo, cl_fixture("testrepo.git")));
 
 		for (th = 0; th < THREADCOUNT; ++th) {
-			data = git__malloc(2 * sizeof(int));
+			cl_git_pass(git__malloc(&data, 2 * sizeof(int)));
 
 			((int *)data)[0] = th;
 			((int *)data)[1] = th % max_i;

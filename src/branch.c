@@ -162,8 +162,10 @@ int git_branch_iterator_new(
 {
 	branch_iter *iter;
 
-	iter = git__calloc(1, sizeof(branch_iter));
-	GITERR_CHECK_ALLOC(iter);
+	*out = NULL;
+
+	if (git__calloc(&iter, 1, sizeof(branch_iter)) < 0)
+		return -1;
 
 	iter->flags = list_flags;
 

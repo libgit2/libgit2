@@ -25,8 +25,8 @@ static int add_refspec(git_remote *remote, const char *string, bool is_fetch)
 {
 	git_refspec *spec;
 
-	spec = git__calloc(1, sizeof(git_refspec));
-	GITERR_CHECK_ALLOC(spec);
+	if (git__calloc(&spec, 1, sizeof(git_refspec)) < 0)
+		return -1;
 
 	if (git_refspec__parse(spec, string, is_fetch) < 0) {
 		git__free(spec);
@@ -115,30 +115,20 @@ static int create_internal(git_remote **out, git_repository *repo, const char *n
 	/* name is optional */
 	assert(out && repo && url);
 
-	remote = git__calloc(1, sizeof(git_remote));
-	GITERR_CHECK_ALLOC(remote);
+	*out = NULL;
+
+	if (git__calloc(&remote, 1, sizeof(git_remote)) < 0)
+		return -1;
 
 	remote->repo = repo;
 	remote->update_fetchhead = 1;
 
-	if (get_check_cert(&remote->check_cert, repo) < 0)
+	if ((error = get_check_cert(&remote->check_cert, repo)) < 0 ||
+		(error = git_vector_init(&remote->refs, 32, NULL)) < 0 ||
+		(error = git__strdup(&remote->url, url)) < 0 ||
+		(name != NULL && (error = git__strdup(&remote->name, name)) < 0) ||
+		(fetch != NULL && (error = add_refspec(remote, fetch, true)) < 0))
 		goto on_error;
-
-	if (git_vector_init(&remote->refs, 32, NULL) < 0)
-		goto on_error;
-
-	remote->url = git__strdup(url);
-	GITERR_CHECK_ALLOC(remote->url);
-
-	if (name != NULL) {
-		remote->name = git__strdup(name);
-		GITERR_CHECK_ALLOC(remote->name);
-	}
-
-	if (fetch != NULL) {
-		if (add_refspec(remote, fetch, true) < 0)
-			goto on_error;
-	}
 
 	if (!name)
 		/* A remote without a name doesn't download tags */
@@ -183,6 +173,8 @@ int git_remote_create(git_remote **out, git_repository *repo, const char *name, 
 	git_remote *remote = NULL;
 	int error;
 
+	*out = NULL;
+
 	if ((error = ensure_remote_name_is_valid(name)) < 0)
 		return error;
 
@@ -215,6 +207,8 @@ int git_remote_create_with_fetchspec(git_remote **out, git_repository *repo, con
 	git_remote *remote = NULL;
 	int error;
 
+	*out = NULL;
+
 	if ((error = ensure_remote_name_is_valid(name)) < 0)
 		return error;
 
@@ -241,6 +235,8 @@ int git_remote_create_inmemory(git_remote **out, git_repository *repo, const cha
 	int error;
 	git_remote *remote;
 
+	*out = NULL;
+
 	if ((error = create_internal(&remote, repo, NULL, url, fetch)) < 0)
 		return error;
 
@@ -248,26 +244,18 @@ int git_remote_create_inmemory(git_remote **out, git_repository *repo, const cha
 	return 0;
 }
 
-int git_remote_dup(git_remote **dest, const git_remote *source)
+int git_remote_dup(git_remote **out, const git_remote *source)
 {
+	git_remote *remote;
 	int error;
-	git_remote *remote = git__calloc(1, sizeof(git_remote));
-	GITERR_CHECK_ALLOC(remote);
 
-	if (source->name != NULL) {
-		remote->name = git__strdup(source->name);
-		GITERR_CHECK_ALLOC(remote->name);
-	}
+	*out = NULL;
 
-	if (source->url != NULL) {
-		remote->url = git__strdup(source->url);
-		GITERR_CHECK_ALLOC(remote->url);		
-	}
-
-	if (source->pushurl != NULL) {
-		remote->pushurl = git__strdup(source->pushurl);
-		GITERR_CHECK_ALLOC(remote->pushurl);		
-	}
+	if (git__calloc(&remote, 1, sizeof(git_remote)) < 0 ||
+		(source->name != NULL && git__strdup(&remote->name, source->name) < 0) ||
+		(source->url != NULL && git__strdup(&remote->url, source->url) < 0) ||
+		(source->pushurl != NULL && git__strdup(&remote->pushurl, source->pushurl) < 0))
+		goto on_error;
 
 	remote->repo = source->repo;
 	remote->download_tags = source->download_tags;
@@ -276,14 +264,16 @@ int git_remote_dup(git_remote **dest, const git_remote *source)
 
 	if ((error = git_vector_dup(&remote->refs, &source->refs, NULL)) < 0 ||
 		(error = git_vector_dup(&remote->refspecs, &source->refspecs, NULL)) < 0 ||
-		(error = git_vector_dup(&remote->active_refspecs, &source->active_refspecs, NULL))) {
-		git__free(remote);
-		return error;
-	}
+		(error = git_vector_dup(&remote->active_refspecs, &source->active_refspecs, NULL)))
+		goto on_error;
 
-	*dest = remote;
+	*out = remote;
 
 	return 0;
+
+on_error:
+	git_remote_free(remote);
+	return error;
 }
 
 struct refspec_cb_data {
@@ -325,7 +315,7 @@ static int get_optional_config(
 
 int git_remote_load(git_remote **out, git_repository *repo, const char *name)
 {
-	git_remote *remote;
+	git_remote *remote = NULL;
 	git_buf buf = GIT_BUF_INIT;
 	const char *val;
 	int error = 0;
@@ -335,44 +325,25 @@ int git_remote_load(git_remote **out, git_repository *repo, const char *name)
 
 	assert(out && repo && name);
 
-	if ((error = ensure_remote_name_is_valid(name)) < 0)
-		return error;
-
-	if (git_repository_config__weakptr(&config, repo) < 0)
-		return -1;
-
-	remote = git__malloc(sizeof(git_remote));
-	GITERR_CHECK_ALLOC(remote);
-
-	memset(remote, 0x0, sizeof(git_remote));
-	remote->update_fetchhead = 1;
-	remote->name = git__strdup(name);
-	GITERR_CHECK_ALLOC(remote->name);
-
-	if ((error = get_check_cert(&remote->check_cert, repo)) < 0)
-		goto cleanup;
-
-	if (git_vector_init(&remote->refs, 32, NULL) < 0 ||
-	    git_vector_init(&remote->refspecs, 2, NULL) < 0 ||
-	    git_vector_init(&remote->active_refspecs, 2, NULL) < 0) {
-		error = -1;
-		goto cleanup;
-	}
-
-	if ((error = git_buf_printf(&buf, "remote.%s.url", name)) < 0)
-		goto cleanup;
-
-	if ((error = get_optional_config(&found, config, &buf, NULL, (void *)&val)) < 0)
+	if ((error = ensure_remote_name_is_valid(name)) < 0 ||
+		(error = git_repository_config__weakptr(&config, repo)) < 0 ||
+		(error = git__calloc(&remote, 1, sizeof(git_remote))) < 0 ||
+		(error = git__strdup(&remote->name, name)) < 0 ||
+		(error = get_check_cert(&remote->check_cert, repo)) < 0 ||
+		(error = git_vector_init(&remote->refs, 32, NULL)) < 0 ||
+	    (error = git_vector_init(&remote->refspecs, 2, NULL)) < 0 ||
+	    (error = git_vector_init(&remote->active_refspecs, 2, NULL)) < 0 ||
+		(error = git_buf_printf(&buf, "remote.%s.url", name)) < 0 ||
+		(error = get_optional_config(&found, config, &buf, NULL, (void *)&val)) < 0)
 		goto cleanup;
 
 	optional_setting_found |= found;
 
 	remote->repo = repo;
+	remote->update_fetchhead = 1;
 
-	if (found && strlen(val) > 0) {
-		remote->url = git__strdup(val);
-		GITERR_CHECK_ALLOC(remote->url);
-	}
+	if (found && strlen(val) > 0 && (error = git__strdup(&remote->url, val)) < 0)
+		goto cleanup;
 
 	val = NULL;
 	git_buf_clear(&buf);
@@ -388,10 +359,8 @@ int git_remote_load(git_remote **out, git_repository *repo, const char *name)
 		goto cleanup;
 	}
 
-	if (found && strlen(val) > 0) {
-		remote->pushurl = git__strdup(val);
-		GITERR_CHECK_ALLOC(remote->pushurl);
-	}
+	if (found && strlen(val) > 0 && (error = git__strdup(&remote->pushurl, val)) < 0)
+		goto cleanup;
 
 	data.remote = remote;
 	data.fetch = true;
@@ -588,16 +557,14 @@ const char *git_remote_url(const git_remote *remote)
 	return remote->url;
 }
 
-int git_remote_set_url(git_remote *remote, const char* url)
+int git_remote_set_url(git_remote *remote, const char *url)
 {
 	assert(remote);
 	assert(url);
 
 	git__free(remote->url);
-	remote->url = git__strdup(url);
-	GITERR_CHECK_ALLOC(remote->url);
 
-	return 0;
+	return git__strdup(&remote->url, url);
 }
 
 const char *git_remote_pushurl(const git_remote *remote)
@@ -611,12 +578,11 @@ int git_remote_set_pushurl(git_remote *remote, const char* url)
 	assert(remote);
 
 	git__free(remote->pushurl);
-	if (url) {
-		remote->pushurl = git__strdup(url);
-		GITERR_CHECK_ALLOC(remote->pushurl);
-	} else {
-		remote->pushurl = NULL;
-	}
+
+	if (url)
+		return git__strdup(&remote->pushurl, url);
+
+	remote->pushurl = NULL;
 	return 0;
 }
 
@@ -690,7 +656,7 @@ int git_remote_ls(const git_remote_head ***out, size_t *size, git_remote *remote
 	return remote->transport->ls(out, size, remote->transport);
 }
 
-int git_remote__get_http_proxy(git_remote *remote, bool use_ssl, char **proxy_url)
+int git_remote__get_http_proxy(char **proxy_url, git_remote *remote, bool use_ssl)
 {
 	git_config *cfg;
 	const git_config_entry *ce;
@@ -741,12 +707,10 @@ int git_remote__get_http_proxy(git_remote *remote, bool use_ssl, char **proxy_ur
 	val = use_ssl ? getenv("HTTPS_PROXY") : getenv("HTTP_PROXY");
 
 found:
-	if (val && val[0]) {
-		*proxy_url = git__strdup(val);
-		GITERR_CHECK_ALLOC(*proxy_url);
-	}
+	if (val && val[0])
+		error = git__strdup(proxy_url, val);
 
-	return 0;
+	return error;
 }
 
 /* DWIM `refspecs` based on `refs` and append the output to `out` */
@@ -1148,16 +1112,19 @@ static int remote_list_cb(const git_config_entry *entry, void *payload)
 	const char *name = entry->name + strlen("remote.");
 	size_t namelen = strlen(name);
 	char *remote_name;
+	int error;
 
 	/* we know name matches "remote.<stuff>.(push)?url" */
 
 	if (!strcmp(&name[namelen - 4], ".url"))
-		remote_name = git__strndup(name, namelen - 4); /* strip ".url" */
+		error = git__strndup(&remote_name, name, namelen - 4); /* strip ".url" */
 	else
-		remote_name = git__strndup(name, namelen - 8); /* strip ".pushurl" */
-	GITERR_CHECK_ALLOC(remote_name);
+		error = git__strndup(&remote_name, name, namelen - 8); /* strip ".pushurl" */
 
-	return git_vector_insert(list, remote_name);
+	if (!error)
+		error = git_vector_insert(list, remote_name);
+
+	return error;
 }
 
 int git_remote_list(git_strarray *remotes_list, git_repository *repo)
@@ -1442,14 +1409,9 @@ int git_remote_rename(
 
 		if (!remote->name) {
 			if ((error = rename_fetch_refspecs(
-				remote,
-				new_name,
-				callback,
-				payload)) < 0)
-					return error;
-
-			remote->name = git__strdup(new_name);
-			GITERR_CHECK_ALLOC(remote->name);
+					remote, new_name, callback, payload)) < 0 ||
+				(error = git__strdup(&remote->name, new_name)) < 0)
+				return error;
 
 			return git_remote_save(remote);
 		}
@@ -1482,10 +1444,7 @@ int git_remote_rename(
 
 	git__free(remote->name);
 
-	remote->name = git__strdup(new_name);
-	GITERR_CHECK_ALLOC(remote->name);
-
-	return 0;
+	return git__strdup(&remote->name, new_name);
 }
 
 int git_remote_update_fetchhead(git_remote *remote)
@@ -1640,7 +1599,7 @@ static int copy_refspecs(git_strarray *array, git_remote *remote, unsigned int p
 		if (spec->push != push)
 			continue;
 
-		if ((dup = git__strdup(spec->string)) == NULL)
+		if (git__strdup(&dup, spec->string) < 0)
 			goto on_error;
 
 		if (git_vector_insert(&refspecs, dup) < 0) {

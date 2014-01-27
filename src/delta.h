@@ -19,8 +19,7 @@ struct git_delta_index;
  * before free_delta_index() is called.  The returned pointer must be freed
  * using free_delta_index().
  */
-extern struct git_delta_index *
-git_delta_create_index(const void *buf, unsigned long bufsize);
+extern git_delta_create_index(struct git_delta_index **out, const void *buf, unsigned long bufsize);
 
 /*
  * free_delta_index: free the index created by create_delta_index()
@@ -46,11 +45,12 @@ extern unsigned long git_delta_sizeof_index(struct git_delta_index *index);
  * returned and *delta_size is updated with its size.  The returned buffer
  * must be freed by the caller.
  */
-extern void *git_delta_create(
+extern int git_delta_create(
+	void **out,
+	unsigned long *delta_size,
 	const struct git_delta_index *index,
 	const void *buf,
 	unsigned long bufsize,
-	unsigned long *delta_size,
 	unsigned long max_delta_size);
 
 /*
@@ -67,14 +67,18 @@ GIT_INLINE(void *) git_delta(
 	unsigned long *delta_size,
 	unsigned long max_delta_size)
 {
-	struct git_delta_index *index = git_delta_create_index(src_buf, src_bufsize);
-	if (index) {
-		void *delta = git_delta_create(
-			index, trg_buf, trg_bufsize, delta_size, max_delta_size);
-		git_delta_free_index(index);
-		return delta;
-	}
-	return NULL;
+	struct git_delta_index *index;
+	void *delta;
+
+	if (git_delta_create_index(&index, src_buf, src_bufsize) < 0)
+		return NULL;
+
+	if (git_delta_create(&delta, delta_size,
+		index, trg_buf, trg_bufsize, max_delta_size) < 0)
+		delta = NULL;
+
+	git_delta_free_index(index);
+	return delta;
 }
 
 /*

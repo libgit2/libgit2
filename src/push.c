@@ -35,8 +35,8 @@ int git_push_new(git_push **out, git_remote *remote)
 
 	*out = NULL;
 
-	p = git__calloc(1, sizeof(*p));
-	GITERR_CHECK_ALLOC(p);
+	if (git__calloc(&p, 1, sizeof(*p)) < 0)
+		return -1;
 
 	p->repo = remote->repo;
 	p->remote = remote;
@@ -138,8 +138,8 @@ static int parse_refspec(git_push *push, push_spec **spec, const char *str)
 
 	*spec = NULL;
 
-	s = git__calloc(1, sizeof(*s));
-	GITERR_CHECK_ALLOC(s);
+	if (git__calloc(&s, 1, sizeof(*s)) < 0)
+		return -1;
 
 	if (str[0] == '+') {
 		s->force = true;
@@ -148,19 +148,19 @@ static int parse_refspec(git_push *push, push_spec **spec, const char *str)
 
 	delim = strchr(str, ':');
 	if (delim == NULL) {
-		s->lref = git__strdup(str);
-		if (!s->lref || check_lref(push, s->lref) < 0)
+		if (git__strdup(&s->lref, str) < 0 ||
+			check_lref(push, s->lref) < 0)
 			goto on_error;
 	} else {
 		if (delim - str) {
-			s->lref = git__strndup(str, delim - str);
-			if (!s->lref || check_lref(push, s->lref) < 0)
+			if (git__strndup(&s->lref, str, delim - str) < 0 ||
+				check_lref(push, s->lref) < 0)
 				goto on_error;
 		}
 
 		if (strlen(delim + 1)) {
-			s->rref = git__strdup(delim + 1);
-			if (!s->rref || check_rref(s->rref) < 0)
+			if (git__strdup(&s->rref, delim + 1) ||
+				check_rref(s->rref) < 0)
 				goto on_error;
 		}
 	}
@@ -170,8 +170,8 @@ static int parse_refspec(git_push *push, push_spec **spec, const char *str)
 
 	/* If rref is ommitted, use the same ref name as lref */
 	if (!s->rref) {
-		s->rref = git__strdup(s->lref);
-		if (!s->rref || check_rref(s->rref) < 0)
+		if (git__strdup(&s->rref, s->lref) < 0 ||
+			check_rref(s->rref) < 0)
 			goto on_error;
 	}
 
@@ -288,7 +288,7 @@ static int revwalk(git_vector *commits, git_push *push)
 	git_remote_head *head;
 	push_spec *spec;
 	git_revwalk *rw;
-	git_oid oid;
+	git_oid oid, *o;
 	unsigned int i;
 	int error = -1;
 
@@ -373,11 +373,9 @@ static int revwalk(git_vector *commits, git_push *push)
 	}
 
 	while ((error = git_revwalk_next(&oid, rw)) == 0) {
-		git_oid *o = git__malloc(GIT_OID_RAWSZ);
-		if (!o) {
-			error = -1;
+		if ((error = git__malloc(&o, GIT_OID_RAWSZ)) < 0)
 			goto on_error;
-		}
+
 		git_oid_cpy(o, &oid);
 		if ((error = git_vector_insert(commits, o)) < 0)
 			goto on_error;

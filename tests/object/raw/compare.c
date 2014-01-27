@@ -98,7 +98,7 @@ void test_object_raw_compare__compare_allocfmt_oids(void)
 
 	cl_git_pass(git_oid_fromstr(&in, exp));
 
-	out = git_oid_allocfmt(&in);
+	cl_git_pass(git_oid_allocfmt(&out, &in));
 	cl_assert(out);
 	cl_assert_equal_s(exp, out);
 	git__free(out);

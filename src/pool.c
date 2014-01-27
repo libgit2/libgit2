@@ -17,7 +17,7 @@ struct pool_freelist {
 #define GIT_POOL_MIN_USABLE	4
 #define GIT_POOL_MIN_PAGESZ	2 * sizeof(void*)
 
-static void *pool_alloc_page(git_pool *pool, uint32_t size);
+static int pool_alloc_page(void **out, git_pool *pool, uint32_t size);
 static void pool_insert_page(git_pool *pool, git_pool_page *page);
 
 int git_pool_init(
@@ -103,10 +103,12 @@ static void pool_insert_page(git_pool *pool, git_pool_page *page)
 	scan->next = page;
 }
 
-static void *pool_alloc_page(git_pool *pool, uint32_t size)
+static int pool_alloc_page(void **out, git_pool *pool, uint32_t size)
 {
 	git_pool_page *page;
 	uint32_t alloc_size;
+
+	*out = NULL;
 
 	if (size <= pool->page_size)
 		alloc_size = pool->page_size;
@@ -115,9 +117,8 @@ static void *pool_alloc_page(git_pool *pool, uint32_t size)
 		pool->has_large_page_alloc = 1;
 	}
 
-	page = git__calloc(1, alloc_size + sizeof(git_pool_page));
-	if (!page)
-		return NULL;
+	if (git__calloc(&page, 1, alloc_size + sizeof(git_pool_page)) < 0)
+		return -1;
 
 	page->size  = alloc_size;
 	page->avail = alloc_size - size;
@@ -131,7 +132,8 @@ static void *pool_alloc_page(git_pool *pool, uint32_t size)
 
 	pool->items++;
 
-	return page->data;
+	*out = page->data;
+	return 0;
 }
 
 GIT_INLINE(void) pool_remove_page(
@@ -143,11 +145,13 @@ GIT_INLINE(void) pool_remove_page(
 		prev->next = page->next;
 }
 
-void *git_pool_malloc(git_pool *pool, uint32_t items)
+int git_pool_malloc(void **out, git_pool *pool, uint32_t items)
 {
 	git_pool_page *scan = pool->open, *prev;
 	uint32_t size = items * pool->item_size;
 	void *ptr = NULL;
+
+	*out = NULL;
 
 	pool->has_string_alloc = 0;
 	if (items > 1)
@@ -155,12 +159,13 @@ void *git_pool_malloc(git_pool *pool, uint32_t items)
 	else if (pool->free_list != NULL) {
 		ptr = pool->free_list;
 		pool->free_list = ((struct pool_freelist *)pool->free_list)->next;
-		return ptr;
+		*out = ptr;
+		return 0;
 	}
 
 	/* just add a block if there is no open one to accomodate this */
 	if (size >= pool->page_size || !scan || scan->avail < size)
-		return pool_alloc_page(pool, size);
+		return pool_alloc_page(out, pool, size);
 
 	pool->items++;
 
@@ -185,60 +190,74 @@ void *git_pool_malloc(git_pool *pool, uint32_t items)
 		pool_insert_page(pool, scan);
 	}
 
-	return ptr;
+	*out = ptr;
+	return 0;
 }
 
-char *git_pool_strndup(git_pool *pool, const char *str, size_t n)
+int git_pool_strndup(char **out, git_pool *pool, const char *str, size_t n)
 {
 	char *ptr = NULL;
+	int error;
 
-	assert(pool && str && pool->item_size == sizeof(char));
+	assert(out && pool && str && pool->item_size == sizeof(char));
 
-	if ((uint32_t)(n + 1) < n)
-		return NULL;
+	*out = NULL;
 
-	if ((ptr = git_pool_malloc(pool, (uint32_t)(n + 1))) != NULL) {
+	if ((uint32_t)(n + 1) < n) {
+		giterr_set_oom();
+		return -1;
+	}
+
+	if ((error = git_pool_malloc(&ptr, pool, (uint32_t)(n + 1))) == 0) {
 		memcpy(ptr, str, n);
 		ptr[n] = '\0';
+
+		*out = ptr;
 	}
 
 	pool->has_string_alloc = 1;
 
-	return ptr;
+	return error;
 }
 
-char *git_pool_strdup(git_pool *pool, const char *str)
+int git_pool_strdup(char **out, git_pool *pool, const char *str)
 {
-	assert(pool && str && pool->item_size == sizeof(char));
+	assert(out && pool && str && pool->item_size == sizeof(char));
 
-	return git_pool_strndup(pool, str, strlen(str));
+	return git_pool_strndup(out, pool, str, strlen(str));
 }
 
-char *git_pool_strdup_safe(git_pool *pool, const char *str)
+int git_pool_strdup_safe(char **out, git_pool *pool, const char *str)
 {
-	return str ? git_pool_strdup(pool, str) : NULL;
+	return str ? git_pool_strdup(out, pool, str) : NULL;
 }
 
-char *git_pool_strcat(git_pool *pool, const char *a, const char *b)
+int git_pool_strcat(char **out, git_pool *pool, const char *a, const char *b)
 {
 	void *ptr;
 	size_t len_a, len_b;
+	int error;
 
-	assert(pool && a && b && pool->item_size == sizeof(char));
+	assert(out && pool && a && b && pool->item_size == sizeof(char));
+
+	*out = NULL;
 
 	len_a = a ? strlen(a) : 0;
 	len_b = b ? strlen(b) : 0;
 
-	if ((ptr = git_pool_malloc(pool, (uint32_t)(len_a + len_b + 1))) != NULL) {
+	if ((error = git_pool_malloc(&ptr, pool, (uint32_t)(len_a + len_b + 1))) == 0) {
 		if (len_a)
 			memcpy(ptr, a, len_a);
 		if (len_b)
 			memcpy(((char *)ptr) + len_a, b, len_b);
 		*(((char *)ptr) + len_a + len_b) = '\0';
+
+		*out = ptr;
 	}
+
 	pool->has_string_alloc = 1;
 
-	return ptr;
+	return error;
 }
 
 void git_pool_free(git_pool *pool, void *ptr)

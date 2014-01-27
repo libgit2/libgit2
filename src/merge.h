@@ -140,7 +140,7 @@ int git_merge__bases_many(
  * Three-way tree differencing
  */
 
-git_merge_diff_list *git_merge_diff_list__alloc(git_repository *repo);
+int git_merge_diff_list__alloc(git_merge_diff_list **out, git_repository *repo);
 
 int git_merge_diff_list__find_differences(git_merge_diff_list *merge_diff_list,
 	const git_tree *ancestor_tree,

@@ -36,7 +36,7 @@ void test_repo_message__message(void)
 	len = git_repository_message(NULL, 0, _repo);
 	cl_assert(len > 0);
 
-	_actual = git__malloc(len + 1);
+	cl_git_pass(git__malloc(&_actual, len + 1));
 	cl_assert(_actual != NULL);
 
 	/* Test non truncation */

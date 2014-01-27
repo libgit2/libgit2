@@ -630,22 +630,17 @@ static int add_push_report_pkt(git_push *push, git_pkt *pkt)
 
 	switch (pkt->type) {
 		case GIT_PKT_OK:
-			status = git__calloc(1, sizeof(push_status));
-			GITERR_CHECK_ALLOC(status);
-			status->msg = NULL;
-			status->ref = git__strdup(((git_pkt_ok *)pkt)->ref);
-			if (!status->ref ||
+			if (git__calloc(&status, 1, sizeof(push_status)) < 0 ||
+				git__strdup(&status->ref, ((git_pkt_ok *)pkt)->ref) < 0 ||
 				git_vector_insert(&push->status, status) < 0) {
 				git_push_status_free(status);
 				return -1;
 			}
 			break;
 		case GIT_PKT_NG:
-			status = git__calloc(sizeof(push_status), 1);
-			GITERR_CHECK_ALLOC(status);
-			status->ref = git__strdup(((git_pkt_ng *)pkt)->ref);
-			status->msg = git__strdup(((git_pkt_ng *)pkt)->msg);
-			if (!status->ref || !status->msg ||
+			if (git__calloc(&status, 1, sizeof(push_status)) < 0 ||
+				git__strdup(&status->ref, ((git_pkt_ng *)pkt)->ref) < 0 ||
+				git__strdup(&status->msg, ((git_pkt_ng *)pkt)->msg) < 0 ||
 				git_vector_insert(&push->status, status) < 0) {
 				git_push_status_free(status);
 				return -1;
@@ -753,14 +748,15 @@ static int parse_report(gitno_buffer *buf, git_push *push)
 
 static int add_ref_from_push_spec(git_vector *refs, push_spec *push_spec)
 {
-	git_pkt_ref *added = git__calloc(1, sizeof(git_pkt_ref));
-	GITERR_CHECK_ALLOC(added);
+	git_pkt_ref *added;
+
+	if (git__calloc(&added, 1, sizeof(git_pkt_ref)) < 0)
+		return -1;
 
 	added->type = GIT_PKT_REF;
 	git_oid_cpy(&added->head.oid, &push_spec->loid);
-	added->head.name = git__strdup(push_spec->rref);
 
-	if (!added->head.name ||
+	if (git__strdup(&added->head.name, push_spec->rref) < 0 ||
 		git_vector_insert(refs, added) < 0) {
 		git_pkt_free((git_pkt *)added);
 		return -1;

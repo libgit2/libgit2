@@ -896,7 +896,9 @@ int git_revparse(
 		const char *rstr;
 		revspec->flags = GIT_REVPARSE_RANGE;
 
-		lstr = git__substrdup(spec, dotdot - spec);
+		if (git__substrdup(&lstr, spec, dotdot - spec))
+			return -1;
+
 		rstr = dotdot + 2;
 		if (dotdot[2] == '.') {
 			revspec->flags |= GIT_REVPARSE_MERGE_BASE;

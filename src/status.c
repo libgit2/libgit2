@@ -163,8 +163,8 @@ static int status_collect(
 	if (!status_is_included(status, head2idx, idx2wd))
 		return 0;
 
-	status_entry = git__malloc(sizeof(git_status_entry));
-	GITERR_CHECK_ALLOC(status_entry);
+	if (git__malloc(&status_entry, sizeof(git_status_entry)) < 0)
+		return -1;
 
 	status_entry->status = status_compute(status, head2idx, idx2wd);
 	status_entry->head_to_index = head2idx;
@@ -207,22 +207,25 @@ static int status_entry_cmp(const void *a, const void *b)
 	return status_entry_cmp_base(a, b, git__strcmp);
 }
 
-static git_status_list *git_status_list_alloc(git_index *index)
+static int git_status_list_alloc(git_status_list **out, git_index *index)
 {
 	git_status_list *status = NULL;
 	int (*entrycmp)(const void *a, const void *b);
 
-	if (!(status = git__calloc(1, sizeof(git_status_list))))
-		return NULL;
+	*out = NULL;
+
+	if (git__calloc(&status, 1, sizeof(git_status_list)) < 0)
+		return -1;
 
 	entrycmp = index->ignore_case ? status_entry_icmp : status_entry_cmp;
 
 	if (git_vector_init(&status->paired, 0, entrycmp) < 0) {
 		git__free(status);
-		return NULL;
+		return -1;
 	}
 
-	return status;
+	*out = status;
+	return 0;
 }
 
 int git_status_list_new(
@@ -262,8 +265,8 @@ int git_status_list_new(
 		git_index_read(index, false) < 0)
 		giterr_clear();
 
-	status = git_status_list_alloc(index);
-	GITERR_CHECK_ALLOC(status);
+	if ((error = git_status_list_alloc(&status, index)) < 0)
+		return error;
 
 	if (opts) {
 		memcpy(&status->opts, opts, sizeof(git_status_options));
@@ -449,11 +452,10 @@ int git_status_file(
 
 	assert(status_flags && repo && path);
 
-	if ((error = git_repository_index__weakptr(&index, repo)) < 0)
+	if ((error = git_repository_index__weakptr(&index, repo)) < 0 ||
+		(error = git__strdup(&sfi.expected, path)) < 0)
 		return error;
 
-	if ((sfi.expected = git__strdup(path)) == NULL)
-		return -1;
 	if (index->ignore_case)
 		sfi.fnm_flags = FNM_CASEFOLD;
 

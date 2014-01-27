@@ -106,11 +106,9 @@ int git_attr_get_many(
 	if (git_attr_path__init(&path, pathname, git_repository_workdir(repo)) < 0)
 		return -1;
 
-	if ((error = collect_attr_files(repo, flags, pathname, &files)) < 0)
+	if ((error = collect_attr_files(repo, flags, pathname, &files)) < 0 ||
+		(error = git__calloc(&info, num_attr, sizeof(attr_get_many_info))) < 0)
 		goto cleanup;
-
-	info = git__calloc(num_attr, sizeof(attr_get_many_info));
-	GITERR_CHECK_ALLOC(info);
 
 	git_vector_foreach(&files, i, file) {
 
@@ -218,16 +216,14 @@ int git_attr_add_macro(
 	git_attr_rule *macro = NULL;
 	git_pool *pool;
 
-	if (git_attr_cache__init(repo) < 0)
+	if (git_attr_cache__init(repo) < 0 ||
+		git__calloc(&macro, 1, sizeof(git_attr_rule)) < 0)
 		return -1;
-
-	macro = git__calloc(1, sizeof(git_attr_rule));
-	GITERR_CHECK_ALLOC(macro);
 
 	pool = &git_repository_attr_cache(repo)->pool;
 
-	macro->match.pattern = git_pool_strdup(pool, name);
-	GITERR_CHECK_ALLOC(macro->match.pattern);
+	if ((error = git_pool_strdup(&macro->match.pattern, pool, name)) < 0)
+		goto done;
 
 	macro->match.length = strlen(macro->match.pattern);
 	macro->match.flags = GIT_ATTR_FNMATCH_MACRO;
@@ -237,6 +233,7 @@ int git_attr_add_macro(
 	if (!error)
 		error = git_attr_cache__insert_macro(repo, macro);
 
+done:
 	if (error < 0)
 		git_attr_rule__free(macro);
 
@@ -617,7 +614,7 @@ static int attr_cache__lookup_path(
 			!git_futils_find_global_file(&buf, &cfgval[2]))
 			*out = git_buf_detach(&buf);
 		else if (cfgval)
-			*out = git__strdup(cfgval);
+			error = git__strdup(out, cfgval);
 
 	}
 	else if (!git_futils_find_xdg_file(&buf, fallback))

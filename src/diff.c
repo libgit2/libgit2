@@ -20,19 +20,22 @@
 #define DIFF_FLAG_SET(DIFF,FLAG,VAL) (DIFF)->opts.flags = \
 	(VAL) ? ((DIFF)->opts.flags | (FLAG)) : ((DIFF)->opts.flags & ~(VAL))
 
-static git_diff_delta *diff_delta__alloc(
+static int diff_delta__alloc(
+	git_diff_delta **out,
 	git_diff *diff,
 	git_delta_t status,
 	const char *path)
 {
-	git_diff_delta *delta = git__calloc(1, sizeof(git_diff_delta));
-	if (!delta)
-		return NULL;
+	git_diff_delta *delta;
+	
+	*out = NULL;
 
-	delta->old_file.path = git_pool_strdup(&diff->pool, path);
-	if (delta->old_file.path == NULL) {
+	if (git__calloc(&delta, 1, sizeof(git_diff_delta)) < 0)
+		return -1;
+
+	if (git_pool_strdup(&delta->old_file.path, &diff->pool, path) < 0) {
 		git__free(delta);
-		return NULL;
+		return -1;
 	}
 
 	delta->new_file.path = delta->old_file.path;
@@ -46,7 +49,8 @@ static git_diff_delta *diff_delta__alloc(
 	}
 	delta->status = status;
 
-	return delta;
+	*out = delta;
+	return 0;
 }
 
 static int diff_insert_delta(
@@ -100,8 +104,8 @@ static int diff_delta__from_one(
 			&matched_pathspec, NULL))
 		return 0;
 
-	delta = diff_delta__alloc(diff, status, entry->path);
-	GITERR_CHECK_ALLOC(delta);
+	if (diff_delta__alloc(&delta, diff, status, entry->path) < 0)
+		return -1;
 
 	/* This fn is just for single-sided diffs */
 	assert(status != GIT_DELTA_MODIFIED);
@@ -152,8 +156,9 @@ static int diff_delta__from_two(
 		new_mode = temp_mode;
 	}
 
-	delta = diff_delta__alloc(diff, status, canonical_path);
-	GITERR_CHECK_ALLOC(delta);
+	if (diff_delta__alloc(&delta, diff, status, canonical_path) < 0)
+		return -1;
+
 	delta->nfiles = 2;
 
 	git_oid_cpy(&delta->old_file.oid, &old_entry->oid);
@@ -213,15 +218,15 @@ static git_diff_delta *diff_delta__last_for_item(
 	return NULL;
 }
 
-static char *diff_strdup_prefix(git_pool *pool, const char *prefix)
+static int diff_strdup_prefix(char **out, git_pool *pool, const char *prefix)
 {
 	size_t len = strlen(prefix);
 
 	/* append '/' at end if needed */
 	if (len > 0 && prefix[len - 1] != '/')
-		return git_pool_strcat(pool, prefix, "/");
+		return git_pool_strcat(out, pool, prefix, "/");
 	else
-		return git_pool_strndup(pool, prefix, len + 1);
+		return git_pool_strndup(out, pool, prefix, len + 1);
 }
 
 GIT_INLINE(const char *) diff_delta__path(const git_diff_delta *delta)
@@ -318,17 +323,21 @@ static const char *diff_mnemonic_prefix(
 	return pfx;
 }
 
-static git_diff *diff_list_alloc(
+static int diff_list_alloc(
+	git_diff **out,
 	git_repository *repo,
 	git_iterator *old_iter,
 	git_iterator *new_iter)
 {
 	git_diff_options dflt = GIT_DIFF_OPTIONS_INIT;
-	git_diff *diff = git__calloc(1, sizeof(git_diff));
-	if (!diff)
-		return NULL;
-
+	git_diff *diff;
+	
 	assert(repo && old_iter && new_iter);
+
+	*out = NULL;
+
+	if (git__calloc(&diff, 1, sizeof(git_diff)) < 0)
+		return -1;
 
 	GIT_REFCOUNT_INC(diff);
 	diff->repo = repo;
@@ -339,7 +348,7 @@ static git_diff *diff_list_alloc(
 	if (git_vector_init(&diff->deltas, 0, git_diff_delta__cmp) < 0 ||
 		git_pool_init(&diff->pool, 1, 0) < 0) {
 		git_diff_free(diff);
-		return NULL;
+		return -1;
 	}
 
 	/* Use case-insensitive compare if either iterator has
@@ -363,7 +372,8 @@ static git_diff *diff_list_alloc(
 		git_vector_set_cmp(&diff->deltas, git_diff_delta__casecmp);
 	}
 
-	return diff;
+	*out = diff;
+	return 0;
 }
 
 static int diff_list_apply_options(
@@ -460,9 +470,8 @@ static int diff_list_apply_options(
 	}
 
 	/* strdup prefix from pool so we're not dependent on external data */
-	diff->opts.old_prefix = diff_strdup_prefix(pool, diff->opts.old_prefix);
-	diff->opts.new_prefix = diff_strdup_prefix(pool, diff->opts.new_prefix);
-	if (!diff->opts.old_prefix || !diff->opts.new_prefix)
+	if (diff_strdup_prefix(&diff->opts.old_prefix, pool, diff->opts.old_prefix) < 0 ||
+		diff_strdup_prefix(&diff->opts.new_prefix, pool, diff->opts.new_prefix) < 0)
 		return -1;
 
 	if (DIFF_FLAG_IS_SET(diff, GIT_DIFF_REVERSE)) {
@@ -1051,8 +1060,8 @@ int git_diff__from_iterators(
 
 	*diff_ptr = NULL;
 
-	diff = diff_list_alloc(repo, old_iter, new_iter);
-	GITERR_CHECK_ALLOC(diff);
+	if (diff_list_alloc(&diff, repo, old_iter, new_iter) < 0)
+		return -1;
 
 	info.repo = repo;
 	info.old_iter = old_iter;

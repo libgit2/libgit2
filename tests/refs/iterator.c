@@ -142,7 +142,10 @@ void test_refs_iterator__foreach_can_cancel(void)
 static int refs_foreach_name_cb(const char *name, void *payload)
 {
 	git_vector *output = payload;
-	cl_git_pass(git_vector_insert(output, git__strdup(name)));
+	char *dup;
+
+	cl_git_pass(git__strdup(&dup, name));
+	cl_git_pass(git_vector_insert(output, dup));
 	return 0;
 }
 

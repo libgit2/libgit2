@@ -19,7 +19,8 @@
  * @param peel the first non-tag object's OID, or NULL
  * @return the created git_reference or NULL on error
  */
-GIT_EXTERN(git_reference *) git_reference__alloc(
+GIT_EXTERN(int) git_reference__alloc(
+	git_reference **out,
 	const char *name,
 	const git_oid *oid,
 	const git_oid *peel);
@@ -31,7 +32,8 @@ GIT_EXTERN(git_reference *) git_reference__alloc(
  * @param target the target for a symbolic reference
  * @return the created git_reference or NULL on error
  */
-GIT_EXTERN(git_reference *) git_reference__alloc_symbolic(
+GIT_EXTERN(int) git_reference__alloc_symbolic(
+	git_reference **out,
 	const char *name,
 	const char *target);
 

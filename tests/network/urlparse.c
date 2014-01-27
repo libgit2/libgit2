@@ -141,7 +141,7 @@ void test_network_urlparse__encoded_username_password(void)
 
 void test_network_urlparse__connection_data_cross_host_redirect(void)
 {
-	conndata.host = git__strdup("bar.com");
+	cl_git_pass(git__strdup(&conndata.host, "bar.com"));
 	cl_git_fail_with(gitno_connection_data_from_url(&conndata,
 				"https://foo.com/bar/baz", NULL),
 			-1);

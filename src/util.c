@@ -40,15 +40,14 @@ int git_strarray_copy(git_strarray *tgt, const git_strarray *src)
 	if (!src->count)
 		return 0;
 
-	tgt->strings = git__calloc(src->count, sizeof(char *));
-	GITERR_CHECK_ALLOC(tgt->strings);
+	if (git__calloc(&tgt->strings, src->count, sizeof(char *)) < 0)
+		return -1;
 
 	for (i = 0; i < src->count; ++i) {
 		if (!src->strings[i])
 			continue;
 
-		tgt->strings[tgt->count] = git__strdup(src->strings[i]);
-		if (!tgt->strings[tgt->count]) {
+		if (git__strdup(&tgt->strings[tgt->count], src->strings[i]) < 0) {
 			git_strarray_free(tgt);
 			memset(tgt, 0, sizeof(*tgt));
 			return -1;
@@ -633,8 +632,10 @@ void git__insertsort_r(
 	uint8_t *i, *j;
 	bool freeswap = !swapel;
 
-	if (freeswap)
-		swapel = git__malloc(elsize);
+	if (freeswap) {
+		if (git__malloc(&swapel, elsize) < 0)
+			return;
+	}
 
 	for (i = base + elsize; i < end; i += elsize)
 		for (j = i; j > base && cmp(j, j - elsize, payload) < 0; j -= elsize) {

@@ -130,7 +130,9 @@ static void check_mode_at_line(
 void test_core_mkdir__chmods(void)
 {
 	struct stat st;
-	mode_t *old = git__malloc(sizeof(mode_t));
+	mode_t *old;
+	
+	cl_git_pass(git__malloc(&old, sizeof(mode_t)));
 	*old = p_umask(022);
 
 	cl_set_cleanup(cleanup_chmod_root, old);

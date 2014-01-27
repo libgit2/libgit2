@@ -212,7 +212,7 @@ void test_stash_save__stashing_updates_the_reflog(void)
 
 	cl_git_pass(git_stash_save(&stash_tip_oid, repo, signature, NULL, GIT_STASH_DEFAULT));
 
-	sha = git_oid_allocfmt(&stash_tip_oid);
+	cl_git_pass(git_oid_allocfmt(&sha, &stash_tip_oid));
 
 	assert_object_oid("refs/stash@{0}", sha, GIT_OBJ_COMMIT);
 	assert_object_oid("refs/stash@{1}", NULL, GIT_OBJ_COMMIT);

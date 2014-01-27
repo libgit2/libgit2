@@ -184,14 +184,14 @@ static int check_invariant(struct tsort_run *stack, ssize_t stack_curr)
 static int resize(struct tsort_store *store, size_t new_size)
 {
 	if (store->alloc < new_size) {
-		void **tempstore = git__realloc(store->storage, new_size * sizeof(void *));
+		void **tempstore;
 
 		/**
 		 * Do not propagate on OOM; this will abort the sort and
 		 * leave the array unsorted, but no error code will be
 		 * raised
 		 */
-		if (tempstore == NULL)
+		if (git__realloc(&tempstore, store->storage, new_size * sizeof(void *)) < 0)
 			return -1;
 
 		store->storage = tempstore;

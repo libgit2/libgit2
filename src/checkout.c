@@ -307,8 +307,10 @@ static int checkout_action_wd_only(
 	error = checkout_notify(data, notify, NULL, wd);
 
 	if (!error && remove) {
-		char *path = git_pool_strdup(&data->pool, wd->path);
-		GITERR_CHECK_ALLOC(path);
+		char *path;
+
+		if (git_pool_strdup(&path, &data->pool, wd->path))
+			return -1;
 
 		error = git_vector_insert(&data->removes, path);
 	}
@@ -745,8 +747,8 @@ static int checkout_conflicts_load(checkout_data *data, git_iterator *workdir, g
 		if (!conflict_pathspec_match(data, workdir, pathspec, ancestor, ours, theirs))
 			continue;
 
-		conflict = git__calloc(1, sizeof(checkout_conflictdata));
-		GITERR_CHECK_ALLOC(conflict);
+		if (git__calloc(&conflict, 1, sizeof(checkout_conflictdata)) < 0)
+			return -1;
 
 		conflict->ancestor = ancestor;
 		conflict->ours = ours;
@@ -1044,13 +1046,9 @@ static int checkout_get_actions(
 
 	deltas = &data->diff->deltas;
 
-	*counts_ptr = counts = git__calloc(CHECKOUT_ACTION__MAX+1, sizeof(size_t));
-	*actions_ptr = actions = git__calloc(
-		deltas->length ? deltas->length : 1, sizeof(uint32_t));
-	if (!counts || !actions) {
-		error = -1;
+	if ((error = git__calloc(&counts, CHECKOUT_ACTION__MAX+1, sizeof(size_t))) < 0 ||
+		(error = git__calloc(&actions, deltas->length ? deltas->length : 1, sizeof(uint32_t))) < 0)
 		goto fail;
-	}
 
 	git_vector_foreach(deltas, i, delta) {
 		error = checkout_action(&act, data, delta, workdir, &wditem, &pathspec);
@@ -1069,8 +1067,7 @@ static int checkout_get_actions(
 			counts[CHECKOUT_ACTION__CONFLICT]++;
 	}
 
-	error = checkout_remaining_wd_items(data, workdir, wditem, &pathspec);
-	if (error)
+	if ((error = checkout_remaining_wd_items(data, workdir, wditem, &pathspec)) < 0)
 		goto fail;
 
 	counts[CHECKOUT_ACTION__REMOVE] += data->removes.length;
@@ -1094,6 +1091,9 @@ static int checkout_get_actions(
 
 	git_pathspec__vfree(&pathspec);
 	git_pool_clear(&pathpool);
+
+	*counts_ptr = counts;
+	*actions_ptr = actions;
 
 	return 0;
 

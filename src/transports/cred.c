@@ -42,6 +42,9 @@ static void plaintext_free(struct git_cred *cred)
 {
 	git_cred_userpass_plaintext *c = (git_cred_userpass_plaintext *)cred;
 
+	if (c == NULL)
+		return;
+
 	git__free(c->username);
 
 	/* Zero the memory which previously held the password */
@@ -64,25 +67,17 @@ int git_cred_userpass_plaintext_new(
 
 	assert(cred && username && password);
 
-	c = git__malloc(sizeof(git_cred_userpass_plaintext));
-	GITERR_CHECK_ALLOC(c);
+	if (git__malloc(&c, sizeof(git_cred_userpass_plaintext)) < 0 ||
+		git__strdup(&c->username, username) < 0 ||
+		git__strdup(&c->password, password) < 0) {
+		plaintext_free((git_cred *)c);
+
+		*cred = NULL;
+		return -1;
+	}
 
 	c->parent.credtype = GIT_CREDTYPE_USERPASS_PLAINTEXT;
 	c->parent.free = plaintext_free;
-	c->username = git__strdup(username);
-
-	if (!c->username) {
-		git__free(c);
-		return -1;
-	}
-
-	c->password = git__strdup(password);
-
-	if (!c->password) {
-		git__free(c->username);
-		git__free(c);
-		return -1;
-	}
 
 	*cred = &c->parent;
 	return 0;
@@ -90,8 +85,10 @@ int git_cred_userpass_plaintext_new(
 
 static void ssh_key_free(struct git_cred *cred)
 {
-	git_cred_ssh_key *c =
-		(git_cred_ssh_key *)cred;
+	git_cred_ssh_key *c = (git_cred_ssh_key *)cred;
+
+	if (c == NULL)
+		return;
 
 	git__free(c->username);
 	git__free(c->publickey);
@@ -111,6 +108,9 @@ static void ssh_key_free(struct git_cred *cred)
 static void ssh_custom_free(struct git_cred *cred)
 {
 	git_cred_ssh_custom *c = (git_cred_ssh_custom *)cred;
+
+	if (c == NULL)
+		return;
 
 	git__free(c->username);
 	git__free(c->publickey);
@@ -137,29 +137,19 @@ int git_cred_ssh_key_new(
 
 	assert(cred && privatekey);
 
-	c = git__calloc(1, sizeof(git_cred_ssh_key));
-	GITERR_CHECK_ALLOC(c);
+	if (git__calloc(&c, 1, sizeof(git_cred_ssh_key)) < 0 ||
+		git__strdup(&c->privatekey, privatekey) < 0 ||
+		(username && git__strdup(&c->username, username) < 0) ||
+		(publickey && git__strdup(&c->publickey, publickey) < 0) ||
+		(passphrase && git__strdup(&c->passphrase, passphrase) < 0)) {
+		ssh_key_free((git_cred *)c);
+
+		*cred = NULL;
+		return -1;
+	}
 
 	c->parent.credtype = GIT_CREDTYPE_SSH_KEY;
 	c->parent.free = ssh_key_free;
-
-	if (username) {
-		c->username = git__strdup(username);
-		GITERR_CHECK_ALLOC(c->username);
-	}
-
-	c->privatekey = git__strdup(privatekey);
-	GITERR_CHECK_ALLOC(c->privatekey);
-
-	if (publickey) {
-		c->publickey = git__strdup(publickey);
-		GITERR_CHECK_ALLOC(c->publickey);
-	}
-
-	if (passphrase) {
-		c->passphrase = git__strdup(passphrase);
-		GITERR_CHECK_ALLOC(c->passphrase);
-	}
 
 	*cred = &c->parent;
 	return 0;
@@ -170,18 +160,16 @@ int git_cred_ssh_key_from_agent(git_cred **cred, const char *username) {
 
 	assert(cred);
 
-	c = git__calloc(1, sizeof(git_cred_ssh_key));
-	GITERR_CHECK_ALLOC(c);
+	if (git__calloc(&c, 1, sizeof(git_cred_ssh_key)) < 0 ||
+		(username && git__strdup(&c->username, username)) < 0) {
+		ssh_key_free((git_cred *)c);
+
+		*cred = NULL;
+		return -1;
+	}
 
 	c->parent.credtype = GIT_CREDTYPE_SSH_KEY;
 	c->parent.free = ssh_key_free;
-
-	if (username) {
-		c->username = git__strdup(username);
-		GITERR_CHECK_ALLOC(c->username);
-	}
-
-	c->privatekey = NULL;
 
 	*cred = &c->parent;
 	return 0;
@@ -199,27 +187,24 @@ int git_cred_ssh_custom_new(
 
 	assert(cred);
 
-	c = git__calloc(1, sizeof(git_cred_ssh_custom));
-	GITERR_CHECK_ALLOC(c);
+	if (git__calloc(&c, 1, sizeof(git_cred_ssh_custom)) < 0 ||
+		(username && git__strdup(&c->username, username)) < 0 ||
+		(publickey_len > 0 && git__malloc(&c->publickey, publickey_len) < 0)) {
+		ssh_custom_free((git_cred *)c);
 
-	c->parent.credtype = GIT_CREDTYPE_SSH_CUSTOM;
-	c->parent.free = ssh_custom_free;
-
-	if (username) {
-		c->username = git__strdup(username);
-		GITERR_CHECK_ALLOC(c->username);
+		*cred = NULL;
+		return -1;
 	}
 
-	if (publickey_len > 0) {
-		c->publickey = git__malloc(publickey_len);
-		GITERR_CHECK_ALLOC(c->publickey);
-
+	if (publickey_len > 0)
 		memcpy(c->publickey, publickey, publickey_len);
-	}
 
 	c->publickey_len = publickey_len;
 	c->sign_callback = sign_callback;
 	c->sign_data = sign_data;
+
+	c->parent.credtype = GIT_CREDTYPE_SSH_CUSTOM;
+	c->parent.free = ssh_custom_free;
 
 	*cred = &c->parent;
 	return 0;
@@ -231,8 +216,10 @@ int git_cred_default_new(git_cred **cred)
 
 	assert(cred);
 
-	c = git__calloc(1, sizeof(git_cred_default));
-	GITERR_CHECK_ALLOC(c);
+	if (git__calloc(&c, 1, sizeof(git_cred_default)) < 0) {
+		*cred = NULL;
+		return -1;
+	}
 
 	c->credtype = GIT_CREDTYPE_DEFAULT;
 	c->free = default_free;

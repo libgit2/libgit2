@@ -13,9 +13,9 @@
 
 #include <git2/sys/refdb_backend.h>
 
-git_reflog_entry *git_reflog_entry__alloc(void)
+int git_reflog_entry__alloc(git_reflog_entry **out)
 {
-	return git__calloc(1, sizeof(git_reflog_entry));
+	return git__calloc(out, 1, sizeof(git_reflog_entry));
 }
 
 void git_reflog_entry__free(git_reflog_entry *entry)
@@ -79,14 +79,12 @@ int git_reflog_append(git_reflog *reflog, const git_oid *new_oid, const git_sign
 
 	assert(reflog && new_oid && committer);
 
-	entry = git__calloc(1, sizeof(git_reflog_entry));
-	GITERR_CHECK_ALLOC(entry);
-
-	if ((git_signature_dup(&entry->committer, committer)) < 0)
+	if (git__calloc(&entry, 1, sizeof(git_reflog_entry)) < 0 ||
+		git_signature_dup(&entry->committer, committer) < 0)
 		goto cleanup;
 
 	if (msg != NULL) {
-		if ((entry->msg = git__strdup(msg)) == NULL)
+		if (git__strdup(&entry->msg, msg) < 0)
 			goto cleanup;
 
 		newline = strchr(msg, '\n');

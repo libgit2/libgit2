@@ -60,9 +60,7 @@ char *git_win32_get_error_message(DWORD error_code)
 			goto on_error;
 		}
 
-		utf8_msg = git__malloc(utf8_size);
-
-		if (!utf8_msg)
+		if (git__malloc(&utf8_msg, utf8_size) < 0)
 			goto on_error;
 
 		if (!WideCharToMultiByte(CP_UTF8, dwFlags,

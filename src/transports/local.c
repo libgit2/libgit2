@@ -60,11 +60,12 @@ static int add_ref(transport_local *t, const char *name)
 		return error;
 	}
 
-	head = git__calloc(1, sizeof(git_remote_head));
-	GITERR_CHECK_ALLOC(head);
-
-	head->name = git__strdup(name);
-	GITERR_CHECK_ALLOC(head->name);
+	if (git__calloc(&head, 1, sizeof(git_remote_head)) < 0 ||
+		git__strdup(&head->name, name) < 0) {
+		git__free(head->name);
+		git__free(head);
+		return -1;
+	}
 
 	git_oid_cpy(&head->oid, &head_oid);
 
@@ -92,11 +93,10 @@ static int add_ref(transport_local *t, const char *name)
 	}
 
 	/* And if it's a tag, peel it, and add it to the list */
-	head = git__calloc(1, sizeof(git_remote_head));
-	GITERR_CHECK_ALLOC(head);
-
-	if (git_buf_join(&buf, 0, name, peeled) < 0)
+	if (git__calloc(&head, 1, sizeof(git_remote_head)) < 0 ||
+		git_buf_join(&buf, 0, name, peeled) < 0)
 		return -1;
+
 	head->name = git_buf_detach(&buf);
 
 	if (!(error = git_tag_peel(&target, (git_tag *)obj))) {
@@ -176,8 +176,9 @@ static int local_connect(
 	GIT_UNUSED(cred_acquire_cb);
 	GIT_UNUSED(cred_acquire_payload);
 
-	t->url = git__strdup(url);
-	GITERR_CHECK_ALLOC(t->url);
+	if (git__strdup(&t->url, url) < 0)
+		return -1;
+
 	t->direction = direction;
 	t->flags = flags;
 
@@ -377,12 +378,8 @@ static int local_push(
 		const git_error *last;
 		char *ref = spec->rref ? spec->rref : spec->lref;
 
-		status = git__calloc(sizeof(push_status), 1);
-		if (!status)
-			goto on_error;
-
-		status->ref = git__strdup(ref);
-		if (!status->ref) {
+		if (git__calloc(&status, sizeof(push_status), 1) < 0 ||
+			git__strdup(&status->ref, ref) < 0) {
 			git_push_status_free(status);
 			goto on_error;
 		}
@@ -394,18 +391,18 @@ static int local_push(
 			case GIT_OK:
 				break;
 			case GIT_EINVALIDSPEC:
-				status->msg = git__strdup("funny refname");
+				error = git__strdup(&status->msg, "funny refname");
 				break;
 			case GIT_ENOTFOUND:
-				status->msg = git__strdup("Remote branch not found to delete");
+				error = git__strdup(&status->msg, "Remote branch not found to delete");
 				break;
 			default:
 				last = giterr_last();
 
 				if (last && last->message)
-					status->msg = git__strdup(last->message);
+					error = git__strdup(&status->msg, last->message);
 				else
-					status->msg = git__strdup("Unspecified error encountered");
+					error = git__strdup(&status->msg, "Unspecified error encountered");
 				break;
 		}
 
@@ -424,9 +421,9 @@ static int local_push(
 
 	if (push->specs.length) {
 		int flags = t->flags;
-		url = git__strdup(t->url);
 
-		if (!url || t->parent.close(&t->parent) < 0 ||
+		if (git__strdup(&url, t->url) < 0 ||
+			t->parent.close(&t->parent) < 0 ||
 			t->parent.connect(&t->parent, url,
 			push->remote->callbacks.credentials, NULL, GIT_DIRECTION_PUSH, flags))
 			goto on_error;
@@ -621,8 +618,10 @@ int git_transport_local(git_transport **out, git_remote *owner, void *param)
 
 	GIT_UNUSED(param);
 
-	t = git__calloc(1, sizeof(transport_local));
-	GITERR_CHECK_ALLOC(t);
+	if (git__calloc(&t, 1, sizeof(transport_local)) < 0) {
+		*out = NULL;
+		return -1;
+	}
 
 	t->parent.version = GIT_TRANSPORT_VERSION;
 	t->parent.connect = local_connect;

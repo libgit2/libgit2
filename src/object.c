@@ -15,6 +15,7 @@
 #include "tree.h"
 #include "blob.h"
 #include "tag.h"
+#include "oid.h"
 
 static const int OBJECT_BASE_SIZE = 4096;
 
@@ -77,8 +78,8 @@ int git_object__from_odb_object(
 	}
 
 	/* Allocate and initialize base object */
-	object = git__calloc(1, object_size);
-	GITERR_CHECK_ALLOC(object);
+	if (git__calloc(&object, 1, object_size) < 0)
+		return -1;
 
 	git_oid_cpy(&object->cached.oid, &odb_obj->cached.oid);
 	object->cached.type = odb_obj->cached.type;
@@ -296,8 +297,7 @@ static int peel_error(int error, const git_oid *oid, git_otype type)
 
 	type_name = git_object_type2string(type);
 
-	git_oid_fmt(hex_oid, oid);
-	hex_oid[GIT_OID_HEXSZ] = '\0';
+	git_oid__fmtz(hex_oid, oid);
 
 	giterr_set(GITERR_OBJECT, "The git_object of id '%s' can not be "
 		"successfully peeled into a %s (git_otype=%i).", hex_oid, type_name, type);

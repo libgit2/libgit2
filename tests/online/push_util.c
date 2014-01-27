@@ -30,13 +30,13 @@ int record_update_tips_cb(const char *refname, const git_oid *a, const git_oid *
 	updated_tip *t;
 	record_callbacks_data *record_data = (record_callbacks_data *)data;
 
-	cl_assert(t = git__malloc(sizeof(*t)));
+	cl_git_pass(git__malloc(&t, sizeof(*t)));
 
-	cl_assert(t->name = git__strdup(refname));
-	cl_assert(t->old_oid = git__malloc(sizeof(*t->old_oid)));
+	cl_git_pass(git__strdup(&t->name, refname));
+	cl_git_pass(git__malloc(&t->old_oid, sizeof(*t->old_oid)));
 	git_oid_cpy(t->old_oid, a);
 
-	cl_assert(t->new_oid = git__malloc(sizeof(*t->new_oid)));
+	cl_git_pass(git__malloc(&t->new_oid, sizeof(*t->new_oid)));
 	git_oid_cpy(t->new_oid, b);
 
 	git_vector_insert(&record_data->updated_tips, t);
@@ -110,7 +110,7 @@ failed:
 	git_buf_puts(&msg, "Expected and actual refs differ:\nEXPECTED:\n");
 
 	for(i = 0; i < expected_refs_len; i++) {
-		cl_assert(oid_str = git_oid_allocfmt(expected_refs[i].oid));
+		cl_git_pass(git_oid_allocfmt(&oid_str, expected_refs[i].oid));
 		cl_git_pass(git_buf_printf(&msg, "%s = %s\n", expected_refs[i].name, oid_str));
 		git__free(oid_str);
 	}
@@ -121,7 +121,7 @@ failed:
 		if (master_present && !strcmp(actual->name, "refs/heads/master"))
 			continue;
 
-		cl_assert(oid_str = git_oid_allocfmt(&actual->oid));
+		cl_git_pass(git_oid_allocfmt(&oid_str, &actual->oid));
 		cl_git_pass(git_buf_printf(&msg, "%s = %s\n", actual->name, oid_str));
 		git__free(oid_str);
 	}

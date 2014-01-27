@@ -34,7 +34,7 @@ static bool contains_angle_brackets(const char *input)
 	return strchr(input, '<') != NULL || strchr(input, '>') != NULL;
 }
 
-static char *extract_trimmed(const char *ptr, size_t len)
+static int extract_trimmed(char **out, const char *ptr, size_t len)
 {
 	while (len && git__isspace(ptr[0])) {
 		ptr++; len--;
@@ -44,7 +44,7 @@ static char *extract_trimmed(const char *ptr, size_t len)
 		len--;
 	}
 
-	return git__substrdup(ptr, len);
+	return git__substrdup(out, ptr, len);
 }
 
 int git_signature_new(git_signature **sig_out, const char *name, const char *email, git_time_t time, int offset)
@@ -61,14 +61,12 @@ int git_signature_new(git_signature **sig_out, const char *name, const char *ema
 			"Neither `name` nor `email` should contain angle brackets chars.");
 	}
 
-	p = git__calloc(1, sizeof(git_signature));
-	GITERR_CHECK_ALLOC(p);
-
-	p->name = extract_trimmed(name, strlen(name));
-	p->email = extract_trimmed(email, strlen(email));
-
-	if (p->name == NULL || p->email == NULL)
-		return -1; /* oom */
+	if (git__calloc(&p, 1, sizeof(git_signature)) < 0 ||
+		extract_trimmed(&p->name, name, strlen(name)) < 0 ||
+		extract_trimmed(&p->email, email, strlen(email)) < 0) {
+		git_signature_free(p);
+		return -1;
+	}
 
 	if (p->name[0] == '\0') {
 		git_signature_free(p);
@@ -84,19 +82,17 @@ int git_signature_new(git_signature **sig_out, const char *name, const char *ema
 
 int git_signature_dup(git_signature **dest, const git_signature *source)
 {
-	git_signature *signature;
+	git_signature *signature = NULL;
 
 	if (source == NULL)
 		return 0;
 
-	signature = git__calloc(1, sizeof(git_signature));
-	GITERR_CHECK_ALLOC(signature);
-
-	signature->name = git__strdup(source->name);
-	GITERR_CHECK_ALLOC(signature->name);
-
-	signature->email = git__strdup(source->email);
-	GITERR_CHECK_ALLOC(signature->email);
+	if (git__calloc(&signature, 1, sizeof(git_signature)) < 0 ||
+		git__strdup(&signature->name, source->name) < 0 ||
+		git__strdup(&signature->email, source->email) < 0) {
+		git_signature_free(signature);
+		return -1;
+	}
 
 	signature->when.time = source->when.time;
 	signature->when.offset = source->when.offset;
@@ -182,8 +178,10 @@ int git_signature__parse(git_signature *sig, const char **buffer_out,
 		return signature_error("malformed e-mail");
 
 	email_start += 1;
-	sig->name = extract_trimmed(buffer, email_start - buffer - 1);
-	sig->email = extract_trimmed(email_start, email_end - email_start);
+
+	if (extract_trimmed(&sig->name, buffer, email_start - buffer - 1) < 0 ||
+		extract_trimmed(&sig->email, email_start, email_end - email_start) < 0)
+		return -1;
 
 	/* Do we even have a time at the end of the signature? */
 	if (email_end + 2 < buffer_end) {

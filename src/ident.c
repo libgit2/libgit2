@@ -112,14 +112,20 @@ static int ident_apply(
 		return ident_remove_id(to, from);
 }
 
-git_filter *git_ident_filter_new(void)
+int git_ident_filter_new(git_filter **out)
 {
-	git_filter *f = git__calloc(1, sizeof(git_filter));
+	git_filter *f;
+	
+	*out = NULL;
+
+	if (git__calloc(&f, 1, sizeof(git_filter)) < 0)
+		return -1;
 
 	f->version = GIT_FILTER_VERSION;
 	f->attributes = "+ident"; /* apply to files with ident attribute set */
 	f->shutdown = git_filter_free;
 	f->apply    = ident_apply;
 
-	return f;
+	*out = f;
+	return 0;
 }

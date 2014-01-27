@@ -19,9 +19,20 @@ static git_error g_git_oom_error = {
 	GITERR_NOMEMORY
 };
 
+static git_error g_git_init_error = {
+	"Global startup failed (out of memory?)",
+	GITERR_NOMEMORY
+};
+
 static void set_error(int error_class, char *string)
 {
-	git_error *error = &GIT_GLOBAL->error_t;
+	git_global_st *state;
+	git_error *error;
+
+	if (git__global_state(&state) < 0)
+		return;
+
+	error = &state->error_t;
 
 	if (error->message != string)
 		git__free(error->message);
@@ -29,12 +40,17 @@ static void set_error(int error_class, char *string)
 	error->message = string;
 	error->klass = error_class;
 
-	GIT_GLOBAL->last_error = error;
+	state->last_error = error;
 }
 
 void giterr_set_oom(void)
 {
-	GIT_GLOBAL->last_error = &g_git_oom_error;
+	git_global_st *state;
+
+	if (git__global_state(&state) < 0)
+		return;
+
+	state->last_error = &g_git_oom_error;
 }
 
 void giterr_set(int error_class, const char *string, ...)
@@ -81,9 +97,7 @@ void giterr_set_str(int error_class, const char *string)
 
 	assert(string);
 
-	message = git__strdup(string);
-
-	if (message)
+	if (git__strdup(&message, string) == 0)
 		set_error(error_class, message);
 }
 
@@ -104,9 +118,14 @@ int giterr_set_regex(const regex_t *regex, int error_code)
 
 void giterr_clear(void)
 {
-	if (GIT_GLOBAL->last_error != NULL) {
+	git_global_st *state;
+
+	if (git__global_state(&state) < 0)
+		return;
+
+	if (state->last_error != NULL) {
 		set_error(0, NULL);
-		GIT_GLOBAL->last_error = NULL;
+		state->last_error = NULL;
 	}
 
 	errno = 0;
@@ -117,11 +136,12 @@ void giterr_clear(void)
 
 int giterr_detach(git_error *cpy)
 {
-	git_error *error = GIT_GLOBAL->last_error;
+	git_global_st *state;
+	git_error *error;
 
 	assert(cpy);
 
-	if (!error)
+	if (git__global_state(&state) < 0 || (error = state->last_error) == NULL)
 		return -1;
 
 	cpy->message = error->message;
@@ -135,7 +155,12 @@ int giterr_detach(git_error *cpy)
 
 const git_error *giterr_last(void)
 {
-	return GIT_GLOBAL->last_error;
+	git_global_st *state;
+
+	if (git__global_state(&state) < 0)
+		return &g_git_init_error;
+
+	return state->last_error;
 }
 
 int giterr_capture(git_error_state *state, int error_code)

@@ -12,6 +12,7 @@
 #include "config.h"
 #include "iterator.h"
 #include "signature.h"
+#include "oid.h"
 
 static int note_error_notfound(void)
 {
@@ -310,12 +311,17 @@ static int note_new(git_note **out, git_oid *note_oid, git_blob *blob)
 {
 	git_note *note = NULL;
 
-	note = (git_note *)git__malloc(sizeof(git_note));
-	GITERR_CHECK_ALLOC(note);
+	*out = NULL;
+
+	if (git__malloc(&note, sizeof(git_note)) < 0)
+		return -1;
 
 	git_oid_cpy(&note->oid, note_oid);
-	note->message = git__strdup((char *)git_blob_rawcontent(blob));
-	GITERR_CHECK_ALLOC(note->message);
+
+	if (git__strdup(&note->message, (char *)git_blob_rawcontent(blob)) < 0) {
+		git__free(note);
+		return -1;
+	}
 
 	*out = note;
 
@@ -423,18 +429,16 @@ int git_note_read(git_note **out, git_repository *repo,
 		  const char *notes_ref, const git_oid *oid)
 {
 	int error;
-	char *target = NULL;
+	char target[GIT_OID_HEXSZ+1];
 	git_tree *tree = NULL;
 	git_commit *commit = NULL;
 
-	target = git_oid_allocfmt(oid);
-	GITERR_CHECK_ALLOC(target);
+	git_oid__fmtz(target, oid);
 
 	if (!(error = retrieve_note_tree_and_commit(
 			&tree, &commit, repo, &notes_ref)))
 		error = note_lookup(out, repo, tree, target);
 
-	git__free(target);
 	git_tree_free(tree);
 	git_commit_free(commit);
 	return error;
@@ -451,12 +455,11 @@ int git_note_create(
 	int allow_note_overwrite)
 {
 	int error;
-	char *target = NULL;
+	char target[GIT_OID_HEXSZ+1];
 	git_commit *commit = NULL;
 	git_tree *tree = NULL;
 
-	target = git_oid_allocfmt(oid);
-	GITERR_CHECK_ALLOC(target);
+	git_oid__fmtz(target, oid);
 
 	error = retrieve_note_tree_and_commit(&tree, &commit, repo, &notes_ref);
 
@@ -467,7 +470,6 @@ int git_note_create(
 			note, tree, target, &commit, allow_note_overwrite);
 
 cleanup:
-	git__free(target);
 	git_commit_free(commit);
 	git_tree_free(tree);
 	return error;
@@ -478,19 +480,17 @@ int git_note_remove(git_repository *repo, const char *notes_ref,
 		const git_oid *oid)
 {
 	int error;
-	char *target = NULL;
+	char target[GIT_OID_HEXSZ+1];
 	git_commit *commit = NULL;
 	git_tree *tree = NULL;
 
-	target = git_oid_allocfmt(oid);
-	GITERR_CHECK_ALLOC(target);
+	git_oid__fmtz(target, oid);
 
 	if (!(error = retrieve_note_tree_and_commit(
 			&tree, &commit, repo, &notes_ref)))
 		error = note_remove(
 			repo, author, committer, notes_ref, tree, target, &commit);
 
-	git__free(target);
 	git_commit_free(commit);
 	git_tree_free(tree);
 	return error;

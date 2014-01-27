@@ -131,22 +131,23 @@ void git_threads_shutdown(void)
 	InterlockedExchange(&_mutex, 0);
 }
 
-git_global_st *git__global_state(void)
+int git__global_state(git_global_st **out)
 {
 	void *ptr;
 
 	assert(_n_inits);
 
-	if ((ptr = TlsGetValue(_tls_index)) != NULL)
-		return ptr;
+	if ((ptr = TlsGetValue(_tls_index)) == NULL) {
+		if (git__calloc(&ptr, 1, sizeof(git_global_st)) < 0) {
+			*out = NULL;
+			return -1;
+		}
 
-	ptr = git__malloc(sizeof(git_global_st));
-	if (!ptr)
-		return NULL;
+		TlsSetValue(_tls_index, ptr);
+	}
 
-	memset(ptr, 0x0, sizeof(git_global_st));
-	TlsSetValue(_tls_index, ptr);
-	return ptr;
+	*out = ptr;
+	return 0;
 }
 
 #elif defined(GIT_THREADS) && defined(_POSIX_THREADS)
@@ -199,22 +200,25 @@ void git_threads_shutdown(void)
 	_once_init = new_once;
 }
 
-git_global_st *git__global_state(void)
+int git__global_state(git_global_st **out)
 {
 	void *ptr;
 
 	assert(git__n_inits.val);
 
+	*out = NULL;
+
 	if ((ptr = pthread_getspecific(_tls_key)) != NULL)
 		return ptr;
 
-	ptr = git__malloc(sizeof(git_global_st));
-	if (!ptr)
-		return NULL;
+	if (git__malloc(&ptr, sizeof(git_global_st)) < 0)
+		return -1;
 
 	memset(ptr, 0x0, sizeof(git_global_st));
 	pthread_setspecific(_tls_key, ptr);
-	return ptr;
+
+	*out = ptr;
+	return 0;
 }
 
 #else

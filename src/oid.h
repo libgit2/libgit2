@@ -33,4 +33,15 @@ GIT_INLINE(int) git_oid__cmp(const git_oid *a, const git_oid *b)
 	return git_oid__hashcmp(a->id, b->id);
 }
 
+/**
+ * Format a git_oid into a hex string.
+ *
+ * @param out output hex string; must be pointing at the start of
+ *		the hex sequence and have at least the number of bytes
+ *		needed for an oid encoded in hex and a trailing NULL.
+ *      (41 bytes).
+ * @param id oid structure to format.
+ */
+void git_oid__fmtz(char *str, const git_oid *oid);
+
 #endif

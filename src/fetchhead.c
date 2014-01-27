@@ -15,6 +15,7 @@
 #include "filebuf.h"
 #include "refs.h"
 #include "repository.h"
+#include "oid.h"
 
 int git_fetchhead_ref_cmp(const void *a, const void *b)
 {
@@ -47,21 +48,17 @@ int git_fetchhead_ref_create(
 
 	assert(out && oid);
 
-	*out = NULL;
+	if (git__calloc(&fetchhead_ref, 1, sizeof(git_fetchhead_ref)) < 0 ||
+		(ref_name && git__strdup(&fetchhead_ref->ref_name, ref_name)) < 0 ||
+		(remote_url && git__strdup(&fetchhead_ref->remote_url, remote_url)) < 0) {
+		git_fetchhead_ref_free(fetchhead_ref);
 
-	fetchhead_ref = git__malloc(sizeof(git_fetchhead_ref));
-	GITERR_CHECK_ALLOC(fetchhead_ref);
-
-	memset(fetchhead_ref, 0x0, sizeof(git_fetchhead_ref));
+		*out = NULL;
+		return -1;
+	}
 
 	git_oid_cpy(&fetchhead_ref->oid, oid);
 	fetchhead_ref->is_merge = is_merge;
-
-	if (ref_name)
-		fetchhead_ref->ref_name = git__strdup(ref_name);
-
-	if (remote_url)
-		fetchhead_ref->remote_url = git__strdup(remote_url);
 
 	*out = fetchhead_ref;
 
@@ -78,8 +75,7 @@ static int fetchhead_ref_write(
 
 	assert(file && fetchhead_ref);
 
-	git_oid_fmt(oid, &fetchhead_ref->oid);
-	oid[GIT_OID_HEXSZ] = '\0';
+	git_oid__fmtz(oid, &fetchhead_ref->oid);
 
 	if (git__prefixcmp(fetchhead_ref->ref_name, GIT_REFS_HEADS_DIR) == 0) {
 		type = "branch ";

@@ -24,62 +24,90 @@
  * that set error code and error message
  * on allocation failure
  */
-GIT_INLINE(void *) git__malloc(size_t len)
+GIT_INLINE(void *) git__std_malloc(size_t len)
 {
-	void *ptr = malloc(len);
-	if (!ptr) giterr_set_oom();
+	void *ptr;
+	
+	if ((ptr = malloc(len)) == NULL)
+		giterr_set_oom();
+
 	return ptr;
 }
 
-GIT_INLINE(void *) git__calloc(size_t nelem, size_t elsize)
+GIT_INLINE(void *) git__std_calloc(size_t nelem, size_t elsize)
 {
-	void *ptr = calloc(nelem, elsize);
-	if (!ptr) giterr_set_oom();
+	void *ptr;
+
+	if ((ptr = calloc(nelem, elsize)) == NULL)
+		giterr_set_oom();
+
 	return ptr;
 }
 
-GIT_INLINE(char *) git__strdup(const char *str)
+GIT_INLINE(void *) git__std_realloc(void *in, size_t len)
 {
-	char *ptr = strdup(str);
-	if (!ptr) giterr_set_oom();
+	void *ptr;
+
+	if ((ptr = realloc(in, len)) == NULL)
+		giterr_set_oom();
+
 	return ptr;
 }
 
-GIT_INLINE(char *) git__strndup(const char *str, size_t n)
+/* Signature allocators that return error codes */
+GIT_INLINE(int) git__malloc(void **out, size_t len)
+{
+	return (*out = git__std_malloc(len)) == NULL ? -1 : 0;
+}
+
+GIT_INLINE(int) git__calloc(void **out, size_t nelem, size_t elsize)
+{
+	return (*out = git__std_calloc(nelem, elsize)) == NULL ? -1 : 0;
+}
+
+GIT_INLINE(int) git__strdup(char **out, const char *str)
+{
+	if ((*out = strdup(str)) == NULL) {
+		giterr_set_oom();
+		return -1;
+	}
+
+	return 0;
+}
+
+GIT_INLINE(int) git__strndup(char **out, const char *str, size_t n)
 {
 	size_t length = 0;
-	char *ptr;
 
 	while (length < n && str[length])
 		++length;
 
-	ptr = (char*)git__malloc(length + 1);
-
-	if (!ptr)
-		return NULL;
+	if (git__malloc(out, length + 1) < 0)
+		return -1;
 
 	if (length)
-		memcpy(ptr, str, length);
+		memcpy(*out, str, length);
 
-	ptr[length] = '\0';
+	(*out)[length] = '\0';
 
-	return ptr;
+	return 0;
 }
 
 /* NOTE: This doesn't do null or '\0' checking.  Watch those boundaries! */
-GIT_INLINE(char *) git__substrdup(const char *start, size_t n)
+GIT_INLINE(int) git__substrdup(char **out, const char *start, size_t n)
 {
-	char *ptr = (char*)git__malloc(n+1);
-	memcpy(ptr, start, n);
-	ptr[n] = '\0';
-	return ptr;
+	if (git__malloc(out, n+1) < 0)
+		return -1;
+
+	memcpy(*out, start, n);
+	(*out)[n] = '\0';
+
+	return 0;
 }
 
-GIT_INLINE(void *) git__realloc(void *ptr, size_t size)
+GIT_INLINE(int) git__realloc(void **out, void *ptr, size_t size)
 {
-	void *new_ptr = realloc(ptr, size);
-	if (!new_ptr) giterr_set_oom();
-	return new_ptr;
+	return (*out = git__std_realloc(ptr, size)) == NULL ? -1 : 0;
 }
 
 GIT_INLINE(void) git__free(void *ptr)

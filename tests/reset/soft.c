@@ -2,6 +2,7 @@
 #include "posix.h"
 #include "reset_helpers.h"
 #include "path.h"
+#include "oid.h"
 #include "repo/repo_helpers.h"
 
 static git_repository *repo;
@@ -57,8 +58,7 @@ void test_reset_soft__resetting_to_the_commit_pointed_at_by_the_Head_does_not_ch
 	char raw_head_oid[GIT_OID_HEXSZ + 1];
 
 	cl_git_pass(git_reference_name_to_id(&oid, repo, "HEAD"));
-	git_oid_fmt(raw_head_oid, &oid);
-	raw_head_oid[GIT_OID_HEXSZ] = '\0';
+	git_oid__fmtz(raw_head_oid, &oid);
 
 	retrieve_target_from_oid(&target, repo, raw_head_oid);
 

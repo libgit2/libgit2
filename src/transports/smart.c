@@ -99,8 +99,8 @@ static int git_smart__connect(
 	if (git_smart__reset_stream(t, true) < 0)
 		return -1;
 
-	t->url = git__strdup(url);
-	GITERR_CHECK_ALLOC(t->url);
+	if (git__strdup(&t->url, url) < 0)
+		return -1;
 
 	t->direction = direction;
 	t->flags = flags;
@@ -297,6 +297,9 @@ static void git_smart__free(git_transport *transport)
 	unsigned int i;
 	git_pkt *p;
 
+	if (transport == NULL)
+		return;
+
 	/* Make sure that the current stream is closed, if we have one. */
 	git_smart__close(transport);
 
@@ -327,8 +330,10 @@ int git_transport_smart(git_transport **out, git_remote *owner, void *param)
 	if (!param)
 		return -1;
 
-	t = git__calloc(sizeof(transport_smart), 1);
-	GITERR_CHECK_ALLOC(t);
+	if (git__calloc(&t, sizeof(transport_smart), 1) < 0) {
+		*out = NULL;
+		return -1;
+	}
 
 	t->parent.version = GIT_TRANSPORT_VERSION;
 	t->parent.set_callbacks = git_smart__set_callbacks;
@@ -346,18 +351,10 @@ int git_transport_smart(git_transport **out, git_remote *owner, void *param)
 	t->owner = owner;
 	t->rpc = definition->rpc;
 
-	if (git_vector_init(&t->refs, 16, ref_name_cmp) < 0) {
-		git__free(t);
-		return -1;
-	}
-
-	if (git_vector_init(&t->heads, 16, ref_name_cmp) < 0) {
-		git__free(t);
-		return -1;
-	}
-
-	if (definition->callback(&t->wrapped, &t->parent) < 0) {
-		git__free(t);
+	if (git_vector_init(&t->refs, 16, ref_name_cmp) < 0 ||
+		git_vector_init(&t->heads, 16, ref_name_cmp) < 0 ||
+		definition->callback(&t->wrapped, &t->parent) < 0) {
+		git_smart__free((git_transport *)t);
 		return -1;
 	}
 

@@ -40,7 +40,7 @@ static void test_find_differences(
     struct merge_index_conflict_data *treediff_conflict_data,
     size_t treediff_conflict_data_len)
 {
-    git_merge_diff_list *merge_diff_list = git_merge_diff_list__alloc(repo);
+    git_merge_diff_list *merge_diff_list;
     git_oid ancestor_oid, ours_oid, theirs_oid;
     git_tree *ancestor_tree, *ours_tree, *theirs_tree;
 
@@ -49,8 +49,8 @@ static void test_find_differences(
 	opts.target_limit = 1000;
 	opts.rename_threshold = 50;
 
-	opts.metric = git__malloc(sizeof(git_diff_similarity_metric));
-	cl_assert(opts.metric != NULL);
+	cl_git_pass(git_merge_diff_list__alloc(&merge_diff_list, repo));
+	cl_git_pass(git__malloc(&opts.metric, sizeof(git_diff_similarity_metric)));
 
 	opts.metric->file_signature = git_diff_find_similar__hashsig_for_file;
 	opts.metric->buffer_signature = git_diff_find_similar__hashsig_for_buf;

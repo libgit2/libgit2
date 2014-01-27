@@ -153,10 +153,7 @@ static void assert_mergebase_many(const char *expected_sha, int count, ...)
 	char *partial_oid;
 	git_object *object;
 
-	oids = git__malloc(count * sizeof(git_oid));
-	cl_assert(oids != NULL);
-
-	memset(oids, 0x0, count * sizeof(git_oid));
+	git__calloc(&oids, count, sizeof(git_oid));
 
 	va_start(ap, count);
 	

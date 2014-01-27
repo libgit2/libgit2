@@ -33,52 +33,57 @@ enum {
 	GIT_PACKREF_WAS_LOOSE = 2
 };
 
-static git_reference *alloc_ref(const char *name)
+static int alloc_ref(git_reference **out, const char *name)
 {
-	git_reference *ref;
 	size_t namelen = strlen(name);
 
-	if ((ref = git__calloc(1, sizeof(git_reference) + namelen + 1)) == NULL)
-		return NULL;
+	if (git__calloc(out, 1, sizeof(git_reference) + namelen + 1) < 0)
+		return -1;
 
-	memcpy(ref->name, name, namelen + 1);
+	memcpy((*out)->name, name, namelen + 1);
 
-	return ref;
+	return 0;
 }
 
-git_reference *git_reference__alloc_symbolic(
-	const char *name, const char *target)
+int git_reference__alloc_symbolic(
+	git_reference **out,
+	const char *name,
+	const char *target)
 {
 	git_reference *ref;
 
-	assert(name && target);
+	assert(out && name && target);
 
-	ref = alloc_ref(name);
-	if (!ref)
-		return NULL;
+	*out = NULL;
+
+	if (alloc_ref(&ref, name) < 0)
+		return -1;
 
 	ref->type = GIT_REF_SYMBOLIC;
 
-	if ((ref->target.symbolic = git__strdup(target)) == NULL) {
+	if (git__strdup(&ref->target.symbolic, target) < 0) {
 		git__free(ref);
-		return NULL;
+		return -1;
 	}
 
-	return ref;
+	*out = ref;
+	return 0;
 }
 
-git_reference *git_reference__alloc(
+int git_reference__alloc(
+	git_reference **out,
 	const char *name,
 	const git_oid *oid,
 	const git_oid *peel)
 {
 	git_reference *ref;
 
-	assert(name && oid);
+	assert(out && name && oid);
 
-	ref = alloc_ref(name);
-	if (!ref)
-		return NULL;
+	*out = NULL;
+
+	if (alloc_ref(&ref, name) < 0)
+		return -1;
 
 	ref->type = GIT_REF_OID;
 	git_oid_cpy(&ref->target.oid, oid);
@@ -86,18 +91,22 @@ git_reference *git_reference__alloc(
 	if (peel != NULL)
 		git_oid_cpy(&ref->peel, peel);
 
-	return ref;
+	*out = ref;
+	return 0;
 }
 
-git_reference *git_reference__set_name(
-	git_reference *ref, const char *name)
+int git_reference__set_name(
+	git_reference **out,
+	git_reference *ref,
+	const char *name)
 {
 	size_t namelen = strlen(name);
-	git_reference *rewrite =
-		git__realloc(ref, sizeof(git_reference) + namelen + 1);
-	if (rewrite != NULL)
-		memcpy(rewrite->name, name, namelen + 1);
-	return rewrite;
+
+	if (git__realloc(out, ref, sizeof(git_reference) + namelen + 1) < 0)
+		return -1;
+
+	memcpy((*out)->name, name, namelen + 1);
+	return 0;
 }
 
 void git_reference_free(git_reference *reference)
@@ -367,7 +376,7 @@ static int reference__create(
 			return -1;
 		}
 
-		ref = git_reference__alloc(name, oid, NULL);
+		error = git_reference__alloc(&ref, name, oid, NULL);
 	} else {
 		char normalized_target[GIT_REFNAME_MAX];
 
@@ -375,10 +384,11 @@ static int reference__create(
 			normalized_target, sizeof(normalized_target), symbolic)) < 0)
 			return error;
 
-		ref = git_reference__alloc_symbolic(name, normalized_target);
+		error = git_reference__alloc_symbolic(&ref, name, normalized_target);
 	}
 
-	GITERR_CHECK_ALLOC(ref);
+	if (error < 0)
+		return error;
 
 	if ((error = git_refdb_write(refdb, ref, force, signature, log_message)) < 0) {
 		git_reference_free(ref);
@@ -722,8 +732,11 @@ void git_reference_iterator_free(git_reference_iterator *iter)
 
 static int cb__reflist_add(const char *ref, void *data)
 {
-	char *name = git__strdup(ref);
-	GITERR_CHECK_ALLOC(name);
+	char *name;
+
+	if (git__strdup(&name, ref) < 0)
+		return -1;
+
 	return git_vector_insert((git_vector *)data, name);
 }
 

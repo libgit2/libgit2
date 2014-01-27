@@ -213,8 +213,8 @@ int p_readlink(const char *link, char *target, size_t target_len)
 		return -1;
 	}
 
-	target_w = (wchar_t*)git__malloc(target_len * sizeof(wchar_t));
-	GITERR_CHECK_ALLOC(target_w);
+	if (git__malloc(&target_w, target_len * sizeof(wchar_t)) < 0)
+		return -1;
 
 	dwRet = pGetFinalPath(hFile, target_w, (DWORD)target_len, 0x0);
 	if (dwRet == 0 ||
@@ -292,11 +292,13 @@ int p_getcwd(char *buffer_out, size_t size)
 	int ret;
 	wchar_t *buf;
 
-	if ((size_t)((int)size) != size)
+	if ((size_t)((int)size) != size) {
+		giterr_set(GITERR_INVALID, "Invalid buffer length");
 		return -1;
+	}
 
-	buf = (wchar_t*)git__malloc(sizeof(wchar_t) * (int)size);
-	GITERR_CHECK_ALLOC(buf);
+	if (git__malloc(&buf, sizeof(wchar_t) * (int)size) < 0)
+		return -1;
 
 	_wgetcwd(buf, (int)size);
 
@@ -387,7 +389,7 @@ char *p_realpath(const char *orig_path, char *buffer)
 			CP_UTF8, 0, buffer_w, -1, NULL, 0, NULL, NULL);
 
 		if (!buffer_sz ||
-			!(buffer = (char *)git__malloc(buffer_sz)) ||
+			git__malloc(&buffer, buffer_sz) < 0 ||
 			!WideCharToMultiByte(
 				CP_UTF8, 0, buffer_w, -1, buffer, buffer_sz, NULL, NULL))
 		{

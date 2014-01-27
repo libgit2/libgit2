@@ -63,9 +63,7 @@ int git_buf_try_grow(
 	/* round allocation up to multiple of 8 */
 	new_size = (new_size + 7) & ~7;
 
-	new_ptr = git__realloc(new_ptr, new_size);
-
-	if (!new_ptr) {
+	if (git__realloc(&new_ptr, new_ptr, new_size) < 0) {
 		if (mark_oom) {
 			if (buf->ptr) git__free(buf->ptr);
 			buf->ptr = git_buf__oom;

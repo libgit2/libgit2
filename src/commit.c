@@ -50,14 +50,14 @@ int git_commit_create_v(
 {
 	va_list ap;
 	int i, res;
-	const git_commit **parents;
+	git_commit ** parents;
 
-	parents = git__malloc(parent_count * sizeof(git_commit *));
-	GITERR_CHECK_ALLOC(parents);
+	if (git__malloc(&parents, parent_count * sizeof(git_commit *)) < 0)
+		return -1;
 
 	va_start(ap, parent_count);
 	for (i = 0; i < parent_count; ++i)
-		parents[i] = va_arg(ap, const git_commit *);
+		parents[i] = va_arg(ap, git_commit *);
 	va_end(ap);
 
 	res = git_commit_create(
@@ -65,7 +65,7 @@ int git_commit_create_v(
 		message_encoding, message,
 		tree, parent_count, parents);
 
-	git__free((void *)parents);
+	git__free(parents);
 	return res;
 }
 
@@ -135,13 +135,13 @@ int git_commit_create(
 	const git_commit *parents[])
 {
 	int retval, i;
-	const git_oid **parent_oids;
+	git_oid const **parent_oids;
 
 	assert(parent_count >= 0);
 	assert(git_object_owner((const git_object *)tree) == repo);
 
-	parent_oids = git__malloc(parent_count * sizeof(git_oid *));
-	GITERR_CHECK_ALLOC(parent_oids);
+	if (git__malloc(&parent_oids, parent_count * sizeof(git_oid *)) < 0)
+		return -1;
 
 	for (i = 0; i < parent_count; ++i) {
 		assert(git_object_owner((const git_object *)parents[i]) == repo);
@@ -153,7 +153,7 @@ int git_commit_create(
 		message_encoding, message,
 		git_object_id((const git_object *)tree), parent_count, parent_oids);
 
-	git__free((void *)parent_oids);
+	git__free(parent_oids);
 
 	return retval;
 }
@@ -178,8 +178,9 @@ int git_commit__parse(void *_commit, git_odb_object *odb_obj)
 	}
 
 	header_len = buffer - buffer_start;
-	commit->raw_header = git__strndup(buffer_start, header_len);
-	GITERR_CHECK_ALLOC(commit->raw_header);
+
+	if (git__strndup(&commit->raw_header, buffer_start, header_len) < 0)
+		return -1;
 
 	/* point "buffer" to header data */
 	buffer = commit->raw_header;
@@ -188,8 +189,8 @@ int git_commit__parse(void *_commit, git_odb_object *odb_obj)
 	if (parent_count < 1)
 		parent_count = 1;
 
-	git_array_init_to_size(commit->parent_ids, parent_count);
-	GITERR_CHECK_ARRAY(commit->parent_ids);
+	if (git_array_init_to_size(commit->parent_ids, parent_count) < 0)
+		return -1;
 
 	if (git_oid__parse(&commit->tree_id, &buffer, buffer_end, "tree ") < 0)
 		goto bad_buffer;
@@ -205,17 +206,13 @@ int git_commit__parse(void *_commit, git_odb_object *odb_obj)
 		git_oid_cpy(new_id, &parent_id);
 	}
 
-	commit->author = git__malloc(sizeof(git_signature));
-	GITERR_CHECK_ALLOC(commit->author);
-
-	if (git_signature__parse(commit->author, &buffer, buffer_end, "author ", '\n') < 0)
+	if (git__malloc(&commit->author, sizeof(git_signature)) < 0 ||
+		git_signature__parse(commit->author, &buffer, buffer_end, "author ", '\n') < 0)
 		return -1;
 
 	/* Always parse the committer; we need the commit time */
-	commit->committer = git__malloc(sizeof(git_signature));
-	GITERR_CHECK_ALLOC(commit->committer);
-
-	if (git_signature__parse(commit->committer, &buffer, buffer_end, "committer ", '\n') < 0)
+	if (git__malloc(&commit->committer, sizeof(git_signature)) < 0 ||
+		git_signature__parse(commit->committer, &buffer, buffer_end, "committer ", '\n') < 0)
 		return -1;
 
 	/* Parse add'l header entries */
@@ -227,8 +224,8 @@ int git_commit__parse(void *_commit, git_odb_object *odb_obj)
 		if (git__prefixcmp(buffer, "encoding ") == 0) {
 			buffer += strlen("encoding ");
 
-			commit->message_encoding = git__strndup(buffer, eoln - buffer);
-			GITERR_CHECK_ALLOC(commit->message_encoding);
+			if (git__strndup(&commit->message_encoding, buffer, eoln - buffer) < 0)
+				return -1;
 		}
 
 		if (eoln < buffer_end && *eoln == '\n')
@@ -245,10 +242,8 @@ int git_commit__parse(void *_commit, git_odb_object *odb_obj)
 		++buffer;
 
 	/* extract commit message */
-	if (buffer <= buffer_end) {
-		commit->raw_message = git__strndup(buffer, buffer_end - buffer);
-		GITERR_CHECK_ALLOC(commit->raw_message);
-	}
+	if (buffer <= buffer_end && git__strndup(&commit->raw_message, buffer, buffer_end - buffer) < 0)
+		return -1;
 
 	return 0;
 
@@ -311,10 +306,10 @@ const char *git_commit_summary(git_commit *commit)
 				git_buf_putc(&summary, *msg);
 		}
 
-		if (summary.asize == 0)
-			commit->summary = git__strdup("");
-		else
+		if (summary.asize > 0)
 			commit->summary = git_buf_detach(&summary);
+		else if (git__strdup(&commit->summary, "") < 0)
+			commit->summary = NULL;
 	}
 
 	return commit->summary;

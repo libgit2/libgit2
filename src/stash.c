@@ -35,15 +35,11 @@ static int retrieve_head(git_reference **out, git_repository *repo)
 
 static int append_abbreviated_oid(git_buf *out, const git_oid *b_commit)
 {
-	char *formatted_oid;
+	char formatted_oid[GIT_OID_HEXSZ];
 
-	formatted_oid = git_oid_allocfmt(b_commit);
-	GITERR_CHECK_ALLOC(formatted_oid);
+	git_oid_fmt(formatted_oid, b_commit);
 
-	git_buf_put(out, formatted_oid, 7);
-	git__free(formatted_oid);
-
-	return git_buf_oom(out) ? -1 : 0;
+	return git_buf_put(out, formatted_oid, 7);
 }
 
 static int append_commit_description(git_buf *out, git_commit* commit)
