@@ -66,12 +66,40 @@ void test_refs_branches_create__can_force_create_over_an_existing_branch(void)
 	cl_assert_equal_s("refs/heads/br2", git_reference_name(branch));
 }
 
-
 void test_refs_branches_create__creating_a_branch_with_an_invalid_name_returns_EINVALIDSPEC(void)
 {
 	retrieve_known_commit(&target, repo);
 
 	cl_assert_equal_i(GIT_EINVALIDSPEC,
 		git_branch_create(&branch, repo, "inv@{id", target, 0));
+}
+
+void test_refs_branches_create__creation_creates_new_reflog(void)
+{
+	git_reflog *log;
+	const git_reflog_entry *entry;
+
+	retrieve_known_commit(&target, repo);
+	cl_git_pass(git_branch_create(&branch, repo, NEW_BRANCH_NAME, target, false));
+	cl_git_pass(git_reflog_read(&log, repo, "refs/heads/" NEW_BRANCH_NAME));
+
+	cl_assert_equal_i(1, git_reflog_entrycount(log));
+	entry = git_reflog_entry_byindex(log, 0);
+}
+
+void test_refs_branches_create__recreation_updates_existing_reflog(void)
+{
+	git_reflog *log;
+	const git_reflog_entry *entry;
+
+	retrieve_known_commit(&target, repo);
+
+	cl_git_pass(git_branch_create(&branch, repo, NEW_BRANCH_NAME, target, false));
+	cl_git_pass(git_branch_delete(branch));
+	cl_git_pass(git_branch_create(&branch, repo, NEW_BRANCH_NAME, target, false));
+	cl_git_pass(git_reflog_read(&log, repo, "refs/heads/" NEW_BRANCH_NAME));
+
+	cl_assert_equal_i(2, git_reflog_entrycount(log));
+	entry = git_reflog_entry_byindex(log, 0);
 }
 
