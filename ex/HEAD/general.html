@@ -133,10 +133,9 @@ as an example.</p>
       <td class=code>
         <div class='highlight'><pre><span class="k">static</span> <span class="kt">void</span> <span class="nf">check_error</span><span class="p">(</span><span class="kt">int</span> <span class="n">error_code</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">action</span><span class="p">)</span>
 <span class="p">{</span>
+  <span class="k">const</span> <span class="n">git_error</span> <span class="o">*</span><span class="n">error</span> <span class="o">=</span> <span class="n"><a name="giterr_last-27" class="fnlink" href="../../#HEAD/group/giterr/giterr_last">giterr_last</a></span><span class="p">();</span>
   <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">error_code</span><span class="p">)</span>
     <span class="k">return</span><span class="p">;</span>
-
-  <span class="k">const</span> <span class="n">git_error</span> <span class="o">*</span><span class="n">error</span> <span class="o">=</span> <span class="n"><a name="giterr_last-27" class="fnlink" href="../../#HEAD/group/giterr/giterr_last">giterr_last</a></span><span class="p">();</span>
 
   <span class="n">printf</span><span class="p">(</span><span class="s">&quot;Error %d %s - %s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">error_code</span><span class="p">,</span> <span class="n">action</span><span class="p">,</span>
        <span class="p">(</span><span class="n">error</span> <span class="o">&amp;&amp;</span> <span class="n">error</span><span class="o">-&gt;</span><span class="n">message</span><span class="p">)</span> <span class="o">?</span> <span class="n">error</span><span class="o">-&gt;</span><span class="n">message</span> <span class="o">:</span> <span class="s">&quot;???&quot;</span><span class="p">);</span>
