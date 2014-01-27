@@ -202,6 +202,7 @@ void test_network_remote_local__push_to_bare_remote_with_file_url(void)
 	/* Should be able to push to a bare remote */
 	git_remote *localremote;
 	git_push *push;
+	const char *url;
 
 	/* Get some commits */
 	connect_to_local_repository(cl_fixture("testrepo.git"));
@@ -218,7 +219,7 @@ void test_network_remote_local__push_to_bare_remote_with_file_url(void)
 	}
 
 	/* Create a file URL */
-	const char *url = cl_git_path_url("./localbare.git");
+	url = cl_git_path_url("./localbare.git");
 
 	/* Connect to the bare repo */
 	cl_git_pass(git_remote_create_inmemory(&localremote, repo, NULL, url));
