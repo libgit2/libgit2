@@ -186,7 +186,7 @@ PATTERNS("csharp",
 	 "|[-+*/<>%&^|=!]=|--|\\+\\+|<<=?|>>=?|&&|\\|\\||::|->"),
 
 PATTERNS("php",
-	 "^[ \t]*((public|private|protected|static|final)[ \t]+)*((class|function)[ \t].*)$",
+	 "^[ \t]*(((public|private|protected|static|final)[ \t]+)*((class|function)[ \t].*))$",
 	 /* -- */
 	 "[a-zA-Z_][a-zA-Z0-9_]*"
 	 "|[-+0-9.e]+[fFlL]?|0[xX]?[0-9a-fA-F]+[lL]?"
