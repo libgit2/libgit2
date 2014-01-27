@@ -861,15 +861,15 @@ void test_diff_blob__using_path_and_attributes(void)
 	cl_git_pass(git_config_set_bool(cfg, "diff.iam_binary.binary", 1));
 	cl_git_pass(git_config_set_bool(cfg, "diff.iam_text.binary", 0));
 	cl_git_pass(git_config_set_string(
-		cfg, "diff.iam_alphactx.xfuncname", "^[A-Za-z]"));
+		cfg, "diff.iam_alphactx.xfuncname", "^[A-Za-z].*$"));
 	cl_git_pass(git_config_set_bool(cfg, "diff.iam_textalpha.binary", 0));
 	cl_git_pass(git_config_set_string(
-		cfg, "diff.iam_textalpha.xfuncname", "^[A-Za-z]"));
+		cfg, "diff.iam_textalpha.xfuncname", "^[A-Za-z].*$"));
 	cl_git_pass(git_config_set_string(
-		cfg, "diff.iam_numctx.funcname", "^[0-9]"));
+		cfg, "diff.iam_numctx.funcname", "^[0-9][0-9]*"));
 	cl_git_pass(git_config_set_bool(cfg, "diff.iam_textnum.binary", 0));
 	cl_git_pass(git_config_set_string(
-		cfg, "diff.iam_textnum.funcname", "^[0-9]"));
+		cfg, "diff.iam_textnum.funcname", "^[0-9][0-9]*"));
 	git_config_free(cfg);
 
 	cl_git_append2file(
