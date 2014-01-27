@@ -133,9 +133,9 @@ static int diff_patch_load(git_patch *patch, git_diff_output *output)
 
 	incomplete_data =
 		(((patch->ofile.flags & GIT_DIFF_FLAG__NO_DATA) != 0 ||
-		  (patch->ofile.file->flags & GIT_DIFF_FLAG_VALID_OID) != 0) &&
+		  (patch->ofile.file->flags & GIT_DIFF_FLAG_VALID_ID) != 0) &&
 		 ((patch->nfile.flags & GIT_DIFF_FLAG__NO_DATA) != 0 ||
-		  (patch->nfile.file->flags & GIT_DIFF_FLAG_VALID_OID) != 0));
+		  (patch->nfile.file->flags & GIT_DIFF_FLAG_VALID_ID) != 0));
 
 	/* always try to load workdir content first because filtering may
 	 * need 2x data size and this minimizes peak memory footprint
@@ -169,7 +169,7 @@ static int diff_patch_load(git_patch *patch, git_diff_output *output)
 	if (incomplete_data &&
 		patch->ofile.file->mode == patch->nfile.file->mode &&
 		patch->ofile.file->mode != GIT_FILEMODE_COMMIT &&
-		git_oid_equal(&patch->ofile.file->oid, &patch->nfile.file->oid) &&
+		git_oid_equal(&patch->ofile.file->id, &patch->nfile.file->id) &&
 		patch->delta->status == GIT_DELTA_MODIFIED) /* not RENAMED/COPIED! */
 		patch->delta->status = GIT_DELTA_UNMODIFIED;
 
@@ -184,7 +184,7 @@ cleanup:
 			patch->delta->status != GIT_DELTA_UNMODIFIED &&
 			(patch->ofile.map.len || patch->nfile.map.len) &&
 			(patch->ofile.map.len != patch->nfile.map.len ||
-			 !git_oid_equal(&patch->ofile.file->oid, &patch->nfile.file->oid)))
+			 !git_oid_equal(&patch->ofile.file->id, &patch->nfile.file->id)))
 			patch->flags |= GIT_DIFF_PATCH_DIFFABLE;
 
 		patch->flags |= GIT_DIFF_PATCH_LOADED;
@@ -315,7 +315,7 @@ static int diff_single_generate(diff_patch_with_delta *pd, git_xdiff_output *xo)
 		(has_old ? GIT_DELTA_MODIFIED : GIT_DELTA_ADDED) :
 		(has_old ? GIT_DELTA_DELETED : GIT_DELTA_UNTRACKED);
 
-	if (git_oid_equal(&patch->nfile.file->oid, &patch->ofile.file->oid))
+	if (git_oid_equal(&patch->nfile.file->id, &patch->ofile.file->id))
 		pd->delta.status = GIT_DELTA_UNMODIFIED;
 
 	patch->delta = &pd->delta;

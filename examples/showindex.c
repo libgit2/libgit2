@@ -49,7 +49,7 @@ int main (int argc, char** argv)
 	for (i = 0; i < ecount; ++i) {
 		const git_index_entry *e = git_index_get_byindex(index, i);
 
-		git_oid_fmt(out, &e->oid);
+		git_oid_fmt(out, &e->id);
 
 		printf("File Path: %s\n", e->path);
 		printf("    Stage: %d\n", git_index_entry_stage(e));

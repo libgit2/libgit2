@@ -305,8 +305,8 @@ const git_tree_entry *git_tree_entry_byindex(
 	return git_vector_get(&tree->entries, idx);
 }
 
-const git_tree_entry *git_tree_entry_byoid(
-	const git_tree *tree, const git_oid *oid)
+const git_tree_entry *git_tree_entry_byid(
+	const git_tree *tree, const git_oid *id)
 {
 	size_t i;
 	const git_tree_entry *e;
@@ -314,7 +314,7 @@ const git_tree_entry *git_tree_entry_byoid(
 	assert(tree);
 
 	git_vector_foreach(&tree->entries, i, e) {
-		if (memcmp(&e->oid.id, &oid->id, sizeof(oid->id)) == 0)
+		if (memcmp(&e->oid.id, &id->id, sizeof(id->id)) == 0)
 			return e;
 	}
 
@@ -551,7 +551,7 @@ static int write_tree(
 			if (error < 0)
 				goto on_error;
 		} else {
-			error = append_entry(bld, filename, &entry->oid, entry->mode);
+			error = append_entry(bld, filename, &entry->id, entry->mode);
 			if (error < 0)
 				goto on_error;
 		}

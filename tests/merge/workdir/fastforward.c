@@ -13,10 +13,10 @@ static git_index *repo_index;
 #define TEST_INDEX_PATH TEST_REPO_PATH "/.git/index"
 
 #define THEIRS_FASTFORWARD_BRANCH	"ff_branch"
-#define THEIRS_FASTFORWARD_OID		"fd89f8cffb663ac89095a0f9764902e93ceaca6a"
+#define THEIRS_FASTFORWARD_ID		"fd89f8cffb663ac89095a0f9764902e93ceaca6a"
 
 #define THEIRS_NOFASTFORWARD_BRANCH	"branch"
-#define THEIRS_NOFASTFORWARD_OID	"7cb63eed597130ba4abb87b3e544b85021905520"
+#define THEIRS_NOFASTFORWARD_ID	"7cb63eed597130ba4abb87b3e544b85021905520"
 
 
 // Fixture setup and teardown
@@ -57,11 +57,11 @@ void test_merge_workdir_fastforward__fastforward(void)
 	git_merge_result *result;
 	git_oid expected, ff_oid;
 
-	cl_git_pass(git_oid_fromstr(&expected, THEIRS_FASTFORWARD_OID));
+	cl_git_pass(git_oid_fromstr(&expected, THEIRS_FASTFORWARD_ID));
 
 	cl_assert(result = merge_fastforward_branch(0));
 	cl_assert(git_merge_result_is_fastforward(result));
-	cl_git_pass(git_merge_result_fastforward_oid(&ff_oid, result));
+	cl_git_pass(git_merge_result_fastforward_id(&ff_oid, result));
 	cl_assert(git_oid_cmp(&ff_oid, &expected) == 0);
 
 	git_merge_result_free(result);
@@ -136,7 +136,7 @@ void test_merge_workdir_fastforward__uptodate_merging_prev_commit(void)
 	git_merge_result *result;
 
 	cl_git_pass(git_oid_fromstr(&their_oid, "c607fc30883e335def28cd686b51f6cfa02b06ec"));
-	cl_git_pass(git_merge_head_from_oid(&their_heads[0], repo, &their_oid));
+	cl_git_pass(git_merge_head_from_id(&their_heads[0], repo, &their_oid));
 
 	cl_git_pass(git_merge(&result, repo, (const git_merge_head **)their_heads, 1, NULL));
 

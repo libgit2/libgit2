@@ -643,7 +643,7 @@ static int index_entry_init(
 
 	git_index_entry__init_from_stat(entry, &st, !index->distrust_filemode);
 
-	entry->oid = oid;
+	entry->id = oid;
 	entry->path = git__strdup(rel_path);
 	GITERR_CHECK_ALLOC(entry->path);
 
@@ -757,9 +757,9 @@ static int index_conflict_to_reuc(git_index *index, const char *path)
 	our_mode = conflict_entries[1] == NULL ? 0 : conflict_entries[1]->mode;
 	their_mode = conflict_entries[2] == NULL ? 0 : conflict_entries[2]->mode;
 
-	ancestor_oid = conflict_entries[0] == NULL ? NULL : &conflict_entries[0]->oid;
-	our_oid = conflict_entries[1] == NULL ? NULL : &conflict_entries[1]->oid;
-	their_oid = conflict_entries[2] == NULL ? NULL : &conflict_entries[2]->oid;
+	ancestor_oid = conflict_entries[0] == NULL ? NULL : &conflict_entries[0]->id;
+	our_oid = conflict_entries[1] == NULL ? NULL : &conflict_entries[1]->id;
+	their_oid = conflict_entries[2] == NULL ? NULL : &conflict_entries[2]->id;
 
 	if ((ret = git_index_reuc_add(index, path, ancestor_mode, ancestor_oid,
 		our_mode, our_oid, their_mode, their_oid)) >= 0)
@@ -1515,7 +1515,7 @@ static size_t read_entry(git_index_entry *dest, const void *buffer, size_t buffe
 	dest->uid = ntohl(source->uid);
 	dest->gid = ntohl(source->gid);
 	dest->file_size = ntohl(source->file_size);
-	git_oid_cpy(&dest->oid, &source->oid);
+	git_oid_cpy(&dest->id, &source->oid);
 	dest->flags = ntohs(source->flags);
 
 	if (dest->flags & GIT_IDXENTRY_EXTENDED) {
@@ -1756,7 +1756,7 @@ static int write_disk_entry(git_filebuf *file, git_index_entry *entry)
 	ondisk->gid = htonl(entry->gid);
 	ondisk->file_size = htonl((uint32_t)entry->file_size);
 
-	git_oid_cpy(&ondisk->oid, &entry->oid);
+	git_oid_cpy(&ondisk->oid, &entry->id);
 
 	ondisk->flags = htons(entry->flags);
 
@@ -1983,7 +1983,7 @@ static int read_tree_cb(
 	GITERR_CHECK_ALLOC(entry);
 
 	entry->mode = tentry->attr;
-	entry->oid = tentry->oid;
+	entry->id = tentry->oid;
 
 	/* look for corresponding old entry and copy data to new entry */
 	if (data->old_entries) {
@@ -1997,7 +1997,7 @@ static int read_tree_cb(
 				&pos, data->old_entries, data->entries_search, &skey) &&
 			(old_entry = git_vector_get(data->old_entries, pos)) != NULL &&
 			entry->mode == old_entry->mode &&
-			git_oid_equal(&entry->oid, &old_entry->oid))
+			git_oid_equal(&entry->id, &old_entry->id))
 		{
 			memcpy(entry, old_entry, sizeof(*entry));
 			entry->flags_extended = 0;
@@ -2135,7 +2135,7 @@ int git_index_add_all(
 			error = -1;
 			break;
 		}
-		entry->oid = blobid;
+		entry->id = blobid;
 
 		/* add working directory item to index */
 		if ((error = index_insert(index, entry, 1)) < 0) {

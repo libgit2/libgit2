@@ -79,7 +79,7 @@ void test_merge_workdir_setup__one_branch(void)
 	git_merge_head *our_head, *their_heads[1];
 	
 	cl_git_pass(git_oid_fromstr(&our_oid, ORIG_HEAD));
-	cl_git_pass(git_merge_head_from_oid(&our_head, repo, &our_oid));
+	cl_git_pass(git_merge_head_from_id(&our_head, repo, &our_oid));
 	
 	cl_git_pass(git_reference_lookup(&octo1_ref, repo, GIT_REFS_HEADS_DIR OCTO1_BRANCH));
 	cl_git_pass(git_merge_head_from_ref(&their_heads[0], repo, octo1_ref));
@@ -105,7 +105,7 @@ void test_merge_workdir_setup__no_fastforward(void)
 	git_merge_head *our_head, *their_heads[1];
 
 	cl_git_pass(git_oid_fromstr(&our_oid, ORIG_HEAD));
-	cl_git_pass(git_merge_head_from_oid(&our_head, repo, &our_oid));
+	cl_git_pass(git_merge_head_from_id(&our_head, repo, &our_oid));
 
 	cl_git_pass(git_reference_lookup(&octo1_ref, repo, GIT_REFS_HEADS_DIR OCTO1_BRANCH));
 	cl_git_pass(git_merge_head_from_ref(&their_heads[0], repo, octo1_ref));
@@ -131,10 +131,10 @@ void test_merge_workdir_setup__one_oid(void)
 	git_merge_head *our_head, *their_heads[1];
 	
 	cl_git_pass(git_oid_fromstr(&our_oid, ORIG_HEAD));
-	cl_git_pass(git_merge_head_from_oid(&our_head, repo, &our_oid));
+	cl_git_pass(git_merge_head_from_id(&our_head, repo, &our_oid));
 	
 	cl_git_pass(git_oid_fromstr(&octo1_oid, OCTO1_OID));
-	cl_git_pass(git_merge_head_from_oid(&their_heads[0], repo, &octo1_oid));
+	cl_git_pass(git_merge_head_from_id(&their_heads[0], repo, &octo1_oid));
 
 	cl_git_pass(git_merge__setup(repo, our_head, (const git_merge_head **)their_heads, 1, 0));
 
@@ -156,7 +156,7 @@ void test_merge_workdir_setup__two_branches(void)
 	git_merge_head *our_head, *their_heads[2];
 	
 	cl_git_pass(git_oid_fromstr(&our_oid, ORIG_HEAD));
-	cl_git_pass(git_merge_head_from_oid(&our_head, repo, &our_oid));
+	cl_git_pass(git_merge_head_from_id(&our_head, repo, &our_oid));
 	
 	cl_git_pass(git_reference_lookup(&octo1_ref, repo, GIT_REFS_HEADS_DIR OCTO1_BRANCH));
 	cl_git_pass(git_merge_head_from_ref(&their_heads[0], repo, octo1_ref));
@@ -189,7 +189,7 @@ void test_merge_workdir_setup__three_branches(void)
 	git_merge_head *our_head, *their_heads[3];
 	
 	cl_git_pass(git_oid_fromstr(&our_oid, ORIG_HEAD));
-	cl_git_pass(git_merge_head_from_oid(&our_head, repo, &our_oid));
+	cl_git_pass(git_merge_head_from_id(&our_head, repo, &our_oid));
 
 	cl_git_pass(git_reference_lookup(&octo1_ref, repo, GIT_REFS_HEADS_DIR OCTO1_BRANCH));
 	cl_git_pass(git_merge_head_from_ref(&their_heads[0], repo, octo1_ref));
@@ -227,16 +227,16 @@ void test_merge_workdir_setup__three_oids(void)
 	git_merge_head *our_head, *their_heads[3];
 	
 	cl_git_pass(git_oid_fromstr(&our_oid, ORIG_HEAD));
-	cl_git_pass(git_merge_head_from_oid(&our_head, repo, &our_oid));
+	cl_git_pass(git_merge_head_from_id(&our_head, repo, &our_oid));
 
 	cl_git_pass(git_oid_fromstr(&octo1_oid, OCTO1_OID));
-	cl_git_pass(git_merge_head_from_oid(&their_heads[0], repo, &octo1_oid));
+	cl_git_pass(git_merge_head_from_id(&their_heads[0], repo, &octo1_oid));
 	
 	cl_git_pass(git_oid_fromstr(&octo2_oid, OCTO2_OID));
-	cl_git_pass(git_merge_head_from_oid(&their_heads[1], repo, &octo2_oid));
+	cl_git_pass(git_merge_head_from_id(&their_heads[1], repo, &octo2_oid));
 
 	cl_git_pass(git_oid_fromstr(&octo3_oid, OCTO3_OID));
-	cl_git_pass(git_merge_head_from_oid(&their_heads[2], repo, &octo3_oid));
+	cl_git_pass(git_merge_head_from_id(&their_heads[2], repo, &octo3_oid));
 
 	cl_git_pass(git_merge__setup(repo, our_head, (const git_merge_head **)their_heads, 3, 0));
 
@@ -260,13 +260,13 @@ void test_merge_workdir_setup__branches_and_oids_1(void)
 	git_merge_head *our_head, *their_heads[2];
 	
 	cl_git_pass(git_oid_fromstr(&our_oid, ORIG_HEAD));
-	cl_git_pass(git_merge_head_from_oid(&our_head, repo, &our_oid));
+	cl_git_pass(git_merge_head_from_id(&our_head, repo, &our_oid));
 
 	cl_git_pass(git_reference_lookup(&octo1_ref, repo, GIT_REFS_HEADS_DIR OCTO1_BRANCH));
 	cl_git_pass(git_merge_head_from_ref(&their_heads[0], repo, octo1_ref));
 
 	cl_git_pass(git_oid_fromstr(&octo2_oid, OCTO2_OID));
-	cl_git_pass(git_merge_head_from_oid(&their_heads[1], repo, &octo2_oid));
+	cl_git_pass(git_merge_head_from_id(&their_heads[1], repo, &octo2_oid));
 
 	cl_git_pass(git_merge__setup(repo, our_head, (const git_merge_head **)their_heads, 2, 0));
 
@@ -293,19 +293,19 @@ void test_merge_workdir_setup__branches_and_oids_2(void)
 	git_merge_head *our_head, *their_heads[4];
 
 	cl_git_pass(git_oid_fromstr(&our_oid, ORIG_HEAD));
-	cl_git_pass(git_merge_head_from_oid(&our_head, repo, &our_oid));
+	cl_git_pass(git_merge_head_from_id(&our_head, repo, &our_oid));
 
 	cl_git_pass(git_reference_lookup(&octo1_ref, repo, GIT_REFS_HEADS_DIR OCTO1_BRANCH));
 	cl_git_pass(git_merge_head_from_ref(&their_heads[0], repo, octo1_ref));
 	
 	cl_git_pass(git_oid_fromstr(&octo2_oid, OCTO2_OID));
-	cl_git_pass(git_merge_head_from_oid(&their_heads[1], repo, &octo2_oid));
+	cl_git_pass(git_merge_head_from_id(&their_heads[1], repo, &octo2_oid));
 
 	cl_git_pass(git_reference_lookup(&octo3_ref, repo, GIT_REFS_HEADS_DIR OCTO3_BRANCH));
 	cl_git_pass(git_merge_head_from_ref(&their_heads[2], repo, octo3_ref));
 	
 	cl_git_pass(git_oid_fromstr(&octo4_oid, OCTO4_OID));
-	cl_git_pass(git_merge_head_from_oid(&their_heads[3], repo, &octo4_oid));
+	cl_git_pass(git_merge_head_from_id(&their_heads[3], repo, &octo4_oid));
 	
 	cl_git_pass(git_merge__setup(repo, our_head, (const git_merge_head **)their_heads, 4, 0));
 
@@ -335,16 +335,16 @@ void test_merge_workdir_setup__branches_and_oids_3(void)
 	git_merge_head *our_head, *their_heads[4];
 	
 	cl_git_pass(git_oid_fromstr(&our_oid, ORIG_HEAD));
-	cl_git_pass(git_merge_head_from_oid(&our_head, repo, &our_oid));
+	cl_git_pass(git_merge_head_from_id(&our_head, repo, &our_oid));
 
 	cl_git_pass(git_oid_fromstr(&octo1_oid, OCTO1_OID));
-	cl_git_pass(git_merge_head_from_oid(&their_heads[0], repo, &octo1_oid));
+	cl_git_pass(git_merge_head_from_id(&their_heads[0], repo, &octo1_oid));
 
 	cl_git_pass(git_reference_lookup(&octo2_ref, repo, GIT_REFS_HEADS_DIR OCTO2_BRANCH));
 	cl_git_pass(git_merge_head_from_ref(&their_heads[1], repo, octo2_ref));
 
 	cl_git_pass(git_oid_fromstr(&octo3_oid, OCTO3_OID));
-	cl_git_pass(git_merge_head_from_oid(&their_heads[2], repo, &octo3_oid));
+	cl_git_pass(git_merge_head_from_id(&their_heads[2], repo, &octo3_oid));
 	
 	cl_git_pass(git_reference_lookup(&octo4_ref, repo, GIT_REFS_HEADS_DIR OCTO4_BRANCH));
 	cl_git_pass(git_merge_head_from_ref(&their_heads[3], repo, octo4_ref));
@@ -378,16 +378,16 @@ void test_merge_workdir_setup__branches_and_oids_4(void)
 	git_merge_head *our_head, *their_heads[5];
 	
 	cl_git_pass(git_oid_fromstr(&our_oid, ORIG_HEAD));
-	cl_git_pass(git_merge_head_from_oid(&our_head, repo, &our_oid));
+	cl_git_pass(git_merge_head_from_id(&our_head, repo, &our_oid));
 	
 	cl_git_pass(git_oid_fromstr(&octo1_oid, OCTO1_OID));
-	cl_git_pass(git_merge_head_from_oid(&their_heads[0], repo, &octo1_oid));
+	cl_git_pass(git_merge_head_from_id(&their_heads[0], repo, &octo1_oid));
 	
 	cl_git_pass(git_reference_lookup(&octo2_ref, repo, GIT_REFS_HEADS_DIR OCTO2_BRANCH));
 	cl_git_pass(git_merge_head_from_ref(&their_heads[1], repo, octo2_ref));
 	
 	cl_git_pass(git_oid_fromstr(&octo3_oid, OCTO3_OID));
-	cl_git_pass(git_merge_head_from_oid(&their_heads[2], repo, &octo3_oid));
+	cl_git_pass(git_merge_head_from_id(&their_heads[2], repo, &octo3_oid));
 	
 	cl_git_pass(git_reference_lookup(&octo4_ref, repo, GIT_REFS_HEADS_DIR OCTO4_BRANCH));
 	cl_git_pass(git_merge_head_from_ref(&their_heads[3], repo, octo4_ref));
@@ -424,7 +424,7 @@ void test_merge_workdir_setup__three_same_branches(void)
 	git_merge_head *our_head, *their_heads[3];
 	
 	cl_git_pass(git_oid_fromstr(&our_oid, ORIG_HEAD));
-	cl_git_pass(git_merge_head_from_oid(&our_head, repo, &our_oid));
+	cl_git_pass(git_merge_head_from_id(&our_head, repo, &our_oid));
 	
 	cl_git_pass(git_reference_lookup(&octo1_1_ref, repo, GIT_REFS_HEADS_DIR OCTO1_BRANCH));
 	cl_git_pass(git_merge_head_from_ref(&their_heads[0], repo, octo1_1_ref));
@@ -462,16 +462,16 @@ void test_merge_workdir_setup__three_same_oids(void)
 	git_merge_head *our_head, *their_heads[3];
 	
 	cl_git_pass(git_oid_fromstr(&our_oid, ORIG_HEAD));
-	cl_git_pass(git_merge_head_from_oid(&our_head, repo, &our_oid));
+	cl_git_pass(git_merge_head_from_id(&our_head, repo, &our_oid));
 	
 	cl_git_pass(git_oid_fromstr(&octo1_1_oid, OCTO1_OID));
-	cl_git_pass(git_merge_head_from_oid(&their_heads[0], repo, &octo1_1_oid));
+	cl_git_pass(git_merge_head_from_id(&their_heads[0], repo, &octo1_1_oid));
 	
 	cl_git_pass(git_oid_fromstr(&octo1_2_oid, OCTO1_OID));
-	cl_git_pass(git_merge_head_from_oid(&their_heads[1], repo, &octo1_2_oid));
+	cl_git_pass(git_merge_head_from_id(&their_heads[1], repo, &octo1_2_oid));
 	
 	cl_git_pass(git_oid_fromstr(&octo1_3_oid, OCTO1_OID));
-	cl_git_pass(git_merge_head_from_oid(&their_heads[2], repo, &octo1_3_oid));
+	cl_git_pass(git_merge_head_from_id(&their_heads[2], repo, &octo1_3_oid));
 	
 	cl_git_pass(git_merge__setup(repo, our_head, (const git_merge_head **)their_heads, 3, 0));
 	
@@ -539,7 +539,7 @@ void test_merge_workdir_setup__remote_tracking_one_branch(void)
 	cl_git_pass(create_remote_tracking_branch(OCTO1_BRANCH, OCTO1_OID));
 
 	cl_git_pass(git_oid_fromstr(&our_oid, ORIG_HEAD));
-	cl_git_pass(git_merge_head_from_oid(&our_head, repo, &our_oid));
+	cl_git_pass(git_merge_head_from_id(&our_head, repo, &our_oid));
 	
 	cl_git_pass(git_reference_lookup(&octo1_ref, repo, GIT_REFS_REMOTES_DIR "origin/" OCTO1_BRANCH));
 	cl_git_pass(git_merge_head_from_ref(&their_heads[0], repo, octo1_ref));
@@ -569,7 +569,7 @@ void test_merge_workdir_setup__remote_tracking_two_branches(void)
 	cl_git_pass(create_remote_tracking_branch(OCTO2_BRANCH, OCTO2_OID));
 
 	cl_git_pass(git_oid_fromstr(&our_oid, ORIG_HEAD));
-	cl_git_pass(git_merge_head_from_oid(&our_head, repo, &our_oid));
+	cl_git_pass(git_merge_head_from_id(&our_head, repo, &our_oid));
 	
 	cl_git_pass(git_reference_lookup(&octo1_ref, repo, GIT_REFS_REMOTES_DIR "origin/" OCTO1_BRANCH));
 	cl_git_pass(git_merge_head_from_ref(&their_heads[0], repo, octo1_ref));
@@ -606,7 +606,7 @@ void test_merge_workdir_setup__remote_tracking_three_branches(void)
 	cl_git_pass(create_remote_tracking_branch(OCTO3_BRANCH, OCTO3_OID));
 	
 	cl_git_pass(git_oid_fromstr(&our_oid, ORIG_HEAD));
-	cl_git_pass(git_merge_head_from_oid(&our_head, repo, &our_oid));
+	cl_git_pass(git_merge_head_from_id(&our_head, repo, &our_oid));
 
 	cl_git_pass(git_reference_lookup(&octo1_ref, repo, GIT_REFS_REMOTES_DIR "origin/" OCTO1_BRANCH));
 	cl_git_pass(git_merge_head_from_ref(&their_heads[0], repo, octo1_ref));
@@ -645,7 +645,7 @@ void test_merge_workdir_setup__normal_branch_and_remote_tracking_branch(void)
 	cl_git_pass(create_remote_tracking_branch(OCTO2_BRANCH, OCTO2_OID));
 
 	cl_git_pass(git_oid_fromstr(&our_oid, ORIG_HEAD));
-	cl_git_pass(git_merge_head_from_oid(&our_head, repo, &our_oid));
+	cl_git_pass(git_merge_head_from_id(&our_head, repo, &our_oid));
 
 	cl_git_pass(git_reference_lookup(&octo1_ref, repo, GIT_REFS_HEADS_DIR OCTO1_BRANCH));
 	cl_git_pass(git_merge_head_from_ref(&their_heads[0], repo, octo1_ref));
@@ -679,7 +679,7 @@ void test_merge_workdir_setup__remote_tracking_branch_and_normal_branch(void)
 	cl_git_pass(create_remote_tracking_branch(OCTO1_BRANCH, OCTO1_OID));
 
 	cl_git_pass(git_oid_fromstr(&our_oid, ORIG_HEAD));
-	cl_git_pass(git_merge_head_from_oid(&our_head, repo, &our_oid));
+	cl_git_pass(git_merge_head_from_id(&our_head, repo, &our_oid));
 	
 	cl_git_pass(git_reference_lookup(&octo1_ref, repo, GIT_REFS_REMOTES_DIR "origin/" OCTO1_BRANCH));
 	cl_git_pass(git_merge_head_from_ref(&their_heads[0], repo, octo1_ref));
@@ -716,7 +716,7 @@ void test_merge_workdir_setup__two_remote_tracking_branch_and_two_normal_branche
 	cl_git_pass(create_remote_tracking_branch(OCTO4_BRANCH, OCTO4_OID));
 
 	cl_git_pass(git_oid_fromstr(&our_oid, ORIG_HEAD));
-	cl_git_pass(git_merge_head_from_oid(&our_head, repo, &our_oid));
+	cl_git_pass(git_merge_head_from_id(&our_head, repo, &our_oid));
 	
 	cl_git_pass(git_reference_lookup(&octo1_ref, repo, GIT_REFS_HEADS_DIR OCTO1_BRANCH));
 	cl_git_pass(git_merge_head_from_ref(&their_heads[0], repo, octo1_ref));
@@ -757,7 +757,7 @@ void test_merge_workdir_setup__pull_one(void)
 	git_merge_head *our_head, *their_heads[1];
 
 	cl_git_pass(git_oid_fromstr(&our_oid, ORIG_HEAD));
-	cl_git_pass(git_merge_head_from_oid(&our_head, repo, &our_oid));
+	cl_git_pass(git_merge_head_from_id(&our_head, repo, &our_oid));
 
 	cl_git_pass(git_oid_fromstr(&octo1_1_oid, OCTO1_OID));
 	cl_git_pass(git_merge_head_from_fetchhead(&their_heads[0], repo, GIT_REFS_HEADS_DIR OCTO1_BRANCH, "http://remote.url/repo.git", &octo1_1_oid));
@@ -782,7 +782,7 @@ void test_merge_workdir_setup__pull_two(void)
 	git_merge_head *our_head, *their_heads[2];
 	
 	cl_git_pass(git_oid_fromstr(&our_oid, ORIG_HEAD));
-	cl_git_pass(git_merge_head_from_oid(&our_head, repo, &our_oid));
+	cl_git_pass(git_merge_head_from_id(&our_head, repo, &our_oid));
 
 	cl_git_pass(git_oid_fromstr(&octo1_oid, OCTO1_OID));
 	cl_git_pass(git_merge_head_from_fetchhead(&their_heads[0], repo, GIT_REFS_HEADS_DIR OCTO1_BRANCH, "http://remote.url/repo.git", &octo1_oid));
@@ -812,7 +812,7 @@ void test_merge_workdir_setup__pull_three(void)
 	git_merge_head *our_head, *their_heads[3];
 	
 	cl_git_pass(git_oid_fromstr(&our_oid, ORIG_HEAD));
-	cl_git_pass(git_merge_head_from_oid(&our_head, repo, &our_oid));
+	cl_git_pass(git_merge_head_from_id(&our_head, repo, &our_oid));
 
 	cl_git_pass(git_oid_fromstr(&octo1_oid, OCTO1_OID));
 	cl_git_pass(git_merge_head_from_fetchhead(&their_heads[0], repo, GIT_REFS_HEADS_DIR OCTO1_BRANCH, "http://remote.url/repo.git", &octo1_oid));
@@ -845,7 +845,7 @@ void test_merge_workdir_setup__three_remotes(void)
 	git_merge_head *our_head, *their_heads[3];
 	
 	cl_git_pass(git_oid_fromstr(&our_oid, ORIG_HEAD));
-	cl_git_pass(git_merge_head_from_oid(&our_head, repo, &our_oid));
+	cl_git_pass(git_merge_head_from_id(&our_head, repo, &our_oid));
 
 	cl_git_pass(git_oid_fromstr(&octo1_oid, OCTO1_OID));
 	cl_git_pass(git_merge_head_from_fetchhead(&their_heads[0], repo, GIT_REFS_HEADS_DIR OCTO1_BRANCH, "http://remote.first/repo.git", &octo1_oid));
@@ -879,7 +879,7 @@ void test_merge_workdir_setup__two_remotes(void)
 	git_merge_head *our_head, *their_heads[4];
 	
 	cl_git_pass(git_oid_fromstr(&our_oid, ORIG_HEAD));
-	cl_git_pass(git_merge_head_from_oid(&our_head, repo, &our_oid));
+	cl_git_pass(git_merge_head_from_id(&our_head, repo, &our_oid));
 
 	cl_git_pass(git_oid_fromstr(&octo1_oid, OCTO1_OID));
 	cl_git_pass(git_merge_head_from_fetchhead(&their_heads[0], repo, GIT_REFS_HEADS_DIR OCTO1_BRANCH, "http://remote.first/repo.git", &octo1_oid));
@@ -1002,7 +1002,7 @@ void test_merge_workdir_setup__retained_after_success(void)
 	opts.merge_flags |= GIT_MERGE_NO_FASTFORWARD;
 
 	cl_git_pass(git_oid_fromstr(&our_oid, ORIG_HEAD));
-	cl_git_pass(git_merge_head_from_oid(&our_head, repo, &our_oid));
+	cl_git_pass(git_merge_head_from_id(&our_head, repo, &our_oid));
 
 	cl_git_pass(git_reference_lookup(&octo1_ref, repo, GIT_REFS_HEADS_DIR OCTO1_BRANCH));
 
@@ -1033,7 +1033,7 @@ void test_merge_workdir_setup__removed_after_failure(void)
 	opts.merge_flags |= GIT_MERGE_NO_FASTFORWARD;
 
 	cl_git_pass(git_oid_fromstr(&our_oid, ORIG_HEAD));
-	cl_git_pass(git_merge_head_from_oid(&our_head, repo, &our_oid));
+	cl_git_pass(git_merge_head_from_id(&our_head, repo, &our_oid));
 
 	cl_git_pass(git_reference_lookup(&octo1_ref, repo, GIT_REFS_HEADS_DIR OCTO1_BRANCH));
 	cl_git_pass(git_merge_head_from_ref(&their_heads[0], repo, octo1_ref));

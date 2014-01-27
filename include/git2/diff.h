@@ -203,7 +203,7 @@ typedef struct git_diff git_diff;
 typedef enum {
 	GIT_DIFF_FLAG_BINARY     = (1u << 0), /** file(s) treated as binary data */
 	GIT_DIFF_FLAG_NOT_BINARY = (1u << 1), /** file(s) treated as text data */
-	GIT_DIFF_FLAG_VALID_OID  = (1u << 2), /** `oid` value is known correct */
+	GIT_DIFF_FLAG_VALID_ID  = (1u << 2), /** `id` value is known correct */
 } git_diff_flag_t;
 
 /**
@@ -250,7 +250,7 @@ typedef enum {
  * be restricted to one of the `git_filemode_t` values.
  */
 typedef struct {
-	git_oid     oid;
+	git_oid     id;
 	const char *path;
 	git_off_t   size;
 	uint32_t    flags;
@@ -361,7 +361,7 @@ typedef struct {
 
 	uint16_t    context_lines;    /**< defaults to 3 */
 	uint16_t    interhunk_lines;  /**< defaults to 0 */
-	uint16_t    oid_abbrev;       /**< default 'core.abbrev' or 7 if unset */
+	uint16_t    id_abbrev;       /**< default 'core.abbrev' or 7 if unset */
 	git_off_t   max_size;         /**< defaults to 512MB */
 	const char *old_prefix;       /**< defaults to "a" */
 	const char *new_prefix;       /**< defaults to "b" */

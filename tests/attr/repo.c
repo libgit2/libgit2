@@ -293,7 +293,7 @@ static void assert_proper_normalization(git_index *index, const char *filename, 
 	cl_assert(!git_index_find(&index_pos, index, filename));
 
 	entry = git_index_get_byindex(index, index_pos);
-	cl_assert_equal_i(0, git_oid_streq(&entry->oid, expected_sha));
+	cl_assert_equal_i(0, git_oid_streq(&entry->id, expected_sha));
 }
 
 void test_attr_repo__staging_properly_normalizes_line_endings_according_to_gitattributes_directives(void)

@@ -91,7 +91,7 @@ static git_diff_delta *diff_delta__merge_like_cgit(
 		dup->status = a->status;
 	}
 
-	git_oid_cpy(&dup->old_file.oid, &a->old_file.oid);
+	git_oid_cpy(&dup->old_file.id, &a->old_file.id);
 	dup->old_file.mode  = a->old_file.mode;
 	dup->old_file.size  = a->old_file.size;
 	dup->old_file.flags = a->old_file.flags;
@@ -124,7 +124,7 @@ static git_diff_delta *diff_delta__merge_like_cgit_reversed(
 		dup->status = b->status;
 	}
 
-	git_oid_cpy(&dup->old_file.oid, &b->old_file.oid);
+	git_oid_cpy(&dup->old_file.id, &b->old_file.id);
 	dup->old_file.mode  = b->old_file.mode;
 	dup->old_file.size  = b->old_file.size;
 	dup->old_file.flags = b->old_file.flags;
@@ -375,7 +375,7 @@ static int insert_delete_side_of_split(
 	deleted->nfiles = 1;
 	memset(&deleted->new_file, 0, sizeof(deleted->new_file));
 	deleted->new_file.path = deleted->old_file.path;
-	deleted->new_file.flags |= GIT_DIFF_FLAG_VALID_OID;
+	deleted->new_file.flags |= GIT_DIFF_FLAG_VALID_ID;
 
 	return git_vector_insert(onto, deleted);
 }
@@ -408,7 +408,7 @@ static int apply_splits_and_deletes(
 			delta->nfiles = 1;
 			memset(&delta->old_file, 0, sizeof(delta->old_file));
 			delta->old_file.path = delta->new_file.path;
-			delta->old_file.flags |= GIT_DIFF_FLAG_VALID_OID;
+			delta->old_file.flags |= GIT_DIFF_FLAG_VALID_ID;
 		}
 
 		/* clean up delta before inserting into new list */
@@ -510,7 +510,7 @@ static int similarity_sig(
 				(git_object **)&info->blob, info->repo,
 				info->odb_obj, GIT_OBJ_BLOB);
 		else
-			error = git_blob_lookup(&info->blob, info->repo, &file->oid);
+			error = git_blob_lookup(&info->blob, info->repo, &file->id);
 
 		if (error < 0) {
 			/* if lookup fails, just skip this item in similarity calc */
@@ -572,21 +572,21 @@ static int similarity_measure(
 
 	/* if exact match is requested, force calculation of missing OIDs now */
 	if (exact_match) {
-		if (git_oid_iszero(&a_file->oid) &&
+		if (git_oid_iszero(&a_file->id) &&
 			diff->old_src == GIT_ITERATOR_TYPE_WORKDIR &&
 			!git_diff__oid_for_file(diff->repo, a_file->path,
-				a_file->mode, a_file->size, &a_file->oid))
-			a_file->flags |= GIT_DIFF_FLAG_VALID_OID;
+				a_file->mode, a_file->size, &a_file->id))
+			a_file->flags |= GIT_DIFF_FLAG_VALID_ID;
 
-		if (git_oid_iszero(&b_file->oid) &&
+		if (git_oid_iszero(&b_file->id) &&
 			diff->new_src == GIT_ITERATOR_TYPE_WORKDIR &&
 			!git_diff__oid_for_file(diff->repo, b_file->path,
-				b_file->mode, b_file->size, &b_file->oid))
-			b_file->flags |= GIT_DIFF_FLAG_VALID_OID;
+				b_file->mode, b_file->size, &b_file->id))
+			b_file->flags |= GIT_DIFF_FLAG_VALID_ID;
 	}
 
 	/* check OID match as a quick test */
-	if (git_oid__cmp(&a_file->oid, &b_file->oid) == 0) {
+	if (git_oid__cmp(&a_file->id, &b_file->id) == 0) {
 		*score = 100;
 		return 0;
 	}
@@ -999,7 +999,7 @@ find_best_matches:
 				memcpy(&src->old_file, &swap, sizeof(src->old_file));
 				memset(&src->new_file, 0, sizeof(src->new_file));
 				src->new_file.path = src->old_file.path;
-				src->new_file.flags |= GIT_DIFF_FLAG_VALID_OID;
+				src->new_file.flags |= GIT_DIFF_FLAG_VALID_ID;
 
 				num_updates++;
 
@@ -1024,7 +1024,7 @@ find_best_matches:
 				src->nfiles = 1;
 				memset(&src->old_file, 0, sizeof(src->old_file));
 				src->old_file.path = src->new_file.path;
-				src->old_file.flags |= GIT_DIFF_FLAG_VALID_OID;
+				src->old_file.flags |= GIT_DIFF_FLAG_VALID_ID;
 
 				src->flags &= ~GIT_DIFF_FLAG__TO_SPLIT;
 				num_rewrites--;

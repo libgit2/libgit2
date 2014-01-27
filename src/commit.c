@@ -69,7 +69,7 @@ int git_commit_create_v(
 	return res;
 }
 
-int git_commit_create_from_oids(
+int git_commit_create_from_ids(
 	git_oid *oid,
 	git_repository *repo,
 	const char *update_ref,
@@ -148,7 +148,7 @@ int git_commit_create(
 		parent_oids[i] = git_object_id((const git_object *)parents[i]);
 	}
 
-	retval = git_commit_create_from_oids(
+	retval = git_commit_create_from_ids(
 		oid, repo, update_ref, author, committer,
 		message_encoding, message,
 		git_object_id((const git_object *)tree), parent_count, parent_oids);

@@ -57,7 +57,7 @@ static void assert_content_in_index(
 			if (!expected_shas)
 				continue;
 
-			cl_git_pass(git_oid_streq(&entry->oid, expected_shas->strings[i]));
+			cl_git_pass(git_oid_streq(&entry->id, expected_shas->strings[i]));
 		} else
 			cl_assert_equal_i(should_exist, error != GIT_ENOTFOUND);
 	}

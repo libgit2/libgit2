@@ -101,7 +101,7 @@ static int has_cr_in_index(const git_filter_source *src)
 	if (!S_ISREG(entry->mode)) /* don't crlf filter non-blobs */
 		return true;
 
-	if (git_blob_lookup(&blob, repo, &entry->oid) < 0)
+	if (git_blob_lookup(&blob, repo, &entry->id) < 0)
 		return false;
 
 	blobcontent = git_blob_rawcontent(blob);

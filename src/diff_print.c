@@ -37,8 +37,8 @@ static int diff_print_info_init(
 	if (diff)
 		pi->flags = diff->opts.flags;
 
-	if (diff && diff->opts.oid_abbrev != 0)
-		pi->oid_strlen = diff->opts.oid_abbrev;
+	if (diff && diff->opts.id_abbrev != 0)
+		pi->oid_strlen = diff->opts.id_abbrev;
 	else if (!diff || !diff->repo)
 		pi->oid_strlen = GIT_ABBREV_DEFAULT;
 	else if (git_repository__cvar(
@@ -170,8 +170,8 @@ static int diff_print_one_raw(
 
 	git_buf_clear(out);
 
-	git_oid_tostr(start_oid, pi->oid_strlen, &delta->old_file.oid);
-	git_oid_tostr(end_oid, pi->oid_strlen, &delta->new_file.oid);
+	git_oid_tostr(start_oid, pi->oid_strlen, &delta->old_file.id);
+	git_oid_tostr(end_oid, pi->oid_strlen, &delta->new_file.id);
 
 	git_buf_printf(
 		out, ":%06o %06o %s... %s... %c",
@@ -203,8 +203,8 @@ static int diff_print_oid_range(
 {
 	char start_oid[GIT_OID_HEXSZ+1], end_oid[GIT_OID_HEXSZ+1];
 
-	git_oid_tostr(start_oid, oid_strlen, &delta->old_file.oid);
-	git_oid_tostr(end_oid, oid_strlen, &delta->new_file.oid);
+	git_oid_tostr(start_oid, oid_strlen, &delta->old_file.id);
+	git_oid_tostr(end_oid, oid_strlen, &delta->new_file.id);
 
 	/* TODO: Match git diff more closely */
 	if (delta->old_file.mode == delta->new_file.mode) {
@@ -235,11 +235,11 @@ static int diff_delta_format_with_paths(
 	const char *oldpath = delta->old_file.path;
 	const char *newpath = delta->new_file.path;
 
-	if (git_oid_iszero(&delta->old_file.oid)) {
+	if (git_oid_iszero(&delta->old_file.id)) {
 		oldpfx = "";
 		oldpath = "/dev/null";
 	}
-	if (git_oid_iszero(&delta->new_file.oid)) {
+	if (git_oid_iszero(&delta->new_file.id)) {
 		newpfx = "";
 		newpath = "/dev/null";
 	}

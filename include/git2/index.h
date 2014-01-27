@@ -56,7 +56,7 @@ typedef struct git_index_entry {
 	unsigned int gid;
 	git_off_t file_size;
 
-	git_oid oid;
+	git_oid id;
 
 	unsigned short flags;
 	unsigned short flags_extended;

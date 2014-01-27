@@ -72,7 +72,7 @@ void test_merge_trees_commits__automerge(void)
 	cl_assert((entry = git_index_get_bypath(index, "automergeable.txt", 0)) != NULL);
 	cl_assert(entry->file_size == strlen(AUTOMERGEABLE_MERGED_FILE));
 
-	cl_git_pass(git_object_lookup((git_object **)&blob, repo, &entry->oid, GIT_OBJ_BLOB));
+	cl_git_pass(git_object_lookup((git_object **)&blob, repo, &entry->id, GIT_OBJ_BLOB));
 	cl_assert(memcmp(git_blob_rawcontent(blob), AUTOMERGEABLE_MERGED_FILE, (size_t)entry->file_size) == 0);
 
 	git_index_free(index);

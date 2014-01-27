@@ -110,18 +110,18 @@ static int diff_delta__from_one(
 	if (delta->status == GIT_DELTA_DELETED) {
 		delta->old_file.mode = entry->mode;
 		delta->old_file.size = entry->file_size;
-		git_oid_cpy(&delta->old_file.oid, &entry->oid);
+		git_oid_cpy(&delta->old_file.id, &entry->id);
 	} else /* ADDED, IGNORED, UNTRACKED */ {
 		delta->new_file.mode = entry->mode;
 		delta->new_file.size = entry->file_size;
-		git_oid_cpy(&delta->new_file.oid, &entry->oid);
+		git_oid_cpy(&delta->new_file.id, &entry->id);
 	}
 
-	delta->old_file.flags |= GIT_DIFF_FLAG_VALID_OID;
+	delta->old_file.flags |= GIT_DIFF_FLAG_VALID_ID;
 
 	if (delta->status == GIT_DELTA_DELETED ||
-		!git_oid_iszero(&delta->new_file.oid))
-		delta->new_file.flags |= GIT_DIFF_FLAG_VALID_OID;
+		!git_oid_iszero(&delta->new_file.id))
+		delta->new_file.flags |= GIT_DIFF_FLAG_VALID_ID;
 
 	return diff_insert_delta(diff, delta, matched_pathspec);
 }
@@ -156,24 +156,24 @@ static int diff_delta__from_two(
 	GITERR_CHECK_ALLOC(delta);
 	delta->nfiles = 2;
 
-	git_oid_cpy(&delta->old_file.oid, &old_entry->oid);
+	git_oid_cpy(&delta->old_file.id, &old_entry->id);
 	delta->old_file.size = old_entry->file_size;
 	delta->old_file.mode = old_mode;
-	delta->old_file.flags |= GIT_DIFF_FLAG_VALID_OID;
+	delta->old_file.flags |= GIT_DIFF_FLAG_VALID_ID;
 
-	git_oid_cpy(&delta->new_file.oid, &new_entry->oid);
+	git_oid_cpy(&delta->new_file.id, &new_entry->id);
 	delta->new_file.size = new_entry->file_size;
 	delta->new_file.mode = new_mode;
 
 	if (new_oid) {
 		if (DIFF_FLAG_IS_SET(diff, GIT_DIFF_REVERSE))
-			git_oid_cpy(&delta->old_file.oid, new_oid);
+			git_oid_cpy(&delta->old_file.id, new_oid);
 		else
-			git_oid_cpy(&delta->new_file.oid, new_oid);
+			git_oid_cpy(&delta->new_file.id, new_oid);
 	}
 
-	if (new_oid || !git_oid_iszero(&new_entry->oid))
-		delta->new_file.flags |= GIT_DIFF_FLAG_VALID_OID;
+	if (new_oid || !git_oid_iszero(&new_entry->id))
+		delta->new_file.flags |= GIT_DIFF_FLAG_VALID_ID;
 
 	return diff_insert_delta(diff, delta, matched_pathspec);
 }
@@ -189,21 +189,21 @@ static git_diff_delta *diff_delta__last_for_item(
 	switch (delta->status) {
 	case GIT_DELTA_UNMODIFIED:
 	case GIT_DELTA_DELETED:
-		if (git_oid__cmp(&delta->old_file.oid, &item->oid) == 0)
+		if (git_oid__cmp(&delta->old_file.id, &item->id) == 0)
 			return delta;
 		break;
 	case GIT_DELTA_ADDED:
-		if (git_oid__cmp(&delta->new_file.oid, &item->oid) == 0)
+		if (git_oid__cmp(&delta->new_file.id, &item->id) == 0)
 			return delta;
 		break;
 	case GIT_DELTA_UNTRACKED:
 		if (diff->strcomp(delta->new_file.path, item->path) == 0 &&
-			git_oid__cmp(&delta->new_file.oid, &item->oid) == 0)
+			git_oid__cmp(&delta->new_file.id, &item->id) == 0)
 			return delta;
 		break;
 	case GIT_DELTA_MODIFIED:
-		if (git_oid__cmp(&delta->old_file.oid, &item->oid) == 0 ||
-			git_oid__cmp(&delta->new_file.oid, &item->oid) == 0)
+		if (git_oid__cmp(&delta->old_file.id, &item->id) == 0 ||
+			git_oid__cmp(&delta->new_file.id, &item->id) == 0)
 			return delta;
 		break;
 	default:
@@ -629,7 +629,7 @@ static int maybe_modified_submodule(
 
 	/* now that we have a HEAD OID, check if HEAD moved */
 	if ((sm_status & GIT_SUBMODULE_STATUS_IN_WD) != 0 &&
-		!git_oid_equal(&info->oitem->oid, found_oid))
+		!git_oid_equal(&info->oitem->id, found_oid))
 		*status = GIT_DELTA_MODIFIED;
 
 	return 0;
@@ -689,15 +689,15 @@ static int maybe_modified(
 	}
 
 	/* if oids and modes match (and are valid), then file is unmodified */
-	else if (git_oid_equal(&oitem->oid, &nitem->oid) &&
+	else if (git_oid_equal(&oitem->id, &nitem->id) &&
 			 omode == nmode &&
-			 !git_oid_iszero(&oitem->oid))
+			 !git_oid_iszero(&oitem->id))
 		status = GIT_DELTA_UNMODIFIED;
 
 	/* if we have an unknown OID and a workdir iterator, then check some
 	 * circumstances that can accelerate things or need special handling
 	 */
-	else if (git_oid_iszero(&nitem->oid) && new_is_workdir) {
+	else if (git_oid_iszero(&nitem->id) && new_is_workdir) {
 		bool use_ctime = ((diff->diffcaps & GIT_DIFFCAPS_TRUST_CTIME) != 0);
 		bool use_nanos = ((diff->diffcaps & GIT_DIFFCAPS_TRUST_NANOSECS) != 0);
 
@@ -732,7 +732,7 @@ static int maybe_modified(
 	/* if we got here and decided that the files are modified, but we
 	 * haven't calculated the OID of the new item, then calculate it now
 	 */
-	if (status == GIT_DELTA_MODIFIED && git_oid_iszero(&nitem->oid)) {
+	if (status == GIT_DELTA_MODIFIED && git_oid_iszero(&nitem->id)) {
 		if (git_oid_iszero(&noid)) {
 			if ((error = git_diff__oid_for_file(diff->repo,
 					nitem->path, nitem->mode, nitem->file_size, &noid)) < 0)
@@ -744,7 +744,7 @@ static int maybe_modified(
 		 * matches between the index and the workdir HEAD)
 		 */
 		if (omode == nmode && !S_ISGITLINK(omode) &&
-			git_oid_equal(&oitem->oid, &noid))
+			git_oid_equal(&oitem->id, &noid))
 			status = GIT_DELTA_UNMODIFIED;
 	}
 

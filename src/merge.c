@@ -317,7 +317,7 @@ GIT_INLINE(int) index_entry_cmp(const git_index_entry *a, const git_index_entry 
 		return (b->path == NULL) ? 0 : 1;
 
 	if ((value = a->mode - b->mode) == 0 &&
-		(value = git_oid__cmp(&a->oid, &b->oid)) == 0)
+		(value = git_oid__cmp(&a->id, &b->id)) == 0)
 		value = strcmp(a->path, b->path);
 
 	return value;
@@ -478,12 +478,12 @@ static int merge_conflict_resolve_one_renamed(
 		conflict->type == GIT_MERGE_DIFF_RENAMED_ADDED)
 		return 0;
 
-	ours_changed = (git_oid__cmp(&conflict->ancestor_entry.oid, &conflict->our_entry.oid) != 0);
-	theirs_changed = (git_oid__cmp(&conflict->ancestor_entry.oid, &conflict->their_entry.oid) != 0);
+	ours_changed = (git_oid__cmp(&conflict->ancestor_entry.id, &conflict->our_entry.id) != 0);
+	theirs_changed = (git_oid__cmp(&conflict->ancestor_entry.id, &conflict->their_entry.id) != 0);
 
 	/* if both are modified (and not to a common target) require a merge */
 	if (ours_changed && theirs_changed &&
-		git_oid__cmp(&conflict->our_entry.oid, &conflict->their_entry.oid) != 0)
+		git_oid__cmp(&conflict->our_entry.id, &conflict->their_entry.id) != 0)
 		return 0;
 
 	if ((merged = git_pool_malloc(&diff_list->pool, sizeof(git_index_entry))) == NULL)
@@ -575,7 +575,7 @@ static int merge_conflict_resolve_automerge(
 
 	index_entry->file_size = result.len;
 	index_entry->mode = result.mode;
-	git_oid_cpy(&index_entry->oid, &automerge_oid);
+	git_oid_cpy(&index_entry->id, &automerge_oid);
 
 	git_vector_insert(&diff_list->staged, index_entry);
 	git_vector_insert(&diff_list->resolved, (git_merge_diff *)conflict);
@@ -643,7 +643,7 @@ static int index_entry_similarity_exact(
 	GIT_UNUSED(cache);
 	GIT_UNUSED(opts);
 
-	if (git_oid__cmp(&a->oid, &b->oid) == 0)
+	if (git_oid__cmp(&a->id, &b->id) == 0)
 		return 100;
 
 	return 0;
@@ -662,10 +662,10 @@ static int index_entry_similarity_calc(
 
 	*out = NULL;
 
-	if ((error = git_blob_lookup(&blob, repo, &entry->oid)) < 0)
+	if ((error = git_blob_lookup(&blob, repo, &entry->id)) < 0)
 		return error;
 
-	git_oid_cpy(&diff_file.oid, &entry->oid);
+	git_oid_cpy(&diff_file.id, &entry->id);
 	diff_file.path = entry->path;
 	diff_file.size = entry->file_size;
 	diff_file.mode = entry->mode;
@@ -1163,7 +1163,7 @@ GIT_INLINE(int) merge_diff_detect_binary(
 	int error = 0;
 
 	if (GIT_MERGE_INDEX_ENTRY_ISFILE(conflict->ancestor_entry)) {
-		if ((error = git_blob_lookup(&ancestor_blob, repo, &conflict->ancestor_entry.oid)) < 0)
+		if ((error = git_blob_lookup(&ancestor_blob, repo, &conflict->ancestor_entry.id)) < 0)
 			goto done;
 
 		conflict->binary = git_blob_is_binary(ancestor_blob);
@@ -1171,7 +1171,7 @@ GIT_INLINE(int) merge_diff_detect_binary(
 
 	if (!conflict->binary &&
 		GIT_MERGE_INDEX_ENTRY_ISFILE(conflict->our_entry)) {
-		if ((error = git_blob_lookup(&our_blob, repo, &conflict->our_entry.oid)) < 0)
+		if ((error = git_blob_lookup(&our_blob, repo, &conflict->our_entry.id)) < 0)
 			goto done;
 
 		conflict->binary = git_blob_is_binary(our_blob);
@@ -1179,7 +1179,7 @@ GIT_INLINE(int) merge_diff_detect_binary(
 
 	if (!conflict->binary &&
 		GIT_MERGE_INDEX_ENTRY_ISFILE(conflict->their_entry)) {
-		if ((error = git_blob_lookup(&their_blob, repo, &conflict->their_entry.oid)) < 0)
+		if ((error = git_blob_lookup(&their_blob, repo, &conflict->their_entry.id)) < 0)
 			goto done;
 
 		conflict->binary = git_blob_is_binary(their_blob);
@@ -1222,7 +1222,7 @@ GIT_INLINE(int) merge_delta_type_from_index_entries(
 		return GIT_DELTA_TYPECHANGE;
 	else if(S_ISLNK(ancestor->mode) ^ S_ISLNK(other->mode))
 		return GIT_DELTA_TYPECHANGE;
-	else if (git_oid__cmp(&ancestor->oid, &other->oid) ||
+	else if (git_oid__cmp(&ancestor->id, &other->id) ||
 			 ancestor->mode != other->mode)
 		return GIT_DELTA_MODIFIED;
 
@@ -1497,7 +1497,7 @@ static int merge_index_insert_reuc(
 	}
 
 	mode[idx] = entry->mode;
-	oid[idx] = &entry->oid;
+	oid[idx] = &entry->id;
 
 	return git_index_reuc_add(index, entry->path,
 		mode[0], oid[0], mode[1], oid[1], mode[2], oid[2]);
@@ -2111,7 +2111,7 @@ static int merge_ancestor_head(
 	if ((error = git_merge_base_many(&ancestor_oid, repo, their_heads_len + 1, oids)) < 0)
 		goto on_error;
 
-	error = git_merge_head_from_oid(ancestor_head, repo, &ancestor_oid);
+	error = git_merge_head_from_id(ancestor_head, repo, &ancestor_oid);
 
 on_error:
 	git__free(oids);
@@ -2615,7 +2615,7 @@ int git_merge_result_is_fastforward(git_merge_result *merge_result)
 	return merge_result->is_fastforward;
 }
 
-int git_merge_result_fastforward_oid(git_oid *out, git_merge_result *merge_result)
+int git_merge_result_fastforward_id(git_oid *out, git_merge_result *merge_result)
 {
 	assert(out && merge_result);
 
@@ -2699,7 +2699,7 @@ int git_merge_head_from_ref(
 	return error;
 }
 
-int git_merge_head_from_oid(
+int git_merge_head_from_id(
 	git_merge_head **out,
 	git_repository *repo,
 	const git_oid *oid)

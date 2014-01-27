@@ -167,9 +167,9 @@ void test_diff_blob__can_compare_text_blobs_with_patch(void)
 	delta = git_patch_get_delta(p);
 	cl_assert(delta != NULL);
 	cl_assert_equal_i(GIT_DELTA_MODIFIED, delta->status);
-	cl_assert(git_oid_equal(git_blob_id(a), &delta->old_file.oid));
+	cl_assert(git_oid_equal(git_blob_id(a), &delta->old_file.id));
 	cl_assert_equal_sz(git_blob_rawsize(a), delta->old_file.size);
-	cl_assert(git_oid_equal(git_blob_id(b), &delta->new_file.oid));
+	cl_assert(git_oid_equal(git_blob_id(b), &delta->new_file.id));
 	cl_assert_equal_sz(git_blob_rawsize(b), delta->new_file.size);
 
 	cl_assert_equal_i(1, (int)git_patch_num_hunks(p));
@@ -190,9 +190,9 @@ void test_diff_blob__can_compare_text_blobs_with_patch(void)
 	delta = git_patch_get_delta(p);
 	cl_assert(delta != NULL);
 	cl_assert_equal_i(GIT_DELTA_MODIFIED, delta->status);
-	cl_assert(git_oid_equal(git_blob_id(b), &delta->old_file.oid));
+	cl_assert(git_oid_equal(git_blob_id(b), &delta->old_file.id));
 	cl_assert_equal_sz(git_blob_rawsize(b), delta->old_file.size);
-	cl_assert(git_oid_equal(git_blob_id(c), &delta->new_file.oid));
+	cl_assert(git_oid_equal(git_blob_id(c), &delta->new_file.id));
 	cl_assert_equal_sz(git_blob_rawsize(c), delta->new_file.size);
 
 	cl_assert_equal_i(1, (int)git_patch_num_hunks(p));
@@ -213,9 +213,9 @@ void test_diff_blob__can_compare_text_blobs_with_patch(void)
 	delta = git_patch_get_delta(p);
 	cl_assert(delta != NULL);
 	cl_assert_equal_i(GIT_DELTA_MODIFIED, delta->status);
-	cl_assert(git_oid_equal(git_blob_id(a), &delta->old_file.oid));
+	cl_assert(git_oid_equal(git_blob_id(a), &delta->old_file.id));
 	cl_assert_equal_sz(git_blob_rawsize(a), delta->old_file.size);
-	cl_assert(git_oid_equal(git_blob_id(c), &delta->new_file.oid));
+	cl_assert(git_oid_equal(git_blob_id(c), &delta->new_file.id));
 	cl_assert_equal_sz(git_blob_rawsize(c), delta->new_file.size);
 
 	cl_git_pass(git_patch_line_stats(&tc, &ta, &td, p));
@@ -233,9 +233,9 @@ void test_diff_blob__can_compare_text_blobs_with_patch(void)
 	delta = git_patch_get_delta(p);
 	cl_assert(delta != NULL);
 	cl_assert_equal_i(GIT_DELTA_MODIFIED, delta->status);
-	cl_assert(git_oid_equal(git_blob_id(c), &delta->old_file.oid));
+	cl_assert(git_oid_equal(git_blob_id(c), &delta->old_file.id));
 	cl_assert_equal_sz(git_blob_rawsize(c), delta->old_file.size);
-	cl_assert(git_oid_equal(git_blob_id(d), &delta->new_file.oid));
+	cl_assert(git_oid_equal(git_blob_id(d), &delta->new_file.id));
 	cl_assert_equal_sz(git_blob_rawsize(d), delta->new_file.size);
 
 	cl_assert_equal_i(2, (int)git_patch_num_hunks(p));
@@ -328,9 +328,9 @@ void test_diff_blob__can_compare_against_null_blobs_with_patch(void)
 	delta = git_patch_get_delta(p);
 	cl_assert(delta != NULL);
 	cl_assert_equal_i(GIT_DELTA_DELETED, delta->status);
-	cl_assert(git_oid_equal(git_blob_id(d), &delta->old_file.oid));
+	cl_assert(git_oid_equal(git_blob_id(d), &delta->old_file.id));
 	cl_assert_equal_sz(git_blob_rawsize(d), delta->old_file.size);
-	cl_assert(git_oid_iszero(&delta->new_file.oid));
+	cl_assert(git_oid_iszero(&delta->new_file.id));
 	cl_assert_equal_sz(0, delta->new_file.size);
 
 	cl_assert_equal_i(1, (int)git_patch_num_hunks(p));
@@ -353,9 +353,9 @@ void test_diff_blob__can_compare_against_null_blobs_with_patch(void)
 	delta = git_patch_get_delta(p);
 	cl_assert(delta != NULL);
 	cl_assert_equal_i(GIT_DELTA_ADDED, delta->status);
-	cl_assert(git_oid_iszero(&delta->old_file.oid));
+	cl_assert(git_oid_iszero(&delta->old_file.id));
 	cl_assert_equal_sz(0, delta->old_file.size);
-	cl_assert(git_oid_equal(git_blob_id(d), &delta->new_file.oid));
+	cl_assert(git_oid_equal(git_blob_id(d), &delta->new_file.id));
 	cl_assert_equal_sz(git_blob_rawsize(d), delta->new_file.size);
 
 	cl_assert_equal_i(1, (int)git_patch_num_hunks(p));
@@ -446,9 +446,9 @@ void test_diff_blob__can_compare_identical_blobs_with_patch(void)
 	cl_assert(delta != NULL);
 	cl_assert_equal_i(GIT_DELTA_UNMODIFIED, delta->status);
 	cl_assert_equal_sz(delta->old_file.size, git_blob_rawsize(d));
-	cl_assert(git_oid_equal(git_blob_id(d), &delta->old_file.oid));
+	cl_assert(git_oid_equal(git_blob_id(d), &delta->old_file.id));
 	cl_assert_equal_sz(delta->new_file.size, git_blob_rawsize(d));
-	cl_assert(git_oid_equal(git_blob_id(d), &delta->new_file.oid));
+	cl_assert(git_oid_equal(git_blob_id(d), &delta->new_file.id));
 
 	cl_assert_equal_i(0, (int)git_patch_num_hunks(p));
 	git_patch_free(p);
@@ -460,9 +460,9 @@ void test_diff_blob__can_compare_identical_blobs_with_patch(void)
 	cl_assert(delta != NULL);
 	cl_assert_equal_i(GIT_DELTA_UNMODIFIED, delta->status);
 	cl_assert_equal_sz(0, delta->old_file.size);
-	cl_assert(git_oid_iszero(&delta->old_file.oid));
+	cl_assert(git_oid_iszero(&delta->old_file.id));
 	cl_assert_equal_sz(0, delta->new_file.size);
-	cl_assert(git_oid_iszero(&delta->new_file.oid));
+	cl_assert(git_oid_iszero(&delta->new_file.id));
 
 	cl_assert_equal_i(0, (int)git_patch_num_hunks(p));
 	git_patch_free(p);

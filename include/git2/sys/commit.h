@@ -29,7 +29,7 @@ GIT_BEGIN_DECL
  * the `tree`, neither the `parents` list of `git_oid`s are checked for
  * validity.
  */
-GIT_EXTERN(int) git_commit_create_from_oids(
+GIT_EXTERN(int) git_commit_create_from_ids(
 	git_oid *oid,
 	git_repository *repo,
 	const char *update_ref,
