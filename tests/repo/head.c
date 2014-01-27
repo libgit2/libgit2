@@ -217,3 +217,24 @@ void test_repo_head__setting_head_updates_reflog(void)
 	git_reflog_free(log);
 	git_object_free(tag);
 }
+
+void test_repo_head__setting_creates_head_ref(void)
+{
+	git_reference *head;
+	git_reflog *log;
+	const git_reflog_entry *entry;
+
+	cl_git_pass(git_reference_lookup(&head, repo, "HEAD"));
+	cl_git_pass(git_reference_delete(head));
+	cl_git_pass(git_reflog_delete(repo, "HEAD"));
+
+	cl_git_pass(git_repository_set_head(repo, "refs/heads/haacked", NULL, "create HEAD"));
+
+	cl_git_pass(git_reflog_read(&log, repo, "HEAD"));
+	cl_assert_equal_i(1, git_reflog_entrycount(log));
+	entry = git_reflog_entry_byindex(log, 0);
+	cl_assert_equal_s("create HEAD", git_reflog_entry_message(entry));
+
+	git_reflog_free(log);
+	git_reference_free(head);
+}
