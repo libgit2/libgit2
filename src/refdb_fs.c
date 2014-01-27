@@ -1438,8 +1438,10 @@ static int reflog_append(refdb_fs_backend *backend, const git_reference *ref, co
 	git_buf buf = GIT_BUF_INIT, path = GIT_BUF_INIT;
 	git_repository *repo = backend->repo;
 
-	/* Creation of symbolic references doesn't get a reflog entry */
-	if (ref->type == GIT_REF_SYMBOLIC && strcmp(ref->name, GIT_HEAD_FILE))
+	/* Creation of a symbolic reference doesn't get a reflog entry, except for
+	 * HEAD. git_repository_set_head and friends go through here. */
+	if (ref->type == GIT_REF_SYMBOLIC &&
+	    0 != strcmp(ref->name, GIT_HEAD_FILE))
 		return 0;
 
 	error = git_reference_name_to_id(&old_id, repo, ref->name);
