@@ -180,22 +180,23 @@ void test_diff_drivers__builtins(void)
 	git_patch *patch;
 	git_buf file = GIT_BUF_INIT, actual = GIT_BUF_INIT, expected = GIT_BUF_INIT;
 	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
-	int i;
-	static const char *files[] = {
-		"html",
-		NULL
-	};
+	git_vector files = GIT_VECTOR_INIT;
+	size_t i;
+	char *path, *extension;
 
 	g_repo = cl_git_sandbox_init("userdiff");
+
+	cl_git_pass(git_path_dirload("userdiff/files", 9, 0, 0, &files));
 
 	opts.interhunk_lines = 1;
 	opts.context_lines = 1;
 	opts.pathspec.count = 1;
 
-	for (i = 0; files[i]; ++i) {
-		git_buf_sets(&file, "files/file.");
-		git_buf_puts(&file, files[i]);
-		opts.pathspec.strings = &file.ptr;
+	git_vector_foreach(&files, i, path) {
+		if (git__prefixcmp(path, "files/file."))
+			continue;
+		extension = path + strlen("files/file.");
+		opts.pathspec.strings = &path;
 
 		/* do diff with no special driver */
 
@@ -205,7 +206,7 @@ void test_diff_drivers__builtins(void)
 		cl_git_pass(git_patch_to_buf(&actual, patch));
 
 		git_buf_sets(&expected, "userdiff/expected/nodriver/diff.");
-		git_buf_puts(&expected, files[i]);
+		git_buf_puts(&expected, extension);
 		cl_git_pass(git_futils_readbuffer(&expected, expected.ptr));
 
 		overwrite_filemode(expected.ptr, &actual);
@@ -220,7 +221,7 @@ void test_diff_drivers__builtins(void)
 
 		{
 			FILE *fp = fopen("userdiff/.gitattributes", "w");
-			fprintf(fp, "*.%s diff=%s\n", files[i], files[i]);
+			fprintf(fp, "*.%s diff=%s\n", extension, extension);
 			fclose(fp);
 		}
 
@@ -230,7 +231,7 @@ void test_diff_drivers__builtins(void)
 		cl_git_pass(git_patch_to_buf(&actual, patch));
 
 		git_buf_sets(&expected, "userdiff/expected/driver/diff.");
-		git_buf_puts(&expected, files[i]);
+		git_buf_puts(&expected, extension);
 		cl_git_pass(git_futils_readbuffer(&expected, expected.ptr));
 
 		overwrite_filemode(expected.ptr, &actual);
@@ -240,9 +241,12 @@ void test_diff_drivers__builtins(void)
 		git_buf_clear(&actual);
 		git_patch_free(patch);
 		git_diff_free(diff);
+
+		git__free(path);
 	}
 
 	git_buf_free(&file);
 	git_buf_free(&actual);
 	git_buf_free(&expected);
+	git_vector_free(&files);
 }

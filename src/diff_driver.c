@@ -437,6 +437,7 @@ static int diff_context_line__pattern_match(
 			i = (pmatch[1].rm_so >= 0) ? 1 : 0;
 			git_buf_consume(line, git_buf_cstr(line) + pmatch[i].rm_so);
 			git_buf_truncate(line, pmatch[i].rm_eo - pmatch[i].rm_so);
+			git_buf_rtrim(line);
 
 			return true;
 		}
