@@ -38,7 +38,7 @@ static int create_branch(
 		return error;
 
 	/* Create the new branch */
-	error = git_branch_create(&branch_ref, repo, name, head_obj, 0);
+	error = git_branch_create(&branch_ref, repo, name, head_obj, 0, NULL, NULL);
 
 	git_commit_free(head_obj);
 

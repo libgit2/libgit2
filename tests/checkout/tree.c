@@ -480,7 +480,7 @@ void assert_conflict(
 	/* Create a branch pointing at the parent */
 	cl_git_pass(git_revparse_single(&g_object, g_repo, parent_sha));
 	cl_git_pass(git_branch_create(&branch, g_repo,
-		"potential_conflict", (git_commit *)g_object, 0));
+		"potential_conflict", (git_commit *)g_object, 0, NULL, NULL));
 
 	/* Make HEAD point to this branch */
 	cl_git_pass(git_reference_symbolic_create(

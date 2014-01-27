@@ -54,7 +54,9 @@ int git_branch_create(
 	git_repository *repository,
 	const char *branch_name,
 	const git_commit *commit,
-	int force)
+	int force,
+	const git_signature *signature,
+	const char *log_message)
 {
 	git_reference *branch = NULL;
 	git_buf canonical_branch_name = GIT_BUF_INIT;
@@ -63,14 +65,14 @@ int git_branch_create(
 	assert(branch_name && commit && ref_out);
 	assert(git_object_owner((const git_object *)commit) == repository);
 
-	if (!(error = git_buf_joinpath(
-			&canonical_branch_name, GIT_REFS_HEADS_DIR, branch_name)))
-		error = git_reference_create(
-			&branch, repository, git_buf_cstr(&canonical_branch_name),
-			git_commit_id(commit), force, NULL, NULL);
+	if (git_buf_joinpath(&canonical_branch_name, GIT_REFS_HEADS_DIR, branch_name) < 0)
+		goto cleanup;
 
-	*ref_out = branch;
+	if (!(error = git_reference_create(&branch, repository,
+		git_buf_cstr(&canonical_branch_name), git_commit_id(commit), force, signature, log_message)))
+		*ref_out = branch;
 
+cleanup:
 	git_buf_free(&canonical_branch_name);
 	return error;
 }
