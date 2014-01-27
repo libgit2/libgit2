@@ -41,7 +41,6 @@ int git_strarray_copy(git_strarray *tgt, const git_strarray *src)
 		return 0;
 
 	tgt->strings = git__calloc(src->count, sizeof(char *));
-	GITERR_CHECK_ALLOC(tgt->strings);
 
 	for (i = 0; i < src->count; ++i) {
 		if (!src->strings[i])

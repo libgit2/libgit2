@@ -53,10 +53,7 @@
 
 #include <regex.h>
 
-/**
- * Check a pointer allocation result, returning -1 if it failed.
- */
-#define GITERR_CHECK_ALLOC(ptr) if (ptr == NULL) { return -1; }
+extern void (*git__on_panic)(const char *);
 
 /**
  * Check a return value and propogate result if non-zero.

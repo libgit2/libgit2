@@ -53,7 +53,6 @@ int git_commit_create_v(
 	const git_commit **parents;
 
 	parents = git__malloc(parent_count * sizeof(git_commit *));
-	GITERR_CHECK_ALLOC(parents);
 
 	va_start(ap, parent_count);
 	for (i = 0; i < parent_count; ++i)
@@ -141,7 +140,6 @@ int git_commit_create(
 	assert(git_object_owner((const git_object *)tree) == repo);
 
 	parent_oids = git__malloc(parent_count * sizeof(git_oid *));
-	GITERR_CHECK_ALLOC(parent_oids);
 
 	for (i = 0; i < parent_count; ++i) {
 		assert(git_object_owner((const git_object *)parents[i]) == repo);
@@ -179,7 +177,6 @@ int git_commit__parse(void *_commit, git_odb_object *odb_obj)
 
 	header_len = buffer - buffer_start;
 	commit->raw_header = git__strndup(buffer_start, header_len);
-	GITERR_CHECK_ALLOC(commit->raw_header);
 
 	/* point "buffer" to header data */
 	buffer = commit->raw_header;
@@ -189,7 +186,6 @@ int git_commit__parse(void *_commit, git_odb_object *odb_obj)
 		parent_count = 1;
 
 	git_array_init_to_size(commit->parent_ids, parent_count);
-	GITERR_CHECK_ARRAY(commit->parent_ids);
 
 	if (git_oid__parse(&commit->tree_id, &buffer, buffer_end, "tree ") < 0)
 		goto bad_buffer;
@@ -200,20 +196,17 @@ int git_commit__parse(void *_commit, git_odb_object *odb_obj)
 
 	while (git_oid__parse(&parent_id, &buffer, buffer_end, "parent ") == 0) {
 		git_oid *new_id = git_array_alloc(commit->parent_ids);
-		GITERR_CHECK_ALLOC(new_id);
 
 		git_oid_cpy(new_id, &parent_id);
 	}
 
 	commit->author = git__malloc(sizeof(git_signature));
-	GITERR_CHECK_ALLOC(commit->author);
 
 	if (git_signature__parse(commit->author, &buffer, buffer_end, "author ", '\n') < 0)
 		return -1;
 
 	/* Always parse the committer; we need the commit time */
 	commit->committer = git__malloc(sizeof(git_signature));
-	GITERR_CHECK_ALLOC(commit->committer);
 
 	if (git_signature__parse(commit->committer, &buffer, buffer_end, "committer ", '\n') < 0)
 		return -1;
@@ -228,7 +221,6 @@ int git_commit__parse(void *_commit, git_odb_object *odb_obj)
 			buffer += strlen("encoding ");
 
 			commit->message_encoding = git__strndup(buffer, eoln - buffer);
-			GITERR_CHECK_ALLOC(commit->message_encoding);
 		}
 
 		if (eoln < buffer_end && *eoln == '\n')
@@ -247,7 +239,6 @@ int git_commit__parse(void *_commit, git_odb_object *odb_obj)
 	/* extract commit message */
 	if (buffer <= buffer_end) {
 		commit->raw_message = git__strndup(buffer, buffer_end - buffer);
-		GITERR_CHECK_ALLOC(commit->raw_message);
 	}
 
 	return 0;

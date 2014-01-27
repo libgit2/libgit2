@@ -118,7 +118,6 @@ static int tag_parse(git_tag *tag, const char *buffer, const char *buffer_end)
 	text_len = search - buffer;
 
 	tag->tag_name = git__malloc(text_len + 1);
-	GITERR_CHECK_ALLOC(tag->tag_name);
 
 	memcpy(tag->tag_name, buffer, text_len);
 	tag->tag_name[text_len] = '\0';
@@ -128,7 +127,6 @@ static int tag_parse(git_tag *tag, const char *buffer, const char *buffer_end)
 	tag->tagger = NULL;
 	if (buffer < buffer_end && *buffer != '\n') {
 		tag->tagger = git__malloc(sizeof(git_signature));
-		GITERR_CHECK_ALLOC(tag->tagger);
 
 		if (git_signature__parse(tag->tagger, &buffer, buffer_end, "tagger ", '\n') < 0)
 			return -1;
@@ -142,7 +140,6 @@ static int tag_parse(git_tag *tag, const char *buffer, const char *buffer_end)
 		text_len = buffer_end - ++buffer;
 
 		tag->message = git__malloc(text_len + 1);
-		GITERR_CHECK_ALLOC(tag->message);
 
 		memcpy(tag->message, buffer, text_len);
 		tag->message[text_len] = '\0';
@@ -462,7 +459,6 @@ static int tag_list_cb(const char *tag_name, git_oid *oid, void *data)
 		p_fnmatch(filter->pattern, tag_name + GIT_REFS_TAGS_DIR_LEN, 0) == 0)
 	{
 		char *matched = git__strdup(tag_name + GIT_REFS_TAGS_DIR_LEN);
-		GITERR_CHECK_ALLOC(matched);
 
 		return git_vector_insert(filter->taglist, matched);
 	}

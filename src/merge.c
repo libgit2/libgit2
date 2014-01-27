@@ -567,11 +567,8 @@ static int merge_conflict_resolve_automerge(
 		(error = git_odb_write(&automerge_oid, odb, result.data, result.len, GIT_OBJ_BLOB)) < 0)
 		goto done;
 
-	if ((index_entry = git_pool_malloc(&diff_list->pool, sizeof(git_index_entry))) == NULL)
-	GITERR_CHECK_ALLOC(index_entry);
-
+	index_entry = git_pool_malloc(&diff_list->pool, sizeof(git_index_entry));
 	index_entry->path = git_pool_strdup(&diff_list->pool, result.path);
-	GITERR_CHECK_ALLOC(index_entry->path);
 
 	index_entry->file_size = result.len;
 	index_entry->mode = result.mode;
@@ -1008,11 +1005,9 @@ int git_merge_diff_list__find_renames(
 
 	similarity_ours = git__calloc(diff_list->conflicts.length,
 		sizeof(struct merge_diff_similarity));
-	GITERR_CHECK_ALLOC(similarity_ours);
 
 	similarity_theirs = git__calloc(diff_list->conflicts.length,
 		sizeof(struct merge_diff_similarity));
-	GITERR_CHECK_ALLOC(similarity_theirs);
 
 	/* Calculate similarity between items that were deleted from the ancestor
 	 * and added in the other branch.
@@ -1024,7 +1019,6 @@ int git_merge_diff_list__find_renames(
 	if (diff_list->conflicts.length <= opts->target_limit) {
 		cache_size = diff_list->conflicts.length * 3;
 		cache = git__calloc(cache_size, sizeof(void *));
-		GITERR_CHECK_ALLOC(cache);
 
 		merge_diff_list_count_candidates(diff_list, &src_count, &tgt_count);
 
@@ -1279,7 +1273,6 @@ static int merge_diff_list_insert_unmodified(
 	git_index_entry *entry;
 
 	entry = git_pool_malloc(&diff_list->pool, sizeof(git_index_entry));
-	GITERR_CHECK_ALLOC(entry);
 
 	if ((error = index_entry_dup(entry, &diff_list->pool, tree_items[0])) >= 0)
 		error = git_vector_insert(&diff_list->staged, entry);
@@ -1457,7 +1450,6 @@ static int merge_tree_normalize_opts(
 	/* assign the internal metric with whitespace flag as payload */
 	if (!opts->metric) {
 		opts->metric = git__malloc(sizeof(git_diff_similarity_metric));
-		GITERR_CHECK_ALLOC(opts->metric);
 
 		opts->metric->file_signature = git_diff_find_similar__hashsig_for_file;
 		opts->metric->buffer_signature = git_diff_find_similar__hashsig_for_buf;
@@ -1624,7 +1616,6 @@ int git_merge_trees(
 		return error;
 
 	diff_list = git_merge_diff_list__alloc(repo);
-	GITERR_CHECK_ALLOC(diff_list);
 
 	if ((error = git_merge_diff_list__find_differences(diff_list, ancestor_tree, our_tree, their_tree)) < 0 ||
 		(error = git_merge_diff_list__find_renames(repo, diff_list, &opts)) < 0)
@@ -1985,7 +1976,6 @@ static int write_merge_msg(
 	assert(repo && heads);
 
 	entries = git__calloc(heads_len, sizeof(struct merge_msg_entry));
-	GITERR_CHECK_ALLOC(entries); 
 
 	if (git_vector_init(&matching, heads_len, NULL) < 0) {
 		git__free(entries);
@@ -2101,7 +2091,6 @@ static int merge_ancestor_head(
 	assert(repo && our_head && their_heads);
 
 	oids = git__calloc(their_heads_len + 1, sizeof(git_oid));
-	GITERR_CHECK_ALLOC(oids);
 
 	git_oid_cpy(&oids[0], git_commit_id(our_head->commit));
 
@@ -2234,7 +2223,6 @@ static int merge_affected_paths(git_vector *paths, git_repository *repo, git_ind
 
 	git_vector_foreach(&merged_list->deltas, i, delta) {
 		path = git__strdup(delta->new_file.path);
-		GITERR_CHECK_ALLOC(path);
 
 		if ((error = git_vector_insert(paths, path)) < 0)
 			goto on_error;
@@ -2248,7 +2236,6 @@ static int merge_affected_paths(git_vector *paths, git_repository *repo, git_ind
 			strcmp(git_vector_last(paths), e->path) != 0)) {
 
 			path = git__strdup(e->path);
-			GITERR_CHECK_ALLOC(path);
 
 			if ((error = git_vector_insert(paths, path)) < 0)
 				goto on_error;
@@ -2490,10 +2477,8 @@ int git_merge(
 	}
 
 	result = git__calloc(1, sizeof(git_merge_result));
-	GITERR_CHECK_ALLOC(result);
 
 	their_trees = git__calloc(their_heads_len, sizeof(git_tree *));
-	GITERR_CHECK_ALLOC(their_trees);
 
 	if ((error = git_repository__ensure_not_bare(repo, "merge")) < 0)
 		goto on_error;
@@ -2651,16 +2636,13 @@ static int merge_head_init(
 	*out = NULL;
 
 	head = git__calloc(1, sizeof(git_merge_head));
-	GITERR_CHECK_ALLOC(head);
 
 	if (ref_name) {
 		head->ref_name = git__strdup(ref_name);
-		GITERR_CHECK_ALLOC(head->ref_name);
 	}
 
 	if (remote_url) {
 		head->remote_url = git__strdup(remote_url);
-		GITERR_CHECK_ALLOC(head->remote_url);
 	}
 
 	git_oid_cpy(&head->oid, oid);

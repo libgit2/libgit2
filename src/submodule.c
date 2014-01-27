@@ -545,7 +545,6 @@ int git_submodule_set_url(git_submodule *submodule, const char *url)
 	git__free(submodule->url);
 
 	submodule->url = git__strdup(url);
-	GITERR_CHECK_ALLOC(submodule->url);
 
 	return 0;
 }
@@ -1047,7 +1046,6 @@ static int submodule_get(
 
 	if (!git_strmap_valid_index(smcfg, pos)) {
 		sm = submodule_alloc(repo, name);
-		GITERR_CHECK_ALLOC(sm);
 
 		/* insert value at name - if another thread beats us to it, then use
 		 * their record and release our own.
@@ -1396,7 +1394,6 @@ static int load_submodule_config(git_repository *repo)
 	 */
 	if (!repo->submodules) {
 		repo->submodules = git_strmap_alloc();
-		GITERR_CHECK_ALLOC(repo->submodules);
 	}
 
 	/* add submodule information from index */

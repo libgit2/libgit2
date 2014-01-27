@@ -326,11 +326,9 @@ int git_index_open(git_index **index_out, const char *index_path)
 	assert(index_out);
 
 	index = git__calloc(1, sizeof(git_index));
-	GITERR_CHECK_ALLOC(index);
 
 	if (index_path != NULL) {
 		index->index_file_path = git__strdup(index_path);
-		GITERR_CHECK_ALLOC(index->index_file_path);
 
 		/* Check if index file is stored on disk already */
 		if (git_path_exists(index->index_file_path) == true)
@@ -639,13 +637,11 @@ static int index_entry_init(
 		return error;
 
 	entry = git__calloc(1, sizeof(git_index_entry));
-	GITERR_CHECK_ALLOC(entry);
 
 	git_index_entry__init_from_stat(entry, &st, !index->distrust_filemode);
 
 	entry->id = oid;
 	entry->path = git__strdup(rel_path);
-	GITERR_CHECK_ALLOC(entry->path);
 
 	*entry_out = entry;
 	return 0;
@@ -664,7 +660,6 @@ static int index_entry_reuc_init(git_index_reuc_entry **reuc_out,
 	*reuc_out = NULL;
 
 	reuc = git__calloc(1, sizeof(git_index_reuc_entry));
-	GITERR_CHECK_ALLOC(reuc);
 
 	reuc->path = git__strdup(path);
 	if (reuc->path == NULL)
@@ -1137,7 +1132,6 @@ int git_index_conflict_iterator_new(
 	assert(iterator_out && index);
 
 	it = git__calloc(1, sizeof(git_index_conflict_iterator));
-	GITERR_CHECK_ALLOC(it);
 
 	it->index = index;
 
@@ -1213,21 +1207,17 @@ int git_index_name_add(git_index *index,
 	assert ((ancestor && ours) || (ancestor && theirs) || (ours && theirs));
 
 	conflict_name = git__calloc(1, sizeof(git_index_name_entry));
-	GITERR_CHECK_ALLOC(conflict_name);
 
 	if (ancestor) {
 		conflict_name->ancestor = git__strdup(ancestor);
-		GITERR_CHECK_ALLOC(conflict_name->ancestor);
 	}
 
 	if (ours) {
 		conflict_name->ours = git__strdup(ours);
-		GITERR_CHECK_ALLOC(conflict_name->ours);
 	}
 
 	if (theirs) {
 		conflict_name->theirs = git__strdup(theirs);
-		GITERR_CHECK_ALLOC(conflict_name->theirs);
 	}
 
 	return git_vector_insert(&index->names, conflict_name);
@@ -1390,11 +1380,9 @@ static int read_reuc(git_index *index, const char *buffer, size_t size)
 			return index_error_invalid("reading reuc entries");
 
 		lost = git__calloc(1, sizeof(git_index_reuc_entry));
-		GITERR_CHECK_ALLOC(lost);
 
 		/* read NUL-terminated pathname for entry */
 		lost->path = git__strdup(buffer);
-		GITERR_CHECK_ALLOC(lost->path);
 
 		size -= len;
 		buffer += len;
@@ -1466,7 +1454,6 @@ static int read_conflict_names(git_index *index, const char *buffer, size_t size
 		ptr = NULL; \
 	else { \
 		ptr = git__malloc(len); \
-		GITERR_CHECK_ALLOC(ptr); \
 		memcpy(ptr, buffer, len); \
 	} \
 	\
@@ -1475,7 +1462,6 @@ static int read_conflict_names(git_index *index, const char *buffer, size_t size
 
 	while (size) {
 		git_index_name_entry *conflict_name = git__calloc(1, sizeof(git_index_name_entry));
-		GITERR_CHECK_ALLOC(conflict_name);
 
 		read_conflict_name(conflict_name->ancestor);
 		read_conflict_name(conflict_name->ours);
@@ -1648,7 +1634,6 @@ static int parse_index(git_index *index, const char *buffer, size_t buffer_size)
 		git_index_entry *entry;
 
 		entry = git__malloc(sizeof(git_index_entry));
-		GITERR_CHECK_ALLOC(entry);
 
 		entry_size = read_entry(entry, buffer, buffer_size);
 
@@ -1980,7 +1965,6 @@ static int read_tree_cb(
 		return -1;
 
 	entry = git__calloc(1, sizeof(git_index_entry));
-	GITERR_CHECK_ALLOC(entry);
 
 	entry->mode = tentry->attr;
 	entry->id = tentry->oid;

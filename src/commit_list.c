@@ -121,7 +121,6 @@ static int commit_quick_parse(
 	}
 
 	commit->parents = alloc_parents(walk, commit, parents);
-	GITERR_CHECK_ALLOC(commit->parents);
 
 	buffer = parents_start;
 	for (i = 0; i < parents; ++i) {

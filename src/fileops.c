@@ -834,7 +834,6 @@ static int cp_link(const char *from, const char *to, size_t link_size)
 	int error = 0;
 	ssize_t read_len;
 	char *link_data = git__malloc(link_size + 1);
-	GITERR_CHECK_ALLOC(link_data);
 
 	read_len = p_readlink(from, link_data, link_size);
 	if (read_len != (ssize_t)link_size) {

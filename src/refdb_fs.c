@@ -603,7 +603,6 @@ static int refdb_fs_backend__iterator(
 		return -1;
 
 	iter = git__calloc(1, sizeof(refdb_fs_iter));
-	GITERR_CHECK_ALLOC(iter);
 
 	if (git_pool_init(&iter->pool, 1, 0) < 0 ||
 		git_vector_init(&iter->loose, 8, NULL) < 0)
@@ -1140,10 +1139,8 @@ static int reflog_alloc(git_reflog **reflog, const char *name)
 	*reflog = NULL;
 
 	log = git__calloc(1, sizeof(git_reflog));
-	GITERR_CHECK_ALLOC(log);
 
 	log->ref_name = git__strdup(name);
-	GITERR_CHECK_ALLOC(log->ref_name);
 
 	if (git_vector_init(&log->entries, 0, NULL) < 0) {
 		git__free(log->ref_name);
@@ -1172,10 +1169,8 @@ static int reflog_parse(git_reflog *log, const char *buf, size_t buf_size)
 
 	while (buf_size > GIT_REFLOG_SIZE_MIN) {
 		entry = git__calloc(1, sizeof(git_reflog_entry));
-		GITERR_CHECK_ALLOC(entry);
 
 		entry->committer = git__malloc(sizeof(git_signature));
-		GITERR_CHECK_ALLOC(entry->committer);
 
 		if (git_oid_fromstrn(&entry->oid_old, buf, GIT_OID_HEXSZ) < 0)
 			goto fail;
@@ -1203,7 +1198,6 @@ static int reflog_parse(git_reflog *log, const char *buf, size_t buf_size)
 				seek_forward(1);
 
 			entry->msg = git__strndup(ptr, buf - ptr);
-			GITERR_CHECK_ALLOC(entry->msg);
 		} else
 			entry->msg = NULL;
 
@@ -1586,7 +1580,6 @@ int git_refdb_backend_fs(
 	refdb_fs_backend *backend;
 
 	backend = git__calloc(1, sizeof(refdb_fs_backend));
-	GITERR_CHECK_ALLOC(backend);
 
 	backend->repo = repository;
 

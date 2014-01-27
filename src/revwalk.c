@@ -48,7 +48,6 @@ static int mark_uninteresting(git_commit_list_node *commit)
 	assert(commit);
 
 	git_array_alloc(pending);
-	GITERR_CHECK_ARRAY(pending);
 
 	do {
 		commit->uninteresting = 1;
@@ -63,7 +62,6 @@ static int mark_uninteresting(git_commit_list_node *commit)
 		for (i = 0; i < commit->out_degree; ++i)
 			if (!commit->parents[i]->uninteresting) {
 				git_commit_list_node **node = git_array_alloc(pending);
-				GITERR_CHECK_ALLOC(node);
 				*node = commit->parents[i];
 			}
 
@@ -432,12 +430,10 @@ int git_revwalk_new(git_revwalk **revwalk_out, git_repository *repo)
 	git_revwalk *walk;
 
 	walk = git__malloc(sizeof(git_revwalk));
-	GITERR_CHECK_ALLOC(walk);
 
 	memset(walk, 0x0, sizeof(git_revwalk));
 
 	walk->commits = git_oidmap_alloc();
-	GITERR_CHECK_ALLOC(walk->commits);
 
 	if (git_pqueue_init(&walk->iterator_time, 8, git_commit_list_time_cmp) < 0 ||
 		git_vector_init(&walk->twos, 4, NULL) < 0 ||

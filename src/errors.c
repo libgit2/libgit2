@@ -14,11 +14,6 @@
  * New error handling
  ********************************************/
 
-static git_error g_git_oom_error = {
-	"Out of memory",
-	GITERR_NOMEMORY
-};
-
 static void set_error(int error_class, char *string)
 {
 	git_error *error = &GIT_GLOBAL->error_t;
@@ -32,9 +27,18 @@ static void set_error(int error_class, char *string)
 	GIT_GLOBAL->last_error = error;
 }
 
-void giterr_set_oom(void)
+void (*git__on_panic)(const char *) = NULL;
+
+/* coverity[+kill] */
+void giterr_panic(const char *message)
 {
-	GIT_GLOBAL->last_error = &g_git_oom_error;
+	if (git__on_panic != NULL) {
+		git__on_panic(message);
+		/* noreturn */
+	}
+
+	fprintf(stderr, "libgit2 panic: %s\n", message);
+	_exit(255);
 }
 
 void giterr_set(int error_class, const char *string, ...)

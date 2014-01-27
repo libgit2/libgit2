@@ -122,7 +122,6 @@ int git_refspec__parse(git_refspec *refspec, const char *input, bool is_fetch)
 	}
 
 	refspec->string = git__strdup(input);
-	GITERR_CHECK_ALLOC(refspec->string);
 
 	return 0;
 
@@ -257,7 +256,6 @@ int git_refspec__dwim_one(git_vector *out, git_refspec *spec, git_vector *refs)
 	};
 
 	git_refspec *cur = git__calloc(1, sizeof(git_refspec));
-	GITERR_CHECK_ALLOC(cur);
 
 	cur->force = spec->force;
 	cur->push = spec->push;
@@ -283,7 +281,6 @@ int git_refspec__dwim_one(git_vector *out, git_refspec *spec, git_vector *refs)
 	/* No shorthands found, copy over the name */
 	if (cur->src == NULL && spec->src != NULL) {
 		cur->src = git__strdup(spec->src);
-		GITERR_CHECK_ALLOC(cur->src);
 	}
 
 	if (spec->dst && git__prefixcmp(spec->dst, GIT_REFS_DIR)) {
@@ -304,7 +301,6 @@ int git_refspec__dwim_one(git_vector *out, git_refspec *spec, git_vector *refs)
 
 	if (cur->dst == NULL && spec->dst != NULL) {
 		cur->dst = git__strdup(spec->dst);
-		GITERR_CHECK_ALLOC(cur->dst);
 	}
 
 	return git_vector_insert(out, cur);

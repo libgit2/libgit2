@@ -95,7 +95,6 @@ static int diff_driver_add_funcname(
 	}
 
 	re_ptr = git_array_alloc(drv->fn_patterns);
-	GITERR_CHECK_ALLOC(re_ptr);
 
 	memcpy(re_ptr, &re, sizeof(re));
 	return 0;
@@ -159,7 +158,6 @@ static int git_diff_driver_load(
 	}
 
 	drv = git__calloc(1, sizeof(git_diff_driver) + namelen + 1);
-	GITERR_CHECK_ALLOC(drv);
 	drv->type = DIFF_DRIVER_AUTO;
 	memcpy(drv->name, driver_name, namelen);
 

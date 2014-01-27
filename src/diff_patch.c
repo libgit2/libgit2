@@ -102,7 +102,6 @@ static int diff_patch_alloc_from_diff(
 {
 	int error;
 	git_patch *patch = git__calloc(1, sizeof(git_patch));
-	GITERR_CHECK_ALLOC(patch);
 
 	if (!(error = diff_patch_init_from_diff(patch, diff, delta_index))) {
 		patch->flags |= GIT_DIFF_PATCH_ALLOCATED;
@@ -381,7 +380,6 @@ static int diff_patch_with_delta_alloc(
 	size_t new_len = *new_path ? strlen(*new_path) : 0;
 
 	*out = pd = git__calloc(1, sizeof(*pd) + old_len + new_len + 2);
-	GITERR_CHECK_ALLOC(pd);
 
 	pd->patch.flags = GIT_DIFF_PATCH_ALLOCATED;
 
@@ -865,7 +863,6 @@ static int diff_patch_hunk_cb(
 	GIT_UNUSED(delta);
 
 	hunk = git_array_alloc(patch->hunks);
-	GITERR_CHECK_ALLOC(hunk);
 
 	memcpy(&hunk->hunk, hunk_, sizeof(hunk->hunk));
 
@@ -894,7 +891,6 @@ static int diff_patch_line_cb(
 	assert(hunk); /* programmer error if no hunk is available */
 
 	line = git_array_alloc(patch->lines);
-	GITERR_CHECK_ALLOC(line);
 
 	memcpy(line, line_, sizeof(*line));
 

@@ -80,7 +80,6 @@ int git_reflog_append(git_reflog *reflog, const git_oid *new_oid, const git_sign
 	assert(reflog && new_oid && committer);
 
 	entry = git__calloc(1, sizeof(git_reflog_entry));
-	GITERR_CHECK_ALLOC(entry);
 
 	if ((git_signature_dup(&entry->committer, committer)) < 0)
 		goto cleanup;

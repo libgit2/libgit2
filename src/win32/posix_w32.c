@@ -214,7 +214,6 @@ int p_readlink(const char *link, char *target, size_t target_len)
 	}
 
 	target_w = (wchar_t*)git__malloc(target_len * sizeof(wchar_t));
-	GITERR_CHECK_ALLOC(target_w);
 
 	dwRet = pGetFinalPath(hFile, target_w, (DWORD)target_len, 0x0);
 	if (dwRet == 0 ||
@@ -296,7 +295,6 @@ int p_getcwd(char *buffer_out, size_t size)
 		return -1;
 
 	buf = (wchar_t*)git__malloc(sizeof(wchar_t) * (int)size);
-	GITERR_CHECK_ALLOC(buf);
 
 	_wgetcwd(buf, (int)size);
 

@@ -22,7 +22,6 @@ int git_attr_file__new(
 	git_attr_file *attrs = NULL;
 
 	attrs = git__calloc(1, sizeof(git_attr_file));
-	GITERR_CHECK_ALLOC(attrs);
 
 	if (pool)
 		attrs->pool = pool;
@@ -37,7 +36,6 @@ int git_attr_file__new(
 		size_t len = strlen(path);
 
 		attrs->key = git_pool_malloc(attrs->pool, (uint32_t)len + 3);
-		GITERR_CHECK_ALLOC(attrs->key);
 
 		attrs->key[0] = '0' + (char)from;
 		attrs->key[1] = '#';
@@ -513,7 +511,6 @@ int git_attr_assignment__parse(
 		/* allocate assign if needed */
 		if (!assign) {
 			assign = git__calloc(1, sizeof(git_attr_assignment));
-			GITERR_CHECK_ALLOC(assign);
 			GIT_REFCOUNT_INC(assign);
 		}
 
@@ -547,7 +544,6 @@ int git_attr_assignment__parse(
 
 		/* allocate permanent storage for name */
 		assign->name = git_pool_strndup(pool, name_start, scan - name_start);
-		GITERR_CHECK_ALLOC(assign->name);
 
 		/* if there is an equals sign, find the value */
 		if (*scan == '=') {
@@ -556,7 +552,6 @@ int git_attr_assignment__parse(
 			/* if we found a value, allocate permanent storage for it */
 			if (scan > value_start) {
 				assign->value = git_pool_strndup(pool, value_start, scan - value_start);
-				GITERR_CHECK_ALLOC(assign->value);
 			}
 		}
 

@@ -29,7 +29,7 @@ static int verify_last_error(git_filebuf *file)
 		return -1;
 
 	case BUFERR_MEM:
-		giterr_set_oom();
+		giterr_panic("buffer out of memory");
 		return -1;
 
 	case BUFERR_ZLIB:
@@ -216,7 +216,6 @@ int git_filebuf_open(git_filebuf *file, const char *path, int flags, mode_t mode
 	/* Allocate the main cache buffer */
 	if (!file->do_not_buffer) {
 		file->buffer = git__malloc(file->buf_size);
-		GITERR_CHECK_ALLOC(file->buffer);
 	}
 
 	/* If we are hashing on-write, allocate a new hash context */
@@ -239,7 +238,6 @@ int git_filebuf_open(git_filebuf *file, const char *path, int flags, mode_t mode
 
 		/* Allocate the Zlib cache buffer */
 		file->z_buf = git__malloc(file->buf_size);
-		GITERR_CHECK_ALLOC(file->z_buf);
 
 		/* Never flush */
 		file->flush_mode = Z_NO_FLUSH;
@@ -264,17 +262,14 @@ int git_filebuf_open(git_filebuf *file, const char *path, int flags, mode_t mode
 		/* No original path */
 		file->path_original = NULL;
 		file->path_lock = git_buf_detach(&tmp_path);
-		GITERR_CHECK_ALLOC(file->path_lock);
 	} else {
 		path_len = strlen(path);
 
 		/* Save the original path of the file */
 		file->path_original = git__strdup(path);
-		GITERR_CHECK_ALLOC(file->path_original);
 
 		/* create the locking path by appending ".lock" to the original */
 		file->path_lock = git__malloc(path_len + GIT_FILELOCK_EXTLENGTH);
-		GITERR_CHECK_ALLOC(file->path_lock);
 
 		memcpy(file->path_lock, file->path_original, path_len);
 		memcpy(file->path_lock + path_len, GIT_FILELOCK_EXTENSION, GIT_FILELOCK_EXTLENGTH);
@@ -311,7 +306,6 @@ int git_filebuf_commit_at(git_filebuf *file, const char *path)
 {
 	git__free(file->path_original);
 	file->path_original = git__strdup(path);
-	GITERR_CHECK_ALLOC(file->path_original);
 
 	return git_filebuf_commit(file);
 }

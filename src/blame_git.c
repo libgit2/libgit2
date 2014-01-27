@@ -39,7 +39,6 @@ static int make_origin(git_blame__origin **out, git_commit *commit, const char *
 	git_blame__origin *o;
 
 	o = git__calloc(1, sizeof(*o) + strlen(path) + 1);
-	GITERR_CHECK_ALLOC(o);
 	o->commit = commit;
 	o->refcnt = 1;
 	strcpy(o->path, path);

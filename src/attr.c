@@ -110,7 +110,6 @@ int git_attr_get_many(
 		goto cleanup;
 
 	info = git__calloc(num_attr, sizeof(attr_get_many_info));
-	GITERR_CHECK_ALLOC(info);
 
 	git_vector_foreach(&files, i, file) {
 
@@ -176,7 +175,6 @@ int git_attr_foreach(
 		goto cleanup;
 
 	seen = git_strmap_alloc();
-	GITERR_CHECK_ALLOC(seen);
 
 	git_vector_foreach(&files, i, file) {
 
@@ -222,12 +220,10 @@ int git_attr_add_macro(
 		return -1;
 
 	macro = git__calloc(1, sizeof(git_attr_rule));
-	GITERR_CHECK_ALLOC(macro);
 
 	pool = &git_repository_attr_cache(repo)->pool;
 
 	macro->match.pattern = git_pool_strdup(pool, name);
-	GITERR_CHECK_ALLOC(macro->match.pattern);
 
 	macro->match.length = strlen(macro->match.pattern);
 	macro->match.flags = GIT_ATTR_FNMATCH_MACRO;
@@ -654,13 +650,11 @@ int git_attr_cache__init(git_repository *repo)
 	/* allocate hashtable for attribute and ignore file contents */
 	if (cache->files == NULL) {
 		cache->files = git_strmap_alloc();
-		GITERR_CHECK_ALLOC(cache->files);
 	}
 
 	/* allocate hashtable for attribute macros */
 	if (cache->macros == NULL) {
 		cache->macros = git_strmap_alloc();
-		GITERR_CHECK_ALLOC(cache->macros);
 	}
 
 	/* allocate string pool */

@@ -138,7 +138,8 @@ typedef enum {
 	GIT_OPT_ENABLE_CACHING,
 	GIT_OPT_GET_CACHED_MEMORY,
 	GIT_OPT_GET_TEMPLATE_PATH,
-	GIT_OPT_SET_TEMPLATE_PATH
+	GIT_OPT_SET_TEMPLATE_PATH,
+	GIT_OPT_SET_PANIC_HANDLER
 } git_libgit2_opt_t;
 
 /**
@@ -223,6 +224,16 @@ typedef enum {
  *		> Set the default template path.
  *		>
  *		> - `path` directory of template.
+ *
+ *	* opts(GIT_OPT_SET_PANIC_HANDLER, void (*handler)(const char *message))
+ *
+ *		> Set the panic handler. This callback is issued by libgit2
+ *		> during a critical (non-recoverable) error.
+ *		> This basically means Out-of-memory conditions, which shouldn't
+ *		> really happen on modern OSes because of overcommitment.
+ *		> The callback is not supposed to return: ensure to either crash
+ *		> the running process with the appropriate error message, or
+ *		> trampoline out of the callstack.
  *
  * @param option Option key
  * @param ... value to set the option

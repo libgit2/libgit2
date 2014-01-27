@@ -216,7 +216,6 @@ static int load_workdir(git_repository *repo, git_buf *parent_path)
 		repo->workdir = git_buf_detach(&worktree);
 	}
 
-	GITERR_CHECK_ALLOC(repo->workdir);
 	return 0;
 }
 
@@ -425,10 +424,8 @@ int git_repository_open_bare(
 	}
 
 	repo = repository_alloc();
-	GITERR_CHECK_ALLOC(repo);
 
 	repo->path_repository = git_buf_detach(&path);
-	GITERR_CHECK_ALLOC(repo->path_repository);
 
 	/* of course we're bare! */
 	repo->is_bare = 1;
@@ -456,10 +453,8 @@ int git_repository_open_ext(
 		return error;
 
 	repo = repository_alloc();
-	GITERR_CHECK_ALLOC(repo);
 
 	repo->path_repository = git_buf_detach(&path);
-	GITERR_CHECK_ALLOC(repo->path_repository);
 
 	if ((flags & GIT_REPOSITORY_OPEN_BARE) != 0)
 		repo->is_bare = 1;
@@ -486,7 +481,6 @@ int git_repository_wrap_odb(git_repository **repo_out, git_odb *odb)
 	git_repository *repo;
 
 	repo = repository_alloc();
-	GITERR_CHECK_ALLOC(repo);
 
 	git_repository_set_odb(repo, odb);
 	*repo_out = repo;

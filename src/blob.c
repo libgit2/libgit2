@@ -134,7 +134,6 @@ static int write_symlink(
 	int error;
 
 	link_data = git__malloc(link_size);
-	GITERR_CHECK_ALLOC(link_data);
 
 	read_len = p_readlink(path, link_data, link_size);
 	if (read_len != (ssize_t)link_size) {
@@ -284,7 +283,6 @@ int git_blob_create_fromchunks(
 		goto cleanup;
 
 	content = git__malloc(BUFFER_SIZE);
-	GITERR_CHECK_ALLOC(content);
 
 	if ((error = git_filebuf_open(
 			&file, git_buf_cstr(&path), GIT_FILEBUF_TEMPORARY, 0666)) < 0)

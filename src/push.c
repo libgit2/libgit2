@@ -36,7 +36,6 @@ int git_push_new(git_push **out, git_remote *remote)
 	*out = NULL;
 
 	p = git__calloc(1, sizeof(*p));
-	GITERR_CHECK_ALLOC(p);
 
 	p->repo = remote->repo;
 	p->remote = remote;
@@ -139,7 +138,6 @@ static int parse_refspec(git_push *push, push_spec **spec, const char *str)
 	*spec = NULL;
 
 	s = git__calloc(1, sizeof(*s));
-	GITERR_CHECK_ALLOC(s);
 
 	if (str[0] == '+') {
 		s->force = true;

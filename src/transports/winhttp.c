@@ -625,7 +625,6 @@ replay:
 
 			location = git__malloc(location_length);
 			location8 = git__malloc(location_length);
-			GITERR_CHECK_ALLOC(location);
 
 			if (!WinHttpQueryHeaders(s->request,
 				WINHTTP_QUERY_LOCATION,
@@ -978,7 +977,6 @@ static int winhttp_stream_alloc(winhttp_subtransport *t, winhttp_stream **stream
 		return -1;
 
 	s = git__calloc(sizeof(winhttp_stream), 1);
-	GITERR_CHECK_ALLOC(s);
 
 	s->parent.subtransport = &t->parent;
 	s->parent.read = winhttp_stream_read;
@@ -1147,7 +1145,6 @@ int git_smart_subtransport_http(git_smart_subtransport **out, git_transport *own
 		return -1;
 
 	t = git__calloc(sizeof(winhttp_subtransport), 1);
-	GITERR_CHECK_ALLOC(t);
 
 	t->owner = (transport_smart *)owner;
 	t->parent.action = winhttp_action;

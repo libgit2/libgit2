@@ -35,7 +35,6 @@ static int parse_ignore_file(
 	while (!error && *scan) {
 		if (!match) {
 			match = git__calloc(1, sizeof(*match));
-			GITERR_CHECK_ALLOC(match);
 		}
 
 		match->flags = GIT_ATTR_FNMATCH_ALLOWSPACE | GIT_ATTR_FNMATCH_ALLOWNEG;

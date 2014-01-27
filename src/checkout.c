@@ -308,7 +308,6 @@ static int checkout_action_wd_only(
 
 	if (!error && remove) {
 		char *path = git_pool_strdup(&data->pool, wd->path);
-		GITERR_CHECK_ALLOC(path);
 
 		error = git_vector_insert(&data->removes, path);
 	}
@@ -746,7 +745,6 @@ static int checkout_conflicts_load(checkout_data *data, git_iterator *workdir, g
 			continue;
 
 		conflict = git__calloc(1, sizeof(checkout_conflictdata));
-		GITERR_CHECK_ALLOC(conflict);
 
 		conflict->ancestor = ancestor;
 		conflict->ours = ours;

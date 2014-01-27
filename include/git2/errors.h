@@ -136,15 +136,21 @@ GIT_EXTERN(int) giterr_detach(git_error *cpy);
 GIT_EXTERN(void) giterr_set_str(int error_class, const char *string);
 
 /**
- * Set the error message to a special value for memory allocation failure.
+ * Crash the library on a non-recoverable error condition (out of memory)
  *
- * The normal `giterr_set_str()` function attempts to `strdup()` the string
- * that is passed in.  This is not a good idea when the error in question
- * is a memory allocation failure.  That circumstance has a special setter
- * function that sets the error string to a known and statically allocated
- * internal value.
+ * This function will _Exit() the current process after printing the
+ * given error message; it's supposed to be used on situations where the
+ * library cannot continue operating at all, such as out of memory.
+ *
+ * If a custom panic callback has been configured by the user, the
+ * callback will be issued.
+ *
+ * This function does *not* return.
+ *
+ * @see GIT_OPT_SET_PANIC_HANDLER
+ * @param error The error message that caused the panic
  */
-GIT_EXTERN(void) giterr_set_oom(void);
+GIT_EXTERN(void) giterr_panic(const char *error);
 
 /** @} */
 GIT_END_DECL

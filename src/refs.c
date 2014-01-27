@@ -378,7 +378,6 @@ static int reference__create(
 		ref = git_reference__alloc_symbolic(name, normalized_target);
 	}
 
-	GITERR_CHECK_ALLOC(ref);
 
 	if ((error = git_refdb_write(refdb, ref, force, signature, log_message)) < 0) {
 		git_reference_free(ref);
@@ -723,7 +722,6 @@ void git_reference_iterator_free(git_reference_iterator *iter)
 static int cb__reflist_add(const char *ref, void *data)
 {
 	char *name = git__strdup(ref);
-	GITERR_CHECK_ALLOC(name);
 	return git_vector_insert((git_vector *)data, name);
 }
 

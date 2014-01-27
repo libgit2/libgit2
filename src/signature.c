@@ -62,7 +62,6 @@ int git_signature_new(git_signature **sig_out, const char *name, const char *ema
 	}
 
 	p = git__calloc(1, sizeof(git_signature));
-	GITERR_CHECK_ALLOC(p);
 
 	p->name = extract_trimmed(name, strlen(name));
 	p->email = extract_trimmed(email, strlen(email));
@@ -90,13 +89,10 @@ int git_signature_dup(git_signature **dest, const git_signature *source)
 		return 0;
 
 	signature = git__calloc(1, sizeof(git_signature));
-	GITERR_CHECK_ALLOC(signature);
 
 	signature->name = git__strdup(source->name);
-	GITERR_CHECK_ALLOC(signature->name);
 
 	signature->email = git__strdup(source->email);
-	GITERR_CHECK_ALLOC(signature->email);
 
 	signature->when.time = source->when.time;
 	signature->when.offset = source->when.offset;

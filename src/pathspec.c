@@ -256,7 +256,6 @@ int git_pathspec_new(git_pathspec **out, const git_strarray *pathspec)
 {
 	int error = 0;
 	git_pathspec *ps = git__malloc(sizeof(git_pathspec));
-	GITERR_CHECK_ALLOC(ps);
 
 	if ((error = git_pathspec__init(ps, pathspec)) < 0) {
 		git__free(ps);
@@ -412,7 +411,6 @@ static int pathspec_match_from_iterator(
 
 	if (out) {
 		*out = m = pathspec_match_alloc(ps, PATHSPEC_DATATYPE_STRINGS);
-		GITERR_CHECK_ALLOC(m);
 	}
 
 	if ((error = git_iterator_reset(iter, ps->prefix, ps->prefix)) < 0)
@@ -600,7 +598,6 @@ int git_pathspec_match_diff(
 
 	if (out) {
 		*out = m = pathspec_match_alloc(ps, PATHSPEC_DATATYPE_DIFF);
-		GITERR_CHECK_ALLOC(m);
 	}
 
 	pathspec_match_context_init(
