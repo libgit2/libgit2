@@ -1434,12 +1434,12 @@ success:
 static int reflog_append(refdb_fs_backend *backend, const git_reference *ref, const git_signature *who, const char *message)
 {
 	int error;
-	git_oid old_id, new_id;
+	git_oid old_id, new_id = {{0}};
 	git_buf buf = GIT_BUF_INIT, path = GIT_BUF_INIT;
 	git_repository *repo = backend->repo;
 
 	/* Creation of symbolic references doesn't get a reflog entry */
-	if (ref->type == GIT_REF_SYMBOLIC)
+	if (ref->type == GIT_REF_SYMBOLIC && strcmp(ref->name, GIT_HEAD_FILE))
 		return 0;
 
 	error = git_reference_name_to_id(&old_id, repo, ref->name);
@@ -1450,7 +1450,8 @@ static int reflog_append(refdb_fs_backend *backend, const git_reference *ref, co
 	if (error < 0)
 		return error;
 
-	git_oid_cpy(&new_id, git_reference_target(ref));
+	if (git_reference_target(ref) != NULL)
+		git_oid_cpy(&new_id, git_reference_target(ref));
 
 	if ((error = serialize_reflog_entry(&buf, &old_id, &new_id, who, message)) < 0)
 		goto cleanup;

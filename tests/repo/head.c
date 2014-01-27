@@ -194,3 +194,26 @@ void test_repo_head__can_tell_if_an_unborn_head_is_detached(void)
 
 	cl_assert_equal_i(false, git_repository_head_detached(repo));
 }
+
+void test_repo_head__setting_head_updates_reflog(void)
+{
+	git_reflog *log;
+	const git_reflog_entry *entry1, *entry2, *entry3;
+	git_object *tag;
+
+	cl_git_pass(git_repository_set_head(repo, "refs/heads/haacked", NULL, "message1"));
+	cl_git_pass(git_repository_set_head(repo, "refs/heads/unborn", NULL, "message2"));
+	cl_git_pass(git_revparse_single(&tag, repo, "tags/test"));
+	cl_git_pass(git_repository_set_head_detached(repo, git_object_id(tag), NULL, "message3"));
+
+	cl_git_pass(git_reflog_read(&log, repo, "HEAD"));
+	entry1 = git_reflog_entry_byindex(log, 2);
+	entry2 = git_reflog_entry_byindex(log, 1);
+	entry3 = git_reflog_entry_byindex(log, 0);
+	cl_assert_equal_s("message1", git_reflog_entry_message(entry1));
+	cl_assert_equal_s("message2", git_reflog_entry_message(entry2));
+	cl_assert_equal_s("message3", git_reflog_entry_message(entry3));
+
+	git_reflog_free(log);
+	git_object_free(tag);
+}
