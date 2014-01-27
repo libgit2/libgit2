@@ -230,27 +230,20 @@ void test_network_remote_remotes__fnmatch(void)
 
 void test_network_remote_remotes__transform(void)
 {
-	char ref[1024] = {0};
+	git_buf ref = GIT_BUF_INIT;
 
-	cl_git_pass(git_refspec_transform(ref, sizeof(ref), _refspec, "refs/heads/master"));
+	cl_git_pass(git_refspec_transform(&ref, _refspec, "refs/heads/master"));
 	cl_assert_equal_s(ref, "refs/remotes/test/master");
+	git_buf_free(&ref);
 }
 
 void test_network_remote_remotes__transform_destination_to_source(void)
 {
-	char ref[1024] = {0};
+	git_buf ref = GIT_BUF_INIT;
 
-	cl_git_pass(git_refspec_rtransform(ref, sizeof(ref), _refspec, "refs/remotes/test/master"));
-	cl_assert_equal_s(ref, "refs/heads/master");
-}
-
-void test_network_remote_remotes__transform_r(void)
-{
-	git_buf buf = GIT_BUF_INIT;
-
-	cl_git_pass(git_refspec_transform_r(&buf,  _refspec, "refs/heads/master"));
-	cl_assert_equal_s(git_buf_cstr(&buf), "refs/remotes/test/master");
-	git_buf_free(&buf);
+	cl_git_pass(git_refspec_rtransform(&ref, _refspec, "refs/remotes/test/master"));
+	cl_assert_equal_s(ref.ptr, "refs/heads/master");
+	git_buf_free(&ref);
 }
 
 void test_network_remote_remotes__missing_refspecs(void)

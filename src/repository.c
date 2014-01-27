@@ -495,34 +495,18 @@ int git_repository_wrap_odb(git_repository **repo_out, git_odb *odb)
 }
 
 int git_repository_discover(
-	char *repository_path,
-	size_t size,
+	git_buf *out,
 	const char *start_path,
 	int across_fs,
 	const char *ceiling_dirs)
 {
-	git_buf path = GIT_BUF_INIT;
 	uint32_t flags = across_fs ? GIT_REPOSITORY_OPEN_CROSS_FS : 0;
-	int error;
 
-	assert(start_path && repository_path && size > 0);
+	assert(start_path);
 
-	*repository_path = '\0';
+	git_buf_sanitize(out);
 
-	if ((error = find_repo(&path, NULL, start_path, flags, ceiling_dirs)) < 0)
-		return error != GIT_ENOTFOUND ? -1 : error;
-
-	if (size < (size_t)(path.size + 1)) {
-		giterr_set(GITERR_REPOSITORY,
-			"The given buffer is too small to store the discovered path");
-		git_buf_free(&path);
-		return -1;
-	}
-
-	/* success: we discovered a repository */
-	git_buf_copy_cstr(repository_path, size, &path);
-	git_buf_free(&path);
-	return 0;
+	return find_repo(out, NULL, start_path, flags, ceiling_dirs);
 }
 
 static int load_config(
@@ -598,9 +582,9 @@ int git_repository_config__weakptr(git_config **out, git_repository *repo)
 		git_buf system_buf = GIT_BUF_INIT;
 		git_config *config;
 
-		git_config_find_global_r(&global_buf);
-		git_config_find_xdg_r(&xdg_buf);
-		git_config_find_system_r(&system_buf);
+		git_config_find_global(&global_buf);
+		git_config_find_xdg(&xdg_buf);
+		git_config_find_system(&system_buf);
 
 		/* If there is no global file, open a backend for it anyway */
 		if (git_buf_len(&global_buf) == 0)
@@ -1732,14 +1716,13 @@ cleanup:
 	return error;
 }
 
-int git_repository_message(char *buffer, size_t len, git_repository *repo)
+int git_repository_message(git_buf *out,  git_repository *repo)
 {
-	git_buf buf = GIT_BUF_INIT, path = GIT_BUF_INIT;
+	git_buf path = GIT_BUF_INIT;
 	struct stat st;
 	int error;
 
-	if (buffer != NULL)
-		*buffer = '\0';
+	git_buf_sanitize(out);
 
 	if (git_buf_joinpath(&path, repo->path_repository, GIT_MERGE_MSG_FILE) < 0)
 		return -1;
@@ -1749,16 +1732,10 @@ int git_repository_message(char *buffer, size_t len, git_repository *repo)
 			error = GIT_ENOTFOUND;
 		giterr_set(GITERR_OS, "Could not access message file");
 	}
-	else if (buffer != NULL) {
-		error = git_futils_readbuffer(&buf, git_buf_cstr(&path));
-		git_buf_copy_cstr(buffer, len, &buf);
-	}
+
+	error = git_futils_readbuffer(out, git_buf_cstr(&path));
 
 	git_buf_free(&path);
-	git_buf_free(&buf);
-
-	if (!error)
-		error = (int)st.st_size + 1; /* add 1 for NUL byte */
 
 	return error;
 }

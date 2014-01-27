@@ -214,7 +214,7 @@ int git_push_update_tips(git_push *push)
 		if (!fetch_spec)
 			continue;
 
-		if ((error = git_refspec_transform_r(&remote_ref_name, fetch_spec, status->ref)) < 0)
+		if ((error = git_refspec_transform(&remote_ref_name, fetch_spec, status->ref)) < 0)
 			goto on_error;
 
 		/* Find matching  push ref spec */

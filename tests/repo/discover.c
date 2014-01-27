@@ -25,12 +25,13 @@
 
 static void ensure_repository_discover(const char *start_path,
                                        const char *ceiling_dirs,
-                                       const char *expected_path)
+				       git_buf *expected_path)
 {
-	char found_path[GIT_PATH_MAX];
-	cl_git_pass(git_repository_discover(found_path, sizeof(found_path), start_path, 0, ceiling_dirs));
+	git_buf found_path = GIT_BUF_INIT;
+	cl_git_pass(git_repository_discover(&found_path, start_path, 0, ceiling_dirs));
 	//across_fs is always 0 as we can't automate the filesystem change tests
-	cl_assert_equal_s(found_path, expected_path);
+	cl_assert_equal_s(found_path.ptr, expected_path->ptr);
+	git_buf_free(&found_path);
 }
 
 static void write_file(const char *path, const char *content)
@@ -69,42 +70,40 @@ static void append_ceiling_dir(git_buf *ceiling_dirs, const char *path)
 
 void test_repo_discover__0(void)
 {
-   // test discover
+	// test discover
 	git_repository *repo;
-	git_buf ceiling_dirs_buf = GIT_BUF_INIT;
+	git_buf ceiling_dirs_buf = GIT_BUF_INIT, repository_path = GIT_BUF_INIT,
+		sub_repository_path = GIT_BUF_INIT, found_path = GIT_BUF_INIT;
 	const char *ceiling_dirs;
-	char repository_path[GIT_PATH_MAX];
-	char sub_repository_path[GIT_PATH_MAX];
-	char found_path[GIT_PATH_MAX];
 	const mode_t mode = 0777;
 
 	git_futils_mkdir_r(DISCOVER_FOLDER, NULL, mode);
 	append_ceiling_dir(&ceiling_dirs_buf, TEMP_REPO_FOLDER);
 	ceiling_dirs = git_buf_cstr(&ceiling_dirs_buf);
 
-	cl_assert_equal_i(GIT_ENOTFOUND, git_repository_discover(repository_path, sizeof(repository_path), DISCOVER_FOLDER, 0, ceiling_dirs));
+	cl_assert_equal_i(GIT_ENOTFOUND, git_repository_discover(&repository_path, DISCOVER_FOLDER, 0, ceiling_dirs));
 
 	cl_git_pass(git_repository_init(&repo, DISCOVER_FOLDER, 1));
-	cl_git_pass(git_repository_discover(repository_path, sizeof(repository_path), DISCOVER_FOLDER, 0, ceiling_dirs));
+	cl_git_pass(git_repository_discover(&repository_path, DISCOVER_FOLDER, 0, ceiling_dirs));
 	git_repository_free(repo);
 
 	cl_git_pass(git_repository_init(&repo, SUB_REPOSITORY_FOLDER, 0));
 	cl_git_pass(git_futils_mkdir_r(SUB_REPOSITORY_FOLDER_SUB_SUB_SUB, NULL, mode));
-	cl_git_pass(git_repository_discover(sub_repository_path, sizeof(sub_repository_path), SUB_REPOSITORY_FOLDER, 0, ceiling_dirs));
+	cl_git_pass(git_repository_discover(&sub_repository_path, SUB_REPOSITORY_FOLDER, 0, ceiling_dirs));
 
 	cl_git_pass(git_futils_mkdir_r(SUB_REPOSITORY_FOLDER_SUB_SUB_SUB, NULL, mode));
-	ensure_repository_discover(SUB_REPOSITORY_FOLDER_SUB, ceiling_dirs, sub_repository_path);
-	ensure_repository_discover(SUB_REPOSITORY_FOLDER_SUB_SUB, ceiling_dirs, sub_repository_path);
-	ensure_repository_discover(SUB_REPOSITORY_FOLDER_SUB_SUB_SUB, ceiling_dirs, sub_repository_path);
+	ensure_repository_discover(SUB_REPOSITORY_FOLDER_SUB, ceiling_dirs, &sub_repository_path);
+	ensure_repository_discover(SUB_REPOSITORY_FOLDER_SUB_SUB, ceiling_dirs, &sub_repository_path);
+	ensure_repository_discover(SUB_REPOSITORY_FOLDER_SUB_SUB_SUB, ceiling_dirs, &sub_repository_path);
 
 	cl_git_pass(git_futils_mkdir_r(REPOSITORY_ALTERNATE_FOLDER_SUB_SUB_SUB, NULL, mode));
 	write_file(REPOSITORY_ALTERNATE_FOLDER "/" DOT_GIT, "gitdir: ../" SUB_REPOSITORY_FOLDER_NAME "/" DOT_GIT);
 	write_file(REPOSITORY_ALTERNATE_FOLDER_SUB_SUB "/" DOT_GIT, "gitdir: ../../../" SUB_REPOSITORY_FOLDER_NAME "/" DOT_GIT);
 	write_file(REPOSITORY_ALTERNATE_FOLDER_SUB_SUB_SUB "/" DOT_GIT, "gitdir: ../../../../");
-	ensure_repository_discover(REPOSITORY_ALTERNATE_FOLDER, ceiling_dirs, sub_repository_path);
-	ensure_repository_discover(REPOSITORY_ALTERNATE_FOLDER_SUB, ceiling_dirs, sub_repository_path);
-	ensure_repository_discover(REPOSITORY_ALTERNATE_FOLDER_SUB_SUB, ceiling_dirs, sub_repository_path);
-	ensure_repository_discover(REPOSITORY_ALTERNATE_FOLDER_SUB_SUB_SUB, ceiling_dirs, repository_path);
+	ensure_repository_discover(REPOSITORY_ALTERNATE_FOLDER, ceiling_dirs, &sub_repository_path);
+	ensure_repository_discover(REPOSITORY_ALTERNATE_FOLDER_SUB, ceiling_dirs, &sub_repository_path);
+	ensure_repository_discover(REPOSITORY_ALTERNATE_FOLDER_SUB_SUB, ceiling_dirs, &sub_repository_path);
+	ensure_repository_discover(REPOSITORY_ALTERNATE_FOLDER_SUB_SUB_SUB, ceiling_dirs, &repository_path);
 
 	cl_git_pass(git_futils_mkdir_r(ALTERNATE_MALFORMED_FOLDER1, NULL, mode));
 	write_file(ALTERNATE_MALFORMED_FOLDER1 "/" DOT_GIT, "Anything but not gitdir:");
@@ -114,29 +113,31 @@ void test_repo_discover__0(void)
 	write_file(ALTERNATE_MALFORMED_FOLDER3 "/" DOT_GIT, "gitdir: \n\n\n");
 	cl_git_pass(git_futils_mkdir_r(ALTERNATE_NOT_FOUND_FOLDER, NULL, mode));
 	write_file(ALTERNATE_NOT_FOUND_FOLDER "/" DOT_GIT, "gitdir: a_repository_that_surely_does_not_exist");
-	cl_git_fail(git_repository_discover(found_path, sizeof(found_path), ALTERNATE_MALFORMED_FOLDER1, 0, ceiling_dirs));
-	cl_git_fail(git_repository_discover(found_path, sizeof(found_path), ALTERNATE_MALFORMED_FOLDER2, 0, ceiling_dirs));
-	cl_git_fail(git_repository_discover(found_path, sizeof(found_path), ALTERNATE_MALFORMED_FOLDER3, 0, ceiling_dirs));
-	cl_assert_equal_i(GIT_ENOTFOUND, git_repository_discover(found_path, sizeof(found_path), ALTERNATE_NOT_FOUND_FOLDER, 0, ceiling_dirs));
+	cl_git_fail(git_repository_discover(&found_path, ALTERNATE_MALFORMED_FOLDER1, 0, ceiling_dirs));
+	cl_git_fail(git_repository_discover(&found_path, ALTERNATE_MALFORMED_FOLDER2, 0, ceiling_dirs));
+	cl_git_fail(git_repository_discover(&found_path, ALTERNATE_MALFORMED_FOLDER3, 0, ceiling_dirs));
+	cl_assert_equal_i(GIT_ENOTFOUND, git_repository_discover(&found_path, ALTERNATE_NOT_FOUND_FOLDER, 0, ceiling_dirs));
 
 	append_ceiling_dir(&ceiling_dirs_buf, SUB_REPOSITORY_FOLDER);
 	ceiling_dirs = git_buf_cstr(&ceiling_dirs_buf);
 
 	//this must pass as ceiling_directories cannot predent the current
 	//working directory to be checked
-	cl_git_pass(git_repository_discover(found_path, sizeof(found_path), SUB_REPOSITORY_FOLDER, 0, ceiling_dirs));
-	cl_assert_equal_i(GIT_ENOTFOUND, git_repository_discover(found_path, sizeof(found_path), SUB_REPOSITORY_FOLDER_SUB, 0, ceiling_dirs));
-	cl_assert_equal_i(GIT_ENOTFOUND, git_repository_discover(found_path, sizeof(found_path), SUB_REPOSITORY_FOLDER_SUB_SUB, 0, ceiling_dirs));
-	cl_assert_equal_i(GIT_ENOTFOUND, git_repository_discover(found_path, sizeof(found_path), SUB_REPOSITORY_FOLDER_SUB_SUB_SUB, 0, ceiling_dirs));
+	cl_git_pass(git_repository_discover(&found_path, SUB_REPOSITORY_FOLDER, 0, ceiling_dirs));
+	cl_assert_equal_i(GIT_ENOTFOUND, git_repository_discover(&found_path, SUB_REPOSITORY_FOLDER_SUB, 0, ceiling_dirs));
+	cl_assert_equal_i(GIT_ENOTFOUND, git_repository_discover(&found_path, SUB_REPOSITORY_FOLDER_SUB_SUB, 0, ceiling_dirs));
+	cl_assert_equal_i(GIT_ENOTFOUND, git_repository_discover(&found_path, SUB_REPOSITORY_FOLDER_SUB_SUB_SUB, 0, ceiling_dirs));
 
 	//.gitfile redirection should not be affected by ceiling directories
-	ensure_repository_discover(REPOSITORY_ALTERNATE_FOLDER, ceiling_dirs, sub_repository_path);
-	ensure_repository_discover(REPOSITORY_ALTERNATE_FOLDER_SUB, ceiling_dirs, sub_repository_path);
-	ensure_repository_discover(REPOSITORY_ALTERNATE_FOLDER_SUB_SUB, ceiling_dirs, sub_repository_path);
-	ensure_repository_discover(REPOSITORY_ALTERNATE_FOLDER_SUB_SUB_SUB, ceiling_dirs, repository_path);
+	ensure_repository_discover(REPOSITORY_ALTERNATE_FOLDER, ceiling_dirs, &sub_repository_path);
+	ensure_repository_discover(REPOSITORY_ALTERNATE_FOLDER_SUB, ceiling_dirs, &sub_repository_path);
+	ensure_repository_discover(REPOSITORY_ALTERNATE_FOLDER_SUB_SUB, ceiling_dirs, &sub_repository_path);
+	ensure_repository_discover(REPOSITORY_ALTERNATE_FOLDER_SUB_SUB_SUB, ceiling_dirs, &repository_path);
 
 	cl_git_pass(git_futils_rmdir_r(TEMP_REPO_FOLDER, NULL, GIT_RMDIR_REMOVE_FILES));
 	git_repository_free(repo);
 	git_buf_free(&ceiling_dirs_buf);
+	git_buf_free(&repository_path);
+	git_buf_free(&sub_repository_path);
 }
 

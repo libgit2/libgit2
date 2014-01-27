@@ -178,60 +178,14 @@ int git_refspec_dst_matches(const git_refspec *refspec, const char *refname)
 	return (p_fnmatch(refspec->dst, refname, 0) == 0);
 }
 
-static int refspec_transform_internal(char *out, size_t outlen, const char *from, const char *to, const char *name)
-{
-	size_t baselen, namelen;
-
-	baselen = strlen(to);
-	if (outlen <= baselen) {
-		giterr_set(GITERR_INVALID, "Reference name too long");
-		return GIT_EBUFS;
-	}
-
-	/*
-	 * No '*' at the end means that it's mapped to one specific local
-	 * branch, so no actual transformation is needed.
-	 */
-	if (to[baselen - 1] != '*') {
-		memcpy(out, to, baselen + 1); /* include '\0' */
-		return 0;
-	}
-
-	/* There's a '*' at the end, so remove its length */
-	baselen--;
-
-	/* skip the prefix, -1 is for the '*' */
-	name += strlen(from) - 1;
-
-	namelen = strlen(name);
-
-	if (outlen <= baselen + namelen) {
-		giterr_set(GITERR_INVALID, "Reference name too long");
-		return GIT_EBUFS;
-	}
-
-	memcpy(out, to, baselen);
-	memcpy(out + baselen, name, namelen + 1);
-
-	return 0;
-}
-
-int git_refspec_transform(char *out, size_t outlen, const git_refspec *spec, const char *name)
-{
-	return refspec_transform_internal(out, outlen, spec->src, spec->dst, name);
-}
-
-int git_refspec_rtransform(char *out, size_t outlen, const git_refspec *spec, const char *name)
-{
-	return refspec_transform_internal(out, outlen, spec->dst, spec->src, name);
-}
-
 static int refspec_transform(
 	git_buf *out, const char *from, const char *to, const char *name)
 {
 	size_t to_len   = to   ? strlen(to)   : 0;
 	size_t from_len = from ? strlen(from) : 0;
 	size_t name_len = name ? strlen(name) : 0;
+
+	git_buf_sanitize(out);
 
 	if (git_buf_set(out, to, to_len) < 0)
 		return -1;
@@ -253,12 +207,12 @@ static int refspec_transform(
 	return git_buf_put(out, name + from_len, name_len - from_len);
 }
 
-int git_refspec_transform_r(git_buf *out, const git_refspec *spec, const char *name)
+int git_refspec_transform(git_buf *out, const git_refspec *spec, const char *name)
 {
 	return refspec_transform(out, spec->src, spec->dst, name);
 }
 
-int git_refspec_transform_l(git_buf *out, const git_refspec *spec, const char *name)
+int git_refspec_rtransform(git_buf *out, const git_refspec *spec, const char *name)
 {
 	return refspec_transform(out, spec->dst, spec->src, name);
 }

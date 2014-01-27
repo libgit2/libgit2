@@ -935,59 +935,19 @@ void git_config_iterator_free(git_config_iterator *iter)
 	iter->free(iter);
 }
 
-static int git_config__find_file_to_path(
-	char *out, size_t outlen, int (*find)(git_buf *buf))
-{
-	int error = 0;
-	git_buf path = GIT_BUF_INIT;
-
-	if ((error = find(&path)) < 0)
-		goto done;
-
-	if (path.size >= outlen) {
-		giterr_set(GITERR_NOMEMORY, "Buffer is too short for the path");
-		error = GIT_EBUFS;
-		goto done;
-	}
-
-	git_buf_copy_cstr(out, outlen, &path);
-
-done:
-	git_buf_free(&path);
-	return error;
-}
-
-int git_config_find_global_r(git_buf *path)
+int git_config_find_global(git_buf *path)
 {
 	return git_futils_find_global_file(path, GIT_CONFIG_FILENAME_GLOBAL);
 }
 
-int git_config_find_global(char *global_config_path, size_t length)
-{
-	return git_config__find_file_to_path(
-		global_config_path, length, git_config_find_global_r);
-}
-
-int git_config_find_xdg_r(git_buf *path)
+int git_config_find_xdg(git_buf *path)
 {
 	return git_futils_find_xdg_file(path, GIT_CONFIG_FILENAME_XDG);
 }
 
-int git_config_find_xdg(char *xdg_config_path, size_t length)
-{
-	return git_config__find_file_to_path(
-		xdg_config_path, length, git_config_find_xdg_r);
-}
-
-int git_config_find_system_r(git_buf *path)
+int git_config_find_system(git_buf *path)
 {
 	return git_futils_find_system_file(path, GIT_CONFIG_FILENAME_SYSTEM);
-}
-
-int git_config_find_system(char *system_config_path, size_t length)
-{
-	return git_config__find_file_to_path(
-		system_config_path, length, git_config_find_system_r);
 }
 
 int git_config__global_location(git_buf *buf)
@@ -1026,16 +986,16 @@ int git_config_open_default(git_config **out)
 	if ((error = git_config_new(&cfg)) < 0)
 		return error;
 
-	if (!git_config_find_global_r(&buf) || !git_config__global_location(&buf)) {
+	if (!git_config_find_global(&buf) || !git_config__global_location(&buf)) {
 		error = git_config_add_file_ondisk(cfg, buf.ptr,
 			GIT_CONFIG_LEVEL_GLOBAL, 0);
 	}
 
-	if (!error && !git_config_find_xdg_r(&buf))
+	if (!error && !git_config_find_xdg(&buf))
 		error = git_config_add_file_ondisk(cfg, buf.ptr,
 			GIT_CONFIG_LEVEL_XDG, 0);
 
-	if (!error && !git_config_find_system_r(&buf))
+	if (!error && !git_config_find_system(&buf))
 		error = git_config_add_file_ondisk(cfg, buf.ptr,
 			GIT_CONFIG_LEVEL_SYSTEM, 0);
 

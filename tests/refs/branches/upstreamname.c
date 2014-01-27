@@ -21,7 +21,7 @@ void test_refs_branches_upstreamname__cleanup(void)
 
 void test_refs_branches_upstreamname__can_retrieve_the_remote_tracking_reference_name_of_a_local_branch(void)
 {
-	cl_git_pass(git_branch_upstream__name(
+	cl_git_pass(git_branch_upstream_name(
 		&upstream_name, repo, "refs/heads/master"));
 
 	cl_assert_equal_s("refs/remotes/test/master", git_buf_cstr(&upstream_name));
@@ -29,14 +29,8 @@ void test_refs_branches_upstreamname__can_retrieve_the_remote_tracking_reference
 
 void test_refs_branches_upstreamname__can_retrieve_the_local_upstream_reference_name_of_a_local_branch(void)
 {
-	cl_git_pass(git_branch_upstream__name(
+	cl_git_pass(git_branch_upstream_name(
 		&upstream_name, repo, "refs/heads/track-local"));
 
 	cl_assert_equal_s("refs/heads/master", git_buf_cstr(&upstream_name));
-}
-
-void test_refs_branches_upstreamname__can_return_the_size_of_thelocal_upstream_reference_name_of_a_local_branch(void)
-{
-	cl_assert_equal_i((int)strlen("refs/heads/master") + 1,
-		git_branch_upstream_name(NULL, 0, repo, "refs/heads/track-local"));
 }
