@@ -211,7 +211,8 @@ int git_branch_move(
 	/* first update ref then config so failure won't trash config */
 
 	error = git_reference_rename(
-		out, branch, git_buf_cstr(&new_reference_name), force);
+		out, branch, git_buf_cstr(&new_reference_name), force,
+		signature, log_message);
 	if (error < 0)
 		goto done;
 

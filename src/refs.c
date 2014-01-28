@@ -558,33 +558,25 @@ int git_reference_rename(
 	git_reference **out,
 	git_reference *ref,
 	const char *new_name,
-	int force)
+	int force,
+	const git_signature *signature,
+	const char *log_message)
 {
-	git_signature *who;
+	git_signature *who = (git_signature*)signature;
 	int error;
 
 	/* Should we return an error if there is no default? */
-	if (((error = git_signature_default(&who, ref->db->repo)) < 0) &&
+	if (!who &&
+	    ((error = git_signature_default(&who, ref->db->repo)) < 0) &&
 	    ((error = git_signature_now(&who, "unknown", "unknown")) < 0)) {
 		return error;
 	}
 
-	error = reference__rename(out, ref, new_name, force, who, NULL);
+	error = reference__rename(out, ref, new_name, force, who, log_message);
 
 	git_signature_free(who);
 
 	return error;
-}
-
-int git_reference_rename_with_log(
-	git_reference **out,
-	git_reference *ref,
-	const char *new_name,
-	int force,
-	const git_signature *who,
-	const char * message)
-{
-	return reference__rename(out, ref, new_name, force, who, message);
 }
 
 int git_reference_resolve(git_reference **ref_out, const git_reference *ref)
