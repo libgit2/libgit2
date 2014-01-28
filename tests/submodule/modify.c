@@ -178,25 +178,28 @@ void test_submodule_modify__edit_and_save(void)
 	cl_git_pass(git_submodule_set_url(sm1, SM_LIBGIT2_URL));
 	old_ignore = git_submodule_set_ignore(sm1, GIT_SUBMODULE_IGNORE_UNTRACKED);
 	old_update = git_submodule_set_update(sm1, GIT_SUBMODULE_UPDATE_REBASE);
-	old_fetchrecurse = git_submodule_set_fetch_recurse_submodules(sm1, GIT_SUBMODULE_RECURSE_YES);
+	old_fetchrecurse = git_submodule_set_fetch_recurse_submodules(
+		sm1, GIT_SUBMODULE_RECURSE_YES);
 
 	cl_assert_equal_s(SM_LIBGIT2_URL, git_submodule_url(sm1));
 	cl_assert_equal_i(
-		(int)GIT_SUBMODULE_IGNORE_UNTRACKED, (int)git_submodule_ignore(sm1));
+		GIT_SUBMODULE_IGNORE_UNTRACKED, git_submodule_ignore(sm1));
 	cl_assert_equal_i(
-		(int)GIT_SUBMODULE_UPDATE_REBASE, (int)git_submodule_update(sm1));
-	cl_assert_equal_i(GIT_SUBMODULE_RECURSE_YES, git_submodule_fetch_recurse_submodules(sm1));
+		GIT_SUBMODULE_UPDATE_REBASE, git_submodule_update(sm1));
+	cl_assert_equal_i(
+		GIT_SUBMODULE_RECURSE_YES, git_submodule_fetch_recurse_submodules(sm1));
 
 	/* revert without saving (and confirm setters return old value) */
 	cl_git_pass(git_submodule_set_url(sm1, old_url));
 	cl_assert_equal_i(
-		(int)GIT_SUBMODULE_IGNORE_UNTRACKED,
-		(int)git_submodule_set_ignore(sm1, GIT_SUBMODULE_IGNORE_RESET));
+		GIT_SUBMODULE_IGNORE_UNTRACKED,
+		git_submodule_set_ignore(sm1, GIT_SUBMODULE_IGNORE_RESET));
 	cl_assert_equal_i(
-		(int)GIT_SUBMODULE_UPDATE_REBASE,
-		(int)git_submodule_set_update(sm1, GIT_SUBMODULE_UPDATE_RESET));
+		GIT_SUBMODULE_UPDATE_REBASE,
+		git_submodule_set_update(sm1, GIT_SUBMODULE_UPDATE_RESET));
 	cl_assert_equal_i(
-		GIT_SUBMODULE_RECURSE_YES, git_submodule_set_fetch_recurse_submodules(sm1, old_fetchrecurse));
+		GIT_SUBMODULE_RECURSE_YES, git_submodule_set_fetch_recurse_submodules(
+			sm1, GIT_SUBMODULE_RECURSE_RESET));
 
 	/* check that revert was successful */
 	cl_assert_equal_s(old_url, git_submodule_url(sm1));
@@ -243,19 +246,22 @@ void test_submodule_modify__edit_and_save(void)
 
 	cl_assert_equal_s(SM_LIBGIT2_URL, git_submodule_url(sm2));
 	cl_assert_equal_i(
-		(int)GIT_SUBMODULE_IGNORE_UNTRACKED, (int)git_submodule_ignore(sm2));
+		GIT_SUBMODULE_IGNORE_UNTRACKED, git_submodule_ignore(sm2));
 	cl_assert_equal_i(
-		(int)GIT_SUBMODULE_UPDATE_REBASE, (int)git_submodule_update(sm2));
-	cl_assert_equal_i(GIT_SUBMODULE_RECURSE_YES, git_submodule_fetch_recurse_submodules(sm2));
+		GIT_SUBMODULE_UPDATE_REBASE, git_submodule_update(sm2));
+	cl_assert_equal_i(
+		GIT_SUBMODULE_RECURSE_NO, git_submodule_fetch_recurse_submodules(sm2));
 
 	/* set fetchRecurseSubmodules on-demand */
 	cl_git_pass(git_submodule_reload(sm1));
 	git_submodule_set_fetch_recurse_submodules(sm1, GIT_SUBMODULE_RECURSE_ONDEMAND);
-	cl_assert_equal_i(GIT_SUBMODULE_RECURSE_ONDEMAND, git_submodule_fetch_recurse_submodules(sm1));
+	cl_assert_equal_i(
+		GIT_SUBMODULE_RECURSE_ONDEMAND, git_submodule_fetch_recurse_submodules(sm1));
 	/* call save */
 	cl_git_pass(git_submodule_save(sm1));
 	cl_git_pass(git_submodule_reload(sm1));
-	cl_assert_equal_i(GIT_SUBMODULE_RECURSE_ONDEMAND, git_submodule_fetch_recurse_submodules(sm1));
+	cl_assert_equal_i(
+		GIT_SUBMODULE_RECURSE_ONDEMAND, git_submodule_fetch_recurse_submodules(sm1));
 
 	git_repository_free(r2);
 	git__free(old_url);
