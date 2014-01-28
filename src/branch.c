@@ -111,6 +111,9 @@ int git_branch_delete(git_reference *branch)
 	if (git_reference_delete(branch) < 0)
 		goto on_error;
 
+	if (git_reflog_delete(git_reference_owner(branch), git_reference_name(branch)) < 0)
+		goto on_error;
+
 	error = 0;
 
 on_error:

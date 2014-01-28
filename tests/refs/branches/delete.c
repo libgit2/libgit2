@@ -115,3 +115,29 @@ void test_refs_branches_delete__deleting_a_branch_removes_related_configuration_
 	assert_config_entry_existence(repo, "branch.track-local.remote", false);
 	assert_config_entry_existence(repo, "branch.track-local.merge", false);
 }
+
+void test_refs_branches_delete__removes_reflog(void)
+{
+	git_reference *branch;
+	git_reflog *log;
+	git_oid oidzero = {{0}};
+	git_signature *sig;
+
+	/* Ensure the reflog has at least one entry */
+	cl_git_pass(git_signature_now(&sig, "Me", "user@example.com"));
+	cl_git_pass(git_reflog_read(&log, repo, "refs/heads/track-local"));
+	cl_git_pass(git_reflog_append(log, &oidzero, sig, "message"));
+	cl_assert(git_reflog_entrycount(log) > 0);
+	git_signature_free(sig);
+	git_reflog_free(log);
+
+	cl_git_pass(git_branch_lookup(&branch, repo, "track-local", GIT_BRANCH_LOCAL));
+	cl_git_pass(git_branch_delete(branch));
+	git_reference_free(branch);
+
+	/* Reading a nonexistant reflog creates it, but it should be empty */
+	cl_git_pass(git_reflog_read(&log, repo, "refs/heads/track-local"));
+	cl_assert_equal_i(0, git_reflog_entrycount(log));
+	git_reflog_free(log);
+}
+

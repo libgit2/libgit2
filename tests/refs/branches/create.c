@@ -87,23 +87,3 @@ void test_refs_branches_create__creation_creates_new_reflog(void)
 	entry = git_reflog_entry_byindex(log, 0);
 	cl_assert_equal_s("create!", git_reflog_entry_message(entry));
 }
-
-void test_refs_branches_create__recreation_updates_existing_reflog(void)
-{
-	git_reflog *log;
-	const git_reflog_entry *entry1, *entry2;
-
-	retrieve_known_commit(&target, repo);
-
-	cl_git_pass(git_branch_create(&branch, repo, NEW_BRANCH_NAME, target, false, NULL, "Create 1"));
-	cl_git_pass(git_branch_delete(branch));
-	cl_git_pass(git_branch_create(&branch, repo, NEW_BRANCH_NAME, target, false, NULL, "Create 2"));
-	cl_git_pass(git_reflog_read(&log, repo, "refs/heads/" NEW_BRANCH_NAME));
-
-	cl_assert_equal_i(2, git_reflog_entrycount(log));
-	entry1 = git_reflog_entry_byindex(log, 1);
-	entry2 = git_reflog_entry_byindex(log, 0);
-	cl_assert_equal_s("Create 1", git_reflog_entry_message(entry1));
-	cl_assert_equal_s("Create 2", git_reflog_entry_message(entry2));
-}
-
