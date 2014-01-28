@@ -560,7 +560,6 @@ void test_status_renames__zero_byte_file_does_not_fail(void)
 {
 	git_status_list *statuslist;
 	git_status_options opts = GIT_STATUS_OPTIONS_INIT;
-	status_entry_counts counts = {0};
 
 	struct status_entry expected[] = {
 		{ GIT_STATUS_WT_DELETED, "ikeepsix.txt", "ikeepsix.txt" },

@@ -21,27 +21,22 @@ static int retrieve_branch_reference(
 	const char *branch_name,
 	int is_remote)
 {
-	git_reference *branch;
-	int error = -1;
+	git_reference *branch = NULL;
+	int error = 0;
 	char *prefix;
 	git_buf ref_name = GIT_BUF_INIT;
 
-	*branch_reference_out = NULL;
-
 	prefix = is_remote ? GIT_REFS_REMOTES_DIR : GIT_REFS_HEADS_DIR;
 
-	if (git_buf_joinpath(&ref_name, prefix, branch_name) < 0)
-		goto cleanup;
+	if ((error = git_buf_joinpath(&ref_name, prefix, branch_name)) < 0)
+		/* OOM */;
+	else if ((error = git_reference_lookup(&branch, repo, ref_name.ptr)) < 0)
+		giterr_set(
+			GITERR_REFERENCE, "Cannot locate %s branch '%s'",
+			is_remote ? "remote-tracking" : "local", branch_name);
 
-	if ((error = git_reference_lookup(&branch, repo, ref_name.ptr)) < 0) {
-		giterr_set(GITERR_REFERENCE,
-			"Cannot locate %s branch '%s'.", is_remote ? "remote-tracking" : "local", branch_name);
-		goto cleanup;
-	}
+	*branch_reference_out = branch; /* will be NULL on error */
 
-	*branch_reference_out = branch;
-
-cleanup:
 	git_buf_free(&ref_name);
 	return error;
 }
@@ -63,21 +58,19 @@ int git_branch_create(
 {
 	git_reference *branch = NULL;
 	git_buf canonical_branch_name = GIT_BUF_INIT;
-	int error = -1;
+	int error = 0;
 
 	assert(branch_name && commit && ref_out);
 	assert(git_object_owner((const git_object *)commit) == repository);
 
-	if (git_buf_joinpath(&canonical_branch_name, GIT_REFS_HEADS_DIR, branch_name) < 0)
-		goto cleanup;
+	if (!(error = git_buf_joinpath(
+			&canonical_branch_name, GIT_REFS_HEADS_DIR, branch_name)))
+		error = git_reference_create(
+			&branch, repository, git_buf_cstr(&canonical_branch_name),
+			git_commit_id(commit), force, NULL, NULL);
 
-	error = git_reference_create(&branch, repository,
-		git_buf_cstr(&canonical_branch_name), git_commit_id(commit), force, NULL, NULL);
+	*ref_out = branch;
 
-	if (!error)
-		*ref_out = branch;
-
-cleanup:
 	git_buf_free(&canonical_branch_name);
 	return error;
 }
