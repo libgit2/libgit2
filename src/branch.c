@@ -190,7 +190,9 @@ int git_branch_move(
 	git_reference **out,
 	git_reference *branch,
 	const char *new_branch_name,
-	int force)
+	int force,
+	const git_signature *signature,
+	const char *log_message)
 {
 	git_buf new_reference_name = GIT_BUF_INIT,
 		old_config_section = GIT_BUF_INIT,

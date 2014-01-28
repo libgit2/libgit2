@@ -121,13 +121,19 @@ GIT_EXTERN(void) git_branch_iterator_free(git_branch_iterator *iter);
  *
  * @param force Overwrite existing branch.
  *
+ * @param signature The identity that will used to populate the reflog entry
+ *
+ * @param log_message The one line long message to be appended to the reflog
+ *
  * @return 0 on success, GIT_EINVALIDSPEC or an error code.
  */
 GIT_EXTERN(int) git_branch_move(
 	git_reference **out,
 	git_reference *branch,
 	const char *new_branch_name,
-	int force);
+	int force,
+	const git_signature *signature,
+	const char *log_message);
 
 /**
  * Lookup a branch by its name in a repository.
