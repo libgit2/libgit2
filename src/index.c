@@ -90,6 +90,7 @@ struct entry_long {
 
 struct entry_srch_key {
 	const char *path;
+	int path_len;
 	int stage;
 };
 
@@ -109,14 +110,24 @@ static int index_srch(const void *key, const void *array_member)
 {
 	const struct entry_srch_key *srch_key = key;
 	const git_index_entry *entry = array_member;
-	int ret;
+	int cmp, len1, len2, len;
 
-	ret = strcmp(srch_key->path, entry->path);
+	len1 = srch_key->path_len;
+	len2 = strlen(entry->path);
+	len = len1 < len2 ? len1 : len2;
 
-	if (ret == 0 && srch_key->stage != GIT_INDEX_STAGE_ANY)
-		ret = srch_key->stage - GIT_IDXENTRY_STAGE(entry);
+	cmp = memcmp(srch_key->path, entry->path, len);
+	if (cmp)
+		return cmp;
+	if (len1 < len2)
+		return -1;
+	if (len1 > len2)
+		return 1;
 
-	return ret;
+	if (srch_key->stage != GIT_INDEX_STAGE_ANY)
+		return srch_key->stage - GIT_IDXENTRY_STAGE(entry);
+
+	return 0;
 }
 
 static int index_isrch(const void *key, const void *array_member)
@@ -579,7 +590,7 @@ const git_index_entry *git_index_get_bypath(
 
 	git_vector_sort(&index->entries);
 
-	if (git_index__find(&pos, index, path, stage) < 0) {
+	if (git_index__find(&pos, index, path, strlen(path), stage) < 0) {
 		giterr_set(GITERR_INDEX, "Index does not contain %s", path);
 		return NULL;
 	}
@@ -701,6 +712,106 @@ static git_index_entry *index_entry_dup(const git_index_entry *source_entry)
 	return entry;
 }
 
+#if 0
+static int has_file_name(git_index *index,
+	 const git_index_entry *entry, int pos, int ok_to_replace)
+{
+	int retval = 0;
+	int len = ce_namelen(ce);
+	int stage = ce_stage(ce);
+	const char *name = ce->name;
+
+	while (pos < istate->cache_nr) {
+		struct cache_entry *p = istate->cache[pos++];
+
+		if (len >= ce_namelen(p))
+			break;
+		if (memcmp(name, p->name, len))
+			break;
+		if (ce_stage(p) != stage)
+			continue;
+		if (p->name[len] != '/')
+			continue;
+		if (p->ce_flags & CE_REMOVE)
+			continue;
+		retval = -1;
+		if (!ok_to_replace)
+			break;
+		remove_index_entry_at(istate, --pos);
+	}
+	return retval;
+}
+
+/*
+ * Do we have another file with a pathname that is a proper
+ * subset of the name we're trying to add?
+ */
+static int has_dir_name(git_index *index,
+		const git_index_entry *entry, int ok_to_replace)
+{
+	int retval = 0;
+	int stage = ce_stage(ce);
+	const char *name = ce->name;
+	const char *slash = name + ce_namelen(ce);
+
+	for (;;) {
+		int len;
+
+		for (;;) {
+			if (*--slash == '/')
+				break;
+			if (slash <= ce->name)
+				return retval;
+		}
+		len = slash - name;
+
+		pos = index_name_stage_pos(istate, name, len, stage);
+		if (pos >= 0) {
+			/*
+			 * Found one, but not so fast.  This could
+			 * be a marker that says "I was here, but
+			 * I am being removed".  Such an entry is
+			 * not a part of the resulting tree, and
+			 * it is Ok to have a directory at the same
+			 * path.
+			 */
+			if (!(istate->cache[pos]->ce_flags & CE_REMOVE)) {
+				retval = -1;
+				if (!ok_to_replace)
+					break;
+				remove_index_entry_at(istate, pos);
+				continue;
+			}
+		}
+		else
+			pos = -pos-1;
+
+		/*
+		 * Trivial optimization: if we find an entry that
+		 * already matches the sub-directory, then we know
+		 * we're ok, and we can exit.
+		 */
+		while (pos < istate->cache_nr) {
+			struct cache_entry *p = istate->cache[pos];
+			if ((ce_namelen(p) <= len) ||
+			    (p->name[len] != '/') ||
+			    memcmp(p->name, name, len))
+				break; /* not our subdirectory */
+			if (ce_stage(p) == stage && !(p->ce_flags & CE_REMOVE))
+				/*
+				 * p is at the same stage as our entry, and
+				 * is a subdirectory of what we are looking
+				 * at, so we cannot have conflicts at our
+				 * level or anything shorter.
+				 */
+				return retval;
+			pos++;
+		}
+	}
+	return retval;
+}
+#endif
+
 static int index_insert(git_index *index, git_index_entry *entry, int replace)
 {
 	size_t path_length, position;
@@ -720,9 +831,9 @@ static int index_insert(git_index *index, git_index_entry *entry, int replace)
 
 	/* look if an entry with this path already exists */
 	if (!git_index__find(
-			&position, index, entry->path, GIT_IDXENTRY_STAGE(entry))) {
+			&position, index, entry->path, strlen(entry->path),
+			GIT_IDXENTRY_STAGE(entry))) {
 		existing = (git_index_entry **)&index->entries.contents[position];
-
 		/* update filemode to existing values if stat is not trusted */
 		entry->mode = index_merge_mode(index, *existing, entry->mode);
 	}
@@ -832,7 +943,7 @@ int git_index_remove(git_index *index, const char *path, int stage)
 
 	git_vector_sort(&index->entries);
 
-	if (git_index__find(&position, index, path, stage) < 0) {
+	if (git_index__find(&position, index, path, strlen(path), stage) < 0) {
 		giterr_set(GITERR_INDEX, "Index does not contain %s at stage %d",
 			path, stage);
 		return GIT_ENOTFOUND;
@@ -889,13 +1000,14 @@ int git_index_remove_directory(git_index *index, const char *dir, int stage)
 }
 
 int git_index__find(
-	size_t *at_pos, git_index *index, const char *path, int stage)
+	size_t *at_pos, git_index *index, const char *path, int path_len, int stage)
 {
 	struct entry_srch_key srch_key;
 
 	assert(path);
 
 	srch_key.path = path;
+	srch_key.path_len = path_len;
 	srch_key.stage = stage;
 
 	return git_vector_bsearch2(
@@ -937,6 +1049,7 @@ size_t git_index__prefix_position(git_index *index, const char *path)
 	size_t pos;
 
 	srch_key.path = path;
+	srch_key.path_len = strlen(path);
 	srch_key.stage = 0;
 
 	git_vector_sort(&index->entries);
@@ -1991,6 +2104,7 @@ static int read_tree_cb(
 		struct entry_srch_key skey;
 
 		skey.path = path.ptr;
+		skey.path_len = strlen(path.ptr);
 		skey.stage = 0;
 
 		if (!git_vector_bsearch2(
@@ -2109,7 +2223,7 @@ int git_index_add_all(
 		/* skip ignored items that are not already in the index */
 		if ((flags & GIT_INDEX_ADD_FORCE) == 0 &&
 			git_iterator_current_is_ignored(wditer) &&
-			git_index__find(&existing, index, wd->path, 0) < 0)
+			git_index__find(&existing, index, wd->path, strlen(wd->path), 0) < 0)
 			continue;
 
 		/* issue notification callback if requested */
