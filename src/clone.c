@@ -246,7 +246,7 @@ static int update_head_to_remote(
 			signature, reflog_message);
 	} else {
 		error = git_repository_set_head_detached(
-			repo, &head_info.remote_head_oid, NULL, reflog_message);
+			repo, &head_info.remote_head_oid, signature, reflog_message);
 	}
 
 cleanup:

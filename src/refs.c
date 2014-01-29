@@ -574,7 +574,8 @@ int git_reference_rename(
 
 	error = reference__rename(out, ref, new_name, force, who, log_message);
 
-	git_signature_free(who);
+	if (!signature)
+		git_signature_free(who);
 
 	return error;
 }

@@ -78,22 +78,30 @@ void test_refs_branches_create__creation_creates_new_reflog(void)
 {
 	git_reflog *log;
 	const git_reflog_entry *entry;
+	git_signature *sig;
+
+	cl_git_pass(git_signature_now(&sig, "me", "foo@example.com"));
 
 	retrieve_known_commit(&target, repo);
-	cl_git_pass(git_branch_create(&branch, repo, NEW_BRANCH_NAME, target, false, NULL, "create!"));
+	cl_git_pass(git_branch_create(&branch, repo, NEW_BRANCH_NAME, target, false, sig, "create!"));
 	cl_git_pass(git_reflog_read(&log, repo, "refs/heads/" NEW_BRANCH_NAME));
 
 	cl_assert_equal_i(1, git_reflog_entrycount(log));
 	entry = git_reflog_entry_byindex(log, 0);
 	cl_assert_equal_s("create!", git_reflog_entry_message(entry));
+	cl_assert_equal_s("foo@example.com", git_reflog_entry_committer(entry)->email);
 
 	git_reflog_free(log);
+	git_signature_free(sig);
 }
 
 void test_refs_branches_create__default_reflog_message(void)
 {
 	git_reflog *log;
 	const git_reflog_entry *entry;
+	git_signature *sig;
+
+	cl_git_pass(git_signature_default(&sig, repo));
 
 	retrieve_known_commit(&target, repo);
 	cl_git_pass(git_branch_create(&branch, repo, NEW_BRANCH_NAME, target, false, NULL, NULL));
@@ -101,6 +109,8 @@ void test_refs_branches_create__default_reflog_message(void)
 
 	entry = git_reflog_entry_byindex(log, 0);
 	cl_assert_equal_s("Branch: created", git_reflog_entry_message(entry));
+	cl_assert_equal_s(sig->email, git_reflog_entry_committer(entry)->email);
 
 	git_reflog_free(log);
+	git_signature_free(sig);
 }

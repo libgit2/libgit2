@@ -200,11 +200,14 @@ void test_repo_head__setting_head_updates_reflog(void)
 	git_reflog *log;
 	const git_reflog_entry *entry1, *entry2, *entry3;
 	git_object *tag;
+	git_signature *sig;
 
-	cl_git_pass(git_repository_set_head(repo, "refs/heads/haacked", NULL, "message1"));
-	cl_git_pass(git_repository_set_head(repo, "refs/heads/unborn", NULL, "message2"));
+	cl_git_pass(git_signature_now(&sig, "me", "foo@example.com"));
+
+	cl_git_pass(git_repository_set_head(repo, "refs/heads/haacked", sig, "message1"));
+	cl_git_pass(git_repository_set_head(repo, "refs/heads/unborn", sig, "message2"));
 	cl_git_pass(git_revparse_single(&tag, repo, "tags/test"));
-	cl_git_pass(git_repository_set_head_detached(repo, git_object_id(tag), NULL, "message3"));
+	cl_git_pass(git_repository_set_head_detached(repo, git_object_id(tag), sig, "message3"));
 
 	cl_git_pass(git_reflog_read(&log, repo, "HEAD"));
 	entry1 = git_reflog_entry_byindex(log, 2);
@@ -213,9 +216,13 @@ void test_repo_head__setting_head_updates_reflog(void)
 	cl_assert_equal_s("message1", git_reflog_entry_message(entry1));
 	cl_assert_equal_s("message2", git_reflog_entry_message(entry2));
 	cl_assert_equal_s("message3", git_reflog_entry_message(entry3));
+	cl_assert_equal_s("foo@example.com", git_reflog_entry_committer(entry1)->email);
+	cl_assert_equal_s("foo@example.com", git_reflog_entry_committer(entry2)->email);
+	cl_assert_equal_s("foo@example.com", git_reflog_entry_committer(entry3)->email);
 
 	git_reflog_free(log);
 	git_object_free(tag);
+	git_signature_free(sig);
 }
 
 void test_repo_head__setting_creates_head_ref(void)

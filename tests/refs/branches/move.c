@@ -193,17 +193,22 @@ void test_refs_branches_move__updates_the_reflog(void)
 	git_reference *new_branch;
 	git_reflog *log;
 	const git_reflog_entry *entry;
+	git_signature *sig;
+
+	cl_git_pass(git_signature_now(&sig, "me", "foo@example.com"));
 
 	cl_git_pass(git_reference_lookup(&branch, repo, "refs/heads/master"));
-	cl_git_pass(git_branch_move(&new_branch, branch, "master2", 0, NULL, "message"));
+	cl_git_pass(git_branch_move(&new_branch, branch, "master2", 0, sig, "message"));
 
 	cl_git_pass(git_reflog_read(&log, repo, git_reference_name(new_branch)));
 	entry = git_reflog_entry_byindex(log, 0);
 	cl_assert_equal_s("message", git_reflog_entry_message(entry));
+	cl_assert_equal_s("foo@example.com", git_reflog_entry_committer(entry)->email);
 
 	git_reference_free(branch);
 	git_reference_free(new_branch);
 	git_reflog_free(log);
+	git_signature_free(sig);
 }
 
 void test_refs_branches_move__default_reflog_message(void)
@@ -212,6 +217,9 @@ void test_refs_branches_move__default_reflog_message(void)
 	git_reference *new_branch;
 	git_reflog *log;
 	const git_reflog_entry *entry;
+	git_signature *sig;
+
+	cl_git_pass(git_signature_default(&sig, repo));
 
 	cl_git_pass(git_reference_lookup(&branch, repo, "refs/heads/master"));
 	cl_git_pass(git_branch_move(&new_branch, branch, "master2", 0, NULL, NULL));
@@ -220,9 +228,10 @@ void test_refs_branches_move__default_reflog_message(void)
 	entry = git_reflog_entry_byindex(log, 0);
 	cl_assert_equal_s("Branch: renamed refs/heads/master to refs/heads/master2",
 			git_reflog_entry_message(entry));
+	cl_assert_equal_s(sig->email, git_reflog_entry_committer(entry)->email);
 
 	git_reference_free(branch);
 	git_reference_free(new_branch);
 	git_reflog_free(log);
-
+	git_signature_free(sig);
 }
