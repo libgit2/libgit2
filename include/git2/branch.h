@@ -45,7 +45,9 @@ GIT_BEGIN_DECL
  *
  * @param signature The identity that will used to populate the reflog entry
  *
- * @param log_message The one line long message to be appended to the reflog
+ * @param log_message The one line long message to be appended to the reflog.
+ * If NULL, the default is "Branch: created"; if you want something more
+ * useful, provide a message.
  *
  * @return 0, GIT_EINVALIDSPEC or an error code.
  * A proper reference is written in the refs/heads namespace
