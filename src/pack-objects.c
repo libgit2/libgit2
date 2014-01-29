@@ -348,7 +348,7 @@ static int write_object(
 		}
 
 		if (written < 0) {
-			error = written;
+			error = (int)written;
 			goto done;
 		}
 

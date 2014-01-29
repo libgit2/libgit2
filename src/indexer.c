@@ -659,7 +659,7 @@ static int inject_object(git_indexer *idx, git_oid *id)
 	hdr_len = git_packfile__object_header(hdr, len, git_odb_object_type(obj));
 	git_filebuf_write(&idx->pack_file, hdr, hdr_len);
 	idx->pack->mwf.size += hdr_len;
-	entry->crc = crc32(entry->crc, hdr, hdr_len);
+	entry->crc = crc32(entry->crc, hdr, (uInt)hdr_len);
 
 	if ((error = git_zstream_deflatebuf(&buf, data, len)) < 0)
 		goto cleanup;
