@@ -712,32 +712,29 @@ static git_index_entry *index_entry_dup(const git_index_entry *source_entry)
 	return entry;
 }
 
-#if 0
 static int has_file_name(git_index *index,
-	 const git_index_entry *entry, int pos, int ok_to_replace)
+	 const git_index_entry *entry, size_t pos, int ok_to_replace)
 {
 	int retval = 0;
-	int len = ce_namelen(ce);
-	int stage = ce_stage(ce);
-	const char *name = ce->name;
+	size_t len = strlen(entry->path);
+	int stage = GIT_IDXENTRY_STAGE(entry);
+	const char *name = entry->path;
 
-	while (pos < istate->cache_nr) {
-		struct cache_entry *p = istate->cache[pos++];
+	while (pos < index->entries.length) {
+		git_index_entry *p = index->entries.contents[pos++];
 
-		if (len >= ce_namelen(p))
+		if (len >= strlen(p->path))
 			break;
-		if (memcmp(name, p->name, len))
+		if (memcmp(name, p->path, len))
 			break;
-		if (ce_stage(p) != stage)
+		if (GIT_IDXENTRY_STAGE(p) != stage)
 			continue;
-		if (p->name[len] != '/')
-			continue;
-		if (p->ce_flags & CE_REMOVE)
+		if (p->path[len] != '/')
 			continue;
 		retval = -1;
 		if (!ok_to_replace)
 			break;
-		remove_index_entry_at(istate, --pos);
+		git_vector_remove(&index->entries, --pos);
 	}
 	return retval;
 }
@@ -750,67 +747,65 @@ static int has_dir_name(git_index *index,
 		const git_index_entry *entry, int ok_to_replace)
 {
 	int retval = 0;
-	int stage = ce_stage(ce);
-	const char *name = ce->name;
-	const char *slash = name + ce_namelen(ce);
+	int stage = GIT_IDXENTRY_STAGE(entry);
+	const char *name = entry->path;
+	const char *slash = name + strlen(name);
 
 	for (;;) {
-		int len;
+		size_t len, position;
 
 		for (;;) {
 			if (*--slash == '/')
 				break;
-			if (slash <= ce->name)
+			if (slash <= entry->path)
 				return retval;
 		}
 		len = slash - name;
 
-		pos = index_name_stage_pos(istate, name, len, stage);
-		if (pos >= 0) {
-			/*
-			 * Found one, but not so fast.  This could
-			 * be a marker that says "I was here, but
-			 * I am being removed".  Such an entry is
-			 * not a part of the resulting tree, and
-			 * it is Ok to have a directory at the same
-			 * path.
-			 */
-			if (!(istate->cache[pos]->ce_flags & CE_REMOVE)) {
-				retval = -1;
-				if (!ok_to_replace)
-					break;
-				remove_index_entry_at(istate, pos);
-				continue;
-			}
+		if (git_index__find(&position, index, name, len, stage) == 0) {
+			retval = -1;
+			if (!ok_to_replace)
+				break;
+
+			git_vector_remove(&index->entries, position);
+			continue;
 		}
-		else
-			pos = -pos-1;
 
 		/*
 		 * Trivial optimization: if we find an entry that
 		 * already matches the sub-directory, then we know
 		 * we're ok, and we can exit.
 		 */
-		while (pos < istate->cache_nr) {
-			struct cache_entry *p = istate->cache[pos];
-			if ((ce_namelen(p) <= len) ||
-			    (p->name[len] != '/') ||
-			    memcmp(p->name, name, len))
+		while (position < index->entries.length) {
+			git_index_entry *p = index->entries.contents[position];
+
+			if ((strlen(p->path) <= len) ||
+			    (p->path[len] != '/') ||
+			    memcmp(p->path, name, len))
 				break; /* not our subdirectory */
-			if (ce_stage(p) == stage && !(p->ce_flags & CE_REMOVE))
-				/*
-				 * p is at the same stage as our entry, and
-				 * is a subdirectory of what we are looking
-				 * at, so we cannot have conflicts at our
-				 * level or anything shorter.
-				 */
+
+			if (GIT_IDXENTRY_STAGE(p) == stage)
 				return retval;
-			pos++;
+
+			position++;
 		}
 	}
 	return retval;
 }
-#endif
+
+static int check_file_directory_conflict(git_index *index,
+		git_index_entry *entry, size_t pos, int ok_to_replace)
+{
+	int retval = has_file_name(index, entry, pos, ok_to_replace);
+	retval = retval + has_dir_name(index, entry, ok_to_replace);
+
+	if (retval) {
+		giterr_set(GITERR_INDEX, "'%s' appears as both a file an a directory", entry->path);
+		return -1;
+	}
+
+	return 0;
+}
 
 static int index_insert(git_index *index, git_index_entry *entry, int replace)
 {
@@ -837,6 +832,9 @@ static int index_insert(git_index *index, git_index_entry *entry, int replace)
 		/* update filemode to existing values if stat is not trusted */
 		entry->mode = index_merge_mode(index, *existing, entry->mode);
 	}
+
+	if (check_file_directory_conflict(index, entry, position, replace) < 0)
+		return -1;
 
 	/* if replacing is not requested or no existing entry exists, just
 	 * insert entry at the end; the index is no longer sorted
