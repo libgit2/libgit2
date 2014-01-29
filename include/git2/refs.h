@@ -182,7 +182,8 @@ GIT_EXTERN(int) git_reference_create(git_reference **out, git_repository *repo, 
  * @param signature The identity that will used to populate the reflog entry
  * @param log_message The one line long message to be appended to the reflog
  * @param old_id The old value which the reference should have
- * @return 0 on success, GIT_EEXISTS, GIT_EINVALIDSPEC or an error code
+ * @return 0 on success, GIT_EMODIFIED if the value of the reference
+ * has changed, GIT_EEXISTS, GIT_EINVALIDSPEC or an error code
  */
 GIT_EXTERN(int) git_reference_create_matching(git_reference **out, git_repository *repo, const char *name, const git_oid *id, int force, const git_signature *signature, const char *log_message, const git_oid *old_id);
 
@@ -308,7 +309,8 @@ GIT_EXTERN(int) git_reference_symbolic_set_target(
  * @param id The new target OID for the reference
  * @param signature The identity that will used to populate the reflog entry
  * @param log_message The one line long message to be appended to the reflog
- * @return 0 or an error code
+ * @return 0 on success, GIT_EMODIFIED if the value of the reference
+ * has changed, or an error code
  */
 GIT_EXTERN(int) git_reference_set_target(
 	git_reference **out,

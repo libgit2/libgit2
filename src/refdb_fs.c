@@ -941,7 +941,7 @@ static int refdb_fs_backend__write(
 	refdb_fs_backend *backend = (refdb_fs_backend *)_backend;
 	git_filebuf file = GIT_FILEBUF_INIT;
 	git_reference *old_ref;
-	int error;
+	int error = 0;
 
 	assert(backend);
 
@@ -961,12 +961,14 @@ static int refdb_fs_backend__write(
 
 		if (old_ref->type == GIT_REF_SYMBOLIC) {
 			giterr_set(GITERR_REFERENCE, "cannot compare id to symbolic reference target");
+			error = -1;
 			goto on_error;
 		}
 
 		/* Finally we can compare the ids */
 		if (git_oid_cmp(old_id, &old_ref->target.oid)) {
 			giterr_set(GITERR_REFERENCE, "old reference value does not match");
+			error = GIT_EMODIFIED;
 			goto on_error;
 		}
 	}
@@ -982,7 +984,7 @@ static int refdb_fs_backend__write(
 on_error:
         git_filebuf_cleanup(&file);
         git_reference_free(old_ref);
-        return -1;
+        return error;
 }
 
 static int refdb_fs_backend__delete(
