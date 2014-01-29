@@ -134,14 +134,25 @@ static int index_isrch(const void *key, const void *array_member)
 {
 	const struct entry_srch_key *srch_key = key;
 	const git_index_entry *entry = array_member;
-	int ret;
+	int cmp, len1, len2, len;
 
-	ret = strcasecmp(srch_key->path, entry->path);
+	len1 = srch_key->path_len;
+	len2 = strlen(entry->path);
+	len = len1 < len2 ? len1 : len2;
 
-	if (ret == 0 && srch_key->stage != GIT_INDEX_STAGE_ANY)
-		ret = srch_key->stage - GIT_IDXENTRY_STAGE(entry);
+	cmp = strncasecmp(srch_key->path, entry->path, len);
 
-	return ret;
+	if (cmp)
+		return cmp;
+	if (len1 < len2)
+		return -1;
+	if (len1 > len2)
+		return 1;
+
+	if (srch_key->stage != GIT_INDEX_STAGE_ANY)
+		return srch_key->stage - GIT_IDXENTRY_STAGE(entry);
+
+	return 0;
 }
 
 static int index_cmp_path(const void *a, const void *b)
