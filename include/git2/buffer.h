@@ -105,6 +105,17 @@ GIT_EXTERN(int) git_buf_grow(git_buf *buffer, size_t target_size);
 GIT_EXTERN(int) git_buf_set(
 	git_buf *buffer, const void *data, size_t datalen);
 
+/**
+ * Append buffer to a copy of some raw data.
+ *
+ * @param buffer The buffer to set
+ * @param data The data to copy into the buffer
+ * @param datalen The length of the data to copy into the buffer
+ * @return 0 on success, -1 on allocation failure
+ */
+GIT_EXTERN(int) git_buf_put(
+	git_buf *buffer, const void *data, size_t datalen);
+
 GIT_END_DECL
 
 /** @} */
