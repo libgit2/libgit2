@@ -26,7 +26,7 @@ IF(ICONV_FOUND)
 	GET_FILENAME_COMPONENT(iconv_path ${iconv_lib} PATH)
 	GET_FILENAME_COMPONENT(iconv_name ${iconv_lib} NAME_WE)
 	STRING(REGEX REPLACE "^lib" "" iconv_name ${iconv_name})
-	SET(ICONV_LIBRARIES -L${iconv_path} -l${iconv_name})
+	SET(ICONV_LIBRARIES "-L${iconv_path} -l${iconv_name}")
 
 	IF(NOT ICONV_FIND_QUIETLY)
 		MESSAGE(STATUS "Found Iconv: ${ICONV_LIBRARIES}")
