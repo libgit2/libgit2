@@ -2398,12 +2398,21 @@ int git_merge__indexes(git_repository *repo, git_index *index_new)
 		goto done;
 	}
 
-	/* Update the new index */
+	/* Remove removed items from the index */
 	git_vector_foreach(&paths, i, path) {
-		if ((e = git_index_get_bypath(index_new, path, 0)) != NULL)
-			error = git_index_add(index_repo, e);
-		else
-			error = git_index_remove(index_repo, path, 0);
+		if ((e = git_index_get_bypath(index_new, path, 0)) == NULL) {
+			if ((error = git_index_remove(index_repo, path, 0)) < 0 &&
+				error != GIT_ENOTFOUND)
+				goto done;
+		}
+	}
+
+	/* Add updated items to the index */
+	git_vector_foreach(&paths, i, path) {
+		if ((e = git_index_get_bypath(index_new, path, 0)) != NULL) {
+			if ((error = git_index_add(index_repo, e)) < 0)
+				goto done;
+		}
 	}
 
 	/* Add conflicts */
