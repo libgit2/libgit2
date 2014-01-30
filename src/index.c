@@ -804,7 +804,7 @@ static int has_dir_name(git_index *index,
 	return retval;
 }
 
-static int check_file_directory_conflict(git_index *index,
+static int check_file_directory_collision(git_index *index,
 		git_index_entry *entry, size_t pos, int ok_to_replace)
 {
 	int retval = has_file_name(index, entry, pos, ok_to_replace);
@@ -844,7 +844,7 @@ static int index_insert(git_index *index, git_index_entry *entry, int replace)
 		entry->mode = index_merge_mode(index, *existing, entry->mode);
 	}
 
-	if (check_file_directory_conflict(index, entry, position, replace) < 0)
+	if (check_file_directory_collision(index, entry, position, replace) < 0)
 		return -1;
 
 	/* if replacing is not requested or no existing entry exists, just
