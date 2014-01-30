@@ -134,7 +134,7 @@ int git_zstream_deflatebuf(git_buf *out, const void *in, size_t in_len)
 	while (!git_zstream_done(&zs)) {
 		size_t step = git_zstream_suggest_output_len(&zs), written;
 
-		if ((error = git_buf_grow(out, out->asize + step + 1)) < 0)
+		if ((error = git_buf_grow(out, out->asize + step)) < 0)
 			goto done;
 
 		written = out->asize - out->size;
@@ -144,8 +144,11 @@ int git_zstream_deflatebuf(git_buf *out, const void *in, size_t in_len)
 			goto done;
 
 		out->size += written;
-		out->ptr[out->size] = '\0';
 	}
+
+	/* NULL terminate for consistency if possible */
+	if (out->size < out->asize)
+		out->ptr[out->size] = '\0';
 
 done:
 	git_zstream_free(&zs);
