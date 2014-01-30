@@ -108,7 +108,7 @@ GIT_EXTERN(int) git_revwalk_push(git_revwalk *walk, const git_oid *id);
  * pattern will be pushed to the revision walker.
  *
  * A leading 'refs/' is implied if not present as well as a trailing
- * '/ *' if the glob lacks '?', '*' or '['.
+ * '/\*' if the glob lacks '?', '\*' or '['.
  *
  * @param walk the walker being used for the traversal
  * @param glob the glob pattern references should match
@@ -147,7 +147,7 @@ GIT_EXTERN(int) git_revwalk_hide(git_revwalk *walk, const git_oid *commit_id);
  * revision walk.
  *
  * A leading 'refs/' is implied if not present as well as a trailing
- * '/ *' if the glob lacks '?', '*' or '['.
+ * '/\*' if the glob lacks '?', '\*' or '['.
  *
  * @param walk the walker being used for the traversal
  * @param glob the glob pattern references should match
