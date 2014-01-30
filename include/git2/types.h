@@ -323,6 +323,25 @@ typedef enum {
 	GIT_SUBMODULE_IGNORE_DEFAULT   = 0
 } git_submodule_ignore_t;
 
+/**
+ * Options for submodule recurse.
+ *
+ * Represent the value of `submodule.$name.fetchRecurseSubmodules`
+ *
+ * * GIT_SUBMODULE_RECURSE_RESET - reset to the on-disk value
+ * * GIT_SUBMODULE_RECURSE_NO    - do no recurse into submodules
+ * * GIT_SUBMODULE_RECURSE_YES   - recurse into submodules
+ * * GIT_SUBMODULE_RECURSE_ONDEMAND - recurse into submodules only when
+ *                                    commit not already in local clone
+ */
+typedef enum {
+	GIT_SUBMODULE_RECURSE_RESET = -1,
+
+	GIT_SUBMODULE_RECURSE_NO = 0,
+	GIT_SUBMODULE_RECURSE_YES = 1,
+	GIT_SUBMODULE_RECURSE_ONDEMAND = 2,
+} git_submodule_recurse_t;
+
 /** @} */
 GIT_END_DECL
 

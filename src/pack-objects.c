@@ -291,7 +291,6 @@ static int write_object(
 	void *delta_data = NULL;
 	void *data;
 	size_t hdr_len, zbuf_len = COMPRESS_BUFLEN, data_len;
-	ssize_t written;
 	int error;
 
 	if (po->delta) {
@@ -337,19 +336,15 @@ static int write_object(
 		GITERR_CHECK_ALLOC(zbuf);
 
 		git_zstream_reset(&pb->zstream);
+		git_zstream_set_input(&pb->zstream, data, data_len);
 
-		while ((written = git_zstream_deflate(zbuf, zbuf_len, &pb->zstream, data, data_len)) > 0) {
-			if ((error = write_cb(zbuf, written, cb_data)) < 0 ||
-				(error = git_hash_update(&pb->ctx, zbuf, written)) < 0)
+		while (!git_zstream_done(&pb->zstream)) {
+			if ((error = git_zstream_get_output(zbuf, &zbuf_len, &pb->zstream)) < 0 ||
+				(error = write_cb(zbuf, zbuf_len, cb_data)) < 0 ||
+				(error = git_hash_update(&pb->ctx, zbuf, zbuf_len)) < 0)
 				goto done;
 
-			data = (char *)data + written;
-			data_len -= written;
-		}
-
-		if (written < 0) {
-			error = written;
-			goto done;
+			zbuf_len = COMPRESS_BUFLEN; /* reuse buffer */
 		}
 
 		if (po->delta)

@@ -10,14 +10,18 @@
 #include "zstream.h"
 #include "buffer.h"
 
-#define BUFFER_SIZE (1024 * 1024)
+#define ZSTREAM_BUFFER_SIZE (1024 * 1024)
+#define ZSTREAM_BUFFER_MIN_EXTRA 8
 
-static int zstream_seterr(int zerr, git_zstream *zstream)
+static int zstream_seterr(git_zstream *zs)
 {
-	if (zerr == Z_MEM_ERROR)
+	if (zs->zerr == Z_OK || zs->zerr == Z_STREAM_END)
+		return 0;
+
+	if (zs->zerr == Z_MEM_ERROR)
 		giterr_set_oom();
-	else if (zstream->msg)
-		giterr_set(GITERR_ZLIB, zstream->msg);
+	else if (zs->z.msg)
+		giterr_set(GITERR_ZLIB, zs->z.msg);
 	else
 		giterr_set(GITERR_ZLIB, "Unknown compression error");
 
@@ -26,69 +30,127 @@ static int zstream_seterr(int zerr, git_zstream *zstream)
 
 int git_zstream_init(git_zstream *zstream)
 {
-	int zerr;
-
-	if ((zerr = deflateInit(zstream, Z_DEFAULT_COMPRESSION)) != Z_OK)
-		return zstream_seterr(zerr, zstream);
-
-	return 0;
-}
-
-ssize_t git_zstream_deflate(void *out, size_t out_len, git_zstream *zstream, const void *in, size_t in_len)
-{
-	int zerr;
-
-	if ((ssize_t)out_len < 0)
-		out_len = INT_MAX;
-
-	zstream->next_in = (Bytef *)in;
-	zstream->avail_in = in_len;
-	zstream->next_out = out;
-	zstream->avail_out = out_len;
-
-	if ((zerr = deflate(zstream, Z_FINISH)) == Z_STREAM_ERROR)
-		return zstream_seterr(zerr, zstream);
-
-	return (out_len - zstream->avail_out);
-}
-
-void git_zstream_reset(git_zstream *zstream)
-{
-	deflateReset(zstream);
+	zstream->zerr = deflateInit(&zstream->z, Z_DEFAULT_COMPRESSION);
+	return zstream_seterr(zstream);
 }
 
 void git_zstream_free(git_zstream *zstream)
 {
-	deflateEnd(zstream);
+	deflateEnd(&zstream->z);
+}
+
+void git_zstream_reset(git_zstream *zstream)
+{
+	deflateReset(&zstream->z);
+	zstream->in = NULL;
+	zstream->in_len = 0;
+	zstream->zerr = Z_STREAM_END;
+}
+
+int git_zstream_set_input(git_zstream *zstream, const void *in, size_t in_len)
+{
+	zstream->in = in;
+	zstream->in_len = in_len;
+	zstream->zerr = Z_OK;
+	return 0;
+}
+
+bool git_zstream_done(git_zstream *zstream)
+{
+	return (!zstream->in_len && zstream->zerr == Z_STREAM_END);
+}
+
+size_t git_zstream_suggest_output_len(git_zstream *zstream)
+{
+	if (zstream->in_len > ZSTREAM_BUFFER_SIZE)
+		return ZSTREAM_BUFFER_SIZE;
+	else if (zstream->in_len > ZSTREAM_BUFFER_MIN_EXTRA)
+		return zstream->in_len;
+	else
+		return ZSTREAM_BUFFER_MIN_EXTRA;
+}
+
+int git_zstream_get_output(void *out, size_t *out_len, git_zstream *zstream)
+{
+	int zflush = Z_FINISH;
+	size_t out_remain = *out_len;
+
+	while (out_remain > 0 && zstream->zerr != Z_STREAM_END) {
+		size_t out_queued, in_queued, out_used, in_used;
+
+		/* set up in data */
+		zstream->z.next_in  = (Bytef *)zstream->in;
+		zstream->z.avail_in = (uInt)zstream->in_len;
+		if ((size_t)zstream->z.avail_in != zstream->in_len) {
+			zstream->z.avail_in = INT_MAX;
+			zflush = Z_NO_FLUSH;
+		} else {
+			zflush = Z_FINISH;
+		}
+		in_queued = (size_t)zstream->z.avail_in;
+
+		/* set up out data */
+		zstream->z.next_out = out;
+		zstream->z.avail_out = (uInt)out_remain;
+		if ((size_t)zstream->z.avail_out != out_remain)
+			zstream->z.avail_out = INT_MAX;
+		out_queued = (size_t)zstream->z.avail_out;
+
+		/* compress next chunk */
+		zstream->zerr = deflate(&zstream->z, zflush);
+
+		if (zstream->zerr == Z_STREAM_ERROR)
+			return zstream_seterr(zstream);
+
+		out_used = (out_queued - zstream->z.avail_out);
+		out_remain -= out_used;
+		out = ((char *)out) + out_used;
+
+		in_used = (in_queued - zstream->z.avail_in);
+		zstream->in_len -= in_used;
+		zstream->in += in_used;
+	}
+
+	/* either we finished the input or we did not flush the data */
+	assert(zstream->in_len > 0 || zflush == Z_FINISH);
+
+	/* set out_size to number of bytes actually written to output */
+	*out_len = *out_len - out_remain;
+
+	return 0;
 }
 
 int git_zstream_deflatebuf(git_buf *out, const void *in, size_t in_len)
 {
-	git_zstream zstream = GIT_ZSTREAM_INIT;
-	size_t out_len;
-	ssize_t written;
+	git_zstream zs = GIT_ZSTREAM_INIT;
 	int error = 0;
 
-	if ((error = git_zstream_init(&zstream)) < 0)
+	if ((error = git_zstream_init(&zs)) < 0)
 		return error;
 
-	do {
-		if (out->asize - out->size < BUFFER_SIZE)
-			git_buf_grow(out, out->asize + BUFFER_SIZE);
+	if ((error = git_zstream_set_input(&zs, in, in_len)) < 0)
+		goto done;
 
-		out_len = out->asize - out->size;
+	while (!git_zstream_done(&zs)) {
+		size_t step = git_zstream_suggest_output_len(&zs), written;
 
-		if ((written = git_zstream_deflate(out->ptr + out->size, out_len, &zstream, in, in_len)) <= 0)
-			break;
+		if ((error = git_buf_grow(out, out->asize + step)) < 0)
+			goto done;
 
-		in = (char *)in + written;
-		in_len -= written;
+		written = out->asize - out->size;
+
+		if ((error = git_zstream_get_output(
+				out->ptr + out->size, &written, &zs)) < 0)
+			goto done;
+
 		out->size += written;
-	} while (written > 0);
+	}
 
-	if (written < 0)
-		error = written;
+	/* NULL terminate for consistency if possible */
+	if (out->size < out->asize)
+		out->ptr[out->size] = '\0';
 
-	git_zstream_free(&zstream);
+done:
+	git_zstream_free(&zs);
 	return error;
 }

@@ -498,6 +498,7 @@ int git_submodule_save(git_submodule *submodule)
 
 	submodule->ignore_default = submodule->ignore;
 	submodule->update_default = submodule->update;
+	submodule->fetch_recurse_default = submodule->fetch_recurse;
 	submodule->flags |= GIT_SUBMODULE_STATUS_IN_CONFIG;
 
 cleanup:
@@ -649,6 +650,9 @@ git_submodule_recurse_t git_submodule_set_fetch_recurse_submodules(
 	git_submodule_recurse_t old;
 
 	assert(submodule);
+
+	if (fetch_recurse_submodules == GIT_SUBMODULE_RECURSE_RESET)
+		fetch_recurse_submodules = submodule->fetch_recurse_default;
 
 	old = submodule->fetch_recurse;
 	submodule->fetch_recurse = fetch_recurse_submodules;
@@ -1000,7 +1004,7 @@ static git_submodule *submodule_alloc(git_repository *repo, const char *name)
 	GIT_REFCOUNT_INC(sm);
 	sm->ignore = sm->ignore_default = GIT_SUBMODULE_IGNORE_NONE;
 	sm->update = sm->update_default = GIT_SUBMODULE_UPDATE_CHECKOUT;
-	sm->fetch_recurse = GIT_SUBMODULE_RECURSE_YES;
+	sm->fetch_recurse = sm->fetch_recurse_default = GIT_SUBMODULE_RECURSE_NO;
 	sm->repo   = repo;
 	sm->branch = NULL;
 
@@ -1218,6 +1222,7 @@ static int submodule_load_from_config(
 	else if (strcasecmp(property, "fetchRecurseSubmodules") == 0) {
 		if (git_submodule_parse_recurse(&sm->fetch_recurse, value) < 0)
 			return -1;
+		sm->fetch_recurse_default = sm->fetch_recurse;
 	}
 	else if (strcasecmp(property, "ignore") == 0) {
 		if ((error = git_submodule_parse_ignore(&sm->ignore, value)) < 0)

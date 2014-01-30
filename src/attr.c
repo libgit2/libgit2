@@ -49,6 +49,8 @@ int git_attr_get(
 	git_attr_name attr;
 	git_attr_rule *rule;
 
+	assert(value && repo && name);
+
 	*value = NULL;
 
 	if (git_attr_path__init(&path, pathname, git_repository_workdir(repo)) < 0)
@@ -102,6 +104,11 @@ int git_attr_get_many(
 	git_attr_rule *rule;
 	attr_get_many_info *info = NULL;
 	size_t num_found = 0;
+
+	if (!num_attr)
+		return 0;
+
+	assert(values && repo && names);
 
 	if (git_attr_path__init(&path, pathname, git_repository_workdir(repo)) < 0)
 		return -1;
@@ -168,6 +175,8 @@ int git_attr_foreach(
 	git_attr_rule *rule;
 	git_attr_assignment *assign;
 	git_strmap *seen = NULL;
+
+	assert(repo && callback);
 
 	if (git_attr_path__init(&path, pathname, git_repository_workdir(repo)) < 0)
 		return -1;

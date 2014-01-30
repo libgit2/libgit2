@@ -183,7 +183,7 @@ GIT_EXTERN(int) git_blame_buffer(
 		git_blame **out,
 		git_blame *reference,
 		const char *buffer,
-		uint32_t buffer_len);
+		size_t buffer_len);
 
 /**
  * Free memory allocated by git_blame_file or git_blame_buffer.

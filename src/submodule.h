@@ -60,7 +60,9 @@
  * - `update_default` is the update value from the config
  * - `ignore` is a git_submodule_ignore_t value - see gitmodules(5) ignore.
  * - `ignore_default` is the ignore value from the config
- * - `fetch_recurse` is 0 or 1 - see gitmodules(5) fetchRecurseSubmodules.
+ * - `fetch_recurse` is a git_submodule_recurse_t value - see gitmodules(5)
+ *    fetchRecurseSubmodules.
+ * - `fetch_recurse_default` is the recurse value from the config
  *
  * - `repo` is the parent repository that contains this submodule.
  * - `flags` after for internal use, tracking where this submodule has been
@@ -87,6 +89,7 @@ struct git_submodule {
 	git_submodule_ignore_t ignore;
 	git_submodule_ignore_t ignore_default;
 	git_submodule_recurse_t fetch_recurse;
+	git_submodule_recurse_t fetch_recurse_default;
 
 	/* internal information */
 	git_repository *repo;
