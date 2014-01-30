@@ -246,7 +246,7 @@ static int checkout_action_no_wd(
 			*action = CHECKOUT_ACTION_IF(SAFE, UPDATE_BLOB, NONE);
 		break;
 	case GIT_DELTA_DELETED: /* case 8 or 25 */
-		*action = CHECKOUT_ACTION__REMOVE;
+		*action = CHECKOUT_ACTION_IF(SAFE, REMOVE, NONE);
 		break;
 	default: /* impossible */
 		break;
