@@ -1332,20 +1332,28 @@ static int rename_one_remote_reference(
 {
 	int error;
 	git_buf new_name = GIT_BUF_INIT;
+	git_buf log_message = GIT_BUF_INIT;
 
-	error = git_buf_printf(
-		&new_name,
-		GIT_REFS_REMOTES_DIR "%s%s",
-		new_remote_name,
-		reference->name + strlen(GIT_REFS_REMOTES_DIR) + strlen(old_remote_name));
+	if ((error = git_buf_printf(
+					&new_name,
+					GIT_REFS_REMOTES_DIR "%s%s",
+					new_remote_name,
+					reference->name + strlen(GIT_REFS_REMOTES_DIR) + strlen(old_remote_name))) < 0)
+		goto cleanup;
 
-	if (!error) {
-		error = git_reference_rename(
-			NULL, reference, git_buf_cstr(&new_name), 0);
-		git_reference_free(reference);
-	}
+	if ((error = git_buf_printf(&log_message,
+					"renamed remote %s to %s",
+					old_remote_name, new_remote_name)) < 0)
+		goto cleanup;
 
+	error = git_reference_rename(
+		NULL, reference, git_buf_cstr(&new_name), 0,
+		NULL, git_buf_cstr(&log_message));
+	git_reference_free(reference);
+
+cleanup:
 	git_buf_free(&new_name);
+	git_buf_free(&log_message);
 	return error;
 }
 

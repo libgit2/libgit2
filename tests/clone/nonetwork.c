@@ -24,6 +24,7 @@ void test_clone_nonetwork__initialize(void)
 	g_options.checkout_opts = dummy_opts;
 	g_options.checkout_opts.checkout_strategy = GIT_CHECKOUT_SAFE_CREATE;
 	g_options.remote_callbacks = dummy_callbacks;
+	cl_git_pass(git_signature_now(&g_options.signature, "Me", "foo@example.com"));
 }
 
 void test_clone_nonetwork__cleanup(void)
@@ -43,6 +44,7 @@ void test_clone_nonetwork__cleanup(void)
 		g_remote = NULL;
 	}
 
+	git_signature_free(g_options.signature);
 	cl_fixture_cleanup("./foo");
 }
 
@@ -213,11 +215,13 @@ void test_clone_nonetwork__can_detached_head(void)
 	git_object *obj;
 	git_repository *cloned;
 	git_reference *cloned_head;
+	git_reflog *log;
+	const git_reflog_entry *entry;
 
 	cl_git_pass(git_clone(&g_repo, cl_git_fixture_url("testrepo.git"), "./foo", &g_options));
 
 	cl_git_pass(git_revparse_single(&obj, g_repo, "master~1"));
-	cl_git_pass(git_repository_set_head_detached(g_repo, git_object_id(obj)));
+	cl_git_pass(git_repository_set_head_detached(g_repo, git_object_id(obj), NULL, NULL));
 
 	cl_git_pass(git_clone(&cloned, "./foo", "./foo1", &g_options));
 
@@ -226,9 +230,55 @@ void test_clone_nonetwork__can_detached_head(void)
 	cl_git_pass(git_repository_head(&cloned_head, cloned));
 	cl_assert(!git_oid_cmp(git_object_id(obj), git_reference_target(cloned_head)));
 
+	cl_git_pass(git_reflog_read(&log, cloned, "HEAD"));
+	entry = git_reflog_entry_byindex(log, 0);
+	cl_assert_equal_s("foo@example.com", git_reflog_entry_committer(entry)->email);
+
 	git_object_free(obj);
 	git_reference_free(cloned_head);
+	git_reflog_free(log);
 	git_repository_free(cloned);
 
 	cl_fixture_cleanup("./foo1");
+}
+
+static void assert_correct_reflog(const char *name)
+{
+	git_reflog *log;
+	const git_reflog_entry *entry;
+	char expected_log_message[128] = {0};
+
+	sprintf(expected_log_message, "clone: from %s", cl_git_fixture_url("testrepo.git"));
+
+	cl_git_pass(git_reflog_read(&log, g_repo, name));
+	cl_assert_equal_i(1, git_reflog_entrycount(log));
+	entry = git_reflog_entry_byindex(log, 0);
+	cl_assert_equal_s(expected_log_message, git_reflog_entry_message(entry));
+	cl_assert_equal_s("foo@example.com", git_reflog_entry_committer(entry)->email);
+
+	git_reflog_free(log);
+}
+
+void test_clone_nonetwork__clone_updates_reflog_properly(void)
+{
+	cl_git_pass(git_clone(&g_repo, cl_git_fixture_url("testrepo.git"), "./foo", &g_options));
+	assert_correct_reflog("HEAD");
+	assert_correct_reflog("refs/heads/master");
+}
+
+void test_clone_nonetwork__clone_into_updates_reflog_properly(void)
+{
+	git_remote *remote;
+	git_signature *sig;
+	cl_git_pass(git_signature_now(&sig, "Me", "foo@example.com"));
+
+	cl_git_pass(git_repository_init(&g_repo, "./foo", false));
+	cl_git_pass(git_remote_create(&remote, g_repo, "origin", cl_git_fixture_url("testrepo.git")));
+	cl_git_pass(git_clone_into(g_repo, remote, NULL, NULL, sig));
+
+	assert_correct_reflog("HEAD");
+	assert_correct_reflog("refs/heads/master");
+
+	git_remote_free(remote);
+	git_signature_free(sig);
 }

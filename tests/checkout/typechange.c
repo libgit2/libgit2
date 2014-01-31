@@ -122,7 +122,7 @@ void test_checkout_typechange__checkout_typechanges_safe(void)
 		cl_git_pass(git_checkout_tree(g_repo, obj, &opts));
 
 		cl_git_pass(
-			git_repository_set_head_detached(g_repo, git_object_id(obj)));
+			git_repository_set_head_detached(g_repo, git_object_id(obj), NULL, NULL));
 
 		assert_workdir_matches_tree(g_repo, git_object_id(obj), NULL, true);
 
@@ -231,7 +231,7 @@ void test_checkout_typechange__checkout_with_conflicts(void)
 		cl_assert(!git_path_exists("typechanges/untracked"));
 
 		cl_git_pass(
-			git_repository_set_head_detached(g_repo, git_object_id(obj)));
+			git_repository_set_head_detached(g_repo, git_object_id(obj), NULL, NULL));
 
 		assert_workdir_matches_tree(g_repo, git_object_id(obj), NULL, true);
 

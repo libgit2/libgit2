@@ -54,24 +54,34 @@ int git_branch_create(
 	git_repository *repository,
 	const char *branch_name,
 	const git_commit *commit,
-	int force)
+	int force,
+	const git_signature *signature,
+	const char *log_message)
 {
 	git_reference *branch = NULL;
-	git_buf canonical_branch_name = GIT_BUF_INIT;
-	int error = 0;
+	git_buf canonical_branch_name = GIT_BUF_INIT,
+			  log_message_buf = GIT_BUF_INIT;
+	int error = -1;
 
 	assert(branch_name && commit && ref_out);
 	assert(git_object_owner((const git_object *)commit) == repository);
 
-	if (!(error = git_buf_joinpath(
-			&canonical_branch_name, GIT_REFS_HEADS_DIR, branch_name)))
-		error = git_reference_create(
-			&branch, repository, git_buf_cstr(&canonical_branch_name),
-			git_commit_id(commit), force, NULL, NULL);
+	if (git_buf_joinpath(&canonical_branch_name, GIT_REFS_HEADS_DIR, branch_name) < 0)
+		goto cleanup;
 
-	*ref_out = branch;
+	if (git_buf_sets(&log_message_buf, log_message ? log_message : "Branch: created") < 0)
+		goto cleanup;
 
+	error = git_reference_create(&branch, repository,
+		git_buf_cstr(&canonical_branch_name), git_commit_id(commit), force, signature,
+		git_buf_cstr(&log_message_buf));
+
+	if (!error)
+		*ref_out = branch;
+
+cleanup:
 	git_buf_free(&canonical_branch_name);
+	git_buf_free(&log_message_buf);
 	return error;
 }
 
@@ -107,6 +117,9 @@ int git_branch_delete(git_reference *branch)
 		goto on_error;
 
 	if (git_reference_delete(branch) < 0)
+		goto on_error;
+
+	if (git_reflog_delete(git_reference_owner(branch), git_reference_name(branch)) < 0)
 		goto on_error;
 
 	error = 0;
@@ -185,11 +198,14 @@ int git_branch_move(
 	git_reference **out,
 	git_reference *branch,
 	const char *new_branch_name,
-	int force)
+	int force,
+	const git_signature *signature,
+	const char *log_message)
 {
 	git_buf new_reference_name = GIT_BUF_INIT,
-		old_config_section = GIT_BUF_INIT,
-		new_config_section = GIT_BUF_INIT;
+	        old_config_section = GIT_BUF_INIT,
+	        new_config_section = GIT_BUF_INIT,
+	        log_message_buf = GIT_BUF_INIT;
 	int error;
 
 	assert(branch && new_branch_name);
@@ -197,14 +213,23 @@ int git_branch_move(
 	if (!git_reference_is_branch(branch))
 		return not_a_local_branch(git_reference_name(branch));
 
-	error = git_buf_joinpath(&new_reference_name, GIT_REFS_HEADS_DIR, new_branch_name);
-	if (error < 0)
+	if ((error = git_buf_joinpath(&new_reference_name, GIT_REFS_HEADS_DIR, new_branch_name)) < 0)
 		goto done;
+
+	if (log_message) {
+		if ((error = git_buf_sets(&log_message_buf, log_message)) < 0)
+			goto done;
+	} else {
+		if ((error = git_buf_printf(&log_message_buf, "Branch: renamed %s to %s",
+						git_reference_name(branch), git_buf_cstr(&new_reference_name))) < 0)
+			goto done;
+	}
 
 	/* first update ref then config so failure won't trash config */
 
 	error = git_reference_rename(
-		out, branch, git_buf_cstr(&new_reference_name), force);
+		out, branch, git_buf_cstr(&new_reference_name), force,
+		signature, git_buf_cstr(&log_message_buf));
 	if (error < 0)
 		goto done;
 
@@ -221,6 +246,7 @@ done:
 	git_buf_free(&new_reference_name);
 	git_buf_free(&old_config_section);
 	git_buf_free(&new_config_section);
+	git_buf_free(&log_message_buf);
 
 	return error;
 }

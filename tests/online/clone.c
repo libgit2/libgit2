@@ -147,7 +147,7 @@ void test_online_clone__clone_into(void)
 	callbacks.payload = &fetch_progress_cb_was_called;
 	git_remote_set_callbacks(remote, &callbacks);
 
-	cl_git_pass(git_clone_into(g_repo, remote, &checkout_opts, NULL));
+	cl_git_pass(git_clone_into(g_repo, remote, &checkout_opts, NULL, NULL));
 
 	cl_git_pass(git_buf_joinpath(&path, git_repository_workdir(g_repo), "master.txt"));
 	cl_assert_equal_i(true, git_path_isfile(git_buf_cstr(&path)));

@@ -45,6 +45,8 @@ GIT_BEGIN_DECL
  *   default is "origin".
  * - `checkout_branch` gives the name of the branch to checkout.  NULL
  *   means use the remote's HEAD.
+ * - `signature` is the identity used when updating the reflog. NULL means to
+ *   use the default signature using the config.
  */
 
 typedef struct git_clone_options {
@@ -57,6 +59,7 @@ typedef struct git_clone_options {
 	int ignore_cert_errors;
 	const char *remote_name;
 	const char* checkout_branch;
+	git_signature *signature;
 } git_clone_options;
 
 #define GIT_CLONE_OPTIONS_VERSION 1
@@ -96,6 +99,7 @@ GIT_EXTERN(int) git_clone(
  * @param co_opts options to use during checkout
  * @param branch the branch to checkout after the clone, pass NULL for the
  *        remote's default branch
+ * @param signature The identity used when updating the reflog.
  * @return 0 on success, any non-zero return value from a callback
  *         function, or a negative value to indicate an error (use
  *         `giterr_last` for a detailed error message)
@@ -104,7 +108,8 @@ GIT_EXTERN(int) git_clone_into(
 	git_repository *repo,
 	git_remote *remote,
 	const git_checkout_opts *co_opts,
-	const char *branch);
+	const char *branch,
+	const git_signature *signature);
 
 /** @} */
 GIT_END_DECL

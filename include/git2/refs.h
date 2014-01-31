@@ -297,6 +297,8 @@ GIT_EXTERN(int) git_reference_set_target(
  * @param ref The reference to rename
  * @param new_name The new name for the reference
  * @param force Overwrite an existing reference
+ * @param signature The identity that will used to populate the reflog entry
+ * @param log_message The one line long message to be appended to the reflog
  * @return 0 on success, GIT_EINVALIDSPEC, GIT_EEXISTS or an error code
  *
  */
@@ -304,7 +306,9 @@ GIT_EXTERN(int) git_reference_rename(
 	git_reference **new_ref,
 	git_reference *ref,
 	const char *new_name,
-	int force);
+	int force,
+	const git_signature *signature,
+	const char *log_message);
 
 /**
  * Delete an existing reference.

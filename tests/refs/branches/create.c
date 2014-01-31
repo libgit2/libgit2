@@ -46,7 +46,7 @@ void test_refs_branches_create__can_create_a_local_branch(void)
 {
 	retrieve_known_commit(&target, repo);
 
-	cl_git_pass(git_branch_create(&branch, repo, NEW_BRANCH_NAME, target, 0));
+	cl_git_pass(git_branch_create(&branch, repo, NEW_BRANCH_NAME, target, 0, NULL, NULL));
 	cl_git_pass(git_oid_cmp(git_reference_target(branch), git_commit_id(target)));
 }
 
@@ -54,24 +54,69 @@ void test_refs_branches_create__can_not_create_a_branch_if_its_name_collide_with
 {
 	retrieve_known_commit(&target, repo);
 
-	cl_assert_equal_i(GIT_EEXISTS, git_branch_create(&branch, repo, "br2", target, 0));
+	cl_assert_equal_i(GIT_EEXISTS, git_branch_create(&branch, repo, "br2", target, 0, NULL, NULL));
 }
 
 void test_refs_branches_create__can_force_create_over_an_existing_branch(void)
 {
 	retrieve_known_commit(&target, repo);
 
-	cl_git_pass(git_branch_create(&branch, repo, "br2", target, 1));
+	cl_git_pass(git_branch_create(&branch, repo, "br2", target, 1, NULL, NULL));
 	cl_git_pass(git_oid_cmp(git_reference_target(branch), git_commit_id(target)));
 	cl_assert_equal_s("refs/heads/br2", git_reference_name(branch));
 }
-
 
 void test_refs_branches_create__creating_a_branch_with_an_invalid_name_returns_EINVALIDSPEC(void)
 {
 	retrieve_known_commit(&target, repo);
 
 	cl_assert_equal_i(GIT_EINVALIDSPEC,
-		git_branch_create(&branch, repo, "inv@{id", target, 0));
+		git_branch_create(&branch, repo, "inv@{id", target, 0, NULL, NULL));
 }
 
+void test_refs_branches_create__creation_creates_new_reflog(void)
+{
+	git_reflog *log;
+	const git_reflog_entry *entry;
+	git_signature *sig;
+
+	cl_git_pass(git_signature_now(&sig, "me", "foo@example.com"));
+
+	retrieve_known_commit(&target, repo);
+	cl_git_pass(git_branch_create(&branch, repo, NEW_BRANCH_NAME, target, false, sig, "create!"));
+	cl_git_pass(git_reflog_read(&log, repo, "refs/heads/" NEW_BRANCH_NAME));
+
+	cl_assert_equal_i(1, git_reflog_entrycount(log));
+	entry = git_reflog_entry_byindex(log, 0);
+	cl_assert_equal_s("create!", git_reflog_entry_message(entry));
+	cl_assert_equal_s("foo@example.com", git_reflog_entry_committer(entry)->email);
+
+	git_reflog_free(log);
+	git_signature_free(sig);
+}
+
+void test_refs_branches_create__default_reflog_message(void)
+{
+	git_reflog *log;
+	const git_reflog_entry *entry;
+	git_signature *sig;
+	git_config *cfg;
+
+	cl_git_pass(git_repository_config(&cfg, repo));
+	cl_git_pass(git_config_set_string(cfg, "user.name", "Foo Bar"));
+	cl_git_pass(git_config_set_string(cfg, "user.email", "foo@example.com"));
+	git_config_free(cfg);
+
+	cl_git_pass(git_signature_default(&sig, repo));
+
+	retrieve_known_commit(&target, repo);
+	cl_git_pass(git_branch_create(&branch, repo, NEW_BRANCH_NAME, target, false, NULL, NULL));
+	cl_git_pass(git_reflog_read(&log, repo, "refs/heads/" NEW_BRANCH_NAME));
+
+	entry = git_reflog_entry_byindex(log, 0);
+	cl_assert_equal_s("Branch: created", git_reflog_entry_message(entry));
+	cl_assert_equal_s(sig->email, git_reflog_entry_committer(entry)->email);
+
+	git_reflog_free(log);
+	git_signature_free(sig);
+}

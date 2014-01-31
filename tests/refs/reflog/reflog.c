@@ -114,7 +114,7 @@ void test_refs_reflog_reflog__renaming_the_reference_moves_the_reflog(void)
 	cl_assert_equal_i(false, git_path_isfile(git_buf_cstr(&moved_log_path)));
 
 	cl_git_pass(git_reference_lookup(&master, g_repo, "refs/heads/master"));
-	cl_git_pass(git_reference_rename(&new_master, master, "refs/moved", 0));
+	cl_git_pass(git_reference_rename(&new_master, master, "refs/moved", 0, NULL, NULL));
 	git_reference_free(master);
 
 	cl_assert_equal_i(false, git_path_isfile(git_buf_cstr(&master_log_path)));
@@ -165,7 +165,7 @@ void test_refs_reflog_reflog__cannot_write_a_moved_reflog(void)
 
 	cl_git_pass(git_reflog_write(reflog));
 
-	cl_git_pass(git_reference_rename(&new_master, master, "refs/moved", 0));
+	cl_git_pass(git_reference_rename(&new_master, master, "refs/moved", 0, NULL, NULL));
 	git_reference_free(master);
 
 	cl_git_fail(git_reflog_write(reflog));
