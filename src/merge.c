@@ -2330,7 +2330,7 @@ done:
 
 static int merge_check_workdir(size_t *conflicts, git_repository *repo, git_index *index_new, git_vector *merged_paths)
 {
-	git_tree *head_tree = NULL;
+	git_index *index_repo = NULL;
 	git_diff *wd_diff_list = NULL;
 	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
 	int error = 0;
@@ -2341,9 +2341,6 @@ static int merge_check_workdir(size_t *conflicts, git_repository *repo, git_inde
 
 	opts.flags |= GIT_DIFF_INCLUDE_UNTRACKED;
 
-	if ((error = git_repository_head_tree(&head_tree, repo)) < 0)
-		goto done;
-
 	/* Workdir changes may exist iff they do not conflict with changes that
 	 * will be applied by the merge (including conflicts).  Ensure that there
 	 * are no changes in the workdir to these paths.
@@ -2351,13 +2348,13 @@ static int merge_check_workdir(size_t *conflicts, git_repository *repo, git_inde
 	opts.pathspec.count = merged_paths->length;
 	opts.pathspec.strings = (char **)merged_paths->contents;
 
-	if ((error = git_diff_tree_to_workdir(&wd_diff_list, repo, head_tree, &opts)) < 0)
+	if ((error = git_diff_index_to_workdir(&wd_diff_list, repo, index_repo, &opts)) < 0)
 		goto done;
 
 	*conflicts = wd_diff_list->deltas.length;
 
 done:
-	git_tree_free(head_tree);
+	git_index_free(index_repo);
 	git_diff_free(wd_diff_list);
 
 	return error;
