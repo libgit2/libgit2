@@ -112,23 +112,28 @@ static int process_commit_parents(git_revwalk *walk, git_commit_list_node *commi
 
 static int push_commit(git_revwalk *walk, const git_oid *oid, int uninteresting)
 {
+	git_oid commit_id;
 	int error;
-	git_object *obj;
-	git_otype type;
+	git_object *obj, *oobj;
 	git_commit_list_node *commit;
 
-	if ((error = git_object_lookup(&obj, walk->repo, oid, GIT_OBJ_ANY)) < 0)
+	if ((error = git_object_lookup(&oobj, walk->repo, oid, GIT_OBJ_ANY)) < 0)
 		return error;
 
-	type = git_object_type(obj);
-	git_object_free(obj);
+	error = git_object_peel(&obj, oobj, GIT_OBJ_COMMIT);
+	git_object_free(oobj);
 
-	if (type != GIT_OBJ_COMMIT) {
-		giterr_set(GITERR_INVALID, "Object is no commit object");
+	if (error == GIT_ENOTFOUND) {
+		giterr_set(GITERR_INVALID, "Object is not a committish");
 		return -1;
 	}
+	if (error < 0)
+		return error;
 
-	commit = git_revwalk__commit_lookup(walk, oid);
+	git_oid_cpy(&commit_id, git_object_id(obj));
+	git_object_free(obj);
+
+	commit = git_revwalk__commit_lookup(walk, &commit_id);
 	if (commit == NULL)
 		return -1; /* error already reported by failed lookup */
 

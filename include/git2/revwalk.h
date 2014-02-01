@@ -87,7 +87,7 @@ GIT_EXTERN(void) git_revwalk_reset(git_revwalk *walker);
 /**
  * Mark a commit to start traversal from.
  *
- * The given OID must belong to a commit on the walked
+ * The given OID must belong to a committish on the walked
  * repository.
  *
  * The given commit will be used as one of the roots
@@ -127,7 +127,7 @@ GIT_EXTERN(int) git_revwalk_push_head(git_revwalk *walk);
 /**
  * Mark a commit (and its ancestors) uninteresting for the output.
  *
- * The given OID must belong to a commit on the walked
+ * The given OID must belong to a committish on the walked
  * repository.
  *
  * The resolved commit and all its parents will be hidden from the
@@ -166,7 +166,7 @@ GIT_EXTERN(int) git_revwalk_hide_head(git_revwalk *walk);
 /**
  * Push the OID pointed to by a reference
  *
- * The reference must point to a commit.
+ * The reference must point to a committish.
  *
  * @param walk the walker being used for the traversal
  * @param refname the reference to push
@@ -177,7 +177,7 @@ GIT_EXTERN(int) git_revwalk_push_ref(git_revwalk *walk, const char *refname);
 /**
  * Hide the OID pointed to by a reference
  *
- * The reference must point to a commit.
+ * The reference must point to a committish.
  *
  * @param walk the walker being used for the traversal
  * @param refname the reference to hide
