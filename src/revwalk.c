@@ -180,17 +180,12 @@ struct push_cb_data {
 	int hide;
 };
 
-static int push_glob_cb(const char *refname, void *data_)
-{
-	struct push_cb_data *data = (struct push_cb_data *)data_;
-	return push_ref(data->walk, refname, data->hide, true);
-}
-
 static int push_glob(git_revwalk *walk, const char *glob, int hide)
 {
 	int error = 0;
 	git_buf buf = GIT_BUF_INIT;
-	struct push_cb_data data;
+	git_reference *ref;
+	git_reference_iterator *iter;
 	size_t wildcard;
 
 	assert(walk && glob);
@@ -208,12 +203,20 @@ static int push_glob(git_revwalk *walk, const char *glob, int hide)
 	if (!glob[wildcard])
 		git_buf_put(&buf, "/*", 2);
 
-	data.walk = walk;
-	data.hide = hide;
+	if ((error = git_reference_iterator_glob_new(&iter, walk->repo, buf.ptr)) < 0)
+		goto out;
 
-	error = git_reference_foreach_glob(
-		walk->repo, git_buf_cstr(&buf), push_glob_cb, &data);
+	while ((error = git_reference_next(&ref, iter)) == 0) {
+		error = push_ref(walk, git_reference_name(ref), hide, true);
+		git_reference_free(ref);
+		if (error < 0)
+			break;
+	}
+	git_reference_iterator_free(iter);
 
+	if (error == GIT_ITEROVER)
+		error = 0;
+out:
 	git_buf_free(&buf);
 	return error;
 }
