@@ -255,10 +255,19 @@ void test_revwalk_basic__push_range(void)
 
 void test_revwalk_basic__push_mixed(void)
 {
+	git_oid oid;
+	int i = 0;
+
 	revwalk_basic_setup_walk(NULL);
 
 	git_revwalk_reset(_walk);
 	git_revwalk_sorting(_walk, 0);
 	cl_git_pass(git_revwalk_push_glob(_walk, "tags"));
-	cl_git_pass(test_walk_only(_walk, commit_sorting_segment, 1));
+
+	while (git_revwalk_next(&oid, _walk) == 0) {
+		i++;
+	}
+
+	/* git rev-list --count --glob=tags #=> 9 */
+	cl_assert_equal_i(9, i);
 }
