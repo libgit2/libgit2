@@ -7,6 +7,20 @@
 #define TEST_REPO_PATH "merge-resolve"
 #define MERGE_BRANCH_OID "7cb63eed597130ba4abb87b3e544b85021905520"
 
+#define AUTOMERGEABLE_MERGED_FILE \
+	"this file is changed in master\n" \
+	"this file is automergeable\n" \
+	"this file is automergeable\n" \
+	"this file is automergeable\n" \
+	"this file is automergeable\n" \
+	"this file is automergeable\n" \
+	"this file is automergeable\n" \
+	"this file is automergeable\n" \
+	"this file is changed in branch\n"
+
+#define CHANGED_IN_BRANCH_FILE \
+	"changed in branch\n"
+
 static git_repository *repo;
 static git_index *repo_index;
 
@@ -40,6 +54,13 @@ static char *affected[][5] = {
 	{ "changed-in-branch.txt", "conflicting.txt", "removed-in-branch.txt", NULL },
 	{ "automergeable.txt", "changed-in-branch.txt", "conflicting.txt", "removed-in-branch.txt", NULL },
 	{ NULL },
+};
+
+static char *result_contents[4][6] = {
+	{ "automergeable.txt", AUTOMERGEABLE_MERGED_FILE, NULL, NULL },
+	{ "changed-in-branch.txt", CHANGED_IN_BRANCH_FILE, NULL, NULL },
+	{ "automergeable.txt", AUTOMERGEABLE_MERGED_FILE, "changed-in-branch.txt", CHANGED_IN_BRANCH_FILE, NULL, NULL },
+	{ NULL }
 };
 
 void test_merge_workdir_dirty__initialize(void)
@@ -115,6 +136,37 @@ static void stage_random_files(char *files[])
 		cl_git_pass(git_index_add_bypath(repo_index, filename));
 }
 
+static void stage_content(char *content[])
+{
+	git_reference *head;
+	git_object *head_object;
+	git_merge_result *result = NULL;
+	git_buf path = GIT_BUF_INIT;
+	char *filename, *text;
+	size_t i;
+
+	cl_git_pass(git_repository_head(&head, repo));
+	cl_git_pass(git_reference_peel(&head_object, head, GIT_OBJ_COMMIT));
+	cl_git_pass(git_reset(repo, head_object, GIT_RESET_HARD));
+
+	for (i = 0, filename = content[i], text = content[++i];
+		filename && text;
+		filename = content[++i], text = content[++i]) {
+
+		git_buf_clear(&path);
+
+		cl_git_pass(git_buf_printf(&path, "%s/%s", TEST_REPO_PATH, filename));
+
+		cl_git_mkfile(path.ptr, text);
+		cl_git_pass(git_index_add_bypath(repo_index, filename));
+	}
+
+	git_merge_result_free(result);
+	git_object_free(head_object);
+	git_reference_free(head);
+	git_buf_free(&path);
+}
+
 static int merge_dirty_files(char *dirty_files[])
 {
 	git_reference *head;
@@ -179,4 +231,22 @@ void test_merge_workdir_dirty__staged_files_in_index_disallowed(void)
 
 	for (i = 0, files = affected[i]; files[0]; files = affected[++i])
 		cl_git_fail(merge_staged_files(files));
+}
+
+void test_merge_workdir_dirty__identical_staged_files_allowed(void)
+{
+	git_merge_result *result;
+	char **content;
+	size_t i;
+
+	set_core_autocrlf_to(repo, false);
+	
+	for (i = 0, content = result_contents[i]; content[0]; content = result_contents[++i]) {
+		stage_content(content);
+
+		git_index_write(repo_index);
+		cl_git_pass(merge_branch(&result, 0, 0));
+
+		git_merge_result_free(result);
+	}
 }
