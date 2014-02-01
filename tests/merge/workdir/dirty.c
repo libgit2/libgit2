@@ -3,6 +3,7 @@
 #include "buffer.h"
 #include "merge.h"
 #include "../merge_helpers.h"
+#include "posix.h"
 
 #define TEST_REPO_PATH "merge-resolve"
 #define MERGE_BRANCH_OID "7cb63eed597130ba4abb87b3e544b85021905520"
@@ -125,6 +126,41 @@ static void write_files(char *files[])
 	git_buf_free(&content);
 }
 
+static void hack_index(char *files[])
+{
+	char *filename;
+	struct stat statbuf;
+	git_buf path = GIT_BUF_INIT;
+	git_index_entry *entry;
+	size_t i;
+
+	/* Update the index to suggest that checkout placed these files on
+	 * disk, keeping the object id but updating the cache, which will
+	 * emulate a Git implementation's different filter.
+	 */
+	for (i = 0, filename = files[i]; filename; filename = files[++i]) {
+		git_buf_clear(&path);
+
+		cl_assert(entry = (git_index_entry *)
+			git_index_get_bypath(repo_index, filename, 0));
+
+		cl_git_pass(git_buf_printf(&path, "%s/%s", TEST_REPO_PATH, filename));
+		cl_git_pass(p_stat(path.ptr, &statbuf));
+
+		entry->ctime.seconds = (git_time_t)statbuf.st_ctime;
+		entry->ctime.nanoseconds = 0;
+		entry->mtime.seconds = (git_time_t)statbuf.st_mtime;
+		entry->mtime.nanoseconds = 0;
+		entry->dev = statbuf.st_dev;
+		entry->ino = statbuf.st_ino;
+		entry->uid  = statbuf.st_uid;
+		entry->gid  = statbuf.st_gid;
+		entry->file_size = statbuf.st_size;
+	}
+
+	git_buf_free(&path);
+}
+
 static void stage_random_files(char *files[])
 {
 	char *filename;
@@ -179,6 +215,31 @@ static int merge_dirty_files(char *dirty_files[])
 	cl_git_pass(git_reset(repo, head_object, GIT_RESET_HARD));
 
 	write_files(dirty_files);
+
+	error = merge_branch(&result, 0, 0);
+
+	git_merge_result_free(result);
+	git_object_free(head_object);
+	git_reference_free(head);
+
+	return error;
+}
+
+static int merge_differently_filtered_files(char *files[])
+{
+	git_reference *head;
+	git_object *head_object;
+	git_merge_result *result = NULL;
+	int error;
+
+	cl_git_pass(git_repository_head(&head, repo));
+	cl_git_pass(git_reference_peel(&head_object, head, GIT_OBJ_COMMIT));
+	cl_git_pass(git_reset(repo, head_object, GIT_RESET_HARD));
+
+	write_files(files);
+	hack_index(files);
+
+	cl_git_pass(git_index_write(repo_index));
 
 	error = merge_branch(&result, 0, 0);
 
@@ -249,4 +310,13 @@ void test_merge_workdir_dirty__identical_staged_files_allowed(void)
 
 		git_merge_result_free(result);
 	}
+}
+
+void test_merge_workdir_dirty__honors_cache(void)
+{
+	char **files;
+	size_t i;
+
+	for (i = 0, files = affected[i]; files[0]; files = affected[++i])
+		cl_git_pass(merge_differently_filtered_files(files));
 }
