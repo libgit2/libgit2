@@ -252,3 +252,13 @@ void test_revwalk_basic__push_range(void)
 	cl_git_pass(git_revwalk_push_range(_walk, "9fd738e~2..9fd738e"));
 	cl_git_pass(test_walk_only(_walk, commit_sorting_segment, 1));
 }
+
+void test_revwalk_basic__push_mixed(void)
+{
+	revwalk_basic_setup_walk(NULL);
+
+	git_revwalk_reset(_walk);
+	git_revwalk_sorting(_walk, 0);
+	cl_git_pass(git_revwalk_push_glob(_walk, "tags"));
+	cl_git_pass(test_walk_only(_walk, commit_sorting_segment, 1));
+}
