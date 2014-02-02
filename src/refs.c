@@ -1113,6 +1113,17 @@ int git_reference_is_tag(git_reference *ref)
 	return git_reference__is_tag(ref->name);
 }
 
+int git_reference__is_note(const char *ref_name)
+{
+	return git__prefixcmp(ref_name, GIT_REFS_NOTES_DIR) == 0;
+}
+
+int git_reference_is_note(git_reference *ref)
+{
+	assert(ref);
+	return git_reference__is_note(ref->name);
+}
+
 static int peel_error(int error, git_reference *ref, const char* msg)
 {
 	giterr_set(

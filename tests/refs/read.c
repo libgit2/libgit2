@@ -271,6 +271,21 @@ void test_refs_read__can_determine_if_a_reference_is_a_tag(void)
 	assert_is_tag("refs/remotes/test/master", false);
 }
 
+static void assert_is_note(const char *name, bool expected_noteness)
+{
+	git_reference *reference;
+	cl_git_pass(git_reference_lookup(&reference, g_repo, name));
+	cl_assert_equal_i(expected_noteness, git_reference_is_note(reference));
+	git_reference_free(reference);
+}
+
+void test_refs_read__can_determine_if_a_reference_is_a_note(void)
+{
+	assert_is_note("refs/notes/fanout", true);
+	assert_is_note("refs/heads/packed", false);
+	assert_is_note("refs/remotes/test/master", false);
+}
+
 void test_refs_read__invalid_name_returns_EINVALIDSPEC(void)
 {
 	git_reference *reference;
