@@ -1452,8 +1452,12 @@ static int reflog_append(refdb_fs_backend *backend, const git_reference *ref, co
 	if (error < 0)
 		return error;
 
-	if (git_reference_symbolic_target(ref) != NULL)
-		git_reference_name_to_id(&new_id, repo, git_reference_symbolic_target(ref));
+	if (git_reference_symbolic_target(ref) != NULL) {
+		error = git_reference_name_to_id(&new_id, repo, git_reference_symbolic_target(ref));
+		if (error != 0 && error != GIT_ENOTFOUND)
+			goto cleanup;
+		giterr_clear();
+	}
 	else if (git_reference_target(ref) != NULL)
 		git_oid_cpy(&new_id, git_reference_target(ref));
 
