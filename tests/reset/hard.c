@@ -197,3 +197,30 @@ void test_reset_hard__cleans_up_merge(void)
 	git_buf_free(&merge_mode_path);
 	git_buf_free(&orig_head_path);
 }
+
+void test_reset_hard__reflog_is_correct(void)
+{
+	const char *exp_msg = "commit: Add a file which name should appear before the "
+		"\"subdir/\" folder while being dealt with by the treewalker";
+
+	reflog_check(repo, "HEAD", 3, "emeric.fermas@gmail.com", exp_msg);
+	reflog_check(repo, "refs/heads/master", 3, "emeric.fermas@gmail.com", exp_msg);
+
+	/* Branch not moving, no reflog entry */
+	cl_git_pass(git_revparse_single(&target, repo, "HEAD^{commit}"));
+	cl_git_pass(git_reset(repo, target, GIT_RESET_HARD, NULL, NULL));
+	reflog_check(repo, "HEAD", 3, "emeric.fermas@gmail.com", exp_msg);
+	reflog_check(repo, "refs/heads/master", 3, "emeric.fermas@gmail.com", exp_msg);
+
+	/* Moved branch, expect default message */
+	cl_git_pass(git_revparse_single(&target, repo, "HEAD~^{commit}"));
+	cl_git_pass(git_reset(repo, target, GIT_RESET_HARD, NULL, NULL));
+	reflog_check(repo, "HEAD", 3, "emeric.fermas@gmail.com", exp_msg);
+	reflog_check(repo, "refs/heads/master", 4, NULL, "reset: moving");
+
+	/* Moved branch, expect custom message */
+	cl_git_pass(git_revparse_single(&target, repo, "HEAD~^{commit}"));
+	cl_git_pass(git_reset(repo, target, GIT_RESET_HARD, NULL, "message1"));
+	reflog_check(repo, "HEAD", 3, "emeric.fermas@gmail.com", exp_msg);
+	reflog_check(repo, "refs/heads/master", 5, NULL, "message1");
+}

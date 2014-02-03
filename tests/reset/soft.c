@@ -154,3 +154,29 @@ void test_reset_soft__fails_when_index_contains_conflicts_independently_of_MERGE
 
 	cl_assert_equal_i(GIT_EUNMERGED, git_reset(repo, target, GIT_RESET_SOFT, NULL, NULL));
 }
+
+void test_reset_soft_reflog_is_correct(void)
+{
+	const char *exp_msg = "commit: Updating test data so we can test inter-hunk-context";
+
+	reflog_check(repo, "HEAD", 9, "yoram.harmelin@gmail.com", exp_msg);
+	reflog_check(repo, "refs/heads/master", 9, "yoram.harmelin@gmail.com", exp_msg);
+
+	/* Branch not moving, no reflog entry */
+	cl_git_pass(git_revparse_single(&target, repo, "HEAD^{commit}"));
+	cl_git_pass(git_reset(repo, target, GIT_RESET_SOFT, NULL, NULL));
+	reflog_check(repo, "HEAD", 9, "yoram.harmelin@gmail.com", exp_msg);
+	reflog_check(repo, "refs/heads/master", 9, "yoram.harmelin@gmail.com", exp_msg);
+
+	/* Moved branch, expect default message */
+	cl_git_pass(git_revparse_single(&target, repo, "HEAD~^{commit}"));
+	cl_git_pass(git_reset(repo, target, GIT_RESET_SOFT, NULL, NULL));
+	reflog_check(repo, "HEAD", 9, "yoram.harmelin@gmail.com", exp_msg);
+	reflog_check(repo, "refs/heads/master", 10, NULL, "reset: moving");
+
+	/* Moved branch, expect custom message */
+	cl_git_pass(git_revparse_single(&target, repo, "HEAD~^{commit}"));
+	cl_git_pass(git_reset(repo, target, GIT_RESET_SOFT, NULL, "message1"));
+	reflog_check(repo, "HEAD", 9, "yoram.harmelin@gmail.com", exp_msg);
+	reflog_check(repo, "refs/heads/master", 11, NULL, "message1");
+}

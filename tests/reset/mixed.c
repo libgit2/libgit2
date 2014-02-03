@@ -47,3 +47,29 @@ void test_reset_mixed__resetting_refreshes_the_index_to_the_commit_tree(void)
 	cl_git_pass(git_status_file(&status, repo, "macro_bad"));
 	cl_assert(status == GIT_STATUS_WT_NEW);
 }
+
+void test_reset_mixed__reflog_is_correct(void)
+{
+	const char *exp_msg = "commit: Updating test data so we can test inter-hunk-context";
+
+	reflog_check(repo, "HEAD", 9, "yoram.harmelin@gmail.com", exp_msg);
+	reflog_check(repo, "refs/heads/master", 9, "yoram.harmelin@gmail.com", exp_msg);
+
+	/* Branch not moving, no reflog entry */
+	cl_git_pass(git_revparse_single(&target, repo, "HEAD^{commit}"));
+	cl_git_pass(git_reset(repo, target, GIT_RESET_MIXED, NULL, NULL));
+	reflog_check(repo, "HEAD", 9, "yoram.harmelin@gmail.com", exp_msg);
+	reflog_check(repo, "refs/heads/master", 9, "yoram.harmelin@gmail.com", exp_msg);
+
+	/* Moved branch, expect default message */
+	cl_git_pass(git_revparse_single(&target, repo, "HEAD~^{commit}"));
+	cl_git_pass(git_reset(repo, target, GIT_RESET_MIXED, NULL, NULL));
+	reflog_check(repo, "HEAD", 9, "yoram.harmelin@gmail.com", exp_msg);
+	reflog_check(repo, "refs/heads/master", 10, NULL, "reset: moving");
+
+	/* Moved branch, expect custom message */
+	cl_git_pass(git_revparse_single(&target, repo, "HEAD~^{commit}"));
+	cl_git_pass(git_reset(repo, target, GIT_RESET_MIXED, NULL, "message1"));
+	reflog_check(repo, "HEAD", 9, "yoram.harmelin@gmail.com", exp_msg);
+	reflog_check(repo, "refs/heads/master", 11, NULL, "message1");
+}
