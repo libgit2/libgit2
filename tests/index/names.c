@@ -86,7 +86,7 @@ void test_index_names__cleaned_on_reset_hard(void)
 {
 	git_object *target;
 
-	retrieve_target_from_oid(&target, repo, "3a34580a35add43a4cf361e8e9a30060a905c876");
+	cl_git_pass(git_revparse_single(&target, repo, "3a34580"));
 
 	test_index_names__add();
 	cl_git_pass(git_reset(repo, target, GIT_RESET_HARD));
@@ -99,7 +99,7 @@ void test_index_names__cleaned_on_reset_mixed(void)
 {
 	git_object *target;
 
-	retrieve_target_from_oid(&target, repo, "3a34580a35add43a4cf361e8e9a30060a905c876");
+	cl_git_pass(git_revparse_single(&target, repo, "3a34580"));
 
 	test_index_names__add();
 	cl_git_pass(git_reset(repo, target, GIT_RESET_MIXED));
