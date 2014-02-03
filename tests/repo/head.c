@@ -200,7 +200,7 @@ static void test_reflog(git_repository *repo, size_t idx,
 		const char *email, const char *message)
 {
 	git_reflog *log;
-	git_reflog_entry *entry;
+	const git_reflog_entry *entry;
 
 	cl_git_pass(git_reflog_read(&log, repo, "HEAD"));
 	entry = git_reflog_entry_byindex(log, idx);
