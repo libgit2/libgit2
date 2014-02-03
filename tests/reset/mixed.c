@@ -29,7 +29,7 @@ void test_reset_mixed__cannot_reset_in_a_bare_repository(void)
 
 	cl_git_pass(git_revparse_single(&target, bare, KNOWN_COMMIT_IN_BARE_REPO));
 
-	cl_assert_equal_i(GIT_EBAREREPO, git_reset(bare, target, GIT_RESET_MIXED));
+	cl_assert_equal_i(GIT_EBAREREPO, git_reset(bare, target, GIT_RESET_MIXED, NULL, NULL));
 
 	git_repository_free(bare);
 }
@@ -42,7 +42,7 @@ void test_reset_mixed__resetting_refreshes_the_index_to_the_commit_tree(void)
 	cl_assert(status == GIT_STATUS_CURRENT);
 	cl_git_pass(git_revparse_single(&target, repo, "605812a"));
 
-	cl_git_pass(git_reset(repo, target, GIT_RESET_MIXED));
+	cl_git_pass(git_reset(repo, target, GIT_RESET_MIXED, NULL, NULL));
 
 	cl_git_pass(git_status_file(&status, repo, "macro_bad"));
 	cl_assert(status == GIT_STATUS_WT_NEW);
