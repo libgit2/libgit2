@@ -95,4 +95,14 @@ GIT_INLINE(void) git_vector_set_cmp(git_vector *v, git_vector_cmp cmp)
 	}
 }
 
+/** Swap two elements */
+#define git_vector_swap_elements(V, P1, P2) do { \
+	void *__t = (V)->contents[P1]; \
+	(V)->contents[P1] = (V)->contents[P2]; \
+	(V)->contents[P2] = __t; } while (0)
+
+/** Compare two elements */
+#define git_vector_cmp_elements(V, P1, P2) \
+	(V)->_cmp(git_vector_get(V,P1), git_vector_get(V,P2))
+
 #endif

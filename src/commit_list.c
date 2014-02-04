@@ -11,10 +11,10 @@
 #include "pool.h"
 #include "odb.h"
 
-int git_commit_list_time_cmp(void *a, void *b)
+int git_commit_list_time_cmp(const void *a, const void *b)
 {
-	git_commit_list_node *commit_a = (git_commit_list_node *)a;
-	git_commit_list_node *commit_b = (git_commit_list_node *)b;
+	const git_commit_list_node *commit_a = a;
+	const git_commit_list_node *commit_b = b;
 
 	return (commit_a->time < commit_b->time);
 }
