@@ -19,10 +19,7 @@ void git_warning_set_callback(git_warning_callback cb, void *payload)
 }
 
 int git_warning(
-	git_error_t klass,
-	git_repository *repo,
-	git_otype otype,
-	const void *object,
+	git_warning_t warning,
 	const char *fmt,
 	...)
 {
@@ -39,8 +36,7 @@ int git_warning(
 	va_end(arglist);
 
 	if (!error)
-		error = cb(
-			_warning_payload, klass, git_buf_cstr(&buf), repo, otype, object);
+		error = cb(warning, git_buf_cstr(&buf), _warning_payload);
 
 	git_buf_free(&buf);
 

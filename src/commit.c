@@ -274,7 +274,6 @@ int git_commit_amend(
 int git_commit__parse(void *_commit, git_odb_object *odb_obj)
 {
 	git_commit *commit = _commit;
-	git_repository *repo = git_commit_owner(commit);
 	const char *buffer_start = git_odb_object_data(odb_obj), *buffer;
 	const char *buffer_end = buffer_start + git_odb_object_size(odb_obj);
 	git_oid parent_id;
@@ -304,16 +303,14 @@ int git_commit__parse(void *_commit, git_odb_object *odb_obj)
 	commit->author = git__malloc(sizeof(git_signature));
 	GITERR_CHECK_ALLOC(commit->author);
 
-	if (git_signature__parse(
-		commit->author, &buffer, buffer_end, "author ", '\n', repo) < 0)
+	if (git_signature__parse(commit->author, &buffer, buffer_end, "author ", '\n') < 0)
 		return -1;
 
 	/* Always parse the committer; we need the commit time */
 	commit->committer = git__malloc(sizeof(git_signature));
 	GITERR_CHECK_ALLOC(commit->committer);
 
-	if (git_signature__parse(
-		commit->committer, &buffer, buffer_end, "committer ", '\n', repo) < 0)
+	if (git_signature__parse(commit->committer, &buffer, buffer_end, "committer ", '\n') < 0)
 		return -1;
 
 	/* Parse add'l header entries */

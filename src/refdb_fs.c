@@ -1274,9 +1274,7 @@ static int reflog_parse(git_reflog *log, const char *buf, size_t buf_size)
 		while (*buf && *buf != '\t' && *buf != '\n')
 			seek_forward(1);
 
-		if (git_signature__parse(
-				entry->committer, &ptr, buf + 1, NULL, *buf,
-				log && log->db ? log->db->repo : NULL) < 0)
+		if (git_signature__parse(entry->committer, &ptr, buf + 1, NULL, *buf) < 0)
 			goto fail;
 
 		if (*buf == '\t') {

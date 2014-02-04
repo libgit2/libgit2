@@ -10,13 +10,8 @@
 #include "common.h"
 #include "git2/sys/warning.h"
 
-extern void git_warning_set_callback(git_warning_callback cb, void *payload);
-
 extern int git_warning(
-	git_error_t klass,
-	git_repository *repo,
-	git_otype otype,
-	const void *object,
+	git_warning_t warning,
 	const char *fmt,
 	...);
 

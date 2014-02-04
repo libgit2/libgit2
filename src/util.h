@@ -310,6 +310,13 @@ GIT_INLINE(bool) git__iswildcard(int c)
 	return (c == '*' || c == '?' || c == '[');
 }
 
+GIT_INLINE(const char *) git__skip_over_to_space(const char *str)
+{
+	while (git__isspace(*str)) ++str;
+	while (*str && !git__isspace(*str)) ++str;
+	return str;
+}
+
 /*
  * Parse a string value as a boolean, just like Core Git does.
  *

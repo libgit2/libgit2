@@ -147,7 +147,7 @@ static void assert_signature_parses(passing_signature_test_case *passcase)
 	size_t len = strlen(passcase->string);
 	struct git_signature person = {0};
 
-	cl_git_pass(git_signature__parse(&person, &str, str + len, passcase->header, '\n', NULL));
+	cl_git_pass(git_signature__parse(&person, &str, str + len, passcase->header, '\n'));
 	cl_assert_equal_s(passcase->name, person.name);
 	cl_assert_equal_s(passcase->email, person.email);
 	cl_assert_equal_sz(passcase->time, person.when.time);
@@ -161,7 +161,7 @@ static void assert_signature_doesnt_parse(failing_signature_test_case *failcase)
 	size_t len = strlen(failcase->string);
 	git_signature person = {0};
 
-	cl_git_fail(git_signature__parse(&person, &str, str + len, failcase->header, '\n', NULL));
+	cl_git_fail(git_signature__parse(&person, &str, str + len, failcase->header, '\n'));
 	git__free(person.name); git__free(person.email);
 }
 
@@ -177,24 +177,26 @@ void test_commit_parse__signature(void)
 		assert_signature_doesnt_parse(failcase);
 }
 
-static int fail_on_warn(
-	void *p, git_error_t k, const char *m, git_repository *r, git_otype t, const void *o)
+static int fail_on_warn(git_warning_t w, const char *m, void *p)
 {
-	GIT_UNUSED(p); GIT_UNUSED(k); GIT_UNUSED(m); GIT_UNUSED(r); GIT_UNUSED(t); GIT_UNUSED(o);
+	GIT_UNUSED(w); GIT_UNUSED(m); GIT_UNUSED(p);
 	return -1;
 }
 
 void test_commit_parse__signature_semivalid(void)
 {
 	passing_signature_test_case passcase = {"author Vicent Marti <tanoku@gmail.com> 9999999999998589934592 \n", "author ", "Vicent Marti", "tanoku@gmail.com", -1, 0};
-	failing_signature_test_case failcase = {"author Vicent Marti <tanoku@gmail.com> 9999999999998589934592 \n", "author "};
+	failing_signature_test_case failcase1 = {"author Vicent Marti <tanoku@gmail.com> 9999999999998589934592 \n", "author "};
+	failing_signature_test_case failcase2 = {"author Vicent Marti <tanoku@gmail.com> 998589934592 +123412341234123412341234 \n", "author "};
 
 	assert_signature_parses(&passcase);
 
-	git_libgit2_opts(GIT_OPT_SET_WARNING_CALLBACK, fail_on_warn, NULL);
-	assert_signature_doesnt_parse(&failcase);
+	git_warning_set_callback(fail_on_warn, NULL);
 
-	git_libgit2_opts(GIT_OPT_SET_WARNING_CALLBACK, NULL, NULL);
+	assert_signature_doesnt_parse(&failcase1);
+	assert_signature_doesnt_parse(&failcase2);
+
+	git_warning_set_callback(NULL, NULL);
 }
 
 
