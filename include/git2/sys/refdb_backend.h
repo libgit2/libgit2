@@ -95,7 +95,7 @@ struct git_refdb_backend {
 	int (*write)(git_refdb_backend *backend,
 		     const git_reference *ref, int force,
 		     const git_signature *who, const char *message,
-		     const git_oid *old);
+		     const git_oid *old, const char *old_target);
 
 	int (*rename)(
 		git_reference **out, git_refdb_backend *backend,

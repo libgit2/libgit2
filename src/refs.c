@@ -332,7 +332,8 @@ static int reference__create(
 	int force,
 	const git_signature *signature,
 	const char *log_message,
-	const git_oid *old_id)
+	const git_oid *old_id,
+	const char *old_target)
 {
 	char normalized[GIT_REFNAME_MAX];
 	git_refdb *refdb;
@@ -381,7 +382,7 @@ static int reference__create(
 
 	GITERR_CHECK_ALLOC(ref);
 
-	if ((error = git_refdb_write(refdb, ref, force, signature, log_message, old_id)) < 0) {
+	if ((error = git_refdb_write(refdb, ref, force, signature, log_message, old_id, old_target)) < 0) {
 		git_reference_free(ref);
 		return error;
 	}
@@ -431,7 +432,7 @@ int git_reference_create_matching(
 	}
 
 	error = reference__create(
-		ref_out, repo, name, id, NULL, force, signature, log_message, old_id);
+		ref_out, repo, name, id, NULL, force, signature, log_message, old_id, NULL);
 
 	git_signature_free(who);
 	return error;
@@ -471,7 +472,7 @@ int git_reference_symbolic_create(
 	}
 
 	error = reference__create(
-		ref_out, repo, name, NULL, target, force, signature, log_message, NULL);
+		ref_out, repo, name, NULL, target, force, signature, log_message, NULL, NULL);
 
 	git_signature_free(who);
 	return error;
