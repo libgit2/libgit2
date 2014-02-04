@@ -141,35 +141,61 @@ failing_signature_test_case failing_signature_cases[] = {
 	{NULL, NULL,}
 };
 
+static void assert_signature_parses(passing_signature_test_case *passcase)
+{
+	const char *str = passcase->string;
+	size_t len = strlen(passcase->string);
+	struct git_signature person = {0};
+
+	cl_git_pass(git_signature__parse(&person, &str, str + len, passcase->header, '\n', NULL));
+	cl_assert_equal_s(passcase->name, person.name);
+	cl_assert_equal_s(passcase->email, person.email);
+	cl_assert_equal_sz(passcase->time, person.when.time);
+	cl_assert_equal_i(passcase->offset, person.when.offset);
+	git__free(person.name); git__free(person.email);
+}
+
+static void assert_signature_doesnt_parse(failing_signature_test_case *failcase)
+{
+	const char *str = failcase->string;
+	size_t len = strlen(failcase->string);
+	git_signature person = {0};
+
+	cl_git_fail(git_signature__parse(&person, &str, str + len, failcase->header, '\n', NULL));
+	git__free(person.name); git__free(person.email);
+}
+
 void test_commit_parse__signature(void)
 {
 	passing_signature_test_case *passcase;
 	failing_signature_test_case *failcase;
 
-	for (passcase = passing_signature_cases; passcase->string != NULL; passcase++)
-	{
-		const char *str = passcase->string;
-		size_t len = strlen(passcase->string);
-		struct git_signature person = {0};
+	for (passcase = passing_signature_cases; passcase->string; passcase++)
+		assert_signature_parses(passcase);
 
-		cl_git_pass(git_signature__parse(&person, &str, str + len, passcase->header, '\n'));
-		cl_assert_equal_s(passcase->name, person.name);
-		cl_assert_equal_s(passcase->email, person.email);
-		cl_assert_equal_i((int)passcase->time, (int)person.when.time);
-		cl_assert_equal_i(passcase->offset, person.when.offset);
-		git__free(person.name); git__free(person.email);
-	}
-
-	for (failcase = failing_signature_cases; failcase->string != NULL; failcase++)
-	{
-		const char *str = failcase->string;
-		size_t len = strlen(failcase->string);
-		git_signature person = {0};
-		cl_git_fail(git_signature__parse(&person, &str, str + len, failcase->header, '\n'));
-		git__free(person.name); git__free(person.email);
-	}
+	for (failcase = failing_signature_cases; failcase->string; failcase++)
+		assert_signature_doesnt_parse(failcase);
 }
 
+static int fail_on_warn(
+	void *p, git_error_t k, const char *m, git_repository *r, git_otype t, const void *o)
+{
+	GIT_UNUSED(p); GIT_UNUSED(k); GIT_UNUSED(m); GIT_UNUSED(r); GIT_UNUSED(t); GIT_UNUSED(o);
+	return -1;
+}
+
+void test_commit_parse__signature_semivalid(void)
+{
+	passing_signature_test_case passcase = {"author Vicent Marti <tanoku@gmail.com> 9999999999998589934592 \n", "author ", "Vicent Marti", "tanoku@gmail.com", -1, 0};
+	failing_signature_test_case failcase = {"author Vicent Marti <tanoku@gmail.com> 9999999999998589934592 \n", "author "};
+
+	assert_signature_parses(&passcase);
+
+	git_libgit2_opts(GIT_OPT_SET_WARNING_CALLBACK, fail_on_warn, NULL);
+	assert_signature_doesnt_parse(&failcase);
+
+	git_libgit2_opts(GIT_OPT_SET_WARNING_CALLBACK, NULL, NULL);
+}
 
 
 static char *failing_commit_cases[] = {

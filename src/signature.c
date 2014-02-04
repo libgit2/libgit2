@@ -155,8 +155,10 @@ int git_signature_default(git_signature **out, git_repository *repo)
 	return error;
 }
 
-int git_signature__parse(git_signature *sig, const char **buffer_out,
-		const char *buffer_end, const char *header, char ender)
+int git_signature__parse(
+	git_signature *sig, const char **buffer_out,
+	const char *buffer_end, const char *header, char ender,
+	git_repository *repo)
 {
 	const char *buffer = *buffer_out;
 	const char *email_start, *email_end;
@@ -190,8 +192,19 @@ int git_signature__parse(git_signature *sig, const char **buffer_out,
 		const char *time_start = email_end + 2;
 		const char *time_end;
 
-		if (git__strtol64(&sig->when.time, time_start, &time_end, 10) < 0)
-			return signature_error("invalid Unix timestamp");
+		if (git__strtol64(&sig->when.time, time_start, &time_end, 10) < 0) {
+			if (git_warning(
+					GITERR_OBJECT, repo, GIT_OBJ_ANY, time_start,
+					"invalid timestamp") < 0)
+				return signature_error("invalid Unix timestamp");
+			else {
+				sig->when.time = (uint64_t)-1L;
+				/* skip over invalid timestamp data */
+				time_end = time_start;
+				while (git__isspace(*time_end)) ++time_end;
+				while (!git__isspace(*time_end)) ++time_end;
+			}
+		}
 
 		/* do we have a timezone? */
 		if (time_end + 1 < buffer_end) {
@@ -202,8 +215,12 @@ int git_signature__parse(git_signature *sig, const char **buffer_out,
 
 			if ((tz_start[0] != '-' && tz_start[0] != '+') ||
 				git__strtol32(&offset, tz_start + 1, &tz_end, 10) < 0) {
-				//malformed timezone, just assume it's zero
-				offset = 0;
+				if (git_warning(
+						GITERR_OBJECT, repo, GIT_OBJ_ANY, tz_start,
+						"invalid timezone") < 0)
+					return signature_error("invalid timezone");
+				else
+					offset = 0;
 			}
 
 			hours = offset / 100;

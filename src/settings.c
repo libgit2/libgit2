@@ -123,6 +123,13 @@ int git_libgit2_opts(int key, ...)
 	case GIT_OPT_SET_TEMPLATE_PATH:
 		error = git_sysdir_set(GIT_SYSDIR_TEMPLATE, va_arg(ap, const char *));
 		break;
+
+	case GIT_OPT_SET_WARNING_CALLBACK:
+		{
+			git_warning_callback cb = va_arg(ap, git_warning_callback);
+			void *payload = va_arg(ap, void *);
+			git_warning_set_callback(cb, payload);
+		}
 	}
 
 	va_end(ap);

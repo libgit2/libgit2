@@ -130,13 +130,15 @@ static int tag_parse(git_tag *tag, const char *buffer, const char *buffer_end)
 		tag->tagger = git__malloc(sizeof(git_signature));
 		GITERR_CHECK_ALLOC(tag->tagger);
 
-		if (git_signature__parse(tag->tagger, &buffer, buffer_end, "tagger ", '\n') < 0)
+		if (git_signature__parse(
+				tag->tagger, &buffer, buffer_end,
+				"tagger ", '\n', git_tag_owner(tag)) < 0)
 			return -1;
 	}
 
 	tag->message = NULL;
 	if (buffer < buffer_end) {
-		if( *buffer != '\n' )
+		if (*buffer != '\n')
 			return tag_error("No new line before message");
 
 		text_len = buffer_end - ++buffer;

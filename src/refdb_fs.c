@@ -1274,7 +1274,9 @@ static int reflog_parse(git_reflog *log, const char *buf, size_t buf_size)
 		while (*buf && *buf != '\t' && *buf != '\n')
 			seek_forward(1);
 
-		if (git_signature__parse(entry->committer, &ptr, buf + 1, NULL, *buf) < 0)
+		if (git_signature__parse(
+				entry->committer, &ptr, buf + 1, NULL, *buf,
+				log && log->db ? log->db->repo : NULL) < 0)
 			goto fail;
 
 		if (*buf == '\t') {
@@ -1402,7 +1404,7 @@ static int refdb_reflog_fs__read(git_reflog **out, git_refdb_backend *_backend, 
 	if ((error == GIT_ENOTFOUND) &&
 		((error = create_new_reflog_file(git_buf_cstr(&log_path))) < 0))
 		goto cleanup;
- 
+
 	if ((error = reflog_parse(log,
 		git_buf_cstr(&log_file), git_buf_len(&log_file))) < 0)
 		goto cleanup;

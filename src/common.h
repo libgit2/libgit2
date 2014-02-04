@@ -171,5 +171,6 @@ GIT_INLINE(void) git__init_structure(void *structure, size_t len, unsigned int v
 /* NOTE: other giterr functions are in the public errors.h header file */
 
 #include "util.h"
+#include "warning.h"
 
 #endif /* INCLUDE_common_h__ */
