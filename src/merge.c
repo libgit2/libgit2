@@ -2397,7 +2397,7 @@ int git_merge__indexes(git_repository *repo, git_index *index_new)
 
 	/* Remove removed items from the index */
 	git_vector_foreach(&paths, i, path) {
-		if ((e = git_index_get_bypath(index_new, path, 0)) == NULL) {
+		if (git_index_get_bypath(index_new, path, 0) == NULL) {
 			if ((error = git_index_remove(index_repo, path, 0)) < 0 &&
 				error != GIT_ENOTFOUND)
 				goto done;
