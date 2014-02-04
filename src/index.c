@@ -1811,8 +1811,10 @@ static int parse_index(git_index *index, const char *buffer, size_t buffer_size)
 
 #undef seek_forward
 
-	/* Entries are stored case-sensitively on disk. */
-	git_vector_set_sorted(&index->entries, index->ignore_case);
+	/* Entries are stored case-sensitively on disk, so re-sort now if
+	 * in-memory index is supposed to be case-insensitive
+	 */
+	git_vector_set_sorted(&index->entries, !index->ignore_case);
 	git_vector_sort(&index->entries);
 
 	return 0;
