@@ -80,7 +80,7 @@ void test_index_tests__empty_index(void)
    cl_assert(index->on_disk == 0);
 
    cl_assert(git_index_entrycount(index) == 0);
-   cl_assert(index->entries.sorted);
+   cl_assert(git_vector_is_sorted(&index->entries));
 
    git_index_free(index);
 }
@@ -95,7 +95,7 @@ void test_index_tests__default_test_index(void)
    cl_assert(index->on_disk);
 
    cl_assert(git_index_entrycount(index) == index_entry_count);
-   cl_assert(index->entries.sorted);
+   cl_assert(git_vector_is_sorted(&index->entries));
 
    entries = (git_index_entry **)index->entries.contents;
 
@@ -118,7 +118,7 @@ void test_index_tests__gitgit_index(void)
    cl_assert(index->on_disk);
 
    cl_assert(git_index_entrycount(index) == index_entry_count_2);
-   cl_assert(index->entries.sorted);
+   cl_assert(git_vector_is_sorted(&index->entries));
    cl_assert(index->tree != NULL);
 
    git_index_free(index);
@@ -195,7 +195,7 @@ void test_index_tests__sort1(void)
    cl_git_pass(git_index_open(&index, "fake-index"));
 
    /* FIXME: this test is slightly dumb */
-   cl_assert(index->entries.sorted);
+   cl_assert(git_vector_is_sorted(&index->entries));
 
    git_index_free(index);
 }

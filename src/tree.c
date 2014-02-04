@@ -283,7 +283,8 @@ static const git_tree_entry *entry_fromname(
 {
 	size_t idx;
 
-	assert(tree->entries.sorted); /* be safe when we cast away constness */
+	/* be safe when we cast away constness - i.e. don't trigger a sort */
+	assert(git_vector_is_sorted(&tree->entries));
 
 	if (tree_key_search(&idx, (git_vector *)&tree->entries, name, name_len) < 0)
 		return NULL;
@@ -333,7 +334,8 @@ int git_tree__prefix_position(const git_tree *tree, const char *path)
 	ksearch.filename = path;
 	ksearch.filename_len = strlen(path);
 
-	assert(tree->entries.sorted); /* be safe when we cast away constness */
+	/* be safe when we cast away constness - i.e. don't trigger a sort */
+	assert(git_vector_is_sorted(&tree->entries));
 
 	/* Find tree entry with appropriate prefix */
 	git_vector_bsearch2(

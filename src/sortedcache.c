@@ -321,7 +321,7 @@ size_t git_sortedcache_entrycount(const git_sortedcache *sc)
 void *git_sortedcache_entry(git_sortedcache *sc, size_t pos)
 {
 	/* make sure the items are sorted so this gets the correct item */
-	if (!sc->items.sorted)
+	if (!git_vector_is_sorted(&sc->items))
 		git_vector_sort(&sc->items);
 
 	return git_vector_get(&sc->items, pos);

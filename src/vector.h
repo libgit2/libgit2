@@ -11,12 +11,17 @@
 
 typedef int (*git_vector_cmp)(const void *, const void *);
 
+enum {
+	GIT_VECTOR_SORTED = (1u << 0),
+	GIT_VECTOR_FLAG_MAX = (1u << 1),
+};
+
 typedef struct git_vector {
 	size_t _alloc_size;
 	git_vector_cmp _cmp;
 	void **contents;
 	size_t length;
-	int sorted;
+	uint32_t flags;
 } git_vector;
 
 #define GIT_VECTOR_INIT {0}
@@ -86,12 +91,20 @@ void git_vector_remove_matching(
 int git_vector_resize_to(git_vector *v, size_t new_length);
 int git_vector_set(void **old, git_vector *v, size_t position, void *value);
 
+/** Check if vector is sorted */
+#define git_vector_is_sorted(V) (((V)->flags & GIT_VECTOR_SORTED) != 0)
+
+/** Directly set sorted state of vector */
+#define git_vector_set_sorted(V,S) do { \
+	(V)->flags = (S) ? ((V)->flags | GIT_VECTOR_SORTED) : \
+		((V)->flags & ~GIT_VECTOR_SORTED); } while (0)
+
 /** Set the comparison function used for sorting the vector */
 GIT_INLINE(void) git_vector_set_cmp(git_vector *v, git_vector_cmp cmp)
 {
 	if (cmp != v->_cmp) {
 		v->_cmp = cmp;
-		v->sorted = 0;
+		git_vector_set_sorted(v, 0);
 	}
 }
 

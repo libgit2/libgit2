@@ -56,7 +56,9 @@ int git_vector_dup(git_vector *v, const git_vector *src, git_vector_cmp cmp)
 	v->_alloc_size = src->length;
 	v->_cmp = cmp;
 	v->length = src->length;
-	v->sorted = src->sorted && cmp == src->_cmp;
+	v->flags  = src->flags;
+	if (cmp != src->_cmp)
+		git_vector_set_sorted(v, 0);
 	v->contents = git__malloc(bytes);
 	GITERR_CHECK_ALLOC(v->contents);
 
@@ -97,7 +99,7 @@ int git_vector_init(git_vector *v, size_t initial_size, git_vector_cmp cmp)
 	v->_alloc_size = 0;
 	v->_cmp = cmp;
 	v->length = 0;
-	v->sorted = 1;
+	v->flags = GIT_VECTOR_SORTED;
 	v->contents = NULL;
 
 	return resize_vector(v, max(initial_size, MIN_ALLOCSIZE));
@@ -128,7 +130,8 @@ int git_vector_insert(git_vector *v, void *element)
 		return -1;
 
 	v->contents[v->length++] = element;
-	v->sorted = 0;
+
+	git_vector_set_sorted(v, v->length <= 1);
 
 	return 0;
 }
@@ -141,7 +144,7 @@ int git_vector_insert_sorted(
 
 	assert(v && v->_cmp);
 
-	if (!v->sorted)
+	if (!git_vector_is_sorted(v))
 		git_vector_sort(v);
 
 	if (v->length >= v->_alloc_size &&
@@ -171,11 +174,11 @@ void git_vector_sort(git_vector *v)
 {
 	assert(v);
 
-	if (v->sorted || !v->_cmp)
+	if (git_vector_is_sorted(v) || !v->_cmp)
 		return;
 
 	git__tsort(v->contents, v->length, v->_cmp);
-	v->sorted = 1;
+	git_vector_set_sorted(v, 1);
 }
 
 int git_vector_bsearch2(
@@ -291,7 +294,7 @@ void git_vector_clear(git_vector *v)
 {
 	assert(v);
 	v->length = 0;
-	v->sorted = 1;
+	git_vector_set_sorted(v, 1);
 }
 
 void git_vector_swap(git_vector *a, git_vector *b)

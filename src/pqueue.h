@@ -9,15 +9,11 @@
 
 #include "vector.h"
 
-typedef struct {
-	git_vector values;
-	size_t     initial_size;
-	uint32_t   flags;
-} git_pqueue;
+typedef git_vector git_pqueue;
 
 enum {
-	GIT_PQUEUE_DEFAULT = 0,
-	GIT_PQUEUE_FIXED_SIZE = (1 << 0), /* don't grow heap, keep highest */
+	/* flag meaning: don't grow heap, keep highest values only */
+	GIT_PQUEUE_FIXED_SIZE = (GIT_VECTOR_FLAG_MAX << 1),
 };
 
 /**
@@ -25,36 +21,20 @@ enum {
  *
  * @param pq The priority queue struct to initialize
  * @param flags Flags (see above) to control queue behavior
- * @param est_size The estimated/initial queue size
+ * @param init_size The initial queue size
  * @param cmp The entry priority comparison function
  * @return 0 on success, <0 on error
  */
 extern int git_pqueue_init(
 	git_pqueue *pq,
 	uint32_t flags,
-	size_t est_size,
+	size_t init_size,
 	git_vector_cmp cmp);
 
-/**
- * Free the queue memory
- */
-extern void git_pqueue_free(git_pqueue *pq);
-
-/**
- * Get the number of items in the queue
- */
-GIT_INLINE(size_t) git_pqueue_size(const git_pqueue *pq)
-{
-	return git_vector_length(&pq->values);
-}
-
-/**
- * Get an item in the queue
- */
-GIT_INLINE(void *) git_pqueue_get(const git_pqueue *pq, size_t pos)
-{
-	return git_vector_get(&pq->values, pos);
-}
+#define git_pqueue_free  git_vector_free
+#define git_pqueue_clear git_vector_clear
+#define git_pqueue_size  git_vector_length
+#define git_pqueue_get   git_vector_get
 
 /**
  * Insert a new item into the queue

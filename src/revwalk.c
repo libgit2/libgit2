@@ -543,7 +543,7 @@ void git_revwalk_reset(git_revwalk *walk)
 		commit->uninteresting = 0;
 		});
 
-	git_pqueue_free(&walk->iterator_time);
+	git_pqueue_clear(&walk->iterator_time);
 	git_commit_list_free(&walk->iterator_topo);
 	git_commit_list_free(&walk->iterator_rand);
 	git_commit_list_free(&walk->iterator_reverse);
