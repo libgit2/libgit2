@@ -91,3 +91,17 @@ void test_refs_delete__packed_only(void)
 	git_reference_free(ref);
 	git_refdb_free(refdb);
 }
+
+void test_refs_delete__remove(void)
+{
+	git_reference *ref;
+
+	/* Check that passing no old values lets us delete */
+
+	cl_git_pass(git_reference_lookup(&ref, g_repo, packed_test_head_name));
+	git_reference_free(ref);
+
+	cl_git_pass(git_reference_remove(g_repo, packed_test_head_name));
+
+	cl_git_fail(git_reference_lookup(&ref, g_repo, packed_test_head_name));
+}
