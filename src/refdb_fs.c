@@ -930,6 +930,30 @@ static bool should_write_reflog(git_repository *repo, const char *name)
 	return 0;
 }
 
+static int cmp_old_ref(int *cmp, git_refdb_backend *backend, const git_reference *ref,
+	const git_oid *old_id, const char *old_target)
+{
+	int error = 0;
+	git_reference *old_ref = NULL;
+
+	*cmp = 0;
+	if (old_id || old_target) {
+		if ((error = refdb_fs_backend__lookup(&old_ref, backend, ref->name)) < 0)
+			goto out;
+	}
+
+	if (old_id && old_ref->type == GIT_REF_OID)
+		*cmp = git_oid_cmp(old_id, &old_ref->target.oid);
+
+	if (old_target && old_ref->type == GIT_REF_SYMBOLIC)
+		*cmp = git__strcmp(old_target, old_ref->target.symbolic);
+
+out:
+	git_reference_free(old_ref);
+
+	return error;
+}
+
 static int refdb_fs_backend__write(
 	git_refdb_backend *_backend,
 	const git_reference *ref,
@@ -954,20 +978,8 @@ static int refdb_fs_backend__write(
 	if ((error = loose_lock(&file, backend, ref)) < 0)
 		return error;
 
-	if (old_id || old_target) {
-		if ((error = refdb_fs_backend__lookup(&old_ref, _backend, ref->name)) < 0)
-			goto on_error;
-	}
-
-	if (old_id && old_ref->type == GIT_REF_OID) {
-		cmp = git_oid_cmp(old_id, &old_ref->target.oid);
-		git_reference_free(old_ref);
-	}
-
-	if (old_target && old_ref->type == GIT_REF_SYMBOLIC) {
-		cmp = git__strcmp(old_target, old_ref->target.symbolic);
-		git_reference_free(old_ref);
-	}
+	if ((error = cmp_old_ref(&cmp, _backend, ref, old_id, old_target)) < 0)
+		goto on_error;
 
 	if (cmp) {
 		giterr_set(GITERR_REFERENCE, "old reference value does not match");
