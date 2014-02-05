@@ -360,7 +360,7 @@ int git_clone_into(git_repository *repo, git_remote *remote, const git_checkout_
 	git_remote_set_update_fetchhead(remote, 0);
 	git_buf_printf(&reflog_message, "clone: from %s", git_remote_url(remote));
 
-	if ((error = git_remote_fetch(remote)) != 0)
+	if ((error = git_remote_fetch(remote, signature, git_buf_cstr(&reflog_message))) != 0)
 		goto cleanup;
 
 	if (branch)

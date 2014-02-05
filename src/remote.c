@@ -845,7 +845,10 @@ int git_remote_download(git_remote *remote)
 	return git_fetch_download_pack(remote);
 }
 
-int git_remote_fetch(git_remote *remote)
+int git_remote_fetch(
+		git_remote *remote,
+		const git_signature *signature,
+		const char *reflog_message)
 {
 	int error;
 
@@ -860,7 +863,7 @@ int git_remote_fetch(git_remote *remote)
 	git_remote_disconnect(remote);
 
 	/* Create "remote/foo" branches for all remote branches */
-	return git_remote_update_tips(remote);
+	return git_remote_update_tips(remote, signature, reflog_message);
 }
 
 static int remote_head_for_fetchspec_src(git_remote_head **out, git_vector *update_heads, const char *fetchspec_src)
@@ -978,7 +981,12 @@ cleanup:
 	return error;
 }
 
-static int update_tips_for_spec(git_remote *remote, git_refspec *spec, git_vector *refs)
+static int update_tips_for_spec(
+		git_remote *remote,
+		git_refspec *spec,
+		git_vector *refs,
+		const git_signature *signature,
+		const char *log_message)
 {
 	int error = 0, autotag;
 	unsigned int i = 0;
@@ -1045,7 +1053,8 @@ static int update_tips_for_spec(git_remote *remote, git_refspec *spec, git_vecto
 			continue;
 
 		/* In autotag mode, don't overwrite any locally-existing tags */
-		error = git_reference_create(&ref, remote->repo, refname.ptr, &head->oid, !autotag, NULL, NULL);
+		error = git_reference_create(&ref, remote->repo, refname.ptr, &head->oid, !autotag, 
+				signature, log_message);
 		if (error < 0 && error != GIT_EEXISTS)
 			goto on_error;
 
@@ -1074,7 +1083,10 @@ on_error:
 
 }
 
-int git_remote_update_tips(git_remote *remote)
+int git_remote_update_tips(
+		git_remote *remote,
+		const git_signature *signature,
+		const char *reflog_message)
 {
 	git_refspec *spec, tagspec;
 	git_vector refs;
@@ -1089,7 +1101,7 @@ int git_remote_update_tips(git_remote *remote)
 		goto out;
 
 	if (remote->download_tags == GIT_REMOTE_DOWNLOAD_TAGS_ALL) {
-		error = update_tips_for_spec(remote, &tagspec, &refs);
+		error = update_tips_for_spec(remote, &tagspec, &refs, signature, reflog_message);
 		goto out;
 	}
 
@@ -1097,7 +1109,7 @@ int git_remote_update_tips(git_remote *remote)
 		if (spec->push)
 			continue;
 
-		if ((error = update_tips_for_spec(remote, spec, &refs)) < 0)
+		if ((error = update_tips_for_spec(remote, spec, &refs, signature, reflog_message)) < 0)
 			goto out;
 	}
 
