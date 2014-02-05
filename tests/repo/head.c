@@ -15,21 +15,42 @@ void test_repo_head__cleanup(void)
 	cl_git_sandbox_cleanup();
 }
 
+static void check_last_reflog_entry(const char *email, const char *message)
+{
+	git_reflog *log;
+	const git_reflog_entry *entry;
+
+	cl_git_pass(git_reflog_read(&log, repo, GIT_HEAD_FILE));
+	cl_assert(git_reflog_entrycount(log) > 0);
+	entry = git_reflog_entry_byindex(log, 0);
+	if (email)
+		cl_assert_equal_s(email, git_reflog_entry_committer(entry)->email);
+	if (message)
+		cl_assert_equal_s(message, git_reflog_entry_message(entry));
+	git_reflog_free(log);
+}
+
 void test_repo_head__head_detached(void)
 {
 	git_reference *ref;
+	git_signature *sig;
 
-	cl_git_pass(git_repository_head_detached(repo));
-
-	cl_git_pass(git_repository_detach_head(repo));
-
-	cl_assert_equal_i(true, git_repository_head_detached(repo));
-
-	/* take the reop back to it's original state */
-	cl_git_pass(git_reference_symbolic_create(&ref, repo, "HEAD", "refs/heads/master", 1, NULL, NULL));
-	git_reference_free(ref);
+	cl_git_pass(git_signature_now(&sig, "Foo Bar", "foo@example.com"));
 
 	cl_assert_equal_i(false, git_repository_head_detached(repo));
+
+	cl_git_pass(git_repository_detach_head(repo, sig, "CABLE DETACHED"));
+	check_last_reflog_entry(sig->email, "CABLE DETACHED");
+	cl_assert_equal_i(true, git_repository_head_detached(repo));
+
+	/* take the repo back to it's original state */
+	cl_git_pass(git_reference_symbolic_create(&ref, repo, "HEAD", "refs/heads/master",
+				true, sig, "REATTACH"));
+	git_reference_free(ref);
+
+	check_last_reflog_entry(sig->email, "REATTACH");
+	cl_assert_equal_i(false, git_repository_head_detached(repo));
+	git_signature_free(sig);
 }
 
 void test_repo_head__unborn_head(void)
@@ -147,7 +168,7 @@ void test_repo_head__detach_head_Detaches_HEAD_and_make_it_point_to_the_peeled_c
 {
 	cl_assert_equal_i(false, git_repository_head_detached(repo));
 
-	cl_git_pass(git_repository_detach_head(repo));
+	cl_git_pass(git_repository_detach_head(repo, NULL, NULL));
 
 	assert_head_is_correctly_detached();
 }
@@ -158,7 +179,7 @@ void test_repo_head__detach_head_Fails_if_HEAD_and_point_to_a_non_commitish(void
 
 	cl_git_pass(git_reference_symbolic_create(&head, repo, GIT_HEAD_FILE, "refs/tags/point_to_blob", 1, NULL, NULL));
 
-	cl_git_fail(git_repository_detach_head(repo));
+	cl_git_fail(git_repository_detach_head(repo, NULL, NULL));
 
 	git_reference_free(head);
 }
@@ -167,7 +188,7 @@ void test_repo_head__detaching_an_unborn_branch_returns_GIT_EUNBORNBRANCH(void)
 {
 	make_head_unborn(repo, NON_EXISTING_HEAD);
 
-	cl_assert_equal_i(GIT_EUNBORNBRANCH, git_repository_detach_head(repo));
+	cl_assert_equal_i(GIT_EUNBORNBRANCH, git_repository_detach_head(repo, NULL, NULL));
 }
 
 void test_repo_head__retrieving_an_unborn_branch_returns_GIT_EUNBORNBRANCH(void)

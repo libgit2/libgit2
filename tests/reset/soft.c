@@ -45,7 +45,7 @@ void test_reset_soft__can_reset_the_non_detached_Head_to_the_specified_commit(vo
 
 void test_reset_soft__can_reset_the_detached_Head_to_the_specified_commit(void)
 {
-	git_repository_detach_head(repo);
+	git_repository_detach_head(repo, NULL, NULL);
 
 	assert_reset_soft(true);
 }
@@ -118,7 +118,7 @@ void test_reset_soft__fails_when_merging(void)
 {
 	git_buf merge_head_path = GIT_BUF_INIT;
 
-	cl_git_pass(git_repository_detach_head(repo));
+	cl_git_pass(git_repository_detach_head(repo, NULL, NULL));
 	cl_git_pass(git_buf_joinpath(&merge_head_path, git_repository_path(repo), "MERGE_HEAD"));
 	cl_git_mkfile(git_buf_cstr(&merge_head_path), "beefbeefbeefbeefbeefbeefbeefbeefbeefbeef\n");
 

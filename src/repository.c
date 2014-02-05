@@ -1891,7 +1891,9 @@ cleanup:
 }
 
 int git_repository_detach_head(
-	git_repository* repo)
+	git_repository* repo,
+	const git_signature *signature,
+	const char *reflog_message)
 {
 	git_reference *old_head = NULL,
 		*new_head = NULL;
@@ -1906,7 +1908,8 @@ int git_repository_detach_head(
 	if ((error = git_object_lookup(&object, repo, git_reference_target(old_head), GIT_OBJ_COMMIT)) < 0)
 		goto cleanup;
 
-	error = git_reference_create(&new_head, repo, GIT_HEAD_FILE, git_reference_target(old_head), 1, NULL, NULL);
+	error = git_reference_create(&new_head, repo, GIT_HEAD_FILE, git_reference_target(old_head),
+			1, signature, reflog_message);
 
 cleanup:
 	git_object_free(object);
