@@ -15,8 +15,15 @@ static git_index *repo_index;
 // Fixture setup and teardown
 void test_revert_workdir__initialize(void)
 {
+	git_config *cfg;
+
 	repo = cl_git_sandbox_init(TEST_REPO_PATH);
 	git_repository_index(&repo_index, repo);
+
+	/* Ensure that the user's merge.conflictstyle doesn't interfere */
+	cl_git_pass(git_repository_config(&cfg, repo));
+	cl_git_pass(git_config_set_string(cfg, "merge.conflictstyle", "merge"));
+	git_config_free(cfg);
 }
 
 void test_revert_workdir__cleanup(void)
