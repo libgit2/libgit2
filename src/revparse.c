@@ -490,8 +490,7 @@ static int handle_grep_syntax(git_object **out, git_repository *repo, const git_
 	git_revwalk_sorting(walk, GIT_SORT_TIME);
 
 	if (spec_oid == NULL) {
-		// TODO: @carlosmn: The glob should be refs/* but this makes git_revwalk_next() fails
-		if ((error = git_revwalk_push_glob(walk, GIT_REFS_HEADS_DIR "*")) < 0)
+		if ((error = git_revwalk_push_glob(walk, "refs/*")) < 0)
 			goto cleanup;
 	} else if ((error = git_revwalk_push(walk, spec_oid)) < 0)
 			goto cleanup;

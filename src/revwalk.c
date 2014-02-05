@@ -110,25 +110,34 @@ static int process_commit_parents(git_revwalk *walk, git_commit_list_node *commi
 	return error;
 }
 
-static int push_commit(git_revwalk *walk, const git_oid *oid, int uninteresting)
+static int push_commit(git_revwalk *walk, const git_oid *oid, int uninteresting, int from_glob)
 {
+	git_oid commit_id;
 	int error;
-	git_object *obj;
-	git_otype type;
+	git_object *obj, *oobj;
 	git_commit_list_node *commit;
 
-	if ((error = git_object_lookup(&obj, walk->repo, oid, GIT_OBJ_ANY)) < 0)
+	if ((error = git_object_lookup(&oobj, walk->repo, oid, GIT_OBJ_ANY)) < 0)
 		return error;
 
-	type = git_object_type(obj);
-	git_object_free(obj);
+	error = git_object_peel(&obj, oobj, GIT_OBJ_COMMIT);
+	git_object_free(oobj);
 
-	if (type != GIT_OBJ_COMMIT) {
-		giterr_set(GITERR_INVALID, "Object is no commit object");
+	if (error == GIT_ENOTFOUND) {
+		/* If this comes from e.g. push_glob("tags"), ignore this */
+		if (from_glob)
+			return 0;
+
+		giterr_set(GITERR_INVALID, "Object is not a committish");
 		return -1;
 	}
+	if (error < 0)
+		return error;
 
-	commit = git_revwalk__commit_lookup(walk, oid);
+	git_oid_cpy(&commit_id, git_object_id(obj));
+	git_object_free(obj);
+
+	commit = git_revwalk__commit_lookup(walk, &commit_id);
 	if (commit == NULL)
 		return -1; /* error already reported by failed lookup */
 
@@ -146,24 +155,24 @@ static int push_commit(git_revwalk *walk, const git_oid *oid, int uninteresting)
 int git_revwalk_push(git_revwalk *walk, const git_oid *oid)
 {
 	assert(walk && oid);
-	return push_commit(walk, oid, 0);
+	return push_commit(walk, oid, 0, false);
 }
 
 
 int git_revwalk_hide(git_revwalk *walk, const git_oid *oid)
 {
 	assert(walk && oid);
-	return push_commit(walk, oid, 1);
+	return push_commit(walk, oid, 1, false);
 }
 
-static int push_ref(git_revwalk *walk, const char *refname, int hide)
+static int push_ref(git_revwalk *walk, const char *refname, int hide, int from_glob)
 {
 	git_oid oid;
 
 	if (git_reference_name_to_id(&oid, walk->repo, refname) < 0)
 		return -1;
 
-	return push_commit(walk, &oid, hide);
+	return push_commit(walk, &oid, hide, from_glob);
 }
 
 struct push_cb_data {
@@ -171,17 +180,12 @@ struct push_cb_data {
 	int hide;
 };
 
-static int push_glob_cb(const char *refname, void *data_)
-{
-	struct push_cb_data *data = (struct push_cb_data *)data_;
-	return push_ref(data->walk, refname, data->hide);
-}
-
 static int push_glob(git_revwalk *walk, const char *glob, int hide)
 {
 	int error = 0;
 	git_buf buf = GIT_BUF_INIT;
-	struct push_cb_data data;
+	git_reference *ref;
+	git_reference_iterator *iter;
 	size_t wildcard;
 
 	assert(walk && glob);
@@ -199,12 +203,20 @@ static int push_glob(git_revwalk *walk, const char *glob, int hide)
 	if (!glob[wildcard])
 		git_buf_put(&buf, "/*", 2);
 
-	data.walk = walk;
-	data.hide = hide;
+	if ((error = git_reference_iterator_glob_new(&iter, walk->repo, buf.ptr)) < 0)
+		goto out;
 
-	error = git_reference_foreach_glob(
-		walk->repo, git_buf_cstr(&buf), push_glob_cb, &data);
+	while ((error = git_reference_next(&ref, iter)) == 0) {
+		error = push_ref(walk, git_reference_name(ref), hide, true);
+		git_reference_free(ref);
+		if (error < 0)
+			break;
+	}
+	git_reference_iterator_free(iter);
 
+	if (error == GIT_ITEROVER)
+		error = 0;
+out:
 	git_buf_free(&buf);
 	return error;
 }
@@ -224,19 +236,19 @@ int git_revwalk_hide_glob(git_revwalk *walk, const char *glob)
 int git_revwalk_push_head(git_revwalk *walk)
 {
 	assert(walk);
-	return push_ref(walk, GIT_HEAD_FILE, 0);
+	return push_ref(walk, GIT_HEAD_FILE, 0, false);
 }
 
 int git_revwalk_hide_head(git_revwalk *walk)
 {
 	assert(walk);
-	return push_ref(walk, GIT_HEAD_FILE, 1);
+	return push_ref(walk, GIT_HEAD_FILE, 1, false);
 }
 
 int git_revwalk_push_ref(git_revwalk *walk, const char *refname)
 {
 	assert(walk && refname);
-	return push_ref(walk, refname, 0);
+	return push_ref(walk, refname, 0, false);
 }
 
 int git_revwalk_push_range(git_revwalk *walk, const char *range)
@@ -253,10 +265,10 @@ int git_revwalk_push_range(git_revwalk *walk, const char *range)
 		return GIT_EINVALIDSPEC;
 	}
 
-	if ((error = push_commit(walk, git_object_id(revspec.from), 1)))
+	if ((error = push_commit(walk, git_object_id(revspec.from), 1, false)))
 		goto out;
 
-	error = push_commit(walk, git_object_id(revspec.to), 0);
+	error = push_commit(walk, git_object_id(revspec.to), 0, false);
 
 out:
 	git_object_free(revspec.from);
@@ -267,7 +279,7 @@ out:
 int git_revwalk_hide_ref(git_revwalk *walk, const char *refname)
 {
 	assert(walk && refname);
-	return push_ref(walk, refname, 1);
+	return push_ref(walk, refname, 1, false);
 }
 
 static int revwalk_enqueue_timesort(git_revwalk *walk, git_commit_list_node *commit)
