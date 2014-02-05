@@ -7,8 +7,8 @@
 #ifndef INCLUDE_util_h__
 #define INCLUDE_util_h__
 
-#include "posix.h"
 #include "common.h"
+#include "strnlen.h"
 
 #define ARRAY_SIZE(x) (sizeof(x)/sizeof(x[0]))
 #define bitsizeof(x) (CHAR_BIT * sizeof(x))
