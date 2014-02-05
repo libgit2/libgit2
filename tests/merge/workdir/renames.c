@@ -17,7 +17,14 @@ static git_repository *repo;
 // Fixture setup and teardown
 void test_merge_workdir_renames__initialize(void)
 {
+	git_config *cfg;
+
 	repo = cl_git_sandbox_init(TEST_REPO_PATH);
+
+	/* Ensure that the user's merge.conflictstyle doesn't interfere */
+	cl_git_pass(git_repository_config(&cfg, repo));
+	cl_git_pass(git_config_set_string(cfg, "merge.conflictstyle", "merge"));
+	git_config_free(cfg);
 }
 
 void test_merge_workdir_renames__cleanup(void)

@@ -61,12 +61,19 @@ struct checkout_name_entry {
 
 void test_checkout_conflict__initialize(void)
 {
+	git_config *cfg;
+
 	g_repo = cl_git_sandbox_init(TEST_REPO_PATH);
 	git_repository_index(&g_index, g_repo);
 
 	cl_git_rewritefile(
 		TEST_REPO_PATH "/.gitattributes",
 		"* text eol=lf\n");
+
+	/* Ensure that the user's merge.conflictstyle doesn't interfere */
+	cl_git_pass(git_repository_config(&cfg, g_repo));
+	cl_git_pass(git_config_set_string(cfg, "merge.conflictstyle", "merge"));
+	git_config_free(cfg);
 }
 
 void test_checkout_conflict__cleanup(void)
