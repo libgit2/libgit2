@@ -116,7 +116,15 @@ void git_reference_free(git_reference *reference)
 
 int git_reference_delete(git_reference *ref)
 {
-	return git_refdb_delete(ref->db, ref->name, NULL, NULL);
+	const git_oid *old_id = NULL;
+	const char *old_target = NULL;
+
+	if (ref->type == GIT_REF_OID)
+		old_id = &ref->target.oid;
+	else
+		old_target = ref->target.symbolic;
+
+	return git_refdb_delete(ref->db, ref->name, old_id, old_target);
 }
 
 int git_reference_lookup(git_reference **ref_out,
