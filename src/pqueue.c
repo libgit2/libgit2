@@ -35,32 +35,47 @@ int git_pqueue_init(
 static void pqueue_up(git_pqueue *pq, size_t el)
 {
 	size_t parent_el = PQUEUE_PARENT_OF(el);
+	void *kid = git_vector_get(pq, el);
 
-	while (el > 0 && git_vector_cmp_elements(pq, parent_el, el) > 0) {
-		git_vector_swap_elements(pq, el, parent_el);
+	while (el > 0) {
+		void *parent = pq->contents[parent_el];
+
+		if (pq->_cmp(parent, kid) <= 0)
+			break;
+
+		pq->contents[el] = parent;
 
 		el = parent_el;
 		parent_el = PQUEUE_PARENT_OF(el);
 	}
+
+	pq->contents[el] = kid;
 }
 
 static void pqueue_down(git_pqueue *pq, size_t el)
 {
-	size_t last = git_pqueue_size(pq);
+	void *parent = git_vector_get(pq, el), *kid, *rkid;
 
 	while (1) {
-		size_t kid = PQUEUE_LCHILD_OF(el), rkid = PQUEUE_RCHILD_OF(el);
-		if (kid >= last)
-			break;
-		if (rkid < last && git_vector_cmp_elements(pq, kid, rkid) > 0)
-			kid = rkid;
+		size_t kid_el = PQUEUE_LCHILD_OF(el);
 
-		if (git_vector_cmp_elements(pq, el, kid) < 0)
+		if ((kid = git_vector_get(pq, kid_el)) == NULL)
 			break;
 
-		git_vector_swap_elements(pq, el, kid);
-		el = kid;
+		if ((rkid = git_vector_get(pq, kid_el + 1)) != NULL &&
+			pq->_cmp(kid, rkid) > 0) {
+			kid    = rkid;
+			kid_el += 1;
+		}
+
+		if (pq->_cmp(parent, kid) < 0)
+			break;
+
+		pq->contents[el] = kid;
+		el = kid_el;
 	}
+
+	pq->contents[el] = parent;
 }
 
 int git_pqueue_insert(git_pqueue *pq, void *item)
