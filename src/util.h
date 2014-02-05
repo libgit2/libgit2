@@ -7,6 +7,7 @@
 #ifndef INCLUDE_util_h__
 #define INCLUDE_util_h__
 
+#include "posix.h"
 #include "common.h"
 
 #define ARRAY_SIZE(x) (sizeof(x)/sizeof(x[0]))
@@ -50,8 +51,7 @@ GIT_INLINE(char *) git__strndup(const char *str, size_t n)
 	size_t length = 0;
 	char *ptr;
 
-	while (length < n && str[length])
-		++length;
+	length = p_strnlen(str, n);
 
 	ptr = (char*)git__malloc(length + 1);
 
