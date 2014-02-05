@@ -201,10 +201,10 @@ int git_refdb_rename(
 	return 0;
 }
 
-int git_refdb_delete(struct git_refdb *db, const char *ref_name)
+int git_refdb_delete(struct git_refdb *db, const char *ref_name, const git_oid *old_id, const char *old_target)
 {
 	assert(db && db->backend);
-	return db->backend->del(db->backend, ref_name);
+	return db->backend->del(db->backend, ref_name, old_id, old_target);
 }
 
 int git_refdb_reflog_read(git_reflog **out, git_refdb *db,  const char *name)

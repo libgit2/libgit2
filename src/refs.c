@@ -116,7 +116,7 @@ void git_reference_free(git_reference *reference)
 
 int git_reference_delete(git_reference *ref)
 {
-	return git_refdb_delete(ref->db, ref->name);
+	return git_refdb_delete(ref->db, ref->name, NULL, NULL);
 }
 
 int git_reference_lookup(git_reference **ref_out,
