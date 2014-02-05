@@ -8,6 +8,7 @@
 #define INCLUDE_util_h__
 
 #include "common.h"
+#include "strnlen.h"
 
 #define ARRAY_SIZE(x) (sizeof(x)/sizeof(x[0]))
 #define bitsizeof(x) (CHAR_BIT * sizeof(x))
@@ -50,8 +51,7 @@ GIT_INLINE(char *) git__strndup(const char *str, size_t n)
 	size_t length = 0;
 	char *ptr;
 
-	while (length < n && str[length])
-		++length;
+	length = p_strnlen(str, n);
 
 	ptr = (char*)git__malloc(length + 1);
 
