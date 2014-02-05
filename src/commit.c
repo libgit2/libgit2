@@ -164,33 +164,15 @@ int git_commit__parse(void *_commit, git_odb_object *odb_obj)
 	const char *buffer_start = git_odb_object_data(odb_obj), *buffer;
 	const char *buffer_end = buffer_start + git_odb_object_size(odb_obj);
 	git_oid parent_id;
-	uint32_t parent_count = 0;
 	size_t header_len;
 
-	/* find end-of-header (counting parents as we go) */
-	for (buffer = buffer_start; buffer < buffer_end; ++buffer) {
-		if (!strncmp("\n\n", buffer, 2)) {
-			++buffer;
-			break;
-		}
-		if (!strncmp("\nparent ", buffer, strlen("\nparent ")))
-			++parent_count;
-	}
+	buffer = buffer_start;
 
-	header_len = buffer - buffer_start;
-	commit->raw_header = git__strndup(buffer_start, header_len);
-	GITERR_CHECK_ALLOC(commit->raw_header);
-
-	/* point "buffer" to header data */
-	buffer = commit->raw_header;
-	buffer_end = commit->raw_header + header_len;
-
-	if (parent_count < 1)
-		parent_count = 1;
-
-	git_array_init_to_size(commit->parent_ids, parent_count);
+	/* Allocate for one, which will allow not to realloc 90% of the time  */
+	git_array_init_to_size(commit->parent_ids, 1);
 	GITERR_CHECK_ARRAY(commit->parent_ids);
 
+	/* The tree is always the first field */
 	if (git_oid__parse(&commit->tree_id, &buffer, buffer_end, "tree ") < 0)
 		goto bad_buffer;
 
@@ -221,6 +203,9 @@ int git_commit__parse(void *_commit, git_odb_object *odb_obj)
 	/* Parse add'l header entries */
 	while (buffer < buffer_end) {
 		const char *eoln = buffer;
+		if (buffer[-1] == '\n' && buffer[0] == '\n')
+			break;
+
 		while (eoln < buffer_end && *eoln != '\n')
 			++eoln;
 
@@ -236,13 +221,12 @@ int git_commit__parse(void *_commit, git_odb_object *odb_obj)
 		buffer = eoln;
 	}
 
-	/* point "buffer" to data after header */
-	buffer = git_odb_object_data(odb_obj);
-	buffer_end = buffer + git_odb_object_size(odb_obj);
+	header_len = buffer - buffer_start;
+	commit->raw_header = git__strndup(buffer_start, header_len);
+	GITERR_CHECK_ALLOC(commit->raw_header);
 
-	buffer += header_len;
-	if (*buffer == '\n')
-		++buffer;
+	/* point "buffer" to data after header, +1 for the final LF */
+	buffer = buffer_start + header_len + 1;
 
 	/* extract commit message */
 	if (buffer <= buffer_end) {
