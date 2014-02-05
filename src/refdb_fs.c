@@ -937,9 +937,21 @@ static int cmp_old_ref(int *cmp, git_refdb_backend *backend, const char *name,
 	git_reference *old_ref = NULL;
 
 	*cmp = 0;
-	if (old_id || old_target) {
-		if ((error = refdb_fs_backend__lookup(&old_ref, backend, name)) < 0)
-			goto out;
+	/* It "matches" if there is no old value to compare against */
+	if (!old_id && !old_target)
+		return 0;
+
+	if ((error = refdb_fs_backend__lookup(&old_ref, backend, name)) < 0)
+		goto out;
+
+	/* If the types don't match, there's no way the values do */
+	if (old_id && old_ref->type != GIT_REF_OID) {
+		*cmp = -1;
+		goto out;
+	}
+	if (old_target && old_ref->type != GIT_REF_SYMBOLIC) {
+		*cmp = 1;
+		goto out;
 	}
 
 	if (old_id && old_ref->type == GIT_REF_OID)
