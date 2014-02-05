@@ -7,6 +7,7 @@
 
 static const char *commit_id = "099fabac3a9ea935598528c27f866e34089c2eff";
 static const char *refname = "refs/heads/master";
+static const char *other_refname = "refs/heads/foo";
 static const char *other_commit_id = "a65fedf39aefe402d3bb6e24df4d4f5fe4547750";
 
 static git_repository *g_repo;
@@ -23,7 +24,6 @@ void test_refs_races__cleanup(void)
 
 void test_refs_races__create_matching(void)
 {
-	int error;
 	git_reference *ref, *ref2, *ref3;
 	git_oid id, other_id;
 
@@ -35,6 +35,25 @@ void test_refs_races__create_matching(void)
 	cl_git_pass(git_reference_lookup(&ref, g_repo, refname));
 	cl_git_pass(git_reference_create_matching(&ref2, g_repo, refname, &other_id, 1, NULL, NULL, &id));
 	cl_git_fail_with(GIT_EMODIFIED, git_reference_set_target(&ref3, ref, &other_id, NULL, NULL));
+
+	git_reference_free(ref);
+	git_reference_free(ref2);
+	git_reference_free(ref3);
+}
+
+void test_refs_races__symbolic_create_matching(void)
+{
+	git_reference *ref, *ref2, *ref3;
+	git_oid id, other_id;
+
+	git_oid_fromstr(&id, commit_id);
+	git_oid_fromstr(&other_id, other_commit_id);
+
+	cl_git_fail_with(GIT_EMODIFIED, git_reference_symbolic_create_matching(&ref, g_repo, "HEAD", other_refname, 1, NULL, NULL, other_refname));
+
+	cl_git_pass(git_reference_lookup(&ref, g_repo, "HEAD"));
+	cl_git_pass(git_reference_symbolic_create_matching(&ref2, g_repo, "HEAD", other_refname, 1, NULL, NULL, refname));
+	cl_git_fail_with(GIT_EMODIFIED, git_reference_symbolic_set_target(&ref3, ref, other_refname, NULL, NULL));
 
 	git_reference_free(ref);
 	git_reference_free(ref2);

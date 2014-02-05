@@ -450,14 +450,15 @@ int git_reference_create(
         return git_reference_create_matching(ref_out, repo, name, id, force, signature, log_message, NULL);
 }
 
-int git_reference_symbolic_create(
+int git_reference_symbolic_create_matching(
 	git_reference **ref_out,
 	git_repository *repo,
 	const char *name,
 	const char *target,
 	int force,
 	const git_signature *signature,
-	const char *log_message)
+	const char *log_message,
+	const char *old_target)
 {
 	int error;
 	git_signature *who = NULL;
@@ -472,10 +473,22 @@ int git_reference_symbolic_create(
 	}
 
 	error = reference__create(
-		ref_out, repo, name, NULL, target, force, signature, log_message, NULL, NULL);
+		ref_out, repo, name, NULL, target, force, signature, log_message, NULL, old_target);
 
 	git_signature_free(who);
 	return error;
+}
+
+int git_reference_symbolic_create(
+	git_reference **ref_out,
+	git_repository *repo,
+	const char *name,
+	const char *target,
+	int force,
+	const git_signature *signature,
+	const char *log_message)
+{
+	return git_reference_symbolic_create_matching(ref_out, repo, name, target, force, signature, log_message, NULL);
 }
 
 static int ensure_is_an_updatable_direct_reference(git_reference *ref)
@@ -530,8 +543,8 @@ int git_reference_symbolic_set_target(
 	if ((error = ensure_is_an_updatable_symbolic_reference(ref)) < 0)
 		return error;
 
-	return git_reference_symbolic_create(
-		out, ref->db->repo, ref->name, target, 1, signature, log_message);
+	return git_reference_symbolic_create_matching(
+		out, ref->db->repo, ref->name, target, 1, signature, log_message, ref->target.symbolic);
 }
 
 static int reference__rename(git_reference **out, git_reference *ref, const char *new_name, int force,
