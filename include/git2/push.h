@@ -105,7 +105,7 @@ GIT_EXTERN(int) git_push_add_refspec(git_push *push, const char *refspec);
  * @param push The push object
  * @param signature The identity to use when updating reflogs
  * @param reflog_message The message to insert into the reflogs. If NULL, the
- *								 default is "update by push".
+ *                       default is "update by push".
  *
  * @return 0 or an error code
  */

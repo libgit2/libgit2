@@ -357,7 +357,7 @@ GIT_EXTERN(void) git_remote_free(git_remote *remote);
  * @param remote the remote to update
  * @param signature The identity to use when updating reflogs
  * @param reflog_message The message to insert into the reflogs. If NULL, the
- *								 default is "fetch"
+ *                       default is "fetch"
  * @return 0 or an error code
  */
 GIT_EXTERN(int) git_remote_update_tips(
