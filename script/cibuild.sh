@@ -34,5 +34,5 @@ export GITTEST_REMOTE_SSH_PUBKEY="$HOME/.ssh/id_rsa.pub"
 export GITTEST_REMOTE_SSH_PASSPHRASE=""
 
 if [ -e ./libgit2_clar ]; then
-    ./libgit2_clar -sonline::push
+    ./libgit2_clar -sonline::push -sonline::clone::cred_callback_failure
 fi

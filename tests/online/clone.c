@@ -198,15 +198,21 @@ static int cred_failure_cb(
 void test_online_clone__cred_callback_failure_return_code_is_tunnelled(void)
 {
 	const char *remote_url = cl_getenv("GITTEST_REMOTE_URL");
+	const char *remote_user = cl_getenv("GITTEST_REMOTE_USER");
 
 	if (!remote_url) {
 		printf("GITTEST_REMOTE_URL unset; skipping clone test\n");
 		return;
 	}
 
+	if (!remote_user) {
+		printf("GITTEST_REMOTE_USER unset; skipping clone test\n");
+		return;
+	}
+
 	g_options.remote_callbacks.credentials = cred_failure_cb;
 
-	/* TODO: this doesn't work currently. */
+	/* TODO: this should expect -172. */
 	cl_git_fail_with(git_clone(&g_repo, remote_url, "./foo", &g_options), -1);
 }
 
