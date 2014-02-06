@@ -851,6 +851,7 @@ int git_remote_fetch(
 		const char *reflog_message)
 {
 	int error;
+	git_buf reflog_msg_buf = GIT_BUF_INIT;
 
 	/* Connect and download everything */
 	if ((error = git_remote_connect(remote, GIT_DIRECTION_FETCH)) != 0)
@@ -862,8 +863,18 @@ int git_remote_fetch(
 	/* We don't need to be connected anymore */
 	git_remote_disconnect(remote);
 
+	/* Default reflog message */
+	if (reflog_message)
+		git_buf_sets(&reflog_msg_buf, reflog_message);
+	else {
+		git_buf_printf(&reflog_msg_buf, "fetch %s",
+				remote->name ? remote->name : remote->url);
+	}
+
 	/* Create "remote/foo" branches for all remote branches */
-	return git_remote_update_tips(remote, signature, reflog_message);
+	error = git_remote_update_tips(remote, signature, git_buf_cstr(&reflog_msg_buf));
+	git_buf_free(&reflog_msg_buf);
+	return error;
 }
 
 static int remote_head_for_fetchspec_src(git_remote_head **out, git_vector *update_heads, const char *fetchspec_src)
