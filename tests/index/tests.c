@@ -80,7 +80,7 @@ void test_index_tests__empty_index(void)
    cl_assert(index->on_disk == 0);
 
    cl_assert(git_index_entrycount(index) == 0);
-   cl_assert(index->entries.sorted);
+   cl_assert(git_vector_is_sorted(&index->entries));
 
    git_index_free(index);
 }
@@ -95,7 +95,7 @@ void test_index_tests__default_test_index(void)
    cl_assert(index->on_disk);
 
    cl_assert(git_index_entrycount(index) == index_entry_count);
-   cl_assert(index->entries.sorted);
+   cl_assert(git_vector_is_sorted(&index->entries));
 
    entries = (git_index_entry **)index->entries.contents;
 
@@ -118,7 +118,7 @@ void test_index_tests__gitgit_index(void)
    cl_assert(index->on_disk);
 
    cl_assert(git_index_entrycount(index) == index_entry_count_2);
-   cl_assert(index->entries.sorted);
+   cl_assert(git_vector_is_sorted(&index->entries));
    cl_assert(index->tree != NULL);
 
    git_index_free(index);
@@ -195,7 +195,7 @@ void test_index_tests__sort1(void)
    cl_git_pass(git_index_open(&index, "fake-index"));
 
    /* FIXME: this test is slightly dumb */
-   cl_assert(index->entries.sorted);
+   cl_assert(git_vector_is_sorted(&index->entries));
 
    git_index_free(index);
 }
@@ -542,4 +542,38 @@ void test_index_tests__corrupted_extension(void)
 	git_index *index;
 
 	cl_git_fail_with(git_index_open(&index, TEST_INDEXBAD_PATH), GIT_ERROR);
+}
+
+static void assert_index_is_sorted(git_index *index)
+{
+	git_vector *entries = &index->entries;
+	size_t i;
+
+	cl_assert(git_vector_is_sorted(entries));
+
+	for (i = 1; i < git_vector_length(entries); ++i) {
+		git_index_entry *prev = git_vector_get(entries, i - 1);
+		git_index_entry *curr = git_vector_get(entries, i);
+		cl_assert(index->entries._cmp(prev, curr) <= 0);
+	}
+}
+
+void test_index_tests__reload_while_ignoring_case(void)
+{
+	git_index *index;
+	unsigned int caps;
+
+	cl_git_pass(git_index_open(&index, TEST_INDEX_PATH));
+	assert_index_is_sorted(index);
+
+	caps = git_index_caps(index);
+	cl_git_pass(git_index_set_caps(index, caps &= ~GIT_INDEXCAP_IGNORE_CASE));
+	cl_git_pass(git_index_read(index, true));
+	assert_index_is_sorted(index);
+
+	cl_git_pass(git_index_set_caps(index, caps | GIT_INDEXCAP_IGNORE_CASE));
+	cl_git_pass(git_index_read(index, true));
+	assert_index_is_sorted(index);
+
+	git_index_free(index);
 }

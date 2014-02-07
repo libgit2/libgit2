@@ -1564,7 +1564,7 @@ static int read_reuc(git_index *index, const char *buffer, size_t size)
 	}
 
 	/* entries are guaranteed to be sorted on-disk */
-	index->reuc.sorted = 1;
+	git_vector_set_sorted(&index->reuc, true);
 
 	return 0;
 }
@@ -1610,7 +1610,7 @@ static int read_conflict_names(git_index *index, const char *buffer, size_t size
 #undef read_conflict_name
 
 	/* entries are guaranteed to be sorted on-disk */
-	index->names.sorted = 1;
+	git_vector_set_sorted(&index->names, true);
 
 	return 0;
 }
@@ -1811,8 +1811,10 @@ static int parse_index(git_index *index, const char *buffer, size_t buffer_size)
 
 #undef seek_forward
 
-	/* Entries are stored case-sensitively on disk. */
-	index->entries.sorted = !index->ignore_case;
+	/* Entries are stored case-sensitively on disk, so re-sort now if
+	 * in-memory index is supposed to be case-insensitive
+	 */
+	git_vector_set_sorted(&index->entries, !index->ignore_case);
 	git_vector_sort(&index->entries);
 
 	return 0;

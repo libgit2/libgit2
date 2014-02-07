@@ -161,10 +161,10 @@ on_error:
 
 static int interesting(git_pqueue *list)
 {
-	unsigned int i;
-	/* element 0 isn't used - we need to start at 1 */
-	for (i = 1; i < list->size; i++) {
-		git_commit_list_node *commit = list->d[i];
+	size_t i;
+
+	for (i = 0; i < git_pqueue_size(list); i++) {
+		git_commit_list_node *commit = git_pqueue_get(list, i);
 		if ((commit->flags & STALE) == 0)
 			return 1;
 	}
@@ -186,7 +186,7 @@ int git_merge__bases_many(git_commit_list **out, git_revwalk *walk, git_commit_l
 			return git_commit_list_insert(one, out) ? 0 : -1;
 	}
 
-	if (git_pqueue_init(&list, twos->length * 2, git_commit_list_time_cmp) < 0)
+	if (git_pqueue_init(&list, 0, twos->length * 2, git_commit_list_time_cmp) < 0)
 		return -1;
 
 	if (git_commit_list_parse(walk, one) < 0)
@@ -205,10 +205,11 @@ int git_merge__bases_many(git_commit_list **out, git_revwalk *walk, git_commit_l
 
 	/* as long as there are non-STALE commits */
 	while (interesting(&list)) {
-		git_commit_list_node *commit;
+		git_commit_list_node *commit = git_pqueue_pop(&list);
 		int flags;
 
-		commit = git_pqueue_pop(&list);
+		if (commit == NULL)
+			break;
 
 		flags = commit->flags & (PARENT1 | PARENT2 | STALE);
 		if (flags == (PARENT1 | PARENT2)) {
