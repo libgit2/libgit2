@@ -1716,7 +1716,7 @@ cleanup:
 	return error;
 }
 
-int git_repository_message(git_buf *out,  git_repository *repo)
+int git_repository_message(git_buf *out, git_repository *repo)
 {
 	git_buf path = GIT_BUF_INIT;
 	struct stat st;
@@ -1731,9 +1731,9 @@ int git_repository_message(git_buf *out,  git_repository *repo)
 		if (errno == ENOENT)
 			error = GIT_ENOTFOUND;
 		giterr_set(GITERR_OS, "Could not access message file");
+	} else {
+		error = git_futils_readbuffer(out, git_buf_cstr(&path));
 	}
-
-	error = git_futils_readbuffer(out, git_buf_cstr(&path));
 
 	git_buf_free(&path);
 

@@ -90,7 +90,7 @@ struct entry_long {
 
 struct entry_srch_key {
 	const char *path;
-	int path_len;
+	size_t path_len;
 	int stage;
 };
 
@@ -110,7 +110,8 @@ static int index_srch(const void *key, const void *array_member)
 {
 	const struct entry_srch_key *srch_key = key;
 	const git_index_entry *entry = array_member;
-	int cmp, len1, len2, len;
+	int cmp;
+	size_t len1, len2, len;
 
 	len1 = srch_key->path_len;
 	len2 = strlen(entry->path);
@@ -134,7 +135,8 @@ static int index_isrch(const void *key, const void *array_member)
 {
 	const struct entry_srch_key *srch_key = key;
 	const git_index_entry *entry = array_member;
-	int cmp, len1, len2, len;
+	int cmp;
+	size_t len1, len2, len;
 
 	len1 = srch_key->path_len;
 	len2 = strlen(entry->path);
@@ -599,9 +601,7 @@ const git_index_entry *git_index_get_bypath(
 
 	assert(index);
 
-	git_vector_sort(&index->entries);
-
-	if (git_index__find(&pos, index, path, strlen(path), stage) < 0) {
+	if (git_index__find(&pos, index, path, 0, stage) < 0) {
 		giterr_set(GITERR_INDEX, "Index does not contain %s", path);
 		return NULL;
 	}
@@ -837,8 +837,7 @@ static int index_insert(git_index *index, git_index_entry *entry, int replace)
 
 	/* look if an entry with this path already exists */
 	if (!git_index__find(
-			&position, index, entry->path, strlen(entry->path),
-			GIT_IDXENTRY_STAGE(entry))) {
+			&position, index, entry->path, 0, GIT_IDXENTRY_STAGE(entry))) {
 		existing = (git_index_entry **)&index->entries.contents[position];
 		/* update filemode to existing values if stat is not trusted */
 		entry->mode = index_merge_mode(index, *existing, entry->mode);
@@ -950,9 +949,7 @@ int git_index_remove(git_index *index, const char *path, int stage)
 	int error;
 	git_index_entry *entry;
 
-	git_vector_sort(&index->entries);
-
-	if (git_index__find(&position, index, path, strlen(path), stage) < 0) {
+	if (git_index__find(&position, index, path, 0, stage) < 0) {
 		giterr_set(GITERR_INDEX, "Index does not contain %s at stage %d",
 			path, stage);
 		return GIT_ENOTFOUND;
@@ -1009,18 +1006,20 @@ int git_index_remove_directory(git_index *index, const char *dir, int stage)
 }
 
 int git_index__find(
-	size_t *at_pos, git_index *index, const char *path, int path_len, int stage)
+	size_t *out, git_index *index, const char *path, size_t path_len, int stage)
 {
 	struct entry_srch_key srch_key;
 
 	assert(path);
 
+	git_vector_sort(&index->entries);
+
 	srch_key.path = path;
-	srch_key.path_len = path_len;
+	srch_key.path_len = !path_len ? strlen(path) : path_len;
 	srch_key.stage = stage;
 
 	return git_vector_bsearch2(
-		at_pos, &index->entries, index->entries_search, &srch_key);
+		out, &index->entries, index->entries_search, &srch_key);
 }
 
 int git_index_find(size_t *at_pos, git_index *index, const char *path)
@@ -2234,7 +2233,7 @@ int git_index_add_all(
 		/* skip ignored items that are not already in the index */
 		if ((flags & GIT_INDEX_ADD_FORCE) == 0 &&
 			git_iterator_current_is_ignored(wditer) &&
-			git_index__find(&existing, index, wd->path, strlen(wd->path), 0) < 0)
+			git_index__find(&existing, index, wd->path, 0, 0) < 0)
 			continue;
 
 		/* issue notification callback if requested */

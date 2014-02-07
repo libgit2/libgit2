@@ -56,7 +56,7 @@ extern int git_index_entry__cmp(const void *a, const void *b);
 extern int git_index_entry__cmp_icase(const void *a, const void *b);
 
 extern int git_index__find(
-	size_t *at_pos, git_index *index, const char *path, int path_len, int stage);
+	size_t *at_pos, git_index *index, const char *path, size_t path_len, int stage);
 
 extern void git_index__set_ignore_case(git_index *index, bool ignore_case);
 

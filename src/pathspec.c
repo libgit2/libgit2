@@ -445,7 +445,7 @@ static int pathspec_match_from_iterator(
 		/* check if path is ignored and untracked */
 		if (index != NULL &&
 			git_iterator_current_is_ignored(iter) &&
-			git_index__find(NULL, index, entry->path, strlen(entry->path), GIT_INDEX_STAGE_ANY) < 0)
+			git_index__find(NULL, index, entry->path, 0, GIT_INDEX_STAGE_ANY) < 0)
 			continue;
 
 		/* mark the matched pattern as used */
