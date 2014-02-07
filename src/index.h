@@ -50,11 +50,13 @@ struct git_index_conflict_iterator {
 extern void git_index_entry__init_from_stat(
 	git_index_entry *entry, struct stat *st, bool trust_mode);
 
-extern size_t git_index__prefix_position(git_index *index, const char *path);
-
 extern int git_index_entry__cmp(const void *a, const void *b);
 extern int git_index_entry__cmp_icase(const void *a, const void *b);
 
+/* Search index for `path`, returning GIT_ENOTFOUND if it does not exist.
+ * `at_pos` is set to the position where it is or would be inserted.
+ * Pass `path_len` as strlen of path or 0 to call strlen internally.
+ */
 extern int git_index__find(
 	size_t *at_pos, git_index *index, const char *path, size_t path_len, int stage);
 

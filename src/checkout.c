@@ -277,19 +277,23 @@ static int checkout_action_wd_only(
 
 	/* check if item is tracked in the index but not in the checkout diff */
 	if (data->index != NULL) {
+		size_t pos;
+
+		error = git_index__find(
+			&pos, data->index, wd->path, 0, GIT_INDEX_STAGE_ANY);
+
 		if (wd->mode != GIT_FILEMODE_TREE) {
-			if (!(error = git_index_find(NULL, data->index, wd->path))) {
+			if (!error) { /* found by git_index__find call */
 				notify = GIT_CHECKOUT_NOTIFY_DIRTY;
 				remove = ((data->strategy & GIT_CHECKOUT_FORCE) != 0);
 			} else if (error != GIT_ENOTFOUND)
 				return error;
 			else
-				giterr_clear();
+				error = 0; /* git_index__find does not set error msg */
 		} else {
 			/* for tree entries, we have to see if there are any index
 			 * entries that are contained inside that tree
 			 */
-			size_t pos = git_index__prefix_position(data->index, wd->path);
 			const git_index_entry *e = git_index_get_byindex(data->index, pos);
 
 			if (e != NULL && data->diff->pfxcomp(e->path, wd->path) == 0) {

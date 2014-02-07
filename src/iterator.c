@@ -815,8 +815,10 @@ static int index_iterator__reset(
 	if (iterator__reset_range(self, start, end) < 0)
 		return -1;
 
-	ii->current = ii->base.start ?
-		git_index__prefix_position(ii->index, ii->base.start) : 0;
+	ii->current = 0;
+
+	if (ii->base.start)
+		git_index__find(&ii->current, ii->index, ii->base.start, 0, 0);
 
 	if ((ie = index_iterator__skip_conflicts(ii)) == NULL)
 		return 0;

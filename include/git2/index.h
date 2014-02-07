@@ -77,7 +77,12 @@ typedef struct git_index_entry {
 #define GIT_IDXENTRY_VALID     (0x8000)
 #define GIT_IDXENTRY_STAGESHIFT 12
 
-#define GIT_IDXENTRY_STAGE(E) (((E)->flags & GIT_IDXENTRY_STAGEMASK) >> GIT_IDXENTRY_STAGESHIFT)
+#define GIT_IDXENTRY_STAGE(E) \
+	(((E)->flags & GIT_IDXENTRY_STAGEMASK) >> GIT_IDXENTRY_STAGESHIFT)
+
+#define GIT_IDXENTRY_STAGE_SET(E,S) do { \
+	(E)->flags = ((E)->flags & ~GIT_IDXENTRY_STAGEMASK) | \
+		(((S) & 0x03) << GIT_IDXENTRY_STAGESHIFT); } while (0)
 
 /**
  * Bitmasks for on-disk fields of `git_index_entry`'s `flags_extended`
@@ -327,12 +332,14 @@ GIT_EXTERN(size_t) git_index_entrycount(const git_index *index);
 
 /**
  * Clear the contents (all the entries) of an index object.
- * This clears the index object in memory; changes must be manually
- * written to disk for them to take effect.
+ *
+ * This clears the index object in memory; changes must be explicitly
+ * written to disk for them to take effect persistently.
  *
  * @param index an existing index object
+ * @return 0 on success, error code < 0 on failure
  */
-GIT_EXTERN(void) git_index_clear(git_index *index);
+GIT_EXTERN(int) git_index_clear(git_index *index);
 
 /**
  * Get a pointer to one of the entries in the index
