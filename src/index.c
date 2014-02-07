@@ -1228,9 +1228,12 @@ int git_index_conflict_remove(git_index *index, const char *path)
 	return 0;
 }
 
-static int index_conflicts_match(const git_vector *v, size_t idx)
+static int index_conflicts_match(const git_vector *v, size_t idx, void *p)
 {
+	git_index *index = p;
 	git_index_entry *entry = git_vector_get(v, idx);
+
+	GIT_UNUSED(index);
 
 	if (GIT_IDXENTRY_STAGE(entry) > 0) {
 		index_entry_free(entry);
@@ -1243,7 +1246,7 @@ static int index_conflicts_match(const git_vector *v, size_t idx)
 void git_index_conflict_cleanup(git_index *index)
 {
 	assert(index);
-	git_vector_remove_matching(&index->entries, index_conflicts_match);
+	git_vector_remove_matching(&index->entries, index_conflicts_match, index);
 }
 
 int git_index_has_conflicts(const git_index *index)

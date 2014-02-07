@@ -653,9 +653,12 @@ static int checkout_conflictdata_cmp(const void *a, const void *b)
 	return diff;
 }
 
-int checkout_conflictdata_empty(const git_vector *conflicts, size_t idx)
+int checkout_conflictdata_empty(
+	const git_vector *conflicts, size_t idx, void *payload)
 {
 	checkout_conflictdata *conflict;
+
+	GIT_UNUSED(payload);
 
 	if ((conflict = git_vector_get(conflicts, idx)) == NULL)
 		return -1;
@@ -954,7 +957,8 @@ static int checkout_conflicts_coalesce_renames(
 			ancestor_conflict->one_to_two = 1;
 	}
 
-	git_vector_remove_matching(&data->conflicts, checkout_conflictdata_empty);
+	git_vector_remove_matching(
+		&data->conflicts, checkout_conflictdata_empty, NULL);
 
 done:
 	return error;

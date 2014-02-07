@@ -276,14 +276,16 @@ void git_vector_uniq(git_vector *v, void  (*git_free_cb)(void *))
 }
 
 void git_vector_remove_matching(
-	git_vector *v, int (*match)(const git_vector *v, size_t idx))
+	git_vector *v,
+	int (*match)(const git_vector *v, size_t idx, void *payload),
+	void *payload)
 {
 	size_t i, j;
 
 	for (i = 0, j = 0; j < v->length; ++j) {
 		v->contents[i] = v->contents[j];
 
-		if (!match(v, i))
+		if (!match(v, i, payload))
 			i++;
 	}
 
@@ -336,6 +338,21 @@ int git_vector_set(void **old, git_vector *v, size_t position, void *value)
 		*old = v->contents[position];
 
 	v->contents[position] = value;
+
+	return 0;
+}
+
+int git_vector_verify_sorted(const git_vector *v)
+{
+	size_t i;
+
+	if (!git_vector_is_sorted(v))
+		return -1;
+
+	for (i = 1; i < v->length; ++i) {
+		if (v->_cmp(v->contents[i - 1], v->contents[i]) > 0)
+			return -1;
+	}
 
 	return 0;
 }

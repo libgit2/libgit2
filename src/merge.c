@@ -995,9 +995,11 @@ static void merge_diff_list_coalesce_renames(
 	}
 }
 
-static int merge_diff_empty(const git_vector *conflicts, size_t idx)
+static int merge_diff_empty(const git_vector *conflicts, size_t idx, void *p)
 {
 	git_merge_diff *conflict = conflicts->contents[idx];
+
+	GIT_UNUSED(p);
 
 	return (!GIT_MERGE_INDEX_ENTRY_EXISTS(conflict->ancestor_entry) &&
 		!GIT_MERGE_INDEX_ENTRY_EXISTS(conflict->our_entry) &&
@@ -1079,7 +1081,7 @@ int git_merge_diff_list__find_renames(
 	merge_diff_list_coalesce_renames(diff_list, similarity_ours, similarity_theirs, opts);
 
 	/* And remove any entries that were merged and are now empty. */
-	git_vector_remove_matching(&diff_list->conflicts, merge_diff_empty);
+	git_vector_remove_matching(&diff_list->conflicts, merge_diff_empty, NULL);
 
 done:
 	if (cache != NULL) {
