@@ -8,6 +8,7 @@
 #include "diff.h"
 #include "diff_patch.h"
 #include "fileops.h"
+#include "git2/sys/diff.h"
 
 typedef struct {
 	git_diff *diff;
@@ -435,7 +436,7 @@ int git_patch_print(
 	return error;
 }
 
-static int diff_print_to_buffer_cb(
+int git_diff_print_callback__to_buf(
 	const git_diff_delta *delta,
 	const git_diff_hunk *hunk,
 	const git_diff_line *line,
@@ -443,6 +444,11 @@ static int diff_print_to_buffer_cb(
 {
 	git_buf *output = payload;
 	GIT_UNUSED(delta); GIT_UNUSED(hunk);
+
+	if (!output) {
+		giterr_set(GITERR_INVALID, "Buffer pointer must be provided");
+		return -1;
+	}
 
 	if (line->origin == GIT_DIFF_LINE_ADDITION ||
 		line->origin == GIT_DIFF_LINE_DELETION ||
@@ -452,10 +458,28 @@ static int diff_print_to_buffer_cb(
 	return git_buf_put(output, line->content, line->content_len);
 }
 
+int git_diff_print_callback__to_file_handle(
+	const git_diff_delta *delta,
+	const git_diff_hunk *hunk,
+	const git_diff_line *line,
+	void *payload)
+{
+	FILE *fp = payload ? payload : stdout;
+
+	GIT_UNUSED(delta); GIT_UNUSED(hunk);
+
+	if (line->origin == GIT_DIFF_LINE_CONTEXT ||
+		line->origin == GIT_DIFF_LINE_ADDITION ||
+		line->origin == GIT_DIFF_LINE_DELETION)
+		fputc(line->origin, fp);
+	fwrite(line->content, 1, line->content_len, fp);
+	return 0;
+}
+
 /* print a git_patch to a git_buf */
 int git_patch_to_buf(
 	git_buf *out,
 	git_patch *patch)
 {
-	return git_patch_print(patch, diff_print_to_buffer_cb, out);
+	return git_patch_print(patch, git_diff_print_callback__to_buf, out);
 }
