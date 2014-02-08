@@ -71,4 +71,16 @@ GIT_INLINE(const git_futils_filestamp *) git_index__filestamp(git_index *index)
 
 extern int git_index__changed_relative_to(git_index *index, const git_futils_filestamp *fs);
 
+/* Copy the current entries vector *and* increment the index refcount.
+ * Call `git_index__release_snapshot` when done.
+ */
+extern int git_index__snapshot(git_vector *entries, git_index *index);
+extern void git_index__release_snapshot(git_index *index);
+
+/* Allow searching in a snapshot; entries must already be sorted! */
+extern int git_index__find_in_entries(
+	size_t *at_pos,
+	git_vector *entries, git_vector_cmp entry_cmp,
+	const char *path, size_t path_len, int stage);
+
 #endif

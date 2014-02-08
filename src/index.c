@@ -1056,21 +1056,26 @@ int git_index_remove_directory(git_index *index, const char *dir, int stage)
 	return error;
 }
 
-int git_index__find(
-	size_t *out, git_index *index, const char *path, size_t path_len, int stage)
+int git_index__find_in_entries(
+	size_t *out, git_vector *entries, git_vector_cmp entry_cmp,
+	const char *path, size_t path_len, int stage)
 {
 	struct entry_srch_key srch_key;
-
-	assert(path);
-
-	git_vector_sort(&index->entries);
-
 	srch_key.path = path;
 	srch_key.path_len = !path_len ? strlen(path) : path_len;
 	srch_key.stage = stage;
+	return git_vector_bsearch2(out, entries, entry_cmp, &srch_key);
+}
 
-	return git_vector_bsearch2(
-		out, &index->entries, index->entries_search, &srch_key);
+int git_index__find(
+	size_t *out, git_index *index, const char *path, size_t path_len, int stage)
+{
+	assert(index && path);
+
+	git_vector_sort(&index->entries);
+
+	return git_index__find_in_entries(
+		out, &index->entries, index->entries_search, path, path_len, stage);
 }
 
 int git_index_find(size_t *at_pos, git_index *index, const char *path)
@@ -2441,4 +2446,23 @@ int git_index_update_all(
 		giterr_set_after_callback(error);
 
 	return error;
+}
+
+int git_index__snapshot(git_vector *entries, git_index *index)
+{
+	int error;
+
+	GIT_REFCOUNT_INC(index);
+	git_vector_sort(&index->entries);
+	error = git_vector_dup(entries, &index->entries, index->entries._cmp);
+
+	if (error < 0)
+		git_index_free(index);
+
+	return error;
+}
+
+void git_index__release_snapshot(git_index *index)
+{
+	git_index_free(index);
 }
