@@ -688,30 +688,32 @@ static int reference_path_available(
 	return 0;
 }
 
-static int loose_lock(git_filebuf *file, refdb_fs_backend *backend, const git_reference *ref)
+static int loose_lock(git_filebuf *file, refdb_fs_backend *backend, const char *name)
 {
+        int error;
 	git_buf ref_path = GIT_BUF_INIT;
+
+	assert(file && backend && name);
 
 	/* Remove a possibly existing empty directory hierarchy
 	 * which name would collide with the reference name
 	 */
-	if (git_futils_rmdir_r(ref->name, backend->path, GIT_RMDIR_SKIP_NONEMPTY) < 0)
+	if (git_futils_rmdir_r(name, backend->path, GIT_RMDIR_SKIP_NONEMPTY) < 0)
 		return -1;
 
-	if (git_buf_joinpath(&ref_path, backend->path, ref->name) < 0)
+	if (git_buf_joinpath(&ref_path, backend->path, name) < 0)
 		return -1;
 
-	if (git_filebuf_open(file, ref_path.ptr, GIT_FILEBUF_FORCE, GIT_REFS_FILE_MODE) < 0) {
-		git_buf_free(&ref_path);
-		return -1;
-	}
+	error = git_filebuf_open(file, ref_path.ptr, GIT_FILEBUF_FORCE, GIT_REFS_FILE_MODE);
 
 	git_buf_free(&ref_path);
-	return 0;
+        return error;
 }
 
 static int loose_commit(git_filebuf *file, const git_reference *ref)
 {
+	assert(file && ref);
+
 	if (ref->type == GIT_REF_OID) {
 		char oid[GIT_OID_HEXSZ + 1];
 		git_oid_nfmt(oid, sizeof(oid), &ref->target.oid);
@@ -928,16 +930,54 @@ static bool should_write_reflog(git_repository *repo, const char *name)
 	return 0;
 }
 
+static int cmp_old_ref(int *cmp, git_refdb_backend *backend, const char *name,
+	const git_oid *old_id, const char *old_target)
+{
+	int error = 0;
+	git_reference *old_ref = NULL;
+
+	*cmp = 0;
+	/* It "matches" if there is no old value to compare against */
+	if (!old_id && !old_target)
+		return 0;
+
+	if ((error = refdb_fs_backend__lookup(&old_ref, backend, name)) < 0)
+		goto out;
+
+	/* If the types don't match, there's no way the values do */
+	if (old_id && old_ref->type != GIT_REF_OID) {
+		*cmp = -1;
+		goto out;
+	}
+	if (old_target && old_ref->type != GIT_REF_SYMBOLIC) {
+		*cmp = 1;
+		goto out;
+	}
+
+	if (old_id && old_ref->type == GIT_REF_OID)
+		*cmp = git_oid_cmp(old_id, &old_ref->target.oid);
+
+	if (old_target && old_ref->type == GIT_REF_SYMBOLIC)
+		*cmp = git__strcmp(old_target, old_ref->target.symbolic);
+
+out:
+	git_reference_free(old_ref);
+
+	return error;
+}
+
 static int refdb_fs_backend__write(
 	git_refdb_backend *_backend,
 	const git_reference *ref,
 	int force,
 	const git_signature *who,
-	const char *message)
+	const char *message,
+	const git_oid *old_id,
+	const char *old_target)
 {
 	refdb_fs_backend *backend = (refdb_fs_backend *)_backend;
 	git_filebuf file = GIT_FILEBUF_INIT;
-	int error;
+	int error = 0, cmp = 0;
 
 	assert(backend);
 
@@ -945,9 +985,18 @@ static int refdb_fs_backend__write(
 	if (error < 0)
 		return error;
 
-	/* We need to perform the reflog append under the ref's lock */
-	if ((error = loose_lock(&file, backend, ref)) < 0)
+	/* We need to perform the reflog append and old value check under the ref's lock */
+	if ((error = loose_lock(&file, backend, ref->name)) < 0)
 		return error;
+
+	if ((error = cmp_old_ref(&cmp, _backend, ref->name, old_id, old_target)) < 0)
+		goto on_error;
+
+	if (cmp) {
+		giterr_set(GITERR_REFERENCE, "old reference value does not match");
+		error = GIT_EMODIFIED;
+		goto on_error;
+	}
 
 	if (should_write_reflog(backend->repo, ref->name) &&
 	    (error = reflog_append(backend, ref, who, message)) < 0) {
@@ -956,19 +1005,39 @@ static int refdb_fs_backend__write(
 	}
 
 	return loose_commit(&file, ref);
+
+on_error:
+        git_filebuf_cleanup(&file);
+        return error;
 }
 
 static int refdb_fs_backend__delete(
 	git_refdb_backend *_backend,
-	const char *ref_name)
+	const char *ref_name,
+	const git_oid *old_id, const char *old_target)
 {
 	refdb_fs_backend *backend = (refdb_fs_backend *)_backend;
 	git_buf loose_path = GIT_BUF_INIT;
-	size_t pack_pos;
-	int error = 0;
+	size_t pack_pos
+;	git_filebuf file = GIT_FILEBUF_INIT;
+	int error = 0, cmp = 0;
 	bool loose_deleted = 0;
 
 	assert(backend && ref_name);
+
+	if ((error = loose_lock(&file, backend, ref_name)) < 0)
+		return error;
+
+	error = cmp_old_ref(&cmp, _backend, ref_name, old_id, old_target);
+	//git_filebuf_cleanup(&file);
+	if (error < 0)
+		goto cleanup;
+
+	if (cmp) {
+		giterr_set(GITERR_REFERENCE, "old reference value does not match");
+		error = GIT_EMODIFIED;
+		goto cleanup;
+	}
 
 	/* If a loose reference exists, remove it from the filesystem */
 	if (git_buf_joinpath(&loose_path, backend->path, ref_name) < 0)
@@ -982,14 +1051,14 @@ static int refdb_fs_backend__delete(
 	git_buf_free(&loose_path);
 
 	if (error != 0)
-		return error;
+		goto cleanup;
 
-	if (packed_reload(backend) < 0)
-		return -1;
+	if ((error = packed_reload(backend)) < 0)
+		goto cleanup;
 
 	/* If a packed reference exists, remove it from the packfile and repack */
-	if (git_sortedcache_wlock(backend->refcache) < 0)
-		return -1;
+	if ((error = git_sortedcache_wlock(backend->refcache)) < 0)
+		goto cleanup;
 
 	if (!(error = git_sortedcache_lookup_index(
 			&pack_pos, backend->refcache, ref_name)))
@@ -997,10 +1066,17 @@ static int refdb_fs_backend__delete(
 
 	git_sortedcache_wunlock(backend->refcache);
 
-	if (error == GIT_ENOTFOUND)
-		return loose_deleted ? 0 : ref_error_notfound(ref_name);
+	if (error == GIT_ENOTFOUND) {
+		error = loose_deleted ? 0 : ref_error_notfound(ref_name);
+		goto cleanup;
+	}
 
-	return packed_write(backend);
+	error = packed_write(backend);
+
+cleanup:
+	git_filebuf_cleanup(&file);
+
+	return error;
 }
 
 static int refdb_reflog_fs__rename(git_refdb_backend *_backend, const char *old_name, const char *new_name);
@@ -1026,7 +1102,7 @@ static int refdb_fs_backend__rename(
 		(error = refdb_fs_backend__lookup(&old, _backend, old_name)) < 0)
 		return error;
 
-	if ((error = refdb_fs_backend__delete(_backend, old_name)) < 0) {
+	if ((error = refdb_fs_backend__delete(_backend, old_name, NULL, NULL)) < 0) {
 		git_reference_free(old);
 		return error;
 	}
@@ -1037,7 +1113,7 @@ static int refdb_fs_backend__rename(
 		return -1;
 	}
 
-	if ((error = loose_lock(&file, backend, new)) < 0) {
+	if ((error = loose_lock(&file, backend, new->name)) < 0) {
 		git_reference_free(new);
 		return error;
 	}

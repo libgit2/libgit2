@@ -68,6 +68,46 @@ GIT_EXTERN(int) git_reference_name_to_id(
 GIT_EXTERN(int) git_reference_dwim(git_reference **out, git_repository *repo, const char *shorthand);
 
 /**
+ * Conditionally create a new symbolic reference.
+ *
+ * A symbolic reference is a reference name that refers to another
+ * reference name.  If the other name moves, the symbolic name will move,
+ * too.  As a simple example, the "HEAD" reference might refer to
+ * "refs/heads/master" while on the "master" branch of a repository.
+ *
+ * The symbolic reference will be created in the repository and written to
+ * the disk.  The generated reference object must be freed by the user.
+ *
+ * Valid reference names must follow one of two patterns:
+ *
+ * 1. Top-level names must contain only capital letters and underscores,
+ *    and must begin and end with a letter. (e.g. "HEAD", "ORIG_HEAD").
+ * 2. Names prefixed with "refs/" can be almost anything.  You must avoid
+ *    the characters '~', '^', ':', '\\', '?', '[', and '*', and the
+ *    sequences ".." and "@{" which have special meaning to revparse.
+ *
+ * This function will return an error if a reference already exists with the
+ * given name unless `force` is true, in which case it will be overwritten.
+ *
+ * The signature and message for the reflog will be ignored if the
+ * reference does not belong in the standard set (HEAD, branches and
+ * remote-tracking branches) and it does not have a reflog.
+ *
+ * It will also return an error if the reference's value at the time
+ * of updating does not match the one passed.
+ *
+ * @param out Pointer to the newly created reference
+ * @param repo Repository where that reference will live
+ * @param name The name of the reference
+ * @param target The target of the reference
+ * @param force Overwrite existing references
+ * @param signature The identity that will used to populate the reflog entry
+ * @param log_message The one line long message to be appended to the reflog
+ * @return 0 on success, GIT_EEXISTS, GIT_EINVALIDSPEC, GIT_EMODIFIED or an error code
+ */
+GIT_EXTERN(int) git_reference_symbolic_create_matching(git_reference **out, git_repository *repo, const char *name, const char *target, int force, const git_signature *signature, const char *log_message, const char *old_value);
+
+/**
  * Create a new symbolic reference.
  *
  * A symbolic reference is a reference name that refers to another
@@ -142,6 +182,50 @@ GIT_EXTERN(int) git_reference_symbolic_create(git_reference **out, git_repositor
  * @return 0 on success, GIT_EEXISTS, GIT_EINVALIDSPEC or an error code
  */
 GIT_EXTERN(int) git_reference_create(git_reference **out, git_repository *repo, const char *name, const git_oid *id, int force, const git_signature *signature, const char *log_message);
+
+/**
+ * Conditionally create new direct reference
+ *
+ * A direct reference (also called an object id reference) refers directly
+ * to a specific object id (a.k.a. OID or SHA) in the repository.  The id
+ * permanently refers to the object (although the reference itself can be
+ * moved).  For example, in libgit2 the direct ref "refs/tags/v0.17.0"
+ * refers to OID 5b9fac39d8a76b9139667c26a63e6b3f204b3977.
+ *
+ * The direct reference will be created in the repository and written to
+ * the disk.  The generated reference object must be freed by the user.
+ *
+ * Valid reference names must follow one of two patterns:
+ *
+ * 1. Top-level names must contain only capital letters and underscores,
+ *    and must begin and end with a letter. (e.g. "HEAD", "ORIG_HEAD").
+ * 2. Names prefixed with "refs/" can be almost anything.  You must avoid
+ *    the characters '~', '^', ':', '\\', '?', '[', and '*', and the
+ *    sequences ".." and "@{" which have special meaning to revparse.
+ *
+ * This function will return an error if a reference already exists with the
+ * given name unless `force` is true, in which case it will be overwritten.
+ *
+ * The signature and message for the reflog will be ignored if the
+ * reference does not belong in the standard set (HEAD, branches and
+ * remote-tracking branches) and and it does not have a reflog.
+ *
+ * It will also return an error if the reference's value at the time
+ * of updating does not match the one passed.
+ *
+ * @param out Pointer to the newly created reference
+ * @param repo Repository where that reference will live
+ * @param name The name of the reference
+ * @param id The object id pointed to by the reference.
+ * @param force Overwrite existing references
+ * @param force Overwrite existing references
+ * @param signature The identity that will used to populate the reflog entry
+ * @param log_message The one line long message to be appended to the reflog
+ * @param old_id The old value which the reference should have
+ * @return 0 on success, GIT_EMODIFIED if the value of the reference
+ * has changed, GIT_EEXISTS, GIT_EINVALIDSPEC or an error code
+ */
+GIT_EXTERN(int) git_reference_create_matching(git_reference **out, git_repository *repo, const char *name, const git_oid *id, int force, const git_signature *signature, const char *log_message, const git_oid *old_id);
 
 /**
  * Get the OID pointed to by a direct reference.
@@ -254,22 +338,19 @@ GIT_EXTERN(int) git_reference_symbolic_set_target(
 	const char *log_message);
 
 /**
- * Create a new reference with the same name as the given reference but a
+ * Conditionally create a new reference with the same name as the given reference but a
  * different OID target. The reference must be a direct reference, otherwise
  * this will fail.
  *
  * The new reference will be written to disk, overwriting the given reference.
- *
- * The signature and message for the reflog will be ignored if the
- * reference does not belong in the standard set (HEAD, branches and
- * remote-tracking branches) and and it does not have a reflog.
  *
  * @param out Pointer to the newly created reference
  * @param ref The reference
  * @param id The new target OID for the reference
  * @param signature The identity that will used to populate the reflog entry
  * @param log_message The one line long message to be appended to the reflog
- * @return 0 or an error code
+ * @return 0 on success, GIT_EMODIFIED if the value of the reference
+ * has changed, or an error code
  */
 GIT_EXTERN(int) git_reference_set_target(
 	git_reference **out,
@@ -317,10 +398,24 @@ GIT_EXTERN(int) git_reference_rename(
  * will be immediately removed on disk but the memory will not be freed.
  * Callers must call `git_reference_free`.
  *
+ * This function will return an error if the reference has changed
+ * from the time it was looked up.
+ *
  * @param ref The reference to remove
- * @return 0 or an error code
+ * @return 0, GIT_EMODIFIED or an error code
  */
 GIT_EXTERN(int) git_reference_delete(git_reference *ref);
+
+/**
+ * Delete an existing reference by name
+ *
+ * This method removes the named reference from the repository without
+ * looking at its old value.
+ *
+ * @param ref The reference to remove
+ * @return 0, GIT_EMODIFIED or an error code
+ */
+GIT_EXTERN(int) git_reference_remove(git_repository *repo, const char *name);
 
 /**
  * Fill a list with all the references that can be found in a repository.
