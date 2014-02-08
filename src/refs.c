@@ -1082,8 +1082,10 @@ static int reference__update_terminal(
 			nesting+1, signature, log_message);
 		git_reference_free(ref);
 	} else {
+		/* If we're not moving the target, don't recreate the ref */
+		if (0 != git_oid_cmp(git_reference_target(ref), oid))
+			error = git_reference_create(NULL, repo, ref_name, oid, 1, signature, log_message);
 		git_reference_free(ref);
-		error = git_reference_create(NULL, repo, ref_name, oid, 1, signature, log_message);
 	}
 
 	return error;

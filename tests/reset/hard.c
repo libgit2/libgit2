@@ -69,10 +69,9 @@ void test_reset_hard__resetting_reverts_modified_files(void)
 		cl_assert_equal_s(before[i], content.ptr);
 	}
 
-	retrieve_target_from_oid(
-		&target, repo, "26a125ee1bfc5df1e1b2e9441bbe63c8a7ae989f");
+	cl_git_pass(git_revparse_single(&target, repo, "26a125e"));
 
-	cl_git_pass(git_reset(repo, target, GIT_RESET_HARD));
+	cl_git_pass(git_reset(repo, target, GIT_RESET_HARD, NULL, NULL));
 
 	for (i = 0; i < 4; ++i) {
 		cl_git_pass(git_buf_joinpath(&path, wd, files[i]));
@@ -95,9 +94,9 @@ void test_reset_hard__cannot_reset_in_a_bare_repository(void)
 	cl_git_pass(git_repository_open(&bare, cl_fixture("testrepo.git")));
 	cl_assert(git_repository_is_bare(bare) == true);
 
-	retrieve_target_from_oid(&target, bare, KNOWN_COMMIT_IN_BARE_REPO);
+	cl_git_pass(git_revparse_single(&target, bare, KNOWN_COMMIT_IN_BARE_REPO));
 
-	cl_assert_equal_i(GIT_EBAREREPO, git_reset(bare, target, GIT_RESET_HARD));
+	cl_assert_equal_i(GIT_EBAREREPO, git_reset(bare, target, GIT_RESET_HARD, NULL, NULL));
 
 	git_repository_free(bare);
 }
@@ -152,8 +151,8 @@ void test_reset_hard__resetting_reverts_unmerged(void)
 		unmerged_index_init(index, entries);
 		cl_git_pass(git_index_write(index));
 
-		retrieve_target_from_oid(&target, repo, "26a125ee1bfc5df1e1b2e9441bbe63c8a7ae989f");
-		cl_git_pass(git_reset(repo, target, GIT_RESET_HARD));
+		cl_git_pass(git_revparse_single(&target, repo, "26a125e"));
+		cl_git_pass(git_reset(repo, target, GIT_RESET_HARD, NULL, NULL));
 
 		cl_assert(git_path_exists("status/conflicting_file") == 0);
 
@@ -183,8 +182,8 @@ void test_reset_hard__cleans_up_merge(void)
 	cl_git_pass(git_buf_joinpath(&orig_head_path, git_repository_path(repo), "ORIG_HEAD"));
 	cl_git_mkfile(git_buf_cstr(&orig_head_path), "0017bd4ab1ec30440b17bae1680cff124ab5f1f6");
 
-	retrieve_target_from_oid(&target, repo, "0017bd4ab1ec30440b17bae1680cff124ab5f1f6");
-	cl_git_pass(git_reset(repo, target, GIT_RESET_HARD));
+	cl_git_pass(git_revparse_single(&target, repo, "0017bd4"));
+	cl_git_pass(git_reset(repo, target, GIT_RESET_HARD, NULL, NULL));
 
 	cl_assert(!git_path_exists(git_buf_cstr(&merge_head_path)));
 	cl_assert(!git_path_exists(git_buf_cstr(&merge_msg_path)));
@@ -197,4 +196,31 @@ void test_reset_hard__cleans_up_merge(void)
 	git_buf_free(&merge_msg_path);
 	git_buf_free(&merge_mode_path);
 	git_buf_free(&orig_head_path);
+}
+
+void test_reset_hard__reflog_is_correct(void)
+{
+	const char *exp_msg = "commit: Add a file which name should appear before the "
+		"\"subdir/\" folder while being dealt with by the treewalker";
+
+	reflog_check(repo, "HEAD", 3, "emeric.fermas@gmail.com", exp_msg);
+	reflog_check(repo, "refs/heads/master", 3, "emeric.fermas@gmail.com", exp_msg);
+
+	/* Branch not moving, no reflog entry */
+	cl_git_pass(git_revparse_single(&target, repo, "HEAD^{commit}"));
+	cl_git_pass(git_reset(repo, target, GIT_RESET_HARD, NULL, NULL));
+	reflog_check(repo, "HEAD", 3, "emeric.fermas@gmail.com", exp_msg);
+	reflog_check(repo, "refs/heads/master", 3, "emeric.fermas@gmail.com", exp_msg);
+
+	/* Moved branch, expect default message */
+	cl_git_pass(git_revparse_single(&target, repo, "HEAD~^{commit}"));
+	cl_git_pass(git_reset(repo, target, GIT_RESET_HARD, NULL, NULL));
+	reflog_check(repo, "HEAD", 3, "emeric.fermas@gmail.com", exp_msg);
+	reflog_check(repo, "refs/heads/master", 4, NULL, "reset: moving");
+
+	/* Moved branch, expect custom message */
+	cl_git_pass(git_revparse_single(&target, repo, "HEAD~^{commit}"));
+	cl_git_pass(git_reset(repo, target, GIT_RESET_HARD, NULL, "message1"));
+	reflog_check(repo, "HEAD", 3, "emeric.fermas@gmail.com", exp_msg);
+	reflog_check(repo, "refs/heads/master", 5, NULL, "message1");
 }

@@ -183,7 +183,7 @@ static void stage_content(char *content[])
 
 	cl_git_pass(git_repository_head(&head, repo));
 	cl_git_pass(git_reference_peel(&head_object, head, GIT_OBJ_COMMIT));
-	cl_git_pass(git_reset(repo, head_object, GIT_RESET_HARD));
+	cl_git_pass(git_reset(repo, head_object, GIT_RESET_HARD, NULL, NULL));
 
 	for (i = 0, filename = content[i], text = content[++i];
 		filename && text;
@@ -212,7 +212,7 @@ static int merge_dirty_files(char *dirty_files[])
 
 	cl_git_pass(git_repository_head(&head, repo));
 	cl_git_pass(git_reference_peel(&head_object, head, GIT_OBJ_COMMIT));
-	cl_git_pass(git_reset(repo, head_object, GIT_RESET_HARD));
+	cl_git_pass(git_reset(repo, head_object, GIT_RESET_HARD, NULL, NULL));
 
 	write_files(dirty_files);
 
@@ -234,7 +234,7 @@ static int merge_differently_filtered_files(char *files[])
 
 	cl_git_pass(git_repository_head(&head, repo));
 	cl_git_pass(git_reference_peel(&head_object, head, GIT_OBJ_COMMIT));
-	cl_git_pass(git_reset(repo, head_object, GIT_RESET_HARD));
+	cl_git_pass(git_reset(repo, head_object, GIT_RESET_HARD, NULL, NULL));
 
 	write_files(files);
 	hack_index(files);

@@ -111,8 +111,27 @@ int git_commit_create_from_ids(
 
 	git_buf_free(&commit);
 
-	if (update_ref != NULL)
-		return git_reference__update_terminal(repo, update_ref, oid, NULL, NULL);
+	if (update_ref != NULL) {
+		int error;
+		git_commit *c;
+		const char *shortmsg;
+		git_buf reflog_msg = GIT_BUF_INIT;
+
+		if (git_commit_lookup(&c, repo, oid) < 0)
+			goto on_error;
+
+		shortmsg = git_commit_summary(c);
+		git_buf_printf(&reflog_msg, "commit%s: %s",
+				git_commit_parentcount(c) == 0 ? " (initial)" : "",
+				shortmsg);
+		git_commit_free(c);
+
+		error = git_reference__update_terminal(repo, update_ref, oid,
+				committer, git_buf_cstr(&reflog_msg));
+
+		git_buf_free(&reflog_msg);
+		return error;
+	}
 
 	return 0;
 

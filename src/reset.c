@@ -94,13 +94,16 @@ cleanup:
 int git_reset(
 	git_repository *repo,
 	git_object *target,
-	git_reset_t reset_type)
+	git_reset_t reset_type,
+	git_signature *signature,
+	const char *log_message)
 {
 	git_object *commit = NULL;
 	git_index *index = NULL;
 	git_tree *tree = NULL;
 	int error = 0;
 	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
+	git_buf log_message_buf = GIT_BUF_INIT;
 
 	assert(repo && target);
 
@@ -129,9 +132,14 @@ int git_reset(
 		goto cleanup;
 	}
 
+	if (log_message)
+		git_buf_sets(&log_message_buf, log_message);
+	else
+		git_buf_sets(&log_message_buf, "reset: moving");
+
 	/* move HEAD to the new target */
 	if ((error = git_reference__update_terminal(repo, GIT_HEAD_FILE,
-		git_object_id(commit), NULL, NULL)) < 0)
+		git_object_id(commit), signature, git_buf_cstr(&log_message_buf))) < 0)
 		goto cleanup;
 
 	if (reset_type == GIT_RESET_HARD) {

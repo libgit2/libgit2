@@ -78,7 +78,7 @@ void test_refs_branches_delete__can_delete_a_branch_pointed_at_by_detached_HEAD(
 	git_reference_free(head);
 
 	/* Detach HEAD and make it target the commit that "master" points to */
-	git_repository_detach_head(repo);
+	git_repository_detach_head(repo, NULL, NULL);
 
 	cl_git_pass(git_branch_lookup(&branch, repo, "master", GIT_BRANCH_LOCAL));
 	cl_git_pass(git_branch_delete(branch));

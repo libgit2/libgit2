@@ -355,9 +355,16 @@ GIT_EXTERN(void) git_remote_free(git_remote *remote);
  * Update the tips to the new state
  *
  * @param remote the remote to update
+ * @param signature The identity to use when updating reflogs
+ * @param reflog_message The message to insert into the reflogs. If NULL, the
+ *                       default is "fetch <name>", where <name> is the name of
+ *                       the remote (or its url, for in-memory remotes).
  * @return 0 or an error code
  */
-GIT_EXTERN(int) git_remote_update_tips(git_remote *remote);
+GIT_EXTERN(int) git_remote_update_tips(
+		git_remote *remote,
+		const git_signature *signature,
+		const char *reflog_message);
 
 /**
  * Download new data and update tips
@@ -366,9 +373,15 @@ GIT_EXTERN(int) git_remote_update_tips(git_remote *remote);
  * disconnect and update the remote-tracking branches.
  *
  * @param remote the remote to fetch from
+ * @param signature The identity to use when updating reflogs
+ * @param reflog_message The message to insert into the reflogs. If NULL, the
+ *								 default is "fetch"
  * @return 0 or an error code
  */
-GIT_EXTERN(int) git_remote_fetch(git_remote *remote);
+GIT_EXTERN(int) git_remote_fetch(
+		git_remote *remote,
+		const git_signature *signature,
+		const char *reflog_message);
 
 /**
  * Return whether a string is a valid remote URL

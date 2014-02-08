@@ -7,6 +7,8 @@ static const char *commit_message = "This commit has been created in memory\n\
 static const char *tree_oid = "1810dff58d8a660512d4832e740f692884338ccd";
 static const char *root_commit_message = "This is a root commit\n\
    This is a root commit and should be the only one in this branch\n";
+static const char *root_reflog_message = "commit (initial): This is a root commit \
+   This is a root commit and should be the only one in this branch";
 static char *head_old;
 static git_reference *head, *branch;
 static git_commit *commit;
@@ -101,6 +103,8 @@ void test_commit_write__root(void)
 	git_signature *author, *committer;
 	const char *branch_name = "refs/heads/root-commit-branch";
 	git_tree *tree;
+	git_reflog *log;
+	const git_reflog_entry *entry;
 
 	git_oid_fromstr(&tree_id, tree_oid);
 	cl_git_pass(git_tree_lookup(&tree, g_repo, &tree_id));
@@ -130,7 +134,6 @@ void test_commit_write__root(void)
 		0));
 
 	git_object_free((git_object *)tree);
-	git_signature_free(committer);
 	git_signature_free(author);
 
 	/*
@@ -144,4 +147,14 @@ void test_commit_write__root(void)
 	branch_oid = git_reference_target(branch);
 	cl_git_pass(git_oid_cmp(branch_oid, &commit_id));
 	cl_assert_equal_s(root_commit_message, git_commit_message(commit));
+
+	cl_git_pass(git_reflog_read(&log, g_repo, branch_name));
+	cl_assert_equal_i(1, git_reflog_entrycount(log));
+	entry = git_reflog_entry_byindex(log, 0);
+	cl_assert_equal_s(committer->email, git_reflog_entry_committer(entry)->email);
+	cl_assert_equal_s(committer->name, git_reflog_entry_committer(entry)->name);
+	cl_assert_equal_s(root_reflog_message, git_reflog_entry_message(entry));
+
+	git_signature_free(committer);
+	git_reflog_free(log);
 }

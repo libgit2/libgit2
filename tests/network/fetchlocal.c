@@ -37,7 +37,7 @@ void test_network_fetchlocal__complete(void)
 	git_remote_set_callbacks(origin, &callbacks);
 	cl_git_pass(git_remote_connect(origin, GIT_DIRECTION_FETCH));
 	cl_git_pass(git_remote_download(origin));
-	cl_git_pass(git_remote_update_tips(origin));
+	cl_git_pass(git_remote_update_tips(origin, NULL, NULL));
 
 	cl_git_pass(git_reference_list(&refnames, repo));
 	cl_assert_equal_i(19, (int)refnames.count);
@@ -75,7 +75,7 @@ void test_network_fetchlocal__partial(void)
 	git_remote_set_callbacks(origin, &callbacks);
 	cl_git_pass(git_remote_connect(origin, GIT_DIRECTION_FETCH));
 	cl_git_pass(git_remote_download(origin));
-	cl_git_pass(git_remote_update_tips(origin));
+	cl_git_pass(git_remote_update_tips(origin, NULL, NULL));
 
 	git_strarray_free(&refnames);
 

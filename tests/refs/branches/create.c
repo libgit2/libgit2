@@ -29,15 +29,16 @@ void test_refs_branches_create__cleanup(void)
 
 static void retrieve_target_from_oid(git_commit **out, git_repository *repo, const char *sha)
 {
-	git_oid oid;
+	git_object *obj;
 
-	cl_git_pass(git_oid_fromstr(&oid, sha));
-	cl_git_pass(git_commit_lookup(out, repo, &oid));
+	cl_git_pass(git_revparse_single(&obj, repo, sha));
+	cl_git_pass(git_commit_lookup(out, repo, git_object_id(obj)));
+	git_object_free(obj);
 }
 
 static void retrieve_known_commit(git_commit **commit, git_repository *repo)
 {
-	retrieve_target_from_oid(commit, repo, "e90810b8df3e80c413d903f631643c716887138d");
+	retrieve_target_from_oid(commit, repo, "e90810b8df3");
 }
 
 #define NEW_BRANCH_NAME "new-branch-on-the-block"

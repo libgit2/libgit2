@@ -116,8 +116,15 @@ static git_index *repo_index;
 // Fixture setup and teardown
 void test_merge_workdir_simple__initialize(void)
 {
+	git_config *cfg;
+
 	repo = cl_git_sandbox_init(TEST_REPO_PATH);
 	git_repository_index(&repo_index, repo);
+
+	/* Ensure that the user's merge.conflictstyle doesn't interfere */
+	cl_git_pass(git_repository_config(&cfg, repo));
+	cl_git_pass(git_config_set_string(cfg, "merge.conflictstyle", "merge"));
+	git_config_free(cfg);
 }
 
 void test_merge_workdir_simple__cleanup(void)
@@ -585,7 +592,7 @@ void test_merge_workdir_simple__directory_file(void)
 	cl_git_pass(git_reference_symbolic_create(&head, repo, GIT_HEAD_FILE, GIT_REFS_HEADS_DIR OURS_DIRECTORY_FILE, 1, NULL, NULL));
 	cl_git_pass(git_reference_name_to_id(&head_commit_id, repo, GIT_HEAD_FILE));
 	cl_git_pass(git_commit_lookup(&head_commit, repo, &head_commit_id));
-	cl_git_pass(git_reset(repo, (git_object *)head_commit, GIT_RESET_HARD));
+	cl_git_pass(git_reset(repo, (git_object *)head_commit, GIT_RESET_HARD, NULL, NULL));
 
 	cl_git_pass(git_oid_fromstr(&their_oids[0], THEIRS_DIRECTORY_FILE));
 	cl_git_pass(git_merge_head_from_id(&their_heads[0], repo, &their_oids[0]));
@@ -684,7 +691,7 @@ void test_merge_workdir_simple__binary(void)
 	cl_git_pass(git_oid_fromstr(&their_oid, "ad01aebfdf2ac13145efafe3f9fcf798882f1730"));
 
 	cl_git_pass(git_commit_lookup(&our_commit, repo, &our_oid));
-	cl_git_pass(git_reset(repo, (git_object *)our_commit, GIT_RESET_HARD));
+	cl_git_pass(git_reset(repo, (git_object *)our_commit, GIT_RESET_HARD, NULL, NULL));
 
 	cl_git_pass(git_merge_head_from_id(&their_head, repo, &their_oid));
 

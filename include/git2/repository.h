@@ -615,11 +615,15 @@ GIT_EXTERN(int) git_repository_set_head_detached(
  * Otherwise, the HEAD will be detached and point to the peeled Commit.
  *
  * @param repo Repository pointer
+ * @param signature The identity that will used to populate the reflog entry
+ * @param log_message The one line long message to be appended to the reflog
  * @return 0 on success, GIT_EUNBORNBRANCH when HEAD points to a non existing
  * branch or an error code
  */
 GIT_EXTERN(int) git_repository_detach_head(
-	git_repository* repo);
+	git_repository* repo,
+	const git_signature *signature,
+	const char *reflog_message);
 
 typedef enum {
 	GIT_REPOSITORY_STATE_NONE,

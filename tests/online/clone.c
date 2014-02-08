@@ -192,30 +192,28 @@ static int cred_failure_cb(
 {
 	GIT_UNUSED(cred); GIT_UNUSED(url); GIT_UNUSED(username_from_url);
 	GIT_UNUSED(allowed_types); GIT_UNUSED(data);
-	return -1;
+	return -172;
 }
 
-void test_online_clone__cred_callback_failure_is_euser(void)
+void test_online_clone__cred_callback_failure_return_code_is_tunnelled(void)
 {
 	const char *remote_url = cl_getenv("GITTEST_REMOTE_URL");
 	const char *remote_user = cl_getenv("GITTEST_REMOTE_USER");
-	const char *remote_default = cl_getenv("GITTEST_REMOTE_DEFAULT");
-	int error;
 
 	if (!remote_url) {
 		printf("GITTEST_REMOTE_URL unset; skipping clone test\n");
 		return;
 	}
 
-	if (!remote_user && !remote_default) {
-		printf("GITTEST_REMOTE_USER and GITTEST_REMOTE_DEFAULT unset; skipping clone test\n");
+	if (!remote_user) {
+		printf("GITTEST_REMOTE_USER unset; skipping clone test\n");
 		return;
 	}
 
 	g_options.remote_callbacks.credentials = cred_failure_cb;
 
-	cl_git_fail(error = git_clone(&g_repo, remote_url, "./foo", &g_options));
-	cl_assert_equal_i(error, GIT_EUSER);
+	/* TODO: this should expect -172. */
+	cl_git_fail_with(git_clone(&g_repo, remote_url, "./foo", &g_options), -1);
 }
 
 void test_online_clone__credentials(void)

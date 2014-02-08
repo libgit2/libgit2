@@ -351,7 +351,7 @@ void test_online_push__initialize(void)
 		/* Now that we've deleted everything, fetch from the remote */
 		cl_git_pass(git_remote_connect(_remote, GIT_DIRECTION_FETCH));
 		cl_git_pass(git_remote_download(_remote));
-		cl_git_pass(git_remote_update_tips(_remote));
+		cl_git_pass(git_remote_update_tips(_remote, NULL, NULL));
 		git_remote_disconnect(_remote);
 	} else
 		printf("GITTEST_REMOTE_URL unset; skipping push test\n");
@@ -414,11 +414,13 @@ static void do_push(
 	git_push_options opts = GIT_PUSH_OPTIONS_INIT;
 	size_t i;
 	int pack_progress_calls = 0, transfer_progress_calls = 0;
+	git_signature *pusher;
 
 	if (_remote) {
 		/* Auto-detect the number of threads to use */
 		opts.pb_parallelism = 0;
 
+		cl_git_pass(git_signature_now(&pusher, "Foo Bar", "foo@example.com"));
 		cl_git_pass(git_remote_connect(_remote, GIT_DIRECTION_PUSH));
 
 		cl_git_pass(git_push_new(&push, _remote));
@@ -455,13 +457,15 @@ static void do_push(
 
 		verify_refs(_remote, expected_refs, expected_refs_len);
 
-		cl_git_pass(git_push_update_tips(push));
+		cl_git_pass(git_push_update_tips(push, pusher, "test push"));
 		verify_tracking_branches(_remote, expected_refs, expected_refs_len);
 
 		git_push_free(push);
 
 		git_remote_disconnect(_remote);
+		git_signature_free(pusher);
 	}
+
 }
 
 /* Call push_finish() without ever calling git_push_add_refspec() */
@@ -528,6 +532,9 @@ void test_online_push__b5_cancel(void)
 
 void test_online_push__multi(void)
 {
+	git_reflog *log;
+	const git_reflog_entry *entry;
+
 	const char *specs[] = {
 		"refs/heads/b1:refs/heads/b1",
 		"refs/heads/b2:refs/heads/b2",
@@ -552,6 +559,15 @@ void test_online_push__multi(void)
 	do_push(specs, ARRAY_SIZE(specs),
 		exp_stats, ARRAY_SIZE(exp_stats),
 		exp_refs, ARRAY_SIZE(exp_refs), 0, 1);
+
+	cl_git_pass(git_reflog_read(&log, _repo, "refs/remotes/test/b1"));
+	entry = git_reflog_entry_byindex(log, 0);
+	if (entry) {
+		cl_assert_equal_s("test push", git_reflog_entry_message(entry));
+		cl_assert_equal_s("foo@example.com", git_reflog_entry_committer(entry)->email);
+	}
+
+	git_reflog_free(log);
 }
 
 void test_online_push__implicit_tgt(void)
