@@ -242,8 +242,8 @@ GIT_EXTERN(int) git_commit_nth_gen_ancestor(
 /**
  * Create new commit in the repository from a list of `git_object` pointers
  *
- * The message will not be cleaned up automatically. You can do that with
- * the `git_message_prettify()` function.
+ * The message will **not** be cleaned up automatically. You can do that
+ * with the `git_message_prettify()` function.
  *
  * @param id Pointer in which to store the OID of the newly created commit
  *
@@ -291,20 +291,20 @@ GIT_EXTERN(int) git_commit_create(
 	const char *message_encoding,
 	const char *message,
 	const git_tree *tree,
-	int parent_count,
+	size_t parent_count,
 	const git_commit *parents[]);
 
 /**
  * Create new commit in the repository using a variable argument list.
  *
- * The message will be cleaned up from excess whitespace and it will be made
- * sure that the last line ends with a '\n'.
+ * The message will **not** be cleaned up automatically. You can do that
+ * with the `git_message_prettify()` function.
  *
  * The parents for the commit are specified as a variable list of pointers
  * to `const git_commit *`. Note that this is a convenience method which may
  * not be safe to export for certain languages or compilers
  *
- * All other parameters remain the same at `git_commit_create()`.
+ * All other parameters remain the same as `git_commit_create()`.
  *
  * @see git_commit_create
  */
@@ -317,8 +317,39 @@ GIT_EXTERN(int) git_commit_create_v(
 	const char *message_encoding,
 	const char *message,
 	const git_tree *tree,
-	int parent_count,
+	size_t parent_count,
 	...);
+
+/**
+ * Amend an existing commit by replacing only non-NULL values.
+ *
+ * This creates a new commit that is exactly the same as the old commit,
+ * except that any non-NULL values will be updated.  The new commit has
+ * the same parents as the old commit.
+ *
+ * The `update_ref` value works as in the regular `git_commit_create()`,
+ * updating the ref to point to the newly rewritten commit.  If you want
+ * to amend a commit that is not currently the HEAD of the branch and then
+ * rewrite the following commits to reach a ref, pass this as NULL and
+ * update the rest of the commit chain and ref separately.
+ *
+ * Unlike `git_commit_create()`, the `author`, `committer`, `message`,
+ * `message_encoding`, and `tree` parameters can be NULL in which case this
+ * will use the values from the original `commit_to_amend`.
+ *
+ * All parameters have the same meanings as in `git_commit_create()`.
+ *
+ * @see git_commit_create
+ */
+GIT_EXTERN(int) git_commit_amend(
+	git_oid *id,
+	const git_commit *commit_to_amend,
+	const char *update_ref,
+	const git_signature *author,
+	const git_signature *committer,
+	const char *message_encoding,
+	const char *message,
+	const git_tree *tree);
 
 /** @} */
 GIT_END_DECL
