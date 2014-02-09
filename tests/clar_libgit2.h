@@ -116,4 +116,6 @@ void cl_repo_commit_from_index(
 void cl_repo_set_bool(git_repository *repo, const char *cfg, int value);
 int cl_repo_get_bool(git_repository *repo, const char *cfg);
 
+void cl_repo_set_string(git_repository *repo, const char *cfg, const char *value);
+
 #endif
