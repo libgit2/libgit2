@@ -39,6 +39,7 @@ struct opts {
 	git_diff_find_options findopts;
 	int color;
 	int cached;
+	int numstat;
 	git_diff_format_t format;
 	const char *treeish1;
 	const char *treeish2;
@@ -49,6 +50,7 @@ struct opts {
 static void parse_opts(struct opts *o, int argc, char *argv[]);
 static int color_printer(
 	const git_diff_delta*, const git_diff_hunk*, const git_diff_line*, void*);
+static void diff_print_numstat(git_diff *diff);
 
 int main(int argc, char *argv[])
 {
@@ -57,7 +59,7 @@ int main(int argc, char *argv[])
 	git_diff *diff;
 	struct opts o = {
 		GIT_DIFF_OPTIONS_INIT, GIT_DIFF_FIND_OPTIONS_INIT,
-		-1, 0, GIT_DIFF_FORMAT_PATCH, NULL, NULL, "."
+		-1, 0, 0, GIT_DIFF_FORMAT_PATCH, NULL, NULL, "."
 	};
 
 	git_threads_init();
@@ -117,15 +119,19 @@ int main(int argc, char *argv[])
 
 	/** Generate simple output using libgit2 display helper. */
 
-	if (o.color >= 0)
-		fputs(colors[0], stdout);
+	if (o.numstat == 1)
+		diff_print_numstat(diff);
+	else {
+		if (o.color >= 0)
+			fputs(colors[0], stdout);
 
-	check_lg2(
-		git_diff_print(diff, o.format, color_printer, &o.color),
-		"displaying diff", NULL);
+		check_lg2(
+			git_diff_print(diff, o.format, color_printer, &o.color),
+			"displaying diff", NULL);
 
-	if (o.color >= 0)
-		fputs(colors[0], stdout);
+		if (o.color >= 0)
+			fputs(colors[0], stdout);
+	}
 
 	/** Cleanup before exiting. */
 
@@ -228,6 +234,8 @@ static void parse_opts(struct opts *o, int argc, char *argv[])
 			o->diffopts.flags |= GIT_DIFF_INCLUDE_IGNORED;
 		else if (!strcmp(a, "--untracked"))
 			o->diffopts.flags |= GIT_DIFF_INCLUDE_UNTRACKED;
+		else if (!strcmp(a, "--numstat"))
+			o->numstat = 1;
 		else if (match_uint16_arg(
 				&o->findopts.rename_threshold, &args, "-M") ||
 			match_uint16_arg(
@@ -254,4 +262,26 @@ static void parse_opts(struct opts *o, int argc, char *argv[])
 			!match_str_arg(&o->dir, &args, "--git-dir"))
 			usage("Unknown command line argument", a);
 	}
+}
+
+/** Display diff output with "--numstat".*/
+static void diff_print_numstat(git_diff *diff)
+{
+	git_patch *patch;
+	const git_diff_delta *delta;
+	size_t i;
+	size_t ndeltas;
+	size_t nadditions, ndeletions;
+	ndeltas = git_diff_num_deltas(diff);	
+	for (i = 0; i < ndeltas; i++){
+		check_lg2(
+			git_patch_from_diff(&patch, diff, i),
+			"generating patch from diff", NULL);
+		check_lg2(
+			git_patch_line_stats(NULL, &nadditions, &ndeletions, patch),
+			"generating the number of additions and deletions", NULL);
+		delta = git_patch_get_delta(patch);
+		printf("%u\t%u\t%s\n", nadditions, ndeletions, delta->new_file.path);
+	}
+	git_patch_free(patch);
 }
