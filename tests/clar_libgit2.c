@@ -468,6 +468,7 @@ void clar__assert_equal_file(
 			p_snprintf(
 				buf, sizeof(buf), "file content mismatch at byte %d",
 				(int)(total_bytes + pos));
+			p_close(fd);
 			clar__fail(file, line, buf, path, 1);
 		}
 
