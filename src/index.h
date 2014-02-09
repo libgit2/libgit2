@@ -21,12 +21,15 @@ struct git_index {
 	git_refcount rc;
 
 	char *index_file_path;
-
 	git_futils_filestamp stamp;
+
 	git_vector entries;
 
-	unsigned int on_disk:1;
+	git_mutex  lock;    /* lock held while entries is being changed */
+	git_vector deleted; /* deleted entries if readers > 0 */
+	git_atomic readers; /* number of active iterators */
 
+	unsigned int on_disk:1;
 	unsigned int ignore_case:1;
 	unsigned int distrust_filemode:1;
 	unsigned int no_symlinks:1;
