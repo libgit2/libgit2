@@ -1018,8 +1018,8 @@ static int refdb_fs_backend__delete(
 {
 	refdb_fs_backend *backend = (refdb_fs_backend *)_backend;
 	git_buf loose_path = GIT_BUF_INIT;
-	size_t pack_pos
-;	git_filebuf file = GIT_FILEBUF_INIT;
+	size_t pack_pos;
+	git_filebuf file = GIT_FILEBUF_INIT;
 	int error = 0, cmp = 0;
 	bool loose_deleted = 0;
 
@@ -1029,7 +1029,6 @@ static int refdb_fs_backend__delete(
 		return error;
 
 	error = cmp_old_ref(&cmp, _backend, ref_name, old_id, old_target);
-	//git_filebuf_cleanup(&file);
 	if (error < 0)
 		goto cleanup;
 
