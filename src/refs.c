@@ -433,9 +433,9 @@ int git_reference_create_matching(
 	const char *name,
 	const git_oid *id,
 	int force,
+	const git_oid *old_id,
 	const git_signature *signature,
-	const char *log_message,
-	const git_oid *old_id)
+	const char *log_message)
 
 {
 	int error;
@@ -466,7 +466,7 @@ int git_reference_create(
 	const git_signature *signature,
 	const char *log_message)
 {
-        return git_reference_create_matching(ref_out, repo, name, id, force, signature, log_message, NULL);
+        return git_reference_create_matching(ref_out, repo, name, id, force, NULL, signature, log_message);
 }
 
 int git_reference_symbolic_create_matching(
@@ -475,9 +475,9 @@ int git_reference_symbolic_create_matching(
 	const char *name,
 	const char *target,
 	int force,
+	const char *old_target,
 	const git_signature *signature,
-	const char *log_message,
-	const char *old_target)
+	const char *log_message)
 {
 	int error;
 	git_signature *who = NULL;
@@ -507,7 +507,7 @@ int git_reference_symbolic_create(
 	const git_signature *signature,
 	const char *log_message)
 {
-	return git_reference_symbolic_create_matching(ref_out, repo, name, target, force, signature, log_message, NULL);
+	return git_reference_symbolic_create_matching(ref_out, repo, name, target, force, NULL, signature, log_message);
 }
 
 static int ensure_is_an_updatable_direct_reference(git_reference *ref)
@@ -536,7 +536,7 @@ int git_reference_set_target(
 	if ((error = ensure_is_an_updatable_direct_reference(ref)) < 0)
 		return error;
 
-	return git_reference_create_matching(out, repo, ref->name, id, 1, signature, log_message, &ref->target.oid);
+	return git_reference_create_matching(out, repo, ref->name, id, 1, &ref->target.oid, signature, log_message);
 }
 
 static int ensure_is_an_updatable_symbolic_reference(git_reference *ref)
@@ -563,7 +563,7 @@ int git_reference_symbolic_set_target(
 		return error;
 
 	return git_reference_symbolic_create_matching(
-		out, ref->db->repo, ref->name, target, 1, signature, log_message, ref->target.symbolic);
+		out, ref->db->repo, ref->name, target, 1, ref->target.symbolic, signature, log_message);
 }
 
 static int reference__rename(git_reference **out, git_reference *ref, const char *new_name, int force,

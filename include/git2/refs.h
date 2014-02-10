@@ -102,12 +102,12 @@ GIT_EXTERN(int) git_reference_dwim(git_reference **out, git_repository *repo, co
  * @param name The name of the reference
  * @param target The target of the reference
  * @param force Overwrite existing references
+ * @param current_value The expected value of the reference when updating
  * @param signature The identity that will used to populate the reflog entry
  * @param log_message The one line long message to be appended to the reflog
- * @param current_value The expected value of the reference when updating
  * @return 0 on success, GIT_EEXISTS, GIT_EINVALIDSPEC, GIT_EMODIFIED or an error code
  */
-GIT_EXTERN(int) git_reference_symbolic_create_matching(git_reference **out, git_repository *repo, const char *name, const char *target, int force, const git_signature *signature, const char *log_message, const char *current_value);
+GIT_EXTERN(int) git_reference_symbolic_create_matching(git_reference **out, git_repository *repo, const char *name, const char *target, int force, const char *current_value, const git_signature *signature, const char *log_message);
 
 /**
  * Create a new symbolic reference.
@@ -222,13 +222,13 @@ GIT_EXTERN(int) git_reference_create(git_reference **out, git_repository *repo, 
  * @param id The object id pointed to by the reference.
  * @param force Overwrite existing references
  * @param force Overwrite existing references
+ * @param current_id The expected value of the reference at the time of update
  * @param signature The identity that will used to populate the reflog entry
  * @param log_message The one line long message to be appended to the reflog
- * @param current_id The expected value of the reference at the time of update
  * @return 0 on success, GIT_EMODIFIED if the value of the reference
  * has changed, GIT_EEXISTS, GIT_EINVALIDSPEC or an error code
  */
-GIT_EXTERN(int) git_reference_create_matching(git_reference **out, git_repository *repo, const char *name, const git_oid *id, int force, const git_signature *signature, const char *log_message, const git_oid *current_id);
+GIT_EXTERN(int) git_reference_create_matching(git_reference **out, git_repository *repo, const char *name, const git_oid *id, int force, const git_oid *current_id, const git_signature *signature, const char *log_message);
 
 /**
  * Get the OID pointed to by a direct reference.
