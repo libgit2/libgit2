@@ -196,6 +196,7 @@ extern int git__bsearch_r(
 	size_t *position);
 
 extern int git__strcmp_cb(const void *a, const void *b);
+extern int git__strcasecmp_cb(const void *a, const void *b);
 
 extern int git__strcmp(const char *a, const char *b);
 extern int git__strcasecmp(const char *a, const char *b);

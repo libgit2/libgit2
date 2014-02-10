@@ -53,8 +53,13 @@ struct git_index_conflict_iterator {
 extern void git_index_entry__init_from_stat(
 	git_index_entry *entry, struct stat *st, bool trust_mode);
 
-extern int git_index_entry__cmp(const void *a, const void *b);
-extern int git_index_entry__cmp_icase(const void *a, const void *b);
+/* Index entry comparison functions for array sorting */
+extern int git_index_entry_cmp(const void *a, const void *b);
+extern int git_index_entry_icmp(const void *a, const void *b);
+
+/* Index entry search functions for search using a search spec */
+extern int git_index_entry_srch(const void *a, const void *b);
+extern int git_index_entry_isrch(const void *a, const void *b);
 
 /* Search index for `path`, returning GIT_ENOTFOUND if it does not exist.
  * `at_pos` is set to the position where it is or would be inserted.
@@ -83,7 +88,7 @@ extern void git_index__release_snapshot(git_index *index);
 /* Allow searching in a snapshot; entries must already be sorted! */
 extern int git_index__find_in_entries(
 	size_t *at_pos,
-	git_vector *entries, git_vector_cmp entry_cmp,
+	git_vector *entries, git_vector_cmp entry_srch,
 	const char *path, size_t path_len, int stage);
 
 #endif

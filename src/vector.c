@@ -177,7 +177,8 @@ void git_vector_sort(git_vector *v)
 	if (git_vector_is_sorted(v) || !v->_cmp)
 		return;
 
-	git__tsort(v->contents, v->length, v->_cmp);
+	if (v->length > 1)
+		git__tsort(v->contents, v->length, v->_cmp);
 	git_vector_set_sorted(v, 1);
 }
 

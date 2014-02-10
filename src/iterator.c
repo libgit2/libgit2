@@ -868,16 +868,20 @@ int git_iterator_for_index(
 		return error;
 	}
 	ii->index = index;
-	ii->entry_srch = index->entries_search;
 
 	ITERATOR_BASE_INIT(ii, index, INDEX, git_index_owner(index));
 
-	if (index->ignore_case) {
-		ii->base.flags |= GIT_ITERATOR_IGNORE_CASE;
-		ii->base.prefixcomp = git__prefixcmp_icase;
+	if ((error = iterator__update_ignore_case((git_iterator *)ii, flags)) < 0) {
+		git_iterator_free((git_iterator *)ii);
+		return error;
 	}
 
-	/* TODO: resort entries to match desired ignore_case behavior */
+	ii->entry_srch = iterator__ignore_case(ii) ?
+		git_index_entry_isrch : git_index_entry_srch;
+
+	git_vector_set_cmp(&ii->entries, iterator__ignore_case(ii) ?
+		git_index_entry_icmp : git_index_entry_cmp);
+	git_vector_sort(&ii->entries);
 
 	git_buf_init(&ii->partial, 0);
 	ii->tree_entry.mode = GIT_FILEMODE_TREE;

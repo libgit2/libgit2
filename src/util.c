@@ -542,10 +542,12 @@ int git__bsearch_r(
  */
 int git__strcmp_cb(const void *a, const void *b)
 {
-	const char *stra = (const char *)a;
-	const char *strb = (const char *)b;
+	return strcmp((const char *)a, (const char *)b);
+}
 
-	return strcmp(stra, strb);
+int git__strcasecmp_cb(const void *a, const void *b)
+{
+	return strcasecmp((const char *)a, (const char *)b);
 }
 
 int git__parse_bool(int *out, const char *value)

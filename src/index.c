@@ -106,7 +106,7 @@ static int write_index(git_index *index, git_filebuf *file);
 static void index_entry_free(git_index_entry *entry);
 static void index_entry_reuc_free(git_index_reuc_entry *reuc);
 
-static int index_srch(const void *key, const void *array_member)
+int git_index_entry_srch(const void *key, const void *array_member)
 {
 	const struct entry_srch_key *srch_key = key;
 	const git_index_entry *entry = array_member;
@@ -131,7 +131,7 @@ static int index_srch(const void *key, const void *array_member)
 	return 0;
 }
 
-static int index_isrch(const void *key, const void *array_member)
+int git_index_entry_isrch(const void *key, const void *array_member)
 {
 	const struct entry_srch_key *srch_key = key;
 	const git_index_entry *entry = array_member;
@@ -157,31 +157,21 @@ static int index_isrch(const void *key, const void *array_member)
 	return 0;
 }
 
-static int index_cmp_path(const void *a, const void *b)
-{
-	return strcmp((const char *)a, (const char *)b);
-}
-
-static int index_icmp_path(const void *a, const void *b)
-{
-	return strcasecmp((const char *)a, (const char *)b);
-}
-
-static int index_srch_path(const void *path, const void *array_member)
+static int index_entry_srch_path(const void *path, const void *array_member)
 {
 	const git_index_entry *entry = array_member;
 
 	return strcmp((const char *)path, entry->path);
 }
 
-static int index_isrch_path(const void *path, const void *array_member)
+static int index_entry_isrch_path(const void *path, const void *array_member)
 {
 	const git_index_entry *entry = array_member;
 
 	return strcasecmp((const char *)path, entry->path);
 }
 
-static int index_cmp(const void *a, const void *b)
+int git_index_entry_cmp(const void *a, const void *b)
 {
 	int diff;
 	const git_index_entry *entry_a = a;
@@ -195,7 +185,7 @@ static int index_cmp(const void *a, const void *b)
 	return diff;
 }
 
-static int index_icmp(const void *a, const void *b)
+int git_index_entry_icmp(const void *a, const void *b)
 {
 	int diff;
 	const git_index_entry *entry_a = a;
@@ -351,14 +341,21 @@ void git_index__set_ignore_case(git_index *index, bool ignore_case)
 {
 	index->ignore_case = ignore_case;
 
-	index->entries_cmp_path = ignore_case ? index_icmp_path : index_cmp_path;
-	index->entries_search = ignore_case ? index_isrch : index_srch;
-	index->entries_search_path = ignore_case ? index_isrch_path : index_srch_path;
+	if (ignore_case) {
+		index->entries_cmp_path    = git__strcasecmp_cb;
+		index->entries_search      = git_index_entry_isrch;
+		index->entries_search_path = index_entry_isrch_path;
+		index->reuc_search         = reuc_isrch;
+	} else {
+		index->entries_cmp_path    = git__strcmp_cb;
+		index->entries_search      = git_index_entry_srch;
+		index->entries_search_path = index_entry_srch_path;
+		index->reuc_search         = reuc_srch;
+	}
 
-	git_vector_set_cmp(&index->entries, ignore_case ? index_icmp : index_cmp);
+	git_vector_set_cmp(&index->entries,
+		ignore_case ? git_index_entry_icmp : git_index_entry_cmp);
 	index_sort_if_needed(index, true);
-
-	index->reuc_search = ignore_case ? reuc_isrch : reuc_srch;
 
 	git_vector_set_cmp(&index->reuc, ignore_case ? reuc_icmp : reuc_cmp);
 	git_vector_sort(&index->reuc);
@@ -390,15 +387,15 @@ int git_index_open(git_index **index_out, const char *index_path)
 			index->on_disk = 1;
 	}
 
-	if (git_vector_init(&index->entries, 32, index_cmp) < 0 ||
+	if (git_vector_init(&index->entries, 32, git_index_entry_cmp) < 0 ||
 		git_vector_init(&index->names, 32, conflict_name_cmp) < 0 ||
 		git_vector_init(&index->reuc, 32, reuc_cmp) < 0 ||
-		git_vector_init(&index->deleted, 2, index_cmp) < 0)
+		git_vector_init(&index->deleted, 2, git_index_entry_cmp) < 0)
 		goto fail;
 
-	index->entries_cmp_path = index_cmp_path;
-	index->entries_search = index_srch;
-	index->entries_search_path = index_srch_path;
+	index->entries_cmp_path = git__strcmp_cb;
+	index->entries_search = git_index_entry_srch;
+	index->entries_search_path = index_entry_srch_path;
 	index->reuc_search = reuc_srch;
 
 	if (index_path != NULL && (error = git_index_read(index, true)) < 0)
@@ -725,22 +722,6 @@ void git_index_entry__init_from_stat(
 	entry->uid  = st->st_uid;
 	entry->gid  = st->st_gid;
 	entry->file_size = st->st_size;
-}
-
-int git_index_entry__cmp(const void *a, const void *b)
-{
-	const git_index_entry *entry_a = a;
-	const git_index_entry *entry_b = b;
-
-	return strcmp(entry_a->path, entry_b->path);
-}
-
-int git_index_entry__cmp_icase(const void *a, const void *b)
-{
-	const git_index_entry *entry_a = a;
-	const git_index_entry *entry_b = b;
-
-	return strcasecmp(entry_a->path, entry_b->path);
 }
 
 static int index_entry_init(
@@ -1129,14 +1110,14 @@ int git_index_remove_directory(git_index *index, const char *dir, int stage)
 }
 
 int git_index__find_in_entries(
-	size_t *out, git_vector *entries, git_vector_cmp entry_cmp,
+	size_t *out, git_vector *entries, git_vector_cmp entry_srch,
 	const char *path, size_t path_len, int stage)
 {
 	struct entry_srch_key srch_key;
 	srch_key.path = path;
 	srch_key.path_len = !path_len ? strlen(path) : path_len;
 	srch_key.stage = stage;
-	return git_vector_bsearch2(out, entries, entry_cmp, &srch_key);
+	return git_vector_bsearch2(out, entries, entry_srch, &srch_key);
 }
 
 int git_index__find(
@@ -2040,7 +2021,7 @@ static int write_entries(git_index *index, git_filebuf *file)
 	/* If index->entries is sorted case-insensitively, then we need
 	 * to re-sort it case-sensitively before writing */
 	if (index->ignore_case) {
-		git_vector_dup(&case_sorted, &index->entries, index_cmp);
+		git_vector_dup(&case_sorted, &index->entries, git_index_entry_cmp);
 		git_vector_sort(&case_sorted);
 		entries = &case_sorted;
 	} else {
