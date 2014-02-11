@@ -33,6 +33,7 @@ static int collect_attr_files(
 	const char *path,
 	git_vector *files);
 
+static void release_attr_files(git_vector *files);
 
 int git_attr_get(
 	const char **value,
@@ -76,7 +77,7 @@ int git_attr_get(
 	}
 
 cleanup:
-	git_vector_free(&files);
+	release_attr_files(&files);
 	git_attr_path__free(&path);
 
 	return error;
@@ -152,7 +153,7 @@ int git_attr_get_many(
 	}
 
 cleanup:
-	git_vector_free(&files);
+	release_attr_files(&files);
 	git_attr_path__free(&path);
 	git__free(info);
 
@@ -181,11 +182,9 @@ int git_attr_foreach(
 	if (git_attr_path__init(&path, pathname, git_repository_workdir(repo)) < 0)
 		return -1;
 
-	if ((error = collect_attr_files(repo, flags, pathname, &files)) < 0)
+	if ((error = collect_attr_files(repo, flags, pathname, &files)) < 0 ||
+		(error = git_strmap_alloc(&seen)) < 0)
 		goto cleanup;
-
-	seen = git_strmap_alloc();
-	GITERR_CHECK_ALLOC(seen);
 
 	git_vector_foreach(&files, i, file) {
 
@@ -211,7 +210,7 @@ int git_attr_foreach(
 
 cleanup:
 	git_strmap_free(seen);
-	git_vector_free(&files);
+	release_attr_files(&files);
 	git_attr_path__free(&path);
 
 	return error;
@@ -350,12 +349,21 @@ static int load_attr_from_cache(
 	if (git_buf_printf(&cache_key, "%d#%s", (int)source, relative_path) < 0)
 		return -1;
 
+	if (git_mutex_lock(&cache->lock) < 0) {
+		giterr_set(GITERR_OS, "Could not get cache attr lock");
+		git_buf_free(&cache_key);
+		return -1;
+	}
+
 	cache_pos = git_strmap_lookup_index(cache->files, cache_key.ptr);
 
-	git_buf_free(&cache_key);
-
-	if (git_strmap_valid_index(cache->files, cache_pos))
+	if (git_strmap_valid_index(cache->files, cache_pos)) {
 		*file = git_strmap_value_at(cache->files, cache_pos);
+		GIT_REFCOUNT_INC(*file);
+	}
+
+	git_mutex_unlock(&cache->lock);
+	git_buf_free(&cache_key);
 
 	return 0;
 }
@@ -367,20 +375,26 @@ int git_attr_cache__internal_file(
 {
 	int error = 0;
 	git_attr_cache *cache = git_repository_attr_cache(repo);
-	khiter_t cache_pos = git_strmap_lookup_index(cache->files, filename);
+	khiter_t cache_pos;
+
+	if (git_mutex_lock(&cache->lock) < 0) {
+		giterr_set(GITERR_OS, "Unable to get attr cache lock");
+		return -1;
+	}
+
+	cache_pos = git_strmap_lookup_index(cache->files, filename);
 
 	if (git_strmap_valid_index(cache->files, cache_pos)) {
 		*file = git_strmap_value_at(cache->files, cache_pos);
-		return 0;
+	}
+	else if (!(error = git_attr_file__new(file, 0, filename, &cache->pool))) {
+
+		git_strmap_insert(cache->files, (*file)->key + 2, *file, error);
+		if (error > 0)
+			error = 0;
 	}
 
-	if (git_attr_file__new(file, 0, filename, &cache->pool) < 0)
-		return -1;
-
-	git_strmap_insert(cache->files, (*file)->key + 2, *file, error);
-	if (error > 0)
-		error = 0;
-
+	git_mutex_unlock(&cache->lock);
 	return error;
 }
 
@@ -452,9 +466,17 @@ int git_attr_cache__push_file(
 	if (parse && (error = parse(repo, parsedata, content, file)) < 0)
 		goto finish;
 
-	git_strmap_insert(cache->files, file->key, file, error); //-V595
-	if (error > 0)
-		error = 0;
+	if (git_mutex_lock(&cache->lock) < 0) {
+		giterr_set(GITERR_OS, "Unable to get attr cache lock");
+		error = -1;
+	} else {
+		git_strmap_insert(cache->files, file->key, file, error); /* -V595 */
+		if (error > 0) { /* > 0 means inserting for the first time */
+			error = 0;
+			GIT_REFCOUNT_INC(file);
+		}
+		git_mutex_unlock(&cache->lock);
+	}
 
 	/* remember "cache buster" file signature */
 	if (blob)
@@ -481,7 +503,8 @@ finish:
 }
 
 #define push_attr_file(R,S,B,F) \
-	git_attr_cache__push_file((R),(B),(F),GIT_ATTR_FILE_FROM_FILE,git_attr_file__parse_buffer,NULL,(S))
+	git_attr_cache__push_file											\
+	((R),(B),(F),GIT_ATTR_FILE_FROM_FILE,git_attr_file__parse_buffer,NULL,(S))
 
 typedef struct {
 	git_repository *repo;
@@ -533,6 +556,18 @@ static int push_one_attr(void *ref, git_buf *path)
 			git_attr_file__parse_buffer, NULL, info->files);
 
 	return error;
+}
+
+static void release_attr_files(git_vector *files)
+{
+	size_t i;
+	git_attr_file *file;
+
+	git_vector_foreach(files, i, file) {
+		git_attr_file__free(file);
+		files->contents[i] = NULL;
+	}
+	git_vector_free(files);
 }
 
 static int collect_attr_files(
@@ -600,7 +635,7 @@ static int collect_attr_files(
 
  cleanup:
 	if (error < 0)
-		git_vector_free(files);
+		release_attr_files(files);
 	git_buf_free(&dir);
 
 	return error;
@@ -637,60 +672,10 @@ static int attr_cache__lookup_path(
 	return error;
 }
 
-int git_attr_cache__init(git_repository *repo)
+static void attr_cache__free(git_attr_cache *cache)
 {
-	int ret;
-	git_attr_cache *cache = git_repository_attr_cache(repo);
-	git_config *cfg;
-
-	if (cache->initialized)
-		return 0;
-
-	/* cache config settings for attributes and ignores */
-	if (git_repository_config__weakptr(&cfg, repo) < 0)
-		return -1;
-
-	ret = attr_cache__lookup_path(
-		&cache->cfg_attr_file, cfg, GIT_ATTR_CONFIG, GIT_ATTR_FILE_XDG);
-	if (ret < 0)
-		return ret;
-
-	ret = attr_cache__lookup_path(
-		&cache->cfg_excl_file, cfg, GIT_IGNORE_CONFIG, GIT_IGNORE_FILE_XDG);
-	if (ret < 0)
-		return ret;
-
-	/* allocate hashtable for attribute and ignore file contents */
-	if (cache->files == NULL) {
-		cache->files = git_strmap_alloc();
-		GITERR_CHECK_ALLOC(cache->files);
-	}
-
-	/* allocate hashtable for attribute macros */
-	if (cache->macros == NULL) {
-		cache->macros = git_strmap_alloc();
-		GITERR_CHECK_ALLOC(cache->macros);
-	}
-
-	/* allocate string pool */
-	if (git_pool_init(&cache->pool, 1, 0) < 0)
-		return -1;
-
-	cache->initialized = 1;
-
-	/* insert default macros */
-	return git_attr_add_macro(repo, "binary", "-diff -crlf -text");
-}
-
-void git_attr_cache_flush(
-	git_repository *repo)
-{
-	git_attr_cache *cache;
-
-	if (!repo)
+	if (!cache)
 		return;
-
-	cache = git_repository_attr_cache(repo);
 
 	if (cache->files != NULL) {
 		git_attr_file *file;
@@ -720,19 +705,93 @@ void git_attr_cache_flush(
 	git__free(cache->cfg_excl_file);
 	cache->cfg_excl_file = NULL;
 
-	cache->initialized = 0;
+	git_mutex_free(&cache->lock);
+
+	git__free(cache);
+}
+
+int git_attr_cache__init(git_repository *repo)
+{
+	int ret = 0;
+	git_attr_cache *cache = git_repository_attr_cache(repo);
+	git_config *cfg;
+
+	if (cache)
+		return 0;
+
+	if ((ret = git_repository_config__weakptr(&cfg, repo)) < 0)
+		return ret;
+
+	cache = git__calloc(1, sizeof(git_attr_cache));
+	GITERR_CHECK_ALLOC(cache);
+
+	/* set up lock */
+	if (git_mutex_init(&cache->lock) < 0) {
+		giterr_set(GITERR_OS, "Unable to initialize lock for attr cache");
+		git__free(cache);
+		return -1;
+	}
+
+	/* cache config settings for attributes and ignores */
+	ret = attr_cache__lookup_path(
+		&cache->cfg_attr_file, cfg, GIT_ATTR_CONFIG, GIT_ATTR_FILE_XDG);
+	if (ret < 0)
+		goto cancel;
+
+	ret = attr_cache__lookup_path(
+		&cache->cfg_excl_file, cfg, GIT_IGNORE_CONFIG, GIT_IGNORE_FILE_XDG);
+	if (ret < 0)
+		goto cancel;
+
+	/* allocate hashtable for attribute and ignore file contents,
+	 * hashtable for attribute macros, and string pool
+	 */
+	if ((ret = git_strmap_alloc(&cache->files)) < 0 ||
+		(ret = git_strmap_alloc(&cache->macros)) < 0 ||
+		(ret = git_pool_init(&cache->pool, 1, 0)) < 0)
+		goto cancel;
+
+	cache = git__compare_and_swap(&repo->attrcache, NULL, cache);
+	if (cache)
+		goto cancel; /* raced with another thread, free this but no error */
+
+	/* insert default macros */
+	return git_attr_add_macro(repo, "binary", "-diff -crlf -text");
+
+cancel:
+	attr_cache__free(cache);
+	return ret;
+}
+
+void git_attr_cache_flush(git_repository *repo)
+{
+	git_attr_cache *cache;
+
+	/* this could be done less expensively, but for now, we'll just free
+	 * the entire attrcache and let the next use reinitialize it...
+	 */
+	if (repo && (cache = git__swap(repo->attrcache, NULL)) != NULL)
+		attr_cache__free(cache);
 }
 
 int git_attr_cache__insert_macro(git_repository *repo, git_attr_rule *macro)
 {
-	git_strmap *macros = git_repository_attr_cache(repo)->macros;
+	git_attr_cache *cache = git_repository_attr_cache(repo);
+	git_strmap *macros = cache->macros;
 	int error;
 
 	/* TODO: generate warning log if (macro->assigns.length == 0) */
 	if (macro->assigns.length == 0)
 		return 0;
 
-	git_strmap_insert(macros, macro->match.pattern, macro, error);
+	if (git_mutex_lock(&cache->lock) < 0) {
+		giterr_set(GITERR_OS, "Unable to get attr cache lock");
+		error = -1;
+	} else {
+		git_strmap_insert(macros, macro->match.pattern, macro, error);
+		git_mutex_unlock(&cache->lock);
+	}
+
 	return (error < 0) ? -1 : 0;
 }
 

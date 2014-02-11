@@ -64,6 +64,7 @@ typedef struct {
 } git_attr_assignment;
 
 typedef struct {
+	git_refcount rc;
 	char *key;				/* cache "source#path" this was loaded from */
 	git_vector rules;		/* vector of <rule*> or <fnmatch*> */
 	git_pool *pool;

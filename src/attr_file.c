@@ -23,6 +23,7 @@ int git_attr_file__new(
 
 	attrs = git__calloc(1, sizeof(git_attr_file));
 	GITERR_CHECK_ALLOC(attrs);
+	GIT_REFCOUNT_INC(attrs);
 
 	if (pool)
 		attrs->pool = pool;
@@ -152,11 +153,8 @@ void git_attr_file__clear_rules(git_attr_file *file)
 	git_vector_free(&file->rules);
 }
 
-void git_attr_file__free(git_attr_file *file)
+static void attr_file_free(git_attr_file *file)
 {
-	if (!file)
-		return;
-
 	git_attr_file__clear_rules(file);
 
 	if (file->pool_is_allocated) {
@@ -166,6 +164,13 @@ void git_attr_file__free(git_attr_file *file)
 	file->pool = NULL;
 
 	git__free(file);
+}
+
+void git_attr_file__free(git_attr_file *file)
+{
+	if (!file)
+		return;
+	GIT_REFCOUNT_DEC(file, attr_file_free);
 }
 
 uint32_t git_attr_file__name_hash(const char *name)

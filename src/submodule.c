@@ -1638,8 +1638,7 @@ static int submodule_cache_alloc(
 		return -1;
 	}
 
-	cache->submodules = git_strmap_alloc();
-	if (!cache->submodules) {
+	if (git_strmap_alloc(&cache->submodules) < 0) {
 		submodule_cache_free(cache);
 		return -1;
 	}
