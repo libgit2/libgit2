@@ -218,24 +218,11 @@ static int crlf_apply_to_workdir(
 	if (!workdir_ending)
 		return -1;
 
-	if (!strcmp("\n", workdir_ending)) {
-		if (ca->crlf_action == GIT_CRLF_GUESS && ca->auto_crlf)
-			return GIT_PASSTHROUGH;
+	/* only LF->CRLF conversion is supported, do nothing on LF platforms */
+	if (strcmp(workdir_ending, "\r\n") != 0)
+		return GIT_PASSTHROUGH;
 
-		if (git_buf_find(from, '\r') < 0)
-			return GIT_PASSTHROUGH;
-
-		if (git_buf_text_crlf_to_lf(to, from) < 0)
-			return -1;
-	} else {
-		/* only other supported option is lf->crlf conversion */
-		assert(!strcmp("\r\n", workdir_ending));
-
-		if (git_buf_text_lf_to_crlf(to, from) < 0)
-			return -1;
-	}
-
-	return 0;
+	return git_buf_text_lf_to_crlf(to, from);
 }
 
 static int crlf_check(
