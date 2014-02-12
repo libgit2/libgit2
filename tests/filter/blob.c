@@ -41,7 +41,8 @@ void test_filter_blob__all_crlf(void)
 
 	cl_git_pass(git_blob_filtered_content(&buf, blob, "file.lf", 1));
 
-	cl_assert_equal_s(ALL_CRLF_TEXT_AS_LF, buf.ptr);
+	/* we never convert CRLF -> LF on platforms that have LF */
+	cl_assert_equal_s(ALL_CRLF_TEXT_AS_CRLF, buf.ptr);
 
 	git_buf_free(&buf);
 	git_blob_free(blob);
