@@ -29,6 +29,15 @@
 #define O_CLOEXEC 0
 #endif
 
+/* Determine whether an errno value indicates that a read or write failed
+ * because the descriptor is blocked.
+ */
+#if defined(EWOULDBLOCK)
+#define GIT_ISBLOCKED(e) ((e) == EAGAIN || (e) == EWOULDBLOCK)
+#else
+#define GIT_ISBLOCKED(e) ((e) == EAGAIN)
+#endif
+
 typedef int git_file;
 
 /**
