@@ -189,7 +189,7 @@ int p_write(git_file fd, const void *buf, size_t cnt)
 		r = write(fd, b, cnt);
 #endif
 		if (r < 0) {
-			if (errno == EINTR || errno == EAGAIN)
+			if (errno == EINTR || GIT_ISBLOCKED(errno))
 				continue;
 			return -1;
 		}
