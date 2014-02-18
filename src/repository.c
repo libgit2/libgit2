@@ -2006,5 +2006,7 @@ int git_repository_is_shallow(git_repository *repo)
 		return 0;
 	}
 
-	return error < 0 ? error : st.st_size == 0 ? 0 : 1;
+	if (error < 0)
+		return error;
+	return st.st_size == 0 ? 0 : 1;
 }
