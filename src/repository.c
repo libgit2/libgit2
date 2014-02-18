@@ -2001,9 +2001,12 @@ int git_repository_is_shallow(git_repository *repo)
 	error = git_path_lstat(path.ptr, &st);
 	git_buf_free(&path);
 
-	if (error == GIT_ENOTFOUND)
+	if (error == GIT_ENOTFOUND) {
+		giterr_clear();
 		return 0;
+	}
+
 	if (error < 0)
-		return -1;
+		return error;
 	return st.st_size == 0 ? 0 : 1;
 }

@@ -31,3 +31,9 @@ void test_repo_shallow__shallow_repo(void)
 	cl_assert_equal_i(1, git_repository_is_shallow(g_repo));
 }
 
+void test_repo_shallow__clears_errors(void)
+{
+	g_repo = cl_git_sandbox_init("testrepo.git");
+	cl_assert_equal_i(0, git_repository_is_shallow(g_repo));
+	cl_assert_equal_p(NULL, giterr_last());
+}
