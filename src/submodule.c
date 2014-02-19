@@ -113,11 +113,17 @@ int git_submodule_lookup(
 
 	assert(repo && name);
 
-	if ((error = load_submodule_config(repo)) < 0)
+	if (repo->submodules) {
+		pos = git_strmap_lookup_index(repo->submodules, name);
+		if (git_strmap_valid_index(repo->submodules, pos)) {
+			goto found;
+		}
+	}
+
+	if ((error = git_submodule_reload_all(repo)) < 0)
 		return error;
 
 	pos = git_strmap_lookup_index(repo->submodules, name);
-
 	if (!git_strmap_valid_index(repo->submodules, pos)) {
 		error = GIT_ENOTFOUND;
 
@@ -141,6 +147,7 @@ int git_submodule_lookup(
 		return error;
 	}
 
+found:
 	if (sm_ptr)
 		*sm_ptr = git_strmap_value_at(repo->submodules, pos);
 
