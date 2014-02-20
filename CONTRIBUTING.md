@@ -5,9 +5,13 @@ your help.
 
 ## Licensing
 
-By contributing to libgit2, you agree to release your contribution under the terms of the license.
-For code under `examples`, this is governed by the [CC0 Public Domain Dedication](examples/COPYING).
-All other code is released under the [GPL v2 with linking exception](COPYING).
+By contributing to libgit2, you agree to release your contribution under
+the terms of the license.  Except for the `examples` directory, all code
+is released under the [GPL v2 with linking exception](COPYING).
+
+The `examples` code is governed by the
+[CC0 Public Domain Dedication](examples/COPYING), so that you may copy
+from them into your own application.
 
 ## Discussion & Chat
 
@@ -76,15 +80,19 @@ you're porting code *from* to see what you need to do.  As a general rule,
 MIT and BSD (3-clause) licenses are typically no problem.  Apache 2.0
 license typically doesn't work due to GPL incompatibility.
 
-If you are pulling in code from core Git, another project or code you've pulled from
-a forum / Stack Overflow then please flag this in your PR and also make sure you've
-given proper credit to the original author in the code snippet.
+If you are pulling in code from core Git, another project or code you've
+pulled from a forum / Stack Overflow then please flag this in your PR and
+also make sure you've given proper credit to the original author in the
+code snippet.
 
 ## Style Guide
 
-`libgit2` is written in [ANSI C](http://en.wikipedia.org/wiki/ANSI_C)
-(a.k.a. C89) with some specific conventions for function and type naming,
-code formatting, and testing.
+The public API of `libgit2` is [ANSI C](http://en.wikipedia.org/wiki/ANSI_C)
+(a.k.a. C89) compatible.  Internally, `libgit2` is written using a portable
+subset of C99 - in order to compiler with GCC, Clang, MSVC, etc., we keep
+local variable declarations at the tops of blocks only and avoid `//` style
+comments.  Additionally, `libgit2` follows some extra conventions for
+function and type naming, code formatting, and testing.
 
 We like to keep the source code consistent and easy to read.  Maintaining
 this takes some discipline, but it's been more than worth it.  Take a look
