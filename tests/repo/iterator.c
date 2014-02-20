@@ -156,7 +156,7 @@ void test_repo_iterator__index_icase(void)
 {
 	git_iterator *i;
 	git_index *index;
-	unsigned int caps;
+	int caps;
 
 	g_repo = cl_git_sandbox_init("icase");
 

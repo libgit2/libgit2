@@ -10,6 +10,13 @@
 #include "git2/common.h"
 #include "cc-compat.h"
 
+/** Declare a function as always inlined. */
+#if defined(_MSC_VER)
+# define GIT_INLINE(type) static __inline type
+#else
+# define GIT_INLINE(type) static inline type
+#endif
+
 #include <assert.h>
 #include <errno.h>
 #include <limits.h>

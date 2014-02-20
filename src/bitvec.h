@@ -7,7 +7,7 @@
 #ifndef INCLUDE_bitvec_h__
 #define INCLUDE_bitvec_h__
 
-#include "util.h"
+#include "common.h"
 
 /*
  * This is a silly little fixed length bit vector type that will store

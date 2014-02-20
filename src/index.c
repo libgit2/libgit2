@@ -438,7 +438,7 @@ static int create_index_error(int error, const char *msg)
 	return error;
 }
 
-int git_index_set_caps(git_index *index, unsigned int caps)
+int git_index_set_caps(git_index *index, int caps)
 {
 	unsigned int old_ignore_case;
 
@@ -474,7 +474,7 @@ int git_index_set_caps(git_index *index, unsigned int caps)
 	return 0;
 }
 
-unsigned int git_index_caps(const git_index *index)
+int git_index_caps(const git_index *index)
 {
 	return ((index->ignore_case ? GIT_INDEXCAP_IGNORE_CASE : 0) |
 			(index->distrust_filemode ? GIT_INDEXCAP_NO_FILEMODE : 0) |
