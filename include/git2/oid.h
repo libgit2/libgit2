@@ -167,10 +167,7 @@ GIT_EXTERN(int) git_oid_cmp(const git_oid *a, const git_oid *b);
  * @param b second oid structure.
  * @return true if equal, false otherwise
  */
-GIT_INLINE(int) git_oid_equal(const git_oid *a, const git_oid *b)
-{
-	return !git_oid_cmp(a, b);
-}
+GIT_EXTERN(int) git_oid_equal(const git_oid *a, const git_oid *b);
 
 /**
  * Compare the first 'len' hexadecimal characters (packets of 4 bits)
