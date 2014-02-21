@@ -98,8 +98,12 @@ void git_buf_truncate(git_buf *buf, size_t len);
 void git_buf_shorten(git_buf *buf, size_t amount);
 void git_buf_rtruncate_at_char(git_buf *path, char separator);
 
+/** General join with separator */
 int git_buf_join_n(git_buf *buf, char separator, int nbuf, ...);
+/** Fast join of two strings - first may legally point into `buf` data */
 int git_buf_join(git_buf *buf, char separator, const char *str_a, const char *str_b);
+/** Fast join of three strings - cannot reference `buf` data */
+int git_buf_join3(git_buf *buf, char separator, const char *str_a, const char *str_b, const char *str_c);
 
 /**
  * Join two strings as paths, inserting a slash between as needed.

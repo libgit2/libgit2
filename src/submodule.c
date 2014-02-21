@@ -168,10 +168,11 @@ int git_submodule_lookup(
 		if (git_repository_workdir(repo)) {
 			git_buf path = GIT_BUF_INIT;
 
-			if (git_buf_joinpath(&path, git_repository_workdir(repo), name) < 0)
+			if (git_buf_join3(&path,
+					'/', git_repository_workdir(repo), name, DOT_GIT) < 0)
 				return -1;
 
-			if (git_path_contains(&path, DOT_GIT))
+			if (git_path_exists(path.ptr))
 				error = GIT_EEXISTS;
 
 			git_buf_free(&path);
@@ -328,8 +329,8 @@ int git_submodule_add_setup(
 	else if (use_gitlink) {
 		git_buf repodir = GIT_BUF_INIT;
 
-		error = git_buf_join_n(
-			&repodir, '/', 3, git_repository_path(repo), "modules", path);
+		error = git_buf_join3(
+			&repodir, '/', git_repository_path(repo), "modules", path);
 		if (error < 0)
 			goto cleanup;
 

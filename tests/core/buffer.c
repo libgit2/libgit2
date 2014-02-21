@@ -599,6 +599,38 @@ void test_core_buffer__10(void)
 	git_buf_free(&a);
 }
 
+void test_core_buffer__join3(void)
+{
+	git_buf a = GIT_BUF_INIT;
+
+	cl_git_pass(git_buf_join3(&a, '/', "test", "string", "join"));
+	cl_assert_equal_s("test/string/join", a.ptr);
+	cl_git_pass(git_buf_join3(&a, '/', "test/", "string", "join"));
+	cl_assert_equal_s("test/string/join", a.ptr);
+	cl_git_pass(git_buf_join3(&a, '/', "test/", "/string", "join"));
+	cl_assert_equal_s("test/string/join", a.ptr);
+	cl_git_pass(git_buf_join3(&a, '/', "test/", "/string/", "join"));
+	cl_assert_equal_s("test/string/join", a.ptr);
+	cl_git_pass(git_buf_join3(&a, '/', "test/", "/string/", "/join"));
+	cl_assert_equal_s("test/string/join", a.ptr);
+
+	cl_git_pass(git_buf_join3(&a, '/', "", "string", "join"));
+	cl_assert_equal_s("string/join", a.ptr);
+	cl_git_pass(git_buf_join3(&a, '/', "", "string/", "join"));
+	cl_assert_equal_s("string/join", a.ptr);
+	cl_git_pass(git_buf_join3(&a, '/', "", "string/", "/join"));
+	cl_assert_equal_s("string/join", a.ptr);
+
+	cl_git_pass(git_buf_join3(&a, '/', "string", "", "join"));
+	cl_assert_equal_s("string/join", a.ptr);
+	cl_git_pass(git_buf_join3(&a, '/', "string/", "", "join"));
+	cl_assert_equal_s("string/join", a.ptr);
+	cl_git_pass(git_buf_join3(&a, '/', "string/", "", "/join"));
+	cl_assert_equal_s("string/join", a.ptr);
+
+	git_buf_free(&a);
+}
+
 void test_core_buffer__11(void)
 {
 	git_buf a = GIT_BUF_INIT;

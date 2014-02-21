@@ -467,6 +467,59 @@ int git_buf_join(
 	return 0;
 }
 
+int git_buf_join3(
+	git_buf *buf,
+	char separator,
+	const char *str_a,
+	const char *str_b,
+	const char *str_c)
+{
+	size_t len_a = strlen(str_a), len_b = strlen(str_b), len_c = strlen(str_c);
+	int sep_a = 0, sep_b = 0;
+	char *tgt;
+
+	/* for this function, disallow pointers into the existing buffer */
+	assert(str_a < buf->ptr || str_a >= buf->ptr + buf->size);
+	assert(str_b < buf->ptr || str_b >= buf->ptr + buf->size);
+	assert(str_c < buf->ptr || str_c >= buf->ptr + buf->size);
+
+	if (separator) {
+		if (len_a > 0) {
+			while (*str_b == separator) { str_b++; len_b--; }
+			sep_a = (str_a[len_a - 1] != separator);
+		}
+		if (len_a > 0 || len_b > 0)
+			while (*str_c == separator) { str_c++; len_c--; }
+		if (len_b > 0)
+			sep_b = (str_b[len_b - 1] != separator);
+	}
+
+	if (git_buf_grow(buf, len_a + sep_a + len_b + sep_b + len_c + 1) < 0)
+		return -1;
+
+	tgt = buf->ptr;
+
+	if (len_a) {
+		memcpy(tgt, str_a, len_a);
+		tgt += len_a;
+	}
+	if (sep_a)
+		*tgt++ = separator;
+	if (len_b) {
+		memcpy(tgt, str_b, len_b);
+		tgt += len_b;
+	}
+	if (sep_b)
+		*tgt++ = separator;
+	if (len_c)
+		memcpy(tgt, str_c, len_c);
+
+	buf->size = len_a + sep_a + len_b + sep_b + len_c;
+	buf->ptr[buf->size] = '\0';
+
+	return 0;
+}
+
 void git_buf_rtrim(git_buf *buf)
 {
 	while (buf->size > 0) {
