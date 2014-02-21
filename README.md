@@ -20,17 +20,17 @@ Additionally, the example code has been released to the public domain (see the
 * API documentation: <http://libgit2.github.com/libgit2>
 * IRC: [#libgit2](irc://irc.freenode.net/libgit2) on irc.freenode.net.
 * Mailing list: The libgit2 mailing list was
-    traditionally hosted in Librelist but has been deprecated. We encourage you to 
+    traditionally hosted in Librelist but has been deprecated. We encourage you to
     [use StackOverflow](http://stackoverflow.com/questions/tagged/libgit2) instead for any questions regarding
-    the library, or [open an issue](https://github.com/libgit2/libgit2/issues) 
-    on GitHub for bug reports.  The mailing list archives are still available at 
+    the library, or [open an issue](https://github.com/libgit2/libgit2/issues)
+    on GitHub for bug reports.  The mailing list archives are still available at
     <http://librelist.com/browser/libgit2/>.
 
 
 What It Can Do
 ==============
 
-`libgit2` is already very usable and is being used in production for many applications including the GitHub.com site, in Plastic SCM 
+`libgit2` is already very usable and is being used in production for many applications including the GitHub.com site, in Plastic SCM
 and also powering Microsoft's Visual Studio tools for Git.  The library provides:
 
 * SHA conversions, formatting and shortening
@@ -65,7 +65,7 @@ Under Unix-like systems, like Linux, \*BSD and Mac OS X, libgit2 expects `pthrea
 they should be installed by default on all systems. Under Windows, libgit2 uses the native Windows API
 for threading.
 
-The `libgit2` library is built using `CMake 2.6+` (<http://www.cmake.org>) on all platforms.
+The `libgit2` library is built using [CMake](<http://www.cmake.org>) (version 2.6 or newer) on all platforms.
 
 On most systems you can build the library using the following commands
 

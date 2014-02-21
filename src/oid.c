@@ -179,6 +179,11 @@ int git_oid_cmp(const git_oid *a, const git_oid *b)
 	return git_oid__cmp(a, b);
 }
 
+int git_oid_equal(const git_oid *a, const git_oid *b)
+{
+	return (git_oid__cmp(a, b) == 0);
+}
+
 int git_oid_ncmp(const git_oid *oid_a, const git_oid *oid_b, size_t len)
 {
 	const unsigned char *a = oid_a->id;
