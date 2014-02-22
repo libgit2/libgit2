@@ -2046,13 +2046,15 @@ static int write_index(git_index *index, git_filebuf *file)
 	git_oid hash_final;
 	struct index_header header;
 	bool is_extended;
+	uint32_t index_version_number;
 
 	assert(index && file);
 
 	is_extended = is_index_extended(index);
+	index_version_number = is_extended ? INDEX_VERSION_NUMBER_EXT : INDEX_VERSION_NUMBER;
 
 	header.signature = htonl(INDEX_HEADER_SIG);
-	header.version = htonl(is_extended ? INDEX_VERSION_NUMBER_EXT : INDEX_VERSION_NUMBER);
+	header.version = htonl(index_version_number);
 	header.entry_count = htonl((uint32_t)index->entries.length);
 
 	if (git_filebuf_write(file, &header, sizeof(struct index_header)) < 0)
