@@ -190,12 +190,17 @@
     <script type="text/template" id="type-template">
       <h1 class="funcTitle"><%= tname %><small><%= data.type %></small></h1>
       <p><%= data.value %></p>
-      <% if (data.comments) { %>
+      <% if (data.sections) { %>
+      <% _.each(data.sections, function(sec) { %>
+      <div><%= sec[0] %></div>
+      <pre><%= sec[1].join("\n") %></pre>
+      <% }) %>
+      <% } else { if (data.comments) { %>
       <div><%= data.comments %></div>
       <% } %>
       <% if (data.block) { %>
       <pre><%= data.block %></pre>
-      <% } %>
+      <% } } %>
       <% if (returns.length > 0) { %>
       <h3>Returns</h3>
       <% _.each(_.initial(returns), function(fun) { %>
