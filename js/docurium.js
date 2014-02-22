@@ -634,7 +634,7 @@ $(function() {
 	this.changelogView = new ChangelogView({model: this.doc})
       }
       this.doc.setVersion()
-      this.mainView.setActive(this.ChangelogView)
+      this.mainView.setActive(this.changelogView)
     },
   });
 
