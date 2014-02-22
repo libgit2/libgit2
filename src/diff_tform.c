@@ -218,7 +218,7 @@ int git_diff_merge(git_diff *onto, const git_diff *from)
 int git_diff_find_similar__hashsig_for_file(
 	void **out, const git_diff_file *f, const char *path, void *p)
 {
-	git_hashsig_option_t opt = (git_hashsig_option_t)p;
+	git_hashsig_option_t opt = (git_hashsig_option_t)(long long)p;
 	int error = 0;
 
 	GIT_UNUSED(f);
@@ -235,7 +235,7 @@ int git_diff_find_similar__hashsig_for_file(
 int git_diff_find_similar__hashsig_for_buf(
 	void **out, const git_diff_file *f, const char *buf, size_t len, void *p)
 {
-	git_hashsig_option_t opt = (git_hashsig_option_t)p;
+	git_hashsig_option_t opt = (git_hashsig_option_t)(long long)p;
 	int error = 0;
 
 	GIT_UNUSED(f);
