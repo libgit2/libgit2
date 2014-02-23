@@ -303,3 +303,18 @@ void test_blame_simple__can_restrict_to_newish_commits(void)
 	check_blame_hunk_index(g_repo, g_blame, 0,  1, 1, 1, "be3563a", "branch_file.txt");
 	check_blame_hunk_index(g_repo, g_blame, 1,  2, 1, 0, "a65fedf", "branch_file.txt");
 }
+
+void test_blame_simple__can_restrict_to_first_parent_commits(void)
+{
+	git_blame_options opts = GIT_BLAME_OPTIONS_INIT;
+	opts.flags |= GIT_BLAME_FIRST_PARENT;
+
+	cl_git_pass(git_repository_open(&g_repo, cl_fixture("blametest.git")));
+
+	cl_git_pass(git_blame_file(&g_blame, g_repo, "b.txt", &opts));
+	cl_assert_equal_i(4, git_blame_get_hunk_count(g_blame));
+	check_blame_hunk_index(g_repo, g_blame, 0,  1, 4, 0, "da237394", "b.txt");
+	check_blame_hunk_index(g_repo, g_blame, 1,  5, 1, 0, "b99f7ac0", "b.txt");
+	check_blame_hunk_index(g_repo, g_blame, 2,  6, 5, 0, "63d671eb", "b.txt");
+	check_blame_hunk_index(g_repo, g_blame, 3, 11, 5, 0, "bc7c5ac2", "b.txt");
+}
