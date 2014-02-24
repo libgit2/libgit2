@@ -1,7 +1,7 @@
 #include "blame_helpers.h"
 
-git_repository *g_repo;
-git_blame *g_fileblame, *g_bufferblame;
+static git_repository *g_repo;
+static git_blame *g_fileblame, *g_bufferblame;
 
 void test_blame_buffer__initialize(void)
 {
