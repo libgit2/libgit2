@@ -148,7 +148,7 @@ static void usage(const char *msg, const char *arg)
 	fprintf(stderr, "   -L <n,m>            process only line range n-m, counting from 1\n");
 	fprintf(stderr, "   -M                  find line moves within and across files\n");
 	fprintf(stderr, "   -C                  find line copies within and across files\n");
-	fprintf(stderr, "   -F                  only care about the first parent\n");
+	fprintf(stderr, "   -F                  follow only the first parent commits\n");
 	fprintf(stderr, "\n");
 	exit(1);
 }
