@@ -9,7 +9,7 @@
 
 #include <git2.h>
 #include "common.h"
-#include "fileops.h"
+#include "sysdir.h"
 #include "cache.h"
 
 void git_libgit2_version(int *major, int *minor, int *rev)
@@ -38,14 +38,14 @@ int git_libgit2_capabilities()
 extern size_t git_mwindow__window_size;
 extern size_t git_mwindow__mapped_limit;
 
-static int config_level_to_futils_dir(int config_level)
+static int config_level_to_sysdir(int config_level)
 {
 	int val = -1;
 
 	switch (config_level) {
-	case GIT_CONFIG_LEVEL_SYSTEM: val = GIT_FUTILS_DIR_SYSTEM; break;
-	case GIT_CONFIG_LEVEL_XDG:    val = GIT_FUTILS_DIR_XDG; break;
-	case GIT_CONFIG_LEVEL_GLOBAL: val = GIT_FUTILS_DIR_GLOBAL; break;
+	case GIT_CONFIG_LEVEL_SYSTEM: val = GIT_SYSDIR_SYSTEM; break;
+	case GIT_CONFIG_LEVEL_XDG:    val = GIT_SYSDIR_XDG; break;
+	case GIT_CONFIG_LEVEL_GLOBAL: val = GIT_SYSDIR_GLOBAL; break;
 	default:
 		giterr_set(
 			GITERR_INVALID, "Invalid config path selector %d", config_level);
@@ -79,17 +79,17 @@ int git_libgit2_opts(int key, ...)
 		break;
 
 	case GIT_OPT_GET_SEARCH_PATH:
-		if ((error = config_level_to_futils_dir(va_arg(ap, int))) >= 0) {
+		if ((error = config_level_to_sysdir(va_arg(ap, int))) >= 0) {
 			char *out = va_arg(ap, char *);
 			size_t outlen = va_arg(ap, size_t);
 
-			error = git_futils_dirs_get_str(out, outlen, error);
+			error = git_sysdir_get_str(out, outlen, error);
 		}
 		break;
 
 	case GIT_OPT_SET_SEARCH_PATH:
-		if ((error = config_level_to_futils_dir(va_arg(ap, int))) >= 0)
-			error = git_futils_dirs_set(error, va_arg(ap, const char *));
+		if ((error = config_level_to_sysdir(va_arg(ap, int))) >= 0)
+			error = git_sysdir_set(error, va_arg(ap, const char *));
 		break;
 
 	case GIT_OPT_SET_CACHE_OBJECT_LIMIT:
@@ -118,12 +118,12 @@ int git_libgit2_opts(int key, ...)
 			char *out = va_arg(ap, char *);
 			size_t outlen = va_arg(ap, size_t);
 
-			error = git_futils_dirs_get_str(out, outlen, GIT_FUTILS_DIR_TEMPLATE);
+			error = git_sysdir_get_str(out, outlen, GIT_SYSDIR_TEMPLATE);
 		}
 		break;
 
 	case GIT_OPT_SET_TEMPLATE_PATH:
-		error = git_futils_dirs_set(GIT_FUTILS_DIR_TEMPLATE, va_arg(ap, const char *));
+		error = git_sysdir_set(GIT_SYSDIR_TEMPLATE, va_arg(ap, const char *));
 		break;
 	}
 

@@ -1,6 +1,6 @@
 #include "common.h"
 #include "repository.h"
-#include "fileops.h"
+#include "sysdir.h"
 #include "config.h"
 #include "attr.h"
 #include "ignore.h"
@@ -589,7 +589,7 @@ static int collect_attr_files(
 	}
 
 	if ((flags & GIT_ATTR_CHECK_NO_SYSTEM) == 0) {
-		error = git_futils_find_system_file(&dir, GIT_ATTR_FILE_SYSTEM);
+		error = git_sysdir_find_system_file(&dir, GIT_ATTR_FILE_SYSTEM);
 		if (!error)
 			error = push_attr_file(repo, files, NULL, dir.ptr);
 		else if (error == GIT_ENOTFOUND) {
@@ -623,13 +623,13 @@ static int attr_cache__lookup_path(
 
 		/* expand leading ~/ as needed */
 		if (cfgval && cfgval[0] == '~' && cfgval[1] == '/' &&
-			!git_futils_find_global_file(&buf, &cfgval[2]))
+			!git_sysdir_find_global_file(&buf, &cfgval[2]))
 			*out = git_buf_detach(&buf);
 		else if (cfgval)
 			*out = git__strdup(cfgval);
 
 	}
-	else if (!git_futils_find_xdg_file(&buf, fallback))
+	else if (!git_sysdir_find_xdg_file(&buf, fallback))
 		*out = git_buf_detach(&buf);
 
 	git_buf_free(&buf);

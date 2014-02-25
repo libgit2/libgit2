@@ -6,7 +6,7 @@
  */
 
 #include "common.h"
-#include "fileops.h"
+#include "sysdir.h"
 #include "config.h"
 #include "git2/config.h"
 #include "git2/sys/config.h"
@@ -937,17 +937,17 @@ void git_config_iterator_free(git_config_iterator *iter)
 
 int git_config_find_global(git_buf *path)
 {
-	return git_futils_find_global_file(path, GIT_CONFIG_FILENAME_GLOBAL);
+	return git_sysdir_find_global_file(path, GIT_CONFIG_FILENAME_GLOBAL);
 }
 
 int git_config_find_xdg(git_buf *path)
 {
-	return git_futils_find_xdg_file(path, GIT_CONFIG_FILENAME_XDG);
+	return git_sysdir_find_xdg_file(path, GIT_CONFIG_FILENAME_XDG);
 }
 
 int git_config_find_system(git_buf *path)
 {
-	return git_futils_find_system_file(path, GIT_CONFIG_FILENAME_SYSTEM);
+	return git_sysdir_find_system_file(path, GIT_CONFIG_FILENAME_SYSTEM);
 }
 
 int git_config__global_location(git_buf *buf)
@@ -956,7 +956,7 @@ int git_config__global_location(git_buf *buf)
 	const char *sep, *start;
 	size_t len;
 
-	if (git_futils_dirs_get(&paths, GIT_FUTILS_DIR_GLOBAL) < 0)
+	if (git_sysdir_get(&paths, GIT_SYSDIR_GLOBAL) < 0)
 		return -1;
 
 	/* no paths, so give up */

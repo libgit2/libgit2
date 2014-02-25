@@ -7,7 +7,7 @@
 #include "common.h"
 #include "global.h"
 #include "hash.h"
-#include "fileops.h"
+#include "sysdir.h"
 #include "git2/threads.h"
 #include "thread-utils.h"
 
@@ -86,7 +86,7 @@ static int synchronized_threads_init()
 
 	/* Initialize any other subsystems that have global state */
 	if ((error = git_hash_global_init()) >= 0)
-		error = git_futils_dirs_global_init();
+		error = git_sysdir_global_init();
 
 	win32_pthread_initialize();
 
@@ -169,7 +169,7 @@ static void init_once(void)
 
 	/* Initialize any other subsystems that have global state */
 	if ((init_error = git_hash_global_init()) >= 0)
-		init_error = git_futils_dirs_global_init();
+		init_error = git_sysdir_global_init();
 
 	GIT_MEMORY_BARRIER;
 }

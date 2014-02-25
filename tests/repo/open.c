@@ -1,5 +1,6 @@
 #include "clar_libgit2.h"
 #include "fileops.h"
+#include "sysdir.h"
 #include <ctype.h>
 
 void test_repo_open__cleanup(void)
@@ -323,7 +324,7 @@ void test_repo_open__no_config(void)
 	git_repository_free(repo);
 	cl_fixture_cleanup("empty_standard_repo");
 
-	git_futils_dirs_global_shutdown();
+	git_sysdir_global_shutdown();
 }
 
 void test_repo_open__force_bare(void)
