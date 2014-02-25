@@ -105,8 +105,9 @@ int main(int argc, char *argv[])
 		if (break_on_null_hunk && !hunk) break;
 
 		if (hunk) {
-			break_on_null_hunk = 1;
 			char sig[128] = {0};
+			break_on_null_hunk = 1;
+			
 
 			git_oid_tostr(oid, 10, &hunk->final_commit_id);
 			snprintf(sig, 30, "%s <%s>", hunk->final_signature->name, hunk->final_signature->email);

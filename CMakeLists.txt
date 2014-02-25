@@ -21,7 +21,8 @@ INCLUDE(CheckLibraryExists)
 
 # Build options
 #
-OPTION( SONAME				"Set the (SO)VERSION of the target"		ON  )
+OPTION( SONAME			
+	"Set the (SO)VERSION of the target"		ON  )
 OPTION( BUILD_SHARED_LIBS	"Build Shared Library (OFF for Static)"	ON  )
 OPTION( THREADSAFE			"Build libgit2 as threadsafe"			OFF )
 OPTION( BUILD_CLAR			"Build Tests using the Clar suite"		ON  )
@@ -57,6 +58,10 @@ IF(MSVC)
 	# By default, libgit2 is built with WinHTTP.  To use the built-in
 	# HTTP transport, invoke CMake with the "-DWINHTTP=OFF" argument.
 	OPTION( WINHTTP			"Use Win32 WinHTTP routines"	ON  )
+
+	ADD_DEFINITIONS(-D_SCL_SECURE_NO_WARNINGS)
+	ADD_DEFINITIONS(-D_CRT_SECURE_NO_DEPRECATE)
+	ADD_DEFINITIONS(-D_CRT_NONSTDC_NO_DEPRECATE)
 ENDIF()
 
 # This variable will contain the libraries we need to put into

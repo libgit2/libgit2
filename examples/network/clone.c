@@ -22,7 +22,7 @@ static void print_progress(const progress_data *pd)
 	int index_percent = (100*pd->fetch_progress.indexed_objects) / pd->fetch_progress.total_objects;
 	int checkout_percent = pd->total_steps > 0
 		? (100 * pd->completed_steps) / pd->total_steps
-		: 0.f;
+		: 0;
 	int kbytes = pd->fetch_progress.received_bytes / 1024;
 
 	if (pd->fetch_progress.received_objects == pd->fetch_progress.total_objects) {

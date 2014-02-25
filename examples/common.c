@@ -156,7 +156,7 @@ int diff_output(
 	const git_diff_line *l,
 	void *p)
 {
-	FILE *fp = p;
+	FILE *fp = (FILE*)p;
 
 	(void)d; (void)h;
 
