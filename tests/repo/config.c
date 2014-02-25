@@ -1,4 +1,5 @@
 #include "clar_libgit2.h"
+#include "sysdir.h"
 #include "fileops.h"
 #include <ctype.h>
 
@@ -47,7 +48,7 @@ void test_repo_config__open_missing_global(void)
 	git_config_free(config);
 	git_repository_free(repo);
 
-	git_futils_dirs_global_shutdown();
+	git_sysdir_global_shutdown();
 }
 
 void test_repo_config__open_missing_global_with_separators(void)
@@ -76,7 +77,7 @@ void test_repo_config__open_missing_global_with_separators(void)
 	git_config_free(config);
 	git_repository_free(repo);
 
-	git_futils_dirs_global_shutdown();
+	git_sysdir_global_shutdown();
 }
 
 #include "repository.h"
@@ -105,7 +106,7 @@ void test_repo_config__read_no_configs(void)
 	cl_assert_equal_i(GIT_ABBREV_DEFAULT, val);
 	git_repository_free(repo);
 
-	git_futils_dirs_global_shutdown();
+	git_sysdir_global_shutdown();
 
 	/* with just system */
 
@@ -204,5 +205,5 @@ void test_repo_config__read_no_configs(void)
 	cl_assert(!git_path_exists("empty_standard_repo/.git/config"));
 	cl_assert(!git_path_exists("alternate/3/.gitconfig"));
 
-	git_futils_dirs_global_shutdown();
+	git_sysdir_global_shutdown();
 }

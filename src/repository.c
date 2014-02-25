@@ -16,6 +16,7 @@
 #include "tag.h"
 #include "blob.h"
 #include "fileops.h"
+#include "sysdir.h"
 #include "filebuf.h"
 #include "index.h"
 #include "config.h"
@@ -1264,7 +1265,7 @@ static int repo_init_structure(
 		}
 
 		if (!tdir) {
-			if (!(error = git_futils_find_template_dir(&template_buf)))
+			if (!(error = git_sysdir_find_template_dir(&template_buf)))
 				tdir = template_buf.ptr;
 			default_template = true;
 		}

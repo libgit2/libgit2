@@ -7,8 +7,8 @@
 
 #include "common.h"
 #include "config.h"
-#include "fileops.h"
 #include "filebuf.h"
+#include "sysdir.h"
 #include "buffer.h"
 #include "buf_text.h"
 #include "git2/config.h"
@@ -1003,7 +1003,7 @@ static int included_path(git_buf *out, const char *dir, const char *path)
 {
 	/* From the user's home */
 	if (path[0] == '~' && path[1] == '/')
-		return git_futils_find_global_file(out, &path[1]);
+		return git_sysdir_find_global_file(out, &path[1]);
 
 	return git_path_join_unrooted(out, path, dir, NULL);
 }
