@@ -17,8 +17,6 @@
 #include "signature.h"
 #include "message.h"
 
-#include <stdarg.h>
-
 void git_commit__free(void *_commit)
 {
 	git_commit *commit = _commit;

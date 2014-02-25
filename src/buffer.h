@@ -7,8 +7,6 @@
 #ifndef INCLUDE_buffer_h__
 #define INCLUDE_buffer_h__
 
-#include <stdarg.h>
-
 #include "common.h"
 #include "git2/strarray.h"
 #include "git2/buffer.h"
