@@ -12,7 +12,6 @@
 #else
 #include <dirent.h>
 #endif
-#include <stdarg.h>
 #include <stdio.h>
 #include <ctype.h>
 

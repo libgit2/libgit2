@@ -7,7 +7,6 @@
 #include "buffer.h"
 #include "posix.h"
 #include "git2/buffer.h"
-#include <stdarg.h>
 #include <ctype.h>
 
 /* Used as default value for git_buf->ptr so that people can always

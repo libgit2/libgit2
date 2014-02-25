@@ -8,7 +8,6 @@
 #include "global.h"
 #include "posix.h"
 #include "buffer.h"
-#include <stdarg.h>
 
 /********************************************
  * New error handling

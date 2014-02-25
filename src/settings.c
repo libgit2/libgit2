@@ -5,8 +5,6 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include <stdarg.h>
-
 #include <git2.h>
 #include "common.h"
 #include "fileops.h"

@@ -7,6 +7,8 @@
 #ifndef INCLUDE_compat_h__
 #define INCLUDE_compat_h__
 
+#include <stdarg.h>
+
 /*
  * See if our compiler is known to support flexible array members.
  */
