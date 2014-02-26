@@ -31,6 +31,7 @@ struct opts {
 	int M;
 	int start_line;
 	int end_line;
+	int F;
 };
 static void parse_opts(struct opts *o, int argc, char *argv[]);
 
@@ -52,6 +53,7 @@ int main(int argc, char *argv[])
 	parse_opts(&o, argc, argv);
 	if (o.M) blameopts.flags |= GIT_BLAME_TRACK_COPIES_SAME_COMMIT_MOVES;
 	if (o.C) blameopts.flags |= GIT_BLAME_TRACK_COPIES_SAME_COMMIT_COPIES;
+	if (o.F) blameopts.flags |= GIT_BLAME_FIRST_PARENT;
 
 	/** Open the repository. */
 	check_lg2(git_repository_open_ext(&repo, ".", 0, NULL), "Couldn't open repository", NULL);
@@ -146,6 +148,7 @@ static void usage(const char *msg, const char *arg)
 	fprintf(stderr, "   -L <n,m>            process only line range n-m, counting from 1\n");
 	fprintf(stderr, "   -M                  find line moves within and across files\n");
 	fprintf(stderr, "   -C                  find line copies within and across files\n");
+	fprintf(stderr, "   -F                  follow only the first parent commits\n");
 	fprintf(stderr, "\n");
 	exit(1);
 }
@@ -174,6 +177,8 @@ static void parse_opts(struct opts *o, int argc, char *argv[])
 			o->M = 1;
 		else if (!strcasecmp(a, "-C"))
 			o->C = 1;
+		else if (!strcasecmp(a, "-F"))
+			o->F = 1;
 		else if (!strcasecmp(a, "-L")) {
 			i++; a = argv[i];
 			if (i >= argc) fatal("Not enough arguments to -L", NULL);

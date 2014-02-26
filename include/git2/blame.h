@@ -40,6 +40,9 @@ typedef enum {
 	 * commit (like `git blame -CCC`). Implies SAME_COMMIT_COPIES.
 	 * NOT IMPLEMENTED. */
 	GIT_BLAME_TRACK_COPIES_ANY_COMMIT_COPIES = (1<<3),
+	/** Restrict the search of commits to those reachable following only the
+	 * first parents. */
+	GIT_BLAME_FIRST_PARENT = (1<<4),
 } git_blame_flag_t;
 
 /**
