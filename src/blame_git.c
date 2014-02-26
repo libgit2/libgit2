@@ -489,7 +489,7 @@ static void pass_blame(git_blame *blame, git_blame__origin *origin, uint32_t opt
 	if (!git_oid_cmp(git_commit_id(commit), &blame->options.oldest_commit))
 		/* Stop at oldest specified commit */
 		num_parents = 0;
-	else if (opt & GIT_BLAME_FIRST_PARENT)
+	else if (opt & GIT_BLAME_FIRST_PARENT && num_parents > 1)
 		/* Limit search to the first parent */
 		num_parents = 1;
 
