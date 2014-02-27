@@ -58,6 +58,7 @@ int git_branch_create(
 	const git_signature *signature,
 	const char *log_message)
 {
+	int is_head = 0;
 	git_reference *branch = NULL;
 	git_buf canonical_branch_name = GIT_BUF_INIT,
 			  log_message_buf = GIT_BUF_INIT;
@@ -65,7 +66,19 @@ int git_branch_create(
 
 	assert(branch_name && commit && ref_out);
 	assert(git_object_owner((const git_object *)commit) == repository);
+	if (git_branch_lookup(&branch, repository, branch_name, GIT_BRANCH_LOCAL) == 0) {
+		if ((is_head = git_branch_is_head(branch)) < 0) {
+			error = is_head;
+			goto cleanup;
+		}
+	}
 
+	if (is_head && force) {
+		giterr_set(GITERR_REFERENCE, "Cannot force update branch '%s' as it is "
+			"the current HEAD of the repository.", git_reference_name(branch));
+		goto cleanup;
+	}
+	
 	if (git_buf_joinpath(&canonical_branch_name, GIT_REFS_HEADS_DIR, branch_name) < 0)
 		goto cleanup;
 
