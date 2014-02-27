@@ -31,19 +31,21 @@ extern int git_diff_file_content__init_from_diff(
 	size_t delta_index,
 	bool use_old);
 
-extern int git_diff_file_content__init_from_blob(
-	git_diff_file_content *fc,
-	git_repository *repo,
-	const git_diff_options *opts,
-	const git_blob *blob,
-	git_diff_file *as_file);
+typedef struct {
+	const git_blob *blob;
+	const void *buf;
+	size_t buflen;
+	const char *as_path;
+} git_diff_file_content_src;
 
-extern int git_diff_file_content__init_from_raw(
+#define GIT_DIFF_FILE_CONTENT_SRC__BLOB(BLOB,PATH) { (BLOB),NULL,0,(PATH) }
+#define GIT_DIFF_FILE_CONTENT_SRC__BUF(BUF,LEN,PATH) { NULL,(BUF),(LEN),(PATH) }
+
+extern int git_diff_file_content__init_from_src(
 	git_diff_file_content *fc,
 	git_repository *repo,
 	const git_diff_options *opts,
-	const char *buf,
-	size_t buflen,
+	const git_diff_file_content_src *src,
 	git_diff_file *as_file);
 
 /* this loads the blob/file-on-disk as needed */

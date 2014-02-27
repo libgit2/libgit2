@@ -106,6 +106,34 @@ GIT_EXTERN(int) git_patch_from_blob_and_buffer(
 	const git_diff_options *opts);
 
 /**
+ * Directly generate a patch from the difference between two buffers.
+ *
+ * This is just like `git_diff_buffers()` except it generates a patch
+ * object for the difference instead of directly making callbacks.  You can
+ * use the standard `git_patch` accessor functions to read the patch
+ * data, and you must call `git_patch_free()` on the patch when done.
+ *
+ * @param out The generated patch; NULL on error
+ * @param old_buffer Raw data for old side of diff, or NULL for empty
+ * @param old_len Length of the raw data for old side of the diff
+ * @param old_as_path Treat old buffer as if it had this filename; can be NULL
+ * @param new_buffer Raw data for new side of diff, or NULL for empty
+ * @param new_len Length of raw data for new side of diff
+ * @param new_as_path Treat buffer as if it had this filename; can be NULL
+ * @param opts Options for diff, or NULL for default options
+ * @return 0 on success or error code < 0
+ */
+GIT_EXTERN(int) git_patch_from_buffers(
+	git_patch **out,
+	const void *old_buffer,
+	size_t old_len,
+	const char *old_as_path,
+	const char *new_buffer,
+	size_t new_len,
+	const char *new_as_path,
+	const git_diff_options *opts);
+
+/**
  * Free a git_patch object.
  */
 GIT_EXTERN(void) git_patch_free(git_patch *patch);
