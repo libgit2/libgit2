@@ -4,9 +4,9 @@ libgit2 - the Git linkable library
 [![Build Status](https://secure.travis-ci.org/libgit2/libgit2.png?branch=development)](http://travis-ci.org/libgit2/libgit2)
 [![Coverity Scan Build Status](https://scan.coverity.com/projects/639/badge.svg)](https://scan.coverity.com/projects/639)
 
-`libgit2` is a portable, pure C implementation of the Git core methods provided as a
-re-entrant linkable library with a solid API, allowing you to write native
-speed custom Git applications in any language with bindings.
+`libgit2` is a portable, pure C implementation of the Git core methods
+provided as a re-entrant linkable library with a solid API, allowing you to
+write native speed custom Git applications in any language with bindings.
 
 `libgit2` is licensed under a **very permissive license** (GPLv2 with a special
 Linking Exception).  This basically means that you can link it (unmodified)
@@ -30,8 +30,9 @@ Additionally, the example code has been released to the public domain (see the
 What It Can Do
 ==============
 
-`libgit2` is already very usable and is being used in production for many applications including the GitHub.com site, in Plastic SCM
-and also powering Microsoft's Visual Studio tools for Git.  The library provides:
+`libgit2` is already very usable and is being used in production for many
+applications including the GitHub.com site, in Plastic SCM and also powering
+Microsoft's Visual Studio tools for Git.  The library provides:
 
 * SHA conversions, formatting and shortening
 * abstracted ODB backend system
@@ -199,14 +200,16 @@ we can add it to the list.
 How Can I Contribute?
 ==================================
 
-Check the [contribution guidelines](CONTRIBUTING.md).
-
+Check the [contribution guidelines](CONTRIBUTING.md) to understand our
+workflow, the libgit2 [coding conventions](CONVENTIONS.md), and out list of
+[good starting projects](PROJECTS.md).
 
 License
 ==================================
-`libgit2` is under GPL2 **with linking exemption**. This means you
-can link to and use the library from any program, proprietary or open source; paid
-or gratis.  However, you cannot modify libgit2 and distribute it without
+
+`libgit2` is under GPL2 **with linking exemption**. This means you can link to
+and use the library from any program, proprietary or open source; paid or
+gratis.  However, you cannot modify libgit2 and distribute it without
 supplying the source.
 
-See the COPYING file for the full license text.
+See the [COPYING file](COPYING) for the full license text.

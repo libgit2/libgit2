@@ -101,23 +101,4 @@ at the
 
 ## Starter Projects
 
-So, you want to start helping out with `libgit2`? That's fantastic? We
-welcome contributions and we promise we'll try to be nice.
-
-If you want to jump in, you can look at our issues list to see if there
-are any unresolved issues to jump in on.  Also, here is a list of some
-smaller project ideas that could help you become familiar with the code
-base and make a nice first step:
-
-* Look at the `examples/` programs, find an existing one that mirrors a
-  core Git command and add a missing command-line option.  There are many
-  gaps right now and this helps demonstrate how to use the library.
-* Pick a Git command that is not emulates in `examples/` and write a new
-  example that mirrors the behavior.  Examples don't have to be perfect
-  emulations, but should demonstrate how to use the libgit2 APIs to get
-  results that are similar to Git commands.  This lets you (and us) easily
-  exercise a particular facet of the API and measure compatability and
-  feature parity with core git.
-* Submit a PR to clarify documentation! While we do try to document all of
-  the APIs, your fresh eyes on the documentation will find areas that are
-  confusing much more easily.
+See our [projects list](https://github.com/libgit2/libgit2/blob/development/PROJECTS.md).
