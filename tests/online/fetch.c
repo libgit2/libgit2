@@ -81,6 +81,21 @@ void test_online_fetch__no_tags_http(void)
 	do_fetch("http://github.com/libgit2/TestGitRepository.git", GIT_REMOTE_DOWNLOAD_TAGS_NONE, 3);
 }
 
+void test_online_fetch__fetch_twice(void)
+{
+	git_remote *remote;
+	cl_git_pass(git_remote_create(&remote, _repo, "test", "git://github.com/libgit2/TestGitRepository.git"));
+    	cl_git_pass(git_remote_connect(remote, GIT_DIRECTION_FETCH));
+    	cl_git_pass(git_remote_download(remote));
+    	git_remote_disconnect(remote);
+    	
+    	git_remote_connect(remote, GIT_DIRECTION_FETCH);
+	cl_git_pass(git_remote_download(remote));
+	git_remote_disconnect(remote);
+	
+	git_remote_free(remote);
+}
+
 static int transferProgressCallback(const git_transfer_progress *stats, void *payload)
 {
 	bool *invoked = (bool *)payload;
