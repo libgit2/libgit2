@@ -579,6 +579,10 @@ int git_smart__download_pack(
 done:
 	if (writepack)
 		writepack->free(writepack);
+	if (progress_cb) {
+		t->packetsize_cb = NULL;
+		t->packetsize_payload = NULL;
+	}
 
 	return error;
 }

@@ -53,6 +53,7 @@ static void ssh_error(LIBSSH2_SESSION *session, const char *errmsg)
 static int gen_proto(git_buf *request, const char *cmd, const char *url)
 {
 	char *repo;
+	int len;
 
 	if (!git__prefixcmp(url, prefix_ssh)) {
 		url = url + strlen(prefix_ssh);
@@ -67,7 +68,7 @@ static int gen_proto(git_buf *request, const char *cmd, const char *url)
 		return -1;
 	}
 
-	int len = strlen(cmd) + 1 /* Space */ + 1 /* Quote */ + strlen(repo) + 1 /* Quote */ + 1;
+	len = strlen(cmd) + 1 /* Space */ + 1 /* Quote */ + strlen(repo) + 1 /* Quote */ + 1;
 
 	git_buf_grow(request, len);
 	git_buf_printf(request, "%s '%s'", cmd, repo);
