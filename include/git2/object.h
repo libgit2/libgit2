@@ -143,7 +143,7 @@ GIT_EXTERN(git_repository *) git_object_owner(const git_object *obj);
 GIT_EXTERN(void) git_object_free(git_object *object);
 
 /**
- * Convert an object type to it's string representation.
+ * Convert an object type to its string representation.
  *
  * The result is a pointer to a string in static memory and
  * should not be free()'ed.
