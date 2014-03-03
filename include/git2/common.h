@@ -119,7 +119,7 @@ typedef enum {
  *
  * - GIT_FEATURE_SSH
  *   Libgit2 supports the SSH protocol for network operations. This requires
- *   the openssh to be found when compiling libgit2
+ *   the libssh2 library to be found when compiling libgit2
  */
 GIT_EXTERN(int) git_libgit2_features(void);
 
