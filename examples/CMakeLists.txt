@@ -6,10 +6,14 @@ ELSE()
 	TARGET_LINK_LIBRARIES(cgit2 git2 pthread)
 ENDIF()
 
+OPTION( BUILD_EXAMPLES_GENERAL 		"Build general example"		OFF )
+
 FILE(GLOB SRC_EXAMPLE_APPS RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} *.c)
 FOREACH(src_app ${SRC_EXAMPLE_APPS})
 	STRING(REPLACE ".c" "" app_name ${src_app})
-	IF(NOT ${app_name} STREQUAL "common")
+	IF(${app_name} STREQUAL "general" AND BUILD_EXAMPLES_GENERAL OR
+		NOT ${app_name} STREQUAL "general" AND NOT ${app_name} STREQUAL "common"
+	)
 		ADD_EXECUTABLE(${app_name} ${src_app} "common.c")
 		TARGET_LINK_LIBRARIES(${app_name} git2)
 	ENDIF()
