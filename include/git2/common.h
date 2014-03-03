@@ -101,7 +101,7 @@ typedef enum {
 	GIT_HAS_THREADS	= (1 << 0),
 	GIT_HAS_HTTPS = (1 << 1),
 	GIT_HAS_SSH = (1 << 2),
-} git_cap_t;
+} git_feature_t;
 
 /**
  * Query compile time options for libgit2.
