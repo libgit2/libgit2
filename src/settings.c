@@ -21,13 +21,13 @@ int git_libgit2_features()
 {
 	return 0
 #ifdef GIT_THREADS
-		| GIT_HAS_THREADS
+		| GIT_FEATURE_THREADS
 #endif
 #if defined(GIT_SSL) || defined(GIT_WINHTTP)
-		| GIT_HAS_HTTPS
+		| GIT_FEATURE_HTTPS
 #endif
 #if defined(GIT_SSH)
-		| GIT_HAS_SSH
+		| GIT_FEATURE_SSH
 #endif
 	;
 }

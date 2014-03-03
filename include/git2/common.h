@@ -98,26 +98,26 @@ GIT_EXTERN(void) git_libgit2_version(int *major, int *minor, int *rev);
  * was compiled
  */
 typedef enum {
-	GIT_HAS_THREADS	= (1 << 0),
-	GIT_HAS_HTTPS = (1 << 1),
-	GIT_HAS_SSH = (1 << 2),
+	GIT_FEATURE_THREADS	= (1 << 0),
+	GIT_FEATURE_HTTPS = (1 << 1),
+	GIT_FEATURE_SSH = (1 << 2),
 } git_feature_t;
 
 /**
  * Query compile time options for libgit2.
  *
- * @return A combination of GIT_HAS_* values.
+ * @return A combination of GIT_FEATURE_* values.
  *
- * - GIT_HAS_THREADS
+ * - GIT_FEATURE_THREADS
  *   Libgit2 was compiled with thread support. Note that thread support is
  *   still to be seen as a 'work in progress' - basic object lookups are
  *   believed to be threadsafe, but other operations may not be.
  *
- * - GIT_HAS_HTTPS
+ * - GIT_FEATURE_HTTPS
  *   Libgit2 supports the https:// protocol. This requires the openssl
  *   library to be found when compiling libgit2.
  *
- * - GIT_HAS_SSH
+ * - GIT_FEATURE_SSH
  *   Libgit2 supports the SSH protocol for network operations. This requires
  *   the openssh to be found when compiling libgit2
  */
