@@ -1013,6 +1013,39 @@ GIT_EXTERN(int) git_diff_blob_to_buffer(
 	git_diff_line_cb line_cb,
 	void *payload);
 
+/**
+ * Directly run a diff between two buffers.
+ *
+ * Even more than with `git_diff_blobs`, comparing two buffer lacks
+ * context, so the `git_diff_file` parameters to the callbacks will be
+ * faked a la the rules for `git_diff_blobs()`.
+ *
+ * @param old_buffer Raw data for old side of diff, or NULL for empty
+ * @param old_len Length of the raw data for old side of the diff
+ * @param old_as_path Treat old buffer as if it had this filename; can be NULL
+ * @param new_buffer Raw data for new side of diff, or NULL for empty
+ * @param new_len Length of raw data for new side of diff
+ * @param new_as_path Treat buffer as if it had this filename; can be NULL
+ * @param options Options for diff, or NULL for default options
+ * @param file_cb Callback for "file"; made once if there is a diff; can be NULL
+ * @param hunk_cb Callback for each hunk in diff; can be NULL
+ * @param line_cb Callback for each line in diff; can be NULL
+ * @param payload Payload passed to each callback function
+ * @return 0 on success, non-zero callback return value, or error code
+ */
+GIT_EXTERN(int) git_diff_buffers(
+	const void *old_buffer,
+	size_t old_len,
+	const char *old_as_path,
+	const void *new_buffer,
+	size_t new_len,
+	const char *new_as_path,
+	const git_diff_options *options,
+	git_diff_file_cb file_cb,
+	git_diff_hunk_cb hunk_cb,
+	git_diff_line_cb line_cb,
+	void *payload);
+
 
 GIT_END_DECL
 

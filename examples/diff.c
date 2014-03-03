@@ -269,19 +269,23 @@ static void diff_print_numstat(git_diff *diff)
 {
 	git_patch *patch;
 	const git_diff_delta *delta;
-	size_t i;
-	size_t ndeltas;
+	size_t d, ndeltas = git_diff_num_deltas(diff);
 	size_t nadditions, ndeletions;
-	ndeltas = git_diff_num_deltas(diff);	
-	for (i = 0; i < ndeltas; i++){
+
+	for (d = 0; d < ndeltas; d++){
 		check_lg2(
-			git_patch_from_diff(&patch, diff, i),
+			git_patch_from_diff(&patch, diff, d),
 			"generating patch from diff", NULL);
+
 		check_lg2(
 			git_patch_line_stats(NULL, &nadditions, &ndeletions, patch),
 			"generating the number of additions and deletions", NULL);
+
 		delta = git_patch_get_delta(patch);
-		printf("%u\t%u\t%s\n", nadditions, ndeletions, delta->new_file.path);
+
+		printf("%ld\t%ld\t%s\n",
+			   (long)nadditions, (long)ndeletions, delta->new_file.path);
+
+		git_patch_free(patch);
 	}
-	git_patch_free(patch);
 }
