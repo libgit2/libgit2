@@ -1,6 +1,6 @@
 #include "clar_libgit2.h"
 
-void test_core_caps__0(void)
+void test_core_features__0(void)
 {
 	int major, minor, rev, caps;
 
@@ -9,23 +9,23 @@ void test_core_caps__0(void)
 	cl_assert_equal_i(LIBGIT2_VER_MINOR, minor);
 	cl_assert_equal_i(LIBGIT2_VER_REVISION, rev);
 
-	caps = git_libgit2_capabilities();
+	caps = git_libgit2_features();
 
 #ifdef GIT_THREADS
-	cl_assert((caps & GIT_CAP_THREADS) != 0);
+	cl_assert((caps & GIT_FEATURE_THREADS) != 0);
 #else
-	cl_assert((caps & GIT_CAP_THREADS) == 0);
+	cl_assert((caps & GIT_FEATURE_THREADS) == 0);
 #endif
 
 #if defined(GIT_SSL) || defined(GIT_WINHTTP)
-	cl_assert((caps & GIT_CAP_HTTPS) != 0);
+	cl_assert((caps & GIT_FEATURE_HTTPS) != 0);
 #else
-	cl_assert((caps & GIT_CAP_HTTPS) == 0);
+	cl_assert((caps & GIT_FEATURE_HTTPS) == 0);
 #endif
 
 #if defined(GIT_SSH)
-	cl_assert((caps & GIT_CAP_SSH) != 0);
+	cl_assert((caps & GIT_FEATURE_SSH) != 0);
 #else
-	cl_assert((caps & GIT_CAP_SSH) == 0);
+	cl_assert((caps & GIT_FEATURE_SSH) == 0);
 #endif
 }

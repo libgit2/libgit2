@@ -17,17 +17,17 @@ void git_libgit2_version(int *major, int *minor, int *rev)
 	*rev = LIBGIT2_VER_REVISION;
 }
 
-int git_libgit2_capabilities()
+int git_libgit2_features()
 {
 	return 0
 #ifdef GIT_THREADS
-		| GIT_CAP_THREADS
+		| GIT_FEATURE_THREADS
 #endif
 #if defined(GIT_SSL) || defined(GIT_WINHTTP)
-		| GIT_CAP_HTTPS
+		| GIT_FEATURE_HTTPS
 #endif
 #if defined(GIT_SSH)
-		| GIT_CAP_SSH
+		| GIT_FEATURE_SSH
 #endif
 	;
 }
