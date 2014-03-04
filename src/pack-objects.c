@@ -288,18 +288,21 @@ static int write_object(
 	git_odb_object *obj = NULL;
 	git_otype type;
 	unsigned char hdr[10], *zbuf = NULL;
-	void *delta_data = NULL;
-	void *data;
+	void *data = NULL;
 	size_t hdr_len, zbuf_len = COMPRESS_BUFLEN, data_len;
 	int error;
 
+	/*
+	 * If we have a delta base, let's use the delta to save space.
+	 * Otherwise load the whole object. 'data' ends up pointing to
+	 * whatever data we want to put into the packfile.
+	 */
 	if (po->delta) {
 		if (po->delta_data)
-			delta_data = po->delta_data;
-		else if ((error = get_delta(&delta_data, pb->odb, po)) < 0)
+			data = po->delta_data;
+		else if ((error = get_delta(&data, pb->odb, po)) < 0)
 				goto done;
 
-		data = delta_data;
 		data_len = po->delta_size;
 		type = GIT_OBJ_REF_DELTA;
 	} else {
@@ -346,13 +349,17 @@ static int write_object(
 
 			zbuf_len = COMPRESS_BUFLEN; /* reuse buffer */
 		}
-
-		if (po->delta)
-			git__free(delta_data);
 	}
 
-	if (po->delta_data) {
-		git__free(po->delta_data);
+	/*
+	 * If po->delta is true, data is a delta and it is our
+	 * responsibility to free it (otherwise it's a git_object's
+	 * data). We set po->delta_data to NULL in case we got the
+	 * data from there instead of get_delta(). If we didn't,
+	 * there's no harm.
+	 */
+	if (po->delta) {
+		git__free(data);
 		po->delta_data = NULL;
 	}
 
