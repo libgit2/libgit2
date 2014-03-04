@@ -493,6 +493,23 @@ static int pack_backend__exists(git_odb_backend *backend, const git_oid *oid)
 	return pack_entry_find(&e, (struct pack_backend *)backend, oid) == 0;
 }
 
+static int pack_backend__exists_prefix(
+	git_oid *out, git_odb_backend *backend, const git_oid *short_id, size_t len)
+{
+	int error;
+	struct pack_backend *pb = (struct pack_backend *)backend;
+	struct git_pack_entry e = {0};
+
+	error = pack_entry_find_prefix(&e, pb, short_id, len);
+
+	if (error == GIT_ENOTFOUND && !(error = pack_backend__refresh(backend)))
+		error = pack_entry_find_prefix(&e, pb, short_id, len);
+
+	git_oid_cpy(out, &e.sha1);
+
+	return error;
+}
+
 static int pack_backend__foreach(git_odb_backend *_backend, git_odb_foreach_cb cb, void *data)
 {
 	int error;
@@ -612,6 +629,7 @@ static int pack_backend__alloc(struct pack_backend **out, size_t initial_size)
 	backend->parent.read_prefix = &pack_backend__read_prefix;
 	backend->parent.read_header = &pack_backend__read_header;
 	backend->parent.exists = &pack_backend__exists;
+	backend->parent.exists_prefix = &pack_backend__exists_prefix;
 	backend->parent.refresh = &pack_backend__refresh;
 	backend->parent.foreach = &pack_backend__foreach;
 	backend->parent.writepack = &pack_backend__writepack;
