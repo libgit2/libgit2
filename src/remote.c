@@ -831,17 +831,21 @@ int git_remote_fetch(git_remote *remote)
 {
 	int error;
 
-	/* Connect and download everything */
-	if ((error = git_remote_connect(remote, GIT_DIRECTION_FETCH)) != 0)
+	/* Connect to the remote. */
+	if ((error = git_remote_connect(remote, GIT_DIRECTION_FETCH)) < 0)
 		return error;
 
-	if ((error = git_remote_download(remote)) != 0)
-		return error;
+	/* Download everything. */
+	error = git_remote_download(remote);
 
-	/* We don't need to be connected anymore */
+	/* We don't need to be connected anymore/ */
 	git_remote_disconnect(remote);
 
-	/* Create "remote/foo" branches for all remote branches */
+	/* If the download failed, return the error. */
+	if (error < 0)
+		return error;
+
+	/* Create "remote/foo" branches for all remote branches. */
 	return git_remote_update_tips(remote);
 }
 
