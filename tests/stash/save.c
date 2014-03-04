@@ -159,6 +159,8 @@ void test_stash_save__can_include_untracked_and_ignored_files(void)
 	assert_blob_oid("refs/stash^3:who", NULL);
 	assert_blob_oid("refs/stash^3:when", "b6ed15e81e2593d7bb6265eb4a991d29dc3e628b");
 	assert_blob_oid("refs/stash^3:just.ignore", "78925fb1236b98b37a35e9723033e627f97aa88b");
+
+	cl_assert(!git_path_exists("stash/just.ignore"));
 }
 
 #define MESSAGE "Look Ma! I'm on TV!"
