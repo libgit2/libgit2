@@ -465,7 +465,8 @@ static int ensure_there_are_changes_to_stash(
 static int reset_index_and_workdir(
 	git_repository *repo,
 	git_commit *commit,
-	bool remove_untracked)
+	bool remove_untracked,
+	bool remove_ignored)
 {
 	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
 
@@ -473,6 +474,9 @@ static int reset_index_and_workdir(
 
 	if (remove_untracked)
 		opts.checkout_strategy |= GIT_CHECKOUT_REMOVE_UNTRACKED;
+
+	if (remove_ignored)
+		opts.checkout_strategy |= GIT_CHECKOUT_REMOVE_IGNORED;
 
 	return git_checkout_tree(repo, (git_object *)commit, &opts);
 }
@@ -532,7 +536,8 @@ int git_stash_save(
 	if ((error = reset_index_and_workdir(
 		repo,
 		((flags & GIT_STASH_KEEP_INDEX) != 0) ? i_commit : b_commit,
-		(flags & GIT_STASH_INCLUDE_UNTRACKED) != 0)) < 0)
+		(flags & GIT_STASH_INCLUDE_UNTRACKED) != 0,
+		(flags & GIT_STASH_INCLUDE_IGNORED) != 0)) < 0)
 		goto cleanup;
 
 cleanup:
