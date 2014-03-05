@@ -324,7 +324,7 @@ static void diff_print_shortstat(git_diff *diff)
 
 	if (ndeltas) {
 
-	    printf(", %ld ", (long)ndeltas);
+	    printf(" %ld ", (long)ndeltas);
 	    printf("%s", 1==ndeltas ? "file changed" : "files changed");
 
 	    if(nadditions_sum) {
@@ -336,6 +336,6 @@ static void diff_print_shortstat(git_diff *diff)
 		printf(", %ld ",ndeletions_sum);
 		printf("%s", 1==ndeletions_sum ? "deletion(-)" : "deletions(-)");
 	    }
+	    printf("\n");
 	}
-	printf("\n");
 }
