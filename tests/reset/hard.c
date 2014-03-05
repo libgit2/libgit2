@@ -212,11 +212,15 @@ void test_reset_hard__reflog_is_correct(void)
 	reflog_check(repo, "HEAD", 3, "emeric.fermas@gmail.com", exp_msg);
 	reflog_check(repo, "refs/heads/master", 3, "emeric.fermas@gmail.com", exp_msg);
 
+	git_object_free(target);
+
 	/* Moved branch, expect default message */
 	cl_git_pass(git_revparse_single(&target, repo, "HEAD~^{commit}"));
 	cl_git_pass(git_reset(repo, target, GIT_RESET_HARD, NULL, NULL));
 	reflog_check(repo, "HEAD", 3, "emeric.fermas@gmail.com", exp_msg);
 	reflog_check(repo, "refs/heads/master", 4, NULL, "reset: moving");
+
+	git_object_free(target);
 
 	/* Moved branch, expect custom message */
 	cl_git_pass(git_revparse_single(&target, repo, "HEAD~^{commit}"));

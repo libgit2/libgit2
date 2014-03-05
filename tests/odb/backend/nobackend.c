@@ -18,6 +18,11 @@ void test_odb_backend_nobackend__initialize(void)
 	git_repository_set_config(_repo, config);
 	git_repository_set_odb(_repo, odb);
 	git_repository_set_refdb(_repo, refdb);
+
+	/* The set increases the refcount and we don't want them anymore */
+	git_config_free(config);
+	git_odb_free(odb);
+	git_refdb_free(refdb);
 }
 
 void test_odb_backend_nobackend__cleanup(void)
