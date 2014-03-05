@@ -23,9 +23,14 @@ void test_odb_mixed__dup_oid(void) {
 	cl_git_pass(git_oid_fromstr(&oid, hex));
 	cl_git_pass(git_odb_read_prefix(&obj, _odb, &oid, GIT_OID_HEXSZ));
 	git_odb_object_free(obj);
+
+	cl_git_pass(git_odb_exists_prefix(NULL, _odb, &oid, GIT_OID_HEXSZ));
+
 	cl_git_pass(git_oid_fromstrn(&oid, short_hex, sizeof(short_hex) - 1));
 	cl_git_pass(git_odb_read_prefix(&obj, _odb, &oid, sizeof(short_hex) - 1));
 	git_odb_object_free(obj);
+
+	cl_git_pass(git_odb_exists_prefix(NULL, _odb, &oid, sizeof(short_hex) - 1));
 }
 
 /* some known sha collisions of file content:
@@ -37,7 +42,7 @@ void test_odb_mixed__dup_oid(void) {
 
 void test_odb_mixed__dup_oid_prefix_0(void) {
 	char hex[10];
-	git_oid oid;
+	git_oid oid, found;
 	git_odb_object *obj;
 
 	/* ambiguous in the same pack file */
@@ -46,10 +51,14 @@ void test_odb_mixed__dup_oid_prefix_0(void) {
 	cl_git_pass(git_oid_fromstrn(&oid, hex, strlen(hex)));
 	cl_assert_equal_i(
 		GIT_EAMBIGUOUS, git_odb_read_prefix(&obj, _odb, &oid, strlen(hex)));
+	cl_assert_equal_i(
+		GIT_EAMBIGUOUS, git_odb_exists_prefix(&found, _odb, &oid, strlen(hex)));
 
 	strncpy(hex, "dea509d09", sizeof(hex));
 	cl_git_pass(git_oid_fromstrn(&oid, hex, strlen(hex)));
 	cl_git_pass(git_odb_read_prefix(&obj, _odb, &oid, strlen(hex)));
+	cl_git_pass(git_odb_exists_prefix(&found, _odb, &oid, strlen(hex)));
+	cl_assert(git_oid_equal(&found, git_odb_object_id(obj)));
 	git_odb_object_free(obj);
 
 	strncpy(hex, "dea509d0b", sizeof(hex));
@@ -63,10 +72,14 @@ void test_odb_mixed__dup_oid_prefix_0(void) {
 	cl_git_pass(git_oid_fromstrn(&oid, hex, strlen(hex)));
 	cl_assert_equal_i(
 		GIT_EAMBIGUOUS, git_odb_read_prefix(&obj, _odb, &oid, strlen(hex)));
+	cl_assert_equal_i(
+		GIT_EAMBIGUOUS, git_odb_exists_prefix(&found, _odb, &oid, strlen(hex)));
 
 	strncpy(hex, "81b5bff5b", sizeof(hex));
 	cl_git_pass(git_oid_fromstrn(&oid, hex, strlen(hex)));
 	cl_git_pass(git_odb_read_prefix(&obj, _odb, &oid, strlen(hex)));
+	cl_git_pass(git_odb_exists_prefix(&found, _odb, &oid, strlen(hex)));
+	cl_assert(git_oid_equal(&found, git_odb_object_id(obj)));
 	git_odb_object_free(obj);
 
 	strncpy(hex, "81b5bff5f", sizeof(hex));
@@ -80,10 +93,14 @@ void test_odb_mixed__dup_oid_prefix_0(void) {
 	cl_git_pass(git_oid_fromstrn(&oid, hex, strlen(hex)));
 	cl_assert_equal_i(
 		GIT_EAMBIGUOUS, git_odb_read_prefix(&obj, _odb, &oid, strlen(hex)));
+	cl_assert_equal_i(
+		GIT_EAMBIGUOUS, git_odb_exists_prefix(&found, _odb, &oid, strlen(hex)));
 
 	strncpy(hex, "0ddeaded9", sizeof(hex));
 	cl_git_pass(git_oid_fromstrn(&oid, hex, strlen(hex)));
 	cl_git_pass(git_odb_read_prefix(&obj, _odb, &oid, strlen(hex)));
+	cl_git_pass(git_odb_exists_prefix(&found, _odb, &oid, strlen(hex)));
+	cl_assert(git_oid_equal(&found, git_odb_object_id(obj)));
 	git_odb_object_free(obj);
 
 	strncpy(hex, "0ddeadede", sizeof(hex));
