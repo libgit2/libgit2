@@ -862,7 +862,7 @@ int git_odb_open_wstream(
 {
 	size_t i, writes = 0;
 	int error = GIT_ERROR;
-	git_hash_ctx *ctx;
+	git_hash_ctx *ctx = NULL;
 
 	assert(stream && db);
 
@@ -883,22 +883,28 @@ int git_odb_open_wstream(
 		}
 	}
 
-	if (error == GIT_PASSTHROUGH)
-		error = 0;
-	if (error < 0 && !writes)
-		error = git_odb__error_unsupported_in_backend("write object");
+	if (error < 0) {
+		if (error == GIT_PASSTHROUGH)
+			error = 0;
+		else if (!writes)
+			error = git_odb__error_unsupported_in_backend("write object");
+
+		goto done;
+	}
 
 	ctx = git__malloc(sizeof(git_hash_ctx));
 	GITERR_CHECK_ALLOC(ctx);
 
+	if ((error = git_hash_ctx_init(ctx)) < 0)
+		goto done;
 
-	git_hash_ctx_init(ctx);
 	hash_header(ctx, size, type);
 	(*stream)->hash_ctx = ctx;
 
 	(*stream)->declared_size = size;
 	(*stream)->received_bytes = 0;
 
+done:
 	return error;
 }
 
