@@ -857,11 +857,14 @@ int git_remote_fetch(
 	if ((error = git_remote_connect(remote, GIT_DIRECTION_FETCH)) != 0)
 		return error;
 
-	if ((error = git_remote_download(remote)) != 0)
-		return error;
+	error = git_remote_download(remote);
 
 	/* We don't need to be connected anymore */
 	git_remote_disconnect(remote);
+
+	/* If the download failed, return the error */
+	if (error != 0)
+		return error;
 
 	/* Default reflog message */
 	if (reflog_message)
