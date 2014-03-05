@@ -853,6 +853,9 @@ int git_path_direach(
 
 	if ((dir = opendir(path->ptr)) == NULL) {
 		giterr_set(GITERR_OS, "Failed to open directory '%s'", path->ptr);
+		if (errno == ENOENT)
+			return GIT_ENOTFOUND;
+
 		return -1;
 	}
 
