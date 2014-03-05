@@ -293,18 +293,21 @@ static void tag_options_init(tag_options *opts)
 
 int main(int argc, char **argv)
 {
+	git_repository *repo;
+	tag_options opts;
+	tag_action action;
+	tag_state state;
+
 	git_threads_init();
 
-	git_repository *repo;
 	check_lg2(git_repository_open_ext(&repo, ".", 0, NULL),
 			"Could not open repository", NULL);
 
-	tag_options opts;
 	tag_options_init(&opts);
-	tag_action action;
 	parse_options(&action, &opts, argc, argv);
 
-	tag_state state = {repo, &opts};
+	state.repo = repo;
+	state.opts = &opts;
 	action(&state);
 
 	git_repository_free(repo);
