@@ -800,7 +800,6 @@ int git_odb_read_prefix(
 
 	if (len < GIT_OID_MINPREFIXLEN)
 		return git_odb__error_ambiguous("prefix length too short");
-
 	if (len > GIT_OID_HEXSZ)
 		len = GIT_OID_HEXSZ;
 

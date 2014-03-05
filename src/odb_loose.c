@@ -647,12 +647,9 @@ static int loose_backend__read_prefix(
 {
 	int error = 0;
 
-	assert(len <= GIT_OID_HEXSZ);
+	assert(len >= GIT_OID_MINPREFIXLEN && len <= GIT_OID_HEXSZ);
 
-	if (len < GIT_OID_MINPREFIXLEN)
-		error = git_odb__error_ambiguous("prefix length too short");
-
-	else if (len == GIT_OID_HEXSZ) {
+	if (len == GIT_OID_HEXSZ) {
 		/* We can fall back to regular read method */
 		error = loose_backend__read(buffer_p, len_p, type_p, backend, short_oid);
 		if (!error)
@@ -698,10 +695,7 @@ static int loose_backend__exists_prefix(
 	git_buf object_path = GIT_BUF_INIT;
 	int error;
 
-	assert(backend && out && short_id);
-
-	if (len < GIT_OID_MINPREFIXLEN)
-		return git_odb__error_ambiguous("prefix length too short");
+	assert(backend && out && short_id && len >= GIT_OID_MINPREFIXLEN);
 
 	error = locate_object_short_oid(
 		&object_path, out, (loose_backend *)backend, short_id, len);
