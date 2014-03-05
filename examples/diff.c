@@ -234,6 +234,10 @@ static void parse_opts(struct opts *o, int argc, char *argv[])
 			o->diffopts.flags |= GIT_DIFF_INCLUDE_IGNORED;
 		else if (!strcmp(a, "--untracked"))
 			o->diffopts.flags |= GIT_DIFF_INCLUDE_UNTRACKED;
+		else if (!strcmp(a, "--patience"))
+			o->diffopts.flags |= GIT_DIFF_PATIENCE;
+		else if (!strcmp(a, "--minimal"))
+			o->diffopts.flags |= GIT_DIFF_MINIMAL;
 		else if (!strcmp(a, "--numstat"))
 			o->numstat = 1;
 		else if (match_uint16_arg(
