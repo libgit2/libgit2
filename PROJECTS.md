@@ -32,8 +32,6 @@ These are good small projects to get started with libgit2.
       diff API now has a flag to support it
     * Add the `--patience` flag to `examples/diff.c` since it is also now
       supported.
-    * Add the `--shortstat` flag to `examples/diff.c` based on the work
-      that was done to add `--numstat` already.
     * Fix the `examples/diff.c` implementation of the `-B`
       (a.k.a. `--break-rewrites`) command line option to actually look for
       the optional `[<n>][/<m>]` configuration values. There is an
