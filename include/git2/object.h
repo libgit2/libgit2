@@ -10,6 +10,7 @@
 #include "common.h"
 #include "types.h"
 #include "oid.h"
+#include "buffer.h"
 
 /**
  * @file git2/object.h
@@ -102,6 +103,15 @@ GIT_EXTERN(int) git_object_lookup_bypath(
  * @return the SHA1 id
  */
 GIT_EXTERN(const git_oid *) git_object_id(const git_object *obj);
+
+/**
+ * Get a short abbreviated OID string for the object
+ *
+ * @param out Buffer to write string into
+ * @param obj The object to get an ID for
+ * @return 0 on success, <0 for error
+ */
+GIT_EXTERN(int) git_object_short_id(git_buf *out, const git_object *obj);
 
 /**
  * Get the object type of an object
