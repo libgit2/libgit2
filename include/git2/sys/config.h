@@ -70,6 +70,19 @@ struct git_config_backend {
 #define GIT_CONFIG_BACKEND_INIT {GIT_CONFIG_BACKEND_VERSION}
 
 /**
+ * Initializes a `git_config_backend` with default values. Equivalent to
+ * creating an instance with GIT_CONFIG_BACKEND_INIT.
+ *
+ * @param opts the `git_config_backend` instance to initialize.
+ * @param version the version of the struct; you should pass
+ *        `GIT_CONFIG_BACKEND_VERSION` here.
+ * @return Zero on success; -1 on failure.
+ */
+GIT_EXTERN(int) git_config_init_backend(
+	git_config_backend* backend,
+	int version);
+
+/**
  * Add a generic config file instance to an existing config
  *
  * Note that the configuration object will free the file

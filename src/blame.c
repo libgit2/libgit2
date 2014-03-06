@@ -476,3 +476,15 @@ int git_blame_buffer(
 	*out = blame;
 	return 0;
 }
+
+int git_blame_init_options(git_blame_options* opts, int version)
+{
+	if (version != GIT_BLAME_OPTIONS_VERSION) {
+		giterr_set(GITERR_INVALID, "Invalid version %d for git_blame_options", version);
+		return -1;
+	} else {
+		git_blame_options o = GIT_BLAME_OPTIONS_INIT;
+		memcpy(opts, &o, sizeof(o));
+		return 0;
+	}
+}

@@ -83,6 +83,19 @@ typedef struct git_blame_options {
 #define GIT_BLAME_OPTIONS_INIT {GIT_BLAME_OPTIONS_VERSION}
 
 /**
+* Initializes a `git_blame_options` with default values. Equivalent to
+* creating an instance with GIT_BLAME_OPTIONS_INIT.
+*
+* @param opts the `git_blame_options` instance to initialize.
+* @param version the version of the struct; you should pass
+* `GIT_BLAME_OPTIONS_VERSION` here.
+* @return Zero on success; -1 on failure.
+*/
+GIT_EXTERN(int) git_blame_init_options(
+	git_blame_options* opts,
+	int version);
+
+/**
  * Structure that represents a blame hunk.
  *
  * - `lines_in_hunk` is the number of lines in this hunk

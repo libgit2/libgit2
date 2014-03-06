@@ -495,3 +495,14 @@ int git_status_should_ignore(
 	return git_ignore_path_is_ignored(ignored, repo, path);
 }
 
+int git_status_init_options(git_status_options* opts, int version)
+{
+	if (version != GIT_STATUS_OPTIONS_VERSION) {
+		giterr_set(GITERR_INVALID, "Invalid version %d for git_status_options", version);
+		return -1;
+	} else {
+		git_status_options o = GIT_STATUS_OPTIONS_INIT;
+		memcpy(opts, &o, sizeof(o));
+		return 0;
+	}
+}

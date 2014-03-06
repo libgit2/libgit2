@@ -175,6 +175,19 @@ typedef struct {
 #define GIT_STATUS_OPTIONS_INIT {GIT_STATUS_OPTIONS_VERSION}
 
 /**
+ * Initializes a `git_status_options` with default values. Equivalent to
+ * creating an instance with GIT_STATUS_OPTIONS_INIT.
+ *
+ * @param opts the `git_status_options` instance to initialize.
+ * @param version the version of the struct; you should pass
+ *        `GIT_STATUS_OPTIONS_VERSION` here.
+ * @return Zero on success; -1 on failure.
+ */
+GIT_EXTERN(int) git_status_init_options(
+	git_status_options* opts,
+	int version);
+
+/**
  * A status entry, providing the differences between the file as it exists
  * in HEAD and the index, and providing the differences between the index
  * and the working directory.

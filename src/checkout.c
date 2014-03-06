@@ -2194,3 +2194,15 @@ int git_checkout_head(
 	assert(repo);
 	return git_checkout_tree(repo, NULL, opts);
 }
+
+int git_checkout_init_opts(git_checkout_opts* opts, int version)
+{
+	if (version != GIT_CHECKOUT_OPTS_VERSION) {
+		giterr_set(GITERR_INVALID, "Invalid version %d for git_checkout_opts", version);
+		return -1;
+	} else {
+		git_checkout_opts o = GIT_CHECKOUT_OPTS_INIT;
+		memcpy(opts, &o, sizeof(o));
+		return 0;
+	}
+}
