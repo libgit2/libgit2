@@ -1245,3 +1245,15 @@ cleanup:
 
 	return error;
 }
+
+int git_config_init_backend(git_config_backend* backend, int version)
+{
+	if (version != GIT_CONFIG_BACKEND_VERSION) {
+		giterr_set(GITERR_INVALID, "Invalid version %d for git_config_backend", version);
+		return -1;
+	} else {
+		git_config_backend b = GIT_CONFIG_BACKEND_INIT;
+		memcpy(backend, &b, sizeof(b));
+		return 0;
+	}
+}

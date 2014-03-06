@@ -439,3 +439,15 @@ int git_clone(
 	*out = repo;
 	return error;
 }
+
+int git_clone_init_options(git_clone_options* opts, int version)
+{
+	if (version != GIT_CLONE_OPTIONS_VERSION) {
+		giterr_set(GITERR_INVALID, "Invalid version %d for git_clone_options", version);
+		return -1;
+	} else {
+		git_clone_options o = GIT_CLONE_OPTIONS_INIT;
+		memcpy(opts, &o, sizeof(o));
+		return 0;
+	}
+}

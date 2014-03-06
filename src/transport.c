@@ -217,3 +217,15 @@ int git_remote_supported_url(const char* url)
 
 	return fn != &git_transport_dummy;
 }
+
+int git_transport_init(git_transport* opts, int version)
+{
+	if (version != GIT_TRANSPORT_VERSION) {
+		giterr_set(GITERR_INVALID, "Invalid version %d for git_transport", version);
+		return -1;
+	} else {
+		git_transport o = GIT_TRANSPORT_INIT;
+		memcpy(opts, &o, sizeof(o));
+		return 0;
+	}
+}

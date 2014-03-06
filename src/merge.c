@@ -2744,3 +2744,27 @@ void git_merge_head_free(git_merge_head *head)
 
 	git__free(head);
 }
+
+int git_merge_init_opts(git_merge_opts* opts, int version)
+{
+	if (version != GIT_MERGE_OPTS_VERSION) {
+		giterr_set(GITERR_INVALID, "Invalid version %d for git_merge_opts", version);
+		return -1;
+	} else {
+		git_merge_opts o = GIT_MERGE_OPTS_INIT;
+		memcpy(opts, &o, sizeof(o));
+		return 0;
+	}
+}
+
+int git_merge_tree_init_opts(git_merge_tree_opts* opts, int version)
+{
+	if (version != GIT_MERGE_TREE_OPTS_VERSION) {
+		giterr_set(GITERR_INVALID, "Invalid version %d for git_merge_tree_opts", version);
+		return -1;
+	} else {
+		git_merge_tree_opts o = GIT_MERGE_TREE_OPTS_INIT;
+		memcpy(opts, &o, sizeof(o));
+		return 0;
+	}
+}

@@ -377,6 +377,19 @@ typedef struct {
 	{GIT_DIFF_OPTIONS_VERSION, 0, GIT_SUBMODULE_IGNORE_DEFAULT, {NULL,0}, NULL, NULL, 3}
 
 /**
+* Initializes a `git_diff_options` with default values. Equivalent to
+* creating an instance with GIT_DIFF_OPTIONS_INIT.
+*
+* @param opts the `git_diff_options` instance to initialize.
+* @param version the version of the struct; you should pass
+* `GIT_DIFF_OPTIONS_VERSION` here.
+* @return Zero on success; -1 on failure.
+*/
+GIT_EXTERN(int) git_diff_init_options(
+	git_diff_options* opts,
+	int version);
+
+/**
  * When iterating over a diff, callback that will be made per file.
  *
  * @param delta A pointer to the delta data for the file
@@ -603,6 +616,19 @@ typedef struct {
 
 #define GIT_DIFF_FIND_OPTIONS_VERSION 1
 #define GIT_DIFF_FIND_OPTIONS_INIT {GIT_DIFF_FIND_OPTIONS_VERSION}
+
+/**
+* Initializes a `git_diff_find_options` with default values. Equivalent to
+* creating an instance with GIT_DIFF_FIND_OPTIONS_INIT.
+*
+* @param opts the `git_diff_find_options` instance to initialize.
+* @param version the version of the struct; you should pass
+* `GIT_DIFF_FIND_OPTIONS_VERSION` here.
+* @return Zero on success; -1 on failure.
+*/
+GIT_EXTERN(int) git_diff_find_init_options(
+	git_diff_find_options* opts,
+	int version);
 
 /** @name Diff Generator Functions
  *

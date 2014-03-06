@@ -705,3 +705,15 @@ void git_push_free(git_push *push)
 
 	git__free(push);
 }
+
+int git_push_init_options(git_push_options* opts, int version)
+{
+	if (version != GIT_PUSH_OPTIONS_VERSION) {
+		giterr_set(GITERR_INVALID, "Invalid version %d for git_push_options", version);
+		return -1;
+	} else {
+		git_push_options o = GIT_PUSH_OPTIONS_INIT;
+		memcpy(opts, &o, sizeof(o));
+		return 0;
+	}
+}

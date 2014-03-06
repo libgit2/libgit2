@@ -267,6 +267,19 @@ typedef struct git_checkout_opts {
 #define GIT_CHECKOUT_OPTS_INIT {GIT_CHECKOUT_OPTS_VERSION}
 
 /**
+* Initializes a `git_checkout_opts` with default values. Equivalent to
+* creating an instance with GIT_CHECKOUT_OPTS_INIT.
+*
+* @param opts the `git_checkout_opts` instance to initialize.
+* @param version the version of the struct; you should pass
+* `GIT_CHECKOUT_OPTS_VERSION` here.
+* @return Zero on success; -1 on failure.
+*/
+GIT_EXTERN(int) git_checkout_init_opts(
+	git_checkout_opts* opts,
+	int version);
+
+/**
  * Updates files in the index and the working tree to match the content of
  * the commit pointed at by HEAD.
  *

@@ -268,6 +268,19 @@ typedef struct {
 #define GIT_REPOSITORY_INIT_OPTIONS_INIT {GIT_REPOSITORY_INIT_OPTIONS_VERSION}
 
 /**
+ * Initializes a `git_repository_init_options` with default values. Equivalent
+ * to creating an instance with GIT_REPOSITORY_INIT_OPTIONS_INIT.
+ *
+ * @param opts the `git_repository_init_options` instance to initialize.
+ * @param version the version of the struct; you should pass
+ *        `GIT_REPOSITORY_INIT_OPTIONS_VERSION` here.
+ * @return Zero on success; -1 on failure.
+ */
+GIT_EXTERN(int) git_repository_init_init_options(
+	git_repository_init_options* opts,
+	int version);
+
+/**
  * Create a new Git repository in the given folder with extended controls.
  *
  * This will initialize a new git repository (creating the repo_path

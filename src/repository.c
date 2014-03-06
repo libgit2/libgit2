@@ -2010,3 +2010,15 @@ int git_repository_is_shallow(git_repository *repo)
 		return error;
 	return st.st_size == 0 ? 0 : 1;
 }
+
+int git_repository_init_init_options(git_repository_init_options* opts, int version)
+{
+	if (version != GIT_REPOSITORY_INIT_OPTIONS_VERSION) {
+		giterr_set(GITERR_INVALID, "Invalid version %d for git_repository_init_options", version);
+		return -1;
+	} else {
+		git_repository_init_options o = GIT_REPOSITORY_INIT_OPTIONS_INIT;
+		memcpy(opts, &o, sizeof(o));
+		return 0;
+	}
+}

@@ -34,6 +34,19 @@ typedef struct {
 #define GIT_REVERT_OPTS_INIT {GIT_REVERT_OPTS_VERSION, 0, GIT_MERGE_TREE_OPTS_INIT, GIT_CHECKOUT_OPTS_INIT}
 
 /**
+ * Initializes a `git_revert_opts` with default values. Equivalent to
+ * creating an instance with GIT_REVERT_OPTS_INIT.
+ *
+ * @param opts the `git_revert_opts` instance to initialize.
+ * @param version the version of the struct; you should pass
+ *        `GIT_REVERT_OPTS_VERSION` here.
+ * @return Zero on success; -1 on failure.
+ */
+GIT_EXTERN(int) git_revert_init_opts(
+	git_revert_opts* opts,
+	int version);
+
+/**
  * Reverts the given commit against the given "our" commit, producing an
  * index that reflects the result of the revert.
  *

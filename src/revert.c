@@ -218,3 +218,15 @@ done:
 
 	return error;
 }
+
+int git_revert_init_opts(git_revert_opts* opts, int version)
+{
+	if (version != GIT_REVERT_OPTS_VERSION) {
+		giterr_set(GITERR_INVALID, "Invalid version %d for git_revert_opts", version);
+		return -1;
+	} else {
+		git_revert_opts o = GIT_REVERT_OPTS_INIT;
+		memcpy(opts, &o, sizeof(o));
+		return 0;
+	}
+}

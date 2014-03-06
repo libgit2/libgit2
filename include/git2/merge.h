@@ -104,6 +104,18 @@ typedef struct {
 #define GIT_MERGE_TREE_OPTS_VERSION 1
 #define GIT_MERGE_TREE_OPTS_INIT {GIT_MERGE_TREE_OPTS_VERSION}
 
+/**
+ * Initializes a `git_merge_tree_opts` with default values. Equivalent to
+ * creating an instance with GIT_MERGE_TREE_OPTS_INIT.
+ *
+ * @param opts the `git_merge_tree_opts` instance to initialize.
+ * @param version the version of the struct; you should pass
+ *        `GIT_MERGE_TREE_OPTS_VERSION` here.
+ * @return Zero on success; -1 on failure.
+ */
+GIT_EXTERN(int) git_merge_tree_init_opts(
+	git_merge_tree_opts* opts,
+	int version);
 
 /**
  * Option flags for `git_merge`.
@@ -144,6 +156,18 @@ typedef struct {
 #define GIT_MERGE_OPTS_VERSION 1
 #define GIT_MERGE_OPTS_INIT {GIT_MERGE_OPTS_VERSION, 0, GIT_MERGE_TREE_OPTS_INIT, GIT_CHECKOUT_OPTS_INIT}
 
+/**
+ * Initializes a `git_merge_opts` with default values. Equivalent to creating
+ * an instance with GIT_MERGE_OPTS_INIT.
+ *
+ * @param opts the `git_merge_opts` instance to initialize.
+ * @param version the version of the struct; you should pass
+ *        `GIT_MERGE_OPTS_VERSION` here.
+ * @return Zero on success; -1 on failure.
+ */
+GIT_EXTERN(int) git_merge_init_opts(
+	git_merge_opts* opts,
+	int version);
 
 /**
  * Find a merge base between two commits
