@@ -154,7 +154,7 @@ typedef struct {
 } git_merge_opts;
 
 #define GIT_MERGE_OPTS_VERSION 1
-#define GIT_MERGE_OPTS_INIT {GIT_MERGE_OPTS_VERSION, 0, GIT_MERGE_TREE_OPTS_INIT, GIT_CHECKOUT_OPTS_INIT}
+#define GIT_MERGE_OPTS_INIT {GIT_MERGE_OPTS_VERSION, (git_merge_flags_t)0, GIT_MERGE_TREE_OPTS_INIT, GIT_CHECKOUT_OPTS_INIT}
 
 /**
  * Initializes a `git_merge_opts` with default values. Equivalent to creating
