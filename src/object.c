@@ -397,3 +397,46 @@ cleanup:
 	git_tree_free(tree);
 	return error;
 }
+
+int git_object_short_id(git_buf *out, const git_object *obj)
+{
+	git_repository *repo;
+	int len = GIT_ABBREV_DEFAULT, error;
+	git_oid id = {{0}};
+	git_odb *odb;
+
+	assert(out && obj);
+
+	git_buf_sanitize(out);
+	repo = git_object_owner(obj);
+
+	if ((error = git_repository__cvar(&len, repo, GIT_CVAR_ABBREV)) < 0)
+		return error;
+
+	if ((error = git_repository_odb(&odb, repo)) < 0)
+		return error;
+
+	while (len < GIT_OID_HEXSZ) {
+		/* set up short oid */
+		memcpy(&id.id, &obj->cached.oid.id, (len + 1) / 2);
+		if (len & 1)
+			id.id[len / 2] &= 0xf0;
+
+		error = git_odb_exists_prefix(NULL, odb, &id, len);
+		if (error != GIT_EAMBIGUOUS)
+			break;
+
+		giterr_clear();
+		len++;
+	}
+
+	if (!error && !(error = git_buf_grow(out, len + 1))) {
+		git_oid_tostr(out->ptr, len + 1, &id);
+		out->size = len;
+	}
+
+	git_odb_free(odb);
+
+	return error;
+}
+

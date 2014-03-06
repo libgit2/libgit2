@@ -28,10 +28,6 @@ These are good small projects to get started with libgit2.
   core Git command and add a missing command-line option.  There are many
   gaps right now and this helps demonstrate how to use the library.  Here
   are some specific ideas:
-    * Add the `--minimal` flag to `examples/diff.c` since the `libgit2`
-      diff API now has a flag to support it
-    * Add the `--patience` flag to `examples/diff.c` since it is also now
-      supported.
     * Fix the `examples/diff.c` implementation of the `-B`
       (a.k.a. `--break-rewrites`) command line option to actually look for
       the optional `[<n>][/<m>]` configuration values. There is an

@@ -272,9 +272,17 @@ static int _dirent_loose_load(void *payload, git_buf *full_path)
 	if (git__suffixcmp(full_path->ptr, ".lock") == 0)
 		return 0;
 
-	if (git_path_isdir(full_path->ptr))
-		return git_path_direach(
+	if (git_path_isdir(full_path->ptr)) {
+		int error = git_path_direach(
 			full_path, backend->direach_flags, _dirent_loose_load, backend);
+		/* Race with the filesystem, ignore it */
+		if (error == GIT_ENOTFOUND) {
+			giterr_clear();
+			return 0;
+		}
+
+		return error;
+	}
 
 	file_path = full_path->ptr + strlen(backend->path);
 

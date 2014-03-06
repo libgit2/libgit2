@@ -635,6 +635,61 @@ int git_odb_exists(git_odb *db, const git_oid *id)
 	return (int)found;
 }
 
+int git_odb_exists_prefix(
+	git_oid *out, git_odb *db, const git_oid *short_id, size_t len)
+{
+	int error = GIT_ENOTFOUND, num_found = 0;
+	size_t i;
+	git_oid last_found = {{0}}, found;
+
+	assert(db && short_id);
+
+	if (len < GIT_OID_MINPREFIXLEN)
+		return git_odb__error_ambiguous("prefix length too short");
+	if (len > GIT_OID_HEXSZ)
+		len = GIT_OID_HEXSZ;
+
+	if (len == GIT_OID_HEXSZ) {
+		if (git_odb_exists(db, short_id)) {
+			if (out)
+				git_oid_cpy(out, short_id);
+			return 0;
+		} else {
+			return git_odb__error_notfound("no match for id prefix", short_id);
+		}
+	}
+
+	for (i = 0; i < db->backends.length; ++i) {
+		backend_internal *internal = git_vector_get(&db->backends, i);
+		git_odb_backend *b = internal->backend;
+
+		if (!b->exists_prefix)
+			continue;
+
+		error = b->exists_prefix(&found, b, short_id, len);
+		if (error == GIT_ENOTFOUND || error == GIT_PASSTHROUGH)
+			continue;
+		if (error)
+			return error;
+
+		/* make sure found item doesn't introduce ambiguity */
+		if (num_found) {
+			if (git_oid__cmp(&last_found, &found))
+				return git_odb__error_ambiguous("multiple matches for prefix");
+		} else {
+			git_oid_cpy(&last_found, &found);
+			num_found++;
+		}
+	}
+
+	if (!num_found)
+		return git_odb__error_notfound("no match for id prefix", short_id);
+	if (out)
+		git_oid_cpy(out, &last_found);
+
+	return error;
+}
+
 int git_odb_read_header(size_t *len_p, git_otype *type_p, git_odb *db, const git_oid *id)
 {
 	int error;
@@ -745,7 +800,6 @@ int git_odb_read_prefix(
 
 	if (len < GIT_OID_MINPREFIXLEN)
 		return git_odb__error_ambiguous("prefix length too short");
-
 	if (len > GIT_OID_HEXSZ)
 		len = GIT_OID_HEXSZ;
 
@@ -862,7 +916,7 @@ int git_odb_open_wstream(
 {
 	size_t i, writes = 0;
 	int error = GIT_ERROR;
-	git_hash_ctx *ctx;
+	git_hash_ctx *ctx = NULL;
 
 	assert(stream && db);
 
@@ -883,22 +937,28 @@ int git_odb_open_wstream(
 		}
 	}
 
-	if (error == GIT_PASSTHROUGH)
-		error = 0;
-	if (error < 0 && !writes)
-		error = git_odb__error_unsupported_in_backend("write object");
+	if (error < 0) {
+		if (error == GIT_PASSTHROUGH)
+			error = 0;
+		else if (!writes)
+			error = git_odb__error_unsupported_in_backend("write object");
+
+		goto done;
+	}
 
 	ctx = git__malloc(sizeof(git_hash_ctx));
 	GITERR_CHECK_ALLOC(ctx);
 
+	if ((error = git_hash_ctx_init(ctx)) < 0)
+		goto done;
 
-	git_hash_ctx_init(ctx);
 	hash_header(ctx, size, type);
 	(*stream)->hash_ctx = ctx;
 
 	(*stream)->declared_size = size;
 	(*stream)->received_bytes = 0;
 
+done:
 	return error;
 }
 

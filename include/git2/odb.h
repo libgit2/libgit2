@@ -159,6 +159,19 @@ GIT_EXTERN(int) git_odb_read_header(size_t *len_out, git_otype *type_out, git_od
 GIT_EXTERN(int) git_odb_exists(git_odb *db, const git_oid *id);
 
 /**
+ * Determine if objects can be found in the object database from a short OID.
+ *
+ * @param out The full OID of the found object if just one is found.
+ * @param db The database to be searched for the given object.
+ * @param short_id A prefix of the id of the object to read.
+ * @param len The length of the prefix.
+ * @return 0 if found, GIT_ENOTFOUND if not found, GIT_EAMBIGUOUS if multiple
+ *         matches were found, other value < 0 if there was a read error.
+ */
+GIT_EXTERN(int) git_odb_exists_prefix(
+	git_oid *out, git_odb *db, const git_oid *short_id, size_t len);
+
+/**
  * Refresh the object database to load newly added files.
  *
  * If the object databases have changed on disk while the library

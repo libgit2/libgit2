@@ -35,11 +35,8 @@ struct git_odb_backend {
 	int (* read)(
 		void **, size_t *, git_otype *, git_odb_backend *, const git_oid *);
 
-	/* To find a unique object given a prefix
-	 * of its oid.
-	 * The oid given must be so that the
-	 * remaining (GIT_OID_HEXSZ - len)*4 bits
-	 * are 0s.
+	/* To find a unique object given a prefix of its oid.  The oid given
+	 * must be so that the remaining (GIT_OID_HEXSZ - len)*4 bits are 0s.
 	 */
 	int (* read_prefix)(
 		git_oid *, void **, size_t *, git_otype *,
@@ -63,6 +60,9 @@ struct git_odb_backend {
 
 	int (* exists)(
 		git_odb_backend *, const git_oid *);
+
+	int (* exists_prefix)(
+		git_oid *, git_odb_backend *, const git_oid *, size_t);
 
 	/**
 	 * If the backend implements a refreshing mechanism, it should be exposed
