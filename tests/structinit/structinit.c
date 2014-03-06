@@ -19,8 +19,10 @@
  *                   signature "int (structname* instance, int version)".
  */
 #define CHECK_MACRO_FUNC_INIT_EQUAL(structname, structver, macroinit, funcinitname) \
+do { \
 	structname structname##_macro_latest = macroinit; \
 	structname structname##_func_latest; \
+	int structname##_curr_ver = structver - 1; \
 	cl_git_pass(funcinitname(&structname##_func_latest, structver)); \
 	cl_check_( \
 		memcmp(&structname##_macro_latest, &structname##_func_latest, \
@@ -28,13 +30,13 @@
 		"Macro-based and function-based initializer for " STRINGIFY(structname) \
 			" are not equivalent."); \
 	\
-	int structname##_curr_ver = structver - 1; \
 	while (structname##_curr_ver > 0) \
 	{ \
 		structname macro; \
 		cl_git_pass(funcinitname(&macro, structname##_curr_ver)); \
 		structname##_curr_ver--; \
-	}
+	}\
+} while(0)
 
 void test_structinit_structinit__compare(void)
 {
