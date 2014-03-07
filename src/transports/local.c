@@ -194,6 +194,9 @@ static int local_connect(
 	GIT_UNUSED(cred_acquire_cb);
 	GIT_UNUSED(cred_acquire_payload);
 
+	if (t->connected)
+		return 0;
+
 	t->url = git__strdup(url);
 	GITERR_CHECK_ALLOC(t->url);
 	t->direction = direction;
