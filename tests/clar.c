@@ -476,12 +476,12 @@ void clar__assert_equal(
 	else if(!strcmp("%.*s", fmt)) {
 		const char *s1 = va_arg(args, const char *);
 		const char *s2 = va_arg(args, const char *);
-		size_t len = va_arg(args, size_t);
+		int len = va_arg(args, int);
 		is_equal = (!s1 || !s2) ? (s1 == s2) : !strncmp(s1, s2, len);
 
 		if (!is_equal) {
 			if (s1 && s2) {
-				size_t pos;
+				int pos;
 				for (pos = 0; s1[pos] == s2[pos] && pos < len; ++pos)
 					/* find differing byte offset */;
 				p_snprintf(buf, sizeof(buf), "'%.*s' != '%.*s' (at byte %d)",
