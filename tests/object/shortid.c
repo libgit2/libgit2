@@ -26,6 +26,13 @@ void test_object_shortid__select(void)
 	cl_assert_equal_s("ce01362", shorty.ptr);
 	git_object_free(obj);
 
+	git_oid_fromstr(&full, "038d718da6a1ebbc6a7780a96ed75a70cc2ad6e2");
+	cl_git_pass(git_object_lookup(&obj, _repo, &full, GIT_OBJ_ANY));
+	cl_git_pass(git_object_short_id(&shorty, obj));
+	cl_assert_equal_i(7, shorty.size);
+	cl_assert_equal_s("038d718", shorty.ptr);
+	git_object_free(obj);
+
 	git_oid_fromstr(&full, "dea509d097ce692e167dfc6a48a7a280cc5e877e");
 	cl_git_pass(git_object_lookup(&obj, _repo, &full, GIT_OBJ_ANY));
 	cl_git_pass(git_object_short_id(&shorty, obj));
