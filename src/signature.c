@@ -199,10 +199,10 @@ int git_signature__parse(
 			time_end = git__skip_over_to_space(time_start);
 
 			/* warn (and return error if requested) */
-			if (git_warning(
-					GIT_WARNING_INVALID_SIGNATURE_TIMESTAMP,
-					"invalid signature timestamp '%.*s'",
-					(int)(time_end - time_start), time_start) < 0)
+			if (git_warn_invalid_data(
+					GIT_WARNING_INVALID_DATA__SIGNATURE_TIMESTAMP,
+					time_start, (int)(time_end - time_start),
+					"invalid signature %stimestamp", header) < 0)
 				return signature_error("invalid Unix timestamp");
 		}
 
@@ -223,10 +223,10 @@ int git_signature__parse(
 				tz_end = git__skip_over_to_space(tz_start);
 
 				/* warn (and return error if requested) */
-				if (git_warning(
-						GIT_WARNING_INVALID_SIGNATURE_TIMEZONE,
-						"invalid signature timezone '%.*s'",
-						(int)(tz_end - tz_start), tz_start) < 0)
+				if (git_warn_invalid_data(
+						GIT_WARNING_INVALID_DATA__SIGNATURE_TIMEZONE,
+						tz_start, (int)(tz_end - tz_start),
+						"invalid timezone in signature %s", header) < 0)
 					return signature_error("invalid timezone");
 			}
 

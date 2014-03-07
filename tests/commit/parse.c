@@ -177,24 +177,53 @@ void test_commit_parse__signature(void)
 		assert_signature_doesnt_parse(failcase);
 }
 
-static int fail_on_warn(git_warning_t w, const char *m, void *p)
+static int pass_on_warn(git_warning *warning, void *payload)
 {
-	GIT_UNUSED(w); GIT_UNUSED(m); GIT_UNUSED(p);
+	git_warning *expected = payload;
+	cl_assert_equal_i(expected->type, warning->type);
+	if (expected->message)
+		cl_assert(strstr(warning->message, expected->message) != NULL);
+	return 0;
+}
+
+static int fail_on_warn(git_warning *warning, void *payload)
+{
+	git_warning *expected = payload;
+	cl_assert_equal_i(expected->type, warning->type);
+	if (expected->message)
+		cl_assert(strstr(warning->message, expected->message) != NULL);
 	return -1;
 }
 
 void test_commit_parse__signature_semivalid(void)
 {
+	git_warning expected = { 0 };
 	passing_signature_test_case passcase = {"author Vicent Marti <tanoku@gmail.com> 9999999999998589934592 \n", "author ", "Vicent Marti", "tanoku@gmail.com", -1, 0};
 	failing_signature_test_case failcase1 = {"author Vicent Marti <tanoku@gmail.com> 9999999999998589934592 \n", "author "};
 	failing_signature_test_case failcase2 = {"author Vicent Marti <tanoku@gmail.com> 998589934592 +123412341234123412341234 \n", "author "};
+	failing_signature_test_case failcase3 = {"committer Vicent Marti <tanoku@gmail.com> 998589934592 +123412341234123412341234 \n", "committer "};
+
+	expected.type = GIT_WARNING_INVALID_DATA__SIGNATURE_TIMESTAMP;
+	expected.message = "author";
+	git_warning_set_callback(pass_on_warn, &expected);
 
 	assert_signature_parses(&passcase);
 
-	git_warning_set_callback(fail_on_warn, NULL);
+	expected.type = GIT_WARNING_INVALID_DATA__SIGNATURE_TIMESTAMP;
+	expected.message = "author";
+	git_warning_set_callback(fail_on_warn, &expected);
 
 	assert_signature_doesnt_parse(&failcase1);
+
+	expected.type = GIT_WARNING_INVALID_DATA__SIGNATURE_TIMEZONE;
+	expected.message = "author";
+
 	assert_signature_doesnt_parse(&failcase2);
+
+	expected.type = GIT_WARNING_INVALID_DATA__SIGNATURE_TIMEZONE;
+	expected.message = "committer";
+
+	assert_signature_doesnt_parse(&failcase3);
 
 	git_warning_set_callback(NULL, NULL);
 }

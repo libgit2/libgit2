@@ -11,9 +11,27 @@ GIT_BEGIN_DECL
 
 typedef enum {
 	GIT_WARNING_NONE = 0,
-	GIT_WARNING_INVALID_SIGNATURE_TIMESTAMP,
-	GIT_WARNING_INVALID_SIGNATURE_TIMEZONE,
+	GIT_WARNING_INVALID_DATA__SIGNATURE_TIMESTAMP,
+	GIT_WARNING_INVALID_DATA__SIGNATURE_TIMEZONE,
 } git_warning_t;
+
+/**
+ * Base class for warnings
+ */
+typedef struct git_warning git_warning;
+struct git_warning {
+	git_warning_t type;
+	const char *message;
+};
+
+/**
+ * Subclass of warning for invalid data string
+ */
+typedef struct {
+	git_warning base;
+	const char *invalid_data;
+	int invalid_data_len;
+} git_warning_invalid_data;
 
 /**
  * Type for warning callbacks.
@@ -21,17 +39,13 @@ typedef enum {
  * Using `git_warning_set_callback(cb, payload)` you can set a warning
  * callback function (and payload) that will be used to issue various
  * warnings when recoverable data problems are encountered inside libgit2.
- * It will be passed several parameters describing the problem.
+ * It will be passed a warning structure describing the problem.
  *
- * @param warning A git_warning_t value for the specific situation
- * @param message A message explaining the details of the warning
+ * @param warning A git_warning structure for the specific situation
  * @param payload The payload set when callback function was specified
  * @return 0 to continue, <0 to convert the warning to an error
  */
-typedef int (*git_warning_callback)(
-	git_warning_t warning,
-	const char *message,
-	void *payload);
+typedef int (*git_warning_callback)(git_warning *warning, void *payload);
 
 /**
  * Set the callback to be invoked when an invalid but recoverable

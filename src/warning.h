@@ -10,8 +10,15 @@
 #include "common.h"
 #include "git2/sys/warning.h"
 
-extern int git_warning(
+int git_warn(
 	git_warning_t warning,
+	const char *fmt,
+	...);
+
+int git_warn_invalid_data(
+	git_warning_t warning,
+	const char *data,
+	int datalen,
 	const char *fmt,
 	...);
 
