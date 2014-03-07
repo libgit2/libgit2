@@ -455,19 +455,18 @@ int git_commit_nth_gen_ancestor(
 
 	assert(ancestor && commit);
 
-	current = (git_commit *)commit;
+	if (git_object_dup((git_object **) &current, (git_object *) commit) < 0)
+		return -1;
 
-	if (n == 0)
-		return git_commit_lookup(
-			ancestor,
-			commit->object.repo,
-			git_object_id((const git_object *)commit));
+	if (n == 0) {
+		*ancestor = current;
+		return 0;
+	}
 
 	while (n--) {
-		error = git_commit_parent(&parent, (git_commit *)current, 0);
+		error = git_commit_parent(&parent, current, 0);
 
-		if (current != commit)
-			git_commit_free(current);
+		git_commit_free(current);
 
 		if (error < 0)
 			return error;
