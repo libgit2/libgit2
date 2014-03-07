@@ -66,16 +66,22 @@ int git_branch_create(
 
 	assert(branch_name && commit && ref_out);
 	assert(git_object_owner((const git_object *)commit) == repository);
-	if (git_branch_lookup(&branch, repository, branch_name, GIT_BRANCH_LOCAL) == 0) {
-		if ((is_head = git_branch_is_head(branch)) < 0) {
-			error = is_head;
+
+	if (force && git_branch_lookup(&branch, repository, branch_name, GIT_BRANCH_LOCAL) == 0) {
+		error = git_branch_is_head(branch);
+		git_reference_free(branch);
+		branch = NULL;
+
+		if (error < 0)
 			goto cleanup;
-		}
+
+		is_head = error;
 	}
 
 	if (is_head && force) {
 		giterr_set(GITERR_REFERENCE, "Cannot force update branch '%s' as it is "
-			"the current HEAD of the repository.", git_reference_name(branch));
+			"the current HEAD of the repository.", branch_name);
+		error = -1;
 		goto cleanup;
 	}
 	

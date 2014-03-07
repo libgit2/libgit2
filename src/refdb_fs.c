@@ -1343,7 +1343,10 @@ static int refdb_reflog_fs__ensure_log(git_refdb_backend *_backend, const char *
 	if ((error = retrieve_reflog_path(&path, repo, name)) < 0)
 		return error;
 
-	return create_new_reflog_file(git_buf_cstr(&path));
+	error = create_new_reflog_file(git_buf_cstr(&path));
+	git_buf_free(&path);
+
+	return error;
 }
 
 static int has_reflog(git_repository *repo, const char *name)
