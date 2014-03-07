@@ -20,12 +20,15 @@
 
 static int hunk_byfinalline_search_cmp(const void *key, const void *entry)
 {
-	uint16_t lineno = (uint16_t)*(size_t*)key;
 	git_blame_hunk *hunk = (git_blame_hunk*)entry;
 
-	if (lineno < hunk->final_start_line_number)
+	size_t lineno = *(size_t*)key;
+	size_t lines_in_hunk = (size_t)hunk->lines_in_hunk;
+	size_t final_start_line_number = (size_t)hunk->final_start_line_number;
+
+	if (lineno < final_start_line_number)
 		return -1;
-	if (lineno >= hunk->final_start_line_number + hunk->lines_in_hunk)
+	if (lineno >= final_start_line_number + lines_in_hunk)
 		return 1;
 	return 0;
 }
@@ -95,7 +98,7 @@ static void shift_hunks_by(git_vector *v, size_t start_line, int shift_by)
 {
 	size_t i;
 
-	if (!git_vector_bsearch2( &i, v, hunk_byfinalline_search_cmp, &start_line)) {
+	if (!git_vector_bsearch2(&i, v, hunk_byfinalline_search_cmp, &start_line)) {
 		for (; i < v->length; i++) {
 			git_blame_hunk *hunk = (git_blame_hunk*)v->contents[i];
 			hunk->final_start_line_number += shift_by;
@@ -161,10 +164,10 @@ const git_blame_hunk *git_blame_get_hunk_byindex(git_blame *blame, uint32_t inde
 
 const git_blame_hunk *git_blame_get_hunk_byline(git_blame *blame, uint32_t lineno)
 {
-	size_t i;
+	size_t i, new_lineno = (size_t)lineno;
 	assert(blame);
 
-	if (!git_vector_bsearch2( &i, &blame->hunks, hunk_byfinalline_search_cmp, &lineno)) {
+	if (!git_vector_bsearch2(&i, &blame->hunks, hunk_byfinalline_search_cmp, &new_lineno)) {
 		return git_blame_get_hunk_byindex(blame, (uint32_t)i);
 	}
 
