@@ -62,7 +62,7 @@ int do_clone(git_repository *repo, int argc, char **argv)
 	progress_data pd = {{0}};
 	git_repository *cloned_repo = NULL;
 	git_clone_options clone_opts = GIT_CLONE_OPTIONS_INIT;
-	git_checkout_opts checkout_opts = GIT_CHECKOUT_OPTS_INIT;
+	git_checkout_options checkout_opts = GIT_CHECKOUT_OPTIONS_INIT;
 	const char *url = argv[1];
 	const char *path = argv[2];
 	int error;

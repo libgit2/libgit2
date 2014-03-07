@@ -112,7 +112,7 @@ void test_index_names__cleaned_on_checkout_tree(void)
 {
 	git_oid oid;
 	git_object *obj;
-	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 
 	opts.checkout_strategy = GIT_CHECKOUT_SAFE | GIT_CHECKOUT_UPDATE_ONLY;
 
@@ -127,7 +127,7 @@ void test_index_names__cleaned_on_checkout_tree(void)
 
 void test_index_names__cleaned_on_checkout_head(void)
 {
-	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 
 	opts.checkout_strategy = GIT_CHECKOUT_SAFE | GIT_CHECKOUT_UPDATE_ONLY;
 
@@ -138,7 +138,7 @@ void test_index_names__cleaned_on_checkout_head(void)
 
 void test_index_names__retained_on_checkout_index(void)
 {
-	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 
 	opts.checkout_strategy = GIT_CHECKOUT_SAFE | GIT_CHECKOUT_UPDATE_ONLY;
 

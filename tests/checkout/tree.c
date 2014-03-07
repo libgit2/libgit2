@@ -7,14 +7,14 @@
 #include "fileops.h"
 
 static git_repository *g_repo;
-static git_checkout_opts g_opts;
+static git_checkout_options g_opts;
 static git_object *g_object;
 
 void test_checkout_tree__initialize(void)
 {
 	g_repo = cl_git_sandbox_init("testrepo");
 
-	GIT_INIT_STRUCTURE(&g_opts, GIT_CHECKOUT_OPTS_VERSION);
+	GIT_INIT_STRUCTURE(&g_opts, GIT_CHECKOUT_OPTIONS_VERSION);
 	g_opts.checkout_strategy = GIT_CHECKOUT_SAFE_CREATE;
 }
 
@@ -128,7 +128,7 @@ void test_checkout_tree__doesnt_write_unrequested_files_to_worktree(void)
 	git_oid chomped_oid;
 	git_commit* p_master_commit;
 	git_commit* p_chomped_commit;
-	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 
 	git_oid_fromstr(&master_oid, "a65fedf39aefe402d3bb6e24df4d4f5fe4547750");
 	git_oid_fromstr(&chomped_oid, "e90810b8df3e80c413d903f631643c716887138d");
@@ -148,7 +148,7 @@ void test_checkout_tree__doesnt_write_unrequested_files_to_worktree(void)
 
 void test_checkout_tree__can_switch_branches(void)
 {
-	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 	git_oid oid;
 	git_object *obj = NULL;
 
@@ -202,7 +202,7 @@ void test_checkout_tree__can_switch_branches(void)
 
 void test_checkout_tree__can_remove_untracked(void)
 {
-	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 
 	opts.checkout_strategy = GIT_CHECKOUT_SAFE | GIT_CHECKOUT_REMOVE_UNTRACKED;
 
@@ -216,7 +216,7 @@ void test_checkout_tree__can_remove_untracked(void)
 
 void test_checkout_tree__can_remove_ignored(void)
 {
-	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 	int ignored = 0;
 
 	opts.checkout_strategy = GIT_CHECKOUT_SAFE | GIT_CHECKOUT_REMOVE_IGNORED;
@@ -239,7 +239,7 @@ static int checkout_tree_with_blob_ignored_in_workdir(int strategy, bool isdir)
 {
 	git_oid oid;
 	git_object *obj = NULL;
-	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 	int ignored = 0, error;
 
 	assert_on_branch(g_repo, "master");
@@ -344,7 +344,7 @@ void test_checkout_tree__can_overwrite_ignored_folder_by_default(void)
 
 void test_checkout_tree__can_update_only(void)
 {
-	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 	git_oid oid;
 	git_object *obj = NULL;
 
@@ -554,7 +554,7 @@ void test_checkout_tree__checking_out_a_conflicting_content_change_returns_EMERG
 
 void test_checkout_tree__donot_update_deleted_file_by_default(void)
 {
-	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 	git_oid old_id, new_id;
 	git_commit *old_commit = NULL, *new_commit = NULL;
 	git_index *index = NULL;
@@ -622,7 +622,7 @@ static int checkout_cancel_cb(
 void test_checkout_tree__can_cancel_checkout_from_notify(void)
 {
 	struct checkout_cancel_at ca;
-	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 	git_oid oid;
 	git_object *obj = NULL;
 
@@ -674,7 +674,7 @@ void test_checkout_tree__can_cancel_checkout_from_notify(void)
 void test_checkout_tree__can_checkout_with_last_workdir_item_missing(void)
 {
 	git_index *index = NULL;
-	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 	git_oid tree_id, commit_id;
 	git_tree *tree = NULL;
 	git_commit *commit = NULL;
@@ -710,7 +710,7 @@ void test_checkout_tree__can_checkout_with_last_workdir_item_missing(void)
 
 void test_checkout_tree__issue_1397(void)
 {
-	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 	const char *partial_oid = "8a7ef04";
 	git_object *tree = NULL;
 
@@ -733,7 +733,7 @@ void test_checkout_tree__issue_1397(void)
 
 void test_checkout_tree__can_write_to_empty_dirs(void)
 {
-	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 	git_oid oid;
 	git_object *obj = NULL;
 
@@ -759,7 +759,7 @@ void test_checkout_tree__can_write_to_empty_dirs(void)
 void test_checkout_tree__fails_when_dir_in_use(void)
 {
 #ifdef GIT_WIN32
-	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 	git_oid oid;
 	git_object *obj = NULL;
 
@@ -792,7 +792,7 @@ void test_checkout_tree__fails_when_dir_in_use(void)
 void test_checkout_tree__can_continue_when_dir_in_use(void)
 {
 #ifdef GIT_WIN32
-	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 	git_oid oid;
 	git_object *obj = NULL;
 
@@ -825,7 +825,7 @@ void test_checkout_tree__can_continue_when_dir_in_use(void)
 
 void test_checkout_tree__target_directory_from_bare(void)
 {
-	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 	git_oid oid;
 	checkout_counts cts;
 	memset(&cts, 0, sizeof(cts));
@@ -910,7 +910,7 @@ static void create_conflict(void)
 
 void test_checkout_tree__fails_when_conflicts_exist_in_index(void)
 {
-	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 	git_oid oid;
 	git_object *obj = NULL;
 
@@ -930,7 +930,7 @@ void test_checkout_tree__filemode_preserved_in_index(void)
 {
 	git_oid executable_oid;
 	git_commit *commit;
-	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 	git_index *index;
 	const git_index_entry *entry;
 

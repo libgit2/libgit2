@@ -67,8 +67,8 @@ cleanup:
 
 static int revert_normalize_opts(
 	git_repository *repo,
-	git_revert_opts *opts,
-	const git_revert_opts *given,
+	git_revert_options *opts,
+	const git_revert_options *given,
 	const char *their_label)
 {
 	int error = 0;
@@ -78,10 +78,10 @@ static int revert_normalize_opts(
 	GIT_UNUSED(repo);
 
 	if (given != NULL)
-		memcpy(opts, given, sizeof(git_revert_opts));
+		memcpy(opts, given, sizeof(git_revert_options));
 	else {
-		git_revert_opts default_opts = GIT_REVERT_OPTS_INIT;
-		memcpy(opts, &default_opts, sizeof(git_revert_opts));
+		git_revert_options default_opts = GIT_REVERT_OPTIONS_INIT;
+		memcpy(opts, &default_opts, sizeof(git_revert_options));
 	}
 
 	if (!opts->checkout_opts.checkout_strategy)
@@ -166,9 +166,9 @@ done:
 int git_revert(
 	git_repository *repo,
 	git_commit *commit,
-	const git_revert_opts *given_opts)
+	const git_revert_options *given_opts)
 {
-	git_revert_opts opts;
+	git_revert_options opts;
 	git_reference *our_ref = NULL;
 	git_commit *our_commit = NULL;
 	char commit_oidstr[GIT_OID_HEXSZ + 1];
@@ -179,7 +179,7 @@ int git_revert(
 
 	assert(repo && commit);
 
-	GITERR_CHECK_VERSION(given_opts, GIT_REVERT_OPTS_VERSION, "git_revert_opts");
+	GITERR_CHECK_VERSION(given_opts, GIT_REVERT_OPTIONS_VERSION, "git_revert_options");
 
 	if ((error = git_repository__ensure_not_bare(repo, "revert")) < 0)
 		return error;
@@ -219,13 +219,13 @@ done:
 	return error;
 }
 
-int git_revert_init_opts(git_revert_opts* opts, int version)
+int git_revert_init_opts(git_revert_options* opts, int version)
 {
-	if (version != GIT_REVERT_OPTS_VERSION) {
-		giterr_set(GITERR_INVALID, "Invalid version %d for git_revert_opts", version);
+	if (version != GIT_REVERT_OPTIONS_VERSION) {
+		giterr_set(GITERR_INVALID, "Invalid version %d for git_revert_options", version);
 		return -1;
 	} else {
-		git_revert_opts o = GIT_REVERT_OPTS_INIT;
+		git_revert_options o = GIT_REVERT_OPTIONS_INIT;
 		memcpy(opts, &o, sizeof(o));
 		return 0;
 	}

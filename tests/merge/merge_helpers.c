@@ -83,7 +83,7 @@ int merge_branches(git_merge_result **result, git_repository *repo, const char *
 {
 	git_reference *head_ref, *theirs_ref;
 	git_merge_head *theirs_head;
-	git_checkout_opts head_checkout_opts = GIT_CHECKOUT_OPTS_INIT;
+	git_checkout_options head_checkout_opts = GIT_CHECKOUT_OPTIONS_INIT;
 
 	head_checkout_opts.checkout_strategy = GIT_CHECKOUT_FORCE;
 

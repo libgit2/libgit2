@@ -207,7 +207,7 @@ static void ensure_workdir_link(const char *path, const char *target)
 
 void test_checkout_conflict__ignored(void)
 {
-	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 
 	opts.checkout_strategy |= GIT_CHECKOUT_SKIP_UNMERGED;
 
@@ -221,7 +221,7 @@ void test_checkout_conflict__ignored(void)
 
 void test_checkout_conflict__ours(void)
 {
-	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 
 	opts.checkout_strategy |= GIT_CHECKOUT_USE_OURS;
 
@@ -234,7 +234,7 @@ void test_checkout_conflict__ours(void)
 
 void test_checkout_conflict__theirs(void)
 {
-	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 
 	opts.checkout_strategy |= GIT_CHECKOUT_USE_THEIRS;
 
@@ -248,7 +248,7 @@ void test_checkout_conflict__theirs(void)
 
 void test_checkout_conflict__diff3(void)
 {
-	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 
 	create_conflicting_index();
 
@@ -259,7 +259,7 @@ void test_checkout_conflict__diff3(void)
 
 void test_checkout_conflict__automerge(void)
 {
-	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 
 	struct checkout_index_entry checkout_index_entries[] = {
 		{ 0100644, AUTOMERGEABLE_ANCESTOR_OID, 1, "automergeable.txt" },
@@ -277,7 +277,7 @@ void test_checkout_conflict__automerge(void)
 
 void test_checkout_conflict__directory_file(void)
 {
-	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 
 	struct checkout_index_entry checkout_index_entries[] = {
 		{ 0100644, CONFLICTING_ANCESTOR_OID, 1, "df-1" },
@@ -316,7 +316,7 @@ void test_checkout_conflict__directory_file(void)
 
 void test_checkout_conflict__directory_file_with_custom_labels(void)
 {
-	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 
 	struct checkout_index_entry checkout_index_entries[] = {
 		{ 0100644, CONFLICTING_ANCESTOR_OID, 1, "df-1" },
@@ -357,7 +357,7 @@ void test_checkout_conflict__directory_file_with_custom_labels(void)
 
 void test_checkout_conflict__link_file(void)
 {
-	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 
 	struct checkout_index_entry checkout_index_entries[] = {
 		{ 0100644, CONFLICTING_ANCESTOR_OID, 1, "link-1" },
@@ -393,7 +393,7 @@ void test_checkout_conflict__link_file(void)
 
 void test_checkout_conflict__links(void)
 {
-	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 
 	struct checkout_index_entry checkout_index_entries[] = {
 		{ 0120000, LINK_ANCESTOR_OID, 1, "link-1" },
@@ -418,7 +418,7 @@ void test_checkout_conflict__links(void)
 
 void test_checkout_conflict__add_add(void)
 {
-	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 
 	struct checkout_index_entry checkout_index_entries[] = {
 		{ 0100644, CONFLICTING_OURS_OID, 2, "conflicting.txt" },
@@ -438,7 +438,7 @@ void test_checkout_conflict__add_add(void)
 
 void test_checkout_conflict__mode_change(void)
 {
-	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 
 	struct checkout_index_entry checkout_index_entries[] = {
 		{ 0100644, CONFLICTING_ANCESTOR_OID, 1, "executable-1" },
@@ -495,7 +495,7 @@ void test_checkout_conflict__mode_change(void)
 
 void test_checkout_conflict__renames(void)
 {
-	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 
 	struct checkout_index_entry checkout_index_entries[] = {
 		{ 0100644, "68c6c84b091926c7d90aa6a79b2bc3bb6adccd8e", 0, "0a-no-change.txt" },
@@ -680,7 +680,7 @@ void test_checkout_conflict__renames(void)
 
 void test_checkout_conflict__rename_keep_ours(void)
 {
-	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 	
 	struct checkout_index_entry checkout_index_entries[] = {
 		{ 0100644, "68c6c84b091926c7d90aa6a79b2bc3bb6adccd8e", 0, "0a-no-change.txt" },
@@ -847,7 +847,7 @@ void test_checkout_conflict__rename_keep_ours(void)
 
 void test_checkout_conflict__name_mangled_file_exists_in_workdir(void)
 {
-	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 
 	struct checkout_index_entry checkout_index_entries[] = {
 		{ 0100644, "b42712cfe99a1a500b2a51fe984e0b8a7702ba11", 1, "test-one-side-one.txt" },
@@ -987,7 +987,7 @@ void test_checkout_conflict__name_mangled_file_exists_in_workdir(void)
 
 void test_checkout_conflict__update_only(void)
 {
-	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 
 	struct checkout_index_entry checkout_index_entries[] = {
 		{ 0100644, AUTOMERGEABLE_ANCESTOR_OID, 1, "automergeable.txt" },
@@ -1032,7 +1032,7 @@ void test_checkout_conflict__update_only(void)
 
 void test_checkout_conflict__path_filters(void)
 {
-	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 	char *paths[] = { "conflicting-1.txt", "conflicting-3.txt" };
 	git_strarray patharray = {0};
 
@@ -1089,7 +1089,7 @@ static void collect_progress(
 
 void test_checkout_conflict__report_progress(void)
 {
-	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 	git_vector paths = GIT_VECTOR_INIT;
 	char *path;
 	size_t i;

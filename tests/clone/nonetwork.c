@@ -14,7 +14,7 @@ static git_remote* g_remote;
 
 void test_clone_nonetwork__initialize(void)
 {
-	git_checkout_opts dummy_opts = GIT_CHECKOUT_OPTS_INIT;
+	git_checkout_options dummy_opts = GIT_CHECKOUT_OPTIONS_INIT;
 	git_remote_callbacks dummy_callbacks = GIT_REMOTE_CALLBACKS_INIT;
 
 	g_repo = NULL;
