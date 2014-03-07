@@ -430,10 +430,15 @@ int git_clone(
 	}
 
 	if (error != 0) {
+		git_error_state last_error = {0};
+		giterr_capture(&last_error, error);
+
 		git_repository_free(repo);
 		repo = NULL;
 
 		(void)git_futils_rmdir_r(local_path, NULL, rmdir_flags);
+
+		giterr_restore(&last_error);
 	}
 
 	*out = repo;
