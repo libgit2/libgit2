@@ -65,7 +65,12 @@
 #	ifndef PRIxZ
 #		define PRIxZ "Ix"
 #	endif
+
+#	ifdef _MSC_VER
+	typedef struct stat STAT_T;
+#	else
 	typedef struct _stat STAT_T;
+#	endif
 #else
 #	include <sys/wait.h> /* waitpid(2) */
 #	include <unistd.h>
@@ -465,6 +470,24 @@ void clar__assert_equal(
 					s1, s2, pos);
 			} else {
 				p_snprintf(buf, sizeof(buf), "'%s' != '%s'", s1, s2);
+			}
+		}
+	}
+	else if(!strcmp("%.*s", fmt)) {
+		const char *s1 = va_arg(args, const char *);
+		const char *s2 = va_arg(args, const char *);
+		size_t len = va_arg(args, size_t);
+		is_equal = (!s1 || !s2) ? (s1 == s2) : !strncmp(s1, s2, len);
+
+		if (!is_equal) {
+			if (s1 && s2) {
+				size_t pos;
+				for (pos = 0; s1[pos] == s2[pos] && pos < len; ++pos)
+					/* find differing byte offset */;
+				p_snprintf(buf, sizeof(buf), "'%.*s' != '%.*s' (at byte %d)",
+					len, s1, len, s2, pos);
+			} else {
+				p_snprintf(buf, sizeof(buf), "'%.*s' != '%.*s'", len, s1, len, s2);
 			}
 		}
 	}
