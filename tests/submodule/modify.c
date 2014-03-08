@@ -9,6 +9,10 @@ static git_repository *g_repo = NULL;
 #define SM_LIBGIT2     "sm_libgit2"
 #define SM_LIBGIT2B    "sm_libgit2b"
 
+#define SM_RELATIVE_URL "../TestGitRepository"
+#define SM_RELATIVE_RESOLVED_URL "https://github.com/libgit2/TestGitRepository"
+#define SM_RELATIVE "TestGitRepository"
+
 void test_submodule_modify__initialize(void)
 {
 	g_repo = setup_fixture_submod2();
@@ -59,6 +63,26 @@ void test_submodule_modify__add(void)
 	cl_git_pass(
 		git_config_get_string(&s, cfg, "submodule." SM_LIBGIT2B ".url"));
 	cl_assert_equal_s(s, SM_LIBGIT2_URL);
+	git_config_free(cfg);
+}
+
+void test_submodule_modify__add_with_relative_url(void) {
+	git_submodule *sm;
+	git_config *cfg;
+	const char *s;
+
+	git_repository* repo;
+	/* setup_fixture_submod2 does not work here because it does not set up origin configuration */
+	cl_git_pass(git_clone(&repo, SM_LIBGIT2_URL, "./sandbox/submodules_cloned", NULL));
+
+	cl_git_pass(
+		git_submodule_add_setup(&sm, repo, SM_RELATIVE_URL, SM_RELATIVE, 1)
+		);
+
+	cl_git_pass(git_repository_config(&cfg, repo));
+	cl_git_pass(
+		git_config_get_string(&s, cfg, "submodule." SM_RELATIVE ".url"));
+	cl_assert_equal_s(s, SM_RELATIVE_RESOLVED_URL);
 	git_config_free(cfg);
 }
 
