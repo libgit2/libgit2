@@ -263,7 +263,7 @@ GIT_EXTERN(git_repository *) git_revwalk_repository(git_revwalk *walk);
 
 /**
 * This is a callback function that user can provide to hide a
-* commit and its parents. If the callback function returns true,
+* commit and its parents. If the callback function returns non-zero value,
 * then this commit and its parents will be hidden.
 *
 * @param commit_id oid of Commit
@@ -274,7 +274,7 @@ typedef int(*git_revwalk_hide_cb)(
 	void *payload);
 
 /**
-* Adds a callback function to hide a commit
+* Adds a callback function to hide a commit and its parents
 *
 * @param walk the revision walker
 * @param hide_cb  callback function to hide a commit and its parents
