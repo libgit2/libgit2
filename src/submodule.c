@@ -229,16 +229,7 @@ int git_submodule_add_setup(
 	}
 
 	/* resolve parameters */
-
-	if (url[0] == '.' && (url[1] == '/' || (url[1] == '.' && url[2] == '/'))) {
-		if (!(error = lookup_head_remote(&real_url, repo)))
-			error = git_path_apply_relative(&real_url, url);
-	} else if (strchr(url, ':') != NULL || url[0] == '/') {
-		error = git_buf_sets(&real_url, url);
-	} else {
-		giterr_set(GITERR_SUBMODULE, "Invalid format for submodule URL");
-		error = -1;
-	}
+	error = git_submodule_resolve_url(&real_url, repo, url);
 	if (error)
 		goto cleanup;
 
@@ -531,6 +522,25 @@ const char *git_submodule_url(git_submodule *submodule)
 {
 	assert(submodule);
 	return submodule->url;
+}
+
+int git_submodule_resolve_url(git_buf *out, git_repository *repo, const char *url)
+{
+	assert(url);
+
+	int error = 0;
+
+	if (url[0] == '.' && (url[1] == '/' || (url[1] == '.' && url[2] == '/'))) {
+		if (!(error = lookup_head_remote(out, repo)))
+			error = git_path_apply_relative(out, url);
+	} else if (strchr(url, ':') != NULL || url[0] == '/') {
+		error = git_buf_sets(out, url);
+	} else {
+		giterr_set(GITERR_SUBMODULE, "Invalid format for submodule URL");
+		error = -1;
+	}
+
+	return error;
 }
 
 const char *git_submodule_branch(git_submodule *submodule)
