@@ -640,7 +640,7 @@ int git_odb_exists_prefix(
 {
 	int error = GIT_ENOTFOUND, num_found = 0;
 	size_t i;
-	git_oid last_found = {{0}}, found;
+	git_oid key = {{0}}, last_found = {{0}}, found;
 
 	assert(db && short_id);
 
@@ -659,6 +659,11 @@ int git_odb_exists_prefix(
 		}
 	}
 
+	/* just copy valid part of short_id */
+	memcpy(&key.id, short_id->id, (len + 1) / 2);
+	if (len & 1)
+		key.id[len / 2] &= 0xF0;
+
 	for (i = 0; i < db->backends.length; ++i) {
 		backend_internal *internal = git_vector_get(&db->backends, i);
 		git_odb_backend *b = internal->backend;
@@ -666,7 +671,7 @@ int git_odb_exists_prefix(
 		if (!b->exists_prefix)
 			continue;
 
-		error = b->exists_prefix(&found, b, short_id, len);
+		error = b->exists_prefix(&found, b, &key, len);
 		if (error == GIT_ENOTFOUND || error == GIT_PASSTHROUGH)
 			continue;
 		if (error)
@@ -683,11 +688,11 @@ int git_odb_exists_prefix(
 	}
 
 	if (!num_found)
-		return git_odb__error_notfound("no match for id prefix", short_id);
+		return git_odb__error_notfound("no match for id prefix", &key);
 	if (out)
 		git_oid_cpy(out, &last_found);
 
-	return error;
+	return 0;
 }
 
 int git_odb_read_header(size_t *len_p, git_otype *type_p, git_odb *db, const git_oid *id)
@@ -790,7 +795,7 @@ int git_odb_read_prefix(
 {
 	size_t i;
 	int error = GIT_ENOTFOUND;
-	git_oid found_full_oid = {{0}};
+	git_oid key = {{0}}, found_full_oid = {{0}};
 	git_rawobj raw;
 	void *data = NULL;
 	bool found = false;
@@ -809,13 +814,18 @@ int git_odb_read_prefix(
 			return 0;
 	}
 
+	/* just copy valid part of short_id */
+	memcpy(&key.id, short_id->id, (len + 1) / 2);
+	if (len & 1)
+		key.id[len / 2] &= 0xF0;
+
 	for (i = 0; i < db->backends.length; ++i) {
 		backend_internal *internal = git_vector_get(&db->backends, i);
 		git_odb_backend *b = internal->backend;
 
 		if (b->read_prefix != NULL) {
 			git_oid full_oid;
-			error = b->read_prefix(&full_oid, &raw.data, &raw.len, &raw.type, b, short_id, len);
+			error = b->read_prefix(&full_oid, &raw.data, &raw.len, &raw.type, b, &key, len);
 			if (error == GIT_ENOTFOUND || error == GIT_PASSTHROUGH)
 				continue;
 
@@ -836,7 +846,7 @@ int git_odb_read_prefix(
 	}
 
 	if (!found)
-		return git_odb__error_notfound("no match for prefix", short_id);
+		return git_odb__error_notfound("no match for prefix", &key);
 
 	if ((object = odb_object__alloc(&found_full_oid, &raw)) == NULL)
 		return -1;
