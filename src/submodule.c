@@ -526,9 +526,9 @@ const char *git_submodule_url(git_submodule *submodule)
 
 int git_submodule_resolve_url(git_buf *out, git_repository *repo, const char *url)
 {
-	assert(url);
-
 	int error = 0;
+
+	assert(url);
 
 	if (url[0] == '.' && (url[1] == '/' || (url[1] == '.' && url[2] == '/'))) {
 		if (!(error = lookup_head_remote(out, repo)))
