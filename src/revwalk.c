@@ -183,11 +183,6 @@ static int push_ref(git_revwalk *walk, const char *refname, int hide, int from_g
 	return push_commit(walk, &oid, hide, from_glob);
 }
 
-struct push_cb_data {
-	git_revwalk *walk;
-	int hide;
-};
-
 static int push_glob(git_revwalk *walk, const char *glob, int hide)
 {
 	int error = 0;
