@@ -35,6 +35,7 @@
           <a class="source" href="../rev-parse.html">rev-parse.c</a>
           <a class="source" href="../showindex.html">showindex.c</a>
           <a class="source" href="../status.html">status.c</a>
+          <a class="source" href="../tag.html">tag.c</a>
       </div>
     </div>
   </div>
@@ -78,7 +79,7 @@
   <span class="kt">int</span> <span class="n">index_percent</span> <span class="o">=</span> <span class="p">(</span><span class="mi">100</span><span class="o">*</span><span class="n">pd</span><span class="o">-&gt;</span><span class="n">fetch_progress</span><span class="p">.</span><span class="n">indexed_objects</span><span class="p">)</span> <span class="o">/</span> <span class="n">pd</span><span class="o">-&gt;</span><span class="n">fetch_progress</span><span class="p">.</span><span class="n">total_objects</span><span class="p">;</span>
   <span class="kt">int</span> <span class="n">checkout_percent</span> <span class="o">=</span> <span class="n">pd</span><span class="o">-&gt;</span><span class="n">total_steps</span> <span class="o">&gt;</span> <span class="mi">0</span>
     <span class="o">?</span> <span class="p">(</span><span class="mi">100</span> <span class="o">*</span> <span class="n">pd</span><span class="o">-&gt;</span><span class="n">completed_steps</span><span class="p">)</span> <span class="o">/</span> <span class="n">pd</span><span class="o">-&gt;</span><span class="n">total_steps</span>
-    <span class="o">:</span> <span class="mf">0.f</span><span class="p">;</span>
+    <span class="o">:</span> <span class="mi">0</span><span class="p">;</span>
   <span class="kt">int</span> <span class="n">kbytes</span> <span class="o">=</span> <span class="n">pd</span><span class="o">-&gt;</span><span class="n">fetch_progress</span><span class="p">.</span><span class="n">received_bytes</span> <span class="o">/</span> <span class="mi">1024</span><span class="p">;</span>
 
   <span class="k">if</span> <span class="p">(</span><span class="n">pd</span><span class="o">-&gt;</span><span class="n">fetch_progress</span><span class="p">.</span><span class="n">received_objects</span> <span class="o">==</span> <span class="n">pd</span><span class="o">-&gt;</span><span class="n">fetch_progress</span><span class="p">.</span><span class="n">total_objects</span><span class="p">)</span> <span class="p">{</span>
@@ -118,7 +119,7 @@
   <span class="n">progress_data</span> <span class="n">pd</span> <span class="o">=</span> <span class="p">{{</span><span class="mi">0</span><span class="p">}};</span>
   <span class="n">git_repository</span> <span class="o">*</span><span class="n">cloned_repo</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
   <span class="n">git_clone_options</span> <span class="n">clone_opts</span> <span class="o">=</span> <span class="n">GIT_CLONE_OPTIONS_INIT</span><span class="p">;</span>
-  <span class="n">git_checkout_opts</span> <span class="n">checkout_opts</span> <span class="o">=</span> <span class="n">GIT_CHECKOUT_OPTS_INIT</span><span class="p">;</span>
+  <span class="n">git_checkout_options</span> <span class="n">checkout_opts</span> <span class="o">=</span> <span class="n">GIT_CHECKOUT_OPTIONS_INIT</span><span class="p">;</span>
   <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">url</span> <span class="o">=</span> <span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">];</span>
   <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">path</span> <span class="o">=</span> <span class="n">argv</span><span class="p">[</span><span class="mi">2</span><span class="p">];</span>
   <span class="kt">int</span> <span class="n">error</span><span class="p">;</span>

@@ -35,6 +35,7 @@
           <a class="source" href="rev-parse.html">rev-parse.c</a>
           <a class="source" href="showindex.html">showindex.c</a>
           <a class="source" href="status.html">status.c</a>
+          <a class="source" href="tag.html">tag.c</a>
       </div>
     </div>
   </div>
@@ -106,7 +107,7 @@
         <div class='highlight'><pre><span class="k">static</span> <span class="kt">void</span> <span class="nf">show_blob</span><span class="p">(</span><span class="k">const</span> <span class="n">git_blob</span> <span class="o">*</span><span class="n">blob</span><span class="p">)</span>
 <span class="p">{</span>
   <span class="cm">/* ? Does this need crlf filtering? */</span>
-  <span class="n">fwrite</span><span class="p">(</span><span class="n"><a name="git_blob_rawcontent-1" class="fnlink" href="../../#HEAD/group/blob/git_blob_rawcontent">git_blob_rawcontent</a></span><span class="p">(</span><span class="n">blob</span><span class="p">),</span> <span class="n"><a name="git_blob_rawsize-2" class="fnlink" href="../../#HEAD/group/blob/git_blob_rawsize">git_blob_rawsize</a></span><span class="p">(</span><span class="n">blob</span><span class="p">),</span> <span class="mi">1</span><span class="p">,</span> <span class="n">stdout</span><span class="p">);</span>
+  <span class="n">fwrite</span><span class="p">(</span><span class="n"><a name="git_blob_rawcontent-1" class="fnlink" href="../../#HEAD/group/blob/git_blob_rawcontent">git_blob_rawcontent</a></span><span class="p">(</span><span class="n">blob</span><span class="p">),</span> <span class="p">(</span><span class="kt">size_t</span><span class="p">)</span><span class="n"><a name="git_blob_rawsize-2" class="fnlink" href="../../#HEAD/group/blob/git_blob_rawsize">git_blob_rawsize</a></span><span class="p">(</span><span class="n">blob</span><span class="p">),</span> <span class="mi">1</span><span class="p">,</span> <span class="n">stdout</span><span class="p">);</span>
 <span class="p">}</span></pre></div>
       </td>
     </tr>
@@ -194,7 +195,7 @@
   <span class="kt">int</span> <span class="n">action</span><span class="p">;</span>
   <span class="kt">int</span> <span class="n">verbose</span><span class="p">;</span>
 <span class="p">};</span>
-<span class="k">static</span> <span class="kt">void</span> <span class="n">parse_opts</span><span class="p">(</span><span class="k">struct</span> <span class="n">opts</span> <span class="o">*</span><span class="n">o</span><span class="p">,</span> <span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">*</span><span class="n">argv</span><span class="p">[]);</span></pre></div>
+<span class="k">static</span> <span class="kt">void</span> <span class="nf">parse_opts</span><span class="p">(</span><span class="k">struct</span> <span class="n">opts</span> <span class="o">*</span><span class="n">o</span><span class="p">,</span> <span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">*</span><span class="n">argv</span><span class="p">[]);</span></pre></div>
       </td>
     </tr>
     <tr id='section-5'>

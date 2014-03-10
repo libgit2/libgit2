@@ -35,6 +35,7 @@
           <a class="source" href="rev-parse.html">rev-parse.c</a>
           <a class="source" href="showindex.html">showindex.c</a>
           <a class="source" href="status.html">status.c</a>
+          <a class="source" href="tag.html">tag.c</a>
       </div>
     </div>
   </div>
@@ -126,9 +127,9 @@ revwalker configuration calls</li>
         <p>utility functions that are called to configure the walker</p>
       </td>
       <td class=code>
-        <div class='highlight'><pre><span class="k">static</span> <span class="kt">void</span> <span class="n">set_sorting</span><span class="p">(</span><span class="k">struct</span> <span class="n">log_state</span> <span class="o">*</span><span class="n">s</span><span class="p">,</span> <span class="kt">unsigned</span> <span class="kt">int</span> <span class="n">sort_mode</span><span class="p">);</span>
-<span class="k">static</span> <span class="kt">void</span> <span class="n">push_rev</span><span class="p">(</span><span class="k">struct</span> <span class="n">log_state</span> <span class="o">*</span><span class="n">s</span><span class="p">,</span> <span class="n">git_object</span> <span class="o">*</span><span class="n">obj</span><span class="p">,</span> <span class="kt">int</span> <span class="n">hide</span><span class="p">);</span>
-<span class="k">static</span> <span class="kt">int</span> <span class="n">add_revision</span><span class="p">(</span><span class="k">struct</span> <span class="n">log_state</span> <span class="o">*</span><span class="n">s</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">revstr</span><span class="p">);</span></pre></div>
+        <div class='highlight'><pre><span class="k">static</span> <span class="kt">void</span> <span class="nf">set_sorting</span><span class="p">(</span><span class="k">struct</span> <span class="n">log_state</span> <span class="o">*</span><span class="n">s</span><span class="p">,</span> <span class="kt">unsigned</span> <span class="kt">int</span> <span class="n">sort_mode</span><span class="p">);</span>
+<span class="k">static</span> <span class="kt">void</span> <span class="nf">push_rev</span><span class="p">(</span><span class="k">struct</span> <span class="n">log_state</span> <span class="o">*</span><span class="n">s</span><span class="p">,</span> <span class="n">git_object</span> <span class="o">*</span><span class="n">obj</span><span class="p">,</span> <span class="kt">int</span> <span class="n">hide</span><span class="p">);</span>
+<span class="k">static</span> <span class="kt">int</span> <span class="nf">add_revision</span><span class="p">(</span><span class="k">struct</span> <span class="n">log_state</span> <span class="o">*</span><span class="n">s</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">revstr</span><span class="p">);</span></pre></div>
       </td>
     </tr>
     <tr id='section-5'>
@@ -143,8 +144,8 @@ revwalker configuration calls</li>
   <span class="kt">int</span> <span class="n">show_diff</span><span class="p">;</span>
   <span class="kt">int</span> <span class="n">skip</span><span class="p">,</span> <span class="n">limit</span><span class="p">;</span>
   <span class="kt">int</span> <span class="n">min_parents</span><span class="p">,</span> <span class="n">max_parents</span><span class="p">;</span>
-  <span class="n">git_time_t</span> <span class="n">before</span><span class="p">;</span>
-  <span class="n">git_time_t</span> <span class="n">after</span><span class="p">;</span>
+  <span class="kt">git_time_t</span> <span class="n">before</span><span class="p">;</span>
+  <span class="kt">git_time_t</span> <span class="n">after</span><span class="p">;</span>
   <span class="kt">char</span> <span class="o">*</span><span class="n">author</span><span class="p">;</span>
   <span class="kt">char</span> <span class="o">*</span><span class="n">committer</span><span class="p">;</span>
 <span class="p">};</span></pre></div>
@@ -158,11 +159,11 @@ revwalker configuration calls</li>
         <p>utility functions that parse options and help with log output</p>
       </td>
       <td class=code>
-        <div class='highlight'><pre><span class="k">static</span> <span class="kt">int</span> <span class="n">parse_options</span><span class="p">(</span>
+        <div class='highlight'><pre><span class="k">static</span> <span class="kt">int</span> <span class="nf">parse_options</span><span class="p">(</span>
   <span class="k">struct</span> <span class="n">log_state</span> <span class="o">*</span><span class="n">s</span><span class="p">,</span> <span class="k">struct</span> <span class="n">log_options</span> <span class="o">*</span><span class="n">opt</span><span class="p">,</span> <span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">**</span><span class="n">argv</span><span class="p">);</span>
-<span class="k">static</span> <span class="kt">void</span> <span class="n">print_time</span><span class="p">(</span><span class="k">const</span> <span class="n">git_time</span> <span class="o">*</span><span class="n">intime</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">prefix</span><span class="p">);</span>
-<span class="k">static</span> <span class="kt">void</span> <span class="n">print_commit</span><span class="p">(</span><span class="n">git_commit</span> <span class="o">*</span><span class="n">commit</span><span class="p">);</span>
-<span class="k">static</span> <span class="kt">int</span> <span class="n">match_with_parent</span><span class="p">(</span><span class="n">git_commit</span> <span class="o">*</span><span class="n">commit</span><span class="p">,</span> <span class="kt">int</span> <span class="n">i</span><span class="p">,</span> <span class="n">git_diff_options</span> <span class="o">*</span><span class="p">);</span>
+<span class="k">static</span> <span class="kt">void</span> <span class="nf">print_time</span><span class="p">(</span><span class="k">const</span> <span class="n">git_time</span> <span class="o">*</span><span class="n">intime</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">prefix</span><span class="p">);</span>
+<span class="k">static</span> <span class="kt">void</span> <span class="nf">print_commit</span><span class="p">(</span><span class="n">git_commit</span> <span class="o">*</span><span class="n">commit</span><span class="p">);</span>
+<span class="k">static</span> <span class="kt">int</span> <span class="nf">match_with_parent</span><span class="p">(</span><span class="n">git_commit</span> <span class="o">*</span><span class="n">commit</span><span class="p">,</span> <span class="kt">int</span> <span class="n">i</span><span class="p">,</span> <span class="n">git_diff_options</span> <span class="o">*</span><span class="p">);</span>
 
 
 <span class="kt">int</span> <span class="nf">main</span><span class="p">(</span><span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">*</span><span class="n">argv</span><span class="p">[])</span>
@@ -629,28 +630,28 @@ revwalker configuration calls</li>
           <a class="pilcrow" href="#section-22">&#182;</a>
         </div>
         <p>Found git-dir. <em>/;
-        else if (match<em>int</em>arg(&amp;opt->skip, &amp;args, &quot;--skip&quot;, 0))
+        else if (match<em>int</em>arg(&amp;opt-&gt;skip, &amp;args, &quot;--skip&quot;, 0))
             /</em>* Found valid --skip. <em>/;
-        else if (match<em>int</em>arg(&amp;opt->limit, &amp;args, &quot;--max-count&quot;, 0))
+        else if (match<em>int</em>arg(&amp;opt-&gt;limit, &amp;args, &quot;--max-count&quot;, 0))
             /</em>* Found valid --max-count. <em>/;
         else if (a[1] &gt;= &#39;0&#39; &amp;&amp; a[1] &lt;= &#39;9&#39;)
-            is<em>integer(&amp;opt->limit, a + 1, 0);
-        else if (match</em>int_arg(&amp;opt->limit, &amp;args, &quot;-n&quot;, 0))
+            is<em>integer(&amp;opt-&gt;limit, a + 1, 0);
+        else if (match</em>int_arg(&amp;opt-&gt;limit, &amp;args, &quot;-n&quot;, 0))
             /</em>* Found valid -n. <em>/;
         else if (!strcmp(a, &quot;--merges&quot;))
-            opt->min<em>parents = 2;
+            opt-&gt;min<em>parents = 2;
         else if (!strcmp(a, &quot;--no-merges&quot;))
-            opt->max</em>parents = 1;
+            opt-&gt;max</em>parents = 1;
         else if (!strcmp(a, &quot;--no-min-parents&quot;))
-            opt->min<em>parents = 0;
+            opt-&gt;min<em>parents = 0;
         else if (!strcmp(a, &quot;--no-max-parents&quot;))
-            opt->max</em>parents = -1;
-        else if (match<em>int</em>arg(&amp;opt->max_parents, &amp;args, &quot;--max-parents=&quot;, 1))
+            opt-&gt;max</em>parents = -1;
+        else if (match<em>int</em>arg(&amp;opt-&gt;max_parents, &amp;args, &quot;--max-parents=&quot;, 1))
             /</em>* Found valid --max-parents. <em>/;
-        else if (match<em>int</em>arg(&amp;opt->min_parents, &amp;args, &quot;--min-parents=&quot;, 0))
+        else if (match<em>int</em>arg(&amp;opt-&gt;min_parents, &amp;args, &quot;--min-parents=&quot;, 0))
             /</em>* Found valid --min<em>parents. */;
         else if (!strcmp(a, &quot;-p&quot;) || !strcmp(a, &quot;-u&quot;) || !strcmp(a, &quot;--patch&quot;))
-            opt->show</em>diff = 1;
+            opt-&gt;show</em>diff = 1;
         else
             usage(&quot;Unsupported argument&quot;, a);
     }</p>

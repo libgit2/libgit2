@@ -35,6 +35,7 @@
           <a class="source" href="rev-parse.html">rev-parse.c</a>
           <a class="source" href="showindex.html">showindex.c</a>
           <a class="source" href="status.html">status.c</a>
+          <a class="source" href="tag.html">tag.c</a>
       </div>
     </div>
   </div>
@@ -92,8 +93,9 @@ simulate the output of <code>git blame</code> and a few of its command line argu
   <span class="kt">int</span> <span class="n">M</span><span class="p">;</span>
   <span class="kt">int</span> <span class="n">start_line</span><span class="p">;</span>
   <span class="kt">int</span> <span class="n">end_line</span><span class="p">;</span>
+  <span class="kt">int</span> <span class="n">F</span><span class="p">;</span>
 <span class="p">};</span>
-<span class="k">static</span> <span class="kt">void</span> <span class="n">parse_opts</span><span class="p">(</span><span class="k">struct</span> <span class="n">opts</span> <span class="o">*</span><span class="n">o</span><span class="p">,</span> <span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">*</span><span class="n">argv</span><span class="p">[]);</span>
+<span class="k">static</span> <span class="kt">void</span> <span class="nf">parse_opts</span><span class="p">(</span><span class="k">struct</span> <span class="n">opts</span> <span class="o">*</span><span class="n">o</span><span class="p">,</span> <span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">*</span><span class="n">argv</span><span class="p">[]);</span>
 
 <span class="kt">int</span> <span class="nf">main</span><span class="p">(</span><span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">*</span><span class="n">argv</span><span class="p">[])</span>
 <span class="p">{</span>
@@ -112,7 +114,8 @@ simulate the output of <code>git blame</code> and a few of its command line argu
 
   <span class="n">parse_opts</span><span class="p">(</span><span class="o">&amp;</span><span class="n">o</span><span class="p">,</span> <span class="n">argc</span><span class="p">,</span> <span class="n">argv</span><span class="p">);</span>
   <span class="k">if</span> <span class="p">(</span><span class="n">o</span><span class="p">.</span><span class="n">M</span><span class="p">)</span> <span class="n">blameopts</span><span class="p">.</span><span class="n">flags</span> <span class="o">|=</span> <span class="n">GIT_BLAME_TRACK_COPIES_SAME_COMMIT_MOVES</span><span class="p">;</span>
-  <span class="k">if</span> <span class="p">(</span><span class="n">o</span><span class="p">.</span><span class="n">C</span><span class="p">)</span> <span class="n">blameopts</span><span class="p">.</span><span class="n">flags</span> <span class="o">|=</span> <span class="n">GIT_BLAME_TRACK_COPIES_SAME_COMMIT_COPIES</span><span class="p">;</span></pre></div>
+  <span class="k">if</span> <span class="p">(</span><span class="n">o</span><span class="p">.</span><span class="n">C</span><span class="p">)</span> <span class="n">blameopts</span><span class="p">.</span><span class="n">flags</span> <span class="o">|=</span> <span class="n">GIT_BLAME_TRACK_COPIES_SAME_COMMIT_COPIES</span><span class="p">;</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">o</span><span class="p">.</span><span class="n">F</span><span class="p">)</span> <span class="n">blameopts</span><span class="p">.</span><span class="n">flags</span> <span class="o">|=</span> <span class="n">GIT_BLAME_FIRST_PARENT</span><span class="p">;</span></pre></div>
       </td>
     </tr>
     <tr id='section-3'>
@@ -202,8 +205,9 @@ nail down the end points.</p>
     <span class="k">if</span> <span class="p">(</span><span class="n">break_on_null_hunk</span> <span class="o">&amp;&amp;</span> <span class="o">!</span><span class="n">hunk</span><span class="p">)</span> <span class="k">break</span><span class="p">;</span>
 
     <span class="k">if</span> <span class="p">(</span><span class="n">hunk</span><span class="p">)</span> <span class="p">{</span>
-      <span class="n">break_on_null_hunk</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
       <span class="kt">char</span> <span class="n">sig</span><span class="p">[</span><span class="mi">128</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">};</span>
+      <span class="n">break_on_null_hunk</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+      
 
       <span class="n"><a name="git_oid_tostr-17" class="fnlink" href="../../#HEAD/group/oid/git_oid_tostr">git_oid_tostr</a></span><span class="p">(</span><span class="n">oid</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">hunk</span><span class="o">-&gt;</span><span class="n">final_commit_id</span><span class="p">);</span>
       <span class="n">snprintf</span><span class="p">(</span><span class="n">sig</span><span class="p">,</span> <span class="mi">30</span><span class="p">,</span> <span class="s">&quot;%s &lt;%s&gt;&quot;</span><span class="p">,</span> <span class="n">hunk</span><span class="o">-&gt;</span><span class="n">final_signature</span><span class="o">-&gt;</span><span class="n">name</span><span class="p">,</span> <span class="n">hunk</span><span class="o">-&gt;</span><span class="n">final_signature</span><span class="o">-&gt;</span><span class="n">email</span><span class="p">);</span>
@@ -259,6 +263,7 @@ nail down the end points.</p>
   <span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span> <span class="s">&quot;   -L &lt;n,m&gt;            process only line range n-m, counting from 1</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
   <span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span> <span class="s">&quot;   -M                  find line moves within and across files</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
   <span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span> <span class="s">&quot;   -C                  find line copies within and across files</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+  <span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span> <span class="s">&quot;   -F                  follow only the first parent commits</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
   <span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span> <span class="s">&quot;</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
   <span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">);</span>
 <span class="p">}</span></pre></div>
@@ -296,6 +301,8 @@ nail down the end points.</p>
       <span class="n">o</span><span class="o">-&gt;</span><span class="n">M</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
     <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">strcasecmp</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="s">&quot;-C&quot;</span><span class="p">))</span>
       <span class="n">o</span><span class="o">-&gt;</span><span class="n">C</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+    <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">strcasecmp</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="s">&quot;-F&quot;</span><span class="p">))</span>
+      <span class="n">o</span><span class="o">-&gt;</span><span class="n">F</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
     <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">strcasecmp</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="s">&quot;-L&quot;</span><span class="p">))</span> <span class="p">{</span>
       <span class="n">i</span><span class="o">++</span><span class="p">;</span> <span class="n">a</span> <span class="o">=</span> <span class="n">argv</span><span class="p">[</span><span class="n">i</span><span class="p">];</span>
       <span class="k">if</span> <span class="p">(</span><span class="n">i</span> <span class="o">&gt;=</span> <span class="n">argc</span><span class="p">)</span> <span class="n">fatal</span><span class="p">(</span><span class="s">&quot;Not enough arguments to -L&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>

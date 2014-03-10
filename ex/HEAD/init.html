@@ -35,6 +35,7 @@
           <a class="source" href="rev-parse.html">rev-parse.c</a>
           <a class="source" href="showindex.html">showindex.c</a>
           <a class="source" href="status.html">status.c</a>
+          <a class="source" href="tag.html">tag.c</a>
       </div>
     </div>
   </div>
@@ -108,8 +109,8 @@ That is demonstrated in the &quot;create<em>initial</em>commit&quot; helper func
   <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">gitdir</span><span class="p">;</span>
   <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">dir</span><span class="p">;</span>
 <span class="p">};</span>
-<span class="k">static</span> <span class="kt">void</span> <span class="n">create_initial_commit</span><span class="p">(</span><span class="n">git_repository</span> <span class="o">*</span><span class="n">repo</span><span class="p">);</span>
-<span class="k">static</span> <span class="kt">void</span> <span class="n">parse_opts</span><span class="p">(</span><span class="k">struct</span> <span class="n">opts</span> <span class="o">*</span><span class="n">o</span><span class="p">,</span> <span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">*</span><span class="n">argv</span><span class="p">[]);</span>
+<span class="k">static</span> <span class="kt">void</span> <span class="nf">create_initial_commit</span><span class="p">(</span><span class="n">git_repository</span> <span class="o">*</span><span class="n">repo</span><span class="p">);</span>
+<span class="k">static</span> <span class="kt">void</span> <span class="nf">parse_opts</span><span class="p">(</span><span class="k">struct</span> <span class="n">opts</span> <span class="o">*</span><span class="n">o</span><span class="p">,</span> <span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">*</span><span class="n">argv</span><span class="p">[]);</span>
 
 
 <span class="kt">int</span> <span class="nf">main</span><span class="p">(</span><span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">*</span><span class="n">argv</span><span class="p">[])</span>
