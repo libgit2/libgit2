@@ -81,6 +81,11 @@ static int process_commit(git_revwalk *walk, git_commit_list_node *commit, int h
 {
 	int error;
 
+	if (!hide && walk->hide_cb)
+	{
+		hide = walk->hide_cb(&commit->oid, walk->hide_cb_payload);
+	}
+
 	if (hide && mark_uninteresting(commit) < 0)
 		return -1;
 
@@ -573,5 +578,28 @@ void git_revwalk_reset(git_revwalk *walk)
 
 	walk->one = NULL;
 	git_vector_clear(&walk->twos);
+}
+
+int git_revwalk_add_hide_cb(
+	git_revwalk *walk,
+	git_revwalk_hide_cb hide_cb,
+	void *payload)
+{
+	assert(walk);
+
+	if (walk->walking)
+		git_revwalk_reset(walk);
+
+	if (walk->hide_cb)
+	{
+		/* There is already a callback added */
+		giterr_set(GITERR_INVALID, "There is already a callback added to hide commits in revision walker.");
+		return -1;
+	}
+
+	walk->hide_cb = hide_cb;
+	walk->hide_cb_payload = payload;
+
+	return 0;
 }
 
