@@ -532,7 +532,7 @@ int git_index_write(git_index *index)
 	if ((error = git_filebuf_open(
 		&file, index->index_file_path, GIT_FILEBUF_HASH_CONTENTS, GIT_INDEX_FILE_MODE)) < 0) {
 		if (error == GIT_ELOCKED)
-			giterr_set(GITERR_INDEX, "The index is locked. This might be due to a concurrrent or crashed process");
+			giterr_set(GITERR_INDEX, "The index is locked. This might be due to a concurrent or crashed process");
 
 		return error;
 	}
