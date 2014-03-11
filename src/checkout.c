@@ -1681,29 +1681,20 @@ static int checkout_write_merge(
 {
 	git_buf our_label = GIT_BUF_INIT, their_label = GIT_BUF_INIT,
 		path_suffixed = GIT_BUF_INIT, path_workdir = GIT_BUF_INIT;
-	git_merge_file_options merge_file_opts = GIT_MERGE_FILE_OPTIONS_INIT;
-	git_merge_file_input ancestor = GIT_MERGE_FILE_INPUT_INIT,
-		ours = GIT_MERGE_FILE_INPUT_INIT,
-		theirs = GIT_MERGE_FILE_INPUT_INIT;
-	git_merge_file_result result = GIT_MERGE_FILE_RESULT_INIT;
+	git_merge_file_options opts = GIT_MERGE_FILE_OPTIONS_INIT;
+	git_merge_file_result result = {0};
 	git_filebuf output = GIT_FILEBUF_INIT;
 	int error = 0;
 
 	if (data->opts.checkout_strategy & GIT_CHECKOUT_CONFLICT_STYLE_DIFF3)
-		merge_file_opts.style = GIT_MERGE_FILE_STYLE_DIFF3;
+		opts.flags |= GIT_MERGE_FILE_STYLE_DIFF3;
 
-	if ((conflict->ancestor &&
-		(error = git_merge_file_input_from_index_entry(
-		&ancestor, data->repo, conflict->ancestor)) < 0) ||
-		(error = git_merge_file_input_from_index_entry(
-		&ours, data->repo, conflict->ours)) < 0 ||
-		(error = git_merge_file_input_from_index_entry(
-		&theirs, data->repo, conflict->theirs)) < 0)
-		goto done;
-
-	ancestor.label = data->opts.ancestor_label ? data->opts.ancestor_label : "ancestor";
-	ours.label = data->opts.our_label ? data->opts.our_label : "ours";
-	theirs.label = data->opts.their_label ? data->opts.their_label : "theirs";
+	opts.ancestor_label = data->opts.ancestor_label ?
+		data->opts.ancestor_label : "ancestor";
+	opts.our_label = data->opts.our_label ?
+		data->opts.our_label : "ours";
+	opts.their_label = data->opts.their_label ?
+		data->opts.their_label : "theirs";
 
 	/* If all the paths are identical, decorate the diff3 file with the branch
 	 * names.  Otherwise, append branch_name:path.
@@ -1712,16 +1703,17 @@ static int checkout_write_merge(
 		strcmp(conflict->ours->path, conflict->theirs->path) != 0) {
 
 		if ((error = conflict_entry_name(
-			&our_label, ours.label, conflict->ours->path)) < 0 ||
+			&our_label, opts.our_label, conflict->ours->path)) < 0 ||
 			(error = conflict_entry_name(
-			&their_label, theirs.label, conflict->theirs->path)) < 0)
+			&their_label, opts.their_label, conflict->theirs->path)) < 0)
 			goto done;
 
-		ours.label = git_buf_cstr(&our_label);
-		theirs.label = git_buf_cstr(&their_label);
+		opts.our_label = git_buf_cstr(&our_label);
+		opts.their_label = git_buf_cstr(&their_label);
 	}
 
-	if ((error = git_merge_files(&result, &ancestor, &ours, &theirs, &merge_file_opts)) < 0)
+	if ((error = git_merge_file_from_index(&result, data->repo,
+		conflict->ancestor, conflict->ours, conflict->theirs, &opts)) < 0)
 		goto done;
 
 	if (result.path == NULL || result.mode == 0) {
@@ -1739,7 +1731,7 @@ static int checkout_write_merge(
 
 	if ((error = git_futils_mkpath2file(path_workdir.ptr, 0755)) < 0 ||
 		(error = git_filebuf_open(&output, path_workdir.ptr, GIT_FILEBUF_DO_NOT_BUFFER, result.mode)) < 0 ||
-		(error = git_filebuf_write(&output, result.data, result.len)) < 0 ||
+		(error = git_filebuf_write(&output, result.ptr, result.len)) < 0 ||
 		(error = git_filebuf_commit(&output)) < 0)
 		goto done;
 
@@ -1747,9 +1739,6 @@ done:
 	git_buf_free(&our_label);
 	git_buf_free(&their_label);
 
-	git_merge_file_input_free(&ancestor);
-	git_merge_file_input_free(&ours);
-	git_merge_file_input_free(&theirs);
 	git_merge_file_result_free(&result);
 	git_buf_free(&path_workdir);
 	git_buf_free(&path_suffixed);
