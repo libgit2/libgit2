@@ -221,7 +221,7 @@ IF (MSVC)
 
 	# /GF - String pooling
 	# /MP - Parallel build
-	SET(CMAKE_C_FLAGS "/GF /MP /wd4244 /wd4267 /nologo ${CMAKE_C_FLAGS}")
+	SET(CMAKE_C_FLAGS "/GF /MP /nologo ${CMAKE_C_FLAGS}")
 
 	IF (STDCALL)
 		# /Gz - stdcall calling convention

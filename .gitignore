@@ -14,7 +14,6 @@
 .lock-wafbuild
 .waf*
 build/
-buildx64/
 build-amiga/
 tests/tmp/
 msvc/Debug/
