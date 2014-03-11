@@ -11,8 +11,10 @@ GIT_BEGIN_DECL
 
 typedef enum {
 	GIT_WARNING_NONE = 0,
-	GIT_WARNING_INVALID_DATA__SIGNATURE_TIMESTAMP,
-	GIT_WARNING_INVALID_DATA__SIGNATURE_TIMEZONE,
+	GIT_WARNING_INVALID_DATA__SIGNATURE_TIMESTAMP, /* default continue */
+	GIT_WARNING_INVALID_DATA__SIGNATURE_TIMEZONE,  /* default continue */
+	GIT_WARNING_INVALID_DATA__SIGNATURE_EMAIL_MISSING, /* default error */
+	GIT_WARNING_INVALID_DATA__SIGNATURE_EMAIL_UNTERMINATED, /* error */
 } git_warning_t;
 
 /**
@@ -42,10 +44,13 @@ typedef struct {
  * It will be passed a warning structure describing the problem.
  *
  * @param warning A git_warning structure for the specific situation
+ * @param default_rval Default return code (i.e. <0 if warning defaults
+ *                     to error, 0 if defaults to no error)
  * @param payload The payload set when callback function was specified
  * @return 0 to continue, <0 to convert the warning to an error
  */
-typedef int (*git_warning_callback)(git_warning *warning, void *payload);
+typedef int (*git_warning_callback)(
+	git_warning *warning, int default_rval, void *payload);
 
 /**
  * Set the callback to be invoked when an invalid but recoverable

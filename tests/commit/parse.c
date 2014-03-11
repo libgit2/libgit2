@@ -3,7 +3,7 @@
 #include "commit.h"
 #include "signature.h"
 
-// Fixture setup
+/* Fixture setup */
 static git_repository *g_repo;
 void test_commit_parse__initialize(void)
 {
@@ -15,7 +15,7 @@ void test_commit_parse__cleanup(void)
 }
 
 
-// Header parsing
+/* Header parsing */
 typedef struct {
 	const char *line;
 	const char *header;
@@ -70,7 +70,7 @@ void test_commit_parse__header(void)
 }
 
 
-// Signature parsing
+/* Signature parsing */
 typedef struct {
 	const char *string;
 	const char *header;
@@ -89,27 +89,27 @@ passing_signature_test_case passing_signature_cases[] = {
 	{"committer Vicent Marti <tanoku@gmail.com> 123456 +0000 \n", "committer ", "Vicent Marti", "tanoku@gmail.com", 123456, 0},
 	{"committer Vicent Marti <tanoku@gmail.com> 123456 +0100 \n", "committer ", "Vicent Marti", "tanoku@gmail.com", 123456, 60},
 	{"committer Vicent Marti <tanoku@gmail.com> 123456 -0100 \n", "committer ", "Vicent Marti", "tanoku@gmail.com", 123456, -60},
-	// Parse a signature without an author field
+	/* Parse a signature without an author field */
 	{"committer <tanoku@gmail.com> 123456 -0100 \n", "committer ", "", "tanoku@gmail.com", 123456, -60},
-	// Parse a signature without an author field
+	/* Parse a signature without an author field */
 	{"committer  <tanoku@gmail.com> 123456 -0100 \n", "committer ", "", "tanoku@gmail.com", 123456, -60},
-	// Parse a signature with an empty author field
+	/* Parse a signature with an empty author field */
 	{"committer   <tanoku@gmail.com> 123456 -0100 \n", "committer ", "", "tanoku@gmail.com", 123456, -60},
-	// Parse a signature with an empty email field
+	/* Parse a signature with an empty email field */
 	{"committer Vicent Marti <> 123456 -0100 \n", "committer ", "Vicent Marti", "", 123456, -60},
-	// Parse a signature with an empty email field
+	/* Parse a signature with an empty email field */
 	{"committer Vicent Marti < > 123456 -0100 \n", "committer ", "Vicent Marti", "", 123456, -60},
-	// Parse a signature with empty name and email
+	/* Parse a signature with empty name and email */
 	{"committer <> 123456 -0100 \n", "committer ", "", "", 123456, -60},
-	// Parse a signature with empty name and email
+	/* Parse a signature with empty name and email */
 	{"committer  <> 123456 -0100 \n", "committer ", "", "", 123456, -60},
-	// Parse a signature with empty name and email
+	/* Parse a signature with empty name and email */
 	{"committer  < > 123456 -0100 \n", "committer ", "", "", 123456, -60},
-	// Parse an obviously invalid signature
+	/* Parse an obviously invalid signature */
 	{"committer foo<@bar> 123456 -0100 \n", "committer ", "foo", "@bar", 123456, -60},
-	// Parse an obviously invalid signature
+	/* Parse an obviously invalid signature */
 	{"committer    foo<@bar> 123456 -0100 \n", "committer ", "foo", "@bar", 123456, -60},
-	// Parse an obviously invalid signature
+	/* Parse an obviously invalid signature */
 	{"committer <>\n", "committer ", "", "", 0, 0},
 	{"committer Vicent Marti <tanoku@gmail.com> 123456 -1500 \n", "committer ", "Vicent Marti", "tanoku@gmail.com", 123456, 0},
 	{"committer Vicent Marti <tanoku@gmail.com> 123456 +0163 \n", "committer ", "Vicent Marti", "tanoku@gmail.com", 123456, 0},
@@ -177,25 +177,27 @@ void test_commit_parse__signature(void)
 		assert_signature_doesnt_parse(failcase);
 }
 
-static int pass_on_warn(git_warning *warning, void *payload)
+static int pass_on_warn(git_warning *warning, int rval, void *payload)
 {
 	git_warning *expected = payload;
+	GIT_UNUSED(rval);
 	cl_assert_equal_i(expected->type, warning->type);
 	if (expected->message)
 		cl_assert(strstr(warning->message, expected->message) != NULL);
 	return 0;
 }
 
-static int fail_on_warn(git_warning *warning, void *payload)
+static int fail_on_warn(git_warning *warning, int rval, void *payload)
 {
 	git_warning *expected = payload;
+	GIT_UNUSED(rval);
 	cl_assert_equal_i(expected->type, warning->type);
 	if (expected->message)
 		cl_assert(strstr(warning->message, expected->message) != NULL);
 	return -1;
 }
 
-void test_commit_parse__signature_semivalid(void)
+void test_commit_parse__signature_time_warnings(void)
 {
 	git_warning expected = { 0 };
 	passing_signature_test_case passcase = {"author Vicent Marti <tanoku@gmail.com> 9999999999998589934592 \n", "author ", "Vicent Marti", "tanoku@gmail.com", -1, 0};
@@ -228,67 +230,108 @@ void test_commit_parse__signature_semivalid(void)
 	git_warning_set_callback(NULL, NULL);
 }
 
+static int default_on_warn(git_warning *warning, int rval, void *payload)
+{
+	git_warning *expected = payload;
+	cl_assert_equal_i(expected->type, warning->type);
+	if (expected->message)
+		cl_assert(strstr(warning->message, expected->message) != NULL);
+	return rval;
+}
+
+void test_commit_parse__signature_email_warnings(void)
+{
+	git_warning expected = { 0 };
+	passing_signature_test_case passcase1 = {"author Vicent Marti tanoku@gmail.com> 98589934592 \n", "author ", "Vicent Marti tanoku@gmail.com> 98589934592", "", 0, 0};
+	passing_signature_test_case passcase2 = {"committer Vicent Marti <tanoku@gmail.com 98589934592 \n", "committer ", "Vicent Marti", "tanoku@gmail.com 98589934592", 0, 0};
+
+	failing_signature_test_case failcase1 = {"author Vicent Marti tanoku@gmail.com> 98589934592 \n", "author "};
+	failing_signature_test_case failcase2 = {"committer Vicent Marti <tanoku@gmail.com 98589934592 \n", "author "};
+
+	git_warning_set_callback(default_on_warn, &expected);
+
+	expected.type = GIT_WARNING_INVALID_DATA__SIGNATURE_EMAIL_MISSING;
+	expected.message = "author";
+	assert_signature_doesnt_parse(&failcase1);
+
+	expected.type = GIT_WARNING_INVALID_DATA__SIGNATURE_EMAIL_UNTERMINATED;
+	expected.message = "committer";
+	assert_signature_doesnt_parse(&failcase2);
+
+	git_warning_set_callback(pass_on_warn, &expected);
+
+	expected.type = GIT_WARNING_INVALID_DATA__SIGNATURE_EMAIL_MISSING;
+	expected.message = "author";
+	assert_signature_parses(&passcase1);
+
+	expected.type = GIT_WARNING_INVALID_DATA__SIGNATURE_EMAIL_UNTERMINATED;
+	expected.message = "committer";
+	assert_signature_parses(&passcase2);
+
+	git_warning_set_callback(NULL, NULL);
+}
+
 
 static char *failing_commit_cases[] = {
-// empty commit
+/* empty commit */
 "",
-// random garbage
+/* random garbage */
 "asd97sa9du902e9a0jdsuusad09as9du098709aweu8987sd\n",
-// broken endlines 1
+/* broken endlines 1 */
 "tree f6c0dad3c7b3481caa9d73db21f91964894a945b\r\n\
 parent 05452d6349abcd67aa396dfb28660d765d8b2a36\r\n\
 author Vicent Marti <tanoku@gmail.com> 1273848544 +0200\r\n\
 committer Vicent Marti <tanoku@gmail.com> 1273848544 +0200\r\n\
 \r\n\
 a test commit with broken endlines\r\n",
-// broken endlines 2
+/* broken endlines 2 */
 "tree f6c0dad3c7b3481caa9d73db21f91964894a945b\
 parent 05452d6349abcd67aa396dfb28660d765d8b2a36\
 author Vicent Marti <tanoku@gmail.com> 1273848544 +0200\
 committer Vicent Marti <tanoku@gmail.com> 1273848544 +0200\
 \
 another test commit with broken endlines",
-// starting endlines
+/* starting endlines */
 "\ntree f6c0dad3c7b3481caa9d73db21f91964894a945b\n\
 parent 05452d6349abcd67aa396dfb28660d765d8b2a36\n\
 author Vicent Marti <tanoku@gmail.com> 1273848544 +0200\n\
 committer Vicent Marti <tanoku@gmail.com> 1273848544 +0200\n\
 \n\
 a test commit with a starting endline\n",
-// corrupted commit 1
+/* corrupted commit 1 */
 "tree f6c0dad3c7b3481caa9d73db21f91964894a945b\n\
 parent 05452d6349abcd67aa396df",
-// corrupted commit 2
+/* corrupted commit 2 */
 "tree f6c0dad3c7b3481caa9d73db21f91964894a945b\n\
 parent ",
-// corrupted commit 3
+/* corrupted commit 3 */
 "tree f6c0dad3c7b3481caa9d73db21f91964894a945b\n\
 parent ",
-// corrupted commit 4
+/* corrupted commit 4 */
 "tree f6c0dad3c7b3481caa9d73db21f91964894a945b\n\
 par",
 };
 
 
 static char *passing_commit_cases[] = {
-// simple commit with no message
+/* simple commit with no message */
 "tree 1810dff58d8a660512d4832e740f692884338ccd\n\
 author Vicent Marti <tanoku@gmail.com> 1273848544 +0200\n\
 committer Vicent Marti <tanoku@gmail.com> 1273848544 +0200\n\
 \n",
-// simple commit, no parent
+/* simple commit, no parent */
 "tree 1810dff58d8a660512d4832e740f692884338ccd\n\
 author Vicent Marti <tanoku@gmail.com> 1273848544 +0200\n\
 committer Vicent Marti <tanoku@gmail.com> 1273848544 +0200\n\
 \n\
 a simple commit which works\n",
-// simple commit, no parent, no newline in message
+/* simple commit, no parent, no newline in message */
 "tree 1810dff58d8a660512d4832e740f692884338ccd\n\
 author Vicent Marti <tanoku@gmail.com> 1273848544 +0200\n\
 committer Vicent Marti <tanoku@gmail.com> 1273848544 +0200\n\
 \n\
 a simple commit which works",
-// simple commit, 1 parent
+/* simple commit, 1 parent */
 "tree 1810dff58d8a660512d4832e740f692884338ccd\n\
 parent e90810b8df3e80c413d903f631643c716887138d\n\
 author Vicent Marti <tanoku@gmail.com> 1273848544 +0200\n\
@@ -367,7 +410,7 @@ void test_commit_parse__entire_commit(void)
 }
 
 
-// query the details on a parsed commit
+/* query the details on a parsed commit */
 void test_commit_parse__details0(void) {
 	static const char *commit_ids[] = {
 		"a4a7dce85cf63874e984719f4fdd239f5145052f", /* 0 */
@@ -415,7 +458,7 @@ void test_commit_parse__details0(void) {
 			old_parent = parent;
 			cl_git_pass(git_commit_parent(&parent, commit, p));
 			cl_assert(parent != NULL);
-			cl_assert(git_commit_author(parent) != NULL); // is it really a commit?
+			cl_assert(git_commit_author(parent) != NULL); /* is it really a commit? */
 		}
 		git_commit_free(old_parent);
 		git_commit_free(parent);

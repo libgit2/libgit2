@@ -19,18 +19,18 @@ void git_warning_set_callback(git_warning_callback cb, void *payload)
 }
 
 static int git_warning__send(
-	git_warning *warning, const char *fmt, va_list ap)
+	git_warning *warning, int default_rval, const char *fmt, va_list ap)
 {
 	int error = 0;
 	git_buf buf = GIT_BUF_INIT;
 	git_warning_callback cb = _warning_cb;
 
 	if (!cb)
-		return 0;
+		return default_rval;
 
 	if (!(error = git_buf_vprintf(&buf, fmt, ap))) {
 		warning->message = git_buf_cstr(&buf);
-		error = cb(warning, _warning_payload);
+		error = cb(warning, default_rval, _warning_payload);
 	}
 
 	git_buf_free(&buf);
@@ -40,6 +40,7 @@ static int git_warning__send(
 
 int git_warn(
 	git_warning_t type,
+	int default_rval,
 	const char *fmt,
 	...)
 {
@@ -48,12 +49,12 @@ int git_warn(
 	git_warning warning;
 
 	if (!_warning_cb)
-		return 0;
+		return default_rval;
 
 	warning.type = type;
 
 	va_start(ap, fmt);
-	error = git_warning__send(&warning, fmt, ap);
+	error = git_warning__send(&warning, default_rval, fmt, ap);
 	va_end(ap);
 
 	return error;
@@ -61,6 +62,7 @@ int git_warn(
 
 int git_warn_invalid_data(
 	git_warning_t type,
+	int default_rval,
 	const char *data,
 	int datalen,
 	const char *fmt,
@@ -71,7 +73,7 @@ int git_warn_invalid_data(
 	git_warning_invalid_data warning;
 
 	if (!_warning_cb)
-		return 0;
+		return default_rval;
 
 	warning.base.type = type;
 	warning.invalid_data = git__strndup(data, datalen);
@@ -79,7 +81,7 @@ int git_warn_invalid_data(
 	warning.invalid_data_len = datalen;
 
 	va_start(ap, fmt);
-	error = git_warning__send((git_warning *)&warning, fmt, ap);
+	error = git_warning__send((git_warning *)&warning, default_rval, fmt, ap);
 	va_end(ap);
 
 	git__free((char *)warning.invalid_data);
