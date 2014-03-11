@@ -82,9 +82,7 @@ static int process_commit(git_revwalk *walk, git_commit_list_node *commit, int h
 	int error;
 
 	if (!hide && walk->hide_cb)
-	{
 		hide = walk->hide_cb(&commit->oid, walk->hide_cb_payload);
-	}
 
 	if (hide && mark_uninteresting(commit) < 0)
 		return -1;
@@ -585,8 +583,7 @@ int git_revwalk_add_hide_cb(
 	if (walk->walking)
 		git_revwalk_reset(walk);
 
-	if (walk->hide_cb)
-	{
+	if (walk->hide_cb) {
 		/* There is already a callback added */
 		giterr_set(GITERR_INVALID, "There is already a callback added to hide commits in revision walker.");
 		return -1;

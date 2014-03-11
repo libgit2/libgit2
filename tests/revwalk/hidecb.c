@@ -35,9 +35,7 @@ void test_revwalk_hidecb__initialize(void)
 	cl_git_pass(git_oid_fromstr(&_head_id, commit_head));
 
 	for (i = 0; i < commit_count; i++)
-	{
 		cl_git_pass(git_oid_fromstr(&commit_ids[i], commit_strs[i]));
-	}
 
 }
 
@@ -73,7 +71,7 @@ static int hide_commit_cb(const git_oid *commit_id, void *data)
 static int hide_commit_use_payload_cb(const git_oid *commit_id, void *data)
 {
 	git_oid *hide_commit_id = data;
-	if (0 == git_oid_cmp(commit_id, hide_commit_id))
+	if (git_oid_cmp(commit_id, hide_commit_id) == 0)
 		return 1;
 	else
 		return 0;
@@ -197,3 +195,4 @@ void test_revwalk_hidecb__test_payload(void)
 
 	git_revwalk_free(walk);
 }
+
