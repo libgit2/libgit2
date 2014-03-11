@@ -8,17 +8,6 @@ static git_repository *repo;
 
 #define TEST_REPO_PATH "merge-resolve"
 
-#define AUTOMERGEABLE_MERGED_FILE \
-	"this file is changed in master\n" \
-	"this file is automergeable\n" \
-	"this file is automergeable\n" \
-	"this file is automergeable\n" \
-	"this file is automergeable\n" \
-	"this file is automergeable\n" \
-	"this file is automergeable\n" \
-	"this file is automergeable\n" \
-	"this file is changed in branch\n"
-
 void test_merge_trees_commits__initialize(void)
 {
 	repo = cl_git_sandbox_init(TEST_REPO_PATH);

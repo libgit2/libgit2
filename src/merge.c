@@ -539,11 +539,9 @@ static int merge_conflict_resolve_automerge(
 	const git_merge_diff *conflict,
 	unsigned int merge_file_favor)
 {
-	git_merge_file_options merge_file_opts = GIT_MERGE_FILE_OPTIONS_INIT;
-	git_merge_file_input ancestor = GIT_MERGE_FILE_INPUT_INIT,
-		ours = GIT_MERGE_FILE_INPUT_INIT,
-		theirs = GIT_MERGE_FILE_INPUT_INIT;
-	git_merge_file_result result = GIT_MERGE_FILE_RESULT_INIT;
+	const git_index_entry *ancestor = NULL, *ours = NULL, *theirs = NULL;
+	git_merge_file_options opts = GIT_MERGE_FILE_OPTIONS_INIT;
+	git_merge_file_result result = {0};
 	git_index_entry *index_entry;
 	git_odb *odb = NULL;
 	git_oid automerge_oid;
@@ -553,7 +551,9 @@ static int merge_conflict_resolve_automerge(
 
 	*resolved = 0;
 
-	merge_file_opts.favor = merge_file_favor;
+	if (!GIT_MERGE_INDEX_ENTRY_EXISTS(conflict->our_entry) ||
+		!GIT_MERGE_INDEX_ENTRY_EXISTS(conflict->their_entry))
+		return 0;
 
 	/* Reject D/F conflicts */
 	if (conflict->type == GIT_MERGE_DIFF_DIRECTORY_FILE)
@@ -584,13 +584,19 @@ static int merge_conflict_resolve_automerge(
 	if (conflict->binary)
 		return 0;
 
+	ancestor = GIT_MERGE_INDEX_ENTRY_EXISTS(conflict->ancestor_entry) ?
+		&conflict->ancestor_entry : NULL;
+	ours = GIT_MERGE_INDEX_ENTRY_EXISTS(conflict->our_entry) ?
+		&conflict->our_entry : NULL;
+	theirs = GIT_MERGE_INDEX_ENTRY_EXISTS(conflict->their_entry) ?
+		&conflict->their_entry : NULL;
+
+	opts.favor = merge_file_favor;
+
 	if ((error = git_repository_odb(&odb, diff_list->repo)) < 0 ||
-		(error = git_merge_file_input_from_index_entry(&ancestor, diff_list->repo, &conflict->ancestor_entry)) < 0 ||
-		(error = git_merge_file_input_from_index_entry(&ours, diff_list->repo, &conflict->our_entry)) < 0 ||
-		(error = git_merge_file_input_from_index_entry(&theirs, diff_list->repo, &conflict->their_entry)) < 0 ||
-		(error = git_merge_files(&result, &ancestor, &ours, &theirs, &merge_file_opts)) < 0 ||
+		(error = git_merge_file_from_index(&result, diff_list->repo, ancestor, ours, theirs, &opts)) < 0 ||
 		!result.automergeable ||
-		(error = git_odb_write(&automerge_oid, odb, result.data, result.len, GIT_OBJ_BLOB)) < 0)
+		(error = git_odb_write(&automerge_oid, odb, result.ptr, result.len, GIT_OBJ_BLOB)) < 0)
 		goto done;
 
 	if ((index_entry = git_pool_malloc(&diff_list->pool, sizeof(git_index_entry))) == NULL)
@@ -609,9 +615,6 @@ static int merge_conflict_resolve_automerge(
 	*resolved = 1;
 
 done:
-	git_merge_file_input_free(&ancestor);
-	git_merge_file_input_free(&ours);
-	git_merge_file_input_free(&theirs);
 	git_merge_file_result_free(&result);
 	git_odb_free(odb);
 
@@ -2789,6 +2792,30 @@ int git_merge_tree_init_opts(git_merge_tree_opts* opts, int version)
 		return -1;
 	} else {
 		git_merge_tree_opts o = GIT_MERGE_TREE_OPTS_INIT;
+		memcpy(opts, &o, sizeof(o));
+		return 0;
+	}
+}
+
+int git_merge_file_init_input(git_merge_file_input *input, int version)
+{
+	if (version != GIT_MERGE_FILE_INPUT_VERSION) {
+		giterr_set(GITERR_INVALID, "Invalid version %d for git_merge_file_input", version);
+		return -1;
+	} else {
+		git_merge_file_input i = GIT_MERGE_FILE_INPUT_INIT;
+		memcpy(input, &i, sizeof(i));
+		return 0;
+	}
+}
+
+int git_merge_file_init_options(git_merge_file_options *opts, int version)
+{
+	if (version != GIT_MERGE_FILE_OPTIONS_VERSION) {
+		giterr_set(GITERR_INVALID, "Invalid version %d for git_merge_file_options", version);
+		return -1;
+	} else {
+		git_merge_file_options o = GIT_MERGE_FILE_OPTIONS_INIT;
 		memcpy(opts, &o, sizeof(o));
 		return 0;
 	}

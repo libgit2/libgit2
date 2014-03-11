@@ -300,7 +300,7 @@ static void index_entry_free(git_index_entry *entry)
 	git__free(entry);
 }
 
-static unsigned int index_create_mode(unsigned int mode)
+unsigned int git_index__create_mode(unsigned int mode)
 {
 	if (S_ISLNK(mode))
 		return S_IFLNK;
@@ -320,9 +320,9 @@ static unsigned int index_merge_mode(
 
 	if (index->distrust_filemode && S_ISREG(mode))
 		return (existing && S_ISREG(existing->mode)) ?
-			existing->mode : index_create_mode(0666);
+			existing->mode : git_index__create_mode(0666);
 
-	return index_create_mode(mode);
+	return git_index__create_mode(mode);
 }
 
 void git_index__set_ignore_case(git_index *index, bool ignore_case)
@@ -619,7 +619,7 @@ void git_index_entry__init_from_stat(
 	entry->dev  = st->st_rdev;
 	entry->ino  = st->st_ino;
 	entry->mode = (!trust_mode && S_ISREG(st->st_mode)) ?
-		index_create_mode(0666) : index_create_mode(st->st_mode);
+		git_index__create_mode(0666) : git_index__create_mode(st->st_mode);
 	entry->uid  = st->st_uid;
 	entry->gid  = st->st_gid;
 	entry->file_size = st->st_size;
