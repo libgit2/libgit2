@@ -90,15 +90,16 @@ static int merge_branch(git_merge_result **result, int merge_file_favor, int che
 {
 	git_oid their_oids[1];
 	git_merge_head *their_heads[1];
-	git_merge_opts opts = GIT_MERGE_OPTS_INIT;
+	git_merge_tree_opts merge_opts = GIT_MERGE_TREE_OPTS_INIT;
+	git_checkout_options checkout_opts = GIT_CHECKOUT_OPTIONS_INIT;
 	int error;
 
 	cl_git_pass(git_oid_fromstr(&their_oids[0], MERGE_BRANCH_OID));
 	cl_git_pass(git_merge_head_from_id(&their_heads[0], repo, &their_oids[0]));
 
-	opts.merge_tree_opts.file_favor = merge_file_favor;
-	opts.checkout_opts.checkout_strategy = checkout_strategy;
-	error = git_merge(result, repo, (const git_merge_head **)their_heads, 1, &opts);
+	merge_opts.file_favor = merge_file_favor;
+	checkout_opts.checkout_strategy = checkout_strategy;
+	error = git_merge(result, repo, (const git_merge_head **)their_heads, 1, &merge_opts, &checkout_opts);
 
 	git_merge_head_free(their_heads[0]);
 

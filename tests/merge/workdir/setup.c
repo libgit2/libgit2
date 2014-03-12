@@ -970,7 +970,6 @@ void test_merge_workdir_setup__retained_after_success(void)
 	git_oid our_oid;
 	git_reference *octo1_ref;
 	git_merge_head *our_head, *their_heads[1];
-	git_merge_opts opts = GIT_MERGE_OPTS_INIT;
 	git_merge_result *result;
 
 	cl_git_pass(git_oid_fromstr(&our_oid, ORIG_HEAD));
@@ -980,7 +979,7 @@ void test_merge_workdir_setup__retained_after_success(void)
 
 	cl_git_pass(git_merge_head_from_ref(&their_heads[0], repo, octo1_ref));
 
-	cl_git_pass(git_merge(&result, repo, (const git_merge_head **)&their_heads[0], 1, &opts));
+	cl_git_pass(git_merge(&result, repo, (const git_merge_head **)&their_heads[0], 1, NULL, NULL));
 
 	cl_assert(test_file_contents(GIT_MERGE_HEAD_FILE, OCTO1_OID "\n"));
 	cl_assert(test_file_contents(GIT_ORIG_HEAD_FILE, ORIG_HEAD "\n"));
@@ -1000,7 +999,6 @@ void test_merge_workdir_setup__removed_after_failure(void)
 	git_reference *octo1_ref;
 	git_merge_head *our_head, *their_heads[1];
 	git_merge_result *result;
-	git_merge_opts opts = GIT_MERGE_OPTS_INIT;
 
 	cl_git_pass(git_oid_fromstr(&our_oid, ORIG_HEAD));
 	cl_git_pass(git_merge_head_from_id(&our_head, repo, &our_oid));
@@ -1012,7 +1010,7 @@ void test_merge_workdir_setup__removed_after_failure(void)
 		"Conflicting file!\n\nMerge will fail!\n");
 
 	cl_git_fail(git_merge(
-		&result, repo, (const git_merge_head **)&their_heads[0], 1, &opts));
+		&result, repo, (const git_merge_head **)&their_heads[0], 1, NULL, NULL));
 
 	cl_assert(!git_path_exists("merge-resolve/" GIT_MERGE_HEAD_FILE));
 	cl_assert(!git_path_exists("merge-resolve/" GIT_ORIG_HEAD_FILE));

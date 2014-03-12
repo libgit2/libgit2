@@ -32,7 +32,6 @@ void test_merge_workdir_submodules__automerge(void)
 	git_commit *our_commit;
 	git_merge_head *their_head;
 	git_merge_result *result;
-	git_merge_opts opts = GIT_MERGE_OPTS_INIT;
 	git_index *index;
 
 	struct merge_index_entry merge_index_entries[] = {
@@ -51,7 +50,7 @@ void test_merge_workdir_submodules__automerge(void)
 	cl_git_pass(git_reference_lookup(&their_ref, repo, "refs/heads/" SUBMODULE_OTHER_BRANCH));
 	cl_git_pass(git_merge_head_from_ref(&their_head, repo, their_ref));
 
-	cl_git_pass(git_merge(&result, repo, (const git_merge_head **)&their_head, 1, &opts));
+	cl_git_pass(git_merge(&result, repo, (const git_merge_head **)&their_head, 1, NULL, NULL));
 
 	cl_git_pass(git_repository_index(&index, repo));
 	cl_assert(merge_test_index(index, merge_index_entries, 6));
@@ -70,7 +69,6 @@ void test_merge_workdir_submodules__take_changed(void)
 	git_commit *our_commit;
 	git_merge_head *their_head;
 	git_merge_result *result;
-	git_merge_opts opts = GIT_MERGE_OPTS_INIT;
 	git_index *index;
 
 	struct merge_index_entry merge_index_entries[] = {
@@ -87,7 +85,7 @@ void test_merge_workdir_submodules__take_changed(void)
 	cl_git_pass(git_reference_lookup(&their_ref, repo, "refs/heads/" SUBMODULE_OTHER2_BRANCH));
 	cl_git_pass(git_merge_head_from_ref(&their_head, repo, their_ref));
 
-	cl_git_pass(git_merge(&result, repo, (const git_merge_head **)&their_head, 1, &opts));
+	cl_git_pass(git_merge(&result, repo, (const git_merge_head **)&their_head, 1, NULL, NULL));
 
 	cl_git_pass(git_repository_index(&index, repo));
 	cl_assert(merge_test_index(index, merge_index_entries, 4));

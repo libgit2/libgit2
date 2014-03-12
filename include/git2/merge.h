@@ -274,32 +274,6 @@ GIT_EXTERN(int) git_merge_status(
 	const git_merge_head **their_heads,
 	size_t their_heads_len);
 
-typedef struct {
-	unsigned int version;
-
-	/** Options for handling the merges of individual files. */
-	git_merge_tree_opts merge_tree_opts;
-
-	/** Options for writing the merge result to the working directory. */
-	git_checkout_options checkout_opts;
-} git_merge_opts;
-
-#define GIT_MERGE_OPTS_VERSION 1
-#define GIT_MERGE_OPTS_INIT {GIT_MERGE_OPTS_VERSION, GIT_MERGE_TREE_OPTS_INIT, GIT_CHECKOUT_OPTIONS_INIT}
-
-/**
- * Initializes a `git_merge_opts` with default values. Equivalent to creating
- * an instance with GIT_MERGE_OPTS_INIT.
- *
- * @param opts the `git_merge_opts` instance to initialize.
- * @param version the version of the struct; you should pass
- *        `GIT_MERGE_OPTS_VERSION` here.
- * @return Zero on success; -1 on failure.
- */
-GIT_EXTERN(int) git_merge_init_opts(
-	git_merge_opts* opts,
-	int version);
-
 /**
  * Find a merge base between two commits
  *
@@ -522,7 +496,8 @@ GIT_EXTERN(int) git_merge_commits(
  * @param repo the repository to merge
  * @param merge_heads the heads to merge into
  * @param merge_heads_len the number of heads to merge
- * @param opts merge options
+ * @param checkout_opts merge options
+ * @param checkout_opts checkout options
  * @return 0 on success or error code
  */
 GIT_EXTERN(int) git_merge(
@@ -530,7 +505,8 @@ GIT_EXTERN(int) git_merge(
 	git_repository *repo,
 	const git_merge_head **their_heads,
 	size_t their_heads_len,
-	const git_merge_opts *opts);
+	const git_merge_tree_opts *merge_opts,
+	const git_checkout_options *checkout_opts);
 
 /**
  * Returns true if a merge is "up-to-date", meaning that the commit(s) 

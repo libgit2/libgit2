@@ -79,7 +79,9 @@ int merge_commits_from_branches(
 	return 0;
 }
 
-int merge_branches(git_merge_result **result, git_repository *repo, const char *ours_branch, const char *theirs_branch, git_merge_opts *opts)
+int merge_branches(git_merge_result **result, git_repository *repo,
+	const char *ours_branch, const char *theirs_branch,
+	git_merge_tree_opts *merge_opts, git_checkout_options *checkout_opts)
 {
 	git_reference *head_ref, *theirs_ref;
 	git_merge_head *theirs_head;
@@ -93,7 +95,7 @@ int merge_branches(git_merge_result **result, git_repository *repo, const char *
 	cl_git_pass(git_reference_lookup(&theirs_ref, repo, theirs_branch));
 	cl_git_pass(git_merge_head_from_ref(&theirs_head, repo, theirs_ref));
 
-	cl_git_pass(git_merge(result, repo, (const git_merge_head **)&theirs_head, 1, opts));
+	cl_git_pass(git_merge(result, repo, (const git_merge_head **)&theirs_head, 1, merge_opts, checkout_opts));
 
 	git_reference_free(head_ref);
 	git_reference_free(theirs_ref);

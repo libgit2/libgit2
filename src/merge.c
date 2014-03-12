@@ -2168,10 +2168,10 @@ const char *merge_their_label(const char *branchname)
 	return slash+1;
 }
 
-static int merge_normalize_opts(
+static int merge_normalize_checkout_opts(
 	git_repository *repo,
-	git_merge_opts *opts,
-	const git_merge_opts *given,
+	git_checkout_options *checkout_opts,
+	const git_checkout_options *given_checkout_opts,
 	const git_merge_head *ancestor_head,
 	const git_merge_head *our_head,
 	size_t their_heads_len,
@@ -2183,38 +2183,38 @@ static int merge_normalize_opts(
 
 	GIT_UNUSED(repo);
 
-	if (given != NULL)
-		memcpy(opts, given, sizeof(git_merge_opts));
+	if (given_checkout_opts != NULL)
+		memcpy(checkout_opts, given_checkout_opts, sizeof(git_checkout_options));
 	else {
-		git_merge_opts default_opts = GIT_MERGE_OPTS_INIT;
-		memcpy(opts, &default_opts, sizeof(git_merge_opts));
+		git_checkout_options default_checkout_opts = GIT_CHECKOUT_OPTIONS_INIT;
+		memcpy(checkout_opts, &default_checkout_opts, sizeof(git_checkout_options));
 	}
 
-	if (!opts->checkout_opts.checkout_strategy)
-		opts->checkout_opts.checkout_strategy = default_checkout_strategy;
+	if (!checkout_opts->checkout_strategy)
+		checkout_opts->checkout_strategy = default_checkout_strategy;
 
 	/* TODO: for multiple ancestors in merge-recursive, this is "merged common ancestors" */
-	if (!opts->checkout_opts.ancestor_label) {
+	if (!checkout_opts->ancestor_label) {
 		if (ancestor_head && ancestor_head->commit)
-			opts->checkout_opts.ancestor_label = git_commit_summary(ancestor_head->commit);
+			checkout_opts->ancestor_label = git_commit_summary(ancestor_head->commit);
 		else
-			opts->checkout_opts.ancestor_label = "ancestor";
+			checkout_opts->ancestor_label = "ancestor";
 	}
 
-	if (!opts->checkout_opts.our_label) {
+	if (!checkout_opts->our_label) {
 		if (our_head && our_head->ref_name)
-			opts->checkout_opts.our_label = our_head->ref_name;
+			checkout_opts->our_label = our_head->ref_name;
 		else
-			opts->checkout_opts.our_label = "ours";
+			checkout_opts->our_label = "ours";
 	}
 
-	if (!opts->checkout_opts.their_label) {
+	if (!checkout_opts->their_label) {
 		if (their_heads_len == 1 && their_heads[0]->ref_name)
-			opts->checkout_opts.their_label = merge_their_label(their_heads[0]->ref_name);
+			checkout_opts->their_label = merge_their_label(their_heads[0]->ref_name);
 		else if (their_heads_len == 1)
-			opts->checkout_opts.their_label = their_heads[0]->oid_str;
+			checkout_opts->their_label = their_heads[0]->oid_str;
 		else
-			opts->checkout_opts.their_label = "theirs";
+			checkout_opts->their_label = "theirs";
 	}
 
 	return error;
@@ -2552,11 +2552,12 @@ int git_merge(
 	git_repository *repo,
 	const git_merge_head **their_heads,
 	size_t their_heads_len,
-	const git_merge_opts *given_opts)
+	const git_merge_tree_opts *merge_opts,
+	const git_checkout_options *given_checkout_opts)
 {
 	git_merge_result *result;
-	git_merge_opts opts;
 	git_reference *our_ref = NULL;
+	git_checkout_options checkout_opts;
 	git_merge_head *ancestor_head = NULL, *our_head = NULL;
 	git_tree *ancestor_tree = NULL, *our_tree = NULL, **their_trees = NULL;
 	git_index *index_new = NULL, *index_repo = NULL;
@@ -2566,8 +2567,6 @@ int git_merge(
 	assert(out && repo && their_heads);
 
 	*out = NULL;
-
-	GITERR_CHECK_VERSION(given_opts, GIT_MERGE_OPTS_VERSION, "git_merge_opts");
 
 	if (their_heads_len != 1) {
 		giterr_set(GITERR_MERGE, "Can only merge a single branch");
@@ -2583,7 +2582,8 @@ int git_merge(
 	if ((error = merge_heads(&ancestor_head, &our_head, repo, their_heads, their_heads_len)) < 0)
 		goto on_error;
 
-	if ((error = merge_normalize_opts(repo, &opts, given_opts, ancestor_head, our_head, their_heads_len, their_heads)) < 0)
+	if ((error = merge_normalize_checkout_opts(repo, &checkout_opts, given_checkout_opts,
+		ancestor_head, our_head, their_heads_len, their_heads)) < 0)
 		goto on_error;
 
 	/* Write the merge files to the repository. */
@@ -2604,10 +2604,10 @@ int git_merge(
 
 	/* TODO: recursive, octopus, etc... */
 
-	if ((error = git_merge_trees(&index_new, repo, ancestor_tree, our_tree, their_trees[0], &opts.merge_tree_opts)) < 0 ||
+	if ((error = git_merge_trees(&index_new, repo, ancestor_tree, our_tree, their_trees[0], merge_opts)) < 0 ||
 		(error = git_merge__indexes(repo, index_new)) < 0 ||
 		(error = git_repository_index(&index_repo, repo)) < 0 ||
-		(error = git_checkout_index(repo, index_repo, &opts.checkout_opts)) < 0)
+		(error = git_checkout_index(repo, index_repo, &checkout_opts)) < 0)
 		goto on_error;
 
 	result->index = index_new;
@@ -2777,18 +2777,6 @@ void git_merge_head_free(git_merge_head *head)
 		git__free(head->remote_url);
 
 	git__free(head);
-}
-
-int git_merge_init_opts(git_merge_opts* opts, int version)
-{
-	if (version != GIT_MERGE_OPTS_VERSION) {
-		giterr_set(GITERR_INVALID, "Invalid version %d for git_merge_opts", version);
-		return -1;
-	} else {
-		git_merge_opts o = GIT_MERGE_OPTS_INIT;
-		memcpy(opts, &o, sizeof(o));
-		return 0;
-	}
 }
 
 int git_merge_tree_init_opts(git_merge_tree_opts* opts, int version)

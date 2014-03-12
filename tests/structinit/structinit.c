@@ -80,11 +80,6 @@ void test_structinit_structinit__compare(void)
 		git_merge_tree_opts, GIT_MERGE_TREE_OPTS_VERSION, \
 		GIT_MERGE_TREE_OPTS_INIT, git_merge_tree_init_opts);
 
-	/* merge */
-	CHECK_MACRO_FUNC_INIT_EQUAL( \
-		git_merge_opts, GIT_MERGE_OPTS_VERSION, \
-		GIT_MERGE_OPTS_INIT, git_merge_init_opts);
-
 	/* push */
 	CHECK_MACRO_FUNC_INIT_EQUAL( \
 		git_push_options, GIT_PUSH_OPTIONS_VERSION, \
