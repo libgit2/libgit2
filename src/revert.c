@@ -121,7 +121,7 @@ int git_revert_commit(
 	git_commit *revert_commit,
 	git_commit *our_commit,
 	unsigned int mainline,
-	const git_merge_tree_opts *merge_tree_opts)
+	const git_merge_options *merge_opts)
 {
 	git_commit *parent_commit = NULL;
 	git_tree *parent_tree = NULL, *our_tree = NULL, *revert_tree = NULL;
@@ -152,7 +152,7 @@ int git_revert_commit(
 		(error = git_commit_tree(&our_tree, our_commit)) < 0)
 		goto done;
 
-	error = git_merge_trees(out, repo, revert_tree, our_tree, parent_tree, merge_tree_opts);
+	error = git_merge_trees(out, repo, revert_tree, our_tree, parent_tree, merge_opts);
 
 done:
 	git_tree_free(parent_tree);
@@ -198,7 +198,7 @@ int git_revert(
 		(error = write_merge_msg(repo, commit_oidstr, commit_msg)) < 0 ||
 		(error = git_repository_head(&our_ref, repo)) < 0 ||
 		(error = git_reference_peel((git_object **)&our_commit, our_ref, GIT_OBJ_COMMIT)) < 0 ||
-		(error = git_revert_commit(&index_new, repo, commit, our_commit, opts.mainline, &opts.merge_tree_opts)) < 0 ||
+		(error = git_revert_commit(&index_new, repo, commit, our_commit, opts.mainline, &opts.merge_opts)) < 0 ||
 		(error = git_merge__indexes(repo, index_new)) < 0 ||
 		(error = git_repository_index(&index_repo, repo)) < 0 ||
 		(error = git_checkout_index(repo, index_repo, &opts.checkout_opts)) < 0)

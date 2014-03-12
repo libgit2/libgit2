@@ -77,8 +77,8 @@ void test_structinit_structinit__compare(void)
 
 	/* merge_tree */
 	CHECK_MACRO_FUNC_INIT_EQUAL( \
-		git_merge_tree_opts, GIT_MERGE_TREE_OPTS_VERSION, \
-		GIT_MERGE_TREE_OPTS_INIT, git_merge_tree_init_opts);
+		git_merge_options, GIT_MERGE_OPTIONS_VERSION, \
+		GIT_MERGE_OPTIONS_INIT, git_merge_init_options);
 
 	/* push */
 	CHECK_MACRO_FUNC_INIT_EQUAL( \

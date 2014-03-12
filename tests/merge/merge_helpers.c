@@ -10,7 +10,7 @@
 int merge_trees_from_branches(
 	git_index **index, git_repository *repo,
 	const char *ours_name, const char *theirs_name,
-	git_merge_tree_opts *opts)
+	git_merge_options *opts)
 {
 	git_commit *our_commit, *their_commit, *ancestor_commit = NULL;
 	git_tree *our_tree, *their_tree, *ancestor_tree = NULL;
@@ -55,7 +55,7 @@ int merge_trees_from_branches(
 int merge_commits_from_branches(
 	git_index **index, git_repository *repo,
 	const char *ours_name, const char *theirs_name,
-	git_merge_tree_opts *opts)
+	git_merge_options *opts)
 {
 	git_commit *our_commit, *their_commit;
 	git_oid our_oid, their_oid;
@@ -81,7 +81,7 @@ int merge_commits_from_branches(
 
 int merge_branches(git_merge_result **result, git_repository *repo,
 	const char *ours_branch, const char *theirs_branch,
-	git_merge_tree_opts *merge_opts, git_checkout_options *checkout_opts)
+	git_merge_options *merge_opts, git_checkout_options *checkout_opts)
 {
 	git_reference *head_ref, *theirs_ref;
 	git_merge_head *theirs_head;

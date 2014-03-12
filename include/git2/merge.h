@@ -216,22 +216,22 @@ typedef struct {
 
 	/** Flags for handling conflicting content. */
 	git_merge_file_favor_t file_favor;
-} git_merge_tree_opts;
+} git_merge_options;
 
-#define GIT_MERGE_TREE_OPTS_VERSION 1
-#define GIT_MERGE_TREE_OPTS_INIT {GIT_MERGE_TREE_OPTS_VERSION}
+#define GIT_MERGE_OPTIONS_VERSION 1
+#define GIT_MERGE_OPTIONS_INIT {GIT_MERGE_OPTIONS_VERSION}
 
 /**
- * Initializes a `git_merge_tree_opts` with default values. Equivalent to
- * creating an instance with GIT_MERGE_TREE_OPTS_INIT.
+ * Initializes a `git_merge_options` with default values. Equivalent to
+ * creating an instance with GIT_MERGE_OPTIONS_INIT.
  *
- * @param opts the `git_merge_tree_opts` instance to initialize.
+ * @param opts the `git_merge_options` instance to initialize.
  * @param version the version of the struct; you should pass
- *        `GIT_MERGE_TREE_OPTS_VERSION` here.
+ *        `GIT_MERGE_OPTIONS_VERSION` here.
  * @return Zero on success; -1 on failure.
  */
-GIT_EXTERN(int) git_merge_tree_init_opts(
-	git_merge_tree_opts* opts,
+GIT_EXTERN(int) git_merge_init_options(
+	git_merge_options *opts,
 	int version);
 
 /**
@@ -447,7 +447,7 @@ GIT_EXTERN(int) git_merge_trees(
 	const git_tree *ancestor_tree,
 	const git_tree *our_tree,
 	const git_tree *their_tree,
-	const git_merge_tree_opts *opts);
+	const git_merge_options *opts);
 
 /**
  * Merge two commits, producing a `git_index` that reflects the result of
@@ -469,7 +469,7 @@ GIT_EXTERN(int) git_merge_commits(
 	git_repository *repo,
 	const git_commit *our_commit,
 	const git_commit *their_commit,
-	const git_merge_tree_opts *opts);
+	const git_merge_options *opts);
 
 /**
  * Merges the given commit(s) into HEAD and either returns immediately
@@ -496,7 +496,7 @@ GIT_EXTERN(int) git_merge_commits(
  * @param repo the repository to merge
  * @param merge_heads the heads to merge into
  * @param merge_heads_len the number of heads to merge
- * @param checkout_opts merge options
+ * @param merge_opts merge options
  * @param checkout_opts checkout options
  * @return 0 on success or error code
  */
@@ -505,7 +505,7 @@ GIT_EXTERN(int) git_merge(
 	git_repository *repo,
 	const git_merge_head **their_heads,
 	size_t their_heads_len,
-	const git_merge_tree_opts *merge_opts,
+	const git_merge_options *merge_opts,
 	const git_checkout_options *checkout_opts);
 
 /**

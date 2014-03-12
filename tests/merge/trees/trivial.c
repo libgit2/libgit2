@@ -31,7 +31,7 @@ static int merge_trivial(git_index **index, const char *ours, const char *theirs
 	git_tree *our_tree, *their_tree, *ancestor_tree;
 	git_oid our_oid, their_oid, ancestor_oid;
 	git_buf branch_buf = GIT_BUF_INIT;
-	git_merge_tree_opts opts = GIT_MERGE_TREE_OPTS_INIT;
+	git_merge_options opts = GIT_MERGE_OPTIONS_INIT;
 
 	git_buf_printf(&branch_buf, "%s%s", GIT_REFS_HEADS_DIR, ours);
 	cl_git_pass(git_reference_name_to_id(&our_oid, repo, branch_buf.ptr));

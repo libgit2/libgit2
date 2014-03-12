@@ -97,7 +97,7 @@ static git_merge_result *merge_simple_branch(int merge_file_favor, int checkout_
 	git_oid their_oids[1];
 	git_merge_head *their_heads[1];
 	git_merge_result *result;
-	git_merge_tree_opts merge_opts = GIT_MERGE_TREE_OPTS_INIT;
+	git_merge_options merge_opts = GIT_MERGE_OPTIONS_INIT;
 	git_checkout_options checkout_opts = GIT_CHECKOUT_OPTIONS_INIT;
 
 	cl_git_pass(git_oid_fromstr(&their_oids[0], THEIRS_SIMPLE_OID));
@@ -523,7 +523,7 @@ void test_merge_workdir_simple__directory_file(void)
 	git_oid their_oids[1], head_commit_id;
 	git_merge_head *their_heads[1];
 	git_merge_result *result;
-	git_merge_tree_opts merge_opts = GIT_MERGE_TREE_OPTS_INIT;
+	git_merge_options merge_opts = GIT_MERGE_OPTIONS_INIT;
 	git_commit *head_commit;
 
 	struct merge_index_entry merge_index_entries[] = {
@@ -573,7 +573,7 @@ void test_merge_workdir_simple__unrelated(void)
 	git_oid their_oids[1];
 	git_merge_head *their_heads[1];
 	git_merge_result *result;
-	git_merge_tree_opts merge_opts = GIT_MERGE_TREE_OPTS_INIT;
+	git_merge_options merge_opts = GIT_MERGE_OPTIONS_INIT;
 
 	struct merge_index_entry merge_index_entries[] = {
 		{ 0100644, "233c0919c998ed110a4b6ff36f353aec8b713487", 0, "added-in-master.txt" },
@@ -604,7 +604,7 @@ void test_merge_workdir_simple__unrelated_with_conflicts(void)
 	git_oid their_oids[1];
 	git_merge_head *their_heads[1];
 	git_merge_result *result;
-	git_merge_tree_opts merge_opts = GIT_MERGE_TREE_OPTS_INIT;
+	git_merge_options merge_opts = GIT_MERGE_OPTIONS_INIT;
 
 	struct merge_index_entry merge_index_entries[] = {
 		{ 0100644, "233c0919c998ed110a4b6ff36f353aec8b713487", 0, "added-in-master.txt" },

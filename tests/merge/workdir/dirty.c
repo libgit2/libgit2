@@ -90,7 +90,7 @@ static int merge_branch(git_merge_result **result, int merge_file_favor, int che
 {
 	git_oid their_oids[1];
 	git_merge_head *their_heads[1];
-	git_merge_tree_opts merge_opts = GIT_MERGE_TREE_OPTS_INIT;
+	git_merge_options merge_opts = GIT_MERGE_OPTIONS_INIT;
 	git_checkout_options checkout_opts = GIT_CHECKOUT_OPTIONS_INIT;
 	int error;
 

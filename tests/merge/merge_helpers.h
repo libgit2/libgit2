@@ -85,16 +85,16 @@ struct merge_index_conflict_data {
 int merge_trees_from_branches(
 	git_index **index, git_repository *repo,
 	const char *ours_name, const char *theirs_name,
-	git_merge_tree_opts *opts);
+	git_merge_options *opts);
 
 int merge_commits_from_branches(
 	git_index **index, git_repository *repo,
 	const char *ours_name, const char *theirs_name,
-	git_merge_tree_opts *opts);
+	git_merge_options *opts);
 
 int merge_branches(git_merge_result **result, git_repository *repo,
 	const char *ours_branch, const char *theirs_branch,
-	git_merge_tree_opts *merge_opts, git_checkout_options *checkout_opts);
+	git_merge_options *merge_opts, git_checkout_options *checkout_opts);
 
 int merge_test_diff_list(git_merge_diff_list *diff_list, const struct merge_index_entry expected[], size_t expected_len);
 

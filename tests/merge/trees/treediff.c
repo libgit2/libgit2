@@ -44,7 +44,7 @@ static void test_find_differences(
     git_oid ancestor_oid, ours_oid, theirs_oid;
     git_tree *ancestor_tree, *ours_tree, *theirs_tree;
 
-	git_merge_tree_opts opts = GIT_MERGE_TREE_OPTS_INIT;
+	git_merge_options opts = GIT_MERGE_OPTIONS_INIT;
 	opts.flags |= GIT_MERGE_TREE_FIND_RENAMES;
 	opts.target_limit = 1000;
 	opts.rename_threshold = 50;

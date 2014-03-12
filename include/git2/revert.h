@@ -26,12 +26,12 @@ typedef struct {
 	/** For merge commits, the "mainline" is treated as the parent. */
 	unsigned int mainline;
 
-	git_merge_tree_opts merge_tree_opts;
+	git_merge_options merge_opts;
 	git_checkout_options checkout_opts;
 } git_revert_options;
 
 #define GIT_REVERT_OPTIONS_VERSION 1
-#define GIT_REVERT_OPTIONS_INIT {GIT_REVERT_OPTIONS_VERSION, 0, GIT_MERGE_TREE_OPTS_INIT, GIT_CHECKOUT_OPTIONS_INIT}
+#define GIT_REVERT_OPTIONS_INIT {GIT_REVERT_OPTIONS_VERSION, 0, GIT_MERGE_OPTIONS_INIT, GIT_CHECKOUT_OPTIONS_INIT}
 
 /**
  * Initializes a `git_revert_options` with default values. Equivalent to
@@ -66,7 +66,7 @@ int git_revert_commit(
 	git_commit *revert_commit,
 	git_commit *our_commit,
 	unsigned int mainline,
-	const git_merge_tree_opts *merge_tree_opts);
+	const git_merge_options *merge_options);
 
 /**
  * Reverts the given commit, producing changes in the working directory.

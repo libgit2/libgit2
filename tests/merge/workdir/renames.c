@@ -35,7 +35,7 @@ void test_merge_workdir_renames__cleanup(void)
 void test_merge_workdir_renames__renames(void)
 {
 	git_merge_result *result;
-	git_merge_tree_opts merge_opts = GIT_MERGE_TREE_OPTS_INIT;
+	git_merge_options merge_opts = GIT_MERGE_OPTIONS_INIT;
 
 	struct merge_index_entry merge_index_entries[] = {
 		{ 0100644, "68c6c84b091926c7d90aa6a79b2bc3bb6adccd8e", 0, "0a-no-change.txt" },
@@ -77,7 +77,7 @@ void test_merge_workdir_renames__ours(void)
 {
 	git_index *index;
 	git_merge_result *result;
-	git_merge_tree_opts merge_opts = GIT_MERGE_TREE_OPTS_INIT;
+	git_merge_options merge_opts = GIT_MERGE_OPTIONS_INIT;
 	git_checkout_options checkout_opts = GIT_CHECKOUT_OPTIONS_INIT;
 
 	struct merge_index_entry merge_index_entries[] = {
@@ -119,7 +119,7 @@ void test_merge_workdir_renames__ours(void)
 void test_merge_workdir_renames__similar(void)
 {
 	git_merge_result *result;
-	git_merge_tree_opts merge_opts = GIT_MERGE_TREE_OPTS_INIT;
+	git_merge_options merge_opts = GIT_MERGE_OPTIONS_INIT;
 
 	/*
 	 * Note: this differs slightly from the core git merge result - there, 4a is

@@ -664,7 +664,7 @@ static int index_entry_similarity_exact(
 	git_index_entry *b,
 	size_t b_idx,
 	void **cache,
-	const git_merge_tree_opts *opts)
+	const git_merge_options *opts)
 {
 	GIT_UNUSED(repo);
 	GIT_UNUSED(a_idx);
@@ -682,7 +682,7 @@ static int index_entry_similarity_calc(
 	void **out,
 	git_repository *repo,
 	git_index_entry *entry,
-	const git_merge_tree_opts *opts)
+	const git_merge_options *opts)
 {
 	git_blob *blob;
 	git_diff_file diff_file = {{{0}}};
@@ -722,7 +722,7 @@ static int index_entry_similarity_inexact(
 	git_index_entry *b,
 	size_t b_idx,
 	void **cache,
-	const git_merge_tree_opts *opts)
+	const git_merge_options *opts)
 {
 	int score = 0;
 	int error = 0;
@@ -759,9 +759,9 @@ static int merge_diff_mark_similarity(
 	git_merge_diff_list *diff_list,
 	struct merge_diff_similarity *similarity_ours,
 	struct merge_diff_similarity *similarity_theirs,
-	int (*similarity_fn)(git_repository *, git_index_entry *, size_t, git_index_entry *, size_t, void **, const git_merge_tree_opts *),
+	int (*similarity_fn)(git_repository *, git_index_entry *, size_t, git_index_entry *, size_t, void **, const git_merge_options *),
 	void **cache,
-	const git_merge_tree_opts *opts)
+	const git_merge_options *opts)
 {
 	size_t i, j;
 	git_merge_diff *conflict_src, *conflict_tgt;
@@ -862,7 +862,7 @@ static void merge_diff_mark_rename_conflict(
 	bool theirs_renamed,
 	size_t theirs_source_idx,
 	git_merge_diff *target,
-	const git_merge_tree_opts *opts)
+	const git_merge_options *opts)
 {
 	git_merge_diff *ours_source = NULL, *theirs_source = NULL;
 
@@ -932,7 +932,7 @@ static void merge_diff_list_coalesce_renames(
 	git_merge_diff_list *diff_list,
 	struct merge_diff_similarity *similarity_ours,
 	struct merge_diff_similarity *similarity_theirs,
-	const git_merge_tree_opts *opts)
+	const git_merge_options *opts)
 {
 	size_t i;
 	bool ours_renamed = 0, theirs_renamed = 0;
@@ -1022,7 +1022,7 @@ static void merge_diff_list_count_candidates(
 int git_merge_diff_list__find_renames(
 	git_repository *repo,
 	git_merge_diff_list *diff_list,
-	const git_merge_tree_opts *opts)
+	const git_merge_options *opts)
 {
 	struct merge_diff_similarity *similarity_ours, *similarity_theirs;
 	void **cache = NULL;
@@ -1450,10 +1450,10 @@ void git_merge_diff_list__free(git_merge_diff_list *diff_list)
 	git__free(diff_list);
 }
 
-static int merge_tree_normalize_opts(
+static int merge_normalize_opts(
 	git_repository *repo,
-	git_merge_tree_opts *opts,
-	const git_merge_tree_opts *given)
+	git_merge_options *opts,
+	const git_merge_options *given)
 {
 	git_config *cfg = NULL;
 	int error = 0;
@@ -1464,9 +1464,9 @@ static int merge_tree_normalize_opts(
 		return error;
 
 	if (given != NULL)
-		memcpy(opts, given, sizeof(git_merge_tree_opts));
+		memcpy(opts, given, sizeof(git_merge_options));
 	else {
-		git_merge_tree_opts init = GIT_MERGE_TREE_OPTS_INIT;
+		git_merge_options init = GIT_MERGE_OPTIONS_INIT;
 		memcpy(opts, &init, sizeof(init));
 
 		opts->flags = GIT_MERGE_TREE_FIND_RENAMES;
@@ -1634,10 +1634,10 @@ int git_merge_trees(
 	const git_tree *ancestor_tree,
 	const git_tree *our_tree,
 	const git_tree *their_tree,
-	const git_merge_tree_opts *given_opts)
+	const git_merge_options *given_opts)
 {
 	git_merge_diff_list *diff_list;
-	git_merge_tree_opts opts;
+	git_merge_options opts;
 	git_merge_diff *conflict;
 	git_vector changes;
 	size_t i;
@@ -1647,9 +1647,9 @@ int git_merge_trees(
 
 	*out = NULL;
 
-	GITERR_CHECK_VERSION(given_opts, GIT_MERGE_TREE_OPTS_VERSION, "git_merge_tree_opts");
+	GITERR_CHECK_VERSION(given_opts, GIT_MERGE_OPTIONS_VERSION, "git_merge_options");
 
-	if ((error = merge_tree_normalize_opts(repo, &opts, given_opts)) < 0)
+	if ((error = merge_normalize_opts(repo, &opts, given_opts)) < 0)
 		return error;
 
 	diff_list = git_merge_diff_list__alloc(repo);
@@ -1688,7 +1688,7 @@ int git_merge_commits(
 	git_repository *repo,
 	const git_commit *our_commit,
 	const git_commit *their_commit,
-	const git_merge_tree_opts *opts)
+	const git_merge_options *opts)
 {
 	git_oid ancestor_oid;
 	git_commit *ancestor_commit = NULL;
@@ -2552,7 +2552,7 @@ int git_merge(
 	git_repository *repo,
 	const git_merge_head **their_heads,
 	size_t their_heads_len,
-	const git_merge_tree_opts *merge_opts,
+	const git_merge_options *merge_opts,
 	const git_checkout_options *given_checkout_opts)
 {
 	git_merge_result *result;
@@ -2779,14 +2779,14 @@ void git_merge_head_free(git_merge_head *head)
 	git__free(head);
 }
 
-int git_merge_tree_init_opts(git_merge_tree_opts* opts, int version)
+int git_merge_init_options(git_merge_options *opts, int version)
 {
-	if (version != GIT_MERGE_TREE_OPTS_VERSION) {
-		giterr_set(GITERR_INVALID, "Invalid version %d for git_merge_tree_opts", version);
+	if (version != GIT_MERGE_OPTIONS_VERSION) {
+		giterr_set(GITERR_INVALID, "Invalid version %d for git_merge_options", version);
 		return -1;
 	} else {
-		git_merge_tree_opts o = GIT_MERGE_TREE_OPTS_INIT;
-		memcpy(opts, &o, sizeof(o));
+		git_merge_options default_opts = GIT_MERGE_OPTIONS_INIT;
+		memcpy(opts, &default_opts, sizeof(git_merge_options));
 		return 0;
 	}
 }
