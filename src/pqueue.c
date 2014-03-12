@@ -68,7 +68,7 @@ static void pqueue_down(git_pqueue *pq, size_t el)
 			kid_el += 1;
 		}
 
-		if (pq->_cmp(parent, kid) < 0)
+		if (pq->_cmp(parent, kid) <= 0)
 			break;
 
 		pq->contents[el] = kid;
