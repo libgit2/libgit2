@@ -235,6 +235,46 @@ GIT_EXTERN(int) git_merge_tree_init_opts(
 	int version);
 
 /**
+ * The results of `git_merge_status` indicate the state of a merge scenario.
+ */
+typedef enum {
+	/**
+	 * A "normal" merge; both HEAD and the given merge input have diverged
+	 * from their common ancestor.  The divergent commits must be merged.
+	 */
+	GIT_MERGE_STATUS_NORMAL = 0,
+
+	/**
+	 * The repository is already up-to-date and no merge needs to be
+	 * performed.  The given merge input already exists as a parent of HEAD.
+	 */
+	GIT_MERGE_STATUS_UP_TO_DATE = (1 << 0),
+
+	/**
+	 * The given merge input is a fast-forward from HEAD and no merge
+	 * needs to be performed.  Instead, the client can check out the
+	 * given merge input.
+	 */
+	GIT_MERGE_STATUS_FASTFORWARD = (1 << 1),
+} git_merge_status_t;
+
+/**
+ * Determine the status of the merge between the given branch(es) and the
+ * HEAD of the repository.
+ *
+ * @param status_out status enumeration that the result is written into
+ * @param repo the repository to merge
+ * @param their_heads the heads to merge into
+ * @param their_heads_len the number of heads to merge
+ * @return 0 on success or error code
+ */
+GIT_EXTERN(int) git_merge_status(
+	git_merge_status_t *status_out,
+	git_repository *repo,
+	const git_merge_head **their_heads,
+	size_t their_heads_len);
+
+/**
  * Option flags for `git_merge`.
  */
 typedef enum {

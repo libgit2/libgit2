@@ -2497,6 +2497,79 @@ static int merge_state_cleanup(git_repository *repo)
 	return git_repository__cleanup_files(repo, state_files, ARRAY_SIZE(state_files));
 }
 
+static int merge_heads(
+	git_merge_head **ancestor_head_out,
+	git_merge_head **our_head_out,
+	git_repository *repo,
+	const git_merge_head **their_heads,
+	size_t their_heads_len)
+{
+	git_merge_head *ancestor_head = NULL, *our_head = NULL;
+	git_reference *our_ref = NULL;
+	int error = 0;
+
+	*ancestor_head_out = NULL;
+	*our_head_out = NULL;
+
+	if ((error = git_repository__ensure_not_bare(repo, "merge")) < 0)
+		goto done;
+
+	if ((error = git_reference_lookup(&our_ref, repo, GIT_HEAD_FILE)) < 0 ||
+		(error = git_merge_head_from_ref(&our_head, repo, our_ref)) < 0)
+		goto done;
+
+	if ((error = merge_ancestor_head(&ancestor_head, repo, our_head, their_heads, their_heads_len)) < 0) {
+		if (error != GIT_ENOTFOUND)
+			goto done;
+
+		giterr_clear();
+		error = 0;
+	}
+
+	*ancestor_head_out = ancestor_head;
+	*our_head_out = our_head;
+
+done:
+	if (error < 0) {
+		git_merge_head_free(ancestor_head);
+		git_merge_head_free(our_head);
+	}
+
+	git_reference_free(our_ref);
+
+	return error;
+}
+
+int git_merge_status(
+	git_merge_status_t *out,
+	git_repository *repo,
+	const git_merge_head **their_heads,
+	size_t their_heads_len)
+{
+	git_merge_head *ancestor_head = NULL, *our_head = NULL;
+	int error;
+
+	assert(out && repo && their_heads);
+
+	*out = GIT_MERGE_STATUS_NORMAL;
+
+	if ((error = merge_heads(&ancestor_head, &our_head, repo, their_heads, their_heads_len)) < 0)
+		goto done;
+
+	if (their_heads_len == 1 && ancestor_head != NULL) {
+		/* We're up-to-date if we're trying to merge our own common ancestor. */
+		if (git_oid_equal(&ancestor_head->oid, &their_heads[0]->oid))
+			*out = GIT_MERGE_STATUS_UP_TO_DATE;
+
+		/* We're fastforwardable if we're our own common ancestor. */
+		else if (git_oid_equal(&ancestor_head->oid, &our_head->oid))
+			*out = GIT_MERGE_STATUS_FASTFORWARD;
+	}
+
+done:
+	return error;
+}
+
 int git_merge(
 	git_merge_result **out,
 	git_repository *repo,
@@ -2530,15 +2603,7 @@ int git_merge(
 	their_trees = git__calloc(their_heads_len, sizeof(git_tree *));
 	GITERR_CHECK_ALLOC(their_trees);
 
-	if ((error = git_repository__ensure_not_bare(repo, "merge")) < 0)
-		goto on_error;
-
-	if ((error = git_reference_lookup(&our_ref, repo, GIT_HEAD_FILE)) < 0 ||
-		(error = git_merge_head_from_ref(&our_head, repo, our_ref)) < 0)
-		goto on_error;
-
-	if ((error = merge_ancestor_head(&ancestor_head, repo, our_head, their_heads, their_heads_len)) < 0 &&
-		error != GIT_ENOTFOUND)
+	if ((error = merge_heads(&ancestor_head, &our_head, repo, their_heads, their_heads_len)) < 0)
 		goto on_error;
 
 	if ((error = merge_normalize_opts(repo, &opts, given_opts, ancestor_head, our_head, their_heads_len, their_heads)) < 0)
