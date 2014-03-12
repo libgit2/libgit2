@@ -92,7 +92,7 @@ int merge_commits_from_branches(
 	const char *ours_name, const char *theirs_name,
 	git_merge_options *opts);
 
-int merge_branches(git_merge_result **result, git_repository *repo,
+int merge_branches(git_repository *repo,
 	const char *ours_branch, const char *theirs_branch,
 	git_merge_options *merge_opts, git_checkout_options *checkout_opts);
 

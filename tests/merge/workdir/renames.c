@@ -34,7 +34,6 @@ void test_merge_workdir_renames__cleanup(void)
 
 void test_merge_workdir_renames__renames(void)
 {
-	git_merge_result *result;
 	git_merge_options merge_opts = GIT_MERGE_OPTIONS_INIT;
 
 	struct merge_index_entry merge_index_entries[] = {
@@ -67,16 +66,13 @@ void test_merge_workdir_renames__renames(void)
 	merge_opts.flags |= GIT_MERGE_TREE_FIND_RENAMES;
 	merge_opts.rename_threshold = 50;
 
-	cl_git_pass(merge_branches(&result, repo, GIT_REFS_HEADS_DIR BRANCH_RENAME_OURS, GIT_REFS_HEADS_DIR BRANCH_RENAME_THEIRS, &merge_opts, NULL));
+	cl_git_pass(merge_branches(repo, GIT_REFS_HEADS_DIR BRANCH_RENAME_OURS, GIT_REFS_HEADS_DIR BRANCH_RENAME_THEIRS, &merge_opts, NULL));
 	cl_assert(merge_test_workdir(repo, merge_index_entries, 24));
-
-	git_merge_result_free(result);
 }
 
 void test_merge_workdir_renames__ours(void)
 {
 	git_index *index;
-	git_merge_result *result;
 	git_merge_options merge_opts = GIT_MERGE_OPTIONS_INIT;
 	git_checkout_options checkout_opts = GIT_CHECKOUT_OPTIONS_INIT;
 
@@ -107,18 +103,16 @@ void test_merge_workdir_renames__ours(void)
 	merge_opts.rename_threshold = 50;
 	checkout_opts.checkout_strategy = GIT_CHECKOUT_SAFE | GIT_CHECKOUT_USE_OURS;
 
-	cl_git_pass(merge_branches(&result, repo, GIT_REFS_HEADS_DIR BRANCH_RENAME_OURS, GIT_REFS_HEADS_DIR BRANCH_RENAME_THEIRS, &merge_opts, &checkout_opts));
+	cl_git_pass(merge_branches(repo, GIT_REFS_HEADS_DIR BRANCH_RENAME_OURS, GIT_REFS_HEADS_DIR BRANCH_RENAME_THEIRS, &merge_opts, &checkout_opts));
 	cl_git_pass(git_repository_index(&index, repo));
 	cl_git_pass(git_index_write(index));
 	cl_assert(merge_test_workdir(repo, merge_index_entries, 20));
 
-	git_merge_result_free(result);
 	git_index_free(index);
 }
 
 void test_merge_workdir_renames__similar(void)
 {
-	git_merge_result *result;
 	git_merge_options merge_opts = GIT_MERGE_OPTIONS_INIT;
 
 	/*
@@ -156,9 +150,7 @@ void test_merge_workdir_renames__similar(void)
 	merge_opts.flags |= GIT_MERGE_TREE_FIND_RENAMES;
 	merge_opts.rename_threshold = 50;
 
-	cl_git_pass(merge_branches(&result, repo, GIT_REFS_HEADS_DIR BRANCH_RENAME_OURS, GIT_REFS_HEADS_DIR BRANCH_RENAME_THEIRS, &merge_opts, NULL));
+	cl_git_pass(merge_branches(repo, GIT_REFS_HEADS_DIR BRANCH_RENAME_OURS, GIT_REFS_HEADS_DIR BRANCH_RENAME_THEIRS, &merge_opts, NULL));
 	cl_assert(merge_test_workdir(repo, merge_index_entries, 24));
-
-	git_merge_result_free(result);
 }
 

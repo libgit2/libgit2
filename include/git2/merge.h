@@ -472,27 +472,11 @@ GIT_EXTERN(int) git_merge_commits(
 	const git_merge_options *opts);
 
 /**
- * Merges the given commit(s) into HEAD and either returns immediately
- * if there was no merge to perform (the specified commits have already
- * been merged or would produce a fast-forward) or performs the merge
- * and writes the results into the working directory.
+ * Merges the given commit(s) into HEAD, writing the results into the working
+ * directory.  Any changes are staged for commit and any conflicts are written
+ * to the index.  Callers should inspect the repository's index after this
+ * completes, resolve any conflicts and prepare a commit.
  *
- * Callers should inspect the `git_merge_result`:
- *
- * If `git_merge_result_is_uptodate` is true, there is no work to perform.
- *
- * If `git_merge_result_is_fastforward` is true, the caller should update
- * any necessary references to the commit ID returned by
- * `git_merge_result_fastforward_id` and check that out in order to complete
- * the fast-forward.
- * 
- * Otherwise, callers should inspect the resulting index, resolve any
- * conflicts and prepare a commit.
- *
- * The resultant `git_merge_result` should be free with
- * `git_merge_result_free`.
- *
- * @param out the results of the merge
  * @param repo the repository to merge
  * @param merge_heads the heads to merge into
  * @param merge_heads_len the number of heads to merge
@@ -501,51 +485,11 @@ GIT_EXTERN(int) git_merge_commits(
  * @return 0 on success or error code
  */
 GIT_EXTERN(int) git_merge(
-	git_merge_result **out,
 	git_repository *repo,
 	const git_merge_head **their_heads,
 	size_t their_heads_len,
 	const git_merge_options *merge_opts,
 	const git_checkout_options *checkout_opts);
-
-/**
- * Returns true if a merge is "up-to-date", meaning that the commit(s) 
- * that were provided to `git_merge` are already included in `HEAD`
- * and there is no work to do.
- *
- * @return true if the merge is up-to-date, false otherwise
- */
-GIT_EXTERN(int) git_merge_result_is_uptodate(git_merge_result *merge_result);
-
-/**
- * Returns true if a merge is eligible to be "fast-forwarded", meaning that
- * the commit that was provided to `git_merge` need not be merged, it can
- * simply be checked out, because the current `HEAD` is the merge base of
- * itself and the given commit.  To perform the fast-forward, the caller
- * should check out the results of `git_merge_result_fastforward_id`.
- * 
- * This will never be true if `GIT_MERGE_NO_FASTFORWARD` is supplied as
- * a merge option.
- *
- * @return true if the merge is fast-forwardable, false otherwise
- */
-GIT_EXTERN(int) git_merge_result_is_fastforward(git_merge_result *merge_result);
-
-/**
- * Gets the fast-forward OID if the merge was a fastforward.
- *
- * @param out pointer to populate with the OID of the fast-forward
- * @param merge_result the results of the merge
- * @return 0 on success or error code
- */
-GIT_EXTERN(int) git_merge_result_fastforward_id(git_oid *out, git_merge_result *merge_result);
-
-/**
- * Frees a `git_merge_result`.
- *
- * @param result merge result to free
- */
-GIT_EXTERN(void) git_merge_result_free(git_merge_result *merge_result);
 
 /** @} */
 GIT_END_DECL

@@ -120,16 +120,6 @@ struct git_merge_head {
 	git_commit *commit;
 };
 
-/** Internal structure for merge results */
-struct git_merge_result {
-	bool is_uptodate;
-
-	bool is_fastforward;
-	git_oid fastforward_oid;
-
-	git_index *index;
-};
-
 int git_merge__bases_many(
 	git_commit_list **out,
 	git_revwalk *walk,

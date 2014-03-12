@@ -2548,14 +2548,12 @@ done:
 }
 
 int git_merge(
-	git_merge_result **out,
 	git_repository *repo,
 	const git_merge_head **their_heads,
 	size_t their_heads_len,
 	const git_merge_options *merge_opts,
 	const git_checkout_options *given_checkout_opts)
 {
-	git_merge_result *result;
 	git_reference *our_ref = NULL;
 	git_checkout_options checkout_opts;
 	git_merge_head *ancestor_head = NULL, *our_head = NULL;
@@ -2564,17 +2562,12 @@ int git_merge(
 	size_t i;
 	int error = 0;
 
-	assert(out && repo && their_heads);
-
-	*out = NULL;
+	assert(repo && their_heads);
 
 	if (their_heads_len != 1) {
 		giterr_set(GITERR_MERGE, "Can only merge a single branch");
 		return -1;
 	}
-
-	result = git__calloc(1, sizeof(git_merge_result));
-	GITERR_CHECK_ALLOC(result);
 
 	their_trees = git__calloc(their_heads_len, sizeof(git_tree *));
 	GITERR_CHECK_ALLOC(their_trees);
@@ -2610,16 +2603,12 @@ int git_merge(
 		(error = git_checkout_index(repo, index_repo, &checkout_opts)) < 0)
 		goto on_error;
 
-	result->index = index_new;
-
-	*out = result;
 	goto done;
 
 on_error:
 	merge_state_cleanup(repo);
 
 	git_index_free(index_new);
-	git__free(result);
 
 done:
 	git_index_free(index_repo);
@@ -2638,41 +2627,6 @@ done:
 	git_reference_free(our_ref);
 
 	return error;
-}
-
-/* Merge result data */
-
-int git_merge_result_is_uptodate(git_merge_result *merge_result)
-{
-	assert(merge_result);
-
-	return merge_result->is_uptodate;
-}
-
-int git_merge_result_is_fastforward(git_merge_result *merge_result)
-{
-	assert(merge_result);
-
-	return merge_result->is_fastforward;
-}
-
-int git_merge_result_fastforward_id(git_oid *out, git_merge_result *merge_result)
-{
-	assert(out && merge_result);
-
-	git_oid_cpy(out, &merge_result->fastforward_oid);
-	return 0;
-}
-
-void git_merge_result_free(git_merge_result *merge_result)
-{
-	if (merge_result == NULL)
-		return;
-
-	git_index_free(merge_result->index);
-	merge_result->index = NULL;
-
-	git__free(merge_result);
 }
 
 /* Merge heads are the input to merge */
