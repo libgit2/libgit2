@@ -274,34 +274,8 @@ GIT_EXTERN(int) git_merge_status(
 	const git_merge_head **their_heads,
 	size_t their_heads_len);
 
-/**
- * Option flags for `git_merge`.
- */
-typedef enum {
-	/**
-	 * The default behavior is to allow fast-forwards, returning
-	 * immediately with the commit ID to fast-forward to.
-	 */
-	GIT_MERGE_DEFAULT = 0,
-
-	/**
-	 * Do not fast-forward; perform a merge and prepare a merge result even
-	 * if the inputs are eligible for fast-forwarding.
-	 */
-	GIT_MERGE_NO_FASTFORWARD = 1,
-
-	/**
-	 * Ensure that the inputs are eligible for fast-forwarding, error if
-	 * a merge needs to be performed.
-	 */
-	GIT_MERGE_FASTFORWARD_ONLY = 2,
-} git_merge_flags_t;
-
 typedef struct {
 	unsigned int version;
-
-	/** Options for handling the commit-level merge. */
-	git_merge_flags_t merge_flags;
 
 	/** Options for handling the merges of individual files. */
 	git_merge_tree_opts merge_tree_opts;
@@ -311,7 +285,7 @@ typedef struct {
 } git_merge_opts;
 
 #define GIT_MERGE_OPTS_VERSION 1
-#define GIT_MERGE_OPTS_INIT {GIT_MERGE_OPTS_VERSION, 0, GIT_MERGE_TREE_OPTS_INIT, GIT_CHECKOUT_OPTIONS_INIT}
+#define GIT_MERGE_OPTS_INIT {GIT_MERGE_OPTS_VERSION, GIT_MERGE_TREE_OPTS_INIT, GIT_CHECKOUT_OPTIONS_INIT}
 
 /**
  * Initializes a `git_merge_opts` with default values. Equivalent to creating

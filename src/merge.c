@@ -1774,14 +1774,11 @@ cleanup:
 	return error;
 }
 
-static int write_merge_mode(git_repository *repo, unsigned int flags)
+static int write_merge_mode(git_repository *repo)
 {
 	git_filebuf file = GIT_FILEBUF_INIT;
 	git_buf file_path = GIT_BUF_INIT;
 	int error = 0;
-
-	/* For future expansion */
-	GIT_UNUSED(flags);
 
 	assert(repo);
 
@@ -1789,16 +1786,8 @@ static int write_merge_mode(git_repository *repo, unsigned int flags)
 		(error = git_filebuf_open(&file, file_path.ptr, GIT_FILEBUF_FORCE, GIT_MERGE_FILE_MODE)) < 0)
 		goto cleanup;
 
-	/*
-	 * no-ff is the only thing allowed here at present.  One would
-	 * presume they would be space-delimited when there are more, but
-	 * this needs to be revisited.
-	 */
-
-	if (flags & GIT_MERGE_NO_FASTFORWARD) {
-		if ((error = git_filebuf_write(&file, "no-ff", 5)) < 0)
-			goto cleanup;
-	}
+	if ((error = git_filebuf_write(&file, "no-ff", 5)) < 0)
+		goto cleanup;
 
 	error = git_filebuf_commit(&file);
 
@@ -2114,6 +2103,25 @@ cleanup:
 	return error;
 }
 
+int git_merge__setup(
+	git_repository *repo,
+	const git_merge_head *our_head,
+	const git_merge_head *heads[],
+	size_t heads_len)
+{
+	int error = 0;
+
+	assert (repo && our_head && heads);
+
+	if ((error = write_orig_head(repo, our_head)) == 0 &&
+		(error = write_merge_head(repo, heads, heads_len)) == 0 &&
+		(error = write_merge_mode(repo)) == 0) {
+		error = write_merge_msg(repo, heads, heads_len);
+	}
+
+	return error;
+}
+
 /* Merge branches */
 
 static int merge_ancestor_head(
@@ -2145,37 +2153,6 @@ static int merge_ancestor_head(
 on_error:
 	git__free(oids);
 	return error;
-}
-
-GIT_INLINE(bool) merge_check_uptodate(
-	git_merge_result *result,
-	const git_merge_head *ancestor_head,
-	const git_merge_head *their_head)
-{
-	if (git_oid_cmp(&ancestor_head->oid, &their_head->oid) == 0) {
-		result->is_uptodate = 1;
-		return true;
-	}
-
-	return false;
-}
-
-GIT_INLINE(bool) merge_check_fastforward(
-	git_merge_result *result,
-	const git_merge_head *ancestor_head,
-	const git_merge_head *our_head,
-	const git_merge_head *their_head,
-	unsigned int flags)
-{
-	if ((flags & GIT_MERGE_NO_FASTFORWARD) == 0 &&
-		git_oid_cmp(&ancestor_head->oid, &our_head->oid) == 0) {
-		result->is_fastforward = 1;
-		git_oid_cpy(&result->fastforward_oid, &their_head->oid);
-
-		return true;
-	}
-
-	return false;
 }
 
 const char *merge_their_label(const char *branchname)
@@ -2609,24 +2586,8 @@ int git_merge(
 	if ((error = merge_normalize_opts(repo, &opts, given_opts, ancestor_head, our_head, their_heads_len, their_heads)) < 0)
 		goto on_error;
 
-	if (their_heads_len == 1 &&
-		ancestor_head != NULL &&
-		(merge_check_uptodate(result, ancestor_head, their_heads[0]) ||
-		merge_check_fastforward(result, ancestor_head, our_head, their_heads[0], opts.merge_flags))) {
-		*out = result;
-		goto done;
-	}
-
-	/* If FASTFORWARD_ONLY is specified, fail. */
-	if ((opts.merge_flags & GIT_MERGE_FASTFORWARD_ONLY) ==
-		GIT_MERGE_FASTFORWARD_ONLY) {
-		giterr_set(GITERR_MERGE, "Not a fast-forward.");
-		error = GIT_ENONFASTFORWARD;
-		goto on_error;
-	}
-
 	/* Write the merge files to the repository. */
-	if ((error = git_merge__setup(repo, our_head, their_heads, their_heads_len, opts.merge_flags)) < 0)
+	if ((error = git_merge__setup(repo, our_head, their_heads, their_heads_len)) < 0)
 		goto on_error;
 
 	if (ancestor_head != NULL &&
@@ -2675,26 +2636,6 @@ done:
 	git_merge_head_free(ancestor_head);
 
 	git_reference_free(our_ref);
-
-	return error;
-}
-
-int git_merge__setup(
-	git_repository *repo,
-	const git_merge_head *our_head,
-	const git_merge_head *heads[],
-	size_t heads_len,
-	unsigned int flags)
-{
-	int error = 0;
-
-	assert (repo && our_head && heads);
-
-	if ((error = write_orig_head(repo, our_head)) == 0 &&
-		(error = write_merge_head(repo, heads, heads_len)) == 0 &&
-		(error = write_merge_mode(repo, flags)) == 0) {
-		error = write_merge_msg(repo, heads, heads_len);
-	}
 
 	return error;
 }

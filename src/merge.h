@@ -156,9 +156,8 @@ void git_merge_diff_list__free(git_merge_diff_list *diff_list);
 int git_merge__setup(
 	git_repository *repo,
 	const git_merge_head *our_head,
-	const git_merge_head *their_heads[],
-	size_t their_heads_len,
-	unsigned int flags);
+	const git_merge_head *heads[],
+	size_t heads_len);
 
 int git_merge__indexes(git_repository *repo, git_index *index_new);
 
