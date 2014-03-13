@@ -416,7 +416,7 @@ GIT_EXTERN(int) git_reference_delete(git_reference *ref);
  * looking at its old value.
  *
  * @param ref The reference to remove
- * @return 0, GIT_EMODIFIED or an error code
+ * @return 0 or an error code
  */
 GIT_EXTERN(int) git_reference_remove(git_repository *repo, const char *name);
 
