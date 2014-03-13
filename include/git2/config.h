@@ -226,6 +226,19 @@ GIT_EXTERN(int) git_config_open_level(
  */
 GIT_EXTERN(int) git_config_open_global(git_config **out, git_config *config);
 
+/**
+ * Create a snapshot of the configuration
+ *
+ * Create a snapshot of the current state of a configuration, which
+ * allows you to look into a consistent view of the configuration for
+ * looking up complex values (e.g. a remote, submodule).
+ *
+ * @param out pointer in which to store the snapshot config object
+ * @param config configuration to snapshot
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_config_snapshot(git_config **out, git_config *config);
+
 
 /**
  * Reload changed config files
