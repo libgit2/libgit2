@@ -18,11 +18,12 @@ static void run_in_parallel(
 	int r, t, *id = git__calloc(threads, sizeof(int));
 #ifdef GIT_THREADS
 	git_thread *th = git__calloc(threads, sizeof(git_thread));
+	cl_assert(th != NULL);
 #else
 	void *th = NULL;
 #endif
 
-	cl_assert(id != NULL && th != NULL);
+	cl_assert(id != NULL);
 
 	for (r = 0; r < repeats; ++r) {
 		_repo = cl_git_sandbox_reopen(); /* reopen sandbox to flush caches */
