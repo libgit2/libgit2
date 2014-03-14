@@ -191,7 +191,10 @@ int git_ignore__pop_dir(git_ignores *ign)
 
 		if (ign->dir.size >= keylen &&
 			!memcmp(ign->dir.ptr + ign->dir.size - keylen, start, keylen))
+		{
+			git_attr_file__free(git_vector_last(&ign->ign_path));
 			git_vector_pop(&ign->ign_path);
+		}
 	}
 
 	if (--ign->depth > 0) {
