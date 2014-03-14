@@ -204,9 +204,23 @@ int git_ignore__pop_dir(git_ignores *ign)
 
 void git_ignore__free(git_ignores *ignores)
 {
-	/* don't need to free ignores->ign_internal since it is in cache */
+	unsigned int i;
+	git_attr_file *file;
+
+	/* don't need to free ignores->ign_internal it is cached exactly once */
+
+	git_vector_foreach(&ignores->ign_path, i, file) {
+		git_attr_file__free(file);
+		ignores->ign_path.contents[i] = NULL;
+	}
 	git_vector_free(&ignores->ign_path);
+
+	git_vector_foreach(&ignores->ign_global, i, file) {
+		git_attr_file__free(file);
+		ignores->ign_global.contents[i] = NULL;
+	}
 	git_vector_free(&ignores->ign_global);
+
 	git_buf_free(&ignores->dir);
 }
 
