@@ -820,7 +820,7 @@ static int index_iterator__reset(
 	ii->current = 0;
 
 	if (ii->base.start)
-		git_index__find_in_entries(
+		git_index_snapshot_find(
 			&ii->current, &ii->entries, ii->entry_srch, ii->base.start, 0, 0);
 
 	if ((ie = index_iterator__skip_conflicts(ii)) == NULL)
@@ -846,9 +846,8 @@ static int index_iterator__reset(
 static void index_iterator__free(git_iterator *self)
 {
 	index_iterator *ii = (index_iterator *)self;
-	git_index__release_snapshot(ii->index);
+	git_index_snapshot_release(&ii->entries, ii->index);
 	ii->index = NULL;
-	git_vector_free(&ii->entries);
 	git_buf_free(&ii->partial);
 }
 
@@ -863,7 +862,7 @@ int git_iterator_for_index(
 	index_iterator *ii = git__calloc(1, sizeof(index_iterator));
 	GITERR_CHECK_ALLOC(ii);
 
-	if ((error = git_index__snapshot(&ii->entries, index)) < 0) {
+	if ((error = git_index_snapshot_new(&ii->entries, index)) < 0) {
 		git__free(ii);
 		return error;
 	}

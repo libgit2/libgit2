@@ -61,11 +61,13 @@ extern int git_index_entry_icmp(const void *a, const void *b);
 extern int git_index_entry_srch(const void *a, const void *b);
 extern int git_index_entry_isrch(const void *a, const void *b);
 
-/* Search index for `path`, returning GIT_ENOTFOUND if it does not exist.
+/* Search index for `path`, returning GIT_ENOTFOUND if it does not exist
+ * (but not setting an error message).
+ *
  * `at_pos` is set to the position where it is or would be inserted.
  * Pass `path_len` as strlen of path or 0 to call strlen internally.
  */
-extern int git_index__find(
+extern int git_index__find_pos(
 	size_t *at_pos, git_index *index, const char *path, size_t path_len, int stage);
 
 extern void git_index__set_ignore_case(git_index *index, bool ignore_case);
@@ -82,13 +84,13 @@ extern int git_index__changed_relative_to(git_index *index, const git_futils_fil
 /* Copy the current entries vector *and* increment the index refcount.
  * Call `git_index__release_snapshot` when done.
  */
-extern int git_index__snapshot(git_vector *entries, git_index *index);
-extern void git_index__release_snapshot(git_index *index);
+extern int git_index_snapshot_new(git_vector *snap, git_index *index);
+extern void git_index_snapshot_release(git_vector *snap, git_index *index);
 
 /* Allow searching in a snapshot; entries must already be sorted! */
-extern int git_index__find_in_entries(
-	size_t *at_pos,
-	git_vector *entries, git_vector_cmp entry_srch,
+extern int git_index_snapshot_find(
+	size_t *at_pos, git_vector *snap, git_vector_cmp entry_srch,
 	const char *path, size_t path_len, int stage);
+
 
 #endif
