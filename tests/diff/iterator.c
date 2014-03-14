@@ -363,9 +363,8 @@ static void index_iterator_test(
 	git_index *index;
 	git_iterator *i;
 	const git_index_entry *entry;
-	int error, count = 0;
+	int error, count = 0, caps;
 	git_repository *repo = cl_git_sandbox_init(sandbox);
-	unsigned int caps;
 
 	cl_git_pass(git_repository_index(&index, repo));
 	caps = git_index_caps(index);

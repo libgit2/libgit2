@@ -1230,7 +1230,7 @@ done:
 	return error;
 }
 
-GIT_INLINE(int) index_entry_dup(
+GIT_INLINE(int) index_entry_dup_pool(
 	git_index_entry *out,
 	git_pool *pool,
 	const git_index_entry *src)
@@ -1276,9 +1276,9 @@ static git_merge_diff *merge_diff_from_index_entries(
 	if ((conflict = git_pool_malloc(pool, sizeof(git_merge_diff))) == NULL)
 		return NULL;
 
-	if (index_entry_dup(&conflict->ancestor_entry, pool, entries[TREE_IDX_ANCESTOR]) < 0 ||
-		index_entry_dup(&conflict->our_entry, pool, entries[TREE_IDX_OURS]) < 0 ||
-		index_entry_dup(&conflict->their_entry, pool, entries[TREE_IDX_THEIRS]) < 0)
+	if (index_entry_dup_pool(&conflict->ancestor_entry, pool, entries[TREE_IDX_ANCESTOR]) < 0 ||
+		index_entry_dup_pool(&conflict->our_entry, pool, entries[TREE_IDX_OURS]) < 0 ||
+		index_entry_dup_pool(&conflict->their_entry, pool, entries[TREE_IDX_THEIRS]) < 0)
 		return NULL;
 
 	conflict->our_status = merge_delta_type_from_index_entries(
@@ -1318,7 +1318,7 @@ static int merge_diff_list_insert_unmodified(
 	entry = git_pool_malloc(&diff_list->pool, sizeof(git_index_entry));
 	GITERR_CHECK_ALLOC(entry);
 
-	if ((error = index_entry_dup(entry, &diff_list->pool, tree_items[0])) >= 0)
+	if ((error = index_entry_dup_pool(entry, &diff_list->pool, tree_items[0])) >= 0)
 		error = git_vector_insert(&diff_list->staged, entry);
 
 	return error;

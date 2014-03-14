@@ -90,13 +90,24 @@ struct entry_long {
 
 struct entry_srch_key {
 	const char *path;
-	size_t path_len;
+	size_t pathlen;
 	int stage;
+};
+
+struct entry_internal {
+	git_index_entry entry;
+	size_t pathlen;
+	char path[GIT_FLEX_ARRAY];
+};
+
+struct reuc_entry_internal {
+	git_index_reuc_entry entry;
+	size_t pathlen;
+	char path[GIT_FLEX_ARRAY];
 };
 
 /* local declarations */
 static size_t read_extension(git_index *index, const char *buffer, size_t buffer_size);
-static size_t read_entry(git_index_entry *dest, const void *buffer, size_t buffer_size);
 static int read_header(struct index_header *dest, const void *buffer);
 
 static int parse_index(git_index *index, const char *buffer, size_t buffer_size);
@@ -109,12 +120,12 @@ static void index_entry_reuc_free(git_index_reuc_entry *reuc);
 int git_index_entry_srch(const void *key, const void *array_member)
 {
 	const struct entry_srch_key *srch_key = key;
-	const git_index_entry *entry = array_member;
+	const struct entry_internal *entry = array_member;
 	int cmp;
 	size_t len1, len2, len;
 
-	len1 = srch_key->path_len;
-	len2 = strlen(entry->path);
+	len1 = srch_key->pathlen;
+	len2 = entry->pathlen;
 	len = len1 < len2 ? len1 : len2;
 
 	cmp = memcmp(srch_key->path, entry->path, len);
@@ -126,7 +137,7 @@ int git_index_entry_srch(const void *key, const void *array_member)
 		return 1;
 
 	if (srch_key->stage != GIT_INDEX_STAGE_ANY)
-		return srch_key->stage - GIT_IDXENTRY_STAGE(entry);
+		return srch_key->stage - GIT_IDXENTRY_STAGE(&entry->entry);
 
 	return 0;
 }
@@ -134,12 +145,12 @@ int git_index_entry_srch(const void *key, const void *array_member)
 int git_index_entry_isrch(const void *key, const void *array_member)
 {
 	const struct entry_srch_key *srch_key = key;
-	const git_index_entry *entry = array_member;
+	const struct entry_internal *entry = array_member;
 	int cmp;
 	size_t len1, len2, len;
 
-	len1 = srch_key->path_len;
-	len2 = strlen(entry->path);
+	len1 = srch_key->pathlen;
+	len2 = entry->pathlen;
 	len = len1 < len2 ? len1 : len2;
 
 	cmp = strncasecmp(srch_key->path, entry->path, len);
@@ -152,7 +163,7 @@ int git_index_entry_isrch(const void *key, const void *array_member)
 		return 1;
 
 	if (srch_key->stage != GIT_INDEX_STAGE_ANY)
-		return srch_key->stage - GIT_IDXENTRY_STAGE(entry);
+		return srch_key->stage - GIT_IDXENTRY_STAGE(&entry->entry);
 
 	return 0;
 }
@@ -276,17 +287,11 @@ static int reuc_icmp(const void *a, const void *b)
 
 static void index_entry_reuc_free(git_index_reuc_entry *reuc)
 {
-	if (!reuc)
-		return;
-	git__free(reuc->path);
 	git__free(reuc);
 }
 
 static void index_entry_free(git_index_entry *entry)
 {
-	if (!entry)
-		return;
-	git__free(entry->path);
 	git__free(entry);
 }
 
@@ -447,18 +452,22 @@ void git_index_free(git_index *index)
 /* call with locked index */
 static void index_free_deleted(git_index *index)
 {
+	int readers = (int)git_atomic_get(&index->readers);
 	size_t i;
 
-	if (git_atomic_get(&index->readers) > 0)
+	if (readers > 0)
 		return;
 
-	for (i = 0; i < index->deleted.length; ++i)
-		index_entry_free(git__swap(index->deleted.contents[i], NULL));
+	for (i = 0; i < index->deleted.length; ++i) {
+		git_index_entry *ie = git__swap(index->deleted.contents[i], NULL);
+		index_entry_free(ie);
+	}
 
 	git_vector_clear(&index->deleted);
 }
 
-static int index_remove_entry(git_index *index, size_t pos, bool need_lock)
+/* call with locked index */
+static int index_remove_entry(git_index *index, size_t pos)
 {
 	int error = 0;
 	git_index_entry *entry = git_vector_get(&index->entries, pos);
@@ -466,22 +475,16 @@ static int index_remove_entry(git_index *index, size_t pos, bool need_lock)
 	if (entry != NULL)
 		git_tree_cache_invalidate_path(index->tree, entry->path);
 
-	if (need_lock && git_mutex_lock(&index->lock) < 0) {
-		giterr_set(GITERR_OS, "Unable to lock index");
-		return -1;
-	}
-
 	error = git_vector_remove(&index->entries, pos);
 
 	if (!error) {
-		if (!git_atomic_get(&index->readers))
-			index_entry_free(entry);
-		else
-			error = git_vector_insert(&index->deleted, entry);
-	}
+		int readers = (int)git_atomic_get(&index->readers);
 
-	if (need_lock)
-		git_mutex_unlock(&index->lock);
+		if (readers > 0)
+			error = git_vector_insert(&index->deleted, entry);
+		else
+			index_entry_free(entry);
+	}
 
 	return error;
 }
@@ -501,7 +504,7 @@ int git_index_clear(git_index *index)
 	}
 
 	while (!error && index->entries.length > 0)
-		error = index_remove_entry(index, index->entries.length - 1, false);
+		error = index_remove_entry(index, index->entries.length - 1);
 	index_free_deleted(index);
 
 	git_mutex_unlock(&index->lock);
@@ -684,6 +687,16 @@ size_t git_index_entrycount(const git_index *index)
 	return index->entries.length;
 }
 
+GIT_INLINE(int) git_index__find_internal(
+	size_t *out, git_index *index, const char *path, size_t path_len, int stage,
+	bool need_lock)
+{
+	if (index_sort_if_needed(index, need_lock) < 0)
+		return -1;
+	return git_index__find_in_entries(
+		out, &index->entries, index->entries_search, path, path_len, stage);
+}
+
 const git_index_entry *git_index_get_byindex(
 	git_index *index, size_t n)
 {
@@ -700,7 +713,7 @@ const git_index_entry *git_index_get_bypath(
 
 	assert(index);
 
-	if (git_index__find(&pos, index, path, 0, stage) < 0) {
+	if (git_index__find_internal(&pos, index, path, 0, stage, true) < 0) {
 		giterr_set(GITERR_INDEX, "Index does not contain %s", path);
 		return NULL;
 	}
@@ -724,6 +737,21 @@ void git_index_entry__init_from_stat(
 	entry->file_size = st->st_size;
 }
 
+static git_index_entry *index_entry_alloc(const char *path)
+{
+	size_t pathlen = strlen(path);
+	struct entry_internal *entry =
+		git__calloc(sizeof(struct entry_internal) + pathlen + 1, 1);
+	if (!entry)
+		return NULL;
+
+	entry->pathlen = pathlen;
+	memcpy(entry->path, path, pathlen);
+	entry->entry.path = entry->path;
+
+	return (git_index_entry *)entry;
+}
+
 static int index_entry_init(
 	git_index_entry **entry_out, git_index *index, const char *rel_path)
 {
@@ -743,20 +771,29 @@ static int index_entry_init(
 	if (error < 0)
 		return error;
 
-	entry = git__calloc(1, sizeof(git_index_entry));
+	entry = index_entry_alloc(rel_path);
 	GITERR_CHECK_ALLOC(entry);
 
+	entry->id = oid;
 	git_index_entry__init_from_stat(entry, &st, !index->distrust_filemode);
 
-	entry->id = oid;
-	entry->path = git__strdup(rel_path);
-	if (!entry->path) {
-		git__free(entry);
-		return -1;
-	}
-
-	*entry_out = entry;
+	*entry_out = (git_index_entry *)entry;
 	return 0;
+}
+
+static git_index_reuc_entry *reuc_entry_alloc(const char *path)
+{
+	size_t pathlen = strlen(path);
+	struct reuc_entry_internal *entry =
+		git__calloc(sizeof(struct reuc_entry_internal) + pathlen + 1, 1);
+	if (!entry)
+		return NULL;
+
+	entry->pathlen = pathlen;
+	memcpy(entry->path, path, pathlen);
+	entry->entry.path = entry->path;
+
+	return (git_index_reuc_entry *)entry;
 }
 
 static int index_entry_reuc_init(git_index_reuc_entry **reuc_out,
@@ -769,16 +806,8 @@ static int index_entry_reuc_init(git_index_reuc_entry **reuc_out,
 
 	assert(reuc_out && path);
 
-	*reuc_out = NULL;
-
-	reuc = git__calloc(1, sizeof(git_index_reuc_entry));
+	*reuc_out = reuc = reuc_entry_alloc(path);
 	GITERR_CHECK_ALLOC(reuc);
-
-	reuc->path = git__strdup(path);
-	if (reuc->path == NULL) {
-		git__free(reuc);
-		return -1;
-	}
 
 	if ((reuc->mode[0] = ancestor_mode) > 0)
 		git_oid_cpy(&reuc->oid[0], ancestor_oid);
@@ -789,8 +818,14 @@ static int index_entry_reuc_init(git_index_reuc_entry **reuc_out,
 	if ((reuc->mode[2] = their_mode) > 0)
 		git_oid_cpy(&reuc->oid[2], their_oid);
 
-	*reuc_out = reuc;
 	return 0;
+}
+
+static void index_entry_cpy(git_index_entry *tgt, const git_index_entry *src)
+{
+	char *tgt_path = tgt->path;
+	memcpy(tgt, src, sizeof(*tgt));
+	tgt->path = tgt_path; /* reset to existing path data */
 }
 
 static int index_entry_dup(git_index_entry **out, const git_index_entry *src)
@@ -802,19 +837,10 @@ static int index_entry_dup(git_index_entry **out, const git_index_entry *src)
 		return 0;
 	}
 
-	entry = git__malloc(sizeof(git_index_entry));
+	*out = entry = index_entry_alloc(src->path);
 	GITERR_CHECK_ALLOC(entry);
 
-	memcpy(entry, src, sizeof(git_index_entry));
-
-	/* duplicate the path string so we own it */
-	entry->path = git__strdup(entry->path);
-	if (!entry->path) {
-		git__free(entry);
-		return -1;
-	}
-
-	*out = entry;
+	index_entry_cpy(entry, src);
 	return 0;
 }
 
@@ -827,13 +853,13 @@ static int has_file_name(git_index *index,
 	const char *name = entry->path;
 
 	while (pos < index->entries.length) {
-		git_index_entry *p = index->entries.contents[pos++];
+		struct entry_internal *p = index->entries.contents[pos++];
 
-		if (len >= strlen(p->path))
+		if (len >= p->pathlen)
 			break;
 		if (memcmp(name, p->path, len))
 			break;
-		if (GIT_IDXENTRY_STAGE(p) != stage)
+		if (GIT_IDXENTRY_STAGE(&p->entry) != stage)
 			continue;
 		if (p->path[len] != '/')
 			continue;
@@ -841,7 +867,7 @@ static int has_file_name(git_index *index,
 		if (!ok_to_replace)
 			break;
 
-		if (index_remove_entry(index, --pos, true) < 0)
+		if (index_remove_entry(index, --pos) < 0)
 			break;
 	}
 	return retval;
@@ -860,7 +886,7 @@ static int has_dir_name(git_index *index,
 	const char *slash = name + strlen(name);
 
 	for (;;) {
-		size_t len, position;
+		size_t len, pos;
 
 		for (;;) {
 			if (*--slash == '/')
@@ -870,12 +896,12 @@ static int has_dir_name(git_index *index,
 		}
 		len = slash - name;
 
-		if (git_index__find(&position, index, name, len, stage) == 0) {
+		if (!git_index__find_internal(&pos, index, name, len, stage, false)) {
 			retval = -1;
 			if (!ok_to_replace)
 				break;
 
-			if (index_remove_entry(index, position, true) < 0)
+			if (index_remove_entry(index, pos) < 0)
 				break;
 			continue;
 		}
@@ -885,20 +911,19 @@ static int has_dir_name(git_index *index,
 		 * already matches the sub-directory, then we know
 		 * we're ok, and we can exit.
 		 */
-		while (position < index->entries.length) {
-			git_index_entry *p = index->entries.contents[position];
+		for (; pos < index->entries.length; ++pos) {
+			struct entry_internal *p = index->entries.contents[pos];
 
-			if ((strlen(p->path) <= len) ||
-			    (p->path[len] != '/') ||
+			if (p->pathlen <= len ||
+			    p->path[len] != '/' ||
 			    memcmp(p->path, name, len))
 				break; /* not our subdirectory */
 
-			if (GIT_IDXENTRY_STAGE(p) == stage)
+			if (GIT_IDXENTRY_STAGE(&p->entry) == stage)
 				return retval;
-
-			position++;
 		}
 	}
+
 	return retval;
 }
 
@@ -909,7 +934,8 @@ static int check_file_directory_collision(git_index *index,
 	retval = retval + has_dir_name(index, entry, ok_to_replace);
 
 	if (retval) {
-		giterr_set(GITERR_INDEX, "'%s' appears as both a file an a directory", entry->path);
+		giterr_set(GITERR_INDEX,
+			"'%s' appears as both a file and a directory", entry->path);
 		return -1;
 	}
 
@@ -931,10 +957,9 @@ static int index_insert(
 	assert(index && entry_ptr);
 
 	entry = *entry_ptr;
-	assert(entry && entry->path);
 
 	/* make sure that the path length flag is correct */
-	path_length = strlen(entry->path);
+	path_length = ((struct entry_internal *)entry)->pathlen;
 
 	entry->flags &= ~GIT_IDXENTRY_NAMEMASK;
 
@@ -943,43 +968,43 @@ static int index_insert(
 	else
 		entry->flags |= GIT_IDXENTRY_NAMEMASK;
 
+	if ((error = git_mutex_lock(&index->lock)) < 0) {
+		giterr_set(GITERR_OS, "Unable to acquire index lock");
+		return error;
+	}
+
+	git_vector_sort(&index->entries);
+
 	/* look if an entry with this path already exists */
-	if (!git_index__find(
-			&position, index, entry->path, 0, GIT_IDXENTRY_STAGE(entry))) {
+	if (!git_index__find_internal(
+			&position, index, entry->path, 0, GIT_IDXENTRY_STAGE(entry), false)) {
 		existing = index->entries.contents[position];
 		/* update filemode to existing values if stat is not trusted */
 		entry->mode = index_merge_mode(index, existing, entry->mode);
 	}
 
+	/* look for tree / blob name collisions, removing conflicts if requested */
 	error = check_file_directory_collision(index, entry, position, replace);
 	if (error < 0)
-		goto done;
+		/* skip changes */;
 
 	/* if we are replacing an existing item, overwrite the existing entry
 	 * and return it in place of the passed in one.
 	 */
-	if (existing && replace) {
-		git__free(entry->path);
-		entry->path = existing->path;
-
-		memcpy(existing, entry, sizeof(*entry));
+	else if (existing && replace) {
+		index_entry_cpy(existing, entry);
+		index_entry_free(entry);
 		*entry_ptr = existing;
-
-		git__free(entry);
-		return 0;
 	}
-
-	/* if replacing is not requested or no existing entry exists, just
-	 * insert entry at the end; the index is no longer sorted
-	 */
-	if ((error = git_mutex_lock(&index->lock)) < 0) {
-		giterr_set(GITERR_OS, "Unable to acquire index lock");
-	} else {
+	else {
+		/* if replacing is not requested or no existing entry exists, just
+		 * insert entry at the end; the index is no longer sorted
+		 */
 		error = git_vector_insert(&index->entries, entry);
-		git_mutex_unlock(&index->lock);
 	}
 
-done:
+	git_mutex_unlock(&index->lock);
+
 	if (error < 0) {
 		index_entry_free(*entry_ptr);
 		*entry_ptr = NULL;
@@ -1053,7 +1078,7 @@ int git_index_add(git_index *index, const git_index_entry *source_entry)
 	git_index_entry *entry = NULL;
 	int ret;
 
-	assert(index && source_entry);
+	assert(index && source_entry && source_entry->path);
 
 	if ((ret = index_entry_dup(&entry, source_entry)) < 0 ||
 		(ret = index_insert(index, &entry, 1)) < 0)
@@ -1065,15 +1090,24 @@ int git_index_add(git_index *index, const git_index_entry *source_entry)
 
 int git_index_remove(git_index *index, const char *path, int stage)
 {
+	int error;
 	size_t position;
 
-	if (git_index__find(&position, index, path, 0, stage) < 0) {
-		giterr_set(GITERR_INDEX, "Index does not contain %s at stage %d",
-			path, stage);
-		return GIT_ENOTFOUND;
+	if (git_mutex_lock(&index->lock) < 0) {
+		giterr_set(GITERR_OS, "Failed to lock index");
+		return -1;
 	}
 
-	return index_remove_entry(index, position, true);
+	if (git_index__find_internal(&position, index, path, 0, stage, false) < 0) {
+		giterr_set(
+			GITERR_INDEX, "Index does not contain %s at stage %d", path, stage);
+		error = GIT_ENOTFOUND;
+	} else {
+		error = index_remove_entry(index, position);
+	}
+
+	git_mutex_unlock(&index->lock);
+	return error;
 }
 
 int git_index_remove_directory(git_index *index, const char *dir, int stage)
@@ -1083,12 +1117,17 @@ int git_index_remove_directory(git_index *index, const char *dir, int stage)
 	size_t pos;
 	git_index_entry *entry;
 
-	if (git_buf_sets(&pfx, dir) < 0 || git_path_to_dir(&pfx) < 0)
+	if (git_mutex_lock(&index->lock) < 0) {
+		giterr_set(GITERR_OS, "Failed to lock index");
 		return -1;
+	}
 
-	git_index__find(&pos, index, pfx.ptr, pfx.size, GIT_INDEX_STAGE_ANY);
+	if (!(error = git_buf_sets(&pfx, dir)) &&
+		!(error = git_path_to_dir(&pfx)))
+		git_index__find_internal(
+			&pos, index, pfx.ptr, pfx.size, GIT_INDEX_STAGE_ANY, false);
 
-	while (1) {
+	while (!error) {
 		entry = git_vector_get(&index->entries, pos);
 		if (!entry || git__prefixcmp(entry->path, pfx.ptr) != 0)
 			break;
@@ -1098,12 +1137,12 @@ int git_index_remove_directory(git_index *index, const char *dir, int stage)
 			continue;
 		}
 
-		if ((error = index_remove_entry(index, pos, true)) < 0)
-			break;
+		error = index_remove_entry(index, pos);
 
-		/* removed entry at 'pos' so we don't need to increment it */
+		/* removed entry at 'pos' so we don't need to increment */
 	}
 
+	git_mutex_unlock(&index->lock);
 	git_buf_free(&pfx);
 
 	return error;
@@ -1115,7 +1154,7 @@ int git_index__find_in_entries(
 {
 	struct entry_srch_key srch_key;
 	srch_key.path = path;
-	srch_key.path_len = !path_len ? strlen(path) : path_len;
+	srch_key.pathlen = !path_len ? strlen(path) : path_len;
 	srch_key.stage = stage;
 	return git_vector_bsearch2(out, entries, entry_srch, &srch_key);
 }
@@ -1124,12 +1163,7 @@ int git_index__find(
 	size_t *out, git_index *index, const char *path, size_t path_len, int stage)
 {
 	assert(index && path);
-
-	if (index_sort_if_needed(index, true) < 0)
-		return -1;
-
-	return git_index__find_in_entries(
-		out, &index->entries, index->entries_search, path, path_len, stage);
+	return git_index__find_internal(out, index, path, path_len, stage, true);
 }
 
 int git_index_find(size_t *at_pos, git_index *index, const char *path)
@@ -1138,7 +1172,13 @@ int git_index_find(size_t *at_pos, git_index *index, const char *path)
 
 	assert(index && path);
 
+	if (git_mutex_lock(&index->lock) < 0) {
+		giterr_set(GITERR_OS, "Failed to lock index");
+		return -1;
+	}
+
 	if (git_vector_bsearch2(&pos, &index->entries, index->entries_search_path, path) < 0) {
+		git_mutex_unlock(&index->lock);
 		giterr_set(GITERR_INDEX, "Index does not contain %s", path);
 		return GIT_ENOTFOUND;
 	}
@@ -1158,6 +1198,7 @@ int git_index_find(size_t *at_pos, git_index *index, const char *path)
 	if (at_pos)
 		*at_pos = pos;
 
+	git_mutex_unlock(&index->lock);
 	return 0;
 }
 
@@ -1288,6 +1329,11 @@ int git_index_conflict_remove(git_index *index, const char *path)
 	if (git_index_find(&pos, index, path) < 0)
 		return GIT_ENOTFOUND;
 
+	if (git_mutex_lock(&index->lock) < 0) {
+		giterr_set(GITERR_OS, "Unable to lock index");
+		return -1;
+	}
+
 	while ((conflict_entry = git_vector_get(&index->entries, pos)) != NULL) {
 
 		if (index->entries_cmp_path(conflict_entry->path, path) != 0)
@@ -1298,9 +1344,11 @@ int git_index_conflict_remove(git_index *index, const char *path)
 			continue;
 		}
 
-		if ((error = index_remove_entry(index, pos, true)) < 0)
+		if ((error = index_remove_entry(index, pos)) < 0)
 			break;
 	}
+
+	git_mutex_unlock(&index->lock);
 
 	return error;
 }
@@ -1311,7 +1359,7 @@ static int index_conflicts_match(const git_vector *v, size_t idx, void *p)
 	git_index_entry *entry = git_vector_get(v, idx);
 
 	if (GIT_IDXENTRY_STAGE(entry) > 0 &&
-		!index_remove_entry(index, idx, false))
+		!index_remove_entry(index, idx))
 		return 1;
 
 	return 0;
@@ -1488,7 +1536,6 @@ static int index_reuc_insert(
 		return git_vector_insert(&index->reuc, reuc);
 
 	/* exists, replace it */
-	git__free((*existing)->path);
 	git__free(*existing);
 	*existing = reuc;
 
@@ -1596,12 +1643,8 @@ static int read_reuc(git_index *index, const char *buffer, size_t size)
 		if (size <= len)
 			return index_error_invalid("reading reuc entries");
 
-		lost = git__calloc(1, sizeof(git_index_reuc_entry));
+		lost = reuc_entry_alloc(buffer);
 		GITERR_CHECK_ALLOC(lost);
-
-		/* read NUL-terminated pathname for entry */
-		lost->path = git__strdup(buffer);
-		GITERR_CHECK_ALLOC(lost->path);
 
 		size -= len;
 		buffer += len;
@@ -1700,41 +1743,41 @@ static int read_conflict_names(git_index *index, const char *buffer, size_t size
 	return 0;
 }
 
-static size_t read_entry(git_index_entry *dest, const void *buffer, size_t buffer_size)
+static size_t read_entry(
+	git_index_entry **out, const void *buffer, size_t buffer_size)
 {
 	size_t path_length, entry_size;
 	uint16_t flags_raw;
 	const char *path_ptr;
 	const struct entry_short *source = buffer;
+	git_index_entry entry = {{0}};
 
 	if (INDEX_FOOTER_SIZE + minimal_entry_size > buffer_size)
 		return 0;
 
-	memset(dest, 0x0, sizeof(git_index_entry));
+	entry.ctime.seconds = (git_time_t)ntohl(source->ctime.seconds);
+	entry.ctime.nanoseconds = ntohl(source->ctime.nanoseconds);
+	entry.mtime.seconds = (git_time_t)ntohl(source->mtime.seconds);
+	entry.mtime.nanoseconds = ntohl(source->mtime.nanoseconds);
+	entry.dev = ntohl(source->dev);
+	entry.ino = ntohl(source->ino);
+	entry.mode = ntohl(source->mode);
+	entry.uid = ntohl(source->uid);
+	entry.gid = ntohl(source->gid);
+	entry.file_size = ntohl(source->file_size);
+	git_oid_cpy(&entry.id, &source->oid);
+	entry.flags = ntohs(source->flags);
 
-	dest->ctime.seconds = (git_time_t)ntohl(source->ctime.seconds);
-	dest->ctime.nanoseconds = ntohl(source->ctime.nanoseconds);
-	dest->mtime.seconds = (git_time_t)ntohl(source->mtime.seconds);
-	dest->mtime.nanoseconds = ntohl(source->mtime.nanoseconds);
-	dest->dev = ntohl(source->dev);
-	dest->ino = ntohl(source->ino);
-	dest->mode = ntohl(source->mode);
-	dest->uid = ntohl(source->uid);
-	dest->gid = ntohl(source->gid);
-	dest->file_size = ntohl(source->file_size);
-	git_oid_cpy(&dest->id, &source->oid);
-	dest->flags = ntohs(source->flags);
-
-	if (dest->flags & GIT_IDXENTRY_EXTENDED) {
+	if (entry.flags & GIT_IDXENTRY_EXTENDED) {
 		const struct entry_long *source_l = (const struct entry_long *)source;
 		path_ptr = source_l->path;
 
 		flags_raw = ntohs(source_l->flags_extended);
-		memcpy(&dest->flags_extended, &flags_raw, 2);
+		memcpy(&entry.flags_extended, &flags_raw, 2);
 	} else
 		path_ptr = source->path;
 
-	path_length = dest->flags & GIT_IDXENTRY_NAMEMASK;
+	path_length = entry.flags & GIT_IDXENTRY_NAMEMASK;
 
 	/* if this is a very long string, we must find its
 	 * real length without overflowing */
@@ -1748,7 +1791,7 @@ static size_t read_entry(git_index_entry *dest, const void *buffer, size_t buffe
 		path_length = path_end - path_ptr;
 	}
 
-	if (dest->flags & GIT_IDXENTRY_EXTENDED)
+	if (entry.flags & GIT_IDXENTRY_EXTENDED)
 		entry_size = long_entry_size(path_length);
 	else
 		entry_size = short_entry_size(path_length);
@@ -1756,8 +1799,10 @@ static size_t read_entry(git_index_entry *dest, const void *buffer, size_t buffe
 	if (INDEX_FOOTER_SIZE + entry_size > buffer_size)
 		return 0;
 
-	dest->path = git__strdup(path_ptr);
-	assert(dest->path);
+	entry.path = (char *)path_ptr;
+
+	if (index_entry_dup(out, &entry) < 0)
+		return 0;
 
 	return entry_size;
 }
@@ -1853,20 +1898,12 @@ static int parse_index(git_index *index, const char *buffer, size_t buffer_size)
 		return -1;
 	}
 
-	git_vector_clear(&index->entries);
+	assert(!index->entries.length);
 
 	/* Parse all the entries */
 	for (i = 0; i < header.entry_count && buffer_size > INDEX_FOOTER_SIZE; ++i) {
-		size_t entry_size;
 		git_index_entry *entry;
-
-		entry = git__malloc(sizeof(git_index_entry));
-		if (!entry) {
-			error = -1;
-			goto done;
-		}
-
-		entry_size = read_entry(entry, buffer, buffer_size);
+		size_t entry_size = read_entry(&entry, buffer, buffer_size);
 
 		/* 0 bytes read means an object corruption */
 		if (entry_size == 0) {
@@ -1874,8 +1911,10 @@ static int parse_index(git_index *index, const char *buffer, size_t buffer_size)
 			goto done;
 		}
 
-		if ((error = git_vector_insert(&index->entries, entry)) < 0)
+		if ((error = git_vector_insert(&index->entries, entry)) < 0) {
+			index_entry_free(entry);
 			goto done;
+		}
 
 		seek_forward(entry_size);
 	}
@@ -1953,7 +1992,7 @@ static int write_disk_entry(git_filebuf *file, git_index_entry *entry)
 	size_t path_len, disk_size;
 	char *path;
 
-	path_len = strlen(entry->path);
+	path_len = ((struct entry_internal *)entry)->pathlen;
 
 	if (entry->flags & GIT_IDXENTRY_EXTENDED)
 		disk_size = long_entry_size(path_len);
@@ -2222,7 +2261,7 @@ static int read_tree_cb(
 	if (git_buf_joinpath(&path, root, tentry->filename) < 0)
 		return -1;
 
-	entry = git__calloc(1, sizeof(git_index_entry));
+	entry = index_entry_alloc(path.ptr);
 	GITERR_CHECK_ALLOC(entry);
 
 	entry->mode = tentry->attr;
@@ -2236,7 +2275,9 @@ static int read_tree_cb(
 		entry->mode == old_entry->mode &&
 		git_oid_equal(&entry->id, &old_entry->id))
 	{
+		char *oldpath = entry->path;
 		memcpy(entry, old_entry, sizeof(*entry));
+		entry->path = oldpath;
 		entry->flags_extended = 0;
 	}
 
@@ -2245,7 +2286,6 @@ static int read_tree_cb(
 	else
 		entry->flags = GIT_IDXENTRY_NAMEMASK;
 
-	entry->path = git_buf_detach(&path);
 	git_buf_free(&path);
 
 	if (git_vector_insert(data->new_entries, entry) < 0) {
@@ -2543,10 +2583,11 @@ int git_index__snapshot(git_vector *entries, git_index *index)
 void git_index__release_snapshot(git_index *index)
 {
 	git_atomic_dec(&index->readers);
-	git_index_free(index);
 
 	if (!git_mutex_lock(&index->lock)) {
 		index_free_deleted(index); /* try to free pending deleted items */
 		git_mutex_unlock(&index->lock);
 	}
+
+	git_index_free(index);
 }

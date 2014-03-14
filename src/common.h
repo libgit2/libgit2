@@ -46,6 +46,7 @@
 # include <unistd.h>
 # ifdef GIT_THREADS
 #	include <pthread.h>
+#	include <sched.h>
 # endif
 #define GIT_STDLIB_CALL
 
