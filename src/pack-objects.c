@@ -86,12 +86,15 @@ static unsigned name_hash(const char *name)
 
 static int packbuilder_config(git_packbuilder *pb)
 {
-	git_config *config;
+	git_config *config, *repo_config;
 	int ret;
 	int64_t val;
 
-	if (git_repository_config__weakptr(&config, pb->repo) < 0)
-		return -1;
+	if ((ret = git_repository_config__weakptr(&repo_config, pb->repo)) < 0)
+		return ret;
+
+	if ((ret = git_config_snapshot(&config, repo_config)) < 0)
+		return ret;
 
 #define config_get(KEY,DST,DFLT) do { \
 	ret = git_config_get_int64(&val, config, KEY); \
@@ -108,6 +111,8 @@ static int packbuilder_config(git_packbuilder *pb)
 	config_get("pack.windowMemory", pb->window_memory_limit, 0);
 
 #undef config_get
+
+	git_config_free(config);
 
 	return 0;
 }

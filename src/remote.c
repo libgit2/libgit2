@@ -347,7 +347,7 @@ int git_remote_load(git_remote **out, git_repository *repo, const char *name)
 	git_buf buf = GIT_BUF_INIT;
 	const char *val;
 	int error = 0;
-	git_config *config;
+	git_config *config, *repo_config;
 	struct refspec_cb_data data = { NULL };
 	bool optional_setting_found = false, found;
 
@@ -356,8 +356,11 @@ int git_remote_load(git_remote **out, git_repository *repo, const char *name)
 	if ((error = ensure_remote_name_is_valid(name)) < 0)
 		return error;
 
-	if (git_repository_config__weakptr(&config, repo) < 0)
+	if (git_repository_config__weakptr(&repo_config, repo) < 0)
 		return -1;
+
+	if ((error = git_config_snapshot(&config, repo_config)) < 0)
+		return error;
 
 	remote = git__malloc(sizeof(git_remote));
 	GITERR_CHECK_ALLOC(remote);
@@ -437,6 +440,7 @@ int git_remote_load(git_remote **out, git_repository *repo, const char *name)
 	*out = remote;
 
 cleanup:
+	git_config_free(config);
 	git_buf_free(&buf);
 
 	if (error < 0)
