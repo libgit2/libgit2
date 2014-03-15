@@ -1317,15 +1317,13 @@ int git_index_conflict_get(
 	return 0;
 }
 
-int git_index_conflict_remove(git_index *index, const char *path)
+static int index_conflict_remove(git_index *index, const char *path)
 {
-	size_t pos;
+	size_t pos = 0;
 	git_index_entry *conflict_entry;
 	int error = 0;
 
-	assert(index && path);
-
-	if (git_index_find(&pos, index, path) < 0)
+	if (path != NULL && git_index_find(&pos, index, path) < 0)
 		return GIT_ENOTFOUND;
 
 	if (git_mutex_lock(&index->lock) < 0) {
@@ -1335,7 +1333,8 @@ int git_index_conflict_remove(git_index *index, const char *path)
 
 	while ((conflict_entry = git_vector_get(&index->entries, pos)) != NULL) {
 
-		if (index->entries_cmp_path(conflict_entry->path, path) != 0)
+		if (path != NULL &&
+			index->entries_cmp_path(conflict_entry->path, path) != 0)
 			break;
 
 		if (GIT_IDXENTRY_STAGE(conflict_entry) == 0) {
@@ -1352,27 +1351,16 @@ int git_index_conflict_remove(git_index *index, const char *path)
 	return error;
 }
 
-static int index_conflicts_match(const git_vector *v, size_t idx, void *p)
+int git_index_conflict_remove(git_index *index, const char *path)
 {
-	git_index *index = p;
-	git_index_entry *entry = git_vector_get(v, idx);
-
-	if (GIT_IDXENTRY_STAGE(entry) > 0 &&
-		!index_remove_entry(index, idx))
-		return 1;
-
-	return 0;
+	assert(index && path);
+	return index_conflict_remove(index, path);
 }
 
-void git_index_conflict_cleanup(git_index *index)
+int git_index_conflict_cleanup(git_index *index)
 {
 	assert(index);
-
-	if (git_mutex_lock(&index->lock) < 0)
-		return;
-	git_vector_remove_matching(&index->entries, index_conflicts_match, index);
-	index_free_deleted(index);
-	git_mutex_unlock(&index->lock);
+	return index_conflict_remove(index, NULL);
 }
 
 int git_index_has_conflicts(const git_index *index)

@@ -575,8 +575,7 @@ GIT_EXTERN(int) git_index_update_all(
  * @param at_pos the address to which the position of the index entry is written (optional)
  * @param index an existing index object
  * @param path path to search
- * @return a zero-based position in the index if found;
- * GIT_ENOTFOUND otherwise
+ * @return a zero-based position in the index if found; GIT_ENOTFOUND otherwise
  */
 GIT_EXTERN(int) git_index_find(size_t *at_pos, git_index *index, const char *path);
 
@@ -620,6 +619,7 @@ GIT_EXTERN(int) git_index_conflict_add(
  * @param their_out Pointer to store the their entry
  * @param index an existing index object
  * @param path path to search
+ * @return 0 or an error code
  */
 GIT_EXTERN(int) git_index_conflict_get(
 	const git_index_entry **ancestor_out,
@@ -632,16 +632,18 @@ GIT_EXTERN(int) git_index_conflict_get(
  * Removes the index entries that represent a conflict of a single file.
  *
  * @param index an existing index object
- * @param path to search
+ * @param path path to remove conflicts for
+ * @return 0 or an error code
  */
 GIT_EXTERN(int) git_index_conflict_remove(git_index *index, const char *path);
 
 /**
- * Remove all conflicts in the index (entries with a stage greater than 0.)
+ * Remove all conflicts in the index (entries with a stage greater than 0).
  *
  * @param index an existing index object
+ * @return 0 or an error code
  */
-GIT_EXTERN(void) git_index_conflict_cleanup(git_index *index);
+GIT_EXTERN(int) git_index_conflict_cleanup(git_index *index);
 
 /**
  * Determine if the index contains entries representing file conflicts.
@@ -651,9 +653,12 @@ GIT_EXTERN(void) git_index_conflict_cleanup(git_index *index);
 GIT_EXTERN(int) git_index_has_conflicts(const git_index *index);
 
 /**
- * Create an iterator for the conflicts in the index.  You may not modify the
- * index while iterating, the results are undefined.
+ * Create an iterator for the conflicts in the index.
  *
+ * The index must not be modified while iterating; the results are undefined.
+ *
+ * @param iterator_out The newly created conflict iterator
+ * @param index The index to scan
  * @return 0 or an error code
  */
 GIT_EXTERN(int) git_index_conflict_iterator_new(
