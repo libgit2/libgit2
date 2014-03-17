@@ -1137,7 +1137,7 @@ int git_reference__is_branch(const char *ref_name)
 	return git__prefixcmp(ref_name, GIT_REFS_HEADS_DIR) == 0;
 }
 
-int git_reference_is_branch(git_reference *ref)
+int git_reference_is_branch(const git_reference *ref)
 {
 	assert(ref);
 	return git_reference__is_branch(ref->name);

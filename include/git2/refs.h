@@ -586,7 +586,7 @@ GIT_EXTERN(int) git_reference_ensure_log(git_repository *repo, const char *refna
  * @return 1 when the reference lives in the refs/heads
  * namespace; 0 otherwise.
  */
-GIT_EXTERN(int) git_reference_is_branch(git_reference *ref);
+GIT_EXTERN(int) git_reference_is_branch(const git_reference *ref);
 
 /**
  * Check if a reference is a remote tracking branch
