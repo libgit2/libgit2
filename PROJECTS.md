@@ -58,6 +58,9 @@ These are good small projects to get started with libgit2.
 * Submit a PR to clarify documentation! While we do try to document all of
   the APIs, your fresh eyes on the documentation will find areas that are
   confusing much more easily.
+* Add support for the symref protocol extension, so we don't guess
+  what the remote's default branch is
+  [#2006](https://github.com/libgit2/libgit2/issues/2006)
 
 If none of these appeal to you, take a look at our issues list to see if
 there are any unresolved issues you'd like to jump in on.
@@ -80,3 +83,9 @@ projects above.
 * Upgrade internal libxdiff code to latest from core Git
 * Add a hashtable lookup for files in the index instead of binary search
   every time
+* Make the index write the cache out to disk (with tests to gain
+  confidence that the caching invalidation works correctly)
+* Have the tree builder use a hash table when building instead of a
+  list.
+* Move the tagopt mechanism to the newer git 1.9 interpretation of
+  --tags [#2120](https://github.com/libgit2/libgit2/issues/2120)
