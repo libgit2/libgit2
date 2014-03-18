@@ -189,7 +189,6 @@ void test_revwalk_mergebase__many_no_common_ancestor_returns_ENOTFOUND(void)
 	assert_mergebase_many(NULL, 3, "e90810", "41bc8c", "a65fed");
 	assert_mergebase_many(NULL, 3, "e90810", "a65fed", "41bc8c");
 	assert_mergebase_many(NULL, 3, "a65fed", "e90810", "41bc8c");
-	assert_mergebase_many(NULL, 3, "a65fed", "e90810", "41bc8c");
 	assert_mergebase_many(NULL, 3, "a65fed", "41bc8c", "e90810");
 
 	assert_mergebase_many(NULL, 3, "e90810", "763d71", "a65fed");
@@ -207,6 +206,70 @@ void test_revwalk_mergebase__many_merge_branch(void)
 	assert_mergebase_many("8496071c1b46c854b31185ea97743be6a8774479", 3, "849607", "a65fed", "763d71");
 
 	assert_mergebase_many("5b5b025afb0b4c913b4c338a42934a3863bf3644", 5, "5b5b02", "763d71", "a4a7dc", "a65fed", "41bc8c");
+}
+
+static void assert_mergebase_octopus(const char *expected_sha, int count, ...)
+{
+	va_list ap;
+	int i;
+	git_oid *oids;
+	git_oid oid, expected;
+	char *partial_oid;
+	git_object *object;
+
+	oids = git__malloc(count * sizeof(git_oid));
+	cl_assert(oids != NULL);
+
+	memset(oids, 0x0, count * sizeof(git_oid));
+
+	va_start(ap, count);
+
+	for (i = 0; i < count; ++i) {
+		partial_oid = va_arg(ap, char *);
+		cl_git_pass(git_oid_fromstrn(&oid, partial_oid, strlen(partial_oid)));
+
+		cl_git_pass(git_object_lookup_prefix(&object, _repo, &oid, strlen(partial_oid), GIT_OBJ_COMMIT));
+		git_oid_cpy(&oids[i], git_object_id(object));
+		git_object_free(object);
+	}
+
+	va_end(ap);
+
+	if (expected_sha == NULL)
+		cl_assert_equal_i(GIT_ENOTFOUND, git_merge_base_octopus(&oid, _repo, count, oids));
+	else {
+		cl_git_pass(git_merge_base_octopus(&oid, _repo, count, oids));
+		cl_git_pass(git_oid_fromstr(&expected, expected_sha));
+
+		cl_assert(git_oid_cmp(&expected, &oid) == 0);
+	}
+
+	git__free(oids);
+}
+
+void test_revwalk_mergebase__octopus_no_common_ancestor_returns_ENOTFOUND(void)
+{
+	assert_mergebase_octopus(NULL, 3, "41bc8c", "e90810", "a65fed");
+	assert_mergebase_octopus(NULL, 3, "e90810", "41bc8c", "a65fed");
+	assert_mergebase_octopus(NULL, 3, "e90810", "a65fed", "41bc8c");
+	assert_mergebase_octopus(NULL, 3, "a65fed", "e90810", "41bc8c");
+	assert_mergebase_octopus(NULL, 3, "a65fed", "41bc8c", "e90810");
+
+	assert_mergebase_octopus(NULL, 3, "e90810", "763d71", "a65fed");
+
+	assert_mergebase_octopus(NULL, 3, "763d71", "e90810", "a65fed");
+	assert_mergebase_octopus(NULL, 3, "763d71", "a65fed", "e90810");
+
+	assert_mergebase_octopus(NULL, 5, "5b5b02", "763d71", "a4a7dc", "a65fed", "41bc8c");
+}
+
+void test_revwalk_mergebase__octopus_merge_branch(void)
+{
+	assert_mergebase_octopus("8496071c1b46c854b31185ea97743be6a8774479", 3, "a65fed", "763d71", "849607");
+
+	assert_mergebase_octopus("8496071c1b46c854b31185ea97743be6a8774479", 3, "a65fed", "763d71", "849607");
+	assert_mergebase_octopus("8496071c1b46c854b31185ea97743be6a8774479", 3, "a65fed", "849607", "763d71");
+	assert_mergebase_octopus("8496071c1b46c854b31185ea97743be6a8774479", 3, "849607", "a65fed", "763d71");
 }
 
 /*

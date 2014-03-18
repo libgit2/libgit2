@@ -114,6 +114,31 @@ cleanup:
 	return error;
 }
 
+int git_merge_base_octopus(git_oid *out, git_repository *repo, size_t length, const git_oid input_array[])
+{
+	git_oid result;
+	unsigned int i;
+	int error = -1;
+
+	assert(out && repo && input_array);
+
+	if (length < 2) {
+		giterr_set(GITERR_INVALID, "At least two commits are required to find an ancestor. Provided 'length' was %u.", length);
+		return -1;
+	}
+
+	result = input_array[0];
+	for (i = 1; i < length; i++) {
+		error = git_merge_base(&result, repo, &result, &input_array[i]);
+		if (error < 0)
+			return error;
+	}
+
+	*out = result;
+
+	return 0;
+}
+
 int git_merge_base(git_oid *out, git_repository *repo, const git_oid *one, const git_oid *two)
 {
 	git_revwalk *walk;
