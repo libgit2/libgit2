@@ -2517,8 +2517,8 @@ done:
 	return error;
 }
 
-int git_merge_status(
-	git_merge_status_t *out,
+int git_merge_analysis(
+	git_merge_analysis_t *out,
 	git_repository *repo,
 	const git_merge_head **their_heads,
 	size_t their_heads_len)
@@ -2528,7 +2528,7 @@ int git_merge_status(
 
 	assert(out && repo && their_heads);
 
-	*out = GIT_MERGE_STATUS_NORMAL;
+	*out = GIT_MERGE_ANALYSIS_NORMAL;
 
 	if ((error = merge_heads(&ancestor_head, &our_head, repo, their_heads, their_heads_len)) < 0)
 		goto done;
@@ -2536,11 +2536,11 @@ int git_merge_status(
 	if (their_heads_len == 1 && ancestor_head != NULL) {
 		/* We're up-to-date if we're trying to merge our own common ancestor. */
 		if (git_oid_equal(&ancestor_head->oid, &their_heads[0]->oid))
-			*out = GIT_MERGE_STATUS_UP_TO_DATE;
+			*out = GIT_MERGE_ANALYSIS_UP_TO_DATE;
 
 		/* We're fastforwardable if we're our own common ancestor. */
 		else if (git_oid_equal(&ancestor_head->oid, &our_head->oid))
-			*out = GIT_MERGE_STATUS_FASTFORWARD;
+			*out = GIT_MERGE_ANALYSIS_FASTFORWARD | GIT_MERGE_ANALYSIS_NORMAL;
 	}
 
 done:

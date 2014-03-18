@@ -235,41 +235,44 @@ GIT_EXTERN(int) git_merge_init_options(
 	int version);
 
 /**
- * The results of `git_merge_status` indicate the state of a merge scenario.
+ * The results of `git_merge_analysis` indicate the merge opportunities.
  */
 typedef enum {
+	/** No merge is possible.  (Unused.) */
+	GIT_MERGE_ANALYSIS_NONE = 0,
+
 	/**
 	 * A "normal" merge; both HEAD and the given merge input have diverged
 	 * from their common ancestor.  The divergent commits must be merged.
 	 */
-	GIT_MERGE_STATUS_NORMAL = 0,
+	GIT_MERGE_ANALYSIS_NORMAL = (1 << 0),
 
 	/**
 	 * The repository is already up-to-date and no merge needs to be
 	 * performed.  The given merge input already exists as a parent of HEAD.
 	 */
-	GIT_MERGE_STATUS_UP_TO_DATE = (1 << 0),
+	GIT_MERGE_ANALYSIS_UP_TO_DATE = (1 << 1),
 
 	/**
 	 * The given merge input is a fast-forward from HEAD and no merge
 	 * needs to be performed.  Instead, the client can check out the
 	 * given merge input.
 	 */
-	GIT_MERGE_STATUS_FASTFORWARD = (1 << 1),
-} git_merge_status_t;
+	GIT_MERGE_ANALYSIS_FASTFORWARD = (1 << 2),
+} git_merge_analysis_t;
 
 /**
- * Determine the status of the merge between the given branch(es) and the
- * HEAD of the repository.
+ * Analyzes the given branch(es) and determines the opportunities for
+ * merging them into the HEAD of the repository.
  *
- * @param status_out status enumeration that the result is written into
+ * @param analysis_out analysis enumeration that the result is written into
  * @param repo the repository to merge
  * @param their_heads the heads to merge into
  * @param their_heads_len the number of heads to merge
  * @return 0 on success or error code
  */
-GIT_EXTERN(int) git_merge_status(
-	git_merge_status_t *status_out,
+GIT_EXTERN(int) git_merge_analysis(
+	git_merge_analysis_t *analysis_out,
 	git_repository *repo,
 	const git_merge_head **their_heads,
 	size_t their_heads_len);
