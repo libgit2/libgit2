@@ -588,7 +588,7 @@ on_error:
 }
 
 int git_branch_is_head(
-		git_reference *branch)
+		const git_reference *branch)
 {
 	git_reference *head;
 	bool is_same = false;

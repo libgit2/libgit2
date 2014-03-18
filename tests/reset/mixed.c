@@ -65,17 +65,19 @@ void test_reset_mixed__reflog_is_correct(void)
 	target = NULL;
 
 	/* Moved branch, expect default message */
+	exp_msg = "reset: moving";
 	cl_git_pass(git_revparse_single(&target, repo, "HEAD~^{commit}"));
 	cl_git_pass(git_reset(repo, target, GIT_RESET_MIXED, NULL, NULL));
-	reflog_check(repo, "HEAD", 9, "yoram.harmelin@gmail.com", exp_msg);
-	reflog_check(repo, "refs/heads/master", 10, NULL, "reset: moving");
+	reflog_check(repo, "HEAD", 10, NULL, exp_msg);
+	reflog_check(repo, "refs/heads/master", 10, NULL, exp_msg);
 
 	git_object_free(target);
 	target = NULL;
 
 	/* Moved branch, expect custom message */
+	exp_msg = "message1";
 	cl_git_pass(git_revparse_single(&target, repo, "HEAD~^{commit}"));
 	cl_git_pass(git_reset(repo, target, GIT_RESET_MIXED, NULL, "message1"));
-	reflog_check(repo, "HEAD", 9, "yoram.harmelin@gmail.com", exp_msg);
-	reflog_check(repo, "refs/heads/master", 11, NULL, "message1");
+	reflog_check(repo, "HEAD", 11, NULL, exp_msg);
+	reflog_check(repo, "refs/heads/master", 11, NULL, exp_msg);
 }

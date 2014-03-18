@@ -238,7 +238,7 @@ GIT_EXTERN(int) git_branch_upstream_name(
  * error code otherwise.
  */
 GIT_EXTERN(int) git_branch_is_head(
-	git_reference *branch);
+	const git_reference *branch);
 
 /**
  * Return the name of remote that the remote tracking branch belongs to.
