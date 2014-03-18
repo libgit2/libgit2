@@ -341,3 +341,30 @@ void test_repo_head__orphan_branch_does_not_count(void)
 
 	git_signature_free(sig);
 }
+
+void test_repo_head__set_to_current_target(void)
+{
+	git_signature *sig;
+	const char *msg;
+	git_reflog *log;
+	size_t nentries, nentries_after;
+
+	cl_git_pass(git_reflog_read(&log, repo, GIT_HEAD_FILE));
+	nentries = git_reflog_entrycount(log);
+	git_reflog_free(log);
+
+	cl_git_pass(git_signature_now(&sig, "me", "foo@example.com"));
+
+	msg = "message 1";
+	cl_git_pass(git_repository_set_head(repo, "refs/heads/haacked", sig, msg));
+	cl_git_pass(git_repository_set_head(repo, "refs/heads/haacked", sig, msg));
+
+	cl_git_pass(git_reflog_read(&log, repo, GIT_HEAD_FILE));
+	nentries_after = git_reflog_entrycount(log);
+	git_reflog_free(log);
+
+	cl_assert_equal_i(nentries + 1, nentries_after);
+
+	git_signature_free(sig);
+
+}

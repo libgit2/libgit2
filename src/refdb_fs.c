@@ -1021,6 +1021,8 @@ static int refdb_fs_backend__write(
 	refdb_fs_backend *backend = (refdb_fs_backend *)_backend;
 	git_filebuf file = GIT_FILEBUF_INIT;
 	int error = 0, cmp = 0;
+	const char *new_target = NULL;
+	const git_oid *new_id = NULL;
 
 	assert(backend);
 
@@ -1039,6 +1041,21 @@ static int refdb_fs_backend__write(
 		giterr_set(GITERR_REFERENCE, "old reference value does not match");
 		error = GIT_EMODIFIED;
 		goto on_error;
+	}
+
+	if (ref->type == GIT_REF_SYMBOLIC)
+		new_target = ref->target.symbolic;
+	else
+		new_id = &ref->target.oid;
+
+	error = cmp_old_ref(&cmp, _backend, ref->name, new_id, new_target);
+	if (error < 0 && error != GIT_ENOTFOUND)
+		goto on_error;
+
+	/* Don't update if we have the same value */
+	if (!error && !cmp) {
+		error = 0;
+		goto on_error; /* not really error */
 	}
 
 	if (should_write_reflog(backend->repo, ref->name)) {
