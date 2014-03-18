@@ -107,7 +107,7 @@ typedef struct {
 	diskfile_backend *snapshot_from;
 } diskfile_readonly_backend;
 
-static int config_parse(diskfile_backend *cfg_file, struct reader *reader, git_config_level_t level, int depth);
+static int config_parse(git_strmap *values, diskfile_backend *cfg_file, struct reader *reader, git_config_level_t level, int depth);
 static int parse_variable(struct reader *reader, char **var_name, char **var_value);
 static int config_write(diskfile_backend *cfg, const char *key, const regex_t *preg, const char *value);
 static char *escape_value(const char *ptr);
@@ -243,7 +243,7 @@ static int config_open(git_config_backend *cfg, git_config_level_t level)
 	if (res == GIT_ENOTFOUND)
 		return 0;
 
-	if (res < 0 || (res = config_parse(b, reader, level, 0)) < 0) {
+	if (res < 0 || (res = config_parse(b->header.values, b, reader, level, 0)) < 0) {
 		free_vars(b->header.values);
 		b->header.values = NULL;
 	}
@@ -256,47 +256,41 @@ static int config_open(git_config_backend *cfg, git_config_level_t level)
 
 static int config_refresh(git_config_backend *cfg)
 {
-	int res = 0, updated = 0, any_updated = 0;
+	int error = 0, updated = 0, any_updated = 0;
 	diskfile_backend *b = (diskfile_backend *)cfg;
-	git_strmap *old_values;
+	git_strmap *values = NULL;
 	struct reader *reader = NULL;
 	uint32_t i;
 
 	for (i = 0; i < git_array_size(b->readers); i++) {
 		reader = git_array_get(b->readers, i);
-
-		res = git_futils_readbuffer_updated(
+		error = git_futils_readbuffer_updated(
 			&reader->buffer, reader->file_path,
 			&reader->file_mtime, &reader->file_size, &updated);
 
-		if (res < 0)
-			return (res == GIT_ENOTFOUND) ? 0 : res;
+		if (error < 0)
+			return (error == GIT_ENOTFOUND) ? 0 : error;
 
 		if (updated)
 			any_updated = 1;
 	}
 
 	if (!any_updated)
-		return (res == GIT_ENOTFOUND) ? 0 : res;
+		return (error == GIT_ENOTFOUND) ? 0 : error;
 
-	/* need to reload - store old values and prep for reload */
-	old_values = b->header.values;
-	if ((res = git_strmap_alloc(&b->header.values)) < 0) {
-		b->header.values = old_values;
+	     
+	if ((error = git_strmap_alloc(&values)) < 0)
 		goto cleanup;
-	}
 
-	if ((res = config_parse(b, reader, b->level, 0)) < 0) {
-		free_vars(b->header.values);
-		b->header.values = old_values;
+	if ((error = config_parse(values, b, reader, b->level, 0)) < 0)
 		goto cleanup;
-	}
 
-	free_vars(old_values);
+	values = git__swap(b->header.values, values);
 
 cleanup:
+	free_vars(values);
 	git_buf_free(&reader->buffer);
-	return res;
+	return error;
 }
 
 static void backend_free(git_config_backend *_backend)
@@ -1218,7 +1212,7 @@ static int included_path(git_buf *out, const char *dir, const char *path)
 	return git_path_join_unrooted(out, path, dir, NULL);
 }
 
-static int config_parse(diskfile_backend *cfg_file, struct reader *reader, git_config_level_t level, int depth)
+static int config_parse(git_strmap *values, diskfile_backend *cfg_file, struct reader *reader, git_config_level_t level, int depth)
 {
 	int c;
 	char *current_section = NULL;
@@ -1228,7 +1222,6 @@ static int config_parse(diskfile_backend *cfg_file, struct reader *reader, git_c
 	git_buf buf = GIT_BUF_INIT;
 	int result = 0;
 	uint32_t reader_idx;
-	git_strmap *values = cfg_file->header.values;
 
 	if (depth >= MAX_INCLUDE_DEPTH) {
 		giterr_set(GITERR_CONFIG, "Maximum config include depth reached");
@@ -1327,7 +1320,7 @@ static int config_parse(diskfile_backend *cfg_file, struct reader *reader, git_c
 									    &r->file_size, NULL)) < 0)
 					break;
 
-				result = config_parse(cfg_file, r, level, depth+1);
+				result = config_parse(values, cfg_file, r, level, depth+1);
 				r = git_array_get(cfg_file->readers, index);
 				git_buf_free(&r->buffer);
 
