@@ -1555,7 +1555,7 @@ success:
 /* Append to the reflog, must be called under reference lock */
 static int reflog_append(refdb_fs_backend *backend, const git_reference *ref, const git_oid *old, const git_oid *new, const git_signature *who, const char *message)
 {
-	int error, is_symbolic, was_symbolic = 0;
+	int error, is_symbolic, currently_exists;
 	git_oid old_id = {{0}}, new_id = {{0}};
 	git_buf buf = GIT_BUF_INIT, path = GIT_BUF_INIT;
 	git_repository *repo = backend->repo;
@@ -1573,14 +1573,14 @@ static int reflog_append(refdb_fs_backend *backend, const git_reference *ref, co
 	if (error < 0 && error != GIT_ENOTFOUND)
 		return error;
 
-	if (current_ref)
-		was_symbolic = current_ref->type == GIT_REF_SYMBOLIC;
+	currently_exists = !!current_ref;
 
+	git_reference_free(current_ref);
 	/* From here on is_symoblic also means that it's HEAD */
 
 	if (old) {
 		git_oid_cpy(&old_id, old);
-	} else if (!was_symbolic) {
+	} else if (currently_exists) {
 		error = git_reference_name_to_id(&old_id, repo, ref->name);
 		if (error == GIT_ENOTFOUND) {
 			memset(&old_id, 0, sizeof(git_oid));

@@ -269,3 +269,75 @@ void test_repo_head__setting_head_updates_reflog(void)
 	git_object_free(tag);
 	git_signature_free(sig);
 }
+
+static void assert_head_reflog(git_repository *repo, size_t idx,
+			       const char *old_id, const char *new_id, const char *message)
+{
+	git_reflog *log;
+	const git_reflog_entry *entry;
+	char id_str[GIT_OID_HEXSZ + 1] = {0};
+
+	cl_git_pass(git_reflog_read(&log, repo, GIT_HEAD_FILE));
+	entry = git_reflog_entry_byindex(log, idx);
+
+	git_oid_fmt(id_str, git_reflog_entry_id_old(entry));
+	cl_assert_equal_s(old_id, id_str);
+
+	git_oid_fmt(id_str, git_reflog_entry_id_new(entry));
+	cl_assert_equal_s(new_id, id_str);
+
+	cl_assert_equal_s(message, git_reflog_entry_message(entry));
+
+	git_reflog_free(log);
+}
+
+void test_repo_head__detaching_writes_reflog(void)
+{
+	git_signature *sig;
+	git_oid id;
+	const char *msg;
+
+	cl_git_pass(git_signature_now(&sig, "me", "foo@example.com"));
+
+	msg = "message1";
+	git_oid_fromstr(&id, "e90810b8df3e80c413d903f631643c716887138d");
+	cl_git_pass(git_repository_set_head_detached(repo, &id, sig, msg));
+	assert_head_reflog(repo, 0, "a65fedf39aefe402d3bb6e24df4d4f5fe4547750",
+			   "e90810b8df3e80c413d903f631643c716887138d", msg);
+
+	msg = "message2";
+	cl_git_pass(git_repository_set_head(repo, "refs/heads/haacked", sig, msg));
+	assert_head_reflog(repo, 0, "e90810b8df3e80c413d903f631643c716887138d",
+			   "258f0e2a959a364e40ed6603d5d44fbb24765b10", msg);
+
+	git_signature_free(sig);
+}
+
+void test_repo_head__orphan_branch_does_not_count(void)
+{
+	git_signature *sig;
+	git_oid id;
+	const char *msg;
+
+	cl_git_pass(git_signature_now(&sig, "me", "foo@example.com"));
+
+	/* Have something known */
+	msg = "message1";
+	git_oid_fromstr(&id, "e90810b8df3e80c413d903f631643c716887138d");
+	cl_git_pass(git_repository_set_head_detached(repo, &id, sig, msg));
+	assert_head_reflog(repo, 0, "a65fedf39aefe402d3bb6e24df4d4f5fe4547750",
+			   "e90810b8df3e80c413d903f631643c716887138d", msg);
+
+	/* Switching to an orphan branch does not write tot he reflog */
+	cl_git_pass(git_repository_set_head(repo, "refs/heads/orphan", sig, "ignored message"));
+	assert_head_reflog(repo, 0, "a65fedf39aefe402d3bb6e24df4d4f5fe4547750",
+			   "e90810b8df3e80c413d903f631643c716887138d", msg);
+
+	/* And coming back, we set the source to zero */
+	msg = "message2";
+	cl_git_pass(git_repository_set_head(repo, "refs/heads/haacked", sig, msg));
+	assert_head_reflog(repo, 0, "0000000000000000000000000000000000000000",
+			   "258f0e2a959a364e40ed6603d5d44fbb24765b10", msg);
+
+	git_signature_free(sig);
+}
