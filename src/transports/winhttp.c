@@ -21,6 +21,10 @@
 
 #include <strsafe.h>
 
+/* For IInternetSecurityManager zone check */
+#include <objbase.h>
+#include <urlmon.h>
+
 /* For UuidCreate */
 #pragma comment(lib, "rpcrt4")
 
@@ -141,18 +145,83 @@ on_error:
 
 static int apply_default_credentials(HINTERNET request)
 {
-	/* If we are explicitly asked to deliver default credentials, turn set
-	 * the security level to low which will guarantee they are delivered.
-	 * The default is "medium" which applies to the intranet and sounds
-	 * like it would correspond to Internet Explorer security zones, but
-	 * in fact does not.
-	 */
+	/* Either the caller explicitly requested that default credentials be passed,
+	 * or our fallback credential callback was invoked and checked that the target
+	 * URI was in the appropriate Internet Explorer security zone. By setting this
+	 * flag, we guarantee that the credentials are delivered by WinHTTP. The default
+	 * is "medium" which applies to the intranet and sounds like it would correspond
+	 * to Internet Explorer security zones, but in fact does not. */
 	DWORD data = WINHTTP_AUTOLOGON_SECURITY_LEVEL_LOW;
 
 	if (!WinHttpSetOption(request, WINHTTP_OPTION_AUTOLOGON_POLICY, &data, sizeof(DWORD)))
 		return -1;
 
 	return 0;
+}
+
+static int fallback_cred_acquire_cb(
+	git_cred **cred,
+	const char *url,
+	const char *username_from_url,
+	unsigned int allowed_types,
+	void *payload)
+{
+	int error = 1;
+
+	/* If the target URI supports integrated Windows authentication
+	 * as an authentication mechanism */
+	if (GIT_CREDTYPE_DEFAULT & allowed_types) {
+		LPWSTR wide_url;
+		DWORD wide_len;
+
+		/* Convert URL to wide characters */
+		wide_len = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, url, -1, NULL, 0);
+
+		if (!wide_len) {
+			giterr_set(GITERR_OS, "Failed to measure string for wide conversion");
+			return -1;
+		}
+
+		wide_url = git__malloc(wide_len * sizeof(WCHAR));
+		GITERR_CHECK_ALLOC(wide_url);
+
+		if (!MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, url, -1, wide_url, wide_len)) {
+			giterr_set(GITERR_OS, "Failed to convert string to wide form");
+			git__free(wide_url);
+			return -1;
+		}
+
+		if (SUCCEEDED(CoInitializeEx(NULL, COINIT_MULTITHREADED))) {
+			IInternetSecurityManager* pISM;
+
+			/* And if the target URI is in the My Computer, Intranet, or Trusted zones */
+			if (SUCCEEDED(CoCreateInstance(&CLSID_InternetSecurityManager, NULL,
+				CLSCTX_ALL, &IID_IInternetSecurityManager, (void **)&pISM))) {
+				DWORD dwZone;
+
+				if (SUCCEEDED(pISM->lpVtbl->MapUrlToZone(pISM, wide_url, &dwZone, 0)) &&
+					(URLZONE_LOCAL_MACHINE == dwZone ||
+					URLZONE_INTRANET == dwZone ||
+					URLZONE_TRUSTED == dwZone)) {
+					git_cred *existing = *cred;
+
+					if (existing)
+						existing->free(existing);
+
+					/* Then use default Windows credentials to authenticate this request */
+					error = git_cred_default_new(cred);
+				}
+
+				pISM->lpVtbl->Release(pISM);
+			}
+
+			CoUninitialize();
+		}
+
+		git__free(wide_url);
+	}
+
+	return error;
 }
 
 static int winhttp_stream_connect(winhttp_stream *s)
@@ -657,8 +726,7 @@ replay:
 		}
 
 		/* Handle authentication failures */
-		if (HTTP_STATUS_DENIED == status_code &&
-			get_verb == s->verb && t->owner->cred_acquire_cb) {
+		if (HTTP_STATUS_DENIED == status_code && get_verb == s->verb) {
 			int allowed_types;
 
 			if (parse_unauthorized_response(s->request, &allowed_types, &t->auth_mechanism) < 0)
@@ -666,21 +734,36 @@ replay:
 
 			if (allowed_types &&
 				(!t->cred || 0 == (t->cred->credtype & allowed_types))) {
+				int cred_error = 1;
 
-				int error = t->owner->cred_acquire_cb(
-					&t->cred, t->owner->url, t->connection_data.user,
-					allowed_types, t->owner->cred_acquire_payload);
-				if (error < 0)
-					return error;
+				/* Start with the user-supplied credential callback, if present */
+				if (t->owner->cred_acquire_cb) {
+					cred_error = t->owner->cred_acquire_cb(&t->cred, t->owner->url,
+						t->connection_data.user, allowed_types,	t->owner->cred_acquire_payload);
 
-				assert(t->cred);
+					if (cred_error < 0)
+						return cred_error;
+				}
 
-				WinHttpCloseHandle(s->request);
-				s->request = NULL;
-				s->sent_request = 0;
+				/* Invoke the fallback credentials acquisition callback if necessary */
+				if (cred_error > 0) {
+					cred_error = fallback_cred_acquire_cb(&t->cred, t->owner->url,
+						t->connection_data.user, allowed_types, NULL);
 
-				/* Successfully acquired a credential */
-				goto replay;
+					if (cred_error < 0)
+						return cred_error;
+				}
+
+				if (!cred_error) {
+					assert(t->cred);
+
+					WinHttpCloseHandle(s->request);
+					s->request = NULL;
+					s->sent_request = 0;
+
+					/* Successfully acquired a credential */
+					goto replay;
+				}
 			}
 		}
 

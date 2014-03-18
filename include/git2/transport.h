@@ -185,7 +185,8 @@ GIT_EXTERN(int) git_cred_default_new(git_cred **out);
  *                          remote url, or NULL if not included.
  * - allowed_types: A bitmask stating which cred types are OK to return.
  * - payload: The payload provided when specifying this callback.
- * - returns 0 for success or non-zero to indicate an error
+ * - returns 0 for success, < 0 to indicate an error, > 0 to indicate
+ *       no credential was acquired
  */
 typedef int (*git_cred_acquire_cb)(
 	git_cred **cred,
