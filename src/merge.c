@@ -2524,26 +2524,41 @@ int git_merge_analysis(
 	size_t their_heads_len)
 {
 	git_merge_head *ancestor_head = NULL, *our_head = NULL;
-	int error;
+	int error = 0;
 
 	assert(out && repo && their_heads);
 
-	*out = GIT_MERGE_ANALYSIS_NORMAL;
+	*out = GIT_MERGE_ANALYSIS_NONE;
+
+	if (git_repository_head_unborn(repo)) {
+		*out = GIT_MERGE_ANALYSIS_UNBORN;
+		goto done;
+	}
+
+	if (their_heads_len != 1) {
+		giterr_set(GITERR_MERGE, "Can only merge a single branch");
+		error = -1;
+		goto done;
+	}
 
 	if ((error = merge_heads(&ancestor_head, &our_head, repo, their_heads, their_heads_len)) < 0)
 		goto done;
 
-	if (their_heads_len == 1 && ancestor_head != NULL) {
-		/* We're up-to-date if we're trying to merge our own common ancestor. */
-		if (git_oid_equal(&ancestor_head->oid, &their_heads[0]->oid))
-			*out = GIT_MERGE_ANALYSIS_UP_TO_DATE;
+	/* We're up-to-date if we're trying to merge our own common ancestor. */
+	if (ancestor_head && git_oid_equal(&ancestor_head->oid, &their_heads[0]->oid))
+		*out = GIT_MERGE_ANALYSIS_UP_TO_DATE;
 
-		/* We're fastforwardable if we're our own common ancestor. */
-		else if (git_oid_equal(&ancestor_head->oid, &our_head->oid))
-			*out = GIT_MERGE_ANALYSIS_FASTFORWARD | GIT_MERGE_ANALYSIS_NORMAL;
-	}
+	/* We're fastforwardable if we're our own common ancestor. */
+	else if (ancestor_head && git_oid_equal(&ancestor_head->oid, &our_head->oid))
+		*out = GIT_MERGE_ANALYSIS_FASTFORWARD | GIT_MERGE_ANALYSIS_NORMAL;
+
+	/* Otherwise, just a normal merge is possible. */
+	else
+		*out = GIT_MERGE_ANALYSIS_NORMAL;
 
 done:
+	git_merge_head_free(ancestor_head);
+	git_merge_head_free(our_head);
 	return error;
 }
 

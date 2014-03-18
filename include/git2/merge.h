@@ -259,6 +259,13 @@ typedef enum {
 	 * given merge input.
 	 */
 	GIT_MERGE_ANALYSIS_FASTFORWARD = (1 << 2),
+
+	/**
+	 * The HEAD of the current repository is "unborn" and does not point to
+	 * a valid commit.  No merge can be performed, but the caller may wish
+	 * to simply set HEAD to the target commit(s).
+	 */
+	GIT_MERGE_ANALYSIS_UNBORN = (1 << 3),
 } git_merge_analysis_t;
 
 /**
