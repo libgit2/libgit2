@@ -416,3 +416,54 @@ void test_repo_head__branch_birth(void)
 	git_signature_free(sig);
 
 }
+
+static size_t entrycount(git_repository *repo, const char *name)
+{
+	git_reflog *log;
+	size_t ret;
+
+	cl_git_pass(git_reflog_read(&log, repo, name));
+	ret = git_reflog_entrycount(log);
+	git_reflog_free(log);
+
+	return ret;
+}
+
+void test_repo_head__symref_chain(void)
+{
+	git_signature *sig;
+	git_oid id;
+	git_tree *tree;
+	git_reference *ref;
+	const char *msg;
+	size_t nentries, nentries_master;
+
+	nentries = entrycount(repo, GIT_HEAD_FILE);
+
+	cl_git_pass(git_signature_now(&sig, "me", "foo@example.com"));
+
+	cl_git_pass(git_repository_head(&ref, repo));
+	cl_git_pass(git_reference_peel((git_object **) &tree, ref, GIT_OBJ_TREE));
+	git_reference_free(ref);
+
+	nentries_master = entrycount(repo, "refs/heads/master");
+
+	msg = "message 1";
+	cl_git_pass(git_reference_symbolic_create(&ref, repo, "refs/heads/master", "refs/heads/foo", 1, sig, msg));
+	git_reference_free(ref);
+
+	cl_assert_equal_i(0, entrycount(repo, "refs/heads/foo"));
+	cl_assert_equal_i(nentries, entrycount(repo, GIT_HEAD_FILE));
+	cl_assert_equal_i(nentries_master, entrycount(repo, "refs/heads/master"));
+
+	msg = "message 2";
+	cl_git_pass(git_commit_create(&id, repo, "HEAD", sig, sig, NULL, msg, tree, 0, NULL));
+	git_tree_free(tree);
+
+	cl_assert_equal_i(1, entrycount(repo, "refs/heads/foo"));
+	cl_assert_equal_i(nentries +1, entrycount(repo, GIT_HEAD_FILE));
+	cl_assert_equal_i(nentries_master, entrycount(repo, "refs/heads/master"));
+
+	git_signature_free(sig);
+
+}

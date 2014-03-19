@@ -993,23 +993,53 @@ static int maybe_append_head(refdb_fs_backend *backend, const git_reference *ref
 {
 	int error;
 	git_oid old_id = {{0}};
-	git_reference *head;
+	git_reference *tmp = NULL, *head = NULL, *peeled = NULL;
+	const char *name;
+
+	if (ref->type == GIT_REF_SYMBOLIC)
+		return 0;
 
 	/* if we can't resolve, we use {0}*40 as old id */
 	git_reference_name_to_id(&old_id, backend->repo, ref->name);
 
-	if ((error = git_reference_lookup(&head, backend->repo, "HEAD")) < 0)
+	if ((error = git_reference_lookup(&head, backend->repo, GIT_HEAD_FILE)) < 0)
 		return error;
 
 	if (git_reference_type(head) == GIT_REF_OID)
 		goto cleanup;
 
-	if (strcmp(git_reference_symbolic_target(head), ref->name))
+	if ((error = git_reference_lookup(&tmp, backend->repo, GIT_HEAD_FILE)) < 0)
+		goto cleanup;
+
+	/* Go down the symref chain until we find the branch */
+	while (git_reference_type(tmp) == GIT_REF_SYMBOLIC) {
+		error = git_reference_lookup(&peeled, backend->repo, git_reference_symbolic_target(tmp));
+		if (error < 0)
+			break;
+
+		git_reference_free(tmp);
+		tmp = peeled;
+	}
+
+	if (error == GIT_ENOTFOUND) {
+		error = 0;
+		name = git_reference_symbolic_target(tmp);
+	} else if (error < 0) {
+		goto cleanup;
+	} else {
+		name = git_reference_name(tmp);
+	}
+
+	if (error < 0)
+		goto cleanup;
+
+	if (strcmp(name, ref->name))
 		goto cleanup;
 
 	error = reflog_append(backend, head, &old_id, git_reference_target(ref), who, message);
 
 cleanup:
+	git_reference_free(tmp);
 	git_reference_free(head);
 	return error;
 }
