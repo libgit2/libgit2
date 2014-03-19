@@ -1572,11 +1572,10 @@ success:
 /* Append to the reflog, must be called under reference lock */
 static int reflog_append(refdb_fs_backend *backend, const git_reference *ref, const git_oid *old, const git_oid *new, const git_signature *who, const char *message)
 {
-	int error, is_symbolic, currently_exists;
+	int error, is_symbolic;
 	git_oid old_id = {{0}}, new_id = {{0}};
 	git_buf buf = GIT_BUF_INIT, path = GIT_BUF_INIT;
 	git_repository *repo = backend->repo;
-	git_reference *current_ref = NULL;
 
 	is_symbolic = ref->type == GIT_REF_SYMBOLIC;
 
@@ -1586,37 +1585,23 @@ static int reflog_append(refdb_fs_backend *backend, const git_reference *ref, co
 	    !(old && new))
 		return 0;
 
-	error = git_reference_lookup(&current_ref, repo, ref->name);
-	if (error < 0 && error != GIT_ENOTFOUND)
-		return error;
-
-	currently_exists = !!current_ref;
-
-	git_reference_free(current_ref);
 	/* From here on is_symoblic also means that it's HEAD */
 
 	if (old) {
 		git_oid_cpy(&old_id, old);
-	} else if (currently_exists) {
+	} else {
 		error = git_reference_name_to_id(&old_id, repo, ref->name);
-		if (error == GIT_ENOTFOUND) {
-			memset(&old_id, 0, sizeof(git_oid));
-			error = 0;
-		}
-
-		if (error < 0)
+		if (error < 0 && error != GIT_ENOTFOUND)
 			return error;
 	}
 
 	if (is_symbolic) {
 		error = git_reference_name_to_id(&new_id, repo, git_reference_symbolic_target(ref));
-		if (error != 0 && error != GIT_ENOTFOUND)
-			goto cleanup;
+		if (error < 0 && error != GIT_ENOTFOUND)
+			return error;
 		/* detaching HEAD does not create an entry */
-		if (error == GIT_ENOTFOUND) {
-			error = 0;
-			goto cleanup;
-		}
+		if (error == GIT_ENOTFOUND)
+			return 0;
 
 		giterr_clear();
 	}
