@@ -992,18 +992,54 @@ out:
 static int maybe_append_head(refdb_fs_backend *backend, const git_reference *ref, const git_signature *who, const char *message)
 {
 	int error;
-	git_oid old_id;
-	git_reference *head;
+	git_oid old_id = {{0}};
+	git_reference *tmp = NULL, *head = NULL, *peeled = NULL;
+	const char *name;
 
-	error = git_reference_name_to_id(&old_id, backend->repo, ref->name);
-	if (!git_branch_is_head(ref))
+	if (ref->type == GIT_REF_SYMBOLIC)
 		return 0;
 
-	if ((error = git_reference_lookup(&head, backend->repo, "HEAD")) < 0)
+	/* if we can't resolve, we use {0}*40 as old id */
+	git_reference_name_to_id(&old_id, backend->repo, ref->name);
+
+	if ((error = git_reference_lookup(&head, backend->repo, GIT_HEAD_FILE)) < 0)
 		return error;
+
+	if (git_reference_type(head) == GIT_REF_OID)
+		goto cleanup;
+
+	if ((error = git_reference_lookup(&tmp, backend->repo, GIT_HEAD_FILE)) < 0)
+		goto cleanup;
+
+	/* Go down the symref chain until we find the branch */
+	while (git_reference_type(tmp) == GIT_REF_SYMBOLIC) {
+		error = git_reference_lookup(&peeled, backend->repo, git_reference_symbolic_target(tmp));
+		if (error < 0)
+			break;
+
+		git_reference_free(tmp);
+		tmp = peeled;
+	}
+
+	if (error == GIT_ENOTFOUND) {
+		error = 0;
+		name = git_reference_symbolic_target(tmp);
+	} else if (error < 0) {
+		goto cleanup;
+	} else {
+		name = git_reference_name(tmp);
+	}
+
+	if (error < 0)
+		goto cleanup;
+
+	if (strcmp(name, ref->name))
+		goto cleanup;
 
 	error = reflog_append(backend, head, &old_id, git_reference_target(ref), who, message);
 
+cleanup:
+	git_reference_free(tmp);
 	git_reference_free(head);
 	return error;
 }
@@ -1021,6 +1057,8 @@ static int refdb_fs_backend__write(
 	refdb_fs_backend *backend = (refdb_fs_backend *)_backend;
 	git_filebuf file = GIT_FILEBUF_INIT;
 	int error = 0, cmp = 0;
+	const char *new_target = NULL;
+	const git_oid *new_id = NULL;
 
 	assert(backend);
 
@@ -1039,6 +1077,21 @@ static int refdb_fs_backend__write(
 		giterr_set(GITERR_REFERENCE, "old reference value does not match");
 		error = GIT_EMODIFIED;
 		goto on_error;
+	}
+
+	if (ref->type == GIT_REF_SYMBOLIC)
+		new_target = ref->target.symbolic;
+	else
+		new_id = &ref->target.oid;
+
+	error = cmp_old_ref(&cmp, _backend, ref->name, new_id, new_target);
+	if (error < 0 && error != GIT_ENOTFOUND)
+		goto on_error;
+
+	/* Don't update if we have the same value */
+	if (!error && !cmp) {
+		error = 0;
+		goto on_error; /* not really error */
 	}
 
 	if (should_write_reflog(backend->repo, ref->name)) {
@@ -1555,11 +1608,10 @@ success:
 /* Append to the reflog, must be called under reference lock */
 static int reflog_append(refdb_fs_backend *backend, const git_reference *ref, const git_oid *old, const git_oid *new, const git_signature *who, const char *message)
 {
-	int error, is_symbolic, was_symbolic = 0;
+	int error, is_symbolic;
 	git_oid old_id = {{0}}, new_id = {{0}};
 	git_buf buf = GIT_BUF_INIT, path = GIT_BUF_INIT;
 	git_repository *repo = backend->repo;
-	git_reference *current_ref = NULL;
 
 	is_symbolic = ref->type == GIT_REF_SYMBOLIC;
 
@@ -1569,46 +1621,32 @@ static int reflog_append(refdb_fs_backend *backend, const git_reference *ref, co
 	    !(old && new))
 		return 0;
 
-	error = git_reference_lookup(&current_ref, repo, ref->name);
-	if (error < 0 && error != GIT_ENOTFOUND)
-		return error;
-
-	if (current_ref)
-		was_symbolic = current_ref->type == GIT_REF_SYMBOLIC;
-
 	/* From here on is_symoblic also means that it's HEAD */
 
 	if (old) {
 		git_oid_cpy(&old_id, old);
-	} else if (!was_symbolic) {
+	} else {
 		error = git_reference_name_to_id(&old_id, repo, ref->name);
-		if (error == GIT_ENOTFOUND) {
-			memset(&old_id, 0, sizeof(git_oid));
-			error = 0;
-		}
-
-		if (error < 0)
+		if (error < 0 && error != GIT_ENOTFOUND)
 			return error;
 	}
 
-	if (is_symbolic) {
-		error = git_reference_name_to_id(&new_id, repo, git_reference_symbolic_target(ref));
-		if (error != 0 && error != GIT_ENOTFOUND)
-			goto cleanup;
-		/* detaching HEAD does not create an entry */
-		if (error == GIT_ENOTFOUND) {
-			error = 0;
-			goto cleanup;
-		}
-
-		giterr_clear();
-	}
-
-
-	if (new)
+	if (new) {
 		git_oid_cpy(&new_id, new);
-	else if (!is_symbolic)
-		git_oid_cpy(&new_id, git_reference_target(ref));
+	} else {
+		if (!is_symbolic) {
+			git_oid_cpy(&new_id, git_reference_target(ref));
+		} else {
+			error = git_reference_name_to_id(&new_id, repo, git_reference_symbolic_target(ref));
+			if (error < 0 && error != GIT_ENOTFOUND)
+				return error;
+			/* detaching HEAD does not create an entry */
+			if (error == GIT_ENOTFOUND)
+				return 0;
+
+			giterr_clear();
+		}
+	}
 
 	if ((error = serialize_reflog_entry(&buf, &old_id, &new_id, who, message)) < 0)
 		goto cleanup;
