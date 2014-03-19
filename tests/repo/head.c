@@ -368,3 +368,51 @@ void test_repo_head__set_to_current_target(void)
 	git_signature_free(sig);
 
 }
+
+void test_repo_head__branch_birth(void)
+{
+	git_signature *sig;
+	git_oid id;
+	git_tree *tree;
+	git_reference *ref;
+	const char *msg;
+	git_reflog *log;
+	size_t nentries, nentries_after;
+
+	cl_git_pass(git_reflog_read(&log, repo, GIT_HEAD_FILE));
+	nentries = git_reflog_entrycount(log);
+	git_reflog_free(log);
+
+	cl_git_pass(git_signature_now(&sig, "me", "foo@example.com"));
+
+	cl_git_pass(git_repository_head(&ref, repo));
+	cl_git_pass(git_reference_peel((git_object **) &tree, ref, GIT_OBJ_TREE));
+	git_reference_free(ref);
+
+	msg = "message 1";
+	cl_git_pass(git_repository_set_head(repo, "refs/heads/orphan", sig, msg));
+
+	cl_git_pass(git_reflog_read(&log, repo, GIT_HEAD_FILE));
+	nentries_after = git_reflog_entrycount(log);
+	git_reflog_free(log);
+
+	cl_assert_equal_i(nentries, nentries_after);
+
+	msg = "message 2";
+	cl_git_pass(git_commit_create(&id, repo, "HEAD", sig, sig, NULL, msg, tree, 0, NULL));
+
+	git_tree_free(tree);
+
+	cl_git_pass(git_reflog_read(&log, repo, "refs/heads/orphan"));
+	cl_assert_equal_i(1, git_reflog_entrycount(log));
+	git_reflog_free(log);
+
+	cl_git_pass(git_reflog_read(&log, repo, GIT_HEAD_FILE));
+	nentries_after = git_reflog_entrycount(log);
+	git_reflog_free(log);
+
+	cl_assert_equal_i(nentries + 1, nentries_after);
+
+	git_signature_free(sig);
+
+}

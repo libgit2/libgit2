@@ -992,18 +992,24 @@ out:
 static int maybe_append_head(refdb_fs_backend *backend, const git_reference *ref, const git_signature *who, const char *message)
 {
 	int error;
-	git_oid old_id;
+	git_oid old_id = {{0}};
 	git_reference *head;
 
-	error = git_reference_name_to_id(&old_id, backend->repo, ref->name);
-	if (!git_branch_is_head(ref))
-		return 0;
+	/* if we can't resolve, we use {0}*40 as old id */
+	git_reference_name_to_id(&old_id, backend->repo, ref->name);
 
 	if ((error = git_reference_lookup(&head, backend->repo, "HEAD")) < 0)
 		return error;
 
+	if (git_reference_type(head) == GIT_REF_OID)
+		goto cleanup;
+
+	if (strcmp(git_reference_symbolic_target(head), ref->name))
+		goto cleanup;
+
 	error = reflog_append(backend, head, &old_id, git_reference_target(ref), who, message);
 
+cleanup:
 	git_reference_free(head);
 	return error;
 }
@@ -1595,22 +1601,22 @@ static int reflog_append(refdb_fs_backend *backend, const git_reference *ref, co
 			return error;
 	}
 
-	if (is_symbolic) {
-		error = git_reference_name_to_id(&new_id, repo, git_reference_symbolic_target(ref));
-		if (error < 0 && error != GIT_ENOTFOUND)
-			return error;
-		/* detaching HEAD does not create an entry */
-		if (error == GIT_ENOTFOUND)
-			return 0;
-
-		giterr_clear();
-	}
-
-
-	if (new)
+	if (new) {
 		git_oid_cpy(&new_id, new);
-	else if (!is_symbolic)
-		git_oid_cpy(&new_id, git_reference_target(ref));
+	} else {
+		if (!is_symbolic) {
+			git_oid_cpy(&new_id, git_reference_target(ref));
+		} else {
+			error = git_reference_name_to_id(&new_id, repo, git_reference_symbolic_target(ref));
+			if (error < 0 && error != GIT_ENOTFOUND)
+				return error;
+			/* detaching HEAD does not create an entry */
+			if (error == GIT_ENOTFOUND)
+				return 0;
+
+			giterr_clear();
+		}
+	}
 
 	if ((error = serialize_reflog_entry(&buf, &old_id, &new_id, who, message)) < 0)
 		goto cleanup;
