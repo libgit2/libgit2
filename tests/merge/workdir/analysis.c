@@ -99,7 +99,8 @@ void test_merge_workdir_analysis__unborn(void)
 	p_unlink(git_buf_cstr(&master));
 
 	analysis = analysis_from_branch(NOFASTFORWARD_BRANCH);
-	cl_assert_equal_i(GIT_MERGE_ANALYSIS_UNBORN, analysis);
+	cl_assert_equal_i(GIT_MERGE_ANALYSIS_FASTFORWARD, (analysis & GIT_MERGE_ANALYSIS_FASTFORWARD));
+	cl_assert_equal_i(GIT_MERGE_ANALYSIS_UNBORN, (analysis & GIT_MERGE_ANALYSIS_UNBORN));
 
 	git_buf_free(&master);
 }

@@ -248,8 +248,8 @@ typedef enum {
 	GIT_MERGE_ANALYSIS_NORMAL = (1 << 0),
 
 	/**
-	 * The repository is already up-to-date and no merge needs to be
-	 * performed.  The given merge input already exists as a parent of HEAD.
+	 * All given merge inputs are reachable from HEAD, meaning the
+	 * repository is up-to-date and no merge needs to be performed.
 	 */
 	GIT_MERGE_ANALYSIS_UP_TO_DATE = (1 << 1),
 

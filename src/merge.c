@@ -2531,7 +2531,7 @@ int git_merge_analysis(
 	*out = GIT_MERGE_ANALYSIS_NONE;
 
 	if (git_repository_head_unborn(repo)) {
-		*out = GIT_MERGE_ANALYSIS_UNBORN;
+		*out = GIT_MERGE_ANALYSIS_FASTFORWARD | GIT_MERGE_ANALYSIS_UNBORN;
 		goto done;
 	}
 
