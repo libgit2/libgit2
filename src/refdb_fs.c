@@ -1048,9 +1048,6 @@ static int maybe_append_head(refdb_fs_backend *backend, const git_reference *ref
 		name = git_reference_name(tmp);
 	}
 
-	if (error < 0)
-		goto cleanup;
-
 	if (strcmp(name, ref->name))
 		goto cleanup;
 
