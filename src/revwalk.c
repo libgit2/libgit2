@@ -141,6 +141,9 @@ static int push_commit(git_revwalk *walk, const git_oid *oid, int uninteresting,
 	if (commit == NULL)
 		return -1; /* error already reported by failed lookup */
 
+	if (uninteresting)
+		walk->did_hide = 1;
+
 	commit->uninteresting = uninteresting;
 	if (walk->one == NULL && !uninteresting) {
 		walk->one = commit;
@@ -390,11 +393,18 @@ static int prepare_walk(git_revwalk *walk)
 		return GIT_ITEROVER;
 	}
 
-	/* first figure out what the merge bases are */
-	if (git_merge__bases_many(&bases, walk, walk->one, &walk->twos) < 0)
-		return -1;
+	/*
+	 * If the user asked to hide commits, we need to figure out
+	 * what the merge bases are so we can know when we can stop
+	 * marking parents uninteresting.
+	 */
+	if (walk->did_hide) {
+		if (git_merge__bases_many(&bases, walk, walk->one, &walk->twos) < 0)
+			return -1;
 
-	git_commit_list_free(&bases);
+		git_commit_list_free(&bases);
+	}
+
 	if (process_commit(walk, walk->one, walk->one->uninteresting) < 0)
 		return -1;
 

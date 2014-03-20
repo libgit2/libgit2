@@ -205,6 +205,12 @@ int git_merge__bases_many(git_commit_list **out, git_revwalk *walk, git_commit_l
 	git_commit_list *result = NULL, *tmp = NULL;
 	git_pqueue list;
 
+	/* If there's only the one commit, there can be no merge bases */
+	if (twos->length == 0) {
+		*out = NULL;
+		return 0;
+	}
+
 	/* if the commit is repeated, we have a our merge base already */
 	git_vector_foreach(twos, i, two) {
 		if (one == two)
