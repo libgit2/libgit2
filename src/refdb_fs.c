@@ -925,16 +925,34 @@ static int reflog_append(refdb_fs_backend *backend, const git_reference *ref, co
 static int has_reflog(git_repository *repo, const char *name);
 
 /* We only write if it's under heads/, remotes/ or notes/ or if it already has a log */
-static bool should_write_reflog(git_repository *repo, const char *name)
+static int should_write_reflog(int *write, git_repository *repo, const char *name)
 {
-	if (has_reflog(repo, name))
-		return 1;
+	git_config *config;
+	int error, logall, is_bare;
 
-	if (!git__prefixcmp(name, GIT_REFS_HEADS_DIR) ||
-	    !git__strcmp(name, GIT_HEAD_FILE) ||
-	    !git__prefixcmp(name, GIT_REFS_REMOTES_DIR) ||
-	    !git__prefixcmp(name, GIT_REFS_NOTES_DIR))
-		return 1;
+	/* Defaults to the oppsite of being bare */
+	is_bare = git_repository_is_bare(repo);
+	logall = !is_bare;
+
+	if ((error = git_repository_config__weakptr(&config, repo)) < 0)
+		return error;
+
+	error = git_config_get_bool(&logall, config, "core.logallrefupdates");
+	if (error < 0 && error != GIT_ENOTFOUND)
+		return error;
+
+	if (!logall) {
+		*write = 0;
+	} else if (has_reflog(repo, name)) {
+		*write = 1;
+	} else if (!git__prefixcmp(name, GIT_REFS_HEADS_DIR) ||
+		   !git__strcmp(name, GIT_HEAD_FILE) ||
+		   !git__prefixcmp(name, GIT_REFS_REMOTES_DIR) ||
+		   !git__prefixcmp(name, GIT_REFS_NOTES_DIR)) {
+		*write = 1;
+	} else {
+		*write = 0;
+	}
 
 	return 0;
 }
@@ -1030,9 +1048,6 @@ static int maybe_append_head(refdb_fs_backend *backend, const git_reference *ref
 		name = git_reference_name(tmp);
 	}
 
-	if (error < 0)
-		goto cleanup;
-
 	if (strcmp(name, ref->name))
 		goto cleanup;
 
@@ -1056,7 +1071,7 @@ static int refdb_fs_backend__write(
 {
 	refdb_fs_backend *backend = (refdb_fs_backend *)_backend;
 	git_filebuf file = GIT_FILEBUF_INIT;
-	int error = 0, cmp = 0;
+	int error = 0, cmp = 0, should_write;
 	const char *new_target = NULL;
 	const git_oid *new_id = NULL;
 
@@ -1094,7 +1109,10 @@ static int refdb_fs_backend__write(
 		goto on_error; /* not really error */
 	}
 
-	if (should_write_reflog(backend->repo, ref->name)) {
+	if ((error = should_write_reflog(&should_write, backend->repo, ref->name)) < 0)
+		goto on_error;
+
+	if (should_write) {
 		if ((error = reflog_append(backend, ref, NULL, NULL, who, message)) < 0)
 			goto on_error;
 		if ((error = maybe_append_head(backend, ref, who, message)) < 0)

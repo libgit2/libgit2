@@ -261,3 +261,76 @@ void test_refs_reflog_reflog__do_not_append_when_no_update(void)
 
 	cl_assert_equal_i(nlogs_after, nlogs);
 }
+
+static void assert_no_reflog_update(void)
+{
+	size_t nlogs, nlogs_after;
+	size_t nlogs_master, nlogs_master_after;
+	git_reference *ref;
+	git_reflog *log;
+	git_oid id;
+
+	cl_git_pass(git_reflog_read(&log, g_repo, "HEAD"));
+	nlogs = git_reflog_entrycount(log);
+	git_reflog_free(log);
+
+	cl_git_pass(git_reflog_read(&log, g_repo, "refs/heads/master"));
+	nlogs_master = git_reflog_entrycount(log);
+	git_reflog_free(log);
+
+	/* Move it back */
+	git_oid_fromstr(&id, "be3563ae3f795b2b4353bcce3a527ad0a4f7f644");
+	cl_git_pass(git_reference_create(&ref, g_repo, "refs/heads/master", &id, 1, NULL, NULL));
+	git_reference_free(ref);
+
+	cl_git_pass(git_reflog_read(&log, g_repo, "HEAD"));
+	nlogs_after = git_reflog_entrycount(log);
+	git_reflog_free(log);
+
+	cl_assert_equal_i(nlogs_after, nlogs);
+
+	cl_git_pass(git_reflog_read(&log, g_repo, "refs/heads/master"));
+	nlogs_master_after = git_reflog_entrycount(log);
+	git_reflog_free(log);
+
+	cl_assert_equal_i(nlogs_after, nlogs);
+	cl_assert_equal_i(nlogs_master_after, nlogs_master);
+
+}
+
+void test_refs_reflog_reflog__logallrefupdates_bare_set_false(void)
+{
+	git_config *config;
+
+	cl_git_pass(git_repository_config(&config, g_repo));
+	cl_git_pass(git_config_set_bool(config, "core.logallrefupdates", false));
+	git_config_free(config);
+
+	assert_no_reflog_update();
+}
+
+void test_refs_reflog_reflog__logallrefupdates_bare_unset(void)
+{
+	git_config *config;
+
+	cl_git_pass(git_repository_config(&config, g_repo));
+	cl_git_pass(git_config_delete_entry(config, "core.logallrefupdates"));
+	git_config_free(config);
+
+	assert_no_reflog_update();
+}
+
+void test_refs_reflog_reflog__logallrefupdates_nonbare_set_false(void)
+{
+	git_config *config;
+
+	cl_git_sandbox_cleanup();
+	g_repo = cl_git_sandbox_init("testrepo");
+
+
+	cl_git_pass(git_repository_config(&config, g_repo));
+	cl_git_pass(git_config_set_bool(config, "core.logallrefupdates", false));
+	git_config_free(config);
+
+	assert_no_reflog_update();
+}
