@@ -445,7 +445,7 @@ int git_odb_get_backend(git_odb_backend **out, git_odb *odb, size_t pos)
 {
 	backend_internal *internal;
 
-	assert(odb && odb);
+	assert(out && odb);
 	internal = git_vector_get(&odb->backends, pos);
 
 	if (internal && internal->backend) {
