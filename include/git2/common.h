@@ -195,7 +195,7 @@ typedef enum {
  *		> across all repositories before libgit2 starts evicting objects
  *		> from the cache.  This is a soft limit, in that the library might
  *		> briefly exceed it, but will start aggressively evicting objects
- *		> from cache when that happens.  The default cache size is 256Mb.
+ *		> from cache when that happens.  The default cache size is 256MB.
  *
  *	* opts(GIT_OPT_ENABLE_CACHING, int enabled)
  *
