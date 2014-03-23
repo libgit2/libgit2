@@ -78,10 +78,14 @@ int git_libgit2_opts(int key, ...)
 
 	case GIT_OPT_GET_SEARCH_PATH:
 		if ((error = config_level_to_sysdir(va_arg(ap, int))) >= 0) {
-			char *out = va_arg(ap, char *);
-			size_t outlen = va_arg(ap, size_t);
+			git_buf *out = va_arg(ap, git_buf *);
+			const git_buf *tmp;
 
-			error = git_sysdir_get_str(out, outlen, error);
+			git_buf_sanitize(out);
+			if ((error = git_sysdir_get(&tmp, error)) < 0)
+				break;
+
+			error = git_buf_sets(out, tmp->ptr);
 		}
 		break;
 
@@ -113,10 +117,14 @@ int git_libgit2_opts(int key, ...)
 
 	case GIT_OPT_GET_TEMPLATE_PATH:
 		{
-			char *out = va_arg(ap, char *);
-			size_t outlen = va_arg(ap, size_t);
+			git_buf *out = va_arg(ap, git_buf *);
+			const git_buf *tmp;
 
-			error = git_sysdir_get_str(out, outlen, GIT_SYSDIR_TEMPLATE);
+			git_buf_sanitize(out);
+			if ((error = git_sysdir_get(&tmp, GIT_SYSDIR_TEMPLATE)) < 0)
+				break;
+
+			error = git_buf_sets(out, tmp->ptr);
 		}
 		break;
 
