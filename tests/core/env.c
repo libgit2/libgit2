@@ -218,7 +218,7 @@ void test_core_env__1(void)
 static void check_global_searchpath(
 	const char *path, int position, const char *file, git_buf *temp)
 {
-	char out[GIT_PATH_MAX];
+	git_buf out = GIT_BUF_INIT;
 
 	/* build and set new path */
 	if (position < 0)
@@ -233,12 +233,12 @@ static void check_global_searchpath(
 
 	/* get path and make sure $PATH expansion worked */
 	cl_git_pass(git_libgit2_opts(
-		GIT_OPT_GET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL, out, sizeof(out)));
+		GIT_OPT_GET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL, &out));
 
 	if (position < 0)
-		cl_assert(git__prefixcmp(out, path) == 0);
+		cl_assert(git__prefixcmp(out.ptr, path) == 0);
 	else if (position > 0)
-		cl_assert(git__suffixcmp(out, path) == 0);
+		cl_assert(git__suffixcmp(out.ptr, path) == 0);
 	else
 		cl_assert_equal_s(out, path);
 
@@ -250,6 +250,8 @@ static void check_global_searchpath(
 		GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL, NULL));
 	cl_assert_equal_i(
 		GIT_ENOTFOUND, git_sysdir_find_global_file(temp, file));
+
+	git_buf_free(&out);
 }
 
 void test_core_env__2(void)
