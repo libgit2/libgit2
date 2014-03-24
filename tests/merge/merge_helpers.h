@@ -4,6 +4,49 @@
 #include "merge.h"
 #include "git2/merge.h"
 
+#define AUTOMERGEABLE_MERGED_FILE \
+	"this file is changed in master\n" \
+	"this file is automergeable\n" \
+	"this file is automergeable\n" \
+	"this file is automergeable\n" \
+	"this file is automergeable\n" \
+	"this file is automergeable\n" \
+	"this file is automergeable\n" \
+	"this file is automergeable\n" \
+	"this file is changed in branch\n"
+
+#define AUTOMERGEABLE_MERGED_FILE_CRLF \
+	"this file is changed in master\r\n" \
+	"this file is automergeable\r\n" \
+	"this file is automergeable\r\n" \
+	"this file is automergeable\r\n" \
+	"this file is automergeable\r\n" \
+	"this file is automergeable\r\n" \
+	"this file is automergeable\r\n" \
+	"this file is automergeable\r\n" \
+	"this file is changed in branch\r\n"
+
+#define CONFLICTING_MERGE_FILE \
+	"<<<<<<< HEAD\n" \
+	"this file is changed in master and branch\n" \
+	"=======\n" \
+	"this file is changed in branch and master\n" \
+	">>>>>>> 7cb63eed597130ba4abb87b3e544b85021905520\n"
+
+#define CONFLICTING_DIFF3_FILE \
+	"<<<<<<< HEAD\n" \
+	"this file is changed in master and branch\n" \
+	"||||||| initial\n" \
+	"this file is a conflict\n" \
+	"=======\n" \
+	"this file is changed in branch and master\n" \
+	">>>>>>> 7cb63eed597130ba4abb87b3e544b85021905520\n"
+
+#define CONFLICTING_UNION_FILE \
+	"this file is changed in master and branch\n" \
+	"this file is changed in branch and master\n"
+
+
 struct merge_index_entry {
 	uint16_t mode;
 	char oid_str[41];
@@ -42,15 +85,16 @@ struct merge_index_conflict_data {
 int merge_trees_from_branches(
 	git_index **index, git_repository *repo,
 	const char *ours_name, const char *theirs_name,
-	git_merge_tree_opts *opts);
+	git_merge_options *opts);
 
 int merge_commits_from_branches(
 	git_index **index, git_repository *repo,
 	const char *ours_name, const char *theirs_name,
-	git_merge_tree_opts *opts);
+	git_merge_options *opts);
 
-int merge_branches(git_merge_result **result, git_repository *repo,
-	const char *ours_branch, const char *theirs_branch, git_merge_opts *opts);
+int merge_branches(git_repository *repo,
+	const char *ours_branch, const char *theirs_branch,
+	git_merge_options *merge_opts, git_checkout_options *checkout_opts);
 
 int merge_test_diff_list(git_merge_diff_list *diff_list, const struct merge_index_entry expected[], size_t expected_len);
 

@@ -23,6 +23,43 @@
 GIT_BEGIN_DECL
 
 /**
+ * The file inputs to `git_merge_file`.  Callers should populate the
+ * `git_merge_file_input` structure with descriptions of the files in
+ * each side of the conflict for use in producing the merge file.
+ */
+typedef struct {
+	unsigned int version;
+
+	/** Pointer to the contents of the file. */
+	const char *ptr;
+
+	/** Size of the contents pointed to in `ptr`. */
+	size_t size;
+
+	/** File name of the conflicted file, or `NULL` to not merge the path. */
+	const char *path;
+
+	/** File mode of the conflicted file, or `0` to not merge the mode. */
+	unsigned int mode;
+} git_merge_file_input;
+
+#define GIT_MERGE_FILE_INPUT_VERSION 1
+#define GIT_MERGE_FILE_INPUT_INIT {GIT_MERGE_FILE_INPUT_VERSION}
+
+/**
+ * Initializes a `git_merge_file_input` with default values. Equivalent to
+ * creating an instance with GIT_MERGE_FILE_INPUT_INIT.
+ *
+ * @param opts the `git_merge_file_input` instance to initialize.
+ * @param version the version of the struct; you should pass
+ *        `GIT_MERGE_FILE_INPUT_VERSION` here.
+ * @return Zero on success; -1 on failure.
+ */
+GIT_EXTERN(int) git_merge_file_init_input(
+	git_merge_file_input *opts,
+	int version);
+
+/**
  * Flags for `git_merge_tree` options.  A combination of these flags can be
  * passed in via the `flags` value in the `git_merge_tree_opts`.
  */
@@ -71,6 +108,86 @@ typedef enum {
 	GIT_MERGE_FILE_FAVOR_UNION = 3,
 } git_merge_file_favor_t;
 
+typedef enum {
+	/* Defaults */
+	GIT_MERGE_FILE_DEFAULT = 0,
+
+	/* Create standard conflicted merge files */
+	GIT_MERGE_FILE_STYLE_MERGE = (1 << 0),
+
+	/* Create diff3-style files */
+	GIT_MERGE_FILE_STYLE_DIFF3 = (1 << 1),
+
+	/* Condense non-alphanumeric regions for simplified diff file */
+	GIT_MERGE_FILE_SIMPLIFY_ALNUM = (1 << 2),
+} git_merge_file_flags_t;
+
+typedef struct {
+	unsigned int version;
+
+	/**
+	 * Label for the ancestor file side of the conflict which will be prepended
+	 * to labels in diff3-format merge files.
+	 */
+	const char *ancestor_label;
+
+	/**
+	 * Label for our file side of the conflict which will be prepended
+	 * to labels in merge files.
+	 */
+	const char *our_label;
+
+	/**
+	 * Label for their file side of the conflict which will be prepended
+	 * to labels in merge files.
+	 */
+	const char *their_label;
+
+	/** The file to favor in region conflicts. */
+	git_merge_file_favor_t favor;
+
+	/** Merge file flags. */
+	git_merge_file_flags_t flags;
+} git_merge_file_options;
+
+#define GIT_MERGE_FILE_OPTIONS_VERSION 1
+#define GIT_MERGE_FILE_OPTIONS_INIT {GIT_MERGE_FILE_OPTIONS_VERSION}
+
+/**
+ * Initializes a `git_merge_file_options` with default values. Equivalent to
+ * creating an instance with GIT_MERGE_FILE_OPTIONS_INIT.
+ *
+ * @param opts the `git_merge_file_options` instance to initialize.
+ * @param version the version of the struct; you should pass
+ *        `GIT_MERGE_FILE_OPTIONS_VERSION` here.
+ * @return Zero on success; -1 on failure.
+ */
+GIT_EXTERN(int) git_merge_file_init_options(
+	git_merge_file_options *opts,
+	int version);
+
+typedef struct {
+	/**
+	 * True if the output was automerged, false if the output contains
+	 * conflict markers.
+	 */
+	unsigned int automergeable;
+
+	/**
+	 * The path that the resultant merge file should use, or NULL if a
+	 * filename conflict would occur.
+	 */
+	char *path;
+
+	/** The mode that the resultant merge file should use.  */
+	unsigned int mode;
+
+	/** The contents of the merge. */
+	unsigned char *ptr;
+
+	/** The length of the merge contents. */
+	size_t len;
+} git_merge_file_result;
 
 typedef struct {
 	unsigned int version;
@@ -99,75 +216,73 @@ typedef struct {
 
 	/** Flags for handling conflicting content. */
 	git_merge_file_favor_t file_favor;
-} git_merge_tree_opts;
+} git_merge_options;
 
-#define GIT_MERGE_TREE_OPTS_VERSION 1
-#define GIT_MERGE_TREE_OPTS_INIT {GIT_MERGE_TREE_OPTS_VERSION}
+#define GIT_MERGE_OPTIONS_VERSION 1
+#define GIT_MERGE_OPTIONS_INIT {GIT_MERGE_OPTIONS_VERSION}
 
 /**
- * Initializes a `git_merge_tree_opts` with default values. Equivalent to
- * creating an instance with GIT_MERGE_TREE_OPTS_INIT.
+ * Initializes a `git_merge_options` with default values. Equivalent to
+ * creating an instance with GIT_MERGE_OPTIONS_INIT.
  *
- * @param opts the `git_merge_tree_opts` instance to initialize.
+ * @param opts the `git_merge_options` instance to initialize.
  * @param version the version of the struct; you should pass
- *        `GIT_MERGE_TREE_OPTS_VERSION` here.
+ *        `GIT_MERGE_OPTIONS_VERSION` here.
  * @return Zero on success; -1 on failure.
  */
-GIT_EXTERN(int) git_merge_tree_init_opts(
-	git_merge_tree_opts* opts,
+GIT_EXTERN(int) git_merge_init_options(
+	git_merge_options *opts,
 	int version);
 
 /**
- * Option flags for `git_merge`.
+ * The results of `git_merge_analysis` indicate the merge opportunities.
  */
 typedef enum {
-	/**
-	 * The default behavior is to allow fast-forwards, returning
-	 * immediately with the commit ID to fast-forward to.
-	 */
-	GIT_MERGE_DEFAULT = 0,
+	/** No merge is possible.  (Unused.) */
+	GIT_MERGE_ANALYSIS_NONE = 0,
 
 	/**
-	 * Do not fast-forward; perform a merge and prepare a merge result even
-	 * if the inputs are eligible for fast-forwarding.
+	 * A "normal" merge; both HEAD and the given merge input have diverged
+	 * from their common ancestor.  The divergent commits must be merged.
 	 */
-	GIT_MERGE_NO_FASTFORWARD = 1,
+	GIT_MERGE_ANALYSIS_NORMAL = (1 << 0),
 
 	/**
-	 * Ensure that the inputs are eligible for fast-forwarding, error if
-	 * a merge needs to be performed.
+	 * All given merge inputs are reachable from HEAD, meaning the
+	 * repository is up-to-date and no merge needs to be performed.
 	 */
-	GIT_MERGE_FASTFORWARD_ONLY = 2,
-} git_merge_flags_t;
+	GIT_MERGE_ANALYSIS_UP_TO_DATE = (1 << 1),
 
-typedef struct {
-	unsigned int version;
+	/**
+	 * The given merge input is a fast-forward from HEAD and no merge
+	 * needs to be performed.  Instead, the client can check out the
+	 * given merge input.
+	 */
+	GIT_MERGE_ANALYSIS_FASTFORWARD = (1 << 2),
 
-	/** Options for handling the commit-level merge. */
-	git_merge_flags_t merge_flags;
-
-	/** Options for handling the merges of individual files. */
-	git_merge_tree_opts merge_tree_opts;
-
-	/** Options for writing the merge result to the working directory. */
-	git_checkout_options checkout_opts;
-} git_merge_opts;
-
-#define GIT_MERGE_OPTS_VERSION 1
-#define GIT_MERGE_OPTS_INIT {GIT_MERGE_OPTS_VERSION, 0, GIT_MERGE_TREE_OPTS_INIT, GIT_CHECKOUT_OPTIONS_INIT}
+	/**
+	 * The HEAD of the current repository is "unborn" and does not point to
+	 * a valid commit.  No merge can be performed, but the caller may wish
+	 * to simply set HEAD to the target commit(s).
+	 */
+	GIT_MERGE_ANALYSIS_UNBORN = (1 << 3),
+} git_merge_analysis_t;
 
 /**
- * Initializes a `git_merge_opts` with default values. Equivalent to creating
- * an instance with GIT_MERGE_OPTS_INIT.
+ * Analyzes the given branch(es) and determines the opportunities for
+ * merging them into the HEAD of the repository.
  *
- * @param opts the `git_merge_opts` instance to initialize.
- * @param version the version of the struct; you should pass
- *        `GIT_MERGE_OPTS_VERSION` here.
- * @return Zero on success; -1 on failure.
+ * @param analysis_out analysis enumeration that the result is written into
+ * @param repo the repository to merge
+ * @param their_heads the heads to merge into
+ * @param their_heads_len the number of heads to merge
+ * @return 0 on success or error code
  */
-GIT_EXTERN(int) git_merge_init_opts(
-	git_merge_opts* opts,
-	int version);
+GIT_EXTERN(int) git_merge_analysis(
+	git_merge_analysis_t *analysis_out,
+	git_repository *repo,
+	const git_merge_head **their_heads,
+	size_t their_heads_len);
 
 /**
  * Find a merge base between two commits
@@ -269,6 +384,58 @@ GIT_EXTERN(void) git_merge_head_free(
 	git_merge_head *head);
 
 /**
+ * Merge two files as they exist in the in-memory data structures, using
+ * the given common ancestor as the baseline, producing a
+ * `git_merge_file_result` that reflects the merge result.  The
+ * `git_merge_file_result` must be freed with `git_merge_file_result_free`.
+ *
+ * Note that this function does not reference a repository and any
+ * configuration must be passed as `git_merge_file_options`.
+ *
+ * @param out The git_merge_file_result to be filled in
+ * @param ancestor The contents of the ancestor file
+ * @param ours The contents of the file in "our" side
+ * @param theirs The contents of the file in "their" side
+ * @param opts The merge file options or `NULL` for defaults
+ * @return 0 on success or error code
+ */
+GIT_EXTERN(int) git_merge_file(
+	git_merge_file_result *out,
+	const git_merge_file_input *ancestor,
+	const git_merge_file_input *ours,
+	const git_merge_file_input *theirs,
+	const git_merge_file_options *opts);
+
+/**
+ * Merge two files as they exist in the index, using the given common
+ * ancestor as the baseline, producing a `git_merge_file_result` that
+ * reflects the merge result.  The `git_merge_file_result` must be freed with
+ * `git_merge_file_result_free`.
+ *
+ * @param out The git_merge_file_result to be filled in
+ * @param repo The repository
+ * @param ancestor The index entry for the ancestor file (stage level 1)
+ * @param our_path The index entry for our file (stage level 2)
+ * @param their_path The index entry for their file (stage level 3)
+ * @param opts The merge file options or NULL
+ * @return 0 on success or error code
+ */
+GIT_EXTERN(int) git_merge_file_from_index(
+	git_merge_file_result *out,
+	git_repository *repo,
+	const git_index_entry *ancestor,
+	const git_index_entry *ours,
+	const git_index_entry *theirs,
+	const git_merge_file_options *opts);
+
+/**
+ * Frees a `git_merge_file_result`.
+ *
+ * @param result The result to free or `NULL`
+ */
+GIT_EXTERN(void) git_merge_file_result_free(git_merge_file_result *result);
+
+/**
  * Merge two trees, producing a `git_index` that reflects the result of
  * the merge.  The index may be written as-is to the working directory
  * or checked out.  If the index is to be converted to a tree, the caller
@@ -290,7 +457,7 @@ GIT_EXTERN(int) git_merge_trees(
 	const git_tree *ancestor_tree,
 	const git_tree *our_tree,
 	const git_tree *their_tree,
-	const git_merge_tree_opts *opts);
+	const git_merge_options *opts);
 
 /**
  * Merge two commits, producing a `git_index` that reflects the result of
@@ -312,81 +479,27 @@ GIT_EXTERN(int) git_merge_commits(
 	git_repository *repo,
 	const git_commit *our_commit,
 	const git_commit *their_commit,
-	const git_merge_tree_opts *opts);
+	const git_merge_options *opts);
 
 /**
- * Merges the given commit(s) into HEAD and either returns immediately
- * if there was no merge to perform (the specified commits have already
- * been merged or would produce a fast-forward) or performs the merge
- * and writes the results into the working directory.
+ * Merges the given commit(s) into HEAD, writing the results into the working
+ * directory.  Any changes are staged for commit and any conflicts are written
+ * to the index.  Callers should inspect the repository's index after this
+ * completes, resolve any conflicts and prepare a commit.
  *
- * Callers should inspect the `git_merge_result`:
- *
- * If `git_merge_result_is_uptodate` is true, there is no work to perform.
- *
- * If `git_merge_result_is_fastforward` is true, the caller should update
- * any necessary references to the commit ID returned by
- * `git_merge_result_fastforward_id` and check that out in order to complete
- * the fast-forward.
- * 
- * Otherwise, callers should inspect the resulting index, resolve any
- * conflicts and prepare a commit.
- *
- * The resultant `git_merge_result` should be free with
- * `git_merge_result_free`.
- *
- * @param out the results of the merge
  * @param repo the repository to merge
  * @param merge_heads the heads to merge into
  * @param merge_heads_len the number of heads to merge
- * @param opts merge options
+ * @param merge_opts merge options
+ * @param checkout_opts checkout options
  * @return 0 on success or error code
  */
 GIT_EXTERN(int) git_merge(
-	git_merge_result **out,
 	git_repository *repo,
 	const git_merge_head **their_heads,
 	size_t their_heads_len,
-	const git_merge_opts *opts);
-
-/**
- * Returns true if a merge is "up-to-date", meaning that the commit(s) 
- * that were provided to `git_merge` are already included in `HEAD`
- * and there is no work to do.
- *
- * @return true if the merge is up-to-date, false otherwise
- */
-GIT_EXTERN(int) git_merge_result_is_uptodate(git_merge_result *merge_result);
-
-/**
- * Returns true if a merge is eligible to be "fast-forwarded", meaning that
- * the commit that was provided to `git_merge` need not be merged, it can
- * simply be checked out, because the current `HEAD` is the merge base of
- * itself and the given commit.  To perform the fast-forward, the caller
- * should check out the results of `git_merge_result_fastforward_id`.
- * 
- * This will never be true if `GIT_MERGE_NO_FASTFORWARD` is supplied as
- * a merge option.
- *
- * @return true if the merge is fast-forwardable, false otherwise
- */
-GIT_EXTERN(int) git_merge_result_is_fastforward(git_merge_result *merge_result);
-
-/**
- * Gets the fast-forward OID if the merge was a fastforward.
- *
- * @param out pointer to populate with the OID of the fast-forward
- * @param merge_result the results of the merge
- * @return 0 on success or error code
- */
-GIT_EXTERN(int) git_merge_result_fastforward_id(git_oid *out, git_merge_result *merge_result);
-
-/**
- * Frees a `git_merge_result`.
- *
- * @param result merge result to free
- */
-GIT_EXTERN(void) git_merge_result_free(git_merge_result *merge_result);
+	const git_merge_options *merge_opts,
+	const git_checkout_options *checkout_opts);
 
 /** @} */
 GIT_END_DECL

@@ -27,7 +27,7 @@ void test_merge_trees_renames__cleanup(void)
 void test_merge_trees_renames__index(void)
 {
 	git_index *index;
-	git_merge_tree_opts *opts = NULL;
+	git_merge_options *opts = NULL;
 
 	struct merge_index_entry merge_index_entries[] = {
 		{ 0100644, "68c6c84b091926c7d90aa6a79b2bc3bb6adccd8e", 0, "0a-no-change.txt" },
@@ -205,7 +205,7 @@ void test_merge_trees_renames__index(void)
 void test_merge_trees_renames__no_rename_index(void)
 {
 	git_index *index;
-	git_merge_tree_opts opts = GIT_MERGE_TREE_OPTS_INIT;
+	git_merge_options opts = GIT_MERGE_OPTIONS_INIT;
 
 	struct merge_index_entry merge_index_entries[] = {
 		{ 0100644, "68c6c84b091926c7d90aa6a79b2bc3bb6adccd8e", 0, "0a-no-change.txt" },

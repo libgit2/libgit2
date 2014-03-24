@@ -86,19 +86,20 @@ static void set_core_autocrlf_to(git_repository *repo, bool value)
 	git_config_free(cfg);
 }
 
-static int merge_branch(git_merge_result **result, int merge_file_favor, int checkout_strategy)
+static int merge_branch(int merge_file_favor, int checkout_strategy)
 {
 	git_oid their_oids[1];
 	git_merge_head *their_heads[1];
-	git_merge_opts opts = GIT_MERGE_OPTS_INIT;
+	git_merge_options merge_opts = GIT_MERGE_OPTIONS_INIT;
+	git_checkout_options checkout_opts = GIT_CHECKOUT_OPTIONS_INIT;
 	int error;
 
 	cl_git_pass(git_oid_fromstr(&their_oids[0], MERGE_BRANCH_OID));
 	cl_git_pass(git_merge_head_from_id(&their_heads[0], repo, &their_oids[0]));
 
-	opts.merge_tree_opts.file_favor = merge_file_favor;
-	opts.checkout_opts.checkout_strategy = checkout_strategy;
-	error = git_merge(result, repo, (const git_merge_head **)their_heads, 1, &opts);
+	merge_opts.file_favor = merge_file_favor;
+	checkout_opts.checkout_strategy = checkout_strategy;
+	error = git_merge(repo, (const git_merge_head **)their_heads, 1, &merge_opts, &checkout_opts);
 
 	git_merge_head_free(their_heads[0]);
 
@@ -176,7 +177,6 @@ static void stage_content(char *content[])
 {
 	git_reference *head;
 	git_object *head_object;
-	git_merge_result *result = NULL;
 	git_buf path = GIT_BUF_INIT;
 	char *filename, *text;
 	size_t i;
@@ -197,7 +197,6 @@ static void stage_content(char *content[])
 		cl_git_pass(git_index_add_bypath(repo_index, filename));
 	}
 
-	git_merge_result_free(result);
 	git_object_free(head_object);
 	git_reference_free(head);
 	git_buf_free(&path);
@@ -207,7 +206,6 @@ static int merge_dirty_files(char *dirty_files[])
 {
 	git_reference *head;
 	git_object *head_object;
-	git_merge_result *result = NULL;
 	int error;
 
 	cl_git_pass(git_repository_head(&head, repo));
@@ -216,9 +214,8 @@ static int merge_dirty_files(char *dirty_files[])
 
 	write_files(dirty_files);
 
-	error = merge_branch(&result, 0, 0);
+	error = merge_branch(0, 0);
 
-	git_merge_result_free(result);
 	git_object_free(head_object);
 	git_reference_free(head);
 
@@ -229,7 +226,6 @@ static int merge_differently_filtered_files(char *files[])
 {
 	git_reference *head;
 	git_object *head_object;
-	git_merge_result *result = NULL;
 	int error;
 
 	cl_git_pass(git_repository_head(&head, repo));
@@ -241,9 +237,8 @@ static int merge_differently_filtered_files(char *files[])
 
 	cl_git_pass(git_index_write(repo_index));
 
-	error = merge_branch(&result, 0, 0);
+	error = merge_branch(0, 0);
 
-	git_merge_result_free(result);
 	git_object_free(head_object);
 	git_reference_free(head);
 
@@ -251,17 +246,9 @@ static int merge_differently_filtered_files(char *files[])
 }
 
 static int merge_staged_files(char *staged_files[])
-{
-	git_merge_result *result = NULL;
-	int error;
-	
+{	
 	stage_random_files(staged_files);
-
-	error = merge_branch(&result, 0, 0);
-
-	git_merge_result_free(result);
-
-	return error;
+	return merge_branch(0, 0);
 }
 
 void test_merge_workdir_dirty__unaffected_dirty_files_allowed(void)
@@ -296,7 +283,6 @@ void test_merge_workdir_dirty__staged_files_in_index_disallowed(void)
 
 void test_merge_workdir_dirty__identical_staged_files_allowed(void)
 {
-	git_merge_result *result;
 	char **content;
 	size_t i;
 
@@ -306,9 +292,7 @@ void test_merge_workdir_dirty__identical_staged_files_allowed(void)
 		stage_content(content);
 
 		git_index_write(repo_index);
-		cl_git_pass(merge_branch(&result, 0, 0));
-
-		git_merge_result_free(result);
+		cl_git_pass(merge_branch(0, 0));
 	}
 }
 

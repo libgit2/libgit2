@@ -8,17 +8,6 @@ static git_repository *repo;
 
 #define TEST_REPO_PATH "merge-resolve"
 
-#define AUTOMERGEABLE_MERGED_FILE \
-	"this file is changed in master\n" \
-	"this file is automergeable\n" \
-	"this file is automergeable\n" \
-	"this file is automergeable\n" \
-	"this file is automergeable\n" \
-	"this file is automergeable\n" \
-	"this file is automergeable\n" \
-	"this file is automergeable\n" \
-	"this file is changed in branch\n"
-
 void test_merge_trees_commits__initialize(void)
 {
 	repo = cl_git_sandbox_init(TEST_REPO_PATH);
@@ -33,7 +22,7 @@ void test_merge_trees_commits__automerge(void)
 {
 	git_index *index;
 	const git_index_entry *entry;
-	git_merge_tree_opts opts = GIT_MERGE_TREE_OPTS_INIT;
+	git_merge_options opts = GIT_MERGE_OPTIONS_INIT;
 	git_blob *blob;
 
 	struct merge_index_entry merge_index_entries[] = {
@@ -82,7 +71,7 @@ void test_merge_trees_commits__automerge(void)
 void test_merge_trees_commits__no_ancestor(void)
 {
 	git_index *index;
-	git_merge_tree_opts opts = GIT_MERGE_TREE_OPTS_INIT;
+	git_merge_options opts = GIT_MERGE_OPTIONS_INIT;
 
 	struct merge_index_entry merge_index_entries[] = {
 		{ 0100644, "233c0919c998ed110a4b6ff36f353aec8b713487", 0, "added-in-master.txt" },
@@ -109,7 +98,7 @@ void test_merge_trees_commits__no_ancestor(void)
 void test_merge_trees_commits__df_conflict(void)
 {
 	git_index *index;
-	git_merge_tree_opts opts = GIT_MERGE_TREE_OPTS_INIT;
+	git_merge_options opts = GIT_MERGE_OPTIONS_INIT;
 
 	struct merge_index_entry merge_index_entries[] = {
 		{ 0100644, "49130a28ef567af9a6a6104c38773fedfa5f9742", 2, "dir-10" },

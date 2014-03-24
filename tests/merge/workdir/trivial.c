@@ -34,8 +34,6 @@ static int merge_trivial(const char *ours, const char *theirs)
 	git_checkout_options checkout_opts = GIT_CHECKOUT_OPTIONS_INIT;
 	git_reference *our_ref, *their_ref;
 	git_merge_head *their_heads[1];
-	git_merge_opts opts = GIT_MERGE_OPTS_INIT;
-	git_merge_result *result;
 
 	checkout_opts.checkout_strategy = GIT_CHECKOUT_FORCE;
 
@@ -49,13 +47,12 @@ static int merge_trivial(const char *ours, const char *theirs)
 	cl_git_pass(git_reference_lookup(&their_ref, repo, branch_buf.ptr));
 	cl_git_pass(git_merge_head_from_ref(&their_heads[0], repo, their_ref));
 
-	cl_git_pass(git_merge(&result, repo, (const git_merge_head **)their_heads, 1, &opts));
+	cl_git_pass(git_merge(repo, (const git_merge_head **)their_heads, 1, NULL, NULL));
 
 	git_buf_free(&branch_buf);
 	git_reference_free(our_ref);
 	git_reference_free(their_ref);
 	git_merge_head_free(their_heads[0]);
-	git_merge_result_free(result);
 
 	return 0;
 }
