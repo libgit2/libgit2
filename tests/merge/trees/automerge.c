@@ -54,28 +54,6 @@ static git_repository *repo;
 	  "", \
 	  "5c3b68a71fc4fa5d362fd3875e53137c6a5ab7a5" }
 
-#define AUTOMERGEABLE_MERGED_FILE \
-	"this file is changed in master\n" \
-	"this file is automergeable\n" \
-	"this file is automergeable\n" \
-	"this file is automergeable\n" \
-	"this file is automergeable\n" \
-	"this file is automergeable\n" \
-	"this file is automergeable\n" \
-	"this file is automergeable\n" \
-	"this file is changed in branch\n"
-
-#define AUTOMERGEABLE_MERGED_FILE_CRLF \
-	"this file is changed in master\r\n" \
-	"this file is automergeable\r\n" \
-	"this file is automergeable\r\n" \
-	"this file is automergeable\r\n" \
-	"this file is automergeable\r\n" \
-	"this file is automergeable\r\n" \
-	"this file is automergeable\r\n" \
-	"this file is automergeable\r\n" \
-	"this file is changed in branch\r\n"
-
 // Fixture setup and teardown
 void test_merge_trees_automerge__initialize(void)
 {

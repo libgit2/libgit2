@@ -65,6 +65,16 @@ void test_structinit_structinit__compare(void)
 		git_diff_find_options, GIT_DIFF_FIND_OPTIONS_VERSION, \
 		GIT_DIFF_FIND_OPTIONS_INIT, git_diff_find_init_options);
 
+	/* merge_file_input */
+	CHECK_MACRO_FUNC_INIT_EQUAL( \
+		git_merge_file_input, GIT_MERGE_FILE_INPUT_VERSION, \
+		GIT_MERGE_FILE_INPUT_INIT, git_merge_file_init_input);
+
+	/* merge_file */
+	CHECK_MACRO_FUNC_INIT_EQUAL( \
+		git_merge_file_options, GIT_MERGE_FILE_OPTIONS_VERSION, \
+		GIT_MERGE_FILE_OPTIONS_INIT, git_merge_file_init_options);
+
 	/* merge_tree */
 	CHECK_MACRO_FUNC_INIT_EQUAL( \
 		git_merge_tree_opts, GIT_MERGE_TREE_OPTS_VERSION, \

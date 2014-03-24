@@ -60,4 +60,6 @@ extern int git_index__find(
 
 extern void git_index__set_ignore_case(git_index *index, bool ignore_case);
 
+extern unsigned int git_index__create_mode(unsigned int mode);
+
 #endif
