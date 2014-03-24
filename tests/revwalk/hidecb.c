@@ -60,7 +60,7 @@ static int hide_none_cb(const git_oid *commit_id, void *data)
 /* Hide some commits */
 static int hide_commit_cb(const git_oid *commit_id, void *data)
 {
-	if (0 == git_oid_cmp(commit_id, &commit_ids[3]))
+	if (0 == git_oid_cmp(commit_id, &commit_ids[5]))
 		return 1;
 	else
 		return 0;
@@ -165,7 +165,7 @@ void test_revwalk_hidecb__hide_some_commits(void)
 		i++;
 	}
 
-	cl_assert_equal_i(i, 3);
+	cl_assert_equal_i(i, 4);
 	cl_assert_equal_i(error, GIT_ITEROVER);
 
 	git_revwalk_free(walk);
