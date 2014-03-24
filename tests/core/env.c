@@ -240,7 +240,7 @@ static void check_global_searchpath(
 	else if (position > 0)
 		cl_assert(git__suffixcmp(out.ptr, path) == 0);
 	else
-		cl_assert_equal_s(out, path);
+		cl_assert_equal_s(out.ptr, path);
 
 	/* find file using new path */
 	cl_git_pass(git_sysdir_find_global_file(temp, file));
