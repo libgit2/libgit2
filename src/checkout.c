@@ -328,11 +328,16 @@ static bool submodule_is_config_only(
 {
 	git_submodule *sm = NULL;
 	unsigned int sm_loc = 0;
+	bool rval = false;
 
-	if (git_submodule_lookup(&sm, data->repo, path) < 0 ||
-		git_submodule_location(&sm_loc, sm) < 0 ||
-		sm_loc == GIT_SUBMODULE_STATUS_IN_CONFIG)
+	if (git_submodule_lookup(&sm, data->repo, path) < 0)
 		return true;
+
+	if (git_submodule_location(&sm_loc, sm) < 0 ||
+		sm_loc == GIT_SUBMODULE_STATUS_IN_CONFIG)
+		rval = true;
+
+	git_submodule_free(sm);
 
 	return false;
 }
@@ -1262,7 +1267,6 @@ static int checkout_submodule(
 	const git_diff_file *file)
 {
 	int error = 0;
-	git_submodule *sm;
 
 	/* Until submodules are supported, UPDATE_ONLY means do nothing here */
 	if ((data->strategy & GIT_CHECKOUT_UPDATE_ONLY) != 0)
@@ -1273,7 +1277,7 @@ static int checkout_submodule(
 			data->opts.dir_mode, GIT_MKDIR_PATH)) < 0)
 		return error;
 
-	if ((error = git_submodule_lookup(&sm, data->repo, file->path)) < 0) {
+	if ((error = git_submodule_lookup(NULL, data->repo, file->path)) < 0) {
 		/* I've observed repos with submodules in the tree that do not
 		 * have a .gitmodules - core Git just makes an empty directory
 		 */

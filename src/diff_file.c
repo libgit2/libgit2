@@ -320,7 +320,8 @@ static int diff_file_content_load_workdir_file(
 
 		error = git_filter_list_apply_to_data(&out, fl, &raw);
 
-		git_buf_free(&raw);
+		if (out.ptr != raw.ptr)
+			git_buf_free(&raw);
 
 		if (!error) {
 			fc->map.len  = out.size;
