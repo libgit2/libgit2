@@ -1,6 +1,7 @@
 #include "clar_libgit2.h"
 #include "repository.h"
 #include "posix.h"
+#include "diff_helpers.h"
 #include "../submodule/submodule_helpers.h"
 
 static git_repository *g_repo = NULL;
@@ -11,6 +12,7 @@ void test_diff_submodules__initialize(void)
 
 void test_diff_submodules__cleanup(void)
 {
+	cl_git_sandbox_cleanup();
 }
 
 #define get_buf_ptr(buf) ((buf)->asize ? (buf)->ptr : NULL)
@@ -34,6 +36,10 @@ static void check_diff_patches_at_line(
 
 		if (expected[d] && !strcmp(expected[d], "<SKIP>"))
 			continue;
+		if (expected[d] && !strcmp(expected[d], "<UNTRACKED>")) {
+			cl_assert_at_line(delta->status == GIT_DELTA_UNTRACKED, file, line);
+			continue;
+		}
 		if (expected[d] && !strcmp(expected[d], "<END>")) {
 			cl_git_pass(git_patch_to_buf(&buf, patch));
 			cl_assert_at_line(!strcmp(expected[d], "<END>"), file, line);
@@ -115,7 +121,9 @@ void test_diff_submodules__dirty_submodule_2(void)
 	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
 	git_diff *diff = NULL, *diff2 = NULL;
 	char *smpath = "testrepo";
-	static const char *expected_none[] = { "<END>" };
+	static const char *expected_none[] = {
+		"<END>"
+	};
 	static const char *expected_dirty[] = {
 		"diff --git a/testrepo b/testrepo\nindex a65fedf..a65fedf 160000\n--- a/testrepo\n+++ b/testrepo\n@@ -1 +1 @@\n-Subproject commit a65fedf39aefe402d3bb6e24df4d4f5fe4547750\n+Subproject commit a65fedf39aefe402d3bb6e24df4d4f5fe4547750-dirty\n", /* testrepo.git */
 		"<END>"
@@ -170,6 +178,8 @@ void test_diff_submodules__submod2_index_to_wd(void)
 	git_diff *diff = NULL;
 	static const char *expected[] = {
 		"<SKIP>", /* .gitmodules */
+		"<UNTRACKED>", /* not-submodule */
+		"<UNTRACKED>", /* not */
 		"diff --git a/sm_changed_file b/sm_changed_file\nindex 4800958..4800958 160000\n--- a/sm_changed_file\n+++ b/sm_changed_file\n@@ -1 +1 @@\n-Subproject commit 480095882d281ed676fe5b863569520e54a7d5c0\n+Subproject commit 480095882d281ed676fe5b863569520e54a7d5c0-dirty\n", /* sm_changed_file */
 		"diff --git a/sm_changed_head b/sm_changed_head\nindex 4800958..3d9386c 160000\n--- a/sm_changed_head\n+++ b/sm_changed_head\n@@ -1 +1 @@\n-Subproject commit 480095882d281ed676fe5b863569520e54a7d5c0\n+Subproject commit 3d9386c507f6b093471a3e324085657a3c2b4247\n", /* sm_changed_head */
 		"diff --git a/sm_changed_index b/sm_changed_index\nindex 4800958..4800958 160000\n--- a/sm_changed_index\n+++ b/sm_changed_index\n@@ -1 +1 @@\n-Subproject commit 480095882d281ed676fe5b863569520e54a7d5c0\n+Subproject commit 480095882d281ed676fe5b863569520e54a7d5c0-dirty\n", /* sm_changed_index */
@@ -349,6 +359,8 @@ void test_diff_submodules__diff_ignore_options(void)
 	git_config *cfg;
 	static const char *expected_normal[] = {
 		"<SKIP>", /* .gitmodules */
+		"<UNTRACKED>", /* not-submodule */
+		"<UNTRACKED>", /* not */
 		"diff --git a/sm_changed_file b/sm_changed_file\nindex 4800958..4800958 160000\n--- a/sm_changed_file\n+++ b/sm_changed_file\n@@ -1 +1 @@\n-Subproject commit 480095882d281ed676fe5b863569520e54a7d5c0\n+Subproject commit 480095882d281ed676fe5b863569520e54a7d5c0-dirty\n", /* sm_changed_file */
 		"diff --git a/sm_changed_head b/sm_changed_head\nindex 4800958..3d9386c 160000\n--- a/sm_changed_head\n+++ b/sm_changed_head\n@@ -1 +1 @@\n-Subproject commit 480095882d281ed676fe5b863569520e54a7d5c0\n+Subproject commit 3d9386c507f6b093471a3e324085657a3c2b4247\n", /* sm_changed_head */
 		"diff --git a/sm_changed_index b/sm_changed_index\nindex 4800958..4800958 160000\n--- a/sm_changed_index\n+++ b/sm_changed_index\n@@ -1 +1 @@\n-Subproject commit 480095882d281ed676fe5b863569520e54a7d5c0\n+Subproject commit 480095882d281ed676fe5b863569520e54a7d5c0-dirty\n", /* sm_changed_index */
@@ -358,10 +370,14 @@ void test_diff_submodules__diff_ignore_options(void)
 	};
 	static const char *expected_ignore_all[] = {
 		"<SKIP>", /* .gitmodules */
+		"<UNTRACKED>", /* not-submodule */
+		"<UNTRACKED>", /* not */
 		"<END>"
 	};
 	static const char *expected_ignore_dirty[] = {
 		"<SKIP>", /* .gitmodules */
+		"<UNTRACKED>", /* not-submodule */
+		"<UNTRACKED>", /* not */
 		"diff --git a/sm_changed_head b/sm_changed_head\nindex 4800958..3d9386c 160000\n--- a/sm_changed_head\n+++ b/sm_changed_head\n@@ -1 +1 @@\n-Subproject commit 480095882d281ed676fe5b863569520e54a7d5c0\n+Subproject commit 3d9386c507f6b093471a3e324085657a3c2b4247\n", /* sm_changed_head */
 		"diff --git a/sm_missing_commits b/sm_missing_commits\nindex 4800958..5e49635 160000\n--- a/sm_missing_commits\n+++ b/sm_missing_commits\n@@ -1 +1 @@\n-Subproject commit 480095882d281ed676fe5b863569520e54a7d5c0\n+Subproject commit 5e4963595a9774b90524d35a807169049de8ccad\n", /* sm_missing_commits */
 		"<END>"
@@ -422,4 +438,50 @@ void test_diff_submodules__diff_ignore_options(void)
 	git_diff_free(diff);
 
 	git_config_free(cfg);
+}
+
+void test_diff_submodules__skips_empty_includes_used(void)
+{
+	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
+	git_diff *diff = NULL;
+	diff_expects exp;
+	git_repository *r2;
+
+	/* A side effect of of Git's handling of untracked directories and
+	 * auto-ignoring of ".git" entries is that a newly initialized Git
+	 * repo inside another repo will be skipped by diff, but one that
+	 * actually has a commit it in will show as an untracked directory.
+	 * Let's make sure that works.
+	 */
+
+	g_repo = cl_git_sandbox_init("empty_standard_repo");
+
+	opts.flags |= GIT_DIFF_INCLUDE_IGNORED | GIT_DIFF_INCLUDE_UNTRACKED;
+
+	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, NULL, &opts));
+	memset(&exp, 0, sizeof(exp));
+	cl_git_pass(git_diff_foreach(
+		diff, diff_file_cb, diff_hunk_cb, diff_line_cb, &exp));
+	cl_assert_equal_i(0, exp.files);
+	git_diff_free(diff);
+
+	cl_git_pass(git_repository_init(&r2, "empty_standard_repo/subrepo", 0));
+
+	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, NULL, &opts));
+	memset(&exp, 0, sizeof(exp));
+	cl_git_pass(git_diff_foreach(
+		diff, diff_file_cb, diff_hunk_cb, diff_line_cb, &exp));
+	cl_assert_equal_i(1, exp.files);
+	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_IGNORED]);
+	git_diff_free(diff);
+
+	cl_git_mkfile("empty_standard_repo/subrepo/README.txt", "hello\n");
+
+	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, NULL, &opts));
+	memset(&exp, 0, sizeof(exp));
+	cl_git_pass(git_diff_foreach(
+		diff, diff_file_cb, diff_hunk_cb, diff_line_cb, &exp));
+	cl_assert_equal_i(1, exp.files);
+	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_UNTRACKED]);
+	git_diff_free(diff);
 }
