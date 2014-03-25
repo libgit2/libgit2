@@ -430,10 +430,17 @@ int git_clone(
 	}
 
 	if (error != 0) {
+		void *ptr;
+		GIT_UNUSED(ptr);
+
+		printf("Foo!\n");
+
 		git_repository_free(repo);
 		repo = NULL;
 
 		(void)git_futils_rmdir_r(local_path, NULL, rmdir_flags);
+
+		printf("bar!\n");
 	}
 
 	*out = repo;
