@@ -261,6 +261,30 @@ GIT_EXTERN(void) git_revwalk_free(git_revwalk *walk);
  */
 GIT_EXTERN(git_repository *) git_revwalk_repository(git_revwalk *walk);
 
+/**
+ * This is a callback function that user can provide to hide a
+ * commit and its parents. If the callback function returns non-zero value,
+ * then this commit and its parents will be hidden.
+ *
+ * @param commit_id oid of Commit
+ * @param payload User-specified pointer to data to be passed as data payload
+ */
+typedef int(*git_revwalk_hide_cb)(
+	const git_oid *commit_id,
+	void *payload);
+
+/**
+ * Adds a callback function to hide a commit and its parents
+ *
+ * @param walk the revision walker
+ * @param hide_cb  callback function to hide a commit and its parents
+ * @param payload  data payload to be passed to callback function
+ */
+GIT_EXTERN(int) git_revwalk_add_hide_cb(
+	git_revwalk *walk,
+	git_revwalk_hide_cb hide_cb,
+	void *payload);
+
 /** @} */
 GIT_END_DECL
 #endif
