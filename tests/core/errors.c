@@ -85,3 +85,27 @@ void test_core_errors__new_school(void)
 
 	giterr_clear();
 }
+
+void test_core_errors__restore(void)
+{
+	git_error_state err_state = {0};
+
+	giterr_clear();
+	cl_assert(giterr_last() == NULL);
+
+	cl_assert_equal_i(0, giterr_capture(&err_state, 0));
+
+	memset(&err_state, 0x0, sizeof(git_error_state));
+
+	giterr_set(42, "Foo: %s", "bar");
+	cl_assert_equal_i(-1, giterr_capture(&err_state, -1));
+
+	cl_assert(giterr_last() == NULL);
+
+	giterr_set(99, "Bar: %s", "foo");
+
+	giterr_restore(&err_state);
+
+	cl_assert_equal_i(42, giterr_last()->klass);
+	cl_assert_equal_s("Foo: bar", giterr_last()->message);
+}
