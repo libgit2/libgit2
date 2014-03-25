@@ -128,9 +128,6 @@ extern int git_submodule_open_bare(
 	git_repository **repo,
 	git_submodule *submodule);
 
-/* Release reference to submodule object - not currently for external use */
-extern void git_submodule_free(git_submodule *sm);
-
 extern int git_submodule_parse_ignore(
 	git_submodule_ignore_t *out, const char *value);
 extern int git_submodule_parse_update(

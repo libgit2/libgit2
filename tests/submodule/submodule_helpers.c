@@ -125,3 +125,32 @@ git_repository *setup_fixture_submod2(void)
 
 	return repo;
 }
+
+void assert_submodule_exists(git_repository *repo, const char *name)
+{
+	git_submodule *sm;
+	cl_git_pass(git_submodule_lookup(&sm, repo, name));
+	cl_assert(sm);
+	git_submodule_free(sm);
+}
+
+void refute_submodule_exists(
+	git_repository *repo, const char *name, int expected_error)
+{
+	git_submodule *sm;
+	cl_assert_equal_i(
+		expected_error, git_submodule_lookup(&sm, repo, name));
+}
+
+unsigned int get_submodule_status(git_repository *repo, const char *name)
+{
+	git_submodule *sm = NULL;
+	unsigned int status = 0;
+
+	cl_git_pass(git_submodule_lookup(&sm, repo, name));
+	cl_assert(sm);
+	cl_git_pass(git_submodule_status(&status, sm));
+	git_submodule_free(sm);
+
+	return status;
+}

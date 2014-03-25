@@ -528,12 +528,15 @@ int git_diff__oid_for_file(
 	/* calculate OID for file if possible */
 	if (S_ISGITLINK(mode)) {
 		git_submodule *sm;
-		const git_oid *sm_oid;
 
-		if (!git_submodule_lookup(&sm, repo, path) &&
-			(sm_oid = git_submodule_wd_id(sm)) != NULL)
-			git_oid_cpy(oid, sm_oid);
-		else {
+		memset(oid, 0, sizeof(*oid));
+
+		if (!git_submodule_lookup(&sm, repo, path)) {
+			const git_oid *sm_oid = git_submodule_wd_id(sm);
+			if (sm_oid)
+				git_oid_cpy(oid, sm_oid);
+			git_submodule_free(sm);
+		} else {
 			/* if submodule lookup failed probably just in an intermediate
 			 * state where some init hasn't happened, so ignore the error
 			 */
@@ -615,24 +618,24 @@ static int maybe_modified_submodule(
 	}
 
 	if (ign <= 0 && git_submodule_ignore(sub) == GIT_SUBMODULE_IGNORE_ALL)
-		return 0;
-
-	if ((error = git_submodule__status(
+		/* ignore it */;
+	else if ((error = git_submodule__status(
 			&sm_status, NULL, NULL, found_oid, sub, ign)) < 0)
-		return error;
+		/* return error below */;
 
 	/* check IS_WD_UNMODIFIED because this case is only used
 	 * when the new side of the diff is the working directory
 	 */
-	if (!GIT_SUBMODULE_STATUS_IS_WD_UNMODIFIED(sm_status))
+	else if (!GIT_SUBMODULE_STATUS_IS_WD_UNMODIFIED(sm_status))
 		*status = GIT_DELTA_MODIFIED;
 
 	/* now that we have a HEAD OID, check if HEAD moved */
-	if ((sm_status & GIT_SUBMODULE_STATUS_IN_WD) != 0 &&
+	else if ((sm_status & GIT_SUBMODULE_STATUS_IN_WD) != 0 &&
 		!git_oid_equal(&info->oitem->id, found_oid))
 		*status = GIT_DELTA_MODIFIED;
 
-	return 0;
+	git_submodule_free(sub);
+	return error;
 }
 
 static int maybe_modified(
@@ -960,10 +963,8 @@ static int handle_unmatched_new_item(
 		delta_type = GIT_DELTA_ADDED;
 
 	else if (nitem->mode == GIT_FILEMODE_COMMIT) {
-		git_submodule *sm;
-
 		/* ignore things that are not actual submodules */
-		if (git_submodule_lookup(&sm, info->repo, nitem->path) != 0) {
+		if (git_submodule_lookup(NULL, info->repo, nitem->path) != 0) {
 			giterr_clear();
 			delta_type = GIT_DELTA_IGNORED;
 		}

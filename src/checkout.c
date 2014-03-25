@@ -147,19 +147,23 @@ static bool checkout_is_workdir_modified(
 		git_submodule *sm;
 		unsigned int sm_status = 0;
 		const git_oid *sm_oid = NULL;
+		bool rval = false;
 
-		if (git_submodule_lookup(&sm, data->repo, wditem->path) < 0 ||
-			git_submodule_status(&sm_status, sm) < 0)
+		if (git_submodule_lookup(&sm, data->repo, wditem->path) < 0) {
+			giterr_clear();
 			return true;
+		}
 
-		if (GIT_SUBMODULE_STATUS_IS_WD_DIRTY(sm_status))
-			return true;
+		if (git_submodule_status(&sm_status, sm) < 0 ||
+			GIT_SUBMODULE_STATUS_IS_WD_DIRTY(sm_status))
+			rval = true;
+		else if ((sm_oid = git_submodule_wd_id(sm)) == NULL)
+			rval = false;
+		else
+			rval = (git_oid__cmp(&baseitem->id, sm_oid) != 0);
 
-		sm_oid = git_submodule_wd_id(sm);
-		if (!sm_oid)
-			return false;
-
-		return (git_oid__cmp(&baseitem->id, sm_oid) != 0);
+		git_submodule_free(sm);
+		return rval;
 	}
 
 	/* Look at the cache to decide if the workdir is modified.  If not,
@@ -1510,7 +1514,7 @@ static int checkout_create_submodules(
 
 	/* initial reload of submodules if .gitmodules was changed */
 	if (data->reload_submodules &&
-		(error = git_submodule_reload_all(data->repo)) < 0)
+		(error = git_submodule_reload_all(data->repo, 1)) < 0)
 		return error;
 
 	git_vector_foreach(&data->diff->deltas, i, delta) {
@@ -1534,7 +1538,7 @@ static int checkout_create_submodules(
 	}
 
 	/* final reload once submodules have been updated */
-	return git_submodule_reload_all(data->repo);
+	return git_submodule_reload_all(data->repo, 1);
 }
 
 static int checkout_lookup_head_tree(git_tree **out, git_repository *repo)

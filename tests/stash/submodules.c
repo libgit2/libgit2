@@ -19,6 +19,9 @@ void test_stash_submodules__initialize(void)
 
 void test_stash_submodules__cleanup(void)
 {
+	git_submodule_free(sm);
+	sm = NULL;
+
 	git_signature_free(signature);
 	signature = NULL;
 }
