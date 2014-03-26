@@ -111,6 +111,11 @@ enum {
 	GIT_SUBMODULE_STATUS__INDEX_MULTIPLE_ENTRIES = (1u << 27),
 };
 
+#define GIT_SUBMODULE_STATUS__ALL_WD_FLAGS \
+	(GIT_SUBMODULE_STATUS_IN_WD | \
+	 GIT_SUBMODULE_STATUS__WD_OID_VALID | \
+	 GIT_SUBMODULE_STATUS__WD_FLAGS)
+
 #define GIT_SUBMODULE_STATUS__CLEAR_INTERNAL(S) \
 	((S) & ~(0xFFFFFFFFu << 20))
 
@@ -127,9 +132,6 @@ extern int git_submodule__status(
 extern int git_submodule_open_bare(
 	git_repository **repo,
 	git_submodule *submodule);
-
-/* Release reference to submodule object - not currently for external use */
-extern void git_submodule_free(git_submodule *sm);
 
 extern int git_submodule_parse_ignore(
 	git_submodule_ignore_t *out, const char *value);

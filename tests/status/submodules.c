@@ -29,6 +29,7 @@ void test_status_submodules__api(void)
 	cl_assert(sm != NULL);
 	cl_assert_equal_s("testrepo", git_submodule_name(sm));
 	cl_assert_equal_s("testrepo", git_submodule_path(sm));
+	git_submodule_free(sm);
 }
 
 void test_status_submodules__0(void)
@@ -136,6 +137,7 @@ void test_status_submodules__moved_head(void)
 
 	cl_git_pass(git_submodule_lookup(&sm, g_repo, "testrepo"));
 	cl_git_pass(git_submodule_open(&smrepo, sm));
+	git_submodule_free(sm);
 
 	/* move submodule HEAD to c47800c7266a2be04c571c04d5a6614691ea99bd */
 	cl_git_pass(

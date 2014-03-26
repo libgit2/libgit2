@@ -363,18 +363,21 @@ static void print_short(git_repository *repo, git_status_list *status)
 			unsigned int smstatus = 0;
 
 			if (!git_submodule_lookup(
-					&sm, repo, s->index_to_workdir->new_file.path) &&
-				!git_submodule_status(&smstatus, sm))
-			{
-				if (smstatus & GIT_SUBMODULE_STATUS_WD_MODIFIED)
-					extra = " (new commits)";
-				else if (smstatus & GIT_SUBMODULE_STATUS_WD_INDEX_MODIFIED)
-					extra = " (modified content)";
-				else if (smstatus & GIT_SUBMODULE_STATUS_WD_WD_MODIFIED)
-					extra = " (modified content)";
-				else if (smstatus & GIT_SUBMODULE_STATUS_WD_UNTRACKED)
-					extra = " (untracked content)";
+					&sm, repo, s->index_to_workdir->new_file.path)) {
+
+				if (!git_submodule_status(&smstatus, sm)) {
+					if (smstatus & GIT_SUBMODULE_STATUS_WD_MODIFIED)
+						extra = " (new commits)";
+					else if (smstatus & GIT_SUBMODULE_STATUS_WD_INDEX_MODIFIED)
+						extra = " (modified content)";
+					else if (smstatus & GIT_SUBMODULE_STATUS_WD_WD_MODIFIED)
+						extra = " (modified content)";
+					else if (smstatus & GIT_SUBMODULE_STATUS_WD_UNTRACKED)
+						extra = " (untracked content)";
+				}
 			}
+
+			git_submodule_free(sm);
 		}
 
 		/**

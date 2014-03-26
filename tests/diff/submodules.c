@@ -131,7 +131,7 @@ void test_diff_submodules__dirty_submodule_2(void)
 
 	g_repo = setup_fixture_submodules();
 
-	cl_git_pass(git_submodule_reload_all(g_repo));
+	cl_git_pass(git_submodule_reload_all(g_repo, 1));
 
 	opts.flags = GIT_DIFF_INCLUDE_UNTRACKED |
 		GIT_DIFF_SHOW_UNTRACKED_CONTENT |
@@ -165,7 +165,7 @@ void test_diff_submodules__dirty_submodule_2(void)
 
 	git_diff_free(diff);
 
-	cl_git_pass(git_submodule_reload_all(g_repo));
+	cl_git_pass(git_submodule_reload_all(g_repo, 1));
 
 	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, NULL, &opts));
 	check_diff_patches(diff, expected_dirty);
@@ -291,7 +291,9 @@ void test_diff_submodules__invalid_cache(void)
 	check_diff_patches(diff, expected_dirty);
 	git_diff_free(diff);
 
-	cl_git_pass(git_submodule_reload_all(g_repo));
+	git_submodule_free(sm);
+
+	cl_git_pass(git_submodule_reload_all(g_repo, 1));
 	cl_git_pass(git_submodule_lookup(&sm, g_repo, smpath));
 
 	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, NULL, &opts));
@@ -343,6 +345,8 @@ void test_diff_submodules__invalid_cache(void)
 	git_diff_free(diff);
 
 	p_unlink("submod2/sm_changed_head/new_around_here");
+
+	git_submodule_free(sm);
 
 	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, NULL, &opts));
 	check_diff_patches(diff, expected_moved);

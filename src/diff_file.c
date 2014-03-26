@@ -177,11 +177,17 @@ static int diff_file_content_commit_to_str(
 		unsigned int sm_status = 0;
 		const git_oid *sm_head;
 
-		if ((error = git_submodule_lookup(&sm, fc->repo, fc->file->path)) < 0 ||
-			(error = git_submodule_status(&sm_status, sm)) < 0) {
+		if ((error = git_submodule_lookup(&sm, fc->repo, fc->file->path)) < 0) {
 			/* GIT_EEXISTS means a "submodule" that has not been git added */
-			if (error == GIT_EEXISTS)
+			if (error == GIT_EEXISTS) {
+				giterr_clear();
 				error = 0;
+			}
+			return error;
+		}
+
+		if ((error = git_submodule_status(&sm_status, sm)) < 0) {
+			git_submodule_free(sm);
 			return error;
 		}
 
@@ -196,6 +202,8 @@ static int diff_file_content_commit_to_str(
 
 		if (GIT_SUBMODULE_STATUS_IS_WD_DIRTY(sm_status))
 			status = "-dirty";
+
+		git_submodule_free(sm);
 	}
 
 	git_oid_tostr(oid, sizeof(oid), &fc->file->id);
@@ -312,7 +320,8 @@ static int diff_file_content_load_workdir_file(
 
 		error = git_filter_list_apply_to_data(&out, fl, &raw);
 
-		git_buf_free(&raw);
+		if (out.ptr != raw.ptr)
+			git_buf_free(&raw);
 
 		if (!error) {
 			fc->map.len  = out.size;
