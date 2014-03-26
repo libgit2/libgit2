@@ -1313,8 +1313,8 @@ static int workdir_iterator__update_entry(fs_iterator *fi)
 	if (error < 0)
 		giterr_clear();
 
-	/* mark submodule (or any dir with .git) as GITLINK and remove slash */
-	if (!error || error == GIT_EEXISTS) {
+	/* mark submodule as GITLINK and remove slash */
+	if (!error) {
 		fi->entry.mode = S_IFGITLINK;
 		fi->entry.path[strlen(fi->entry.path) - 1] = '\0';
 	}

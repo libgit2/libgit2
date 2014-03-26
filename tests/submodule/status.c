@@ -324,7 +324,7 @@ static int confirm_submodule_status(
 {
 	submodule_expectations *exp = payload;
 
-	while (git__suffixcmp(exp->paths[exp->counter], "/") == 0)
+	while (exp->statuses[exp->counter] < 0)
 		exp->counter++;
 
 	cl_assert_equal_i(exp->statuses[exp->counter], (int)status_flags);
@@ -345,8 +345,10 @@ void test_submodule_status__iterator(void)
 		"just_a_dir/",
 		"just_a_dir/contents",
 		"just_a_file",
-		"not",
-		"not-submodule",
+		"not-submodule/",
+		"not-submodule/README.txt",
+		"not/",
+		"not/README.txt",
 		"README.txt",
 		"sm_added_and_uncommited",
 		"sm_changed_file",
@@ -359,11 +361,13 @@ void test_submodule_status__iterator(void)
 	};
 	static int expected_flags[] = {
 		GIT_STATUS_INDEX_MODIFIED | GIT_STATUS_WT_MODIFIED, /* ".gitmodules" */
-		0,					    /* "just_a_dir/" will be skipped */
+		-1,					    /* "just_a_dir/" will be skipped */
 		GIT_STATUS_CURRENT,     /* "just_a_dir/contents" */
 		GIT_STATUS_CURRENT,	    /* "just_a_file" */
-		GIT_STATUS_IGNORED,	    /* "not" (contains .git) */
-		GIT_STATUS_IGNORED,     /* "not-submodule" (contains .git) */
+		GIT_STATUS_WT_NEW,      /* "not-submodule/" untracked item */
+		-1,                     /* "not-submodule/README.txt" */
+		GIT_STATUS_WT_NEW,      /* "not/" untracked item */
+		-1,                     /* "not/README.txt" */
 		GIT_STATUS_CURRENT,     /* "README.txt */
 		GIT_STATUS_INDEX_NEW,   /* "sm_added_and_uncommited" */
 		GIT_STATUS_WT_MODIFIED, /* "sm_changed_file" */

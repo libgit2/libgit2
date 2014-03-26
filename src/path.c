@@ -1051,15 +1051,8 @@ int git_path_dirload_with_stat(
 		}
 
 		if (S_ISDIR(ps->st.st_mode)) {
-			if ((error = git_buf_joinpath(&full, full.ptr, ".git")) < 0)
-				break;
-
-			if (p_access(full.ptr, F_OK) == 0) {
-				ps->st.st_mode = GIT_FILEMODE_COMMIT;
-			} else {
-				ps->path[ps->path_len++] = '/';
-				ps->path[ps->path_len] = '\0';
-			}
+			ps->path[ps->path_len++] = '/';
+			ps->path[ps->path_len] = '\0';
 		}
 	}
 

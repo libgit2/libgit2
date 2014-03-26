@@ -881,7 +881,7 @@ void test_diff_workdir__submodules(void)
 	 * only significant difference is that those Added items will show up
 	 * as Untracked items in the pure libgit2 diff.
 	 *
-	 * Then add in the two extra ignored items "not" and "not-submodule"
+	 * Then add in the two extra untracked items "not" and "not-submodule"
 	 * to get the 12 files reported here.
 	 */
 
@@ -890,8 +890,8 @@ void test_diff_workdir__submodules(void)
 	cl_assert_equal_i(0, exp.file_status[GIT_DELTA_ADDED]);
 	cl_assert_equal_i(0, exp.file_status[GIT_DELTA_DELETED]);
 	cl_assert_equal_i(2, exp.file_status[GIT_DELTA_MODIFIED]);
-	cl_assert_equal_i(2, exp.file_status[GIT_DELTA_IGNORED]);
-	cl_assert_equal_i(8, exp.file_status[GIT_DELTA_UNTRACKED]);
+	cl_assert_equal_i(0, exp.file_status[GIT_DELTA_IGNORED]);
+	cl_assert_equal_i(10, exp.file_status[GIT_DELTA_UNTRACKED]);
 
 	/* the following numbers match "git diff 873585" exactly */
 
