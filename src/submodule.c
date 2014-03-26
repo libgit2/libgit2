@@ -156,7 +156,7 @@ int git_submodule_lookup(
 			if (git_buf_joinpath(&path, git_repository_workdir(repo), name) < 0)
 				return -1;
 
-			if (git_path_contains_dir(&path, DOT_GIT))
+			if (git_path_contains(&path, DOT_GIT))
 				error = GIT_EEXISTS;
 
 			git_buf_free(&path);
@@ -846,7 +846,8 @@ int git_submodule_reload_all(git_repository *repo, int force)
 	if (repo->submodules)
 		git_strmap_foreach_value(repo->submodules, sm, { sm->flags = 0; });
 
-	error = load_submodule_config(repo, true);
+	if ((error = load_submodule_config(repo, true)) < 0)
+		return error;
 
 	git_strmap_foreach_value(repo->submodules, sm, {
 		git_strmap *cache = repo->submodules;
