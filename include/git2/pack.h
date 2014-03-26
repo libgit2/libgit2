@@ -115,6 +115,17 @@ GIT_EXTERN(int) git_packbuilder_insert_tree(git_packbuilder *pb, const git_oid *
 GIT_EXTERN(int) git_packbuilder_insert_commit(git_packbuilder *pb, const git_oid *id);
 
 /**
+ * Write the contents of the packfile to an in-memory buffer
+ *
+ * The contents of the buffer will become a valid packfile, even though there
+ * will be no attached index
+ *
+ * @param buf Buffer where to write the packfile
+ * @param pb The packbuilder
+ */
+GIT_EXTERN(int) git_packbuilder_write_buf(git_buf *buf, git_packbuilder *pb);
+
+/**
  * Write the new pack and corresponding index file to path.
  *
  * @param pb The packbuilder
