@@ -1279,14 +1279,17 @@ static int submodule_load_from_config(
 		}
 	}
 
+	/* Found a alternate key for the submodule */
 	if (alternate) {
 		void *old_sm = NULL;
 		git_strmap_insert2(smcfg, alternate, sm, old_sm, error);
 
 		if (error < 0)
 			goto done;
-		if (error >= 0)
-			GIT_REFCOUNT_INC(sm); /* inserted under a new key */
+		if (error > 0)
+			error = 0;
+
+		GIT_REFCOUNT_INC(sm); /* increase refcount for new key */
 
 		/* if we replaced an old module under this key, release the old one */
 		if (old_sm && ((git_submodule *)old_sm) != sm) {

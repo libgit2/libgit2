@@ -141,3 +141,36 @@ void test_submodule_lookup__lookup_even_with_missing_index(void)
 	refute_submodule_exists(g_repo, "just_a_file", GIT_ENOTFOUND);
 	refute_submodule_exists(g_repo, "no_such_file", GIT_ENOTFOUND);
 }
+
+void test_submodule_lookup__just_added(void)
+{
+	git_submodule *sm;
+
+	cl_git_pass(git_submodule_add_setup(&sm, g_repo, "https://github.com/libgit2/libgit2.git", "sm_just_added", 1));
+	git_submodule_free(sm);
+	assert_submodule_exists(g_repo, "sm_just_added");
+
+	cl_git_pass(git_submodule_add_setup(&sm, g_repo, "https://github.com/libgit2/libgit2.git", "sm_just_added_2", 1));
+	assert_submodule_exists(g_repo, "sm_just_added_2");
+	git_submodule_free(sm);
+
+	cl_git_append2file("submod2/.gitmodules", "\n[submodule \"mismatch_name\"]\n\tpath = mismatch_path\n\turl = https://example.com/example.git\n\n");
+
+	cl_git_pass(git_submodule_reload_all(g_repo, 1));
+
+	assert_submodule_exists(g_repo, "mismatch_name");
+	assert_submodule_exists(g_repo, "mismatch_path");
+
+	assert_submodule_exists(g_repo, "sm_just_added");
+	assert_submodule_exists(g_repo, "sm_just_added_2");
+
+	/* all the regular ones should still be working right, too */
+
+	assert_submodule_exists(g_repo, "sm_unchanged");
+	assert_submodule_exists(g_repo, "sm_added_and_uncommited");
+	assert_submodule_exists(g_repo, "sm_gitmodules_only");
+	refute_submodule_exists(g_repo, "not-submodule", GIT_EEXISTS);
+	refute_submodule_exists(g_repo, "just_a_dir", GIT_ENOTFOUND);
+	refute_submodule_exists(g_repo, "just_a_file", GIT_ENOTFOUND);
+	refute_submodule_exists(g_repo, "no_such_file", GIT_ENOTFOUND);
+}
