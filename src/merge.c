@@ -2629,9 +2629,8 @@ int git_merge(
 on_error:
 	merge_state_cleanup(repo);
 
-	git_index_free(index_new);
-
 done:
+	git_index_free(index_new);
 	git_index_free(index_repo);
 
 	git_tree_free(ancestor_tree);

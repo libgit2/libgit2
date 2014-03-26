@@ -48,18 +48,27 @@ void test_revwalk_hidecb__cleanup(void)
 /* Hide all commits */
 static int hide_every_commit_cb(const git_oid *commit_id, void *data)
 {
+	GIT_UNUSED(commit_id);
+	GIT_UNUSED(data);
+
 	return 1;
 }
 
 /* Do not hide anything */
 static int hide_none_cb(const git_oid *commit_id, void *data)
 {
+	GIT_UNUSED(commit_id);
+	GIT_UNUSED(data);
+
 	return 0;
 }
 
 /* Hide some commits */
 static int hide_commit_cb(const git_oid *commit_id, void *data)
 {
+	GIT_UNUSED(commit_id);
+	GIT_UNUSED(data);
+
 	if (0 == git_oid_cmp(commit_id, &commit_ids[5]))
 		return 1;
 	else
