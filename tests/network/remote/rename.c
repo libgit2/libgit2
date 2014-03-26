@@ -167,7 +167,7 @@ void test_network_remote_rename__cannot_rename_an_inmemory_remote(void)
 {
 	git_remote *remote;
 
-	cl_git_pass(git_remote_create_inmemory(&remote, _repo, NULL, "file:///blah"));
+	cl_git_pass(git_remote_create_anonymous(&remote, _repo, "file:///blah", NULL));
 	cl_git_fail(git_remote_rename(remote, "newname", NULL, NULL));
 
 	git_remote_free(remote);

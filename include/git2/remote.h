@@ -62,10 +62,10 @@ GIT_EXTERN(int) git_remote_create_with_fetchspec(
 		const char *fetch);
 
 /**
- * Create a remote in memory
+ * Create an anonymous remote
  *
- * Create a remote with the given refspec in memory. You can use
- * this when you have a URL instead of a remote's name.  Note that in-memory
+ * Create a remote with the given url and refspec in memory. You can use
+ * this when you have a URL instead of a remote's name.  Note that anonymous
  * remotes cannot be converted to persisted remotes.
  *
  * The name, when provided, will be checked for validity.
@@ -73,15 +73,15 @@ GIT_EXTERN(int) git_remote_create_with_fetchspec(
  *
  * @param out pointer to the new remote object
  * @param repo the associated repository
- * @param fetch the fetch refspec to use for this remote.
  * @param url the remote repository's URL
+ * @param fetch the fetch refspec to use for this remote.
  * @return 0 or an error code
  */
-GIT_EXTERN(int) git_remote_create_inmemory(
+GIT_EXTERN(int) git_remote_create_anonymous(
 		git_remote **out,
 		git_repository *repo,
-		const char *fetch,
-		const char *url);
+		const char *url,
+		const char *fetch);
 
 /**
  * Get the information for a particular remote

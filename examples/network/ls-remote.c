@@ -15,7 +15,7 @@ static int use_remote(git_repository *repo, char *name)
 	// Find the remote by name
 	error = git_remote_load(&remote, repo, name);
 	if (error < 0) {
-		error = git_remote_create_inmemory(&remote, repo, NULL, name);
+		error = git_remote_create_anonymous(&remote, repo, name, NULL);
 		if (error < 0)
 			goto cleanup;
 	}
