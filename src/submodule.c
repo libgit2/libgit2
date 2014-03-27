@@ -156,7 +156,7 @@ int git_submodule_lookup(
 			if (git_buf_joinpath(&path, git_repository_workdir(repo), name) < 0)
 				return -1;
 
-			if (git_path_contains_dir(&path, DOT_GIT))
+			if (git_path_contains(&path, DOT_GIT))
 				error = GIT_EEXISTS;
 
 			git_buf_free(&path);
@@ -846,7 +846,8 @@ int git_submodule_reload_all(git_repository *repo, int force)
 	if (repo->submodules)
 		git_strmap_foreach_value(repo->submodules, sm, { sm->flags = 0; });
 
-	error = load_submodule_config(repo, true);
+	if ((error = load_submodule_config(repo, true)) < 0)
+		return error;
 
 	git_strmap_foreach_value(repo->submodules, sm, {
 		git_strmap *cache = repo->submodules;
@@ -1278,14 +1279,17 @@ static int submodule_load_from_config(
 		}
 	}
 
+	/* Found a alternate key for the submodule */
 	if (alternate) {
 		void *old_sm = NULL;
 		git_strmap_insert2(smcfg, alternate, sm, old_sm, error);
 
 		if (error < 0)
 			goto done;
-		if (error >= 0)
-			GIT_REFCOUNT_INC(sm); /* inserted under a new key */
+		if (error > 0)
+			error = 0;
+
+		GIT_REFCOUNT_INC(sm); /* increase refcount for new key */
 
 		/* if we replaced an old module under this key, release the old one */
 		if (old_sm && ((git_submodule *)old_sm) != sm) {

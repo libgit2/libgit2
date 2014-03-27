@@ -115,8 +115,8 @@ typedef enum {
  *
  * - The submodule is not mentioned in the HEAD, the index, and the config,
  *   but does "exist" in the working directory (i.e. there is a subdirectory
- *   that is a valid self-contained git repo).  In this case, this function
- *   returns GIT_EEXISTS to indicate the the submodule exists but not in a
+ *   that appears to be a Git repository).  In this case, this function
+ *   returns GIT_EEXISTS to indicate a sub-repository exists but not in a
  *   state where a git_submodule can be instantiated.
  * - The submodule is not mentioned in the HEAD, index, or config and the
  *   working directory doesn't contain a value git repo at that path.
@@ -129,7 +129,7 @@ typedef enum {
  * @param repo The parent repository
  * @param name The name of or path to the submodule; trailing slashes okay
  * @return 0 on success, GIT_ENOTFOUND if submodule does not exist,
- *         GIT_EEXISTS if submodule exists in working directory only,
+ *         GIT_EEXISTS if a repository is found in working directory only,
  *         -1 on other errors.
  */
 GIT_EXTERN(int) git_submodule_lookup(
