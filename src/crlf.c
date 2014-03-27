@@ -21,6 +21,7 @@ struct crlf_attrs {
 	int crlf_action;
 	int eol;
 	int auto_crlf;
+	int safe_crlf;
 };
 
 struct crlf_filter {
@@ -123,6 +124,9 @@ static int crlf_apply_to_odb(
 	const git_buf *from,
 	const git_filter_source *src)
 {
+	git_buf safe = GIT_BUF_INIT;
+	int error = 0;
+
 	/* Empty file? Nothing to do */
 	if (!git_buf_len(from))
 		return 0;
@@ -154,12 +158,31 @@ static int crlf_apply_to_odb(
 				return GIT_PASSTHROUGH;
 		}
 
-		if (!stats.cr)
+		if (!stats.cr && !ca->safe_crlf)
 			return GIT_PASSTHROUGH;
 	}
 
 	/* Actually drop the carriage returns */
-	return git_buf_text_crlf_to_lf(to, from);
+	if ((error = git_buf_text_crlf_to_lf(to, from)) < 0)
+		return error;
+
+	/* If safecrlf is enabled, sanity-check the result. */
+	if (ca->safe_crlf) {
+		if ((error = git_buf_grow(&safe, max(from->size, to->size))) < 0 ||
+			(error = git_buf_text_lf_to_crlf(&safe, to)) < 0)
+			goto done;
+
+		if (git_buf_cmp(from, &safe) != 0) {
+			giterr_set(GITERR_FILTER, "LF would be replaced by CRLF in '%s'",
+				git_filter_source_path(src));
+			error = -1;
+		}
+	}
+
+done:
+	git_buf_free(&safe);
+
+	return error;
 }
 
 static const char *line_ending(struct crlf_attrs *ca)
@@ -270,6 +293,13 @@ static int crlf_check(
 		if (ca.auto_crlf == GIT_AUTO_CRLF_INPUT &&
 			git_filter_source_mode(src) == GIT_FILTER_SMUDGE)
 			return GIT_PASSTHROUGH;
+	}
+
+	if (git_filter_source_mode(src) == GIT_FILTER_CLEAN) {
+		error = git_repository__cvar(
+			&ca.safe_crlf, git_filter_source_repo(src), GIT_CVAR_SAFE_CRLF);
+		if (error < 0)
+			return error;
 	}
 
 	*payload = git__malloc(sizeof(ca));
