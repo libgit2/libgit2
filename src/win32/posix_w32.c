@@ -467,10 +467,31 @@ int p_rename(const char *from, const char *to)
 {
 	git_win32_path wfrom;
 	git_win32_path wto;
+	int rename_tries;
+	int rename_succeeded;
+	int error;
 
 	git_win32_path_from_c(wfrom, from);
 	git_win32_path_from_c(wto, to);
-	return MoveFileExW(wfrom, wto, MOVEFILE_REPLACE_EXISTING | MOVEFILE_COPY_ALLOWED) ? 0 : -1;
+	
+	/* wait up to 50ms if file is locked by another thread or process */
+	rename_tries = 0;
+	rename_succeeded = 0;
+	while (rename_tries < 10) {
+		if (MoveFileExW(wfrom, wto, MOVEFILE_REPLACE_EXISTING | MOVEFILE_COPY_ALLOWED) != 0) {
+			rename_succeeded = 1;
+			break;
+		}
+		
+		error = GetLastError();
+		if (error == ERROR_SHARING_VIOLATION || error == ERROR_ACCESS_DENIED) {
+			Sleep(5);
+			rename_tries++;
+		} else
+			break;
+	}
+	
+	return rename_succeeded ? 0 : -1;
 }
 
 int p_recv(GIT_SOCKET socket, void *buffer, size_t length, int flags)
