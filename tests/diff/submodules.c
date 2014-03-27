@@ -449,7 +449,6 @@ void test_diff_submodules__skips_empty_includes_used(void)
 	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
 	git_diff *diff = NULL;
 	diff_expects exp;
-	git_repository *r2;
 
 	/* A side effect of of Git's handling of untracked directories and
 	 * auto-ignoring of ".git" entries is that a newly initialized Git
@@ -469,7 +468,11 @@ void test_diff_submodules__skips_empty_includes_used(void)
 	cl_assert_equal_i(0, exp.files);
 	git_diff_free(diff);
 
-	cl_git_pass(git_repository_init(&r2, "empty_standard_repo/subrepo", 0));
+	{
+		git_repository *r2;
+		cl_git_pass(git_repository_init(&r2, "empty_standard_repo/subrepo", 0));
+		git_repository_free(r2);
+	}
 
 	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, NULL, &opts));
 	memset(&exp, 0, sizeof(exp));
