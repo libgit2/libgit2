@@ -1126,6 +1126,7 @@ static void submodule_release(git_submodule *sm)
 		git__free(sm->path);
 	git__free(sm->name);
 	git__free(sm->url);
+	git__free(sm->branch);
 	git__memzero(sm, sizeof(*sm));
 	git__free(sm);
 }
