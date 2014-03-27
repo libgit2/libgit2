@@ -852,10 +852,13 @@ int git_submodule_reload_all(git_repository *repo, int force)
 	git_strmap_foreach_value(repo->submodules, sm, {
 		git_strmap *cache = repo->submodules;
 
-		if ((sm->flags & GIT_SUBMODULE_STATUS__IN_FLAGS) == 0) {
-			submodule_cache_remove_item(cache, sm->name, sm, true);
+		if (sm && (sm->flags & GIT_SUBMODULE_STATUS__IN_FLAGS) == 0) {
+			/* we must check path != name before first remove, in case
+			 * that call frees the submodule */
+			bool free_as_path = (sm->path != sm->name);
 
-			if (sm->path != sm->name)
+			submodule_cache_remove_item(cache, sm->name, sm, true);
+			if (free_as_path)
 				submodule_cache_remove_item(cache, sm->path, sm, true);
 		}
 	});
