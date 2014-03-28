@@ -99,6 +99,30 @@ struct git_submodule {
 	git_oid wd_oid;
 };
 
+/**
+ * The git_submodule_cache stores known submodules along with timestamps,
+ * etc. about when they were loaded
+ */
+typedef struct {
+	git_repository *repo;
+	git_strmap *submodules;
+	git_mutex  lock;
+
+	/* cache invalidation data */
+	git_oid head_id;
+	git_futils_filestamp index_stamp;
+	git_buf gitmodules_path;
+	git_futils_filestamp gitmodules_stamp;
+	git_oid gitmodules_id;
+	git_futils_filestamp config_stamp;
+} git_submodule_cache;
+
+/* Force revalidation of submodule data cache (alloc as needed) */
+extern int git_submodule_cache_refresh(git_repository *repo);
+
+/* Release all submodules */
+extern void git_submodule_cache_free(git_repository *repo);
+
 /* Additional flags on top of public GIT_SUBMODULE_STATUS values */
 enum {
 	GIT_SUBMODULE_STATUS__WD_SCANNED          = (1u << 20),
@@ -122,6 +146,10 @@ enum {
 /* Internal submodule check does not attempt to refresh cached data */
 extern bool git_submodule__is_submodule(git_repository *repo, const char *name);
 
+/* Internal lookup does not attempt to refresh cached data */
+extern int git_submodule__lookup(
+	git_submodule **out, git_repository *repo, const char *path);
+
 /* Internal status fn returns status and optionally the various OIDs */
 extern int git_submodule__status(
 	unsigned int *out_status,
@@ -143,5 +171,6 @@ extern int git_submodule_parse_update(
 
 extern const char *git_submodule_ignore_to_str(git_submodule_ignore_t);
 extern const char *git_submodule_update_to_str(git_submodule_update_t);
+extern const char *git_submodule_recurse_to_str(git_submodule_recurse_t);
 
 #endif
