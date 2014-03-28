@@ -133,6 +133,18 @@ static int submodule_lookup(
 	return 0;
 }
 
+/* clear a set of flags on all submodules */
+static void submodule_cache_clear_flags(
+	git_submodule_cache *cache, uint32_t mask)
+{
+	git_submodule *sm;
+	uint32_t inverted_mask = ~mask;
+
+	git_strmap_foreach_value(cache->submodules, sm, {
+		sm->flags &= inverted_mask;
+	});
+}
+
 /*
  * PUBLIC APIS
  */
@@ -377,8 +389,7 @@ cleanup:
 	if (out != NULL)
 		*out = sm;
 
-	if (mods != NULL)
-		git_config_file_free(mods);
+	git_config_file_free(mods);
 	git_repository_free(subrepo);
 	git_buf_free(&real_url);
 	git_buf_free(&name);
@@ -556,8 +567,7 @@ int git_submodule_save(git_submodule *submodule)
 	submodule->flags |= GIT_SUBMODULE_STATUS_IN_CONFIG;
 
 cleanup:
-	if (mods != NULL)
-		git_config_file_free(mods);
+	git_config_file_free(mods);
 	git_buf_free(&key);
 
 	return error;
@@ -916,10 +926,8 @@ int git_submodule_reload_all(git_repository *repo, int force)
 	GIT_UNUSED(force);
 	assert(repo);
 
-	if (repo->_submodules) {
-		map = repo->_submodules->submodules;
-		git_strmap_foreach_value(map, sm, { sm->flags = 0; });
-	}
+	if (repo->_submodules)
+		submodule_cache_clear_flags(repo->_submodules, 0xFFFFFFFFu);
 
 	if ((error = submodule_cache_init(repo, true)) < 0)
 		return error;
@@ -1063,7 +1071,9 @@ int git_submodule_reload(git_submodule *sm, int force)
 	}
 
 	/* refresh wd data */
-	sm->flags &= ~GIT_SUBMODULE_STATUS__ALL_WD_FLAGS;
+	sm->flags &=
+		~(GIT_SUBMODULE_STATUS_IN_WD | GIT_SUBMODULE_STATUS__WD_OID_VALID |
+		  GIT_SUBMODULE_STATUS__WD_FLAGS);
 
 	return submodule_load_from_wd_lite(sm);
 }
@@ -1450,15 +1460,14 @@ static int submodule_load_from_wd_lite(git_submodule *sm)
 	return 0;
 }
 
-static int submodule_cache_refresh_from_index(git_submodule_cache *cache)
+static int submodule_cache_refresh_from_index(
+	git_submodule_cache *cache, git_index *idx)
 {
 	int error;
-	git_index *index;
 	git_iterator *i;
 	const git_index_entry *entry;
 
-	if ((error = git_repository_index__weakptr(&index, cache->repo)) < 0 ||
-		(error = git_iterator_for_index(&i, index, 0, NULL, NULL)) < 0)
+	if ((error = git_iterator_for_index(&i, idx, 0, NULL, NULL)) < 0)
 		return error;
 
 	while (!(error = git_iterator_advance(&entry, i))) {
@@ -1477,8 +1486,7 @@ static int submodule_cache_refresh_from_index(git_submodule_cache *cache)
 				submodule_update_from_index_entry(sm, entry);
 				git_submodule_free(sm);
 			}
-		} else if (strcmp(entry->path, GIT_MODULES_FILE) == 0)
-			git_oid_cpy(&cache->gitmodules_id, &entry->id);
+		}
 	}
 
 	if (error == GIT_ITEROVER)
@@ -1489,23 +1497,15 @@ static int submodule_cache_refresh_from_index(git_submodule_cache *cache)
 	return error;
 }
 
-static int submodule_cache_refresh_from_head(git_submodule_cache *cache)
+static int submodule_cache_refresh_from_head(
+	git_submodule_cache *cache, git_tree *head)
 {
 	int error;
-	git_tree *head;
 	git_iterator *i;
 	const git_index_entry *entry;
 
-	/* if we can't look up current head, then there's no submodule in it */
-	if (git_repository_head_tree(&head, cache->repo) < 0) {
-		giterr_clear();
-		return 0;
-	}
-
-	if ((error = git_iterator_for_tree(&i, head, 0, NULL, NULL)) < 0) {
-		git_tree_free(head);
+	if ((error = git_iterator_for_tree(&i, head, 0, NULL, NULL)) < 0)
 		return error;
-	}
 
 	while (!(error = git_iterator_advance(&entry, i))) {
 		khiter_t pos = git_strmap_lookup_index(cache->submodules, entry->path);
@@ -1515,8 +1515,7 @@ static int submodule_cache_refresh_from_head(git_submodule_cache *cache)
 			sm = git_strmap_value_at(cache->submodules, pos);
 
 			if (S_ISGITLINK(entry->mode))
-				submodule_update_from_head_data(
-					sm, entry->mode, &entry->id);
+				submodule_update_from_head_data(sm, entry->mode, &entry->id);
 			else
 				sm->flags |= GIT_SUBMODULE_STATUS__HEAD_NOT_SUBMODULE;
 		} else if (S_ISGITLINK(entry->mode)) {
@@ -1525,9 +1524,6 @@ static int submodule_cache_refresh_from_head(git_submodule_cache *cache)
 					sm, entry->mode, &entry->id);
 				git_submodule_free(sm);
 			}
-		} else if (strcmp(entry->path, GIT_MODULES_FILE) == 0 &&
-				   git_oid_iszero(&cache->gitmodules_id)) {
-			git_oid_cpy(&cache->gitmodules_id, &entry->id);
 		}
 	}
 
@@ -1535,7 +1531,6 @@ static int submodule_cache_refresh_from_head(git_submodule_cache *cache)
 		error = 0;
 
 	git_iterator_free(i);
-	git_tree_free(head);
 
 	return error;
 }
@@ -1562,14 +1557,6 @@ static git_config_backend *open_gitmodules(
 				mods = NULL;
 			}
 		}
-	}
-
-	if (!mods && !git_oid_iszero(&cache->gitmodules_id)) {
-		/* TODO: Retrieve .gitmodules content from ODB */
-
-		/* Should we actually do this?  Core git does not, but it means you
-		 * can't really get much information about submodules on bare repos.
-		 */
 	}
 
 	git_buf_free(&path);
@@ -1622,50 +1609,102 @@ static int submodule_cache_alloc(
 
 static int submodule_cache_refresh(git_submodule_cache *cache, bool force)
 {
-	int error;
+	int error = 0, updates = 0, changed;
 	git_config_backend *mods = NULL;
+	const char *wd;
+	git_index *idx = NULL;
+	git_tree *head = NULL;
+	git_buf path = GIT_BUF_INIT;
 
-	GIT_UNUSED(force);
+	if (git_mutex_lock(&cache->lock) < 0) {
+		giterr_set(GITERR_OS, "Unable to acquire lock on submodule cache");
+		return -1;
+	}
 
 	/* TODO: only do the following if the sources appear modified */
 
-	memset(&cache->gitmodules_id, 0, sizeof(cache->gitmodules_id));
-
 	/* add submodule information from index */
 
-	if ((error = submodule_cache_refresh_from_index(cache)) < 0)
-		goto cleanup;
+	if (!git_repository_index(&idx, cache->repo)) {
+		if (force || git_index__changed_relative_to(idx, &cache->index_stamp)) {
+			if ((error = submodule_cache_refresh_from_index(cache, idx)) < 0)
+				goto cleanup;
+
+			updates += 1;
+			git_futils_filestamp_set(
+				&cache->index_stamp, git_index__filestamp(idx));
+		}
+	} else {
+		giterr_clear();
+
+		submodule_cache_clear_flags(
+			cache, GIT_SUBMODULE_STATUS_IN_INDEX |
+			GIT_SUBMODULE_STATUS__INDEX_FLAGS |
+			GIT_SUBMODULE_STATUS__INDEX_OID_VALID);
+	}
 
 	/* add submodule information from HEAD */
 
-	if ((error = submodule_cache_refresh_from_head(cache)) < 0)
-		goto cleanup;
+	if (!git_repository_head_tree(&head, cache->repo)) {
+		if (force || !git_oid_equal(&cache->head_id, git_tree_id(head))) {
+			if ((error = submodule_cache_refresh_from_head(cache, head)) < 0)
+				goto cleanup;
+
+			updates += 1;
+			git_oid_cpy(&cache->head_id, git_tree_id(head));
+		}
+	} else {
+		giterr_clear();
+
+		submodule_cache_clear_flags(
+			cache, GIT_SUBMODULE_STATUS_IN_HEAD |
+			GIT_SUBMODULE_STATUS__HEAD_OID_VALID);
+	}
 
 	/* add submodule information from .gitmodules */
 
-	if ((mods = open_gitmodules(cache, false)) != NULL &&
-		(error = git_config_file_foreach(
-			mods, submodule_load_from_config, cache)) < 0)
+	wd = git_repository_workdir(cache->repo);
+
+	if (wd && (error = git_buf_joinpath(&path, wd, GIT_MODULES_FILE)) < 0)
 		goto cleanup;
+
+	changed = git_futils_filestamp_check(&cache->gitmodules_stamp, path.ptr);
+	if (changed < 0) {
+		giterr_clear();
+		submodule_cache_clear_flags(cache, GIT_SUBMODULE_STATUS_IN_CONFIG);
+	} else if (changed > 0 && (mods = open_gitmodules(cache, false)) != NULL) {
+		if ((error = git_config_file_foreach(
+				mods, submodule_load_from_config, cache)) < 0)
+			goto cleanup;
+		updates += 1;
+	}
 
 	/* shallow scan submodules in work tree */
 
-	if (!git_repository_is_bare(cache->repo)) {
+	if (wd && updates > 0) {
 		git_submodule *sm;
 
-		git_strmap_foreach_value(cache->submodules, sm, {
-			sm->flags &= ~GIT_SUBMODULE_STATUS__ALL_WD_FLAGS;
-		});
+		submodule_cache_clear_flags(
+			cache, GIT_SUBMODULE_STATUS_IN_WD |
+			GIT_SUBMODULE_STATUS__WD_SCANNED |
+			GIT_SUBMODULE_STATUS__WD_FLAGS |
+			GIT_SUBMODULE_STATUS__WD_OID_VALID);
+
 		git_strmap_foreach_value(cache->submodules, sm, {
 			submodule_load_from_wd_lite(sm);
 		});
 	}
 
 cleanup:
-	if (mods != NULL)
-		git_config_file_free(mods);
+	git_config_file_free(mods);
 
 	/* TODO: if we got an error, mark submodule config as invalid? */
+
+	git_mutex_unlock(&cache->lock);
+
+	git_index_free(idx);
+	git_tree_free(head);
+	git_buf_free(&path);
 
 	return error;
 }

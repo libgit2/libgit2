@@ -113,7 +113,6 @@ typedef struct {
 	git_futils_filestamp index_stamp;
 	git_buf gitmodules_path;
 	git_futils_filestamp gitmodules_stamp;
-	git_oid gitmodules_id;
 	git_futils_filestamp config_stamp;
 } git_submodule_cache;
 
@@ -134,11 +133,6 @@ enum {
 	GIT_SUBMODULE_STATUS__WD_NOT_SUBMODULE    = (1u << 26),
 	GIT_SUBMODULE_STATUS__INDEX_MULTIPLE_ENTRIES = (1u << 27),
 };
-
-#define GIT_SUBMODULE_STATUS__ALL_WD_FLAGS \
-	(GIT_SUBMODULE_STATUS_IN_WD | \
-	 GIT_SUBMODULE_STATUS__WD_OID_VALID | \
-	 GIT_SUBMODULE_STATUS__WD_FLAGS)
 
 #define GIT_SUBMODULE_STATUS__CLEAR_INTERNAL(S) \
 	((S) & ~(0xFFFFFFFFu << 20))
