@@ -353,8 +353,8 @@ clar_parse_args(int argc, char **argv)
 	}
 }
 
-int
-clar_test(int argc, char **argv)
+void
+clar_test_init(int argc, char **argv)
 {
 	clar_print_init(
 		(int)_clar_callback_count,
@@ -369,13 +369,23 @@ clar_test(int argc, char **argv)
 
 	if (argc > 1)
 		clar_parse_args(argc, argv);
+}
 
+int
+clar_test_run()
+{
 	if (!_clar.suites_ran) {
 		size_t i;
 		for (i = 0; i < _clar_suite_count; ++i)
 			clar_run_suite(&_clar_suites[i], NULL);
 	}
 
+	return _clar.total_errors;
+}
+
+void
+clar_test_shutdown()
+{
 	clar_print_shutdown(
 		_clar.tests_ran,
 		(int)_clar_suite_count,
@@ -383,7 +393,18 @@ clar_test(int argc, char **argv)
 	);
 
 	clar_unsandbox();
-	return _clar.total_errors;
+}
+
+int
+clar_test(int argc, char **argv)
+{
+	int errors;
+
+	clar_test_init(argc, argv);
+	errors = clar_test_run();
+	clar_test_shutdown();
+
+	return errors;
 }
 
 void clar__fail(

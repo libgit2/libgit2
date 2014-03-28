@@ -127,3 +127,8 @@ static int clar_sandbox(void)
 	return 0;
 }
 
+const char *clar_sandbox_path(void)
+{
+	return _clar_path;
+}
+
