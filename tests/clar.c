@@ -106,6 +106,9 @@ struct clar_error {
 };
 
 static struct {
+	int argc;
+	char **argv;
+
 	const char *active_test;
 	const char *active_suite;
 
@@ -367,13 +370,16 @@ clar_test_init(int argc, char **argv)
 		exit(-1);
 	}
 
-	if (argc > 1)
-		clar_parse_args(argc, argv);
+	_clar.argc = argc;
+	_clar.argv = argv;
 }
 
 int
 clar_test_run()
 {
+	if (_clar.argc > 1)
+		clar_parse_args(_clar.argc, _clar.argv);
+
 	if (!_clar.suites_ran) {
 		size_t i;
 		for (i = 0; i < _clar_suite_count; ++i)
