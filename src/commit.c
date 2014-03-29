@@ -493,14 +493,14 @@ int git_commit_entry_last_commit_id(git_oid *out, git_repository *repo, const gi
 
 	assert(out && commit && path);
 
-	if (git_revwalk_new(&walk, repo) < 0)
-		return -1;
-
 	if ((error = git_commit_tree(&root_tree, commit)) < 0)
 		return error;
 
 	if ((error = git_tree_entry_bypath(&source_tree_entry, root_tree, path)) < 0)
-		return error;
+		return GIT_ENOTFOUND;
+
+	if (git_revwalk_new(&walk, repo) < 0)
+		return -1;
 
 	if ((node = git_revwalk__commit_lookup(walk, &commit->object.cached.oid)) == NULL)
 		return -1;
@@ -549,6 +549,7 @@ int git_commit_entry_last_commit_id(git_oid *out, git_repository *repo, const gi
 			}
 			go = go || eq;
 		}
+
 		if (!go)
 			break;
 
