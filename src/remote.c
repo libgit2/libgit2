@@ -262,12 +262,12 @@ int git_remote_dup(git_remote **dest, git_remote *source)
 
 	if (source->url != NULL) {
 		remote->url = git__strdup(source->url);
-		GITERR_CHECK_ALLOC(remote->url);		
+		GITERR_CHECK_ALLOC(remote->url);
 	}
 
 	if (source->pushurl != NULL) {
 		remote->pushurl = git__strdup(source->pushurl);
-		GITERR_CHECK_ALLOC(remote->pushurl);		
+		GITERR_CHECK_ALLOC(remote->pushurl);
 	}
 
 	remote->repo = source->repo;
@@ -1067,7 +1067,7 @@ static int update_tips_for_spec(
 			continue;
 
 		/* In autotag mode, don't overwrite any locally-existing tags */
-		error = git_reference_create(&ref, remote->repo, refname.ptr, &head->oid, !autotag, 
+		error = git_reference_create(&ref, remote->repo, refname.ptr, &head->oid, !autotag,
 				signature, log_message);
 		if (error < 0 && error != GIT_EEXISTS)
 			goto on_error;
