@@ -127,6 +127,8 @@ int git_refspec__parse(git_refspec *refspec, const char *input, bool is_fetch)
 	return 0;
 
  invalid:
+	giterr_set(GITERR_REFERENCE, "'%s' is not a valid refspec", input);
+
 	return -1;
 }
 
