@@ -404,7 +404,7 @@ static int local_push(
 	git_vector_foreach(&push->specs, j, spec) {
 		push_status *status;
 		const git_error *last;
-		char *ref = spec->rref ? spec->rref : spec->lref;
+		char *ref = spec->refspec->dst ? spec->refspec->dst : spec->refspec->src;
 
 		status = git__calloc(sizeof(push_status), 1);
 		if (!status)
@@ -416,7 +416,7 @@ static int local_push(
 			goto on_error;
 		}
 
-		error = local_push_update_remote_ref(remote_repo, spec->lref, spec->rref,
+		error = local_push_update_remote_ref(remote_repo, spec->refspec->src, spec->refspec->dst,
 			&spec->loid, &spec->roid);
 
 		switch (error) {
