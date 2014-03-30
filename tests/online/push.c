@@ -384,7 +384,7 @@ void test_online_push__initialize(void)
 		cl_git_pass(git_push_new(&push, _remote));
 
 		git_vector_foreach(&delete_specs, i, curr_del_spec) {
-			git_push_add_refspec(push, curr_del_spec);
+			git_remote_add_push(_remote, curr_del_spec);
 			git__free(curr_del_spec);
 		}
 
@@ -468,6 +468,10 @@ static void do_push(
 		cl_git_pass(git_signature_now(&pusher, "Foo Bar", "foo@example.com"));
 		cl_git_pass(git_remote_connect(_remote, GIT_DIRECTION_PUSH));
 
+		/* Setup the remote push refspecs */
+		for (i = 0; i < refspecs_len; i++)
+			cl_git_pass(git_remote_add_push(_remote, refspecs[i]));
+
 		cl_git_pass(git_push_new(&push, _remote));
 		cl_git_pass(git_push_set_options(push, &opts));
 
@@ -481,9 +485,6 @@ static void do_push(
 					push, push_pack_progress_cb, &pack_progress_calls,
 					push_transfer_progress_cb, &transfer_progress_calls));
 		}
-
-		for (i = 0; i < refspecs_len; i++)
-			cl_git_pass(git_push_add_refspec(push, refspecs[i]));
 
 		if (expected_ret < 0) {
 			cl_git_fail_with(git_push_finish(push), expected_ret);
@@ -805,24 +806,6 @@ void test_online_push__delete(void)
 	do_push(specs_delete_force, ARRAY_SIZE(specs_delete_force),
 		exp_stats_delete, ARRAY_SIZE(exp_stats_delete),
 		exp_refs_delete, ARRAY_SIZE(exp_refs_delete), 0, 0, 0);
-}
-
-void test_online_push__bad_refspecs(void)
-{
-	/* All classes of refspecs that should be rejected by
-	 * git_push_add_refspec() should go in this test.
-	 */
-	git_push *push;
-
-	if (_remote) {
-/*		cl_git_pass(git_remote_connect(_remote, GIT_DIRECTION_PUSH)); */
-		cl_git_pass(git_push_new(&push, _remote));
-
-		/* Unexpanded branch names not supported */
-		cl_git_fail(git_push_add_refspec(push, "b6:b6"));
-
-		git_push_free(push);
-	}
 }
 
 void test_online_push__expressions(void)

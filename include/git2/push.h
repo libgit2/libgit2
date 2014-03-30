@@ -103,16 +103,6 @@ GIT_EXTERN(int) git_push_set_callbacks(
 	void *transfer_progress_cb_payload);
 
 /**
- * Add a refspec to be pushed
- *
- * @param push The push object
- * @param refspec Refspec string
- *
- * @return 0 or an error code
- */
-GIT_EXTERN(int) git_push_add_refspec(git_push *push, const char *refspec);
-
-/**
  * Update remote tips after a push
  *
  * @param push The push object
