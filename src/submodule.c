@@ -898,66 +898,9 @@ int git_submodule_open(git_repository **subrepo, git_submodule *sm)
 	return git_submodule__open(subrepo, sm, false);
 }
 
-static void submodule_cache_remove_item(
-	git_strmap *map,
-	const char *name,
-	git_submodule *expected,
-	bool free_after_remove)
-{
-	khiter_t pos;
-	git_submodule *found;
-
-	if (!map)
-		return;
-
-	pos = git_strmap_lookup_index(map, name);
-
-	if (!git_strmap_valid_index(map, pos))
-		return;
-
-	found = git_strmap_value_at(map, pos);
-
-	if (expected && found != expected)
-		return;
-
-	git_strmap_set_value_at(map, pos, NULL);
-	git_strmap_delete_at(map, pos);
-
-	if (free_after_remove)
-		git_submodule_free(found);
-}
-
 int git_submodule_reload_all(git_repository *repo, int force)
 {
-	int error = 0;
-	git_submodule *sm;
-	git_strmap *map;
-
-	GIT_UNUSED(force);
-	assert(repo);
-
-	if (repo->_submodules)
-		submodule_cache_clear_flags(repo->_submodules, 0xFFFFFFFFu);
-
-	if ((error = submodule_cache_init(repo, CACHE_FLUSH)) < 0)
-		return error;
-
-	if (!repo->_submodules || !(map = repo->_submodules->submodules))
-		return error;
-
-	git_strmap_foreach_value(map, sm, {
-		if (sm && (sm->flags & GIT_SUBMODULE_STATUS__IN_FLAGS) == 0) {
-			/* we must check path != name before first remove, in case
-			 * that call frees the submodule */
-			bool free_as_path = (sm->path != sm->name);
-
-			submodule_cache_remove_item(map, sm->name, sm, true);
-			if (free_as_path)
-				submodule_cache_remove_item(map, sm->path, sm, true);
-		}
-	});
-
-	return error;
+	return submodule_cache_init(repo, force ? CACHE_FLUSH : CACHE_REFRESH);
 }
 
 static void submodule_update_from_index_entry(
@@ -1210,20 +1153,49 @@ static int submodule_alloc(
 	return 0;
 }
 
+static void submodule_cache_remove_item(
+	git_submodule_cache *cache,
+	git_submodule *item,
+	bool free_after_remove)
+{
+	git_strmap *map;
+	const char *name, *alt;
+
+	if (!cache || !(map = cache->submodules) || !item)
+		return;
+
+	name = item->name;
+	alt  = (item->path != item->name) ? item->path : NULL;
+
+	for (; name; name = alt, alt = NULL) {
+		khiter_t pos = git_strmap_lookup_index(map, name);
+		git_submodule *found;
+
+		if (!git_strmap_valid_index(map, pos))
+			continue;
+
+		found = git_strmap_value_at(map, pos);
+
+		if (found != item)
+			continue;
+
+		git_strmap_set_value_at(map, pos, NULL);
+		git_strmap_delete_at(map, pos);
+
+		if (free_after_remove)
+			git_submodule_free(found);
+	}
+}
+
 static void submodule_release(git_submodule *sm)
 {
 	if (!sm)
 		return;
 
-	if (sm->repo && sm->repo->_submodules) {
-		git_strmap *map = sm->repo->_submodules->submodules;
-		bool free_as_path = (sm->path != sm->name);
-
+	if (sm->repo) {
+		git_submodule_cache *cache = sm->repo->_submodules;
 		sm->repo = NULL;
-
-		submodule_cache_remove_item(map, sm->name, sm, false);
-		if (free_as_path)
-			submodule_cache_remove_item(map, sm->path, sm, false);
+		submodule_cache_remove_item(cache, sm, false);
 	}
 
 	if (sm->path != sm->name)
@@ -1619,98 +1591,114 @@ static int submodule_cache_alloc(
 
 static int submodule_cache_refresh(git_submodule_cache *cache, int refresh)
 {
-	int error = 0, updates = 0, flush, changed;
-	git_config_backend *mods = NULL;
-	const char *wd;
+	int error = 0, update_index, update_head, update_gitmod;
 	git_index *idx = NULL;
 	git_tree *head = NULL;
+	const char *wd = NULL;
 	git_buf path = GIT_BUF_INIT;
+	git_submodule *sm;
+	git_config_backend *mods = NULL;
+	uint32_t mask;
 
-	if (!refresh)
+	if (!cache || !cache->repo || !refresh)
 		return 0;
-	flush = (refresh == CACHE_FLUSH);
 
 	if (git_mutex_lock(&cache->lock) < 0) {
 		giterr_set(GITERR_OS, "Unable to acquire lock on submodule cache");
 		return -1;
 	}
 
-	/* TODO: only do the following if the sources appear modified */
+	/* get sources that we will need to check */
 
-	/* add submodule information from index */
-
-	if (!git_repository_index(&idx, cache->repo)) {
-		if (flush || git_index__changed_relative_to(idx, &cache->index_stamp)) {
-			if ((error = submodule_cache_refresh_from_index(cache, idx)) < 0)
-				goto cleanup;
-
-			updates += 1;
-			git_futils_filestamp_set(
-				&cache->index_stamp, git_index__filestamp(idx));
-		}
-	} else {
+	if (git_repository_index(&idx, cache->repo) < 0)
+		giterr_clear();
+	if (git_repository_head_tree(&head, cache->repo) < 0)
 		giterr_clear();
 
-		submodule_cache_clear_flags(
-			cache, GIT_SUBMODULE_STATUS_IN_INDEX |
+	wd = git_repository_workdir(cache->repo);
+	if (wd && (error = git_buf_joinpath(&path, wd, GIT_MODULES_FILE)) < 0)
+		goto cleanup;
+
+	/* check for invalidation */
+
+	if (refresh == CACHE_FLUSH)
+		update_index = update_head = update_gitmod = true;
+	else {
+		update_index =
+			!idx || git_index__changed_relative_to(idx, &cache->index_stamp);
+		update_head =
+			!head || !git_oid_equal(&cache->head_id, git_tree_id(head));
+
+		update_gitmod = (wd != NULL) ?
+			git_futils_filestamp_check(&cache->gitmodules_stamp, path.ptr) :
+			(cache->gitmodules_stamp.mtime != 0);
+		if (update_gitmod < 0)
+			giterr_clear();
+	}
+
+	/* clear submodule flags that are to be refreshed */
+
+	mask = 0;
+	if (!idx || update_index)
+		mask |= GIT_SUBMODULE_STATUS_IN_INDEX |
 			GIT_SUBMODULE_STATUS__INDEX_FLAGS |
-			GIT_SUBMODULE_STATUS__INDEX_OID_VALID);
+			GIT_SUBMODULE_STATUS__INDEX_OID_VALID |
+			GIT_SUBMODULE_STATUS__INDEX_MULTIPLE_ENTRIES;
+	if (!head || update_head)
+		mask |= GIT_SUBMODULE_STATUS_IN_HEAD |
+			GIT_SUBMODULE_STATUS__HEAD_OID_VALID;
+	if (update_gitmod)
+		mask |= GIT_SUBMODULE_STATUS_IN_CONFIG;
+	if (mask != 0)
+		mask |= GIT_SUBMODULE_STATUS_IN_WD |
+			GIT_SUBMODULE_STATUS__WD_SCANNED |
+			GIT_SUBMODULE_STATUS__WD_FLAGS |
+			GIT_SUBMODULE_STATUS__WD_OID_VALID;
+
+	submodule_cache_clear_flags(cache, mask);
+
+	/* add back submodule information from index */
+
+	if (idx && update_index) {
+		if ((error = submodule_cache_refresh_from_index(cache, idx)) < 0)
+			goto cleanup;
+
+		git_futils_filestamp_set(
+			&cache->index_stamp, git_index__filestamp(idx));
 	}
 
 	/* add submodule information from HEAD */
 
-	if (!git_repository_head_tree(&head, cache->repo)) {
-		if (flush || !git_oid_equal(&cache->head_id, git_tree_id(head))) {
-			if ((error = submodule_cache_refresh_from_head(cache, head)) < 0)
-				goto cleanup;
+	if (head && update_head) {
+		if ((error = submodule_cache_refresh_from_head(cache, head)) < 0)
+			goto cleanup;
 
-			updates += 1;
-			git_oid_cpy(&cache->head_id, git_tree_id(head));
-		}
-	} else {
-		giterr_clear();
-
-		submodule_cache_clear_flags(
-			cache, GIT_SUBMODULE_STATUS_IN_HEAD |
-			GIT_SUBMODULE_STATUS__HEAD_OID_VALID);
+		git_oid_cpy(&cache->head_id, git_tree_id(head));
 	}
 
 	/* add submodule information from .gitmodules */
 
-	wd = git_repository_workdir(cache->repo);
-
-	if (wd && (error = git_buf_joinpath(&path, wd, GIT_MODULES_FILE)) < 0)
-		goto cleanup;
-
-	changed = git_futils_filestamp_check(&cache->gitmodules_stamp, path.ptr);
-	if (flush && !changed)
-		changed = 1;
-
-	if (changed < 0) {
-		giterr_clear();
-		submodule_cache_clear_flags(cache, GIT_SUBMODULE_STATUS_IN_CONFIG);
-	} else if (changed > 0 && (mods = open_gitmodules(cache, false)) != NULL) {
-		if ((error = git_config_file_foreach(
+	if (wd && update_gitmod > 0) {
+		if ((mods = open_gitmodules(cache, false)) != NULL &&
+			(error = git_config_file_foreach(
 				mods, submodule_load_from_config, cache)) < 0)
 			goto cleanup;
-		updates += 1;
 	}
 
-	/* shallow scan submodules in work tree */
+	/* shallow scan submodules in work tree as needed */
 
-	if (wd && updates > 0) {
-		git_submodule *sm;
-
-		submodule_cache_clear_flags(
-			cache, GIT_SUBMODULE_STATUS_IN_WD |
-			GIT_SUBMODULE_STATUS__WD_SCANNED |
-			GIT_SUBMODULE_STATUS__WD_FLAGS |
-			GIT_SUBMODULE_STATUS__WD_OID_VALID);
-
+	if (wd && mask != 0) {
 		git_strmap_foreach_value(cache->submodules, sm, {
 			submodule_load_from_wd_lite(sm);
 		});
 	}
+
+	/* remove submodules that no longer exist */
+
+	git_strmap_foreach_value(cache->submodules, sm, {
+		if (sm && (sm->flags & GIT_SUBMODULE_STATUS__IN_FLAGS) == 0)
+			submodule_cache_remove_item(cache, sm, true);
+	});
 
 cleanup:
 	git_config_file_free(mods);
