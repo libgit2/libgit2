@@ -10,13 +10,10 @@
 #include "git2.h"
 
 typedef struct push_spec {
-	char *lref;
-	char *rref;
+	git_refspec *refspec;
 
 	git_oid loid;
 	git_oid roid;
-
-	bool force;
 } push_spec;
 
 typedef struct push_status {
