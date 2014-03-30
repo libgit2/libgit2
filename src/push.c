@@ -29,66 +29,6 @@ static int push_status_ref_cmp(const void *a, const void *b)
 	return strcmp(push_status_a->ref, push_status_b->ref);
 }
 
-int git_push_new(git_push **out, git_remote *remote)
-{
-	git_push *p;
-
-	*out = NULL;
-
-	p = git__calloc(1, sizeof(*p));
-	GITERR_CHECK_ALLOC(p);
-
-	p->repo = remote->repo;
-	p->remote = remote;
-	p->report_status = 1;
-	p->pb_parallelism = 1;
-
-	if (git_vector_init(&p->specs, 0, push_spec_rref_cmp) < 0) {
-		git__free(p);
-		return -1;
-	}
-
-	if (git_vector_init(&p->status, 0, push_status_ref_cmp) < 0) {
-		git_vector_free(&p->specs);
-		git__free(p);
-		return -1;
-	}
-
-	*out = p;
-	return 0;
-}
-
-int git_push_set_options(git_push *push, const git_push_options *opts)
-{
-	if (!push || !opts)
-		return -1;
-
-	GITERR_CHECK_VERSION(opts, GIT_PUSH_OPTIONS_VERSION, "git_push_options");
-
-	push->pb_parallelism = opts->pb_parallelism;
-
-	return 0;
-}
-
-int git_push_set_callbacks(
-	git_push *push,
-	git_packbuilder_progress pack_progress_cb,
-	void *pack_progress_cb_payload,
-	git_push_transfer_progress transfer_progress_cb,
-	void *transfer_progress_cb_payload)
-{
-	if (!push)
-		return -1;
-
-	push->pack_progress_cb = pack_progress_cb;
-	push->pack_progress_cb_payload = pack_progress_cb_payload;
-
-	push->transfer_progress_cb = transfer_progress_cb;
-	push->transfer_progress_cb_payload = transfer_progress_cb_payload;
-
-	return 0;
-}
-
 static void free_refspec(push_spec *spec)
 {
 	if (spec == NULL)
@@ -126,13 +66,90 @@ on_error:
 	return -1;
 }
 
-int git_push_add_refspec(git_push *push, const char *refspec)
+static int add_refspec(git_push *push, const char *refspec)
 {
 	push_spec *spec;
 
 	if (parse_refspec(&spec, refspec) < 0 ||
 	    git_vector_insert(&push->specs, spec) < 0)
 		return -1;
+
+	return 0;
+}
+
+int git_push_new(git_push **out, git_remote *remote)
+{
+	git_push *p;
+	git_strarray refspecs;
+	size_t i;
+
+	*out = NULL;
+
+	p = git__calloc(1, sizeof(*p));
+	GITERR_CHECK_ALLOC(p);
+
+	p->repo = remote->repo;
+	p->remote = remote;
+	p->report_status = 1;
+	p->pb_parallelism = 1;
+
+	if (git_vector_init(&p->specs, 0, push_spec_rref_cmp) < 0) {
+		goto cleanup;
+	}
+
+	if (git_vector_init(&p->status, 0, push_status_ref_cmp) < 0) {
+		goto cleanup;
+	}
+
+	// Copy and parse our remote refspecs
+	if (git_remote_get_push_refspecs(&refspecs, remote) < 0) {
+		goto cleanup;
+	}
+
+	for (i = 0; i < refspecs.count; i++) {
+		if (add_refspec(p, refspecs.strings[i]) < 0) {
+			goto cleanup;
+		}
+	}
+
+
+	*out = p;
+
+	return 0;
+
+cleanup:
+	git_vector_free(&p->specs);
+	git__free(p);
+	return -1;
+}
+
+int git_push_set_options(git_push *push, const git_push_options *opts)
+{
+	if (!push || !opts)
+		return -1;
+
+	GITERR_CHECK_VERSION(opts, GIT_PUSH_OPTIONS_VERSION, "git_push_options");
+
+	push->pb_parallelism = opts->pb_parallelism;
+
+	return 0;
+}
+
+int git_push_set_callbacks(
+	git_push *push,
+	git_packbuilder_progress pack_progress_cb,
+	void *pack_progress_cb_payload,
+	git_push_transfer_progress transfer_progress_cb,
+	void *transfer_progress_cb_payload)
+{
+	if (!push)
+		return -1;
+
+	push->pack_progress_cb = pack_progress_cb;
+	push->pack_progress_cb_payload = pack_progress_cb_payload;
+
+	push->transfer_progress_cb = transfer_progress_cb;
+	push->transfer_progress_cb_payload = transfer_progress_cb_payload;
 
 	return 0;
 }
@@ -163,7 +180,7 @@ int git_push_update_tips(
 		if ((error = git_refspec_transform(&remote_ref_name, fetch_spec, status->ref)) < 0)
 			goto on_error;
 
-		/* Find matching  push ref spec */
+		/* Find matching push ref spec */
 		git_vector_foreach(&push->specs, j, push_spec) {
 			if (!strcmp(push_spec->refspec->dst, status->ref))
 				break;
