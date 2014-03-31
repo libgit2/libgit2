@@ -160,7 +160,7 @@ void test_revwalk_basic__glob_heads(void)
 	}
 
 	/* git log --branches --oneline | wc -l => 14 */
-	cl_assert(i == 14);
+	cl_assert_equal_i(i, 14);
 }
 
 void test_revwalk_basic__glob_heads_with_invalid(void)
@@ -194,7 +194,7 @@ void test_revwalk_basic__push_head(void)
 	}
 
 	/* git log HEAD --oneline | wc -l => 7 */
-	cl_assert(i == 7);
+	cl_assert_equal_i(i, 7);
 }
 
 void test_revwalk_basic__push_head_hide_ref(void)
@@ -212,7 +212,7 @@ void test_revwalk_basic__push_head_hide_ref(void)
 	}
 
 	/* git log HEAD --oneline --not refs/heads/packed-test | wc -l => 4 */
-	cl_assert(i == 4);
+	cl_assert_equal_i(i, 4);
 }
 
 void test_revwalk_basic__push_head_hide_ref_nobase(void)
@@ -230,7 +230,78 @@ void test_revwalk_basic__push_head_hide_ref_nobase(void)
 	}
 
 	/* git log HEAD --oneline --not refs/heads/packed | wc -l => 7 */
-	cl_assert(i == 7);
+	cl_assert_equal_i(i, 7);
+}
+
+/*
+* $ git rev-list HEAD 5b5b02 ^refs/heads/packed-test
+* a65fedf39aefe402d3bb6e24df4d4f5fe4547750
+* be3563ae3f795b2b4353bcce3a527ad0a4f7f644
+* c47800c7266a2be04c571c04d5a6614691ea99bd
+* 9fd738e8f7967c078dceed8190330fc8648ee56a
+
+* $ git log HEAD 5b5b02 --oneline --not refs/heads/packed-test | wc -l => 4
+* a65fedf
+* be3563a Merge branch 'br2'
+* c47800c branch commit one
+* 9fd738e a fourth commit
+*/
+void test_revwalk_basic__multiple_push_1(void)
+{
+	int i = 0;
+	git_oid oid;
+
+	revwalk_basic_setup_walk(NULL);
+
+	cl_git_pass(git_revwalk_push_head(_walk));
+
+	cl_git_pass(git_revwalk_hide_ref(_walk, "refs/heads/packed-test"));
+
+	cl_git_pass(git_oid_fromstr(&oid, "5b5b025afb0b4c913b4c338a42934a3863bf3644"));
+	cl_git_pass(git_revwalk_push(_walk, &oid));
+
+	while (git_revwalk_next(&oid, _walk) == 0)
+		i++;
+
+	cl_assert_equal_i(i, 4);
+}
+
+/*
+* Difference between test_revwalk_basic__multiple_push_1 and 
+* test_revwalk_basic__multiple_push_2 is in the order reference
+* refs/heads/packed-test and commit 5b5b02 are pushed. 
+* revwalk should return same commits in both the tests.
+
+* $ git rev-list 5b5b02 HEAD ^refs/heads/packed-test
+* a65fedf39aefe402d3bb6e24df4d4f5fe4547750
+* be3563ae3f795b2b4353bcce3a527ad0a4f7f644
+* c47800c7266a2be04c571c04d5a6614691ea99bd
+* 9fd738e8f7967c078dceed8190330fc8648ee56a
+
+* $ git log 5b5b02 HEAD --oneline --not refs/heads/packed-test | wc -l => 4
+* a65fedf
+* be3563a Merge branch 'br2'
+* c47800c branch commit one
+* 9fd738e a fourth commit
+*/
+void test_revwalk_basic__multiple_push_2(void)
+{
+	int i = 0;
+	git_oid oid;
+
+	revwalk_basic_setup_walk(NULL);
+
+	cl_git_pass(git_oid_fromstr(&oid, "5b5b025afb0b4c913b4c338a42934a3863bf3644"));
+	cl_git_pass(git_revwalk_push(_walk, &oid));
+
+	cl_git_pass(git_revwalk_hide_ref(_walk, "refs/heads/packed-test"));
+
+	cl_git_pass(git_revwalk_push_head(_walk));
+
+	while (git_revwalk_next(&oid, _walk) == 0)
+		i++;
+
+	cl_assert_equal_i(i, 4);
 }
 
 void test_revwalk_basic__disallow_non_commit(void)

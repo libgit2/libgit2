@@ -32,8 +32,7 @@ struct git_revwalk {
 	int (*enqueue)(git_revwalk *, git_commit_list_node *);
 
 	unsigned walking:1,
-		first_parent: 1,
-		did_hide: 1;
+		first_parent: 1;
 	unsigned int sorting;
 
 	/* merge base calculation */

@@ -39,8 +39,9 @@ git_commit_list_node *git_revwalk__commit_lookup(
 	return commit;
 }
 
-static int mark_uninteresting(git_commit_list_node *commit)
+static int mark_uninteresting(git_revwalk *walk, git_commit_list_node *commit)
 {
+	int error;
 	unsigned short i;
 	git_array_t(git_commit_list_node *) pending = GIT_ARRAY_INIT;
 	git_commit_list_node **tmp;
@@ -53,12 +54,8 @@ static int mark_uninteresting(git_commit_list_node *commit)
 	do {
 		commit->uninteresting = 1;
 
-		/* This means we've reached a merge base, so there's no need to walk any more */
-		if ((commit->flags & (RESULT | STALE)) == RESULT) {
-			tmp = git_array_pop(pending);
-			commit = tmp ? *tmp : NULL;
-			continue;
-		}
+		if ((error = git_commit_list_parse(walk, commit)) < 0)
+			return error;
 
 		for (i = 0; i < commit->out_degree; ++i)
 			if (!commit->parents[i]->uninteresting) {
@@ -84,7 +81,7 @@ static int process_commit(git_revwalk *walk, git_commit_list_node *commit, int h
 	if (!hide && walk->hide_cb)
 		hide = walk->hide_cb(&commit->oid, walk->hide_cb_payload);
 
-	if (hide && mark_uninteresting(commit) < 0)
+	if (hide && mark_uninteresting(walk, commit) < 0)
 		return -1;
 
 	if (commit->seen)
@@ -95,7 +92,10 @@ static int process_commit(git_revwalk *walk, git_commit_list_node *commit, int h
 	if ((error = git_commit_list_parse(walk, commit)) < 0)
 		return error;
 
-	return walk->enqueue(walk, commit);
+	if (!hide)
+		return walk->enqueue(walk, commit);
+
+	return 0;
 }
 
 static int process_commit_parents(git_revwalk *walk, git_commit_list_node *commit)
@@ -143,9 +143,6 @@ static int push_commit(git_revwalk *walk, const git_oid *oid, int uninteresting,
 	commit = git_revwalk__commit_lookup(walk, &commit_id);
 	if (commit == NULL)
 		return -1; /* error already reported by failed lookup */
-
-	if (uninteresting)
-		walk->did_hide = 1;
 
 	commit->uninteresting = uninteresting;
 	if (walk->one == NULL && !uninteresting) {
@@ -298,15 +295,14 @@ static int revwalk_next_timesort(git_commit_list_node **object_out, git_revwalk 
 	int error;
 	git_commit_list_node *next;
 
-	while ((next = git_pqueue_pop(&walk->iterator_time)) != NULL) {
-		if ((error = process_commit_parents(walk, next)) < 0)
-			return error;
-
+	while ((next = git_pqueue_pop(&walk->iterator_time)) != NULL)
 		if (!next->uninteresting) {
+			if ((error = process_commit_parents(walk, next)) < 0)
+				return error;
+
 			*object_out = next;
 			return 0;
 		}
-	}
 
 	giterr_clear();
 	return GIT_ITEROVER;
@@ -317,15 +313,14 @@ static int revwalk_next_unsorted(git_commit_list_node **object_out, git_revwalk 
 	int error;
 	git_commit_list_node *next;
 
-	while ((next = git_commit_list_pop(&walk->iterator_rand)) != NULL) {
-		if ((error = process_commit_parents(walk, next)) < 0)
-			return error;
-
+	while ((next = git_commit_list_pop(&walk->iterator_rand)) != NULL)
 		if (!next->uninteresting) {
+			if ((error = process_commit_parents(walk, next)) < 0)
+				return error;
+
 			*object_out = next;
 			return 0;
 		}
-	}
 
 	giterr_clear();
 	return GIT_ITEROVER;
@@ -380,7 +375,6 @@ static int prepare_walk(git_revwalk *walk)
 	int error;
 	unsigned int i;
 	git_commit_list_node *next, *two;
-	git_commit_list *bases = NULL;
 
 	/*
 	 * If walk->one is NULL, there were no positive references,
@@ -389,18 +383,6 @@ static int prepare_walk(git_revwalk *walk)
 	if (walk->one == NULL) {
 		giterr_clear();
 		return GIT_ITEROVER;
-	}
-
-	/*
-	 * If the user asked to hide commits, we need to figure out
-	 * what the merge bases are so we can know when we can stop
-	 * marking parents uninteresting.
-	 */
-	if (walk->did_hide) {
-		if (git_merge__bases_many(&bases, walk, walk->one, &walk->twos) < 0)
-			return -1;
-
-		git_commit_list_free(&bases);
 	}
 
 	if (process_commit(walk, walk->one, walk->one->uninteresting) < 0)
