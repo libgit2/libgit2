@@ -811,6 +811,8 @@ void test_online_push__delete(void)
 
 void test_online_push__expressions(void)
 {
+    cl_fail("Expressions in refspecs doesn't actually work yet");
+
 	/* TODO: Expressions in refspecs doesn't actually work yet */
 	const char *specs_left_expr[] = { "refs/heads/b2~1:refs/heads/b2" };
 
