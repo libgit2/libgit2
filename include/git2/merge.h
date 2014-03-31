@@ -177,13 +177,13 @@ typedef struct {
 	 * The path that the resultant merge file should use, or NULL if a
 	 * filename conflict would occur.
 	 */
-	char *path;
+	const char *path;
 
 	/** The mode that the resultant merge file should use.  */
 	unsigned int mode;
 
 	/** The contents of the merge. */
-	unsigned char *ptr;
+	const char *ptr;
 
 	/** The length of the merge contents. */
 	size_t len;

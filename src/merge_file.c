@@ -272,8 +272,8 @@ void git_merge_file_result_free(git_merge_file_result *result)
 	if (result == NULL)
 		return;
 
-	git__free(result->path);
+	git__free((char *)result->path);
 
 	/* xdiff uses malloc() not git_malloc, so we use free(), not git_free() */
-	free(result->ptr);
+	free((char *)result->ptr);
 }
