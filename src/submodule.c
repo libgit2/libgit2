@@ -135,6 +135,21 @@ static int submodule_lookup(
  * PUBLIC APIS
  */
 
+bool git_submodule__is_submodule(git_repository *repo, const char *name)
+{
+	git_strmap *map;
+
+	if (load_submodule_config(repo, false) < 0) {
+		giterr_clear();
+		return false;
+	}
+
+	if (!(map = repo->submodules))
+		return false;
+
+	return git_strmap_valid_index(map, git_strmap_lookup_index(map, name));
+}
+
 int git_submodule_lookup(
 	git_submodule **out, /* NULL if user only wants to test existence */
 	git_repository *repo,
