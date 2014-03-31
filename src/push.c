@@ -519,7 +519,7 @@ static int calculate_work(git_push *push)
 	/* Update local and remote oids*/
 
 	git_vector_foreach(&push->specs, i, spec) {
-		if (spec->refspec->src) {
+		if (spec->refspec->src && strlen(spec->refspec->src) != 0) {
 			/* This is a create or update.  Local ref must exist. */
 			if (git_reference_name_to_id(
 					&spec->loid, push->repo, spec->refspec->src) < 0) {
