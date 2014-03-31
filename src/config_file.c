@@ -113,6 +113,7 @@ static int config_write(diskfile_backend *cfg, const char *key, const regex_t *p
 static char *escape_value(const char *ptr);
 
 int git_config_file__snapshot(git_config_backend **out, diskfile_backend *in);
+static int config_snapshot(git_config_backend **out, git_config_backend *in);
 
 static void set_parse_error(struct reader *reader, int col, const char *error_str)
 {
@@ -326,6 +327,7 @@ static void backend_free(git_config_backend *_backend)
 static void config_iterator_free(
 	git_config_iterator* iter)
 {
+	iter->backend->free(iter->backend);
 	git__free(iter);
 }
 
@@ -360,15 +362,27 @@ static int config_iterator_new(
 	git_config_iterator **iter,
 	struct git_config_backend* backend)
 {
-	diskfile_header *h = (diskfile_header *)backend;
-	git_config_file_iter *it = git__calloc(1, sizeof(git_config_file_iter));
+	diskfile_header *h;
+	git_config_file_iter *it;
+	git_config_backend *snapshot;
+	diskfile_backend *b = (diskfile_backend *) backend;
+	int error;
 
+	if ((error = config_snapshot(&snapshot, backend)) < 0)
+		return error;
+
+	if ((error = snapshot->open(snapshot, b->level)) < 0)
+		return error;
+
+	it = git__calloc(1, sizeof(git_config_file_iter));
 	GITERR_CHECK_ALLOC(it);
+
+	h = (diskfile_header *)snapshot;
 
 	/* strmap_begin() is currently a macro returning 0 */
 	GIT_UNUSED(h);
 
-	it->parent.backend = backend;
+	it->parent.backend = snapshot;
 	it->iter = git_strmap_begin(h->values);
 	it->next_var = NULL;
 
