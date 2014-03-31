@@ -376,6 +376,15 @@ GIT_EXTERN(int) git_merge_head_from_id(
 	const git_oid *id);
 
 /**
+ * Gets the commit ID that the given `git_merge_head` refers to.
+ *
+ * @param id pointer to commit id to be filled in
+ * @param head the given merge head
+ */
+GIT_EXTERN(const git_oid *) git_merge_head_id(
+	const git_merge_head *head);
+
+/**
  * Frees a `git_merge_head`.
  *
  * @param head merge head to free

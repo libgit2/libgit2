@@ -881,6 +881,33 @@ void test_merge_workdir_setup__two_remotes(void)
 	git_merge_head_free(their_heads[3]);
 }
 
+void test_merge_workdir_setup__id_from_head(void)
+{
+	git_oid expected_id;
+	const git_oid *id;
+	git_reference *ref;
+	git_merge_head *heads[3];
+
+	cl_git_pass(git_oid_fromstr(&expected_id, OCTO1_OID));
+	cl_git_pass(git_merge_head_from_fetchhead(&heads[0], repo, GIT_REFS_HEADS_DIR OCTO1_BRANCH, "http://remote.url/repo.git", &expected_id));
+	id = git_merge_head_id(heads[0]);
+	cl_assert_equal_i(1, git_oid_equal(id, &expected_id));
+
+	cl_git_pass(git_merge_head_from_id(&heads[1], repo, &expected_id));
+	id = git_merge_head_id(heads[1]);
+	cl_assert_equal_i(1, git_oid_equal(id, &expected_id));
+
+	cl_git_pass(git_reference_lookup(&ref, repo, GIT_REFS_HEADS_DIR OCTO1_BRANCH));
+	cl_git_pass(git_merge_head_from_ref(&heads[2], repo, ref));
+	id = git_merge_head_id(heads[2]);
+	cl_assert_equal_i(1, git_oid_equal(id, &expected_id));
+
+	git_reference_free(ref);
+	git_merge_head_free(heads[0]);
+	git_merge_head_free(heads[1]);
+	git_merge_head_free(heads[2]);
+}
+
 struct merge_head_cb_data {
 	const char **oid_str;
 	unsigned int len;

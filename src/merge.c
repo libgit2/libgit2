@@ -2736,6 +2736,14 @@ int git_merge_head_from_fetchhead(
 	return merge_head_init(out, repo, branch_name, remote_url, oid);
 }
 
+const git_oid *git_merge_head_id(
+	const git_merge_head *head)
+{
+	assert(head);
+
+	return &head->oid;
+}
+
 void git_merge_head_free(git_merge_head *head)
 {
 	if (head == NULL)
