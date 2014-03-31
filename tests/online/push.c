@@ -428,11 +428,10 @@ static int push_pack_progress_cb(
 	return 0;
 }
 
-static int push_transfer_progress_cb(
-	unsigned int current, unsigned int total, size_t bytes, void* payload)
+static int push_transfer_progress_cb(const git_transfer_progress *stats, void* payload)
 {
 	int *calls = (int *)payload;
-	GIT_UNUSED(current); GIT_UNUSED(total); GIT_UNUSED(bytes);
+	GIT_UNUSED(stats);
 	if (*calls < 0)
 		return *calls;
 	(*calls)++;
