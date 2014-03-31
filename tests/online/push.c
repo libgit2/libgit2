@@ -574,11 +574,11 @@ void test_online_push__multi(void)
 
 void test_online_push__implicit_tgt(void)
 {
-	const char *specs1[] = { "refs/heads/b1:" };
+	const char *specs1[] = { "refs/heads/b1:refs/heads/b1" };
 	push_status exp_stats1[] = { { "refs/heads/b1", 1 } };
 	expected_ref exp_refs1[] = { { "refs/heads/b1", &_oid_b1 } };
 
-	const char *specs2[] = { "refs/heads/b2:" };
+	const char *specs2[] = { "refs/heads/b2:refs/heads/b2" };
 	push_status exp_stats2[] = { { "refs/heads/b2", 1 } };
 	expected_ref exp_refs2[] = {
 	{ "refs/heads/b1", &_oid_b1 },
