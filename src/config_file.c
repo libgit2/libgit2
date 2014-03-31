@@ -395,7 +395,6 @@ static int config_iterator_new(
 
 static int config_set(git_config_backend *cfg, const char *name, const char *value)
 {
-	cvar_t *var = NULL, *old_var = NULL;
 	diskfile_backend *b = (diskfile_backend *)cfg;
 	git_strmap *values = b->header.values;
 	char *key, *esc_value = NULL;
@@ -412,67 +411,38 @@ static int config_set(git_config_backend *cfg, const char *name, const char *val
 	pos = git_strmap_lookup_index(values, key);
 	if (git_strmap_valid_index(values, pos)) {
 		cvar_t *existing = git_strmap_value_at(values, pos);
-		char *tmp = NULL;
-
-		git__free(key);
 
 		if (existing->next != NULL) {
+			git__free(key);
 			giterr_set(GITERR_CONFIG, "Multivar incompatible with simple set");
 			return -1;
 		}
 
 		/* don't update if old and new values already match */
 		if ((!existing->entry->value && !value) ||
-			(existing->entry->value && value && !strcmp(existing->entry->value, value)))
+			(existing->entry->value && value &&
+			 !strcmp(existing->entry->value, value))) {
+			git__free(key);
 			return 0;
-
-		if (value) {
-			tmp = git__strdup(value);
-			GITERR_CHECK_ALLOC(tmp);
-			esc_value = escape_value(value);
-			GITERR_CHECK_ALLOC(esc_value);
 		}
-
-		git__free((void *)existing->entry->value);
-		existing->entry->value = tmp;
-
-		ret = config_write(b, existing->entry->name, NULL, esc_value);
-
-		git__free(esc_value);
-		return ret;
 	}
 
-	var = git__malloc(sizeof(cvar_t));
-	GITERR_CHECK_ALLOC(var);
-	memset(var, 0x0, sizeof(cvar_t));
-	var->entry = git__malloc(sizeof(git_config_entry));
-	GITERR_CHECK_ALLOC(var->entry);
-	memset(var->entry, 0x0, sizeof(git_config_entry));
-
-	var->entry->name = key;
-	var->entry->value = NULL;
+	/* No early returns due to sanity checks, let's write it out and refresh */
 
 	if (value) {
-		var->entry->value = git__strdup(value);
-		GITERR_CHECK_ALLOC(var->entry->value);
 		esc_value = escape_value(value);
 		GITERR_CHECK_ALLOC(esc_value);
 	}
 
-	if ((ret = config_write(b, key, NULL, esc_value)) < 0) {
-		git__free(esc_value);
-		cvar_free(var);
-		return ret;
-	}
+	if ((ret = config_write(b, key, NULL, esc_value)) < 0)
+		goto out;
 
+	ret = config_refresh(cfg);
+
+out:
 	git__free(esc_value);
-	git_strmap_insert2(values, key, var, old_var, rval);
-	if (rval < 0)
-		return -1;
-	if (old_var != NULL)
-		cvar_free(old_var);
-
-	return 0;
+	git__free(key);
+	return ret;
 }
 
 /*
@@ -500,8 +470,6 @@ static int config_get(const git_config_backend *cfg, const char *key, const git_
 static int config_set_multivar(
 	git_config_backend *cfg, const char *name, const char *regexp, const char *value)
 {
-	int replaced = 0;
-	cvar_t *var, *newvar;
 	diskfile_backend *b = (diskfile_backend *)cfg;
 	git_strmap *values = b->header.values;
 	char *key;
@@ -522,8 +490,6 @@ static int config_set_multivar(
 		return result;
 	}
 
-	var = git_strmap_value_at(values, pos);
-
 	result = regcomp(&preg, regexp, REG_EXTENDED);
 	if (result < 0) {
 		git__free(key);
@@ -532,44 +498,13 @@ static int config_set_multivar(
 		return -1;
 	}
 
-	for (;;) {
-		if (regexec(&preg, var->entry->value, 0, NULL, 0) == 0) {
-			char *tmp = git__strdup(value);
-			GITERR_CHECK_ALLOC(tmp);
+	/* If we do have it, set call config_write() and reload */
+	if ((result = config_write(b, key, &preg, value)) < 0)
+		goto out;
 
-			git__free((void *)var->entry->value);
-			var->entry->value = tmp;
-			replaced = 1;
-		}
+	result = config_refresh(cfg);
 
-		if (var->next == NULL)
-			break;
-
-		var = var->next;
-	}
-
-	/* If we've reached the end of the variables and we haven't found it yet, we need to append it */
-	if (!replaced) {
-		newvar = git__malloc(sizeof(cvar_t));
-		GITERR_CHECK_ALLOC(newvar);
-		memset(newvar, 0x0, sizeof(cvar_t));
-		newvar->entry = git__malloc(sizeof(git_config_entry));
-		GITERR_CHECK_ALLOC(newvar->entry);
-		memset(newvar->entry, 0x0, sizeof(git_config_entry));
-
-		newvar->entry->name = git__strdup(var->entry->name);
-		GITERR_CHECK_ALLOC(newvar->entry->name);
-
-		newvar->entry->value = git__strdup(value);
-		GITERR_CHECK_ALLOC(newvar->entry->value);
-
-		newvar->entry->level = var->entry->level;
-
-		var->next = newvar;
-	}
-
-	result = config_write(b, key, &preg, value);
-
+out:
 	git__free(key);
 	regfree(&preg);
 
