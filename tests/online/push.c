@@ -469,6 +469,7 @@ static void do_push(
 		cl_git_pass(git_remote_connect(_remote, GIT_DIRECTION_PUSH));
 
 		/* Setup the remote push refspecs */
+        git_remote_clear_refspecs(_remote);
 		for (i = 0; i < refspecs_len; i++)
 			cl_git_pass(git_remote_add_push(_remote, refspecs[i]));
 
