@@ -120,7 +120,7 @@ enum {
 	((S) & ~(0xFFFFFFFFu << 20))
 
 /* Internal submodule check does not attempt to refresh cached data */
-bool git_submodule__is_submodule(git_repository *repo, const char *name);
+extern bool git_submodule__is_submodule(git_repository *repo, const char *name);
 
 /* Internal status fn returns status and optionally the various OIDs */
 extern int git_submodule__status(
