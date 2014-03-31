@@ -863,9 +863,9 @@ struct push_packbuilder_payload
 {
 	git_smart_subtransport_stream *stream;
 	git_packbuilder *pb;
-	git_push_transfer_progress cb;
+    git_transfer_progress stats;
+	git_transfer_progress_callback cb;
 	void *cb_payload;
-	size_t last_bytes;
 	double last_progress_report_time;
 };
 
@@ -879,11 +879,13 @@ static int stream_thunk(void *buf, size_t size, void *data)
 
 	if (payload->cb) {
 		double current_time = git__timer();
-		payload->last_bytes += size;
+        payload->stats.total_objects = payload->pb->nr_objects;
+        payload->stats.received_objects = payload->pb->nr_written;
+        payload->stats.received_bytes += size;
 
 		if ((current_time - payload->last_progress_report_time) >= MIN_PROGRESS_UPDATE_INTERVAL) {
 			payload->last_progress_report_time = current_time;
-			if (payload->cb(payload->pb->nr_written, payload->pb->nr_objects, payload->last_bytes, payload->cb_payload)) {
+			if (payload->cb(&payload->stats, payload->cb_payload)) {
 				giterr_clear();
 				error = GIT_EUSER;
 			}
@@ -958,7 +960,10 @@ int git_smart__push(git_transport *transport, git_push *push)
 
 	/* If progress is being reported write the final report */
 	if (push->transfer_progress_cb) {
-		push->transfer_progress_cb(push->pb->nr_written, push->pb->nr_objects, packbuilder_payload.last_bytes, push->transfer_progress_cb_payload);
+        packbuilder_payload.stats.total_objects = push->pb->nr_objects;
+        packbuilder_payload.stats.received_objects = push->pb->nr_written;
+
+		push->transfer_progress_cb(&packbuilder_payload.stats, push->transfer_progress_cb_payload);
 	}
 
 	if (push->status.length) {

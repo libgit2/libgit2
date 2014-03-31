@@ -139,7 +139,7 @@ int git_push_set_callbacks(
 	git_push *push,
 	git_packbuilder_progress pack_progress_cb,
 	void *pack_progress_cb_payload,
-	git_push_transfer_progress transfer_progress_cb,
+	git_transfer_progress_callback transfer_progress_cb,
 	void *transfer_progress_cb_payload)
 {
 	if (!push)
