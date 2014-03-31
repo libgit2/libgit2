@@ -89,6 +89,7 @@ struct reader {
 typedef struct {
 	git_config_backend parent;
 	git_strmap *values;
+	int readonly;
 } diskfile_header;
 
 typedef struct {
@@ -448,12 +449,19 @@ out:
 /*
  * Internal function that actually gets the value in string form
  */
-static int config_get(const git_config_backend *cfg, const char *key, const git_config_entry **out)
+static int config_get(git_config_backend *cfg, const char *key, const git_config_entry **out)
 {
 	diskfile_header *h = (diskfile_header *)cfg;
-	git_strmap *values = h->values;
-	khiter_t pos = git_strmap_lookup_index(values, key);
+	git_strmap *values;
+	khiter_t pos;
 	cvar_t *var;
+	int error;
+
+	if (!h->readonly && ((error = config_refresh(cfg)) < 0))
+		return error;
+
+	values = h->values;
+	pos = git_strmap_lookup_index(values, key);
 
 	/* no error message; the config system will write one */
 	if (!git_strmap_valid_index(values, pos))
@@ -783,6 +791,7 @@ int git_config_file__snapshot(git_config_backend **out, diskfile_backend *in)
 
 	backend->snapshot_from = in;
 
+	backend->header.readonly = 1;
 	backend->header.parent.version = GIT_CONFIG_BACKEND_VERSION;
 	backend->header.parent.open = config_readonly_open;
 	backend->header.parent.get = config_get;

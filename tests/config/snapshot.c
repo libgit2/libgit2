@@ -19,11 +19,6 @@ void test_config_snapshot__create_snapshot(void)
 	cl_git_mkfile(filename, "[old]\nvalue = 56\n");
 
 	cl_git_pass(git_config_get_int32(&tmp, cfg, "old.value"));
-	cl_assert_equal_i(5, tmp);
-
-	cl_git_pass(git_config_refresh(cfg));
-
-	cl_git_pass(git_config_get_int32(&tmp, cfg, "old.value"));
 	cl_assert_equal_i(56, tmp);
 
 	cl_git_pass(git_config_get_int32(&tmp, snapshot, "old.value"));

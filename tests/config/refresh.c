@@ -26,9 +26,6 @@ void test_config_refresh__update_value(void)
 
 	cl_git_rewritefile(TEST_FILE, "[section]\n\tvalue = 10\n\n");
 
-	cl_git_pass(git_config_get_int32(&v, cfg, "section.value"));
-	cl_assert_equal_i(1, v);
-
 	cl_git_pass(git_config_refresh(cfg));
 
 	cl_git_pass(git_config_get_int32(&v, cfg, "section.value"));
@@ -53,9 +50,9 @@ void test_config_refresh__delete_value(void)
 
 	cl_git_rewritefile(TEST_FILE, "[section]\n\tnewval = 10\n\n");
 
-	cl_git_pass(git_config_get_int32(&v, cfg, "section.value"));
-	cl_assert_equal_i(1, v);
-	cl_git_fail(git_config_get_int32(&v, cfg, "section.newval"));
+	cl_git_fail_with(GIT_ENOTFOUND, git_config_get_int32(&v, cfg, "section.value"));
+
+	cl_git_pass(git_config_get_int32(&v, cfg, "section.newval"));
 
 	cl_git_pass(git_config_refresh(cfg));
 
