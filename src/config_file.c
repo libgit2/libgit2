@@ -254,11 +254,34 @@ static int config_open(git_config_backend *cfg, git_config_level_t level)
 	return res;
 }
 
+/* The meat of the refresh, as we want to use it in different places */
+static int config__refresh(git_config_backend *cfg)
+{
+	git_strmap *values = NULL;
+	diskfile_backend *b = (diskfile_backend *)cfg;
+	struct reader *reader = NULL;
+	int error = 0;
+
+	if ((error = git_strmap_alloc(&values)) < 0)
+		goto out;
+
+	reader = git_array_get(b->readers, git_array_size(b->readers) - 1);
+
+	if ((error = config_parse(values, b, reader, b->level, 0)) < 0)
+		goto out;
+
+	values = git__swap(b->header.values, values);
+
+out:
+	free_vars(values);
+	git_buf_free(&reader->buffer);
+	return error;
+}
+
 static int config_refresh(git_config_backend *cfg)
 {
 	int error = 0, updated = 0, any_updated = 0;
 	diskfile_backend *b = (diskfile_backend *)cfg;
-	git_strmap *values = NULL;
 	struct reader *reader = NULL;
 	uint32_t i;
 
@@ -278,19 +301,7 @@ static int config_refresh(git_config_backend *cfg)
 	if (!any_updated)
 		return (error == GIT_ENOTFOUND) ? 0 : error;
 
-	     
-	if ((error = git_strmap_alloc(&values)) < 0)
-		goto cleanup;
-
-	if ((error = config_parse(values, b, reader, b->level, 0)) < 0)
-		goto cleanup;
-
-	values = git__swap(b->header.values, values);
-
-cleanup:
-	free_vars(values);
-	git_buf_free(&reader->buffer);
-	return error;
+	return config__refresh(cfg);
 }
 
 static void backend_free(git_config_backend *_backend)
