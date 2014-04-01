@@ -69,7 +69,10 @@ void test_submodule_nosubs__reload_add_reload(void)
 
 	cl_git_pass(git_submodule_reload_all(repo, 0));
 
-	cl_git_pass(git_submodule_add_setup(&sm, repo, "https://github.com/libgit2/libgit2.git", "submodules/libgit2", 1));
+	/* try one add with a reload (to make sure no errors happen) */
+
+	cl_git_pass(git_submodule_add_setup(&sm, repo,
+		"https://github.com/libgit2/libgit2.git", "submodules/libgit2", 1));
 
 	cl_git_pass(git_submodule_reload_all(repo, 0));
 
@@ -78,6 +81,17 @@ void test_submodule_nosubs__reload_add_reload(void)
 
 	cl_git_pass(git_submodule_lookup(&sm, repo, "submodules/libgit2"));
 	cl_assert_equal_s("submodules/libgit2", git_submodule_name(sm));
+	git_submodule_free(sm);
+
+	/* try one add without a reload (to make sure cache inval works, too) */
+
+	cl_git_pass(git_submodule_add_setup(&sm, repo,
+		"https://github.com/libgit2/libgit2.git", "libgit2-again", 1));
+	cl_assert_equal_s("libgit2-again", git_submodule_name(sm));
+	git_submodule_free(sm);
+
+	cl_git_pass(git_submodule_lookup(&sm, repo, "libgit2-again"));
+	cl_assert_equal_s("libgit2-again", git_submodule_name(sm));
 	git_submodule_free(sm);
 }
 
@@ -101,7 +115,7 @@ void test_submodule_nosubs__add_and_delete(void)
 	git_submodule *sm;
 	git_buf buf = GIT_BUF_INIT;
 
-	/* note the lack of calls to git_submodule_reload - this *should* work */
+	/* note lack of calls to git_submodule_reload_all - this *should* work */
 
 	cl_git_fail(git_submodule_lookup(NULL, repo, "libgit2"));
 	cl_git_fail(git_submodule_lookup(NULL, repo, "submodules/libgit2"));
