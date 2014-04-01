@@ -54,7 +54,7 @@ int git_vector_dup(git_vector *v, const git_vector *src, git_vector_cmp cmp)
 	bytes = src->length * sizeof(void *);
 
 	v->_alloc_size = src->length;
-	v->_cmp = cmp;
+	v->_cmp = cmp ? cmp : src->_cmp;
 	v->length = src->length;
 	v->flags  = src->flags;
 	if (cmp != src->_cmp)

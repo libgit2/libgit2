@@ -236,40 +236,62 @@ int git_submodule_lookup(
 	return error;
 }
 
+static void submodule_free_dup(void *sm)
+{
+	git_submodule_free(sm);
+}
+
 int git_submodule_foreach(
 	git_repository *repo,
 	int (*callback)(git_submodule *sm, const char *name, void *payload),
 	void *payload)
 {
 	int error;
+	size_t i;
 	git_submodule *sm;
-	git_vector seen = GIT_VECTOR_INIT;
-	git_vector_set_cmp(&seen, submodule_cmp);
+	git_submodule_cache *cache;
+	git_vector snapshot = GIT_VECTOR_INIT;
 
 	assert(repo && callback);
 
 	if ((error = submodule_cache_init(repo, CACHE_REFRESH)) < 0)
 		return error;
 
-	git_strmap_foreach_value(repo->_submodules->submodules, sm, {
-		/* Usually the following will not come into play - it just prevents
-		 * us from issuing a callback twice for a submodule where the name
-		 * and path are not the same.
-		 */
-		if (GIT_REFCOUNT_VAL(sm) > 1) {
-			if (git_vector_bsearch(NULL, &seen, sm) != GIT_ENOTFOUND)
-				continue;
-			if ((error = git_vector_insert(&seen, sm)) < 0)
-				break;
-		}
+	cache = repo->_submodules;
 
+	if (git_mutex_lock(&cache->lock) < 0) {
+		giterr_set(GITERR_OS, "Unable to acquire lock on submodule cache");
+		return -1;
+	}
+
+	if (!(error = git_vector_init(
+			&snapshot, kh_size(cache->submodules), submodule_cmp))) {
+
+		git_strmap_foreach_value(cache->submodules, sm, {
+			if ((error = git_vector_insert(&snapshot, sm)) < 0)
+				break;
+			GIT_REFCOUNT_INC(sm);
+		});
+	}
+
+	git_mutex_unlock(&cache->lock);
+
+	if (error < 0)
+		goto done;
+
+	git_vector_uniq(&snapshot, submodule_free_dup);
+
+	git_vector_foreach(&snapshot, i, sm) {
 		if ((error = callback(sm, sm->name, payload)) != 0) {
 			giterr_set_after_callback(error);
 			break;
 		}
-	});
+	}
 
-	git_vector_free(&seen);
+done:
+	git_vector_foreach(&snapshot, i, sm)
+		git_submodule_free(sm);
+	git_vector_free(&snapshot);
 
 	return error;
 }
@@ -387,9 +409,17 @@ int git_submodule_add_setup(
 
 	/* add submodule to hash and "reload" it */
 
+	if (git_mutex_lock(&repo->_submodules->lock) < 0) {
+		giterr_set(GITERR_OS, "Unable to acquire lock on submodule cache");
+		error = -1;
+		goto cleanup;
+	}
+
 	if (!(error = submodule_get(&sm, repo->_submodules, path, NULL)) &&
 		!(error = git_submodule_reload(sm, false)))
 		error = git_submodule_init(sm, false);
+
+	git_mutex_unlock(&repo->_submodules->lock);
 
 cleanup:
 	if (error && sm) {
