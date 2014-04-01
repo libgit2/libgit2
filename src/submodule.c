@@ -1345,8 +1345,9 @@ static int submodule_load_from_config(
 	const git_config_entry *entry, void *payload)
 {
 	git_submodule_cache *cache = payload;
-	const char *namestart, *property, *alternate = NULL;
+	const char *namestart, *property;
 	const char *key = entry->name, *value = entry->value, *path;
+	char *alternate = NULL, *replaced = NULL;
 	git_buf name = GIT_BUF_INIT;
 	git_submodule *sm = NULL;
 	int error = 0;
@@ -1377,17 +1378,39 @@ static int submodule_load_from_config(
 	 * should be strcasecmp
 	 */
 
-	if (strcmp(sm->name, name.ptr) != 0) {
-		alternate = sm->name = git_buf_detach(&name);
-	} else if (path && strcmp(path, sm->path) != 0) {
-		alternate = sm->path = git__strdup(value);
-		if (!sm->path) {
-			error = -1;
-			goto done;
+	if (strcmp(sm->name, name.ptr) != 0) { /* name changed */
+		if (!strcmp(sm->path, name.ptr)) { /* already set as path */
+			replaced = sm->name;
+			sm->name = sm->path;
+		} else {
+			if (sm->name != sm->path)
+				replaced = sm->name;
+			alternate = sm->name = git_buf_detach(&name);
+		}
+	}
+	else if (path && strcmp(path, sm->path) != 0) { /* path changed */
+		if (!strcmp(sm->name, value)) { /* already set as name */
+			replaced = sm->path;
+			sm->path = sm->name;
+		} else {
+			if (sm->path != sm->name)
+				replaced = sm->path;
+			if ((alternate = git__strdup(value)) == NULL) {
+				error = -1;
+				goto done;
+			}
+			sm->path = alternate;
 		}
 	}
 
-	/* Found a alternate key for the submodule */
+	/* Deregister under name being replaced */
+	if (replaced) {
+		git_strmap_delete(cache->submodules, replaced);
+		git_submodule_free(sm);
+		git__free(replaced);
+	}
+
+	/* Insert under alternate key */
 	if (alternate) {
 		void *old_sm = NULL;
 		git_strmap_insert2(cache->submodules, alternate, sm, old_sm, error);
@@ -1684,6 +1707,8 @@ static int submodule_cache_refresh(git_submodule_cache *cache, int refresh)
 			GIT_SUBMODULE_STATUS__WD_SCANNED |
 			GIT_SUBMODULE_STATUS__WD_FLAGS |
 			GIT_SUBMODULE_STATUS__WD_OID_VALID;
+	else
+		goto cleanup; /* nothing to do */
 
 	submodule_cache_clear_flags(cache, mask);
 
@@ -1726,7 +1751,12 @@ static int submodule_cache_refresh(git_submodule_cache *cache, int refresh)
 	/* remove submodules that no longer exist */
 
 	git_strmap_foreach_value(cache->submodules, sm, {
-		if (sm && (sm->flags & GIT_SUBMODULE_STATUS__IN_FLAGS) == 0)
+		/* purge unless in HEAD, index, or .gitmodules; no sm for wd only */
+		if (sm != NULL &&
+			!(sm->flags &
+			 (GIT_SUBMODULE_STATUS_IN_HEAD |
+			  GIT_SUBMODULE_STATUS_IN_INDEX |
+			  GIT_SUBMODULE_STATUS_IN_CONFIG)))
 			submodule_cache_remove_item(cache, sm, true);
 	});
 
