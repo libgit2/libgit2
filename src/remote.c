@@ -236,7 +236,7 @@ on_error:
 	return -1;
 }
 
-int git_remote_create_inmemory(git_remote **out, git_repository *repo, const char *fetch, const char *url)
+int git_remote_create_anonymous(git_remote **out, git_repository *repo, const char *url, const char *fetch)
 {
 	int error;
 	git_remote *remote;
@@ -502,7 +502,7 @@ int git_remote_save(const git_remote *remote)
 	assert(remote);
 
 	if (!remote->name) {
-		giterr_set(GITERR_INVALID, "Can't save an in-memory remote.");
+		giterr_set(GITERR_INVALID, "Can't save an anonymous remote.");
 		return GIT_EINVALIDSPEC;
 	}
 
@@ -1433,7 +1433,7 @@ static int rename_fetch_refspecs(
 		if (spec->push)
 			continue;
 
-		/* Every refspec is a problem refspec for an in-memory remote, OR */
+		/* Every refspec is a problem refspec for an anonymous remote, OR */
 		/* Does the dst part of the refspec follow the expected format? */
 		if (!remote->name ||
 			strcmp(git_buf_cstr(&base), spec->string)) {
@@ -1481,7 +1481,7 @@ int git_remote_rename(
 	assert(remote && new_name);
 
 	if (!remote->name) {
-		giterr_set(GITERR_INVALID, "Can't rename an in-memory remote.");
+		giterr_set(GITERR_INVALID, "Can't rename an anonymous remote.");
 		return GIT_EINVALIDSPEC;
 	}
 

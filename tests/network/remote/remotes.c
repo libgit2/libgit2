@@ -66,7 +66,7 @@ void test_network_remote_remotes__error_when_no_push_available(void)
 	git_transport *t;
 	git_push *p;
 
-	cl_git_pass(git_remote_create_inmemory(&r, _repo, NULL, cl_fixture("testrepo.git")));
+	cl_git_pass(git_remote_create_anonymous(&r, _repo, cl_fixture("testrepo.git"), NULL));
 
 	cl_git_pass(git_transport_local(&t,r,NULL));
 
@@ -343,7 +343,7 @@ void test_network_remote_remotes__cannot_save_an_inmemory_remote(void)
 {
 	git_remote *remote;
 
-	cl_git_pass(git_remote_create_inmemory(&remote, _repo, NULL, "git://github.com/libgit2/libgit2"));
+	cl_git_pass(git_remote_create_anonymous(&remote, _repo, "git://github.com/libgit2/libgit2", NULL));
 
 	cl_assert_equal_p(NULL, git_remote_name(remote));
 
@@ -436,7 +436,7 @@ void test_network_remote_remotes__check_structure_version(void)
 
 	git_remote_free(_remote);
 	_remote = NULL;
-	cl_git_pass(git_remote_create_inmemory(&_remote, _repo, NULL, "test-protocol://localhost"));
+	cl_git_pass(git_remote_create_anonymous(&_remote, _repo, "test-protocol://localhost", NULL));
 
 	transport.version = 0;
 	cl_git_fail(git_remote_set_transport(_remote, &transport));
@@ -503,7 +503,7 @@ void test_network_remote_remotes__query_refspecs(void)
 	git_strarray array;
 	int i;
 
-	cl_git_pass(git_remote_create_inmemory(&remote, _repo, NULL, "git://github.com/libgit2/libgit2"));
+	cl_git_pass(git_remote_create_anonymous(&remote, _repo, "git://github.com/libgit2/libgit2", NULL));
 
 	for (i = 0; i < 3; i++) {
 		cl_git_pass(git_remote_add_fetch(remote, fetch_refspecs[i]));
