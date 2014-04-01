@@ -169,20 +169,22 @@ static void action_delete_tag(tag_state *state)
 {
 	tag_options *opts = state->opts;
 	git_object *obj;
-	char oid[GIT_OID_HEXSZ + 1];
+	git_buf abbrev_oid = {0};
 
 	check(!opts->tag_name, "Name required");
 
 	check_lg2(git_revparse_single(&obj, state->repo, opts->tag_name),
 			"Failed to lookup rev", opts->tag_name);
 
+	check_lg2(git_object_short_id(&abbrev_oid, obj),
+			"Unable to get abbreviated OID", opts->tag_name);
+
 	check_lg2(git_tag_delete(state->repo, opts->tag_name),
 			"Unable to delete tag", opts->tag_name);
 
-	git_oid_tostr(oid, sizeof(oid), git_object_id(obj));
+	printf("Deleted tag '%s' (was %s)\n", opts->tag_name, abbrev_oid.ptr);
 
-	printf("Deleted tag '%s' (was %s)\n", opts->tag_name, oid);
-
+	git_buf_free(&abbrev_oid);
 	git_object_free(obj);
 }
 
