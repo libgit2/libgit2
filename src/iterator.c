@@ -10,7 +10,7 @@
 #include "index.h"
 #include "ignore.h"
 #include "buffer.h"
-#include "git2/submodule.h"
+#include "submodule.h"
 #include <ctype.h>
 
 #define ITERATOR_SET_CB(P,NAME_LC) do { \
@@ -1275,12 +1275,36 @@ GIT_INLINE(bool) workdir_path_is_dotgit(const git_buf *path)
 
 static int workdir_iterator__enter_dir(fs_iterator *fi)
 {
+	fs_iterator_frame *ff = fi->stack;
+	size_t pos;
+	git_path_with_stat *entry;
+	bool found_submodules = false;
+
 	/* only push new ignores if this is not top level directory */
-	if (fi->stack->next != NULL) {
+	if (ff->next != NULL) {
 		workdir_iterator *wi = (workdir_iterator *)fi;
 		ssize_t slash_pos = git_buf_rfind_next(&fi->path, '/');
 
 		(void)git_ignore__push_dir(&wi->ignores, &fi->path.ptr[slash_pos + 1]);
+	}
+
+	/* convert submodules to GITLINK and remove trailing slashes */
+	git_vector_foreach(&ff->entries, pos, entry) {
+		if (S_ISDIR(entry->st.st_mode) &&
+			git_submodule__is_submodule(fi->base.repo, entry->path))
+		{
+			entry->st.st_mode = GIT_FILEMODE_COMMIT;
+			entry->path_len--;
+			entry->path[entry->path_len] = '\0';
+			found_submodules = true;
+		}
+	}
+
+	/* if we renamed submodules, re-sort and re-seek to start */
+	if (found_submodules) {
+		git_vector_set_sorted(&ff->entries, 0);
+		git_vector_sort(&ff->entries);
+		fs_iterator__seek_frame_start(fi, ff);
 	}
 
 	return 0;
@@ -1295,7 +1319,6 @@ static int workdir_iterator__leave_dir(fs_iterator *fi)
 
 static int workdir_iterator__update_entry(fs_iterator *fi)
 {
-	int error = 0;
 	workdir_iterator *wi = (workdir_iterator *)fi;
 
 	/* skip over .git entries */
@@ -1304,20 +1327,6 @@ static int workdir_iterator__update_entry(fs_iterator *fi)
 
 	/* reset is_ignored since we haven't checked yet */
 	wi->is_ignored = -1;
-
-	/* check if apparent tree entries are actually submodules */
-	if (fi->entry.mode != GIT_FILEMODE_TREE)
-		return 0;
-
-	error = git_submodule_lookup(NULL, fi->base.repo, fi->entry.path);
-	if (error < 0)
-		giterr_clear();
-
-	/* mark submodule as GITLINK and remove slash */
-	if (!error) {
-		fi->entry.mode = S_IFGITLINK;
-		fi->entry.path[strlen(fi->entry.path) - 1] = '\0';
-	}
 
 	return 0;
 }

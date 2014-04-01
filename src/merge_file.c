@@ -117,7 +117,7 @@ static int git_merge_file__from_inputs(
 
 	memset(out, 0x0, sizeof(git_merge_file_result));
 
-	merge_file_normalize_opts(&options, given_opts);		
+	merge_file_normalize_opts(&options, given_opts);
 
 	memset(&xmparam, 0x0, sizeof(xmparam_t));
 
@@ -165,7 +165,7 @@ static int git_merge_file__from_inputs(
 	}
 
 	out->automergeable = (xdl_result == 0);
-	out->ptr = (unsigned char *)mmbuffer.ptr;
+	out->ptr = (const char *)mmbuffer.ptr;
 	out->len = mmbuffer.size;
 	out->mode = merge_file_best_mode(ancestor, ours, theirs);
 
