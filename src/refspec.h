@@ -23,7 +23,6 @@ struct git_refspec {
 
 #define GIT_REFSPEC_TAGS "refs/tags/*:refs/tags/*"
 
-int git_refspec_parse(struct git_refspec *refspec, const char *str);
 int git_refspec__parse(
 	struct git_refspec *refspec,
 	const char *str,
