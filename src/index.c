@@ -524,7 +524,9 @@ int git_index__changed_relative_to(
 	if (git_index_read(index, false) < 0)
 		giterr_clear();
 
-	return (memcmp(&index->stamp, fs, sizeof(index->stamp)) == 0);
+	return (index->stamp.mtime != fs->mtime ||
+			index->stamp.size != fs->size ||
+			index->stamp.ino != fs->ino);
 }
 
 int git_index_write(git_index *index)
