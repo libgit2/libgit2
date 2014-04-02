@@ -259,6 +259,17 @@ static int checkout_action_no_wd(
 	return checkout_action_common(action, data, delta, NULL);
 }
 
+static bool wd_item_is_removable(git_iterator *iter, const git_index_entry *wd)
+{
+	git_buf *full = NULL;
+
+	if (wd->mode != GIT_FILEMODE_TREE)
+		return true;
+	if (git_iterator_current_workdir_path(&full, iter) < 0)
+		return true;
+	return !full || !git_path_contains(full, DOT_GIT);
+}
+
 static int checkout_action_wd_only(
 	checkout_data *data,
 	git_iterator *workdir,
@@ -307,11 +318,13 @@ static int checkout_action_wd_only(
 		/* found in index */;
 	else if (git_iterator_current_is_ignored(workdir)) {
 		notify = GIT_CHECKOUT_NOTIFY_IGNORED;
-		remove = ((data->strategy & GIT_CHECKOUT_REMOVE_IGNORED) != 0);
+		remove = ((data->strategy & GIT_CHECKOUT_REMOVE_IGNORED) != 0) &&
+			wd_item_is_removable(workdir, wd);
 	}
 	else {
 		notify = GIT_CHECKOUT_NOTIFY_UNTRACKED;
-		remove = ((data->strategy & GIT_CHECKOUT_REMOVE_UNTRACKED) != 0);
+		remove = ((data->strategy & GIT_CHECKOUT_REMOVE_UNTRACKED) != 0) &&
+			wd_item_is_removable(workdir, wd);
 	}
 
 	error = checkout_notify(data, notify, NULL, wd);
