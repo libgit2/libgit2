@@ -91,8 +91,10 @@ static int submodule_cache_init(git_repository *repo, int refresh);
 static void submodule_cache_free(git_submodule_cache *cache);
 
 static git_config_backend *open_gitmodules(git_submodule_cache *, int gitmod);
-static int lookup_head_remote_key(git_buf *key, git_repository *repo);
-static int lookup_head_remote(git_buf *url, git_repository *repo);
+static int get_url_base(git_buf *url, git_repository *repo);
+static int lookup_default_remote(git_remote **remote, git_repository *repo);
+static int lookup_head_remote_key(git_buf *remote_key, git_repository *repo);
+static int lookup_head_remote(git_remote **remote, git_repository *repo);
 static int submodule_get(git_submodule **, git_submodule_cache *, const char *, const char *);
 static int submodule_load_from_config(const git_config_entry *, void *);
 static int submodule_load_from_wd_lite(git_submodule *);
@@ -644,7 +646,7 @@ int git_submodule_resolve_url(git_buf *out, git_repository *repo, const char *ur
 	assert(url);
 
 	if (git_path_is_relative(url)) {
-		if (!(error = lookup_head_remote(out, repo)))
+		if (!(error = get_url_base(out, repo)))
 			error = git_path_apply_relative(out, url);
 	} else if (strchr(url, ':') != NULL || url[0] == '/') {
 		error = git_buf_sets(out, url);
@@ -1795,81 +1797,109 @@ static int submodule_cache_init(git_repository *repo, int cache_refresh)
 	return error;
 }
 
-static int lookup_head_remote_key(git_buf *key, git_repository *repo)
+static int get_url_base(git_buf *url, git_repository *repo)
 {
 	int error;
-	git_config *cfg;
-	git_reference *head = NULL, *remote = NULL;
-	const char *tgt, *scan;
+	git_remote *remote;
+	error = lookup_default_remote(&remote, repo);
+	const char *url_ptr;
 
-	/* 1. resolve HEAD -> refs/heads/BRANCH
-	 * 2. lookup config branch.BRANCH.remote -> ORIGIN
-	 * 3. return remote.ORIGIN.url
-	 */
-
-	git_buf_clear(key);
-
-	if ((error = git_repository_config__weakptr(&cfg, repo)) < 0)
-		return error;
-
-	if (git_reference_lookup(&head, repo, GIT_HEAD_FILE) < 0) {
-		giterr_set(GITERR_SUBMODULE,
-			"Cannot resolve relative URL when HEAD cannot be resolved");
-		return GIT_ENOTFOUND;
+	assert(url && repo);
+	
+	if (!error)	{
+		url_ptr = git_remote_url(remote);
+	} else if (error == GIT_ENOTFOUND) {
+		/* if repository does not have a default remote, use workdir instead */
+		giterr_clear();
+		error = 0;
+		url_ptr = git_repository_workdir(repo);
 	}
-
-	if (git_reference_type(head) != GIT_REF_SYMBOLIC) {
-		giterr_set(GITERR_SUBMODULE,
-			"Cannot resolve relative URL when HEAD is not symbolic");
-		error = GIT_ENOTFOUND;
+	
+	if (error < 0)
 		goto cleanup;
-	}
-
-	if ((error = git_branch_upstream(&remote, head)) < 0)
-		goto cleanup;
-
-	/* remote should refer to something like refs/remotes/ORIGIN/BRANCH */
-
-	if (git_reference_type(remote) != GIT_REF_SYMBOLIC ||
-		git__prefixcmp(
-			git_reference_symbolic_target(remote), GIT_REFS_REMOTES_DIR) != 0)
-	{
-		giterr_set(GITERR_SUBMODULE,
-			"Cannot resolve relative URL when HEAD is not symbolic");
-		error = GIT_ENOTFOUND;
-		goto cleanup;
-	}
-
-	scan = tgt = git_reference_symbolic_target(remote) +
-		strlen(GIT_REFS_REMOTES_DIR);
-	while (*scan && (*scan != '/' || (scan > tgt && scan[-1] != '\\')))
-		scan++; /* find non-escaped slash to end ORIGIN name */
-
-	error = git_buf_printf(key, "remote.%.*s.url", (int)(scan - tgt), tgt);
+		
+	error = git_buf_sets(url, url_ptr);
 
 cleanup:
-	if (error < 0)
-		git_buf_clear(key);
-
-	git_reference_free(head);
-	git_reference_free(remote);
+	git_remote_free(remote);
 
 	return error;
 }
 
-static int lookup_head_remote(git_buf *url, git_repository *repo)
+/**
+ * Lookup the remote that is considered the default remote in the current state
+ */
+static int lookup_default_remote(git_remote **remote, git_repository *repo)
 {
 	int error;
-	git_config *cfg;
-	const char *tgt;
-	git_buf key = GIT_BUF_INIT;
+	error = lookup_head_remote(remote, repo);
 
-	if (!(error = lookup_head_remote_key(&key, repo)) &&
-		!(error = git_repository_config__weakptr(&cfg, repo)) &&
-		!(error = git_config_get_string(&tgt, cfg, key.ptr)))
-		error = git_buf_sets(url, tgt);
+	assert(remote && repo);
 
-	git_buf_free(&key);
+	// if that failed, use 'origin' instead
+	if (error == GIT_ENOTFOUND) {
+		error = git_remote_load(remote, repo, "origin");
+	}
+
+	if (error == GIT_ENOTFOUND) {
+		giterr_set(GITERR_SUBMODULE,
+			"Neither HEAD points to a local tracking branch, nor does origin exist");
+	}
+
+	return error;
+}
+
+/**
+ * Lookup name of remote of the local tracking branch HEAD points to
+ */
+static int lookup_head_remote_key(git_buf *remote_name, git_repository *repo)
+{
+	int error;
+	git_reference *head = NULL;
+	git_buf upstream_name = GIT_BUF_INIT;
+
+	/* lookup and dereference HEAD */
+	if ((error = git_repository_head(&head, repo) < 0))
+	   goto cleanup;
+
+	/* lookup remote tracking branch of HEAD */
+	if ((error = git_branch_upstream_name(&upstream_name, repo, git_reference_name(head))) < 0)
+		goto cleanup;
+
+	/* lookup remote of remote tracking branch */
+	if ((error = git_branch_remote_name(remote_name, repo, upstream_name.ptr)) < 0)
+		goto cleanup;
+
+cleanup:
+	git_buf_free(&upstream_name);
+	if (head)
+		git_reference_free(head);
+
+	return error;
+}
+
+/**
+ * Lookup the remote of the local tracking branch HEAD points to
+ */
+static int lookup_head_remote(git_remote **remote, git_repository *repo)
+{
+	int error;
+	git_buf remote_name = GIT_BUF_INIT;
+
+	assert(remote && repo);
+
+	/* should be NULL in case of error */
+	*remote = NULL;
+
+	/* lookup remote of remote tracking branch name */
+	if ((error = lookup_head_remote_key(&remote_name, repo)) < 0)
+		goto cleanup;
+
+	error = git_remote_load(remote, repo, remote_name.ptr);
+
+cleanup:
+	git_buf_free(&remote_name);
+
 	return error;
 }
 
