@@ -339,7 +339,7 @@ static bool submodule_is_config_only(
 
 	git_submodule_free(sm);
 
-	return false;
+	return rval;
 }
 
 static int checkout_action_with_wd(
