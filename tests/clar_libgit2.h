@@ -65,6 +65,8 @@ void clar__assert_equal_file(
 	const char *file,
 	int line);
 
+#define cl_skip(reason) do { printf("skipping %s::%s; %s\n", clar_active_suite(), clar_active_test(), reason); return; } while (0)
+
 /*
  * Some utility macros for building long strings
  */

@@ -555,6 +555,16 @@ void cl_set_cleanup(void (*cleanup)(void *), void *opaque)
 	_clar.local_cleanup_payload = opaque;
 }
 
+const char *clar_active_suite(void)
+{
+	return _clar.active_suite;
+}
+
+const char *clar_active_test(void)
+{
+	return _clar.active_test;
+}
+
 #include "clar/sandbox.h"
 #include "clar/fixtures.h"
 #include "clar/fs.h"

@@ -135,13 +135,16 @@ void test_blame_simple__trivial_libgit2(void)
 	git_blame_options opts = GIT_BLAME_OPTIONS_INIT;
 	git_object *obj;
 
-	cl_git_pass(git_repository_open(&g_repo, cl_fixture("../..")));
+	/* If we can't open the libgit2 repo or if it isn't a full repo
+	 * with proper history, just skip this test */
+	if (git_repository_open(&g_repo, cl_fixture("../..")) < 0 ||
+		git_repository_is_shallow(g_repo) ||
+		git_revparse_single(&obj, g_repo, "359fc2d") < 0)
+	{
+		giterr_clear();
+		cl_skip("not inside valid libgit2 repo");
+	}
 
-	/* This test can't work on a shallow clone */
-	if (git_repository_is_shallow(g_repo))
-		return;
-
-	cl_git_pass(git_revparse_single(&obj, g_repo, "359fc2d"));
 	git_oid_cpy(&opts.newest_commit, git_object_id(obj));
 	git_object_free(obj);
 
