@@ -200,15 +200,8 @@ void test_online_clone__cred_callback_failure_return_code_is_tunnelled(void)
 	const char *remote_url = cl_getenv("GITTEST_REMOTE_URL");
 	const char *remote_user = cl_getenv("GITTEST_REMOTE_USER");
 
-	if (!remote_url) {
-		printf("GITTEST_REMOTE_URL unset; skipping clone test\n");
-		return;
-	}
-
-	if (!remote_user) {
-		printf("GITTEST_REMOTE_USER unset; skipping clone test\n");
-		return;
-	}
+	if (!remote_url || !remote_user)
+		clar__skip();
 
 	g_options.remote_callbacks.credentials = cred_failure_cb;
 

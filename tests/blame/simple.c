@@ -137,14 +137,14 @@ void test_blame_simple__trivial_libgit2(void)
 
 	/* If we can't open the libgit2 repo or if it isn't a full repo
 	 * with proper history, just skip this test */
-	if (git_repository_open(&g_repo, cl_fixture("../..")) < 0 ||
-		git_repository_is_shallow(g_repo) ||
-		git_revparse_single(&obj, g_repo, "359fc2d") < 0)
-	{
-		printf("NOT INSIDE VALID LIBGIT2 REPO; skipping blame test\n");
-		giterr_clear();
-		return;
-	}
+	if (git_repository_open(&g_repo, cl_fixture("../..")) < 0)
+		cl_skip();
+
+	if (git_repository_is_shallow(g_repo))
+		cl_skip();
+
+	if (git_revparse_single(&obj, g_repo, "359fc2d") < 0)
+		cl_skip();
 
 	git_oid_cpy(&opts.newest_commit, git_object_id(obj));
 	git_object_free(obj);

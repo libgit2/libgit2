@@ -109,10 +109,11 @@ static struct {
 	int argc;
 	char **argv;
 
+	enum cl_test_status test_status;
 	const char *active_test;
 	const char *active_suite;
 
-	int suite_errors;
+	int total_skipped;
 	int total_errors;
 
 	int tests_ran;
@@ -150,7 +151,7 @@ struct clar_suite {
 static void clar_print_init(int test_count, int suite_count, const char *suite_names);
 static void clar_print_shutdown(int test_count, int suite_count, int error_count);
 static void clar_print_error(int num, const struct clar_error *error);
-static void clar_print_ontest(const char *test_name, int test_number, int failed);
+static void clar_print_ontest(const char *test_name, int test_number, enum cl_test_status failed);
 static void clar_print_onsuite(const char *suite_name, int suite_index);
 static void clar_print_onabort(const char *msg, ...);
 
@@ -186,8 +187,7 @@ clar_run_test(
 	const struct clar_func *initialize,
 	const struct clar_func *cleanup)
 {
-	int error_st = _clar.suite_errors;
-
+	_clar.test_status = CL_TEST_OK;
 	_clar.trampoline_enabled = 1;
 
 	if (setjmp(_clar.trampoline) == 0) {
@@ -211,14 +211,11 @@ clar_run_test(
 	_clar.local_cleanup = NULL;
 	_clar.local_cleanup_payload = NULL;
 
-	if (_clar.report_errors_only)
+	if (_clar.report_errors_only) {
 		clar_report_errors();
-	else
-		clar_print_ontest(
-			test->name,
-			_clar.tests_ran,
-			(_clar.suite_errors > error_st)
-		);
+	} else {
+		clar_print_ontest(test->name, _clar.tests_ran, _clar.test_status);
+	}
 }
 
 static void
@@ -237,7 +234,6 @@ clar_run_suite(const struct clar_suite *suite, const char *filter)
 		clar_print_onsuite(suite->name, ++_clar.suites_ran);
 
 	_clar.active_suite = suite->name;
-	_clar.suite_errors = 0;
 
 	if (filter) {
 		size_t suitelen = strlen(suite->name);
@@ -413,6 +409,25 @@ clar_test(int argc, char **argv)
 	return errors;
 }
 
+static void abort_test(void)
+{
+	if (!_clar.trampoline_enabled) {
+		clar_print_onabort(
+				"Fatal error: a cleanup method raised an exception.");
+		clar_report_errors();
+		exit(-1);
+	}
+
+	longjmp(_clar.trampoline, -1);
+}
+
+void clar__skip(void)
+{
+	_clar.test_status = CL_TEST_SKIP;
+	_clar.total_skipped++;
+	abort_test();
+}
+
 void clar__fail(
 	const char *file,
 	int line,
@@ -440,19 +455,11 @@ void clar__fail(
 	if (description != NULL)
 		error->description = strdup(description);
 
-	_clar.suite_errors++;
 	_clar.total_errors++;
+	_clar.test_status = CL_TEST_FAILURE;
 
-	if (should_abort) {
-		if (!_clar.trampoline_enabled) {
-			clar_print_onabort(
-				"Fatal error: a cleanup method raised an exception.");
-			clar_report_errors();
-			exit(-1);
-		}
-
-		longjmp(_clar.trampoline, -1);
-	}
+	if (should_abort)
+		abort_test();
 }
 
 void clar__assert(

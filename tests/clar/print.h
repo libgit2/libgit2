@@ -35,11 +35,17 @@ static void clar_print_error(int num, const struct clar_error *error)
 	fflush(stdout);
 }
 
-static void clar_print_ontest(const char *test_name, int test_number, int failed)
+static void clar_print_ontest(const char *test_name, int test_number, enum cl_test_status status)
 {
 	(void)test_name;
 	(void)test_number;
-	printf("%c", failed ? 'F' : '.');
+
+	switch(status) {
+	case CL_TEST_OK: printf("."); break;
+	case CL_TEST_FAILURE: printf("F"); break;
+	case CL_TEST_SKIP: printf("S"); break;
+	}
+
 	fflush(stdout);
 }
 
