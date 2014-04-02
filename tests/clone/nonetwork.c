@@ -282,3 +282,37 @@ void test_clone_nonetwork__clone_into_updates_reflog_properly(void)
 	git_remote_free(remote);
 	git_signature_free(sig);
 }
+
+static void cleanup_repository(void *path)
+{
+	if (g_repo) {
+		git_repository_free(g_repo);
+		g_repo = NULL;
+	}
+
+	cl_fixture_cleanup((const char *)path);
+}
+
+void test_clone_nonetwork__clone_from_empty_sets_upstream(void)
+{
+	git_config *config;
+	git_repository *repo;
+	const char *str;
+
+	/* Create an empty repo to clone from */
+	cl_set_cleanup(&cleanup_repository, "./test1");
+	cl_git_pass(git_repository_init(&g_repo, "./test1", 0));
+	cl_set_cleanup(&cleanup_repository, "./repowithunborn");
+	cl_git_pass(git_clone(&repo, "./test1", "./repowithunborn", NULL));
+
+	cl_git_pass(git_repository_config(&config, repo));
+
+	cl_git_pass(git_config_get_string(&str, config, "branch.master.remote"));
+	cl_assert_equal_s("origin", str);
+	cl_git_pass(git_config_get_string(&str, config, "branch.master.merge"));
+	cl_assert_equal_s("refs/heads/master", str);
+
+	git_config_free(config);
+	git_repository_free(repo);
+	cl_fixture_cleanup("./repowithunborn");
+}

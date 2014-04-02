@@ -28,4 +28,3 @@
 
 #define FETCH_HEAD_EXPLICIT_DATA \
 	"0966a434eb1a025db6b71485ab63a3bfbea520b6\t\tbranch 'first-merge' of git://github.com/libgit2/TestGitRepository\n"
-
