@@ -158,8 +158,8 @@ typedef enum {
  * to back it.
  *
  * Since there is no ODB or working directory behind this index,
- * any Index methods which rely on these (e.g. index_add) will
- * fail with the GIT_ERROR error code.
+ * any Index methods which rely on these (e.g. index_add_bypath)
+ * will fail with the GIT_ERROR error code.
  *
  * If you need to access the index of an actual repository,
  * use the `git_repository_index` wrapper.
