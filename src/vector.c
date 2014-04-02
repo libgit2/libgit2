@@ -330,6 +330,47 @@ int git_vector_resize_to(git_vector *v, size_t new_length)
 	return 0;
 }
 
+int git_vector_grow_at(git_vector *v, size_t idx, size_t grow_len)
+{
+	size_t new_length = v->length + grow_len;
+	size_t new_idx = idx + grow_len;
+
+	assert(grow_len > 0);
+	assert (idx <= v->length);
+
+	if (new_length < v->length ||
+		(new_length > v->_alloc_size && resize_vector(v, new_length) < 0))
+		return -1;
+
+	memmove(&v->contents[new_idx], &v->contents[idx],
+		sizeof(void *) * (v->length - idx));
+	memset(&v->contents[idx], 0, sizeof(void *) * grow_len);
+
+	v->length = new_length;
+	return 0;
+}
+
+int git_vector_shrink_at(git_vector *v, size_t idx, size_t shrink_len)
+{
+	size_t new_length = v->length - shrink_len;
+	size_t end_idx = idx + shrink_len;
+
+	assert(shrink_len > 0 && shrink_len <= v->length);
+	assert(idx <= v->length);
+
+	if (new_length > v->length)
+		return -1;
+
+	if (idx > v->length)
+		memmove(&v->contents[idx], &v->contents[end_idx],
+			sizeof(void *) * (v->length - idx));
+
+	memset(&v->contents[new_length], 0, sizeof(void *) * shrink_len);
+
+	v->length = new_length;
+	return 0;
+}
+
 int git_vector_set(void **old, git_vector *v, size_t position, void *value)
 {
 	if (position + 1 > v->length) {
