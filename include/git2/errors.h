@@ -87,6 +87,7 @@ typedef enum {
 	GITERR_REVERT,
 	GITERR_CALLBACK,
 	GITERR_CHERRYPICK,
+	GITERR_PATCH,
 } git_error_t;
 
 /**
