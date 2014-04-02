@@ -902,19 +902,32 @@ static int remote_head_for_fetchspec_src(git_remote_head **out, git_vector *upda
 static int remote_head_for_ref(git_remote_head **out, git_refspec *spec, git_vector *update_heads, git_reference *ref)
 {
 	git_reference *resolved_ref = NULL;
-	git_reference *tracking_ref = NULL;
 	git_buf remote_name = GIT_BUF_INIT;
+	git_buf upstream_name = GIT_BUF_INIT;
+	git_repository *repo;
+	const char *ref_name;
 	int error = 0;
 
 	assert(out && spec && ref);
 
 	*out = NULL;
 
-	if ((error = git_reference_resolve(&resolved_ref, ref)) < 0 ||
-		(!git_reference_is_branch(resolved_ref)) ||
-		(error = git_branch_upstream(&tracking_ref, resolved_ref)) < 0 ||
-		(error = git_refspec_rtransform(&remote_name, spec, git_reference_name(tracking_ref))) < 0) {
-		/* Not an error if HEAD is unborn or no tracking branch */
+	repo = git_reference_owner(ref);
+
+	error = git_reference_resolve(&resolved_ref, ref);
+
+	/* If we're in an unborn branch, let's pretend nothing happened */
+	if (error == GIT_ENOTFOUND && git_reference_type(ref) == GIT_REF_SYMBOLIC) {
+		ref_name = git_reference_symbolic_target(ref);
+		error = 0;
+	} else {
+		ref_name = git_reference_name(resolved_ref);
+	}
+
+	if ((!git_reference__is_branch(ref_name)) ||
+	    (error = git_branch_upstream_name(&upstream_name, repo, ref_name)) < 0 ||
+	    (error = git_refspec_rtransform(&remote_name, spec, upstream_name.ptr)) < 0) {
+		/* Not an error if there is no upstream */
 		if (error == GIT_ENOTFOUND)
 			error = 0;
 
@@ -924,9 +937,9 @@ static int remote_head_for_ref(git_remote_head **out, git_refspec *spec, git_vec
 	error = remote_head_for_fetchspec_src(out, update_heads, git_buf_cstr(&remote_name));
 
 cleanup:
-	git_reference_free(tracking_ref);
 	git_reference_free(resolved_ref);
 	git_buf_free(&remote_name);
+	git_buf_free(&upstream_name);
 	return error;
 }
 
