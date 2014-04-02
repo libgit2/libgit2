@@ -880,8 +880,10 @@ static int handle_unmatched_new_item(
 			git_buf *full = NULL;
 			if (git_iterator_current_workdir_path(&full, info->new_iter) < 0)
 				return -1;
-			if (full && git_path_contains_dir(full, DOT_GIT))
+			if (full && git_path_contains(full, DOT_GIT)) {
+				/* TODO: warning if not a valid git repository */
 				recurse_into_dir = false;
+			}
 		}
 
 		/* still have to look into untracked directories to match core git -
