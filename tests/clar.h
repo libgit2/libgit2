@@ -16,6 +16,8 @@ void clar_test_shutdown(void);
 int clar_test(int argc, char *argv[]);
 
 const char *clar_sandbox_path(void);
+const char *clar_active_suite(void);
+const char *clar_active_test(void);
 
 void cl_set_cleanup(void (*cleanup)(void *), void *opaque);
 void cl_fs_cleanup(void);

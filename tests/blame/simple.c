@@ -141,9 +141,8 @@ void test_blame_simple__trivial_libgit2(void)
 		git_repository_is_shallow(g_repo) ||
 		git_revparse_single(&obj, g_repo, "359fc2d") < 0)
 	{
-		printf("NOT INSIDE VALID LIBGIT2 REPO; skipping blame test\n");
 		giterr_clear();
-		return;
+		cl_skip("not inside valid libgit2 repo");
 	}
 
 	git_oid_cpy(&opts.newest_commit, git_object_id(obj));
