@@ -51,6 +51,25 @@ void test_repo_config__open_missing_global(void)
 	git_sysdir_global_shutdown();
 }
 
+void test_repo_config__inaccessible_global(void)
+{
+	git_repository *repo;
+
+	cl_git_pass(git_libgit2_opts(
+		GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL, path.ptr));
+	cl_git_pass(git_libgit2_opts(
+		GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_SYSTEM, path.ptr));
+	cl_git_pass(git_libgit2_opts(
+		GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_XDG, path.ptr));
+
+	cl_must_pass(p_chmod(path.ptr, 0000));
+
+	cl_git_pass(git_repository_open(&repo, "empty_standard_repo"));
+	git_repository_free(repo);
+
+	cl_must_pass(p_chmod(path.ptr, 0777));
+}
+
 void test_repo_config__open_missing_global_with_separators(void)
 {
 	git_repository *repo;

@@ -86,25 +86,15 @@ int git_config_new(git_config **out)
 	return 0;
 }
 
-int git_config_add_file_ondisk(
-	git_config *cfg,
-	const char *path,
-	git_config_level_t level,
-	int force)
+static int add_file_ondisk(git_config *cfg, const char *path, git_config_level_t level,
+			   int force, int allow_fail)
 {
 	git_config_backend *file = NULL;
-	struct stat st;
 	int res;
 
 	assert(cfg && path);
 
-	res = p_stat(path, &st);
-	if (res < 0 && errno != ENOENT) {
-		giterr_set(GITERR_CONFIG, "Error stat'ing config file '%s'", path);
-		return -1;
-	}
-
-	if (git_config_file__ondisk(&file, path) < 0)
+	if (git_config_file__ondisk(&file, path, allow_fail) < 0)
 		return -1;
 
 	if ((res = git_config_add_backend(cfg, file, level, force)) < 0) {
@@ -117,6 +107,24 @@ int git_config_add_file_ondisk(
 	}
 
 	return 0;
+}
+
+int git_config_add_file_ondisk(
+	git_config *cfg,
+	const char *path,
+	git_config_level_t level,
+	int force)
+{
+	return add_file_ondisk(cfg, path, level, force, 0);
+}
+
+int git_config_add_file_ondisk_gently(
+	git_config *cfg,
+	const char *path,
+	git_config_level_t level,
+	int force)
+{
+	return add_file_ondisk(cfg, path, level, force, 1);
 }
 
 int git_config_open_ondisk(git_config **out, const char *path)

@@ -177,6 +177,18 @@ GIT_EXTERN(int) git_config_add_file_ondisk(
 	int force);
 
 /**
+ * Add an on-disk config file instance to an existing config
+ *
+ * Behaves like git_config_add_file_ondisk but ignores errors when the
+ * path is not accessible.
+ */
+int git_config_add_file_ondisk_gently(
+	git_config *cfg,
+	const char *path,
+	git_config_level_t level,
+	int force);
+
+/**
  * Create a new config instance containing a single on-disk file
  *
  * This method is a simple utility wrapper for the following sequence

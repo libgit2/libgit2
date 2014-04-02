@@ -41,8 +41,9 @@ extern int git_config_rename_section(
  *
  * @param out the new backend
  * @param path where the config file is located
+ * @param allow_fail whether it's ok to fail to open the config file
  */
-extern int git_config_file__ondisk(git_config_backend **out, const char *path);
+extern int git_config_file__ondisk(git_config_backend **out, const char *path, int allow_fail);
 
 extern int git_config__normalize_name(const char *in, char **out);
 

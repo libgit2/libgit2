@@ -1490,7 +1490,7 @@ static git_config_backend *open_gitmodules(
 
 		if (okay_to_create || git_path_isfile(path.ptr)) {
 			/* git_config_file__ondisk should only fail if OOM */
-			if (git_config_file__ondisk(&mods, path.ptr) < 0)
+			if (git_config_file__ondisk(&mods, path.ptr, 0) < 0)
 				mods = NULL;
 			/* open should only fail here if the file is malformed */
 			else if (git_config_file_open(mods, GIT_CONFIG_LEVEL_LOCAL) < 0) {

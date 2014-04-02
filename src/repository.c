@@ -538,19 +538,19 @@ static int load_config(
 	git_buf_free(&config_path);
 
 	if (global_config_path != NULL &&
-		(error = git_config_add_file_ondisk(
+		(error = git_config_add_file_ondisk_gently(
 			cfg, global_config_path, GIT_CONFIG_LEVEL_GLOBAL, 0)) < 0 &&
 		error != GIT_ENOTFOUND)
 		goto on_error;
 
 	if (xdg_config_path != NULL &&
-		(error = git_config_add_file_ondisk(
+		(error = git_config_add_file_ondisk_gently(
 			cfg, xdg_config_path, GIT_CONFIG_LEVEL_XDG, 0)) < 0 &&
 		error != GIT_ENOTFOUND)
 		goto on_error;
 
 	if (system_config_path != NULL &&
-		(error = git_config_add_file_ondisk(
+		(error = git_config_add_file_ondisk_gently(
 			cfg, system_config_path, GIT_CONFIG_LEVEL_SYSTEM, 0)) < 0 &&
 		error != GIT_ENOTFOUND)
 		goto on_error;

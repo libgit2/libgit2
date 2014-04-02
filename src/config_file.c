@@ -96,6 +96,8 @@ typedef struct {
 	char  *file_path;
 
 	git_config_level_t level;
+
+	int allow_fail;
 } diskfile_backend;
 
 static int config_parse(diskfile_backend *cfg_file, struct reader *reader, git_config_level_t level, int depth);
@@ -197,6 +199,10 @@ static int config_open(git_config_backend *cfg, git_config_level_t level)
 	/* It's fine if the file doesn't exist */
 	if (res == GIT_ENOTFOUND)
 		return 0;
+	/* or if the user doesn't care about failing to open */
+	if (res < 0 && b->allow_fail)
+		return 0;
+
 
 	if (res < 0 || (res = config_parse(b, reader, level, 0)) < 0) {
 		free_vars(b->values);
@@ -608,7 +614,7 @@ static int config_delete_multivar(git_config_backend *cfg, const char *name, con
 	return result;
 }
 
-int git_config_file__ondisk(git_config_backend **out, const char *path)
+int git_config_file__ondisk(git_config_backend **out, const char *path, int allow_fail)
 {
 	diskfile_backend *backend;
 
@@ -619,6 +625,8 @@ int git_config_file__ondisk(git_config_backend **out, const char *path)
 
 	backend->file_path = git__strdup(path);
 	GITERR_CHECK_ALLOC(backend->file_path);
+
+	backend->allow_fail = allow_fail;
 
 	backend->parent.open = config_open;
 	backend->parent.get = config_get;

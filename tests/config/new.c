@@ -30,3 +30,24 @@ void test_config_new__write_new_config(void)
 
 	p_unlink(TEST_CONFIG);
 }
+
+#define TEST_DIR "perm-dir"
+
+void test_config_new__maybe_fail_on_access(void)
+{
+	git_config *config;
+
+	cl_git_mkfile(TEST_CONFIG, "[core]\nfoo = 4");
+
+	cl_git_pass(git_config_open_ondisk(&config, TEST_CONFIG));
+	git_config_free(config);
+
+	cl_git_pass(p_chmod(TEST_CONFIG, 0000));
+
+	cl_git_fail_with(-1, git_config_open_ondisk(&config, TEST_CONFIG));
+
+	cl_git_pass(git_config_new(&config));
+	cl_git_pass(git_config_add_file_ondisk_gently(config, TEST_CONFIG, 1, 1));
+
+	git_config_free(config);
+}
