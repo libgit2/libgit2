@@ -849,12 +849,21 @@ int git_submodule_sync(git_submodule *sm)
 		(sm->flags & GIT_SUBMODULE_STATUS_IN_WD) != 0 &&
 		!(error = git_submodule_open(&smrepo, sm)))
 	{
-		if ((error = lookup_head_remote_key(&key, smrepo)) < 0) {
+		git_buf remote_name = GIT_BUF_INIT;
+
+		if ((error = git_repository_config__weakptr(&cfg, smrepo)) < 0)
+			/* return error from reading submodule config */;
+		else if ((error = lookup_head_remote_key(&remote_name, smrepo)) < 0) {
 			giterr_clear();
-			git_buf_sets(&key, "branch.origin.remote");
+			error = git_buf_sets(&key, "branch.origin.remote");
+		} else {
+			error = git_buf_join3(
+				&key, '.', "branch", remote_name.ptr, "remote");
+			git_buf_free(&remote_name);
 		}
 
-		error = git_config__update_entry(cfg, key.ptr, sm->url, true, true);
+		if (!error)
+			error = git_config__update_entry(cfg, key.ptr, sm->url, true, false);
 
 		git_repository_free(smrepo);
 	}

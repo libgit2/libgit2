@@ -69,6 +69,26 @@ static int sync_one_submodule(
 	return git_submodule_sync(sm);
 }
 
+static void assert_submodule_url_is_synced(
+	git_submodule *sm, const char *parent_key, const char *child_key)
+{
+	git_config *cfg;
+	const char *str;
+	git_repository *smrepo;
+
+	cl_git_pass(git_repository_config(&cfg, g_repo));
+	cl_git_pass(git_config_get_string(&str, cfg, parent_key));
+	cl_assert_equal_s(git_submodule_url(sm), str);
+	git_config_free(cfg);
+
+	cl_git_pass(git_submodule_open(&smrepo, sm));
+	cl_git_pass(git_repository_config(&cfg, smrepo));
+	cl_git_pass(git_config_get_string(&str, cfg, child_key));
+	cl_assert_equal_s(git_submodule_url(sm), str);
+	git_config_free(cfg);
+	git_repository_free(smrepo);
+}
+
 void test_submodule_modify__sync(void)
 {
 	git_submodule *sm1, *sm2, *sm3;
@@ -104,14 +124,12 @@ void test_submodule_modify__sync(void)
 	cl_git_pass(git_submodule_foreach(g_repo, sync_one_submodule, NULL));
 
 	/* check that submodule config is updated */
-	cl_git_pass(git_repository_config(&cfg, g_repo));
-	cl_git_pass(git_config_get_string(&str, cfg, "submodule."SM1".url"));
-	cl_assert_equal_s(git_submodule_url(sm1), str);
-	cl_git_pass(git_config_get_string(&str, cfg, "submodule."SM2".url"));
-	cl_assert_equal_s(git_submodule_url(sm2), str);
-	cl_git_pass(git_config_get_string(&str, cfg, "submodule."SM3".url"));
-	cl_assert_equal_s(git_submodule_url(sm3), str);
-	git_config_free(cfg);
+	assert_submodule_url_is_synced(
+		sm1, "submodule."SM1".url", "branch.origin.remote");
+	assert_submodule_url_is_synced(
+		sm2, "submodule."SM2".url", "branch.origin.remote");
+	assert_submodule_url_is_synced(
+		sm3, "submodule."SM3".url", "branch.origin.remote");
 
 	git_submodule_free(sm1);
 	git_submodule_free(sm2);
