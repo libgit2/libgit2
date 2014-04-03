@@ -727,9 +727,10 @@ static int has_file_name(git_index *index,
 	 const git_index_entry *entry, size_t pos, int ok_to_replace)
 {
 	int retval = 0;
-	size_t len = strlen(entry->path);
+	size_t len = strlen(entry->path), to_remove_pos;
 	int stage = GIT_IDXENTRY_STAGE(entry);
 	const char *name = entry->path;
+	git_index_entry *to_remove;
 
 	while (pos < index->entries.length) {
 		git_index_entry *p = index->entries.contents[pos++];
@@ -745,7 +746,11 @@ static int has_file_name(git_index *index,
 		retval = -1;
 		if (!ok_to_replace)
 			break;
-		git_vector_remove(&index->entries, --pos);
+
+		to_remove_pos = --pos;
+		to_remove = index->entries.contents[to_remove_pos];
+		if (!git_vector_remove(&index->entries, to_remove_pos))
+			index_entry_free(to_remove);
 	}
 	return retval;
 }
@@ -761,6 +766,7 @@ static int has_dir_name(git_index *index,
 	int stage = GIT_IDXENTRY_STAGE(entry);
 	const char *name = entry->path;
 	const char *slash = name + strlen(name);
+	git_index_entry *to_remove;
 
 	for (;;) {
 		size_t len, position;
@@ -778,7 +784,9 @@ static int has_dir_name(git_index *index,
 			if (!ok_to_replace)
 				break;
 
-			git_vector_remove(&index->entries, position);
+			to_remove = index->entries.contents[position];
+			if (!git_vector_remove(&index->entries, position))
+				index_entry_free(to_remove);
 			continue;
 		}
 
