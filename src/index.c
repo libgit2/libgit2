@@ -727,9 +727,10 @@ static int has_file_name(git_index *index,
 	 const git_index_entry *entry, size_t pos, int ok_to_replace)
 {
 	int retval = 0;
-	size_t len = strlen(entry->path);
+	size_t len = strlen(entry->path), to_remove_pos;
 	int stage = GIT_IDXENTRY_STAGE(entry);
 	const char *name = entry->path;
+	git_index_entry *to_remove;
 
 	while (pos < index->entries.length) {
 		git_index_entry *p = index->entries.contents[pos++];
@@ -745,7 +746,11 @@ static int has_file_name(git_index *index,
 		retval = -1;
 		if (!ok_to_replace)
 			break;
-		git_vector_remove(&index->entries, --pos);
+
+		to_remove_pos = --pos;
+		to_remove = index->entries.contents[to_remove_pos];
+		if (!git_vector_remove(&index->entries, to_remove_pos))
+			index_entry_free(to_remove);
 	}
 	return retval;
 }
@@ -761,6 +766,7 @@ static int has_dir_name(git_index *index,
 	int stage = GIT_IDXENTRY_STAGE(entry);
 	const char *name = entry->path;
 	const char *slash = name + strlen(name);
+	git_index_entry *to_remove;
 
 	for (;;) {
 		size_t len, position;
@@ -778,7 +784,9 @@ static int has_dir_name(git_index *index,
 			if (!ok_to_replace)
 				break;
 
-			git_vector_remove(&index->entries, position);
+			to_remove = index->entries.contents[position];
+			if (!git_vector_remove(&index->entries, position))
+				index_entry_free(to_remove);
 			continue;
 		}
 
@@ -811,7 +819,7 @@ static int check_file_directory_collision(git_index *index,
 	retval = retval + has_dir_name(index, entry, ok_to_replace);
 
 	if (retval) {
-		giterr_set(GITERR_INDEX, "'%s' appears as both a file an a directory", entry->path);
+		giterr_set(GITERR_INDEX, "'%s' appears as both a file and a directory", entry->path);
 		return -1;
 	}
 
@@ -1400,8 +1408,7 @@ static int index_reuc_insert(
 		return git_vector_insert(&index->reuc, reuc);
 
 	/* exists, replace it */
-	git__free((*existing)->path);
-	git__free(*existing);
+	index_entry_reuc_free(*existing);
 	*existing = reuc;
 
 	return 0;
