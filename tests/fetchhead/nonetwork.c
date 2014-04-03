@@ -307,3 +307,39 @@ void test_fetchhead_nonetwork__invalid_description(void)
 	cl_assert(git__prefixcmp(giterr_last()->message, "Invalid description") == 0);
 }
 
+static int assert_master_for_merge(const char *ref, const char *url, const git_oid *id, unsigned int is_merge, void *data)
+{
+	GIT_UNUSED(url);
+	GIT_UNUSED(id);
+	GIT_UNUSED(data);
+
+	if (!strcmp("refs/heads/master", ref) && !is_merge)
+		return -1;
+
+	return 0;
+}
+
+void test_fetchhead_nonetwork__unborn_with_upstream(void)
+{
+	git_repository *repo;
+	git_remote *remote;
+
+	/* Create an empty repo to clone from */
+	cl_set_cleanup(&cleanup_repository, "./test1");
+	cl_git_pass(git_repository_init(&g_repo, "./test1", 0));
+	cl_set_cleanup(&cleanup_repository, "./repowithunborn");
+	cl_git_pass(git_clone(&repo, "./test1", "./repowithunborn", NULL));
+
+	/* Simulate someone pushing to it by changing to one that has stuff */
+	cl_git_pass(git_remote_load(&remote, repo, "origin"));
+	cl_git_pass(git_remote_set_url(remote, cl_fixture("testrepo.git")));
+	cl_git_pass(git_remote_save(remote));
+
+	cl_git_pass(git_remote_fetch(remote, NULL, NULL));
+	git_remote_free(remote);
+
+	cl_git_pass(git_repository_fetchhead_foreach(repo, assert_master_for_merge, NULL));
+
+	git_repository_free(repo);
+	cl_fixture_cleanup("./repowithunborn");
+}
