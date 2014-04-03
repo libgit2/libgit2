@@ -315,46 +315,47 @@ void test_online_push__initialize(void)
 	_remote_default = cl_getenv("GITTEST_REMOTE_DEFAULT");
 	_remote = NULL;
 
-	if (_remote_url) {
-		cl_git_pass(git_remote_create(&_remote, _repo, "test", _remote_url));
+	/* Skip the test if we're missing the remote URL */
+	if (!_remote_url)
+		cl_skip();
 
-		record_callbacks_data_clear(&_record_cbs_data);
-		git_remote_set_callbacks(_remote, &_record_cbs);
+	cl_git_pass(git_remote_create(&_remote, _repo, "test", _remote_url));
 
-		cl_git_pass(git_remote_connect(_remote, GIT_DIRECTION_PUSH));
+	record_callbacks_data_clear(&_record_cbs_data);
+	git_remote_set_callbacks(_remote, &_record_cbs);
 
-		/* Clean up previously pushed branches.  Fails if receive.denyDeletes is
-		 * set on the remote.  Also, on Git 1.7.0 and newer, you must run
-		 * 'git config receive.denyDeleteCurrent ignore' in the remote repo in
-		 * order to delete the remote branch pointed to by HEAD (usually master).
-		 * See: https://raw.github.com/git/git/master/Documentation/RelNotes/1.7.0.txt
-		 */
-		cl_git_pass(git_remote_ls(&heads, &heads_len, _remote));
-		cl_git_pass(create_deletion_refspecs(&delete_specs, heads, heads_len));
-		if (delete_specs.length) {
-			git_push *push;
+	cl_git_pass(git_remote_connect(_remote, GIT_DIRECTION_PUSH));
 
-			cl_git_pass(git_push_new(&push, _remote));
+	/* Clean up previously pushed branches.  Fails if receive.denyDeletes is
+	 * set on the remote.  Also, on Git 1.7.0 and newer, you must run
+	 * 'git config receive.denyDeleteCurrent ignore' in the remote repo in
+	 * order to delete the remote branch pointed to by HEAD (usually master).
+	 * See: https://raw.github.com/git/git/master/Documentation/RelNotes/1.7.0.txt
+	 */
+	cl_git_pass(git_remote_ls(&heads, &heads_len, _remote));
+	cl_git_pass(create_deletion_refspecs(&delete_specs, heads, heads_len));
+	if (delete_specs.length) {
+		git_push *push;
 
-			git_vector_foreach(&delete_specs, i, curr_del_spec) {
-				git_push_add_refspec(push, curr_del_spec);
-				git__free(curr_del_spec);
-			}
+		cl_git_pass(git_push_new(&push, _remote));
 
-			cl_git_pass(git_push_finish(push));
-			git_push_free(push);
+		git_vector_foreach(&delete_specs, i, curr_del_spec) {
+			git_push_add_refspec(push, curr_del_spec);
+			git__free(curr_del_spec);
 		}
 
-		git_remote_disconnect(_remote);
-		git_vector_free(&delete_specs);
+		cl_git_pass(git_push_finish(push));
+		git_push_free(push);
+	}
 
-		/* Now that we've deleted everything, fetch from the remote */
-		cl_git_pass(git_remote_connect(_remote, GIT_DIRECTION_FETCH));
-		cl_git_pass(git_remote_download(_remote));
-		cl_git_pass(git_remote_update_tips(_remote, NULL, NULL));
-		git_remote_disconnect(_remote);
-	} else
-		printf("GITTEST_REMOTE_URL unset; skipping push test\n");
+	git_remote_disconnect(_remote);
+	git_vector_free(&delete_specs);
+
+	/* Now that we've deleted everything, fetch from the remote */
+	cl_git_pass(git_remote_connect(_remote, GIT_DIRECTION_FETCH));
+	cl_git_pass(git_remote_download(_remote));
+	cl_git_pass(git_remote_update_tips(_remote, NULL, NULL));
+	git_remote_disconnect(_remote);
 }
 
 void test_online_push__cleanup(void)
