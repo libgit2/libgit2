@@ -620,7 +620,7 @@ int gitno_connection_data_from_url(
 		url, default_port);
 
 	if (error < 0 ) {
-			goto cleanup;
+		goto cleanup;
 	}
 		
 	if (url[0] == '/') {
