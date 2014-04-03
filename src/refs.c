@@ -1031,7 +1031,9 @@ int git_reference__normalize_name_lax(
 }
 #define GIT_REF_TYPEMASK (GIT_REF_OID | GIT_REF_SYMBOLIC)
 
-int git_reference_cmp(git_reference *ref1, git_reference *ref2)
+int git_reference_cmp(
+	const git_reference *ref1,
+	const git_reference *ref2)
 {
 	git_ref_t type1, type2;
 	assert(ref1 && ref2);
@@ -1148,7 +1150,7 @@ int git_reference__is_remote(const char *ref_name)
 	return git__prefixcmp(ref_name, GIT_REFS_REMOTES_DIR) == 0;
 }
 
-int git_reference_is_remote(git_reference *ref)
+int git_reference_is_remote(const git_reference *ref)
 {
 	assert(ref);
 	return git_reference__is_remote(ref->name);
@@ -1159,7 +1161,7 @@ int git_reference__is_tag(const char *ref_name)
 	return git__prefixcmp(ref_name, GIT_REFS_TAGS_DIR) == 0;
 }
 
-int git_reference_is_tag(git_reference *ref)
+int git_reference_is_tag(const git_reference *ref)
 {
 	assert(ref);
 	return git_reference__is_tag(ref->name);
@@ -1170,7 +1172,7 @@ int git_reference__is_note(const char *ref_name)
 	return git__prefixcmp(ref_name, GIT_REFS_NOTES_DIR) == 0;
 }
 
-int git_reference_is_note(git_reference *ref)
+int git_reference_is_note(const git_reference *ref)
 {
 	assert(ref);
 	return git_reference__is_note(ref->name);
@@ -1244,7 +1246,7 @@ int git_reference_is_valid_name(const char *refname)
 	return git_reference__is_valid_name(refname, GIT_REF_FORMAT_ALLOW_ONELEVEL);
 }
 
-const char *git_reference_shorthand(git_reference *ref)
+const char *git_reference_shorthand(const git_reference *ref)
 {
 	const char *name = ref->name;
 

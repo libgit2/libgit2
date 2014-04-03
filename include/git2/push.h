@@ -148,7 +148,7 @@ GIT_EXTERN(int) git_push_finish(git_push *push);
  *
  * @return true if remote side successfully unpacked, false otherwise
  */
-GIT_EXTERN(int) git_push_unpack_ok(git_push *push);
+GIT_EXTERN(int) git_push_unpack_ok(const git_push *push);
 
 /**
  * Invoke callback `cb' on each status entry

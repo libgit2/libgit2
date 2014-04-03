@@ -2695,7 +2695,7 @@ static int merge_head_init(
 int git_merge_head_from_ref(
 	git_merge_head **out,
 	git_repository *repo,
-	git_reference *ref)
+	const git_reference *ref)
 {
 	git_reference *resolved;
 	int error = 0;

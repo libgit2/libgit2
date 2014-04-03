@@ -179,8 +179,9 @@ GIT_EXTERN(int) git_branch_lookup(
  * @return 0 on success; otherwise an error code (e.g., if the
  *  ref is no local or remote branch).
  */
-GIT_EXTERN(int) git_branch_name(const char **out,
-		git_reference *ref);
+GIT_EXTERN(int) git_branch_name(
+		const char **out,
+		const git_reference *ref);
 
 /**
  * Return the reference supporting the remote tracking branch,
@@ -196,7 +197,7 @@ GIT_EXTERN(int) git_branch_name(const char **out,
  */
 GIT_EXTERN(int) git_branch_upstream(
 	git_reference **out,
-	git_reference *branch);
+	const git_reference *branch);
 
 /**
  * Set the upstream configuration for a given local branch

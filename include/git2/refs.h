@@ -487,7 +487,9 @@ GIT_EXTERN(void) git_reference_free(git_reference *ref);
  * @param ref2 The second git_reference
  * @return 0 if the same, else a stable but meaningless ordering.
  */
-GIT_EXTERN(int) git_reference_cmp(git_reference *ref1, git_reference *ref2);
+GIT_EXTERN(int) git_reference_cmp(
+	const git_reference *ref1,
+	const git_reference *ref2);
 
 /**
  * Create an iterator for the repo's references
@@ -596,7 +598,7 @@ GIT_EXTERN(int) git_reference_is_branch(const git_reference *ref);
  * @return 1 when the reference lives in the refs/remotes
  * namespace; 0 otherwise.
  */
-GIT_EXTERN(int) git_reference_is_remote(git_reference *ref);
+GIT_EXTERN(int) git_reference_is_remote(const git_reference *ref);
 
 /**
  * Check if a reference is a tag
@@ -606,7 +608,7 @@ GIT_EXTERN(int) git_reference_is_remote(git_reference *ref);
  * @return 1 when the reference lives in the refs/tags
  * namespace; 0 otherwise.
  */
-GIT_EXTERN(int) git_reference_is_tag(git_reference *ref);
+GIT_EXTERN(int) git_reference_is_tag(const git_reference *ref);
 
 /**
  * Check if a reference is a note
@@ -616,7 +618,7 @@ GIT_EXTERN(int) git_reference_is_tag(git_reference *ref);
  * @return 1 when the reference lives in the refs/notes
  * namespace; 0 otherwise.
  */
-GIT_EXTERN(int) git_reference_is_note(git_reference *ref);
+GIT_EXTERN(int) git_reference_is_note(const git_reference *ref);
 
 typedef enum {
 	GIT_REF_FORMAT_NORMAL = 0u,
@@ -720,7 +722,7 @@ GIT_EXTERN(int) git_reference_is_valid_name(const char *refname);
  * @param ref a reference
  * @return the human-readable version of the name
  */
-GIT_EXTERN(const char *) git_reference_shorthand(git_reference *ref);
+GIT_EXTERN(const char *) git_reference_shorthand(const git_reference *ref);
 
 
 /** @} */
