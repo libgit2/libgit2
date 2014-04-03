@@ -341,7 +341,7 @@ GIT_EXTERN(int) git_merge_base_octopus(
 GIT_EXTERN(int) git_merge_head_from_ref(
 	git_merge_head **out,
 	git_repository *repo,
-	git_reference *ref);
+	const git_reference *ref);
 
 /**
  * Creates a `git_merge_head` from the given fetch head data.  The resulting

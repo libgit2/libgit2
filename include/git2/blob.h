@@ -216,7 +216,7 @@ GIT_EXTERN(int) git_blob_create_frombuffer(
  * @return 1 if the content of the blob is detected
  * as binary; 0 otherwise.
  */
-GIT_EXTERN(int) git_blob_is_binary(git_blob *blob);
+GIT_EXTERN(int) git_blob_is_binary(const git_blob *blob);
 
 /** @} */
 GIT_END_DECL

@@ -651,7 +651,7 @@ int git_push_finish(git_push *push)
 	return 0;
 }
 
-int git_push_unpack_ok(git_push *push)
+int git_push_unpack_ok(const git_push *push)
 {
 	return push->unpack_ok;
 }

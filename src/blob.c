@@ -326,7 +326,7 @@ cleanup:
 	return error;
 }
 
-int git_blob_is_binary(git_blob *blob)
+int git_blob_is_binary(const git_blob *blob)
 {
 	git_buf content;
 

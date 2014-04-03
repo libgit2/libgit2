@@ -281,7 +281,9 @@ int git_branch_lookup(
 	return retrieve_branch_reference(ref_out, repo, branch_name, branch_type == GIT_BRANCH_REMOTE);
 }
 
-int git_branch_name(const char **out, git_reference *ref)
+int git_branch_name(
+	const char **out,
+	const git_reference *ref)
 {
 	const char *branch_name;
 
@@ -450,8 +452,8 @@ cleanup:
 }
 
 int git_branch_upstream(
-		git_reference **tracking_out,
-		git_reference *branch)
+	git_reference **tracking_out,
+	const git_reference *branch)
 {
 	int error;
 	git_buf tracking_name = GIT_BUF_INIT;
