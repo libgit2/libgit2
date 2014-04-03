@@ -819,7 +819,7 @@ static int check_file_directory_collision(git_index *index,
 	retval = retval + has_dir_name(index, entry, ok_to_replace);
 
 	if (retval) {
-		giterr_set(GITERR_INDEX, "'%s' appears as both a file an a directory", entry->path);
+		giterr_set(GITERR_INDEX, "'%s' appears as both a file and a directory", entry->path);
 		return -1;
 	}
 
