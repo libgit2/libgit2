@@ -614,10 +614,12 @@ int gitno_connection_data_from_url(
 		goto cleanup;
 	}
 
-	error = gitno_extract_url_parts(
+	if((error = gitno_extract_url_parts(
 		&data->host, &data->port, &data->path, &data->user, &data->pass,
-		url, default_port);
-
+		url, default_port)) < 0 ) {
+			goto cleanup;
+	}
+		
 	if (url[0] == '/') {
 		/* Relative redirect; reuse original host name and port */
 		path_search_start = url;
@@ -625,9 +627,9 @@ int gitno_connection_data_from_url(
 		data->host = original_host;
 		original_host = NULL;
 	}
-
-	if (!error) {
-		const char *path = strchr(path_search_start, '/');
+	
+	const char *path = strchr(path_search_start, '/');
+	if (path) {
 		size_t pathlen = strlen(path);
 		size_t suffixlen = service_suffix ? strlen(service_suffix) : 0;
 
