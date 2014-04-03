@@ -1408,8 +1408,7 @@ static int index_reuc_insert(
 		return git_vector_insert(&index->reuc, reuc);
 
 	/* exists, replace it */
-	git__free((*existing)->path);
-	git__free(*existing);
+	index_entry_reuc_free(*existing);
 	*existing = reuc;
 
 	return 0;
