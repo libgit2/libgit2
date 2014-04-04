@@ -118,7 +118,7 @@ class Module(object):
             self.modified = True
             self.mtime = st.st_mtime
 
-            with open(path) as fp:
+            with codecs.open(path, encoding='utf-8') as fp:
                 raw_content = fp.read()
 
         except IOError:
