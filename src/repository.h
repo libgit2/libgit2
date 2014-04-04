@@ -19,7 +19,7 @@
 #include "buffer.h"
 #include "object.h"
 #include "attrcache.h"
-#include "strmap.h"
+#include "submodule.h"
 #include "diff_driver.h"
 
 #define DOT_GIT ".git"
@@ -105,10 +105,10 @@ struct git_repository {
 	git_refdb *_refdb;
 	git_config *_config;
 	git_index *_index;
+	git_submodule_cache *_submodules;
 
 	git_cache objects;
 	git_attr_cache attrcache;
-	git_strmap *submodules;
 	git_diff_driver_registry *diff_drivers;
 
 	char *path_repository;
@@ -148,11 +148,6 @@ int git_repository_index__weakptr(git_index **out, git_repository *repo);
  */
 int git_repository__cvar(int *out, git_repository *repo, git_cvar_cached cvar);
 void git_repository__cvar_cache_clear(git_repository *repo);
-
-/*
- * Submodule cache
- */
-extern void git_submodule_config_free(git_repository *repo);
 
 GIT_INLINE(int) git_repository__ensure_not_bare(
 	git_repository *repo,

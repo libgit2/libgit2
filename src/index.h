@@ -62,4 +62,11 @@ extern void git_index__set_ignore_case(git_index *index, bool ignore_case);
 
 extern unsigned int git_index__create_mode(unsigned int mode);
 
+GIT_INLINE(const git_futils_filestamp *) git_index__filestamp(git_index *index)
+{
+   return &index->stamp;
+}
+
+extern int git_index__changed_relative_to(git_index *index, const git_futils_filestamp *fs);
+
 #endif

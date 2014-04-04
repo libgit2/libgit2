@@ -2,6 +2,7 @@
 
 #include "clar_libgit2.h"
 #include "posix.h"
+#include "fileops.h"
 
 void test_submodule_nosubs__cleanup(void)
 {
@@ -68,7 +69,10 @@ void test_submodule_nosubs__reload_add_reload(void)
 
 	cl_git_pass(git_submodule_reload_all(repo, 0));
 
-	cl_git_pass(git_submodule_add_setup(&sm, repo, "https://github.com/libgit2/libgit2.git", "submodules/libgit2", 1));
+	/* try one add with a reload (to make sure no errors happen) */
+
+	cl_git_pass(git_submodule_add_setup(&sm, repo,
+		"https://github.com/libgit2/libgit2.git", "submodules/libgit2", 1));
 
 	cl_git_pass(git_submodule_reload_all(repo, 0));
 
@@ -77,6 +81,17 @@ void test_submodule_nosubs__reload_add_reload(void)
 
 	cl_git_pass(git_submodule_lookup(&sm, repo, "submodules/libgit2"));
 	cl_assert_equal_s("submodules/libgit2", git_submodule_name(sm));
+	git_submodule_free(sm);
+
+	/* try one add without a reload (to make sure cache inval works, too) */
+
+	cl_git_pass(git_submodule_add_setup(&sm, repo,
+		"https://github.com/libgit2/libgit2.git", "libgit2-again", 1));
+	cl_assert_equal_s("libgit2-again", git_submodule_name(sm));
+	git_submodule_free(sm);
+
+	cl_git_pass(git_submodule_lookup(&sm, repo, "libgit2-again"));
+	cl_assert_equal_s("libgit2-again", git_submodule_name(sm));
 	git_submodule_free(sm);
 }
 
@@ -92,4 +107,70 @@ void test_submodule_nosubs__bad_gitmodules(void)
 
 	cl_git_pass(git_submodule_lookup(NULL, repo, "foobar"));
 	cl_assert_equal_i(GIT_ENOTFOUND, git_submodule_lookup(NULL, repo, "subdir"));
+}
+
+void test_submodule_nosubs__add_and_delete(void)
+{
+	git_repository *repo = cl_git_sandbox_init("status");
+	git_submodule *sm;
+	git_buf buf = GIT_BUF_INIT;
+
+	/* note lack of calls to git_submodule_reload_all - this *should* work */
+
+	cl_git_fail(git_submodule_lookup(NULL, repo, "libgit2"));
+	cl_git_fail(git_submodule_lookup(NULL, repo, "submodules/libgit2"));
+
+	/* create */
+
+	cl_git_pass(git_submodule_add_setup(
+		&sm, repo, "https://github.com/libgit2/libgit2.git", "submodules/libgit2", 1));
+	cl_assert_equal_s("submodules/libgit2", git_submodule_name(sm));
+	cl_assert_equal_s("submodules/libgit2", git_submodule_path(sm));
+	git_submodule_free(sm);
+
+	cl_git_pass(git_futils_readbuffer(&buf, "status/.gitmodules"));
+	cl_assert(strstr(buf.ptr, "[submodule \"submodules/libgit2\"]") != NULL);
+	cl_assert(strstr(buf.ptr, "path = submodules/libgit2") != NULL);
+	git_buf_free(&buf);
+
+	/* lookup */
+
+	cl_git_fail(git_submodule_lookup(&sm, repo, "libgit2"));
+	cl_git_pass(git_submodule_lookup(&sm, repo, "submodules/libgit2"));
+	cl_assert_equal_s("submodules/libgit2", git_submodule_name(sm));
+	cl_assert_equal_s("submodules/libgit2", git_submodule_path(sm));
+	git_submodule_free(sm);
+
+	/* update name */
+
+	cl_git_rewritefile(
+		"status/.gitmodules",
+		"[submodule \"libgit2\"]\n"
+		"  path = submodules/libgit2\n"
+		"  url = https://github.com/libgit2/libgit2.git\n");
+
+	cl_git_pass(git_submodule_lookup(&sm, repo, "libgit2"));
+	cl_assert_equal_s("libgit2", git_submodule_name(sm));
+	cl_assert_equal_s("submodules/libgit2", git_submodule_path(sm));
+	git_submodule_free(sm);
+	cl_git_pass(git_submodule_lookup(&sm, repo, "submodules/libgit2"));
+	git_submodule_free(sm);
+
+	/* revert name update */
+
+	cl_git_rewritefile(
+		"status/.gitmodules",
+		"[submodule \"submodules/libgit2\"]\n"
+		"  path = submodules/libgit2\n"
+		"  url = https://github.com/libgit2/libgit2.git\n");
+
+	cl_git_fail(git_submodule_lookup(&sm, repo, "libgit2"));
+	cl_git_pass(git_submodule_lookup(&sm, repo, "submodules/libgit2"));
+	git_submodule_free(sm);
+
+	/* remove completely */
+
+	cl_must_pass(p_unlink("status/.gitmodules"));
+	cl_git_fail(git_submodule_lookup(&sm, repo, "libgit2"));
+	cl_git_fail(git_submodule_lookup(&sm, repo, "submodules/libgit2"));
 }

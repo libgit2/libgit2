@@ -53,6 +53,14 @@ extern int git_config__lookup_entry(
 	const char *key,
 	bool no_errors);
 
+/* internal only: update and/or delete entry string with constraints */
+extern int git_config__update_entry(
+	git_config *cfg,
+	const char *key,
+	const char *value,
+	bool overwrite_existing,
+	bool only_if_existing);
+
 /*
  * Lookup functions that cannot fail.  These functions look up a config
  * value and return a fallback value if the value is missing or if any

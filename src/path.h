@@ -119,6 +119,14 @@ GIT_INLINE(void) git_path_mkposix(char *path)
 #	define git_path_mkposix(p) /* blank */
 #endif
 
+/**
+ * Check if string is a relative path (i.e. starts with "./" or "../")
+ */
+GIT_INLINE(int) git_path_is_relative(const char *p)
+{
+	return (p[0] == '.' && (p[1] == '/' || (p[1] == '.' && p[2] == '/')));
+}
+
 extern int git__percent_decode(git_buf *decoded_out, const char *input);
 
 /**

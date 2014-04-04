@@ -93,6 +93,7 @@ void git_repository__cleanup(git_repository *repo)
 
 	git_cache_clear(&repo->objects);
 	git_attr_cache_flush(repo);
+	git_submodule_cache_free(repo);
 
 	set_config(repo, NULL);
 	set_index(repo, NULL);
@@ -108,7 +109,6 @@ void git_repository_free(git_repository *repo)
 	git_repository__cleanup(repo);
 
 	git_cache_free(&repo->objects);
-	git_submodule_config_free(repo);
 
 	git_diff_driver_registry_free(repo->diff_drivers);
 	repo->diff_drivers = NULL;

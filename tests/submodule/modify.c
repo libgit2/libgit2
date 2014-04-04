@@ -7,59 +7,10 @@ static git_repository *g_repo = NULL;
 
 #define SM_LIBGIT2_URL "https://github.com/libgit2/libgit2.git"
 #define SM_LIBGIT2     "sm_libgit2"
-#define SM_LIBGIT2B    "sm_libgit2b"
 
 void test_submodule_modify__initialize(void)
 {
 	g_repo = setup_fixture_submod2();
-}
-
-void test_submodule_modify__add(void)
-{
-	git_submodule *sm;
-	git_config *cfg;
-	const char *s;
-
-	/* re-add existing submodule */
-	cl_assert_equal_i(
-		GIT_EEXISTS,
-		git_submodule_add_setup(NULL, g_repo, "whatever", "sm_unchanged", 1));
-
-	/* add a submodule using a gitlink */
-
-	cl_git_pass(
-		git_submodule_add_setup(&sm, g_repo, SM_LIBGIT2_URL, SM_LIBGIT2, 1)
-		);
-	git_submodule_free(sm);
-
-	cl_assert(git_path_isfile("submod2/" SM_LIBGIT2 "/.git"));
-
-	cl_assert(git_path_isdir("submod2/.git/modules"));
-	cl_assert(git_path_isdir("submod2/.git/modules/" SM_LIBGIT2));
-	cl_assert(git_path_isfile("submod2/.git/modules/" SM_LIBGIT2 "/HEAD"));
-
-	cl_git_pass(git_repository_config(&cfg, g_repo));
-	cl_git_pass(
-		git_config_get_string(&s, cfg, "submodule." SM_LIBGIT2 ".url"));
-	cl_assert_equal_s(s, SM_LIBGIT2_URL);
-	git_config_free(cfg);
-
-	/* add a submodule not using a gitlink */
-
-	cl_git_pass(
-		git_submodule_add_setup(&sm, g_repo, SM_LIBGIT2_URL, SM_LIBGIT2B, 0)
-		);
-	git_submodule_free(sm);
-
-	cl_assert(git_path_isdir("submod2/" SM_LIBGIT2B "/.git"));
-	cl_assert(git_path_isfile("submod2/" SM_LIBGIT2B "/.git/HEAD"));
-	cl_assert(!git_path_exists("submod2/.git/modules/" SM_LIBGIT2B));
-
-	cl_git_pass(git_repository_config(&cfg, g_repo));
-	cl_git_pass(
-		git_config_get_string(&s, cfg, "submodule." SM_LIBGIT2B ".url"));
-	cl_assert_equal_s(s, SM_LIBGIT2_URL);
-	git_config_free(cfg);
 }
 
 static int delete_one_config(const git_config_entry *entry, void *payload)
@@ -118,6 +69,26 @@ static int sync_one_submodule(
 	return git_submodule_sync(sm);
 }
 
+static void assert_submodule_url_is_synced(
+	git_submodule *sm, const char *parent_key, const char *child_key)
+{
+	git_config *cfg;
+	const char *str;
+	git_repository *smrepo;
+
+	cl_git_pass(git_repository_config(&cfg, g_repo));
+	cl_git_pass(git_config_get_string(&str, cfg, parent_key));
+	cl_assert_equal_s(git_submodule_url(sm), str);
+	git_config_free(cfg);
+
+	cl_git_pass(git_submodule_open(&smrepo, sm));
+	cl_git_pass(git_repository_config(&cfg, smrepo));
+	cl_git_pass(git_config_get_string(&str, cfg, child_key));
+	cl_assert_equal_s(git_submodule_url(sm), str);
+	git_config_free(cfg);
+	git_repository_free(smrepo);
+}
+
 void test_submodule_modify__sync(void)
 {
 	git_submodule *sm1, *sm2, *sm3;
@@ -153,14 +124,12 @@ void test_submodule_modify__sync(void)
 	cl_git_pass(git_submodule_foreach(g_repo, sync_one_submodule, NULL));
 
 	/* check that submodule config is updated */
-	cl_git_pass(git_repository_config(&cfg, g_repo));
-	cl_git_pass(git_config_get_string(&str, cfg, "submodule."SM1".url"));
-	cl_assert_equal_s(git_submodule_url(sm1), str);
-	cl_git_pass(git_config_get_string(&str, cfg, "submodule."SM2".url"));
-	cl_assert_equal_s(git_submodule_url(sm2), str);
-	cl_git_pass(git_config_get_string(&str, cfg, "submodule."SM3".url"));
-	cl_assert_equal_s(git_submodule_url(sm3), str);
-	git_config_free(cfg);
+	assert_submodule_url_is_synced(
+		sm1, "submodule."SM1".url", "branch.origin.remote");
+	assert_submodule_url_is_synced(
+		sm2, "submodule."SM2".url", "branch.origin.remote");
+	assert_submodule_url_is_synced(
+		sm3, "submodule."SM3".url", "branch.origin.remote");
 
 	git_submodule_free(sm1);
 	git_submodule_free(sm2);

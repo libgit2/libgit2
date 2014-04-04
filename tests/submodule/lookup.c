@@ -1,7 +1,7 @@
 #include "clar_libgit2.h"
 #include "submodule_helpers.h"
-#include "posix.h"
 #include "git2/sys/repository.h"
+#include "fileops.h"
 
 static git_repository *g_repo = NULL;
 
@@ -115,13 +115,7 @@ void test_submodule_lookup__lookup_even_with_unborn_head(void)
 		&head, g_repo, "HEAD", "refs/heads/garbage", 1, NULL, NULL));
 	git_reference_free(head);
 
-	assert_submodule_exists(g_repo, "sm_unchanged");
-	assert_submodule_exists(g_repo, "sm_added_and_uncommited");
-	assert_submodule_exists(g_repo, "sm_gitmodules_only");
-	refute_submodule_exists(g_repo, "not-submodule", GIT_EEXISTS);
-	refute_submodule_exists(g_repo, "just_a_dir", GIT_ENOTFOUND);
-	refute_submodule_exists(g_repo, "just_a_file", GIT_ENOTFOUND);
-	refute_submodule_exists(g_repo, "no_such_file", GIT_ENOTFOUND);
+	test_submodule_lookup__simple_lookup(); /* baseline should still pass */
 }
 
 void test_submodule_lookup__lookup_even_with_missing_index(void)
@@ -133,44 +127,145 @@ void test_submodule_lookup__lookup_even_with_missing_index(void)
 	git_repository_set_index(g_repo, idx);
 	git_index_free(idx);
 
+	test_submodule_lookup__simple_lookup(); /* baseline should still pass */
+}
+
+static void baseline_tests(void)
+{
+	/* small baseline that should work even if we change the index or make
+	 * commits from the index
+	 */
 	assert_submodule_exists(g_repo, "sm_unchanged");
-	assert_submodule_exists(g_repo, "sm_added_and_uncommited");
 	assert_submodule_exists(g_repo, "sm_gitmodules_only");
 	refute_submodule_exists(g_repo, "not-submodule", GIT_EEXISTS);
-	refute_submodule_exists(g_repo, "just_a_dir", GIT_ENOTFOUND);
-	refute_submodule_exists(g_repo, "just_a_file", GIT_ENOTFOUND);
-	refute_submodule_exists(g_repo, "no_such_file", GIT_ENOTFOUND);
+}
+
+static void add_submodule_with_commit(const char *name)
+{
+	git_submodule *sm;
+	git_repository *smrepo;
+	git_index *idx;
+	git_buf p = GIT_BUF_INIT;
+
+	cl_git_pass(git_submodule_add_setup(&sm, g_repo,
+		"https://github.com/libgit2/libgit2.git", name, 1));
+
+	assert_submodule_exists(g_repo, name);
+
+	cl_git_pass(git_submodule_open(&smrepo, sm));
+	cl_git_pass(git_repository_index(&idx, smrepo));
+
+	cl_git_pass(git_buf_joinpath(&p, git_repository_workdir(smrepo), "file"));
+	cl_git_mkfile(p.ptr, "new file");
+	git_buf_free(&p);
+
+	cl_git_pass(git_index_add_bypath(idx, "file"));
+	cl_git_pass(git_index_write(idx));
+	git_index_free(idx);
+
+	cl_repo_commit_from_index(NULL, smrepo, NULL, 0, "initial commit");
+	git_repository_free(smrepo);
+
+	cl_git_pass(git_submodule_add_finalize(sm));
+
+	git_submodule_free(sm);
 }
 
 void test_submodule_lookup__just_added(void)
 {
 	git_submodule *sm;
+	git_buf snap1 = GIT_BUF_INIT, snap2 = GIT_BUF_INIT;
+	git_reference *original_head = NULL;
 
-	cl_git_pass(git_submodule_add_setup(&sm, g_repo, "https://github.com/libgit2/libgit2.git", "sm_just_added", 1));
+	refute_submodule_exists(g_repo, "sm_just_added", GIT_ENOTFOUND);
+	refute_submodule_exists(g_repo, "sm_just_added_2", GIT_ENOTFOUND);
+	refute_submodule_exists(g_repo, "sm_just_added_idx", GIT_ENOTFOUND);
+	refute_submodule_exists(g_repo, "sm_just_added_head", GIT_ENOTFOUND);
+	refute_submodule_exists(g_repo, "mismatch_name", GIT_ENOTFOUND);
+	refute_submodule_exists(g_repo, "mismatch_path", GIT_ENOTFOUND);
+	baseline_tests();
+
+	cl_git_pass(git_futils_readbuffer(&snap1, "submod2/.gitmodules"));
+	cl_git_pass(git_repository_head(&original_head, g_repo));
+
+	cl_git_pass(git_submodule_add_setup(&sm, g_repo,
+		"https://github.com/libgit2/libgit2.git", "sm_just_added", 1));
 	git_submodule_free(sm);
 	assert_submodule_exists(g_repo, "sm_just_added");
 
-	cl_git_pass(git_submodule_add_setup(&sm, g_repo, "https://github.com/libgit2/libgit2.git", "sm_just_added_2", 1));
+	cl_git_pass(git_submodule_add_setup(&sm, g_repo,
+		"https://github.com/libgit2/libgit2.git", "sm_just_added_2", 1));
 	assert_submodule_exists(g_repo, "sm_just_added_2");
+	cl_git_fail(git_submodule_add_finalize(sm)); /* fails if no HEAD */
 	git_submodule_free(sm);
 
-	cl_git_append2file("submod2/.gitmodules", "\n[submodule \"mismatch_name\"]\n\tpath = mismatch_path\n\turl = https://example.com/example.git\n\n");
+	add_submodule_with_commit("sm_just_added_head");
+	cl_repo_commit_from_index(NULL, g_repo, NULL, 0, "commit new sm to head");
+	assert_submodule_exists(g_repo, "sm_just_added_head");
 
-	cl_git_pass(git_submodule_reload_all(g_repo, 1));
+	add_submodule_with_commit("sm_just_added_idx");
+	assert_submodule_exists(g_repo, "sm_just_added_idx");
+
+	cl_git_pass(git_futils_readbuffer(&snap2, "submod2/.gitmodules"));
+
+	cl_git_append2file(
+		"submod2/.gitmodules",
+		"\n[submodule \"mismatch_name\"]\n"
+		"\tpath = mismatch_path\n"
+		"\turl = https://example.com/example.git\n\n");
 
 	assert_submodule_exists(g_repo, "mismatch_name");
 	assert_submodule_exists(g_repo, "mismatch_path");
-
 	assert_submodule_exists(g_repo, "sm_just_added");
 	assert_submodule_exists(g_repo, "sm_just_added_2");
+	assert_submodule_exists(g_repo, "sm_just_added_idx");
+	assert_submodule_exists(g_repo, "sm_just_added_head");
+	baseline_tests();
 
-	/* all the regular ones should still be working right, too */
+	cl_git_rewritefile("submod2/.gitmodules", snap2.ptr);
+	git_buf_free(&snap2);
 
-	assert_submodule_exists(g_repo, "sm_unchanged");
-	assert_submodule_exists(g_repo, "sm_added_and_uncommited");
-	assert_submodule_exists(g_repo, "sm_gitmodules_only");
-	refute_submodule_exists(g_repo, "not-submodule", GIT_EEXISTS);
-	refute_submodule_exists(g_repo, "just_a_dir", GIT_ENOTFOUND);
-	refute_submodule_exists(g_repo, "just_a_file", GIT_ENOTFOUND);
-	refute_submodule_exists(g_repo, "no_such_file", GIT_ENOTFOUND);
+	refute_submodule_exists(g_repo, "mismatch_name", GIT_ENOTFOUND);
+	refute_submodule_exists(g_repo, "mismatch_path", GIT_ENOTFOUND);
+	assert_submodule_exists(g_repo, "sm_just_added");
+	assert_submodule_exists(g_repo, "sm_just_added_2");
+	assert_submodule_exists(g_repo, "sm_just_added_idx");
+	assert_submodule_exists(g_repo, "sm_just_added_head");
+	baseline_tests();
+
+	cl_git_rewritefile("submod2/.gitmodules", snap1.ptr);
+	git_buf_free(&snap1);
+
+	refute_submodule_exists(g_repo, "mismatch_name", GIT_ENOTFOUND);
+	refute_submodule_exists(g_repo, "mismatch_path", GIT_ENOTFOUND);
+	/* note error code change, because add_setup made a repo in the workdir */
+	refute_submodule_exists(g_repo, "sm_just_added", GIT_EEXISTS);
+	refute_submodule_exists(g_repo, "sm_just_added_2", GIT_EEXISTS);
+	/* these still exist in index and head respectively */
+	assert_submodule_exists(g_repo, "sm_just_added_idx");
+	assert_submodule_exists(g_repo, "sm_just_added_head");
+	baseline_tests();
+
+	{
+		git_index *idx;
+		cl_git_pass(git_repository_index(&idx, g_repo));
+		cl_git_pass(git_index_remove_bypath(idx, "sm_just_added_idx"));
+		cl_git_pass(git_index_remove_bypath(idx, "sm_just_added_head"));
+		cl_git_pass(git_index_write(idx));
+		git_index_free(idx);
+	}
+
+	refute_submodule_exists(g_repo, "sm_just_added_idx", GIT_EEXISTS);
+	assert_submodule_exists(g_repo, "sm_just_added_head");
+
+	{
+		git_signature *sig;
+		cl_git_pass(git_signature_now(&sig, "resetter", "resetter@email.com"));
+		cl_git_pass(git_reference_create(NULL, g_repo, "refs/heads/master", git_reference_target(original_head), 1, sig, "move head back"));
+		git_signature_free(sig);
+		git_reference_free(original_head);
+	}
+
+	refute_submodule_exists(g_repo, "sm_just_added_head", GIT_EEXISTS);
 }
+
