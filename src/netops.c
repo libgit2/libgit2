@@ -619,9 +619,9 @@ int gitno_connection_data_from_url(
 		&data->host, &data->port, &data->path, &data->user, &data->pass,
 		url, default_port);
 
-	if (error < 0 ) {
+	if (error < 0 )
 		goto cleanup;
-	}
+	
 		
 	if (url[0] == '/') {
 		/* Relative redirect; reuse original host name and port */
