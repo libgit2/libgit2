@@ -30,6 +30,7 @@ p_fnmatchx(const char *pattern, const char *string, int flags, size_t recurs)
 		const char *stringstart;
 		char *newp;
 		char c, test;
+		int recurs_flags = flags & ~FNM_PERIOD;
 
 		if (recurs-- == 0)
 				return FNM_NORES;
@@ -53,9 +54,13 @@ p_fnmatchx(const char *pattern, const char *string, int flags, size_t recurs)
 						break;
 				case '*':
 						c = *pattern;
-						/* Collapse multiple stars. */
-						while (c == '*')
+
+						/* Apply '**' to overwrite PATHNAME match */
+						if (c == '*') {
+							flags &= ~FNM_PATHNAME;
+							while (c == '*')
 								c = *++pattern;
+						}
 
 						if (*string == '.' && (flags & FNM_PERIOD) &&
 							(string == stringstart ||
@@ -80,7 +85,7 @@ p_fnmatchx(const char *pattern, const char *string, int flags, size_t recurs)
 						while ((test = *string) != EOS) {
 								int e;
 
-								e = p_fnmatchx(pattern, string, flags & ~FNM_PERIOD, recurs);
+								e = p_fnmatchx(pattern, string, recurs_flags, recurs);
 								if (e != FNM_NOMATCH)
 										return e;
 								if (test == '/' && (flags & FNM_PATHNAME))

@@ -54,6 +54,19 @@ void test_attr_ignore__ignore_root(void)
 	assert_is_ignored(true, "NewFolder/NewFolder/File.txt");
 }
 
+void test_attr_ignore__full_paths(void)
+{
+	cl_git_rewritefile("attr/.gitignore", "Folder/*/Contained");
+
+	assert_is_ignored(true, "Folder/Middle/Contained");
+	assert_is_ignored(false, "Folder/Middle/More/More/Contained");
+
+	cl_git_rewritefile("attr/.gitignore", "Folder/**/Contained");
+
+	assert_is_ignored(true, "Folder/Middle/Contained");
+	assert_is_ignored(true, "Folder/Middle/More/More/Contained");
+}
+
 
 void test_attr_ignore__skip_gitignore_directory(void)
 {
