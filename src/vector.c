@@ -327,8 +327,10 @@ int git_vector_resize_to(git_vector *v, size_t new_length)
 
 int git_vector_set(void **old, git_vector *v, size_t position, void *value)
 {
-	if (git_vector_resize_to(v, position + 1) < 0)
-		return -1;
+	if (position + 1 > v->length) {
+		if (git_vector_resize_to(v, position + 1) < 0)
+			return -1;
+	}
 
 	if (old != NULL)
 		*old = v->contents[position];
