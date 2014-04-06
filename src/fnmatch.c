@@ -55,7 +55,9 @@ p_fnmatchx(const char *pattern, const char *string, int flags, size_t recurs)
 				case '*':
 						c = *pattern;
 
-						/* Apply '**' to overwrite PATHNAME match */
+						/* Let '**' override PATHNAME match for this segment.
+						 * It will be restored if/when we recurse below.
+						 */
 						if (c == '*') {
 							flags &= ~FNM_PATHNAME;
 							while (c == '*')
