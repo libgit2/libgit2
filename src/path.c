@@ -782,6 +782,8 @@ int git_path_iconv(git_path_iconv_t *ic, char **in, size_t *inlen)
 		!git_path_has_non_ascii(*in, *inlen))
 		return 0;
 
+	git_buf_clear(&ic->buf);
+
 	while (1) {
 		if (git_buf_grow(&ic->buf, wantlen + 1) < 0)
 			return -1;
