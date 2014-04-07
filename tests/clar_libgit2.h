@@ -11,11 +11,13 @@
  *
  * Use this wrapper around all `git_` library calls that return error codes!
  */
-#define cl_git_pass(expr) do { \
+#define cl_git_pass(expr) cl_git_pass_(expr, __FILE__, __LINE__)
+
+#define cl_git_pass_(expr, file, line) do { \
 	int _lg2_error; \
 	giterr_clear(); \
 	if ((_lg2_error = (expr)) != 0) \
-		cl_git_report_failure(_lg2_error, __FILE__, __LINE__, "Function call failed: " #expr); \
+		cl_git_report_failure(_lg2_error, file, line, "Function call failed: " #expr); \
 	} while (0)
 
 /**
