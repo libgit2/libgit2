@@ -1966,7 +1966,9 @@ int git_repository__cleanup_files(git_repository *repo, const char *files[], siz
 
 		if ((error = git_buf_joinpath(&path, repo->path_repository, files[i])) < 0 ||
 			(git_path_isfile(git_buf_cstr(&path)) &&
-			(error = p_unlink(git_buf_cstr(&path))) < 0))
+			(error = p_unlink(git_buf_cstr(&path))) < 0) ||
+			(git_path_isdir(git_buf_cstr(&path)) &&
+			(error = git_futils_rmdir_r(git_buf_cstr(&path), NULL, GIT_RMDIR_REMOVE_FILES | GIT_RMDIR_REMOVE_BLOCKERS)) < 0))
 			goto done;
 	}
 
@@ -1982,6 +1984,9 @@ static const char *state_files[] = {
 	GIT_MERGE_MSG_FILE,
 	GIT_REVERT_HEAD_FILE,
 	GIT_CHERRY_PICK_HEAD_FILE,
+	GIT_BISECT_LOG_FILE,
+	GIT_REBASE_MERGE_DIR,
+	GIT_REBASE_APPLY_DIR,
 };
 
 int git_repository_state_cleanup(git_repository *repo)
