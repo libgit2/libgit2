@@ -124,9 +124,6 @@ static int crlf_apply_to_odb(
 	const git_buf *from,
 	const git_filter_source *src)
 {
-	git_buf safe = GIT_BUF_INIT;
-	int error = 0;
-
 	/* Empty file? Nothing to do */
 	if (!git_buf_len(from))
 		return 0;
@@ -140,6 +137,13 @@ static int crlf_apply_to_odb(
 		/* Check heuristics for binary vs text - returns true if binary */
 		if (git_buf_text_gather_stats(&stats, from, false))
 			return GIT_PASSTHROUGH;
+
+		/* If safecrlf is enabled, sanity-check the result. */
+		if (ca->safe_crlf && (stats.cr != stats.crlf || stats.lf != stats.crlf)) {
+			giterr_set(GITERR_FILTER, "LF would be replaced by CRLF in '%s'",
+				git_filter_source_path(src));
+			return -1;
+		}
 
 		/*
 		 * We're currently not going to even try to convert stuff
@@ -158,31 +162,12 @@ static int crlf_apply_to_odb(
 				return GIT_PASSTHROUGH;
 		}
 
-		if (!stats.cr && !ca->safe_crlf)
+		if (!stats.cr)
 			return GIT_PASSTHROUGH;
 	}
 
 	/* Actually drop the carriage returns */
-	if ((error = git_buf_text_crlf_to_lf(to, from)) < 0)
-		return error;
-
-	/* If safecrlf is enabled, sanity-check the result. */
-	if (ca->safe_crlf) {
-		if ((error = git_buf_grow(&safe, max(from->size, to->size))) < 0 ||
-			(error = git_buf_text_lf_to_crlf(&safe, to)) < 0)
-			goto done;
-
-		if (git_buf_cmp(from, &safe) != 0) {
-			giterr_set(GITERR_FILTER, "LF would be replaced by CRLF in '%s'",
-				git_filter_source_path(src));
-			error = -1;
-		}
-	}
-
-done:
-	git_buf_free(&safe);
-
-	return error;
+	return git_buf_text_crlf_to_lf(to, from);
 }
 
 static const char *line_ending(struct crlf_attrs *ca)
