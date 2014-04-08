@@ -180,7 +180,7 @@ int git_graph_descendant_of(git_repository *repo, const git_oid *commit, const g
 	if (git_oid_equal(commit, ancestor))
 		return 0;
 
-	if ((error = git_merge_base(&merge_base, repo, commit, ancestor) < 0))
+	if ((error = git_merge_base(&merge_base, repo, commit, ancestor)) < 0)
 		return error;
 
 	return git_oid_equal(&merge_base, ancestor);
