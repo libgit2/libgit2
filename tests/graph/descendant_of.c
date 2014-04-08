@@ -45,3 +45,11 @@ void test_graph_descendant_of__returns_correct_result(void)
 	git_commit_free(other);
 
 }
+
+void test_graph_descendant_of__nopath(void)
+{
+	git_oid oid;
+
+	git_oid_fromstr(&oid, "e90810b8df3e80c413d903f631643c716887138d");
+	cl_assert_equal_i(0, git_graph_descendant_of(_repo, git_commit_id(commit), &oid));
+}
