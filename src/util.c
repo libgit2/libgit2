@@ -62,6 +62,12 @@ int git_strarray_copy(git_strarray *tgt, const git_strarray *src)
 
 int git__strtol64(int64_t *result, const char *nptr, const char **endptr, int base)
 {
+
+	return git__strtonl64(result, nptr, (size_t)-1, endptr, base);
+}
+
+int git__strtonl64(int64_t *result, const char *nptr, size_t nptr_len, const char **endptr, int base)
+{
 	const char *p;
 	int64_t n, nn;
 	int c, ovfl, v, neg, ndig;
@@ -107,7 +113,7 @@ int git__strtol64(int64_t *result, const char *nptr, const char **endptr, int ba
 	/*
 	 * Non-empty sequence of digits
 	 */
-	for (;; p++,ndig++) {
+	for (; nptr_len > 0; p++,ndig++,nptr_len--) {
 		c = *p;
 		v = base;
 		if ('0'<=c && c<='9')
@@ -144,11 +150,17 @@ Return:
 
 int git__strtol32(int32_t *result, const char *nptr, const char **endptr, int base)
 {
+
+	return git__strtonl32(result, nptr, (size_t)-1, endptr, base);
+}
+
+int git__strtonl32(int32_t *result, const char *nptr, size_t nptr_len, const char **endptr, int base)
+{
 	int error;
 	int32_t tmp_int;
 	int64_t tmp_long;
 
-	if ((error = git__strtol64(&tmp_long, nptr, endptr, base)) < 0)
+	if ((error = git__strtonl64(&tmp_long, nptr, nptr_len, endptr, base)) < 0)
 		return error;
 
 	tmp_int = tmp_long & 0xFFFFFFFF;
@@ -300,6 +312,31 @@ char *git__strsep(char **end, const char *sep)
 	}
 
 	return NULL;
+}
+
+
+const char *git__strnchr(const char *str, size_t len, char c)
+{
+	for (; len; len--) {
+		if (str[len] == c)
+			return &str[len];
+	}
+
+	return NULL;
+}
+
+size_t git__linenlen(const char *buffer, size_t buffer_len)
+{
+	size_t line_len = 0;
+
+	while (buffer_len--) {
+		line_len++;
+
+		if (*buffer++ == '\n')
+			break;
+	}
+
+	return line_len;
 }
 
 void git__hexdump(const char *buffer, size_t len)
