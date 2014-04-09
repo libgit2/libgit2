@@ -448,6 +448,8 @@ typedef int (*git_diff_file_cb)(
 	float progress,
 	void *payload);
 
+#define GIT_DIFF_HUNK_HEADER_SIZE	128
+
 /**
  * When producing a binary diff, the binary data returned will be
  * either the deflated full ("literal") contents of the file, or
@@ -499,12 +501,12 @@ typedef int(*git_diff_binary_cb)(
  * Structure describing a hunk of a diff.
  */
 typedef struct {
-	int    old_start;     /**< Starting line number in old_file */
-	int    old_lines;     /**< Number of lines in old_file */
-	int    new_start;     /**< Starting line number in new_file */
-	int    new_lines;     /**< Number of lines in new_file */
-	size_t header_len;    /**< Number of bytes in header text */
-	char   header[128];   /**< Header text, NUL-byte terminated */
+	int    old_start;     /** Starting line number in old_file */
+	int    old_lines;     /** Number of lines in old_file */
+	int    new_start;     /** Starting line number in new_file */
+	int    new_lines;     /** Number of lines in new_file */
+	size_t header_len;    /** Number of bytes in header text */
+	char   header[GIT_DIFF_HUNK_HEADER_SIZE];   /** Header text, NUL-byte terminated */
 } git_diff_hunk;
 
 /**

@@ -173,6 +173,11 @@ void git_buf_rtrim(git_buf *buf);
 
 int git_buf_cmp(const git_buf *a, const git_buf *b);
 
+/* Unquote a buffer as specified in
+ * http://marc.info/?l=git&m=112927316408690&w=2
+ */
+int git_buf_unquote(git_buf *buf);
+
 /* Write data as base64 encoded in buffer */
 int git_buf_encode_base64(git_buf *buf, const char *data, size_t len);
 /* Decode the given bas64 and write the result to the buffer */

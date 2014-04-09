@@ -267,6 +267,19 @@ GIT_EXTERN(int) git_patch_to_buf(
 	git_buf *out,
 	git_patch *patch);
 
+/**
+ * Create a patch from the contents of a patch file.
+ *
+ * @param out The patch to be created
+ * @param patchfile The contents of a patch file
+ * @param patchfile_len The length of the patch file
+ * @return 0 on success, <0 on failure.
+ */
+GIT_EXTERN(int) git_patch_from_patchfile(
+	git_patch **out,
+	const char *patchfile,
+	size_t patchfile_len);
+
 GIT_END_DECL
 
 /**@}*/
