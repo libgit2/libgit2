@@ -26,7 +26,7 @@ GIT__USE_STRMAP;
 typedef struct cvar_t {
 	struct cvar_t *next;
 	git_config_entry *entry;
-	int included; /* whether this is part of [include] */
+	bool included; /* whether this is part of [include] */
 } cvar_t;
 
 typedef struct git_config_file_iter {
@@ -546,19 +546,14 @@ static int config_delete(git_config_backend *cfg, const char *name)
 		return -1;
 	}
 
-	git_strmap_delete_at(values, pos);
+	if ((result = config_write(b, var->entry->name, NULL, NULL)) < 0)
+		return result;
 
-	result = config_write(b, var->entry->name, NULL, NULL);
-
-	cvar_free(var);
-	return result;
+	return config_refresh(cfg);
 }
 
 static int config_delete_multivar(git_config_backend *cfg, const char *name, const char *regexp)
 {
-	cvar_t *var, *prev = NULL, *new_head = NULL;
-	cvar_t **to_delete;
-	int to_delete_idx;
 	diskfile_backend *b = (diskfile_backend *)cfg;
 	git_strmap *values = b->header.values;
 	char *key;
@@ -572,59 +567,25 @@ static int config_delete_multivar(git_config_backend *cfg, const char *name, con
 	pos = git_strmap_lookup_index(values, key);
 
 	if (!git_strmap_valid_index(values, pos)) {
-		giterr_set(GITERR_CONFIG, "Could not find key '%s' to delete", name);
 		git__free(key);
+		giterr_set(GITERR_CONFIG, "Could not find key '%s' to delete", name);
 		return GIT_ENOTFOUND;
 	}
 
-	var = git_strmap_value_at(values, pos);
-
 	result = regcomp(&preg, regexp, REG_EXTENDED);
 	if (result < 0) {
-		git__free(key);
 		giterr_set_regex(&preg, result);
-		regfree(&preg);
-		return -1;
+		result = -1;
+		goto out;
 	}
 
-	to_delete = git__calloc(cvar_length(var), sizeof(cvar_t *));
-	GITERR_CHECK_ALLOC(to_delete);
-	to_delete_idx = 0;
+	if ((result = config_write(b, key, &preg, NULL)) < 0)
+		goto out;
 
-	while (var != NULL) {
-		cvar_t *next = var->next;
+	result = config_refresh(cfg);
 
-		if (regexec(&preg, var->entry->value, 0, NULL, 0) == 0) {
-			// If we are past the head, reattach previous node to next one,
-			// otherwise set the new head for the strmap.
-			if (prev != NULL) {
-				prev->next = next;
-			} else {
-				new_head = next;
-			}
-
-			to_delete[to_delete_idx++] = var;
-		} else {
-			prev = var;
-		}
-
-		var = next;
-	}
-
-	if (new_head != NULL) {
-		git_strmap_set_value_at(values, pos, new_head);
-	} else {
-		git_strmap_delete_at(values, pos);
-	}
-
-	if (to_delete_idx > 0)
-		result = config_write(b, key, &preg, NULL);
-
-	while (to_delete_idx-- > 0)
-		cvar_free(to_delete[to_delete_idx]);
-
+out:
 	git__free(key);
-	git__free(to_delete);
 	regfree(&preg);
 	return result;
 }
@@ -1532,7 +1493,7 @@ static int config_write(diskfile_backend *cfg, const char *key, const regex_t *p
 			 * this, but instead we'll handle it gracefully with an error. */
 			if (value == NULL) {
 				giterr_set(GITERR_CONFIG,
-					"Race condition when writing a config file (a cvar has been removed)");
+					"race condition when writing a config file (a cvar has been removed)");
 				goto rewrite_fail;
 			}
 
