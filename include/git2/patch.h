@@ -141,12 +141,12 @@ GIT_EXTERN(void) git_patch_free(git_patch *patch);
 /**
  * Get the delta associated with a patch
  */
-GIT_EXTERN(const git_diff_delta *) git_patch_get_delta(git_patch *patch);
+GIT_EXTERN(const git_diff_delta *) git_patch_get_delta(const git_patch *patch);
 
 /**
  * Get the number of hunks in a patch
  */
-GIT_EXTERN(size_t) git_patch_num_hunks(git_patch *patch);
+GIT_EXTERN(size_t) git_patch_num_hunks(const git_patch *patch);
 
 /**
  * Get line counts of each type in a patch.
@@ -197,7 +197,7 @@ GIT_EXTERN(int) git_patch_get_hunk(
  * @return Number of lines in hunk or -1 if invalid hunk index
  */
 GIT_EXTERN(int) git_patch_num_lines_in_hunk(
-	git_patch *patch,
+	const git_patch *patch,
 	size_t hunk_idx);
 
 /**

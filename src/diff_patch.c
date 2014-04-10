@@ -631,13 +631,13 @@ void git_patch_free(git_patch *patch)
 		GIT_REFCOUNT_DEC(patch, diff_patch_free);
 }
 
-const git_diff_delta *git_patch_get_delta(git_patch *patch)
+const git_diff_delta *git_patch_get_delta(const git_patch *patch)
 {
 	assert(patch);
 	return patch->delta;
 }
 
-size_t git_patch_num_hunks(git_patch *patch)
+size_t git_patch_num_hunks(const git_patch *patch)
 {
 	assert(patch);
 	return git_array_size(patch->hunks);
@@ -708,7 +708,7 @@ int git_patch_get_hunk(
 	return 0;
 }
 
-int git_patch_num_lines_in_hunk(git_patch *patch, size_t hunk_idx)
+int git_patch_num_lines_in_hunk(const git_patch *patch, size_t hunk_idx)
 {
 	diff_patch_hunk *hunk;
 	assert(patch);
