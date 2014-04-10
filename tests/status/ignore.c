@@ -228,6 +228,32 @@ void test_status_ignore__subdirectories(void)
 	cl_assert(ignored);
 }
 
+static void make_test_data(void)
+{
+	static const char *files[] = {
+		"empty_standard_repo/dir/a/ignore_me",
+		"empty_standard_repo/dir/b/ignore_me",
+		"empty_standard_repo/dir/ignore_me",
+		"empty_standard_repo/ignore_also/file",
+		"empty_standard_repo/ignore_me",
+		"empty_standard_repo/test/ignore_me/file",
+		"empty_standard_repo/test/ignore_me/file2",
+		"empty_standard_repo/test/ignore_me/and_me/file",
+		NULL
+	};
+	static const char *repo = "empty_standard_repo";
+	const char **scan;
+	size_t repolen = strlen(repo) + 1;
+
+	g_repo = cl_git_sandbox_init(repo);
+
+	for (scan = files; *scan != NULL; ++scan) {
+		cl_git_pass(git_futils_mkdir(
+			*scan + repolen, repo, 0777, GIT_MKDIR_PATH | GIT_MKDIR_SKIP_LAST));
+		cl_git_mkfile(*scan, "contents");
+	}
+}
+
 void test_status_ignore__subdirectories_recursion(void)
 {
 	/* Let's try again with recursing into ignored dirs turned on */
@@ -235,6 +261,9 @@ void test_status_ignore__subdirectories_recursion(void)
 	status_entry_counts counts;
 	static const char *paths_r[] = {
 		".gitignore",
+		"dir/a/ignore_me",
+		"dir/b/ignore_me",
+		"dir/ignore_me",
 		"ignore_also/file",
 		"ignore_me",
 		"test/ignore_me/and_me/file",
@@ -242,49 +271,30 @@ void test_status_ignore__subdirectories_recursion(void)
 		"test/ignore_me/file2",
 	};
 	static const unsigned int statuses_r[] = {
-		GIT_STATUS_WT_NEW,
-		GIT_STATUS_IGNORED,
-		GIT_STATUS_IGNORED,
-		GIT_STATUS_IGNORED,
-		GIT_STATUS_IGNORED,
-		GIT_STATUS_IGNORED,
+		GIT_STATUS_WT_NEW,  GIT_STATUS_IGNORED, GIT_STATUS_IGNORED,
+		GIT_STATUS_IGNORED, GIT_STATUS_IGNORED, GIT_STATUS_IGNORED,
+		GIT_STATUS_IGNORED, GIT_STATUS_IGNORED, GIT_STATUS_IGNORED,
 	};
 	static const char *paths_nr[] = {
 		".gitignore",
+		"dir/a/ignore_me",
+		"dir/b/ignore_me",
+		"dir/ignore_me",
 		"ignore_also/",
 		"ignore_me",
 		"test/ignore_me/",
 	};
 	static const unsigned int statuses_nr[] = {
 		GIT_STATUS_WT_NEW,
-		GIT_STATUS_IGNORED,
-		GIT_STATUS_IGNORED,
-		GIT_STATUS_IGNORED,
+		GIT_STATUS_IGNORED, GIT_STATUS_IGNORED, GIT_STATUS_IGNORED,
+		GIT_STATUS_IGNORED, GIT_STATUS_IGNORED, GIT_STATUS_IGNORED,
 	};
 
-	g_repo = cl_git_sandbox_init("empty_standard_repo");
-
+	make_test_data();
 	cl_git_rewritefile("empty_standard_repo/.gitignore", "ignore_me\n/ignore_also\n");
 
-	cl_git_mkfile(
-		"empty_standard_repo/ignore_me", "I'm going to be ignored!");
-	cl_git_pass(git_futils_mkdir_r(
-		"empty_standard_repo/test/ignore_me", NULL, 0775));
-	cl_git_mkfile(
-		"empty_standard_repo/test/ignore_me/file", "I'm going to be ignored!");
-	cl_git_mkfile(
-		"empty_standard_repo/test/ignore_me/file2", "Me, too!");
-	cl_git_pass(git_futils_mkdir_r(
-		"empty_standard_repo/test/ignore_me/and_me", NULL, 0775));
-	cl_git_mkfile(
-		"empty_standard_repo/test/ignore_me/and_me/file", "Deeply ignored");
-	cl_git_pass(git_futils_mkdir_r(
-		"empty_standard_repo/ignore_also", NULL, 0775));
-	cl_git_mkfile(
-		"empty_standard_repo/ignore_also/file", "I'm going to be ignored!");
-
 	memset(&counts, 0x0, sizeof(status_entry_counts));
-	counts.expected_entry_count = 6;
+	counts.expected_entry_count = 9;
 	counts.expected_paths = paths_r;
 	counts.expected_statuses = statuses_r;
 
@@ -299,11 +309,52 @@ void test_status_ignore__subdirectories_recursion(void)
 
 
 	memset(&counts, 0x0, sizeof(status_entry_counts));
-	counts.expected_entry_count = 4;
+	counts.expected_entry_count = 7;
 	counts.expected_paths = paths_nr;
 	counts.expected_statuses = statuses_nr;
 
 	opts.flags = GIT_STATUS_OPT_DEFAULTS;
+
+	cl_git_pass(git_status_foreach_ext(
+		g_repo, &opts, cb_status__normal, &counts));
+
+	cl_assert_equal_i(counts.expected_entry_count, counts.entry_count);
+	cl_assert_equal_i(0, counts.wrong_status_flags_count);
+	cl_assert_equal_i(0, counts.wrong_sorted_path);
+}
+
+void test_status_ignore__subdirectories_not_at_root(void)
+{
+	git_status_options opts = GIT_STATUS_OPTIONS_INIT;
+	status_entry_counts counts;
+	static const char *paths_1[] = {
+		"dir/.gitignore",
+		"dir/a/ignore_me",
+		"dir/b/ignore_me",
+		"dir/ignore_me",
+		"ignore_also/file",
+		"ignore_me",
+		"test/.gitignore",
+		"test/ignore_me/and_me/file",
+		"test/ignore_me/file",
+		"test/ignore_me/file2",
+	};
+	static const unsigned int statuses_1[] = {
+		GIT_STATUS_WT_NEW,  GIT_STATUS_IGNORED, GIT_STATUS_IGNORED,
+		GIT_STATUS_IGNORED, GIT_STATUS_WT_NEW, GIT_STATUS_WT_NEW,
+		GIT_STATUS_WT_NEW, GIT_STATUS_IGNORED, GIT_STATUS_WT_NEW, GIT_STATUS_WT_NEW,
+	};
+
+	make_test_data();
+	cl_git_rewritefile("empty_standard_repo/dir/.gitignore", "ignore_me\n/ignore_also\n");
+	cl_git_rewritefile("empty_standard_repo/test/.gitignore", "and_me\n");
+
+	memset(&counts, 0x0, sizeof(status_entry_counts));
+	counts.expected_entry_count = 10;
+	counts.expected_paths = paths_1;
+	counts.expected_statuses = statuses_1;
+
+	opts.flags = GIT_STATUS_OPT_DEFAULTS | GIT_STATUS_OPT_RECURSE_IGNORED_DIRS;
 
 	cl_git_pass(git_status_foreach_ext(
 		g_repo, &opts, cb_status__normal, &counts));
