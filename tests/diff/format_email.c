@@ -443,3 +443,71 @@ void test_diff_format_email__rename_add_remove(void)
 	git_buf_free(&buf);
 }
 
+void test_diff_format_email__multiline_summary(void)
+{
+	git_oid oid;
+	git_commit *commit = NULL;
+	git_diff *diff = NULL;
+	git_diff_format_email_options opts = GIT_DIFF_FORMAT_EMAIL_OPTIONS_INIT;
+	git_buf buf = GIT_BUF_INIT;
+
+	const char *email =
+	"From 9264b96c6d104d0e07ae33d3007b6a48246c6f92 Mon Sep 17 00:00:00 2001\n" \
+	"From: Jacques Germishuys <jacquesg@striata.com>\n" \
+	"Date: Wed, 9 Apr 2014 20:57:01 +0200\n" \
+	"Subject: [PATCH] Modify some content\n" \
+	"\n" \
+	"---\n" \
+	" file1.txt | 8 +++++---\n" \
+	" 1 file changed, 5 insertions(+), 3 deletions(-)\n" \
+	"\n" \
+	"diff --git a/file1.txt b/file1.txt\n" \
+	"index 94aaae8..af8f41d 100644\n" \
+	"--- a/file1.txt\n" \
+	"+++ b/file1.txt\n" \
+	"@@ -1,15 +1,17 @@\n" \
+	" file1.txt\n" \
+	" file1.txt\n" \
+	"+_file1.txt_\n" \
+	" file1.txt\n" \
+	" file1.txt\n" \
+	" file1.txt\n" \
+	" file1.txt\n" \
+	"+\n" \
+	"+\n" \
+	" file1.txt\n" \
+	" file1.txt\n" \
+	" file1.txt\n" \
+	" file1.txt\n" \
+	" file1.txt\n" \
+	"-file1.txt\n" \
+	"-file1.txt\n" \
+	"-file1.txt\n" \
+	"+_file1.txt_\n" \
+	"+_file1.txt_\n" \
+	" file1.txt\n" \
+	"--\n" \
+	"libgit2 " LIBGIT2_VERSION "\n" \
+	"\n";
+
+	git_oid_fromstr(&oid, "9264b96c6d104d0e07ae33d3007b6a48246c6f92");
+
+	cl_git_pass(git_commit_lookup(&commit, repo, &oid));
+
+	opts.id = git_commit_id(commit);
+	opts.author = git_commit_author(commit);
+	opts.summary = "Modify some content\nSome extra stuff here";
+
+	cl_git_pass(git_diff__commit(&diff, repo, commit, NULL));
+	cl_git_pass(git_diff_format_email(&buf, diff, &opts));
+	cl_assert(strcmp(git_buf_cstr(&buf), email) == 0);
+
+	git_buf_clear(&buf);
+	cl_git_pass(git_diff_commit_as_email(&buf, repo, commit, 1, 1, 0, NULL));
+	cl_assert(strcmp(git_buf_cstr(&buf), email) == 0);
+
+	git_diff_free(diff);
+	git_commit_free(commit);
+	git_buf_free(&buf);
+}
+

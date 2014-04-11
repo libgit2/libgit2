@@ -1544,6 +1544,7 @@ int git_diff_format_email(
 	const git_diff_format_email_options *opts)
 {
 	git_diff_stats *stats = NULL;
+	char *summary = NULL, *loc = NULL;
 	bool ignore_marker;
 	unsigned int format_flags = 0;
 	int error;
@@ -1565,8 +1566,24 @@ int git_diff_format_email(
 		}
 	}
 
+	/* the summary we receive may not be clean.
+	 * it could potentially contain new line characters
+	 * or not be set, sanitize, */
+	if ((loc = strpbrk(opts->summary, "\r\n")) != NULL) {
+		size_t offset = 0;
+
+		if ((offset = (loc - opts->summary)) == 0) {
+			giterr_set(GITERR_INVALID, "summary is empty");
+			error = -1;
+		}
+
+		summary = git__calloc(offset + 1, sizeof(char));
+		GITERR_CHECK_ALLOC(summary);
+		strncpy(summary, opts->summary, offset);
+	}
+
 	error = git_diff_format_email__append_header_tobuf(out,
-				opts->id, opts->author, opts->summary,
+				opts->id, opts->author, summary == NULL ? opts->summary : summary,
 				opts->patch_no, opts->total_patches, ignore_marker);
 
 	if (error < 0)
@@ -1583,6 +1600,7 @@ int git_diff_format_email(
 	error = git_buf_puts(out, "--\nlibgit2 " LIBGIT2_VERSION "\n\n");
 
 on_error:
+	git__free(summary);
 	git_diff_stats_free(stats);
 
 	return error;
