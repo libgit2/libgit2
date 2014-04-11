@@ -232,9 +232,8 @@ unlock:
 
 void git_sortedcache_updated(git_sortedcache *sc)
 {
-	 /* update filestamp to latest value */
-	if (git_futils_filestamp_check(&sc->stamp, sc->path) < 0)
-		giterr_clear();
+	/* update filestamp to latest value */
+	git_futils_filestamp_check(&sc->stamp, sc->path);
 }
 
 /* release all items in sorted cache */

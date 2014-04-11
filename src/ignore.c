@@ -1,7 +1,7 @@
 #include "git2/ignore.h"
 #include "common.h"
 #include "ignore.h"
-#include "attr.h"
+#include "attr_file.h"
 #include "path.h"
 #include "config.h"
 
@@ -10,26 +10,27 @@
 #define GIT_IGNORE_DEFAULT_RULES ".\n..\n.git\n"
 
 static int parse_ignore_file(
-	git_repository *repo, void *parsedata, const char *buffer, git_attr_file *ignores)
+	git_repository *repo,
+	git_attr_file *attrs,
+	const char *data,
+	void *payload)
 {
 	int error = 0;
-	git_attr_fnmatch *match = NULL;
-	const char *scan = NULL, *context = NULL;
 	int ignore_case = false;
+	const char *scan = data, *context = NULL;
+	git_attr_fnmatch *match = NULL;
 
-	/* Prefer to have the caller pass in a git_ignores as the parsedata
-	 * object.  If they did not, then look up the value of ignore_case */
-	if (parsedata != NULL)
-		ignore_case = ((git_ignores *)parsedata)->ignore_case;
+	/* either read ignore_case from ignores structure or use repo config */
+	if (payload != NULL)
+		ignore_case = ((git_ignores *)payload)->ignore_case;
 	else if (git_repository__cvar(&ignore_case, repo, GIT_CVAR_IGNORECASE) < 0)
-		return error;
+		giterr_clear();
 
-	if (ignores->key &&
-		git_path_root(ignores->key + 2) < 0 &&
-		git__suffixcmp(ignores->key, "/" GIT_IGNORE_FILE) == 0)
-		context = ignores->key + 2;
-
-	scan = buffer;
+	/* if subdir file path, convert context for file paths */
+	if (attrs->ce &&
+		git_path_root(attrs->ce->path) < 0 &&
+		!git__suffixcmp(attrs->ce->path, "/" GIT_IGNORE_FILE))
+		context = attrs->ce->path;
 
 	while (!error && *scan) {
 		if (!match) {
@@ -40,7 +41,7 @@ static int parse_ignore_file(
 		match->flags = GIT_ATTR_FNMATCH_ALLOWSPACE | GIT_ATTR_FNMATCH_ALLOWNEG;
 
 		if (!(error = git_attr_fnmatch__parse(
-			match, ignores->pool, context, &scan)))
+			match, &attrs->pool, context, &scan)))
 		{
 			match->flags |= GIT_ATTR_FNMATCH_IGNORE;
 
@@ -48,7 +49,7 @@ static int parse_ignore_file(
 				match->flags |= GIT_ATTR_FNMATCH_ICASE;
 
 			scan = git__next_line(scan);
-			error = git_vector_insert(&ignores->rules, match);
+			error = git_vector_insert(&attrs->rules, match);
 		}
 
 		if (error != 0) {
@@ -67,28 +68,46 @@ static int parse_ignore_file(
 	return error;
 }
 
-#define push_ignore_file(R,IGN,S,B,F) \
-	git_attr_cache__push_file((R),(B),(F),GIT_ATTR_FILE_FROM_FILE,parse_ignore_file,(IGN),(S))
+static int push_ignore_file(
+	git_ignores *ignores,
+	git_vector *which_list,
+	const char *base,
+	const char *filename)
+{
+	int error = 0;
+	git_attr_file *file = NULL;
+
+	if ((error = git_attr_cache__get(
+			&file, ignores->repo, GIT_ATTR_CACHE__FROM_FILE,
+			base, filename, parse_ignore_file, ignores)) < 0 ||
+		(error = git_vector_insert(which_list, file)) < 0)
+		git_attr_file__free(file);
+
+	return error;
+}
 
 static int push_one_ignore(void *payload, git_buf *path)
 {
 	git_ignores *ign = payload;
-
 	ign->depth++;
-
-	return push_ignore_file(
-		ign->repo, ign, &ign->ign_path, path->ptr, GIT_IGNORE_FILE);
+	return push_ignore_file(ign, &ign->ign_path, path->ptr, GIT_IGNORE_FILE);
 }
 
-static int get_internal_ignores(git_attr_file **ign, git_repository *repo)
+static int get_internal_ignores(git_attr_file **out, git_repository *repo)
 {
 	int error;
 
-	if (!(error = git_attr_cache__init(repo)))
-		error = git_attr_cache__internal_file(repo, GIT_IGNORE_INTERNAL, ign);
+	if ((error = git_attr_cache__init(repo)) < 0)
+		return error;
 
-	if (!error && !(*ign)->rules.length)
-		error = parse_ignore_file(repo, NULL, GIT_IGNORE_DEFAULT_RULES, *ign);
+	/* get with NULL parser, gives existing or empty git_attr_file */
+	error = git_attr_cache__get(
+		out, repo, GIT_ATTR_CACHE__FROM_FILE,
+		NULL, GIT_IGNORE_INTERNAL, NULL, NULL);
+
+	/* if internal rules list is empty, insert default rules */
+	if (!error && !(*out)->rules.length)
+		error = parse_ignore_file(repo, *out, GIT_IGNORE_DEFAULT_RULES, NULL);
 
 	return error;
 }
@@ -127,8 +146,7 @@ int git_ignore__for_path(
 		goto cleanup;
 
 	/* set up internals */
-	error = get_internal_ignores(&ignores->ign_internal, repo);
-	if (error < 0)
+	if ((error = get_internal_ignores(&ignores->ign_internal, repo)) < 0)
 		goto cleanup;
 
 	/* load .gitignore up the path */
@@ -140,14 +158,16 @@ int git_ignore__for_path(
 	}
 
 	/* load .git/info/exclude */
-	error = push_ignore_file(repo, ignores, &ignores->ign_global,
+	error = push_ignore_file(
+		ignores, &ignores->ign_global,
 		git_repository_path(repo), GIT_IGNORE_FILE_INREPO);
 	if (error < 0)
 		goto cleanup;
 
 	/* load core.excludesfile */
 	if (git_repository_attr_cache(repo)->cfg_excl_file != NULL)
-		error = push_ignore_file(repo, ignores, &ignores->ign_global, NULL,
+		error = push_ignore_file(
+			ignores, &ignores->ign_global, NULL,
 			git_repository_attr_cache(repo)->cfg_excl_file);
 
 cleanup:
@@ -165,35 +185,33 @@ int git_ignore__push_dir(git_ignores *ign, const char *dir)
 	ign->depth++;
 
 	return push_ignore_file(
-		ign->repo, ign, &ign->ign_path, ign->dir.ptr, GIT_IGNORE_FILE);
+		ign, &ign->ign_path, ign->dir.ptr, GIT_IGNORE_FILE);
 }
 
 int git_ignore__pop_dir(git_ignores *ign)
 {
 	if (ign->ign_path.length > 0) {
 		git_attr_file *file = git_vector_last(&ign->ign_path);
-		const char *start, *end, *scan;
-		size_t keylen;
+		const char *start = file->ce->path, *end;
 
-		/* - ign->dir looks something like "a/b/" (or "a/b/c/d/")
-		 * - file->key looks something like "0#a/b/.gitignore
+		/* - ign->dir looks something like "/home/user/a/b/" (or "a/b/c/d/")
+		 * - file->path looks something like "a/b/.gitignore
 		 *
-		 * We are popping the last directory off ign->dir.  We also want to
-		 * remove the file from the vector if the directory part of the key
-		 * matches the ign->dir path.  We need to test if the "a/b" part of
+		 * We are popping the last directory off ign->dir.  We also want
+		 * to remove the file from the vector if the popped directory
+		 * matches the ignore path.  We need to test if the "a/b" part of
 		 * the file key matches the path we are about to pop.
 		 */
 
-		for (start = end = scan = &file->key[2]; *scan; ++scan)
-			if (*scan == '/')
-				end = scan; /* point 'end' to last '/' in key */
-		keylen = (end - start) + 1;
+		if ((end = strrchr(start, '/')) != NULL) {
+			size_t dirlen = (end - start) + 1;
 
-		if (ign->dir.size >= keylen &&
-			!memcmp(ign->dir.ptr + ign->dir.size - keylen, start, keylen))
-		{
-			git_attr_file__free(git_vector_last(&ign->ign_path));
-			git_vector_pop(&ign->ign_path);
+			if (ign->dir.size >= dirlen &&
+				!memcmp(ign->dir.ptr + ign->dir.size - dirlen, start, dirlen))
+			{
+				git_vector_pop(&ign->ign_path);
+				git_attr_file__free(file);
+			}
 		}
 	}
 
@@ -210,7 +228,7 @@ void git_ignore__free(git_ignores *ignores)
 	unsigned int i;
 	git_attr_file *file;
 
-	/* don't need to free ignores->ign_internal it is cached exactly once */
+	git_attr_file__free(ignores->ign_internal);
 
 	git_vector_foreach(&ignores->ign_path, i, file) {
 		git_attr_file__free(file);
@@ -283,10 +301,12 @@ int git_ignore_add_rule(
 	const char *rules)
 {
 	int error;
-	git_attr_file *ign_internal;
+	git_attr_file *ign_internal = NULL;
 
-	if (!(error = get_internal_ignores(&ign_internal, repo)))
+	if (!(error = get_internal_ignores(&ign_internal, repo))) {
 		error = parse_ignore_file(repo, NULL, rules, ign_internal);
+		git_attr_file__free(ign_internal);
+	}
 
 	return error;
 }
@@ -300,8 +320,10 @@ int git_ignore_clear_internal_rules(
 	if (!(error = get_internal_ignores(&ign_internal, repo))) {
 		git_attr_file__clear_rules(ign_internal);
 
-		return parse_ignore_file(
+		error = parse_ignore_file(
 			repo, NULL, GIT_IGNORE_DEFAULT_RULES, ign_internal);
+
+		git_attr_file__free(ign_internal);
 	}
 
 	return error;

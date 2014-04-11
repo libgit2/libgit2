@@ -607,8 +607,15 @@ int git_index_read(git_index *index, int force)
 	}
 
 	updated = git_futils_filestamp_check(&stamp, index->index_file_path);
-	if (updated < 0 || (!updated && !force))
+	if (updated < 0) {
+		giterr_set(
+			GITERR_INDEX,
+			"Failed to read index: '%s' no longer exists",
+			index->index_file_path);
 		return updated;
+	}
+	if (!updated && !force)
+		return 0;
 
 	error = git_futils_readbuffer(&buffer, index->index_file_path);
 	if (error < 0)
@@ -667,11 +674,11 @@ int git_index_write(git_index *index)
 	if ((error = git_filebuf_commit(&file)) < 0)
 		return error;
 
-	error = git_futils_filestamp_check(&index->stamp, index->index_file_path);
-	if (error < 0)
-		return error;
+	if (git_futils_filestamp_check(&index->stamp, index->index_file_path) < 0)
+		/* index could not be read from disk! */;
+	else
+		index->on_disk = 1;
 
-	index->on_disk = 1;
 	return 0;
 }
 
