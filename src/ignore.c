@@ -77,11 +77,16 @@ static int push_ignore_file(
 	int error = 0;
 	git_attr_file *file = NULL;
 
-	if ((error = git_attr_cache__get(
-			&file, ignores->repo, GIT_ATTR_CACHE__FROM_FILE,
-			base, filename, parse_ignore_file, ignores)) < 0 ||
-		(error = git_vector_insert(which_list, file)) < 0)
-		git_attr_file__free(file);
+	error = git_attr_cache__get(
+		&file, ignores->repo, GIT_ATTR_CACHE__FROM_FILE,
+		base, filename, parse_ignore_file, ignores);
+	if (error < 0)
+		return error;
+
+	if (file != NULL) {
+		if ((error = git_vector_insert(which_list, file)) < 0)
+			git_attr_file__free(file);
+	}
 
 	return error;
 }
@@ -122,19 +127,15 @@ int git_ignore__for_path(
 
 	assert(ignores);
 
+	memset(ignores, 0, sizeof(*ignores));
 	ignores->repo = repo;
-	git_buf_init(&ignores->dir, 0);
-	ignores->ign_internal = NULL;
-	ignores->depth = 0;
 
 	/* Read the ignore_case flag */
 	if ((error = git_repository__cvar(
 			&ignores->ignore_case, repo, GIT_CVAR_IGNORECASE)) < 0)
 		goto cleanup;
 
-	if ((error = git_vector_init(&ignores->ign_path, 8, NULL)) < 0 ||
-		(error = git_vector_init(&ignores->ign_global, 2, NULL)) < 0 ||
-		(error = git_attr_cache__init(repo)) < 0)
+	if ((error = git_attr_cache__init(repo)) < 0)
 		goto cleanup;
 
 	/* given a unrooted path in a non-bare repo, resolve it */
@@ -304,7 +305,7 @@ int git_ignore_add_rule(
 	git_attr_file *ign_internal = NULL;
 
 	if (!(error = get_internal_ignores(&ign_internal, repo))) {
-		error = parse_ignore_file(repo, NULL, rules, ign_internal);
+		error = parse_ignore_file(repo, ign_internal, rules, NULL);
 		git_attr_file__free(ign_internal);
 	}
 
@@ -321,7 +322,7 @@ int git_ignore_clear_internal_rules(
 		git_attr_file__clear_rules(ign_internal);
 
 		error = parse_ignore_file(
-			repo, NULL, GIT_IGNORE_DEFAULT_RULES, ign_internal);
+			repo, ign_internal, GIT_IGNORE_DEFAULT_RULES, NULL);
 
 		git_attr_file__free(ign_internal);
 	}

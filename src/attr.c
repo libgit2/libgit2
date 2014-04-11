@@ -60,6 +60,7 @@ int git_attr_get(
 	if ((error = collect_attr_files(repo, flags, pathname, &files)) < 0)
 		goto cleanup;
 
+	memset(&attr, 0, sizeof(attr));
 	attr.name = name;
 	attr.name_hash = git_attr_file__name_hash(name);
 
@@ -295,11 +296,15 @@ static int push_attr_file(
 	int error = 0;
 	git_attr_file *file = NULL;
 
-	if ((error = git_attr_cache__get(
-			&file, repo, source, base, filename,
-			git_attr_file__parse_buffer, NULL)) < 0 ||
-		(error = git_vector_insert(list, file)) < 0)
-		git_attr_file__free(file);
+	error = git_attr_cache__get(
+		&file, repo, source, base, filename, git_attr_file__parse_buffer, NULL);
+	if (error < 0)
+		return error;
+
+	if (file != NULL) {
+		if ((error = git_vector_insert(list, file)) < 0)
+			git_attr_file__free(file);
+	}
 
 	return error;
 }
@@ -343,9 +348,8 @@ static int collect_attr_files(
 	const char *workdir = git_repository_workdir(repo);
 	attr_walk_up_info info = { NULL };
 
-	if (git_attr_cache__init(repo) < 0 ||
-		git_vector_init(files, 4, NULL) < 0)
-		return -1;
+	if ((error = git_attr_cache__init(repo)) < 0)
+		return error;
 
 	/* Resolve path in a non-bare repo */
 	if (workdir != NULL)

@@ -23,9 +23,7 @@ int git_attr_file__new(
 	git_attr_file *attrs = git__calloc(1, sizeof(git_attr_file));
 	GITERR_CHECK_ALLOC(attrs);
 
-	if (git_pool_init(&attrs->pool, 1, 0) < 0 ||
-		git_vector_init(&attrs->rules, 0, NULL) < 0)
-	{
+	if (git_pool_init(&attrs->pool, 1, 0) < 0) {
 		attr_file_free(attrs);
 		return -1;
 	}

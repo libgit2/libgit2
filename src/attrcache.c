@@ -41,16 +41,29 @@ int git_attr_cache_entry__new(
 	const char *path,
 	git_pool *pool)
 {
-	size_t baselen = base ? strlen(base) : 0, pathlen = strlen(path);
-	size_t cachesize = sizeof(git_attr_cache_entry) + baselen + pathlen + 1;
+	size_t baselen = 0, pathlen = strlen(path);
+	size_t cachesize = sizeof(git_attr_cache_entry) + pathlen + 1;
 	git_attr_cache_entry *ce;
+
+	if (base != NULL && git_path_root(path) < 0) {
+		baselen = strlen(base);
+		cachesize += baselen;
+
+		if (baselen && base[baselen - 1] != '/')
+			cachesize++;
+	}
 
 	ce = git_pool_mallocz(pool, cachesize);
 	GITERR_CHECK_ALLOC(ce);
 
-	if (baselen)
+	if (baselen) {
 		memcpy(ce->fullpath, base, baselen);
+
+		if (base[baselen - 1] != '/')
+			ce->fullpath[baselen++] = '/';
+	}
 	memcpy(&ce->fullpath[baselen], path, pathlen);
+
 	ce->path = &ce->fullpath[baselen];
 	*out = ce;
 
@@ -119,6 +132,7 @@ static int attr_cache_remove(git_attr_cache *cache, git_attr_file *file)
 		ce->file[file->source] == file)
 	{
 		ce->file[file->source] = NULL;
+		GIT_REFCOUNT_OWN(file, NULL);
 		found = true;
 	}
 
@@ -130,14 +144,13 @@ static int attr_cache_remove(git_attr_cache *cache, git_attr_file *file)
 	return error;
 }
 
-int git_attr_cache__get(
-	git_attr_file **out,
+static int attr_cache_lookup(
+	git_attr_file **out_file,
+	git_attr_cache_entry **out_ce,
 	git_repository *repo,
 	git_attr_cache_source source,
 	const char *base,
-	const char *filename,
-	git_attr_cache_parser parser,
-	void *payload)
+	const char *filename)
 {
 	int error = 0;
 	git_buf path = GIT_BUF_INIT;
@@ -172,36 +185,61 @@ int git_attr_cache__get(
 
 	attr_cache_unlock(cache);
 
+cleanup:
+	*out_file = file;
+	*out_ce = ce;
+
+	git_buf_free(&path);
+	return error;
+}
+
+int git_attr_cache__get(
+	git_attr_file **out,
+	git_repository *repo,
+	git_attr_cache_source source,
+	const char *base,
+	const char *filename,
+	git_attr_cache_parser parser,
+	void *payload)
+{
+	int error = 0;
+	git_attr_cache *cache = git_repository_attr_cache(repo);
+	git_attr_cache_entry *ce = NULL;
+	git_attr_file *file = NULL;
+
+	if ((error = attr_cache_lookup(&file, &ce, repo, source, base, filename)) < 0)
+		goto cleanup;
+
 	/* if this is not a file backed entry, just create a new empty one */
 	if (!parser) {
-		error = git_attr_file__new(&file, ce, source);
-		goto cleanup;
+		if (!file && !(error = git_attr_file__new(&file, ce, source)))
+			error = attr_cache_upsert(cache, file);
+	}
+	/* otherwise load and/or reload as needed */
+	else if (!file || (error = git_attr_file__out_of_date(repo, file)) > 0) {
+		if (!(error = git_attr_file__load(
+				&file, repo, ce, source, parser, payload)))
+			error = attr_cache_upsert(cache, file);
 	}
 
-	/* otherwise load and/or reload as needed */
-	switch (git_attr_file__out_of_date(repo, file)) {
-	case 1:
-		if (!(error = git_attr_file__load(
-				  &file, repo, ce, source, parser, payload)))
-			error = attr_cache_upsert(cache, file);
-		break;
-	case 0:
-		/* just use the file */
-		break;
-	case GIT_ENOTFOUND:
-		/* did exist and now does not - remove from cache */
-		error = attr_cache_remove(cache, file);
-		file = NULL;
-		break;
-	default:
-		/* other error (e.g. out of memory, can't read index) */
+	/* GIT_ENOTFOUND is okay when probing for the file.  If the file did
+	 * exist and now does not, we have to remove it from cache, however.
+	 */
+	if (error == GIT_ENOTFOUND) {
 		giterr_clear();
-		break;
+		error = 0;
+
+		if (file != NULL)
+			error = attr_cache_remove(cache, file);
 	}
 
 cleanup:
-	*out = error ? NULL : file;
-	git_buf_free(&path);
+	if (error < 0 && file != NULL) {
+		git_attr_file__free(file);
+		file = NULL;
+	}
+	*out = file;
+
 	return error;
 }
 
@@ -250,7 +288,6 @@ static int attr_cache__lookup_path(
 			*out = git_buf_detach(&buf);
 		else if (cfgval)
 			*out = git__strdup(cfgval);
-
 	}
 	else if (!git_sysdir_find_xdg_file(&buf, fallback))
 		*out = git_buf_detach(&buf);
@@ -262,14 +299,24 @@ static int attr_cache__lookup_path(
 
 static void attr_cache__free(git_attr_cache *cache)
 {
+	bool unlock;
+
 	if (!cache)
 		return;
 
-	if (cache->files != NULL) {
-		git_attr_file *file;
+	unlock = (git_mutex_lock(&cache->lock) == 0);
 
-		git_strmap_foreach_value(cache->files, file, {
-			git_attr_file__free(file);
+	if (cache->files != NULL) {
+		git_attr_cache_entry *ce;
+		int i;
+
+		git_strmap_foreach_value(cache->files, ce, {
+			for (i = 0; i < GIT_ATTR_CACHE_NUM_SOURCES; ++i) {
+				if (ce->file[i]) {
+					GIT_REFCOUNT_OWN(ce->file[i], NULL);
+					git_attr_file__free(ce->file[i]);
+				}
+			}
 		});
 		git_strmap_free(cache->files);
 	}
@@ -291,6 +338,8 @@ static void attr_cache__free(git_attr_cache *cache)
 	git__free(cache->cfg_excl_file);
 	cache->cfg_excl_file = NULL;
 
+	if (unlock)
+		git_mutex_unlock(&cache->lock);
 	git_mutex_free(&cache->lock);
 
 	git__free(cache);
