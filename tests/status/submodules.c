@@ -1,7 +1,5 @@
 #include "clar_libgit2.h"
-#include "buffer.h"
-#include "path.h"
-#include "posix.h"
+#include "fileops.h"
 #include "status_helpers.h"
 #include "../submodule/submodule_helpers.h"
 
@@ -389,3 +387,92 @@ void test_status_submodules__contained_untracked_repo(void)
 		g_repo, &opts, cb_status__match, &counts));
 	cl_assert_equal_i(5, counts.entry_count);
 }
+
+void test_status_submodules__broken_stuff_that_git_allows(void)
+{
+	git_status_options opts = GIT_STATUS_OPTIONS_INIT;
+	status_entry_counts counts;
+	git_repository *contained;
+	static const char *expected_files_with_broken[] = {
+		".gitmodules",
+		"added",
+		"broken/tracked",
+		"deleted",
+		"ignored",
+		"modified",
+		"untracked"
+	};
+	static unsigned int expected_status_with_broken[] = {
+		GIT_STATUS_WT_MODIFIED,
+		GIT_STATUS_INDEX_NEW,
+		GIT_STATUS_INDEX_NEW,
+		GIT_STATUS_INDEX_DELETED,
+		GIT_STATUS_IGNORED,
+		GIT_STATUS_WT_MODIFIED,
+		GIT_STATUS_WT_NEW,
+	};
+
+	g_repo = setup_fixture_submodules();
+
+	opts.flags = GIT_STATUS_OPT_INCLUDE_UNTRACKED |
+		GIT_STATUS_OPT_RECURSE_UNTRACKED_DIRS |
+		GIT_STATUS_OPT_INCLUDE_IGNORED;
+
+	/* make a directory and stick a tracked item into the index */
+	{
+		git_index *idx;
+		cl_must_pass(p_mkdir("submodules/broken", 0777));
+		cl_git_mkfile("submodules/broken/tracked", "tracked content");
+		cl_git_pass(git_repository_index(&idx, g_repo));
+		cl_git_pass(git_index_add_bypath(idx, "broken/tracked"));
+		cl_git_pass(git_index_write(idx));
+		git_index_free(idx);
+	}
+
+	status_counts_init(
+		counts, expected_files_with_broken, expected_status_with_broken);
+	cl_git_pass(git_status_foreach_ext(
+		g_repo, &opts, cb_status__match, &counts));
+	cl_assert_equal_i(7, counts.entry_count);
+
+	/* directory with tracked items that looks a little bit like a repo */
+
+	cl_must_pass(p_mkdir("submodules/broken/.git", 0777));
+	cl_must_pass(p_mkdir("submodules/broken/.git/info", 0777));
+	cl_git_mkfile("submodules/broken/.git/info/exclude", "# bogus");
+
+	status_counts_init(
+		counts, expected_files_with_broken, expected_status_with_broken);
+	cl_git_pass(git_status_foreach_ext(
+		g_repo, &opts, cb_status__match, &counts));
+	cl_assert_equal_i(7, counts.entry_count);
+
+	/* directory with tracked items that is a repo */
+
+	cl_git_pass(git_futils_rmdir_r(
+		"submodules/broken/.git", NULL, GIT_RMDIR_REMOVE_FILES));
+	cl_git_pass(git_repository_init(&contained, "submodules/broken", false));
+	git_repository_free(contained);
+
+	status_counts_init(
+		counts, expected_files_with_broken, expected_status_with_broken);
+	cl_git_pass(git_status_foreach_ext(
+		g_repo, &opts, cb_status__match, &counts));
+	cl_assert_equal_i(7, counts.entry_count);
+
+	/* directory with tracked items that claims to be a submodule but is not */
+
+	cl_git_pass(git_futils_rmdir_r(
+		"submodules/broken/.git", NULL, GIT_RMDIR_REMOVE_FILES));
+	cl_git_append2file("submodules/.gitmodules",
+		"\n[submodule \"broken\"]\n"
+		"\tpath = broken\n"
+		"\turl = https://github.com/not/used\n\n");
+
+	status_counts_init(
+		counts, expected_files_with_broken, expected_status_with_broken);
+	cl_git_pass(git_status_foreach_ext(
+		g_repo, &opts, cb_status__match, &counts));
+	cl_assert_equal_i(7, counts.entry_count);
+}
+
