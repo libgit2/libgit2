@@ -8,9 +8,13 @@
 #ifndef INCLUDE_git_win32_reparse_h__
 #define INCLUDE_git_win32_reparse_h__
 
-#include <Windows.h>
-
-typedef struct _REPARSE_DATA_BUFFER {
+/* This structure is defined in MSDN at
+ * http://msdn.microsoft.com/en-us/library/windows/hardware/ff552012(v=vs.85).aspx
+ *
+ * It was formerly included in the Windows 2000 SDK and remains defined in
+ * mingw, so we must define it with a silly name to avoid conflicting.
+ */
+typedef struct _GIT_REPARSE_DATA_BUFFER {
 	ULONG  ReparseTag;
 	USHORT ReparseDataLength;
 	USHORT Reserved;
@@ -34,10 +38,15 @@ typedef struct _REPARSE_DATA_BUFFER {
 			UCHAR DataBuffer[1];
 		} GenericReparseBuffer;
 	};
-} REPARSE_DATA_BUFFER, *PREPARSE_DATA_BUFFER;
+} GIT_REPARSE_DATA_BUFFER;
 
 #define REPARSE_DATA_HEADER_SIZE			8
 #define REPARSE_DATA_MOUNTPOINT_HEADER_SIZE	8
 #define REPARSE_DATA_UNION_SIZE				12
+
+/* mingw lacks FSCL_GET_REPARSE_POINT */
+#ifndef FSCTL_GET_REPARSE_POINT 
+# define FSCTL_GET_REPARSE_POINT			0x000900a8
+#endif
 
 #endif

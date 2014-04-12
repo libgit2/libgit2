@@ -90,7 +90,7 @@ static void do_hardlink(const char *old, const char *new)
 
 static void do_junction(const char *old, const char *new)
 {
-	REPARSE_DATA_BUFFER *reparse_buf;
+	GIT_REPARSE_DATA_BUFFER *reparse_buf;
 	HANDLE handle;
 	git_buf unparsed_buf = GIT_BUF_INIT;
 	wchar_t *subst_utf16, *print_utf16;

@@ -35,4 +35,13 @@ GIT_INLINE(int) git_win32_path_to_c(git_win32_path_as_utf8 dest, const wchar_t *
 	return git__utf16_to_8(dest, GIT_WIN_PATH_UTF8, src);
 }
 
+/* Trim trailing '\'s from the given path. */
+int git_win32_path_trim_end(wchar_t *str, size_t len);
+
+/* "Unparse" the NTFS path - removing any crazy prefixes, like \??\, \\?\,
+ * or \\?\UNC\.  Removes trailing backslashes.  The string need not be
+ * null-terminated (though it will be null-terminated on return.)
+ */
+int git_win32_path_unparse(git_win32_path str, int len);
+
 #endif
