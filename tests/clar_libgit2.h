@@ -29,6 +29,17 @@
 
 #define cl_git_fail_with(expr, error) cl_assert_equal_i(error,expr)
 
+/**
+ * Like cl_git_pass, only for Win32 error code conventions
+ */
+#define cl_win32_pass(expr) do { \
+	int _win32_res; \
+	if ((_win32_res = (expr)) == 0) { \
+		giterr_set(GITERR_OS, "Returned: %d, system error code: %d", _win32_res, GetLastError()); \
+		cl_git_report_failure(_win32_res, __FILE__, __LINE__, "System call failed: " #expr); \
+	} \
+	} while(0)
+
 void cl_git_report_failure(int, const char *, int, const char *);
 
 #define cl_assert_at_line(expr,file,line) \
