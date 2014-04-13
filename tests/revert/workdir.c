@@ -66,7 +66,7 @@ void test_revert_workdir__conflicts(void)
 	git_reference *head_ref;
 	git_commit *head, *commit;
 	git_oid revert_oid;
-	git_buf conflicting_buf = GIT_BUF_INIT;
+	git_buf conflicting_buf = GIT_BUF_INIT, mergemsg_buf = GIT_BUF_INIT;
 
 	struct merge_index_entry merge_index_entries[] = {
 		{ 0100644, "7731926a337c4eaba1e2187d90ebfa0a93659382", 1, "file1.txt" },
@@ -112,9 +112,21 @@ void test_revert_workdir__conflicts(void)
 		"File one\n" \
 		">>>>>>> parent of 72333f4... automergeable changes\n") == 0);
 
+	cl_assert(git_path_exists(TEST_REPO_PATH "/.git/MERGE_MSG"));
+	cl_git_pass(git_futils_readbuffer(&mergemsg_buf,
+		TEST_REPO_PATH "/.git/MERGE_MSG"));
+	cl_assert(strcmp(mergemsg_buf.ptr,
+		"Revert \"automergeable changes\"\n" \
+		"\n" \
+		"This reverts commit 72333f47d4e83616630ff3b0ffe4c0faebcc3c45.\n"
+		"\n" \
+		"Conflicts:\n" \
+		"\tfile1.txt\n") == 0);
+
 	git_commit_free(commit);
 	git_commit_free(head);
 	git_reference_free(head_ref);
+	git_buf_free(&mergemsg_buf);
 	git_buf_free(&conflicting_buf);
 }
 

@@ -214,7 +214,7 @@ void test_merge_workdir_simple__automerge_crlf(void)
 
 void test_merge_workdir_simple__mergefile(void)
 {
-	git_buf conflicting_buf = GIT_BUF_INIT;
+	git_buf conflicting_buf = GIT_BUF_INIT, mergemsg_buf = GIT_BUF_INIT;
 
 	struct merge_index_entry merge_index_entries[] = {
 		ADDED_IN_MASTER_INDEX_ENTRY,
@@ -240,7 +240,15 @@ void test_merge_workdir_simple__mergefile(void)
 	cl_git_pass(git_futils_readbuffer(&conflicting_buf,
 		TEST_REPO_PATH "/conflicting.txt"));
 	cl_assert(strcmp(conflicting_buf.ptr, CONFLICTING_MERGE_FILE) == 0);
+	cl_git_pass(git_futils_readbuffer(&mergemsg_buf,
+		TEST_REPO_PATH "/.git/MERGE_MSG"));
+	cl_assert(strcmp(git_buf_cstr(&mergemsg_buf),
+		"Merge commit '7cb63eed597130ba4abb87b3e544b85021905520'\n" \
+		"\n" \
+		"Conflicts:\n" \
+		"\tconflicting.txt\n") == 0);
 	git_buf_free(&conflicting_buf);
+	git_buf_free(&mergemsg_buf);
 
 	cl_assert(merge_test_index(repo_index, merge_index_entries, 8));
 	cl_assert(merge_test_reuc(repo_index, merge_reuc_entries, 3));

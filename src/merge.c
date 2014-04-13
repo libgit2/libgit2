@@ -2662,6 +2662,7 @@ int git_merge(
 	if ((error = git_merge_trees(&index_new, repo, ancestor_tree, our_tree, their_trees[0], merge_opts)) < 0 ||
 		(error = git_merge__indexes(repo, index_new)) < 0 ||
 		(error = git_repository_index(&index_repo, repo)) < 0 ||
+		(error = git_merge__append_conflicts_to_merge_msg(repo, index_repo)) < 0 ||
 		(error = git_checkout_index(repo, index_repo, &checkout_opts)) < 0)
 		goto on_error;
 
