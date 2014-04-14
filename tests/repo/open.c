@@ -102,14 +102,13 @@ void test_repo_open__gitlinked(void)
 
 void test_repo_open__from_git_new_workdir(void)
 {
+#ifndef GIT_WIN32
 	/* The git-new-workdir script that ships with git sets up a bunch of
 	 * symlinks to create a second workdir that shares the object db with
 	 * another checkout.  Libgit2 can open a repo that has been configured
 	 * this way.
 	 */
-	cl_git_sandbox_init("empty_standard_repo");
 
-#ifndef GIT_WIN32
 	git_repository *repo2;
 	git_buf link_tgt = GIT_BUF_INIT, link = GIT_BUF_INIT, body = GIT_BUF_INIT;
 	const char **scan;
@@ -121,6 +120,8 @@ void test_repo_open__from_git_new_workdir(void)
 	static const char *copies[] = {
 		"HEAD", NULL
 	};
+
+	cl_git_sandbox_init("empty_standard_repo");
 
 	cl_git_pass(p_mkdir("alternate", 0777));
 	cl_git_pass(p_mkdir("alternate/.git", 0777));

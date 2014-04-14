@@ -183,6 +183,7 @@ int git_threads_init(void)
 
 void git_threads_shutdown(void)
 {
+	void *ptr = NULL;
 	pthread_once_t new_once = PTHREAD_ONCE_INIT;
 
 	if (git_atomic_dec(&git__n_inits) > 0) return;
@@ -190,7 +191,7 @@ void git_threads_shutdown(void)
 	/* Shut down any subsystems that have global state */
 	git__shutdown();
 
-	void *ptr = pthread_getspecific(_tls_key);
+	ptr = pthread_getspecific(_tls_key);
 	pthread_setspecific(_tls_key, NULL);
 	git__free(ptr);
 
