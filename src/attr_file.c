@@ -61,8 +61,7 @@ int git_attr_file__parse_buffer(
 	git_repository *repo, void *parsedata, const char *buffer, git_attr_file *attrs)
 {
 	int error = 0;
-	const char *scan = NULL;
-	char *context = NULL;
+	const char *scan = NULL, *context = NULL;
 	git_attr_rule *rule = NULL;
 
 	GIT_UNUSED(parsedata);
@@ -72,10 +71,10 @@ int git_attr_file__parse_buffer(
 	scan = buffer;
 
 	/* if subdir file path, convert context for file paths */
-	if (attrs->key && git__suffixcmp(attrs->key, "/" GIT_ATTR_FILE) == 0) {
+	if (attrs->key &&
+		git_path_root(attrs->key + 2) < 0 &&
+		git__suffixcmp(attrs->key, "/" GIT_ATTR_FILE) == 0)
 		context = attrs->key + 2;
-		context[strlen(context) - strlen(GIT_ATTR_FILE)] = '\0';
-	}
 
 	while (!error && *scan) {
 		/* allocate rule if needed */
@@ -114,10 +113,6 @@ int git_attr_file__parse_buffer(
 	}
 
 	git_attr_rule__free(rule);
-
-	/* restore file path used for context */
-	if (context)
-		context[strlen(context)] = '.'; /* first char of GIT_ATTR_FILE */
 
 	return error;
 }
@@ -414,7 +409,10 @@ int git_attr_fnmatch__parse(
 	if ((spec->flags & GIT_ATTR_FNMATCH_FULLPATH) != 0 &&
 		source != NULL && git_path_root(pattern) < 0)
 	{
-		size_t sourcelen = strlen(source);
+        /* use context path minus the trailing filename */
+        char *slash = strrchr(source, '/');
+        size_t sourcelen = slash ? slash - source + 1 : 0;
+
 		/* given an unrooted fullpath match from a file inside a repo,
 		 * prefix the pattern with the relative directory of the source file
 		 */
