@@ -15,7 +15,13 @@ void test_threads_diff__cleanup(void)
 
 static void setup_trees(void)
 {
+	git_index *idx;
+
 	_repo = cl_git_sandbox_reopen(); /* reopen sandbox to flush caches */
+
+	/* avoid competing to load initial index */
+	cl_git_pass(git_repository_index(&idx, _repo));
+	git_index_free(idx);
 
 	cl_git_pass(git_revparse_single(
 		(git_object **)&_a, _repo, "0017bd4ab1^{tree}"));
@@ -107,7 +113,7 @@ void test_threads_diff__concurrent_diffs(void)
 	_check_counts = 1;
 
 	run_in_parallel(
-		20, 32, run_index_diffs, setup_trees, free_trees);
+		5, 32, run_index_diffs, setup_trees, free_trees);
 }
 
 static void *run_index_diffs_with_modifier(void *arg)
@@ -169,5 +175,5 @@ void test_threads_diff__with_concurrent_index_modified(void)
 	_check_counts = 0;
 
 	run_in_parallel(
-		20, 32, run_index_diffs_with_modifier, setup_trees, free_trees);
+		5, 16, run_index_diffs_with_modifier, setup_trees, free_trees);
 }

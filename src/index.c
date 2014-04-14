@@ -292,6 +292,7 @@ static void index_entry_reuc_free(git_index_reuc_entry *reuc)
 
 static void index_entry_free(git_index_entry *entry)
 {
+	memset(&entry->id, 0, sizeof(entry->id));
 	git__free(entry);
 }
 
@@ -415,9 +416,9 @@ int git_index_open(git_index **index_out, const char *index_path)
 	}
 
 	if (git_vector_init(&index->entries, 32, git_index_entry_cmp) < 0 ||
-		git_vector_init(&index->names, 32, conflict_name_cmp) < 0 ||
-		git_vector_init(&index->reuc, 32, reuc_cmp) < 0 ||
-		git_vector_init(&index->deleted, 2, git_index_entry_cmp) < 0)
+		git_vector_init(&index->names, 8, conflict_name_cmp) < 0 ||
+		git_vector_init(&index->reuc, 8, reuc_cmp) < 0 ||
+		git_vector_init(&index->deleted, 8, git_index_entry_cmp) < 0)
 		goto fail;
 
 	index->entries_cmp_path = git__strcmp_cb;
@@ -477,7 +478,7 @@ static void index_free_deleted(git_index *index)
 	int readers = (int)git_atomic_get(&index->readers);
 	size_t i;
 
-	if (readers > 0)
+	if (readers > 0 || !index->deleted.length)
 		return;
 
 	for (i = 0; i < index->deleted.length; ++i) {
@@ -500,12 +501,11 @@ static int index_remove_entry(git_index *index, size_t pos)
 	error = git_vector_remove(&index->entries, pos);
 
 	if (!error) {
-		int readers = (int)git_atomic_get(&index->readers);
-
-		if (readers > 0)
+		if (git_atomic_get(&index->readers) > 0) {
 			error = git_vector_insert(&index->deleted, entry);
-		else
+		} else {
 			index_entry_free(entry);
+		}
 	}
 
 	return error;
@@ -529,12 +529,12 @@ int git_index_clear(git_index *index)
 		error = index_remove_entry(index, index->entries.length - 1);
 	index_free_deleted(index);
 
-	git_mutex_unlock(&index->lock);
-
 	git_index_reuc_clear(index);
 	git_index_name_clear(index);
 
 	git_futils_filestamp_set(&index->stamp, NULL);
+
+	git_mutex_unlock(&index->lock);
 
 	return error;
 }
@@ -860,6 +860,7 @@ static int index_entry_dup(git_index_entry **out, const git_index_entry *src)
 	GITERR_CHECK_ALLOC(entry);
 
 	index_entry_cpy(entry, src);
+
 	return 0;
 }
 
@@ -961,6 +962,15 @@ static int check_file_directory_collision(git_index *index,
 	return 0;
 }
 
+static int index_no_dups(void **old, void *new)
+{
+	const git_index_entry *entry = new;
+	GIT_UNUSED(old);
+	giterr_set(GITERR_INDEX, "'%s' appears multiple times at stage %d",
+		entry->path, GIT_IDXENTRY_STAGE(entry));
+	return GIT_EEXISTS;
+}
+
 /* index_insert takes ownership of the new entry - if it can't insert
  * it, then it will return an error **and also free the entry**.  When
  * it replaces an existing entry, it will update the entry_ptr with the
@@ -987,9 +997,9 @@ static int index_insert(
 	else
 		entry->flags |= GIT_IDXENTRY_NAMEMASK;
 
-	if ((error = git_mutex_lock(&index->lock)) < 0) {
+	if (git_mutex_lock(&index->lock) < 0) {
 		giterr_set(GITERR_OS, "Unable to acquire index lock");
-		return error;
+		return -1;
 	}
 
 	git_vector_sort(&index->entries);
@@ -1010,24 +1020,26 @@ static int index_insert(
 	/* if we are replacing an existing item, overwrite the existing entry
 	 * and return it in place of the passed in one.
 	 */
-	else if (existing && replace) {
-		index_entry_cpy(existing, entry);
+	else if (existing) {
+		if (replace)
+			index_entry_cpy(existing, entry);
 		index_entry_free(entry);
-		*entry_ptr = existing;
+		*entry_ptr = entry = existing;
 	}
 	else {
-		/* if replacing is not requested or no existing entry exists, just
-		 * insert entry at the end; the index is no longer sorted
+		/* if replace is not requested or no existing entry exists, insert
+		 * at the sorted position.  (Since we re-sort after each insert to
+		 * check for dups, this is actually cheaper in the long run.)
 		 */
-		error = git_vector_insert(&index->entries, entry);
+		error = git_vector_insert_sorted(&index->entries, entry, index_no_dups);
 	}
-
-	git_mutex_unlock(&index->lock);
 
 	if (error < 0) {
 		index_entry_free(*entry_ptr);
 		*entry_ptr = NULL;
 	}
+
+	git_mutex_unlock(&index->lock);
 
 	return error;
 }
