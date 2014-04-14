@@ -15,7 +15,6 @@ static int parse_ignore_file(
 	int error = 0;
 	git_attr_fnmatch *match = NULL;
 	const char *scan = NULL;
-	char *context = NULL;
 	int ignore_case = false;
 
 	/* Prefer to have the caller pass in a git_ignores as the parsedata
@@ -24,11 +23,6 @@ static int parse_ignore_file(
 		ignore_case = ((git_ignores *)parsedata)->ignore_case;
 	else if (git_repository__cvar(&ignore_case, repo, GIT_CVAR_IGNORECASE) < 0)
 		return error;
-
-	if (ignores->key && git__suffixcmp(ignores->key, "/" GIT_IGNORE_FILE) == 0) {
-		context = ignores->key + 2;
-		context[strlen(context) - strlen(GIT_IGNORE_FILE)] = '\0';
-	}
 
 	scan = buffer;
 
@@ -41,7 +35,7 @@ static int parse_ignore_file(
 		match->flags = GIT_ATTR_FNMATCH_ALLOWSPACE | GIT_ATTR_FNMATCH_ALLOWNEG;
 
 		if (!(error = git_attr_fnmatch__parse(
-			match, ignores->pool, context, &scan)))
+			match, ignores->pool, NULL, &scan)))
 		{
 			match->flags |= GIT_ATTR_FNMATCH_IGNORE;
 
@@ -64,9 +58,6 @@ static int parse_ignore_file(
 	}
 
 	git__free(match);
-	/* restore file path used for context */
-	if (context)
-		context[strlen(context)] = '.'; /* first char of GIT_IGNORE_FILE */
 
 	return error;
 }
