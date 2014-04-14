@@ -32,6 +32,11 @@ static int parse_ignore_file(
 		!git__suffixcmp(attrs->ce->path, "/" GIT_IGNORE_FILE))
 		context = attrs->ce->path;
 
+	if (git_mutex_lock(&attrs->lock) < 0) {
+		giterr_set(GITERR_OS, "Failed to lock attribute file");
+		return -1;
+	}
+
 	while (!error && *scan) {
 		if (!match) {
 			match = git__calloc(1, sizeof(*match));
@@ -63,6 +68,7 @@ static int parse_ignore_file(
 		}
 	}
 
+	git_mutex_unlock(&attrs->lock);
 	git__free(match);
 
 	return error;
@@ -247,12 +253,12 @@ void git_ignore__free(git_ignores *ignores)
 }
 
 static bool ignore_lookup_in_rules(
-	git_vector *rules, git_attr_path *path, int *ignored)
+	git_attr_file *file, git_attr_path *path, int *ignored)
 {
 	size_t j;
 	git_attr_fnmatch *match;
 
-	git_vector_rforeach(rules, j, match) {
+	git_vector_rforeach(&file->rules, j, match) {
 		if (git_attr_fnmatch__match(match, path)) {
 			*ignored = ((match->flags & GIT_ATTR_FNMATCH_NEGATIVE) == 0);
 			return true;
@@ -274,19 +280,18 @@ int git_ignore__lookup(
 		return -1;
 
 	/* first process builtins - success means path was found */
-	if (ignore_lookup_in_rules(
-			&ignores->ign_internal->rules, &path, ignored))
+	if (ignore_lookup_in_rules(ignores->ign_internal, &path, ignored))
 		goto cleanup;
 
 	/* next process files in the path */
 	git_vector_foreach(&ignores->ign_path, i, file) {
-		if (ignore_lookup_in_rules(&file->rules, &path, ignored))
+		if (ignore_lookup_in_rules(file, &path, ignored))
 			goto cleanup;
 	}
 
 	/* last process global ignores */
 	git_vector_foreach(&ignores->ign_global, i, file) {
-		if (ignore_lookup_in_rules(&file->rules, &path, ignored))
+		if (ignore_lookup_in_rules(file, &path, ignored))
 			goto cleanup;
 	}
 
@@ -319,10 +324,9 @@ int git_ignore_clear_internal_rules(
 	git_attr_file *ign_internal;
 
 	if (!(error = get_internal_ignores(&ign_internal, repo))) {
-		git_attr_file__clear_rules(ign_internal);
-
-		error = parse_ignore_file(
-			repo, ign_internal, GIT_IGNORE_DEFAULT_RULES, NULL);
+		if (!(error = git_attr_file__clear_rules(ign_internal, true)))
+			error = parse_ignore_file(
+				repo, ign_internal, GIT_IGNORE_DEFAULT_RULES, NULL);
 
 		git_attr_file__free(ign_internal);
 	}
@@ -371,19 +375,18 @@ int git_ignore_path_is_ignored(
 			break;
 
 		/* first process builtins - success means path was found */
-		if (ignore_lookup_in_rules(
-				&ignores.ign_internal->rules, &path, ignored))
+		if (ignore_lookup_in_rules(ignores.ign_internal, &path, ignored))
 			goto cleanup;
 
 		/* next process files in the path */
 		git_vector_foreach(&ignores.ign_path, i, file) {
-			if (ignore_lookup_in_rules(&file->rules, &path, ignored))
+			if (ignore_lookup_in_rules(file, &path, ignored))
 				goto cleanup;
 		}
 
 		/* last process global ignores */
 		git_vector_foreach(&ignores.ign_global, i, file) {
-			if (ignore_lookup_in_rules(&file->rules, &path, ignored))
+			if (ignore_lookup_in_rules(file, &path, ignored))
 				goto cleanup;
 		}
 

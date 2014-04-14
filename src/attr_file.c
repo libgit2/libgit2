@@ -9,8 +9,13 @@
 
 static void attr_file_free(git_attr_file *file)
 {
-	git_attr_file__clear_rules(file);
+	bool unlock = !git_mutex_lock(&file->lock);
+	git_attr_file__clear_rules(file, false);
 	git_pool_clear(&file->pool);
+	if (unlock)
+		git_mutex_unlock(&file->lock);
+	git_mutex_free(&file->lock);
+
 	git__memzero(file, sizeof(*file));
 	git__free(file);
 }
@@ -22,6 +27,12 @@ int git_attr_file__new(
 {
 	git_attr_file *attrs = git__calloc(1, sizeof(git_attr_file));
 	GITERR_CHECK_ALLOC(attrs);
+
+	if (git_mutex_init(&attrs->lock) < 0) {
+		giterr_set(GITERR_OS, "Failed to initialize lock");
+		git__free(attrs);
+		return -1;
+	}
 
 	if (git_pool_init(&attrs->pool, 1, 0) < 0) {
 		attr_file_free(attrs);
@@ -35,14 +46,24 @@ int git_attr_file__new(
 	return 0;
 }
 
-void git_attr_file__clear_rules(git_attr_file *file)
+int git_attr_file__clear_rules(git_attr_file *file, bool need_lock)
 {
 	unsigned int i;
 	git_attr_rule *rule;
 
+	if (need_lock && git_mutex_lock(&file->lock) < 0) {
+		giterr_set(GITERR_OS, "Failed to lock attribute file");
+		return -1;
+	}
+
 	git_vector_foreach(&file->rules, i, rule)
 		git_attr_rule__free(rule);
 	git_vector_free(&file->rules);
+
+	if (need_lock)
+		git_mutex_unlock(&file->lock);
+
+	return 0;
 }
 
 void git_attr_file__free(git_attr_file *file)
@@ -162,6 +183,11 @@ int git_attr_file__parse_buffer(
 		!git__suffixcmp(attrs->ce->path, "/" GIT_ATTR_FILE))
 		context = attrs->ce->path;
 
+	if (git_mutex_lock(&attrs->lock) < 0) {
+		giterr_set(GITERR_OS, "Failed to lock attribute file");
+		return -1;
+	}
+
 	while (!error && *scan) {
 		/* allocate rule if needed */
 		if (!rule) {
@@ -198,6 +224,7 @@ int git_attr_file__parse_buffer(
 		}
 	}
 
+	git_mutex_unlock(&attrs->lock);
 	git_attr_rule__free(rule);
 
 	return error;

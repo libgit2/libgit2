@@ -66,6 +66,7 @@ typedef struct {
 
 struct git_attr_file {
 	git_refcount rc;
+	git_mutex lock;
 	git_attr_cache_entry *ce;
 	git_attr_cache_source source;
 	git_vector rules;			/* vector of <rule*> or <fnmatch*> */
@@ -115,7 +116,8 @@ int git_attr_file__parse_buffer(
 	const char *data,
 	void *payload);
 
-void git_attr_file__clear_rules(git_attr_file *file);
+int git_attr_file__clear_rules(
+	git_attr_file *file, bool need_lock);
 
 int git_attr_file__lookup_one(
 	git_attr_file *file,
