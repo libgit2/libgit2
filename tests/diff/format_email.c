@@ -511,3 +511,46 @@ void test_diff_format_email__multiline_summary(void)
 	git_buf_free(&buf);
 }
 
+void test_diff_format_email__binary(void)
+{
+	git_oid oid;
+	git_commit *commit = NULL;
+	git_diff *diff = NULL;
+	git_diff_format_email_options opts = GIT_DIFF_FORMAT_EMAIL_OPTIONS_INIT;
+	git_buf buf = GIT_BUF_INIT;
+
+	/* TODO: Actually 0 bytes here should be 5!. Seems like we don't load the new content for binary files? */
+	const char *email =
+	"From 8d7523f6fcb2404257889abe0d96f093d9f524f9 Mon Sep 17 00:00:00 2001\n" \
+	"From: Jacques Germishuys <jacquesg@striata.com>\n" \
+	"Date: Sun, 13 Apr 2014 18:10:18 +0200\n" \
+	"Subject: [PATCH] Modified binary file\n" \
+	"\n" \
+	"---\n" \
+	" binary.bin | Bin 3 -> 0 bytes\n" \
+	" 1 file changed, 0 insertions(+), 0 deletions(-)\n" \
+	"\n" \
+	"diff --git a/binary.bin b/binary.bin\n" \
+	"index bd474b2..9ac35ff 100644\n" \
+	"Binary files a/binary.bin and b/binary.bin differ\n" \
+	"--\n" \
+	"libgit2 " LIBGIT2_VERSION "\n" \
+	"\n";
+
+	git_oid_fromstr(&oid, "8d7523f6fcb2404257889abe0d96f093d9f524f9");
+
+	cl_git_pass(git_commit_lookup(&commit, repo, &oid));
+
+	opts.id = git_commit_id(commit);
+	opts.author = git_commit_author(commit);
+	opts.summary = "Modified binary file";
+
+	cl_git_pass(git_diff__commit(&diff, repo, commit, NULL));
+	cl_git_pass(git_diff_format_email(&buf, diff, &opts));
+	cl_assert(strcmp(git_buf_cstr(&buf), email) == 0);
+
+	git_diff_free(diff);
+	git_commit_free(commit);
+	git_buf_free(&buf);
+}
+
