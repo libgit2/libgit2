@@ -151,4 +151,6 @@ int git_merge__setup(
 
 int git_merge__indexes(git_repository *repo, git_index *index_new);
 
+int git_merge__append_conflicts_to_merge_msg(git_repository *repo, git_index *index);
+
 #endif
