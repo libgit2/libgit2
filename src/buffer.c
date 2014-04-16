@@ -148,6 +148,15 @@ int git_buf_putc(git_buf *buf, char c)
 	return 0;
 }
 
+int git_buf_putcn(git_buf *buf, char c, size_t len)
+{
+	ENSURE_SIZE(buf, buf->size + len + 1);
+	memset(buf->ptr + buf->size, c, len);
+	buf->size += len;
+	buf->ptr[buf->size] = '\0';
+	return 0;
+}
+
 int git_buf_put(git_buf *buf, const char *data, size_t len)
 {
 	ENSURE_SIZE(buf, buf->size + len + 1);

@@ -20,6 +20,8 @@
 # define max(a,b) ((a) > (b) ? (a) : (b))
 #endif
 
+#define GIT_DATE_RFC2822_SZ  32
+
 /*
  * Custom memory allocation wrappers
  * that set error code and error message
@@ -327,6 +329,16 @@ extern int git__parse_bool(int *out, const char *value);
  * - "2003-7-17 08:23"
  */
 extern int git__date_parse(git_time_t *out, const char *date);
+
+/*
+ * Format a git_time as a RFC2822 string
+ *
+ * @param out buffer to store formatted date; a '\\0' terminator will automatically be added.
+ * @param len size of the buffer; should be atleast `GIT_DATE_RFC2822_SZ` in size;
+ * @param date the date to be formatted
+ * @return 0 if successful; -1 on error
+ */
+extern int git__date_rfc2822_fmt(char *out, size_t len, const git_time *date);
 
 /*
  * Unescapes a string in-place.

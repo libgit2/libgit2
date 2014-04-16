@@ -1427,6 +1427,216 @@ int git_diff__paired_foreach(
 	return error;
 }
 
+int git_diff__commit(
+	git_diff **diff,
+	git_repository *repo,
+	const git_commit *commit,
+	const git_diff_options *opts)
+{
+	git_commit *parent = NULL;
+	git_diff *commit_diff = NULL;
+	git_tree *old_tree = NULL, *new_tree = NULL;
+	size_t parents;
+	int error = 0;
+
+	if ((parents = git_commit_parentcount(commit)) > 1) {
+		char commit_oidstr[GIT_OID_HEXSZ + 1];
+
+		error = -1;
+		giterr_set(GITERR_INVALID, "Commit %s is a merge commit",
+			git_oid_tostr(commit_oidstr, GIT_OID_HEXSZ + 1, git_commit_id(commit)));
+		goto on_error;
+	}
+
+	if (parents > 0)
+		if ((error = git_commit_parent(&parent, commit, 0)) < 0 ||
+			(error = git_commit_tree(&old_tree, parent)) < 0)
+				goto on_error;
+
+	if ((error = git_commit_tree(&new_tree, commit)) < 0 ||
+		(error = git_diff_tree_to_tree(&commit_diff, repo, old_tree, new_tree, opts)) < 0)
+			goto on_error;
+
+	*diff = commit_diff;
+
+on_error:
+	git_tree_free(new_tree);
+	git_tree_free(old_tree);
+	git_commit_free(parent);
+
+	return error;
+}
+
+int git_diff_format_email__append_header_tobuf(
+	git_buf *out,
+	const git_oid *id,
+	const git_signature *author,
+	const char *summary,
+	size_t patch_no,
+	size_t total_patches,
+	bool exclude_patchno_marker)
+{
+	char idstr[GIT_OID_HEXSZ + 1];
+	char date_str[GIT_DATE_RFC2822_SZ];
+	int error = 0;
+
+	git_oid_fmt(idstr, id);
+	idstr[GIT_OID_HEXSZ] = '\0';
+
+	if ((error = git__date_rfc2822_fmt(date_str, sizeof(date_str), &author->when)) < 0)
+		return error;
+
+	error = git_buf_printf(out,
+				"From %s Mon Sep 17 00:00:00 2001\n" \
+				"From: %s <%s>\n" \
+				"Date: %s\n" \
+				"Subject: ",
+				idstr,
+				author->name, author->email,
+				date_str);
+
+	if (error < 0)
+		return error;
+
+	if (!exclude_patchno_marker) {
+		if (total_patches == 1) {
+			error = git_buf_puts(out, "[PATCH] ");
+		} else {
+			error = git_buf_printf(out, "[PATCH %"PRIuZ"/%"PRIuZ"] ", patch_no, total_patches);
+		}
+
+		if (error < 0)
+			return error;
+	}
+
+	error = git_buf_printf(out, "%s\n\n", summary);
+
+	return error;
+}
+
+int git_diff_format_email__append_patches_tobuf(
+	git_buf *out,
+	git_diff *diff)
+{
+	size_t i, deltas;
+	int error = 0;
+
+	deltas = git_diff_num_deltas(diff);
+
+	for (i = 0; i < deltas; ++i) {
+		git_patch *patch = NULL;
+
+		if ((error = git_patch_from_diff(&patch, diff, i)) >= 0)
+			error = git_patch_to_buf(out, patch);
+
+		git_patch_free(patch);
+
+		if (error < 0)
+			break;
+	}
+
+	return error;
+}
+
+int git_diff_format_email(
+	git_buf *out,
+	git_diff *diff,
+	const git_diff_format_email_options *opts)
+{
+	git_diff_stats *stats = NULL;
+	char *summary = NULL, *loc = NULL;
+	bool ignore_marker;
+	unsigned int format_flags = 0;
+	int error;
+
+	assert(out && diff && opts);
+	assert(opts->summary && opts->id && opts->author);
+
+	GITERR_CHECK_VERSION(opts, GIT_DIFF_FORMAT_EMAIL_OPTIONS_VERSION, "git_format_email_options");
+
+	if ((ignore_marker = opts->flags & GIT_DIFF_FORMAT_EMAIL_EXCLUDE_SUBJECT_PATCH_MARKER) == false) {
+		if (opts->patch_no > opts->total_patches) {
+			giterr_set(GITERR_INVALID, "patch %"PRIuZ" out of range. max %"PRIuZ, opts->patch_no, opts->total_patches);
+			return -1;
+		}
+
+		if (opts->patch_no == 0) {
+			giterr_set(GITERR_INVALID, "invalid patch no %"PRIuZ". should be >0", opts->patch_no);
+			return -1;
+		}
+	}
+
+	/* the summary we receive may not be clean.
+	 * it could potentially contain new line characters
+	 * or not be set, sanitize, */
+	if ((loc = strpbrk(opts->summary, "\r\n")) != NULL) {
+		size_t offset = 0;
+
+		if ((offset = (loc - opts->summary)) == 0) {
+			giterr_set(GITERR_INVALID, "summary is empty");
+			error = -1;
+		}
+
+		summary = git__calloc(offset + 1, sizeof(char));
+		GITERR_CHECK_ALLOC(summary);
+		strncpy(summary, opts->summary, offset);
+	}
+
+	error = git_diff_format_email__append_header_tobuf(out,
+				opts->id, opts->author, summary == NULL ? opts->summary : summary,
+				opts->patch_no, opts->total_patches, ignore_marker);
+
+	if (error < 0)
+		goto on_error;
+
+	format_flags = GIT_DIFF_STATS_FULL | GIT_DIFF_STATS_INCLUDE_SUMMARY;
+
+	if ((error = git_buf_puts(out, "---\n")) < 0 ||
+		(error = git_diff_get_stats(&stats, diff)) < 0 ||
+		(error = git_diff_stats_to_buf(out, stats, format_flags)) < 0 ||
+		(error = git_diff_format_email__append_patches_tobuf(out, diff)) < 0)
+			goto on_error;
+
+	error = git_buf_puts(out, "--\nlibgit2 " LIBGIT2_VERSION "\n\n");
+
+on_error:
+	git__free(summary);
+	git_diff_stats_free(stats);
+
+	return error;
+}
+
+int git_diff_commit_as_email(
+	git_buf *out,
+	git_repository *repo,
+	git_commit *commit,
+	size_t patch_no,
+	size_t total_patches,
+	git_diff_format_email_flags_t flags,
+	const git_diff_options *diff_opts)
+{
+	git_diff *diff = NULL;
+	git_diff_format_email_options opts = GIT_DIFF_FORMAT_EMAIL_OPTIONS_INIT;
+	int error;
+
+	assert (out && repo && commit);
+
+	opts.flags = flags;
+	opts.patch_no = patch_no;
+	opts.total_patches = total_patches;
+	opts.id = git_commit_id(commit);
+	opts.summary = git_commit_summary(commit);
+	opts.author = git_commit_author(commit);
+
+	if ((error = git_diff__commit(&diff, repo, commit, diff_opts)) < 0)
+		return error;
+
+	error = git_diff_format_email(out, diff, &opts);
+
+	git_diff_free(diff);
+	return error;
+}
+
 int git_diff_init_options(git_diff_options* opts, int version)
 {
 	if (version != GIT_DIFF_OPTIONS_VERSION) {
@@ -1446,6 +1656,18 @@ int git_diff_find_init_options(git_diff_find_options* opts, int version)
 		return -1;
 	} else {
 		git_diff_find_options o = GIT_DIFF_FIND_OPTIONS_INIT;
+		memcpy(opts, &o, sizeof(o));
+		return 0;
+	}
+}
+
+int git_diff_format_email_init_options(git_diff_format_email_options* opts, int version)
+{
+	if (version != GIT_DIFF_FORMAT_EMAIL_OPTIONS_VERSION) {
+		giterr_set(GITERR_INVALID, "Invalid version %d for git_diff_format_email_options", version);
+		return -1;
+	} else {
+		git_diff_format_email_options o = GIT_DIFF_FORMAT_EMAIL_OPTIONS_INIT;
 		memcpy(opts, &o, sizeof(o));
 		return 0;
 	}

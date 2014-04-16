@@ -116,6 +116,9 @@ extern void git_diff_find_similar__hashsig_free(void *sig, void *payload);
 extern int git_diff_find_similar__calc_similarity(
 	int *score, void *siga, void *sigb, void *payload);
 
+extern int git_diff__commit(
+	git_diff **diff, git_repository *repo, const git_commit *commit, const git_diff_options *opts);
+
 /*
  * Sometimes a git_diff_file will have a zero size; this attempts to
  * fill in the size without loading the blob if possible.  If that is
