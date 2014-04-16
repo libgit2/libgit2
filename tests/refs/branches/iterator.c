@@ -48,7 +48,7 @@ static void assert_retrieval(unsigned int flags, unsigned int expected_count)
 
 void test_refs_branches_iterator__retrieve_all_branches(void)
 {
-	assert_retrieval(GIT_BRANCH_LOCAL | GIT_BRANCH_REMOTE, 14);
+	assert_retrieval(GIT_BRANCH_ALL, 14);
 }
 
 void test_refs_branches_iterator__retrieve_remote_branches(void)
@@ -139,7 +139,7 @@ void test_refs_branches_iterator__mix_of_packed_and_loose(void)
 
 	r2 = cl_git_sandbox_init("testrepo2");
 
-	cl_git_pass(git_branch_iterator_new(&iter, r2, GIT_BRANCH_LOCAL | GIT_BRANCH_REMOTE));
+	cl_git_pass(git_branch_iterator_new(&iter, r2, GIT_BRANCH_ALL));
 	contains_branches(exp, iter);
 
 	git_branch_iterator_free(iter);

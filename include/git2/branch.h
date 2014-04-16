@@ -84,7 +84,7 @@ typedef struct git_branch_iterator git_branch_iterator;
  * @param repo Repository where to find the branches.
  * @param list_flags Filtering flags for the branch
  * listing. Valid values are GIT_BRANCH_LOCAL, GIT_BRANCH_REMOTE
- * or a combination of the two.
+ * or GIT_BRANCH_ALL.
  *
  * @return 0 on success  or an error code
  */
