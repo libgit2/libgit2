@@ -490,3 +490,24 @@ void clar__assert_equal_file(
 	clar__assert_equal(file, line, "mismatched file length", 1, "%"PRIuZ,
 		(size_t)expected_bytes, (size_t)total_bytes);
 }
+
+void cl_fake_home(git_buf *restore)
+{
+	git_buf path = GIT_BUF_INIT;
+
+	cl_git_pass(git_libgit2_opts(
+		GIT_OPT_GET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL, restore));
+
+	cl_must_pass(p_mkdir("home", 0777));
+	cl_git_pass(git_path_prettify(&path, "home", NULL));
+	cl_git_pass(git_libgit2_opts(
+		GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL, path.ptr));
+	git_buf_free(&path);
+}
+
+void cl_fake_home_cleanup(git_buf *restore)
+{
+	cl_git_pass(git_libgit2_opts(
+		GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL, restore->ptr));
+	git_buf_free(restore);
+}

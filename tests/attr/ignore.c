@@ -130,22 +130,18 @@ void test_attr_ignore__skip_gitignore_directory(void)
 
 void test_attr_ignore__expand_tilde_to_homedir(void)
 {
-	git_buf path = GIT_BUF_INIT;
+	git_buf cleanup = GIT_BUF_INIT;
 	git_config *cfg;
 
 	assert_is_ignored(false, "example.global_with_tilde");
 
+	cl_fake_home(&cleanup);
+
 	/* construct fake home with fake global excludes */
-
-	cl_must_pass(p_mkdir("home", 0777));
-	cl_git_pass(git_path_prettify(&path, "home", NULL));
-	cl_git_pass(git_libgit2_opts(
-		GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL, path.ptr));
-
-	cl_git_mkfile("home/globalexcludes", "# found me\n*.global_with_tilde\n");
+	cl_git_mkfile("home/globalexclude", "# found me\n*.global_with_tilde\n");
 
 	cl_git_pass(git_repository_config(&cfg, g_repo));
-	cl_git_pass(git_config_set_string(cfg, "core.excludesfile", "~/globalexcludes"));
+	cl_git_pass(git_config_set_string(cfg, "core.excludesfile", "~/globalexclude"));
 	git_config_free(cfg);
 
 	git_attr_cache_flush(g_repo); /* must reset to pick up change */
@@ -154,8 +150,9 @@ void test_attr_ignore__expand_tilde_to_homedir(void)
 
 	cl_git_pass(git_futils_rmdir_r("home", NULL, GIT_RMDIR_REMOVE_FILES));
 
-	cl_git_pass(git_libgit2_opts(
-		GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL, NULL));
+	cl_fake_home_cleanup(&cleanup);
 
-	git_buf_free(&path);
+	git_attr_cache_flush(g_repo); /* must reset to pick up change */
+
+	assert_is_ignored(false, "example.global_with_tilde");
 }

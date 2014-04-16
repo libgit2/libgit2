@@ -364,6 +364,62 @@ void test_status_ignore__subdirectories_not_at_root(void)
 	cl_assert_equal_i(0, counts.wrong_sorted_path);
 }
 
+void test_status_ignore__leading_slash_ignores(void)
+{
+	git_status_options opts = GIT_STATUS_OPTIONS_INIT;
+	status_entry_counts counts;
+	git_buf home = GIT_BUF_INIT;
+	static const char *paths_2[] = {
+		"dir/.gitignore",
+		"dir/a/ignore_me",
+		"dir/b/ignore_me",
+		"dir/ignore_me",
+		"ignore_also/file",
+		"ignore_me",
+		"test/.gitignore",
+		"test/ignore_me/and_me/file",
+		"test/ignore_me/file",
+		"test/ignore_me/file2",
+	};
+	static const unsigned int statuses_2[] = {
+		GIT_STATUS_WT_NEW,  GIT_STATUS_WT_NEW,  GIT_STATUS_WT_NEW,
+		GIT_STATUS_IGNORED, GIT_STATUS_IGNORED, GIT_STATUS_IGNORED,
+		GIT_STATUS_WT_NEW, GIT_STATUS_WT_NEW, GIT_STATUS_WT_NEW, GIT_STATUS_WT_NEW,
+	};
+
+	make_test_data();
+
+	cl_fake_home(&home);
+	cl_git_mkfile("home/.gitignore", "/ignore_me\n");
+	{
+		git_config *cfg;
+		cl_git_pass(git_repository_config(&cfg, g_repo));
+		cl_git_pass(git_config_set_string(
+			cfg, "core.excludesfile", "~/.gitignore"));
+		git_config_free(cfg);
+	}
+
+	cl_git_rewritefile("empty_standard_repo/.git/info/exclude", "/ignore_also\n");
+	cl_git_rewritefile("empty_standard_repo/dir/.gitignore", "/ignore_me\n");
+	cl_git_rewritefile("empty_standard_repo/test/.gitignore", "/and_me\n");
+
+	memset(&counts, 0x0, sizeof(status_entry_counts));
+	counts.expected_entry_count = 10;
+	counts.expected_paths = paths_2;
+	counts.expected_statuses = statuses_2;
+
+	opts.flags = GIT_STATUS_OPT_DEFAULTS | GIT_STATUS_OPT_RECURSE_IGNORED_DIRS;
+
+	cl_git_pass(git_status_foreach_ext(
+		g_repo, &opts, cb_status__normal, &counts));
+
+	cl_assert_equal_i(counts.expected_entry_count, counts.entry_count);
+	cl_assert_equal_i(0, counts.wrong_status_flags_count);
+	cl_assert_equal_i(0, counts.wrong_sorted_path);
+
+	cl_fake_home_cleanup(&home);
+}
+
 void test_status_ignore__adding_internal_ignores(void)
 {
 	int ignored;
