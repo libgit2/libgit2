@@ -41,6 +41,9 @@ typedef enum {
 
 	/* git_cred_default */
 	GIT_CREDTYPE_DEFAULT = (1u << 3),
+
+	/* git_cred_ssh_interactive */
+	GIT_CREDTYPE_SSH_INTERACTIVE = (1u << 4),
 } git_credtype_t;
 
 /* The base structure for all credential types */
@@ -60,8 +63,10 @@ typedef struct {
 
 #ifdef GIT_SSH
 typedef LIBSSH2_USERAUTH_PUBLICKEY_SIGN_FUNC((*git_cred_sign_callback));
+typedef LIBSSH2_USERAUTH_KBDINT_RESPONSE_FUNC((*git_cred_ssh_interactive_callback));
 #else
 typedef int (*git_cred_sign_callback)(void *, ...);
+typedef int (*git_cred_ssh_interactive_callback)(void *, ...);
 #endif
 
 /**
@@ -74,6 +79,16 @@ typedef struct git_cred_ssh_key {
 	char *privatekey;
 	char *passphrase;
 } git_cred_ssh_key;
+
+/**
+ * Keyboard-interactive based ssh authentication
+ */
+typedef struct git_cred_ssh_interactive {
+	git_cred parent;
+	char *username;
+	void *prompt_callback;
+	void *payload;
+} git_cred_ssh_interactive;
 
 /**
  * A key with a custom signature function
@@ -129,6 +144,21 @@ GIT_EXTERN(int) git_cred_ssh_key_new(
 	const char *publickey,
 	const char *privatekey,
 	const char *passphrase);
+
+/**
+ * Create a new ssh keyboard-interactive based credential object.
+ * The supplied credential parameter will be internally duplicated.
+ *
+ * @param username Username to use to authenticate.
+ * @param prompt_callback The callback method used for prompts.
+ * @param payload Additional data to pass to the callback.
+ * @return 0 for success or an error code for failure.
+ */
+GIT_EXTERN(int) git_cred_ssh_interactive_new(
+	git_cred **out,
+	const char *username,
+	git_cred_ssh_interactive_callback prompt_callback,
+	void *payload);
 
 /**
  * Create a new ssh key credential object used for querying an ssh-agent.
