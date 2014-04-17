@@ -187,7 +187,7 @@ int git_cherry_pick(
 		goto on_error;
 	}
 
-	git_oid_fmt(commit_oidstr, git_commit_id(commit));
+	git_oid_nfmt(commit_oidstr, sizeof(commit_oidstr), git_commit_id(commit));
 
 	if ((error = write_merge_msg(repo, commit_msg)) < 0 ||
 		(error = git_buf_printf(&their_label, "%.7s... %s", commit_oidstr, commit_summary)) < 0 ||
