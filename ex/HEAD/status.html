@@ -69,7 +69,8 @@
 <span class="cm"> * &lt;http://creativecommons.org/publicdomain/zero/1.0/&gt;.</span>
 <span class="cm"> */</span>
 
-<span class="cp">#include &quot;common.h&quot;</span></pre></div>
+<span class="cp">#include &quot;common.h&quot;</span>
+<span class="cp">#include &lt;unistd.h&gt;</span></pre></div>
       </td>
     </tr>
     <tr id='section-2'>
@@ -110,19 +111,22 @@ from <code>git status</code></li>
 <span class="cp">#define MAX_PATHSPEC 8</span>
 
 <span class="k">struct</span> <span class="n">opts</span> <span class="p">{</span>
-    <span class="n">git_status_options</span> <span class="n">statusopt</span><span class="p">;</span>
-    <span class="kt">char</span> <span class="o">*</span><span class="n">repodir</span><span class="p">;</span>
-    <span class="kt">char</span> <span class="o">*</span><span class="n">pathspec</span><span class="p">[</span><span class="n">MAX_PATHSPEC</span><span class="p">];</span>
-    <span class="kt">int</span> <span class="n">npaths</span><span class="p">;</span>
-    <span class="kt">int</span> <span class="n">format</span><span class="p">;</span>
-    <span class="kt">int</span> <span class="n">zterm</span><span class="p">;</span>
-    <span class="kt">int</span> <span class="n">showbranch</span><span class="p">;</span>
+  <span class="n">git_status_options</span> <span class="n">statusopt</span><span class="p">;</span>
+  <span class="kt">char</span> <span class="o">*</span><span class="n">repodir</span><span class="p">;</span>
+  <span class="kt">char</span> <span class="o">*</span><span class="n">pathspec</span><span class="p">[</span><span class="n">MAX_PATHSPEC</span><span class="p">];</span>
+  <span class="kt">int</span> <span class="n">npaths</span><span class="p">;</span>
+  <span class="kt">int</span> <span class="n">format</span><span class="p">;</span>
+  <span class="kt">int</span> <span class="n">zterm</span><span class="p">;</span>
+  <span class="kt">int</span> <span class="n">showbranch</span><span class="p">;</span>
+  <span class="kt">int</span> <span class="n">showsubmod</span><span class="p">;</span>
+  <span class="kt">int</span> <span class="n">repeat</span><span class="p">;</span>
 <span class="p">};</span>
 
 <span class="k">static</span> <span class="kt">void</span> <span class="nf">parse_opts</span><span class="p">(</span><span class="k">struct</span> <span class="n">opts</span> <span class="o">*</span><span class="n">o</span><span class="p">,</span> <span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">*</span><span class="n">argv</span><span class="p">[]);</span>
 <span class="k">static</span> <span class="kt">void</span> <span class="nf">show_branch</span><span class="p">(</span><span class="n">git_repository</span> <span class="o">*</span><span class="n">repo</span><span class="p">,</span> <span class="kt">int</span> <span class="n">format</span><span class="p">);</span>
 <span class="k">static</span> <span class="kt">void</span> <span class="nf">print_long</span><span class="p">(</span><span class="n">git_status_list</span> <span class="o">*</span><span class="n">status</span><span class="p">);</span>
 <span class="k">static</span> <span class="kt">void</span> <span class="nf">print_short</span><span class="p">(</span><span class="n">git_repository</span> <span class="o">*</span><span class="n">repo</span><span class="p">,</span> <span class="n">git_status_list</span> <span class="o">*</span><span class="n">status</span><span class="p">);</span>
+<span class="k">static</span> <span class="kt">int</span> <span class="nf">print_submod</span><span class="p">(</span><span class="n">git_submodule</span> <span class="o">*</span><span class="n">sm</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">name</span><span class="p">,</span> <span class="kt">void</span> <span class="o">*</span><span class="n">payload</span><span class="p">);</span>
 
 <span class="kt">int</span> <span class="nf">main</span><span class="p">(</span><span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">*</span><span class="n">argv</span><span class="p">[])</span>
 <span class="p">{</span>
@@ -130,7 +134,7 @@ from <code>git status</code></li>
   <span class="n">git_status_list</span> <span class="o">*</span><span class="n">status</span><span class="p">;</span>
   <span class="k">struct</span> <span class="n">opts</span> <span class="n">o</span> <span class="o">=</span> <span class="p">{</span> <span class="n">GIT_STATUS_OPTIONS_INIT</span><span class="p">,</span> <span class="s">&quot;.&quot;</span> <span class="p">};</span>
 
-  <span class="n"><a name="git_threads_init-23" class="fnlink" href="../../#HEAD/group/threads/git_threads_init">git_threads_init</a></span><span class="p">();</span>
+  <span class="n"><a name="git_threads_init-27" class="fnlink" href="../../#HEAD/group/threads/git_threads_init">git_threads_init</a></span><span class="p">();</span>
 
   <span class="n">o</span><span class="p">.</span><span class="n">statusopt</span><span class="p">.</span><span class="n">show</span>  <span class="o">=</span> <span class="n">GIT_STATUS_SHOW_INDEX_AND_WORKDIR</span><span class="p">;</span>
   <span class="n">o</span><span class="p">.</span><span class="n">statusopt</span><span class="p">.</span><span class="n">flags</span> <span class="o">=</span> <span class="n">GIT_STATUS_OPT_INCLUDE_UNTRACKED</span> <span class="o">|</span>
@@ -154,7 +158,11 @@ directory if none was given).</p>
 
   <span class="k">if</span> <span class="p">(</span><span class="n"><a name="git_repository_is_bare-7" class="fnlink" href="../../#HEAD/group/repository/git_repository_is_bare">git_repository_is_bare</a></span><span class="p">(</span><span class="n">repo</span><span class="p">))</span>
     <span class="n">fatal</span><span class="p">(</span><span class="s">&quot;Cannot report status on bare repository&quot;</span><span class="p">,</span>
-      <span class="n"><a name="git_repository_path-6" class="fnlink" href="../../#HEAD/group/repository/git_repository_path">git_repository_path</a></span><span class="p">(</span><span class="n">repo</span><span class="p">));</span></pre></div>
+      <span class="n"><a name="git_repository_path-6" class="fnlink" href="../../#HEAD/group/repository/git_repository_path">git_repository_path</a></span><span class="p">(</span><span class="n">repo</span><span class="p">));</span>
+
+<span class="nl">show_status:</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">o</span><span class="p">.</span><span class="n">repeat</span><span class="p">)</span>
+    <span class="n">printf</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\033</span><span class="s">[H</span><span class="se">\033</span><span class="s">[2J&quot;</span><span class="p">);</span></pre></div>
       </td>
     </tr>
     <tr id='section-4'>
@@ -176,10 +184,16 @@ about what results are presented.</p>
       </td>
       <td class=code>
         <div class='highlight'><pre>  <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_status_list_new-11" class="fnlink" href="../../#HEAD/group/status/git_status_list_new">git_status_list_new</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">status</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">o</span><span class="p">.</span><span class="n">statusopt</span><span class="p">),</span>
-      <span class="s">&quot;Could not get status&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+    <span class="s">&quot;Could not get status&quot;</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
 
   <span class="k">if</span> <span class="p">(</span><span class="n">o</span><span class="p">.</span><span class="n">showbranch</span><span class="p">)</span>
     <span class="n">show_branch</span><span class="p">(</span><span class="n">repo</span><span class="p">,</span> <span class="n">o</span><span class="p">.</span><span class="n">format</span><span class="p">);</span>
+
+  <span class="k">if</span> <span class="p">(</span><span class="n">o</span><span class="p">.</span><span class="n">showsubmod</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kt">int</span> <span class="n">submod_count</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="n">check_lg2</span><span class="p">(</span><span class="n"><a name="git_submodule_foreach-23" class="fnlink" href="../../#HEAD/group/submodule/git_submodule_foreach">git_submodule_foreach</a></span><span class="p">(</span><span class="n">repo</span><span class="p">,</span> <span class="n">print_submod</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">submod_count</span><span class="p">),</span>
+      <span class="s">&quot;Cannot iterate submodules&quot;</span><span class="p">,</span> <span class="n">o</span><span class="p">.</span><span class="n">repodir</span><span class="p">);</span>
+  <span class="p">}</span>
 
   <span class="k">if</span> <span class="p">(</span><span class="n">o</span><span class="p">.</span><span class="n">format</span> <span class="o">==</span> <span class="n">FORMAT_LONG</span><span class="p">)</span>
     <span class="n">print_long</span><span class="p">(</span><span class="n">status</span><span class="p">);</span>
@@ -187,8 +201,14 @@ about what results are presented.</p>
     <span class="n">print_short</span><span class="p">(</span><span class="n">repo</span><span class="p">,</span> <span class="n">status</span><span class="p">);</span>
 
   <span class="n"><a name="git_status_list_free-20" class="fnlink" href="../../#HEAD/group/status/git_status_list_free">git_status_list_free</a></span><span class="p">(</span><span class="n">status</span><span class="p">);</span>
+
+  <span class="k">if</span> <span class="p">(</span><span class="n">o</span><span class="p">.</span><span class="n">repeat</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">sleep</span><span class="p">(</span><span class="n">o</span><span class="p">.</span><span class="n">repeat</span><span class="p">);</span>
+    <span class="k">goto</span> <span class="n">show_status</span><span class="p">;</span>
+  <span class="p">}</span>
+
   <span class="n"><a name="git_repository_free-4" class="fnlink" href="../../#HEAD/group/repository/git_repository_free">git_repository_free</a></span><span class="p">(</span><span class="n">repo</span><span class="p">);</span>
-  <span class="n"><a name="git_threads_shutdown-24" class="fnlink" href="../../#HEAD/group/threads/git_threads_shutdown">git_threads_shutdown</a></span><span class="p">();</span>
+  <span class="n"><a name="git_threads_shutdown-28" class="fnlink" href="../../#HEAD/group/threads/git_threads_shutdown">git_threads_shutdown</a></span><span class="p">();</span>
 
   <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
 <span class="p">}</span></pre></div>
@@ -507,18 +527,21 @@ let&#39;s go take a look at its status.</p>
       <span class="kt">unsigned</span> <span class="kt">int</span> <span class="n">smstatus</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
 
       <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n"><a name="git_submodule_lookup-21" class="fnlink" href="../../#HEAD/group/submodule/git_submodule_lookup">git_submodule_lookup</a></span><span class="p">(</span>
-          <span class="o">&amp;</span><span class="n">sm</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="n">s</span><span class="o">-&gt;</span><span class="n">index_to_workdir</span><span class="o">-&gt;</span><span class="n">new_file</span><span class="p">.</span><span class="n">path</span><span class="p">)</span> <span class="o">&amp;&amp;</span>
-        <span class="o">!</span><span class="n"><a name="git_submodule_status-22" class="fnlink" href="../../#HEAD/group/submodule/git_submodule_status">git_submodule_status</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">smstatus</span><span class="p">,</span> <span class="n">sm</span><span class="p">))</span>
-      <span class="p">{</span>
-        <span class="k">if</span> <span class="p">(</span><span class="n">smstatus</span> <span class="o">&amp;</span> <span class="n">GIT_SUBMODULE_STATUS_WD_MODIFIED</span><span class="p">)</span>
-          <span class="n">extra</span> <span class="o">=</span> <span class="s">&quot; (new commits)&quot;</span><span class="p">;</span>
-        <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">smstatus</span> <span class="o">&amp;</span> <span class="n">GIT_SUBMODULE_STATUS_WD_INDEX_MODIFIED</span><span class="p">)</span>
-          <span class="n">extra</span> <span class="o">=</span> <span class="s">&quot; (modified content)&quot;</span><span class="p">;</span>
-        <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">smstatus</span> <span class="o">&amp;</span> <span class="n">GIT_SUBMODULE_STATUS_WD_WD_MODIFIED</span><span class="p">)</span>
-          <span class="n">extra</span> <span class="o">=</span> <span class="s">&quot; (modified content)&quot;</span><span class="p">;</span>
-        <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">smstatus</span> <span class="o">&amp;</span> <span class="n">GIT_SUBMODULE_STATUS_WD_UNTRACKED</span><span class="p">)</span>
-          <span class="n">extra</span> <span class="o">=</span> <span class="s">&quot; (untracked content)&quot;</span><span class="p">;</span>
+          <span class="o">&amp;</span><span class="n">sm</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="n">s</span><span class="o">-&gt;</span><span class="n">index_to_workdir</span><span class="o">-&gt;</span><span class="n">new_file</span><span class="p">.</span><span class="n">path</span><span class="p">))</span> <span class="p">{</span>
+
+        <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n"><a name="git_submodule_status-26" class="fnlink" href="../../#HEAD/group/submodule/git_submodule_status">git_submodule_status</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">smstatus</span><span class="p">,</span> <span class="n">sm</span><span class="p">))</span> <span class="p">{</span>
+          <span class="k">if</span> <span class="p">(</span><span class="n">smstatus</span> <span class="o">&amp;</span> <span class="n">GIT_SUBMODULE_STATUS_WD_MODIFIED</span><span class="p">)</span>
+            <span class="n">extra</span> <span class="o">=</span> <span class="s">&quot; (new commits)&quot;</span><span class="p">;</span>
+          <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">smstatus</span> <span class="o">&amp;</span> <span class="n">GIT_SUBMODULE_STATUS_WD_INDEX_MODIFIED</span><span class="p">)</span>
+            <span class="n">extra</span> <span class="o">=</span> <span class="s">&quot; (modified content)&quot;</span><span class="p">;</span>
+          <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">smstatus</span> <span class="o">&amp;</span> <span class="n">GIT_SUBMODULE_STATUS_WD_WD_MODIFIED</span><span class="p">)</span>
+            <span class="n">extra</span> <span class="o">=</span> <span class="s">&quot; (modified content)&quot;</span><span class="p">;</span>
+          <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">smstatus</span> <span class="o">&amp;</span> <span class="n">GIT_SUBMODULE_STATUS_WD_UNTRACKED</span><span class="p">)</span>
+            <span class="n">extra</span> <span class="o">=</span> <span class="s">&quot; (untracked content)&quot;</span><span class="p">;</span>
+        <span class="p">}</span>
       <span class="p">}</span>
+
+      <span class="n"><a name="git_submodule_free-22" class="fnlink" href="../../#HEAD/group/submodule/git_submodule_free">git_submodule_free</a></span><span class="p">(</span><span class="n">sm</span><span class="p">);</span>
     <span class="p">}</span></pre></div>
       </td>
     </tr>
@@ -527,7 +550,7 @@ let&#39;s go take a look at its status.</p>
         <div class="pilwrap">
           <a class="pilcrow" href="#section-15">&#182;</a>
         </div>
-        <p>Now that we have all the information, it&#39;s time to format the output.</p>
+        <p>Now that we have all the information, format the output.</p>
       </td>
       <td class=code>
         <div class='highlight'><pre>    <span class="k">if</span> <span class="p">(</span><span class="n">s</span><span class="o">-&gt;</span><span class="n">head_to_index</span><span class="p">)</span> <span class="p">{</span>
@@ -561,6 +584,21 @@ let&#39;s go take a look at its status.</p>
     <span class="k">if</span> <span class="p">(</span><span class="n">s</span><span class="o">-&gt;</span><span class="n">status</span> <span class="o">==</span> <span class="n">GIT_STATUS_WT_NEW</span><span class="p">)</span>
       <span class="n">printf</span><span class="p">(</span><span class="s">&quot;?? %s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">s</span><span class="o">-&gt;</span><span class="n">index_to_workdir</span><span class="o">-&gt;</span><span class="n">old_file</span><span class="p">.</span><span class="n">path</span><span class="p">);</span>
   <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="k">static</span> <span class="kt">int</span> <span class="nf">print_submod</span><span class="p">(</span><span class="n">git_submodule</span> <span class="o">*</span><span class="n">sm</span><span class="p">,</span> <span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">name</span><span class="p">,</span> <span class="kt">void</span> <span class="o">*</span><span class="n">payload</span><span class="p">)</span>
+<span class="p">{</span>
+  <span class="kt">int</span> <span class="o">*</span><span class="n">count</span> <span class="o">=</span> <span class="n">payload</span><span class="p">;</span>
+  <span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="n">name</span><span class="p">;</span>
+
+  <span class="k">if</span> <span class="p">(</span><span class="o">*</span><span class="n">count</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="n">printf</span><span class="p">(</span><span class="s">&quot;# Submodules</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+  <span class="p">(</span><span class="o">*</span><span class="n">count</span><span class="p">)</span><span class="o">++</span><span class="p">;</span>
+
+  <span class="n">printf</span><span class="p">(</span><span class="s">&quot;# - submodule &#39;%s&#39; at %s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span>
+    <span class="n"><a name="git_submodule_name-24" class="fnlink" href="../../#HEAD/group/submodule/git_submodule_name">git_submodule_name</a></span><span class="p">(</span><span class="n">sm</span><span class="p">),</span> <span class="n"><a name="git_submodule_path-25" class="fnlink" href="../../#HEAD/group/submodule/git_submodule_path">git_submodule_path</a></span><span class="p">(</span><span class="n">sm</span><span class="p">));</span>
+
+  <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
 <span class="p">}</span></pre></div>
       </td>
     </tr>
@@ -615,6 +653,12 @@ let&#39;s go take a look at its status.</p>
       <span class="n">o</span><span class="o">-&gt;</span><span class="n">statusopt</span><span class="p">.</span><span class="n">flags</span> <span class="o">|=</span> <span class="n">GIT_STATUS_OPT_EXCLUDE_SUBMODULES</span><span class="p">;</span>
     <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">strncmp</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="s">&quot;--git-dir=&quot;</span><span class="p">,</span> <span class="n">strlen</span><span class="p">(</span><span class="s">&quot;--git-dir=&quot;</span><span class="p">)))</span>
       <span class="n">o</span><span class="o">-&gt;</span><span class="n">repodir</span> <span class="o">=</span> <span class="n">a</span> <span class="o">+</span> <span class="n">strlen</span><span class="p">(</span><span class="s">&quot;--git-dir=&quot;</span><span class="p">);</span>
+    <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">strcmp</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="s">&quot;--repeat&quot;</span><span class="p">))</span>
+      <span class="n">o</span><span class="o">-&gt;</span><span class="n">repeat</span> <span class="o">=</span> <span class="mi">10</span><span class="p">;</span>
+    <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">match_int_arg</span><span class="p">(</span><span class="o">&amp;</span><span class="n">o</span><span class="o">-&gt;</span><span class="n">repeat</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">args</span><span class="p">,</span> <span class="s">&quot;--repeat&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
+      <span class="cm">/* okay */</span><span class="p">;</span>
+    <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">strcmp</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="s">&quot;--list-submodules&quot;</span><span class="p">))</span>
+      <span class="n">o</span><span class="o">-&gt;</span><span class="n">showsubmod</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
     <span class="k">else</span>
       <span class="n">check_lg2</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s">&quot;Unsupported option&quot;</span><span class="p">,</span> <span class="n">a</span><span class="p">);</span>
   <span class="p">}</span>
