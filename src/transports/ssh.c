@@ -310,7 +310,7 @@ static int _git_ssh_authenticate_session(
 
 			rc = libssh2_userauth_publickey(
 				session, c->username, (const unsigned char *)c->publickey,
-				c->publickey_len, c->sign_callback, &c->sign_data);
+				c->publickey_len, c->sign_callback, &c->payload);
 			break;
 		}
 		case GIT_CREDTYPE_SSH_INTERACTIVE: {

@@ -204,7 +204,7 @@ int git_cred_ssh_custom_new(
 	const char *publickey,
 	size_t publickey_len,
 	git_cred_sign_callback sign_callback,
-	void *sign_data)
+	void *payload)
 {
 	git_cred_ssh_custom *c;
 
@@ -228,7 +228,7 @@ int git_cred_ssh_custom_new(
 
 	c->publickey_len = publickey_len;
 	c->sign_callback = sign_callback;
-	c->sign_data = sign_data;
+	c->payload = payload;
 
 	*cred = &c->parent;
 	return 0;

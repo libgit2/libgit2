@@ -99,7 +99,7 @@ typedef struct git_cred_ssh_custom {
 	char *publickey;
 	size_t publickey_len;
 	void *sign_callback;
-	void *sign_data;
+	void *payload;
 } git_cred_ssh_custom;
 
 /** A key for NTLM/Kerberos "default" credentials */
@@ -186,8 +186,8 @@ GIT_EXTERN(int) git_cred_ssh_key_from_agent(
  * @param username username to use to authenticate
  * @param publickey The bytes of the public key.
  * @param publickey_len The length of the public key in bytes.
- * @param sign_fn The callback method to sign the data during the challenge.
- * @param sign_data The data to pass to the sign function.
+ * @param sign_callback The callback method to sign the data during the challenge.
+ * @param payload Additional data to pass to the callback.
  * @return 0 for success or an error code for failure
  */
 GIT_EXTERN(int) git_cred_ssh_custom_new(
@@ -195,8 +195,8 @@ GIT_EXTERN(int) git_cred_ssh_custom_new(
 	const char *username,
 	const char *publickey,
 	size_t publickey_len,
-	git_cred_sign_callback sign_fn,
-	void *sign_data);
+	git_cred_sign_callback sign_callback,
+	void *payload);
 
 /**
  * Create a "default" credential usable for Negotiate mechanisms like NTLM
