@@ -121,7 +121,6 @@ static int attr_cache_remove(git_attr_cache *cache, git_attr_file *file)
 {
 	int error = 0;
 	git_attr_file_entry *entry;
-	bool found = false;
 
 	if (!file)
 		return 0;
@@ -133,7 +132,7 @@ static int attr_cache_remove(git_attr_cache *cache, git_attr_file *file)
 
 	attr_cache_unlock(cache);
 
-	if (found) {
+	if (file) {
 		GIT_REFCOUNT_OWN(file, NULL);
 		git_attr_file__free(file);
 	}
@@ -206,39 +205,42 @@ int git_attr_cache__get(
 	int error = 0;
 	git_attr_cache *cache = git_repository_attr_cache(repo);
 	git_attr_file_entry *entry = NULL;
-	git_attr_file *file = NULL;
+	git_attr_file *file = NULL, *updated = NULL;
 
 	if ((error = attr_cache_lookup(
 			&file, &entry, repo, source, base, filename)) < 0)
-		goto cleanup;
+		return error;
 
-	/* if file not found or out of date, load up-to-date data and replace */
-	if (!file || (error = git_attr_file__out_of_date(repo, file)) > 0) {
-		/* decrement refcount (if file was found) b/c we will not return it */
-		git_attr_file__free(file);
+	/* load file if we don't have one or if existing one is out of date */
+	if (!file || (error = git_attr_file__out_of_date(repo, file)) > 0)
+		error = git_attr_file__load(&updated, repo, entry, source, parser);
 
-		if (!(error = git_attr_file__load(&file, repo, entry, source, parser)))
-			error = attr_cache_upsert(cache, file);
+	/* if we loaded the file, insert into and/or update cache */
+	if (updated) {
+		if ((error = attr_cache_upsert(cache, updated)) < 0)
+			git_attr_file__free(updated);
+		else {
+			git_attr_file__free(file); /* offset incref from lookup */
+			file = updated;
+		}
 	}
 
-	/* GIT_ENOTFOUND is okay when probing for the file.  If the file did
-	 * exist and now does not, we have to remove it from cache, however.
-	 */
-	if (error == GIT_ENOTFOUND) {
-		giterr_clear();
-		error = 0;
-
-		if (file != NULL)
-			error = attr_cache_remove(cache, file);
+	/* if file could not be loaded */
+	if (error < 0) {
+		/* remove existing entry */
+		if (file) {
+			git_attr_file__free(file); /* offset incref from lookup */
+			attr_cache_remove(cache, file);
+			file = NULL;
+		}
+		/* no error if file simply doesn't exist */
+		if (error == GIT_ENOTFOUND) {
+			giterr_clear();
+			error = 0;
+		}
 	}
 
-cleanup:
-	if (error < 0 && file != NULL) {
-		git_attr_file__free(file);
-		file = NULL;
-	}
 	*out = file;
-
 	return error;
 }
 

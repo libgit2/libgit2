@@ -103,6 +103,7 @@ static void *run_index_diffs(void *arg)
 	}
 
 	git_diff_free(diff);
+	giterr_clear();
 
 	return arg;
 }
@@ -139,8 +140,7 @@ static void *run_index_diffs_with_modifier(void *arg)
 			git_thread_yield();
 		}
 
-		git_index_free(idx);
-		return arg;
+		goto done;
 	}
 
 	/* only use explicit index in this test to prevent reloading */
@@ -164,7 +164,10 @@ static void *run_index_diffs_with_modifier(void *arg)
 	/* results will be unpredictable with index modifier thread running */
 
 	git_diff_free(diff);
+
+done:
 	git_index_free(idx);
+	giterr_clear();
 
 	return arg;
 }

@@ -11,7 +11,7 @@ void test_threads_iterator__cleanup(void)
 
 static void *run_workdir_iterator(void *arg)
 {
-	int error = 0, thread = *(int *)arg;
+	int error = 0;
 	git_iterator *iter;
 	const git_index_entry *entry = NULL;
 
@@ -35,7 +35,7 @@ static void *run_workdir_iterator(void *arg)
 	cl_assert_equal_i(GIT_ITEROVER, error);
 
 	git_iterator_free(iter);
-
+	giterr_clear();
 	return arg;
 }
 
