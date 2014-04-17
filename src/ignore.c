@@ -1,7 +1,7 @@
 #include "git2/ignore.h"
 #include "common.h"
 #include "ignore.h"
-#include "attr_file.h"
+#include "attrcache.h"
 #include "path.h"
 #include "config.h"
 
@@ -10,30 +10,24 @@
 #define GIT_IGNORE_DEFAULT_RULES ".\n..\n.git\n"
 
 static int parse_ignore_file(
-	git_repository *repo,
-	git_attr_file *attrs,
-	const char *data,
-	void *payload)
+	git_repository *repo, git_attr_file *attrs, const char *data)
 {
 	int error = 0;
 	int ignore_case = false;
 	const char *scan = data, *context = NULL;
 	git_attr_fnmatch *match = NULL;
 
-	/* either read ignore_case from ignores structure or use repo config */
-	if (payload != NULL)
-		ignore_case = ((git_ignores *)payload)->ignore_case;
-	else if (git_repository__cvar(&ignore_case, repo, GIT_CVAR_IGNORECASE) < 0)
+	if (git_repository__cvar(&ignore_case, repo, GIT_CVAR_IGNORECASE) < 0)
 		giterr_clear();
 
 	/* if subdir file path, convert context for file paths */
-	if (attrs->ce &&
-		git_path_root(attrs->ce->path) < 0 &&
-		!git__suffixcmp(attrs->ce->path, "/" GIT_IGNORE_FILE))
-		context = attrs->ce->path;
+	if (attrs->entry &&
+		git_path_root(attrs->entry->path) < 0 &&
+		!git__suffixcmp(attrs->entry->path, "/" GIT_IGNORE_FILE))
+		context = attrs->entry->path;
 
 	if (git_mutex_lock(&attrs->lock) < 0) {
-		giterr_set(GITERR_OS, "Failed to lock attribute file");
+		giterr_set(GITERR_OS, "Failed to lock ignore file");
 		return -1;
 	}
 
@@ -84,8 +78,8 @@ static int push_ignore_file(
 	git_attr_file *file = NULL;
 
 	error = git_attr_cache__get(
-		&file, ignores->repo, GIT_ATTR_CACHE__FROM_FILE,
-		base, filename, parse_ignore_file, ignores);
+		&file, ignores->repo, GIT_ATTR_FILE__FROM_FILE,
+		base, filename, parse_ignore_file);
 	if (error < 0)
 		return error;
 
@@ -111,14 +105,12 @@ static int get_internal_ignores(git_attr_file **out, git_repository *repo)
 	if ((error = git_attr_cache__init(repo)) < 0)
 		return error;
 
-	/* get with NULL parser, gives existing or empty git_attr_file */
 	error = git_attr_cache__get(
-		out, repo, GIT_ATTR_CACHE__FROM_FILE,
-		NULL, GIT_IGNORE_INTERNAL, NULL, NULL);
+		out, repo, GIT_ATTR_FILE__IN_MEMORY, NULL, GIT_IGNORE_INTERNAL, NULL);
 
 	/* if internal rules list is empty, insert default rules */
 	if (!error && !(*out)->rules.length)
-		error = parse_ignore_file(repo, *out, GIT_IGNORE_DEFAULT_RULES, NULL);
+		error = parse_ignore_file(repo, *out, GIT_IGNORE_DEFAULT_RULES);
 
 	return error;
 }
@@ -199,7 +191,7 @@ int git_ignore__pop_dir(git_ignores *ign)
 {
 	if (ign->ign_path.length > 0) {
 		git_attr_file *file = git_vector_last(&ign->ign_path);
-		const char *start = file->ce->path, *end;
+		const char *start = file->entry->path, *end;
 
 		/* - ign->dir looks something like "/home/user/a/b/" (or "a/b/c/d/")
 		 * - file->path looks something like "a/b/.gitignore
@@ -302,35 +294,33 @@ cleanup:
 	return 0;
 }
 
-int git_ignore_add_rule(
-	git_repository *repo,
-	const char *rules)
+int git_ignore_add_rule(git_repository *repo, const char *rules)
 {
 	int error;
 	git_attr_file *ign_internal = NULL;
 
-	if (!(error = get_internal_ignores(&ign_internal, repo))) {
-		error = parse_ignore_file(repo, ign_internal, rules, NULL);
-		git_attr_file__free(ign_internal);
-	}
+	if ((error = get_internal_ignores(&ign_internal, repo)) < 0)
+		return error;
+
+	error = parse_ignore_file(repo, ign_internal, rules);
+	git_attr_file__free(ign_internal);
 
 	return error;
 }
 
-int git_ignore_clear_internal_rules(
-	git_repository *repo)
+int git_ignore_clear_internal_rules(git_repository *repo)
 {
 	int error;
 	git_attr_file *ign_internal;
 
-	if (!(error = get_internal_ignores(&ign_internal, repo))) {
-		if (!(error = git_attr_file__clear_rules(ign_internal, true)))
-			error = parse_ignore_file(
-				repo, ign_internal, GIT_IGNORE_DEFAULT_RULES, NULL);
+	if ((error = get_internal_ignores(&ign_internal, repo)) < 0)
+		return error;
 
-		git_attr_file__free(ign_internal);
-	}
+	if (!(error = git_attr_file__clear_rules(ign_internal, true)))
+		error = parse_ignore_file(
+			repo, ign_internal, GIT_IGNORE_DEFAULT_RULES);
 
+	git_attr_file__free(ign_internal);
 	return error;
 }
 

@@ -13,7 +13,7 @@ void test_attr_file__simple_read(void)
 
 	cl_git_pass(git_attr_file__load_standalone(&file, cl_fixture("attr/attr0")));
 
-	cl_assert_equal_s(cl_fixture("attr/attr0"), file->ce->path);
+	cl_assert_equal_s(cl_fixture("attr/attr0"), file->entry->path);
 	cl_assert(file->rules.length == 1);
 
 	rule = get_rule(0);
@@ -39,7 +39,7 @@ void test_attr_file__match_variants(void)
 
 	cl_git_pass(git_attr_file__load_standalone(&file, cl_fixture("attr/attr1")));
 
-	cl_assert_equal_s(cl_fixture("attr/attr1"), file->ce->path);
+	cl_assert_equal_s(cl_fixture("attr/attr1"), file->entry->path);
 	cl_assert(file->rules.length == 10);
 
 	/* let's do a thorough check of this rule, then just verify
@@ -123,7 +123,7 @@ void test_attr_file__assign_variants(void)
 
 	cl_git_pass(git_attr_file__load_standalone(&file, cl_fixture("attr/attr2")));
 
-	cl_assert_equal_s(cl_fixture("attr/attr2"), file->ce->path);
+	cl_assert_equal_s(cl_fixture("attr/attr2"), file->entry->path);
 	cl_assert(file->rules.length == 11);
 
 	check_one_assign(file, 0, 0, "pat0", "simple", EXPECT_TRUE, NULL);
@@ -188,7 +188,7 @@ void test_attr_file__check_attr_examples(void)
 	git_attr_assignment *assign;
 
 	cl_git_pass(git_attr_file__load_standalone(&file, cl_fixture("attr/attr3")));
-	cl_assert_equal_s(cl_fixture("attr/attr3"), file->ce->path);
+	cl_assert_equal_s(cl_fixture("attr/attr3"), file->entry->path);
 	cl_assert(file->rules.length == 3);
 
 	rule = get_rule(0);

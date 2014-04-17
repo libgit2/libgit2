@@ -2,6 +2,7 @@
 #include "repository.h"
 #include "filebuf.h"
 #include "attr_file.h"
+#include "attrcache.h"
 #include "git2/blob.h"
 #include "git2/tree.h"
 #include "index.h"
@@ -22,8 +23,8 @@ static void attr_file_free(git_attr_file *file)
 
 int git_attr_file__new(
 	git_attr_file **out,
-	git_attr_cache_entry *ce,
-	git_attr_cache_source source)
+	git_attr_file_entry *entry,
+	git_attr_file_source source)
 {
 	git_attr_file *attrs = git__calloc(1, sizeof(git_attr_file));
 	GITERR_CHECK_ALLOC(attrs);
@@ -40,7 +41,7 @@ int git_attr_file__new(
 	}
 
 	GIT_REFCOUNT_INC(attrs);
-	attrs->ce = ce;
+	attrs->entry  = entry;
 	attrs->source = source;
 	*out = attrs;
 	return 0;
@@ -95,42 +96,77 @@ static int attr_file_oid_from_index(
 int git_attr_file__load(
 	git_attr_file **out,
 	git_repository *repo,
-	git_attr_cache_entry *ce,
-	git_attr_cache_source source,
-	git_attr_cache_parser parser,
-	void *payload)
+	git_attr_file_entry *entry,
+	git_attr_file_source source,
+	git_attr_file_parser parser)
 {
 	int error = 0;
 	git_blob *blob = NULL;
 	git_buf content = GIT_BUF_INIT;
 	const char *data = NULL;
 	git_attr_file *file;
+	struct stat st;
 
 	*out = NULL;
 
-	if (source == GIT_ATTR_CACHE__FROM_INDEX) {
+	switch (source) {
+	case GIT_ATTR_FILE__IN_MEMORY:
+		/* in-memory attribute file doesn't need data */
+		break;
+	case GIT_ATTR_FILE__FROM_INDEX: {
 		git_oid id;
 
-		if ((error = attr_file_oid_from_index(&id, repo, ce->path)) < 0 ||
+		if ((error = attr_file_oid_from_index(&id, repo, entry->path)) < 0 ||
 			(error = git_blob_lookup(&blob, repo, &id)) < 0)
 			return error;
 
 		data = git_blob_rawcontent(blob);
-	} else {
-		if ((error = git_futils_readbuffer(&content, ce->fullpath)) < 0)
-			/* always return ENOTFOUND so item will just be skipped */
-			/* TODO: issue a warning once warnings API is available */
+		break;
+	}
+	case GIT_ATTR_FILE__FROM_FILE: {
+		int fd;
+
+		if (p_stat(entry->fullpath, &st) < 0)
+			return git_path_set_error(errno, entry->fullpath, "stat");
+		if (S_ISDIR(st.st_mode))
 			return GIT_ENOTFOUND;
+
+		/* For open or read errors, return ENOTFOUND to skip item */
+		/* TODO: issue warning when warning API is available */
+
+		if ((fd = git_futils_open_ro(entry->fullpath)) < 0)
+			return GIT_ENOTFOUND;
+
+		error = git_futils_readbuffer_fd(&content, fd, (size_t)st.st_size);
+		p_close(fd);
+
+		if (error < 0)
+			return GIT_ENOTFOUND;
+
 		data = content.ptr;
+		break;
+	}
+	default:
+		giterr_set(GITERR_INVALID, "Unknown file source %d", source);
+		return -1;
 	}
 
-	if ((error = git_attr_file__new(&file, ce, source)) < 0)
+	if ((error = git_attr_file__new(&file, entry, source)) < 0)
 		goto cleanup;
 
-	if (parser && (error = parser(repo, file, data, payload)) < 0)
+	if (parser && (error = parser(repo, file, data)) < 0) {
 		git_attr_file__free(file);
-	else
-		*out = file;
+		goto cleanup;
+	}
+
+	/* write cache breaker */
+	if (source == GIT_ATTR_FILE__FROM_INDEX)
+		git_oid_cpy(&file->cache_data.oid, git_blob_id(blob));
+	else if (source == GIT_ATTR_FILE__FROM_FILE)
+		git_futils_filestamp_set_from_stat(&file->cache_data.stamp, &st);
+	/* else always cacheable */
+
+	*out = file;
 
 cleanup:
 	git_blob_free(blob);
@@ -144,18 +180,29 @@ int git_attr_file__out_of_date(git_repository *repo, git_attr_file *file)
 	if (!file)
 		return 1;
 
-	if (file->source == GIT_ATTR_CACHE__FROM_INDEX) {
+	switch (file->source) {
+	case GIT_ATTR_FILE__IN_MEMORY:
+		return 0;
+
+	case GIT_ATTR_FILE__FROM_FILE:
+		return git_futils_filestamp_check(
+			&file->cache_data.stamp, file->entry->fullpath);
+
+	case GIT_ATTR_FILE__FROM_INDEX: {
 		int error;
 		git_oid id;
 
-		if ((error = attr_file_oid_from_index(&id, repo, file->ce->path)) < 0)
+		if ((error = attr_file_oid_from_index(
+				&id, repo, file->entry->path)) < 0)
 			return error;
 
 		return (git_oid__cmp(&file->cache_data.oid, &id) != 0);
 	}
 
-	return git_futils_filestamp_check(
-		&file->cache_data.stamp, file->ce->fullpath);
+	default:
+		giterr_set(GITERR_INVALID, "Invalid file type %d", file->source);
+		return -1;
+	}
 }
 
 static int sort_by_hash_and_name(const void *a_raw, const void *b_raw);
@@ -166,22 +213,17 @@ static bool parse_optimized_patterns(
 	const char *pattern);
 
 int git_attr_file__parse_buffer(
-	git_repository *repo,
-	git_attr_file *attrs,
-	const char *data,
-	void *payload)
+	git_repository *repo, git_attr_file *attrs, const char *data)
 {
 	int error = 0;
 	const char *scan = data, *context = NULL;
 	git_attr_rule *rule = NULL;
 
-	GIT_UNUSED(payload);
-
 	/* if subdir file path, convert context for file paths */
-	if (attrs->ce &&
-		git_path_root(attrs->ce->path) < 0 &&
-		!git__suffixcmp(attrs->ce->path, "/" GIT_ATTR_FILE))
-		context = attrs->ce->path;
+	if (attrs->entry &&
+		git_path_root(attrs->entry->path) < 0 &&
+		!git__suffixcmp(attrs->entry->path, "/" GIT_ATTR_FILE))
+		context = attrs->entry->path;
 
 	if (git_mutex_lock(&attrs->lock) < 0) {
 		giterr_set(GITERR_OS, "Failed to lock attribute file");
@@ -268,19 +310,18 @@ int git_attr_file__lookup_one(
 	return 0;
 }
 
-int git_attr_file__load_standalone(
-	git_attr_file **out,
-	const char *path)
+int git_attr_file__load_standalone(git_attr_file **out, const char *path)
 {
 	int error;
 	git_attr_file *file;
 	git_buf content = GIT_BUF_INIT;
 
-	error = git_attr_file__new(&file, NULL, GIT_ATTR_CACHE__FROM_FILE);
+	error = git_attr_file__new(&file, NULL, GIT_ATTR_FILE__FROM_FILE);
 	if (error < 0)
 		return error;
 
-	error = git_attr_cache_entry__new(&file->ce, NULL, path, &file->pool);
+	error = git_attr_cache__alloc_file_entry(
+		&file->entry, NULL, path, &file->pool);
 	if (error < 0) {
 		git_attr_file__free(file);
 		return error;
@@ -290,7 +331,7 @@ int git_attr_file__load_standalone(
 	 */
 
 	if (!(error = git_futils_readbuffer(&content, path))) {
-		error = git_attr_file__parse_buffer(NULL, file, content.ptr, NULL);
+		error = git_attr_file__parse_buffer(NULL, file, content.ptr);
 		git_buf_free(&content);
 	}
 

@@ -260,26 +260,26 @@ typedef struct {
 } attr_walk_up_info;
 
 static int attr_decide_sources(
-	uint32_t flags, bool has_wd, bool has_index, git_attr_cache_source *srcs)
+	uint32_t flags, bool has_wd, bool has_index, git_attr_file_source *srcs)
 {
 	int count = 0;
 
 	switch (flags & 0x03) {
 	case GIT_ATTR_CHECK_FILE_THEN_INDEX:
 		if (has_wd)
-			srcs[count++] = GIT_ATTR_CACHE__FROM_FILE;
+			srcs[count++] = GIT_ATTR_FILE__FROM_FILE;
 		if (has_index)
-			srcs[count++] = GIT_ATTR_CACHE__FROM_INDEX;
+			srcs[count++] = GIT_ATTR_FILE__FROM_INDEX;
 		break;
 	case GIT_ATTR_CHECK_INDEX_THEN_FILE:
 		if (has_index)
-			srcs[count++] = GIT_ATTR_CACHE__FROM_INDEX;
+			srcs[count++] = GIT_ATTR_FILE__FROM_INDEX;
 		if (has_wd)
-			srcs[count++] = GIT_ATTR_CACHE__FROM_FILE;
+			srcs[count++] = GIT_ATTR_FILE__FROM_FILE;
 		break;
 	case GIT_ATTR_CHECK_INDEX_ONLY:
 		if (has_index)
-			srcs[count++] = GIT_ATTR_CACHE__FROM_INDEX;
+			srcs[count++] = GIT_ATTR_FILE__FROM_INDEX;
 		break;
 	}
 
@@ -289,7 +289,7 @@ static int attr_decide_sources(
 static int push_attr_file(
 	git_repository *repo,
 	git_vector *list,
-	git_attr_cache_source source,
+	git_attr_file_source source,
 	const char *base,
 	const char *filename)
 {
@@ -297,7 +297,7 @@ static int push_attr_file(
 	git_attr_file *file = NULL;
 
 	error = git_attr_cache__get(
-		&file, repo, source, base, filename, git_attr_file__parse_buffer, NULL);
+		&file, repo, source, base, filename, git_attr_file__parse_buffer);
 	if (error < 0)
 		return error;
 
@@ -313,7 +313,7 @@ static int push_one_attr(void *ref, git_buf *path)
 {
 	int error = 0, n_src, i;
 	attr_walk_up_info *info = (attr_walk_up_info *)ref;
-	git_attr_cache_source src[2];
+	git_attr_file_source src[2];
 
 	n_src = attr_decide_sources(
 		info->flags, info->workdir != NULL, info->index != NULL, src);
@@ -367,7 +367,7 @@ static int collect_attr_files(
 	 */
 
 	error = push_attr_file(
-		repo, files, GIT_ATTR_CACHE__FROM_FILE,
+		repo, files, GIT_ATTR_FILE__FROM_FILE,
 		git_repository_path(repo), GIT_ATTR_FILE_INREPO);
 	if (error < 0)
 		goto cleanup;
@@ -385,7 +385,7 @@ static int collect_attr_files(
 
 	if (git_repository_attr_cache(repo)->cfg_attr_file != NULL) {
 		error = push_attr_file(
-			repo, files, GIT_ATTR_CACHE__FROM_FILE,
+			repo, files, GIT_ATTR_FILE__FROM_FILE,
 			NULL, git_repository_attr_cache(repo)->cfg_attr_file);
 		if (error < 0)
 			goto cleanup;
@@ -395,7 +395,7 @@ static int collect_attr_files(
 		error = git_sysdir_find_system_file(&dir, GIT_ATTR_FILE_SYSTEM);
 		if (!error)
 			error = push_attr_file(
-				repo, files, GIT_ATTR_CACHE__FROM_FILE, NULL, dir.ptr);
+				repo, files, GIT_ATTR_FILE__FROM_FILE, NULL, dir.ptr);
 		else if (error == GIT_ENOTFOUND) {
 			giterr_clear();
 			error = 0;

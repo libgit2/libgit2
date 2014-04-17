@@ -13,7 +13,6 @@
 #include "pool.h"
 #include "buffer.h"
 #include "fileops.h"
-#include "attrcache.h"
 
 #define GIT_ATTR_FILE			".gitattributes"
 #define GIT_ATTR_FILE_INREPO	"info/attributes"
@@ -36,6 +35,14 @@
 	(GIT_ATTR_FNMATCH_ALLOWSPACE | \
 	 GIT_ATTR_FNMATCH_ALLOWNEG | GIT_ATTR_FNMATCH_ALLOWMACRO)
 
+typedef enum {
+	GIT_ATTR_FILE__IN_MEMORY  = 0,
+	GIT_ATTR_FILE__FROM_FILE  = 1,
+	GIT_ATTR_FILE__FROM_INDEX = 2,
+
+	GIT_ATTR_FILE_NUM_SOURCES = 3
+} git_attr_file_source;
+
 extern const char *git_attr__true;
 extern const char *git_attr__false;
 extern const char *git_attr__unset;
@@ -46,10 +53,10 @@ typedef struct {
 	unsigned int flags;
 } git_attr_fnmatch;
 
-struct git_attr_rule {
+typedef struct {
 	git_attr_fnmatch match;
 	git_vector assigns;		/* vector of <git_attr_assignment*> */
-};
+} git_attr_rule;
 
 typedef struct {
 	git_refcount unused;
@@ -64,18 +71,31 @@ typedef struct {
 	const char *value;
 } git_attr_assignment;
 
-struct git_attr_file {
+typedef struct git_attr_file_entry git_attr_file_entry;
+
+typedef struct {
 	git_refcount rc;
 	git_mutex lock;
-	git_attr_cache_entry *ce;
-	git_attr_cache_source source;
+	git_attr_file_entry *entry;
+	git_attr_file_source source;
 	git_vector rules;			/* vector of <rule*> or <fnmatch*> */
 	git_pool pool;
 	union {
 		git_oid oid;
 		git_futils_filestamp stamp;
 	} cache_data;
+} git_attr_file;
+
+struct git_attr_file_entry {
+	git_attr_file *file[GIT_ATTR_FILE_NUM_SOURCES];
+	const char *path; /* points into fullpath */
+	char fullpath[GIT_FLEX_ARRAY];
 };
+
+typedef int (*git_attr_file_parser)(
+	git_repository *repo,
+	git_attr_file *file,
+	const char *data);
 
 typedef struct {
 	git_buf  full;
@@ -90,31 +110,26 @@ typedef struct {
 
 int git_attr_file__new(
 	git_attr_file **out,
-	git_attr_cache_entry *ce,
-	git_attr_cache_source source);
+	git_attr_file_entry *entry,
+	git_attr_file_source source);
 
 void git_attr_file__free(git_attr_file *file);
 
 int git_attr_file__load(
 	git_attr_file **out,
 	git_repository *repo,
-	git_attr_cache_entry *ce,
-	git_attr_cache_source source,
-	git_attr_cache_parser parser,
-	void *payload);
+	git_attr_file_entry *ce,
+	git_attr_file_source source,
+	git_attr_file_parser parser);
 
 int git_attr_file__load_standalone(
-	git_attr_file **out,
-	const char *path);
+	git_attr_file **out, const char *path);
 
 int git_attr_file__out_of_date(
 	git_repository *repo, git_attr_file *file);
 
 int git_attr_file__parse_buffer(
-	git_repository *repo,
-	git_attr_file *attrs,
-	const char *data,
-	void *payload);
+	git_repository *repo, git_attr_file *attrs, const char *data);
 
 int git_attr_file__clear_rules(
 	git_attr_file *file, bool need_lock);

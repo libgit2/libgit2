@@ -24,7 +24,7 @@ GIT_INLINE(void) attr_cache_unlock(git_attr_cache *cache)
 	git_mutex_unlock(&cache->lock);
 }
 
-GIT_INLINE(git_attr_cache_entry *) attr_cache_lookup_entry(
+GIT_INLINE(git_attr_file_entry *) attr_cache_lookup_entry(
 	git_attr_cache *cache, const char *path)
 {
 	khiter_t pos = git_strmap_lookup_index(cache->files, path);
@@ -35,15 +35,15 @@ GIT_INLINE(git_attr_cache_entry *) attr_cache_lookup_entry(
 		return NULL;
 }
 
-int git_attr_cache_entry__new(
-	git_attr_cache_entry **out,
+int git_attr_cache__alloc_file_entry(
+	git_attr_file_entry **out,
 	const char *base,
 	const char *path,
 	git_pool *pool)
 {
 	size_t baselen = 0, pathlen = strlen(path);
-	size_t cachesize = sizeof(git_attr_cache_entry) + pathlen + 1;
-	git_attr_cache_entry *ce;
+	size_t cachesize = sizeof(git_attr_file_entry) + pathlen + 1;
+	git_attr_file_entry *ce;
 
 	if (base != NULL && git_path_root(path) < 0) {
 		baselen = strlen(base);
@@ -72,41 +72,41 @@ int git_attr_cache_entry__new(
 
 /* call with attrcache locked */
 static int attr_cache_make_entry(
-	git_attr_cache_entry **out, git_repository *repo, const char *path)
+	git_attr_file_entry **out, git_repository *repo, const char *path)
 {
 	int error = 0;
 	git_attr_cache *cache = git_repository_attr_cache(repo);
-	git_attr_cache_entry *ce = NULL;
+	git_attr_file_entry *entry = NULL;
 
-	error = git_attr_cache_entry__new(
-		&ce, git_repository_workdir(repo), path, &cache->pool);
+	error = git_attr_cache__alloc_file_entry(
+		&entry, git_repository_workdir(repo), path, &cache->pool);
 
 	if (!error) {
-		git_strmap_insert(cache->files, ce->path, ce, error);
+		git_strmap_insert(cache->files, entry->path, entry, error);
 		if (error > 0)
 			error = 0;
 	}
 
-	*out = ce;
+	*out = entry;
 	return error;
 }
 
 /* insert entry or replace existing if we raced with another thread */
 static int attr_cache_upsert(git_attr_cache *cache, git_attr_file *file)
 {
-	git_attr_cache_entry *ce;
+	git_attr_file_entry *entry;
 	git_attr_file *old;
 
 	if (attr_cache_lock(cache) < 0)
 		return -1;
 
-	ce = attr_cache_lookup_entry(cache, file->ce->path);
+	entry = attr_cache_lookup_entry(cache, file->entry->path);
 
-	old = ce->file[file->source];
-
-	GIT_REFCOUNT_OWN(file, ce);
+	GIT_REFCOUNT_OWN(file, entry);
 	GIT_REFCOUNT_INC(file);
-	ce->file[file->source] = file;
+
+	old = git__compare_and_swap(
+		&entry->file[file->source], entry->file[file->source], file);
 
 	if (old) {
 		GIT_REFCOUNT_OWN(old, NULL);
@@ -120,7 +120,7 @@ static int attr_cache_upsert(git_attr_cache *cache, git_attr_file *file)
 static int attr_cache_remove(git_attr_cache *cache, git_attr_file *file)
 {
 	int error = 0;
-	git_attr_cache_entry *ce;
+	git_attr_file_entry *entry;
 	bool found = false;
 
 	if (!file)
@@ -128,27 +128,29 @@ static int attr_cache_remove(git_attr_cache *cache, git_attr_file *file)
 	if ((error = attr_cache_lock(cache)) < 0)
 		return error;
 
-	if ((ce = attr_cache_lookup_entry(cache, file->ce->path)) != NULL &&
-		ce->file[file->source] == file)
-	{
-		ce->file[file->source] = NULL;
-		GIT_REFCOUNT_OWN(file, NULL);
-		found = true;
-	}
+	if ((entry = attr_cache_lookup_entry(cache, file->entry->path)) != NULL)
+		file = git__compare_and_swap(&entry->file[file->source], file, NULL);
 
 	attr_cache_unlock(cache);
 
-	if (found)
+	if (found) {
+		GIT_REFCOUNT_OWN(file, NULL);
 		git_attr_file__free(file);
+	}
 
 	return error;
 }
 
+/* Look up cache entry and file.
+ * - If entry is not present, create it while the cache is locked.
+ * - If file is present, increment refcount before returning it, so the
+ *   cache can be unlocked and it won't go away.
+ */
 static int attr_cache_lookup(
 	git_attr_file **out_file,
-	git_attr_cache_entry **out_ce,
+	git_attr_file_entry **out_entry,
 	git_repository *repo,
-	git_attr_cache_source source,
+	git_attr_file_source source,
 	const char *base,
 	const char *filename)
 {
@@ -156,7 +158,7 @@ static int attr_cache_lookup(
 	git_buf path = GIT_BUF_INIT;
 	const char *wd = git_repository_workdir(repo), *relfile;
 	git_attr_cache *cache = git_repository_attr_cache(repo);
-	git_attr_cache_entry *ce = NULL;
+	git_attr_file_entry *entry = NULL;
 	git_attr_file *file = NULL;
 
 	/* join base and path as needed */
@@ -174,20 +176,20 @@ static int attr_cache_lookup(
 	if ((error = attr_cache_lock(cache)) < 0)
 		goto cleanup;
 
-	ce = attr_cache_lookup_entry(cache, relfile);
-	if (!ce) {
-		if ((error = attr_cache_make_entry(&ce, repo, relfile)) < 0)
+	entry = attr_cache_lookup_entry(cache, relfile);
+	if (!entry) {
+		if ((error = attr_cache_make_entry(&entry, repo, relfile)) < 0)
 			goto cleanup;
-	} else if (ce->file[source] != NULL) {
-		file = ce->file[source];
+	} else if (entry->file[source] != NULL) {
+		file = entry->file[source];
 		GIT_REFCOUNT_INC(file);
 	}
 
 	attr_cache_unlock(cache);
 
 cleanup:
-	*out_file = file;
-	*out_ce = ce;
+	*out_file  = file;
+	*out_entry = entry;
 
 	git_buf_free(&path);
 	return error;
@@ -196,29 +198,26 @@ cleanup:
 int git_attr_cache__get(
 	git_attr_file **out,
 	git_repository *repo,
-	git_attr_cache_source source,
+	git_attr_file_source source,
 	const char *base,
 	const char *filename,
-	git_attr_cache_parser parser,
-	void *payload)
+	git_attr_file_parser parser)
 {
 	int error = 0;
 	git_attr_cache *cache = git_repository_attr_cache(repo);
-	git_attr_cache_entry *ce = NULL;
+	git_attr_file_entry *entry = NULL;
 	git_attr_file *file = NULL;
 
-	if ((error = attr_cache_lookup(&file, &ce, repo, source, base, filename)) < 0)
+	if ((error = attr_cache_lookup(
+			&file, &entry, repo, source, base, filename)) < 0)
 		goto cleanup;
 
-	/* if this is not a file backed entry, just create a new empty one */
-	if (!parser) {
-		if (!file && !(error = git_attr_file__new(&file, ce, source)))
-			error = attr_cache_upsert(cache, file);
-	}
-	/* otherwise load and/or reload as needed */
-	else if (!file || (error = git_attr_file__out_of_date(repo, file)) > 0) {
-		if (!(error = git_attr_file__load(
-				&file, repo, ce, source, parser, payload)))
+	/* if file not found or out of date, load up-to-date data and replace */
+	if (!file || (error = git_attr_file__out_of_date(repo, file)) > 0) {
+		/* decrement refcount (if file was found) b/c we will not return it */
+		git_attr_file__free(file);
+
+		if (!(error = git_attr_file__load(&file, repo, entry, source, parser)))
 			error = attr_cache_upsert(cache, file);
 	}
 
@@ -245,13 +244,13 @@ cleanup:
 
 bool git_attr_cache__is_cached(
 	git_repository *repo,
-	git_attr_cache_source source,
+	git_attr_file_source source,
 	const char *filename)
 {
 	git_attr_cache *cache = git_repository_attr_cache(repo);
 	git_strmap *files;
 	khiter_t pos;
-	git_attr_cache_entry *ce;
+	git_attr_file_entry *entry;
 
 	if (!(cache = git_repository_attr_cache(repo)) ||
 		!(files = cache->files))
@@ -261,9 +260,9 @@ bool git_attr_cache__is_cached(
 	if (!git_strmap_valid_index(files, pos))
 		return false;
 
-	ce = git_strmap_value_at(files, pos);
+	entry = git_strmap_value_at(files, pos);
 
-	return ce && (ce->file[source] != NULL);
+	return entry && (entry->file[source] != NULL);
 }
 
 
@@ -307,14 +306,15 @@ static void attr_cache__free(git_attr_cache *cache)
 	unlock = (git_mutex_lock(&cache->lock) == 0);
 
 	if (cache->files != NULL) {
-		git_attr_cache_entry *ce;
+		git_attr_file_entry *entry;
+		git_attr_file *file;
 		int i;
 
-		git_strmap_foreach_value(cache->files, ce, {
-			for (i = 0; i < GIT_ATTR_CACHE_NUM_SOURCES; ++i) {
-				if (ce->file[i]) {
-					GIT_REFCOUNT_OWN(ce->file[i], NULL);
-					git_attr_file__free(ce->file[i]);
+		git_strmap_foreach_value(cache->files, entry, {
+			for (i = 0; i < GIT_ATTR_FILE_NUM_SOURCES; ++i) {
+				if ((file = git__swap(entry->file[i], NULL)) != NULL) {
+					GIT_REFCOUNT_OWN(file, NULL);
+					git_attr_file__free(file);
 				}
 			}
 		});
@@ -345,7 +345,7 @@ static void attr_cache__free(git_attr_cache *cache)
 	git__free(cache);
 }
 
-int git_attr_cache__init(git_repository *repo)
+int git_attr_cache__do_init(git_repository *repo)
 {
 	int ret = 0;
 	git_attr_cache *cache = git_repository_attr_cache(repo);

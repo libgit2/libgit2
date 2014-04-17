@@ -7,9 +7,8 @@
 #ifndef INCLUDE_attrcache_h__
 #define INCLUDE_attrcache_h__
 
-#include "pool.h"
+#include "attr_file.h"
 #include "strmap.h"
-#include "buffer.h"
 
 #define GIT_ATTR_CONFIG       "core.attributesfile"
 #define GIT_IGNORE_CONFIG     "core.excludesfile"
@@ -23,55 +22,35 @@ typedef struct {
 	git_pool  pool;
 } git_attr_cache;
 
-extern int git_attr_cache__init(git_repository *repo);
+extern int git_attr_cache__do_init(git_repository *repo);
 
-typedef enum {
-	GIT_ATTR_CACHE__FROM_FILE = 0,
-	GIT_ATTR_CACHE__FROM_INDEX = 1,
-
-	GIT_ATTR_CACHE_NUM_SOURCES = 2
-} git_attr_cache_source;
-
-typedef struct git_attr_file git_attr_file;
-typedef struct git_attr_rule git_attr_rule;
-
-typedef struct {
-	git_attr_file *file[GIT_ATTR_CACHE_NUM_SOURCES];
-	const char *path; /* points into fullpath */
-	char fullpath[GIT_FLEX_ARRAY];
-} git_attr_cache_entry;
-
-typedef int (*git_attr_cache_parser)(
-	git_repository *repo,
-	git_attr_file *file,
-	const char *data,
-	void *payload);
+#define git_attr_cache__init(REPO) \
+	(git_repository_attr_cache(REPO) ? 0 : git_attr_cache__do_init(REPO))
 
 /* get file - loading and reload as needed */
 extern int git_attr_cache__get(
 	git_attr_file **file,
 	git_repository *repo,
-	git_attr_cache_source source,
+	git_attr_file_source source,
 	const char *base,
 	const char *filename,
-	git_attr_cache_parser parser,
-	void *payload);
+	git_attr_file_parser parser);
 
 extern bool git_attr_cache__is_cached(
 	git_repository *repo,
-	git_attr_cache_source source,
+	git_attr_file_source source,
 	const char *path);
+
+extern int git_attr_cache__alloc_file_entry(
+	git_attr_file_entry **out,
+	const char *base,
+	const char *path,
+	git_pool *pool);
 
 extern int git_attr_cache__insert_macro(
 	git_repository *repo, git_attr_rule *macro);
 
 extern git_attr_rule *git_attr_cache__lookup_macro(
 	git_repository *repo, const char *name);
-
-extern int git_attr_cache_entry__new(
-	git_attr_cache_entry **out,
-	const char *base,
-	const char *path,
-	git_pool *pool);
 
 #endif

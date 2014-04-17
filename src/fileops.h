@@ -317,4 +317,10 @@ extern int git_futils_filestamp_check(
 extern void git_futils_filestamp_set(
 	git_futils_filestamp *tgt, const git_futils_filestamp *src);
 
+/**
+ * Set file stamp data from stat structure
+ */
+extern void git_futils_filestamp_set_from_stat(
+	git_futils_filestamp *stamp, struct stat *st);
+
 #endif /* INCLUDE_fileops_h__ */
