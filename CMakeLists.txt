@@ -340,9 +340,11 @@ ELSE ()
 		SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-unused-function")
 	ENDIF()
 
-	CHECK_C_COMPILER_FLAG(-Wno-deprecated-declarations DEPRECATED_DECLARATIONS_WARNING)
-	IF(DEPRECATED_DECLARATIONS_WARNING)
-		SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-deprecated-declarations")
+	IF (APPLE) # Apple deprecated OpenSSL
+		CHECK_C_COMPILER_FLAG(-Wno-deprecated-declarations DEPRECATED_DECLARATIONS_WARNING)
+		IF(DEPRECATED_DECLARATIONS_WARNING)
+			SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-deprecated-declarations")
+		ENDIF()
 	ENDIF()
 
 	IF (PROFILE)
