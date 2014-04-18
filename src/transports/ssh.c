@@ -282,7 +282,6 @@ shutdown:
 
 static int _git_ssh_authenticate_session(
 	LIBSSH2_SESSION* session,
-	const char *user,
 	git_cred* cred)
 {
 	int rc;
@@ -291,13 +290,11 @@ static int _git_ssh_authenticate_session(
 		switch (cred->credtype) {
 		case GIT_CREDTYPE_USERPASS_PLAINTEXT: {
 			git_cred_userpass_plaintext *c = (git_cred_userpass_plaintext *)cred;
-			user = c->username ? c->username : user;
-			rc = libssh2_userauth_password(session, user, c->password);
+			rc = libssh2_userauth_password(session, c->username, c->password);
 			break;
 		}
 		case GIT_CREDTYPE_SSH_KEY: {
 			git_cred_ssh_key *c = (git_cred_ssh_key *)cred;
-			user = c->username ? c->username : user;
 
 			if (c->privatekey)
 				rc = libssh2_userauth_publickey_fromfile(
@@ -311,7 +308,6 @@ static int _git_ssh_authenticate_session(
 		case GIT_CREDTYPE_SSH_CUSTOM: {
 			git_cred_ssh_custom *c = (git_cred_ssh_custom *)cred;
 
-			user = c->username ? c->username : user;
 			rc = libssh2_userauth_publickey(
 				session, c->username, (const unsigned char *)c->publickey,
 				c->publickey_len, c->sign_callback, &c->sign_data);
@@ -415,15 +411,10 @@ static int _git_ssh_setup_conn(
 	}
 	assert(t->cred);
 
-	if (!user && !git_cred_has_username(t->cred)) {
-		giterr_set_str(GITERR_NET, "Cannot authenticate without a username");
-		goto on_error;
-	}
-
 	if (_git_ssh_session_create(&session, s->socket) < 0)
 		goto on_error;
 
-	if (_git_ssh_authenticate_session(session, user, t->cred) < 0)
+	if (_git_ssh_authenticate_session(session, t->cred) < 0)
 		goto on_error;
 
 	channel = libssh2_channel_open_session(session);
