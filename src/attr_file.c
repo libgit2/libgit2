@@ -353,6 +353,8 @@ bool git_attr_fnmatch__match(
 
 	if (match->flags & GIT_ATTR_FNMATCH_ICASE)
 		flags |= FNM_CASEFOLD;
+	if (match->flags & GIT_ATTR_FNMATCH_LEADINGDIR)
+		flags |= FNM_LEADING_DIR;
 
 	if (match->flags & GIT_ATTR_FNMATCH_FULLPATH) {
 		filename = path->path;
@@ -542,6 +544,13 @@ int git_attr_fnmatch__parse(
 		spec->flags = spec->flags | GIT_ATTR_FNMATCH_DIRECTORY;
 		if (--slash_count <= 0)
 			spec->flags = spec->flags & ~GIT_ATTR_FNMATCH_FULLPATH;
+	}
+	if (spec->length >= 2 &&
+		pattern[spec->length - 1] == '*' &&
+		pattern[spec->length - 2] == '/') {
+		spec->length -= 2;
+		spec->flags = spec->flags | GIT_ATTR_FNMATCH_LEADINGDIR;
+		/* leave FULLPATH match on, however */
 	}
 
 	if ((spec->flags & GIT_ATTR_FNMATCH_FULLPATH) != 0 &&

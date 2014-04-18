@@ -456,6 +456,24 @@ void test_status_ignore__contained_dir_with_matching_name(void)
 	cl_assert_equal_i(0, counts.wrong_sorted_path);
 }
 
+void test_status_ignore__trailing_slash_star(void)
+{
+	static const char *test_files[] = {
+		"empty_standard_repo/file",
+		"empty_standard_repo/subdir/file",
+		"empty_standard_repo/subdir/sub2/sub3/file",
+		NULL
+	};
+
+	make_test_data("empty_standard_repo", test_files);
+	cl_git_mkfile(
+		"empty_standard_repo/subdir/.gitignore", "/**/*\n");
+
+	refute_is_ignored("file");
+	assert_is_ignored("subdir/sub2/sub3/file");
+	assert_is_ignored("subdir/file");
+}
+
 void test_status_ignore__adding_internal_ignores(void)
 {
 	g_repo = cl_git_sandbox_init("empty_standard_repo");
