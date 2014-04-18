@@ -248,9 +248,7 @@ int git_attr_file__parse_buffer(
 				repo, &attrs->pool, &rule->assigns, &scan)))
 		{
 			if (rule->match.flags & GIT_ATTR_FNMATCH_MACRO)
-				/* should generate error/warning if this is coming from any
-				 * file other than .gitattributes at repo root.
-				 */
+				/* TODO: warning if macro found in file below repo root */
 				error = git_attr_cache__insert_macro(repo, rule);
 			else
 				error = git_vector_insert(&attrs->rules, rule);
