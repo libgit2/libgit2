@@ -68,6 +68,7 @@ static struct map_data _cvar_maps[] = {
 	{"core.trustctime", NULL, 0, GIT_TRUSTCTIME_DEFAULT },
 	{"core.abbrev", _cvar_map_int, 1, GIT_ABBREV_DEFAULT },
 	{"core.precomposeunicode", NULL, 0, GIT_PRECOMPOSE_DEFAULT },
+	{"core.safecrlf", NULL, 0, GIT_SAFE_CRLF_DEFAULT},
 };
 
 int git_repository__cvar(int *out, git_repository *repo, git_cvar_cached cvar)

@@ -21,6 +21,7 @@ struct crlf_attrs {
 	int crlf_action;
 	int eol;
 	int auto_crlf;
+	int safe_crlf;
 };
 
 struct crlf_filter {
@@ -136,6 +137,13 @@ static int crlf_apply_to_odb(
 		/* Check heuristics for binary vs text - returns true if binary */
 		if (git_buf_text_gather_stats(&stats, from, false))
 			return GIT_PASSTHROUGH;
+
+		/* If safecrlf is enabled, sanity-check the result. */
+		if (ca->safe_crlf && (stats.cr != stats.crlf || stats.lf != stats.crlf)) {
+			giterr_set(GITERR_FILTER, "LF would be replaced by CRLF in '%s'",
+				git_filter_source_path(src));
+			return -1;
+		}
 
 		/*
 		 * We're currently not going to even try to convert stuff
@@ -270,6 +278,13 @@ static int crlf_check(
 		if (ca.auto_crlf == GIT_AUTO_CRLF_INPUT &&
 			git_filter_source_mode(src) == GIT_FILTER_SMUDGE)
 			return GIT_PASSTHROUGH;
+	}
+
+	if (git_filter_source_mode(src) == GIT_FILTER_CLEAN) {
+		error = git_repository__cvar(
+			&ca.safe_crlf, git_filter_source_repo(src), GIT_CVAR_SAFE_CRLF);
+		if (error < 0)
+			return error;
 	}
 
 	*payload = git__malloc(sizeof(ca));
