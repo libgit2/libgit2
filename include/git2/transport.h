@@ -86,7 +86,7 @@ typedef struct git_cred_ssh_key {
 typedef struct git_cred_ssh_interactive {
 	git_cred parent;
 	char *username;
-	void *prompt_callback;
+	git_cred_ssh_interactive_callback prompt_callback;
 	void *payload;
 } git_cred_ssh_interactive;
 
@@ -98,7 +98,7 @@ typedef struct git_cred_ssh_custom {
 	char *username;
 	char *publickey;
 	size_t publickey_len;
-	void *sign_callback;
+	git_cred_sign_callback sign_callback;
 	void *payload;
 } git_cred_ssh_custom;
 
