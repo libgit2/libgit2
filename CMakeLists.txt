@@ -18,6 +18,7 @@ CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
 SET(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_LIST_DIR}/cmake/Modules/")
 
 INCLUDE(CheckLibraryExists)
+INCLUDE(CheckCCompilerFlag)
 
 # Build options
 #
@@ -287,7 +288,7 @@ IF (MSVC)
    # Precompiled headers
 
 ELSE ()
-	SET(CMAKE_C_FLAGS "-D_GNU_SOURCE -Wall -Wextra -Wno-missing-field-initializers -Wstrict-aliasing=2 -Wstrict-prototypes -Wdeclaration-after-statement ${CMAKE_C_FLAGS}")
+	SET(CMAKE_C_FLAGS "-D_GNU_SOURCE -Wall -Wextra ${CMAKE_C_FLAGS}")
 
 	IF (WIN32 AND NOT CYGWIN)
 		SET(CMAKE_C_FLAGS_DEBUG "-D_DEBUG")
@@ -301,16 +302,49 @@ ELSE ()
 		ADD_DEFINITIONS(-D__USE_MINGW_ANSI_STDIO=1)
 
 	ELSEIF (BUILD_SHARED_LIBS)
-		SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fvisibility=hidden -fPIC")
-	ENDIF ()
-	IF (APPLE) # Apple deprecated OpenSSL
-		SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-deprecated-declarations")
-
-		# With clang, disable some annoying extra warnings
-		IF (NOT CMAKE_COMPILER_IS_GNUCC)
-			SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-unused-const-variable -Wno-unused-function")
+		CHECK_C_COMPILER_FLAG(-fvisibility=hidden HIDDEN_VISIBILITY_FLAG)
+		IF(HIDDEN_VISIBILITY_FLAG)
+			SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fvisibility=hidden")
 		ENDIF()
+
+		SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
 	ENDIF ()
+
+	CHECK_C_COMPILER_FLAG(-Wno-missing-field-initializers NO_MISSING_FIELD_INIT_WARNING)
+	IF(NO_MISSING_FIELD_INIT_WARNING)
+		SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-missing-field-initializers")
+	ENDIF()
+
+	CHECK_C_COMPILER_FLAG(-Wstrict-aliasing STRICT_ALIASING_WARNING)
+	IF(STRICT_ALIASING_WARNING)
+		SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wstrict-aliasing=2")
+	ENDIF()
+
+	CHECK_C_COMPILER_FLAG(-Wstrict-prototypes STRICT_PROTOTYPES_WARNING)
+	IF(STRICT_PROTOTYPES_WARNING)
+		SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wstrict-prototypes")
+	ENDIF()
+
+	CHECK_C_COMPILER_FLAG(-Wdeclaration-after-statement DECLARATION_AFTER_STATEMENT_WARNING)
+	IF(DECLARATION_AFTER_STATEMENT_WARNING)
+		SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wdeclaration-after-statement")
+	ENDIF()
+
+	CHECK_C_COMPILER_FLAG(-Wno-unused-const-variable UNUSED_CONST_VAR_WARNING)
+	IF(UNUSED_CONST_VAR_WARNING)
+		SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-unused-const-variable")
+	ENDIF()
+
+	CHECK_C_COMPILER_FLAG(-Wno-unused-function UNUSED_FUNCTION_WARNING)
+	IF(UNUSED_FUNCTION_WARNING)
+		SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-unused-function")
+	ENDIF()
+
+	CHECK_C_COMPILER_FLAG(-Wno-deprecated-declarations DEPRECATED_DECLARATIONS_WARNING)
+	IF(DEPRECATED_DECLARATIONS_WARNING)
+		SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-deprecated-declarations")
+	ENDIF()
+
 	IF (PROFILE)
 		SET(CMAKE_C_FLAGS "-pg ${CMAKE_C_FLAGS}")
 		SET(CMAKE_EXE_LINKER_FLAGS "-pg ${CMAKE_EXE_LINKER_FLAGS}")
