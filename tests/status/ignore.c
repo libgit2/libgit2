@@ -16,6 +16,23 @@ void test_status_ignore__cleanup(void)
 	cl_git_sandbox_cleanup();
 }
 
+static void assert_ignored_(
+	bool expected, const char *filepath, const char *file, int line)
+{
+	int is_ignored = 0;
+	cl_git_pass_(
+		git_status_should_ignore(&is_ignored, g_repo, filepath), file, line);
+	clar__assert(
+		(expected != 0) == (is_ignored != 0),
+		file, line, "expected != is_ignored", filepath, 1);
+}
+#define assert_ignored(expected, filepath) \
+	assert_ignored_(expected, filepath, __FILE__, __LINE__)
+#define assert_is_ignored(filepath) \
+	assert_ignored_(true, filepath, __FILE__, __LINE__)
+#define refute_is_ignored(filepath) \
+	assert_ignored_(false, filepath, __FILE__, __LINE__)
+
 void test_status_ignore__0(void)
 {
 	struct {
@@ -47,11 +64,8 @@ void test_status_ignore__0(void)
 
 	g_repo = cl_git_sandbox_init("attr");
 
-	for (one_test = test_cases; one_test->path != NULL; one_test++) {
-		int ignored;
-		cl_git_pass(git_status_should_ignore(&ignored, g_repo, one_test->path));
-		cl_assert_(ignored == one_test->expected, one_test->path);
-	}
+	for (one_test = test_cases; one_test->path != NULL; one_test++)
+		assert_ignored(one_test->expected, one_test->path);
 
 	/* confirm that ignore files were cached */
 	cl_assert(git_attr_cache__is_cached(
@@ -63,37 +77,22 @@ void test_status_ignore__0(void)
 
 void test_status_ignore__1(void)
 {
-	int ignored;
-
 	g_repo = cl_git_sandbox_init("attr");
 
 	cl_git_rewritefile("attr/.gitignore", "/*.txt\n/dir/\n");
 	git_attr_cache_flush(g_repo);
 
-	cl_git_pass(git_status_should_ignore(&ignored, g_repo, "root_test4.txt"));
-	cl_assert(ignored);
-
-	cl_git_pass(git_status_should_ignore(&ignored, g_repo, "sub/subdir_test2.txt"));
-	cl_assert(!ignored);
-
-	cl_git_pass(git_status_should_ignore(&ignored, g_repo, "dir"));
-	cl_assert(ignored);
-
-	cl_git_pass(git_status_should_ignore(&ignored, g_repo, "dir/"));
-	cl_assert(ignored);
-
-	cl_git_pass(git_status_should_ignore(&ignored, g_repo, "sub/dir"));
-	cl_assert(!ignored);
-
-	cl_git_pass(git_status_should_ignore(&ignored, g_repo, "sub/dir/"));
-	cl_assert(!ignored);
+	assert_is_ignored("root_test4.txt");
+	refute_is_ignored("sub/subdir_test2.txt");
+	assert_is_ignored("dir");
+	assert_is_ignored("dir/");
+	refute_is_ignored("sub/dir");
+	refute_is_ignored("sub/dir/");
 }
-
 
 void test_status_ignore__empty_repo_with_gitignore_rewrite(void)
 {
 	status_entry_single st;
-	int ignored;
 
 	g_repo = cl_git_sandbox_init("empty_standard_repo");
 
@@ -108,8 +107,7 @@ void test_status_ignore__empty_repo_with_gitignore_rewrite(void)
 	cl_git_pass(git_status_file(&st.status, g_repo, "look-ma.txt"));
 	cl_assert(st.status == GIT_STATUS_WT_NEW);
 
-	cl_git_pass(git_status_should_ignore(&ignored, g_repo, "look-ma.txt"));
-	cl_assert(!ignored);
+	refute_is_ignored("look-ma.txt");
 
 	cl_git_rewritefile("empty_standard_repo/.gitignore", "*.nomatch\n");
 
@@ -121,8 +119,7 @@ void test_status_ignore__empty_repo_with_gitignore_rewrite(void)
 	cl_git_pass(git_status_file(&st.status, g_repo, "look-ma.txt"));
 	cl_assert(st.status == GIT_STATUS_WT_NEW);
 
-	cl_git_pass(git_status_should_ignore(&ignored, g_repo, "look-ma.txt"));
-	cl_assert(!ignored);
+	refute_is_ignored("look-ma.txt");
 
 	cl_git_rewritefile("empty_standard_repo/.gitignore", "*.txt\n");
 
@@ -134,8 +131,7 @@ void test_status_ignore__empty_repo_with_gitignore_rewrite(void)
 	cl_git_pass(git_status_file(&st.status, g_repo, "look-ma.txt"));
 	cl_assert(st.status == GIT_STATUS_IGNORED);
 
-	cl_git_pass(git_status_should_ignore(&ignored, g_repo, "look-ma.txt"));
-	cl_assert(ignored);
+	assert_is_ignored("look-ma.txt");
 }
 
 void test_status_ignore__ignore_pattern_contains_space(void)
@@ -181,7 +177,6 @@ void test_status_ignore__ignore_pattern_ignorecase(void)
 void test_status_ignore__subdirectories(void)
 {
 	status_entry_single st;
-	int ignored;
 
 	g_repo = cl_git_sandbox_init("empty_standard_repo");
 
@@ -198,8 +193,7 @@ void test_status_ignore__subdirectories(void)
 	cl_git_pass(git_status_file(&st.status, g_repo, "ignore_me"));
 	cl_assert(st.status == GIT_STATUS_IGNORED);
 
-	cl_git_pass(git_status_should_ignore(&ignored, g_repo, "ignore_me"));
-	cl_assert(ignored);
+	assert_is_ignored("ignore_me");
 
 	/* I've changed libgit2 so that the behavior here now differs from
 	 * core git but seems to make more sense.  In core git, the following
@@ -225,9 +219,7 @@ void test_status_ignore__subdirectories(void)
 	cl_git_pass(git_status_file(&st.status, g_repo, "test/ignore_me/file"));
 	cl_assert(st.status == GIT_STATUS_IGNORED);
 
-	cl_git_pass(
-		git_status_should_ignore(&ignored, g_repo, "test/ignore_me/file"));
-	cl_assert(ignored);
+	assert_is_ignored("test/ignore_me/file");
 }
 
 static void make_test_data(const char *reponame, const char **files)
@@ -439,7 +431,6 @@ void test_status_ignore__contained_dir_with_matching_name(void)
 	static const unsigned int expected_statuses[] = {
 		GIT_STATUS_WT_NEW,  GIT_STATUS_WT_NEW,  GIT_STATUS_IGNORED
 	};
-	int ignored;
 	git_status_options opts = GIT_STATUS_OPTIONS_INIT;
 	status_entry_counts counts;
 
@@ -447,13 +438,8 @@ void test_status_ignore__contained_dir_with_matching_name(void)
 	cl_git_mkfile(
 		"empty_standard_repo/subdir_match/.gitignore", "*_ignoreme\n");
 
-	cl_git_pass(git_status_should_ignore(
-		&ignored, g_repo, "subdir_match/aaa/subdir_match/file"));
-	cl_assert(!ignored);
-
-	cl_git_pass(git_status_should_ignore(
-		&ignored, g_repo, "subdir_match/zzz_ignoreme"));
-	cl_assert(ignored);
+	refute_is_ignored("subdir_match/aaa/subdir_match/file");
+	assert_is_ignored("subdir_match/zzz_ignoreme");
 
 	memset(&counts, 0x0, sizeof(status_entry_counts));
 	counts.expected_entry_count = 3;
@@ -472,149 +458,102 @@ void test_status_ignore__contained_dir_with_matching_name(void)
 
 void test_status_ignore__adding_internal_ignores(void)
 {
-	int ignored;
-
 	g_repo = cl_git_sandbox_init("empty_standard_repo");
 
-	cl_git_pass(git_status_should_ignore(&ignored, g_repo, "one.txt"));
-	cl_assert(!ignored);
-	cl_git_pass(git_status_should_ignore(&ignored, g_repo, "two.bar"));
-	cl_assert(!ignored);
+	refute_is_ignored("one.txt");
+	refute_is_ignored("two.bar");
 
 	cl_git_pass(git_ignore_add_rule(g_repo, "*.nomatch\n"));
 
-	cl_git_pass(git_status_should_ignore(&ignored, g_repo, "one.txt"));
-	cl_assert(!ignored);
-	cl_git_pass(git_status_should_ignore(&ignored, g_repo, "two.bar"));
-	cl_assert(!ignored);
+	refute_is_ignored("one.txt");
+	refute_is_ignored("two.bar");
 
 	cl_git_pass(git_ignore_add_rule(g_repo, "*.txt\n"));
 
-	cl_git_pass(git_status_should_ignore(&ignored, g_repo, "one.txt"));
-	cl_assert(ignored);
-	cl_git_pass(git_status_should_ignore(&ignored, g_repo, "two.bar"));
-	cl_assert(!ignored);
+	assert_is_ignored("one.txt");
+	refute_is_ignored("two.bar");
 
 	cl_git_pass(git_ignore_add_rule(g_repo, "*.bar\n"));
 
-	cl_git_pass(git_status_should_ignore(&ignored, g_repo, "one.txt"));
-	cl_assert(ignored);
-	cl_git_pass(git_status_should_ignore(&ignored, g_repo, "two.bar"));
-	cl_assert(ignored);
+	assert_is_ignored("one.txt");
+	assert_is_ignored("two.bar");
 
 	cl_git_pass(git_ignore_clear_internal_rules(g_repo));
 
-	cl_git_pass(git_status_should_ignore(&ignored, g_repo, "one.txt"));
-	cl_assert(!ignored);
-	cl_git_pass(git_status_should_ignore(&ignored, g_repo, "two.bar"));
-	cl_assert(!ignored);
+	refute_is_ignored("one.txt");
+	refute_is_ignored("two.bar");
 
 	cl_git_pass(git_ignore_add_rule(
 		g_repo, "multiple\n*.rules\n# comment line\n*.bar\n"));
 
-	cl_git_pass(git_status_should_ignore(&ignored, g_repo, "one.txt"));
-	cl_assert(!ignored);
-	cl_git_pass(git_status_should_ignore(&ignored, g_repo, "two.bar"));
-	cl_assert(ignored);
+	refute_is_ignored("one.txt");
+	assert_is_ignored("two.bar");
 }
 
 void test_status_ignore__add_internal_as_first_thing(void)
 {
-	int ignored;
 	const char *add_me = "\n#################\n## Eclipse\n#################\n\n*.pydevproject\n.project\n.metadata\nbin/\ntmp/\n*.tmp\n\n";
 
 	g_repo = cl_git_sandbox_init("empty_standard_repo");
 
 	cl_git_pass(git_ignore_add_rule(g_repo, add_me));
 
-	cl_git_pass(git_status_should_ignore(&ignored, g_repo, "one.tmp"));
-	cl_assert(ignored);
-	cl_git_pass(git_status_should_ignore(&ignored, g_repo, "two.bar"));
-	cl_assert(!ignored);
+	assert_is_ignored("one.tmp");
+	refute_is_ignored("two.bar");
 }
 
 void test_status_ignore__internal_ignores_inside_deep_paths(void)
 {
-	int ignored;
 	const char *add_me = "Debug\nthis/is/deep\npatterned*/dir\n";
 
 	g_repo = cl_git_sandbox_init("empty_standard_repo");
 
 	cl_git_pass(git_ignore_add_rule(g_repo, add_me));
 
-	cl_git_pass(git_status_should_ignore(&ignored, g_repo, "Debug"));
-	cl_assert(ignored);
-	cl_git_pass(git_status_should_ignore(&ignored, g_repo, "and/Debug"));
-	cl_assert(ignored);
-	cl_git_pass(git_status_should_ignore(&ignored, g_repo, "really/Debug/this/file"));
-	cl_assert(ignored);
-	cl_git_pass(git_status_should_ignore(&ignored, g_repo, "Debug/what/I/say"));
-	cl_assert(ignored);
+	assert_is_ignored("Debug");
+	assert_is_ignored("and/Debug");
+	assert_is_ignored("really/Debug/this/file");
+	assert_is_ignored("Debug/what/I/say");
 
-	cl_git_pass(git_status_should_ignore(&ignored, g_repo, "and/NoDebug"));
-	cl_assert(!ignored);
-	cl_git_pass(git_status_should_ignore(&ignored, g_repo, "NoDebug/this"));
-	cl_assert(!ignored);
-	cl_git_pass(git_status_should_ignore(&ignored, g_repo, "please/NoDebug/this"));
-	cl_assert(!ignored);
+	refute_is_ignored("and/NoDebug");
+	refute_is_ignored("NoDebug/this");
+	refute_is_ignored("please/NoDebug/this");
 
-	cl_git_pass(git_status_should_ignore(&ignored, g_repo, "this/is/deep"));
-	cl_assert(ignored);
+	assert_is_ignored("this/is/deep");
 	/* pattern containing slash gets FNM_PATHNAME so all slashes must match */
-	cl_git_pass(git_status_should_ignore(&ignored, g_repo, "and/this/is/deep"));
-	cl_assert(!ignored);
-	cl_git_pass(git_status_should_ignore(&ignored, g_repo, "this/is/deep/too"));
-	cl_assert(ignored);
+	refute_is_ignored("and/this/is/deep");
+	assert_is_ignored("this/is/deep/too");
 	/* pattern containing slash gets FNM_PATHNAME so all slashes must match */
-	cl_git_pass(git_status_should_ignore(&ignored, g_repo, "but/this/is/deep/and/ignored"));
-	cl_assert(!ignored);
+	refute_is_ignored("but/this/is/deep/and/ignored");
 
-	cl_git_pass(git_status_should_ignore(&ignored, g_repo, "this/is/not/deep"));
-	cl_assert(!ignored);
-	cl_git_pass(git_status_should_ignore(&ignored, g_repo, "is/this/not/as/deep"));
-	cl_assert(!ignored);
-	cl_git_pass(git_status_should_ignore(&ignored, g_repo, "this/is/deepish"));
-	cl_assert(!ignored);
-	cl_git_pass(git_status_should_ignore(&ignored, g_repo, "xthis/is/deep"));
-	cl_assert(!ignored);
+	refute_is_ignored("this/is/not/deep");
+	refute_is_ignored("is/this/not/as/deep");
+	refute_is_ignored("this/is/deepish");
+	refute_is_ignored("xthis/is/deep");
 }
 
 void test_status_ignore__automatically_ignore_bad_files(void)
 {
-	int ignored;
-
 	g_repo = cl_git_sandbox_init("empty_standard_repo");
 
-	cl_git_pass(git_status_should_ignore(&ignored, g_repo, ".git"));
-	cl_assert(ignored);
-	cl_git_pass(git_status_should_ignore(&ignored, g_repo, "this/file/."));
-	cl_assert(ignored);
-	cl_git_pass(git_status_should_ignore(&ignored, g_repo, "path/../funky"));
-	cl_assert(ignored);
-	cl_git_pass(git_status_should_ignore(&ignored, g_repo, "path/whatever.c"));
-	cl_assert(!ignored);
+	assert_is_ignored(".git");
+	assert_is_ignored("this/file/.");
+	assert_is_ignored("path/../funky");
+	refute_is_ignored("path/whatever.c");
 
 	cl_git_pass(git_ignore_add_rule(g_repo, "*.c\n"));
 
-	cl_git_pass(git_status_should_ignore(&ignored, g_repo, ".git"));
-	cl_assert(ignored);
-	cl_git_pass(git_status_should_ignore(&ignored, g_repo, "this/file/."));
-	cl_assert(ignored);
-	cl_git_pass(git_status_should_ignore(&ignored, g_repo, "path/../funky"));
-	cl_assert(ignored);
-	cl_git_pass(git_status_should_ignore(&ignored, g_repo, "path/whatever.c"));
-	cl_assert(ignored);
+	assert_is_ignored(".git");
+	assert_is_ignored("this/file/.");
+	assert_is_ignored("path/../funky");
+	assert_is_ignored("path/whatever.c");
 
 	cl_git_pass(git_ignore_clear_internal_rules(g_repo));
 
-	cl_git_pass(git_status_should_ignore(&ignored, g_repo, ".git"));
-	cl_assert(ignored);
-	cl_git_pass(git_status_should_ignore(&ignored, g_repo, "this/file/."));
-	cl_assert(ignored);
-	cl_git_pass(git_status_should_ignore(&ignored, g_repo, "path/../funky"));
-	cl_assert(ignored);
-	cl_git_pass(git_status_should_ignore(&ignored, g_repo, "path/whatever.c"));
-	cl_assert(!ignored);
+	assert_is_ignored(".git");
+	assert_is_ignored("this/file/.");
+	assert_is_ignored("path/../funky");
+	refute_is_ignored("path/whatever.c");
 }
 
 void test_status_ignore__filenames_with_special_prefixes_do_not_interfere_with_status_retrieval(void)
@@ -653,7 +592,6 @@ void test_status_ignore__filenames_with_special_prefixes_do_not_interfere_with_s
 
 void test_status_ignore__issue_1766_negated_ignores(void)
 {
-	int ignored = 0;
 	unsigned int status;
 
 	g_repo = cl_git_sandbox_init("empty_standard_repo");
@@ -665,11 +603,8 @@ void test_status_ignore__issue_1766_negated_ignores(void)
 	cl_git_mkfile(
 		"empty_standard_repo/a/ignoreme", "I should be ignored\n");
 
-	cl_git_pass(git_status_should_ignore(&ignored, g_repo, "a/.gitignore"));
-	cl_assert(!ignored);
-
-	cl_git_pass(git_status_should_ignore(&ignored, g_repo, "a/ignoreme"));
-	cl_assert(ignored);
+	refute_is_ignored("a/.gitignore");
+	assert_is_ignored("a/ignoreme");
 
 	cl_git_pass(git_futils_mkdir_r(
 		"empty_standard_repo/b", NULL, 0775));
@@ -678,18 +613,12 @@ void test_status_ignore__issue_1766_negated_ignores(void)
 	cl_git_mkfile(
 		"empty_standard_repo/b/ignoreme", "I should be ignored\n");
 
-	cl_git_pass(git_status_should_ignore(&ignored, g_repo, "b/.gitignore"));
-	cl_assert(!ignored);
-
-	cl_git_pass(git_status_should_ignore(&ignored, g_repo, "b/ignoreme"));
-	cl_assert(ignored);
+	refute_is_ignored("b/.gitignore");
+	assert_is_ignored("b/ignoreme");
 
 	/* shouldn't have changed results from first couple either */
-
-	cl_git_pass(git_status_should_ignore(&ignored, g_repo, "a/.gitignore"));
-	cl_assert(!ignored);
-	cl_git_pass(git_status_should_ignore(&ignored, g_repo, "a/ignoreme"));
-	cl_assert(ignored);
+	refute_is_ignored("a/.gitignore");
+	assert_is_ignored("a/ignoreme");
 
 	/* status should find the two ignore files and nothing else */
 
