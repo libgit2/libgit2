@@ -85,8 +85,11 @@ int git_vector_insert_sorted(git_vector *v, void *element,
 int git_vector_remove(git_vector *v, size_t idx);
 void git_vector_pop(git_vector *v);
 void git_vector_uniq(git_vector *v, void  (*git_free_cb)(void *));
+
 void git_vector_remove_matching(
-	git_vector *v, int (*match)(const git_vector *v, size_t idx));
+	git_vector *v,
+	int (*match)(const git_vector *v, size_t idx, void *payload),
+	void *payload);
 
 int git_vector_resize_to(git_vector *v, size_t new_length);
 int git_vector_set(void **old, git_vector *v, size_t position, void *value);
@@ -107,5 +110,8 @@ GIT_INLINE(void) git_vector_set_cmp(git_vector *v, git_vector_cmp cmp)
 		git_vector_set_sorted(v, 0);
 	}
 }
+
+/* Just use this in tests, not for realz. returns -1 if not sorted */
+int git_vector_verify_sorted(const git_vector *v);
 
 #endif

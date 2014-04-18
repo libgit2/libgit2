@@ -292,13 +292,14 @@ typedef struct {
  * Compare stat information for file with reference info.
  *
  * This function updates the file stamp to current data for the given path
- * and returns 0 if the file is up-to-date relative to the prior setting or
- * 1 if the file has been changed.  (This also may return GIT_ENOTFOUND if
- * the file doesn't exist.)
+ * and returns 0 if the file is up-to-date relative to the prior setting,
+ * 1 if the file has been changed, or GIT_ENOTFOUND if the file doesn't
+ * exist.  This will not call giterr_set, so you must set the error if you
+ * plan to return an error.
  *
  * @param stamp File stamp to be checked
  * @param path Path to stat and check if changed
- * @return 0 if up-to-date, 1 if out-of-date, <0 on error
+ * @return 0 if up-to-date, 1 if out-of-date, GIT_ENOTFOUND if cannot stat
  */
 extern int git_futils_filestamp_check(
 	git_futils_filestamp *stamp, const char *path);
@@ -315,5 +316,11 @@ extern int git_futils_filestamp_check(
  */
 extern void git_futils_filestamp_set(
 	git_futils_filestamp *tgt, const git_futils_filestamp *src);
+
+/**
+ * Set file stamp data from stat structure
+ */
+extern void git_futils_filestamp_set_from_stat(
+	git_futils_filestamp *stamp, struct stat *st);
 
 #endif /* INCLUDE_fileops_h__ */

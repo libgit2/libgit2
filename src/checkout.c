@@ -277,19 +277,23 @@ static int checkout_action_wd_only(
 
 	/* check if item is tracked in the index but not in the checkout diff */
 	if (data->index != NULL) {
+		size_t pos;
+
+		error = git_index__find_pos(
+			&pos, data->index, wd->path, 0, GIT_INDEX_STAGE_ANY);
+
 		if (wd->mode != GIT_FILEMODE_TREE) {
-			if (!(error = git_index_find(NULL, data->index, wd->path))) {
+			if (!error) { /* found by git_index__find_pos call */
 				notify = GIT_CHECKOUT_NOTIFY_DIRTY;
 				remove = ((data->strategy & GIT_CHECKOUT_FORCE) != 0);
 			} else if (error != GIT_ENOTFOUND)
 				return error;
 			else
-				giterr_clear();
+				error = 0; /* git_index__find_pos does not set error msg */
 		} else {
 			/* for tree entries, we have to see if there are any index
 			 * entries that are contained inside that tree
 			 */
-			size_t pos = git_index__prefix_position(data->index, wd->path);
 			const git_index_entry *e = git_index_get_byindex(data->index, pos);
 
 			if (e != NULL && data->diff->pfxcomp(e->path, wd->path) == 0) {
@@ -653,9 +657,12 @@ static int checkout_conflictdata_cmp(const void *a, const void *b)
 	return diff;
 }
 
-int checkout_conflictdata_empty(const git_vector *conflicts, size_t idx)
+int checkout_conflictdata_empty(
+	const git_vector *conflicts, size_t idx, void *payload)
 {
 	checkout_conflictdata *conflict;
+
+	GIT_UNUSED(payload);
 
 	if ((conflict = git_vector_get(conflicts, idx)) == NULL)
 		return -1;
@@ -954,7 +961,8 @@ static int checkout_conflicts_coalesce_renames(
 			ancestor_conflict->one_to_two = 1;
 	}
 
-	git_vector_remove_matching(&data->conflicts, checkout_conflictdata_empty);
+	git_vector_remove_matching(
+		&data->conflicts, checkout_conflictdata_empty, NULL);
 
 done:
 	return error;

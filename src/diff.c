@@ -318,6 +318,31 @@ static const char *diff_mnemonic_prefix(
 	return pfx;
 }
 
+static void diff_set_ignore_case(git_diff *diff, bool ignore_case)
+{
+	if (!ignore_case) {
+		diff->opts.flags &= ~GIT_DIFF_IGNORE_CASE;
+
+		diff->strcomp    = git__strcmp;
+		diff->strncomp   = git__strncmp;
+		diff->pfxcomp    = git__prefixcmp;
+		diff->entrycomp  = git_index_entry_cmp;
+
+		git_vector_set_cmp(&diff->deltas, git_diff_delta__cmp);
+	} else {
+		diff->opts.flags |= GIT_DIFF_IGNORE_CASE;
+
+		diff->strcomp    = git__strcasecmp;
+		diff->strncomp   = git__strncasecmp;
+		diff->pfxcomp    = git__prefixcmp_icase;
+		diff->entrycomp  = git_index_entry_icmp;
+
+		git_vector_set_cmp(&diff->deltas, git_diff_delta__casecmp);
+	}
+
+	git_vector_sort(&diff->deltas);
+}
+
 static git_diff *diff_list_alloc(
 	git_repository *repo,
 	git_iterator *old_iter,
@@ -344,24 +369,10 @@ static git_diff *diff_list_alloc(
 
 	/* Use case-insensitive compare if either iterator has
 	 * the ignore_case bit set */
-	if (!git_iterator_ignore_case(old_iter) &&
-		!git_iterator_ignore_case(new_iter)) {
-		diff->opts.flags &= ~GIT_DIFF_IGNORE_CASE;
-
-		diff->strcomp    = git__strcmp;
-		diff->strncomp   = git__strncmp;
-		diff->pfxcomp    = git__prefixcmp;
-		diff->entrycomp  = git_index_entry__cmp;
-	} else {
-		diff->opts.flags |= GIT_DIFF_IGNORE_CASE;
-
-		diff->strcomp    = git__strcasecmp;
-		diff->strncomp   = git__strncasecmp;
-		diff->pfxcomp    = git__prefixcmp_icase;
-		diff->entrycomp  = git_index_entry__cmp_icase;
-
-		git_vector_set_cmp(&diff->deltas, git_diff_delta__casecmp);
-	}
+	diff_set_ignore_case(
+		diff,
+		git_iterator_ignore_case(old_iter) ||
+		git_iterator_ignore_case(new_iter));
 
 	return diff;
 }
@@ -1183,39 +1194,25 @@ int git_diff_tree_to_index(
 	const git_diff_options *opts)
 {
 	int error = 0;
-	bool reset_index_ignore_case = false;
+	bool index_ignore_case = false;
 
 	assert(diff && repo);
 
 	if (!index && (error = diff_load_index(&index, repo)) < 0)
 		return error;
 
-	if (index->ignore_case) {
-		git_index__set_ignore_case(index, false);
-		reset_index_ignore_case = true;
-	}
+	index_ignore_case = index->ignore_case;
 
 	DIFF_FROM_ITERATORS(
-		git_iterator_for_tree(&a, old_tree, 0, pfx, pfx),
-		git_iterator_for_index(&b, index, 0, pfx, pfx)
+		git_iterator_for_tree(
+			&a, old_tree, GIT_ITERATOR_DONT_IGNORE_CASE, pfx, pfx),
+		git_iterator_for_index(
+			&b, index, GIT_ITERATOR_DONT_IGNORE_CASE, pfx, pfx)
 	);
 
-	if (reset_index_ignore_case) {
-		git_index__set_ignore_case(index, true);
-
-		if (!error) {
-			git_diff *d = *diff;
-
-			d->opts.flags |= GIT_DIFF_IGNORE_CASE;
-			d->strcomp    = git__strcasecmp;
-			d->strncomp   = git__strncasecmp;
-			d->pfxcomp    = git__prefixcmp_icase;
-			d->entrycomp  = git_index_entry__cmp_icase;
-
-			git_vector_set_cmp(&d->deltas, git_diff_delta__casecmp);
-			git_vector_sort(&d->deltas);
-		}
-	}
+	/* if index is in case-insensitive order, re-sort deltas to match */
+	if (!error && index_ignore_case)
+		diff_set_ignore_case(*diff, true);
 
 	return error;
 }

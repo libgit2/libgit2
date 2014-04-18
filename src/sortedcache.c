@@ -20,7 +20,7 @@ int git_sortedcache_new(
 
 	if (git_pool_init(&sc->pool, 1, 0) < 0 ||
 		git_vector_init(&sc->items, 4, item_cmp) < 0 ||
-		(sc->map = git_strmap_alloc()) == NULL)
+		git_strmap_alloc(&sc->map) < 0)
 		goto fail;
 
 	if (git_rwlock_init(&sc->lock)) {
@@ -39,8 +39,7 @@ int git_sortedcache_new(
 	return 0;
 
 fail:
-	if (sc->map)
-		git_strmap_free(sc->map);
+	git_strmap_free(sc->map);
 	git_vector_free(&sc->items);
 	git_pool_clear(&sc->pool);
 	git__free(sc);
@@ -233,9 +232,8 @@ unlock:
 
 void git_sortedcache_updated(git_sortedcache *sc)
 {
-	 /* update filestamp to latest value */
-	if (git_futils_filestamp_check(&sc->stamp, sc->path) < 0)
-		giterr_clear();
+	/* update filestamp to latest value */
+	git_futils_filestamp_check(&sc->stamp, sc->path);
 }
 
 /* release all items in sorted cache */

@@ -66,7 +66,7 @@ git_diff_driver_registry *git_diff_driver_registry_new()
 	if (!reg)
 		return NULL;
 
-	if ((reg->drivers = git_strmap_alloc()) == NULL) {
+	if (git_strmap_alloc(&reg->drivers) < 0) {
 		git_diff_driver_registry_free(reg);
 		return NULL;
 	}

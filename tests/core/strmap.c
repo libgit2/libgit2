@@ -3,12 +3,22 @@
 
 GIT__USE_STRMAP;
 
+git_strmap *g_table;
+
+void test_core_strmap__initialize(void)
+{
+	cl_git_pass(git_strmap_alloc(&g_table));
+	cl_assert(g_table != NULL);
+}
+
+void test_core_strmap__cleanup(void)
+{
+	git_strmap_free(g_table);
+}
+
 void test_core_strmap__0(void)
 {
-	git_strmap *table = git_strmap_alloc();
-	cl_assert(table != NULL);
-	cl_assert(git_strmap_num_entries(table) == 0);
-	git_strmap_free(table);
+	cl_assert(git_strmap_num_entries(g_table) == 0);
 }
 
 static void insert_strings(git_strmap *table, int count)
@@ -37,21 +47,17 @@ void test_core_strmap__1(void)
 {
 	int i;
 	char *str;
-	git_strmap *table = git_strmap_alloc();
-	cl_assert(table != NULL);
 
-	insert_strings(table, 20);
+	insert_strings(g_table, 20);
 
-	cl_assert(git_strmap_exists(table, "aaaaaaaaa"));
-	cl_assert(git_strmap_exists(table, "ggggggggg"));
-	cl_assert(!git_strmap_exists(table, "aaaaaaaab"));
-	cl_assert(!git_strmap_exists(table, "abcdefghi"));
+	cl_assert(git_strmap_exists(g_table, "aaaaaaaaa"));
+	cl_assert(git_strmap_exists(g_table, "ggggggggg"));
+	cl_assert(!git_strmap_exists(g_table, "aaaaaaaab"));
+	cl_assert(!git_strmap_exists(g_table, "abcdefghi"));
 
 	i = 0;
-	git_strmap_foreach_value(table, str, { i++; free(str); });
+	git_strmap_foreach_value(g_table, str, { i++; free(str); });
 	cl_assert(i == 20);
-
-	git_strmap_free(table);
 }
 
 void test_core_strmap__2(void)
@@ -59,44 +65,36 @@ void test_core_strmap__2(void)
 	khiter_t pos;
 	int i;
 	char *str;
-	git_strmap *table = git_strmap_alloc();
-	cl_assert(table != NULL);
 
-	insert_strings(table, 20);
+	insert_strings(g_table, 20);
 
-	cl_assert(git_strmap_exists(table, "aaaaaaaaa"));
-	cl_assert(git_strmap_exists(table, "ggggggggg"));
-	cl_assert(!git_strmap_exists(table, "aaaaaaaab"));
-	cl_assert(!git_strmap_exists(table, "abcdefghi"));
+	cl_assert(git_strmap_exists(g_table, "aaaaaaaaa"));
+	cl_assert(git_strmap_exists(g_table, "ggggggggg"));
+	cl_assert(!git_strmap_exists(g_table, "aaaaaaaab"));
+	cl_assert(!git_strmap_exists(g_table, "abcdefghi"));
 
-	cl_assert(git_strmap_exists(table, "bbbbbbbbb"));
-	pos = git_strmap_lookup_index(table, "bbbbbbbbb");
-	cl_assert(git_strmap_valid_index(table, pos));
-	cl_assert_equal_s(git_strmap_value_at(table, pos), "bbbbbbbbb");
-	free(git_strmap_value_at(table, pos));
-	git_strmap_delete_at(table, pos);
+	cl_assert(git_strmap_exists(g_table, "bbbbbbbbb"));
+	pos = git_strmap_lookup_index(g_table, "bbbbbbbbb");
+	cl_assert(git_strmap_valid_index(g_table, pos));
+	cl_assert_equal_s(git_strmap_value_at(g_table, pos), "bbbbbbbbb");
+	free(git_strmap_value_at(g_table, pos));
+	git_strmap_delete_at(g_table, pos);
 
-	cl_assert(!git_strmap_exists(table, "bbbbbbbbb"));
+	cl_assert(!git_strmap_exists(g_table, "bbbbbbbbb"));
 
 	i = 0;
-	git_strmap_foreach_value(table, str, { i++; free(str); });
+	git_strmap_foreach_value(g_table, str, { i++; free(str); });
 	cl_assert(i == 19);
-
-	git_strmap_free(table);
 }
 
 void test_core_strmap__3(void)
 {
 	int i;
 	char *str;
-	git_strmap *table = git_strmap_alloc();
-	cl_assert(table != NULL);
 
-	insert_strings(table, 10000);
+	insert_strings(g_table, 10000);
 
 	i = 0;
-	git_strmap_foreach_value(table, str, { i++; free(str); });
+	git_strmap_foreach_value(g_table, str, { i++; free(str); });
 	cl_assert(i == 10000);
-
-	git_strmap_free(table);
 }

@@ -355,6 +355,7 @@ static void index_iterator_test(
 	const char *sandbox,
 	const char *start,
 	const char *end,
+	git_iterator_flag_t flags,
 	int expected_count,
 	const char **expected_names,
 	const char **expected_oids)
@@ -362,11 +363,13 @@ static void index_iterator_test(
 	git_index *index;
 	git_iterator *i;
 	const git_index_entry *entry;
-	int error, count = 0;
+	int error, count = 0, caps;
 	git_repository *repo = cl_git_sandbox_init(sandbox);
 
 	cl_git_pass(git_repository_index(&index, repo));
-	cl_git_pass(git_iterator_for_index(&i, index, 0, start, end));
+	caps = git_index_caps(index);
+
+	cl_git_pass(git_iterator_for_index(&i, index, flags, start, end));
 
 	while (!(error = git_iterator_advance(&entry, i))) {
 		cl_assert(entry);
@@ -388,6 +391,8 @@ static void index_iterator_test(
 	cl_assert_equal_i(expected_count, count);
 
 	git_iterator_free(i);
+
+	cl_assert(caps == git_index_caps(index));
 	git_index_free(index);
 }
 
@@ -446,7 +451,8 @@ static const char *expected_index_oids_0[] = {
 void test_diff_iterator__index_0(void)
 {
 	index_iterator_test(
-		"attr", NULL, NULL, 23, expected_index_0, expected_index_oids_0);
+		"attr", NULL, NULL, 0, ARRAY_SIZE(expected_index_0),
+		expected_index_0, expected_index_oids_0);
 }
 
 static const char *expected_index_range[] = {
@@ -466,25 +472,26 @@ static const char *expected_index_oids_range[] = {
 void test_diff_iterator__index_range(void)
 {
 	index_iterator_test(
-		"attr", "root", "root", 4, expected_index_range, expected_index_oids_range);
+		"attr", "root", "root", 0, ARRAY_SIZE(expected_index_range),
+		expected_index_range, expected_index_oids_range);
 }
 
 void test_diff_iterator__index_range_empty_0(void)
 {
 	index_iterator_test(
-		"attr", "empty", "empty", 0, NULL, NULL);
+		"attr", "empty", "empty", 0, 0, NULL, NULL);
 }
 
 void test_diff_iterator__index_range_empty_1(void)
 {
 	index_iterator_test(
-		"attr", "z_empty_after", NULL, 0, NULL, NULL);
+		"attr", "z_empty_after", NULL, 0, 0, NULL, NULL);
 }
 
 void test_diff_iterator__index_range_empty_2(void)
 {
 	index_iterator_test(
-		"attr", NULL, ".aaa_empty_before", 0, NULL, NULL);
+		"attr", NULL, ".aaa_empty_before", 0, 0, NULL, NULL);
 }
 
 static const char *expected_index_1[] = {
@@ -522,9 +529,45 @@ static const char* expected_index_oids_1[] = {
 void test_diff_iterator__index_1(void)
 {
 	index_iterator_test(
-		"status", NULL, NULL, 13, expected_index_1, expected_index_oids_1);
+		"status", NULL, NULL, 0, ARRAY_SIZE(expected_index_1),
+		expected_index_1, expected_index_oids_1);
 }
 
+static const char *expected_index_cs[] = {
+	"B", "D", "F", "H", "J", "L/1", "L/B", "L/D", "L/a", "L/c",
+	"a", "c", "e", "g", "i", "k/1", "k/B", "k/D", "k/a", "k/c",
+};
+
+static const char *expected_index_ci[] = {
+	"a", "B", "c", "D", "e", "F", "g", "H", "i", "J",
+	"k/1", "k/a", "k/B", "k/c", "k/D", "L/1", "L/a", "L/B", "L/c", "L/D",
+};
+
+void test_diff_iterator__index_case_folding(void)
+{
+	git_buf path = GIT_BUF_INIT;
+	int fs_is_ci = 0;
+
+	cl_git_pass(git_buf_joinpath(&path, cl_fixture("icase"), ".gitted/CoNfIg"));
+	fs_is_ci = git_path_exists(path.ptr);
+	git_buf_free(&path);
+
+	index_iterator_test(
+		"icase", NULL, NULL, 0, ARRAY_SIZE(expected_index_cs),
+		fs_is_ci ? expected_index_ci : expected_index_cs, NULL);
+
+	cl_git_sandbox_cleanup();
+
+	index_iterator_test(
+		"icase", NULL, NULL, GIT_ITERATOR_IGNORE_CASE,
+		ARRAY_SIZE(expected_index_ci), expected_index_ci, NULL);
+
+	cl_git_sandbox_cleanup();
+
+	index_iterator_test(
+		"icase", NULL, NULL, GIT_ITERATOR_DONT_IGNORE_CASE,
+		ARRAY_SIZE(expected_index_cs), expected_index_cs, NULL);
+}
 
 /* -- WORKDIR ITERATOR TESTS -- */
 

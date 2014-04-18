@@ -35,6 +35,14 @@
 	(GIT_ATTR_FNMATCH_ALLOWSPACE | \
 	 GIT_ATTR_FNMATCH_ALLOWNEG | GIT_ATTR_FNMATCH_ALLOWMACRO)
 
+typedef enum {
+	GIT_ATTR_FILE__IN_MEMORY  = 0,
+	GIT_ATTR_FILE__FROM_FILE  = 1,
+	GIT_ATTR_FILE__FROM_INDEX = 2,
+
+	GIT_ATTR_FILE_NUM_SOURCES = 3
+} git_attr_file_source;
+
 extern const char *git_attr__true;
 extern const char *git_attr__false;
 extern const char *git_attr__unset;
@@ -63,16 +71,31 @@ typedef struct {
 	const char *value;
 } git_attr_assignment;
 
+typedef struct git_attr_file_entry git_attr_file_entry;
+
 typedef struct {
-	char *key;				/* cache "source#path" this was loaded from */
-	git_vector rules;		/* vector of <rule*> or <fnmatch*> */
-	git_pool *pool;
-	bool pool_is_allocated;
+	git_refcount rc;
+	git_mutex lock;
+	git_attr_file_entry *entry;
+	git_attr_file_source source;
+	git_vector rules;			/* vector of <rule*> or <fnmatch*> */
+	git_pool pool;
 	union {
 		git_oid oid;
 		git_futils_filestamp stamp;
 	} cache_data;
 } git_attr_file;
+
+struct git_attr_file_entry {
+	git_attr_file *file[GIT_ATTR_FILE_NUM_SOURCES];
+	const char *path; /* points into fullpath */
+	char fullpath[GIT_FLEX_ARRAY];
+};
+
+typedef int (*git_attr_file_parser)(
+	git_repository *repo,
+	git_attr_file *file,
+	const char *data);
 
 typedef struct {
 	git_buf  full;
@@ -81,29 +104,37 @@ typedef struct {
 	int      is_dir;
 } git_attr_path;
 
-typedef enum {
-	GIT_ATTR_FILE_FROM_FILE = 0,
-	GIT_ATTR_FILE_FROM_INDEX = 1
-} git_attr_file_source;
-
 /*
  * git_attr_file API
  */
 
-extern int git_attr_file__new(
-	git_attr_file **attrs_ptr, git_attr_file_source src, const char *path, git_pool *pool);
+int git_attr_file__new(
+	git_attr_file **out,
+	git_attr_file_entry *entry,
+	git_attr_file_source source);
 
-extern int git_attr_file__new_and_load(
-	git_attr_file **attrs_ptr, const char *path);
+void git_attr_file__free(git_attr_file *file);
 
-extern void git_attr_file__free(git_attr_file *file);
+int git_attr_file__load(
+	git_attr_file **out,
+	git_repository *repo,
+	git_attr_file_entry *ce,
+	git_attr_file_source source,
+	git_attr_file_parser parser);
 
-extern void git_attr_file__clear_rules(git_attr_file *file);
+int git_attr_file__load_standalone(
+	git_attr_file **out, const char *path);
 
-extern int git_attr_file__parse_buffer(
-	git_repository *repo, void *parsedata, const char *buf, git_attr_file *file);
+int git_attr_file__out_of_date(
+	git_repository *repo, git_attr_file *file);
 
-extern int git_attr_file__lookup_one(
+int git_attr_file__parse_buffer(
+	git_repository *repo, git_attr_file *attrs, const char *data);
+
+int git_attr_file__clear_rules(
+	git_attr_file *file, bool need_lock);
+
+int git_attr_file__lookup_one(
 	git_attr_file *file,
 	const git_attr_path *path,
 	const char *attr,
@@ -114,7 +145,7 @@ extern int git_attr_file__lookup_one(
 	git_vector_rforeach(&(file)->rules, (iter), (rule)) \
 		if (git_attr_rule__match((rule), (path)))
 
-extern uint32_t git_attr_file__name_hash(const char *name);
+uint32_t git_attr_file__name_hash(const char *name);
 
 
 /*

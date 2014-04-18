@@ -995,9 +995,11 @@ static void merge_diff_list_coalesce_renames(
 	}
 }
 
-static int merge_diff_empty(const git_vector *conflicts, size_t idx)
+static int merge_diff_empty(const git_vector *conflicts, size_t idx, void *p)
 {
 	git_merge_diff *conflict = conflicts->contents[idx];
+
+	GIT_UNUSED(p);
 
 	return (!GIT_MERGE_INDEX_ENTRY_EXISTS(conflict->ancestor_entry) &&
 		!GIT_MERGE_INDEX_ENTRY_EXISTS(conflict->our_entry) &&
@@ -1079,7 +1081,7 @@ int git_merge_diff_list__find_renames(
 	merge_diff_list_coalesce_renames(diff_list, similarity_ours, similarity_theirs, opts);
 
 	/* And remove any entries that were merged and are now empty. */
-	git_vector_remove_matching(&diff_list->conflicts, merge_diff_empty);
+	git_vector_remove_matching(&diff_list->conflicts, merge_diff_empty, NULL);
 
 done:
 	if (cache != NULL) {
@@ -1228,7 +1230,7 @@ done:
 	return error;
 }
 
-GIT_INLINE(int) index_entry_dup(
+GIT_INLINE(int) index_entry_dup_pool(
 	git_index_entry *out,
 	git_pool *pool,
 	const git_index_entry *src)
@@ -1274,9 +1276,9 @@ static git_merge_diff *merge_diff_from_index_entries(
 	if ((conflict = git_pool_malloc(pool, sizeof(git_merge_diff))) == NULL)
 		return NULL;
 
-	if (index_entry_dup(&conflict->ancestor_entry, pool, entries[TREE_IDX_ANCESTOR]) < 0 ||
-		index_entry_dup(&conflict->our_entry, pool, entries[TREE_IDX_OURS]) < 0 ||
-		index_entry_dup(&conflict->their_entry, pool, entries[TREE_IDX_THEIRS]) < 0)
+	if (index_entry_dup_pool(&conflict->ancestor_entry, pool, entries[TREE_IDX_ANCESTOR]) < 0 ||
+		index_entry_dup_pool(&conflict->our_entry, pool, entries[TREE_IDX_OURS]) < 0 ||
+		index_entry_dup_pool(&conflict->their_entry, pool, entries[TREE_IDX_THEIRS]) < 0)
 		return NULL;
 
 	conflict->our_status = merge_delta_type_from_index_entries(
@@ -1316,7 +1318,7 @@ static int merge_diff_list_insert_unmodified(
 	entry = git_pool_malloc(&diff_list->pool, sizeof(git_index_entry));
 	GITERR_CHECK_ALLOC(entry);
 
-	if ((error = index_entry_dup(entry, &diff_list->pool, tree_items[0])) >= 0)
+	if ((error = index_entry_dup_pool(entry, &diff_list->pool, tree_items[0])) >= 0)
 		error = git_vector_insert(&diff_list->staged, entry);
 
 	return error;
@@ -1330,7 +1332,7 @@ int git_merge_diff_list__find_differences(
 {
 	git_iterator *iterators[3] = {0};
 	const git_index_entry *items[3] = {0}, *best_cur_item, *cur_items[3];
-	git_vector_cmp entry_compare = git_index_entry__cmp;
+	git_vector_cmp entry_compare = git_index_entry_cmp;
 	struct merge_diff_df_data df_data = {0};
 	int cur_item_modified;
 	size_t i, j;

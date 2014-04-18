@@ -132,6 +132,7 @@ int git_futils_readbuffer_fd(git_buf *buf, git_file fd, size_t len)
 
 	if (read_size != (ssize_t)len) {
 		giterr_set(GITERR_OS, "Failed to read descriptor");
+		git_buf_free(buf);
 		return -1;
 	}
 
@@ -804,10 +805,8 @@ int git_futils_filestamp_check(
 	if (stamp == NULL)
 		return 1;
 
-	if (p_stat(path, &st) < 0) {
-		giterr_set(GITERR_OS, "Could not stat '%s'", path);
+	if (p_stat(path, &st) < 0)
 		return GIT_ENOTFOUND;
-	}
 
 	if (stamp->mtime == (git_time_t)st.st_mtime &&
 		stamp->size  == (git_off_t)st.st_size   &&
@@ -830,4 +829,17 @@ void git_futils_filestamp_set(
 		memcpy(target, source, sizeof(*target));
 	else
 		memset(target, 0, sizeof(*target));
+}
+
+
+void git_futils_filestamp_set_from_stat(
+	git_futils_filestamp *stamp, struct stat *st)
+{
+	if (st) {
+		stamp->mtime = (git_time_t)st->st_mtime;
+		stamp->size  = (git_off_t)st->st_size;
+		stamp->ino   = (unsigned int)st->st_ino;
+	} else {
+		memset(stamp, 0, sizeof(*stamp));
+	}
 }

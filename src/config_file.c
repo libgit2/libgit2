@@ -180,11 +180,15 @@ static int config_open(git_config_backend *cfg, git_config_level_t level)
 
 	b->level = level;
 
-	b->values = git_strmap_alloc();
-	GITERR_CHECK_ALLOC(b->values);
+	if ((res = git_strmap_alloc(&b->values)) < 0)
+		return res;
 
 	git_array_init(b->readers);
 	reader = git_array_alloc(b->readers);
+	if (!reader) {
+		git_strmap_free(b->values);
+		return -1;
+	}
 	memset(reader, 0, sizeof(struct reader));
 
 	reader->file_path = git__strdup(b->file_path);
@@ -205,6 +209,7 @@ static int config_open(git_config_backend *cfg, git_config_level_t level)
 
 	reader = git_array_get(b->readers, 0);
 	git_buf_free(&reader->buffer);
+
 	return res;
 }
 
@@ -218,8 +223,10 @@ static int config_refresh(git_config_backend *cfg)
 
 	for (i = 0; i < git_array_size(b->readers); i++) {
 		reader = git_array_get(b->readers, i);
+
 		res = git_futils_readbuffer_updated(
-			&reader->buffer, reader->file_path, &reader->file_mtime, &reader->file_size, &updated);
+			&reader->buffer, reader->file_path,
+			&reader->file_mtime, &reader->file_size, &updated);
 
 		if (res < 0)
 			return (res == GIT_ENOTFOUND) ? 0 : res;
@@ -233,10 +240,9 @@ static int config_refresh(git_config_backend *cfg)
 
 	/* need to reload - store old values and prep for reload */
 	old_values = b->values;
-	b->values = git_strmap_alloc();
-	GITERR_CHECK_ALLOC(b->values);
-
-	if ((res = config_parse(b, reader, b->level, 0)) < 0) {
+	if ((res = git_strmap_alloc(&b->values)) < 0) {
+		b->values = old_values;
+	} else if ((res = config_parse(b, reader, b->level, 0)) < 0) {
 		free_vars(b->values);
 		b->values = old_values;
 	} else {

@@ -190,8 +190,9 @@ void test_core_vector__5(void)
 	git_vector_free(&x);
 }
 
-static int remove_ones(const git_vector *v, size_t idx)
+static int remove_ones(const git_vector *v, size_t idx, void *p)
 {
+	GIT_UNUSED(p);
 	return (git_vector_get(v, idx) == (void *)0x001);
 }
 
@@ -206,7 +207,7 @@ void test_core_vector__remove_matching(void)
 	git_vector_insert(&x, (void*) 0x001);
 
 	cl_assert(x.length == 1);
-	git_vector_remove_matching(&x, remove_ones);
+	git_vector_remove_matching(&x, remove_ones, NULL);
 	cl_assert(x.length == 0);
 
 	git_vector_insert(&x, (void*) 0x001);
@@ -214,7 +215,7 @@ void test_core_vector__remove_matching(void)
 	git_vector_insert(&x, (void*) 0x001);
 
 	cl_assert(x.length == 3);
-	git_vector_remove_matching(&x, remove_ones);
+	git_vector_remove_matching(&x, remove_ones, NULL);
 	cl_assert(x.length == 0);
 
 	git_vector_insert(&x, (void*) 0x002);
@@ -223,7 +224,7 @@ void test_core_vector__remove_matching(void)
 	git_vector_insert(&x, (void*) 0x001);
 
 	cl_assert(x.length == 4);
-	git_vector_remove_matching(&x, remove_ones);
+	git_vector_remove_matching(&x, remove_ones, NULL);
 	cl_assert(x.length == 2);
 
 	git_vector_foreach(&x, i, compare) {
@@ -238,7 +239,7 @@ void test_core_vector__remove_matching(void)
 	git_vector_insert(&x, (void*) 0x001);
 
 	cl_assert(x.length == 4);
-	git_vector_remove_matching(&x, remove_ones);
+	git_vector_remove_matching(&x, remove_ones, NULL);
 	cl_assert(x.length == 2);
 
 	git_vector_foreach(&x, i, compare) {
@@ -253,7 +254,7 @@ void test_core_vector__remove_matching(void)
 	git_vector_insert(&x, (void*) 0x001);
 
 	cl_assert(x.length == 4);
-	git_vector_remove_matching(&x, remove_ones);
+	git_vector_remove_matching(&x, remove_ones, NULL);
 	cl_assert(x.length == 2);
 
 	git_vector_foreach(&x, i, compare) {
@@ -268,7 +269,7 @@ void test_core_vector__remove_matching(void)
 	git_vector_insert(&x, (void*) 0x003);
 
 	cl_assert(x.length == 4);
-	git_vector_remove_matching(&x, remove_ones);
+	git_vector_remove_matching(&x, remove_ones, NULL);
 	cl_assert(x.length == 4);
 
 	git_vector_free(&x);

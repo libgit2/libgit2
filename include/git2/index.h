@@ -77,7 +77,12 @@ typedef struct git_index_entry {
 #define GIT_IDXENTRY_VALID     (0x8000)
 #define GIT_IDXENTRY_STAGESHIFT 12
 
-#define GIT_IDXENTRY_STAGE(E) (((E)->flags & GIT_IDXENTRY_STAGEMASK) >> GIT_IDXENTRY_STAGESHIFT)
+#define GIT_IDXENTRY_STAGE(E) \
+	(((E)->flags & GIT_IDXENTRY_STAGEMASK) >> GIT_IDXENTRY_STAGESHIFT)
+
+#define GIT_IDXENTRY_STAGE_SET(E,S) do { \
+	(E)->flags = ((E)->flags & ~GIT_IDXENTRY_STAGEMASK) | \
+		(((S) & 0x03) << GIT_IDXENTRY_STAGESHIFT); } while (0)
 
 /**
  * Bitmasks for on-disk fields of `git_index_entry`'s `flags_extended`
@@ -327,12 +332,14 @@ GIT_EXTERN(size_t) git_index_entrycount(const git_index *index);
 
 /**
  * Clear the contents (all the entries) of an index object.
- * This clears the index object in memory; changes must be manually
- * written to disk for them to take effect.
+ *
+ * This clears the index object in memory; changes must be explicitly
+ * written to disk for them to take effect persistently.
  *
  * @param index an existing index object
+ * @return 0 on success, error code < 0 on failure
  */
-GIT_EXTERN(void) git_index_clear(git_index *index);
+GIT_EXTERN(int) git_index_clear(git_index *index);
 
 /**
  * Get a pointer to one of the entries in the index
@@ -568,8 +575,7 @@ GIT_EXTERN(int) git_index_update_all(
  * @param at_pos the address to which the position of the index entry is written (optional)
  * @param index an existing index object
  * @param path path to search
- * @return a zero-based position in the index if found;
- * GIT_ENOTFOUND otherwise
+ * @return a zero-based position in the index if found; GIT_ENOTFOUND otherwise
  */
 GIT_EXTERN(int) git_index_find(size_t *at_pos, git_index *index, const char *path);
 
@@ -613,6 +619,7 @@ GIT_EXTERN(int) git_index_conflict_add(
  * @param their_out Pointer to store the their entry
  * @param index an existing index object
  * @param path path to search
+ * @return 0 or an error code
  */
 GIT_EXTERN(int) git_index_conflict_get(
 	const git_index_entry **ancestor_out,
@@ -625,16 +632,18 @@ GIT_EXTERN(int) git_index_conflict_get(
  * Removes the index entries that represent a conflict of a single file.
  *
  * @param index an existing index object
- * @param path to search
+ * @param path path to remove conflicts for
+ * @return 0 or an error code
  */
 GIT_EXTERN(int) git_index_conflict_remove(git_index *index, const char *path);
 
 /**
- * Remove all conflicts in the index (entries with a stage greater than 0.)
+ * Remove all conflicts in the index (entries with a stage greater than 0).
  *
  * @param index an existing index object
+ * @return 0 or an error code
  */
-GIT_EXTERN(void) git_index_conflict_cleanup(git_index *index);
+GIT_EXTERN(int) git_index_conflict_cleanup(git_index *index);
 
 /**
  * Determine if the index contains entries representing file conflicts.
@@ -644,9 +653,12 @@ GIT_EXTERN(void) git_index_conflict_cleanup(git_index *index);
 GIT_EXTERN(int) git_index_has_conflicts(const git_index *index);
 
 /**
- * Create an iterator for the conflicts in the index.  You may not modify the
- * index while iterating, the results are undefined.
+ * Create an iterator for the conflicts in the index.
  *
+ * The index must not be modified while iterating; the results are undefined.
+ *
+ * @param iterator_out The newly created conflict iterator
+ * @param index The index to scan
  * @return 0 or an error code
  */
 GIT_EXTERN(int) git_index_conflict_iterator_new(

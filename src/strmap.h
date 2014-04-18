@@ -22,7 +22,9 @@ typedef khiter_t git_strmap_iter;
 #define GIT__USE_STRMAP \
 	__KHASH_IMPL(str, static kh_inline, const char *, void *, 1, kh_str_hash_func, kh_str_hash_equal)
 
-#define git_strmap_alloc()  kh_init(str)
+#define git_strmap_alloc(hp) \
+	((*(hp) = kh_init(str)) == NULL) ? giterr_set_oom(), -1 : 0
+
 #define git_strmap_free(h)  kh_destroy(str, h), h = NULL
 #define git_strmap_clear(h) kh_clear(str, h)
 

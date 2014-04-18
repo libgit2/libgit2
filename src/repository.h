@@ -108,7 +108,7 @@ struct git_repository {
 	git_submodule_cache *_submodules;
 
 	git_cache objects;
-	git_attr_cache attrcache;
+	git_attr_cache *attrcache;
 	git_diff_driver_registry *diff_drivers;
 
 	char *path_repository;
@@ -123,7 +123,7 @@ struct git_repository {
 
 GIT_INLINE(git_attr_cache *) git_repository_attr_cache(git_repository *repo)
 {
-	return &repo->attrcache;
+	return repo->attrcache;
 }
 
 int git_repository_head_tree(git_tree **tree, git_repository *repo);

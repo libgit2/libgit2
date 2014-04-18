@@ -305,6 +305,11 @@ ELSE ()
 	ENDIF ()
 	IF (APPLE) # Apple deprecated OpenSSL
 		SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-deprecated-declarations")
+
+		# With clang, disable some annoying extra warnings
+		IF (NOT CMAKE_COMPILER_IS_GNUCC)
+			SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-unused-const-variable -Wno-unused-function")
+		ENDIF()
 	ENDIF ()
 	IF (PROFILE)
 		SET(CMAKE_C_FLAGS "-pg ${CMAKE_C_FLAGS}")

@@ -68,9 +68,12 @@ void test_attr_repo__get_one(void)
 		attr_check_expected(scan->expected, scan->expected_str, scan->attr, value);
 	}
 
-	cl_assert(git_attr_cache__is_cached(g_repo, 0, ".git/info/attributes"));
-	cl_assert(git_attr_cache__is_cached(g_repo, 0, ".gitattributes"));
-	cl_assert(git_attr_cache__is_cached(g_repo, 0, "sub/.gitattributes"));
+	cl_assert(git_attr_cache__is_cached(
+		g_repo, GIT_ATTR_FILE__FROM_FILE, ".git/info/attributes"));
+	cl_assert(git_attr_cache__is_cached(
+		g_repo, GIT_ATTR_FILE__FROM_FILE, ".gitattributes"));
+	cl_assert(git_attr_cache__is_cached(
+		g_repo, GIT_ATTR_FILE__FROM_FILE, "sub/.gitattributes"));
 }
 
 void test_attr_repo__get_many(void)

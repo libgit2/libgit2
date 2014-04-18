@@ -1638,8 +1638,7 @@ static int submodule_cache_alloc(
 		return -1;
 	}
 
-	cache->submodules = git_strmap_alloc();
-	if (!cache->submodules) {
+	if (git_strmap_alloc(&cache->submodules) < 0) {
 		submodule_cache_free(cache);
 		return -1;
 	}
@@ -1694,8 +1693,6 @@ static int submodule_cache_refresh(git_submodule_cache *cache, int refresh)
 		update_gitmod = (wd != NULL) ?
 			git_futils_filestamp_check(&cache->gitmodules_stamp, path.ptr) :
 			(cache->gitmodules_stamp.mtime != 0);
-		if (update_gitmod < 0)
-			giterr_clear();
 	}
 
 	/* clear submodule flags that are to be refreshed */

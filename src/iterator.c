@@ -644,6 +644,8 @@ typedef struct {
 	git_iterator base;
 	git_iterator_callbacks cb;
 	git_index *index;
+	git_vector entries;
+	git_vector_cmp entry_srch;
 	size_t current;
 	/* when not in autoexpand mode, use these to represent "tree" state */
 	git_buf partial;
@@ -654,10 +656,10 @@ typedef struct {
 
 static const git_index_entry *index_iterator__index_entry(index_iterator *ii)
 {
-	const git_index_entry *ie = git_index_get_byindex(ii->index, ii->current);
+	const git_index_entry *ie = git_vector_get(&ii->entries, ii->current);
 
 	if (ie != NULL && iterator__past_end(ii, ie->path)) {
-		ii->current = git_index_entrycount(ii->index);
+		ii->current = git_vector_length(&ii->entries);
 		ie = NULL;
 	}
 
@@ -726,7 +728,7 @@ static int index_iterator__current(
 	const git_index_entry **entry, git_iterator *self)
 {
 	index_iterator *ii = (index_iterator *)self;
-	const git_index_entry *ie = git_index_get_byindex(ii->index, ii->current);
+	const git_index_entry *ie = git_vector_get(&ii->entries, ii->current);
 
 	if (ie != NULL && index_iterator__at_tree(ii)) {
 		ii->tree_entry.path = ii->partial.ptr;
@@ -744,14 +746,14 @@ static int index_iterator__current(
 static int index_iterator__at_end(git_iterator *self)
 {
 	index_iterator *ii = (index_iterator *)self;
-	return (ii->current >= git_index_entrycount(ii->index));
+	return (ii->current >= git_vector_length(&ii->entries));
 }
 
 static int index_iterator__advance(
 	const git_index_entry **entry, git_iterator *self)
 {
 	index_iterator *ii = (index_iterator *)self;
-	size_t entrycount = git_index_entrycount(ii->index);
+	size_t entrycount = git_vector_length(&ii->entries);
 	const git_index_entry *ie;
 
 	if (!iterator__has_been_accessed(ii))
@@ -766,7 +768,7 @@ static int index_iterator__advance(
 			while (ii->current < entrycount) {
 				ii->current++;
 
-				if (!(ie = git_index_get_byindex(ii->index, ii->current)) ||
+				if (!(ie = git_vector_get(&ii->entries, ii->current)) ||
 					ii->base.prefixcomp(ie->path, ii->partial.ptr) != 0)
 					break;
 			}
@@ -789,7 +791,7 @@ static int index_iterator__advance_into(
 	const git_index_entry **entry, git_iterator *self)
 {
 	index_iterator *ii = (index_iterator *)self;
-	const git_index_entry *ie = git_index_get_byindex(ii->index, ii->current);
+	const git_index_entry *ie = git_vector_get(&ii->entries, ii->current);
 
 	if (ie != NULL && index_iterator__at_tree(ii)) {
 		if (ii->restore_terminator)
@@ -815,8 +817,11 @@ static int index_iterator__reset(
 	if (iterator__reset_range(self, start, end) < 0)
 		return -1;
 
-	ii->current = ii->base.start ?
-		git_index__prefix_position(ii->index, ii->base.start) : 0;
+	ii->current = 0;
+
+	if (ii->base.start)
+		git_index_snapshot_find(
+			&ii->current, &ii->entries, ii->entry_srch, ii->base.start, 0, 0);
 
 	if ((ie = index_iterator__skip_conflicts(ii)) == NULL)
 		return 0;
@@ -841,9 +846,8 @@ static int index_iterator__reset(
 static void index_iterator__free(git_iterator *self)
 {
 	index_iterator *ii = (index_iterator *)self;
-	git_index_free(ii->index);
+	git_index_snapshot_release(&ii->entries, ii->index);
 	ii->index = NULL;
-
 	git_buf_free(&ii->partial);
 }
 
@@ -854,18 +858,29 @@ int git_iterator_for_index(
 	const char *start,
 	const char *end)
 {
+	int error = 0;
 	index_iterator *ii = git__calloc(1, sizeof(index_iterator));
 	GITERR_CHECK_ALLOC(ii);
 
+	if ((error = git_index_snapshot_new(&ii->entries, index)) < 0) {
+		git__free(ii);
+		return error;
+	}
+	ii->index = index;
+
 	ITERATOR_BASE_INIT(ii, index, INDEX, git_index_owner(index));
 
-	if (index->ignore_case) {
-		ii->base.flags |= GIT_ITERATOR_IGNORE_CASE;
-		ii->base.prefixcomp = git__prefixcmp_icase;
+	if ((error = iterator__update_ignore_case((git_iterator *)ii, flags)) < 0) {
+		git_iterator_free((git_iterator *)ii);
+		return error;
 	}
 
-	ii->index = index;
-	GIT_REFCOUNT_INC(index);
+	ii->entry_srch = iterator__ignore_case(ii) ?
+		git_index_entry_isrch : git_index_entry_srch;
+
+	git_vector_set_cmp(&ii->entries, iterator__ignore_case(ii) ?
+		git_index_entry_icmp : git_index_entry_cmp);
+	git_vector_sort(&ii->entries);
 
 	git_buf_init(&ii->partial, 0);
 	ii->tree_entry.mode = GIT_FILEMODE_TREE;
@@ -873,7 +888,6 @@ int git_iterator_for_index(
 	index_iterator__reset((git_iterator *)ii, NULL, NULL);
 
 	*iter = (git_iterator *)ii;
-
 	return 0;
 }
 
