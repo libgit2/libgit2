@@ -294,7 +294,7 @@ int git_attr_add_macro(
 	git_attr_rule *macro = NULL;
 	git_pool *pool;
 
-	if ((error = attr_setup(repo)) < 0)
+	if ((error = git_attr_cache__init(repo)) < 0)
 		return error;
 
 	macro = git__calloc(1, sizeof(git_attr_rule));

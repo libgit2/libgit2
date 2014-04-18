@@ -545,7 +545,8 @@ int git_attr_fnmatch__parse(
 		if (--slash_count <= 0)
 			spec->flags = spec->flags & ~GIT_ATTR_FNMATCH_FULLPATH;
 	}
-	if (spec->length >= 2 &&
+	if ((spec->flags & GIT_ATTR_FNMATCH_NOLEADINGDIR) == 0 &&
+		spec->length >= 2 &&
 		pattern[spec->length - 1] == '*' &&
 		pattern[spec->length - 2] == '/') {
 		spec->length -= 2;
