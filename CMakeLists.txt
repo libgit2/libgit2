@@ -335,7 +335,7 @@ ENDIF()
 
 IF (THREADSAFE)
 	IF (NOT WIN32)
-		find_package(Threads REQUIRED)
+		FIND_PACKAGE(Threads REQUIRED)
 	ENDIF()
 
 	ADD_DEFINITIONS(-DGIT_THREADS)
@@ -366,7 +366,7 @@ IF (CMAKE_SIZEOF_VOID_P EQUAL 8)
 ELSEIF (CMAKE_SIZEOF_VOID_P EQUAL 4)
 	ADD_DEFINITIONS(-DGIT_ARCH_32)
 ELSE()
-	message(FATAL_ERROR "Unsupported architecture")
+	MESSAGE(FATAL_ERROR "Unsupported architecture")
 ENDIF()
 
 # Compile and link libgit2
@@ -455,7 +455,7 @@ ENDIF ()
 IF (TAGS)
 	FIND_PROGRAM(CTAGS ctags)
 	IF (NOT CTAGS)
-		message(FATAL_ERROR "Could not find ctags command")
+		MESSAGE(FATAL_ERROR "Could not find ctags command")
 	ENDIF ()
 
 	FILE(GLOB_RECURSE SRC_ALL *.[ch])
