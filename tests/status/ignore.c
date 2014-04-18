@@ -230,31 +230,33 @@ void test_status_ignore__subdirectories(void)
 	cl_assert(ignored);
 }
 
-static void make_test_data(void)
+static void make_test_data(const char *reponame, const char **files)
 {
-	static const char *files[] = {
-		"empty_standard_repo/dir/a/ignore_me",
-		"empty_standard_repo/dir/b/ignore_me",
-		"empty_standard_repo/dir/ignore_me",
-		"empty_standard_repo/ignore_also/file",
-		"empty_standard_repo/ignore_me",
-		"empty_standard_repo/test/ignore_me/file",
-		"empty_standard_repo/test/ignore_me/file2",
-		"empty_standard_repo/test/ignore_me/and_me/file",
-		NULL
-	};
-	static const char *repo = "empty_standard_repo";
 	const char **scan;
-	size_t repolen = strlen(repo) + 1;
+	size_t repolen = strlen(reponame) + 1;
 
-	g_repo = cl_git_sandbox_init(repo);
+	g_repo = cl_git_sandbox_init(reponame);
 
 	for (scan = files; *scan != NULL; ++scan) {
 		cl_git_pass(git_futils_mkdir(
-			*scan + repolen, repo, 0777, GIT_MKDIR_PATH | GIT_MKDIR_SKIP_LAST));
+			*scan + repolen, reponame,
+			0777, GIT_MKDIR_PATH | GIT_MKDIR_SKIP_LAST));
 		cl_git_mkfile(*scan, "contents");
 	}
 }
+
+static const char *test_repo_1 = "empty_standard_repo";
+static const char *test_files_1[] = {
+	"empty_standard_repo/dir/a/ignore_me",
+	"empty_standard_repo/dir/b/ignore_me",
+	"empty_standard_repo/dir/ignore_me",
+	"empty_standard_repo/ignore_also/file",
+	"empty_standard_repo/ignore_me",
+	"empty_standard_repo/test/ignore_me/file",
+	"empty_standard_repo/test/ignore_me/file2",
+	"empty_standard_repo/test/ignore_me/and_me/file",
+	NULL
+};
 
 void test_status_ignore__subdirectories_recursion(void)
 {
@@ -292,7 +294,7 @@ void test_status_ignore__subdirectories_recursion(void)
 		GIT_STATUS_IGNORED, GIT_STATUS_IGNORED, GIT_STATUS_IGNORED,
 	};
 
-	make_test_data();
+	make_test_data(test_repo_1, test_files_1);
 	cl_git_rewritefile("empty_standard_repo/.gitignore", "ignore_me\n/ignore_also\n");
 
 	memset(&counts, 0x0, sizeof(status_entry_counts));
@@ -347,7 +349,7 @@ void test_status_ignore__subdirectories_not_at_root(void)
 		GIT_STATUS_WT_NEW, GIT_STATUS_IGNORED, GIT_STATUS_WT_NEW, GIT_STATUS_WT_NEW,
 	};
 
-	make_test_data();
+	make_test_data(test_repo_1, test_files_1);
 	cl_git_rewritefile("empty_standard_repo/dir/.gitignore", "ignore_me\n/ignore_also\n");
 	cl_git_rewritefile("empty_standard_repo/test/.gitignore", "and_me\n");
 
@@ -389,7 +391,7 @@ void test_status_ignore__leading_slash_ignores(void)
 		GIT_STATUS_WT_NEW, GIT_STATUS_WT_NEW, GIT_STATUS_WT_NEW, GIT_STATUS_WT_NEW,
 	};
 
-	make_test_data();
+	make_test_data(test_repo_1, test_files_1);
 
 	cl_fake_home(&home);
 	cl_git_mkfile("home/.gitignore", "/ignore_me\n");
@@ -420,6 +422,52 @@ void test_status_ignore__leading_slash_ignores(void)
 	cl_assert_equal_i(0, counts.wrong_sorted_path);
 
 	cl_fake_home_cleanup(&home);
+}
+
+void test_status_ignore__contained_dir_with_matching_name(void)
+{
+	static const char *test_files[] = {
+		"empty_standard_repo/subdir_match/aaa/subdir_match/file",
+		"empty_standard_repo/subdir_match/zzz_ignoreme",
+		NULL
+	};
+	static const char *expected_paths[] = {
+		"subdir_match/.gitignore",
+		"subdir_match/aaa/subdir_match/file",
+		"subdir_match/zzz_ignoreme",
+	};
+	static const unsigned int expected_statuses[] = {
+		GIT_STATUS_WT_NEW,  GIT_STATUS_WT_NEW,  GIT_STATUS_IGNORED
+	};
+	int ignored;
+	git_status_options opts = GIT_STATUS_OPTIONS_INIT;
+	status_entry_counts counts;
+
+	make_test_data("empty_standard_repo", test_files);
+	cl_git_mkfile(
+		"empty_standard_repo/subdir_match/.gitignore", "*_ignoreme\n");
+
+	cl_git_pass(git_status_should_ignore(
+		&ignored, g_repo, "subdir_match/aaa/subdir_match/file"));
+	cl_assert(!ignored);
+
+	cl_git_pass(git_status_should_ignore(
+		&ignored, g_repo, "subdir_match/zzz_ignoreme"));
+	cl_assert(ignored);
+
+	memset(&counts, 0x0, sizeof(status_entry_counts));
+	counts.expected_entry_count = 3;
+	counts.expected_paths = expected_paths;
+	counts.expected_statuses = expected_statuses;
+
+	opts.flags = GIT_STATUS_OPT_DEFAULTS | GIT_STATUS_OPT_RECURSE_IGNORED_DIRS;
+
+	cl_git_pass(git_status_foreach_ext(
+		g_repo, &opts, cb_status__normal, &counts));
+
+	cl_assert_equal_i(counts.expected_entry_count, counts.entry_count);
+	cl_assert_equal_i(0, counts.wrong_status_flags_count);
+	cl_assert_equal_i(0, counts.wrong_sorted_path);
 }
 
 void test_status_ignore__adding_internal_ignores(void)
