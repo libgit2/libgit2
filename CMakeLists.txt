@@ -18,7 +18,7 @@ CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
 SET(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_LIST_DIR}/cmake/Modules/")
 
 INCLUDE(CheckLibraryExists)
-INCLUDE(CheckCCompilerFlag)
+INCLUDE(AddCFlagIfSupported)
 
 # Build options
 #
@@ -302,49 +302,20 @@ ELSE ()
 		ADD_DEFINITIONS(-D__USE_MINGW_ANSI_STDIO=1)
 
 	ELSEIF (BUILD_SHARED_LIBS)
-		CHECK_C_COMPILER_FLAG(-fvisibility=hidden HIDDEN_VISIBILITY_FLAG)
-		IF(HIDDEN_VISIBILITY_FLAG)
-			SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fvisibility=hidden")
-		ENDIF()
+		ADD_C_FLAG_IF_SUPPORTED(-fvisibility=hidden)
 
 		SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
 	ENDIF ()
 
-	CHECK_C_COMPILER_FLAG(-Wno-missing-field-initializers NO_MISSING_FIELD_INIT_WARNING)
-	IF(NO_MISSING_FIELD_INIT_WARNING)
-		SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-missing-field-initializers")
-	ENDIF()
-
-	CHECK_C_COMPILER_FLAG(-Wstrict-aliasing STRICT_ALIASING_WARNING)
-	IF(STRICT_ALIASING_WARNING)
-		SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wstrict-aliasing=2")
-	ENDIF()
-
-	CHECK_C_COMPILER_FLAG(-Wstrict-prototypes STRICT_PROTOTYPES_WARNING)
-	IF(STRICT_PROTOTYPES_WARNING)
-		SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wstrict-prototypes")
-	ENDIF()
-
-	CHECK_C_COMPILER_FLAG(-Wdeclaration-after-statement DECLARATION_AFTER_STATEMENT_WARNING)
-	IF(DECLARATION_AFTER_STATEMENT_WARNING)
-		SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wdeclaration-after-statement")
-	ENDIF()
-
-	CHECK_C_COMPILER_FLAG(-Wno-unused-const-variable UNUSED_CONST_VAR_WARNING)
-	IF(UNUSED_CONST_VAR_WARNING)
-		SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-unused-const-variable")
-	ENDIF()
-
-	CHECK_C_COMPILER_FLAG(-Wno-unused-function UNUSED_FUNCTION_WARNING)
-	IF(UNUSED_FUNCTION_WARNING)
-		SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-unused-function")
-	ENDIF()
+	ADD_C_FLAG_IF_SUPPORTED(-Wno-missing-field-initializers)
+	ADD_C_FLAG_IF_SUPPORTED(-Wstrict-aliasing=2)
+	ADD_C_FLAG_IF_SUPPORTED(-Wstrict-prototypes)
+	ADD_C_FLAG_IF_SUPPORTED(-Wdeclaration-after-statement)
+	ADD_C_FLAG_IF_SUPPORTED(-Wno-unused-const-variable)
+	ADD_C_FLAG_IF_SUPPORTED(-Wno-unused-function)
 
 	IF (APPLE) # Apple deprecated OpenSSL
-		CHECK_C_COMPILER_FLAG(-Wno-deprecated-declarations DEPRECATED_DECLARATIONS_WARNING)
-		IF(DEPRECATED_DECLARATIONS_WARNING)
-			SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-deprecated-declarations")
-		ENDIF()
+		ADD_C_FLAG_IF_SUPPORTED(-Wno-deprecated-declarations)
 	ENDIF()
 
 	IF (PROFILE)
