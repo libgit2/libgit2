@@ -468,6 +468,9 @@ struct git_remote_callbacks {
 	/**
 	 * This will be called if the remote host requires
 	 * authentication in order to connect to it.
+	 *
+	 * Returning GIT_PASSTHROUGH will make libgit2 behave as
+	 * though this field isn't set.
 	 */
 	int (*credentials)(git_cred **cred, const char *url, const char *username_from_url, unsigned int allowed_types,	void *data);
 

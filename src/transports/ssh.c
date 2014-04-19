@@ -387,6 +387,7 @@ static int _git_ssh_setup_conn(
 {
 	char *host=NULL, *port=NULL, *path=NULL, *user=NULL, *pass=NULL;
 	const char *default_port="22";
+	int no_callback = 0;
 	ssh_stream *s;
 	LIBSSH2_SESSION* session=NULL;
 	LIBSSH2_CHANNEL* channel=NULL;
@@ -413,24 +414,31 @@ static int _git_ssh_setup_conn(
 	if (user && pass) {
 		if (git_cred_userpass_plaintext_new(&t->cred, user, pass) < 0)
 			goto on_error;
-	} else if (t->owner->cred_acquire_cb) {
-		if (t->owner->cred_acquire_cb(
-				&t->cred, t->owner->url, user,
-				GIT_CREDTYPE_USERPASS_PLAINTEXT |
-				GIT_CREDTYPE_SSH_KEY |
-				GIT_CREDTYPE_SSH_INTERACTIVE |
-				GIT_CREDTYPE_SSH_CUSTOM,
-				t->owner->cred_acquire_payload) < 0)
-			goto on_error;
+	} else if (!t->owner->cred_acquire_cb) {
+		no_callback = 1;
+	} else {
+		int error;
+		error = t->owner->cred_acquire_cb(&t->cred, t->owner->url, user,
+			GIT_CREDTYPE_USERPASS_PLAINTEXT |
+			GIT_CREDTYPE_SSH_KEY | GIT_CREDTYPE_SSH_CUSTOM |
+			GIT_CREDTYPE_SSH_INTERACTIVE,
+			t->owner->cred_acquire_payload);
 
-		if (!t->cred) {
+		if (error == GIT_PASSTHROUGH)
+			no_callback = 1;
+		else if (error < 0)
+			goto on_error;
+		else if (!t->cred) {
 			giterr_set(GITERR_SSH, "Callback failed to initialize SSH credentials");
 			goto on_error;
 		}
-	} else {
-		giterr_set(GITERR_SSH, "Cannot set up SSH connection without credentials");
+	}
+
+	if (no_callback) {
+		giterr_set(GITERR_SSH, "authentication required but no callback set");
 		goto on_error;
 	}
+
 	assert(t->cred);
 
 	if (_git_ssh_session_create(&session, s->socket) < 0)
