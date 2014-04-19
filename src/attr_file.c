@@ -248,9 +248,7 @@ int git_attr_file__parse_buffer(
 				repo, &attrs->pool, &rule->assigns, &scan)))
 		{
 			if (rule->match.flags & GIT_ATTR_FNMATCH_MACRO)
-				/* should generate error/warning if this is coming from any
-				 * file other than .gitattributes at repo root.
-				 */
+				/* TODO: warning if macro found in file below repo root */
 				error = git_attr_cache__insert_macro(repo, rule);
 			else
 				error = git_vector_insert(&attrs->rules, rule);
@@ -355,6 +353,8 @@ bool git_attr_fnmatch__match(
 
 	if (match->flags & GIT_ATTR_FNMATCH_ICASE)
 		flags |= FNM_CASEFOLD;
+	if (match->flags & GIT_ATTR_FNMATCH_LEADINGDIR)
+		flags |= FNM_LEADING_DIR;
 
 	if (match->flags & GIT_ATTR_FNMATCH_FULLPATH) {
 		filename = path->path;
@@ -544,6 +544,14 @@ int git_attr_fnmatch__parse(
 		spec->flags = spec->flags | GIT_ATTR_FNMATCH_DIRECTORY;
 		if (--slash_count <= 0)
 			spec->flags = spec->flags & ~GIT_ATTR_FNMATCH_FULLPATH;
+	}
+	if ((spec->flags & GIT_ATTR_FNMATCH_NOLEADINGDIR) == 0 &&
+		spec->length >= 2 &&
+		pattern[spec->length - 1] == '*' &&
+		pattern[spec->length - 2] == '/') {
+		spec->length -= 2;
+		spec->flags = spec->flags | GIT_ATTR_FNMATCH_LEADINGDIR;
+		/* leave FULLPATH match on, however */
 	}
 
 	if ((spec->flags & GIT_ATTR_FNMATCH_FULLPATH) != 0 &&

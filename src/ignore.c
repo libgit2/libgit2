@@ -123,7 +123,7 @@ int git_ignore__for_path(
 	int error = 0;
 	const char *workdir = git_repository_workdir(repo);
 
-	assert(ignores);
+	assert(ignores && path);
 
 	memset(ignores, 0, sizeof(*ignores));
 	ignores->repo = repo;
@@ -140,9 +140,12 @@ int git_ignore__for_path(
 	if (workdir && git_path_root(path) < 0)
 		error = git_path_find_dir(&ignores->dir, path, workdir);
 	else
-		error = git_buf_sets(&ignores->dir, path);
+		error = git_buf_joinpath(&ignores->dir, path, "");
 	if (error < 0)
 		goto cleanup;
+
+	if (workdir && !git__prefixcmp(ignores->dir.ptr, workdir))
+		ignores->dir_root = strlen(workdir);
 
 	/* set up internals */
 	if ((error = get_internal_ignores(&ignores->ign_internal, repo)) < 0)
@@ -204,10 +207,10 @@ int git_ignore__pop_dir(git_ignores *ign)
 
 		if ((end = strrchr(start, '/')) != NULL) {
 			size_t dirlen = (end - start) + 1;
+			const char *relpath = ign->dir.ptr + ign->dir_root;
+			size_t pathlen = ign->dir.size - ign->dir_root;
 
-			if (ign->dir.size >= dirlen &&
-				!memcmp(ign->dir.ptr + ign->dir.size - dirlen, start, dirlen))
-			{
+			if (pathlen == dirlen && !memcmp(relpath, start, dirlen)) {
 				git_vector_pop(&ign->ign_path);
 				git_attr_file__free(file);
 			}

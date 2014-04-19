@@ -83,7 +83,8 @@ int git_pathspec__vinit(
 		if (!match)
 			return -1;
 
-		match->flags = GIT_ATTR_FNMATCH_ALLOWSPACE | GIT_ATTR_FNMATCH_ALLOWNEG;
+		match->flags = GIT_ATTR_FNMATCH_ALLOWSPACE |
+			GIT_ATTR_FNMATCH_ALLOWNEG | GIT_ATTR_FNMATCH_NOLEADINGDIR;
 
 		ret = git_attr_fnmatch__parse(match, strpool, NULL, &pattern);
 		if (ret == GIT_ENOTFOUND) {

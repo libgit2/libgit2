@@ -217,6 +217,74 @@ cleanup:
 	return error;
 }
 
+static int preload_attr_file(
+	git_repository *repo,
+	git_attr_file_source source,
+	const char *base,
+	const char *file)
+{
+	int error;
+	git_attr_file *preload = NULL;
+
+	if (!file)
+		return 0;
+	if (!(error = git_attr_cache__get(
+			&preload, repo, source, base, file, git_attr_file__parse_buffer)))
+		git_attr_file__free(preload);
+
+	return error;
+}
+
+static int attr_setup(git_repository *repo)
+{
+	int error = 0;
+	const char *workdir = git_repository_workdir(repo);
+	git_index *idx = NULL;
+	git_buf sys = GIT_BUF_INIT;
+
+	if ((error = git_attr_cache__init(repo)) < 0)
+		return error;
+
+	/* preload attribute files that could contain macros so the
+	 * definitions will be available for later file parsing
+	 */
+
+	if (!(error = git_sysdir_find_system_file(&sys, GIT_ATTR_FILE_SYSTEM))) {
+		error = preload_attr_file(
+			repo, GIT_ATTR_FILE__FROM_FILE, NULL, sys.ptr);
+		git_buf_free(&sys);
+	}
+	if (error < 0) {
+		if (error == GIT_ENOTFOUND) {
+			giterr_clear();
+			error = 0;
+		} else
+			return error;
+	}
+
+	if ((error = preload_attr_file(
+			repo, GIT_ATTR_FILE__FROM_FILE,
+			NULL, git_repository_attr_cache(repo)->cfg_attr_file)) < 0)
+		return error;
+
+	if ((error = preload_attr_file(
+			repo, GIT_ATTR_FILE__FROM_FILE,
+			git_repository_path(repo), GIT_ATTR_FILE_INREPO)) < 0)
+		return error;
+
+	if (workdir != NULL &&
+		(error = preload_attr_file(
+			repo, GIT_ATTR_FILE__FROM_FILE, workdir, GIT_ATTR_FILE)) < 0)
+		return error;
+
+	if ((error = git_repository_index__weakptr(&idx, repo)) < 0 ||
+		(error = preload_attr_file(
+			repo, GIT_ATTR_FILE__FROM_INDEX, NULL, GIT_ATTR_FILE)) < 0)
+		return error;
+
+	return error;
+}
+
 int git_attr_add_macro(
 	git_repository *repo,
 	const char *name,
@@ -226,8 +294,8 @@ int git_attr_add_macro(
 	git_attr_rule *macro = NULL;
 	git_pool *pool;
 
-	if (git_attr_cache__init(repo) < 0)
-		return -1;
+	if ((error = git_attr_cache__init(repo)) < 0)
+		return error;
 
 	macro = git__calloc(1, sizeof(git_attr_rule));
 	GITERR_CHECK_ALLOC(macro);
@@ -348,7 +416,7 @@ static int collect_attr_files(
 	const char *workdir = git_repository_workdir(repo);
 	attr_walk_up_info info = { NULL };
 
-	if ((error = git_attr_cache__init(repo)) < 0)
+	if ((error = attr_setup(repo)) < 0)
 		return error;
 
 	/* Resolve path in a non-bare repo */

@@ -16,7 +16,7 @@ void test_attr_ignore__cleanup(void)
 	g_repo = NULL;
 }
 
-void assert_is_ignored_(
+static void assert_is_ignored_(
 	bool expected, const char *filepath, const char *file, int line)
 {
 	int is_ignored = 0;
