@@ -7,13 +7,10 @@
 
 #include "common.h"
 #include "error.h"
+#include "utf-conv.h"
 
 #ifdef GIT_WINHTTP
 # include <winhttp.h>
-#endif
-
-#ifndef WC_ERR_INVALID_CHARS
-#define WC_ERR_INVALID_CHARS	0x80
 #endif
 
 char *git_win32_get_error_message(DWORD error_code)
@@ -21,7 +18,6 @@ char *git_win32_get_error_message(DWORD error_code)
 	LPWSTR lpMsgBuf = NULL;
 	HMODULE hModule = NULL;
 	char *utf8_msg = NULL;
-	int utf8_size;
 	DWORD dwFlags =
 		FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_IGNORE_INSERTS;
 
@@ -45,33 +41,11 @@ char *git_win32_get_error_message(DWORD error_code)
 	if (FormatMessageW(dwFlags, hModule, error_code,
 		MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
 		(LPWSTR)&lpMsgBuf, 0, NULL)) {
+		/* Convert the message to UTF-8. If this fails, we will
+		 * return NULL, which is a condition expected by the caller */
+		if (git__utf16_to_8_alloc(&utf8_msg, lpMsgBuf) < 0)
+			utf8_msg = NULL;
 
-		/* Invalid code point check supported on Vista+ only */
-		if (git_has_win32_version(6, 0, 0))
-			dwFlags = WC_ERR_INVALID_CHARS;
-		else
-			dwFlags = 0;
-
-		utf8_size = WideCharToMultiByte(CP_UTF8, dwFlags,
-			lpMsgBuf, -1, NULL, 0, NULL, NULL);
-
-		if (!utf8_size) {
-			assert(0);
-			goto on_error;
-		}
-
-		utf8_msg = git__malloc(utf8_size);
-
-		if (!utf8_msg)
-			goto on_error;
-
-		if (!WideCharToMultiByte(CP_UTF8, dwFlags,
-			lpMsgBuf, -1, utf8_msg, utf8_size, NULL, NULL)) {
-			git__free(utf8_msg);
-			goto on_error;
-		}
-
-on_error:
 		LocalFree(lpMsgBuf);
 	}
 

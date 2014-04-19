@@ -91,7 +91,7 @@ static int apply_basic_credential(HINTERNET request, git_cred *cred)
 	git_cred_userpass_plaintext *c = (git_cred_userpass_plaintext *)cred;
 	git_buf buf = GIT_BUF_INIT, raw = GIT_BUF_INIT;
 	wchar_t *wide = NULL;
-	int error = -1, wide_len = 0;
+	int error = -1, wide_len;
 
 	git_buf_printf(&raw, "%s:%s", c->username, c->password);
 
@@ -100,21 +100,7 @@ static int apply_basic_credential(HINTERNET request, git_cred *cred)
 		git_buf_put_base64(&buf, git_buf_cstr(&raw), raw.size) < 0)
 		goto on_error;
 
-	wide_len = MultiByteToWideChar(CP_UTF8,	MB_ERR_INVALID_CHARS,
-		git_buf_cstr(&buf),	-1, NULL, 0);
-
-	if (!wide_len) {
-		giterr_set(GITERR_OS, "Failed to measure string for wide conversion");
-		goto on_error;
-	}
-
-	wide = git__malloc(wide_len * sizeof(wchar_t));
-
-	if (!wide)
-		goto on_error;
-
-	if (!MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS,
-		git_buf_cstr(&buf), -1, wide, wide_len)) {
+	if ((wide_len = git__utf8_to_16_alloc(&wide, git_buf_cstr(&buf))) < 0) {
 		giterr_set(GITERR_OS, "Failed to convert string to wide form");
 		goto on_error;
 	}
@@ -171,23 +157,11 @@ static int fallback_cred_acquire_cb(
 	/* If the target URI supports integrated Windows authentication
 	 * as an authentication mechanism */
 	if (GIT_CREDTYPE_DEFAULT & allowed_types) {
-		LPWSTR wide_url;
-		DWORD wide_len;
+		wchar_t *wide_url;
 
 		/* Convert URL to wide characters */
-		wide_len = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, url, -1, NULL, 0);
-
-		if (!wide_len) {
-			giterr_set(GITERR_OS, "Failed to measure string for wide conversion");
-			return -1;
-		}
-
-		wide_url = git__malloc(wide_len * sizeof(WCHAR));
-		GITERR_CHECK_ALLOC(wide_url);
-
-		if (!MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, url, -1, wide_url, wide_len)) {
+		if (git__utf8_to_16_alloc(&wide_url, url) < 0) {
 			giterr_set(GITERR_OS, "Failed to convert string to wide form");
-			git__free(wide_url);
 			return -1;
 		}
 
@@ -232,7 +206,7 @@ static int winhttp_stream_connect(winhttp_stream *s)
 	wchar_t ct[MAX_CONTENT_TYPE_LEN];
 	wchar_t *types[] = { L"*/*", NULL };
 	BOOL peerdist = FALSE;
-	int error = -1, wide_len;
+	int error = -1;
 	unsigned long disable_redirects = WINHTTP_DISABLE_REDIRECTS;
 
 	/* Prepare URL */
@@ -242,21 +216,7 @@ static int winhttp_stream_connect(winhttp_stream *s)
 		return -1;
 
 	/* Convert URL to wide characters */
-	wide_len = MultiByteToWideChar(CP_UTF8,	MB_ERR_INVALID_CHARS,
-		git_buf_cstr(&buf),	-1, NULL, 0);
-
-	if (!wide_len) {
-		giterr_set(GITERR_OS, "Failed to measure string for wide conversion");
-		goto on_error;
-	}
-
-	s->request_uri = git__malloc(wide_len * sizeof(wchar_t));
-
-	if (!s->request_uri)
-		goto on_error;
-
-	if (!MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS,
-		git_buf_cstr(&buf), -1, s->request_uri, wide_len)) {
+	if (git__utf8_to_16_alloc(&s->request_uri, git_buf_cstr(&buf)) < 0) {
 		giterr_set(GITERR_OS, "Failed to convert string to wide form");
 		goto on_error;
 	}
@@ -285,30 +245,17 @@ static int winhttp_stream_connect(winhttp_stream *s)
 		wchar_t *proxy_wide;
 
 		/* Convert URL to wide characters */
-		wide_len = MultiByteToWideChar(CP_UTF8,	MB_ERR_INVALID_CHARS,
-			proxy_url, -1, NULL, 0);
+		int proxy_wide_len = git__utf8_to_16_alloc(&proxy_wide, proxy_url);
 
-		if (!wide_len) {
-			giterr_set(GITERR_OS, "Failed to measure string for wide conversion");
-			goto on_error;
-		}
-
-		proxy_wide = git__malloc(wide_len * sizeof(wchar_t));
-
-		if (!proxy_wide)
-			goto on_error;
-
-		if (!MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS,
-			proxy_url, -1, proxy_wide, wide_len)) {
+		if (proxy_wide_len < 0) {
 			giterr_set(GITERR_OS, "Failed to convert string to wide form");
-			git__free(proxy_wide);
 			goto on_error;
 		}
 
 		/* Strip any trailing forward slash on the proxy URL;
 		 * WinHTTP doesn't like it if one is present */
-		if (wide_len > 1 && L'/' == proxy_wide[wide_len - 2])
-			proxy_wide[wide_len - 2] = L'\0';
+		if (proxy_wide_len > 1 && L'/' == proxy_wide[proxy_wide_len - 2])
+			proxy_wide[proxy_wide_len - 2] = L'\0';
 
 		proxy_info.dwAccessType = WINHTTP_ACCESS_TYPE_NAMED_PROXY;
 		proxy_info.lpszProxy = proxy_wide;
@@ -359,7 +306,10 @@ static int winhttp_stream_connect(winhttp_stream *s)
 			s->service) < 0)
 			goto on_error;
 
-		git__utf8_to_16(ct, MAX_CONTENT_TYPE_LEN, git_buf_cstr(&buf));
+		if (git__utf8_to_16(ct, MAX_CONTENT_TYPE_LEN, git_buf_cstr(&buf)) < 0) {
+			giterr_set(GITERR_OS, "Failed to convert content-type to wide characters");
+			goto on_error;
+		}
 
 		if (!WinHttpAddRequestHeaders(s->request, ct, (ULONG)-1L,
 			WINHTTP_ADDREQ_FLAG_ADD | WINHTTP_ADDREQ_FLAG_REPLACE)) {
@@ -373,7 +323,10 @@ static int winhttp_stream_connect(winhttp_stream *s)
 			s->service) < 0)
 			goto on_error;
 
-		git__utf8_to_16(ct, MAX_CONTENT_TYPE_LEN, git_buf_cstr(&buf));
+		if (git__utf8_to_16(ct, MAX_CONTENT_TYPE_LEN, git_buf_cstr(&buf)) < 0) {
+			giterr_set(GITERR_OS, "Failed to convert accept header to wide characters");
+			goto on_error;
+		}
 
 		if (!WinHttpAddRequestHeaders(s->request, ct, (ULONG)-1L,
 			WINHTTP_ADDREQ_FLAG_ADD | WINHTTP_ADDREQ_FLAG_REPLACE)) {
@@ -506,16 +459,20 @@ static int winhttp_connect(
 	const char *url)
 {
 	wchar_t *ua = L"git/1.0 (libgit2 " WIDEN(LIBGIT2_VERSION) L")";
-	git_win32_path host;
+	wchar_t *wide_host;
 	int32_t port;
 	const char *default_port = "80";
+	int error = -1;
 
 	/* Prepare port */
 	if (git__strtol32(&port, t->connection_data.port, NULL, 10) < 0)
 		return -1;
 
 	/* Prepare host */
-	git_win32_path_from_c(host, t->connection_data.host);
+	if (git__utf8_to_16_alloc(&wide_host, t->connection_data.host) < 0) {
+		giterr_set(GITERR_OS, "Unable to convert host to wide characters");
+		return -1;
+	}
 
 	/* Establish session */
 	t->session = WinHttpOpen(
@@ -527,22 +484,27 @@ static int winhttp_connect(
 
 	if (!t->session) {
 		giterr_set(GITERR_OS, "Failed to init WinHTTP");
-		return -1;
+		goto on_error;
 	}
 
 	/* Establish connection */
 	t->connection = WinHttpConnect(
 		t->session,
-		host,
+		wide_host,
 		(INTERNET_PORT) port,
 		0);
 
 	if (!t->connection) {
 		giterr_set(GITERR_OS, "Failed to connect to host");
-		return -1;
+		goto on_error;
 	}
 
-	return 0;
+	error = 0;
+
+on_error:
+	git__free(wide_host);
+
+	return error;
 }
 
 static int winhttp_stream_read(
@@ -693,7 +655,6 @@ replay:
 			}
 
 			location = git__malloc(location_length);
-			location8 = git__malloc(location_length);
 			GITERR_CHECK_ALLOC(location);
 
 			if (!WinHttpQueryHeaders(s->request,
@@ -706,7 +667,14 @@ replay:
 				git__free(location);
 				return -1;
 			}
-			git__utf16_to_8(location8, location_length, location);
+
+			/* Convert the Location header to UTF-8 */
+			if (git__utf16_to_8_alloc(&location8, location) < 0) {
+				giterr_set(GITERR_OS, "Failed to convert Location header to UTF-8");
+				git__free(location);
+				return -1;
+			}
+
 			git__free(location);
 
 			/* Replay the request */
@@ -716,8 +684,11 @@ replay:
 
 			if (!git__prefixcmp_icase(location8, prefix_https)) {
 				/* Upgrade to secure connection; disconnect and start over */
-				if (gitno_connection_data_from_url(&t->connection_data, location8, s->service_url) < 0)
+				if (gitno_connection_data_from_url(&t->connection_data, location8, s->service_url) < 0) {
+					git__free(location8);
 					return -1;
+				}
+
 				winhttp_connect(t, location8);
 			}
 
@@ -778,7 +749,11 @@ replay:
 		else
 			snprintf(expected_content_type_8, MAX_CONTENT_TYPE_LEN, "application/x-git-%s-advertisement", s->service);
 
-		git__utf8_to_16(expected_content_type, MAX_CONTENT_TYPE_LEN, expected_content_type_8);
+		if (git__utf8_to_16(expected_content_type, MAX_CONTENT_TYPE_LEN, expected_content_type_8) < 0) {
+			giterr_set(GITERR_OS, "Failed to convert expected content-type to wide characters");
+			return -1;
+		}
+
 		content_type_length = sizeof(content_type);
 
 		if (!WinHttpQueryHeaders(s->request,

@@ -11,7 +11,9 @@
 
 /* use a 64-bit file offset type */
 # define lseek _lseeki64
+# undef stat
 # define stat _stati64
+# undef fstat
 # define fstat _fstati64
 
 /* stat: file mode type testing macros */

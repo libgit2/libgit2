@@ -28,7 +28,6 @@ char *p_realpath(const char *, char *);
 #define p_vsnprintf(b, c, f, a) vsnprintf(b, c, f, a)
 #define p_snprintf(b, c, f, ...) snprintf(b, c, f, __VA_ARGS__)
 #define p_mkstemp(p) mkstemp(p)
-#define p_setenv(n,v,o) setenv(n,v,o)
 #define p_inet_pton(a, b, c) inet_pton(a, b, c)
 
 /* see win32/posix.h for explanation about why this exists */

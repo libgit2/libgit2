@@ -59,47 +59,40 @@ void cl_git_rewritefile(const char *path, const char *content)
 
 char *cl_getenv(const char *name)
 {
-	git_win32_path name_utf16;
-	DWORD alloc_len;
-	wchar_t *value_utf16;
-	char *value_utf8;
+	wchar_t *wide_name, *wide_value;
+	char *utf8_value = NULL;
+	DWORD value_len;
 
-	git_win32_path_from_c(name_utf16, name);
-	alloc_len = GetEnvironmentVariableW(name_utf16, NULL, 0);
-	if (alloc_len <= 0)
-		return NULL;
+	cl_assert(git__utf8_to_16_alloc(&wide_name, name) >= 0);
 
-	cl_assert(value_utf16 = git__calloc(alloc_len, sizeof(wchar_t)));
+	value_len = GetEnvironmentVariableW(wide_name, NULL, 0);
 
-	GetEnvironmentVariableW(name_utf16, value_utf16, alloc_len);
+	if (value_len) {
+		cl_assert(wide_value = git__malloc(value_len * sizeof(wchar_t)));
+		cl_assert(GetEnvironmentVariableW(wide_name, wide_value, value_len));
+		cl_assert(git__utf16_to_8_alloc(&utf8_value, wide_value) >= 0);
+		git__free(wide_value);
+	}
 
-	alloc_len = alloc_len * 4 + 1; /* worst case UTF16->UTF8 growth */
-	cl_assert(value_utf8 = git__calloc(alloc_len, 1));
-
-	git__utf16_to_8(value_utf8, alloc_len, value_utf16);
-
-	git__free(value_utf16);
-
-	return value_utf8;
+	git__free(wide_name);
+	return utf8_value;
 }
 
 int cl_setenv(const char *name, const char *value)
 {
-	git_win32_path name_utf16;
-	git_win32_path value_utf16;
+	wchar_t *wide_name, *wide_value;
 
-	git_win32_path_from_c(name_utf16, name);
+	cl_assert(git__utf8_to_16_alloc(&wide_name, name) >= 0);
 
 	if (value) {
-		git_win32_path_from_c(value_utf16, value);
-		cl_assert(SetEnvironmentVariableW(name_utf16, value_utf16));
+		cl_assert(git__utf8_to_16_alloc(&wide_value, value) >= 0);
+		cl_assert(SetEnvironmentVariableW(wide_name, wide_value));
 	} else {
 		/* Windows XP returns 0 (failed) when passing NULL for lpValue when
-		 * lpName does not exist in the environment block. This behavior
-		 * seems to have changed in later versions. Don't check return value
-		 * of SetEnvironmentVariable when passing NULL for lpValue.
-		 */
-		SetEnvironmentVariableW(name_utf16, NULL);
+		* lpName does not exist in the environment block. This behavior
+		* seems to have changed in later versions. Don't check the return value
+		* of SetEnvironmentVariable when passing NULL for lpValue. */
+		SetEnvironmentVariableW(wide_name, NULL);
 	}
 
 	return 0;
@@ -115,8 +108,8 @@ int cl_rename(const char *source, const char *dest)
 	git_win32_path dest_utf16;
 	unsigned retries = 1;
 
-	git_win32_path_from_c(source_utf16, source);
-	git_win32_path_from_c(dest_utf16, dest);
+	cl_assert(git_win32_path_from_utf8(source_utf16, source) >= 0);
+	cl_assert(git_win32_path_from_utf8(dest_utf16, dest) >= 0);
 
 	while (!MoveFileW(source_utf16, dest_utf16)) {
 		/* Only retry if the error is ERROR_ACCESS_DENIED;
