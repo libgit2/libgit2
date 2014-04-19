@@ -41,6 +41,9 @@ typedef enum {
 
 	/* git_cred_default */
 	GIT_CREDTYPE_DEFAULT = (1u << 3),
+
+	/* git_cred_ssh_interactive */
+	GIT_CREDTYPE_SSH_INTERACTIVE = (1u << 4),
 } git_credtype_t;
 
 /* The base structure for all credential types */
@@ -60,8 +63,10 @@ typedef struct {
 
 #ifdef GIT_SSH
 typedef LIBSSH2_USERAUTH_PUBLICKEY_SIGN_FUNC((*git_cred_sign_callback));
+typedef LIBSSH2_USERAUTH_KBDINT_RESPONSE_FUNC((*git_cred_ssh_interactive_callback));
 #else
 typedef int (*git_cred_sign_callback)(void *, ...);
+typedef int (*git_cred_ssh_interactive_callback)(void *, ...);
 #endif
 
 /**
@@ -76,6 +81,16 @@ typedef struct git_cred_ssh_key {
 } git_cred_ssh_key;
 
 /**
+ * Keyboard-interactive based ssh authentication
+ */
+typedef struct git_cred_ssh_interactive {
+	git_cred parent;
+	char *username;
+	git_cred_ssh_interactive_callback prompt_callback;
+	void *payload;
+} git_cred_ssh_interactive;
+
+/**
  * A key with a custom signature function
  */
 typedef struct git_cred_ssh_custom {
@@ -83,8 +98,8 @@ typedef struct git_cred_ssh_custom {
 	char *username;
 	char *publickey;
 	size_t publickey_len;
-	void *sign_callback;
-	void *sign_data;
+	git_cred_sign_callback sign_callback;
+	void *payload;
 } git_cred_ssh_custom;
 
 /** A key for NTLM/Kerberos "default" credentials */
@@ -131,6 +146,21 @@ GIT_EXTERN(int) git_cred_ssh_key_new(
 	const char *passphrase);
 
 /**
+ * Create a new ssh keyboard-interactive based credential object.
+ * The supplied credential parameter will be internally duplicated.
+ *
+ * @param username Username to use to authenticate.
+ * @param prompt_callback The callback method used for prompts.
+ * @param payload Additional data to pass to the callback.
+ * @return 0 for success or an error code for failure.
+ */
+GIT_EXTERN(int) git_cred_ssh_interactive_new(
+	git_cred **out,
+	const char *username,
+	git_cred_ssh_interactive_callback prompt_callback,
+	void *payload);
+
+/**
  * Create a new ssh key credential object used for querying an ssh-agent.
  * The supplied credential parameter will be internally duplicated.
  *
@@ -156,8 +186,8 @@ GIT_EXTERN(int) git_cred_ssh_key_from_agent(
  * @param username username to use to authenticate
  * @param publickey The bytes of the public key.
  * @param publickey_len The length of the public key in bytes.
- * @param sign_fn The callback method to sign the data during the challenge.
- * @param sign_data The data to pass to the sign function.
+ * @param sign_callback The callback method to sign the data during the challenge.
+ * @param payload Additional data to pass to the callback.
  * @return 0 for success or an error code for failure
  */
 GIT_EXTERN(int) git_cred_ssh_custom_new(
@@ -165,8 +195,8 @@ GIT_EXTERN(int) git_cred_ssh_custom_new(
 	const char *username,
 	const char *publickey,
 	size_t publickey_len,
-	git_cred_sign_callback sign_fn,
-	void *sign_data);
+	git_cred_sign_callback sign_callback,
+	void *payload);
 
 /**
  * Create a "default" credential usable for Negotiate mechanisms like NTLM

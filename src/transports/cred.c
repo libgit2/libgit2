@@ -30,7 +30,6 @@ static void plaintext_free(struct git_cred *cred)
 		git__free(c->password);
 	}
 
-	git__memzero(c, sizeof(*c));
 	git__free(c);
 }
 
@@ -73,8 +72,13 @@ static void ssh_key_free(struct git_cred *cred)
 		(git_cred_ssh_key *)cred;
 
 	git__free(c->username);
-	git__free(c->publickey);
-	git__free(c->privatekey);
+
+	if (c->privatekey) {
+		/* Zero the memory which previously held the private key */
+		size_t key_len = strlen(c->privatekey);
+		git__memzero(c->privatekey, key_len);
+		git__free(c->privatekey);
+	}
 
 	if (c->passphrase) {
 		/* Zero the memory which previously held the passphrase */
@@ -83,7 +87,22 @@ static void ssh_key_free(struct git_cred *cred)
 		git__free(c->passphrase);
 	}
 
-	git__memzero(c, sizeof(*c));
+	if (c->publickey) {
+		/* Zero the memory which previously held the public key */
+		size_t key_len = strlen(c->publickey);
+		git__memzero(c->publickey, key_len);
+		git__free(c->publickey);
+	}
+
+	git__free(c);
+}
+
+static void ssh_interactive_free(struct git_cred *cred)
+{
+	git_cred_ssh_interactive *c = (git_cred_ssh_interactive *)cred;
+
+	git__free(c->username);
+
 	git__free(c);
 }
 
@@ -92,9 +111,14 @@ static void ssh_custom_free(struct git_cred *cred)
 	git_cred_ssh_custom *c = (git_cred_ssh_custom *)cred;
 
 	git__free(c->username);
-	git__free(c->publickey);
 
-	git__memzero(c, sizeof(*c));
+	if (c->publickey) {
+		/* Zero the memory which previously held the publickey */
+		size_t key_len = strlen(c->publickey);
+		git__memzero(c->publickey, key_len);
+		git__free(c->publickey);
+	}
+
 	git__free(c);
 }
 
@@ -142,6 +166,32 @@ int git_cred_ssh_key_new(
 	return 0;
 }
 
+int git_cred_ssh_interactive_new(
+	git_cred **out,
+	const char *username,
+	git_cred_ssh_interactive_callback prompt_callback,
+	void *payload)
+{
+	git_cred_ssh_interactive *c;
+
+	assert(out && username && prompt_callback);
+
+	c = git__calloc(1, sizeof(git_cred_ssh_interactive));
+	GITERR_CHECK_ALLOC(c);
+
+	c->parent.credtype = GIT_CREDTYPE_SSH_INTERACTIVE;
+	c->parent.free = ssh_interactive_free;
+
+	c->username = git__strdup(username);
+	GITERR_CHECK_ALLOC(c->username);
+
+	c->prompt_callback = prompt_callback;
+	c->payload = payload;
+
+	*out = &c->parent;
+	return 0;
+}
+
 int git_cred_ssh_key_from_agent(git_cred **cred, const char *username) {
 	git_cred_ssh_key *c;
 
@@ -168,7 +218,7 @@ int git_cred_ssh_custom_new(
 	const char *publickey,
 	size_t publickey_len,
 	git_cred_sign_callback sign_callback,
-	void *sign_data)
+	void *payload)
 {
 	git_cred_ssh_custom *c;
 
@@ -192,7 +242,7 @@ int git_cred_ssh_custom_new(
 
 	c->publickey_len = publickey_len;
 	c->sign_callback = sign_callback;
-	c->sign_data = sign_data;
+	c->payload = payload;
 
 	*cred = &c->parent;
 	return 0;
