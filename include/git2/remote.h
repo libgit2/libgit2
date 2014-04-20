@@ -455,8 +455,7 @@ struct git_remote_callbacks {
 	/**
 	 * Textual progress from the remote. Text send over the
 	 * progress side-band will be passed to this function (this is
-	 * the 'counting objects' output. This callback should return a value less
-	 * than zero to cancel the operation.
+	 * the 'counting objects' output.
 	 */
 	int (*progress)(const char *str, int len, void *data);
 

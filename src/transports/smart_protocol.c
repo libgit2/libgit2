@@ -882,10 +882,7 @@ static int stream_thunk(void *buf, size_t size, void *data)
 
 		if ((current_time - payload->last_progress_report_time) >= MIN_PROGRESS_UPDATE_INTERVAL) {
 			payload->last_progress_report_time = current_time;
-			if (payload->cb(payload->pb->nr_written, payload->pb->nr_objects, payload->last_bytes, payload->cb_payload)) {
-				giterr_clear();
-				error = GIT_EUSER;
-			}
+			error = payload->cb(payload->pb->nr_written, payload->pb->nr_objects, payload->last_bytes, payload->cb_payload);
 		}
 	}
 
@@ -957,7 +954,14 @@ int git_smart__push(git_transport *transport, git_push *push)
 
 	/* If progress is being reported write the final report */
 	if (push->transfer_progress_cb) {
-		push->transfer_progress_cb(push->pb->nr_written, push->pb->nr_objects, packbuilder_payload.last_bytes, push->transfer_progress_cb_payload);
+		error = push->transfer_progress_cb(
+					push->pb->nr_written,
+					push->pb->nr_objects,
+					packbuilder_payload.last_bytes,
+					push->transfer_progress_cb_payload);
+
+		if (error < 0)
+			goto done;
 	}
 
 	if (push->status.length) {
