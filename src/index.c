@@ -1880,8 +1880,9 @@ static int parse_index(git_index *index, const char *buffer, size_t buffer_size)
 	git_oid checksum_calculated, checksum_expected;
 
 #define seek_forward(_increase) { \
-	if (_increase >= buffer_size) \
-		return index_error_invalid("ran out of data while parsing"); \
+	if (_increase >= buffer_size) { \
+		error = index_error_invalid("ran out of data while parsing"); \
+		goto done; } \
 	buffer += _increase; \
 	buffer_size -= _increase;\
 }
