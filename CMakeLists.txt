@@ -18,6 +18,7 @@ CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
 SET(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_LIST_DIR}/cmake/Modules/")
 
 INCLUDE(CheckLibraryExists)
+INCLUDE(AddCFlagIfSupported)
 
 # Build options
 #
@@ -287,7 +288,7 @@ IF (MSVC)
    # Precompiled headers
 
 ELSE ()
-	SET(CMAKE_C_FLAGS "-D_GNU_SOURCE -Wall -Wextra -Wno-missing-field-initializers -Wstrict-aliasing=2 -Wstrict-prototypes -Wdeclaration-after-statement ${CMAKE_C_FLAGS}")
+	SET(CMAKE_C_FLAGS "-D_GNU_SOURCE -Wall -Wextra ${CMAKE_C_FLAGS}")
 
 	IF (WIN32 AND NOT CYGWIN)
 		SET(CMAKE_C_FLAGS_DEBUG "-D_DEBUG")
@@ -301,16 +302,22 @@ ELSE ()
 		ADD_DEFINITIONS(-D__USE_MINGW_ANSI_STDIO=1)
 
 	ELSEIF (BUILD_SHARED_LIBS)
-		SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fvisibility=hidden -fPIC")
-	ENDIF ()
-	IF (APPLE) # Apple deprecated OpenSSL
-		SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-deprecated-declarations")
+		ADD_C_FLAG_IF_SUPPORTED(-fvisibility=hidden)
 
-		# With clang, disable some annoying extra warnings
-		IF (NOT CMAKE_COMPILER_IS_GNUCC)
-			SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-unused-const-variable -Wno-unused-function")
-		ENDIF()
+		SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
 	ENDIF ()
+
+	ADD_C_FLAG_IF_SUPPORTED(-Wno-missing-field-initializers)
+	ADD_C_FLAG_IF_SUPPORTED(-Wstrict-aliasing=2)
+	ADD_C_FLAG_IF_SUPPORTED(-Wstrict-prototypes)
+	ADD_C_FLAG_IF_SUPPORTED(-Wdeclaration-after-statement)
+	ADD_C_FLAG_IF_SUPPORTED(-Wno-unused-const-variable)
+	ADD_C_FLAG_IF_SUPPORTED(-Wno-unused-function)
+
+	IF (APPLE) # Apple deprecated OpenSSL
+		ADD_C_FLAG_IF_SUPPORTED(-Wno-deprecated-declarations)
+	ENDIF()
+
 	IF (PROFILE)
 		SET(CMAKE_C_FLAGS "-pg ${CMAKE_C_FLAGS}")
 		SET(CMAKE_EXE_LINKER_FLAGS "-pg ${CMAKE_EXE_LINKER_FLAGS}")
@@ -335,7 +342,7 @@ ENDIF()
 
 IF (THREADSAFE)
 	IF (NOT WIN32)
-		find_package(Threads REQUIRED)
+		FIND_PACKAGE(Threads REQUIRED)
 	ENDIF()
 
 	ADD_DEFINITIONS(-DGIT_THREADS)
@@ -366,7 +373,7 @@ IF (CMAKE_SIZEOF_VOID_P EQUAL 8)
 ELSEIF (CMAKE_SIZEOF_VOID_P EQUAL 4)
 	ADD_DEFINITIONS(-DGIT_ARCH_32)
 ELSE()
-	message(FATAL_ERROR "Unsupported architecture")
+	MESSAGE(FATAL_ERROR "Unsupported architecture")
 ENDIF()
 
 # Compile and link libgit2
@@ -455,7 +462,7 @@ ENDIF ()
 IF (TAGS)
 	FIND_PROGRAM(CTAGS ctags)
 	IF (NOT CTAGS)
-		message(FATAL_ERROR "Could not find ctags command")
+		MESSAGE(FATAL_ERROR "Could not find ctags command")
 	ENDIF ()
 
 	FILE(GLOB_RECURSE SRC_ALL *.[ch])
