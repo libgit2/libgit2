@@ -60,12 +60,17 @@ int git_reset_default(
 	for (i = 0, max_i = git_diff_num_deltas(diff); i < max_i; ++i) {
 		const git_diff_delta *delta = git_diff_get_delta(diff, i);
 
-		if ((error = git_index_conflict_remove(index, delta->old_file.path)) < 0)
-			goto cleanup;
-
 		assert(delta->status == GIT_DELTA_ADDED ||
 			delta->status == GIT_DELTA_MODIFIED ||
 			delta->status == GIT_DELTA_DELETED);
+
+		error = git_index_conflict_remove(index, delta->old_file.path);
+		if (error < 0) {
+			if (delta->status == GIT_DELTA_ADDED && error == GIT_ENOTFOUND)
+				giterr_clear();
+			else
+				goto cleanup;
+		}
 
 		if (delta->status == GIT_DELTA_DELETED) {
 			if ((error = git_index_remove(index, delta->old_file.path, 0)) < 0)
