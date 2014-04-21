@@ -677,9 +677,7 @@ void git_push_status_free(push_status *status)
 	if (status == NULL)
 		return;
 
-	if (status->msg)
-		git__free(status->msg);
-
+	git__free(status->msg);
 	git__free(status->ref);
 	git__free(status);
 }
