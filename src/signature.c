@@ -51,7 +51,7 @@ int git_signature_new(git_signature **sig_out, const char *name, const char *ema
 {
 	git_signature *p = NULL;
 
-	assert(name && email);
+	assert(sig_out && name && email);
 
 	*sig_out = NULL;
 
@@ -86,6 +86,8 @@ int git_signature_dup(git_signature **dest, const git_signature *source)
 {
 	git_signature *signature;
 
+	assert(dest);
+
 	if (source == NULL)
 		return 0;
 
@@ -114,6 +116,8 @@ int git_signature_now(git_signature **sig_out, const char *name, const char *ema
 	git_signature *sig;
 	struct tm _utc;
 
+	assert(sig_out);
+
 	*sig_out = NULL;
 
 	/*
@@ -141,17 +145,38 @@ int git_signature_now(git_signature **sig_out, const char *name, const char *ema
 int git_signature_default(git_signature **out, git_repository *repo)
 {
 	int error;
-	git_config *cfg;
+	git_config *cfg = NULL;
 	const char *user_name, *user_email;
+
+	assert(out);
 
 	if ((error = git_repository_config(&cfg, repo)) < 0)
 		return error;
 
-	if (!(error = git_config_get_string(&user_name, cfg, "user.name")) &&
-		!(error = git_config_get_string(&user_email, cfg, "user.email")))
-		error = git_signature_now(out, user_name, user_email);
+	if ((error = git_config_get_string(&user_name, cfg, "user.name")) >= 0)
+		error = git_config_get_string(&user_email, cfg, "user.email");
 
 	git_config_free(cfg);
+
+	/* fallback to the default configuration if user.name and/or user.email
+	 * is not set on the repository level*/
+	if (error == GIT_ENOTFOUND) {
+		if ((error = git_config_open_default(&cfg)) < 0)
+			return error;
+
+		if ((error = git_config_get_string(&user_name, cfg, "user.name")) < 0 ||
+			(error = git_config_get_string(&user_email, cfg, "user.email")) < 0)
+			goto on_error;
+	}
+
+	if (error < 0)
+		goto on_error;
+
+	error = git_signature_now(out, user_name, user_email);
+
+on_error:
+	git_config_free(cfg);
+
 	return error;
 }
 
@@ -160,6 +185,8 @@ int git_signature__parse(git_signature *sig, const char **buffer_out,
 {
 	const char *buffer = *buffer_out;
 	const char *email_start, *email_end;
+
+	assert(buffer_out);
 
 	memset(sig, 0, sizeof(git_signature));
 
