@@ -628,7 +628,7 @@ static int add_push_report_pkt(git_push *push, git_pkt *pkt)
 
 	switch (pkt->type) {
 		case GIT_PKT_OK:
-			status = git__calloc(1, sizeof(push_status));
+			status = git__calloc(sizeof(push_status), 1);
 			GITERR_CHECK_ALLOC(status);
 			status->msg = NULL;
 			status->ref = git__strdup(((git_pkt_ok *)pkt)->ref);
