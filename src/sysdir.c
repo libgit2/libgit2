@@ -213,7 +213,7 @@ static int git_sysdir_find_in_dirlist(
 			return 0;
 	}
 
-	git_buf_clear(path);
+	git_buf_free(path);
 	giterr_set(GITERR_OS, "The %s file '%s' doesn't exist", label, name);
 	return GIT_ENOTFOUND;
 }
