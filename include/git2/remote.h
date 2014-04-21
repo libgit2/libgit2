@@ -457,7 +457,7 @@ struct git_remote_callbacks {
 	 * progress side-band will be passed to this function (this is
 	 * the 'counting objects' output.
 	 */
-	int (*progress)(const char *str, int len, void *data);
+	int (*sideband_progress)(const char *str, int len, void *data);
 
 	/**
 	 * Completion is called when different parts of the download

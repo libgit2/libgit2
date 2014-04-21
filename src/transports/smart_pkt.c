@@ -153,7 +153,7 @@ static int data_pkt(git_pkt **out, const char *line, size_t len)
 	return 0;
 }
 
-static int progress_pkt(git_pkt **out, const char *line, size_t len)
+static int sideband_progress_pkt(git_pkt **out, const char *line, size_t len)
 {
 	git_pkt_progress *pkt;
 
@@ -403,7 +403,7 @@ int git_pkt_parse_line(
 	if (*line == GIT_SIDE_BAND_DATA)
 		ret = data_pkt(head, line, len);
 	else if (*line == GIT_SIDE_BAND_PROGRESS)
-		ret = progress_pkt(head, line, len);
+		ret = sideband_progress_pkt(head, line, len);
 	else if (*line == GIT_SIDE_BAND_ERROR)
 		ret = sideband_error_pkt(head, line, len);
 	else if (!git__prefixcmp(line, "ACK"))
