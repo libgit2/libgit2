@@ -32,7 +32,7 @@ GIT_EXTERN(int) git_indexer_new(
 		const char *path,
 		unsigned int mode,
 		git_odb *odb,
-		git_transfer_progress_callback progress_cb,
+		git_transfer_progress_cb progress_cb,
 		void *progress_cb_payload);
 
 /**

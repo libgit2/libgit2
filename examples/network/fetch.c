@@ -97,7 +97,7 @@ int fetch(git_repository *repo, int argc, char **argv)
 
 	// Set up the callbacks (only update_tips for now)
 	callbacks.update_tips = &update_cb;
-	callbacks.progress = &progress_cb;
+	callbacks.sideband_progress = &progress_cb;
 	callbacks.credentials = cred_acquire_cb;
 	git_remote_set_callbacks(remote, &callbacks);
 

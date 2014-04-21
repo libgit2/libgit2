@@ -472,7 +472,7 @@ on_error:
 
 typedef struct foreach_data {
 	git_transfer_progress *stats;
-	git_transfer_progress_callback progress_cb;
+	git_transfer_progress_cb progress_cb;
 	void *progress_payload;
 	git_odb_writepack *writepack;
 } foreach_data;
@@ -489,7 +489,7 @@ static int local_download_pack(
 		git_transport *transport,
 		git_repository *repo,
 		git_transfer_progress *stats,
-		git_transfer_progress_callback progress_cb,
+		git_transfer_progress_cb progress_cb,
 		void *progress_payload)
 {
 	transport_local *t = (transport_local*)transport;

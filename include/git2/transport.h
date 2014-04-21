@@ -287,7 +287,7 @@ struct git_transport {
 		git_transport *transport,
 		git_repository *repo,
 		git_transfer_progress *stats,
-		git_transfer_progress_callback progress_cb,
+		git_transfer_progress_cb progress_cb,
 		void *progress_payload);
 
 	/* Checks to see if the transport is connected */

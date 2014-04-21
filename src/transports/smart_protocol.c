@@ -450,7 +450,7 @@ static int no_sideband(transport_smart *t, struct git_odb_writepack *writepack, 
 
 struct network_packetsize_payload
 {
-	git_transfer_progress_callback callback;
+	git_transfer_progress_cb callback;
 	void *payload;
 	git_transfer_progress *stats;
 	size_t last_fired_bytes;
@@ -478,7 +478,7 @@ int git_smart__download_pack(
 	git_transport *transport,
 	git_repository *repo,
 	git_transfer_progress *stats,
-	git_transfer_progress_callback transfer_progress_cb,
+	git_transfer_progress_cb transfer_progress_cb,
 	void *progress_payload)
 {
 	transport_smart *t = (transport_smart *)transport;

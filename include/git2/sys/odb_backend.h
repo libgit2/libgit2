@@ -81,7 +81,7 @@ struct git_odb_backend {
 
 	int (* writepack)(
 		git_odb_writepack **, git_odb_backend *, git_odb *odb,
-		git_transfer_progress_callback progress_cb, void *progress_payload);
+		git_transfer_progress_cb progress_cb, void *progress_payload);
 
 	void (* free)(git_odb_backend *);
 };
