@@ -21,7 +21,6 @@ static void initialize(const char *repo_name)
 
 void test_reset_default__initialize(void)
 {
-	initialize("status");
 }
 
 void test_reset_default__cleanup(void)
@@ -67,6 +66,8 @@ void test_reset_default__resetting_filepaths_against_a_null_target_removes_them_
 {
 	char *paths[] = { "staged_changes", "staged_new_file" };
 
+	initialize("status");
+
 	_pathspecs.strings = paths;
 	_pathspecs.count = 2;
 
@@ -101,6 +102,8 @@ void test_reset_default__resetting_filepaths_replaces_their_corresponding_index_
 		"a6be623522ce87a1d862128ac42672604f7b468b" };
 	char *after_shas[] = { "32504b727382542f9f089e24fddac5e78533e96c",
 		"061d42a44cacde5726057b67558821d95db96f19" };
+
+	initialize("status");
 
 	_pathspecs.strings = paths;
 	_pathspecs.count = 2;
@@ -139,7 +142,6 @@ void test_reset_default__resetting_filepaths_clears_previous_conflicts(void)
 	char *paths[] = { "conflicts-one.txt" };
 	char *after_shas[] = { "1f85ca51b8e0aac893a621b61a9c2661d6aa6d81" };
 
-	test_reset_default__cleanup();
 	initialize("mergedrepo");
 
 	_pathspecs.strings = paths;
@@ -168,6 +170,8 @@ void test_reset_default__resetting_unknown_filepaths_does_not_fail(void)
 {
 	char *paths[] = { "I_am_not_there.txt", "me_neither.txt" };
 
+	initialize("status");
+
 	_pathspecs.strings = paths;
 	_pathspecs.count = 2;
 
@@ -177,4 +181,35 @@ void test_reset_default__resetting_unknown_filepaths_does_not_fail(void)
 	cl_git_pass(git_reset_default(_repo, _target, &_pathspecs));
 
 	assert_content_in_index(&_pathspecs, false, NULL);
+}
+
+void test_reset_default__staged_rename_reset_delete(void)
+{
+	git_index *idx;
+	git_index_entry entry;
+	const git_index_entry *existing;
+	char *paths[] = { "new.txt" };
+
+	initialize("testrepo2");
+
+	cl_git_pass(git_repository_index(&idx, _repo));
+
+	existing = git_index_get_bypath(idx, "new.txt", 0);
+	cl_assert(existing);
+	memcpy(&entry, existing, sizeof(entry));
+
+	cl_git_pass(git_index_remove_bypath(idx, "new.txt"));
+
+	entry.path = "renamed.txt";
+	cl_git_pass(git_index_add(idx, &entry));
+
+	_pathspecs.strings = paths;
+	_pathspecs.count = 1;
+
+	assert_content_in_index(&_pathspecs, false, NULL);
+
+	cl_git_pass(git_revparse_single(&_target, _repo, "HEAD"));
+	cl_git_pass(git_reset_default(_repo, _target, &_pathspecs));
+
+	assert_content_in_index(&_pathspecs, true, NULL);
 }
