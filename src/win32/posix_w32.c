@@ -9,12 +9,13 @@
 #include "path.h"
 #include "utf-conv.h"
 #include "repository.h"
+#include "reparse.h"
 #include <errno.h>
 #include <io.h>
 #include <fcntl.h>
 #include <ws2tcpip.h>
 
-#if defined(__MINGW32__)
+#ifndef FILE_NAME_NORMALIZED
 # define FILE_NAME_NORMALIZED 0
 #endif
 
@@ -100,29 +101,79 @@ GIT_INLINE(time_t) filetime_to_time_t(const FILETIME *ft)
 	return (time_t)winTime;
 }
 
-#define WIN32_IS_WSEP(CH) ((CH) == L'/' || (CH) == L'\\')
-
-static int do_lstat(
-	const char *file_name, struct stat *buf, int posix_enotdir)
+/* On success, returns the length, in characters, of the path stored in dest.
+ * On failure, returns a negative value. */
+static int readlink_w(
+	git_win32_path dest,
+	const git_win32_path path)
 {
-	WIN32_FILE_ATTRIBUTE_DATA fdata;
-	git_win32_path fbuf;
-	wchar_t lastch;
-	int flen;
+	BYTE buf[MAXIMUM_REPARSE_DATA_BUFFER_SIZE];
+	GIT_REPARSE_DATA_BUFFER *reparse_buf = (GIT_REPARSE_DATA_BUFFER *)buf;
+	HANDLE handle = NULL;
+	DWORD ioctl_ret;
+	wchar_t *target;
+	size_t target_len;
 
-	if ((flen = utf8_to_16_with_errno(fbuf, file_name)) < 0)
+	int error = -1;
+
+	handle = CreateFileW(path, GENERIC_READ,
+		FILE_SHARE_READ | FILE_SHARE_DELETE, NULL, OPEN_EXISTING,
+		FILE_FLAG_OPEN_REPARSE_POINT | FILE_FLAG_BACKUP_SEMANTICS, NULL);
+
+	if (INVALID_HANDLE_VALUE == handle) {
+		errno = ENOENT;
 		return -1;
-
-	/* truncate trailing slashes */
-	for (; flen > 0; --flen) {
-		lastch = fbuf[flen - 1];
-		if (WIN32_IS_WSEP(lastch))
-			fbuf[flen - 1] = L'\0';
-		else if (lastch != L'\0')
-			break;
 	}
 
-	if (GetFileAttributesExW(fbuf, GetFileExInfoStandard, &fdata)) {
+	if (!DeviceIoControl(handle, FSCTL_GET_REPARSE_POINT, NULL, 0,
+		reparse_buf, sizeof(buf), &ioctl_ret, NULL)) {
+		errno = EINVAL;
+		goto on_error;
+	}
+
+	switch (reparse_buf->ReparseTag) {
+	case IO_REPARSE_TAG_SYMLINK:
+		target = reparse_buf->SymbolicLinkReparseBuffer.PathBuffer +
+			(reparse_buf->SymbolicLinkReparseBuffer.SubstituteNameOffset / sizeof(WCHAR));
+		target_len = reparse_buf->SymbolicLinkReparseBuffer.SubstituteNameLength / sizeof(WCHAR);
+		break;
+	case IO_REPARSE_TAG_MOUNT_POINT:
+		target = reparse_buf->MountPointReparseBuffer.PathBuffer +
+			(reparse_buf->MountPointReparseBuffer.SubstituteNameOffset / sizeof(WCHAR));
+		target_len = reparse_buf->MountPointReparseBuffer.SubstituteNameLength / sizeof(WCHAR);
+		break;
+	default:
+		errno = EINVAL;
+		goto on_error;
+	}
+
+	if (target_len) {
+		/* The path may need to have a prefix removed. */
+		target_len = git_win32__to_dos(target, target_len);
+
+		/* Need one additional character in the target buffer
+		 * for the terminating NULL. */
+		if (GIT_WIN_PATH_UTF16 > target_len) {
+			wcscpy(dest, target);
+			error = (int)target_len;
+		}
+	}
+
+on_error:
+	CloseHandle(handle);
+	return error;
+}
+
+#define WIN32_IS_WSEP(CH) ((CH) == L'/' || (CH) == L'\\')
+
+static int lstat_w(
+	wchar_t *path,
+	struct stat *buf,
+	bool posix_enotdir)
+{
+	WIN32_FILE_ATTRIBUTE_DATA fdata;
+
+	if (GetFileAttributesExW(path, GetFileExInfoStandard, &fdata)) {
 		int fMode = S_IREAD;
 
 		if (!buf)
@@ -136,12 +187,6 @@ static int do_lstat(
 		if (!(fdata.dwFileAttributes & FILE_ATTRIBUTE_READONLY))
 			fMode |= S_IWRITE;
 
-		if (fdata.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT)
-			fMode |= S_IFLNK;
-
-		if ((fMode & (S_IFDIR | S_IFLNK)) == (S_IFDIR | S_IFLNK)) // junction
-			fMode ^= S_IFLNK;
-
 		buf->st_ino = 0;
 		buf->st_gid = 0;
 		buf->st_uid = 0;
@@ -153,16 +198,17 @@ static int do_lstat(
 		buf->st_mtime = filetime_to_time_t(&(fdata.ftLastWriteTime));
 		buf->st_ctime = filetime_to_time_t(&(fdata.ftCreationTime));
 
-		/* Windows symlinks have zero file size, call readlink to determine
-		 * the length of the path pointed to, which we expect everywhere else
-		 */
-		if (S_ISLNK(fMode)) {
-			git_win32_utf8_path target;
+		if (fdata.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) {
+			git_win32_path target;
 
-			if (p_readlink(file_name, target, GIT_WIN_PATH_UTF8) == -1)
-				return -1;
+			if (readlink_w(target, path) >= 0) {
+				buf->st_mode = (buf->st_mode & ~S_IFMT) | S_IFLNK;
 
-			buf->st_size = strlen(target);
+				/* st_size gets the UTF-8 length of the target name, in bytes,
+				 * not counting the NULL terminator */
+				if ((buf->st_size = git__utf16_to_8(NULL, 0, target)) < 0)
+					return -1;
+			}
 		}
 
 		return 0;
@@ -174,18 +220,23 @@ static int do_lstat(
 	 * file path is a regular file, otherwise set ENOENT.
 	 */
 	if (posix_enotdir) {
+		size_t path_len = wcslen(path);
+
 		/* scan up path until we find an existing item */
 		while (1) {
-			/* remove last directory component */
-			for (--flen; flen > 0 && !WIN32_IS_WSEP(fbuf[flen]); --flen);
+			DWORD attrs;
 
-			if (flen <= 0)
+			/* remove last directory component */
+			for (path_len--; path_len > 0 && !WIN32_IS_WSEP(path[path_len]); path_len--);
+
+			if (path_len <= 0)
 				break;
 
-			fbuf[flen] = L'\0';
+			path[path_len] = L'\0';
+			attrs = GetFileAttributesW(path);
 
-			if (GetFileAttributesExW(fbuf, GetFileExInfoStandard, &fdata)) {
-				if (!(fdata.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY))
+			if (INVALID_FILE_ATTRIBUTES != attrs) {
+				if (!(attrs & FILE_ATTRIBUTE_DIRECTORY))
 					errno = ENOTDIR;
 				break;
 			}
@@ -195,105 +246,51 @@ static int do_lstat(
 	return -1;
 }
 
+static int do_lstat(const char *path, struct stat *buf, bool posixly_correct)
+{
+	git_win32_path path_w;
+	int len;
+
+	if ((len = utf8_to_16_with_errno(path_w, path)) < 0)
+		return -1;
+
+	git_win32__path_trim_end(path_w, len);
+
+	return lstat_w(path_w, buf, posixly_correct);
+}
+
 int p_lstat(const char *filename, struct stat *buf)
 {
-	return do_lstat(filename, buf, 0);
+	return do_lstat(filename, buf, false);
 }
 
 int p_lstat_posixly(const char *filename, struct stat *buf)
 {
-	return do_lstat(filename, buf, 1);
+	return do_lstat(filename, buf, true);
 }
 
-/*
- * Returns the address of the GetFinalPathNameByHandleW function.
- * This function is available on Windows Vista and higher.
- */
-static PFGetFinalPathNameByHandleW get_fpnbyhandle(void)
+int p_readlink(const char *path, char *buf, size_t bufsiz)
 {
-	static PFGetFinalPathNameByHandleW pFunc = NULL;
-	PFGetFinalPathNameByHandleW toReturn = pFunc;
+	git_win32_path path_w, target_w;
+	git_win32_utf8_path target;
+	int len;
 
-	if (!toReturn) {
-		HMODULE hModule = GetModuleHandleW(L"kernel32");
+	/* readlink(2) does not NULL-terminate the string written
+	 * to the target buffer. Furthermore, the target buffer need
+	 * not be large enough to hold the entire result. A truncated
+	 * result should be written in this case. Since this truncation
+	 * could occur in the middle of the encoding of a code point,
+	 * we need to buffer the result on the stack. */
 
-		if (hModule)
-			toReturn = (PFGetFinalPathNameByHandleW)GetProcAddress(hModule, "GetFinalPathNameByHandleW");
+	if (utf8_to_16_with_errno(path_w, path) < 0 ||
+		readlink_w(target_w, path_w) < 0 ||
+		(len = git_win32_path_to_utf8(target, target_w)) < 0)
+		return -1;
 
-		pFunc = toReturn;
-	}
+	bufsiz = min((size_t)len, bufsiz);
+	memcpy(buf, target, bufsiz);
 
-	assert(toReturn);
-
-	return toReturn;
-}
-
-/*
- * Parts of the The p_readlink function are heavily inspired by the php 
- * readlink function in link_win32.c
- *
- * Copyright (c) 1999 - 2012 The PHP Group. All rights reserved.
- *
- * For details of the PHP license see http://www.php.net/license/3_01.txt
- */
-int p_readlink(const char *link, char *target, size_t target_len)
-{
-	static const wchar_t prefix[] = L"\\\\?\\";
-	PFGetFinalPathNameByHandleW pgfp = get_fpnbyhandle();
-	HANDLE hFile = NULL;
-	wchar_t *target_w = NULL;
-	bool trim_prefix;
-	git_win32_path link_w;
-	DWORD dwChars, dwLastError;
-	int error = -1;
-
-	/* Check that we found the function, and convert to UTF-16 */
-	if (!pgfp || utf8_to_16_with_errno(link_w, link) < 0)
-		goto on_error;
-
-	/* Use FILE_FLAG_BACKUP_SEMANTICS so we can open a directory. Do not
-	 * specify FILE_FLAG_OPEN_REPARSE_POINT; we want to open a handle to the
-	 * target of the link. */
-	hFile = CreateFileW(link_w, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_DELETE,
-		NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
-
-	if (hFile == INVALID_HANDLE_VALUE)
-		goto on_error;
-
-	/* Find out how large the buffer should be to hold the result */
-	if (!(dwChars = pgfp(hFile, NULL, 0, FILE_NAME_NORMALIZED)))
-		goto on_error;
-
-	if (!(target_w = git__malloc(dwChars * sizeof(wchar_t))))
-		goto on_error;
-
-	/* Call a second time */
-	dwChars = pgfp(hFile, target_w, dwChars, FILE_NAME_NORMALIZED);
-
-	if (!dwChars)
-		goto on_error;
-
-	/* Do we need to trim off a \\?\ from the start of the path? */
-	trim_prefix = (dwChars >= ARRAY_SIZE(prefix)) &&
-		!wcsncmp(prefix, target_w, ARRAY_SIZE(prefix));
-
-	/* Convert the result to UTF-8 */
-	if (git__utf16_to_8(target, target_len, trim_prefix ? target_w + 4 : target_w) < 0)
-		goto on_error;
-
-	error = 0;
-
-on_error:
-	dwLastError = GetLastError();
-
-	if (hFile && INVALID_HANDLE_VALUE != hFile)
-		CloseHandle(hFile);
-
-	if (target_w)
-		git__free(target_w);
-
-	SetLastError(dwLastError);
-	return error;
+	return (int)bufsiz;
 }
 
 int p_symlink(const char *old, const char *new)
@@ -356,20 +353,94 @@ int p_getcwd(char *buffer_out, size_t size)
 	return 0;
 }
 
+/*
+ * Returns the address of the GetFinalPathNameByHandleW function.
+ * This function is available on Windows Vista and higher.
+ */
+static PFGetFinalPathNameByHandleW get_fpnbyhandle(void)
+{
+	static PFGetFinalPathNameByHandleW pFunc = NULL;
+	PFGetFinalPathNameByHandleW toReturn = pFunc;
+
+	if (!toReturn) {
+		HMODULE hModule = GetModuleHandleW(L"kernel32");
+
+		if (hModule)
+			toReturn = (PFGetFinalPathNameByHandleW)GetProcAddress(hModule, "GetFinalPathNameByHandleW");
+
+		pFunc = toReturn;
+	}
+
+	assert(toReturn);
+
+	return toReturn;
+}
+
+static int getfinalpath_w(
+	git_win32_path dest,
+	const wchar_t *path)
+{
+	PFGetFinalPathNameByHandleW pgfp = get_fpnbyhandle();
+	HANDLE hFile;
+	DWORD dwChars;
+
+	if (!pgfp)
+		return -1;
+
+	/* Use FILE_FLAG_BACKUP_SEMANTICS so we can open a directory. Do not
+	* specify FILE_FLAG_OPEN_REPARSE_POINT; we want to open a handle to the
+	* target of the link. */
+	hFile = CreateFileW(path, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_DELETE,
+		NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
+
+	if (hFile == INVALID_HANDLE_VALUE)
+		return -1;
+
+	/* Call GetFinalPathNameByHandle */
+	dwChars = pgfp(hFile, dest, GIT_WIN_PATH_UTF16, FILE_NAME_NORMALIZED);
+
+	if (!dwChars || dwChars >= GIT_WIN_PATH_UTF16) {
+		DWORD error = GetLastError();
+		CloseHandle(hFile);
+		SetLastError(error);
+		return -1;
+	}
+
+	CloseHandle(hFile);
+
+	/* The path may be delivered to us with a prefix; canonicalize */
+	return (int)git_win32__to_dos(dest, dwChars);
+}
+
+static int follow_and_lstat_link(git_win32_path path, struct stat* buf)
+{
+	git_win32_path target_w;
+
+	if (getfinalpath_w(target_w, path) < 0)
+		return -1;
+
+	return lstat_w(target_w, buf, false);
+}
+
 int p_stat(const char* path, struct stat* buf)
 {
-	git_win32_utf8_path target;
-	int error = 0;
+	git_win32_path path_w;
+	int len;
 
-	error = do_lstat(path, buf, 0);
+	if ((len = utf8_to_16_with_errno(path_w, path)) < 0)
+		return -1;
 
-	/* We need not do this in a loop to unwind chains of symlinks since
-	 * p_readlink calls GetFinalPathNameByHandle which does it for us. */
-	if (error >= 0 && S_ISLNK(buf->st_mode) &&
-		(error = p_readlink(path, target, GIT_WIN_PATH_UTF8)) >= 0)
-		error = do_lstat(target, buf, 0);
+	git_win32__path_trim_end(path_w, len);
 
-	return error;
+	if (lstat_w(path_w, buf, false) < 0)
+		return -1;
+
+	/* The item is a symbolic link or mount point. No need to iterate
+	 * to follow multiple links; use GetFinalPathNameFromHandle. */
+	if (S_ISLNK(buf->st_mode))
+		return follow_and_lstat_link(path_w, buf);
+
+	return 0;
 }
 
 int p_chdir(const char* path)
