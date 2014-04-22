@@ -158,6 +158,9 @@ int git_buf_cmp(const git_buf *a, const git_buf *b);
 /* Write data as base64 encoded in buffer */
 int git_buf_put_base64(git_buf *buf, const char *data, size_t len);
 
+/* Write data as "base85" encoded in buffer */
+int git_buf_put_base85(git_buf *buf, const char *data, size_t len);
+
 /*
  * Insert, remove or replace a portion of the buffer.
  *

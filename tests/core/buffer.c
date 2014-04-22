@@ -773,6 +773,26 @@ void test_core_buffer__base64(void)
 	git_buf_free(&buf);
 }
 
+void test_core_buffer__base85(void)
+{
+	git_buf buf = GIT_BUF_INIT;
+
+	cl_git_pass(git_buf_put_base85(&buf, "this", 4));
+	cl_assert_equal_s("bZBXF", buf.ptr);
+	git_buf_clear(&buf);
+
+	cl_git_pass(git_buf_put_base85(&buf, "two rnds", 8));
+	cl_assert_equal_s("ba!tca&BaE", buf.ptr);
+	git_buf_clear(&buf);
+
+	cl_git_pass(git_buf_put_base85(&buf, "this is base 85 encoded",
+		strlen("this is base 85 encoded")));
+	cl_assert_equal_s("bZBXFAZc?TVqtS-AUHK3Wo~0{WMyOk", buf.ptr);
+	git_buf_clear(&buf);
+
+	git_buf_free(&buf);
+}
+
 void test_core_buffer__classify_with_utf8(void)
 {
 	char *data0 = "Simple text\n";
