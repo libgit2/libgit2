@@ -137,7 +137,7 @@ static void do_junction(const char *old, const char *new)
 
 	reparse_buf->ReparseTag = IO_REPARSE_TAG_MOUNT_POINT;
 	reparse_buf->MountPointReparseBuffer.SubstituteNameOffset = 0;
-	reparse_buf->MountPointReparseBuffer.SubstituteNameLength =	subst_byte_len;
+	reparse_buf->MountPointReparseBuffer.SubstituteNameLength = subst_byte_len;
 	reparse_buf->MountPointReparseBuffer.PrintNameOffset = (USHORT)(subst_byte_len + sizeof(WCHAR));
 	reparse_buf->MountPointReparseBuffer.PrintNameLength = print_byte_len;
 	reparse_buf->ReparseDataLength = reparse_buflen - REPARSE_DATA_HEADER_SIZE;

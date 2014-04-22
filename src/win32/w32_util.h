@@ -49,6 +49,6 @@ size_t git_win32__path_trim_end(wchar_t *str, size_t len);
  * @param path The path which should be converted.
  * @return The length of the modified string (<= the input length)
  */
-size_t git_win32__to_dos(wchar_t *str, size_t len);
+size_t git_win32__canonicalize_path(wchar_t *str, size_t len);
 
 #endif

@@ -495,7 +495,7 @@ bool git_path_is_empty_dir(const char *path)
 		HANDLE hFind = FindFirstFileW(filter_w, &findData);
 
 		/* If the find handle was created successfully, then it's a directory */
-		if (INVALID_HANDLE_VALUE != hFind) {
+		if (hFind != INVALID_HANDLE_VALUE) {
 			empty = true;
 
 			do {

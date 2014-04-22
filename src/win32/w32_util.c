@@ -7,8 +7,6 @@
 
 #include "w32_util.h"
 
-#define CONST_STRLEN(x) ((sizeof(x)/sizeof(x[0])) - 1)
-
 /**
  * Creates a FindFirstFile(Ex) filter string from a UTF-8 path.
  * The filter string enumerates all items in the directory.
@@ -26,8 +24,10 @@ bool git_win32__findfirstfile_filter(git_win32_path dest, const char *src)
 	if (len < 0)
 		return false;
 
-	/* Ensure that the path does not end with a trailing slash --
-	 * because we're about to add one! */
+	/* Ensure that the path does not end with a trailing slash,
+	 * because we're about to add one. Don't rely our trim_end
+	 * helper, because we want to remove the backslash even for
+	 * drive letter paths, in this case. */
 	if (len > 0 &&
 		(dest[len - 1] == L'/' || dest[len - 1] == L'\\')) {
 		dest[len - 1] = L'\0';
@@ -35,7 +35,7 @@ bool git_win32__findfirstfile_filter(git_win32_path dest, const char *src)
 	}
 
 	/* Ensure we have enough room to add the suffix */
-	if ((size_t)len > GIT_WIN_PATH_UTF16 - ARRAY_SIZE(suffix))
+	if ((size_t)len >= GIT_WIN_PATH_UTF16 - CONST_STRLEN(suffix))
 		return false;
 
 	wcscat(dest, suffix);
@@ -59,11 +59,11 @@ int git_win32__sethidden(const char *path)
 	attrs = GetFileAttributesW(buf);
 
 	/* Ensure the path exists */
-	if (INVALID_FILE_ATTRIBUTES == attrs)
+	if (attrs == INVALID_FILE_ATTRIBUTES)
 		return -1;
 
 	/* If the item isn't already +H, add the bit */
-	if (0 == (attrs & FILE_ATTRIBUTE_HIDDEN) &&
+	if ((attrs & FILE_ATTRIBUTE_HIDDEN) == 0 &&
 		!SetFileAttributesW(buf, attrs | FILE_ATTRIBUTE_HIDDEN))
 		return -1;
 
@@ -85,7 +85,7 @@ size_t git_win32__path_trim_end(wchar_t *str, size_t len)
 
 		/* Don't trim backslashes from drive letter paths, which
 		 * are 3 characters long and of the form C:\, D:\, etc. */
-		if (3 == len && git_win32__isalpha(str[0]) && str[1] == ':')
+		if (len == 3 && git_win32__isalpha(str[0]) && str[1] == ':')
 			break;
 
 		len--;
@@ -103,7 +103,7 @@ size_t git_win32__path_trim_end(wchar_t *str, size_t len)
  * @param path The path which should be converted.
  * @return The length of the modified string (<= the input length)
  */
-size_t git_win32__to_dos(wchar_t *str, size_t len)
+size_t git_win32__canonicalize_path(wchar_t *str, size_t len)
 {
 	static const wchar_t dosdevices_prefix[] = L"\\\?\?\\";
 	static const wchar_t nt_prefix[] = L"\\\\?\\";

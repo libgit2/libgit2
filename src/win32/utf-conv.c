@@ -9,7 +9,7 @@
 #include "utf-conv.h"
 
 #ifndef WC_ERR_INVALID_CHARS
-#define WC_ERR_INVALID_CHARS	0x80
+# define WC_ERR_INVALID_CHARS	0x80
 #endif
 
 GIT_INLINE(DWORD) get_wc_flags(void)
@@ -87,12 +87,8 @@ int git__utf8_to_16_alloc(wchar_t **dest, const char *src)
 	utf16_size = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, src, -1, *dest, utf16_size);
 
 	if (!utf16_size) {
-		/* Don't let git__free stomp on the thread-local last error code,
-		* so that the caller can call giterr_set(GITERR_OS, ...) */
-		DWORD last_error = GetLastError();
 		git__free(*dest);
 		*dest = NULL;
-		SetLastError(last_error);
 	}
 
 	/* Subtract 1 from the result to turn 0 into -1 (an error code) and to not count the NULL
@@ -131,12 +127,8 @@ int git__utf16_to_8_alloc(char **dest, const wchar_t *src)
 	utf8_size = WideCharToMultiByte(CP_UTF8, dwFlags, src, -1, *dest, utf8_size, NULL, NULL);
 
 	if (!utf8_size) {
-		/* Don't let git__free stomp on the thread-local last error code,
-		 * so that the caller can call giterr_set(GITERR_OS, ...) */
-		DWORD last_error = GetLastError();
 		git__free(*dest);
 		*dest = NULL;
-		SetLastError(last_error);
 	}
 
 	/* Subtract 1 from the result to turn 0 into -1 (an error code) and to not count the NULL

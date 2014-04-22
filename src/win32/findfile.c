@@ -119,7 +119,7 @@ static int win32_find_git_in_registry(
 
 		/* InstallLocation points to the root of the git directory */
 		if (!RegQueryValueExW(hKey, L"InstallLocation", NULL, &dwType, (LPBYTE)path, &cbData) &&
-			REG_SZ == dwType) {
+			dwType == REG_SZ) {
 
 			/* Append the suffix */
 			wcscat(path, subdir);

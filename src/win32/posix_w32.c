@@ -62,7 +62,7 @@ int p_unlink(const char *path)
 
 	/* If the file could not be deleted because it was
 	 * read-only, clear the bit and try again */
-	if (-1 == error && EACCES == errno) {
+	if (error == -1 && errno == EACCES) {
 		_wchmod(buf, 0666);
 		error = _wunlink(buf);
 	}
@@ -120,7 +120,7 @@ static int readlink_w(
 		FILE_SHARE_READ | FILE_SHARE_DELETE, NULL, OPEN_EXISTING,
 		FILE_FLAG_OPEN_REPARSE_POINT | FILE_FLAG_BACKUP_SEMANTICS, NULL);
 
-	if (INVALID_HANDLE_VALUE == handle) {
+	if (handle == INVALID_HANDLE_VALUE) {
 		errno = ENOENT;
 		return -1;
 	}
@@ -149,7 +149,7 @@ static int readlink_w(
 
 	if (target_len) {
 		/* The path may need to have a prefix removed. */
-		target_len = git_win32__to_dos(target, target_len);
+		target_len = git_win32__canonicalize_path(target, target_len);
 
 		/* Need one additional character in the target buffer
 		 * for the terminating NULL. */
@@ -235,7 +235,7 @@ static int lstat_w(
 			path[path_len] = L'\0';
 			attrs = GetFileAttributesW(path);
 
-			if (INVALID_FILE_ATTRIBUTES != attrs) {
+			if (attrs != INVALID_FILE_ATTRIBUTES) {
 				if (!(attrs & FILE_ATTRIBUTE_DIRECTORY))
 					errno = ENOTDIR;
 				break;
@@ -393,23 +393,18 @@ static int getfinalpath_w(
 	hFile = CreateFileW(path, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_DELETE,
 		NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
 
-	if (hFile == INVALID_HANDLE_VALUE)
+	if (INVALID_HANDLE_VALUE == hFile)
 		return -1;
 
 	/* Call GetFinalPathNameByHandle */
 	dwChars = pgfp(hFile, dest, GIT_WIN_PATH_UTF16, FILE_NAME_NORMALIZED);
-
-	if (!dwChars || dwChars >= GIT_WIN_PATH_UTF16) {
-		DWORD error = GetLastError();
-		CloseHandle(hFile);
-		SetLastError(error);
-		return -1;
-	}
-
 	CloseHandle(hFile);
 
+	if (!dwChars || dwChars >= GIT_WIN_PATH_UTF16)
+		return -1;
+
 	/* The path may be delivered to us with a prefix; canonicalize */
-	return (int)git_win32__to_dos(dest, dwChars);
+	return (int)git_win32__canonicalize_path(dest, dwChars);
 }
 
 static int follow_and_lstat_link(git_win32_path path, struct stat* buf)
@@ -473,7 +468,7 @@ int p_rmdir(const char* path)
 
 	error = _wrmdir(buf);
 
-	if (-1 == error) {
+	if (error == -1) {
 		switch (GetLastError()) {
 			/* _wrmdir() is documented to return EACCES if "A program has an open
 			 * handle to the directory."  This sounds like what everybody else calls
@@ -513,7 +508,7 @@ char *p_realpath(const char *orig_path, char *buffer)
 	}
 
 	/* The path must exist. */
-	if (INVALID_FILE_ATTRIBUTES == GetFileAttributesW(buffer_w)) {
+	if (GetFileAttributesW(buffer_w) == INVALID_FILE_ATTRIBUTES) {
 		errno = ENOENT;
 		return NULL;
 	}
