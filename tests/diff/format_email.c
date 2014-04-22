@@ -17,15 +17,44 @@ void test_diff_format_email__cleanup(void)
 	cl_git_sandbox_cleanup();
 }
 
-void test_diff_format_email__simple(void)
+static void assert_email_match(
+	const char *expected,
+	const char *oidstr,
+	git_diff_format_email_options *opts)
 {
 	git_oid oid;
 	git_commit *commit = NULL;
 	git_diff *diff = NULL;
-	git_diff_format_email_options opts = GIT_DIFF_FORMAT_EMAIL_OPTIONS_INIT;
 	git_buf buf = GIT_BUF_INIT;
 
-	const char *email = 
+	git_oid_fromstr(&oid, oidstr);
+
+	cl_git_pass(git_commit_lookup(&commit, repo, &oid));
+
+	opts->id = git_commit_id(commit);
+	opts->author = git_commit_author(commit);
+	if (!opts->summary)
+		opts->summary = git_commit_summary(commit);
+
+	cl_git_pass(git_diff__commit(&diff, repo, commit, NULL));
+	cl_git_pass(git_diff_format_email(&buf, diff, opts));
+
+	cl_assert_equal_s(expected, git_buf_cstr(&buf));
+	git_buf_clear(&buf);
+
+	cl_git_pass(git_diff_commit_as_email(
+		&buf, repo, commit, 1, 1, opts->flags, NULL));
+	cl_assert_equal_s(expected, git_buf_cstr(&buf));
+
+	git_diff_free(diff);
+	git_commit_free(commit);
+	git_buf_free(&buf);
+}
+
+void test_diff_format_email__simple(void)
+{
+	git_diff_format_email_options opts = GIT_DIFF_FORMAT_EMAIL_OPTIONS_INIT;
+	const char *email =
 	"From 9264b96c6d104d0e07ae33d3007b6a48246c6f92 Mon Sep 17 00:00:00 2001\n" \
 	"From: Jacques Germishuys <jacquesg@striata.com>\n" \
 	"Date: Wed, 9 Apr 2014 20:57:01 +0200\n" \
@@ -64,25 +93,8 @@ void test_diff_format_email__simple(void)
 	"libgit2 " LIBGIT2_VERSION "\n" \
 	"\n";
 
-	git_oid_fromstr(&oid, "9264b96c6d104d0e07ae33d3007b6a48246c6f92");
-
-	cl_git_pass(git_commit_lookup(&commit, repo, &oid));
-
-	opts.id = git_commit_id(commit);
-	opts.author = git_commit_author(commit);
-	opts.summary = git_commit_summary(commit);
-
-	cl_git_pass(git_diff__commit(&diff, repo, commit, NULL));
-	cl_git_pass(git_diff_format_email(&buf, diff, &opts));
-	cl_assert(strcmp(git_buf_cstr(&buf), email) == 0);
-
-	git_buf_clear(&buf);
-	cl_git_pass(git_diff_commit_as_email(&buf, repo, commit, 1, 1, 0, NULL));
-	cl_assert(strcmp(git_buf_cstr(&buf), email) == 0);
-
-	git_diff_free(diff);
-	git_commit_free(commit);
-	git_buf_free(&buf);
+	assert_email_match(
+		email, "9264b96c6d104d0e07ae33d3007b6a48246c6f92", &opts);
 }
 
 void test_diff_format_email__multiple(void)
@@ -90,10 +102,10 @@ void test_diff_format_email__multiple(void)
 	git_oid oid;
 	git_commit *commit = NULL;
 	git_diff *diff = NULL;
-	git_diff_format_email_options opts = GIT_DIFF_FORMAT_EMAIL_OPTIONS_INIT;
+ 	git_diff_format_email_options opts = GIT_DIFF_FORMAT_EMAIL_OPTIONS_INIT;
 	git_buf buf = GIT_BUF_INIT;
 
-	const char *email = 
+	const char *email =
 	"From 10808fe9c9be5a190c0ba68d1a002233fb363508 Mon Sep 17 00:00:00 2001\n" \
 	"From: Jacques Germishuys <jacquesg@striata.com>\n" \
 	"Date: Thu, 10 Apr 2014 19:37:05 +0200\n" \
@@ -167,6 +179,7 @@ void test_diff_format_email__multiple(void)
 	"libgit2 " LIBGIT2_VERSION "\n" \
 	"\n";
 
+
 	git_oid_fromstr(&oid, "10808fe9c9be5a190c0ba68d1a002233fb363508");
 	cl_git_pass(git_commit_lookup(&commit, repo, &oid));
 
@@ -196,7 +209,7 @@ void test_diff_format_email__multiple(void)
 	cl_git_pass(git_diff__commit(&diff, repo, commit, NULL));
 	cl_git_pass(git_diff_format_email(&buf, diff, &opts));
 
-	cl_assert(strcmp(git_buf_cstr(&buf), email) == 0);
+	cl_assert_equal_s(email, git_buf_cstr(&buf));
 
 	git_diff_free(diff);
 	git_commit_free(commit);
@@ -205,13 +218,8 @@ void test_diff_format_email__multiple(void)
 
 void test_diff_format_email__exclude_marker(void)
 {
-	git_oid oid;
-	git_commit *commit = NULL;
-	git_diff *diff = NULL;
 	git_diff_format_email_options opts = GIT_DIFF_FORMAT_EMAIL_OPTIONS_INIT;
-	git_buf buf = GIT_BUF_INIT;
-
-	const char *email = 
+	const char *email =
 	"From 9264b96c6d104d0e07ae33d3007b6a48246c6f92 Mon Sep 17 00:00:00 2001\n" \
 	"From: Jacques Germishuys <jacquesg@striata.com>\n" \
 	"Date: Wed, 9 Apr 2014 20:57:01 +0200\n" \
@@ -250,27 +258,10 @@ void test_diff_format_email__exclude_marker(void)
 	"libgit2 " LIBGIT2_VERSION "\n" \
 	"\n";
 
-	git_oid_fromstr(&oid, "9264b96c6d104d0e07ae33d3007b6a48246c6f92");
-	cl_git_pass(git_commit_lookup(&commit, repo, &oid));
-
-	opts.id = git_commit_id(commit);
-	opts.author = git_commit_author(commit);
-	opts.summary = git_commit_summary(commit);
-
 	opts.flags |= GIT_DIFF_FORMAT_EMAIL_EXCLUDE_SUBJECT_PATCH_MARKER;
 
-	cl_git_pass(git_diff__commit(&diff, repo, commit, NULL));
-	cl_git_pass(git_diff_format_email(&buf, diff, &opts));
-	cl_assert(strcmp(git_buf_cstr(&buf), email) == 0);
-
-	git_buf_clear(&buf);
-	cl_git_pass(git_diff_commit_as_email(&buf, repo, commit, 1, 1,
-		GIT_DIFF_FORMAT_EMAIL_EXCLUDE_SUBJECT_PATCH_MARKER, NULL));
-	cl_assert(strcmp(git_buf_cstr(&buf), email) == 0);
-
-	git_diff_free(diff);
-	git_commit_free(commit);
-	git_buf_free(&buf);
+	assert_email_match(
+		email, "9264b96c6d104d0e07ae33d3007b6a48246c6f92", &opts);
 }
 
 void test_diff_format_email__invalid_no(void)
@@ -303,13 +294,8 @@ void test_diff_format_email__invalid_no(void)
 
 void test_diff_format_email__mode_change(void)
 {
-	git_oid oid;
-	git_commit *commit = NULL;
-	git_diff *diff = NULL;
 	git_diff_format_email_options opts = GIT_DIFF_FORMAT_EMAIL_OPTIONS_INIT;
-	git_buf buf = GIT_BUF_INIT;
-
-	const char *email = 
+	const char *email =
 	"From 7ade76dd34bba4733cf9878079f9fd4a456a9189 Mon Sep 17 00:00:00 2001\n" \
 	"From: Jacques Germishuys <jacquesg@striata.com>\n" \
 	"Date: Thu, 10 Apr 2014 10:05:03 +0200\n" \
@@ -330,36 +316,14 @@ void test_diff_format_email__mode_change(void)
 	"libgit2 " LIBGIT2_VERSION "\n" \
 	"\n";
 
-	git_oid_fromstr(&oid, "7ade76dd34bba4733cf9878079f9fd4a456a9189");
-
-	cl_git_pass(git_commit_lookup(&commit, repo, &oid));
-
-	opts.id = git_commit_id(commit);
-	opts.author = git_commit_author(commit);
-	opts.summary = git_commit_summary(commit);
-
-	cl_git_pass(git_diff__commit(&diff, repo, commit, NULL));
-	cl_git_pass(git_diff_format_email(&buf, diff, &opts));
-	cl_assert(strcmp(git_buf_cstr(&buf), email) == 0);
-
-	git_buf_clear(&buf);
-	cl_git_pass(git_diff_commit_as_email(&buf, repo, commit, 1, 1, 0, NULL));
-	cl_assert(strcmp(git_buf_cstr(&buf), email) == 0);
-
-	git_diff_free(diff);
-	git_commit_free(commit);
-	git_buf_free(&buf);
+	assert_email_match(
+		email, "7ade76dd34bba4733cf9878079f9fd4a456a9189", &opts);
 }
 
 void test_diff_format_email__rename_add_remove(void)
 {
-	git_oid oid;
-	git_commit *commit = NULL;
-	git_diff *diff = NULL;
 	git_diff_format_email_options opts = GIT_DIFF_FORMAT_EMAIL_OPTIONS_INIT;
-	git_buf buf = GIT_BUF_INIT;
-
-	const char *email = 
+	const char *email =
 	"From 6e05acc5a5dab507d91a0a0cc0fb05a3dd98892d Mon Sep 17 00:00:00 2001\n" \
 	"From: Jacques Germishuys <jacquesg@striata.com>\n" \
 	"Date: Wed, 9 Apr 2014 21:15:56 +0200\n" \
@@ -422,35 +386,13 @@ void test_diff_format_email__rename_add_remove(void)
 	"libgit2 " LIBGIT2_VERSION "\n" \
 	"\n";
 
-	git_oid_fromstr(&oid, "6e05acc5a5dab507d91a0a0cc0fb05a3dd98892d");
-
-	cl_git_pass(git_commit_lookup(&commit, repo, &oid));
-
-	opts.id = git_commit_id(commit);
-	opts.author = git_commit_author(commit);
-	opts.summary = git_commit_summary(commit);
-
-	cl_git_pass(git_diff__commit(&diff, repo, commit, NULL));
-	cl_git_pass(git_diff_format_email(&buf, diff, &opts));
-	cl_assert(strcmp(git_buf_cstr(&buf), email) == 0);
-
-	git_buf_clear(&buf);
-	cl_git_pass(git_diff_commit_as_email(&buf, repo, commit, 1, 1, 0, NULL));
-	cl_assert(strcmp(git_buf_cstr(&buf), email) == 0);
-
-	git_diff_free(diff);
-	git_commit_free(commit);
-	git_buf_free(&buf);
+	assert_email_match(
+		email, "6e05acc5a5dab507d91a0a0cc0fb05a3dd98892d", &opts);
 }
 
 void test_diff_format_email__multiline_summary(void)
 {
-	git_oid oid;
-	git_commit *commit = NULL;
-	git_diff *diff = NULL;
 	git_diff_format_email_options opts = GIT_DIFF_FORMAT_EMAIL_OPTIONS_INIT;
-	git_buf buf = GIT_BUF_INIT;
-
 	const char *email =
 	"From 9264b96c6d104d0e07ae33d3007b6a48246c6f92 Mon Sep 17 00:00:00 2001\n" \
 	"From: Jacques Germishuys <jacquesg@striata.com>\n" \
@@ -490,36 +432,15 @@ void test_diff_format_email__multiline_summary(void)
 	"libgit2 " LIBGIT2_VERSION "\n" \
 	"\n";
 
-	git_oid_fromstr(&oid, "9264b96c6d104d0e07ae33d3007b6a48246c6f92");
-
-	cl_git_pass(git_commit_lookup(&commit, repo, &oid));
-
-	opts.id = git_commit_id(commit);
-	opts.author = git_commit_author(commit);
 	opts.summary = "Modify some content\nSome extra stuff here";
 
-	cl_git_pass(git_diff__commit(&diff, repo, commit, NULL));
-	cl_git_pass(git_diff_format_email(&buf, diff, &opts));
-	cl_assert(strcmp(git_buf_cstr(&buf), email) == 0);
-
-	git_buf_clear(&buf);
-	cl_git_pass(git_diff_commit_as_email(&buf, repo, commit, 1, 1, 0, NULL));
-	cl_assert(strcmp(git_buf_cstr(&buf), email) == 0);
-
-	git_diff_free(diff);
-	git_commit_free(commit);
-	git_buf_free(&buf);
+	assert_email_match(
+		email, "9264b96c6d104d0e07ae33d3007b6a48246c6f92", &opts);
 }
 
 void test_diff_format_email__binary(void)
 {
-	git_oid oid;
-	git_commit *commit = NULL;
-	git_diff *diff = NULL;
 	git_diff_format_email_options opts = GIT_DIFF_FORMAT_EMAIL_OPTIONS_INIT;
-	git_buf buf = GIT_BUF_INIT;
-
-	/* TODO: Actually 0 bytes here should be 5!. Seems like we don't load the new content for binary files? */
 	const char *email =
 	"From 8d7523f6fcb2404257889abe0d96f093d9f524f9 Mon Sep 17 00:00:00 2001\n" \
 	"From: Jacques Germishuys <jacquesg@striata.com>\n" \
@@ -536,21 +457,11 @@ void test_diff_format_email__binary(void)
 	"--\n" \
 	"libgit2 " LIBGIT2_VERSION "\n" \
 	"\n";
+	/* TODO: Actually 0 bytes here should be 5!. Seems like we don't load the new content for binary files? */
 
-	git_oid_fromstr(&oid, "8d7523f6fcb2404257889abe0d96f093d9f524f9");
-
-	cl_git_pass(git_commit_lookup(&commit, repo, &oid));
-
-	opts.id = git_commit_id(commit);
-	opts.author = git_commit_author(commit);
 	opts.summary = "Modified binary file";
 
-	cl_git_pass(git_diff__commit(&diff, repo, commit, NULL));
-	cl_git_pass(git_diff_format_email(&buf, diff, &opts));
-	cl_assert(strcmp(git_buf_cstr(&buf), email) == 0);
-
-	git_diff_free(diff);
-	git_commit_free(commit);
-	git_buf_free(&buf);
+	assert_email_match(
+		email, "8d7523f6fcb2404257889abe0d96f093d9f524f9", &opts);
 }
 

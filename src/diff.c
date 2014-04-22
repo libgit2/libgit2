@@ -1590,7 +1590,8 @@ int git_diff_format_email(
 
 	if ((error = git_buf_puts(out, "---\n")) < 0 ||
 		(error = git_diff_get_stats(&stats, diff)) < 0 ||
-		(error = git_diff_stats_to_buf(out, stats, format_flags)) < 0 ||
+		(error = git_diff_stats_to_buf(out, stats, format_flags, 0)) < 0 ||
+		(error = git_buf_putc(out, '\n')) < 0 ||
 		(error = git_diff_format_email__append_patches_tobuf(out, diff)) < 0)
 			goto on_error;
 

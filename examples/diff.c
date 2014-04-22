@@ -34,10 +34,11 @@ static const char *colors[] = {
 };
 
 enum {
-	OUTPUT_DIFF = 0,
-	OUTPUT_STAT = 1,
-	OUTPUT_SHORTSTAT = 2,
-	OUTPUT_NUMSTAT = 3
+	OUTPUT_DIFF = (1 << 0),
+	OUTPUT_STAT = (1 << 1),
+	OUTPUT_SHORTSTAT = (1 << 2),
+	OUTPUT_NUMSTAT = (1 << 3),
+	OUTPUT_SUMMARY = (1 << 4)
 };
 
 enum {
@@ -137,14 +138,13 @@ int main(int argc, char *argv[])
 
 	/** Generate simple output using libgit2 display helper. */
 
-	switch (o.output) {
-	case OUTPUT_STAT:
-	case OUTPUT_NUMSTAT:
-	case OUTPUT_SHORTSTAT:
-		diff_print_stats(diff, &o);
-		break;
+	if (!o.output)
+		o.output = OUTPUT_DIFF;
 
-	case OUTPUT_DIFF:
+	if (o.output != OUTPUT_DIFF)
+		diff_print_stats(diff, &o);
+
+	if ((o.output & OUTPUT_DIFF) != 0) {
 		if (o.color >= 0)
 			fputs(colors[0], stdout);
 
@@ -154,10 +154,6 @@ int main(int argc, char *argv[])
 
 		if (o.color >= 0)
 			fputs(colors[0], stdout);
-		break;
-
-	default:
-		usage("Unknown output format", "programmer error");
 	}
 
 	/** Cleanup before exiting. */
@@ -233,8 +229,10 @@ static void parse_opts(struct opts *o, int argc, char *argv[])
 				usage("Only one or two tree identifiers can be provided", NULL);
 		}
 		else if (!strcmp(a, "-p") || !strcmp(a, "-u") ||
-			!strcmp(a, "--patch"))
+				 !strcmp(a, "--patch")) {
+			o->output |= OUTPUT_DIFF;
 			o->format = GIT_DIFF_FORMAT_PATCH;
+		}
 		else if (!strcmp(a, "--cached"))
 			o->cache = CACHE_ONLY;
 		else if (!strcmp(a, "--nocache"))
@@ -273,11 +271,13 @@ static void parse_opts(struct opts *o, int argc, char *argv[])
 		else if (!strcmp(a, "--minimal"))
 			o->diffopts.flags |= GIT_DIFF_MINIMAL;
 		else if (!strcmp(a, "--stat"))
-			o->output = OUTPUT_STAT;
+			o->output |= OUTPUT_STAT;
 		else if (!strcmp(a, "--numstat"))
-			o->output = OUTPUT_NUMSTAT;
+			o->output |= OUTPUT_NUMSTAT;
 		else if (!strcmp(a, "--shortstat"))
-			o->output = OUTPUT_SHORTSTAT;
+			o->output |= OUTPUT_SHORTSTAT;
+		else if (!strcmp(a, "--summary"))
+			o->output |= OUTPUT_SUMMARY;
 		else if (match_uint16_arg(
 				&o->findopts.rename_threshold, &args, "-M") ||
 			match_uint16_arg(
@@ -308,59 +308,30 @@ static void parse_opts(struct opts *o, int argc, char *argv[])
 	}
 }
 
-/** Display diff output with "--numstat" or "--shortstat" */
+/** Display diff output with "--stat", "--numstat", or "--shortstat" */
 static void diff_print_stats(git_diff *diff, struct opts *o)
 {
-	git_patch *patch;
-	size_t d, ndeltas = git_diff_num_deltas(diff);
-	size_t nadditions, ndeletions;
-	long nadditions_sum, ndeletions_sum;
+	git_diff_stats *stats;
+	git_buf b = GIT_BUF_INIT_CONST(NULL, 0);
+	git_diff_stats_format_t format = 0;
 
-	nadditions_sum = 0;
-	ndeletions_sum = 0;
+	check_lg2(
+		git_diff_get_stats(&stats, diff), "generating stats for diff", NULL);
 
-	for (d = 0; d < ndeltas; d++){
-		check_lg2(
-			git_patch_from_diff(&patch, diff, d),
-			"generating patch from diff", NULL);
+	if (o->output & OUTPUT_STAT)
+		format |= GIT_DIFF_STATS_FULL;
+	if (o->output & OUTPUT_SHORTSTAT)
+		format |= GIT_DIFF_STATS_SHORT;
+	if (o->output & OUTPUT_NUMSTAT)
+		format |= GIT_DIFF_STATS_NUMBER;
+	if (o->output & OUTPUT_SUMMARY)
+		format |= GIT_DIFF_STATS_INCLUDE_SUMMARY;
 
-		check_lg2(
-			git_patch_line_stats(NULL, &nadditions, &ndeletions, patch),
-			"generating the number of additions and deletions", NULL);
+	check_lg2(
+		git_diff_stats_to_buf(&b, stats, format, 80), "formatting stats", NULL);
 
-		if (o->output == OUTPUT_NUMSTAT) {
-			const git_diff_delta *delta = git_patch_get_delta(patch);
-			printf("%ld\t%ld\t%s\n",
-				   (long)nadditions, (long)ndeletions, delta->new_file.path);
-		}
-		else if (o->output == OUTPUT_STAT) {
-			const git_diff_delta *delta = git_patch_get_delta(patch);
-			printf(" %s\t| %ld\t(%ld+ %ld-)\n",
-				   delta->new_file.path, (long)nadditions + (long)ndeletions,
-				   (long)nadditions, (long)ndeletions);
-		}
+	fputs(b.ptr, stdout);
 
-		nadditions_sum += nadditions;
-		ndeletions_sum += ndeletions;
-
-		git_patch_free(patch);
-	}
-
-	if (o->output != OUTPUT_NUMSTAT && ndeltas > 0) {
-	    printf(" %ld %s", (long)ndeltas,
-			1 == ndeltas ? "file changed" : "files changed");
-
-	    if (nadditions_sum) {
-			printf(", %ld ",nadditions_sum);
-			printf("%s", 1 == nadditions_sum ? "insertion(+)" : "insertions(+)");
-	    }
-
-	    if (ndeletions_sum) {
-			printf(", %ld ",ndeletions_sum);
-			printf("%s", 1 == ndeletions_sum ? "deletion(-)" : "deletions(-)");
-	    }
-
-	    printf("\n");
-	}
+	git_buf_free(&b);
+	git_diff_stats_free(stats);
 }
-
