@@ -8,7 +8,6 @@
 #include "vector.h"
 #include "diff.h"
 #include "diff_patch.h"
-#include <math.h>
 
 #define DIFF_RENAME_FILE_SEPARATOR " => "
 #define STATS_FULL_MIN_SCALE 7
@@ -32,12 +31,25 @@ struct git_diff_stats {
 	int max_digits;
 };
 
+static int digits_for_value(size_t val)
+{
+	int count = 1;
+	size_t placevalue = 10;
+
+	while (val >= placevalue) {
+		++count;
+		placevalue *= 10;
+	}
+
+	return count;
+}
+
 int git_diff_file_stats__full_to_buf(
 	git_buf *out,
 	const git_diff_delta *delta,
 	const diff_file_stats *filestat,
 	const git_diff_stats *stats,
-	double scale_to)
+	size_t width)
 {
 	const char *old_path = NULL, *new_path = NULL;
 	size_t padding, old_size, new_size;
@@ -81,15 +93,16 @@ int git_diff_file_stats__full_to_buf(
 			if (git_buf_putc(out, ' ') < 0)
 				goto on_error;
 
-			if (scale_to <= 0) {
+			if (!width) {
 				if (git_buf_putcn(out, '+', filestat->insertions) < 0 ||
 					git_buf_putcn(out, '-', filestat->deletions) < 0)
 					goto on_error;
 			} else {
 				size_t total = filestat->insertions + filestat->deletions;
-				double full = round(total * scale_to / stats->max_filestat);
+				size_t full = (total * width + stats->max_filestat / 2) /
+					stats->max_filestat;
 				size_t plus = full * filestat->insertions / total;
-				size_t minus = (size_t)full - plus;
+				size_t minus = full - plus;
 
 				if (git_buf_putcn(out, '+', max(plus,  1)) < 0 ||
 					git_buf_putcn(out, '-', max(minus, 1)) < 0)
@@ -205,7 +218,7 @@ int git_diff_get_stats(
 	stats->files_changed = deltas;
 	stats->insertions = total_insertions;
 	stats->deletions = total_deletions;
-	stats->max_digits = (int)ceil(log10(stats->max_filestat + 1));
+	stats->max_digits = digits_for_value(stats->max_filestat + 1);
 
 	if (error < 0) {
 		git_diff_stats_free(stats);
@@ -265,12 +278,11 @@ int git_diff_stats_to_buf(
 	}
 
 	if (format & GIT_DIFF_STATS_FULL) {
-		double scale_to = -1;
 		if (width > 0) {
 			if (width > stats->max_name + stats->max_digits + 5)
-				scale_to = width - (stats->max_name + stats->max_digits + 5);
-			if (scale_to < STATS_FULL_MIN_SCALE)
-				scale_to = STATS_FULL_MIN_SCALE;
+				width -= (stats->max_name + stats->max_digits + 5);
+			if (width < STATS_FULL_MIN_SCALE)
+				width = STATS_FULL_MIN_SCALE;
 		}
 
 		for (i = 0; i < stats->files_changed; ++i) {
@@ -278,7 +290,7 @@ int git_diff_stats_to_buf(
 				continue;
 
 			error = git_diff_file_stats__full_to_buf(
-				out, delta, &stats->filestats[i], stats, scale_to);
+				out, delta, &stats->filestats[i], stats, width);
 			if (error < 0)
 				return error;
 		}
