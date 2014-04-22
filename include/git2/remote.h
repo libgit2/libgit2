@@ -468,6 +468,9 @@ struct git_remote_callbacks {
 	/**
 	 * This will be called if the remote host requires
 	 * authentication in order to connect to it.
+	 *
+	 * Returning GIT_PASSTHROUGH will make libgit2 behave as
+	 * though this field isn't set.
 	 */
 	int (*credentials)(git_cred **cred, const char *url, const char *username_from_url, unsigned int allowed_types,	void *data);
 
@@ -518,6 +521,17 @@ GIT_EXTERN(int) git_remote_init_callbacks(
  * @return 0 or an error code
  */
 GIT_EXTERN(int) git_remote_set_callbacks(git_remote *remote, const git_remote_callbacks *callbacks);
+
+/**
+ * Retrieve the current callback structure
+ *
+ * This provides read access to the callbacks structure as the remote
+ * sees it.
+ *
+ * @param remote the remote to query
+ * @return a pointer to the callbacks structure
+ */
+GIT_EXTERN(const git_remote_callbacks *) git_remote_get_callbacks(git_remote *remote);
 
 /**
  * Get the statistics structure that is filled in by the fetch operation.

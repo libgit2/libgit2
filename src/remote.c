@@ -1253,6 +1253,13 @@ int git_remote_set_callbacks(git_remote *remote, const git_remote_callbacks *cal
 	return 0;
 }
 
+const git_remote_callbacks *git_remote_get_callbacks(git_remote *remote)
+{
+	assert(remote);
+
+	return &remote->callbacks;
+}
+
 int git_remote_set_transport(git_remote *remote, git_transport *transport)
 {
 	assert(remote && transport);
