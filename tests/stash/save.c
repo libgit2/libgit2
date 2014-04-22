@@ -148,6 +148,19 @@ void test_stash_save__can_include_untracked_files(void)
 	assert_blob_oid("refs/stash^3:just.ignore", NULL);
 }
 
+void test_stash_save__untracked_skips_ignored(void)
+{
+	cl_git_append2file("stash/.gitignore", "bundle/vendor/\n");
+	cl_must_pass(p_mkdir("stash/bundle", 0777));
+	cl_must_pass(p_mkdir("stash/bundle/vendor", 0777));
+	cl_git_mkfile("stash/bundle/vendor/blah", "contents\n");
+
+	cl_git_pass(git_stash_save(
+		&stash_tip_oid, repo, signature, NULL, GIT_STASH_INCLUDE_UNTRACKED));
+
+	cl_assert(git_path_exists("stash/bundle/vendor/blah"));
+}
+
 void test_stash_save__can_include_untracked_and_ignored_files(void)
 {
 	cl_git_pass(git_stash_save(&stash_tip_oid, repo, signature, NULL, GIT_STASH_INCLUDE_UNTRACKED | GIT_STASH_INCLUDE_IGNORED));
