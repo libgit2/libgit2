@@ -176,10 +176,9 @@ static int attr_cache_lookup(
 		goto cleanup;
 
 	entry = attr_cache_lookup_entry(cache, relfile);
-	if (!entry) {
-		if ((error = attr_cache_make_entry(&entry, repo, relfile)) < 0)
-			goto cleanup;
-	} else if (entry->file[source] != NULL) {
+	if (!entry)
+		error = attr_cache_make_entry(&entry, repo, relfile);
+	else if (entry->file[source] != NULL) {
 		file = entry->file[source];
 		GIT_REFCOUNT_INC(file);
 	}
@@ -254,8 +253,7 @@ bool git_attr_cache__is_cached(
 	khiter_t pos;
 	git_attr_file_entry *entry;
 
-	if (!(cache = git_repository_attr_cache(repo)) ||
-		!(files = cache->files))
+	if (!cache || !(files = cache->files))
 		return false;
 
 	pos = git_strmap_lookup_index(files, filename);

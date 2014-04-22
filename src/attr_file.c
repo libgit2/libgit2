@@ -232,14 +232,13 @@ int git_attr_file__parse_buffer(
 
 	while (!error && *scan) {
 		/* allocate rule if needed */
-		if (!rule) {
-			if (!(rule = git__calloc(1, sizeof(*rule)))) {
-				error = -1;
-				break;
-			}
-			rule->match.flags = GIT_ATTR_FNMATCH_ALLOWNEG |
-				GIT_ATTR_FNMATCH_ALLOWMACRO;
+		if (!rule && !(rule = git__calloc(1, sizeof(*rule)))) {
+			error = -1;
+			break;
 		}
+
+		rule->match.flags =
+			GIT_ATTR_FNMATCH_ALLOWNEG | GIT_ATTR_FNMATCH_ALLOWMACRO;
 
 		/* parse the next "pattern attr attr attr" line */
 		if (!(error = git_attr_fnmatch__parse(
