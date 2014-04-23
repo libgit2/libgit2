@@ -1528,3 +1528,71 @@ int git_iterator_current_workdir_path(git_buf **path, git_iterator *iter)
 
 	return 0;
 }
+
+int git_iterator_advance_over_and_check_ignored(
+	const git_index_entry **entryptr, bool *ignored, git_iterator *iter)
+{
+	int error = 0;
+	workdir_iterator *wi = (workdir_iterator *)iter;
+	char *base = NULL;
+	const git_index_entry *entry;
+
+	*ignored = false;
+
+	if (iter->type != GIT_ITERATOR_TYPE_WORKDIR)
+		return git_iterator_advance(entryptr, iter);
+	if ((error = git_iterator_current(&entry, iter)) < 0)
+		return error;
+
+	if (!S_ISDIR(entry->mode)) {
+		if (git_ignore__lookup(
+				&wi->ignores, wi->fi.entry.path, &wi->is_ignored) < 0)
+			wi->is_ignored = true;
+		*ignored = wi->is_ignored;
+		return git_iterator_advance(entryptr, iter);
+	}
+
+	*ignored = true;
+
+	base = git__strdup(entry->path);
+	GITERR_CHECK_ALLOC(base);
+
+	/* scan inside directory looking for a non-ignored item */
+	while (entry && !iter->prefixcomp(entry->path, base)) {
+		if (git_ignore__lookup(
+				&wi->ignores, wi->fi.entry.path, &wi->is_ignored) < 0)
+			wi->is_ignored = true;
+
+		if (!wi->is_ignored && S_ISDIR(entry->mode)) {
+			error = git_iterator_advance_into(&entry, iter);
+
+			if (!error)
+				continue;
+			else if (error == GIT_ENOTFOUND) {
+				error = 0;
+				wi->is_ignored = true; /* treat empty directories as ignored */
+			} else
+				break; /* real error, stop here */
+		}
+
+		/* if we found a non-ignored item, treat parent as untracked */
+		if (!wi->is_ignored) {
+			*ignored = false;
+			break;
+		}
+
+		if ((error = git_iterator_advance(&entry, iter)) < 0)
+			break;
+	}
+
+	/* wrap up scan back to base directory */
+	while (entry && !iter->prefixcomp(entry->path, base))
+		if ((error = git_iterator_advance(&entry, iter)) < 0)
+			break;
+
+	*entryptr = entry;
+	git__free(base);
+
+	return error;
+}
+

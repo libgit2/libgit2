@@ -42,7 +42,6 @@ void assert_status(
 	int status_flags)
 {
 	unsigned int status;
-	int error;
 
 	if (status_flags < 0)
 		cl_assert_equal_i(status_flags, git_status_file(&status, repo, path));

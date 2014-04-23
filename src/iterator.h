@@ -258,4 +258,12 @@ extern int git_iterator_current_workdir_path(
 /* Return index pointer if index iterator, else NULL */
 extern git_index *git_iterator_get_index(git_iterator *iter);
 
+/* Special type of advance that can be called when looking at a tree in
+ * the working directory that leaves the iterator on the next item after
+ * the tree, but also scans the tree contents looking for any items that
+ * are not ignored.
+ */
+extern int git_iterator_advance_over_and_check_ignored(
+	const git_index_entry **entry, bool *ignored, git_iterator *iter);
+
 #endif
