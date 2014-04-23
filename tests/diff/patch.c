@@ -2,6 +2,7 @@
 #include "git2/sys/repository.h"
 
 #include "diff_helpers.h"
+#include "diff.h"
 #include "repository.h"
 #include "buf_text.h"
 

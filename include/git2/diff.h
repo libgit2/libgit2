@@ -180,6 +180,10 @@ typedef enum {
 	/** Take extra time to find minimal diff */
 	GIT_DIFF_MINIMAL = (1 << 29),
 
+	/** Include the necessary deflate / delta information so that `git-apply`
+	 *  can apply given diff information to binary files.
+	 */
+	GIT_DIFF_SHOW_BINARY = (1 << 30),
 } git_diff_option_t;
 
 /**
