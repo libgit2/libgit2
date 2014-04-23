@@ -839,7 +839,7 @@ static int handle_unmatched_new_item(
 			DIFF_FLAG_ISNT_SET(diff, GIT_DIFF_ENABLE_FAST_UNTRACKED_DIRS))
 		{
 			git_diff_delta *last;
-			bool ignored;
+			git_iterator_status_t untracked_state;
 
 			/* attempt to insert record for this directory */
 			if ((error = diff_delta__from_one(diff, delta_type, nitem)) != 0)
@@ -851,13 +851,14 @@ static int handle_unmatched_new_item(
 				return git_iterator_advance(&info->nitem, info->new_iter);
 
 			/* iterate into dir looking for an actual untracked file */
-			if ((error = git_iterator_advance_over_and_check_ignored(
-					&info->nitem, &ignored, info->new_iter)) < 0 &&
+			if ((error = git_iterator_advance_over_with_status(
+					&info->nitem, &untracked_state, info->new_iter)) < 0 &&
 				error != GIT_ITEROVER)
 				return error;
 
-			/* it iteration only found ignored items, update the record */
-			if (ignored) {
+			/* if we found nothing or just ignored items, update the record */
+			if (untracked_state == GIT_ITERATOR_STATUS_IGNORED ||
+				untracked_state == GIT_ITERATOR_STATUS_EMPTY) {
 				last->status = GIT_DELTA_IGNORED;
 
 				/* remove the record if we don't want ignored records */

@@ -336,22 +336,22 @@ static int checkout_action_wd_only(
 			error = git_iterator_advance(wditem, workdir);
 	} else {
 		/* untracked or ignored - can't know which until we advance through */
-		bool ignored, over = false;
-		bool removable = wd_item_is_removable(workdir, wd);
+		bool over = false, removable = wd_item_is_removable(workdir, wd);
+		git_iterator_status_t untracked_state;
 
 		/* copy the entry for issuing notification callback later */
 		git_index_entry saved_wd = *wd;
 		git_buf_sets(&data->tmp, wd->path);
 		saved_wd.path = data->tmp.ptr;
 
-		error = git_iterator_advance_over_and_check_ignored(
-			wditem, &ignored, workdir);
+		error = git_iterator_advance_over_with_status(
+			wditem, &untracked_state, workdir);
 		if (error == GIT_ITEROVER)
 			over = true;
 		else if (error < 0)
 			return error;
 
-		if (ignored) {
+		if (untracked_state == GIT_ITERATOR_STATUS_IGNORED) {
 			notify = GIT_CHECKOUT_NOTIFY_IGNORED;
 			remove = ((data->strategy & GIT_CHECKOUT_REMOVE_IGNORED) != 0);
 		} else {
