@@ -622,7 +622,6 @@ int gitno_connection_data_from_url(
 	if (error < 0 )
 		goto cleanup;
 	
-		
 	if (url[0] == '/') {
 		/* Relative redirect; reuse original host name and port */
 		path_search_start = url;
