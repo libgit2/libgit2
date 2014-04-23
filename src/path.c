@@ -9,6 +9,7 @@
 #include "posix.h"
 #ifdef GIT_WIN32
 #include "win32/posix.h"
+#include "win32/w32_util.h"
 #else
 #include <dirent.h>
 #endif
@@ -486,33 +487,33 @@ bool git_path_isfile(const char *path)
 
 bool git_path_is_empty_dir(const char *path)
 {
-	HANDLE hFind = INVALID_HANDLE_VALUE;
-	git_win32_path wbuf;
-	int wbufsz;
-	WIN32_FIND_DATAW ffd;
-	bool retval = true;
+	git_win32_path filter_w;
+	bool empty = false;
 
-	if (!git_path_isdir(path))
-		return false;
+	if (git_win32__findfirstfile_filter(filter_w, path)) {
+		WIN32_FIND_DATAW findData;
+		HANDLE hFind = FindFirstFileW(filter_w, &findData);
 
-	wbufsz = git_win32_path_from_c(wbuf, path);
-	if (!wbufsz || wbufsz + 2 > GIT_WIN_PATH_UTF16)
-		return false;
-	memcpy(&wbuf[wbufsz - 1], L"\\*", 3 * sizeof(wchar_t));
+		/* If the find handle was created successfully, then it's a directory */
+		if (hFind != INVALID_HANDLE_VALUE) {
+			empty = true;
 
-	hFind = FindFirstFileW(wbuf, &ffd);
-	if (INVALID_HANDLE_VALUE == hFind)
-		return false;
+			do {
+				/* Allow the enumeration to return . and .. and still be considered
+				 * empty. In the special case of drive roots (i.e. C:\) where . and
+				 * .. do not occur, we can still consider the path to be an empty
+				 * directory if there's nothing there. */
+				if (!git_path_is_dot_or_dotdotW(findData.cFileName)) {
+					empty = false;
+					break;
+				}
+			} while (FindNextFileW(hFind, &findData));
 
-	do {
-		if (!git_path_is_dot_or_dotdotW(ffd.cFileName)) {
-			retval = false;
-			break;
+			FindClose(hFind);
 		}
-	} while (FindNextFileW(hFind, &ffd) != 0);
+	}
 
-	FindClose(hFind);
-	return retval;
+	return empty;
 }
 
 #else

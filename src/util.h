@@ -22,6 +22,15 @@
 
 #define GIT_DATE_RFC2822_SZ  32
 
+/**
+ * Return the length of a constant string.
+ * We are aware that `strlen` performs the same task and is usually
+ * optimized away by the compiler, whilst being safer because it returns
+ * valid values when passed a pointer instead of a constant string; however
+ * this macro will transparently work with wide-char and single-char strings.
+ */
+#define CONST_STRLEN(x) ((sizeof(x)/sizeof(x[0])) - 1)
+
 /*
  * Custom memory allocation wrappers
  * that set error code and error message

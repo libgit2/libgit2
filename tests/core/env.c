@@ -21,7 +21,7 @@ static char *home_values[] = {
 	"f\xc4\x80ke_\xc4\xa4ome", /* latin extended */
 	"f\xce\xb1\xce\xba\xce\xb5_h\xce\xbfm\xce\xad",  /* having fun with greek */
 	"fa\xe0" "\xb8" "\x87" "e_\xe0" "\xb8" "\x99" "ome", /* thai characters */
-	"f\xe1\x9cx80ke_\xe1\x9c\x91ome", /* tagalog characters */
+	"f\xe1\x9c\x80ke_\xe1\x9c\x91ome", /* tagalog characters */
 	"\xe1\xb8\x9f\xe1\xba\xa2" "ke_ho" "\xe1" "\xb9" "\x81" "e", /* latin extended additional */
 	"\xf0\x9f\x98\x98\xf0\x9f\x98\x82", /* emoticons */
 	NULL
