@@ -260,6 +260,23 @@ void test_merge_workdir_dirty__unaffected_dirty_files_allowed(void)
 		cl_git_pass(merge_dirty_files(files));
 }
 
+void test_merge_workdir_dirty__unstaged_deletes_maintained(void)
+{
+	git_reference *head;
+	git_object *head_object;
+
+	cl_git_pass(git_repository_head(&head, repo));
+	cl_git_pass(git_reference_peel(&head_object, head, GIT_OBJ_COMMIT));
+	cl_git_pass(git_reset(repo, head_object, GIT_RESET_HARD, NULL, NULL));
+
+	cl_git_pass(p_unlink("merge-resolve/unchanged.txt"));
+
+	cl_git_pass(merge_branch(0, 0));
+
+	git_object_free(head_object);
+	git_reference_free(head);
+}
+
 void test_merge_workdir_dirty__affected_dirty_files_disallowed(void)
 {
 	char **files;
