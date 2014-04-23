@@ -555,3 +555,46 @@ void test_status_renames__both_casechange_two(void)
 
 	git_index_free(index);
 }
+
+void test_status_renames__with_precompose(void)
+{
+	git_repository *repo;
+	git_index *index;
+	unsigned int status;
+
+	cl_git_pass(git_repository_init(&repo, "precompose_unicode", 0));
+	
+	cl_repo_set_bool(repo, "core.precomposeunicode", false);
+
+	char *composed = "ḱṷṓn", *decomposed = "ḱṷṓn";
+	cl_git_mkfile("precompose_unicode/ḱṷṓn", "content\n");
+
+	cl_git_pass(git_repository_index(&index, repo));
+	cl_git_pass(git_index_add_bypath(index, decomposed));
+	cl_git_pass(git_index_write(index));
+
+	cl_repo_commit_from_index(NULL, repo, NULL, 1323847743, "Initial commit\n");
+
+	int error;
+	error = git_status_file(&status, repo, decomposed);
+	cl_assert(status == GIT_STATUS_CURRENT);
+
+	cl_repo_set_bool(repo, "core.precomposeunicode", true);
+
+	error = git_status_file(&status, repo, decomposed);
+	cl_assert(status == GIT_STATUS_WT_DELETED);
+
+	char *composedRename = "ḱṷṓna";
+	cl_rename(decomposed, composedRename);
+
+	error = git_status_file(&status, repo, decomposed);
+	cl_assert(status == GIT_STATUS_WT_DELETED);
+
+	git_index_remove_bypath(index, decomposed);
+	git_index_add_bypath(index, composedRename);
+	git_index_write(index);
+
+	error = git_status_file(&status, repo, composedRename);
+	cl_assert(status == GIT_STATUS_CURRENT);
+}
+
