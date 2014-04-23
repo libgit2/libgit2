@@ -175,7 +175,8 @@ static int diff_print_one_raw(
 	git_oid_tostr(end_oid, pi->oid_strlen, &delta->new_file.id);
 
 	git_buf_printf(
-		out, ":%06o %06o %s... %s... %c",
+		out, (pi->oid_strlen <= GIT_OID_HEXSZ) ?
+			":%06o %06o %s... %s... %c" : ":%06o %06o %s %s %c",
 		delta->old_file.mode, delta->new_file.mode, start_oid, end_oid, code);
 
 	if (delta->similarity > 0)

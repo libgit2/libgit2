@@ -10,149 +10,134 @@
 #include "diff_patch.h"
 
 #define DIFF_RENAME_FILE_SEPARATOR " => "
+#define STATS_FULL_MIN_SCALE 7
+
+typedef struct {
+	size_t insertions;
+	size_t deletions;
+} diff_file_stats;
 
 struct git_diff_stats {
-	git_vector patches;
+	git_diff *diff;
+	diff_file_stats *filestats;
 
 	size_t files_changed;
 	size_t insertions;
 	size_t deletions;
+	size_t renames;
+
+	size_t max_name;
+	size_t max_filestat;
+	int max_digits;
 };
 
-static size_t diff_get_filename_padding(
-	int has_renames,
-	const git_diff_stats *stats)
+static int digits_for_value(size_t val)
 {
-	const git_patch *patch = NULL;
-	size_t i, max_padding = 0;
+	int count = 1;
+	size_t placevalue = 10;
 
-	if (has_renames) {
-		git_vector_foreach(&stats->patches, i, patch) {
-			const git_diff_delta *delta = NULL;
-			size_t len;
-
-			delta = git_patch_get_delta(patch);
-			if (strcmp(delta->old_file.path, delta->new_file.path) == 0)
-				continue;
-
-			if ((len = strlen(delta->old_file.path) + strlen(delta->new_file.path)) > max_padding)
-				max_padding = len;
-		}
+	while (val >= placevalue) {
+		++count;
+		placevalue *= 10;
 	}
 
-	git_vector_foreach(&stats->patches, i, patch) {
-		const git_diff_delta *delta = NULL;
-		size_t len;
-
-		delta = git_patch_get_delta(patch);
-		len = strlen(delta->new_file.path);
-
-		if (strcmp(delta->old_file.path, delta->new_file.path) != 0)
-			continue;
-
-		if (len > max_padding)
-			max_padding = len;
-	}
-
-	return max_padding;
+	return count;
 }
 
 int git_diff_file_stats__full_to_buf(
 	git_buf *out,
-	size_t max_padding,
-	int has_renames,
-	const git_patch *patch)
+	const git_diff_delta *delta,
+	const diff_file_stats *filestat,
+	const git_diff_stats *stats,
+	size_t width)
 {
 	const char *old_path = NULL, *new_path = NULL;
-	const git_diff_delta *delta = NULL;
 	size_t padding, old_size, new_size;
-	int error;
-
-	delta = git_patch_get_delta(patch);
 
 	old_path = delta->old_file.path;
 	new_path = delta->new_file.path;
 	old_size = delta->old_file.size;
 	new_size = delta->new_file.size;
 
-	if ((error = git_buf_printf(out, " %s", old_path)) < 0)
+	if (git_buf_printf(out, " %s", old_path) < 0)
 		goto on_error;
 
 	if (strcmp(old_path, new_path) != 0) {
-		padding = max_padding - strlen(old_path) - strlen(new_path);
+		padding = stats->max_name - strlen(old_path) - strlen(new_path);
 
-		if ((error = git_buf_printf(out, DIFF_RENAME_FILE_SEPARATOR "%s", new_path)) < 0)
+		if (git_buf_printf(out, DIFF_RENAME_FILE_SEPARATOR "%s", new_path) < 0)
 			goto on_error;
-	}
-	else {
-		padding = max_padding - strlen(old_path);
+	} else {
+		padding = stats->max_name - strlen(old_path);
 
-		if (has_renames)
+		if (stats->renames > 0)
 			padding += strlen(DIFF_RENAME_FILE_SEPARATOR);
 	}
 
-	if ((error = git_buf_putcn(out, ' ', padding)) < 0 ||
-		(error = git_buf_puts(out, " | ")) < 0)
-			goto on_error;
+	if (git_buf_putcn(out, ' ', padding) < 0 ||
+		git_buf_puts(out, " | ") < 0)
+		goto on_error;
 
 	if (delta->flags & GIT_DIFF_FLAG_BINARY) {
-		if ((error = git_buf_printf(out, "Bin %" PRIuZ " -> %" PRIuZ " bytes", old_size, new_size)) < 0)
+		if (git_buf_printf(out,
+				"Bin %" PRIuZ " -> %" PRIuZ " bytes", old_size, new_size) < 0)
 			goto on_error;
 	}
 	else {
-		size_t insertions, deletions;
-
-		if ((error = git_patch_line_stats(NULL, &insertions, &deletions, patch)) < 0)
+		if (git_buf_printf(out,
+				"%*" PRIuZ, stats->max_digits,
+				filestat->insertions + filestat->deletions) < 0)
 			goto on_error;
 
-		if ((error = git_buf_printf(out, "%" PRIuZ, insertions + deletions)) < 0)
-			goto on_error;
+		if (filestat->insertions || filestat->deletions) {
+			if (git_buf_putc(out, ' ') < 0)
+				goto on_error;
 
-		if (insertions || deletions) {
-			if ((error = git_buf_putc(out, ' ')) < 0 ||
-				(error = git_buf_putcn(out, '+', insertions)) < 0 ||
-				(error = git_buf_putcn(out, '-', deletions)) < 0)
+			if (!width) {
+				if (git_buf_putcn(out, '+', filestat->insertions) < 0 ||
+					git_buf_putcn(out, '-', filestat->deletions) < 0)
 					goto on_error;
+			} else {
+				size_t total = filestat->insertions + filestat->deletions;
+				size_t full = (total * width + stats->max_filestat / 2) /
+					stats->max_filestat;
+				size_t plus = full * filestat->insertions / total;
+				size_t minus = full - plus;
+
+				if (git_buf_putcn(out, '+', max(plus,  1)) < 0 ||
+					git_buf_putcn(out, '-', max(minus, 1)) < 0)
+					goto on_error;
+			}
 		}
 	}
 
-	error = git_buf_putc(out, '\n');
+	git_buf_putc(out, '\n');
 
 on_error:
-	return error;
+	return (git_buf_oom(out) ? -1 : 0);
 }
 
 int git_diff_file_stats__number_to_buf(
 	git_buf *out,
-	const git_patch *patch)
+	const git_diff_delta *delta,
+	const diff_file_stats *filestats)
 {
-	const git_diff_delta *delta = NULL;
-	const char *path = NULL;
-	size_t insertions, deletions;
 	int error;
-
-	delta = git_patch_get_delta(patch);
-	path = delta->new_file.path;
-
-	if ((error = git_patch_line_stats(NULL, &insertions, &deletions, patch)) < 0)
-		return error;
+	const char *path = delta->new_file.path;
 
 	if (delta->flags & GIT_DIFF_FLAG_BINARY)
 		error = git_buf_printf(out, "%-8c" "%-8c" "%s\n", '-', '-', path);
 	else
-		error = git_buf_printf(out, "%-8" PRIuZ "%-8" PRIuZ "%s\n", insertions, deletions, path);
+		error = git_buf_printf(out, "%-8" PRIuZ "%-8" PRIuZ "%s\n",
+			filestats->insertions, filestats->deletions, path);
 
 	return error;
 }
 
 int git_diff_file_stats__summary_to_buf(
 	git_buf *out,
-	const git_patch *patch)
+	const git_diff_delta *delta)
 {
-	const git_diff_delta *delta = NULL;
-
-	delta = git_patch_get_delta(patch);
-
 	if (delta->old_file.mode != delta->new_file.mode) {
 		if (delta->old_file.mode == 0) {
 			git_buf_printf(out, " create mode %06o %s\n",
@@ -171,39 +156,6 @@ int git_diff_file_stats__summary_to_buf(
 	return 0;
 }
 
-int git_diff_stats__has_renames(
-	const git_diff_stats *stats)
-{
-	git_patch *patch = NULL;
-	size_t i;
-
-	git_vector_foreach(&stats->patches, i, patch) {
-		const git_diff_delta *delta = git_patch_get_delta(patch);
-
-		if (strcmp(delta->old_file.path, delta->new_file.path) != 0) {
-			return 1;
-		}
-	}
-
-	return 0;
-}
-
-int git_diff_stats__add_file_stats(
-	git_diff_stats *stats,
-	git_patch *patch)
-{
-	const git_diff_delta *delta = NULL;
-	int error = 0;
-
-	if ((delta = git_patch_get_delta(patch)) == NULL)
-		return -1;
-
-	if ((error = git_vector_insert(&stats->patches, patch)) < 0)
-		return error;
-
-	return error;
-}
-
 int git_diff_get_stats(
 	git_diff_stats **out,
 	git_diff *diff)
@@ -220,35 +172,60 @@ int git_diff_get_stats(
 
 	deltas = git_diff_num_deltas(diff);
 
-	for (i = 0; i < deltas; ++i) {
+	stats->filestats = git__calloc(deltas, sizeof(diff_file_stats));
+	if (!stats->filestats) {
+		git__free(stats);
+		return -1;
+	}
+
+	stats->diff = diff;
+	GIT_REFCOUNT_INC(diff);
+
+	for (i = 0; i < deltas && !error; ++i) {
 		git_patch *patch = NULL;
-		size_t add, remove;
+		size_t add = 0, remove = 0, namelen;
+		const git_diff_delta *delta;
 
 		if ((error = git_patch_from_diff(&patch, diff, i)) < 0)
-			goto on_error;
+			break;
 
-		if ((error = git_patch_line_stats(NULL, &add, &remove, patch)) < 0 ||
-			(error = git_diff_stats__add_file_stats(stats, patch)) < 0) {
-			git_patch_free(patch);
-			goto on_error;
+		/* keep a count of renames because it will affect formatting */
+		delta = git_patch_get_delta(patch);
+
+		namelen = strlen(delta->new_file.path);
+		if (strcmp(delta->old_file.path, delta->new_file.path) != 0) {
+			namelen += strlen(delta->old_file.path);
+			stats->renames++;
 		}
+
+		/* and, of course, count the line stats */
+		error = git_patch_line_stats(NULL, &add, &remove, patch);
+
+		git_patch_free(patch);
+
+		stats->filestats[i].insertions = add;
+		stats->filestats[i].deletions = remove;
 
 		total_insertions += add;
 		total_deletions += remove;
+
+		if (stats->max_name < namelen)
+			stats->max_name = namelen;
+		if (stats->max_filestat < add + remove)
+			stats->max_filestat = add + remove;
 	}
 
 	stats->files_changed = deltas;
 	stats->insertions = total_insertions;
 	stats->deletions = total_deletions;
+	stats->max_digits = digits_for_value(stats->max_filestat + 1);
+
+	if (error < 0) {
+		git_diff_stats_free(stats);
+		stats = NULL;
+	}
 
 	*out = stats;
-
-	goto done;
-
-on_error:
-	git_diff_stats_free(stats);
-
-done:
 	return error;
 }
 
@@ -279,48 +256,67 @@ size_t git_diff_stats_deletions(
 int git_diff_stats_to_buf(
 	git_buf *out,
 	const git_diff_stats *stats,
-	git_diff_stats_format_t format)
+	git_diff_stats_format_t format,
+	size_t width)
 {
-	git_patch *patch = NULL;
+	int error = 0;
 	size_t i;
-	int has_renames = 0, error = 0;
+	const git_diff_delta *delta;
 
 	assert(out && stats);
 
-	/* check if we have renames, it affects the padding */
-	has_renames = git_diff_stats__has_renames(stats);
+	if (format & GIT_DIFF_STATS_NUMBER) {
+		for (i = 0; i < stats->files_changed; ++i) {
+			if ((delta = git_diff_get_delta(stats->diff, i)) == NULL)
+				continue;
 
-	git_vector_foreach(&stats->patches, i, patch) {
-		if (format & GIT_DIFF_STATS_FULL) {
-			size_t max_padding = diff_get_filename_padding(has_renames, stats);
-
-			error = git_diff_file_stats__full_to_buf(out, max_padding, has_renames, patch);
+			error = git_diff_file_stats__number_to_buf(
+				out, delta, &stats->filestats[i]);
+			if (error < 0)
+				return error;
 		}
-		else if (format & GIT_DIFF_STATS_NUMBER) {
-			error = git_diff_file_stats__number_to_buf(out, patch);
+	}
+
+	if (format & GIT_DIFF_STATS_FULL) {
+		if (width > 0) {
+			if (width > stats->max_name + stats->max_digits + 5)
+				width -= (stats->max_name + stats->max_digits + 5);
+			if (width < STATS_FULL_MIN_SCALE)
+				width = STATS_FULL_MIN_SCALE;
 		}
 
-		if (error < 0)
-			return error;
+		for (i = 0; i < stats->files_changed; ++i) {
+			if ((delta = git_diff_get_delta(stats->diff, i)) == NULL)
+				continue;
+
+			error = git_diff_file_stats__full_to_buf(
+				out, delta, &stats->filestats[i], stats, width);
+			if (error < 0)
+				return error;
+		}
 	}
 
 	if (format & GIT_DIFF_STATS_FULL || format & GIT_DIFF_STATS_SHORT) {
-		error = git_buf_printf(out, " %" PRIuZ " file%s changed, %" PRIuZ " insertions(+), %" PRIuZ " deletions(-)\n",
-					stats->files_changed, stats->files_changed > 1 ? "s" : "",
-					stats->insertions, stats->deletions);
+		error = git_buf_printf(
+			out, " %" PRIuZ " file%s changed, %" PRIuZ
+			" insertion%s(+), %" PRIuZ " deletion%s(-)\n",
+			stats->files_changed, stats->files_changed != 1 ? "s" : "",
+			stats->insertions, stats->insertions != 1 ? "s" : "",
+			stats->deletions, stats->deletions != 1 ? "s" : "");
 
 		if (error < 0)
 			return error;
 	}
 
 	if (format & GIT_DIFF_STATS_INCLUDE_SUMMARY) {
-		git_vector_foreach(&stats->patches, i, patch) {
-			if ((error = git_diff_file_stats__summary_to_buf(out, patch)) < 0)
+		for (i = 0; i < stats->files_changed; ++i) {
+			if ((delta = git_diff_get_delta(stats->diff, i)) == NULL)
+				continue;
+
+			error = git_diff_file_stats__summary_to_buf(out, delta);
+			if (error < 0)
 				return error;
 		}
-
-		if (git_vector_length(&stats->patches) > 0)
-			git_buf_putc(out, '\n');
 	}
 
 	return error;
@@ -328,16 +324,11 @@ int git_diff_stats_to_buf(
 
 void git_diff_stats_free(git_diff_stats *stats)
 {
-	size_t i;
-	git_patch *patch;
-
 	if (stats == NULL)
 		return;
 
-	git_vector_foreach(&stats->patches, i, patch)
-		git_patch_free(patch);
-
-	git_vector_free(&stats->patches);
+	git_diff_free(stats->diff); /* bumped refcount in constructor */
+	git__free(stats->filestats);
 	git__free(stats);
 }
 
