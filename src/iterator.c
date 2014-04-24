@@ -1566,25 +1566,26 @@ int git_iterator_advance_over_with_status(
 				&wi->ignores, wi->fi.entry.path, &wi->is_ignored) < 0)
 			wi->is_ignored = true;
 
-		if (!wi->is_ignored && S_ISDIR(entry->mode)) {
+		/* if we found an explicitly ignored item, then update from
+		 * EMPTY to IGNORED
+		 */
+		if (wi->is_ignored)
+			*status = GIT_ITERATOR_STATUS_IGNORED;
+		else if (S_ISDIR(entry->mode)) {
 			error = git_iterator_advance_into(&entry, iter);
 
 			if (!error)
 				continue;
 			else if (error == GIT_ENOTFOUND) {
 				error = 0;
-				wi->is_ignored = true; /* treat empty directories as ignored */
+				wi->is_ignored = true; /* mark empty directories as ignored */
 			} else
 				break; /* real error, stop here */
-		}
-
-		/* if we found a non-ignored item, treat parent as untracked */
-		if (!wi->is_ignored) {
+		} else {
+			/* we found a non-ignored item, treat parent as untracked */
 			*status = GIT_ITERATOR_STATUS_NORMAL;
 			break;
 		}
-		if (entry && !S_ISDIR(entry->mode))
-			*status = GIT_ITERATOR_STATUS_IGNORED;
 
 		if ((error = git_iterator_advance(&entry, iter)) < 0)
 			break;
