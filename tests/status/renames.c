@@ -582,12 +582,13 @@ void test_status_renames__zero_byte_file_does_not_fail(void)
 }
 
 #ifdef GIT_USE_ICONV
-
 static char *nfc = "\xC3\x85\x73\x74\x72\xC3\xB6\x6D";
 static char *nfd = "\x41\xCC\x8A\x73\x74\x72\x6F\xCC\x88\x6D";
+#endif
 
 void test_status_renames__precomposed_unicode_rename(void)
 {
+#ifdef GIT_USE_ICONV
 	git_status_list *statuslist;
 	git_status_options opts = GIT_STATUS_OPTIONS_INIT;
 	struct status_entry expected0[] = {
@@ -634,10 +635,12 @@ void test_status_renames__precomposed_unicode_rename(void)
 	cl_git_pass(git_status_list_new(&statuslist, g_repo, &opts));
 	check_status(statuslist, expected3, ARRAY_SIZE(expected3));
 	git_status_list_free(statuslist);
+#endif
 }
 
 void test_status_renames__precomposed_unicode_toggle_is_rename(void)
 {
+#ifdef GIT_USE_ICONV
 	git_status_list *statuslist;
 	git_status_options opts = GIT_STATUS_OPTIONS_INIT;
 	struct status_entry expected0[] = {
@@ -703,6 +706,6 @@ void test_status_renames__precomposed_unicode_toggle_is_rename(void)
 	cl_git_pass(git_status_list_new(&statuslist, g_repo, &opts));
 	check_status(statuslist, expected3, ARRAY_SIZE(expected3));
 	git_status_list_free(statuslist);
+#endif
 }
 
-#endif
