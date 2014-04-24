@@ -343,3 +343,12 @@ void test_fetchhead_nonetwork__unborn_with_upstream(void)
 	git_repository_free(repo);
 	cl_fixture_cleanup("./repowithunborn");
 }
+
+void test_fetchhead_nonetwork__quote_in_branch_name(void)
+{
+	cl_set_cleanup(&cleanup_repository, "./test1");
+	cl_git_pass(git_repository_init(&g_repo, "./test1", 0));
+
+	cl_git_rewritefile("./test1/.git/FETCH_HEAD", FETCH_HEAD_QUOTE_DATA);
+	cl_git_pass(git_repository_fetchhead_foreach(g_repo, read_noop, NULL));
+}
