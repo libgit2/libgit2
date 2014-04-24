@@ -167,21 +167,45 @@ PATTERNS("cpp",
 	 "|[-+0-9.e]+[fFlL]?|0[xXbB]?[0-9a-fA-F]+[lLuU]*"
 	 "|[-+*/<>%&^|=!]=|--|\\+\\+|<<=?|>>=?|&&|\\|\\||::|->\\*?|\\.\\*"),
 
+	/* Possible TODO: Contextual keywords
+	 * http://msdn.microsoft.com/en-us/library/the35c6y.aspx
+	 * http://msdn.microsoft.com/en-us/library/bb310804.aspx
+	 */
+#define CS_VISIBILITY "internal|private|protected|public"
+#define CS_MEMBER_MODIFIER "abstract|new|override|partial|sealed|static|unsafe|virtual|" CS_VISIBILITY
+#define CS_METHOD_MODIFIER "async|extern|" CS_MEMBER_MODIFIER
+#define CS_KEYWORD \
+	"if|else|switch|case|" \
+	"do|for|foreach|in|while|" \
+	"break|continue|default|goto|return|yield|" \
+	"throw|try|catch|finally|" \
+	"unsafe|fixed|lock|" \
+	"await|base|this|new|var|" \
+	"null|true|false|" \
+	"as|is|sizeof|typeof|checked|unchecked|stackalloc|" \
+	"explicit|implicit|operator|" \
+	"delegate|readonly|ref|out|using"
+
 PATTERNS("csharp",
-	 /* Keywords */
-	 "!^[ \t]*(do|while|for|if|else|instanceof|new|return|switch|case|throw|catch|using)\n"
 	 /* Methods and constructors */
-	 "^[ \t]*(((static|public|internal|private|protected|new|virtual|sealed|override|unsafe)[ \t]+)*[][<>@.~_[:alnum:]]+[ \t]+[<>@._[:alnum:]]+[ \t]*\\(.*\\))[ \t]*$\n"
-	 /* Properties */
-	 "^[ \t]*(((static|public|internal|private|protected|new|virtual|sealed|override|unsafe)[ \t]+)*[][<>@.~_[:alnum:]]+[ \t]+[@._[:alnum:]]+)[ \t]*$\n"
+	 "^[ \t]*(((" CS_METHOD_MODIFIER ")[ \t]+)*[][<>@.~_[:alnum:]]+[ \t]+[<>@._[:alnum:]]+[ \t]*\\(.*\\))[ \t]*$\n"
+	 /* Properties, events, delegates */
+	 "^[ \t]*(((" CS_MEMBER_MODIFIER ")[ \t]+)*((delegate|event)[ \t]+)*[][<>@.~_[:alnum:]]+[ \t]+[@._[:alnum:]]+)[ \t]*$\n"
 	 /* Type definitions */
-	 "^[ \t]*(((static|public|internal|private|protected|new|unsafe|sealed|abstract|partial)[ \t]+)*(class|enum|interface|struct)[ \t]+.*)$\n"
+	 "^[ \t]*(((" CS_MEMBER_MODIFIER ")[ \t]+)*(class|enum|interface|struct)[ \t]+.*)$\n"
+	 /* Keywords */
+	 "!^[ \t]*(" CS_KEYWORD ")\n"
 	 /* Namespace */
 	 "^[ \t]*(namespace[ \t]+.*)$",
 	 /* -- */
 	 "[a-zA-Z_][a-zA-Z0-9_]*"
 	 "|[-+0-9.e]+[fFlL]?|0[xXbB]?[0-9a-fA-F]+[lL]?"
 	 "|[-+*/<>%&^|=!]=|--|\\+\\+|<<=?|>>=?|&&|\\|\\||::|->"),
+
+#undef CS_KEYWORD
+#undef CS_METHOD_MODIFIER
+#undef CS_MEMBER_MODIFIER
+#undef CS_VISIBILITY
 
 PATTERNS("php",
 	 "^[ \t]*(((public|private|protected|static|final)[ \t]+)*((class|function)[ \t].*))$",
