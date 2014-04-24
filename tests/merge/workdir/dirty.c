@@ -86,7 +86,7 @@ static void set_core_autocrlf_to(git_repository *repo, bool value)
 	git_config_free(cfg);
 }
 
-static int merge_branch(int merge_file_favor, int checkout_strategy)
+static int merge_branch(void)
 {
 	git_oid their_oids[1];
 	git_merge_head *their_heads[1];
@@ -97,8 +97,7 @@ static int merge_branch(int merge_file_favor, int checkout_strategy)
 	cl_git_pass(git_oid_fromstr(&their_oids[0], MERGE_BRANCH_OID));
 	cl_git_pass(git_merge_head_from_id(&their_heads[0], repo, &their_oids[0]));
 
-	merge_opts.file_favor = merge_file_favor;
-	checkout_opts.checkout_strategy = checkout_strategy;
+	checkout_opts.checkout_strategy = GIT_CHECKOUT_SAFE | GIT_CHECKOUT_ALLOW_CONFLICTS;
 	error = git_merge(repo, (const git_merge_head **)their_heads, 1, &merge_opts, &checkout_opts);
 
 	git_merge_head_free(their_heads[0]);
@@ -214,7 +213,7 @@ static int merge_dirty_files(char *dirty_files[])
 
 	write_files(dirty_files);
 
-	error = merge_branch(0, 0);
+	error = merge_branch();
 
 	git_object_free(head_object);
 	git_reference_free(head);
@@ -237,7 +236,7 @@ static int merge_differently_filtered_files(char *files[])
 
 	cl_git_pass(git_index_write(repo_index));
 
-	error = merge_branch(0, 0);
+	error = merge_branch();
 
 	git_object_free(head_object);
 	git_reference_free(head);
@@ -248,7 +247,7 @@ static int merge_differently_filtered_files(char *files[])
 static int merge_staged_files(char *staged_files[])
 {	
 	stage_random_files(staged_files);
-	return merge_branch(0, 0);
+	return merge_branch();
 }
 
 void test_merge_workdir_dirty__unaffected_dirty_files_allowed(void)
@@ -258,6 +257,23 @@ void test_merge_workdir_dirty__unaffected_dirty_files_allowed(void)
 
 	for (i = 0, files = unaffected[i]; files[0]; files = unaffected[++i])
 		cl_git_pass(merge_dirty_files(files));
+}
+
+void test_merge_workdir_dirty__unstaged_deletes_maintained(void)
+{
+	git_reference *head;
+	git_object *head_object;
+
+	cl_git_pass(git_repository_head(&head, repo));
+	cl_git_pass(git_reference_peel(&head_object, head, GIT_OBJ_COMMIT));
+	cl_git_pass(git_reset(repo, head_object, GIT_RESET_HARD, NULL, NULL));
+
+	cl_git_pass(p_unlink("merge-resolve/unchanged.txt"));
+
+	cl_git_pass(merge_branch());
+
+	git_object_free(head_object);
+	git_reference_free(head);
 }
 
 void test_merge_workdir_dirty__affected_dirty_files_disallowed(void)
@@ -292,7 +308,7 @@ void test_merge_workdir_dirty__identical_staged_files_allowed(void)
 		stage_content(content);
 
 		git_index_write(repo_index);
-		cl_git_pass(merge_branch(0, 0));
+		cl_git_pass(merge_branch());
 	}
 }
 

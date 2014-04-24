@@ -92,7 +92,7 @@ void test_merge_workdir_simple__cleanup(void)
 	cl_git_sandbox_cleanup();
 }
 
-static void merge_simple_branch(int merge_file_favor, int checkout_strategy)
+static void merge_simple_branch(int merge_file_favor, int addl_checkout_strategy)
 {
 	git_oid their_oids[1];
 	git_merge_head *their_heads[1];
@@ -103,7 +103,9 @@ static void merge_simple_branch(int merge_file_favor, int checkout_strategy)
 	cl_git_pass(git_merge_head_from_id(&their_heads[0], repo, &their_oids[0]));
 
 	merge_opts.file_favor = merge_file_favor;
-	checkout_opts.checkout_strategy = checkout_strategy;
+	checkout_opts.checkout_strategy = GIT_CHECKOUT_SAFE | GIT_CHECKOUT_ALLOW_CONFLICTS |
+		addl_checkout_strategy;
+
 	cl_git_pass(git_merge(repo, (const git_merge_head **)their_heads, 1, &merge_opts, &checkout_opts));
 
 	git_merge_head_free(their_heads[0]);

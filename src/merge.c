@@ -2186,8 +2186,6 @@ static int merge_normalize_checkout_opts(
 	const git_merge_head **their_heads)
 {
 	int error = 0;
-	unsigned int default_checkout_strategy = GIT_CHECKOUT_SAFE_CREATE |
-		GIT_CHECKOUT_ALLOW_CONFLICTS;
 
 	GIT_UNUSED(repo);
 
@@ -2195,11 +2193,11 @@ static int merge_normalize_checkout_opts(
 		memcpy(checkout_opts, given_checkout_opts, sizeof(git_checkout_options));
 	else {
 		git_checkout_options default_checkout_opts = GIT_CHECKOUT_OPTIONS_INIT;
+		default_checkout_opts.checkout_strategy =  GIT_CHECKOUT_SAFE |
+			GIT_CHECKOUT_ALLOW_CONFLICTS;
+
 		memcpy(checkout_opts, &default_checkout_opts, sizeof(git_checkout_options));
 	}
-
-	if (!checkout_opts->checkout_strategy)
-		checkout_opts->checkout_strategy = default_checkout_strategy;
 
 	/* TODO: for multiple ancestors in merge-recursive, this is "merged common ancestors" */
 	if (!checkout_opts->ancestor_label) {
