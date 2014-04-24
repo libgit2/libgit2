@@ -210,7 +210,7 @@ static int fetchhead_ref_parse(
 			name = desc + 1;
 
 		if (name) {
-			if ((desc = strchr(name, '\'')) == NULL ||
+			if ((desc = strstr(name, "' ")) == NULL ||
 				git__prefixcmp(desc, "' of ") != 0) {
 				giterr_set(GITERR_FETCHHEAD,
 					"Invalid description in FETCH_HEAD line %d", line_num);
