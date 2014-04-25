@@ -617,7 +617,7 @@ int git_filter_list_apply_to_data(
 			si = di; /* swap buffers */
 		} else {
 			tgt->size = 0;
-			return error;
+			goto cleanup;
 		}
 	}
 
@@ -625,9 +625,10 @@ int git_filter_list_apply_to_data(
 	if (si != 1)
 		git_buf_swap(dbuffer[0], dbuffer[1]);
 
+cleanup:
 	git_buf_free(&local); /* don't leak if we allocated locally */
 
-	return 0;
+	return error;
 }
 
 int git_filter_list_apply_to_file(
