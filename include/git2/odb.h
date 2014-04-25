@@ -338,7 +338,7 @@ GIT_EXTERN(int) git_odb_open_rstream(git_odb_stream **out, git_odb *db, const gi
 GIT_EXTERN(int) git_odb_write_pack(
 	git_odb_writepack **out,
 	git_odb *db,
-	git_transfer_progress_callback progress_cb,
+	git_transfer_progress_cb progress_cb,
 	void *progress_payload);
 
 /**

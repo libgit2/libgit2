@@ -241,7 +241,7 @@ typedef struct git_transfer_progress {
  * @param stats Structure containing information about the state of the transfer
  * @param payload Payload provided by caller
  */
-typedef int (*git_transfer_progress_callback)(const git_transfer_progress *stats, void *payload);
+typedef int (*git_transfer_progress_cb)(const git_transfer_progress *stats, void *payload);
 
 /**
  * Opaque structure representing a submodule.

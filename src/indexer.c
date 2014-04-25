@@ -45,7 +45,7 @@ struct git_indexer {
 	unsigned int fanout[256];
 	git_hash_ctx hash_ctx;
 	git_oid hash;
-	git_transfer_progress_callback progress_cb;
+	git_transfer_progress_cb progress_cb;
 	void *progress_payload;
 	char objbuf[8*1024];
 
@@ -120,7 +120,7 @@ int git_indexer_new(
 		const char *prefix,
 		unsigned int mode,
 		git_odb *odb,
-		git_transfer_progress_callback progress_cb,
+		git_transfer_progress_cb progress_cb,
 		void *progress_payload)
 {
 	git_indexer *idx;

@@ -457,7 +457,7 @@ struct git_remote_callbacks {
 	 * progress side-band will be passed to this function (this is
 	 * the 'counting objects' output.
 	 */
-	int (*progress)(const char *str, int len, void *data);
+	git_transport_message_cb sideband_progress;
 
 	/**
 	 * Completion is called when different parts of the download
@@ -472,14 +472,14 @@ struct git_remote_callbacks {
 	 * Returning GIT_PASSTHROUGH will make libgit2 behave as
 	 * though this field isn't set.
 	 */
-	int (*credentials)(git_cred **cred, const char *url, const char *username_from_url, unsigned int allowed_types,	void *data);
+	git_cred_acquire_cb credentials;
 
 	/**
 	 * During the download of new data, this will be regularly
 	 * called with the current count of progress done by the
 	 * indexer.
 	 */
-	int (*transfer_progress)(const git_transfer_progress *stats, void *data);
+	git_transfer_progress_cb transfer_progress;
 
 	/**
 	 * Each time a reference is updated locally, this function

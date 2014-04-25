@@ -450,7 +450,7 @@ static int no_sideband(transport_smart *t, struct git_odb_writepack *writepack, 
 
 struct network_packetsize_payload
 {
-	git_transfer_progress_callback callback;
+	git_transfer_progress_cb callback;
 	void *payload;
 	git_transfer_progress *stats;
 	size_t last_fired_bytes;
@@ -478,7 +478,7 @@ int git_smart__download_pack(
 	git_transport *transport,
 	git_repository *repo,
 	git_transfer_progress *stats,
-	git_transfer_progress_callback progress_cb,
+	git_transfer_progress_cb transfer_progress_cb,
 	void *progress_payload)
 {
 	transport_smart *t = (transport_smart *)transport;
@@ -490,8 +490,8 @@ int git_smart__download_pack(
 
 	memset(stats, 0, sizeof(git_transfer_progress));
 
-	if (progress_cb) {
-		npp.callback = progress_cb;
+	if (transfer_progress_cb) {
+		npp.callback = transfer_progress_cb;
 		npp.payload = progress_payload;
 		npp.stats = stats;
 		t->packetsize_cb = &network_packetsize;
@@ -504,7 +504,7 @@ int git_smart__download_pack(
 	}
 
 	if ((error = git_repository_odb__weakptr(&odb, repo)) < 0 ||
-		((error = git_odb_write_pack(&writepack, odb, progress_cb, progress_payload)) != 0))
+		((error = git_odb_write_pack(&writepack, odb, transfer_progress_cb, progress_payload)) != 0))
 		goto done;
 
 	/*
@@ -518,7 +518,7 @@ int git_smart__download_pack(
 	}
 
 	do {
-		git_pkt *pkt;
+		git_pkt *pkt = NULL;
 
 		/* Check cancellation before network call */
 		if (t->cancelled.val) {
@@ -527,40 +527,34 @@ int git_smart__download_pack(
 			goto done;
 		}
 
-		if ((error = recv_pkt(&pkt, buf)) < 0)
-			goto done;
-
-		/* Check cancellation after network call */
-		if (t->cancelled.val) {
-			giterr_clear();
-			error = GIT_EUSER;
-			goto done;
-		}
-
-		if (pkt->type == GIT_PKT_PROGRESS) {
-			if (t->progress_cb) {
-				git_pkt_progress *p = (git_pkt_progress *) pkt;
-				error = t->progress_cb(p->data, p->len, t->message_cb_payload);
-				if (error)
-					goto done;
+		if ((error = recv_pkt(&pkt, buf)) >= 0) {
+			/* Check cancellation after network call */
+			if (t->cancelled.val) {
+				giterr_clear();
+				error = GIT_EUSER;
+			} else if (pkt->type == GIT_PKT_PROGRESS) {
+				if (t->progress_cb) {
+					git_pkt_progress *p = (git_pkt_progress *) pkt;
+					error = t->progress_cb(p->data, p->len, t->message_cb_payload);
+				}
+			} else if (pkt->type == GIT_PKT_DATA) {
+				git_pkt_data *p = (git_pkt_data *) pkt;
+				error = writepack->append(writepack, p->data, p->len, stats);
+			} else if (pkt->type == GIT_PKT_FLUSH) {
+				/* A flush indicates the end of the packfile */
+				git__free(pkt);
+				break;
 			}
-			git__free(pkt);
-		} else if (pkt->type == GIT_PKT_DATA) {
-			git_pkt_data *p = (git_pkt_data *) pkt;
-			error = writepack->append(writepack, p->data, p->len, stats);
-
-			git__free(pkt);
-			if (error != 0)
-				goto done;
-		} else if (pkt->type == GIT_PKT_FLUSH) {
-			/* A flush indicates the end of the packfile */
-			git__free(pkt);
-			break;
 		}
+
+		git__free(pkt);
+		if (error < 0)
+			goto done;
+
 	} while (1);
 
 	/*
-	 * Trailing execution of progress_cb, if necessary...
+	 * Trailing execution of transfer_progress_cb, if necessary...
 	 * Only the callback through the npp datastructure currently
 	 * updates the last_fired_bytes value. It is possible that
 	 * progress has already been reported with the correct
@@ -579,7 +573,7 @@ int git_smart__download_pack(
 done:
 	if (writepack)
 		writepack->free(writepack);
-	if (progress_cb) {
+	if (transfer_progress_cb) {
 		t->packetsize_cb = NULL;
 		t->packetsize_payload = NULL;
 	}
@@ -634,7 +628,7 @@ static int add_push_report_pkt(git_push *push, git_pkt *pkt)
 
 	switch (pkt->type) {
 		case GIT_PKT_OK:
-			status = git__calloc(1, sizeof(push_status));
+			status = git__calloc(sizeof(push_status), 1);
 			GITERR_CHECK_ALLOC(status);
 			status->msg = NULL;
 			status->ref = git__strdup(((git_pkt_ok *)pkt)->ref);
@@ -696,10 +690,11 @@ static int add_push_report_sideband_pkt(git_push *push, git_pkt_data *data_pkt)
 	return 0;
 }
 
-static int parse_report(gitno_buffer *buf, git_push *push)
+static int parse_report(transport_smart *transport, git_push *push)
 {
 	git_pkt *pkt = NULL;
 	const char *line_end = NULL;
+	gitno_buffer *buf = &transport->buffer;
 	int error, recvd;
 
 	for (;;) {
@@ -738,6 +733,10 @@ static int parse_report(gitno_buffer *buf, git_push *push)
 				error = -1;
 				break;
 			case GIT_PKT_PROGRESS:
+				if (transport->progress_cb) {
+					git_pkt_progress *p = (git_pkt_progress *) pkt;
+					error = transport->progress_cb(p->data, p->len, transport->message_cb_payload);
+				}
 				break;
 			default:
 				error = add_push_report_pkt(push, pkt);
@@ -883,10 +882,7 @@ static int stream_thunk(void *buf, size_t size, void *data)
 
 		if ((current_time - payload->last_progress_report_time) >= MIN_PROGRESS_UPDATE_INTERVAL) {
 			payload->last_progress_report_time = current_time;
-			if (payload->cb(payload->pb->nr_written, payload->pb->nr_objects, payload->last_bytes, payload->cb_payload)) {
-				giterr_clear();
-				error = GIT_EUSER;
-			}
+			error = payload->cb(payload->pb->nr_written, payload->pb->nr_objects, payload->last_bytes, payload->cb_payload);
 		}
 	}
 
@@ -953,12 +949,19 @@ int git_smart__push(git_transport *transport, git_push *push)
 	 * we consider the pack to have been unpacked successfully */
 	if (!push->specs.length || !push->report_status)
 		push->unpack_ok = 1;
-	else if ((error = parse_report(&t->buffer, push)) < 0)
+	else if ((error = parse_report(t, push)) < 0)
 		goto done;
 
 	/* If progress is being reported write the final report */
 	if (push->transfer_progress_cb) {
-		push->transfer_progress_cb(push->pb->nr_written, push->pb->nr_objects, packbuilder_payload.last_bytes, push->transfer_progress_cb_payload);
+		error = push->transfer_progress_cb(
+					push->pb->nr_written,
+					push->pb->nr_objects,
+					packbuilder_payload.last_bytes,
+					push->transfer_progress_cb_payload);
+
+		if (error < 0)
+			goto done;
 	}
 
 	if (push->status.length) {

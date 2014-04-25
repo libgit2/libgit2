@@ -208,9 +208,7 @@ int git_push_update_tips(
 	int error = 0;
 
 	git_vector_foreach(&push->status, i, status) {
-		/* If this ref update was successful (ok, not ng), it will have an empty message */
-		if (status->msg)
-			continue;
+		int fire_callback = 1;
 
 		/* Find the corresponding remote ref */
 		fetch_spec = git_remote__matching_refspec(push->remote, status->ref);
@@ -230,24 +228,38 @@ int git_push_update_tips(
 		if (j == push->specs.length)
 			continue;
 
-		/* Update the remote ref */
-		if (git_oid_iszero(&push_spec->loid)) {
-			error = git_reference_lookup(&remote_ref, push->remote->repo, git_buf_cstr(&remote_ref_name));
+		/* If this ref update was successful (ok, not ng), it will have an empty message */
+		if (status->msg == NULL) {
+			/* Update the remote ref */
+			if (git_oid_iszero(&push_spec->loid)) {
+				error = git_reference_lookup(&remote_ref, push->remote->repo, git_buf_cstr(&remote_ref_name));
 
-			if (!error) {
-				if ((error = git_reference_delete(remote_ref)) < 0) {
+				if (error >= 0) {
+					error = git_reference_delete(remote_ref);
 					git_reference_free(remote_ref);
-					goto on_error;
 				}
-				git_reference_free(remote_ref);
-			} else if (error == GIT_ENOTFOUND)
-				giterr_clear();
-			else
+			} else {
+				error = git_reference_create(NULL, push->remote->repo,
+							git_buf_cstr(&remote_ref_name), &push_spec->loid, 1, signature,
+							reflog_message ? reflog_message : "update by push");
+			}
+		}
+
+		if (error < 0) {
+			if (error != GIT_ENOTFOUND)
 				goto on_error;
-		} else if ((error = git_reference_create(NULL, push->remote->repo,
-						git_buf_cstr(&remote_ref_name), &push_spec->loid, 1, signature,
-						reflog_message ? reflog_message : "update by push")) < 0)
-			goto on_error;
+
+			giterr_clear();
+			fire_callback = 0;
+		}
+
+		if (fire_callback && push->remote->callbacks.update_tips) {
+			error = push->remote->callbacks.update_tips(git_buf_cstr(&remote_ref_name),
+						&push_spec->roid, &push_spec->loid, push->remote->callbacks.payload);
+
+			if (error < 0)
+				goto on_error;
+		}
 	}
 
 	error = 0;
@@ -677,9 +689,7 @@ void git_push_status_free(push_status *status)
 	if (status == NULL)
 		return;
 
-	if (status->msg)
-		git__free(status->msg);
-
+	git__free(status->msg);
 	git__free(status->ref);
 	git__free(status);
 }
