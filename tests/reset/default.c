@@ -185,23 +185,20 @@ void test_reset_default__resetting_unknown_filepaths_does_not_fail(void)
 
 void test_reset_default__staged_rename_reset_delete(void)
 {
-	git_index *idx;
 	git_index_entry entry;
 	const git_index_entry *existing;
 	char *paths[] = { "new.txt" };
 
 	initialize("testrepo2");
 
-	cl_git_pass(git_repository_index(&idx, _repo));
-
-	existing = git_index_get_bypath(idx, "new.txt", 0);
+	existing = git_index_get_bypath(_index, "new.txt", 0);
 	cl_assert(existing);
 	memcpy(&entry, existing, sizeof(entry));
 
-	cl_git_pass(git_index_remove_bypath(idx, "new.txt"));
+	cl_git_pass(git_index_remove_bypath(_index, "new.txt"));
 
 	entry.path = "renamed.txt";
-	cl_git_pass(git_index_add(idx, &entry));
+	cl_git_pass(git_index_add(_index, &entry));
 
 	_pathspecs.strings = paths;
 	_pathspecs.count = 1;
