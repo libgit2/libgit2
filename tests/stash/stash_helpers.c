@@ -42,15 +42,11 @@ void assert_status(
 	int status_flags)
 {
 	unsigned int status;
-	int error;
 
-	error = git_status_file(&status, repo, path);
-
-	if (status_flags < 0) {
-		cl_assert_equal_i(status_flags, error);
-		return;
+	if (status_flags < 0)
+		cl_assert_equal_i(status_flags, git_status_file(&status, repo, path));
+	else {
+		cl_git_pass(git_status_file(&status, repo, path));
+		cl_assert_equal_i((unsigned int)status_flags, status);
 	}
-
-	cl_assert_equal_i(0, error);
-	cl_assert_equal_i((unsigned int)status_flags, status);
 }

@@ -178,7 +178,8 @@ static int stash_update_index_from_diff(
 			break;
 
 		case GIT_DELTA_UNTRACKED:
-			if (data->include_untracked)
+			if (data->include_untracked &&
+				delta->new_file.mode != GIT_FILEMODE_TREE)
 				add_path = delta->new_file.path;
 			break;
 

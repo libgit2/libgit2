@@ -784,72 +784,6 @@ static bool entry_is_prefixed(
 			item->path[pathlen] == '/');
 }
 
-static int diff_scan_inside_untracked_dir(
-	git_diff *diff, diff_in_progress *info, git_delta_t *delta_type)
-{
-	int error = 0;
-	git_buf base = GIT_BUF_INIT;
-	bool is_ignored;
-
-	*delta_type = GIT_DELTA_IGNORED;
-	git_buf_sets(&base, info->nitem->path);
-
-	/* advance into untracked directory */
-	if ((error = git_iterator_advance_into(&info->nitem, info->new_iter)) < 0) {
-
-		/* skip ahead if empty */
-		if (error == GIT_ENOTFOUND) {
-			giterr_clear();
-			error = git_iterator_advance(&info->nitem, info->new_iter);
-		}
-
-		goto done;
-	}
-
-	/* look for actual untracked file */
-	while (info->nitem != NULL &&
-		   !diff->pfxcomp(info->nitem->path, git_buf_cstr(&base))) {
-		is_ignored = git_iterator_current_is_ignored(info->new_iter);
-
-		/* need to recurse into non-ignored directories */
-		if (!is_ignored && S_ISDIR(info->nitem->mode)) {
-			error = git_iterator_advance_into(&info->nitem, info->new_iter);
-
-			if (!error)
-				continue;
-			else if (error == GIT_ENOTFOUND) {
-				error = 0;
-				is_ignored = true; /* treat empty as ignored */
-			} else
-				break; /* real error, must stop */
-		}
-
-		/* found a non-ignored item - treat parent dir as untracked */
-		if (!is_ignored) {
-			*delta_type = GIT_DELTA_UNTRACKED;
-			break;
-		}
-
-		if ((error = git_iterator_advance(&info->nitem, info->new_iter)) < 0)
-			break;
-	}
-
-	/* finish off scan */
-	while (info->nitem != NULL &&
-		   !diff->pfxcomp(info->nitem->path, git_buf_cstr(&base))) {
-		if ((error = git_iterator_advance(&info->nitem, info->new_iter)) < 0)
-			break;
-	}
-
-done:
-	git_buf_free(&base);
-
-	if (error == GIT_ITEROVER)
-		error = 0;
-
-	return error;
-}
-
 static int handle_unmatched_new_item(
 	git_diff *diff, diff_in_progress *info)
 {
@@ -905,6 +839,7 @@ static int handle_unmatched_new_item(
 			DIFF_FLAG_ISNT_SET(diff, GIT_DIFF_ENABLE_FAST_UNTRACKED_DIRS))
 		{
 			git_diff_delta *last;
+			git_iterator_status_t untracked_state;
 
 			/* attempt to insert record for this directory */
 			if ((error = diff_delta__from_one(diff, delta_type, nitem)) != 0)
@@ -916,11 +851,14 @@ static int handle_unmatched_new_item(
 				return git_iterator_advance(&info->nitem, info->new_iter);
 
 			/* iterate into dir looking for an actual untracked file */
-			if (diff_scan_inside_untracked_dir(diff, info, &delta_type) < 0)
-				return -1;
+			if ((error = git_iterator_advance_over_with_status(
+					&info->nitem, &untracked_state, info->new_iter)) < 0 &&
+				error != GIT_ITEROVER)
+				return error;
 
-			/* it iteration changed delta type, the update the record */
-			if (delta_type == GIT_DELTA_IGNORED) {
+			/* if we found nothing or just ignored items, update the record */
+			if (untracked_state == GIT_ITERATOR_STATUS_IGNORED ||
+				untracked_state == GIT_ITERATOR_STATUS_EMPTY) {
 				last->status = GIT_DELTA_IGNORED;
 
 				/* remove the record if we don't want ignored records */

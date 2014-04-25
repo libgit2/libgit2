@@ -56,6 +56,7 @@ typedef struct {
 	git_vector conflicts;
 	git_buf path;
 	size_t workdir_len;
+	git_buf tmp;
 	unsigned int strategy;
 	int can_symlink;
 	bool reload_submodules;
@@ -259,21 +260,41 @@ static int checkout_action_no_wd(
 	return checkout_action_common(action, data, delta, NULL);
 }
 
+static bool wd_item_is_removable(git_iterator *iter, const git_index_entry *wd)
+{
+	git_buf *full = NULL;
+
+	if (wd->mode != GIT_FILEMODE_TREE)
+		return true;
+	if (git_iterator_current_workdir_path(&full, iter) < 0)
+		return true;
+	return !full || !git_path_contains(full, DOT_GIT);
+}
+
+static int checkout_queue_remove(checkout_data *data, const char *path)
+{
+	char *copy = git_pool_strdup(&data->pool, path);
+	GITERR_CHECK_ALLOC(copy);
+	return git_vector_insert(&data->removes, copy);
+}
+
+/* note that this advances the iterator over the wd item */
 static int checkout_action_wd_only(
 	checkout_data *data,
 	git_iterator *workdir,
-	const git_index_entry *wd,
+	const git_index_entry **wditem,
 	git_vector *pathspec)
 {
 	int error = 0;
 	bool remove = false;
 	git_checkout_notify_t notify = GIT_CHECKOUT_NOTIFY_NONE;
+	const git_index_entry *wd = *wditem;
 
 	if (!git_pathspec__match(
 			pathspec, wd->path,
 			(data->strategy & GIT_CHECKOUT_DISABLE_PATHSPEC_MATCH) != 0,
 			git_iterator_ignore_case(workdir), NULL, NULL))
-		return 0;
+		return git_iterator_advance(wditem, workdir);
 
 	/* check if item is tracked in the index but not in the checkout diff */
 	if (data->index != NULL) {
@@ -303,24 +324,49 @@ static int checkout_action_wd_only(
 		}
 	}
 
-	if (notify != GIT_CHECKOUT_NOTIFY_NONE)
-		/* found in index */;
-	else if (git_iterator_current_is_ignored(workdir)) {
-		notify = GIT_CHECKOUT_NOTIFY_IGNORED;
-		remove = ((data->strategy & GIT_CHECKOUT_REMOVE_IGNORED) != 0);
-	}
-	else {
-		notify = GIT_CHECKOUT_NOTIFY_UNTRACKED;
-		remove = ((data->strategy & GIT_CHECKOUT_REMOVE_UNTRACKED) != 0);
-	}
+	if (notify != GIT_CHECKOUT_NOTIFY_NONE) {
+		/* if we found something in the index, notify and advance */
+		if ((error = checkout_notify(data, notify, NULL, wd)) != 0)
+			return error;
 
-	error = checkout_notify(data, notify, NULL, wd);
+		if (remove && wd_item_is_removable(workdir, wd))
+			error = checkout_queue_remove(data, wd->path);
 
-	if (!error && remove) {
-		char *path = git_pool_strdup(&data->pool, wd->path);
-		GITERR_CHECK_ALLOC(path);
+		if (!error)
+			error = git_iterator_advance(wditem, workdir);
+	} else {
+		/* untracked or ignored - can't know which until we advance through */
+		bool over = false, removable = wd_item_is_removable(workdir, wd);
+		git_iterator_status_t untracked_state;
 
-		error = git_vector_insert(&data->removes, path);
+		/* copy the entry for issuing notification callback later */
+		git_index_entry saved_wd = *wd;
+		git_buf_sets(&data->tmp, wd->path);
+		saved_wd.path = data->tmp.ptr;
+
+		error = git_iterator_advance_over_with_status(
+			wditem, &untracked_state, workdir);
+		if (error == GIT_ITEROVER)
+			over = true;
+		else if (error < 0)
+			return error;
+
+		if (untracked_state == GIT_ITERATOR_STATUS_IGNORED) {
+			notify = GIT_CHECKOUT_NOTIFY_IGNORED;
+			remove = ((data->strategy & GIT_CHECKOUT_REMOVE_IGNORED) != 0);
+		} else {
+			notify = GIT_CHECKOUT_NOTIFY_UNTRACKED;
+			remove = ((data->strategy & GIT_CHECKOUT_REMOVE_UNTRACKED) != 0);
+		}
+
+		if ((error = checkout_notify(data, notify, NULL, &saved_wd)) != 0)
+			return error;
+
+		if (remove && removable)
+			error = checkout_queue_remove(data, saved_wd.path);
+
+		if (!error && over) /* restore ITEROVER if needed */
+			error = GIT_ITEROVER;
 	}
 
 	return error;
@@ -554,11 +600,8 @@ static int checkout_action(
 			}
 
 			/* case 1 - handle wd item (if it matches pathspec) */
-			error = checkout_action_wd_only(data, workdir, wd, pathspec);
-			if (error)
-				goto done;
-			if ((error = git_iterator_advance(wditem, workdir)) < 0 &&
-				error != GIT_ITEROVER)
+			error = checkout_action_wd_only(data, workdir, wditem, pathspec);
+			if (error && error != GIT_ITEROVER)
 				goto done;
 			continue;
 		}
@@ -619,10 +662,8 @@ static int checkout_remaining_wd_items(
 {
 	int error = 0;
 
-	while (wd && !error) {
-		if (!(error = checkout_action_wd_only(data, workdir, wd, spec)))
-			error = git_iterator_advance(&wd, workdir);
-	}
+	while (wd && !error)
+		error = checkout_action_wd_only(data, workdir, &wd, spec);
 
 	if (error == GIT_ITEROVER)
 		error = 0;
@@ -1853,6 +1894,7 @@ static void checkout_data_clear(checkout_data *data)
 	data->pfx = NULL;
 
 	git_buf_free(&data->path);
+	git_buf_free(&data->tmp);
 
 	git_index_free(data->index);
 	data->index = NULL;

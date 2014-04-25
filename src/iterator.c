@@ -1528,3 +1528,77 @@ int git_iterator_current_workdir_path(git_buf **path, git_iterator *iter)
 
 	return 0;
 }
+
+int git_iterator_advance_over_with_status(
+	const git_index_entry **entryptr,
+	git_iterator_status_t *status,
+	git_iterator *iter)
+{
+	int error = 0;
+	workdir_iterator *wi = (workdir_iterator *)iter;
+	char *base = NULL;
+	const git_index_entry *entry;
+
+	*status = GIT_ITERATOR_STATUS_NORMAL;
+
+	if (iter->type != GIT_ITERATOR_TYPE_WORKDIR)
+		return git_iterator_advance(entryptr, iter);
+	if ((error = git_iterator_current(&entry, iter)) < 0)
+		return error;
+
+	if (!S_ISDIR(entry->mode)) {
+		if (git_ignore__lookup(
+				&wi->ignores, wi->fi.entry.path, &wi->is_ignored) < 0)
+			wi->is_ignored = true;
+		if (wi->is_ignored)
+			*status = GIT_ITERATOR_STATUS_IGNORED;
+		return git_iterator_advance(entryptr, iter);
+	}
+
+	*status = GIT_ITERATOR_STATUS_EMPTY;
+
+	base = git__strdup(entry->path);
+	GITERR_CHECK_ALLOC(base);
+
+	/* scan inside directory looking for a non-ignored item */
+	while (entry && !iter->prefixcomp(entry->path, base)) {
+		if (git_ignore__lookup(
+				&wi->ignores, wi->fi.entry.path, &wi->is_ignored) < 0)
+			wi->is_ignored = true;
+
+		/* if we found an explicitly ignored item, then update from
+		 * EMPTY to IGNORED
+		 */
+		if (wi->is_ignored)
+			*status = GIT_ITERATOR_STATUS_IGNORED;
+		else if (S_ISDIR(entry->mode)) {
+			error = git_iterator_advance_into(&entry, iter);
+
+			if (!error)
+				continue;
+			else if (error == GIT_ENOTFOUND) {
+				error = 0;
+				wi->is_ignored = true; /* mark empty directories as ignored */
+			} else
+				break; /* real error, stop here */
+		} else {
+			/* we found a non-ignored item, treat parent as untracked */
+			*status = GIT_ITERATOR_STATUS_NORMAL;
+			break;
+		}
+
+		if ((error = git_iterator_advance(&entry, iter)) < 0)
+			break;
+	}
+
+	/* wrap up scan back to base directory */
+	while (entry && !iter->prefixcomp(entry->path, base))
+		if ((error = git_iterator_advance(&entry, iter)) < 0)
+			break;
+
+	*entryptr = entry;
+	git__free(base);
+
+	return error;
+}
+
