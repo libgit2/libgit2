@@ -236,6 +236,11 @@ GIT_EXTERN(int) git_status_foreach(
  * in what order.  See the `git_status_options` structure for details
  * about the additional controls that this makes available.
  *
+ * Note that if a `pathspec` is given in the `git_status_options` to filter
+ * the status, then the results from rename detection (if you enable it) may
+ * not be accurate.  To do rename detection properly, this must be called
+ * with no `pathspec` so that all files can be considered.
+ *
  * @param repo Repository object
  * @param opts Status options structure
  * @param callback The function to call on each file
@@ -251,8 +256,20 @@ GIT_EXTERN(int) git_status_foreach_ext(
 /**
  * Get file status for a single file.
  *
- * This is not quite the same as calling `git_status_foreach_ext()` with
- * the pathspec set to the specified path.
+ * This tries to get status for the filename that you give.  If no files
+ * match that name (in either the HEAD, index, or working directory), this
+ * returns GIT_ENOTFOUND.
+ *
+ * If the name matches multiple files (for example, if the `path` names a
+ * directory or if running on a case- insensitive filesystem and yet the
+ * HEAD has two entries that both match the path), then this returns
+ * GIT_EAMBIGUOUS because it cannot give correct results.
+ *
+ * This does not do any sort of rename detection.  Renames require a set of
+ * targets and because of the path filtering, there is not enough
+ * information to check renames correctly.  To check file status with rename
+ * detection, there is no choice but to do a full `git_status_list_new` and
+ * scan through looking for the path that you are interested in.
  *
  * @param status_flags Output combination of git_status_t values for file
  * @param repo A repository object
@@ -269,6 +286,11 @@ GIT_EXTERN(int) git_status_file(
 /**
  * Gather file status information and populate the `git_status_list`.
  *
+ * Note that if a `pathspec` is given in the `git_status_options` to filter
+ * the status, then the results from rename detection (if you enable it) may
+ * not be accurate.  To do rename detection properly, this must be called
+ * with no `pathspec` so that all files can be considered.
+ *
  * @param out Pointer to store the status results in
  * @param repo Repository object
  * @param opts Status options structure
@@ -281,6 +303,9 @@ GIT_EXTERN(int) git_status_list_new(
 
 /**
  * Gets the count of status entries in this list.
+ *
+ * If there are no changes in status (at least according the options given
+ * when the status list was created), this can return 0.
  *
  * @param statuslist Existing status list object
  * @return the number of status entries
