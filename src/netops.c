@@ -321,7 +321,7 @@ static int verify_server_cert(gitno_ssl *ssl, const char *host)
 	GENERAL_NAMES_free(alts);
 
 	if (matched == 0)
-		goto cert_fail;
+		goto cert_fail_name;
 
 	if (matched == 1)
 		return 0;
@@ -358,11 +358,11 @@ static int verify_server_cert(gitno_ssl *ssl, const char *host)
 		int size = ASN1_STRING_to_UTF8(&peer_cn, str);
 		GITERR_CHECK_ALLOC(peer_cn);
 		if (memchr(peer_cn, '\0', size))
-			goto cert_fail;
+			goto cert_fail_name;
 	}
 
 	if (check_host_name((char *)peer_cn, host) < 0)
-		goto cert_fail;
+		goto cert_fail_name;
 
 	OPENSSL_free(peer_cn);
 
@@ -372,9 +372,9 @@ on_error:
 	OPENSSL_free(peer_cn);
 	return ssl_set_error(ssl, 0);
 
-cert_fail:
+cert_fail_name:
 	OPENSSL_free(peer_cn);
-	giterr_set(GITERR_SSL, "Certificate host name check failed");
+	giterr_set(GITERR_SSL, "hostname does not match certificate");
 	return -1;
 }
 
