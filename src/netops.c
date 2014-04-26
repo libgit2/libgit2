@@ -287,6 +287,10 @@ static int verify_server_cert(gitno_ssl *ssl, const char *host)
 
 
 	cert = SSL_get_peer_certificate(ssl->ssl);
+	if (!cert) {
+		giterr_set(GITERR_SSL, "the server did not provide a certificate");
+		return -1;
+	}
 
 	/* Check the alternative names */
 	alts = X509_get_ext_d2i(cert, NID_subject_alt_name, NULL, NULL);
