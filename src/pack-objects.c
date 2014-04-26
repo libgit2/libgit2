@@ -406,6 +406,7 @@ static int write_one(
 			po->delta = NULL;
 	}
 
+	*status = WRITE_ONE_WRITTEN;
 	po->written = 1;
 	po->recursing = 0;
 
