@@ -207,7 +207,7 @@ static int gitno_ssl_teardown(gitno_ssl *ssl)
 }
 
 /* Match host names according to RFC 2818 rules */
-static int match_host(const char *pattern, const char *host)
+int gitno__match_host(const char *pattern, const char *host)
 {
 	for (;;) {
 		char c = tolower(*pattern++);
@@ -230,9 +230,9 @@ static int match_host(const char *pattern, const char *host)
 			while(*host) {
 				char h = tolower(*host);
 				if (c == h)
-					return match_host(pattern, host++);
+					return gitno__match_host(pattern, host++);
 				if (h == '.')
-					return match_host(pattern, host);
+					return gitno__match_host(pattern, host);
 				host++;
 			}
 			return -1;
@@ -250,7 +250,7 @@ static int check_host_name(const char *name, const char *host)
 	if (!strcasecmp(name, host))
 		return 0;
 
-	if (match_host(name, host) < 0)
+	if (gitno__match_host(name, host) < 0)
 		return -1;
 
 	return 0;
