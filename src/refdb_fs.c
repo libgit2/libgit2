@@ -930,7 +930,7 @@ static int should_write_reflog(int *write, git_repository *repo, const char *nam
 	git_config *config;
 	int error, logall, is_bare;
 
-	/* Defaults to the oppsite of being bare */
+	/* Defaults to the opposite of the repo being bare */
 	is_bare = git_repository_is_bare(repo);
 	logall = !is_bare;
 
