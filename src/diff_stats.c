@@ -90,15 +90,16 @@ int git_diff_file_stats__full_to_buf(
 			goto on_error;
 
 		if (filestat->insertions || filestat->deletions) {
+			size_t total = filestat->insertions + filestat->deletions;
+
 			if (git_buf_putc(out, ' ') < 0)
 				goto on_error;
 
-			if (!width) {
+			if (!width || total <= width) {
 				if (git_buf_putcn(out, '+', filestat->insertions) < 0 ||
 					git_buf_putcn(out, '-', filestat->deletions) < 0)
 					goto on_error;
 			} else {
-				size_t total = filestat->insertions + filestat->deletions;
 				size_t full = (total * width + stats->max_filestat / 2) /
 					stats->max_filestat;
 				size_t plus = full * filestat->insertions / total;
