@@ -74,7 +74,7 @@ static void git__shutdown(void)
 #if defined(GIT_THREADS) && defined(GIT_WIN32)
 
 static DWORD _tls_index;
-static DWORD _mutex = 0;
+static volatile LONG _mutex = 0;
 
 static int synchronized_threads_init()
 {
