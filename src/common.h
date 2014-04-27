@@ -44,6 +44,7 @@
 #else
 
 # include <unistd.h>
+# include <strings.h>
 # ifdef GIT_THREADS
 #	include <pthread.h>
 #	include <sched.h>
