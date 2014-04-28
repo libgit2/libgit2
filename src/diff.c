@@ -664,6 +664,7 @@ static int maybe_modified(
 	unsigned int omode = oitem->mode;
 	unsigned int nmode = nitem->mode;
 	bool new_is_workdir = (info->new_iter->type == GIT_ITERATOR_TYPE_WORKDIR);
+	bool modified_uncertain = false;
 	const char *matched_pathspec;
 	int error = 0;
 
@@ -731,15 +732,21 @@ static int maybe_modified(
 		/* if the stat data looks different, then mark modified - this just
 		 * means that the OID will be recalculated below to confirm change
 		 */
-		else if (omode != nmode ||
-			oitem->file_size != nitem->file_size ||
-			!diff_time_eq(&oitem->mtime, &nitem->mtime, use_nanos) ||
+		else if (omode != nmode || oitem->file_size != nitem->file_size) {
+			status = GIT_DELTA_MODIFIED;
+			modified_uncertain =
+				(oitem->file_size <= 0 && nitem->file_size > 0);
+		}
+		else if (!diff_time_eq(&oitem->mtime, &nitem->mtime, use_nanos) ||
 			(use_ctime &&
 			 !diff_time_eq(&oitem->ctime, &nitem->ctime, use_nanos)) ||
 			oitem->ino != nitem->ino ||
 			oitem->uid != nitem->uid ||
 			oitem->gid != nitem->gid)
+		{
 			status = GIT_DELTA_MODIFIED;
+			modified_uncertain = true;
+		}
 	}
 
 	/* if mode is GITLINK and submodules are ignored, then skip */
@@ -750,7 +757,7 @@ static int maybe_modified(
 	/* if we got here and decided that the files are modified, but we
 	 * haven't calculated the OID of the new item, then calculate it now
 	 */
-	if (status == GIT_DELTA_MODIFIED && git_oid_iszero(&nitem->id)) {
+	if (modified_uncertain && git_oid_iszero(&nitem->id)) {
 		if (git_oid_iszero(&noid)) {
 			if ((error = git_diff__oid_for_file(&noid,
 					diff, nitem->path, nitem->mode, nitem->file_size)) < 0)

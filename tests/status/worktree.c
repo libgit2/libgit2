@@ -578,7 +578,11 @@ void test_status_worktree__line_endings_dont_count_as_changes_with_autocrlf(void
 
 	cl_git_pass(git_status_file(&status, repo, "current_file"));
 
-	cl_assert_equal_i(GIT_STATUS_CURRENT, status);
+	/* stat data on file should no longer match stat cache, even though
+	 * file diff will be empty because of line-ending conversion - matches
+	 * the Git command-line behavior here.
+	 */
+	cl_assert_equal_i(GIT_STATUS_WT_MODIFIED, status);
 }
 
 void test_status_worktree__line_endings_dont_count_as_changes_with_autocrlf_issue_1397(void)

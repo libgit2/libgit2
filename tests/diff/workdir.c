@@ -67,8 +67,8 @@ void test_diff_workdir__to_index(void)
 #ifdef GIT_PERF
 		cl_assert_equal_sz(
 			13 /* in root */ + 3 /* in subdir */, diff->stat_calls);
-		cl_assert_equal_sz(9, diff->oid_calculations);
-		cl_assert_equal_sz(2, diff->submodule_lookups);
+		cl_assert_equal_sz(5, diff->oid_calculations);
+		cl_assert_equal_sz(1, diff->submodule_lookups);
 #endif
 	}
 

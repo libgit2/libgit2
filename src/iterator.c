@@ -1306,7 +1306,7 @@ static int workdir_iterator__enter_dir(fs_iterator *fi)
 
 	/* convert submodules to GITLINK and remove trailing slashes */
 	git_vector_foreach(&ff->entries, pos, entry) {
-		if (!S_ISDIR(entry->st.st_mode))
+		if (!S_ISDIR(entry->st.st_mode) || !strcmp(GIT_DIR, entry->path))
 			continue;
 
 		GIT_PERF_INC(fi->base.submodule_lookups);
