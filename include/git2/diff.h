@@ -145,6 +145,13 @@ typedef enum {
 	 */
 	GIT_DIFF_ENABLE_FAST_UNTRACKED_DIRS = (1u << 14),
 
+	/** When diff finds a file in the working directory with stat
+	 * information different from the index, but the OID ends up being the
+	 * same, write the correct stat information into the index.  Note:
+	 * without this flag, diff will always leave the index untouched.
+	 */
+	GIT_DIFF_UPDATE_INDEX = (1u << 15),
+
 	/*
 	 * Options controlling how output will be generated
 	 */

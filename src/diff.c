@@ -442,6 +442,14 @@ static int diff_list_apply_options(
 		diff->new_src = tmp_src;
 	}
 
+	/* Unset UPDATE_INDEX unless diffing workdir and index */
+	if (DIFF_FLAG_IS_SET(diff, GIT_DIFF_UPDATE_INDEX) &&
+		(!(diff->old_src == GIT_ITERATOR_TYPE_WORKDIR ||
+		   diff->new_src == GIT_ITERATOR_TYPE_WORKDIR) ||
+		 !(diff->old_src == GIT_ITERATOR_TYPE_INDEX ||
+		   diff->new_src == GIT_ITERATOR_TYPE_INDEX)))
+		diff->opts.flags &= ~GIT_DIFF_UPDATE_INDEX;
+
 	/* if ignore_submodules not explicitly set, check diff config */
 	if (diff->opts.ignore_submodules <= 0) {
 		const git_config_entry *entry;
@@ -523,11 +531,14 @@ int git_diff__oid_for_file(
 	entry.file_size = size;
 	entry.path = (char *)path;
 
-	return git_diff__oid_for_entry(out, diff, &entry);
+	return git_diff__oid_for_entry(out, diff, &entry, NULL);
 }
 
 int git_diff__oid_for_entry(
-	git_oid *out, git_diff *diff, const git_index_entry *src)
+	git_oid *out,
+	git_diff *diff,
+	const git_index_entry *src,
+	const git_oid *update_match)
 {
 	int error = 0;
 	git_buf full_path = GIT_BUF_INIT;
@@ -595,7 +606,16 @@ int git_diff__oid_for_entry(
 		git_filter_list_free(fl);
 	}
 
-	/* TODO: update index for entry if requested */
+	/* update index for entry if requested */
+	if (!error && update_match && git_oid_equal(out, update_match)) {
+		git_index *idx;
+
+		if (!(error = git_repository_index(&idx, diff->repo))) {
+			memcpy(&entry.id, out, sizeof(entry.id));
+			error = git_index_add(idx, &entry);
+			git_index_free(idx);
+		}
+ 	}
 
 	git_buf_free(&full_path);
 	return error;
@@ -776,7 +796,12 @@ static int maybe_modified(
 	 */
 	if (modified_uncertain && git_oid_iszero(&nitem->id)) {
 		if (git_oid_iszero(&noid)) {
-			if ((error = git_diff__oid_for_entry(&noid, diff, nitem)) < 0)
+			const git_oid *update_check =
+				DIFF_FLAG_IS_SET(diff, GIT_DIFF_UPDATE_INDEX) ?
+				&oitem->id : NULL;
+
+			if ((error = git_diff__oid_for_entry(
+					&noid, diff, nitem, update_check)) < 0)
 				return error;
 		}
 
@@ -1207,6 +1232,9 @@ int git_diff_index_to_workdir(
 		git_iterator_for_workdir(
 			&b, repo, GIT_ITERATOR_DONT_AUTOEXPAND, pfx, pfx)
 	);
+
+	if (!error && DIFF_FLAG_IS_SET(*diff, GIT_DIFF_UPDATE_INDEX))
+		error = git_index_write(index);
 
 	return error;
 }
