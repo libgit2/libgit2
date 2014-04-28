@@ -516,38 +516,52 @@ int git_diff__oid_for_file(
 	uint16_t  mode,
 	git_off_t size)
 {
+	git_index_entry entry;
+
+	memset(&entry, 0, sizeof(entry));
+	entry.mode = mode;
+	entry.file_size = size;
+	entry.path = (char *)path;
+
+	return git_diff__oid_for_entry(out, diff, &entry);
+}
+
+int git_diff__oid_for_entry(
+	git_oid *out, git_diff *diff, const git_index_entry *src)
+{
 	int error = 0;
 	git_buf full_path = GIT_BUF_INIT;
+	git_index_entry entry = *src;
 	git_filter_list *fl = NULL;
 
 	memset(out, 0, sizeof(*out));
 
 	if (git_buf_joinpath(
-		&full_path, git_repository_workdir(diff->repo), path) < 0)
+		&full_path, git_repository_workdir(diff->repo), entry.path) < 0)
 		return -1;
 
-	if (!mode) {
+	if (!entry.mode) {
 		struct stat st;
 
 		GIT_PERF_INC(diff->stat_calls);
 
 		if (p_stat(full_path.ptr, &st) < 0) {
-			error = git_path_set_error(errno, path, "stat");
+			error = git_path_set_error(errno, entry.path, "stat");
 			git_buf_free(&full_path);
 			return error;
 		}
 
-		mode = st.st_mode;
-		size = st.st_size;
+		git_index_entry__init_from_stat(
+			&entry, &st, (diff->diffcaps & GIT_DIFFCAPS_TRUST_MODE_BITS) != 0);
 	}
 
 	/* calculate OID for file if possible */
-	if (S_ISGITLINK(mode)) {
+	if (S_ISGITLINK(entry.mode)) {
 		git_submodule *sm;
 
 		GIT_PERF_INC(diff->submodule_lookups);
 
-		if (!git_submodule_lookup(&sm, diff->repo, path)) {
+		if (!git_submodule_lookup(&sm, diff->repo, entry.path)) {
 			const git_oid *sm_oid = git_submodule_wd_id(sm);
 			if (sm_oid)
 				git_oid_cpy(out, sm_oid);
@@ -558,14 +572,15 @@ int git_diff__oid_for_file(
 			 */
 			giterr_clear();
 		}
-	} else if (S_ISLNK(mode)) {
+	} else if (S_ISLNK(entry.mode)) {
 		GIT_PERF_INC(diff->oid_calculations);
 		error = git_odb__hashlink(out, full_path.ptr);
-	} else if (!git__is_sizet(size)) {
-		giterr_set(GITERR_OS, "File size overflow (for 32-bits) on '%s'", path);
+	} else if (!git__is_sizet(entry.file_size)) {
+		giterr_set(GITERR_OS, "File size overflow (for 32-bits) on '%s'",
+			entry.path);
 		error = -1;
 	} else if (!(error = git_filter_list_load(
-			&fl, diff->repo, NULL, path, GIT_FILTER_TO_ODB)))
+			&fl, diff->repo, NULL, entry.path, GIT_FILTER_TO_ODB)))
 	{
 		int fd = git_futils_open_ro(full_path.ptr);
 		if (fd < 0)
@@ -573,12 +588,14 @@ int git_diff__oid_for_file(
 		else {
 			GIT_PERF_INC(diff->oid_calculations);
 			error = git_odb__hashfd_filtered(
-				out, fd, (size_t)size, GIT_OBJ_BLOB, fl);
+				out, fd, (size_t)entry.file_size, GIT_OBJ_BLOB, fl);
 			p_close(fd);
 		}
 
 		git_filter_list_free(fl);
 	}
+
+	/* TODO: update index for entry if requested */
 
 	git_buf_free(&full_path);
 	return error;
@@ -759,8 +776,7 @@ static int maybe_modified(
 	 */
 	if (modified_uncertain && git_oid_iszero(&nitem->id)) {
 		if (git_oid_iszero(&noid)) {
-			if ((error = git_diff__oid_for_file(&noid,
-					diff, nitem->path, nitem->mode, nitem->file_size)) < 0)
+			if ((error = git_diff__oid_for_entry(&noid, diff, nitem)) < 0)
 				return error;
 		}
 

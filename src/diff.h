@@ -95,7 +95,9 @@ extern int git_diff_delta__format_file_header(
 	int oid_strlen);
 
 extern int git_diff__oid_for_file(
-	git_oid *oit, git_diff *, const char *, uint16_t, git_off_t);
+	git_oid *out, git_diff *, const char *, uint16_t, git_off_t);
+extern int git_diff__oid_for_entry(
+	git_oid *out, git_diff *, const git_index_entry *entry);
 
 extern int git_diff__from_iterators(
 	git_diff **diff_ptr,

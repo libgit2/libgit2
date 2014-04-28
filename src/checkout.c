@@ -184,8 +184,7 @@ static bool checkout_is_workdir_modified(
 	if (baseitem->size && wditem->file_size != baseitem->size)
 		return true;
 
-	if (git_diff__oid_for_file(
-			&oid, data->diff, wditem->path, wditem->mode, wditem->file_size) < 0)
+	if (git_diff__oid_for_entry(&oid, data->diff, wditem) < 0)
 		return false;
 
 	return (git_oid__cmp(&baseitem->id, &oid) != 0);

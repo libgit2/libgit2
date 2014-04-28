@@ -842,7 +842,7 @@ static int index_entry_reuc_init(git_index_reuc_entry **reuc_out,
 
 static void index_entry_cpy(git_index_entry *tgt, const git_index_entry *src)
 {
-	char *tgt_path = tgt->path;
+	const char *tgt_path = tgt->path;
 	memcpy(tgt, src, sizeof(*tgt));
 	tgt->path = tgt_path; /* reset to existing path data */
 }
@@ -2282,9 +2282,7 @@ static int read_tree_cb(
 		entry->mode == old_entry->mode &&
 		git_oid_equal(&entry->id, &old_entry->id))
 	{
-		char *oldpath = entry->path;
-		memcpy(entry, old_entry, sizeof(*entry));
-		entry->path = oldpath;
+		index_entry_cpy(entry, old_entry);
 		entry->flags_extended = 0;
 	}
 
