@@ -1017,6 +1017,8 @@ static int fs_iterator__expand_dir(fs_iterator *fi)
 		return GIT_ENOTFOUND;
 	}
 
+	GIT_PERF_ADD(fi->base.stat_calls, ff->entries.length);
+
 	fs_iterator__seek_frame_start(fi, ff);
 
 	ff->next  = fi->stack;
@@ -1304,9 +1306,11 @@ static int workdir_iterator__enter_dir(fs_iterator *fi)
 
 	/* convert submodules to GITLINK and remove trailing slashes */
 	git_vector_foreach(&ff->entries, pos, entry) {
-		if (S_ISDIR(entry->st.st_mode) &&
-			git_submodule__is_submodule(fi->base.repo, entry->path))
-		{
+		if (!S_ISDIR(entry->st.st_mode))
+			continue;
+
+		GIT_PERF_INC(fi->base.submodule_lookups);
+		if (git_submodule__is_submodule(fi->base.repo, entry->path)) {
 			entry->st.st_mode = GIT_FILEMODE_COMMIT;
 			entry->path_len--;
 			entry->path[entry->path_len] = '\0';

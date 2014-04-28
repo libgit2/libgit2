@@ -62,6 +62,11 @@ struct git_diff {
 	git_iterator_type_t old_src;
 	git_iterator_type_t new_src;
 	uint32_t diffcaps;
+#ifdef GIT_PERF
+	size_t stat_calls;
+	size_t oid_calculations;
+	size_t submodule_lookups;
+#endif
 
 	int (*strcomp)(const char *, const char *);
 	int (*strncomp)(const char *, const char *, size_t);
@@ -90,7 +95,7 @@ extern int git_diff_delta__format_file_header(
 	int oid_strlen);
 
 extern int git_diff__oid_for_file(
-	git_repository *, const char *, uint16_t, git_off_t, git_oid *);
+	git_oid *oit, git_diff *, const char *, uint16_t, git_off_t);
 
 extern int git_diff__from_iterators(
 	git_diff **diff_ptr,

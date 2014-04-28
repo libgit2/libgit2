@@ -510,26 +510,31 @@ void git_diff_addref(git_diff *diff)
 }
 
 int git_diff__oid_for_file(
-	git_repository *repo,
+	git_oid *out,
+	git_diff *diff,
 	const char *path,
 	uint16_t  mode,
-	git_off_t size,
-	git_oid *oid)
+	git_off_t size)
 {
-	int result = 0;
+	int error = 0;
 	git_buf full_path = GIT_BUF_INIT;
+	git_filter_list *fl = NULL;
+
+	memset(out, 0, sizeof(*out));
 
 	if (git_buf_joinpath(
-		&full_path, git_repository_workdir(repo), path) < 0)
+		&full_path, git_repository_workdir(diff->repo), path) < 0)
 		return -1;
 
 	if (!mode) {
 		struct stat st;
 
-		if (p_stat(path, &st) < 0) {
-			giterr_set(GITERR_OS, "Could not stat '%s'", path);
-			result = -1;
-			goto cleanup;
+		GIT_PERF_INC(diff->stat_calls);
+
+		if (p_stat(full_path.ptr, &st) < 0) {
+			error = git_path_set_error(errno, path, "stat");
+			git_buf_free(&full_path);
+			return error;
 		}
 
 		mode = st.st_mode;
@@ -540,46 +545,43 @@ int git_diff__oid_for_file(
 	if (S_ISGITLINK(mode)) {
 		git_submodule *sm;
 
-		memset(oid, 0, sizeof(*oid));
+		GIT_PERF_INC(diff->submodule_lookups);
 
-		if (!git_submodule_lookup(&sm, repo, path)) {
+		if (!git_submodule_lookup(&sm, diff->repo, path)) {
 			const git_oid *sm_oid = git_submodule_wd_id(sm);
 			if (sm_oid)
-				git_oid_cpy(oid, sm_oid);
+				git_oid_cpy(out, sm_oid);
 			git_submodule_free(sm);
 		} else {
 			/* if submodule lookup failed probably just in an intermediate
 			 * state where some init hasn't happened, so ignore the error
 			 */
 			giterr_clear();
-			memset(oid, 0, sizeof(*oid));
 		}
 	} else if (S_ISLNK(mode)) {
-		result = git_odb__hashlink(oid, full_path.ptr);
+		GIT_PERF_INC(diff->oid_calculations);
+		error = git_odb__hashlink(out, full_path.ptr);
 	} else if (!git__is_sizet(size)) {
 		giterr_set(GITERR_OS, "File size overflow (for 32-bits) on '%s'", path);
-		result = -1;
-	} else {
-		git_filter_list *fl = NULL;
-
-		result = git_filter_list_load(&fl, repo, NULL, path, GIT_FILTER_TO_ODB);
-		if (!result) {
-			int fd = git_futils_open_ro(full_path.ptr);
-			if (fd < 0)
-				result = fd;
-			else {
-				result = git_odb__hashfd_filtered(
-					oid, fd, (size_t)size, GIT_OBJ_BLOB, fl);
-				p_close(fd);
-			}
-
-			git_filter_list_free(fl);
+		error = -1;
+	} else if (!(error = git_filter_list_load(
+			&fl, diff->repo, NULL, path, GIT_FILTER_TO_ODB)))
+	{
+		int fd = git_futils_open_ro(full_path.ptr);
+		if (fd < 0)
+			error = fd;
+		else {
+			GIT_PERF_INC(diff->oid_calculations);
+			error = git_odb__hashfd_filtered(
+				out, fd, (size_t)size, GIT_OBJ_BLOB, fl);
+			p_close(fd);
 		}
+
+		git_filter_list_free(fl);
 	}
 
-cleanup:
 	git_buf_free(&full_path);
-	return result;
+	return error;
 }
 
 static bool diff_time_eq(
@@ -616,6 +618,8 @@ static int maybe_modified_submodule(
 	if (DIFF_FLAG_IS_SET(diff, GIT_DIFF_IGNORE_SUBMODULES) ||
 		ign == GIT_SUBMODULE_IGNORE_ALL)
 		return 0;
+
+	GIT_PERF_INC(diff->submodule_lookups);
 
 	if ((error = git_submodule_lookup(
 			&sub, diff->repo, info->nitem->path)) < 0) {
@@ -748,8 +752,8 @@ static int maybe_modified(
 	 */
 	if (status == GIT_DELTA_MODIFIED && git_oid_iszero(&nitem->id)) {
 		if (git_oid_iszero(&noid)) {
-			if ((error = git_diff__oid_for_file(diff->repo,
-					nitem->path, nitem->mode, nitem->file_size, &noid)) < 0)
+			if ((error = git_diff__oid_for_file(&noid,
+					diff, nitem->path, nitem->mode, nitem->file_size)) < 0)
 				return error;
 		}
 
@@ -914,6 +918,8 @@ static int handle_unmatched_new_item(
 		delta_type = GIT_DELTA_ADDED;
 
 	else if (nitem->mode == GIT_FILEMODE_COMMIT) {
+		GIT_PERF_INC(diff->submodule_lookups);
+
 		/* ignore things that are not actual submodules */
 		if (git_submodule_lookup(NULL, info->repo, nitem->path) != 0) {
 			giterr_clear();
@@ -1065,6 +1071,11 @@ int git_diff__from_iterators(
 		if (error == GIT_ITEROVER)
 			error = 0;
 	}
+
+	GIT_PERF_ADD(diff->stat_calls, old_iter->stat_calls);
+	GIT_PERF_ADD(diff->stat_calls, new_iter->stat_calls);
+	GIT_PERF_ADD(diff->submodule_lookups, old_iter->submodule_lookups);
+	GIT_PERF_ADD(diff->submodule_lookups, new_iter->submodule_lookups);
 
 cleanup:
 	if (!error)

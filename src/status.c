@@ -81,15 +81,15 @@ static unsigned int workdir_delta2status(
 			if (git_oid_iszero(&idx2wd->old_file.id) &&
 				diff->old_src == GIT_ITERATOR_TYPE_WORKDIR &&
 				!git_diff__oid_for_file(
-					diff->repo, idx2wd->old_file.path, idx2wd->old_file.mode,
-					idx2wd->old_file.size, &idx2wd->old_file.id))
+					&idx2wd->old_file.id, diff, idx2wd->old_file.path,
+					idx2wd->old_file.mode, idx2wd->old_file.size))
 			idx2wd->old_file.flags |= GIT_DIFF_FLAG_VALID_ID;
 
 			if (git_oid_iszero(&idx2wd->new_file.id) &&
 				diff->new_src == GIT_ITERATOR_TYPE_WORKDIR &&
 				!git_diff__oid_for_file(
-					diff->repo, idx2wd->new_file.path, idx2wd->new_file.mode,
-					idx2wd->new_file.size, &idx2wd->new_file.id))
+					&idx2wd->new_file.id, diff, idx2wd->new_file.path,
+					idx2wd->new_file.mode, idx2wd->new_file.size))
 				idx2wd->new_file.flags |= GIT_DIFF_FLAG_VALID_ID;
 
 			if (!git_oid_equal(&idx2wd->old_file.id, &idx2wd->new_file.id))

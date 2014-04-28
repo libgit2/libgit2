@@ -2,6 +2,11 @@
 #include "diff_helpers.h"
 #include "repository.h"
 
+#ifdef GIT_PERF
+/* access to diff usage statistics */
+#	include "diff.h"
+#endif
+
 static git_repository *g_repo = NULL;
 
 void test_diff_workdir__initialize(void)
@@ -58,6 +63,13 @@ void test_diff_workdir__to_index(void)
 		cl_assert_equal_i(5, exp.line_ctxt);
 		cl_assert_equal_i(4, exp.line_adds);
 		cl_assert_equal_i(5, exp.line_dels);
+
+#ifdef GIT_PERF
+		cl_assert_equal_sz(
+			13 /* in root */ + 3 /* in subdir */, diff->stat_calls);
+		cl_assert_equal_sz(9, diff->oid_calculations);
+		cl_assert_equal_sz(2, diff->submodule_lookups);
+#endif
 	}
 
 	git_diff_free(diff);

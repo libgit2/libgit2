@@ -436,4 +436,12 @@ GIT_INLINE(double) git__timer(void)
 
 #endif
 
+#ifdef GIT_PERF
+#	define GIT_PERF_INC(counter) (counter)++
+#	define GIT_PERF_ADD(counter,val) (counter) += (val)
+#else
+#	define GIT_PERF_INC(counter) 0
+#	define GIT_PERF_ADD(counter,val) 0
+#endif
+
 #endif /* INCLUDE_util_h__ */
