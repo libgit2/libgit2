@@ -14,6 +14,7 @@
 #include "index.h"
 #include "odb.h"
 #include "submodule.h"
+#include "trace.h"
 
 #define DIFF_FLAG_IS_SET(DIFF,FLAG) (((DIFF)->opts.flags & (FLAG)) != 0)
 #define DIFF_FLAG_ISNT_SET(DIFF,FLAG) (((DIFF)->opts.flags & (FLAG)) == 0)
@@ -554,8 +555,7 @@ int git_diff__oid_for_entry(
 	if (!entry.mode) {
 		struct stat st;
 
-		GIT_PERF_INC(diff->stat_calls);
-
+		git_trace(GIT_TRACE_TRACE, "stat=1");
 		if (p_stat(full_path.ptr, &st) < 0) {
 			error = git_path_set_error(errno, entry.path, "stat");
 			git_buf_free(&full_path);
@@ -570,8 +570,7 @@ int git_diff__oid_for_entry(
 	if (S_ISGITLINK(entry.mode)) {
 		git_submodule *sm;
 
-		GIT_PERF_INC(diff->submodule_lookups);
-
+		git_trace(GIT_TRACE_TRACE, "submodule_lookup=1");
 		if (!git_submodule_lookup(&sm, diff->repo, entry.path)) {
 			const git_oid *sm_oid = git_submodule_wd_id(sm);
 			if (sm_oid)
@@ -584,7 +583,7 @@ int git_diff__oid_for_entry(
 			giterr_clear();
 		}
 	} else if (S_ISLNK(entry.mode)) {
-		GIT_PERF_INC(diff->oid_calculations);
+		git_trace(GIT_TRACE_TRACE, "oid_calculation=1");
 		error = git_odb__hashlink(out, full_path.ptr);
 	} else if (!git__is_sizet(entry.file_size)) {
 		giterr_set(GITERR_OS, "File size overflow (for 32-bits) on '%s'",
@@ -597,7 +596,7 @@ int git_diff__oid_for_entry(
 		if (fd < 0)
 			error = fd;
 		else {
-			GIT_PERF_INC(diff->oid_calculations);
+			git_trace(GIT_TRACE_TRACE, "oid_calculation=1");
 			error = git_odb__hashfd_filtered(
 				out, fd, (size_t)entry.file_size, GIT_OBJ_BLOB, fl);
 			p_close(fd);
@@ -656,7 +655,7 @@ static int maybe_modified_submodule(
 		ign == GIT_SUBMODULE_IGNORE_ALL)
 		return 0;
 
-	GIT_PERF_INC(diff->submodule_lookups);
+	git_trace(GIT_TRACE_TRACE, "submodule_lookup=1");
 
 	if ((error = git_submodule_lookup(
 			&sub, diff->repo, info->nitem->path)) < 0) {
@@ -966,7 +965,7 @@ static int handle_unmatched_new_item(
 		delta_type = GIT_DELTA_ADDED;
 
 	else if (nitem->mode == GIT_FILEMODE_COMMIT) {
-		GIT_PERF_INC(diff->submodule_lookups);
+		git_trace(GIT_TRACE_TRACE, "submodule_lookup=1");
 
 		/* ignore things that are not actual submodules */
 		if (git_submodule_lookup(NULL, info->repo, nitem->path) != 0) {
@@ -1119,11 +1118,6 @@ int git_diff__from_iterators(
 		if (error == GIT_ITEROVER)
 			error = 0;
 	}
-
-	GIT_PERF_ADD(diff->stat_calls, old_iter->stat_calls);
-	GIT_PERF_ADD(diff->stat_calls, new_iter->stat_calls);
-	GIT_PERF_ADD(diff->submodule_lookups, old_iter->submodule_lookups);
-	GIT_PERF_ADD(diff->submodule_lookups, new_iter->submodule_lookups);
 
 cleanup:
 	if (!error)

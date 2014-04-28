@@ -62,11 +62,6 @@ struct git_diff {
 	git_iterator_type_t old_src;
 	git_iterator_type_t new_src;
 	uint32_t diffcaps;
-#ifdef GIT_PERF
-	size_t stat_calls;
-	size_t oid_calculations;
-	size_t submodule_lookups;
-#endif
 
 	int (*strcomp)(const char *, const char *);
 	int (*strncomp)(const char *, const char *, size_t);

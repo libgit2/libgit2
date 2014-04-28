@@ -1,21 +1,43 @@
 #include "clar_libgit2.h"
 #include "diff_helpers.h"
 #include "repository.h"
-
-#ifdef GIT_PERF
-/* access to diff usage statistics */
-#	include "diff.h"
-#endif
+#include <git2/trace.h>
 
 static git_repository *g_repo = NULL;
 
+static struct {
+	size_t stat_calls;
+	size_t oid_calcs;
+	size_t submodule_lookups;
+} g_diff_perf;
+
+static void add_stats(git_trace_level_t level, const char *msg)
+{
+	const char *assign = strchr(msg, '=');
+
+	GIT_UNUSED(level);
+
+	if (!assign)
+		return;
+
+	if (!strncmp("stat", msg, (assign - msg)))
+		g_diff_perf.stat_calls += atoi(assign + 1);
+	else if (!strncmp("submodule_lookup", msg, (assign - msg)))
+		g_diff_perf.submodule_lookups += atoi(assign + 1);
+	else if (!strncmp("oid_calculation", msg, (assign - msg)))
+		g_diff_perf.oid_calcs += atoi(assign + 1);
+}
+
 void test_diff_workdir__initialize(void)
 {
+	memset(&g_diff_perf, 0, sizeof(g_diff_perf));
+	cl_git_pass(git_trace_set(GIT_TRACE_TRACE, add_stats));
 }
 
 void test_diff_workdir__cleanup(void)
 {
 	cl_git_sandbox_cleanup();
+	cl_git_pass(git_trace_set(0, NULL));
 }
 
 void test_diff_workdir__to_index(void)
@@ -64,11 +86,11 @@ void test_diff_workdir__to_index(void)
 		cl_assert_equal_i(4, exp.line_adds);
 		cl_assert_equal_i(5, exp.line_dels);
 
-#ifdef GIT_PERF
+#ifdef GIT_TRACE
 		cl_assert_equal_sz(
-			13 /* in root */ + 3 /* in subdir */, diff->stat_calls);
-		cl_assert_equal_sz(5, diff->oid_calculations);
-		cl_assert_equal_sz(1, diff->submodule_lookups);
+			13 /* in root */ + 3 /* in subdir */, g_diff_perf.stat_calls);
+		cl_assert_equal_sz(5, g_diff_perf.oid_calcs);
+		cl_assert_equal_sz(1, g_diff_perf.submodule_lookups);
 #endif
 	}
 
@@ -1525,6 +1547,8 @@ static void basic_diff_status(git_diff **out, const git_diff_options *opts)
 {
 	diff_expects exp;
 
+	memset(&g_diff_perf, 0, sizeof(g_diff_perf));
+
 	cl_git_pass(git_diff_index_to_workdir(out, g_repo, NULL, opts));
 
 	memset(&exp, 0, sizeof(exp));
@@ -1558,10 +1582,10 @@ void test_diff_workdir__can_update_index(void)
 	opts.flags |= GIT_DIFF_INCLUDE_IGNORED | GIT_DIFF_INCLUDE_UNTRACKED;
 
 	basic_diff_status(&diff, &opts);
-#ifdef GIT_PERF
-	cl_assert_equal_sz(diff->stat_calls, 13 + 3);
-	cl_assert_equal_sz(diff->oid_calculations, 5);
-	cl_assert_equal_sz(diff->submodule_lookups, 1);
+#ifdef GIT_TRACE
+	cl_assert_equal_sz(13 + 3, g_diff_perf.stat_calls);
+	cl_assert_equal_sz(5, g_diff_perf.oid_calcs);
+	cl_assert_equal_sz(1, g_diff_perf.submodule_lookups);
 #endif
 
 	git_diff_free(diff);
@@ -1570,10 +1594,10 @@ void test_diff_workdir__can_update_index(void)
 	opts.flags |= GIT_DIFF_UPDATE_INDEX;
 
 	basic_diff_status(&diff, &opts);
-#ifdef GIT_PERF
-	cl_assert_equal_sz(diff->stat_calls, 13 + 3);
-	cl_assert_equal_sz(diff->oid_calculations, 5);
-	cl_assert_equal_sz(diff->submodule_lookups, 1);
+#ifdef GIT_TRACE
+	cl_assert_equal_sz(13 + 3, g_diff_perf.stat_calls);
+	cl_assert_equal_sz(5, g_diff_perf.oid_calcs);
+	cl_assert_equal_sz(1, g_diff_perf.submodule_lookups);
 #endif
 
 	git_diff_free(diff);
@@ -1581,10 +1605,10 @@ void test_diff_workdir__can_update_index(void)
 	/* now if we do it again, we should see fewer OID calculations */
 
 	basic_diff_status(&diff, &opts);
-#ifdef GIT_PERF
-	cl_assert_equal_sz(diff->stat_calls, 13 + 3);
-	cl_assert_equal_sz(diff->oid_calculations, 0); /* Yay */
-	cl_assert_equal_sz(diff->submodule_lookups, 1);
+#ifdef GIT_TRACE
+	cl_assert_equal_sz(13 + 3, g_diff_perf.stat_calls);
+	cl_assert_equal_sz(0, g_diff_perf.oid_calcs); /* Yay */
+	cl_assert_equal_sz(1, g_diff_perf.submodule_lookups);
 #endif
 
 	git_diff_free(diff);

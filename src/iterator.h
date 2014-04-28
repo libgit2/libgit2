@@ -53,10 +53,6 @@ struct git_iterator {
 	char *end;
 	int (*prefixcomp)(const char *str, const char *prefix);
 	unsigned int flags;
-#ifdef GIT_PERF
-	size_t stat_calls;
-	size_t submodule_lookups;
-#endif
 };
 
 extern int git_iterator_for_nothing(

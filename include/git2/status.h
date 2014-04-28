@@ -121,6 +121,11 @@ typedef enum {
  * - GIT_STATUS_OPT_NO_REFRESH bypasses the default status behavior of
  *   doing a "soft" index reload (i.e. reloading the index data if the
  *   file on disk has been modified outside libgit2).
+ * - GIT_STATUS_OPT_UPDATE_INDEX tells libgit2 to refresh the stat cache
+ *   in the index for files that are unchanged but have out of date stat
+ *   information in the index.  It will result in less work being done on
+ *   subsequent calls to get status.  This is mutually exclusive with the
+ *   NO_REFRESH option.
  *
  * Calling `git_status_foreach()` is like calling the extended version
  * with: GIT_STATUS_OPT_INCLUDE_IGNORED, GIT_STATUS_OPT_INCLUDE_UNTRACKED,
@@ -141,6 +146,7 @@ typedef enum {
 	GIT_STATUS_OPT_SORT_CASE_INSENSITIVELY  = (1u << 10),
 	GIT_STATUS_OPT_RENAMES_FROM_REWRITES    = (1u << 11),
 	GIT_STATUS_OPT_NO_REFRESH               = (1u << 12),
+	GIT_STATUS_OPT_UPDATE_INDEX             = (1u << 13),
 } git_status_opt_t;
 
 #define GIT_STATUS_OPT_DEFAULTS \

@@ -37,7 +37,6 @@ OPTION( ANDROID				"Build for android NDK"	 				OFF )
 OPTION( USE_ICONV			"Link with and use iconv library" 		OFF )
 OPTION( USE_SSH				"Link with libssh to enable SSH support" ON )
 OPTION( VALGRIND			"Configure build for valgrind"			OFF )
-OPTION( PERF_STATS			"Internally track performance data"		OFF )
 
 IF(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
 	SET( USE_ICONV ON )
@@ -351,10 +350,6 @@ IF (THREADSAFE)
 	ENDIF()
 
 	ADD_DEFINITIONS(-DGIT_THREADS)
-ENDIF()
-
-IF (PERF_STATS)
-	ADD_DEFINITIONS(-DGIT_PERF)
 ENDIF()
 
 ADD_DEFINITIONS(-D_FILE_OFFSET_BITS=64)
