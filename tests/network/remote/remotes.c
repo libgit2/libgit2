@@ -68,7 +68,7 @@ void test_network_remote_remotes__error_when_no_push_available(void)
 
 	cl_git_pass(git_remote_create_anonymous(&r, _repo, cl_fixture("testrepo.git"), NULL));
 
-	cl_git_pass(git_transport_local(&t,r,NULL));
+	cl_git_pass(git_transport_local(&t, "file", r->url, r, NULL));
 
 	/* Make sure that push is really not available */
 	t->push = NULL;

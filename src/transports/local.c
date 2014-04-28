@@ -644,10 +644,17 @@ static void local_free(git_transport *transport)
  * Public API *
  **************/
 
-int git_transport_local(git_transport **out, git_remote *owner, void *param)
+int git_transport_local(
+	git_transport **out,
+	const char *scheme,
+	const char *url,
+	git_remote *owner,
+	void *param)
 {
 	transport_local *t;
 
+	GIT_UNUSED(scheme);
+	GIT_UNUSED(url);
 	GIT_UNUSED(param);
 
 	t = git__calloc(1, sizeof(transport_local));

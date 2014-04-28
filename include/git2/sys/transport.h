@@ -128,15 +128,27 @@ GIT_EXTERN(int) git_transport_init(
  */
 GIT_EXTERN(int) git_transport_new(git_transport **out, git_remote *owner, const char *url);
 
-/* Signature of a function that queries whether a transport is available */
+/**
+ * Signature of a function that queries a transport to determine if it
+ * should be initialized and invoked to handle the given URL.
+ *
+ * Note that the `scheme` is provided independently of the `url`;
+ * when a URL is given in non-canonical format, some guesswork is done
+ * to determine the likely scheme.  For example, `C:/Repo/Foo` on
+ * Windows is likely the `file` scheme, while `zaphod:/tmp/repo` on
+ * Unix is likely the `ssh` scheme.
+ */
 typedef int (*git_transport_query_cb)(
 	unsigned int *available,
+	const char *scheme,
 	const char *url,
 	void *param);
 
 /* Signature of a function that creates a transport */
 typedef int (*git_transport_init_cb)(
 	git_transport **out,
+	const char *scheme,
+	const char *url,
 	git_remote *owner,
 	void *param);
 
@@ -183,12 +195,16 @@ GIT_EXTERN(int) git_transport_unregister(
  * Create an instance of the dummy transport.
  *
  * @param out The newly created transport (out)
+ * @param scheme The type of remote (`git`, `http`, etc)
+ * @param uri The URI or ssh path of the remote
  * @param owner The git_remote which will own this transport
  * @param payload You must pass NULL for this parameter.
  * @return 0 or an error code
  */
 GIT_EXTERN(int) git_transport_dummy(
 	git_transport **out,
+	const char *scheme,
+	const char *url,
 	git_remote *owner,
 	/* NULL */ void *payload);
 
@@ -196,12 +212,16 @@ GIT_EXTERN(int) git_transport_dummy(
  * Create an instance of the local transport.
  *
  * @param out The newly created transport (out)
+ * @param scheme The type of remote (`file` for this transport)
+ * @param uri The `file://` URL or local path to the repository
  * @param owner The git_remote which will own this transport
  * @param payload You must pass NULL for this parameter.
  * @return 0 or an error code
  */
 GIT_EXTERN(int) git_transport_local(
 	git_transport **out,
+	const char *scheme,
+	const char *url,
 	git_remote *owner,
 	/* NULL */ void *payload);
 
@@ -209,12 +229,16 @@ GIT_EXTERN(int) git_transport_local(
  * Create an instance of the smart transport.
  *
  * @param out The newly created transport (out)
+ * @param scheme The type of remote (`git`, `http`, etc)
+ * @param uri The URI or ssh path of the remote
  * @param owner The git_remote which will own this transport
  * @param payload A pointer to a git_smart_subtransport_definition
  * @return 0 or an error code
  */
 GIT_EXTERN(int) git_transport_smart(
 	git_transport **out,
+	const char *scheme,
+	const char *uri,
 	git_remote *owner,
 	/* (git_smart_subtransport_definition *) */ void *payload);
 

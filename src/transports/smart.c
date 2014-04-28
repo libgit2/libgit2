@@ -319,10 +319,18 @@ static int ref_name_cmp(const void *a, const void *b)
 	return strcmp(ref_a->head.name, ref_b->head.name);
 }
 
-int git_transport_smart(git_transport **out, git_remote *owner, void *param)
+int git_transport_smart(
+	git_transport **out,
+	const char *scheme,
+	const char *url,
+	git_remote *owner,
+	void *param)
 {
 	transport_smart *t;
 	git_smart_subtransport_definition *definition = (git_smart_subtransport_definition *)param;
+
+	GIT_UNUSED(scheme);
+	GIT_UNUSED(url);
 
 	if (!param)
 		return -1;
