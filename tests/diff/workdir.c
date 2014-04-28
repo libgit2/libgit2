@@ -5,6 +5,7 @@
 
 static git_repository *g_repo = NULL;
 
+#ifdef GIT_TRACE
 static struct {
 	size_t stat_calls;
 	size_t oid_calcs;
@@ -27,17 +28,22 @@ static void add_stats(git_trace_level_t level, const char *msg)
 	else if (!strncmp("oid_calculation", msg, (assign - msg)))
 		g_diff_perf.oid_calcs += atoi(assign + 1);
 }
+#endif
 
 void test_diff_workdir__initialize(void)
 {
+#ifdef GIT_TRACE
 	memset(&g_diff_perf, 0, sizeof(g_diff_perf));
 	cl_git_pass(git_trace_set(GIT_TRACE_TRACE, add_stats));
+#endif
 }
 
 void test_diff_workdir__cleanup(void)
 {
 	cl_git_sandbox_cleanup();
+#ifdef GIT_TRACE
 	cl_git_pass(git_trace_set(0, NULL));
+#endif
 }
 
 void test_diff_workdir__to_index(void)
@@ -1547,7 +1553,9 @@ static void basic_diff_status(git_diff **out, const git_diff_options *opts)
 {
 	diff_expects exp;
 
+#ifdef GIT_TRACE
 	memset(&g_diff_perf, 0, sizeof(g_diff_perf));
+#endif
 
 	cl_git_pass(git_diff_index_to_workdir(out, g_repo, NULL, opts));
 
