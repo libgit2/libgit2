@@ -14,6 +14,7 @@
 #include "indexer.h"
 #include "strarray.h"
 #include "transport.h"
+#include "sys/transport.h"
 
 /**
  * @file git2/remote.h
