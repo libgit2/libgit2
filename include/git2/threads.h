@@ -19,30 +19,39 @@
 GIT_BEGIN_DECL
 
 /**
- * Init the threading system.
+ * Initialize the threading system.
  *
- * If libgit2 has been built with GIT_THREADS
- * on, this function must be called once before
- * any other library functions.
+ * If libgit2 has been built with GIT_THREADS on, this function must be
+ * called once before any other library functions.
  *
  * If libgit2 has been built without GIT_THREADS
  * support, this function is a no-op.
  *
- * @return 0 or an error code
+ * This returns the number of current library users, as defined by
+ * the number of callers to `git_threads_init` minus the number of
+ * callres to `git_threads_shutdown`.
+ *
+ * @return the number of current library users (including this one)
+ *         or an error code
  */
 GIT_EXTERN(int) git_threads_init(void);
 
 /**
  * Shutdown the threading system.
  *
- * If libgit2 has been built with GIT_THREADS
- * on, this function must be called before shutting
- * down the library.
+ * If libgit2 has been built with GIT_THREADS on, this function must be
+ * called before shutting down the library.
  *
- * If libgit2 has been built without GIT_THREADS
- * support, this function is a no-op.
+ * The library will be shut down when the last library user (as defined by
+ * a previous caller to `git_threads_init`) calls this method.  The number
+ * of current library users is returned.
+ *
+ * If libgit2 has been built without GIT_THREADS support, this function
+ * is a no-op.
+ *
+ * @return the number of current library users or an error code
  */
-GIT_EXTERN(void) git_threads_shutdown(void);
+GIT_EXTERN(int) git_threads_shutdown(void);
 
 /** @} */
 GIT_END_DECL

@@ -95,19 +95,19 @@ static int synchronized_threads_init()
 
 int git_threads_init(void)
 {
-	int error = 0;
+	int count, error = 0;
 
 	/* Enter the lock */
 	while (InterlockedCompareExchange(&_mutex, 1, 0)) { Sleep(0); }
 
 	/* Only do work on a 0 -> 1 transition of the refcount */
-	if (1 == git_atomic_inc(&git__n_inits))
+	if ((count = git_atomic_inc(&git__n_inits)) == 1)
 		error = synchronized_threads_init();
 
 	/* Exit the lock */
 	InterlockedExchange(&_mutex, 0);
 
-	return error;
+	return error ? error : count;
 }
 
 static void synchronized_threads_shutdown()
@@ -118,17 +118,21 @@ static void synchronized_threads_shutdown()
 	git_mutex_free(&git__mwindow_mutex);
 }
 
-void git_threads_shutdown(void)
+int git_threads_shutdown(void)
 {
+	int count;
+
 	/* Enter the lock */
 	while (InterlockedCompareExchange(&_mutex, 1, 0)) { Sleep(0); }
 
 	/* Only do work on a 1 -> 0 transition of the refcount */
-	if (0 == git_atomic_dec(&git__n_inits))
+	if ((count = git_atomic_dec(&git__n_inits)) == 0)
 		synchronized_threads_shutdown();
 
 	/* Exit the lock */
 	InterlockedExchange(&_mutex, 0);
+
+	return count;
 }
 
 git_global_st *git__global_state(void)
@@ -175,17 +179,21 @@ static void init_once(void)
 
 int git_threads_init(void)
 {
+	int count;
+
 	pthread_once(&_once_init, init_once);
-	git_atomic_inc(&git__n_inits);
-	return init_error;
+	count = git_atomic_inc(&git__n_inits);
+	return init_error ? init_error : count;
 }
 
-void git_threads_shutdown(void)
+int git_threads_shutdown(void)
 {
 	void *ptr = NULL;
 	pthread_once_t new_once = PTHREAD_ONCE_INIT;
+	int count;
 
-	if (git_atomic_dec(&git__n_inits) > 0) return;
+	if ((count = git_atomic_dec(&git__n_inits)) > 0)
+		return count;
 
 	/* Shut down any subsystems that have global state */
 	git__shutdown();
@@ -197,6 +205,8 @@ void git_threads_shutdown(void)
 	pthread_key_delete(_tls_key);
 	git_mutex_free(&git__mwindow_mutex);
 	_once_init = new_once;
+
+	return 0;
 }
 
 git_global_st *git__global_state(void)
@@ -223,15 +233,18 @@ static git_global_st __state;
 
 int git_threads_init(void)
 {
-	git_atomic_inc(&git__n_inits);
-	return 0;
+	return git_atomic_inc(&git__n_inits);
 }
 
-void git_threads_shutdown(void)
+int git_threads_shutdown(void)
 {
+	int count;
+
 	/* Shut down any subsystems that have global state */
-	if (0 == git_atomic_dec(&git__n_inits))
+	if ((count = git_atomic_dec(&git__n_inits)) == 0)
 		git__shutdown();
+
+	return count;
 }
 
 git_global_st *git__global_state(void)
