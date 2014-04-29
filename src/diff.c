@@ -1282,20 +1282,6 @@ int git_diff_tree_to_workdir_with_index(
 	return error;
 }
 
-int git_diff_options_init(git_diff_options *options, unsigned int version)
-{
-	git_diff_options template = GIT_DIFF_OPTIONS_INIT;
-
-	if (version != template.version) {
-		giterr_set(GITERR_INVALID,
-			"Invalid version %d for git_diff_options", (int)version);
-		return -1;
-	}
-
-	memcpy(options, &template, sizeof(*options));
-	return 0;
-}
-
 size_t git_diff_num_deltas(const git_diff *diff)
 {
 	assert(diff);
