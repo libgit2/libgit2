@@ -518,14 +518,38 @@ int git_status_should_ignore(
 	return git_ignore_path_is_ignored(ignored, repo, path);
 }
 
-int git_status_init_options(git_status_options* opts, int version)
+int git_status_init_options(git_status_options* opts, unsigned int version)
 {
-	if (version != GIT_STATUS_OPTIONS_VERSION) {
+	git_status_options o = GIT_STATUS_OPTIONS_INIT;
+	if (version != o.version) {
 		giterr_set(GITERR_INVALID, "Invalid version %d for git_status_options", version);
 		return -1;
-	} else {
-		git_status_options o = GIT_STATUS_OPTIONS_INIT;
-		memcpy(opts, &o, sizeof(o));
-		return 0;
 	}
+	memcpy(opts, &o, sizeof(o));
+	return 0;
 }
+
+int git_status_list_get_perfdata(
+	git_diff_perfdata *out, const git_status_list *status)
+{
+	if (!out || out->version != GIT_DIFF_PERFDATA_VERSION) {
+		giterr_set(GITERR_INVALID, "Invalid version %d for git_diff_perfdata",
+				   out ? out->version : 0);
+		return -1;
+	}
+
+	out->stat_calls = 0;
+	out->oid_calculations = 0;
+
+	if (status->head2idx) {
+		out->stat_calls += status->head2idx->perf.stat_calls;
+		out->oid_calculations += status->head2idx->perf.oid_calculations;
+	}
+	if (status->idx2wd) {
+		out->stat_calls += status->idx2wd->perf.stat_calls;
+		out->oid_calculations += status->idx2wd->perf.oid_calculations;
+	}
+
+	return 0;
+}
+

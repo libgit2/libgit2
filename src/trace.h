@@ -15,16 +15,13 @@
 struct git_trace_data {
 	git_trace_level_t level;
 	git_trace_callback callback;
-	void *callback_payload;
 };
 
 extern struct git_trace_data git_trace__data;
 
 GIT_INLINE(void) git_trace__write_fmt(
 	git_trace_level_t level,
-	void *message_payload,
-	const char *fmt,
-	...)
+	const char *fmt, ...)
 {
 	git_trace_callback callback = git_trace__data.callback;
 	git_buf message = GIT_BUF_INIT;
@@ -34,18 +31,18 @@ GIT_INLINE(void) git_trace__write_fmt(
 	git_buf_vprintf(&message, fmt, ap);
 	va_end(ap);
 
-	callback(
-		level, git_trace__data.callback_payload, message_payload,
-		git_buf_cstr(&message));
+	callback(level, git_buf_cstr(&message));
 
 	git_buf_free(&message);
 }
 
 #define git_trace_level()		(git_trace__data.level)
-#define git_trace(l, p, ...)	do { \
-	if ((git_trace__data.level & (l)) != 0 && git_trace__data.callback) { \
-		git_trace__write_fmt((l), (p), __VA_ARGS__); \
-	} } while (0)
+#define git_trace(l, ...)		{ \
+									if (git_trace__data.level >= l && \
+										git_trace__data.callback != NULL) { \
+										git_trace__write_fmt(l, __VA_ARGS__); \
+									} \
+								}
 
 #else
 

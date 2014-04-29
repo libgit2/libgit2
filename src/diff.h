@@ -8,6 +8,7 @@
 #define INCLUDE_diff_h__
 
 #include "git2/diff.h"
+#include "git2/sys/diff.h"
 #include "git2/oid.h"
 
 #include <stdio.h>
@@ -62,6 +63,7 @@ struct git_diff {
 	git_iterator_type_t old_src;
 	git_iterator_type_t new_src;
 	uint32_t diffcaps;
+	git_diff_perfdata perf;
 
 	int (*strcomp)(const char *, const char *);
 	int (*strncomp)(const char *, const char *, size_t);

@@ -6,19 +6,7 @@
 #include "util.h"
 #include "path.h"
 #include "../diff/diff_helpers.h"
-
-#ifdef GIT_TRACE
-static diff_perf g_diff_perf;
-#endif
-
-void test_status_worktree__initialize(void)
-{
-#ifdef GIT_TRACE
-	memset(&g_diff_perf, 0, sizeof(g_diff_perf));
-	cl_git_pass(git_trace_set(
-		GIT_TRACE_PERF, diff_perf_track_stats, &g_diff_perf));
-#endif
-}
+#include "git2/sys/diff.h"
 
 /**
  * Cleanup
@@ -29,9 +17,6 @@ void test_status_worktree__initialize(void)
 void test_status_worktree__cleanup(void)
 {
 	cl_git_sandbox_cleanup();
-#ifdef GIT_TRACE
-	cl_git_pass(git_trace_set(GIT_TRACE_NONE, NULL, NULL));
-#endif
 }
 
 /**
@@ -903,38 +888,50 @@ void test_status_worktree__long_filenames(void)
  * while reducing the amount of work that needs to be done
  */
 
+static void check_status0(git_status_list *status)
+{
+	size_t i, max_i = git_status_list_entrycount(status);
+	cl_assert_equal_sz(entry_count0, max_i);
+	for (i = 0; i < max_i; ++i) {
+		const git_status_entry *entry = git_status_byindex(status, i);
+		cl_assert_equal_i(entry_statuses0[i], entry->status);
+	}
+}
+
 void test_status_worktree__update_stat_cache_0(void)
 {
 	git_repository *repo = cl_git_sandbox_init("status");
+	git_status_options opts = GIT_STATUS_OPTIONS_INIT;
+	git_status_list *status;
+	git_diff_perfdata perf = GIT_DIFF_PERFDATA_INIT;
 
-	assert_show(entry_count0, entry_paths0, entry_statuses0,
-		repo, GIT_STATUS_SHOW_INDEX_AND_WORKDIR, 0);
+	opts.flags = GIT_STATUS_OPT_DEFAULTS;
 
-#ifdef GIT_TRACE
-	cl_assert_equal_sz(13 + 3, g_diff_perf.stat_calls);
-	cl_assert_equal_sz(5, g_diff_perf.oid_calcs);
-	cl_assert_equal_sz(1, g_diff_perf.submodule_lookups);
+	cl_git_pass(git_status_list_new(&status, repo, &opts));
+	check_status0(status);
+	cl_git_pass(git_status_list_get_perfdata(&perf, status));
+	cl_assert_equal_sz(13 + 3, perf.stat_calls);
+	cl_assert_equal_sz(5, perf.oid_calculations);
 
-	memset(&g_diff_perf, 0, sizeof(g_diff_perf));
-#endif
+	git_status_list_free(status);
 
-	assert_show(entry_count0, entry_paths0, entry_statuses0,
-		repo, GIT_STATUS_SHOW_INDEX_AND_WORKDIR, GIT_STATUS_OPT_UPDATE_INDEX);
+	opts.flags |= GIT_STATUS_OPT_UPDATE_INDEX;
 
-#ifdef GIT_TRACE
-	cl_assert_equal_sz(13 + 3, g_diff_perf.stat_calls);
-	cl_assert_equal_sz(5, g_diff_perf.oid_calcs);
-	cl_assert_equal_sz(1, g_diff_perf.submodule_lookups);
+	cl_git_pass(git_status_list_new(&status, repo, &opts));
+	check_status0(status);
+	cl_git_pass(git_status_list_get_perfdata(&perf, status));
+	cl_assert_equal_sz(13 + 3, perf.stat_calls);
+	cl_assert_equal_sz(5, perf.oid_calculations);
 
-	memset(&g_diff_perf, 0, sizeof(g_diff_perf));
-#endif
+	git_status_list_free(status);
 
-	assert_show(entry_count0, entry_paths0, entry_statuses0,
-		repo, GIT_STATUS_SHOW_INDEX_AND_WORKDIR, 0);
+	opts.flags &= ~GIT_STATUS_OPT_UPDATE_INDEX;
 
-#ifdef GIT_TRACE
-	cl_assert_equal_sz(13 + 3, g_diff_perf.stat_calls);
-	cl_assert_equal_sz(0, g_diff_perf.oid_calcs);
-	cl_assert_equal_sz(1, g_diff_perf.submodule_lookups);
-#endif
+	cl_git_pass(git_status_list_new(&status, repo, &opts));
+	check_status0(status);
+	cl_git_pass(git_status_list_get_perfdata(&perf, status));
+	cl_assert_equal_sz(13 + 3, perf.stat_calls);
+	cl_assert_equal_sz(0, perf.oid_calculations);
+
+	git_status_list_free(status);
 }

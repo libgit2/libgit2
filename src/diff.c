@@ -14,7 +14,6 @@
 #include "index.h"
 #include "odb.h"
 #include "submodule.h"
-#include "trace.h"
 
 #define DIFF_FLAG_IS_SET(DIFF,FLAG) (((DIFF)->opts.flags & (FLAG)) != 0)
 #define DIFF_FLAG_ISNT_SET(DIFF,FLAG) (((DIFF)->opts.flags & (FLAG)) == 0)
@@ -555,7 +554,8 @@ int git_diff__oid_for_entry(
 	if (!entry.mode) {
 		struct stat st;
 
-		git_trace(GIT_TRACE_PERF, NULL, "stat");
+		diff->perf.stat_calls++;
+
 		if (p_stat(full_path.ptr, &st) < 0) {
 			error = git_path_set_error(errno, entry.path, "stat");
 			git_buf_free(&full_path);
@@ -570,7 +570,6 @@ int git_diff__oid_for_entry(
 	if (S_ISGITLINK(entry.mode)) {
 		git_submodule *sm;
 
-		git_trace(GIT_TRACE_PERF, NULL, "submodule_lookup");
 		if (!git_submodule_lookup(&sm, diff->repo, entry.path)) {
 			const git_oid *sm_oid = git_submodule_wd_id(sm);
 			if (sm_oid)
@@ -583,8 +582,8 @@ int git_diff__oid_for_entry(
 			giterr_clear();
 		}
 	} else if (S_ISLNK(entry.mode)) {
-		git_trace(GIT_TRACE_PERF, NULL, "oid_calculation");
 		error = git_odb__hashlink(out, full_path.ptr);
+		diff->perf.oid_calculations++;
 	} else if (!git__is_sizet(entry.file_size)) {
 		giterr_set(GITERR_OS, "File size overflow (for 32-bits) on '%s'",
 			entry.path);
@@ -596,10 +595,10 @@ int git_diff__oid_for_entry(
 		if (fd < 0)
 			error = fd;
 		else {
-			git_trace(GIT_TRACE_PERF, NULL, "oid_calculation");
 			error = git_odb__hashfd_filtered(
 				out, fd, (size_t)entry.file_size, GIT_OBJ_BLOB, fl);
 			p_close(fd);
+			diff->perf.oid_calculations++;
 		}
 
 		git_filter_list_free(fl);
@@ -654,8 +653,6 @@ static int maybe_modified_submodule(
 	if (DIFF_FLAG_IS_SET(diff, GIT_DIFF_IGNORE_SUBMODULES) ||
 		ign == GIT_SUBMODULE_IGNORE_ALL)
 		return 0;
-
-	git_trace(GIT_TRACE_PERF, NULL, "submodule_lookup");
 
 	if ((error = git_submodule_lookup(
 			&sub, diff->repo, info->nitem->path)) < 0) {
@@ -965,8 +962,6 @@ static int handle_unmatched_new_item(
 		delta_type = GIT_DELTA_ADDED;
 
 	else if (nitem->mode == GIT_FILEMODE_COMMIT) {
-		git_trace(GIT_TRACE_PERF, NULL, "submodule_lookup");
-
 		/* ignore things that are not actual submodules */
 		if (git_submodule_lookup(NULL, info->repo, nitem->path) != 0) {
 			giterr_clear();
@@ -1118,6 +1113,8 @@ int git_diff__from_iterators(
 		if (error == GIT_ITEROVER)
 			error = 0;
 	}
+
+	diff->perf.stat_calls += old_iter->stat_calls + new_iter->stat_calls;
 
 cleanup:
 	if (!error)
@@ -1311,6 +1308,22 @@ const git_diff_delta *git_diff_get_delta(const git_diff *diff, size_t idx)
 int git_diff_is_sorted_icase(const git_diff *diff)
 {
 	return (diff->opts.flags & GIT_DIFF_IGNORE_CASE) != 0;
+}
+
+static int diff_options_bad_version(int version, const char *thing)
+{
+	giterr_set(GITERR_INVALID, "Invalid version %d for %s", version, thing);
+	return -1;
+}
+
+int git_diff_get_perfdata(git_diff_perfdata *out, const git_diff *diff)
+{
+	if (!out || out->version != GIT_DIFF_PERFDATA_VERSION)
+		return diff_options_bad_version(
+			out ? out->version : 0, "git_diff_perfdata");
+	out->stat_calls = diff->perf.stat_calls;
+	out->oid_calculations = diff->perf.oid_calculations;
+	return 0;
 }
 
 int git_diff__paired_foreach(
@@ -1615,38 +1628,29 @@ int git_diff_commit_as_email(
 	return error;
 }
 
-int git_diff_init_options(git_diff_options* opts, int version)
+int git_diff_init_options(git_diff_options* opts, unsigned int version)
 {
-	if (version != GIT_DIFF_OPTIONS_VERSION) {
-		giterr_set(GITERR_INVALID, "Invalid version %d for git_diff_options", version);
-		return -1;
-	} else {
-		git_diff_options o = GIT_DIFF_OPTIONS_INIT;
-		memcpy(opts, &o, sizeof(o));
-		return 0;
-	}
+	git_diff_options o = GIT_DIFF_OPTIONS_INIT;
+	if (version != o.version)
+		return diff_options_bad_version(version, "git_diff_options");
+	memcpy(opts, &o, sizeof(o));
+	return 0;
 }
 
-int git_diff_find_init_options(git_diff_find_options* opts, int version)
+int git_diff_find_init_options(git_diff_find_options* opts, unsigned int version)
 {
-	if (version != GIT_DIFF_FIND_OPTIONS_VERSION) {
-		giterr_set(GITERR_INVALID, "Invalid version %d for git_diff_find_options", version);
-		return -1;
-	} else {
-		git_diff_find_options o = GIT_DIFF_FIND_OPTIONS_INIT;
-		memcpy(opts, &o, sizeof(o));
-		return 0;
-	}
+	git_diff_find_options o = GIT_DIFF_FIND_OPTIONS_INIT;
+	if (version != o.version)
+		return diff_options_bad_version(version, "git_diff_find_options");
+	memcpy(opts, &o, sizeof(o));
+	return 0;
 }
 
-int git_diff_format_email_init_options(git_diff_format_email_options* opts, int version)
+int git_diff_format_email_init_options(git_diff_format_email_options* opts, unsigned int version)
 {
-	if (version != GIT_DIFF_FORMAT_EMAIL_OPTIONS_VERSION) {
-		giterr_set(GITERR_INVALID, "Invalid version %d for git_diff_format_email_options", version);
-		return -1;
-	} else {
-		git_diff_format_email_options o = GIT_DIFF_FORMAT_EMAIL_OPTIONS_INIT;
-		memcpy(opts, &o, sizeof(o));
-		return 0;
-	}
+	git_diff_format_email_options o = GIT_DIFF_FORMAT_EMAIL_OPTIONS_INIT;
+	if (version != o.version)
+		return diff_options_bad_version(version, "git_diff_format_email_options");
+	memcpy(opts, &o, sizeof(o));
+	return 0;
 }

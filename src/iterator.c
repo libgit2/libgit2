@@ -11,7 +11,6 @@
 #include "ignore.h"
 #include "buffer.h"
 #include "submodule.h"
-#include "trace.h"
 #include <ctype.h>
 
 #define ITERATOR_SET_CB(P,NAME_LC) do { \
@@ -1017,8 +1016,7 @@ static int fs_iterator__expand_dir(fs_iterator *fi)
 		fs_iterator__free_frame(ff);
 		return GIT_ENOTFOUND;
 	}
-
-	git_trace(GIT_TRACE_PERF, &ff->entries.length, "stat");
+	fi->base.stat_calls += ff->entries.length;
 
 	fs_iterator__seek_frame_start(fi, ff);
 
@@ -1310,7 +1308,6 @@ static int workdir_iterator__enter_dir(fs_iterator *fi)
 		if (!S_ISDIR(entry->st.st_mode) || !strcmp(GIT_DIR, entry->path))
 			continue;
 
-		git_trace(GIT_TRACE_PERF, entry->path, "submodule_lookup");
 		if (git_submodule__is_submodule(fi->base.repo, entry->path)) {
 			entry->st.st_mode = GIT_FILEMODE_COMMIT;
 			entry->path_len--;
