@@ -555,7 +555,7 @@ int git_diff__oid_for_entry(
 	if (!entry.mode) {
 		struct stat st;
 
-		git_trace(GIT_TRACE_TRACE, "stat=1");
+		git_trace(GIT_TRACE_PERF, NULL, "stat");
 		if (p_stat(full_path.ptr, &st) < 0) {
 			error = git_path_set_error(errno, entry.path, "stat");
 			git_buf_free(&full_path);
@@ -570,7 +570,7 @@ int git_diff__oid_for_entry(
 	if (S_ISGITLINK(entry.mode)) {
 		git_submodule *sm;
 
-		git_trace(GIT_TRACE_TRACE, "submodule_lookup=1");
+		git_trace(GIT_TRACE_PERF, NULL, "submodule_lookup");
 		if (!git_submodule_lookup(&sm, diff->repo, entry.path)) {
 			const git_oid *sm_oid = git_submodule_wd_id(sm);
 			if (sm_oid)
@@ -583,7 +583,7 @@ int git_diff__oid_for_entry(
 			giterr_clear();
 		}
 	} else if (S_ISLNK(entry.mode)) {
-		git_trace(GIT_TRACE_TRACE, "oid_calculation=1");
+		git_trace(GIT_TRACE_PERF, NULL, "oid_calculation");
 		error = git_odb__hashlink(out, full_path.ptr);
 	} else if (!git__is_sizet(entry.file_size)) {
 		giterr_set(GITERR_OS, "File size overflow (for 32-bits) on '%s'",
@@ -596,7 +596,7 @@ int git_diff__oid_for_entry(
 		if (fd < 0)
 			error = fd;
 		else {
-			git_trace(GIT_TRACE_TRACE, "oid_calculation=1");
+			git_trace(GIT_TRACE_PERF, NULL, "oid_calculation");
 			error = git_odb__hashfd_filtered(
 				out, fd, (size_t)entry.file_size, GIT_OBJ_BLOB, fl);
 			p_close(fd);
@@ -655,7 +655,7 @@ static int maybe_modified_submodule(
 		ign == GIT_SUBMODULE_IGNORE_ALL)
 		return 0;
 
-	git_trace(GIT_TRACE_TRACE, "submodule_lookup=1");
+	git_trace(GIT_TRACE_PERF, NULL, "submodule_lookup");
 
 	if ((error = git_submodule_lookup(
 			&sub, diff->repo, info->nitem->path)) < 0) {
@@ -965,7 +965,7 @@ static int handle_unmatched_new_item(
 		delta_type = GIT_DELTA_ADDED;
 
 	else if (nitem->mode == GIT_FILEMODE_COMMIT) {
-		git_trace(GIT_TRACE_TRACE, "submodule_lookup=1");
+		git_trace(GIT_TRACE_PERF, NULL, "submodule_lookup");
 
 		/* ignore things that are not actual submodules */
 		if (git_submodule_lookup(NULL, info->repo, nitem->path) != 0) {

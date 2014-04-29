@@ -62,3 +62,17 @@ extern int diff_foreach_via_iterator(
 
 extern void diff_print(FILE *fp, git_diff *diff);
 extern void diff_print_raw(FILE *fp, git_diff *diff);
+
+#include "git2/trace.h"
+
+typedef struct {
+	size_t stat_calls;
+	size_t oid_calcs;
+	size_t submodule_lookups;
+} diff_perf;
+
+extern void diff_perf_track_stats(
+	git_trace_level_t level,
+	void *cb_payload,
+	void *msg_payload,
+	const char *msg);

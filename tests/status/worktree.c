@@ -5,38 +5,18 @@
 #include "posix.h"
 #include "util.h"
 #include "path.h"
-#include <git2/trace.h>
+#include "../diff/diff_helpers.h"
 
 #ifdef GIT_TRACE
-static struct {
-	size_t stat_calls;
-	size_t oid_calcs;
-	size_t submodule_lookups;
-} g_diff_perf;
-
-static void add_stats(git_trace_level_t level, const char *msg)
-{
-	const char *assign = strchr(msg, '=');
-
-	GIT_UNUSED(level);
-
-	if (!assign)
-		return;
-
-	if (!strncmp("stat", msg, (assign - msg)))
-		g_diff_perf.stat_calls += atoi(assign + 1);
-	else if (!strncmp("submodule_lookup", msg, (assign - msg)))
-		g_diff_perf.submodule_lookups += atoi(assign + 1);
-	else if (!strncmp("oid_calculation", msg, (assign - msg)))
-		g_diff_perf.oid_calcs += atoi(assign + 1);
-}
+static diff_perf g_diff_perf;
 #endif
 
 void test_status_worktree__initialize(void)
 {
 #ifdef GIT_TRACE
 	memset(&g_diff_perf, 0, sizeof(g_diff_perf));
-	cl_git_pass(git_trace_set(GIT_TRACE_TRACE, add_stats));
+	cl_git_pass(git_trace_set(
+		GIT_TRACE_PERF, diff_perf_track_stats, &g_diff_perf));
 #endif
 }
 
@@ -50,7 +30,7 @@ void test_status_worktree__cleanup(void)
 {
 	cl_git_sandbox_cleanup();
 #ifdef GIT_TRACE
-	cl_git_pass(git_trace_set(0, NULL));
+	cl_git_pass(git_trace_set(GIT_TRACE_NONE, NULL, NULL));
 #endif
 }
 
@@ -956,7 +936,5 @@ void test_status_worktree__update_stat_cache_0(void)
 	cl_assert_equal_sz(13 + 3, g_diff_perf.stat_calls);
 	cl_assert_equal_sz(0, g_diff_perf.oid_calcs);
 	cl_assert_equal_sz(1, g_diff_perf.submodule_lookups);
-
-	memset(&g_diff_perf, 0, sizeof(g_diff_perf));
 #endif
 }

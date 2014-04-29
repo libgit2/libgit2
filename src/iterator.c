@@ -1018,7 +1018,7 @@ static int fs_iterator__expand_dir(fs_iterator *fi)
 		return GIT_ENOTFOUND;
 	}
 
-	git_trace(GIT_TRACE_TRACE, "stat=%ld", (long)ff->entries.length);
+	git_trace(GIT_TRACE_PERF, &ff->entries.length, "stat");
 
 	fs_iterator__seek_frame_start(fi, ff);
 
@@ -1310,7 +1310,7 @@ static int workdir_iterator__enter_dir(fs_iterator *fi)
 		if (!S_ISDIR(entry->st.st_mode) || !strcmp(GIT_DIR, entry->path))
 			continue;
 
-		git_trace(GIT_TRACE_TRACE, "submodule_lookup=1");
+		git_trace(GIT_TRACE_PERF, entry->path, "submodule_lookup");
 		if (git_submodule__is_submodule(fi->base.repo, entry->path)) {
 			entry->st.st_mode = GIT_FILEMODE_COMMIT;
 			entry->path_len--;

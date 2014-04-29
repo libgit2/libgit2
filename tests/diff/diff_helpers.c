@@ -229,3 +229,22 @@ void diff_print_raw(FILE *fp, git_diff *diff)
 		git_diff_print(diff, GIT_DIFF_FORMAT_RAW,
 			git_diff_print_callback__to_file_handle, fp ? fp : stderr));
 }
+
+void diff_perf_track_stats(
+	git_trace_level_t level,
+	void *cb_payload,
+	void *msg_payload,
+	const char *msg)
+{
+	diff_perf *data = cb_payload;
+
+	if (!(level & GIT_TRACE_PERF))
+		return;
+
+	if (!strcmp("stat", msg))
+		data->stat_calls += msg_payload ? *((size_t *)msg_payload) : 1;
+	else if (!strcmp("submodule_lookup", msg))
+		data->submodule_lookups++;
+	else if (!strcmp("oid_calculation", msg))
+		data->oid_calcs++;
+}
