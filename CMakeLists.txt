@@ -195,7 +195,7 @@ ELSE()
 ENDIF()
 
 # Optional external dependency: libssh2
-IF (USE_SSH AND NOT MINGW)
+IF (USE_SSH)
 	FIND_PACKAGE(LIBSSH2)
 ENDIF()
 IF (LIBSSH2_FOUND)

@@ -19,7 +19,7 @@ matrix:
  fast_finish: true
  include:
    - compiler: i586-mingw32msvc-gcc
-     env: OPTIONS="-DBUILD_CLAR=OFF -DWIN32=ON -DMINGW=ON"
+     env: OPTIONS="-DBUILD_CLAR=OFF -DWIN32=ON -DMINGW=ON -DUSE_SSH=OFF"
    - compiler: gcc
      env: COVERITY=1
  allow_failures:
