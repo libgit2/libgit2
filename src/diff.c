@@ -1310,17 +1310,10 @@ int git_diff_is_sorted_icase(const git_diff *diff)
 	return (diff->opts.flags & GIT_DIFF_IGNORE_CASE) != 0;
 }
 
-static int diff_options_bad_version(int version, const char *thing)
-{
-	giterr_set(GITERR_INVALID, "Invalid version %d for %s", version, thing);
-	return -1;
-}
-
 int git_diff_get_perfdata(git_diff_perfdata *out, const git_diff *diff)
 {
-	if (!out || out->version != GIT_DIFF_PERFDATA_VERSION)
-		return diff_options_bad_version(
-			out ? out->version : 0, "git_diff_perfdata");
+	assert(out);
+	GITERR_CHECK_VERSION(out, GIT_DIFF_PERFDATA_VERSION, "git_diff_perfdata");
 	out->stat_calls = diff->perf.stat_calls;
 	out->oid_calculations = diff->perf.oid_calculations;
 	return 0;

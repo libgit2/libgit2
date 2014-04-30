@@ -501,14 +501,13 @@ struct git_remote_callbacks {
  * Initializes a `git_remote_callbacks` with default values. Equivalent to
  * creating an instance with GIT_REMOTE_CALLBACKS_INIT.
  *
- * @param opts the `git_remote_callbacks` instance to initialize.
- * @param version the version of the struct; you should pass
- *        `GIT_REMOTE_CALLBACKS_VERSION` here.
+ * @param opts the `git_remote_callbacks` struct to initialize
+ * @param version Version of struct; pass `GIT_REMOTE_CALLBACKS_VERSION`
  * @return Zero on success; -1 on failure.
  */
 GIT_EXTERN(int) git_remote_init_callbacks(
-	git_remote_callbacks* opts,
-	int version);
+	git_remote_callbacks *opts,
+	unsigned int version);
 
 /**
  * Set the callbacks for a remote

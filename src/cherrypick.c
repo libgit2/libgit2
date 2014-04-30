@@ -217,14 +217,10 @@ done:
 	return error;
 }
 
-int git_cherry_pick_init_opts(git_cherry_pick_options* opts, int version)
+int git_cherry_pick_init_options(
+	git_cherry_pick_options *opts, unsigned int version)
 {
-	if (version != GIT_CHERRY_PICK_OPTIONS_VERSION) {
-		giterr_set(GITERR_INVALID, "Invalid version %d for git_cherry_pick_options", version);
-		return -1;
-	} else {
-		git_cherry_pick_options o = GIT_CHERRY_PICK_OPTIONS_INIT;
-		memcpy(opts, &o, sizeof(o));
-		return 0;
-	}
+	GIT_INIT_STRUCTURE_FROM_TEMPLATE(
+		opts, version, git_cherry_pick_options, GIT_CHERRY_PICK_OPTIONS_INIT);
+	return 0;
 }

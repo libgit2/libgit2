@@ -314,14 +314,13 @@ struct git_transport {
  * Initializes a `git_transport` with default values. Equivalent to
  * creating an instance with GIT_TRANSPORT_INIT.
  *
- * @param opts the `git_transport` instance to initialize.
- * @param version the version of the struct; you should pass
- *        `GIT_TRANSPORT_VERSION` here.
+ * @param opts the `git_transport` struct to initialize
+ * @param version Version of struct; pass `GIT_TRANSPORT_VERSION`
  * @return Zero on success; -1 on failure.
  */
 GIT_EXTERN(int) git_transport_init(
-	git_transport* opts,
-	int version);
+	git_transport *opts,
+	unsigned int version);
 
 /**
  * Function to use to create a transport from a URL. The transport database

@@ -93,14 +93,13 @@ struct git_odb_backend {
  * Initializes a `git_odb_backend` with default values. Equivalent to
  * creating an instance with GIT_ODB_BACKEND_INIT.
  *
- * @param opts the `git_odb_backend` instance to initialize.
- * @param version the version of the struct; you should pass
- *        `GIT_ODB_BACKEND_VERSION` here.
+ * @param opts the `git_odb_backend` struct to initialize.
+ * @param version Version the struct; pass `GIT_ODB_BACKEND_VERSION`
  * @return Zero on success; -1 on failure.
  */
 GIT_EXTERN(int) git_odb_init_backend(
-	git_odb_backend* backend,
-	int version);
+	git_odb_backend *backend,
+	unsigned int version);
 
 GIT_EXTERN(void *) git_odb_backend_malloc(git_odb_backend *backend, size_t len);
 

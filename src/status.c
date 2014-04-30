@@ -528,11 +528,8 @@ int git_status_init_options(git_status_options *opts, unsigned int version)
 int git_status_list_get_perfdata(
 	git_diff_perfdata *out, const git_status_list *status)
 {
-	if (!out || out->version != GIT_DIFF_PERFDATA_VERSION) {
-		giterr_set(GITERR_INVALID, "Invalid version %d for git_diff_perfdata",
-				   out ? out->version : 0);
-		return -1;
-	}
+	assert(out);
+	GITERR_CHECK_VERSION(out, GIT_DIFF_PERFDATA_VERSION, "git_diff_perfdata");
 
 	out->stat_calls = 0;
 	out->oid_calculations = 0;
