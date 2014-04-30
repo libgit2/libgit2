@@ -1749,55 +1749,19 @@ int git_remote_init_callbacks(git_remote_callbacks* opts, int version)
 	}
 }
 
-struct branch_removal_data {
-	git_vector branches;
-	const char *name;
-};
-
-static int retrieve_branches_cb(
-	const git_config_entry *entry,
-	void *payload)
+/* asserts a branch.<foo>.remote format */
+static const char *name_offset(size_t *len_out, const char *name)
 {
-	int error;
-	struct branch_removal_data *data = (struct branch_removal_data *)payload;
+	size_t prefix_len;
+	const char *dot;
 
-	if (strcmp(data->name, entry->value))
-		return 0;
+	prefix_len = strlen("remote.");
+	dot = strchr(name + prefix_len, '.');
 
-	error = git_vector_insert(
-		&data->branches,
-		git__strndup(
-		entry->name + strlen("branch."),
-		strlen(entry->name) - strlen("branch.") - strlen(".remote")));
+	assert(dot);
 
-	return error;
-}
-
-static int delete_branch_remote_config_entry(
-	git_config *config,
-	const char *branch_name)
-{
-	int error;
-
-	git_buf config_entry = GIT_BUF_INIT;
-
-	if (git_buf_printf(&config_entry, "branch.%s.%s", branch_name, "remote") < 0)
-		return -1;
-
-	if ((error = git_config_delete_entry(config, git_buf_cstr(&config_entry))) < 0)
-		goto cleanup;
-
-	git_buf_clear(&config_entry);
-
-	if (git_buf_printf(&config_entry, "branch.%s.%s", branch_name, "merge") < 0)
-		return -1;
-
-	error = git_config_delete_entry(config, git_buf_cstr(&config_entry));
-
-cleanup:
-	git_buf_free(&config_entry);
-
-	return error;
+	*len_out = dot - name - prefix_len;
+	return name + prefix_len;
 }
 
 static int remove_branch_config_related_entries(
@@ -1806,29 +1770,46 @@ static int remove_branch_config_related_entries(
 {
 	int error;
 	git_config *config;
-	size_t i;
-	char *branch_name;
-	struct branch_removal_data data;
+	git_config_entry *entry;
+	git_config_iterator *iter;
+	git_buf buf = GIT_BUF_INIT;
 
 	if ((error = git_repository_config__weakptr(&config, repo)) < 0)
 		return error;
 
-	if ((error = git_vector_init(&data.branches, 4, git__strcmp_cb)) < 0)
+	if ((error = git_config_iterator_glob_new(&iter, config, "branch\\..+\\.remote")) < 0)
 		return error;
 
-	data.name = remote_name;
+	/* find any branches with us as upstream and remove that config */
+	while ((error = git_config_next(&entry, iter)) == 0) {
+		const char *branch;
+		size_t branch_len;
 
-	error = git_config_foreach_match(
-		config, "branch\\..+\\.remote", retrieve_branches_cb, &data);
+		if (strcmp(remote_name, entry->value))
+			continue;
 
-	git_vector_foreach(&data.branches, i, branch_name) {
-		if (!error)
-			error = delete_branch_remote_config_entry(config, branch_name);
+		branch = name_offset(&branch_len, entry->name);
 
-		git__free(branch_name);
+		git_buf_clear(&buf);
+		if (git_buf_printf(&buf, "branch.%.*s.merge", (int)branch_len, branch) < 0)
+			break;
+
+		if ((error = git_config_delete_entry(config, git_buf_cstr(&buf))) < 0)
+			break;
+
+		git_buf_clear(&buf);
+		if (git_buf_printf(&buf, "branch.%.*s.remote", (int)branch_len, branch) < 0)
+			break;
+
+		if ((error = git_config_delete_entry(config, git_buf_cstr(&buf))) < 0)
+			break;
 	}
 
-	git_vector_free(&data.branches);
+	if (error == GIT_ITEROVER)
+		error = 0;
+
+	git_buf_free(&buf);
+	git_config_iterator_free(iter);
 	return error;
 }
 
