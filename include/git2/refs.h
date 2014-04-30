@@ -525,6 +525,17 @@ GIT_EXTERN(int) git_reference_iterator_glob_new(
  */
 GIT_EXTERN(int) git_reference_next(git_reference **out, git_reference_iterator *iter);
 
+/**
+ * Get the next reference's name
+ *
+ * This function is provided for convenience in case only the names
+ * are interesting as it avoids the allocation of the `git_reference`
+ * object which `git_reference_next()` needs.
+ *
+ * @param out pointer in which to store the string
+ * @param iter the iterator
+ * @return 0, GIT_ITEROVER if there are no more; or an error code
+ */
 GIT_EXTERN(int) git_reference_next_name(const char **out, git_reference_iterator *iter);
 
 /**
