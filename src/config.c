@@ -1144,7 +1144,7 @@ int git_config_parse_int64(int64_t *out, const char *value)
 	}
 
 fail_parse:
-	giterr_set(GITERR_CONFIG, "Failed to parse '%s' as an integer", value);
+	giterr_set(GITERR_CONFIG, "Failed to parse '%s' as an integer", value ? value : "(null)");
 	return -1;
 }
 
@@ -1164,7 +1164,7 @@ int git_config_parse_int32(int32_t *out, const char *value)
 	return 0;
 
 fail_parse:
-	giterr_set(GITERR_CONFIG, "Failed to parse '%s' as a 32-bit integer", value);
+	giterr_set(GITERR_CONFIG, "Failed to parse '%s' as a 32-bit integer", value ? value : "(null)");
 	return -1;
 }
 
