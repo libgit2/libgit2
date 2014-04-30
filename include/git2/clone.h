@@ -66,17 +66,16 @@ typedef struct git_clone_options {
 #define GIT_CLONE_OPTIONS_INIT {GIT_CLONE_OPTIONS_VERSION, {GIT_CHECKOUT_OPTIONS_VERSION, GIT_CHECKOUT_SAFE_CREATE}, GIT_REMOTE_CALLBACKS_INIT}
 
 /**
-* Initializes a `git_clone_options` with default values. Equivalent to
-* creating an instance with GIT_CLONE_OPTIONS_INIT.
-*
-* @param opts the `git_clone_options` instance to initialize.
-* @param version the version of the struct; you should pass
-* `GIT_CLONE_OPTIONS_VERSION` here.
-* @return Zero on success; -1 on failure.
-*/
+ * Initializes a `git_clone_options` with default values. Equivalent to
+ * creating an instance with GIT_CLONE_OPTIONS_INIT.
+ *
+ * @param opts The `git_clone_options` struct to initialize
+ * @param version Version of struct; pass `GIT_CLONE_OPTIONS_VERSION`
+ * @return Zero on success; -1 on failure.
+ */
 GIT_EXTERN(int) git_clone_init_options(
-	git_clone_options* opts,
-	int version);
+	git_clone_options *opts,
+	unsigned int version);
 
 /**
  * Clone a remote repository.

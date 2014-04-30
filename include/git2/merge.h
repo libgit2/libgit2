@@ -57,7 +57,7 @@ typedef struct {
  */
 GIT_EXTERN(int) git_merge_file_init_input(
 	git_merge_file_input *opts,
-	int version);
+	unsigned int version);
 
 /**
  * Flags for `git_merge_tree` options.  A combination of these flags can be
@@ -164,7 +164,7 @@ typedef struct {
  */
 GIT_EXTERN(int) git_merge_file_init_options(
 	git_merge_file_options *opts,
-	int version);
+	unsigned int version);
 
 typedef struct {
 	/**
@@ -232,7 +232,7 @@ typedef struct {
  */
 GIT_EXTERN(int) git_merge_init_options(
 	git_merge_options *opts,
-	int version);
+	unsigned int version);
 
 /**
  * The results of `git_merge_analysis` indicate the merge opportunities.

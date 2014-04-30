@@ -388,13 +388,13 @@ typedef struct {
 	{GIT_DIFF_OPTIONS_VERSION, 0, GIT_SUBMODULE_IGNORE_DEFAULT, {NULL,0}, NULL, NULL, 3}
 
 /**
-* Initializes a `git_diff_options` with default values. Equivalent to
-* creating an instance with GIT_DIFF_OPTIONS_INIT.
-*
-* @param opts The `git_diff_options` instance to initialize.
-* @param version Version of struct; pass `GIT_DIFF_OPTIONS_VERSION`
-* @return Zero on success; -1 on failure.
-*/
+ * Initializes a `git_diff_options` with default values. Equivalent to
+ * creating an instance with GIT_DIFF_OPTIONS_INIT.
+ *
+ * @param opts The `git_diff_options` struct to initialize
+ * @param version Version of struct; pass `GIT_DIFF_OPTIONS_VERSION`
+ * @return Zero on success; -1 on failure.
+ */
 GIT_EXTERN(int) git_diff_init_options(
 	git_diff_options *opts,
 	unsigned int version);
@@ -628,13 +628,13 @@ typedef struct {
 #define GIT_DIFF_FIND_OPTIONS_INIT {GIT_DIFF_FIND_OPTIONS_VERSION}
 
 /**
-* Initializes a `git_diff_find_options` with default values. Equivalent to
-* creating an instance with GIT_DIFF_FIND_OPTIONS_INIT.
-*
-* @param opts The `git_diff_find_options` instance to initialize.
-* @param version Version of struct; pass `GIT_DIFF_FIND_OPTIONS_VERSION`
-* @return Zero on success; -1 on failure.
-*/
+ * Initializes a `git_diff_find_options` with default values. Equivalent to
+ * creating an instance with GIT_DIFF_FIND_OPTIONS_INIT.
+ *
+ * @param opts The `git_diff_find_options` struct to initialize
+ * @param version Version of struct; pass `GIT_DIFF_FIND_OPTIONS_VERSION`
+ * @return Zero on success; -1 on failure.
+ */
 GIT_EXTERN(int) git_diff_find_init_options(
 	git_diff_find_options *opts,
 	unsigned int version);
@@ -1221,14 +1221,14 @@ GIT_EXTERN(int) git_diff_commit_as_email(
 	const git_diff_options *diff_opts);
 
 /**
-* Initializes a `git_diff_format_email_options` with default values.
-*
-* Equivalent to creating an instance with GIT_DIFF_FORMAT_EMAIL_OPTIONS_INIT.
-*
-* @param opts Uhe `git_diff_format_email_options` instance to initialize.
-* @param version Version of struct; pass `GIT_DIFF_FORMAT_EMAIL_OPTIONS_VERSION`
-* @return Zero on success; -1 on failure.
-*/
+ * Initializes a `git_diff_format_email_options` with default values.
+ *
+ * Equivalent to creating an instance with GIT_DIFF_FORMAT_EMAIL_OPTIONS_INIT.
+ *
+ * @param opts The `git_diff_format_email_options` struct to initialize
+ * @param version Version of struct; pass `GIT_DIFF_FORMAT_EMAIL_OPTIONS_VERSION`
+ * @return Zero on success; -1 on failure.
+ */
 GIT_EXTERN(int) git_diff_format_email_init_options(
 	git_diff_format_email_options *opts,
 	unsigned int version);

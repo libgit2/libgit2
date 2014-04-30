@@ -1628,29 +1628,26 @@ int git_diff_commit_as_email(
 	return error;
 }
 
-int git_diff_init_options(git_diff_options* opts, unsigned int version)
+int git_diff_init_options(git_diff_options *opts, unsigned int version)
 {
-	git_diff_options o = GIT_DIFF_OPTIONS_INIT;
-	if (version != o.version)
-		return diff_options_bad_version(version, "git_diff_options");
-	memcpy(opts, &o, sizeof(o));
+	GIT_INIT_STRUCTURE_FROM_TEMPLATE(
+		opts, version, git_diff_options, GIT_DIFF_OPTIONS_INIT);
 	return 0;
 }
 
-int git_diff_find_init_options(git_diff_find_options* opts, unsigned int version)
+int git_diff_find_init_options(
+	git_diff_find_options *opts, unsigned int version)
 {
-	git_diff_find_options o = GIT_DIFF_FIND_OPTIONS_INIT;
-	if (version != o.version)
-		return diff_options_bad_version(version, "git_diff_find_options");
-	memcpy(opts, &o, sizeof(o));
+	GIT_INIT_STRUCTURE_FROM_TEMPLATE(
+		opts, version, git_diff_find_options, GIT_DIFF_FIND_OPTIONS_INIT);
 	return 0;
 }
 
-int git_diff_format_email_init_options(git_diff_format_email_options* opts, unsigned int version)
+int git_diff_format_email_init_options(
+	git_diff_format_email_options *opts, unsigned int version)
 {
-	git_diff_format_email_options o = GIT_DIFF_FORMAT_EMAIL_OPTIONS_INIT;
-	if (version != o.version)
-		return diff_options_bad_version(version, "git_diff_format_email_options");
-	memcpy(opts, &o, sizeof(o));
+	GIT_INIT_STRUCTURE_FROM_TEMPLATE(
+		opts, version, git_diff_format_email_options,
+		GIT_DIFF_FORMAT_EMAIL_OPTIONS_INIT);
 	return 0;
 }
