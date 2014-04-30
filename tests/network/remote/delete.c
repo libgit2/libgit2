@@ -27,14 +27,18 @@ void test_network_remote_delete__cannot_delete_an_anonymous_remote(void)
 	cl_git_fail(git_remote_delete(remote));
 
 	git_remote_free(remote);
+	git_remote_free(_remote);
 }
 
-void test_network_remote_delete__deleting_a_remote_removes_the_remote_tracking_references(void)
+void test_network_remote_delete__remove_remote_tracking_branches(void)
 {
-	cl_assert(false);
+	git_reference *ref;
+
+	cl_git_pass(git_remote_delete(_remote));
+	cl_git_fail_with(GIT_ENOTFOUND, git_reference_lookup(&ref, _repo, "refs/remotes/test/master"));
 }
 
-void test_network_remote_delete__deleting_a_remote_removes_the_remote_configuration_settings(void)
+void test_network_remote_delete__remove_remote_configuration_settings(void)
 {
 	cl_assert(count_config_entries_match(_repo, "remote\\.test\\.+") > 0);
 
@@ -43,7 +47,7 @@ void test_network_remote_delete__deleting_a_remote_removes_the_remote_configurat
 	cl_assert_equal_i(0, count_config_entries_match(_repo, "remote\\.test\\.+"));
 }
 
-void test_network_remote_delete__deleting_a_remote_removes_the_branch_remote_configuration_settings(void)
+void test_network_remote_delete__remove_branch_upstream_configuration_settings(void)
 {
 	assert_config_entry_existence(_repo, "branch.mergeless.remote", true);
 	assert_config_entry_existence(_repo, "branch.master.remote", true);

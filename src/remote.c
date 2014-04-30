@@ -1813,6 +1813,53 @@ static int remove_branch_config_related_entries(
 	return error;
 }
 
+static int remove_refs(git_repository *repo, const char *glob)
+{
+	git_reference_iterator *iter;
+	const char *name;
+	int error;
+
+	if ((error = git_reference_iterator_glob_new(&iter, repo, glob)) < 0)
+		return error;
+
+	while ((error = git_reference_next_name(&name, iter)) == 0) {
+		if ((error = git_reference_remove(repo, name)) < 0)
+			break;
+	}
+	git_reference_iterator_free(iter);
+
+	if (error == GIT_ITEROVER)
+		error = 0;
+
+	return error;
+}
+
+static int remove_remote_tracking(git_repository *repo, const char *remote_name)
+{
+	git_remote *remote;
+	int error;
+	size_t i, count;
+
+	/* we want to use what's on the config, regardless of changes to the instance in memory */
+	if ((error = git_remote_load(&remote, repo, remote_name)) < 0)
+		return error;
+
+	count = git_remote_refspec_count(remote);
+	for (i = 0; i < count; i++) {
+		const git_refspec *refspec = git_remote_get_refspec(remote, i);
+
+		/* shouldn't ever actually happen */
+		if (refspec == NULL)
+			continue;
+
+		if ((error = remove_refs(repo, git_refspec_dst(refspec))) < 0)
+			break;
+	}
+
+	git_remote_free(remote);
+	return error;
+}
+
 int git_remote_delete(git_remote *remote)
 {
 	int error;
@@ -1827,12 +1874,15 @@ int git_remote_delete(git_remote *remote)
 
 	repo = git_remote_owner(remote);
 
-	if ((error = rename_remote_config_section(
-		repo, git_remote_name(remote), NULL)) < 0)
-		return error;
-
 	if ((error = remove_branch_config_related_entries(repo,
 		git_remote_name(remote))) < 0)
+		return error;
+
+	if ((error = remove_remote_tracking(repo, git_remote_name(remote))) < 0)
+		return error;
+
+	if ((error = rename_remote_config_section(
+		repo, git_remote_name(remote), NULL)) < 0)
 		return error;
 
 	git_remote_free(remote);
