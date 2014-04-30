@@ -1,6 +1,6 @@
 #!/bin/sh
 
-if [ "$COVERITY" -eq 1 ];
+if [ -n "$COVERITY" ];
 then
 	./script/coverity.sh;
 	exit $?;
