@@ -81,6 +81,24 @@ void test_attr_ignore__full_paths(void)
 	assert_is_ignored(false, "Folder/Middle/More/More/Contained/Not/Happy/Child");
 }
 
+void test_attr_ignore__more_starstar_cases(void)
+{
+	cl_must_pass(p_unlink("attr/.gitignore"));
+	cl_git_mkfile(
+		"attr/dir/.gitignore",
+		"sub/**/*.html\n");
+
+	assert_is_ignored(false, "aaa.html");
+	assert_is_ignored(false, "dir");
+	assert_is_ignored(false, "dir/sub");
+	assert_is_ignored(true,  "dir/sub/sub2/aaa.html");
+	assert_is_ignored(true,  "dir/sub/aaa.html");
+	assert_is_ignored(false, "dir/aaa.html");
+	assert_is_ignored(false, "sub");
+	assert_is_ignored(false, "sub/aaa.html");
+	assert_is_ignored(false, "sub/sub2/aaa.html");
+}
+
 void test_attr_ignore__leading_stars(void)
 {
 	cl_git_rewritefile(
