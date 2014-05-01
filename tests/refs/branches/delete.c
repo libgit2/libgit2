@@ -10,8 +10,7 @@ void test_refs_branches_delete__initialize(void)
 {
 	git_oid id;
 
-	cl_fixture_sandbox("testrepo.git");
-	cl_git_pass(git_repository_open(&repo, "testrepo.git"));
+	repo = cl_git_sandbox_init("testrepo.git");
 
 	cl_git_pass(git_oid_fromstr(&id, "be3563ae3f795b2b4353bcce3a527ad0a4f7f644"));
 	cl_git_pass(git_reference_create(&fake_remote, repo, "refs/remotes/nulltoken/master", &id, 0, NULL, NULL));
@@ -22,10 +21,8 @@ void test_refs_branches_delete__cleanup(void)
 	git_reference_free(fake_remote);
 	fake_remote = NULL;
 
-	git_repository_free(repo);
+	cl_git_sandbox_cleanup();
 	repo = NULL;
-
-	cl_fixture_cleanup("testrepo.git");
 }
 
 void test_refs_branches_delete__can_not_delete_a_branch_pointed_at_by_HEAD(void)

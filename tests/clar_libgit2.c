@@ -493,9 +493,11 @@ void cl_fake_home_cleanup(void *payload)
 
 	GIT_UNUSED(payload);
 
-	cl_git_pass(git_libgit2_opts(
-		GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL, restore));
-	git__free(restore);
+	if (restore) {
+		cl_git_pass(git_libgit2_opts(
+			GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL, restore));
+		git__free(restore);
+	}
 }
 
 void cl_fake_home(void)

@@ -7,7 +7,8 @@ static git_reference *branch;
 
 void test_refs_branches_ishead__initialize(void)
 {
-	cl_git_pass(git_repository_open(&repo, cl_fixture("testrepo.git")));
+	repo = cl_git_sandbox_init("testrepo.git");
+	branch = NULL;
 }
 
 void test_refs_branches_ishead__cleanup(void)
@@ -15,7 +16,7 @@ void test_refs_branches_ishead__cleanup(void)
 	git_reference_free(branch);
 	branch = NULL;
 
-	git_repository_free(repo);
+	cl_git_sandbox_cleanup();
 	repo = NULL;
 }
 
@@ -28,34 +29,20 @@ void test_refs_branches_ishead__can_tell_if_a_branch_is_pointed_at_by_HEAD(void)
 
 void test_refs_branches_ishead__can_properly_handle_unborn_HEAD(void)
 {
-	git_repository_free(repo);
-
-	repo = cl_git_sandbox_init("testrepo.git");
-
 	make_head_unborn(repo, NON_EXISTING_HEAD);
 
 	cl_git_pass(git_reference_lookup(&branch, repo, "refs/heads/master"));
 
 	cl_assert_equal_i(false, git_branch_is_head(branch));
-
-	cl_git_sandbox_cleanup();
-	repo = NULL;
 }
 
 void test_refs_branches_ishead__can_properly_handle_missing_HEAD(void)
 {
-	git_repository_free(repo);
-
-	repo = cl_git_sandbox_init("testrepo.git");
-
 	delete_head(repo);
 
 	cl_git_pass(git_reference_lookup(&branch, repo, "refs/heads/master"));
 
 	cl_assert_equal_i(false, git_branch_is_head(branch));
-
-	cl_git_sandbox_cleanup();
-	repo = NULL;
 }
 
 void test_refs_branches_ishead__can_tell_if_a_branch_is_not_pointed_at_by_HEAD(void)
@@ -95,9 +82,6 @@ void test_refs_branches_ishead__only_direct_references_are_considered(void)
 {
 	git_reference *linked, *super, *head;
 
-	git_repository_free(repo);
-	repo = cl_git_sandbox_init("testrepo.git");
-
 	cl_git_pass(git_reference_symbolic_create(&linked, repo, "refs/heads/linked", "refs/heads/master", 0, NULL, NULL));
 	cl_git_pass(git_reference_symbolic_create(&super, repo, "refs/heads/super", "refs/heads/linked", 0, NULL, NULL));
 	cl_git_pass(git_reference_symbolic_create(&head, repo, GIT_HEAD_FILE, "refs/heads/super", 1, NULL, NULL));
@@ -111,6 +95,4 @@ void test_refs_branches_ishead__only_direct_references_are_considered(void)
 	git_reference_free(linked);
 	git_reference_free(super);
 	git_reference_free(head);
-	cl_git_sandbox_cleanup();
-	repo = NULL;
 }

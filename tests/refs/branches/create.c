@@ -7,10 +7,9 @@ static git_reference *branch;
 
 void test_refs_branches_create__initialize(void)
 {
-	cl_fixture_sandbox("testrepo.git");
-	cl_git_pass(git_repository_open(&repo, "testrepo.git"));
-
+	repo = cl_git_sandbox_init("testrepo.git");
 	branch = NULL;
+	target = NULL;
 }
 
 void test_refs_branches_create__cleanup(void)
@@ -21,10 +20,8 @@ void test_refs_branches_create__cleanup(void)
 	git_commit_free(target);
 	target = NULL;
 
-	git_repository_free(repo);
+	cl_git_sandbox_cleanup();
 	repo = NULL;
-
-	cl_fixture_cleanup("testrepo.git");
 }
 
 static void retrieve_target_from_oid(git_commit **out, git_repository *repo, const char *sha)
