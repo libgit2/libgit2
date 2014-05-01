@@ -364,7 +364,6 @@ void test_status_ignore__leading_slash_ignores(void)
 {
 	git_status_options opts = GIT_STATUS_OPTIONS_INIT;
 	status_entry_counts counts;
-	git_buf home = GIT_BUF_INIT;
 	static const char *paths_2[] = {
 		"dir/.gitignore",
 		"dir/a/ignore_me",
@@ -385,7 +384,7 @@ void test_status_ignore__leading_slash_ignores(void)
 
 	make_test_data(test_repo_1, test_files_1);
 
-	cl_fake_home(&home);
+	cl_fake_home();
 	cl_git_mkfile("home/.gitignore", "/ignore_me\n");
 	{
 		git_config *cfg;
@@ -412,8 +411,6 @@ void test_status_ignore__leading_slash_ignores(void)
 	cl_assert_equal_i(counts.expected_entry_count, counts.entry_count);
 	cl_assert_equal_i(0, counts.wrong_status_flags_count);
 	cl_assert_equal_i(0, counts.wrong_sorted_path);
-
-	cl_fake_home_cleanup(&home);
 }
 
 void test_status_ignore__contained_dir_with_matching_name(void)

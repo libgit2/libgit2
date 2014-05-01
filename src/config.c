@@ -984,24 +984,22 @@ int git_config__global_location(git_buf *buf)
 {
 	const git_buf *paths;
 	const char *sep, *start;
-	size_t len;
 
 	if (git_sysdir_get(&paths, GIT_SYSDIR_GLOBAL) < 0)
 		return -1;
 
 	/* no paths, so give up */
-	if (git_buf_len(paths) == 0)
+	if (!paths || !git_buf_len(paths))
 		return -1;
 
-	start = git_buf_cstr(paths);
-	sep = strchr(start, GIT_PATH_LIST_SEPARATOR);
+	/* find unescaped separator or end of string */
+	for (sep = start = git_buf_cstr(paths); *sep; ++sep) {
+		if (*sep == GIT_PATH_LIST_SEPARATOR &&
+			(sep <= start || sep[-1] != '\\'))
+			break;
+	}
 
-	if (sep)
-		len = sep - start;
-	else
-		len = paths->size;
-
-	if (git_buf_set(buf, start, len) < 0)
+	if (git_buf_set(buf, start, (size_t)(sep - start)) < 0)
 		return -1;
 
 	return git_buf_joinpath(buf, buf->ptr, GIT_CONFIG_FILENAME_GLOBAL);
