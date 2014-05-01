@@ -13,7 +13,11 @@
  */
 
 #include "common.h"
+#ifdef _WIN32
+#define sleep(a) Sleep(a * 1000)
+#else
 #include <unistd.h>
+#endif
 
 /**
  * This example demonstrates the use of the libgit2 status APIs,
