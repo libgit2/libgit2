@@ -73,7 +73,7 @@ static int ensure_remote_name_is_valid(const char *name)
 	if (!git_remote_is_valid_name(name)) {
 		giterr_set(
 			GITERR_CONFIG,
-			"'%s' is not a valid remote name.", name);
+			"'%s' is not a valid remote name.", name ? name : "(null)");
 		error = GIT_EINVALIDSPEC;
 	}
 
