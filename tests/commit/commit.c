@@ -38,6 +38,10 @@ void test_commit_commit__create_unexisting_update_ref(void)
 	cl_git_pass(git_commit_create(&oid, _repo, "refs/heads/foo/bar", s, s,
 				      NULL, "some msg", tree, 1, (const git_commit **) &commit));
 
+	/* fail because the parent isn't the tip of the branch anymore */
+	cl_git_fail(git_commit_create(&oid, _repo, "refs/heads/foo/bar", s, s,
+				      NULL, "some msg", tree, 1, (const git_commit **) &commit));
+
 	cl_git_pass(git_reference_lookup(&ref, _repo, "refs/heads/foo/bar"));
 	cl_assert(!git_oid_cmp(&oid, git_reference_target(ref)));
 
