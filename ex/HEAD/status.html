@@ -70,7 +70,11 @@
 <span class="cm"> */</span>
 
 <span class="cp">#include &quot;common.h&quot;</span>
-<span class="cp">#include &lt;unistd.h&gt;</span></pre></div>
+<span class="cp">#ifdef _WIN32</span>
+<span class="cp">#define sleep(a) Sleep(a * 1000)</span>
+<span class="cp">#else</span>
+<span class="cp">#include &lt;unistd.h&gt;</span>
+<span class="cp">#endif</span></pre></div>
       </td>
     </tr>
     <tr id='section-2'>
