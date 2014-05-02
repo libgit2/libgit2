@@ -184,9 +184,7 @@ static bool checkout_is_workdir_modified(
 	if (baseitem->size && wditem->file_size != baseitem->size)
 		return true;
 
-	if (git_diff__oid_for_file(
-			data->repo, wditem->path, wditem->mode,
-			wditem->file_size, &oid) < 0)
+	if (git_diff__oid_for_entry(&oid, data->diff, wditem, NULL) < 0)
 		return false;
 
 	return (git_oid__cmp(&baseitem->id, &oid) != 0);
@@ -2242,14 +2240,9 @@ int git_checkout_head(
 	return git_checkout_tree(repo, NULL, opts);
 }
 
-int git_checkout_init_opts(git_checkout_options* opts, int version)
+int git_checkout_init_options(git_checkout_options *opts, unsigned int version)
 {
-	if (version != GIT_CHECKOUT_OPTIONS_VERSION) {
-		giterr_set(GITERR_INVALID, "Invalid version %d for git_checkout_options", version);
-		return -1;
-	} else {
-		git_checkout_options o = GIT_CHECKOUT_OPTIONS_INIT;
-		memcpy(opts, &o, sizeof(o));
-		return 0;
-	}
+	GIT_INIT_STRUCTURE_FROM_TEMPLATE(
+		opts, version, git_checkout_options, GIT_CHECKOUT_OPTIONS_INIT);
+	return 0;
 }

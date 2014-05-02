@@ -170,6 +170,11 @@ GIT_INLINE(void) git__init_structure(void *structure, size_t len, unsigned int v
 }
 #define GIT_INIT_STRUCTURE(S,V) git__init_structure(S, sizeof(*S), V)
 
+#define GIT_INIT_STRUCTURE_FROM_TEMPLATE(PTR,VERSION,TYPE,TPL) do { \
+	TYPE _tmpl = TPL; \
+	GITERR_CHECK_VERSION(&(VERSION), _tmpl.version, #TYPE);	\
+	memcpy((PTR), &_tmpl, sizeof(_tmpl)); } while (0)
+
 /* NOTE: other giterr functions are in the public errors.h header file */
 
 #include "util.h"

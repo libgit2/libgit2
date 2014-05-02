@@ -121,6 +121,11 @@ typedef enum {
  * - GIT_STATUS_OPT_NO_REFRESH bypasses the default status behavior of
  *   doing a "soft" index reload (i.e. reloading the index data if the
  *   file on disk has been modified outside libgit2).
+ * - GIT_STATUS_OPT_UPDATE_INDEX tells libgit2 to refresh the stat cache
+ *   in the index for files that are unchanged but have out of date stat
+ *   information in the index.  It will result in less work being done on
+ *   subsequent calls to get status.  This is mutually exclusive with the
+ *   NO_REFRESH option.
  *
  * Calling `git_status_foreach()` is like calling the extended version
  * with: GIT_STATUS_OPT_INCLUDE_IGNORED, GIT_STATUS_OPT_INCLUDE_UNTRACKED,
@@ -141,6 +146,7 @@ typedef enum {
 	GIT_STATUS_OPT_SORT_CASE_INSENSITIVELY  = (1u << 10),
 	GIT_STATUS_OPT_RENAMES_FROM_REWRITES    = (1u << 11),
 	GIT_STATUS_OPT_NO_REFRESH               = (1u << 12),
+	GIT_STATUS_OPT_UPDATE_INDEX             = (1u << 13),
 } git_status_opt_t;
 
 #define GIT_STATUS_OPT_DEFAULTS \
@@ -178,14 +184,13 @@ typedef struct {
  * Initializes a `git_status_options` with default values. Equivalent to
  * creating an instance with GIT_STATUS_OPTIONS_INIT.
  *
- * @param opts the `git_status_options` instance to initialize.
- * @param version the version of the struct; you should pass
- *        `GIT_STATUS_OPTIONS_VERSION` here.
+ * @param opts The `git_status_options` instance to initialize.
+ * @param version Version of struct; pass `GIT_STATUS_OPTIONS_VERSION`
  * @return Zero on success; -1 on failure.
  */
 GIT_EXTERN(int) git_status_init_options(
-	git_status_options* opts,
-	int version);
+	git_status_options *opts,
+	unsigned int version);
 
 /**
  * A status entry, providing the differences between the file as it exists

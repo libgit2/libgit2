@@ -52,6 +52,7 @@ struct git_iterator {
 	char *start;
 	char *end;
 	int (*prefixcomp)(const char *str, const char *prefix);
+	size_t stat_calls;
 	unsigned int flags;
 };
 

@@ -9,11 +9,6 @@ static git_repository *g_repo = NULL;
 
 void test_attr_repo__initialize(void)
 {
-	/* Before each test, instantiate the attr repo from the fixtures and
-	 * rename the .gitted to .git so it is a repo with a working dir.
-	 * Also rename gitattributes to .gitattributes, because it contains
-	 * macro definitions which are only allowed in the root.
-	 */
 	g_repo = cl_git_sandbox_init("attr");
 }
 

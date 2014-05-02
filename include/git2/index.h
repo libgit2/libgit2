@@ -61,7 +61,7 @@ typedef struct git_index_entry {
 	unsigned short flags;
 	unsigned short flags_extended;
 
-	char *path;
+	const char *path;
 } git_index_entry;
 
 /**

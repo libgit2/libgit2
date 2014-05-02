@@ -131,7 +131,12 @@ int cl_repo_get_bool(git_repository *repo, const char *cfg);
 
 void cl_repo_set_string(git_repository *repo, const char *cfg, const char *value);
 
-void cl_fake_home(git_buf *restore);
-void cl_fake_home_cleanup(git_buf *restore);
+/* set up a fake "home" directory and set libgit2 GLOBAL search path.
+ *
+ * automatically configures cleanup function to restore the regular search
+ * path, although you can call it explicitly if you wish (with NULL).
+ */
+void cl_fake_home(void);
+void cl_fake_home_cleanup(void *);
 
 #endif

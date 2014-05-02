@@ -1736,14 +1736,9 @@ const git_refspec *git_remote_get_refspec(const git_remote *remote, size_t n)
 	return git_vector_get(&remote->refspecs, n);
 }
 
-int git_remote_init_callbacks(git_remote_callbacks* opts, int version)
+int git_remote_init_callbacks(git_remote_callbacks *opts, unsigned int version)
 {
-	if (version != GIT_REMOTE_CALLBACKS_VERSION) {
-		giterr_set(GITERR_INVALID, "Invalid version %d for git_remote_callbacks", version);
-		return -1;
-	} else {
-		git_remote_callbacks o = GIT_REMOTE_CALLBACKS_INIT;
-		memcpy(opts, &o, sizeof(o));
-		return 0;
-	}
+	GIT_INIT_STRUCTURE_FROM_TEMPLATE(
+		opts, version, git_remote_callbacks, GIT_REMOTE_CALLBACKS_INIT);
+	return 0;
 }

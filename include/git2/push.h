@@ -49,8 +49,8 @@ typedef struct {
  * @return Zero on success; -1 on failure.
  */
 GIT_EXTERN(int) git_push_init_options(
-	git_push_options* opts,
-	int version);
+	git_push_options *opts,
+	unsigned int version);
 
 /** Push network progress notification function */
 typedef int (*git_push_transfer_progress)(

@@ -220,14 +220,9 @@ done:
 	return error;
 }
 
-int git_revert_init_opts(git_revert_options* opts, int version)
+int git_revert_init_options(git_revert_options *opts, unsigned int version)
 {
-	if (version != GIT_REVERT_OPTIONS_VERSION) {
-		giterr_set(GITERR_INVALID, "Invalid version %d for git_revert_options", version);
-		return -1;
-	} else {
-		git_revert_options o = GIT_REVERT_OPTIONS_INIT;
-		memcpy(opts, &o, sizeof(o));
-		return 0;
-	}
+	GIT_INIT_STRUCTURE_FROM_TEMPLATE(
+		opts, version, git_revert_options, GIT_REVERT_OPTIONS_INIT);
+	return 0;
 }

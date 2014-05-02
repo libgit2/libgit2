@@ -81,15 +81,15 @@ static unsigned int workdir_delta2status(
 			if (git_oid_iszero(&idx2wd->old_file.id) &&
 				diff->old_src == GIT_ITERATOR_TYPE_WORKDIR &&
 				!git_diff__oid_for_file(
-					diff->repo, idx2wd->old_file.path, idx2wd->old_file.mode,
-					idx2wd->old_file.size, &idx2wd->old_file.id))
+					&idx2wd->old_file.id, diff, idx2wd->old_file.path,
+					idx2wd->old_file.mode, idx2wd->old_file.size))
 			idx2wd->old_file.flags |= GIT_DIFF_FLAG_VALID_ID;
 
 			if (git_oid_iszero(&idx2wd->new_file.id) &&
 				diff->new_src == GIT_ITERATOR_TYPE_WORKDIR &&
 				!git_diff__oid_for_file(
-					diff->repo, idx2wd->new_file.path, idx2wd->new_file.mode,
-					idx2wd->new_file.size, &idx2wd->new_file.id))
+					&idx2wd->new_file.id, diff, idx2wd->new_file.path,
+					idx2wd->new_file.mode, idx2wd->new_file.size))
 				idx2wd->new_file.flags |= GIT_DIFF_FLAG_VALID_ID;
 
 			if (!git_oid_equal(&idx2wd->old_file.id, &idx2wd->new_file.id))
@@ -225,6 +225,28 @@ static git_status_list *git_status_list_alloc(git_index *index)
 	return status;
 }
 
+static int status_validate_options(const git_status_options *opts)
+{
+	if (!opts)
+		return 0;
+
+	GITERR_CHECK_VERSION(opts, GIT_STATUS_OPTIONS_VERSION, "git_status_options");
+
+	if (opts->show > GIT_STATUS_SHOW_WORKDIR_ONLY) {
+		giterr_set(GITERR_INVALID, "Unknown status 'show' option");
+		return -1;
+	}
+
+	if ((opts->flags & GIT_STATUS_OPT_NO_REFRESH) != 0 &&
+		(opts->flags & GIT_STATUS_OPT_UPDATE_INDEX) != 0) {
+		giterr_set(GITERR_INVALID, "Updating index from status "
+			"is not allowed when index refresh is disabled");
+		return -1;
+	}
+
+	return 0;
+}
+
 int git_status_list_new(
 	git_status_list **out,
 	git_repository *repo,
@@ -240,11 +262,10 @@ int git_status_list_new(
 	int error = 0;
 	unsigned int flags = opts ? opts->flags : GIT_STATUS_OPT_DEFAULTS;
 
-	assert(show <= GIT_STATUS_SHOW_WORKDIR_ONLY);
-
 	*out = NULL;
 
-	GITERR_CHECK_VERSION(opts, GIT_STATUS_OPTIONS_VERSION, "git_status_options");
+	if (status_validate_options(opts) < 0)
+		return -1;
 
 	if ((error = git_repository__ensure_not_bare(repo, "status")) < 0 ||
 		(error = git_repository_index(&index, repo)) < 0)
@@ -287,6 +308,8 @@ int git_status_list_new(
 		diffopt.flags = diffopt.flags | GIT_DIFF_RECURSE_IGNORED_DIRS;
 	if ((flags & GIT_STATUS_OPT_EXCLUDE_SUBMODULES) != 0)
 		diffopt.flags = diffopt.flags | GIT_DIFF_IGNORE_SUBMODULES;
+	if ((flags & GIT_STATUS_OPT_UPDATE_INDEX) != 0)
+		diffopt.flags = diffopt.flags | GIT_DIFF_UPDATE_INDEX;
 
 	if ((flags & GIT_STATUS_OPT_RENAMES_FROM_REWRITES) != 0)
 		findopt.flags = findopt.flags |
@@ -495,14 +518,31 @@ int git_status_should_ignore(
 	return git_ignore_path_is_ignored(ignored, repo, path);
 }
 
-int git_status_init_options(git_status_options* opts, int version)
+int git_status_init_options(git_status_options *opts, unsigned int version)
 {
-	if (version != GIT_STATUS_OPTIONS_VERSION) {
-		giterr_set(GITERR_INVALID, "Invalid version %d for git_status_options", version);
-		return -1;
-	} else {
-		git_status_options o = GIT_STATUS_OPTIONS_INIT;
-		memcpy(opts, &o, sizeof(o));
-		return 0;
-	}
+	GIT_INIT_STRUCTURE_FROM_TEMPLATE(
+		opts, version, git_status_options, GIT_STATUS_OPTIONS_INIT);
+	return 0;
 }
+
+int git_status_list_get_perfdata(
+	git_diff_perfdata *out, const git_status_list *status)
+{
+	assert(out);
+	GITERR_CHECK_VERSION(out, GIT_DIFF_PERFDATA_VERSION, "git_diff_perfdata");
+
+	out->stat_calls = 0;
+	out->oid_calculations = 0;
+
+	if (status->head2idx) {
+		out->stat_calls += status->head2idx->perf.stat_calls;
+		out->oid_calculations += status->head2idx->perf.oid_calculations;
+	}
+	if (status->idx2wd) {
+		out->stat_calls += status->idx2wd->perf.stat_calls;
+		out->oid_calculations += status->idx2wd->perf.oid_calculations;
+	}
+
+	return 0;
+}
+

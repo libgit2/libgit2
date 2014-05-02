@@ -148,12 +148,11 @@ void test_attr_ignore__skip_gitignore_directory(void)
 
 void test_attr_ignore__expand_tilde_to_homedir(void)
 {
-	git_buf cleanup = GIT_BUF_INIT;
 	git_config *cfg;
 
 	assert_is_ignored(false, "example.global_with_tilde");
 
-	cl_fake_home(&cleanup);
+	cl_fake_home();
 
 	/* construct fake home with fake global excludes */
 	cl_git_mkfile("home/globalexclude", "# found me\n*.global_with_tilde\n");
@@ -168,7 +167,7 @@ void test_attr_ignore__expand_tilde_to_homedir(void)
 
 	cl_git_pass(git_futils_rmdir_r("home", NULL, GIT_RMDIR_REMOVE_FILES));
 
-	cl_fake_home_cleanup(&cleanup);
+	cl_fake_home_cleanup(NULL);
 
 	git_attr_cache_flush(g_repo); /* must reset to pick up change */
 

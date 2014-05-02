@@ -480,14 +480,9 @@ int git_blame_buffer(
 	return 0;
 }
 
-int git_blame_init_options(git_blame_options* opts, int version)
+int git_blame_init_options(git_blame_options *opts, unsigned int version)
 {
-	if (version != GIT_BLAME_OPTIONS_VERSION) {
-		giterr_set(GITERR_INVALID, "Invalid version %d for git_blame_options", version);
-		return -1;
-	} else {
-		git_blame_options o = GIT_BLAME_OPTIONS_INIT;
-		memcpy(opts, &o, sizeof(o));
-		return 0;
-	}
+	GIT_INIT_STRUCTURE_FROM_TEMPLATE(
+		opts, version, git_blame_options, GIT_BLAME_OPTIONS_INIT);
+	return 0;
 }

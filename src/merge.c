@@ -2803,38 +2803,24 @@ void git_merge_head_free(git_merge_head *head)
 	git__free(head);
 }
 
-int git_merge_init_options(git_merge_options *opts, int version)
+int git_merge_init_options(git_merge_options *opts, unsigned int version)
 {
-	if (version != GIT_MERGE_OPTIONS_VERSION) {
-		giterr_set(GITERR_INVALID, "Invalid version %d for git_merge_options", version);
-		return -1;
-	} else {
-		git_merge_options default_opts = GIT_MERGE_OPTIONS_INIT;
-		memcpy(opts, &default_opts, sizeof(git_merge_options));
-		return 0;
-	}
+	GIT_INIT_STRUCTURE_FROM_TEMPLATE(
+		opts, version, git_merge_options, GIT_MERGE_OPTIONS_INIT);
+	return 0;
 }
 
-int git_merge_file_init_input(git_merge_file_input *input, int version)
+int git_merge_file_init_input(git_merge_file_input *input, unsigned int version)
 {
-	if (version != GIT_MERGE_FILE_INPUT_VERSION) {
-		giterr_set(GITERR_INVALID, "Invalid version %d for git_merge_file_input", version);
-		return -1;
-	} else {
-		git_merge_file_input i = GIT_MERGE_FILE_INPUT_INIT;
-		memcpy(input, &i, sizeof(i));
-		return 0;
-	}
+	GIT_INIT_STRUCTURE_FROM_TEMPLATE(
+		input, version, git_merge_file_input, GIT_MERGE_FILE_INPUT_INIT);
+	return 0;
 }
 
-int git_merge_file_init_options(git_merge_file_options *opts, int version)
+int git_merge_file_init_options(
+	git_merge_file_options *opts, unsigned int version)
 {
-	if (version != GIT_MERGE_FILE_OPTIONS_VERSION) {
-		giterr_set(GITERR_INVALID, "Invalid version %d for git_merge_file_options", version);
-		return -1;
-	} else {
-		git_merge_file_options o = GIT_MERGE_FILE_OPTIONS_INIT;
-		memcpy(opts, &o, sizeof(o));
-		return 0;
-	}
+	GIT_INIT_STRUCTURE_FROM_TEMPLATE(
+		opts, version, git_merge_file_options, GIT_MERGE_FILE_OPTIONS_INIT);
+	return 0;
 }

@@ -5,6 +5,8 @@
 #include "posix.h"
 #include "util.h"
 #include "path.h"
+#include "../diff/diff_helpers.h"
+#include "git2/sys/diff.h"
 
 /**
  * Cleanup
@@ -40,11 +42,15 @@ void test_status_worktree__whole_repository(void)
 	cl_assert_equal_i(0, counts.wrong_sorted_path);
 }
 
-void assert_show(const int entry_counts, const char *entry_paths[],
-				 const unsigned int entry_statuses[], git_status_show_t show)
+void assert_show(
+	const int entry_counts,
+	const char *entry_paths[],
+	const unsigned int entry_statuses[],
+	git_repository *repo,
+	git_status_show_t show,
+	unsigned int extra_flags)
 {
 	status_entry_counts counts;
-	git_repository *repo = cl_git_sandbox_init("status");
 	git_status_options opts = GIT_STATUS_OPTIONS_INIT;
 
 	memset(&counts, 0x0, sizeof(status_entry_counts));
@@ -52,7 +58,7 @@ void assert_show(const int entry_counts, const char *entry_paths[],
 	counts.expected_paths = entry_paths;
 	counts.expected_statuses = entry_statuses;
 
-	opts.flags = GIT_STATUS_OPT_DEFAULTS;
+	opts.flags = GIT_STATUS_OPT_DEFAULTS | extra_flags;
 	opts.show = show;
 
 	cl_git_pass(
@@ -67,19 +73,19 @@ void assert_show(const int entry_counts, const char *entry_paths[],
 void test_status_worktree__show_index_and_workdir(void)
 {
 	assert_show(entry_count0, entry_paths0, entry_statuses0,
-		GIT_STATUS_SHOW_INDEX_AND_WORKDIR);
+		cl_git_sandbox_init("status"), GIT_STATUS_SHOW_INDEX_AND_WORKDIR, 0);
 }
 
 void test_status_worktree__show_index_only(void)
 {
 	assert_show(entry_count5, entry_paths5, entry_statuses5,
-		GIT_STATUS_SHOW_INDEX_ONLY);
+		cl_git_sandbox_init("status"), GIT_STATUS_SHOW_INDEX_ONLY, 0);
 }
 
 void test_status_worktree__show_workdir_only(void)
 {
 	assert_show(entry_count6, entry_paths6, entry_statuses6,
-		GIT_STATUS_SHOW_WORKDIR_ONLY);
+		cl_git_sandbox_init("status"), GIT_STATUS_SHOW_WORKDIR_ONLY, 0);
 }
 
 /* this test is equivalent to t18-status.c:statuscb1 */
@@ -578,7 +584,11 @@ void test_status_worktree__line_endings_dont_count_as_changes_with_autocrlf(void
 
 	cl_git_pass(git_status_file(&status, repo, "current_file"));
 
-	cl_assert_equal_i(GIT_STATUS_CURRENT, status);
+	/* stat data on file should no longer match stat cache, even though
+	 * file diff will be empty because of line-ending conversion - matches
+	 * the Git command-line behavior here.
+	 */
+	cl_assert_equal_i(GIT_STATUS_WT_MODIFIED, status);
 }
 
 void test_status_worktree__line_endings_dont_count_as_changes_with_autocrlf_issue_1397(void)
@@ -873,3 +883,55 @@ void test_status_worktree__long_filenames(void)
 	cl_assert_equal_i(0, counts.wrong_sorted_path);
 }
 
+/* The update stat cache tests mostly just mirror other tests and try
+ * to make sure that updating the stat cache doesn't change the results
+ * while reducing the amount of work that needs to be done
+ */
+
+static void check_status0(git_status_list *status)
+{
+	size_t i, max_i = git_status_list_entrycount(status);
+	cl_assert_equal_sz(entry_count0, max_i);
+	for (i = 0; i < max_i; ++i) {
+		const git_status_entry *entry = git_status_byindex(status, i);
+		cl_assert_equal_i(entry_statuses0[i], entry->status);
+	}
+}
+
+void test_status_worktree__update_stat_cache_0(void)
+{
+	git_repository *repo = cl_git_sandbox_init("status");
+	git_status_options opts = GIT_STATUS_OPTIONS_INIT;
+	git_status_list *status;
+	git_diff_perfdata perf = GIT_DIFF_PERFDATA_INIT;
+
+	opts.flags = GIT_STATUS_OPT_DEFAULTS;
+
+	cl_git_pass(git_status_list_new(&status, repo, &opts));
+	check_status0(status);
+	cl_git_pass(git_status_list_get_perfdata(&perf, status));
+	cl_assert_equal_sz(13 + 3, perf.stat_calls);
+	cl_assert_equal_sz(5, perf.oid_calculations);
+
+	git_status_list_free(status);
+
+	opts.flags |= GIT_STATUS_OPT_UPDATE_INDEX;
+
+	cl_git_pass(git_status_list_new(&status, repo, &opts));
+	check_status0(status);
+	cl_git_pass(git_status_list_get_perfdata(&perf, status));
+	cl_assert_equal_sz(13 + 3, perf.stat_calls);
+	cl_assert_equal_sz(5, perf.oid_calculations);
+
+	git_status_list_free(status);
+
+	opts.flags &= ~GIT_STATUS_OPT_UPDATE_INDEX;
+
+	cl_git_pass(git_status_list_new(&status, repo, &opts));
+	check_status0(status);
+	cl_git_pass(git_status_list_get_perfdata(&perf, status));
+	cl_assert_equal_sz(13 + 3, perf.stat_calls);
+	cl_assert_equal_sz(0, perf.oid_calculations);
+
+	git_status_list_free(status);
+}

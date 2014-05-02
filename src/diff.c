@@ -442,6 +442,14 @@ static int diff_list_apply_options(
 		diff->new_src = tmp_src;
 	}
 
+	/* Unset UPDATE_INDEX unless diffing workdir and index */
+	if (DIFF_FLAG_IS_SET(diff, GIT_DIFF_UPDATE_INDEX) &&
+		(!(diff->old_src == GIT_ITERATOR_TYPE_WORKDIR ||
+		   diff->new_src == GIT_ITERATOR_TYPE_WORKDIR) ||
+		 !(diff->old_src == GIT_ITERATOR_TYPE_INDEX ||
+		   diff->new_src == GIT_ITERATOR_TYPE_INDEX)))
+		diff->opts.flags &= ~GIT_DIFF_UPDATE_INDEX;
+
 	/* if ignore_submodules not explicitly set, check diff config */
 	if (diff->opts.ignore_submodules <= 0) {
 		const git_config_entry *entry;
@@ -510,76 +518,105 @@ void git_diff_addref(git_diff *diff)
 }
 
 int git_diff__oid_for_file(
-	git_repository *repo,
+	git_oid *out,
+	git_diff *diff,
 	const char *path,
 	uint16_t  mode,
-	git_off_t size,
-	git_oid *oid)
+	git_off_t size)
 {
-	int result = 0;
+	git_index_entry entry;
+
+	memset(&entry, 0, sizeof(entry));
+	entry.mode = mode;
+	entry.file_size = size;
+	entry.path = (char *)path;
+
+	return git_diff__oid_for_entry(out, diff, &entry, NULL);
+}
+
+int git_diff__oid_for_entry(
+	git_oid *out,
+	git_diff *diff,
+	const git_index_entry *src,
+	const git_oid *update_match)
+{
+	int error = 0;
 	git_buf full_path = GIT_BUF_INIT;
+	git_index_entry entry = *src;
+	git_filter_list *fl = NULL;
+
+	memset(out, 0, sizeof(*out));
 
 	if (git_buf_joinpath(
-		&full_path, git_repository_workdir(repo), path) < 0)
+		&full_path, git_repository_workdir(diff->repo), entry.path) < 0)
 		return -1;
 
-	if (!mode) {
+	if (!entry.mode) {
 		struct stat st;
 
-		if (p_stat(path, &st) < 0) {
-			giterr_set(GITERR_OS, "Could not stat '%s'", path);
-			result = -1;
-			goto cleanup;
+		diff->perf.stat_calls++;
+
+		if (p_stat(full_path.ptr, &st) < 0) {
+			error = git_path_set_error(errno, entry.path, "stat");
+			git_buf_free(&full_path);
+			return error;
 		}
 
-		mode = st.st_mode;
-		size = st.st_size;
+		git_index_entry__init_from_stat(
+			&entry, &st, (diff->diffcaps & GIT_DIFFCAPS_TRUST_MODE_BITS) != 0);
 	}
 
 	/* calculate OID for file if possible */
-	if (S_ISGITLINK(mode)) {
+	if (S_ISGITLINK(entry.mode)) {
 		git_submodule *sm;
 
-		memset(oid, 0, sizeof(*oid));
-
-		if (!git_submodule_lookup(&sm, repo, path)) {
+		if (!git_submodule_lookup(&sm, diff->repo, entry.path)) {
 			const git_oid *sm_oid = git_submodule_wd_id(sm);
 			if (sm_oid)
-				git_oid_cpy(oid, sm_oid);
+				git_oid_cpy(out, sm_oid);
 			git_submodule_free(sm);
 		} else {
 			/* if submodule lookup failed probably just in an intermediate
 			 * state where some init hasn't happened, so ignore the error
 			 */
 			giterr_clear();
-			memset(oid, 0, sizeof(*oid));
 		}
-	} else if (S_ISLNK(mode)) {
-		result = git_odb__hashlink(oid, full_path.ptr);
-	} else if (!git__is_sizet(size)) {
-		giterr_set(GITERR_OS, "File size overflow (for 32-bits) on '%s'", path);
-		result = -1;
-	} else {
-		git_filter_list *fl = NULL;
-
-		result = git_filter_list_load(&fl, repo, NULL, path, GIT_FILTER_TO_ODB);
-		if (!result) {
-			int fd = git_futils_open_ro(full_path.ptr);
-			if (fd < 0)
-				result = fd;
-			else {
-				result = git_odb__hashfd_filtered(
-					oid, fd, (size_t)size, GIT_OBJ_BLOB, fl);
-				p_close(fd);
-			}
-
-			git_filter_list_free(fl);
+	} else if (S_ISLNK(entry.mode)) {
+		error = git_odb__hashlink(out, full_path.ptr);
+		diff->perf.oid_calculations++;
+	} else if (!git__is_sizet(entry.file_size)) {
+		giterr_set(GITERR_OS, "File size overflow (for 32-bits) on '%s'",
+			entry.path);
+		error = -1;
+	} else if (!(error = git_filter_list_load(
+			&fl, diff->repo, NULL, entry.path, GIT_FILTER_TO_ODB)))
+	{
+		int fd = git_futils_open_ro(full_path.ptr);
+		if (fd < 0)
+			error = fd;
+		else {
+			error = git_odb__hashfd_filtered(
+				out, fd, (size_t)entry.file_size, GIT_OBJ_BLOB, fl);
+			p_close(fd);
+			diff->perf.oid_calculations++;
 		}
+
+		git_filter_list_free(fl);
 	}
 
-cleanup:
+	/* update index for entry if requested */
+	if (!error && update_match && git_oid_equal(out, update_match)) {
+		git_index *idx;
+
+		if (!(error = git_repository_index(&idx, diff->repo))) {
+			memcpy(&entry.id, out, sizeof(entry.id));
+			error = git_index_add(idx, &entry);
+			git_index_free(idx);
+		}
+ 	}
+
 	git_buf_free(&full_path);
-	return result;
+	return error;
 }
 
 static bool diff_time_eq(
@@ -660,6 +697,7 @@ static int maybe_modified(
 	unsigned int omode = oitem->mode;
 	unsigned int nmode = nitem->mode;
 	bool new_is_workdir = (info->new_iter->type == GIT_ITERATOR_TYPE_WORKDIR);
+	bool modified_uncertain = false;
 	const char *matched_pathspec;
 	int error = 0;
 
@@ -727,15 +765,21 @@ static int maybe_modified(
 		/* if the stat data looks different, then mark modified - this just
 		 * means that the OID will be recalculated below to confirm change
 		 */
-		else if (omode != nmode ||
-			oitem->file_size != nitem->file_size ||
-			!diff_time_eq(&oitem->mtime, &nitem->mtime, use_nanos) ||
+		else if (omode != nmode || oitem->file_size != nitem->file_size) {
+			status = GIT_DELTA_MODIFIED;
+			modified_uncertain =
+				(oitem->file_size <= 0 && nitem->file_size > 0);
+		}
+		else if (!diff_time_eq(&oitem->mtime, &nitem->mtime, use_nanos) ||
 			(use_ctime &&
 			 !diff_time_eq(&oitem->ctime, &nitem->ctime, use_nanos)) ||
 			oitem->ino != nitem->ino ||
 			oitem->uid != nitem->uid ||
 			oitem->gid != nitem->gid)
+		{
 			status = GIT_DELTA_MODIFIED;
+			modified_uncertain = true;
+		}
 	}
 
 	/* if mode is GITLINK and submodules are ignored, then skip */
@@ -746,10 +790,14 @@ static int maybe_modified(
 	/* if we got here and decided that the files are modified, but we
 	 * haven't calculated the OID of the new item, then calculate it now
 	 */
-	if (status == GIT_DELTA_MODIFIED && git_oid_iszero(&nitem->id)) {
+	if (modified_uncertain && git_oid_iszero(&nitem->id)) {
 		if (git_oid_iszero(&noid)) {
-			if ((error = git_diff__oid_for_file(diff->repo,
-					nitem->path, nitem->mode, nitem->file_size, &noid)) < 0)
+			const git_oid *update_check =
+				DIFF_FLAG_IS_SET(diff, GIT_DIFF_UPDATE_INDEX) ?
+				&oitem->id : NULL;
+
+			if ((error = git_diff__oid_for_entry(
+					&noid, diff, nitem, update_check)) < 0)
 				return error;
 		}
 
@@ -1066,6 +1114,8 @@ int git_diff__from_iterators(
 			error = 0;
 	}
 
+	diff->perf.stat_calls += old_iter->stat_calls + new_iter->stat_calls;
+
 cleanup:
 	if (!error)
 		*diff_ptr = diff;
@@ -1174,6 +1224,9 @@ int git_diff_index_to_workdir(
 			&b, repo, GIT_ITERATOR_DONT_AUTOEXPAND, pfx, pfx)
 	);
 
+	if (!error && DIFF_FLAG_IS_SET(*diff, GIT_DIFF_UPDATE_INDEX))
+		error = git_index_write(index);
+
 	return error;
 }
 
@@ -1226,20 +1279,6 @@ int git_diff_tree_to_workdir_with_index(
 	return error;
 }
 
-int git_diff_options_init(git_diff_options *options, unsigned int version)
-{
-	git_diff_options template = GIT_DIFF_OPTIONS_INIT;
-
-	if (version != template.version) {
-		giterr_set(GITERR_INVALID,
-			"Invalid version %d for git_diff_options", (int)version);
-		return -1;
-	}
-
-	memcpy(options, &template, sizeof(*options));
-	return 0;
-}
-
 size_t git_diff_num_deltas(const git_diff *diff)
 {
 	assert(diff);
@@ -1269,6 +1308,15 @@ const git_diff_delta *git_diff_get_delta(const git_diff *diff, size_t idx)
 int git_diff_is_sorted_icase(const git_diff *diff)
 {
 	return (diff->opts.flags & GIT_DIFF_IGNORE_CASE) != 0;
+}
+
+int git_diff_get_perfdata(git_diff_perfdata *out, const git_diff *diff)
+{
+	assert(out);
+	GITERR_CHECK_VERSION(out, GIT_DIFF_PERFDATA_VERSION, "git_diff_perfdata");
+	out->stat_calls = diff->perf.stat_calls;
+	out->oid_calculations = diff->perf.oid_calculations;
+	return 0;
 }
 
 int git_diff__paired_foreach(
@@ -1573,38 +1621,26 @@ int git_diff_commit_as_email(
 	return error;
 }
 
-int git_diff_init_options(git_diff_options* opts, int version)
+int git_diff_init_options(git_diff_options *opts, unsigned int version)
 {
-	if (version != GIT_DIFF_OPTIONS_VERSION) {
-		giterr_set(GITERR_INVALID, "Invalid version %d for git_diff_options", version);
-		return -1;
-	} else {
-		git_diff_options o = GIT_DIFF_OPTIONS_INIT;
-		memcpy(opts, &o, sizeof(o));
-		return 0;
-	}
+	GIT_INIT_STRUCTURE_FROM_TEMPLATE(
+		opts, version, git_diff_options, GIT_DIFF_OPTIONS_INIT);
+	return 0;
 }
 
-int git_diff_find_init_options(git_diff_find_options* opts, int version)
+int git_diff_find_init_options(
+	git_diff_find_options *opts, unsigned int version)
 {
-	if (version != GIT_DIFF_FIND_OPTIONS_VERSION) {
-		giterr_set(GITERR_INVALID, "Invalid version %d for git_diff_find_options", version);
-		return -1;
-	} else {
-		git_diff_find_options o = GIT_DIFF_FIND_OPTIONS_INIT;
-		memcpy(opts, &o, sizeof(o));
-		return 0;
-	}
+	GIT_INIT_STRUCTURE_FROM_TEMPLATE(
+		opts, version, git_diff_find_options, GIT_DIFF_FIND_OPTIONS_INIT);
+	return 0;
 }
 
-int git_diff_format_email_init_options(git_diff_format_email_options* opts, int version)
+int git_diff_format_email_init_options(
+	git_diff_format_email_options *opts, unsigned int version)
 {
-	if (version != GIT_DIFF_FORMAT_EMAIL_OPTIONS_VERSION) {
-		giterr_set(GITERR_INVALID, "Invalid version %d for git_diff_format_email_options", version);
-		return -1;
-	} else {
-		git_diff_format_email_options o = GIT_DIFF_FORMAT_EMAIL_OPTIONS_INIT;
-		memcpy(opts, &o, sizeof(o));
-		return 0;
-	}
+	GIT_INIT_STRUCTURE_FROM_TEMPLATE(
+		opts, version, git_diff_format_email_options,
+		GIT_DIFF_FORMAT_EMAIL_OPTIONS_INIT);
+	return 0;
 }

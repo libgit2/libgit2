@@ -1,12 +1,9 @@
 #include "clar_libgit2.h"
 #include "diff_helpers.h"
 #include "repository.h"
+#include "git2/sys/diff.h"
 
 static git_repository *g_repo = NULL;
-
-void test_diff_workdir__initialize(void)
-{
-}
 
 void test_diff_workdir__cleanup(void)
 {
@@ -58,6 +55,14 @@ void test_diff_workdir__to_index(void)
 		cl_assert_equal_i(5, exp.line_ctxt);
 		cl_assert_equal_i(4, exp.line_adds);
 		cl_assert_equal_i(5, exp.line_dels);
+	}
+
+	{
+		git_diff_perfdata perf = GIT_DIFF_PERFDATA_INIT;
+		cl_git_pass(git_diff_get_perfdata(&perf, diff));
+		cl_assert_equal_sz(
+			13 /* in root */ + 3 /* in subdir */, perf.stat_calls);
+		cl_assert_equal_sz(5, perf.oid_calculations);
 	}
 
 	git_diff_free(diff);
@@ -1489,4 +1494,89 @@ void test_diff_workdir__with_stale_index(void)
 	cl_assert_equal_i(6, exp.file_status[GIT_DELTA_UNMODIFIED]);
 
 	git_index_free(idx);
+}
+
+static int touch_file(void *payload, git_buf *path)
+{
+	int fd;
+	char b;
+
+	GIT_UNUSED(payload);
+	if (git_path_isdir(path->ptr))
+		return 0;
+
+	cl_assert((fd = p_open(path->ptr, O_RDWR)) >= 0);
+	cl_assert_equal_i(1, p_read(fd, &b, 1));
+	cl_must_pass(p_lseek(fd, 0, SEEK_SET));
+	cl_must_pass(p_write(fd, &b, 1));
+	cl_must_pass(p_close(fd));
+
+	return 0;
+}
+
+static void basic_diff_status(git_diff **out, const git_diff_options *opts)
+{
+	diff_expects exp;
+
+	cl_git_pass(git_diff_index_to_workdir(out, g_repo, NULL, opts));
+
+	memset(&exp, 0, sizeof(exp));
+
+	cl_git_pass(git_diff_foreach(
+		*out, diff_file_cb, diff_hunk_cb, diff_line_cb, &exp));
+
+	cl_assert_equal_i(13, exp.files);
+	cl_assert_equal_i(0, exp.file_status[GIT_DELTA_ADDED]);
+	cl_assert_equal_i(4, exp.file_status[GIT_DELTA_DELETED]);
+	cl_assert_equal_i(4, exp.file_status[GIT_DELTA_MODIFIED]);
+	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_IGNORED]);
+	cl_assert_equal_i(4, exp.file_status[GIT_DELTA_UNTRACKED]);
+}
+
+void test_diff_workdir__can_update_index(void)
+{
+	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
+	git_diff *diff = NULL;
+	git_diff_perfdata perf = GIT_DIFF_PERFDATA_INIT;
+
+	g_repo = cl_git_sandbox_init("status");
+
+	/* touch all the files so stat times are different */
+	{
+		git_buf path = GIT_BUF_INIT;
+		cl_git_pass(git_buf_sets(&path, "status"));
+		cl_git_pass(git_path_direach(&path, 0, touch_file, NULL));
+		git_buf_free(&path);
+	}
+
+	opts.flags |= GIT_DIFF_INCLUDE_IGNORED | GIT_DIFF_INCLUDE_UNTRACKED;
+
+	basic_diff_status(&diff, &opts);
+
+	cl_git_pass(git_diff_get_perfdata(&perf, diff));
+	cl_assert_equal_sz(13 + 3, perf.stat_calls);
+	cl_assert_equal_sz(5, perf.oid_calculations);
+
+	git_diff_free(diff);
+
+	/* now allow diff to update stat cache */
+	opts.flags |= GIT_DIFF_UPDATE_INDEX;
+
+	basic_diff_status(&diff, &opts);
+
+	cl_git_pass(git_diff_get_perfdata(&perf, diff));
+	cl_assert_equal_sz(13 + 3, perf.stat_calls);
+	cl_assert_equal_sz(5, perf.oid_calculations);
+
+	git_diff_free(diff);
+
+	/* now if we do it again, we should see fewer OID calculations */
+
+	basic_diff_status(&diff, &opts);
+
+	cl_git_pass(git_diff_get_perfdata(&perf, diff));
+	cl_assert_equal_sz(13 + 3, perf.stat_calls);
+	cl_assert_equal_sz(0, perf.oid_calculations);
+
+	git_diff_free(diff);
 }
