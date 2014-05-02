@@ -133,6 +133,13 @@ void test_attr_ignore__expand_tilde_to_homedir(void)
 	git_buf cleanup = GIT_BUF_INIT;
 	git_config *cfg;
 
+	int mask = p_umask(0);
+	p_umask(mask);
+
+	printf("umask %o\n", mask);
+
+	return;
+
 	assert_is_ignored(false, "example.global_with_tilde");
 
 	cl_fake_home(&cleanup);
