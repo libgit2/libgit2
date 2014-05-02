@@ -99,7 +99,7 @@ const char *p_gai_strerror(int ret)
 
 #endif /* NO_ADDRINFO */
 
-int p_open(const char *path, int flags, ...)
+int p_open(const char *path, volatile int flags, ...)
 {
 	mode_t mode = 0;
 
