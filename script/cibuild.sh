@@ -18,8 +18,8 @@ cmake .. -DCMAKE_INSTALL_PREFIX=../_install $OPTIONS || exit $?
 cmake --build . --target install || exit $?
 umask
 ctest -V .
-umask
 ret=$?
+umask
 ls -Rl /tmp
 
 exit $ret
