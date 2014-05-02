@@ -107,6 +107,11 @@ GIT_EXTERN(const git_oid *) git_object_id(const git_object *obj);
 /**
  * Get a short abbreviated OID string for the object
  *
+ * This starts at the "core.abbrev" length (default 7 characters) and
+ * iteratively extends to a longer string if that length is ambiguous.
+ * The result will be unambiguous (at least until new objects are added to
+ * the repository).
+ *
  * @param out Buffer to write string into
  * @param obj The object to get an ID for
  * @return 0 on success, <0 for error
