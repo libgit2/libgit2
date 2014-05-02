@@ -62,6 +62,8 @@ p_fnmatchx(const char *pattern, const char *string, int flags, size_t recurs)
 							flags &= ~FNM_PATHNAME;
 							while (c == '*')
 								c = *++pattern;
+							if (c == '/')
+								c = *++pattern;
 						}
 
 						if (*string == '.' && (flags & FNM_PERIOD) &&
