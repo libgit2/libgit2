@@ -12,16 +12,15 @@ git init --bare $HOME/_temp/test.git
 git daemon --listen=localhost --export-all --enable=receive-pack --base-path=$HOME/_temp $HOME/_temp 2>/dev/null &
 export GITTEST_REMOTE_URL="git://localhost/test.git"
 
-# This works around odd issues on Travis where /tmp becomes unwritable
-mkdir $HOME/_tmpdir
-export CLAR_TMP=$HOME/_tmpdir
-
 mkdir _build
 cd _build
 cmake .. -DCMAKE_INSTALL_PREFIX=../_install $OPTIONS || exit $?
 cmake --build . --target install || exit $?
-./libgit2_clar -Q -ionline || exit $?
-#ctest -V . || exit $?
+ctest -V .
+ret=$?
+ls -Rl /tmp
+
+exit $ret
 
 # Now that we've tested the raw git protocol, let's set up ssh to we
 # can do the push tests over it
