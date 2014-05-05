@@ -755,6 +755,10 @@ static int foreach_cb(void *_state, git_buf *path)
 {
 	struct foreach_state *state = (struct foreach_state *) _state;
 
+	/* non-dir is some stray file, ignore it */
+	if (!git_path_isdir(git_buf_cstr(path)))
+		return 0;
+
 	return git_path_direach(path, 0, foreach_object_dir_cb, state);
 }
 
