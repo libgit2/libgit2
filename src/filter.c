@@ -23,6 +23,7 @@ struct git_filter_source {
 	git_oid         oid;  /* zero if unknown (which is likely) */
 	uint16_t        filemode; /* zero if unknown */
 	git_filter_mode_t mode;
+	git_filter_opt_t  options;
 };
 
 typedef struct {
@@ -358,6 +359,11 @@ git_filter_mode_t git_filter_source_mode(const git_filter_source *src)
 	return src->mode;
 }
 
+git_filter_opt_t git_filter_source_options(const git_filter_source *src)
+{
+	return src->options;
+}
+
 static int filter_list_new(
 	git_filter_list **out, const git_filter_source *src)
 {
@@ -372,6 +378,7 @@ static int filter_list_new(
 	fl->source.repo = src->repo;
 	fl->source.path = fl->path;
 	fl->source.mode = src->mode;
+	fl->source.options = src->options;
 
 	*out = fl;
 	return 0;
@@ -419,12 +426,16 @@ static int filter_list_check_attributes(
 }
 
 int git_filter_list_new(
-	git_filter_list **out, git_repository *repo, git_filter_mode_t mode)
+	git_filter_list **out,
+	git_repository *repo,
+	git_filter_mode_t mode,
+	git_filter_opt_t options)
 {
 	git_filter_source src = { 0 };
 	src.repo = repo;
 	src.path = NULL;
 	src.mode = mode;
+	src.options = options;
 	return filter_list_new(out, &src);
 }
 
@@ -433,7 +444,8 @@ int git_filter_list_load(
 	git_repository *repo,
 	git_blob *blob, /* can be NULL */
 	const char *path,
-	git_filter_mode_t mode)
+	git_filter_mode_t mode,
+	git_filter_opt_t options)
 {
 	int error = 0;
 	git_filter_list *fl = NULL;
@@ -448,6 +460,7 @@ int git_filter_list_load(
 	src.repo = repo;
 	src.path = path;
 	src.mode = mode;
+	src.options = options;
 	if (blob)
 		git_oid_cpy(&src.oid, git_blob_id(blob));
 

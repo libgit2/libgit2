@@ -121,7 +121,7 @@ void test_object_blob_filter__to_odb(void)
 	cl_git_append2file("empty_standard_repo/.gitattributes", "*.txt text\n");
 
 	cl_git_pass(git_filter_list_load(
-		&fl, g_repo, NULL, "filename.txt", GIT_FILTER_TO_ODB));
+		&fl, g_repo, NULL, "filename.txt", GIT_FILTER_TO_ODB, 0));
 	cl_assert(fl != NULL);
 
 	for (i = 0; i < CRLF_NUM_TEST_OBJECTS; i++) {

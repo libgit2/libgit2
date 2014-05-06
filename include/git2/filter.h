@@ -35,6 +35,11 @@ typedef enum {
 	GIT_FILTER_CLEAN = GIT_FILTER_TO_ODB,
 } git_filter_mode_t;
 
+typedef enum {
+	GIT_FILTER_OPT_DEFAULT = 0u,
+	GIT_FILTER_OPT_ALLOW_UNSAFE = (1u << 0),
+} git_filter_opt_t;
+
 /**
  * A filter that can transform file data
  *
@@ -83,7 +88,8 @@ GIT_EXTERN(int) git_filter_list_load(
 	git_repository *repo,
 	git_blob *blob, /* can be NULL */
 	const char *path,
-	git_filter_mode_t mode);
+	git_filter_mode_t mode,
+	git_filter_opt_t options);
 
 /**
  * Apply filter list to a data buffer.
