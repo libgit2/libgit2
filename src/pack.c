@@ -653,7 +653,7 @@ int git_packfile_stream_open(git_packfile_stream *obj, struct git_pack_file *p, 
 	st = inflateInit(&obj->zstream);
 	if (st != Z_OK) {
 		git__free(obj);
-		giterr_set(GITERR_ZLIB, "Failed to inflate packfile");
+		giterr_set(GITERR_ZLIB, "failed to init packfile stream");
 		return -1;
 	}
 
@@ -684,7 +684,7 @@ ssize_t git_packfile_stream_read(git_packfile_stream *obj, void *buffer, size_t 
 	written = len - obj->zstream.avail_out;
 
 	if (st != Z_OK && st != Z_STREAM_END) {
-		giterr_set(GITERR_ZLIB, "Failed to inflate packfile");
+		giterr_set(GITERR_ZLIB, "error reading from the zlib stream");
 		return -1;
 	}
 
@@ -729,7 +729,7 @@ int packfile_unpack_compressed(
 	st = inflateInit(&stream);
 	if (st != Z_OK) {
 		git__free(buffer);
-		giterr_set(GITERR_ZLIB, "Failed to inflate packfile");
+		giterr_set(GITERR_ZLIB, "failed to init zlib stream on unpack");
 
 		return -1;
 	}
@@ -756,7 +756,7 @@ int packfile_unpack_compressed(
 
 	if ((st != Z_STREAM_END) || stream.total_out != size) {
 		git__free(buffer);
-		giterr_set(GITERR_ZLIB, "Failed to inflate packfile");
+		giterr_set(GITERR_ZLIB, "error inflating zlib stream");
 		return -1;
 	}
 
