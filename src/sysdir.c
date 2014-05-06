@@ -90,6 +90,8 @@ void git_sysdir_global_shutdown(void)
 	int i;
 	for (i = 0; i < GIT_SYSDIR__MAX; ++i)
 		git_buf_free(&git_sysdir__dirs[i]);
+
+	git_sysdir__dirs_shutdown_set = 0;
 }
 
 static int git_sysdir_check_selector(git_sysdir_t which)
