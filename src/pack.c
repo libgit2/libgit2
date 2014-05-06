@@ -546,13 +546,6 @@ static int packfile_unpack_delta(
 
 	if (!cached) { /* have to inflate it */
 		error = git_packfile_unpack(&base, p, &base_offset);
-
-		/*
-		 * TODO: git.git tries to load the base from other packfiles
-		 * or loose objects.
-		 *
-		 * We'll need to do this in order to support thin packs.
-		 */
 		if (error < 0)
 			return error;
 	}
