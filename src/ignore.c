@@ -248,14 +248,15 @@ void git_ignore__free(git_ignores *ignores)
 }
 
 static bool ignore_lookup_in_rules(
-	git_attr_file *file, git_attr_path *path, int *ignored)
+	int *ignored, git_attr_file *file, git_attr_path *path)
 {
 	size_t j;
 	git_attr_fnmatch *match;
 
 	git_vector_rforeach(&file->rules, j, match) {
 		if (git_attr_fnmatch__match(match, path)) {
-			*ignored = ((match->flags & GIT_ATTR_FNMATCH_NEGATIVE) == 0);
+			*ignored = ((match->flags & GIT_ATTR_FNMATCH_NEGATIVE) == 0) ?
+				GIT_IGNORE_TRUE : GIT_IGNORE_FALSE;
 			return true;
 		}
 	}
@@ -264,33 +265,33 @@ static bool ignore_lookup_in_rules(
 }
 
 int git_ignore__lookup(
-	git_ignores *ignores, const char *pathname, int *ignored)
+	int *out, git_ignores *ignores, const char *pathname)
 {
 	unsigned int i;
 	git_attr_file *file;
 	git_attr_path path;
+
+	*out = GIT_IGNORE_NOTFOUND;
 
 	if (git_attr_path__init(
 		&path, pathname, git_repository_workdir(ignores->repo)) < 0)
 		return -1;
 
 	/* first process builtins - success means path was found */
-	if (ignore_lookup_in_rules(ignores->ign_internal, &path, ignored))
+	if (ignore_lookup_in_rules(out, ignores->ign_internal, &path))
 		goto cleanup;
 
 	/* next process files in the path */
 	git_vector_foreach(&ignores->ign_path, i, file) {
-		if (ignore_lookup_in_rules(file, &path, ignored))
+		if (ignore_lookup_in_rules(out, file, &path))
 			goto cleanup;
 	}
 
 	/* last process global ignores */
 	git_vector_foreach(&ignores->ign_global, i, file) {
-		if (ignore_lookup_in_rules(file, &path, ignored))
+		if (ignore_lookup_in_rules(out, file, &path))
 			goto cleanup;
 	}
-
-	*ignored = 0;
 
 cleanup:
 	git_attr_path__free(&path);
@@ -335,8 +336,6 @@ int git_ignore_path_is_ignored(
 	int error;
 	const char *workdir;
 	git_attr_path path;
-	char *tail, *end;
-	bool full_is_dir;
 	git_ignores ignores;
 	unsigned int i;
 	git_attr_file *file;
@@ -345,55 +344,42 @@ int git_ignore_path_is_ignored(
 
 	workdir = repo ? git_repository_workdir(repo) : NULL;
 
-	if ((error = git_attr_path__init(&path, pathname, workdir)) < 0)
-		return error;
+	memset(&path, 0, sizeof(path));
+	memset(&ignores, 0, sizeof(ignores));
 
-	tail = path.path;
-	end  = &path.full.ptr[path.full.size];
-	full_is_dir = path.is_dir;
+	if ((error = git_attr_path__init(&path, pathname, workdir)) < 0 ||
+		(error = git_ignore__for_path(repo, path.path, &ignores)) < 0)
+		goto cleanup;
 
 	while (1) {
-		/* advance to next component of path */
-		path.basename = tail;
-
-		while (tail < end && *tail != '/') tail++;
-		*tail = '\0';
-
-		path.full.size = (tail - path.full.ptr);
-		path.is_dir = (tail == end) ? full_is_dir : true;
-
-		/* initialize ignores the first time through */
-		if (path.basename == path.path &&
-			(error = git_ignore__for_path(repo, path.path, &ignores)) < 0)
-			break;
-
 		/* first process builtins - success means path was found */
-		if (ignore_lookup_in_rules(ignores.ign_internal, &path, ignored))
+		if (ignore_lookup_in_rules(ignored, ignores.ign_internal, &path))
 			goto cleanup;
 
 		/* next process files in the path */
 		git_vector_foreach(&ignores.ign_path, i, file) {
-			if (ignore_lookup_in_rules(file, &path, ignored))
+			if (ignore_lookup_in_rules(ignored, file, &path))
 				goto cleanup;
 		}
 
 		/* last process global ignores */
 		git_vector_foreach(&ignores.ign_global, i, file) {
-			if (ignore_lookup_in_rules(file, &path, ignored))
+			if (ignore_lookup_in_rules(ignored, file, &path))
 				goto cleanup;
 		}
 
-		/* if we found no rules before reaching the end, we're done */
-		if (tail == end)
+		/* move up one directory */
+		if (path.basename == path.path)
 			break;
+		path.basename[-1] = '\0';
+		while (path.basename > path.path && *path.basename != '/')
+			path.basename--;
+		if (path.basename > path.path)
+			path.basename++;
+		path.is_dir = 1;
 
-		/* now add this directory to list of ignores */
-		if ((error = git_ignore__push_dir(&ignores, path.path)) < 0)
+		if ((error = git_ignore__pop_dir(&ignores)) < 0)
 			break;
-
-		/* reinstate divider in path */
-		*tail = '/';
-		while (*tail == '/') tail++;
 	}
 
 	*ignored = 0;
@@ -403,7 +389,6 @@ cleanup:
 	git_ignore__free(&ignores);
 	return error;
 }
-
 
 int git_ignore__check_pathspec_for_exact_ignores(
 	git_repository *repo,

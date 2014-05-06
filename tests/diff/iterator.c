@@ -647,7 +647,7 @@ static void workdir_iterator_test(
 
 void test_diff_iterator__workdir_0(void)
 {
-	workdir_iterator_test("attr", NULL, NULL, 27, 1, NULL, "ign");
+	workdir_iterator_test("attr", NULL, NULL, 23, 5, NULL, "ign");
 }
 
 static const char *status_paths[] = {
