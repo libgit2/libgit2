@@ -40,6 +40,13 @@ static int pack_entry_find_offset(
 		const git_oid *short_oid,
 		size_t len);
 
+/**
+ * Generate the chain of dependencies which we need to get to the
+ * object at `off`. As we use a stack, the latest is the base object,
+ * the rest are deltas.
+ */
+static int pack_dependency_chain(git_dependency_chain *chain, struct git_pack_file *p, git_off_t off);
+
 static int packfile_error(const char *message)
 {
 	giterr_set(GITERR_ODB, "Invalid pack file - %s", message);
@@ -583,47 +590,63 @@ int git_packfile_unpack(
 	git_mwindow *w_curs = NULL;
 	git_off_t curpos = *obj_offset;
 	int error;
+	git_dependency_chain chain;
+	struct pack_chain_elem *elem;
 
-	size_t size = 0;
-	git_otype type;
+	git_otype base_type;
 
 	/*
 	 * TODO: optionally check the CRC on the packfile
 	 */
 
+	error = pack_dependency_chain(&chain, p, *obj_offset);
+	if (error < 0)
+		return error;
+
 	obj->data = NULL;
 	obj->len = 0;
 	obj->type = GIT_OBJ_BAD;
 
-	error = git_packfile_unpack_header(&size, &type, &p->mwf, &w_curs, &curpos);
+	/* the first one is the base, so we expand that one */
+	elem = git_array_pop(chain);
+	curpos = elem->offset;
+	error = packfile_unpack_compressed(obj, p, &w_curs, &curpos, elem->size, elem->type);
 	git_mwindow_close(&w_curs);
 
 	if (error < 0)
-		return error;
+		goto cleanup;
 
-	switch (type) {
-	case GIT_OBJ_OFS_DELTA:
-	case GIT_OBJ_REF_DELTA:
-		error = packfile_unpack_delta(
-				obj, p, &w_curs, &curpos,
-				size, type, *obj_offset);
-		break;
+	base_type = elem->type;
+	/* we now apply each consecutive delta until we run out */
+	while (git_array_size(chain) > 0) {
+		git_rawobj base, delta;
 
-	case GIT_OBJ_COMMIT:
-	case GIT_OBJ_TREE:
-	case GIT_OBJ_BLOB:
-	case GIT_OBJ_TAG:
-		error = packfile_unpack_compressed(
-				obj, p, &w_curs, &curpos,
-				size, type);
-		break;
+		elem = git_array_pop(chain);
+		curpos = elem->offset;
+		error = packfile_unpack_compressed(&delta, p, &w_curs, &curpos, elem->size, elem->type);
+		git_mwindow_close(&w_curs);
 
-	default:
-		error = packfile_error("invalid packfile type in header");;
-		break;
+		if (error < 0)
+			break;
+
+		/* the current object becomes the new base, on which we apply the delta */
+		base = *obj;
+		obj->data = NULL;
+		obj->len = 0;
+		obj->type = GIT_OBJ_BAD;
+
+		error = git__delta_apply(obj, base.data, base.len, delta.data, delta.len);
+		git__free(delta.data);
+		git__free(base.data);
+
+		if (error < 0)
+			break;
+
+		obj->type = base_type;
 	}
 
-	*obj_offset = curpos;
+cleanup:
+	git_array_clear(chain);
 	return error;
 }
 
@@ -1214,4 +1237,75 @@ int git_pack_entry_find(
 
 	git_oid_cpy(&e->sha1, &found_oid);
 	return 0;
+}
+
+static int pack_dependency_chain(git_dependency_chain *chain_out, struct git_pack_file *p, git_off_t obj_offset)
+{
+	git_dependency_chain chain = GIT_ARRAY_INIT;
+	git_mwindow *w_curs = NULL;
+	git_off_t curpos = obj_offset, base_offset;
+	int error = 0, found_base = 0;
+	size_t size;
+	git_otype type;
+
+	while (!found_base && error == 0) {
+		struct pack_chain_elem *elem;
+
+		curpos = obj_offset;
+		elem = git_array_alloc(chain);
+		if (!elem)
+			return -1;
+
+		error = git_packfile_unpack_header(&size, &type, &p->mwf, &w_curs, &curpos);
+		git_mwindow_close(&w_curs);
+
+		if (error < 0)
+			return error;
+
+		elem->offset = curpos;
+		elem->size = size;
+		elem->type = type;
+
+		switch (type) {
+		case GIT_OBJ_OFS_DELTA:
+		case GIT_OBJ_REF_DELTA:
+			base_offset = get_delta_base(p, &w_curs, &curpos, type, obj_offset);
+			git_mwindow_close(&w_curs);
+
+			if (base_offset == 0)
+				return packfile_error("delta offset is zero");
+			if (base_offset < 0) /* must actually be an error code */
+				return (int)base_offset;
+
+			/* we need to pass the pos *after* the delta-base bit */
+			elem->offset = curpos;
+
+			/* go through the loop again, but with the new object */
+			obj_offset = base_offset;
+			break;
+
+		/* one of these means we've found the final object in the chain */
+		case GIT_OBJ_COMMIT:
+		case GIT_OBJ_TREE:
+		case GIT_OBJ_BLOB:
+		case GIT_OBJ_TAG:
+			found_base = 1;
+			break;
+
+		default:
+			error = packfile_error("invalid packfile type in header");
+			break;
+		}
+	}
+
+	if (!found_base) {
+		git_array_clear(chain);
+		return packfile_error("after dependency chain loop; cannot happen");
+	}
+
+	if (error < 0)
+		git_array_clear(chain);
+
+	*chain_out = chain;
+	return error;
 }
