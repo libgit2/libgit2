@@ -62,9 +62,14 @@ typedef struct git_pack_cache_entry {
 } git_pack_cache_entry;
 
 struct pack_chain_elem {
+	int cached;
+	git_off_t base_key;
+	/* if we don't have it cached we have this */
 	git_off_t offset;
 	size_t size;
 	git_otype type;
+	/* if cached, we have this instead */
+	git_pack_cache_entry *cached_entry;
 };
 
 typedef git_array_t(struct pack_chain_elem) git_dependency_chain;
