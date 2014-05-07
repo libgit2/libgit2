@@ -20,16 +20,29 @@
 #define DIFF_FLAG_SET(DIFF,FLAG,VAL) (DIFF)->opts.flags = \
 	(VAL) ? ((DIFF)->opts.flags | (FLAG)) : ((DIFF)->opts.flags & ~(VAL))
 
+typedef struct {
+	git_diff_delta base;
+	git_diff_file  extra[GIT_FLEX_ARRAY];
+} git_diff_delta_merged;
+
 static git_diff_delta *diff_delta__alloc(
 	git_diff *diff,
 	git_delta_t status,
-	const char *path)
+	const git_index_entry *entry,
+	uint16_t nfiles)
 {
-	git_diff_delta *delta = git__calloc(1, sizeof(git_diff_delta));
+	git_diff_delta *delta;
+	size_t alloc_size = sizeof(git_diff_delta);
+
+	alloc_size = (nfiles > 2) ?
+		sizeof(git_diff_delta_merged) + sizeof(git_diff_file) * (nfiles - 2) :
+		sizeof(git_diff_delta);
+
+	delta = git__calloc(1, alloc_size);
 	if (!delta)
 		return NULL;
 
-	delta->old_file.path = git_pool_strdup(&diff->pool, path);
+	delta->old_file.path = git_pool_strdup(&diff->pool, entry->path);
 	if (delta->old_file.path == NULL) {
 		git__free(delta);
 		return NULL;
@@ -45,6 +58,26 @@ static git_diff_delta *diff_delta__alloc(
 		}
 	}
 	delta->status = status;
+	delta->nfiles = nfiles;
+
+	if (delta->status == GIT_DELTA_ADDED ||
+		delta->status == GIT_DELTA_IGNORED ||
+		delta->status == GIT_DELTA_UNTRACKED)
+	{
+		delta->new_file.mode = entry->mode;
+		delta->new_file.size = entry->file_size;
+		git_oid_cpy(&delta->new_file.id, &entry->id);
+	} else {
+		delta->old_file.mode = entry->mode;
+		delta->old_file.size = entry->file_size;
+		git_oid_cpy(&delta->old_file.id, &entry->id);
+	}
+
+	delta->old_file.flags |= GIT_DIFF_FLAG_VALID_ID;
+
+	if (delta->status == GIT_DELTA_DELETED ||
+		!git_oid_iszero(&delta->new_file.id))
+		delta->new_file.flags |= GIT_DIFF_FLAG_VALID_ID;
 
 	return delta;
 }
@@ -100,28 +133,11 @@ static int diff_delta__from_one(
 			&matched_pathspec, NULL))
 		return 0;
 
-	delta = diff_delta__alloc(diff, status, entry->path);
-	GITERR_CHECK_ALLOC(delta);
-
 	/* This fn is just for single-sided diffs */
 	assert(status != GIT_DELTA_MODIFIED);
-	delta->nfiles = 1;
 
-	if (delta->status == GIT_DELTA_DELETED) {
-		delta->old_file.mode = entry->mode;
-		delta->old_file.size = entry->file_size;
-		git_oid_cpy(&delta->old_file.id, &entry->id);
-	} else /* ADDED, IGNORED, UNTRACKED */ {
-		delta->new_file.mode = entry->mode;
-		delta->new_file.size = entry->file_size;
-		git_oid_cpy(&delta->new_file.id, &entry->id);
-	}
-
-	delta->old_file.flags |= GIT_DIFF_FLAG_VALID_ID;
-
-	if (delta->status == GIT_DELTA_DELETED ||
-		!git_oid_iszero(&delta->new_file.id))
-		delta->new_file.flags |= GIT_DIFF_FLAG_VALID_ID;
+	delta = diff_delta__alloc(diff, status, entry, 1);
+	GITERR_CHECK_ALLOC(delta);
 
 	return diff_insert_delta(diff, delta, matched_pathspec);
 }
@@ -137,7 +153,6 @@ static int diff_delta__from_two(
 	const char *matched_pathspec)
 {
 	git_diff_delta *delta;
-	const char *canonical_path = old_entry->path;
 
 	if (status == GIT_DELTA_UNMODIFIED &&
 		DIFF_FLAG_ISNT_SET(diff, GIT_DIFF_INCLUDE_UNMODIFIED))
@@ -152,14 +167,8 @@ static int diff_delta__from_two(
 		new_mode = temp_mode;
 	}
 
-	delta = diff_delta__alloc(diff, status, canonical_path);
+	delta = diff_delta__alloc(diff, status, old_entry, 2);
 	GITERR_CHECK_ALLOC(delta);
-	delta->nfiles = 2;
-
-	git_oid_cpy(&delta->old_file.id, &old_entry->id);
-	delta->old_file.size = old_entry->file_size;
-	delta->old_file.mode = old_mode;
-	delta->old_file.flags |= GIT_DIFF_FLAG_VALID_ID;
 
 	git_oid_cpy(&delta->new_file.id, &new_entry->id);
 	delta->new_file.size = new_entry->file_size;
@@ -1644,3 +1653,212 @@ int git_diff_format_email_init_options(
 		GIT_DIFF_FORMAT_EMAIL_OPTIONS_INIT);
 	return 0;
 }
+
+static int diff_commit_nonmerge(
+	git_diff **diff_ptr,
+	git_commit *commit,
+	const git_diff_options *opts)
+{
+	int error = 0;
+	git_tree *tree = NULL, *parent_tree = NULL;
+
+	error = git_commit_tree(&tree, commit);
+
+	if (!error && git_commit_parentcount(commit) > 0) {
+		git_commit *parent = NULL;
+
+		if (!(error = git_commit_parent(&parent, commit, 0)))
+			error = git_commit_tree(&parent_tree, parent);
+
+		git_commit_free(parent);
+	}
+
+	if (!error)
+		error = git_diff_tree_to_tree(
+			diff_ptr, git_commit_owner(commit), parent_tree, tree, opts);
+
+	git_tree_free(parent_tree);
+	git_tree_free(tree);
+
+	return error;
+}
+
+static void free_commit_parent_trees_array(git_tree **parents)
+{
+	unsigned int p;
+	for (p = 0; parents[p] != NULL; ++p)
+		git_tree_free(parents[p]);
+	git__free(parents);
+}
+
+static int alloc_commit_parent_trees_array(
+	git_tree ***parents_ptr, git_commit *commit)
+{
+	int error = 0;
+	unsigned int p, nparents = git_commit_parentcount(commit);
+	git_tree **parents;
+
+	/* add extra element to give final NULL at end of array */
+	parents = git__calloc(nparents + 1, sizeof(git_tree *));
+	GITERR_CHECK_ALLOC(parents);
+
+	for (p = 0; p < nparents; ++p) {
+		git_commit *parent = NULL;
+
+		if (!(error = git_commit_parent(&parent, commit, p)))
+			error = git_commit_tree(&parents[p], parent);
+		git_commit_free(parent);
+
+		if (error < 0) {
+			free_commit_parent_trees_array(parents);
+			return error;
+		}
+	}
+
+	*parents_ptr = parents;
+	return 0;
+}
+
+static int match_parent_tree_entries(
+	unsigned int nparents, git_tree **parents, const git_index_entry *item)
+{
+	int error = GIT_ENOTFOUND;
+	unsigned int p;
+	git_tree_entry *te = NULL;
+
+	for (p = 0; error < 0 && p < nparents; ++p) {
+		if (git_tree_entry_bypath(&te, parents[p], item->path))
+			giterr_clear();
+		else {
+			error = git_oid_equal(git_tree_entry_id(te), &item->id) ?
+				(int)p : -1;
+			git_tree_entry_free(te);
+		}
+	}
+
+	return error;
+}
+
+int git_diff_commit(
+	git_diff **diff_ptr,
+	git_commit *commit,
+	const git_diff_options *opts)
+{
+	int error = 0;
+	unsigned int nparents = 0, p;
+	git_tree *tree = NULL, **parents = NULL;
+	git_iterator_flag_t iflag = GIT_ITERATOR_DONT_IGNORE_CASE;
+	char *pfx = NULL;
+	git_iterator *iter = NULL;
+	const git_index_entry *nitem;
+	git_diff *diff = NULL;
+
+	assert(diff_ptr && commit);
+	*diff_ptr = NULL;
+
+	/* this diff is a little bit different because if the commit has
+	 * multiple parents, this actually only wants to include files that
+	 * are do not match any of the parent trees.
+	 */
+
+	nparents = git_commit_parentcount(commit);
+	if (nparents <= 1)
+		return diff_commit_nonmerge(diff_ptr, commit, opts);
+
+	if ((error = git_commit_tree(&tree, commit)) < 0 ||
+		(error = alloc_commit_parent_trees_array(&parents, commit)) < 0)
+		goto cleanup;
+
+	/* now iterate over tree and look for each entry in all of parents */
+
+	if (opts) {
+		pfx = git_pathspec_prefix(&opts->pathspec);
+
+		if ((opts->flags & GIT_DIFF_IGNORE_CASE) != 0)
+			iflag = GIT_ITERATOR_IGNORE_CASE;
+	}
+
+	if ((error = git_iterator_for_tree(&iter, tree, iflag, pfx, pfx)) < 0)
+		goto cleanup;
+
+	if (!(diff = diff_list_alloc(git_commit_owner(commit), iter, iter)))
+		error = -1;
+	else
+		error = diff_list_apply_options(diff, opts);
+
+	while (!error && !(error = git_iterator_advance(&nitem, iter))) {
+		const char *matched_pathspec;
+		int matched_parent;
+		git_diff_delta *delta;
+
+		if (!git_pathspec__match(
+				&diff->pathspec, nitem->path,
+				DIFF_FLAG_IS_SET(diff, GIT_DIFF_DISABLE_PATHSPEC_MATCH),
+				DIFF_FLAG_IS_SET(diff, GIT_DIFF_IGNORE_CASE),
+				&matched_pathspec, NULL))
+			continue;
+
+		matched_parent = match_parent_tree_entries(nparents, parents, nitem);
+
+		/* don't record a diff if we found a parent that matched exactly */
+		if (matched_parent >= 0)
+			continue;
+
+		/* create a specialized delta */
+		delta = diff_delta__alloc(diff, GIT_DELTA_ADDED, nitem, nparents + 1);
+		if (!delta) {
+			error = -1;
+			break;
+		}
+
+		/* add other sides of delta as needed */
+		if (matched_parent != GIT_ENOTFOUND) {
+			git_tree_entry *te = NULL;
+			git_diff_file *f;
+
+			for (p = 0; error < 0 && p < nparents; ++p) {
+				if (!p)
+					f = (delta->status == GIT_DELTA_ADDED) ?
+						&delta->old_file : &delta->new_file;
+				else
+					f = &((git_diff_delta_merged *)delta)->extra[p - 1];
+
+				if (git_tree_entry_bypath(&te, parents[p], nitem->path)) {
+					giterr_clear();
+					f->flags |= GIT_DIFF_FLAG_VALID_ID;
+				} else {
+					f->mode = git_tree_entry_filemode(te);
+					f->size = 0;
+					git_oid_cpy(&f->id, git_tree_entry_id(te));
+					git_tree_entry_free(te);
+				}
+			}
+
+			delta->status = GIT_DELTA_MODIFIED;
+		}
+
+		error = diff_insert_delta(diff, delta, matched_pathspec);
+	}
+
+	if (error == GIT_ITEROVER)
+		error = 0;
+
+	/* TODO:
+	 * - walk all parents to look for DELETED items
+	 * - resort deltas after adding those
+	 */
+
+cleanup:
+	git_iterator_free(iter);
+	git__free(pfx);
+	git_tree_free(tree);
+	free_commit_parent_trees_array(parents);
+
+	if (!error)
+		*diff_ptr = diff;
+	else
+		git_diff_free(diff);
+
+	return error;
+}
+
