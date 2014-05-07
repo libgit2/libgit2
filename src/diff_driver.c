@@ -234,13 +234,10 @@ static int git_diff_driver_load(
 	}
 
 	/* if you can't read config for repo, just use default driver */
-	if (git_repository_config__weakptr(&repo_cfg, repo) < 0) {
+	if (git_repository_config_snapshot(&cfg, repo) < 0) {
 		giterr_clear();
 		goto done;
 	}
-
-	if ((error = git_config_snapshot(&cfg, repo_cfg)) < 0)
-		return error;
 
 	drv = git__calloc(1, sizeof(git_diff_driver) + namelen + 1);
 	GITERR_CHECK_ALLOC(drv);

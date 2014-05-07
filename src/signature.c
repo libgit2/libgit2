@@ -141,13 +141,10 @@ int git_signature_now(git_signature **sig_out, const char *name, const char *ema
 int git_signature_default(git_signature **out, git_repository *repo)
 {
 	int error;
-	git_config *cfg, *repo_cfg;
+	git_config *cfg;
 	const char *user_name, *user_email;
 
-	if ((error = git_repository_config__weakptr(&repo_cfg, repo)) < 0)
-		return error;
-
-	if ((error = git_config_snapshot(&cfg, repo_cfg)) < 0)
+	if ((error = git_repository_config_snapshot(&cfg, repo)) < 0)
 		return error;
 
 	if (!(error = git_config_get_string(&user_name, cfg, "user.name")) &&

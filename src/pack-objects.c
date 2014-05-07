@@ -86,14 +86,11 @@ static unsigned name_hash(const char *name)
 
 static int packbuilder_config(git_packbuilder *pb)
 {
-	git_config *config, *repo_config;
+	git_config *config;
 	int ret;
 	int64_t val;
 
-	if ((ret = git_repository_config__weakptr(&repo_config, pb->repo)) < 0)
-		return ret;
-
-	if ((ret = git_config_snapshot(&config, repo_config)) < 0)
+	if ((ret = git_repository_config_snapshot(&config, pb->repo)) < 0)
 		return ret;
 
 #define config_get(KEY,DST,DFLT) do { \

@@ -439,7 +439,7 @@ int git_repository_open_ext(
 	int error;
 	git_buf path = GIT_BUF_INIT, parent = GIT_BUF_INIT;
 	git_repository *repo;
-	git_config *repo_config, *config;
+	git_config *config;
 
 	if (repo_ptr)
 		*repo_ptr = NULL;
@@ -454,10 +454,7 @@ int git_repository_open_ext(
 	repo->path_repository = git_buf_detach(&path);
 	GITERR_CHECK_ALLOC(repo->path_repository);
 
-	if ((error = git_repository_config__weakptr(&repo_config, repo)) < 0)
-		return error;
-
-	if ((error = git_config_snapshot(&config, repo_config)) < 0)
+	if ((error = git_repository_config_snapshot(&config, repo)) < 0)
 		return error;
 
 	if ((flags & GIT_REPOSITORY_OPEN_BARE) != 0)
@@ -622,6 +619,16 @@ int git_repository_config(git_config **out, git_repository *repo)
 
 	GIT_REFCOUNT_INC(*out);
 	return 0;
+}
+
+int git_repository_config_snapshot(git_config **out, git_repository *repo)
+{
+	git_config *weak;
+
+	if (git_repository_config__weakptr(&weak, repo) < 0)
+		return -1;
+
+	return git_config_snapshot(out, weak);
 }
 
 void git_repository_set_config(git_repository *repo, git_config *config)

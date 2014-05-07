@@ -332,7 +332,7 @@ int git_branch_upstream_name(
 	int error = -1;
 	git_remote *remote = NULL;
 	const git_refspec *refspec;
-	git_config *config, *repo_config;
+	git_config *config;
 
 	assert(out && refname);
 
@@ -341,10 +341,7 @@ int git_branch_upstream_name(
 	if (!git_reference__is_branch(refname))
 		return not_a_local_branch(refname);
 
-	if ((error = git_repository_config__weakptr(&repo_config, repo)) < 0)
-		return error;
-
-	if ((error = git_config_snapshot(&config, repo_config)) < 0)
+	if ((error = git_repository_config_snapshot(&config, repo)) < 0)
 		return error;
 
 	if ((error = retrieve_upstream_configuration(
