@@ -1242,14 +1242,16 @@ static int pack_dependency_chain(git_dependency_chain *chain_out, struct git_pac
 
 		curpos = obj_offset;
 		elem = git_array_alloc(chain);
-		if (!elem)
-			return -1;
+		if (!elem) {
+			error = -1;
+			goto on_error;
+		}
 
 		error = git_packfile_unpack_header(&size, &type, &p->mwf, &w_curs, &curpos);
 		git_mwindow_close(&w_curs);
 
 		if (error < 0)
-			return error;
+			goto on_error;
 
 		elem->cached = 0;
 		elem->offset = curpos;
@@ -1273,8 +1275,10 @@ static int pack_dependency_chain(git_dependency_chain *chain_out, struct git_pac
 
 			if (base_offset == 0)
 				return packfile_error("delta offset is zero");
-			if (base_offset < 0) /* must actually be an error code */
-				return (int)base_offset;
+			if (base_offset < 0) { /* must actually be an error code */
+				error = (int)base_offset;
+				goto on_error;
+			}
 
 			/* we need to pass the pos *after* the delta-base bit */
 			elem->offset = curpos;
@@ -1302,9 +1306,10 @@ static int pack_dependency_chain(git_dependency_chain *chain_out, struct git_pac
 		return packfile_error("after dependency chain loop; cannot happen");
 	}
 
-	if (error < 0)
-		git_array_clear(chain);
-
 	*chain_out = chain;
+	return error;
+
+on_error:
+	git_array_clear(chain);
 	return error;
 }
