@@ -207,7 +207,7 @@ ENDIF()
 
 # Optional external dependency: iconv
 IF (USE_ICONV)
-	FIND_PACKAGE(ICONV)
+	FIND_PACKAGE(Iconv)
 ENDIF()
 IF (ICONV_FOUND)
 	ADD_DEFINITIONS(-DGIT_USE_ICONV)
