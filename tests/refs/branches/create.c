@@ -167,16 +167,16 @@ void test_refs_branches_create__can_create_branch_with_unicode(void)
 	const char *alt[] = { nfd, nfc, NULL };
 	const char *expected[] = { nfc, nfd, emoji };
 	unsigned int i;
+	bool fs_decompose_unicode =
+		git_path_does_fs_decompose_unicode(git_repository_path(repo));
 
 	retrieve_known_commit(&target, repo);
 
 	if (cl_repo_get_bool(repo, "core.precomposeunicode"))
 		expected[1] = nfc;
-#ifdef __APPLE__
 	/* test decomp. because not all Mac filesystems decompose unicode */
-	else if (git_path_does_fs_decompose_unicode(git_repository_path(repo)))
+	else if (fs_decompose_unicode)
 		expected[0] = nfd;
-#endif
 
 	for (i = 0; i < ARRAY_SIZE(names); ++i) {
 		cl_git_pass(git_branch_create(
@@ -185,7 +185,7 @@ void test_refs_branches_create__can_create_branch_with_unicode(void)
 			git_reference_target(branch), git_commit_id(target)));
 
 		assert_branch_matches_name(expected[i], names[i]);
-		if (alt[i])
+		if (fs_decompose_unicode && alt[i])
 			assert_branch_matches_name(expected[i], alt[i]);
 
 		cl_git_pass(git_branch_delete(branch));
