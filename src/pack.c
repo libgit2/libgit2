@@ -50,15 +50,23 @@ static int packfile_error(const char *message)
  * Delta base cache
  ********************/
 
-static git_pack_cache_entry *new_cache_object(git_rawobj *source)
+static git_pack_cache_entry *new_cache_object(git_rawobj *source, git_off_t offset)
 {
 	git_pack_cache_entry *e = git__calloc(1, sizeof(git_pack_cache_entry));
 	if (!e)
 		return NULL;
 
 	memcpy(&e->raw, source, sizeof(git_rawobj));
+	e->next = e->prev = e;
+	e->offset = offset;
 
 	return e;
+}
+
+static void remove_entry(git_pack_cache_entry *entry)
+{
+	entry->prev->next = entry->next;
+	entry->next->prev = entry->prev;
 }
 
 static void free_cache_object(void *o)
@@ -74,12 +82,16 @@ static void free_cache_object(void *o)
 
 static void cache_free(git_pack_cache *cache)
 {
-	khiter_t k;
+	git_pack_cache_entry *entry, *next;
 
+	/* this works as a proxy for an initialized cache */
 	if (cache->entries) {
-		for (k = kh_begin(cache->entries); k != kh_end(cache->entries); k++) {
-			if (kh_exist(cache->entries, k))
-				free_cache_object(kh_value(cache->entries, k));
+		entry = cache->sentinel.next;
+		while (entry != &cache->sentinel) {
+			next = entry->next;
+			remove_entry(entry);
+			free_cache_object(entry);
+			entry = next;
 		}
 
 		git_offmap_free(cache->entries);
@@ -107,7 +119,28 @@ static int cache_init(git_pack_cache *cache)
 		return -1;
 	}
 
+	cache->sentinel.prev = &cache->sentinel;
+	cache->sentinel.next = &cache->sentinel;
+
 	return 0;
+}
+
+/* call with the cache lock held */
+static void move_to_front(git_pack_cache *cache, git_pack_cache_entry *entry)
+{
+	git_pack_cache_entry *next = NULL, *latest = NULL;
+
+	/* remove the entry from the current position */
+	next = entry->next;
+	entry->prev->next = entry->next;
+	next->prev = entry->prev;
+
+	/* and put ourselves at the top of the list */
+	latest = cache->sentinel.prev;
+	entry->next = latest->next;
+	latest->next = entry;
+	entry->prev = latest;
+	entry->next->prev = entry;
 }
 
 static git_pack_cache_entry *cache_get(git_pack_cache *cache, git_off_t offset)
@@ -122,7 +155,7 @@ static git_pack_cache_entry *cache_get(git_pack_cache *cache, git_off_t offset)
 	if (k != kh_end(cache->entries)) { /* found it */
 		entry = kh_value(cache->entries, k);
 		git_atomic_inc(&entry->refcount);
-		entry->last_usage = cache->use_ctr++;
+		move_to_front(cache, entry);
 	}
 	git_mutex_unlock(&cache->lock);
 
@@ -130,23 +163,27 @@ static git_pack_cache_entry *cache_get(git_pack_cache *cache, git_off_t offset)
 }
 
 /* Run with the cache lock held */
-static void free_lowest_entry(git_pack_cache *cache)
+static int free_lowest_entry(git_pack_cache *cache)
 {
 	git_pack_cache_entry *entry;
 	khiter_t k;
+	int error = 0;
 
-	for (k = kh_begin(cache->entries); k != kh_end(cache->entries); k++) {
-		if (!kh_exist(cache->entries, k))
-			continue;
-
-		entry = kh_value(cache->entries, k);
-
-		if (entry && entry->refcount.val == 0) {
+	entry = cache->sentinel.next;
+	while (entry != &cache->sentinel) {
+		if (entry->refcount.val == 0) {
 			cache->memory_used -= entry->raw.len;
+			cache->nentries--;
+			k = kh_get(off, cache->entries, entry->offset);
 			kh_del(off, cache->entries, k);
+			remove_entry(entry);
 			free_cache_object(entry);
+			break;
 		}
+		entry = entry->next;
 	}
+
+	return error;
 }
 
 static int cache_add(git_pack_cache *cache, git_rawobj *base, git_off_t offset)
@@ -158,7 +195,7 @@ static int cache_add(git_pack_cache *cache, git_rawobj *base, git_off_t offset)
 	if (base->len > GIT_PACK_CACHE_SIZE_LIMIT)
 		return -1;
 
-	entry = new_cache_object(base);
+	entry = new_cache_object(base, offset);
 	if (entry) {
 		if (git_mutex_lock(&cache->lock) < 0) {
 			giterr_set(GITERR_OS, "failed to lock cache");
@@ -167,13 +204,15 @@ static int cache_add(git_pack_cache *cache, git_rawobj *base, git_off_t offset)
 		/* Add it to the cache if nobody else has */
 		exists = kh_get(off, cache->entries, offset) != kh_end(cache->entries);
 		if (!exists) {
-			while (cache->memory_used + base->len > cache->memory_limit)
+			while (cache->nentries > 256)
 				free_lowest_entry(cache);
 
 			k = kh_put(off, cache->entries, offset, &error);
 			assert(error != 0);
 			kh_value(cache->entries, k) = entry;
 			cache->memory_used += entry->raw.len;
+			cache->nentries++;
+			move_to_front(cache, entry);
 		}
 		git_mutex_unlock(&cache->lock);
 		/* Somebody beat us to adding it into the cache */
