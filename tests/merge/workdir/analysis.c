@@ -105,3 +105,29 @@ void test_merge_workdir_analysis__unborn(void)
 	git_buf_free(&master);
 }
 
+void test_merge_workdir_analysis__fastforward_with_config_noff(void)
+{
+	git_config *config;
+	git_merge_analysis_t analysis;
+
+	git_repository_config(&config, repo);
+	git_config_set_string(config, "merge.ff", "false");
+
+	analysis = analysis_from_branch(FASTFORWARD_BRANCH);
+	cl_assert_equal_i(GIT_MERGE_ANALYSIS_FASTFORWARD, (analysis & GIT_MERGE_ANALYSIS_FASTFORWARD));
+	cl_assert_equal_i(GIT_MERGE_ANALYSIS_NORMAL, (analysis & GIT_MERGE_ANALYSIS_NORMAL));
+	cl_assert_equal_i(GIT_MERGE_CONFIG_NO_FASTFORWARD, (analysis & GIT_MERGE_CONFIG_NO_FASTFORWARD));
+}
+
+void test_merge_workdir_analysis__no_fastforward_with_config_ffonly(void)
+{
+	git_config *config;
+	git_merge_analysis_t analysis;
+
+	git_repository_config(&config, repo);
+	git_config_set_string(config, "merge.ff", "only");
+
+	analysis = analysis_from_branch(NOFASTFORWARD_BRANCH);
+	cl_assert_equal_i(GIT_MERGE_ANALYSIS_NORMAL, (analysis & GIT_MERGE_ANALYSIS_NORMAL));
+	cl_assert_equal_i(GIT_MERGE_CONFIG_FASTFORWARD_ONLY, (analysis & GIT_MERGE_CONFIG_FASTFORWARD_ONLY));
+}

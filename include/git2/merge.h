@@ -266,6 +266,18 @@ typedef enum {
 	 * to simply set HEAD to the target commit(s).
 	 */
 	GIT_MERGE_ANALYSIS_UNBORN = (1 << 3),
+
+	/**
+	 * There is a `merge.ff=false` configuration setting, suggesting that
+	 * the user does not want to allow a fast-forward merge.
+	 */
+	GIT_MERGE_CONFIG_NO_FASTFORWARD = (1 << 4),
+
+	/**
+	 * There is a `merge.ff=only` configuration setting, suggesting that
+	 * the user only wants fast-forward merges.
+	 */
+	GIT_MERGE_CONFIG_FASTFORWARD_ONLY = (1 << 5),
 } git_merge_analysis_t;
 
 /**
