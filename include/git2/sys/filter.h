@@ -58,7 +58,7 @@ GIT_EXTERN(int) git_filter_list_new(
 	git_filter_list **out,
 	git_repository *repo,
 	git_filter_mode_t mode,
-	git_filter_opt_t options);
+	uint32_t options);
 
 /**
  * Add a filter to a filter list with the given payload.
@@ -123,9 +123,9 @@ GIT_EXTERN(const git_oid *) git_filter_source_id(const git_filter_source *src);
 GIT_EXTERN(git_filter_mode_t) git_filter_source_mode(const git_filter_source *src);
 
 /**
- * Get the git_filter_opt_t options to be applied
+ * Get the combination git_filter_opt_t options to be applied
  */
-GIT_EXTERN(git_filter_opt_t) git_filter_source_options(const git_filter_source *src);
+GIT_EXTERN(uint32_t) git_filter_source_options(const git_filter_source *src);
 
 /*
  * struct git_filter

@@ -23,7 +23,7 @@ struct git_filter_source {
 	git_oid         oid;  /* zero if unknown (which is likely) */
 	uint16_t        filemode; /* zero if unknown */
 	git_filter_mode_t mode;
-	git_filter_opt_t  options;
+	uint32_t        options;
 };
 
 typedef struct {
@@ -359,7 +359,7 @@ git_filter_mode_t git_filter_source_mode(const git_filter_source *src)
 	return src->mode;
 }
 
-git_filter_opt_t git_filter_source_options(const git_filter_source *src)
+uint32_t git_filter_source_options(const git_filter_source *src)
 {
 	return src->options;
 }
@@ -429,7 +429,7 @@ int git_filter_list_new(
 	git_filter_list **out,
 	git_repository *repo,
 	git_filter_mode_t mode,
-	git_filter_opt_t options)
+	uint32_t options)
 {
 	git_filter_source src = { 0 };
 	src.repo = repo;
@@ -445,7 +445,7 @@ int git_filter_list_load(
 	git_blob *blob, /* can be NULL */
 	const char *path,
 	git_filter_mode_t mode,
-	git_filter_opt_t options)
+	uint32_t options)
 {
 	int error = 0;
 	git_filter_list *fl = NULL;
