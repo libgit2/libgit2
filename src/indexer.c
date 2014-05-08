@@ -717,6 +717,9 @@ static int fix_thin_pack(git_indexer *idx, git_transfer_progress *stats)
 
 	/* Loop until we find the first REF delta */
 	git_vector_foreach(&idx->deltas, i, delta) {
+		if (!delta)
+			continue;
+
 		curpos = delta->delta_off;
 		error = git_packfile_unpack_header(&size, &type, &idx->pack->mwf, &w, &curpos);
 		git_mwindow_close(&w);
@@ -756,13 +759,18 @@ static int resolve_deltas(git_indexer *idx, git_transfer_progress *stats)
 {
 	unsigned int i;
 	struct delta_info *delta;
-	int progressed = 0, progress_cb_result;
+	int progressed = 0, non_null = 0, progress_cb_result;
 
 	while (idx->deltas.length > 0) {
 		progressed = 0;
+		non_null = 0;
 		git_vector_foreach(&idx->deltas, i, delta) {
 			git_rawobj obj;
 
+			if (!delta)
+				continue;
+
+			non_null = 1;
 			idx->off = delta->delta_off;
 			if (git_packfile_unpack(&obj, idx->pack, &idx->off) < 0)
 				continue;
@@ -777,15 +785,14 @@ static int resolve_deltas(git_indexer *idx, git_transfer_progress *stats)
 			if ((progress_cb_result = do_progress_callback(idx, stats)) < 0)
 				return progress_cb_result;
 
-			/*
-			 * Remove this delta from the list and
-			 * decrease i so we don't skip over the next
-			 * delta.
-			 */
-			git_vector_remove(&idx->deltas, i);
+			/* remove from the list */
+			git_vector_set(NULL, &idx->deltas, i, NULL);
 			git__free(delta);
-			i--;
 		}
+
+		/* if none were actually set, we're done */
+		if (!non_null)
+			break;
 
 		if (!progressed && (fix_thin_pack(idx, stats) < 0)) {
 			giterr_set(GITERR_INDEXER, "missing delta bases");
