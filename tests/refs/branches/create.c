@@ -1,5 +1,6 @@
 #include "clar_libgit2.h"
 #include "refs.h"
+#include "path.h"
 
 static git_repository *repo;
 static git_commit *target;
@@ -136,4 +137,59 @@ void test_refs_branches_create__default_reflog_message(void)
 
 	git_reflog_free(log);
 	git_signature_free(sig);
+}
+
+static void assert_branch_matches_name(
+	const char *expected, const char *lookup_as)
+{
+	git_reference *ref;
+	git_buf b = GIT_BUF_INIT;
+
+	cl_git_pass(git_branch_lookup(&ref, repo, lookup_as, GIT_BRANCH_LOCAL));
+
+	cl_git_pass(git_buf_sets(&b, "refs/heads/"));
+	cl_git_pass(git_buf_puts(&b, expected));
+	cl_assert_equal_s(b.ptr, git_reference_name(ref));
+
+	cl_git_pass(
+		git_oid_cmp(git_reference_target(ref), git_commit_id(target)));
+
+	git_reference_free(ref);
+	git_buf_free(&b);
+}
+
+void test_refs_branches_create__can_create_branch_with_unicode(void)
+{
+	const char *nfc = "\xC3\x85\x73\x74\x72\xC3\xB6\x6D";
+	const char *nfd = "\x41\xCC\x8A\x73\x74\x72\x6F\xCC\x88\x6D";
+	const char *emoji = "\xF0\x9F\x8D\xB7";
+	const char *names[] = { nfc, nfd, emoji };
+	const char *alt[] = { nfd, nfc, NULL };
+	const char *expected[] = { nfc, nfd, emoji };
+	unsigned int i;
+
+	retrieve_known_commit(&target, repo);
+
+	if (cl_repo_get_bool(repo, "core.precomposeunicode"))
+		expected[1] = nfc;
+#ifdef __APPLE__
+	/* test decomp. because not all Mac filesystems decompose unicode */
+	else if (git_path_does_fs_decompose_unicode(git_repository_path(repo)))
+		expected[0] = nfd;
+#endif
+
+	for (i = 0; i < ARRAY_SIZE(names); ++i) {
+		cl_git_pass(git_branch_create(
+			&branch, repo, names[i], target, 0, NULL, NULL));
+		cl_git_pass(git_oid_cmp(
+			git_reference_target(branch), git_commit_id(target)));
+
+		assert_branch_matches_name(expected[i], names[i]);
+		if (alt[i])
+			assert_branch_matches_name(expected[i], alt[i]);
+
+		cl_git_pass(git_branch_delete(branch));
+		git_reference_free(branch);
+		branch = NULL;
+	}
 }
