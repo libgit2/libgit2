@@ -1236,6 +1236,7 @@ static int pack_dependency_chain(git_dependency_chain *chain_out, struct git_pac
 	if (!p->bases.entries && (cache_init(&p->bases) < 0))
 		return -1;
 
+	git_array_init_to_size(chain, 64);
 	while (!found_base && error == 0) {
 		struct pack_chain_elem *elem;
 		git_pack_cache_entry *cached = NULL;
