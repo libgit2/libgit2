@@ -597,9 +597,9 @@ int git_diff_print_callback__to_file_handle(
 }
 
 /* print a git_patch to a git_buf */
-int git_patch_to_buf(
-	git_buf *out,
-	git_patch *patch)
+int git_patch_to_buf(git_buf *out, git_patch *patch)
 {
+	assert(out && patch);
+	git_buf_sanitize(out);
 	return git_patch_print(patch, git_diff_print_callback__to_buf, out);
 }

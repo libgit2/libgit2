@@ -641,7 +641,9 @@ int git_submodule_resolve_url(git_buf *out, git_repository *repo, const char *ur
 {
 	int error = 0;
 
-	assert(url);
+	assert(out && repo && url);
+
+	git_buf_sanitize(out);
 
 	if (git_path_is_relative(url)) {
 		if (!(error = get_url_base(out, repo)))
