@@ -23,6 +23,23 @@ static DWORD get_page_size(void)
 	return page_size;
 }
 
+int p_mmap_write_at(void *buf, size_t len, int fd, git_off_t offset)
+{
+	git_map out;
+	const size_t page_offset = offset % get_page_size();
+
+	if (0 > p_mmap(&out, len + page_offset
+		, GIT_PROT_WRITE, GIT_MAP_SHARED, fd, offset - page_offset))
+		return -1;
+
+	memcpy((char *) out.data + page_offset, buf, len);
+
+	if (0 > p_munmap(&out))
+		return -1;
+
+	return 0;
+}
+
 int p_mmap(git_map *out, size_t len, int prot, int flags, int fd, git_off_t offset)
 {
 	HANDLE fh = (HANDLE)_get_osfhandle(fd);

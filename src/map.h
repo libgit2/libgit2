@@ -43,4 +43,8 @@ typedef struct { /* memory mapped buffer	*/
 extern int p_mmap(git_map *out, size_t len, int prot, int flags, int fd, git_off_t offset);
 extern int p_munmap(git_map *map);
 
+#ifdef GIT_WIN32
+extern int p_mmap_write_at(void *buf, size_t len, int fd, git_off_t offset);
+#endif
+
 #endif /* INCLUDE_map_h__ */
