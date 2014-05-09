@@ -61,7 +61,7 @@ static int lock_file(git_filebuf *file, int flags, mode_t mode)
 			return res;
 	}
 
-	file->fd = git_futils_creat_locked(file->path_lock, mode);
+	file->fd = git_futils_creat_locked(file->path_lock, mode, flags & GIT_FILEBUF_USE_MMAP);
 
 	if (file->fd < 0)
 		return file->fd;
@@ -143,6 +143,18 @@ int git_filebuf_flush(git_filebuf *file)
 
 GIT_INLINE(bool) do_write(git_filebuf *file, void *source, size_t len)
 {
+#ifdef GIT_WIN32
+	if (0 <= file->map_pos) {
+		const bool ok = 0 <= p_mmap_write_at(
+			source, len, file->fd, file->map_pos);
+		if (ok)
+			file->map_pos += len;
+		else
+			file->last_error = BUFERR_WRITE;
+		return ok;
+	}
+#endif
+
 	if (0 <= p_write(file->fd, source, len))
 		return true;
 	file->last_error = BUFERR_WRITE;
@@ -216,6 +228,7 @@ int git_filebuf_open(git_filebuf *file, const char *path, int flags, mode_t mode
 	file->buf_pos = 0;
 	file->fd = -1;
 	file->last_error = BUFERR_OK;
+	file->map_pos = flags & GIT_FILEBUF_USE_MMAP ? 0 : -1;
 
 	/* Allocate the main cache buffer */
 	if (!file->do_not_buffer) {

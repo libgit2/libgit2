@@ -44,7 +44,7 @@ extern int git_futils_creat_withpath(const char *path, const mode_t dirmode, con
 /**
  * Create an open a process-locked file
  */
-extern int git_futils_creat_locked(const char *path, const mode_t mode);
+extern int git_futils_creat_locked(const char *path, const mode_t mode, bool rdwr);
 
 /**
  * Create a path recursively
