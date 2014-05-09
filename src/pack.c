@@ -549,20 +549,37 @@ int git_packfile_unpack(
 
 	/* the first one is the base, so we expand that one */
 	elem = git_array_pop(chain);
+	base_type = elem->type;
 	if (elem->cached) {
 		cached = elem->cached_entry;
 		memcpy(obj, &cached->raw, sizeof(git_rawobj));
-		base_type = obj->type;
-	} else {
-		curpos = elem->offset;
-		error = packfile_unpack_compressed(obj, p, &w_curs, &curpos, elem->size, elem->type);
-		git_mwindow_close(&w_curs);
-		base_type = elem->type;
-		free_base = 1;
 	}
 
 	if (error < 0)
 		goto cleanup;
+
+	switch (base_type) {
+	case GIT_OBJ_COMMIT:
+	case GIT_OBJ_TREE:
+	case GIT_OBJ_BLOB:
+	case GIT_OBJ_TAG:
+		if (!elem->cached) {
+			curpos = elem->offset;
+			error = packfile_unpack_compressed(obj, p, &w_curs, &curpos, elem->size, elem->type);
+			git_mwindow_close(&w_curs);
+			free_base = 1;
+		}
+		if (error < 0)
+			goto cleanup;
+		break;
+	case GIT_OBJ_OFS_DELTA:
+	case GIT_OBJ_REF_DELTA:
+		error = packfile_error("dependency chain ends in a delta");
+		goto cleanup;
+	default:
+		error = packfile_error("invalid packfile type in header");
+		goto cleanup;
+	}
 
 	/*
 	 * Finding the object we want as the base element is
@@ -1229,7 +1246,7 @@ static int pack_dependency_chain(git_dependency_chain *chain_out, struct git_pac
 	git_dependency_chain chain = GIT_ARRAY_INIT;
 	git_mwindow *w_curs = NULL;
 	git_off_t curpos = obj_offset, base_offset;
-	int error = 0, found_base = 0;
+	int error = 0;
 	size_t size;
 	git_otype type;
 
@@ -1237,7 +1254,7 @@ static int pack_dependency_chain(git_dependency_chain *chain_out, struct git_pac
 		return -1;
 
 	git_array_init_to_size(chain, 64);
-	while (!found_base && error == 0) {
+	while (true) {
 		struct pack_chain_elem *elem;
 		git_pack_cache_entry *cached = NULL;
 
@@ -1246,6 +1263,16 @@ static int pack_dependency_chain(git_dependency_chain *chain_out, struct git_pac
 		if (!elem) {
 			error = -1;
 			goto on_error;
+		}
+
+		elem->base_key = obj_offset;
+
+		/* if we have a base cached, we can stop here instead */
+		if ((cached = cache_get(&p->bases, obj_offset)) != NULL) {
+			elem->cached_entry = cached;
+			elem->cached = 1;
+			elem->type = cached->raw.type;
+			break;
 		}
 
 		error = git_packfile_unpack_header(&size, &type, &p->mwf, &w_curs, &curpos);
@@ -1260,51 +1287,26 @@ static int pack_dependency_chain(git_dependency_chain *chain_out, struct git_pac
 		elem->type = type;
 		elem->base_key = obj_offset;
 
-		switch (type) {
-		case GIT_OBJ_OFS_DELTA:
-		case GIT_OBJ_REF_DELTA:
-			/* if we have a base cached, we can stop here instead */
-			if ((cached = cache_get(&p->bases, obj_offset)) != NULL) {
-				elem->cached_entry = cached;
-				elem->cached = 1;
-				found_base = 1;
-				break;
-			}
-
-			base_offset = get_delta_base(p, &w_curs, &curpos, type, obj_offset);
-			git_mwindow_close(&w_curs);
-
-			if (base_offset == 0)
-				return packfile_error("delta offset is zero");
-			if (base_offset < 0) { /* must actually be an error code */
-				error = (int)base_offset;
-				goto on_error;
-			}
-
-			/* we need to pass the pos *after* the delta-base bit */
-			elem->offset = curpos;
-
-			/* go through the loop again, but with the new object */
-			obj_offset = base_offset;
+		if (type != GIT_OBJ_OFS_DELTA && type != GIT_OBJ_REF_DELTA)
 			break;
 
-		/* one of these means we've found the final object in the chain */
-		case GIT_OBJ_COMMIT:
-		case GIT_OBJ_TREE:
-		case GIT_OBJ_BLOB:
-		case GIT_OBJ_TAG:
-			found_base = 1;
-			break;
+		base_offset = get_delta_base(p, &w_curs, &curpos, type, obj_offset);
+		git_mwindow_close(&w_curs);
 
-		default:
-			error = packfile_error("invalid packfile type in header");
-			break;
+		if (base_offset == 0) {
+			error = packfile_error("delta offset is zero");
+			goto on_error;
 		}
-	}
+		if (base_offset < 0) { /* must actually be an error code */
+			error = (int)base_offset;
+			goto on_error;
+		}
 
-	if (!found_base) {
-		git_array_clear(chain);
-		return packfile_error("after dependency chain loop; cannot happen");
+		/* we need to pass the pos *after* the delta-base bit */
+		elem->offset = curpos;
+
+		/* go through the loop again, but with the new object */
+		obj_offset = base_offset;
 	}
 
 	*chain_out = chain;
