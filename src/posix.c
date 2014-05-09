@@ -203,11 +203,11 @@ int p_write(git_file fd, const void *buf, size_t cnt)
 	return 0;
 }
 
-#ifdef NO_MMAP
-
 #include "map.h"
 
-int p_mmap(git_map *out, size_t len, int prot, int flags, int fd, git_off_t offset)
+#if defined(NO_MMAP) || defined(NO_MMAP_ALT)
+
+int p_no_mmap(git_map *out, size_t len, int prot, int flags, int fd, git_off_t offset)
 {
 	GIT_MMAP_VALIDATE(out, len, prot, flags);
 
@@ -231,7 +231,7 @@ int p_mmap(git_map *out, size_t len, int prot, int flags, int fd, git_off_t offs
 	return 0;
 }
 
-int p_munmap(git_map *map)
+int p_no_munmap(git_map *map)
 {
 	assert(map != NULL);
 	free(map->data);

@@ -154,7 +154,8 @@ static git_mwindow *new_window(
 	git_mwindow_file *mwf,
 	git_file fd,
 	git_off_t size,
-	git_off_t offset)
+	git_off_t offset,
+	bool no_mmap)
 {
 	git_mwindow_ctl *ctl = &mem_ctl;
 	size_t walign = git_mwindow__window_size / 2;
@@ -184,7 +185,7 @@ static git_mwindow *new_window(
 	 * window.
 	 */
 
-	if (git_futils_mmap_ro(&w->window_map, fd, w->offset, (size_t)len) < 0) {
+	if (git_futils_opt_mmap_ro(&w->window_map, fd, w->offset, (size_t)len, no_mmap) < 0) {
 		git__free(w);
 		return NULL;
 	}
@@ -212,6 +213,17 @@ unsigned char *git_mwindow_open(
 	size_t extra,
 	unsigned int *left)
 {
+	return git_mwindow_open_opt_mmap(mwf, cursor, offset, extra, left, false);
+}
+
+unsigned char *git_mwindow_open_opt_mmap(
+	git_mwindow_file *mwf,
+	git_mwindow **cursor,
+	git_off_t offset,
+	size_t extra,
+	unsigned int *left,
+	bool no_mmap)
+{
 	git_mwindow_ctl *ctl = &mem_ctl;
 	git_mwindow *w = *cursor;
 
@@ -236,7 +248,7 @@ unsigned char *git_mwindow_open(
 		 * one.
 		 */
 		if (!w) {
-			w = new_window(mwf, mwf->fd, mwf->size, offset);
+			w = new_window(mwf, mwf->fd, mwf->size, offset, no_mmap);
 			if (w == NULL) {
 				git_mutex_unlock(&git__mwindow_mutex);
 				return NULL;
