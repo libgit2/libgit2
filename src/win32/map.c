@@ -94,6 +94,11 @@ int p_munmap(git_map *map)
 
 	assert(map != NULL);
 
+#ifdef NO_MMAP_ALT
+	if (!map->fmh)
+		return p_no_munmap(map);
+#endif
+
 	if (map->data) {
 		if (!UnmapViewOfFile(map->data)) {
 			giterr_set(GITERR_OS, "Failed to munmap. Could not unmap view of file");

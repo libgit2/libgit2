@@ -120,6 +120,14 @@ int git_packfile_unpack_header(
 		git_mwindow **w_curs,
 		git_off_t *curpos);
 
+int git_packfile_unpack_header_opt_mmap(
+	size_t *size_p,
+	git_otype *type_p,
+	git_mwindow_file *mwf,
+	git_mwindow **w_curs,
+	git_off_t *curpos,
+	bool no_mmap);
+
 int git_packfile_resolve_header(
 		size_t *size_p,
 		git_otype *type_p,

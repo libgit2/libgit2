@@ -38,6 +38,8 @@ typedef struct git_mwindow_ctl {
 int git_mwindow_contains(git_mwindow *win, git_off_t offset);
 void git_mwindow_free_all(git_mwindow_file *mwf);
 unsigned char *git_mwindow_open(git_mwindow_file *mwf, git_mwindow **cursor, git_off_t offset, size_t extra, unsigned int *left);
+unsigned char *git_mwindow_open_opt_mmap(git_mwindow_file *mwf,
+	git_mwindow **cursor, git_off_t offset, size_t extra, unsigned int *left, bool no_mmap);
 int git_mwindow_file_register(git_mwindow_file *mwf);
 void git_mwindow_file_deregister(git_mwindow_file *mwf);
 void git_mwindow_close(git_mwindow **w_cursor);

@@ -247,6 +247,13 @@ extern int git_futils_mmap_ro(
 	git_off_t begin,
 	size_t len);
 
+extern int git_futils_opt_mmap_ro(
+	git_map *out,
+	git_file fd,
+	git_off_t begin,
+	size_t len,
+	bool no_mmap);
+
 /**
  * Read-only map an entire file.
  *

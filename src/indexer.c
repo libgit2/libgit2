@@ -514,7 +514,8 @@ int git_indexer_append(git_indexer *idx, const void *data, size_t size, git_tran
 			return 0;
 
 		if (!idx->have_stream) {
-			error = git_packfile_unpack_header(&entry_size, &type, mwf, &w, &idx->off);
+			error = git_packfile_unpack_header_opt_mmap(
+				&entry_size, &type, mwf, &w, &idx->off, true);
 			if (error == GIT_EBUFS) {
 				idx->off = entry_start;
 				return 0;

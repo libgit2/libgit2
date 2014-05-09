@@ -249,6 +249,16 @@ int git_futils_mv_withpath(const char *from, const char *to, const mode_t dirmod
 	return 0;
 }
 
+int git_futils_opt_mmap_ro(
+	git_map *out, git_file fd, git_off_t begin, size_t len, bool no_mmap)
+{
+#ifdef NO_MMAP_ALT
+	if (no_mmap)
+		return p_no_mmap(out, len, GIT_PROT_READ, GIT_MAP_SHARED, fd, begin);
+#endif
+	return git_futils_mmap_ro(out, fd, begin, len);
+}
+
 int git_futils_mmap_ro(git_map *out, git_file fd, git_off_t begin, size_t len)
 {
 	return p_mmap(out, len, GIT_PROT_READ, GIT_MAP_SHARED, fd, begin);

@@ -348,7 +348,8 @@ static unsigned char *pack_window_open(
 		struct git_pack_file *p,
 		git_mwindow **w_cursor,
 		git_off_t offset,
-		unsigned int *left)
+		unsigned int *left,
+		bool no_mmap)
 {
 	if (p->mwf.fd == -1 && packfile_open(p) < 0)
 		return NULL;
@@ -361,8 +362,8 @@ static unsigned char *pack_window_open(
 	if (offset > (p->mwf.size - 20))
 		return NULL;
 
-	return git_mwindow_open(&p->mwf, w_cursor, offset, 20, left);
- }
+	return git_mwindow_open_opt_mmap(&p->mwf, w_cursor, offset, 20, left, no_mmap);
+}
 
 /*
  * The per-object header is a pretty dense thing, which is
@@ -437,6 +438,18 @@ int git_packfile_unpack_header(
 		git_mwindow **w_curs,
 		git_off_t *curpos)
 {
+	return git_packfile_unpack_header_opt_mmap(
+		size_p, type_p, mwf, w_curs, curpos, false);
+}
+
+int git_packfile_unpack_header_opt_mmap(
+	size_t *size_p,
+	git_otype *type_p,
+	git_mwindow_file *mwf,
+	git_mwindow **w_curs,
+	git_off_t *curpos,
+	bool no_mmap)
+{
 	unsigned char *base;
 	unsigned int left;
 	unsigned long used;
@@ -449,7 +462,7 @@ int git_packfile_unpack_header(
 	 * insane, so we know won't exceed what we have been given.
 	 */
 /*	base = pack_window_open(p, w_curs, *curpos, &left); */
-	base = git_mwindow_open(mwf, w_curs, *curpos, 20, &left);
+	base = git_mwindow_open_opt_mmap(mwf, w_curs, *curpos, 20, &left, no_mmap);
 	if (base == NULL)
 		return GIT_EBUFS;
 
@@ -676,7 +689,7 @@ ssize_t git_packfile_stream_read(git_packfile_stream *obj, void *buffer, size_t 
 	if (obj->done)
 		return 0;
 
-	in = pack_window_open(obj->p, &obj->mw, obj->curpos, &obj->zstream.avail_in);
+	in = pack_window_open(obj->p, &obj->mw, obj->curpos, &obj->zstream.avail_in, true);
 	if (in == NULL)
 		return GIT_EBUFS;
 
@@ -742,7 +755,7 @@ int packfile_unpack_compressed(
 	}
 
 	do {
-		in = pack_window_open(p, w_curs, *curpos, &stream.avail_in);
+		in = pack_window_open(p, w_curs, *curpos, &stream.avail_in, false);
 		stream.next_in = in;
 		st = inflate(&stream, Z_FINISH);
 		git_mwindow_close(w_curs);
@@ -789,7 +802,7 @@ git_off_t get_delta_base(
 	git_off_t base_offset;
 	git_oid unused;
 
-	base_info = pack_window_open(p, w_curs, *curpos, &left);
+	base_info = pack_window_open(p, w_curs, *curpos, &left, false);
 	/* Assumption: the only reason this would fail is because the file is too small */
 	if (base_info == NULL)
 		return GIT_EBUFS;
