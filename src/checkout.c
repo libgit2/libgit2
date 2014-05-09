@@ -1212,7 +1212,8 @@ static int blob_content_to_file(
 
 	if (!opts->disable_filters)
 		error = git_filter_list_load(
-			&fl, git_blob_owner(blob), blob, hint_path, GIT_FILTER_TO_WORKTREE);
+			&fl, git_blob_owner(blob), blob, hint_path,
+			GIT_FILTER_TO_WORKTREE, GIT_FILTER_OPT_DEFAULT);
 
 	if (!error)
 		error = git_filter_list_apply_to_blob(&out, fl, blob);

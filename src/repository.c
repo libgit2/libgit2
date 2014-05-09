@@ -1789,7 +1789,8 @@ int git_repository_hashfile(
 	/* passing empty string for "as_path" indicated --no-filters */
 	if (strlen(as_path) > 0) {
 		error = git_filter_list_load(
-			&fl, repo, NULL, as_path, GIT_FILTER_TO_ODB);
+			&fl, repo, NULL, as_path,
+			GIT_FILTER_TO_ODB, GIT_FILTER_OPT_DEFAULT);
 		if (error < 0)
 			return error;
 	} else {

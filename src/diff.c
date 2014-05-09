@@ -589,7 +589,8 @@ int git_diff__oid_for_entry(
 			entry.path);
 		error = -1;
 	} else if (!(error = git_filter_list_load(
-			&fl, diff->repo, NULL, entry.path, GIT_FILTER_TO_ODB)))
+		&fl, diff->repo, NULL, entry.path,
+		GIT_FILTER_TO_ODB, GIT_FILTER_OPT_ALLOW_UNSAFE)))
 	{
 		int fd = git_futils_open_ro(full_path.ptr);
 		if (fd < 0)

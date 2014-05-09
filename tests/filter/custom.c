@@ -194,7 +194,7 @@ void test_filter_custom__to_odb(void)
 	git_buf in = GIT_BUF_INIT_CONST(workdir_data, strlen(workdir_data));
 
 	cl_git_pass(git_filter_list_load(
-		&fl, g_repo, NULL, "herofile", GIT_FILTER_TO_ODB));
+		&fl, g_repo, NULL, "herofile", GIT_FILTER_TO_ODB, 0));
 
 	cl_git_pass(git_filter_list_apply_to_data(&out, fl, &in));
 
@@ -215,7 +215,7 @@ void test_filter_custom__to_workdir(void)
 		bitflipped_and_reversed_data, BITFLIPPED_AND_REVERSED_DATA_LEN);
 
 	cl_git_pass(git_filter_list_load(
-		&fl, g_repo, NULL, "herofile", GIT_FILTER_TO_WORKTREE));
+		&fl, g_repo, NULL, "herofile", GIT_FILTER_TO_WORKTREE, 0));
 
 	cl_git_pass(git_filter_list_apply_to_data(&out, fl, &in));
 
@@ -233,13 +233,13 @@ void test_filter_custom__can_register_a_custom_filter_in_the_repository(void)
 	git_filter_list *fl;
 
 	cl_git_pass(git_filter_list_load(
-		&fl, g_repo, NULL, "herofile", GIT_FILTER_TO_WORKTREE));
+		&fl, g_repo, NULL, "herofile", GIT_FILTER_TO_WORKTREE, 0));
 	/* expect: bitflip, reverse, crlf */
 	cl_assert_equal_sz(3, git_filter_list_length(fl));
 	git_filter_list_free(fl);
 
 	cl_git_pass(git_filter_list_load(
-		&fl, g_repo, NULL, "herocorp", GIT_FILTER_TO_WORKTREE));
+		&fl, g_repo, NULL, "herocorp", GIT_FILTER_TO_WORKTREE, 0));
 	/* expect: bitflip, reverse - possibly crlf depending on global config */
 	{
 		size_t flen = git_filter_list_length(fl);
@@ -248,19 +248,20 @@ void test_filter_custom__can_register_a_custom_filter_in_the_repository(void)
 	git_filter_list_free(fl);
 
 	cl_git_pass(git_filter_list_load(
-		&fl, g_repo, NULL, "hero.bin", GIT_FILTER_TO_WORKTREE));
+		&fl, g_repo, NULL, "hero.bin", GIT_FILTER_TO_WORKTREE, 0));
 	/* expect: bitflip, reverse */
 	cl_assert_equal_sz(2, git_filter_list_length(fl));
 	git_filter_list_free(fl);
 
 	cl_git_pass(git_filter_list_load(
-		&fl, g_repo, NULL, "heroflip", GIT_FILTER_TO_WORKTREE));
+		&fl, g_repo, NULL, "heroflip", GIT_FILTER_TO_WORKTREE, 0));
 	/* expect: bitflip (because of -reverse) */
 	cl_assert_equal_sz(1, git_filter_list_length(fl));
 	git_filter_list_free(fl);
 
 	cl_git_pass(git_filter_list_load(
-		&fl, g_repo, NULL, "doesntapplytome.bin", GIT_FILTER_TO_WORKTREE));
+		&fl, g_repo, NULL, "doesntapplytome.bin",
+		GIT_FILTER_TO_WORKTREE, 0));
 	/* expect: none */
 	cl_assert_equal_sz(0, git_filter_list_length(fl));
 	git_filter_list_free(fl);
