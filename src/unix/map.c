@@ -12,6 +12,11 @@
 #include <sys/mman.h>
 #include <errno.h>
 
+long git_mmap_pagesize(void)
+{
+	return sysconf(_SC_PAGE_SIZE);
+}
+
 int p_mmap(git_map *out, size_t len, int prot, int flags, int fd, git_off_t offset)
 {
 	int mprot = 0;
@@ -34,6 +39,17 @@ int p_mmap(git_map *out, size_t len, int prot, int flags, int fd, git_off_t offs
 	else
 		mflag = MAP_SHARED;
 
+	if (PROT_WRITE == mprot) {
+		/* make sure the file is large enough */
+		struct stat st;
+		git_off_t filesize;
+		if (0 > fstat(fd, &st))
+			return -1;
+		filesize = offset + len;
+		if (st.st_size < filesize && 0 > ftruncate(fd, filesize))
+			return -1;
+	}
+
 	out->data = mmap(NULL, len, mprot, mflag, fd, offset);
 
 	if (!out->data || out->data == MAP_FAILED) {
@@ -55,4 +71,3 @@ int p_munmap(git_map *map)
 }
 
 #endif
-
