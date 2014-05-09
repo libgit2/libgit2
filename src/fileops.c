@@ -63,9 +63,9 @@ int git_futils_creat_withpath(const char *path, const mode_t dirmode, const mode
 	return fd;
 }
 
-int git_futils_creat_locked(const char *path, const mode_t mode)
+int git_futils_creat_locked(const char *path, const mode_t mode, bool rdwr)
 {
-	int fd = p_open(path, O_WRONLY | O_CREAT | O_TRUNC |
+	int fd = p_open(path, (rdwr ? O_RDWR : O_WRONLY) | O_CREAT | O_TRUNC |
 		O_EXCL | O_BINARY | O_CLOEXEC, mode);
 
 	if (fd < 0) {
@@ -74,14 +74,6 @@ int git_futils_creat_locked(const char *path, const mode_t mode)
 	}
 
 	return fd;
-}
-
-int git_futils_creat_locked_withpath(const char *path, const mode_t dirmode, const mode_t mode)
-{
-	if (git_futils_mkpath2file(path, dirmode) < 0)
-		return -1;
-
-	return git_futils_creat_locked(path, mode);
 }
 
 int git_futils_open_ro(const char *path)

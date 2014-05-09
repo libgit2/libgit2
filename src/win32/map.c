@@ -23,6 +23,23 @@ static DWORD get_page_size(void)
 	return page_size;
 }
 
+int p_mmap_write_at(void *buf, size_t len, int fd, git_off_t offset)
+{
+	git_map out;
+	const size_t page_offset = offset % get_page_size();
+
+	if (0 > p_mmap(&out, len + page_offset
+		, GIT_PROT_WRITE, GIT_MAP_SHARED, fd, offset - page_offset))
+		return -1;
+
+	memcpy((char *) out.data + page_offset, buf, len);
+
+	if (0 > p_munmap(&out))
+		return -1;
+
+	return 0;
+}
+
 int p_mmap(git_map *out, size_t len, int prot, int flags, int fd, git_off_t offset)
 {
 	HANDLE fh = (HANDLE)_get_osfhandle(fd);
@@ -31,8 +48,9 @@ int p_mmap(git_map *out, size_t len, int prot, int flags, int fd, git_off_t offs
 	DWORD view_prot = 0;
 	DWORD off_low = 0;
 	DWORD off_hi = 0;
-	git_off_t page_start;
-	git_off_t page_offset;
+	DWORD end_low;
+	DWORD end_hi;
+	git_off_t end;
 
 	GIT_MMAP_VALIDATE(out, len, prot, flags);
 
@@ -46,6 +64,12 @@ int p_mmap(git_map *out, size_t len, int prot, int flags, int fd, git_off_t offs
 		return -1;
 	}
 
+	if ((offset % page_size) != 0) { /* offset must be multiple of page size */
+		errno = EINVAL;
+		giterr_set(GITERR_OS, "Failed to mmap. Offset must be multiple of page size");
+		return -1;
+	}
+
 	if (prot & GIT_PROT_WRITE)
 		fmap_prot |= PAGE_READWRITE;
 	else if (prot & GIT_PROT_READ)
@@ -56,26 +80,22 @@ int p_mmap(git_map *out, size_t len, int prot, int flags, int fd, git_off_t offs
 	if (prot & GIT_PROT_READ)
 		view_prot |= FILE_MAP_READ;
 
-	page_start = (offset / page_size) * page_size;
-	page_offset = offset - page_start;
+	assert(sizeof(git_off_t) == 8);
 
-	if (page_offset != 0) { /* offset must be multiple of page size */
-		errno = EINVAL;
-		giterr_set(GITERR_OS, "Failed to mmap. Offset must be multiple of page size");
-		return -1;
-	}
+	end = offset + len;
+	end_low = (DWORD) end;
+	end_hi = (DWORD) (end >> 32);
 
-	out->fmh = CreateFileMapping(fh, NULL, fmap_prot, 0, 0, NULL);
+	out->fmh = CreateFileMapping(fh, NULL, fmap_prot, end_hi, end_low, NULL);
 	if (!out->fmh || out->fmh == INVALID_HANDLE_VALUE) {
 		giterr_set(GITERR_OS, "Failed to mmap. Invalid handle value");
 		out->fmh = NULL;
 		return -1;
 	}
 
-	assert(sizeof(git_off_t) == 8);
+	off_low = (DWORD) offset;
+	off_hi = (DWORD) (offset >> 32);
 
-	off_low = (DWORD)(page_start);
-	off_hi = (DWORD)(page_start >> 32);
 	out->data = MapViewOfFile(out->fmh, view_prot, off_hi, off_low, len);
 	if (!out->data) {
 		giterr_set(GITERR_OS, "Failed to mmap. No data written");

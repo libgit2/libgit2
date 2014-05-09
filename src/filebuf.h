@@ -9,6 +9,9 @@
 
 #include "fileops.h"
 #include "hash.h"
+#ifdef GIT_WIN32
+#	include "map.h"
+#endif
 #include <zlib.h>
 
 #ifdef GIT_THREADS
@@ -20,7 +23,13 @@
 #define GIT_FILEBUF_FORCE				(1 << 3)
 #define GIT_FILEBUF_TEMPORARY			(1 << 4)
 #define GIT_FILEBUF_DO_NOT_BUFFER		(1 << 5)
+#ifdef GIT_WIN32
+#define GIT_FILEBUF_USE_MMAP			(1 << 6)
+#define GIT_FILEBUF_DEFLATE_SHIFT		(7)
+#else
+#define GIT_FILEBUF_USE_MMAP			(0)
 #define GIT_FILEBUF_DEFLATE_SHIFT		(6)
+#endif
 
 #define GIT_FILELOCK_EXTENSION ".lock\0"
 #define GIT_FILELOCK_EXTLENGTH 6
@@ -36,6 +45,10 @@ struct git_filebuf {
 
 	unsigned char *buffer;
 	unsigned char *z_buf;
+
+#ifdef GIT_WIN32
+	git_off_t map_pos;
+#endif
 
 	z_stream zs;
 	int flush_mode;

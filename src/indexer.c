@@ -141,6 +141,7 @@ int git_indexer_new(
 		goto cleanup;
 
 	error = git_filebuf_open(&idx->pack_file, path.ptr,
+		GIT_FILEBUF_USE_MMAP |
 		GIT_FILEBUF_TEMPORARY | GIT_FILEBUF_DO_NOT_BUFFER,
 		idx->mode);
 	git_buf_free(&path);

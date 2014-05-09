@@ -56,10 +56,12 @@ static int lock_file(git_filebuf *file, int flags, mode_t mode)
 	/* create path to the file buffer is required */
 	if (flags & GIT_FILEBUF_FORCE) {
 		/* XXX: Should dirmode here be configurable? Or is 0777 always fine? */
-		file->fd = git_futils_creat_locked_withpath(file->path_lock, 0777, mode);
-	} else {
-		file->fd = git_futils_creat_locked(file->path_lock, mode);
+		int res = git_futils_mkpath2file(file->path_lock, 0777);
+		if (0 > res)
+			return res;
 	}
+
+	file->fd = git_futils_creat_locked(file->path_lock, mode, flags & GIT_FILEBUF_USE_MMAP);
 
 	if (file->fd < 0)
 		return file->fd;
@@ -139,13 +141,31 @@ int git_filebuf_flush(git_filebuf *file)
 	return flush_buffer(file);
 }
 
+GIT_INLINE(bool) do_write(git_filebuf *file, void *source, size_t len)
+{
+#ifdef GIT_WIN32
+	if (0 <= file->map_pos) {
+		const bool ok = 0 <= p_mmap_write_at(
+			source, len, file->fd, file->map_pos);
+		if (ok)
+			file->map_pos += len;
+		else
+			file->last_error = BUFERR_WRITE;
+		return ok;
+	}
+#endif
+
+	if (0 <= p_write(file->fd, source, len))
+		return true;
+	file->last_error = BUFERR_WRITE;
+	return false;
+}
+
 static int write_normal(git_filebuf *file, void *source, size_t len)
 {
 	if (len > 0) {
-		if (p_write(file->fd, (void *)source, len) < 0) {
-			file->last_error = BUFERR_WRITE;
+		if (!do_write(file, source, len))
 			return -1;
-		}
 
 		if (file->compute_digest)
 			git_hash_update(&file->digest, source, len);
@@ -175,10 +195,8 @@ static int write_deflate(git_filebuf *file, void *source, size_t len)
 
 			have = file->buf_size - (size_t)zs->avail_out;
 
-			if (p_write(file->fd, file->z_buf, have) < 0) {
-				file->last_error = BUFERR_WRITE;
+			if (!do_write(file, file->z_buf, have))
 				return -1;
-			}
 
 		} while (zs->avail_out == 0);
 
@@ -210,6 +228,7 @@ int git_filebuf_open(git_filebuf *file, const char *path, int flags, mode_t mode
 	file->buf_pos = 0;
 	file->fd = -1;
 	file->last_error = BUFERR_OK;
+	file->map_pos = flags & GIT_FILEBUF_USE_MMAP ? 0 : -1;
 
 	/* Allocate the main cache buffer */
 	if (!file->do_not_buffer) {
