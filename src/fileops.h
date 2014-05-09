@@ -47,12 +47,6 @@ extern int git_futils_creat_withpath(const char *path, const mode_t dirmode, con
 extern int git_futils_creat_locked(const char *path, const mode_t mode);
 
 /**
- * Create an open a process-locked file, while
- * also creating all the folders in its path
- */
-extern int git_futils_creat_locked_withpath(const char *path, const mode_t dirmode, const mode_t mode);
-
-/**
  * Create a path recursively
  *
  * If a base parameter is being passed, it's expected to be valued with a

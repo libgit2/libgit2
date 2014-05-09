@@ -76,14 +76,6 @@ int git_futils_creat_locked(const char *path, const mode_t mode)
 	return fd;
 }
 
-int git_futils_creat_locked_withpath(const char *path, const mode_t dirmode, const mode_t mode)
-{
-	if (git_futils_mkpath2file(path, dirmode) < 0)
-		return -1;
-
-	return git_futils_creat_locked(path, mode);
-}
-
 int git_futils_open_ro(const char *path)
 {
 	int fd = p_open(path, O_RDONLY);
