@@ -2458,7 +2458,7 @@ int git_checkout_tree(
 		}
 	}
 
-	if (!(error = git_iterator_for_tree(&tree_i, tree, 0, NULL, NULL)))
+	if (!(error = git_iterator_for_tree(&tree_i, tree, GIT_ITERATOR_DONT_IGNORE_CASE, NULL, NULL)))
 		error = git_checkout_iterator(tree_i, opts);
 
 	git_iterator_free(tree_i);
