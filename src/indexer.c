@@ -35,6 +35,7 @@ struct git_indexer {
 	struct git_pack_header hdr;
 	struct git_pack_file *pack;
 	git_filebuf pack_file;
+	git_buf path;
 	unsigned int mode;
 	git_off_t off;
 	git_off_t entry_start;
@@ -124,7 +125,6 @@ int git_indexer_new(
 		void *progress_payload)
 {
 	git_indexer *idx;
-	git_buf path = GIT_BUF_INIT;
 	static const char suff[] = "/pack";
 	int error;
 
@@ -136,14 +136,14 @@ int git_indexer_new(
 	idx->mode = mode ? mode : GIT_PACK_FILE_MODE;
 	git_hash_ctx_init(&idx->trailer);
 
-	error = git_buf_joinpath(&path, prefix, suff);
+	error = git_buf_joinpath(&idx->path, prefix, suff);
 	if (error < 0)
 		goto cleanup;
 
-	error = git_filebuf_open(&idx->pack_file, path.ptr,
+	error = git_filebuf_open(&idx->pack_file, idx->path.ptr,
 		GIT_FILEBUF_TEMPORARY | GIT_FILEBUF_DO_NOT_BUFFER,
 		idx->mode);
-	git_buf_free(&path);
+	git_buf_shorten(&idx->path, sizeof(suff) - 1);
 	if (error < 0)
 		goto cleanup;
 
@@ -151,7 +151,7 @@ int git_indexer_new(
 	return 0;
 
 cleanup:
-	git_buf_free(&path);
+	git_buf_free(&idx->path);
 	git_filebuf_cleanup(&idx->pack_file);
 	git__free(idx);
 	return -1;
@@ -917,9 +917,7 @@ int git_indexer_commit(git_indexer *idx, git_transfer_progress *stats)
 
 	git_vector_sort(&idx->objects);
 
-	git_buf_sets(&filename, idx->pack->pack_name);
-	git_buf_shorten(&filename, strlen("pack"));
-	git_buf_puts(&filename, "idx");
+	git_buf_joinpath(&filename, idx->path.ptr, "idx");
 	if (git_buf_oom(&filename))
 		return -1;
 
@@ -1033,5 +1031,6 @@ void git_indexer_free(git_indexer *idx)
 	git_vector_free_deep(&idx->deltas);
 	git_packfile_free(idx->pack);
 	git_filebuf_cleanup(&idx->pack_file);
+	git_buf_free(&idx->path);
 	git__free(idx);
 }
