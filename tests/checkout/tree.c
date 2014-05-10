@@ -645,14 +645,7 @@ void test_checkout_tree__can_cancel_checkout_from_notify(void)
 	cl_git_fail_with(git_checkout_tree(g_repo, obj, &opts), -5555);
 
 	cl_assert(!git_path_exists("testrepo/new.txt"));
-
-	/* on case-insensitive FS = a/b.txt, branch_file.txt, new.txt */
-	/* on case-sensitive FS   = README, then above */
-
-	if (git_path_exists("testrepo/.git/CoNfIg")) /* case insensitive */
-		cl_assert_equal_i(3, ca.count);
-	else
-		cl_assert_equal_i(4, ca.count);
+	cl_assert_equal_i(4, ca.count);
 
 	/* and again with a different stopping point and return code */
 	ca.filename = "README";
@@ -662,11 +655,7 @@ void test_checkout_tree__can_cancel_checkout_from_notify(void)
 	cl_git_fail_with(git_checkout_tree(g_repo, obj, &opts), 123);
 
 	cl_assert(!git_path_exists("testrepo/new.txt"));
-
-	if (git_path_exists("testrepo/.git/CoNfIg")) /* case insensitive */
-		cl_assert_equal_i(4, ca.count);
-	else
-		cl_assert_equal_i(1, ca.count);
+	cl_assert_equal_i(1, ca.count);
 
 	git_object_free(obj);
 }
