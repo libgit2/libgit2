@@ -514,26 +514,30 @@ int git_packfile_resolve_header(
 	return error;
 }
 
+#define SMALL_STACK_SIZE 64
+
 /**
  * Generate the chain of dependencies which we need to get to the
  * object at `off`. `chain` is used a stack, popping gives the right
  * order to apply deltas on. If an object is found in the pack's base
  * cache, we stop calculating there.
  */
-static int pack_dependency_chain(git_dependency_chain *chain_out, git_pack_cache_entry **cached_out,
-				 git_off_t *cached_off, struct git_pack_file *p, git_off_t obj_offset)
+static int pack_dependency_chain(git_dependency_chain *chain_out,
+				 git_pack_cache_entry **cached_out, git_off_t *cached_off,
+				 struct pack_chain_elem *small_stack, size_t *stack_sz,
+				 struct git_pack_file *p, git_off_t obj_offset)
 {
 	git_dependency_chain chain = GIT_ARRAY_INIT;
 	git_mwindow *w_curs = NULL;
 	git_off_t curpos = obj_offset, base_offset;
-	int error = 0;
-	size_t size;
+	int error = 0, use_heap = 0;
+	size_t size, elem_pos;
 	git_otype type;
 
 	if (!p->bases.entries && (cache_init(&p->bases) < 0))
 		return -1;
 
-	git_array_init_to_size(chain, 64);
+	elem_pos = 0;
 	while (true) {
 		struct pack_chain_elem *elem;
 		git_pack_cache_entry *cached = NULL;
@@ -545,11 +549,24 @@ static int pack_dependency_chain(git_dependency_chain *chain_out, git_pack_cache
 			break;
 		}
 
+		/* if we run out of space on the small stack, use the array */
+		if (elem_pos == SMALL_STACK_SIZE) {
+			git_array_init_to_size(chain, elem_pos);
+			GITERR_CHECK_ARRAY(chain);
+			memcpy(chain.ptr, small_stack, elem_pos * sizeof(struct pack_chain_elem));
+			chain.size = elem_pos;
+			use_heap = 1;
+		}
+
 		curpos = obj_offset;
-		elem = git_array_alloc(chain);
-		if (!elem) {
-			error = -1;
-			goto on_error;
+		if (!use_heap) {
+			elem = &small_stack[elem_pos];
+		} else {
+			elem = git_array_alloc(chain);
+			if (!elem) {
+				error = -1;
+				goto on_error;
+			}
 		}
 
 		elem->base_key = obj_offset;
@@ -585,8 +602,11 @@ static int pack_dependency_chain(git_dependency_chain *chain_out, git_pack_cache
 
 		/* go through the loop again, but with the new object */
 		obj_offset = base_offset;
+		elem_pos++;
 	}
 
+	
+	*stack_sz = elem_pos + 1;
 	*chain_out = chain;
 	return error;
 
@@ -604,15 +624,17 @@ int git_packfile_unpack(
 	git_off_t curpos = *obj_offset;
 	int error, free_base = 0;
 	git_dependency_chain chain = GIT_ARRAY_INIT;
-	struct pack_chain_elem *elem = NULL;
+	struct pack_chain_elem *elem = NULL, *stack;
 	git_pack_cache_entry *cached = NULL;
+	struct pack_chain_elem small_stack[SMALL_STACK_SIZE];
+	size_t stack_size, elem_pos;
 	git_otype base_type;
 
 	/*
 	 * TODO: optionally check the CRC on the packfile
 	 */
 
-	error = pack_dependency_chain(&chain, &cached, obj_offset, p, *obj_offset);
+	error = pack_dependency_chain(&chain, &cached, obj_offset, small_stack, &stack_size, p, *obj_offset);
 	if (error < 0)
 		return error;
 
@@ -620,11 +642,16 @@ int git_packfile_unpack(
 	obj->len = 0;
 	obj->type = GIT_OBJ_BAD;
 
+	/* let's point to the right stack */
+	stack = chain.ptr ? chain.ptr : small_stack;
+
+	elem_pos = stack_size;
 	if (cached) {
 		memcpy(obj, &cached->raw, sizeof(git_rawobj));
 		base_type = obj->type;
+		elem_pos--;	/* stack_size includes the base, which isn't actually there */
 	} else {
-		elem = git_array_pop(chain);
+		elem = &stack[--elem_pos];
 		base_type = elem->type;
 	}
 
@@ -661,7 +688,7 @@ int git_packfile_unpack(
 	 * give the caller the cached object, which it would then feel
 	 * free to free, so we need to copy the data.
 	 */
-	if (cached && git_array_size(chain) == 0) {
+	if (cached && stack_size == 1) {
 		void *data = obj->data;
 		obj->data = git__malloc(obj->len + 1);
 		GITERR_CHECK_ALLOC(obj->data);
@@ -671,10 +698,10 @@ int git_packfile_unpack(
 	}
 
 	/* we now apply each consecutive delta until we run out */
-	while (git_array_size(chain) > 0 && !error) {
+	while (elem_pos > 0 && !error) {
 		git_rawobj base, delta;
 
-		elem = git_array_pop(chain);
+		elem = &stack[elem_pos - 1];
 		curpos = elem->offset;
 		error = packfile_unpack_compressed(&delta, p, &w_curs, &curpos, elem->size, elem->type);
 		git_mwindow_close(&w_curs);
@@ -711,9 +738,11 @@ int git_packfile_unpack(
 			break;
 
 		/* only try to cache if we're not handing this buffer off to the caller */
-		if (git_array_size(chain) > 0 &&
+		if (elem_pos != 1 &&
 		    (error = cache_add(&p->bases, obj, elem->base_key)) < 0)
 			goto cleanup;
+
+		elem_pos--;
 	}
 
 cleanup:
