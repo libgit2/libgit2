@@ -40,14 +40,6 @@ static int pack_entry_find_offset(
 		const git_oid *short_oid,
 		size_t len);
 
-/**
- * Generate the chain of dependencies which we need to get to the
- * object at `off`. `chain` is used a stack, popping gives the right
- * order to apply deltas on. If an object is found in the pack's base
- * cache, we stop calculating there.
- */
-static int pack_dependency_chain(git_dependency_chain *chain, struct git_pack_file *p, git_off_t off);
-
 static int packfile_error(const char *message)
 {
 	giterr_set(GITERR_ODB, "Invalid pack file - %s", message);
@@ -522,6 +514,87 @@ int git_packfile_resolve_header(
 	return error;
 }
 
+/**
+ * Generate the chain of dependencies which we need to get to the
+ * object at `off`. `chain` is used a stack, popping gives the right
+ * order to apply deltas on. If an object is found in the pack's base
+ * cache, we stop calculating there.
+ */
+static int pack_dependency_chain(git_dependency_chain *chain_out, git_pack_cache_entry **cached_out,
+				 git_off_t *cached_off, struct git_pack_file *p, git_off_t obj_offset)
+{
+	git_dependency_chain chain = GIT_ARRAY_INIT;
+	git_mwindow *w_curs = NULL;
+	git_off_t curpos = obj_offset, base_offset;
+	int error = 0;
+	size_t size;
+	git_otype type;
+
+	if (!p->bases.entries && (cache_init(&p->bases) < 0))
+		return -1;
+
+	git_array_init_to_size(chain, 64);
+	while (true) {
+		struct pack_chain_elem *elem;
+		git_pack_cache_entry *cached = NULL;
+
+		/* if we have a base cached, we can stop here instead */
+		if ((cached = cache_get(&p->bases, obj_offset)) != NULL) {
+			*cached_out = cached;
+			*cached_off = obj_offset;
+			break;
+		}
+
+		curpos = obj_offset;
+		elem = git_array_alloc(chain);
+		if (!elem) {
+			error = -1;
+			goto on_error;
+		}
+
+		elem->base_key = obj_offset;
+
+		error = git_packfile_unpack_header(&size, &type, &p->mwf, &w_curs, &curpos);
+		git_mwindow_close(&w_curs);
+
+		if (error < 0)
+			goto on_error;
+
+		elem->offset = curpos;
+		elem->size = size;
+		elem->type = type;
+		elem->base_key = obj_offset;
+
+		if (type != GIT_OBJ_OFS_DELTA && type != GIT_OBJ_REF_DELTA)
+			break;
+
+		base_offset = get_delta_base(p, &w_curs, &curpos, type, obj_offset);
+		git_mwindow_close(&w_curs);
+
+		if (base_offset == 0) {
+			error = packfile_error("delta offset is zero");
+			goto on_error;
+		}
+		if (base_offset < 0) { /* must actually be an error code */
+			error = (int)base_offset;
+			goto on_error;
+		}
+
+		/* we need to pass the pos *after* the delta-base bit */
+		elem->offset = curpos;
+
+		/* go through the loop again, but with the new object */
+		obj_offset = base_offset;
+	}
+
+	*chain_out = chain;
+	return error;
+
+on_error:
+	git_array_clear(chain);
+	return error;
+}
+
 int git_packfile_unpack(
 	git_rawobj *obj,
 	struct git_pack_file *p,
@@ -531,7 +604,7 @@ int git_packfile_unpack(
 	git_off_t curpos = *obj_offset;
 	int error, free_base = 0;
 	git_dependency_chain chain = GIT_ARRAY_INIT;
-	struct pack_chain_elem *elem;
+	struct pack_chain_elem *elem = NULL;
 	git_pack_cache_entry *cached = NULL;
 	git_otype base_type;
 
@@ -539,7 +612,7 @@ int git_packfile_unpack(
 	 * TODO: optionally check the CRC on the packfile
 	 */
 
-	error = pack_dependency_chain(&chain, p, *obj_offset);
+	error = pack_dependency_chain(&chain, &cached, obj_offset, p, *obj_offset);
 	if (error < 0)
 		return error;
 
@@ -547,12 +620,12 @@ int git_packfile_unpack(
 	obj->len = 0;
 	obj->type = GIT_OBJ_BAD;
 
-	/* the first one is the base, so we expand that one */
-	elem = git_array_pop(chain);
-	base_type = elem->type;
-	if (elem->cached) {
-		cached = elem->cached_entry;
+	if (cached) {
 		memcpy(obj, &cached->raw, sizeof(git_rawobj));
+		base_type = obj->type;
+	} else {
+		elem = git_array_pop(chain);
+		base_type = elem->type;
 	}
 
 	if (error < 0)
@@ -563,10 +636,11 @@ int git_packfile_unpack(
 	case GIT_OBJ_TREE:
 	case GIT_OBJ_BLOB:
 	case GIT_OBJ_TAG:
-		if (!elem->cached) {
+		if (!cached) {
 			curpos = elem->offset;
 			error = packfile_unpack_compressed(obj, p, &w_curs, &curpos, elem->size, elem->type);
 			git_mwindow_close(&w_curs);
+			base_type = elem->type;
 			free_base = 1;
 		}
 		if (error < 0)
@@ -646,7 +720,8 @@ cleanup:
 	if (error < 0)
 		git__free(obj->data);
 
-	*obj_offset = elem->offset;
+	if (elem)
+		*obj_offset = elem->offset;
 
 	git_array_clear(chain);
 	return error;
@@ -1239,80 +1314,4 @@ int git_pack_entry_find(
 
 	git_oid_cpy(&e->sha1, &found_oid);
 	return 0;
-}
-
-static int pack_dependency_chain(git_dependency_chain *chain_out, struct git_pack_file *p, git_off_t obj_offset)
-{
-	git_dependency_chain chain = GIT_ARRAY_INIT;
-	git_mwindow *w_curs = NULL;
-	git_off_t curpos = obj_offset, base_offset;
-	int error = 0;
-	size_t size;
-	git_otype type;
-
-	if (!p->bases.entries && (cache_init(&p->bases) < 0))
-		return -1;
-
-	git_array_init_to_size(chain, 64);
-	while (true) {
-		struct pack_chain_elem *elem;
-		git_pack_cache_entry *cached = NULL;
-
-		curpos = obj_offset;
-		elem = git_array_alloc(chain);
-		if (!elem) {
-			error = -1;
-			goto on_error;
-		}
-
-		elem->base_key = obj_offset;
-
-		/* if we have a base cached, we can stop here instead */
-		if ((cached = cache_get(&p->bases, obj_offset)) != NULL) {
-			elem->cached_entry = cached;
-			elem->cached = 1;
-			elem->type = cached->raw.type;
-			break;
-		}
-
-		error = git_packfile_unpack_header(&size, &type, &p->mwf, &w_curs, &curpos);
-		git_mwindow_close(&w_curs);
-
-		if (error < 0)
-			goto on_error;
-
-		elem->cached = 0;
-		elem->offset = curpos;
-		elem->size = size;
-		elem->type = type;
-		elem->base_key = obj_offset;
-
-		if (type != GIT_OBJ_OFS_DELTA && type != GIT_OBJ_REF_DELTA)
-			break;
-
-		base_offset = get_delta_base(p, &w_curs, &curpos, type, obj_offset);
-		git_mwindow_close(&w_curs);
-
-		if (base_offset == 0) {
-			error = packfile_error("delta offset is zero");
-			goto on_error;
-		}
-		if (base_offset < 0) { /* must actually be an error code */
-			error = (int)base_offset;
-			goto on_error;
-		}
-
-		/* we need to pass the pos *after* the delta-base bit */
-		elem->offset = curpos;
-
-		/* go through the loop again, but with the new object */
-		obj_offset = base_offset;
-	}
-
-	*chain_out = chain;
-	return error;
-
-on_error:
-	git_array_clear(chain);
-	return error;
 }
