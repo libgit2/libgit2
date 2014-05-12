@@ -104,17 +104,20 @@ void git_buf_free(git_buf *buf)
 void git_buf_sanitize(git_buf *buf)
 {
 	if (buf->ptr == NULL) {
-		assert (buf->size == 0 && buf->asize == 0);
+		assert(buf->size == 0 && buf->asize == 0);
 		buf->ptr = git_buf__initbuf;
-	}
+	} else if (buf->asize > buf->size)
+		buf->ptr[buf->size] = '\0';
 }
 
 void git_buf_clear(git_buf *buf)
 {
 	buf->size = 0;
 
-	if (!buf->ptr)
+	if (!buf->ptr) {
 		buf->ptr = git_buf__initbuf;
+		buf->asize = 0;
+	}
 
 	if (buf->asize > 0)
 		buf->ptr[0] = '\0';
@@ -129,8 +132,11 @@ int git_buf_set(git_buf *buf, const void *data, size_t len)
 			ENSURE_SIZE(buf, len + 1);
 			memmove(buf->ptr, data, len);
 		}
+
 		buf->size = len;
-		buf->ptr[buf->size] = '\0';
+		if (buf->asize > buf->size)
+			buf->ptr[buf->size] = '\0';
+
 	}
 	return 0;
 }
@@ -326,19 +332,20 @@ void git_buf_consume(git_buf *buf, const char *end)
 
 void git_buf_truncate(git_buf *buf, size_t len)
 {
-	if (len < buf->size) {
-		buf->size = len;
+	if (len >= buf->size)
+		return;
+
+	buf->size = len;
+	if (buf->size < buf->asize)
 		buf->ptr[buf->size] = '\0';
-	}
 }
 
 void git_buf_shorten(git_buf *buf, size_t amount)
 {
-	if (amount > buf->size)
-		amount = buf->size;
-
-	buf->size = buf->size - amount;
-	buf->ptr[buf->size] = '\0';
+	if (buf->size > amount)
+		git_buf_truncate(buf, buf->size - amount);
+	else
+		git_buf_clear(buf);
 }
 
 void git_buf_rtruncate_at_char(git_buf *buf, char separator)
@@ -574,7 +581,8 @@ void git_buf_rtrim(git_buf *buf)
 		buf->size--;
 	}
 
-	buf->ptr[buf->size] = '\0';
+	if (buf->asize > buf->size)
+		buf->ptr[buf->size] = '\0';
 }
 
 int git_buf_cmp(const git_buf *a, const git_buf *b)
@@ -598,8 +606,7 @@ int git_buf_splice(
 	/* Ported from git.git
 	 * https://github.com/git/git/blob/16eed7c/strbuf.c#L159-176
 	 */
-	if (git_buf_grow(buf, git_buf_len(buf) + nb_to_insert - nb_to_remove) < 0)
-		return -1;
+	ENSURE_SIZE(buf, buf->size + nb_to_insert - nb_to_insert + 1);
 
 	memmove(buf->ptr + where + nb_to_insert,
 			buf->ptr + where + nb_to_remove,

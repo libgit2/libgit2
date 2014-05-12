@@ -591,6 +591,9 @@ int git_filter_list_apply_to_data(
 	git_buf *dbuffer[2], local = GIT_BUF_INIT;
 	unsigned int si = 0;
 
+	git_buf_sanitize(tgt);
+	git_buf_sanitize(src);
+
 	if (!fl)
 		return filter_list_out_buffer_from_raw(tgt, src->ptr, src->size);
 
@@ -626,7 +629,7 @@ int git_filter_list_apply_to_data(
 			/* PASSTHROUGH means filter decided not to process the buffer */
 			error = 0;
 		} else if (!error) {
-			git_buf_shorten(dbuffer[di], 0); /* force NUL termination */
+			git_buf_sanitize(dbuffer[di]); /* force NUL termination */
 			si = di; /* swap buffers */
 		} else {
 			tgt->size = 0;
