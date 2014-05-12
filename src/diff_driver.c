@@ -219,7 +219,7 @@ static int git_diff_driver_load(
 	git_diff_driver *drv = NULL;
 	size_t namelen = strlen(driver_name);
 	khiter_t pos;
-	git_config *cfg, *repo_cfg;
+	git_config *cfg;
 	git_buf name = GIT_BUF_INIT;
 	const git_config_entry *ce;
 	bool found_driver = false;

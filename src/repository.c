@@ -627,10 +627,11 @@ int git_repository_config(git_config **out, git_repository *repo)
 
 int git_repository_config_snapshot(git_config **out, git_repository *repo)
 {
+	int error;
 	git_config *weak;
 
-	if (git_repository_config__weakptr(&weak, repo) < 0)
-		return -1;
+	if ((error = git_repository_config__weakptr(&weak, repo)) < 0)
+		return error;
 
 	return git_config_snapshot(out, weak);
 }

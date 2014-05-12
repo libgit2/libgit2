@@ -418,7 +418,11 @@ GIT_EXTERN(int) git_repository_config(git_config **out, git_repository *repo);
  * Get a snapshot of the repository's configuration
  *
  * Convenience function to take a snapshot from the repository's
- * configuration.
+ * configuration.  The contents of this snapshot will not change,
+ * even if the underlying config files are modified.
+ *
+ * The configuration file must be freed once it's no longer
+ * being used by the user.
  *
  * @param out Pointer to store the loaded configuration
  * @param repo the repository

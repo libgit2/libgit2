@@ -247,18 +247,15 @@ static int refcounted_strmap_alloc(refcounted_strmap **out)
 	int error;
 
 	map = git__calloc(1, sizeof(refcounted_strmap));
-	if (!map) {
-		giterr_set_oom();
-		return -1;
-	}
+	GITERR_CHECK_ALLOC(map);
 
 	git_atomic_set(&map->refcount, 1);
-	if ((error = git_strmap_alloc(&map->values)) < 0) {
-		git__free(map);
-		return error;
-	}
 
-	*out = map;
+	if ((error = git_strmap_alloc(&map->values)) < 0)
+		git__free(map);
+	else
+		*out = map;
+
 	return error;
 }
 
