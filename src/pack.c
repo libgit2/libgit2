@@ -668,7 +668,6 @@ int git_packfile_unpack(
 			error = packfile_unpack_compressed(obj, p, &w_curs, &curpos, elem->size, elem->type);
 			git_mwindow_close(&w_curs);
 			base_type = elem->type;
-			free_base = 1;
 		}
 		if (error < 0)
 			goto cleanup;
@@ -683,7 +682,7 @@ int git_packfile_unpack(
 	}
 
 	/*
-	 * Finding the object we want as the base element is
+	 * Finding the object we want a cached base element is
 	 * problematic, as we need to make sure we don't accidentally
 	 * give the caller the cached object, which it would then feel
 	 * free to free, so we need to copy the data.
@@ -700,6 +699,13 @@ int git_packfile_unpack(
 	/* we now apply each consecutive delta until we run out */
 	while (elem_pos > 0 && !error) {
 		git_rawobj base, delta;
+
+		/*
+		 * We can now try to add the base to the cache, as
+		 * long as it's not already the cached one.
+		 */
+		if (!cached)
+			free_base = !!cache_add(&p->bases, obj, elem->base_key);
 
 		elem = &stack[elem_pos - 1];
 		curpos = elem->offset;
@@ -736,11 +742,6 @@ int git_packfile_unpack(
 
 		if (error < 0)
 			break;
-
-		/* only try to cache if we're not handing this buffer off to the caller */
-		if (elem_pos != 1 &&
-		    (error = cache_add(&p->bases, obj, elem->base_key)) < 0)
-			goto cleanup;
 
 		elem_pos--;
 	}
