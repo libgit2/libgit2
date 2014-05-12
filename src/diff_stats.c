@@ -284,6 +284,8 @@ int git_diff_stats_to_buf(
 			if (width < STATS_FULL_MIN_SCALE)
 				width = STATS_FULL_MIN_SCALE;
 		}
+		if (width > stats->max_filestat)
+			width = 0;
 
 		for (i = 0; i < stats->files_changed; ++i) {
 			if ((delta = git_diff_get_delta(stats->diff, i)) == NULL)

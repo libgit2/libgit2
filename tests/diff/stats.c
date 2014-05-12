@@ -54,6 +54,10 @@ void test_diff_stats__stat(void)
 	cl_git_pass(git_diff_stats_to_buf(&buf, _stats, GIT_DIFF_STATS_FULL, 0));
 	cl_assert(strcmp(git_buf_cstr(&buf), stat) == 0);
 	git_buf_free(&buf);
+
+	cl_git_pass(git_diff_stats_to_buf(&buf, _stats, GIT_DIFF_STATS_FULL, 80));
+	cl_assert(strcmp(git_buf_cstr(&buf), stat) == 0);
+	git_buf_free(&buf);
 }
 
 void test_diff_stats__multiple_hunks(void)
