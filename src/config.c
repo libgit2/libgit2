@@ -137,6 +137,38 @@ int git_config_open_ondisk(git_config **out, const char *path)
 	return error;
 }
 
+int git_config_snapshot(git_config **out, git_config *in)
+{
+	int error;
+	size_t i;
+	file_internal *internal;
+	git_config *config;
+
+	*out = NULL;
+
+	if (git_config_new(&config) < 0)
+		return -1;
+
+	git_vector_foreach(&in->files, i, internal) {
+		git_config_backend *b;
+
+		if ((error = internal->file->snapshot(&b, internal->file)) < 0)
+			goto on_error;
+
+		if ((error = git_config_add_backend(config, b, internal->level, 0)) < 0) {
+			b->free(b);
+			goto on_error;
+		}
+	}
+
+	*out = config;
+	return error;
+
+on_error:
+	git_config_free(config);
+	return error;
+}
+
 static int find_internal_file_by_level(
 	file_internal **internal_out,
 	const git_config *cfg,

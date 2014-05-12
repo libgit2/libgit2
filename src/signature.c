@@ -144,7 +144,7 @@ int git_signature_default(git_signature **out, git_repository *repo)
 	git_config *cfg;
 	const char *user_name, *user_email;
 
-	if ((error = git_repository_config(&cfg, repo)) < 0)
+	if ((error = git_repository_config_snapshot(&cfg, repo)) < 0)
 		return error;
 
 	if (!(error = git_config_get_string(&user_name, cfg, "user.name")) &&

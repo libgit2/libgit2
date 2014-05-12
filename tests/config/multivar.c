@@ -231,13 +231,13 @@ void test_config_multivar__delete(void)
 
 	n = 0;
 	cl_git_pass(git_config_get_multivar_foreach(cfg, _name, NULL, cb, &n));
-	cl_assert(n == 2);
+	cl_assert_equal_i(2, n);
 
 	cl_git_pass(git_config_delete_multivar(cfg, _name, "github"));
 
 	n = 0;
 	cl_git_pass(git_config_get_multivar_foreach(cfg, _name, NULL, cb, &n));
-	cl_assert(n == 1);
+	cl_assert_equal_i(1, n);
 
 	git_config_free(cfg);
 
@@ -245,7 +245,7 @@ void test_config_multivar__delete(void)
 
 	n = 0;
 	cl_git_pass(git_config_get_multivar_foreach(cfg, _name, NULL, cb, &n));
-	cl_assert(n == 1);
+	cl_assert_equal_i(1, n);
 
 	git_config_free(cfg);
 }

@@ -408,11 +408,23 @@ GIT_EXTERN(int) git_repository_is_bare(git_repository *repo);
  * The configuration file must be freed once it's no longer
  * being used by the user.
  *
- * @param out Pointer to store the loaded config file
+ * @param out Pointer to store the loaded configuration
  * @param repo A repository object
  * @return 0, or an error code
  */
 GIT_EXTERN(int) git_repository_config(git_config **out, git_repository *repo);
+
+/**
+ * Get a snapshot of the repository's configuration
+ *
+ * Convenience function to take a snapshot from the repository's
+ * configuration.
+ *
+ * @param out Pointer to store the loaded configuration
+ * @param repo the repository
+ * @return 0, or an error code
+ */
+GIT_EXTERN(int) git_repository_config_snapshot(git_config **out, git_repository *repo);
 
 /**
  * Get the Object Database for this repository.

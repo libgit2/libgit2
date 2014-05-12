@@ -306,16 +306,12 @@ int git_branch_name(
 
 static int retrieve_upstream_configuration(
 	const char **out,
-	git_repository *repo,
+	const git_config *config,
 	const char *canonical_branch_name,
 	const char *format)
 {
-	git_config *config;
 	git_buf buf = GIT_BUF_INIT;
 	int error;
-
-	if (git_repository_config__weakptr(&config, repo) < 0)
-		return -1;
 
 	if (git_buf_printf(&buf, format,
 		canonical_branch_name + strlen(GIT_REFS_HEADS_DIR)) < 0)
@@ -336,6 +332,7 @@ int git_branch_upstream_name(
 	int error = -1;
 	git_remote *remote = NULL;
 	const git_refspec *refspec;
+	git_config *config;
 
 	assert(out && refname);
 
@@ -344,12 +341,15 @@ int git_branch_upstream_name(
 	if (!git_reference__is_branch(refname))
 		return not_a_local_branch(refname);
 
+	if ((error = git_repository_config_snapshot(&config, repo)) < 0)
+		return error;
+
 	if ((error = retrieve_upstream_configuration(
-		&remote_name, repo, refname, "branch.%s.remote")) < 0)
+		&remote_name, config, refname, "branch.%s.remote")) < 0)
 			goto cleanup;
 
 	if ((error = retrieve_upstream_configuration(
-		&merge_name, repo, refname, "branch.%s.merge")) < 0)
+		&merge_name, config, refname, "branch.%s.merge")) < 0)
 			goto cleanup;
 
 	if (!*remote_name || !*merge_name) {
@@ -378,6 +378,7 @@ int git_branch_upstream_name(
 	error = git_buf_set(out, git_buf_cstr(&buf), git_buf_len(&buf));
 
 cleanup:
+	git_config_free(config);
 	git_remote_free(remote);
 	git_buf_free(&buf);
 	return error;

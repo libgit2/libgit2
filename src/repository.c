@@ -169,13 +169,9 @@ int git_repository_new(git_repository **out)
 	return 0;
 }
 
-static int load_config_data(git_repository *repo)
+static int load_config_data(git_repository *repo, const git_config *config)
 {
 	int is_bare;
-	git_config *config;
-
-	if (git_repository_config__weakptr(&config, repo) < 0)
-		return -1;
 
 	/* Try to figure out if it's bare, default to non-bare if it's not set */
 	if (git_config_get_bool(&is_bare, config, "core.bare") < 0)
@@ -186,18 +182,14 @@ static int load_config_data(git_repository *repo)
 	return 0;
 }
 
-static int load_workdir(git_repository *repo, git_buf *parent_path)
+static int load_workdir(git_repository *repo, git_config *config, git_buf *parent_path)
 {
 	int         error;
-	git_config *config;
 	const git_config_entry *ce;
 	git_buf     worktree = GIT_BUF_INIT;
 
 	if (repo->is_bare)
 		return 0;
-
-	if ((error = git_repository_config__weakptr(&config, repo)) < 0)
-		return error;
 
 	if ((error = git_config__lookup_entry(
 			&ce, config, "core.worktree", false)) < 0)
@@ -451,6 +443,7 @@ int git_repository_open_ext(
 	int error;
 	git_buf path = GIT_BUF_INIT, parent = GIT_BUF_INIT;
 	git_repository *repo;
+	git_config *config;
 
 	if (repo_ptr)
 		*repo_ptr = NULL;
@@ -465,15 +458,20 @@ int git_repository_open_ext(
 	repo->path_repository = git_buf_detach(&path);
 	GITERR_CHECK_ALLOC(repo->path_repository);
 
+	if ((error = git_repository_config_snapshot(&config, repo)) < 0)
+		return error;
+
 	if ((flags & GIT_REPOSITORY_OPEN_BARE) != 0)
 		repo->is_bare = 1;
-	else if ((error = load_config_data(repo)) < 0 ||
-		(error = load_workdir(repo, &parent)) < 0)
+	else if ((error = load_config_data(repo, config)) < 0 ||
+		 (error = load_workdir(repo, config, &parent)) < 0)
 	{
+		git_config_free(config);
 		git_repository_free(repo);
 		return error;
 	}
 
+	git_config_free(config);
 	git_buf_free(&parent);
 	*repo_ptr = repo;
 	return 0;
@@ -625,6 +623,16 @@ int git_repository_config(git_config **out, git_repository *repo)
 
 	GIT_REFCOUNT_INC(*out);
 	return 0;
+}
+
+int git_repository_config_snapshot(git_config **out, git_repository *repo)
+{
+	git_config *weak;
+
+	if (git_repository_config__weakptr(&weak, repo) < 0)
+		return -1;
+
+	return git_config_snapshot(out, weak);
 }
 
 void git_repository_set_config(git_repository *repo, git_config *config)

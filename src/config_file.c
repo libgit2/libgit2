@@ -26,7 +26,7 @@ GIT__USE_STRMAP;
 typedef struct cvar_t {
 	struct cvar_t *next;
 	git_config_entry *entry;
-	int included; /* whether this is part of [include] */
+	bool included; /* whether this is part of [include] */
 } cvar_t;
 
 typedef struct git_config_file_iter {
@@ -87,26 +87,52 @@ struct reader {
 };
 
 typedef struct {
-	git_config_backend parent;
-
+	git_atomic refcount;
 	git_strmap *values;
+} refcounted_strmap;
+
+typedef struct {
+	git_config_backend parent;
+	/* mutex to coordinate accessing the values */
+	git_mutex values_mutex;
+	refcounted_strmap *values;
+	int readonly;
+} diskfile_header;
+
+typedef struct {
+	diskfile_header header;
+
+	git_config_level_t level;
 
 	git_array_t(struct reader) readers;
 
 	char  *file_path;
-
-	git_config_level_t level;
 } diskfile_backend;
 
-static int config_parse(diskfile_backend *cfg_file, struct reader *reader, git_config_level_t level, int depth);
+typedef struct {
+	diskfile_header header;
+
+	diskfile_backend *snapshot_from;
+} diskfile_readonly_backend;
+
+static int config_parse(git_strmap *values, diskfile_backend *cfg_file, struct reader *reader, git_config_level_t level, int depth);
 static int parse_variable(struct reader *reader, char **var_name, char **var_value);
 static int config_write(diskfile_backend *cfg, const char *key, const regex_t *preg, const char *value);
 static char *escape_value(const char *ptr);
+
+int git_config_file__snapshot(git_config_backend **out, diskfile_backend *in);
+static int config_snapshot(git_config_backend **out, git_config_backend *in);
 
 static void set_parse_error(struct reader *reader, int col, const char *error_str)
 {
 	giterr_set(GITERR_CONFIG, "Failed to parse config file: %s (in %s:%d, column %d)",
 		error_str, reader->file_path, reader->line_number, col);
+}
+
+static int config_error_readonly(void)
+{
+	giterr_set(GITERR_CONFIG, "this backend is read-only");
+	return -1;
 }
 
 static void cvar_free(cvar_t *var)
@@ -118,18 +144,6 @@ static void cvar_free(cvar_t *var)
 	git__free((char *)var->entry->value);
 	git__free(var->entry);
 	git__free(var);
-}
-
-static int cvar_length(cvar_t *var)
-{
-	int length = 0;
-
-	while (var) {
-		length++;
-		var = var->next;
-	}
-
-	return length;
 }
 
 int git_config_file_normalize_section(char *start, char *end)
@@ -155,6 +169,30 @@ int git_config_file_normalize_section(char *start, char *end)
 	return 0;
 }
 
+/* Add or append the new config option */
+static int append_entry(git_strmap *values, cvar_t *var)
+{
+	git_strmap_iter pos;
+	cvar_t *existing;
+	int error = 0;
+
+	pos = git_strmap_lookup_index(values, var->entry->name);
+	if (!git_strmap_valid_index(values, pos)) {
+		git_strmap_insert(values, var->entry->name, var, error);
+	} else {
+		existing = git_strmap_value_at(values, pos);
+		while (existing->next != NULL) {
+			existing = existing->next;
+		}
+		existing->next = var;
+	}
+
+	if (error > 0)
+		error = 0;
+
+	return error;
+}
+
 static void free_vars(git_strmap *values)
 {
 	cvar_t *var = NULL;
@@ -172,6 +210,58 @@ static void free_vars(git_strmap *values)
 	git_strmap_free(values);
 }
 
+static void refcounted_strmap_free(refcounted_strmap *map)
+{
+	if (!map)
+		return;
+
+	if (git_atomic_dec(&map->refcount) != 0)
+		return;
+
+	free_vars(map->values);
+	git__free(map);
+}
+
+/**
+ * Take the current values map from the backend and increase its
+ * refcount. This is its own function to make sure we use the mutex to
+ * avoid the map pointer from changing under us.
+ */
+static refcounted_strmap *refcounted_strmap_take(diskfile_header *h)
+{
+	refcounted_strmap *map;
+
+	git_mutex_lock(&h->values_mutex);
+
+	map = h->values;
+	git_atomic_inc(&map->refcount);
+
+	git_mutex_unlock(&h->values_mutex);
+
+	return map;
+}
+
+static int refcounted_strmap_alloc(refcounted_strmap **out)
+{
+	refcounted_strmap *map;
+	int error;
+
+	map = git__calloc(1, sizeof(refcounted_strmap));
+	if (!map) {
+		giterr_set_oom();
+		return -1;
+	}
+
+	git_atomic_set(&map->refcount, 1);
+	if ((error = git_strmap_alloc(&map->values)) < 0) {
+		git__free(map);
+		return error;
+	}
+
+	*out = map;
+	return error;
+}
+
 static int config_open(git_config_backend *cfg, git_config_level_t level)
 {
 	int res;
@@ -180,13 +270,14 @@ static int config_open(git_config_backend *cfg, git_config_level_t level)
 
 	b->level = level;
 
-	if ((res = git_strmap_alloc(&b->values)) < 0)
+	if ((res = refcounted_strmap_alloc(&b->header.values)) < 0)
 		return res;
 
+	git_mutex_init(&b->header.values_mutex);
 	git_array_init(b->readers);
 	reader = git_array_alloc(b->readers);
 	if (!reader) {
-		git_strmap_free(b->values);
+		refcounted_strmap_free(b->header.values);
 		return -1;
 	}
 	memset(reader, 0, sizeof(struct reader));
@@ -202,9 +293,9 @@ static int config_open(git_config_backend *cfg, git_config_level_t level)
 	if (res == GIT_ENOTFOUND)
 		return 0;
 
-	if (res < 0 || (res = config_parse(b, reader, level, 0)) < 0) {
-		free_vars(b->values);
-		b->values = NULL;
+	if (res < 0 || (res = config_parse(b->header.values->values, b, reader, level, 0)) < 0) {
+		refcounted_strmap_free(b->header.values);
+		b->header.values = NULL;
 	}
 
 	reader = git_array_get(b->readers, 0);
@@ -213,44 +304,60 @@ static int config_open(git_config_backend *cfg, git_config_level_t level)
 	return res;
 }
 
+/* The meat of the refresh, as we want to use it in different places */
+static int config__refresh(git_config_backend *cfg)
+{
+	refcounted_strmap *values = NULL, *tmp;
+	diskfile_backend *b = (diskfile_backend *)cfg;
+	struct reader *reader = NULL;
+	int error = 0;
+
+	if ((error = refcounted_strmap_alloc(&values)) < 0)
+		goto out;
+
+	reader = git_array_get(b->readers, git_array_size(b->readers) - 1);
+
+	if ((error = config_parse(values->values, b, reader, b->level, 0)) < 0)
+		goto out;
+
+	git_mutex_lock(&b->header.values_mutex);
+
+	tmp = b->header.values;
+	b->header.values = values;
+	values = tmp;
+
+	git_mutex_unlock(&b->header.values_mutex);
+
+out:
+	refcounted_strmap_free(values);
+	git_buf_free(&reader->buffer);
+	return error;
+}
+
 static int config_refresh(git_config_backend *cfg)
 {
-	int res = 0, updated = 0, any_updated = 0;
+	int error = 0, updated = 0, any_updated = 0;
 	diskfile_backend *b = (diskfile_backend *)cfg;
-	git_strmap *old_values;
 	struct reader *reader = NULL;
 	uint32_t i;
 
 	for (i = 0; i < git_array_size(b->readers); i++) {
 		reader = git_array_get(b->readers, i);
-
-		res = git_futils_readbuffer_updated(
+		error = git_futils_readbuffer_updated(
 			&reader->buffer, reader->file_path,
 			&reader->file_mtime, &reader->file_size, &updated);
 
-		if (res < 0)
-			return (res == GIT_ENOTFOUND) ? 0 : res;
+		if (error < 0)
+			return (error == GIT_ENOTFOUND) ? 0 : error;
 
 		if (updated)
 			any_updated = 1;
 	}
 
 	if (!any_updated)
-		return (res == GIT_ENOTFOUND) ? 0 : res;
+		return (error == GIT_ENOTFOUND) ? 0 : error;
 
-	/* need to reload - store old values and prep for reload */
-	old_values = b->values;
-	if ((res = git_strmap_alloc(&b->values)) < 0) {
-		b->values = old_values;
-	} else if ((res = config_parse(b, reader, b->level, 0)) < 0) {
-		free_vars(b->values);
-		b->values = old_values;
-	} else {
-		free_vars(old_values);
-	}
-
-	git_buf_free(&reader->buffer);
-	return res;
+	return config__refresh(cfg);
 }
 
 static void backend_free(git_config_backend *_backend)
@@ -268,13 +375,14 @@ static void backend_free(git_config_backend *_backend)
 	git_array_clear(backend->readers);
 
 	git__free(backend->file_path);
-	free_vars(backend->values);
+	refcounted_strmap_free(backend->header.values);
 	git__free(backend);
 }
 
 static void config_iterator_free(
 	git_config_iterator* iter)
 {
+	iter->backend->free(iter->backend);
 	git__free(iter);
 }
 
@@ -283,12 +391,13 @@ static int config_iterator_next(
 	git_config_iterator *iter)
 {
 	git_config_file_iter *it = (git_config_file_iter *) iter;
-	diskfile_backend *b = (diskfile_backend *) it->parent.backend;
+	diskfile_header *h = (diskfile_header *) it->parent.backend;
+	git_strmap *values = h->values->values;
 	int err = 0;
 	cvar_t * var;
 
 	if (it->next_var == NULL) {
-		err = git_strmap_next((void**) &var, &(it->iter), b->values);
+		err = git_strmap_next((void**) &var, &(it->iter), values);
 	} else {
 		var = it->next_var;
 	}
@@ -308,15 +417,28 @@ static int config_iterator_new(
 	git_config_iterator **iter,
 	struct git_config_backend* backend)
 {
-	diskfile_backend *b = (diskfile_backend *)backend;
-	git_config_file_iter *it = git__calloc(1, sizeof(git_config_file_iter));
+	diskfile_header *h;
+	git_config_file_iter *it;
+	git_config_backend *snapshot;
+	diskfile_backend *b = (diskfile_backend *) backend;
+	int error;
 
-	GIT_UNUSED(b);
+	if ((error = config_snapshot(&snapshot, backend)) < 0)
+		return error;
 
+	if ((error = snapshot->open(snapshot, b->level)) < 0)
+		return error;
+
+	it = git__calloc(1, sizeof(git_config_file_iter));
 	GITERR_CHECK_ALLOC(it);
 
-	it->parent.backend = backend;
-	it->iter = git_strmap_begin(b->values);
+	h = (diskfile_header *)snapshot;
+
+	/* strmap_begin() is currently a macro returning 0 */
+	GIT_UNUSED(h);
+
+	it->parent.backend = snapshot;
+	it->iter = git_strmap_begin(h->values);
 	it->next_var = NULL;
 
 	it->parent.next = config_iterator_next;
@@ -328,8 +450,9 @@ static int config_iterator_new(
 
 static int config_set(git_config_backend *cfg, const char *name, const char *value)
 {
-	cvar_t *var = NULL, *old_var = NULL;
 	diskfile_backend *b = (diskfile_backend *)cfg;
+	refcounted_strmap *map;
+	git_strmap *values;
 	char *key, *esc_value = NULL;
 	khiter_t pos;
 	int rval, ret;
@@ -337,93 +460,82 @@ static int config_set(git_config_backend *cfg, const char *name, const char *val
 	if ((rval = git_config__normalize_name(name, &key)) < 0)
 		return rval;
 
+	map = refcounted_strmap_take(&b->header);
+	values = map->values;
+
 	/*
 	 * Try to find it in the existing values and update it if it
 	 * only has one value.
 	 */
-	pos = git_strmap_lookup_index(b->values, key);
-	if (git_strmap_valid_index(b->values, pos)) {
-		cvar_t *existing = git_strmap_value_at(b->values, pos);
-		char *tmp = NULL;
-
-		git__free(key);
+	pos = git_strmap_lookup_index(values, key);
+	if (git_strmap_valid_index(values, pos)) {
+		cvar_t *existing = git_strmap_value_at(values, pos);
 
 		if (existing->next != NULL) {
 			giterr_set(GITERR_CONFIG, "Multivar incompatible with simple set");
-			return -1;
+			ret = -1;
+			goto out;
 		}
 
 		/* don't update if old and new values already match */
 		if ((!existing->entry->value && !value) ||
-			(existing->entry->value && value && !strcmp(existing->entry->value, value)))
-			return 0;
-
-		if (value) {
-			tmp = git__strdup(value);
-			GITERR_CHECK_ALLOC(tmp);
-			esc_value = escape_value(value);
-			GITERR_CHECK_ALLOC(esc_value);
+			(existing->entry->value && value &&
+			 !strcmp(existing->entry->value, value))) {
+			ret = 0;
+			goto out;
 		}
-
-		git__free((void *)existing->entry->value);
-		existing->entry->value = tmp;
-
-		ret = config_write(b, existing->entry->name, NULL, esc_value);
-
-		git__free(esc_value);
-		return ret;
 	}
 
-	var = git__malloc(sizeof(cvar_t));
-	GITERR_CHECK_ALLOC(var);
-	memset(var, 0x0, sizeof(cvar_t));
-	var->entry = git__malloc(sizeof(git_config_entry));
-	GITERR_CHECK_ALLOC(var->entry);
-	memset(var->entry, 0x0, sizeof(git_config_entry));
-
-	var->entry->name = key;
-	var->entry->value = NULL;
+	/* No early returns due to sanity checks, let's write it out and refresh */
 
 	if (value) {
-		var->entry->value = git__strdup(value);
-		GITERR_CHECK_ALLOC(var->entry->value);
 		esc_value = escape_value(value);
 		GITERR_CHECK_ALLOC(esc_value);
 	}
 
-	if ((ret = config_write(b, key, NULL, esc_value)) < 0) {
-		git__free(esc_value);
-		cvar_free(var);
-		return ret;
-	}
+	if ((ret = config_write(b, key, NULL, esc_value)) < 0)
+		goto out;
 
+	ret = config_refresh(cfg);
+
+out:
+	refcounted_strmap_free(map);
 	git__free(esc_value);
-	git_strmap_insert2(b->values, key, var, old_var, rval);
-	if (rval < 0)
-		return -1;
-	if (old_var != NULL)
-		cvar_free(old_var);
-
-	return 0;
+	git__free(key);
+	return ret;
 }
 
 /*
  * Internal function that actually gets the value in string form
  */
-static int config_get(const git_config_backend *cfg, const char *key, const git_config_entry **out)
+static int config_get(git_config_backend *cfg, const char *key, const git_config_entry **out)
 {
-	diskfile_backend *b = (diskfile_backend *)cfg;
-	khiter_t pos = git_strmap_lookup_index(b->values, key);
+	diskfile_header *h = (diskfile_header *)cfg;
+	refcounted_strmap *map;
+	git_strmap *values;
+	khiter_t pos;
 	cvar_t *var;
+	int error;
+
+	if (!h->readonly && ((error = config_refresh(cfg)) < 0))
+		return error;
+
+	map = refcounted_strmap_take(h);
+	values = map->values;
+
+	pos = git_strmap_lookup_index(values, key);
 
 	/* no error message; the config system will write one */
-	if (!git_strmap_valid_index(b->values, pos))
+	if (!git_strmap_valid_index(values, pos)) {
+		refcounted_strmap_free(map);
 		return GIT_ENOTFOUND;
+	}
 
-	var = git_strmap_value_at(b->values, pos);
+	var = git_strmap_value_at(values, pos);
 	while (var->next)
 		var = var->next;
 
+	refcounted_strmap_free(map);
 	*out = var->entry;
 	return 0;
 }
@@ -431,9 +543,9 @@ static int config_get(const git_config_backend *cfg, const char *key, const git_
 static int config_set_multivar(
 	git_config_backend *cfg, const char *name, const char *regexp, const char *value)
 {
-	int replaced = 0;
-	cvar_t *var, *newvar;
 	diskfile_backend *b = (diskfile_backend *)cfg;
+	refcounted_strmap *map;
+	git_strmap *values;
 	char *key;
 	regex_t preg;
 	int result;
@@ -444,62 +556,33 @@ static int config_set_multivar(
 	if ((result = git_config__normalize_name(name, &key)) < 0)
 		return result;
 
-	pos = git_strmap_lookup_index(b->values, key);
-	if (!git_strmap_valid_index(b->values, pos)) {
+	map = refcounted_strmap_take(&b->header);
+	values = b->header.values->values;
+
+	pos = git_strmap_lookup_index(values, key);
+	if (!git_strmap_valid_index(values, pos)) {
 		/* If we don't have it, behave like a normal set */
 		result = config_set(cfg, name, value);
+		refcounted_strmap_free(map);
 		git__free(key);
 		return result;
 	}
 
-	var = git_strmap_value_at(b->values, pos);
-
 	result = regcomp(&preg, regexp, REG_EXTENDED);
 	if (result < 0) {
-		git__free(key);
 		giterr_set_regex(&preg, result);
-		regfree(&preg);
-		return -1;
+		result = -1;
+		goto out;
 	}
 
-	for (;;) {
-		if (regexec(&preg, var->entry->value, 0, NULL, 0) == 0) {
-			char *tmp = git__strdup(value);
-			GITERR_CHECK_ALLOC(tmp);
+	/* If we do have it, set call config_write() and reload */
+	if ((result = config_write(b, key, &preg, value)) < 0)
+		goto out;
 
-			git__free((void *)var->entry->value);
-			var->entry->value = tmp;
-			replaced = 1;
-		}
+	result = config_refresh(cfg);
 
-		if (var->next == NULL)
-			break;
-
-		var = var->next;
-	}
-
-	/* If we've reached the end of the variables and we haven't found it yet, we need to append it */
-	if (!replaced) {
-		newvar = git__malloc(sizeof(cvar_t));
-		GITERR_CHECK_ALLOC(newvar);
-		memset(newvar, 0x0, sizeof(cvar_t));
-		newvar->entry = git__malloc(sizeof(git_config_entry));
-		GITERR_CHECK_ALLOC(newvar->entry);
-		memset(newvar->entry, 0x0, sizeof(git_config_entry));
-
-		newvar->entry->name = git__strdup(var->entry->name);
-		GITERR_CHECK_ALLOC(newvar->entry->name);
-
-		newvar->entry->value = git__strdup(value);
-		GITERR_CHECK_ALLOC(newvar->entry->value);
-
-		newvar->entry->level = var->entry->level;
-
-		var->next = newvar;
-	}
-
-	result = config_write(b, key, &preg, value);
-
+out:
+	refcounted_strmap_free(map);
 	git__free(key);
 	regfree(&preg);
 
@@ -510,6 +593,7 @@ static int config_delete(git_config_backend *cfg, const char *name)
 {
 	cvar_t *var;
 	diskfile_backend *b = (diskfile_backend *)cfg;
+	refcounted_strmap *map;	git_strmap *values;
 	char *key;
 	int result;
 	khiter_t pos;
@@ -517,35 +601,37 @@ static int config_delete(git_config_backend *cfg, const char *name)
 	if ((result = git_config__normalize_name(name, &key)) < 0)
 		return result;
 
-	pos = git_strmap_lookup_index(b->values, key);
+	map = refcounted_strmap_take(&b->header);
+	values = b->header.values->values;
+
+	pos = git_strmap_lookup_index(values, key);
 	git__free(key);
 
-	if (!git_strmap_valid_index(b->values, pos)) {
+	if (!git_strmap_valid_index(values, pos)) {
+		refcounted_strmap_free(map);
 		giterr_set(GITERR_CONFIG, "Could not find key '%s' to delete", name);
 		return GIT_ENOTFOUND;
 	}
 
-	var = git_strmap_value_at(b->values, pos);
+	var = git_strmap_value_at(values, pos);
+	refcounted_strmap_free(map);
 
 	if (var->next != NULL) {
 		giterr_set(GITERR_CONFIG, "Cannot delete multivar with a single delete");
 		return -1;
 	}
 
-	git_strmap_delete_at(b->values, pos);
+	if ((result = config_write(b, var->entry->name, NULL, NULL)) < 0)
+		return result;
 
-	result = config_write(b, var->entry->name, NULL, NULL);
-
-	cvar_free(var);
-	return result;
+	return config_refresh(cfg);
 }
 
 static int config_delete_multivar(git_config_backend *cfg, const char *name, const char *regexp)
 {
-	cvar_t *var, *prev = NULL, *new_head = NULL;
-	cvar_t **to_delete;
-	int to_delete_idx;
 	diskfile_backend *b = (diskfile_backend *)cfg;
+	refcounted_strmap *map;
+	git_strmap *values;
 	char *key;
 	regex_t preg;
 	int result;
@@ -554,64 +640,43 @@ static int config_delete_multivar(git_config_backend *cfg, const char *name, con
 	if ((result = git_config__normalize_name(name, &key)) < 0)
 		return result;
 
-	pos = git_strmap_lookup_index(b->values, key);
+	map = refcounted_strmap_take(&b->header);
+	values = b->header.values->values;
 
-	if (!git_strmap_valid_index(b->values, pos)) {
-		giterr_set(GITERR_CONFIG, "Could not find key '%s' to delete", name);
+	pos = git_strmap_lookup_index(values, key);
+
+	if (!git_strmap_valid_index(values, pos)) {
+		refcounted_strmap_free(map);
 		git__free(key);
+		giterr_set(GITERR_CONFIG, "Could not find key '%s' to delete", name);
 		return GIT_ENOTFOUND;
 	}
 
-	var = git_strmap_value_at(b->values, pos);
+	refcounted_strmap_free(map);
 
 	result = regcomp(&preg, regexp, REG_EXTENDED);
 	if (result < 0) {
-		git__free(key);
 		giterr_set_regex(&preg, result);
-		regfree(&preg);
-		return -1;
+		result = -1;
+		goto out;
 	}
 
-	to_delete = git__calloc(cvar_length(var), sizeof(cvar_t *));
-	GITERR_CHECK_ALLOC(to_delete);
-	to_delete_idx = 0;
+	if ((result = config_write(b, key, &preg, NULL)) < 0)
+		goto out;
 
-	while (var != NULL) {
-		cvar_t *next = var->next;
+	result = config_refresh(cfg);
 
-		if (regexec(&preg, var->entry->value, 0, NULL, 0) == 0) {
-			// If we are past the head, reattach previous node to next one,
-			// otherwise set the new head for the strmap.
-			if (prev != NULL) {
-				prev->next = next;
-			} else {
-				new_head = next;
-			}
-
-			to_delete[to_delete_idx++] = var;
-		} else {
-			prev = var;
-		}
-
-		var = next;
-	}
-
-	if (new_head != NULL) {
-		git_strmap_set_value_at(b->values, pos, new_head);
-	} else {
-		git_strmap_delete_at(b->values, pos);
-	}
-
-	if (to_delete_idx > 0)
-		result = config_write(b, key, &preg, NULL);
-
-	while (to_delete_idx-- > 0)
-		cvar_free(to_delete[to_delete_idx]);
-
+out:
 	git__free(key);
-	git__free(to_delete);
 	regfree(&preg);
 	return result;
+}
+
+static int config_snapshot(git_config_backend **out, git_config_backend *in)
+{
+	diskfile_backend *b = (diskfile_backend *) in;
+
+	return git_config_file__snapshot(out, b);
 }
 
 int git_config_file__ondisk(git_config_backend **out, const char *path)
@@ -621,20 +686,119 @@ int git_config_file__ondisk(git_config_backend **out, const char *path)
 	backend = git__calloc(1, sizeof(diskfile_backend));
 	GITERR_CHECK_ALLOC(backend);
 
-	backend->parent.version = GIT_CONFIG_BACKEND_VERSION;
+	backend->header.parent.version = GIT_CONFIG_BACKEND_VERSION;
 
 	backend->file_path = git__strdup(path);
 	GITERR_CHECK_ALLOC(backend->file_path);
 
-	backend->parent.open = config_open;
-	backend->parent.get = config_get;
-	backend->parent.set = config_set;
-	backend->parent.set_multivar = config_set_multivar;
-	backend->parent.del = config_delete;
-	backend->parent.del_multivar = config_delete_multivar;
-	backend->parent.iterator = config_iterator_new;
-	backend->parent.refresh = config_refresh;
-	backend->parent.free = backend_free;
+	backend->header.parent.open = config_open;
+	backend->header.parent.get = config_get;
+	backend->header.parent.set = config_set;
+	backend->header.parent.set_multivar = config_set_multivar;
+	backend->header.parent.del = config_delete;
+	backend->header.parent.del_multivar = config_delete_multivar;
+	backend->header.parent.iterator = config_iterator_new;
+	backend->header.parent.refresh = config_refresh;
+	backend->header.parent.snapshot = config_snapshot;
+	backend->header.parent.free = backend_free;
+
+	*out = (git_config_backend *)backend;
+
+	return 0;
+}
+
+static int config_set_readonly(git_config_backend *cfg, const char *name, const char *value)
+{
+	GIT_UNUSED(cfg);
+	GIT_UNUSED(name);
+	GIT_UNUSED(value);
+
+	return config_error_readonly();
+}
+
+static int config_set_multivar_readonly(
+	git_config_backend *cfg, const char *name, const char *regexp, const char *value)
+{
+	GIT_UNUSED(cfg);
+	GIT_UNUSED(name);
+	GIT_UNUSED(regexp);
+	GIT_UNUSED(value);
+
+	return config_error_readonly();
+}
+
+static int config_delete_multivar_readonly(git_config_backend *cfg, const char *name, const char *regexp)
+{
+	GIT_UNUSED(cfg);
+	GIT_UNUSED(name);
+	GIT_UNUSED(regexp);
+
+	return config_error_readonly();
+}
+
+static int config_delete_readonly(git_config_backend *cfg, const char *name)
+{
+	GIT_UNUSED(cfg);
+	GIT_UNUSED(name);
+
+	return config_error_readonly();
+}
+
+static int config_refresh_readonly(git_config_backend *cfg)
+{
+	GIT_UNUSED(cfg);
+
+	return config_error_readonly();
+}
+
+static void backend_readonly_free(git_config_backend *_backend)
+{
+	diskfile_backend *backend = (diskfile_backend *)_backend;
+
+	if (backend == NULL)
+		return;
+
+	refcounted_strmap_free(backend->header.values);
+	git__free(backend);
+}
+
+static int config_readonly_open(git_config_backend *cfg, git_config_level_t level)
+{
+	diskfile_readonly_backend *b = (diskfile_readonly_backend *) cfg;
+	diskfile_backend *src = b->snapshot_from;
+	refcounted_strmap *src_map;
+
+	/* We're just copying data, don't care about the level */
+	GIT_UNUSED(level);
+
+	src_map = refcounted_strmap_take(&src->header);
+	b->header.values = src_map;
+
+	return 0;
+}
+
+int git_config_file__snapshot(git_config_backend **out, diskfile_backend *in)
+{
+	diskfile_readonly_backend *backend;
+
+	backend = git__calloc(1, sizeof(diskfile_readonly_backend));
+	GITERR_CHECK_ALLOC(backend);
+
+	backend->header.parent.version = GIT_CONFIG_BACKEND_VERSION;
+
+	backend->snapshot_from = in;
+
+	backend->header.readonly = 1;
+	backend->header.parent.version = GIT_CONFIG_BACKEND_VERSION;
+	backend->header.parent.open = config_readonly_open;
+	backend->header.parent.get = config_get;
+	backend->header.parent.set = config_set_readonly;
+	backend->header.parent.set_multivar = config_set_multivar_readonly;
+	backend->header.parent.del = config_delete_readonly;
+	backend->header.parent.del_multivar = config_delete_multivar_readonly;
+	backend->header.parent.iterator = config_iterator_new;
+	backend->header.parent.refresh = config_refresh_readonly;
+	backend->header.parent.free = backend_readonly_free;
 
 	*out = (git_config_backend *)backend;
 
@@ -1014,16 +1178,15 @@ static int included_path(git_buf *out, const char *dir, const char *path)
 	return git_path_join_unrooted(out, path, dir, NULL);
 }
 
-static int config_parse(diskfile_backend *cfg_file, struct reader *reader, git_config_level_t level, int depth)
+static int config_parse(git_strmap *values, diskfile_backend *cfg_file, struct reader *reader, git_config_level_t level, int depth)
 {
 	int c;
 	char *current_section = NULL;
 	char *var_name;
 	char *var_value;
-	cvar_t *var, *existing;
+	cvar_t *var;
 	git_buf buf = GIT_BUF_INIT;
 	int result = 0;
-	khiter_t pos;
 	uint32_t reader_idx;
 
 	if (depth >= MAX_INCLUDE_DEPTH) {
@@ -1088,21 +1251,13 @@ static int config_parse(diskfile_backend *cfg_file, struct reader *reader, git_c
 			var->entry->level = level;
 			var->included = !!depth;
 
-			/* Add or append the new config option */
-			pos = git_strmap_lookup_index(cfg_file->values, var->entry->name);
-			if (!git_strmap_valid_index(cfg_file->values, pos)) {
-				git_strmap_insert(cfg_file->values, var->entry->name, var, result);
-				if (result < 0)
-					break;
-				result = 0;
-			} else {
-				existing = git_strmap_value_at(cfg_file->values, pos);
-				while (existing->next != NULL) {
-					existing = existing->next;
-				}
-				existing->next = var;
-			}
 
+			if ((result = append_entry(values, var)) < 0)
+				break;
+			else
+				result = 0;
+
+			/* Add or append the new config option */
 			if (!git__strcmp(var->entry->name, "include.path")) {
 				struct reader *r;
 				git_buf path = GIT_BUF_INIT;
@@ -1131,7 +1286,7 @@ static int config_parse(diskfile_backend *cfg_file, struct reader *reader, git_c
 									    &r->file_size, NULL)) < 0)
 					break;
 
-				result = config_parse(cfg_file, r, level, depth+1);
+				result = config_parse(values, cfg_file, r, level, depth+1);
 				r = git_array_get(cfg_file->readers, index);
 				git_buf_free(&r->buffer);
 
@@ -1374,7 +1529,7 @@ static int config_write(diskfile_backend *cfg, const char *key, const regex_t *p
 			 * this, but instead we'll handle it gracefully with an error. */
 			if (value == NULL) {
 				giterr_set(GITERR_CONFIG,
-					"Race condition when writing a config file (a cvar has been removed)");
+					"race condition when writing a config file (a cvar has been removed)");
 				goto rewrite_fail;
 			}
 

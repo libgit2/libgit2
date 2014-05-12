@@ -219,7 +219,7 @@ static int git_diff_driver_load(
 	git_diff_driver *drv = NULL;
 	size_t namelen = strlen(driver_name);
 	khiter_t pos;
-	git_config *cfg;
+	git_config *cfg, *repo_cfg;
 	git_buf name = GIT_BUF_INIT;
 	const git_config_entry *ce;
 	bool found_driver = false;
@@ -234,7 +234,7 @@ static int git_diff_driver_load(
 	}
 
 	/* if you can't read config for repo, just use default driver */
-	if (git_repository_config__weakptr(&cfg, repo) < 0) {
+	if (git_repository_config_snapshot(&cfg, repo) < 0) {
 		giterr_clear();
 		goto done;
 	}
@@ -321,6 +321,7 @@ static int git_diff_driver_load(
 
 done:
 	git_buf_free(&name);
+	git_config_free(cfg);
 
 	if (!*out) {
 		int error2 = git_diff_driver_builtin(out, reg, driver_name);
