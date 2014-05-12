@@ -33,17 +33,18 @@ GIT_BEGIN_DECL
  * The special value 'GIT_OBJ_ANY' may be passed to let
  * the method guess the object's type.
  *
- * @param object pointer to the looked-up object
+ * @param out Pointer in which to store the looked-up object (must be
+ *            freed by the caller when done)
  * @param repo the repository to look up the object
  * @param id the unique identifier for the object
  * @param type the type of the object
  * @return 0 or an error code
  */
 GIT_EXTERN(int) git_object_lookup(
-		git_object **object,
-		git_repository *repo,
-		const git_oid *id,
-		git_otype type);
+	git_object **out,
+	git_repository *repo,
+	const git_oid *id,
+	git_otype type);
 
 /**
  * Lookup a reference to one of the objects in a repository,
@@ -65,7 +66,8 @@ GIT_EXTERN(int) git_object_lookup(
  * The special value 'GIT_OBJ_ANY' may be passed to let
  * the method guess the object's type.
  *
- * @param object_out pointer where to store the looked-up object
+ * @param out Pointer in which to store the looked-up object (must be
+ *            freed by the caller when done)
  * @param repo the repository to look up the object
  * @param id a short identifier for the object
  * @param len the length of the short identifier
@@ -73,28 +75,56 @@ GIT_EXTERN(int) git_object_lookup(
  * @return 0 or an error code
  */
 GIT_EXTERN(int) git_object_lookup_prefix(
-		git_object **object_out,
-		git_repository *repo,
-		const git_oid *id,
-		size_t len,
-		git_otype type);
+	git_object **out,
+	git_repository *repo,
+	const git_oid *id,
+	size_t len,
+	git_otype type);
 
 
 /**
  * Lookup an object that represents a tree entry.
  *
- * @param out buffer that receives a pointer to the object (which must be freed
- *            by the caller)
+ * @param out Pointer in which to store the looked-up object (must be
+ *            freed by the caller when done)
  * @param treeish root object that can be peeled to a tree
  * @param path relative path from the root object to the desired object
  * @param type type of object desired
  * @return 0 on success, or an error code
  */
 GIT_EXTERN(int) git_object_lookup_bypath(
-		git_object **out,
-		const git_object *treeish,
-		const char *path,
-		git_otype type);
+	git_object **out,
+	const git_object *treeish,
+	const char *path,
+	git_otype type);
+
+/**
+ * Look up object by partial or full OID and type, trying to return the
+ * object even if a parse error is encountered.
+ *
+ * Unlike other APIs to look up objects, this tries to return a
+ * `git_object` even if the data is not well-formatted, so long as the
+ * basic object type can still be determined from the raw data.
+ *
+ * If the object does not parse correctly, this will still return an error
+ * code, but it will also set the `out` parameter to an object with as
+ * much data filled in as possible.  The resulting object may return NULL
+ * for properties that should not be NULL or other strange things.
+ *
+ * @param out Pointer in which to store the looked-up object (must be
+ *            freed by the caller when done)
+ * @param repo the repository to look up the object
+ * @param id a short identifier for the object
+ * @param len the length of the short identifier
+ * @param type the type of the object
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_object_lookup_lax(
+	git_object **out,
+	git_repository *repo,
+	const git_oid *id,
+	size_t len,
+	git_otype type);
 
 /**
  * Get the id (SHA1) of a repository object
@@ -169,12 +199,13 @@ GIT_EXTERN(void) git_object_free(git_object *object);
 GIT_EXTERN(const char *) git_object_type2string(git_otype type);
 
 /**
- * Convert a string object type representation to it's git_otype.
+ * Convert a string object type representation to its git_otype.
  *
- * @param str the string to convert.
- * @return the corresponding git_otype.
+ * @param str The string to convert.
+ * @param len Length of str (or 0 for unspecified but NUL-terminated input)
+ * @return The corresponding `git_otype` of `GIT_OBJ_BAD` if no match.
  */
-GIT_EXTERN(git_otype) git_object_string2type(const char *str);
+GIT_EXTERN(git_otype) git_object_string2type(const char *str, size_t len);
 
 /**
  * Determine if the given git_otype is a valid loose object type.

@@ -129,7 +129,7 @@ static size_t get_object_header(obj_hdr *hdr, unsigned char *data)
 	typename[used] = 0;
 	if (used == 0)
 		return 0;
-	hdr->type = git_object_string2type(typename);
+	hdr->type = git_object_string2type(typename, used);
 	used++; /* consume the space */
 
 	/*

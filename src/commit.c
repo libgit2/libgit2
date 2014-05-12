@@ -328,87 +328,41 @@ int git_commit_amend(
 	return error;
 }
 
-int git_commit__parse(void *_commit, git_odb_object *odb_obj)
+int git_commit__parse(void *obj, git_odb_object *odb_obj)
 {
-	git_commit *commit = _commit;
-	const char *buffer_start = git_odb_object_data(odb_obj), *buffer;
-	const char *buffer_end = buffer_start + git_odb_object_size(odb_obj);
-	git_oid parent_id;
-	size_t header_len;
-
-	buffer = buffer_start;
+	int error = 0;
+	const char *start = git_odb_object_data(odb_obj);
+	const char *end = start + git_odb_object_size(odb_obj);
+	const char *body = NULL;
+	git_commit *commit = obj;
+	git_object_parse_t parser[] = {
+		{ "tree", 4, GIT_PARSE_OID, { .id = &commit->tree_id } },
+		{ "parent", 6, GIT_PARSE_OID_ARRAY, { .ids = &commit->parent_ids } },
+		{ "author", 6, GIT_PARSE_SIGNATURE, { .sig = &commit->author } },
+		{ "committer", 9, GIT_PARSE_SIGNATURE, { .sig = &commit->committer } },
+		{ NULL, 0, GIT_PARSE_MODE_OPTIONAL },
+		{ "encoding", 8, GIT_PARSE_TO_EOL, { .text = &commit->message_encoding } },
+		{ NULL, 0, GIT_PARSE_BODY, { .body = &body } },
+	};
 
 	/* Allocate for one, which will allow not to realloc 90% of the time  */
 	git_array_init_to_size(commit->parent_ids, 1);
 	GITERR_CHECK_ARRAY(commit->parent_ids);
 
-	/* The tree is always the first field */
-	if (git_oid__parse(&commit->tree_id, &buffer, buffer_end, "tree ") < 0)
-		goto bad_buffer;
+	error = git_object__parse_lines(GIT_OBJ_COMMIT, parser, start, end);
 
-	/*
-	 * TODO: commit grafts!
-	 */
-
-	while (git_oid__parse(&parent_id, &buffer, buffer_end, "parent ") == 0) {
-		git_oid *new_id = git_array_alloc(commit->parent_ids);
-		GITERR_CHECK_ALLOC(new_id);
-
-		git_oid_cpy(new_id, &parent_id);
-	}
-
-	commit->author = git__malloc(sizeof(git_signature));
-	GITERR_CHECK_ALLOC(commit->author);
-
-	if (git_signature__parse(commit->author, &buffer, buffer_end, "author ", '\n') < 0)
-		return -1;
-
-	/* Always parse the committer; we need the commit time */
-	commit->committer = git__malloc(sizeof(git_signature));
-	GITERR_CHECK_ALLOC(commit->committer);
-
-	if (git_signature__parse(commit->committer, &buffer, buffer_end, "committer ", '\n') < 0)
-		return -1;
-
-	/* Parse add'l header entries */
-	while (buffer < buffer_end) {
-		const char *eoln = buffer;
-		if (buffer[-1] == '\n' && buffer[0] == '\n')
-			break;
-
-		while (eoln < buffer_end && *eoln != '\n')
-			++eoln;
-
-		if (git__prefixcmp(buffer, "encoding ") == 0) {
-			buffer += strlen("encoding ");
-
-			commit->message_encoding = git__strndup(buffer, eoln - buffer);
-			GITERR_CHECK_ALLOC(commit->message_encoding);
+	/* strdup raw version of header data and commit message */
+	if (body != NULL) {
+		if (body > start) {
+			commit->raw_header = git__strndup(start, (body - 1) - start);
+			GITERR_CHECK_ALLOC(commit->raw_header);
 		}
 
-		if (eoln < buffer_end && *eoln == '\n')
-			++eoln;
-		buffer = eoln;
-	}
-
-	header_len = buffer - buffer_start;
-	commit->raw_header = git__strndup(buffer_start, header_len);
-	GITERR_CHECK_ALLOC(commit->raw_header);
-
-	/* point "buffer" to data after header, +1 for the final LF */
-	buffer = buffer_start + header_len + 1;
-
-	/* extract commit message */
-	if (buffer <= buffer_end) {
-		commit->raw_message = git__strndup(buffer, buffer_end - buffer);
+		commit->raw_message = git__strndup(body, end - body);
 		GITERR_CHECK_ALLOC(commit->raw_message);
 	}
 
-	return 0;
-
-bad_buffer:
-	giterr_set(GITERR_OBJECT, "Failed to parse bad commit object");
-	return -1;
+	return error;
 }
 
 #define GIT_COMMIT_GETTER(_rvalue, _name, _return) \

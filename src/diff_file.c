@@ -240,7 +240,7 @@ static int diff_file_content_load_blob(git_diff_file_content *fc)
 
 	if (odb_obj != NULL) {
 		error = git_object__from_odb_object(
-			(git_object **)&fc->blob, fc->repo, odb_obj, GIT_OBJ_BLOB);
+			(git_object **)&fc->blob, fc->repo, odb_obj, GIT_OBJ_BLOB, true);
 		git_odb_object_free(odb_obj);
 	} else {
 		error = git_blob_lookup(
