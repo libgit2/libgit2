@@ -381,7 +381,7 @@ static int diff_list_apply_options(
 	git_diff *diff,
 	const git_diff_options *opts)
 {
-	git_config *cfg;
+	git_config *cfg = NULL;
 	git_repository *repo = diff->repo;
 	git_pool *pool = &diff->pool;
 	int val;
@@ -406,20 +406,20 @@ static int diff_list_apply_options(
 		diff->opts.flags |= GIT_DIFF_INCLUDE_UNTRACKED;
 
 	/* load config values that affect diff behavior */
-	if ((val = git_repository_config__weakptr(&cfg, repo)) < 0)
+	if ((val = git_repository_config_snapshot(&cfg, repo)) < 0)
 		return val;
 
-	if (!git_repository__cvar(&val, repo, GIT_CVAR_SYMLINKS) && val)
+	if (!git_config__cvar(&val, cfg, GIT_CVAR_SYMLINKS) && val)
 		diff->diffcaps = diff->diffcaps | GIT_DIFFCAPS_HAS_SYMLINKS;
 
-	if (!git_repository__cvar(&val, repo, GIT_CVAR_IGNORESTAT) && val)
+	if (!git_config__cvar(&val, cfg, GIT_CVAR_IGNORESTAT) && val)
 		diff->diffcaps = diff->diffcaps | GIT_DIFFCAPS_IGNORE_STAT;
 
 	if ((diff->opts.flags & GIT_DIFF_IGNORE_FILEMODE) == 0 &&
-		!git_repository__cvar(&val, repo, GIT_CVAR_FILEMODE) && val)
+		!git_config__cvar(&val, cfg, GIT_CVAR_FILEMODE) && val)
 		diff->diffcaps = diff->diffcaps | GIT_DIFFCAPS_TRUST_MODE_BITS;
 
-	if (!git_repository__cvar(&val, repo, GIT_CVAR_TRUSTCTIME) && val)
+	if (!git_config__cvar(&val, cfg, GIT_CVAR_TRUSTCTIME) && val)
 		diff->diffcaps = diff->diffcaps | GIT_DIFFCAPS_TRUST_CTIME;
 
 	/* Don't set GIT_DIFFCAPS_USE_DEV - compile time option in core git */
@@ -481,8 +481,6 @@ static int diff_list_apply_options(
 	/* strdup prefix from pool so we're not dependent on external data */
 	diff->opts.old_prefix = diff_strdup_prefix(pool, diff->opts.old_prefix);
 	diff->opts.new_prefix = diff_strdup_prefix(pool, diff->opts.new_prefix);
-	if (!diff->opts.old_prefix || !diff->opts.new_prefix)
-		return -1;
 
 	if (DIFF_FLAG_IS_SET(diff, GIT_DIFF_REVERSE)) {
 		const char *tmp_prefix = diff->opts.old_prefix;
@@ -490,7 +488,10 @@ static int diff_list_apply_options(
 		diff->opts.new_prefix  = tmp_prefix;
 	}
 
-	return 0;
+	git_config_free(cfg);
+
+	/* check strdup results for error */
+	return (!diff->opts.old_prefix || !diff->opts.new_prefix) ? -1 : 0;
 }
 
 static void diff_list_free(git_diff *diff)

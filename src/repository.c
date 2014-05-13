@@ -443,7 +443,6 @@ int git_repository_open_ext(
 	int error;
 	git_buf path = GIT_BUF_INIT, parent = GIT_BUF_INIT;
 	git_repository *repo;
-	git_config *config;
 
 	if (repo_ptr)
 		*repo_ptr = NULL;
@@ -458,23 +457,24 @@ int git_repository_open_ext(
 	repo->path_repository = git_buf_detach(&path);
 	GITERR_CHECK_ALLOC(repo->path_repository);
 
-	if ((error = git_repository_config_snapshot(&config, repo)) < 0)
-		return error;
-
 	if ((flags & GIT_REPOSITORY_OPEN_BARE) != 0)
 		repo->is_bare = 1;
-	else if ((error = load_config_data(repo, config)) < 0 ||
-		 (error = load_workdir(repo, config, &parent)) < 0)
-	{
+	else {
+		git_config *config = NULL;
+
+		if ((error = git_repository_config_snapshot(&config, repo)) < 0 ||
+			(error = load_config_data(repo, config)) < 0 ||
+			(error = load_workdir(repo, config, &parent)) < 0)
+			git_repository_free(repo);
+
 		git_config_free(config);
-		git_repository_free(repo);
-		return error;
 	}
 
-	git_config_free(config);
+	if (!error)
+		*repo_ptr = repo;
 	git_buf_free(&parent);
-	*repo_ptr = repo;
-	return 0;
+
+	return error;
 }
 
 int git_repository_open(git_repository **repo_out, const char *path)
