@@ -233,16 +233,16 @@ static int git_diff_driver_load(
 		return 0;
 	}
 
+	drv = git__calloc(1, sizeof(git_diff_driver) + namelen + 1);
+	GITERR_CHECK_ALLOC(drv);
+	drv->type = DIFF_DRIVER_AUTO;
+	memcpy(drv->name, driver_name, namelen);
+
 	/* if you can't read config for repo, just use default driver */
 	if (git_repository_config_snapshot(&cfg, repo) < 0) {
 		giterr_clear();
 		goto done;
 	}
-
-	drv = git__calloc(1, sizeof(git_diff_driver) + namelen + 1);
-	GITERR_CHECK_ALLOC(drv);
-	drv->type = DIFF_DRIVER_AUTO;
-	memcpy(drv->name, driver_name, namelen);
 
 	if ((error = git_buf_printf(&name, "diff.%s.binary", driver_name)) < 0)
 		goto done;
