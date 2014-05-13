@@ -206,6 +206,8 @@ static int gitno_ssl_teardown(gitno_ssl *ssl)
 	return ret;
 }
 
+#endif
+
 /* Match host names according to RFC 2818 rules */
 int gitno__match_host(const char *pattern, const char *host)
 {
@@ -255,6 +257,8 @@ static int check_host_name(const char *name, const char *host)
 
 	return 0;
 }
+
+#ifdef GIT_SSL
 
 static int verify_server_cert(gitno_ssl *ssl, const char *host)
 {
