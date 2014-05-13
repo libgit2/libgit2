@@ -633,7 +633,6 @@ typedef struct {
 	git_iterator *new_iter;
 	const git_index_entry *oitem;
 	const git_index_entry *nitem;
-	git_buf ignore_prefix;
 } diff_in_progress;
 
 #define MODE_BITS_MASK 0000777
@@ -844,23 +843,12 @@ static int handle_unmatched_new_item(
 	/* check if this is a prefix of the other side */
 	contains_oitem = entry_is_prefixed(diff, info->oitem, nitem);
 
-	/* check if this is contained in an ignored parent directory */
-	if (git_buf_len(&info->ignore_prefix)) {
-		if (diff->pfxcomp(nitem->path, git_buf_cstr(&info->ignore_prefix)) == 0)
-			delta_type = GIT_DELTA_IGNORED;
-		else
-			git_buf_clear(&info->ignore_prefix);
-	}
+	/* update delta_type if this item is ignored */
+	if (git_iterator_current_is_ignored(info->new_iter))
+		delta_type = GIT_DELTA_IGNORED;
 
 	if (nitem->mode == GIT_FILEMODE_TREE) {
 		bool recurse_into_dir = contains_oitem;
-
-		/* if not already inside an ignored dir, check if this is ignored */
-		if (delta_type != GIT_DELTA_IGNORED &&
-			git_iterator_current_is_ignored(info->new_iter)) {
-			delta_type = GIT_DELTA_IGNORED;
-			git_buf_sets(&info->ignore_prefix, nitem->path);
-		}
 
 		/* check if user requests recursion into this type of dir */
 		recurse_into_dir = contains_oitem ||
@@ -938,26 +926,11 @@ static int handle_unmatched_new_item(
 		}
 	}
 
-	/* In core git, the next two checks are effectively reversed --
-	 * i.e. when an file contained in an ignored directory is explicitly
-	 * ignored, it shows up as an ignored file in the diff list, even though
-	 * other untracked files in the same directory are skipped completely.
-	 *
-	 * To me, this seems odd.  If the directory is ignored and the file is
-	 * untracked, we should skip it consistently, regardless of whether it
-	 * happens to match a pattern in the ignore file.
-	 *
-	 * To match the core git behavior, reverse the following two if checks
-	 * so that individual file ignores are checked before container
-	 * directory exclusions are used to skip the file.
-	 */
 	else if (delta_type == GIT_DELTA_IGNORED &&
-		DIFF_FLAG_ISNT_SET(diff, GIT_DIFF_RECURSE_IGNORED_DIRS))
+		DIFF_FLAG_ISNT_SET(diff, GIT_DIFF_RECURSE_IGNORED_DIRS) &&
+		git_iterator_current_tree_is_ignored(info->new_iter))
 		/* item contained in ignored directory, so skip over it */
 		return git_iterator_advance(&info->nitem, info->new_iter);
-
-	else if (git_iterator_current_is_ignored(info->new_iter))
-		delta_type = GIT_DELTA_IGNORED;
 
 	else if (info->new_iter->type != GIT_ITERATOR_TYPE_WORKDIR)
 		delta_type = GIT_DELTA_ADDED;
@@ -1068,7 +1041,6 @@ int git_diff__from_iterators(
 	info.repo = repo;
 	info.old_iter = old_iter;
 	info.new_iter = new_iter;
-	git_buf_init(&info.ignore_prefix, 0);
 
 	/* make iterators have matching icase behavior */
 	if (DIFF_FLAG_IS_SET(diff, GIT_DIFF_IGNORE_CASE)) {
@@ -1122,8 +1094,6 @@ cleanup:
 		*diff_ptr = diff;
 	else
 		git_diff_free(diff);
-
-	git_buf_free(&info.ignore_prefix);
 
 	return error;
 }
