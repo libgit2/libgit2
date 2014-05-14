@@ -68,6 +68,7 @@ extern int p_rename(const char *from, const char *to);
 
 #ifndef GIT_WIN32
 
+#define p_ftruncate(fd, size) ftruncate(fd, size)
 #define p_stat(p,b) stat(p, b)
 #define p_chdir(p) chdir(p)
 #define p_rmdir(p) rmdir(p)
@@ -82,6 +83,8 @@ typedef int GIT_SOCKET;
 #define p_gmtime_r gmtime_r
 
 #else
+
+extern int p_ftruncate(int fd, git_off_t size);
 
 typedef SOCKET GIT_SOCKET;
 extern struct tm * p_localtime_r (const time_t *timer, struct tm *result);

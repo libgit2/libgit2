@@ -569,7 +569,7 @@ int p_mkstemp(char *tmp_path)
 		return -1;
 #endif
 
-	return p_creat(tmp_path, 0744); //-V536
+	return p_open(tmp_path, O_RDWR | O_CREAT | O_TRUNC | O_EXCL, 0600);
 }
 
 int p_access(const char* path, mode_t mode)
@@ -695,4 +695,12 @@ int p_inet_pton(int af, const char *src, void *dst)
 
 	errno = EINVAL;
 	return -1;
+}
+
+int p_ftruncate(int fd, git_off_t size)
+{
+	if (0 > p_lseek(fd, size, SEEK_SET))
+		return -1;
+
+	return SetEndOfFile((HANDLE) _get_osfhandle(fd)) ? 0 : -1;
 }
