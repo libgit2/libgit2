@@ -8,6 +8,7 @@ static git_repository *g_repo = NULL;
 
 void test_index_addall__initialize(void)
 {
+	cl_fake_home();
 }
 
 void test_index_addall__cleanup(void)
@@ -15,6 +16,7 @@ void test_index_addall__cleanup(void)
 	git_repository_free(g_repo);
 	g_repo = NULL;
 
+	cl_fake_home_cleanup(NULL);
 	cl_fixture_cleanup(TEST_DIR);
 }
 

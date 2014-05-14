@@ -10,11 +10,13 @@ void test_diff_iterator__initialize(void)
 	 * cleanup function so that assertion failures don't result in a
 	 * missed cleanup.
 	 */
+	cl_fake_home();
 }
 
 void test_diff_iterator__cleanup(void)
 {
 	cl_git_sandbox_cleanup();
+	cl_fake_home_cleanup(NULL);
 }
 
 

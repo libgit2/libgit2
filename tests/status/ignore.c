@@ -9,11 +9,13 @@ static git_repository *g_repo = NULL;
 
 void test_status_ignore__initialize(void)
 {
+	cl_fake_home();
 }
 
 void test_status_ignore__cleanup(void)
 {
 	cl_git_sandbox_cleanup();
+	cl_fake_home_cleanup(NULL);
 }
 
 static void assert_ignored_(
