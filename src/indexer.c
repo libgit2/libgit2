@@ -703,7 +703,7 @@ static int fix_thin_pack(git_indexer *idx, git_transfer_progress *stats)
 	size_t size;
 	git_otype type;
 	git_mwindow *w = NULL;
-	git_off_t curpos;
+	git_off_t curpos = 0;
 	unsigned char *base_info;
 	unsigned int left = 0;
 	git_oid base;
