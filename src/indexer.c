@@ -429,6 +429,7 @@ static int write_at(git_indexer *idx, const void *data, git_off_t offset, size_t
 	git_file fd = idx->pack->mwf.fd;
 	long page_size = git__page_size();
 	git_off_t page_start, page_offset;
+	unsigned char *map_data;
 	git_map map;
 	int error;
 
@@ -439,7 +440,8 @@ static int write_at(git_indexer *idx, const void *data, git_off_t offset, size_t
 	if ((error = p_mmap(&map, page_offset + size, GIT_PROT_WRITE, GIT_MAP_SHARED, fd, page_start)) < 0)
 		return error;
 
-	memcpy(map.data + page_offset, data, size);
+	map_data = (unsigned char *)map.data;
+	memcpy(map_data + page_offset, data, size);
 	p_munmap(&map);
 
 	return 0;
