@@ -313,6 +313,7 @@ static int config__refresh(git_config_backend *cfg)
 		goto out;
 
 	reader = git_array_get(b->readers, git_array_size(b->readers) - 1);
+	GITERR_CHECK_ALLOC(reader);
 
 	if ((error = config_parse(values->values, b, reader, b->level, 0)) < 0)
 		goto out;
@@ -327,7 +328,8 @@ static int config__refresh(git_config_backend *cfg)
 
 out:
 	refcounted_strmap_free(values);
-	git_buf_free(&reader->buffer);
+	if (reader)
+		git_buf_free(&reader->buffer);
 	return error;
 }
 
@@ -344,8 +346,8 @@ static int config_refresh(git_config_backend *cfg)
 			&reader->buffer, reader->file_path,
 			&reader->file_mtime, &reader->file_size, &updated);
 
-		if (error < 0)
-			return (error == GIT_ENOTFOUND) ? 0 : error;
+		if (error < 0 && error != GIT_ENOTFOUND)
+			return error;
 
 		if (updated)
 			any_updated = 1;

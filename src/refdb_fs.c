@@ -927,19 +927,15 @@ static int has_reflog(git_repository *repo, const char *name);
 /* We only write if it's under heads/, remotes/ or notes/ or if it already has a log */
 static int should_write_reflog(int *write, git_repository *repo, const char *name)
 {
-	git_config *config;
-	int error, logall, is_bare;
+	int error, logall;
+
+	error = git_repository__cvar(&logall, repo, GIT_CVAR_LOGALLREFUPDATES);
+	if (error < 0)
+		return error;
 
 	/* Defaults to the opposite of the repo being bare */
-	is_bare = git_repository_is_bare(repo);
-	logall = !is_bare;
-
-	if ((error = git_repository_config__weakptr(&config, repo)) < 0)
-		return error;
-
-	error = git_config_get_bool(&logall, config, "core.logallrefupdates");
-	if (error < 0 && error != GIT_ENOTFOUND)
-		return error;
+	if (logall == GIT_LOGALLREFUPDATES_UNSET)
+		logall = !git_repository_is_bare(repo);
 
 	if (!logall) {
 		*write = 0;

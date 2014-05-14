@@ -76,4 +76,10 @@ extern int git_config__get_bool_force(
 extern int git_config__get_int_force(
 	const git_config *cfg, const char *key, int fallback_value);
 
+/* API for repository cvar-style lookups from config - not cached, but
+ * uses cvar value maps and fallbacks
+ */
+extern int git_config__cvar(
+	int *out, git_config *config, git_cvar_cached cvar);
+
 #endif

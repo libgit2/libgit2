@@ -363,20 +363,22 @@ int git_tag_create_frombuffer(git_oid *oid, git_repository *repo, const char *bu
 	}
 
 	/* write the buffer */
-	if (git_odb_open_wstream(&stream, odb, strlen(buffer), GIT_OBJ_TAG) < 0)
-		return -1;
+	if ((error = git_odb_open_wstream(
+			&stream, odb, strlen(buffer), GIT_OBJ_TAG)) < 0)
+		return error;
 
-	git_odb_stream_write(stream, buffer, strlen(buffer));
+	if (!(error = git_odb_stream_write(stream, buffer, strlen(buffer))))
+		error = git_odb_stream_finalize_write(oid, stream);
 
-	error = git_odb_stream_finalize_write(oid, stream);
 	git_odb_stream_free(stream);
 
 	if (error < 0) {
 		git_buf_free(&ref_name);
-		return -1;
+		return error;
 	}
 
-	error = git_reference_create(&new_ref, repo, ref_name.ptr, oid, allow_ref_overwrite, NULL, NULL);
+	error = git_reference_create(
+		&new_ref, repo, ref_name.ptr, oid, allow_ref_overwrite, NULL, NULL);
 
 	git_reference_free(new_ref);
 	git_buf_free(&ref_name);
