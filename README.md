@@ -189,6 +189,8 @@ Here are the bindings to libgit2 that are currently available:
     * GitPowerShell <https://github.com/ethomson/gitpowershell>
 * Python
     * pygit2 <https://github.com/libgit2/pygit2>
+* R
+    * git2r <https://github.com/ropensci/git2r>
 * Ruby
     * Rugged <https://github.com/libgit2/rugged>
 * Vala
