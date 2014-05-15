@@ -2,24 +2,9 @@
 #include "buffer.h"
 #include "fileops.h"
 
-static git_config_level_t setting[3] = {
-	GIT_CONFIG_LEVEL_GLOBAL,
-	GIT_CONFIG_LEVEL_XDG,
-	GIT_CONFIG_LEVEL_SYSTEM
-};
-static char *restore[3];
-
 void test_config_global__initialize(void)
 {
-	int i;
 	git_buf path = GIT_BUF_INIT;
-
-	/* snapshot old settings to restore later */
-	for (i = 0; i < 3; ++i) {
-		cl_git_pass(
-			git_libgit2_opts(GIT_OPT_GET_SEARCH_PATH, setting[i], &path));
-		restore[i] = git_buf_detach(&path);
-	}
 
 	cl_git_pass(git_futils_mkdir_r("home", NULL, 0777));
 	cl_git_pass(git_path_prettify(&path, "home", NULL));
@@ -41,18 +26,7 @@ void test_config_global__initialize(void)
 
 void test_config_global__cleanup(void)
 {
-	int i;
-
-	for (i = 0; i < 3; ++i) {
-		cl_git_pass(
-			git_libgit2_opts(GIT_OPT_SET_SEARCH_PATH, setting[i], restore[i]));
-		git__free(restore[i]);
-		restore[i] = NULL;
-	}
-
-	cl_git_pass(git_futils_rmdir_r("home", NULL, GIT_RMDIR_REMOVE_FILES));
-	cl_git_pass(git_futils_rmdir_r("xdg", NULL, GIT_RMDIR_REMOVE_FILES));
-	cl_git_pass(git_futils_rmdir_r("etc", NULL, GIT_RMDIR_REMOVE_FILES));
+	cl_sandbox_set_search_path_defaults();
 }
 
 void test_config_global__open_global(void)
