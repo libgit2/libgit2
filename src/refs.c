@@ -365,7 +365,7 @@ static int reference__create(
 	if (ref_out)
 		*ref_out = NULL;
 
-	error = git_reference__normalize_name_lax(normalized, sizeof(normalized), name);
+	error = reference_normalize_for_repo(normalized, sizeof(normalized), repo, name);
 	if (error < 0)
 		return error;
 
@@ -388,15 +388,15 @@ static int reference__create(
 			return -1;
 		}
 
-		ref = git_reference__alloc(name, oid, NULL);
+		ref = git_reference__alloc(normalized, oid, NULL);
 	} else {
 		char normalized_target[GIT_REFNAME_MAX];
 
-		if ((error = git_reference__normalize_name_lax(
-			normalized_target, sizeof(normalized_target), symbolic)) < 0)
+		if ((error = reference_normalize_for_repo(
+			normalized_target, sizeof(normalized_target), repo, symbolic)) < 0)
 			return error;
 
-		ref = git_reference__alloc_symbolic(name, normalized_target);
+		ref = git_reference__alloc_symbolic(normalized, normalized_target);
 	}
 
 	GITERR_CHECK_ALLOC(ref);
@@ -569,18 +569,14 @@ int git_reference_symbolic_set_target(
 static int reference__rename(git_reference **out, git_reference *ref, const char *new_name, int force,
 				 const git_signature *signature, const char *message)
 {
-	unsigned int normalization_flags;
 	char normalized[GIT_REFNAME_MAX];
 	bool should_head_be_updated = false;
 	int error = 0;
 
 	assert(ref && new_name && signature);
 
-	normalization_flags = ref->type == GIT_REF_SYMBOLIC ?
-		GIT_REF_FORMAT_ALLOW_ONELEVEL : GIT_REF_FORMAT_NORMAL;
-
-	if ((error = git_reference_normalize_name(
-			normalized, sizeof(normalized), new_name, normalization_flags)) < 0)
+	if ((error = reference_normalize_for_repo(
+			normalized, sizeof(normalized), git_reference_owner(ref), new_name)) < 0)
 		return error;
 
 
@@ -590,12 +586,12 @@ static int reference__rename(git_reference **out, git_reference *ref, const char
 
 	should_head_be_updated = (error > 0);
 
-	if ((error = git_refdb_rename(out, ref->db, ref->name, new_name, force, signature, message)) < 0)
+	if ((error = git_refdb_rename(out, ref->db, ref->name, normalized, force, signature, message)) < 0)
 		return error;
 
 	/* Update HEAD it was pointing to the reference being renamed */
 	if (should_head_be_updated &&
-		(error = git_repository_set_head(ref->db->repo, new_name, signature, message)) < 0) {
+		(error = git_repository_set_head(ref->db->repo, normalized, signature, message)) < 0) {
 		giterr_set(GITERR_REFERENCE, "Failed to update HEAD after renaming reference");
 		return error;
 	}
@@ -1018,17 +1014,6 @@ cleanup:
 	return error;
 }
 
-int git_reference__normalize_name_lax(
-	char *buffer_out,
-	size_t out_size,
-	const char *name)
-{
-	return git_reference_normalize_name(
-		buffer_out,
-		out_size,
-		name,
-		GIT_REF_FORMAT_ALLOW_ONELEVEL);
-}
 #define GIT_REF_TYPEMASK (GIT_REF_OID | GIT_REF_SYMBOLIC)
 
 int git_reference_cmp(
