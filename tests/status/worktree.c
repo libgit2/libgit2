@@ -955,16 +955,19 @@ void test_status_worktree__nopermissions(void)
 	counts.expected_entry_count = 1;
 	counts.expected_paths = expected_paths;
 	counts.expected_statuses = expected_statuses;
+	counts.debug = 1;
 
 	opts.show = GIT_STATUS_SHOW_WORKDIR_ONLY;
 	opts.flags = GIT_STATUS_OPT_DEFAULTS;
 
 	cl_git_pass(
 		git_status_foreach_ext(repo, &opts, cb_status__normal, &counts) );
+
+	// Restore permissions so we can cleanup :)
+	p_chmod("empty_standard_repo/no_permission", 0777);
+
 	cl_assert_equal_i(counts.expected_entry_count, counts.entry_count);
 	cl_assert_equal_i(0, counts.wrong_status_flags_count);
 	cl_assert_equal_i(0, counts.wrong_sorted_path);
 
-	// Restore permissions so we can cleanup :)
-	p_chmod("empty_standard_repo/no_permission", 0777);
 }

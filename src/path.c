@@ -1108,13 +1108,12 @@ int git_path_dirload_with_stat(
 
 		if ((error = git_buf_joinpath(&full, full.ptr, ps->path)) < 0 ||
 			(error = git_path_lstat(full.ptr, &ps->st)) < 0) {
-			if (error == GIT_ENOTFOUND) {
+			if (error == GIT_ENOTFOUND || error == GIT_ENOACCESS) {
 				giterr_clear();
 				error = 0;
 				git_vector_remove(contents, i--);
 				continue;
 			}
-
 			break;
 		}
 
