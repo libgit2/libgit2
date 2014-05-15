@@ -941,21 +941,17 @@ void test_status_worktree__nopermissions(void)
 	char path[260*4+1];
 	const char *expected_paths[] = {path};
 	const unsigned int expected_statuses[] = {GIT_STATUS_WT_NEW};
-	const char *folder_name = "no_permission";
 
 	git_repository *repo = cl_git_sandbox_init("empty_standard_repo");
 	git_status_options opts = GIT_STATUS_OPTIONS_INIT;
 	status_entry_counts counts = {0};
 
 	// Create directory with no read permission
-	sprintf(path, "empty_standard_repo/%s", folder_name);
-	cl_git_pass(git_futils_mkdir_r(path, NULL, 0777));
-	sprintf(path, "empty_standard_repo/%s/foo", folder_name);
-	cl_git_mkfile(path, "dummy");
-	sprintf(path, "empty_standard_repo/%s", folder_name);
-	p_chmod(path, 0644);
+	cl_git_pass(git_futils_mkdir_r("empty_standard_repo/no_permission", NULL, 0777));
+	cl_git_mkfile("empty_standard_repo/no_permission/foo", "dummy");
+	p_chmod("empty_standard_repo/no_permission", 0644);
 
-	sprintf(path, "%s/", folder_name);
+	sprintf(path, "%s/", "no_permission");
 	counts.expected_entry_count = 1;
 	counts.expected_paths = expected_paths;
 	counts.expected_statuses = expected_statuses;
@@ -970,6 +966,5 @@ void test_status_worktree__nopermissions(void)
 	cl_assert_equal_i(0, counts.wrong_sorted_path);
 
 	// Restore permissions so we can cleanup :)
-	sprintf(path, "empty_standard_repo/%s", folder_name);
-	p_chmod(path, 0777);
+	p_chmod("empty_standard_repo/no_permission", 0777);
 }
