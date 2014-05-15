@@ -83,16 +83,12 @@ static void cache_free(git_pack_cache *cache)
 		}
 
 		git_offmap_free(cache->entries);
-		git_mutex_free(&cache->lock);
+		cache->entries = NULL;
 	}
-
-	memset(cache, 0, sizeof(*cache));
 }
 
 static int cache_init(git_pack_cache *cache)
 {
-	memset(cache, 0, sizeof(*cache));
-
 	cache->entries = git_offmap_alloc();
 	GITERR_CHECK_ALLOC(cache->entries);
 
@@ -533,9 +529,6 @@ static int pack_dependency_chain(git_dependency_chain *chain_out,
 	int error = 0, use_heap = 0;
 	size_t size, elem_pos;
 	git_otype type;
-
-	if (!p->bases.entries && (cache_init(&p->bases) < 0))
-		return -1;
 
 	elem_pos = 0;
 	while (true) {
@@ -985,6 +978,7 @@ void git_packfile_free(struct git_pack_file *p)
 	git__free(p->bad_object_sha1);
 
 	git_mutex_free(&p->lock);
+	git_mutex_free(&p->bases.lock);
 	git__free(p);
 }
 
@@ -1116,6 +1110,11 @@ int git_packfile_alloc(struct git_pack_file **pack_out, const char *path)
 
 	if (git_mutex_init(&p->lock)) {
 		giterr_set(GITERR_OS, "Failed to initialize packfile mutex");
+		git__free(p);
+		return -1;
+	}
+
+	if (cache_init(&p->bases) < 0) {
 		git__free(p);
 		return -1;
 	}
