@@ -2564,11 +2564,13 @@ done:
 	return error;
 }
 
-int analysis_config(git_merge_analysis_t *out, git_repository *repo)
+int merge_config(git_merge_config_t *out, git_repository *repo)
 {
 	git_config *config;
 	const char *value;
 	int bool_value, error = 0;
+
+	*out = GIT_MERGE_CONFIG_NONE;
 
 	if ((error = git_repository_config(&config, repo)) < 0)
 		goto done;
@@ -2596,7 +2598,8 @@ done:
 }
 
 int git_merge_analysis(
-	git_merge_analysis_t *out,
+	git_merge_analysis_t *analysis_out,
+	git_merge_config_t *config_out,
 	git_repository *repo,
 	const git_merge_head **their_heads,
 	size_t their_heads_len)
@@ -2604,7 +2607,7 @@ int git_merge_analysis(
 	git_merge_head *ancestor_head = NULL, *our_head = NULL;
 	int error = 0;
 
-	assert(out && repo && their_heads);
+	assert(analysis_out && config_out && repo && their_heads);
 
 	if (their_heads_len != 1) {
 		giterr_set(GITERR_MERGE, "Can only merge a single branch");
@@ -2612,13 +2615,13 @@ int git_merge_analysis(
 		goto done;
 	}
 
-	*out = GIT_MERGE_ANALYSIS_NONE;
+	*analysis_out = GIT_MERGE_ANALYSIS_NONE;
 
-	if ((error = analysis_config(out, repo)) < 0)
+	if ((error = merge_config(config_out, repo)) < 0)
 		goto done;
 
 	if (git_repository_head_unborn(repo)) {
-		*out |= GIT_MERGE_ANALYSIS_FASTFORWARD | GIT_MERGE_ANALYSIS_UNBORN;
+		*analysis_out |= GIT_MERGE_ANALYSIS_FASTFORWARD | GIT_MERGE_ANALYSIS_UNBORN;
 		goto done;
 	}
 
@@ -2627,15 +2630,15 @@ int git_merge_analysis(
 
 	/* We're up-to-date if we're trying to merge our own common ancestor. */
 	if (ancestor_head && git_oid_equal(&ancestor_head->oid, &their_heads[0]->oid))
-		*out |= GIT_MERGE_ANALYSIS_UP_TO_DATE;
+		*analysis_out |= GIT_MERGE_ANALYSIS_UP_TO_DATE;
 
 	/* We're fastforwardable if we're our own common ancestor. */
 	else if (ancestor_head && git_oid_equal(&ancestor_head->oid, &our_head->oid))
-		*out |= GIT_MERGE_ANALYSIS_FASTFORWARD | GIT_MERGE_ANALYSIS_NORMAL;
+		*analysis_out |= GIT_MERGE_ANALYSIS_FASTFORWARD | GIT_MERGE_ANALYSIS_NORMAL;
 
 	/* Otherwise, just a normal merge is possible. */
 	else
-		*out |= GIT_MERGE_ANALYSIS_NORMAL;
+		*analysis_out |= GIT_MERGE_ANALYSIS_NORMAL;
 
 done:
 	git_merge_head_free(ancestor_head);
