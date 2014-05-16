@@ -1304,13 +1304,14 @@ static int rename_remote_config_section(
 	if (git_buf_printf(&old_section_name, "remote.%s", old_name) < 0)
 		goto cleanup;
 
-	if (git_buf_printf(&new_section_name, "remote.%s", new_name) < 0)
-		goto cleanup;
+	if (new_name &&
+		(git_buf_printf(&new_section_name, "remote.%s", new_name) < 0))
+			goto cleanup;
 
 	error = git_config_rename_section(
 		repo,
 		git_buf_cstr(&old_section_name),
-		git_buf_cstr(&new_section_name));
+		new_name ? git_buf_cstr(&new_section_name) : NULL);
 
 cleanup:
 	git_buf_free(&old_section_name);
@@ -1741,5 +1742,146 @@ int git_remote_init_callbacks(git_remote_callbacks *opts, unsigned int version)
 {
 	GIT_INIT_STRUCTURE_FROM_TEMPLATE(
 		opts, version, git_remote_callbacks, GIT_REMOTE_CALLBACKS_INIT);
+	return 0;
+}
+
+/* asserts a branch.<foo>.remote format */
+static const char *name_offset(size_t *len_out, const char *name)
+{
+	size_t prefix_len;
+	const char *dot;
+
+	prefix_len = strlen("remote.");
+	dot = strchr(name + prefix_len, '.');
+
+	assert(dot);
+
+	*len_out = dot - name - prefix_len;
+	return name + prefix_len;
+}
+
+static int remove_branch_config_related_entries(
+	git_repository *repo,
+	const char *remote_name)
+{
+	int error;
+	git_config *config;
+	git_config_entry *entry;
+	git_config_iterator *iter;
+	git_buf buf = GIT_BUF_INIT;
+
+	if ((error = git_repository_config__weakptr(&config, repo)) < 0)
+		return error;
+
+	if ((error = git_config_iterator_glob_new(&iter, config, "branch\\..+\\.remote")) < 0)
+		return error;
+
+	/* find any branches with us as upstream and remove that config */
+	while ((error = git_config_next(&entry, iter)) == 0) {
+		const char *branch;
+		size_t branch_len;
+
+		if (strcmp(remote_name, entry->value))
+			continue;
+
+		branch = name_offset(&branch_len, entry->name);
+
+		git_buf_clear(&buf);
+		if (git_buf_printf(&buf, "branch.%.*s.merge", (int)branch_len, branch) < 0)
+			break;
+
+		if ((error = git_config_delete_entry(config, git_buf_cstr(&buf))) < 0)
+			break;
+
+		git_buf_clear(&buf);
+		if (git_buf_printf(&buf, "branch.%.*s.remote", (int)branch_len, branch) < 0)
+			break;
+
+		if ((error = git_config_delete_entry(config, git_buf_cstr(&buf))) < 0)
+			break;
+	}
+
+	if (error == GIT_ITEROVER)
+		error = 0;
+
+	git_buf_free(&buf);
+	git_config_iterator_free(iter);
+	return error;
+}
+
+static int remove_refs(git_repository *repo, const char *glob)
+{
+	git_reference_iterator *iter;
+	const char *name;
+	int error;
+
+	if ((error = git_reference_iterator_glob_new(&iter, repo, glob)) < 0)
+		return error;
+
+	while ((error = git_reference_next_name(&name, iter)) == 0) {
+		if ((error = git_reference_remove(repo, name)) < 0)
+			break;
+	}
+	git_reference_iterator_free(iter);
+
+	if (error == GIT_ITEROVER)
+		error = 0;
+
+	return error;
+}
+
+static int remove_remote_tracking(git_repository *repo, const char *remote_name)
+{
+	git_remote *remote;
+	int error;
+	size_t i, count;
+
+	/* we want to use what's on the config, regardless of changes to the instance in memory */
+	if ((error = git_remote_load(&remote, repo, remote_name)) < 0)
+		return error;
+
+	count = git_remote_refspec_count(remote);
+	for (i = 0; i < count; i++) {
+		const git_refspec *refspec = git_remote_get_refspec(remote, i);
+
+		/* shouldn't ever actually happen */
+		if (refspec == NULL)
+			continue;
+
+		if ((error = remove_refs(repo, git_refspec_dst(refspec))) < 0)
+			break;
+	}
+
+	git_remote_free(remote);
+	return error;
+}
+
+int git_remote_delete(git_remote *remote)
+{
+	int error;
+	git_repository *repo;
+
+	assert(remote);
+
+	if (!remote->name) {
+		giterr_set(GITERR_INVALID, "Can't delete an anonymous remote.");
+		return -1;
+	}
+
+	repo = git_remote_owner(remote);
+
+	if ((error = remove_branch_config_related_entries(repo,
+		git_remote_name(remote))) < 0)
+		return error;
+
+	if ((error = remove_remote_tracking(repo, git_remote_name(remote))) < 0)
+		return error;
+
+	if ((error = rename_remote_config_section(
+		repo, git_remote_name(remote), NULL)) < 0)
+		return error;
+
+	git_remote_free(remote);
+
 	return 0;
 }
