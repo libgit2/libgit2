@@ -397,7 +397,11 @@ void git_diff_driver_update_options(
 int git_diff_driver_content_is_binary(
 	git_diff_driver *driver, const char *content, size_t content_len)
 {
-	const git_buf search = { (char *)content, 0, min(content_len, 4000) };
+	git_buf search;
+
+	search.ptr   = (char *)content;
+	search.size  = min(content_len, GIT_FILTER_BYTES_TO_CHECK_NUL);
+	search.asize = 0;
 
 	GIT_UNUSED(driver);
 
