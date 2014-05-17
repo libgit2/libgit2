@@ -286,7 +286,9 @@ static int print_binary_hunk(diff_print_info *pi, git_blob *old, git_blob *new)
 {
 	git_buf deflate = GIT_BUF_INIT, delta = GIT_BUF_INIT, *out = NULL;
 	const void *old_data, *new_data;
-	size_t old_data_len, new_data_len, delta_data_len, inflated_len, remain;
+	git_off_t off_t_old_data_len, off_t_new_data_len;
+	unsigned long old_data_len, new_data_len, delta_data_len, inflated_len;
+	size_t remain;
 	const char *out_type = "literal";
 	char *ptr;
 	int error;
@@ -294,8 +296,17 @@ static int print_binary_hunk(diff_print_info *pi, git_blob *old, git_blob *new)
 	old_data = old ? git_blob_rawcontent(old) : NULL;
 	new_data = new ? git_blob_rawcontent(new) : NULL;
 
-	old_data_len = old ? (size_t)git_blob_rawsize(old) : 0;
-	new_data_len = new ? (size_t)git_blob_rawsize(new) : 0;
+	off_t_old_data_len = old ? git_blob_rawsize(old) : 0;
+	off_t_new_data_len = new ? git_blob_rawsize(new) : 0;
+
+	/* The git_delta function accepts unsigned long only */
+	if (off_t_old_data_len > ULONG_MAX || off_t_new_data_len > ULONG_MAX) {
+		error = -1;
+		goto done;
+	}
+
+	old_data_len = (unsigned long)off_t_old_data_len;
+	new_data_len = (unsigned long)off_t_new_data_len;
 
 	out = &deflate;
 	inflated_len = new_data_len;
@@ -304,11 +315,17 @@ static int print_binary_hunk(diff_print_info *pi, git_blob *old, git_blob *new)
 		&deflate, new_data, new_data_len)) < 0)
 		goto done;
 
+	/* The git_delta function accepts unsigned long only */
+	if (deflate.size > ULONG_MAX) {
+		error = -1;
+		goto done;
+	}
+
 	if (old && new) {
 		void *delta_data;
 
 		delta_data = git_delta(old_data, old_data_len, new_data,
-			new_data_len, &delta_data_len, deflate.size);
+			new_data_len, &delta_data_len, (unsigned long)deflate.size);
 
 		if (delta_data) {
 			error = git_zstream_deflatebuf(&delta, delta_data, delta_data_len);
@@ -325,16 +342,16 @@ static int print_binary_hunk(diff_print_info *pi, git_blob *old, git_blob *new)
 		}
 	}
 
-	git_buf_printf(pi->buf, "%s %" PRIuZ "\n", out_type, inflated_len);
+	git_buf_printf(pi->buf, "%s %u\n", out_type, inflated_len);
 	pi->line.num_lines++;
 
 	for (ptr = out->ptr, remain = out->size; remain > 0; ) {
 		size_t chunk_len = (52 < remain) ? 52 : remain;
 
 		if (chunk_len <= 26)
-			git_buf_putc(pi->buf, chunk_len + 'A' - 1);
+			git_buf_putc(pi->buf, (char)chunk_len + 'A' - 1);
 		else
-			git_buf_putc(pi->buf, chunk_len - 26 + 'a' - 1);
+			git_buf_putc(pi->buf, (char)chunk_len - 26 + 'a' - 1);
 
 		git_buf_put_base85(pi->buf, ptr, chunk_len);
 		git_buf_putc(pi->buf, '\n');
