@@ -137,6 +137,12 @@ typedef enum {
 extern int git_futils_rmdir_r(const char *path, const char *base, uint32_t flags);
 
 /**
+* Return a temporary directory name.
+* @return On success, a directory name, else NULL.
+*/
+extern char *git_futils_tmpdir(void);
+
+/**
  * Create and open a temporary file with a `_git2_` suffix.
  * Writes the filename into path_out.
  * @return On success, an open file descriptor, else an error code < 0.

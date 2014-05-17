@@ -19,6 +19,64 @@ int git_futils_mkpath2file(const char *file_path, const mode_t mode)
 		GIT_MKDIR_PATH | GIT_MKDIR_SKIP_LAST | GIT_MKDIR_VERIFY_DIR);
 }
 
+static int is_valid_tmp_path(const char *path)
+{
+	struct stat st;
+
+	if (p_stat(path, &st) != 0)
+		return 0;
+
+	if (!S_ISDIR(st.st_mode))
+		return 0;
+
+	return (p_access(path, W_OK) == 0);
+}
+
+char *git_futils_tmpdir()
+{
+	static char *tmpdir = NULL;
+
+	if (NULL == tmpdir) {
+
+#ifdef GIT_WIN32
+
+		static char tmpbuffer[GIT_PATH_MAX];
+		if (GetTempPathA(GIT_PATH_MAX, tmpbuffer)) {
+			git_path_mkposix(tmpbuffer);
+			return tmpdir = tmpbuffer;
+		}
+
+#else
+
+		static const char *env_tmp_vars[] = {
+			"TMPDIR", "TMP", "TEMP", "USERPROFILE"
+		};
+
+		size_t i;
+
+		for (i = 0; i < sizeof(env_tmp_vars) / sizeof(char *); ++i) {
+			const char *env = getenv(env_tmp_vars[i]);
+			if (!env)
+				continue;
+
+			if (is_valid_tmp_path(env))
+				return tmpdir = env;
+		}
+
+		/* If the environment doesn't say anything, try to use /tmp */
+		if (NULL == tmpdir && is_valid_tmp_path("/tmp"))
+			return tmpdir = "/tmp";
+
+#endif
+
+		// use empty as initialized but unknown
+		tmpdir = "";
+		return NULL;
+	}
+
+	return tmpdir[0] ? tmpdir : NULL;
+}
+
 int git_futils_mktmp(git_buf *path_out, const char *filename, mode_t mode)
 {
 	int fd;

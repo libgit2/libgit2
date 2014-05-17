@@ -251,7 +251,25 @@ int git_filebuf_open(git_filebuf *file, const char *path, int flags, mode_t mode
 		git_buf tmp_path = GIT_BUF_INIT;
 
 		/* Open the file as temporary for locking */
-		file->fd = git_futils_mktmp(&tmp_path, path, mode);
+		char *tmp_dir = git_futils_tmpdir();
+		if (NULL == tmp_dir)
+			file->fd = git_futils_mktmp(&tmp_path, path, mode);
+		else {
+			const char *basename;
+			git_buf tmp_buf = GIT_BUF_INIT;
+
+			basename = strrchr(path, '/');
+			if (NULL == basename)
+				basename = path;
+			else
+				++basename;
+
+			if (0 > git_buf_joinpath(&tmp_buf, tmp_dir, basename))
+				goto cleanup;
+
+			file->fd = git_futils_mktmp(&tmp_path, tmp_buf.ptr, mode);
+			git_buf_free(&tmp_buf);
+		}
 
 		if (file->fd < 0) {
 			git_buf_free(&tmp_path);
