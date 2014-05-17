@@ -1580,3 +1580,117 @@ void test_diff_workdir__can_update_index(void)
 
 	git_diff_free(diff);
 }
+
+#define STR7    "0123456"
+#define STR8    "01234567"
+#define STR40   STR8   STR8   STR8   STR8   STR8
+#define STR200  STR40  STR40  STR40  STR40  STR40
+#define STR999Z STR200 STR200 STR200 STR200 STR40 STR40 STR40 STR40 \
+	            STR8 STR8 STR8 STR8 STR7 "\0"
+#define STR1000 STR200 STR200 STR200 STR200 STR200
+#define STR3999Z STR1000 STR1000 STR1000 STR999Z
+#define STR4000 STR1000 STR1000 STR1000 STR1000
+
+static void assert_delta_binary(git_diff *diff, size_t idx, int is_binary)
+{
+	git_patch *patch;
+	const git_diff_delta *delta;
+
+	cl_git_pass(git_patch_from_diff(&patch, diff, idx));
+	delta = git_patch_get_delta(patch);
+	cl_assert_equal_b((delta->flags & GIT_DIFF_FLAG_BINARY), is_binary);
+	git_patch_free(patch);
+}
+
+void test_diff_workdir__binary_detection(void)
+{
+	git_index *idx;
+	git_diff *diff = NULL;
+	git_buf b = GIT_BUF_INIT;
+	int i;
+	git_buf data[10] = {
+		{ "1234567890", 0, 0 },         /* 0 - all ascii text control */
+		{ "Åü†HøπΩ", 0, 0 },            /* 1 - UTF-8 multibyte text */
+		{ "\xEF\xBB\xBFÜ⤒ƒ8£€", 0, 0 }, /* 2 - UTF-8 with BOM */
+		{ STR999Z, 0, 1000 },           /* 3 - ASCII with NUL at 1000 */
+		{ STR3999Z, 0, 4000 },          /* 4 - ASCII with NUL at 4000 */
+		{ STR4000 STR3999Z "x", 0, 8001 }, /* 5 - ASCII with NUL at 8000 */
+		{ STR4000 STR4000 "\0", 0, 8001 }, /* 6 - ASCII with NUL at 8001 */
+		{ "\x00\xDC\x00\x6E\x21\x39\xFE\x0E\x00\x63\x00\xF8"
+		  "\x00\x64\x00\x65\x20\x48", 0, 18 }, /* 7 - UTF-16 text */
+		{ "\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d"
+		  "\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d",
+		  0, 26 }, /* 8 - All non-printable characters (no NUL) */
+		{ "Hello \x01\x02\x03\x04\x05\x06 World!\x01\x02\x03\x04"
+		  "\x05\x06\x07", 0, 26 }, /* 9 - 50-50 non-printable (no NUL) */
+	};
+
+	g_repo = cl_git_sandbox_init("empty_standard_repo");
+	cl_git_pass(git_repository_index(&idx, g_repo));
+
+	/* We start with ASCII in index and test data in workdir,
+	 * then we will try with test data in index and ASCII in workdir.
+	 */
+
+	cl_git_pass(git_buf_sets(&b, "empty_standard_repo/0"));
+	for (i = 0; i < 10; ++i) {
+		b.ptr[b.size - 1] = '0' + i;
+		cl_git_mkfile(b.ptr, "baseline");
+		cl_git_pass(git_index_add_bypath(idx, &b.ptr[b.size - 1]));
+
+		if (data[i].size == 0)
+			data[i].size = strlen(data[i].ptr);
+		cl_git_write2file(
+			b.ptr, data[i].ptr, data[i].size, O_WRONLY|O_TRUNC, 0664);
+	}
+	git_index_write(idx);
+
+	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, NULL, NULL));
+
+	cl_assert_equal_i(10, git_diff_num_deltas(diff));
+
+	/* using diff binary detection (i.e. looking for NUL byte) */
+	assert_delta_binary(diff, 0, false);
+	assert_delta_binary(diff, 1, false);
+	assert_delta_binary(diff, 2, false);
+	assert_delta_binary(diff, 3, true);
+	assert_delta_binary(diff, 4, true);
+	assert_delta_binary(diff, 5, true);
+	assert_delta_binary(diff, 6, false);
+	assert_delta_binary(diff, 7, true);
+	assert_delta_binary(diff, 8, false);
+	assert_delta_binary(diff, 9, false);
+	/* The above have been checked to match command-line Git */
+
+	git_diff_free(diff);
+
+	cl_git_pass(git_buf_sets(&b, "empty_standard_repo/0"));
+	for (i = 0; i < 10; ++i) {
+		b.ptr[b.size - 1] = '0' + i;
+		cl_git_pass(git_index_add_bypath(idx, &b.ptr[b.size - 1]));
+
+		cl_git_write2file(b.ptr, "baseline\n", 9, O_WRONLY|O_TRUNC, 0664);
+	}
+	git_index_write(idx);
+
+	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, NULL, NULL));
+
+	cl_assert_equal_i(10, git_diff_num_deltas(diff));
+
+	/* using diff binary detection (i.e. looking for NUL byte) */
+	assert_delta_binary(diff, 0, false);
+	assert_delta_binary(diff, 1, false);
+	assert_delta_binary(diff, 2, false);
+	assert_delta_binary(diff, 3, true);
+	assert_delta_binary(diff, 4, true);
+	assert_delta_binary(diff, 5, true);
+	assert_delta_binary(diff, 6, false);
+	assert_delta_binary(diff, 7, true);
+	assert_delta_binary(diff, 8, false);
+	assert_delta_binary(diff, 9, false);
+
+	git_diff_free(diff);
+
+	git_index_free(idx);
+	git_buf_free(&b);
+}
