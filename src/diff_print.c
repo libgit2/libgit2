@@ -342,7 +342,7 @@ static int print_binary_hunk(diff_print_info *pi, git_blob *old, git_blob *new)
 		}
 	}
 
-	git_buf_printf(pi->buf, "%s %u\n", out_type, inflated_len);
+	git_buf_printf(pi->buf, "%s %lu\n", out_type, inflated_len);
 	pi->line.num_lines++;
 
 	for (ptr = out->ptr, remain = out->size; remain > 0; ) {
