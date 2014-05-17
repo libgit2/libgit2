@@ -110,7 +110,7 @@ int git_indexer_new(
 	git_indexer *idx;
 	git_buf path = GIT_BUF_INIT, tmp_path = GIT_BUF_INIT;
 	static const char suff[] = "/pack";
-	int error, fd;
+	int error, fd = -1;
 
 	idx = git__calloc(1, sizeof(git_indexer));
 	GITERR_CHECK_ALLOC(idx);
