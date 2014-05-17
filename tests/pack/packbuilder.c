@@ -17,6 +17,7 @@ static git_transfer_progress _stats;
 void test_pack_packbuilder__initialize(void)
 {
 	_repo = cl_git_sandbox_init("testrepo.git");
+	cl_git_pass(p_chdir("testrepo.git"));
 	cl_git_pass(git_revwalk_new(&_revwalker, _repo));
 	cl_git_pass(git_packbuilder_new(&_packbuilder, _repo));
 	cl_git_pass(git_vector_init(&_commits, 0, NULL));
@@ -46,6 +47,7 @@ void test_pack_packbuilder__cleanup(void)
 	git_indexer_free(_indexer);
 	_indexer = NULL;
 
+	p_chdir("..");
 	cl_git_sandbox_cleanup();
 	_repo = NULL;
 }
