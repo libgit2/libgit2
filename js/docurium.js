@@ -337,7 +337,23 @@ $(function() {
       var needs = _.map(data.used.needs, toPair, docurium)
       var fileLink = {name: data.file, url: docurium.github_file(data.file, data.line, data.lineto)}
 
-      this.set('data', {tname: tname, data: data, returns: returns, needs: needs, fileLink: fileLink})
+      // so it doesn't look crap, we build up a block with fields
+      // without a comment
+      var had_comment = false
+      var blocks = []
+      var tmp = []
+      _.each(data.fields, function(f) {
+	if (had_comment) {
+	  blocks.push(tmp)
+	  tmp = []
+	}
+
+	tmp.push(f)
+	had_comment = f.comments
+      })
+      blocks.push(tmp)
+
+      this.set('data', {tname: tname, data: data, blocks: blocks, returns: returns, needs: needs, fileLink: fileLink})
     }
   })
 
