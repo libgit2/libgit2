@@ -164,6 +164,39 @@ void test_online_clone__clone_into(void)
 	git_buf_free(&path);
 }
 
+void test_online_clone__clone_mirror(void)
+{
+	git_buf path = GIT_BUF_INIT;
+	git_remote *remote;
+	git_reference *head;
+	git_remote_callbacks callbacks = GIT_REMOTE_CALLBACKS_INIT;
+
+	bool fetch_progress_cb_was_called = false;
+
+	cl_git_pass(git_repository_init(&g_repo, "./foo.git", true));
+	cl_git_pass(git_remote_create(&remote, g_repo, "origin", LIVE_REPO_URL));
+
+	callbacks.transfer_progress = &fetch_progress;
+	callbacks.payload = &fetch_progress_cb_was_called;
+	git_remote_set_callbacks(remote, &callbacks);
+
+	git_remote_clear_refspecs(remote);
+	cl_git_pass(git_remote_add_fetch(remote, "+refs/*:refs/*"));
+
+	cl_git_pass(git_clone_into(g_repo, remote, NULL, NULL, NULL));
+
+	cl_git_pass(git_reference_lookup(&head, g_repo, "HEAD"));
+	cl_assert_equal_i(GIT_REF_SYMBOLIC, git_reference_type(head));
+	cl_assert_equal_s("refs/heads/master", git_reference_symbolic_target(head));
+
+	cl_assert_equal_i(true, fetch_progress_cb_was_called);
+
+	git_remote_free(remote);
+	git_reference_free(head);
+	git_buf_free(&path);
+	cl_fixture_cleanup("./foo.git");
+}
+
 static int update_tips(const char *refname, const git_oid *a, const git_oid *b, void *payload)
 {
 	int *callcount = (int*)payload;

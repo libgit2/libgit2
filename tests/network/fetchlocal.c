@@ -86,3 +86,29 @@ void test_network_fetchlocal__partial(void)
 	git_strarray_free(&refnames);
 	git_remote_free(origin);
 }
+
+void test_network_fetchlocal__clone_into_mirror(void)
+{
+	git_buf path = GIT_BUF_INIT;
+	git_repository *repo;
+	git_remote *remote;
+	git_reference *head;
+
+	cl_git_pass(git_repository_init(&repo, "./foo.git", true));
+	cl_git_pass(git_remote_create(&remote, repo, "origin", cl_git_fixture_url("testrepo.git")));
+
+	git_remote_clear_refspecs(remote);
+	cl_git_pass(git_remote_add_fetch(remote, "+refs/*:refs/*"));
+
+	cl_git_pass(git_clone_into(repo, remote, NULL, NULL, NULL));
+
+	cl_git_pass(git_reference_lookup(&head, repo, "HEAD"));
+	cl_assert_equal_i(GIT_REF_SYMBOLIC, git_reference_type(head));
+	cl_assert_equal_s("refs/heads/master", git_reference_symbolic_target(head));
+
+	git_remote_free(remote);
+	git_reference_free(head);
+	git_repository_free(repo);
+	git_buf_free(&path);
+	cl_fixture_cleanup("./foo.git");
+}
