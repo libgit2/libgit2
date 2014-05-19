@@ -171,6 +171,10 @@ static int update_head_to_new_branch(
 
 	git_reference_free(tracking_branch);
 
+	/* if it already existed, then the user's refspec created it for us, ignore it' */
+	if (error == GIT_EEXISTS)
+		error = 0;
+
 	return error;
 }
 
