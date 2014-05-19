@@ -336,25 +336,30 @@ static bool should_checkout(
 	return !git_repository_head_unborn(repo);
 }
 
-int git_clone_into(git_repository *repo, git_remote *remote, const git_checkout_options *co_opts, const char *branch, const git_signature *signature)
+int git_clone_into(git_repository *repo, git_remote *_remote, const git_checkout_options *co_opts, const char *branch, const git_signature *signature)
 {
 	int error = 0, old_fetchhead;
-	git_strarray refspecs;
 	git_buf reflog_message = GIT_BUF_INIT;
+	git_remote *remote;
+	const git_remote_callbacks *callbacks;
 
-	assert(repo && remote);
+	assert(repo && _remote);
 
 	if (!git_repository_is_empty(repo)) {
 		giterr_set(GITERR_INVALID, "the repository is not empty");
 		return -1;
 	}
 
-
-	if ((error = git_remote_get_fetch_refspecs(&refspecs, remote)) < 0)
+	if ((error = git_remote_dup(&remote, _remote)) < 0)
 		return error;
+
+	callbacks = git_remote_get_callbacks(_remote);
+	if (!giterr__check_version(callbacks, 1, "git_remote_callbacks") &&
+	    (error = git_remote_set_callbacks(remote, git_remote_get_callbacks(_remote))) < 0)
+		goto cleanup;
 
 	if ((error = git_remote_add_fetch(remote, "refs/tags/*:refs/tags/*")) < 0)
-		return error;
+		goto cleanup;
 
 	old_fetchhead = git_remote_update_fetchhead(remote);
 	git_remote_set_update_fetchhead(remote, 0);
@@ -375,15 +380,7 @@ int git_clone_into(git_repository *repo, git_remote *remote, const git_checkout_
 
 cleanup:
 	git_remote_set_update_fetchhead(remote, old_fetchhead);
-
-	/* Go back to the original refspecs */
-	{
-		int error_alt = git_remote_set_fetch_refspecs(remote, &refspecs);
-		if (!error)
-			error = error_alt;
-	}
-
-	git_strarray_free(&refspecs);
+	git_remote_free(remote);
 	git_buf_free(&reflog_message);
 
 	return error;
