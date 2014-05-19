@@ -139,7 +139,9 @@ static int crlf_apply_to_odb(
 			return GIT_PASSTHROUGH;
 
 		/* If safecrlf is enabled, sanity-check the result. */
-		if (stats.cr != stats.crlf || stats.lf != stats.crlf) {
+		if (stats.cr != stats.crlf ||
+			(stats.crlf > 0 && stats.lf != stats.crlf)) {
+
 			switch (ca->safe_crlf) {
 			case GIT_SAFE_CRLF_FAIL:
 				giterr_set(

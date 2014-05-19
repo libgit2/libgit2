@@ -103,12 +103,12 @@ void test_filter_crlf__with_safecrlf(void)
 	cl_git_fail(git_filter_list_apply_to_data(&out, fl, &in));
 	cl_assert_equal_i(giterr_last()->klass, GITERR_FILTER);
 
-	/* Normalized \n fails with safecrlf */
+	/* Normalized \n is reversible, so does not fail with safecrlf */
 	in.ptr = "Normal\nLF\nonly\nline-endings.\n";
 	in.size = strlen(in.ptr);
 
-	cl_git_fail(git_filter_list_apply_to_data(&out, fl, &in));
-	cl_assert_equal_i(giterr_last()->klass, GITERR_FILTER);
+	cl_git_pass(git_filter_list_apply_to_data(&out, fl, &in));
+	cl_assert_equal_s(in.ptr, out.ptr);
 
 	git_filter_list_free(fl);
 	git_buf_free(&out);
