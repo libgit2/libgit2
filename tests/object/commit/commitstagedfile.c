@@ -112,7 +112,7 @@ void test_object_commit_commitstagedfile__generate_predictable_object_ids(void)
 	cl_git_pass(git_tree_lookup(&tree, repo, &tree_oid));
 
 	memset(&buffer, 0, sizeof(git_buf));
-	cl_git_pass(git_message_prettify(&buffer, "Initial commit", 0));
+	cl_git_pass(git_message_prettify(&buffer, "Initial commit", 0, '#'));
 
 	cl_git_pass(git_commit_create_v(
 		&commit_oid,
