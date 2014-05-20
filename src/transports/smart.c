@@ -7,6 +7,7 @@
 #include "git2.h"
 #include "smart.h"
 #include "refs.h"
+#include "refspec.h"
 
 static int git_smart__recv_cb(gitno_buffer *buf)
 {
@@ -63,7 +64,7 @@ static int git_smart__set_callbacks(
 	return 0;
 }
 
-int git_smart__update_heads(transport_smart *t)
+int git_smart__update_heads(transport_smart *t, git_vector *symrefs)
 {
 	size_t i;
 	git_pkt *pkt;
@@ -81,6 +82,19 @@ int git_smart__update_heads(transport_smart *t)
 	return 0;
 }
 
+static void free_symrefs(git_vector *symrefs)
+{
+	git_refspec *spec;
+	size_t i;
+
+	git_vector_foreach(symrefs, i, spec) {
+		git_refspec__free(spec);
+		git__free(spec);
+	}
+
+	git_vector_free(symrefs);
+}
+
 static int git_smart__connect(
 	git_transport *transport,
 	const char *url,
@@ -94,6 +108,7 @@ static int git_smart__connect(
 	int error;
 	git_pkt *pkt;
 	git_pkt_ref *first;
+	git_vector symrefs;
 	git_smart_service_t service;
 
 	if (git_smart__reset_stream(t, true) < 0)
@@ -147,8 +162,11 @@ static int git_smart__connect(
 
 	first = (git_pkt_ref *)git_vector_get(&t->refs, 0);
 
+	if ((error = git_vector_init(&symrefs, 1, NULL)) < 0)
+		return error;
+
 	/* Detect capabilities */
-	if (git_smart__detect_caps(first, &t->caps) < 0)
+	if (git_smart__detect_caps(first, &t->caps, &symrefs) < 0)
 		return -1;
 
 	/* If the only ref in the list is capabilities^{} with OID_ZERO, remove it */
@@ -159,7 +177,9 @@ static int git_smart__connect(
 	}
 
 	/* Keep a list of heads for _ls */
-	git_smart__update_heads(t);
+	git_smart__update_heads(t, &symrefs);
+
+	free_symrefs(&symrefs);
 
 	if (t->rpc && git_smart__reset_stream(t, false) < 0)
 		return -1;
