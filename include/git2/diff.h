@@ -191,6 +191,9 @@ typedef enum {
 	 *  can apply given diff information to binary files.
 	 */
 	GIT_DIFF_SHOW_BINARY = (1 << 30),
+	
+	/** Include unreadable files in the diff */
+	GIT_DIFF_INCLUDE_UNREADABLE = (1 << 31),
 } git_diff_option_t;
 
 /**
@@ -237,6 +240,7 @@ typedef enum {
 	GIT_DELTA_IGNORED = 6,    /** entry is ignored item in workdir */
 	GIT_DELTA_UNTRACKED = 7,  /** entry is untracked item in workdir */
 	GIT_DELTA_TYPECHANGE = 8, /** type of entry changed between old and new */
+	GIT_DELTA_UNREADABLE = 9, /** entry is unreadable */
 } git_delta_t;
 
 /**

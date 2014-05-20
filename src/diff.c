@@ -92,6 +92,10 @@ static int diff_delta__from_one(
 	if (status == GIT_DELTA_UNTRACKED &&
 		DIFF_FLAG_ISNT_SET(diff, GIT_DIFF_INCLUDE_UNTRACKED))
 		return 0;
+	
+	if (status == GIT_DELTA_UNREADABLE &&
+		DIFF_FLAG_ISNT_SET(diff, GIT_DIFF_INCLUDE_UNREADABLE))
+		return 0;
 
 	if (!git_pathspec__match(
 			&diff->pathspec, entry->path,
@@ -201,6 +205,11 @@ static git_diff_delta *diff_delta__last_for_item(
 			git_oid__cmp(&delta->new_file.id, &item->id) == 0)
 			return delta;
 		break;
+	case GIT_DELTA_UNREADABLE:
+		if (diff->strcomp(delta->new_file.path, item->path) == 0 &&
+			git_oid__cmp(&delta->new_file.id, &item->id) == 0)
+			return delta;
+		break;
 	case GIT_DELTA_MODIFIED:
 		if (git_oid__cmp(&delta->old_file.id, &item->id) == 0 ||
 			git_oid__cmp(&delta->new_file.id, &item->id) == 0)
@@ -291,6 +300,10 @@ bool git_diff_delta__should_skip(
 
 	if (delta->status == GIT_DELTA_UNTRACKED &&
 		(flags & GIT_DIFF_INCLUDE_UNTRACKED) == 0)
+		return true;
+
+	if (delta->status == GIT_DELTA_UNREADABLE &&
+		(flags & GIT_DIFF_INCLUDE_UNREADABLE) == 0)
 		return true;
 
 	return false;
@@ -924,17 +937,22 @@ static int handle_unmatched_new_item(
 		if (recurse_into_dir) {
 			error = git_iterator_advance_into(&info->nitem, info->new_iter);
 
-			/* if real error or no error, proceed with iteration */
-			if (error != GIT_ENOTFOUND && error != GIT_EUNREADABLE)
-				return error;
-			giterr_clear();
+			printf("error advancing into diff %d\n", error);
+			if (error == GIT_EUNREADABLE) {
+				delta_type = GIT_DELTA_UNREADABLE;
+			} else {
+				/* if real error or no error, proceed with iteration */
+				if (error != GIT_ENOTFOUND)
+					return error;
+				giterr_clear();
 
-			/* if directory is empty, can't advance into it, so either skip
-			 * it or ignore it
-			 */
-			if (contains_oitem && error != GIT_EUNREADABLE)
-				return git_iterator_advance(&info->nitem, info->new_iter);
-			delta_type = GIT_DELTA_IGNORED;
+				/* if directory is empty, can't advance into it, so either skip
+				 * it or ignore it
+				 */
+				if (contains_oitem )
+					return git_iterator_advance(&info->nitem, info->new_iter);
+				delta_type = GIT_DELTA_IGNORED;
+			}
 		}
 	}
 

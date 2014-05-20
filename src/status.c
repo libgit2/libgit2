@@ -62,6 +62,9 @@ static unsigned int workdir_delta2status(
 	case GIT_DELTA_UNTRACKED:
 		st = GIT_STATUS_WT_NEW;
 		break;
+	case GIT_DELTA_UNREADABLE:
+		st = GIT_STATUS_WT_UNREADABLE;
+		break;
 	case GIT_DELTA_DELETED:
 		st = GIT_STATUS_WT_DELETED;
 		break;

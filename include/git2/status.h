@@ -43,6 +43,7 @@ typedef enum {
 	GIT_STATUS_WT_DELETED       = (1u << 9),
 	GIT_STATUS_WT_TYPECHANGE    = (1u << 10),
 	GIT_STATUS_WT_RENAMED       = (1u << 11),
+	GIT_STATUS_WT_UNREADABLE    = (1u << 12),
 
 	GIT_STATUS_IGNORED          = (1u << 14),
 } git_status_t;
