@@ -925,14 +925,14 @@ static int handle_unmatched_new_item(
 			error = git_iterator_advance_into(&info->nitem, info->new_iter);
 
 			/* if real error or no error, proceed with iteration */
-			if (error != GIT_ENOTFOUND)
+			if (error != GIT_ENOTFOUND && error != GIT_EUNREADABLE)
 				return error;
 			giterr_clear();
 
 			/* if directory is empty, can't advance into it, so either skip
 			 * it or ignore it
 			 */
-			if (contains_oitem)
+			if (contains_oitem && error != GIT_EUNREADABLE)
 				return git_iterator_advance(&info->nitem, info->new_iter);
 			delta_type = GIT_DELTA_IGNORED;
 		}
@@ -981,7 +981,7 @@ static int handle_unmatched_new_item(
 	}
 
 	/* Actually create the record for this item if necessary */
-	if ((error = diff_delta__from_one(diff, delta_type, nitem)) != 0)
+	if (error != GIT_EUNREADABLE && (error = diff_delta__from_one(diff, delta_type, nitem)) != 0)
 		return error;
 
 	/* If user requested TYPECHANGE records, then check for that instead of
