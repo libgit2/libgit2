@@ -75,6 +75,25 @@ int git_smart__update_heads(transport_smart *t, git_vector *symrefs)
 		if (pkt->type != GIT_PKT_REF)
 			continue;
 
+		if (symrefs) {
+			git_refspec *spec;
+			git_buf buf = GIT_BUF_INIT;
+			size_t j;
+			int error;
+
+			git_vector_foreach(symrefs, j, spec) {
+				git_buf_clear(&buf);
+				if (git_refspec_src_matches(spec, ref->head.name) &&
+				    !(error = git_refspec_transform(&buf, spec, ref->head.name)))
+					ref->head.symref_target = git_buf_detach(&buf);
+			}
+
+			git_buf_free(&buf);
+
+			if (error < 0)
+				return error;
+		}
+
 		if (git_vector_insert(&t->heads, &ref->head) < 0)
 			return -1;
 	}
