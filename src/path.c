@@ -560,14 +560,10 @@ int git_path_set_error(int errno_value, const char *path, const char *action)
 	case EEXIST:
 		giterr_set(GITERR_OS, "Failed %s - '%s' already exists", action, path);
 		return GIT_EEXISTS;
-
-	case EACCES:
-		giterr_set(GITERR_OS, "Failed %s - '%s' permission denied", action, path);
-		return GIT_ENOACCESS;
-
+		
 	default:
 		giterr_set(GITERR_OS, "Could not %s '%s'", action, path);
-		return -1;
+		return GIT_EUNREADABLE;
 	}
 }
 
@@ -1108,12 +1104,13 @@ int git_path_dirload_with_stat(
 
 		if ((error = git_buf_joinpath(&full, full.ptr, ps->path)) < 0 ||
 			(error = git_path_lstat(full.ptr, &ps->st)) < 0) {
-			if (error == GIT_ENOTFOUND || error == GIT_ENOACCESS) {
+			if (error == GIT_ENOTFOUND) {
 				giterr_clear();
 				error = 0;
 				git_vector_remove(contents, i--);
 				continue;
 			}
+			
 			break;
 		}
 
