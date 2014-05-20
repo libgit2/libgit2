@@ -51,6 +51,8 @@
 
 #define GIT_REFNAME_MAX 1024
 
+typedef char git_refname_t[GIT_REFNAME_MAX];
+
 struct git_reference {
 	git_refdb *db;
 	git_ref_t type;

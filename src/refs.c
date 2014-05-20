@@ -159,8 +159,7 @@ int git_reference_name_to_id(
 }
 
 static int reference_normalize_for_repo(
-	char *out,
-	size_t out_size,
+	git_refname_t out,
 	git_repository *repo,
 	const char *name)
 {
@@ -171,7 +170,7 @@ static int reference_normalize_for_repo(
 		precompose)
 		flags |= GIT_REF_FORMAT__PRECOMPOSE_UNICODE;
 
-	return git_reference_normalize_name(out, out_size, name, flags);
+	return git_reference_normalize_name(out, GIT_REFNAME_MAX, name, flags);
 }
 
 int git_reference_lookup_resolved(
@@ -180,7 +179,7 @@ int git_reference_lookup_resolved(
 	const char *name,
 	int max_nesting)
 {
-	char scan_name[GIT_REFNAME_MAX];
+	git_refname_t scan_name;
 	git_ref_t scan_type;
 	int error = 0, nesting;
 	git_reference *ref = NULL;
@@ -197,8 +196,7 @@ int git_reference_lookup_resolved(
 
 	scan_type = GIT_REF_SYMBOLIC;
 
-	if ((error = reference_normalize_for_repo(
-			scan_name, sizeof(scan_name), repo, name)) < 0)
+	if ((error = reference_normalize_for_repo(scan_name, repo, name)) < 0)
 		return error;
 
 	if ((error = git_repository_refdb__weakptr(&refdb, repo)) < 0)
@@ -354,7 +352,7 @@ static int reference__create(
 	const git_oid *old_id,
 	const char *old_target)
 {
-	char normalized[GIT_REFNAME_MAX];
+	git_refname_t normalized;
 	git_refdb *refdb;
 	git_reference *ref = NULL;
 	int error = 0;
@@ -365,7 +363,7 @@ static int reference__create(
 	if (ref_out)
 		*ref_out = NULL;
 
-	error = reference_normalize_for_repo(normalized, sizeof(normalized), repo, name);
+	error = reference_normalize_for_repo(normalized, repo, name);
 	if (error < 0)
 		return error;
 
@@ -390,10 +388,9 @@ static int reference__create(
 
 		ref = git_reference__alloc(normalized, oid, NULL);
 	} else {
-		char normalized_target[GIT_REFNAME_MAX];
+		git_refname_t normalized_target;
 
-		if ((error = reference_normalize_for_repo(
-			normalized_target, sizeof(normalized_target), repo, symbolic)) < 0)
+		if ((error = reference_normalize_for_repo(normalized_target, repo, symbolic)) < 0)
 			return error;
 
 		ref = git_reference__alloc_symbolic(normalized, normalized_target);
@@ -569,14 +566,14 @@ int git_reference_symbolic_set_target(
 static int reference__rename(git_reference **out, git_reference *ref, const char *new_name, int force,
 				 const git_signature *signature, const char *message)
 {
-	char normalized[GIT_REFNAME_MAX];
+	git_refname_t normalized;
 	bool should_head_be_updated = false;
 	int error = 0;
 
 	assert(ref && new_name && signature);
 
 	if ((error = reference_normalize_for_repo(
-			normalized, sizeof(normalized), git_reference_owner(ref), new_name)) < 0)
+			normalized, git_reference_owner(ref), new_name)) < 0)
 		return error;
 
 
