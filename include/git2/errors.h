@@ -41,7 +41,6 @@ typedef enum {
 	GIT_EMERGECONFLICT  = -13,	/*< Merge conflicts prevented operation */
 	GIT_ELOCKED         = -14,	/*< Lock file prevented operation */
 	GIT_EMODIFIED       = -15,	/*< Reference value does not match expected */
-	GIT_EUNREADABLE     = -16,	/*< File or folder is unreadable */
 
 	GIT_PASSTHROUGH     = -30,	/*< Internal only */
 	GIT_ITEROVER        = -31,	/*< Signals end of iteration with iterator */

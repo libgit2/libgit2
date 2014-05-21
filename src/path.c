@@ -560,10 +560,10 @@ int git_path_set_error(int errno_value, const char *path, const char *action)
 	case EEXIST:
 		giterr_set(GITERR_OS, "Failed %s - '%s' already exists", action, path);
 		return GIT_EEXISTS;
-		
+
 	default:
 		giterr_set(GITERR_OS, "Could not %s '%s'", action, path);
-		return GIT_EUNREADABLE;
+		return -1;
 	}
 }
 
@@ -1108,6 +1108,13 @@ int git_path_dirload_with_stat(
 				giterr_clear();
 				error = 0;
 				git_vector_remove(contents, i--);
+				continue;
+			}
+			/* Treat the file as unreadable if we get any other error */
+			if (error != 0) {
+				giterr_clear();
+				error = 0;
+				ps->st.st_mode = GIT_FILEMODE_UNREADABLE;
 				continue;
 			}
 			

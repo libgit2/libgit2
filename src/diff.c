@@ -937,22 +937,17 @@ static int handle_unmatched_new_item(
 		if (recurse_into_dir) {
 			error = git_iterator_advance_into(&info->nitem, info->new_iter);
 
-			printf("error advancing into diff %d\n", error);
-			if (error == GIT_EUNREADABLE) {
-				delta_type = GIT_DELTA_UNREADABLE;
-			} else {
-				/* if real error or no error, proceed with iteration */
-				if (error != GIT_ENOTFOUND)
-					return error;
-				giterr_clear();
+			/* if real error or no error, proceed with iteration */
+			if (error != GIT_ENOTFOUND)
+				return error;
+			giterr_clear();
 
-				/* if directory is empty, can't advance into it, so either skip
-				 * it or ignore it
-				 */
-				if (contains_oitem )
-					return git_iterator_advance(&info->nitem, info->new_iter);
-				delta_type = GIT_DELTA_IGNORED;
-			}
+			/* if directory is empty, can't advance into it, so either skip
+			 * it or ignore it
+			 */
+			if (contains_oitem )
+				return git_iterator_advance(&info->nitem, info->new_iter);
+			delta_type = GIT_DELTA_IGNORED;
 		}
 	}
 
@@ -998,8 +993,12 @@ static int handle_unmatched_new_item(
 		}
 	}
 
+	else if (nitem->mode == GIT_FILEMODE_UNREADABLE) {
+		delta_type = GIT_DELTA_UNREADABLE;
+	}
+
 	/* Actually create the record for this item if necessary */
-	if (error != GIT_EUNREADABLE && (error = diff_delta__from_one(diff, delta_type, nitem)) != 0)
+	if ((error = diff_delta__from_one(diff, delta_type, nitem)) != 0)
 		return error;
 
 	/* If user requested TYPECHANGE records, then check for that instead of
