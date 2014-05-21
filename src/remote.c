@@ -1885,3 +1885,50 @@ int git_remote_delete(git_remote *remote)
 
 	return 0;
 }
+
+int git_remote_default_branch(git_buf *out, git_remote *remote)
+{
+	const git_remote_head **heads;
+	const git_remote_head *guess = NULL;
+	const git_oid *head_id;
+	size_t heads_len, i;
+	int error;
+
+	if ((error = git_remote_ls(&heads, &heads_len, remote)) < 0)
+		return error;
+
+	if (heads_len == 0)
+		return GIT_ENOTFOUND;
+
+	git_buf_sanitize(out);
+	/* the first one must be HEAD so if that has the symref info, we're done */
+	if (heads[0]->symref_target)
+		return git_buf_puts(out, heads[0]->symref_target);
+
+	/*
+	 * If there's no symref information, we have to look over them
+	 * and guess. We return the first match unless the master
+	 * branch is a candidate. Then we return the master branch.
+	 */
+	head_id = &heads[0]->oid;
+
+	for (i = 1; i < heads_len; i++) {
+		if (git_oid_cmp(head_id, &heads[i]->oid))
+			continue;
+
+		if (!guess) {
+			guess = heads[i];
+			continue;
+		}
+
+		if (!git__strcmp(GIT_REFS_HEADS_MASTER_FILE, heads[i]->name)) {
+			guess = heads[i];
+			break;
+		}
+	}
+
+	if (!guess)
+		return GIT_ENOTFOUND;
+
+	return git_buf_puts(out, guess->name);
+}
