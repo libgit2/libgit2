@@ -342,7 +342,7 @@ static bool should_checkout(
 
 int git_clone_into(git_repository *repo, git_remote *_remote, const git_checkout_options *co_opts, const char *branch, const git_signature *signature)
 {
-	int error = 0, old_fetchhead;
+	int error;
 	git_buf reflog_message = GIT_BUF_INIT;
 	git_remote *remote;
 	const git_remote_callbacks *callbacks;
@@ -359,13 +359,12 @@ int git_clone_into(git_repository *repo, git_remote *_remote, const git_checkout
 
 	callbacks = git_remote_get_callbacks(_remote);
 	if (!giterr__check_version(callbacks, 1, "git_remote_callbacks") &&
-	    (error = git_remote_set_callbacks(remote, git_remote_get_callbacks(_remote))) < 0)
+	    (error = git_remote_set_callbacks(remote, callbacks)) < 0)
 		goto cleanup;
 
 	if ((error = git_remote_add_fetch(remote, "refs/tags/*:refs/tags/*")) < 0)
 		goto cleanup;
 
-	old_fetchhead = git_remote_update_fetchhead(remote);
 	git_remote_set_update_fetchhead(remote, 0);
 	git_buf_printf(&reflog_message, "clone: from %s", git_remote_url(remote));
 
@@ -383,7 +382,6 @@ int git_clone_into(git_repository *repo, git_remote *_remote, const git_checkout
 		error = git_checkout_head(repo, co_opts);
 
 cleanup:
-	git_remote_set_update_fetchhead(remote, old_fetchhead);
 	git_remote_free(remote);
 	git_buf_free(&reflog_message);
 
