@@ -2564,7 +2564,7 @@ done:
 	return error;
 }
 
-int merge_config(git_merge_config_t *out, git_repository *repo)
+static int merge_config(git_merge_config_t *out, git_repository *repo)
 {
 	git_config *config;
 	const char *value;
