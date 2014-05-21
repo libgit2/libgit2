@@ -272,6 +272,18 @@ static int git_smart__close(git_transport *transport)
 	unsigned int i;
 	git_pkt *p;
 	int ret;
+	git_smart_subtransport_stream *stream;
+	const char flush[] = "0000";
+
+	/*
+	 * If we're still connected at this point and not using RPC,
+	 * we should say goodbye by sending a flush, or git-daemon
+	 * will complain that we disconnected unexpectedly.
+	 */
+	if (t->connected && !t->rpc &&
+	    !t->wrapped->action(&stream, t->wrapped, t->url, GIT_SERVICE_UPLOADPACK)) {
+		t->current_stream->write(t->current_stream, flush, 4);
+	}
 
 	ret = git_smart__reset_stream(t, true);
 
