@@ -108,50 +108,9 @@ static int create_tracking_branch(
 struct head_info {
 	git_repository *repo;
 	git_oid remote_head_oid;
-	git_buf branchname;
 	const git_refspec *refspec;
 	bool found;
 };
-
-static int reference_matches_remote_head(
-	const char *reference_name,
-	void *payload)
-{
-	struct head_info *head_info = (struct head_info *)payload;
-	git_oid oid;
-	int error;
-
-	/* TODO: Should we guard against references
-	 * which name doesn't start with refs/heads/ ?
-	 */
-
-	error = git_reference_name_to_id(&oid, head_info->repo, reference_name);
-	if (error == GIT_ENOTFOUND) {
-		/* If the reference doesn't exists, it obviously cannot match the
-		 * expected oid. */
-		giterr_clear();
-		return 0;
-	}
-
-	if (!error && !git_oid__cmp(&head_info->remote_head_oid, &oid)) {
-		/* Determine the local reference name from the remote tracking one */
-		error = git_refspec_rtransform(
-			&head_info->branchname, head_info->refspec, reference_name);
-
-		if (!error &&
-			git_buf_len(&head_info->branchname) > 0 &&
-			!(error = git_buf_sets(
-				&head_info->branchname,
-				git_buf_cstr(&head_info->branchname) +
-				strlen(GIT_REFS_HEADS_DIR))))
-		{
-			head_info->found = true;
-			error = GIT_ITEROVER;
-		}
-	}
-
-	return error;
-}
 
 static int update_head_to_new_branch(
 	git_repository *repo,
@@ -161,6 +120,10 @@ static int update_head_to_new_branch(
 	const char *reflog_message)
 {
 	git_reference *tracking_branch = NULL;
+
+	if (!git__prefixcmp(name, GIT_REFS_HEADS_DIR))
+		name += strlen(GIT_REFS_HEADS_DIR);
+
 	int error = create_tracking_branch(&tracking_branch, repo, target, name,
 			signature, reflog_message);
 
@@ -190,6 +153,7 @@ static int update_head_to_remote(
 	const git_remote_head *remote_head, **refs;
 	struct head_info head_info;
 	git_buf remote_master_name = GIT_BUF_INIT;
+	git_buf branch = GIT_BUF_INIT;
 
 	if ((error = git_remote_ls(&refs, &refs_len, remote)) < 0)
 		return error;
@@ -199,15 +163,22 @@ static int update_head_to_remote(
 		return setup_tracking_config(
 			repo, "master", GIT_REMOTE_ORIGIN, GIT_REFS_HEADS_MASTER_FILE);
 
+	memset(&head_info, 0, sizeof(head_info));
+	error = git_remote_default_branch(&branch, remote);
+	if (error == GIT_ENOTFOUND) {
+		git_buf_puts(&branch, GIT_REFS_HEADS_MASTER_FILE);
+	} else {
+		head_info.found = 1;
+	}
+
 	/* Get the remote's HEAD. This is always the first ref in the list. */
 	remote_head = refs[0];
 	assert(remote_head);
 
-	memset(&head_info, 0, sizeof(head_info));
 	git_oid_cpy(&head_info.remote_head_oid, &remote_head->oid);
 	head_info.repo = repo;
 	head_info.refspec =
-		git_remote__matching_refspec(remote, GIT_REFS_HEADS_MASTER_FILE);
+		git_remote__matching_refspec(remote, git_buf_cstr(&branch));
 
 	if (head_info.refspec == NULL) {
 		memset(&dummy_spec, 0, sizeof(git_refspec));
@@ -218,35 +189,14 @@ static int update_head_to_remote(
 	if ((error = git_refspec_transform(
 		&remote_master_name,
 		head_info.refspec,
-		GIT_REFS_HEADS_MASTER_FILE)) < 0)
+		git_buf_cstr(&branch))) < 0)
 		return error;
 
-	/* Check to see if the remote HEAD points to the remote master */
-	error = reference_matches_remote_head(
-		git_buf_cstr(&remote_master_name), &head_info);
-	if (error < 0 && error != GIT_ITEROVER)
-		goto cleanup;
-
 	if (head_info.found) {
 		error = update_head_to_new_branch(
 			repo,
 			&head_info.remote_head_oid,
-			git_buf_cstr(&head_info.branchname),
-			signature, reflog_message);
-		goto cleanup;
-	}
-
-	/* Not master. Check all the other refs. */
-	error = git_reference_foreach_name(
-		repo, reference_matches_remote_head, &head_info);
-	if (error < 0 && error != GIT_ITEROVER)
-		goto cleanup;
-
-	if (head_info.found) {
-		error = update_head_to_new_branch(
-			repo,
-			&head_info.remote_head_oid,
-			git_buf_cstr(&head_info.branchname),
+			git_buf_cstr(&branch),
 			signature, reflog_message);
 	} else {
 		error = git_repository_set_head_detached(
@@ -255,7 +205,7 @@ static int update_head_to_remote(
 
 cleanup:
 	git_buf_free(&remote_master_name);
-	git_buf_free(&head_info.branchname);
+	git_buf_free(&branch);
 	return error;
 }
 
