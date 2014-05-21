@@ -2572,7 +2572,7 @@ int merge_config(git_merge_config_t *out, git_repository *repo)
 
 	*out = GIT_MERGE_CONFIG_NONE;
 
-	if ((error = git_repository_config(&config, repo)) < 0)
+	if ((error = git_repository_config_snapshot(&config, repo)) < 0)
 		goto done;
 
 	if ((error = git_config_get_string(&value, config, "merge.ff")) < 0) {
