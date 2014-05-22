@@ -378,8 +378,8 @@ GIT_EXTERN(int) git_merge_head_from_id(
 /**
  * Gets the commit ID that the given `git_merge_head` refers to.
  *
- * @param id pointer to commit id to be filled in
  * @param head the given merge head
+ * @return commit id
  */
 GIT_EXTERN(const git_oid *) git_merge_head_id(
 	const git_merge_head *head);
@@ -424,8 +424,8 @@ GIT_EXTERN(int) git_merge_file(
  * @param out The git_merge_file_result to be filled in
  * @param repo The repository
  * @param ancestor The index entry for the ancestor file (stage level 1)
- * @param our_path The index entry for our file (stage level 2)
- * @param their_path The index entry for their file (stage level 3)
+ * @param ours The index entry for our file (stage level 2)
+ * @param theirs The index entry for their file (stage level 3)
  * @param opts The merge file options or NULL
  * @return 0 on success or error code
  */
@@ -497,8 +497,8 @@ GIT_EXTERN(int) git_merge_commits(
  * completes, resolve any conflicts and prepare a commit.
  *
  * @param repo the repository to merge
- * @param merge_heads the heads to merge into
- * @param merge_heads_len the number of heads to merge
+ * @param their_heads the heads to merge into
+ * @param their_heads_len the number of heads to merge
  * @param merge_opts merge options
  * @param checkout_opts checkout options
  * @return 0 on success or error code
