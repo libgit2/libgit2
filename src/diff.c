@@ -747,6 +747,11 @@ static int maybe_modified(
 	else if (GIT_MODE_TYPE(omode) != GIT_MODE_TYPE(nmode)) {
 		if (DIFF_FLAG_IS_SET(diff, GIT_DIFF_INCLUDE_TYPECHANGE))
 			status = GIT_DELTA_TYPECHANGE;
+		else if (nmode == GIT_FILEMODE_UNREADABLE) {
+			if (!(error = diff_delta__from_one(diff, GIT_DELTA_DELETED, oitem)))
+				error = diff_delta__from_one(diff, GIT_DELTA_UNREADABLE, nitem);
+			return error;
+		}
 		else {
 			if (!(error = diff_delta__from_one(diff, GIT_DELTA_DELETED, oitem)))
 				error = diff_delta__from_one(diff, GIT_DELTA_ADDED, nitem);
