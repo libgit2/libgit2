@@ -938,7 +938,7 @@ void test_status_worktree__update_stat_cache_0(void)
 
 void test_status_worktree__nopermissions(void)
 {
-	const char *expected_paths[] = { "empty_standard_repo/no_permission" };
+	const char *expected_paths[] = { "empty_standard_repo/no_permission/foo" };
 	const unsigned int expected_statuses[] = {GIT_STATUS_WT_UNREADABLE};
 
 	git_repository *repo = cl_git_sandbox_init("empty_standard_repo");
@@ -956,7 +956,7 @@ void test_status_worktree__nopermissions(void)
 	counts.debug = 1;
 
 	opts.show = GIT_STATUS_SHOW_WORKDIR_ONLY;
-	opts.flags = GIT_STATUS_OPT_DEFAULTS;
+	opts.flags = GIT_STATUS_OPT_DEFAULTS | GIT_DIFF_INCLUDE_UNREADABLE;
 
 	cl_git_pass(
 		git_status_foreach_ext(repo, &opts, cb_status__normal, &counts) );
