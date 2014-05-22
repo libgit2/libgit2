@@ -623,6 +623,24 @@ GIT_EXTERN(int) git_remote_is_valid_name(const char *remote_name);
 */
 GIT_EXTERN(int) git_remote_delete(git_remote *remote);
 
+/**
+ * Retrieve the name of the remote's default branch
+ *
+ * The default branch of a repository is the branch which HEAD points
+ * to. If the remote does not support reporting this information
+ * directly, it performs the guess as git does; that is, if there are
+ * multiple branches which point to the same commit, the first one is
+ * chosen. If the master branch is a candidate, it wins.
+ *
+ * This function must only be called after connecting.
+ *
+ * @param out the buffern in which to store the reference name
+ * @param remote the remote
+ * @return 0, GIT_ENOTFOUND if the remote does not have any references
+ * or none of them point to HEAD's commit, or an error message.
+ */
+GIT_EXTERN(int) git_remote_default_branch(git_buf *out, git_remote *remote);
+
 /** @} */
 GIT_END_DECL
 #endif
