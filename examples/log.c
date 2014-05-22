@@ -54,7 +54,7 @@ struct log_options {
 	int min_parents, max_parents;
 	git_time_t before;
 	git_time_t after;
-	char *author;
+	const char *author;
 	char *committer;
 };
 
@@ -75,6 +75,7 @@ int main(int argc, char *argv[])
 	git_oid oid;
 	git_commit *commit = NULL;
 	git_pathspec *ps = NULL;
+	const git_signature *sig;
 
 	git_threads_init();
 
@@ -125,6 +126,12 @@ int main(int argc, char *argv[])
 			}
 
 			if (unmatched > 0)
+				continue;
+		}
+
+		if (opt.author != NULL) {
+			if ((sig = git_commit_author(commit)) == NULL ||
+				strstr(sig->name, opt.author) == NULL)
 				continue;
 		}
 
@@ -401,6 +408,8 @@ static int parse_options(
 			set_sorting(s, GIT_SORT_TOPOLOGICAL);
 		else if (!strcmp(a, "--reverse"))
 			set_sorting(s, GIT_SORT_REVERSE);
+		else if (match_str_arg(&opt->author, &args, "--author"))
+			/** Found valid --author */;
 		else if (match_str_arg(&s->repodir, &args, "--git-dir"))
 			/** Found git-dir. */;
 		else if (match_int_arg(&opt->skip, &args, "--skip", 0))
