@@ -40,6 +40,13 @@ typedef struct {
 		have_refs : 1;
 } transport_local;
 
+static void free_head(git_remote_head *head)
+{
+	git__free(head->name);
+	git__free(head->symref_target);
+	git__free(head);
+}
+
 static int add_ref(transport_local *t, const char *name)
 {
 	const char peeled[] = "^{}";
@@ -83,8 +90,7 @@ static int add_ref(transport_local *t, const char *name)
 	git_reference_free(ref);
 
 	if ((error = git_vector_insert(&t->refs, head)) < 0) {
-		git__free(head->name);
-		git__free(head);
+		free_head(head);
 		return error;
 	}
 
@@ -117,8 +123,7 @@ static int add_ref(transport_local *t, const char *name)
 		git_oid_cpy(&head->oid, git_object_id(target));
 
 		if ((error = git_vector_insert(&t->refs, head)) < 0) {
-			git__free(head->name);
-			git__free(head);
+			free_head(head);
 		}
 	}
 
@@ -640,10 +645,8 @@ static void local_free(git_transport *transport)
 	size_t i;
 	git_remote_head *head;
 
-	git_vector_foreach(&t->refs, i, head) {
-		git__free(head->name);
-		git__free(head);
-	}
+	git_vector_foreach(&t->refs, i, head)
+		free_head(head);
 
 	git_vector_free(&t->refs);
 

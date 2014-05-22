@@ -26,17 +26,16 @@ int git_smart__store_refs(transport_smart *t, int flushes)
 	int error, flush = 0, recvd;
 	const char *line_end = NULL;
 	git_pkt *pkt = NULL;
-	git_pkt_ref *ref;
 	size_t i;
 
 	/* Clear existing refs in case git_remote_connect() is called again
 	 * after git_remote_disconnect().
 	 */
-	git_vector_foreach(refs, i, ref) {
-		git__free(ref->head.name);
-		git__free(ref);
+	git_vector_foreach(refs, i, pkt) {
+		git_pkt_free(pkt);
 	}
 	git_vector_clear(refs);
+	pkt = NULL;
 
 	do {
 		if (buf->offset > 0)

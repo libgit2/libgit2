@@ -113,11 +113,12 @@ static int update_head_to_new_branch(
 	const char *reflog_message)
 {
 	git_reference *tracking_branch = NULL;
+	int error;
 
 	if (!git__prefixcmp(name, GIT_REFS_HEADS_DIR))
 		name += strlen(GIT_REFS_HEADS_DIR);
 
-	int error = create_tracking_branch(&tracking_branch, repo, target, name,
+	error = create_tracking_branch(&tracking_branch, repo, target, name,
 			signature, reflog_message);
 
 	if (!error)
