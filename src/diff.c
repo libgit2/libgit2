@@ -200,12 +200,8 @@ static git_diff_delta *diff_delta__last_for_item(
 		if (git_oid__cmp(&delta->new_file.id, &item->id) == 0)
 			return delta;
 		break;
-	case GIT_DELTA_UNTRACKED:
-		if (diff->strcomp(delta->new_file.path, item->path) == 0 &&
-			git_oid__cmp(&delta->new_file.id, &item->id) == 0)
-			return delta;
-		break;
 	case GIT_DELTA_UNREADABLE:
+	case GIT_DELTA_UNTRACKED:
 		if (diff->strcomp(delta->new_file.path, item->path) == 0 &&
 			git_oid__cmp(&delta->new_file.id, &item->id) == 0)
 			return delta;
