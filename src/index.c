@@ -1104,12 +1104,26 @@ int git_index_remove_bypath(git_index *index, const char *path)
 	return 0;
 }
 
+static bool valid_filemode(const int filemode)
+{
+	return (filemode == GIT_FILEMODE_BLOB ||
+		filemode == GIT_FILEMODE_BLOB_EXECUTABLE ||
+		filemode == GIT_FILEMODE_LINK ||
+		filemode == GIT_FILEMODE_COMMIT);
+}
+
+
 int git_index_add(git_index *index, const git_index_entry *source_entry)
 {
 	git_index_entry *entry = NULL;
 	int ret;
 
 	assert(index && source_entry && source_entry->path);
+
+	if (!valid_filemode(source_entry->mode)) {
+		giterr_set(GITERR_INDEX, "invalid filemode");
+		return -1;
+	}
 
 	if ((ret = index_entry_dup(&entry, source_entry)) < 0 ||
 		(ret = index_insert(index, &entry, 1)) < 0)
