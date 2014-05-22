@@ -967,5 +967,4 @@ void test_status_worktree__nopermissions(void)
 	cl_assert_equal_i(counts.expected_entry_count, counts.entry_count);
 	cl_assert_equal_i(0, counts.wrong_status_flags_count);
 	cl_assert_equal_i(0, counts.wrong_sorted_path);
-
 }
