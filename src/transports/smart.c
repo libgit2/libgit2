@@ -79,7 +79,7 @@ int git_smart__update_heads(transport_smart *t, git_vector *symrefs)
 			git_refspec *spec;
 			git_buf buf = GIT_BUF_INIT;
 			size_t j;
-			int error;
+			int error = 0;
 
 			git_vector_foreach(symrefs, j, spec) {
 				git_buf_clear(&buf);
