@@ -44,6 +44,7 @@ struct log_state {
 
 /** utility functions that are called to configure the walker */
 static void set_sorting(struct log_state *s, unsigned int sort_mode);
+static int signature_does_not_match(const git_signature *sig, const char *filter);
 static void push_rev(struct log_state *s, git_object *obj, int hide);
 static int add_revision(struct log_state *s, const char *revstr);
 
@@ -55,7 +56,7 @@ struct log_options {
 	git_time_t before;
 	git_time_t after;
 	const char *author;
-	char *committer;
+	const char *committer;
 };
 
 /** utility functions that parse options and help with log output */
@@ -75,7 +76,6 @@ int main(int argc, char *argv[])
 	git_oid oid;
 	git_commit *commit = NULL;
 	git_pathspec *ps = NULL;
-	const git_signature *sig;
 
 	git_threads_init();
 
@@ -129,11 +129,11 @@ int main(int argc, char *argv[])
 				continue;
 		}
 
-		if (opt.author != NULL) {
-			if ((sig = git_commit_author(commit)) == NULL ||
-				strstr(sig->name, opt.author) == NULL)
-				continue;
-		}
+		if (signature_does_not_match(git_commit_author(commit), opt.author))
+			continue;
+
+		if (signature_does_not_match(git_commit_committer(commit), opt.committer))
+			continue;
 
 		if (count++ < opt.skip)
 			continue;
@@ -176,6 +176,18 @@ int main(int argc, char *argv[])
 	git_repository_free(s.repo);
 	git_threads_shutdown();
 
+	return 0;
+}
+
+/** Determine if the given git_signature does not contain the filter text. */
+static int signature_does_not_match(const git_signature *sig, const char *filter) {
+	if (filter == NULL)
+		return 0;
+
+	if (sig == NULL ||
+		(strstr(sig->name, filter) == NULL &&
+		strstr(sig->email, filter) == NULL))
+		return 1;
 	return 0;
 }
 
@@ -410,6 +422,8 @@ static int parse_options(
 			set_sorting(s, GIT_SORT_REVERSE);
 		else if (match_str_arg(&opt->author, &args, "--author"))
 			/** Found valid --author */;
+		else if (match_str_arg(&opt->committer, &args, "--committer"))
+			/** Found valid --committer */;
 		else if (match_str_arg(&s->repodir, &args, "--git-dir"))
 			/** Found git-dir. */;
 		else if (match_int_arg(&opt->skip, &args, "--skip", 0))
