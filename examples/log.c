@@ -44,7 +44,6 @@ struct log_state {
 
 /** utility functions that are called to configure the walker */
 static void set_sorting(struct log_state *s, unsigned int sort_mode);
-static int signature_does_not_match(const git_signature *sig, const char *filter);
 static void push_rev(struct log_state *s, git_object *obj, int hide);
 static int add_revision(struct log_state *s, const char *revstr);
 
@@ -57,6 +56,7 @@ struct log_options {
 	git_time_t after;
 	const char *author;
 	const char *committer;
+	const char *grep;
 };
 
 /** utility functions that parse options and help with log output */
@@ -66,6 +66,9 @@ static void print_time(const git_time *intime, const char *prefix);
 static void print_commit(git_commit *commit);
 static int match_with_parent(git_commit *commit, int i, git_diff_options *);
 
+/** utility functions for filtering */
+static int signature_does_not_match(const git_signature *sig, const char *filter);
+static int log_message_does_not_match(const git_commit *commit, const char *filter);
 
 int main(int argc, char *argv[])
 {
@@ -135,6 +138,9 @@ int main(int argc, char *argv[])
 		if (signature_does_not_match(git_commit_committer(commit), opt.committer))
 			continue;
 
+		if (log_message_does_not_match(commit, opt.grep))
+			continue;
+
 		if (count++ < opt.skip)
 			continue;
 		if (opt.limit != -1 && printed++ >= opt.limit) {
@@ -188,6 +194,20 @@ static int signature_does_not_match(const git_signature *sig, const char *filter
 		(strstr(sig->name, filter) == NULL &&
 		strstr(sig->email, filter) == NULL))
 		return 1;
+
+	return 0;
+}
+
+static int log_message_does_not_match(const git_commit *commit, const char *filter) {
+	const char *message = NULL;
+
+	if (filter == NULL)
+		return 0;
+
+	if ((message = git_commit_message(commit)) == NULL ||
+		strstr(message, filter) == NULL)
+		return 1;
+
 	return 0;
 }
 
@@ -424,6 +444,8 @@ static int parse_options(
 			/** Found valid --author */;
 		else if (match_str_arg(&opt->committer, &args, "--committer"))
 			/** Found valid --committer */;
+		else if (match_str_arg(&opt->grep, &args, "--grep"))
+			/** Found valid --grep */;
 		else if (match_str_arg(&s->repodir, &args, "--git-dir"))
 			/** Found git-dir. */;
 		else if (match_int_arg(&opt->skip, &args, "--skip", 0))
