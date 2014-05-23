@@ -46,6 +46,7 @@ enum {
 
 typedef struct {
 	git_repository *repo;
+	git_iterator *target;
 	git_diff *diff;
 	git_checkout_options opts;
 	bool opts_free_baseline;
@@ -54,6 +55,8 @@ typedef struct {
 	git_pool pool;
 	git_vector removes;
 	git_vector conflicts;
+	git_vector *reuc;
+	git_vector *names;
 	git_buf path;
 	size_t workdir_len;
 	git_buf tmp;
@@ -138,6 +141,7 @@ static int checkout_notify(
 static bool checkout_is_workdir_modified(
 	checkout_data *data,
 	const git_diff_file *baseitem,
+	const git_diff_file *newitem,
 	const git_index_entry *wditem)
 {
 	git_oid oid;
@@ -169,13 +173,16 @@ static bool checkout_is_workdir_modified(
 
 	/* Look at the cache to decide if the workdir is modified.  If not,
 	 * we can simply compare the oid in the cache to the baseitem instead
-	 * of hashing the file.
+	 * of hashing the file.  If so, we allow the checkout to proceed if the
+	 * oid is identical (ie, the staged item is what we're trying to check
+	 * out.)
 	 */
 	if ((ie = git_index_get_bypath(data->index, wditem->path, 0)) != NULL) {
 		if (wditem->mtime.seconds == ie->mtime.seconds &&
 			wditem->mtime.nanoseconds == ie->mtime.nanoseconds &&
 			wditem->file_size == ie->file_size)
-			return (git_oid__cmp(&baseitem->id, &ie->id) != 0);
+			return (git_oid__cmp(&baseitem->id, &ie->id) != 0 &&
+				git_oid_cmp(&newitem->id, &ie->id) != 0);
 	}
 
 	/* depending on where base is coming from, we may or may not know
@@ -401,7 +408,7 @@ static int checkout_action_with_wd(
 
 	switch (delta->status) {
 	case GIT_DELTA_UNMODIFIED: /* case 14/15 or 33 */
-		if (checkout_is_workdir_modified(data, &delta->old_file, wd)) {
+		if (checkout_is_workdir_modified(data, &delta->old_file, &delta->new_file, wd)) {
 			GITERR_CHECK_ERROR(
 				checkout_notify(data, GIT_CHECKOUT_NOTIFY_DIRTY, delta, wd) );
 			*action = CHECKOUT_ACTION_IF(FORCE, UPDATE_BLOB, NONE);
@@ -414,13 +421,13 @@ static int checkout_action_with_wd(
 			*action = CHECKOUT_ACTION_IF(FORCE, UPDATE_BLOB, CONFLICT);
 		break;
 	case GIT_DELTA_DELETED: /* case 9 or 10 (or 26 but not really) */
-		if (checkout_is_workdir_modified(data, &delta->old_file, wd))
+		if (checkout_is_workdir_modified(data, &delta->old_file, &delta->new_file, wd))
 			*action = CHECKOUT_ACTION_IF(FORCE, REMOVE, CONFLICT);
 		else
 			*action = CHECKOUT_ACTION_IF(SAFE, REMOVE, NONE);
 		break;
 	case GIT_DELTA_MODIFIED: /* case 16, 17, 18 (or 36 but not really) */
-		if (checkout_is_workdir_modified(data, &delta->old_file, wd))
+		if (checkout_is_workdir_modified(data, &delta->old_file, &delta->new_file, wd))
 			*action = CHECKOUT_ACTION_IF(FORCE, UPDATE_BLOB, CONFLICT);
 		else
 			*action = CHECKOUT_ACTION_IF(SAFE, UPDATE_BLOB, NONE);
@@ -443,7 +450,7 @@ static int checkout_action_with_wd(
 			} else
 				*action = CHECKOUT_ACTION_IF(FORCE, REMOVE, CONFLICT);
 		}
-		else if (checkout_is_workdir_modified(data, &delta->old_file, wd))
+		else if (checkout_is_workdir_modified(data, &delta->old_file, &delta->new_file, wd))
 			*action = CHECKOUT_ACTION_IF(FORCE, REMOVE_AND_UPDATE, CONFLICT);
 		else
 			*action = CHECKOUT_ACTION_IF(SAFE, REMOVE_AND_UPDATE, NONE);
@@ -788,11 +795,16 @@ done:
 static int checkout_conflicts_load(checkout_data *data, git_iterator *workdir, git_vector *pathspec)
 {
 	git_index_conflict_iterator *iterator = NULL;
+	git_index *index;
 	const git_index_entry *ancestor, *ours, *theirs;
 	checkout_conflictdata *conflict;
 	int error = 0;
 
-	if ((error = git_index_conflict_iterator_new(&iterator, data->index)) < 0)
+	/* Only write conficts from sources that have them: indexes. */
+	if ((index = git_iterator_get_index(data->target)) == NULL)
+		return 0;
+
+	if ((error = git_index_conflict_iterator_new(&iterator, index)) < 0)
 		goto done;
 
 	data->conflicts._cmp = checkout_conflictdata_cmp;
@@ -818,6 +830,10 @@ static int checkout_conflicts_load(checkout_data *data, git_iterator *workdir, g
 
 		git_vector_insert(&data->conflicts, conflict);
 	}
+
+	/* Collect the REUC and NAME entries */
+	data->reuc = &index->reuc;
+	data->names = &index->names;
 
 	if (error == GIT_ITEROVER)
 		error = 0;
@@ -957,16 +973,20 @@ done:
 static int checkout_conflicts_coalesce_renames(
 	checkout_data *data)
 {
+	git_index *index;
 	const git_index_name_entry *name_entry;
 	checkout_conflictdata *ancestor_conflict, *our_conflict, *their_conflict;
 	size_t i, names;
 	int error = 0;
 
+	if ((index = git_iterator_get_index(data->target)) == NULL)
+		return 0;
+
 	/* Juggle entries based on renames */
-	names = git_index_name_entrycount(data->index);
+	names = git_index_name_entrycount(index);
 
 	for (i = 0; i < names; i++) {
-		name_entry = git_index_name_get_byindex(data->index, i);
+		name_entry = git_index_name_get_byindex(index, i);
 
 		if ((error = checkout_conflicts_load_byname_entry(
 			&ancestor_conflict, &our_conflict, &their_conflict,
@@ -1010,13 +1030,17 @@ done:
 static int checkout_conflicts_mark_directoryfile(
 	checkout_data *data)
 {
+	git_index *index;
 	checkout_conflictdata *conflict;
 	const git_index_entry *entry;
 	size_t i, j, len;
 	const char *path;
 	int prefixed, error = 0;
 
-	len = git_index_entrycount(data->index);
+	if ((index = git_iterator_get_index(data->target)) == NULL)
+		return 0;
+
+	len = git_index_entrycount(index);
 
 	/* Find d/f conflicts */
 	git_vector_foreach(&data->conflicts, i, conflict) {
@@ -1027,7 +1051,7 @@ static int checkout_conflicts_mark_directoryfile(
 		path = conflict->ours ?
 			conflict->ours->path : conflict->theirs->path;
 
-		if ((error = git_index_find(&j, data->index, path)) < 0) {
+		if ((error = git_index_find(&j, index, path)) < 0) {
 			if (error == GIT_ENOTFOUND)
 				giterr_set(GITERR_INDEX,
 					"Index inconsistency, could not find entry for expected conflict '%s'", path);
@@ -1036,7 +1060,7 @@ static int checkout_conflicts_mark_directoryfile(
 		}
 
 		for (; j < len; j++) {
-			if ((entry = git_index_get_byindex(data->index, j)) == NULL) {
+			if ((entry = git_index_get_byindex(index, j)) == NULL) {
 				giterr_set(GITERR_INDEX,
 					"Index inconsistency, truncated index while loading expected conflict '%s'", path);
 				error = -1;
@@ -1802,6 +1826,24 @@ done:
 	return error;
 }
 
+static int checkout_conflict_update_index(
+	checkout_data *data,
+	checkout_conflictdata *conflict)
+{
+	int error = 0;
+
+	if (conflict->ancestor)
+		error = git_index_add(data->index, conflict->ancestor);
+
+	if (!error && conflict->ours)
+		error = git_index_add(data->index, conflict->ours);
+
+	if (!error && conflict->theirs)
+		error = git_index_add(data->index, conflict->theirs);
+
+	return error;
+}
+
 static int checkout_create_conflicts(checkout_data *data)
 {
 	checkout_conflictdata *conflict;
@@ -1864,6 +1906,12 @@ static int checkout_create_conflicts(checkout_data *data)
 		else if (!error)
 			error = checkout_write_merge(data, conflict);
 
+		/* Update the index extensions (REUC and NAME) if we're checking
+		 * out a different index. (Otherwise just leave them there.)
+		 */
+		if (!error && (data->strategy & GIT_CHECKOUT_DONT_UPDATE_INDEX) == 0)
+			error = checkout_conflict_update_index(data, conflict);
+
 		if (error)
 			break;
 
@@ -1876,6 +1924,37 @@ static int checkout_create_conflicts(checkout_data *data)
 	return error;
 }
 
+static int checkout_extensions_update_index(checkout_data *data)
+{
+	const git_index_reuc_entry *reuc_entry;
+	const git_index_name_entry *name_entry;
+	size_t i;
+	int error = 0;
+
+	if ((data->strategy & GIT_CHECKOUT_UPDATE_ONLY) != 0)
+		return 0;
+
+	if (data->reuc) {
+		git_vector_foreach(data->reuc, i, reuc_entry) {
+			if ((error = git_index_reuc_add(data->index, reuc_entry->path,
+				reuc_entry->mode[0], &reuc_entry->oid[0],
+				reuc_entry->mode[1], &reuc_entry->oid[1],
+				reuc_entry->mode[2], &reuc_entry->oid[2])) < 0)
+				goto done;
+		}
+	}
+
+	if (data->names) {
+		git_vector_foreach(data->names, i, name_entry) {
+			if ((error = git_index_name_add(data->index, name_entry->ancestor,
+				name_entry->ours, name_entry->theirs)) < 0)
+				goto done;
+		}
+	}
+
+done:
+	return error;
+}
 
 static void checkout_data_clear(checkout_data *data)
 {
@@ -1919,6 +1998,7 @@ static int checkout_data_init(
 		return error;
 
 	data->repo = repo;
+	data->target = target;
 
 	GITERR_CHECK_VERSION(
 		proposed, GIT_CHECKOUT_OPTIONS_VERSION, "git_checkout_options");
@@ -1943,15 +2023,15 @@ static int checkout_data_init(
 			(error = git_config_refresh(cfg)) < 0)
 			goto cleanup;
 
-		/* if we are checking out the index, don't reload,
-		 * otherwise get index and force reload
+		/* Get the repository index and reload it (unless we're checking
+		 * out the index; then it has the changes we're trying to check
+		 * out and those should not be overwritten.)
 		 */
-		if ((data->index = git_iterator_get_index(target)) != NULL) {
-			GIT_REFCOUNT_INC(data->index);
-		} else {
-			/* otherwise, grab and reload the index */
-			if ((error = git_repository_index(&data->index, data->repo)) < 0 ||
-				(error = git_index_read(data->index, true)) < 0)
+		if ((error = git_repository_index(&data->index, data->repo)) < 0)
+			goto cleanup;
+
+		if (data->index != git_iterator_get_index(target)) {
+			if ((error = git_index_read(data->index, true)) < 0)
 				goto cleanup;
 
 			/* cannot checkout if unresolved conflicts exist */
@@ -1963,7 +2043,7 @@ static int checkout_data_init(
 				goto cleanup;
 			}
 
-			/* clean conflict data when doing a tree or commit checkout */
+			/* clean conflict data in the current index */
 			git_index_name_clear(data->index);
 			git_index_reuc_clear(data->index);
 		}
@@ -2132,6 +2212,10 @@ int git_checkout_iterator(
 		(error = checkout_create_conflicts(&data)) < 0)
 		goto cleanup;
 
+	if (data.index != git_iterator_get_index(target) &&
+		(error = checkout_extensions_update_index(&data)) < 0)
+		goto cleanup;
+
 	assert(data.completed_steps == data.total_steps);
 
 cleanup:
@@ -2154,7 +2238,7 @@ int git_checkout_index(
 	git_index *index,
 	const git_checkout_options *opts)
 {
-	int error;
+	int error, owned = 0;
 	git_iterator *index_i;
 
 	if (!index && !repo) {
@@ -2162,10 +2246,16 @@ int git_checkout_index(
 			"Must provide either repository or index to checkout");
 		return -1;
 	}
-	if (index && repo && git_index_owner(index) != repo) {
+
+	if (index && repo &&
+		git_index_owner(index) &&
+		git_index_owner(index) != repo) {
 		giterr_set(GITERR_CHECKOUT,
 			"Index to checkout does not match repository");
 		return -1;
+	} else if(index && repo && !git_index_owner(index)) {
+		GIT_REFCOUNT_OWN(index, repo);
+		owned = 1;
 	}
 
 	if (!repo)
@@ -2177,6 +2267,9 @@ int git_checkout_index(
 
 	if (!(error = git_iterator_for_index(&index_i, index, 0, NULL, NULL)))
 		error = git_checkout_iterator(index_i, opts);
+
+	if (owned)
+		GIT_REFCOUNT_OWN(index, NULL);
 
 	git_iterator_free(index_i);
 	git_index_free(index);
