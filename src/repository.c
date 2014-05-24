@@ -1232,15 +1232,10 @@ static int repo_init_structure(
 		}
 
 		if (tdir) {
-			if (chmod) {
-				error = git_futils_cp_r(tdir, repo_dir,
-					GIT_CPDIR_COPY_SYMLINKS | GIT_CPDIR_CHMOD_DIRS |
-					GIT_CPDIR_SIMPLE_TO_MODE, dmode);
-			} else {
-				error = git_futils_cp_r(tdir, repo_dir,
-					GIT_CPDIR_COPY_SYMLINKS |
-					GIT_CPDIR_SIMPLE_TO_MODE, dmode);
-			}
+			uint32_t cpflags = GIT_CPDIR_COPY_SYMLINKS | GIT_CPDIR_SIMPLE_TO_MODE;
+			if (opts->mode != GIT_REPOSITORY_INIT_SHARED_UMASK)
+					cpflags |= GIT_CPDIR_CHMOD_DIRS;
+			error = git_futils_cp_r(tdir, repo_dir, cpflags, dmode);
 		}
 
 		git_buf_free(&template_buf);
@@ -1263,13 +1258,12 @@ static int repo_init_structure(
 	 */
 	for (tpl = repo_template; !error && tpl->path; ++tpl) {
 		if (!tpl->content) {
-			if (chmod) {
-				error = git_futils_mkdir(
-					tpl->path, repo_dir, dmode, GIT_MKDIR_PATH | GIT_MKDIR_CHMOD);
-			} else {
-				error = git_futils_mkdir(
-					tpl->path, repo_dir, dmode, GIT_MKDIR_PATH);
-			}
+			uint32_t mkdir_flags = GIT_MKDIR_PATH;
+			if (chmod)
+				mkdir_flags |= GIT_MKDIR_CHMOD;
+
+			error = git_futils_mkdir(
+				tpl->path, repo_dir, dmode, mkdir_flags);
 		}
 		else if (!external_tpl) {
 			const char *content = tpl->content;
