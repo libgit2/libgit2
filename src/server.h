@@ -12,14 +12,16 @@
 
 struct git_server {
 	enum git_request_type type;
+	git_repository *repo;
 	gitno_socket s;
 	int rpc;
 	char *path;
 };
 
-extern int git_server_new(git_server **out, int fd);
+extern int git_server_new(git_server **out, git_repository *repo, int fd);
 extern void git_server_free(git_server *server);
 extern int git_server__handle_request(git_server *server, git_pkt *pkt);
+extern int git_server__ls(git_buf *out, git_server *server);
 
 #endif
 

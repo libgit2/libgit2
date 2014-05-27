@@ -202,6 +202,7 @@ int git_pkt_send_flush(GIT_SOCKET s);
 int git_pkt_buffer_done(git_buf *buf);
 int git_pkt_buffer_wants(const git_remote_head * const *refs, size_t count, transport_smart_caps *caps, git_buf *buf);
 int git_pkt_buffer_have(git_oid *oid, git_buf *buf);
+int git_pkt_buffer_reference(git_buf *buf, git_reference *ref);
 void git_pkt_free(git_pkt *pkt);
 
 #endif

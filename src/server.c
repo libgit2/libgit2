@@ -8,13 +8,16 @@
 #include "server.h"
 #include "netops.h"
 
-int git_server_new(git_server **out, int fd)
+int git_server_new(git_server **out, git_repository *repo, int fd)
 {
 	git_server *server;
+
+	assert(out && repo);
 
 	server = git__calloc(1, sizeof(git_server));
 	GITERR_CHECK_ALLOC(server);
 
+	server->repo = repo;
 	server->s.socket = fd;
 
 	*out = server;
@@ -45,6 +48,54 @@ int git_server__handle_request(git_server *server, git_pkt *pkt)
 	GITERR_CHECK_ALLOC(server->path);
 
 	return 0;
+}
+
+int git_server__ls(git_buf *out, git_server *server)
+{
+	git_repository *repo = server->repo;
+	git_strarray ref_names = {0};
+	git_reference *ref = NULL;
+	int error;
+	size_t i;
+
+	assert(out && server);
+
+	if (server->type != GIT_REQUEST_UPLOAD_PACK) {
+		giterr_set(GITERR_NET, "unsupported type");
+	}
+
+	if ((error = git_reference_list(&ref_names, repo)) < 0)
+		return error;
+
+	/* the references need to be alphasorted */
+	git__tsort((void **)ref_names.strings, ref_names.count, git__strcmp_cb);
+
+	if ((error = git_reference_lookup(&ref, repo, "HEAD")) < 0)
+		goto cleanup;
+
+	error = git_pkt_buffer_reference(out, ref);
+	git_reference_free(ref);
+	if (error < 0)
+		return error;
+
+	for (i = 0; i < ref_names.count; i++) {
+		if ((error = git_reference_lookup(&ref, repo, ref_names.strings[i])) < 0)
+			goto cleanup;
+
+		error = git_pkt_buffer_reference(out, ref);
+		git_reference_free(ref);
+		if (error < 0)
+			break;
+	}
+
+	if (error < 0)
+		return -1;
+
+	error = git_pkt_buffer_flush(out);
+
+cleanup:
+	git_strarray_free(&ref_names);
+	return error;
 }
 
 int git_server_run(git_server *server)
@@ -83,6 +134,8 @@ int git_server_run(git_server *server)
 
 		break;
 	}
+
+	/* and now we let the server respond with the listing */
 
 	return 0;
 }

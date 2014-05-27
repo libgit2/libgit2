@@ -597,3 +597,45 @@ int git_pkt_buffer_done(git_buf *buf)
 {
 	return git_buf_puts(buf, pkt_done_str);
 }
+
+int git_pkt_buffer_reference(git_buf *buf, git_reference *ref)
+{
+	char oidhex[GIT_OID_HEXSZ + 1] = {0};
+	git_reference *resolved;
+	git_object *target = NULL, *non_tag = NULL;
+	size_t len;
+	int error;
+
+	assert(buf && ref);
+
+	if ((error = git_reference_resolve(&resolved, ref)) < 0)
+		return error;
+
+	git_oid_fmt(oidhex, git_reference_target(resolved));
+	len = 4 /* prefix */ + GIT_OID_HEXSZ + 1 /* SP */ + strlen(git_reference_name(ref)) + 1 /* LF */;
+	if ((error = git_buf_printf(buf, "%04zx%s %s\n", len, oidhex, git_reference_name(ref))) < 0)
+		goto cleanup;
+
+	if ((error = git_object_lookup(&target, git_reference_owner(ref),
+				       git_reference_target(resolved), GIT_OBJ_ANY)) < 0)
+		goto cleanup;
+
+	if (git_object_type(target) != GIT_OBJ_TAG)
+		goto cleanup;
+
+	/* if it is in fact a tag, we peel to the first non-tag */
+	if ((error = git_object_peel(&non_tag, target, GIT_OBJ_ANY)) < 0)
+		goto cleanup;
+
+	git_oid_fmt(oidhex, git_object_id(non_tag));
+	len = 4 /* prefix */ + GIT_OID_HEXSZ + 1 /* SP */ + strlen(git_reference_name(ref))
+		+ 3 /* ^{} */ + 1 /* LF */;
+
+	error = git_buf_printf(buf, "%04zx%s %s^{}\n", len, oidhex, git_reference_name(ref));
+
+cleanup:
+	git_object_free(non_tag);
+	git_object_free(target);
+	git_reference_free(resolved);
+	return error;
+}
