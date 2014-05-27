@@ -351,6 +351,29 @@ static int request_pkt(git_pkt **out, const char *line, size_t len)
 	return 0;
 }
 
+static int have_want_pkt(git_pkt **out, enum git_pkt_type type, const char *line, size_t len)
+{
+	git_pkt_have_want *pkt;
+	size_t min_len;
+
+	min_len = 5 /* 'have ' */ + GIT_OID_HEXSZ;
+
+	if (len < min_len) {
+		giterr_set(GITERR_NET, "have/want pkt too short");
+		return -1;
+	}
+
+	pkt = git__malloc(sizeof(*pkt));
+	GITERR_CHECK_ALLOC(pkt);
+
+	line += 5;
+	pkt->type = type;
+	git_oid_fromstr(&pkt->id, line);
+
+	*out = (git_pkt *) pkt;
+	return 0;
+}
+
 static int32_t parse_len(const char *line)
 {
 	char num[PKT_LEN_SIZE + 1];
@@ -456,6 +479,10 @@ int git_pkt_parse_line(
 		ret = ng_pkt(head, line, len);
 	else if (!git__prefixcmp(line, "unpack"))
 		ret = unpack_pkt(head, line, len);
+	else if (!git__prefixcmp(line, "have"))
+		ret = have_want_pkt(head, GIT_PKT_HAVE, line, len);
+	else if (!git__prefixcmp(line, "want"))
+		ret = have_want_pkt(head, GIT_PKT_WANT, line, len);
 	else if (!git__prefixcmp(line, "git-upload-pack"))
 		ret = request_pkt(head, line, len);
 	else if (!git__prefixcmp(line, "git-receive-pack"))

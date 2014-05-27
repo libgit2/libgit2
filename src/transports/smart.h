@@ -13,6 +13,7 @@
 #include "netops.h"
 #include "buffer.h"
 #include "push.h"
+#include "oid.h"
 
 #define GIT_SIDE_BAND_DATA     1
 #define GIT_SIDE_BAND_PROGRESS 2
@@ -34,6 +35,7 @@ enum git_pkt_type {
 	GIT_PKT_FLUSH,
 	GIT_PKT_REF,
 	GIT_PKT_HAVE,
+	GIT_PKT_WANT,
 	GIT_PKT_ACK,
 	GIT_PKT_NAK,
 	GIT_PKT_PACK,
@@ -128,6 +130,11 @@ typedef struct {
 	/* TODO: suppor the host extension */
 	char path[GIT_FLEX_ARRAY];
 } git_pkt_request;
+
+typedef struct {
+	enum git_pkt_type type;
+	git_oid id;
+} git_pkt_have_want;
 
 typedef struct transport_smart_caps {
 	int common:1,
