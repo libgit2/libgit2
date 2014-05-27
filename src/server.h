@@ -1,0 +1,25 @@
+/*
+ * Copyright (C) the libgit2 contributors. All rights reserved.
+ *
+ * This file is part of libgit2, distributed under the GNU GPL v2 with
+ * a Linking Exception. For full terms see the included COPYING file.
+ */
+#ifndef INCLUDE_server_h__
+#define INCLUDE_server_h__
+
+#include "common.h"
+#include "transports/smart.h"
+
+struct git_server {
+	enum git_request_type type;
+	gitno_socket s;
+	int rpc;
+	char *path;
+};
+
+extern int git_server_new(git_server **out, int fd);
+extern void git_server_free(git_server *server);
+extern int git_server__handle_request(git_server *server, git_pkt *pkt);
+
+#endif
+

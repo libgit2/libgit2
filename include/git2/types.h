@@ -180,6 +180,8 @@ typedef struct git_merge_result git_merge_result;
 /** Representation of a status collection */
 typedef struct git_status_list git_status_list;
 
+/** A server */
+typedef struct git_server git_server;
 
 /** Basic type of any Git reference. */
 typedef enum {
