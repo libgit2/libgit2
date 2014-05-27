@@ -81,3 +81,36 @@ void test_network_server__upload_pack_ls(void)
 
 	git_buf_free(&listing);
 }
+
+void test_network_server__want(void)
+{
+	const char buf[] = "0032want 7e47fe2bd8d01d481f44d7af0531bd93d3b21c01\n";
+	const char *rest;
+
+	cl_git_pass(git_pkt_parse_line(&g_pkt, buf, &rest, sizeof(buf)));
+	cl_git_pass(git_server_new(&g_server, g_repo, 0));
+	cl_git_pass(git_server__negotiation(g_server, g_pkt));
+	cl_assert_equal_i(1, git_array_size(g_server->wants));
+}
+
+void test_network_server__have_no_common(void)
+{
+	const char buf[] = "0032have 7e47fe2bd8d01d481f44d7af0531bd93d3b21c01\n";
+	const char *rest;
+
+	cl_git_pass(git_pkt_parse_line(&g_pkt, buf, &rest, sizeof(buf)));
+	cl_git_pass(git_server_new(&g_server, g_repo, 0));
+	cl_git_pass(git_server__negotiation(g_server, g_pkt));
+	cl_assert_equal_i(0, git_array_size(g_server->common));
+}
+
+void test_network_server__have_common(void)
+{
+	const char buf[] = "0032have a65fedf39aefe402d3bb6e24df4d4f5fe4547750\n";
+	const char *rest;
+
+	cl_git_pass(git_pkt_parse_line(&g_pkt, buf, &rest, sizeof(buf)));
+	cl_git_pass(git_server_new(&g_server, g_repo, 0));
+	cl_git_pass(git_server__negotiation(g_server, g_pkt));
+	cl_assert_equal_i(1, git_array_size(g_server->common));
+}

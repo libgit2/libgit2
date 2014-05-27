@@ -29,6 +29,8 @@ void git_server_free(git_server *server)
 	if (server == NULL)
 		return;
 
+	git_array_clear(server->wants);
+	git_array_clear(server->common);
 	git__free(server->path);
 	git__free(server);
 }
@@ -95,6 +97,50 @@ int git_server__ls(git_buf *out, git_server *server)
 
 cleanup:
 	git_strarray_free(&ref_names);
+	return error;
+}
+
+int git_server__negotiation(git_server *server, git_pkt *_pkt)
+{
+	git_oid *id, *have_id;
+	git_pkt_have_want *pkt;
+	git_odb *odb = NULL;
+	int error;
+
+	if (_pkt->type != GIT_PKT_HAVE && _pkt->type != GIT_PKT_WANT) {
+		giterr_set(GITERR_NET, "invalid pkt for negotiation");
+		return -1;
+	}
+
+	pkt = (git_pkt_have_want *) _pkt;
+
+	if (pkt->type == GIT_PKT_WANT) {
+		id = git_array_alloc(server->wants);
+		GITERR_CHECK_ALLOC(id);
+
+		git_oid_cpy(id, &pkt->id);
+		return 0;
+	}
+
+	/* we know it's a 'have', so we check to see if it's common */
+	have_id = &pkt->id;
+	if ((error = git_repository_odb(&odb, server->repo)) < 0)
+		return error;
+
+	if ((error = git_odb_exists(odb, have_id)) < 0)
+		goto cleanup;
+
+	if (error == 1) {
+		error = 0;
+		id = git_array_alloc(server->common);
+		GITERR_CHECK_ALLOC(id);
+
+		git_oid_cpy(id, &pkt->id);
+	}
+
+cleanup:
+	git_odb_free(odb);
+
 	return error;
 }
 
