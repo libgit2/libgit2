@@ -40,6 +40,7 @@ enum git_pkt_type {
 	GIT_PKT_OK,
 	GIT_PKT_NG,
 	GIT_PKT_UNPACK,
+	GIT_PKT_REQUEST,
 };
 
 /* Used for multi_ack and mutli_ack_detailed */
@@ -48,6 +49,12 @@ enum git_ack_status {
 	GIT_ACK_CONTINUE,
 	GIT_ACK_COMMON,
 	GIT_ACK_READY
+};
+
+enum git_request_type {
+	GIT_REQUEST_NONE,
+	GIT_REQUEST_RECEIVE_PACK,
+	GIT_REQUEST_UPLOAD_PACK,
 };
 
 /* This would be a flush pkt */
@@ -110,6 +117,13 @@ typedef struct {
 	enum git_pkt_type type;
 	int unpack_ok;
 } git_pkt_unpack;
+
+typedef struct {
+	enum git_pkt_type type;
+	enum git_request_type request;
+	/* TODO: suppor the host extension */
+	char path[GIT_FLEX_ARRAY];
+} git_pkt_request;
 
 typedef struct transport_smart_caps {
 	int common:1,

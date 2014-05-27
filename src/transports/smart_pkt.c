@@ -315,6 +315,42 @@ static int unpack_pkt(git_pkt **out, const char *line, size_t len)
 	return 0;
 }
 
+static int request_pkt(git_pkt **out, const char *line, size_t len)
+{
+	git_pkt_request *pkt;
+	enum git_request_type req = 0;
+	size_t skip, path_len;
+
+	if (line[len] != '\0') {
+		giterr_set(GITERR_NET, "invalid request - no terminator");
+		return -1;
+	}
+
+	if (!git__prefixcmp(line, "git-receive-pack ")) {
+		skip = strlen("git-receive-pack ");
+		line += skip;
+		req = GIT_REQUEST_RECEIVE_PACK;
+	} else if (!git__prefixcmp(line, "git-upload-pack ")) {
+		skip = strlen("git-upload-pack ");
+		line += skip;
+		req = GIT_REQUEST_UPLOAD_PACK;
+	} else {
+		giterr_set(GITERR_NET, "invalid request - unkown service");
+		return -1;
+	}
+
+	path_len = strlen(line);
+	pkt = git__malloc(sizeof(*pkt) + path_len + 1);
+	GITERR_CHECK_ALLOC(pkt);
+
+	pkt->type = GIT_PKT_REQUEST;
+	pkt->request = req;
+	memcpy(pkt->path, line, path_len + 1);
+
+	*out = (git_pkt *) pkt;
+	return 0;
+}
+
 static int32_t parse_len(const char *line)
 {
 	char num[PKT_LEN_SIZE + 1];
@@ -420,6 +456,10 @@ int git_pkt_parse_line(
 		ret = ng_pkt(head, line, len);
 	else if (!git__prefixcmp(line, "unpack"))
 		ret = unpack_pkt(head, line, len);
+	else if (!git__prefixcmp(line, "git-upload-pack"))
+		ret = request_pkt(head, line, len);
+	else if (!git__prefixcmp(line, "git-receive-pack"))
+		ret = request_pkt(head, line, len);
 	else
 		ret = ref_pkt(head, line, len);
 
@@ -430,6 +470,9 @@ int git_pkt_parse_line(
 
 void git_pkt_free(git_pkt *pkt)
 {
+	if (pkt == NULL)
+		return;
+
 	if (pkt->type == GIT_PKT_REF) {
 		git_pkt_ref *p = (git_pkt_ref *) pkt;
 		git__free(p->head.name);
