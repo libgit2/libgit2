@@ -27,6 +27,7 @@ typedef enum {
 	GIT_CLONE_LOCAL_AUTO,
 	GIT_CLONE_LOCAL,
 	GIT_CLONE_NO_LOCAL,
+	GIT_CLONE_LOCAL_NO_LINKS,
 } git_clone_local_t;
 
 /**

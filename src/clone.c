@@ -357,7 +357,7 @@ int git_clone__should_clone_local(const char *url, git_clone_local_t local)
 
 	is_url = !git__prefixcmp(url, "file://");
 
-	if (is_url && local != GIT_CLONE_LOCAL)
+	if (is_url && local != GIT_CLONE_LOCAL && local != GIT_CLONE_LOCAL_NO_LINKS )
 		return false;
 
 	path = url;
