@@ -270,22 +270,23 @@ typedef enum {
 
 typedef enum {
 	/*
-	 * No configuration was found that suggests a behavior for merge.
+	 * No configuration was found that suggests a preferred behavior for
+	 * merge.
 	 */
-	GIT_MERGE_CONFIG_NONE = 0,
+	GIT_MERGE_PREFERENCE_NONE = 0,
 
 	/**
 	 * There is a `merge.ff=false` configuration setting, suggesting that
 	 * the user does not want to allow a fast-forward merge.
 	 */
-	GIT_MERGE_CONFIG_NO_FASTFORWARD = (1 << 0),
+	GIT_MERGE_PREFERENCE_NO_FASTFORWARD = (1 << 0),
 
 	/**
 	 * There is a `merge.ff=only` configuration setting, suggesting that
 	 * the user only wants fast-forward merges.
 	 */
-	GIT_MERGE_CONFIG_FASTFORWARD_ONLY = (1 << 1),
-} git_merge_config_t;
+	GIT_MERGE_PREFERENCE_FASTFORWARD_ONLY = (1 << 1),
+} git_merge_preference_t;
 
 /**
  * Analyzes the given branch(es) and determines the opportunities for
@@ -299,7 +300,7 @@ typedef enum {
  */
 GIT_EXTERN(int) git_merge_analysis(
 	git_merge_analysis_t *analysis_out,
-	git_merge_config_t *config_out,
+	git_merge_preference_t *preference_out,
 	git_repository *repo,
 	const git_merge_head **their_heads,
 	size_t their_heads_len);

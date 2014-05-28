@@ -2564,13 +2564,13 @@ done:
 	return error;
 }
 
-static int merge_config(git_merge_config_t *out, git_repository *repo)
+static int merge_preference(git_merge_preference_t *out, git_repository *repo)
 {
 	git_config *config;
 	const char *value;
 	int bool_value, error = 0;
 
-	*out = GIT_MERGE_CONFIG_NONE;
+	*out = GIT_MERGE_PREFERENCE_NONE;
 
 	if ((error = git_repository_config_snapshot(&config, repo)) < 0)
 		goto done;
@@ -2586,10 +2586,10 @@ static int merge_config(git_merge_config_t *out, git_repository *repo)
 
 	if (git_config_parse_bool(&bool_value, value) == 0) {
 		if (!bool_value)
-			*out |= GIT_MERGE_CONFIG_NO_FASTFORWARD;
+			*out |= GIT_MERGE_PREFERENCE_NO_FASTFORWARD;
 	} else {
 		if (strcasecmp(value, "only") == 0)
-			*out |= GIT_MERGE_CONFIG_FASTFORWARD_ONLY;
+			*out |= GIT_MERGE_PREFERENCE_FASTFORWARD_ONLY;
 	}
 
 done:
@@ -2599,7 +2599,7 @@ done:
 
 int git_merge_analysis(
 	git_merge_analysis_t *analysis_out,
-	git_merge_config_t *config_out,
+	git_merge_preference_t *preference_out,
 	git_repository *repo,
 	const git_merge_head **their_heads,
 	size_t their_heads_len)
@@ -2607,7 +2607,7 @@ int git_merge_analysis(
 	git_merge_head *ancestor_head = NULL, *our_head = NULL;
 	int error = 0;
 
-	assert(analysis_out && config_out && repo && their_heads);
+	assert(analysis_out && preference_out && repo && their_heads);
 
 	if (their_heads_len != 1) {
 		giterr_set(GITERR_MERGE, "Can only merge a single branch");
@@ -2617,7 +2617,7 @@ int git_merge_analysis(
 
 	*analysis_out = GIT_MERGE_ANALYSIS_NONE;
 
-	if ((error = merge_config(config_out, repo)) < 0)
+	if ((error = merge_preference(preference_out, repo)) < 0)
 		goto done;
 
 	if (git_repository_head_unborn(repo)) {
