@@ -405,9 +405,10 @@ int git_clone(
 
 	if (!(error = create_and_configure_origin(&origin, repo, url, &options))) {
 		if (git_clone__should_clone_local(url, options.local)) {
+			int link = options.local != GIT_CLONE_LOCAL_NO_LINKS;
 			error = git_clone_local_into(
 				repo, origin, &options.checkout_opts,
-				options.checkout_branch, options.signature);
+				options.checkout_branch, link, options.signature);
 		} else {
 			error = git_clone_into(
 				repo, origin, &options.checkout_opts,
@@ -448,15 +449,36 @@ static const char *repository_base(git_repository *repo)
 	return git_repository_workdir(repo);
 }
 
-int git_clone_local_into(git_repository *repo, git_remote *remote, const git_checkout_options *co_opts, const char *branch, const git_signature *signature)
+static bool can_link(const char *src, const char *dst, int link)
 {
-	int error, root;
+#ifdef GIT_WIN32
+	return false;
+#else
+
+	struct stat st_src, st_dst;
+
+	if (!link)
+		return false;
+
+	if (p_stat(src, &st_src) < 0)
+		return false;
+
+	if (p_stat(dst, &st_dst) < 0)
+		return false;
+
+	return st_src.st_dev == st_dst.st_dev;
+#endif
+}
+
+int git_clone_local_into(git_repository *repo, git_remote *remote, const git_checkout_options *co_opts, const char *branch, int link, const git_signature *signature)
+{
+	int error, root, flags;
 	git_repository *src;
 	git_buf src_odb = GIT_BUF_INIT, dst_odb = GIT_BUF_INIT, src_path = GIT_BUF_INIT;
 	git_buf reflog_message = GIT_BUF_INIT;
 	const char *url;
 
-	assert(repo && remote && co_opts);
+	assert(repo && remote);
 
 	if (!git_repository_is_empty(repo)) {
 		giterr_set(GITERR_INVALID, "the repository is not empty");
@@ -495,8 +517,12 @@ int git_clone_local_into(git_repository *repo, git_remote *remote, const git_che
 		goto cleanup;
 	}
 
+	flags = 0;
+	if (can_link(git_repository_path(src), git_repository_path(repo), link))
+		flags |= GIT_CPDIR_LINK_FILES;
+
 	if ((error = git_futils_cp_r(git_buf_cstr(&src_odb), git_buf_cstr(&dst_odb),
-				     0, GIT_OBJECT_DIR_MODE)) < 0)
+				     flags, GIT_OBJECT_DIR_MODE)) < 0)
 		goto cleanup;
 
 	git_buf_printf(&reflog_message, "clone: from %s", git_remote_url(remote));

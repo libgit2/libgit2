@@ -144,6 +144,9 @@ GIT_EXTERN(int) git_clone_into(
  * @param co_opts options to use during checkout
  * @param branch the branch to checkout after the clone, pass NULL for the
  *        remote's default branch
+ * @param link wether to use hardlinks instead of copying
+ * objects. This is only possible if both repositories are on the same
+ * filesystem.
  * @param signature the identity used when updating the reflog
  * @return 0 on success, any non-zero return value from a callback
  *         function, or a negative value to indicate an error (use
@@ -154,6 +157,7 @@ GIT_EXTERN(int) git_clone_local_into(
 	git_remote *remote,
 	const git_checkout_options *co_opts,
 	const char *branch,
+	int link,
 	const git_signature *signature);
 
 /** @} */
