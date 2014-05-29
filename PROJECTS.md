@@ -39,12 +39,6 @@ These are good small projects to get started with libgit2.
       the data is available, you would just need to add the code into the
       `print_commit()` routine (along with a way of passing the option
       into that function).
-    * For `examples/log.c`, implement any one of `--author=<...>`,
-      `--committer=<...>`, or `--grep=<...>` but just use simple string
-      match with `strstr()` instead of full regular expression
-      matching. (I.e. I'm suggesting implementing this as if
-      `--fixed-strings` was always turned on, because it will be a simpler
-      project.)
     * As an extension to the matching idea for `examples/log.c`, add the
       `-i` option to use `strcasestr()` for matches.
     * For `examples/log.c`, implement the `--first-parent` option now that
