@@ -17,6 +17,12 @@ struct git_blob {
 	git_odb_object *odb_object;
 };
 
+GIT_INLINE(size_t) git_blob__rawsize(const git_blob *blob)
+{
+	assert(blob);
+	return git_odb_object_size(blob->odb_object);
+}
+
 void git_blob__free(void *blob);
 int git_blob__parse(void *blob, git_odb_object *obj);
 int git_blob__getbuf(git_buf *buffer, git_blob *blob);

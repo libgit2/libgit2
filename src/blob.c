@@ -24,8 +24,7 @@ const void *git_blob_rawcontent(const git_blob *blob)
 
 git_off_t git_blob_rawsize(const git_blob *blob)
 {
-	assert(blob);
-	return (git_off_t)git_odb_object_size(blob->odb_object);
+	return (git_off_t) git_blob__rawsize(blob);
 }
 
 int git_blob__getbuf(git_buf *buffer, git_blob *blob)

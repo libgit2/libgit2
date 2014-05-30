@@ -282,31 +282,16 @@ int git_diff_delta__format_file_header(
 	return git_buf_oom(out) ? -1 : 0;
 }
 
-static int print_binary_hunk(diff_print_info *pi, git_blob *old, git_blob *new)
+static int print_binary_hunk(diff_print_info *pi,
+	const void *old_data, unsigned long old_data_len,
+	const void *new_data, unsigned long new_data_len)
 {
 	git_buf deflate = GIT_BUF_INIT, delta = GIT_BUF_INIT, *out = NULL;
-	const void *old_data, *new_data;
-	git_off_t off_t_old_data_len, off_t_new_data_len;
-	unsigned long old_data_len, new_data_len, delta_data_len, inflated_len;
+	unsigned long inflated_len;
 	size_t remain;
 	const char *out_type = "literal";
 	char *ptr;
 	int error;
-
-	old_data = old ? git_blob_rawcontent(old) : NULL;
-	new_data = new ? git_blob_rawcontent(new) : NULL;
-
-	off_t_old_data_len = old ? git_blob_rawsize(old) : 0;
-	off_t_new_data_len = new ? git_blob_rawsize(new) : 0;
-
-	/* The git_delta function accepts unsigned long only */
-	if (off_t_old_data_len > ULONG_MAX || off_t_new_data_len > ULONG_MAX) {
-		error = -1;
-		goto done;
-	}
-
-	old_data_len = (unsigned long)off_t_old_data_len;
-	new_data_len = (unsigned long)off_t_new_data_len;
 
 	out = &deflate;
 	inflated_len = new_data_len;
@@ -315,17 +300,13 @@ static int print_binary_hunk(diff_print_info *pi, git_blob *old, git_blob *new)
 		&deflate, new_data, new_data_len)) < 0)
 		goto done;
 
-	/* The git_delta function accepts unsigned long only */
-	if (deflate.size > ULONG_MAX) {
-		error = -1;
-		goto done;
-	}
-
-	if (old && new) {
+	if (old_data_len > 0 && new_data_len > 0) {
 		void *delta_data;
+		unsigned long delta_data_len;
 
 		delta_data = git_delta(old_data, old_data_len, new_data,
-			new_data_len, &delta_data_len, (unsigned long)deflate.size);
+			new_data_len, &delta_data_len,
+			deflate.size > ULONG_MAX ? 0 : deflate.size);
 
 		if (delta_data) {
 			error = git_zstream_deflatebuf(&delta, delta_data, delta_data_len);
@@ -379,6 +360,8 @@ static int diff_print_patch_file_binary(
 	const char *oldpfx, const char *newpfx)
 {
 	git_blob *old = NULL, *new = NULL;
+	const void *old_data, *new_data;
+	size_t old_data_len, new_data_len;
 	const git_oid *old_id, *new_id;
 	int error;
 
@@ -389,17 +372,34 @@ static int diff_print_patch_file_binary(
 				"Binary files %s%s and %s%s differ\n");
 	}
 
-	git_buf_printf(pi->buf, "GIT binary patch\n");
-	pi->line.num_lines++;
-
 	old_id = (delta->status != GIT_DELTA_ADDED) ? &delta->old_file.id : NULL;
 	new_id = (delta->status != GIT_DELTA_DELETED) ? &delta->new_file.id : NULL;
 
 	if ((old_id && (error = git_blob_lookup(&old, pi->diff->repo, old_id)) < 0) ||
-		(new_id && (error = git_blob_lookup(&new, pi->diff->repo,new_id)) < 0) ||
-		(error = print_binary_hunk(pi, old, new)) < 0 ||
+		(new_id && (error = git_blob_lookup(&new, pi->diff->repo, new_id)) < 0))
+		goto done;
+
+	old_data_len = old ? git_blob__rawsize(old) : 0;
+	new_data_len = new ? git_blob__rawsize(new) : 0;
+
+	/* The git_delta function accepts unsigned long only */
+	if (old_data_len > ULONG_MAX || new_data_len > ULONG_MAX) {
+		pi->line.num_lines = 1;
+		error = diff_delta_format_with_paths(
+			pi->buf, delta, oldpfx, newpfx,
+			"Binary files %s%s and %s%s differ\n");
+		goto done;
+	}
+
+	git_buf_printf(pi->buf, "GIT binary patch\n");
+	pi->line.num_lines++;
+
+	old_data = old ? git_blob_rawcontent(old) : NULL;
+	new_data = new ? git_blob_rawcontent(new) : NULL;
+
+	if ((error = print_binary_hunk(pi, old_data, old_data_len, new_data, new_data_len)) < 0 ||
 		(error = git_buf_putc(pi->buf, '\n')) < 0 ||
-		(error = print_binary_hunk(pi, new, old)) < 0)
+		(error = print_binary_hunk(pi, new_data, new_data_len, old_data, old_data_len)) < 0)
 		goto done;
 
 	pi->line.num_lines++;
