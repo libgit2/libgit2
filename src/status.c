@@ -313,6 +313,8 @@ int git_status_list_new(
 		diffopt.flags = diffopt.flags | GIT_DIFF_IGNORE_SUBMODULES;
 	if ((flags & GIT_STATUS_OPT_UPDATE_INDEX) != 0)
 		diffopt.flags = diffopt.flags | GIT_DIFF_UPDATE_INDEX;
+	if ((flags & GIT_STATUS_OPT_INCLUDE_UNREADABLE) != 0)
+		diffopt.flags = diffopt.flags | GIT_DIFF_INCLUDE_UNREADABLE;
 
 	if ((flags & GIT_STATUS_OPT_RENAMES_FROM_REWRITES) != 0)
 		findopt.flags = findopt.flags |

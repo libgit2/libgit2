@@ -148,6 +148,7 @@ typedef enum {
 	GIT_STATUS_OPT_RENAMES_FROM_REWRITES    = (1u << 11),
 	GIT_STATUS_OPT_NO_REFRESH               = (1u << 12),
 	GIT_STATUS_OPT_UPDATE_INDEX             = (1u << 13),
+	GIT_STATUS_OPT_INCLUDE_UNREADABLE       = (1u << 14),
 } git_status_opt_t;
 
 #define GIT_STATUS_OPT_DEFAULTS \
