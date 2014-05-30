@@ -60,6 +60,15 @@ void test_network_remote_remotes__pushurl(void)
 	cl_assert(git_remote_pushurl(_remote) == NULL);
 }
 
+void test_network_remote_remotes__error_when_not_found(void)
+{
+	git_remote *r;
+	cl_git_fail_with(git_remote_load(&r, _repo, "does-not-exist"), GIT_ENOTFOUND);
+
+	cl_assert(giterr_last() != NULL);
+	cl_assert(giterr_last()->klass == GITERR_CONFIG);
+}
+
 void test_network_remote_remotes__error_when_no_push_available(void)
 {
 	git_remote *r;
