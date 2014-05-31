@@ -298,15 +298,15 @@ static int print_binary_hunk(diff_print_info *pi, git_blob *old, git_blob *new)
 	old_data_len = old ? git_blob_rawsize(old) : 0;
 	new_data_len = new ? git_blob_rawsize(new) : 0;
 
-	if (!git__is_ulong(old_data_len) || !git__is_ulong(new_data_len)) {
-		error = GIT_EBUFS;
-		goto done;
-	}
+	/* The git_delta function accepts unsigned long only */
+	if (!git__is_ulong(old_data_len) || !git__is_ulong(new_data_len))
+		return GIT_EBUFS;
 
 	out = &deflate;
 	inflated_len = (unsigned long)new_data_len;
 
-	if ((error = git_zstream_deflatebuf(out, new_data, (size_t)new_data_len)) < 0)
+	if ((error = git_zstream_deflatebuf(
+			out, new_data, (size_t)new_data_len)) < 0)
 		goto done;
 
 	/* The git_delta function accepts unsigned long only */
