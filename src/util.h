@@ -133,6 +133,13 @@ GIT_INLINE(int) git__is_uint32(size_t p)
 	return p == (size_t)r;
 }
 
+/** @return true if p fits into the range of an unsigned long */
+GIT_INLINE(int) git__is_ulong(git_off_t p)
+{
+	unsigned long r = (unsigned long)p;
+	return p == (git_off_t)r;
+}
+
 /* 32-bit cross-platform rotl */
 #ifdef _MSC_VER /* use built-in method in MSVC */
 #	define git__rotl(v, s) (uint32_t)_rotl(v, s)
