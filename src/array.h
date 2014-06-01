@@ -71,4 +71,7 @@ GIT_INLINE(void *) git_array_grow(void *_a, size_t item_size)
 
 #define git_array_valid_index(a, i) ((i) < (a).size)
 
+#define git_array_foreach(a, i, element) \
+	for ((i) = 0; (i) < (a).size && ((element) = &(a).ptr[(i)]); (i)++)
+
 #endif

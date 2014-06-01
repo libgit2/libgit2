@@ -13,6 +13,28 @@
 #include "array.h"
 #include "git2/patch.h"
 
+/* cached information about a hunk in a diff */
+
+typedef struct {
+	git_diff_hunk hunk;
+	size_t line_start;
+	size_t line_count;
+} diff_patch_hunk;
+
+struct git_patch {
+	git_refcount rc;
+	git_diff *diff; /* for refcount purposes, maybe NULL for blob diffs */
+	git_diff_delta *delta;
+	size_t delta_index;
+	git_diff_file_content ofile;
+	git_diff_file_content nfile;
+	uint32_t flags;
+	git_array_t(diff_patch_hunk) hunks;
+	git_array_t(git_diff_line)   lines;
+	size_t content_size, context_size, header_size;
+	git_pool flattened;
+};
+
 extern git_diff *git_patch__diff(git_patch *);
 
 extern git_diff_driver *git_patch__driver(git_patch *);
