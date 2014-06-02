@@ -197,7 +197,7 @@
       <dl>
       <% _.each(blocks, function(block) { %>
       <% _.each(block, function(field) { %>
-      <dt><code><%= field.name %> <%= field.value %></code></dt>
+      <dt><code><%= field.type %> <%= field.name %> <%= field.value %></code></dt>
       <% }) %>
       <dd><%= _.last(block).comments %></dd>
       <% }) %>
