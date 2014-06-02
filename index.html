@@ -215,6 +215,14 @@
     <script type="text/template" id="enum-template">
       <h1 class="funcTitle"><%= type.tname %><small><%= type.type %></small></h1>
       <p><%= type.value %></p>
+
+      <% if (type.data.description) { %>
+      <p><%= type.data.description %></p>
+      <% } %>
+      <% if (type.data.comments) { %>
+      <p><%= type.data.comments %></p>
+      <% } %>
+
       <table>
 	<% _.each(type.data.fields, function(field) { %>
 	<tr>
@@ -233,6 +241,14 @@
     <script type="text/template" id="struct-template">
       <h1 class="funcTitle"><%= type.tname %><small><%= type.type %></small></h1>
       <p><%= type.value %></p>
+
+      <% if (type.data.description) { %>
+      <p><%= type.data.description %></p>
+      <% } %>
+      <% if (type.data.comments) { %>
+      <p><%= type.data.comments %></p>
+      <% } %>
+
       <table>
 	<% _.each(type.data.fields, function(field) { %>
 	<tr>
