@@ -215,20 +215,6 @@
     <script type="text/template" id="enum-template">
       <h1 class="funcTitle"><%= type.tname %><small><%= type.type %></small></h1>
       <p><%= type.value %></p>
-      <% if (type.comments) { %>
-      <div><%= type.comments %></div>
-      <% } %>
-      <!-- blocks of fields, with attached docs -->
-      <dl>
-      <% _.each(type.blocks, function(block) { %>
-      <% _.each(block, function(field) { %>
-      <dt><code><%= field.name %> <%= field.value %></code></dt>
-      <% }) %>
-      <dd><%= _.last(block).comments %></dd>
-      <% }) %>
-      </dl>
-
-      <hr />
       <table>
 	<% _.each(type.data.fields, function(field) { %>
 	<tr>
