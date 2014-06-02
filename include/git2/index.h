@@ -415,7 +415,7 @@ GIT_EXTERN(int) git_index_add(git_index *index, const git_index_entry *source_en
  *	(entry->flags & GIT_IDXENTRY_STAGEMASK) >> GIT_IDXENTRY_STAGESHIFT
  *
  * @param entry The entry
- * @returns the stage number
+ * @return the stage number
  */
 GIT_EXTERN(int) git_index_entry_stage(const git_index_entry *entry);
 
