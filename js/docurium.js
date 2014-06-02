@@ -358,10 +358,17 @@ $(function() {
   })
 
   var TypeView = Backbone.View.extend({
-    template: _.template($('#type-template').html()),
+    enumTemplate: _.template($('#enum-template').html()),
+    structTemplate: _.template($('#struct-template').html()),
+    usesTemplate: _.template($('#uses-template').html()),
 
     render: function() {
-      var content = this.template(this.model.get('data'))
+      var type = this.model.get('data')
+      var uses = this.usesTemplate(type)
+
+      var template = type.data.type == 'struct' ? this.structTemplate : this.enumTemplate
+      var content = template({type: type, uses: uses})
+
       this.el = content
       return this
     }

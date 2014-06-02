@@ -186,23 +186,7 @@
       <% }) %> <!-- loop through the groups -->
     </script>
 
-    <!-- listing for a particular type -->
-    <script type="text/template" id="type-template">
-      <h1 class="funcTitle"><%= tname %><small><%= data.type %></small></h1>
-      <p><%= data.value %></p>
-      <% if (data.comments) { %>
-      <div><%= data.comments %></div>
-      <% } %>
-      <!-- blocks of fields, with attached docs -->
-      <dl>
-      <% _.each(blocks, function(block) { %>
-      <% _.each(block, function(field) { %>
-      <dt><code><%= field.type %> <%= field.name %> <%= field.value %></code></dt>
-      <% }) %>
-      <dd><%= _.last(block).comments %></dd>
-      <% }) %>
-      </dl>
-
+    <script type="text/template" id="uses-template">
       <% if (returns.length > 0) { %>
       <h3>Returns</h3>
       <% _.each(_.initial(returns), function(fun) { %>
@@ -225,6 +209,59 @@
 	Defined in:
 	<a href="<%= fileLink.url %>"><%= fileLink.name %></a>
       </div>
+    </script>
+
+    <!-- listing for an enum -->
+    <script type="text/template" id="enum-template">
+      <h1 class="funcTitle"><%= type.tname %><small><%= type.type %></small></h1>
+      <p><%= type.value %></p>
+      <% if (type.comments) { %>
+      <div><%= type.comments %></div>
+      <% } %>
+      <!-- blocks of fields, with attached docs -->
+      <dl>
+      <% _.each(type.blocks, function(block) { %>
+      <% _.each(block, function(field) { %>
+      <dt><code><%= field.name %> <%= field.value %></code></dt>
+      <% }) %>
+      <dd><%= _.last(block).comments %></dd>
+      <% }) %>
+      </dl>
+
+      <hr />
+      <table>
+	<% _.each(type.data.fields, function(field) { %>
+	<tr>
+	  <td><code><%= field.name %></code></td>
+	<tr>
+	  <% if (field.comments) { %>
+	  <tr>
+	    <td class="type-comment"><%= field.comments %></td>
+	  </tr>
+	  <% } %>
+	<% }) %>
+      </table>
+      <%= uses %>
+    </script>
+    <!-- listing for a struct -->
+    <script type="text/template" id="struct-template">
+      <h1 class="funcTitle"><%= type.tname %><small><%= type.type %></small></h1>
+      <p><%= type.value %></p>
+      <table>
+	<% _.each(type.data.fields, function(field) { %>
+	<tr>
+	  <td><code><%= field.type %></code></td>
+	  <td><code><%= field.name %></code></td>
+	<tr>
+	  <% if (field.comments) { %>
+	  <tr>
+	    <td colspan="2" class="type-comment"><%= field.comments %></td>
+	  </tr>
+	  <% } %>
+	<% }) %>
+      </table>
+
+      <%= uses %>
     </script>
 
     <script type="text/template" id="group-template">

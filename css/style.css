@@ -254,3 +254,7 @@ p.functionList a.introd {
 .changelog li.deletes {
   color: #933;
 }
+
+.type-comment {
+  padding-left: 3em;
+}

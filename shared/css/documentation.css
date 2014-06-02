@@ -459,6 +459,7 @@ div.sidebar-module ul ul li span {
 .content .verseblock-content,
 .content .sectionbody .dlist dt,
 .content p > tt,
+.content table tr td code,
 .content dl code,
 .content ul code,
 p code {
