@@ -438,4 +438,7 @@ extern int git_path_iconv(git_path_iconv_t *ic, char **in, size_t *inlen);
 
 extern bool git_path_does_fs_decompose_unicode(const char *root);
 
+/* Used for paths to repositories on the filesystem */
+extern int git_path_from_url_or_path(git_buf *local_path_out, const char *url_or_path);
+
 #endif

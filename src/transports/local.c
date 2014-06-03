@@ -175,24 +175,6 @@ on_error:
 	return -1;
 }
 
-static int path_from_url_or_path(git_buf *local_path_out, const char *url_or_path)
-{
-	int error;
-
-	/* If url_or_path begins with file:// treat it as a URL */
-	if (!git__prefixcmp(url_or_path, "file://")) {
-		if ((error = git_path_fromurl(local_path_out, url_or_path)) < 0) {
-			return error;
-		}
-	} else { /* We assume url_or_path is already a path */
-		if ((error = git_buf_sets(local_path_out, url_or_path)) < 0) {
-			return error;
-		}
-	}
-
-	return 0;
-}
-
 /*
  * Try to open the url as a git directory. The direction doesn't
  * matter in this case because we're calculating the heads ourselves.
@@ -222,7 +204,7 @@ static int local_connect(
 	t->flags = flags;
 
 	/* 'url' may be a url or path; convert to a path */
-	if ((error = path_from_url_or_path(&buf, url)) < 0) {
+	if ((error = git_path_from_url_or_path(&buf, url)) < 0) {
 		git_buf_free(&buf);
 		return error;
 	}
@@ -386,7 +368,7 @@ static int local_push(
 	size_t j;
 
 	/* 'push->remote->url' may be a url or path; convert to a path */
-	if ((error = path_from_url_or_path(&buf, push->remote->url)) < 0) {
+	if ((error = git_path_from_url_or_path(&buf, push->remote->url)) < 0) {
 		git_buf_free(&buf);
 		return error;
 	}
