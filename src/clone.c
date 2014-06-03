@@ -492,20 +492,16 @@ int git_clone_local_into(git_repository *repo, git_remote *remote, const git_che
 	 */
 	url = git_remote_url(remote);
 	if (!git__prefixcmp(url, "file://"))
-		root = strlen("file://");
-	else
-		root = git_path_root(url);
-
-	if (root >= 0)
-		git_buf_puts(&src_path, url + root);
-	else
+		url += strlen("file://");
+	else if (git_path_root(url) < 0) { /* relative path */
 		git_buf_joinpath(&src_path, repository_base(repo), url);
-
-	if (git_buf_oom(&src_path))
-		return -1;
+		if (git_buf_oom(&src_path))
+			return -1;
+		url = git_buf_cstr(&src_path);
+	}
 
 	/* Copy .git/objects/ from the source to the target */
-	if ((error = git_repository_open(&src, git_buf_cstr(&src_path))) < 0) {
+	if ((error = git_repository_open(&src, url)) < 0) {
 		git_buf_free(&src_path);
 		return error;
 	}
