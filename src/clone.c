@@ -472,11 +472,10 @@ static bool can_link(const char *src, const char *dst, int link)
 
 int git_clone_local_into(git_repository *repo, git_remote *remote, const git_checkout_options *co_opts, const char *branch, int link, const git_signature *signature)
 {
-	int error, root, flags;
+	int error, flags;
 	git_repository *src;
 	git_buf src_odb = GIT_BUF_INIT, dst_odb = GIT_BUF_INIT, src_path = GIT_BUF_INIT;
 	git_buf reflog_message = GIT_BUF_INIT;
-	const char *url;
 
 	assert(repo && remote);
 
@@ -490,19 +489,8 @@ int git_clone_local_into(git_repository *repo, git_remote *remote, const git_che
 	 * repo, if it's not rooted, the path should be relative to
 	 * the repository's worktree/gitdir.
 	 */
-	url = git_remote_url(remote);
-	if (!git__prefixcmp(url, "file://"))
-		root = strlen("file://");
-	else
-		root = git_path_root(url);
-
-	if (root >= 0)
-		git_buf_puts(&src_path, url + root);
-	else
-		git_buf_joinpath(&src_path, repository_base(repo), url);
-
-	if (git_buf_oom(&src_path))
-		return -1;
+	if ((error = git_path_from_url_or_path(&src_path, git_remote_url(remote))) < 0)
+		return error;
 
 	/* Copy .git/objects/ from the source to the target */
 	if ((error = git_repository_open(&src, git_buf_cstr(&src_path))) < 0) {
