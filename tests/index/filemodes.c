@@ -166,4 +166,6 @@ void test_index_filemodes__invalid(void)
 
 	entry.mode = GIT_FILEMODE_BLOB;
 	cl_git_pass(git_index_add(index, &entry));
+
+	git_index_free(index);
 }
