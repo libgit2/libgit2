@@ -995,7 +995,10 @@ static int handle_unmatched_new_item(
 	}
 
 	else if (nitem->mode == GIT_FILEMODE_UNREADABLE) {
-		delta_type = GIT_DELTA_UNREADABLE;
+		if (DIFF_FLAG_IS_SET(diff, GIT_DIFF_INCLUDE_UNREADABLE_AS_UNTRACKED))
+			delta_type = GIT_DELTA_UNTRACKED;
+		else
+			delta_type = GIT_DELTA_UNREADABLE;
 	}
 
 	/* Actually create the record for this item if necessary */
