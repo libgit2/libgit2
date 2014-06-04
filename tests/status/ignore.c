@@ -388,7 +388,7 @@ void test_status_ignore__leading_slash_ignores(void)
 	cl_git_mkfile("home/.gitignore", "/ignore_me\n");
 	{
 		git_config *cfg;
-		cl_git_pass(git_repository_config(&cfg, g_repo));
+		cl_git_pass(git_repository_config_writable(&cfg, g_repo));
 		cl_git_pass(git_config_set_string(
 			cfg, "core.excludesfile", "~/.gitignore"));
 		git_config_free(cfg);

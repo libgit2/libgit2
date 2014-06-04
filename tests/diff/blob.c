@@ -796,7 +796,7 @@ void test_diff_blob__using_path_and_attributes(void)
 
 	/* set up custom diff drivers and 'diff' attribute mappings for them */
 
-	cl_git_pass(git_repository_config(&cfg, g_repo));
+	cl_git_pass(git_repository_config_writable(&cfg, g_repo));
 	cl_git_pass(git_config_set_bool(cfg, "diff.iam_binary.binary", 1));
 	cl_git_pass(git_config_set_bool(cfg, "diff.iam_text.binary", 0));
 	cl_git_pass(git_config_set_string(

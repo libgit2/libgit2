@@ -462,7 +462,7 @@ int git_repository_open_ext(
 	else {
 		git_config *config = NULL;
 
-		if ((error = git_repository_config_snapshot(&config, repo)) < 0 ||
+		if ((error = git_repository_config(&config, repo)) < 0 ||
 			(error = load_config_data(repo, config)) < 0 ||
 			(error = load_workdir(repo, config, &parent)) < 0)
 			git_repository_free(repo);
@@ -616,7 +616,7 @@ int git_repository_config__weakptr(git_config **out, git_repository *repo)
 	return error;
 }
 
-int git_repository_config(git_config **out, git_repository *repo)
+int git_repository_config_writable(git_config **out, git_repository *repo)
 {
 	if (git_repository_config__weakptr(out, repo) < 0)
 		return -1;
@@ -625,7 +625,7 @@ int git_repository_config(git_config **out, git_repository *repo)
 	return 0;
 }
 
-int git_repository_config_snapshot(git_config **out, git_repository *repo)
+int git_repository_config(git_config **out, git_repository *repo)
 {
 	int error;
 	git_config *weak;

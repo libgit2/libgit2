@@ -116,8 +116,8 @@ void test_merge_workdir_analysis__fastforward_with_config_noff(void)
 	git_merge_analysis_t merge_analysis;
 	git_merge_preference_t merge_pref;
 
-	git_repository_config(&config, repo);
-	git_config_set_string(config, "merge.ff", "false");
+	git_repository_config_writable(&config, repo);
+	cl_git_pass(git_config_set_string(config, "merge.ff", "false"));
 
 	analysis_from_branch(&merge_analysis, &merge_pref, FASTFORWARD_BRANCH);
 	cl_assert_equal_i(GIT_MERGE_ANALYSIS_FASTFORWARD, (merge_analysis & GIT_MERGE_ANALYSIS_FASTFORWARD));
@@ -131,8 +131,8 @@ void test_merge_workdir_analysis__no_fastforward_with_config_ffonly(void)
 	git_merge_analysis_t merge_analysis;
 	git_merge_preference_t merge_pref;
 
-	git_repository_config(&config, repo);
-	git_config_set_string(config, "merge.ff", "only");
+	git_repository_config_writable(&config, repo);
+	cl_git_pass(git_config_set_string(config, "merge.ff", "only"));
 
 	analysis_from_branch(&merge_analysis, &merge_pref, NOFASTFORWARD_BRANCH);
 	cl_assert_equal_i(GIT_MERGE_ANALYSIS_NORMAL, (merge_analysis & GIT_MERGE_ANALYSIS_NORMAL));

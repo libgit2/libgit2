@@ -239,7 +239,7 @@ static int git_diff_driver_load(
 	memcpy(drv->name, driver_name, namelen);
 
 	/* if you can't read config for repo, just use default driver */
-	if (git_repository_config_snapshot(&cfg, repo) < 0) {
+	if (git_repository_config(&cfg, repo) < 0) {
 		giterr_clear();
 		goto done;
 	}

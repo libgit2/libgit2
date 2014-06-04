@@ -11,7 +11,7 @@ void test_network_remote_createthenload__initialize(void)
 
 	cl_git_pass(git_repository_open(&_repo, "testrepo.git"));
 
-	cl_git_pass(git_repository_config(&_config, _repo));
+	cl_git_pass(git_repository_config_writable(&_config, _repo));
 	cl_git_pass(git_config_set_string(_config, "remote.origin.fetch", "+refs/heads/*:refs/remotes/origin/*"));
 	cl_git_pass(git_config_set_string(_config, "remote.origin.url", url));
 	git_config_free(_config);

@@ -82,7 +82,7 @@ void test_online_fetchhead__no_merges(void)
 
 	fetchhead_test_clone();
 
-	cl_git_pass(git_repository_config(&config, g_repo));
+	cl_git_pass(git_repository_config_writable(&config, g_repo));
 	cl_git_pass(git_config_delete_entry(config, "branch.master.remote"));
 	cl_git_pass(git_config_delete_entry(config, "branch.master.merge"));
 	git_config_free(config);

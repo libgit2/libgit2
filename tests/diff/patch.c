@@ -188,7 +188,7 @@ void test_diff_patch__config_options(void)
 	const char *expected4 = "diff --git staged_changes_modified_file staged_changes_modified_file\nindex 70bd9443ada0..906ee7711f4f 100644\n--- staged_changes_modified_file\n+++ staged_changes_modified_file\n@@ -1 +1,2 @@\n staged_changes_modified_file\n+staged_changes_modified_file\n";
 
 	g_repo = cl_git_sandbox_init("status");
-	cl_git_pass(git_repository_config(&cfg, g_repo));
+	cl_git_pass(git_repository_config_writable(&cfg, g_repo));
 	one = resolve_commit_oid_to_tree(g_repo, one_sha);
 	opts.pathspec.count = 1;
 	opts.pathspec.strings = &onefile;

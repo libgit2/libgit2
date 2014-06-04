@@ -281,7 +281,7 @@ void test_config_write__can_set_an_empty_value(void)
 	const char * str;
 
 	repository = cl_git_sandbox_init("testrepo.git");
-	cl_git_pass(git_repository_config(&config, repository));
+	cl_git_pass(git_repository_config_writable(&config, repository));
 
 	cl_git_pass(git_config_set_string(config, "core.somevar", ""));
 	cl_git_pass(git_config_get_string(&str, config, "core.somevar"));

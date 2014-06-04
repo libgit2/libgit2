@@ -101,7 +101,7 @@ void test_diff_drivers__patterns(void)
 
 	/* let's define that driver */
 
-	cl_git_pass(git_repository_config(&cfg, g_repo));
+	cl_git_pass(git_repository_config_writable(&cfg, g_repo));
 	cl_git_pass(git_config_set_bool(cfg, "diff.kipling0.binary", 1));
 	git_config_free(cfg);
 
@@ -121,7 +121,7 @@ void test_diff_drivers__patterns(void)
 	git_diff_driver_registry_free(g_repo->diff_drivers);
 	g_repo->diff_drivers = NULL;
 
-	cl_git_pass(git_repository_config(&cfg, g_repo));
+	cl_git_pass(git_repository_config_writable(&cfg, g_repo));
 	cl_git_pass(git_config_set_bool(cfg, "diff.kipling0.binary", 0));
 	cl_git_pass(git_config_set_string(cfg, "diff.kipling0.xfuncname", "^H.*$"));
 	git_config_free(cfg);

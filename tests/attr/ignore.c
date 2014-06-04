@@ -157,7 +157,7 @@ void test_attr_ignore__expand_tilde_to_homedir(void)
 	/* construct fake home with fake global excludes */
 	cl_git_mkfile("home/globalexclude", "# found me\n*.global_with_tilde\n");
 
-	cl_git_pass(git_repository_config(&cfg, g_repo));
+	cl_git_pass(git_repository_config_writable(&cfg, g_repo));
 	cl_git_pass(git_config_set_string(cfg, "core.excludesfile", "~/globalexclude"));
 	git_config_free(cfg);
 

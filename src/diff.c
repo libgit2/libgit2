@@ -406,7 +406,7 @@ static int diff_list_apply_options(
 		diff->opts.flags |= GIT_DIFF_INCLUDE_UNTRACKED;
 
 	/* load config values that affect diff behavior */
-	if ((val = git_repository_config_snapshot(&cfg, repo)) < 0)
+	if ((val = git_repository_config(&cfg, repo)) < 0)
 		return val;
 
 	if (!git_config__cvar(&val, cfg, GIT_CVAR_SYMLINKS) && val)

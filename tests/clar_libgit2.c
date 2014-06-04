@@ -398,7 +398,7 @@ void cl_repo_commit_from_index(
 void cl_repo_set_bool(git_repository *repo, const char *cfg, int value)
 {
 	git_config *config;
-	cl_git_pass(git_repository_config(&config, repo));
+	cl_git_pass(git_repository_config_writable(&config, repo));
 	cl_git_pass(git_config_set_bool(config, cfg, value != 0));
 	git_config_free(config);
 }
@@ -417,7 +417,7 @@ int cl_repo_get_bool(git_repository *repo, const char *cfg)
 void cl_repo_set_string(git_repository *repo, const char *cfg, const char *value)
 {
 	git_config *config;
-	cl_git_pass(git_repository_config(&config, repo));
+	cl_git_pass(git_repository_config_writable(&config, repo));
 	cl_git_pass(git_config_set_string(config, cfg, value));
 	git_config_free(config);
 }
