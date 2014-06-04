@@ -156,6 +156,7 @@ typedef enum {
 	(GIT_STATUS_OPT_INCLUDE_IGNORED | \
 	GIT_STATUS_OPT_INCLUDE_UNTRACKED | \
 	GIT_STATUS_OPT_RECURSE_UNTRACKED_DIRS)
+
 /**
  * Options to control how `git_status_foreach_ext()` will issue callbacks.
  *
