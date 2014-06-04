@@ -10,7 +10,13 @@
 
 #include "map.h"
 #include <sys/mman.h>
+#include <unistd.h>
 #include <errno.h>
+
+long git__page_size(void)
+{
+	return sysconf(_SC_PAGE_SIZE);
+}
 
 int p_mmap(git_map *out, size_t len, int prot, int flags, int fd, git_off_t offset)
 {

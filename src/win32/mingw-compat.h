@@ -10,6 +10,7 @@
 #if defined(__MINGW32__)
 
 /* use a 64-bit file offset type */
+# undef lseek
 # define lseek _lseeki64
 # undef stat
 # define stat _stati64

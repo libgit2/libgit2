@@ -19,6 +19,15 @@
 # define FILE_NAME_NORMALIZED 0
 #endif
 
+/* Options which we always provide to _wopen.
+ *
+ * _O_BINARY - Raw access; no translation of CR or LF characters
+ * _O_NOINHERIT - Do not mark the created handle as inheritable by child processes.
+ *    The Windows default is 'not inheritable', but the CRT's default (following
+ *    POSIX convention) is 'inheritable'. We have no desire for our handles to be
+ *    inheritable on Windows, so specify the flag to get default behavior back. */
+#define STANDARD_OPEN_FLAGS (_O_BINARY | _O_NOINHERIT)
+
 /* GetFinalPathNameByHandleW signature */
 typedef DWORD(WINAPI *PFGetFinalPathNameByHandleW)(HANDLE, LPWSTR, DWORD, DWORD);
 
@@ -317,7 +326,7 @@ int p_open(const char *path, int flags, ...)
 		va_end(arg_list);
 	}
 
-	return _wopen(buf, flags | _O_BINARY, mode);
+	return _wopen(buf, flags | STANDARD_OPEN_FLAGS, mode);
 }
 
 int p_creat(const char *path, mode_t mode)
@@ -327,7 +336,7 @@ int p_creat(const char *path, mode_t mode)
 	if (utf8_to_16_with_errno(buf, path) < 0)
 		return -1;
 
-	return _wopen(buf, _O_WRONLY | _O_CREAT | _O_TRUNC | _O_BINARY, mode);
+	return _wopen(buf, _O_WRONLY | _O_CREAT | _O_TRUNC | STANDARD_OPEN_FLAGS, mode);
 }
 
 int p_getcwd(char *buffer_out, size_t size)
@@ -569,7 +578,7 @@ int p_mkstemp(char *tmp_path)
 		return -1;
 #endif
 
-	return p_creat(tmp_path, 0744); //-V536
+	return p_open(tmp_path, O_RDWR | O_CREAT | O_EXCL, 0744); //-V536
 }
 
 int p_access(const char* path, mode_t mode)

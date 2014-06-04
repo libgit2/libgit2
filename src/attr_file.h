@@ -138,7 +138,7 @@ int git_attr_file__clear_rules(
 
 int git_attr_file__lookup_one(
 	git_attr_file *file,
-	const git_attr_path *path,
+	git_attr_path *path,
 	const char *attr,
 	const char **value);
 
@@ -162,13 +162,13 @@ extern int git_attr_fnmatch__parse(
 
 extern bool git_attr_fnmatch__match(
 	git_attr_fnmatch *rule,
-	const git_attr_path *path);
+	git_attr_path *path);
 
 extern void git_attr_rule__free(git_attr_rule *rule);
 
 extern bool git_attr_rule__match(
 	git_attr_rule *rule,
-	const git_attr_path *path);
+	git_attr_path *path);
 
 extern git_attr_assignment *git_attr_rule__lookup_assignment(
 	git_attr_rule *rule, const char *name);

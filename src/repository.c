@@ -443,7 +443,6 @@ int git_repository_open_ext(
 	int error;
 	git_buf path = GIT_BUF_INIT, parent = GIT_BUF_INIT;
 	git_repository *repo;
-	git_config *config;
 
 	if (repo_ptr)
 		*repo_ptr = NULL;
@@ -458,23 +457,24 @@ int git_repository_open_ext(
 	repo->path_repository = git_buf_detach(&path);
 	GITERR_CHECK_ALLOC(repo->path_repository);
 
-	if ((error = git_repository_config_snapshot(&config, repo)) < 0)
-		return error;
-
 	if ((flags & GIT_REPOSITORY_OPEN_BARE) != 0)
 		repo->is_bare = 1;
-	else if ((error = load_config_data(repo, config)) < 0 ||
-		 (error = load_workdir(repo, config, &parent)) < 0)
-	{
+	else {
+		git_config *config = NULL;
+
+		if ((error = git_repository_config_snapshot(&config, repo)) < 0 ||
+			(error = load_config_data(repo, config)) < 0 ||
+			(error = load_workdir(repo, config, &parent)) < 0)
+			git_repository_free(repo);
+
 		git_config_free(config);
-		git_repository_free(repo);
-		return error;
 	}
 
-	git_config_free(config);
+	if (!error)
+		*repo_ptr = repo;
 	git_buf_free(&parent);
-	*repo_ptr = repo;
-	return 0;
+
+	return error;
 }
 
 int git_repository_open(git_repository **repo_out, const char *path)
@@ -1190,6 +1190,7 @@ static int repo_init_structure(
 	bool external_tpl =
 		((opts->flags & GIT_REPOSITORY_INIT_EXTERNAL_TEMPLATE) != 0);
 	mode_t dmode = pick_dir_mode(opts);
+	bool chmod = opts->mode != GIT_REPOSITORY_INIT_SHARED_UMASK;
 
 	/* Hide the ".git" directory */
 #ifdef GIT_WIN32
@@ -1230,10 +1231,12 @@ static int repo_init_structure(
 			default_template = true;
 		}
 
-		if (tdir)
-			error = git_futils_cp_r(tdir, repo_dir,
-				GIT_CPDIR_COPY_SYMLINKS | GIT_CPDIR_CHMOD_DIRS |
-				GIT_CPDIR_SIMPLE_TO_MODE, dmode);
+		if (tdir) {
+			uint32_t cpflags = GIT_CPDIR_COPY_SYMLINKS | GIT_CPDIR_SIMPLE_TO_MODE;
+			if (opts->mode != GIT_REPOSITORY_INIT_SHARED_UMASK)
+					cpflags |= GIT_CPDIR_CHMOD_DIRS;
+			error = git_futils_cp_r(tdir, repo_dir, cpflags, dmode);
+		}
 
 		git_buf_free(&template_buf);
 		git_config_free(cfg);
@@ -1254,9 +1257,14 @@ static int repo_init_structure(
 	 * - only create files if no external template was specified
 	 */
 	for (tpl = repo_template; !error && tpl->path; ++tpl) {
-		if (!tpl->content)
+		if (!tpl->content) {
+			uint32_t mkdir_flags = GIT_MKDIR_PATH;
+			if (chmod)
+				mkdir_flags |= GIT_MKDIR_CHMOD;
+
 			error = git_futils_mkdir(
-				tpl->path, repo_dir, dmode, GIT_MKDIR_PATH | GIT_MKDIR_CHMOD);
+				tpl->path, repo_dir, dmode, mkdir_flags);
+		}
 		else if (!external_tpl) {
 			const char *content = tpl->content;
 

@@ -19,6 +19,12 @@
 # define EAFNOSUPPORT (INT_MAX-1)
 #endif
 
+#ifdef _MSC_VER
+# define p_ftruncate(fd, sz) _chsize_s(fd, sz)
+#else  /* MinGW */
+# define p_ftruncate(fd, sz) _chsize(fd, sz)
+#endif
+
 GIT_INLINE(int) p_link(const char *old, const char *new)
 {
 	GIT_UNUSED(old);

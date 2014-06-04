@@ -139,7 +139,7 @@ int git_config_open_ondisk(git_config **out, const char *path)
 
 int git_config_snapshot(git_config **out, git_config *in)
 {
-	int error;
+	int error = 0;
 	size_t i;
 	file_internal *internal;
 	git_config *config;
@@ -153,19 +153,19 @@ int git_config_snapshot(git_config **out, git_config *in)
 		git_config_backend *b;
 
 		if ((error = internal->file->snapshot(&b, internal->file)) < 0)
-			goto on_error;
+			break;
 
 		if ((error = git_config_add_backend(config, b, internal->level, 0)) < 0) {
 			b->free(b);
-			goto on_error;
+			break;
 		}
 	}
 
-	*out = config;
-	return error;
+	if (error < 0)
+		git_config_free(config);
+	else
+		*out = config;
 
-on_error:
-	git_config_free(config);
 	return error;
 }
 

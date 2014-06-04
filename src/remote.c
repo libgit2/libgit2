@@ -403,6 +403,7 @@ int git_remote_load(git_remote **out, git_repository *repo, const char *name)
 
 	if (!optional_setting_found) {
 		error = GIT_ENOTFOUND;
+		giterr_set(GITERR_CONFIG, "Remote '%s' does not exist.", name);
 		goto cleanup;
 	}
 
@@ -1304,13 +1305,14 @@ static int rename_remote_config_section(
 	if (git_buf_printf(&old_section_name, "remote.%s", old_name) < 0)
 		goto cleanup;
 
-	if (git_buf_printf(&new_section_name, "remote.%s", new_name) < 0)
-		goto cleanup;
+	if (new_name &&
+		(git_buf_printf(&new_section_name, "remote.%s", new_name) < 0))
+			goto cleanup;
 
 	error = git_config_rename_section(
 		repo,
 		git_buf_cstr(&old_section_name),
-		git_buf_cstr(&new_section_name));
+		new_name ? git_buf_cstr(&new_section_name) : NULL);
 
 cleanup:
 	git_buf_free(&old_section_name);
@@ -1742,4 +1744,218 @@ int git_remote_init_callbacks(git_remote_callbacks *opts, unsigned int version)
 	GIT_INIT_STRUCTURE_FROM_TEMPLATE(
 		opts, version, git_remote_callbacks, GIT_REMOTE_CALLBACKS_INIT);
 	return 0;
+}
+
+/* asserts a branch.<foo>.remote format */
+static const char *name_offset(size_t *len_out, const char *name)
+{
+	size_t prefix_len;
+	const char *dot;
+
+	prefix_len = strlen("remote.");
+	dot = strchr(name + prefix_len, '.');
+
+	assert(dot);
+
+	*len_out = dot - name - prefix_len;
+	return name + prefix_len;
+}
+
+static int remove_branch_config_related_entries(
+	git_repository *repo,
+	const char *remote_name)
+{
+	int error;
+	git_config *config;
+	git_config_entry *entry;
+	git_config_iterator *iter;
+	git_buf buf = GIT_BUF_INIT;
+
+	if ((error = git_repository_config__weakptr(&config, repo)) < 0)
+		return error;
+
+	if ((error = git_config_iterator_glob_new(&iter, config, "branch\\..+\\.remote")) < 0)
+		return error;
+
+	/* find any branches with us as upstream and remove that config */
+	while ((error = git_config_next(&entry, iter)) == 0) {
+		const char *branch;
+		size_t branch_len;
+
+		if (strcmp(remote_name, entry->value))
+			continue;
+
+		branch = name_offset(&branch_len, entry->name);
+
+		git_buf_clear(&buf);
+		if (git_buf_printf(&buf, "branch.%.*s.merge", (int)branch_len, branch) < 0)
+			break;
+
+		if ((error = git_config_delete_entry(config, git_buf_cstr(&buf))) < 0)
+			break;
+
+		git_buf_clear(&buf);
+		if (git_buf_printf(&buf, "branch.%.*s.remote", (int)branch_len, branch) < 0)
+			break;
+
+		if ((error = git_config_delete_entry(config, git_buf_cstr(&buf))) < 0)
+			break;
+	}
+
+	if (error == GIT_ITEROVER)
+		error = 0;
+
+	git_buf_free(&buf);
+	git_config_iterator_free(iter);
+	return error;
+}
+
+static int remove_refs(git_repository *repo, const git_refspec *spec)
+{
+	git_reference_iterator *iter = NULL;
+	git_vector refs;
+	const char *name;
+	char *dup;
+	int error;
+	size_t i;
+
+	if ((error = git_vector_init(&refs, 8, NULL)) < 0)
+		return error;
+
+	if ((error = git_reference_iterator_new(&iter, repo)) < 0)
+		goto cleanup;
+
+	while ((error = git_reference_next_name(&name, iter)) == 0) {
+		if (!git_refspec_dst_matches(spec, name))
+			continue;
+
+		dup = git__strdup(name);
+		if (!dup) {
+			error = -1;
+			goto cleanup;
+		}
+
+		if ((error = git_vector_insert(&refs, dup)) < 0)
+			goto cleanup;
+	}
+	if (error == GIT_ITEROVER)
+		error = 0;
+	if (error < 0)
+		goto cleanup;
+
+	git_vector_foreach(&refs, i, name) {
+		if ((error = git_reference_remove(repo, name)) < 0)
+			break;
+	}
+
+cleanup:
+	git_reference_iterator_free(iter);
+	git_vector_foreach(&refs, i, dup) {
+		git__free(dup);
+	}
+	git_vector_free(&refs);
+	return error;
+}
+
+static int remove_remote_tracking(git_repository *repo, const char *remote_name)
+{
+	git_remote *remote;
+	int error;
+	size_t i, count;
+
+	/* we want to use what's on the config, regardless of changes to the instance in memory */
+	if ((error = git_remote_load(&remote, repo, remote_name)) < 0)
+		return error;
+
+	count = git_remote_refspec_count(remote);
+	for (i = 0; i < count; i++) {
+		const git_refspec *refspec = git_remote_get_refspec(remote, i);
+
+		/* shouldn't ever actually happen */
+		if (refspec == NULL)
+			continue;
+
+		if ((error = remove_refs(repo, refspec)) < 0)
+			break;
+	}
+
+	git_remote_free(remote);
+	return error;
+}
+
+int git_remote_delete(git_remote *remote)
+{
+	int error;
+	git_repository *repo;
+
+	assert(remote);
+
+	if (!remote->name) {
+		giterr_set(GITERR_INVALID, "Can't delete an anonymous remote.");
+		return -1;
+	}
+
+	repo = git_remote_owner(remote);
+
+	if ((error = remove_branch_config_related_entries(repo,
+		git_remote_name(remote))) < 0)
+		return error;
+
+	if ((error = remove_remote_tracking(repo, git_remote_name(remote))) < 0)
+		return error;
+
+	if ((error = rename_remote_config_section(
+		repo, git_remote_name(remote), NULL)) < 0)
+		return error;
+
+	git_remote_free(remote);
+
+	return 0;
+}
+
+int git_remote_default_branch(git_buf *out, git_remote *remote)
+{
+	const git_remote_head **heads;
+	const git_remote_head *guess = NULL;
+	const git_oid *head_id;
+	size_t heads_len, i;
+	int error;
+
+	if ((error = git_remote_ls(&heads, &heads_len, remote)) < 0)
+		return error;
+
+	if (heads_len == 0)
+		return GIT_ENOTFOUND;
+
+	git_buf_sanitize(out);
+	/* the first one must be HEAD so if that has the symref info, we're done */
+	if (heads[0]->symref_target)
+		return git_buf_puts(out, heads[0]->symref_target);
+
+	/*
+	 * If there's no symref information, we have to look over them
+	 * and guess. We return the first match unless the master
+	 * branch is a candidate. Then we return the master branch.
+	 */
+	head_id = &heads[0]->oid;
+
+	for (i = 1; i < heads_len; i++) {
+		if (git_oid_cmp(head_id, &heads[i]->oid))
+			continue;
+
+		if (!guess) {
+			guess = heads[i];
+			continue;
+		}
+
+		if (!git__strcmp(GIT_REFS_HEADS_MASTER_FILE, heads[i]->name)) {
+			guess = heads[i];
+			break;
+		}
+	}
+
+	if (!guess)
+		return GIT_ENOTFOUND;
+
+	return git_buf_puts(out, guess->name);
 }

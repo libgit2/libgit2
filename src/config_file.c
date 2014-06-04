@@ -270,7 +270,6 @@ static int config_open(git_config_backend *cfg, git_config_level_t level)
 	if ((res = refcounted_strmap_alloc(&b->header.values)) < 0)
 		return res;
 
-	git_mutex_init(&b->header.values_mutex);
 	git_array_init(b->readers);
 	reader = git_array_alloc(b->readers);
 	if (!reader) {
@@ -313,6 +312,7 @@ static int config__refresh(git_config_backend *cfg)
 		goto out;
 
 	reader = git_array_get(b->readers, git_array_size(b->readers) - 1);
+	GITERR_CHECK_ALLOC(reader);
 
 	if ((error = config_parse(values->values, b, reader, b->level, 0)) < 0)
 		goto out;
@@ -327,7 +327,8 @@ static int config__refresh(git_config_backend *cfg)
 
 out:
 	refcounted_strmap_free(values);
-	git_buf_free(&reader->buffer);
+	if (reader)
+		git_buf_free(&reader->buffer);
 	return error;
 }
 
@@ -344,8 +345,8 @@ static int config_refresh(git_config_backend *cfg)
 			&reader->buffer, reader->file_path,
 			&reader->file_mtime, &reader->file_size, &updated);
 
-		if (error < 0)
-			return (error == GIT_ENOTFOUND) ? 0 : error;
+		if (error < 0 && error != GIT_ENOTFOUND)
+			return error;
 
 		if (updated)
 			any_updated = 1;
@@ -373,6 +374,7 @@ static void backend_free(git_config_backend *_backend)
 
 	git__free(backend->file_path);
 	refcounted_strmap_free(backend->header.values);
+	git_mutex_free(&backend->header.values_mutex);
 	git__free(backend);
 }
 
@@ -684,6 +686,7 @@ int git_config_file__ondisk(git_config_backend **out, const char *path)
 	GITERR_CHECK_ALLOC(backend);
 
 	backend->header.parent.version = GIT_CONFIG_BACKEND_VERSION;
+	git_mutex_init(&backend->header.values_mutex);
 
 	backend->file_path = git__strdup(path);
 	GITERR_CHECK_ALLOC(backend->file_path);
@@ -756,6 +759,7 @@ static void backend_readonly_free(git_config_backend *_backend)
 		return;
 
 	refcounted_strmap_free(backend->header.values);
+	git_mutex_free(&backend->header.values_mutex);
 	git__free(backend);
 }
 
@@ -782,6 +786,7 @@ int git_config_file__snapshot(git_config_backend **out, diskfile_backend *in)
 	GITERR_CHECK_ALLOC(backend);
 
 	backend->header.parent.version = GIT_CONFIG_BACKEND_VERSION;
+	git_mutex_init(&backend->header.values_mutex);
 
 	backend->snapshot_from = in;
 

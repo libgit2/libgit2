@@ -139,4 +139,6 @@ void cl_repo_set_string(git_repository *repo, const char *cfg, const char *value
 void cl_fake_home(void);
 void cl_fake_home_cleanup(void *);
 
+void cl_sandbox_set_search_path_defaults(void);
+
 #endif

@@ -21,7 +21,7 @@ static size_t line_length_without_trailing_spaces(const char *line, size_t len)
 
 /* Greatly inspired from git.git "stripspace" */
 /* see https://github.com/git/git/blob/497215d8811ac7b8955693ceaad0899ecd894ed2/builtin/stripspace.c#L4-67 */
-int git_message_prettify(git_buf *message_out, const char *message, int strip_comments)
+int git_message_prettify(git_buf *message_out, const char *message, int strip_comments, char comment_char)
 {
 	const size_t message_len = strlen(message);
 
@@ -40,7 +40,7 @@ int git_message_prettify(git_buf *message_out, const char *message, int strip_co
 			line_length = message_len - i;
 		}
 
-		if (strip_comments && line_length && message[i] == '#')
+		if (strip_comments && line_length && message[i] == comment_char)
 			continue;
 
 		rtrimmed_line_length = line_length_without_trailing_spaces(message + i, line_length);

@@ -35,3 +35,31 @@ void assert_config_entry_value(
 
 	cl_assert_equal_s(expected_value, out);
 }
+
+static int count_config_entries_cb(
+	const git_config_entry *entry,
+	void *payload)
+{
+	int *how_many = (int *)payload;
+
+	GIT_UNUSED(entry);
+
+	(*how_many)++;
+
+	return 0;
+}
+
+int count_config_entries_match(git_repository *repo, const char *pattern)
+{
+	git_config *config;
+	int how_many = 0;
+
+	cl_git_pass(git_repository_config(&config, repo));
+
+	cl_assert_equal_i(0, git_config_foreach_match(
+		config,	pattern, count_config_entries_cb, &how_many));
+
+	git_config_free(config);
+
+	return how_many;
+}

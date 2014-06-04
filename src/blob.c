@@ -334,7 +334,8 @@ int git_blob_is_binary(const git_blob *blob)
 	assert(blob);
 
 	content.ptr   = blob->odb_object->buffer;
-	content.size  = min(blob->odb_object->cached.size, 4000);
+	content.size  =
+		min(blob->odb_object->cached.size, GIT_FILTER_BYTES_TO_CHECK_NUL);
 	content.asize = 0;
 
 	return git_buf_text_is_binary(&content);

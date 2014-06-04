@@ -39,6 +39,7 @@ typedef enum {
 	GIT_CVAR_ABBREV,        /* core.abbrev */
 	GIT_CVAR_PRECOMPOSE,    /* core.precomposeunicode */
 	GIT_CVAR_SAFE_CRLF,		/* core.safecrlf */
+	GIT_CVAR_LOGALLREFUPDATES, /* core.logallrefupdates */
 	GIT_CVAR_CACHE_MAX
 } git_cvar_cached;
 
@@ -92,6 +93,9 @@ typedef enum {
 	GIT_PRECOMPOSE_DEFAULT = GIT_CVAR_FALSE,
 	/* core.safecrlf */
 	GIT_SAFE_CRLF_DEFAULT = GIT_CVAR_FALSE,
+	/* core.logallrefupdates */
+	GIT_LOGALLREFUPDATES_UNSET = 2,
+	GIT_LOGALLREFUPDATES_DEFAULT = GIT_LOGALLREFUPDATES_UNSET,
 } git_cvar_value;
 
 /* internal repository init flags */

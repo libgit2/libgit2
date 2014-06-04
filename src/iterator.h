@@ -245,6 +245,8 @@ extern int git_iterator_current_parent_tree(
 
 extern bool git_iterator_current_is_ignored(git_iterator *iter);
 
+extern bool git_iterator_current_tree_is_ignored(git_iterator *iter);
+
 extern int git_iterator_cmp(
 	git_iterator *iter, const char *path_prefix);
 

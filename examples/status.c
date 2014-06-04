@@ -14,9 +14,10 @@
 
 #include "common.h"
 #ifdef _WIN32
-#define sleep(a) Sleep(a * 1000)
+# include <Windows.h>
+# define sleep(a) Sleep(a * 1000)
 #else
-#include <unistd.h>
+# include <unistd.h>
 #endif
 
 /**

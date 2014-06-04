@@ -281,7 +281,7 @@ uint32_t git_attr_file__name_hash(const char *name)
 
 int git_attr_file__lookup_one(
 	git_attr_file *file,
-	const git_attr_path *path,
+	git_attr_path *path,
 	const char *attr,
 	const char **value)
 {
@@ -342,13 +342,10 @@ int git_attr_file__load_standalone(git_attr_file **out, const char *path)
 
 bool git_attr_fnmatch__match(
 	git_attr_fnmatch *match,
-	const git_attr_path *path)
+	git_attr_path *path)
 {
 	const char *filename;
 	int flags = 0;
-
-	if ((match->flags & GIT_ATTR_FNMATCH_DIRECTORY) && !path->is_dir)
-		return false;
 
 	if (match->flags & GIT_ATTR_FNMATCH_ICASE)
 		flags |= FNM_CASEFOLD;
@@ -365,12 +362,28 @@ bool git_attr_fnmatch__match(
 			flags |= FNM_LEADING_DIR;
 	}
 
+	if ((match->flags & GIT_ATTR_FNMATCH_DIRECTORY) && !path->is_dir) {
+		int matchval;
+
+		/* for attribute checks or root ignore checks, fail match */
+		if (!(match->flags & GIT_ATTR_FNMATCH_IGNORE) ||
+			path->basename == path->path)
+			return false;
+
+		/* for ignore checks, use container of current item for check */
+		path->basename[-1] = '\0';
+		flags |= FNM_LEADING_DIR;
+		matchval = p_fnmatch(match->pattern, path->path, flags);
+		path->basename[-1] = '/';
+		return (matchval != FNM_NOMATCH);
+	}
+
 	return (p_fnmatch(match->pattern, filename, flags) != FNM_NOMATCH);
 }
 
 bool git_attr_rule__match(
 	git_attr_rule *rule,
-	const git_attr_path *path)
+	git_attr_path *path)
 {
 	bool matched = git_attr_fnmatch__match(&rule->match, path);
 

@@ -518,3 +518,16 @@ void cl_fake_home(void)
 		GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL, path.ptr));
 	git_buf_free(&path);
 }
+
+void cl_sandbox_set_search_path_defaults(void)
+{
+	const char *sandbox_path = clar_sandbox_path();
+
+	git_libgit2_opts(
+		GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL, sandbox_path);
+	git_libgit2_opts(
+		GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_XDG, sandbox_path);
+	git_libgit2_opts(
+		GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_SYSTEM, sandbox_path);
+}
+

@@ -83,16 +83,12 @@ static void cache_free(git_pack_cache *cache)
 		}
 
 		git_offmap_free(cache->entries);
-		git_mutex_free(&cache->lock);
+		cache->entries = NULL;
 	}
-
-	memset(cache, 0, sizeof(*cache));
 }
 
 static int cache_init(git_pack_cache *cache)
 {
-	memset(cache, 0, sizeof(*cache));
-
 	cache->entries = git_offmap_alloc();
 	GITERR_CHECK_ALLOC(cache->entries);
 
@@ -514,72 +510,102 @@ int git_packfile_resolve_header(
 	return error;
 }
 
-static int packfile_unpack_delta(
-		git_rawobj *obj,
-		struct git_pack_file *p,
-		git_mwindow **w_curs,
-		git_off_t *curpos,
-		size_t delta_size,
-		git_otype delta_type,
-		git_off_t obj_offset)
+#define SMALL_STACK_SIZE 64
+
+/**
+ * Generate the chain of dependencies which we need to get to the
+ * object at `off`. `chain` is used a stack, popping gives the right
+ * order to apply deltas on. If an object is found in the pack's base
+ * cache, we stop calculating there.
+ */
+static int pack_dependency_chain(git_dependency_chain *chain_out,
+				 git_pack_cache_entry **cached_out, git_off_t *cached_off,
+				 struct pack_chain_elem *small_stack, size_t *stack_sz,
+				 struct git_pack_file *p, git_off_t obj_offset)
 {
-	git_off_t base_offset, base_key;
-	git_rawobj base, delta;
-	git_pack_cache_entry *cached = NULL;
-	int error, found_base = 0;
+	git_dependency_chain chain = GIT_ARRAY_INIT;
+	git_mwindow *w_curs = NULL;
+	git_off_t curpos = obj_offset, base_offset;
+	int error = 0, use_heap = 0;
+	size_t size, elem_pos;
+	git_otype type;
 
-	base_offset = get_delta_base(p, w_curs, curpos, delta_type, obj_offset);
-	git_mwindow_close(w_curs);
-	if (base_offset == 0)
-		return packfile_error("delta offset is zero");
-	if (base_offset < 0) /* must actually be an error code */
-		return (int)base_offset;
+	elem_pos = 0;
+	while (true) {
+		struct pack_chain_elem *elem;
+		git_pack_cache_entry *cached = NULL;
 
-	if (!p->bases.entries && (cache_init(&p->bases) < 0))
-		return -1;
+		/* if we have a base cached, we can stop here instead */
+		if ((cached = cache_get(&p->bases, obj_offset)) != NULL) {
+			*cached_out = cached;
+			*cached_off = obj_offset;
+			break;
+		}
 
-	base_key = base_offset; /* git_packfile_unpack modifies base_offset */
-	if ((cached = cache_get(&p->bases, base_offset)) != NULL) {
-		memcpy(&base, &cached->raw, sizeof(git_rawobj));
-		found_base = 1;
-	}
+		/* if we run out of space on the small stack, use the array */
+		if (elem_pos == SMALL_STACK_SIZE) {
+			git_array_init_to_size(chain, elem_pos);
+			GITERR_CHECK_ARRAY(chain);
+			memcpy(chain.ptr, small_stack, elem_pos * sizeof(struct pack_chain_elem));
+			chain.size = elem_pos;
+			use_heap = 1;
+		}
 
-	if (!cached) { /* have to inflate it */
-		error = git_packfile_unpack(&base, p, &base_offset);
+		curpos = obj_offset;
+		if (!use_heap) {
+			elem = &small_stack[elem_pos];
+		} else {
+			elem = git_array_alloc(chain);
+			if (!elem) {
+				error = -1;
+				goto on_error;
+			}
+		}
 
-		/*
-		 * TODO: git.git tries to load the base from other packfiles
-		 * or loose objects.
-		 *
-		 * We'll need to do this in order to support thin packs.
-		 */
+		elem->base_key = obj_offset;
+
+		error = git_packfile_unpack_header(&size, &type, &p->mwf, &w_curs, &curpos);
+		git_mwindow_close(&w_curs);
+
 		if (error < 0)
-			return error;
+			goto on_error;
+
+		elem->offset = curpos;
+		elem->size = size;
+		elem->type = type;
+		elem->base_key = obj_offset;
+
+		if (type != GIT_OBJ_OFS_DELTA && type != GIT_OBJ_REF_DELTA)
+			break;
+
+		base_offset = get_delta_base(p, &w_curs, &curpos, type, obj_offset);
+		git_mwindow_close(&w_curs);
+
+		if (base_offset == 0) {
+			error = packfile_error("delta offset is zero");
+			goto on_error;
+		}
+		if (base_offset < 0) { /* must actually be an error code */
+			error = (int)base_offset;
+			goto on_error;
+		}
+
+		/* we need to pass the pos *after* the delta-base bit */
+		elem->offset = curpos;
+
+		/* go through the loop again, but with the new object */
+		obj_offset = base_offset;
+		elem_pos++;
 	}
 
-	error = packfile_unpack_compressed(&delta, p, w_curs, curpos, delta_size, delta_type);
-	git_mwindow_close(w_curs);
-
-	if (error < 0) {
-		if (!found_base)
-			git__free(base.data);
-		return error;
-	}
-
-	obj->type = base.type;
-	error = git__delta_apply(obj, base.data, base.len, delta.data, delta.len);
-	if (error < 0)
-		goto on_error;
-
-	if (found_base)
-		git_atomic_dec(&cached->refcount);
-	else if (cache_add(&p->bases, &base, base_key) < 0)
-		git__free(base.data);
+	
+	*stack_sz = elem_pos + 1;
+	*chain_out = chain;
+	return error;
 
 on_error:
-	git__free(delta.data);
-
-	return error; /* error set by git__delta_apply */
+	git_array_clear(chain);
+	return error;
 }
 
 int git_packfile_unpack(
@@ -589,48 +615,138 @@ int git_packfile_unpack(
 {
 	git_mwindow *w_curs = NULL;
 	git_off_t curpos = *obj_offset;
-	int error;
-
-	size_t size = 0;
-	git_otype type;
+	int error, free_base = 0;
+	git_dependency_chain chain = GIT_ARRAY_INIT;
+	struct pack_chain_elem *elem = NULL, *stack;
+	git_pack_cache_entry *cached = NULL;
+	struct pack_chain_elem small_stack[SMALL_STACK_SIZE];
+	size_t stack_size, elem_pos;
+	git_otype base_type;
 
 	/*
 	 * TODO: optionally check the CRC on the packfile
 	 */
 
+	error = pack_dependency_chain(&chain, &cached, obj_offset, small_stack, &stack_size, p, *obj_offset);
+	if (error < 0)
+		return error;
+
 	obj->data = NULL;
 	obj->len = 0;
 	obj->type = GIT_OBJ_BAD;
 
-	error = git_packfile_unpack_header(&size, &type, &p->mwf, &w_curs, &curpos);
-	git_mwindow_close(&w_curs);
+	/* let's point to the right stack */
+	stack = chain.ptr ? chain.ptr : small_stack;
+
+	elem_pos = stack_size;
+	if (cached) {
+		memcpy(obj, &cached->raw, sizeof(git_rawobj));
+		base_type = obj->type;
+		elem_pos--;	/* stack_size includes the base, which isn't actually there */
+	} else {
+		elem = &stack[--elem_pos];
+		base_type = elem->type;
+	}
 
 	if (error < 0)
-		return error;
+		goto cleanup;
 
-	switch (type) {
-	case GIT_OBJ_OFS_DELTA:
-	case GIT_OBJ_REF_DELTA:
-		error = packfile_unpack_delta(
-				obj, p, &w_curs, &curpos,
-				size, type, *obj_offset);
-		break;
-
+	switch (base_type) {
 	case GIT_OBJ_COMMIT:
 	case GIT_OBJ_TREE:
 	case GIT_OBJ_BLOB:
 	case GIT_OBJ_TAG:
-		error = packfile_unpack_compressed(
-				obj, p, &w_curs, &curpos,
-				size, type);
+		if (!cached) {
+			curpos = elem->offset;
+			error = packfile_unpack_compressed(obj, p, &w_curs, &curpos, elem->size, elem->type);
+			git_mwindow_close(&w_curs);
+			base_type = elem->type;
+		}
+		if (error < 0)
+			goto cleanup;
 		break;
-
+	case GIT_OBJ_OFS_DELTA:
+	case GIT_OBJ_REF_DELTA:
+		error = packfile_error("dependency chain ends in a delta");
+		goto cleanup;
 	default:
-		error = packfile_error("invalid packfile type in header");;
-		break;
+		error = packfile_error("invalid packfile type in header");
+		goto cleanup;
 	}
 
-	*obj_offset = curpos;
+	/*
+	 * Finding the object we want a cached base element is
+	 * problematic, as we need to make sure we don't accidentally
+	 * give the caller the cached object, which it would then feel
+	 * free to free, so we need to copy the data.
+	 */
+	if (cached && stack_size == 1) {
+		void *data = obj->data;
+		obj->data = git__malloc(obj->len + 1);
+		GITERR_CHECK_ALLOC(obj->data);
+		memcpy(obj->data, data, obj->len + 1);
+		git_atomic_dec(&cached->refcount);
+		goto cleanup;
+	}
+
+	/* we now apply each consecutive delta until we run out */
+	while (elem_pos > 0 && !error) {
+		git_rawobj base, delta;
+
+		/*
+		 * We can now try to add the base to the cache, as
+		 * long as it's not already the cached one.
+		 */
+		if (!cached)
+			free_base = !!cache_add(&p->bases, obj, elem->base_key);
+
+		elem = &stack[elem_pos - 1];
+		curpos = elem->offset;
+		error = packfile_unpack_compressed(&delta, p, &w_curs, &curpos, elem->size, elem->type);
+		git_mwindow_close(&w_curs);
+
+		if (error < 0)
+			break;
+
+		/* the current object becomes the new base, on which we apply the delta */
+		base = *obj;
+		obj->data = NULL;
+		obj->len = 0;
+		obj->type = GIT_OBJ_BAD;
+
+		error = git__delta_apply(obj, base.data, base.len, delta.data, delta.len);
+		obj->type = base_type;
+		/*
+		 * We usually don't want to free the base at this
+		 * point, as we put it into the cache in the previous
+		 * iteration. free_base lets us know that we got the
+		 * base object directly from the packfile, so we can free it.
+		 */
+		git__free(delta.data);
+		if (free_base) {
+			free_base = 0;
+			git__free(base.data);
+		}
+
+		if (cached) {
+			git_atomic_dec(&cached->refcount);
+			cached = NULL;
+		}
+
+		if (error < 0)
+			break;
+
+		elem_pos--;
+	}
+
+cleanup:
+	if (error < 0)
+		git__free(obj->data);
+
+	if (elem)
+		*obj_offset = elem->offset;
+
+	git_array_clear(chain);
 	return error;
 }
 
@@ -660,7 +776,7 @@ int git_packfile_stream_open(git_packfile_stream *obj, struct git_pack_file *p, 
 	st = inflateInit(&obj->zstream);
 	if (st != Z_OK) {
 		git__free(obj);
-		giterr_set(GITERR_ZLIB, "Failed to inflate packfile");
+		giterr_set(GITERR_ZLIB, "failed to init packfile stream");
 		return -1;
 	}
 
@@ -691,7 +807,7 @@ ssize_t git_packfile_stream_read(git_packfile_stream *obj, void *buffer, size_t 
 	written = len - obj->zstream.avail_out;
 
 	if (st != Z_OK && st != Z_STREAM_END) {
-		giterr_set(GITERR_ZLIB, "Failed to inflate packfile");
+		giterr_set(GITERR_ZLIB, "error reading from the zlib stream");
 		return -1;
 	}
 
@@ -736,7 +852,7 @@ int packfile_unpack_compressed(
 	st = inflateInit(&stream);
 	if (st != Z_OK) {
 		git__free(buffer);
-		giterr_set(GITERR_ZLIB, "Failed to inflate packfile");
+		giterr_set(GITERR_ZLIB, "failed to init zlib stream on unpack");
 
 		return -1;
 	}
@@ -763,7 +879,7 @@ int packfile_unpack_compressed(
 
 	if ((st != Z_STREAM_END) || stream.total_out != size) {
 		git__free(buffer);
-		giterr_set(GITERR_ZLIB, "Failed to inflate packfile");
+		giterr_set(GITERR_ZLIB, "error inflating zlib stream");
 		return -1;
 	}
 
@@ -862,6 +978,7 @@ void git_packfile_free(struct git_pack_file *p)
 	git__free(p->bad_object_sha1);
 
 	git_mutex_free(&p->lock);
+	git_mutex_free(&p->bases.lock);
 	git__free(p);
 }
 
@@ -993,6 +1110,11 @@ int git_packfile_alloc(struct git_pack_file **pack_out, const char *path)
 
 	if (git_mutex_init(&p->lock)) {
 		giterr_set(GITERR_OS, "Failed to initialize packfile mutex");
+		git__free(p);
+		return -1;
+	}
+
+	if (cache_init(&p->bases) < 0) {
 		git__free(p);
 		return -1;
 	}
