@@ -1114,6 +1114,7 @@ int git_path_dirload_with_stat(
 			if (error != 0) {
 				giterr_clear();
 				error = 0;
+				memset(&ps->st, 0, sizeof(ps->st));
 				ps->st.st_mode = GIT_FILEMODE_UNREADABLE;
 				continue;
 			}
