@@ -1380,7 +1380,7 @@ static int rename_one_remote_reference(
 		goto cleanup;
 
 	error = git_reference_rename(
-		NULL, reference, git_buf_cstr(&new_name), 0,
+		NULL, reference, git_buf_cstr(&new_name), 1,
 		NULL, git_buf_cstr(&log_message));
 	git_reference_free(reference);
 
@@ -1396,18 +1396,20 @@ static int rename_remote_references(
 	const char *new_name)
 {
 	int error;
+	git_buf buf = GIT_BUF_INIT;
 	git_reference *ref;
 	git_reference_iterator *iter;
 
-	if ((error = git_reference_iterator_new(&iter, repo)) < 0)
+	if ((error = git_buf_printf(&buf, GIT_REFS_REMOTES_DIR "%s/*", old_name)) < 0)
+		return error;
+
+	error = git_reference_iterator_glob_new(&iter, repo, git_buf_cstr(&buf));
+	git_buf_free(&buf);
+
+	if (error < 0)
 		return error;
 
 	while ((error = git_reference_next(&ref, iter)) == 0) {
-		if (git__prefixcmp(ref->name, GIT_REFS_REMOTES_DIR)) {
-			git_reference_free(ref);
-			continue;
-		}
-
 		if ((error = rename_one_remote_reference(ref, old_name, new_name)) < 0)
 			break;
 	}
