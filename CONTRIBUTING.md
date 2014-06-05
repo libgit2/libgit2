@@ -5,16 +5,19 @@ your help.
 
 ## Licensing
 
-By contributing to libgit2, you agree to release your contribution under the terms of the license.
-For code under `examples`, this is governed by the [CC0 Public Domain Dedication](examples/COPYING).
-All other code is released under the [GPL v2 with linking exception](COPYING).
+By contributing to libgit2, you agree to release your contribution
+under the terms of the following licenses:
+- For code under `examples`, this is governed by the
+[CC0 Public Domain Dedication](examples/COPYING).
+- All other code is released under the [GPL v2 with linking exception](COPYING).
 
 ## Discussion & Chat
 
-We hang out in the #libgit2 channel on irc.freenode.net.
+We hang out in the [`#libgit2`](irc://irc.freenode.net/libgit2) channel on
+Freenode ([web access](http://webchat.freenode.net/?channels=#libgit2)).
 
 Also, feel free to open an
-[Issue](https://github.com/libgit2/libgit2/issues/new) to start a discussion
+[issue](https://github.com/libgit2/libgit2/issues/new) to start a discussion
 about any concerns you have.  We like to use Issues for that so there is an
 easily accessible permanent record of the conversation.
 
@@ -23,9 +26,8 @@ easily accessible permanent record of the conversation.
 First, know which version of libgit2 your problem is in and include it in
 your bug report.  This can either be a tag (e.g.
 [v0.17.0](https://github.com/libgit2/libgit2/tree/v0.17.0) ) or a commit
-SHA (e.g.
-[01be7863](https://github.com/libgit2/libgit2/commit/01be786319238fd6507a08316d1c265c1a89407f)
-).  Using [`git describe`](http://git-scm.com/docs/git-describe) is a great
+SHA (e.g. [01be7863](https://github.com/libgit2/libgit2/commit/01be7863)).
+Using [`git describe`](http://git-scm.com/docs/git-describe) is a great
 way to tell us what version you're working with.
 
 If you're not running against the latest `development` branch version,
@@ -76,9 +78,9 @@ you're porting code *from* to see what you need to do.  As a general rule,
 MIT and BSD (3-clause) licenses are typically no problem.  Apache 2.0
 license typically doesn't work due to GPL incompatibility.
 
-If you are pulling in code from core Git, another project or code you've pulled from
-a forum / Stack Overflow then please flag this in your PR and also make sure you've
-given proper credit to the original author in the code snippet.
+If you are pulling in code from core Git, another project or code you've pulled
+from a forum / Stack Overflow then please flag this in your PR and also make
+sure you've given proper credit to the original author in the code snippet.
 
 ## Style Guide
 
@@ -86,15 +88,15 @@ given proper credit to the original author in the code snippet.
 (a.k.a. C89) with some specific conventions for function and type naming,
 code formatting, and testing.
 
-We like to keep the source code consistent and easy to read.  Maintaining
-this takes some discipline, but it's been more than worth it.  Take a look
-at the
+We like to keep the source code consistent and easy to read.
+Maintaining this takes some discipline, but it's been more than worth it.
+Take a look at the
 [conventions file](https://github.com/libgit2/libgit2/blob/development/CONVENTIONS.md).
 
 ## Starter Projects
 
-So, you want to start helping out with `libgit2`? That's fantastic? We
-welcome contributions and we promise we'll try to be nice.
+So, you want to start helping out with `libgit2`? That's fantastic!
+We welcome contributions and we promise we'll try to be nice.
 
 If you want to jump in, you can look at our issues list to see if there
 are any unresolved issues to jump in on.  Also, here is a list of some
