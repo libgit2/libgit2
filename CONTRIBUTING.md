@@ -15,7 +15,9 @@ from them into your own application.
 
 ## Discussion & Chat
 
-We hang out in the #libgit2 channel on irc.freenode.net.
+We hang out in the
+[`#libgit2`](http://webchat.freenode.net/?channels=#libgit2)) channel on
+irc.freenode.net.
 
 Also, feel free to open an
 [Issue](https://github.com/libgit2/libgit2/issues/new) to start a discussion
@@ -34,10 +36,10 @@ and when a critical bug fix needs to be backported, it will be done on a
 
 First, know which version of libgit2 your problem is in and include it in
 your bug report.  This can either be a tag (e.g.
-[v0.17.0](https://github.com/libgit2/libgit2/releases/tag/v0.17.0) ) or a
-commit SHA (e.g.
-[01be7863](https://github.com/libgit2/libgit2/commit/01be786319238fd6507a08316d1c265c1a89407f)
-).  Using [`git describe`](http://git-scm.com/docs/git-describe) is a
+[v0.17.0](https://github.com/libgit2/libgit2/releases/tag/v0.17.0)) or a
+commit SHA
+(e.g. [01be7863](https://github.com/libgit2/libgit2/commit/01be7863)).
+Using [`git describe`](http://git-scm.com/docs/git-describe) is a
 great way to tell us what version you're working with.
 
 If you're not running against the latest `master` branch version,
