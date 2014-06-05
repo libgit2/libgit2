@@ -172,3 +172,33 @@ void test_network_remote_rename__cannot_rename_an_inmemory_remote(void)
 
 	git_remote_free(remote);
 }
+
+void test_network_remote_rename__overwrite_ref_in_target(void)
+{
+	git_oid id;
+	char idstr[GIT_OID_HEXSZ + 1] = {0};
+	git_remote *remote;
+	git_reference *ref;
+	git_branch_t btype;
+	git_branch_iterator *iter;
+
+	cl_git_pass(git_oid_fromstr(&id, "a65fedf39aefe402d3bb6e24df4d4f5fe4547750"));
+	cl_git_pass(git_reference_create(&ref, _repo, "refs/remotes/renamed/master", &id, 1, NULL, NULL));
+	git_reference_free(ref);
+
+	cl_git_pass(git_remote_load(&remote, _repo, "test"));
+	cl_git_pass(git_remote_rename(remote, "renamed", dont_call_me_cb, NULL));
+	git_remote_free(remote);
+
+
+	/* make sure there's only one remote-tracking branch */
+	cl_git_pass(git_branch_iterator_new(&iter, _repo, GIT_BRANCH_REMOTE));
+	cl_git_pass(git_branch_next(&ref, &btype, iter));
+	cl_assert_equal_s("refs/remotes/renamed/master", git_reference_name(ref));
+	git_oid_fmt(idstr, git_reference_target(ref));
+	cl_assert_equal_s("be3563ae3f795b2b4353bcce3a527ad0a4f7f644", idstr);
+	git_reference_free(ref);
+
+	cl_git_fail_with(GIT_ITEROVER, git_branch_next(&ref, &btype, iter));
+	git_branch_iterator_free(iter);
+}
