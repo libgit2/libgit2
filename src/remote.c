@@ -1484,6 +1484,7 @@ int git_remote_rename(
 	void *payload)
 {
 	int error;
+	char *tmp, *dup;
 
 	assert(remote && new_name);
 
@@ -1510,10 +1511,12 @@ int git_remote_rename(
 	if ((error = rename_fetch_refspecs(remote, new_name, callback, payload)) < 0)
 		return error;
 
-	git__free(remote->name);
+	dup = git__strdup(new_name);
+	GITERR_CHECK_ALLOC(dup);
 
-	remote->name = git__strdup(new_name);
-	GITERR_CHECK_ALLOC(remote->name);
+	tmp = remote->name;
+	remote->name = dup;
+	git__free(tmp);
 
 	return 0;
 }
