@@ -1359,19 +1359,24 @@ static int update_branch_remote_config_entry(
 }
 
 static int rename_one_remote_reference(
-	git_reference *reference,
+	git_reference *reference_in,
 	const char *old_remote_name,
 	const char *new_remote_name)
 {
 	int error;
+	git_reference *ref = NULL, *dummy = NULL;
+	git_buf namespace = GIT_BUF_INIT, old_namespace = GIT_BUF_INIT;
 	git_buf new_name = GIT_BUF_INIT;
 	git_buf log_message = GIT_BUF_INIT;
+	size_t pfx_len;
+	const char *target;
 
-	if ((error = git_buf_printf(
-					&new_name,
-					GIT_REFS_REMOTES_DIR "%s%s",
-					new_remote_name,
-					reference->name + strlen(GIT_REFS_REMOTES_DIR) + strlen(old_remote_name))) < 0)
+	if ((error = git_buf_printf(&namespace, GIT_REFS_REMOTES_DIR "%s/", new_remote_name)) < 0)
+		return error;
+
+	pfx_len = strlen(GIT_REFS_REMOTES_DIR) + strlen(old_remote_name) + 1;
+	git_buf_puts(&new_name, namespace.ptr);
+	if ((error = git_buf_puts(&new_name, git_reference_name(reference_in) + pfx_len)) < 0)
 		goto cleanup;
 
 	if ((error = git_buf_printf(&log_message,
@@ -1379,12 +1384,36 @@ static int rename_one_remote_reference(
 					old_remote_name, new_remote_name)) < 0)
 		goto cleanup;
 
-	error = git_reference_rename(
-		NULL, reference, git_buf_cstr(&new_name), 1,
-		NULL, git_buf_cstr(&log_message));
-	git_reference_free(reference);
+	if ((error = git_reference_rename(&ref, reference_in, git_buf_cstr(&new_name), 1,
+					  NULL, git_buf_cstr(&log_message))) < 0)
+		goto cleanup;
+
+	if (git_reference_type(ref) != GIT_REF_SYMBOLIC)
+		goto cleanup;
+
+	/* Handle refs like origin/HEAD -> origin/master */
+	target = git_reference_symbolic_target(ref);
+	if ((error = git_buf_printf(&old_namespace, GIT_REFS_REMOTES_DIR "%s/", old_remote_name)) < 0)
+		goto cleanup;
+
+	if (git__prefixcmp(target, old_namespace.ptr))
+		goto cleanup;
+
+	git_buf_clear(&new_name);
+	git_buf_puts(&new_name, namespace.ptr);
+	if ((error = git_buf_puts(&new_name, target + pfx_len)) < 0)
+		goto cleanup;
+
+	error = git_reference_symbolic_set_target(&dummy, ref, git_buf_cstr(&new_name),
+						  NULL, git_buf_cstr(&log_message));
+
+	git_reference_free(dummy);
 
 cleanup:
+	git_reference_free(reference_in);
+	git_reference_free(ref);
+	git_buf_free(&namespace);
+	git_buf_free(&old_namespace);
 	git_buf_free(&new_name);
 	git_buf_free(&log_message);
 	return error;
