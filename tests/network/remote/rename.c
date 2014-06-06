@@ -218,3 +218,51 @@ void test_network_remote_rename__overwrite_ref_in_target(void)
 	cl_git_fail_with(GIT_ITEROVER, git_branch_next(&ref, &btype, iter));
 	git_branch_iterator_free(iter);
 }
+
+void test_network_remote_rename__symref_head(void)
+{
+	int error;
+	git_remote *remote;
+	git_reference *ref;
+	git_branch_t btype;
+	git_branch_iterator *iter;
+	git_strarray problems = {0};
+	char idstr[GIT_OID_HEXSZ + 1] = {0};
+	git_vector refs;
+
+	cl_git_pass(git_reference_symbolic_create(&ref, _repo, "refs/remotes/test/HEAD", "refs/remotes/test/master", 0, NULL, NULL));
+	git_reference_free(ref);
+
+	cl_git_pass(git_remote_load(&remote, _repo, "test"));
+	cl_git_pass(git_remote_rename(&problems, remote, "renamed"));
+	git_remote_free(remote);
+	cl_assert_equal_i(0, problems.count);
+	git_strarray_free(&problems);
+
+	cl_git_pass(git_vector_init(&refs, 2, (git_vector_cmp) git_reference_cmp));
+	cl_git_pass(git_branch_iterator_new(&iter, _repo, GIT_BRANCH_REMOTE));
+
+	while ((error = git_branch_next(&ref, &btype, iter)) == 0) {
+		cl_git_pass(git_vector_insert(&refs, ref));
+	}
+	cl_assert_equal_i(GIT_ITEROVER, error);
+	git_vector_sort(&refs);
+
+	cl_assert_equal_i(2, refs.length);
+
+	ref = git_vector_get(&refs, 0);
+	cl_assert_equal_s("refs/remotes/renamed/HEAD", git_reference_name(ref));
+	cl_assert_equal_s("refs/remotes/renamed/master", git_reference_symbolic_target(ref));
+	git_reference_free(ref);
+
+	ref = git_vector_get(&refs, 1);
+	cl_assert_equal_s("refs/remotes/renamed/master", git_reference_name(ref));
+	git_oid_fmt(idstr, git_reference_target(ref));
+	cl_assert_equal_s("be3563ae3f795b2b4353bcce3a527ad0a4f7f644", idstr);
+	git_reference_free(ref);
+
+	git_vector_free(&refs);
+
+	cl_git_fail_with(GIT_ITEROVER, git_branch_next(&ref, &btype, iter));
+	git_branch_iterator_free(iter);
+}
