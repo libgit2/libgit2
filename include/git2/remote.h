@@ -618,8 +618,6 @@ GIT_EXTERN(int) git_remote_is_valid_name(const char *remote_name);
 * All remote-tracking branches and configuration settings
 * for the remote will be removed.
 *
-* once deleted, the passed remote object will be freed and invalidated.
-*
 * @param remote A valid remote
 * @return 0 on success, or an error code.
 */

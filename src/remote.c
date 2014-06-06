@@ -1921,8 +1921,6 @@ int git_remote_delete(git_remote *remote)
 		repo, git_remote_name(remote), NULL)) < 0)
 		return error;
 
-	git_remote_free(remote);
-
 	return 0;
 }
 
