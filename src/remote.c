@@ -1442,10 +1442,8 @@ static int rename_fetch_refspecs(
 		if (spec->push)
 			continue;
 
-		/* Every refspec is a problem refspec for an anonymous remote, OR */
 		/* Does the dst part of the refspec follow the expected format? */
-		if (!remote->name ||
-			strcmp(git_buf_cstr(&base), spec->string)) {
+		if (strcmp(git_buf_cstr(&base), spec->string)) {
 
 			if ((error = callback(spec->string, payload)) != 0) {
 				giterr_set_after_callback(error);
@@ -1497,49 +1495,20 @@ int git_remote_rename(
 	if ((error = ensure_remote_name_is_valid(new_name)) < 0)
 		return error;
 
-	if (remote->repo) {
-		if ((error = ensure_remote_doesnot_exist(remote->repo, new_name)) < 0)
-			return error;
+	if ((error = ensure_remote_doesnot_exist(remote->repo, new_name)) < 0)
+		return error;
 
-		if (!remote->name) {
-			if ((error = rename_fetch_refspecs(
-				remote,
-				new_name,
-				callback,
-				payload)) < 0)
-					return error;
+	if ((error = rename_remote_config_section(remote->repo, remote->name, new_name)) < 0)
+		return error;
 
-			remote->name = git__strdup(new_name);
-			GITERR_CHECK_ALLOC(remote->name);
+	if ((error = update_branch_remote_config_entry(remote->repo, remote->name, new_name)) < 0)
+		return error;
 
-			return git_remote_save(remote);
-		}
+	if ((error = rename_remote_references(remote->repo, remote->name, new_name)) < 0)
+		return error;
 
-		if ((error = rename_remote_config_section(
-			remote->repo,
-			remote->name,
-			new_name)) < 0)
-				return error;
-
-		if ((error = update_branch_remote_config_entry(
-			remote->repo,
-			remote->name,
-			new_name)) < 0)
-				return error;
-
-		if ((error = rename_remote_references(
-			remote->repo,
-			remote->name,
-			new_name)) < 0)
-				return error;
-
-		if ((error = rename_fetch_refspecs(
-			remote,
-			new_name,
-			callback,
-			payload)) < 0)
-				return error;
-	}
+	if ((error = rename_fetch_refspecs(remote, new_name, callback, payload)) < 0)
+		return error;
 
 	git__free(remote->name);
 
