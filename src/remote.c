@@ -21,7 +21,7 @@
 
 static int dwim_refspecs(git_vector *out, git_vector *refspecs, git_vector *refs);
 
-static int add_refspec(git_remote *remote, const char *string, bool is_fetch)
+static int add_refspec_to(git_vector *vector, const char *string, bool is_fetch)
 {
 	git_refspec *spec;
 
@@ -34,13 +34,18 @@ static int add_refspec(git_remote *remote, const char *string, bool is_fetch)
 	}
 
 	spec->push = !is_fetch;
-	if (git_vector_insert(&remote->refspecs, spec) < 0) {
+	if (git_vector_insert(vector, spec) < 0) {
 		git_refspec__free(spec);
 		git__free(spec);
 		return -1;
 	}
 
 	return 0;
+}
+
+static int add_refspec(git_remote *remote, const char *string, bool is_fetch)
+{
+	return add_refspec_to(&remote->refspecs, string, is_fetch);
 }
 
 static int download_tags_value(git_remote *remote, git_config *cfg)
@@ -813,20 +818,37 @@ static int ls_to_vector(git_vector *out, git_remote *remote)
 	return 0;
 }
 
-int git_remote_download(git_remote *remote)
+int git_remote_download(git_remote *remote, const git_strarray *refspecs)
 {
 	int error;
-	git_vector refs;
+	size_t i;
+	git_vector refs, specs, *to_active;
 
 	assert(remote);
 
 	if (ls_to_vector(&refs, remote) < 0)
 		return -1;
 
+	if ((git_vector_init(&specs, 0, NULL)) < 0)
+		goto on_error;
+
+	if (!refspecs) {
+		to_active = &remote->refspecs;
+	} else {
+		for (i = 0; i < refspecs->count; i++) {
+			if ((error = add_refspec_to(&specs, refspecs->strings[i], true)) < 0)
+				goto on_error;
+		}
+
+		to_active = &specs;
+	}
+
 	free_refspecs(&remote->active_refspecs);
 
-	error = dwim_refspecs(&remote->active_refspecs, &remote->refspecs, &refs);
+	error = dwim_refspecs(&remote->active_refspecs, to_active, &refs);
 	git_vector_free(&refs);
+	free_refspecs(&specs);
+	git_vector_free(&specs);
 
 	if (error < 0)
 		return error;
@@ -835,10 +857,17 @@ int git_remote_download(git_remote *remote)
 		return error;
 
 	return git_fetch_download_pack(remote);
+
+on_error:
+	git_vector_free(&refs);
+	free_refspecs(&specs);
+	git_vector_free(&specs);
+	return error;
 }
 
 int git_remote_fetch(
 		git_remote *remote,
+		const git_strarray *refspecs,
 		const git_signature *signature,
 		const char *reflog_message)
 {
@@ -849,7 +878,7 @@ int git_remote_fetch(
 	if ((error = git_remote_connect(remote, GIT_DIRECTION_FETCH)) != 0)
 		return error;
 
-	error = git_remote_download(remote);
+	error = git_remote_download(remote, refspecs);
 
 	/* We don't need to be connected anymore */
 	git_remote_disconnect(remote);

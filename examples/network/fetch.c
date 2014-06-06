@@ -36,7 +36,7 @@ static void *download(void *ptr)
 	// Download the packfile and index it. This function updates the
 	// amount of received data and the indexer stats which lets you
 	// inform the user about progress.
-	if (git_remote_download(data->remote) < 0) {
+	if (git_remote_download(data->remote, NULL) < 0) {
 		data->ret = -1;
 		goto exit;
 	}
