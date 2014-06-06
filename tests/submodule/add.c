@@ -68,13 +68,16 @@ void test_submodule_add__url_relative(void)
 {
 	git_submodule *sm;
 	git_remote *remote;
+	git_strarray problems = {0};
 
 	/* default remote url is https://github.com/libgit2/false.git */
 	g_repo = cl_git_sandbox_init("testrepo2");
 
 	/* make sure we don't default to origin - rename origin -> test_remote */
 	cl_git_pass(git_remote_load(&remote, g_repo, "origin"));
-	cl_git_pass(git_remote_rename(remote, "test_remote", NULL, NULL));
+	cl_git_pass(git_remote_rename(&problems, remote, "test_remote"));
+	cl_assert_equal_i(0, problems.count);
+	git_strarray_free(&problems);
 	cl_git_fail(git_remote_load(&remote, g_repo, "origin"));
 	git_remote_free(remote);
 

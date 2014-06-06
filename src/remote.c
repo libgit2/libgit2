@@ -1419,11 +1419,7 @@ static int rename_remote_references(
 	return (error == GIT_ITEROVER) ? 0 : error;
 }
 
-static int rename_fetch_refspecs(
-	git_remote *remote,
-	const char *new_name,
-	int (*callback)(const char *problematic_refspec, void *payload),
-	void *payload)
+static int rename_fetch_refspecs(git_vector *problems, git_remote *remote, const char *new_name)
 {
 	git_config *config;
 	git_buf base = GIT_BUF_INIT, var = GIT_BUF_INIT, val = GIT_BUF_INIT;
@@ -1432,6 +1428,9 @@ static int rename_fetch_refspecs(
 	int error = 0;
 
 	if ((error = git_repository_config__weakptr(&config, remote->repo)) < 0)
+		return error;
+
+	if ((error = git_vector_init(problems, 1, NULL)) < 0)
 		return error;
 
 	if ((error = git_buf_printf(
@@ -1444,11 +1443,13 @@ static int rename_fetch_refspecs(
 
 		/* Does the dst part of the refspec follow the expected format? */
 		if (strcmp(git_buf_cstr(&base), spec->string)) {
+			char *dup;
 
-			if ((error = callback(spec->string, payload)) != 0) {
-				giterr_set_after_callback(error);
+			dup = git__strdup(spec->string);
+			GITERR_CHECK_ALLOC(dup);
+
+			if ((error = git_vector_insert(problems, dup)) < 0)
 				break;
-			}
 
 			continue;
 		}
@@ -1474,19 +1475,25 @@ static int rename_fetch_refspecs(
 	git_buf_free(&base);
 	git_buf_free(&var);
 	git_buf_free(&val);
+
+	if (error < 0) {
+		char *str;
+		git_vector_foreach(problems, i, str)
+			git__free(str);
+
+		git_vector_free(problems);
+	}
+
 	return error;
 }
 
-int git_remote_rename(
-	git_remote *remote,
-	const char *new_name,
-	git_remote_rename_problem_cb callback,
-	void *payload)
+int git_remote_rename(git_strarray *out, git_remote *remote, const char *new_name)
 {
 	int error;
+	git_vector problem_refspecs;
 	char *tmp, *dup;
 
-	assert(remote && new_name);
+	assert(out && remote && new_name);
 
 	if (!remote->name) {
 		giterr_set(GITERR_INVALID, "Can't rename an anonymous remote.");
@@ -1508,8 +1515,11 @@ int git_remote_rename(
 	if ((error = rename_remote_references(remote->repo, remote->name, new_name)) < 0)
 		return error;
 
-	if ((error = rename_fetch_refspecs(remote, new_name, callback, payload)) < 0)
+	if ((error = rename_fetch_refspecs(&problem_refspecs, remote, new_name)) < 0)
 		return error;
+
+	out->count = problem_refspecs.length;
+	out->strings = (char **) problem_refspecs.contents;
 
 	dup = git__strdup(new_name);
 	GITERR_CHECK_ALLOC(dup);
