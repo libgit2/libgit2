@@ -84,7 +84,7 @@ void test_threads_refdb__iterator(void)
 
 #ifdef GIT_THREADS
 		for (t = 0; t < THREADS; ++t) {
-			cl_git_pass(git_thread_join(th[t], NULL));
+			cl_git_pass(git_thread_join(&th[t], NULL));
 		}
 #endif
 
@@ -215,7 +215,7 @@ void test_threads_refdb__edit_while_iterate(void)
 	}
 
 	for (t = 0; t < THREADS; ++t) {
-		cl_git_pass(git_thread_join(th[t], NULL));
+		cl_git_pass(git_thread_join(&th[t], NULL));
 	}
 #endif
 }

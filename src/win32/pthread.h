@@ -16,13 +16,18 @@
 #	define GIT_RESTRICT __restrict__
 #endif
 
+typedef struct {
+	HANDLE thread;
+	void *(*proc)(void *);
+	void *value;
+} git_win32_thread;
+
 typedef int pthread_mutexattr_t;
 typedef int pthread_condattr_t;
 typedef int pthread_attr_t;
 typedef int pthread_rwlockattr_t;
 
 typedef CRITICAL_SECTION pthread_mutex_t;
-typedef HANDLE pthread_t;
 typedef HANDLE pthread_cond_t;
 
 typedef struct { void *Ptr; } GIT_SRWLOCK;
@@ -36,13 +41,15 @@ typedef struct {
 
 #define PTHREAD_MUTEX_INITIALIZER  {(void*)-1}
 
-int pthread_create(
-	pthread_t *GIT_RESTRICT thread,
-	const pthread_attr_t *GIT_RESTRICT attr,
-	void *(*start_routine)(void*),
-	void *GIT_RESTRICT arg);
+int git_win32__thread_create(
+	git_win32_thread *GIT_RESTRICT,
+	const pthread_attr_t *GIT_RESTRICT,
+	void *(*) (void *),
+	void *GIT_RESTRICT);
 
-int pthread_join(pthread_t, void **);
+int git_win32__thread_join(
+	git_win32_thread *,
+	void **);
 
 int pthread_mutex_init(
 	pthread_mutex_t *GIT_RESTRICT mutex,

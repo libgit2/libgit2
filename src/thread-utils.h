@@ -40,12 +40,23 @@ typedef git_atomic git_atomic_ssize;
 
 #ifdef GIT_THREADS
 
+#if defined(GIT_WIN32)
+
+#define git_thread git_win32_thread
+#define git_thread_create(thread, attr, start_routine, arg) \
+	git_win32__thread_create(thread, attr, start_routine, arg)
+#define git_thread_join(thread_ptr, status) \
+	git_win32__thread_join(thread_ptr, status)
+
+#else
+
 #define git_thread pthread_t
 #define git_thread_create(thread, attr, start_routine, arg) \
 	pthread_create(thread, attr, start_routine, arg)
-#define git_thread_kill(thread) pthread_cancel(thread)
-#define git_thread_exit(status)	pthread_exit(status)
-#define git_thread_join(id, status) pthread_join(id, status)
+#define git_thread_join(thread_ptr, status) \
+	pthread_join(*(thread_ptr), status)
+
+#endif
 
 #if defined(GIT_WIN32)
 #define git_thread_yield() Sleep(0)
@@ -179,8 +190,6 @@ GIT_INLINE(int64_t) git_atomic64_add(git_atomic64 *a, int64_t addend)
 
 #define git_thread unsigned int
 #define git_thread_create(thread, attr, start_routine, arg) 0
-#define git_thread_kill(thread) (void)0
-#define git_thread_exit(status) (void)0
 #define git_thread_join(id, status) (void)0
 #define git_thread_yield() (void)0
 
