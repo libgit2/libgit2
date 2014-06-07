@@ -194,6 +194,9 @@ void test_online_clone__clone_mirror(void)
 	git_remote_free(remote);
 	git_reference_free(head);
 	git_buf_free(&path);
+	git_repository_free(g_repo);
+	g_repo = NULL;
+
 	cl_fixture_cleanup("./foo.git");
 }
 
