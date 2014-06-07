@@ -19,7 +19,8 @@
 typedef struct {
 	HANDLE thread;
 	void *(*proc)(void *);
-	void *value;
+	void *param;
+	void *result;
 } git_win32_thread;
 
 typedef int pthread_mutexattr_t;
@@ -50,6 +51,17 @@ int git_win32__thread_create(
 int git_win32__thread_join(
 	git_win32_thread *,
 	void **);
+
+#ifdef GIT_THREADS
+
+typedef git_win32_thread git_thread;
+
+#define git_thread_create(git_thread_ptr, attr, start_routine, arg) \
+	git_win32__thread_create(git_thread_ptr, attr, start_routine, arg)
+#define git_thread_join(git_thread_ptr, status) \
+	git_win32__thread_join(git_thread_ptr, status)
+
+#endif
 
 int pthread_mutex_init(
 	pthread_mutex_t *GIT_RESTRICT mutex,

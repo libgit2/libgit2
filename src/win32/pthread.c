@@ -18,7 +18,7 @@ static DWORD WINAPI git_win32__threadproc(LPVOID lpParameter)
 {
 	git_win32_thread *thread = lpParameter;
 
-	thread->value = thread->proc(thread->value);
+	thread->result = thread->proc(thread->param);
 
 	return CLEAN_THREAD_EXIT;
 }
@@ -31,7 +31,8 @@ int git_win32__thread_create(
 {
 	GIT_UNUSED(attr);
 
-	thread->value = arg;
+	thread->result = NULL;
+	thread->param = arg;
 	thread->proc = start_routine;
 	thread->thread = CreateThread(
 		NULL, 0, git_win32__threadproc, thread, 0, NULL);
@@ -57,11 +58,11 @@ int git_win32__thread_join(
 	 * then we don't have a return value to give back to the caller. */
 	if (exit != CLEAN_THREAD_EXIT) {
 		assert(false);
-		thread->value = NULL;
+		thread->result = NULL;
 	}
 
 	if (value_ptr)
-		*value_ptr = thread->value;
+		*value_ptr = thread->result;
 
 	CloseHandle(thread->thread);
 	return 0;

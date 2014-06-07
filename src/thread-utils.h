@@ -40,21 +40,16 @@ typedef git_atomic git_atomic_ssize;
 
 #ifdef GIT_THREADS
 
-#if defined(GIT_WIN32)
+#if !defined(GIT_WIN32)
 
-#define git_thread git_win32_thread
-#define git_thread_create(thread, attr, start_routine, arg) \
-	git_win32__thread_create(thread, attr, start_routine, arg)
-#define git_thread_join(thread_ptr, status) \
-	git_win32__thread_join(thread_ptr, status)
+typedef struct {
+	pthread_t thread;
+} git_thread;
 
-#else
-
-#define git_thread pthread_t
-#define git_thread_create(thread, attr, start_routine, arg) \
-	pthread_create(thread, attr, start_routine, arg)
-#define git_thread_join(thread_ptr, status) \
-	pthread_join(*(thread_ptr), status)
+#define git_thread_create(git_thread_ptr, attr, start_routine, arg) \
+	pthread_create(&(git_thread_ptr)->thread, attr, start_routine, arg)
+#define git_thread_join(git_thread_ptr, status) \
+	pthread_join((git_thread_ptr)->thread, status)
 
 #endif
 
