@@ -12,4 +12,6 @@
 #define LIBGIT2_VER_MINOR 20
 #define LIBGIT2_VER_REVISION 0
 
+#define LIBGIT2_SOVERSION 20
+
 #endif
