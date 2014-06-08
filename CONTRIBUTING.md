@@ -5,11 +5,13 @@ your help.
 
 ## Licensing
 
-By contributing to libgit2, you agree to release your contribution
-under the terms of the following licenses:
-- For code under `examples`, this is governed by the
-[CC0 Public Domain Dedication](examples/COPYING).
-- All other code is released under the [GPL v2 with linking exception](COPYING).
+By contributing to libgit2, you agree to release your contribution under
+the terms of the license.  Except for the `examples` directory, all code
+is released under the [GPL v2 with linking exception](COPYING).
+
+The `examples` code is governed by the
+[CC0 Public Domain Dedication](examples/COPYING), so that you may copy
+from them into your own application.
 
 ## Discussion & Chat
 
