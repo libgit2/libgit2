@@ -13,6 +13,7 @@
 
 PROJECT(libgit2 C)
 CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
+CMAKE_POLICY(SET CMP0015 NEW)
 
 # Add find modules to the path
 SET(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules/")
@@ -62,6 +63,13 @@ IF(MSVC)
 	ADD_DEFINITIONS(-D_SCL_SECURE_NO_WARNINGS)
 	ADD_DEFINITIONS(-D_CRT_SECURE_NO_DEPRECATE)
 	ADD_DEFINITIONS(-D_CRT_NONSTDC_NO_DEPRECATE)
+ENDIF()
+
+IF(MINGW)
+	# By default, libgit2 is built with the built-in HTTP transport.
+	# To use WinHTTP (available for x86 only), invoke CMake with the
+	# "-DWINHTTP=ON" argument.
+	OPTION(	WINHTTP			"Use Win32 WinHTTP routines"	OFF	)
 ENDIF()
 
 # This variable will contain the libraries we need to put into
@@ -130,10 +138,17 @@ SET(LIBGIT2_VERSION_STRING "${LIBGIT2_VERSION_MAJOR}.${LIBGIT2_VERSION_MINOR}.${
 # Find required dependencies
 INCLUDE_DIRECTORIES(src include)
 
-IF (WIN32 AND WINHTTP AND NOT MINGW)
+IF (WIN32 AND WINHTTP)
 	ADD_DEFINITIONS(-DGIT_WINHTTP)
 	INCLUDE_DIRECTORIES(deps/http-parser)
 	FILE(GLOB SRC_HTTP deps/http-parser/*.c deps/http-parser/*.h)
+
+	IF (MINGW)
+		INCLUDE_DIRECTORIES(deps/winhttp_mingw)
+		LINK_DIRECTORIES(deps/winhttp_mingw)
+	ENDIF ()
+
+	LINK_LIBRARIES(winhttp rpcrt4)
 ELSE ()
 	IF (NOT AMIGA)
 		FIND_PACKAGE(OpenSSL)
