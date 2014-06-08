@@ -78,7 +78,7 @@ static void git__shutdown(void)
 static DWORD _tls_index;
 static volatile LONG _mutex = 0;
 
-static int synchronized_threads_init()
+static int synchronized_threads_init(void)
 {
 	int error;
 
@@ -112,7 +112,7 @@ int git_threads_init(void)
 	return error;
 }
 
-static void synchronized_threads_shutdown()
+static void synchronized_threads_shutdown(void)
 {
 	/* Shut down any subsystems that have global state */
 	git__shutdown();
