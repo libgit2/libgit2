@@ -84,9 +84,12 @@ sure you've given proper credit to the original author in the code snippet.
 
 ## Style Guide
 
-`libgit2` is written in [ANSI C](http://en.wikipedia.org/wiki/ANSI_C)
-(a.k.a. C89) with some specific conventions for function and type naming,
-code formatting, and testing.
+The public API of `libgit2` is [ANSI C](http://en.wikipedia.org/wiki/ANSI_C)
+(a.k.a. C89) compatible.  Internally, `libgit2` is written using a portable
+subset of C99 - in order to compile with GCC, Clang, MSVC, etc., we keep
+local variable declarations at the tops of blocks only and avoid `//` style
+comments.  Additionally, `libgit2` follows some extra conventions for
+function and type naming, code formatting, and testing.
 
 We like to keep the source code consistent and easy to read.
 Maintaining this takes some discipline, but it's been more than worth it.
@@ -95,22 +98,4 @@ Take a look at the
 
 ## Starter Projects
 
-So, you want to start helping out with `libgit2`? That's fantastic!
-We welcome contributions and we promise we'll try to be nice.
-
-If you want to jump in, you can look at our issues list to see if there
-are any unresolved issues to jump in on.  Also, here is a list of some
-smaller project ideas that could help you become familiar with the code
-base and make a nice first step:
-
-* Convert a `git_*modulename*_foreach()` callback-based iteration API
-  into a `git_*modulename*_iterator` object with a create/advance style
-  of API.  This helps folks writing language bindings and usually isn't
-  too complicated.
-* Write a new `examples/` program that mirrors a particular core git
-  command.  (See `examples/diff.c` for example.)  This lets you (and us)
-  easily exercise a particular facet of the API and measure compatability
-  and feature parity with core git.
-* Submit a PR to clarify documentation! While we do try to document all of
-  the APIs, your fresh eyes on the documentation will find areas that are
-  confusing much more easily.
+See our [projects list](https://github.com/libgit2/libgit2/blob/development/PROJECTS.md).
