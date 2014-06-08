@@ -1359,19 +1359,24 @@ static int update_branch_remote_config_entry(
 }
 
 static int rename_one_remote_reference(
-	git_reference *reference,
+	git_reference *reference_in,
 	const char *old_remote_name,
 	const char *new_remote_name)
 {
 	int error;
+	git_reference *ref = NULL, *dummy = NULL;
+	git_buf namespace = GIT_BUF_INIT, old_namespace = GIT_BUF_INIT;
 	git_buf new_name = GIT_BUF_INIT;
 	git_buf log_message = GIT_BUF_INIT;
+	size_t pfx_len;
+	const char *target;
 
-	if ((error = git_buf_printf(
-					&new_name,
-					GIT_REFS_REMOTES_DIR "%s%s",
-					new_remote_name,
-					reference->name + strlen(GIT_REFS_REMOTES_DIR) + strlen(old_remote_name))) < 0)
+	if ((error = git_buf_printf(&namespace, GIT_REFS_REMOTES_DIR "%s/", new_remote_name)) < 0)
+		return error;
+
+	pfx_len = strlen(GIT_REFS_REMOTES_DIR) + strlen(old_remote_name) + 1;
+	git_buf_puts(&new_name, namespace.ptr);
+	if ((error = git_buf_puts(&new_name, git_reference_name(reference_in) + pfx_len)) < 0)
 		goto cleanup;
 
 	if ((error = git_buf_printf(&log_message,
@@ -1379,12 +1384,36 @@ static int rename_one_remote_reference(
 					old_remote_name, new_remote_name)) < 0)
 		goto cleanup;
 
-	error = git_reference_rename(
-		NULL, reference, git_buf_cstr(&new_name), 1,
-		NULL, git_buf_cstr(&log_message));
-	git_reference_free(reference);
+	if ((error = git_reference_rename(&ref, reference_in, git_buf_cstr(&new_name), 1,
+					  NULL, git_buf_cstr(&log_message))) < 0)
+		goto cleanup;
+
+	if (git_reference_type(ref) != GIT_REF_SYMBOLIC)
+		goto cleanup;
+
+	/* Handle refs like origin/HEAD -> origin/master */
+	target = git_reference_symbolic_target(ref);
+	if ((error = git_buf_printf(&old_namespace, GIT_REFS_REMOTES_DIR "%s/", old_remote_name)) < 0)
+		goto cleanup;
+
+	if (git__prefixcmp(target, old_namespace.ptr))
+		goto cleanup;
+
+	git_buf_clear(&new_name);
+	git_buf_puts(&new_name, namespace.ptr);
+	if ((error = git_buf_puts(&new_name, target + pfx_len)) < 0)
+		goto cleanup;
+
+	error = git_reference_symbolic_set_target(&dummy, ref, git_buf_cstr(&new_name),
+						  NULL, git_buf_cstr(&log_message));
+
+	git_reference_free(dummy);
 
 cleanup:
+	git_reference_free(reference_in);
+	git_reference_free(ref);
+	git_buf_free(&namespace);
+	git_buf_free(&old_namespace);
 	git_buf_free(&new_name);
 	git_buf_free(&log_message);
 	return error;
@@ -1419,11 +1448,7 @@ static int rename_remote_references(
 	return (error == GIT_ITEROVER) ? 0 : error;
 }
 
-static int rename_fetch_refspecs(
-	git_remote *remote,
-	const char *new_name,
-	int (*callback)(const char *problematic_refspec, void *payload),
-	void *payload)
+static int rename_fetch_refspecs(git_vector *problems, git_remote *remote, const char *new_name)
 {
 	git_config *config;
 	git_buf base = GIT_BUF_INIT, var = GIT_BUF_INIT, val = GIT_BUF_INIT;
@@ -1434,6 +1459,9 @@ static int rename_fetch_refspecs(
 	if ((error = git_repository_config__weakptr(&config, remote->repo)) < 0)
 		return error;
 
+	if ((error = git_vector_init(problems, 1, NULL)) < 0)
+		return error;
+
 	if ((error = git_buf_printf(
 			&base, "+refs/heads/*:refs/remotes/%s/*", remote->name)) < 0)
 		return error;
@@ -1442,15 +1470,15 @@ static int rename_fetch_refspecs(
 		if (spec->push)
 			continue;
 
-		/* Every refspec is a problem refspec for an anonymous remote, OR */
 		/* Does the dst part of the refspec follow the expected format? */
-		if (!remote->name ||
-			strcmp(git_buf_cstr(&base), spec->string)) {
+		if (strcmp(git_buf_cstr(&base), spec->string)) {
+			char *dup;
 
-			if ((error = callback(spec->string, payload)) != 0) {
-				giterr_set_after_callback(error);
+			dup = git__strdup(spec->string);
+			GITERR_CHECK_ALLOC(dup);
+
+			if ((error = git_vector_insert(problems, dup)) < 0)
 				break;
-			}
 
 			continue;
 		}
@@ -1476,18 +1504,25 @@ static int rename_fetch_refspecs(
 	git_buf_free(&base);
 	git_buf_free(&var);
 	git_buf_free(&val);
+
+	if (error < 0) {
+		char *str;
+		git_vector_foreach(problems, i, str)
+			git__free(str);
+
+		git_vector_free(problems);
+	}
+
 	return error;
 }
 
-int git_remote_rename(
-	git_remote *remote,
-	const char *new_name,
-	git_remote_rename_problem_cb callback,
-	void *payload)
+int git_remote_rename(git_strarray *out, git_remote *remote, const char *new_name)
 {
 	int error;
+	git_vector problem_refspecs;
+	char *tmp, *dup;
 
-	assert(remote && new_name);
+	assert(out && remote && new_name);
 
 	if (!remote->name) {
 		giterr_set(GITERR_INVALID, "Can't rename an anonymous remote.");
@@ -1497,54 +1532,30 @@ int git_remote_rename(
 	if ((error = ensure_remote_name_is_valid(new_name)) < 0)
 		return error;
 
-	if (remote->repo) {
-		if ((error = ensure_remote_doesnot_exist(remote->repo, new_name)) < 0)
-			return error;
+	if ((error = ensure_remote_doesnot_exist(remote->repo, new_name)) < 0)
+		return error;
 
-		if (!remote->name) {
-			if ((error = rename_fetch_refspecs(
-				remote,
-				new_name,
-				callback,
-				payload)) < 0)
-					return error;
+	if ((error = rename_remote_config_section(remote->repo, remote->name, new_name)) < 0)
+		return error;
 
-			remote->name = git__strdup(new_name);
-			GITERR_CHECK_ALLOC(remote->name);
+	if ((error = update_branch_remote_config_entry(remote->repo, remote->name, new_name)) < 0)
+		return error;
 
-			return git_remote_save(remote);
-		}
+	if ((error = rename_remote_references(remote->repo, remote->name, new_name)) < 0)
+		return error;
 
-		if ((error = rename_remote_config_section(
-			remote->repo,
-			remote->name,
-			new_name)) < 0)
-				return error;
+	if ((error = rename_fetch_refspecs(&problem_refspecs, remote, new_name)) < 0)
+		return error;
 
-		if ((error = update_branch_remote_config_entry(
-			remote->repo,
-			remote->name,
-			new_name)) < 0)
-				return error;
+	out->count = problem_refspecs.length;
+	out->strings = (char **) problem_refspecs.contents;
 
-		if ((error = rename_remote_references(
-			remote->repo,
-			remote->name,
-			new_name)) < 0)
-				return error;
+	dup = git__strdup(new_name);
+	GITERR_CHECK_ALLOC(dup);
 
-		if ((error = rename_fetch_refspecs(
-			remote,
-			new_name,
-			callback,
-			payload)) < 0)
-				return error;
-	}
-
-	git__free(remote->name);
-
-	remote->name = git__strdup(new_name);
-	GITERR_CHECK_ALLOC(remote->name);
+	tmp = remote->name;
+	remote->name = dup;
+	git__free(tmp);
 
 	return 0;
 }
@@ -1909,8 +1920,6 @@ int git_remote_delete(git_remote *remote)
 	if ((error = rename_remote_config_section(
 		repo, git_remote_name(remote), NULL)) < 0)
 		return error;
-
-	git_remote_free(remote);
 
 	return 0;
 }
