@@ -678,7 +678,8 @@ static void assert_ignore_case(
 	cl_git_pass(git_buf_joinpath(&camel_case_path,
 		git_repository_workdir(repo), "Plop"));
 
-	cl_git_pass(p_rename(git_buf_cstr(&lower_case_path), git_buf_cstr(&camel_case_path)));
+	cl_git_pass(p_unlink(git_buf_cstr(&lower_case_path)));
+	cl_git_mkfile(git_buf_cstr(&camel_case_path), "");
 
 	cl_git_pass(git_status_file(&status, repo2, "plop"));
 	cl_assert_equal_i(expected_lower_cased_file_status, status);
