@@ -22,21 +22,6 @@ void test_core_link__cleanup(void)
 #endif
 }
 
-static bool is_wine(void)
-{
-#ifdef GIT_WIN32
-	HMODULE module;
-	FARPROC is_wine;
-
-	cl_assert(module = GetModuleHandleW(L"ntdll"));
-	is_wine = GetProcAddress(module, "wine_get_version");
-
-	return is_wine != NULL;
-#else
-	return false;
-#endif
-}
-
 #ifdef GIT_WIN32
 static bool is_administrator(void)
 {
@@ -111,7 +96,7 @@ static void do_junction(const char *old, const char *new)
 	USHORT reparse_buflen;
 	size_t i;
 
-	if (is_wine())
+	if (cl_is_win32_wine())
 		clar__skip();
 
 	/* Junction targets must be the unparsed name, starting with \??\, using
@@ -183,8 +168,8 @@ static void do_custom_reparse(const char *path)
 	size_t reparse_buflen = REPARSE_GUID_DATA_BUFFER_HEADER_SIZE +
 		strlen(reparse_data) + 1;
 
-	if (is_wine())
-		clar__skip();
+    if (cl_is_win32_wine())
+        clar__skip();
 
 	reparse_buf = LocalAlloc(LMEM_FIXED|LMEM_ZEROINIT, reparse_buflen);
 	cl_assert(reparse_buf);
@@ -553,8 +538,8 @@ void test_core_link__readlink_normal_file(void)
 {
 	char buf[2048];
 
-	if (is_wine())
-		clar__skip();
+    if (cl_is_win32_wine())
+        clar__skip();
 
 	cl_git_rewritefile("readlink_regfile", "This is a regular file!\n");
 	cl_must_fail(p_readlink("readlink_regfile", buf, 2048));
