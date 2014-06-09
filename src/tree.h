@@ -26,7 +26,6 @@ struct git_tree {
 };
 
 struct git_treebuilder {
-	git_vector removed;
 	size_t entrycount; /* vector may contain "removed" entries */
 	git_strmap *map;
 };
