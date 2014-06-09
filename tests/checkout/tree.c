@@ -763,7 +763,7 @@ void test_checkout_tree__fails_when_dir_in_use(void)
 	git_oid oid;
 	git_object *obj = NULL;
 
-	if (cl_is_win32_wine())
+	if (git_win32__is_wine())
 		clar__skip();
 
 	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
@@ -799,7 +799,7 @@ void test_checkout_tree__can_continue_when_dir_in_use(void)
 	git_oid oid;
 	git_object *obj = NULL;
 
-	if (cl_is_win32_wine())
+	if (git_win32__is_wine())
 		clar__skip();
 
 	opts.checkout_strategy = GIT_CHECKOUT_FORCE |

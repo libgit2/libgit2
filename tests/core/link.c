@@ -96,7 +96,7 @@ static void do_junction(const char *old, const char *new)
 	USHORT reparse_buflen;
 	size_t i;
 
-	if (cl_is_win32_wine())
+	if (git_win32__is_wine())
 		clar__skip();
 
 	/* Junction targets must be the unparsed name, starting with \??\, using
@@ -168,7 +168,7 @@ static void do_custom_reparse(const char *path)
 	size_t reparse_buflen = REPARSE_GUID_DATA_BUFFER_HEADER_SIZE +
 		strlen(reparse_data) + 1;
 
-    if (cl_is_win32_wine())
+    if (git_win32__is_wine())
         clar__skip();
 
 	reparse_buf = LocalAlloc(LMEM_FIXED|LMEM_ZEROINIT, reparse_buflen);
@@ -538,8 +538,10 @@ void test_core_link__readlink_normal_file(void)
 {
 	char buf[2048];
 
-    if (cl_is_win32_wine())
+#ifdef GIT_WIN32
+    if (git_win32__is_wine())
         clar__skip();
+#endif
 
 	cl_git_rewritefile("readlink_regfile", "This is a regular file!\n");
 	cl_must_fail(p_readlink("readlink_regfile", buf, 2048));

@@ -40,21 +40,6 @@
 	} \
 	} while(0)
 
-/**
- * Allows a test case to check whether or not it is running
- * on Wine or real Windows
- */
-GIT_INLINE(bool) cl_is_win32_wine(void)
-{
-	bool is_wine = false;
-
-#ifdef GIT_WIN32
-	is_wine = !!GetProcAddress(GetModuleHandleW(L"ntdll"), "wine_get_version");
-#endif
-
-	return is_wine;
-}
-
 void cl_git_report_failure(int, const char *, int, const char *);
 
 #define cl_assert_at_line(expr,file,line) \

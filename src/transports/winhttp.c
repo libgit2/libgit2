@@ -398,10 +398,14 @@ static int parse_unauthorized_response(
 		*auth_mechanism = GIT_WINHTTP_AUTH_BASIC;
 	}
 
-	if ((WINHTTP_AUTH_SCHEME_NTLM & supported) ||
-		(WINHTTP_AUTH_SCHEME_NEGOTIATE & supported)) {
-		*allowed_types |= GIT_CREDTYPE_DEFAULT;
-		*auth_mechanism = GIT_WINHTTP_AUTH_NEGOTIATE;
+	/* On Wine 1.4 and earlier, the NTLM and Negotiate schemes may be returned
+	 * by WinHttpQueryAuthSchemes when they have not really been advertised. */
+	if (!git_win32__is_wine()) {
+		if ((WINHTTP_AUTH_SCHEME_NTLM & supported) ||
+			(WINHTTP_AUTH_SCHEME_NEGOTIATE & supported)) {
+			*allowed_types |= GIT_CREDTYPE_DEFAULT;
+			*auth_mechanism = GIT_WINHTTP_AUTH_NEGOTIATE;
+		}
 	}
 
 	return 0;
