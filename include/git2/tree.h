@@ -354,7 +354,7 @@ typedef int (*git_treebuilder_filter_cb)(
  * @param filter Callback to filter entries
  * @param payload Extra data to pass to filter callback
  */
-GIT_EXTERN(void) git_treebuilder_filter(
+GIT_EXTERN(int) git_treebuilder_filter(
 	git_treebuilder *bld,
 	git_treebuilder_filter_cb filter,
 	void *payload);
