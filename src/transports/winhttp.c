@@ -28,7 +28,6 @@
 #define WIDEN(s) WIDEN2(s)
 
 #define MAX_CONTENT_TYPE_LEN	100
-#define WINHTTP_OPTION_PEERDIST_EXTENSION_STATE	109
 #define CACHED_POST_BODY_BUF_SIZE	4096
 #define UUID_LENGTH_CCH	32
 
@@ -208,7 +207,6 @@ static int winhttp_stream_connect(winhttp_stream *s)
 	char *proxy_url = NULL;
 	wchar_t ct[MAX_CONTENT_TYPE_LEN];
 	LPCWSTR types[] = { L"*/*", NULL };
-	BOOL peerdist = FALSE;
 	int error = -1;
 	unsigned long disable_redirects = WINHTTP_DISABLE_REDIRECTS;
 
@@ -286,14 +284,6 @@ static int winhttp_stream_connect(winhttp_stream *s)
 			giterr_set(GITERR_OS, "Failed to disable redirects");
 			goto on_error;
 	}
-
-	/* Strip unwanted headers (X-P2P-PeerDist, X-P2P-PeerDistEx) that WinHTTP
-	 * adds itself. This option may not be supported by the underlying
-	 * platform, so we do not error-check it */
-	WinHttpSetOption(s->request,
-		WINHTTP_OPTION_PEERDIST_EXTENSION_STATE,
-		&peerdist,
-		sizeof(peerdist));
 
 	/* Send Pragma: no-cache header */
 	if (!WinHttpAddRequestHeaders(s->request, pragma_nocache, (ULONG) -1L, WINHTTP_ADDREQ_FLAG_ADD)) {
