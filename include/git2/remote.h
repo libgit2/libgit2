@@ -577,9 +577,6 @@ GIT_EXTERN(void) git_remote_set_autotag(
  * strarray on succesful return.
  * @param remote the remote to rename
  * @param new_name the new name the remote should bear
- * @param callback Optional callback to notify the consumer of fetch refspecs
- * that haven't been automatically updated and need potential manual tweaking.
- * @param payload Additional data to pass to the callback
  * @return 0, GIT_EINVALIDSPEC, GIT_EEXISTS or an error code
  */
 GIT_EXTERN(int) git_remote_rename(
