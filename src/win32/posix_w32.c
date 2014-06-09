@@ -320,6 +320,8 @@ int p_open(const char *path, int flags, ...)
 {
 	git_win32_path buf;
 	mode_t mode = 0;
+	int fd, umask;
+	DWORD attrs;
 
 	if (utf8_to_16_with_errno(buf, path) < 0)
 		return -1;
@@ -332,18 +334,34 @@ int p_open(const char *path, int flags, ...)
 		va_end(arg_list);
 	}
 
-	return _wopen(buf, flags | STANDARD_OPEN_FLAGS, mode & WIN32_MODE_MASK);
+	fd = _wopen(buf, flags | STANDARD_OPEN_FLAGS, mode & WIN32_MODE_MASK);
+
+	if (fd != -1 && (flags & O_CREAT)) {
+		umask = _umask(0);
+		_umask(umask);
+
+		if (!((mode & ~umask) & _S_IWRITE)) {
+			/* The file should be marked +R on disk, but some CRT
+			 * implementations (Wine is a notable one) do not mark
+			 * FILE_ATTRIBUTE_READONLY on file creation, making us
+			 * come back to double-check. */
+			attrs = GetFileAttributesW(buf);
+
+			if (attrs == INVALID_FILE_ATTRIBUTES ||
+				(!(attrs & FILE_ATTRIBUTE_READONLY) &&
+				 !SetFileAttributesW(buf, attrs | FILE_ATTRIBUTE_READONLY))) {
+				_close(fd);
+				return -1;
+			}
+		}
+	}
+
+	return fd;
 }
 
 int p_creat(const char *path, mode_t mode)
 {
-	git_win32_path buf;
-	int oflag = _O_WRONLY | _O_CREAT | _O_TRUNC | STANDARD_OPEN_FLAGS;
-
-	if (utf8_to_16_with_errno(buf, path) < 0)
-		return -1;
-
-	return _wopen(buf, oflag, mode & WIN32_MODE_MASK);
+	return p_open(path, _O_WRONLY | _O_CREAT | _O_TRUNC, mode);
 }
 
 int p_getcwd(char *buffer_out, size_t size)
