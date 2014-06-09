@@ -367,7 +367,8 @@ size_t git_tree_entrycount(const git_tree *tree)
 unsigned int git_treebuilder_entrycount(git_treebuilder *bld)
 {
 	assert(bld);
-	return (unsigned int)bld->entrycount;
+
+	return git_strmap_num_entries(bld->map);
 }
 
 static int tree_error(const char *str, const char *path)
@@ -469,7 +470,6 @@ static int append_entry(
 		return -1;
 	}
 
-	bld->entrycount++;
 	return 0;
 }
 
@@ -680,7 +680,6 @@ int git_treebuilder_insert(
 		}
 	}
 
-	bld->entrycount++;
 	git_oid_cpy(&entry->oid, id);
 	entry->attr = filemode;
 
@@ -719,14 +718,13 @@ int git_treebuilder_remove(git_treebuilder *bld, const char *filename)
 	git_strmap_delete(bld->map, filename);
 	git_tree_entry_free(entry);
 
-	bld->entrycount--;
 	return 0;
 }
 
 int git_treebuilder_write(git_oid *oid, git_repository *repo, git_treebuilder *bld)
 {
 	int error = 0;
-	size_t i;
+	size_t i, entrycount;
 	git_buf tree = GIT_BUF_INIT;
 	git_odb *odb;
 	git_tree_entry *entry;
@@ -734,7 +732,8 @@ int git_treebuilder_write(git_oid *oid, git_repository *repo, git_treebuilder *b
 
 	assert(bld);
 
-	if (git_vector_init(&entries, bld->entrycount, entry_sort_cmp) < 0)
+	entrycount = git_strmap_num_entries(bld->map);
+	if (git_vector_init(&entries, entrycount, entry_sort_cmp) < 0)
 		return -1;
 
 	git_strmap_foreach_value(bld->map, entry, {
@@ -745,7 +744,7 @@ int git_treebuilder_write(git_oid *oid, git_repository *repo, git_treebuilder *b
 	git_vector_sort(&entries);
 
 	/* Grow the buffer beforehand to an estimated size */
-	error = git_buf_grow(&tree, bld->entrycount * 72);
+	error = git_buf_grow(&tree, entrycount * 72);
 
 	for (i = 0; i < entries.length && !error; ++i) {
 		git_tree_entry *entry = git_vector_get(&entries, i);
@@ -781,7 +780,6 @@ void git_treebuilder_filter(
 	git_strmap_foreach(bld->map, filename, entry, {
 			if (filter(entry, payload)) {
 				git_strmap_delete(bld->map, filename);
-				bld->entrycount--;
 				git_tree_entry_free(entry);
 			}
 	});
@@ -795,7 +793,6 @@ void git_treebuilder_clear(git_treebuilder *bld)
 
 	git_strmap_foreach_value(bld->map, e, git_tree_entry_free(e));
 	git_strmap_clear(bld->map);
-	bld->entrycount = 0;
 }
 
 void git_treebuilder_free(git_treebuilder *bld)
