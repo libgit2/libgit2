@@ -229,7 +229,7 @@ static int winhttp_stream_connect(winhttp_stream *s)
 			s->request_uri,
 			NULL,
 			WINHTTP_NO_REFERER,
-			types,
+			s->verb != post_verb ? types : &types[1],
 			t->connection_data.use_ssl ? WINHTTP_FLAG_SECURE : 0);
 
 	if (!s->request) {
