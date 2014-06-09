@@ -17,12 +17,8 @@
 #include "repository.h"
 
 #include <winhttp.h>
-
-/* For IInternetSecurityManager zone check */
-#ifdef _MSC_VER
-# include <objbase.h>
-# include <urlmon.h>
-#endif
+#include <objbase.h>
+#include <urlmon.h>
 
 #define WIDEN2(s) L ## s
 #define WIDEN(s) WIDEN2(s)
@@ -45,6 +41,13 @@ static const wchar_t *transfer_encoding = L"Transfer-Encoding: chunked";
 static const int no_check_cert_flags = SECURITY_FLAG_IGNORE_CERT_CN_INVALID |
 	SECURITY_FLAG_IGNORE_CERT_DATE_INVALID |
 	SECURITY_FLAG_IGNORE_UNKNOWN_CA;
+
+#if defined(__MINGW32__)
+static const CLSID CLSID_InternetSecurityManager = { 0x7B8A2D94, 0x0AC9, 0x11D1,
+	{ 0x89, 0x6C, 0x00, 0xC0, 0x4F, 0xB6, 0xBF, 0xC4 } };
+static const IID IID_IInternetSecurityManager = { 0x79EAC9EE, 0xBAF9, 0x11CE,
+	{ 0x8C, 0x82, 0x00, 0xAA, 0x00, 0x4B, 0xA9, 0x0B } };
+#endif
 
 #define OWNING_SUBTRANSPORT(s) ((winhttp_subtransport *)(s)->parent.subtransport)
 
@@ -148,7 +151,9 @@ static int fallback_cred_acquire_cb(
 {
 	int error = 1;
 
-#ifdef _MSC_VER
+	GIT_UNUSED(username_from_url);
+	GIT_UNUSED(payload);
+
 	/* If the target URI supports integrated Windows authentication
 	 * as an authentication mechanism */
 	if (GIT_CREDTYPE_DEFAULT & allowed_types) {
@@ -189,13 +194,6 @@ static int fallback_cred_acquire_cb(
 
 		git__free(wide_url);
 	}
-#else
-	GIT_UNUSED(cred);
-	GIT_UNUSED(url);
-	GIT_UNUSED(username_from_url);
-	GIT_UNUSED(allowed_types);
-	GIT_UNUSED(payload);
-#endif
 
 	return error;
 }
@@ -965,7 +963,7 @@ static int winhttp_stream_write_chunked(
 	}
 	else {
 		/* Append as much to the buffer as we can */
-		int count = min(CACHED_POST_BODY_BUF_SIZE - s->chunk_buffer_len, (int)len);
+		int count = (int)min(CACHED_POST_BODY_BUF_SIZE - s->chunk_buffer_len, len);
 
 		if (!s->chunk_buffer)
 			s->chunk_buffer = git__malloc(CACHED_POST_BODY_BUF_SIZE);
