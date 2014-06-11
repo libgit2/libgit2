@@ -14,6 +14,7 @@
  * forms, we didn't write zlib */
 #if defined(_MSC_VER)
 #	pragma warning( disable : 4131 )
+#	pragma warning( disable : 4142 ) /* benign redefinition of type */
 #endif
 
 /* Maximum value for memLevel in deflateInit2 */
