@@ -526,7 +526,7 @@ $(function() {
 
     loadVersions: function() {
       $.getJSON("project.json").then(function(data) {
-        docurium.set({'versions': data.versions, 'github': data.github, 'signatures': data.signatures, 'name': data.name, 'groups': data.groups})
+        docurium.set({'versions': data.versions, 'github': data.github, 'signatures': data.signatures, 'name': data.name})
         docurium.setVersion()
       })
     },
@@ -568,7 +568,7 @@ $(function() {
     },
 
     groupOf: function (func) {
-      return this.get('groups')[func]
+      return this.get('data')['groups'][func]
     },
 
     github_file: function(file, line, lineto) {
