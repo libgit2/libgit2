@@ -35,6 +35,11 @@
 #include "http_parser.h"
 #include "global.h"
 
+#if defined(GIT_SSL) && defined(GIT_THREADS)
+/* OpenSSL wants us to keep an array of locks */
+static git_mutex *openssl_locks;
+#endif
+
 #ifdef GIT_WIN32
 static void net_set_error(const char *str)
 {
@@ -387,6 +392,24 @@ cert_fail_name:
 	return -1;
 }
 
+#ifdef GIT_THREADS
+void openssl_locking_function(int mode, int n, const char *file, int line)
+{
+	int lock;
+
+	GIT_UNUSED(file);
+	GIT_UNUSED(line);
+
+	lock = mode & CRYPTO_LOCK;
+
+	if (lock) {
+		git_mutex_lock(&openssl_locks[n]);
+	} else {
+		git_mutex_unlock(&openssl_locks[n]);
+	}
+}
+#endif
+
 /**
  * The OpenSSL init functions are not reentrant so we need to init
  * them under lock.
@@ -408,6 +431,25 @@ static int init_ssl(void)
 
 	SSL_library_init();
 	SSL_load_error_strings();
+
+#ifdef GIT_THREADS
+	{
+		int num_locks, i;
+
+
+		CRYPTO_set_locking_callback(openssl_locking_function);
+
+		num_locks = CRYPTO_num_locks();
+		openssl_locks = git__calloc(num_locks, sizeof(git_mutex));
+		for (i = 0; i < num_locks; i++) {
+			if (git_mutex_init(&openssl_locks[i]) < 0) {
+				git_mutex_unlock(&git__ssl_mutex);
+				giterr_set(GITERR_SSL, "failed to init lock %d", i);
+				return -1;
+			}
+		}
+	}
+#endif
 
 	git_atomic_set(&git__ssl_init, 1);
 	git_mutex_unlock(&git__ssl_mutex);
