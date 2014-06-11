@@ -18,6 +18,8 @@ typedef struct {
 git_global_st *git__global_state(void);
 
 extern git_mutex git__mwindow_mutex;
+extern git_mutex git__ssl_mutex;
+extern git_atomic git__ssl_init;
 
 #define GIT_GLOBAL (git__global_state())
 

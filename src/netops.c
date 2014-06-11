@@ -33,6 +33,7 @@
 #include "posix.h"
 #include "buffer.h"
 #include "http_parser.h"
+#include "global.h"
 
 #ifdef GIT_WIN32
 static void net_set_error(const char *str)
@@ -386,12 +387,41 @@ cert_fail_name:
 	return -1;
 }
 
+/**
+ * The OpenSSL init functions are not reentrant so we need to init
+ * them under lock.
+ */
+static int init_ssl(void)
+{
+	if (git__ssl_init.val)
+		return 0;
+
+	if (git_mutex_lock(&git__ssl_mutex) < 0) {
+		giterr_set(GITERR_OS, "failed to acquire ssl init lock");
+		return -1;
+	}
+
+	/* if we had to wait for the lock, someone else did it, we can return */
+	if (git__ssl_init.val)
+		return 0;
+
+
+	SSL_library_init();
+	SSL_load_error_strings();
+
+	git_atomic_set(&git__ssl_init, 1);
+	git_mutex_unlock(&git__ssl_mutex);
+
+	return 0;
+}
+
 static int ssl_setup(gitno_socket *socket, const char *host, int flags)
 {
 	int ret;
 
-	SSL_library_init();
-	SSL_load_error_strings();
+	if (init_ssl() < 0)
+		return -1;
+
 	socket->ssl.ctx = SSL_CTX_new(SSLv23_method());
 	if (socket->ssl.ctx == NULL)
 		return ssl_set_error(&socket->ssl, 0);

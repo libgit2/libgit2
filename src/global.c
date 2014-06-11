@@ -16,6 +16,9 @@ git_mutex git__mwindow_mutex;
 
 #define MAX_SHUTDOWN_CB 8
 
+git_mutex git__ssl_mutex;
+git_atomic git__ssl_init;
+
 static git_global_shutdown_fn git__shutdown_callbacks[MAX_SHUTDOWN_CB];
 static git_atomic git__n_shutdown_callbacks;
 static git_atomic git__n_inits;
