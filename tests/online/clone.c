@@ -13,6 +13,8 @@
 #define BB_REPO_URL_WITH_WRONG_PASS "https://libgit2:wrong@bitbucket.org/libgit2/testgitrepository.git"
 #define ASSEMBLA_REPO_URL "https://libgit2:_Libgit2@git.assembla.com/libgit2-test-repos.git"
 
+#define SSH_REPO_URL "ssh://github.com/libgit2/TestGitRepository"
+
 static git_repository *g_repo;
 static git_clone_options g_options;
 
@@ -313,7 +315,20 @@ void test_online_clone__can_cancel(void)
 }
 
 
+static int check_ssh_auth_methods(git_cred **cred, const char *url, const char *username_from_url,
+				  unsigned int allowed_types, void *data)
+{
+	GIT_UNUSED(cred); GIT_UNUSED(url); GIT_UNUSED(username_from_url); GIT_UNUSED(data);
 
+	cl_assert_equal_i(GIT_CREDTYPE_SSH_KEY | GIT_CREDTYPE_SSH_CUSTOM, allowed_types);
 
+	return GIT_EUSER;
+}
 
+void test_online_clone__ssh_auth_methods(void)
+{
+	g_options.remote_callbacks.credentials = check_ssh_auth_methods;
 
+	cl_git_fail_with(GIT_EUSER,
+		git_clone(&g_repo, SSH_REPO_URL, "./foo", &g_options));
+}

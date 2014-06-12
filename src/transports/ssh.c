@@ -37,6 +37,8 @@ typedef struct {
 	git_cred *cred;
 } ssh_subtransport;
 
+static int list_auth_methods(int *out, const char *host, const char *port);
+
 static void ssh_error(LIBSSH2_SESSION *session, const char *errmsg)
 {
 	char *ssherr;
@@ -387,7 +389,7 @@ static int _git_ssh_setup_conn(
 {
 	char *host=NULL, *port=NULL, *path=NULL, *user=NULL, *pass=NULL;
 	const char *default_port="22";
-	int no_callback = 0;
+	int no_callback = 0, auth_methods;
 	ssh_stream *s;
 	LIBSSH2_SESSION* session=NULL;
 	LIBSSH2_CHANNEL* channel=NULL;
@@ -408,6 +410,12 @@ static int _git_ssh_setup_conn(
 		GITERR_CHECK_ALLOC(port);
 	}
 
+	if (list_auth_methods(&auth_methods, host, port) < 0) {
+		auth_methods = GIT_CREDTYPE_USERPASS_PLAINTEXT |
+			GIT_CREDTYPE_SSH_KEY | GIT_CREDTYPE_SSH_CUSTOM |
+			GIT_CREDTYPE_SSH_INTERACTIVE;
+	}
+
 	if (gitno_connect(&s->socket, host, port, 0) < 0)
 		goto on_error;
 
@@ -418,11 +426,8 @@ static int _git_ssh_setup_conn(
 		no_callback = 1;
 	} else {
 		int error;
-		error = t->owner->cred_acquire_cb(&t->cred, t->owner->url, user,
-			GIT_CREDTYPE_USERPASS_PLAINTEXT |
-			GIT_CREDTYPE_SSH_KEY | GIT_CREDTYPE_SSH_CUSTOM |
-			GIT_CREDTYPE_SSH_INTERACTIVE,
-			t->owner->cred_acquire_payload);
+		error = t->owner->cred_acquire_cb(&t->cred, t->owner->url, user, auth_methods,
+						  t->owner->cred_acquire_payload);
 
 		if (error == GIT_PASSTHROUGH)
 			no_callback = 1;
@@ -584,6 +589,72 @@ static void _ssh_free(git_smart_subtransport *subtransport)
 	assert(!t->current_stream);
 
 	git__free(t);
+}
+
+#define SSH_AUTH_PUBLICKEY "publickey"
+#define SSH_AUTH_PASSWORD "password"
+#define SSH_AUTH_KEYBOARD_INTERACTIVE "keyboard-interactive"
+
+static int list_auth_methods(int *out, const char *host, const char *port)
+{
+	gitno_socket s;
+	LIBSSH2_SESSION *session = NULL;
+	const char *list, *ptr;
+
+	*out = 0;
+
+	if (gitno_connect(&s, host, port, 0) < 0)
+		return -1;
+
+	if (_git_ssh_session_create(&session, s) < 0)
+		goto on_error;
+
+	/* the username is dummy, we're throwing away the connection anyway */
+	list = libssh2_userauth_list(session, "git", strlen("git"));
+
+	/* either error, or the remote accepts NONE auth, which is bizarre, let's punt */
+	if (list == NULL)
+		goto out;
+
+	ptr = list;
+	while (ptr) {
+		if (*ptr == ',')
+			ptr++;
+
+		if (!git__prefixcmp(ptr, SSH_AUTH_PUBLICKEY)) {
+			*out |= GIT_CREDTYPE_SSH_KEY;
+			*out |= GIT_CREDTYPE_SSH_CUSTOM;
+			ptr += strlen(SSH_AUTH_PUBLICKEY);
+			continue;
+		}
+
+		if (!git__prefixcmp(ptr, SSH_AUTH_PASSWORD)) {
+			*out |= GIT_CREDTYPE_USERPASS_PLAINTEXT;
+			ptr += strlen(SSH_AUTH_PASSWORD);
+			continue;
+		}
+
+		if (!git__prefixcmp(ptr, SSH_AUTH_KEYBOARD_INTERACTIVE)) {
+			*out |= GIT_CREDTYPE_SSH_INTERACTIVE;
+			ptr += strlen(SSH_AUTH_KEYBOARD_INTERACTIVE);
+			continue;
+		}
+
+		/* Skipt it if we don't know it */
+		ptr = strchr(ptr, ',');
+	}
+
+out:
+	libssh2_session_free(session);
+	gitno_close(&s);
+
+	return 0;
+
+on_error:
+	libssh2_session_free(session);
+	gitno_close(&s);
+
+	return -1;
 }
 #endif
 
