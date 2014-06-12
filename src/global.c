@@ -19,10 +19,8 @@ git_mutex git__mwindow_mutex;
 #ifdef GIT_SSL
 # include <openssl/ssl.h>
 SSL_CTX *git__ssl_ctx;
+static git_mutex *openssl_locks;
 #endif
-
-git_mutex git__ssl_mutex;
-git_atomic git__ssl_init;
 
 static git_global_shutdown_fn git__shutdown_callbacks[MAX_SHUTDOWN_CB];
 static git_atomic git__n_shutdown_callbacks;
@@ -47,12 +45,59 @@ static void git__shutdown(void)
 
 }
 
+#if defined(GIT_THREADS) && defined(GIT_SSL)
+void openssl_locking_function(int mode, int n, const char *file, int line)
+{
+	int lock;
+
+	GIT_UNUSED(file);
+	GIT_UNUSED(line);
+
+	lock = mode & CRYPTO_LOCK;
+
+	if (lock) {
+		git_mutex_lock(&openssl_locks[n]);
+	} else {
+		git_mutex_unlock(&openssl_locks[n]);
+	}
+}
+#endif
+
+
 static void init_ssl(void)
 {
 #ifdef GIT_SSL
 	SSL_load_error_strings();
 	OpenSSL_add_ssl_algorithms();
 	git__ssl_ctx = SSL_CTX_new(SSLv23_method());
+	SSL_CTX_set_mode(git__ssl_ctx, SSL_MODE_AUTO_RETRY);
+	SSL_CTX_set_verify(git__ssl_ctx, SSL_VERIFY_NONE, NULL);
+	if (!SSL_CTX_set_default_verify_paths(git__ssl_ctx)) {
+		SSL_CTX_free(git__ssl_ctx);
+		git__ssl_ctx = NULL;
+	}
+
+# ifdef GIT_THREADS
+	{
+		int num_locks, i;
+
+		num_locks = CRYPTO_num_locks();
+		openssl_locks = git__calloc(num_locks, sizeof(git_mutex));
+		if (openssl_locks == NULL) {
+			SSL_CTX_free(git__ssl_ctx);
+			git__ssl_ctx = NULL;
+		}
+
+		for (i = 0; i < num_locks; i++) {
+			if (git_mutex_init(&openssl_locks[i]) != 0) {
+				SSL_CTX_free(git__ssl_ctx);
+				git__ssl_ctx = NULL;
+			}
+		}
+
+		CRYPTO_set_locking_callback(openssl_locking_function);
+	}
+# endif
 #endif
 }
 
@@ -182,8 +227,6 @@ static void cb__free_status(void *st)
 static void init_once(void)
 {
 	if ((init_error = git_mutex_init(&git__mwindow_mutex)) != 0)
-		return;
-	if ((init_error = git_mutex_init(&git__ssl_mutex)) != 0)
 		return;
 	pthread_key_create(&_tls_key, &cb__free_status);
 

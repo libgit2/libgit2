@@ -35,11 +35,6 @@
 #include "http_parser.h"
 #include "global.h"
 
-#if defined(GIT_SSL) && defined(GIT_THREADS)
-/* OpenSSL wants us to keep an array of locks */
-static git_mutex *openssl_locks;
-#endif
-
 #ifdef GIT_WIN32
 static void net_set_error(const char *str)
 {
@@ -391,86 +386,14 @@ cert_fail_name:
 	return -1;
 }
 
-#ifdef GIT_THREADS
-void openssl_locking_function(int mode, int n, const char *file, int line)
-{
-	int lock;
-
-	GIT_UNUSED(file);
-	GIT_UNUSED(line);
-
-	lock = mode & CRYPTO_LOCK;
-
-	if (lock) {
-		git_mutex_lock(&openssl_locks[n]);
-	} else {
-		git_mutex_unlock(&openssl_locks[n]);
-	}
-}
-#endif
-
-/**
- * The OpenSSL init functions are not reentrant so we need to init
- * them under lock.
- */
-static int init_ssl(void)
-{
-	if (git__ssl_init.val)
-		return 0;
-
-	if (git_mutex_lock(&git__ssl_mutex) < 0) {
-		giterr_set(GITERR_OS, "failed to acquire ssl init lock");
-		return -1;
-	}
-
-	/* if we had to wait for the lock, someone else did it, we can return */
-	if (git__ssl_init.val)
-		return 0;
-
-	SSL_CTX_set_mode(git__ssl_ctx, SSL_MODE_AUTO_RETRY);
-	SSL_CTX_set_verify(git__ssl_ctx, SSL_VERIFY_NONE, NULL);
-	if (!SSL_CTX_set_default_verify_paths(git__ssl_ctx)) {
-		unsigned long err = ERR_get_error();
-		giterr_set(GITERR_SSL, "failed to set verify paths: %s\n", ERR_error_string(err, NULL));
-		return -1;
-	}
-
-#ifdef GIT_THREADS
-	{
-		int num_locks, i;
-
-		num_locks = CRYPTO_num_locks();
-		openssl_locks = git__calloc(num_locks, sizeof(git_mutex));
-		if (openssl_locks == NULL) {
-			git_mutex_unlock(&git__ssl_mutex);
-			return -1;
-		}
-		GITERR_CHECK_ALLOC(openssl_locks);
-
-		for (i = 0; i < num_locks; i++) {
-			if (git_mutex_init(&openssl_locks[i]) != 0) {
-				git_mutex_unlock(&git__ssl_mutex);
-				giterr_set(GITERR_SSL, "failed to init lock %d", i);
-				return -1;
-			}
-		}
-	}
-
-	CRYPTO_set_locking_callback(openssl_locking_function);
-#endif
-
-	git_atomic_inc(&git__ssl_init);
-	git_mutex_unlock(&git__ssl_mutex);
-
-	return 0;
-}
-
 static int ssl_setup(gitno_socket *socket, const char *host, int flags)
 {
 	int ret;
 
-	if (init_ssl() < 0)
+	if (git__ssl_ctx == NULL) {
+		giterr_set(GITERR_NET, "OpenSSL initialization failed");
 		return -1;
+	}
 
 	socket->ssl.ssl = SSL_new(git__ssl_ctx);
 	if (socket->ssl.ssl == NULL)
