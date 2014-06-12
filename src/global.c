@@ -16,6 +16,11 @@ git_mutex git__mwindow_mutex;
 
 #define MAX_SHUTDOWN_CB 8
 
+#ifdef GIT_SSL
+# include <openssl/ssl.h>
+SSL_CTX *git__ssl_ctx;
+#endif
+
 git_mutex git__ssl_mutex;
 git_atomic git__ssl_init;
 
@@ -160,6 +165,15 @@ static pthread_key_t _tls_key;
 static pthread_once_t _once_init = PTHREAD_ONCE_INIT;
 int init_error = 0;
 
+static void init_ssl(void)
+{
+#ifdef GIT_SSL
+	SSL_load_error_strings();
+	OpenSSL_add_ssl_algorithms();
+	git__ssl_ctx = SSL_CTX_new(SSLv23_method());
+#endif
+}
+
 static void cb__free_status(void *st)
 {
 	git__free(st);
@@ -169,11 +183,17 @@ static void init_once(void)
 {
 	if ((init_error = git_mutex_init(&git__mwindow_mutex)) != 0)
 		return;
+	if ((init_error = git_mutex_init(&git__ssl_mutex)) != 0)
+		return;
 	pthread_key_create(&_tls_key, &cb__free_status);
+
 
 	/* Initialize any other subsystems that have global state */
 	if ((init_error = git_hash_global_init()) >= 0)
 		init_error = git_sysdir_global_init();
+
+	/* OpenSSL needs to be initialized from the main thread */
+	init_ssl();
 
 	GIT_MEMORY_BARRIER;
 }

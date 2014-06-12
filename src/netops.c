@@ -163,7 +163,7 @@ void gitno_buffer_setup_callback(
 void gitno_buffer_setup(gitno_socket *socket, gitno_buffer *buf, char *data, size_t len)
 {
 #ifdef GIT_SSL
-	if (socket->ssl.ctx) {
+	if (socket->ssl.ssl) {
 		gitno_buffer_setup_callback(socket, buf, data, len, gitno__recv_ssl, NULL);
 		return;
 	}
@@ -208,7 +208,6 @@ static int gitno_ssl_teardown(gitno_ssl *ssl)
 		ret = 0;
 
 	SSL_free(ssl->ssl);
-	SSL_CTX_free(ssl->ctx);
 	return ret;
 }
 
@@ -428,30 +427,39 @@ static int init_ssl(void)
 	if (git__ssl_init.val)
 		return 0;
 
-
-	SSL_library_init();
-	SSL_load_error_strings();
+	SSL_CTX_set_mode(git__ssl_ctx, SSL_MODE_AUTO_RETRY);
+	SSL_CTX_set_verify(git__ssl_ctx, SSL_VERIFY_NONE, NULL);
+	if (!SSL_CTX_set_default_verify_paths(git__ssl_ctx)) {
+		unsigned long err = ERR_get_error();
+		giterr_set(GITERR_SSL, "failed to set verify paths: %s\n", ERR_error_string(err, NULL));
+		return -1;
+	}
 
 #ifdef GIT_THREADS
 	{
 		int num_locks, i;
 
-
-		CRYPTO_set_locking_callback(openssl_locking_function);
-
 		num_locks = CRYPTO_num_locks();
 		openssl_locks = git__calloc(num_locks, sizeof(git_mutex));
+		if (openssl_locks == NULL) {
+			git_mutex_unlock(&git__ssl_mutex);
+			return -1;
+		}
+		GITERR_CHECK_ALLOC(openssl_locks);
+
 		for (i = 0; i < num_locks; i++) {
-			if (git_mutex_init(&openssl_locks[i]) < 0) {
+			if (git_mutex_init(&openssl_locks[i]) != 0) {
 				git_mutex_unlock(&git__ssl_mutex);
 				giterr_set(GITERR_SSL, "failed to init lock %d", i);
 				return -1;
 			}
 		}
 	}
+
+	CRYPTO_set_locking_callback(openssl_locking_function);
 #endif
 
-	git_atomic_set(&git__ssl_init, 1);
+	git_atomic_inc(&git__ssl_init);
 	git_mutex_unlock(&git__ssl_mutex);
 
 	return 0;
@@ -464,16 +472,7 @@ static int ssl_setup(gitno_socket *socket, const char *host, int flags)
 	if (init_ssl() < 0)
 		return -1;
 
-	socket->ssl.ctx = SSL_CTX_new(SSLv23_method());
-	if (socket->ssl.ctx == NULL)
-		return ssl_set_error(&socket->ssl, 0);
-
-	SSL_CTX_set_mode(socket->ssl.ctx, SSL_MODE_AUTO_RETRY);
-	SSL_CTX_set_verify(socket->ssl.ctx, SSL_VERIFY_NONE, NULL);
-	if (!SSL_CTX_set_default_verify_paths(socket->ssl.ctx))
-		return ssl_set_error(&socket->ssl, 0);
-
-	socket->ssl.ssl = SSL_new(socket->ssl.ctx);
+	socket->ssl.ssl = SSL_new(git__ssl_ctx);
 	if (socket->ssl.ssl == NULL)
 		return ssl_set_error(&socket->ssl, 0);
 
@@ -610,7 +609,7 @@ int gitno_send(gitno_socket *socket, const char *msg, size_t len, int flags)
 	size_t off = 0;
 
 #ifdef GIT_SSL
-	if (socket->ssl.ctx)
+	if (socket->ssl.ssl)
 		return gitno_send_ssl(&socket->ssl, msg, len, flags);
 #endif
 
@@ -631,7 +630,7 @@ int gitno_send(gitno_socket *socket, const char *msg, size_t len, int flags)
 int gitno_close(gitno_socket *s)
 {
 #ifdef GIT_SSL
-	if (s->ssl.ctx &&
+	if (s->ssl.ssl &&
 		gitno_ssl_teardown(&s->ssl) < 0)
 		return -1;
 #endif
