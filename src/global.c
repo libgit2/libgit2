@@ -47,6 +47,15 @@ static void git__shutdown(void)
 
 }
 
+static void init_ssl(void)
+{
+#ifdef GIT_SSL
+	SSL_load_error_strings();
+	OpenSSL_add_ssl_algorithms();
+	git__ssl_ctx = SSL_CTX_new(SSLv23_method());
+#endif
+}
+
 /**
  * Handle the global state with TLS
  *
@@ -165,15 +174,6 @@ static pthread_key_t _tls_key;
 static pthread_once_t _once_init = PTHREAD_ONCE_INIT;
 int init_error = 0;
 
-static void init_ssl(void)
-{
-#ifdef GIT_SSL
-	SSL_load_error_strings();
-	OpenSSL_add_ssl_algorithms();
-	git__ssl_ctx = SSL_CTX_new(SSLv23_method());
-#endif
-}
-
 static void cb__free_status(void *st)
 {
 	git__free(st);
@@ -248,6 +248,7 @@ static git_global_st __state;
 
 int git_threads_init(void)
 {
+	init_ssl();
 	git_atomic_inc(&git__n_inits);
 	return 0;
 }
