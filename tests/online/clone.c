@@ -243,8 +243,7 @@ void test_online_clone__cred_callback_failure_return_code_is_tunnelled(void)
 
 	g_options.remote_callbacks.credentials = cred_failure_cb;
 
-	/* TODO: this should expect -172. */
-	cl_git_fail_with(git_clone(&g_repo, remote_url, "./foo", &g_options), -1);
+	cl_git_fail_with(-172, git_clone(&g_repo, remote_url, "./foo", &g_options));
 }
 
 void test_online_clone__credentials(void)

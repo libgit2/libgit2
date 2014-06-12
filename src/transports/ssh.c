@@ -389,7 +389,7 @@ static int _git_ssh_setup_conn(
 {
 	char *host=NULL, *port=NULL, *path=NULL, *user=NULL, *pass=NULL;
 	const char *default_port="22";
-	int no_callback = 0, auth_methods;
+	int no_callback = 0, auth_methods, error = 0;
 	ssh_stream *s;
 	LIBSSH2_SESSION* session=NULL;
 	LIBSSH2_CHANNEL* channel=NULL;
@@ -401,10 +401,10 @@ static int _git_ssh_setup_conn(
 	s = (ssh_stream *)*stream;
 
 	if (!git__prefixcmp(url, prefix_ssh)) {
-		if (gitno_extract_url_parts(&host, &port, &path, &user, &pass, url, default_port) < 0)
+		if ((error = gitno_extract_url_parts(&host, &port, &path, &user, &pass, url, default_port)) < 0)
 			goto on_error;
 	} else {
-		if (git_ssh_extract_url_parts(&host, &user, url) < 0)
+		if ((error = git_ssh_extract_url_parts(&host, &user, url)) < 0)
 			goto on_error;
 		port = git__strdup(default_port);
 		GITERR_CHECK_ALLOC(port);
@@ -416,16 +416,15 @@ static int _git_ssh_setup_conn(
 			GIT_CREDTYPE_SSH_INTERACTIVE;
 	}
 
-	if (gitno_connect(&s->socket, host, port, 0) < 0)
+	if ((error = gitno_connect(&s->socket, host, port, 0)) < 0)
 		goto on_error;
 
 	if (user && pass) {
-		if (git_cred_userpass_plaintext_new(&t->cred, user, pass) < 0)
+		if ((error = git_cred_userpass_plaintext_new(&t->cred, user, pass)) < 0)
 			goto on_error;
 	} else if (!t->owner->cred_acquire_cb) {
 		no_callback = 1;
 	} else {
-		int error;
 		error = t->owner->cred_acquire_cb(&t->cred, t->owner->url, user, auth_methods,
 						  t->owner->cred_acquire_payload);
 
@@ -435,25 +434,28 @@ static int _git_ssh_setup_conn(
 			goto on_error;
 		else if (!t->cred) {
 			giterr_set(GITERR_SSH, "Callback failed to initialize SSH credentials");
+			error = -1;
 			goto on_error;
 		}
 	}
 
 	if (no_callback) {
 		giterr_set(GITERR_SSH, "authentication required but no callback set");
+		error = -1;
 		goto on_error;
 	}
 
 	assert(t->cred);
 
-	if (_git_ssh_session_create(&session, s->socket) < 0)
+	if ((error = _git_ssh_session_create(&session, s->socket)) < 0)
 		goto on_error;
 
-	if (_git_ssh_authenticate_session(session, t->cred) < 0)
+	if ((error = _git_ssh_authenticate_session(session, t->cred)) < 0)
 		goto on_error;
 
 	channel = libssh2_channel_open_session(session);
 	if (!channel) {
+		error = -1;
 		ssh_error(session, "Failed to open SSH channel");
 		goto on_error;
 	}
@@ -488,7 +490,7 @@ on_error:
 	if (session)
 		libssh2_session_free(session);
 
-	return -1;
+	return error;
 }
 
 static int ssh_uploadpack_ls(
@@ -496,10 +498,7 @@ static int ssh_uploadpack_ls(
 	const char *url,
 	git_smart_subtransport_stream **stream)
 {
-	if (_git_ssh_setup_conn(t, url, cmd_uploadpack, stream) < 0)
-		return -1;
-
-	return 0;
+	return _git_ssh_setup_conn(t, url, cmd_uploadpack, stream);
 }
 
 static int ssh_uploadpack(
