@@ -8,9 +8,9 @@
 
 #define LIVE_REPO_URL "http://github.com/libgit2/TestGitRepository"
 #define LIVE_EMPTYREPO_URL "http://github.com/libgit2/TestEmptyRepository"
-#define BB_REPO_URL "https://libgit2@bitbucket.org/libgit2/testgitrepository.git"
-#define BB_REPO_URL_WITH_PASS "https://libgit2:libgit2@bitbucket.org/libgit2/testgitrepository.git"
-#define BB_REPO_URL_WITH_WRONG_PASS "https://libgit2:wrong@bitbucket.org/libgit2/testgitrepository.git"
+#define BB_REPO_URL "https://libgit3@bitbucket.org/libgit2/testgitrepository.git"
+#define BB_REPO_URL_WITH_PASS "https://libgit3:libgit3@bitbucket.org/libgit2/testgitrepository.git"
+#define BB_REPO_URL_WITH_WRONG_PASS "https://libgit3:wrong@bitbucket.org/libgit2/testgitrepository.git"
 #define ASSEMBLA_REPO_URL "https://libgit2:_Libgit2@git.assembla.com/libgit2-test-repos.git"
 
 static git_repository *g_repo;
