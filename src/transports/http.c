@@ -260,7 +260,7 @@ static int on_headers_complete(http_parser *parser)
 
 	if (parser->status_code == 401 &&
 	    get_verb == s->verb) {
-		if (!t->owner->cred_acquire_payload) {
+		if (!t->owner->cred_acquire_cb) {
 			no_callback = 1;
 		} else {
 			int allowed_types = 0;
