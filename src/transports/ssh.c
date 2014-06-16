@@ -34,7 +34,6 @@ typedef struct {
 	git_smart_subtransport parent;
 	transport_smart *owner;
 	ssh_stream *current_stream;
-	git_cred *cred;
 } ssh_subtransport;
 
 static int list_auth_methods(int *out, const char *host, const char *port);
@@ -341,10 +340,44 @@ static int _git_ssh_authenticate_session(
 		}
 	} while (LIBSSH2_ERROR_EAGAIN == rc || LIBSSH2_ERROR_TIMEOUT == rc);
 
+        if (rc == LIBSSH2_ERROR_PASSWORD_EXPIRED || rc == LIBSSH2_ERROR_AUTHENTICATION_FAILED)
+                return GIT_EAUTH;
+
 	if (rc != LIBSSH2_ERROR_NONE) {
 		ssh_error(session, "Failed to authenticate SSH session");
 		return -1;
 	}
+
+	return 0;
+}
+
+static int request_creds(git_cred **out, ssh_subtransport *t, const char *user, int auth_methods)
+{
+	int error, no_callback = 0;
+	git_cred *cred = NULL;
+
+	if (!t->owner->cred_acquire_cb) {
+		no_callback = 1;
+	} else {
+		error = t->owner->cred_acquire_cb(&cred, t->owner->url, user, auth_methods,
+						  t->owner->cred_acquire_payload);
+
+		if (error == GIT_PASSTHROUGH)
+			no_callback = 1;
+		else if (error < 0)
+			return error;
+		else if (!cred) {
+			giterr_set(GITERR_SSH, "Callback failed to initialize SSH credentials");
+			return -1;
+		}
+	}
+
+	if (no_callback) {
+		giterr_set(GITERR_SSH, "authentication required but no callback set");
+		return -1;
+	}
+
+	*out = cred;
 
 	return 0;
 }
@@ -389,8 +422,9 @@ static int _git_ssh_setup_conn(
 {
 	char *host=NULL, *port=NULL, *path=NULL, *user=NULL, *pass=NULL;
 	const char *default_port="22";
-	int no_callback = 0, auth_methods, error = 0;
+	int auth_methods, error = 0;
 	ssh_stream *s;
+	git_cred *cred = NULL;
 	LIBSSH2_SESSION* session=NULL;
 	LIBSSH2_CHANNEL* channel=NULL;
 
@@ -420,37 +454,31 @@ static int _git_ssh_setup_conn(
 		goto on_error;
 
 	if (user && pass) {
-		if ((error = git_cred_userpass_plaintext_new(&t->cred, user, pass)) < 0)
+		if ((error = git_cred_userpass_plaintext_new(&cred, user, pass)) < 0)
 			goto on_error;
-	} else if (!t->owner->cred_acquire_cb) {
-		no_callback = 1;
-	} else {
-		error = t->owner->cred_acquire_cb(&t->cred, t->owner->url, user, auth_methods,
-						  t->owner->cred_acquire_payload);
-
-		if (error == GIT_PASSTHROUGH)
-			no_callback = 1;
-		else if (error < 0)
-			goto on_error;
-		else if (!t->cred) {
-			giterr_set(GITERR_SSH, "Callback failed to initialize SSH credentials");
-			error = -1;
-			goto on_error;
-		}
 	}
-
-	if (no_callback) {
-		giterr_set(GITERR_SSH, "authentication required but no callback set");
-		error = -1;
-		goto on_error;
-	}
-
-	assert(t->cred);
 
 	if ((error = _git_ssh_session_create(&session, s->socket)) < 0)
 		goto on_error;
 
-	if ((error = _git_ssh_authenticate_session(session, t->cred)) < 0)
+	error = GIT_EAUTH;
+	/* if we already have something to try */
+	if (cred)
+		error = _git_ssh_authenticate_session(session, cred);
+
+	while (error == GIT_EAUTH) {
+		if (cred) {
+			cred->free(cred);
+			cred = NULL;
+		}
+
+		if ((error = request_creds(&cred, t, user, auth_methods)) < 0)
+			goto on_error;
+
+		error = _git_ssh_authenticate_session(session, cred);
+	}
+
+	if (error < 0)
 		goto on_error;
 
 	channel = libssh2_channel_open_session(session);
@@ -466,6 +494,9 @@ static int _git_ssh_setup_conn(
 	s->channel = channel;
 
 	t->current_stream = s;
+	if (cred)
+		cred->free(cred);
+
 	git__free(host);
 	git__free(port);
 	git__free(path);
@@ -481,6 +512,9 @@ on_error:
 
 	if (*stream)
 		ssh_stream_free(*stream);
+
+	if (cred)
+		cred->free(cred);
 
 	git__free(host);
 	git__free(port);

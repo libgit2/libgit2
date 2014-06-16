@@ -246,6 +246,37 @@ void test_online_clone__cred_callback_failure_return_code_is_tunnelled(void)
 	cl_git_fail_with(-172, git_clone(&g_repo, remote_url, "./foo", &g_options));
 }
 
+static int cred_count_calls_cb(git_cred **cred, const char *url, const char *user,
+			       unsigned int allowed_types, void *data)
+{
+	size_t *counter = (size_t *) data;
+
+	GIT_UNUSED(url); GIT_UNUSED(user); GIT_UNUSED(allowed_types);
+
+	(*counter)++;
+
+	if (*counter == 3)
+		return GIT_EUSER;
+
+	return git_cred_userpass_plaintext_new(cred, "foo", "bar");
+}
+
+void test_online_clone__cred_callback_called_again_on_auth_failure(void)
+{
+	const char *remote_url = cl_getenv("GITTEST_REMOTE_URL");
+	const char *remote_user = cl_getenv("GITTEST_REMOTE_USER");
+	size_t counter = 0;
+
+	if (!remote_url || !remote_user)
+		clar__skip();
+
+	g_options.remote_callbacks.credentials = cred_count_calls_cb;
+	g_options.remote_callbacks.payload = &counter;
+
+	cl_git_fail_with(GIT_EUSER, git_clone(&g_repo, remote_url, "./foo", &g_options));
+	cl_assert_equal_i(3, counter);
+}
+
 void test_online_clone__credentials(void)
 {
 	/* Remote URL environment variable must be set.  User and password are optional.  */
