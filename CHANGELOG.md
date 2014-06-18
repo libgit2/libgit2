@@ -9,3 +9,6 @@ v0.21 + 1
 * Use a map for the treebuilder, making insertion O(1)
 
 * LF -> CRLF filter refuses to handle mixed-EOL files
+
+* LF -> CRLF filter now runs when * text = auto (with Git for Windows 1.9.4)
+
