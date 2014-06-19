@@ -78,14 +78,6 @@ extern int git_buf_text_lf_to_crlf(git_buf *tgt, const git_buf *src);
 extern int git_buf_text_common_prefix(git_buf *buf, const git_strarray *strs);
 
 /**
- * Check quickly if buffer looks like it contains binary data
- *
- * @param buf Buffer to check
- * @return true if buffer looks like non-text data
- */
-extern bool git_buf_text_is_binary(const git_buf *buf);
-
-/**
  * Check quickly if buffer contains a NUL byte
  *
  * @param buf Buffer to check

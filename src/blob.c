@@ -338,7 +338,7 @@ int git_blob_is_binary(const git_blob *blob)
 		min(blob->odb_object->cached.size, GIT_FILTER_BYTES_TO_CHECK_NUL);
 	content.asize = 0;
 
-	return git_buf_text_is_binary(&content);
+	return git_buf_text_contains_nul(&content);
 }
 
 int git_blob_filtered_content(

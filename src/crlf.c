@@ -231,7 +231,7 @@ static int crlf_apply_to_workdir(
 		return 0;
 
 	/* Don't filter binary files */
-	if (git_buf_text_is_binary(from))
+	if (git_buf_text_contains_nul(from))
 		return GIT_PASSTHROUGH;
 
 	/* Determine proper line ending */
