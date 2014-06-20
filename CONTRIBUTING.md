@@ -26,7 +26,7 @@ easily accessible permanent record of the conversation.
 
 The `master` branch is the main branch where development happens.
 Releases are tagged
-(e.g. [v0.21.0](https://github.com/libgit2/libgit2/releases/tag/v0.21.0)
+(e.g. [v0.21.0](https://github.com/libgit2/libgit2/releases/tag/v0.21.0) )
 and when a critical bug fix needs to be backported, it will be done on a
 `<tag>-maint` maintenance branch.
 
