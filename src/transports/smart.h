@@ -23,6 +23,7 @@
 #define GIT_CAP_DELETE_REFS "delete-refs"
 #define GIT_CAP_REPORT_STATUS "report-status"
 #define GIT_CAP_THIN_PACK "thin-pack"
+#define GIT_CAP_SYMREF "symref"
 
 enum git_pkt_type {
 	GIT_PKT_CMD,
@@ -154,7 +155,7 @@ typedef struct {
 
 /* smart_protocol.c */
 int git_smart__store_refs(transport_smart *t, int flushes);
-int git_smart__detect_caps(git_pkt_ref *pkt, transport_smart_caps *caps);
+int git_smart__detect_caps(git_pkt_ref *pkt, transport_smart_caps *caps, git_vector *symrefs);
 int git_smart__push(git_transport *transport, git_push *push);
 
 int git_smart__negotiate_fetch(
@@ -167,14 +168,14 @@ int git_smart__download_pack(
 	git_transport *transport,
 	git_repository *repo,
 	git_transfer_progress *stats,
-	git_transfer_progress_callback progress_cb,
+	git_transfer_progress_cb progress_cb,
 	void *progress_payload);
 
 /* smart.c */
 int git_smart__negotiation_step(git_transport *transport, void *data, size_t len);
 int git_smart__get_push_stream(transport_smart *t, git_smart_subtransport_stream **out);
 
-int git_smart__update_heads(transport_smart *t);
+int git_smart__update_heads(transport_smart *t, git_vector *symrefs);
 
 /* smart_pkt.c */
 int git_pkt_parse_line(git_pkt **head, const char *line, const char **out, size_t len);

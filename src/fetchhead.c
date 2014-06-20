@@ -210,7 +210,7 @@ static int fetchhead_ref_parse(
 			name = desc + 1;
 
 		if (name) {
-			if ((desc = strchr(name, '\'')) == NULL ||
+			if ((desc = strstr(name, "' ")) == NULL ||
 				git__prefixcmp(desc, "' of ") != 0) {
 				giterr_set(GITERR_FETCHHEAD,
 					"Invalid description in FETCH_HEAD line %d", line_num);
@@ -260,8 +260,8 @@ int git_repository_fetchhead_foreach(git_repository *repo,
 	while ((line = git__strsep(&buffer, "\n")) != NULL) {
 		++line_num;
 
-		if ((error = fetchhead_ref_parse(&oid, &is_merge, &name, &remote_url,
-			line, line_num)) < 0)
+		if ((error = fetchhead_ref_parse(
+				&oid, &is_merge, &name, &remote_url, line, line_num)) < 0)
 			goto done;
 
 		if (git_buf_len(&name) > 0)
@@ -269,8 +269,9 @@ int git_repository_fetchhead_foreach(git_repository *repo,
 		else
 			ref_name = NULL;
 
-		if ((cb(ref_name, remote_url, &oid, is_merge, payload)) != 0) {
-			error = GIT_EUSER;
+		error = cb(ref_name, remote_url, &oid, is_merge, payload);
+		if (error) {
+			giterr_set_after_callback(error);
 			goto done;
 		}
 	}

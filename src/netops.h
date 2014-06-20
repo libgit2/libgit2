@@ -16,7 +16,6 @@
 
 struct gitno_ssl {
 #ifdef GIT_SSL
-	SSL_CTX *ctx;
 	SSL *ssl;
 #else
 	size_t dummy;
@@ -53,6 +52,19 @@ enum {
 	 * Indicates that the server certificate should not be validated. */
 	GITNO_CONNECT_SSL_NO_CHECK_CERT = 2,
 };
+
+/**
+ * Check if the name in a cert matches the wanted hostname
+ *
+ * Check if a pattern from a certificate matches the hostname we
+ * wanted to connect to according to RFC2818 rules (which specifies
+ * HTTP over TLS). Mainly, an asterisk matches anything, but is
+ * limited to a single url component.
+ *
+ * Note that this does not set an error message. It expects the user
+ * to provide the message for the user.
+ */
+int gitno__match_host(const char *pattern, const char *host);
 
 void gitno_buffer_setup(gitno_socket *t, gitno_buffer *buf, char *data, size_t len);
 void gitno_buffer_setup_callback(gitno_socket *t, gitno_buffer *buf, char *data, size_t len, int (*recv)(gitno_buffer *buf), void *cb_data);

@@ -485,12 +485,14 @@ static void pass_blame(git_blame *blame, git_blame__origin *origin, uint32_t opt
 	git_blame__origin *sg_buf[16];
 	git_blame__origin *porigin, **sg_origin = sg_buf;
 
-	GIT_UNUSED(opt);
-
 	num_parents = git_commit_parentcount(commit);
 	if (!git_oid_cmp(git_commit_id(commit), &blame->options.oldest_commit))
 		/* Stop at oldest specified commit */
 		num_parents = 0;
+	else if (opt & GIT_BLAME_FIRST_PARENT && num_parents > 1)
+		/* Limit search to the first parent */
+		num_parents = 1;
+
 	if (!num_parents) {
 		git_oid_cpy(&blame->options.oldest_commit, git_commit_id(commit));
 		goto finish;

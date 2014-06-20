@@ -66,7 +66,7 @@ static void assert_merge_and_or_remote_key_missing(git_repository *repository, c
 	git_reference *branch;
 
 	cl_assert_equal_i(GIT_OBJ_COMMIT, git_object_type((git_object*)target));
-	cl_git_pass(git_branch_create(&branch, repository, entry_name, (git_commit*)target, 0));
+	cl_git_pass(git_branch_create(&branch, repository, entry_name, (git_commit*)target, 0, NULL, NULL));
 
 	cl_assert_equal_i(GIT_ENOTFOUND, git_branch_upstream(&upstream, branch));
 

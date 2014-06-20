@@ -10,11 +10,10 @@ void test_refs_branches_delete__initialize(void)
 {
 	git_oid id;
 
-	cl_fixture_sandbox("testrepo.git");
-	cl_git_pass(git_repository_open(&repo, "testrepo.git"));
+	repo = cl_git_sandbox_init("testrepo.git");
 
 	cl_git_pass(git_oid_fromstr(&id, "be3563ae3f795b2b4353bcce3a527ad0a4f7f644"));
-	cl_git_pass(git_reference_create(&fake_remote, repo, "refs/remotes/nulltoken/master", &id, 0));
+	cl_git_pass(git_reference_create(&fake_remote, repo, "refs/remotes/nulltoken/master", &id, 0, NULL, NULL));
 }
 
 void test_refs_branches_delete__cleanup(void)
@@ -22,10 +21,8 @@ void test_refs_branches_delete__cleanup(void)
 	git_reference_free(fake_remote);
 	fake_remote = NULL;
 
-	git_repository_free(repo);
+	cl_git_sandbox_cleanup();
 	repo = NULL;
-
-	cl_fixture_cleanup("testrepo.git");
 }
 
 void test_refs_branches_delete__can_not_delete_a_branch_pointed_at_by_HEAD(void)
@@ -78,7 +75,7 @@ void test_refs_branches_delete__can_delete_a_branch_pointed_at_by_detached_HEAD(
 	git_reference_free(head);
 
 	/* Detach HEAD and make it target the commit that "master" points to */
-	git_repository_detach_head(repo);
+	git_repository_detach_head(repo, NULL, NULL);
 
 	cl_git_pass(git_branch_lookup(&branch, repo, "master", GIT_BRANCH_LOCAL));
 	cl_git_pass(git_branch_delete(branch));
@@ -115,3 +112,29 @@ void test_refs_branches_delete__deleting_a_branch_removes_related_configuration_
 	assert_config_entry_existence(repo, "branch.track-local.remote", false);
 	assert_config_entry_existence(repo, "branch.track-local.merge", false);
 }
+
+void test_refs_branches_delete__removes_reflog(void)
+{
+	git_reference *branch;
+	git_reflog *log;
+	git_oid oidzero = {{0}};
+	git_signature *sig;
+
+	/* Ensure the reflog has at least one entry */
+	cl_git_pass(git_signature_now(&sig, "Me", "user@example.com"));
+	cl_git_pass(git_reflog_read(&log, repo, "refs/heads/track-local"));
+	cl_git_pass(git_reflog_append(log, &oidzero, sig, "message"));
+	cl_assert(git_reflog_entrycount(log) > 0);
+	git_signature_free(sig);
+	git_reflog_free(log);
+
+	cl_git_pass(git_branch_lookup(&branch, repo, "track-local", GIT_BRANCH_LOCAL));
+	cl_git_pass(git_branch_delete(branch));
+	git_reference_free(branch);
+
+	/* Reading a nonexistant reflog creates it, but it should be empty */
+	cl_git_pass(git_reflog_read(&log, repo, "refs/heads/track-local"));
+	cl_assert_equal_i(0, git_reflog_entrycount(log));
+	git_reflog_free(log);
+}
+

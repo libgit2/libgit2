@@ -194,7 +194,10 @@ int git_push_add_refspec(git_push *push, const char *refspec)
 	return 0;
 }
 
-int git_push_update_tips(git_push *push)
+int git_push_update_tips(
+		git_push *push,
+		const git_signature *signature,
+		const char *reflog_message)
 {
 	git_buf remote_ref_name = GIT_BUF_INIT;
 	size_t i, j;
@@ -205,16 +208,14 @@ int git_push_update_tips(git_push *push)
 	int error = 0;
 
 	git_vector_foreach(&push->status, i, status) {
-		/* If this ref update was successful (ok, not ng), it will have an empty message */
-		if (status->msg)
-			continue;
+		int fire_callback = 1;
 
 		/* Find the corresponding remote ref */
 		fetch_spec = git_remote__matching_refspec(push->remote, status->ref);
 		if (!fetch_spec)
 			continue;
 
-		if ((error = git_refspec_transform_r(&remote_ref_name, fetch_spec, status->ref)) < 0)
+		if ((error = git_refspec_transform(&remote_ref_name, fetch_spec, status->ref)) < 0)
 			goto on_error;
 
 		/* Find matching  push ref spec */
@@ -227,22 +228,38 @@ int git_push_update_tips(git_push *push)
 		if (j == push->specs.length)
 			continue;
 
-		/* Update the remote ref */
-		if (git_oid_iszero(&push_spec->loid)) {
-			error = git_reference_lookup(&remote_ref, push->remote->repo, git_buf_cstr(&remote_ref_name));
+		/* If this ref update was successful (ok, not ng), it will have an empty message */
+		if (status->msg == NULL) {
+			/* Update the remote ref */
+			if (git_oid_iszero(&push_spec->loid)) {
+				error = git_reference_lookup(&remote_ref, push->remote->repo, git_buf_cstr(&remote_ref_name));
 
-			if (!error) {
-				if ((error = git_reference_delete(remote_ref)) < 0) {
+				if (error >= 0) {
+					error = git_reference_delete(remote_ref);
 					git_reference_free(remote_ref);
-					goto on_error;
 				}
-				git_reference_free(remote_ref);
-			} else if (error == GIT_ENOTFOUND)
-				giterr_clear();
-			else
+			} else {
+				error = git_reference_create(NULL, push->remote->repo,
+							git_buf_cstr(&remote_ref_name), &push_spec->loid, 1, signature,
+							reflog_message ? reflog_message : "update by push");
+			}
+		}
+
+		if (error < 0) {
+			if (error != GIT_ENOTFOUND)
 				goto on_error;
-		} else if ((error = git_reference_create(NULL, push->remote->repo, git_buf_cstr(&remote_ref_name), &push_spec->loid, 1)) < 0)
-			goto on_error;
+
+			giterr_clear();
+			fire_callback = 0;
+		}
+
+		if (fire_callback && push->remote->callbacks.update_tips) {
+			error = push->remote->callbacks.update_tips(git_buf_cstr(&remote_ref_name),
+						&push_spec->roid, &push_spec->loid, push->remote->callbacks.payload);
+
+			if (error < 0)
+				goto on_error;
+		}
 	}
 
 	error = 0;
@@ -541,10 +558,7 @@ static int queue_objects(git_push *push)
 	error = 0;
 
 on_error:
-	git_vector_foreach(&commits, i, oid)
-		git__free(oid);
-
-	git_vector_free(&commits);
+	git_vector_free_deep(&commits);
 	return error;
 }
 
@@ -649,7 +663,7 @@ int git_push_finish(git_push *push)
 	return 0;
 }
 
-int git_push_unpack_ok(git_push *push)
+int git_push_unpack_ok(const git_push *push)
 {
 	return push->unpack_ok;
 }
@@ -662,8 +676,9 @@ int git_push_status_foreach(git_push *push,
 	unsigned int i;
 
 	git_vector_foreach(&push->status, i, status) {
-		if (cb(status->ref, status->msg, data) < 0)
-			return GIT_EUSER;
+		int error = cb(status->ref, status->msg, data);
+		if (error)
+			return giterr_set_after_callback(error);
 	}
 
 	return 0;
@@ -674,9 +689,7 @@ void git_push_status_free(push_status *status)
 	if (status == NULL)
 		return;
 
-	if (status->msg)
-		git__free(status->msg);
-
+	git__free(status->msg);
 	git__free(status->ref);
 	git__free(status);
 }
@@ -701,4 +714,11 @@ void git_push_free(git_push *push)
 	git_vector_free(&push->status);
 
 	git__free(push);
+}
+
+int git_push_init_options(git_push_options *opts, unsigned int version)
+{
+	GIT_INIT_STRUCTURE_FROM_TEMPLATE(
+		opts, version, git_push_options, GIT_PUSH_OPTIONS_INIT);
+	return 0;
 }

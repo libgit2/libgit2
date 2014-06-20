@@ -53,6 +53,7 @@ static void ssh_error(LIBSSH2_SESSION *session, const char *errmsg)
 static int gen_proto(git_buf *request, const char *cmd, const char *url)
 {
 	char *repo;
+	int len;
 
 	if (!git__prefixcmp(url, prefix_ssh)) {
 		url = url + strlen(prefix_ssh);
@@ -67,7 +68,7 @@ static int gen_proto(git_buf *request, const char *cmd, const char *url)
 		return -1;
 	}
 
-	int len = strlen(cmd) + 1 /* Space */ + 1 /* Quote */ + strlen(repo) + 1 /* Quote */ + 1;
+	len = strlen(cmd) + 1 /* Space */ + 1 /* Quote */ + strlen(repo) + 1 /* Quote */ + 1;
 
 	git_buf_grow(request, len);
 	git_buf_printf(request, "%s '%s'", cmd, repo);
@@ -235,9 +236,52 @@ static int git_ssh_extract_url_parts(
 	return 0;
 }
 
+static int ssh_agent_auth(LIBSSH2_SESSION *session, git_cred_ssh_key *c) {
+	int rc = LIBSSH2_ERROR_NONE;
+
+	struct libssh2_agent_publickey *curr, *prev = NULL;
+
+	LIBSSH2_AGENT *agent = libssh2_agent_init(session);
+
+	if (agent == NULL)
+		return -1;
+
+	rc = libssh2_agent_connect(agent);
+
+	if (rc != LIBSSH2_ERROR_NONE)
+		goto shutdown;
+
+	rc = libssh2_agent_list_identities(agent);
+
+	if (rc != LIBSSH2_ERROR_NONE)
+		goto shutdown;
+
+	while (1) {
+		rc = libssh2_agent_get_identity(agent, &curr, prev);
+
+		if (rc < 0)
+			goto shutdown;
+
+		if (rc == 1)
+			goto shutdown;
+
+		rc = libssh2_agent_userauth(agent, c->username, curr);
+
+		if (rc == 0)
+			break;
+
+		prev = curr;
+	}
+
+shutdown:
+	libssh2_agent_disconnect(agent);
+	libssh2_agent_free(agent);
+
+	return rc;
+}
+
 static int _git_ssh_authenticate_session(
 	LIBSSH2_SESSION* session,
-	const char *user,
 	git_cred* cred)
 {
 	int rc;
@@ -246,24 +290,48 @@ static int _git_ssh_authenticate_session(
 		switch (cred->credtype) {
 		case GIT_CREDTYPE_USERPASS_PLAINTEXT: {
 			git_cred_userpass_plaintext *c = (git_cred_userpass_plaintext *)cred;
-			user = c->username ? c->username : user;
-			rc = libssh2_userauth_password(session, user, c->password);
+			rc = libssh2_userauth_password(session, c->username, c->password);
 			break;
 		}
 		case GIT_CREDTYPE_SSH_KEY: {
 			git_cred_ssh_key *c = (git_cred_ssh_key *)cred;
-			user = c->username ? c->username : user;
-			rc = libssh2_userauth_publickey_fromfile(
-				session, c->username, c->publickey, c->privatekey, c->passphrase);
+
+			if (c->privatekey)
+				rc = libssh2_userauth_publickey_fromfile(
+					session, c->username, c->publickey,
+					c->privatekey, c->passphrase);
+			else
+				rc = ssh_agent_auth(session, c);
+
 			break;
 		}
 		case GIT_CREDTYPE_SSH_CUSTOM: {
 			git_cred_ssh_custom *c = (git_cred_ssh_custom *)cred;
 
-			user = c->username ? c->username : user;
 			rc = libssh2_userauth_publickey(
 				session, c->username, (const unsigned char *)c->publickey,
-				c->publickey_len, c->sign_callback, &c->sign_data);
+				c->publickey_len, c->sign_callback, &c->payload);
+			break;
+		}
+		case GIT_CREDTYPE_SSH_INTERACTIVE: {
+			void **abstract = libssh2_session_abstract(session);
+			git_cred_ssh_interactive *c = (git_cred_ssh_interactive *)cred;
+
+			/* ideally, we should be able to set this by calling
+			 * libssh2_session_init_ex() instead of libssh2_session_init().
+			 * libssh2's API is inconsistent here i.e. libssh2_userauth_publickey()
+			 * allows you to pass the `abstract` as part of the call, whereas
+			 * libssh2_userauth_keyboard_interactive() does not!
+			 *
+			 * The only way to set the `abstract` pointer is by calling
+			 * libssh2_session_abstract(), which will replace the existing
+			 * pointer as is done below. This is safe for now (at time of writing),
+			 * but may not be valid in future.
+			 */
+			*abstract = c->payload;
+
+			rc = libssh2_userauth_keyboard_interactive(
+				session, c->username, c->prompt_callback);
 			break;
 		}
 		default:
@@ -319,6 +387,7 @@ static int _git_ssh_setup_conn(
 {
 	char *host=NULL, *port=NULL, *path=NULL, *user=NULL, *pass=NULL;
 	const char *default_port="22";
+	int no_callback = 0;
 	ssh_stream *s;
 	LIBSSH2_SESSION* session=NULL;
 	LIBSSH2_CHANNEL* channel=NULL;
@@ -345,34 +414,37 @@ static int _git_ssh_setup_conn(
 	if (user && pass) {
 		if (git_cred_userpass_plaintext_new(&t->cred, user, pass) < 0)
 			goto on_error;
-	} else if (t->owner->cred_acquire_cb) {
-		if (t->owner->cred_acquire_cb(
-				&t->cred, t->owner->url, user,
-				GIT_CREDTYPE_USERPASS_PLAINTEXT |
-				GIT_CREDTYPE_SSH_KEY |
-				GIT_CREDTYPE_SSH_CUSTOM,
-				t->owner->cred_acquire_payload) < 0)
-			goto on_error;
+	} else if (!t->owner->cred_acquire_cb) {
+		no_callback = 1;
+	} else {
+		int error;
+		error = t->owner->cred_acquire_cb(&t->cred, t->owner->url, user,
+			GIT_CREDTYPE_USERPASS_PLAINTEXT |
+			GIT_CREDTYPE_SSH_KEY | GIT_CREDTYPE_SSH_CUSTOM |
+			GIT_CREDTYPE_SSH_INTERACTIVE,
+			t->owner->cred_acquire_payload);
 
-		if (!t->cred) {
+		if (error == GIT_PASSTHROUGH)
+			no_callback = 1;
+		else if (error < 0)
+			goto on_error;
+		else if (!t->cred) {
 			giterr_set(GITERR_SSH, "Callback failed to initialize SSH credentials");
 			goto on_error;
 		}
-	} else {
-		giterr_set(GITERR_SSH, "Cannot set up SSH connection without credentials");
-		goto on_error;
 	}
-	assert(t->cred);
 
-	if (!user && !git_cred_has_username(t->cred)) {
-		giterr_set_str(GITERR_NET, "Cannot authenticate without a username");
+	if (no_callback) {
+		giterr_set(GITERR_SSH, "authentication required but no callback set");
 		goto on_error;
 	}
+
+	assert(t->cred);
 
 	if (_git_ssh_session_create(&session, s->socket) < 0)
 		goto on_error;
 
-	if (_git_ssh_authenticate_session(session, user, t->cred) < 0)
+	if (_git_ssh_authenticate_session(session, t->cred) < 0)
 		goto on_error;
 
 	channel = libssh2_channel_open_session(session);

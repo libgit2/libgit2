@@ -127,17 +127,17 @@ static void add_fake_conflicts(git_index *index)
 	ancestor_entry.path = "duplicate";
 	ancestor_entry.mode = GIT_FILEMODE_BLOB;
 	ancestor_entry.flags |= (1 << GIT_IDXENTRY_STAGESHIFT);
-	git_oid_fromstr(&ancestor_entry.oid, "a8233120f6ad708f843d861ce2b7228ec4e3dec6");
+	git_oid_fromstr(&ancestor_entry.id, "a8233120f6ad708f843d861ce2b7228ec4e3dec6");
 
 	our_entry.path = "duplicate";
 	our_entry.mode = GIT_FILEMODE_BLOB;
 	ancestor_entry.flags |= (2 << GIT_IDXENTRY_STAGESHIFT);
-	git_oid_fromstr(&our_entry.oid, "45b983be36b73c0788dc9cbcb76cbb80fc7bb057");
+	git_oid_fromstr(&our_entry.id, "45b983be36b73c0788dc9cbcb76cbb80fc7bb057");
 
 	their_entry.path = "duplicate";
 	their_entry.mode = GIT_FILEMODE_BLOB;
 	ancestor_entry.flags |= (3 << GIT_IDXENTRY_STAGESHIFT);
-	git_oid_fromstr(&their_entry.oid, "a71586c1dfe8a71c6cbf6c129f404c5642ff31bd");
+	git_oid_fromstr(&their_entry.id, "a71586c1dfe8a71c6cbf6c129f404c5642ff31bd");
 
 	cl_git_pass(git_index_conflict_add(index, &ancestor_entry, &our_entry, &their_entry));
 }

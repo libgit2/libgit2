@@ -25,7 +25,7 @@ void test_checkout_head__unborn_head_returns_GIT_EUNBORNBRANCH(void)
 
 void test_checkout_head__with_index_only_tree(void)
 {
-	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 	git_index *index;
 
 	/* let's start by getting things into a known state */

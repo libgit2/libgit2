@@ -7,8 +7,6 @@
 #ifndef INCLUDE_trace_h__
 #define INCLUDE_trace_h__
 
-#include <stdarg.h>
-
 #include <git2/trace.h>
 #include "buffer.h"
 

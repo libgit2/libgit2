@@ -1,10 +1,20 @@
 #include "clar_libgit2.h"
 #include "reset_helpers.h"
 
-void retrieve_target_from_oid(git_object **object_out, git_repository *repo, const char *sha)
+void reflog_check(git_repository *repo, const char *refname,
+		size_t exp_count, const char *exp_email, const char *exp_msg)
 {
-	git_oid oid;
+	git_reflog *log;
+	const git_reflog_entry *entry;
 
-	cl_git_pass(git_oid_fromstr(&oid, sha));
-	cl_git_pass(git_object_lookup(object_out, repo, &oid, GIT_OBJ_ANY));
+	cl_git_pass(git_reflog_read(&log, repo, refname));
+	cl_assert_equal_i(exp_count, git_reflog_entrycount(log));
+	entry = git_reflog_entry_byindex(log, 0);
+
+	if (exp_email)
+		cl_assert_equal_s(exp_email, git_reflog_entry_committer(entry)->email);
+	if (exp_msg)
+		cl_assert_equal_s(exp_msg, git_reflog_entry_message(entry));
+
+	git_reflog_free(log);
 }

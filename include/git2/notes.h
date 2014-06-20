@@ -106,12 +106,12 @@ GIT_EXTERN(const char *) git_note_message(const git_note *note);
 
 
 /**
- * Get the note object OID
+ * Get the note object's id
  *
  * @param note the note
- * @return the note object OID
+ * @return the note object's id
  */
-GIT_EXTERN(const git_oid *) git_note_oid(const git_note *note);
+GIT_EXTERN(const git_oid *) git_note_id(const git_note *note);
 
 /**
  * Add a note for an object
@@ -189,7 +189,7 @@ GIT_EXTERN(int) git_note_default_ref(const char **out, git_repository *repo);
  *
  * @param payload Extra parameter to callback function.
  *
- * @return 0 on success, GIT_EUSER on non-zero callback, or error code
+ * @return 0 on success, non-zero callback return value, or error code
  */
 GIT_EXTERN(int) git_note_foreach(
 	git_repository *repo,

@@ -13,6 +13,12 @@
  */
 
 #include "common.h"
+#ifdef _WIN32
+# include <Windows.h>
+# define sleep(a) Sleep(a * 1000)
+#else
+# include <unistd.h>
+#endif
 
 /**
  * This example demonstrates the use of the libgit2 status APIs,
@@ -44,19 +50,22 @@ enum {
 #define MAX_PATHSPEC 8
 
 struct opts {
-    git_status_options statusopt;
-    char *repodir;
-    char *pathspec[MAX_PATHSPEC];
-    int npaths;
-    int format;
-    int zterm;
-    int showbranch;
+	git_status_options statusopt;
+	char *repodir;
+	char *pathspec[MAX_PATHSPEC];
+	int npaths;
+	int format;
+	int zterm;
+	int showbranch;
+	int showsubmod;
+	int repeat;
 };
 
 static void parse_opts(struct opts *o, int argc, char *argv[]);
 static void show_branch(git_repository *repo, int format);
 static void print_long(git_status_list *status);
 static void print_short(git_repository *repo, git_status_list *status);
+static int print_submod(git_submodule *sm, const char *name, void *payload);
 
 int main(int argc, char *argv[])
 {
@@ -84,6 +93,10 @@ int main(int argc, char *argv[])
 		fatal("Cannot report status on bare repository",
 			git_repository_path(repo));
 
+show_status:
+	if (o.repeat)
+		printf("\033[H\033[2J");
+
 	/**
 	 * Run status on the repository
 	 *
@@ -98,10 +111,16 @@ int main(int argc, char *argv[])
 	 * about what results are presented.
 	 */
 	check_lg2(git_status_list_new(&status, repo, &o.statusopt),
-		  "Could not get status", NULL);
+		"Could not get status", NULL);
 
 	if (o.showbranch)
 		show_branch(repo, o.format);
+
+	if (o.showsubmod) {
+		int submod_count = 0;
+		check_lg2(git_submodule_foreach(repo, print_submod, &submod_count),
+			"Cannot iterate submodules", o.repodir);
+	}
 
 	if (o.format == FORMAT_LONG)
 		print_long(status);
@@ -109,6 +128,12 @@ int main(int argc, char *argv[])
 		print_short(repo, status);
 
 	git_status_list_free(status);
+
+	if (o.repeat) {
+		sleep(o.repeat);
+		goto show_status;
+	}
+
 	git_repository_free(repo);
 	git_threads_shutdown();
 
@@ -363,22 +388,25 @@ static void print_short(git_repository *repo, git_status_list *status)
 			unsigned int smstatus = 0;
 
 			if (!git_submodule_lookup(
-					&sm, repo, s->index_to_workdir->new_file.path) &&
-				!git_submodule_status(&smstatus, sm))
-			{
-				if (smstatus & GIT_SUBMODULE_STATUS_WD_MODIFIED)
-					extra = " (new commits)";
-				else if (smstatus & GIT_SUBMODULE_STATUS_WD_INDEX_MODIFIED)
-					extra = " (modified content)";
-				else if (smstatus & GIT_SUBMODULE_STATUS_WD_WD_MODIFIED)
-					extra = " (modified content)";
-				else if (smstatus & GIT_SUBMODULE_STATUS_WD_UNTRACKED)
-					extra = " (untracked content)";
+					&sm, repo, s->index_to_workdir->new_file.path)) {
+
+				if (!git_submodule_status(&smstatus, sm)) {
+					if (smstatus & GIT_SUBMODULE_STATUS_WD_MODIFIED)
+						extra = " (new commits)";
+					else if (smstatus & GIT_SUBMODULE_STATUS_WD_INDEX_MODIFIED)
+						extra = " (modified content)";
+					else if (smstatus & GIT_SUBMODULE_STATUS_WD_WD_MODIFIED)
+						extra = " (modified content)";
+					else if (smstatus & GIT_SUBMODULE_STATUS_WD_UNTRACKED)
+						extra = " (untracked content)";
+				}
 			}
+
+			git_submodule_free(sm);
 		}
 
 		/**
-		 * Now that we have all the information, it's time to format the output.
+		 * Now that we have all the information, format the output.
 		 */
 
 		if (s->head_to_index) {
@@ -412,6 +440,21 @@ static void print_short(git_repository *repo, git_status_list *status)
 		if (s->status == GIT_STATUS_WT_NEW)
 			printf("?? %s\n", s->index_to_workdir->old_file.path);
 	}
+}
+
+static int print_submod(git_submodule *sm, const char *name, void *payload)
+{
+	int *count = payload;
+	(void)name;
+
+	if (*count == 0)
+		printf("# Submodules\n");
+	(*count)++;
+
+	printf("# - submodule '%s' at %s\n",
+		git_submodule_name(sm), git_submodule_path(sm));
+
+	return 0;
 }
 
 /**
@@ -459,6 +502,12 @@ static void parse_opts(struct opts *o, int argc, char *argv[])
 			o->statusopt.flags |= GIT_STATUS_OPT_EXCLUDE_SUBMODULES;
 		else if (!strncmp(a, "--git-dir=", strlen("--git-dir=")))
 			o->repodir = a + strlen("--git-dir=");
+		else if (!strcmp(a, "--repeat"))
+			o->repeat = 10;
+		else if (match_int_arg(&o->repeat, &args, "--repeat", 0))
+			/* okay */;
+		else if (!strcmp(a, "--list-submodules"))
+			o->showsubmod = 1;
 		else
 			check_lg2(-1, "Unsupported option", a);
 	}

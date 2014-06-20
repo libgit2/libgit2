@@ -148,6 +148,25 @@ void test_stash_save__can_include_untracked_files(void)
 	assert_blob_oid("refs/stash^3:just.ignore", NULL);
 }
 
+void test_stash_save__untracked_skips_ignored(void)
+{
+	cl_git_append2file("stash/.gitignore", "bundle/vendor/\n");
+	cl_must_pass(p_mkdir("stash/bundle", 0777));
+	cl_must_pass(p_mkdir("stash/bundle/vendor", 0777));
+	cl_git_mkfile("stash/bundle/vendor/blah", "contents\n");
+
+	cl_assert(git_path_exists("stash/when")); /* untracked */
+	cl_assert(git_path_exists("stash/just.ignore")); /* ignored */
+	cl_assert(git_path_exists("stash/bundle/vendor/blah")); /* ignored */
+
+	cl_git_pass(git_stash_save(
+		&stash_tip_oid, repo, signature, NULL, GIT_STASH_INCLUDE_UNTRACKED));
+
+	cl_assert(!git_path_exists("stash/when"));
+	cl_assert(git_path_exists("stash/bundle/vendor/blah"));
+	cl_assert(git_path_exists("stash/just.ignore"));
+}
+
 void test_stash_save__can_include_untracked_and_ignored_files(void)
 {
 	cl_git_pass(git_stash_save(&stash_tip_oid, repo, signature, NULL, GIT_STASH_INCLUDE_UNTRACKED | GIT_STASH_INCLUDE_IGNORED));
@@ -159,6 +178,8 @@ void test_stash_save__can_include_untracked_and_ignored_files(void)
 	assert_blob_oid("refs/stash^3:who", NULL);
 	assert_blob_oid("refs/stash^3:when", "b6ed15e81e2593d7bb6265eb4a991d29dc3e628b");
 	assert_blob_oid("refs/stash^3:just.ignore", "78925fb1236b98b37a35e9723033e627f97aa88b");
+
+	cl_assert(!git_path_exists("stash/just.ignore"));
 }
 
 #define MESSAGE "Look Ma! I'm on TV!"
@@ -174,7 +195,7 @@ void test_stash_save__cannot_stash_against_an_unborn_branch(void)
 {
 	git_reference *head;
 
-	cl_git_pass(git_reference_symbolic_create(&head, repo, "HEAD", "refs/heads/unborn", 1));
+	cl_git_pass(git_reference_symbolic_create(&head, repo, "HEAD", "refs/heads/unborn", 1, NULL, NULL));
 
 	cl_assert_equal_i(GIT_EUNBORNBRANCH,
 		git_stash_save(&stash_tip_oid, repo, signature, NULL, GIT_STASH_DEFAULT));
@@ -196,7 +217,7 @@ void test_stash_save__cannot_stash_against_a_bare_repository(void)
 
 void test_stash_save__can_stash_against_a_detached_head(void)
 {
-	git_repository_detach_head(repo);
+	git_repository_detach_head(repo, NULL, NULL);
 
 	cl_git_pass(git_stash_save(&stash_tip_oid, repo, signature, NULL, GIT_STASH_DEFAULT));
 
@@ -340,7 +361,7 @@ void test_stash_save__can_stage_normal_then_stage_untracked(void)
 
 void test_stash_save__including_untracked_without_any_untracked_file_creates_an_empty_tree(void)
 {
-	cl_git_pass(p_unlink("stash/when"));
+	cl_must_pass(p_unlink("stash/when"));
 
 	assert_status(repo, "what", GIT_STATUS_WT_MODIFIED | GIT_STATUS_INDEX_MODIFIED);
 	assert_status(repo, "how", GIT_STATUS_INDEX_MODIFIED);
@@ -351,4 +372,19 @@ void test_stash_save__including_untracked_without_any_untracked_file_creates_an_
 	cl_git_pass(git_stash_save(&stash_tip_oid, repo, signature, NULL, GIT_STASH_INCLUDE_UNTRACKED));
 
 	assert_object_oid("stash^3^{tree}", EMPTY_TREE, GIT_OBJ_TREE);
+}
+
+void test_stash_save__skip_submodules(void)
+{
+	git_repository *untracked_repo;
+	cl_git_pass(git_repository_init(&untracked_repo, "stash/untracked_repo", false));
+	cl_git_mkfile("stash/untracked_repo/content", "stuff");
+	git_repository_free(untracked_repo);
+
+	assert_status(repo, "untracked_repo/", GIT_STATUS_WT_NEW);
+
+	cl_git_pass(git_stash_save(
+		&stash_tip_oid, repo, signature, NULL, GIT_STASH_INCLUDE_UNTRACKED));
+
+	assert_status(repo, "untracked_repo/", GIT_STATUS_WT_NEW);
 }

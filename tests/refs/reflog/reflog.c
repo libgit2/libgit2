@@ -49,17 +49,20 @@ static void assert_appends(const git_signature *committer, const git_oid *oid)
 
 	/* Read and parse the reflog for this branch */
 	cl_git_pass(git_reflog_read(&reflog, repo2, new_ref));
-	cl_assert_equal_i(2, (int)git_reflog_entrycount(reflog));
+	cl_assert_equal_i(3, (int)git_reflog_entrycount(reflog));
+
+	/* The first one was the creation of the branch */
+	entry = git_reflog_entry_byindex(reflog, 2);
+	cl_assert(git_oid_streq(&entry->oid_old, GIT_OID_HEX_ZERO) == 0);
 
 	entry = git_reflog_entry_byindex(reflog, 1);
 	assert_signature(committer, entry->committer);
-	cl_assert(git_oid_streq(&entry->oid_old, GIT_OID_HEX_ZERO) == 0);
+	cl_assert(git_oid_cmp(oid, &entry->oid_old) == 0);
 	cl_assert(git_oid_cmp(oid, &entry->oid_cur) == 0);
 	cl_assert(entry->msg == NULL);
 
 	entry = git_reflog_entry_byindex(reflog, 0);
 	assert_signature(committer, entry->committer);
-	cl_assert(git_oid_cmp(oid, &entry->oid_old) == 0);
 	cl_assert(git_oid_cmp(oid, &entry->oid_cur) == 0);
 	cl_assert_equal_s(commit_msg, entry->msg);
 
@@ -79,7 +82,7 @@ void test_refs_reflog_reflog__append_then_read(void)
 
 	/* Create a new branch pointing at the HEAD */
 	git_oid_fromstr(&oid, current_master_tip);
-	cl_git_pass(git_reference_create(&ref, g_repo, new_ref, &oid, 0));
+	cl_git_pass(git_reference_create(&ref, g_repo, new_ref, &oid, 0, NULL, NULL));
 	git_reference_free(ref);
 
 	cl_git_pass(git_signature_now(&committer, "foo", "foo@bar"));
@@ -91,29 +94,6 @@ void test_refs_reflog_reflog__append_then_read(void)
 	cl_git_pass(git_reflog_append(reflog, &oid, committer, commit_msg "\n"));
 	cl_git_pass(git_reflog_write(reflog));
 	git_reflog_free(reflog);
-
-	assert_appends(committer, &oid);
-
-	git_signature_free(committer);
-}
-
-void test_refs_reflog_reflog__append_to_then_read(void)
-{
-	/* write a reflog for a given reference and ensure it can be read back */
-	git_reference *ref;
-	git_oid oid;
-	git_signature *committer;
-
-	/* Create a new branch pointing at the HEAD */
-	git_oid_fromstr(&oid, current_master_tip);
-	cl_git_pass(git_reference_create(&ref, g_repo, new_ref, &oid, 0));
-	git_reference_free(ref);
-
-	cl_git_pass(git_signature_now(&committer, "foo", "foo@bar"));
-
-	cl_git_fail(git_reflog_append_to(g_repo, new_ref, &oid, committer, "no inner\nnewline"));
-	cl_git_pass(git_reflog_append_to(g_repo, new_ref, &oid, committer, NULL));
-	cl_git_pass(git_reflog_append_to(g_repo, new_ref, &oid, committer, commit_msg "\n"));
 
 	assert_appends(committer, &oid);
 
@@ -134,7 +114,7 @@ void test_refs_reflog_reflog__renaming_the_reference_moves_the_reflog(void)
 	cl_assert_equal_i(false, git_path_isfile(git_buf_cstr(&moved_log_path)));
 
 	cl_git_pass(git_reference_lookup(&master, g_repo, "refs/heads/master"));
-	cl_git_pass(git_reference_rename(&new_master, master, "refs/moved", 0));
+	cl_git_pass(git_reference_rename(&new_master, master, "refs/moved", 0, NULL, NULL));
 	git_reference_free(master);
 
 	cl_assert_equal_i(false, git_path_isfile(git_buf_cstr(&master_log_path)));
@@ -147,13 +127,7 @@ void test_refs_reflog_reflog__renaming_the_reference_moves_the_reflog(void)
 
 static void assert_has_reflog(bool expected_result, const char *name)
 {
-	git_reference *ref;
-
-	cl_git_pass(git_reference_lookup(&ref, g_repo, name));
-
-	cl_assert_equal_i(expected_result, git_reference_has_log(ref));
-
-	git_reference_free(ref);
+	cl_assert_equal_i(expected_result, git_reference_has_log(g_repo, name));
 }
 
 void test_refs_reflog_reflog__reference_has_reflog(void)
@@ -191,7 +165,7 @@ void test_refs_reflog_reflog__cannot_write_a_moved_reflog(void)
 
 	cl_git_pass(git_reflog_write(reflog));
 
-	cl_git_pass(git_reference_rename(&new_master, master, "refs/moved", 0));
+	cl_git_pass(git_reference_rename(&new_master, master, "refs/moved", 0, NULL, NULL));
 	git_reference_free(master);
 
 	cl_git_fail(git_reflog_write(reflog));
@@ -206,4 +180,157 @@ void test_refs_reflog_reflog__renaming_with_an_invalid_name_returns_EINVALIDSPEC
 {
 	cl_assert_equal_i(GIT_EINVALIDSPEC,
 			  git_reflog_rename(g_repo, "refs/heads/master", "refs/heads/Inv@{id"));
+}
+
+void test_refs_reflog_reflog__write_only_std_locations(void)
+{
+	git_reference *ref;
+	git_oid id;
+
+	git_oid_fromstr(&id, current_master_tip);
+
+	cl_git_pass(git_reference_create(&ref, g_repo, "refs/heads/foo", &id, 1, NULL, NULL));
+	git_reference_free(ref);
+	cl_git_pass(git_reference_create(&ref, g_repo, "refs/tags/foo", &id, 1, NULL, NULL));
+	git_reference_free(ref);
+	cl_git_pass(git_reference_create(&ref, g_repo, "refs/notes/foo", &id, 1, NULL, NULL));
+	git_reference_free(ref);
+
+	assert_has_reflog(true, "refs/heads/foo");
+	assert_has_reflog(false, "refs/tags/foo");
+	assert_has_reflog(true, "refs/notes/foo");
+
+}
+
+void test_refs_reflog_reflog__write_when_explicitly_active(void)
+{
+	git_reference *ref;
+	git_oid id;
+
+	git_oid_fromstr(&id, current_master_tip);
+	git_reference_ensure_log(g_repo, "refs/tags/foo");
+
+	cl_git_pass(git_reference_create(&ref, g_repo, "refs/tags/foo", &id, 1, NULL, NULL));
+	git_reference_free(ref);
+	assert_has_reflog(true, "refs/tags/foo");
+}
+
+void test_refs_reflog_reflog__append_to_HEAD_when_changing_current_branch(void)
+{
+	size_t nlogs, nlogs_after;
+	git_reference *ref;
+	git_reflog *log;
+	git_oid id;
+
+	cl_git_pass(git_reflog_read(&log, g_repo, "HEAD"));
+	nlogs = git_reflog_entrycount(log);
+	git_reflog_free(log);
+
+	/* Move it back */
+	git_oid_fromstr(&id, "be3563ae3f795b2b4353bcce3a527ad0a4f7f644");
+	cl_git_pass(git_reference_create(&ref, g_repo, "refs/heads/master", &id, 1, NULL, NULL));
+	git_reference_free(ref);
+
+	cl_git_pass(git_reflog_read(&log, g_repo, "HEAD"));
+	nlogs_after = git_reflog_entrycount(log);
+	git_reflog_free(log);
+
+	cl_assert_equal_i(nlogs_after, nlogs + 1);
+}
+
+void test_refs_reflog_reflog__do_not_append_when_no_update(void)
+{
+	size_t nlogs, nlogs_after;
+	git_reference *ref, *ref2;
+	git_reflog *log;
+
+	cl_git_pass(git_reflog_read(&log, g_repo, "HEAD"));
+	nlogs = git_reflog_entrycount(log);
+	git_reflog_free(log);
+
+	cl_git_pass(git_reference_lookup(&ref, g_repo, "refs/heads/master"));
+	cl_git_pass(git_reference_create(&ref2, g_repo, "refs/heads/master",
+					 git_reference_target(ref), 1, NULL, NULL));
+
+	git_reference_free(ref);
+	git_reference_free(ref2);
+
+	cl_git_pass(git_reflog_read(&log, g_repo, "HEAD"));
+	nlogs_after = git_reflog_entrycount(log);
+	git_reflog_free(log);
+
+	cl_assert_equal_i(nlogs_after, nlogs);
+}
+
+static void assert_no_reflog_update(void)
+{
+	size_t nlogs, nlogs_after;
+	size_t nlogs_master, nlogs_master_after;
+	git_reference *ref;
+	git_reflog *log;
+	git_oid id;
+
+	cl_git_pass(git_reflog_read(&log, g_repo, "HEAD"));
+	nlogs = git_reflog_entrycount(log);
+	git_reflog_free(log);
+
+	cl_git_pass(git_reflog_read(&log, g_repo, "refs/heads/master"));
+	nlogs_master = git_reflog_entrycount(log);
+	git_reflog_free(log);
+
+	/* Move it back */
+	git_oid_fromstr(&id, "be3563ae3f795b2b4353bcce3a527ad0a4f7f644");
+	cl_git_pass(git_reference_create(&ref, g_repo, "refs/heads/master", &id, 1, NULL, NULL));
+	git_reference_free(ref);
+
+	cl_git_pass(git_reflog_read(&log, g_repo, "HEAD"));
+	nlogs_after = git_reflog_entrycount(log);
+	git_reflog_free(log);
+
+	cl_assert_equal_i(nlogs_after, nlogs);
+
+	cl_git_pass(git_reflog_read(&log, g_repo, "refs/heads/master"));
+	nlogs_master_after = git_reflog_entrycount(log);
+	git_reflog_free(log);
+
+	cl_assert_equal_i(nlogs_after, nlogs);
+	cl_assert_equal_i(nlogs_master_after, nlogs_master);
+
+}
+
+void test_refs_reflog_reflog__logallrefupdates_bare_set_false(void)
+{
+	git_config *config;
+
+	cl_git_pass(git_repository_config(&config, g_repo));
+	cl_git_pass(git_config_set_bool(config, "core.logallrefupdates", false));
+	git_config_free(config);
+
+	assert_no_reflog_update();
+}
+
+void test_refs_reflog_reflog__logallrefupdates_bare_unset(void)
+{
+	git_config *config;
+
+	cl_git_pass(git_repository_config(&config, g_repo));
+	cl_git_pass(git_config_delete_entry(config, "core.logallrefupdates"));
+	git_config_free(config);
+
+	assert_no_reflog_update();
+}
+
+void test_refs_reflog_reflog__logallrefupdates_nonbare_set_false(void)
+{
+	git_config *config;
+
+	cl_git_sandbox_cleanup();
+	g_repo = cl_git_sandbox_init("testrepo");
+
+
+	cl_git_pass(git_repository_config(&config, g_repo));
+	cl_git_pass(git_config_set_bool(config, "core.logallrefupdates", false));
+	git_config_free(config);
+
+	assert_no_reflog_update();
 }

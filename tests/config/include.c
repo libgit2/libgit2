@@ -47,6 +47,8 @@ void test_config_include__homedir(void)
 	cl_assert_equal_s(str, "huzzah");
 
 	git_config_free(cfg);
+
+	cl_sandbox_set_search_path_defaults();
 }
 
 void test_config_include__refresh(void)

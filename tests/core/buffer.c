@@ -406,6 +406,23 @@ check_joinbuf_2(
 }
 
 static void
+check_joinbuf_overlapped(
+	const char *oldval,
+	int ofs_a,
+	const char *b,
+	const char *expected)
+{
+	char sep = '/';
+	git_buf buf = GIT_BUF_INIT;
+
+	git_buf_sets(&buf, oldval);
+	git_buf_join(&buf, sep, buf.ptr + ofs_a, b);
+	cl_assert(git_buf_oom(&buf) == 0);
+	cl_assert_equal_s(expected, git_buf_cstr(&buf));
+	git_buf_free(&buf);
+}
+
+static void
 check_joinbuf_n_2(
 	const char *a,
 	const char *b,
@@ -479,6 +496,20 @@ void test_core_buffer__8(void)
 	check_joinbuf_2("/abcd", "/defg/", "/abcd/defg/");
 	check_joinbuf_2("/abcd/", "defg/", "/abcd/defg/");
 	check_joinbuf_2("/abcd/", "/defg/", "/abcd/defg/");
+
+	check_joinbuf_overlapped("abcd", 0, "efg", "abcd/efg");
+	check_joinbuf_overlapped("abcd", 1, "efg", "bcd/efg");
+	check_joinbuf_overlapped("abcd", 2, "efg", "cd/efg");
+	check_joinbuf_overlapped("abcd", 3, "efg", "d/efg");
+	check_joinbuf_overlapped("abcd", 4, "efg", "efg");
+	check_joinbuf_overlapped("abc/", 2, "efg", "c/efg");
+	check_joinbuf_overlapped("abc/", 3, "efg", "/efg");
+	check_joinbuf_overlapped("abc/", 4, "efg", "efg");
+	check_joinbuf_overlapped("abcd", 3, "", "d/");
+	check_joinbuf_overlapped("abcd", 4, "", "");
+	check_joinbuf_overlapped("abc/", 2, "", "c/");
+	check_joinbuf_overlapped("abc/", 3, "", "/");
+	check_joinbuf_overlapped("abc/", 4, "", "");
 
 	check_joinbuf_n_2("", "", "");
 	check_joinbuf_n_2("", "a", "a");
@@ -564,6 +595,38 @@ void test_core_buffer__10(void)
 	cl_assert_equal_s(a.ptr, "test/string/join");
 	cl_git_pass(git_buf_join_n(&a, '/', 2, a.ptr, "more"));
 	cl_assert_equal_s(a.ptr, "test/string/join/test/string/join/more");
+
+	git_buf_free(&a);
+}
+
+void test_core_buffer__join3(void)
+{
+	git_buf a = GIT_BUF_INIT;
+
+	cl_git_pass(git_buf_join3(&a, '/', "test", "string", "join"));
+	cl_assert_equal_s("test/string/join", a.ptr);
+	cl_git_pass(git_buf_join3(&a, '/', "test/", "string", "join"));
+	cl_assert_equal_s("test/string/join", a.ptr);
+	cl_git_pass(git_buf_join3(&a, '/', "test/", "/string", "join"));
+	cl_assert_equal_s("test/string/join", a.ptr);
+	cl_git_pass(git_buf_join3(&a, '/', "test/", "/string/", "join"));
+	cl_assert_equal_s("test/string/join", a.ptr);
+	cl_git_pass(git_buf_join3(&a, '/', "test/", "/string/", "/join"));
+	cl_assert_equal_s("test/string/join", a.ptr);
+
+	cl_git_pass(git_buf_join3(&a, '/', "", "string", "join"));
+	cl_assert_equal_s("string/join", a.ptr);
+	cl_git_pass(git_buf_join3(&a, '/', "", "string/", "join"));
+	cl_assert_equal_s("string/join", a.ptr);
+	cl_git_pass(git_buf_join3(&a, '/', "", "string/", "/join"));
+	cl_assert_equal_s("string/join", a.ptr);
+
+	cl_git_pass(git_buf_join3(&a, '/', "string", "", "join"));
+	cl_assert_equal_s("string/join", a.ptr);
+	cl_git_pass(git_buf_join3(&a, '/', "string/", "", "join"));
+	cl_assert_equal_s("string/join", a.ptr);
+	cl_git_pass(git_buf_join3(&a, '/', "string/", "", "/join"));
+	cl_assert_equal_s("string/join", a.ptr);
 
 	git_buf_free(&a);
 }
@@ -706,6 +769,26 @@ void test_core_buffer__base64(void)
 	git_buf_clear(&buf);
 	cl_git_pass(git_buf_put_base64(&buf, "this!\n", 6));
 	cl_assert_equal_s("dGhpcyEK", buf.ptr);
+
+	git_buf_free(&buf);
+}
+
+void test_core_buffer__base85(void)
+{
+	git_buf buf = GIT_BUF_INIT;
+
+	cl_git_pass(git_buf_put_base85(&buf, "this", 4));
+	cl_assert_equal_s("bZBXF", buf.ptr);
+	git_buf_clear(&buf);
+
+	cl_git_pass(git_buf_put_base85(&buf, "two rnds", 8));
+	cl_assert_equal_s("ba!tca&BaE", buf.ptr);
+	git_buf_clear(&buf);
+
+	cl_git_pass(git_buf_put_base85(&buf, "this is base 85 encoded",
+		strlen("this is base 85 encoded")));
+	cl_assert_equal_s("bZBXFAZc?TVqtS-AUHK3Wo~0{WMyOk", buf.ptr);
+	git_buf_clear(&buf);
 
 	git_buf_free(&buf);
 }

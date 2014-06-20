@@ -99,7 +99,7 @@ const char *p_gai_strerror(int ret)
 
 #endif /* NO_ADDRINFO */
 
-int p_open(const char *path, int flags, ...)
+int p_open(const char *path, volatile int flags, ...)
 {
 	mode_t mode = 0;
 
@@ -189,7 +189,7 @@ int p_write(git_file fd, const void *buf, size_t cnt)
 		r = write(fd, b, cnt);
 #endif
 		if (r < 0) {
-			if (errno == EINTR || errno == EAGAIN)
+			if (errno == EINTR || GIT_ISBLOCKED(errno))
 				continue;
 			return -1;
 		}
@@ -203,4 +203,47 @@ int p_write(git_file fd, const void *buf, size_t cnt)
 	return 0;
 }
 
+#ifdef NO_MMAP
 
+#include "map.h"
+
+long git__page_size(void)
+{
+	/* dummy; here we don't need any alignment anyway */
+	return 4096;
+}
+
+
+int p_mmap(git_map *out, size_t len, int prot, int flags, int fd, git_off_t offset)
+{
+	GIT_MMAP_VALIDATE(out, len, prot, flags);
+
+	out->data = NULL;
+	out->len = 0;
+
+	if ((prot & GIT_PROT_WRITE) && ((flags & GIT_MAP_TYPE) == GIT_MAP_SHARED)) {
+		giterr_set(GITERR_OS, "Trying to map shared-writeable");
+		return -1;
+	}
+
+	out->data = malloc(len);
+	GITERR_CHECK_ALLOC(out->data);
+
+	if ((p_lseek(fd, offset, SEEK_SET) < 0) || ((size_t)p_read(fd, out->data, len) != len)) {
+		giterr_set(GITERR_OS, "mmap emulation failed");
+		return -1;
+	}
+
+	out->len = len;
+	return 0;
+}
+
+int p_munmap(git_map *map)
+{
+	assert(map != NULL);
+	free(map->data);
+
+	return 0;
+}
+
+#endif

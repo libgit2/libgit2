@@ -38,6 +38,10 @@ struct git_revwalk {
 	/* merge base calculation */
 	git_commit_list_node *one;
 	git_vector twos;
+
+	/* hide callback */
+	git_revwalk_hide_cb hide_cb;
+	void *hide_cb_payload;
 };
 
 git_commit_list_node *git_revwalk__commit_lookup(git_revwalk *walk, const git_oid *oid);

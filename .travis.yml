@@ -3,23 +3,39 @@
 
 language: c
 
+os:
+  - linux
+  - osx
+
 compiler:
   - gcc
   - clang
 
 # Settings to try
 env:
+ global:
+  - secure: "YnhS+8n6B+uoyaYfaJ3Lei7cSJqHDPiKJCKFIF2c87YDfmCvAJke8QtE7IzjYDs7UFkTCM4ox+ph2bERUrxZbSCyEkHdjIZpKuMJfYWja/jgMqTMxdyOH9y8JLFbZsSXDIXDwqBlC6vVyl1fP90M35wuWcNTs6tctfVWVofEFbs="
+ matrix:
   - OPTIONS="-DTHREADSAFE=ON -DCMAKE_BUILD_TYPE=Release"
   - OPTIONS="-DBUILD_CLAR=ON -DBUILD_EXAMPLES=ON"
 
 matrix:
+ fast_finish: true
+ exclude:
+   - os: osx
+     compiler: gcc
  include:
    - compiler: i586-mingw32msvc-gcc
-     env: OPTIONS="-DBUILD_CLAR=OFF -DWIN32=ON -DMINGW=ON"
+     env: OPTIONS="-DBUILD_CLAR=OFF -DWIN32=ON -DMINGW=ON -DUSE_SSH=OFF"
+     os: linux
+   - compiler: gcc
+     env: COVERITY=1
+     os: linux
+ allow_failures:
+   - env: COVERITY=1
 
 install:
- - sudo apt-get -qq update
- - sudo apt-get -qq install cmake libssh2-1-dev openssh-client openssh-server
+  - ./script/install-deps-${TRAVIS_OS_NAME}.sh
 
 # Run the Build script and tests
 script:
@@ -27,8 +43,8 @@ script:
 
 # Run Tests
 after_success:
- - sudo apt-get -qq install valgrind
- - valgrind --leak-check=full --show-reachable=yes --suppressions=./libgit2_clar.supp _build/libgit2_clar -ionline
+ - if [ "$TRAVIS_OS_NAME" = "linux" ]; then sudo apt-get -qq install valgrind; fi
+ - if [ "$TRAVIS_OS_NAME" = "linux" ]; then valgrind --leak-check=full --show-reachable=yes --suppressions=./libgit2_clar.supp _build/libgit2_clar -ionline; fi
 
 # Only watch the development branch
 branches:

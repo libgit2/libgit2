@@ -15,7 +15,10 @@ PROJECT(libgit2 C)
 CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
 
 # Add find modules to the path
-SET(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
+SET(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules/")
+
+INCLUDE(CheckLibraryExists)
+INCLUDE(AddCFlagIfSupported)
 
 # Build options
 #
@@ -33,8 +36,9 @@ OPTION( ANDROID				"Build for android NDK"	 				OFF )
 
 OPTION( USE_ICONV			"Link with and use iconv library" 		OFF )
 OPTION( USE_SSH				"Link with libssh to enable SSH support" ON )
+OPTION( VALGRIND			"Configure build for valgrind"			OFF )
 
-IF(APPLE)
+IF(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
 	SET( USE_ICONV ON )
 ENDIF()
 
@@ -54,6 +58,10 @@ IF(MSVC)
 	# By default, libgit2 is built with WinHTTP.  To use the built-in
 	# HTTP transport, invoke CMake with the "-DWINHTTP=OFF" argument.
 	OPTION( WINHTTP			"Use Win32 WinHTTP routines"	ON  )
+
+	ADD_DEFINITIONS(-D_SCL_SECURE_NO_WARNINGS)
+	ADD_DEFINITIONS(-D_CRT_SECURE_NO_DEPRECATE)
+	ADD_DEFINITIONS(-D_CRT_NONSTDC_NO_DEPRECATE)
 ENDIF()
 
 # This variable will contain the libraries we need to put into
@@ -77,15 +85,11 @@ FUNCTION(TARGET_OS_LIBRARIES target)
 	ELSEIF(CMAKE_SYSTEM_NAME MATCHES "(Solaris|SunOS)")
 		TARGET_LINK_LIBRARIES(${target} socket nsl)
 		SET(LIBGIT2_PC_LIBS "${LIBGIT2_PC_LIBS} -lsocket -lnsl" PARENT_SCOPE)
-	ELSEIF(CMAKE_SYSTEM_NAME MATCHES "Linux")
+	ENDIF()
+	CHECK_LIBRARY_EXISTS(rt clock_gettime "time.h" NEED_LIBRT)
+	IF(NEED_LIBRT)
 		TARGET_LINK_LIBRARIES(${target} rt)
 		SET(LIBGIT2_PC_LIBS "${LIBGIT2_PC_LIBS} -lrt" PARENT_SCOPE)
-	ENDIF()
-
-	IF(USE_ICONV)
-		TARGET_LINK_LIBRARIES(${target} iconv)
-		ADD_DEFINITIONS(-DGIT_USE_ICONV)
-		SET(LIBGIT2_PC_LIBS "${LIBGIT2_PC_LIBS} -liconv" PARENT_SCOPE)
 	ENDIF()
 
 	IF(THREADSAFE)
@@ -123,6 +127,9 @@ STRING(REGEX REPLACE "^.*LIBGIT2_VERSION \"[0-9]+\\.([0-9]+).*$" "\\1" LIBGIT2_V
 STRING(REGEX REPLACE "^.*LIBGIT2_VERSION \"[0-9]+\\.[0-9]+\\.([0-9]+).*$" "\\1" LIBGIT2_VERSION_REV "${GIT2_HEADER}")
 SET(LIBGIT2_VERSION_STRING "${LIBGIT2_VERSION_MAJOR}.${LIBGIT2_VERSION_MINOR}.${LIBGIT2_VERSION_REV}")
 
+FILE(STRINGS "include/git2/version.h" GIT2_HEADER_SOVERSION REGEX "^#define LIBGIT2_SOVERSION [0-9]+$")
+STRING(REGEX REPLACE "^.*LIBGIT2_SOVERSION ([0-9]+)$" "\\1" LIBGIT2_SOVERSION "${GIT2_HEADER_SOVERSION}")
+
 # Find required dependencies
 INCLUDE_DIRECTORIES(src include)
 
@@ -135,13 +142,13 @@ ELSE ()
 		FIND_PACKAGE(OpenSSL)
 	ENDIF ()
 
-	FIND_PACKAGE(HTTP_Parser QUIET)
+	FIND_PACKAGE(HTTP_Parser)
 	IF (HTTP_PARSER_FOUND AND HTTP_PARSER_VERSION_MAJOR EQUAL 2)
 		INCLUDE_DIRECTORIES(${HTTP_PARSER_INCLUDE_DIRS})
 		LINK_LIBRARIES(${HTTP_PARSER_LIBRARIES})
 		SET(LIBGIT2_PC_LIBS "${LIBGIT2_PC_LIBS} -lhttp_parser")
 	ELSE()
-		MESSAGE("http-parser was not found or is too old; using bundled 3rd-party sources.")
+		MESSAGE(STATUS "http-parser was not found or is too old; using bundled 3rd-party sources.")
 		INCLUDE_DIRECTORIES(deps/http-parser)
 		FILE(GLOB SRC_HTTP deps/http-parser/*.c deps/http-parser/*.h)
 	ENDIF()
@@ -153,7 +160,11 @@ IF (WIN32 AND NOT MINGW AND NOT SHA1_TYPE STREQUAL "builtin")
 	FILE(GLOB SRC_SHA1 src/hash/hash_win32.c)
 ELSEIF (OPENSSL_FOUND AND NOT SHA1_TYPE STREQUAL "builtin")
 	ADD_DEFINITIONS(-DOPENSSL_SHA1)
-	SET(LIBGIT2_PC_REQUIRES "${LIBGIT2_PC_REQUIRES} openssl")
+	IF (CMAKE_SYSTEM_NAME MATCHES "FreeBSD")
+		SET(LIBGIT2_PC_LIBS "${LIBGIT2_PC_LIBS} -lssl")
+	ELSE()
+		SET(LIBGIT2_PC_REQUIRES "${LIBGIT2_PC_REQUIRES} openssl")
+	ENDIF ()
 ELSE()
 	FILE(GLOB SRC_SHA1 src/hash/hash_generic.c)
 ENDIF()
@@ -164,34 +175,31 @@ IF (ENABLE_TRACE STREQUAL "ON")
 ENDIF()
 
 # Include POSIX regex when it is required
-IF(WIN32 OR AMIGA OR ANDROID)
+IF(WIN32 OR AMIGA OR ANDROID OR CMAKE_SYSTEM_NAME MATCHES "(Solaris|SunOS)")
 	INCLUDE_DIRECTORIES(deps/regex)
 	SET(SRC_REGEX deps/regex/regex.c)
 ENDIF()
 
 # Optional external dependency: zlib
-# It's optional, but FIND_PACKAGE gives a warning that looks more like an
-# error.
-FIND_PACKAGE(ZLIB QUIET)
+FIND_PACKAGE(ZLIB)
 IF (ZLIB_FOUND)
 	INCLUDE_DIRECTORIES(${ZLIB_INCLUDE_DIRS})
 	LINK_LIBRARIES(${ZLIB_LIBRARIES})
-	IF(APPLE)
+	IF(APPLE OR CMAKE_SYSTEM_NAME MATCHES "FreeBSD")
 		SET(LIBGIT2_PC_LIBS "${LIBGIT2_PC_LIBS} -lz")
 	ELSE()
 		SET(LIBGIT2_PC_REQUIRES "${LIBGIT2_PC_REQUIRES} zlib")
 	ENDIF()
-	# Fake the message CMake would have shown
-	MESSAGE("-- Found zlib: ${ZLIB_LIBRARY}")
 ELSE()
-	MESSAGE( "zlib was not found; using bundled 3rd-party sources." )
+	MESSAGE(STATUS "zlib was not found; using bundled 3rd-party sources." )
 	INCLUDE_DIRECTORIES(deps/zlib)
 	ADD_DEFINITIONS(-DNO_VIZ -DSTDC -DNO_GZIP)
 	FILE(GLOB SRC_ZLIB deps/zlib/*.c deps/zlib/*.h)
 ENDIF()
 
-IF (USE_SSH AND NOT MINGW)
-	FIND_PACKAGE(LIBSSH2 QUIET)
+# Optional external dependency: libssh2
+IF (USE_SSH)
+	FIND_PACKAGE(LIBSSH2)
 ENDIF()
 IF (LIBSSH2_FOUND)
 	ADD_DEFINITIONS(-DGIT_SSH)
@@ -200,6 +208,15 @@ IF (LIBSSH2_FOUND)
 	SET(SSH_LIBRARIES ${LIBSSH2_LIBRARIES})
 ENDIF()
 
+# Optional external dependency: iconv
+IF (USE_ICONV)
+	FIND_PACKAGE(Iconv)
+ENDIF()
+IF (ICONV_FOUND)
+	ADD_DEFINITIONS(-DGIT_USE_ICONV)
+	INCLUDE_DIRECTORIES(${ICONV_INCLUDE_DIR})
+	SET(LIBGIT2_PC_LIBS "${LIBGIT2_PC_LIBS} ${ICONV_LIBRARIES}")
+ENDIF()
 
 # Platform specific compilation flags
 IF (MSVC)
@@ -274,7 +291,11 @@ IF (MSVC)
    # Precompiled headers
 
 ELSE ()
-	SET(CMAKE_C_FLAGS "-D_GNU_SOURCE -Wall -Wextra -Wno-missing-field-initializers -Wstrict-aliasing=2 -Wstrict-prototypes ${CMAKE_C_FLAGS}")
+	SET(CMAKE_C_FLAGS "-D_GNU_SOURCE -Wall -Wextra ${CMAKE_C_FLAGS}")
+
+	IF (CMAKE_SYSTEM_NAME MATCHES "(Solaris|SunOS)")
+		SET(CMAKE_C_FLAGS "-std=c99 -D_POSIX_C_SOURCE=200112L -D__EXTENSIONS__ -D_POSIX_PTHREAD_SEMANTICS ${CMAKE_C_FLAGS}")
+	ENDIF()
 
 	IF (WIN32 AND NOT CYGWIN)
 		SET(CMAKE_C_FLAGS_DEBUG "-D_DEBUG")
@@ -288,11 +309,22 @@ ELSE ()
 		ADD_DEFINITIONS(-D__USE_MINGW_ANSI_STDIO=1)
 
 	ELSEIF (BUILD_SHARED_LIBS)
-		SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fvisibility=hidden -fPIC")
+		ADD_C_FLAG_IF_SUPPORTED(-fvisibility=hidden)
+
+		SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
 	ENDIF ()
+
+	ADD_C_FLAG_IF_SUPPORTED(-Wno-missing-field-initializers)
+	ADD_C_FLAG_IF_SUPPORTED(-Wstrict-aliasing=2)
+	ADD_C_FLAG_IF_SUPPORTED(-Wstrict-prototypes)
+	ADD_C_FLAG_IF_SUPPORTED(-Wdeclaration-after-statement)
+	ADD_C_FLAG_IF_SUPPORTED(-Wno-unused-const-variable)
+	ADD_C_FLAG_IF_SUPPORTED(-Wno-unused-function)
+
 	IF (APPLE) # Apple deprecated OpenSSL
-		SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-deprecated-declarations")
-	ENDIF ()
+		ADD_C_FLAG_IF_SUPPORTED(-Wno-deprecated-declarations)
+	ENDIF()
+
 	IF (PROFILE)
 		SET(CMAKE_C_FLAGS "-pg ${CMAKE_C_FLAGS}")
 		SET(CMAKE_EXE_LINKER_FLAGS "-pg ${CMAKE_EXE_LINKER_FLAGS}")
@@ -317,7 +349,7 @@ ENDIF()
 
 IF (THREADSAFE)
 	IF (NOT WIN32)
-		find_package(Threads REQUIRED)
+		FIND_PACKAGE(Threads REQUIRED)
 	ENDIF()
 
 	ADD_DEFINITIONS(-DGIT_THREADS)
@@ -333,9 +365,11 @@ IF (WIN32 AND NOT CYGWIN)
 	ADD_DEFINITIONS(-DWIN32 -D_WIN32_WINNT=0x0501)
 	FILE(GLOB SRC_OS src/win32/*.c src/win32/*.h)
 ELSEIF (AMIGA)
-	ADD_DEFINITIONS(-DNO_ADDRINFO -DNO_READDIR_R)
-	FILE(GLOB SRC_OS src/amiga/*.c src/amiga/*.h)
+	ADD_DEFINITIONS(-DNO_ADDRINFO -DNO_READDIR_R -DNO_MMAP)
 ELSE()
+	IF (VALGRIND)
+		ADD_DEFINITIONS(-DNO_MMAP)
+	ENDIF()
 	FILE(GLOB SRC_OS src/unix/*.c src/unix/*.h)
 ENDIF()
 FILE(GLOB SRC_GIT2 src/*.c src/*.h src/transports/*.c src/transports/*.h src/xdiff/*.c src/xdiff/*.h)
@@ -346,13 +380,14 @@ IF (CMAKE_SIZEOF_VOID_P EQUAL 8)
 ELSEIF (CMAKE_SIZEOF_VOID_P EQUAL 4)
 	ADD_DEFINITIONS(-DGIT_ARCH_32)
 ELSE()
-	message(FATAL_ERROR "Unsupported architecture")
+	MESSAGE(FATAL_ERROR "Unsupported architecture")
 ENDIF()
 
 # Compile and link libgit2
 ADD_LIBRARY(git2 ${SRC_H} ${SRC_GIT2} ${SRC_OS} ${SRC_ZLIB} ${SRC_HTTP} ${SRC_REGEX} ${SRC_SHA1} ${WIN_RC})
 TARGET_LINK_LIBRARIES(git2 ${SSL_LIBRARIES})
 TARGET_LINK_LIBRARIES(git2 ${SSH_LIBRARIES})
+TARGET_LINK_LIBRARIES(git2 ${ICONV_LIBRARIES})
 TARGET_OS_LIBRARIES(git2)
 
 # Workaround for Cmake bug #0011240 (see http://public.kitware.com/Bug/view.php?id=11240)
@@ -365,7 +400,7 @@ MSVC_SPLIT_SOURCES(git2)
 
 IF (SONAME)
 	SET_TARGET_PROPERTIES(git2 PROPERTIES VERSION ${LIBGIT2_VERSION_STRING})
-	SET_TARGET_PROPERTIES(git2 PROPERTIES SOVERSION ${LIBGIT2_VERSION_MAJOR})
+	SET_TARGET_PROPERTIES(git2 PROPERTIES SOVERSION ${LIBGIT2_SOVERSION})
 	IF (LIBGIT2_FILENAME)
 		ADD_DEFINITIONS(-DLIBGIT2_FILENAME=\"${LIBGIT2_FILENAME}\")
 		SET_TARGET_PROPERTIES(git2 PROPERTIES OUTPUT_NAME ${LIBGIT2_FILENAME})
@@ -418,6 +453,7 @@ IF (BUILD_CLAR)
 
 	TARGET_LINK_LIBRARIES(libgit2_clar ${SSL_LIBRARIES})
 	TARGET_LINK_LIBRARIES(libgit2_clar ${SSH_LIBRARIES})
+	TARGET_LINK_LIBRARIES(libgit2_clar ${ICONV_LIBRARIES})
 	TARGET_OS_LIBRARIES(libgit2_clar)
 	MSVC_SPLIT_SOURCES(libgit2_clar)
 
@@ -433,7 +469,7 @@ ENDIF ()
 IF (TAGS)
 	FIND_PROGRAM(CTAGS ctags)
 	IF (NOT CTAGS)
-		message(FATAL_ERROR "Could not find ctags command")
+		MESSAGE(FATAL_ERROR "Could not find ctags command")
 	ENDIF ()
 
 	FILE(GLOB_RECURSE SRC_ALL *.[ch])

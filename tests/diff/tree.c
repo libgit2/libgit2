@@ -9,7 +9,7 @@ static diff_expects expect;
 
 void test_diff_tree__initialize(void)
 {
-	cl_git_pass(git_diff_options_init(&opts, GIT_DIFF_OPTIONS_VERSION));
+	cl_git_pass(git_diff_init_options(&opts, GIT_DIFF_OPTIONS_VERSION));
 
 	memset(&expect, 0, sizeof(expect));
 

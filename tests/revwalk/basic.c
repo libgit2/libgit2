@@ -160,7 +160,7 @@ void test_revwalk_basic__glob_heads(void)
 	}
 
 	/* git log --branches --oneline | wc -l => 14 */
-	cl_assert(i == 14);
+	cl_assert_equal_i(i, 14);
 }
 
 void test_revwalk_basic__glob_heads_with_invalid(void)
@@ -194,7 +194,7 @@ void test_revwalk_basic__push_head(void)
 	}
 
 	/* git log HEAD --oneline | wc -l => 7 */
-	cl_assert(i == 7);
+	cl_assert_equal_i(i, 7);
 }
 
 void test_revwalk_basic__push_head_hide_ref(void)
@@ -212,7 +212,7 @@ void test_revwalk_basic__push_head_hide_ref(void)
 	}
 
 	/* git log HEAD --oneline --not refs/heads/packed-test | wc -l => 4 */
-	cl_assert(i == 4);
+	cl_assert_equal_i(i, 4);
 }
 
 void test_revwalk_basic__push_head_hide_ref_nobase(void)
@@ -230,7 +230,78 @@ void test_revwalk_basic__push_head_hide_ref_nobase(void)
 	}
 
 	/* git log HEAD --oneline --not refs/heads/packed | wc -l => 7 */
-	cl_assert(i == 7);
+	cl_assert_equal_i(i, 7);
+}
+
+/*
+* $ git rev-list HEAD 5b5b02 ^refs/heads/packed-test
+* a65fedf39aefe402d3bb6e24df4d4f5fe4547750
+* be3563ae3f795b2b4353bcce3a527ad0a4f7f644
+* c47800c7266a2be04c571c04d5a6614691ea99bd
+* 9fd738e8f7967c078dceed8190330fc8648ee56a
+
+* $ git log HEAD 5b5b02 --oneline --not refs/heads/packed-test | wc -l => 4
+* a65fedf
+* be3563a Merge branch 'br2'
+* c47800c branch commit one
+* 9fd738e a fourth commit
+*/
+void test_revwalk_basic__multiple_push_1(void)
+{
+	int i = 0;
+	git_oid oid;
+
+	revwalk_basic_setup_walk(NULL);
+
+	cl_git_pass(git_revwalk_push_head(_walk));
+
+	cl_git_pass(git_revwalk_hide_ref(_walk, "refs/heads/packed-test"));
+
+	cl_git_pass(git_oid_fromstr(&oid, "5b5b025afb0b4c913b4c338a42934a3863bf3644"));
+	cl_git_pass(git_revwalk_push(_walk, &oid));
+
+	while (git_revwalk_next(&oid, _walk) == 0)
+		i++;
+
+	cl_assert_equal_i(i, 4);
+}
+
+/*
+* Difference between test_revwalk_basic__multiple_push_1 and 
+* test_revwalk_basic__multiple_push_2 is in the order reference
+* refs/heads/packed-test and commit 5b5b02 are pushed. 
+* revwalk should return same commits in both the tests.
+
+* $ git rev-list 5b5b02 HEAD ^refs/heads/packed-test
+* a65fedf39aefe402d3bb6e24df4d4f5fe4547750
+* be3563ae3f795b2b4353bcce3a527ad0a4f7f644
+* c47800c7266a2be04c571c04d5a6614691ea99bd
+* 9fd738e8f7967c078dceed8190330fc8648ee56a
+
+* $ git log 5b5b02 HEAD --oneline --not refs/heads/packed-test | wc -l => 4
+* a65fedf
+* be3563a Merge branch 'br2'
+* c47800c branch commit one
+* 9fd738e a fourth commit
+*/
+void test_revwalk_basic__multiple_push_2(void)
+{
+	int i = 0;
+	git_oid oid;
+
+	revwalk_basic_setup_walk(NULL);
+
+	cl_git_pass(git_oid_fromstr(&oid, "5b5b025afb0b4c913b4c338a42934a3863bf3644"));
+	cl_git_pass(git_revwalk_push(_walk, &oid));
+
+	cl_git_pass(git_revwalk_hide_ref(_walk, "refs/heads/packed-test"));
+
+	cl_git_pass(git_revwalk_push_head(_walk));
+
+	while (git_revwalk_next(&oid, _walk) == 0)
+		i++;
+
+	cl_assert_equal_i(i, 4);
 }
 
 void test_revwalk_basic__disallow_non_commit(void)
@@ -251,4 +322,101 @@ void test_revwalk_basic__push_range(void)
 	git_revwalk_sorting(_walk, 0);
 	cl_git_pass(git_revwalk_push_range(_walk, "9fd738e~2..9fd738e"));
 	cl_git_pass(test_walk_only(_walk, commit_sorting_segment, 1));
+}
+
+void test_revwalk_basic__push_mixed(void)
+{
+	git_oid oid;
+	int i = 0;
+
+	revwalk_basic_setup_walk(NULL);
+
+	git_revwalk_reset(_walk);
+	git_revwalk_sorting(_walk, 0);
+	cl_git_pass(git_revwalk_push_glob(_walk, "tags"));
+
+	while (git_revwalk_next(&oid, _walk) == 0) {
+		i++;
+	}
+
+	/* git rev-list --count --glob=tags #=> 9 */
+	cl_assert_equal_i(9, i);
+}
+
+void test_revwalk_basic__push_all(void)
+{
+	git_oid oid;
+	int i = 0;
+
+	revwalk_basic_setup_walk(NULL);
+
+	git_revwalk_reset(_walk);
+	git_revwalk_sorting(_walk, 0);
+	cl_git_pass(git_revwalk_push_glob(_walk, "*"));
+
+	while (git_revwalk_next(&oid, _walk) == 0) {
+		i++;
+	}
+
+	/* git rev-list --count --all #=> 15 */
+	cl_assert_equal_i(15, i);
+}
+
+/*
+* $ git rev-list br2 master e908
+* a65fedf39aefe402d3bb6e24df4d4f5fe4547750
+* e90810b8df3e80c413d903f631643c716887138d
+* 6dcf9bf7541ee10456529833502442f385010c3d
+* a4a7dce85cf63874e984719f4fdd239f5145052f
+* be3563ae3f795b2b4353bcce3a527ad0a4f7f644
+* c47800c7266a2be04c571c04d5a6614691ea99bd
+* 9fd738e8f7967c078dceed8190330fc8648ee56a
+* 4a202b346bb0fb0db7eff3cffeb3c70babbd2045
+* 5b5b025afb0b4c913b4c338a42934a3863bf3644
+* 8496071c1b46c854b31185ea97743be6a8774479
+*/
+
+void test_revwalk_basic__mimic_git_rev_list(void)
+{
+   git_oid oid;
+
+   revwalk_basic_setup_walk(NULL);
+   git_revwalk_sorting(_walk, GIT_SORT_TIME);
+
+   cl_git_pass(git_revwalk_push_ref(_walk, "refs/heads/br2"));
+   cl_git_pass(git_revwalk_push_ref(_walk, "refs/heads/master"));
+   cl_git_pass(git_oid_fromstr(&oid, "e90810b8df3e80c413d903f631643c716887138d"));
+   cl_git_pass(git_revwalk_push(_walk, &oid));
+
+   cl_git_pass(git_revwalk_next(&oid, _walk));
+   cl_assert(!git_oid_streq(&oid, "a65fedf39aefe402d3bb6e24df4d4f5fe4547750"));
+
+   cl_git_pass(git_revwalk_next(&oid, _walk));
+   cl_assert(!git_oid_streq(&oid, "e90810b8df3e80c413d903f631643c716887138d"));
+
+   cl_git_pass(git_revwalk_next(&oid, _walk));
+   cl_assert(!git_oid_streq(&oid, "6dcf9bf7541ee10456529833502442f385010c3d"));
+
+   cl_git_pass(git_revwalk_next(&oid, _walk));
+   cl_assert(!git_oid_streq(&oid, "a4a7dce85cf63874e984719f4fdd239f5145052f"));
+
+   cl_git_pass(git_revwalk_next(&oid, _walk));
+   cl_assert(!git_oid_streq(&oid, "be3563ae3f795b2b4353bcce3a527ad0a4f7f644"));
+
+   cl_git_pass(git_revwalk_next(&oid, _walk));
+   cl_assert(!git_oid_streq(&oid, "c47800c7266a2be04c571c04d5a6614691ea99bd"));
+
+   cl_git_pass(git_revwalk_next(&oid, _walk));
+   cl_assert(!git_oid_streq(&oid, "9fd738e8f7967c078dceed8190330fc8648ee56a"));
+
+   cl_git_pass(git_revwalk_next(&oid, _walk));
+   cl_assert(!git_oid_streq(&oid, "4a202b346bb0fb0db7eff3cffeb3c70babbd2045"));
+
+   cl_git_pass(git_revwalk_next(&oid, _walk));
+   cl_assert(!git_oid_streq(&oid, "5b5b025afb0b4c913b4c338a42934a3863bf3644"));
+
+   cl_git_pass(git_revwalk_next(&oid, _walk));
+   cl_assert(!git_oid_streq(&oid, "8496071c1b46c854b31185ea97743be6a8774479"));
+
+   cl_git_fail_with(git_revwalk_next(&oid, _walk), GIT_ITEROVER);
 }

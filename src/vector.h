@@ -7,25 +7,33 @@
 #ifndef INCLUDE_vector_h__
 #define INCLUDE_vector_h__
 
-#include "git2/common.h"
+#include "common.h"
 
 typedef int (*git_vector_cmp)(const void *, const void *);
+
+enum {
+	GIT_VECTOR_SORTED = (1u << 0),
+	GIT_VECTOR_FLAG_MAX = (1u << 1),
+};
 
 typedef struct git_vector {
 	size_t _alloc_size;
 	git_vector_cmp _cmp;
 	void **contents;
 	size_t length;
-	int sorted;
+	uint32_t flags;
 } git_vector;
 
 #define GIT_VECTOR_INIT {0}
 
 int git_vector_init(git_vector *v, size_t initial_size, git_vector_cmp cmp);
 void git_vector_free(git_vector *v);
+void git_vector_free_deep(git_vector *v); /* free each entry and self */
 void git_vector_clear(git_vector *v);
 int git_vector_dup(git_vector *v, const git_vector *src, git_vector_cmp cmp);
 void git_vector_swap(git_vector *a, git_vector *b);
+
+void **git_vector_detach(size_t *size, size_t *asize, git_vector *v);
 
 void git_vector_sort(git_vector *v);
 
@@ -77,19 +85,33 @@ int git_vector_insert_sorted(git_vector *v, void *element,
 int git_vector_remove(git_vector *v, size_t idx);
 void git_vector_pop(git_vector *v);
 void git_vector_uniq(git_vector *v, void  (*git_free_cb)(void *));
+
 void git_vector_remove_matching(
-	git_vector *v, int (*match)(const git_vector *v, size_t idx));
+	git_vector *v,
+	int (*match)(const git_vector *v, size_t idx, void *payload),
+	void *payload);
 
 int git_vector_resize_to(git_vector *v, size_t new_length);
 int git_vector_set(void **old, git_vector *v, size_t position, void *value);
+
+/** Check if vector is sorted */
+#define git_vector_is_sorted(V) (((V)->flags & GIT_VECTOR_SORTED) != 0)
+
+/** Directly set sorted state of vector */
+#define git_vector_set_sorted(V,S) do { \
+	(V)->flags = (S) ? ((V)->flags | GIT_VECTOR_SORTED) : \
+		((V)->flags & ~GIT_VECTOR_SORTED); } while (0)
 
 /** Set the comparison function used for sorting the vector */
 GIT_INLINE(void) git_vector_set_cmp(git_vector *v, git_vector_cmp cmp)
 {
 	if (cmp != v->_cmp) {
 		v->_cmp = cmp;
-		v->sorted = 0;
+		git_vector_set_sorted(v, 0);
 	}
 }
+
+/* Just use this in tests, not for realz. returns -1 if not sorted */
+int git_vector_verify_sorted(const git_vector *v);
 
 #endif

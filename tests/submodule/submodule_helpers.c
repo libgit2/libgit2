@@ -19,8 +19,8 @@ void rewrite_gitmodules(const char *workdir)
 	cl_git_pass(git_buf_joinpath(&in_f, workdir, "gitmodules"));
 	cl_git_pass(git_buf_joinpath(&out_f, workdir, ".gitmodules"));
 
-	cl_assert((in  = fopen(in_f.ptr, "r")) != NULL);
-	cl_assert((out = fopen(out_f.ptr, "w")) != NULL);
+	cl_assert((in  = fopen(in_f.ptr, "rb")) != NULL);
+	cl_assert((out = fopen(out_f.ptr, "wb")) != NULL);
 
 	while (fgets(line, sizeof(line), in) != NULL) {
 		char *scan = line;
@@ -125,3 +125,54 @@ git_repository *setup_fixture_submod2(void)
 
 	return repo;
 }
+
+void assert__submodule_exists(
+	git_repository *repo, const char *name,
+	const char *msg, const char *file, int line)
+{
+	git_submodule *sm;
+	int error = git_submodule_lookup(&sm, repo, name);
+	if (error)
+		cl_git_report_failure(error, file, line, msg);
+	cl_assert_at_line(sm != NULL, file, line);
+	git_submodule_free(sm);
+}
+
+void refute__submodule_exists(
+	git_repository *repo, const char *name, int expected_error,
+	const char *msg, const char *file, int line)
+{
+	git_submodule *sm;
+	clar__assert_equal(
+		file, line, msg, 1, "%i",
+		expected_error, (int)(git_submodule_lookup(&sm, repo, name)));
+}
+
+unsigned int get_submodule_status(git_repository *repo, const char *name)
+{
+	git_submodule *sm = NULL;
+	unsigned int status = 0;
+
+	cl_git_pass(git_submodule_lookup(&sm, repo, name));
+	cl_assert(sm);
+	cl_git_pass(git_submodule_status(&status, sm));
+	git_submodule_free(sm);
+
+	return status;
+}
+
+static int print_submodules(git_submodule *sm, const char *name, void *p)
+{
+	unsigned int loc = 0;
+	GIT_UNUSED(p);
+	git_submodule_location(&loc, sm);
+	fprintf(stderr, "# submodule %s (at %s) flags %x\n",
+		name, git_submodule_path(sm), loc);
+	return 0;
+}
+
+void dump_submodules(git_repository *repo)
+{
+	git_submodule_foreach(repo, print_submodules, NULL);
+}
+

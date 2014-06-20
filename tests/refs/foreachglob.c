@@ -12,7 +12,7 @@ void test_refs_foreachglob__initialize(void)
 	cl_git_pass(git_repository_open(&repo, "testrepo.git"));
 
 	cl_git_pass(git_oid_fromstr(&id, "be3563ae3f795b2b4353bcce3a527ad0a4f7f644"));
-	cl_git_pass(git_reference_create(&fake_remote, repo, "refs/remotes/nulltoken/master", &id, 0));
+	cl_git_pass(git_reference_create(&fake_remote, repo, "refs/remotes/nulltoken/master", &id, 0, NULL, NULL));
 }
 
 void test_refs_foreachglob__cleanup(void)
@@ -81,14 +81,14 @@ static int interrupt_cb(const char *reference_name, void *payload)
 
 	(*count)++;
 
-	return (*count == 11);
+	return (*count == 11) ? -1000 : 0;
 }
 
 void test_refs_foreachglob__can_cancel(void)
 {
 	int count = 0;
 
-	cl_assert_equal_i(GIT_EUSER, git_reference_foreach_glob(
+	cl_assert_equal_i(-1000, git_reference_foreach_glob(
 		repo, "*", interrupt_cb, &count) );
 
 	cl_assert_equal_i(11, count);

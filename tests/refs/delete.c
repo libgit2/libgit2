@@ -66,7 +66,7 @@ void test_refs_delete__packed_only(void)
 	git_oid_fromstr(&id, current_master_tip);
 
 	/* Create and write the new object id reference */
-	cl_git_pass(git_reference_create(&ref, g_repo, new_ref, &id, 0));
+	cl_git_pass(git_reference_create(&ref, g_repo, new_ref, &id, 0, NULL, NULL));
 	git_reference_free(ref);
 
 	/* Lookup the reference */
@@ -90,4 +90,18 @@ void test_refs_delete__packed_only(void)
 	cl_git_pass(git_reference_delete(ref));
 	git_reference_free(ref);
 	git_refdb_free(refdb);
+}
+
+void test_refs_delete__remove(void)
+{
+	git_reference *ref;
+
+	/* Check that passing no old values lets us delete */
+
+	cl_git_pass(git_reference_lookup(&ref, g_repo, packed_test_head_name));
+	git_reference_free(ref);
+
+	cl_git_pass(git_reference_remove(g_repo, packed_test_head_name));
+
+	cl_git_fail(git_reference_lookup(&ref, g_repo, packed_test_head_name));
 }

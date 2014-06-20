@@ -47,7 +47,7 @@ GIT_EXTERN(int) git_reflog_read(git_reflog **out, git_repository *repo,  const c
 GIT_EXTERN(int) git_reflog_write(git_reflog *reflog);
 
 /**
- * Add a new entry to the reflog.
+ * Add a new entry to the in-memory reflog.
  *
  * `msg` is optional and can be NULL.
  *
@@ -60,23 +60,6 @@ GIT_EXTERN(int) git_reflog_write(git_reflog *reflog);
 GIT_EXTERN(int) git_reflog_append(git_reflog *reflog, const git_oid *id, const git_signature *committer, const char *msg);
 
 /**
- * Add a new entry to the named reflog.
- *
- * This utility function loads the named reflog, appends to it and
- * writes it back out to the backend.
- *
- * `msg` is optional and can be NULL.
- *
- * @param repo the repository to act on
- * @param name the reflog's name
- * @param id the OID the reference is now pointing to
- * @param committer the signature of the committer
- * @param msg the reflog message
- * @return 0 or an error code
- */
-GIT_EXTERN(int) git_reflog_append_to(git_repository *repo, const char *name, const git_oid *id, const git_signature *committer, const char *msg);
-
-/**
  * Rename a reflog
  *
  * The reflog to be renamed is expected to already exist
@@ -86,7 +69,7 @@ GIT_EXTERN(int) git_reflog_append_to(git_repository *repo, const char *name, con
  *
  * @param repo the repository
  * @param old_name the old name of the reference
- * @param new_name the new name of the reference
+ * @param name the new name of the reference
  * @return 0 on success, GIT_EINVALIDSPEC or an error code
  */
 GIT_EXTERN(int) git_reflog_rename(git_repository *repo, const char *old_name, const char *name);

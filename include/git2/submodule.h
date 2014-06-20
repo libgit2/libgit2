@@ -97,7 +97,8 @@ typedef enum {
 	(((S) & GIT_SUBMODULE_STATUS__INDEX_FLAGS) == 0)
 
 #define GIT_SUBMODULE_STATUS_IS_WD_UNMODIFIED(S) \
-	(((S) & GIT_SUBMODULE_STATUS__WD_FLAGS) == 0)
+	(((S) & (GIT_SUBMODULE_STATUS__WD_FLAGS & \
+	~GIT_SUBMODULE_STATUS_WD_UNINITIALIZED)) == 0)
 
 #define GIT_SUBMODULE_STATUS_IS_WD_DIRTY(S) \
 	(((S) & (GIT_SUBMODULE_STATUS_WD_INDEX_MODIFIED | \
@@ -114,28 +115,34 @@ typedef enum {
  *
  * - The submodule is not mentioned in the HEAD, the index, and the config,
  *   but does "exist" in the working directory (i.e. there is a subdirectory
- *   that is a valid self-contained git repo).  In this case, this function
- *   returns GIT_EEXISTS to indicate the the submodule exists but not in a
+ *   that appears to be a Git repository).  In this case, this function
+ *   returns GIT_EEXISTS to indicate a sub-repository exists but not in a
  *   state where a git_submodule can be instantiated.
  * - The submodule is not mentioned in the HEAD, index, or config and the
  *   working directory doesn't contain a value git repo at that path.
  *   There may or may not be anything else at that path, but nothing that
  *   looks like a submodule.  In this case, this returns GIT_ENOTFOUND.
  *
- * The submodule object is owned by the containing repo and will be freed
- * when the repo is freed.  The caller need not free the submodule.
+ * You must call `git_submodule_free` when done with the submodule.
  *
- * @param submodule Pointer to submodule description object pointer..
- * @param repo The repository.
- * @param name The name of the submodule.  Trailing slashes will be ignored.
+ * @param out Output ptr to submodule; pass NULL to just get return code
+ * @param repo The parent repository
+ * @param name The name of or path to the submodule; trailing slashes okay
  * @return 0 on success, GIT_ENOTFOUND if submodule does not exist,
- *         GIT_EEXISTS if submodule exists in working directory only, -1 on
- *         other errors.
+ *         GIT_EEXISTS if a repository is found in working directory only,
+ *         -1 on other errors.
  */
 GIT_EXTERN(int) git_submodule_lookup(
-	git_submodule **submodule,
+	git_submodule **out,
 	git_repository *repo,
 	const char *name);
+
+/**
+ * Release a submodule
+ *
+ * @param submodule Submodule object
+ */
+GIT_EXTERN(void) git_submodule_free(git_submodule *submodule);
 
 /**
  * Iterate over all tracked submodules of a repository.
@@ -174,9 +181,11 @@ GIT_EXTERN(int) git_submodule_foreach(
  * `git_submodule_add_finalize()` to wrap up adding the new submodule and
  * .gitmodules to the index to be ready to commit.
  *
- * @param submodule The newly created submodule ready to open for clone
- * @param repo Superproject repository to contain the new submodule
- * @param url URL for the submodules remote
+ * You must call `git_submodule_free` on the submodule object when done.
+ *
+ * @param out The newly created submodule ready to open for clone
+ * @param repo The repository in which you want to create the submodule
+ * @param url URL for the submodule's remote
  * @param path Path at which the submodule should be created
  * @param use_gitlink Should workdir contain a gitlink to the repo in
  *        .git/modules vs. repo directly in workdir.
@@ -184,7 +193,7 @@ GIT_EXTERN(int) git_submodule_foreach(
  *         -1 on other errors.
  */
 GIT_EXTERN(int) git_submodule_add_setup(
-	git_submodule **submodule,
+	git_submodule **out,
 	git_repository *repo,
 	const char *url,
 	const char *path,
@@ -269,6 +278,24 @@ GIT_EXTERN(const char *) git_submodule_path(git_submodule *submodule);
  * @return Pointer to the submodule url
  */
 GIT_EXTERN(const char *) git_submodule_url(git_submodule *submodule);
+
+/**
+ * Resolve a submodule url relative to the given repository.
+ *
+ * @param out buffer to store the absolute submodule url in
+ * @param repo Pointer to repository object
+ * @param url Relative url
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_submodule_resolve_url(git_buf *out, git_repository *repo, const char *url);
+
+/**
+* Get the branch for the submodule.
+*
+* @param submodule Pointer to submodule object
+* @return Pointer to the submodule branch
+*/
+GIT_EXTERN(const char *) git_submodule_branch(git_submodule *submodule);
 
 /**
  * Set the URL for the submodule.
@@ -410,7 +437,7 @@ GIT_EXTERN(git_submodule_update_t) git_submodule_set_update(
  *
  * @return 0 if fetchRecurseSubmodules is false, 1 if true
  */
-GIT_EXTERN(int) git_submodule_fetch_recurse_submodules(
+GIT_EXTERN(git_submodule_recurse_t) git_submodule_fetch_recurse_submodules(
 	git_submodule *submodule);
 
 /**
@@ -424,9 +451,9 @@ GIT_EXTERN(int) git_submodule_fetch_recurse_submodules(
  * @param fetch_recurse_submodules Boolean value
  * @return old value for fetchRecurseSubmodules
  */
-GIT_EXTERN(int) git_submodule_set_fetch_recurse_submodules(
+GIT_EXTERN(git_submodule_recurse_t) git_submodule_set_fetch_recurse_submodules(
 	git_submodule *submodule,
-	int fetch_recurse_submodules);
+	git_submodule_recurse_t fetch_recurse_submodules);
 
 /**
  * Copy submodule info into ".git/config" file.
@@ -474,15 +501,23 @@ GIT_EXTERN(int) git_submodule_open(
  *
  * Call this to reread cached submodule information for this submodule if
  * you have reason to believe that it has changed.
+ *
+ * @param submodule The submodule to reload
+ * @param force Force reload even if the data doesn't seem out of date
+ * @return 0 on success, <0 on error
  */
-GIT_EXTERN(int) git_submodule_reload(git_submodule *submodule);
+GIT_EXTERN(int) git_submodule_reload(git_submodule *submodule, int force);
 
 /**
  * Reread all submodule info.
  *
  * Call this to reload all cached submodule information for the repo.
+ *
+ * @param repo The repository to reload submodule data for
+ * @param force Force full reload even if the data doesn't seem out of date
+ * @return 0 on success, <0 on error
  */
-GIT_EXTERN(int) git_submodule_reload_all(git_repository *repo);
+GIT_EXTERN(int) git_submodule_reload_all(git_repository *repo, int force);
 
 /**
  * Get the status for a submodule.

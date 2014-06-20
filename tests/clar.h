@@ -9,7 +9,19 @@
 
 #include <stdlib.h>
 
+enum cl_test_status {
+	CL_TEST_OK,
+	CL_TEST_FAILURE,
+	CL_TEST_SKIP
+};
+
+void clar_test_init(int argc, char *argv[]);
+int clar_test_run(void);
+void clar_test_shutdown(void);
+
 int clar_test(int argc, char *argv[]);
+
+const char *clar_sandbox_path(void);
 
 void cl_set_cleanup(void (*cleanup)(void *), void *opaque);
 void cl_fs_cleanup(void);
@@ -54,11 +66,16 @@ void cl_fixture_cleanup(const char *fixture_name);
 #define cl_fail(desc) clar__fail(__FILE__, __LINE__, "Test failed.", desc, 1)
 #define cl_warning(desc) clar__fail(__FILE__, __LINE__, "Warning during test execution:", desc, 0)
 
+#define cl_skip() clar__skip()
+
 /**
  * Typed assertion macros
  */
 #define cl_assert_equal_s(s1,s2) clar__assert_equal(__FILE__,__LINE__,"String mismatch: " #s1 " != " #s2, 1, "%s", (s1), (s2))
 #define cl_assert_equal_s_(s1,s2,note) clar__assert_equal(__FILE__,__LINE__,"String mismatch: " #s1 " != " #s2 " (" #note ")", 1, "%s", (s1), (s2))
+
+#define cl_assert_equal_strn(s1,s2,len) clar__assert_equal(__FILE__,__LINE__,"String mismatch: " #s1 " != " #s2, 1, "%.*s", (s1), (s2), (int)(len))
+#define cl_assert_equal_strn_(s1,s2,len,note) clar__assert_equal(__FILE__,__LINE__,"String mismatch: " #s1 " != " #s2 " (" #note ")", 1, "%.*s", (s1), (s2), (int)(len))
 
 #define cl_assert_equal_i(i1,i2) clar__assert_equal(__FILE__,__LINE__,#i1 " != " #i2, 1, "%d", (int)(i1), (int)(i2))
 #define cl_assert_equal_i_(i1,i2,note) clar__assert_equal(__FILE__,__LINE__,#i1 " != " #i2 " (" #note ")", 1, "%d", (i1), (i2))
@@ -68,6 +85,7 @@ void cl_fixture_cleanup(const char *fixture_name);
 
 #define cl_assert_equal_p(p1,p2) clar__assert_equal(__FILE__,__LINE__,"Pointer mismatch: " #p1 " != " #p2, 1, "%p", (p1), (p2))
 
+void clar__skip(void);
 
 void clar__fail(
 	const char *file,

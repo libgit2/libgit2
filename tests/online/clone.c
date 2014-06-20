@@ -8,17 +8,16 @@
 
 #define LIVE_REPO_URL "http://github.com/libgit2/TestGitRepository"
 #define LIVE_EMPTYREPO_URL "http://github.com/libgit2/TestEmptyRepository"
-#define BB_REPO_URL "https://libgit2@bitbucket.org/libgit2/testgitrepository.git"
-#define BB_REPO_URL_WITH_PASS "https://libgit2:libgit2@bitbucket.org/libgit2/testgitrepository.git"
-#define BB_REPO_URL_WITH_WRONG_PASS "https://libgit2:wrong@bitbucket.org/libgit2/testgitrepository.git"
-#define ASSEMBLA_REPO_URL "https://libgit2:_Libgit2@git.assembla.com/libgit2-test-repos.git"
+#define BB_REPO_URL "https://libgit3@bitbucket.org/libgit2/testgitrepository.git"
+#define BB_REPO_URL_WITH_PASS "https://libgit3:libgit3@bitbucket.org/libgit2/testgitrepository.git"
+#define BB_REPO_URL_WITH_WRONG_PASS "https://libgit3:wrong@bitbucket.org/libgit2/testgitrepository.git"
 
 static git_repository *g_repo;
 static git_clone_options g_options;
 
 void test_online_clone__initialize(void)
 {
-	git_checkout_opts dummy_opts = GIT_CHECKOUT_OPTS_INIT;
+	git_checkout_options dummy_opts = GIT_CHECKOUT_OPTIONS_INIT;
 	git_remote_callbacks dummy_callbacks = GIT_REMOTE_CALLBACKS_INIT;
 
 	g_repo = NULL;
@@ -130,7 +129,7 @@ void test_online_clone__clone_into(void)
 	git_buf path = GIT_BUF_INIT;
 	git_remote *remote;
 	git_reference *head;
-	git_checkout_opts checkout_opts = GIT_CHECKOUT_OPTS_INIT;
+	git_checkout_options checkout_opts = GIT_CHECKOUT_OPTIONS_INIT;
 	git_remote_callbacks callbacks = GIT_REMOTE_CALLBACKS_INIT;
 
 	bool checkout_progress_cb_was_called = false,
@@ -147,7 +146,7 @@ void test_online_clone__clone_into(void)
 	callbacks.payload = &fetch_progress_cb_was_called;
 	git_remote_set_callbacks(remote, &callbacks);
 
-	cl_git_pass(git_clone_into(g_repo, remote, &checkout_opts, NULL));
+	cl_git_pass(git_clone_into(g_repo, remote, &checkout_opts, NULL, NULL));
 
 	cl_git_pass(git_buf_joinpath(&path, git_repository_workdir(g_repo), "master.txt"));
 	cl_assert_equal_i(true, git_path_isfile(git_buf_cstr(&path)));
@@ -162,6 +161,42 @@ void test_online_clone__clone_into(void)
 	git_remote_free(remote);
 	git_reference_free(head);
 	git_buf_free(&path);
+}
+
+void test_online_clone__clone_mirror(void)
+{
+	git_buf path = GIT_BUF_INIT;
+	git_remote *remote;
+	git_reference *head;
+	git_remote_callbacks callbacks = GIT_REMOTE_CALLBACKS_INIT;
+
+	bool fetch_progress_cb_was_called = false;
+
+	cl_git_pass(git_repository_init(&g_repo, "./foo.git", true));
+	cl_git_pass(git_remote_create(&remote, g_repo, "origin", LIVE_REPO_URL));
+
+	callbacks.transfer_progress = &fetch_progress;
+	callbacks.payload = &fetch_progress_cb_was_called;
+	git_remote_set_callbacks(remote, &callbacks);
+
+	git_remote_clear_refspecs(remote);
+	cl_git_pass(git_remote_add_fetch(remote, "+refs/*:refs/*"));
+
+	cl_git_pass(git_clone_into(g_repo, remote, NULL, NULL, NULL));
+
+	cl_git_pass(git_reference_lookup(&head, g_repo, "HEAD"));
+	cl_assert_equal_i(GIT_REF_SYMBOLIC, git_reference_type(head));
+	cl_assert_equal_s("refs/heads/master", git_reference_symbolic_target(head));
+
+	cl_assert_equal_i(true, fetch_progress_cb_was_called);
+
+	git_remote_free(remote);
+	git_reference_free(head);
+	git_buf_free(&path);
+	git_repository_free(g_repo);
+	g_repo = NULL;
+
+	cl_fixture_cleanup("./foo.git");
 }
 
 static int update_tips(const char *refname, const git_oid *a, const git_oid *b, void *payload)
@@ -192,30 +227,21 @@ static int cred_failure_cb(
 {
 	GIT_UNUSED(cred); GIT_UNUSED(url); GIT_UNUSED(username_from_url);
 	GIT_UNUSED(allowed_types); GIT_UNUSED(data);
-	return -1;
+	return -172;
 }
 
-void test_online_clone__cred_callback_failure_is_euser(void)
+void test_online_clone__cred_callback_failure_return_code_is_tunnelled(void)
 {
 	const char *remote_url = cl_getenv("GITTEST_REMOTE_URL");
 	const char *remote_user = cl_getenv("GITTEST_REMOTE_USER");
-	const char *remote_default = cl_getenv("GITTEST_REMOTE_DEFAULT");
-	int error;
 
-	if (!remote_url) {
-		printf("GITTEST_REMOTE_URL unset; skipping clone test\n");
-		return;
-	}
-
-	if (!remote_user && !remote_default) {
-		printf("GITTEST_REMOTE_USER and GITTEST_REMOTE_DEFAULT unset; skipping clone test\n");
-		return;
-	}
+	if (!remote_url || !remote_user)
+		clar__skip();
 
 	g_options.remote_callbacks.credentials = cred_failure_cb;
 
-	cl_git_fail(error = git_clone(&g_repo, remote_url, "./foo", &g_options));
-	cl_assert_equal_i(error, GIT_EUSER);
+	/* TODO: this should expect -172. */
+	cl_git_fail_with(git_clone(&g_repo, remote_url, "./foo", &g_options), -1);
 }
 
 void test_online_clone__credentials(void)
@@ -263,17 +289,12 @@ void test_online_clone__bitbucket_style(void)
 	cl_fixture_cleanup("./foo");
 }
 
-void test_online_clone__assembla_style(void)
-{
-	cl_git_pass(git_clone(&g_repo, ASSEMBLA_REPO_URL, "./foo", NULL));
-}
-
 static int cancel_at_half(const git_transfer_progress *stats, void *payload)
 {
 	GIT_UNUSED(payload);
 
 	if (stats->received_objects > (stats->total_objects/2))
-		return 1;
+		return 4321;
 	return 0;
 }
 
@@ -281,7 +302,8 @@ void test_online_clone__can_cancel(void)
 {
 	g_options.remote_callbacks.transfer_progress = cancel_at_half;
 
-	cl_git_fail_with(git_clone(&g_repo, LIVE_REPO_URL, "./foo", &g_options), GIT_EUSER);
+	cl_git_fail_with(
+		git_clone(&g_repo, LIVE_REPO_URL, "./foo", &g_options), 4321);
 }
 
 

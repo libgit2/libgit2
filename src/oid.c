@@ -24,29 +24,23 @@ int git_oid_fromstrn(git_oid *out, const char *str, size_t length)
 	size_t p;
 	int v;
 
+	assert(out && str);
+
+	if (!length)
+		return oid_error_invalid("too short");
+
 	if (length > GIT_OID_HEXSZ)
 		return oid_error_invalid("too long");
 
-	for (p = 0; p < length - 1; p += 2) {
-		v = (git__fromhex(str[p + 0]) << 4)
-				| git__fromhex(str[p + 1]);
+	memset(out->id, 0, GIT_OID_RAWSZ);
 
+	for (p = 0; p < length; p++) {
+		v = git__fromhex(str[p]);
 		if (v < 0)
 			return oid_error_invalid("contains invalid characters");
 
-		out->id[p / 2] = (unsigned char)v;
+		out->id[p / 2] |= (unsigned char)(v << (p % 2 ? 0 : 4));
 	}
-
-	if (length % 2) {
-		v = (git__fromhex(str[p + 0]) << 4);
-		if (v < 0)
-			return oid_error_invalid("contains invalid characters");
-
-		out->id[p / 2] = (unsigned char)v;
-		p += 2;
-	}
-
-	memset(out->id + p / 2, 0, (GIT_OID_HEXSZ - p) / 2);
 
 	return 0;
 }
@@ -177,6 +171,11 @@ void git_oid_cpy(git_oid *out, const git_oid *src)
 int git_oid_cmp(const git_oid *a, const git_oid *b)
 {
 	return git_oid__cmp(a, b);
+}
+
+int git_oid_equal(const git_oid *a, const git_oid *b)
+{
+	return (git_oid__cmp(a, b) == 0);
 }
 
 int git_oid_ncmp(const git_oid *oid_a, const git_oid *oid_b, size_t len)
@@ -314,6 +313,9 @@ git_oid_shorten *git_oid_shorten_new(size_t min_length)
 
 void git_oid_shorten_free(git_oid_shorten *os)
 {
+	if (os == NULL)
+		return;
+
 	git__free(os->nodes);
 	git__free(os);
 }

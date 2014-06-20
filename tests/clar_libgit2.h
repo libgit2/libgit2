@@ -11,11 +11,13 @@
  *
  * Use this wrapper around all `git_` library calls that return error codes!
  */
-#define cl_git_pass(expr) do { \
+#define cl_git_pass(expr) cl_git_pass_((expr), __FILE__, __LINE__)
+
+#define cl_git_pass_(expr, file, line) do { \
 	int _lg2_error; \
 	giterr_clear(); \
 	if ((_lg2_error = (expr)) != 0) \
-		cl_git_report_failure(_lg2_error, __FILE__, __LINE__, "Function call failed: " #expr); \
+		cl_git_report_failure(_lg2_error, file, line, "Function call failed: " #expr); \
 	} while (0)
 
 /**
@@ -26,6 +28,17 @@
 #define cl_git_fail(expr) cl_must_fail(expr)
 
 #define cl_git_fail_with(expr, error) cl_assert_equal_i(error,expr)
+
+/**
+ * Like cl_git_pass, only for Win32 error code conventions
+ */
+#define cl_win32_pass(expr) do { \
+	int _win32_res; \
+	if ((_win32_res = (expr)) == 0) { \
+		giterr_set(GITERR_OS, "Returned: %d, system error code: %d", _win32_res, GetLastError()); \
+		cl_git_report_failure(_win32_res, __FILE__, __LINE__, "System call failed: " #expr); \
+	} \
+	} while(0)
 
 void cl_git_report_failure(int, const char *, int, const char *);
 
@@ -115,5 +128,17 @@ void cl_repo_commit_from_index(
 /* config setting helpers */
 void cl_repo_set_bool(git_repository *repo, const char *cfg, int value);
 int cl_repo_get_bool(git_repository *repo, const char *cfg);
+
+void cl_repo_set_string(git_repository *repo, const char *cfg, const char *value);
+
+/* set up a fake "home" directory and set libgit2 GLOBAL search path.
+ *
+ * automatically configures cleanup function to restore the regular search
+ * path, although you can call it explicitly if you wish (with NULL).
+ */
+void cl_fake_home(void);
+void cl_fake_home_cleanup(void *);
+
+void cl_sandbox_set_search_path_defaults(void);
 
 #endif

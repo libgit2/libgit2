@@ -12,7 +12,7 @@
 
 #endif /* __MINGW32__ */
 
-static int 
+static int
 fs__dotordotdot(WCHAR *_tocheck)
 {
 	return _tocheck[0] == '.' &&
@@ -201,7 +201,7 @@ fs_copy(const char *_source, const char *_dest)
 	DWORD source_attrs, dest_attrs;
 	HANDLE find_handle;
 	WIN32_FIND_DATAW find_data;
-	
+
 	/* The input paths are UTF-8. Convert them to wide characters
 	 * for use with the Windows API. */
 	cl_assert(MultiByteToWideChar(CP_UTF8,
@@ -251,17 +251,22 @@ cl_fs_cleanup(void)
 }
 
 #else
+
+#include <errno.h>
+#include <string.h>
+
 static int
 shell_out(char * const argv[])
 {
-	int status;
+	int status, piderr;
 	pid_t pid;
 
 	pid = fork();
 
 	if (pid < 0) {
 		fprintf(stderr,
-			"System error: `fork()` call failed.\n");
+			"System error: `fork()` call failed (%d) - %s\n",
+			errno, strerror(errno));
 		exit(-1);
 	}
 
@@ -269,7 +274,10 @@ shell_out(char * const argv[])
 		execv(argv[0], argv);
 	}
 
-	waitpid(pid, &status, 0);
+	do {
+		piderr = waitpid(pid, &status, WUNTRACED);
+	} while (piderr < 0 && (errno == EAGAIN || errno == EINTR));
+
 	return WEXITSTATUS(status);
 }
 

@@ -1,5 +1,6 @@
 #include "clar_libgit2.h"
 #include "fileops.h"
+#include "sysdir.h"
 #include <ctype.h>
 
 void test_repo_open__cleanup(void)
@@ -101,14 +102,13 @@ void test_repo_open__gitlinked(void)
 
 void test_repo_open__from_git_new_workdir(void)
 {
+#ifndef GIT_WIN32
 	/* The git-new-workdir script that ships with git sets up a bunch of
 	 * symlinks to create a second workdir that shares the object db with
 	 * another checkout.  Libgit2 can open a repo that has been configured
 	 * this way.
 	 */
-	cl_git_sandbox_init("empty_standard_repo");
 
-#ifndef GIT_WIN32
 	git_repository *repo2;
 	git_buf link_tgt = GIT_BUF_INIT, link = GIT_BUF_INIT, body = GIT_BUF_INIT;
 	const char **scan;
@@ -120,6 +120,8 @@ void test_repo_open__from_git_new_workdir(void)
 	static const char *copies[] = {
 		"HEAD", NULL
 	};
+
+	cl_git_sandbox_init("empty_standard_repo");
 
 	cl_git_pass(p_mkdir("alternate", 0777));
 	cl_git_pass(p_mkdir("alternate/.git", 0777));
@@ -296,7 +298,8 @@ void test_repo_open__no_config(void)
 	git_config *config;
 
 	cl_fixture_sandbox("empty_standard_repo");
-	cl_git_pass(cl_rename("empty_standard_repo/.gitted", "empty_standard_repo/.git"));
+	cl_git_pass(cl_rename(
+		"empty_standard_repo/.gitted", "empty_standard_repo/.git"));
 
 	/* remove local config */
 	cl_git_pass(git_futils_rmdir_r(
@@ -323,7 +326,7 @@ void test_repo_open__no_config(void)
 	git_repository_free(repo);
 	cl_fixture_cleanup("empty_standard_repo");
 
-	git_futils_dirs_global_shutdown();
+	cl_sandbox_set_search_path_defaults();
 }
 
 void test_repo_open__force_bare(void)

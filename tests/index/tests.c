@@ -80,7 +80,7 @@ void test_index_tests__empty_index(void)
    cl_assert(index->on_disk == 0);
 
    cl_assert(git_index_entrycount(index) == 0);
-   cl_assert(index->entries.sorted);
+   cl_assert(git_vector_is_sorted(&index->entries));
 
    git_index_free(index);
 }
@@ -95,7 +95,7 @@ void test_index_tests__default_test_index(void)
    cl_assert(index->on_disk);
 
    cl_assert(git_index_entrycount(index) == index_entry_count);
-   cl_assert(index->entries.sorted);
+   cl_assert(git_vector_is_sorted(&index->entries));
 
    entries = (git_index_entry **)index->entries.contents;
 
@@ -118,7 +118,7 @@ void test_index_tests__gitgit_index(void)
    cl_assert(index->on_disk);
 
    cl_assert(git_index_entrycount(index) == index_entry_count_2);
-   cl_assert(index->entries.sorted);
+   cl_assert(git_vector_is_sorted(&index->entries));
    cl_assert(index->tree != NULL);
 
    git_index_free(index);
@@ -195,7 +195,7 @@ void test_index_tests__sort1(void)
    cl_git_pass(git_index_open(&index, "fake-index"));
 
    /* FIXME: this test is slightly dumb */
-   cl_assert(index->entries.sorted);
+   cl_assert(git_vector_is_sorted(&index->entries));
 
    git_index_free(index);
 }
@@ -243,11 +243,11 @@ void test_index_tests__add(void)
 	entry = git_index_get_byindex(index, 0);
 
 	/* And the built-in hashing mechanism worked as expected */
-	cl_assert(git_oid_cmp(&id1, &entry->oid) == 0);
+	cl_assert(git_oid_cmp(&id1, &entry->id) == 0);
 
 	/* Test access by path instead of index */
 	cl_assert((entry = git_index_get_bypath(index, "test.txt", 0)) != NULL);
-	cl_assert(git_oid_cmp(&id1, &entry->oid) == 0);
+	cl_assert(git_oid_cmp(&id1, &entry->id) == 0);
 
 	git_index_free(index);
 	git_repository_free(repo);
@@ -283,14 +283,14 @@ void test_index_tests__add_issue_1397(void)
 
 	/* Make sure the initial SHA-1 is correct */
 	cl_assert((entry = git_index_get_bypath(index, "crlf_file.txt", 0)) != NULL);
-	cl_assert_(git_oid_cmp(&id1, &entry->oid) == 0, "first oid check");
+	cl_assert_(git_oid_cmp(&id1, &entry->id) == 0, "first oid check");
 
 	/* Update the index */
 	cl_git_pass(git_index_add_bypath(index, "crlf_file.txt"));
 
 	/* Check the new SHA-1 */
 	cl_assert((entry = git_index_get_bypath(index, "crlf_file.txt", 0)) != NULL);
-	cl_assert_(git_oid_cmp(&id1, &entry->oid) == 0, "second oid check");
+	cl_assert_(git_oid_cmp(&id1, &entry->id) == 0, "second oid check");
 
 	git_index_free(index);
 }
@@ -542,4 +542,24 @@ void test_index_tests__corrupted_extension(void)
 	git_index *index;
 
 	cl_git_fail_with(git_index_open(&index, TEST_INDEXBAD_PATH), GIT_ERROR);
+}
+
+void test_index_tests__reload_while_ignoring_case(void)
+{
+	git_index *index;
+	unsigned int caps;
+
+	cl_git_pass(git_index_open(&index, TEST_INDEX_PATH));
+	cl_git_pass(git_vector_verify_sorted(&index->entries));
+
+	caps = git_index_caps(index);
+	cl_git_pass(git_index_set_caps(index, caps &= ~GIT_INDEXCAP_IGNORE_CASE));
+	cl_git_pass(git_index_read(index, true));
+	cl_git_pass(git_vector_verify_sorted(&index->entries));
+
+	cl_git_pass(git_index_set_caps(index, caps | GIT_INDEXCAP_IGNORE_CASE));
+	cl_git_pass(git_index_read(index, true));
+	cl_git_pass(git_vector_verify_sorted(&index->entries));
+
+	git_index_free(index);
 }

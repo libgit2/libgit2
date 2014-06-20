@@ -8,6 +8,7 @@
 #include "map.h"
 #include <errno.h>
 
+#ifndef NO_MMAP
 
 static DWORD get_page_size(void)
 {
@@ -20,6 +21,11 @@ static DWORD get_page_size(void)
 	}
 
 	return page_size;
+}
+
+long git__page_size(void)
+{
+	return (long)get_page_size();
 }
 
 int p_mmap(git_map *out, size_t len, int prot, int flags, int fd, git_off_t offset)
@@ -112,4 +118,4 @@ int p_munmap(git_map *map)
 	return error;
 }
 
-
+#endif

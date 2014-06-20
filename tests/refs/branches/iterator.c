@@ -12,7 +12,7 @@ void test_refs_branches_iterator__initialize(void)
 	cl_git_pass(git_repository_open(&repo, "testrepo.git"));
 
 	cl_git_pass(git_oid_fromstr(&id, "be3563ae3f795b2b4353bcce3a527ad0a4f7f644"));
-	cl_git_pass(git_reference_create(&fake_remote, repo, "refs/remotes/nulltoken/master", &id, 0));
+	cl_git_pass(git_reference_create(&fake_remote, repo, "refs/remotes/nulltoken/master", &id, 0, NULL, NULL));
 }
 
 void test_refs_branches_iterator__cleanup(void)
@@ -48,7 +48,7 @@ static void assert_retrieval(unsigned int flags, unsigned int expected_count)
 
 void test_refs_branches_iterator__retrieve_all_branches(void)
 {
-	assert_retrieval(GIT_BRANCH_LOCAL | GIT_BRANCH_REMOTE, 14);
+	assert_retrieval(GIT_BRANCH_ALL, 14);
 }
 
 void test_refs_branches_iterator__retrieve_remote_branches(void)
@@ -113,7 +113,7 @@ void test_refs_branches_iterator__retrieve_remote_symbolic_HEAD_when_present(voi
 	};
 
 	git_reference_free(fake_remote);
-	cl_git_pass(git_reference_symbolic_create(&fake_remote, repo, "refs/remotes/nulltoken/HEAD", "refs/remotes/nulltoken/master", 0));
+	cl_git_pass(git_reference_symbolic_create(&fake_remote, repo, "refs/remotes/nulltoken/HEAD", "refs/remotes/nulltoken/master", 0, NULL, NULL));
 
 	assert_retrieval(GIT_BRANCH_REMOTE, 3);
 
@@ -139,7 +139,7 @@ void test_refs_branches_iterator__mix_of_packed_and_loose(void)
 
 	r2 = cl_git_sandbox_init("testrepo2");
 
-	cl_git_pass(git_branch_iterator_new(&iter, r2, GIT_BRANCH_LOCAL | GIT_BRANCH_REMOTE));
+	cl_git_pass(git_branch_iterator_new(&iter, r2, GIT_BRANCH_ALL));
 	contains_branches(exp, iter);
 
 	git_branch_iterator_free(iter);

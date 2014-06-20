@@ -33,6 +33,7 @@
 #include "posix.h"
 #include "buffer.h"
 #include "http_parser.h"
+#include "global.h"
 
 #ifdef GIT_WIN32
 static void net_set_error(const char *str)
@@ -157,7 +158,7 @@ void gitno_buffer_setup_callback(
 void gitno_buffer_setup(gitno_socket *socket, gitno_buffer *buf, char *data, size_t len)
 {
 #ifdef GIT_SSL
-	if (socket->ssl.ctx) {
+	if (socket->ssl.ssl) {
 		gitno_buffer_setup_callback(socket, buf, data, len, gitno__recv_ssl, NULL);
 		return;
 	}
@@ -202,12 +203,13 @@ static int gitno_ssl_teardown(gitno_ssl *ssl)
 		ret = 0;
 
 	SSL_free(ssl->ssl);
-	SSL_CTX_free(ssl->ctx);
 	return ret;
 }
 
+#endif
+
 /* Match host names according to RFC 2818 rules */
-static int match_host(const char *pattern, const char *host)
+int gitno__match_host(const char *pattern, const char *host)
 {
 	for (;;) {
 		char c = tolower(*pattern++);
@@ -230,9 +232,9 @@ static int match_host(const char *pattern, const char *host)
 			while(*host) {
 				char h = tolower(*host);
 				if (c == h)
-					return match_host(pattern, host++);
+					return gitno__match_host(pattern, host++);
 				if (h == '.')
-					return match_host(pattern, host);
+					return gitno__match_host(pattern, host);
 				host++;
 			}
 			return -1;
@@ -250,11 +252,13 @@ static int check_host_name(const char *name, const char *host)
 	if (!strcasecmp(name, host))
 		return 0;
 
-	if (match_host(name, host) < 0)
+	if (gitno__match_host(name, host) < 0)
 		return -1;
 
 	return 0;
 }
+
+#ifdef GIT_SSL
 
 static int verify_server_cert(gitno_ssl *ssl, const char *host)
 {
@@ -287,6 +291,10 @@ static int verify_server_cert(gitno_ssl *ssl, const char *host)
 
 
 	cert = SSL_get_peer_certificate(ssl->ssl);
+	if (!cert) {
+		giterr_set(GITERR_SSL, "the server did not provide a certificate");
+		return -1;
+	}
 
 	/* Check the alternative names */
 	alts = X509_get_ext_d2i(cert, NID_subject_alt_name, NULL, NULL);
@@ -321,7 +329,7 @@ static int verify_server_cert(gitno_ssl *ssl, const char *host)
 	GENERAL_NAMES_free(alts);
 
 	if (matched == 0)
-		goto cert_fail;
+		goto cert_fail_name;
 
 	if (matched == 1)
 		return 0;
@@ -358,11 +366,11 @@ static int verify_server_cert(gitno_ssl *ssl, const char *host)
 		int size = ASN1_STRING_to_UTF8(&peer_cn, str);
 		GITERR_CHECK_ALLOC(peer_cn);
 		if (memchr(peer_cn, '\0', size))
-			goto cert_fail;
+			goto cert_fail_name;
 	}
 
 	if (check_host_name((char *)peer_cn, host) < 0)
-		goto cert_fail;
+		goto cert_fail_name;
 
 	OPENSSL_free(peer_cn);
 
@@ -372,9 +380,9 @@ on_error:
 	OPENSSL_free(peer_cn);
 	return ssl_set_error(ssl, 0);
 
-cert_fail:
+cert_fail_name:
 	OPENSSL_free(peer_cn);
-	giterr_set(GITERR_SSL, "Certificate host name check failed");
+	giterr_set(GITERR_SSL, "hostname does not match certificate");
 	return -1;
 }
 
@@ -382,18 +390,12 @@ static int ssl_setup(gitno_socket *socket, const char *host, int flags)
 {
 	int ret;
 
-	SSL_library_init();
-	SSL_load_error_strings();
-	socket->ssl.ctx = SSL_CTX_new(SSLv23_method());
-	if (socket->ssl.ctx == NULL)
-		return ssl_set_error(&socket->ssl, 0);
+	if (git__ssl_ctx == NULL) {
+		giterr_set(GITERR_NET, "OpenSSL initialization failed");
+		return -1;
+	}
 
-	SSL_CTX_set_mode(socket->ssl.ctx, SSL_MODE_AUTO_RETRY);
-	SSL_CTX_set_verify(socket->ssl.ctx, SSL_VERIFY_NONE, NULL);
-	if (!SSL_CTX_set_default_verify_paths(socket->ssl.ctx))
-		return ssl_set_error(&socket->ssl, 0);
-
-	socket->ssl.ssl = SSL_new(socket->ssl.ctx);
+	socket->ssl.ssl = SSL_new(git__ssl_ctx);
 	if (socket->ssl.ssl == NULL)
 		return ssl_set_error(&socket->ssl, 0);
 
@@ -530,7 +532,7 @@ int gitno_send(gitno_socket *socket, const char *msg, size_t len, int flags)
 	size_t off = 0;
 
 #ifdef GIT_SSL
-	if (socket->ssl.ctx)
+	if (socket->ssl.ssl)
 		return gitno_send_ssl(&socket->ssl, msg, len, flags);
 #endif
 
@@ -551,7 +553,7 @@ int gitno_send(gitno_socket *socket, const char *msg, size_t len, int flags)
 int gitno_close(gitno_socket *s)
 {
 #ifdef GIT_SSL
-	if (s->ssl.ctx &&
+	if (s->ssl.ssl &&
 		gitno_ssl_teardown(&s->ssl) < 0)
 		return -1;
 #endif

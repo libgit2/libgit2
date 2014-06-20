@@ -26,17 +26,16 @@ int git_smart__store_refs(transport_smart *t, int flushes)
 	int error, flush = 0, recvd;
 	const char *line_end = NULL;
 	git_pkt *pkt = NULL;
-	git_pkt_ref *ref;
 	size_t i;
 
 	/* Clear existing refs in case git_remote_connect() is called again
 	 * after git_remote_disconnect().
 	 */
-	git_vector_foreach(refs, i, ref) {
-		git__free(ref->head.name);
-		git__free(ref);
+	git_vector_foreach(refs, i, pkt) {
+		git_pkt_free(pkt);
 	}
 	git_vector_clear(refs);
+	pkt = NULL;
 
 	do {
 		if (buf->offset > 0)
@@ -45,7 +44,7 @@ int git_smart__store_refs(transport_smart *t, int flushes)
 			error = GIT_EBUFS;
 
 		if (error < 0 && error != GIT_EBUFS)
-			return -1;
+			return error;
 
 		if (error == GIT_EBUFS) {
 			if ((recvd = gitno_recv(buf)) < 0)
@@ -78,7 +77,52 @@ int git_smart__store_refs(transport_smart *t, int flushes)
 	return flush;
 }
 
-int git_smart__detect_caps(git_pkt_ref *pkt, transport_smart_caps *caps)
+static int append_symref(const char **out, git_vector *symrefs, const char *ptr)
+{
+	int error;
+	const char *end;
+	git_buf buf = GIT_BUF_INIT;
+	git_refspec *mapping;
+
+	ptr += strlen(GIT_CAP_SYMREF);
+	if (*ptr != '=')
+		goto on_invalid;
+
+	ptr++;
+	if (!(end = strchr(ptr, ' ')) &&
+	    !(end = strchr(ptr, '\0')))
+		goto on_invalid;
+
+	if ((error = git_buf_put(&buf, ptr, end - ptr)) < 0)
+		return error;
+
+	/* symref mapping has refspec format */
+	mapping = git__malloc(sizeof(git_refspec));
+	GITERR_CHECK_ALLOC(mapping);
+
+	error = git_refspec__parse(mapping, git_buf_cstr(&buf), true);
+	git_buf_free(&buf);
+
+	/* if the error isn't OOM, then it's a parse error; let's use a nicer message */
+	if (error < 0) {
+		if (giterr_last()->klass != GITERR_NOMEMORY)
+			goto on_invalid;
+
+		return error;
+	}
+
+	if ((error = git_vector_insert(symrefs, mapping)) < 0)
+		return error;
+
+	*out = end;
+	return 0;
+
+on_invalid:
+	giterr_set(GITERR_NET, "remote sent invalid symref");
+	return -1;
+}
+
+int git_smart__detect_caps(git_pkt_ref *pkt, transport_smart_caps *caps, git_vector *symrefs)
 {
 	const char *ptr;
 
@@ -138,6 +182,15 @@ int git_smart__detect_caps(git_pkt_ref *pkt, transport_smart_caps *caps)
 		if (!git__prefixcmp(ptr, GIT_CAP_THIN_PACK)) {
 			caps->common = caps->thin_pack = 1;
 			ptr += strlen(GIT_CAP_THIN_PACK);
+			continue;
+		}
+
+		if (!git__prefixcmp(ptr, GIT_CAP_SYMREF)) {
+			int error;
+
+			if ((error = append_symref(&ptr, symrefs, ptr)) < 0)
+				return error;
+
 			continue;
 		}
 
@@ -209,12 +262,13 @@ static int fetch_setup_walk(git_revwalk **out, git_repository *repo)
 	git_strarray refs;
 	unsigned int i;
 	git_reference *ref;
+	int error;
 
-	if (git_reference_list(&refs, repo) < 0)
-		return -1;
+	if ((error = git_reference_list(&refs, repo)) < 0)
+		return error;
 
-	if (git_revwalk_new(&walk, repo) < 0)
-		return -1;
+	if ((error = git_revwalk_new(&walk, repo)) < 0)
+		return error;
 
 	git_revwalk_sorting(walk, GIT_SORT_TIME);
 
@@ -223,13 +277,13 @@ static int fetch_setup_walk(git_revwalk **out, git_repository *repo)
 		if (!git__prefixcmp(refs.strings[i], GIT_REFS_TAGS_DIR))
 			continue;
 
-		if (git_reference_lookup(&ref, repo, refs.strings[i]) < 0)
+		if ((error = git_reference_lookup(&ref, repo, refs.strings[i])) < 0)
 			goto on_error;
 
 		if (git_reference_type(ref) == GIT_REF_SYMBOLIC)
 			continue;
 
-		if (git_revwalk_push(walk, git_reference_target(ref)) < 0)
+		if ((error = git_revwalk_push(walk, git_reference_target(ref))) < 0)
 			goto on_error;
 
 		git_reference_free(ref);
@@ -242,7 +296,7 @@ static int fetch_setup_walk(git_revwalk **out, git_repository *repo)
 on_error:
 	git_reference_free(ref);
 	git_strarray_free(&refs);
-	return -1;
+	return error;
 }
 
 static int wait_while_ack(gitno_buffer *buf)
@@ -449,7 +503,7 @@ static int no_sideband(transport_smart *t, struct git_odb_writepack *writepack, 
 
 struct network_packetsize_payload
 {
-	git_transfer_progress_callback callback;
+	git_transfer_progress_cb callback;
 	void *payload;
 	git_transfer_progress *stats;
 	size_t last_fired_bytes;
@@ -477,7 +531,7 @@ int git_smart__download_pack(
 	git_transport *transport,
 	git_repository *repo,
 	git_transfer_progress *stats,
-	git_transfer_progress_callback progress_cb,
+	git_transfer_progress_cb transfer_progress_cb,
 	void *progress_payload)
 {
 	transport_smart *t = (transport_smart *)transport;
@@ -489,8 +543,8 @@ int git_smart__download_pack(
 
 	memset(stats, 0, sizeof(git_transfer_progress));
 
-	if (progress_cb) {
-		npp.callback = progress_cb;
+	if (transfer_progress_cb) {
+		npp.callback = transfer_progress_cb;
 		npp.payload = progress_payload;
 		npp.stats = stats;
 		t->packetsize_cb = &network_packetsize;
@@ -503,7 +557,7 @@ int git_smart__download_pack(
 	}
 
 	if ((error = git_repository_odb__weakptr(&odb, repo)) < 0 ||
-		((error = git_odb_write_pack(&writepack, odb, progress_cb, progress_payload)) < 0))
+		((error = git_odb_write_pack(&writepack, odb, transfer_progress_cb, progress_payload)) != 0))
 		goto done;
 
 	/*
@@ -517,57 +571,65 @@ int git_smart__download_pack(
 	}
 
 	do {
-		git_pkt *pkt;
+		git_pkt *pkt = NULL;
 
 		/* Check cancellation before network call */
 		if (t->cancelled.val) {
-			giterr_set(GITERR_NET, "The fetch was cancelled by the user");
+			giterr_clear();
 			error = GIT_EUSER;
 			goto done;
 		}
 
-		if ((error = recv_pkt(&pkt, buf)) < 0)
-			goto done;
-
-		/* Check cancellation after network call */
-		if (t->cancelled.val) {
-			giterr_set(GITERR_NET, "The fetch was cancelled by the user");
-			error = GIT_EUSER;
-			goto done;
-		}
-
-		if (pkt->type == GIT_PKT_PROGRESS) {
-			if (t->progress_cb) {
-				git_pkt_progress *p = (git_pkt_progress *) pkt;
-				if (t->progress_cb(p->data, p->len, t->message_cb_payload)) {
-					giterr_set(GITERR_NET, "The fetch was cancelled by the user");
-					return GIT_EUSER;
+		if ((error = recv_pkt(&pkt, buf)) >= 0) {
+			/* Check cancellation after network call */
+			if (t->cancelled.val) {
+				giterr_clear();
+				error = GIT_EUSER;
+			} else if (pkt->type == GIT_PKT_PROGRESS) {
+				if (t->progress_cb) {
+					git_pkt_progress *p = (git_pkt_progress *) pkt;
+					error = t->progress_cb(p->data, p->len, t->message_cb_payload);
 				}
+			} else if (pkt->type == GIT_PKT_DATA) {
+				git_pkt_data *p = (git_pkt_data *) pkt;
+				error = writepack->append(writepack, p->data, p->len, stats);
+			} else if (pkt->type == GIT_PKT_FLUSH) {
+				/* A flush indicates the end of the packfile */
+				git__free(pkt);
+				break;
 			}
-			git__free(pkt);
-		} else if (pkt->type == GIT_PKT_DATA) {
-			git_pkt_data *p = (git_pkt_data *) pkt;
-			error = writepack->append(writepack, p->data, p->len, stats);
-
-			git__free(pkt);
-			if (error < 0)
-				goto done;
-		} else if (pkt->type == GIT_PKT_FLUSH) {
-			/* A flush indicates the end of the packfile */
-			git__free(pkt);
-			break;
 		}
+
+		git__free(pkt);
+		if (error < 0)
+			goto done;
+
 	} while (1);
+
+	/*
+	 * Trailing execution of transfer_progress_cb, if necessary...
+	 * Only the callback through the npp datastructure currently
+	 * updates the last_fired_bytes value. It is possible that
+	 * progress has already been reported with the correct
+	 * "received_bytes" value, but until (if?) this is unified
+	 * then we will report progress again to be sure that the
+	 * correct last received_bytes value is reported.
+	 */
+	if (npp.callback && npp.stats->received_bytes > npp.last_fired_bytes) {
+		error = npp.callback(npp.stats, npp.payload);
+		if (error != 0)
+			goto done;
+	}
 
 	error = writepack->commit(writepack, stats);
 
 done:
 	if (writepack)
 		writepack->free(writepack);
-
-	/* Trailing execution of progress_cb, if necessary */
-	if (npp.callback && npp.stats->received_bytes > npp.last_fired_bytes)
-		npp.callback(npp.stats, npp.payload);
+	if (transfer_progress_cb) {
+		t->packetsize_cb = NULL;
+		t->packetsize_payload = NULL;
+	}
 
 	return error;
 }
@@ -619,7 +681,7 @@ static int add_push_report_pkt(git_push *push, git_pkt *pkt)
 
 	switch (pkt->type) {
 		case GIT_PKT_OK:
-			status = git__calloc(1, sizeof(push_status));
+			status = git__calloc(sizeof(push_status), 1);
 			GITERR_CHECK_ALLOC(status);
 			status->msg = NULL;
 			status->ref = git__strdup(((git_pkt_ok *)pkt)->ref);
@@ -681,10 +743,11 @@ static int add_push_report_sideband_pkt(git_push *push, git_pkt_data *data_pkt)
 	return 0;
 }
 
-static int parse_report(gitno_buffer *buf, git_push *push)
+static int parse_report(transport_smart *transport, git_push *push)
 {
 	git_pkt *pkt = NULL;
 	const char *line_end = NULL;
+	gitno_buffer *buf = &transport->buffer;
 	int error, recvd;
 
 	for (;;) {
@@ -723,6 +786,10 @@ static int parse_report(gitno_buffer *buf, git_push *push)
 				error = -1;
 				break;
 			case GIT_PKT_PROGRESS:
+				if (transport->progress_cb) {
+					git_pkt_progress *p = (git_pkt_progress *) pkt;
+					error = transport->progress_cb(p->data, p->len, transport->message_cb_payload);
+				}
 				break;
 			default:
 				error = add_push_report_pkt(push, pkt);
@@ -868,10 +935,7 @@ static int stream_thunk(void *buf, size_t size, void *data)
 
 		if ((current_time - payload->last_progress_report_time) >= MIN_PROGRESS_UPDATE_INTERVAL) {
 			payload->last_progress_report_time = current_time;
-			if (payload->cb(payload->pb->nr_written, payload->pb->nr_objects, payload->last_bytes, payload->cb_payload)) {
-				giterr_clear();
-				error = GIT_EUSER;
-			}
+			error = payload->cb(payload->pb->nr_written, payload->pb->nr_objects, payload->last_bytes, payload->cb_payload);
 		}
 	}
 
@@ -938,12 +1002,19 @@ int git_smart__push(git_transport *transport, git_push *push)
 	 * we consider the pack to have been unpacked successfully */
 	if (!push->specs.length || !push->report_status)
 		push->unpack_ok = 1;
-	else if ((error = parse_report(&t->buffer, push)) < 0)
+	else if ((error = parse_report(t, push)) < 0)
 		goto done;
 
 	/* If progress is being reported write the final report */
 	if (push->transfer_progress_cb) {
-		push->transfer_progress_cb(push->pb->nr_written, push->pb->nr_objects, packbuilder_payload.last_bytes, push->transfer_progress_cb_payload);
+		error = push->transfer_progress_cb(
+					push->pb->nr_written,
+					push->pb->nr_objects,
+					packbuilder_payload.last_bytes,
+					push->transfer_progress_cb_payload);
+
+		if (error < 0)
+			goto done;
 	}
 
 	if (push->status.length) {
@@ -951,7 +1022,7 @@ int git_smart__push(git_transport *transport, git_push *push)
 		if (error < 0)
 			goto done;
 
-		error = git_smart__update_heads(t);
+		error = git_smart__update_heads(t, NULL);
 	}
 
 done:

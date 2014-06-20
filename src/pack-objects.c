@@ -7,7 +7,7 @@
 
 #include "pack-objects.h"
 
-#include "compress.h"
+#include "zstream.h"
 #include "delta.h"
 #include "iterator.h"
 #include "netops.h"
@@ -61,6 +61,9 @@ struct pack_write_context {
 /* The minimal interval between progress updates (in seconds). */
 #define MIN_PROGRESS_UPDATE_INTERVAL 0.5
 
+/* Size of the buffer to feed to zlib */
+#define COMPRESS_BUFLEN (1024 * 1024)
+
 static unsigned name_hash(const char *name)
 {
 	unsigned c, hash = 0;
@@ -87,8 +90,8 @@ static int packbuilder_config(git_packbuilder *pb)
 	int ret;
 	int64_t val;
 
-	if (git_repository_config__weakptr(&config, pb->repo) < 0)
-		return -1;
+	if ((ret = git_repository_config_snapshot(&config, pb->repo)) < 0)
+		return ret;
 
 #define config_get(KEY,DST,DFLT) do { \
 	ret = git_config_get_int64(&val, config, KEY); \
@@ -105,6 +108,8 @@ static int packbuilder_config(git_packbuilder *pb)
 	config_get("pack.windowMemory", pb->window_memory_limit, 0);
 
 #undef config_get
+
+	git_config_free(config);
 
 	return 0;
 }
@@ -127,6 +132,7 @@ int git_packbuilder_new(git_packbuilder **out, git_repository *repo)
 	pb->nr_threads = 1; /* do not spawn any thread by default */
 
 	if (git_hash_ctx_init(&pb->ctx) < 0 ||
+		git_zstream_init(&pb->zstream) < 0 ||
 		git_repository_odb(&pb->odb, repo) < 0 ||
 		packbuilder_config(pb) < 0)
 		goto on_error;
@@ -205,14 +211,18 @@ int git_packbuilder_insert(git_packbuilder *pb, const git_oid *oid,
 	po = pb->object_list + pb->nr_objects;
 	memset(po, 0x0, sizeof(*po));
 
-	if (git_odb_read_header(&po->size, &po->type, pb->odb, oid) < 0)
-		return -1;
+	if ((ret = git_odb_read_header(&po->size, &po->type, pb->odb, oid)) < 0)
+		return ret;
 
 	pb->nr_objects++;
 	git_oid_cpy(&po->id, oid);
 	po->hash = name_hash(name);
 
 	pos = kh_put(oid, pb->object_ix, &po->id, &ret);
+	if (ret < 0) {
+		giterr_set_oom();
+		return ret;
+	}
 	assert(ret != 0);
 	kh_value(pb->object_ix, pos) = po;
 
@@ -220,12 +230,17 @@ int git_packbuilder_insert(git_packbuilder *pb, const git_oid *oid,
 
 	if (pb->progress_cb) {
 		double current_time = git__timer();
-		if ((current_time - pb->last_progress_report_time) >= MIN_PROGRESS_UPDATE_INTERVAL) {
+		double elapsed = current_time - pb->last_progress_report_time;
+
+		if (elapsed >= MIN_PROGRESS_UPDATE_INTERVAL) {
 			pb->last_progress_report_time = current_time;
-			if (pb->progress_cb(GIT_PACKBUILDER_ADDING_OBJECTS, pb->nr_objects, 0, pb->progress_cb_payload)) {
-				giterr_clear();
-				return GIT_EUSER;
-			}
+
+			ret = pb->progress_cb(
+				GIT_PACKBUILDER_ADDING_OBJECTS,
+				pb->nr_objects, 0, pb->progress_cb_payload);
+
+			if (ret)
+				return giterr_set_after_callback(ret);
 		}
 	}
 
@@ -266,76 +281,96 @@ on_error:
 	return -1;
 }
 
-static int write_object(git_buf *buf, git_packbuilder *pb, git_pobject *po)
+static int write_object(
+	git_packbuilder *pb,
+	git_pobject *po,
+	int (*write_cb)(void *buf, size_t size, void *cb_data),
+	void *cb_data)
 {
 	git_odb_object *obj = NULL;
-	git_buf zbuf = GIT_BUF_INIT;
 	git_otype type;
-	unsigned char hdr[10];
-	size_t hdr_len;
-	unsigned long size;
-	void *data;
+	unsigned char hdr[10], *zbuf = NULL;
+	void *data = NULL;
+	size_t hdr_len, zbuf_len = COMPRESS_BUFLEN, data_len;
+	int error;
 
+	/*
+	 * If we have a delta base, let's use the delta to save space.
+	 * Otherwise load the whole object. 'data' ends up pointing to
+	 * whatever data we want to put into the packfile.
+	 */
 	if (po->delta) {
 		if (po->delta_data)
 			data = po->delta_data;
-		else if (get_delta(&data, pb->odb, po) < 0)
-				goto on_error;
-		size = po->delta_size;
+		else if ((error = get_delta(&data, pb->odb, po)) < 0)
+				goto done;
+
+		data_len = po->delta_size;
 		type = GIT_OBJ_REF_DELTA;
 	} else {
-		if (git_odb_read(&obj, pb->odb, &po->id))
-			goto on_error;
+		if ((error = git_odb_read(&obj, pb->odb, &po->id)) < 0)
+			goto done;
 
 		data = (void *)git_odb_object_data(obj);
-		size = (unsigned long)git_odb_object_size(obj);
+		data_len = git_odb_object_size(obj);
 		type = git_odb_object_type(obj);
 	}
 
 	/* Write header */
-	hdr_len = git_packfile__object_header(hdr, size, type);
+	hdr_len = git_packfile__object_header(hdr, data_len, type);
 
-	if (git_buf_put(buf, (char *)hdr, hdr_len) < 0)
-		goto on_error;
-
-	if (git_hash_update(&pb->ctx, hdr, hdr_len) < 0)
-		goto on_error;
+	if ((error = write_cb(hdr, hdr_len, cb_data)) < 0 ||
+		(error = git_hash_update(&pb->ctx, hdr, hdr_len)) < 0)
+		goto done;
 
 	if (type == GIT_OBJ_REF_DELTA) {
-		if (git_buf_put(buf, (char *)po->delta->id.id, GIT_OID_RAWSZ) < 0 ||
-			git_hash_update(&pb->ctx, po->delta->id.id, GIT_OID_RAWSZ) < 0)
-			goto on_error;
+		if ((error = write_cb(po->delta->id.id, GIT_OID_RAWSZ, cb_data)) < 0 ||
+			(error = git_hash_update(&pb->ctx, po->delta->id.id, GIT_OID_RAWSZ)) < 0)
+			goto done;
 	}
 
 	/* Write data */
-	if (po->z_delta_size)
-		size = po->z_delta_size;
-	else if (git__compress(&zbuf, data, size) < 0)
-		goto on_error;
-	else {
-		if (po->delta)
-			git__free(data);
-		data = zbuf.ptr;
-		size = (unsigned long)zbuf.size;
+	if (po->z_delta_size) {
+		data_len = po->z_delta_size;
+
+		if ((error = write_cb(data, data_len, cb_data)) < 0 ||
+			(error = git_hash_update(&pb->ctx, data, data_len)) < 0)
+			goto done;
+	} else {
+		zbuf = git__malloc(zbuf_len);
+		GITERR_CHECK_ALLOC(zbuf);
+
+		git_zstream_reset(&pb->zstream);
+		git_zstream_set_input(&pb->zstream, data, data_len);
+
+		while (!git_zstream_done(&pb->zstream)) {
+			if ((error = git_zstream_get_output(zbuf, &zbuf_len, &pb->zstream)) < 0 ||
+				(error = write_cb(zbuf, zbuf_len, cb_data)) < 0 ||
+				(error = git_hash_update(&pb->ctx, zbuf, zbuf_len)) < 0)
+				goto done;
+
+			zbuf_len = COMPRESS_BUFLEN; /* reuse buffer */
+		}
 	}
 
-	if (git_buf_put(buf, data, size) < 0 ||
-		git_hash_update(&pb->ctx, data, size) < 0)
-		goto on_error;
-
-	if (po->delta_data)
-		git__free(po->delta_data);
-
-	git_odb_object_free(obj);
-	git_buf_free(&zbuf);
+	/*
+	 * If po->delta is true, data is a delta and it is our
+	 * responsibility to free it (otherwise it's a git_object's
+	 * data). We set po->delta_data to NULL in case we got the
+	 * data from there instead of get_delta(). If we didn't,
+	 * there's no harm.
+	 */
+	if (po->delta) {
+		git__free(data);
+		po->delta_data = NULL;
+	}
 
 	pb->nr_written++;
-	return 0;
 
-on_error:
+done:
+	git__free(zbuf);
 	git_odb_object_free(obj);
-	git_buf_free(&zbuf);
-	return -1;
+	return error;
 }
 
 enum write_one_status {
@@ -345,9 +380,15 @@ enum write_one_status {
 	WRITE_ONE_RECURSIVE = 2 /* already scheduled to be written */
 };
 
-static int write_one(git_buf *buf, git_packbuilder *pb, git_pobject *po,
-		     enum write_one_status *status)
+static int write_one(
+	enum write_one_status *status,
+	git_packbuilder *pb,
+	git_pobject *po,
+	int (*write_cb)(void *buf, size_t size, void *cb_data),
+	void *cb_data)
 {
+	int error;
+
 	if (po->recursing) {
 		*status = WRITE_ONE_RECURSIVE;
 		return 0;
@@ -358,21 +399,20 @@ static int write_one(git_buf *buf, git_packbuilder *pb, git_pobject *po,
 
 	if (po->delta) {
 		po->recursing = 1;
-		if (write_one(buf, pb, po->delta, status) < 0)
-			return -1;
-		switch (*status) {
-		case WRITE_ONE_RECURSIVE:
-			/* we cannot depend on this one */
+
+		if ((error = write_one(status, pb, po->delta, write_cb, cb_data)) < 0)
+			return error;
+
+		/* we cannot depend on this one */
+		if (*status == WRITE_ONE_RECURSIVE)
 			po->delta = NULL;
-			break;
-		default:
-			break;
-		}
 	}
 
+	*status = WRITE_ONE_WRITTEN;
 	po->written = 1;
 	po->recursing = 0;
-	return write_object(buf, pb, po);
+
+	return write_object(pb, po, write_cb, cb_data);
 }
 
 GIT_INLINE(void) add_to_write_order(git_pobject **wo, unsigned int *endp,
@@ -552,12 +592,11 @@ static git_pobject **compute_write_order(git_packbuilder *pb)
 }
 
 static int write_pack(git_packbuilder *pb,
-		      int (*cb)(void *buf, size_t size, void *data),
-		      void *data)
+	int (*write_cb)(void *buf, size_t size, void *cb_data),
+	void *cb_data)
 {
 	git_pobject **write_order;
 	git_pobject *po;
-	git_buf buf = GIT_BUF_INIT;
 	enum write_one_status status;
 	struct git_pack_header ph;
 	git_oid entry_oid;
@@ -575,10 +614,8 @@ static int write_pack(git_packbuilder *pb,
 	ph.hdr_version = htonl(PACK_VERSION);
 	ph.hdr_entries = htonl(pb->nr_objects);
 
-	if ((error = cb(&ph, sizeof(ph), data)) < 0)
-		goto done;
-
-	if ((error = git_hash_update(&pb->ctx, &ph, sizeof(ph))) < 0)
+	if ((error = write_cb(&ph, sizeof(ph), cb_data)) < 0 ||
+		(error = git_hash_update(&pb->ctx, &ph, sizeof(ph))) < 0)
 		goto done;
 
 	pb->nr_remaining = pb->nr_objects;
@@ -586,25 +623,30 @@ static int write_pack(git_packbuilder *pb,
 		pb->nr_written = 0;
 		for ( ; i < pb->nr_objects; ++i) {
 			po = write_order[i];
-			if ((error = write_one(&buf, pb, po, &status)) < 0)
+
+			if ((error = write_one(&status, pb, po, write_cb, cb_data)) < 0)
 				goto done;
-			if ((error = cb(buf.ptr, buf.size, data)) < 0)
-				goto done;
-			git_buf_clear(&buf);
 		}
 
 		pb->nr_remaining -= pb->nr_written;
 	} while (pb->nr_remaining && i < pb->nr_objects);
 
-
 	if ((error = git_hash_final(&entry_oid, &pb->ctx)) < 0)
 		goto done;
 
-	error = cb(entry_oid.id, GIT_OID_RAWSZ, data);
+	error = write_cb(entry_oid.id, GIT_OID_RAWSZ, cb_data);
 
 done:
+	/* if callback cancelled writing, we must still free delta_data */
+	for ( ; i < pb->nr_objects; ++i) {
+		po = write_order[i];
+		if (po->delta_data) {
+			git__free(po->delta_data);
+			po->delta_data = NULL;
+		}
+	}
+
 	git__free(write_order);
-	git_buf_free(&buf);
 	return error;
 }
 
@@ -911,7 +953,7 @@ static int find_deltas(git_packbuilder *pb, git_pobject **list,
 		 * between writes at that moment.
 		 */
 		if (po->delta_data) {
-			if (git__compress(&zbuf, po->delta_data, po->delta_size) < 0)
+			if (git_zstream_deflatebuf(&zbuf, po->delta_data, po->delta_size) < 0)
 				goto on_error;
 
 			git__free(po->delta_data);
@@ -1167,7 +1209,7 @@ static int ll_find_deltas(git_packbuilder *pb, git_pobject **list,
 		git_mutex_unlock(&target->mutex);
 
 		if (!sub_size) {
-			git_thread_join(target->thread, NULL);
+			git_thread_join(&target->thread, NULL);
 			git_cond_free(&target->cond);
 			git_mutex_free(&target->mutex);
 			active_threads--;
@@ -1236,6 +1278,7 @@ int git_packbuilder_foreach(git_packbuilder *pb, int (*cb)(void *buf, size_t siz
 int git_packbuilder_write_buf(git_buf *buf, git_packbuilder *pb)
 {
 	PREPARE_PACK;
+	git_buf_sanitize(buf);
 	return write_pack(pb, &write_pack_buf, buf);
 }
 
@@ -1249,7 +1292,7 @@ int git_packbuilder_write(
 	git_packbuilder *pb,
 	const char *path,
 	unsigned int mode,
-	git_transfer_progress_callback progress_cb,
+	git_transfer_progress_cb progress_cb,
 	void *progress_cb_payload)
 {
 	git_indexer *indexer;
@@ -1284,21 +1327,22 @@ const git_oid *git_packbuilder_hash(git_packbuilder *pb)
 	return &pb->pack_oid;
 }
 
-static int cb_tree_walk(const char *root, const git_tree_entry *entry, void *payload)
+static int cb_tree_walk(
+	const char *root, const git_tree_entry *entry, void *payload)
 {
+	int error;
 	struct tree_walk_context *ctx = payload;
 
 	/* A commit inside a tree represents a submodule commit and should be skipped. */
 	if (git_tree_entry_type(entry) == GIT_OBJ_COMMIT)
 		return 0;
 
-	if (git_buf_sets(&ctx->buf, root) < 0 ||
-		git_buf_puts(&ctx->buf, git_tree_entry_name(entry)) < 0)
-		return -1;
+	if (!(error = git_buf_sets(&ctx->buf, root)) &&
+		!(error = git_buf_puts(&ctx->buf, git_tree_entry_name(entry))))
+		error = git_packbuilder_insert(
+			ctx->pb, git_tree_entry_id(entry), git_buf_cstr(&ctx->buf));
 
-	return git_packbuilder_insert(ctx->pb,
-		git_tree_entry_id(entry),
-		git_buf_cstr(&ctx->buf));
+	return error;
 }
 
 int git_packbuilder_insert_commit(git_packbuilder *pb, const git_oid *oid)
@@ -1318,22 +1362,17 @@ int git_packbuilder_insert_commit(git_packbuilder *pb, const git_oid *oid)
 
 int git_packbuilder_insert_tree(git_packbuilder *pb, const git_oid *oid)
 {
-	git_tree *tree;
+	int error;
+	git_tree *tree = NULL;
 	struct tree_walk_context context = { pb, GIT_BUF_INIT };
 
-	if (git_tree_lookup(&tree, pb->repo, oid) < 0 ||
-	    git_packbuilder_insert(pb, oid, NULL) < 0)
-		return -1;
-
-	if (git_tree_walk(tree, GIT_TREEWALK_PRE, cb_tree_walk, &context) < 0) {
-		git_tree_free(tree);
-		git_buf_free(&context.buf);
-		return -1;
-	}
+	if (!(error = git_tree_lookup(&tree, pb->repo, oid)) &&
+	    !(error = git_packbuilder_insert(pb, oid, NULL)))
+		error = git_tree_walk(tree, GIT_TREEWALK_PRE, cb_tree_walk, &context);
 
 	git_tree_free(tree);
 	git_buf_free(&context.buf);
-	return 0;
+	return error;
 }
 
 uint32_t git_packbuilder_object_count(git_packbuilder *pb)
@@ -1380,6 +1419,7 @@ void git_packbuilder_free(git_packbuilder *pb)
 		git__free(pb->object_list);
 
 	git_hash_ctx_cleanup(&pb->ctx);
+	git_zstream_free(&pb->zstream);
 
 	git__free(pb);
 }

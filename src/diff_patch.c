@@ -5,6 +5,7 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 #include "common.h"
+#include "git2/blob.h"
 #include "diff.h"
 #include "diff_file.h"
 #include "diff_driver.h"
@@ -133,9 +134,9 @@ static int diff_patch_load(git_patch *patch, git_diff_output *output)
 
 	incomplete_data =
 		(((patch->ofile.flags & GIT_DIFF_FLAG__NO_DATA) != 0 ||
-		  (patch->ofile.file->flags & GIT_DIFF_FLAG_VALID_OID) != 0) &&
+		  (patch->ofile.file->flags & GIT_DIFF_FLAG_VALID_ID) != 0) &&
 		 ((patch->nfile.flags & GIT_DIFF_FLAG__NO_DATA) != 0 ||
-		  (patch->nfile.file->flags & GIT_DIFF_FLAG_VALID_OID) != 0));
+		  (patch->nfile.file->flags & GIT_DIFF_FLAG_VALID_ID) != 0));
 
 	/* always try to load workdir content first because filtering may
 	 * need 2x data size and this minimizes peak memory footprint
@@ -169,7 +170,7 @@ static int diff_patch_load(git_patch *patch, git_diff_output *output)
 	if (incomplete_data &&
 		patch->ofile.file->mode == patch->nfile.file->mode &&
 		patch->ofile.file->mode != GIT_FILEMODE_COMMIT &&
-		git_oid_equal(&patch->ofile.file->oid, &patch->nfile.file->oid) &&
+		git_oid_equal(&patch->ofile.file->id, &patch->nfile.file->id) &&
 		patch->delta->status == GIT_DELTA_MODIFIED) /* not RENAMED/COPIED! */
 		patch->delta->status = GIT_DELTA_UNMODIFIED;
 
@@ -184,7 +185,7 @@ cleanup:
 			patch->delta->status != GIT_DELTA_UNMODIFIED &&
 			(patch->ofile.map.len || patch->nfile.map.len) &&
 			(patch->ofile.map.len != patch->nfile.map.len ||
-			 !git_oid_equal(&patch->ofile.file->oid, &patch->nfile.file->oid)))
+			 !git_oid_equal(&patch->ofile.file->id, &patch->nfile.file->id)))
 			patch->flags |= GIT_DIFF_PATCH_DIFFABLE;
 
 		patch->flags |= GIT_DIFF_PATCH_LOADED;
@@ -193,21 +194,18 @@ cleanup:
 	return error;
 }
 
-static int diff_patch_file_callback(
+static int diff_patch_invoke_file_callback(
 	git_patch *patch, git_diff_output *output)
 {
-	float progress;
+	float progress = patch->diff ?
+		((float)patch->delta_index / patch->diff->deltas.length) : 1.0f;
 
 	if (!output->file_cb)
 		return 0;
 
-	progress = patch->diff ?
-		((float)patch->delta_index / patch->diff->deltas.length) : 1.0f;
-
-	if (output->file_cb(patch->delta, progress, output->payload) != 0)
-		output->error = GIT_EUSER;
-
-	return output->error;
+	return giterr_set_after_callback_function(
+		output->file_cb(patch->delta, progress, output->payload),
+		"git_patch");
 }
 
 static int diff_patch_generate(git_patch *patch, git_diff_output *output)
@@ -229,7 +227,7 @@ static int diff_patch_generate(git_patch *patch, git_diff_output *output)
 		return 0;
 
 	if (output->diff_cb != NULL &&
-		!(error = output->diff_cb(output, patch)))
+		(error = output->diff_cb(output, patch)) < 0)
 		patch->flags |= GIT_DIFF_PATCH_DIFFED;
 
 	return error;
@@ -272,9 +270,10 @@ int git_diff_foreach(
 	size_t idx;
 	git_patch patch;
 
-	if (diff_required(diff, "git_diff_foreach") < 0)
-		return -1;
+	if ((error = diff_required(diff, "git_diff_foreach")) < 0)
+		return error;
 
+	memset(&xo, 0, sizeof(xo));
 	diff_output_init(
 		&xo.output, &diff->opts, file_cb, hunk_cb, data_cb, payload);
 	git_xdiff_init(&xo, &diff->opts);
@@ -285,22 +284,18 @@ int git_diff_foreach(
 		if (git_diff_delta__should_skip(&diff->opts, patch.delta))
 			continue;
 
-		if (!(error = diff_patch_init_from_diff(&patch, diff, idx))) {
+		if ((error = diff_patch_init_from_diff(&patch, diff, idx)) < 0)
+			break;
 
-			error = diff_patch_file_callback(&patch, &xo.output);
+		if (!(error = diff_patch_invoke_file_callback(&patch, &xo.output)))
+			error = diff_patch_generate(&patch, &xo.output);
 
-			if (!error)
-				error = diff_patch_generate(&patch, &xo.output);
+		git_patch_free(&patch);
 
-			git_patch_free(&patch);
-		}
-
-		if (error < 0)
+		if (error)
 			break;
 	}
 
-	if (error == GIT_EUSER)
-		giterr_clear(); /* don't leave error message set invalidly */
 	return error;
 }
 
@@ -321,7 +316,7 @@ static int diff_single_generate(diff_patch_with_delta *pd, git_xdiff_output *xo)
 		(has_old ? GIT_DELTA_MODIFIED : GIT_DELTA_ADDED) :
 		(has_old ? GIT_DELTA_DELETED : GIT_DELTA_UNTRACKED);
 
-	if (git_oid_equal(&patch->nfile.file->oid, &patch->ofile.file->oid))
+	if (git_oid_equal(&patch->nfile.file->id, &patch->ofile.file->id))
 		pd->delta.status = GIT_DELTA_UNMODIFIED;
 
 	patch->delta = &pd->delta;
@@ -332,49 +327,53 @@ static int diff_single_generate(diff_patch_with_delta *pd, git_xdiff_output *xo)
 		!(patch->ofile.opts_flags & GIT_DIFF_INCLUDE_UNMODIFIED))
 		return error;
 
-	error = diff_patch_file_callback(patch, (git_diff_output *)xo);
+	error = diff_patch_invoke_file_callback(patch, (git_diff_output *)xo);
 
 	if (!error)
 		error = diff_patch_generate(patch, (git_diff_output *)xo);
 
-	if (error == GIT_EUSER)
-		giterr_clear(); /* don't leave error message set invalidly */
-
 	return error;
 }
 
-static int diff_patch_from_blobs(
+static int diff_patch_from_sources(
 	diff_patch_with_delta *pd,
 	git_xdiff_output *xo,
-	const git_blob *old_blob,
-	const char *old_path,
-	const git_blob *new_blob,
-	const char *new_path,
+	git_diff_file_content_src *oldsrc,
+	git_diff_file_content_src *newsrc,
 	const git_diff_options *opts)
 {
 	int error = 0;
 	git_repository *repo =
-		new_blob ? git_object_owner((const git_object *)new_blob) :
-		old_blob ? git_object_owner((const git_object *)old_blob) : NULL;
+		oldsrc->blob ? git_blob_owner(oldsrc->blob) :
+		newsrc->blob ? git_blob_owner(newsrc->blob) : NULL;
+	git_diff_file *lfile = &pd->delta.old_file, *rfile = &pd->delta.new_file;
+	git_diff_file_content *ldata = &pd->patch.ofile, *rdata = &pd->patch.nfile;
 
 	GITERR_CHECK_VERSION(opts, GIT_DIFF_OPTIONS_VERSION, "git_diff_options");
 
 	if (opts && (opts->flags & GIT_DIFF_REVERSE) != 0) {
-		const git_blob *tmp_blob;
-		const char *tmp_path;
-		tmp_blob = old_blob; old_blob = new_blob; new_blob = tmp_blob;
-		tmp_path = old_path; old_path = new_path; new_path = tmp_path;
+		void *tmp = lfile; lfile = rfile; rfile = tmp;
+		tmp = ldata; ldata = rdata; rdata = tmp;
 	}
 
 	pd->patch.delta = &pd->delta;
 
-	pd->delta.old_file.path = old_path;
-	pd->delta.new_file.path = new_path;
+	if (!oldsrc->as_path) {
+		if (newsrc->as_path)
+			oldsrc->as_path = newsrc->as_path;
+		else
+			oldsrc->as_path = newsrc->as_path = "file";
+	}
+	else if (!newsrc->as_path)
+		newsrc->as_path = oldsrc->as_path;
 
-	if ((error = git_diff_file_content__init_from_blob(
-			&pd->patch.ofile, repo, opts, old_blob, &pd->delta.old_file)) < 0 ||
-		(error = git_diff_file_content__init_from_blob(
-			&pd->patch.nfile, repo, opts, new_blob, &pd->delta.new_file)) < 0)
+	lfile->path = oldsrc->as_path;
+	rfile->path = newsrc->as_path;
+
+	if ((error = git_diff_file_content__init_from_src(
+			ldata, repo, opts, oldsrc, lfile)) < 0 ||
+		(error = git_diff_file_content__init_from_src(
+			rdata, repo, opts, newsrc, rfile)) < 0)
 		return error;
 
 	return diff_single_generate(pd, xo);
@@ -409,6 +408,62 @@ static int diff_patch_with_delta_alloc(
 	return 0;
 }
 
+static int diff_from_sources(
+	git_diff_file_content_src *oldsrc,
+	git_diff_file_content_src *newsrc,
+	const git_diff_options *opts,
+	git_diff_file_cb file_cb,
+	git_diff_hunk_cb hunk_cb,
+	git_diff_line_cb data_cb,
+	void *payload)
+{
+	int error = 0;
+	diff_patch_with_delta pd;
+	git_xdiff_output xo;
+
+	memset(&xo, 0, sizeof(xo));
+	diff_output_init(
+		&xo.output, opts, file_cb, hunk_cb, data_cb, payload);
+	git_xdiff_init(&xo, opts);
+
+	memset(&pd, 0, sizeof(pd));
+
+	error = diff_patch_from_sources(&pd, &xo, oldsrc, newsrc, opts);
+
+	git_patch_free(&pd.patch);
+
+	return error;
+}
+
+static int patch_from_sources(
+	git_patch **out,
+	git_diff_file_content_src *oldsrc,
+	git_diff_file_content_src *newsrc,
+	const git_diff_options *opts)
+{
+	int error = 0;
+	diff_patch_with_delta *pd;
+	git_xdiff_output xo;
+
+	assert(out);
+	*out = NULL;
+
+	if ((error = diff_patch_with_delta_alloc(
+			&pd, &oldsrc->as_path, &newsrc->as_path)) < 0)
+		return error;
+
+	memset(&xo, 0, sizeof(xo));
+	diff_output_to_patch(&xo.output, &pd->patch);
+	git_xdiff_init(&xo, opts);
+
+	if (!(error = diff_patch_from_sources(pd, &xo, oldsrc, newsrc, opts)))
+		*out = (git_patch *)pd;
+	else
+		git_patch_free((git_patch *)pd);
+
+	return error;
+}
+
 int git_diff_blobs(
 	const git_blob *old_blob,
 	const char *old_path,
@@ -420,28 +475,12 @@ int git_diff_blobs(
 	git_diff_line_cb data_cb,
 	void *payload)
 {
-	int error = 0;
-	diff_patch_with_delta pd;
-	git_xdiff_output xo;
-
-	memset(&pd, 0, sizeof(pd));
-	memset(&xo, 0, sizeof(xo));
-
-	diff_output_init(
-		&xo.output, opts, file_cb, hunk_cb, data_cb, payload);
-	git_xdiff_init(&xo, opts);
-
-	if (!old_path && new_path)
-		old_path = new_path;
-	else if (!new_path && old_path)
-		new_path = old_path;
-
-	error = diff_patch_from_blobs(
-		&pd, &xo, old_blob, old_path, new_blob, new_path, opts);
-
-	git_patch_free(&pd.patch);
-
-	return error;
+	git_diff_file_content_src osrc =
+		GIT_DIFF_FILE_CONTENT_SRC__BLOB(old_blob, old_path);
+	git_diff_file_content_src nsrc =
+		GIT_DIFF_FILE_CONTENT_SRC__BLOB(new_blob, new_path);
+	return diff_from_sources(
+		&osrc, &nsrc, opts, file_cb, hunk_cb, data_cb, payload);
 }
 
 int git_patch_from_blobs(
@@ -452,72 +491,11 @@ int git_patch_from_blobs(
 	const char *new_path,
 	const git_diff_options *opts)
 {
-	int error = 0;
-	diff_patch_with_delta *pd;
-	git_xdiff_output xo;
-
-	assert(out);
-	*out = NULL;
-
-	if (diff_patch_with_delta_alloc(&pd, &old_path, &new_path) < 0)
-		return -1;
-
-	memset(&xo, 0, sizeof(xo));
-
-	diff_output_to_patch(&xo.output, &pd->patch);
-	git_xdiff_init(&xo, opts);
-
-	error = diff_patch_from_blobs(
-		pd, &xo, old_blob, old_path, new_blob, new_path, opts);
-
-	if (!error)
-		*out = (git_patch *)pd;
-	else
-		git_patch_free((git_patch *)pd);
-
-	return error;
-}
-
-static int diff_patch_from_blob_and_buffer(
-	diff_patch_with_delta *pd,
-	git_xdiff_output *xo,
-	const git_blob *old_blob,
-	const char *old_path,
-	const char *buf,
-	size_t buflen,
-	const char *buf_path,
-	const git_diff_options *opts)
-{
-	int error = 0;
-	git_repository *repo =
-		old_blob ? git_object_owner((const git_object *)old_blob) : NULL;
-
-	GITERR_CHECK_VERSION(opts, GIT_DIFF_OPTIONS_VERSION, "git_diff_options");
-
-	pd->patch.delta = &pd->delta;
-
-	if (opts && (opts->flags & GIT_DIFF_REVERSE) != 0) {
-		pd->delta.old_file.path = buf_path;
-		pd->delta.new_file.path = old_path;
-
-		if (!(error = git_diff_file_content__init_from_raw(
-				&pd->patch.ofile, repo, opts, buf, buflen, &pd->delta.old_file)))
-			error = git_diff_file_content__init_from_blob(
-				&pd->patch.nfile, repo, opts, old_blob, &pd->delta.new_file);
-	} else {
-		pd->delta.old_file.path = old_path;
-		pd->delta.new_file.path = buf_path;
-
-		if (!(error = git_diff_file_content__init_from_blob(
-				&pd->patch.ofile, repo, opts, old_blob, &pd->delta.old_file)))
-			error = git_diff_file_content__init_from_raw(
-				&pd->patch.nfile, repo, opts, buf, buflen, &pd->delta.new_file);
-	}
-
-	if (error < 0)
-		return error;
-
-	return diff_single_generate(pd, xo);
+	git_diff_file_content_src osrc =
+		GIT_DIFF_FILE_CONTENT_SRC__BLOB(old_blob, old_path);
+	git_diff_file_content_src nsrc =
+		GIT_DIFF_FILE_CONTENT_SRC__BLOB(new_blob, new_path);
+	return patch_from_sources(out, &osrc, &nsrc, opts);
 }
 
 int git_diff_blob_to_buffer(
@@ -532,28 +510,12 @@ int git_diff_blob_to_buffer(
 	git_diff_line_cb data_cb,
 	void *payload)
 {
-	int error = 0;
-	diff_patch_with_delta pd;
-	git_xdiff_output xo;
-
-	memset(&pd, 0, sizeof(pd));
-	memset(&xo, 0, sizeof(xo));
-
-	diff_output_init(
-		&xo.output, opts, file_cb, hunk_cb, data_cb, payload);
-	git_xdiff_init(&xo, opts);
-
-	if (!old_path && buf_path)
-		old_path = buf_path;
-	else if (!buf_path && old_path)
-		buf_path = old_path;
-
-	error = diff_patch_from_blob_and_buffer(
-		&pd, &xo, old_blob, old_path, buf, buflen, buf_path, opts);
-
-	git_patch_free(&pd.patch);
-
-	return error;
+	git_diff_file_content_src osrc =
+		GIT_DIFF_FILE_CONTENT_SRC__BLOB(old_blob, old_path);
+	git_diff_file_content_src nsrc =
+		GIT_DIFF_FILE_CONTENT_SRC__BUF(buf, buflen, buf_path);
+	return diff_from_sources(
+		&osrc, &nsrc, opts, file_cb, hunk_cb, data_cb, payload);
 }
 
 int git_patch_from_blob_and_buffer(
@@ -565,30 +527,49 @@ int git_patch_from_blob_and_buffer(
 	const char *buf_path,
 	const git_diff_options *opts)
 {
-	int error = 0;
-	diff_patch_with_delta *pd;
-	git_xdiff_output xo;
+	git_diff_file_content_src osrc =
+		GIT_DIFF_FILE_CONTENT_SRC__BLOB(old_blob, old_path);
+	git_diff_file_content_src nsrc =
+		GIT_DIFF_FILE_CONTENT_SRC__BUF(buf, buflen, buf_path);
+	return patch_from_sources(out, &osrc, &nsrc, opts);
+}
 
-	assert(out);
-	*out = NULL;
+int git_diff_buffers(
+	const void *old_buf,
+	size_t old_len,
+	const char *old_path,
+	const void *new_buf,
+	size_t new_len,
+	const char *new_path,
+	const git_diff_options *opts,
+	git_diff_file_cb file_cb,
+	git_diff_hunk_cb hunk_cb,
+	git_diff_line_cb data_cb,
+	void *payload)
+{
+	git_diff_file_content_src osrc =
+		GIT_DIFF_FILE_CONTENT_SRC__BUF(old_buf, old_len, old_path);
+	git_diff_file_content_src nsrc =
+		GIT_DIFF_FILE_CONTENT_SRC__BUF(new_buf, new_len, new_path);
+	return diff_from_sources(
+		&osrc, &nsrc, opts, file_cb, hunk_cb, data_cb, payload);
+}
 
-	if (diff_patch_with_delta_alloc(&pd, &old_path, &buf_path) < 0)
-		return -1;
-
-	memset(&xo, 0, sizeof(xo));
-
-	diff_output_to_patch(&xo.output, &pd->patch);
-	git_xdiff_init(&xo, opts);
-
-	error = diff_patch_from_blob_and_buffer(
-		pd, &xo, old_blob, old_path, buf, buflen, buf_path, opts);
-
-	if (!error)
-		*out = (git_patch *)pd;
-	else
-		git_patch_free((git_patch *)pd);
-
-	return error;
+int git_patch_from_buffers(
+	git_patch **out,
+	const void *old_buf,
+	size_t old_len,
+	const char *old_path,
+	const char *new_buf,
+	size_t new_len,
+	const char *new_path,
+	const git_diff_options *opts)
+{
+	git_diff_file_content_src osrc =
+		GIT_DIFF_FILE_CONTENT_SRC__BUF(old_buf, old_len, old_path);
+	git_diff_file_content_src nsrc =
+		GIT_DIFF_FILE_CONTENT_SRC__BUF(new_buf, new_len, new_path);
+	return patch_from_sources(out, &osrc, &nsrc, opts);
 }
 
 int git_patch_from_diff(
@@ -622,17 +603,18 @@ int git_patch_from_diff(
 	if ((error = diff_patch_alloc_from_diff(&patch, diff, idx)) < 0)
 		return error;
 
+	memset(&xo, 0, sizeof(xo));
 	diff_output_to_patch(&xo.output, patch);
 	git_xdiff_init(&xo, &diff->opts);
 
-	error = diff_patch_file_callback(patch, &xo.output);
+	error = diff_patch_invoke_file_callback(patch, &xo.output);
 
 	if (!error)
 		error = diff_patch_generate(patch, &xo.output);
 
 	if (!error) {
-		/* if cumulative diff size is < 0.5 total size, flatten the patch */
-		/* unload the file content */
+		/* TODO: if cumulative diff size is < 0.5 total size, flatten patch */
+		/* TODO: and unload the file content */
 	}
 
 	if (error || !patch_ptr)
@@ -640,8 +622,6 @@ int git_patch_from_diff(
 	else
 		*patch_ptr = patch;
 
-	if (error == GIT_EUSER)
-		giterr_clear(); /* don't leave error message set invalidly */
 	return error;
 }
 
@@ -651,13 +631,13 @@ void git_patch_free(git_patch *patch)
 		GIT_REFCOUNT_DEC(patch, diff_patch_free);
 }
 
-const git_diff_delta *git_patch_get_delta(git_patch *patch)
+const git_diff_delta *git_patch_get_delta(const git_patch *patch)
 {
 	assert(patch);
 	return patch->delta;
 }
 
-size_t git_patch_num_hunks(git_patch *patch)
+size_t git_patch_num_hunks(const git_patch *patch)
 {
 	assert(patch);
 	return git_array_size(patch->hunks);
@@ -728,7 +708,7 @@ int git_patch_get_hunk(
 	return 0;
 }
 
-int git_patch_num_lines_in_hunk(git_patch *patch, size_t hunk_idx)
+int git_patch_num_lines_in_hunk(const git_patch *patch, size_t hunk_idx)
 {
 	diff_patch_hunk *hunk;
 	assert(patch);
@@ -905,7 +885,7 @@ static int diff_patch_line_cb(
 	GIT_UNUSED(hunk_);
 
 	hunk = git_array_last(patch->hunks);
-	GITERR_CHECK_ALLOC(hunk);
+	assert(hunk); /* programmer error if no hunk is available */
 
 	line = git_array_alloc(patch->lines);
 	GITERR_CHECK_ALLOC(line);

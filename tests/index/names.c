@@ -86,10 +86,10 @@ void test_index_names__cleaned_on_reset_hard(void)
 {
 	git_object *target;
 
-	retrieve_target_from_oid(&target, repo, "3a34580a35add43a4cf361e8e9a30060a905c876");
+	cl_git_pass(git_revparse_single(&target, repo, "3a34580"));
 
 	test_index_names__add();
-	cl_git_pass(git_reset(repo, target, GIT_RESET_HARD));
+	cl_git_pass(git_reset(repo, target, GIT_RESET_HARD, NULL, NULL));
 	cl_assert(git_index_name_entrycount(repo_index) == 0);
 
 	git_object_free(target);
@@ -99,10 +99,10 @@ void test_index_names__cleaned_on_reset_mixed(void)
 {
 	git_object *target;
 
-	retrieve_target_from_oid(&target, repo, "3a34580a35add43a4cf361e8e9a30060a905c876");
+	cl_git_pass(git_revparse_single(&target, repo, "3a34580"));
 
 	test_index_names__add();
-	cl_git_pass(git_reset(repo, target, GIT_RESET_MIXED));
+	cl_git_pass(git_reset(repo, target, GIT_RESET_MIXED, NULL, NULL));
 	cl_assert(git_index_name_entrycount(repo_index) == 0);
 
 	git_object_free(target);
@@ -112,7 +112,7 @@ void test_index_names__cleaned_on_checkout_tree(void)
 {
 	git_oid oid;
 	git_object *obj;
-	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 
 	opts.checkout_strategy = GIT_CHECKOUT_SAFE | GIT_CHECKOUT_UPDATE_ONLY;
 
@@ -127,7 +127,7 @@ void test_index_names__cleaned_on_checkout_tree(void)
 
 void test_index_names__cleaned_on_checkout_head(void)
 {
-	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 
 	opts.checkout_strategy = GIT_CHECKOUT_SAFE | GIT_CHECKOUT_UPDATE_ONLY;
 
@@ -138,7 +138,7 @@ void test_index_names__cleaned_on_checkout_head(void)
 
 void test_index_names__retained_on_checkout_index(void)
 {
-	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 
 	opts.checkout_strategy = GIT_CHECKOUT_SAFE | GIT_CHECKOUT_UPDATE_ONLY;
 

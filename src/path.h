@@ -119,6 +119,14 @@ GIT_INLINE(void) git_path_mkposix(char *path)
 #	define git_path_mkposix(p) /* blank */
 #endif
 
+/**
+ * Check if string is a relative path (i.e. starts with "./" or "../")
+ */
+GIT_INLINE(int) git_path_is_relative(const char *p)
+{
+	return (p[0] == '.' && (p[1] == '/' || (p[1] == '.' && p[2] == '/')));
+}
+
 extern int git__percent_decode(git_buf *decoded_out, const char *input);
 
 /**
@@ -255,9 +263,10 @@ enum {
  * @param flags Combination of GIT_PATH_DIR flags.
  * @param callback Callback for each entry. Passed the `payload` and each
  *		successive path inside the directory as a full path.  This may
- *		safely append text to the pathbuf if needed.
+ *		safely append text to the pathbuf if needed.  Return non-zero to
+ *		cancel iteration (and return value will be propagated back).
  * @param payload Passed to callback as first argument.
- * @return 0 on success, GIT_EUSER on non-zero callback, or error code
+ * @return 0 on success or error code from OS error or from callback
  */
 extern int git_path_direach(
 	git_buf *pathbuf,
@@ -288,7 +297,7 @@ extern int git_path_cmp(
  *		original input path.
  * @param callback Function to invoke on each path.  Passed the `payload`
  *		and the buffer containing the current path.  The path should not
- *		be modified in any way.
+ *		be modified in any way. Return non-zero to stop iteration.
  * @param state Passed to fn as the first ath.
  */
 extern int git_path_walk_up(
@@ -426,5 +435,10 @@ extern void git_path_iconv_clear(git_path_iconv_t *ic);
 extern int git_path_iconv(git_path_iconv_t *ic, char **in, size_t *inlen);
 
 #endif /* GIT_USE_ICONV */
+
+extern bool git_path_does_fs_decompose_unicode(const char *root);
+
+/* Used for paths to repositories on the filesystem */
+extern int git_path_from_url_or_path(git_buf *local_path_out, const char *url_or_path);
 
 #endif

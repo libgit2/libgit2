@@ -82,7 +82,7 @@ int git_reflog_append(git_reflog *reflog, const git_oid *new_oid, const git_sign
 	entry = git__calloc(1, sizeof(git_reflog_entry));
 	GITERR_CHECK_ALLOC(entry);
 
-	if ((entry->committer = git_signature_dup(committer)) == NULL)
+	if ((git_signature_dup(&entry->committer, committer)) < 0)
 		goto cleanup;
 
 	if (msg != NULL) {
@@ -229,23 +229,4 @@ int git_reflog_drop(git_reflog *reflog, size_t idx, int rewrite_previous_entry)
 	git_oid_cpy(&entry->oid_old, &previous->oid_cur);
 
 	return 0;
-}
-
-int git_reflog_append_to(git_repository *repo, const char *name, const git_oid *id,
-			 const git_signature *committer, const char *msg)
-{
-	int error;
-	git_reflog *reflog;
-
-	if ((error = git_reflog_read(&reflog, repo, name)) < 0)
-		return error;
-
-	if ((error = git_reflog_append(reflog, id, committer, msg)) < 0)
-		goto cleanup;
-
-	error = git_reflog_write(reflog);
-
-cleanup:
-	git_reflog_free(reflog);
-	return error;
 }

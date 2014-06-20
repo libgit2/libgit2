@@ -48,7 +48,7 @@ static void do_fetch(const char *url, git_remote_autotag_option_t flag, int n)
 	git_remote_set_autotag(remote, flag);
 	cl_git_pass(git_remote_connect(remote, GIT_DIRECTION_FETCH));
 	cl_git_pass(git_remote_download(remote));
-	cl_git_pass(git_remote_update_tips(remote));
+	cl_git_pass(git_remote_update_tips(remote, NULL, NULL));
 	git_remote_disconnect(remote);
 	cl_assert_equal_i(counter, n);
 	cl_assert(bytes_received > 0);
@@ -58,17 +58,17 @@ static void do_fetch(const char *url, git_remote_autotag_option_t flag, int n)
 
 void test_online_fetch__default_git(void)
 {
-	do_fetch("git://github.com/libgit2/TestGitRepository.git", GIT_REMOTE_DOWNLOAD_TAGS_AUTO, 6);
+	do_fetch("git://github.com/libgit2/TestGitRepository.git", GIT_REMOTE_DOWNLOAD_TAGS_AUTO, 5);
 }
 
 void test_online_fetch__default_http(void)
 {
-	do_fetch("http://github.com/libgit2/TestGitRepository.git", GIT_REMOTE_DOWNLOAD_TAGS_AUTO, 6);
+	do_fetch("http://github.com/libgit2/TestGitRepository.git", GIT_REMOTE_DOWNLOAD_TAGS_AUTO, 5);
 }
 
 void test_online_fetch__default_https(void)
 {
-	do_fetch("https://github.com/libgit2/TestGitRepository.git", GIT_REMOTE_DOWNLOAD_TAGS_AUTO, 6);
+	do_fetch("https://github.com/libgit2/TestGitRepository.git", GIT_REMOTE_DOWNLOAD_TAGS_AUTO, 5);
 }
 
 void test_online_fetch__no_tags_git(void)
@@ -79,6 +79,21 @@ void test_online_fetch__no_tags_git(void)
 void test_online_fetch__no_tags_http(void)
 {
 	do_fetch("http://github.com/libgit2/TestGitRepository.git", GIT_REMOTE_DOWNLOAD_TAGS_NONE, 3);
+}
+
+void test_online_fetch__fetch_twice(void)
+{
+	git_remote *remote;
+	cl_git_pass(git_remote_create(&remote, _repo, "test", "git://github.com/libgit2/TestGitRepository.git"));
+    	cl_git_pass(git_remote_connect(remote, GIT_DIRECTION_FETCH));
+    	cl_git_pass(git_remote_download(remote));
+    	git_remote_disconnect(remote);
+    	
+    	git_remote_connect(remote, GIT_DIRECTION_FETCH);
+	cl_git_pass(git_remote_download(remote));
+	git_remote_disconnect(remote);
+	
+	git_remote_free(remote);
 }
 
 static int transferProgressCallback(const git_transfer_progress *stats, void *payload)
@@ -117,7 +132,7 @@ void test_online_fetch__doesnt_retrieve_a_pack_when_the_repository_is_up_to_date
 
 	cl_assert_equal_i(false, invoked);
 
-	cl_git_pass(git_remote_update_tips(remote));
+	cl_git_pass(git_remote_update_tips(remote, NULL, NULL));
 	git_remote_disconnect(remote);
 
 	git_remote_free(remote);
@@ -129,7 +144,7 @@ static int cancel_at_half(const git_transfer_progress *stats, void *payload)
 	GIT_UNUSED(payload);
 
 	if (stats->received_objects > (stats->total_objects/2))
-		return -1;
+		return -4321;
 	return 0;
 }
 
@@ -147,7 +162,7 @@ void test_online_fetch__can_cancel(void)
 	git_remote_set_callbacks(remote, &callbacks);
 
 	cl_git_pass(git_remote_connect(remote, GIT_DIRECTION_FETCH));
-	cl_git_fail_with(git_remote_download(remote), GIT_EUSER);
+	cl_git_fail_with(git_remote_download(remote), -4321);
 	git_remote_disconnect(remote);
 	git_remote_free(remote);
 }
@@ -166,6 +181,24 @@ void test_online_fetch__ls_disconnected(void)
 	cl_git_pass(git_remote_ls(&refs, &refs_len_after, remote));
 
 	cl_assert_equal_i(refs_len_before, refs_len_after);
+
+	git_remote_free(remote);
+}
+
+void test_online_fetch__remote_symrefs(void)
+{
+	const git_remote_head **refs;
+	size_t refs_len;
+	git_remote *remote;
+
+	cl_git_pass(git_remote_create(&remote, _repo, "test",
+				"http://github.com/libgit2/TestGitRepository.git"));
+	cl_git_pass(git_remote_connect(remote, GIT_DIRECTION_FETCH));
+	git_remote_disconnect(remote);
+	cl_git_pass(git_remote_ls(&refs, &refs_len, remote));
+
+	cl_assert_equal_s("HEAD", refs[0]->name);
+	cl_assert_equal_s("refs/heads/master", refs[0]->symref_target);
 
 	git_remote_free(remote);
 }

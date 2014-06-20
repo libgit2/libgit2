@@ -60,19 +60,24 @@ int git_reset_default(
 	for (i = 0, max_i = git_diff_num_deltas(diff); i < max_i; ++i) {
 		const git_diff_delta *delta = git_diff_get_delta(diff, i);
 
-		if ((error = git_index_conflict_remove(index, delta->old_file.path)) < 0)
-			goto cleanup;
-
 		assert(delta->status == GIT_DELTA_ADDED ||
 			delta->status == GIT_DELTA_MODIFIED ||
 			delta->status == GIT_DELTA_DELETED);
+
+		error = git_index_conflict_remove(index, delta->old_file.path);
+		if (error < 0) {
+			if (delta->status == GIT_DELTA_ADDED && error == GIT_ENOTFOUND)
+				giterr_clear();
+			else
+				goto cleanup;
+		}
 
 		if (delta->status == GIT_DELTA_DELETED) {
 			if ((error = git_index_remove(index, delta->old_file.path, 0)) < 0)
 				goto cleanup;
 		} else {
 			entry.mode = delta->new_file.mode;
-			git_oid_cpy(&entry.oid, &delta->new_file.oid);
+			git_oid_cpy(&entry.id, &delta->new_file.id);
 			entry.path = (char *)delta->new_file.path;
 
 			if ((error = git_index_add(index, &entry)) < 0)
@@ -94,13 +99,16 @@ cleanup:
 int git_reset(
 	git_repository *repo,
 	git_object *target,
-	git_reset_t reset_type)
+	git_reset_t reset_type,
+	git_signature *signature,
+	const char *log_message)
 {
 	git_object *commit = NULL;
 	git_index *index = NULL;
 	git_tree *tree = NULL;
 	int error = 0;
-	git_checkout_opts opts = GIT_CHECKOUT_OPTS_INIT;
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
+	git_buf log_message_buf = GIT_BUF_INIT;
 
 	assert(repo && target);
 
@@ -129,9 +137,14 @@ int git_reset(
 		goto cleanup;
 	}
 
+	if (log_message)
+		git_buf_sets(&log_message_buf, log_message);
+	else
+		git_buf_sets(&log_message_buf, "reset: moving");
+
 	/* move HEAD to the new target */
 	if ((error = git_reference__update_terminal(repo, GIT_HEAD_FILE,
-		git_object_id(commit))) < 0)
+		git_object_id(commit), signature, git_buf_cstr(&log_message_buf))) < 0)
 		goto cleanup;
 
 	if (reset_type == GIT_RESET_HARD) {
@@ -149,7 +162,7 @@ int git_reset(
 			(error = git_index_write(index)) < 0)
 			goto cleanup;
 
-		if ((error = git_repository_merge_cleanup(repo)) < 0) {
+		if ((error = git_repository_state_cleanup(repo)) < 0) {
 			giterr_set(GITERR_INDEX, "%s - failed to clean up merge data", ERROR_MSG);
 			goto cleanup;
 		}
@@ -159,6 +172,7 @@ cleanup:
 	git_object_free(commit);
 	git_index_free(index);
 	git_tree_free(tree);
+	git_buf_free(&log_message_buf);
 
 	return error;
 }

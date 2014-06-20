@@ -18,19 +18,43 @@ void test_submodule_status__cleanup(void)
 
 void test_submodule_status__unchanged(void)
 {
-	unsigned int status, expected;
-	git_submodule *sm;
-
-	cl_git_pass(git_submodule_lookup(&sm, g_repo, "sm_unchanged"));
-	cl_git_pass(git_submodule_status(&status, sm));
-	cl_assert(GIT_SUBMODULE_STATUS_IS_UNMODIFIED(status));
-
-	expected = GIT_SUBMODULE_STATUS_IN_HEAD |
+	unsigned int status = get_submodule_status(g_repo, "sm_unchanged");
+	unsigned int expected =
+		GIT_SUBMODULE_STATUS_IN_HEAD |
 		GIT_SUBMODULE_STATUS_IN_INDEX |
 		GIT_SUBMODULE_STATUS_IN_CONFIG |
 		GIT_SUBMODULE_STATUS_IN_WD;
 
-	cl_assert(status == expected);
+	cl_assert(GIT_SUBMODULE_STATUS_IS_UNMODIFIED(status));
+	cl_assert(expected == status);
+}
+
+static void rm_submodule(const char *name)
+{
+	git_buf path = GIT_BUF_INIT;
+	cl_git_pass(git_buf_joinpath(&path, git_repository_workdir(g_repo), name));
+	cl_git_pass(git_futils_rmdir_r(path.ptr, NULL, GIT_RMDIR_REMOVE_FILES));
+	git_buf_free(&path);
+}
+
+static void add_submodule_to_index(const char *name)
+{
+	git_submodule *sm;
+	cl_git_pass(git_submodule_lookup(&sm, g_repo, name));
+	cl_git_pass(git_submodule_add_to_index(sm, true));
+	git_submodule_free(sm);
+}
+
+static void rm_submodule_from_index(const char *name)
+{
+	git_index *index;
+	size_t pos;
+
+	cl_git_pass(git_repository_index(&index, g_repo));
+	cl_assert(!git_index_find(&pos, index, name));
+	cl_git_pass(git_index_remove(index, name, 0));
+	cl_git_pass(git_index_write(index));
+	git_index_free(index);
 }
 
 /* 4 values of GIT_SUBMODULE_IGNORE to check */
@@ -38,81 +62,49 @@ void test_submodule_status__unchanged(void)
 void test_submodule_status__ignore_none(void)
 {
 	unsigned int status;
-	git_submodule *sm;
-	git_buf path = GIT_BUF_INIT;
 
-	cl_git_pass(git_buf_joinpath(&path, git_repository_workdir(g_repo), "sm_unchanged"));
-	cl_git_pass(git_futils_rmdir_r(git_buf_cstr(&path), NULL, GIT_RMDIR_REMOVE_FILES));
+	rm_submodule("sm_unchanged");
 
-	cl_assert_equal_i(GIT_ENOTFOUND,
-		git_submodule_lookup(&sm, g_repo, "just_a_dir"));
-	cl_assert_equal_i(GIT_EEXISTS,
-		git_submodule_lookup(&sm, g_repo, "not-submodule"));
-	cl_assert_equal_i(GIT_EEXISTS,
-		git_submodule_lookup(&sm, g_repo, "not"));
+	refute_submodule_exists(g_repo, "just_a_dir", GIT_ENOTFOUND);
+	refute_submodule_exists(g_repo, "not-submodule", GIT_EEXISTS);
+	refute_submodule_exists(g_repo, "not", GIT_EEXISTS);
 
-	cl_git_pass(git_submodule_lookup(&sm, g_repo, "sm_changed_index"));
-	cl_git_pass(git_submodule_status(&status, sm));
+	status = get_submodule_status(g_repo, "sm_changed_index");
 	cl_assert((status & GIT_SUBMODULE_STATUS_WD_INDEX_MODIFIED) != 0);
 
-	cl_git_pass(git_submodule_lookup(&sm, g_repo, "sm_changed_head"));
-	cl_git_pass(git_submodule_status(&status, sm));
+	status = get_submodule_status(g_repo, "sm_changed_head");
 	cl_assert((status & GIT_SUBMODULE_STATUS_WD_MODIFIED) != 0);
 
-	cl_git_pass(git_submodule_lookup(&sm, g_repo, "sm_changed_file"));
-	cl_git_pass(git_submodule_status(&status, sm));
+	status = get_submodule_status(g_repo, "sm_changed_file");
 	cl_assert((status & GIT_SUBMODULE_STATUS_WD_WD_MODIFIED) != 0);
 
-	cl_git_pass(git_submodule_lookup(&sm, g_repo, "sm_changed_untracked_file"));
-	cl_git_pass(git_submodule_status(&status, sm));
+	status = get_submodule_status(g_repo, "sm_changed_untracked_file");
 	cl_assert((status & GIT_SUBMODULE_STATUS_WD_UNTRACKED) != 0);
 
-	cl_git_pass(git_submodule_lookup(&sm, g_repo, "sm_missing_commits"));
-	cl_git_pass(git_submodule_status(&status, sm));
+	status = get_submodule_status(g_repo, "sm_missing_commits");
 	cl_assert((status & GIT_SUBMODULE_STATUS_WD_MODIFIED) != 0);
 
-	cl_git_pass(git_submodule_lookup(&sm, g_repo, "sm_added_and_uncommited"));
-	cl_git_pass(git_submodule_status(&status, sm));
+	status = get_submodule_status(g_repo, "sm_added_and_uncommited");
 	cl_assert((status & GIT_SUBMODULE_STATUS_INDEX_ADDED) != 0);
 
 	/* removed sm_unchanged for deleted workdir */
-	cl_git_pass(git_submodule_lookup(&sm, g_repo, "sm_unchanged"));
-	cl_git_pass(git_submodule_status(&status, sm));
+	status = get_submodule_status(g_repo, "sm_unchanged");
 	cl_assert((status & GIT_SUBMODULE_STATUS_WD_DELETED) != 0);
 
 	/* now mkdir sm_unchanged to test uninitialized */
-	cl_git_pass(git_futils_mkdir(git_buf_cstr(&path), NULL, 0755, 0));
-	cl_git_pass(git_submodule_lookup(&sm, g_repo, "sm_unchanged"));
-	cl_git_pass(git_submodule_reload(sm));
-	cl_git_pass(git_submodule_status(&status, sm));
+	cl_git_pass(git_futils_mkdir("sm_unchanged", "submod2", 0755, 0));
+	status = get_submodule_status(g_repo, "sm_unchanged");
 	cl_assert((status & GIT_SUBMODULE_STATUS_WD_UNINITIALIZED) != 0);
 
 	/* update sm_changed_head in index */
-	cl_git_pass(git_submodule_lookup(&sm, g_repo, "sm_changed_head"));
-	cl_git_pass(git_submodule_add_to_index(sm, true));
-	/* reload is not needed because add_to_index updates the submodule data */
-	cl_git_pass(git_submodule_status(&status, sm));
+	add_submodule_to_index("sm_changed_head");
+	status = get_submodule_status(g_repo, "sm_changed_head");
 	cl_assert((status & GIT_SUBMODULE_STATUS_INDEX_MODIFIED) != 0);
 
 	/* remove sm_changed_head from index */
-	{
-		git_index *index;
-		size_t pos;
-
-		cl_git_pass(git_repository_index(&index, g_repo));
-		cl_assert(!git_index_find(&pos, index, "sm_changed_head"));
-		cl_git_pass(git_index_remove(index, "sm_changed_head", 0));
-		cl_git_pass(git_index_write(index));
-
-		git_index_free(index);
-	}
-
-	cl_git_pass(git_submodule_lookup(&sm, g_repo, "sm_changed_head"));
-	cl_git_pass(git_submodule_reload(sm));
-	cl_git_pass(git_submodule_status(&status, sm));
+	rm_submodule_from_index("sm_changed_head");
+	status = get_submodule_status(g_repo, "sm_changed_head");
 	cl_assert((status & GIT_SUBMODULE_STATUS_INDEX_DELETED) != 0);
-
-	git_buf_free(&path);
 }
 
 static int set_sm_ignore(git_submodule *sm, const char *name, void *payload)
@@ -126,191 +118,136 @@ static int set_sm_ignore(git_submodule *sm, const char *name, void *payload)
 void test_submodule_status__ignore_untracked(void)
 {
 	unsigned int status;
-	git_submodule *sm;
-	git_buf path = GIT_BUF_INIT;
 	git_submodule_ignore_t ign = GIT_SUBMODULE_IGNORE_UNTRACKED;
 
-	cl_git_pass(git_buf_joinpath(&path, git_repository_workdir(g_repo), "sm_unchanged"));
-	cl_git_pass(git_futils_rmdir_r(git_buf_cstr(&path), NULL, GIT_RMDIR_REMOVE_FILES));
-
+	rm_submodule("sm_unchanged");
 	cl_git_pass(git_submodule_foreach(g_repo, set_sm_ignore, &ign));
 
-	cl_git_fail(git_submodule_lookup(&sm, g_repo, "not-submodule"));
+	refute_submodule_exists(g_repo, "just_a_dir", GIT_ENOTFOUND);
+	refute_submodule_exists(g_repo, "not-submodule", GIT_EEXISTS);
+	refute_submodule_exists(g_repo, "not", GIT_EEXISTS);
 
-	cl_git_pass(git_submodule_lookup(&sm, g_repo, "sm_changed_index"));
-	cl_git_pass(git_submodule_status(&status, sm));
+	status = get_submodule_status(g_repo, "sm_changed_index");
 	cl_assert((status & GIT_SUBMODULE_STATUS_WD_INDEX_MODIFIED) != 0);
 
-	cl_git_pass(git_submodule_lookup(&sm, g_repo, "sm_changed_head"));
-	cl_git_pass(git_submodule_status(&status, sm));
+	status = get_submodule_status(g_repo, "sm_changed_head");
 	cl_assert((status & GIT_SUBMODULE_STATUS_WD_MODIFIED) != 0);
 
-	cl_git_pass(git_submodule_lookup(&sm, g_repo, "sm_changed_file"));
-	cl_git_pass(git_submodule_status(&status, sm));
+	status = get_submodule_status(g_repo, "sm_changed_file");
 	cl_assert((status & GIT_SUBMODULE_STATUS_WD_WD_MODIFIED) != 0);
 
-	cl_git_pass(git_submodule_lookup(&sm, g_repo, "sm_changed_untracked_file"));
-	cl_git_pass(git_submodule_status(&status, sm));
+	status = get_submodule_status(g_repo, "sm_changed_untracked_file");
 	cl_assert(GIT_SUBMODULE_STATUS_IS_UNMODIFIED(status));
 
-	cl_git_pass(git_submodule_lookup(&sm, g_repo, "sm_missing_commits"));
-	cl_git_pass(git_submodule_status(&status, sm));
+	status = get_submodule_status(g_repo, "sm_missing_commits");
 	cl_assert((status & GIT_SUBMODULE_STATUS_WD_MODIFIED) != 0);
 
-	cl_git_pass(git_submodule_lookup(&sm, g_repo, "sm_added_and_uncommited"));
-	cl_git_pass(git_submodule_status(&status, sm));
+	status = get_submodule_status(g_repo, "sm_added_and_uncommited");
 	cl_assert((status & GIT_SUBMODULE_STATUS_INDEX_ADDED) != 0);
 
 	/* removed sm_unchanged for deleted workdir */
-	cl_git_pass(git_submodule_lookup(&sm, g_repo, "sm_unchanged"));
-	cl_git_pass(git_submodule_status(&status, sm));
+	status = get_submodule_status(g_repo, "sm_unchanged");
 	cl_assert((status & GIT_SUBMODULE_STATUS_WD_DELETED) != 0);
 
 	/* now mkdir sm_unchanged to test uninitialized */
-	cl_git_pass(git_futils_mkdir(git_buf_cstr(&path), NULL, 0755, 0));
-	cl_git_pass(git_submodule_lookup(&sm, g_repo, "sm_unchanged"));
-	cl_git_pass(git_submodule_reload(sm));
-	cl_git_pass(git_submodule_status(&status, sm));
+	cl_git_pass(git_futils_mkdir("sm_unchanged", "submod2", 0755, 0));
+	status = get_submodule_status(g_repo, "sm_unchanged");
 	cl_assert((status & GIT_SUBMODULE_STATUS_WD_UNINITIALIZED) != 0);
 
 	/* update sm_changed_head in index */
-	cl_git_pass(git_submodule_lookup(&sm, g_repo, "sm_changed_head"));
-	cl_git_pass(git_submodule_add_to_index(sm, true));
-	/* reload is not needed because add_to_index updates the submodule data */
-	cl_git_pass(git_submodule_status(&status, sm));
+	add_submodule_to_index("sm_changed_head");
+	status = get_submodule_status(g_repo, "sm_changed_head");
 	cl_assert((status & GIT_SUBMODULE_STATUS_INDEX_MODIFIED) != 0);
-
-	git_buf_free(&path);
 }
 
 void test_submodule_status__ignore_dirty(void)
 {
 	unsigned int status;
-	git_submodule *sm;
-	git_buf path = GIT_BUF_INIT;
 	git_submodule_ignore_t ign = GIT_SUBMODULE_IGNORE_DIRTY;
 
-	cl_git_pass(git_buf_joinpath(&path, git_repository_workdir(g_repo), "sm_unchanged"));
-	cl_git_pass(git_futils_rmdir_r(git_buf_cstr(&path), NULL, GIT_RMDIR_REMOVE_FILES));
-
+	rm_submodule("sm_unchanged");
 	cl_git_pass(git_submodule_foreach(g_repo, set_sm_ignore, &ign));
 
-	cl_assert_equal_i(GIT_ENOTFOUND,
-		git_submodule_lookup(&sm, g_repo, "just_a_dir"));
-	cl_assert_equal_i(GIT_EEXISTS,
-		git_submodule_lookup(&sm, g_repo, "not-submodule"));
-	cl_assert_equal_i(GIT_EEXISTS,
-		git_submodule_lookup(&sm, g_repo, "not"));
+	refute_submodule_exists(g_repo, "just_a_dir", GIT_ENOTFOUND);
+	refute_submodule_exists(g_repo, "not-submodule", GIT_EEXISTS);
+	refute_submodule_exists(g_repo, "not", GIT_EEXISTS);
 
-	cl_git_pass(git_submodule_lookup(&sm, g_repo, "sm_changed_index"));
-	cl_git_pass(git_submodule_status(&status, sm));
+	status = get_submodule_status(g_repo, "sm_changed_index");
 	cl_assert(GIT_SUBMODULE_STATUS_IS_UNMODIFIED(status));
 
-	cl_git_pass(git_submodule_lookup(&sm, g_repo, "sm_changed_head"));
-	cl_git_pass(git_submodule_status(&status, sm));
+	status = get_submodule_status(g_repo, "sm_changed_head");
 	cl_assert((status & GIT_SUBMODULE_STATUS_WD_MODIFIED) != 0);
 
-	cl_git_pass(git_submodule_lookup(&sm, g_repo, "sm_changed_file"));
-	cl_git_pass(git_submodule_status(&status, sm));
+	status = get_submodule_status(g_repo, "sm_changed_file");
 	cl_assert(GIT_SUBMODULE_STATUS_IS_UNMODIFIED(status));
 
-	cl_git_pass(git_submodule_lookup(&sm, g_repo, "sm_changed_untracked_file"));
-	cl_git_pass(git_submodule_status(&status, sm));
+	status = get_submodule_status(g_repo, "sm_changed_untracked_file");
 	cl_assert(GIT_SUBMODULE_STATUS_IS_UNMODIFIED(status));
 
-	cl_git_pass(git_submodule_lookup(&sm, g_repo, "sm_missing_commits"));
-	cl_git_pass(git_submodule_status(&status, sm));
+	status = get_submodule_status(g_repo, "sm_missing_commits");
 	cl_assert((status & GIT_SUBMODULE_STATUS_WD_MODIFIED) != 0);
 
-	cl_git_pass(git_submodule_lookup(&sm, g_repo, "sm_added_and_uncommited"));
-	cl_git_pass(git_submodule_status(&status, sm));
+	status = get_submodule_status(g_repo, "sm_added_and_uncommited");
 	cl_assert((status & GIT_SUBMODULE_STATUS_INDEX_ADDED) != 0);
 
 	/* removed sm_unchanged for deleted workdir */
-	cl_git_pass(git_submodule_lookup(&sm, g_repo, "sm_unchanged"));
-	cl_git_pass(git_submodule_status(&status, sm));
+	status = get_submodule_status(g_repo, "sm_unchanged");
 	cl_assert((status & GIT_SUBMODULE_STATUS_WD_DELETED) != 0);
 
 	/* now mkdir sm_unchanged to test uninitialized */
-	cl_git_pass(git_futils_mkdir(git_buf_cstr(&path), NULL, 0755, 0));
-	cl_git_pass(git_submodule_lookup(&sm, g_repo, "sm_unchanged"));
-	cl_git_pass(git_submodule_reload(sm));
-	cl_git_pass(git_submodule_status(&status, sm));
+	cl_git_pass(git_futils_mkdir("sm_unchanged", "submod2", 0755, 0));
+	status = get_submodule_status(g_repo, "sm_unchanged");
 	cl_assert((status & GIT_SUBMODULE_STATUS_WD_UNINITIALIZED) != 0);
 
 	/* update sm_changed_head in index */
-	cl_git_pass(git_submodule_lookup(&sm, g_repo, "sm_changed_head"));
-	cl_git_pass(git_submodule_add_to_index(sm, true));
-	/* reload is not needed because add_to_index updates the submodule data */
-	cl_git_pass(git_submodule_status(&status, sm));
+	add_submodule_to_index("sm_changed_head");
+	status = get_submodule_status(g_repo, "sm_changed_head");
 	cl_assert((status & GIT_SUBMODULE_STATUS_INDEX_MODIFIED) != 0);
-
-	git_buf_free(&path);
 }
 
 void test_submodule_status__ignore_all(void)
 {
 	unsigned int status;
-	git_submodule *sm;
-	git_buf path = GIT_BUF_INIT;
 	git_submodule_ignore_t ign = GIT_SUBMODULE_IGNORE_ALL;
 
-	cl_git_pass(git_buf_joinpath(&path, git_repository_workdir(g_repo), "sm_unchanged"));
-	cl_git_pass(git_futils_rmdir_r(git_buf_cstr(&path), NULL, GIT_RMDIR_REMOVE_FILES));
-
+	rm_submodule("sm_unchanged");
 	cl_git_pass(git_submodule_foreach(g_repo, set_sm_ignore, &ign));
 
-	cl_assert_equal_i(GIT_ENOTFOUND,
-		git_submodule_lookup(&sm, g_repo, "just_a_dir"));
-	cl_assert_equal_i(GIT_EEXISTS,
-		git_submodule_lookup(&sm, g_repo, "not-submodule"));
-	cl_assert_equal_i(GIT_EEXISTS,
-		git_submodule_lookup(&sm, g_repo, "not"));
+	refute_submodule_exists(g_repo, "just_a_dir", GIT_ENOTFOUND);
+	refute_submodule_exists(g_repo, "not-submodule", GIT_EEXISTS);
+	refute_submodule_exists(g_repo, "not", GIT_EEXISTS);
 
-	cl_git_pass(git_submodule_lookup(&sm, g_repo, "sm_changed_index"));
-	cl_git_pass(git_submodule_status(&status, sm));
+	status = get_submodule_status(g_repo, "sm_changed_index");
 	cl_assert(GIT_SUBMODULE_STATUS_IS_UNMODIFIED(status));
 
-	cl_git_pass(git_submodule_lookup(&sm, g_repo, "sm_changed_head"));
-	cl_git_pass(git_submodule_status(&status, sm));
+	status = get_submodule_status(g_repo, "sm_changed_head");
 	cl_assert(GIT_SUBMODULE_STATUS_IS_UNMODIFIED(status));
 
-	cl_git_pass(git_submodule_lookup(&sm, g_repo, "sm_changed_file"));
-	cl_git_pass(git_submodule_status(&status, sm));
+	status = get_submodule_status(g_repo, "sm_changed_file");
 	cl_assert(GIT_SUBMODULE_STATUS_IS_UNMODIFIED(status));
 
-	cl_git_pass(git_submodule_lookup(&sm, g_repo, "sm_changed_untracked_file"));
-	cl_git_pass(git_submodule_status(&status, sm));
+	status = get_submodule_status(g_repo, "sm_changed_untracked_file");
 	cl_assert(GIT_SUBMODULE_STATUS_IS_UNMODIFIED(status));
 
-	cl_git_pass(git_submodule_lookup(&sm, g_repo, "sm_missing_commits"));
-	cl_git_pass(git_submodule_status(&status, sm));
+	status = get_submodule_status(g_repo, "sm_missing_commits");
 	cl_assert(GIT_SUBMODULE_STATUS_IS_UNMODIFIED(status));
 
-	cl_git_pass(git_submodule_lookup(&sm, g_repo, "sm_added_and_uncommited"));
-	cl_git_pass(git_submodule_status(&status, sm));
+	status = get_submodule_status(g_repo, "sm_added_and_uncommited");
 	cl_assert(GIT_SUBMODULE_STATUS_IS_UNMODIFIED(status));
 
 	/* removed sm_unchanged for deleted workdir */
-	cl_git_pass(git_submodule_lookup(&sm, g_repo, "sm_unchanged"));
-	cl_git_pass(git_submodule_status(&status, sm));
+	status = get_submodule_status(g_repo, "sm_unchanged");
 	cl_assert(GIT_SUBMODULE_STATUS_IS_UNMODIFIED(status));
 
 	/* now mkdir sm_unchanged to test uninitialized */
-	cl_git_pass(git_futils_mkdir(git_buf_cstr(&path), NULL, 0755, 0));
-	cl_git_pass(git_submodule_lookup(&sm, g_repo, "sm_unchanged"));
-	cl_git_pass(git_submodule_reload(sm));
-	cl_git_pass(git_submodule_status(&status, sm));
+	cl_git_pass(git_futils_mkdir("sm_unchanged", "submod2", 0755, 0));
+	status = get_submodule_status(g_repo, "sm_unchanged");
 	cl_assert(GIT_SUBMODULE_STATUS_IS_UNMODIFIED(status));
 
 	/* update sm_changed_head in index */
-	cl_git_pass(git_submodule_lookup(&sm, g_repo, "sm_changed_head"));
-	cl_git_pass(git_submodule_add_to_index(sm, true));
-	/* reload is not needed because add_to_index updates the submodule data */
-	cl_git_pass(git_submodule_status(&status, sm));
+	add_submodule_to_index("sm_changed_head");
+	status = get_submodule_status(g_repo, "sm_changed_head");
 	cl_assert(GIT_SUBMODULE_STATUS_IS_UNMODIFIED(status));
-
-	git_buf_free(&path);
 }
 
 typedef struct {
@@ -324,7 +261,7 @@ static int confirm_submodule_status(
 {
 	submodule_expectations *exp = payload;
 
-	while (git__suffixcmp(exp->paths[exp->counter], "/") == 0)
+	while (exp->statuses[exp->counter] < 0)
 		exp->counter++;
 
 	cl_assert_equal_i(exp->statuses[exp->counter], (int)status_flags);
@@ -345,8 +282,10 @@ void test_submodule_status__iterator(void)
 		"just_a_dir/",
 		"just_a_dir/contents",
 		"just_a_file",
-		"not",
-		"not-submodule",
+		"not-submodule/",
+		"not-submodule/README.txt",
+		"not/",
+		"not/README.txt",
 		"README.txt",
 		"sm_added_and_uncommited",
 		"sm_changed_file",
@@ -359,11 +298,13 @@ void test_submodule_status__iterator(void)
 	};
 	static int expected_flags[] = {
 		GIT_STATUS_INDEX_MODIFIED | GIT_STATUS_WT_MODIFIED, /* ".gitmodules" */
-		0,					    /* "just_a_dir/" will be skipped */
+		-1,					    /* "just_a_dir/" will be skipped */
 		GIT_STATUS_CURRENT,     /* "just_a_dir/contents" */
 		GIT_STATUS_CURRENT,	    /* "just_a_file" */
-		GIT_STATUS_IGNORED,	    /* "not" (contains .git) */
-		GIT_STATUS_IGNORED,     /* "not-submodule" (contains .git) */
+		GIT_STATUS_WT_NEW,      /* "not-submodule/" untracked item */
+		-1,                     /* "not-submodule/README.txt" */
+		GIT_STATUS_WT_NEW,      /* "not/" untracked item */
+		-1,                     /* "not/README.txt" */
 		GIT_STATUS_CURRENT,     /* "README.txt */
 		GIT_STATUS_INDEX_NEW,   /* "sm_added_and_uncommited" */
 		GIT_STATUS_WT_MODIFIED, /* "sm_changed_file" */
@@ -397,29 +338,23 @@ void test_submodule_status__iterator(void)
 
 void test_submodule_status__untracked_dirs_containing_ignored_files(void)
 {
-	git_buf path = GIT_BUF_INIT;
 	unsigned int status, expected;
-	git_submodule *sm;
 
-	cl_git_pass(git_buf_joinpath(&path, git_repository_path(g_repo), "modules/sm_unchanged/info/exclude"));
-	cl_git_append2file(git_buf_cstr(&path), "\n*.ignored\n");
+	cl_git_append2file(
+		"submod2/.git/modules/sm_unchanged/info/exclude", "\n*.ignored\n");
 
-	cl_git_pass(git_buf_joinpath(&path, git_repository_workdir(g_repo), "sm_unchanged/directory"));
-	cl_git_pass(git_futils_mkdir(git_buf_cstr(&path), NULL, 0755, 0));
-	cl_git_pass(git_buf_joinpath(&path, git_buf_cstr(&path), "i_am.ignored"));
-	cl_git_mkfile(git_buf_cstr(&path), "ignored this file, please\n");
+	cl_git_pass(
+		git_futils_mkdir("sm_unchanged/directory", "submod2", 0755, 0));
+	cl_git_mkfile(
+		"submod2/sm_unchanged/directory/i_am.ignored",
+		"ignore this file, please\n");
 
-	cl_git_pass(git_submodule_lookup(&sm, g_repo, "sm_unchanged"));
-	cl_git_pass(git_submodule_status(&status, sm));
-
+	status = get_submodule_status(g_repo, "sm_unchanged");
 	cl_assert(GIT_SUBMODULE_STATUS_IS_UNMODIFIED(status));
 
 	expected = GIT_SUBMODULE_STATUS_IN_HEAD |
 		GIT_SUBMODULE_STATUS_IN_INDEX |
 		GIT_SUBMODULE_STATUS_IN_CONFIG |
 		GIT_SUBMODULE_STATUS_IN_WD;
-
 	cl_assert(status == expected);
-
-	git_buf_free(&path);
 }

@@ -21,27 +21,22 @@ static int retrieve_branch_reference(
 	const char *branch_name,
 	int is_remote)
 {
-	git_reference *branch;
-	int error = -1;
+	git_reference *branch = NULL;
+	int error = 0;
 	char *prefix;
 	git_buf ref_name = GIT_BUF_INIT;
 
-	*branch_reference_out = NULL;
-
 	prefix = is_remote ? GIT_REFS_REMOTES_DIR : GIT_REFS_HEADS_DIR;
 
-	if (git_buf_joinpath(&ref_name, prefix, branch_name) < 0)
-		goto cleanup;
+	if ((error = git_buf_joinpath(&ref_name, prefix, branch_name)) < 0)
+		/* OOM */;
+	else if ((error = git_reference_lookup(&branch, repo, ref_name.ptr)) < 0)
+		giterr_set(
+			GITERR_REFERENCE, "Cannot locate %s branch '%s'",
+			is_remote ? "remote-tracking" : "local", branch_name);
 
-	if ((error = git_reference_lookup(&branch, repo, ref_name.ptr)) < 0) {
-		giterr_set(GITERR_REFERENCE,
-			"Cannot locate %s branch '%s'.", is_remote ? "remote-tracking" : "local", branch_name);
-		goto cleanup;
-	}
+	*branch_reference_out = branch; /* will be NULL on error */
 
-	*branch_reference_out = branch;
-
-cleanup:
 	git_buf_free(&ref_name);
 	return error;
 }
@@ -59,26 +54,53 @@ int git_branch_create(
 	git_repository *repository,
 	const char *branch_name,
 	const git_commit *commit,
-	int force)
+	int force,
+	const git_signature *signature,
+	const char *log_message)
 {
+	int is_head = 0;
 	git_reference *branch = NULL;
-	git_buf canonical_branch_name = GIT_BUF_INIT;
+	git_buf canonical_branch_name = GIT_BUF_INIT,
+			  log_message_buf = GIT_BUF_INIT;
 	int error = -1;
 
 	assert(branch_name && commit && ref_out);
 	assert(git_object_owner((const git_object *)commit) == repository);
 
+	if (force && git_branch_lookup(&branch, repository, branch_name, GIT_BRANCH_LOCAL) == 0) {
+		error = git_branch_is_head(branch);
+		git_reference_free(branch);
+		branch = NULL;
+
+		if (error < 0)
+			goto cleanup;
+
+		is_head = error;
+	}
+
+	if (is_head && force) {
+		giterr_set(GITERR_REFERENCE, "Cannot force update branch '%s' as it is "
+			"the current HEAD of the repository.", branch_name);
+		error = -1;
+		goto cleanup;
+	}
+	
 	if (git_buf_joinpath(&canonical_branch_name, GIT_REFS_HEADS_DIR, branch_name) < 0)
 		goto cleanup;
 
+	if (git_buf_sets(&log_message_buf, log_message ? log_message : "Branch: created") < 0)
+		goto cleanup;
+
 	error = git_reference_create(&branch, repository,
-		git_buf_cstr(&canonical_branch_name), git_commit_id(commit), force);
+		git_buf_cstr(&canonical_branch_name), git_commit_id(commit), force, signature,
+		git_buf_cstr(&log_message_buf));
 
 	if (!error)
 		*ref_out = branch;
 
 cleanup:
 	git_buf_free(&canonical_branch_name);
+	git_buf_free(&log_message_buf);
 	return error;
 }
 
@@ -90,31 +112,33 @@ int git_branch_delete(git_reference *branch)
 
 	assert(branch);
 
-	if (!git_reference_is_branch(branch) &&
-		!git_reference_is_remote(branch)) {
-		giterr_set(GITERR_INVALID, "Reference '%s' is not a valid branch.", git_reference_name(branch));
-		return -1;
+	if (!git_reference_is_branch(branch) && !git_reference_is_remote(branch)) {
+		giterr_set(GITERR_INVALID, "Reference '%s' is not a valid branch.",
+			git_reference_name(branch));
+		return GIT_ENOTFOUND;
 	}
 
 	if ((is_head = git_branch_is_head(branch)) < 0)
 		return is_head;
 
 	if (is_head) {
-		giterr_set(GITERR_REFERENCE,
-				"Cannot delete branch '%s' as it is the current HEAD of the repository.", git_reference_name(branch));
+		giterr_set(GITERR_REFERENCE, "Cannot delete branch '%s' as it is "
+			"the current HEAD of the repository.", git_reference_name(branch));
 		return -1;
 	}
 
-	if (git_buf_printf(&config_section, "branch.%s", git_reference_name(branch) + strlen(GIT_REFS_HEADS_DIR)) < 0)
+	if (git_buf_join(&config_section, '.', "branch",
+			git_reference_name(branch) + strlen(GIT_REFS_HEADS_DIR)) < 0)
 		goto on_error;
 
 	if (git_config_rename_section(
-		git_reference_owner(branch), 
-		git_buf_cstr(&config_section),
-		NULL) < 0)
-			goto on_error;
+		git_reference_owner(branch), git_buf_cstr(&config_section), NULL) < 0)
+		goto on_error;
 
 	if (git_reference_delete(branch) < 0)
+		goto on_error;
+
+	if (git_reflog_delete(git_reference_owner(branch), git_reference_name(branch)) < 0)
 		goto on_error;
 
 	error = 0;
@@ -182,6 +206,9 @@ void git_branch_iterator_free(git_branch_iterator *_iter)
 {
 	branch_iter *iter = (branch_iter *) _iter;
 
+	if (iter == NULL)
+		return;
+
 	git_reference_iterator_free(iter->iter);
 	git__free(iter);
 }
@@ -190,11 +217,14 @@ int git_branch_move(
 	git_reference **out,
 	git_reference *branch,
 	const char *new_branch_name,
-	int force)
+	int force,
+	const git_signature *signature,
+	const char *log_message)
 {
 	git_buf new_reference_name = GIT_BUF_INIT,
-		old_config_section = GIT_BUF_INIT,
-		new_config_section = GIT_BUF_INIT;
+	        old_config_section = GIT_BUF_INIT,
+	        new_config_section = GIT_BUF_INIT,
+	        log_message_buf = GIT_BUF_INIT;
 	int error;
 
 	assert(branch && new_branch_name);
@@ -202,26 +232,40 @@ int git_branch_move(
 	if (!git_reference_is_branch(branch))
 		return not_a_local_branch(git_reference_name(branch));
 
-	error = git_buf_joinpath(&new_reference_name, GIT_REFS_HEADS_DIR, new_branch_name);
+	if ((error = git_buf_joinpath(&new_reference_name, GIT_REFS_HEADS_DIR, new_branch_name)) < 0)
+		goto done;
+
+	if (log_message) {
+		if ((error = git_buf_sets(&log_message_buf, log_message)) < 0)
+			goto done;
+	} else {
+		if ((error = git_buf_printf(&log_message_buf, "Branch: renamed %s to %s",
+						git_reference_name(branch), git_buf_cstr(&new_reference_name))) < 0)
+			goto done;
+	}
+
+	/* first update ref then config so failure won't trash config */
+
+	error = git_reference_rename(
+		out, branch, git_buf_cstr(&new_reference_name), force,
+		signature, git_buf_cstr(&log_message_buf));
 	if (error < 0)
 		goto done;
 
-	git_buf_printf(&old_config_section,
-		"branch.%s", git_reference_name(branch) + strlen(GIT_REFS_HEADS_DIR));
+	git_buf_join(&old_config_section, '.', "branch",
+		git_reference_name(branch) + strlen(GIT_REFS_HEADS_DIR));
+	git_buf_join(&new_config_section, '.', "branch", new_branch_name);
 
-	git_buf_printf(&new_config_section, "branch.%s", new_branch_name);
-
-	if ((error = git_config_rename_section(git_reference_owner(branch),
+	error = git_config_rename_section(
+		git_reference_owner(branch),
 		git_buf_cstr(&old_config_section),
-		git_buf_cstr(&new_config_section))) < 0)
-		goto done;
-
-	error = git_reference_rename(out, branch, git_buf_cstr(&new_reference_name), force);
+		git_buf_cstr(&new_config_section));
 
 done:
 	git_buf_free(&new_reference_name);
 	git_buf_free(&old_config_section);
 	git_buf_free(&new_config_section);
+	git_buf_free(&log_message_buf);
 
 	return error;
 }
@@ -237,7 +281,9 @@ int git_branch_lookup(
 	return retrieve_branch_reference(ref_out, repo, branch_name, branch_type == GIT_BRANCH_REMOTE);
 }
 
-int git_branch_name(const char **out, git_reference *ref)
+int git_branch_name(
+	const char **out,
+	const git_reference *ref)
 {
 	const char *branch_name;
 
@@ -260,16 +306,12 @@ int git_branch_name(const char **out, git_reference *ref)
 
 static int retrieve_upstream_configuration(
 	const char **out,
-	git_repository *repo,
+	const git_config *config,
 	const char *canonical_branch_name,
 	const char *format)
 {
-	git_config *config;
 	git_buf buf = GIT_BUF_INIT;
 	int error;
-
-	if (git_repository_config__weakptr(&config, repo) < 0)
-		return -1;
 
 	if (git_buf_printf(&buf, format,
 		canonical_branch_name + strlen(GIT_REFS_HEADS_DIR)) < 0)
@@ -280,33 +322,39 @@ static int retrieve_upstream_configuration(
 	return error;
 }
 
-int git_branch_upstream__name(
-	git_buf *tracking_name,
+int git_branch_upstream_name(
+	git_buf *out,
 	git_repository *repo,
-	const char *canonical_branch_name)
+	const char *refname)
 {
 	const char *remote_name, *merge_name;
 	git_buf buf = GIT_BUF_INIT;
 	int error = -1;
 	git_remote *remote = NULL;
 	const git_refspec *refspec;
+	git_config *config;
 
-	assert(tracking_name && canonical_branch_name);
+	assert(out && refname);
 
-	if (!git_reference__is_branch(canonical_branch_name))
-		return not_a_local_branch(canonical_branch_name);
+	git_buf_sanitize(out);
+
+	if (!git_reference__is_branch(refname))
+		return not_a_local_branch(refname);
+
+	if ((error = git_repository_config_snapshot(&config, repo)) < 0)
+		return error;
 
 	if ((error = retrieve_upstream_configuration(
-		&remote_name, repo, canonical_branch_name, "branch.%s.remote")) < 0)
+		&remote_name, config, refname, "branch.%s.remote")) < 0)
 			goto cleanup;
 
 	if ((error = retrieve_upstream_configuration(
-		&merge_name, repo, canonical_branch_name, "branch.%s.merge")) < 0)
+		&merge_name, config, refname, "branch.%s.merge")) < 0)
 			goto cleanup;
 
 	if (!*remote_name || !*merge_name) {
 		giterr_set(GITERR_REFERENCE,
-			"branch '%s' does not have an upstream", canonical_branch_name);
+			"branch '%s' does not have an upstream", refname);
 		error = GIT_ENOTFOUND;
 		goto cleanup;
 	}
@@ -321,21 +369,22 @@ int git_branch_upstream__name(
 			goto cleanup;
 		}
 
-		if (git_refspec_transform_r(&buf, refspec, merge_name) < 0)
+		if (git_refspec_transform(&buf, refspec, merge_name) < 0)
 			goto cleanup;
 	} else
 		if (git_buf_sets(&buf, merge_name) < 0)
 			goto cleanup;
 
-	error = git_buf_set(tracking_name, git_buf_cstr(&buf), git_buf_len(&buf));
+	error = git_buf_set(out, git_buf_cstr(&buf), git_buf_len(&buf));
 
 cleanup:
+	git_config_free(config);
 	git_remote_free(remote);
 	git_buf_free(&buf);
 	return error;
 }
 
-static int remote_name(git_buf *buf, git_repository *repo, const char *canonical_branch_name)
+int git_branch_remote_name(git_buf *buf, git_repository *repo, const char *refname)
 {
 	git_strarray remote_list = {0};
 	size_t i;
@@ -344,12 +393,14 @@ static int remote_name(git_buf *buf, git_repository *repo, const char *canonical
 	int error = 0;
 	char *remote_name = NULL;
 
-	assert(buf && repo && canonical_branch_name);
+	assert(buf && repo && refname);
+
+	git_buf_sanitize(buf);
 
 	/* Verify that this is a remote branch */
-	if (!git_reference__is_remote(canonical_branch_name)) {
+	if (!git_reference__is_remote(refname)) {
 		giterr_set(GITERR_INVALID, "Reference '%s' is not a remote branch.",
-			canonical_branch_name);
+			refname);
 		error = GIT_ERROR;
 		goto cleanup;
 	}
@@ -363,7 +414,7 @@ static int remote_name(git_buf *buf, git_repository *repo, const char *canonical
 		if ((error = git_remote_load(&remote, repo, remote_list.strings[i])) < 0)
 			continue;
 
-		fetchspec = git_remote__matching_dst_refspec(remote, canonical_branch_name);
+		fetchspec = git_remote__matching_dst_refspec(remote, refname);
 		if (fetchspec) {
 			/* If we have not already set out yet, then set
 			 * it to the matching remote name. Otherwise
@@ -375,7 +426,7 @@ static int remote_name(git_buf *buf, git_repository *repo, const char *canonical
 				git_remote_free(remote);
 
 				giterr_set(GITERR_REFERENCE,
-					"Reference '%s' is ambiguous", canonical_branch_name);
+					"Reference '%s' is ambiguous", refname);
 				error = GIT_EAMBIGUOUS;
 				goto cleanup;
 			}
@@ -389,76 +440,26 @@ static int remote_name(git_buf *buf, git_repository *repo, const char *canonical
 		error = git_buf_puts(buf, remote_name);
 	} else {
 		giterr_set(GITERR_REFERENCE,
-			"Could not determine remote for '%s'", canonical_branch_name);
+			"Could not determine remote for '%s'", refname);
 		error = GIT_ENOTFOUND;
 	}
 
 cleanup:
+	if (error < 0)
+		git_buf_free(buf);
+
 	git_strarray_free(&remote_list);
 	return error;
 }
 
-int git_branch_remote_name(char *buffer, size_t buffer_len, git_repository *repo, const char *refname)
-{
-	int ret;
-	git_buf buf = GIT_BUF_INIT;
-
-	if ((ret = remote_name(&buf, repo, refname)) < 0)
-		return ret;
-
-	if (buffer)
-		git_buf_copy_cstr(buffer, buffer_len, &buf);
-
-	ret = (int)git_buf_len(&buf) + 1;
-	git_buf_free(&buf);
-
-	return ret;
-}
-
-int git_branch_upstream_name(
-	char *tracking_branch_name_out,
-	size_t buffer_size,
-	git_repository *repo,
-	const char *canonical_branch_name)
-{
-	git_buf buf = GIT_BUF_INIT;
-	int error;
-
-	assert(canonical_branch_name);
-
-	if (tracking_branch_name_out && buffer_size)
-		*tracking_branch_name_out = '\0';
-
-	if ((error = git_branch_upstream__name(
-		&buf, repo, canonical_branch_name)) < 0)
-			goto cleanup;
-
-	if (tracking_branch_name_out && buf.size + 1 > buffer_size) { /* +1 for NUL byte */
-		giterr_set(
-			GITERR_INVALID,
-			"Buffer too short to hold the tracked reference name.");
-		error = -1;
-		goto cleanup;
-	}
-
-	if (tracking_branch_name_out)
-		git_buf_copy_cstr(tracking_branch_name_out, buffer_size, &buf);
-
-	error = (int)buf.size + 1;
-
-cleanup:
-	git_buf_free(&buf);
-	return (int)error;
-}
-
 int git_branch_upstream(
-		git_reference **tracking_out,
-		git_reference *branch)
+	git_reference **tracking_out,
+	const git_reference *branch)
 {
 	int error;
 	git_buf tracking_name = GIT_BUF_INIT;
 
-	if ((error = git_branch_upstream__name(&tracking_name,
+	if ((error = git_branch_upstream_name(&tracking_name,
 		git_reference_owner(branch), git_reference_name(branch))) < 0)
 			return error;
 
@@ -541,7 +542,7 @@ int git_branch_set_upstream(git_reference *branch, const char *upstream_name)
 	if (local)
 		git_buf_puts(&value, ".");
 	else
-		remote_name(&value, repo, git_reference_name(upstream));
+		git_branch_remote_name(&value, repo, git_reference_name(upstream));
 
 	if (git_buf_printf(&key, "branch.%s.remote", shortname) < 0)
 		goto on_error;
@@ -560,7 +561,7 @@ int git_branch_set_upstream(git_reference *branch, const char *upstream_name)
 
 		fetchspec = git_remote__matching_dst_refspec(remote, git_reference_name(upstream));
 		git_buf_clear(&value);
-		if (!fetchspec || git_refspec_transform_l(&value, fetchspec, git_reference_name(upstream)) < 0)
+		if (!fetchspec || git_refspec_rtransform(&value, fetchspec, git_reference_name(upstream)) < 0)
 			goto on_error;
 
 		git_remote_free(remote);
@@ -590,7 +591,7 @@ on_error:
 }
 
 int git_branch_is_head(
-		git_reference *branch)
+		const git_reference *branch)
 {
 	git_reference *head;
 	bool is_same = false;

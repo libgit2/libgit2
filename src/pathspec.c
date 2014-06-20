@@ -83,14 +83,17 @@ int git_pathspec__vinit(
 		if (!match)
 			return -1;
 
-		match->flags = GIT_ATTR_FNMATCH_ALLOWSPACE | GIT_ATTR_FNMATCH_ALLOWNEG;
+		match->flags = GIT_ATTR_FNMATCH_ALLOWSPACE |
+			GIT_ATTR_FNMATCH_ALLOWNEG | GIT_ATTR_FNMATCH_NOLEADINGDIR;
 
 		ret = git_attr_fnmatch__parse(match, strpool, NULL, &pattern);
 		if (ret == GIT_ENOTFOUND) {
 			git__free(match);
 			continue;
-		} else if (ret < 0)
+		} else if (ret < 0) {
+			git__free(match);
 			return ret;
+		}
 
 		if (git_vector_insert(vspec, match) < 0)
 			return -1;
@@ -102,15 +105,7 @@ int git_pathspec__vinit(
 /* free data from the pathspec vector */
 void git_pathspec__vfree(git_vector *vspec)
 {
-	git_attr_fnmatch *match;
-	unsigned int i;
-
-	git_vector_foreach(vspec, i, match) {
-		git__free(match);
-		vspec->contents[i] = NULL;
-	}
-
-	git_vector_free(vspec);
+	git_vector_free_deep(vspec);
 }
 
 struct pathspec_match_context {
@@ -451,7 +446,7 @@ static int pathspec_match_from_iterator(
 		/* check if path is ignored and untracked */
 		if (index != NULL &&
 			git_iterator_current_is_ignored(iter) &&
-			git_index__find(NULL, index, entry->path, GIT_INDEX_STAGE_ANY) < 0)
+			git_index__find_pos(NULL, index, entry->path, 0, GIT_INDEX_STAGE_ANY) < 0)
 			continue;
 
 		/* mark the matched pattern as used */

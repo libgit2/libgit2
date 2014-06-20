@@ -36,6 +36,8 @@ void test_blame_harder__m(void)
 	/* TODO */
 	git_blame_options opts = GIT_BLAME_OPTIONS_INIT;
 
+	GIT_UNUSED(opts);
+
 	opts.flags = GIT_BLAME_TRACK_COPIES_SAME_FILE;
 }
 
@@ -43,6 +45,8 @@ void test_blame_harder__m(void)
 void test_blame_harder__c(void)
 {
 	git_blame_options opts = GIT_BLAME_OPTIONS_INIT;
+
+	GIT_UNUSED(opts);
 
 	/* Attribute the first hunk in b.txt to (E), since it was cut/pasted from
 	 * a.txt in (D).
@@ -54,6 +58,8 @@ void test_blame_harder__cc(void)
 {
 	git_blame_options opts = GIT_BLAME_OPTIONS_INIT;
 
+	GIT_UNUSED(opts);
+
 	/* Attribute the second hunk in b.txt to (E), since it was copy/pasted from
 	 * a.txt in (C).
 	 */
@@ -63,6 +69,8 @@ void test_blame_harder__cc(void)
 void test_blame_harder__ccc(void)
 {
 	git_blame_options opts = GIT_BLAME_OPTIONS_INIT;
+
+	GIT_UNUSED(opts);
 	
 	/* Attribute the third hunk in b.txt to (E).  This hunk was deleted from
 	 * a.txt in (D), but reintroduced in (B).

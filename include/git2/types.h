@@ -131,7 +131,7 @@ typedef struct git_treebuilder git_treebuilder;
 /** Memory representation of an index file. */
 typedef struct git_index git_index;
 
-/** An interator for conflicts in the index. */
+/** An iterator for conflicts in the index. */
 typedef struct git_index_conflict_iterator git_index_conflict_iterator;
 
 /** Memory representation of a set of config files */
@@ -154,15 +154,15 @@ typedef struct git_packbuilder git_packbuilder;
 
 /** Time in a signature */
 typedef struct git_time {
-	git_time_t time; /** time in seconds from epoch */
-	int offset; /** timezone offset, in minutes */
+	git_time_t time; /**< time in seconds from epoch */
+	int offset; /**< timezone offset, in minutes */
 } git_time;
 
 /** An action signature (e.g. for committers, taggers, etc) */
 typedef struct git_signature {
-	char *name; /** full name of the author */
-	char *email; /** email of the author */
-	git_time when; /** time when the action happened */
+	char *name; /**< full name of the author */
+	char *email; /**< email of the author */
+	git_time when; /**< time when the action happened */
 } git_signature;
 
 /** In-memory representation of a reference. */
@@ -183,9 +183,9 @@ typedef struct git_status_list git_status_list;
 
 /** Basic type of any Git reference. */
 typedef enum {
-	GIT_REF_INVALID = 0, /** Invalid reference */
-	GIT_REF_OID = 1, /** A reference which points at an object id */
-	GIT_REF_SYMBOLIC = 2, /** A reference which points at another reference */
+	GIT_REF_INVALID = 0, /**< Invalid reference */
+	GIT_REF_OID = 1, /**< A reference which points at an object id */
+	GIT_REF_SYMBOLIC = 2, /**< A reference which points at another reference */
 	GIT_REF_LISTALL = GIT_REF_OID|GIT_REF_SYMBOLIC,
 } git_ref_t;
 
@@ -193,6 +193,7 @@ typedef enum {
 typedef enum {
 	GIT_BRANCH_LOCAL = 1,
 	GIT_BRANCH_REMOTE = 2,
+	GIT_BRANCH_ALL = GIT_BRANCH_LOCAL|GIT_BRANCH_REMOTE,
 } git_branch_t;
 
 /** Valid modes for index and tree entries. */
@@ -240,7 +241,7 @@ typedef struct git_transfer_progress {
  * @param stats Structure containing information about the state of the transfer
  * @param payload Payload provided by caller
  */
-typedef int (*git_transfer_progress_callback)(const git_transfer_progress *stats, void *payload);
+typedef int (*git_transfer_progress_cb)(const git_transfer_progress *stats, void *payload);
 
 /**
  * Opaque structure representing a submodule.
@@ -313,15 +314,34 @@ typedef enum {
  *   when we don't want any particular ignore rule to be specified.
  */
 typedef enum {
-	GIT_SUBMODULE_IGNORE_RESET     = -1, /* reset to on-disk value */
+	GIT_SUBMODULE_IGNORE_RESET     = -1, /**< reset to on-disk value */
 
-	GIT_SUBMODULE_IGNORE_NONE      = 1,  /* any change or untracked == dirty */
-	GIT_SUBMODULE_IGNORE_UNTRACKED = 2,  /* dirty if tracked files change */
-	GIT_SUBMODULE_IGNORE_DIRTY     = 3,  /* only dirty if HEAD moved */
-	GIT_SUBMODULE_IGNORE_ALL       = 4,  /* never dirty */
+	GIT_SUBMODULE_IGNORE_NONE      = 1,  /**< any change or untracked == dirty */
+	GIT_SUBMODULE_IGNORE_UNTRACKED = 2,  /**< dirty if tracked files change */
+	GIT_SUBMODULE_IGNORE_DIRTY     = 3,  /**< only dirty if HEAD moved */
+	GIT_SUBMODULE_IGNORE_ALL       = 4,  /**< never dirty */
 
 	GIT_SUBMODULE_IGNORE_DEFAULT   = 0
 } git_submodule_ignore_t;
+
+/**
+ * Options for submodule recurse.
+ *
+ * Represent the value of `submodule.$name.fetchRecurseSubmodules`
+ *
+ * * GIT_SUBMODULE_RECURSE_RESET - reset to the on-disk value
+ * * GIT_SUBMODULE_RECURSE_NO    - do no recurse into submodules
+ * * GIT_SUBMODULE_RECURSE_YES   - recurse into submodules
+ * * GIT_SUBMODULE_RECURSE_ONDEMAND - recurse into submodules only when
+ *                                    commit not already in local clone
+ */
+typedef enum {
+	GIT_SUBMODULE_RECURSE_RESET = -1,
+
+	GIT_SUBMODULE_RECURSE_NO = 0,
+	GIT_SUBMODULE_RECURSE_YES = 1,
+	GIT_SUBMODULE_RECURSE_ONDEMAND = 2,
+} git_submodule_recurse_t;
 
 /** @} */
 GIT_END_DECL

@@ -40,6 +40,9 @@ typedef enum {
 	 * commit (like `git blame -CCC`). Implies SAME_COMMIT_COPIES.
 	 * NOT IMPLEMENTED. */
 	GIT_BLAME_TRACK_COPIES_ANY_COMMIT_COPIES = (1<<3),
+	/** Restrict the search of commits to those reachable following only the
+	 * first parents. */
+	GIT_BLAME_FIRST_PARENT = (1<<4),
 } git_blame_flag_t;
 
 /**
@@ -78,6 +81,18 @@ typedef struct git_blame_options {
 
 #define GIT_BLAME_OPTIONS_VERSION 1
 #define GIT_BLAME_OPTIONS_INIT {GIT_BLAME_OPTIONS_VERSION}
+
+/**
+ * Initializes a `git_blame_options` with default values. Equivalent to
+ * creating an instance with GIT_BLAME_OPTIONS_INIT.
+ *
+ * @param opts The `git_blame_options` struct to initialize
+ * @param version Version of struct; pass `GIT_BLAME_OPTIONS_VERSION`
+ * @return Zero on success; -1 on failure.
+ */
+GIT_EXTERN(int) git_blame_init_options(
+	git_blame_options *opts,
+	unsigned int version);
 
 /**
  * Structure that represents a blame hunk.
@@ -183,7 +198,7 @@ GIT_EXTERN(int) git_blame_buffer(
 		git_blame **out,
 		git_blame *reference,
 		const char *buffer,
-		uint32_t buffer_len);
+		size_t buffer_len);
 
 /**
  * Free memory allocated by git_blame_file or git_blame_buffer.

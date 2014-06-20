@@ -21,7 +21,7 @@ static void assert_note_equal(git_note *note, char *message, git_oid *note_oid) 
 	git_blob *blob;
 
 	cl_assert_equal_s(git_note_message(note), message);
-	cl_assert(!git_oid_cmp(git_note_oid(note), note_oid));
+	cl_assert(!git_oid_cmp(git_note_id(note), note_oid));
 
 	cl_git_pass(git_blob_lookup(&blob, _repo, note_oid));
 	cl_assert_equal_s(git_note_message(note), (const char *)git_blob_rawcontent(blob));
@@ -129,7 +129,7 @@ void test_notes_notes__can_cancel_foreach(void)
 	create_note(&note_oid4, "refs/notes/i-can-see-dead-notes", "4a202b346bb0fb0db7eff3cffeb3c70babbd2045", "I decorate 9fd7 and 4a20\n");
 
 	cl_assert_equal_i(
-		GIT_EUSER,
+		1,
 		git_note_foreach(_repo, "refs/notes/i-can-see-dead-notes",
 			note_cancel_cb, &retrieved_notes));
 }
@@ -290,7 +290,7 @@ void test_notes_notes__can_read_a_note_in_an_existing_fanout(void)
 	cl_git_pass(git_note_read(&note, _repo, "refs/notes/fanout", &target_oid));
 
 	cl_git_pass(git_oid_fromstr(&note_oid, "08b041783f40edfe12bb406c9c9a8a040177c125"));
-	cl_assert(!git_oid_cmp(git_note_oid(note), &note_oid));
+	cl_assert(!git_oid_cmp(git_note_id(note), &note_oid));
 
 	git_note_free(note);
 }

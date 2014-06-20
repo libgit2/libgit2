@@ -91,13 +91,13 @@ int fetch(git_repository *repo, int argc, char **argv)
 	// Figure out whether it's a named remote or a URL
 	printf("Fetching %s for repo %p\n", argv[1], repo);
 	if (git_remote_load(&remote, repo, argv[1]) < 0) {
-		if (git_remote_create_inmemory(&remote, repo, NULL, argv[1]) < 0)
+		if (git_remote_create_anonymous(&remote, repo, argv[1], NULL) < 0)
 			return -1;
 	}
 
 	// Set up the callbacks (only update_tips for now)
 	callbacks.update_tips = &update_cb;
-	callbacks.progress = &progress_cb;
+	callbacks.sideband_progress = &progress_cb;
 	callbacks.credentials = cred_acquire_cb;
 	git_remote_set_callbacks(remote, &callbacks);
 
@@ -156,7 +156,7 @@ int fetch(git_repository *repo, int argc, char **argv)
 	// right commits. This may be needed even if there was no packfile
 	// to download, which can happen e.g. when the branches have been
 	// changed but all the neede objects are available locally.
-	if (git_remote_update_tips(remote) < 0)
+	if (git_remote_update_tips(remote, NULL, NULL) < 0)
 		return -1;
 
 	git_remote_free(remote);

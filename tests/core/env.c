@@ -1,5 +1,6 @@
 #include "clar_libgit2.h"
 #include "fileops.h"
+#include "sysdir.h"
 #include "path.h"
 
 #ifdef GIT_WIN32
@@ -20,7 +21,7 @@ static char *home_values[] = {
 	"f\xc4\x80ke_\xc4\xa4ome", /* latin extended */
 	"f\xce\xb1\xce\xba\xce\xb5_h\xce\xbfm\xce\xad",  /* having fun with greek */
 	"fa\xe0" "\xb8" "\x87" "e_\xe0" "\xb8" "\x99" "ome", /* thai characters */
-	"f\xe1\x9cx80ke_\xe1\x9c\x91ome", /* tagalog characters */
+	"f\xe1\x9c\x80ke_\xe1\x9c\x91ome", /* tagalog characters */
 	"\xe1\xb8\x9f\xe1\xba\xa2" "ke_ho" "\xe1" "\xb9" "\x81" "e", /* latin extended additional */
 	"\xf0\x9f\x98\x98\xf0\x9f\x98\x82", /* emoticons */
 	NULL
@@ -39,14 +40,14 @@ void test_core_env__initialize(void)
 	}
 }
 
-static void reset_global_search_path(void)
+static void set_global_search_path_from_env(void)
 {
-	cl_git_pass(git_futils_dirs_set(GIT_FUTILS_DIR_GLOBAL, NULL));
+	cl_git_pass(git_sysdir_set(GIT_SYSDIR_GLOBAL, NULL));
 }
 
-static void reset_system_search_path(void)
+static void set_system_search_path_from_env(void)
 {
-	cl_git_pass(git_futils_dirs_set(GIT_FUTILS_DIR_SYSTEM, NULL));
+	cl_git_pass(git_sysdir_set(GIT_SYSDIR_SYSTEM, NULL));
 }
 
 void test_core_env__cleanup(void)
@@ -68,9 +69,7 @@ void test_core_env__cleanup(void)
 			(void)p_rmdir(*val);
 	}
 
-	/* reset search paths to default */
-	reset_global_search_path();
-	reset_system_search_path();
+	cl_sandbox_set_search_path_defaults();
 }
 
 static void setenv_and_check(const char *name, const char *value)
@@ -120,26 +119,26 @@ void test_core_env__0(void)
 		git_buf_rtruncate_at_char(&path, '/');
 
 		cl_assert_equal_i(
-			GIT_ENOTFOUND, git_futils_find_global_file(&found, testfile));
+			GIT_ENOTFOUND, git_sysdir_find_global_file(&found, testfile));
 
 		setenv_and_check("HOME", path.ptr);
-		reset_global_search_path();
+		set_global_search_path_from_env();
 
-		cl_git_pass(git_futils_find_global_file(&found, testfile));
+		cl_git_pass(git_sysdir_find_global_file(&found, testfile));
 
 		cl_setenv("HOME", env_save[0]);
-		reset_global_search_path();
+		set_global_search_path_from_env();
 
 		cl_assert_equal_i(
-			GIT_ENOTFOUND, git_futils_find_global_file(&found, testfile));
+			GIT_ENOTFOUND, git_sysdir_find_global_file(&found, testfile));
 
 #ifdef GIT_WIN32
 		setenv_and_check("HOMEDRIVE", NULL);
 		setenv_and_check("HOMEPATH", NULL);
 		setenv_and_check("USERPROFILE", path.ptr);
-		reset_global_search_path();
+		set_global_search_path_from_env();
 
-		cl_git_pass(git_futils_find_global_file(&found, testfile));
+		cl_git_pass(git_sysdir_find_global_file(&found, testfile));
 
 		{
 			int root = git_path_root(path.ptr);
@@ -147,19 +146,19 @@ void test_core_env__0(void)
 
 			if (root >= 0) {
 				setenv_and_check("USERPROFILE", NULL);
-				reset_global_search_path();
+				set_global_search_path_from_env();
 
 				cl_assert_equal_i(
-					GIT_ENOTFOUND, git_futils_find_global_file(&found, testfile));
+					GIT_ENOTFOUND, git_sysdir_find_global_file(&found, testfile));
 
 				old = path.ptr[root];
 				path.ptr[root] = '\0';
 				setenv_and_check("HOMEDRIVE", path.ptr);
 				path.ptr[root] = old;
 				setenv_and_check("HOMEPATH", &path.ptr[root]);
-				reset_global_search_path();
+				set_global_search_path_from_env();
 
-				cl_git_pass(git_futils_find_global_file(&found, testfile));
+				cl_git_pass(git_sysdir_find_global_file(&found, testfile));
 			}
 		}
 #endif
@@ -177,38 +176,38 @@ void test_core_env__1(void)
 	git_buf path = GIT_BUF_INIT;
 
 	cl_assert_equal_i(
-		GIT_ENOTFOUND, git_futils_find_global_file(&path, "nonexistentfile"));
+		GIT_ENOTFOUND, git_sysdir_find_global_file(&path, "nonexistentfile"));
 
 	cl_git_pass(cl_setenv("HOME", "doesnotexist"));
 #ifdef GIT_WIN32
 	cl_git_pass(cl_setenv("HOMEPATH", "doesnotexist"));
 	cl_git_pass(cl_setenv("USERPROFILE", "doesnotexist"));
 #endif
-	reset_global_search_path();
+	set_global_search_path_from_env();
 
 	cl_assert_equal_i(
-		GIT_ENOTFOUND, git_futils_find_global_file(&path, "nonexistentfile"));
+		GIT_ENOTFOUND, git_sysdir_find_global_file(&path, "nonexistentfile"));
 
 	cl_git_pass(cl_setenv("HOME", NULL));
 #ifdef GIT_WIN32
 	cl_git_pass(cl_setenv("HOMEPATH", NULL));
 	cl_git_pass(cl_setenv("USERPROFILE", NULL));
 #endif
-	reset_global_search_path();
-	reset_system_search_path();
+	set_global_search_path_from_env();
+	set_system_search_path_from_env();
 
 	cl_assert_equal_i(
-		GIT_ENOTFOUND, git_futils_find_global_file(&path, "nonexistentfile"));
+		GIT_ENOTFOUND, git_sysdir_find_global_file(&path, "nonexistentfile"));
 
 	cl_assert_equal_i(
-		GIT_ENOTFOUND, git_futils_find_system_file(&path, "nonexistentfile"));
+		GIT_ENOTFOUND, git_sysdir_find_system_file(&path, "nonexistentfile"));
 
 #ifdef GIT_WIN32
 	cl_git_pass(cl_setenv("PROGRAMFILES", NULL));
-	reset_system_search_path();
+	set_system_search_path_from_env();
 
 	cl_assert_equal_i(
-		GIT_ENOTFOUND, git_futils_find_system_file(&path, "nonexistentfile"));
+		GIT_ENOTFOUND, git_sysdir_find_system_file(&path, "nonexistentfile"));
 #endif
 
 	git_buf_free(&path);
@@ -217,7 +216,7 @@ void test_core_env__1(void)
 static void check_global_searchpath(
 	const char *path, int position, const char *file, git_buf *temp)
 {
-	char out[GIT_PATH_MAX];
+	git_buf out = GIT_BUF_INIT;
 
 	/* build and set new path */
 	if (position < 0)
@@ -232,23 +231,25 @@ static void check_global_searchpath(
 
 	/* get path and make sure $PATH expansion worked */
 	cl_git_pass(git_libgit2_opts(
-		GIT_OPT_GET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL, out, sizeof(out)));
+		GIT_OPT_GET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL, &out));
 
 	if (position < 0)
-		cl_assert(git__prefixcmp(out, path) == 0);
+		cl_assert(git__prefixcmp(out.ptr, path) == 0);
 	else if (position > 0)
-		cl_assert(git__suffixcmp(out, path) == 0);
+		cl_assert(git__suffixcmp(out.ptr, path) == 0);
 	else
-		cl_assert_equal_s(out, path);
+		cl_assert_equal_s(out.ptr, path);
 
 	/* find file using new path */
-	cl_git_pass(git_futils_find_global_file(temp, file));
+	cl_git_pass(git_sysdir_find_global_file(temp, file));
 
 	/* reset path and confirm file not found */
 	cl_git_pass(git_libgit2_opts(
 		GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL, NULL));
 	cl_assert_equal_i(
-		GIT_ENOTFOUND, git_futils_find_global_file(temp, file));
+		GIT_ENOTFOUND, git_sysdir_find_global_file(temp, file));
+
+	git_buf_free(&out);
 }
 
 void test_core_env__2(void)
@@ -285,7 +286,7 @@ void test_core_env__2(void)
 
 		/* default should be NOTFOUND */
 		cl_assert_equal_i(
-			GIT_ENOTFOUND, git_futils_find_global_file(&found, testfile));
+			GIT_ENOTFOUND, git_sysdir_find_global_file(&found, testfile));
 
 		/* try plain, append $PATH, and prepend $PATH */
 		check_global_searchpath(path.ptr,  0, testfile, &found);

@@ -519,11 +519,11 @@ static int locate_object_short_oid(
 	loose_locate_object_state state;
 	int error;
 
-	/* prealloc memory for OBJ_DIR/xx/ */
-	if (git_buf_grow(object_location, dir_len + 5) < 0)
+	/* prealloc memory for OBJ_DIR/xx/xx..38x..xx */
+	if (git_buf_grow(object_location, dir_len + 3 + GIT_OID_HEXSZ) < 0)
 		return -1;
 
-	git_buf_sets(object_location, objects_dir);
+	git_buf_set(object_location, objects_dir, dir_len);
 	git_path_to_dir(object_location);
 
 	/* save adjusted position at end of dir so it can be restored later */
@@ -533,8 +533,9 @@ static int locate_object_short_oid(
 	git_oid_fmt((char *)state.short_oid, short_oid);
 
 	/* Explore OBJ_DIR/xx/ where xx is the beginning of hex formatted short oid */
-	if (git_buf_printf(object_location, "%.2s/", state.short_oid) < 0)
+	if (git_buf_put(object_location, (char *)state.short_oid, 3) < 0)
 		return -1;
+	object_location->ptr[object_location->size - 1] = '/';
 
 	/* Check that directory exists */
 	if (git_path_isdir(object_location->ptr) == false)
@@ -547,8 +548,7 @@ static int locate_object_short_oid(
 	/* Explore directory to find a unique object matching short_oid */
 	error = git_path_direach(
 		object_location, 0, fn_locate_object_short_oid, &state);
-
-	if (error && error != GIT_EUSER)
+	if (error < 0 && error != GIT_EAMBIGUOUS)
 		return error;
 
 	if (!state.found)
@@ -647,12 +647,9 @@ static int loose_backend__read_prefix(
 {
 	int error = 0;
 
-	assert(len <= GIT_OID_HEXSZ);
+	assert(len >= GIT_OID_MINPREFIXLEN && len <= GIT_OID_HEXSZ);
 
-	if (len < GIT_OID_MINPREFIXLEN)
-		error = git_odb__error_ambiguous("prefix length too short");
-
-	else if (len == GIT_OID_HEXSZ) {
+	if (len == GIT_OID_HEXSZ) {
 		/* We can fall back to regular read method */
 		error = loose_backend__read(buffer_p, len_p, type_p, backend, short_oid);
 		if (!error)
@@ -692,11 +689,26 @@ static int loose_backend__exists(git_odb_backend *backend, const git_oid *oid)
 	return !error;
 }
 
+static int loose_backend__exists_prefix(
+	git_oid *out, git_odb_backend *backend, const git_oid *short_id, size_t len)
+{
+	git_buf object_path = GIT_BUF_INIT;
+	int error;
+
+	assert(backend && out && short_id && len >= GIT_OID_MINPREFIXLEN);
+
+	error = locate_object_short_oid(
+		&object_path, out, (loose_backend *)backend, short_id, len);
+
+	git_buf_free(&object_path);
+
+	return error;
+}
+
 struct foreach_state {
 	size_t dir_len;
 	git_odb_foreach_cb cb;
 	void *data;
-	int cb_error;
 };
 
 GIT_INLINE(int) filename_to_oid(git_oid *oid, const char *ptr)
@@ -735,17 +747,17 @@ static int foreach_object_dir_cb(void *_state, git_buf *path)
 	if (filename_to_oid(&oid, path->ptr + state->dir_len) < 0)
 		return 0;
 
-	if (state->cb(&oid, state->data)) {
-		state->cb_error = GIT_EUSER;
-		return -1;
-	}
-
-	return 0;
+	return giterr_set_after_callback_function(
+		state->cb(&oid, state->data), "git_odb_foreach");
 }
 
 static int foreach_cb(void *_state, git_buf *path)
 {
 	struct foreach_state *state = (struct foreach_state *) _state;
+
+	/* non-dir is some stray file, ignore it */
+	if (!git_path_isdir(git_buf_cstr(path)))
+		return 0;
 
 	return git_path_direach(path, 0, foreach_object_dir_cb, state);
 }
@@ -764,6 +776,8 @@ static int loose_backend__foreach(git_odb_backend *_backend, git_odb_foreach_cb 
 
 	git_buf_sets(&buf, objects_dir);
 	git_path_to_dir(&buf);
+	if (git_buf_oom(&buf))
+		return -1;
 
 	memset(&state, 0, sizeof(state));
 	state.cb = cb;
@@ -774,7 +788,7 @@ static int loose_backend__foreach(git_odb_backend *_backend, git_odb_foreach_cb 
 
 	git_buf_free(&buf);
 
-	return state.cb_error ? state.cb_error : error;
+	return error;
 }
 
 static int loose_backend__stream_fwrite(git_odb_stream *_stream, const git_oid *oid)
@@ -943,6 +957,7 @@ int git_odb_backend_loose(
 	backend->parent.read_header = &loose_backend__read_header;
 	backend->parent.writestream = &loose_backend__stream;
 	backend->parent.exists = &loose_backend__exists;
+	backend->parent.exists_prefix = &loose_backend__exists_prefix;
 	backend->parent.foreach = &loose_backend__foreach;
 	backend->parent.free = &loose_backend__free;
 

@@ -82,23 +82,28 @@ int git_signature_new(git_signature **sig_out, const char *name, const char *ema
 	return 0;
 }
 
-git_signature *git_signature_dup(const git_signature *sig)
+int git_signature_dup(git_signature **dest, const git_signature *source)
 {
-	git_signature *new;
+	git_signature *signature;
 
-	if (sig == NULL)
-		return NULL;
+	if (source == NULL)
+		return 0;
 
-	new = git__calloc(1, sizeof(git_signature));
-	if (new == NULL)
-		return NULL;
+	signature = git__calloc(1, sizeof(git_signature));
+	GITERR_CHECK_ALLOC(signature);
 
-	new->name = git__strdup(sig->name);
-	new->email = git__strdup(sig->email);
-	new->when.time = sig->when.time;
-	new->when.offset = sig->when.offset;
+	signature->name = git__strdup(source->name);
+	GITERR_CHECK_ALLOC(signature->name);
 
-	return new;
+	signature->email = git__strdup(source->email);
+	GITERR_CHECK_ALLOC(signature->email);
+
+	signature->when.time = source->when.time;
+	signature->when.offset = source->when.offset;
+
+	*dest = signature;
+
+	return 0;
 }
 
 int git_signature_now(git_signature **sig_out, const char *name, const char *email)
@@ -139,7 +144,7 @@ int git_signature_default(git_signature **out, git_repository *repo)
 	git_config *cfg;
 	const char *user_name, *user_email;
 
-	if ((error = git_repository_config(&cfg, repo)) < 0)
+	if ((error = git_repository_config_snapshot(&cfg, repo)) < 0)
 		return error;
 
 	if (!(error = git_config_get_string(&user_name, cfg, "user.name")) &&
@@ -224,6 +229,8 @@ void git_signature__writebuf(git_buf *buf, const char *header, const git_signatu
 {
 	int offset, hours, mins;
 	char sign;
+
+	assert(buf && sig);
 
 	offset = sig->when.offset;
 	sign = (sig->when.offset < 0) ? '-' : '+';

@@ -8,6 +8,7 @@
 #define INCLUDE_diff_h__
 
 #include "git2/diff.h"
+#include "git2/sys/diff.h"
 #include "git2/oid.h"
 
 #include <stdio.h>
@@ -62,6 +63,7 @@ struct git_diff {
 	git_iterator_type_t old_src;
 	git_iterator_type_t new_src;
 	uint32_t diffcaps;
+	git_diff_perfdata perf;
 
 	int (*strcomp)(const char *, const char *);
 	int (*strncomp)(const char *, const char *, size_t);
@@ -90,7 +92,9 @@ extern int git_diff_delta__format_file_header(
 	int oid_strlen);
 
 extern int git_diff__oid_for_file(
-	git_repository *, const char *, uint16_t, git_off_t, git_oid *);
+	git_oid *out, git_diff *, const char *, uint16_t, git_off_t);
+extern int git_diff__oid_for_entry(
+	git_oid *out, git_diff *, const git_index_entry *, const git_oid *update);
 
 extern int git_diff__from_iterators(
 	git_diff **diff_ptr,
@@ -116,6 +120,9 @@ extern void git_diff_find_similar__hashsig_free(void *sig, void *payload);
 extern int git_diff_find_similar__calc_similarity(
 	int *score, void *siga, void *sigb, void *payload);
 
+extern int git_diff__commit(
+	git_diff **diff, git_repository *repo, const git_commit *commit, const git_diff_options *opts);
+
 /*
  * Sometimes a git_diff_file will have a zero size; this attempts to
  * fill in the size without loading the blob if possible.  If that is
@@ -134,7 +141,7 @@ GIT_INLINE(int) git_diff_file__resolve_zero_size(
 		return error;
 
 	error = git_odb__read_header_or_object(
-		odb_obj, &len, &type, odb, &file->oid);
+		odb_obj, &len, &type, odb, &file->id);
 
 	git_odb_free(odb);
 

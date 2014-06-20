@@ -1,10 +1,209 @@
 #include "common.h"
 #include "repository.h"
 #include "filebuf.h"
-#include "attr.h"
+#include "attr_file.h"
+#include "attrcache.h"
 #include "git2/blob.h"
 #include "git2/tree.h"
+#include "index.h"
 #include <ctype.h>
+
+static void attr_file_free(git_attr_file *file)
+{
+	bool unlock = !git_mutex_lock(&file->lock);
+	git_attr_file__clear_rules(file, false);
+	git_pool_clear(&file->pool);
+	if (unlock)
+		git_mutex_unlock(&file->lock);
+	git_mutex_free(&file->lock);
+
+	git__memzero(file, sizeof(*file));
+	git__free(file);
+}
+
+int git_attr_file__new(
+	git_attr_file **out,
+	git_attr_file_entry *entry,
+	git_attr_file_source source)
+{
+	git_attr_file *attrs = git__calloc(1, sizeof(git_attr_file));
+	GITERR_CHECK_ALLOC(attrs);
+
+	if (git_mutex_init(&attrs->lock) < 0) {
+		giterr_set(GITERR_OS, "Failed to initialize lock");
+		git__free(attrs);
+		return -1;
+	}
+
+	if (git_pool_init(&attrs->pool, 1, 0) < 0) {
+		attr_file_free(attrs);
+		return -1;
+	}
+
+	GIT_REFCOUNT_INC(attrs);
+	attrs->entry  = entry;
+	attrs->source = source;
+	*out = attrs;
+	return 0;
+}
+
+int git_attr_file__clear_rules(git_attr_file *file, bool need_lock)
+{
+	unsigned int i;
+	git_attr_rule *rule;
+
+	if (need_lock && git_mutex_lock(&file->lock) < 0) {
+		giterr_set(GITERR_OS, "Failed to lock attribute file");
+		return -1;
+	}
+
+	git_vector_foreach(&file->rules, i, rule)
+		git_attr_rule__free(rule);
+	git_vector_free(&file->rules);
+
+	if (need_lock)
+		git_mutex_unlock(&file->lock);
+
+	return 0;
+}
+
+void git_attr_file__free(git_attr_file *file)
+{
+	if (!file)
+		return;
+	GIT_REFCOUNT_DEC(file, attr_file_free);
+}
+
+static int attr_file_oid_from_index(
+	git_oid *oid, git_repository *repo, const char *path)
+{
+	int error;
+	git_index *idx;
+	size_t pos;
+	const git_index_entry *entry;
+
+	if ((error = git_repository_index__weakptr(&idx, repo)) < 0 ||
+		(error = git_index__find_pos(&pos, idx, path, 0, 0)) < 0)
+		return error;
+
+	if (!(entry = git_index_get_byindex(idx, pos)))
+		return GIT_ENOTFOUND;
+
+	*oid = entry->id;
+	return 0;
+}
+
+int git_attr_file__load(
+	git_attr_file **out,
+	git_repository *repo,
+	git_attr_file_entry *entry,
+	git_attr_file_source source,
+	git_attr_file_parser parser)
+{
+	int error = 0;
+	git_blob *blob = NULL;
+	git_buf content = GIT_BUF_INIT;
+	const char *data = NULL;
+	git_attr_file *file;
+	struct stat st;
+
+	*out = NULL;
+
+	switch (source) {
+	case GIT_ATTR_FILE__IN_MEMORY:
+		/* in-memory attribute file doesn't need data */
+		break;
+	case GIT_ATTR_FILE__FROM_INDEX: {
+		git_oid id;
+
+		if ((error = attr_file_oid_from_index(&id, repo, entry->path)) < 0 ||
+			(error = git_blob_lookup(&blob, repo, &id)) < 0)
+			return error;
+
+		data = git_blob_rawcontent(blob);
+		break;
+	}
+	case GIT_ATTR_FILE__FROM_FILE: {
+		int fd;
+
+		if (p_stat(entry->fullpath, &st) < 0)
+			return git_path_set_error(errno, entry->fullpath, "stat");
+		if (S_ISDIR(st.st_mode))
+			return GIT_ENOTFOUND;
+
+		/* For open or read errors, return ENOTFOUND to skip item */
+		/* TODO: issue warning when warning API is available */
+
+		if ((fd = git_futils_open_ro(entry->fullpath)) < 0)
+			return GIT_ENOTFOUND;
+
+		error = git_futils_readbuffer_fd(&content, fd, (size_t)st.st_size);
+		p_close(fd);
+
+		if (error < 0)
+			return GIT_ENOTFOUND;
+
+		data = content.ptr;
+		break;
+	}
+	default:
+		giterr_set(GITERR_INVALID, "Unknown file source %d", source);
+		return -1;
+	}
+
+	if ((error = git_attr_file__new(&file, entry, source)) < 0)
+		goto cleanup;
+
+	if (parser && (error = parser(repo, file, data)) < 0) {
+		git_attr_file__free(file);
+		goto cleanup;
+	}
+
+	/* write cache breaker */
+	if (source == GIT_ATTR_FILE__FROM_INDEX)
+		git_oid_cpy(&file->cache_data.oid, git_blob_id(blob));
+	else if (source == GIT_ATTR_FILE__FROM_FILE)
+		git_futils_filestamp_set_from_stat(&file->cache_data.stamp, &st);
+	/* else always cacheable */
+
+	*out = file;
+
+cleanup:
+	git_blob_free(blob);
+	git_buf_free(&content);
+
+	return error;
+}
+
+int git_attr_file__out_of_date(git_repository *repo, git_attr_file *file)
+{
+	if (!file)
+		return 1;
+
+	switch (file->source) {
+	case GIT_ATTR_FILE__IN_MEMORY:
+		return 0;
+
+	case GIT_ATTR_FILE__FROM_FILE:
+		return git_futils_filestamp_check(
+			&file->cache_data.stamp, file->entry->fullpath);
+
+	case GIT_ATTR_FILE__FROM_INDEX: {
+		int error;
+		git_oid id;
+
+		if ((error = attr_file_oid_from_index(
+				&id, repo, file->entry->path)) < 0)
+			return error;
+
+		return (git_oid__cmp(&file->cache_data.oid, &id) != 0);
+	}
+
+	default:
+		giterr_set(GITERR_INVALID, "Invalid file type %d", file->source);
+		return -1;
+	}
+}
 
 static int sort_by_hash_and_name(const void *a_raw, const void *b_raw);
 static void git_attr_rule__clear(git_attr_rule *rule);
@@ -13,91 +212,42 @@ static bool parse_optimized_patterns(
 	git_pool *pool,
 	const char *pattern);
 
-int git_attr_file__new(
-	git_attr_file **attrs_ptr,
-	git_attr_file_source from,
-	const char *path,
-	git_pool *pool)
-{
-	git_attr_file *attrs = NULL;
-
-	attrs = git__calloc(1, sizeof(git_attr_file));
-	GITERR_CHECK_ALLOC(attrs);
-
-	if (pool)
-		attrs->pool = pool;
-	else {
-		attrs->pool = git__calloc(1, sizeof(git_pool));
-		if (!attrs->pool || git_pool_init(attrs->pool, 1, 0) < 0)
-			goto fail;
-		attrs->pool_is_allocated = true;
-	}
-
-	if (path) {
-		size_t len = strlen(path);
-
-		attrs->key = git_pool_malloc(attrs->pool, (uint32_t)len + 3);
-		GITERR_CHECK_ALLOC(attrs->key);
-
-		attrs->key[0] = '0' + (char)from;
-		attrs->key[1] = '#';
-		memcpy(&attrs->key[2], path, len);
-		attrs->key[len + 2] = '\0';
-	}
-
-	if (git_vector_init(&attrs->rules, 4, NULL) < 0)
-		goto fail;
-
-	*attrs_ptr = attrs;
-	return 0;
-
-fail:
-	git_attr_file__free(attrs);
-	attrs_ptr = NULL;
-	return -1;
-}
-
 int git_attr_file__parse_buffer(
-	git_repository *repo, void *parsedata, const char *buffer, git_attr_file *attrs)
+	git_repository *repo, git_attr_file *attrs, const char *data)
 {
 	int error = 0;
-	const char *scan = NULL;
-	char *context = NULL;
+	const char *scan = data, *context = NULL;
 	git_attr_rule *rule = NULL;
 
-	GIT_UNUSED(parsedata);
-
-	assert(buffer && attrs);
-
-	scan = buffer;
-
 	/* if subdir file path, convert context for file paths */
-	if (attrs->key && git__suffixcmp(attrs->key, "/" GIT_ATTR_FILE) == 0) {
-		context = attrs->key + 2;
-		context[strlen(context) - strlen(GIT_ATTR_FILE)] = '\0';
+	if (attrs->entry &&
+		git_path_root(attrs->entry->path) < 0 &&
+		!git__suffixcmp(attrs->entry->path, "/" GIT_ATTR_FILE))
+		context = attrs->entry->path;
+
+	if (git_mutex_lock(&attrs->lock) < 0) {
+		giterr_set(GITERR_OS, "Failed to lock attribute file");
+		return -1;
 	}
 
 	while (!error && *scan) {
 		/* allocate rule if needed */
-		if (!rule) {
-			if (!(rule = git__calloc(1, sizeof(git_attr_rule)))) {
-				error = -1;
-				break;
-			}
-			rule->match.flags = GIT_ATTR_FNMATCH_ALLOWNEG |
-				GIT_ATTR_FNMATCH_ALLOWMACRO;
+		if (!rule && !(rule = git__calloc(1, sizeof(*rule)))) {
+			error = -1;
+			break;
 		}
+
+		rule->match.flags =
+			GIT_ATTR_FNMATCH_ALLOWNEG | GIT_ATTR_FNMATCH_ALLOWMACRO;
 
 		/* parse the next "pattern attr attr attr" line */
 		if (!(error = git_attr_fnmatch__parse(
-				&rule->match, attrs->pool, context, &scan)) &&
+				&rule->match, &attrs->pool, context, &scan)) &&
 			!(error = git_attr_assignment__parse(
-				repo, attrs->pool, &rule->assigns, &scan)))
+				repo, &attrs->pool, &rule->assigns, &scan)))
 		{
 			if (rule->match.flags & GIT_ATTR_FNMATCH_MACRO)
-				/* should generate error/warning if this is coming from any
-				 * file other than .gitattributes at repo root.
-				 */
+				/* TODO: warning if macro found in file below repo root */
 				error = git_attr_cache__insert_macro(repo, rule);
 			else
 				error = git_vector_insert(&attrs->rules, rule);
@@ -113,64 +263,10 @@ int git_attr_file__parse_buffer(
 		}
 	}
 
+	git_mutex_unlock(&attrs->lock);
 	git_attr_rule__free(rule);
 
-	/* restore file path used for context */
-	if (context)
-		context[strlen(context)] = '.'; /* first char of GIT_ATTR_FILE */
-
 	return error;
-}
-
-int git_attr_file__new_and_load(
-	git_attr_file **attrs_ptr,
-	const char *path)
-{
-	int error;
-	git_buf content = GIT_BUF_INIT;
-
-	if ((error = git_attr_file__new(attrs_ptr, 0, path, NULL)) < 0)
-		return error;
-
-	if (!(error = git_futils_readbuffer(&content, path)))
-		error = git_attr_file__parse_buffer(
-			NULL, NULL, git_buf_cstr(&content), *attrs_ptr);
-
-	git_buf_free(&content);
-
-	if (error) {
-		git_attr_file__free(*attrs_ptr);
-		*attrs_ptr = NULL;
-	}
-
-	return error;
-}
-
-void git_attr_file__clear_rules(git_attr_file *file)
-{
-	unsigned int i;
-	git_attr_rule *rule;
-
-	git_vector_foreach(&file->rules, i, rule)
-		git_attr_rule__free(rule);
-
-	git_vector_free(&file->rules);
-}
-
-void git_attr_file__free(git_attr_file *file)
-{
-	if (!file)
-		return;
-
-	git_attr_file__clear_rules(file);
-
-	if (file->pool_is_allocated) {
-		git_pool_clear(file->pool);
-		git__free(file->pool);
-	}
-	file->pool = NULL;
-
-	git__free(file);
 }
 
 uint32_t git_attr_file__name_hash(const char *name)
@@ -183,10 +279,9 @@ uint32_t git_attr_file__name_hash(const char *name)
 	return h;
 }
 
-
 int git_attr_file__lookup_one(
 	git_attr_file *file,
-	const git_attr_path *path,
+	git_attr_path *path,
 	const char *attr,
 	const char **value)
 {
@@ -212,30 +307,83 @@ int git_attr_file__lookup_one(
 	return 0;
 }
 
+int git_attr_file__load_standalone(git_attr_file **out, const char *path)
+{
+	int error;
+	git_attr_file *file;
+	git_buf content = GIT_BUF_INIT;
+
+	error = git_attr_file__new(&file, NULL, GIT_ATTR_FILE__FROM_FILE);
+	if (error < 0)
+		return error;
+
+	error = git_attr_cache__alloc_file_entry(
+		&file->entry, NULL, path, &file->pool);
+	if (error < 0) {
+		git_attr_file__free(file);
+		return error;
+	}
+	/* because the cache entry is allocated from the file's own pool, we
+	 * don't have to free it - freeing file+pool will free cache entry, too.
+	 */
+
+	if (!(error = git_futils_readbuffer(&content, path))) {
+		error = git_attr_file__parse_buffer(NULL, file, content.ptr);
+		git_buf_free(&content);
+	}
+
+	if (error < 0)
+		git_attr_file__free(file);
+	else
+		*out = file;
+
+	return error;
+}
 
 bool git_attr_fnmatch__match(
 	git_attr_fnmatch *match,
-	const git_attr_path *path)
+	git_attr_path *path)
 {
-	int fnm;
-	int icase_flags = (match->flags & GIT_ATTR_FNMATCH_ICASE) ? FNM_CASEFOLD : 0;
+	const char *filename;
+	int flags = 0;
 
-	if (match->flags & GIT_ATTR_FNMATCH_DIRECTORY && !path->is_dir)
-		return false;
+	if (match->flags & GIT_ATTR_FNMATCH_ICASE)
+		flags |= FNM_CASEFOLD;
+	if (match->flags & GIT_ATTR_FNMATCH_LEADINGDIR)
+		flags |= FNM_LEADING_DIR;
 
-	if (match->flags & GIT_ATTR_FNMATCH_FULLPATH)
-		fnm = p_fnmatch(match->pattern, path->path, FNM_PATHNAME | icase_flags);
-	else if (path->is_dir)
-		fnm = p_fnmatch(match->pattern, path->basename, FNM_LEADING_DIR | icase_flags);
-	else
-		fnm = p_fnmatch(match->pattern, path->basename, icase_flags);
+	if (match->flags & GIT_ATTR_FNMATCH_FULLPATH) {
+		filename = path->path;
+		flags |= FNM_PATHNAME;
+	} else {
+		filename = path->basename;
 
-	return (fnm == FNM_NOMATCH) ? false : true;
+		if (path->is_dir)
+			flags |= FNM_LEADING_DIR;
+	}
+
+	if ((match->flags & GIT_ATTR_FNMATCH_DIRECTORY) && !path->is_dir) {
+		int matchval;
+
+		/* for attribute checks or root ignore checks, fail match */
+		if (!(match->flags & GIT_ATTR_FNMATCH_IGNORE) ||
+			path->basename == path->path)
+			return false;
+
+		/* for ignore checks, use container of current item for check */
+		path->basename[-1] = '\0';
+		flags |= FNM_LEADING_DIR;
+		matchval = p_fnmatch(match->pattern, path->path, flags);
+		path->basename[-1] = '/';
+		return (matchval != FNM_NOMATCH);
+	}
+
+	return (p_fnmatch(match->pattern, filename, flags) != FNM_NOMATCH);
 }
 
 bool git_attr_rule__match(
 	git_attr_rule *rule,
-	const git_attr_path *path)
+	git_attr_path *path)
 {
 	bool matched = git_attr_fnmatch__match(&rule->match, path);
 
@@ -244,7 +392,6 @@ bool git_attr_rule__match(
 
 	return matched;
 }
-
 
 git_attr_assignment *git_attr_rule__lookup_assignment(
 	git_attr_rule *rule, const char *name)
@@ -344,7 +491,7 @@ void git_attr_path__free(git_attr_path *info)
 int git_attr_fnmatch__parse(
 	git_attr_fnmatch *spec,
 	git_pool *pool,
-	const char *source,
+	const char *context,
 	const char **base)
 {
 	const char *pattern, *scan;
@@ -410,20 +557,31 @@ int git_attr_fnmatch__parse(
 		if (--slash_count <= 0)
 			spec->flags = spec->flags & ~GIT_ATTR_FNMATCH_FULLPATH;
 	}
+	if ((spec->flags & GIT_ATTR_FNMATCH_NOLEADINGDIR) == 0 &&
+		spec->length >= 2 &&
+		pattern[spec->length - 1] == '*' &&
+		pattern[spec->length - 2] == '/') {
+		spec->length -= 2;
+		spec->flags = spec->flags | GIT_ATTR_FNMATCH_LEADINGDIR;
+		/* leave FULLPATH match on, however */
+	}
 
 	if ((spec->flags & GIT_ATTR_FNMATCH_FULLPATH) != 0 &&
-		source != NULL && git_path_root(pattern) < 0)
+		context != NULL && git_path_root(pattern) < 0)
 	{
-		size_t sourcelen = strlen(source);
+		/* use context path minus the trailing filename */
+		char *slash = strrchr(context, '/');
+		size_t contextlen = slash ? slash - context + 1 : 0;
+
 		/* given an unrooted fullpath match from a file inside a repo,
 		 * prefix the pattern with the relative directory of the source file
 		 */
 		spec->pattern = git_pool_malloc(
-			pool, (uint32_t)(sourcelen + spec->length + 1));
+			pool, (uint32_t)(contextlen + spec->length + 1));
 		if (spec->pattern) {
-			memcpy(spec->pattern, source, sourcelen);
-			memcpy(spec->pattern + sourcelen, pattern, spec->length);
-			spec->length += sourcelen;
+			memcpy(spec->pattern, context, contextlen);
+			memcpy(spec->pattern + contextlen, pattern, spec->length);
+			spec->length += contextlen;
 			spec->pattern[spec->length] = '\0';
 		}
 	} else {
@@ -436,6 +594,7 @@ int git_attr_fnmatch__parse(
 	} else {
 		/* strip '\' that might have be used for internal whitespace */
 		spec->length = git__unescape(spec->pattern);
+		/* TODO: convert remaining '\' into '/' for POSIX ??? */
 	}
 
 	return 0;

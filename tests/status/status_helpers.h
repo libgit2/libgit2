@@ -8,8 +8,18 @@ typedef struct {
 	const unsigned int* expected_statuses;
 	const char** expected_paths;
 	int expected_entry_count;
+	const char *file;
+	int line;
 	bool debug;
 } status_entry_counts;
+
+#define status_counts_init(counts, paths, statuses) do { \
+	memset(&(counts), 0, sizeof(counts)); \
+	(counts).expected_statuses = (statuses); \
+	(counts).expected_paths = (paths); \
+	(counts).file = __FILE__; \
+	(counts).line = __LINE__; \
+	} while (0)
 
 /* cb_status__normal takes payload of "status_entry_counts *" */
 

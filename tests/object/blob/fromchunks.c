@@ -59,7 +59,7 @@ void test_object_blob_fromchunks__doesnot_overwrite_an_already_existing_object(v
 	git_buf content = GIT_BUF_INIT;
 	git_oid expected_oid, oid;
 	int howmany = 7;
-	
+
 	cl_git_pass(git_oid_fromstr(&expected_oid, "321cbdf08803c744082332332838df6bd160f8f9"));
 
 	cl_git_pass(git_blob_create_fromchunks(&oid, repo, NULL, text_chunked_source_cb, &howmany));
@@ -117,3 +117,40 @@ void test_object_blob_fromchunks__creating_a_blob_from_chunks_honors_the_attribu
 	assert_named_chunked_blob("e9671e138a780833cb689753570fd10a55be84fb", "dummy.txt");
 	assert_named_chunked_blob("e9671e138a780833cb689753570fd10a55be84fb", "dummy.dunno");
 }
+
+static int failing_chunked_source_cb(
+	char *content, size_t max_length, void *payload)
+{
+	int *count = (int *)payload;
+
+	GIT_UNUSED(max_length);
+
+	(*count)--;
+	if (*count == 0)
+		return -1234;
+
+	strcpy(content, textual_content);
+	return (int)strlen(textual_content);
+}
+
+void test_object_blob_fromchunks__can_stop_with_error(void)
+{
+	git_oid expected_oid, oid;
+	git_object *blob;
+	int howmany = 7;
+
+	cl_git_pass(git_oid_fromstr(
+		&expected_oid, "321cbdf08803c744082332332838df6bd160f8f9"));
+
+	cl_git_fail_with(
+		git_object_lookup(&blob, repo, &expected_oid, GIT_OBJ_ANY),
+		GIT_ENOTFOUND);
+
+	cl_git_fail_with(git_blob_create_fromchunks(
+		&oid, repo, NULL, failing_chunked_source_cb, &howmany), -1234);
+
+	cl_git_fail_with(
+		git_object_lookup(&blob, repo, &expected_oid, GIT_OBJ_ANY),
+		GIT_ENOTFOUND);
+}
+

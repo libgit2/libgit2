@@ -139,7 +139,8 @@ void test_core_pool__strndup_limit(void)
 	git_pool p;
 
 	cl_git_pass(git_pool_init(&p, 1, 100));
-	cl_assert(git_pool_strndup(&p, "foo", -1) == NULL);
+	/* ensure 64 bit doesn't overflow */
+	cl_assert(git_pool_strndup(&p, "foo", (size_t)-1) == NULL);
 	git_pool_clear(&p);
 }
 

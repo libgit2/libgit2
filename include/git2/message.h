@@ -8,6 +8,7 @@
 #define INCLUDE_git_message_h__
 
 #include "common.h"
+#include "buffer.h"
 
 /**
  * @file git2/message.h
@@ -23,25 +24,19 @@ GIT_BEGIN_DECL
  *
  * Optionally, can remove lines starting with a "#".
  *
- * @param out The user-allocated buffer which will be filled with the
- *     cleaned up message. Pass NULL if you just want to get the needed
- *     size of the prettified message as the output value.
- *
- * @param out_size Size of the `out` buffer in bytes.
+ * @param out The user-allocated git_buf which will be filled with the
+ *     cleaned up message.
  *
  * @param message The message to be prettified.
  *
- * @param strip_comments Non-zero to remove lines starting with "#", 0 to
- *     leave them in.
+ * @param strip_comments Non-zero to remove comment lines, 0 to leave them in.
  *
- * @return -1 on error, else number of characters in prettified message
- *     including the trailing NUL byte
+ * @param comment_char Comment character. Lines starting with this character
+ * are considered to be comments and removed if `strip_comments` is non-zero.
+ *
+ * @return 0 or an error code.
  */
-GIT_EXTERN(int) git_message_prettify(
-	char *out,
-	size_t out_size,
-	const char *message,
-	int strip_comments);
+GIT_EXTERN(int) git_message_prettify(git_buf *out, const char *message, int strip_comments, char comment_char);
 
 /** @} */
 GIT_END_DECL

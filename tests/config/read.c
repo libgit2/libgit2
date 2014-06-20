@@ -247,7 +247,7 @@ void test_config_read__foreach(void)
 
 	count = 3;
 	cl_git_fail(ret = git_config_foreach(cfg, cfg_callback_countdown, &count));
-	cl_assert_equal_i(GIT_EUSER, ret);
+	cl_assert_equal_i(-100, ret);
 
 	git_config_free(cfg);
 }

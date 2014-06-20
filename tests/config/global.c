@@ -6,18 +6,17 @@ void test_config_global__initialize(void)
 {
 	git_buf path = GIT_BUF_INIT;
 
-	cl_assert_equal_i(0, p_mkdir("home", 0777));
+	cl_git_pass(git_futils_mkdir_r("home", NULL, 0777));
 	cl_git_pass(git_path_prettify(&path, "home", NULL));
 	cl_git_pass(git_libgit2_opts(
 		GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL, path.ptr));
 
-	cl_assert_equal_i(0, p_mkdir("xdg", 0777));
-	cl_assert_equal_i(0, p_mkdir("xdg/git", 0777));
+	cl_git_pass(git_futils_mkdir_r("xdg/git", NULL, 0777));
 	cl_git_pass(git_path_prettify(&path, "xdg/git", NULL));
 	cl_git_pass(git_libgit2_opts(
 		GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_XDG, path.ptr));
 
-	cl_assert_equal_i(0, p_mkdir("etc", 0777));
+	cl_git_pass(git_futils_mkdir_r("etc", NULL, 0777));
 	cl_git_pass(git_path_prettify(&path, "etc", NULL));
 	cl_git_pass(git_libgit2_opts(
 		GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_SYSTEM, path.ptr));
@@ -27,13 +26,7 @@ void test_config_global__initialize(void)
 
 void test_config_global__cleanup(void)
 {
-	cl_git_pass(git_futils_rmdir_r("home", NULL, GIT_RMDIR_REMOVE_FILES));
-	cl_git_pass(git_futils_rmdir_r("xdg", NULL, GIT_RMDIR_REMOVE_FILES));
-	cl_git_pass(git_futils_rmdir_r("etc", NULL, GIT_RMDIR_REMOVE_FILES));
-
-	git_libgit2_opts(GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_SYSTEM, NULL);
-	git_libgit2_opts(GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_XDG, NULL);
-	git_libgit2_opts(GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL, NULL);
+	cl_sandbox_set_search_path_defaults();
 }
 
 void test_config_global__open_global(void)
