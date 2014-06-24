@@ -7,3 +7,5 @@ v0.21 + 1
 * Share open packfiles across repositories to share descriptors and mmaps.
 
 * Use a map for the treebuilder, making insertion O(1)
+
+* LF -> CRLF filter refuses to handle mixed-EOL files
