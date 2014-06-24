@@ -104,6 +104,7 @@ void test_object_tree_write__subtree(void)
 void test_object_tree_write__sorted_subtrees(void)
 {
 	git_treebuilder *builder;
+	git_tree *tree;
 	unsigned int i;
 	int position_c = -1, position_cake = -1, position_config = -1;
 
@@ -143,8 +144,9 @@ void test_object_tree_write__sorted_subtrees(void)
 
 	cl_git_pass(git_treebuilder_write(&tree_oid, g_repo, builder));
 
-	for (i = 0; i < builder->entries.length; ++i) {
-		git_tree_entry *entry = git_vector_get(&builder->entries, i);
+	cl_git_pass(git_tree_lookup(&tree, g_repo, &tree_oid));
+	for (i = 0; i < git_tree_entrycount(tree); i++) {
+		const git_tree_entry *entry = git_tree_entry_byindex(tree, i);
 
 		if (strcmp(entry->filename, "c") == 0)
 			position_c = i;
@@ -155,6 +157,8 @@ void test_object_tree_write__sorted_subtrees(void)
 		if (strcmp(entry->filename, "config") == 0)
 			position_config = i;
 	}
+
+	git_tree_free(tree);
 
 	cl_assert(position_c != -1);
 	cl_assert(position_cake != -1);
