@@ -5,3 +5,5 @@ v0.21 + 1
   made read-write if necessary.
 
 * Share open packfiles across repositories to share descriptors and mmaps.
+
+* Use a map for the treebuilder, making insertion O(1)
