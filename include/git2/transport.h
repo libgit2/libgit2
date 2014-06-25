@@ -221,6 +221,14 @@ GIT_EXTERN(int) git_cred_ssh_custom_new(
 GIT_EXTERN(int) git_cred_default_new(git_cred **out);
 
 /**
+ * Create a credential to specify a username.
+ *
+ * This is used with ssh authentication to query for the username if
+ * none is specified in the url.
+ */
+GIT_EXTERN(int) git_cred_username_new(git_cred **cred, const char *username);
+
+/**
  * Signature of a function which acquires a credential object.
  *
  * - cred: The newly created credential object.
