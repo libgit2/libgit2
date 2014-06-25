@@ -827,19 +827,15 @@ void test_core_buffer__classify_with_utf8(void)
 	git_buf b;
 
 	b.ptr = data0; b.size = b.asize = data0len;
-	cl_assert(!git_buf_text_is_binary(&b));
 	cl_assert(!git_buf_text_contains_nul(&b));
 
 	b.ptr = data1; b.size = b.asize = data1len;
-	cl_assert(git_buf_text_is_binary(&b));
 	cl_assert(!git_buf_text_contains_nul(&b));
 
 	b.ptr = data2; b.size = b.asize = data2len;
-	cl_assert(git_buf_text_is_binary(&b));
 	cl_assert(git_buf_text_contains_nul(&b));
 
 	b.ptr = data3; b.size = b.asize = data3len;
-	cl_assert(!git_buf_text_is_binary(&b));
 	cl_assert(!git_buf_text_contains_nul(&b));
 }
 

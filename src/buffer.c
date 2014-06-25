@@ -142,11 +142,6 @@ int git_buf_set(git_buf *buf, const void *data, size_t len)
 	return 0;
 }
 
-int git_buf_is_binary(const git_buf *buf)
-{
-	return git_buf_text_is_binary(buf);
-}
-
 int git_buf_contains_nul(const git_buf *buf)
 {
 	return git_buf_text_contains_nul(buf);

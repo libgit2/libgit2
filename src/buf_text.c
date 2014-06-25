@@ -176,31 +176,6 @@ int git_buf_text_common_prefix(git_buf *buf, const git_strarray *strings)
 	return 0;
 }
 
-bool git_buf_text_is_binary(const git_buf *buf)
-{
-	const char *scan = buf->ptr, *end = buf->ptr + buf->size;
-	git_bom_t bom;
-	int printable = 0, nonprintable = 0;
-
-	scan += git_buf_text_detect_bom(&bom, buf, 0);
-
-	if (bom > GIT_BOM_UTF8)
-		return 1;
-
-	while (scan < end) {
-		unsigned char c = *scan++;
-
-		if (c > 0x1F && c < 0x7F)
-			printable++;
-		else if (c == '\0')
-			return true;
-		else if (!git__isspace(c))
-			nonprintable++;
-	}
-
-	return ((printable >> 7) < nonprintable);
-}
-
 bool git_buf_text_contains_nul(const git_buf *buf)
 {
 	return (memchr(buf->ptr, '\0', buf->size) != NULL);
