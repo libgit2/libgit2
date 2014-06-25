@@ -67,6 +67,7 @@ int git_mwindow_get_pack(struct git_pack_file **out, const char *path)
 
 	if (git_mwindow_files_init() < 0) {
 		git_mutex_unlock(&git__mwindow_mutex);
+		git__free(packname);
 		return -1;
 	}
 
@@ -93,8 +94,10 @@ int git_mwindow_get_pack(struct git_pack_file **out, const char *path)
 	git_strmap_insert(git__pack_cache, pack->pack_name, pack, error);
 	git_mutex_unlock(&git__mwindow_mutex);
 
-	if (error < 0)
+	if (error < 0) {
+		git_packfile_free(pack);
 		return -1;
+	}
 
 	*out = pack;
 	return 0;
