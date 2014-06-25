@@ -72,18 +72,17 @@ void test_network_remote_remotes__error_when_not_found(void)
 void test_network_remote_remotes__error_when_no_push_available(void)
 {
 	git_remote *r;
-	git_transport *t;
 	git_push *p;
 
 	cl_git_pass(git_remote_create_anonymous(&r, _repo, cl_fixture("testrepo.git"), NULL));
 
-	cl_git_pass(git_transport_local(&t,r,NULL));
-
-	/* Make sure that push is really not available */
-	t->push = NULL;
-	cl_git_pass(git_remote_set_transport(r, t));
+	cl_git_pass(git_remote_set_transport(r, git_transport_local, NULL));
 
 	cl_git_pass(git_remote_connect(r, GIT_DIRECTION_PUSH));
+
+	/* Make sure that push is really not available */
+	r->transport->push = NULL;
+
 	cl_git_pass(git_push_new(&p, r));
 	cl_git_pass(git_push_add_refspec(p, "refs/heads/master"));
 	cl_git_fail_with(git_push_finish(p), GIT_ERROR);
@@ -436,27 +435,6 @@ void test_network_remote_remotes__returns_ENOTFOUND_when_neither_url_nor_pushurl
 
 	cl_git_fail_with(
 		git_remote_load(&remote, _repo, "no-remote-url"), GIT_ENOTFOUND);
-}
-
-void test_network_remote_remotes__check_structure_version(void)
-{
-	git_transport transport = GIT_TRANSPORT_INIT;
-	const git_error *err;
-
-	git_remote_free(_remote);
-	_remote = NULL;
-	cl_git_pass(git_remote_create_anonymous(&_remote, _repo, "test-protocol://localhost", NULL));
-
-	transport.version = 0;
-	cl_git_fail(git_remote_set_transport(_remote, &transport));
-	err = giterr_last();
-	cl_assert_equal_i(GITERR_INVALID, err->klass);
-
-	giterr_clear();
-	transport.version = 1024;
-	cl_git_fail(git_remote_set_transport(_remote, &transport));
-	err = giterr_last();
-	cl_assert_equal_i(GITERR_INVALID, err->klass);
 }
 
 void assert_cannot_create_remote(const char *name, int expected_error)

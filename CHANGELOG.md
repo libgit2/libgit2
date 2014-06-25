@@ -12,3 +12,16 @@ v0.21 + 1
 
 * LF -> CRLF filter now runs when * text = auto (with Git for Windows 1.9.4)
 
+* The git_remote_set_transport function now sets a transport factory function,
+  rather than a pre-existing transport instance.
+
+* The git_clone_options struct no longer provides the ignore_cert_errors or
+  remote_name members for remote customization.
+
+  Instead, the git_clone_options struct has two new members, remote_cb and
+  remote_cb_payload, which allow the caller to completely override the remote
+  creation process. If needed, the caller can use this callback to give their
+  remote a name other than the default (origin) or disable cert checking.
+
+  The remote_callbacks member has been preserved for convenience, although it
+  is not used when a remote creation callback is supplied.

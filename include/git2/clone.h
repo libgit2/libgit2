@@ -12,6 +12,7 @@
 #include "indexer.h"
 #include "checkout.h"
 #include "remote.h"
+#include "transport.h"
 
 
 /**
@@ -52,6 +53,27 @@ typedef enum {
 } git_clone_local_t;
 
 /**
+ * The signature of a function matching git_remote_create, with an additional
+ * void* as a callback payload.
+ *
+ * Callers of git_clone may provide a function matching this signature to override
+ * the remote creation and customization process during a clone operation.
+ *
+ * @param out the resulting remote
+ * @param repo the repository in which to create the remote
+ * @param name the remote's name
+ * @param url the remote's url
+ * @param payload an opaque payload
+ * @return 0, GIT_EINVALIDSPEC, GIT_EEXISTS or an error code
+ */
+typedef int (*git_remote_create_cb)(
+	git_remote **out,
+	git_repository *repo,
+	const char *name,
+	const char *url,
+	void *payload);
+
+/**
  * Clone options structure
  *
  * Use the GIT_CLONE_OPTIONS_INIT to get the default settings, like this:
@@ -72,7 +94,11 @@ typedef struct git_clone_options {
 	git_checkout_options checkout_opts;
 
 	/**
-	 * Callbacks to use for reporting fetch progress.
+	 * Callbacks to use for reporting fetch progress, and for acquiring
+	 * credentials in the event they are needed. This parameter is ignored if
+	 * the remote_cb parameter is set; if you provide a remote creation
+	 * callback, then you have the opportunity to configure remote callbacks in
+	 * provided function.
 	 */
 	git_remote_callbacks remote_callbacks;
 
@@ -83,21 +109,9 @@ typedef struct git_clone_options {
 	int bare;
 
 	/**
-	 * Set to 1 if errors validating the remote host's certificate
-	 * should be ignored.
-	 */
-	int ignore_cert_errors;
-
-	/**
 	 * Whether to use a fetch or copy the object database.
 	 */
 	git_clone_local_t local;
-
-	/**
-	 * The name to be given to the remote that will be
-	 * created. The default is "origin".
-	 */
-	const char *remote_name;
 
 	/**
 	 * The name of the branch to checkout. NULL means use the
@@ -110,6 +124,20 @@ typedef struct git_clone_options {
 	 * use the default signature using the config.
 	 */
 	git_signature *signature;
+
+	/**
+	 * A callback used to create the git_remote, prior to its being
+	 * used to perform the clone operation. See the documentation for
+	 * git_remote_create_cb for details. This parameter may be NULL,
+	 * indicating that git_clone should provide default behavior.
+	 */
+	git_remote_create_cb remote_cb;
+
+	/**
+	 * An opaque payload to pass to the git_remote creation callback.
+	 * This parameter is ignored unless remote_cb is non-NULL.
+	 */
+	void *remote_cb_payload;
 } git_clone_options;
 
 #define GIT_CLONE_OPTIONS_VERSION 1

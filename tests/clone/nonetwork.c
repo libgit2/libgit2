@@ -110,12 +110,25 @@ void test_clone_nonetwork__fail_with_already_existing_but_non_empty_directory(vo
 	cl_git_fail(git_clone(&g_repo, cl_git_fixture_url("testrepo.git"), "./foo", &g_options));
 }
 
+int custom_origin_name_remote_create(
+	git_remote **out,
+	git_repository *repo,
+	const char *name,
+	const char *url,
+	void *payload)
+{
+	GIT_UNUSED(name);
+	GIT_UNUSED(payload);
+
+	return git_remote_create(out, repo, "my_origin", url);
+}
+
 void test_clone_nonetwork__custom_origin_name(void)
 {
-       g_options.remote_name = "my_origin";
-       cl_git_pass(git_clone(&g_repo, cl_git_fixture_url("testrepo.git"), "./foo", &g_options));
+	g_options.remote_cb = custom_origin_name_remote_create;
+	cl_git_pass(git_clone(&g_repo, cl_git_fixture_url("testrepo.git"), "./foo", &g_options));
 
-       cl_git_pass(git_remote_load(&g_remote, g_repo, "my_origin"));
+	cl_git_pass(git_remote_load(&g_remote, g_repo, "my_origin"));
 }
 
 void test_clone_nonetwork__defaults(void)
