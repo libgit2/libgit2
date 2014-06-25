@@ -279,8 +279,13 @@ void test_checkout_crlf__autocrlf_false_text_auto_attr(void)
 
 	git_checkout_head(g_repo, &opts);
 
-	check_file_contents("./crlf/all-lf", ALL_LF_TEXT_RAW);
-	check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_RAW);
+	if (GIT_EOL_NATIVE == GIT_EOL_CRLF) {
+		check_file_contents("./crlf/all-lf", ALL_LF_TEXT_AS_CRLF);
+		check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_AS_CRLF);
+	} else {
+		check_file_contents("./crlf/all-lf", ALL_LF_TEXT_RAW);
+		check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_RAW);
+	}
 }
 
 void test_checkout_crlf__autocrlf_true_text_auto_attr(void)
