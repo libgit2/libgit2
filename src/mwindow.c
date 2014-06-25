@@ -62,11 +62,14 @@ int git_mwindow_get_pack(struct git_pack_file **out, const char *path)
 	if ((error = git_packfile__name(&packname, path)) < 0)
 		return error;
 
-	if (git_mutex_lock(&git__mwindow_mutex) < 0)
+	if (git_mutex_lock(&git__mwindow_mutex) < 0) {
+		giterr_set(GITERR_OS, "failed to lock mwindow mutex");
 		return -1;
+	}
 
 	if (git_mwindow_files_init() < 0) {
 		git_mutex_unlock(&git__mwindow_mutex);
+		git__free(packname);
 		return -1;
 	}
 
@@ -93,31 +96,29 @@ int git_mwindow_get_pack(struct git_pack_file **out, const char *path)
 	git_strmap_insert(git__pack_cache, pack->pack_name, pack, error);
 	git_mutex_unlock(&git__mwindow_mutex);
 
-	if (error < 0)
+	if (error < 0) {
+		git_packfile_free(pack);
 		return -1;
+	}
 
 	*out = pack;
 	return 0;
 }
 
-int git_mwindow_put_pack(struct git_pack_file *pack)
+void git_mwindow_put_pack(struct git_pack_file *pack)
 {
 	int count;
 	git_strmap_iter pos;
 
 	if (git_mutex_lock(&git__mwindow_mutex) < 0)
-		return -1;
+		return;
 
-	if (git_mwindow_files_init() < 0) {
-		git_mutex_unlock(&git__mwindow_mutex);
-		return -1;
-	}
+	/* put before get would be a corrupted state */
+	assert(git__pack_cache);
 
 	pos = git_strmap_lookup_index(git__pack_cache, pack->pack_name);
-	if (!git_strmap_valid_index(git__pack_cache, pos)) {
-		git_mutex_unlock(&git__mwindow_mutex);
-		return GIT_ENOTFOUND;
-	}
+	/* if we cannot find it, the state is corrupted */
+	assert(git_strmap_valid_index(git__pack_cache, pos));
 
 	count = git_atomic_dec(&pack->refcount);
 	if (count == 0) {
@@ -126,7 +127,7 @@ int git_mwindow_put_pack(struct git_pack_file *pack)
 	}
 
 	git_mutex_unlock(&git__mwindow_mutex);
-	return 0;
+	return;
 }
 
 void git_mwindow_free_all(git_mwindow_file *mwf)

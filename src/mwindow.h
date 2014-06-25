@@ -48,6 +48,6 @@ void git_mwindow_files_free(void);
 
 struct git_pack_file; /* just declaration to avoid cyclical includes */
 int git_mwindow_get_pack(struct git_pack_file **out, const char *path);
-int git_mwindow_put_pack(struct git_pack_file *pack);
+void git_mwindow_put_pack(struct git_pack_file *pack);
 
 #endif
