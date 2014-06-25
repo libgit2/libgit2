@@ -59,7 +59,7 @@ GIT_EXTERN(int) git_revert_init_options(
  * @param merge_options the merge options (or null for defaults)
  * @return zero on success, -1 on failure.
  */
-int git_revert_commit(
+GIT_EXTERN(int) git_revert_commit(
 	git_index **out,
 	git_repository *repo,
 	git_commit *revert_commit,
