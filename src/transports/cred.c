@@ -129,6 +129,11 @@ static void default_free(struct git_cred *cred)
 	git__free(c);
 }
 
+static void username_free(struct git_cred *cred)
+{
+	git__free(cred);
+}
+
 int git_cred_ssh_key_new(
 	git_cred **cred,
 	const char *username,
@@ -261,5 +266,23 @@ int git_cred_default_new(git_cred **cred)
 	c->free = default_free;
 
 	*cred = c;
+	return 0;
+}
+
+int git_cred_username_new(git_cred **cred, const char *username)
+{
+	git_cred_username *c;
+	size_t len;
+
+	assert(cred);
+
+	len = strlen(username);
+	c = git__malloc(sizeof(git_cred_username) + len + 1);
+	GITERR_CHECK_ALLOC(c);
+
+	c->parent.credtype = GIT_CREDTYPE_USERNAME;
+	c->parent.free = username_free;
+	memcpy(c->username, username, len + 1);
+
 	return 0;
 }
