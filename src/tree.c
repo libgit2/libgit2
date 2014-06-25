@@ -466,6 +466,7 @@ static int append_entry(
 
 	git_strmap_insert(bld->map, entry->filename, entry, error);
 	if (error < 0) {
+		git_tree_entry_free(entry);
 		giterr_set(GITERR_TREE, "failed to append entry %s to the tree builder", filename);
 		return -1;
 	}
@@ -622,6 +623,7 @@ int git_treebuilder_create(git_treebuilder **builder_p, const git_tree *source)
 	GITERR_CHECK_ALLOC(bld);
 
 	if (git_strmap_alloc(&bld->map) < 0) {
+		git__free(bld);
 		return -1;
 	}
 
