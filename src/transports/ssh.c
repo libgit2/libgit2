@@ -9,6 +9,7 @@
 #include "buffer.h"
 #include "netops.h"
 #include "smart.h"
+#include "cred.h"
 
 #ifdef GIT_SSH
 
@@ -36,7 +37,7 @@ typedef struct {
 	ssh_stream *current_stream;
 } ssh_subtransport;
 
-static int list_auth_methods(int *out, const char *host, const char *port);
+static int list_auth_methods(int *out, LIBSSH2_SESSION *session, const char *username);
 
 static void ssh_error(LIBSSH2_SESSION *session, const char *errmsg)
 {
@@ -377,6 +378,12 @@ static int request_creds(git_cred **out, ssh_subtransport *t, const char *user, 
 		return -1;
 	}
 
+	if (!(cred->credtype & auth_methods)) {
+		cred->free(cred);
+		giterr_set(GITERR_SSH, "callback returned unsupported credentials type");
+		return -1;
+	}
+
 	*out = cred;
 
 	return 0;
@@ -444,26 +451,33 @@ static int _git_ssh_setup_conn(
 		GITERR_CHECK_ALLOC(port);
 	}
 
-	if (list_auth_methods(&auth_methods, host, port) < 0) {
-		auth_methods = GIT_CREDTYPE_USERPASS_PLAINTEXT |
-			GIT_CREDTYPE_SSH_KEY | GIT_CREDTYPE_SSH_CUSTOM |
-			GIT_CREDTYPE_SSH_INTERACTIVE;
+	/* we need the username to ask for auth methods */
+	if (!user) {
+		if ((error = request_creds(&cred, t, NULL, GIT_CREDTYPE_USERNAME)) < 0)
+			goto on_error;
+
+		user = git__strdup(((git_cred_username *) cred)->username);
+		cred->free(cred);
+		cred = NULL;
+		if (!user)
+			goto on_error;
+	} else if (user && pass) {
+		if ((error = git_cred_userpass_plaintext_new(&cred, user, pass)) < 0)
+			goto on_error;
 	}
 
 	if ((error = gitno_connect(&s->socket, host, port, 0)) < 0)
 		goto on_error;
 
-	if (user && pass) {
-		if ((error = git_cred_userpass_plaintext_new(&cred, user, pass)) < 0)
-			goto on_error;
-	}
-
 	if ((error = _git_ssh_session_create(&session, s->socket)) < 0)
+		goto on_error;
+
+	if ((error = list_auth_methods(&auth_methods, session, user)) < 0)
 		goto on_error;
 
 	error = GIT_EAUTH;
 	/* if we already have something to try */
-	if (cred)
+	if (cred && auth_methods & cred->credtype)
 		error = _git_ssh_authenticate_session(session, cred);
 
 	while (error == GIT_EAUTH) {
@@ -474,6 +488,12 @@ static int _git_ssh_setup_conn(
 
 		if ((error = request_creds(&cred, t, user, auth_methods)) < 0)
 			goto on_error;
+
+		if (strcmp(user, git_cred__username(cred))) {
+			giterr_set(GITERR_SSH, "username does not match previous request");
+			error = -1;
+			goto on_error;
+		}
 
 		error = _git_ssh_authenticate_session(session, cred);
 	}
@@ -628,26 +648,17 @@ static void _ssh_free(git_smart_subtransport *subtransport)
 #define SSH_AUTH_PASSWORD "password"
 #define SSH_AUTH_KEYBOARD_INTERACTIVE "keyboard-interactive"
 
-static int list_auth_methods(int *out, const char *host, const char *port)
+static int list_auth_methods(int *out, LIBSSH2_SESSION *session, const char *username)
 {
-	gitno_socket s;
-	LIBSSH2_SESSION *session = NULL;
 	const char *list, *ptr;
 
 	*out = 0;
 
-	if (gitno_connect(&s, host, port, 0) < 0)
-		return -1;
-
-	if (_git_ssh_session_create(&session, s) < 0)
-		goto on_error;
-
-	/* the username is dummy, we're throwing away the connection anyway */
-	list = libssh2_userauth_list(session, "git", strlen("git"));
+	list = libssh2_userauth_list(session, username, strlen(username));
 
 	/* either error, or the remote accepts NONE auth, which is bizarre, let's punt */
-	if (list == NULL)
-		goto out;
+	if (list == NULL && !libssh2_userauth_authenticated(session))
+		return -1;
 
 	ptr = list;
 	while (ptr) {
@@ -677,17 +688,7 @@ static int list_auth_methods(int *out, const char *host, const char *port)
 		ptr = strchr(ptr, ',');
 	}
 
-out:
-	libssh2_session_free(session);
-	gitno_close(&s);
-
 	return 0;
-
-on_error:
-	libssh2_session_free(session);
-	gitno_close(&s);
-
-	return -1;
 }
 #endif
 

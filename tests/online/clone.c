@@ -253,6 +253,9 @@ static int cred_count_calls_cb(git_cred **cred, const char *url, const char *use
 
 	GIT_UNUSED(url); GIT_UNUSED(user); GIT_UNUSED(allowed_types);
 
+	if (allowed_types == GIT_CREDTYPE_USERNAME)
+		return git_cred_username_new(cred, "foo");
+
 	(*counter)++;
 
 	if (*counter == 3)
