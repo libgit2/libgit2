@@ -351,17 +351,45 @@ void test_online_clone__can_cancel(void)
 static int check_ssh_auth_methods(git_cred **cred, const char *url, const char *username_from_url,
 				  unsigned int allowed_types, void *data)
 {
+	int *with_user = (int *) data;
 	GIT_UNUSED(cred); GIT_UNUSED(url); GIT_UNUSED(username_from_url); GIT_UNUSED(data);
 
-	cl_assert_equal_i(GIT_CREDTYPE_SSH_KEY | GIT_CREDTYPE_SSH_CUSTOM, allowed_types);
+	if (!*with_user)
+		cl_assert_equal_i(GIT_CREDTYPE_USERNAME, allowed_types);
+	else
+		cl_assert(!(allowed_types & GIT_CREDTYPE_USERNAME));
 
 	return GIT_EUSER;
 }
 
 void test_online_clone__ssh_auth_methods(void)
 {
-	g_options.remote_callbacks.credentials = check_ssh_auth_methods;
+	int with_user;
 
+	g_options.remote_callbacks.credentials = check_ssh_auth_methods;
+	g_options.remote_callbacks.payload = &with_user;
+
+	with_user = 0;
 	cl_git_fail_with(GIT_EUSER,
 		git_clone(&g_repo, SSH_REPO_URL, "./foo", &g_options));
+
+	with_user = 1;
+	cl_git_fail_with(GIT_EUSER,
+		git_clone(&g_repo, "ssh://git@github.com/libgit2/TestGitRepository", "./foo", &g_options));
+}
+
+static int cred_foo_bar(git_cred **cred, const char *url, const char *username_from_url,
+				  unsigned int allowed_types, void *data)
+
+{
+	GIT_UNUSED(url); GIT_UNUSED(username_from_url); GIT_UNUSED(allowed_types); GIT_UNUSED(data);
+
+	return git_cred_userpass_plaintext_new(cred, "foo", "bar");
+}
+
+void test_online_clone__ssh_cannot_change_username(void)
+{
+	g_options.remote_callbacks.credentials = cred_foo_bar;
+
+	cl_git_fail(git_clone(&g_repo, "ssh://git@github.com/libgit2/TestGitRepository", "./foo", &g_options));
 }
