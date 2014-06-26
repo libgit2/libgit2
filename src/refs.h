@@ -63,7 +63,7 @@ struct git_reference {
 	} target;
 
 	git_oid peel;
-	char name[0];
+	char name[GIT_FLEX_ARRAY];
 };
 
 git_reference *git_reference__set_name(git_reference *ref, const char *name);
