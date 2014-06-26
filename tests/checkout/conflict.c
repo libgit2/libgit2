@@ -169,7 +169,7 @@ static void ensure_workdir_mode(const char *path, int mode)
 		git_buf_joinpath(&fullpath, git_repository_workdir(g_repo), path));
 
 	cl_git_pass(p_stat(git_buf_cstr(&fullpath), &st));
-	cl_assert_equal_i(mode, st.st_mode);
+	cl_assert_equal_i((mode & S_IRWXU), (st.st_mode & S_IRWXU));
 
 	git_buf_free(&fullpath);
 #endif
