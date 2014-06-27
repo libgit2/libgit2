@@ -433,6 +433,8 @@ static int write_at(git_indexer *idx, const void *data, git_off_t offset, size_t
 	git_map map;
 	int error;
 
+	assert(data && size);
+
 	/* the offset needs to be at the beginning of the a page boundary */
 	page_start = (offset / page_size) * page_size;
 	page_offset = offset - page_start;
@@ -450,6 +452,9 @@ static int write_at(git_indexer *idx, const void *data, git_off_t offset, size_t
 static int append_to_pack(git_indexer *idx, const void *data, size_t size)
 {
 	git_off_t current_size = idx->pack->mwf.size;
+
+	if (!size)
+		return 0;
 
 	/* add the extra space we need at the end */
 	if (p_ftruncate(idx->pack->mwf.fd, current_size + size) < 0) {
