@@ -98,4 +98,6 @@ int git_reference_lookup_resolved(
 	const char *name,
 	int max_deref);
 
+int git_reference__log_signature(git_signature **out, git_repository *repo);
+
 #endif
