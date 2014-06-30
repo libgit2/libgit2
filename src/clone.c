@@ -229,6 +229,22 @@ cleanup:
 	return retcode;
 }
 
+static int default_remote_create(
+		git_remote **out,
+		git_repository *repo,
+		const char *name,
+		const char *url,
+		void *payload)
+{
+	int error;
+	git_remote_callbacks *callbacks = payload;
+
+	if ((error = git_remote_create(out, repo, name, url)) < 0)
+		return error;
+
+	return git_remote_set_callbacks(*out, callbacks);
+}
+
 /*
  * submodules?
  */
@@ -241,8 +257,9 @@ static int create_and_configure_origin(
 {
 	int error;
 	git_remote *origin = NULL;
-	const char *name;
 	char buf[GIT_PATH_MAX];
+	git_remote_create_cb remote_create = options->remote_cb;
+	void *payload = options->remote_cb_payload;
 
 	/* If the path exists and is a dir, the url should be the absolute path */
 	if (git_path_root(url) < 0 && git_path_exists(url) && git_path_isdir(url)) {
@@ -252,14 +269,12 @@ static int create_and_configure_origin(
 		url = buf;
 	}
 
-	name = options->remote_name ? options->remote_name : "origin";
-	if ((error = git_remote_create(&origin, repo, name, url)) < 0)
-		goto on_error;
+	if (!remote_create) {
+		remote_create = default_remote_create;
+		payload = (void *)&options->remote_callbacks;
+	}
 
-	if (options->ignore_cert_errors)
-		git_remote_check_cert(origin, 0);
-
-	if ((error = git_remote_set_callbacks(origin, &options->remote_callbacks)) < 0)
+	if ((error = remote_create(&origin, repo, "origin", url, payload)) < 0)
 		goto on_error;
 
 	if ((error = git_remote_save(origin)) < 0)
