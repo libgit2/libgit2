@@ -24,6 +24,8 @@
 #include "repository.h"
 #include "odb.h"
 
+static int clone_local_into(git_repository *repo, git_remote *remote, const git_checkout_options *co_opts, const char *branch, int link, const git_signature *signature);
+
 static int create_branch(
 	git_reference **branch,
 	git_repository *repo,
@@ -329,7 +331,7 @@ static int checkout_branch(git_repository *repo, git_remote *remote, const git_c
 	return error;
 }
 
-int git_clone_into(git_repository *repo, git_remote *_remote, const git_checkout_options *co_opts, const char *branch, const git_signature *signature)
+static int clone_into(git_repository *repo, git_remote *_remote, const git_checkout_options *co_opts, const char *branch, const git_signature *signature)
 {
 	int error;
 	git_buf reflog_message = GIT_BUF_INIT;
@@ -434,11 +436,11 @@ int git_clone(
 	if (!(error = create_and_configure_origin(&origin, repo, url, &options))) {
 		if (git_clone__should_clone_local(url, options.local)) {
 			int link = options.local != GIT_CLONE_LOCAL_NO_LINKS;
-			error = git_clone_local_into(
+			error = clone_local_into(
 				repo, origin, &options.checkout_opts,
 				options.checkout_branch, link, options.signature);
 		} else {
-			error = git_clone_into(
+			error = clone_into(
 				repo, origin, &options.checkout_opts,
 				options.checkout_branch, options.signature);
 		}
@@ -498,7 +500,7 @@ static bool can_link(const char *src, const char *dst, int link)
 #endif
 }
 
-int git_clone_local_into(git_repository *repo, git_remote *remote, const git_checkout_options *co_opts, const char *branch, int link, const git_signature *signature)
+static int clone_local_into(git_repository *repo, git_remote *remote, const git_checkout_options *co_opts, const char *branch, int link, const git_signature *signature)
 {
 	int error, flags;
 	git_repository *src;

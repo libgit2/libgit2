@@ -210,59 +210,6 @@ GIT_EXTERN(int) git_clone(
 	const char *local_path,
 	const git_clone_options *options);
 
-/**
- * Clone into a repository
- *
- * After creating the repository and remote and configuring them for
- * paths and callbacks respectively, you can call this function to
- * perform the clone operation and optionally checkout files.
- *
- * @param repo the repository to use
- * @param remote the remote repository to clone from
- * @param co_opts options to use during checkout
- * @param branch the branch to checkout after the clone, pass NULL for the
- *        remote's default branch
- * @param signature The identity used when updating the reflog.
- * @return 0 on success, any non-zero return value from a callback
- *         function, or a negative value to indicate an error (use
- *         `giterr_last` for a detailed error message)
- */
-GIT_EXTERN(int) git_clone_into(
-	git_repository *repo,
-	git_remote *remote,
-	const git_checkout_options *co_opts,
-	const char *branch,
-	const git_signature *signature);
-
-/**
- * Perform a local clone into a repository
- *
- * A "local clone" bypasses any git-aware protocols and simply copies
- * over the object database from the source repository. It is often
- * faster than a git-aware clone, but no verification of the data is
- * performed, and can copy over too much data.
- *
- * @param repo the repository to use
- * @param remote the remote repository to clone from
- * @param co_opts options to use during checkout
- * @param branch the branch to checkout after the clone, pass NULL for the
- *        remote's default branch
- * @param link wether to use hardlinks instead of copying
- * objects. This is only possible if both repositories are on the same
- * filesystem.
- * @param signature the identity used when updating the reflog
- * @return 0 on success, any non-zero return value from a callback
- *         function, or a negative value to indicate an error (use
- *         `giterr_last` for a detailed error message)
- */
-GIT_EXTERN(int) git_clone_local_into(
-	git_repository *repo,
-	git_remote *remote,
-	const git_checkout_options *co_opts,
-	const char *branch,
-	int link,
-	const git_signature *signature);
-
 /** @} */
 GIT_END_DECL
 #endif
