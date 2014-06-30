@@ -408,17 +408,6 @@ IF (SONAME)
 ENDIF()
 CONFIGURE_FILE(${CMAKE_CURRENT_SOURCE_DIR}/libgit2.pc.in ${CMAKE_CURRENT_BINARY_DIR}/libgit2.pc @ONLY)
 
-IF (LIBSSH2_FOUND)
-	SET(INCLUDE_LIBSSH2 "#include <libssh2.h>")
-	SET(GIT_SSH_PK_FUNC "typedef LIBSSH2_USERAUTH_PUBLICKEY_SIGN_FUNC((*git_cred_sign_callback));")
-	SET(GIT_SSH_KI_FUNC "typedef LIBSSH2_USERAUTH_KBDINT_RESPONSE_FUNC((*git_cred_ssh_interactive_callback));")
-ELSE ()
-	SET(GIT_SSH_PK_FUNC "typedef int (*git_cred_sign_callback)(void *, unsigned char **, size_t *, const unsigned char *, size_t, void **);")
-	SET(GIT_SSH_KI_FUNC "typedef int (*git_cred_ssh_interactive_callback)(const char *, int, const char *, int, int, const void *, void *, void **);")
-ENDIF ()
-CONFIGURE_FILE(${CMAKE_CURRENT_SOURCE_DIR}/include/git2/transport.h.in ${CMAKE_CURRENT_SOURCE_DIR}/include/git2/transport.h @ONLY)
-
-
 IF (MSVC_IDE)
    # Precompiled headers
    SET_TARGET_PROPERTIES(git2 PROPERTIES COMPILE_FLAGS "/Yuprecompiled.h /FIprecompiled.h")
