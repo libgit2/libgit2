@@ -74,6 +74,26 @@ typedef int (*git_remote_create_cb)(
 	void *payload);
 
 /**
+ * The signature of a function matchin git_repository_init, with an
+ * aditional void * as callback payload.
+ *
+ * Callers of git_clone my provide a function matching this signature
+ * to override the repository creation and customization process
+ * during a clone operation.
+ *
+ * @param out the resulting repository
+ * @param path path in which to create the repository
+ * @param bare whether the repository is bare. This is the value from the clone options
+ * @param payload payload specified by the options
+ * @return 0, or a negative value to indicate error
+ */
+typedef int (*git_repository_create_cb)(
+	git_repository **out,
+	const char *path,
+	int bare,
+	void *payload);
+
+/**
  * Clone options structure
  *
  * Use the GIT_CLONE_OPTIONS_INIT to get the default settings, like this:
@@ -126,6 +146,19 @@ typedef struct git_clone_options {
 	git_signature *signature;
 
 	/**
+	 * A callback used to create the new repository into which to
+	 * clone. If NULL, the 'bare' field will be used to determine
+	 * whether to create a bare repository.
+	 */
+	git_repository_create_cb repository_cb;
+
+	/**
+	 * An opaque payload to pass to the git_repository creation callback.
+	 * This parameter is ignored unless repository_cb is non-NULL.
+	 */
+	void *repository_cb_payload;
+
+	/**
 	 * A callback used to create the git_remote, prior to its being
 	 * used to perform the clone operation. See the documentation for
 	 * git_remote_create_cb for details. This parameter may be NULL,
@@ -158,9 +191,9 @@ GIT_EXTERN(int) git_clone_init_options(
 /**
  * Clone a remote repository.
  *
- * This version handles the simple case. If you'd like to create the
- * repository or remote with non-default settings, you can create and
- * configure them and then use `git_clone_into()`.
+ * By default this creates its repository and initial remote to match
+ * git's defaults. You can use the options in the callback to
+ * customize how these are created.
  *
  * @param out pointer that will receive the resulting repository object
  * @param url the remote repository to clone

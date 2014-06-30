@@ -25,3 +25,7 @@ v0.21 + 1
 
   The remote_callbacks member has been preserved for convenience, although it
   is not used when a remote creation callback is supplied.
+
+* The git_clone_options struct now provides repository_cb and
+  repository_cb_payload to allow the user to create a repository with
+  custom options.

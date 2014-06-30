@@ -229,6 +229,13 @@ cleanup:
 	return retcode;
 }
 
+static int default_repository_create(git_repository **out, const char *path, int bare, void *payload)
+{
+	GIT_UNUSED(payload);
+
+	return git_repository_init(out, path, bare);
+}
+
 static int default_remote_create(
 		git_remote **out,
 		git_repository *repo,
@@ -396,6 +403,7 @@ int git_clone(
 	git_remote *origin;
 	git_clone_options options = GIT_CLONE_OPTIONS_INIT;
 	uint32_t rmdir_flags = GIT_RMDIR_REMOVE_FILES;
+	git_repository_create_cb repository_cb;
 
 	assert(out && url && local_path);
 
@@ -415,7 +423,12 @@ int git_clone(
 	if (git_path_exists(local_path))
 		rmdir_flags |= GIT_RMDIR_SKIP_ROOT;
 
-	if ((error = git_repository_init(&repo, local_path, options.bare)) < 0)
+	if (options.repository_cb)
+		repository_cb = options.repository_cb;
+	else
+		repository_cb = default_repository_create;
+
+	if ((error = repository_cb(&repo, local_path, options.bare, options.repository_cb_payload)) < 0)
 		return error;
 
 	if (!(error = create_and_configure_origin(&origin, repo, url, &options))) {
