@@ -146,7 +146,7 @@ GIT_INLINE(void) pool_remove_page(
 void *git_pool_malloc(git_pool *pool, uint32_t items)
 {
 	git_pool_page *scan = pool->open, *prev;
-	uint32_t size = items * pool->item_size;
+	uint32_t size = ((items * pool->item_size) + 7) & ~7;
 	void *ptr = NULL;
 
 	pool->has_string_alloc = 0;
