@@ -11,8 +11,6 @@
 #include "net.h"
 #include "types.h"
 
-@INCLUDE_LIBSSH2@
-
 /**
  * @file git2/transport.h
  * @brief Git transport interfaces and functions
@@ -59,14 +57,19 @@ typedef struct {
 	char *password;
 } git_cred_userpass_plaintext;
 
+
 /*
- * This defines the callbacks for custom public key signatures and
- * keyboard-interactive authentication. It is replaced at build-time
- * with either the libssh2 signature or a dummy signature that's close
- * enough but with void pointers instead of libssh2 structures.
+ * If the user hasn't included libssh2.h before git2.h, we need to
+ * define a few types for the callback signatures.
  */
-@GIT_SSH_PK_FUNC@
-@GIT_SSH_KI_FUNC@
+#ifndef LIBSSH2_VERSION
+typedef struct _LIBSSH2_SESSION LIBSSH2_SESSION;
+typedef struct _LIBSSH2_USERAUTH_KBDINT_PROMPT LIBSSH2_USERAUTH_KBDINT_PROMPT;
+typedef struct _LIBSSH2_USERAUTH_KBDINT_RESPONSE LIBSSH2_USERAUTH_KBDINT_RESPONSE;
+#endif
+
+typedef int (*git_cred_sign_callback)(LIBSSH2_SESSION *session, unsigned char **sig, size_t *sig_len, const unsigned char *data, size_t data_len, void **abstract);
+typedef int (*git_cred_ssh_interactive_callback)(const char* name, int name_len, const char* instruction, int instruction_len, int num_prompts, const LIBSSH2_USERAUTH_KBDINT_PROMPT* prompts, LIBSSH2_USERAUTH_KBDINT_RESPONSE* responses, void **abstract);
 
 /**
  * A ssh key from disk
