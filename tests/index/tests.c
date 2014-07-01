@@ -243,11 +243,11 @@ void test_index_tests__add(void)
 	entry = git_index_get_byindex(index, 0);
 
 	/* And the built-in hashing mechanism worked as expected */
-	cl_assert(git_oid_cmp(&id1, &entry->id) == 0);
+	cl_assert_equal_oid(&id1, &entry->id);
 
 	/* Test access by path instead of index */
 	cl_assert((entry = git_index_get_bypath(index, "test.txt", 0)) != NULL);
-	cl_assert(git_oid_cmp(&id1, &entry->id) == 0);
+	cl_assert_equal_oid(&id1, &entry->id);
 
 	git_index_free(index);
 	git_repository_free(repo);
@@ -283,14 +283,14 @@ void test_index_tests__add_issue_1397(void)
 
 	/* Make sure the initial SHA-1 is correct */
 	cl_assert((entry = git_index_get_bypath(index, "crlf_file.txt", 0)) != NULL);
-	cl_assert_(git_oid_cmp(&id1, &entry->id) == 0, "first oid check");
+	cl_assert_equal_oid(&id1, &entry->id);
 
 	/* Update the index */
 	cl_git_pass(git_index_add_bypath(index, "crlf_file.txt"));
 
 	/* Check the new SHA-1 */
 	cl_assert((entry = git_index_get_bypath(index, "crlf_file.txt", 0)) != NULL);
-	cl_assert_(git_oid_cmp(&id1, &entry->id) == 0, "second oid check");
+	cl_assert_equal_oid(&id1, &entry->id);
 
 	git_index_free(index);
 }
