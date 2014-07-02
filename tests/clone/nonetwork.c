@@ -241,7 +241,7 @@ void test_clone_nonetwork__can_detached_head(void)
 	cl_assert(git_repository_head_detached(cloned));
 
 	cl_git_pass(git_repository_head(&cloned_head, cloned));
-	cl_assert(!git_oid_cmp(git_object_id(obj), git_reference_target(cloned_head)));
+	cl_assert_equal_oid(git_object_id(obj), git_reference_target(cloned_head));
 
 	cl_git_pass(git_reflog_read(&log, cloned, "HEAD"));
 	entry = git_reflog_entry_byindex(log, 0);
