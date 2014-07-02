@@ -124,65 +124,49 @@ void test_online_clone__can_checkout_a_cloned_repo(void)
 	git_buf_free(&path);
 }
 
-void test_online_clone__clone_into(void)
+static int remote_mirror_cb(git_remote **out, git_repository *repo,
+			    const char *name, const char *url, void *payload)
 {
-	git_buf path = GIT_BUF_INIT;
+	int error;
 	git_remote *remote;
-	git_reference *head;
-	git_checkout_options checkout_opts = GIT_CHECKOUT_OPTIONS_INIT;
-	git_remote_callbacks callbacks = GIT_REMOTE_CALLBACKS_INIT;
+	git_remote_callbacks *callbacks = (git_remote_callbacks *) payload;
 
-	bool checkout_progress_cb_was_called = false,
-		  fetch_progress_cb_was_called = false;
 
-	checkout_opts.checkout_strategy = GIT_CHECKOUT_SAFE_CREATE;
-	checkout_opts.progress_cb = &checkout_progress;
-	checkout_opts.progress_payload = &checkout_progress_cb_was_called;
+	if ((error = git_remote_create(&remote, repo, name, url)) < 0)
+		return error;
 
-	cl_git_pass(git_repository_init(&g_repo, "./foo", false));
-	cl_git_pass(git_remote_create(&remote, g_repo, "origin", LIVE_REPO_URL));
+	if ((error = git_remote_set_callbacks(remote, callbacks)) < 0) {
+		git_remote_free(remote);
+		return error;
+	}
 
-	callbacks.transfer_progress = &fetch_progress;
-	callbacks.payload = &fetch_progress_cb_was_called;
-	git_remote_set_callbacks(remote, &callbacks);
+	git_remote_clear_refspecs(remote);
 
-	cl_git_pass(git_clone_into(g_repo, remote, &checkout_opts, NULL, NULL));
+	if ((error = git_remote_add_fetch(remote, "+refs/*:refs/*")) < 0) {
+		git_remote_free(remote);
+		return error;
+	}
 
-	cl_git_pass(git_buf_joinpath(&path, git_repository_workdir(g_repo), "master.txt"));
-	cl_assert_equal_i(true, git_path_isfile(git_buf_cstr(&path)));
-
-	cl_git_pass(git_reference_lookup(&head, g_repo, "HEAD"));
-	cl_assert_equal_i(GIT_REF_SYMBOLIC, git_reference_type(head));
-	cl_assert_equal_s("refs/heads/master", git_reference_symbolic_target(head));
-
-	cl_assert_equal_i(true, checkout_progress_cb_was_called);
-	cl_assert_equal_i(true, fetch_progress_cb_was_called);
-
-	git_remote_free(remote);
-	git_reference_free(head);
-	git_buf_free(&path);
+	*out = remote;
+	return 0;
 }
 
 void test_online_clone__clone_mirror(void)
 {
-	git_buf path = GIT_BUF_INIT;
-	git_remote *remote;
+	git_clone_options opts = GIT_CLONE_OPTIONS_INIT;
 	git_reference *head;
 	git_remote_callbacks callbacks = GIT_REMOTE_CALLBACKS_INIT;
 
 	bool fetch_progress_cb_was_called = false;
 
-	cl_git_pass(git_repository_init(&g_repo, "./foo.git", true));
-	cl_git_pass(git_remote_create(&remote, g_repo, "origin", LIVE_REPO_URL));
-
 	callbacks.transfer_progress = &fetch_progress;
 	callbacks.payload = &fetch_progress_cb_was_called;
-	git_remote_set_callbacks(remote, &callbacks);
 
-	git_remote_clear_refspecs(remote);
-	cl_git_pass(git_remote_add_fetch(remote, "+refs/*:refs/*"));
+	opts.bare = true;
+	opts.remote_cb = remote_mirror_cb;
+	opts.remote_cb_payload = &callbacks;
 
-	cl_git_pass(git_clone_into(g_repo, remote, NULL, NULL, NULL));
+	cl_git_pass(git_clone(&g_repo, LIVE_REPO_URL, "./foo.git", &opts));
 
 	cl_git_pass(git_reference_lookup(&head, g_repo, "HEAD"));
 	cl_assert_equal_i(GIT_REF_SYMBOLIC, git_reference_type(head));
@@ -190,9 +174,7 @@ void test_online_clone__clone_mirror(void)
 
 	cl_assert_equal_i(true, fetch_progress_cb_was_called);
 
-	git_remote_free(remote);
 	git_reference_free(head);
-	git_buf_free(&path);
 	git_repository_free(g_repo);
 	g_repo = NULL;
 

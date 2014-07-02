@@ -279,23 +279,6 @@ void test_clone_nonetwork__clone_updates_reflog_properly(void)
 	assert_correct_reflog("refs/heads/master");
 }
 
-void test_clone_nonetwork__clone_into_updates_reflog_properly(void)
-{
-	git_remote *remote;
-	git_signature *sig;
-	cl_git_pass(git_signature_now(&sig, "Me", "foo@example.com"));
-
-	cl_git_pass(git_repository_init(&g_repo, "./foo", false));
-	cl_git_pass(git_remote_create(&remote, g_repo, "origin", cl_git_fixture_url("testrepo.git")));
-	cl_git_pass(git_clone_into(g_repo, remote, NULL, NULL, sig));
-
-	assert_correct_reflog("HEAD");
-	assert_correct_reflog("refs/heads/master");
-
-	git_remote_free(remote);
-	git_signature_free(sig);
-}
-
 static void cleanup_repository(void *path)
 {
 	if (g_repo) {

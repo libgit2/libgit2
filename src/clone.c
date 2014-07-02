@@ -24,6 +24,8 @@
 #include "repository.h"
 #include "odb.h"
 
+static int clone_local_into(git_repository *repo, git_remote *remote, const git_checkout_options *co_opts, const char *branch, int link, const git_signature *signature);
+
 static int create_branch(
 	git_reference **branch,
 	git_repository *repo,
@@ -229,6 +231,13 @@ cleanup:
 	return retcode;
 }
 
+static int default_repository_create(git_repository **out, const char *path, int bare, void *payload)
+{
+	GIT_UNUSED(payload);
+
+	return git_repository_init(out, path, bare);
+}
+
 static int default_remote_create(
 		git_remote **out,
 		git_repository *repo,
@@ -322,7 +331,7 @@ static int checkout_branch(git_repository *repo, git_remote *remote, const git_c
 	return error;
 }
 
-int git_clone_into(git_repository *repo, git_remote *_remote, const git_checkout_options *co_opts, const char *branch, const git_signature *signature)
+static int clone_into(git_repository *repo, git_remote *_remote, const git_checkout_options *co_opts, const char *branch, const git_signature *signature)
 {
 	int error;
 	git_buf reflog_message = GIT_BUF_INIT;
@@ -396,6 +405,7 @@ int git_clone(
 	git_remote *origin;
 	git_clone_options options = GIT_CLONE_OPTIONS_INIT;
 	uint32_t rmdir_flags = GIT_RMDIR_REMOVE_FILES;
+	git_repository_create_cb repository_cb;
 
 	assert(out && url && local_path);
 
@@ -415,17 +425,22 @@ int git_clone(
 	if (git_path_exists(local_path))
 		rmdir_flags |= GIT_RMDIR_SKIP_ROOT;
 
-	if ((error = git_repository_init(&repo, local_path, options.bare)) < 0)
+	if (options.repository_cb)
+		repository_cb = options.repository_cb;
+	else
+		repository_cb = default_repository_create;
+
+	if ((error = repository_cb(&repo, local_path, options.bare, options.repository_cb_payload)) < 0)
 		return error;
 
 	if (!(error = create_and_configure_origin(&origin, repo, url, &options))) {
 		if (git_clone__should_clone_local(url, options.local)) {
 			int link = options.local != GIT_CLONE_LOCAL_NO_LINKS;
-			error = git_clone_local_into(
+			error = clone_local_into(
 				repo, origin, &options.checkout_opts,
 				options.checkout_branch, link, options.signature);
 		} else {
-			error = git_clone_into(
+			error = clone_into(
 				repo, origin, &options.checkout_opts,
 				options.checkout_branch, options.signature);
 		}
@@ -485,7 +500,7 @@ static bool can_link(const char *src, const char *dst, int link)
 #endif
 }
 
-int git_clone_local_into(git_repository *repo, git_remote *remote, const git_checkout_options *co_opts, const char *branch, int link, const git_signature *signature)
+static int clone_local_into(git_repository *repo, git_remote *remote, const git_checkout_options *co_opts, const char *branch, int link, const git_signature *signature)
 {
 	int error, flags;
 	git_repository *src;
