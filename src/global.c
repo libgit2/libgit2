@@ -291,7 +291,13 @@ static git_global_st __state;
 
 int git_threads_init(void)
 {
-	init_ssl();
+	static int ssl_inited = 0;
+
+	if (!ssl_inited) {
+		init_ssl();
+		ssl_inited = 1;
+	}
+
 	git_atomic_inc(&git__n_inits);
 	return 0;
 }
