@@ -132,11 +132,22 @@ static int ssh_stream_write(
 	size_t len)
 {
 	ssh_stream *s = (ssh_stream *)stream;
+	size_t off = 0;
+	ssize_t ret = 0;
 
 	if (!s->sent_command && send_command(s) < 0)
 		return -1;
 
-	if (libssh2_channel_write(s->channel, buffer, len) < LIBSSH2_ERROR_NONE) {
+	do {
+		ret = libssh2_channel_write(s->channel, buffer + off, len - off);
+		if (ret < 0)
+			break;
+
+		off += ret;
+
+	} while (off < len);
+
+	if (ret < 0) {
 		ssh_error(s->session, "SSH could not write data");
 		return -1;
 	}
