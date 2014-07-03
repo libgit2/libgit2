@@ -1669,27 +1669,14 @@ void git_remote_clear_refspecs(git_remote *remote)
 	git_vector_clear(&remote->refspecs);
 }
 
-static int add_and_dwim(git_remote *remote, const char *str, int push)
-{
-	git_refspec *spec;
-	git_vector *vec;
-
-	if (add_refspec(remote, str, !push) < 0)
-		return -1;
-
-	vec = &remote->refspecs;
-	spec = git_vector_get(vec, vec->length - 1);
-	return git_refspec__dwim_one(&remote->active_refspecs, spec, &remote->refs);
-}
-
 int git_remote_add_fetch(git_remote *remote, const char *refspec)
 {
-	return add_and_dwim(remote, refspec, false);
+	return add_refspec(remote, refspec, true);
 }
 
 int git_remote_add_push(git_remote *remote, const char *refspec)
 {
-	return add_and_dwim(remote, refspec, true);
+	return add_refspec(remote, refspec, false);
 }
 
 static int set_refspecs(git_remote *remote, git_strarray *array, int push)
@@ -1717,10 +1704,7 @@ static int set_refspecs(git_remote *remote, git_strarray *array, int push)
 			return -1;
 	}
 
-	free_refspecs(&remote->active_refspecs);
-	git_vector_clear(&remote->active_refspecs);
-
-	return dwim_refspecs(&remote->active_refspecs, &remote->refspecs, &remote->refs);
+	return 0;
 }
 
 int git_remote_set_fetch_refspecs(git_remote *remote, git_strarray *array)
