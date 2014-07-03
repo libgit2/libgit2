@@ -23,6 +23,7 @@ struct git_remote {
 	git_vector refs;
 	git_vector refspecs;
 	git_vector active_refspecs;
+	git_vector passive_refspecs;
 	git_transport_cb transport_cb;
 	void *transport_cb_payload;
 	git_transport *transport;

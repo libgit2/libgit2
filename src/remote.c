@@ -375,6 +375,7 @@ int git_remote_load(git_remote **out, git_repository *repo, const char *name)
 
 	if (git_vector_init(&remote->refs, 32, NULL) < 0 ||
 	    git_vector_init(&remote->refspecs, 2, NULL) < 0 ||
+	    git_vector_init(&remote->passive_refspecs, 2, NULL) < 0 ||
 	    git_vector_init(&remote->active_refspecs, 2, NULL) < 0) {
 		error = -1;
 		goto cleanup;
@@ -843,9 +844,13 @@ int git_remote_download(git_remote *remote, const git_strarray *refspecs)
 		to_active = &specs;
 	}
 
-	free_refspecs(&remote->active_refspecs);
+	free_refspecs(&remote->passive_refspecs);
+	if ((error = dwim_refspecs(&remote->passive_refspecs, &remote->refspecs, &refs)) < 0)
+		goto on_error;
 
+	free_refspecs(&remote->active_refspecs);
 	error = dwim_refspecs(&remote->active_refspecs, to_active, &refs);
+
 	git_vector_free(&refs);
 	free_refspecs(&specs);
 	git_vector_free(&specs);
@@ -1217,6 +1222,9 @@ void git_remote_free(git_remote *remote)
 
 	free_refspecs(&remote->active_refspecs);
 	git_vector_free(&remote->active_refspecs);
+
+	free_refspecs(&remote->passive_refspecs);
+	git_vector_free(&remote->passive_refspecs);
 
 	git__free(remote->url);
 	git__free(remote->pushurl);
