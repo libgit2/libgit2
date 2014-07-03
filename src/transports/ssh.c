@@ -5,14 +5,16 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
+#ifdef GIT_SSH
+#include <libssh2.h>
+#endif
+
 #include "git2.h"
 #include "buffer.h"
 #include "netops.h"
 #include "smart.h"
 
 #ifdef GIT_SSH
-
-#include <libssh2.h>
 
 #define OWNING_SUBTRANSPORT(s) ((ssh_subtransport *)(s)->parent.subtransport)
 
