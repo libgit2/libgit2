@@ -717,6 +717,9 @@ int gitno_extract_url_parts(
 	if (u.field_set & (1 << UF_PATH)) {
 		*path = git__substrdup(_path, u.field_data[UF_PATH].len);
 		GITERR_CHECK_ALLOC(*path);
+	} else {
+		giterr_set(GITERR_NET, "invalid url, missing path");
+		return GIT_EINVALIDSPEC;
 	}
 
 	if (u.field_set & (1 << UF_USERINFO)) {
