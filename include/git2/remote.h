@@ -459,6 +459,14 @@ struct git_remote_callbacks {
 	git_cred_acquire_cb credentials;
 
 	/**
+	 * If cert verification fails, this will be called to let the
+	 * user make the final decision of whether to allow the
+	 * connection to proceed. Returns 1 to allow the connection, 0
+	 * to disallow it or a negative value to indicate an error.
+	 */
+        git_transport_certificate_check_cb certificate_check;
+
+	/**
 	 * During the download of new data, this will be regularly
 	 * called with the current count of progress done by the
 	 * indexer.

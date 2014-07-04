@@ -20,6 +20,43 @@
  */
 GIT_BEGIN_DECL
 
+/**
+ * Type of host certificate structure that is passed to the check callback
+ */
+typedef enum git_cert_t {
+        /**
+         * The `data` argument to the callback will be a pointer to
+         * OpenSSL's `X509` structure.
+         */
+	GIT_CERT_X509_OPENSSL,
+	GIT_CERT_X509_WINHTTP,
+        /**
+         * The `data` argument to the callback will be a pointer to a
+         * `git_cert_hostkey` structure.
+         */
+	GIT_CERT_HOSTKEY_LIBSSH2,
+} git_cert_t;
+
+/**
+ * Hostkey information taken from libssh2
+ */
+typedef struct {
+        /**
+         * A hostkey type from libssh2, either
+         * `LIBSSH2_HOSTKEY_HASH_MD5` or `LIBSSH2_HOSTKEY_HASH_SHA1`
+         */
+        int type;
+        /**
+         * Hostkey hash. If the type is MD5, only the first 16 bytes
+         * will be set.
+         */
+        unsigned char hash[20];
+} git_cert_hostkey;
+
+/*
+ *** Begin interface for credentials acquisition ***
+ */
+
 /** Authentication type requested */
 typedef enum {
 	/* git_cred_userpass_plaintext */

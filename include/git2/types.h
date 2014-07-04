@@ -253,6 +253,18 @@ typedef int (*git_transfer_progress_cb)(const git_transfer_progress *stats, void
  */
 typedef int (*git_transport_message_cb)(const char *str, int len, void *payload);
 
+
+typedef enum git_cert_t git_cert_t;
+
+/**
+ * Callback for the user's custom certificate checks.
+ *
+ * @param type The type of certificate or host info, SSH or X.509
+ * @param data The data for the certificate or host info
+ * @param payload Payload provided by the caller
+ */
+typedef int (*git_transport_certificate_check_cb)(git_cert_t type, void *data, void *payload);
+
 /**
  * Opaque structure representing a submodule.
  */

@@ -19,6 +19,10 @@ git_http_auth_scheme auth_schemes[] = {
 	{ GIT_AUTHTYPE_BASIC, "Basic", GIT_CREDTYPE_USERPASS_PLAINTEXT, git_http_auth_basic },
 };
 
+#ifdef GIT_SSL
+# include <openssl/x509v3.h>
+#endif
+
 static const char *upload_pack_service = "upload-pack";
 static const char *upload_pack_ls_service_url = "/info/refs?service=git-upload-pack";
 static const char *upload_pack_service_url = "/git-upload-pack";
@@ -524,7 +528,7 @@ static int write_chunk(gitno_socket *socket, const char *buffer, size_t len)
 
 static int http_connect(http_subtransport *t)
 {
-	int flags = 0;
+	int flags = 0, error;
 
 	if (t->connected &&
 		http_should_keep_alive(&t->parser) &&
@@ -546,8 +550,26 @@ static int http_connect(http_subtransport *t)
 			flags |= GITNO_CONNECT_SSL_NO_CHECK_CERT;
 	}
 
-	if (gitno_connect(&t->socket, t->connection_data.host, t->connection_data.port, flags) < 0)
-		return -1;
+	error = gitno_connect(&t->socket, t->connection_data.host, t->connection_data.port, flags);
+
+#ifdef GIT_SSL
+	if (error == GIT_ECERTIFICATE && t->owner->certificate_check_cb != NULL) {
+                X509 *cert = SSL_get_peer_certificate(t->socket.ssl.ssl);
+                int allow;
+
+                allow = t->owner->certificate_check_cb(GIT_CERT_X509_OPENSSL, cert, t->owner->message_cb_payload);
+                if (allow < 0) {
+                        error = allow;
+                } else if (!allow) {
+                        error = GIT_ECERTIFICATE;
+                } else {
+                        error = 0;
+                }
+	}
+#else
+	if (error < 0)
+		return error;
+#endif
 
 	t->connected = 1;
 	return 0;

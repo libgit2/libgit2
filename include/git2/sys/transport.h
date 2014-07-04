@@ -37,6 +37,7 @@ struct git_transport {
 		git_transport *transport,
 		git_transport_message_cb progress_cb,
 		git_transport_message_cb error_cb,
+		git_transport_certificate_check_cb certificate_check_cb,
 		void *payload);
 
 	/* Connect the transport to the remote repository, using the given
