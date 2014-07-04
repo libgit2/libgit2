@@ -209,11 +209,21 @@ static int refspec_transform(
 
 int git_refspec_transform(git_buf *out, const git_refspec *spec, const char *name)
 {
+        git_buf_sanitize(out);
+
+	if (!spec->pattern)
+		return git_buf_puts(out, spec->dst);
+
 	return refspec_transform(out, spec->src, spec->dst, name);
 }
 
 int git_refspec_rtransform(git_buf *out, const git_refspec *spec, const char *name)
 {
+        git_buf_sanitize(out);
+
+	if (!spec->pattern)
+		return git_buf_puts(out, spec->src);
+
 	return refspec_transform(out, spec->dst, spec->src, name);
 }
 
