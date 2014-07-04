@@ -32,3 +32,6 @@ v0.21 + 1
 
 * git_clone_into and git_clone_local_into have been removed from the
   public API in favour of git_clone callbacks
+
+* Add support for refspecs with the asterisk in the middle of a
+  pattern.
