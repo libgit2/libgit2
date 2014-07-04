@@ -15,6 +15,10 @@ v0.21 + 1
 * The git_remote_set_transport function now sets a transport factory function,
   rather than a pre-existing transport instance.
 
+* A factory function for ssh has been added which allows to change the
+  path of the programs to execute for receive-pack and upload-pack on
+  the server, git_transport_ssh_with_paths.
+
 * The git_clone_options struct no longer provides the ignore_cert_errors or
   remote_name members for remote customization.
 

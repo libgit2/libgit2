@@ -288,8 +288,73 @@ void test_online_clone__can_cancel(void)
 		git_clone(&g_repo, LIVE_REPO_URL, "./foo", &g_options), 4321);
 }
 
+static int cred_cb(git_cred **cred, const char *url, const char *user_from_url,
+		   unsigned int allowed_types, void *payload)
+{
+	const char *remote_user = cl_getenv("GITTEST_REMOTE_USER");
+	const char *pubkey = cl_getenv("GITTEST_REMOTE_SSH_PUBKEY");
+	const char *privkey = cl_getenv("GITTEST_REMOTE_SSH_KEY");
+	const char *passphrase = cl_getenv("GITTEST_REMOTE_SSH_PASSPHRASE");
 
+	GIT_UNUSED(url); GIT_UNUSED(user_from_url); GIT_UNUSED(payload);
 
+	if (allowed_types & GIT_CREDTYPE_SSH_KEY)
+		return git_cred_ssh_key_new(cred, remote_user, pubkey, privkey, passphrase);
 
+	giterr_set(GITERR_NET, "unexpected cred type");
+	return -1;
+}
 
+static int custom_remote_ssh_with_paths(
+	git_remote **out,
+	git_repository *repo,
+	const char *name,
+	const char *url,
+	void *payload)
+{
+	int error;
+
+	git_remote_callbacks callbacks = GIT_REMOTE_CALLBACKS_INIT;
+
+	if ((error = git_remote_create(out, repo, name, url)) < 0)
+		return error;
+
+	if ((error = git_remote_set_transport(*out, git_transport_ssh_with_paths, payload)) < 0)
+		return error;
+
+	callbacks.credentials = cred_cb;
+	git_remote_set_callbacks(*out, &callbacks);
+
+	return 0;
+}
+
+void test_online_clone__ssh_with_paths(void)
+{
+	char *bad_paths[] = {
+		"/bin/yes",
+		"/bin/false",
+	};
+	char *good_paths[] = {
+		"/usr/bin/git-upload-pack",
+		"/usr/bin/git-receive-pack",
+	};
+	git_strarray arr = {
+		bad_paths,
+		2,
+	};
+
+	const char *remote_url = cl_getenv("GITTEST_REMOTE_URL");
+	const char *remote_user = cl_getenv("GITTEST_REMOTE_USER");
+
+	if (!remote_url || !remote_user)
+		clar__skip();
+
+	g_options.remote_cb = custom_remote_ssh_with_paths;
+	g_options.remote_cb_payload = &arr;
+
+	cl_git_fail(git_clone(&g_repo, remote_url, "./foo", &g_options));
+
+	arr.strings = good_paths;
+	cl_git_pass(git_clone(&g_repo, remote_url, "./foo", &g_options));
+}
 

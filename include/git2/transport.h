@@ -336,6 +336,22 @@ GIT_EXTERN(int) git_transport_init(
  */
 GIT_EXTERN(int) git_transport_new(git_transport **out, git_remote *owner, const char *url);
 
+/**
+ * Create an ssh transport with custom git command paths
+ *
+ * This is a factory function suitable for setting as the transport
+ * callback in a remote (or for a clone in the options).
+ *
+ * The payload argument must be a strarray pointer with the paths for
+ * the `git-upload-pack` and `git-receive-pack` at index 0 and 1.
+ *
+ * @param out the resulting transport
+ * @param owner the owning remote
+ * @param payload a strarray with the paths
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_transport_ssh_with_paths(git_transport **out, git_remote *owner, void *payload);
+
 /* Signature of a function which creates a transport */
 typedef int (*git_transport_cb)(git_transport **out, git_remote *owner, void *param);
 
