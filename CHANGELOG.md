@@ -56,5 +56,11 @@ v0.21 + 1
 * Add support for refspecs with the asterisk in the middle of a
   pattern.
 
+* Fetching now performs opportunistic updates. To achieve this, we
+  introduce a difference between active and passive refspecs, which
+  make git_remote_download and git_remote_fetch to take a list of
+  resfpecs to be the active list, similarly to how git fetch accepts a
+  list on the command-line.
+
 * Introduce git_merge_bases() and the git_oidarray type to expose all
   merge bases between two commits.

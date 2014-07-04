@@ -408,3 +408,24 @@ void test_network_remote_local__fetch_default_reflog_message(void)
 	git_reflog_free(log);
 	git_signature_free(sig);
 }
+
+void test_network_remote_local__opportunistic_update(void)
+{
+	git_reference *ref;
+	char *refspec_strings[] = {
+		"master",
+	};
+	git_strarray array = {
+		refspec_strings,
+		1,
+	};
+
+	/* this remote has a passive refspec of "refs/heads/<star>:refs/remotes/origin/<star>" */
+	cl_git_pass(git_remote_create(&remote, repo, "origin", cl_git_fixture_url("testrepo.git")));
+	/* and we pass the active refspec "master" */
+	cl_git_pass(git_remote_fetch(remote, &array, NULL, NULL));
+
+	/* and we expect that to update our copy of origin's master */
+	cl_git_pass(git_reference_lookup(&ref, repo, "refs/remotes/origin/master"));
+	git_reference_free(ref);
+}

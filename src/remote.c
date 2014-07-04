@@ -833,6 +833,7 @@ int git_remote_download(git_remote *remote, const git_strarray *refspecs)
 	if ((git_vector_init(&specs, 0, NULL)) < 0)
 		goto on_error;
 
+	remote->passed_refspecs = 0;
 	if (!refspecs) {
 		to_active = &remote->refspecs;
 	} else {
@@ -842,6 +843,7 @@ int git_remote_download(git_remote *remote, const git_strarray *refspecs)
 		}
 
 		to_active = &specs;
+		remote->passed_refspecs = 1;
 	}
 
 	free_refspecs(&remote->passive_refspecs);
@@ -1140,6 +1142,96 @@ on_error:
 
 }
 
+/**
+ * Iteration over the three vectors, with a pause whenever we find a match
+ *
+ * On each stop, we store the iteration stat in the inout i,j,k
+ * parameters, and return the currently matching passive refspec as
+ * well as the head which we matched.
+ */
+static int next_head(const git_remote *remote, git_vector *refs,
+		     git_refspec **out_spec, git_remote_head **out_head,
+		     size_t *out_i, size_t *out_j, size_t *out_k)
+{
+	const git_vector *active, *passive;
+	git_remote_head *head;
+	git_refspec *spec, *passive_spec;
+	size_t i, j, k;
+
+	active = &remote->active_refspecs;
+	passive = &remote->passive_refspecs;
+
+	i = *out_i;
+	j = *out_j;
+	k = *out_k;
+
+	for (; i < refs->length; i++) {
+		head = git_vector_get(refs, i);
+
+		if (!git_reference_is_valid_name(head->name))
+			continue;
+
+		for (; j < active->length; j++) {
+			spec = git_vector_get(active, j);
+
+			if (!git_refspec_src_matches(spec, head->name))
+				continue;
+
+			for (; k < passive->length; k++) {
+				passive_spec = git_vector_get(passive, k);
+
+				if (!git_refspec_src_matches(passive_spec, head->name))
+				    continue;
+
+				*out_spec = passive_spec;
+				*out_head = head;
+				*out_i = i;
+				*out_j = j;
+				*out_k = k + 1;
+				return 0;
+
+			}
+			k = 0;
+		}
+		j = 0;
+	}
+
+	return GIT_ITEROVER;
+}
+
+static int opportunistic_updates(const git_remote *remote, git_vector *refs, const git_signature *sig, const char *msg)
+{
+	size_t i, j, k;
+	git_refspec *spec;
+	git_remote_head *head;
+	git_reference *ref;
+	git_buf refname = GIT_BUF_INIT;
+	int error;
+
+	i = j = k = 0;
+
+	while ((error = next_head(remote, refs, &spec, &head, &i, &j, &k)) == 0) {
+		/*
+		 * If we got here, there is a refspec which was used
+		 * for fetching which matches the source of one of the
+		 * passive refspecs, so we should update that
+		 * remote-tracking branch, but not add it to
+		 * FETCH_HEAD
+		 */
+
+		if ((error = git_refspec_transform(&refname, spec, head->name)) < 0)
+			return error;
+
+		error = git_reference_create(&ref, remote->repo, refname.ptr, &head->oid, true, sig, msg);
+		git_buf_free(&refname);
+
+		if (error < 0)
+			return error;
+	}
+
+	return 0;
+}
+
 int git_remote_update_tips(
 		git_remote *remote,
 		const git_signature *signature,
@@ -1169,6 +1261,10 @@ int git_remote_update_tips(
 		if ((error = update_tips_for_spec(remote, spec, &refs, signature, reflog_message)) < 0)
 			goto out;
 	}
+
+	/* only try to do opportunisitic updates if the refpec lists differ */
+	if (remote->passed_refspecs)
+		error = opportunistic_updates(remote, &refs, signature, reflog_message);
 
 out:
 	git_vector_free(&refs);
