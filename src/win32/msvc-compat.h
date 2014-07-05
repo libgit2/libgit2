@@ -15,7 +15,7 @@
 #	define R_OK 4 /* read mode check */
 
 #	define lseek _lseeki64
-#	define stat _stat64
+#	define stat __stat64
 #	define fstat _fstat64
 
 /* stat: file mode type testing macros */
