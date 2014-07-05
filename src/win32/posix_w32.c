@@ -19,6 +19,10 @@
 # define FILE_NAME_NORMALIZED 0
 #endif
 
+#ifndef IO_REPARSE_TAG_SYMLINK
+#define IO_REPARSE_TAG_SYMLINK (0xA000000CL)
+#endif
+
 /* Options which we always provide to _wopen.
  *
  * _O_BINARY - Raw access; no translation of CR or LF characters
