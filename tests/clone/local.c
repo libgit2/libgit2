@@ -7,25 +7,55 @@
 #include "posix.h"
 #include "fileops.h"
 
+static int file_url(git_buf *buf, const char *host, const char *path)
+{
+	if (path[0] == '/')
+		path++;
+
+	git_buf_clear(buf);
+	return git_buf_printf(buf, "file://%s/%s", host, path);
+}
+
 void test_clone_local__should_clone_local(void)
 {
 	git_buf buf = GIT_BUF_INIT;
-	const char *path;
 
 	/* we use a fixture path because it needs to exist for us to want to clone */
-	
-	cl_git_pass(git_buf_printf(&buf, "file://%s", cl_fixture("testrepo.git")));
-	cl_assert_equal_i(false, git_clone__should_clone_local(buf.ptr, GIT_CLONE_LOCAL_AUTO));
-	cl_assert_equal_i(true,  git_clone__should_clone_local(buf.ptr, GIT_CLONE_LOCAL));
-	cl_assert_equal_i(true,  git_clone__should_clone_local(buf.ptr, GIT_CLONE_LOCAL_NO_LINKS));
-	cl_assert_equal_i(false, git_clone__should_clone_local(buf.ptr, GIT_CLONE_NO_LOCAL));
-	git_buf_free(&buf);
+	const char *path = cl_fixture("testrepo.git");
 
-	path = cl_fixture("testrepo.git");
-	cl_assert_equal_i(true,  git_clone__should_clone_local(path, GIT_CLONE_LOCAL_AUTO));
-	cl_assert_equal_i(true,  git_clone__should_clone_local(path, GIT_CLONE_LOCAL));
-	cl_assert_equal_i(true,  git_clone__should_clone_local(path, GIT_CLONE_LOCAL_NO_LINKS));
-	cl_assert_equal_i(false, git_clone__should_clone_local(path, GIT_CLONE_NO_LOCAL));
+	cl_git_pass(file_url(&buf, "", path));
+	cl_assert_equal_i(0, git_clone__should_clone_local(buf.ptr, GIT_CLONE_LOCAL_AUTO));
+	cl_assert_equal_i(1,  git_clone__should_clone_local(buf.ptr, GIT_CLONE_LOCAL));
+	cl_assert_equal_i(1,  git_clone__should_clone_local(buf.ptr, GIT_CLONE_LOCAL_NO_LINKS));
+	cl_assert_equal_i(0, git_clone__should_clone_local(buf.ptr, GIT_CLONE_NO_LOCAL));
+
+	cl_git_pass(file_url(&buf, "localhost", path));
+	cl_assert_equal_i(0, git_clone__should_clone_local(buf.ptr, GIT_CLONE_LOCAL_AUTO));
+	cl_assert_equal_i(1,  git_clone__should_clone_local(buf.ptr, GIT_CLONE_LOCAL));
+	cl_assert_equal_i(1,  git_clone__should_clone_local(buf.ptr, GIT_CLONE_LOCAL_NO_LINKS));
+	cl_assert_equal_i(0, git_clone__should_clone_local(buf.ptr, GIT_CLONE_NO_LOCAL));
+
+	cl_git_pass(file_url(&buf, "other-host.mycompany.com", path));
+	cl_assert_equal_i(0, git_clone__should_clone_local(buf.ptr, GIT_CLONE_LOCAL_AUTO));
+	cl_assert_equal_i(0, git_clone__should_clone_local(buf.ptr, GIT_CLONE_LOCAL));
+	cl_assert_equal_i(0, git_clone__should_clone_local(buf.ptr, GIT_CLONE_LOCAL_NO_LINKS));
+	cl_assert_equal_i(0, git_clone__should_clone_local(buf.ptr, GIT_CLONE_NO_LOCAL));
+
+	/* Ensure that file:/// urls are percent decoded: .git == %2e%67%69%74 */
+	cl_git_pass(file_url(&buf, "", path));
+	git_buf_shorten(&buf, 4);
+	cl_git_pass(git_buf_puts(&buf, "%2e%67%69%74"));
+	cl_assert_equal_i(0, git_clone__should_clone_local(buf.ptr, GIT_CLONE_LOCAL_AUTO));
+	cl_assert_equal_i(1,  git_clone__should_clone_local(buf.ptr, GIT_CLONE_LOCAL));
+	cl_assert_equal_i(1,  git_clone__should_clone_local(buf.ptr, GIT_CLONE_LOCAL_NO_LINKS));
+	cl_assert_equal_i(0, git_clone__should_clone_local(buf.ptr, GIT_CLONE_NO_LOCAL));
+
+	cl_assert_equal_i(1,  git_clone__should_clone_local(path, GIT_CLONE_LOCAL_AUTO));
+	cl_assert_equal_i(1,  git_clone__should_clone_local(path, GIT_CLONE_LOCAL));
+	cl_assert_equal_i(1,  git_clone__should_clone_local(path, GIT_CLONE_LOCAL_NO_LINKS));
+	cl_assert_equal_i(0, git_clone__should_clone_local(path, GIT_CLONE_NO_LOCAL));
+
+	git_buf_free(&buf);
 }
 
 void test_clone_local__hardlinks(void)

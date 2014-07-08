@@ -371,27 +371,30 @@ cleanup:
 	return error;
 }
 
-int git_clone__should_clone_local(const char *url, git_clone_local_t local)
+int git_clone__should_clone_local(const char *url_or_path, git_clone_local_t local)
 {
-	const char *path;
-	int is_url;
+	git_buf fromurl = GIT_BUF_INIT;
+	const char *path = url_or_path;
+	bool is_url, is_local;
 
 	if (local == GIT_CLONE_NO_LOCAL)
-		return false;
+		return 0;
 
-	is_url = !git__prefixcmp(url, "file://");
+	if (is_url = git_path_is_local_file_url(url_or_path)) {
+		if (git_path_fromurl(&fromurl, url_or_path) < 0) {
+			is_local = -1;
+			goto done;
+		}
 
-	if (is_url && local != GIT_CLONE_LOCAL && local != GIT_CLONE_LOCAL_NO_LINKS )
-		return false;
+		path = fromurl.ptr;
+	}
 
-	path = url;
-	if (is_url)
-		path = url + strlen("file://");
+	is_local = (!is_url || local != GIT_CLONE_LOCAL_AUTO) &&
+		git_path_isdir(path);
 
-	if ((git_path_exists(path) && git_path_isdir(path)) && local != GIT_CLONE_NO_LOCAL)
-		return true;
-
-	return false;
+done:
+	git_buf_free(&fromurl);
+	return is_local;
 }
 
 int git_clone(
@@ -434,16 +437,19 @@ int git_clone(
 		return error;
 
 	if (!(error = create_and_configure_origin(&origin, repo, url, &options))) {
-		if (git_clone__should_clone_local(url, options.local)) {
-			int link = options.local != GIT_CLONE_LOCAL_NO_LINKS;
+		int should_clone = git_clone__should_clone_local(url, options.local);
+		int link = options.local != GIT_CLONE_LOCAL_NO_LINKS;
+
+		if (should_clone == 1)
 			error = clone_local_into(
 				repo, origin, &options.checkout_opts,
 				options.checkout_branch, link, options.signature);
-		} else {
+		else if (should_clone == 0)
 			error = clone_into(
 				repo, origin, &options.checkout_opts,
 				options.checkout_branch, options.signature);
-		}
+		else
+			error = -1;
 
 		git_remote_free(origin);
 	}
