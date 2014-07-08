@@ -568,7 +568,7 @@ $(function() {
     },
 
     groupOf: function (func) {
-      return this.get('data')['groups'][func]
+      return this.get('data')['functions'][func]['group']
     },
 
     github_file: function(file, line, lineto) {
