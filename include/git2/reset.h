@@ -7,6 +7,10 @@
 #ifndef INCLUDE_git_reset_h__
 #define INCLUDE_git_reset_h__
 
+#include "common.h"
+#include "types.h"
+#include "strarray.h"
+
 /**
  * @file git2/reset.h
  * @brief Git reset management routines
