@@ -9,11 +9,11 @@
 #include "git2/remote.h"
 #include "git2/net.h"
 #include "git2/transport.h"
+#include "git2/sys/transport.h"
 #include "path.h"
 
 typedef struct transport_definition {
 	char *prefix;
-	unsigned priority;
 	git_transport_cb fn;
 	void *param;
 } transport_definition;
@@ -24,51 +24,54 @@ static git_smart_subtransport_definition git_subtransport_definition = { git_sma
 static git_smart_subtransport_definition ssh_subtransport_definition = { git_smart_subtransport_ssh, 0 };
 #endif
 
-static transport_definition local_transport_definition = { "file://", 1, git_transport_local, NULL };
+static transport_definition local_transport_definition = { "file://", git_transport_local, NULL };
 #ifdef GIT_SSH
-static transport_definition ssh_transport_definition = { "ssh://", 1, git_transport_smart, &ssh_subtransport_definition };
+static transport_definition ssh_transport_definition = { "ssh://", git_transport_smart, &ssh_subtransport_definition };
 #else
-static transport_definition dummy_transport_definition = { NULL, 1, git_transport_dummy, NULL };
+static transport_definition dummy_transport_definition = { NULL, git_transport_dummy, NULL };
 #endif
 
 static transport_definition transports[] = {
-	{"git://", 1, git_transport_smart, &git_subtransport_definition},
-	{"http://", 1, git_transport_smart, &http_subtransport_definition},
-	{"https://", 1, git_transport_smart, &http_subtransport_definition},
-	{"file://", 1, git_transport_local, NULL},
+	{ "git://",   git_transport_smart, &git_subtransport_definition },
+	{ "http://",  git_transport_smart, &http_subtransport_definition },
+	{ "https://", git_transport_smart, &http_subtransport_definition },
+	{ "file://",  git_transport_local, NULL },
 #ifdef GIT_SSH
-	{"ssh://", 1, git_transport_smart, &ssh_subtransport_definition},
+	{ "ssh://",   git_transport_smart, &ssh_subtransport_definition },
 #endif
-	{NULL, 0, 0}
+	{ NULL, 0, 0 }
 };
 
-static git_vector additional_transports = GIT_VECTOR_INIT;
+static git_vector custom_transports = GIT_VECTOR_INIT;
 
 #define GIT_TRANSPORT_COUNT (sizeof(transports)/sizeof(transports[0])) - 1
 
-static int transport_find_fn(const char *url, git_transport_cb *callback, void **param)
+static int transport_find_fn(
+	git_transport_cb *out,
+	const char *url,
+	void **param)
 {
 	size_t i = 0;
-	unsigned priority = 0;
-	transport_definition *definition = NULL, *definition_iter;
+	transport_definition *d, *definition = NULL;
 
-	// First, check to see if it's an obvious URL, which a URL scheme
-	for (i = 0; i < GIT_TRANSPORT_COUNT; ++i) {
-		definition_iter = &transports[i];
-
-		if (strncasecmp(url, definition_iter->prefix, strlen(definition_iter->prefix)))
-			continue;
-
-		if (definition_iter->priority > priority)
-			definition = definition_iter;
+	/* Find a user transport who wants to deal with this URI */
+	git_vector_foreach(&custom_transports, i, d) {
+		if (strncasecmp(url, d->prefix, strlen(d->prefix)) == 0) {
+			definition = d;
+			break;
+		}
 	}
 
-	git_vector_foreach(&additional_transports, i, definition_iter) {
-		if (strncasecmp(url, definition_iter->prefix, strlen(definition_iter->prefix)))
-			continue;
+	/* Find a system transport for this URI */
+	if (!definition) {
+		for (i = 0; i < GIT_TRANSPORT_COUNT; ++i) {
+			d = &transports[i];
 
-		if (definition_iter->priority > priority)
-			definition = definition_iter;
+			if (strncasecmp(url, d->prefix, strlen(d->prefix)) == 0) {
+				definition = d;
+				break;
+			}
+		}
 	}
 
 #ifdef GIT_WIN32
@@ -90,7 +93,7 @@ static int transport_find_fn(const char *url, git_transport_cb *callback, void *
 #ifdef GIT_SSH
 		definition = &ssh_transport_definition;
 #else
-        definition = &dummy_transport_definition;
+		definition = &dummy_transport_definition;
 #endif
 
 #ifndef GIT_WIN32
@@ -100,9 +103,9 @@ static int transport_find_fn(const char *url, git_transport_cb *callback, void *
 #endif
 
 	if (!definition)
-		return -1;
+		return GIT_ENOTFOUND;
 
-	*callback = definition->fn;
+	*out = definition->fn;
 	*param = definition->param;
 
 	return 0;
@@ -128,10 +131,11 @@ int git_transport_new(git_transport **out, git_remote *owner, const char *url)
 	void *param;
 	int error;
 
-	if (transport_find_fn(url, &fn, &param) < 0) {
+	if ((error = transport_find_fn(&fn, url, &param)) == GIT_ENOTFOUND) {
 		giterr_set(GITERR_NET, "Unsupported URL protocol");
 		return -1;
-	}
+	} else if (error < 0)
+		return error;
 
 	if ((error = fn(&transport, owner, param)) < 0)
 		return error;
@@ -144,59 +148,79 @@ int git_transport_new(git_transport **out, git_remote *owner, const char *url)
 }
 
 int git_transport_register(
-	const char *prefix,
-	unsigned priority,
+	const char *scheme,
 	git_transport_cb cb,
 	void *param)
 {
-	transport_definition *d;
+	git_buf prefix = GIT_BUF_INIT;
+	transport_definition *d, *definition = NULL;
+	size_t i;
+	int error = 0;
 
-	d = git__calloc(sizeof(transport_definition), 1);
-	GITERR_CHECK_ALLOC(d);
+	assert(scheme);
+	assert(cb);
 
-	d->prefix = git__strdup(prefix);
-
-	if (!d->prefix)
+	if ((error = git_buf_printf(&prefix, "%s://", scheme)) < 0)
 		goto on_error;
 
-	d->priority = priority;
-	d->fn = cb;
-	d->param = param;
+	git_vector_foreach(&custom_transports, i, d) {
+		if (strcasecmp(d->prefix, prefix.ptr) == 0) {
+			error = GIT_EEXISTS;
+			goto on_error;
+		}
+	}
 
-	if (git_vector_insert(&additional_transports, d) < 0)
+	definition = git__calloc(1, sizeof(transport_definition));
+	GITERR_CHECK_ALLOC(definition);
+
+	definition->prefix = git_buf_detach(&prefix);
+	definition->fn = cb;
+	definition->param = param;
+
+	if (git_vector_insert(&custom_transports, definition) < 0)
 		goto on_error;
 
 	return 0;
 
 on_error:
-	git__free(d->prefix);
-	git__free(d);
-	return -1;
+	git_buf_free(&prefix);
+	git__free(definition);
+	return error;
 }
 
-int git_transport_unregister(
-	const char *prefix,
-	unsigned priority)
+int git_transport_unregister(const char *scheme)
 {
+	git_buf prefix = GIT_BUF_INIT;
 	transport_definition *d;
-	unsigned i;
+	size_t i;
+	int error = 0;
 
-	git_vector_foreach(&additional_transports, i, d) {
-		if (d->priority == priority && !strcasecmp(d->prefix, prefix)) {
-			if (git_vector_remove(&additional_transports, i) < 0)
-				return -1;
+	assert(scheme);
+
+	if ((error = git_buf_printf(&prefix, "%s://", scheme)) < 0)
+		goto done;
+
+	git_vector_foreach(&custom_transports, i, d) {
+		if (strcasecmp(d->prefix, prefix.ptr) == 0) {
+			if ((error = git_vector_remove(&custom_transports, i)) < 0)
+				goto done;
 
 			git__free(d->prefix);
 			git__free(d);
 
-			if (!additional_transports.length)
-				git_vector_free(&additional_transports);
+			if (!custom_transports.length)
+				git_vector_free(&custom_transports);
 
-			return 0;
+			error = 0;
+			goto done;
 		}
 	}
 
-	return GIT_ENOTFOUND;
+	error = GIT_ENOTFOUND;
+
+done:
+	git_buf_free(&prefix);
+	return error;
 }
 
 /* from remote.h */
@@ -205,7 +229,7 @@ int git_remote_valid_url(const char *url)
 	git_transport_cb fn;
 	void *param;
 
-	return !transport_find_fn(url, &fn, &param);
+	return !transport_find_fn(&fn, url, &param);
 }
 
 int git_remote_supported_url(const char* url)
@@ -213,7 +237,7 @@ int git_remote_supported_url(const char* url)
 	git_transport_cb fn;
 	void *param;
 
-	if (transport_find_fn(url, &fn, &param) < 0)
+	if (transport_find_fn(&fn, url, &param) < 0)
 		return 0;
 
 	return fn != &git_transport_dummy;

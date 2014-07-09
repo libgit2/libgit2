@@ -12,6 +12,12 @@ v0.21 + 1
 
 * LF -> CRLF filter now runs when * text = auto (with Git for Windows 1.9.4)
 
+* The git_transport structure definition has moved into the sys/transport.h
+  file.
+
+* The git_transport_register function no longer takes a priority and takes
+  a URL scheme name (eg "http") instead of a prefix like "http://"
+
 * The git_remote_set_transport function now sets a transport factory function,
   rather than a pre-existing transport instance.
 

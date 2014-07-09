@@ -244,6 +244,16 @@ typedef struct git_transfer_progress {
 typedef int (*git_transfer_progress_cb)(const git_transfer_progress *stats, void *payload);
 
 /**
+ * Type for messages delivered by the transport.  Return a negative value
+ * to cancel the network operation.
+ *
+ * @param str The message from the transport
+ * @param len The length of the message
+ * @param payload Payload provided by the caller
+ */
+typedef int (*git_transport_message_cb)(const char *str, int len, void *payload);
+
+/**
  * Opaque structure representing a submodule.
  */
 typedef struct git_submodule git_submodule;
