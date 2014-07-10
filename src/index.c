@@ -2277,6 +2277,7 @@ typedef struct read_tree_data {
 	git_vector *old_entries;
 	git_vector *new_entries;
 	git_vector_cmp entry_cmp;
+	git_tree_cache *tree;
 } read_tree_data;
 
 static int read_tree_cb(
@@ -2338,6 +2339,9 @@ int git_index_read_tree(git_index *index, const git_tree *tree)
 	data.new_entries = &entries;
 	data.entry_cmp   = index->entries_search;
 
+	index->tree = NULL;
+	git_pool_clear(&index->tree_pool);
+
 	if (index_sort_if_needed(index, true) < 0)
 		return -1;
 
@@ -2358,6 +2362,10 @@ int git_index_read_tree(git_index *index, const git_tree *tree)
 	}
 
 	git_vector_free(&entries);
+	if (error < 0)
+		return error;
+
+	error = git_tree_cache_read_tree(&index->tree, tree, &index->tree_pool);
 
 	return error;
 }

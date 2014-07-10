@@ -7,6 +7,7 @@
 
 #include "tree-cache.h"
 #include "pool.h"
+#include "tree.h"
 
 static git_tree_cache *find_child(
 	const git_tree_cache *tree, const char *path, const char *end)
@@ -152,6 +153,76 @@ int git_tree_cache_read(git_tree_cache **tree, const char *buffer, size_t buffer
 		return -1;
 	}
 
+	return 0;
+}
+
+static int read_tree_recursive(git_tree_cache *cache, const git_tree *tree, git_pool *pool)
+{
+	git_repository *repo;
+	size_t i, j, nentries, ntrees;
+	int error;
+
+	repo = git_tree_owner(tree);
+
+	git_oid_cpy(&cache->oid, git_tree_id(tree));
+	nentries = git_tree_entrycount(tree);
+
+	/*
+	 * We make sure we know how many trees we need to allocate for
+	 * so we don't have to realloc and change the pointers for the
+	 * parents.
+	 */
+	ntrees = 0;
+	for (i = 0; i < nentries; i++) {
+		const git_tree_entry *entry;
+
+		entry = git_tree_entry_byindex(tree, i);
+		if (git_tree_entry_filemode(entry) == GIT_FILEMODE_TREE)
+			ntrees++;
+	}
+
+	cache->children_count = ntrees;
+	cache->children = git_pool_mallocz(pool, ntrees * sizeof(git_tree_cache *));
+	GITERR_CHECK_ALLOC(cache->children);
+
+	j = 0;
+	for (i = 0; i < nentries; i++) {
+		const git_tree_entry *entry;
+		git_tree *subtree;
+
+		entry = git_tree_entry_byindex(tree, i);
+		if (git_tree_entry_filemode(entry) != GIT_FILEMODE_TREE)
+			continue;
+
+		if ((error = git_tree_cache_new(&cache->children[j], git_tree_entry_name(entry), cache, pool)) < 0)
+			return error;
+
+		if ((error = git_tree_lookup(&subtree, repo, git_tree_entry_id(entry))) < 0)
+			return error;
+
+		error = read_tree_recursive(cache->children[j], subtree, pool);
+		git_tree_free(subtree);
+		j++;
+
+		if (error < 0)
+			return error;
+	}
+
+	return 0;
+}
+
+int git_tree_cache_read_tree(git_tree_cache **out, const git_tree *tree, git_pool *pool)
+{
+	int error;
+	git_tree_cache *cache;
+
+	if ((error = git_tree_cache_new(&cache, "", NULL, pool)) < 0)
+		return error;
+
+	if ((error = read_tree_recursive(cache, tree, pool)) < 0)
+		return error;
+
+	*out = cache;
 	return 0;
 }
 
