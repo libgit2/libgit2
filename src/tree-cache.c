@@ -74,7 +74,6 @@ static int read_tree_internal(git_tree_cache **out,
 	git_tree_cache *tree = NULL;
 	const char *name_start, *buffer;
 	int count;
-	size_t name_len;
 
 	buffer = name_start = *buffer_in;
 
@@ -84,17 +83,8 @@ static int read_tree_internal(git_tree_cache **out,
 	if (++buffer >= buffer_end)
 		goto corrupted;
 
-	name_len = strlen(name_start);
-	tree = git__malloc(sizeof(git_tree_cache) + name_len + 1);
-	GITERR_CHECK_ALLOC(tree);
-
-	memset(tree, 0x0, sizeof(git_tree_cache));
-	tree->parent = parent;
-
-	/* NUL-terminated tree name */
-	tree->namelen = name_len;
-	memcpy(tree->name, name_start, name_len);
-	tree->name[name_len] = '\0';
+	if (git_tree_cache_new(&tree, name_start, parent) < 0)
+		return -1;
 
 	/* Blank-terminated ASCII decimal number of entries in this tree */
 	if (git__strtol32(&count, buffer, &buffer, 10) < 0)
@@ -161,6 +151,26 @@ int git_tree_cache_read(git_tree_cache **tree, const char *buffer, size_t buffer
 		return -1;
 	}
 
+	return 0;
+}
+
+int git_tree_cache_new(git_tree_cache **out, const char *name, git_tree_cache *parent)
+{
+	size_t name_len;
+	git_tree_cache *tree;
+
+	name_len = strlen(name);
+	tree = git__malloc(sizeof(git_tree_cache) + name_len + 1);
+	GITERR_CHECK_ALLOC(tree);
+
+	memset(tree, 0x0, sizeof(git_tree_cache));
+	tree->parent = parent;
+	/* NUL-terminated tree name */
+	tree->namelen = name_len;
+	memcpy(tree->name, name, name_len);
+	tree->name[name_len] = '\0';
+
+	*out = tree;
 	return 0;
 }
 
