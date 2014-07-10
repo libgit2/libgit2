@@ -6,6 +6,7 @@
  */
 
 #include "tree-cache.h"
+#include "pool.h"
 
 static git_tree_cache *find_child(
 	const git_tree_cache *tree, const char *path, const char *end)
@@ -69,7 +70,8 @@ const git_tree_cache *git_tree_cache_get(const git_tree_cache *tree, const char 
 }
 
 static int read_tree_internal(git_tree_cache **out,
-		const char **buffer_in, const char *buffer_end, git_tree_cache *parent)
+			      const char **buffer_in, const char *buffer_end,
+			      git_tree_cache *parent, git_pool *pool)
 {
 	git_tree_cache *tree = NULL;
 	const char *name_start, *buffer;
@@ -83,7 +85,7 @@ static int read_tree_internal(git_tree_cache **out,
 	if (++buffer >= buffer_end)
 		goto corrupted;
 
-	if (git_tree_cache_new(&tree, name_start, parent) < 0)
+	if (git_tree_cache_new(&tree, name_start, parent, pool) < 0)
 		return -1;
 
 	/* Blank-terminated ASCII decimal number of entries in this tree */
@@ -118,13 +120,13 @@ static int read_tree_internal(git_tree_cache **out,
 	if (tree->children_count > 0) {
 		unsigned int i;
 
-		tree->children = git__malloc(tree->children_count * sizeof(git_tree_cache *));
+		tree->children = git_pool_malloc(pool, tree->children_count * sizeof(git_tree_cache *));
 		GITERR_CHECK_ALLOC(tree->children);
 
 		memset(tree->children, 0x0, tree->children_count * sizeof(git_tree_cache *));
 
 		for (i = 0; i < tree->children_count; ++i) {
-			if (read_tree_internal(&tree->children[i], &buffer, buffer_end, tree) < 0)
+			if (read_tree_internal(&tree->children[i], &buffer, buffer_end, tree, pool) < 0)
 				goto corrupted;
 		}
 	}
@@ -134,16 +136,15 @@ static int read_tree_internal(git_tree_cache **out,
 	return 0;
 
  corrupted:
-	git_tree_cache_free(tree);
 	giterr_set(GITERR_INDEX, "Corrupted TREE extension in index");
 	return -1;
 }
 
-int git_tree_cache_read(git_tree_cache **tree, const char *buffer, size_t buffer_size)
+int git_tree_cache_read(git_tree_cache **tree, const char *buffer, size_t buffer_size, git_pool *pool)
 {
 	const char *buffer_end = buffer + buffer_size;
 
-	if (read_tree_internal(tree, &buffer, buffer_end, NULL) < 0)
+	if (read_tree_internal(tree, &buffer, buffer_end, NULL, pool) < 0)
 		return -1;
 
 	if (buffer < buffer_end) {
@@ -154,13 +155,13 @@ int git_tree_cache_read(git_tree_cache **tree, const char *buffer, size_t buffer
 	return 0;
 }
 
-int git_tree_cache_new(git_tree_cache **out, const char *name, git_tree_cache *parent)
+int git_tree_cache_new(git_tree_cache **out, const char *name, git_tree_cache *parent, git_pool *pool)
 {
 	size_t name_len;
 	git_tree_cache *tree;
 
 	name_len = strlen(name);
-	tree = git__malloc(sizeof(git_tree_cache) + name_len + 1);
+	tree = git_pool_malloc(pool, sizeof(git_tree_cache) + name_len + 1);
 	GITERR_CHECK_ALLOC(tree);
 
 	memset(tree, 0x0, sizeof(git_tree_cache));
@@ -172,21 +173,4 @@ int git_tree_cache_new(git_tree_cache **out, const char *name, git_tree_cache *p
 
 	*out = tree;
 	return 0;
-}
-
-void git_tree_cache_free(git_tree_cache *tree)
-{
-	unsigned int i;
-
-	if (tree == NULL)
-		return;
-
-	if (tree->children != NULL) {
-		for (i = 0; i < tree->children_count; ++i)
-			git_tree_cache_free(tree->children[i]);
-
-		git__free(tree->children);
-	}
-
-	git__free(tree);
 }

@@ -405,6 +405,8 @@ int git_index_open(git_index **index_out, const char *index_path)
 		return -1;
 	}
 
+	git_pool_init(&index->tree_pool, 1, 0);
+
 	if (index_path != NULL) {
 		index->index_file_path = git__strdup(index_path);
 		if (!index->index_file_path)
@@ -435,6 +437,7 @@ int git_index_open(git_index **index_out, const char *index_path)
 	return 0;
 
 fail:
+	git_pool_clear(&index->tree_pool);
 	git_index_free(index);
 	return error;
 }
@@ -517,8 +520,8 @@ int git_index_clear(git_index *index)
 
 	assert(index);
 
-	git_tree_cache_free(index->tree);
 	index->tree = NULL;
+	git_pool_clear(&index->tree_pool);
 
 	if (git_mutex_lock(&index->lock) < 0) {
 		giterr_set(GITERR_OS, "Failed to lock index");
@@ -620,6 +623,9 @@ int git_index_read(git_index *index, int force)
 	error = git_futils_readbuffer(&buffer, index->index_file_path);
 	if (error < 0)
 		return error;
+
+	index->tree = NULL;
+	git_pool_clear(&index->tree_pool);
 
 	error = git_index_clear(index);
 
@@ -1871,7 +1877,7 @@ static size_t read_extension(git_index *index, const char *buffer, size_t buffer
 	if (dest.signature[0] >= 'A' && dest.signature[0] <= 'Z') {
 		/* tree cache */
 		if (memcmp(dest.signature, INDEX_EXT_TREECACHE_SIG, 4) == 0) {
-			if (git_tree_cache_read(&index->tree, buffer + 8, dest.extension_size) < 0)
+			if (git_tree_cache_read(&index->tree, buffer + 8, dest.extension_size, &index->tree_pool) < 0)
 				return 0;
 		} else if (memcmp(dest.signature, INDEX_EXT_UNMERGED_SIG, 4) == 0) {
 			if (read_reuc(index, buffer + 8, dest.extension_size) < 0)
