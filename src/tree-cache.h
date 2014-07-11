@@ -12,8 +12,7 @@
 #include "pool.h"
 #include "git2/oid.h"
 
-typedef struct {
-	struct git_tree_cache *parent;
+typedef struct git_tree_cache {
 	struct git_tree_cache **children;
 	size_t children_count;
 
@@ -26,7 +25,7 @@ typedef struct {
 int git_tree_cache_read(git_tree_cache **tree, const char *buffer, size_t buffer_size, git_pool *pool);
 void git_tree_cache_invalidate_path(git_tree_cache *tree, const char *path);
 const git_tree_cache *git_tree_cache_get(const git_tree_cache *tree, const char *path);
-int git_tree_cache_new(git_tree_cache **out, const char *name, git_tree_cache *parent, git_pool *pool);
+int git_tree_cache_new(git_tree_cache **out, const char *name, git_pool *pool);
 /**
  * Read a tree as the root of the tree cache (like for `git read-tree`)
  */

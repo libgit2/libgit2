@@ -72,7 +72,7 @@ const git_tree_cache *git_tree_cache_get(const git_tree_cache *tree, const char 
 
 static int read_tree_internal(git_tree_cache **out,
 			      const char **buffer_in, const char *buffer_end,
-			      git_tree_cache *parent, git_pool *pool)
+			      git_pool *pool)
 {
 	git_tree_cache *tree = NULL;
 	const char *name_start, *buffer;
@@ -86,7 +86,7 @@ static int read_tree_internal(git_tree_cache **out,
 	if (++buffer >= buffer_end)
 		goto corrupted;
 
-	if (git_tree_cache_new(&tree, name_start, parent, pool) < 0)
+	if (git_tree_cache_new(&tree, name_start, pool) < 0)
 		return -1;
 
 	/* Blank-terminated ASCII decimal number of entries in this tree */
@@ -127,7 +127,7 @@ static int read_tree_internal(git_tree_cache **out,
 		memset(tree->children, 0x0, tree->children_count * sizeof(git_tree_cache *));
 
 		for (i = 0; i < tree->children_count; ++i) {
-			if (read_tree_internal(&tree->children[i], &buffer, buffer_end, tree, pool) < 0)
+			if (read_tree_internal(&tree->children[i], &buffer, buffer_end, pool) < 0)
 				goto corrupted;
 		}
 	}
@@ -145,7 +145,7 @@ int git_tree_cache_read(git_tree_cache **tree, const char *buffer, size_t buffer
 {
 	const char *buffer_end = buffer + buffer_size;
 
-	if (read_tree_internal(tree, &buffer, buffer_end, NULL, pool) < 0)
+	if (read_tree_internal(tree, &buffer, buffer_end, pool) < 0)
 		return -1;
 
 	if (buffer < buffer_end) {
@@ -194,7 +194,7 @@ static int read_tree_recursive(git_tree_cache *cache, const git_tree *tree, git_
 		if (git_tree_entry_filemode(entry) != GIT_FILEMODE_TREE)
 			continue;
 
-		if ((error = git_tree_cache_new(&cache->children[j], git_tree_entry_name(entry), cache, pool)) < 0)
+		if ((error = git_tree_cache_new(&cache->children[j], git_tree_entry_name(entry), pool)) < 0)
 			return error;
 
 		if ((error = git_tree_lookup(&subtree, repo, git_tree_entry_id(entry))) < 0)
@@ -216,7 +216,7 @@ int git_tree_cache_read_tree(git_tree_cache **out, const git_tree *tree, git_poo
 	int error;
 	git_tree_cache *cache;
 
-	if ((error = git_tree_cache_new(&cache, "", NULL, pool)) < 0)
+	if ((error = git_tree_cache_new(&cache, "", pool)) < 0)
 		return error;
 
 	if ((error = read_tree_recursive(cache, tree, pool)) < 0)
@@ -226,7 +226,7 @@ int git_tree_cache_read_tree(git_tree_cache **out, const git_tree *tree, git_poo
 	return 0;
 }
 
-int git_tree_cache_new(git_tree_cache **out, const char *name, git_tree_cache *parent, git_pool *pool)
+int git_tree_cache_new(git_tree_cache **out, const char *name, git_pool *pool)
 {
 	size_t name_len;
 	git_tree_cache *tree;
@@ -236,7 +236,6 @@ int git_tree_cache_new(git_tree_cache **out, const char *name, git_tree_cache *p
 	GITERR_CHECK_ALLOC(tree);
 
 	memset(tree, 0x0, sizeof(git_tree_cache));
-	tree->parent = parent;
 	/* NUL-terminated tree name */
 	tree->namelen = name_len;
 	memcpy(tree->name, name, name_len);
