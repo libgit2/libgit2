@@ -37,6 +37,8 @@ typedef struct {
 	transport_smart *owner;
 	ssh_stream *current_stream;
 	git_cred *cred;
+	char *cmd_uploadpack;
+	char *cmd_receivepack;
 } ssh_subtransport;
 
 static void ssh_error(LIBSSH2_SESSION *session, const char *errmsg)
@@ -504,7 +506,9 @@ static int ssh_uploadpack_ls(
 	const char *url,
 	git_smart_subtransport_stream **stream)
 {
-	if (_git_ssh_setup_conn(t, url, cmd_uploadpack, stream) < 0)
+	const char *cmd = t->cmd_uploadpack ? t->cmd_uploadpack : cmd_uploadpack;
+
+	if (_git_ssh_setup_conn(t, url, cmd, stream) < 0)
 		return -1;
 
 	return 0;
@@ -531,7 +535,9 @@ static int ssh_receivepack_ls(
 	const char *url,
 	git_smart_subtransport_stream **stream)
 {
-	if (_git_ssh_setup_conn(t, url, cmd_receivepack, stream) < 0)
+	const char *cmd = t->cmd_receivepack ? t->cmd_receivepack : cmd_receivepack;
+
+	if (_git_ssh_setup_conn(t, url, cmd, stream) < 0)
 		return -1;
 
 	return 0;
@@ -596,6 +602,8 @@ static void _ssh_free(git_smart_subtransport *subtransport)
 
 	assert(!t->current_stream);
 
+	git__free(t->cmd_uploadpack);
+	git__free(t->cmd_receivepack);
 	git__free(t);
 }
 #endif
@@ -617,6 +625,48 @@ int git_smart_subtransport_ssh(
 	t->parent.free = _ssh_free;
 
 	*out = (git_smart_subtransport *) t;
+	return 0;
+#else
+	GIT_UNUSED(owner);
+
+	assert(out);
+	*out = NULL;
+
+	giterr_set(GITERR_INVALID, "Cannot create SSH transport. Library was built without SSH support");
+	return -1;
+#endif
+}
+
+int git_transport_ssh_with_paths(git_transport **out, git_remote *owner, void *payload)
+{
+#ifdef GIT_SSH
+	git_strarray *paths = (git_strarray *) payload;
+	git_transport *transport;
+	transport_smart *smart;
+	ssh_subtransport *t;
+	int error;
+	git_smart_subtransport_definition ssh_definition = {
+		git_smart_subtransport_ssh,
+		0, /* no RPC */
+	};
+
+	if (paths->count != 2) {
+		giterr_set(GITERR_SSH, "invalid ssh paths, must be two strings");
+		return GIT_EINVALIDSPEC;
+	}
+
+	if ((error = git_transport_smart(&transport, owner, &ssh_definition)) < 0)
+		return error;
+
+	smart = (transport_smart *) transport;
+	t = (ssh_subtransport *) smart->wrapped;
+
+	t->cmd_uploadpack = git__strdup(paths->strings[0]);
+	GITERR_CHECK_ALLOC(t->cmd_uploadpack);
+	t->cmd_receivepack = git__strdup(paths->strings[1]);
+	GITERR_CHECK_ALLOC(t->cmd_receivepack);
+
+	*out = transport;
 	return 0;
 #else
 	GIT_UNUSED(owner);
