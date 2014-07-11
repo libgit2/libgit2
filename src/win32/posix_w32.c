@@ -19,6 +19,10 @@
 # define FILE_NAME_NORMALIZED 0
 #endif
 
+#ifndef IO_REPARSE_TAG_SYMLINK
+#define IO_REPARSE_TAG_SYMLINK (0xA000000CL)
+#endif
+
 /* Options which we always provide to _wopen.
  *
  * _O_BINARY - Raw access; no translation of CR or LF characters
@@ -543,7 +547,7 @@ char *p_realpath(const char *orig_path, char *buffer)
 
 int p_vsnprintf(char *buffer, size_t count, const char *format, va_list argptr)
 {
-#ifdef _MSC_VER
+#if defined(_MSC_VER) && _MSC_VER >= 1500
 	int len;
 
 	if (count == 0 ||
@@ -570,7 +574,7 @@ int p_snprintf(char *buffer, size_t count, const char *format, ...)
 
 int p_mkstemp(char *tmp_path)
 {
-#if defined(_MSC_VER)
+#if defined(_MSC_VER) && _MSC_VER >= 1500
 	if (_mktemp_s(tmp_path, strlen(tmp_path) + 1) != 0)
 		return -1;
 #else

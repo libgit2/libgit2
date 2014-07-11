@@ -15,7 +15,7 @@
 #	define R_OK 4 /* read mode check */
 
 #	define lseek _lseeki64
-#	define stat _stat64
+#	define stat __stat64
 #	define fstat _fstat64
 
 /* stat: file mode type testing macros */
@@ -38,7 +38,7 @@
 typedef SSIZE_T ssize_t;
 
 /* define snprintf using variadic macro support if available */
-#if _MSC_VER >= 1400
+#if _MSC_VER >= 1500
 # define snprintf(BUF, SZ, FMT, ...) _snprintf_s(BUF, SZ, _TRUNCATE, FMT, __VA_ARGS__)
 #else
 # define snprintf _snprintf
