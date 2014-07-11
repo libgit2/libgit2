@@ -2380,12 +2380,14 @@ int git_merge__append_conflicts_to_merge_msg(
 	size_t i;
 	int error;
 
+	if (!git_index_has_conflicts(index))
+		return 0;
+
 	if ((error = git_buf_joinpath(&file_path, repo->path_repository, GIT_MERGE_MSG_FILE)) < 0 ||
 		(error = git_filebuf_open(&file, file_path.ptr, GIT_FILEBUF_APPEND, GIT_MERGE_FILE_MODE)) < 0)
 		goto cleanup;
 
-	if (git_index_has_conflicts(index))
-		git_filebuf_printf(&file, "\nConflicts:\n");
+	git_filebuf_printf(&file, "\nConflicts:\n");
 
 	for (i = 0; i < git_index_entrycount(index); i++) {
 		const git_index_entry *e = git_index_get_byindex(index, i);
@@ -2409,7 +2411,6 @@ cleanup:
 
 	return error;
 }
-
 
 static int merge_state_cleanup(git_repository *repo)
 {
