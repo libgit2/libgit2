@@ -15,6 +15,7 @@ void test_network_remote_delete__initialize(void)
 
 void test_network_remote_delete__cleanup(void)
 {
+	git_remote_free(_remote);
 	cl_git_sandbox_cleanup();
 }
 
@@ -27,7 +28,6 @@ void test_network_remote_delete__cannot_delete_an_anonymous_remote(void)
 	cl_git_fail(git_remote_delete(remote));
 
 	git_remote_free(remote);
-	git_remote_free(_remote);
 }
 
 void test_network_remote_delete__remove_remote_tracking_branches(void)

@@ -460,7 +460,7 @@ static int append_entry(
 	git_oid_cpy(&entry->oid, id);
 	entry->attr = (uint16_t)filemode;
 
-	if (git_vector_insert(&bld->entries, entry) < 0) {
+	if (git_vector_insert_sorted(&bld->entries, entry, NULL) < 0) {
 		git__free(entry);
 		return -1;
 	}
@@ -671,7 +671,7 @@ int git_treebuilder_insert(
 		entry = alloc_entry(filename);
 		GITERR_CHECK_ALLOC(entry);
 
-		if (git_vector_insert(&bld->entries, entry) < 0) {
+		if (git_vector_insert_sorted(&bld->entries, entry, NULL) < 0) {
 			git__free(entry);
 			return -1;
 		}
