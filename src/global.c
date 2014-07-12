@@ -19,7 +19,9 @@ git_mutex git__mwindow_mutex;
 #ifdef GIT_SSL
 # include <openssl/ssl.h>
 SSL_CTX *git__ssl_ctx;
+# ifdef GIT_THREADS
 static git_mutex *openssl_locks;
+# endif
 #endif
 
 static git_global_shutdown_fn git__shutdown_callbacks[MAX_SHUTDOWN_CB];
