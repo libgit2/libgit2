@@ -36,6 +36,10 @@
 #define CACHED_POST_BODY_BUF_SIZE	4096
 #define UUID_LENGTH_CCH	32
 
+#ifndef WINHTTP_IGNORE_REQUEST_TOTAL_LENGTH
+#define WINHTTP_IGNORE_REQUEST_TOTAL_LENGTH 0
+#endif
+
 static const char *prefix_http = "http://";
 static const char *prefix_https = "https://";
 static const char *upload_pack_service = "upload-pack";
