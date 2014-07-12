@@ -564,11 +564,19 @@ char *p_realpath(const char *orig_path, char *buffer)
 
 int p_vsnprintf(char *buffer, size_t count, const char *format, va_list argptr)
 {
-#if defined(_MSC_VER) && _MSC_VER >= 1500
+#if defined(_MSC_VER)
 	int len;
 
-	if (count == 0 ||
-		(len = _vsnprintf_s(buffer, count, _TRUNCATE, format, argptr)) < 0)
+	if (count == 0)
+		return _vscprintf(format, argptr);
+
+	#if _MSC_VER >= 1500
+	len = _vsnprintf_s(buffer, count, _TRUNCATE, format, argptr);
+	#else
+	len = _vsnprintf(buffer, count, format, argptr);
+	#endif
+
+	if (len < 0)
 		return _vscprintf(format, argptr);
 
 	return len;

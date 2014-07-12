@@ -15,13 +15,6 @@
 typedef unsigned short mode_t;
 typedef SSIZE_T ssize_t;
 
-/* define snprintf using variadic macro support if available */
-#if _MSC_VER >= 1500
-# define snprintf(BUF, SZ, FMT, ...) _snprintf_s(BUF, SZ, _TRUNCATE, FMT, __VA_ARGS__)
-#else
-# define snprintf _snprintf
-#endif
-
 #endif
 
 #define GIT_STDLIB_CALL __cdecl
