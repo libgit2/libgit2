@@ -3,6 +3,7 @@
 
 #include "clar.h"
 #include <git2.h>
+#include <posix.h>
 #include "common.h"
 
 /**
@@ -51,7 +52,7 @@ GIT_INLINE(void) clar__assert_in_range(
 {
 	if (lo > val || hi < val) {
 		char buf[128];
-		snprintf(buf, sizeof(buf), "%d not in [%d,%d]", val, lo, hi);
+		p_snprintf(buf, sizeof(buf), "%d not in [%d,%d]", val, lo, hi);
 		clar__fail(file, line, err, buf, should_abort);
 	}
 }
