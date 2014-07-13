@@ -26,17 +26,11 @@ typedef int GIT_SOCKET;
 #define p_unlink(p) unlink(p)
 #define p_mkdir(p,m) mkdir(p, m)
 #define p_fsync(fd) fsync(fd)
+extern char *p_realpath(const char *, char *);
 
 #define p_recv(s,b,l,f) recv(s,b,l,f)
 #define p_send(s,b,l,f) send(s,b,l,f)
 #define p_inet_pton(a, b, c) inet_pton(a, b, c)
-
-/* The OpenBSD realpath function behaves differently */
-#if !defined(__OpenBSD__)
-# define p_realpath(p, po) realpath(p, po)
-#else
-char *p_realpath(const char *, char *);
-#endif
 
 #define p_vsnprintf(b, c, f, a) vsnprintf(b, c, f, a)
 #define p_snprintf(b, c, f, ...) snprintf(b, c, f, __VA_ARGS__)
