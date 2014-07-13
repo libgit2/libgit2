@@ -13,12 +13,10 @@
 typedef int GIT_SOCKET;
 #define INVALID_SOCKET -1
 
-#define p_strcasecmp(s1, s2) strcasecmp(s1, s2)
-#define p_strncasecmp(s1, s2, c) strncasecmp(s1, s2, c)
-
 #define p_lseek(f,n,w) lseek(f, n, w)
 #define p_fstat(f,b) fstat(f, b)
 #define p_lstat(p,b) lstat(p,b)
+#define p_stat(p,b) stat(p, b)
 
 #define p_readlink(a, b, c) readlink(a, b, c)
 #define p_symlink(o,n) symlink(o, n)
@@ -32,10 +30,11 @@ extern char *p_realpath(const char *, char *);
 #define p_send(s,b,l,f) send(s,b,l,f)
 #define p_inet_pton(a, b, c) inet_pton(a, b, c)
 
+#define p_strcasecmp(s1, s2) strcasecmp(s1, s2)
+#define p_strncasecmp(s1, s2, c) strncasecmp(s1, s2, c)
 #define p_vsnprintf(b, c, f, a) vsnprintf(b, c, f, a)
 #define p_snprintf(b, c, f, ...) snprintf(b, c, f, __VA_ARGS__)
 #define p_mkstemp(p) mkstemp(p)
-#define p_stat(p,b) stat(p, b)
 #define p_chdir(p) chdir(p)
 #define p_chmod(p,m) chmod(p, m)
 #define p_rmdir(p) rmdir(p)
