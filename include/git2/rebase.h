@@ -68,6 +68,19 @@ GIT_EXTERN(int) git_rebase(
 	const git_signature *signature,
 	const git_rebase_options *opts);
 
+/**
+ * Aborts a rebase that is currently in progress, resetting the repository
+ * and working directory to their state before rebase began.
+ *
+ * @param repo The repository with the in-progress rebase
+ * @param signature The identity that is aborting the rebase
+ * @return Zero on success; GIT_ENOTFOUND if a rebase is not in progress,
+ *         -1 on other errors.
+ */
+GIT_EXTERN(int) git_rebase_abort(
+	git_repository *repo,
+	const git_signature *signature);
+
 /** @} */
 GIT_END_DECL
 #endif

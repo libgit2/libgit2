@@ -44,6 +44,18 @@ typedef enum {
 	GIT_REBASE_TYPE_MERGE = 2,
 } git_rebase_type_t;
 
+typedef struct {
+	git_rebase_type_t type;
+	char *state_path;
+
+	int head_detached : 1;
+
+	char *orig_head_name;
+	git_oid orig_head_id;
+} git_rebase_state;
+
+#define GIT_REBASE_STATE_INIT {0}
+
 static int rebase_state_type(
 	git_rebase_type_t *type_out,
 	char **path_out,
@@ -78,6 +90,84 @@ done:
 	git_buf_free(&path);
 
 	return 0;
+}
+
+static int rebase_state(git_rebase_state *state, git_repository *repo)
+{
+	git_buf path = GIT_BUF_INIT, orig_head_name = GIT_BUF_INIT,
+		orig_head_id = GIT_BUF_INIT;
+	int state_path_len, error;
+
+	memset(state, 0x0, sizeof(git_rebase_state));
+
+	if ((error = rebase_state_type(&state->type, &state->state_path, repo)) < 0)
+		goto done;
+
+	if (state->type == GIT_REBASE_TYPE_NONE) {
+		giterr_set(GITERR_REBASE, "There is no rebase in progress");
+		return GIT_ENOTFOUND;
+	}
+
+	if ((error = git_buf_puts(&path, state->state_path)) < 0)
+		goto done;
+
+	state_path_len = git_buf_len(&path);
+
+	if ((error = git_buf_joinpath(&path, path.ptr, HEAD_NAME_FILE)) < 0 ||
+		(error = git_futils_readbuffer(&orig_head_name, path.ptr)) < 0)
+		goto done;
+
+	git_buf_rtrim(&orig_head_name);
+
+	if (strcmp(ORIG_DETACHED_HEAD, orig_head_name.ptr) == 0)
+		state->head_detached = 1;
+
+	git_buf_truncate(&path, state_path_len);
+
+	if ((error = git_buf_joinpath(&path, path.ptr, ORIG_HEAD_FILE)) < 0)
+		goto done;
+
+	if (!git_path_isfile(path.ptr)) {
+		/* Previous versions of git.git used 'head' here; support that. */
+		git_buf_truncate(&path, state_path_len);
+
+		if ((error = git_buf_joinpath(&path, path.ptr, HEAD_FILE)) < 0)
+			goto done;
+	}
+
+	if ((error = git_futils_readbuffer(&orig_head_id, path.ptr)) < 0)
+		goto done;
+
+	git_buf_rtrim(&orig_head_id);
+
+	if ((error = git_oid_fromstr(&state->orig_head_id, orig_head_id.ptr)) < 0)
+		goto done;
+
+	if (!state->head_detached)
+		state->orig_head_name = git_buf_detach(&orig_head_name);
+
+done:
+	git_buf_free(&path);
+	git_buf_free(&orig_head_name);
+	git_buf_free(&orig_head_id);
+	git_buf_free(&onto_id);
+	return error;
+}
+
+static void rebase_state_free(git_rebase_state *state)
+{
+	if (state == NULL)
+		return;
+
+	git__free(state->orig_head_name);
+	git__free(state->state_path);
+}
+
+static int rebase_finish(git_rebase_state *state)
+{
+	return git_path_isdir(state->state_path) ?
+		git_futils_rmdir_r(state->state_path, NULL, GIT_RMDIR_REMOVE_FILES) :
+		0;
 }
 
 static int rebase_setupfile(git_repository *repo, const char *filename, const char *fmt, ...)
@@ -328,5 +418,43 @@ int git_rebase(
 done:
 	git_reference_free(head_ref);
 	git_buf_free(&reflog);
+	return error;
+}
+
+int git_rebase_abort(git_repository *repo, const git_signature *signature)
+{
+	git_rebase_state state = GIT_REBASE_STATE_INIT;
+	git_reference *orig_head_ref = NULL;
+	git_commit *orig_head_commit = NULL;
+	int error;
+
+	assert(repo && signature);
+
+	if ((error = rebase_state(&state, repo)) < 0)
+		goto done;
+
+	error = state.head_detached ?
+		git_reference_create(&orig_head_ref, repo, GIT_HEAD_FILE,
+			 &state.orig_head_id, 1, signature, "rebase: aborting") :
+		git_reference_symbolic_create(
+			&orig_head_ref, repo, GIT_HEAD_FILE, state.orig_head_name, 1,
+			signature, "rebase: aborting");
+
+	if (error < 0)
+		goto done;
+
+	if ((error = git_commit_lookup(
+			&orig_head_commit, repo, &state.orig_head_id)) < 0 ||
+		(error = git_reset(repo, (git_object *)orig_head_commit,
+			GIT_RESET_HARD, NULL, signature, NULL)) < 0)
+		goto done;
+
+	error = rebase_finish(&state);
+
+done:
+	git_commit_free(orig_head_commit);
+	git_reference_free(orig_head_ref);
+	rebase_state_free(&state);
+
 	return error;
 }
