@@ -1971,6 +1971,9 @@ int git_remote_default_branch(git_buf *out, git_remote *remote)
 		if (git_oid_cmp(head_id, &heads[i]->oid))
 			continue;
 
+		if (git__prefixcmp(heads[i]->name, GIT_REFS_HEADS_DIR))
+			continue;
+
 		if (!guess) {
 			guess = heads[i];
 			continue;
