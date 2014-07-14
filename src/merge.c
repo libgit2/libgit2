@@ -1835,29 +1835,6 @@ done:
 
 /* Merge setup / cleanup */
 
-static int write_orig_head(
-	git_repository *repo,
-	const git_merge_head *our_head)
-{
-	git_filebuf file = GIT_FILEBUF_INIT;
-	git_buf file_path = GIT_BUF_INIT;
-	int error = 0;
-
-	assert(repo && our_head);
-
-	if ((error = git_buf_joinpath(&file_path, repo->path_repository, GIT_ORIG_HEAD_FILE)) == 0 &&
-		(error = git_filebuf_open(&file, file_path.ptr, GIT_FILEBUF_FORCE, GIT_MERGE_FILE_MODE)) == 0 &&
-		(error = git_filebuf_printf(&file, "%s\n", our_head->oid_str)) == 0)
-		error = git_filebuf_commit(&file);
-
-	if (error < 0)
-		git_filebuf_cleanup(&file);
-
-	git_buf_free(&file_path);
-
-	return error;
-}
-
 static int write_merge_head(
 	git_repository *repo,
 	const git_merge_head *heads[],
@@ -2229,7 +2206,7 @@ int git_merge__setup(
 
 	assert (repo && our_head && heads);
 
-	if ((error = write_orig_head(repo, our_head)) == 0 &&
+	if ((error = git_repository__set_orig_head(repo, &our_head->oid)) == 0 &&
 		(error = write_merge_head(repo, heads, heads_len)) == 0 &&
 		(error = write_merge_mode(repo)) == 0) {
 		error = write_merge_msg(repo, heads, heads_len);
