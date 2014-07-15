@@ -69,6 +69,19 @@ GIT_EXTERN(int) git_rebase(
 	const git_rebase_options *opts);
 
 /**
+ * Applies the next patch, updating the index and working directory with the
+ * changes.  If there are conflicts, you will need to address those before
+ * committing the changes.
+ *
+ * @param repo The repository with a rebase in progress
+ * @param checkout_opts Options to specify how the patch should be checked out
+ * @return Zero on success; -1 on failure.
+ */
+GIT_EXTERN(int) git_rebase_next(
+	git_repository *repo,
+	git_checkout_options *checkout_opts);
+
+/**
  * Aborts a rebase that is currently in progress, resetting the repository
  * and working directory to their state before rebase began.
  *

@@ -32,6 +32,7 @@
 #define MSGNUM_FILE			"msgnum"
 #define END_FILE			"end"
 #define CMT_FILE_FMT		"cmt.%d"
+#define CURRENT_FILE		"current"
 
 #define ORIG_DETACHED_HEAD	"detached HEAD"
 
@@ -42,7 +43,13 @@ typedef enum {
 	GIT_REBASE_TYPE_NONE = 0,
 	GIT_REBASE_TYPE_APPLY = 1,
 	GIT_REBASE_TYPE_MERGE = 2,
+	GIT_REBASE_TYPE_INTERACTIVE = 3,
 } git_rebase_type_t;
+
+struct git_rebase_state_merge {
+	int32_t msgnum;
+	int32_t end;
+};
 
 typedef struct {
 	git_rebase_type_t type;
@@ -52,6 +59,10 @@ typedef struct {
 
 	char *orig_head_name;
 	git_oid orig_head_id;
+
+	union {
+		struct git_rebase_state_merge merge;
+	};
 } git_rebase_state;
 
 #define GIT_REBASE_STATE_INIT {0}
@@ -90,6 +101,50 @@ done:
 	git_buf_free(&path);
 
 	return 0;
+}
+
+static int rebase_state_merge(git_rebase_state *state, git_repository *repo)
+{
+	git_buf path = GIT_BUF_INIT, msgnum = GIT_BUF_INIT, end = GIT_BUF_INIT;
+	int state_path_len, error;
+
+	GIT_UNUSED(repo);
+
+	if ((error = git_buf_puts(&path, state->state_path)) < 0)
+		goto done;
+
+	state_path_len = git_buf_len(&path);
+
+	if ((error = git_buf_joinpath(&path, path.ptr, MSGNUM_FILE)) < 0)
+		goto done;
+
+	if (git_path_isfile(path.ptr)) {
+		if ((error = git_futils_readbuffer(&msgnum, path.ptr)) < 0)
+			goto done;
+
+		git_buf_rtrim(&msgnum);
+
+		if ((error = git__strtol32(&state->merge.msgnum, msgnum.ptr, NULL, 10)) < 0)
+			goto done;
+	}
+
+	git_buf_truncate(&path, state_path_len);
+
+	if ((error = git_buf_joinpath(&path, path.ptr, END_FILE)) < 0 ||
+		(error = git_futils_readbuffer(&end, path.ptr)) < 0)
+		goto done;
+
+	git_buf_rtrim(&end);
+
+	if ((error = git__strtol32(&state->merge.end, end.ptr, NULL, 10)) < 0)
+		goto done;
+
+done:
+	git_buf_free(&path);
+	git_buf_free(&msgnum);
+	git_buf_free(&end);
+
+	return error;
 }
 
 static int rebase_state(git_rebase_state *state, git_repository *repo)
@@ -145,6 +200,22 @@ static int rebase_state(git_rebase_state *state, git_repository *repo)
 
 	if (!state->head_detached)
 		state->orig_head_name = git_buf_detach(&orig_head_name);
+
+	switch (state->type) {
+	case GIT_REBASE_TYPE_INTERACTIVE:
+		giterr_set(GITERR_REBASE, "Interactive rebase is not supported");
+		error = -1;
+		break;
+	case GIT_REBASE_TYPE_MERGE:
+		error = rebase_state_merge(state, repo);
+		break;
+	case GIT_REBASE_TYPE_APPLY:
+		giterr_set(GITERR_REBASE, "Patch application rebase is not supported");
+		error = -1;
+		break;
+	default:
+		abort();
+	}
 
 done:
 	git_buf_free(&path);
@@ -418,6 +489,91 @@ int git_rebase(
 done:
 	git_reference_free(head_ref);
 	git_buf_free(&reflog);
+	return error;
+}
+
+static int rebase_next_merge(
+	git_repository *repo,
+	git_rebase_state *state,
+	git_checkout_options *checkout_opts)
+{
+	git_buf path = GIT_BUF_INIT, current = GIT_BUF_INIT;
+	git_oid current_id;
+	git_commit *current_commit = NULL, *parent_commit = NULL;
+	git_tree *current_tree = NULL, *head_tree = NULL, *parent_tree = NULL;
+	git_index *index = NULL;
+	unsigned int parent_count;
+	int error;
+
+	if (state->merge.msgnum == state->merge.end)
+		return GIT_ITEROVER;
+
+	state->merge.msgnum++;
+
+	if ((error = git_buf_joinpath(&path, state->state_path, "cmt.")) < 0 ||
+		(error = git_buf_printf(&path, "%d", state->merge.msgnum)) < 0 ||
+		(error = git_futils_readbuffer(&current, path.ptr)) < 0)
+		goto done;
+
+	git_buf_rtrim(&current);
+
+	if ((error = git_oid_fromstr(&current_id, current.ptr)) < 0 ||
+		(error = git_commit_lookup(&current_commit, repo, &current_id)) < 0 ||
+		(error = git_commit_tree(&current_tree, current_commit)) < 0 ||
+		(error = git_repository_head_tree(&head_tree, repo)) < 0)
+		goto done;
+
+	if ((parent_count = git_commit_parentcount(current_commit)) > 1) {
+		giterr_set(GITERR_REBASE, "Cannot rebase a merge commit");
+		error = -1;
+		goto done;
+	} else if (parent_count) {
+		if ((error = git_commit_parent(&parent_commit, current_commit, 0)) < 0 ||
+			(error = git_commit_tree(&parent_tree, parent_commit)) < 0)
+			goto done;
+	}
+
+	if ((error = rebase_setupfile(repo, MSGNUM_FILE, "%d\n", state->merge.msgnum)) < 0 ||
+		(error = rebase_setupfile(repo, CURRENT_FILE, "%s\n", current.ptr)) < 0)
+		goto done;
+
+	if ((error = git_merge_trees(&index, repo, parent_tree, head_tree, current_tree, NULL)) < 0 ||
+		(error = git_merge__check_result(repo, index)) < 0 ||
+		(error = git_checkout_index(repo, index, checkout_opts)) < 0)
+		goto done;
+
+done:
+	git_index_free(index);
+	git_tree_free(current_tree);
+	git_tree_free(head_tree);
+	git_tree_free(parent_tree);
+	git_commit_free(current_commit);
+	git_commit_free(parent_commit);
+	git_buf_free(&path);
+	git_buf_free(&current);
+
+	return error;
+}
+
+int git_rebase_next(git_repository *repo, git_checkout_options *opts)
+{
+	git_rebase_state state = GIT_REBASE_STATE_INIT;
+	int error;
+
+	assert(repo);
+
+	if ((error = rebase_state(&state, repo)) < 0)
+		return -1;
+
+	switch (state.type) {
+	case GIT_REBASE_TYPE_MERGE:
+		error = rebase_next_merge(repo, &state, opts);
+		break;
+	default:
+		abort();
+	}
+
+	rebase_state_free(&state);
 	return error;
 }
 
