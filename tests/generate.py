@@ -8,7 +8,7 @@
 
 from __future__ import with_statement
 from string import Template
-import re, fnmatch, os, codecs, pickle
+import re, fnmatch, os, codecs, pickle, sys
 
 class Module(object):
     class Template(object):
@@ -118,8 +118,12 @@ class Module(object):
             self.modified = True
             self.mtime = st.st_mtime
 
-            with open(path) as fp:
-                raw_content = fp.read()
+            if sys.version_info < (3, 0):
+                with open(path) as fp:
+                    raw_content = fp.read()
+            else:
+                with open(path, 'rb') as fp:
+                    raw_content = "".join(map(chr, fp.read()))
 
         except IOError:
             return False
