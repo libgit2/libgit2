@@ -670,6 +670,7 @@ int git_transport_ssh_with_paths(git_transport **out, git_remote *owner, void *p
 	return 0;
 #else
 	GIT_UNUSED(owner);
+	GIT_UNUSED(payload);
 
 	assert(out);
 	*out = NULL;
