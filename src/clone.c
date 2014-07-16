@@ -380,7 +380,7 @@ int git_clone__should_clone_local(const char *url_or_path, git_clone_local_t loc
 	if (local == GIT_CLONE_NO_LOCAL)
 		return 0;
 
-	if (is_url = git_path_is_local_file_url(url_or_path)) {
+	if ((is_url = git_path_is_local_file_url(url_or_path)) != 0) {
 		if (git_path_fromurl(&fromurl, url_or_path) < 0) {
 			is_local = -1;
 			goto done;
@@ -437,14 +437,14 @@ int git_clone(
 		return error;
 
 	if (!(error = create_and_configure_origin(&origin, repo, url, &options))) {
-		int should_clone = git_clone__should_clone_local(url, options.local);
+		int clone_local = git_clone__should_clone_local(url, options.local);
 		int link = options.local != GIT_CLONE_LOCAL_NO_LINKS;
 
-		if (should_clone == 1)
+		if (clone_local == 1)
 			error = clone_local_into(
 				repo, origin, &options.checkout_opts,
 				options.checkout_branch, link, options.signature);
-		else if (should_clone == 0)
+		else if (clone_local == 0)
 			error = clone_into(
 				repo, origin, &options.checkout_opts,
 				options.checkout_branch, options.signature);
