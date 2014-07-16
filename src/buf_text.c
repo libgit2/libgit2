@@ -176,7 +176,7 @@ int git_buf_text_common_prefix(git_buf *buf, const git_strarray *strings)
 	return 0;
 }
 
-int git_buf_text_is_binary(const git_buf *buf)
+bool git_buf_text_is_binary(const git_buf *buf)
 {
 	const char *scan = buf->ptr, *end = buf->ptr + buf->size;
 	git_bom_t bom;
@@ -201,7 +201,7 @@ int git_buf_text_is_binary(const git_buf *buf)
 	return ((printable >> 7) < nonprintable);
 }
 
-int git_buf_text_contains_nul(const git_buf *buf)
+bool git_buf_text_contains_nul(const git_buf *buf)
 {
 	return (memchr(buf->ptr, '\0', buf->size) != NULL);
 }
