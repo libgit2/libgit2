@@ -82,6 +82,34 @@ GIT_EXTERN(int) git_rebase_next(
 	git_checkout_options *checkout_opts);
 
 /**
+ * Commits the current patch.  You must have resolved any conflicts that
+ * were introduced during the patch application from the `git_rebase_next`
+ * invocation.
+ * 
+ * @param id Pointer in which to store the OID of the newly created commit
+ * @param repo The repository with the in-progress rebase
+ * @param author The author of the updated commit, or NULL to keep the
+ *        author from the original commit
+ * @param committer The committer of the rebase
+ * @param message_encoding The encoding for the message in the commit,
+ *        represented with a standard encoding name.  If message is NULL,
+ *        this should also be NULL, and the encoding from the original
+ *        commit will be maintained.  If message is specified, this may be
+ *        NULL to indicate that "UTF-8" is to be used.
+ * @param message The message for this commit, or NULL to keep the message
+ *        from the original commit
+ * @return Zero on success, GIT_EUNMERGED if there are unmerged changes in
+ *        the index, -1 on failure.
+ */
+GIT_EXTERN(int) git_rebase_commit(
+	git_oid *id,
+	git_repository *repo,
+	const git_signature *author,
+	const git_signature *committer,
+	const char *message_encoding,
+	const char *message);
+
+/**
  * Aborts a rebase that is currently in progress, resetting the repository
  * and working directory to their state before rebase began.
  *

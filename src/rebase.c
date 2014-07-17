@@ -33,6 +33,7 @@
 #define END_FILE			"end"
 #define CMT_FILE_FMT		"cmt.%d"
 #define CURRENT_FILE		"current"
+#define REWRITTEN_FILE		"rewritten"
 
 #define ORIG_DETACHED_HEAD	"detached HEAD"
 
@@ -284,7 +285,7 @@ static int rebase_finish(git_rebase_state *state)
 		0;
 }
 
-static int rebase_setupfile(git_repository *repo, const char *filename, const char *fmt, ...)
+static int rebase_setupfile(git_repository *repo, const char *filename, int flags, const char *fmt, ...)
 {
 	git_buf path = GIT_BUF_INIT,
 		contents = GIT_BUF_INIT;
@@ -297,7 +298,7 @@ static int rebase_setupfile(git_repository *repo, const char *filename, const ch
 
 	if ((error = git_buf_joinpath(&path, repo->path_repository, REBASE_MERGE_DIR)) == 0 &&
 		(error = git_buf_joinpath(&path, path.ptr, filename)) == 0)
-		error = git_futils_writebuffer(&contents, path.ptr, O_RDWR|O_CREAT, REBASE_FILE_MODE);
+		error = git_futils_writebuffer(&contents, path.ptr, flags, REBASE_FILE_MODE);
 
 	git_buf_free(&path);
 	git_buf_free(&contents);
@@ -361,16 +362,16 @@ static int rebase_setup_merge(
 		git_buf_printf(&commit_filename, CMT_FILE_FMT, commit_cnt);
 
 		git_oid_fmt(id_str, &id);
-		if ((error = rebase_setupfile(repo, commit_filename.ptr,
+		if ((error = rebase_setupfile(repo, commit_filename.ptr, -1,
 				"%.*s\n", GIT_OID_HEXSZ, id_str)) < 0)
 			goto done;
 	}
 
 	if (error != GIT_ITEROVER ||
-		(error = rebase_setupfile(repo, END_FILE, "%d\n", commit_cnt)) < 0)
+		(error = rebase_setupfile(repo, END_FILE, -1, "%d\n", commit_cnt)) < 0)
 		goto done;
 
-	error = rebase_setupfile(repo, ONTO_NAME_FILE, "%s\n",
+	error = rebase_setupfile(repo, ONTO_NAME_FILE, -1, "%s\n",
 		rebase_onto_name(onto));
 
 done:
@@ -405,10 +406,10 @@ static int rebase_setup(
 
 	orig_head_name = branch->ref_name ? branch->ref_name : ORIG_DETACHED_HEAD;
 
-	if ((error = rebase_setupfile(repo, HEAD_NAME_FILE, "%s\n", orig_head_name)) < 0 ||
-		(error = rebase_setupfile(repo, ONTO_FILE, "%s\n", onto->oid_str)) < 0 ||
-		(error = rebase_setupfile(repo, ORIG_HEAD_FILE, "%s\n", branch->oid_str)) < 0 ||
-		(error = rebase_setupfile(repo, QUIET_FILE, opts->quiet ? "t\n" : "\n")) < 0)
+	if ((error = rebase_setupfile(repo, HEAD_NAME_FILE, -1, "%s\n", orig_head_name)) < 0 ||
+		(error = rebase_setupfile(repo, ONTO_FILE, -1, "%s\n", onto->oid_str)) < 0 ||
+		(error = rebase_setupfile(repo, ORIG_HEAD_FILE, -1, "%s\n", branch->oid_str)) < 0 ||
+		(error = rebase_setupfile(repo, QUIET_FILE, -1, opts->quiet ? "t\n" : "\n")) < 0)
 		goto done;
 
 	error = rebase_setup_merge(repo, branch, upstream, onto, opts);
@@ -615,8 +616,8 @@ static int rebase_next_merge(
 			goto done;
 	}
 
-	if ((error = rebase_setupfile(repo, MSGNUM_FILE, "%d\n", state->merge.msgnum)) < 0 ||
-		(error = rebase_setupfile(repo, CURRENT_FILE, "%s\n", current.ptr)) < 0)
+	if ((error = rebase_setupfile(repo, MSGNUM_FILE, -1, "%d\n", state->merge.msgnum)) < 0 ||
+		(error = rebase_setupfile(repo, CURRENT_FILE, -1, "%s\n", current.ptr)) < 0)
 		goto done;
 
 	if ((error = normalize_checkout_opts(repo, &checkout_opts, given_checkout_opts, state)) < 0 ||
@@ -657,6 +658,104 @@ int git_rebase_next(
 		abort();
 	}
 
+	rebase_state_free(&state);
+	return error;
+}
+
+static int rebase_commit_merge(
+	git_oid *commit_id,
+	git_repository *repo,
+	git_rebase_state *state,
+	const git_signature *author,
+	const git_signature *committer,
+	const char *message_encoding,
+	const char *message)
+{
+	git_index *index = NULL;
+	git_reference *head = NULL;
+	git_commit *head_commit = NULL;
+	git_tree *tree = NULL;
+	git_oid tree_id;
+	char old_idstr[GIT_OID_HEXSZ], new_idstr[GIT_OID_HEXSZ];
+	int error;
+
+	if (!state->merge.msgnum || !state->merge.current) {
+		giterr_set(GITERR_REBASE, "No rebase-merge state files exist");
+		error = -1;
+		goto done;
+	}
+
+	if ((error = git_repository_index(&index, repo)) < 0)
+		goto done;
+
+	if (git_index_has_conflicts(index)) {
+		giterr_set(GITERR_REBASE, "Conflicts have not been resolved");
+		error = GIT_EMERGECONFLICT;
+		goto done;
+	}
+
+	/* TODO: if there are no changes, error with a useful code */
+
+	if ((error = git_repository_head(&head, repo)) < 0 ||
+		(error = git_reference_peel((git_object **)&head_commit, head, GIT_OBJ_COMMIT)) < 0 ||
+		(error = git_index_write_tree(&tree_id, index)) < 0 ||
+		(error = git_tree_lookup(&tree, repo, &tree_id)) < 0)
+		goto done;
+
+	if (!author)
+		author = git_commit_author(state->merge.current);
+
+	if (!message) {
+		message_encoding = git_commit_message_encoding(state->merge.current);
+		message = git_commit_message(state->merge.current);
+	}
+
+	if ((error = git_commit_create(commit_id, repo, "HEAD", author,
+			committer, message_encoding, message, tree, 1,
+			(const git_commit **)&head_commit)) < 0)
+		goto done;
+
+	git_oid_fmt(old_idstr, git_commit_id(state->merge.current));
+	git_oid_fmt(new_idstr, commit_id);
+
+	error = rebase_setupfile(repo, REWRITTEN_FILE, O_CREAT|O_WRONLY|O_APPEND,
+		"%.*s %.*s\n", GIT_OID_HEXSZ, old_idstr, GIT_OID_HEXSZ, new_idstr);
+
+done:
+	git_tree_free(tree);
+	git_commit_free(head_commit);
+	git_reference_free(head);
+	git_index_free(index);
+
+	return error;
+}
+
+int git_rebase_commit(
+	git_oid *id,
+	git_repository *repo,
+	const git_signature *author,
+	const git_signature *committer,
+	const char *message_encoding,
+	const char *message)
+{
+	git_rebase_state state = GIT_REBASE_STATE_INIT;
+	int error;
+
+	assert(repo && committer);
+
+	if ((error = rebase_state(&state, repo)) < 0)
+		goto done;
+
+	switch (state.type) {
+	case GIT_REBASE_TYPE_MERGE:
+		error = rebase_commit_merge(
+			id, repo, &state, author, committer, message_encoding, message);
+		break;
+	default:
+		abort();
+	}
+
+done:
 	rebase_state_free(&state);
 	return error;
 }
