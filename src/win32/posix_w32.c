@@ -51,6 +51,20 @@ static int utf8_to_16_with_errno(git_win32_path dest, const char *src)
 	return len;
 }
 
+static int utf8_to_16_with_errno_double(git_win32_path_double dest, const char *src)
+{
+	int len = git_win32_path_from_utf8_double(dest, src);
+
+	if (len < 0) {
+		if (GetLastError() == ERROR_INSUFFICIENT_BUFFER)
+			errno = ENAMETOOLONG;
+		else
+			errno = EINVAL; /* Bad code point, presumably */
+	}
+
+	return len;
+}
+
 int p_mkdir(const char *path, mode_t mode)
 {
 	git_win32_path buf;
@@ -503,15 +517,15 @@ int p_rmdir(const char* path)
 
 char *p_realpath(const char *orig_path, char *buffer)
 {
-	git_win32_path orig_path_w, buffer_w;
+	git_win32_path_double orig_path_w, buffer_w;
 
-	if (utf8_to_16_with_errno(orig_path_w, orig_path) < 0)
+	if (utf8_to_16_with_errno_double(orig_path_w, orig_path) < 0)
 		return NULL;
 
 	/* Note that if the path provided is a relative path, then the current directory
 	 * is used to resolve the path -- which is a concurrency issue because the current
 	 * directory is a process-wide variable. */
-	if (!GetFullPathNameW(orig_path_w, GIT_WIN_PATH_UTF16, buffer_w, NULL)) {
+	if (!GetFullPathNameW(orig_path_w, GIT_WIN_PATH_UTF16_DOUBLE, buffer_w, NULL)) {
 		if (GetLastError() == ERROR_INSUFFICIENT_BUFFER)
 			errno = ENAMETOOLONG;
 		else
