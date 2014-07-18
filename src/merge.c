@@ -27,6 +27,7 @@
 #include "index.h"
 #include "filebuf.h"
 #include "config.h"
+#include "oidarray.h"
 
 #include "git2/types.h"
 #include "git2/repository.h"
@@ -39,6 +40,7 @@
 #include "git2/signature.h"
 #include "git2/config.h"
 #include "git2/tree.h"
+#include "git2/oidarray.h"
 #include "git2/sys/index.h"
 
 #define GIT_MERGE_INDEX_ENTRY_EXISTS(X)	((X).mode != 0)
@@ -139,7 +141,7 @@ int git_merge_base_octopus(git_oid *out, git_repository *repo, size_t length, co
 	return 0;
 }
 
-int git_merge_base(git_oid *out, git_repository *repo, const git_oid *one, const git_oid *two)
+static int merge_bases(git_commit_list **out, git_revwalk **walk_out, git_repository *repo, const git_oid *one, const git_oid *two)
 {
 	git_revwalk *walk;
 	git_vector list;
@@ -173,13 +175,63 @@ int git_merge_base(git_oid *out, git_repository *repo, const git_oid *one, const
 		return GIT_ENOTFOUND;
 	}
 
+	*out = result;
+	*walk_out = walk;
+
+	return 0;
+
+on_error:
+	git_revwalk_free(walk);
+	return -1;
+
+}
+
+int git_merge_base(git_oid *out, git_repository *repo, const git_oid *one, const git_oid *two)
+{
+	int error;
+	git_revwalk *walk;
+	git_commit_list *result;
+
+	if ((error = merge_bases(&result, &walk, repo, one, two)) < 0)
+		return error;
+
 	git_oid_cpy(out, &result->item->oid);
+	git_commit_list_free(&result);
+	git_revwalk_free(walk);
+
+	return 0;
+}
+
+int git_merge_bases(git_oidarray *out, git_repository *repo, const git_oid *one, const git_oid *two)
+{
+	int error;
+        git_revwalk *walk;
+	git_commit_list *result, *list;
+	git_array_oid_t array;
+
+	git_array_init(array);
+
+	if ((error = merge_bases(&result, &walk, repo, one, two)) < 0)
+		return error;
+
+	list = result;
+	while (list) {
+		git_oid *id = git_array_alloc(array);
+		if (id == NULL)
+			goto on_error;
+
+		git_oid_cpy(id, &list->item->oid);
+		list = list->next;
+	}
+
+	git_oidarray__from_array(out, &array);
 	git_commit_list_free(&result);
 	git_revwalk_free(walk);
 
 	return 0;
 
 on_error:
+	git_commit_list_free(&result);
 	git_revwalk_free(walk);
 	return -1;
 }
