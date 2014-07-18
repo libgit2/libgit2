@@ -120,6 +120,56 @@ void test_rebase_merge__next_with_conflicts(void)
 	git_reference_free(upstream_ref);
 }
 
+void test_rebase_merge__next_stops_with_iterover(void)
+{
+	git_reference *branch_ref, *upstream_ref;
+	git_merge_head *branch_head, *upstream_head;
+	git_checkout_options checkout_opts = GIT_CHECKOUT_OPTIONS_INIT;
+	git_oid commit_id;
+	int error;
+
+	checkout_opts.checkout_strategy = GIT_CHECKOUT_SAFE;
+
+	cl_git_pass(git_reference_lookup(&branch_ref, repo, "refs/heads/beef"));
+	cl_git_pass(git_reference_lookup(&upstream_ref, repo, "refs/heads/master"));
+
+	cl_git_pass(git_merge_head_from_ref(&branch_head, repo, branch_ref));
+	cl_git_pass(git_merge_head_from_ref(&upstream_head, repo, upstream_ref));
+
+	cl_git_pass(git_rebase(repo, branch_head, upstream_head, NULL, signature, NULL));
+
+	cl_git_pass(git_rebase_next(repo, &checkout_opts));
+	cl_git_pass(git_rebase_commit(&commit_id, repo, NULL, signature,
+		NULL, NULL));
+
+	cl_git_pass(git_rebase_next(repo, &checkout_opts));
+	cl_git_pass(git_rebase_commit(&commit_id, repo, NULL, signature,
+		NULL, NULL));
+
+	cl_git_pass(git_rebase_next(repo, &checkout_opts));
+	cl_git_pass(git_rebase_commit(&commit_id, repo, NULL, signature,
+		NULL, NULL));
+
+	cl_git_pass(git_rebase_next(repo, &checkout_opts));
+	cl_git_pass(git_rebase_commit(&commit_id, repo, NULL, signature,
+		NULL, NULL));
+
+	cl_git_pass(git_rebase_next(repo, &checkout_opts));
+	cl_git_pass(git_rebase_commit(&commit_id, repo, NULL, signature,
+		NULL, NULL));
+
+	cl_git_fail(error = git_rebase_next(repo, &checkout_opts));
+	cl_assert_equal_i(GIT_ITEROVER, error);
+
+	cl_assert_equal_file("5\n", 2, "rebase/.git/rebase-merge/end");
+	cl_assert_equal_file("5\n", 2, "rebase/.git/rebase-merge/msgnum");
+
+	git_merge_head_free(branch_head);
+	git_merge_head_free(upstream_head);
+	git_reference_free(branch_ref);
+	git_reference_free(upstream_ref);
+}
+
 void test_rebase_merge__commit(void)
 {
 	git_reference *branch_ref, *upstream_ref;
