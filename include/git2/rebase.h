@@ -99,7 +99,9 @@ GIT_EXTERN(int) git_rebase_next(
  * @param message The message for this commit, or NULL to keep the message
  *        from the original commit
  * @return Zero on success, GIT_EUNMERGED if there are unmerged changes in
- *        the index, -1 on failure.
+ *        the index, GIT_EAPPLIED if the current commit has already
+ *        been applied to the upstream and there is nothing to commit,
+ *        -1 on failure.
  */
 GIT_EXTERN(int) git_rebase_commit(
 	git_oid *id,

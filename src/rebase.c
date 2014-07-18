@@ -674,7 +674,8 @@ static int rebase_commit_merge(
 	git_index *index = NULL;
 	git_reference *head = NULL;
 	git_commit *head_commit = NULL;
-	git_tree *tree = NULL;
+	git_tree *head_tree = NULL, *tree = NULL;
+	git_diff *diff = NULL;
 	git_oid tree_id;
 	char old_idstr[GIT_OID_HEXSZ], new_idstr[GIT_OID_HEXSZ];
 	int error;
@@ -694,11 +695,19 @@ static int rebase_commit_merge(
 		goto done;
 	}
 
-	/* TODO: if there are no changes, error with a useful code */
-
 	if ((error = git_repository_head(&head, repo)) < 0 ||
 		(error = git_reference_peel((git_object **)&head_commit, head, GIT_OBJ_COMMIT)) < 0 ||
-		(error = git_index_write_tree(&tree_id, index)) < 0 ||
+		(error = git_commit_tree(&head_tree, head_commit)) < 0 ||
+		(error = git_diff_tree_to_index(&diff, repo, head_tree, index, NULL)) < 0)
+		goto done;
+
+	if (git_diff_num_deltas(diff) == 0) {
+		giterr_set(GITERR_REBASE, "This patch has already been applied");
+		error = GIT_EAPPLIED;
+		goto done;
+	}
+
+	if ((error = git_index_write_tree(&tree_id, index)) < 0 ||
 		(error = git_tree_lookup(&tree, repo, &tree_id)) < 0)
 		goto done;
 
@@ -722,7 +731,9 @@ static int rebase_commit_merge(
 		"%.*s %.*s\n", GIT_OID_HEXSZ, old_idstr, GIT_OID_HEXSZ, new_idstr);
 
 done:
+	git_diff_free(diff);
 	git_tree_free(tree);
+	git_tree_free(head_tree);
 	git_commit_free(head_commit);
 	git_reference_free(head);
 	git_index_free(index);
