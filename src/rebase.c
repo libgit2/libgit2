@@ -64,6 +64,8 @@ typedef struct {
 	char *orig_head_name;
 	git_oid orig_head_id;
 
+	git_oid onto_id;
+
 	union {
 		struct git_rebase_state_merge merge;
 	};
@@ -189,7 +191,7 @@ done:
 static int rebase_state(git_rebase_state *state, git_repository *repo)
 {
 	git_buf path = GIT_BUF_INIT, orig_head_name = GIT_BUF_INIT,
-		orig_head_id = GIT_BUF_INIT;
+		orig_head_id = GIT_BUF_INIT, onto_id = GIT_BUF_INIT;
 	int state_path_len, error;
 
 	memset(state, 0x0, sizeof(git_rebase_state));
@@ -235,6 +237,17 @@ static int rebase_state(git_rebase_state *state, git_repository *repo)
 	git_buf_rtrim(&orig_head_id);
 
 	if ((error = git_oid_fromstr(&state->orig_head_id, orig_head_id.ptr)) < 0)
+		goto done;
+
+	git_buf_truncate(&path, state_path_len);
+
+	if ((error = git_buf_joinpath(&path, path.ptr, ONTO_FILE)) < 0 ||
+		(error = git_futils_readbuffer(&onto_id, path.ptr)) < 0)
+		goto done;
+
+	git_buf_rtrim(&onto_id);
+
+	if ((error = git_oid_fromstr(&state->onto_id, onto_id.ptr)) < 0)
 		goto done;
 
 	if (!state->head_detached)
@@ -808,3 +821,51 @@ done:
 
 	return error;
 }
+
+int git_rebase_finish(git_repository *repo, const git_signature *signature)
+{
+	git_rebase_state state = GIT_REBASE_STATE_INIT;
+	git_reference *terminal_ref = NULL, *branch_ref = NULL, *head_ref = NULL;
+	git_commit *terminal_commit = NULL;
+	git_buf branch_msg = GIT_BUF_INIT, head_msg = GIT_BUF_INIT;
+	char onto[GIT_OID_HEXSZ];
+	int error;
+
+	assert(repo);
+
+	if ((error = rebase_state(&state, repo)) < 0)
+		goto done;
+
+	git_oid_fmt(onto, &state.onto_id);
+
+	if ((error = git_buf_printf(&branch_msg, "rebase finished: %s onto %.*s",
+			state.orig_head_name, GIT_OID_HEXSZ, onto)) < 0 ||
+		(error = git_buf_printf(&head_msg, "rebase finished: returning to %s",
+			state.orig_head_name)) < 0 ||
+		(error = git_repository_head(&terminal_ref, repo)) < 0 ||
+		(error = git_reference_peel((git_object **)&terminal_commit,
+			terminal_ref, GIT_OBJ_COMMIT)) < 0)
+		goto done;
+
+	if ((error = git_reference_create_matching(&branch_ref,
+			repo, state.orig_head_name, git_commit_id(terminal_commit), 1,
+			&state.orig_head_id, signature, branch_msg.ptr)) < 0 ||
+		(error = git_reference_symbolic_create(&head_ref,
+			repo, GIT_HEAD_FILE, state.orig_head_name, 1,
+			signature, head_msg.ptr)) < 0)
+		goto done;
+			
+	error = rebase_finish(&state);
+
+done:
+	git_buf_free(&head_msg);
+	git_buf_free(&branch_msg);
+	git_commit_free(terminal_commit);
+	git_reference_free(head_ref);
+	git_reference_free(branch_ref);
+	git_reference_free(terminal_ref);
+	rebase_state_free(&state);
+
+	return error;
+}
+

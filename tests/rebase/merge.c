@@ -295,3 +295,60 @@ void test_rebase_merge__commit_drops_already_applied(void)
 	git_reference_free(upstream_ref);
 }
 
+void test_rebase_merge__finish(void)
+{
+	git_reference *branch_ref, *upstream_ref, *head_ref;
+	git_merge_head *branch_head, *upstream_head;
+	git_checkout_options checkout_opts = GIT_CHECKOUT_OPTIONS_INIT;
+	git_oid commit_id;
+	git_reflog *reflog;
+	const git_reflog_entry *reflog_entry;
+	int error;
+
+	checkout_opts.checkout_strategy = GIT_CHECKOUT_SAFE;
+
+	cl_git_pass(git_reference_lookup(&branch_ref, repo, "refs/heads/gravy"));
+	cl_git_pass(git_reference_lookup(&upstream_ref, repo, "refs/heads/veal"));
+
+	cl_git_pass(git_merge_head_from_ref(&branch_head, repo, branch_ref));
+	cl_git_pass(git_merge_head_from_ref(&upstream_head, repo, upstream_ref));
+
+	cl_git_pass(git_rebase(repo, branch_head, upstream_head, NULL, signature, NULL));
+
+	cl_git_pass(git_rebase_next(repo, &checkout_opts));
+	cl_git_pass(git_rebase_commit(&commit_id, repo, NULL, signature,
+		NULL, NULL));
+
+	cl_git_fail(error = git_rebase_next(repo, &checkout_opts));
+	cl_assert_equal_i(GIT_ITEROVER, error);
+
+	cl_git_pass(git_rebase_finish(repo, signature));
+
+	cl_assert_equal_i(GIT_REPOSITORY_STATE_NONE, git_repository_state(repo));
+
+	cl_git_pass(git_reference_lookup(&head_ref, repo, "HEAD"));
+	cl_assert_equal_i(GIT_REF_SYMBOLIC, git_reference_type(head_ref));
+	cl_assert_equal_s("refs/heads/gravy", git_reference_symbolic_target(head_ref));
+
+	/* Make sure the reflogs are updated appropriately */
+	cl_git_pass(git_reflog_read(&reflog, repo, "HEAD"));
+	cl_assert(reflog_entry = git_reflog_entry_byindex(reflog, 0));
+	cl_assert_equal_oid(&commit_id, git_reflog_entry_id_old(reflog_entry));
+	cl_assert_equal_oid(&commit_id, git_reflog_entry_id_new(reflog_entry));
+	cl_assert_equal_s("rebase finished: returning to refs/heads/gravy", git_reflog_entry_message(reflog_entry));
+	git_reflog_free(reflog);
+
+	cl_git_pass(git_reflog_read(&reflog, repo, "refs/heads/gravy"));
+	cl_assert(reflog_entry = git_reflog_entry_byindex(reflog, 0));
+	cl_assert_equal_oid(git_merge_head_id(branch_head), git_reflog_entry_id_old(reflog_entry));
+	cl_assert_equal_oid(&commit_id, git_reflog_entry_id_new(reflog_entry));
+	cl_assert_equal_s("rebase finished: refs/heads/gravy onto f87d14a4a236582a0278a916340a793714256864", git_reflog_entry_message(reflog_entry));
+
+	git_reflog_free(reflog);
+	git_merge_head_free(branch_head);
+	git_merge_head_free(upstream_head);
+	git_reference_free(head_ref);
+	git_reference_free(branch_ref);
+	git_reference_free(upstream_ref);
+}
+

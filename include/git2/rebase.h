@@ -124,6 +124,18 @@ GIT_EXTERN(int) git_rebase_abort(
 	git_repository *repo,
 	const git_signature *signature);
 
+/**
+ * Finishes a rebase that is currently in progress once all patches have
+ * been applied.
+ *
+ * @param repo The repository with the in-progress rebase
+ * @param signature The identity that is finishing the rebase
+ * @param Zero on success; -1 on error
+ */
+GIT_EXTERN(int) git_rebase_finish(
+	git_repository *repo,
+	const git_signature *signature);
+
 /** @} */
 GIT_END_DECL
 #endif
