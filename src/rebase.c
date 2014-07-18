@@ -686,10 +686,11 @@ static int rebase_commit_merge(
 {
 	git_index *index = NULL;
 	git_reference *head = NULL;
-	git_commit *head_commit = NULL;
+	git_commit *head_commit = NULL, *commit = NULL;
 	git_tree *head_tree = NULL, *tree = NULL;
 	git_diff *diff = NULL;
 	git_oid tree_id;
+	git_buf reflog_msg = GIT_BUF_INIT;
 	char old_idstr[GIT_OID_HEXSZ], new_idstr[GIT_OID_HEXSZ];
 	int error;
 
@@ -732,9 +733,12 @@ static int rebase_commit_merge(
 		message = git_commit_message(state->merge.current);
 	}
 
-	if ((error = git_commit_create(commit_id, repo, "HEAD", author,
+	if ((error = git_commit_create(commit_id, repo, NULL, author,
 			committer, message_encoding, message, tree, 1,
-			(const git_commit **)&head_commit)) < 0)
+			(const git_commit **)&head_commit)) < 0 ||
+		(error = git_commit_lookup(&commit, repo, commit_id)) < 0 ||
+		(error = git_reference__update_for_commit(
+			repo, NULL, "HEAD", commit_id, committer, "rebase")) < 0)
 		goto done;
 
 	git_oid_fmt(old_idstr, git_commit_id(state->merge.current));
@@ -744,6 +748,8 @@ static int rebase_commit_merge(
 		"%.*s %.*s\n", GIT_OID_HEXSZ, old_idstr, GIT_OID_HEXSZ, new_idstr);
 
 done:
+	git_buf_free(&reflog_msg);
+	git_commit_free(commit);
 	git_diff_free(diff);
 	git_tree_free(tree);
 	git_tree_free(head_tree);

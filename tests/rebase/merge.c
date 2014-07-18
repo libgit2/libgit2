@@ -178,6 +178,8 @@ void test_rebase_merge__commit(void)
 	git_oid commit_id, tree_id, parent_id;
 	git_signature *author;
 	git_commit *commit;
+	git_reflog *reflog;
+	const git_reflog_entry *reflog_entry;
 
 	checkout_opts.checkout_strategy = GIT_CHECKOUT_SAFE;
 
@@ -211,8 +213,14 @@ void test_rebase_merge__commit(void)
 
 	cl_assert(git_signature__equal(signature, git_commit_committer(commit)));
 
-	cl_assert_equal_file("da9c51a23d02d931a486f45ad18cda05cf5d2b94 776e4c48922799f903f03f5f6e51da8b01e4cce0\n", 82, "rebase/.git/rebase-merge/rewritten");
+	/* Make sure the reflogs are updated appropriately */
+	cl_git_pass(git_reflog_read(&reflog, repo, "HEAD"));
+	cl_assert(reflog_entry = git_reflog_entry_byindex(reflog, 0));
+	cl_assert_equal_oid(&parent_id, git_reflog_entry_id_old(reflog_entry));
+	cl_assert_equal_oid(&commit_id, git_reflog_entry_id_new(reflog_entry));
+	cl_assert_equal_s("rebase: Modification 1 to beef", git_reflog_entry_message(reflog_entry));
 
+	git_reflog_free(reflog);
 	git_signature_free(author);
 	git_commit_free(commit);
 	git_merge_head_free(branch_head);
