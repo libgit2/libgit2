@@ -28,6 +28,15 @@ typedef struct {
 	 * interoperability with other clients.
 	 */
 	int quiet;
+
+	/**
+	 * Canonical name of the notes reference used to rewrite notes for
+	 * rebased commits when finishing the rebase; if NULL, the contents of
+	 * the coniguration option `notes.rewriteRef` is examined, unless the
+	 * configuration option `notes.rewrite.rebase` is set to false.  If
+	 * `notes.rewriteRef` is NULL, notes will not be rewritten.
+	 */
+	const char *rewrite_notes_ref;
 } git_rebase_options;
 
 #define GIT_REBASE_OPTIONS_VERSION 1
@@ -130,11 +139,13 @@ GIT_EXTERN(int) git_rebase_abort(
  *
  * @param repo The repository with the in-progress rebase
  * @param signature The identity that is finishing the rebase
+ * @param opts Options to specify how rebase is finished
  * @param Zero on success; -1 on error
  */
 GIT_EXTERN(int) git_rebase_finish(
 	git_repository *repo,
-	const git_signature *signature);
+	const git_signature *signature,
+	const git_rebase_options *opts);
 
 /** @} */
 GIT_END_DECL

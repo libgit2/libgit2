@@ -12,12 +12,14 @@
 #include "filebuf.h"
 #include "merge.h"
 #include "array.h"
+#include "config.h"
 
 #include <git2/types.h>
 #include <git2/rebase.h>
 #include <git2/commit.h>
 #include <git2/reset.h>
 #include <git2/revwalk.h>
+#include <git2/notes.h>
 
 #define REBASE_APPLY_DIR	"rebase-apply"
 #define REBASE_MERGE_DIR	"rebase-merge"
@@ -36,6 +38,8 @@
 #define REWRITTEN_FILE		"rewritten"
 
 #define ORIG_DETACHED_HEAD	"detached HEAD"
+
+#define NOTES_DEFAULT_REF	NULL
 
 #define REBASE_DIR_MODE		0777
 #define REBASE_FILE_MODE	0666
@@ -291,7 +295,7 @@ static void rebase_state_free(git_rebase_state *state)
 	git__free(state->state_path);
 }
 
-static int rebase_finish(git_rebase_state *state)
+static int rebase_cleanup(git_rebase_state *state)
 {
 	return git_path_isdir(state->state_path) ?
 		git_futils_rmdir_r(state->state_path, NULL, GIT_RMDIR_REMOVE_FILES) :
@@ -443,12 +447,46 @@ int git_rebase_init_options(git_rebase_options *opts, unsigned int version)
 	return 0;
 }
 
-static void rebase_normalize_options(
+static int rebase_normalize_opts(
+	git_repository *repo,
 	git_rebase_options *opts,
 	const git_rebase_options *given_opts)
 {
+	git_rebase_options default_opts = GIT_REBASE_OPTIONS_INIT;
+	git_config *config;
+
 	if (given_opts)
-		memcpy(&opts, given_opts, sizeof(git_rebase_options));
+		memcpy(opts, given_opts, sizeof(git_rebase_options));
+	else
+		memcpy(opts, &default_opts, sizeof(git_rebase_options));
+
+	if (git_repository_config(&config, repo) < 0)
+		return -1;
+
+	if (given_opts && given_opts->rewrite_notes_ref) {
+		opts->rewrite_notes_ref = git__strdup(given_opts->rewrite_notes_ref);
+		GITERR_CHECK_ALLOC(opts->rewrite_notes_ref);
+	} else if (git_config__get_bool_force(config, "notes.rewrite.rebase", 1)) {
+		const char *rewrite_ref = git_config__get_string_force(
+			config, "notes.rewriteref", NOTES_DEFAULT_REF);
+
+		if (rewrite_ref) {
+			opts->rewrite_notes_ref = git__strdup(rewrite_ref);
+			GITERR_CHECK_ALLOC(opts->rewrite_notes_ref);
+		}
+	}
+
+	git_config_free(config);
+
+	return 0;
+}
+
+static void rebase_opts_free(git_rebase_options *opts)
+{
+	if (!opts)
+		return;
+
+	git__free((char *)opts->rewrite_notes_ref);
 }
 
 static int rebase_ensure_not_in_progress(git_repository *repo)
@@ -512,7 +550,7 @@ int git_rebase(
 	const git_signature *signature,
 	const git_rebase_options *given_opts)
 {
-	git_rebase_options opts = GIT_REBASE_OPTIONS_INIT;
+	git_rebase_options opts;
 	git_reference *head_ref = NULL;
 	git_buf reflog = GIT_BUF_INIT;
 	git_checkout_options checkout_opts = GIT_CHECKOUT_OPTIONS_INIT;
@@ -521,9 +559,9 @@ int git_rebase(
 	assert(repo && branch && (upstream || onto));
 
 	GITERR_CHECK_VERSION(given_opts, GIT_MERGE_OPTIONS_VERSION, "git_merge_options");
-	rebase_normalize_options(&opts, given_opts);
 
-	if ((error = git_repository__ensure_not_bare(repo, "rebase")) < 0 ||
+	if ((error = rebase_normalize_opts(repo, &opts, given_opts)) < 0 ||
+		(error = git_repository__ensure_not_bare(repo, "rebase")) < 0 ||
 		(error = rebase_ensure_not_in_progress(repo)) < 0 ||
 		(error = rebase_ensure_not_dirty(repo)) < 0)
 		goto done;
@@ -546,6 +584,7 @@ int git_rebase(
 done:
 	git_reference_free(head_ref);
 	git_buf_free(&reflog);
+	rebase_opts_free(&opts);
 	return error;
 }
 
@@ -818,7 +857,7 @@ int git_rebase_abort(git_repository *repo, const git_signature *signature)
 			GIT_RESET_HARD, NULL, signature, NULL)) < 0)
 		goto done;
 
-	error = rebase_finish(&state);
+	error = rebase_cleanup(&state);
 
 done:
 	git_commit_free(orig_head_commit);
@@ -828,8 +867,102 @@ done:
 	return error;
 }
 
-int git_rebase_finish(git_repository *repo, const git_signature *signature)
+static int rebase_copy_note(
+	git_repository *repo,
+	git_oid *from,
+	git_oid *to,
+	const git_signature *committer,
+	const git_rebase_options *opts)
 {
+	git_note *note = NULL;
+	git_oid note_id;
+	int error;
+
+	if ((error = git_note_read(&note, repo, opts->rewrite_notes_ref, from)) < 0) {
+		if (error == GIT_ENOTFOUND) {
+			giterr_clear();
+			error = 0;
+		}
+
+		goto done;
+	}
+
+	error = git_note_create(&note_id, repo, git_note_author(note),
+		committer, opts->rewrite_notes_ref, to, git_note_message(note), 0);
+
+done:
+	git_note_free(note);
+
+	return error;
+}
+
+static int rebase_copy_notes(
+	git_repository *repo,
+	git_rebase_state *state,
+	const git_signature *committer,
+	const git_rebase_options *opts)
+{
+	git_buf path = GIT_BUF_INIT, rewritten = GIT_BUF_INIT;
+	char *pair_list, *fromstr, *tostr, *end;
+	git_oid from, to;
+	unsigned int linenum = 1;
+	int error = 0;
+
+	if (!opts->rewrite_notes_ref)
+		goto done;
+
+	if ((error = git_buf_joinpath(&path, state->state_path, REWRITTEN_FILE)) < 0 ||
+		(error = git_futils_readbuffer(&rewritten, path.ptr)) < 0)
+		goto done;
+
+	pair_list = rewritten.ptr;
+
+	while (*pair_list) {
+		fromstr = pair_list;
+
+		if ((end = strchr(fromstr, '\n')) == NULL)
+			goto on_error;
+
+		pair_list = end+1;
+		*end = '\0';
+
+		if ((end = strchr(fromstr, ' ')) == NULL)
+			goto on_error;
+
+		tostr = end+1;
+		*end = '\0';
+
+		if (strlen(fromstr) != GIT_OID_HEXSZ ||
+			strlen(tostr) != GIT_OID_HEXSZ ||
+			git_oid_fromstr(&from, fromstr) < 0 ||
+			git_oid_fromstr(&to, tostr) < 0)
+			goto on_error;
+
+		if ((error = rebase_copy_note(repo, &from, &to, committer, opts)) < 0)
+			goto done;
+
+		linenum++;
+	}
+
+	goto done;
+
+on_error:
+	giterr_set(GITERR_REBASE, "Invalid rewritten file at line %d", linenum);
+	error = -1;
+
+done:
+	git_buf_free(&rewritten);
+	git_buf_free(&path);
+
+	return error;
+}
+
+int git_rebase_finish(
+	git_repository *repo,
+	const git_signature *signature,
+	const git_rebase_options *given_opts)
+{
+	git_rebase_options opts;
 	git_rebase_state state = GIT_REBASE_STATE_INIT;
 	git_reference *terminal_ref = NULL, *branch_ref = NULL, *head_ref = NULL;
 	git_commit *terminal_commit = NULL;
@@ -839,7 +972,8 @@ int git_rebase_finish(git_repository *repo, const git_signature *signature)
 
 	assert(repo);
 
-	if ((error = rebase_state(&state, repo)) < 0)
+	if ((error = rebase_normalize_opts(repo, &opts, given_opts)) < 0 ||
+		(error = rebase_state(&state, repo)) < 0)
 		goto done;
 
 	git_oid_fmt(onto, &state.onto_id);
@@ -850,18 +984,17 @@ int git_rebase_finish(git_repository *repo, const git_signature *signature)
 			state.orig_head_name)) < 0 ||
 		(error = git_repository_head(&terminal_ref, repo)) < 0 ||
 		(error = git_reference_peel((git_object **)&terminal_commit,
-			terminal_ref, GIT_OBJ_COMMIT)) < 0)
-		goto done;
-
-	if ((error = git_reference_create_matching(&branch_ref,
+			terminal_ref, GIT_OBJ_COMMIT)) < 0 ||
+		(error = git_reference_create_matching(&branch_ref,
 			repo, state.orig_head_name, git_commit_id(terminal_commit), 1,
 			&state.orig_head_id, signature, branch_msg.ptr)) < 0 ||
 		(error = git_reference_symbolic_create(&head_ref,
 			repo, GIT_HEAD_FILE, state.orig_head_name, 1,
-			signature, head_msg.ptr)) < 0)
+			signature, head_msg.ptr)) < 0 ||
+		(error = rebase_copy_notes(repo, &state, signature, &opts)) < 0)
 		goto done;
-			
-	error = rebase_finish(&state);
+
+	error = rebase_cleanup(&state);
 
 done:
 	git_buf_free(&head_msg);
@@ -871,6 +1004,7 @@ done:
 	git_reference_free(branch_ref);
 	git_reference_free(terminal_ref);
 	rebase_state_free(&state);
+	rebase_opts_free(&opts);
 
 	return error;
 }

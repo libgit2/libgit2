@@ -330,7 +330,7 @@ void test_rebase_merge__finish(void)
 	cl_git_fail(error = git_rebase_next(repo, &checkout_opts));
 	cl_assert_equal_i(GIT_ITEROVER, error);
 
-	cl_git_pass(git_rebase_finish(repo, signature));
+	cl_git_pass(git_rebase_finish(repo, signature, NULL));
 
 	cl_assert_equal_i(GIT_REPOSITORY_STATE_NONE, git_repository_state(repo));
 
@@ -358,5 +358,97 @@ void test_rebase_merge__finish(void)
 	git_reference_free(head_ref);
 	git_reference_free(branch_ref);
 	git_reference_free(upstream_ref);
+}
+
+static void test_copy_note(
+	const git_rebase_options *opts,
+	bool should_exist)
+{
+	git_reference *branch_ref, *upstream_ref;
+	git_merge_head *branch_head, *upstream_head;
+	git_commit *branch_commit;
+	git_checkout_options checkout_opts = GIT_CHECKOUT_OPTIONS_INIT;
+	git_oid note_id, commit_id;
+	git_note *note = NULL;
+	int error;
+
+	checkout_opts.checkout_strategy = GIT_CHECKOUT_SAFE;
+
+	cl_git_pass(git_reference_lookup(&branch_ref, repo, "refs/heads/gravy"));
+	cl_git_pass(git_reference_lookup(&upstream_ref, repo, "refs/heads/veal"));
+
+	cl_git_pass(git_merge_head_from_ref(&branch_head, repo, branch_ref));
+	cl_git_pass(git_merge_head_from_ref(&upstream_head, repo, upstream_ref));
+
+	cl_git_pass(git_reference_peel((git_object **)&branch_commit,
+		branch_ref, GIT_OBJ_COMMIT));
+
+	/* Add a note to a commit */
+	cl_git_pass(git_note_create(&note_id, repo,
+		git_commit_author(branch_commit), git_commit_committer(branch_commit),
+		"refs/notes/test", git_commit_id(branch_commit),
+		"This is a commit note.", 0));
+
+	cl_git_pass(git_rebase(repo, branch_head, upstream_head, NULL, signature, opts));
+
+	cl_git_pass(git_rebase_next(repo, &checkout_opts));
+	cl_git_pass(git_rebase_commit(&commit_id, repo, NULL, signature,
+		NULL, NULL));
+
+	cl_git_pass(git_rebase_finish(repo, signature, opts));
+
+	cl_assert_equal_i(GIT_REPOSITORY_STATE_NONE, git_repository_state(repo));
+
+	if (should_exist) {
+		cl_git_pass(git_note_read(&note, repo, "refs/notes/test", &commit_id));
+		cl_assert_equal_s("This is a commit note.", git_note_message(note));
+	} else {
+		cl_git_fail(error =
+			git_note_read(&note, repo, "refs/notes/test", &commit_id));
+		cl_assert_equal_i(GIT_ENOTFOUND, error);
+	}
+
+	git_note_free(note);
+	git_commit_free(branch_commit);
+	git_merge_head_free(branch_head);
+	git_merge_head_free(upstream_head);
+	git_reference_free(branch_ref);
+	git_reference_free(upstream_ref);
+}
+
+void test_rebase_merge__copy_notes_off_by_default(void)
+{
+	test_copy_note(NULL, 0);
+}
+
+void test_rebase_merge__copy_notes_specified_in_options(void)
+{
+	git_rebase_options opts = GIT_REBASE_OPTIONS_INIT;
+	opts.rewrite_notes_ref = "refs/notes/test";
+
+	test_copy_note(&opts, 1);
+}
+
+void test_rebase_merge__copy_notes_specified_in_config(void)
+{
+	git_config *config;
+
+	cl_git_pass(git_repository_config(&config, repo));
+	cl_git_pass(git_config_set_string(config,
+		"notes.rewriteRef", "refs/notes/test"));
+
+	test_copy_note(NULL, 1);
+}
+
+void test_rebase_merge__copy_notes_disabled_in_config(void)
+{
+	git_config *config;
+
+	cl_git_pass(git_repository_config(&config, repo));
+	cl_git_pass(git_config_set_bool(config, "notes.rewrite.rebase", 0));
+	cl_git_pass(git_config_set_string(config,
+		"notes.rewriteRef", "refs/notes/test"));
+
+	test_copy_note(NULL, 0);
 }
 
