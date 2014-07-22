@@ -152,6 +152,12 @@ typedef enum {
 	 */
 	GIT_DIFF_UPDATE_INDEX = (1u << 15),
 
+	/** Include unreadable files in the diff */
+	GIT_DIFF_INCLUDE_UNREADABLE = (1u << 16),
+	
+	/** Include unreadable files in the diff */
+	GIT_DIFF_INCLUDE_UNREADABLE_AS_UNTRACKED = (1u << 17),
+
 	/*
 	 * Options controlling how output will be generated
 	 */
@@ -191,12 +197,6 @@ typedef enum {
 	 *  can apply given diff information to binary files.
 	 */
 	GIT_DIFF_SHOW_BINARY = (1 << 30),
-	
-	/** Include unreadable files in the diff */
-	GIT_DIFF_INCLUDE_UNREADABLE = (1 << 27),
-	
-	/** Include unreadable files in the diff */
-	GIT_DIFF_INCLUDE_UNREADABLE_AS_UNTRACKED = (1 << 31),
 } git_diff_option_t;
 
 /**
