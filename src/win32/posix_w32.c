@@ -19,6 +19,10 @@
 # define FILE_NAME_NORMALIZED 0
 #endif
 
+#ifndef IO_REPARSE_TAG_SYMLINK
+#define IO_REPARSE_TAG_SYMLINK (0xA000000CL)
+#endif
+
 /* Options which we always provide to _wopen.
  *
  * _O_BINARY - Raw access; no translation of CR or LF characters
@@ -543,7 +547,7 @@ char *p_realpath(const char *orig_path, char *buffer)
 
 int p_vsnprintf(char *buffer, size_t count, const char *format, va_list argptr)
 {
-#ifdef _MSC_VER
+#if defined(_MSC_VER) && _MSC_VER >= 1500
 	int len;
 
 	if (count == 0 ||
@@ -570,7 +574,7 @@ int p_snprintf(char *buffer, size_t count, const char *format, ...)
 
 int p_mkstemp(char *tmp_path)
 {
-#if defined(_MSC_VER)
+#if defined(_MSC_VER) && _MSC_VER >= 1500
 	if (_mktemp_s(tmp_path, strlen(tmp_path) + 1) != 0)
 		return -1;
 #else
@@ -591,6 +595,31 @@ int p_access(const char* path, mode_t mode)
 	return _waccess(buf, mode);
 }
 
+static int ensure_writable(wchar_t *fpath)
+{
+	DWORD attrs;
+
+	attrs = GetFileAttributesW(fpath);
+	if (attrs == INVALID_FILE_ATTRIBUTES) {
+		if (GetLastError() == ERROR_FILE_NOT_FOUND)
+			return 0;
+
+		giterr_set(GITERR_OS, "failed to get attributes");
+		return -1;
+	}
+
+	if (!(attrs & FILE_ATTRIBUTE_READONLY))
+		return 0;
+
+	attrs &= ~FILE_ATTRIBUTE_READONLY;
+	if (!SetFileAttributesW(fpath, attrs)) {
+		giterr_set(GITERR_OS, "failed to set attributes");
+		return -1;
+	}
+
+	return 0;
+}
+
 int p_rename(const char *from, const char *to)
 {
 	git_win32_path wfrom;
@@ -602,12 +631,13 @@ int p_rename(const char *from, const char *to)
 	if (utf8_to_16_with_errno(wfrom, from) < 0 ||
 		utf8_to_16_with_errno(wto, to) < 0)
 		return -1;
-	
+
 	/* wait up to 50ms if file is locked by another thread or process */
 	rename_tries = 0;
 	rename_succeeded = 0;
 	while (rename_tries < 10) {
-		if (MoveFileExW(wfrom, wto, MOVEFILE_REPLACE_EXISTING | MOVEFILE_COPY_ALLOWED) != 0) {
+		if (ensure_writable(wto) == 0 &&
+		    MoveFileExW(wfrom, wto, MOVEFILE_REPLACE_EXISTING | MOVEFILE_COPY_ALLOWED) != 0) {
 			rename_succeeded = 1;
 			break;
 		}

@@ -419,20 +419,19 @@ GIT_EXTERN(int) git_remote_list(git_strarray *out, git_repository *repo);
 GIT_EXTERN(void) git_remote_check_cert(git_remote *remote, int check);
 
 /**
- * Sets a custom transport for the remote. The caller can use this function
- * to bypass the automatic discovery of a transport by URL scheme (i.e.
- * http://, https://, git://) and supply their own transport to be used
- * instead. After providing the transport to a remote using this function,
- * the transport object belongs exclusively to that remote, and the remote will
- * free it when it is freed with git_remote_free.
+ * Sets a custom transport factory for the remote. The caller can use this
+ * function to override the transport used for this remote when performing
+ * network operations.
  *
  * @param remote the remote to configure
- * @param transport the transport object for the remote to use
+ * @param transport_cb the function to use to create a transport
+ * @param payload opaque parameter passed to transport_cb
  * @return 0 or an error code
  */
 GIT_EXTERN(int) git_remote_set_transport(
 	git_remote *remote,
-	git_transport *transport);
+	git_transport_cb transport_cb,
+	void *payload);
 
 /**
  * Argument to the completion callback which tells it which operation

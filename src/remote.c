@@ -267,9 +267,11 @@ int git_remote_dup(git_remote **dest, git_remote *source)
 
 	if (source->pushurl != NULL) {
 		remote->pushurl = git__strdup(source->pushurl);
-		GITERR_CHECK_ALLOC(remote->pushurl);		
+		GITERR_CHECK_ALLOC(remote->pushurl);
 	}
 
+	remote->transport_cb = source->transport_cb;
+	remote->transport_cb_payload = source->transport_cb_payload;
 	remote->repo = source->repo;
 	remote->download_tags = source->download_tags;
 	remote->check_cert = source->check_cert;
@@ -659,8 +661,14 @@ int git_remote_connect(git_remote *remote, git_direction direction)
 		return -1;
 	}
 
-	/* A transport could have been supplied in advance with
-	 * git_remote_set_transport */
+	/* If we don't have a transport object yet, and the caller specified a
+	 * custom transport factory, use that */
+	if (!t && remote->transport_cb &&
+		(error = remote->transport_cb(&t, remote, remote->transport_cb_payload)) < 0)
+		return error;
+
+	/* If we still don't have a transport, then use the global
+	 * transport registrations which map URI schemes to transport factories */
 	if (!t && (error = git_transport_new(&t, remote, url)) < 0)
 		return error;
 
@@ -1262,18 +1270,20 @@ const git_remote_callbacks *git_remote_get_callbacks(git_remote *remote)
 	return &remote->callbacks;
 }
 
-int git_remote_set_transport(git_remote *remote, git_transport *transport)
+int git_remote_set_transport(
+	git_remote *remote,
+	git_transport_cb transport_cb,
+	void *payload)
 {
-	assert(remote && transport);
-
-	GITERR_CHECK_VERSION(transport, GIT_TRANSPORT_VERSION, "git_transport");
+	assert(remote);
 
 	if (remote->transport) {
 		giterr_set(GITERR_NET, "A transport is already bound to this remote");
 		return -1;
 	}
 
-	remote->transport = transport;
+	remote->transport_cb = transport_cb;
+	remote->transport_cb_payload = payload;
 	return 0;
 }
 
