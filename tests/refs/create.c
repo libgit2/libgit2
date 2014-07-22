@@ -45,7 +45,7 @@ void test_refs_create__symbolic(void)
 	cl_assert(git_reference_type(resolved_ref) == GIT_REF_OID);
 
 	/* ...and that it points to the current master tip */
-	cl_assert(git_oid_cmp(&id, git_reference_target(resolved_ref)) == 0);
+	cl_assert_equal_oid(&id, git_reference_target(resolved_ref));
 	git_reference_free(looked_up_ref);
 	git_reference_free(resolved_ref);
 
@@ -54,7 +54,7 @@ void test_refs_create__symbolic(void)
 
 	cl_git_pass(git_reference_lookup(&looked_up_ref, repo2, new_head_tracker));
 	cl_git_pass(git_reference_resolve(&resolved_ref, looked_up_ref));
-	cl_assert(git_oid_cmp(&id, git_reference_target(resolved_ref)) == 0);
+	cl_assert_equal_oid(&id, git_reference_target(resolved_ref));
 
 	git_repository_free(repo2);
 
@@ -76,7 +76,7 @@ void test_refs_create__deep_symbolic(void)
 	cl_git_pass(git_reference_symbolic_create(&new_reference, g_repo, new_head_tracker, current_head_target, 0, NULL, NULL));
 	cl_git_pass(git_reference_lookup(&looked_up_ref, g_repo, new_head_tracker));
 	cl_git_pass(git_reference_resolve(&resolved_ref, looked_up_ref));
-	cl_assert(git_oid_cmp(&id, git_reference_target(resolved_ref)) == 0);
+	cl_assert_equal_oid(&id, git_reference_target(resolved_ref));
 
 	git_reference_free(new_reference);
 	git_reference_free(looked_up_ref);
@@ -104,14 +104,14 @@ void test_refs_create__oid(void)
 	cl_assert_equal_s(looked_up_ref->name, new_head);
 
 	/* ...and that it points to the current master tip */
-	cl_assert(git_oid_cmp(&id, git_reference_target(looked_up_ref)) == 0);
+	cl_assert_equal_oid(&id, git_reference_target(looked_up_ref));
 	git_reference_free(looked_up_ref);
 
 	/* Similar test with a fresh new repository */
 	cl_git_pass(git_repository_open(&repo2, "testrepo"));
 
 	cl_git_pass(git_reference_lookup(&looked_up_ref, repo2, new_head));
-	cl_assert(git_oid_cmp(&id, git_reference_target(looked_up_ref)) == 0);
+	cl_assert_equal_oid(&id, git_reference_target(looked_up_ref));
 
 	git_repository_free(repo2);
 

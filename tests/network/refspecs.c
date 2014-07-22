@@ -84,4 +84,27 @@ void test_network_refspecs__parsing(void)
 
 	assert_refspec(GIT_DIRECTION_FETCH, "master", true);
 	assert_refspec(GIT_DIRECTION_PUSH, "master", true);
+
+	assert_refspec(GIT_DIRECTION_FETCH, "refs/pull/*/head:refs/remotes/origin/pr/*", true);
+}
+
+void assert_transform(const char *refspec, const char *name, const char *result)
+{
+	git_refspec spec;
+	git_buf buf = GIT_BUF_INIT;
+
+	git_refspec__parse(&spec, refspec, true);
+	cl_git_pass(git_refspec_transform(&buf, &spec, name));
+	cl_assert_equal_s(result, buf.ptr);
+
+	git_buf_free(&buf);
+	git_refspec__free(&spec);
+}
+
+void test_network_refspecs__transform_mid_star(void)
+{
+	assert_transform("refs/pull/*/head:refs/remotes/origin/pr/*", "refs/pull/23/head", "refs/remotes/origin/pr/23");
+	assert_transform("refs/heads/*:refs/remotes/origin/*", "refs/heads/master", "refs/remotes/origin/master");
+	assert_transform("refs/heads/*:refs/heads/*", "refs/heads/master", "refs/heads/master");
+	assert_transform("refs/*:refs/*", "refs/heads/master", "refs/heads/master");
 }

@@ -21,7 +21,7 @@ static void assert_note_equal(git_note *note, char *message, git_oid *note_oid) 
 	git_blob *blob;
 
 	cl_assert_equal_s(git_note_message(note), message);
-	cl_assert(!git_oid_cmp(git_note_id(note), note_oid));
+	cl_assert_equal_oid(git_note_id(note), note_oid);
 
 	cl_git_pass(git_blob_lookup(&blob, _repo, note_oid));
 	cl_assert_equal_s(git_note_message(note), (const char *)git_blob_rawcontent(blob));
@@ -61,10 +61,10 @@ static int note_list_cb(
 	cl_assert(*count < EXPECTATIONS_COUNT);
 
 	cl_git_pass(git_oid_fromstr(&expected_note_oid, list_expectations[*count].note_sha));
-	cl_assert(git_oid_cmp(&expected_note_oid, blob_id) == 0);
+	cl_assert_equal_oid(&expected_note_oid, blob_id);
 
 	cl_git_pass(git_oid_fromstr(&expected_target_oid, list_expectations[*count].annotated_object_sha));
-	cl_assert(git_oid_cmp(&expected_target_oid, annotated_obj_id) == 0);
+	cl_assert_equal_oid(&expected_target_oid, annotated_obj_id);
 
 	(*count)++;
 
@@ -290,7 +290,7 @@ void test_notes_notes__can_read_a_note_in_an_existing_fanout(void)
 	cl_git_pass(git_note_read(&note, _repo, "refs/notes/fanout", &target_oid));
 
 	cl_git_pass(git_oid_fromstr(&note_oid, "08b041783f40edfe12bb406c9c9a8a040177c125"));
-	cl_assert(!git_oid_cmp(git_note_id(note), &note_oid));
+	cl_assert_equal_oid(git_note_id(note), &note_oid);
 
 	git_note_free(note);
 }

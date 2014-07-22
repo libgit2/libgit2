@@ -19,7 +19,7 @@
 # define EAFNOSUPPORT (INT_MAX-1)
 #endif
 
-#ifdef _MSC_VER
+#if defined(_MSC_VER) && _MSC_VER >= 1500
 # define p_ftruncate(fd, sz) _chsize_s(fd, sz)
 #else  /* MinGW */
 # define p_ftruncate(fd, sz) _chsize(fd, sz)

@@ -78,6 +78,24 @@ void clar__assert_equal_file(
 	const char *file,
 	int line);
 
+GIT_INLINE(void) clar__assert_equal_oid(
+	const char *file, int line, const char *desc,
+	const git_oid *one, const git_oid *two)
+{
+	if (git_oid_cmp(one, two)) {
+		char err[] = "\"........................................\" != \"........................................\"";
+
+		git_oid_fmt(&err[1], one);
+		git_oid_fmt(&err[47], two);
+
+		clar__fail(file, line, desc, err, 1);
+	}
+}
+
+#define cl_assert_equal_oid(one, two) \
+	clar__assert_equal_oid(__FILE__, __LINE__, \
+		"OID mismatch: " #one " != " #two, (one), (two))
+
 /*
  * Some utility macros for building long strings
  */
