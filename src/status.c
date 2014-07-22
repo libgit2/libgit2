@@ -337,7 +337,6 @@ int git_status_list_new(
 	if (show != GIT_STATUS_SHOW_INDEX_ONLY) {
 		if ((error = git_diff_index_to_workdir(
 				&status->idx2wd, repo, index, &diffopt)) < 0) {
-					printf("git_diff_index_to_workdir failed with error %d\n", error);
 			goto done;
 		}
 
@@ -417,7 +416,6 @@ int git_status_foreach_ext(
 	int error = 0;
 
 	if ((error = git_status_list_new(&status, repo, opts)) < 0) {
-		printf("git_status_list_new failed with error %d\n", error);
 		return error;
 	}
 
