@@ -1116,7 +1116,15 @@ int git_path_dirload_with_stat(
 				git_vector_remove(contents, i--);
 				continue;
 			}
-
+			/* Treat the file as unreadable if we get any other error */
+			if (error != 0) {
+				giterr_clear();
+				error = 0;
+				memset(&ps->st, 0, sizeof(ps->st));
+				ps->st.st_mode = GIT_FILEMODE_UNREADABLE;
+				continue;
+			}
+			
 			break;
 		}
 

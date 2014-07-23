@@ -119,6 +119,7 @@ static int checkout_notify(
 		case GIT_DELTA_ADDED:
 		case GIT_DELTA_IGNORED:
 		case GIT_DELTA_UNTRACKED:
+		case GIT_DELTA_UNREADABLE:
 			target = &delta->new_file;
 			break;
 		case GIT_DELTA_DELETED:
@@ -2143,6 +2144,7 @@ int git_checkout_iterator(
 
 	diff_opts.flags =
 		GIT_DIFF_INCLUDE_UNMODIFIED |
+		GIT_DIFF_INCLUDE_UNREADABLE |
 		GIT_DIFF_INCLUDE_UNTRACKED |
 		GIT_DIFF_RECURSE_UNTRACKED_DIRS | /* needed to match baseline */
 		GIT_DIFF_INCLUDE_IGNORED |
