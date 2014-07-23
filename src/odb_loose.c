@@ -606,8 +606,11 @@ static int loose_backend__read_header(size_t *len_p, git_otype *type_p, git_odb_
 	if (locate_object(&object_path, (loose_backend *)backend, oid) < 0)
 		error = git_odb__error_notfound("no matching loose object", oid);
 	else if ((error = read_header_loose(&raw, &object_path)) == 0) {
-		*len_p = raw.len;
-		*type_p = raw.type;
+		if (len_p != NULL)
+			*len_p = raw.len;
+
+		if (type_p != NULL)
+			*type_p = raw.type;
 	}
 
 	git_buf_free(&object_path);

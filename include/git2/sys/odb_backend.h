@@ -42,6 +42,11 @@ struct git_odb_backend {
 		git_oid *, void **, size_t *, git_otype *,
 		git_odb_backend *, const git_oid *, size_t);
 
+	/* Read the header information for a given object.
+	 *
+	 * The passed `size_t` or `git_otype` can be NULL of either information
+	 * is not required
+	 */
 	int (* read_header)(
 		size_t *, git_otype *, git_odb_backend *, const git_oid *);
 
