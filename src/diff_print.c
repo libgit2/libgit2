@@ -82,15 +82,15 @@ char git_diff_status_char(git_delta_t status)
 	char code;
 
 	switch (status) {
-		case GIT_DELTA_ADDED:      code = 'A'; break;
-		case GIT_DELTA_DELETED:    code = 'D'; break;
-		case GIT_DELTA_MODIFIED:   code = 'M'; break;
-		case GIT_DELTA_RENAMED:    code = 'R'; break;
-		case GIT_DELTA_COPIED:     code = 'C'; break;
-		case GIT_DELTA_IGNORED:    code = 'I'; break;
-		case GIT_DELTA_UNTRACKED:  code = '?'; break;
-		case GIT_DELTA_UNREADABLE: code = 'X'; break;
-		default:                   code = ' '; break;
+	case GIT_DELTA_ADDED:      code = 'A'; break;
+	case GIT_DELTA_DELETED:    code = 'D'; break;
+	case GIT_DELTA_MODIFIED:   code = 'M'; break;
+	case GIT_DELTA_RENAMED:    code = 'R'; break;
+	case GIT_DELTA_COPIED:     code = 'C'; break;
+	case GIT_DELTA_IGNORED:    code = 'I'; break;
+	case GIT_DELTA_UNTRACKED:  code = '?'; break;
+	case GIT_DELTA_UNREADABLE: code = 'X'; break;
+	default:                   code = ' '; break;
 	}
 
 	return code;
