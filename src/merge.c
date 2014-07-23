@@ -2193,8 +2193,7 @@ static int merge_normalize_checkout_opts(
 		memcpy(checkout_opts, given_checkout_opts, sizeof(git_checkout_options));
 	else {
 		git_checkout_options default_checkout_opts = GIT_CHECKOUT_OPTIONS_INIT;
-		default_checkout_opts.checkout_strategy =  GIT_CHECKOUT_SAFE |
-			GIT_CHECKOUT_ALLOW_CONFLICTS;
+		default_checkout_opts.checkout_strategy =  GIT_CHECKOUT_SAFE;
 
 		memcpy(checkout_opts, &default_checkout_opts, sizeof(git_checkout_options));
 	}
