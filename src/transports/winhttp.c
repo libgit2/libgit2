@@ -212,6 +212,8 @@ static int winhttp_stream_connect(winhttp_stream *s)
 	BOOL peerdist = FALSE;
 	int error = -1;
 	unsigned long disable_redirects = WINHTTP_DISABLE_REDIRECTS;
+	int default_timeout = -1;
+
 
 	/* Prepare URL */
 	git_buf_printf(&buf, "%s%s", t->connection_data.path, s->service_url);
@@ -240,6 +242,8 @@ static int winhttp_stream_connect(winhttp_stream *s)
 		goto on_error;
 	}
 
+	WinHttpSetTimeouts(s->request, default_timeout, default_timeout, default_timeout, default_timeout);
+	
 	/* Set proxy if necessary */
 	if (git_remote__get_http_proxy(t->owner->owner, !!t->connection_data.use_ssl, &proxy_url) < 0)
 		goto on_error;
@@ -467,6 +471,7 @@ static int winhttp_connect(
 	int32_t port;
 	const char *default_port = "80";
 	int error = -1;
+	int default_timeout = -1;
 
 	/* Prepare port */
 	if (git__strtol32(&port, t->connection_data.port, NULL, 10) < 0)
@@ -491,6 +496,9 @@ static int winhttp_connect(
 		goto on_error;
 	}
 
+	WinHttpSetTimeouts(t->session, default_timeout, default_timeout, default_timeout, default_timeout);
+
+	
 	/* Establish connection */
 	t->connection = WinHttpConnect(
 		t->session,
