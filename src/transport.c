@@ -46,33 +46,36 @@ static git_vector custom_transports = GIT_VECTOR_INIT;
 
 #define GIT_TRANSPORT_COUNT (sizeof(transports)/sizeof(transports[0])) - 1
 
+static transport_definition * transport_find_by_url(const char *url)
+{
+	size_t i = 0;
+	transport_definition *d;
+
+	/* Find a user transport who wants to deal with this URI */
+	git_vector_foreach(&custom_transports, i, d) {
+		if (strncasecmp(url, d->prefix, strlen(d->prefix)) == 0) {
+			return d;
+		}
+	}
+
+	/* Find a system transport for this URI */
+	for (i = 0; i < GIT_TRANSPORT_COUNT; ++i) {
+		d = &transports[i];
+
+		if (strncasecmp(url, d->prefix, strlen(d->prefix)) == 0) {
+			return d;
+		}
+	}
+
+	return NULL;
+}
+
 static int transport_find_fn(
 	git_transport_cb *out,
 	const char *url,
 	void **param)
 {
-	size_t i = 0;
-	transport_definition *d, *definition = NULL;
-
-	/* Find a user transport who wants to deal with this URI */
-	git_vector_foreach(&custom_transports, i, d) {
-		if (strncasecmp(url, d->prefix, strlen(d->prefix)) == 0) {
-			definition = d;
-			break;
-		}
-	}
-
-	/* Find a system transport for this URI */
-	if (!definition) {
-		for (i = 0; i < GIT_TRANSPORT_COUNT; ++i) {
-			d = &transports[i];
-
-			if (strncasecmp(url, d->prefix, strlen(d->prefix)) == 0) {
-				definition = d;
-				break;
-			}
-		}
-	}
+	transport_definition *definition = transport_find_by_url(url);
 
 #ifdef GIT_WIN32
 	/* On Windows, it might not be possible to discern between absolute local
@@ -89,12 +92,15 @@ static int transport_find_fn(
 
 	/* It could be a SSH remote path. Check to see if there's a :
 	 * SSH is an unsupported transport mechanism in this version of libgit2 */
-	if (!definition && strrchr(url, ':'))
-#ifdef GIT_SSH
-		definition = &ssh_transport_definition;
-#else
-		definition = &dummy_transport_definition;
+	if (!definition && strrchr(url, ':')) {
+		// re-search transports again with ssh:// as url so that we can find a third party ssh transport
+		definition = transport_find_by_url("ssh://");
+#ifndef GIT_SSH
+		if (!definition) {
+			definition = &dummy_transport_definition;
+		}
 #endif
+	}
 
 #ifndef GIT_WIN32
 	/* Check to see if the path points to a file on the local file system */
