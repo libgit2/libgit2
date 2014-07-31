@@ -667,9 +667,15 @@ int git_treebuilder_insert(
 			entry->removed = 0;
 			bld->entrycount++;
 		}
+
+		entry->attr = filemode;
+		git_oid_cpy(&entry->oid, id);
 	} else {
 		entry = alloc_entry(filename);
 		GITERR_CHECK_ALLOC(entry);
+
+		entry->attr = filemode;
+		git_oid_cpy(&entry->oid, id);
 
 		if (git_vector_insert_sorted(&bld->entries, entry, NULL) < 0) {
 			git__free(entry);
@@ -678,9 +684,6 @@ int git_treebuilder_insert(
 
 		bld->entrycount++;
 	}
-
-	git_oid_cpy(&entry->oid, id);
-	entry->attr = filemode;
 
 	if (entry_out)
 		*entry_out = entry;
