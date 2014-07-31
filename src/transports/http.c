@@ -98,7 +98,7 @@ static int apply_basic_credential(git_buf *buf, git_cred *cred)
 
 	if (git_buf_oom(&raw) ||
 		git_buf_puts(buf, "Authorization: Basic ") < 0 ||
-		git_buf_put_base64(buf, git_buf_cstr(&raw), raw.size) < 0 ||
+		git_buf_encode_base64(buf, git_buf_cstr(&raw), raw.size) < 0 ||
 		git_buf_puts(buf, "\r\n") < 0)
 		goto on_error;
 
