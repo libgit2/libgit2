@@ -346,7 +346,7 @@ void test_online_clone__ssh_with_paths(void)
 	const char *remote_url = cl_getenv("GITTEST_REMOTE_URL");
 	const char *remote_user = cl_getenv("GITTEST_REMOTE_USER");
 
-	if (!remote_url || !remote_user)
+	if (!remote_url || !remote_user || strncmp(remote_url, "ssh://", 5) != 0)
 		clar__skip();
 
 	g_options.remote_cb = custom_remote_ssh_with_paths;
