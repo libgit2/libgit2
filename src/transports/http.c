@@ -286,7 +286,8 @@ static int on_headers_complete(http_parser *parser)
 					assert(t->cred);
 
 					/* Successfully acquired a credential. */
-					return t->parse_error = PARSE_ERROR_REPLAY;
+					t->parse_error = PARSE_ERROR_REPLAY;
+					return 0;
 				}
 			}
 		}
@@ -324,7 +325,8 @@ static int on_headers_complete(http_parser *parser)
 		t->connected = 0;
 		s->redirect_count++;
 
-		return t->parse_error = PARSE_ERROR_REPLAY;
+		t->parse_error = PARSE_ERROR_REPLAY;
+		return 0;
 	}
 
 	/* Check for a 200 HTTP status code. */
@@ -381,6 +383,13 @@ static int on_body_fill_buffer(http_parser *parser, const char *str, size_t len)
 {
 	parser_context *ctx = (parser_context *) parser->data;
 	http_subtransport *t = ctx->t;
+
+	/* If our goal is to replay the request (either an auth failure or
+	 * a redirect) then don't bother buffering since we're ignoring the
+	 * content anyway.
+	 */
+	if (t->parse_error == PARSE_ERROR_REPLAY)
+		return 0;
 
 	if (ctx->buf_size < len) {
 		giterr_set(GITERR_NET, "Can't fit data in the buffer");
@@ -456,7 +465,7 @@ static int http_connect(http_subtransport *t)
 
 	if (t->connected &&
 		http_should_keep_alive(&t->parser) &&
-		http_body_is_final(&t->parser))
+		t->parse_finished)
 		return 0;
 
 	if (t->socket.socket)
