@@ -168,7 +168,7 @@ int main(int argc, char *argv[])
 				&diff, git_commit_owner(commit), a, b, &diffopts),
 				"Diff commit with parent", NULL);
 			check_lg2(
-                git_diff_print(diff, GIT_DIFF_FORMAT_PATCH, diff_output, NULL),
+				git_diff_print(diff, GIT_DIFF_FORMAT_PATCH, diff_output, NULL),
 				"Displaying diff", NULL);
 
 			git_diff_free(diff);

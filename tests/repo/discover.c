@@ -24,8 +24,8 @@
 #define ALTERNATE_NOT_FOUND_FOLDER DISCOVER_FOLDER "/alternate_not_found_repo"
 
 static void ensure_repository_discover(const char *start_path,
-                                       const char *ceiling_dirs,
-				       git_buf *expected_path)
+									   const char *ceiling_dirs,
+									   git_buf *expected_path)
 {
 	git_buf found_path = GIT_BUF_INIT;
 	cl_git_pass(git_repository_discover(&found_path, start_path, 0, ceiling_dirs));

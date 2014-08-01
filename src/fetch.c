@@ -106,7 +106,7 @@ int git_fetch_negotiate(git_remote *remote)
 {
 	git_transport *t = remote->transport;
 
-    remote->need_pack = 0;
+	remote->need_pack = 0;
 
 	if (filter_wants(remote) < 0) {
 		giterr_set(GITERR_NET, "Failed to filter the reference list for wants");

@@ -21,9 +21,9 @@ find_tmp_path(char *buffer, size_t length)
 	static const size_t var_count = 5;
 	static const char *env_vars[] = {
 		"CLAR_TMP", "TMPDIR", "TMP", "TEMP", "USERPROFILE"
- 	};
+	};
 
- 	size_t i;
+	size_t i;
 
 	for (i = 0; i < var_count; ++i) {
 		const char *env = getenv(env_vars[i]);

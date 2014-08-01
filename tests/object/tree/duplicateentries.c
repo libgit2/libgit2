@@ -4,11 +4,11 @@
 static git_repository *_repo;
 
 void test_object_tree_duplicateentries__initialize(void) {
-   _repo = cl_git_sandbox_init("testrepo");
+	_repo = cl_git_sandbox_init("testrepo");
 }
 
 void test_object_tree_duplicateentries__cleanup(void) {
-   cl_git_sandbox_cleanup();
+	cl_git_sandbox_cleanup();
 }
 
 /*

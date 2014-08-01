@@ -48,7 +48,7 @@ int main() {
 /*
   2011-12-29 (0.2.7):
 
-    * Minor code clean up; no actual effect.
+	* Minor code clean up; no actual effect.
 
   2011-09-16 (0.2.6):
 
@@ -67,11 +67,11 @@ int main() {
 
   2011-02-14 (0.2.5):
 
-    * Allow to declare global functions.
+	* Allow to declare global functions.
 
   2009-09-26 (0.2.4):
 
-    * Improve portability
+	* Improve portability
 
   2008-09-19 (0.2.3):
 
@@ -395,13 +395,13 @@ static kh_inline khint_t __ac_X31_hash_string(const char *s)
 
 static kh_inline khint_t __ac_Wang_hash(khint_t key)
 {
-    key += ~(key << 15);
-    key ^=  (key >> 10);
-    key +=  (key << 3);
-    key ^=  (key >> 6);
-    key += ~(key << 11);
-    key ^=  (key >> 16);
-    return key;
+	key += ~(key << 15);
+	key ^=  (key >> 10);
+	key +=  (key << 3);
+	key ^=  (key >> 6);
+	key += ~(key << 11);
+	key ^=  (key >> 16);
+	return key;
 }
 #define kh_int_hash_func2(k) __ac_Wang_hash((khint_t)key)
 
@@ -450,7 +450,7 @@ static kh_inline khint_t __ac_Wang_hash(khint_t key)
   @param  h     Pointer to the hash table [khash_t(name)*]
   @param  k     Key [type of keys]
   @param  r     Extra return code: 0 if the key is present in the hash table;
-                1 if the bucket is empty (never used); 2 if the element in
+				1 if the bucket is empty (never used); 2 if the element in
 				the bucket has been deleted [int*]
   @return       Iterator to the inserted element [khint_t]
  */

@@ -438,13 +438,13 @@ static void tree_iterator__pop_all(tree_iterator *ti, bool to_end, bool final)
 static int tree_iterator__update_entry(tree_iterator *ti)
 {
 	tree_iterator_frame *tf;
-    const git_tree_entry *te;
+	const git_tree_entry *te;
 
 	if (ti->entry_is_current)
-        return 0;
+		return 0;
 
 	tf = ti->head;
-    te = tf->entries[tf->current]->te;
+	te = tf->entries[tf->current]->te;
 
 	ti->entry.mode = te->attr;
 	git_oid_cpy(&ti->entry.id, &te->oid);

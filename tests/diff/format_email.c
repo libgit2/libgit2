@@ -102,7 +102,7 @@ void test_diff_format_email__multiple(void)
 	git_oid oid;
 	git_commit *commit = NULL;
 	git_diff *diff = NULL;
- 	git_diff_format_email_options opts = GIT_DIFF_FORMAT_EMAIL_OPTIONS_INIT;
+	git_diff_format_email_options opts = GIT_DIFF_FORMAT_EMAIL_OPTIONS_INIT;
 	git_buf buf = GIT_BUF_INIT;
 
 	const char *email =

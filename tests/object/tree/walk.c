@@ -6,12 +6,12 @@ static git_repository *g_repo;
 
 void test_object_tree_walk__initialize(void)
 {
-   g_repo = cl_git_sandbox_init("testrepo");
+	g_repo = cl_git_sandbox_init("testrepo");
 }
 
 void test_object_tree_walk__cleanup(void)
 {
-   cl_git_sandbox_cleanup();
+	cl_git_sandbox_cleanup();
 }
 
 static int treewalk_count_cb(

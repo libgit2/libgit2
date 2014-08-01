@@ -725,14 +725,14 @@ void test_refs_revparse__range(void)
 	assert_invalid_single_spec("be3563a^1..be3563a");
 
 	test_rangelike("be3563a^1..be3563a",
-	               "9fd738e8f7967c078dceed8190330fc8648ee56a",
-	               "be3563ae3f795b2b4353bcce3a527ad0a4f7f644",
-	               GIT_REVPARSE_RANGE);
+				   "9fd738e8f7967c078dceed8190330fc8648ee56a",
+				   "be3563ae3f795b2b4353bcce3a527ad0a4f7f644",
+				   GIT_REVPARSE_RANGE);
 
 	test_rangelike("be3563a^1...be3563a",
-	               "9fd738e8f7967c078dceed8190330fc8648ee56a",
-	               "be3563ae3f795b2b4353bcce3a527ad0a4f7f644",
-	               GIT_REVPARSE_RANGE | GIT_REVPARSE_MERGE_BASE);
+				   "9fd738e8f7967c078dceed8190330fc8648ee56a",
+				   "be3563ae3f795b2b4353bcce3a527ad0a4f7f644",
+				   GIT_REVPARSE_RANGE | GIT_REVPARSE_MERGE_BASE);
 
 	test_rangelike("be3563a^1.be3563a", NULL, NULL, 0);
 }
@@ -776,30 +776,30 @@ void test_refs_revparse__ext_can_expand_short_reference_names(void)
 		"a65fedf39aefe402d3bb6e24df4d4f5fe4547750",
 		"refs/heads/master");
 
-    test_object_and_ref(
+	test_object_and_ref(
 		"tags/test",
 		"b25fa35b38051e4ae45d4222e795f9df2e43f1d1",
-        "refs/tags/test");
+		"refs/tags/test");
 }
 
 void test_refs_revparse__ext_returns_NULL_reference_when_expression_points_at_a_revision(void)
 {
-    test_object_and_ref(
-        "HEAD~3",
-        "4a202b346bb0fb0db7eff3cffeb3c70babbd2045",
-        NULL);
+	test_object_and_ref(
+		"HEAD~3",
+		"4a202b346bb0fb0db7eff3cffeb3c70babbd2045",
+		NULL);
 
-    test_object_and_ref(
-        "HEAD~0",
-        "a65fedf39aefe402d3bb6e24df4d4f5fe4547750",
-        NULL);
+	test_object_and_ref(
+		"HEAD~0",
+		"a65fedf39aefe402d3bb6e24df4d4f5fe4547750",
+		NULL);
 
-    test_object_and_ref(
-        "HEAD^0",
-        "a65fedf39aefe402d3bb6e24df4d4f5fe4547750",
-        NULL);
+	test_object_and_ref(
+		"HEAD^0",
+		"a65fedf39aefe402d3bb6e24df4d4f5fe4547750",
+		NULL);
 
-    test_object_and_ref(
+	test_object_and_ref(
 		"@{-1}@{0}",
 		"a4a7dce85cf63874e984719f4fdd239f5145052f",
 		NULL);
@@ -807,8 +807,8 @@ void test_refs_revparse__ext_returns_NULL_reference_when_expression_points_at_a_
 
 void test_refs_revparse__ext_returns_NULL_reference_when_expression_points_at_a_tree_content(void)
 {
-    test_object_and_ref(
+	test_object_and_ref(
 		"tags/test:readme.txt",
 		"0266163a49e280c4f5ed1e08facd36a2bd716bcf",
-        NULL);
+		NULL);
 }

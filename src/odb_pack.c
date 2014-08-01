@@ -562,7 +562,7 @@ static void pack_backend__writepack_free(struct git_odb_writepack *_writepack)
 
 static int pack_backend__writepack(struct git_odb_writepack **out,
 	git_odb_backend *_backend,
-        git_odb *odb,
+		git_odb *odb,
 	git_transfer_progress_cb progress_cb,
 	void *progress_payload)
 {

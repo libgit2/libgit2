@@ -624,7 +624,7 @@ int git_diff__oid_for_entry(
 			error = git_index_add(idx, &entry);
 			git_index_free(idx);
 		}
- 	}
+	}
 
 	git_buf_free(&full_path);
 	return error;

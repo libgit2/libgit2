@@ -410,16 +410,16 @@ GIT_INLINE(double) git__timer(void)
 
 GIT_INLINE(double) git__timer(void)
 {
-   uint64_t time = mach_absolute_time();
-   static double scaling_factor = 0;
+	uint64_t time = mach_absolute_time();
+	static double scaling_factor = 0;
 
-   if (scaling_factor == 0) {
-       mach_timebase_info_data_t info;
-       (void)mach_timebase_info(&info);
-       scaling_factor = (double)info.numer / (double)info.denom;
-   }
+	if (scaling_factor == 0) {
+		mach_timebase_info_data_t info;
+		(void)mach_timebase_info(&info);
+		scaling_factor = (double)info.numer / (double)info.denom;
+	}
 
-   return (double)time * scaling_factor / 1.0E-9;
+	return (double)time * scaling_factor / 1.0E-9;
 }
 
 #else

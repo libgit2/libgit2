@@ -90,7 +90,7 @@ static int transport_find_fn(const char *url, git_transport_cb *callback, void *
 #ifdef GIT_SSH
 		definition = &ssh_transport_definition;
 #else
-        definition = &dummy_transport_definition;
+		definition = &dummy_transport_definition;
 #endif
 
 #ifndef GIT_WIN32

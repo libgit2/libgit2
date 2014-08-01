@@ -34,15 +34,15 @@ void test_merge_trees_treediff__cleanup(void)
 }
 
 static void test_find_differences(
-    const char *ancestor_oidstr,
-    const char *ours_oidstr,
-    const char *theirs_oidstr,
-    struct merge_index_conflict_data *treediff_conflict_data,
-    size_t treediff_conflict_data_len)
+	const char *ancestor_oidstr,
+	const char *ours_oidstr,
+	const char *theirs_oidstr,
+	struct merge_index_conflict_data *treediff_conflict_data,
+	size_t treediff_conflict_data_len)
 {
-    git_merge_diff_list *merge_diff_list = git_merge_diff_list__alloc(repo);
-    git_oid ancestor_oid, ours_oid, theirs_oid;
-    git_tree *ancestor_tree, *ours_tree, *theirs_tree;
+	git_merge_diff_list *merge_diff_list = git_merge_diff_list__alloc(repo);
+	git_oid ancestor_oid, ours_oid, theirs_oid;
+	git_tree *ancestor_tree, *ours_tree, *theirs_tree;
 
 	git_merge_options opts = GIT_MERGE_OPTIONS_INIT;
 	opts.flags |= GIT_MERGE_TREE_FIND_RENAMES;
@@ -115,21 +115,21 @@ void test_merge_trees_treediff__simple(void)
 			{ { 0100644, "11deab00b2d3a6f5a3073988ac050c2d7b6655e2", 0, "changed-in-master.txt" }, GIT_DELTA_MODIFIED },
 			{ { 0100644, "ab6c44a2e84492ad4b41bb6bac87353e9d02ac8b", 0, "changed-in-master.txt" }, GIT_DELTA_UNMODIFIED },
 			GIT_MERGE_DIFF_NONE
-        },
+		},
 
 		{
 			{ { 0100644, "d427e0b2e138501a3d15cc376077a3631e15bd46", 0, "conflicting.txt" }, GIT_DELTA_UNMODIFIED },
 			{ { 0100644, "4e886e602529caa9ab11d71f86634bd1b6e0de10", 0, "conflicting.txt" }, GIT_DELTA_MODIFIED },
 			{ { 0100644, "2bd0a343aeef7a2cf0d158478966a6e587ff3863", 0, "conflicting.txt" }, GIT_DELTA_MODIFIED },
 			GIT_MERGE_DIFF_BOTH_MODIFIED
-        },
+		},
 
 		{
 			{ { 0100644, "dfe3f22baa1f6fce5447901c3086bae368de6bdd", 0, "removed-in-branch.txt" }, GIT_DELTA_UNMODIFIED },
 			{ { 0100644, "dfe3f22baa1f6fce5447901c3086bae368de6bdd", 0, "removed-in-branch.txt" }, GIT_DELTA_UNMODIFIED },
 			{ { 0, "", 0, "" }, GIT_DELTA_DELETED },
 			GIT_MERGE_DIFF_NONE
-        },
+		},
 
 		{
 			{ { 0100644, "5c3b68a71fc4fa5d362fd3875e53137c6a5ab7a5", 0, "removed-in-master.txt" }, GIT_DELTA_UNMODIFIED },
@@ -137,9 +137,9 @@ void test_merge_trees_treediff__simple(void)
 			{ { 0100644, "5c3b68a71fc4fa5d362fd3875e53137c6a5ab7a5", 0, "removed-in-master.txt" }, GIT_DELTA_UNMODIFIED },
 			GIT_MERGE_DIFF_NONE
 		},
-    };
+	};
 
-    test_find_differences(TREE_OID_ANCESTOR, TREE_OID_MASTER, TREE_OID_BRANCH, treediff_conflict_data, 7);
+	test_find_differences(TREE_OID_ANCESTOR, TREE_OID_MASTER, TREE_OID_BRANCH, treediff_conflict_data, 7);
 }
 
 void test_merge_trees_treediff__df_conflicts(void)
@@ -347,7 +347,7 @@ void test_merge_trees_treediff__strict_renames(void)
 			{ { 0100644, "c8f06f2e3bb2964174677e91f0abead0e43c9e5d", 0, "copied.txt" }, GIT_DELTA_RENAMED },
 			GIT_MERGE_DIFF_NONE,
 		},
-    };
+	};
 
 	test_find_differences(TREE_OID_ANCESTOR, TREE_OID_MASTER, TREE_OID_RENAMES1, treediff_conflict_data, 8);
 }
@@ -480,7 +480,7 @@ void test_merge_trees_treediff__rename_conflicts(void)
 			{ { 0100644, "b69fe837e4cecfd4c9a40cdca7c138468687df07", 0, "6-both-renamed.txt" }, GIT_DELTA_RENAMED },
 			GIT_MERGE_DIFF_BOTH_RENAMED_2_TO_1,
 		},
-    };
+	};
 	test_find_differences(TREE_OID_RENAME_CONFLICT_ANCESTOR,
 		TREE_OID_RENAME_CONFLICT_OURS, TREE_OID_RENAME_CONFLICT_THEIRS, treediff_conflict_data, 18);
 }
@@ -500,14 +500,14 @@ void test_merge_trees_treediff__best_renames(void)
 			{ { 0100644, "ee3fa1b8c00aff7fe02065fdb50864bb0d932ccf", 0, "automergeable.txt" }, GIT_DELTA_MODIFIED },
 			{ { 0100644, "45299c1ca5e07bba1fd90843056fb559f96b1f5a", 0, "renamed-90.txt" }, GIT_DELTA_RENAMED },
 			GIT_MERGE_DIFF_RENAMED_MODIFIED,
-        },
+		},
 
 		{
 			{ { 0100644, "ab6c44a2e84492ad4b41bb6bac87353e9d02ac8b", 0, "changed-in-master.txt" }, GIT_DELTA_UNMODIFIED },
 			{ { 0100644, "11deab00b2d3a6f5a3073988ac050c2d7b6655e2", 0, "changed-in-master.txt" }, GIT_DELTA_MODIFIED },
 			{ { 0100644, "ab6c44a2e84492ad4b41bb6bac87353e9d02ac8b", 0, "changed-in-master.txt" }, GIT_DELTA_UNMODIFIED },
 			GIT_MERGE_DIFF_NONE,
-        },
+		},
 
 		{
 			{ { 0100644, "d427e0b2e138501a3d15cc376077a3631e15bd46", 0, "conflicting.txt" }, GIT_DELTA_UNMODIFIED },
@@ -521,7 +521,7 @@ void test_merge_trees_treediff__best_renames(void)
 			{ { 0, "", 0, "" }, GIT_DELTA_DELETED },
 			{ { 0100644, "5c3b68a71fc4fa5d362fd3875e53137c6a5ab7a5", 0, "removed-in-master.txt" }, GIT_DELTA_UNMODIFIED },
 			GIT_MERGE_DIFF_MODIFIED_DELETED,
-        },
+		},
 
 		{
 			{ { 0, "", 0, "" }, GIT_DELTA_UNMODIFIED },
@@ -536,7 +536,7 @@ void test_merge_trees_treediff__best_renames(void)
 			{ { 0100644, "a77a56a49f8f3ae242e02717f18ebbc60c5cc543", 0, "renamed-75.txt" }, GIT_DELTA_ADDED },
 			GIT_MERGE_DIFF_NONE,
 		},
-    };
+	};
 
 	test_find_differences(TREE_OID_ANCESTOR, TREE_OID_MASTER, TREE_OID_RENAMES2, treediff_conflict_data, 7);
 }

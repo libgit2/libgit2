@@ -43,9 +43,9 @@ static int insert_sequential_oids(
 
 		/* After "fail", we expect git_oid_shorten_add to fail */
 		if (fail >= 0 && i >= fail)
-            cl_assert(min_len < 0);
+			cl_assert(min_len < 0);
 		else
-            cl_assert(min_len >= 0);
+			cl_assert(min_len >= 0);
 	}
 
 	*out = oids;
@@ -118,8 +118,8 @@ void test_object_raw_short__oid_shortener_stresstest_git_oid_shorten(void)
 
 void test_object_raw_short__oid_shortener_too_much_oids(void)
 {
-    /* The magic number of oids at which an oid_shortener will fail.
-     * This was experimentally established. */
+	/* The magic number of oids at which an oid_shortener will fail.
+	 * This was experimentally established. */
 #define MAX_OIDS 24556
 
 	git_oid_shorten *os;
