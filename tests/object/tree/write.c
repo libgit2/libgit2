@@ -396,3 +396,64 @@ void test_object_tree_write__cruel_paths(void)
 
 	git_tree_free(tree);
 }
+
+void test_object_tree_write__from_tree_git_sorting(void)
+{
+	git_index *index;
+	git_odb *db;
+	git_treebuilder *bld;
+	git_oid first_tree = {{0}}, second_tree = {{0}}, subtree_id = {{0}}, second_tree_bld = {{0}};
+	git_tree *tree;
+	git_index_entry entry = {{0}};
+	const char *foo = "foo\n";
+	const char *bar = "bar\n";
+
+	cl_git_pass(git_repository_index(&index, g_repo));
+	cl_git_pass(git_index_clear(index));
+	cl_git_pass(git_repository_odb(&db, g_repo));
+
+	cl_git_pass(git_odb_write(&entry.id, db, foo, strlen(foo), GIT_OBJ_BLOB));
+	entry.mode = GIT_FILEMODE_BLOB;
+	entry.path = "foo.txt";
+
+	cl_git_pass(git_index_add(index, &entry));
+	cl_git_pass(git_index_write_tree(&first_tree, index));
+
+	/* Clear the index and re-add so we don't use any tree caches */
+	cl_git_pass(git_index_clear(index));
+	cl_git_pass(git_index_add(index, &entry));
+
+	cl_git_pass(git_odb_write(&entry.id, db, bar, strlen(bar), GIT_OBJ_BLOB));
+	entry.mode = GIT_FILEMODE_BLOB;
+	entry.path = "foo/bar";
+
+	cl_git_pass(git_index_add(index, &entry));
+	cl_git_pass(git_index_write_tree(&second_tree, index));
+
+	/*
+	 * The index has now written the tree from scratch. We will
+	 * create a builder taking the first tree as a starting point
+	 * and create the second tree.
+	 */
+
+	cl_git_pass(git_treebuilder_create(&bld, NULL));
+
+	cl_git_pass(git_treebuilder_insert(NULL, bld, "bar", &entry.id, entry.mode));
+	cl_git_pass(git_treebuilder_write(&subtree_id, g_repo, bld));
+	git_treebuilder_free(bld);
+
+	/* assert subtree_id is the same as the one from the index */
+
+	cl_git_pass(git_tree_lookup(&tree, g_repo, &first_tree));
+	cl_git_pass(git_treebuilder_create(&bld, tree));
+
+	cl_git_pass(git_treebuilder_insert(NULL, bld, "foo", &subtree_id, GIT_FILEMODE_TREE));
+	cl_git_pass(git_treebuilder_write(&second_tree_bld, g_repo, bld));
+	git_treebuilder_free(bld);
+
+	cl_assert(!git_oid_cmp(&second_tree, &second_tree_bld));
+
+	git_tree_free(tree);
+	git_odb_free(db);
+	git_index_free(index);
+}
