@@ -33,24 +33,24 @@ static void cmp_objects(git_rawobj *o, object_data *d)
 
 static void test_read_object(object_data *data)
 {
-    git_oid id;
-    git_odb_object *obj;
+	git_oid id;
+	git_odb_object *obj;
 	git_odb *odb;
 	git_rawobj tmp;
 
-    write_object_files(data);
+	write_object_files(data);
 
-    cl_git_pass(git_odb_open(&odb, "test-objects"));
-    cl_git_pass(git_oid_fromstr(&id, data->id));
-    cl_git_pass(git_odb_read(&obj, odb, &id));
+	cl_git_pass(git_odb_open(&odb, "test-objects"));
+	cl_git_pass(git_oid_fromstr(&id, data->id));
+	cl_git_pass(git_odb_read(&obj, odb, &id));
 
 	tmp.data = obj->buffer;
 	tmp.len = obj->cached.size;
 	tmp.type = obj->cached.type;
 
-    cmp_objects(&tmp, data);
+	cmp_objects(&tmp, data);
 
-    git_odb_object_free(obj);
+	git_odb_object_free(obj);
 	git_odb_free(odb);
 }
 

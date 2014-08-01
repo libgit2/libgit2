@@ -3,12 +3,12 @@
 static const char *committer_name = "Vicent Marti";
 static const char *committer_email = "vicent@github.com";
 static const char *commit_message = "This commit has been created in memory\n\
-   This is a commit created in memory and it will be written back to disk\n";
+	This is a commit created in memory and it will be written back to disk\n";
 static const char *tree_oid = "1810dff58d8a660512d4832e740f692884338ccd";
 static const char *root_commit_message = "This is a root commit\n\
-   This is a root commit and should be the only one in this branch\n";
+	This is a root commit and should be the only one in this branch\n";
 static const char *root_reflog_message = "commit (initial): This is a root commit \
-   This is a root commit and should be the only one in this branch";
+	This is a root commit and should be the only one in this branch";
 static char *head_old;
 static git_reference *head, *branch;
 static git_commit *commit;
@@ -17,7 +17,7 @@ static git_commit *commit;
 static git_repository *g_repo;
 void test_commit_write__initialize(void)
 {
-   g_repo = cl_git_sandbox_init("testrepo");
+	g_repo = cl_git_sandbox_init("testrepo");
 }
 
 void test_commit_write__cleanup(void)
@@ -41,58 +41,58 @@ void test_commit_write__cleanup(void)
 // write a new commit object from memory to disk
 void test_commit_write__from_memory(void)
 {
-   git_oid tree_id, parent_id, commit_id;
-   git_signature *author, *committer;
-   const git_signature *author1, *committer1;
-   git_commit *parent;
-   git_tree *tree;
-   const char *commit_id_str = "8496071c1b46c854b31185ea97743be6a8774479";
+	git_oid tree_id, parent_id, commit_id;
+	git_signature *author, *committer;
+	const git_signature *author1, *committer1;
+	git_commit *parent;
+	git_tree *tree;
+	const char *commit_id_str = "8496071c1b46c854b31185ea97743be6a8774479";
 
-   git_oid_fromstr(&tree_id, tree_oid);
-   cl_git_pass(git_tree_lookup(&tree, g_repo, &tree_id));
+	git_oid_fromstr(&tree_id, tree_oid);
+	cl_git_pass(git_tree_lookup(&tree, g_repo, &tree_id));
 
-   git_oid_fromstr(&parent_id, commit_id_str);
-   cl_git_pass(git_commit_lookup(&parent, g_repo, &parent_id));
+	git_oid_fromstr(&parent_id, commit_id_str);
+	cl_git_pass(git_commit_lookup(&parent, g_repo, &parent_id));
 
-   /* create signatures */
-   cl_git_pass(git_signature_new(&committer, committer_name, committer_email, 123456789, 60));
-   cl_git_pass(git_signature_new(&author, committer_name, committer_email, 987654321, 90));
+	/* create signatures */
+	cl_git_pass(git_signature_new(&committer, committer_name, committer_email, 123456789, 60));
+	cl_git_pass(git_signature_new(&author, committer_name, committer_email, 987654321, 90));
 
-   cl_git_pass(git_commit_create_v(
-      &commit_id, /* out id */
-      g_repo,
-      NULL, /* do not update the HEAD */
-      author,
-      committer,
-      NULL,
-      commit_message,
-      tree,
-      1, parent));
+	cl_git_pass(git_commit_create_v(
+		&commit_id, /* out id */
+		g_repo,
+		NULL, /* do not update the HEAD */
+		author,
+		committer,
+		NULL,
+		commit_message,
+		tree,
+		1, parent));
 
-   git_object_free((git_object *)parent);
-   git_object_free((git_object *)tree);
+	git_object_free((git_object *)parent);
+	git_object_free((git_object *)tree);
 
-   git_signature_free(committer);
-   git_signature_free(author);
+	git_signature_free(committer);
+	git_signature_free(author);
 
-   cl_git_pass(git_commit_lookup(&commit, g_repo, &commit_id));
+	cl_git_pass(git_commit_lookup(&commit, g_repo, &commit_id));
 
-   /* Check attributes were set correctly */
-   author1 = git_commit_author(commit);
-   cl_assert(author1 != NULL);
-   cl_assert_equal_s(committer_name, author1->name);
-   cl_assert_equal_s(committer_email, author1->email);
-   cl_assert(author1->when.time == 987654321);
-   cl_assert(author1->when.offset == 90);
+	/* Check attributes were set correctly */
+	author1 = git_commit_author(commit);
+	cl_assert(author1 != NULL);
+	cl_assert_equal_s(committer_name, author1->name);
+	cl_assert_equal_s(committer_email, author1->email);
+	cl_assert(author1->when.time == 987654321);
+	cl_assert(author1->when.offset == 90);
 
-   committer1 = git_commit_committer(commit);
-   cl_assert(committer1 != NULL);
-   cl_assert_equal_s(committer_name, committer1->name);
-   cl_assert_equal_s(committer_email, committer1->email);
-   cl_assert(committer1->when.time == 123456789);
-   cl_assert(committer1->when.offset == 60);
+	committer1 = git_commit_committer(commit);
+	cl_assert(committer1 != NULL);
+	cl_assert_equal_s(committer_name, committer1->name);
+	cl_assert_equal_s(committer_email, committer1->email);
+	cl_assert(committer1->when.time == 123456789);
+	cl_assert(committer1->when.offset == 60);
 
-   cl_assert_equal_s(commit_message, git_commit_message(commit));
+	cl_assert_equal_s(commit_message, git_commit_message(commit));
 }
 
 // create a root commit

@@ -707,7 +707,7 @@ static int reference_path_available(
 
 static int loose_lock(git_filebuf *file, refdb_fs_backend *backend, const char *name)
 {
-        int error;
+		int error;
 	git_buf ref_path = GIT_BUF_INIT;
 
 	assert(file && backend && name);
@@ -724,7 +724,7 @@ static int loose_lock(git_filebuf *file, refdb_fs_backend *backend, const char *
 	error = git_filebuf_open(file, ref_path.ptr, GIT_FILEBUF_FORCE, GIT_REFS_FILE_MODE);
 
 	git_buf_free(&ref_path);
-        return error;
+		return error;
 }
 
 static int loose_commit(git_filebuf *file, const git_reference *ref)
@@ -1126,8 +1126,8 @@ static int refdb_fs_backend__write(
 	return loose_commit(&file, ref);
 
 on_error:
-        git_filebuf_cleanup(&file);
-        return error;
+		git_filebuf_cleanup(&file);
+		return error;
 }
 
 static int refdb_fs_backend__delete(
@@ -1239,7 +1239,7 @@ static int refdb_fs_backend__rename(
 	/* Try to rename the refog; it's ok if the old doesn't exist */
 	error = refdb_reflog_fs__rename(_backend, old_name, new_name);
 	if (((error == 0) || (error == GIT_ENOTFOUND)) &&
-	    ((error = reflog_append(backend, new, NULL, NULL, who, message)) < 0)) {
+		((error = reflog_append(backend, new, NULL, NULL, who, message)) < 0)) {
 		git_reference_free(new);
 		git_filebuf_cleanup(&file);
 		return error;
@@ -1639,8 +1639,8 @@ static int reflog_append(refdb_fs_backend *backend, const git_reference *ref, co
 
 	/* "normal" symbolic updates do not write */
 	if (is_symbolic &&
-	    strcmp(ref->name, GIT_HEAD_FILE) &&
-	    !(old && new))
+		strcmp(ref->name, GIT_HEAD_FILE) &&
+		!(old && new))
 		return 0;
 
 	/* From here on is_symoblic also means that it's HEAD */
@@ -1677,7 +1677,7 @@ static int reflog_append(refdb_fs_backend *backend, const git_reference *ref, co
 		goto cleanup;
 
 	if (((error = git_futils_mkpath2file(git_buf_cstr(&path), 0777)) < 0) &&
-	    (error != GIT_EEXISTS)) {
+		(error != GIT_EEXISTS)) {
 		goto cleanup;
 	}
 

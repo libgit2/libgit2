@@ -6,7 +6,7 @@ static git_config *g_config = NULL;
 
 void test_config_rename__initialize(void)
 {
-    g_repo = cl_git_sandbox_init("testrepo.git");
+	g_repo = cl_git_sandbox_init("testrepo.git");
 	cl_git_pass(git_repository_config(&g_config, g_repo));
 }
 

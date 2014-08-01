@@ -29,7 +29,7 @@ void test_index_stage__add_always_adds_stage_0(void)
 	size_t entry_idx;
 	const git_index_entry *entry;
 
-    cl_git_mkfile("./mergedrepo/new-file.txt", "new-file\n");
+	cl_git_mkfile("./mergedrepo/new-file.txt", "new-file\n");
 
 	cl_git_pass(git_index_add_bypath(repo_index, "new-file.txt"));
 

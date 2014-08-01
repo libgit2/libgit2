@@ -213,7 +213,7 @@ static git_blame_hunk *split_hunk_in_vector(
 
 	/* Don't split if already at a boundary */
 	if (rel_line <= 0 ||
-	    rel_line >= hunk->lines_in_hunk)
+		rel_line >= hunk->lines_in_hunk)
 	{
 		return hunk;
 	}
@@ -240,30 +240,30 @@ static git_blame_hunk *split_hunk_in_vector(
  */
 static int index_blob_lines(git_blame *blame)
 {
-    const char *buf = blame->final_buf;
-    git_off_t len = blame->final_buf_size;
-    int num = 0, incomplete = 0, bol = 1;
-    size_t *i;
+	const char *buf = blame->final_buf;
+	git_off_t len = blame->final_buf_size;
+	int num = 0, incomplete = 0, bol = 1;
+	size_t *i;
 
-    if (len && buf[len-1] != '\n')
-        incomplete++; /* incomplete line at the end */
-    while (len--) {
-        if (bol) {
-            i = git_array_alloc(blame->line_index);
-            GITERR_CHECK_ALLOC(i);
-            *i = buf - blame->final_buf;
-            bol = 0;
-        }
-        if (*buf++ == '\n') {
-            num++;
-            bol = 1;
-        }
-    }
-    i = git_array_alloc(blame->line_index);
-    GITERR_CHECK_ALLOC(i);
-    *i = buf - blame->final_buf;
-    blame->num_lines = num + incomplete;
-    return blame->num_lines;
+	if (len && buf[len-1] != '\n')
+		incomplete++; /* incomplete line at the end */
+	while (len--) {
+		if (bol) {
+			i = git_array_alloc(blame->line_index);
+			GITERR_CHECK_ALLOC(i);
+			*i = buf - blame->final_buf;
+			bol = 0;
+		}
+		if (*buf++ == '\n') {
+			num++;
+			bol = 1;
+		}
+	}
+	i = git_array_alloc(blame->line_index);
+	GITERR_CHECK_ALLOC(i);
+	*i = buf - blame->final_buf;
+	blame->num_lines = num + incomplete;
+	return blame->num_lines;
 }
 
 static git_blame_hunk* hunk_from_entry(git_blame__entry *e)
@@ -301,7 +301,7 @@ static int blame_internal(git_blame *blame)
 	git_blame__origin *o;
 
 	if ((error = load_blob(blame)) < 0 ||
-	    (error = git_blame__get_origin(&o, blame, blame->final, blame->path)) < 0)
+		(error = git_blame__get_origin(&o, blame, blame->final, blame->path)) < 0)
 		goto cleanup;
 	blame->final_buf = git_blob_rawcontent(blame->final_blob);
 	blame->final_buf_size = git_blob_rawsize(blame->final_blob);
@@ -418,7 +418,7 @@ static int buffer_line_cb(
 
 	if (line->origin == GIT_DIFF_LINE_ADDITION) {
 		if (hunk_is_bufferblame(blame->current_hunk) &&
-		    hunk_ends_at_or_before_line(blame->current_hunk, blame->current_diff_line)) {
+			hunk_ends_at_or_before_line(blame->current_hunk, blame->current_diff_line)) {
 			/* Append to the current buffer-blame hunk */
 			blame->current_hunk->lines_in_hunk++;
 			shift_hunks_by(&blame->hunks, blame->current_diff_line+1, 1);

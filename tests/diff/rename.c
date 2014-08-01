@@ -554,7 +554,7 @@ void test_diff_rename__working_directory_changes(void)
 
 	/*
 	fprintf(stderr, "\n\n");
-    diff_print_raw(stderr, diff);
+	diff_print_raw(stderr, diff);
 	*/
 
 	memset(&exp, 0, sizeof(exp));

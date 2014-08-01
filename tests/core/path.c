@@ -192,7 +192,7 @@ void test_core_path__06_long_joins(void)
 static void
 check_path_to_dir(
 	const char* path,
-    const char* expected)
+	const char* expected)
 {
 	git_buf tgt = GIT_BUF_INIT;
 
@@ -207,7 +207,7 @@ static void
 check_string_to_dir(
 	const char* path,
 	size_t      maxlen,
-    const char* expected)
+	const char* expected)
 {
 	size_t len = strlen(path);
 	char *buf = git__malloc(len + 2);

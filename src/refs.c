@@ -463,7 +463,7 @@ int git_reference_create(
 	const git_signature *signature,
 	const char *log_message)
 {
-        return git_reference_create_matching(ref_out, repo, name, id, force, NULL, signature, log_message);
+		return git_reference_create_matching(ref_out, repo, name, id, force, NULL, signature, log_message);
 }
 
 int git_reference_symbolic_create_matching(
@@ -610,8 +610,8 @@ int git_reference_rename(
 
 	/* Should we return an error if there is no default? */
 	if (!who &&
-	    ((error = git_signature_default(&who, ref->db->repo)) < 0) &&
-	    ((error = git_signature_now(&who, "unknown", "unknown")) < 0)) {
+		((error = git_signature_default(&who, ref->db->repo)) < 0) &&
+		((error = git_signature_now(&who, "unknown", "unknown")) < 0)) {
 		return error;
 	}
 
@@ -955,7 +955,7 @@ int git_reference__normalize_name(
 		goto cleanup;
 
 	if ((segments_count == 1 ) &&
-	    !(flags & GIT_REF_FORMAT_REFSPEC_SHORTHAND) &&
+		!(flags & GIT_REF_FORMAT_REFSPEC_SHORTHAND) &&
 		!(is_all_caps_and_underscore(name, (size_t)segment_len) ||
 			((flags & GIT_REF_FORMAT_REFSPEC_PATTERN) && !strcmp("*", name))))
 			goto cleanup;

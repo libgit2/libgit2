@@ -12,12 +12,12 @@ static git_repository *g_repo;
 /* Fixture setup and teardown */
 void test_object_tree_write__initialize(void)
 {
-   g_repo = cl_git_sandbox_init("testrepo");
+	g_repo = cl_git_sandbox_init("testrepo");
 }
 
 void test_object_tree_write__cleanup(void)
 {
-   cl_git_sandbox_cleanup();
+	cl_git_sandbox_cleanup();
 }
 
 void test_object_tree_write__from_memory(void)
@@ -113,22 +113,22 @@ void test_object_tree_write__sorted_subtrees(void)
 		const char *filename;
 	} entries[] = {
 		{ GIT_FILEMODE_BLOB, ".gitattributes" },
-	  	{ GIT_FILEMODE_BLOB, ".gitignore" },
-	  	{ GIT_FILEMODE_BLOB, ".htaccess" },
-	  	{ GIT_FILEMODE_BLOB, "Capfile" },
-	  	{ GIT_FILEMODE_BLOB, "Makefile"},
-	  	{ GIT_FILEMODE_BLOB, "README"},
-	  	{ GIT_FILEMODE_TREE, "app"},
-	  	{ GIT_FILEMODE_TREE, "cake"},
-	  	{ GIT_FILEMODE_TREE, "config"},
-	  	{ GIT_FILEMODE_BLOB, "c"},
-	  	{ GIT_FILEMODE_BLOB, "git_test.txt"},
-	  	{ GIT_FILEMODE_BLOB, "htaccess.htaccess"},
-	  	{ GIT_FILEMODE_BLOB, "index.php"},
-	  	{ GIT_FILEMODE_TREE, "plugins"},
-	  	{ GIT_FILEMODE_TREE, "schemas"},
-	  	{ GIT_FILEMODE_TREE, "ssl-certs"},
-	  	{ GIT_FILEMODE_TREE, "vendors"}
+		{ GIT_FILEMODE_BLOB, ".gitignore" },
+		{ GIT_FILEMODE_BLOB, ".htaccess" },
+		{ GIT_FILEMODE_BLOB, "Capfile" },
+		{ GIT_FILEMODE_BLOB, "Makefile"},
+		{ GIT_FILEMODE_BLOB, "README"},
+		{ GIT_FILEMODE_TREE, "app"},
+		{ GIT_FILEMODE_TREE, "cake"},
+		{ GIT_FILEMODE_TREE, "config"},
+		{ GIT_FILEMODE_BLOB, "c"},
+		{ GIT_FILEMODE_BLOB, "git_test.txt"},
+		{ GIT_FILEMODE_BLOB, "htaccess.htaccess"},
+		{ GIT_FILEMODE_BLOB, "index.php"},
+		{ GIT_FILEMODE_TREE, "plugins"},
+		{ GIT_FILEMODE_TREE, "schemas"},
+		{ GIT_FILEMODE_TREE, "ssl-certs"},
+		{ GIT_FILEMODE_TREE, "vendors"}
 	};
 
 	git_oid blank_oid, tree_oid;
