@@ -97,7 +97,7 @@ typedef int git_file;
  * Use your manpages to check the docs on these.
  */
 
-extern int p_read(git_file fd, void *buf, size_t cnt);
+extern ssize_t p_read(git_file fd, void *buf, size_t cnt);
 extern int p_write(git_file fd, const void *buf, size_t cnt);
 
 #define p_close(fd) close(fd)
