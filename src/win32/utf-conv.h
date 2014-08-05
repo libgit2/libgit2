@@ -13,6 +13,7 @@
 /* Equal to the Win32 MAX_PATH constant. The maximum path length is 259
  * characters plus a NULL terminator. */
 #define GIT_WIN_PATH_UTF16		260
+#define GIT_WIN_PATH_UTF16_DOUBLE		(GIT_WIN_PATH_UTF16 * 2)
 
 /* Maximum size of a UTF-8 Win32 path. UTF-8 does have 4-byte sequences,
  * but they are encoded in UTF-16 using surrogate pairs, which takes up
@@ -23,6 +24,7 @@
 
 /* Win32 path types */
 typedef wchar_t git_win32_path[GIT_WIN_PATH_UTF16];
+typedef wchar_t git_win32_path_double[GIT_WIN_PATH_UTF16_DOUBLE];
 typedef char git_win32_utf8_path[GIT_WIN_PATH_UTF8];
 
 /**
@@ -77,6 +79,11 @@ int git__utf16_to_8_alloc(char **dest, const wchar_t *src);
 GIT_INLINE(int) git_win32_path_from_utf8(git_win32_path dest, const char *src)
 {
 	return git__utf8_to_16(dest, GIT_WIN_PATH_UTF16, src);
+}
+
+GIT_INLINE(int) git_win32_path_from_utf8_double(git_win32_path_double dest, const char *src)
+{
+	return git__utf8_to_16(dest, GIT_WIN_PATH_UTF16_DOUBLE, src);
 }
 
 /**
