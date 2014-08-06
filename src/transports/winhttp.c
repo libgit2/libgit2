@@ -951,6 +951,36 @@ static int winhttp_stream_write_chunked(
 			return -1;
 		}
 
+		/* If we are using Negotiate, POST requests with a body may fail with ERROR_WINHTTP_RESEND_REQUEST
+		 * We first send a zero-length request to get a 401 without writing the body twice */
+		if (t->cred &&
+			t->cred->credtype == GIT_CREDTYPE_DEFAULT &&
+			t->auth_mechanism == GIT_WINHTTP_AUTH_NEGOTIATE &&
+			s->verb == post_verb) {
+			DWORD bytes_written;
+
+			if (!WinHttpSendRequest(s->request,
+				WINHTTP_NO_ADDITIONAL_HEADERS, 0,
+				WINHTTP_NO_REQUEST_DATA, 0,
+				WINHTTP_IGNORE_REQUEST_TOTAL_LENGTH, 0)) {
+				giterr_set(GITERR_OS, "Failed to send empty request");
+				return -1;
+			}
+
+			if (!WinHttpWriteData(s->request,
+				"0\r\n\r\n", 5,
+				&bytes_written)) {
+				giterr_set(GITERR_OS, "Failed to write empty request");
+				return -1;
+			}
+
+			if (!WinHttpReceiveResponse(s->request, NULL) &&
+				GetLastError() != ERROR_WINHTTP_RESEND_REQUEST) {
+				giterr_set(GITERR_OS, "Failed to read empty request");
+				return -1;
+			}
+		}
+
 		if (!WinHttpSendRequest(s->request,
 			WINHTTP_NO_ADDITIONAL_HEADERS, 0,
 			WINHTTP_NO_REQUEST_DATA, 0,
@@ -1146,6 +1176,20 @@ static int winhttp_action(
 
 		default:
 			assert(0);
+	}
+
+	/* If we are using Negotiate, POST requests with a body may fail with ERROR_WINHTTP_RESEND_REQUEST
+	 * We first send a zero-length request to get a 401 without writing the body twice
+	 * WinHttp only allows the resent content length to differ if using Transfer-Encoding: chunked */
+	if (t->cred &&
+		t->cred->credtype == GIT_CREDTYPE_DEFAULT &&
+		t->auth_mechanism == GIT_WINHTTP_AUTH_NEGOTIATE &&
+		s->verb == post_verb &&
+		/* WinHTTP only supports Transfer-Encoding: chunked
+		 * on Windows Vista (NT 6.0) and higher. */
+		git_has_win32_version(6, 0, 0)) {
+		s->parent.write = winhttp_stream_write_chunked;
+		s->chunked = 1;
 	}
 
 	if (!ret)
