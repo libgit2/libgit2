@@ -36,6 +36,10 @@
 #define CACHED_POST_BODY_BUF_SIZE	4096
 #define UUID_LENGTH_CCH	32
 
+#ifndef WINHTTP_IGNORE_REQUEST_TOTAL_LENGTH
+#define WINHTTP_IGNORE_REQUEST_TOTAL_LENGTH 0
+#endif
+
 static const char *prefix_http = "http://";
 static const char *prefix_https = "https://";
 static const char *upload_pack_service = "upload-pack";
@@ -745,9 +749,9 @@ replay:
 
 		/* Verify that we got the correct content-type back */
 		if (post_verb == s->verb)
-			snprintf(expected_content_type_8, MAX_CONTENT_TYPE_LEN, "application/x-git-%s-result", s->service);
+			p_snprintf(expected_content_type_8, MAX_CONTENT_TYPE_LEN, "application/x-git-%s-result", s->service);
 		else
-			snprintf(expected_content_type_8, MAX_CONTENT_TYPE_LEN, "application/x-git-%s-advertisement", s->service);
+			p_snprintf(expected_content_type_8, MAX_CONTENT_TYPE_LEN, "application/x-git-%s-advertisement", s->service);
 
 		if (git__utf8_to_16(expected_content_type, MAX_CONTENT_TYPE_LEN, expected_content_type_8) < 0) {
 			giterr_set(GITERR_OS, "Failed to convert expected content-type to wide characters");

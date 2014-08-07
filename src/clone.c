@@ -488,6 +488,9 @@ static const char *repository_base(git_repository *repo)
 static bool can_link(const char *src, const char *dst, int link)
 {
 #ifdef GIT_WIN32
+	GIT_UNUSED(src);
+	GIT_UNUSED(dst);
+	GIT_UNUSED(link);
 	return false;
 #else
 
