@@ -1110,27 +1110,28 @@ int git_path_dirload_with_stat(
 
 		if ((error = git_buf_joinpath(&full, full.ptr, ps->path)) < 0 ||
 			(error = git_path_lstat(full.ptr, &ps->st)) < 0) {
+
 			if (error == GIT_ENOTFOUND) {
-				giterr_clear();
-				error = 0;
+				/* file was removed between readdir and lstat */
 				git_vector_remove(contents, i--);
-				continue;
-			}
-			/* Treat the file as unreadable if we get any other error */
-			if (error != 0) {
-				giterr_clear();
-				error = 0;
+			} else {
+				/* Treat the file as unreadable if we get any other error */
 				memset(&ps->st, 0, sizeof(ps->st));
 				ps->st.st_mode = GIT_FILEMODE_UNREADABLE;
-				continue;
 			}
-			
-			break;
+
+			giterr_clear();
+			error = 0;
+			continue;
 		}
 
 		if (S_ISDIR(ps->st.st_mode)) {
 			ps->path[ps->path_len++] = '/';
 			ps->path[ps->path_len] = '\0';
+		}
+		else if (!S_ISREG(ps->st.st_mode) && !S_ISLNK(ps->st.st_mode)) {
+			/* skip everything but dirs, plain files, and symlinks */
+			git_vector_remove(contents, i--);
 		}
 	}
 
