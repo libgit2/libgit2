@@ -534,7 +534,8 @@ int git_attr_fnmatch__parse(
 	}
 
 	if (*pattern == '!' && (spec->flags & GIT_ATTR_FNMATCH_ALLOWNEG) != 0) {
-		spec->flags = spec->flags | GIT_ATTR_FNMATCH_NEGATIVE;
+		spec->flags = spec->flags |
+			GIT_ATTR_FNMATCH_NEGATIVE | GIT_ATTR_FNMATCH_LEADINGDIR;
 		pattern++;
 	}
 
