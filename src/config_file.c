@@ -1649,7 +1649,7 @@ static int is_multiline_var(const char *str)
 	}
 
 	/* An odd number means last backslash wasn't escaped, so it's multiline */
-	return (end > str) && (count & 1);
+	return count & 1;
 }
 
 static int parse_multiline_variable(struct reader *reader, git_buf *value, int in_quotes)

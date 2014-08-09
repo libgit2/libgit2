@@ -90,3 +90,16 @@ void test_config_stress__trailing_backslash(void)
 	cl_assert_equal_s(path, str);
 	git_config_free(config);
 }
+
+void test_config_stress__complex(void)
+{
+	git_config *config;
+	const char *str;
+	const char *path = "./config-immediate-multiline";
+
+	cl_git_mkfile(path, "[imm]\n multi = \"\\\nfoo\"");
+	cl_git_pass(git_config_open_ondisk(&config, path));
+	cl_git_pass(git_config_get_string(&str, config, "imm.multi"));
+	cl_assert_equal_s(str, "foo");
+	git_config_free(config);
+}
