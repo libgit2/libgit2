@@ -22,7 +22,7 @@ static void set_error(int error_class, char *string)
 {
 	git_error *error = &GIT_GLOBAL->error_t;
 
-	if (error->message != string)
+	if (error->message != string && error->message)
 		git__free(error->message);
 
 	error->message = string;
