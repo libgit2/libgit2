@@ -48,3 +48,17 @@ void test_network_remote_defaultbranch__master_on_detached(void)
 	cl_git_pass(git_repository_detach_head(g_repo_a, NULL, NULL));
 	assert_default_branch("refs/heads/master");
 }
+
+void test_network_remote_defaultbranch__no_default_branch(void)
+{
+	git_remote *remote_b;
+	const git_remote_head **heads;
+	size_t len;
+
+	cl_git_pass(git_remote_create(&remote_b, g_repo_b, "self", git_repository_path(g_repo_b)));
+	cl_git_pass(git_remote_connect(remote_b, GIT_DIRECTION_FETCH));
+	cl_git_pass(git_remote_ls(&heads, &len, remote_b));
+	cl_assert_equal_i(0, len);
+
+	git_remote_free(remote_b);
+}
