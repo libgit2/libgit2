@@ -261,9 +261,10 @@ typedef enum git_cert_t git_cert_t;
  *
  * @param type The type of certificate or host info, SSH or X.509
  * @param data The data for the certificate or host info
+ * @param len The size of the certificate or host info
  * @param payload Payload provided by the caller
  */
-typedef int (*git_transport_certificate_check_cb)(git_cert_t type, void *data, void *payload);
+typedef int (*git_transport_certificate_check_cb)(git_cert_t type, void *data, size_t len, void *payload);
 
 /**
  * Opaque structure representing a submodule.

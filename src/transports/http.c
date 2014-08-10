@@ -555,9 +555,32 @@ static int http_connect(http_subtransport *t)
 #ifdef GIT_SSL
 	if (error == GIT_ECERTIFICATE && t->owner->certificate_check_cb != NULL) {
                 X509 *cert = SSL_get_peer_certificate(t->socket.ssl.ssl);
-                int allow;
+                int allow, len;
+		unsigned char *guard, *encoded_cert;
 
-                allow = t->owner->certificate_check_cb(GIT_CERT_X509_OPENSSL, cert, t->owner->message_cb_payload);
+		/* Retrieve the length of the certificate first */
+		len = i2d_X509(cert, NULL);
+		if (len < 0) {
+			giterr_set(GITERR_NET, "failed to retrieve certificate information");
+			return -1;
+		}
+
+
+		encoded_cert = git__malloc(len);
+		GITERR_CHECK_ALLOC(encoded_cert);
+		/* i2d_X509 makes 'copy' point to just after the data */
+		guard = encoded_cert;
+
+		len = i2d_X509(cert, &guard);
+		if (len < 0) {
+			git__free(encoded_cert);
+			giterr_set(GITERR_NET, "failed to retrieve certificate information");
+			return -1;
+		}
+
+                allow = t->owner->certificate_check_cb(GIT_CERT_X509, encoded_cert, len, t->owner->message_cb_payload);
+		git__free(encoded_cert);
+
                 if (allow < 0) {
                         error = allow;
                 } else if (!allow) {

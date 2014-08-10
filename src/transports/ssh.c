@@ -517,28 +517,31 @@ static int _git_ssh_setup_conn(
 	if (error < 0)
 		goto on_error;
 
-        if (t->owner->certificate_check_cb != NULL) {
-                git_cert_hostkey cert;
-                const char *key;
-                int allow;
+	if (t->owner->certificate_check_cb != NULL) {
+		git_cert_hostkey cert;
+		const char *key;
+		int allow;
+		size_t certlen;
 
-                cert.type = LIBSSH2_HOSTKEY_HASH_SHA1;
-                key = libssh2_hostkey_hash(session, LIBSSH2_HOSTKEY_HASH_SHA1);
-                if (key != NULL) {
-                        memcpy(&cert.hash, key, 20);
-                } else {
-                        cert.type = LIBSSH2_HOSTKEY_HASH_MD5;
-                        key = libssh2_hostkey_hash(session, LIBSSH2_HOSTKEY_HASH_MD5);
-                        if (key != NULL)
-                                memcpy(&cert.hash, key, 16);
-                }
+		cert.type = LIBSSH2_HOSTKEY_HASH_SHA1;
+		key = libssh2_hostkey_hash(session, LIBSSH2_HOSTKEY_HASH_SHA1);
+		if (key != NULL) {
+			certlen = 20;
+			memcpy(&cert.hash, key, certlen);
+		} else {
+			cert.type = LIBSSH2_HOSTKEY_HASH_MD5;
+			key = libssh2_hostkey_hash(session, LIBSSH2_HOSTKEY_HASH_MD5);
+			certlen = 16;
+			if (key != NULL)
+				memcpy(&cert.hash, key, certlen);
+		}
 
-                if (key == NULL) {
-                        giterr_set(GITERR_SSH, "unable to get the host key");
-                        return -1;
-                }
+		if (key == NULL) {
+			giterr_set(GITERR_SSH, "unable to get the host key");
+			return -1;
+		}
 
-                allow = t->owner->certificate_check_cb(GIT_CERT_HOSTKEY_LIBSSH2, &cert, t->owner->message_cb_payload);
+                allow = t->owner->certificate_check_cb(GIT_CERT_HOSTKEY_LIBSSH2, &cert, certlen, t->owner->message_cb_payload);
                 if (allow < 0) {
                         error = allow;
                         goto on_error;
