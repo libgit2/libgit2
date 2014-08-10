@@ -1955,6 +1955,9 @@ int git_remote_default_branch(git_buf *out, git_remote *remote)
 	if (heads_len == 0)
 		return GIT_ENOTFOUND;
 
+	if (strcmp(heads[0]->name, GIT_HEAD_FILE))
+		return GIT_ENOTFOUND;
+
 	git_buf_sanitize(out);
 	/* the first one must be HEAD so if that has the symref info, we're done */
 	if (heads[0]->symref_target)
