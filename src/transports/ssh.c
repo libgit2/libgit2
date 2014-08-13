@@ -5,14 +5,16 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
+#ifdef GIT_SSH
+#include <libssh2.h>
+#endif
+
 #include "git2.h"
 #include "buffer.h"
 #include "netops.h"
 #include "smart.h"
 
 #ifdef GIT_SSH
-
-#include <libssh2.h>
 
 #define OWNING_SUBTRANSPORT(s) ((ssh_subtransport *)(s)->parent.subtransport)
 
@@ -35,6 +37,8 @@ typedef struct {
 	transport_smart *owner;
 	ssh_stream *current_stream;
 	git_cred *cred;
+	char *cmd_uploadpack;
+	char *cmd_receivepack;
 } ssh_subtransport;
 
 static void ssh_error(LIBSSH2_SESSION *session, const char *errmsg)
@@ -132,11 +136,22 @@ static int ssh_stream_write(
 	size_t len)
 {
 	ssh_stream *s = (ssh_stream *)stream;
+	size_t off = 0;
+	ssize_t ret = 0;
 
 	if (!s->sent_command && send_command(s) < 0)
 		return -1;
 
-	if (libssh2_channel_write(s->channel, buffer, len) < LIBSSH2_ERROR_NONE) {
+	do {
+		ret = libssh2_channel_write(s->channel, buffer + off, len - off);
+		if (ret < 0)
+			break;
+
+		off += ret;
+
+	} while (off < len);
+
+	if (ret < 0) {
 		ssh_error(s->session, "SSH could not write data");
 		return -1;
 	}
@@ -491,7 +506,9 @@ static int ssh_uploadpack_ls(
 	const char *url,
 	git_smart_subtransport_stream **stream)
 {
-	if (_git_ssh_setup_conn(t, url, cmd_uploadpack, stream) < 0)
+	const char *cmd = t->cmd_uploadpack ? t->cmd_uploadpack : cmd_uploadpack;
+
+	if (_git_ssh_setup_conn(t, url, cmd, stream) < 0)
 		return -1;
 
 	return 0;
@@ -518,7 +535,9 @@ static int ssh_receivepack_ls(
 	const char *url,
 	git_smart_subtransport_stream **stream)
 {
-	if (_git_ssh_setup_conn(t, url, cmd_receivepack, stream) < 0)
+	const char *cmd = t->cmd_receivepack ? t->cmd_receivepack : cmd_receivepack;
+
+	if (_git_ssh_setup_conn(t, url, cmd, stream) < 0)
 		return -1;
 
 	return 0;
@@ -583,6 +602,8 @@ static void _ssh_free(git_smart_subtransport *subtransport)
 
 	assert(!t->current_stream);
 
+	git__free(t->cmd_uploadpack);
+	git__free(t->cmd_receivepack);
 	git__free(t);
 }
 #endif
@@ -607,6 +628,49 @@ int git_smart_subtransport_ssh(
 	return 0;
 #else
 	GIT_UNUSED(owner);
+
+	assert(out);
+	*out = NULL;
+
+	giterr_set(GITERR_INVALID, "Cannot create SSH transport. Library was built without SSH support");
+	return -1;
+#endif
+}
+
+int git_transport_ssh_with_paths(git_transport **out, git_remote *owner, void *payload)
+{
+#ifdef GIT_SSH
+	git_strarray *paths = (git_strarray *) payload;
+	git_transport *transport;
+	transport_smart *smart;
+	ssh_subtransport *t;
+	int error;
+	git_smart_subtransport_definition ssh_definition = {
+		git_smart_subtransport_ssh,
+		0, /* no RPC */
+	};
+
+	if (paths->count != 2) {
+		giterr_set(GITERR_SSH, "invalid ssh paths, must be two strings");
+		return GIT_EINVALIDSPEC;
+	}
+
+	if ((error = git_transport_smart(&transport, owner, &ssh_definition)) < 0)
+		return error;
+
+	smart = (transport_smart *) transport;
+	t = (ssh_subtransport *) smart->wrapped;
+
+	t->cmd_uploadpack = git__strdup(paths->strings[0]);
+	GITERR_CHECK_ALLOC(t->cmd_uploadpack);
+	t->cmd_receivepack = git__strdup(paths->strings[1]);
+	GITERR_CHECK_ALLOC(t->cmd_receivepack);
+
+	*out = transport;
+	return 0;
+#else
+	GIT_UNUSED(owner);
+	GIT_UNUSED(payload);
 
 	assert(out);
 	*out = NULL;

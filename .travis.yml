@@ -46,10 +46,11 @@ after_success:
  - if [ "$TRAVIS_OS_NAME" = "linux" ]; then sudo apt-get -qq install valgrind; fi
  - if [ "$TRAVIS_OS_NAME" = "linux" ]; then valgrind --leak-check=full --show-reachable=yes --suppressions=./libgit2_clar.supp _build/libgit2_clar -ionline; fi
 
-# Only watch the development branch
+# Only watch the development and master branches
 branches:
  only:
    - development
+   - master
 
 # Notify development list when needed
 notifications:

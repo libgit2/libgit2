@@ -52,13 +52,6 @@ GIT_EXTERN(int) git_push_init_options(
 	git_push_options *opts,
 	unsigned int version);
 
-/** Push network progress notification function */
-typedef int (*git_push_transfer_progress)(
-	unsigned int current,
-	unsigned int total,
-	size_t bytes,
-	void* payload);
-
 /**
  * Create a new push object
  *
@@ -99,18 +92,8 @@ GIT_EXTERN(int) git_push_set_callbacks(
 	git_push *push,
 	git_packbuilder_progress pack_progress_cb,
 	void *pack_progress_cb_payload,
-	git_push_transfer_progress transfer_progress_cb,
+	git_transfer_progress_cb transfer_progress_cb,
 	void *transfer_progress_cb_payload);
-
-/**
- * Add a refspec to be pushed
- *
- * @param push The push object
- * @param refspec Refspec string
- *
- * @return 0 or an error code
- */
-GIT_EXTERN(int) git_push_add_refspec(git_push *push, const char *refspec);
 
 /**
  * Update remote tips after a push

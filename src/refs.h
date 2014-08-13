@@ -35,7 +35,7 @@
 #define GIT_FETCH_HEAD_FILE "FETCH_HEAD"
 #define GIT_MERGE_HEAD_FILE "MERGE_HEAD"
 #define GIT_REVERT_HEAD_FILE "REVERT_HEAD"
-#define GIT_CHERRY_PICK_HEAD_FILE "CHERRY_PICK_HEAD"
+#define GIT_CHERRYPICK_HEAD_FILE "CHERRY_PICK_HEAD"
 #define GIT_BISECT_LOG_FILE "BISECT_LOG"
 #define GIT_REBASE_MERGE_DIR "rebase-merge/"
 #define GIT_REBASE_MERGE_INTERACTIVE_FILE GIT_REBASE_MERGE_DIR "interactive"
@@ -63,7 +63,7 @@ struct git_reference {
 	} target;
 
 	git_oid peel;
-	char name[0];
+	char name[GIT_FLEX_ARRAY];
 };
 
 git_reference *git_reference__set_name(git_reference *ref, const char *name);

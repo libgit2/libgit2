@@ -8,6 +8,7 @@
 #define INCLUDE_path_h__
 
 #include "common.h"
+#include "posix.h"
 #include "buffer.h"
 #include "vector.h"
 
@@ -439,6 +440,7 @@ extern int git_path_iconv(git_path_iconv_t *ic, char **in, size_t *inlen);
 extern bool git_path_does_fs_decompose_unicode(const char *root);
 
 /* Used for paths to repositories on the filesystem */
+extern bool git_path_is_local_file_url(const char *file_url);
 extern int git_path_from_url_or_path(git_buf *local_path_out, const char *url_or_path);
 
 #endif

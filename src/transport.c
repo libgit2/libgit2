@@ -133,9 +133,10 @@ int git_transport_new(git_transport **out, git_remote *owner, const char *url)
 		return -1;
 	}
 
-	error = fn(&transport, owner, param);
-	if (error < 0)
+	if ((error = fn(&transport, owner, param)) < 0)
 		return error;
+
+	GITERR_CHECK_VERSION(transport, GIT_TRANSPORT_VERSION, "git_transport");
 
 	*out = transport;
 
