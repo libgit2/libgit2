@@ -938,6 +938,7 @@ void test_status_worktree__update_stat_cache_0(void)
 
 void test_status_worktree__unreadable(void)
 {
+#ifndef GIT_WIN32
 	const char *expected_paths[] = { "no_permission/foo" };
 	const unsigned int expected_statuses[] = {GIT_STATUS_WT_UNREADABLE};
 
@@ -966,10 +967,12 @@ void test_status_worktree__unreadable(void)
 	cl_assert_equal_i(counts.expected_entry_count, counts.entry_count);
 	cl_assert_equal_i(0, counts.wrong_status_flags_count);
 	cl_assert_equal_i(0, counts.wrong_sorted_path);
+#endif
 }
 
 void test_status_worktree__unreadable_not_included(void)
 {
+#ifndef GIT_WIN32
 	const char *expected_paths[] = { "no_permission/" };
 	const unsigned int expected_statuses[] = {GIT_STATUS_WT_NEW};
 
@@ -998,6 +1001,7 @@ void test_status_worktree__unreadable_not_included(void)
 	cl_assert_equal_i(counts.expected_entry_count, counts.entry_count);
 	cl_assert_equal_i(0, counts.wrong_status_flags_count);
 	cl_assert_equal_i(0, counts.wrong_sorted_path);
+#endif
 }
 
 void test_status_worktree__unreadable_as_untracked(void)
