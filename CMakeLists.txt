@@ -36,7 +36,7 @@ OPTION( ANDROID				"Build for android NDK"	 				OFF )
 
 OPTION( USE_ICONV			"Link with and use iconv library" 		OFF )
 OPTION( USE_SSH				"Link with libssh to enable SSH support" ON )
-OPTION( USE_GSSAPI			"Link with libgssapi for SPNEGO auth"    ON )
+OPTION( USE_GSSAPI			"Link with libgssapi for SPNEGO auth"   OFF )
 OPTION( VALGRIND			"Configure build for valgrind"			OFF )
 
 IF(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")

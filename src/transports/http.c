@@ -11,11 +11,13 @@
 #include "buffer.h"
 #include "netops.h"
 #include "smart.h"
+#include "auth.h"
+#include "auth_negotiate.h"
 
-#ifdef GIT_GSSAPI
-# include <gssapi.h>
-# include <krb5.h>
-#endif
+git_http_auth_scheme auth_schemes[] = {
+	{ GIT_AUTHTYPE_NEGOTIATE, "Negotiate", GIT_CREDTYPE_DEFAULT, git_http_auth_negotiate },
+	{ GIT_AUTHTYPE_BASIC, "Basic", GIT_CREDTYPE_USERPASS_PLAINTEXT, git_http_auth_basic },
+};
 
 static const char *upload_pack_service = "upload-pack";
 static const char *upload_pack_ls_service_url = "/info/refs?service=git-upload-pack";
@@ -25,18 +27,6 @@ static const char *receive_pack_ls_service_url = "/info/refs?service=git-receive
 static const char *receive_pack_service_url = "/git-receive-pack";
 static const char *get_verb = "GET";
 static const char *post_verb = "POST";
-static const char *basic_authtype = "Basic";
-static const char *negotiate_authtype = "Negotiate";
-
-#ifdef GIT_GSSAPI
-static gss_OID_desc negotiate_oid_spnego =
-	{ 6, (void *) "\x2b\x06\x01\x05\x05\x02" };
-static gss_OID_desc negotiate_oid_krb5 =
-	{ 9, (void *) "\x2a\x86\x48\x86\xf7\x12\x01\x02\x02" };
-
-static gss_OID negotiate_oids[] =
-	{ &negotiate_oid_spnego, &negotiate_oid_krb5, NULL };
-#endif
 
 #define OWNING_SUBTRANSPORT(s) ((http_subtransport *)(s)->parent.subtransport)
 
@@ -50,11 +40,6 @@ enum last_cb {
 	FIELD,
 	VALUE
 };
-
-typedef enum {
-	GIT_HTTP_AUTH_BASIC = 1,
-	GIT_HTTP_AUTH_NEGOTIATE = 2,
-} http_authmechanism_t;
 
 typedef struct {
 	git_smart_subtransport_stream parent;
@@ -75,10 +60,6 @@ typedef struct {
 	transport_smart *owner;
 	gitno_socket socket;
 	gitno_connection_data connection_data;
-	git_cred *cred;
-	git_cred *url_cred;
-	http_authmechanism_t auth_mechanism;
-	char *auth_challenge;
 	bool connected;
 
 	/* Parser structures */
@@ -95,13 +76,10 @@ typedef struct {
 	int parse_error;
 	unsigned parse_finished : 1;
 
-#ifdef GIT_GSSAPI
-	unsigned negotiate_configured : 1,
-		negotiate_complete : 1;
-	git_buf negotiate_target;
-	gss_ctx_id_t negotiate_context;
-	gss_OID negotiate_oid;
-#endif
+	/* Authentication */
+	git_cred *cred;
+	git_cred *url_cred;
+	git_vector auth_contexts;
 } http_subtransport;
 
 typedef struct {
@@ -114,216 +92,92 @@ typedef struct {
 	size_t *bytes_read;
 } parser_context;
 
-static int apply_basic_credential(
-	git_buf *buf,
-	http_subtransport *transport,
-	git_cred *cred)
+static bool credtype_match(git_http_auth_scheme *scheme, void *data)
 {
-	git_cred_userpass_plaintext *c = (git_cred_userpass_plaintext *)cred;
-	git_buf raw = GIT_BUF_INIT;
-	int error = -1;
+	unsigned int credtype = *(unsigned int *)data;
 
-	GIT_UNUSED(transport);
-
-	git_buf_printf(&raw, "%s:%s", c->username, c->password);
-
-	if (git_buf_oom(&raw) ||
-		git_buf_puts(buf, "Authorization: Basic ") < 0 ||
-		git_buf_encode_base64(buf, git_buf_cstr(&raw), raw.size) < 0 ||
-		git_buf_puts(buf, "\r\n") < 0)
-		goto on_error;
-
-	error = 0;
-
-on_error:
-	if (raw.size)
-		memset(raw.ptr, 0x0, raw.size);
-
-	git_buf_free(&raw);
-	return error;
+	return !!(scheme->credtypes & credtype);
 }
 
-#ifdef GIT_GSSAPI
-
-static void negotiate_err_set(
-	OM_uint32 status_major,
-	OM_uint32 status_minor,
-	const char *message)
+static bool challenge_match(git_http_auth_scheme *scheme, void *data)
 {
-	gss_buffer_desc buffer = GSS_C_EMPTY_BUFFER;
-	OM_uint32 status_display, context = 0;
+	const char *scheme_name = scheme->name;
+	const char *challenge = (const char *)data;
+	size_t scheme_len;
 
-	if (gss_display_status(&status_display, status_major, GSS_C_GSS_CODE,
-		GSS_C_NO_OID, &context, &buffer) == GSS_S_COMPLETE) {
-		giterr_set(GITERR_NET, "%s: %.*s (%d.%d)",
-			message, (int)buffer.length, (const char *)buffer.value,
-			status_major, status_minor);
-		gss_release_buffer(&status_minor, &buffer);
-	} else {
-		giterr_set(GITERR_NET, "%s: unknown negotiate error (%d.%d)",
-			message, status_major, status_minor);
-	}
+	scheme_len = strlen(scheme_name);
+	return (strncmp(challenge, scheme_name, scheme_len) == 0 &&
+		(challenge[scheme_len] == '\0' || challenge[scheme_len] == ' '));
 }
 
-static int negotiate_configure(http_subtransport *transport)
+static int auth_context_match(
+	git_http_auth_context **out,
+	http_subtransport *t,
+	bool (*scheme_match)(git_http_auth_scheme *scheme, void *data),
+	void *data)
 {
-	OM_uint32 status_major, status_minor;
-	gss_OID item, *oid;
-	gss_OID_set mechanism_list;
+	git_http_auth_scheme *scheme = NULL;
+	git_http_auth_context *context = NULL, *c;
 	size_t i;
 
-	/* Query supported mechanisms looking for SPNEGO) */
-	if (GSS_ERROR(status_major =
-		gss_indicate_mechs(&status_minor, &mechanism_list))) {
-		negotiate_err_set(status_major, status_minor,
-			"could not query mechanisms");
-		return -1;
-	}
+	*out = NULL;
 
-	if (mechanism_list) {
-		for (oid = negotiate_oids; *oid; oid++) {
-			for (i = 0; i < mechanism_list->count; i++) {
-				item = &mechanism_list->elements[i];
-
-				if (item->length == (*oid)->length &&
-					memcmp(item->elements, (*oid)->elements, item->length) == 0) {
-					transport->negotiate_oid = *oid;
-					break;
-				}
-
-			}
-
-			if (transport->negotiate_oid)
-				break;
+	for (i = 0; i < ARRAY_SIZE(auth_schemes); i++) {
+		if (scheme_match(&auth_schemes[i], data)) {
+			scheme = &auth_schemes[i];
+			break;
 		}
 	}
 
-	gss_release_oid_set(&status_minor, &mechanism_list);
+	if (!scheme)
+		return 0;
 
-	if (!transport->negotiate_oid) {
-		giterr_set(GITERR_NET, "Negotiate authentication is not supported");
-		return -1;
+	/* See if authentication has already started for this scheme */
+	git_vector_foreach(&t->auth_contexts, i, c) {
+		if (c->type == scheme->type) {
+			context = c;
+			break;
+		}
 	}
 
-	git_buf_puts(&transport->negotiate_target, "HTTP@");
-	git_buf_puts(&transport->negotiate_target, transport->connection_data.host);
+	if (!context) {
+		if (scheme->init_context(&context, &t->connection_data) < 0)
+			return -1;
+		else if (!context)
+			return 0;
+		else if (git_vector_insert(&t->auth_contexts, context) < 0)
+			return -1;
+	}
 
-	if (git_buf_oom(&transport->negotiate_target))
-		return -1;
+	*out = context;
 
-	transport->negotiate_context = GSS_C_NO_CONTEXT;
-	transport->negotiate_configured = 1;
 	return 0;
 }
 
-static int negotiate_next_token(
-	git_buf *buf,
-	http_subtransport *transport,
-	git_cred *cred)
+static int apply_credentials(git_buf *buf, http_subtransport *t)
 {
-	OM_uint32 status_major, status_minor;
-	gss_buffer_desc target_buffer = GSS_C_EMPTY_BUFFER,
-		input_token = GSS_C_EMPTY_BUFFER,
-		output_token = GSS_C_EMPTY_BUFFER;
-	gss_buffer_t input_token_ptr = GSS_C_NO_BUFFER;
-	git_buf input_buf = GIT_BUF_INIT;
-	gss_name_t server = NULL;
-	gss_OID mech;
-	size_t challenge_len;
-	int error = 0;
+	git_cred *cred = t->cred;
+	git_http_auth_context *context;
 
-	GIT_UNUSED(cred);
+	/* Apply the credentials given to us in the URL */
+	if (!cred && t->connection_data.user && t->connection_data.pass) {
+		if (!t->url_cred &&
+			git_cred_userpass_plaintext_new(&t->url_cred,
+				t->connection_data.user, t->connection_data.pass) < 0)
+			return -1;
 
-	target_buffer.value = (void *)transport->negotiate_target.ptr;
-	target_buffer.length = transport->negotiate_target.size;
-
-	status_major = gss_import_name(&status_minor, &target_buffer,
-		GSS_C_NT_HOSTBASED_SERVICE, &server);
-
-	if (GSS_ERROR(status_major)) {
-		negotiate_err_set(status_major, status_minor,
-			"Could not parse principal");
-		error = -1;
-		goto done;
+		cred = t->url_cred;
 	}
 
-	challenge_len = transport->auth_challenge ?
-		strlen(transport->auth_challenge) : 0;
-	assert(challenge_len >= 9);
-
-	if (challenge_len > 9) {
-		if (git_buf_decode_base64(&input_buf,
-				transport->auth_challenge + 10, challenge_len - 10) < 0) {
-			giterr_set(GITERR_NET, "Invalid negotiate challenge from server");
-			error = -1;
-			goto done;
-		}
-
-		input_token.value = input_buf.ptr;
-		input_token.length = input_buf.size;
-		input_token_ptr = &input_token;
-	} else if (transport->negotiate_context != GSS_C_NO_CONTEXT) {
-		giterr_set(GITERR_NET, "Could not restart authentication");
-		error = -1;
-		goto done;
-	}
-
-	mech = &negotiate_oid_spnego;
-
-	if (GSS_ERROR(status_major = gss_init_sec_context(
-		&status_minor,
-		GSS_C_NO_CREDENTIAL,
-		&transport->negotiate_context,
-		server,
-		mech,
-		GSS_C_DELEG_FLAG | GSS_C_MUTUAL_FLAG,
-		GSS_C_INDEFINITE,
-		GSS_C_NO_CHANNEL_BINDINGS,
-		input_token_ptr,
-		NULL,
-		&output_token,
-		NULL,
-		NULL))) {
-		negotiate_err_set(status_major, status_minor, "Negotiate failure");
-		error = -1;
-		goto done;
-	}
-
-	/* This message merely told us auth was complete; we do not respond. */
-	if (status_major == GSS_S_COMPLETE) {
-		transport->negotiate_complete = 1;
-		goto done;
-	}
-
-	git_buf_puts(buf, "Authorization: Negotiate ");
-	git_buf_encode_base64(buf, output_token.value, output_token.length);
-	git_buf_puts(buf, "\r\n");
-
-	if (git_buf_oom(buf))
-		error = -1;
-
-done:
-	gss_release_name(&status_minor, &server);
-	gss_release_buffer(&status_minor, (gss_buffer_t) &output_token);
-	git_buf_free(&input_buf);
-	return error;
-}
-
-static int apply_negotiate_credential(
-	git_buf *buf,
-	http_subtransport *transport,
-	git_cred *cred)
-{
-	if (!transport->negotiate_configured && negotiate_configure(transport) < 0)
-		return -1;
-
-	if (transport->negotiate_complete)
+	if (!cred)
 		return 0;
 
-	return negotiate_next_token(buf, transport, cred);
-}
+	/* Get or create a context for the best scheme for this cred type */
+	if (auth_context_match(&context, t, credtype_match, &cred->credtype) < 0)
+		return -1;
 
-#endif /* GIT_GSSAPI */
+	return context->next_token(buf, context, cred);
+}
 
 static int gen_request(
 	git_buf *buf,
@@ -350,27 +204,8 @@ static int gen_request(
 		git_buf_puts(buf, "Accept: */*\r\n");
 
 	/* Apply credentials to the request */
-#ifdef GIT_GSSAPI
-	if (t->cred && t->cred->credtype == GIT_CREDTYPE_DEFAULT &&
-		(t->auth_mechanism & GIT_HTTP_AUTH_NEGOTIATE)) {
-		if (apply_negotiate_credential(buf, t, t->cred) < 0)
-			return -1;
-	} else
-#endif
-
-	if (t->cred && t->cred->credtype == GIT_CREDTYPE_USERPASS_PLAINTEXT &&
-		t->auth_mechanism == GIT_HTTP_AUTH_BASIC) {
-		if (apply_basic_credential(buf, t, t->cred) < 0)
-			return -1;
-	}
-
-	/* Use url-parsed basic auth if username and password are both provided */
-	if (!t->cred && t->connection_data.user && t->connection_data.pass) {
-		if (!t->url_cred && git_cred_userpass_plaintext_new(&t->url_cred,
-					t->connection_data.user, t->connection_data.pass) < 0)
-			return -1;
-		if (apply_basic_credential(buf, t, t->url_cred) < 0) return -1;
-	}
+	if (apply_credentials(buf, t) < 0)
+		return -1;
 
 	git_buf_puts(buf, "\r\n");
 
@@ -382,31 +217,24 @@ static int gen_request(
 
 static int parse_authenticate_response(
 	git_vector *www_authenticate,
-	int *allowed_types,
-	http_authmechanism_t *auth_mechanism,
-	char **auth_challenge)
+	http_subtransport *t,
+	int *allowed_types)
 {
-	unsigned i;
-	char *entry;
+	git_http_auth_context *context;
+	char *challenge;
+	size_t i;
 
-	git_vector_foreach(www_authenticate, i, entry) {
-		if (!strncmp(entry, negotiate_authtype, 9) &&
-			(entry[9] == '\0' || entry[9] == ' ')) {
-			*allowed_types |= GIT_CREDTYPE_DEFAULT;
-			*auth_mechanism = GIT_HTTP_AUTH_NEGOTIATE;
+	git_vector_foreach(www_authenticate, i, challenge) {
+		if (auth_context_match(&context, t, challenge_match, challenge) < 0)
+			return -1;
+		else if (!context)
+			continue;
 
-			*auth_challenge = git__strdup(entry);
-			GITERR_CHECK_ALLOC(*auth_challenge);
-		}
+		if (context->set_challenge &&
+			context->set_challenge(context, challenge) < 0)
+			return -1;
 
-		else if (!strncmp(entry, basic_authtype, 5) &&
-			(entry[5] == '\0' || entry[5] == ' ')) {
-			*allowed_types |= GIT_CREDTYPE_USERPASS_PLAINTEXT;
-			*auth_mechanism = GIT_HTTP_AUTH_BASIC;
-
-			*auth_challenge = git__strdup(entry);
-			GITERR_CHECK_ALLOC(*auth_challenge);
-		}
+		*allowed_types |= context->credtypes;
 	}
 
 	return 0;
@@ -495,13 +323,8 @@ static int on_headers_complete(http_parser *parser)
 	 * is not complete) or a 200 (simply informing us that auth *is*
 	 * complete.)
 	 */
-	git__free(t->auth_challenge);
-	t->auth_challenge = NULL;
-
-	if (parse_authenticate_response(&t->www_authenticate,
-			&allowed_auth_types,
-			&t->auth_mechanism,
-			&t->auth_challenge) < 0)
+	if (parse_authenticate_response(&t->www_authenticate, t,
+			&allowed_auth_types) < 0)
 		return t->parse_error = PARSE_ERROR_GENERIC;
 
 	/* Check for an authentication failure. */
@@ -1089,27 +912,11 @@ static int http_action(
 	return -1;
 }
 
-static void clear_negotiate_state(http_subtransport *t)
-{
-#ifdef GIT_GSSAPI
-	OM_uint32 status_minor;
-
-	if (t->negotiate_context != GSS_C_NO_CONTEXT) {
-		gss_delete_sec_context(&status_minor, &t->negotiate_context, GSS_C_NO_BUFFER);
-		t->negotiate_context = GSS_C_NO_CONTEXT;
-	}
-
-	git_buf_free(&t->negotiate_target);
-
-	t->negotiate_configured = 0;
-	t->negotiate_complete = 0;
-	t->negotiate_oid = NULL;
-#endif
-}
-
 static int http_close(git_smart_subtransport *subtransport)
 {
 	http_subtransport *t = (http_subtransport *) subtransport;
+	git_http_auth_context *context;
+	size_t i;
 
 	clear_parser_state(t);
 
@@ -1128,10 +935,12 @@ static int http_close(git_smart_subtransport *subtransport)
 		t->url_cred = NULL;
 	}
 
-	git__free(t->auth_challenge);
-	t->auth_challenge = NULL;
+	git_vector_foreach(&t->auth_contexts, i, context) {
+		if (context->free)
+			context->free(context);
+	}
 
-	clear_negotiate_state(t);
+	git_vector_clear(&t->auth_contexts);
 
 	gitno_connection_data_free_ptrs(&t->connection_data);
 
@@ -1144,6 +953,7 @@ static void http_free(git_smart_subtransport *subtransport)
 
 	http_close(subtransport);
 
+	git_vector_free(&t->auth_contexts);
 	git__free(t);
 }
 
