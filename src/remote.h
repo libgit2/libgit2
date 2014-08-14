@@ -9,6 +9,7 @@
 
 #include "git2/remote.h"
 #include "git2/transport.h"
+#include "git2/sys/transport.h"
 
 #include "refspec.h"
 #include "vector.h"
