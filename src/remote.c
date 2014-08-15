@@ -699,6 +699,11 @@ int git_remote_ls(const git_remote_head ***out, size_t *size, git_remote *remote
 {
 	assert(remote);
 
+	if (!remote->transport) {
+		giterr_set(GITERR_NET, "No transport bound to this remote");
+		return -1;
+	}
+
 	return remote->transport->ls(out, size, remote->transport);
 }
 
@@ -1941,6 +1946,8 @@ int git_remote_default_branch(git_buf *out, git_remote *remote)
 	const git_oid *head_id;
 	size_t heads_len, i;
 	int error;
+
+	assert(out);
 
 	if ((error = git_remote_ls(&heads, &heads_len, remote)) < 0)
 		return error;
