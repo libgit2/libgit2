@@ -204,6 +204,8 @@ static void verify_tracking_branches(git_remote *remote, expected_ref expected_r
 		cl_assert_equal_i(branch_type, GIT_BRANCH_REMOTE);
 
 		cl_git_pass(git_vector_insert(&actual_refs, git__strdup(git_reference_name(ref))));
+
+		git_reference_free(ref);
 	}
 
 	cl_assert_equal_i(error, GIT_ITEROVER);
