@@ -352,7 +352,7 @@ static int print_binary_hunk(diff_print_info *pi, git_blob *old, git_blob *new)
 		else
 			git_buf_putc(pi->buf, (char)chunk_len - 26 + 'a' - 1);
 
-		git_buf_put_base85(pi->buf, scan, chunk_len);
+		git_buf_encode_base85(pi->buf, scan, chunk_len);
 		git_buf_putc(pi->buf, '\n');
 
 		if (git_buf_oom(pi->buf)) {

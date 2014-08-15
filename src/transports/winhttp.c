@@ -101,7 +101,7 @@ static int apply_basic_credential(HINTERNET request, git_cred *cred)
 
 	if (git_buf_oom(&raw) ||
 		git_buf_puts(&buf, "Authorization: Basic ") < 0 ||
-		git_buf_put_base64(&buf, git_buf_cstr(&raw), raw.size) < 0)
+		git_buf_encode_base64(&buf, git_buf_cstr(&raw), raw.size) < 0)
 		goto on_error;
 
 	if ((wide_len = git__utf8_to_16_alloc(&wide, git_buf_cstr(&buf))) < 0) {

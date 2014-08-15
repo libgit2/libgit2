@@ -748,7 +748,7 @@ void test_core_buffer__unescape(void)
 	assert_unescape("", "");
 }
 
-void test_core_buffer__base64(void)
+void test_core_buffer__encode_base64(void)
 {
 	git_buf buf = GIT_BUF_INIT;
 
@@ -759,33 +759,54 @@ void test_core_buffer__base64(void)
 	 * 0x 1d 06 21 29 1c 30
 	 *     d  G  h  p  c  w
 	 */
-	cl_git_pass(git_buf_put_base64(&buf, "this", 4));
+	cl_git_pass(git_buf_encode_base64(&buf, "this", 4));
 	cl_assert_equal_s("dGhpcw==", buf.ptr);
 
 	git_buf_clear(&buf);
-	cl_git_pass(git_buf_put_base64(&buf, "this!", 5));
+	cl_git_pass(git_buf_encode_base64(&buf, "this!", 5));
 	cl_assert_equal_s("dGhpcyE=", buf.ptr);
 
 	git_buf_clear(&buf);
-	cl_git_pass(git_buf_put_base64(&buf, "this!\n", 6));
+	cl_git_pass(git_buf_encode_base64(&buf, "this!\n", 6));
 	cl_assert_equal_s("dGhpcyEK", buf.ptr);
 
 	git_buf_free(&buf);
 }
 
-void test_core_buffer__base85(void)
+void test_core_buffer__decode_base64(void)
 {
 	git_buf buf = GIT_BUF_INIT;
 
-	cl_git_pass(git_buf_put_base85(&buf, "this", 4));
+	cl_git_pass(git_buf_decode_base64(&buf, "dGhpcw==", 8));
+	cl_assert_equal_s("this", buf.ptr);
+
+	git_buf_clear(&buf);
+	cl_git_pass(git_buf_decode_base64(&buf, "dGhpcyE=", 8));
+	cl_assert_equal_s("this!", buf.ptr);
+
+	git_buf_clear(&buf);
+	cl_git_pass(git_buf_decode_base64(&buf, "dGhpcyEK", 8));
+	cl_assert_equal_s("this!\n", buf.ptr);
+
+	cl_git_fail(git_buf_decode_base64(&buf, "This is not a valid base64 string!!!", 36));
+	cl_assert_equal_s("this!\n", buf.ptr);
+
+	git_buf_free(&buf);
+}
+
+void test_core_buffer__encode_base85(void)
+{
+	git_buf buf = GIT_BUF_INIT;
+
+	cl_git_pass(git_buf_encode_base85(&buf, "this", 4));
 	cl_assert_equal_s("bZBXF", buf.ptr);
 	git_buf_clear(&buf);
 
-	cl_git_pass(git_buf_put_base85(&buf, "two rnds", 8));
+	cl_git_pass(git_buf_encode_base85(&buf, "two rnds", 8));
 	cl_assert_equal_s("ba!tca&BaE", buf.ptr);
 	git_buf_clear(&buf);
 
-	cl_git_pass(git_buf_put_base85(&buf, "this is base 85 encoded",
+	cl_git_pass(git_buf_encode_base85(&buf, "this is base 85 encoded",
 		strlen("this is base 85 encoded")));
 	cl_assert_equal_s("bZBXFAZc?TVqtS-AUHK3Wo~0{WMyOk", buf.ptr);
 	git_buf_clear(&buf);

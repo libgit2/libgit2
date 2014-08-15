@@ -226,9 +226,28 @@ void test_online_clone__cred_callback_failure_return_code_is_tunnelled(void)
 	cl_git_fail_with(git_clone(&g_repo, remote_url, "./foo", &g_options), -1);
 }
 
+int cred_default(
+	git_cred **cred,
+	const char *url,
+	const char *user_from_url,
+	unsigned int allowed_types,
+	void *payload)
+{
+	GIT_UNUSED(url);
+	GIT_UNUSED(user_from_url);
+	GIT_UNUSED(payload);
+
+	if (!(allowed_types & GIT_CREDTYPE_DEFAULT))
+		return 0;
+
+	return git_cred_default_new(cred);
+}
+
 void test_online_clone__credentials(void)
 {
-	/* Remote URL environment variable must be set.  User and password are optional.  */
+	/* Remote URL environment variable must be set.
+	 * User and password are optional.
+	 */
 	const char *remote_url = cl_getenv("GITTEST_REMOTE_URL");
 	git_cred_userpass_payload user_pass = {
 		cl_getenv("GITTEST_REMOTE_USER"),
@@ -237,8 +256,12 @@ void test_online_clone__credentials(void)
 
 	if (!remote_url) return;
 
-	g_options.remote_callbacks.credentials = git_cred_userpass;
-	g_options.remote_callbacks.payload = &user_pass;
+	if (cl_getenv("GITTEST_REMOTE_DEFAULT")) {
+		g_options.remote_callbacks.credentials = cred_default;
+	} else {
+		g_options.remote_callbacks.credentials = git_cred_userpass;
+		g_options.remote_callbacks.payload = &user_pass;
+	}
 
 	cl_git_pass(git_clone(&g_repo, remote_url, "./foo", &g_options));
 	git_repository_free(g_repo); g_repo = NULL;
@@ -346,7 +369,7 @@ void test_online_clone__ssh_with_paths(void)
 	const char *remote_url = cl_getenv("GITTEST_REMOTE_URL");
 	const char *remote_user = cl_getenv("GITTEST_REMOTE_USER");
 
-	if (!remote_url || !remote_user)
+	if (!remote_url || !remote_user || strncmp(remote_url, "ssh://", 5) != 0)
 		clar__skip();
 
 	g_options.remote_cb = custom_remote_ssh_with_paths;
