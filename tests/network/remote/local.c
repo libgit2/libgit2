@@ -55,6 +55,17 @@ void test_network_remote_local__retrieve_advertised_references(void)
 	cl_assert_equal_i(refs_len, 28);
 }
 
+void test_network_remote_local__retrieve_advertised_before_connect(void)
+{
+	const git_remote_head **refs;
+	size_t refs_len = 0;
+
+	git_buf_sets(&file_path_buf, cl_git_path_url(cl_fixture("testrepo.git")));
+
+	cl_git_pass(git_remote_create_anonymous(&remote, repo, git_buf_cstr(&file_path_buf), NULL));
+	cl_git_fail(git_remote_ls(&refs, &refs_len, remote));
+}
+
 void test_network_remote_local__retrieve_advertised_references_after_disconnect(void)
 {
 	const git_remote_head **refs;
