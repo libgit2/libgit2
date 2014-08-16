@@ -118,6 +118,9 @@ GIT_EXTERN(void) git_oid_pathfmt(char *out, const git_oid *id);
 /**
  * Format a git_oid into a newly allocated c-string.
  *
+ * It is not possible for an external user to call the appropriate
+ * freeing function. It is part of the public API as a debug aid.
+ *
  * @param id the oid structure to format
  * @return the c-string; NULL if memory is exhausted. Caller must
  *			deallocate the string with git__free().
