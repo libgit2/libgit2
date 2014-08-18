@@ -227,18 +227,12 @@ void test_stash_save__can_stash_against_a_detached_head(void)
 
 void test_stash_save__stashing_updates_the_reflog(void)
 {
-	char *sha;
-
 	assert_object_oid("refs/stash@{0}", NULL, GIT_OBJ_COMMIT);
 
 	cl_git_pass(git_stash_save(&stash_tip_oid, repo, signature, NULL, GIT_STASH_DEFAULT));
 
-	sha = git_oid_allocfmt(&stash_tip_oid);
-
-	assert_object_oid("refs/stash@{0}", sha, GIT_OBJ_COMMIT);
+	assert_object_oid("refs/stash@{0}", git_oid_tostr_s(&stash_tip_oid), GIT_OBJ_COMMIT);
 	assert_object_oid("refs/stash@{1}", NULL, GIT_OBJ_COMMIT);
-
-	git__free(sha);
 }
 
 void test_stash_save__cannot_stash_when_there_are_no_local_change(void)
