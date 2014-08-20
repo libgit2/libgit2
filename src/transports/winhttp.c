@@ -952,7 +952,7 @@ static int winhttp_stream_write_chunked(
 		}
 
 		/* If we are using Negotiate, POST requests with a body may fail with ERROR_WINHTTP_RESEND_REQUEST
-		 * We first send a zero-length request to get a 401 without writing the body twice */
+		 * We first send an empty request to get a 401 without writing the body twice */
 		if (t->cred &&
 			t->cred->credtype == GIT_CREDTYPE_DEFAULT &&
 			t->auth_mechanism == GIT_WINHTTP_AUTH_NEGOTIATE &&
@@ -968,7 +968,7 @@ static int winhttp_stream_write_chunked(
 			}
 
 			if (!WinHttpWriteData(s->request,
-				"0\r\n\r\n", 5,
+				"4\r\n0000\r\n0\r\n\r\n", 14,
 				&bytes_written)) {
 				giterr_set(GITERR_OS, "Failed to write empty request");
 				return -1;
@@ -1179,7 +1179,7 @@ static int winhttp_action(
 	}
 
 	/* If we are using Negotiate, POST requests with a body may fail with ERROR_WINHTTP_RESEND_REQUEST
-	 * We first send a zero-length request to get a 401 without writing the body twice
+	 * We first send an empty request to get a 401 without writing the body twice
 	 * WinHttp only allows the resent content length to differ if using Transfer-Encoding: chunked */
 	if (t->cred &&
 		t->cred->credtype == GIT_CREDTYPE_DEFAULT &&
