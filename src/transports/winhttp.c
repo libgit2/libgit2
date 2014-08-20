@@ -74,6 +74,7 @@ typedef struct {
 	unsigned chunk_buffer_len;
 	HANDLE post_body;
 	DWORD post_body_len;
+	char *small_post_body;
 	unsigned sent_request : 1,
 		received_response : 1,
 		chunked : 1;
@@ -798,36 +799,31 @@ static int winhttp_stream_write_single(
 {
 	winhttp_stream *s = (winhttp_stream *)stream;
 	winhttp_subtransport *t = OWNING_SUBTRANSPORT(s);
-	DWORD bytes_written;
 
 	if (!s->request && winhttp_stream_connect(s) < 0)
 		return -1;
 
 	/* This implementation of write permits only a single call. */
-	if (s->sent_request) {
+	if (s->sent_request || s->small_post_body) {
 		giterr_set(GITERR_NET, "Subtransport configured for only one write");
 		return -1;
 	}
 
+	/* The buffer passed to WinHttpSendRequest must be valid until
+	 * WinHttpReceiveResponse is called, so make a copy */
+	s->small_post_body = git__malloc(len);
+	GITERR_CHECK_ALLOC(s->small_post_body);
+	memcpy(s->small_post_body, buffer, len);
+
 	if (!WinHttpSendRequest(s->request,
 			WINHTTP_NO_ADDITIONAL_HEADERS, 0,
-			WINHTTP_NO_REQUEST_DATA, 0,
+			s->small_post_body, (DWORD)len,
 			(DWORD)len, 0)) {
 		giterr_set(GITERR_OS, "Failed to send request");
 		return -1;
 	}
 
 	s->sent_request = 1;
-
-	if (!WinHttpWriteData(s->request,
-			(LPCVOID)buffer,
-			(DWORD)len,
-			&bytes_written)) {
-		giterr_set(GITERR_OS, "Failed to write data");
-		return -1;
-	}
-
-	assert((DWORD)len == bytes_written);
 
 	return 0;
 }
@@ -1049,6 +1045,11 @@ static void winhttp_stream_free(git_smart_subtransport_stream *stream)
 		s->post_body = NULL;
 	}
 
+	if (s->small_post_body) {
+		git__free(s->small_post_body);
+		s->small_post_body = NULL;
+	}
+
 	if (s->request_uri) {
 		git__free(s->request_uri);
 		s->request_uri = NULL;
@@ -1176,20 +1177,6 @@ static int winhttp_action(
 
 		default:
 			assert(0);
-	}
-
-	/* If we are using Negotiate, POST requests with a body may fail with ERROR_WINHTTP_RESEND_REQUEST
-	 * We first send an empty request to get a 401 without writing the body twice
-	 * WinHttp only allows the resent content length to differ if using Transfer-Encoding: chunked */
-	if (t->cred &&
-		t->cred->credtype == GIT_CREDTYPE_DEFAULT &&
-		t->auth_mechanism == GIT_WINHTTP_AUTH_NEGOTIATE &&
-		s->verb == post_verb &&
-		/* WinHTTP only supports Transfer-Encoding: chunked
-		 * on Windows Vista (NT 6.0) and higher. */
-		git_has_win32_version(6, 0, 0)) {
-		s->parent.write = winhttp_stream_write_chunked;
-		s->chunked = 1;
 	}
 
 	if (!ret)
