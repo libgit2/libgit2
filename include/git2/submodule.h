@@ -471,6 +471,24 @@ GIT_EXTERN(git_submodule_recurse_t) git_submodule_set_fetch_recurse_submodules(
 GIT_EXTERN(int) git_submodule_init(git_submodule *submodule, int overwrite);
 
 /**
+ * Set up the subrepository for a submodule in preparation for clone.
+ *
+ * This function can be called to init and set up a submodule
+ * repository from a submodule in preparation to clone it from
+ * its remote.
+ *
+ * @param out Output pointer to the created git repository.
+ * @param sm The submodule to create a new subrepository from.
+ * @param use_gitlink Should the workdir contain a gitlink to
+ *        the repo in .git/modules vs. repo directly in workdir.
+ * @return 0 on success, <0 on failure.
+ */
+GIT_EXTERN(int) git_submodule_repo_init(
+	git_repository **out,
+	const git_submodule *sm,
+	int use_gitlink);
+
+/**
  * Copy submodule remote info into submodule repo.
  *
  * This copies the information about the submodules URL into the checked out
