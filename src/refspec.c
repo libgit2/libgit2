@@ -226,13 +226,13 @@ int git_refspec_transform(git_buf *out, const git_refspec *spec, const char *nam
 	assert(out && spec && name);
 	git_buf_sanitize(out);
 
-	if (!spec->pattern)
-		return git_buf_puts(out, spec->dst);
-
 	if (!git_refspec_src_matches(spec, name)) {
 		giterr_set(GITERR_INVALID, "ref '%s' doesn't match the source", name);
 		return -1;
 	}
+
+	if (!spec->pattern)
+		return git_buf_puts(out, spec->dst);
 
 	return refspec_transform(out, spec->src, spec->dst, name);
 }
@@ -242,13 +242,13 @@ int git_refspec_rtransform(git_buf *out, const git_refspec *spec, const char *na
 	assert(out && spec && name);
 	git_buf_sanitize(out);
 
-	if (!spec->pattern)
-		return git_buf_puts(out, spec->src);
-
 	if (!git_refspec_dst_matches(spec, name)) {
 		giterr_set(GITERR_INVALID, "ref '%s' doesn't match the destination", name);
 		return -1;
 	}
+
+	if (!spec->pattern)
+		return git_buf_puts(out, spec->src);
 
 	return refspec_transform(out, spec->dst, spec->src, name);
 }
