@@ -39,8 +39,66 @@ typedef struct {
 	const char *rewrite_notes_ref;
 } git_rebase_options;
 
+/** Type of rebase operation in-progress after calling `git_rebase_next`. */
+typedef enum {
+	/**
+	 * The given commit is to be cherry-picked.  The client should commit
+	 * the changes and continue if there are no conflicts.
+	 */
+	GIT_REBASE_OPERATION_PICK = 0,
+
+	/**
+	 * The given commit is to be cherry-picked, but the client should prompt
+	 * the user to provide an updated commit message.
+	 */
+	GIT_REBASE_OPERATION_REWORD,
+
+	/**
+	 * The given commit is to be cherry-picked, but the client should stop
+	 * to allow the user to edit the changes before committing them.
+	 */
+	GIT_REBASE_OPERATION_EDIT,
+
+	/**
+	 * The given commit is to be squashed into the previous commit.  The
+	 * commit message will be merged with the previous message.
+	 */
+	GIT_REBASE_OPERATION_SQUASH,
+
+	/**
+	 * The given commit is to be squashed into the previous commit.  The
+	 * commit message from this commit will be discarded.
+	 */
+	GIT_REBASE_OPERATION_FIXUP,
+
+	/**
+	 * No commit will be cherry-picked.  The client should run the given
+	 * command and (if successful) continue.
+	 */
+	GIT_REBASE_OPERATION_EXEC,
+} git_rebase_operation_t;
+
 #define GIT_REBASE_OPTIONS_VERSION 1
 #define GIT_REBASE_OPTIONS_INIT {GIT_REBASE_OPTIONS_VERSION}
+
+typedef struct {
+	/** The type of rebase operation. */
+	unsigned int type;
+
+	union {
+		/**
+		 * The commit ID being cherry-picked.  This will be populated for
+		 * all operations except those of type `GIT_REBASE_OPERATION_EXEC`.
+		 */
+		git_oid id;
+
+		/**
+		 * The executable the user has requested be run.  This will only
+		 * be populated for operations of type `GIT_REBASE_OPERATION_EXEC`.
+		 */
+		const char *exec;
+	};
+} git_rebase_operation;
 
 /**
  * Initializes a `git_rebase_options` with default values. Equivalent to
@@ -78,15 +136,19 @@ GIT_EXTERN(int) git_rebase(
 	const git_rebase_options *opts);
 
 /**
- * Applies the next patch, updating the index and working directory with the
- * changes.  If there are conflicts, you will need to address those before
- * committing the changes.
+ * Performs the next rebase operation and returns the information about it.
+ * If the operation is one that applies a patch (which is any operation except
+ * GIT_REBASE_OPERATION_EXEC) then the patch will be applied and the index and
+ * working directory will be updated with the changes.  If there are conflicts,
+ * you will need to address those before committing the changes.
  *
+ * @param out The rebase operation that is to be performed next
  * @param repo The repository with a rebase in progress
  * @param checkout_opts Options to specify how the patch should be checked out
  * @return Zero on success; -1 on failure.
  */
 GIT_EXTERN(int) git_rebase_next(
+	git_rebase_operation *operation,
 	git_repository *repo,
 	git_checkout_options *checkout_opts);
 
@@ -94,7 +156,7 @@ GIT_EXTERN(int) git_rebase_next(
  * Commits the current patch.  You must have resolved any conflicts that
  * were introduced during the patch application from the `git_rebase_next`
  * invocation.
- * 
+ *
  * @param id Pointer in which to store the OID of the newly created commit
  * @param repo The repository with the in-progress rebase
  * @param author The author of the updated commit, or NULL to keep the
@@ -105,8 +167,8 @@ GIT_EXTERN(int) git_rebase_next(
  *        this should also be NULL, and the encoding from the original
  *        commit will be maintained.  If message is specified, this may be
  *        NULL to indicate that "UTF-8" is to be used.
- * @param message The message for this commit, or NULL to keep the message
- *        from the original commit
+ * @param message The message for this commit, or NULL to use the message
+ *        from the original commit.
  * @return Zero on success, GIT_EUNMERGED if there are unmerged changes in
  *        the index, GIT_EAPPLIED if the current commit has already
  *        been applied to the upstream and there is nothing to commit,

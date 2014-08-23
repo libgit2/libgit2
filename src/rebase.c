@@ -624,6 +624,7 @@ static int normalize_checkout_opts(
 }
 
 static int rebase_next_merge(
+	git_rebase_operation *out,
 	git_repository *repo,
 	git_rebase_state *state,
 	git_checkout_options *given_checkout_opts)
@@ -678,6 +679,9 @@ static int rebase_next_merge(
 		(error = git_checkout_index(repo, index, &checkout_opts)) < 0)
 		goto done;
 
+	out->type = GIT_REBASE_OPERATION_PICK;
+	memcpy(&out->id, &current_id, sizeof(git_oid));
+
 done:
 	git_index_free(index);
 	git_tree_free(current_tree);
@@ -691,20 +695,23 @@ done:
 }
 
 int git_rebase_next(
+	git_rebase_operation *out,
 	git_repository *repo,
 	git_checkout_options *checkout_opts)
 {
 	git_rebase_state state = GIT_REBASE_STATE_INIT;
 	int error;
 
-	assert(repo);
+	assert(out && repo);
+
+	memset(out, 0, sizeof(git_rebase_operation));
 
 	if ((error = rebase_state(&state, repo)) < 0)
 		return -1;
 
 	switch (state.type) {
 	case GIT_REBASE_TYPE_MERGE:
-		error = rebase_next_merge(repo, &state, checkout_opts);
+		error = rebase_next_merge(out, repo, &state, checkout_opts);
 		break;
 	default:
 		abort();
