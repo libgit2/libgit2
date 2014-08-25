@@ -228,8 +228,11 @@ int git_merge__bases_many(git_commit_list **out, git_revwalk *walk, git_commit_l
 		return -1;
 
 	git_vector_foreach(twos, i, two) {
-		git_commit_list_parse(walk, two);
+		if (git_commit_list_parse(walk, two) < 0)
+			return -1;
+
 		two->flags |= PARENT2;
+
 		if (git_pqueue_insert(&list, two) < 0)
 			return -1;
 	}
