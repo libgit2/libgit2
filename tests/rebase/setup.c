@@ -27,6 +27,7 @@ void test_rebase_setup__cleanup(void)
  * git checkout beef ; git rebase --merge master */
 void test_rebase_setup__blocked_when_in_progress(void)
 {
+	git_rebase *rebase;
 	git_reference *branch_ref, *upstream_ref;
 	git_merge_head *branch_head, *upstream_head;
 
@@ -38,11 +39,11 @@ void test_rebase_setup__blocked_when_in_progress(void)
 	cl_git_pass(git_merge_head_from_ref(&branch_head, repo, branch_ref));
 	cl_git_pass(git_merge_head_from_ref(&upstream_head, repo, upstream_ref));
 
-	cl_git_pass(git_rebase(repo, branch_head, upstream_head, NULL, signature, NULL));
+	cl_git_pass(git_rebase_init(&rebase, repo, branch_head, upstream_head, NULL, signature, NULL));
 
 	cl_assert_equal_i(GIT_REPOSITORY_STATE_REBASE_MERGE, git_repository_state(repo));
 
-	cl_git_fail(git_rebase(repo, branch_head, upstream_head, NULL, signature, NULL));
+	cl_git_fail(git_rebase_init(&rebase, repo, branch_head, upstream_head, NULL, signature, NULL));
 
 	git_merge_head_free(branch_head);
 	git_merge_head_free(upstream_head);
@@ -53,6 +54,7 @@ void test_rebase_setup__blocked_when_in_progress(void)
 /* git checkout beef ; git rebase --merge master */
 void test_rebase_setup__merge(void)
 {
+	git_rebase *rebase;
 	git_reference *branch_ref, *upstream_ref;
 	git_merge_head *branch_head, *upstream_head;
 	git_reference *head;
@@ -67,7 +69,7 @@ void test_rebase_setup__merge(void)
 	cl_git_pass(git_merge_head_from_ref(&branch_head, repo, branch_ref));
 	cl_git_pass(git_merge_head_from_ref(&upstream_head, repo, upstream_ref));
 
-	cl_git_pass(git_rebase(repo, branch_head, upstream_head, NULL, signature, NULL));
+	cl_git_pass(git_rebase_init(&rebase, repo, branch_head, upstream_head, NULL, signature, NULL));
 
 	cl_assert_equal_i(GIT_REPOSITORY_STATE_REBASE_MERGE, git_repository_state(repo));
 
@@ -94,11 +96,13 @@ void test_rebase_setup__merge(void)
 	git_merge_head_free(upstream_head);
 	git_reference_free(branch_ref);
 	git_reference_free(upstream_ref);
+	git_rebase_free(rebase);
 }
 
 /* git checkout beef && git rebase --merge --root --onto master */
 void test_rebase_setup__merge_root(void)
 {
+	git_rebase *rebase;
 	git_reference *branch_ref, *onto_ref;
 	git_merge_head *branch_head, *onto_head;
 	git_reference *head;
@@ -113,7 +117,7 @@ void test_rebase_setup__merge_root(void)
 	cl_git_pass(git_merge_head_from_ref(&branch_head, repo, branch_ref));
 	cl_git_pass(git_merge_head_from_ref(&onto_head, repo, onto_ref));
 
-	cl_git_pass(git_rebase(repo, branch_head, NULL, onto_head, signature, NULL));
+	cl_git_pass(git_rebase_init(&rebase, repo, branch_head, NULL, onto_head, signature, NULL));
 
 	git_oid_fromstr(&head_id, "efad0b11c47cb2f0220cbd6f5b0f93bb99064b00");
 	cl_git_pass(git_repository_head(&head, repo));
@@ -140,11 +144,13 @@ void test_rebase_setup__merge_root(void)
 	git_merge_head_free(onto_head);
 	git_reference_free(branch_ref);
 	git_reference_free(onto_ref);
+	git_rebase_free(rebase);
 }
 
 /* git checkout gravy && git rebase --merge --onto master veal */
 void test_rebase_setup__merge_onto_and_upstream(void)
 {
+	git_rebase *rebase;
 	git_reference *branch1_ref, *branch2_ref, *onto_ref;
 	git_merge_head *branch1_head, *branch2_head, *onto_head;
 	git_reference *head;
@@ -161,7 +167,7 @@ void test_rebase_setup__merge_onto_and_upstream(void)
 	cl_git_pass(git_merge_head_from_ref(&branch2_head, repo, branch2_ref));
 	cl_git_pass(git_merge_head_from_ref(&onto_head, repo, onto_ref));
 
-	cl_git_pass(git_rebase(repo, branch1_head, branch2_head, onto_head, signature, NULL));
+	cl_git_pass(git_rebase_init(&rebase, repo, branch1_head, branch2_head, onto_head, signature, NULL));
 
 	git_oid_fromstr(&head_id, "efad0b11c47cb2f0220cbd6f5b0f93bb99064b00");
 	cl_git_pass(git_repository_head(&head, repo));
@@ -186,12 +192,14 @@ void test_rebase_setup__merge_onto_and_upstream(void)
 	git_reference_free(branch1_ref);
 	git_reference_free(branch2_ref);
 	git_reference_free(onto_ref);
+	git_rebase_free(rebase);
 }
 
 /* Ensure merge commits are dropped in a rebase */
 /* git checkout veal && git rebase --merge master */
 void test_rebase_setup__branch_with_merges(void)
 {
+	git_rebase *rebase;
 	git_reference *branch_ref, *upstream_ref;
 	git_merge_head *branch_head, *upstream_head;
 	git_reference *head;
@@ -206,7 +214,7 @@ void test_rebase_setup__branch_with_merges(void)
 	cl_git_pass(git_merge_head_from_ref(&branch_head, repo, branch_ref));
 	cl_git_pass(git_merge_head_from_ref(&upstream_head, repo, upstream_ref));
 
-	cl_git_pass(git_rebase(repo, branch_head, upstream_head, NULL, signature, NULL));
+	cl_git_pass(git_rebase_init(&rebase, repo, branch_head, upstream_head, NULL, signature, NULL));
 
 	cl_assert_equal_i(GIT_REPOSITORY_STATE_REBASE_MERGE, git_repository_state(repo));
 
@@ -233,11 +241,13 @@ void test_rebase_setup__branch_with_merges(void)
 	git_merge_head_free(upstream_head);
 	git_reference_free(branch_ref);
 	git_reference_free(upstream_ref);
+	git_rebase_free(rebase);
 }
 
 /* git checkout barley && git rebase --merge master */
 void test_rebase_setup__orphan_branch(void)
 {
+	git_rebase *rebase;
 	git_reference *branch_ref, *upstream_ref;
 	git_merge_head *branch_head, *upstream_head;
 	git_reference *head;
@@ -252,7 +262,7 @@ void test_rebase_setup__orphan_branch(void)
 	cl_git_pass(git_merge_head_from_ref(&branch_head, repo, branch_ref));
 	cl_git_pass(git_merge_head_from_ref(&upstream_head, repo, upstream_ref));
 
-	cl_git_pass(git_rebase(repo, branch_head, upstream_head, NULL, signature, NULL));
+	cl_git_pass(git_rebase_init(&rebase, repo, branch_head, upstream_head, NULL, signature, NULL));
 
 	cl_assert_equal_i(GIT_REPOSITORY_STATE_REBASE_MERGE, git_repository_state(repo));
 
@@ -279,10 +289,12 @@ void test_rebase_setup__orphan_branch(void)
 	git_merge_head_free(upstream_head);
 	git_reference_free(branch_ref);
 	git_reference_free(upstream_ref);
+	git_rebase_free(rebase);
 }
 
 static int rebase_is_blocked(void)
 {
+	git_rebase *rebase = NULL;
 	int error;
 
 	git_reference *branch_ref, *upstream_ref;
@@ -296,13 +308,14 @@ static int rebase_is_blocked(void)
 	cl_git_pass(git_merge_head_from_ref(&branch_head, repo, branch_ref));
 	cl_git_pass(git_merge_head_from_ref(&upstream_head, repo, upstream_ref));
 												    
-	error = git_rebase(repo, branch_head, upstream_head, NULL, signature, NULL);
+	error = git_rebase_init(&rebase, repo, branch_head, upstream_head, NULL, signature, NULL);
 
 	git_merge_head_free(branch_head);
 	git_merge_head_free(upstream_head);
 
 	git_reference_free(branch_ref);
 	git_reference_free(upstream_ref);
+	git_rebase_free(rebase);
 
 	return error;
 }

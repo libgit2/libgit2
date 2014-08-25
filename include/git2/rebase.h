@@ -114,9 +114,12 @@ GIT_EXTERN(int) git_rebase_init_options(
 	unsigned int version);
 
 /**
- * Sets up a rebase operation to rebase the changes in ours relative to
- * upstream onto another branch.
+ * Initializes a rebase operation to rebase the changes in `ours`
+ * relative to `upstream` onto another branch.  To begin the rebase
+ * process, call `git_rebase_next`.  When you have finished with this
+ * object, call `git_rebase_free`.
  *
+ * @param out Pointer to store the rebase object
  * @param repo The repository to perform the rebase
  * @param branch The terminal commit to rebase
  * @param upstream The commit to begin rebasing from, or NULL to rebase all
@@ -127,13 +130,24 @@ GIT_EXTERN(int) git_rebase_init_options(
  * @param opts Options to specify how rebase is performed
  * @return Zero on success; -1 on failure.
  */
-GIT_EXTERN(int) git_rebase(
+GIT_EXTERN(int) git_rebase_init(
+	git_rebase **out,
 	git_repository *repo,
 	const git_merge_head *branch,
 	const git_merge_head *upstream,
 	const git_merge_head *onto,
 	const git_signature *signature,
 	const git_rebase_options *opts);
+
+/**
+ * Opens an existing rebase that was previously started by either an
+ * invocation of `git_rebase_init` or by another client.
+ *
+ * @param out Pointer to store the rebase object
+ * @param reop The repository that has a rebase in-progress
+ * @return Zero on success; -1 on failure.
+ */
+GIT_EXTERN(int) git_rebase_open(git_rebase **out, git_repository *repo);
 
 /**
  * Performs the next rebase operation and returns the information about it.
@@ -143,13 +157,13 @@ GIT_EXTERN(int) git_rebase(
  * you will need to address those before committing the changes.
  *
  * @param out The rebase operation that is to be performed next
- * @param repo The repository with a rebase in progress
+ * @param repo The rebase in progress
  * @param checkout_opts Options to specify how the patch should be checked out
  * @return Zero on success; -1 on failure.
  */
 GIT_EXTERN(int) git_rebase_next(
 	git_rebase_operation *operation,
-	git_repository *repo,
+	git_rebase *rebase,
 	git_checkout_options *checkout_opts);
 
 /**
@@ -158,7 +172,7 @@ GIT_EXTERN(int) git_rebase_next(
  * invocation.
  *
  * @param id Pointer in which to store the OID of the newly created commit
- * @param repo The repository with the in-progress rebase
+ * @param repo The rebase that is in-progress
  * @param author The author of the updated commit, or NULL to keep the
  *        author from the original commit
  * @param committer The committer of the rebase
@@ -176,7 +190,7 @@ GIT_EXTERN(int) git_rebase_next(
  */
 GIT_EXTERN(int) git_rebase_commit(
 	git_oid *id,
-	git_repository *repo,
+	git_rebase *rebase,
 	const git_signature *author,
 	const git_signature *committer,
 	const char *message_encoding,
@@ -186,28 +200,35 @@ GIT_EXTERN(int) git_rebase_commit(
  * Aborts a rebase that is currently in progress, resetting the repository
  * and working directory to their state before rebase began.
  *
- * @param repo The repository with the in-progress rebase
+ * @param rebase The rebase that is in-progress
  * @param signature The identity that is aborting the rebase
  * @return Zero on success; GIT_ENOTFOUND if a rebase is not in progress,
  *         -1 on other errors.
  */
 GIT_EXTERN(int) git_rebase_abort(
-	git_repository *repo,
+	git_rebase *rebase,
 	const git_signature *signature);
 
 /**
  * Finishes a rebase that is currently in progress once all patches have
  * been applied.
  *
- * @param repo The repository with the in-progress rebase
+ * @param rebase The rebase that is in-progress
  * @param signature The identity that is finishing the rebase
  * @param opts Options to specify how rebase is finished
  * @param Zero on success; -1 on error
  */
 GIT_EXTERN(int) git_rebase_finish(
-	git_repository *repo,
+	git_rebase *rebase,
 	const git_signature *signature,
 	const git_rebase_options *opts);
+
+/**
+ * Frees the `git_rebase` object.
+ *
+ * @param rebase The rebase that is in-progress
+ */
+GIT_EXTERN(void) git_rebase_free(git_rebase *rebase);
 
 /** @} */
 GIT_END_DECL

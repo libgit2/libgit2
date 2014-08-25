@@ -24,6 +24,7 @@ void test_rebase_merge__cleanup(void)
 
 void test_rebase_merge__next(void)
 {
+	git_rebase *rebase;
 	git_reference *branch_ref, *upstream_ref;
 	git_merge_head *branch_head, *upstream_head;
 	git_rebase_operation rebase_operation;
@@ -40,9 +41,9 @@ void test_rebase_merge__next(void)
 	cl_git_pass(git_merge_head_from_ref(&branch_head, repo, branch_ref));
 	cl_git_pass(git_merge_head_from_ref(&upstream_head, repo, upstream_ref));
 
-	cl_git_pass(git_rebase(repo, branch_head, upstream_head, NULL, signature, NULL));
+	cl_git_pass(git_rebase_init(&rebase, repo, branch_head, upstream_head, NULL, signature, NULL));
 
-	cl_git_pass(git_rebase_next(&rebase_operation, repo, &checkout_opts));
+	cl_git_pass(git_rebase_next(&rebase_operation, rebase, &checkout_opts));
 
 	git_oid_fromstr(&pick_id, "da9c51a23d02d931a486f45ad18cda05cf5d2b94");
 
@@ -65,10 +66,12 @@ void test_rebase_merge__next(void)
 	git_merge_head_free(upstream_head);
 	git_reference_free(branch_ref);
 	git_reference_free(upstream_ref);
+	git_rebase_free(rebase);
 }
 
 void test_rebase_merge__next_with_conflicts(void)
 {
+	git_rebase *rebase;
 	git_reference *branch_ref, *upstream_ref;
 	git_merge_head *branch_head, *upstream_head;
 	git_rebase_operation rebase_operation;
@@ -105,9 +108,9 @@ void test_rebase_merge__next_with_conflicts(void)
 	cl_git_pass(git_merge_head_from_ref(&branch_head, repo, branch_ref));
 	cl_git_pass(git_merge_head_from_ref(&upstream_head, repo, upstream_ref));
 
-	cl_git_pass(git_rebase(repo, branch_head, upstream_head, NULL, signature, NULL));
+	cl_git_pass(git_rebase_init(&rebase, repo, branch_head, upstream_head, NULL, signature, NULL));
 
-	cl_git_pass(git_rebase_next(&rebase_operation, repo, &checkout_opts));
+	cl_git_pass(git_rebase_next(&rebase_operation, rebase, &checkout_opts));
 
 	git_oid_fromstr(&pick_id, "33f915f9e4dbd9f4b24430e48731a59b45b15500");
 
@@ -129,10 +132,12 @@ void test_rebase_merge__next_with_conflicts(void)
 	git_merge_head_free(upstream_head);
 	git_reference_free(branch_ref);
 	git_reference_free(upstream_ref);
+	git_rebase_free(rebase);
 }
 
 void test_rebase_merge__next_stops_with_iterover(void)
 {
+	git_rebase *rebase;
 	git_reference *branch_ref, *upstream_ref;
 	git_merge_head *branch_head, *upstream_head;
 	git_rebase_operation rebase_operation;
@@ -148,29 +153,29 @@ void test_rebase_merge__next_stops_with_iterover(void)
 	cl_git_pass(git_merge_head_from_ref(&branch_head, repo, branch_ref));
 	cl_git_pass(git_merge_head_from_ref(&upstream_head, repo, upstream_ref));
 
-	cl_git_pass(git_rebase(repo, branch_head, upstream_head, NULL, signature, NULL));
+	cl_git_pass(git_rebase_init(&rebase, repo, branch_head, upstream_head, NULL, signature, NULL));
 
-	cl_git_pass(git_rebase_next(&rebase_operation, repo, &checkout_opts));
-	cl_git_pass(git_rebase_commit(&commit_id, repo, NULL, signature,
+	cl_git_pass(git_rebase_next(&rebase_operation, rebase, &checkout_opts));
+	cl_git_pass(git_rebase_commit(&commit_id, rebase, NULL, signature,
 		NULL, NULL));
 
-	cl_git_pass(git_rebase_next(&rebase_operation, repo, &checkout_opts));
-	cl_git_pass(git_rebase_commit(&commit_id, repo, NULL, signature,
+	cl_git_pass(git_rebase_next(&rebase_operation, rebase, &checkout_opts));
+	cl_git_pass(git_rebase_commit(&commit_id, rebase, NULL, signature,
 		NULL, NULL));
 
-	cl_git_pass(git_rebase_next(&rebase_operation, repo, &checkout_opts));
-	cl_git_pass(git_rebase_commit(&commit_id, repo, NULL, signature,
+	cl_git_pass(git_rebase_next(&rebase_operation, rebase, &checkout_opts));
+	cl_git_pass(git_rebase_commit(&commit_id, rebase, NULL, signature,
 		NULL, NULL));
 
-	cl_git_pass(git_rebase_next(&rebase_operation, repo, &checkout_opts));
-	cl_git_pass(git_rebase_commit(&commit_id, repo, NULL, signature,
+	cl_git_pass(git_rebase_next(&rebase_operation, rebase, &checkout_opts));
+	cl_git_pass(git_rebase_commit(&commit_id, rebase, NULL, signature,
 		NULL, NULL));
 
-	cl_git_pass(git_rebase_next(&rebase_operation, repo, &checkout_opts));
-	cl_git_pass(git_rebase_commit(&commit_id, repo, NULL, signature,
+	cl_git_pass(git_rebase_next(&rebase_operation, rebase, &checkout_opts));
+	cl_git_pass(git_rebase_commit(&commit_id, rebase, NULL, signature,
 		NULL, NULL));
 
-	cl_git_fail(error = git_rebase_next(&rebase_operation, repo, &checkout_opts));
+	cl_git_fail(error = git_rebase_next(&rebase_operation, rebase, &checkout_opts));
 	cl_assert_equal_i(GIT_ITEROVER, error);
 
 	cl_assert_equal_file("5\n", 2, "rebase/.git/rebase-merge/end");
@@ -180,10 +185,12 @@ void test_rebase_merge__next_stops_with_iterover(void)
 	git_merge_head_free(upstream_head);
 	git_reference_free(branch_ref);
 	git_reference_free(upstream_ref);
+	git_rebase_free(rebase);
 }
 
 void test_rebase_merge__commit(void)
 {
+	git_rebase *rebase;
 	git_reference *branch_ref, *upstream_ref;
 	git_merge_head *branch_head, *upstream_head;
 	git_rebase_operation rebase_operation;
@@ -202,10 +209,10 @@ void test_rebase_merge__commit(void)
 	cl_git_pass(git_merge_head_from_ref(&branch_head, repo, branch_ref));
 	cl_git_pass(git_merge_head_from_ref(&upstream_head, repo, upstream_ref));
 
-	cl_git_pass(git_rebase(repo, branch_head, upstream_head, NULL, signature, NULL));
+	cl_git_pass(git_rebase_init(&rebase, repo, branch_head, upstream_head, NULL, signature, NULL));
 
-	cl_git_pass(git_rebase_next(&rebase_operation, repo, &checkout_opts));
-	cl_git_pass(git_rebase_commit(&commit_id, repo, NULL, signature,
+	cl_git_pass(git_rebase_next(&rebase_operation, rebase, &checkout_opts));
+	cl_git_pass(git_rebase_commit(&commit_id, rebase, NULL, signature,
 		NULL, NULL));
 
 	cl_git_pass(git_commit_lookup(&commit, repo, &commit_id));
@@ -240,10 +247,12 @@ void test_rebase_merge__commit(void)
 	git_merge_head_free(upstream_head);
 	git_reference_free(branch_ref);
 	git_reference_free(upstream_ref);
+	git_rebase_free(rebase);
 }
 
 void test_rebase_merge__commit_updates_rewritten(void)
 {
+	git_rebase *rebase;
 	git_reference *branch_ref, *upstream_ref;
 	git_merge_head *branch_head, *upstream_head;
 	git_rebase_operation rebase_operation;
@@ -258,14 +267,14 @@ void test_rebase_merge__commit_updates_rewritten(void)
 	cl_git_pass(git_merge_head_from_ref(&branch_head, repo, branch_ref));
 	cl_git_pass(git_merge_head_from_ref(&upstream_head, repo, upstream_ref));
 
-	cl_git_pass(git_rebase(repo, branch_head, upstream_head, NULL, signature, NULL));
+	cl_git_pass(git_rebase_init(&rebase, repo, branch_head, upstream_head, NULL, signature, NULL));
 
-	cl_git_pass(git_rebase_next(&rebase_operation, repo, &checkout_opts));
-	cl_git_pass(git_rebase_commit(&commit_id, repo, NULL, signature,
+	cl_git_pass(git_rebase_next(&rebase_operation, rebase, &checkout_opts));
+	cl_git_pass(git_rebase_commit(&commit_id, rebase, NULL, signature,
 		NULL, NULL));
 
-	cl_git_pass(git_rebase_next(&rebase_operation, repo, &checkout_opts));
-	cl_git_pass(git_rebase_commit(&commit_id, repo, NULL, signature,
+	cl_git_pass(git_rebase_next(&rebase_operation, rebase, &checkout_opts));
+	cl_git_pass(git_rebase_commit(&commit_id, rebase, NULL, signature,
 		NULL, NULL));
 
 	cl_assert_equal_file(
@@ -277,10 +286,12 @@ void test_rebase_merge__commit_updates_rewritten(void)
 	git_merge_head_free(upstream_head);
 	git_reference_free(branch_ref);
 	git_reference_free(upstream_ref);
+	git_rebase_free(rebase);
 }
 
 void test_rebase_merge__commit_drops_already_applied(void)
 {
+	git_rebase *rebase;
 	git_reference *branch_ref, *upstream_ref;
 	git_merge_head *branch_head, *upstream_head;
 	git_rebase_operation rebase_operation;
@@ -296,16 +307,16 @@ void test_rebase_merge__commit_drops_already_applied(void)
 	cl_git_pass(git_merge_head_from_ref(&branch_head, repo, branch_ref));
 	cl_git_pass(git_merge_head_from_ref(&upstream_head, repo, upstream_ref));
 
-	cl_git_pass(git_rebase(repo, branch_head, upstream_head, NULL, signature, NULL));
+	cl_git_pass(git_rebase_init(&rebase, repo, branch_head, upstream_head, NULL, signature, NULL));
 
-	cl_git_pass(git_rebase_next(&rebase_operation, repo, &checkout_opts));
-	cl_git_fail(error = git_rebase_commit(&commit_id, repo, NULL, signature,
+	cl_git_pass(git_rebase_next(&rebase_operation, rebase, &checkout_opts));
+	cl_git_fail(error = git_rebase_commit(&commit_id, rebase, NULL, signature,
 		NULL, NULL));
 
 	cl_assert_equal_i(GIT_EAPPLIED, error);
 
-	cl_git_pass(git_rebase_next(&rebase_operation, repo, &checkout_opts));
-	cl_git_pass(git_rebase_commit(&commit_id, repo, NULL, signature,
+	cl_git_pass(git_rebase_next(&rebase_operation, rebase, &checkout_opts));
+	cl_git_pass(git_rebase_commit(&commit_id, rebase, NULL, signature,
 		NULL, NULL));
 
 	cl_assert_equal_file(
@@ -316,10 +327,12 @@ void test_rebase_merge__commit_drops_already_applied(void)
 	git_merge_head_free(upstream_head);
 	git_reference_free(branch_ref);
 	git_reference_free(upstream_ref);
+	git_rebase_free(rebase);
 }
 
 void test_rebase_merge__finish(void)
 {
+	git_rebase *rebase;
 	git_reference *branch_ref, *upstream_ref, *head_ref;
 	git_merge_head *branch_head, *upstream_head;
 	git_rebase_operation rebase_operation;
@@ -337,16 +350,16 @@ void test_rebase_merge__finish(void)
 	cl_git_pass(git_merge_head_from_ref(&branch_head, repo, branch_ref));
 	cl_git_pass(git_merge_head_from_ref(&upstream_head, repo, upstream_ref));
 
-	cl_git_pass(git_rebase(repo, branch_head, upstream_head, NULL, signature, NULL));
+	cl_git_pass(git_rebase_init(&rebase, repo, branch_head, upstream_head, NULL, signature, NULL));
 
-	cl_git_pass(git_rebase_next(&rebase_operation, repo, &checkout_opts));
-	cl_git_pass(git_rebase_commit(&commit_id, repo, NULL, signature,
+	cl_git_pass(git_rebase_next(&rebase_operation, rebase, &checkout_opts));
+	cl_git_pass(git_rebase_commit(&commit_id, rebase, NULL, signature,
 		NULL, NULL));
 
-	cl_git_fail(error = git_rebase_next(&rebase_operation, repo, &checkout_opts));
+	cl_git_fail(error = git_rebase_next(&rebase_operation, rebase, &checkout_opts));
 	cl_assert_equal_i(GIT_ITEROVER, error);
 
-	cl_git_pass(git_rebase_finish(repo, signature, NULL));
+	cl_git_pass(git_rebase_finish(rebase, signature, NULL));
 
 	cl_assert_equal_i(GIT_REPOSITORY_STATE_NONE, git_repository_state(repo));
 
@@ -374,12 +387,14 @@ void test_rebase_merge__finish(void)
 	git_reference_free(head_ref);
 	git_reference_free(branch_ref);
 	git_reference_free(upstream_ref);
+	git_rebase_free(rebase);
 }
 
 static void test_copy_note(
 	const git_rebase_options *opts,
 	bool should_exist)
 {
+	git_rebase *rebase;
 	git_reference *branch_ref, *upstream_ref;
 	git_merge_head *branch_head, *upstream_head;
 	git_commit *branch_commit;
@@ -406,13 +421,13 @@ static void test_copy_note(
 		"refs/notes/test", git_commit_id(branch_commit),
 		"This is a commit note.", 0));
 
-	cl_git_pass(git_rebase(repo, branch_head, upstream_head, NULL, signature, opts));
+	cl_git_pass(git_rebase_init(&rebase, repo, branch_head, upstream_head, NULL, signature, opts));
 
-	cl_git_pass(git_rebase_next(&rebase_operation, repo, &checkout_opts));
-	cl_git_pass(git_rebase_commit(&commit_id, repo, NULL, signature,
+	cl_git_pass(git_rebase_next(&rebase_operation, rebase, &checkout_opts));
+	cl_git_pass(git_rebase_commit(&commit_id, rebase, NULL, signature,
 		NULL, NULL));
 
-	cl_git_pass(git_rebase_finish(repo, signature, opts));
+	cl_git_pass(git_rebase_finish(rebase, signature, opts));
 
 	cl_assert_equal_i(GIT_REPOSITORY_STATE_NONE, git_repository_state(repo));
 
@@ -431,6 +446,7 @@ static void test_copy_note(
 	git_merge_head_free(upstream_head);
 	git_reference_free(branch_ref);
 	git_reference_free(upstream_ref);
+	git_rebase_free(rebase);
 }
 
 void test_rebase_merge__copy_notes_off_by_default(void)

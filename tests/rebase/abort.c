@@ -20,14 +20,16 @@ void test_rebase_abort__cleanup(void)
 
 static void test_abort(git_merge_head *branch, git_merge_head *onto)
 {
+	git_rebase *rebase;
 	git_reference *head_ref, *branch_ref = NULL;
 	git_signature *signature;
 	git_status_list *statuslist;
 	git_reflog *reflog;
 	const git_reflog_entry *reflog_entry;
 
+	cl_git_pass(git_rebase_open(&rebase, repo));
 	cl_git_pass(git_signature_new(&signature, "Rebaser", "rebaser@example.com", 1404157834, -400));
-	cl_git_pass(git_rebase_abort(repo, signature));
+	cl_git_pass(git_rebase_abort(rebase, signature));
 
 	cl_assert_equal_i(GIT_REPOSITORY_STATE_NONE, git_repository_state(repo));
 
@@ -58,10 +60,12 @@ static void test_abort(git_merge_head *branch, git_merge_head *onto)
 	git_reference_free(head_ref);
 	git_reference_free(branch_ref);
 	git_signature_free(signature);
+	git_rebase_free(rebase);
 }
 
 void test_rebase_abort__merge(void)
 {
+	git_rebase *rebase;
 	git_reference *branch_ref, *onto_ref;
 	git_signature *signature;
 	git_merge_head *branch_head, *onto_head;
@@ -74,7 +78,7 @@ void test_rebase_abort__merge(void)
 
 	cl_git_pass(git_signature_new(&signature, "Rebaser", "rebaser@example.com", 1404157834, -400));
 
-	cl_git_pass(git_rebase(repo, branch_head, NULL, onto_head, signature, NULL));
+	cl_git_pass(git_rebase_init(&rebase, repo, branch_head, NULL, onto_head, signature, NULL));
 	cl_assert_equal_i(GIT_REPOSITORY_STATE_REBASE_MERGE, git_repository_state(repo));
 
 	test_abort(branch_head, onto_head);
@@ -86,10 +90,12 @@ void test_rebase_abort__merge(void)
 
 	git_reference_free(branch_ref);
 	git_reference_free(onto_ref);
+	git_rebase_free(rebase);
 }
 
 void test_rebase_abort__detached_head(void)
 {
+	git_rebase *rebase;
 	git_oid branch_id;
 	git_reference *onto_ref;
 	git_signature *signature;
@@ -103,7 +109,7 @@ void test_rebase_abort__detached_head(void)
 
 	cl_git_pass(git_signature_new(&signature, "Rebaser", "rebaser@example.com", 1404157834, -400));
 
-	cl_git_pass(git_rebase(repo, branch_head, NULL, onto_head, signature, NULL));
+	cl_git_pass(git_rebase_init(&rebase, repo, branch_head, NULL, onto_head, signature, NULL));
 	cl_assert_equal_i(GIT_REPOSITORY_STATE_REBASE_MERGE, git_repository_state(repo));
 
 	test_abort(branch_head, onto_head);
@@ -114,10 +120,12 @@ void test_rebase_abort__detached_head(void)
 	git_merge_head_free(onto_head);
 
 	git_reference_free(onto_ref);
+	git_rebase_free(rebase);
 }
 
 void test_rebase_abort__old_style_head_file(void)
 {
+	git_rebase *rebase;
 	git_reference *branch_ref, *onto_ref;
 	git_signature *signature;
 	git_merge_head *branch_head, *onto_head;
@@ -130,7 +138,7 @@ void test_rebase_abort__old_style_head_file(void)
 
 	cl_git_pass(git_signature_new(&signature, "Rebaser", "rebaser@example.com", 1404157834, -400));
 
-	cl_git_pass(git_rebase(repo, branch_head, NULL, onto_head, signature, NULL));
+	cl_git_pass(git_rebase_init(&rebase, repo, branch_head, NULL, onto_head, signature, NULL));
 	cl_assert_equal_i(GIT_REPOSITORY_STATE_REBASE_MERGE, git_repository_state(repo));
 
 	p_rename("rebase-merge/.git/rebase-merge/orig-head",
@@ -145,4 +153,5 @@ void test_rebase_abort__old_style_head_file(void)
 
 	git_reference_free(branch_ref);
 	git_reference_free(onto_ref);
+	git_rebase_free(rebase);
 }

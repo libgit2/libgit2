@@ -183,6 +183,8 @@ typedef struct git_merge_result git_merge_result;
 /** Representation of a status collection */
 typedef struct git_status_list git_status_list;
 
+/** Representation of a rebase */
+typedef struct git_rebase git_rebase;
 
 /** Basic type of any Git reference. */
 typedef enum {
