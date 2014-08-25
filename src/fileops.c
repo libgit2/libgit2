@@ -355,8 +355,9 @@ int git_futils_mkdir(
 		if (p_mkdir(make_path.ptr, mode) < 0) {
 			int tmp_errno = giterr_system_last();
 
-			/* ignore error if directory already exists */
-			if (p_stat(make_path.ptr, &st) < 0 || !S_ISDIR(st.st_mode)) {
+			/* ignore error if not at end or if directory already exists */
+			if (lastch == '\0' &&
+				(p_stat(make_path.ptr, &st) < 0 || !S_ISDIR(st.st_mode))) {
 				giterr_system_set(tmp_errno);
 				giterr_set(GITERR_OS, "Failed to make directory '%s'", make_path.ptr);
 				goto done;
@@ -374,7 +375,8 @@ int git_futils_mkdir(
 		if (((flags & GIT_MKDIR_CHMOD_PATH) != 0 ||
 			 (lastch == '\0' && (flags & GIT_MKDIR_CHMOD) != 0)) &&
 			st.st_mode != mode &&
-			(error = p_chmod(make_path.ptr, mode)) < 0) {
+			(error = p_chmod(make_path.ptr, mode)) < 0 &&
+			lastch == '\0') {
 			giterr_set(GITERR_OS, "Failed to set permissions on '%s'", make_path.ptr);
 			goto done;
 		}
