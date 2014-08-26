@@ -156,13 +156,13 @@ GIT_EXTERN(int) git_rebase_open(git_rebase **out, git_repository *repo);
  * working directory will be updated with the changes.  If there are conflicts,
  * you will need to address those before committing the changes.
  *
- * @param out The rebase operation that is to be performed next
+ * @param out Pointer to store the rebase operation that is to be performed next
  * @param repo The rebase in progress
  * @param checkout_opts Options to specify how the patch should be checked out
  * @return Zero on success; -1 on failure.
  */
 GIT_EXTERN(int) git_rebase_next(
-	git_rebase_operation *operation,
+	git_rebase_operation **operation,
 	git_rebase *rebase,
 	git_checkout_options *checkout_opts);
 

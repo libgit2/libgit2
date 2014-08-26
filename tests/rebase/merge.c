@@ -27,7 +27,7 @@ void test_rebase_merge__next(void)
 	git_rebase *rebase;
 	git_reference *branch_ref, *upstream_ref;
 	git_merge_head *branch_head, *upstream_head;
-	git_rebase_operation rebase_operation;
+	git_rebase_operation *rebase_operation;
 	git_checkout_options checkout_opts = GIT_CHECKOUT_OPTIONS_INIT;
 	git_status_list *status_list;
 	const git_status_entry *status_entry;
@@ -47,8 +47,8 @@ void test_rebase_merge__next(void)
 
 	git_oid_fromstr(&pick_id, "da9c51a23d02d931a486f45ad18cda05cf5d2b94");
 
-	cl_assert_equal_i(GIT_REBASE_OPERATION_PICK, rebase_operation.type);
-	cl_assert_equal_oid(&pick_id, &rebase_operation.id);
+	cl_assert_equal_i(GIT_REBASE_OPERATION_PICK, rebase_operation->type);
+	cl_assert_equal_oid(&pick_id, &rebase_operation->id);
 	cl_assert_equal_file("da9c51a23d02d931a486f45ad18cda05cf5d2b94\n", 41, "rebase/.git/rebase-merge/current");
 	cl_assert_equal_file("1\n", 2, "rebase/.git/rebase-merge/msgnum");
 
@@ -74,7 +74,7 @@ void test_rebase_merge__next_with_conflicts(void)
 	git_rebase *rebase;
 	git_reference *branch_ref, *upstream_ref;
 	git_merge_head *branch_head, *upstream_head;
-	git_rebase_operation rebase_operation;
+	git_rebase_operation *rebase_operation;
 	git_checkout_options checkout_opts = GIT_CHECKOUT_OPTIONS_INIT;
 	git_status_list *status_list;
 	const git_status_entry *status_entry;
@@ -114,8 +114,8 @@ void test_rebase_merge__next_with_conflicts(void)
 
 	git_oid_fromstr(&pick_id, "33f915f9e4dbd9f4b24430e48731a59b45b15500");
 
-	cl_assert_equal_i(GIT_REBASE_OPERATION_PICK, rebase_operation.type);
-	cl_assert_equal_oid(&pick_id, &rebase_operation.id);
+	cl_assert_equal_i(GIT_REBASE_OPERATION_PICK, rebase_operation->type);
+	cl_assert_equal_oid(&pick_id, &rebase_operation->id);
 	cl_assert_equal_file("33f915f9e4dbd9f4b24430e48731a59b45b15500\n", 41, "rebase/.git/rebase-merge/current");
 	cl_assert_equal_file("1\n", 2, "rebase/.git/rebase-merge/msgnum");
 
@@ -140,7 +140,7 @@ void test_rebase_merge__next_stops_with_iterover(void)
 	git_rebase *rebase;
 	git_reference *branch_ref, *upstream_ref;
 	git_merge_head *branch_head, *upstream_head;
-	git_rebase_operation rebase_operation;
+	git_rebase_operation *rebase_operation;
 	git_checkout_options checkout_opts = GIT_CHECKOUT_OPTIONS_INIT;
 	git_oid commit_id;
 	int error;
@@ -193,7 +193,7 @@ void test_rebase_merge__commit(void)
 	git_rebase *rebase;
 	git_reference *branch_ref, *upstream_ref;
 	git_merge_head *branch_head, *upstream_head;
-	git_rebase_operation rebase_operation;
+	git_rebase_operation *rebase_operation;
 	git_checkout_options checkout_opts = GIT_CHECKOUT_OPTIONS_INIT;
 	git_oid commit_id, tree_id, parent_id;
 	git_signature *author;
@@ -255,7 +255,7 @@ void test_rebase_merge__commit_updates_rewritten(void)
 	git_rebase *rebase;
 	git_reference *branch_ref, *upstream_ref;
 	git_merge_head *branch_head, *upstream_head;
-	git_rebase_operation rebase_operation;
+	git_rebase_operation *rebase_operation;
 	git_checkout_options checkout_opts = GIT_CHECKOUT_OPTIONS_INIT;
 	git_oid commit_id;
 
@@ -294,7 +294,7 @@ void test_rebase_merge__commit_drops_already_applied(void)
 	git_rebase *rebase;
 	git_reference *branch_ref, *upstream_ref;
 	git_merge_head *branch_head, *upstream_head;
-	git_rebase_operation rebase_operation;
+	git_rebase_operation *rebase_operation;
 	git_checkout_options checkout_opts = GIT_CHECKOUT_OPTIONS_INIT;
 	git_oid commit_id;
 	int error;
@@ -335,7 +335,7 @@ void test_rebase_merge__finish(void)
 	git_rebase *rebase;
 	git_reference *branch_ref, *upstream_ref, *head_ref;
 	git_merge_head *branch_head, *upstream_head;
-	git_rebase_operation rebase_operation;
+	git_rebase_operation *rebase_operation;
 	git_checkout_options checkout_opts = GIT_CHECKOUT_OPTIONS_INIT;
 	git_oid commit_id;
 	git_reflog *reflog;
@@ -398,7 +398,7 @@ static void test_copy_note(
 	git_reference *branch_ref, *upstream_ref;
 	git_merge_head *branch_head, *upstream_head;
 	git_commit *branch_commit;
-	git_rebase_operation rebase_operation;
+	git_rebase_operation *rebase_operation;
 	git_checkout_options checkout_opts = GIT_CHECKOUT_OPTIONS_INIT;
 	git_oid note_id, commit_id;
 	git_note *note = NULL;
