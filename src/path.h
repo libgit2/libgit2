@@ -128,6 +128,14 @@ GIT_INLINE(int) git_path_is_relative(const char *p)
 	return (p[0] == '.' && (p[1] == '/' || (p[1] == '.' && p[2] == '/')));
 }
 
+/**
+ * Check if string is at end of path segment (i.e. looking at '/' or '\0')
+ */
+GIT_INLINE(int) git_path_at_end_of_segment(const char *p)
+{
+	return !*p || *p == '/';
+}
+
 extern int git__percent_decode(git_buf *decoded_out, const char *input);
 
 /**

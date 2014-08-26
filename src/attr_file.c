@@ -378,6 +378,18 @@ bool git_attr_fnmatch__match(
 		return (matchval != FNM_NOMATCH);
 	}
 
+	/* if path is a directory prefix of a negated pattern, then match */
+	if ((match->flags & GIT_ATTR_FNMATCH_NEGATIVE) && path->is_dir) {
+		size_t pathlen = strlen(path->path);
+		bool prefixed = (pathlen <= match->length) &&
+			((match->flags & GIT_ATTR_FNMATCH_ICASE) ?
+			 !strncasecmp(match->pattern, path->path, pathlen) :
+			 !strncmp(match->pattern, path->path, pathlen));
+
+		if (prefixed && git_path_at_end_of_segment(&match->pattern[pathlen]))
+			return true;
+	}
+
 	return (p_fnmatch(match->pattern, filename, flags) != FNM_NOMATCH);
 }
 
@@ -522,7 +534,8 @@ int git_attr_fnmatch__parse(
 	}
 
 	if (*pattern == '!' && (spec->flags & GIT_ATTR_FNMATCH_ALLOWNEG) != 0) {
-		spec->flags = spec->flags | GIT_ATTR_FNMATCH_NEGATIVE;
+		spec->flags = spec->flags |
+			GIT_ATTR_FNMATCH_NEGATIVE | GIT_ATTR_FNMATCH_LEADINGDIR;
 		pattern++;
 	}
 
