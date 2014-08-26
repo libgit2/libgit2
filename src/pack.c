@@ -744,7 +744,7 @@ cleanup:
 		git__free(obj->data);
 
 	if (elem)
-		*obj_offset = elem->offset;
+		*obj_offset = curpos;
 
 	git_array_clear(chain);
 	return error;
