@@ -12,6 +12,8 @@
 #define BB_REPO_URL_WITH_PASS "https://libgit3:libgit3@bitbucket.org/libgit2/testgitrepository.git"
 #define BB_REPO_URL_WITH_WRONG_PASS "https://libgit3:wrong@bitbucket.org/libgit2/testgitrepository.git"
 
+#define SSH_REPO_URL "ssh://github.com/libgit2/TestGitRepository"
+
 static git_repository *g_repo;
 static git_clone_options g_options;
 
@@ -240,8 +242,41 @@ void test_online_clone__cred_callback_failure_return_code_is_tunnelled(void)
 
 	g_options.remote_callbacks.credentials = cred_failure_cb;
 
-	/* TODO: this should expect -172. */
-	cl_git_fail_with(git_clone(&g_repo, remote_url, "./foo", &g_options), -1);
+	cl_git_fail_with(-172, git_clone(&g_repo, remote_url, "./foo", &g_options));
+}
+
+static int cred_count_calls_cb(git_cred **cred, const char *url, const char *user,
+			       unsigned int allowed_types, void *data)
+{
+	size_t *counter = (size_t *) data;
+
+	GIT_UNUSED(url); GIT_UNUSED(user); GIT_UNUSED(allowed_types);
+
+	if (allowed_types == GIT_CREDTYPE_USERNAME)
+		return git_cred_username_new(cred, "foo");
+
+	(*counter)++;
+
+	if (*counter == 3)
+		return GIT_EUSER;
+
+	return git_cred_userpass_plaintext_new(cred, "foo", "bar");
+}
+
+void test_online_clone__cred_callback_called_again_on_auth_failure(void)
+{
+	const char *remote_url = cl_getenv("GITTEST_REMOTE_URL");
+	const char *remote_user = cl_getenv("GITTEST_REMOTE_USER");
+	size_t counter = 0;
+
+	if (!remote_url || !remote_user)
+		clar__skip();
+
+	g_options.remote_callbacks.credentials = cred_count_calls_cb;
+	g_options.remote_callbacks.payload = &counter;
+
+	cl_git_fail_with(GIT_EUSER, git_clone(&g_repo, remote_url, "./foo", &g_options));
+	cl_assert_equal_i(3, counter);
 }
 
 void test_online_clone__credentials(void)
@@ -307,7 +342,48 @@ void test_online_clone__can_cancel(void)
 }
 
 
+static int check_ssh_auth_methods(git_cred **cred, const char *url, const char *username_from_url,
+				  unsigned int allowed_types, void *data)
+{
+	int *with_user = (int *) data;
+	GIT_UNUSED(cred); GIT_UNUSED(url); GIT_UNUSED(username_from_url); GIT_UNUSED(data);
 
+	if (!*with_user)
+		cl_assert_equal_i(GIT_CREDTYPE_USERNAME, allowed_types);
+	else
+		cl_assert(!(allowed_types & GIT_CREDTYPE_USERNAME));
 
+	return GIT_EUSER;
+}
 
+void test_online_clone__ssh_auth_methods(void)
+{
+	int with_user;
 
+	g_options.remote_callbacks.credentials = check_ssh_auth_methods;
+	g_options.remote_callbacks.payload = &with_user;
+
+	with_user = 0;
+	cl_git_fail_with(GIT_EUSER,
+		git_clone(&g_repo, SSH_REPO_URL, "./foo", &g_options));
+
+	with_user = 1;
+	cl_git_fail_with(GIT_EUSER,
+		git_clone(&g_repo, "ssh://git@github.com/libgit2/TestGitRepository", "./foo", &g_options));
+}
+
+static int cred_foo_bar(git_cred **cred, const char *url, const char *username_from_url,
+				  unsigned int allowed_types, void *data)
+
+{
+	GIT_UNUSED(url); GIT_UNUSED(username_from_url); GIT_UNUSED(allowed_types); GIT_UNUSED(data);
+
+	return git_cred_userpass_plaintext_new(cred, "foo", "bar");
+}
+
+void test_online_clone__ssh_cannot_change_username(void)
+{
+	g_options.remote_callbacks.credentials = cred_foo_bar;
+
+	cl_git_fail(git_clone(&g_repo, "ssh://git@github.com/libgit2/TestGitRepository", "./foo", &g_options));
+}
