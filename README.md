@@ -168,6 +168,8 @@ Here are the bindings to libgit2 that are currently available:
     * hgit2 <https://github.com/fpco/gitlib>
 * Java
     * Jagged <https://github.com/ethomson/jagged>
+* Julia
+    * LibGit2.jl <https://github.com/jakebolewski/LibGit2.jl>
 * Lua
     * luagit2 <https://github.com/libgit2/luagit2>
 * .NET
