@@ -463,3 +463,9 @@ void test_online_clone__ssh_cannot_change_username(void)
 
 	cl_git_fail(git_clone(&g_repo, "ssh://git@github.com/libgit2/TestGitRepository", "./foo", &g_options));
 }
+
+void test_online_clone__url_with_no_path_returns_EINVALIDSPEC(void)
+{
+	cl_git_fail_with(git_clone(&g_repo, "http://github.com", "./foo", &g_options),
+		GIT_EINVALIDSPEC);
+}
