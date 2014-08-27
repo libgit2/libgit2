@@ -15,6 +15,12 @@ v0.21 + 1
 * The git_transport structure definition has moved into the sys/transport.h
   file.
 
+* The ssh transport supports asking the remote host for accepted
+  credential types as well as multiple challeges using a single
+  connection. This requires to know which username you want to connect
+  as, so this introduces the USERNAME credential type which the ssh
+  transport will use to ask for the username.
+
 * The git_transport_register function no longer takes a priority and takes
   a URL scheme name (eg "http") instead of a prefix like "http://"
 
