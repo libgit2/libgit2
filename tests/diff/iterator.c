@@ -380,7 +380,7 @@ static void index_iterator_test(
 		if (expected_oids != NULL) {
 			git_oid oid;
 			cl_git_pass(git_oid_fromstr(&oid, expected_oids[count]));
-			cl_assert_equal_i(git_oid_cmp(&oid, &entry->id), 0);
+			cl_assert_equal_oid(&oid, &entry->id);
 		}
 
 		count++;

@@ -48,7 +48,7 @@ void check_blame_hunk_index(git_repository *repo, git_blame *blame, int idx,
 				actual, expected);
 	}
 	cl_assert_equal_s(actual, expected);
-	cl_assert_equal_i(git_oid_cmp(&hunk->final_commit_id, &hunk->orig_commit_id), 0);
+	cl_assert_equal_oid(&hunk->final_commit_id, &hunk->orig_commit_id);
 
 
 	if (strcmp(hunk->orig_path, orig_path)) {

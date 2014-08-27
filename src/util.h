@@ -419,7 +419,7 @@ GIT_INLINE(double) git__timer(void)
        scaling_factor = (double)info.numer / (double)info.denom;
    }
 
-   return (double)time * scaling_factor / 1.0E-9;
+   return (double)time * scaling_factor / 1.0E9;
 }
 
 #else
@@ -431,13 +431,13 @@ GIT_INLINE(double) git__timer(void)
 	struct timespec tp;
 
 	if (clock_gettime(CLOCK_MONOTONIC, &tp) == 0) {
-		return (double) tp.tv_sec + (double) tp.tv_nsec / 1E-9;
+		return (double) tp.tv_sec + (double) tp.tv_nsec / 1.0E9;
 	} else {
 		/* Fall back to using gettimeofday */
 		struct timeval tv;
 		struct timezone tz;
 		gettimeofday(&tv, &tz);
-		return (double)tv.tv_sec + (double)tv.tv_usec / 1E-6;
+		return (double)tv.tv_sec + (double)tv.tv_usec / 1.0E6;
 	}
 }
 

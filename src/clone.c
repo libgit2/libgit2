@@ -24,6 +24,8 @@
 #include "repository.h"
 #include "odb.h"
 
+static int clone_local_into(git_repository *repo, git_remote *remote, const git_checkout_options *co_opts, const char *branch, int link, const git_signature *signature);
+
 static int create_branch(
 	git_reference **branch,
 	git_repository *repo,
@@ -229,6 +231,29 @@ cleanup:
 	return retcode;
 }
 
+static int default_repository_create(git_repository **out, const char *path, int bare, void *payload)
+{
+	GIT_UNUSED(payload);
+
+	return git_repository_init(out, path, bare);
+}
+
+static int default_remote_create(
+		git_remote **out,
+		git_repository *repo,
+		const char *name,
+		const char *url,
+		void *payload)
+{
+	int error;
+	git_remote_callbacks *callbacks = payload;
+
+	if ((error = git_remote_create(out, repo, name, url)) < 0)
+		return error;
+
+	return git_remote_set_callbacks(*out, callbacks);
+}
+
 /*
  * submodules?
  */
@@ -241,8 +266,9 @@ static int create_and_configure_origin(
 {
 	int error;
 	git_remote *origin = NULL;
-	const char *name;
 	char buf[GIT_PATH_MAX];
+	git_remote_create_cb remote_create = options->remote_cb;
+	void *payload = options->remote_cb_payload;
 
 	/* If the path exists and is a dir, the url should be the absolute path */
 	if (git_path_root(url) < 0 && git_path_exists(url) && git_path_isdir(url)) {
@@ -252,14 +278,12 @@ static int create_and_configure_origin(
 		url = buf;
 	}
 
-	name = options->remote_name ? options->remote_name : "origin";
-	if ((error = git_remote_create(&origin, repo, name, url)) < 0)
-		goto on_error;
+	if (!remote_create) {
+		remote_create = default_remote_create;
+		payload = (void *)&options->remote_callbacks;
+	}
 
-	if (options->ignore_cert_errors)
-		git_remote_check_cert(origin, 0);
-
-	if ((error = git_remote_set_callbacks(origin, &options->remote_callbacks)) < 0)
+	if ((error = remote_create(&origin, repo, "origin", url, payload)) < 0)
 		goto on_error;
 
 	if ((error = git_remote_save(origin)) < 0)
@@ -307,7 +331,7 @@ static int checkout_branch(git_repository *repo, git_remote *remote, const git_c
 	return error;
 }
 
-int git_clone_into(git_repository *repo, git_remote *_remote, const git_checkout_options *co_opts, const char *branch, const git_signature *signature)
+static int clone_into(git_repository *repo, git_remote *_remote, const git_checkout_options *co_opts, const char *branch, const git_signature *signature)
 {
 	int error;
 	git_buf reflog_message = GIT_BUF_INIT;
@@ -347,27 +371,30 @@ cleanup:
 	return error;
 }
 
-int git_clone__should_clone_local(const char *url, git_clone_local_t local)
+int git_clone__should_clone_local(const char *url_or_path, git_clone_local_t local)
 {
-	const char *path;
-	int is_url;
+	git_buf fromurl = GIT_BUF_INIT;
+	const char *path = url_or_path;
+	bool is_url, is_local;
 
 	if (local == GIT_CLONE_NO_LOCAL)
-		return false;
+		return 0;
 
-	is_url = !git__prefixcmp(url, "file://");
+	if ((is_url = git_path_is_local_file_url(url_or_path)) != 0) {
+		if (git_path_fromurl(&fromurl, url_or_path) < 0) {
+			is_local = -1;
+			goto done;
+		}
 
-	if (is_url && local != GIT_CLONE_LOCAL && local != GIT_CLONE_LOCAL_NO_LINKS )
-		return false;
+		path = fromurl.ptr;
+	}
 
-	path = url;
-	if (is_url)
-		path = url + strlen("file://");
+	is_local = (!is_url || local != GIT_CLONE_LOCAL_AUTO) &&
+		git_path_isdir(path);
 
-	if ((git_path_exists(path) && git_path_isdir(path)) && local != GIT_CLONE_NO_LOCAL)
-		return true;
-
-	return false;
+done:
+	git_buf_free(&fromurl);
+	return is_local;
 }
 
 int git_clone(
@@ -381,6 +408,7 @@ int git_clone(
 	git_remote *origin;
 	git_clone_options options = GIT_CLONE_OPTIONS_INIT;
 	uint32_t rmdir_flags = GIT_RMDIR_REMOVE_FILES;
+	git_repository_create_cb repository_cb;
 
 	assert(out && url && local_path);
 
@@ -400,20 +428,28 @@ int git_clone(
 	if (git_path_exists(local_path))
 		rmdir_flags |= GIT_RMDIR_SKIP_ROOT;
 
-	if ((error = git_repository_init(&repo, local_path, options.bare)) < 0)
+	if (options.repository_cb)
+		repository_cb = options.repository_cb;
+	else
+		repository_cb = default_repository_create;
+
+	if ((error = repository_cb(&repo, local_path, options.bare, options.repository_cb_payload)) < 0)
 		return error;
 
 	if (!(error = create_and_configure_origin(&origin, repo, url, &options))) {
-		if (git_clone__should_clone_local(url, options.local)) {
-			int link = options.local != GIT_CLONE_LOCAL_NO_LINKS;
-			error = git_clone_local_into(
+		int clone_local = git_clone__should_clone_local(url, options.local);
+		int link = options.local != GIT_CLONE_LOCAL_NO_LINKS;
+
+		if (clone_local == 1)
+			error = clone_local_into(
 				repo, origin, &options.checkout_opts,
 				options.checkout_branch, link, options.signature);
-		} else {
-			error = git_clone_into(
+		else if (clone_local == 0)
+			error = clone_into(
 				repo, origin, &options.checkout_opts,
 				options.checkout_branch, options.signature);
-		}
+		else
+			error = -1;
 
 		git_remote_free(origin);
 	}
@@ -452,6 +488,9 @@ static const char *repository_base(git_repository *repo)
 static bool can_link(const char *src, const char *dst, int link)
 {
 #ifdef GIT_WIN32
+	GIT_UNUSED(src);
+	GIT_UNUSED(dst);
+	GIT_UNUSED(link);
 	return false;
 #else
 
@@ -470,7 +509,7 @@ static bool can_link(const char *src, const char *dst, int link)
 #endif
 }
 
-int git_clone_local_into(git_repository *repo, git_remote *remote, const git_checkout_options *co_opts, const char *branch, int link, const git_signature *signature)
+static int clone_local_into(git_repository *repo, git_remote *remote, const git_checkout_options *co_opts, const char *branch, int link, const git_signature *signature)
 {
 	int error, flags;
 	git_repository *src;

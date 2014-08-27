@@ -9,6 +9,7 @@
 #include "netops.h"
 #include "buffer.h"
 #include "push.h"
+#include "git2/sys/transport.h"
 
 #define GIT_SIDE_BAND_DATA     1
 #define GIT_SIDE_BAND_PROGRESS 2

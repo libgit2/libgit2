@@ -788,3 +788,98 @@ void test_status_ignore__negative_ignores_inside_ignores(void)
 	refute_is_ignored("top/mid/btm/tracked");
 	refute_is_ignored("top/mid/btm/untracked");
 }
+
+void test_status_ignore__negative_ignores_in_slash_star(void)
+{
+	git_status_options status_opts = GIT_STATUS_OPTIONS_INIT;
+	git_status_list *list;
+	int found_look_ma = 0, found_what_about = 0;
+	size_t i;
+	static const char *test_files[] = {
+		"empty_standard_repo/bin/look-ma.txt",
+		"empty_standard_repo/bin/what-about-me.txt",
+		NULL
+	};
+
+	make_test_data("empty_standard_repo", test_files);
+	cl_git_mkfile(
+		"empty_standard_repo/.gitignore",
+		"bin/*\n"
+		"!bin/w*\n");
+
+	assert_is_ignored("bin/look-ma.txt");
+	refute_is_ignored("bin/what-about-me.txt");
+
+	status_opts.flags = GIT_STATUS_OPT_DEFAULTS;
+	cl_git_pass(git_status_list_new(&list, g_repo, &status_opts));
+	for (i = 0; i < git_status_list_entrycount(list); i++) {
+		const git_status_entry *entry = git_status_byindex(list, i);
+
+		if (!strcmp("bin/look-ma.txt", entry->index_to_workdir->new_file.path))
+			found_look_ma = 1;
+
+		if (!strcmp("bin/what-about-me.txt", entry->index_to_workdir->new_file.path))
+			found_what_about = 1;
+	}
+	git_status_list_free(list);
+
+	cl_assert(found_look_ma);
+	cl_assert(found_what_about);
+}
+
+void test_status_ignore__negative_ignores_without_trailing_slash_inside_ignores(void)
+{
+	git_status_options status_opts = GIT_STATUS_OPTIONS_INIT;
+	git_status_list *list;
+	int found_parent_file = 0, found_parent_child1_file = 0, found_parent_child2_file = 0;
+	size_t i;
+	static const char *test_files[] = {
+		"empty_standard_repo/parent/file.txt",
+		"empty_standard_repo/parent/force.txt",
+		"empty_standard_repo/parent/child1/file.txt",
+		"empty_standard_repo/parent/child2/file.txt",
+		NULL
+	};
+
+	make_test_data("empty_standard_repo", test_files);
+	cl_git_mkfile(
+		"empty_standard_repo/.gitignore",
+		"parent/*\n"
+		"!parent/force.txt\n"
+		"!parent/child1\n"
+		"!parent/child2/\n");
+
+	add_one_to_index("parent/force.txt");
+
+	assert_is_ignored("parent/file.txt");
+	refute_is_ignored("parent/force.txt");
+	refute_is_ignored("parent/child1/file.txt");
+	refute_is_ignored("parent/child2/file.txt");
+
+	status_opts.flags = GIT_STATUS_OPT_DEFAULTS;
+	cl_git_pass(git_status_list_new(&list, g_repo, &status_opts));
+	for (i = 0; i < git_status_list_entrycount(list); i++) {
+		const git_status_entry *entry = git_status_byindex(list, i);
+
+		if (!entry->index_to_workdir)
+			continue;
+
+		if (!strcmp("parent/file.txt", entry->index_to_workdir->new_file.path))
+			found_parent_file = 1;
+
+		if (!strcmp("parent/force.txt", entry->index_to_workdir->new_file.path))
+			found_parent_file = 1;
+
+		if (!strcmp("parent/child1/file.txt", entry->index_to_workdir->new_file.path))
+			found_parent_child1_file = 1;
+
+		if (!strcmp("parent/child2/file.txt", entry->index_to_workdir->new_file.path))
+			found_parent_child2_file = 1;
+	}
+	git_status_list_free(list);
+
+	cl_assert(found_parent_file);
+	cl_assert(found_parent_child1_file);
+	cl_assert(found_parent_child2_file);
+}
+

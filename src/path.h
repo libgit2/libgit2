@@ -8,6 +8,7 @@
 #define INCLUDE_path_h__
 
 #include "common.h"
+#include "posix.h"
 #include "buffer.h"
 #include "vector.h"
 
@@ -125,6 +126,14 @@ GIT_INLINE(void) git_path_mkposix(char *path)
 GIT_INLINE(int) git_path_is_relative(const char *p)
 {
 	return (p[0] == '.' && (p[1] == '/' || (p[1] == '.' && p[2] == '/')));
+}
+
+/**
+ * Check if string is at end of path segment (i.e. looking at '/' or '\0')
+ */
+GIT_INLINE(int) git_path_at_end_of_segment(const char *p)
+{
+	return !*p || *p == '/';
 }
 
 extern int git__percent_decode(git_buf *decoded_out, const char *input);
@@ -439,6 +448,7 @@ extern int git_path_iconv(git_path_iconv_t *ic, char **in, size_t *inlen);
 extern bool git_path_does_fs_decompose_unicode(const char *root);
 
 /* Used for paths to repositories on the filesystem */
+extern bool git_path_is_local_file_url(const char *file_url);
 extern int git_path_from_url_or_path(git_buf *local_path_out, const char *url_or_path);
 
 #endif

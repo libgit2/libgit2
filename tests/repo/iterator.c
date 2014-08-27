@@ -960,3 +960,35 @@ void test_repo_iterator__fs_preserves_error(void)
 
 	git_iterator_free(i);
 }
+
+void test_repo_iterator__skips_fifos_and_such(void)
+{
+#ifndef GIT_WIN32
+	git_iterator *i;
+	const git_index_entry *e;
+
+	g_repo = cl_git_sandbox_init("empty_standard_repo");
+
+	cl_must_pass(p_mkdir("empty_standard_repo/dir", 0777));
+	cl_git_mkfile("empty_standard_repo/file", "not me");
+
+	cl_assert(!mkfifo("empty_standard_repo/fifo", 0777));
+	cl_assert(!access("empty_standard_repo/fifo", F_OK));
+
+	cl_git_pass(git_iterator_for_filesystem(
+		&i, "empty_standard_repo", GIT_ITERATOR_INCLUDE_TREES |
+		GIT_ITERATOR_DONT_AUTOEXPAND, NULL, NULL));
+
+	cl_git_pass(git_iterator_advance(&e, i)); /* .git */
+	cl_assert(S_ISDIR(e->mode));
+	cl_git_pass(git_iterator_advance(&e, i)); /* dir */
+	cl_assert(S_ISDIR(e->mode));
+	/* skips fifo */
+	cl_git_pass(git_iterator_advance(&e, i)); /* file */
+	cl_assert(S_ISREG(e->mode));
+
+	cl_assert_equal_i(GIT_ITEROVER, git_iterator_advance(&e, i));
+
+	git_iterator_free(i);
+#endif
+}

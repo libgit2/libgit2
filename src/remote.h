@@ -9,6 +9,7 @@
 
 #include "git2/remote.h"
 #include "git2/transport.h"
+#include "git2/sys/transport.h"
 
 #include "refspec.h"
 #include "vector.h"
@@ -22,6 +23,8 @@ struct git_remote {
 	git_vector refs;
 	git_vector refspecs;
 	git_vector active_refspecs;
+	git_transport_cb transport_cb;
+	void *transport_cb_payload;
 	git_transport *transport;
 	git_repository *repo;
 	git_remote_callbacks callbacks;

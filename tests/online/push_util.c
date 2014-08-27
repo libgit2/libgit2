@@ -110,9 +110,8 @@ failed:
 	git_buf_puts(&msg, "Expected and actual refs differ:\nEXPECTED:\n");
 
 	for(i = 0; i < expected_refs_len; i++) {
-		cl_assert(oid_str = git_oid_allocfmt(expected_refs[i].oid));
+		oid_str = git_oid_tostr_s(expected_refs[i].oid);
 		cl_git_pass(git_buf_printf(&msg, "%s = %s\n", expected_refs[i].name, oid_str));
-		git__free(oid_str);
 	}
 
 	git_buf_puts(&msg, "\nACTUAL:\n");
@@ -121,9 +120,8 @@ failed:
 		if (master_present && !strcmp(actual->name, "refs/heads/master"))
 			continue;
 
-		cl_assert(oid_str = git_oid_allocfmt(&actual->oid));
+		oid_str = git_oid_tostr_s(&actual->oid);
 		cl_git_pass(git_buf_printf(&msg, "%s = %s\n", actual->name, oid_str));
-		git__free(oid_str);
 	}
 
 	cl_fail(git_buf_cstr(&msg));

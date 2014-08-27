@@ -168,6 +168,8 @@ Here are the bindings to libgit2 that are currently available:
     * hgit2 <https://github.com/fpco/gitlib>
 * Java
     * Jagged <https://github.com/ethomson/jagged>
+* Julia
+    * LibGit2.jl <https://github.com/jakebolewski/LibGit2.jl>
 * Lua
     * luagit2 <https://github.com/libgit2/luagit2>
 * .NET
@@ -182,7 +184,7 @@ Here are the bindings to libgit2 that are currently available:
 * Parrot Virtual Machine
     * parrot-libgit2 <https://github.com/letolabs/parrot-libgit2>
 * Perl
-    * Git-Raw <https://github.com/ghedo/p5-Git-Raw>
+    * Git-Raw <https://github.com/jacquesg/p5-Git-Raw>
 * PHP
     * php-git <https://github.com/libgit2/php-git>
 * PowerShell
