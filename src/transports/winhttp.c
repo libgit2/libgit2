@@ -35,7 +35,8 @@
 #define WINHTTP_OPTION_PEERDIST_EXTENSION_STATE	109
 #define CACHED_POST_BODY_BUF_SIZE	4096
 #define UUID_LENGTH_CCH	32
-
+#define TIMEOUT_INFINITE -1
+#define DEFAULT_CONNECT_TIMEOUT 60000
 #ifndef WINHTTP_IGNORE_REQUEST_TOTAL_LENGTH
 #define WINHTTP_IGNORE_REQUEST_TOTAL_LENGTH 0
 #endif
@@ -212,6 +213,8 @@ static int winhttp_stream_connect(winhttp_stream *s)
 	BOOL peerdist = FALSE;
 	int error = -1;
 	unsigned long disable_redirects = WINHTTP_DISABLE_REDIRECTS;
+	int default_timeout = TIMEOUT_INFINITE;
+	int default_connect_timeout = DEFAULT_CONNECT_TIMEOUT;
 
 	/* Prepare URL */
 	git_buf_printf(&buf, "%s%s", t->connection_data.path, s->service_url);
@@ -237,6 +240,11 @@ static int winhttp_stream_connect(winhttp_stream *s)
 
 	if (!s->request) {
 		giterr_set(GITERR_OS, "Failed to open request");
+		goto on_error;
+	}
+
+	if (!WinHttpSetTimeouts(s->request, default_timeout, default_connect_timeout, default_timeout, default_timeout)) {
+		giterr_set(GITERR_OS, "Failed to set timeouts for WinHTTP");
 		goto on_error;
 	}
 
@@ -467,6 +475,8 @@ static int winhttp_connect(
 	int32_t port;
 	const char *default_port = "80";
 	int error = -1;
+	int default_timeout = TIMEOUT_INFINITE;
+	int default_connect_timeout = DEFAULT_CONNECT_TIMEOUT;
 
 	/* Prepare port */
 	if (git__strtol32(&port, t->connection_data.port, NULL, 10) < 0)
@@ -491,6 +501,12 @@ static int winhttp_connect(
 		goto on_error;
 	}
 
+	if (!WinHttpSetTimeouts(t->session, default_timeout, default_connect_timeout, default_timeout, default_timeout)) {
+		giterr_set(GITERR_OS, "Failed to set timeouts for WinHTTP");
+		goto on_error;
+	}
+
+	
 	/* Establish connection */
 	t->connection = WinHttpConnect(
 		t->session,
