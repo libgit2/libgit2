@@ -356,6 +356,9 @@ static int cred_cb(git_cred **cred, const char *url, const char *user_from_url,
 
 	GIT_UNUSED(url); GIT_UNUSED(user_from_url); GIT_UNUSED(payload);
 
+	if (allowed_types & GIT_CREDTYPE_USERNAME)
+		return git_cred_username_new(cred, remote_user);
+
 	if (allowed_types & GIT_CREDTYPE_SSH_KEY)
 		return git_cred_ssh_key_new(cred, remote_user, pubkey, privkey, passphrase);
 
