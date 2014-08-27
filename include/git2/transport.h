@@ -36,6 +36,14 @@ typedef enum {
 
 	/* git_cred_ssh_interactive */
 	GIT_CREDTYPE_SSH_INTERACTIVE = (1u << 4),
+
+	/**
+	 * Username-only information
+	 *
+	 * If the SSH transport does not know which username to use,
+	 * it will ask via this credential type.
+	 */
+	GIT_CREDTYPE_USERNAME = (1u << 5),
 } git_credtype_t;
 
 /* The base structure for all credential types */
@@ -102,6 +110,12 @@ typedef struct git_cred_ssh_custom {
 
 /** A key for NTLM/Kerberos "default" credentials */
 typedef struct git_cred git_cred_default;
+
+/** Username-only credential information */
+typedef struct git_cred_username {
+	git_cred parent;
+	char username[1];
+} git_cred_username;
 
 /**
  * Check whether a credential object contains username information.
@@ -203,6 +217,14 @@ GIT_EXTERN(int) git_cred_ssh_custom_new(
  * @return 0 for success or an error code for failure
  */
 GIT_EXTERN(int) git_cred_default_new(git_cred **out);
+
+/**
+ * Create a credential to specify a username.
+ *
+ * This is used with ssh authentication to query for the username if
+ * none is specified in the url.
+ */
+GIT_EXTERN(int) git_cred_username_new(git_cred **cred, const char *username);
 
 /**
  * Signature of a function which acquires a credential object.

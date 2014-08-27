@@ -50,6 +50,15 @@ static int cred_acquire_cb(
 	GIT_UNUSED(user_from_url);
 	GIT_UNUSED(payload);
 
+	if (GIT_CREDTYPE_USERNAME & allowed_types) {
+		if (!_remote_user) {
+			printf("GITTEST_REMOTE_USER must be set\n");
+			return -1;
+		}
+
+		return git_cred_username_new(cred, _remote_user);
+	}
+
 	if (GIT_CREDTYPE_DEFAULT & allowed_types) {
 		if (!_remote_default) {
 			printf("GITTEST_REMOTE_DEFAULT must be set to use NTLM/Negotiate credentials\n");
