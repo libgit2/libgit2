@@ -1132,9 +1132,9 @@ static int winhttp_action(
 	int ret = -1;
 
 	if (!t->connection)
-		if (gitno_connection_data_from_url(&t->connection_data, url, NULL) < 0 ||
-			 winhttp_connect(t, url) < 0)
-			return -1;
+		if ((ret = gitno_connection_data_from_url(&t->connection_data, url, NULL)) < 0 ||
+			 (ret = winhttp_connect(t, url)) < 0)
+			return ret;
 
 	if (winhttp_stream_alloc(t, &s) < 0)
 		return -1;
