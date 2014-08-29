@@ -478,7 +478,7 @@ static int fail_certificate_check(git_cert_t type, void *data, size_t len, int v
 	GIT_UNUSED(valid);
 	GIT_UNUSED(payload);
 
-	return 0;
+	return GIT_ECERTIFICATE;
 }
 
 void test_online_clone__certificate_invalid(void)
@@ -500,7 +500,7 @@ static int succeed_certificate_check(git_cert_t type, void *data, size_t len, in
 	GIT_UNUSED(valid);
 	GIT_UNUSED(payload);
 
-	return 1;
+	return 0;
 }
 
 void test_online_clone__certificate_valid(void)

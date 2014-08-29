@@ -476,7 +476,6 @@ static int _git_ssh_setup_conn(
 	if (t->owner->certificate_check_cb != NULL) {
 		git_cert_hostkey cert;
 		const char *key;
-		int allow;
 		size_t certlen;
 
 		cert.type = LIBSSH2_HOSTKEY_HASH_SHA1;
@@ -498,16 +497,14 @@ static int _git_ssh_setup_conn(
 		}
 
 		/* We don't currently trust any hostkeys */
-                allow = t->owner->certificate_check_cb(GIT_CERT_HOSTKEY_LIBSSH2, &cert, certlen, 0, t->owner->message_cb_payload);
-                if (allow < 0) {
-                        error = allow;
-                        goto on_error;
-                }
+		giterr_clear();
+                error = t->owner->certificate_check_cb(GIT_CERT_HOSTKEY_LIBSSH2, &cert, certlen, 0, t->owner->message_cb_payload);
+		if (error < 0) {
+			if (!giterr_last())
+				giterr_set(GITERR_NET, "user cancelled hostkey check");
 
-                if (!allow) {
-                        error = GIT_ECERTIFICATE;
-                        goto on_error;
-                }
+			goto on_error;
+		}
         }
 
 	/* we need the username to ask for auth methods */

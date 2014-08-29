@@ -555,7 +555,7 @@ static int http_connect(http_subtransport *t)
 #ifdef GIT_SSL
 	if ((!error || error == GIT_ECERTIFICATE) && t->owner->certificate_check_cb != NULL) {
                 X509 *cert = SSL_get_peer_certificate(t->socket.ssl.ssl);
-                int allow, len, is_valid;
+                int len, is_valid;
 		unsigned char *guard, *encoded_cert;
 
 		/* Retrieve the length of the certificate first */
@@ -578,17 +578,17 @@ static int http_connect(http_subtransport *t)
 			return -1;
 		}
 
+		giterr_clear();
 		is_valid = error != GIT_ECERTIFICATE;
-                allow = t->owner->certificate_check_cb(GIT_CERT_X509, encoded_cert, len, is_valid, t->owner->message_cb_payload);
+                error = t->owner->certificate_check_cb(GIT_CERT_X509, encoded_cert, len, is_valid, t->owner->message_cb_payload);
 		git__free(encoded_cert);
 
-                if (allow < 0) {
-                        error = allow;
-                } else if (!allow) {
-                        error = GIT_ECERTIFICATE;
-                } else {
-                        error = 0;
-                }
+		if (error < 0) {
+			if (!giterr_last())
+				giterr_set(GITERR_NET, "user cancelled certificate check");
+
+			return error;
+		}
 	}
 #endif
 	if (error < 0)
