@@ -467,54 +467,10 @@ static int _git_ssh_setup_conn(
 		GITERR_CHECK_ALLOC(port);
 	}
 
-	/* we need the username to ask for auth methods */
-	if (!user) {
-		if ((error = request_creds(&cred, t, NULL, GIT_CREDTYPE_USERNAME)) < 0)
-			goto on_error;
-
-		user = git__strdup(((git_cred_username *) cred)->username);
-		cred->free(cred);
-		cred = NULL;
-		if (!user)
-			goto on_error;
-	} else if (user && pass) {
-		if ((error = git_cred_userpass_plaintext_new(&cred, user, pass)) < 0)
-			goto on_error;
-	}
-
 	if ((error = gitno_connect(&s->socket, host, port, 0)) < 0)
 		goto on_error;
 
 	if ((error = _git_ssh_session_create(&session, s->socket)) < 0)
-		goto on_error;
-
-	if ((error = list_auth_methods(&auth_methods, session, user)) < 0)
-		goto on_error;
-
-	error = GIT_EAUTH;
-	/* if we already have something to try */
-	if (cred && auth_methods & cred->credtype)
-		error = _git_ssh_authenticate_session(session, cred);
-
-	while (error == GIT_EAUTH) {
-		if (cred) {
-			cred->free(cred);
-			cred = NULL;
-		}
-
-		if ((error = request_creds(&cred, t, user, auth_methods)) < 0)
-			goto on_error;
-
-		if (strcmp(user, git_cred__username(cred))) {
-			giterr_set(GITERR_SSH, "username does not match previous request");
-			error = -1;
-			goto on_error;
-		}
-
-		error = _git_ssh_authenticate_session(session, cred);
-	}
-
-	if (error < 0)
 		goto on_error;
 
 	if (t->owner->certificate_check_cb != NULL) {
@@ -554,11 +510,54 @@ static int _git_ssh_setup_conn(
                 }
         }
 
+	/* we need the username to ask for auth methods */
+	if (!user) {
+		if ((error = request_creds(&cred, t, NULL, GIT_CREDTYPE_USERNAME)) < 0)
+			goto on_error;
+
+		user = git__strdup(((git_cred_username *) cred)->username);
+		cred->free(cred);
+		cred = NULL;
+		if (!user)
+			goto on_error;
+	} else if (user && pass) {
+		if ((error = git_cred_userpass_plaintext_new(&cred, user, pass)) < 0)
+			goto on_error;
+	}
+
+	if ((error = list_auth_methods(&auth_methods, session, user)) < 0)
+		goto on_error;
+
+	error = GIT_EAUTH;
+	/* if we already have something to try */
+	if (cred && auth_methods & cred->credtype)
+		error = _git_ssh_authenticate_session(session, cred);
+
+	while (error == GIT_EAUTH) {
+		if (cred) {
+			cred->free(cred);
+			cred = NULL;
+		}
+
+		if ((error = request_creds(&cred, t, user, auth_methods)) < 0)
+			goto on_error;
+
+		if (strcmp(user, git_cred__username(cred))) {
+			giterr_set(GITERR_SSH, "username does not match previous request");
+			error = -1;
+			goto on_error;
+		}
+
+		error = _git_ssh_authenticate_session(session, cred);
+	}
+
+	if (error < 0)
+		goto on_error;
+
 	channel = libssh2_channel_open_session(session);
 	if (!channel) {
 		error = -1;
 		ssh_error(session, "Failed to open SSH channel");
-                error = -1;
 		goto on_error;
 	}
 
@@ -634,10 +633,8 @@ static int ssh_receivepack_ls(
 {
 	const char *cmd = t->cmd_receivepack ? t->cmd_receivepack : cmd_receivepack;
 
-	if (_git_ssh_setup_conn(t, url, cmd, stream) < 0)
-		return -1;
 
-	return 0;
+	return _git_ssh_setup_conn(t, url, cmd, stream);
 }
 
 static int ssh_receivepack(
