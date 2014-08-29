@@ -553,9 +553,9 @@ static int http_connect(http_subtransport *t)
 	error = gitno_connect(&t->socket, t->connection_data.host, t->connection_data.port, flags);
 
 #ifdef GIT_SSL
-	if (error == GIT_ECERTIFICATE && t->owner->certificate_check_cb != NULL) {
+	if ((!error || error == GIT_ECERTIFICATE) && t->owner->certificate_check_cb != NULL) {
                 X509 *cert = SSL_get_peer_certificate(t->socket.ssl.ssl);
-                int allow, len;
+                int allow, len, is_valid;
 		unsigned char *guard, *encoded_cert;
 
 		/* Retrieve the length of the certificate first */
@@ -578,7 +578,8 @@ static int http_connect(http_subtransport *t)
 			return -1;
 		}
 
-                allow = t->owner->certificate_check_cb(GIT_CERT_X509, encoded_cert, len, t->owner->message_cb_payload);
+		is_valid = error != GIT_ECERTIFICATE;
+                allow = t->owner->certificate_check_cb(GIT_CERT_X509, encoded_cert, len, is_valid, t->owner->message_cb_payload);
 		git__free(encoded_cert);
 
                 if (allow < 0) {
@@ -589,10 +590,9 @@ static int http_connect(http_subtransport *t)
                         error = 0;
                 }
 	}
-#else
+#endif
 	if (error < 0)
 		return error;
-#endif
 
 	t->connected = 1;
 	return 0;
@@ -653,6 +653,7 @@ replay:
 
 	while (!*bytes_read && !t->parse_finished) {
 		size_t data_offset;
+		int error;
 
 		/*
 		 * Make the parse_buffer think it's as full of data as
@@ -699,8 +700,8 @@ replay:
 		if (PARSE_ERROR_REPLAY == t->parse_error) {
 			s->sent_request = 0;
 
-			if (http_connect(t) < 0)
-				return -1;
+			if ((error = http_connect(t)) < 0)
+				return error;
 
 			goto replay;
 		}
@@ -952,8 +953,8 @@ static int http_action(
 		 (ret = gitno_connection_data_from_url(&t->connection_data, url, NULL)) < 0)
 		return ret;
 
-	if (http_connect(t) < 0)
-		return -1;
+	if ((ret = http_connect(t)) < 0)
+		return ret;
 
 	switch (action) {
 	case GIT_SERVICE_UPLOADPACK_LS:
