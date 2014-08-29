@@ -16,6 +16,8 @@
 #include "remote.h"
 #include "repository.h"
 
+#include <wincrypt.h>
+#pragma comment(lib, "crypt32")
 #include <winhttp.h>
 #pragma comment(lib, "winhttp")
 
@@ -203,6 +205,31 @@ static int fallback_cred_acquire_cb(
 	return error;
 }
 
+static int certificate_check(winhttp_stream *s, int valid)
+{
+	int error;
+	winhttp_subtransport *t = OWNING_SUBTRANSPORT(s);
+	PCERT_CONTEXT cert_ctx;
+	DWORD cert_ctx_size = sizeof(cert_ctx);
+
+	if (t->owner->certificate_check_cb == NULL)
+		return 0;
+
+	if (!WinHttpQueryOption(s->request, WINHTTP_OPTION_SERVER_CERT_CONTEXT, &cert_ctx, &cert_ctx_size)) {
+		giterr_set(GITERR_OS, "failed to get server certificate");
+		return -1;
+	}
+
+	giterr_clear();
+	error = t->owner->certificate_check_cb(GIT_CERT_X509, cert_ctx->pbCertEncoded, cert_ctx->cbCertEncoded, valid, t->owner->cred_acquire_payload);
+	CertFreeCertificateContext(cert_ctx);
+
+	if (error < 0 && !giterr_last())
+		giterr_set(GITERR_NET, "user cancelled certificate check");
+
+	return error;
+}
+
 static int winhttp_stream_connect(winhttp_stream *s)
 {
 	winhttp_subtransport *t = OWNING_SUBTRANSPORT(s);
@@ -384,6 +411,8 @@ static int winhttp_stream_connect(winhttp_stream *s)
 			goto on_error;
 	}
 
+	/* set up the certificate failure callback */
+
 	/* We've done everything up to calling WinHttpSendRequest. */
 
 	error = 0;
@@ -537,6 +566,7 @@ static int winhttp_stream_read(
 	winhttp_subtransport *t = OWNING_SUBTRANSPORT(s);
 	DWORD dw_bytes_read;
 	char replay_count = 0;
+	int error;
 
 replay:
 	/* Enforce a reasonable cap on the number of replays */
@@ -565,6 +595,9 @@ replay:
 
 			s->sent_request = 1;
 		}
+
+		if ((error = certificate_check(s, 1)) < 0)
+			return error;
 
 		if (s->chunked) {
 			assert(s->verb == post_verb);
@@ -815,6 +848,7 @@ static int winhttp_stream_write_single(
 	winhttp_stream *s = (winhttp_stream *)stream;
 	winhttp_subtransport *t = OWNING_SUBTRANSPORT(s);
 	DWORD bytes_written;
+	int error;
 
 	if (!s->request && winhttp_stream_connect(s) < 0)
 		return -1;
@@ -834,6 +868,9 @@ static int winhttp_stream_write_single(
 	}
 
 	s->sent_request = 1;
+
+	if ((error = certificate_check(s, 1)) < 0)
+		return error;
 
 	if (!WinHttpWriteData(s->request,
 			(LPCVOID)buffer,
@@ -954,6 +991,7 @@ static int winhttp_stream_write_chunked(
 {
 	winhttp_stream *s = (winhttp_stream *)stream;
 	winhttp_subtransport *t = OWNING_SUBTRANSPORT(s);
+	int error;
 
 	if (!s->request && winhttp_stream_connect(s) < 0)
 		return -1;
@@ -977,6 +1015,9 @@ static int winhttp_stream_write_chunked(
 
 		s->sent_request = 1;
 	}
+
+	if ((error = certificate_check(s, 1)) < 0)
+		return error;
 
 	if (len > CACHED_POST_BODY_BUF_SIZE) {
 		/* Flush, if necessary */

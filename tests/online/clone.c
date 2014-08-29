@@ -485,11 +485,13 @@ void test_online_clone__certificate_invalid(void)
 {
 	g_options.remote_callbacks.certificate_check = fail_certificate_check;
 
-	cl_git_fail_with(git_clone(&g_repo, "http://github.com/libgit2/TestGitRepository", "./foo", &g_options),
+	cl_git_fail_with(git_clone(&g_repo, "https://github.com/libgit2/TestGitRepository", "./foo", &g_options),
 		GIT_ECERTIFICATE);
 
+#ifdef GIT_SSH
 	cl_git_fail_with(git_clone(&g_repo, "ssh://github.com/libgit2/TestGitRepository", "./foo", &g_options),
 		GIT_ECERTIFICATE);
+#endif
 }
 
 static int succeed_certificate_check(git_cert_t type, void *data, size_t len, int valid, void *payload)
@@ -507,5 +509,5 @@ void test_online_clone__certificate_valid(void)
 {
 	g_options.remote_callbacks.certificate_check = succeed_certificate_check;
 
-	cl_git_pass(git_clone(&g_repo, "http://github.com/libgit2/TestGitRepository", "./foo", &g_options));
+	cl_git_pass(git_clone(&g_repo, "https://github.com/libgit2/TestGitRepository", "./foo", &g_options));
 }
