@@ -51,3 +51,6 @@ v0.21 + 1
 
 * Add support for refspecs with the asterisk in the middle of a
   pattern.
+
+* Introduce git_merge_bases() and the git_oidarray type to expose all
+  merge bases between two commits.
