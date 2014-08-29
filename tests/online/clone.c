@@ -469,3 +469,38 @@ void test_online_clone__url_with_no_path_returns_EINVALIDSPEC(void)
 	cl_git_fail_with(git_clone(&g_repo, "http://github.com", "./foo", &g_options),
 		GIT_EINVALIDSPEC);
 }
+
+static int fail_certificate_check(git_cert_t type, void *data, size_t len, void *payload)
+{
+	GIT_UNUSED(type);
+	GIT_UNUSED(data);
+	GIT_UNUSED(len);
+	GIT_UNUSED(payload);
+
+	return GIT_EUSER;
+}
+
+void test_online_clone__certificate_invalid(void)
+{
+	g_options.remote_callbacks.certificate_check = fail_certificate_check;
+
+	cl_git_fail_with(git_clone(&g_repo, "http://github.com/libgit2/TestGitRepository", "./foo", &g_options),
+		GIT_EUSER);
+}
+
+static int succeed_certificate_check(git_cert_t type, void *data, size_t len, void *payload)
+{
+	GIT_UNUSED(type);
+	GIT_UNUSED(data);
+	GIT_UNUSED(len);
+	GIT_UNUSED(payload);
+
+	return 0;
+}
+
+void test_online_clone__certificate_valid(void)
+{
+	g_options.remote_callbacks.certificate_check = succeed_certificate_check;
+
+	cl_git_pass(git_clone(&g_repo, "http://github.com/libgit2/TestGitRepository", "./foo", &g_options));
+}
