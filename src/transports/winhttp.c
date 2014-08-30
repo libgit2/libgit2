@@ -558,7 +558,7 @@ on_error:
 	return error;
 }
 
-static int send_request(winhttp_stream *s, size_t len, int ignore_length)
+static int do_send_request(winhttp_stream *s, size_t len, int ignore_length)
 {
 	int request_failed = 0, cert_valid = 1, error = 0;
 
@@ -567,25 +567,61 @@ static int send_request(winhttp_stream *s, size_t len, int ignore_length)
 			WINHTTP_NO_ADDITIONAL_HEADERS, 0,
 			WINHTTP_NO_REQUEST_DATA, 0,
 			WINHTTP_IGNORE_REQUEST_TOTAL_LENGTH, 0)) {
-			request_failed = 1;
+			return -1;
 		}
 	} else {
 		if (!WinHttpSendRequest(s->request,
 			WINHTTP_NO_ADDITIONAL_HEADERS, 0,
 			WINHTTP_NO_REQUEST_DATA, 0,
 			len, 0)) {
-			request_failed = 1;
+			return -1;
 		}
 	}
 
-	if (request_failed && GetLastError() == ERROR_WINHTTP_SECURE_FAILURE)
-		cert_valid = 0;
+	return 0;
+}
+
+static int send_request(winhttp_stream *s, size_t len, int ignore_length)
+{
+	int request_failed = 0, cert_valid = 1, error = 0;
+	DWORD ignore_flags;
+
+	if ((error = do_send_request(s, len, ignore_length)) < 0)
+		request_failed = 1;
+
+	if (request_failed) {
+		if (GetLastError() != ERROR_WINHTTP_SECURE_FAILURE) {
+			giterr_set(GITERR_OS, "failed to send request");
+			return -1;
+		} else {
+			cert_valid = 0;
+		}
+	}
 
 	giterr_clear();
 	if ((error = certificate_check(s, cert_valid)) < 0) {
 		if (!giterr_last())
-			giterr_set(GITERR_OS, "failed to send request");
+			giterr_set(GITERR_OS, "user cancelled certificate check");
+
+		return error;
 	}
+
+	/* if neither the request nor the certificate check returned errors, we're done */
+	if (!request_failed)
+		return 0;
+
+	ignore_flags =
+		SECURITY_FLAG_IGNORE_CERT_CN_INVALID |
+		SECURITY_FLAG_IGNORE_CERT_DATE_INVALID |
+		SECURITY_FLAG_IGNORE_UNKNOWN_CA;
+	
+	if (!WinHttpSetOption(s->request, WINHTTP_OPTION_SECURITY_FLAGS, &ignore_flags, sizeof(ignore_flags))) {
+		giterr_set(GITERR_OS, "failed to set security options");
+		return -1;
+	}
+
+	if ((error = do_send_request(s, len, ignore_length)) < 0)
+		giterr_set(GITERR_OS, "failed to send request");
 
 	return error;
 }
