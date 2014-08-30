@@ -212,6 +212,10 @@ static int certificate_check(winhttp_stream *s, int valid)
 	PCERT_CONTEXT cert_ctx;
 	DWORD cert_ctx_size = sizeof(cert_ctx);
 
+	/* If there is no override, we should fail if WinHTTP doesn't think it's fine */
+	if (t->owner->certificate_check_cb == NULL && !valid)
+		return GIT_ECERTIFICATE;
+
 	if (t->owner->certificate_check_cb == NULL || !t->connection_data.use_ssl)
 		return 0;
 
@@ -411,8 +415,6 @@ static int winhttp_stream_connect(winhttp_stream *s)
 			goto on_error;
 	}
 
-	/* set up the certificate failure callback */
-
 	/* We've done everything up to calling WinHttpSendRequest. */
 
 	error = 0;
@@ -556,6 +558,38 @@ on_error:
 	return error;
 }
 
+static int send_request(winhttp_stream *s, size_t len, int ignore_length)
+{
+	int request_failed = 0, cert_valid = 1, error = 0;
+
+	if (ignore_length) {
+		if (!WinHttpSendRequest(s->request,
+			WINHTTP_NO_ADDITIONAL_HEADERS, 0,
+			WINHTTP_NO_REQUEST_DATA, 0,
+			WINHTTP_IGNORE_REQUEST_TOTAL_LENGTH, 0)) {
+			request_failed = 1;
+		}
+	} else {
+		if (!WinHttpSendRequest(s->request,
+			WINHTTP_NO_ADDITIONAL_HEADERS, 0,
+			WINHTTP_NO_REQUEST_DATA, 0,
+			len, 0)) {
+			request_failed = 1;
+		}
+	}
+
+	if (request_failed && GetLastError() == ERROR_WINHTTP_SECURE_FAILURE)
+		cert_valid = 0;
+
+	giterr_clear();
+	if ((error = certificate_check(s, cert_valid)) < 0) {
+		if (!giterr_last())
+			giterr_set(GITERR_OS, "failed to send request");
+	}
+
+	return error;
+}
+
 static int winhttp_stream_read(
 	git_smart_subtransport_stream *stream,
 	char *buffer,
@@ -583,21 +617,15 @@ replay:
 		DWORD status_code, status_code_length, content_type_length, bytes_written;
 		char expected_content_type_8[MAX_CONTENT_TYPE_LEN];
 		wchar_t expected_content_type[MAX_CONTENT_TYPE_LEN], content_type[MAX_CONTENT_TYPE_LEN];
+		int request_failed = 0, cert_valid = 1;
 
 		if (!s->sent_request) {
-			if (!WinHttpSendRequest(s->request,
-				WINHTTP_NO_ADDITIONAL_HEADERS, 0,
-				WINHTTP_NO_REQUEST_DATA, 0,
-				s->post_body_len, 0)) {
-				giterr_set(GITERR_OS, "Failed to send request");
-				return -1;
-			}
+
+			if ((error = send_request(s, s->post_body_len, 0)) < 0)
+				return error;
 
 			s->sent_request = 1;
 		}
-
-		if ((error = certificate_check(s, 1)) < 0)
-			return error;
 
 		if (s->chunked) {
 			assert(s->verb == post_verb);
@@ -859,18 +887,10 @@ static int winhttp_stream_write_single(
 		return -1;
 	}
 
-	if (!WinHttpSendRequest(s->request,
-			WINHTTP_NO_ADDITIONAL_HEADERS, 0,
-			WINHTTP_NO_REQUEST_DATA, 0,
-			(DWORD)len, 0)) {
-		giterr_set(GITERR_OS, "Failed to send request");
-		return -1;
-	}
+	if ((error = send_request(s, len, 0)) < 0)
+		return error;
 
 	s->sent_request = 1;
-
-	if ((error = certificate_check(s, 1)) < 0)
-		return error;
 
 	if (!WinHttpWriteData(s->request,
 			(LPCVOID)buffer,
@@ -1005,19 +1025,11 @@ static int winhttp_stream_write_chunked(
 			return -1;
 		}
 
-		if (!WinHttpSendRequest(s->request,
-			WINHTTP_NO_ADDITIONAL_HEADERS, 0,
-			WINHTTP_NO_REQUEST_DATA, 0,
-			WINHTTP_IGNORE_REQUEST_TOTAL_LENGTH, 0)) {
-			giterr_set(GITERR_OS, "Failed to send request");
-			return -1;
-		}
+		if ((error = send_request(s, 0, 1)) < 0)
+			return error;
 
 		s->sent_request = 1;
 	}
-
-	if ((error = certificate_check(s, 1)) < 0)
-		return error;
 
 	if (len > CACHED_POST_BODY_BUF_SIZE) {
 		/* Flush, if necessary */
