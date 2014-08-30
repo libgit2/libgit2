@@ -212,7 +212,7 @@ static int certificate_check(winhttp_stream *s, int valid)
 	PCERT_CONTEXT cert_ctx;
 	DWORD cert_ctx_size = sizeof(cert_ctx);
 
-	if (t->owner->certificate_check_cb == NULL)
+	if (t->owner->certificate_check_cb == NULL || !t->connection_data.use_ssl)
 		return 0;
 
 	if (!WinHttpQueryOption(s->request, WINHTTP_OPTION_SERVER_CERT_CONTEXT, &cert_ctx, &cert_ctx_size)) {
