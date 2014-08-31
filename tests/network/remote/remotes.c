@@ -91,25 +91,30 @@ void test_network_remote_remotes__error_when_no_push_available(void)
 	git_remote_free(r);
 }
 
-void test_network_remote_remotes__parsing_ssh_remote(void)
-{
-	cl_assert( git_remote_valid_url("git@github.com:libgit2/libgit2.git") );
-}
-
-void test_network_remote_remotes__parsing_local_path_fails_if_path_not_found(void)
-{
-	cl_assert( !git_remote_valid_url("/home/git/repos/libgit2.git") );
-}
-
 void test_network_remote_remotes__supported_transport_methods_are_supported(void)
 {
-	cl_assert( git_remote_supported_url("git://github.com/libgit2/libgit2") );
+	cl_assert(git_remote_supported_url("git://github.com/libgit2/libgit2"));
+	cl_assert(git_remote_supported_url("http://github.com/libgit2/libgit2"));
+
+#ifdef GIT_SSH
+	cl_assert(git_remote_supported_url("git@github.com:libgit2/libgit2.git"));
+	cl_assert(git_remote_supported_url("ssh://git@github.com/libgit2/libgit2.git"));
+#endif
+
+#if defined(GIT_SSL) || defined(GIT_WINHTTP)
+	cl_assert(git_remote_supported_url("https://git@github.com/libgit2/libgit2.git"));
+#endif
 }
 
 void test_network_remote_remotes__unsupported_transport_methods_are_unsupported(void)
 {
 #ifndef GIT_SSH
-	cl_assert( !git_remote_supported_url("git@github.com:libgit2/libgit2.git") );
+	cl_assert(!git_remote_supported_url("git@github.com:libgit2/libgit2.git"));
+	cl_assert(!git_remote_supported_url("ssh://git@github.com/libgit2/libgit2.git"));
+#endif
+
+#if !defined(GIT_SSL) && !defined(GIT_WINHTTP)
+	cl_assert(!git_remote_supported_url("https://git@github.com/libgit2/libgit2.git"));
 #endif
 }
 

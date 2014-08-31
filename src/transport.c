@@ -212,24 +212,13 @@ done:
 	return error;
 }
 
-/* from remote.h */
-int git_remote_valid_url(const char *url)
-{
-	git_transport_cb fn;
-	void *param;
-
-	return !transport_find_fn(&fn, url, &param);
-}
-
 int git_remote_supported_url(const char* url)
 {
 	git_transport_cb fn;
 	void *param;
 
-	if (transport_find_fn(&fn, url, &param) < 0)
-		return 0;
-
-	return 1;
+	/* The only error we expect is ENOTFOUND */
+	return !transport_find_fn(&fn, url, &param);
 }
 
 int git_transport_init(git_transport *opts, unsigned int version)
