@@ -20,25 +20,16 @@ typedef struct transport_definition {
 
 static git_smart_subtransport_definition http_subtransport_definition = { git_smart_subtransport_http, 1 };
 static git_smart_subtransport_definition git_subtransport_definition = { git_smart_subtransport_git, 0 };
-#ifdef GIT_SSH
 static git_smart_subtransport_definition ssh_subtransport_definition = { git_smart_subtransport_ssh, 0 };
-#endif
 
 static transport_definition local_transport_definition = { "file://", git_transport_local, NULL };
-#ifdef GIT_SSH
-static transport_definition ssh_transport_definition = { "ssh://", git_transport_smart, &ssh_subtransport_definition };
-#else
-static transport_definition dummy_transport_definition = { NULL, git_transport_dummy, NULL };
-#endif
 
 static transport_definition transports[] = {
 	{ "git://",   git_transport_smart, &git_subtransport_definition },
 	{ "http://",  git_transport_smart, &http_subtransport_definition },
 	{ "https://", git_transport_smart, &http_subtransport_definition },
 	{ "file://",  git_transport_local, NULL },
-#ifdef GIT_SSH
 	{ "ssh://",   git_transport_smart, &ssh_subtransport_definition },
-#endif
 	{ NULL, 0, 0 }
 };
 
@@ -95,11 +86,6 @@ static int transport_find_fn(
 	if (!definition && strrchr(url, ':')) {
 		// re-search transports again with ssh:// as url so that we can find a third party ssh transport
 		definition = transport_find_by_url("ssh://");
-#ifndef GIT_SSH
-		if (!definition) {
-			definition = &dummy_transport_definition;
-		}
-#endif
 	}
 
 #ifndef GIT_WIN32
@@ -120,15 +106,6 @@ static int transport_find_fn(
 /**************
  * Public API *
  **************/
-
-int git_transport_dummy(git_transport **transport, git_remote *owner, void *param)
-{
-	GIT_UNUSED(transport);
-	GIT_UNUSED(owner);
-	GIT_UNUSED(param);
-	giterr_set(GITERR_NET, "This transport isn't implemented. Sorry");
-	return -1;
-}
 
 int git_transport_new(git_transport **out, git_remote *owner, const char *url)
 {
@@ -246,7 +223,7 @@ int git_remote_supported_url(const char* url)
 	if (transport_find_fn(&fn, url, &param) < 0)
 		return 0;
 
-	return fn != &git_transport_dummy;
+	return 1;
 }
 
 int git_transport_init(git_transport *opts, unsigned int version)
