@@ -254,7 +254,22 @@ typedef int (*git_transfer_progress_cb)(const git_transfer_progress *stats, void
 typedef int (*git_transport_message_cb)(const char *str, int len, void *payload);
 
 
-typedef enum git_cert_t git_cert_t;
+
+/**
+ * Type of host certificate structure that is passed to the check callback
+ */
+typedef enum git_cert_t {
+        /**
+         * The `data` argument to the callback will be a pointer to
+         * the DER-encoded data.
+         */
+	GIT_CERT_X509,
+        /**
+         * The `data` argument to the callback will be a pointer to a
+         * `git_cert_hostkey` structure.
+         */
+	GIT_CERT_HOSTKEY_LIBSSH2,
+} git_cert_t;
 
 /**
  * Callback for the user's custom certificate checks.
