@@ -236,7 +236,7 @@ static void action_create_tag(tag_state *state)
 	git_signature_free(tagger);
 }
 
-static void print_usage()
+static void print_usage(void)
 {
 	fprintf(stderr, "usage: see `git help tag`\n");
 	exit(1);
