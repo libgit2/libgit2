@@ -91,3 +91,18 @@ void test_network_remote_defaultbranch__detached_sharing_nonbranch_id(void)
 
 	git_repository_free(cloned_repo);
 }
+
+void test_network_remote_defaultbranch__unborn_HEAD_with_branches(void)
+{
+	git_reference *ref;
+	git_repository *cloned_repo;
+
+	cl_git_pass(git_reference_symbolic_create(&ref, g_repo_a, "HEAD", "refs/heads/i-dont-exist", 1, NULL, NULL));
+	git_reference_free(ref);
+
+	cl_git_pass(git_clone(&cloned_repo, git_repository_path(g_repo_a), "./semi-empty", NULL));
+
+	cl_assert(git_repository_head_unborn(cloned_repo));
+
+	git_repository_free(cloned_repo);
+}

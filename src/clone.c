@@ -138,23 +138,6 @@ static int update_head_to_new_branch(
 	return error;
 }
 
-/**
- * Check whether there are any branches among the listed
- * references. It's possible for a repository to have a long list of
- * references without us downloading any of them.
- */
-static bool remote_has_branches(const git_remote_head **refs, size_t len)
-{
-	size_t i;
-
-	for (i = 0; i < len; i++) {
-		if (!git__prefixcmp(refs[i]->name, GIT_REFS_HEADS_DIR))
-			return true;
-	}
-
-	return false;
-}
-
 static int update_head_to_remote(
 		git_repository *repo,
 		git_remote *remote,
@@ -172,8 +155,8 @@ static int update_head_to_remote(
 	if ((error = git_remote_ls(&refs, &refs_len, remote)) < 0)
 		return error;
 
-	/* Did we just clone an empty repository? */
-	if (!remote_has_branches(refs, refs_len))
+	/* We cloned an empty repository or one with an unborn HEAD */
+	if (refs_len == 0 || strcmp(refs[0]->name, GIT_HEAD_FILE))
 		return setup_tracking_config(
 			repo, "master", GIT_REMOTE_ORIGIN, GIT_REFS_HEADS_MASTER_FILE);
 
