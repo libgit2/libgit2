@@ -384,6 +384,9 @@ void test_online_clone__ssh_auth_methods(void)
 {
 	int with_user;
 
+#ifndef GIT_SSH
+	clar__skip();
+#endif
 	g_options.remote_callbacks.credentials = check_ssh_auth_methods;
 	g_options.remote_callbacks.payload = &with_user;
 
@@ -436,6 +439,9 @@ void test_online_clone__ssh_with_paths(void)
 	const char *remote_url = cl_getenv("GITTEST_REMOTE_URL");
 	const char *remote_user = cl_getenv("GITTEST_REMOTE_USER");
 
+#ifndef GIT_SSH
+	clar__skip();
+#endif
 	if (!remote_url || !remote_user || strncmp(remote_url, "ssh://", 5) != 0)
 		clar__skip();
 
@@ -459,6 +465,9 @@ static int cred_foo_bar(git_cred **cred, const char *url, const char *username_f
 
 void test_online_clone__ssh_cannot_change_username(void)
 {
+#ifndef GIT_SSH
+	clar__skip();
+#endif
 	g_options.remote_callbacks.credentials = cred_foo_bar;
 
 	cl_git_fail(git_clone(&g_repo, "ssh://git@github.com/libgit2/TestGitRepository", "./foo", &g_options));
