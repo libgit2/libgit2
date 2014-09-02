@@ -556,19 +556,8 @@ void test_network_remote_remotes__restricted_refspecs(void)
 {
 	git_clone_options opts = GIT_CLONE_OPTIONS_INIT;
 	git_repository *repo;
-	git_strarray refs;
-	size_t i, count = 0;
 
 	opts.remote_cb = remote_single_branch;
 
-	cl_git_pass(git_clone(&repo, "git://github.com/libgit2/TestGitRepository", "./restrict-refspec", &opts));
-	cl_git_pass(git_reference_list(&refs, repo));
-
-	for (i = 0; i < refs.count; i++) {
-		if (!git__prefixcmp(refs.strings[i], "refs/heads/"))
-			count++;
-	}
-	cl_assert_equal_i(1, count);
-
-	git_repository_free(repo);
+	cl_git_fail_with(GIT_EINVALIDSPEC, git_clone(&repo, "git://github.com/libgit2/TestGitRepository", "./restrict-refspec", &opts));
 }
