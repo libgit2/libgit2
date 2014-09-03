@@ -196,6 +196,8 @@ GIT_EXTERN(int) git_repository_init(
  *        looking the "template_path" from the options if set, or the
  *        `init.templatedir` global config if not, or falling back on
  *        "/usr/share/git-core/templates" if it exists.
+ * * GIT_REPOSITORY_INIT_RELATIVE_GITLINK - If an alternate workdir is
+ *        specified, use relative paths for the gitdir and core.worktree.
  */
 typedef enum {
 	GIT_REPOSITORY_INIT_BARE              = (1u << 0),
@@ -204,6 +206,7 @@ typedef enum {
 	GIT_REPOSITORY_INIT_MKDIR             = (1u << 3),
 	GIT_REPOSITORY_INIT_MKPATH            = (1u << 4),
 	GIT_REPOSITORY_INIT_EXTERNAL_TEMPLATE = (1u << 5),
+	GIT_REPOSITORY_INIT_RELATIVE_GITLINK  = (1u << 6),
 } git_repository_init_flag_t;
 
 /**

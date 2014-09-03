@@ -197,6 +197,17 @@ extern bool git_path_contains(git_buf *dir, const char *item);
 extern bool git_path_contains_dir(git_buf *parent, const char *subdir);
 
 /**
+ * Make the path relative to the given parent path.
+ *
+ * @param path The path to make relative
+ * @param parent The parent path to make path relative to
+ * @return 0 if path was made relative, GIT_ENOTFOUND
+ *         if there was not common root between the paths,
+ *         or <0.
+ */
+extern int git_path_make_relative(git_buf *path, const char *parent);
+
+/**
  * Check if the given path contains the given file.
  *
  * @param dir Directory path that might contain file
