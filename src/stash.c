@@ -634,7 +634,8 @@ int git_stash_drop(
 		entry = git_reflog_entry_byindex(reflog, 0);
 
 		git_reference_free(stash);
-		if ((error = git_reference_create(&stash, repo, GIT_REFS_STASH_FILE, &entry->oid_cur, 1, NULL, NULL) < 0))
+		error = git_reference_create(&stash, repo, GIT_REFS_STASH_FILE, &entry->oid_cur, 1, NULL, NULL);
+		if (error < 0)
 			goto cleanup;
 
 		/* We need to undo the writing that we just did */
