@@ -67,6 +67,11 @@ static void fetchhead_test_fetch(const char *fetchspec, const char *expected_fet
 void test_online_fetchhead__wildcard_spec(void)
 {
 	fetchhead_test_clone();
+	fetchhead_test_fetch(NULL, FETCH_HEAD_WILDCARD_DATA2);
+	cl_git_pass(git_tag_delete(g_repo, "annotated_tag"));
+	cl_git_pass(git_tag_delete(g_repo, "blob"));
+	cl_git_pass(git_tag_delete(g_repo, "commit_tree"));
+	cl_git_pass(git_tag_delete(g_repo, "nearly-dangling"));
 	fetchhead_test_fetch(NULL, FETCH_HEAD_WILDCARD_DATA);
 }
 
@@ -87,5 +92,12 @@ void test_online_fetchhead__no_merges(void)
 	cl_git_pass(git_config_delete_entry(config, "branch.master.merge"));
 	git_config_free(config);
 
+	fetchhead_test_fetch(NULL, FETCH_HEAD_NO_MERGE_DATA2);
+	cl_git_pass(git_tag_delete(g_repo, "annotated_tag"));
+	cl_git_pass(git_tag_delete(g_repo, "blob"));
+	cl_git_pass(git_tag_delete(g_repo, "commit_tree"));
+	cl_git_pass(git_tag_delete(g_repo, "nearly-dangling"));
 	fetchhead_test_fetch(NULL, FETCH_HEAD_NO_MERGE_DATA);
+	cl_git_pass(git_tag_delete(g_repo, "commit_tree"));
+	fetchhead_test_fetch(NULL, FETCH_HEAD_NO_MERGE_DATA3);
 }
