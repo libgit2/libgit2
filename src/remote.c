@@ -1065,15 +1065,19 @@ static int update_tips_for_spec(
 		if (autotag && !git_odb_exists(odb, &head->oid))
 			continue;
 
-		if (git_vector_insert(&update_heads, head) < 0)
+		if (!autotag && git_vector_insert(&update_heads, head) < 0)
 			goto on_error;
 
 		error = git_reference_name_to_id(&old, remote->repo, refname.ptr);
 		if (error < 0 && error != GIT_ENOTFOUND)
 			goto on_error;
 
-		if (error == GIT_ENOTFOUND)
+		if (error == GIT_ENOTFOUND) {
 			memset(&old, 0, GIT_OID_RAWSZ);
+
+			if (autotag && git_vector_insert(&update_heads, head) < 0)
+				goto on_error;
+		}
 
 		if (!git_oid__cmp(&old, &head->oid))
 			continue;
