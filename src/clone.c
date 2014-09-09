@@ -144,9 +144,9 @@ static int update_head_to_remote(
 		const git_signature *signature,
 		const char *reflog_message)
 {
-	int error = 0, found_branch = 0;
+	int error = 0;
 	size_t refs_len;
-	git_refspec dummy_spec, *refspec;
+	git_refspec *refspec;
 	const git_remote_head *remote_head, **refs;
 	const git_oid *remote_head_id;
 	git_buf remote_master_name = GIT_BUF_INIT;
@@ -155,28 +155,30 @@ static int update_head_to_remote(
 	if ((error = git_remote_ls(&refs, &refs_len, remote)) < 0)
 		return error;
 
-	/* Did we just clone an empty repository? */
-	if (refs_len == 0)
+	/* We cloned an empty repository or one with an unborn HEAD */
+	if (refs_len == 0 || strcmp(refs[0]->name, GIT_HEAD_FILE))
 		return setup_tracking_config(
 			repo, "master", GIT_REMOTE_ORIGIN, GIT_REFS_HEADS_MASTER_FILE);
 
-	error = git_remote_default_branch(&branch, remote);
-	if (error == GIT_ENOTFOUND) {
-		git_buf_puts(&branch, GIT_REFS_HEADS_MASTER_FILE);
-	} else {
-		found_branch = 1;
-	}
-
-	/* Get the remote's HEAD. This is always the first ref in the list. */
+	/* We know we have HEAD, let's see where it points */
 	remote_head = refs[0];
 	assert(remote_head);
 
 	remote_head_id = &remote_head->oid;
+
+	error = git_remote_default_branch(&branch, remote);
+	if (error == GIT_ENOTFOUND) {
+		error = git_repository_set_head_detached(
+			repo, remote_head_id, signature, reflog_message);
+		goto cleanup;
+	}
+
 	refspec = git_remote__matching_refspec(remote, git_buf_cstr(&branch));
 
 	if (refspec == NULL) {
-		memset(&dummy_spec, 0, sizeof(git_refspec));
-		refspec = &dummy_spec;
+		giterr_set(GITERR_NET, "the remote's default branch does not fit the refspec configuration");
+		error = GIT_EINVALIDSPEC;
+		goto cleanup;
 	}
 
 	/* Determine the remote tracking reference name from the local master */
@@ -184,21 +186,18 @@ static int update_head_to_remote(
 		&remote_master_name,
 		refspec,
 		git_buf_cstr(&branch))) < 0)
-		return error;
+		goto cleanup;
 
-	if (found_branch) {
-		error = update_head_to_new_branch(
-			repo,
-			remote_head_id,
-			git_buf_cstr(&branch),
-			signature, reflog_message);
-	} else {
-		error = git_repository_set_head_detached(
-			repo, remote_head_id, signature, reflog_message);
-	}
+	error = update_head_to_new_branch(
+		repo,
+		remote_head_id,
+		git_buf_cstr(&branch),
+		signature, reflog_message);
 
+cleanup:
 	git_buf_free(&remote_master_name);
 	git_buf_free(&branch);
+
 	return error;
 }
 

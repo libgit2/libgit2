@@ -41,7 +41,5 @@ export GITTEST_REMOTE_SSH_PASSPHRASE=""
 
 if [ -e ./libgit2_clar ]; then
     ./libgit2_clar -sonline::push -sonline::clone::cred_callback &&
-    rm -rf $HOME/_temp/test.git &&
-    git init --bare $HOME/_temp/test.git && # create an empty one
     ./libgit2_clar -sonline::clone::ssh_with_paths
 fi
