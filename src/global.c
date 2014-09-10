@@ -223,6 +223,9 @@ int init_error = 0;
 
 static void cb__free_status(void *st)
 {
+	git_global_st *state = (git_global_st *) st;
+	git__free(state->error_t.message);
+
 	git__free(st);
 }
 
