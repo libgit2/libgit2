@@ -411,14 +411,6 @@ GIT_EXTERN(int) git_remote_supported_url(const char* url);
 GIT_EXTERN(int) git_remote_list(git_strarray *out, git_repository *repo);
 
 /**
- * Choose whether to check the server's certificate (applies to HTTPS only)
- *
- * @param remote the remote to configure
- * @param check whether to check the server's certificate (defaults to yes)
- */
-GIT_EXTERN(void) git_remote_check_cert(git_remote *remote, int check);
-
-/**
  * Argument to the completion callback which tells it which operation
  * finished.
  */

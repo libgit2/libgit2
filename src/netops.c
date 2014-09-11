@@ -387,7 +387,7 @@ cert_fail_name:
 	return GIT_ECERTIFICATE;
 }
 
-static int ssl_setup(gitno_socket *socket, const char *host, int flags)
+static int ssl_setup(gitno_socket *socket, const char *host)
 {
 	int ret;
 
@@ -405,9 +405,6 @@ static int ssl_setup(gitno_socket *socket, const char *host, int flags)
 
 	if ((ret = SSL_connect(socket->ssl.ssl)) <= 0)
 		return ssl_set_error(&socket->ssl, ret);
-
-	if (GITNO_CONNECT_SSL_NO_CHECK_CERT & flags)
-		return 0;
 
 	return verify_server_cert(&socket->ssl, host);
 }
@@ -495,7 +492,7 @@ int gitno_connect(gitno_socket *s_out, const char *host, const char *port, int f
 
 #ifdef GIT_SSL
 	if ((flags & GITNO_CONNECT_SSL) &&
-	    (ret = ssl_setup(s_out, host, flags)) < 0)
+	    (ret = ssl_setup(s_out, host)) < 0)
 		return ret;
 #else
 	/* SSL is not supported */

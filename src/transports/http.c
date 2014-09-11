@@ -545,9 +545,6 @@ static int http_connect(http_subtransport *t)
 			return -1;
 
 		flags |= GITNO_CONNECT_SSL;
-
-		if (GIT_TRANSPORTFLAGS_NO_CHECK_CERT & tflags)
-			flags |= GITNO_CONNECT_SSL_NO_CHECK_CERT;
 	}
 
 	error = gitno_connect(&t->socket, t->connection_data.host, t->connection_data.port, flags);
