@@ -150,6 +150,33 @@ GIT_EXTERN(int) git_rebase_init(
 GIT_EXTERN(int) git_rebase_open(git_rebase **out, git_repository *repo);
 
 /**
+ * Gets the count of rebase operations that are to be applied.
+ *
+ * @param rebase The in-progress rebase
+ * @return The number of rebase operations in total
+ */
+GIT_EXTERN(size_t) git_rebase_operation_entrycount(git_rebase *rebase);
+
+/**
+ * Gets the index of the rebase operation that is currently being applied.
+ *
+ * @param rebase The in-progress rebase
+ * @return The index of the rebase operation currently being applied.
+ */
+GIT_EXTERN(size_t) git_rebase_operation_current(git_rebase *rebase);
+
+/**
+ * Gets the rebase operation specified by the given index.
+ *
+ * @param rebase The in-progress rebase
+ * @param idx The index of the rebase operation to retrieve
+ * @return The rebase operation or NULL if `idx` was out of bounds
+ */
+GIT_EXTERN(git_rebase_operation *) git_rebase_operation_byindex(
+	git_rebase *rebase,
+	size_t idx);
+
+/**
  * Performs the next rebase operation and returns the information about it.
  * If the operation is one that applies a patch (which is any operation except
  * GIT_REBASE_OPERATION_EXEC) then the patch will be applied and the index and

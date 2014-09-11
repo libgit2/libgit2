@@ -1087,6 +1087,27 @@ done:
 	return error;
 }
 
+size_t git_rebase_operation_entrycount(git_rebase *rebase)
+{
+	assert(rebase);
+
+	return git_array_size(rebase->operations);
+}
+
+size_t git_rebase_operation_current(git_rebase *rebase)
+{
+	assert(rebase);
+
+	return rebase->current;
+}
+
+git_rebase_operation *git_rebase_operation_byindex(git_rebase *rebase, size_t idx)
+{
+	assert(rebase);
+
+	return git_array_get(rebase->operations, idx);
+}
+
 void git_rebase_free(git_rebase *rebase)
 {
 	if (rebase == NULL)
