@@ -90,7 +90,7 @@ typedef struct {
 		 * The commit ID being cherry-picked.  This will be populated for
 		 * all operations except those of type `GIT_REBASE_OPERATION_EXEC`.
 		 */
-		git_oid id;
+		const git_oid id;
 
 		/**
 		 * The executable the user has requested be run.  This will only

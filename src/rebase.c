@@ -204,7 +204,7 @@ static int rebase_open_merge(git_rebase *rebase)
 		git_buf_clear(&cmt);
 
 		if ((error = git_buf_printf(&cmt, "cmt.%" PRIuZ, (i+1))) < 0 ||
-			(error = rebase_readoid(&operation->id, &buf, &state_path, cmt.ptr)) < 0)
+			(error = rebase_readoid((git_oid *)&operation->id, &buf, &state_path, cmt.ptr)) < 0)
 			goto done;
 	}
 
@@ -549,7 +549,7 @@ static int rebase_init_operations(
 
 		operation = git_array_alloc(rebase->operations);
 		operation->type = GIT_REBASE_OPERATION_PICK;
-		git_oid_cpy(&operation->id, &id);
+		git_oid_cpy((git_oid *)&operation->id, &id);
 	}
 
 	error = 0;
