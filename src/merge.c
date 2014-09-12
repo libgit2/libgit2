@@ -2351,6 +2351,16 @@ static int merge_check_workdir(size_t *conflicts, git_repository *repo, git_inde
 
 	*conflicts = 0;
 
+	/* We need to have merged at least 1 file for the possibility to exist to
+	 * have conflicts with the workdir. Passing 0 as the pathspec count paramter
+	 * will consider all files in the working directory, that is, we may detect
+	 * a conflict if there were untracked files in the workdir prior to starting
+	 * the merge. This typically happens when cherry-picking a commmit whose
+	 * changes have already been applied.
+	 */
+	if (merged_paths->length == 0)
+		return 0;
+
 	opts.flags |= GIT_DIFF_INCLUDE_UNTRACKED;
 
 	/* Workdir changes may exist iff they do not conflict with changes that
