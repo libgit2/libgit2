@@ -92,6 +92,47 @@ void test_cherrypick_workdir__automerge(void)
 	git_signature_free(signature);
 }
 
+/* git reset --hard cfc4f0999a8367568e049af4f72e452d40828a15
+ * git cherry-pick a43a050c588d4e92f11a6b139680923e9728477d*/
+void test_cherrypick_workdir__empty_result(void)
+{
+	git_oid head_oid;
+	git_signature *signature = NULL;
+	git_commit *head = NULL, *commit = NULL;
+	git_oid cherry_oid;
+
+	const char *cherrypick_oid = "a43a050c588d4e92f11a6b139680923e9728477d";
+
+	struct merge_index_entry merge_index_entries[] = {
+		{ 0100644, "19c5c7207054604b69c84d08a7571ef9672bb5c2", 0, "file1.txt" },
+		{ 0100644, "a58ca3fee5eb68b11adc2703e5843f968c9dad1e", 0, "file2.txt" },
+		{ 0100644, "28d9eb4208074ad1cc84e71ccc908b34573f05d2", 0, "file3.txt" },
+	};
+
+	cl_git_pass(git_signature_new(&signature, "Picker", "picker@example.org", time(NULL), 0));
+
+	git_oid_fromstr(&head_oid, "cfc4f0999a8367568e049af4f72e452d40828a15");
+
+	/* Create an untracked file that should not conflict */
+	cl_git_mkfile(TEST_REPO_PATH "/file4.txt", "");
+	cl_assert(git_path_exists(TEST_REPO_PATH "/file4.txt"));
+
+	cl_git_pass(git_commit_lookup(&head, repo, &head_oid));
+	cl_git_pass(git_reset(repo, (git_object *)head, GIT_RESET_HARD, NULL, NULL));
+
+	git_oid_fromstr(&cherry_oid, cherrypick_oid);
+	cl_git_pass(git_commit_lookup(&commit, repo, &cherry_oid));
+	cl_git_pass(git_cherrypick(repo, commit, NULL));
+
+	/* The resulting tree should not have changed, the change was already on HEAD */
+	cl_assert(merge_test_index(repo_index, merge_index_entries, 3));
+
+	git_commit_free(head);
+	git_commit_free(commit);
+
+	git_signature_free(signature);
+}
+
 /* git reset --hard bafbf6912c09505ac60575cd43d3f2aba3bd84d8
  * git cherry-pick e9b63f3655b2ad80c0ff587389b5a9589a3a7110
  */
