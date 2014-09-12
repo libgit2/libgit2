@@ -2342,7 +2342,6 @@ done:
 
 static int merge_check_workdir(size_t *conflicts, git_repository *repo, git_index *index_new, git_vector *merged_paths)
 {
-	git_index *index_repo = NULL;
 	git_diff *wd_diff_list = NULL;
 	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
 	int error = 0;
@@ -2370,13 +2369,12 @@ static int merge_check_workdir(size_t *conflicts, git_repository *repo, git_inde
 	opts.pathspec.count = merged_paths->length;
 	opts.pathspec.strings = (char **)merged_paths->contents;
 
-	if ((error = git_diff_index_to_workdir(&wd_diff_list, repo, index_repo, &opts)) < 0)
+	if ((error = git_diff_index_to_workdir(&wd_diff_list, repo, NULL, &opts)) < 0)
 		goto done;
 
 	*conflicts = wd_diff_list->deltas.length;
 
 done:
-	git_index_free(index_repo);
 	git_diff_free(wd_diff_list);
 
 	return error;
