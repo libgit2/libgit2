@@ -473,13 +473,12 @@ void test_online_clone__ssh_cannot_change_username(void)
 	cl_git_fail(git_clone(&g_repo, "ssh://git@github.com/libgit2/TestGitRepository", "./foo", &g_options));
 }
 
-int ssh_certificate_check(git_cert_t type, void *data, size_t len, int valid, void *payload)
+int ssh_certificate_check(git_cert *cert, int valid, void *payload)
 {
 	git_cert_hostkey *key;
 	git_oid expected = {{0}}, actual = {{0}};
 	const char *expected_str;
 
-	GIT_UNUSED(len);
 	GIT_UNUSED(valid);
 	GIT_UNUSED(payload);
 
@@ -487,10 +486,10 @@ int ssh_certificate_check(git_cert_t type, void *data, size_t len, int valid, vo
 	if (!expected_str)
 		cl_skip();
 
-	cl_git_pass(git_oid_fromstr(&expected, expected_str));
-	cl_assert_equal_i(GIT_CERT_HOSTKEY_LIBSSH2, type);
+	cl_git_pass(git_oid_fromstrp(&expected, expected_str));
+	cl_assert_equal_i(GIT_CERT_HOSTKEY_LIBSSH2, cert->cert_type);
 
-	key = (git_cert_hostkey *) data;
+	key = (git_cert_hostkey *) cert;
 	git_oid_fromraw(&actual, key->hash);
 
 	cl_assert(git_oid_equal(&expected, &actual));
@@ -511,11 +510,9 @@ void test_online_clone__url_with_no_path_returns_EINVALIDSPEC(void)
 		GIT_EINVALIDSPEC);
 }
 
-static int fail_certificate_check(git_cert_t type, void *data, size_t len, int valid, void *payload)
+static int fail_certificate_check(git_cert *cert, int valid, void *payload)
 {
-	GIT_UNUSED(type);
-	GIT_UNUSED(data);
-	GIT_UNUSED(len);
+	GIT_UNUSED(cert);
 	GIT_UNUSED(valid);
 	GIT_UNUSED(payload);
 
@@ -535,11 +532,9 @@ void test_online_clone__certificate_invalid(void)
 #endif
 }
 
-static int succeed_certificate_check(git_cert_t type, void *data, size_t len, int valid, void *payload)
+static int succeed_certificate_check(git_cert *cert, int valid, void *payload)
 {
-	GIT_UNUSED(type);
-	GIT_UNUSED(data);
-	GIT_UNUSED(len);
+	GIT_UNUSED(cert);
 	GIT_UNUSED(valid);
 	GIT_UNUSED(payload);
 

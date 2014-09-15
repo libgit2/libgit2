@@ -484,6 +484,8 @@ static int _git_ssh_setup_conn(
 		const char *key;
 		size_t certlen;
 
+		cert.cert_type = GIT_CERT_HOSTKEY_LIBSSH2;
+
 		cert.type = LIBSSH2_HOSTKEY_HASH_SHA1;
 		key = libssh2_hostkey_hash(session, LIBSSH2_HOSTKEY_HASH_SHA1);
 		if (key != NULL) {
@@ -504,7 +506,7 @@ static int _git_ssh_setup_conn(
 
 		/* We don't currently trust any hostkeys */
 		giterr_clear();
-                error = t->owner->certificate_check_cb(GIT_CERT_HOSTKEY_LIBSSH2, &cert, certlen, 0, t->owner->message_cb_payload);
+                error = t->owner->certificate_check_cb((git_cert *) &cert, 0, t->owner->message_cb_payload);
 		if (error < 0) {
 			if (!giterr_last())
 				giterr_set(GITERR_NET, "user cancelled hostkey check");

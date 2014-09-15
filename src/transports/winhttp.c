@@ -211,6 +211,7 @@ static int certificate_check(winhttp_stream *s, int valid)
 	winhttp_subtransport *t = OWNING_SUBTRANSPORT(s);
 	PCERT_CONTEXT cert_ctx;
 	DWORD cert_ctx_size = sizeof(cert_ctx);
+	git_cert_x509 cert;
 
 	/* If there is no override, we should fail if WinHTTP doesn't think it's fine */
 	if (t->owner->certificate_check_cb == NULL && !valid)
@@ -225,7 +226,10 @@ static int certificate_check(winhttp_stream *s, int valid)
 	}
 
 	giterr_clear();
-	error = t->owner->certificate_check_cb(GIT_CERT_X509, cert_ctx->pbCertEncoded, cert_ctx->cbCertEncoded, valid, t->owner->cred_acquire_payload);
+	cert.cert_type = GIT_CERT_X509;
+	cert.data = cert_ctx->pbCertEncoded;
+	cert.len = cert_ctx->cbCertEncoded;
+	error = t->owner->certificate_check_cb((git_cert *) &cert, valid, t->owner->cred_acquire_payload);
 	CertFreeCertificateContext(cert_ctx);
 
 	if (error < 0 && !giterr_last())

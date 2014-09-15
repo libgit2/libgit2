@@ -24,6 +24,11 @@ GIT_BEGIN_DECL
  * Hostkey information taken from libssh2
  */
 typedef struct {
+	/**
+	 * Type of certificate. Here to share the header with
+	 * `git_cert`.
+	 */
+	git_cert_t cert_type;
         /**
          * A hostkey type from libssh2, either
          * `LIBSSH2_HOSTKEY_HASH_MD5` or `LIBSSH2_HOSTKEY_HASH_SHA1`
@@ -35,6 +40,25 @@ typedef struct {
          */
         unsigned char hash[20];
 } git_cert_hostkey;
+
+/**
+ * X.509 certificate information
+ */
+typedef struct {
+	/**
+	 * Type of certificate. Here to share the header with
+	 * `git_cert`.
+	 */
+	git_cert_t cert_type;
+	/**
+	 * Pointer to the X.509 certificate data
+	 */
+	void *data;
+	/**
+	 * Length of the memory block pointed to by `data`.
+	 */
+	size_t len;
+} git_cert_x509;
 
 /*
  *** Begin interface for credentials acquisition ***
