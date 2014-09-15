@@ -464,6 +464,38 @@ void test_online_clone__ssh_cannot_change_username(void)
 	cl_git_fail(git_clone(&g_repo, "ssh://git@github.com/libgit2/TestGitRepository", "./foo", &g_options));
 }
 
+int ssh_certificate_check(git_cert_t type, void *data, size_t len, int valid, void *payload)
+{
+	git_cert_hostkey *key;
+	git_oid expected = {{0}}, actual = {{0}};
+	const char *expected_str;
+
+	GIT_UNUSED(len);
+	GIT_UNUSED(valid);
+	GIT_UNUSED(payload);
+
+	expected_str = cl_getenv("GITTEST_REMOTE_SSH_FINGERPRINT");
+	if (!expected_str)
+		cl_skip();
+
+	cl_git_pass(git_oid_fromstr(&expected, expected_str));
+	cl_assert_equal_i(GIT_CERT_HOSTKEY_LIBSSH2, type);
+
+	key = (git_cert_hostkey *) data;
+	git_oid_fromraw(&actual, key->hash);
+
+	cl_assert(git_oid_equal(&expected, &actual));
+
+	return GIT_EUSER;
+}
+
+void test_online_clone__ssh_cert(void)
+{
+	g_options.remote_callbacks.certificate_check = ssh_certificate_check;
+
+	cl_git_fail_with(GIT_EUSER, git_clone(&g_repo, "ssh://localhost/foo", "./foo", &g_options));
+}
+
 void test_online_clone__url_with_no_path_returns_EINVALIDSPEC(void)
 {
 	cl_git_fail_with(git_clone(&g_repo, "http://github.com", "./foo", &g_options),
