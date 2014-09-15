@@ -292,6 +292,10 @@ static int ssh_agent_auth(LIBSSH2_SESSION *session, git_cred_ssh_key *c) {
 	}
 
 shutdown:
+
+	if (rc != LIBSSH2_ERROR_NONE)
+		ssh_error(session, "error authenticating");
+
 	libssh2_agent_disconnect(agent);
 	libssh2_agent_free(agent);
 
@@ -305,6 +309,7 @@ static int _git_ssh_authenticate_session(
 	int rc;
 
 	do {
+		giterr_clear();
 		switch (cred->credtype) {
 		case GIT_CREDTYPE_USERPASS_PLAINTEXT: {
 			git_cred_userpass_plaintext *c = (git_cred_userpass_plaintext *)cred;
@@ -361,7 +366,8 @@ static int _git_ssh_authenticate_session(
                 return GIT_EAUTH;
 
 	if (rc != LIBSSH2_ERROR_NONE) {
-		ssh_error(session, "Failed to authenticate SSH session");
+		if (!giterr_last())
+			ssh_error(session, "Failed to authenticate SSH session");
 		return -1;
 	}
 

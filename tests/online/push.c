@@ -864,7 +864,6 @@ void test_online_push__notes(void)
 	push_status exp_stats[] = { { "refs/notes/commits", 1 } };
 	expected_ref exp_refs[] = { { "refs/notes/commits", &expected_oid } };
 	const char *specs_del[] = { ":refs/notes/commits" };
-	expected_ref exp_refs_del[] = { };
 
 	git_oid_fromstr(&expected_oid, "8461a99b27b7043e58ff6e1f5d2cf07d282534fb");
 
@@ -882,7 +881,7 @@ void test_online_push__notes(void)
 
 	do_push(specs_del, ARRAY_SIZE(specs_del),
 		exp_stats, 1,
-		exp_refs_del, ARRAY_SIZE(exp_refs_del), 0, 0, 0);
+		NULL, 0, 0, 0, 0);
 
 	git_signature_free(signature);
 }

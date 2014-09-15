@@ -1058,15 +1058,19 @@ static int update_tips_for_spec(
 		if (autotag && !git_odb_exists(odb, &head->oid))
 			continue;
 
-		if (git_vector_insert(&update_heads, head) < 0)
+		if (!autotag && git_vector_insert(&update_heads, head) < 0)
 			goto on_error;
 
 		error = git_reference_name_to_id(&old, remote->repo, refname.ptr);
 		if (error < 0 && error != GIT_ENOTFOUND)
 			goto on_error;
 
-		if (error == GIT_ENOTFOUND)
+		if (error == GIT_ENOTFOUND) {
 			memset(&old, 0, GIT_OID_RAWSZ);
+
+			if (autotag && git_vector_insert(&update_heads, head) < 0)
+				goto on_error;
+		}
 
 		if (!git_oid__cmp(&old, &head->oid))
 			continue;
@@ -1942,6 +1946,9 @@ int git_remote_default_branch(git_buf *out, git_remote *remote)
 	if (heads_len == 0)
 		return GIT_ENOTFOUND;
 
+	if (strcmp(heads[0]->name, GIT_HEAD_FILE))
+		return GIT_ENOTFOUND;
+
 	git_buf_sanitize(out);
 	/* the first one must be HEAD so if that has the symref info, we're done */
 	if (heads[0]->symref_target)
@@ -1956,6 +1963,9 @@ int git_remote_default_branch(git_buf *out, git_remote *remote)
 
 	for (i = 1; i < heads_len; i++) {
 		if (git_oid_cmp(head_id, &heads[i]->oid))
+			continue;
+
+		if (git__prefixcmp(heads[i]->name, GIT_REFS_HEADS_DIR))
 			continue;
 
 		if (!guess) {

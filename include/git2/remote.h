@@ -384,15 +384,12 @@ GIT_EXTERN(int) git_remote_fetch(
 		const char *reflog_message);
 
 /**
- * Return whether a string is a valid remote URL
  *
- * @param url the url to check
- * @return 1 if the url is valid, 0 otherwise
- */
-GIT_EXTERN(int) git_remote_valid_url(const char *url);
-
-/**
- * Return whether the passed URL is supported by this version of the library.
+ * Return whether the library supports a particular URL scheme
+ *
+ * Both the built-in and externally-registered transport lists are
+ * searched for a transport which supports the scheme of the given
+ * URL.
  *
  * @param url the url to check
  * @return 1 if the url is supported, 0 otherwise

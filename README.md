@@ -195,6 +195,8 @@ Here are the bindings to libgit2 that are currently available:
     * git2r <https://github.com/ropensci/git2r>
 * Ruby
     * Rugged <https://github.com/libgit2/rugged>
+* Rust
+    * git2-rs <https://github.com/alexcrichton/git2-rs>
 * Vala
     * libgit2.vapi <https://github.com/apmasell/vapis/blob/master/libgit2.vapi>
 

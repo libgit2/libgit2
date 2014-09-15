@@ -2,6 +2,7 @@
 #include "posix.h"
 #include "path.h"
 #include "submodule_helpers.h"
+#include "fileops.h"
 
 static git_repository *g_repo = NULL;
 
@@ -29,6 +30,10 @@ static void assert_submodule_url(const char* name, const char *url)
 void test_submodule_add__url_absolute(void)
 {
 	git_submodule *sm;
+	git_config *cfg;
+	git_repository *repo;
+	const char *worktree_path;
+	git_buf dot_git_content = GIT_BUF_INIT;
 
 	g_repo = setup_fixture_submod2();
 
@@ -50,6 +55,21 @@ void test_submodule_add__url_absolute(void)
 	cl_assert(git_path_isdir("submod2/.git/modules/" "sm_libgit2"));
 	cl_assert(git_path_isfile("submod2/.git/modules/" "sm_libgit2" "/HEAD"));
 	assert_submodule_url("sm_libgit2", "https://github.com/libgit2/libgit2.git");
+
+	cl_git_pass(git_repository_open(&repo, "submod2/" "sm_libgit2"));
+
+	/* Verify worktree path is relative */
+	cl_git_pass(git_repository_config(&cfg, repo));
+	cl_git_pass(git_config_get_string(&worktree_path, cfg, "core.worktree"));
+	cl_assert_equal_s("../../../sm_libgit2/", worktree_path);
+
+	/* Verify gitdir path is relative */
+	cl_git_pass(git_futils_readbuffer(&dot_git_content, "submod2/" "sm_libgit2" "/.git"));
+	cl_assert_equal_s("gitdir: ../.git/modules/sm_libgit2/", dot_git_content.ptr);
+
+	git_config_free(cfg);
+	git_repository_free(repo);
+	git_buf_free(&dot_git_content);
 
 	/* add a submodule not using a gitlink */
 

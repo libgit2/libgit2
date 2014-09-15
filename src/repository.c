@@ -994,7 +994,7 @@ static int repo_init_config(
 	uint32_t mode)
 {
 	int error = 0;
-	git_buf cfg_path = GIT_BUF_INIT;
+	git_buf cfg_path = GIT_BUF_INIT, worktree_path = GIT_BUF_INIT;
 	git_config *config = NULL;
 	bool is_bare = ((flags & GIT_REPOSITORY_INIT_BARE) != 0);
 	bool is_reinit = ((flags & GIT_REPOSITORY_INIT__IS_REINIT) != 0);
@@ -1019,9 +1019,16 @@ static int repo_init_config(
 	if (!is_bare) {
 		SET_REPO_CONFIG(bool, "core.logallrefupdates", true);
 
-		if (!(flags & GIT_REPOSITORY_INIT__NATURAL_WD))
-			SET_REPO_CONFIG(string, "core.worktree", work_dir);
-		else if (is_reinit) {
+		if (!(flags & GIT_REPOSITORY_INIT__NATURAL_WD)) {
+			if ((error = git_buf_sets(&worktree_path, work_dir)) < 0)
+				goto cleanup;
+
+			if ((flags & GIT_REPOSITORY_INIT_RELATIVE_GITLINK))
+				if ((error = git_path_make_relative(&worktree_path, repo_dir)) < 0)
+					goto cleanup;
+
+			SET_REPO_CONFIG(string, "core.worktree", worktree_path.ptr);
+		} else if (is_reinit) {
 			if (git_config_delete_entry(config, "core.worktree") < 0)
 				giterr_clear();
 		}
@@ -1038,6 +1045,7 @@ static int repo_init_config(
 
 cleanup:
 	git_buf_free(&cfg_path);
+	git_buf_free(&worktree_path);
 	git_config_free(config);
 
 	return error;
@@ -1126,10 +1134,11 @@ static int repo_write_template(
 }
 
 static int repo_write_gitlink(
-	const char *in_dir, const char *to_repo)
+	const char *in_dir, const char *to_repo, bool use_relative_path)
 {
 	int error;
 	git_buf buf = GIT_BUF_INIT;
+	git_buf path_to_repo = GIT_BUF_INIT;
 	struct stat st;
 
 	git_path_dirname_r(&buf, to_repo);
@@ -1157,13 +1166,20 @@ static int repo_write_gitlink(
 
 	git_buf_clear(&buf);
 
-	error = git_buf_printf(&buf, "%s %s", GIT_FILE_CONTENT_PREFIX, to_repo);
+	error = git_buf_sets(&path_to_repo, to_repo);
+
+	if (!error && use_relative_path)
+		error = git_path_make_relative(&path_to_repo, in_dir);
+
+	if (!error)
+		error = git_buf_join(&buf, ' ', GIT_FILE_CONTENT_PREFIX, path_to_repo.ptr);
 
 	if (!error)
 		error = repo_write_template(in_dir, true, DOT_GIT, 0666, true, buf.ptr);
 
 cleanup:
 	git_buf_free(&buf);
+	git_buf_free(&path_to_repo);
 	return error;
 }
 
@@ -1207,7 +1223,7 @@ static int repo_init_structure(
 	if ((opts->flags & GIT_REPOSITORY_INIT_BARE) == 0 &&
 		(opts->flags & GIT_REPOSITORY_INIT__NATURAL_WD) == 0)
 	{
-		if (repo_write_gitlink(work_dir, repo_dir) < 0)
+		if (repo_write_gitlink(work_dir, repo_dir, opts->flags & GIT_REPOSITORY_INIT_RELATIVE_GITLINK) < 0)
 			return -1;
 	}
 
@@ -1635,7 +1651,7 @@ int git_repository_set_workdir(
 		if (git_repository_config__weakptr(&config, repo) < 0)
 			return -1;
 
-		error = repo_write_gitlink(path.ptr, git_repository_path(repo));
+		error = repo_write_gitlink(path.ptr, git_repository_path(repo), false);
 
 		/* passthrough error means gitlink is unnecessary */
 		if (error == GIT_PASSTHROUGH)
