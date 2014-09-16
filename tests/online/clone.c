@@ -488,13 +488,22 @@ int ssh_certificate_check(git_cert *cert, int valid, void *payload)
 
 	cl_git_pass(git_oid_fromstrp(&expected, expected_str));
 	cl_assert_equal_i(GIT_CERT_HOSTKEY_LIBSSH2, cert->cert_type);
-
 	key = (git_cert_hostkey *) cert;
-	git_oid_fromraw(&actual, key->hash);
 
-	cl_assert_equal_i(GIT_CERT_SSH_SHA1, key->type);
+	/*
+	 * We need to figure out how long our input was to check for
+	 * the type. Here we abuse the fact that both hashes fit into
+	 * our git_oid type.
+	 */
+	if (strlen(expected_str) == 32 && key->type & GIT_CERT_SSH_MD5) {
+		memcpy(&actual.id, key->hash_md5, 16);
+	} else 	if (strlen(expected_str) == 40 && key->type & GIT_CERT_SSH_SHA1) {
+		memcpy(&actual, key->hash_sha1, 20);
+	} else {
+		cl_fail("Cannot find a usable SSH hash");
+	}
 
-	cl_assert(git_oid_equal(&expected, &actual));
+	cl_assert(!memcmp(&expected, &actual, 20));
 
 	return GIT_EUSER;
 }

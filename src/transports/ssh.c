@@ -487,17 +487,17 @@ static int _git_ssh_setup_conn(
 
 		key = libssh2_hostkey_hash(session, LIBSSH2_HOSTKEY_HASH_SHA1);
 		if (key != NULL) {
-			cert.type = GIT_CERT_SSH_SHA1;
-			memcpy(&cert.hash, key, 20);
-		} else {
-			key = libssh2_hostkey_hash(session, LIBSSH2_HOSTKEY_HASH_MD5);
-			if (key != NULL) {
-				cert.type = GIT_CERT_SSH_MD5;
-				memcpy(&cert.hash, key, 16);
-			}
+			cert.type |= GIT_CERT_SSH_SHA1;
+			memcpy(&cert.hash_sha1, key, 20);
 		}
 
-		if (key == NULL) {
+		key = libssh2_hostkey_hash(session, LIBSSH2_HOSTKEY_HASH_MD5);
+		if (key != NULL) {
+			cert.type |= GIT_CERT_SSH_MD5;
+			memcpy(&cert.hash_md5, key, 16);
+		}
+
+		if (cert.type == 0) {
 			giterr_set(GITERR_SSH, "unable to get the host key");
 			return -1;
 		}
