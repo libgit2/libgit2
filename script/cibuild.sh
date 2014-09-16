@@ -15,7 +15,7 @@ export GITTEST_REMOTE_URL="git://localhost/test.git"
 mkdir _build
 cd _build
 cmake .. -DCMAKE_INSTALL_PREFIX=../_install $OPTIONS || exit $?
-cmake --build . --target install || exit $?
+make -j2 install || exit $?
 ctest -V . || exit $?
 
 # Now that we've tested the raw git protocol, let's set up ssh to we
