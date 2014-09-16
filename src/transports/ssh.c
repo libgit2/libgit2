@@ -480,23 +480,21 @@ static int _git_ssh_setup_conn(
 		goto on_error;
 
 	if (t->owner->certificate_check_cb != NULL) {
-		git_cert_hostkey cert;
+		git_cert_hostkey cert = { 0 };
 		const char *key;
-		size_t certlen;
 
 		cert.cert_type = GIT_CERT_HOSTKEY_LIBSSH2;
 
-		cert.type = LIBSSH2_HOSTKEY_HASH_SHA1;
 		key = libssh2_hostkey_hash(session, LIBSSH2_HOSTKEY_HASH_SHA1);
 		if (key != NULL) {
-			certlen = 20;
-			memcpy(&cert.hash, key, certlen);
+			cert.type = GIT_CERT_SSH_SHA1;
+			memcpy(&cert.hash, key, 20);
 		} else {
-			cert.type = LIBSSH2_HOSTKEY_HASH_MD5;
 			key = libssh2_hostkey_hash(session, LIBSSH2_HOSTKEY_HASH_MD5);
-			certlen = 16;
-			if (key != NULL)
-				memcpy(&cert.hash, key, certlen);
+			if (key != NULL) {
+				cert.type = GIT_CERT_SSH_MD5;
+				memcpy(&cert.hash, key, 16);
+			}
 		}
 
 		if (key == NULL) {

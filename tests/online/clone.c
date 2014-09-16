@@ -492,6 +492,8 @@ int ssh_certificate_check(git_cert *cert, int valid, void *payload)
 	key = (git_cert_hostkey *) cert;
 	git_oid_fromraw(&actual, key->hash);
 
+	cl_assert_equal_i(GIT_CERT_SSH_SHA1, key->type);
+
 	cl_assert(git_oid_equal(&expected, &actual));
 
 	return GIT_EUSER;

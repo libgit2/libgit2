@@ -21,6 +21,16 @@
 GIT_BEGIN_DECL
 
 /**
+ * Type of SSH host fingerprint
+ */
+typedef enum {
+	/** MD5, 16 bytes */
+	GIT_CERT_SSH_MD5,
+	/** SHA-1, 20 bytes */
+	GIT_CERT_SSH_SHA1,
+} git_cert_ssh_type ;
+
+/**
  * Hostkey information taken from libssh2
  */
 typedef struct {
@@ -31,9 +41,9 @@ typedef struct {
 	git_cert_t cert_type;
         /**
          * A hostkey type from libssh2, either
-         * `LIBSSH2_HOSTKEY_HASH_MD5` or `LIBSSH2_HOSTKEY_HASH_SHA1`
+         * `GIT_CERT_SSH_MD5` or `GIT_CERT_SSH_SHA1`
          */
-        int type;
+	git_cert_ssh_type type;
         /**
          * Hostkey hash. If the type is MD5, only the first 16 bytes
          * will be set.
