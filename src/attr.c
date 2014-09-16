@@ -411,7 +411,7 @@ static int collect_attr_files(
 	const char *path,
 	git_vector *files)
 {
-	int error;
+	int error = 0;
 	git_buf dir = GIT_BUF_INIT;
 	const char *workdir = git_repository_workdir(repo);
 	attr_walk_up_info info = { NULL };
@@ -422,12 +422,12 @@ static int collect_attr_files(
 	/* Resolve path in a non-bare repo */
 	if (workdir != NULL)
 		error = git_path_find_dir(&dir, path, workdir);
-	else
-		error = git_path_dirname_r(&dir, path);
+	/* when in a bare repo, find the containing folder if the given
+	 * path is a subfolder (if not, the containing folder is the root) */
+	else if (strchr(path, '/') != NULL)
+			error = git_path_dirname_r(&dir, path);
 	if (error < 0)
 		goto cleanup;
-	if (dir.size == 1 && dir.ptr[0] == '.')
-		git_buf_clear(&dir);
 
 	/* in precendence order highest to lowest:
 	 * - $GIT_DIR/info/attributes
