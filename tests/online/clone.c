@@ -483,8 +483,7 @@ int ssh_certificate_check(git_cert *cert, int valid, void *payload)
 	GIT_UNUSED(payload);
 
 	expected_str = cl_getenv("GITTEST_REMOTE_SSH_FINGERPRINT");
-	if (!expected_str)
-		cl_skip();
+	cl_assert(expected_str);
 
 	cl_git_pass(git_oid_fromstrp(&expected, expected_str));
 	cl_assert_equal_i(GIT_CERT_HOSTKEY_LIBSSH2, cert->cert_type);
@@ -511,6 +510,9 @@ int ssh_certificate_check(git_cert *cert, int valid, void *payload)
 void test_online_clone__ssh_cert(void)
 {
 	g_options.remote_callbacks.certificate_check = ssh_certificate_check;
+
+	if (!cl_getenv("GITTEST_REMOTE_SSH_FINGERPRINT"))
+		cl_skip();
 
 	cl_git_fail_with(GIT_EUSER, git_clone(&g_repo, "ssh://localhost/foo", "./foo", &g_options));
 }
