@@ -388,13 +388,6 @@ static int winhttp_stream_connect(winhttp_stream *s)
 
 		if (t->owner->parent.read_flags(&t->owner->parent, &flags) < 0)
 			goto on_error;
-
-		if ((GIT_TRANSPORTFLAGS_NO_CHECK_CERT & flags) &&
-			!WinHttpSetOption(s->request, WINHTTP_OPTION_SECURITY_FLAGS,
-			(LPVOID)&no_check_cert_flags, sizeof(no_check_cert_flags))) {
-			giterr_set(GITERR_OS, "Failed to set options to ignore cert errors");
-			goto on_error;
-		}
 	}
 
 	/* If we have a credential on the subtransport, apply it to the request */
