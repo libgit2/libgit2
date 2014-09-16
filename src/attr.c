@@ -426,6 +426,8 @@ static int collect_attr_files(
 		error = git_path_dirname_r(&dir, path);
 	if (error < 0)
 		goto cleanup;
+	if (dir.size == 1 && dir.ptr[0] == '.')
+		git_buf_clear(&dir);
 
 	/* in precendence order highest to lowest:
 	 * - $GIT_DIR/info/attributes

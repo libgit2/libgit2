@@ -1681,6 +1681,32 @@ int git_repository_is_bare(git_repository *repo)
 	return repo->is_bare;
 }
 
+int git_repository_set_bare(git_repository *repo)
+{
+	int error;
+	git_config *config;
+
+	assert(repo);
+
+	if (repo->is_bare)
+		return 0;
+
+	if ((error = git_repository_config__weakptr(&config, repo)) < 0 ||
+		(error = git_config_set_bool(config, "core.bare", false)) < 0)
+		goto done;
+
+	error = git_config__update_entry(config, "core.worktree", NULL, true, true);
+
+	git__free(repo->workdir);
+	repo->workdir = NULL;
+
+	repo->is_bare = 1;
+
+done:
+	git_config_free(config);
+	return error;
+}
+
 int git_repository_head_tree(git_tree **tree, git_repository *repo)
 {
 	git_reference *head;
