@@ -2338,7 +2338,6 @@ done:
 
 static int merge_check_workdir(size_t *conflicts, git_repository *repo, git_index *index_new, git_vector *merged_paths)
 {
-	git_index *index_repo = NULL;
 	git_diff *wd_diff_list = NULL;
 	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
 	int error = 0;
@@ -2346,6 +2345,16 @@ static int merge_check_workdir(size_t *conflicts, git_repository *repo, git_inde
 	GIT_UNUSED(index_new);
 
 	*conflicts = 0;
+
+	/* We need to have merged at least 1 file for the possibility to exist to
+	 * have conflicts with the workdir. Passing 0 as the pathspec count paramter
+	 * will consider all files in the working directory, that is, we may detect
+	 * a conflict if there were untracked files in the workdir prior to starting
+	 * the merge. This typically happens when cherry-picking a commmit whose
+	 * changes have already been applied.
+	 */
+	if (merged_paths->length == 0)
+		return 0;
 
 	opts.flags |= GIT_DIFF_INCLUDE_UNTRACKED;
 
@@ -2356,13 +2365,12 @@ static int merge_check_workdir(size_t *conflicts, git_repository *repo, git_inde
 	opts.pathspec.count = merged_paths->length;
 	opts.pathspec.strings = (char **)merged_paths->contents;
 
-	if ((error = git_diff_index_to_workdir(&wd_diff_list, repo, index_repo, &opts)) < 0)
+	if ((error = git_diff_index_to_workdir(&wd_diff_list, repo, NULL, &opts)) < 0)
 		goto done;
 
 	*conflicts = wd_diff_list->deltas.length;
 
 done:
-	git_index_free(index_repo);
 	git_diff_free(wd_diff_list);
 
 	return error;
