@@ -447,11 +447,10 @@ static int collect_attr_files(
 		giterr_clear(); /* no error even if there is no index */
 	info.files = files;
 
-	if (!strcmp(dir.ptr, ".")) {
+	if (!strcmp(dir.ptr, "."))
 		error = push_one_attr(&info, "");
-	} else {
+	else
 		error = git_path_walk_up(&dir, workdir, push_one_attr, &info);
-	}
 
 	if (error < 0)
 		goto cleanup;
