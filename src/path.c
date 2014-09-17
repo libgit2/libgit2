@@ -1088,8 +1088,10 @@ int git_path_dirload(
 			entry_path[path_len] = '/';
 		memcpy(&entry_path[path_len + need_slash], de_path, de_len);
 
-		if ((error = git_vector_insert(contents, entry_path)) < 0)
+		if ((error = git_vector_insert(contents, entry_path)) < 0) {
+			git__free(entry_path);
 			break;
+		}
 	}
 
 	closedir(dir);

@@ -547,6 +547,7 @@ void test_network_remote_remotes__single_branch(void)
 	}
 	cl_assert_equal_i(1, count);
 
+	git_strarray_free(&refs);
 	git_repository_free(repo);
 }
 

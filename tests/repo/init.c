@@ -423,6 +423,7 @@ void test_repo_init__relative_gitdir_2(void)
 
 	/* make the directory first, then it should succeed */
 	cl_git_pass(git_repository_init_ext(&_repo, "root/b/my_repository", &opts));
+	git_buf_free(&full_path);
 
 	cl_assert(!git__suffixcmp(git_repository_workdir(_repo), "root/b/c_wd/"));
 	cl_assert(!git__suffixcmp(git_repository_path(_repo), "root/b/my_repository/"));
