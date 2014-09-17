@@ -94,8 +94,8 @@ int main (int argc, char** argv)
   // Next we will convert the 20 byte raw SHA1 value to a human readable 40
   // char hex value.
   printf("\n*Raw to Hex*\n");
-  char out[41];
-  out[40] = '\0';
+  char out[GIT_OID_HEXSZ+1];
+  out[GIT_OID_HEXSZ] = '\0';
 
   // If you have a oid, you can easily get the hex value of the SHA as well.
   git_oid_fmt(out, &oid);
