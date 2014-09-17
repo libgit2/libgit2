@@ -377,7 +377,7 @@ static int push_attr_file(
 	return error;
 }
 
-static int push_one_attr(void *ref, git_buf *path)
+static int push_one_attr(void *ref, const char *path)
 {
 	int error = 0, n_src, i;
 	attr_walk_up_info *info = (attr_walk_up_info *)ref;
@@ -388,7 +388,7 @@ static int push_one_attr(void *ref, git_buf *path)
 
 	for (i = 0; !error && i < n_src; ++i)
 		error = push_attr_file(
-			info->repo, info->files, src[i], path->ptr, GIT_ATTR_FILE);
+			info->repo, info->files, src[i], path, GIT_ATTR_FILE);
 
 	return error;
 }

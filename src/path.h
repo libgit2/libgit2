@@ -323,7 +323,7 @@ extern int git_path_cmp(
 extern int git_path_walk_up(
 	git_buf *pathbuf,
 	const char *ceiling,
-	int (*callback)(void *payload, git_buf *path),
+	int (*callback)(void *payload, const char *path),
 	void *payload);
 
 /**

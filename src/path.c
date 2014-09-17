@@ -417,7 +417,7 @@ int git_path_fromurl(git_buf *local_path_out, const char *file_url)
 int git_path_walk_up(
 	git_buf *path,
 	const char *ceiling,
-	int (*cb)(void *data, git_buf *),
+	int (*cb)(void *data, const char *),
 	void *data)
 {
 	int error = 0;
@@ -435,12 +435,20 @@ int git_path_walk_up(
 	}
 	scan = git_buf_len(path);
 
+	/* empty path: yield only once */
+	if (!scan) {
+		error = cb(data, "");
+		if (error)
+			giterr_set_after_callback(error);
+		return error;
+	}
+
 	iter.ptr = path->ptr;
 	iter.size = git_buf_len(path);
 	iter.asize = path->asize;
 
 	while (scan >= stop) {
-		error = cb(data, &iter);
+		error = cb(data, iter.ptr);
 		iter.ptr[scan] = oldc;
 
 		if (error) {
@@ -459,6 +467,13 @@ int git_path_walk_up(
 
 	if (scan >= 0)
 		iter.ptr[scan] = oldc;
+
+	/* relative path: yield for the last component */
+	if (!error && stop == 0 && iter.ptr[0] != '/') {
+		error = cb(data, "");
+		if (error)
+			giterr_set_after_callback(error);
+	}
 
 	return error;
 }

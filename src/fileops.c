@@ -505,15 +505,15 @@ static int futils__rmdir_recurs_foreach(void *opaque, git_buf *path)
 	return error;
 }
 
-static int futils__rmdir_empty_parent(void *opaque, git_buf *path)
+static int futils__rmdir_empty_parent(void *opaque, const char *path)
 {
 	futils__rmdir_data *data = opaque;
 	int error = 0;
 
-	if (git_buf_len(path) <= data->baselen)
+	if (strlen(path) <= data->baselen)
 		error = GIT_ITEROVER;
 
-	else if (p_rmdir(git_buf_cstr(path)) < 0) {
+	else if (p_rmdir(path) < 0) {
 		int en = errno;
 
 		if (en == ENOENT || en == ENOTDIR) {
@@ -521,7 +521,7 @@ static int futils__rmdir_empty_parent(void *opaque, git_buf *path)
 		} else if (en == ENOTEMPTY || en == EEXIST || en == EBUSY) {
 			error = GIT_ITEROVER;
 		} else {
-			error = git_path_set_error(errno, git_buf_cstr(path), "rmdir");
+			error = git_path_set_error(errno, path, "rmdir");
 		}
 	}
 
