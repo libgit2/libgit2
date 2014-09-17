@@ -16,8 +16,6 @@ static void test_make_relative(
 
 void test_path_core__make_relative(void)
 {
-	git_buf buf = GIT_BUF_INIT;
-
 	test_make_relative("foo.c", "/path/to/foo.c", "/path/to", 0);
 	test_make_relative("bar/foo.c", "/path/to/bar/foo.c", "/path/to", 0);
 	test_make_relative("foo.c", "/path/to/foo.c", "/path/to/", 0);

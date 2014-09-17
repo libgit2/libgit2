@@ -377,7 +377,7 @@ static int push_attr_file(
 	return error;
 }
 
-static int push_one_attr(void *ref, git_buf *path)
+static int push_one_attr(void *ref, const char *path)
 {
 	int error = 0, n_src, i;
 	attr_walk_up_info *info = (attr_walk_up_info *)ref;
@@ -388,7 +388,7 @@ static int push_one_attr(void *ref, git_buf *path)
 
 	for (i = 0; !error && i < n_src; ++i)
 		error = push_attr_file(
-			info->repo, info->files, src[i], path->ptr, GIT_ATTR_FILE);
+			info->repo, info->files, src[i], path, GIT_ATTR_FILE);
 
 	return error;
 }
@@ -422,10 +422,8 @@ static int collect_attr_files(
 	/* Resolve path in a non-bare repo */
 	if (workdir != NULL)
 		error = git_path_find_dir(&dir, path, workdir);
-	/* when in a bare repo, find the containing folder if the given
-	 * path is a subfolder (if not, the containing folder is the root) */
-	else if (strchr(path, '/') != NULL)
-			error = git_path_dirname_r(&dir, path);
+	else
+		error = git_path_dirname_r(&dir, path);
 	if (error < 0)
 		goto cleanup;
 
@@ -449,7 +447,11 @@ static int collect_attr_files(
 		giterr_clear(); /* no error even if there is no index */
 	info.files = files;
 
-	error = git_path_walk_up(&dir, workdir, push_one_attr, &info);
+	if (!strcmp(dir.ptr, "."))
+		error = push_one_attr(&info, "");
+	else
+		error = git_path_walk_up(&dir, workdir, push_one_attr, &info);
+
 	if (error < 0)
 		goto cleanup;
 

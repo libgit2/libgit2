@@ -91,11 +91,11 @@ static int push_ignore_file(
 	return error;
 }
 
-static int push_one_ignore(void *payload, git_buf *path)
+static int push_one_ignore(void *payload, const char *path)
 {
 	git_ignores *ign = payload;
 	ign->depth++;
-	return push_ignore_file(ign, &ign->ign_path, path->ptr, GIT_IGNORE_FILE);
+	return push_ignore_file(ign, &ign->ign_path, path, GIT_IGNORE_FILE);
 }
 
 static int get_internal_ignores(git_attr_file **out, git_repository *repo)

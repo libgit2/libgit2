@@ -368,4 +368,11 @@ void test_attr_repo__bare_repo_with_index(void)
 	cl_assert_equal_s("barfoo", values[1]);
 	cl_assert(GIT_ATTR_UNSPECIFIED(values[2]));
 	cl_assert(GIT_ATTR_TRUE(values[3]));
+
+	cl_git_pass(git_attr_get_many(values, g_repo, 0, "sub/sub/subdir.txt", 4, names));
+
+	cl_assert(GIT_ATTR_TRUE(values[0]));
+	cl_assert_equal_s("foobar", values[1]);
+	cl_assert(GIT_ATTR_FALSE(values[2]));
+	cl_assert(GIT_ATTR_UNSPECIFIED(values[3]));
 }
