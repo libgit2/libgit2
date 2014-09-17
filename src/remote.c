@@ -80,6 +80,8 @@ static int ensure_remote_name_is_valid(const char *name)
 	return error;
 }
 
+#if 0
+/* We could export this as a helper */
 static int get_check_cert(int *out, git_repository *repo)
 {
 	git_config *cfg;
@@ -105,6 +107,7 @@ static int get_check_cert(int *out, git_repository *repo)
 	*out = git_config__get_bool_force(cfg, "http.sslverify", 1);
 	return 0;
 }
+#endif
 
 static int create_internal(git_remote **out, git_repository *repo, const char *name, const char *url, const char *fetch)
 {
@@ -120,9 +123,6 @@ static int create_internal(git_remote **out, git_repository *repo, const char *n
 
 	remote->repo = repo;
 	remote->update_fetchhead = 1;
-
-	if (get_check_cert(&remote->check_cert, repo) < 0)
-		goto on_error;
 
 	if (git_vector_init(&remote->refs, 32, NULL) < 0)
 		goto on_error;
@@ -274,7 +274,6 @@ int git_remote_dup(git_remote **dest, git_remote *source)
 	remote->transport_cb_payload = source->transport_cb_payload;
 	remote->repo = source->repo;
 	remote->download_tags = source->download_tags;
-	remote->check_cert = source->check_cert;
 	remote->update_fetchhead = source->update_fetchhead;
 
 	if (git_vector_init(&remote->refs, 32, NULL) < 0 ||
@@ -368,9 +367,6 @@ int git_remote_load(git_remote **out, git_repository *repo, const char *name)
 	remote->update_fetchhead = 1;
 	remote->name = git__strdup(name);
 	GITERR_CHECK_ALLOC(remote->name);
-
-	if ((error = get_check_cert(&remote->check_cert, repo)) < 0)
-		goto cleanup;
 
 	if (git_vector_init(&remote->refs, 32, NULL) < 0 ||
 	    git_vector_init(&remote->refspecs, 2, NULL) < 0 ||
@@ -673,11 +669,8 @@ int git_remote_connect(git_remote *remote, git_direction direction)
 		return error;
 
 	if (t->set_callbacks &&
-		(error = t->set_callbacks(t, remote->callbacks.sideband_progress, NULL, remote->callbacks.payload)) < 0)
+	    (error = t->set_callbacks(t, remote->callbacks.sideband_progress, NULL, remote->callbacks.certificate_check, remote->callbacks.payload)) < 0)
 		goto on_error;
-
-	if (!remote->check_cert)
-		flags |= GIT_TRANSPORTFLAGS_NO_CHECK_CERT;
 
 	if ((error = t->connect(t, url, remote->callbacks.credentials, remote->callbacks.payload, direction, flags)) != 0)
 		goto on_error;
@@ -1248,13 +1241,6 @@ int git_remote_list(git_strarray *remotes_list, git_repository *repo)
 	return 0;
 }
 
-void git_remote_check_cert(git_remote *remote, int check)
-{
-	assert(remote);
-
-	remote->check_cert = check;
-}
-
 int git_remote_set_callbacks(git_remote *remote, const git_remote_callbacks *callbacks)
 {
 	assert(remote && callbacks);
@@ -1267,6 +1253,7 @@ int git_remote_set_callbacks(git_remote *remote, const git_remote_callbacks *cal
 		return remote->transport->set_callbacks(remote->transport,
 			remote->callbacks.sideband_progress,
 			NULL,
+			remote->callbacks.certificate_check,
 			remote->callbacks.payload);
 
 	return 0;

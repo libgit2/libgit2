@@ -53,12 +53,14 @@ static int git_smart__set_callbacks(
 	git_transport *transport,
 	git_transport_message_cb progress_cb,
 	git_transport_message_cb error_cb,
+	git_transport_certificate_check_cb certificate_check_cb,
 	void *message_cb_payload)
 {
 	transport_smart *t = (transport_smart *)transport;
 
 	t->progress_cb = progress_cb;
 	t->error_cb = error_cb;
+	t->certificate_check_cb = certificate_check_cb;
 	t->message_cb_payload = message_cb_payload;
 
 	return 0;

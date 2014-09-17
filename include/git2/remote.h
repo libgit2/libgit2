@@ -408,14 +408,6 @@ GIT_EXTERN(int) git_remote_supported_url(const char* url);
 GIT_EXTERN(int) git_remote_list(git_strarray *out, git_repository *repo);
 
 /**
- * Choose whether to check the server's certificate (applies to HTTPS only)
- *
- * @param remote the remote to configure
- * @param check whether to check the server's certificate (defaults to yes)
- */
-GIT_EXTERN(void) git_remote_check_cert(git_remote *remote, int check);
-
-/**
  * Argument to the completion callback which tells it which operation
  * finished.
  */
@@ -454,6 +446,14 @@ struct git_remote_callbacks {
 	 * though this field isn't set.
 	 */
 	git_cred_acquire_cb credentials;
+
+	/**
+	 * If cert verification fails, this will be called to let the
+	 * user make the final decision of whether to allow the
+	 * connection to proceed. Returns 1 to allow the connection, 0
+	 * to disallow it or a negative value to indicate an error.
+	 */
+        git_transport_certificate_check_cb certificate_check;
 
 	/**
 	 * During the download of new data, this will be regularly

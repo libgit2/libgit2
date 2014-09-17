@@ -31,7 +31,6 @@ struct git_remote {
 	git_transfer_progress stats;
 	unsigned int need_pack;
 	git_remote_autotag_option_t download_tags;
-	int check_cert;
 	int update_fetchhead;
 };
 

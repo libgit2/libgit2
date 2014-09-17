@@ -19,6 +19,10 @@ git_http_auth_scheme auth_schemes[] = {
 	{ GIT_AUTHTYPE_BASIC, "Basic", GIT_CREDTYPE_USERPASS_PLAINTEXT, git_http_auth_basic },
 };
 
+#ifdef GIT_SSL
+# include <openssl/x509v3.h>
+#endif
+
 static const char *upload_pack_service = "upload-pack";
 static const char *upload_pack_ls_service_url = "/info/refs?service=git-upload-pack";
 static const char *upload_pack_service_url = "/git-upload-pack";
@@ -524,7 +528,7 @@ static int write_chunk(gitno_socket *socket, const char *buffer, size_t len)
 
 static int http_connect(http_subtransport *t)
 {
-	int flags = 0;
+	int flags = 0, error;
 
 	if (t->connected &&
 		http_should_keep_alive(&t->parser) &&
@@ -541,13 +545,55 @@ static int http_connect(http_subtransport *t)
 			return -1;
 
 		flags |= GITNO_CONNECT_SSL;
-
-		if (GIT_TRANSPORTFLAGS_NO_CHECK_CERT & tflags)
-			flags |= GITNO_CONNECT_SSL_NO_CHECK_CERT;
 	}
 
-	if (gitno_connect(&t->socket, t->connection_data.host, t->connection_data.port, flags) < 0)
-		return -1;
+	error = gitno_connect(&t->socket, t->connection_data.host, t->connection_data.port, flags);
+
+#ifdef GIT_SSL
+	if ((!error || error == GIT_ECERTIFICATE) && t->owner->certificate_check_cb != NULL) {
+                X509 *cert = SSL_get_peer_certificate(t->socket.ssl.ssl);
+		git_cert_x509 cert_info;
+                int len, is_valid;
+		unsigned char *guard, *encoded_cert;
+
+		/* Retrieve the length of the certificate first */
+		len = i2d_X509(cert, NULL);
+		if (len < 0) {
+			giterr_set(GITERR_NET, "failed to retrieve certificate information");
+			return -1;
+		}
+
+
+		encoded_cert = git__malloc(len);
+		GITERR_CHECK_ALLOC(encoded_cert);
+		/* i2d_X509 makes 'copy' point to just after the data */
+		guard = encoded_cert;
+
+		len = i2d_X509(cert, &guard);
+		if (len < 0) {
+			git__free(encoded_cert);
+			giterr_set(GITERR_NET, "failed to retrieve certificate information");
+			return -1;
+		}
+
+		giterr_clear();
+		is_valid = error != GIT_ECERTIFICATE;
+		cert_info.cert_type = GIT_CERT_X509;
+		cert_info.data = encoded_cert;
+		cert_info.len = len;
+                error = t->owner->certificate_check_cb((git_cert *) &cert_info, is_valid, t->owner->message_cb_payload);
+		git__free(encoded_cert);
+
+		if (error < 0) {
+			if (!giterr_last())
+				giterr_set(GITERR_NET, "user cancelled certificate check");
+
+			return error;
+		}
+	}
+#endif
+	if (error < 0)
+		return error;
 
 	t->connected = 1;
 	return 0;
@@ -608,6 +654,7 @@ replay:
 
 	while (!*bytes_read && !t->parse_finished) {
 		size_t data_offset;
+		int error;
 
 		/*
 		 * Make the parse_buffer think it's as full of data as
@@ -654,8 +701,8 @@ replay:
 		if (PARSE_ERROR_REPLAY == t->parse_error) {
 			s->sent_request = 0;
 
-			if (http_connect(t) < 0)
-				return -1;
+			if ((error = http_connect(t)) < 0)
+				return error;
 
 			goto replay;
 		}
@@ -907,8 +954,8 @@ static int http_action(
 		 (ret = gitno_connection_data_from_url(&t->connection_data, url, NULL)) < 0)
 		return ret;
 
-	if (http_connect(t) < 0)
-		return -1;
+	if ((ret = http_connect(t)) < 0)
+		return ret;
 
 	switch (action) {
 	case GIT_SERVICE_UPLOADPACK_LS:

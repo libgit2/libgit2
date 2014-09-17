@@ -16,6 +16,8 @@
 #include "remote.h"
 #include "repository.h"
 
+#include <wincrypt.h>
+#pragma comment(lib, "crypt32")
 #include <winhttp.h>
 #pragma comment(lib, "winhttp")
 
@@ -203,6 +205,39 @@ static int fallback_cred_acquire_cb(
 	return error;
 }
 
+static int certificate_check(winhttp_stream *s, int valid)
+{
+	int error;
+	winhttp_subtransport *t = OWNING_SUBTRANSPORT(s);
+	PCERT_CONTEXT cert_ctx;
+	DWORD cert_ctx_size = sizeof(cert_ctx);
+	git_cert_x509 cert;
+
+	/* If there is no override, we should fail if WinHTTP doesn't think it's fine */
+	if (t->owner->certificate_check_cb == NULL && !valid)
+		return GIT_ECERTIFICATE;
+
+	if (t->owner->certificate_check_cb == NULL || !t->connection_data.use_ssl)
+		return 0;
+
+	if (!WinHttpQueryOption(s->request, WINHTTP_OPTION_SERVER_CERT_CONTEXT, &cert_ctx, &cert_ctx_size)) {
+		giterr_set(GITERR_OS, "failed to get server certificate");
+		return -1;
+	}
+
+	giterr_clear();
+	cert.cert_type = GIT_CERT_X509;
+	cert.data = cert_ctx->pbCertEncoded;
+	cert.len = cert_ctx->cbCertEncoded;
+	error = t->owner->certificate_check_cb((git_cert *) &cert, valid, t->owner->cred_acquire_payload);
+	CertFreeCertificateContext(cert_ctx);
+
+	if (error < 0 && !giterr_last())
+		giterr_set(GITERR_NET, "user cancelled certificate check");
+
+	return error;
+}
+
 static int winhttp_stream_connect(winhttp_stream *s)
 {
 	winhttp_subtransport *t = OWNING_SUBTRANSPORT(s);
@@ -353,13 +388,6 @@ static int winhttp_stream_connect(winhttp_stream *s)
 
 		if (t->owner->parent.read_flags(&t->owner->parent, &flags) < 0)
 			goto on_error;
-
-		if ((GIT_TRANSPORTFLAGS_NO_CHECK_CERT & flags) &&
-			!WinHttpSetOption(s->request, WINHTTP_OPTION_SECURITY_FLAGS,
-			(LPVOID)&no_check_cert_flags, sizeof(no_check_cert_flags))) {
-			giterr_set(GITERR_OS, "Failed to set options to ignore cert errors");
-			goto on_error;
-		}
 	}
 
 	/* If we have a credential on the subtransport, apply it to the request */
@@ -527,6 +555,74 @@ on_error:
 	return error;
 }
 
+static int do_send_request(winhttp_stream *s, size_t len, int ignore_length)
+{
+	int request_failed = 0, cert_valid = 1, error = 0;
+
+	if (ignore_length) {
+		if (!WinHttpSendRequest(s->request,
+			WINHTTP_NO_ADDITIONAL_HEADERS, 0,
+			WINHTTP_NO_REQUEST_DATA, 0,
+			WINHTTP_IGNORE_REQUEST_TOTAL_LENGTH, 0)) {
+			return -1;
+		}
+	} else {
+		if (!WinHttpSendRequest(s->request,
+			WINHTTP_NO_ADDITIONAL_HEADERS, 0,
+			WINHTTP_NO_REQUEST_DATA, 0,
+			len, 0)) {
+			return -1;
+		}
+	}
+
+	return 0;
+}
+
+static int send_request(winhttp_stream *s, size_t len, int ignore_length)
+{
+	int request_failed = 0, cert_valid = 1, error = 0;
+	DWORD ignore_flags;
+
+	if ((error = do_send_request(s, len, ignore_length)) < 0)
+		request_failed = 1;
+
+	if (request_failed) {
+		if (GetLastError() != ERROR_WINHTTP_SECURE_FAILURE) {
+			giterr_set(GITERR_OS, "failed to send request");
+			return -1;
+		} else {
+			cert_valid = 0;
+		}
+	}
+
+	giterr_clear();
+	if ((error = certificate_check(s, cert_valid)) < 0) {
+		if (!giterr_last())
+			giterr_set(GITERR_OS, "user cancelled certificate check");
+
+		return error;
+	}
+
+	/* if neither the request nor the certificate check returned errors, we're done */
+	if (!request_failed)
+		return 0;
+
+	ignore_flags =
+		SECURITY_FLAG_IGNORE_CERT_CN_INVALID |
+		SECURITY_FLAG_IGNORE_CERT_DATE_INVALID |
+		SECURITY_FLAG_IGNORE_UNKNOWN_CA;
+	
+	if (!WinHttpSetOption(s->request, WINHTTP_OPTION_SECURITY_FLAGS, &ignore_flags, sizeof(ignore_flags))) {
+		giterr_set(GITERR_OS, "failed to set security options");
+		return -1;
+	}
+
+	if ((error = do_send_request(s, len, ignore_length)) < 0)
+		giterr_set(GITERR_OS, "failed to send request");
+
+	return error;
+}
+
 static int winhttp_stream_read(
 	git_smart_subtransport_stream *stream,
 	char *buffer,
@@ -537,6 +633,7 @@ static int winhttp_stream_read(
 	winhttp_subtransport *t = OWNING_SUBTRANSPORT(s);
 	DWORD dw_bytes_read;
 	char replay_count = 0;
+	int error;
 
 replay:
 	/* Enforce a reasonable cap on the number of replays */
@@ -553,15 +650,12 @@ replay:
 		DWORD status_code, status_code_length, content_type_length, bytes_written;
 		char expected_content_type_8[MAX_CONTENT_TYPE_LEN];
 		wchar_t expected_content_type[MAX_CONTENT_TYPE_LEN], content_type[MAX_CONTENT_TYPE_LEN];
+		int request_failed = 0, cert_valid = 1;
 
 		if (!s->sent_request) {
-			if (!WinHttpSendRequest(s->request,
-				WINHTTP_NO_ADDITIONAL_HEADERS, 0,
-				WINHTTP_NO_REQUEST_DATA, 0,
-				s->post_body_len, 0)) {
-				giterr_set(GITERR_OS, "Failed to send request");
-				return -1;
-			}
+
+			if ((error = send_request(s, s->post_body_len, 0)) < 0)
+				return error;
 
 			s->sent_request = 1;
 		}
@@ -815,6 +909,7 @@ static int winhttp_stream_write_single(
 	winhttp_stream *s = (winhttp_stream *)stream;
 	winhttp_subtransport *t = OWNING_SUBTRANSPORT(s);
 	DWORD bytes_written;
+	int error;
 
 	if (!s->request && winhttp_stream_connect(s) < 0)
 		return -1;
@@ -825,13 +920,8 @@ static int winhttp_stream_write_single(
 		return -1;
 	}
 
-	if (!WinHttpSendRequest(s->request,
-			WINHTTP_NO_ADDITIONAL_HEADERS, 0,
-			WINHTTP_NO_REQUEST_DATA, 0,
-			(DWORD)len, 0)) {
-		giterr_set(GITERR_OS, "Failed to send request");
-		return -1;
-	}
+	if ((error = send_request(s, len, 0)) < 0)
+		return error;
 
 	s->sent_request = 1;
 
@@ -954,6 +1044,7 @@ static int winhttp_stream_write_chunked(
 {
 	winhttp_stream *s = (winhttp_stream *)stream;
 	winhttp_subtransport *t = OWNING_SUBTRANSPORT(s);
+	int error;
 
 	if (!s->request && winhttp_stream_connect(s) < 0)
 		return -1;
@@ -967,13 +1058,8 @@ static int winhttp_stream_write_chunked(
 			return -1;
 		}
 
-		if (!WinHttpSendRequest(s->request,
-			WINHTTP_NO_ADDITIONAL_HEADERS, 0,
-			WINHTTP_NO_REQUEST_DATA, 0,
-			WINHTTP_IGNORE_REQUEST_TOTAL_LENGTH, 0)) {
-			giterr_set(GITERR_OS, "Failed to send request");
-			return -1;
-		}
+		if ((error = send_request(s, 0, 1)) < 0)
+			return error;
 
 		s->sent_request = 1;
 	}

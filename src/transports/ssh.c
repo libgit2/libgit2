@@ -473,6 +473,46 @@ static int _git_ssh_setup_conn(
 		GITERR_CHECK_ALLOC(port);
 	}
 
+	if ((error = gitno_connect(&s->socket, host, port, 0)) < 0)
+		goto on_error;
+
+	if ((error = _git_ssh_session_create(&session, s->socket)) < 0)
+		goto on_error;
+
+	if (t->owner->certificate_check_cb != NULL) {
+		git_cert_hostkey cert = { 0 };
+		const char *key;
+
+		cert.cert_type = GIT_CERT_HOSTKEY_LIBSSH2;
+
+		key = libssh2_hostkey_hash(session, LIBSSH2_HOSTKEY_HASH_SHA1);
+		if (key != NULL) {
+			cert.type |= GIT_CERT_SSH_SHA1;
+			memcpy(&cert.hash_sha1, key, 20);
+		}
+
+		key = libssh2_hostkey_hash(session, LIBSSH2_HOSTKEY_HASH_MD5);
+		if (key != NULL) {
+			cert.type |= GIT_CERT_SSH_MD5;
+			memcpy(&cert.hash_md5, key, 16);
+		}
+
+		if (cert.type == 0) {
+			giterr_set(GITERR_SSH, "unable to get the host key");
+			return -1;
+		}
+
+		/* We don't currently trust any hostkeys */
+		giterr_clear();
+                error = t->owner->certificate_check_cb((git_cert *) &cert, 0, t->owner->message_cb_payload);
+		if (error < 0) {
+			if (!giterr_last())
+				giterr_set(GITERR_NET, "user cancelled hostkey check");
+
+			goto on_error;
+		}
+        }
+
 	/* we need the username to ask for auth methods */
 	if (!user) {
 		if ((error = request_creds(&cred, t, NULL, GIT_CREDTYPE_USERNAME)) < 0)
@@ -487,12 +527,6 @@ static int _git_ssh_setup_conn(
 		if ((error = git_cred_userpass_plaintext_new(&cred, user, pass)) < 0)
 			goto on_error;
 	}
-
-	if ((error = gitno_connect(&s->socket, host, port, 0)) < 0)
-		goto on_error;
-
-	if ((error = _git_ssh_session_create(&session, s->socket)) < 0)
-		goto on_error;
 
 	if ((error = list_auth_methods(&auth_methods, session, user)) < 0)
 		goto on_error;
@@ -602,10 +636,8 @@ static int ssh_receivepack_ls(
 {
 	const char *cmd = t->cmd_receivepack ? t->cmd_receivepack : cmd_receivepack;
 
-	if (_git_ssh_setup_conn(t, url, cmd, stream) < 0)
-		return -1;
 
-	return 0;
+	return _git_ssh_setup_conn(t, url, cmd, stream);
 }
 
 static int ssh_receivepack(

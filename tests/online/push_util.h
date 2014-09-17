@@ -12,7 +12,7 @@ extern const git_oid OID_ZERO;
  * @param data pointer to a record_callbacks_data instance
  */
 #define RECORD_CALLBACKS_INIT(data) \
-	{ GIT_REMOTE_CALLBACKS_VERSION, NULL, NULL, cred_acquire_cb, NULL, record_update_tips_cb, data }
+	{ GIT_REMOTE_CALLBACKS_VERSION, NULL, NULL, cred_acquire_cb, NULL, NULL, record_update_tips_cb, data }
 
 typedef struct {
 	char *name;

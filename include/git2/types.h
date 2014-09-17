@@ -254,6 +254,44 @@ typedef int (*git_transfer_progress_cb)(const git_transfer_progress *stats, void
 typedef int (*git_transport_message_cb)(const char *str, int len, void *payload);
 
 /**
+ * Type of host certificate structure that is passed to the check callback
+ */
+typedef enum git_cert_t {
+        /**
+         * The `data` argument to the callback will be a pointer to
+         * the DER-encoded data.
+         */
+	GIT_CERT_X509,
+        /**
+         * The `data` argument to the callback will be a pointer to a
+         * `git_cert_hostkey` structure.
+         */
+	GIT_CERT_HOSTKEY_LIBSSH2,
+} git_cert_t;
+
+/**
+ * Parent type for `git_cert_hostkey` and `git_cert_x509`.
+ */
+typedef struct {
+	/**
+	 * Type of certificate. A `GIT_CERT_` value.
+	 */
+	git_cert_t cert_type;
+} git_cert;
+
+/**
+ * Callback for the user's custom certificate checks.
+ *
+ * @param type The type of certificate or host info, SSH or X.509
+ * @param data The data for the certificate or host info
+ * @param len The size of the certificate or host info
+ * @param valid Whether the libgit2 checks (OpenSSL or WinHTTP) think
+ * this certificate is valid
+ * @param payload Payload provided by the caller
+ */
+typedef int (*git_transport_certificate_check_cb)(git_cert *cert, int valid, void *payload);
+
+/**
  * Opaque structure representing a submodule.
  */
 typedef struct git_submodule git_submodule;

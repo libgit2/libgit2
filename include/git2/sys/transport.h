@@ -23,9 +23,6 @@ GIT_BEGIN_DECL
 
 typedef enum {
 	GIT_TRANSPORTFLAGS_NONE = 0,
-	/* If the connection is secured with SSL/TLS, the authenticity
-	 * of the server certificate should not be verified. */
-	GIT_TRANSPORTFLAGS_NO_CHECK_CERT = 1
 } git_transport_flags_t;
 
 typedef struct git_transport git_transport;
@@ -37,6 +34,7 @@ struct git_transport {
 		git_transport *transport,
 		git_transport_message_cb progress_cb,
 		git_transport_message_cb error_cb,
+		git_transport_certificate_check_cb certificate_check_cb,
 		void *payload);
 
 	/* Connect the transport to the remote repository, using the given

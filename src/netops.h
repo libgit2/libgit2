@@ -47,10 +47,6 @@ typedef struct gitno_buffer gitno_buffer;
 enum {
 	/* Attempt to create an SSL connection. */
 	GITNO_CONNECT_SSL = 1,
-
-	/* Valid only when GITNO_CONNECT_SSL is also specified.
-	 * Indicates that the server certificate should not be validated. */
-	GITNO_CONNECT_SSL_NO_CHECK_CERT = 2,
 };
 
 /**
