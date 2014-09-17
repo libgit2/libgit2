@@ -37,9 +37,9 @@ matrix:
          OPTIONS="-DBUILD_CLAR=ON -DBUILD_EXAMPLES=OFF -DCMAKE_BUILD_TYPE=Debug"
      os: linux
  allow_failures:
-   - env:
+   env:
      - COVERITY=1
-       VALGRIND=1
+     - VALGRIND=1
 
 install:
   - ./script/install-deps-${TRAVIS_OS_NAME}.sh
