@@ -1078,8 +1078,8 @@ static void collect_progress(
 {
 	git_vector *paths = payload;
 
-	(void)completed_steps;
-	(void)total_steps;
+	GIT_UNUSED(completed_steps);
+	GIT_UNUSED(total_steps);
 
 	if (path == NULL)
 		return;
