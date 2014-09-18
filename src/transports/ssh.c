@@ -504,7 +504,7 @@ static int _git_ssh_setup_conn(
 
 		/* We don't currently trust any hostkeys */
 		giterr_clear();
-                error = t->owner->certificate_check_cb((git_cert *) &cert, 0, t->owner->message_cb_payload);
+		error = t->owner->certificate_check_cb((git_cert *) &cert, 0, host, t->owner->message_cb_payload);
 		if (error < 0) {
 			if (!giterr_last())
 				giterr_set(GITERR_NET, "user cancelled hostkey check");
