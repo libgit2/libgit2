@@ -283,6 +283,7 @@ int git_remote_dup(git_remote **dest, git_remote *source)
 	remote->repo = source->repo;
 	remote->download_tags = source->download_tags;
 	remote->update_fetchhead = source->update_fetchhead;
+	remote->prune_refs = source->prune_refs;
 
 	if (git_vector_init(&remote->refs, 32, NULL) < 0 ||
 	    git_vector_init(&remote->refspecs, 2, NULL) < 0 ||
@@ -437,6 +438,22 @@ int git_remote_lookup(git_remote **out, git_repository *repo, const char *name)
 
 	if (download_tags_value(remote, config) < 0)
 		goto cleanup;
+
+	git_buf_clear(&buf);
+	git_buf_printf(&buf, "remote.%s.prune", name);
+
+	if ((error = git_config_get_bool(&remote->prune_refs, config, git_buf_cstr(&buf))) < 0) {
+		if (error == GIT_ENOTFOUND) {
+			giterr_clear();
+
+			if ((error = git_config_get_bool(&remote->prune_refs, config, "fetch.prune")) < 0) {
+				if (error == GIT_ENOTFOUND) {
+					giterr_clear();
+					error = 0;
+				}
+			}
+		}
+	}
 
 	/* Move the data over to where the matching functions can find them */
 	if (dwim_refspecs(&remote->active_refspecs, &remote->refspecs, &remote->refs) < 0)
@@ -883,6 +900,7 @@ int git_remote_fetch(
 {
 	int error;
 	git_buf reflog_msg_buf = GIT_BUF_INIT;
+	size_t i;
 
 	/* Connect and download everything */
 	if ((error = git_remote_connect(remote, GIT_DIRECTION_FETCH)) != 0)
@@ -904,6 +922,9 @@ int git_remote_fetch(
 		git_buf_printf(&reflog_msg_buf, "fetch %s",
 				remote->name ? remote->name : remote->url);
 	}
+
+	if (remote->prune_refs && (error = git_remote_prune(remote)) < 0)
+		return error;
 
 	/* Create "remote/foo" branches for all remote branches */
 	error = git_remote_update_tips(remote, signature, git_buf_cstr(&reflog_msg_buf));
@@ -1058,6 +1079,78 @@ cleanup:
 	git_vector_free(&fetchhead_refs);
 	git_reference_free(head_ref);
 
+	return error;
+}
+
+int git_remote_prune(git_remote *remote)
+{
+	git_strarray arr = { 0 };
+	size_t i, j, k;
+	git_vector remote_refs = GIT_VECTOR_INIT;
+	git_refspec *spec;
+	int error;
+
+	if ((error = git_reference_list(&arr, remote->repo)) < 0)
+		return error;
+
+	if ((error = ls_to_vector(&remote_refs, remote)) < 0)
+		goto cleanup;
+
+	git_vector_foreach(&remote->active_refspecs, k, spec) {
+		if (spec->push)
+			continue;
+
+		for (i = 0; i < arr.count; ++i) {
+			char *prune_ref = arr.strings[i];
+			int found = 0;
+			git_remote_head *remote_ref;
+			git_oid oid;
+			git_reference *ref;
+
+			if (git_refspec_dst_matches(spec, prune_ref) != 1)
+				continue;
+
+			git_vector_foreach(&remote_refs, j, remote_ref) {
+				git_buf buf = GIT_BUF_INIT;
+
+				if (git_refspec_transform(&buf, spec, remote_ref->name) < 0)
+					continue;
+
+				if (!git__strcmp(prune_ref, git_buf_cstr(&buf))) {
+					found = 1;
+					break;
+				}
+			}
+
+			if (found)
+				continue;
+
+			if ((error = git_reference_lookup(&ref, remote->repo, prune_ref)) >= 0) {
+				if (git_reference_type(ref) == GIT_REF_OID) {
+					git_oid_cpy(&oid, git_reference_target(ref));
+					if ((error = git_reference_delete(ref)) < 0) {
+						git_reference_free(ref);
+						goto cleanup;
+					}
+							
+					if (remote->callbacks.update_tips != NULL) {
+						git_oid zero_oid;
+
+						memset(&zero_oid, 0, sizeof(zero_oid));
+						if (remote->callbacks.update_tips(prune_ref, &oid, &zero_oid, remote->callbacks.payload) < 0) {
+							git_reference_free(ref);
+							goto cleanup;
+						}
+					}
+				}
+				git_reference_free(ref);
+			}
+		}
+	}
+
+cleanup:
+	git_strarray_free(&arr);
+	git_vector_free(&remote_refs);
 	return error;
 }
 
@@ -1458,6 +1551,16 @@ git_remote_autotag_option_t git_remote_autotag(const git_remote *remote)
 void git_remote_set_autotag(git_remote *remote, git_remote_autotag_option_t value)
 {
 	remote->download_tags = value;
+}
+
+int git_remote_prune_refs(const git_remote *remote)
+{
+	return remote->prune_refs;
+}
+
+void git_remote_set_prune_refs(git_remote *remote, int value)
+{
+	remote->prune_refs = value;
 }
 
 static int rename_remote_config_section(
