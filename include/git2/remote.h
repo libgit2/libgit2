@@ -375,6 +375,14 @@ GIT_EXTERN(int) git_remote_update_tips(
 		const char *reflog_message);
 
 /**
+ * Prune tracking refs that are no longer present on remote
+ *
+ * @param remote the remote to prune
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_remote_prune(git_remote *remote);
+
+/**
  * Download new data and update tips
  *
  * Convenience function to connect to a remote, download the data,
@@ -583,6 +591,24 @@ GIT_EXTERN(git_remote_autotag_option_t) git_remote_autotag(const git_remote *rem
 GIT_EXTERN(void) git_remote_set_autotag(
 	git_remote *remote,
 	git_remote_autotag_option_t value);
+
+/**
+ * Retrieve the ref-prune setting
+ *
+ * @param remote the remote to query
+ * @return the ref-prune setting
+ */
+GIT_EXTERN(int) git_remote_prune_refs(const git_remote *remote);
+
+/**
+ * Set the ref-prune setting
+ *
+ * @param remote the remote to configure
+ * @param value a boolean value
+ */
+GIT_EXTERN(void) git_remote_set_prune_refs(
+	git_remote *remote,
+	int value);
 
 /**
  * Give the remote a new name
