@@ -46,6 +46,10 @@ v0.21 + 1
   repository_cb_payload to allow the user to create a repository with
   custom options.
 
+* The option to ignore certificate errors via git_remote_cert_check()
+  is no longer present. Instead, git_remote_callbacks has gained a new
+  entry which lets the user perform their own certificate checks.
+
 * git_clone_into and git_clone_local_into have been removed from the
   public API in favour of git_clone callbacks
 
