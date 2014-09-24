@@ -480,7 +480,6 @@ int ssh_certificate_check(git_cert *cert, int valid, const char *host, void *pay
 	const char *expected_str;
 
 	GIT_UNUSED(valid);
-	GIT_UNUSED(host);
 	GIT_UNUSED(payload);
 
 	expected_str = cl_getenv("GITTEST_REMOTE_SSH_FINGERPRINT");
@@ -504,6 +503,8 @@ int ssh_certificate_check(git_cert *cert, int valid, const char *host, void *pay
 	}
 
 	cl_assert(!memcmp(&expected, &actual, 20));
+
+	cl_assert_equal_s("localhost", host);
 
 	return GIT_EUSER;
 }
@@ -551,8 +552,9 @@ static int succeed_certificate_check(git_cert *cert, int valid, const char *host
 {
 	GIT_UNUSED(cert);
 	GIT_UNUSED(valid);
-	GIT_UNUSED(host);
 	GIT_UNUSED(payload);
+
+	cl_assert_equal_s("github.com", host);
 
 	return 0;
 }
