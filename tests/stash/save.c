@@ -368,6 +368,23 @@ void test_stash_save__including_untracked_without_any_untracked_file_creates_an_
 	assert_object_oid("stash^3^{tree}", EMPTY_TREE, GIT_OBJ_TREE);
 }
 
+void test_stash_save__ignored_directory(void)
+{
+	cl_git_pass(mkdir("stash/ignored_directory", 0777));
+	cl_git_pass(mkdir("stash/ignored_directory/sub", 0777));
+	cl_git_mkfile("stash/ignored_directory/sub/some_file", "stuff");
+
+	assert_status(repo, "ignored_directory/sub/some_file", GIT_STATUS_WT_NEW);
+	cl_git_pass(git_ignore_add_rule(repo, "ignored_directory/"));
+	assert_status(repo, "ignored_directory/sub/some_file", GIT_STATUS_IGNORED);
+
+	cl_git_pass(git_stash_save(&stash_tip_oid, repo, signature, NULL, GIT_STASH_INCLUDE_UNTRACKED | GIT_STASH_INCLUDE_IGNORED));
+
+	cl_assert(!git_path_exists("stash/ignored_directory/sub/some_file"));
+	cl_assert(!git_path_exists("stash/ignored_directory/sub"));
+	cl_assert(!git_path_exists("stash/ignored_directory"));
+}
+
 void test_stash_save__skip_submodules(void)
 {
 	git_repository *untracked_repo;
