@@ -240,8 +240,8 @@ char hex value.</p>
       </td>
       <td class=code>
         <div class='highlight'><pre>  <span class="n">printf</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\n</span><span class="s">*Raw to Hex*</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
-  <span class="kt">char</span> <span class="n">out</span><span class="p">[</span><span class="mi">41</span><span class="p">];</span>
-  <span class="n">out</span><span class="p">[</span><span class="mi">40</span><span class="p">]</span> <span class="o">=</span> <span class="sc">&#39;\0&#39;</span><span class="p">;</span></pre></div>
+  <span class="kt">char</span> <span class="n">out</span><span class="p">[</span><span class="n">GIT_OID_HEXSZ</span><span class="o">+</span><span class="mi">1</span><span class="p">];</span>
+  <span class="n">out</span><span class="p">[</span><span class="n">GIT_OID_HEXSZ</span><span class="p">]</span> <span class="o">=</span> <span class="sc">&#39;\0&#39;</span><span class="p">;</span></pre></div>
       </td>
     </tr>
     <tr id='section-13'>
