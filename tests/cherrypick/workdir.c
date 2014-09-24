@@ -122,7 +122,7 @@ void test_cherrypick_workdir__empty_result(void)
 
 	git_oid_fromstr(&cherry_oid, cherrypick_oid);
 	cl_git_pass(git_commit_lookup(&commit, repo, &cherry_oid));
-	cl_git_pass(git_cherrypick(repo, commit, NULL));
+	cl_git_pass(git_cherry_pick(repo, commit, NULL));
 
 	/* The resulting tree should not have changed, the change was already on HEAD */
 	cl_assert(merge_test_index(repo_index, merge_index_entries, 3));
