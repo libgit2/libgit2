@@ -47,7 +47,7 @@ void test_pack_packbuilder__cleanup(void)
 	git_indexer_free(_indexer);
 	_indexer = NULL;
 
-	p_chdir("..");
+	cl_git_pass(p_chdir(".."));
 	cl_git_sandbox_cleanup();
 	_repo = NULL;
 }
