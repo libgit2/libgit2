@@ -18,6 +18,7 @@
 #include "refs.h"
 #include "refspec.h"
 #include "fetchhead.h"
+#include "global.h"
 
 static int dwim_refspecs(git_vector *out, git_vector *refspecs, git_vector *refs);
 
@@ -87,6 +88,8 @@ static int get_check_cert(int *out, git_repository *repo)
 	git_config *cfg;
 	const char *val;
 	int error = 0;
+	const char *sslcainfo = NULL;
+	const char *sslcapath = NULL;
 
 	assert(out && repo);
 
@@ -103,6 +106,15 @@ static int get_check_cert(int *out, git_repository *repo)
 	/* http.sslVerify config setting */
 	if ((error = git_repository_config__weakptr(&cfg, repo)) < 0)
 		return error;
+
+#ifdef GIT_SSL
+    sslcainfo = git_config__get_string_force(cfg, "http.sslcainfo", NULL);
+    sslcapath = git_config__get_string_force(cfg, "http.sslcapath", NULL);
+
+	if (sslcainfo || sslcapath)
+		if (SSL_CTX_load_verify_locations(git__ssl_ctx, sslcainfo, sslcapath) != 1)
+			return GITERR_SSL;
+#endif
 
 	*out = git_config__get_bool_force(cfg, "http.sslverify", 1);
 	return 0;
