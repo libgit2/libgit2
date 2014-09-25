@@ -7,7 +7,7 @@ struct git_pool_page {
 	git_pool_page *next;
 	uint32_t size;
 	uint32_t avail;
-	char data[GIT_FLEX_ARRAY];
+	GIT_ALIGN(char data[GIT_FLEX_ARRAY], 8);
 };
 
 struct pool_freelist {
