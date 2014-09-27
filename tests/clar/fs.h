@@ -73,7 +73,7 @@ fs_rmdir_helper(WCHAR *_wsource)
 			if (FILE_ATTRIBUTE_READONLY & find_data.dwFileAttributes)
 				cl_assert(SetFileAttributesW(buffer, find_data.dwFileAttributes & ~FILE_ATTRIBUTE_READONLY));
 
-            cl_assert(DeleteFileW(buffer));
+		cl_assert(DeleteFileW(buffer));
 		}
 	}
 	while (FindNextFileW(find_handle, &find_data));
@@ -140,7 +140,7 @@ fs_rm(const char *_source)
 		if (FILE_ATTRIBUTE_READONLY & attrs)
 			cl_assert(SetFileAttributesW(wsource, attrs & ~FILE_ATTRIBUTE_READONLY));
 
-        cl_assert(DeleteFileW(wsource));
+        	cl_assert(DeleteFileW(wsource));
 	}
 
 	/* Wait for the DeleteFile or RemoveDirectory call to complete */
