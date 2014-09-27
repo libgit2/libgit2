@@ -318,6 +318,55 @@ static int winhttp_stream_connect(winhttp_stream *s)
 		}
 
 		git__free(proxy_wide);
+	} else {
+		/* try to detect default WinHTTP proxy */
+		WINHTTP_PROXY_INFO proxy_info;
+		
+		if (!WinHttpGetDefaultProxyConfiguration(&proxy_info)) {
+			giterr_set(GITERR_OS, "Failed to get WinHTTP default proxy configuration");
+			goto on_error;
+		}
+
+		if (proxy_info.dwAccessType == WINHTTP_ACCESS_TYPE_DEFAULT_PROXY) {
+			/* try to retrieve Internet Explorer proxy configuration for the current user */
+			WINHTTP_CURRENT_USER_IE_PROXY_CONFIG current_user_ie_proxy_config;
+
+			if (!WinHttpGetIEProxyConfigForCurrentUser(&current_user_ie_proxy_config)) {
+				giterr_set(GITERR_OS, "Failed to retrieve the Internet Explorer proxy configuration for the current user");
+				goto on_error;
+			}
+			if (current_user_ie_proxy_config.lpszProxy) {
+				proxy_info.dwAccessType = WINHTTP_ACCESS_TYPE_NAMED_PROXY;
+				proxy_info.lpszProxy = current_user_ie_proxy_config.lpszProxy;
+				proxy_info.lpszProxyBypass = current_user_ie_proxy_config.lpszProxyBypass;
+				if (current_user_ie_proxy_config.lpszAutoConfigUrl)
+					GlobalFree(current_user_ie_proxy_config.lpszAutoConfigUrl);
+			} else {
+				/* Web Proxy Auto-Discovery (WPAD) protocol not supported so far */
+				if (current_user_ie_proxy_config.lpszAutoConfigUrl)
+					GlobalFree(current_user_ie_proxy_config.lpszAutoConfigUrl);
+				if (current_user_ie_proxy_config.lpszProxy)
+					GlobalFree(current_user_ie_proxy_config.lpszProxy);
+				if (current_user_ie_proxy_config.lpszProxyBypass)
+					GlobalFree(current_user_ie_proxy_config.lpszProxyBypass);
+			}
+		}
+
+		if (proxy_info.dwAccessType == WINHTTP_ACCESS_TYPE_NAMED_PROXY) {
+			if (!WinHttpSetOption(s->request, WINHTTP_OPTION_PROXY, &proxy_info, sizeof(WINHTTP_PROXY_INFO))) {
+				giterr_set(GITERR_OS, "Failed to set proxy");
+				if (proxy_info.lpszProxy)
+					GlobalFree(proxy_info.lpszProxy);
+				if (proxy_info.lpszProxyBypass)
+					GlobalFree(proxy_info.lpszProxyBypass);
+				goto on_error;
+			}
+		}
+
+		if (proxy_info.lpszProxy)
+			GlobalFree(proxy_info.lpszProxy);
+		if (proxy_info.lpszProxyBypass)
+			GlobalFree(proxy_info.lpszProxyBypass);
 	}
 
 	/* Disable WinHTTP redirects so we can handle them manually. Why, you ask?
