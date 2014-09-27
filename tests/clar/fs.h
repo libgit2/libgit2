@@ -12,20 +12,6 @@
 
 #endif /* __MINGW32__ */
 
-// WINDOWS PROBLEM
-int DeleteFileW_2(WCHAR buffer[])
-{
-    int i=0;
-    for(i=0;i<5;i++)
-    {
-        if(DeleteFileW(buffer)!=0)
-            return 1;
-    }
-    if(i==5)
-        return 0;
-    return 1;
-}
-
 static int
 fs__dotordotdot(WCHAR *_tocheck)
 {
@@ -87,7 +73,7 @@ fs_rmdir_helper(WCHAR *_wsource)
 			if (FILE_ATTRIBUTE_READONLY & find_data.dwFileAttributes)
 				cl_assert(SetFileAttributesW(buffer, find_data.dwFileAttributes & ~FILE_ATTRIBUTE_READONLY));
 
-            cl_assert(DeleteFileW_2(buffer));
+            cl_assert(DeleteFileW(buffer));
 		}
 	}
 	while (FindNextFileW(find_handle, &find_data));
@@ -154,7 +140,7 @@ fs_rm(const char *_source)
 		if (FILE_ATTRIBUTE_READONLY & attrs)
 			cl_assert(SetFileAttributesW(wsource, attrs & ~FILE_ATTRIBUTE_READONLY));
 
-        cl_assert(DeleteFileW_2(wsource));
+        cl_assert(DeleteFileW(wsource));
 	}
 
 	/* Wait for the DeleteFile or RemoveDirectory call to complete */
