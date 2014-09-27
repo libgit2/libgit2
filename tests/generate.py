@@ -80,7 +80,7 @@ class Module(object):
         return re.sub(SKIP_COMMENTS_REGEX, _replacer, text)
 
     def parse(self, contents):
-        TEST_FUNC_REGEX = r"^(void\s+(test_%s__(\w+))\s*\(\s*void\s*\))\s*\{"
+    TEST_FUNC_REGEX = r"^(void\s+(test_%s__(\w+))\(\s*void\s*\))\s*\{"
 
         contents = self._skip_comments(contents)
         regex = re.compile(TEST_FUNC_REGEX % self.name, re.MULTILINE)
