@@ -488,7 +488,7 @@ static int write_tree(
 	const git_tree_cache *cache;
 
 	cache = git_tree_cache_get(index->tree, dirname);
-	if (cache != NULL && cache->entries >= 0){
+	if (cache != NULL && cache->entry_count >= 0){
 		git_oid_cpy(oid, &cache->oid);
 		return (int)find_next_dir(dirname, index, start);
 	}
@@ -589,7 +589,7 @@ int git_tree__write_index(
 		return GIT_EUNMERGED;
 	}
 
-	if (index->tree != NULL && index->tree->entries >= 0) {
+	if (index->tree != NULL && index->tree->entry_count >= 0) {
 		git_oid_cpy(oid, &index->tree->oid);
 		return 0;
 	}

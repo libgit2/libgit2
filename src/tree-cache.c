@@ -31,7 +31,7 @@ void git_tree_cache_invalidate_path(git_tree_cache *tree, const char *path)
 	if (tree == NULL)
 		return;
 
-	tree->entries = -1;
+	tree->entry_count = -1;
 
 	while (ptr != NULL) {
 		end = strchr(ptr, '/');
@@ -43,7 +43,7 @@ void git_tree_cache_invalidate_path(git_tree_cache *tree, const char *path)
 		if (tree == NULL) /* We don't have that tree */
 			return;
 
-		tree->entries = -1;
+		tree->entry_count = -1;
 		ptr = end + 1;
 	}
 }
@@ -93,7 +93,7 @@ static int read_tree_internal(git_tree_cache **out,
 	if (git__strtol32(&count, buffer, &buffer, 10) < 0)
 		goto corrupted;
 
-	tree->entries = count;
+	tree->entry_count = count;
 
 	if (*buffer != ' ' || ++buffer >= buffer_end)
 		goto corrupted;
@@ -108,7 +108,7 @@ static int read_tree_internal(git_tree_cache **out,
 		goto corrupted;
 
 	/* The SHA1 is only there if it's not invalidated */
-	if (tree->entries >= 0) {
+	if (tree->entry_count >= 0) {
 		/* 160-bit SHA-1 for this tree and it's children */
 		if (buffer + GIT_OID_RAWSZ > buffer_end)
 			goto corrupted;
@@ -243,4 +243,56 @@ int git_tree_cache_new(git_tree_cache **out, const char *name, git_pool *pool)
 
 	*out = tree;
 	return 0;
+}
+
+/**
+ * Recursively recalculate the total entry count, which we need to
+ * write out to the index
+ */
+static void recount_entries(git_tree_cache *tree)
+{
+	size_t i;
+	ssize_t entry_count;
+	git_tree_cache *child;
+
+	for (i = 0; i < tree->children_count; i++)
+		recount_entries(tree->children[i]);
+
+	if (tree->entry_count == -1)
+		return;
+
+	entry_count = 0;
+	for (i = 0; i < tree->children_count; i++) {
+		child = tree->children[i];
+
+		if (child->entry_count == -1)
+			continue;
+
+		entry_count += tree->children[i]->children_count;
+	}
+
+	tree->entry_count = entry_count;
+}
+
+static void write_tree(git_buf *out, git_tree_cache *tree)
+{
+	size_t i;
+
+	git_buf_printf(out, "%s%c%zd %"PRIuZ"\n", tree->name, 0, tree->entry_count, tree->children_count);
+
+	if (tree->entry_count == -1)
+		return;
+
+	git_buf_put(out, (const char *) &tree->oid, GIT_OID_RAWSZ);
+
+	for (i = 0; i < tree->children_count; i++)
+		write_tree(out, tree->children[i]);
+}
+
+int git_tree_cache_write(git_buf *out, git_tree_cache *tree)
+{
+	recount_entries(tree);
+	write_tree(out, tree);
+
+	return git_buf_oom(out) ? -1 : 0;
 }

@@ -2114,16 +2114,13 @@ static int write_entries(git_index *index, git_filebuf *file)
 static int write_extension(git_filebuf *file, struct index_extension *header, git_buf *data)
 {
 	struct index_extension ondisk;
-	int error = 0;
 
 	memset(&ondisk, 0x0, sizeof(struct index_extension));
 	memcpy(&ondisk, header, 4);
 	ondisk.extension_size = htonl(header->extension_size);
 
-	if ((error = git_filebuf_write(file, &ondisk, sizeof(struct index_extension))) == 0)
-		error = git_filebuf_write(file, data->ptr, data->size);
-
-	return error;
+	git_filebuf_write(file, &ondisk, sizeof(struct index_extension));
+	return git_filebuf_write(file, data->ptr, data->size);
 }
 
 static int create_name_extension_data(git_buf *name_buf, git_index_name_entry *conflict_name)
@@ -2229,6 +2226,29 @@ done:
 	return error;
 }
 
+static int write_tree_extension(git_index *index, git_filebuf *file)
+{
+	struct index_extension extension;
+	git_buf buf = GIT_BUF_INIT;
+	int error;
+
+	if (index->tree == NULL)
+		return 0;
+
+	if ((error = git_tree_cache_write(&buf, index->tree)) < 0)
+		return error;
+
+	memset(&extension, 0x0, sizeof(struct index_extension));
+	memcpy(&extension.signature, INDEX_EXT_TREECACHE_SIG, 4);
+	extension.extension_size = (uint32_t)buf.size;
+
+	error = write_extension(file, &extension, &buf);
+
+	git_buf_free(&buf);
+
+	return error;
+}
+
 static int write_index(git_index *index, git_filebuf *file)
 {
 	git_oid hash_final;
@@ -2251,7 +2271,9 @@ static int write_index(git_index *index, git_filebuf *file)
 	if (write_entries(index, file) < 0)
 		return -1;
 
-	/* TODO: write tree cache extension */
+	/* write the tree cache extension */
+	if (index->tree != NULL && write_tree_extension(index, file) < 0)
+		return -1;
 
 	/* write the rename conflict extension */
 	if (index->names.length > 0 && write_name_extension(index, file) < 0)
