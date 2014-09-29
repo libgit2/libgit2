@@ -119,8 +119,7 @@ You need to run the CMake commands from the Visual Studio command
 prompt, not the regular or Windows SDK one. Select the right generator
 for your version with the `-G "Visual Studio X" option.
 
-See [the wiki]
-(https://github.com/libgit2/libgit2/wiki/Building-libgit2-on-Windows)
+See [the wiki](https://libgit2.github.com/docs/guides/build-and-link)
 for more detailed instructions.
 
 Android
