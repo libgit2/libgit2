@@ -458,7 +458,7 @@ int gitno_connect(gitno_socket *s_out, const char *host, const char *port, int f
 	hints.ai_socktype = SOCK_STREAM;
 	hints.ai_family = AF_UNSPEC;
 
-	if ((ret = p_getaddrinfo(host, port, &hints, &info)) < 0) {
+	if ((ret = p_getaddrinfo(host, port, &hints, &info)) != 0) {
 		giterr_set(GITERR_NET,
 			"Failed to resolve address for %s: %s", host, p_gai_strerror(ret));
 		return -1;
