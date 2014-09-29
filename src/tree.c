@@ -579,6 +579,7 @@ int git_tree__write_index(
 	git_oid *oid, git_index *index, git_repository *repo)
 {
 	int ret;
+	git_tree *tree;
 	bool old_ignore_case = false;
 
 	assert(oid && index && repo);
@@ -609,7 +610,21 @@ int git_tree__write_index(
 	if (old_ignore_case)
 		git_index__set_ignore_case(index, true);
 
-	return ret < 0 ? ret : 0;
+	index->tree = NULL;
+
+	if (ret < 0)
+		return ret;
+
+	git_pool_clear(&index->tree_pool);
+
+	if ((ret = git_tree_lookup(&tree, repo, oid)) < 0)
+		return ret;
+
+	/* Read the tree cache into the index */
+	ret = git_tree_cache_read_tree(&index->tree, tree, &index->tree_pool);
+	git_tree_free(tree);
+
+	return ret;
 }
 
 int git_treebuilder_create(git_treebuilder **builder_p, const git_tree *source)
