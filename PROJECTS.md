@@ -88,8 +88,6 @@ might make good smaller projects by themselves.
 * Upgrade internal libxdiff code to latest from core Git
 * Improve index internals with hashtable lookup for files instead of
   using binary search every time
-* Make the index write the cache out to disk (with tests to gain
-  confidence that the caching invalidation works correctly)
 * Tree builder improvements:
     * Use a hash table when building instead of a list
     * Extend to allow building a tree hierarchy
