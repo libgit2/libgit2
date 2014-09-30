@@ -12,7 +12,7 @@ void assert_describe(
 
 	cl_git_pass(git_revparse_single(&object, repo, revparse_spec));
 
-	cl_git_pass(git_describe_object(&label, object, opts));
+	cl_git_pass(git_describe_commit(&label, object, opts));
 
 	if (is_prefix_match)
 		cl_assert_equal_i(0, git__prefixcmp(git_buf_cstr(&label), expected_output));

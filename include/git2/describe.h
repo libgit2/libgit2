@@ -55,7 +55,7 @@ typedef struct git_describe_opts {
 	GIT_DESCRIBE_DEFAULT_MAX_CANDIDATES_TAGS, \
 	GIT_DESCRIBE_DEFAULT_ABBREVIATED_SIZE}
 
-GIT_EXTERN(int) git_describe_object(
+GIT_EXTERN(int) git_describe_commit(
 	git_buf *out,
 	git_object *committish,
 	git_describe_opts *opts);

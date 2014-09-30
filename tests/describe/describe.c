@@ -39,7 +39,7 @@ void test_describe_describe__cannot_describe_against_a_repo_with_no_ref(void)
 
 	cl_git_pass(git_reference_foreach(repo, delete_cb, NULL));
 
-	cl_git_fail(git_describe_object(&buf, object, &opts));
+	cl_git_fail(git_describe_commit(&buf, object, &opts));
 
 	git_object_free(object);
 	git_buf_free(&buf);

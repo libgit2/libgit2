@@ -626,7 +626,7 @@ static int normalize_options(
 
 /** TODO: Add git_object_describe_workdir(git_buf *, const char *dirty_suffix, git_describe_opts *); */
 
-int git_describe_object(
+int git_describe_commit(
 	git_buf *out,
 	git_object *committish,
 	git_describe_opts *opts)
