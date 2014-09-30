@@ -155,7 +155,7 @@ int fetch(git_repository *repo, int argc, char **argv)
 	// Update the references in the remote's namespace to point to the
 	// right commits. This may be needed even if there was no packfile
 	// to download, which can happen e.g. when the branches have been
-	// changed but all the neede objects are available locally.
+	// changed but all the needed objects are available locally.
 	if (git_remote_update_tips(remote, NULL, NULL) < 0)
 		return -1;
 

@@ -145,6 +145,19 @@ typedef enum {
 	 */
 	GIT_DIFF_ENABLE_FAST_UNTRACKED_DIRS = (1u << 14),
 
+	/** When diff finds a file in the working directory with stat
+	 * information different from the index, but the OID ends up being the
+	 * same, write the correct stat information into the index.  Note:
+	 * without this flag, diff will always leave the index untouched.
+	 */
+	GIT_DIFF_UPDATE_INDEX = (1u << 15),
+
+	/** Include unreadable files in the diff */
+	GIT_DIFF_INCLUDE_UNREADABLE = (1u << 16),
+	
+	/** Include unreadable files in the diff */
+	GIT_DIFF_INCLUDE_UNREADABLE_AS_UNTRACKED = (1u << 17),
+
 	/*
 	 * Options controlling how output will be generated
 	 */
@@ -205,9 +218,9 @@ typedef struct git_diff git_diff;
  * considered reserved for internal or future use.
  */
 typedef enum {
-	GIT_DIFF_FLAG_BINARY     = (1u << 0), /** file(s) treated as binary data */
-	GIT_DIFF_FLAG_NOT_BINARY = (1u << 1), /** file(s) treated as text data */
-	GIT_DIFF_FLAG_VALID_ID  = (1u << 2), /** `id` value is known correct */
+	GIT_DIFF_FLAG_BINARY     = (1u << 0), /**< file(s) treated as binary data */
+	GIT_DIFF_FLAG_NOT_BINARY = (1u << 1), /**< file(s) treated as text data */
+	GIT_DIFF_FLAG_VALID_ID  = (1u << 2), /**< `id` value is known correct */
 } git_diff_flag_t;
 
 /**
@@ -221,15 +234,16 @@ typedef enum {
  * DELETED pairs).
  */
 typedef enum {
-	GIT_DELTA_UNMODIFIED = 0, /** no changes */
-	GIT_DELTA_ADDED = 1,	  /** entry does not exist in old version */
-	GIT_DELTA_DELETED = 2,	  /** entry does not exist in new version */
-	GIT_DELTA_MODIFIED = 3,   /** entry content changed between old and new */
-	GIT_DELTA_RENAMED = 4,    /** entry was renamed between old and new */
-	GIT_DELTA_COPIED = 5,     /** entry was copied from another old entry */
-	GIT_DELTA_IGNORED = 6,    /** entry is ignored item in workdir */
-	GIT_DELTA_UNTRACKED = 7,  /** entry is untracked item in workdir */
-	GIT_DELTA_TYPECHANGE = 8, /** type of entry changed between old and new */
+	GIT_DELTA_UNMODIFIED = 0, /**< no changes */
+	GIT_DELTA_ADDED = 1,	  /**< entry does not exist in old version */
+	GIT_DELTA_DELETED = 2,	  /**< entry does not exist in new version */
+	GIT_DELTA_MODIFIED = 3,   /**< entry content changed between old and new */
+	GIT_DELTA_RENAMED = 4,    /**< entry was renamed between old and new */
+	GIT_DELTA_COPIED = 5,     /**< entry was copied from another old entry */
+	GIT_DELTA_IGNORED = 6,    /**< entry is ignored item in workdir */
+	GIT_DELTA_UNTRACKED = 7,  /**< entry is untracked item in workdir */
+	GIT_DELTA_TYPECHANGE = 8, /**< type of entry changed between old and new */
+	GIT_DELTA_UNREADABLE = 9, /**< entry is unreadable */
 } git_delta_t;
 
 /**
@@ -381,17 +395,16 @@ typedef struct {
 	{GIT_DIFF_OPTIONS_VERSION, 0, GIT_SUBMODULE_IGNORE_DEFAULT, {NULL,0}, NULL, NULL, 3}
 
 /**
-* Initializes a `git_diff_options` with default values. Equivalent to
-* creating an instance with GIT_DIFF_OPTIONS_INIT.
-*
-* @param opts the `git_diff_options` instance to initialize.
-* @param version the version of the struct; you should pass
-* `GIT_DIFF_OPTIONS_VERSION` here.
-* @return Zero on success; -1 on failure.
-*/
+ * Initializes a `git_diff_options` with default values. Equivalent to
+ * creating an instance with GIT_DIFF_OPTIONS_INIT.
+ *
+ * @param opts The `git_diff_options` struct to initialize
+ * @param version Version of struct; pass `GIT_DIFF_OPTIONS_VERSION`
+ * @return Zero on success; -1 on failure.
+ */
 GIT_EXTERN(int) git_diff_init_options(
-	git_diff_options* opts,
-	int version);
+	git_diff_options *opts,
+	unsigned int version);
 
 /**
  * When iterating over a diff, callback that will be made per file.
@@ -410,12 +423,12 @@ typedef int (*git_diff_file_cb)(
  */
 typedef struct git_diff_hunk git_diff_hunk;
 struct git_diff_hunk {
-	int    old_start;     /** Starting line number in old_file */
-	int    old_lines;     /** Number of lines in old_file */
-	int    new_start;     /** Starting line number in new_file */
-	int    new_lines;     /** Number of lines in new_file */
-	size_t header_len;    /** Number of bytes in header text */
-	char   header[128];   /** Header text, NUL-byte terminated */
+	int    old_start;     /**< Starting line number in old_file */
+	int    old_lines;     /**< Number of lines in old_file */
+	int    new_start;     /**< Starting line number in new_file */
+	int    new_lines;     /**< Number of lines in new_file */
+	size_t header_len;    /**< Number of bytes in header text */
+	char   header[128];   /**< Header text, NUL-byte terminated */
 };
 
 /**
@@ -458,13 +471,13 @@ typedef enum {
  */
 typedef struct git_diff_line git_diff_line;
 struct git_diff_line {
-	char   origin;       /** A git_diff_line_t value */
-	int    old_lineno;   /** Line number in old file or -1 for added line */
-	int    new_lineno;   /** Line number in new file or -1 for deleted line */
-	int    num_lines;    /** Number of newline characters in content */
-	size_t content_len;  /** Number of bytes of data */
-	git_off_t content_offset; /** Offset in the original file to the content */
-	const char *content; /** Pointer to diff text, not NUL-byte terminated */
+	char   origin;       /**< A git_diff_line_t value */
+	int    old_lineno;   /**< Line number in old file or -1 for added line */
+	int    new_lineno;   /**< Line number in new file or -1 for deleted line */
+	int    num_lines;    /**< Number of newline characters in content */
+	size_t content_len;  /**< Number of bytes of data */
+	git_off_t content_offset; /**< Offset in the original file to the content */
+	const char *content; /**< Pointer to diff text, not NUL-byte terminated */
 };
 
 /**
@@ -476,10 +489,10 @@ struct git_diff_line {
  * of lines of file and hunk headers.
  */
 typedef int (*git_diff_line_cb)(
-	const git_diff_delta *delta, /** delta that contains this data */
-	const git_diff_hunk *hunk,   /** hunk containing this data */
-	const git_diff_line *line,   /** line data */
-	void *payload);              /** user reference data */
+	const git_diff_delta *delta, /**< delta that contains this data */
+	const git_diff_hunk *hunk,   /**< hunk containing this data */
+	const git_diff_line *line,   /**< line data */
+	void *payload);              /**< user reference data */
 
 /**
  * Flags to control the behavior of diff rename/copy detection.
@@ -622,17 +635,16 @@ typedef struct {
 #define GIT_DIFF_FIND_OPTIONS_INIT {GIT_DIFF_FIND_OPTIONS_VERSION}
 
 /**
-* Initializes a `git_diff_find_options` with default values. Equivalent to
-* creating an instance with GIT_DIFF_FIND_OPTIONS_INIT.
-*
-* @param opts the `git_diff_find_options` instance to initialize.
-* @param version the version of the struct; you should pass
-* `GIT_DIFF_FIND_OPTIONS_VERSION` here.
-* @return Zero on success; -1 on failure.
-*/
+ * Initializes a `git_diff_find_options` with default values. Equivalent to
+ * creating an instance with GIT_DIFF_FIND_OPTIONS_INIT.
+ *
+ * @param opts The `git_diff_find_options` struct to initialize
+ * @param version Version of struct; pass `GIT_DIFF_FIND_OPTIONS_VERSION`
+ * @return Zero on success; -1 on failure.
+ */
 GIT_EXTERN(int) git_diff_find_init_options(
-	git_diff_find_options* opts,
-	int version);
+	git_diff_find_options *opts,
+	unsigned int version);
 
 /** @name Diff Generator Functions
  *
@@ -803,23 +815,6 @@ GIT_EXTERN(int) git_diff_merge(
 GIT_EXTERN(int) git_diff_find_similar(
 	git_diff *diff,
 	const git_diff_find_options *options);
-
-/**
- * Initialize diff options structure
- *
- * In most cases, you can probably just use `GIT_DIFF_OPTIONS_INIT` to
- * initialize the diff options structure, but in some cases that is not
- * going to work.  You can call this function instead.  Note that you
- * must pass both a pointer to the structure to be initialized and the
- * `GIT_DIFF_OPTIONS_VERSION` value from the header you compiled with.
- *
- * @param options Pointer to git_diff_options memory to be initialized
- * @param version Should be `GIT_DIFF_OPTIONS_VERSION`
- * @return 0 on success, negative on failure (such as unsupported version)
- */
-GIT_EXTERN(int) git_diff_options_init(
-	git_diff_options *options,
-	unsigned int version);
 
 /**@}*/
 
@@ -1233,17 +1228,17 @@ GIT_EXTERN(int) git_diff_commit_as_email(
 	const git_diff_options *diff_opts);
 
 /**
-* Initializes a `git_diff_format_email_options` with default values. Equivalent to
-* creating an instance with GIT_DIFF_FORMAT_EMAIL_OPTIONS_INIT.
-*
-* @param opts the `git_diff_format_email_options` instance to initialize.
-* @param version the version of the struct; you should pass
-* `GIT_DIFF_FORMAT_EMAIL_OPTIONS_VERSION` here.
-* @return Zero on success; -1 on failure.
-*/
+ * Initializes a `git_diff_format_email_options` with default values.
+ *
+ * Equivalent to creating an instance with GIT_DIFF_FORMAT_EMAIL_OPTIONS_INIT.
+ *
+ * @param opts The `git_diff_format_email_options` struct to initialize
+ * @param version Version of struct; pass `GIT_DIFF_FORMAT_EMAIL_OPTIONS_VERSION`
+ * @return Zero on success; -1 on failure.
+ */
 GIT_EXTERN(int) git_diff_format_email_init_options(
 	git_diff_format_email_options *opts,
-	int version);
+	unsigned int version);
 
 GIT_END_DECL
 

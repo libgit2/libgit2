@@ -44,6 +44,7 @@
 #else
 
 # include <unistd.h>
+# include <strings.h>
 # ifdef GIT_THREADS
 #	include <pthread.h>
 #	include <sched.h>
@@ -168,6 +169,11 @@ GIT_INLINE(void) git__init_structure(void *structure, size_t len, unsigned int v
 	*((int*)structure) = version;
 }
 #define GIT_INIT_STRUCTURE(S,V) git__init_structure(S, sizeof(*S), V)
+
+#define GIT_INIT_STRUCTURE_FROM_TEMPLATE(PTR,VERSION,TYPE,TPL) do { \
+	TYPE _tmpl = TPL; \
+	GITERR_CHECK_VERSION(&(VERSION), _tmpl.version, #TYPE);	\
+	memcpy((PTR), &_tmpl, sizeof(_tmpl)); } while (0)
 
 /* NOTE: other giterr functions are in the public errors.h header file */
 

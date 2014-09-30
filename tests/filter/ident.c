@@ -39,7 +39,8 @@ void test_filter_ident__to_worktree(void)
 	git_filter_list *fl;
 	git_filter *ident;
 
-	cl_git_pass(git_filter_list_new(&fl, g_repo, GIT_FILTER_TO_WORKTREE));
+	cl_git_pass(git_filter_list_new(
+		&fl, g_repo, GIT_FILTER_TO_WORKTREE, 0));
 
 	ident = git_filter_lookup(GIT_FILTER_IDENT);
 	cl_assert(ident != NULL);
@@ -78,7 +79,8 @@ void test_filter_ident__to_odb(void)
 	git_filter_list *fl;
 	git_filter *ident;
 
-	cl_git_pass(git_filter_list_new(&fl, g_repo, GIT_FILTER_TO_ODB));
+	cl_git_pass(git_filter_list_new(
+		&fl, g_repo, GIT_FILTER_TO_ODB, 0));
 
 	ident = git_filter_lookup(GIT_FILTER_IDENT);
 	cl_assert(ident != NULL);

@@ -842,7 +842,7 @@ static int index_entry_reuc_init(git_index_reuc_entry **reuc_out,
 
 static void index_entry_cpy(git_index_entry *tgt, const git_index_entry *src)
 {
-	char *tgt_path = tgt->path;
+	const char *tgt_path = tgt->path;
 	memcpy(tgt, src, sizeof(*tgt));
 	tgt->path = tgt_path; /* reset to existing path data */
 }
@@ -1104,12 +1104,26 @@ int git_index_remove_bypath(git_index *index, const char *path)
 	return 0;
 }
 
+static bool valid_filemode(const int filemode)
+{
+	return (filemode == GIT_FILEMODE_BLOB ||
+		filemode == GIT_FILEMODE_BLOB_EXECUTABLE ||
+		filemode == GIT_FILEMODE_LINK ||
+		filemode == GIT_FILEMODE_COMMIT);
+}
+
+
 int git_index_add(git_index *index, const git_index_entry *source_entry)
 {
 	git_index_entry *entry = NULL;
 	int ret;
 
 	assert(index && source_entry && source_entry->path);
+
+	if (!valid_filemode(source_entry->mode)) {
+		giterr_set(GITERR_INDEX, "invalid filemode");
+		return -1;
+	}
 
 	if ((ret = index_entry_dup(&entry, source_entry)) < 0 ||
 		(ret = index_insert(index, &entry, 1)) < 0)
@@ -1753,35 +1767,42 @@ static size_t read_entry(
 	git_index_entry **out, const void *buffer, size_t buffer_size)
 {
 	size_t path_length, entry_size;
-	uint16_t flags_raw;
 	const char *path_ptr;
-	const struct entry_short *source = buffer;
+	struct entry_short source;
 	git_index_entry entry = {{0}};
 
 	if (INDEX_FOOTER_SIZE + minimal_entry_size > buffer_size)
 		return 0;
 
-	entry.ctime.seconds = (git_time_t)ntohl(source->ctime.seconds);
-	entry.ctime.nanoseconds = ntohl(source->ctime.nanoseconds);
-	entry.mtime.seconds = (git_time_t)ntohl(source->mtime.seconds);
-	entry.mtime.nanoseconds = ntohl(source->mtime.nanoseconds);
-	entry.dev = ntohl(source->dev);
-	entry.ino = ntohl(source->ino);
-	entry.mode = ntohl(source->mode);
-	entry.uid = ntohl(source->uid);
-	entry.gid = ntohl(source->gid);
-	entry.file_size = ntohl(source->file_size);
-	git_oid_cpy(&entry.id, &source->oid);
-	entry.flags = ntohs(source->flags);
+	/* buffer is not guaranteed to be aligned */
+	memcpy(&source, buffer, sizeof(struct entry_short));
+
+	entry.ctime.seconds = (git_time_t)ntohl(source.ctime.seconds);
+	entry.ctime.nanoseconds = ntohl(source.ctime.nanoseconds);
+	entry.mtime.seconds = (git_time_t)ntohl(source.mtime.seconds);
+	entry.mtime.nanoseconds = ntohl(source.mtime.nanoseconds);
+	entry.dev = ntohl(source.dev);
+	entry.ino = ntohl(source.ino);
+	entry.mode = ntohl(source.mode);
+	entry.uid = ntohl(source.uid);
+	entry.gid = ntohl(source.gid);
+	entry.file_size = ntohl(source.file_size);
+	git_oid_cpy(&entry.id, &source.oid);
+	entry.flags = ntohs(source.flags);
 
 	if (entry.flags & GIT_IDXENTRY_EXTENDED) {
-		const struct entry_long *source_l = (const struct entry_long *)source;
-		path_ptr = source_l->path;
+		uint16_t flags_raw;
+		size_t flags_offset;
 
-		flags_raw = ntohs(source_l->flags_extended);
-		memcpy(&entry.flags_extended, &flags_raw, 2);
+		flags_offset = offsetof(struct entry_long, flags_extended);
+		memcpy(&flags_raw, (const char *) buffer + flags_offset,
+			sizeof(flags_raw));
+		flags_raw = ntohs(flags_raw);
+
+		memcpy(&entry.flags_extended, &flags_raw, sizeof(flags_raw));
+		path_ptr = (const char *) buffer + offsetof(struct entry_long, path);
 	} else
-		path_ptr = source->path;
+		path_ptr = (const char *) buffer + offsetof(struct entry_short, path);
 
 	path_length = entry.flags & GIT_IDXENTRY_NAMEMASK;
 
@@ -1832,14 +1853,12 @@ static int read_header(struct index_header *dest, const void *buffer)
 
 static size_t read_extension(git_index *index, const char *buffer, size_t buffer_size)
 {
-	const struct index_extension *source;
 	struct index_extension dest;
 	size_t total_size;
 
-	source = (const struct index_extension *)(buffer);
-
-	memcpy(dest.signature, source->signature, 4);
-	dest.extension_size = ntohl(source->extension_size);
+	/* buffer is not guaranteed to be aligned */
+	memcpy(&dest, buffer, sizeof(struct index_extension));
+	dest.extension_size = ntohl(dest.extension_size);
 
 	total_size = dest.extension_size + sizeof(struct index_extension);
 
@@ -2282,9 +2301,7 @@ static int read_tree_cb(
 		entry->mode == old_entry->mode &&
 		git_oid_equal(&entry->id, &old_entry->id))
 	{
-		char *oldpath = entry->path;
-		memcpy(entry, old_entry, sizeof(*entry));
-		entry->path = oldpath;
+		index_entry_cpy(entry, old_entry);
 		entry->flags_extended = 0;
 	}
 

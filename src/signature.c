@@ -70,9 +70,9 @@ int git_signature_new(git_signature **sig_out, const char *name, const char *ema
 	if (p->name == NULL || p->email == NULL)
 		return -1; /* oom */
 
-	if (p->name[0] == '\0') {
+	if (p->name[0] == '\0' || p->email[0] == '\0') {
 		git_signature_free(p);
-		return signature_error("Signature cannot have an empty name");
+		return signature_error("Signature cannot have an empty name or email");
 	}
 
 	p->when.time = time;
@@ -144,7 +144,7 @@ int git_signature_default(git_signature **out, git_repository *repo)
 	git_config *cfg;
 	const char *user_name, *user_email;
 
-	if ((error = git_repository_config(&cfg, repo)) < 0)
+	if ((error = git_repository_config_snapshot(&cfg, repo)) < 0)
 		return error;
 
 	if (!(error = git_config_get_string(&user_name, cfg, "user.name")) &&

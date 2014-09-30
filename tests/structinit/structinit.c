@@ -2,6 +2,7 @@
 #include <git2/sys/config.h>
 #include <git2/sys/odb_backend.h>
 #include <git2/sys/refdb_backend.h>
+#include <git2/sys/transport.h>
 
 #define STRINGIFY(s) #s
 
@@ -48,7 +49,7 @@ void test_structinit_structinit__compare(void)
 	/* checkout */
 	CHECK_MACRO_FUNC_INIT_EQUAL( \
 		git_checkout_options, GIT_CHECKOUT_OPTIONS_VERSION, \
-		GIT_CHECKOUT_OPTIONS_INIT, git_checkout_init_opts);
+		GIT_CHECKOUT_OPTIONS_INIT, git_checkout_init_options);
 
 	/* clone */
 	CHECK_MACRO_FUNC_INIT_EQUAL( \
@@ -98,7 +99,7 @@ void test_structinit_structinit__compare(void)
 	/* revert */
 	CHECK_MACRO_FUNC_INIT_EQUAL( \
 		git_revert_options, GIT_REVERT_OPTIONS_VERSION, \
-		GIT_REVERT_OPTIONS_INIT, git_revert_init_opts);
+		GIT_REVERT_OPTIONS_INIT, git_revert_init_options);
 
 	/* status */
 	CHECK_MACRO_FUNC_INIT_EQUAL( \

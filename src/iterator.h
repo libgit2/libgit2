@@ -52,6 +52,7 @@ struct git_iterator {
 	char *start;
 	char *end;
 	int (*prefixcomp)(const char *str, const char *prefix);
+	size_t stat_calls;
 	unsigned int flags;
 };
 
@@ -243,6 +244,8 @@ extern int git_iterator_current_parent_tree(
 	const git_tree **tree_out, git_iterator *iter, const char *parent_path);
 
 extern bool git_iterator_current_is_ignored(git_iterator *iter);
+
+extern bool git_iterator_current_tree_is_ignored(git_iterator *iter);
 
 extern int git_iterator_cmp(
 	git_iterator *iter, const char *path_prefix);

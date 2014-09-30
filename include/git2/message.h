@@ -29,12 +29,14 @@ GIT_BEGIN_DECL
  *
  * @param message The message to be prettified.
  *
- * @param strip_comments Non-zero to remove lines starting with "#", 0 to
- *     leave them in.
+ * @param strip_comments Non-zero to remove comment lines, 0 to leave them in.
+ *
+ * @param comment_char Comment character. Lines starting with this character
+ * are considered to be comments and removed if `strip_comments` is non-zero.
  *
  * @return 0 or an error code.
  */
-GIT_EXTERN(int) git_message_prettify(git_buf *out, const char *message, int strip_comments);
+GIT_EXTERN(int) git_message_prettify(git_buf *out, const char *message, int strip_comments, char comment_char);
 
 /** @} */
 GIT_END_DECL

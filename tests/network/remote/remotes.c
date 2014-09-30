@@ -60,21 +60,29 @@ void test_network_remote_remotes__pushurl(void)
 	cl_assert(git_remote_pushurl(_remote) == NULL);
 }
 
+void test_network_remote_remotes__error_when_not_found(void)
+{
+	git_remote *r;
+	cl_git_fail_with(git_remote_load(&r, _repo, "does-not-exist"), GIT_ENOTFOUND);
+
+	cl_assert(giterr_last() != NULL);
+	cl_assert(giterr_last()->klass == GITERR_CONFIG);
+}
+
 void test_network_remote_remotes__error_when_no_push_available(void)
 {
 	git_remote *r;
-	git_transport *t;
 	git_push *p;
 
 	cl_git_pass(git_remote_create_anonymous(&r, _repo, cl_fixture("testrepo.git"), NULL));
 
-	cl_git_pass(git_transport_local(&t,r,NULL));
-
-	/* Make sure that push is really not available */
-	t->push = NULL;
-	cl_git_pass(git_remote_set_transport(r, t));
+	cl_git_pass(git_remote_set_transport(r, git_transport_local, NULL));
 
 	cl_git_pass(git_remote_connect(r, GIT_DIRECTION_PUSH));
+
+	/* Make sure that push is really not available */
+	r->transport->push = NULL;
+
 	cl_git_pass(git_push_new(&p, r));
 	cl_git_pass(git_push_add_refspec(p, "refs/heads/master"));
 	cl_git_fail_with(git_push_finish(p), GIT_ERROR);
@@ -83,26 +91,24 @@ void test_network_remote_remotes__error_when_no_push_available(void)
 	git_remote_free(r);
 }
 
-void test_network_remote_remotes__parsing_ssh_remote(void)
+void test_network_remote_remotes__supported_urls(void)
 {
-	cl_assert( git_remote_valid_url("git@github.com:libgit2/libgit2.git") );
-}
+	int ssh_supported = 0, https_supported = 0;
 
-void test_network_remote_remotes__parsing_local_path_fails_if_path_not_found(void)
-{
-	cl_assert( !git_remote_valid_url("/home/git/repos/libgit2.git") );
-}
-
-void test_network_remote_remotes__supported_transport_methods_are_supported(void)
-{
-	cl_assert( git_remote_supported_url("git://github.com/libgit2/libgit2") );
-}
-
-void test_network_remote_remotes__unsupported_transport_methods_are_unsupported(void)
-{
-#ifndef GIT_SSH
-	cl_assert( !git_remote_supported_url("git@github.com:libgit2/libgit2.git") );
+#ifdef GIT_SSH
+	ssh_supported = 1;
 #endif
+
+#if defined(GIT_SSL) || defined(GIT_WINHTTP)
+	https_supported = 1;
+#endif
+
+	cl_assert(git_remote_supported_url("git://github.com/libgit2/libgit2"));
+	cl_assert(git_remote_supported_url("http://github.com/libgit2/libgit2"));
+
+	cl_assert_equal_i(ssh_supported, git_remote_supported_url("git@github.com:libgit2/libgit2.git"));
+	cl_assert_equal_i(ssh_supported, git_remote_supported_url("ssh://git@github.com/libgit2/libgit2.git"));
+	cl_assert_equal_i(https_supported, git_remote_supported_url("https://github.com/libgit2/libgit2.git"));
 }
 
 void test_network_remote_remotes__refspec_parsing(void)
@@ -429,27 +435,6 @@ void test_network_remote_remotes__returns_ENOTFOUND_when_neither_url_nor_pushurl
 		git_remote_load(&remote, _repo, "no-remote-url"), GIT_ENOTFOUND);
 }
 
-void test_network_remote_remotes__check_structure_version(void)
-{
-	git_transport transport = GIT_TRANSPORT_INIT;
-	const git_error *err;
-
-	git_remote_free(_remote);
-	_remote = NULL;
-	cl_git_pass(git_remote_create_anonymous(&_remote, _repo, "test-protocol://localhost", NULL));
-
-	transport.version = 0;
-	cl_git_fail(git_remote_set_transport(_remote, &transport));
-	err = giterr_last();
-	cl_assert_equal_i(GITERR_INVALID, err->klass);
-
-	giterr_clear();
-	transport.version = 1024;
-	cl_git_fail(git_remote_set_transport(_remote, &transport));
-	err = giterr_last();
-	cl_assert_equal_i(GITERR_INVALID, err->klass);
-}
-
 void assert_cannot_create_remote(const char *name, int expected_error)
 {
 	git_remote *remote = NULL;
@@ -523,4 +508,55 @@ void test_network_remote_remotes__query_refspecs(void)
 	git_strarray_free(&array);
 
 	git_remote_free(remote);
+}
+
+static int remote_single_branch(git_remote **out, git_repository *repo, const char *name, const char *url, void *payload)
+{
+	char *fetch_refspecs[] = {
+		"refs/heads/first-merge:refs/remotes/origin/first-merge",
+	};
+	git_strarray fetch_refspecs_strarray = {
+		fetch_refspecs,
+		1,
+	};
+
+	GIT_UNUSED(payload);
+
+	cl_git_pass(git_remote_create(out, repo, name, url));
+	cl_git_pass(git_remote_set_fetch_refspecs(*out, &fetch_refspecs_strarray));
+
+	return 0;
+}
+
+void test_network_remote_remotes__single_branch(void)
+{
+	git_clone_options opts = GIT_CLONE_OPTIONS_INIT;
+	git_repository *repo;
+	git_strarray refs;
+	size_t i, count = 0;
+
+	opts.remote_cb = remote_single_branch;
+	opts.checkout_branch = "first-merge";
+
+	cl_git_pass(git_clone(&repo, "git://github.com/libgit2/TestGitRepository", "./single-branch", &opts));
+	cl_git_pass(git_reference_list(&refs, repo));
+
+	for (i = 0; i < refs.count; i++) {
+		if (!git__prefixcmp(refs.strings[i], "refs/heads/"))
+			count++;
+	}
+	cl_assert_equal_i(1, count);
+
+	git_strarray_free(&refs);
+	git_repository_free(repo);
+}
+
+void test_network_remote_remotes__restricted_refspecs(void)
+{
+	git_clone_options opts = GIT_CLONE_OPTIONS_INIT;
+	git_repository *repo;
+
+	opts.remote_cb = remote_single_branch;
+
+	cl_git_fail_with(GIT_EINVALIDSPEC, git_clone(&repo, "git://github.com/libgit2/TestGitRepository", "./restrict-refspec", &opts));
 }

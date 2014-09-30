@@ -233,16 +233,16 @@ static int git_diff_driver_load(
 		return 0;
 	}
 
-	/* if you can't read config for repo, just use default driver */
-	if (git_repository_config__weakptr(&cfg, repo) < 0) {
-		giterr_clear();
-		goto done;
-	}
-
 	drv = git__calloc(1, sizeof(git_diff_driver) + namelen + 1);
 	GITERR_CHECK_ALLOC(drv);
 	drv->type = DIFF_DRIVER_AUTO;
 	memcpy(drv->name, driver_name, namelen);
+
+	/* if you can't read config for repo, just use default driver */
+	if (git_repository_config_snapshot(&cfg, repo) < 0) {
+		giterr_clear();
+		goto done;
+	}
 
 	if ((error = git_buf_printf(&name, "diff.%s.binary", driver_name)) < 0)
 		goto done;
@@ -321,6 +321,7 @@ static int git_diff_driver_load(
 
 done:
 	git_buf_free(&name);
+	git_config_free(cfg);
 
 	if (!*out) {
 		int error2 = git_diff_driver_builtin(out, reg, driver_name);
@@ -396,7 +397,11 @@ void git_diff_driver_update_options(
 int git_diff_driver_content_is_binary(
 	git_diff_driver *driver, const char *content, size_t content_len)
 {
-	const git_buf search = { (char *)content, 0, min(content_len, 4000) };
+	git_buf search;
+
+	search.ptr   = (char *)content;
+	search.size  = min(content_len, GIT_FILTER_BYTES_TO_CHECK_NUL);
+	search.asize = 0;
 
 	GIT_UNUSED(driver);
 

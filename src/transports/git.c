@@ -8,6 +8,7 @@
 #include "git2.h"
 #include "buffer.h"
 #include "netops.h"
+#include "git2/sys/transport.h"
 
 #define OWNING_SUBTRANSPORT(s) ((git_subtransport *)(s)->parent.subtransport)
 

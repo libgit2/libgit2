@@ -375,7 +375,7 @@ int git_object_lookup_bypath(
 
 	assert(out && treeish && path);
 
-	if ((error = git_object_peel((git_object**)&tree, treeish, GIT_OBJ_TREE) < 0) ||
+	if ((error = git_object_peel((git_object**)&tree, treeish, GIT_OBJ_TREE)) < 0 ||
 		 (error = git_tree_entry_bypath(&entry, tree, path)) < 0)
 	{
 		goto cleanup;

@@ -43,6 +43,7 @@ typedef enum {
 	GIT_STATUS_WT_DELETED       = (1u << 9),
 	GIT_STATUS_WT_TYPECHANGE    = (1u << 10),
 	GIT_STATUS_WT_RENAMED       = (1u << 11),
+	GIT_STATUS_WT_UNREADABLE    = (1u << 12),
 
 	GIT_STATUS_IGNORED          = (1u << 14),
 } git_status_t;
@@ -121,6 +122,11 @@ typedef enum {
  * - GIT_STATUS_OPT_NO_REFRESH bypasses the default status behavior of
  *   doing a "soft" index reload (i.e. reloading the index data if the
  *   file on disk has been modified outside libgit2).
+ * - GIT_STATUS_OPT_UPDATE_INDEX tells libgit2 to refresh the stat cache
+ *   in the index for files that are unchanged but have out of date stat
+ *   information in the index.  It will result in less work being done on
+ *   subsequent calls to get status.  This is mutually exclusive with the
+ *   NO_REFRESH option.
  *
  * Calling `git_status_foreach()` is like calling the extended version
  * with: GIT_STATUS_OPT_INCLUDE_IGNORED, GIT_STATUS_OPT_INCLUDE_UNTRACKED,
@@ -128,19 +134,22 @@ typedef enum {
  * together as `GIT_STATUS_OPT_DEFAULTS` if you want them as a baseline.
  */
 typedef enum {
-	GIT_STATUS_OPT_INCLUDE_UNTRACKED        = (1u << 0),
-	GIT_STATUS_OPT_INCLUDE_IGNORED          = (1u << 1),
-	GIT_STATUS_OPT_INCLUDE_UNMODIFIED       = (1u << 2),
-	GIT_STATUS_OPT_EXCLUDE_SUBMODULES       = (1u << 3),
-	GIT_STATUS_OPT_RECURSE_UNTRACKED_DIRS   = (1u << 4),
-	GIT_STATUS_OPT_DISABLE_PATHSPEC_MATCH   = (1u << 5),
-	GIT_STATUS_OPT_RECURSE_IGNORED_DIRS     = (1u << 6),
-	GIT_STATUS_OPT_RENAMES_HEAD_TO_INDEX    = (1u << 7),
-	GIT_STATUS_OPT_RENAMES_INDEX_TO_WORKDIR = (1u << 8),
-	GIT_STATUS_OPT_SORT_CASE_SENSITIVELY    = (1u << 9),
-	GIT_STATUS_OPT_SORT_CASE_INSENSITIVELY  = (1u << 10),
-	GIT_STATUS_OPT_RENAMES_FROM_REWRITES    = (1u << 11),
-	GIT_STATUS_OPT_NO_REFRESH               = (1u << 12),
+	GIT_STATUS_OPT_INCLUDE_UNTRACKED                = (1u << 0),
+	GIT_STATUS_OPT_INCLUDE_IGNORED                  = (1u << 1),
+	GIT_STATUS_OPT_INCLUDE_UNMODIFIED               = (1u << 2),
+	GIT_STATUS_OPT_EXCLUDE_SUBMODULES               = (1u << 3),
+	GIT_STATUS_OPT_RECURSE_UNTRACKED_DIRS           = (1u << 4),
+	GIT_STATUS_OPT_DISABLE_PATHSPEC_MATCH           = (1u << 5),
+	GIT_STATUS_OPT_RECURSE_IGNORED_DIRS             = (1u << 6),
+	GIT_STATUS_OPT_RENAMES_HEAD_TO_INDEX            = (1u << 7),
+	GIT_STATUS_OPT_RENAMES_INDEX_TO_WORKDIR         = (1u << 8),
+	GIT_STATUS_OPT_SORT_CASE_SENSITIVELY            = (1u << 9),
+	GIT_STATUS_OPT_SORT_CASE_INSENSITIVELY          = (1u << 10),
+	GIT_STATUS_OPT_RENAMES_FROM_REWRITES            = (1u << 11),
+	GIT_STATUS_OPT_NO_REFRESH                       = (1u << 12),
+	GIT_STATUS_OPT_UPDATE_INDEX                     = (1u << 13),
+	GIT_STATUS_OPT_INCLUDE_UNREADABLE               = (1u << 14),
+	GIT_STATUS_OPT_INCLUDE_UNREADABLE_AS_UNTRACKED  = (1u << 15),
 } git_status_opt_t;
 
 #define GIT_STATUS_OPT_DEFAULTS \
@@ -178,14 +187,13 @@ typedef struct {
  * Initializes a `git_status_options` with default values. Equivalent to
  * creating an instance with GIT_STATUS_OPTIONS_INIT.
  *
- * @param opts the `git_status_options` instance to initialize.
- * @param version the version of the struct; you should pass
- *        `GIT_STATUS_OPTIONS_VERSION` here.
+ * @param opts The `git_status_options` instance to initialize.
+ * @param version Version of struct; pass `GIT_STATUS_OPTIONS_VERSION`
  * @return Zero on success; -1 on failure.
  */
 GIT_EXTERN(int) git_status_init_options(
-	git_status_options* opts,
-	int version);
+	git_status_options *opts,
+	unsigned int version);
 
 /**
  * A status entry, providing the differences between the file as it exists

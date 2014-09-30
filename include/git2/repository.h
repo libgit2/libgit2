@@ -196,6 +196,8 @@ GIT_EXTERN(int) git_repository_init(
  *        looking the "template_path" from the options if set, or the
  *        `init.templatedir` global config if not, or falling back on
  *        "/usr/share/git-core/templates" if it exists.
+ * * GIT_REPOSITORY_INIT_RELATIVE_GITLINK - If an alternate workdir is
+ *        specified, use relative paths for the gitdir and core.worktree.
  */
 typedef enum {
 	GIT_REPOSITORY_INIT_BARE              = (1u << 0),
@@ -204,6 +206,7 @@ typedef enum {
 	GIT_REPOSITORY_INIT_MKDIR             = (1u << 3),
 	GIT_REPOSITORY_INIT_MKPATH            = (1u << 4),
 	GIT_REPOSITORY_INIT_EXTERNAL_TEMPLATE = (1u << 5),
+	GIT_REPOSITORY_INIT_RELATIVE_GITLINK  = (1u << 6),
 } git_repository_init_flag_t;
 
 /**
@@ -271,14 +274,13 @@ typedef struct {
  * Initializes a `git_repository_init_options` with default values. Equivalent
  * to creating an instance with GIT_REPOSITORY_INIT_OPTIONS_INIT.
  *
- * @param opts the `git_repository_init_options` instance to initialize.
- * @param version the version of the struct; you should pass
- *        `GIT_REPOSITORY_INIT_OPTIONS_VERSION` here.
+ * @param opts the `git_repository_init_options` struct to initialize
+ * @param version Version of struct; pass `GIT_REPOSITORY_INIT_OPTIONS_VERSION`
  * @return Zero on success; -1 on failure.
  */
 GIT_EXTERN(int) git_repository_init_init_options(
-	git_repository_init_options* opts,
-	int version);
+	git_repository_init_options *opts,
+	unsigned int version);
 
 /**
  * Create a new Git repository in the given folder with extended controls.
@@ -409,11 +411,27 @@ GIT_EXTERN(int) git_repository_is_bare(git_repository *repo);
  * The configuration file must be freed once it's no longer
  * being used by the user.
  *
- * @param out Pointer to store the loaded config file
+ * @param out Pointer to store the loaded configuration
  * @param repo A repository object
  * @return 0, or an error code
  */
 GIT_EXTERN(int) git_repository_config(git_config **out, git_repository *repo);
+
+/**
+ * Get a snapshot of the repository's configuration
+ *
+ * Convenience function to take a snapshot from the repository's
+ * configuration.  The contents of this snapshot will not change,
+ * even if the underlying config files are modified.
+ *
+ * The configuration file must be freed once it's no longer
+ * being used by the user.
+ *
+ * @param out Pointer to store the loaded configuration
+ * @param repo the repository
+ * @return 0, or an error code
+ */
+GIT_EXTERN(int) git_repository_config_snapshot(git_config **out, git_repository *repo);
 
 /**
  * Get the Object Database for this repository.
@@ -547,6 +565,10 @@ GIT_EXTERN(int) git_repository_mergehead_foreach(
  * hash a file in the repository and you want to apply filtering rules (e.g.
  * crlf filters) before generating the SHA, then use this function.
  *
+ * Note: if the repository has `core.safecrlf` set to fail and the
+ * filtering triggers that failure, then this function will return an
+ * error and not calculate the hash of the file.
+ *
  * @param out Output value of calculated SHA
  * @param repo Repository pointer
  * @param path Path to file on disk whose contents should be hashed. If the
@@ -556,6 +578,7 @@ GIT_EXTERN(int) git_repository_mergehead_foreach(
  *             NULL, then the `path` parameter will be used instead. If
  *             this is passed as the empty string, then no filters will be
  *             applied when calculating the hash.
+ * @return 0 on success, or an error code
  */
 GIT_EXTERN(int) git_repository_hashfile(
 	git_oid *out,
@@ -629,7 +652,7 @@ GIT_EXTERN(int) git_repository_set_head_detached(
  *
  * @param repo Repository pointer
  * @param signature The identity that will used to populate the reflog entry
- * @param log_message The one line long message to be appended to the reflog
+ * @param reflog_message The one line long message to be appended to the reflog
  * @return 0 on success, GIT_EUNBORNBRANCH when HEAD points to a non existing
  * branch or an error code
  */
@@ -642,7 +665,7 @@ typedef enum {
 	GIT_REPOSITORY_STATE_NONE,
 	GIT_REPOSITORY_STATE_MERGE,
 	GIT_REPOSITORY_STATE_REVERT,
-	GIT_REPOSITORY_STATE_CHERRY_PICK,
+	GIT_REPOSITORY_STATE_CHERRYPICK,
 	GIT_REPOSITORY_STATE_BISECT,
 	GIT_REPOSITORY_STATE_REBASE,
 	GIT_REPOSITORY_STATE_REBASE_INTERACTIVE,

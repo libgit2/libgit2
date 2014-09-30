@@ -184,3 +184,21 @@ void test_online_fetch__ls_disconnected(void)
 
 	git_remote_free(remote);
 }
+
+void test_online_fetch__remote_symrefs(void)
+{
+	const git_remote_head **refs;
+	size_t refs_len;
+	git_remote *remote;
+
+	cl_git_pass(git_remote_create(&remote, _repo, "test",
+				"http://github.com/libgit2/TestGitRepository.git"));
+	cl_git_pass(git_remote_connect(remote, GIT_DIRECTION_FETCH));
+	git_remote_disconnect(remote);
+	cl_git_pass(git_remote_ls(&refs, &refs_len, remote));
+
+	cl_assert_equal_s("HEAD", refs[0]->name);
+	cl_assert_equal_s("refs/heads/master", refs[0]->symref_target);
+
+	git_remote_free(remote);
+}

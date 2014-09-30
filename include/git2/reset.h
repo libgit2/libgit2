@@ -7,6 +7,10 @@
 #ifndef INCLUDE_git_reset_h__
 #define INCLUDE_git_reset_h__
 
+#include "common.h"
+#include "types.h"
+#include "strarray.h"
+
 /**
  * @file git2/reset.h
  * @brief Git reset management routines
@@ -19,9 +23,9 @@ GIT_BEGIN_DECL
  * Kinds of reset operation
  */
 typedef enum {
-	GIT_RESET_SOFT  = 1, /** Move the head to the given commit */
-	GIT_RESET_MIXED = 2, /** SOFT plus reset index to the commit */
-	GIT_RESET_HARD  = 3, /** MIXED plus changes in working tree discarded */
+	GIT_RESET_SOFT  = 1, /**< Move the head to the given commit */
+	GIT_RESET_MIXED = 2, /**< SOFT plus reset index to the commit */
+	GIT_RESET_HARD  = 3, /**< MIXED plus changes in working tree discarded */
 } git_reset_t;
 
 /**

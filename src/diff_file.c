@@ -112,6 +112,7 @@ int git_diff_file_content__init_from_diff(
 		has_data = !use_old &&
 			(diff->opts.flags & GIT_DIFF_SHOW_UNTRACKED_CONTENT) != 0;
 		break;
+	case GIT_DELTA_UNREADABLE:
 	case GIT_DELTA_MODIFIED:
 	case GIT_DELTA_COPIED:
 	case GIT_DELTA_RENAMED:
@@ -300,7 +301,8 @@ static int diff_file_content_load_workdir_file(
 		goto cleanup;
 
 	if ((error = git_filter_list_load(
-			&fl, fc->repo, NULL, fc->file->path, GIT_FILTER_TO_ODB)) < 0)
+			&fl, fc->repo, NULL, fc->file->path,
+			GIT_FILTER_TO_ODB, GIT_FILTER_OPT_ALLOW_UNSAFE)) < 0)
 		goto cleanup;
 
 	/* if there are no filters, try to mmap the file */

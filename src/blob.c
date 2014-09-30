@@ -198,7 +198,8 @@ int git_blob__create_from_paths(
 		if (try_load_filters)
 			/* Load the filters for writing this file to the ODB */
 			error = git_filter_list_load(
-				&fl, repo, NULL, hint_path, GIT_FILTER_TO_ODB);
+				&fl, repo, NULL, hint_path,
+				GIT_FILTER_TO_ODB, GIT_FILTER_OPT_DEFAULT);
 
 		if (error < 0)
 			/* well, that didn't work */;
@@ -333,7 +334,8 @@ int git_blob_is_binary(const git_blob *blob)
 	assert(blob);
 
 	content.ptr   = blob->odb_object->buffer;
-	content.size  = min(blob->odb_object->cached.size, 4000);
+	content.size  =
+		min(blob->odb_object->cached.size, GIT_FILTER_BYTES_TO_CHECK_NUL);
 	content.asize = 0;
 
 	return git_buf_text_is_binary(&content);
@@ -356,7 +358,8 @@ int git_blob_filtered_content(
 		return 0;
 
 	if (!(error = git_filter_list_load(
-			&fl, git_blob_owner(blob), blob, path, GIT_FILTER_TO_WORKTREE))) {
+			&fl, git_blob_owner(blob), blob, path,
+			GIT_FILTER_TO_WORKTREE, GIT_FILTER_OPT_DEFAULT))) {
 
 		error = git_filter_list_apply_to_blob(out, fl, blob);
 

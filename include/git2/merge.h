@@ -10,6 +10,7 @@
 #include "common.h"
 #include "types.h"
 #include "oid.h"
+#include "oidarray.h"
 #include "checkout.h"
 #include "index.h"
 
@@ -57,11 +58,11 @@ typedef struct {
  */
 GIT_EXTERN(int) git_merge_file_init_input(
 	git_merge_file_input *opts,
-	int version);
+	unsigned int version);
 
 /**
  * Flags for `git_merge_tree` options.  A combination of these flags can be
- * passed in via the `flags` value in the `git_merge_tree_opts`.
+ * passed in via the `flags` value in the `git_merge_options`.
  */
 typedef enum {
 	/**
@@ -73,7 +74,7 @@ typedef enum {
 } git_merge_tree_flag_t;
 
 /**
- * Merge file favor options for `git_merge_trees_opts` instruct the file-level
+ * Merge file favor options for `git_merge_options` instruct the file-level
  * merging functionality how to deal with conflicting regions of the files.
  */
 typedef enum {
@@ -164,7 +165,7 @@ typedef struct {
  */
 GIT_EXTERN(int) git_merge_file_init_options(
 	git_merge_file_options *opts,
-	int version);
+	unsigned int version);
 
 typedef struct {
 	/**
@@ -232,7 +233,7 @@ typedef struct {
  */
 GIT_EXTERN(int) git_merge_init_options(
 	git_merge_options *opts,
-	int version);
+	unsigned int version);
 
 /**
  * The results of `git_merge_analysis` indicate the merge opportunities.
@@ -268,6 +269,26 @@ typedef enum {
 	GIT_MERGE_ANALYSIS_UNBORN = (1 << 3),
 } git_merge_analysis_t;
 
+typedef enum {
+	/*
+	 * No configuration was found that suggests a preferred behavior for
+	 * merge.
+	 */
+	GIT_MERGE_PREFERENCE_NONE = 0,
+
+	/**
+	 * There is a `merge.ff=false` configuration setting, suggesting that
+	 * the user does not want to allow a fast-forward merge.
+	 */
+	GIT_MERGE_PREFERENCE_NO_FASTFORWARD = (1 << 0),
+
+	/**
+	 * There is a `merge.ff=only` configuration setting, suggesting that
+	 * the user only wants fast-forward merges.
+	 */
+	GIT_MERGE_PREFERENCE_FASTFORWARD_ONLY = (1 << 1),
+} git_merge_preference_t;
+
 /**
  * Analyzes the given branch(es) and determines the opportunities for
  * merging them into the HEAD of the repository.
@@ -280,6 +301,7 @@ typedef enum {
  */
 GIT_EXTERN(int) git_merge_analysis(
 	git_merge_analysis_t *analysis_out,
+	git_merge_preference_t *preference_out,
 	git_repository *repo,
 	const git_merge_head **their_heads,
 	size_t their_heads_len);
@@ -295,6 +317,21 @@ GIT_EXTERN(int) git_merge_analysis(
  */
 GIT_EXTERN(int) git_merge_base(
 	git_oid *out,
+	git_repository *repo,
+	const git_oid *one,
+	const git_oid *two);
+
+/**
+ * Find merge bases between two commits
+ *
+ * @param out array in which to store the resulting ids
+ * @param repo the repository where the commits exist
+ * @param one one of the commits
+ * @param two the other commit
+ * @return 0 on success, GIT_ENOTFOUND if not found or error code
+ */
+GIT_EXTERN(int) git_merge_bases(
+	git_oidarray *out,
 	git_repository *repo,
 	const git_oid *one,
 	const git_oid *two);
@@ -378,8 +415,8 @@ GIT_EXTERN(int) git_merge_head_from_id(
 /**
  * Gets the commit ID that the given `git_merge_head` refers to.
  *
- * @param id pointer to commit id to be filled in
  * @param head the given merge head
+ * @return commit id
  */
 GIT_EXTERN(const git_oid *) git_merge_head_id(
 	const git_merge_head *head);
@@ -424,8 +461,8 @@ GIT_EXTERN(int) git_merge_file(
  * @param out The git_merge_file_result to be filled in
  * @param repo The repository
  * @param ancestor The index entry for the ancestor file (stage level 1)
- * @param our_path The index entry for our file (stage level 2)
- * @param their_path The index entry for their file (stage level 3)
+ * @param ours The index entry for our file (stage level 2)
+ * @param theirs The index entry for their file (stage level 3)
  * @param opts The merge file options or NULL
  * @return 0 on success or error code
  */
@@ -497,8 +534,8 @@ GIT_EXTERN(int) git_merge_commits(
  * completes, resolve any conflicts and prepare a commit.
  *
  * @param repo the repository to merge
- * @param merge_heads the heads to merge into
- * @param merge_heads_len the number of heads to merge
+ * @param their_heads the heads to merge into
+ * @param their_heads_len the number of heads to merge
  * @param merge_opts merge options
  * @param checkout_opts checkout options
  * @return 0 on success or error code

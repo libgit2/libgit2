@@ -40,12 +40,12 @@ void test_core_env__initialize(void)
 	}
 }
 
-static void reset_global_search_path(void)
+static void set_global_search_path_from_env(void)
 {
 	cl_git_pass(git_sysdir_set(GIT_SYSDIR_GLOBAL, NULL));
 }
 
-static void reset_system_search_path(void)
+static void set_system_search_path_from_env(void)
 {
 	cl_git_pass(git_sysdir_set(GIT_SYSDIR_SYSTEM, NULL));
 }
@@ -69,9 +69,7 @@ void test_core_env__cleanup(void)
 			(void)p_rmdir(*val);
 	}
 
-	/* reset search paths to default */
-	reset_global_search_path();
-	reset_system_search_path();
+	cl_sandbox_set_search_path_defaults();
 }
 
 static void setenv_and_check(const char *name, const char *value)
@@ -124,12 +122,12 @@ void test_core_env__0(void)
 			GIT_ENOTFOUND, git_sysdir_find_global_file(&found, testfile));
 
 		setenv_and_check("HOME", path.ptr);
-		reset_global_search_path();
+		set_global_search_path_from_env();
 
 		cl_git_pass(git_sysdir_find_global_file(&found, testfile));
 
 		cl_setenv("HOME", env_save[0]);
-		reset_global_search_path();
+		set_global_search_path_from_env();
 
 		cl_assert_equal_i(
 			GIT_ENOTFOUND, git_sysdir_find_global_file(&found, testfile));
@@ -138,7 +136,7 @@ void test_core_env__0(void)
 		setenv_and_check("HOMEDRIVE", NULL);
 		setenv_and_check("HOMEPATH", NULL);
 		setenv_and_check("USERPROFILE", path.ptr);
-		reset_global_search_path();
+		set_global_search_path_from_env();
 
 		cl_git_pass(git_sysdir_find_global_file(&found, testfile));
 
@@ -148,7 +146,7 @@ void test_core_env__0(void)
 
 			if (root >= 0) {
 				setenv_and_check("USERPROFILE", NULL);
-				reset_global_search_path();
+				set_global_search_path_from_env();
 
 				cl_assert_equal_i(
 					GIT_ENOTFOUND, git_sysdir_find_global_file(&found, testfile));
@@ -158,7 +156,7 @@ void test_core_env__0(void)
 				setenv_and_check("HOMEDRIVE", path.ptr);
 				path.ptr[root] = old;
 				setenv_and_check("HOMEPATH", &path.ptr[root]);
-				reset_global_search_path();
+				set_global_search_path_from_env();
 
 				cl_git_pass(git_sysdir_find_global_file(&found, testfile));
 			}
@@ -185,7 +183,7 @@ void test_core_env__1(void)
 	cl_git_pass(cl_setenv("HOMEPATH", "doesnotexist"));
 	cl_git_pass(cl_setenv("USERPROFILE", "doesnotexist"));
 #endif
-	reset_global_search_path();
+	set_global_search_path_from_env();
 
 	cl_assert_equal_i(
 		GIT_ENOTFOUND, git_sysdir_find_global_file(&path, "nonexistentfile"));
@@ -195,8 +193,8 @@ void test_core_env__1(void)
 	cl_git_pass(cl_setenv("HOMEPATH", NULL));
 	cl_git_pass(cl_setenv("USERPROFILE", NULL));
 #endif
-	reset_global_search_path();
-	reset_system_search_path();
+	set_global_search_path_from_env();
+	set_system_search_path_from_env();
 
 	cl_assert_equal_i(
 		GIT_ENOTFOUND, git_sysdir_find_global_file(&path, "nonexistentfile"));
@@ -206,7 +204,7 @@ void test_core_env__1(void)
 
 #ifdef GIT_WIN32
 	cl_git_pass(cl_setenv("PROGRAMFILES", NULL));
-	reset_system_search_path();
+	set_system_search_path_from_env();
 
 	cl_assert_equal_i(
 		GIT_ENOTFOUND, git_sysdir_find_system_file(&path, "nonexistentfile"));

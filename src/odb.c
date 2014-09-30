@@ -783,6 +783,7 @@ int git_odb_read(git_odb_object **out, git_odb *db, const git_oid *id)
 		return error;
 	}
 
+	giterr_clear();
 	if ((object = odb_object__alloc(id, &raw)) == NULL)
 		return -1;
 
@@ -1123,14 +1124,9 @@ int git_odb__error_ambiguous(const char *message)
 	return GIT_EAMBIGUOUS;
 }
 
-int git_odb_init_backend(git_odb_backend* backend, int version)
+int git_odb_init_backend(git_odb_backend *backend, unsigned int version)
 {
-	if (version != GIT_ODB_BACKEND_VERSION) {
-		giterr_set(GITERR_INVALID, "Invalid version %d for git_odb_backend", version);
-		return -1;
-	} else {
-		git_odb_backend b = GIT_ODB_BACKEND_INIT;
-		memcpy(backend, &b, sizeof(b));
-		return 0;
-	}
+	GIT_INIT_STRUCTURE_FROM_TEMPLATE(
+		backend, version, git_odb_backend, GIT_ODB_BACKEND_INIT);
+	return 0;
 }

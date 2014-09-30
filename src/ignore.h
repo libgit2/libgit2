@@ -42,7 +42,14 @@ extern int git_ignore__pop_dir(git_ignores *ign);
 
 extern void git_ignore__free(git_ignores *ign);
 
-extern int git_ignore__lookup(git_ignores *ign, const char *path, int *ignored);
+enum {
+	GIT_IGNORE_UNCHECKED = -2,
+	GIT_IGNORE_NOTFOUND = -1,
+	GIT_IGNORE_FALSE = 0,
+	GIT_IGNORE_TRUE = 1,
+};
+
+extern int git_ignore__lookup(int *out, git_ignores *ign, const char *path);
 
 /* command line Git sometimes generates an error message if given a
  * pathspec that contains an exact match to an ignored file (provided

@@ -232,7 +232,8 @@ static int build_untracked_tree(
 	}
 
 	if (flags & GIT_STASH_INCLUDE_IGNORED) {
-		opts.flags |= GIT_DIFF_INCLUDE_IGNORED;
+		opts.flags |= GIT_DIFF_INCLUDE_IGNORED |
+			GIT_DIFF_RECURSE_IGNORED_DIRS;
 		data.include_ignored = true;
 	}
 
@@ -447,10 +448,11 @@ static int ensure_there_are_changes_to_stash(
 
 	if (include_untracked_files)
 		opts.flags |= GIT_STATUS_OPT_INCLUDE_UNTRACKED |
-		GIT_STATUS_OPT_RECURSE_UNTRACKED_DIRS;
+			GIT_STATUS_OPT_RECURSE_UNTRACKED_DIRS;
 
 	if (include_ignored_files)
-		opts.flags |= GIT_STATUS_OPT_INCLUDE_IGNORED;
+		opts.flags |= GIT_STATUS_OPT_INCLUDE_IGNORED |
+			GIT_STATUS_OPT_RECURSE_IGNORED_DIRS;
 
 	error = git_status_foreach_ext(repo, &opts, is_dirty_cb, NULL);
 
@@ -634,7 +636,8 @@ int git_stash_drop(
 		entry = git_reflog_entry_byindex(reflog, 0);
 
 		git_reference_free(stash);
-		if ((error = git_reference_create(&stash, repo, GIT_REFS_STASH_FILE, &entry->oid_cur, 1, NULL, NULL) < 0))
+		error = git_reference_create(&stash, repo, GIT_REFS_STASH_FILE, &entry->oid_cur, 1, NULL, NULL);
+		if (error < 0)
 			goto cleanup;
 
 		/* We need to undo the writing that we just did */

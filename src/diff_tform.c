@@ -114,7 +114,7 @@ static git_diff_delta *diff_delta__merge_like_cgit_reversed(
 	if ((dup = diff_delta__dup(a, pool)) == NULL)
 		return NULL;
 
-	if (b->status == GIT_DELTA_UNMODIFIED || b->status == GIT_DELTA_UNTRACKED)
+	if (b->status == GIT_DELTA_UNMODIFIED || b->status == GIT_DELTA_UNTRACKED || b->status == GIT_DELTA_UNREADABLE)
 		return dup;
 
 	if (dup->status == GIT_DELTA_DELETED) {
@@ -574,14 +574,14 @@ static int similarity_measure(
 	if (exact_match) {
 		if (git_oid_iszero(&a_file->id) &&
 			diff->old_src == GIT_ITERATOR_TYPE_WORKDIR &&
-			!git_diff__oid_for_file(diff->repo, a_file->path,
-				a_file->mode, a_file->size, &a_file->id))
+			!git_diff__oid_for_file(&a_file->id,
+				diff, a_file->path, a_file->mode, a_file->size))
 			a_file->flags |= GIT_DIFF_FLAG_VALID_ID;
 
 		if (git_oid_iszero(&b_file->id) &&
 			diff->new_src == GIT_ITERATOR_TYPE_WORKDIR &&
-			!git_diff__oid_for_file(diff->repo, b_file->path,
-				b_file->mode, b_file->size, &b_file->id))
+			!git_diff__oid_for_file(&b_file->id,
+				diff, b_file->path, b_file->mode, b_file->size))
 			b_file->flags |= GIT_DIFF_FLAG_VALID_ID;
 	}
 
@@ -732,6 +732,7 @@ static bool is_rename_source(
 	switch (delta->status) {
 	case GIT_DELTA_ADDED:
 	case GIT_DELTA_UNTRACKED:
+	case GIT_DELTA_UNREADABLE:
 	case GIT_DELTA_IGNORED:
 		return false;
 
@@ -786,6 +787,7 @@ GIT_INLINE(bool) delta_is_new_only(git_diff_delta *delta)
 {
 	return (delta->status == GIT_DELTA_ADDED ||
 			delta->status == GIT_DELTA_UNTRACKED ||
+			delta->status == GIT_DELTA_UNREADABLE ||
 			delta->status == GIT_DELTA_IGNORED);
 }
 

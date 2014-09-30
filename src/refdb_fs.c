@@ -458,6 +458,7 @@ typedef struct {
 	git_pool pool;
 	git_vector loose;
 
+	git_sortedcache *cache;
 	size_t loose_pos;
 	size_t packed_pos;
 } refdb_fs_iter;
@@ -468,6 +469,7 @@ static void refdb_fs_backend__iterator_free(git_reference_iterator *_iter)
 
 	git_vector_free(&iter->loose);
 	git_pool_clear(&iter->pool);
+	git_sortedcache_free(iter->cache);
 	git__free(iter);
 }
 
@@ -539,10 +541,14 @@ static int refdb_fs_backend__iterator_next(
 		giterr_clear();
 	}
 
-	git_sortedcache_rlock(backend->refcache);
+	if (!iter->cache) {
+		if ((error = git_sortedcache_copy(&iter->cache, backend->refcache, 1, NULL, NULL)) < 0)
+			return error;
+	}
 
-	while (iter->packed_pos < git_sortedcache_entrycount(backend->refcache)) {
-		ref = git_sortedcache_entry(backend->refcache, iter->packed_pos++);
+	error = GIT_ITEROVER;
+	while (iter->packed_pos < git_sortedcache_entrycount(iter->cache)) {
+		ref = git_sortedcache_entry(iter->cache, iter->packed_pos++);
 		if (!ref) /* stop now if another thread deleted refs and we past end */
 			break;
 
@@ -556,7 +562,6 @@ static int refdb_fs_backend__iterator_next(
 		break;
 	}
 
-	git_sortedcache_runlock(backend->refcache);
 	return error;
 }
 
@@ -579,10 +584,14 @@ static int refdb_fs_backend__iterator_next_name(
 		giterr_clear();
 	}
 
-	git_sortedcache_rlock(backend->refcache);
+	if (!iter->cache) {
+		if ((error = git_sortedcache_copy(&iter->cache, backend->refcache, 1, NULL, NULL)) < 0)
+			return error;
+	}
 
-	while (iter->packed_pos < git_sortedcache_entrycount(backend->refcache)) {
-		ref = git_sortedcache_entry(backend->refcache, iter->packed_pos++);
+	error = GIT_ITEROVER;
+	while (iter->packed_pos < git_sortedcache_entrycount(iter->cache)) {
+		ref = git_sortedcache_entry(iter->cache, iter->packed_pos++);
 		if (!ref) /* stop now if another thread deleted refs and we past end */
 			break;
 
@@ -596,7 +605,6 @@ static int refdb_fs_backend__iterator_next_name(
 		break;
 	}
 
-	git_sortedcache_runlock(backend->refcache);
 	return error;
 }
 
@@ -927,19 +935,15 @@ static int has_reflog(git_repository *repo, const char *name);
 /* We only write if it's under heads/, remotes/ or notes/ or if it already has a log */
 static int should_write_reflog(int *write, git_repository *repo, const char *name)
 {
-	git_config *config;
-	int error, logall, is_bare;
+	int error, logall;
+
+	error = git_repository__cvar(&logall, repo, GIT_CVAR_LOGALLREFUPDATES);
+	if (error < 0)
+		return error;
 
 	/* Defaults to the opposite of the repo being bare */
-	is_bare = git_repository_is_bare(repo);
-	logall = !is_bare;
-
-	if ((error = git_repository_config__weakptr(&config, repo)) < 0)
-		return error;
-
-	error = git_config_get_bool(&logall, config, "core.logallrefupdates");
-	if (error < 0 && error != GIT_ENOTFOUND)
-		return error;
+	if (logall == GIT_LOGALLREFUPDATES_UNSET)
+		logall = !git_repository_is_bare(repo);
 
 	if (!logall) {
 		*write = 0;

@@ -714,7 +714,7 @@ struct foreach_state {
 GIT_INLINE(int) filename_to_oid(git_oid *oid, const char *ptr)
 {
 	int v, i = 0;
-	if (strlen(ptr) != 41)
+	if (strlen(ptr) != GIT_OID_HEXSZ+1)
 		return -1;
 
 	if (ptr[2] != '/') {
@@ -754,6 +754,10 @@ static int foreach_object_dir_cb(void *_state, git_buf *path)
 static int foreach_cb(void *_state, git_buf *path)
 {
 	struct foreach_state *state = (struct foreach_state *) _state;
+
+	/* non-dir is some stray file, ignore it */
+	if (!git_path_isdir(git_buf_cstr(path)))
+		return 0;
 
 	return git_path_direach(path, 0, foreach_object_dir_cb, state);
 }

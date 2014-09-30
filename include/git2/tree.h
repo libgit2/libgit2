@@ -151,7 +151,7 @@ GIT_EXTERN(int) git_tree_entry_bypath(
  * and must be freed explicitly with `git_tree_entry_free()`.
  *
  * @param dest pointer where to store the copy
- * @param entry tree entry to duplicate
+ * @param source tree entry to duplicate
  * @return 0 or an error code
  */
 GIT_EXTERN(int) git_tree_entry_dup(git_tree_entry **dest, const git_tree_entry *source);
@@ -301,8 +301,10 @@ GIT_EXTERN(const git_tree_entry *) git_treebuilder_get(
  * If an entry named `filename` already exists, its attributes
  * will be updated with the given ones.
  *
- * The optional pointer `out` can be used to retrieve a pointer to
- * the newly created/updated entry.  Pass NULL if you do not need it.
+ * The optional pointer `out` can be used to retrieve a pointer to the
+ * newly created/updated entry.  Pass NULL if you do not need it. The
+ * pointer may not be valid past the next operation in this
+ * builder. Duplicate the entry if you want to keep it.
  *
  * No attempt is being made to ensure that the provided oid points
  * to an existing git object in the object database, nor that the

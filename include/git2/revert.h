@@ -37,14 +37,13 @@ typedef struct {
  * Initializes a `git_revert_options` with default values. Equivalent to
  * creating an instance with GIT_REVERT_OPTIONS_INIT.
  *
- * @param opts the `git_revert_options` instance to initialize.
- * @param version the version of the struct; you should pass
- *        `GIT_REVERT_OPTIONS_VERSION` here.
+ * @param opts the `git_revert_options` struct to initialize
+ * @param version Version of struct; pass `GIT_REVERT_OPTIONS_VERSION`
  * @return Zero on success; -1 on failure.
  */
-GIT_EXTERN(int) git_revert_init_opts(
-	git_revert_options* opts,
-	int version);
+GIT_EXTERN(int) git_revert_init_options(
+	git_revert_options *opts,
+	unsigned int version);
 
 /**
  * Reverts the given commit against the given "our" commit, producing an
@@ -57,10 +56,10 @@ GIT_EXTERN(int) git_revert_init_opts(
  * @param revert_commit the commit to revert
  * @param our_commit the commit to revert against (eg, HEAD)
  * @param mainline the parent of the revert commit, if it is a merge
- * @param merge_tree_opts the merge tree options (or null for defaults)
+ * @param merge_options the merge options (or null for defaults)
  * @return zero on success, -1 on failure.
  */
-int git_revert_commit(
+GIT_EXTERN(int) git_revert_commit(
 	git_index **out,
 	git_repository *repo,
 	git_commit *revert_commit,
@@ -72,9 +71,8 @@ int git_revert_commit(
  * Reverts the given commit, producing changes in the working directory.
  *
  * @param repo the repository to revert
- * @param commits the commits to revert
- * @param commits_len the number of commits to revert
- * @param flags merge flags
+ * @param commit the commit to revert
+ * @param given_opts merge flags
  * @return zero on success, -1 on failure.
  */
 GIT_EXTERN(int) git_revert(

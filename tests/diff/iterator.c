@@ -380,7 +380,7 @@ static void index_iterator_test(
 		if (expected_oids != NULL) {
 			git_oid oid;
 			cl_git_pass(git_oid_fromstr(&oid, expected_oids[count]));
-			cl_assert_equal_i(git_oid_cmp(&oid, &entry->id), 0);
+			cl_assert_equal_oid(&oid, &entry->id);
 		}
 
 		count++;
@@ -647,7 +647,7 @@ static void workdir_iterator_test(
 
 void test_diff_iterator__workdir_0(void)
 {
-	workdir_iterator_test("attr", NULL, NULL, 27, 1, NULL, "ign");
+	workdir_iterator_test("attr", NULL, NULL, 23, 5, NULL, "ign");
 }
 
 static const char *status_paths[] = {

@@ -53,7 +53,7 @@ int git_attr_cache__alloc_file_entry(
 			cachesize++;
 	}
 
-	ce = git_pool_mallocz(pool, cachesize);
+	ce = git_pool_mallocz(pool, (uint32_t)cachesize);
 	GITERR_CHECK_ALLOC(ce);
 
 	if (baselen) {
@@ -349,13 +349,10 @@ int git_attr_cache__do_init(git_repository *repo)
 {
 	int ret = 0;
 	git_attr_cache *cache = git_repository_attr_cache(repo);
-	git_config *cfg;
+	git_config *cfg = NULL;
 
 	if (cache)
 		return 0;
-
-	if ((ret = git_repository_config__weakptr(&cfg, repo)) < 0)
-		return ret;
 
 	cache = git__calloc(1, sizeof(git_attr_cache));
 	GITERR_CHECK_ALLOC(cache);
@@ -366,6 +363,9 @@ int git_attr_cache__do_init(git_repository *repo)
 		git__free(cache);
 		return -1;
 	}
+
+	if ((ret = git_repository_config_snapshot(&cfg, repo)) < 0)
+		goto cancel;
 
 	/* cache config settings for attributes and ignores */
 	ret = attr_cache__lookup_path(
@@ -390,11 +390,14 @@ int git_attr_cache__do_init(git_repository *repo)
 	if (cache)
 		goto cancel; /* raced with another thread, free this but no error */
 
+	git_config_free(cfg);
+
 	/* insert default macros */
 	return git_attr_add_macro(repo, "binary", "-diff -crlf -text");
 
 cancel:
 	attr_cache__free(cache);
+	git_config_free(cfg);
 	return ret;
 }
 

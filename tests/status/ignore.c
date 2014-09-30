@@ -364,7 +364,6 @@ void test_status_ignore__leading_slash_ignores(void)
 {
 	git_status_options opts = GIT_STATUS_OPTIONS_INIT;
 	status_entry_counts counts;
-	git_buf home = GIT_BUF_INIT;
 	static const char *paths_2[] = {
 		"dir/.gitignore",
 		"dir/a/ignore_me",
@@ -385,7 +384,7 @@ void test_status_ignore__leading_slash_ignores(void)
 
 	make_test_data(test_repo_1, test_files_1);
 
-	cl_fake_home(&home);
+	cl_fake_home();
 	cl_git_mkfile("home/.gitignore", "/ignore_me\n");
 	{
 		git_config *cfg;
@@ -412,8 +411,6 @@ void test_status_ignore__leading_slash_ignores(void)
 	cl_assert_equal_i(counts.expected_entry_count, counts.entry_count);
 	cl_assert_equal_i(0, counts.wrong_status_flags_count);
 	cl_assert_equal_i(0, counts.wrong_sorted_path);
-
-	cl_fake_home_cleanup(&home);
 }
 
 void test_status_ignore__contained_dir_with_matching_name(void)
@@ -682,5 +679,207 @@ void test_status_ignore__issue_1766_negated_ignores(void)
 		cl_assert_equal_i(0, counts.wrong_status_flags_count);
 		cl_assert_equal_i(0, counts.wrong_sorted_path);
 	}
+}
+
+static void add_one_to_index(const char *file)
+{
+	git_index *index;
+	cl_git_pass(git_repository_index(&index, g_repo));
+	cl_git_pass(git_index_add_bypath(index, file));
+	git_index_free(index);
+}
+
+/* Some further broken scenarios that have been reported */
+void test_status_ignore__more_breakage(void)
+{
+	static const char *test_files[] = {
+		"empty_standard_repo/d1/pfx-d2/d3/d4/d5/tracked",
+		"empty_standard_repo/d1/pfx-d2/d3/d4/d5/untracked",
+		"empty_standard_repo/d1/pfx-d2/d3/d4/untracked",
+		NULL
+	};
+
+	make_test_data("empty_standard_repo", test_files);
+	cl_git_mkfile(
+		"empty_standard_repo/.gitignore",
+		"/d1/pfx-*\n"
+		"!/d1/pfx-d2/\n"
+		"/d1/pfx-d2/*\n"
+		"!/d1/pfx-d2/d3/\n"
+		"/d1/pfx-d2/d3/*\n"
+		"!/d1/pfx-d2/d3/d4/\n");
+	add_one_to_index("d1/pfx-d2/d3/d4/d5/tracked");
+
+	{
+		git_status_options opts = GIT_STATUS_OPTIONS_INIT;
+		status_entry_counts counts;
+		static const char *files[] = {
+			".gitignore",
+			"d1/pfx-d2/d3/d4/d5/tracked",
+			"d1/pfx-d2/d3/d4/d5/untracked",
+			"d1/pfx-d2/d3/d4/untracked",
+		};
+		static const unsigned int statuses[] = {
+			GIT_STATUS_WT_NEW,
+			GIT_STATUS_INDEX_NEW,
+			GIT_STATUS_WT_NEW,
+			GIT_STATUS_WT_NEW,
+		};
+
+		memset(&counts, 0x0, sizeof(status_entry_counts));
+		counts.expected_entry_count = 4;
+		counts.expected_paths = files;
+		counts.expected_statuses = statuses;
+		opts.flags = GIT_STATUS_OPT_DEFAULTS |
+			GIT_STATUS_OPT_INCLUDE_IGNORED |
+			GIT_STATUS_OPT_RECURSE_IGNORED_DIRS;
+		cl_git_pass(git_status_foreach_ext(
+			g_repo, &opts, cb_status__normal, &counts));
+
+		cl_assert_equal_i(counts.expected_entry_count, counts.entry_count);
+		cl_assert_equal_i(0, counts.wrong_status_flags_count);
+		cl_assert_equal_i(0, counts.wrong_sorted_path);
+	}
+
+	refute_is_ignored("d1/pfx-d2/d3/d4/d5/tracked");
+	refute_is_ignored("d1/pfx-d2/d3/d4/d5/untracked");
+	refute_is_ignored("d1/pfx-d2/d3/d4/untracked");
+}
+
+void test_status_ignore__negative_ignores_inside_ignores(void)
+{
+	static const char *test_files[] = {
+		"empty_standard_repo/top/mid/btm/tracked",
+		"empty_standard_repo/top/mid/btm/untracked",
+		NULL
+	};
+
+	make_test_data("empty_standard_repo", test_files);
+	cl_git_mkfile(
+		"empty_standard_repo/.gitignore",
+		"top\n!top/mid/btm\n");
+	add_one_to_index("top/mid/btm/tracked");
+
+	{
+		git_status_options opts = GIT_STATUS_OPTIONS_INIT;
+		status_entry_counts counts;
+		static const char *files[] = {
+			".gitignore", "top/mid/btm/tracked", "top/mid/btm/untracked",
+		};
+		static const unsigned int statuses[] = {
+			GIT_STATUS_WT_NEW, GIT_STATUS_INDEX_NEW, GIT_STATUS_WT_NEW,
+		};
+
+		memset(&counts, 0x0, sizeof(status_entry_counts));
+		counts.expected_entry_count = 3;
+		counts.expected_paths = files;
+		counts.expected_statuses = statuses;
+		opts.flags = GIT_STATUS_OPT_DEFAULTS |
+			GIT_STATUS_OPT_INCLUDE_IGNORED |
+			GIT_STATUS_OPT_RECURSE_IGNORED_DIRS;
+		cl_git_pass(git_status_foreach_ext(
+			g_repo, &opts, cb_status__normal, &counts));
+
+		cl_assert_equal_i(counts.expected_entry_count, counts.entry_count);
+		cl_assert_equal_i(0, counts.wrong_status_flags_count);
+		cl_assert_equal_i(0, counts.wrong_sorted_path);
+	}
+
+	refute_is_ignored("top/mid/btm/tracked");
+	refute_is_ignored("top/mid/btm/untracked");
+}
+
+void test_status_ignore__negative_ignores_in_slash_star(void)
+{
+	git_status_options status_opts = GIT_STATUS_OPTIONS_INIT;
+	git_status_list *list;
+	int found_look_ma = 0, found_what_about = 0;
+	size_t i;
+	static const char *test_files[] = {
+		"empty_standard_repo/bin/look-ma.txt",
+		"empty_standard_repo/bin/what-about-me.txt",
+		NULL
+	};
+
+	make_test_data("empty_standard_repo", test_files);
+	cl_git_mkfile(
+		"empty_standard_repo/.gitignore",
+		"bin/*\n"
+		"!bin/w*\n");
+
+	assert_is_ignored("bin/look-ma.txt");
+	refute_is_ignored("bin/what-about-me.txt");
+
+	status_opts.flags = GIT_STATUS_OPT_DEFAULTS;
+	cl_git_pass(git_status_list_new(&list, g_repo, &status_opts));
+	for (i = 0; i < git_status_list_entrycount(list); i++) {
+		const git_status_entry *entry = git_status_byindex(list, i);
+
+		if (!strcmp("bin/look-ma.txt", entry->index_to_workdir->new_file.path))
+			found_look_ma = 1;
+
+		if (!strcmp("bin/what-about-me.txt", entry->index_to_workdir->new_file.path))
+			found_what_about = 1;
+	}
+	git_status_list_free(list);
+
+	cl_assert(found_look_ma);
+	cl_assert(found_what_about);
+}
+
+void test_status_ignore__negative_ignores_without_trailing_slash_inside_ignores(void)
+{
+	git_status_options status_opts = GIT_STATUS_OPTIONS_INIT;
+	git_status_list *list;
+	int found_parent_file = 0, found_parent_child1_file = 0, found_parent_child2_file = 0;
+	size_t i;
+	static const char *test_files[] = {
+		"empty_standard_repo/parent/file.txt",
+		"empty_standard_repo/parent/force.txt",
+		"empty_standard_repo/parent/child1/file.txt",
+		"empty_standard_repo/parent/child2/file.txt",
+		NULL
+	};
+
+	make_test_data("empty_standard_repo", test_files);
+	cl_git_mkfile(
+		"empty_standard_repo/.gitignore",
+		"parent/*\n"
+		"!parent/force.txt\n"
+		"!parent/child1\n"
+		"!parent/child2/\n");
+
+	add_one_to_index("parent/force.txt");
+
+	assert_is_ignored("parent/file.txt");
+	refute_is_ignored("parent/force.txt");
+	refute_is_ignored("parent/child1/file.txt");
+	refute_is_ignored("parent/child2/file.txt");
+
+	status_opts.flags = GIT_STATUS_OPT_DEFAULTS;
+	cl_git_pass(git_status_list_new(&list, g_repo, &status_opts));
+	for (i = 0; i < git_status_list_entrycount(list); i++) {
+		const git_status_entry *entry = git_status_byindex(list, i);
+
+		if (!entry->index_to_workdir)
+			continue;
+
+		if (!strcmp("parent/file.txt", entry->index_to_workdir->new_file.path))
+			found_parent_file = 1;
+
+		if (!strcmp("parent/force.txt", entry->index_to_workdir->new_file.path))
+			found_parent_file = 1;
+
+		if (!strcmp("parent/child1/file.txt", entry->index_to_workdir->new_file.path))
+			found_parent_child1_file = 1;
+
+		if (!strcmp("parent/child2/file.txt", entry->index_to_workdir->new_file.path))
+			found_parent_child2_file = 1;
+	}
+	git_status_list_free(list);
+
+	cl_assert(found_parent_file);
+	cl_assert(found_parent_child1_file);
+	cl_assert(found_parent_child2_file);
 }
 

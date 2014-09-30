@@ -254,7 +254,8 @@ GIT_EXTERN(int) git_commit_nth_gen_ancestor(
  *	is not direct, it will be resolved to a direct reference.
  *	Use "HEAD" to update the HEAD of the current branch and
  *	make it point to this commit. If the reference doesn't
- *	exist yet, it will be created.
+ *	exist yet, it will be created. If it does exist, the first
+ *	parent must be the tip of this branch.
  *
  * @param author Signature with author and author time of commit
  *
@@ -329,7 +330,7 @@ GIT_EXTERN(int) git_commit_create_v(
  *
  * The `update_ref` value works as in the regular `git_commit_create()`,
  * updating the ref to point to the newly rewritten commit.  If you want
- * to amend a commit that is not currently the HEAD of the branch and then
+ * to amend a commit that is not currently the tip of the branch and then
  * rewrite the following commits to reach a ref, pass this as NULL and
  * update the rest of the commit chain and ref separately.
  *

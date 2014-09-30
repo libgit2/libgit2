@@ -133,6 +133,13 @@ GIT_INLINE(int) git__is_uint32(size_t p)
 	return p == (size_t)r;
 }
 
+/** @return true if p fits into the range of an unsigned long */
+GIT_INLINE(int) git__is_ulong(git_off_t p)
+{
+	unsigned long r = (unsigned long)p;
+	return p == (git_off_t)r;
+}
+
 /* 32-bit cross-platform rotl */
 #ifdef _MSC_VER /* use built-in method in MSVC */
 #	define git__rotl(v, s) (uint32_t)_rotl(v, s)
@@ -412,7 +419,7 @@ GIT_INLINE(double) git__timer(void)
        scaling_factor = (double)info.numer / (double)info.denom;
    }
 
-   return (double)time * scaling_factor / 1.0E-9;
+   return (double)time * scaling_factor / 1.0E9;
 }
 
 #else
@@ -424,13 +431,13 @@ GIT_INLINE(double) git__timer(void)
 	struct timespec tp;
 
 	if (clock_gettime(CLOCK_MONOTONIC, &tp) == 0) {
-		return (double) tp.tv_sec + (double) tp.tv_nsec / 1E-9;
+		return (double) tp.tv_sec + (double) tp.tv_nsec / 1.0E9;
 	} else {
 		/* Fall back to using gettimeofday */
 		struct timeval tv;
 		struct timezone tz;
 		gettimeofday(&tv, &tz);
-		return (double)tv.tv_sec + (double)tv.tv_usec / 1E-6;
+		return (double)tv.tv_sec + (double)tv.tv_usec / 1.0E6;
 	}
 }
 

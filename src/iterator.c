@@ -897,6 +897,7 @@ struct fs_iterator_frame {
 	fs_iterator_frame *next;
 	git_vector entries;
 	size_t index;
+	int is_ignored;
 };
 
 typedef struct fs_iterator fs_iterator;
@@ -1016,6 +1017,7 @@ static int fs_iterator__expand_dir(fs_iterator *fi)
 		fs_iterator__free_frame(ff);
 		return GIT_ENOTFOUND;
 	}
+	fi->base.stat_calls += ff->entries.length;
 
 	fs_iterator__seek_frame_start(fi, ff);
 
@@ -1289,24 +1291,37 @@ GIT_INLINE(bool) workdir_path_is_dotgit(const git_buf *path)
 
 static int workdir_iterator__enter_dir(fs_iterator *fi)
 {
+	workdir_iterator *wi = (workdir_iterator *)fi;
 	fs_iterator_frame *ff = fi->stack;
 	size_t pos;
 	git_path_with_stat *entry;
 	bool found_submodules = false;
 
-	/* only push new ignores if this is not top level directory */
+	/* check if this directory is ignored */
+	if (git_ignore__lookup(
+			&ff->is_ignored, &wi->ignores, fi->path.ptr + fi->root_len) < 0) {
+		giterr_clear();
+		ff->is_ignored = GIT_IGNORE_NOTFOUND;
+	}
+
+	/* if this is not the top level directory... */
 	if (ff->next != NULL) {
-		workdir_iterator *wi = (workdir_iterator *)fi;
 		ssize_t slash_pos = git_buf_rfind_next(&fi->path, '/');
 
+		/* inherit ignored from parent if no rule specified */
+		if (ff->is_ignored <= GIT_IGNORE_NOTFOUND)
+			ff->is_ignored = ff->next->is_ignored;
+
+		/* push new ignores for files in this directory */
 		(void)git_ignore__push_dir(&wi->ignores, &fi->path.ptr[slash_pos + 1]);
 	}
 
 	/* convert submodules to GITLINK and remove trailing slashes */
 	git_vector_foreach(&ff->entries, pos, entry) {
-		if (S_ISDIR(entry->st.st_mode) &&
-			git_submodule__is_submodule(fi->base.repo, entry->path))
-		{
+		if (!S_ISDIR(entry->st.st_mode) || !strcmp(GIT_DIR, entry->path))
+			continue;
+
+		if (git_submodule__is_submodule(fi->base.repo, entry->path)) {
 			entry->st.st_mode = GIT_FILEMODE_COMMIT;
 			entry->path_len--;
 			entry->path[entry->path_len] = '\0';
@@ -1340,7 +1355,7 @@ static int workdir_iterator__update_entry(fs_iterator *fi)
 		return GIT_ENOTFOUND;
 
 	/* reset is_ignored since we haven't checked yet */
-	wi->is_ignored = -1;
+	wi->is_ignored = GIT_IGNORE_UNCHECKED;
 
 	return 0;
 }
@@ -1485,6 +1500,19 @@ int git_iterator_current_parent_tree(
 	return 0;
 }
 
+static void workdir_iterator_update_is_ignored(workdir_iterator *wi)
+{
+	if (git_ignore__lookup(
+			&wi->is_ignored, &wi->ignores, wi->fi.entry.path) < 0) {
+		giterr_clear();
+		wi->is_ignored = GIT_IGNORE_NOTFOUND;
+	}
+
+	/* use ignore from containing frame stack */
+	if (wi->is_ignored <= GIT_IGNORE_NOTFOUND)
+		wi->is_ignored = wi->fi.stack->is_ignored;
+}
+
 bool git_iterator_current_is_ignored(git_iterator *iter)
 {
 	workdir_iterator *wi = (workdir_iterator *)iter;
@@ -1492,14 +1520,22 @@ bool git_iterator_current_is_ignored(git_iterator *iter)
 	if (iter->type != GIT_ITERATOR_TYPE_WORKDIR)
 		return false;
 
-	if (wi->is_ignored != -1)
-		return (bool)(wi->is_ignored != 0);
+	if (wi->is_ignored != GIT_IGNORE_UNCHECKED)
+		return (bool)(wi->is_ignored == GIT_IGNORE_TRUE);
 
-	if (git_ignore__lookup(
-			&wi->ignores, wi->fi.entry.path, &wi->is_ignored) < 0)
-		wi->is_ignored = true;
+	workdir_iterator_update_is_ignored(wi);
 
-	return (bool)wi->is_ignored;
+	return (bool)(wi->is_ignored == GIT_IGNORE_TRUE);
+}
+
+bool git_iterator_current_tree_is_ignored(git_iterator *iter)
+{
+	workdir_iterator *wi = (workdir_iterator *)iter;
+
+	if (iter->type != GIT_ITERATOR_TYPE_WORKDIR)
+		return false;
+
+	return (bool)(wi->fi.stack->is_ignored == GIT_IGNORE_TRUE);
 }
 
 int git_iterator_cmp(git_iterator *iter, const char *path_prefix)
@@ -1547,10 +1583,8 @@ int git_iterator_advance_over_with_status(
 		return error;
 
 	if (!S_ISDIR(entry->mode)) {
-		if (git_ignore__lookup(
-				&wi->ignores, wi->fi.entry.path, &wi->is_ignored) < 0)
-			wi->is_ignored = true;
-		if (wi->is_ignored)
+		workdir_iterator_update_is_ignored(wi);
+		if (wi->is_ignored == GIT_IGNORE_TRUE)
 			*status = GIT_ITERATOR_STATUS_IGNORED;
 		return git_iterator_advance(entryptr, iter);
 	}
@@ -1562,14 +1596,12 @@ int git_iterator_advance_over_with_status(
 
 	/* scan inside directory looking for a non-ignored item */
 	while (entry && !iter->prefixcomp(entry->path, base)) {
-		if (git_ignore__lookup(
-				&wi->ignores, wi->fi.entry.path, &wi->is_ignored) < 0)
-			wi->is_ignored = true;
+		workdir_iterator_update_is_ignored(wi);
 
 		/* if we found an explicitly ignored item, then update from
 		 * EMPTY to IGNORED
 		 */
-		if (wi->is_ignored)
+		if (wi->is_ignored == GIT_IGNORE_TRUE)
 			*status = GIT_ITERATOR_STATUS_IGNORED;
 		else if (S_ISDIR(entry->mode)) {
 			error = git_iterator_advance_into(&entry, iter);
@@ -1578,7 +1610,7 @@ int git_iterator_advance_over_with_status(
 				continue;
 			else if (error == GIT_ENOTFOUND) {
 				error = 0;
-				wi->is_ignored = true; /* mark empty directories as ignored */
+				wi->is_ignored = GIT_IGNORE_TRUE; /* mark empty dirs ignored */
 			} else
 				break; /* real error, stop here */
 		} else {

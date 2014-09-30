@@ -236,14 +236,9 @@ int git_refdb_ensure_log(git_refdb *db, const char *refname)
 	return db->backend->ensure_log(db->backend, refname);
 }
 
-int git_refdb_init_backend(git_refdb_backend* backend, int version)
+int git_refdb_init_backend(git_refdb_backend *backend, unsigned int version)
 {
-	if (version != GIT_REFDB_BACKEND_VERSION) {
-		giterr_set(GITERR_INVALID, "Invalid version %d for git_refdb_backend", version);
-		return -1;
-	} else {
-		git_refdb_backend b = GIT_REFDB_BACKEND_INIT;
-		memcpy(backend, &b, sizeof(b));
-		return 0;
-	}
+	GIT_INIT_STRUCTURE_FROM_TEMPLATE(
+		backend, version, git_refdb_backend, GIT_REFDB_BACKEND_INIT);
+	return 0;
 }

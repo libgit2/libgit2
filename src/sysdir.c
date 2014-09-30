@@ -90,6 +90,8 @@ void git_sysdir_global_shutdown(void)
 	int i;
 	for (i = 0; i < GIT_SYSDIR__MAX; ++i)
 		git_buf_free(&git_sysdir__dirs[i]);
+
+	git_sysdir__dirs_shutdown_set = 0;
 }
 
 static int git_sysdir_check_selector(git_sysdir_t which)
@@ -194,14 +196,19 @@ static int git_sysdir_find_in_dirlist(
 	const git_buf *syspath;
 
 	GITERR_CHECK_ERROR(git_sysdir_get(&syspath, which));
+	if (!syspath || !git_buf_len(syspath))
+		goto done;
 
 	for (scan = git_buf_cstr(syspath); scan; scan = next) {
-		for (next = strchr(scan, GIT_PATH_LIST_SEPARATOR);
-			 next && next > scan && next[-1] == '\\';
-			 next = strchr(next + 1, GIT_PATH_LIST_SEPARATOR))
-			/* find unescaped separator or end of string */;
+		/* find unescaped separator or end of string */
+		for (next = scan; *next; ++next) {
+			if (*next == GIT_PATH_LIST_SEPARATOR &&
+				(next <= scan || next[-1] != '\\'))
+				break;
+		}
 
-		len = next ? (size_t)(next++ - scan) : strlen(scan);
+		len = (size_t)(next - scan);
+		next = (*next ? next + 1 : NULL);
 		if (!len)
 			continue;
 
@@ -213,6 +220,7 @@ static int git_sysdir_find_in_dirlist(
 			return 0;
 	}
 
+done:
 	git_buf_free(path);
 	giterr_set(GITERR_OS, "The %s file '%s' doesn't exist", label, name);
 	return GIT_ENOTFOUND;

@@ -22,7 +22,7 @@ int main (int argc, char **argv)
 	git_repository *repo;
 	git_revwalk *walk;
 	git_oid oid;
-	char buf[41];
+	char buf[GIT_OID_HEXSZ+1];
 
 	git_threads_init();
 
@@ -32,7 +32,7 @@ int main (int argc, char **argv)
 
 	while (!git_revwalk_next(&oid, walk)) {
 		git_oid_fmt(buf, &oid);
-		buf[40] = '\0';
+		buf[GIT_OID_HEXSZ] = '\0';
 		printf("%s\n", buf);
 	}
 

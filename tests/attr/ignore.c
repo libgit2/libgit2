@@ -81,6 +81,24 @@ void test_attr_ignore__full_paths(void)
 	assert_is_ignored(false, "Folder/Middle/More/More/Contained/Not/Happy/Child");
 }
 
+void test_attr_ignore__more_starstar_cases(void)
+{
+	cl_must_pass(p_unlink("attr/.gitignore"));
+	cl_git_mkfile(
+		"attr/dir/.gitignore",
+		"sub/**/*.html\n");
+
+	assert_is_ignored(false, "aaa.html");
+	assert_is_ignored(false, "dir");
+	assert_is_ignored(false, "dir/sub");
+	assert_is_ignored(true,  "dir/sub/sub2/aaa.html");
+	assert_is_ignored(true,  "dir/sub/aaa.html");
+	assert_is_ignored(false, "dir/aaa.html");
+	assert_is_ignored(false, "sub");
+	assert_is_ignored(false, "sub/aaa.html");
+	assert_is_ignored(false, "sub/sub2/aaa.html");
+}
+
 void test_attr_ignore__leading_stars(void)
 {
 	cl_git_rewritefile(
@@ -130,12 +148,11 @@ void test_attr_ignore__skip_gitignore_directory(void)
 
 void test_attr_ignore__expand_tilde_to_homedir(void)
 {
-	git_buf cleanup = GIT_BUF_INIT;
 	git_config *cfg;
 
 	assert_is_ignored(false, "example.global_with_tilde");
 
-	cl_fake_home(&cleanup);
+	cl_fake_home();
 
 	/* construct fake home with fake global excludes */
 	cl_git_mkfile("home/globalexclude", "# found me\n*.global_with_tilde\n");
@@ -150,7 +167,7 @@ void test_attr_ignore__expand_tilde_to_homedir(void)
 
 	cl_git_pass(git_futils_rmdir_r("home", NULL, GIT_RMDIR_REMOVE_FILES));
 
-	cl_fake_home_cleanup(&cleanup);
+	cl_fake_home_cleanup(NULL);
 
 	git_attr_cache_flush(g_repo); /* must reset to pick up change */
 

@@ -6,7 +6,7 @@ static void assert_message_prettifying(char *expected_output, char *input, int s
 {
 	git_buf prettified_message = GIT_BUF_INIT;
 
-	git_message_prettify(&prettified_message, input, strip_comments);
+	git_message_prettify(&prettified_message, input, strip_comments, '#');
 	cl_assert_equal_s(expected_output, git_buf_cstr(&prettified_message));
 
 	git_buf_free(&prettified_message);
@@ -175,25 +175,25 @@ void test_object_message__message_prettify(void)
 	git_buf buffer;
 
 	memset(&buffer, 0, sizeof(buffer));
-	cl_git_pass(git_message_prettify(&buffer, "", 0));
+	cl_git_pass(git_message_prettify(&buffer, "", 0, '#'));
 	cl_assert_equal_s(buffer.ptr, "");
 	git_buf_free(&buffer);
-	cl_git_pass(git_message_prettify(&buffer, "", 1));
+	cl_git_pass(git_message_prettify(&buffer, "", 1, '#'));
 	cl_assert_equal_s(buffer.ptr, "");
 	git_buf_free(&buffer);
 
-	cl_git_pass(git_message_prettify(&buffer, "Short", 0));
+	cl_git_pass(git_message_prettify(&buffer, "Short", 0, '#'));
 	cl_assert_equal_s("Short\n", buffer.ptr);
 	git_buf_free(&buffer);
-	cl_git_pass(git_message_prettify(&buffer, "Short", 1));
+	cl_git_pass(git_message_prettify(&buffer, "Short", 1, '#'));
 	cl_assert_equal_s("Short\n", buffer.ptr);
 	git_buf_free(&buffer);
 
-	cl_git_pass(git_message_prettify(&buffer, "This is longer\nAnd multiline\n# with some comments still in\n", 0));
+	cl_git_pass(git_message_prettify(&buffer, "This is longer\nAnd multiline\n# with some comments still in\n", 0, '#'));
 	cl_assert_equal_s(buffer.ptr, "This is longer\nAnd multiline\n# with some comments still in\n");
 	git_buf_free(&buffer);
 
-	cl_git_pass(git_message_prettify(&buffer, "This is longer\nAnd multiline\n# with some comments still in\n", 1));
+	cl_git_pass(git_message_prettify(&buffer, "This is longer\nAnd multiline\n# with some comments still in\n", 1, '#'));
 	cl_assert_equal_s(buffer.ptr, "This is longer\nAnd multiline\n");
 	git_buf_free(&buffer);
 }

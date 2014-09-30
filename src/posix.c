@@ -99,7 +99,7 @@ const char *p_gai_strerror(int ret)
 
 #endif /* NO_ADDRINFO */
 
-int p_open(const char *path, int flags, ...)
+int p_open(const char *path, volatile int flags, ...)
 {
 	mode_t mode = 0;
 
@@ -206,6 +206,13 @@ int p_write(git_file fd, const void *buf, size_t cnt)
 #ifdef NO_MMAP
 
 #include "map.h"
+
+long git__page_size(void)
+{
+	/* dummy; here we don't need any alignment anyway */
+	return 4096;
+}
+
 
 int p_mmap(git_map *out, size_t len, int prot, int flags, int fd, git_off_t offset)
 {

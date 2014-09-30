@@ -112,7 +112,7 @@ void test_object_commit_commitstagedfile__generate_predictable_object_ids(void)
 	cl_git_pass(git_tree_lookup(&tree, repo, &tree_oid));
 
 	memset(&buffer, 0, sizeof(git_buf));
-	cl_git_pass(git_message_prettify(&buffer, "Initial commit", 0));
+	cl_git_pass(git_message_prettify(&buffer, "Initial commit", 0, '#'));
 
 	cl_git_pass(git_commit_create_v(
 		&commit_oid,
@@ -175,6 +175,10 @@ void test_object_commit_commitstagedfile__amend_commit(void)
 	cl_git_pass(git_commit_amend(
 		&new_oid, old_commit, "HEAD", NULL, NULL, NULL, "Initial commit", NULL));
 
+	/* fail because the commit isn't the tip of the branch anymore */
+	cl_git_fail(git_commit_amend(
+		&new_oid, old_commit, "HEAD", NULL, NULL, NULL, "Initial commit", NULL));
+
 	cl_git_pass(git_commit_lookup(&new_commit, repo, &new_oid));
 
 	cl_assert_equal_i(0, git_commit_parentcount(new_commit));
@@ -182,6 +186,7 @@ void test_object_commit_commitstagedfile__amend_commit(void)
 	assert_commit_is_head(new_commit);
 
 	git_commit_free(old_commit);
+
 	old_commit = new_commit;
 
 	/* let's amend the tree of that last commit */
@@ -191,6 +196,10 @@ void test_object_commit_commitstagedfile__amend_commit(void)
 	cl_git_pass(git_index_write_tree(&tree_oid, index));
 	cl_git_pass(git_tree_lookup(&tree, repo, &tree_oid));
 	cl_assert_equal_i(2, git_tree_entrycount(tree));
+
+	/* fail to amend on a ref which does not exist */
+	cl_git_fail_with(GIT_ENOTFOUND, git_commit_amend(
+		&new_oid, old_commit, "refs/heads/nope", NULL, NULL, NULL, "Initial commit", tree));
 
 	cl_git_pass(git_commit_amend(
 		&new_oid, old_commit, "HEAD", NULL, NULL, NULL, "Initial commit", tree));

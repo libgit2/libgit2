@@ -137,6 +137,38 @@ int git_config_open_ondisk(git_config **out, const char *path)
 	return error;
 }
 
+int git_config_snapshot(git_config **out, git_config *in)
+{
+	int error = 0;
+	size_t i;
+	file_internal *internal;
+	git_config *config;
+
+	*out = NULL;
+
+	if (git_config_new(&config) < 0)
+		return -1;
+
+	git_vector_foreach(&in->files, i, internal) {
+		git_config_backend *b;
+
+		if ((error = internal->file->snapshot(&b, internal->file)) < 0)
+			break;
+
+		if ((error = git_config_add_backend(config, b, internal->level, 0)) < 0) {
+			b->free(b);
+			break;
+		}
+	}
+
+	if (error < 0)
+		git_config_free(config);
+	else
+		*out = config;
+
+	return error;
+}
+
 static int find_internal_file_by_level(
 	file_internal **internal_out,
 	const git_config *cfg,
@@ -967,16 +999,19 @@ void git_config_iterator_free(git_config_iterator *iter)
 
 int git_config_find_global(git_buf *path)
 {
+	git_buf_sanitize(path);
 	return git_sysdir_find_global_file(path, GIT_CONFIG_FILENAME_GLOBAL);
 }
 
 int git_config_find_xdg(git_buf *path)
 {
+	git_buf_sanitize(path);
 	return git_sysdir_find_xdg_file(path, GIT_CONFIG_FILENAME_XDG);
 }
 
 int git_config_find_system(git_buf *path)
 {
+	git_buf_sanitize(path);
 	return git_sysdir_find_system_file(path, GIT_CONFIG_FILENAME_SYSTEM);
 }
 
@@ -984,24 +1019,22 @@ int git_config__global_location(git_buf *buf)
 {
 	const git_buf *paths;
 	const char *sep, *start;
-	size_t len;
 
 	if (git_sysdir_get(&paths, GIT_SYSDIR_GLOBAL) < 0)
 		return -1;
 
 	/* no paths, so give up */
-	if (git_buf_len(paths) == 0)
+	if (!paths || !git_buf_len(paths))
 		return -1;
 
-	start = git_buf_cstr(paths);
-	sep = strchr(start, GIT_PATH_LIST_SEPARATOR);
+	/* find unescaped separator or end of string */
+	for (sep = start = git_buf_cstr(paths); *sep; ++sep) {
+		if (*sep == GIT_PATH_LIST_SEPARATOR &&
+			(sep <= start || sep[-1] != '\\'))
+			break;
+	}
 
-	if (sep)
-		len = sep - start;
-	else
-		len = paths->size;
-
-	if (git_buf_set(buf, start, len) < 0)
+	if (git_buf_set(buf, start, (size_t)(sep - start)) < 0)
 		return -1;
 
 	return git_buf_joinpath(buf, buf->ptr, GIT_CONFIG_FILENAME_GLOBAL);
@@ -1144,7 +1177,7 @@ int git_config_parse_int64(int64_t *out, const char *value)
 	}
 
 fail_parse:
-	giterr_set(GITERR_CONFIG, "Failed to parse '%s' as an integer", value);
+	giterr_set(GITERR_CONFIG, "Failed to parse '%s' as an integer", value ? value : "(null)");
 	return -1;
 }
 
@@ -1164,7 +1197,7 @@ int git_config_parse_int32(int32_t *out, const char *value)
 	return 0;
 
 fail_parse:
-	giterr_set(GITERR_CONFIG, "Failed to parse '%s' as a 32-bit integer", value);
+	giterr_set(GITERR_CONFIG, "Failed to parse '%s' as a 32-bit integer", value ? value : "(null)");
 	return -1;
 }
 
@@ -1276,14 +1309,9 @@ cleanup:
 	return error;
 }
 
-int git_config_init_backend(git_config_backend* backend, int version)
+int git_config_init_backend(git_config_backend *backend, unsigned int version)
 {
-	if (version != GIT_CONFIG_BACKEND_VERSION) {
-		giterr_set(GITERR_INVALID, "Invalid version %d for git_config_backend", version);
-		return -1;
-	} else {
-		git_config_backend b = GIT_CONFIG_BACKEND_INIT;
-		memcpy(backend, &b, sizeof(b));
-		return 0;
-	}
+	GIT_INIT_STRUCTURE_FROM_TEMPLATE(
+		backend, version, git_config_backend, GIT_CONFIG_BACKEND_INIT);
+	return 0;
 }

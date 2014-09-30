@@ -408,7 +408,8 @@ int cl_repo_get_bool(git_repository *repo, const char *cfg)
 	int val = 0;
 	git_config *config;
 	cl_git_pass(git_repository_config(&config, repo));
-	cl_git_pass(git_config_get_bool(&val, config, cfg));;
+	if (git_config_get_bool(&val, config, cfg) < 0)
+		giterr_clear();
 	git_config_free(config);
 	return val;
 }
@@ -470,7 +471,7 @@ void clar__assert_equal_file(
 				buf, sizeof(buf), "file content mismatch at byte %d",
 				(int)(total_bytes + pos));
 			p_close(fd);
-			clar__fail(file, line, buf, path, 1);
+			clar__fail(file, line, path, buf, 1);
 		}
 
 		expected_data += bytes;
@@ -484,23 +485,49 @@ void clar__assert_equal_file(
 		(size_t)expected_bytes, (size_t)total_bytes);
 }
 
-void cl_fake_home(git_buf *restore)
+static char *_cl_restore_home = NULL;
+
+void cl_fake_home_cleanup(void *payload)
+{
+	char *restore = _cl_restore_home;
+	_cl_restore_home = NULL;
+
+	GIT_UNUSED(payload);
+
+	if (restore) {
+		cl_git_pass(git_libgit2_opts(
+			GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL, restore));
+		git__free(restore);
+	}
+}
+
+void cl_fake_home(void)
 {
 	git_buf path = GIT_BUF_INIT;
 
 	cl_git_pass(git_libgit2_opts(
-		GIT_OPT_GET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL, restore));
+		GIT_OPT_GET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL, &path));
 
-	cl_must_pass(p_mkdir("home", 0777));
+	_cl_restore_home = git_buf_detach(&path);
+	cl_set_cleanup(cl_fake_home_cleanup, NULL);
+
+	if (!git_path_exists("home"))
+		cl_must_pass(p_mkdir("home", 0777));
 	cl_git_pass(git_path_prettify(&path, "home", NULL));
 	cl_git_pass(git_libgit2_opts(
 		GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL, path.ptr));
 	git_buf_free(&path);
 }
 
-void cl_fake_home_cleanup(git_buf *restore)
+void cl_sandbox_set_search_path_defaults(void)
 {
-	cl_git_pass(git_libgit2_opts(
-		GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL, restore->ptr));
-	git_buf_free(restore);
+	const char *sandbox_path = clar_sandbox_path();
+
+	git_libgit2_opts(
+		GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL, sandbox_path);
+	git_libgit2_opts(
+		GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_XDG, sandbox_path);
+	git_libgit2_opts(
+		GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_SYSTEM, sandbox_path);
 }
+
