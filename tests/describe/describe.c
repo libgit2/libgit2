@@ -9,11 +9,11 @@ void test_describe_describe__can_describe_against_a_bare_repo(void)
 
 	cl_git_pass(git_repository_open(&repo, cl_fixture("testrepo.git")));
 
-	assert_describe("hard_tag", "HEAD", repo, &opts, &fmt_opts, false);
+	assert_describe("hard_tag", "HEAD", repo, &opts, &fmt_opts);
 
 	opts.show_commit_oid_as_fallback = 1;
 
-	assert_describe("be3563a", "HEAD^", repo, &opts, &fmt_opts, true);
+	assert_describe("be3563a*", "HEAD^", repo, &opts, &fmt_opts);
 
 	git_repository_free(repo);
 }
