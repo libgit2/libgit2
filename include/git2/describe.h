@@ -75,6 +75,11 @@ GIT_EXTERN(int) git_describe_commit(
 	git_object *committish,
 	git_describe_opts *opts);
 
+GIT_EXTERN(int) git_describe_workdir(
+	git_describe_result **out,
+	git_repository *repo,
+	git_describe_opts *opts);
+
 GIT_EXTERN(int) git_describe_format(git_buf *out, const git_describe_result *result, const git_describe_format_options *opts);
 
 GIT_EXTERN(void) git_describe_result_free(git_describe_result *result);

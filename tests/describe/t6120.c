@@ -77,6 +77,20 @@ void test_describe_t6120__firstparent(void)
 	assert_describe("e-3-", "HEAD", repo, &opts, &fmt_opts, true);
 }
 
+void test_describe_t6120__workdir(void)
+{
+	git_describe_opts opts = GIT_DESCRIBE_OPTIONS_INIT;
+	git_describe_format_options fmt_opts = GIT_DESCRIBE_FORMAT_OPTIONS_INIT;
+
+	assert_describe_workdir("A-", NULL, repo, &opts, &fmt_opts, true);
+	cl_git_mkfile("describe/file", "something different");
+
+	fmt_opts.dirty_suffix = "-dirty";
+	assert_describe_workdir("A-", "-dirty", repo, &opts, &fmt_opts, true);
+	fmt_opts.dirty_suffix = ".mod";
+	assert_describe_workdir("A-", ".mod", repo, &opts, &fmt_opts, true);
+}
+
 static void commit_and_tag(
 	git_time_t *time,
 	const char *commit_msg,

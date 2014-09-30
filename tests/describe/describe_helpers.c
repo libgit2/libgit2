@@ -26,3 +26,29 @@ void assert_describe(
 	git_object_free(object);
 	git_buf_free(&label);
 }
+
+void assert_describe_workdir(
+	const char *expected_output,
+	const char *expected_suffix,
+	git_repository *repo,
+	git_describe_opts *opts,
+	git_describe_format_options *fmt_opts,
+	bool is_prefix_match)
+{
+	git_buf label = GIT_BUF_INIT;
+	git_describe_result *result;
+
+	cl_git_pass(git_describe_workdir(&result, repo, opts));
+	cl_git_pass(git_describe_format(&label, result, fmt_opts));
+
+	if (is_prefix_match)
+		cl_assert_equal_i(0, git__prefixcmp(git_buf_cstr(&label), expected_output));
+	else
+		cl_assert_equal_s(expected_output, label);
+
+	if (expected_suffix)
+		cl_assert_equal_i(0, git__suffixcmp(git_buf_cstr(&label), expected_suffix));
+
+	git_describe_result_free(result);
+	git_buf_free(&label);
+}

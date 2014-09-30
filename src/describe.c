@@ -5,6 +5,9 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 #include "git2/describe.h"
+#include "git2/strarray.h"
+#include "git2/diff.h"
+#include "git2/status.h"
 
 #include "common.h"
 #include "commit.h"
@@ -385,7 +388,6 @@ static int show_suffix(
 	git_buf_printf(buf, "-%d-g", depth);
 
 	git_buf_put(buf, hex_oid, size);
-	git_buf_putc(buf, '\0');
 
 	return git_buf_oom(buf) ? -1 : 0;
 }
@@ -699,6 +701,47 @@ cleanup:
 	return error;
 }
 
+int git_describe_workdir(
+	git_describe_result **out,
+	git_repository *repo,
+	git_describe_opts *opts)
+{
+	int error;
+	git_oid current_id;
+	git_status_list *status = NULL;
+	git_status_options status_opts = GIT_STATUS_OPTIONS_INIT;
+	git_describe_result *result;
+	git_object *commit;
+
+	if ((error = git_reference_name_to_id(&current_id, repo, GIT_HEAD_FILE)) < 0)
+		return error;
+
+	if ((error = git_object_lookup(&commit, repo, &current_id, GIT_OBJ_COMMIT)) < 0)
+		return error;
+
+	/* The first step is to perform a describe of HEAD, so we can leverage this */
+	if ((error = git_describe_commit(&result, commit, opts)) < 0)
+		goto out;
+
+	if ((error = git_status_list_new(&status, repo, &status_opts)) < 0)
+		goto out;
+
+
+	if (git_status_list_entrycount(status) > 0)
+		result->dirty = 1;
+
+out:
+	git_object_free(commit);
+	git_status_list_free(status);
+
+	if (error < 0)
+		git_describe_result_free(result);
+	else
+		*out = result;
+
+	return error;
+}
+
 int git_describe_format(git_buf *out, const git_describe_result *result, const git_describe_format_options *opts)
 {
 	int error;
@@ -744,13 +787,13 @@ int git_describe_format(git_buf *out, const git_describe_result *result, const g
 		char hex_oid[GIT_OID_HEXSZ + 1] = {0};
 		int size;
 		if ((error = find_unique_abbrev_size(
-			     &size, &result->commit_id, opts->abbreviated_size)) < 0)
+			     &size, repo, &result->commit_id, opts->abbreviated_size)) < 0)
 			return -1;
 
 		git_oid_fmt(hex_oid, &result->commit_id);
 		git_buf_put(out, hex_oid, size);
 
-		if (opts->dirty_suffix)
+		if (result->dirty && opts->dirty_suffix)
 			git_buf_puts(out, opts->dirty_suffix);
 
 		return git_buf_oom(out) ? -1 : 0;
@@ -765,12 +808,12 @@ int git_describe_format(git_buf *out, const git_describe_result *result, const g
 	if (opts->abbreviated_size) {
 		if ((error = show_suffix(out, result->tag->depth,
 			&result->commit_id, opts->abbreviated_size)) < 0)
-			return -1;
+			return error;
 	}
 
-	if (opts->dirty_suffix)
+	if (result->dirty && opts->dirty_suffix) {
 		git_buf_puts(out, opts->dirty_suffix);
-
+	}
 
 	return git_buf_oom(out) ? -1 : 0;
 }
