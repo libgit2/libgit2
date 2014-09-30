@@ -768,7 +768,7 @@ int git_path_cmp(
 int git_path_make_relative(git_buf *path, const char *parent)
 {
 	const char *p, *q, *p_dirsep, *q_dirsep;
-	size_t plen = path->size, newlen, depth = 1, i;
+	size_t plen = path->size, newlen, depth = 1, i, offset;
 
 	for (p_dirsep = p = path->ptr, q_dirsep = q = parent; *p && *q; p++, q++) {
 		if (*p == '/' && *q == '/') {
@@ -808,8 +808,11 @@ int git_path_make_relative(git_buf *path, const char *parent)
 
 	newlen = (depth * 3) + plen;
 
+	/* save the offset as we might realllocate the pointer */
+	offset = p - path->ptr;
 	if (git_buf_try_grow(path, newlen + 1, 1, 0) < 0)
 		return -1;
+	p = path->ptr + offset;
 
 	memmove(path->ptr + (depth * 3), p, plen + 1);
 
