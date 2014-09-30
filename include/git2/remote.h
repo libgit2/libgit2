@@ -596,10 +596,11 @@ GIT_EXTERN(int) git_remote_is_valid_name(const char *remote_name);
 * All remote-tracking branches and configuration settings
 * for the remote will be removed.
 *
-* @param remote A valid remote
+* @param repo the repository in which to act
+* @param name the name of the remove to delete
 * @return 0 on success, or an error code.
 */
-GIT_EXTERN(int) git_remote_delete(git_remote *remote);
+GIT_EXTERN(int) git_remote_delete(git_repository *repo, const char *name);
 
 /**
  * Retrieve the name of the remote's default branch
