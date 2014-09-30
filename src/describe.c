@@ -166,7 +166,7 @@ cleanup:
 	return error;
 }
 
-typedef struct git_describe_result {
+struct git_describe_result {
 	int dirty;
 	int exact_match;
 	int fallback_to_id;
@@ -174,7 +174,7 @@ typedef struct git_describe_result {
 	git_repository *repo;
 	struct commit_name *name;
 	struct possible_tag *tag;
-} git_describe_result;
+};
 
 struct get_name_data
 {
