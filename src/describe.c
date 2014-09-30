@@ -17,6 +17,7 @@
 #include "revwalk.h"
 #include "tag.h"
 #include "vector.h"
+#include "repository.h"
 
 /* Ported from https://github.com/git/git/blob/89dde7882f71f846ccd0359756d27bebc31108de/builtin/describe.c */
 
@@ -357,14 +358,33 @@ static int display_name(git_buf *buf, git_repository *repo, struct commit_name *
 
 static int find_unique_abbrev_size(
 	int *out,
+	git_repository *repo,
 	const git_oid *oid_in,
 	int abbreviated_size)
 {
-	GIT_UNUSED(abbreviated_size);
+	size_t size = abbreviated_size;
+	git_odb *odb;
+	git_oid dummy;
+	int error;
 
-	/* TODO: Actually find the abbreviated oid size */
-	GIT_UNUSED(oid_in);
+	if ((error = git_repository_odb__weakptr(&odb, repo)) < 0)
+		return error;
 
+	while (size < GIT_OID_HEXSZ) {
+		if ((error = git_odb_exists_prefix(&dummy, odb, oid_in, size)) == 0) {
+			*out = (int) size;
+			return 0;
+		}
+
+		/* If the error wasn't that it's not unique, then it's a proper error */
+		if (error != GIT_EAMBIGUOUS)
+			return error;
+
+		/* Try again with a larger size */
+		size++;
+	}
+
+	/* If we didn't find any shorter prefix, we have to do the whole thing */
 	*out = GIT_OID_HEXSZ;
 	
 	return 0;
@@ -373,6 +393,7 @@ static int find_unique_abbrev_size(
 static int show_suffix(
 	git_buf *buf,
 	int depth,
+	git_repository *repo,
 	const git_oid* id,
 	size_t abbrev_size)
 {
@@ -380,7 +401,7 @@ static int show_suffix(
 
 	char hex_oid[GIT_OID_HEXSZ];
 
-	if ((error = find_unique_abbrev_size(&size, id, abbrev_size)) < 0)
+	if ((error = find_unique_abbrev_size(&size, repo, id, abbrev_size)) < 0)
 		return error;
 
 	git_oid_fmt(hex_oid, id);
@@ -772,7 +793,7 @@ int git_describe_format(git_buf *out, const git_describe_result *result, const g
 
 		if (opts->always_use_long_format) {
 			const git_oid *id = name->tag ? git_tag_target_id(name->tag) : &result->commit_id;
-			if ((error = show_suffix(out, 0, id, opts->abbreviated_size)) < 0)
+			if ((error = show_suffix(out, 0, repo, id, opts->abbreviated_size)) < 0)
 				return error;
 		}
 
@@ -806,7 +827,7 @@ int git_describe_format(git_buf *out, const git_describe_result *result, const g
 		return error;
 
 	if (opts->abbreviated_size) {
-		if ((error = show_suffix(out, result->tag->depth,
+		if ((error = show_suffix(out, result->tag->depth, repo,
 			&result->commit_id, opts->abbreviated_size)) < 0)
 			return error;
 	}
