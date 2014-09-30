@@ -178,7 +178,7 @@ typedef struct git_describe_result {
 
 struct get_name_data
 {
-	git_describe_opts *opts;
+	git_describe_options *opts;
 	git_repository *repo;
 	git_oidmap *names;
 	git_describe_result *result;
@@ -634,10 +634,10 @@ cleanup:
 }
 
 static int normalize_options(
-	git_describe_opts *dst,
-	const git_describe_opts *src)
+	git_describe_options *dst,
+	const git_describe_options *src)
 {
-	git_describe_opts default_options = GIT_DESCRIBE_OPTIONS_INIT;
+	git_describe_options default_options = GIT_DESCRIBE_OPTIONS_INIT;
 	if (!src) src = &default_options;
 
 	*dst = *src;
@@ -648,18 +648,16 @@ static int normalize_options(
 	return 0;
 }
 
-/** TODO: Add git_object_describe_workdir(git_buf *, const char *dirty_suffix, git_describe_opts *); */
-
 int git_describe_commit(
 	git_describe_result **result,
 	git_object *committish,
-	git_describe_opts *opts)
+	git_describe_options *opts)
 {
 	struct get_name_data data;
 	struct commit_name *name;
 	git_commit *commit;
 	int error = -1;
-	git_describe_opts normOptions;
+	git_describe_options normalized;
 
 	assert(committish);
 
@@ -670,20 +668,18 @@ int git_describe_commit(
 	data.opts = opts;
 	data.repo = git_object_owner(committish);
 
-	if ((error = normalize_options(&normOptions, opts)) < 0)
+	if ((error = normalize_options(&normalized, opts)) < 0)
 		return error;
 
 	GITERR_CHECK_VERSION(
-		&normOptions,
+		&normalized,
 		GIT_DESCRIBE_OPTIONS_VERSION,
-		"git_describe_opts");
+		"git_describe_options");
 
 	data.names = git_oidmap_alloc();
 	GITERR_CHECK_ALLOC(data.names);
 
 	/** TODO: contains to be implemented */
-
-	/** TODO: deal with max_abbrev_size (either document or fix) */
 
 	if ((error = git_object_peel((git_object **)(&commit), committish, GIT_OBJ_COMMIT)) < 0)
 		goto cleanup;
@@ -725,7 +721,7 @@ cleanup:
 int git_describe_workdir(
 	git_describe_result **out,
 	git_repository *repo,
-	git_describe_opts *opts)
+	git_describe_options *opts)
 {
 	int error;
 	git_oid current_id;
@@ -858,4 +854,18 @@ void git_describe_result_free(git_describe_result *result)
 	}
 
 	git__free(result);
+}
+
+int git_describe_init_options(git_describe_options *opts, unsigned int version)
+{
+	GIT_INIT_STRUCTURE_FROM_TEMPLATE(
+		opts, version, git_describe_options, GIT_DESCRIBE_OPTIONS_INIT);
+	return 0;
+}
+
+int git_describe_init_format_options(git_describe_format_options *opts, unsigned int version)
+{
+	GIT_INIT_STRUCTURE_FROM_TEMPLATE(
+		opts, version, git_describe_format_options, GIT_DESCRIBE_FORMAT_OPTIONS_INIT);
+	return 0;
 }

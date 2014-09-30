@@ -4,7 +4,7 @@
 void test_describe_describe__can_describe_against_a_bare_repo(void)
 {
 	git_repository *repo;
-	git_describe_opts opts = GIT_DESCRIBE_OPTIONS_INIT;
+	git_describe_options opts = GIT_DESCRIBE_OPTIONS_INIT;
 	git_describe_format_options fmt_opts = GIT_DESCRIBE_FORMAT_OPTIONS_INIT;
 
 	cl_git_pass(git_repository_open(&repo, cl_fixture("testrepo.git")));
@@ -31,7 +31,7 @@ static int delete_cb(git_reference *ref, void *payload)
 void test_describe_describe__cannot_describe_against_a_repo_with_no_ref(void)
 {
 	git_repository *repo;
-	git_describe_opts opts = GIT_DESCRIBE_OPTIONS_INIT;
+	git_describe_options opts = GIT_DESCRIBE_OPTIONS_INIT;
 	git_buf buf = GIT_BUF_INIT;
 	git_object *object;
 	git_describe_result *result = NULL;

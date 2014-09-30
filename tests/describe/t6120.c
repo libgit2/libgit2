@@ -18,7 +18,7 @@ void test_describe_t6120__cleanup(void)
 
 void test_describe_t6120__default(void)
 {
-	git_describe_opts opts = GIT_DESCRIBE_OPTIONS_INIT;
+	git_describe_options opts = GIT_DESCRIBE_OPTIONS_INIT;
 	git_describe_format_options fmt_opts = GIT_DESCRIBE_FORMAT_OPTIONS_INIT;
 
 	assert_describe("A-*", "HEAD", repo, &opts, &fmt_opts);
@@ -31,7 +31,7 @@ void test_describe_t6120__default(void)
 
 void test_describe_t6120__tags(void)
 {
-	git_describe_opts opts = GIT_DESCRIBE_OPTIONS_INIT;
+	git_describe_options opts = GIT_DESCRIBE_OPTIONS_INIT;
 	git_describe_format_options fmt_opts = GIT_DESCRIBE_FORMAT_OPTIONS_INIT;
 	opts.describe_strategy = GIT_DESCRIBE_TAGS;
 
@@ -45,7 +45,7 @@ void test_describe_t6120__tags(void)
 
 void test_describe_t6120__all(void)
 {
-	git_describe_opts opts = GIT_DESCRIBE_OPTIONS_INIT;
+	git_describe_options opts = GIT_DESCRIBE_OPTIONS_INIT;
 	git_describe_format_options fmt_opts = GIT_DESCRIBE_FORMAT_OPTIONS_INIT;
 	opts.describe_strategy = GIT_DESCRIBE_ALL;
 
@@ -56,7 +56,7 @@ void test_describe_t6120__all(void)
 
 void test_describe_t6120__longformat(void)
 {
-	git_describe_opts opts = GIT_DESCRIBE_OPTIONS_INIT;
+	git_describe_options opts = GIT_DESCRIBE_OPTIONS_INIT;
 	git_describe_format_options fmt_opts = GIT_DESCRIBE_FORMAT_OPTIONS_INIT;
 
 	fmt_opts.always_use_long_format = 1;
@@ -67,7 +67,7 @@ void test_describe_t6120__longformat(void)
 
 void test_describe_t6120__firstparent(void)
 {
-	git_describe_opts opts = GIT_DESCRIBE_OPTIONS_INIT;
+	git_describe_options opts = GIT_DESCRIBE_OPTIONS_INIT;
 	git_describe_format_options fmt_opts = GIT_DESCRIBE_FORMAT_OPTIONS_INIT;
 	opts.describe_strategy = GIT_DESCRIBE_TAGS;
 
@@ -79,7 +79,7 @@ void test_describe_t6120__firstparent(void)
 
 void test_describe_t6120__workdir(void)
 {
-	git_describe_opts opts = GIT_DESCRIBE_OPTIONS_INIT;
+	git_describe_options opts = GIT_DESCRIBE_OPTIONS_INIT;
 	git_describe_format_options fmt_opts = GIT_DESCRIBE_FORMAT_OPTIONS_INIT;
 
 	assert_describe_workdir("A-*[0-9a-f]", repo, &opts, &fmt_opts);
@@ -119,7 +119,7 @@ static void commit_and_tag(
 
 void test_describe_t6120__pattern(void)
 {
-	git_describe_opts opts = GIT_DESCRIBE_OPTIONS_INIT;
+	git_describe_options opts = GIT_DESCRIBE_OPTIONS_INIT;
 	git_describe_format_options fmt_opts = GIT_DESCRIBE_FORMAT_OPTIONS_INIT;
 	git_oid tag_id;
 	git_object *head;

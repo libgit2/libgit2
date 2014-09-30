@@ -32,9 +32,9 @@ typedef enum {
  * Zero out for defaults.  Initialize with `GIT_DESCRIBE_OPTIONS_INIT` macro to
  * correctly set the `version` field.  E.g.
  *
- *		git_describe_opts opts = GIT_DESCRIBE_OPTIONS_INIT;
+ *		git_describe_options opts = GIT_DESCRIBE_OPTIONS_INIT;
  */
-typedef struct git_describe_opts {
+typedef struct git_describe_options {
 	unsigned int version;
 
 	unsigned int max_candidates_tags; /** default: 10 */
@@ -42,7 +42,7 @@ typedef struct git_describe_opts {
 	const char *pattern;
 	int only_follow_first_parent;
 	int show_commit_oid_as_fallback;
-} git_describe_opts;
+} git_describe_options;
 
 #define GIT_DESCRIBE_DEFAULT_MAX_CANDIDATES_TAGS 10
 #define GIT_DESCRIBE_DEFAULT_ABBREVIATED_SIZE 7
@@ -52,6 +52,8 @@ typedef struct git_describe_opts {
 	GIT_DESCRIBE_OPTIONS_VERSION, \
 	GIT_DESCRIBE_DEFAULT_MAX_CANDIDATES_TAGS, \
 }
+
+GIT_EXTERN(int) git_describe_init_options(git_describe_options *opts, unsigned int version);
 
 typedef struct {
 	unsigned int version;
@@ -68,17 +70,19 @@ typedef struct {
 		GIT_DESCRIBE_DEFAULT_ABBREVIATED_SIZE, \
  }
 
+GIT_EXTERN(int) git_describe_init_format_options(git_describe_format_options *opts, unsigned int version);
+
 typedef struct git_describe_result git_describe_result;
 
 GIT_EXTERN(int) git_describe_commit(
 	git_describe_result **result,
 	git_object *committish,
-	git_describe_opts *opts);
+	git_describe_options *opts);
 
 GIT_EXTERN(int) git_describe_workdir(
 	git_describe_result **out,
 	git_repository *repo,
-	git_describe_opts *opts);
+	git_describe_options *opts);
 
 GIT_EXTERN(int) git_describe_format(git_buf *out, const git_describe_result *result, const git_describe_format_options *opts);
 

@@ -4,7 +4,7 @@ void assert_describe(
 	const char *expected_output,
 	const char *revparse_spec,
 	git_repository *repo,
-	git_describe_opts *opts,
+	git_describe_options *opts,
 	git_describe_format_options *fmt_opts)
 {
 	git_object *object;
@@ -26,7 +26,7 @@ void assert_describe(
 void assert_describe_workdir(
 	const char *expected_output,
 	git_repository *repo,
-	git_describe_opts *opts,
+	git_describe_options *opts,
 	git_describe_format_options *fmt_opts)
 {
 	git_buf label = GIT_BUF_INIT;
