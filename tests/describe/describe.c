@@ -5,14 +5,15 @@ void test_describe_describe__can_describe_against_a_bare_repo(void)
 {
 	git_repository *repo;
 	git_describe_opts opts = GIT_DESCRIBE_OPTIONS_INIT;
+	git_describe_format_options fmt_opts = GIT_DESCRIBE_FORMAT_OPTIONS_INIT;
 
 	cl_git_pass(git_repository_open(&repo, cl_fixture("testrepo.git")));
 
-	assert_describe("hard_tag", "HEAD", repo, &opts, false);
+	assert_describe("hard_tag", "HEAD", repo, &opts, &fmt_opts, false);
 
 	opts.show_commit_oid_as_fallback = 1;
 
-	assert_describe("be3563a", "HEAD^", repo, &opts, true);
+	assert_describe("be3563a", "HEAD^", repo, &opts, &fmt_opts, true);
 
 	git_repository_free(repo);
 }
@@ -33,14 +34,16 @@ void test_describe_describe__cannot_describe_against_a_repo_with_no_ref(void)
 	git_describe_opts opts = GIT_DESCRIBE_OPTIONS_INIT;
 	git_buf buf = GIT_BUF_INIT;
 	git_object *object;
+	git_describe_result *result = NULL;
 
 	repo = cl_git_sandbox_init("testrepo.git");
 	cl_git_pass(git_revparse_single(&object, repo, "HEAD"));
 
 	cl_git_pass(git_reference_foreach(repo, delete_cb, NULL));
 
-	cl_git_fail(git_describe_commit(&buf, object, &opts));
+	cl_git_fail(git_describe_commit(&result, object, &opts));
 
+	git_describe_result_free(result);
 	git_object_free(object);
 	git_buf_free(&buf);
 	cl_git_sandbox_cleanup();

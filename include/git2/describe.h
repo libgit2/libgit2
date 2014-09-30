@@ -38,10 +38,8 @@ typedef struct git_describe_opts {
 	unsigned int version;
 
 	unsigned int max_candidates_tags; /** default: 10 */
-	unsigned int abbreviated_size;
 	unsigned int describe_strategy; /** default: GIT_DESCRIBE_DEFAULT */
 	const char *pattern;
-	int always_use_long_format;
 	int only_follow_first_parent;
 	int show_commit_oid_as_fallback;
 } git_describe_opts;
@@ -53,12 +51,33 @@ typedef struct git_describe_opts {
 #define GIT_DESCRIBE_OPTIONS_INIT { \
 	GIT_DESCRIBE_OPTIONS_VERSION, \
 	GIT_DESCRIBE_DEFAULT_MAX_CANDIDATES_TAGS, \
-	GIT_DESCRIBE_DEFAULT_ABBREVIATED_SIZE}
+}
+
+typedef struct {
+	unsigned int version;
+
+	unsigned int abbreviated_size;
+
+	int always_use_long_format;
+	char *dirty_suffix;
+} git_describe_format_options;
+
+#define GIT_DESCRIBE_FORMAT_OPTIONS_VERSION 1
+#define GIT_DESCRIBE_FORMAT_OPTIONS_INIT { \
+		GIT_DESCRIBE_FORMAT_OPTIONS_VERSION,   \
+		GIT_DESCRIBE_DEFAULT_ABBREVIATED_SIZE, \
+ }
+
+typedef struct git_describe_result git_describe_result;
 
 GIT_EXTERN(int) git_describe_commit(
-	git_buf *out,
+	git_describe_result **result,
 	git_object *committish,
 	git_describe_opts *opts);
+
+GIT_EXTERN(int) git_describe_format(git_buf *out, const git_describe_result *result, const git_describe_format_options *opts);
+
+GIT_EXTERN(void) git_describe_result_free(git_describe_result *result);
 
 /** @} */
 GIT_END_DECL

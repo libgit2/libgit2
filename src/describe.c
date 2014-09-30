@@ -162,12 +162,44 @@ cleanup:
 	return error;
 }
 
+typedef struct git_describe_result {
+	int dirty;
+	int exact_match;
+	int fallback_to_id;
+	git_oid commit_id;
+	git_repository *repo;
+	struct commit_name *name;
+	struct possible_tag *tag;
+} git_describe_result;
+
 struct get_name_data
 {
 	git_describe_opts *opts;
 	git_repository *repo;
 	git_oidmap *names;
+	git_describe_result *result;
 };
+
+static int commit_name_dup(struct commit_name **out, struct commit_name *in)
+{
+	struct commit_name *name;
+
+	name = git__malloc(sizeof(struct commit_name));
+	GITERR_CHECK_ALLOC(name);
+
+	memcpy(name, in,  sizeof(struct commit_name));
+	name->tag = NULL;
+	name->path = NULL;
+
+	if (in->tag && git_object_dup((git_object **) &name->tag, (git_object *) in->tag) < 0)
+		return -1;
+
+	name->path = git__strdup(in->path);
+	GITERR_CHECK_ALLOC(name->path);
+
+	*out = name;
+	return 0;
+}
 
 static int get_name(const char *refname, void *payload)
 {
@@ -222,6 +254,23 @@ struct possible_tag {
 	int found_order;
 	unsigned flag_within;
 };
+
+static int possible_tag_dup(struct possible_tag **out, struct possible_tag *in)
+{
+	struct possible_tag *tag;
+
+	tag = git__malloc(sizeof(struct possible_tag));
+	GITERR_CHECK_ALLOC(tag);
+
+	memcpy(tag, in, sizeof(struct possible_tag));
+	tag->name = NULL;
+
+	if (commit_name_dup(&tag->name, in->name) < 0)
+		return -1;
+
+	*out = tag;
+	return 0;
+}
 
 static int compare_pt(const void *a_, const void *b_)
 {
@@ -352,15 +401,12 @@ static int describe_not_found(const git_oid *oid, const char *message_format) {
 }
 
 static int describe(
-	git_buf *out,
 	struct get_name_data *data,
-	git_commit *commit,
-	const char *dirty_suffix)
+	git_commit *commit)
 {
 	struct commit_name *n;
 	struct possible_tag *best;
 	bool all, tags;
-	git_buf buf = GIT_BUF_INIT;
 	git_revwalk *walk = NULL;
 	git_pqueue list;
 	git_commit_list_node *cmit, *gave_up_on = NULL;
@@ -379,28 +425,18 @@ static int describe(
 	all = data->opts->describe_strategy == GIT_DESCRIBE_ALL;
 	tags = data->opts->describe_strategy == GIT_DESCRIBE_TAGS;
 
+	git_oid_cpy(&data->result->commit_id, git_commit_id(commit));
+
 	n = find_commit_name(data->names, git_commit_id(commit));
 	if (n && (tags || all || n->prio == 2)) {
 		/*
 		 * Exact match to an existing ref.
 		 */
-		if ((error = display_name(&buf, data->repo, n)) < 0)
+		data->result->exact_match = 1;
+		if ((error = commit_name_dup(&data->result->name, n)) < 0)
 			goto cleanup;
 
-		if (data->opts->always_use_long_format) {
-			if ((error = show_suffix(&buf, 0,
-				n->tag ? git_tag_target_id(n->tag) : git_commit_id(commit),
-				data->opts->abbreviated_size)) < 0)
-					goto cleanup;
-		}
-
-		if (dirty_suffix)
-			git_buf_printf(&buf, "%s", dirty_suffix);
-
-		if (git_buf_oom(&buf))
-			return -1;
-
-		goto found;
+		goto cleanup;
 	}
 
 	if (!data->opts->max_candidates_tags) {
@@ -492,23 +528,10 @@ static int describe(
 
 	if (!match_cnt) {
 		if (data->opts->show_commit_oid_as_fallback) {
-			char hex_oid[GIT_OID_HEXSZ];
-			int size;
+			data->result->fallback_to_id = 1;
+			git_oid_cpy(&data->result->commit_id, &cmit->oid);
 
-			if ((error = find_unique_abbrev_size(
-				&size, &cmit->oid, data->opts->abbreviated_size)) < 0)
-					goto cleanup;
-
-			git_oid_fmt(hex_oid, &cmit->oid);
-			git_buf_put(&buf, hex_oid, size);
-
-			if (dirty_suffix)
-				git_buf_printf(&buf, "%s", dirty_suffix);
-
-			if (git_buf_oom(&buf))
-				return -1;
-
-			goto found;
+			goto cleanup;
 		}
 		if (unannotated_cnt) {
 			error = describe_not_found(git_commit_id(commit), 
@@ -538,7 +561,10 @@ static int describe(
 	if ((error = finish_depth_computation(
 		&list, walk, best)) < 0)
 		goto cleanup;
+
 	seen_commits += error;
+	if ((error = possible_tag_dup(&data->result->tag, best)) < 0)
+		goto cleanup;
 
 	/*
 	{
@@ -568,25 +594,7 @@ static int describe(
 	}
 	*/
 
-	if ((error = display_name(&buf, data->repo, best->name)) < 0)
-		goto cleanup;
-
-	if (data->opts->abbreviated_size) {
-		if ((error = show_suffix(&buf, best->depth,
-			&cmit->oid, data->opts->abbreviated_size)) < 0)
-				goto cleanup;
-	}
-
-	if (dirty_suffix)
-		git_buf_printf(&buf, "%s", dirty_suffix);
-
-	if (git_buf_oom(&buf))
-		return -1;
-
-found:
-	out->ptr = buf.ptr;
-	out->asize = buf.asize;
-	out->size = buf.size;
+	git_oid_cpy(&data->result->commit_id, &cmit->oid);
 
 cleanup:
 	{
@@ -614,20 +622,13 @@ static int normalize_options(
 	if (dst->max_candidates_tags > GIT_DESCRIBE_DEFAULT_MAX_CANDIDATES_TAGS)
 		dst->max_candidates_tags = GIT_DESCRIBE_DEFAULT_MAX_CANDIDATES_TAGS;
 
-	if (dst->always_use_long_format && dst->abbreviated_size == 0) {
-		giterr_set(GITERR_DESCRIBE, "Cannot describe - "
-			"'always_use_long_format' is incompatible with a zero"
-			"'abbreviated_size'");
-		return -1;
-	}
-
 	return 0;
 }
 
 /** TODO: Add git_object_describe_workdir(git_buf *, const char *dirty_suffix, git_describe_opts *); */
 
 int git_describe_commit(
-	git_buf *out,
+	git_describe_result **result,
 	git_object *committish,
 	git_describe_opts *opts)
 {
@@ -635,10 +636,13 @@ int git_describe_commit(
 	struct commit_name *name;
 	git_commit *commit;
 	int error = -1;
-	const char *dirty_suffix = NULL;
 	git_describe_opts normOptions;
 
-	assert(out && committish);
+	assert(committish);
+
+	data.result = git__calloc(1, sizeof(git_describe_result));
+	GITERR_CHECK_ALLOC(data.result);
+	data.result->repo = git_object_owner(committish);
 
 	data.opts = opts;
 	data.repo = git_object_owner(committish);
@@ -673,10 +677,12 @@ int git_describe_commit(
 		goto cleanup;
 	}
 
-	if ((error = describe(out, &data, commit, dirty_suffix)) < 0)
+	if ((error = describe(&data, commit)) < 0)
 		goto cleanup;
 
 cleanup:
+	git_commit_free(commit);
+
 	git_oidmap_foreach_value(data.names, name, {
 		git_tag_free(name->tag);
 		git__free(name->path);
@@ -684,7 +690,108 @@ cleanup:
 	});
 
 	git_oidmap_free(data.names);
-	git_commit_free(commit);
+
+	if (error < 0)
+		git_describe_result_free(data.result);
+	else
+		*result = data.result;
 
 	return error;
+}
+
+int git_describe_format(git_buf *out, const git_describe_result *result, const git_describe_format_options *opts)
+{
+	int error;
+	git_repository *repo;
+	struct commit_name *name;
+
+	assert(out && result);
+
+	GITERR_CHECK_VERSION(opts, GIT_DESCRIBE_FORMAT_OPTIONS_VERSION, "git_describe_format_options");
+	git_buf_sanitize(out);
+
+
+	if (opts->always_use_long_format && opts->abbreviated_size == 0) {
+		giterr_set(GITERR_DESCRIBE, "Cannot describe - "
+			"'always_use_long_format' is incompatible with a zero"
+			"'abbreviated_size'");
+		return -1;
+	}
+
+
+	repo = result->repo;
+
+	/* If we did find an exact match, then it's the easier method */
+	if (result->exact_match) {
+		name = result->name;
+		if ((error = display_name(out, repo, name)) < 0)
+			return error;
+
+		if (opts->always_use_long_format) {
+			const git_oid *id = name->tag ? git_tag_target_id(name->tag) : &result->commit_id;
+			if ((error = show_suffix(out, 0, id, opts->abbreviated_size)) < 0)
+				return error;
+		}
+
+		if (result->dirty && opts->dirty_suffix)
+			git_buf_puts(out, opts->dirty_suffix);
+
+		return git_buf_oom(out) ? -1 : 0;
+	}
+
+	/* If we didn't find *any* tags, we fall back to the commit's id */
+	if (result->fallback_to_id) {
+		char hex_oid[GIT_OID_HEXSZ + 1] = {0};
+		int size;
+		if ((error = find_unique_abbrev_size(
+			     &size, &result->commit_id, opts->abbreviated_size)) < 0)
+			return -1;
+
+		git_oid_fmt(hex_oid, &result->commit_id);
+		git_buf_put(out, hex_oid, size);
+
+		if (opts->dirty_suffix)
+			git_buf_puts(out, opts->dirty_suffix);
+
+		return git_buf_oom(out) ? -1 : 0;
+	}
+
+	/* Lastly, if we found a matching tag, we show that */
+	name = result->tag->name;
+
+	if ((error = display_name(out, repo, name)) < 0)
+		return error;
+
+	if (opts->abbreviated_size) {
+		if ((error = show_suffix(out, result->tag->depth,
+			&result->commit_id, opts->abbreviated_size)) < 0)
+			return -1;
+	}
+
+	if (opts->dirty_suffix)
+		git_buf_puts(out, opts->dirty_suffix);
+
+
+	return git_buf_oom(out) ? -1 : 0;
+}
+
+void git_describe_result_free(git_describe_result *result)
+{
+	if (result == NULL)
+		return;
+
+	if (result->name) {
+		git_tag_free(result->name->tag);
+		git__free(result->name->path);
+		git__free(result->name);
+	}
+
+	if (result->tag) {
+		git_tag_free(result->tag->name->tag);
+		git__free(result->tag->name->path);
+		git__free(result->tag->name);
+		git__free(result->tag);
+	}
+
+	git__free(result);
 }

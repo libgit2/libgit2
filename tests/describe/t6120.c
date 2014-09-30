@@ -19,56 +19,62 @@ void test_describe_t6120__cleanup(void)
 void test_describe_t6120__default(void)
 {
 	git_describe_opts opts = GIT_DESCRIBE_OPTIONS_INIT;
+	git_describe_format_options fmt_opts = GIT_DESCRIBE_FORMAT_OPTIONS_INIT;
 
-	assert_describe("A-", "HEAD", repo, &opts, true);
-	assert_describe("A-", "HEAD^", repo, &opts, true);
-	assert_describe("R-", "HEAD^^", repo, &opts, true);
-	assert_describe("A-", "HEAD^^2", repo, &opts, true);
-	assert_describe("B", "HEAD^^2^", repo, &opts, false);
-	assert_describe("R-", "HEAD^^^", repo, &opts, true);
+	assert_describe("A-", "HEAD", repo, &opts, &fmt_opts, true);
+	assert_describe("A-", "HEAD^", repo, &opts, &fmt_opts, true);
+	assert_describe("R-", "HEAD^^", repo, &opts, &fmt_opts, true);
+	assert_describe("A-", "HEAD^^2", repo, &opts, &fmt_opts, true);
+	assert_describe("B", "HEAD^^2^", repo, &opts, &fmt_opts, false);
+	assert_describe("R-", "HEAD^^^", repo, &opts, &fmt_opts, true);
 }
 
 void test_describe_t6120__tags(void)
 {
 	git_describe_opts opts = GIT_DESCRIBE_OPTIONS_INIT;
+	git_describe_format_options fmt_opts = GIT_DESCRIBE_FORMAT_OPTIONS_INIT;
 	opts.describe_strategy = GIT_DESCRIBE_TAGS;
 
-	assert_describe("c-", "HEAD", repo, &opts, true);
-	assert_describe("c-", "HEAD^", repo, &opts, true);
-	assert_describe("e-", "HEAD^^", repo, &opts, true);
-	assert_describe("c-", "HEAD^^2", repo, &opts, true);
-	assert_describe("B", "HEAD^^2^", repo, &opts, false);
-	assert_describe("e", "HEAD^^^", repo, &opts, false);
+	assert_describe("c-", "HEAD", repo, &opts, &fmt_opts, true);
+	assert_describe("c-", "HEAD^", repo, &opts, &fmt_opts, true);
+	assert_describe("e-", "HEAD^^", repo, &opts, &fmt_opts, true);
+	assert_describe("c-", "HEAD^^2", repo, &opts, &fmt_opts, true);
+	assert_describe("B", "HEAD^^2^", repo, &opts, &fmt_opts, false);
+	assert_describe("e", "HEAD^^^", repo, &opts, &fmt_opts, false);
 }
 
 void test_describe_t6120__all(void)
 {
 	git_describe_opts opts = GIT_DESCRIBE_OPTIONS_INIT;
+	git_describe_format_options fmt_opts = GIT_DESCRIBE_FORMAT_OPTIONS_INIT;
 	opts.describe_strategy = GIT_DESCRIBE_ALL;
 
-	assert_describe("heads/master", "HEAD", repo, &opts, false);
-	assert_describe("tags/c-", "HEAD^", repo, &opts, true);
-	assert_describe("tags/e", "HEAD^^^", repo, &opts, false);
+	assert_describe("heads/master", "HEAD", repo, &opts, &fmt_opts, false);
+	assert_describe("tags/c-", "HEAD^", repo, &opts, &fmt_opts, true);
+	assert_describe("tags/e", "HEAD^^^", repo, &opts, &fmt_opts, false);
 }
 
 void test_describe_t6120__longformat(void)
 {
 	git_describe_opts opts = GIT_DESCRIBE_OPTIONS_INIT;
-	opts.always_use_long_format = 1;
+	git_describe_format_options fmt_opts = GIT_DESCRIBE_FORMAT_OPTIONS_INIT;
 
-	assert_describe("B-0-", "HEAD^^2^", repo, &opts, true);
-	assert_describe("A-3-", "HEAD^^2", repo, &opts, true);
+	fmt_opts.always_use_long_format = 1;
+
+	assert_describe("B-0-", "HEAD^^2^", repo, &opts, &fmt_opts, true);
+	assert_describe("A-3-", "HEAD^^2", repo, &opts, &fmt_opts, true);
 }
 
 void test_describe_t6120__firstparent(void)
 {
 	git_describe_opts opts = GIT_DESCRIBE_OPTIONS_INIT;
+	git_describe_format_options fmt_opts = GIT_DESCRIBE_FORMAT_OPTIONS_INIT;
 	opts.describe_strategy = GIT_DESCRIBE_TAGS;
 
-	assert_describe("c-7-", "HEAD", repo, &opts, true);
+	assert_describe("c-7-", "HEAD", repo, &opts, &fmt_opts, true);
 
 	opts.only_follow_first_parent = 1;
-	assert_describe("e-3-", "HEAD", repo, &opts, true);
+	assert_describe("e-3-", "HEAD", repo, &opts, &fmt_opts, true);
 }
 
 static void commit_and_tag(
@@ -100,6 +106,7 @@ static void commit_and_tag(
 void test_describe_t6120__pattern(void)
 {
 	git_describe_opts opts = GIT_DESCRIBE_OPTIONS_INIT;
+	git_describe_format_options fmt_opts = GIT_DESCRIBE_FORMAT_OPTIONS_INIT;
 	git_oid tag_id;
 	git_object *head;
 	git_signature *tagger;
@@ -121,15 +128,15 @@ void test_describe_t6120__pattern(void)
 
 	/* Exercize */
 	opts.pattern = "test-*";
-	assert_describe("test-annotated-", "HEAD", repo, &opts, true);
+	assert_describe("test-annotated-", "HEAD", repo, &opts, &fmt_opts, true);
 
 	opts.describe_strategy = GIT_DESCRIBE_TAGS;
 	opts.pattern = "test1-*";
-	assert_describe("test1-lightweight-", "HEAD", repo, &opts, true);
+	assert_describe("test1-lightweight-", "HEAD", repo, &opts, &fmt_opts, true);
 
 	opts.pattern = "test2-*";
-	assert_describe("test2-lightweight-", "HEAD", repo, &opts, true);
+	assert_describe("test2-lightweight-", "HEAD", repo, &opts, &fmt_opts, true);
 
-	opts.always_use_long_format = 1;
-	assert_describe("test2-lightweight-", "HEAD^", repo, &opts, true);
+	fmt_opts.always_use_long_format = 1;
+	assert_describe("test2-lightweight-", "HEAD^", repo, &opts, &fmt_opts, true);
 }
