@@ -22,7 +22,6 @@
 #include "tree.h"
 #include "merge_file.h"
 #include "blob.h"
-#include "hashsig.h"
 #include "oid.h"
 #include "index.h"
 #include "filebuf.h"
@@ -42,6 +41,7 @@
 #include "git2/tree.h"
 #include "git2/oidarray.h"
 #include "git2/sys/index.h"
+#include "git2/sys/hashsig.h"
 
 #define GIT_MERGE_INDEX_ENTRY_EXISTS(X)	((X).mode != 0)
 #define GIT_MERGE_INDEX_ENTRY_ISFILE(X) S_ISREG((X).mode)

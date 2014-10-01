@@ -8,9 +8,9 @@
 
 #include "git2/config.h"
 #include "git2/blob.h"
+#include "git2/sys/hashsig.h"
 
 #include "diff.h"
-#include "hashsig.h"
 #include "path.h"
 #include "fileops.h"
 #include "config.h"
