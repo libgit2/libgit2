@@ -1,7 +1,7 @@
 #include "clar_libgit2.h"
 #include "buffer.h"
 #include "buf_text.h"
-#include "hashsig.h"
+#include "git2/sys/hashsig.h"
 #include "fileops.h"
 
 #define TESTSTR "Have you seen that? Have you seeeen that??"

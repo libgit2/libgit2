@@ -4,10 +4,12 @@
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
  */
-#ifndef INCLUDE_hashsig_h__
-#define INCLUDE_hashsig_h__
+#ifndef INCLUDE_sys_hashsig_h__
+#define INCLUDE_sys_hashsig_h__
 
-#include "common.h"
+#include "git2/common.h"
+
+GIT_BEGIN_DECL
 
 /**
  * Similarity signature of line hashes for a buffer
@@ -35,7 +37,7 @@ typedef enum {
  * @param buflen The length of the data at `buf`
  * @param generate_pairwise_hashes Should pairwise runs be hashed
  */
-extern int git_hashsig_create(
+GIT_EXTERN(int) git_hashsig_create(
 	git_hashsig **out,
 	const char *buf,
 	size_t buflen,
@@ -50,7 +52,7 @@ extern int git_hashsig_create(
  * This will return an error if the file doesn't contain enough data to
  * compute a valid signature.
  */
-extern int git_hashsig_create_fromfile(
+GIT_EXTERN(int) git_hashsig_create_fromfile(
 	git_hashsig **out,
 	const char *path,
 	git_hashsig_option_t opts);
@@ -58,15 +60,17 @@ extern int git_hashsig_create_fromfile(
 /**
  * Release memory for a content similarity signature
  */
-extern void git_hashsig_free(git_hashsig *sig);
+GIT_EXTERN(void) git_hashsig_free(git_hashsig *sig);
 
 /**
  * Measure similarity between two files
  *
  * @return <0 for error, [0 to 100] as similarity score
  */
-extern int git_hashsig_compare(
+GIT_EXTERN(int) git_hashsig_compare(
 	const git_hashsig *a,
 	const git_hashsig *b);
+
+GIT_END_DECL
 
 #endif
