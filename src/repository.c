@@ -1567,8 +1567,10 @@ int git_repository_head_unborn(git_repository *repo)
 	error = git_repository_head(&ref, repo);
 	git_reference_free(ref);
 
-	if (error == GIT_EUNBORNBRANCH)
+	if (error == GIT_EUNBORNBRANCH) {
+		giterr_clear();
 		return 1;
+	}
 
 	if (error < 0)
 		return -1;
