@@ -1,6 +1,7 @@
 #include "clar_libgit2.h"
 #include "git2/repository.h"
 #include "git2/merge.h"
+#include "git2/annotated_commit.h"
 #include "git2/sys/index.h"
 #include "merge.h"
 #include "../merge_helpers.h"
@@ -43,17 +44,17 @@ static void analysis_from_branch(
 {
 	git_buf refname = GIT_BUF_INIT;
 	git_reference *their_ref;
-	git_merge_head *their_head;
+	git_annotated_commit *their_head;
 
 	git_buf_printf(&refname, "%s%s", GIT_REFS_HEADS_DIR, branchname);
 
 	cl_git_pass(git_reference_lookup(&their_ref, repo, git_buf_cstr(&refname)));
-	cl_git_pass(git_merge_head_from_ref(&their_head, repo, their_ref));
+	cl_git_pass(git_annotated_commit_from_ref(&their_head, repo, their_ref));
 
-	cl_git_pass(git_merge_analysis(merge_analysis, merge_pref, repo, (const git_merge_head **)&their_head, 1));
+	cl_git_pass(git_merge_analysis(merge_analysis, merge_pref, repo, (const git_annotated_commit **)&their_head, 1));
 
 	git_buf_free(&refname);
-	git_merge_head_free(their_head);
+	git_annotated_commit_free(their_head);
 	git_reference_free(their_ref);
 }
 

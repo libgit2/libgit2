@@ -13,8 +13,10 @@
 #include "merge.h"
 #include "array.h"
 #include "config.h"
+#include "annotated_commit.h"
 
 #include <git2/types.h>
+#include <git2/annotated_commit.h>
 #include <git2/rebase.h>
 #include <git2/commit.h>
 #include <git2/reset.h>
@@ -352,14 +354,14 @@ static int rebase_setupfile(git_rebase *rebase, const char *filename, int flags,
 	return error;
 }
 
-static const char *rebase_onto_name(const git_merge_head *onto)
+static const char *rebase_onto_name(const git_annotated_commit *onto)
 {
 	if (onto->ref_name && git__strncmp(onto->ref_name, "refs/heads/", 11) == 0)
 		return onto->ref_name + 11;
 	else if (onto->ref_name)
 		return onto->ref_name;
 	else
-		return onto->oid_str;
+		return onto->id_str;
 }
 
 static int rebase_setupfiles_merge(git_rebase *rebase)
@@ -519,9 +521,9 @@ done:
 static int rebase_init_operations(
 	git_rebase *rebase,
 	git_repository *repo,
-	const git_merge_head *branch,
-	const git_merge_head *upstream,
-	const git_merge_head *onto)
+	const git_annotated_commit *branch,
+	const git_annotated_commit *upstream,
+	const git_annotated_commit *onto)
 {
 	git_revwalk *revwalk = NULL;
 	git_commit *commit;
@@ -534,8 +536,8 @@ static int rebase_init_operations(
 		upstream = onto;
 
 	if ((error = git_revwalk_new(&revwalk, rebase->repo)) < 0 ||
-		(error = git_revwalk_push(revwalk, &branch->oid)) < 0 ||
-		(error = git_revwalk_hide(revwalk, &upstream->oid)) < 0)
+		(error = git_revwalk_push(revwalk, git_annotated_commit_id(branch))) < 0 ||
+		(error = git_revwalk_hide(revwalk, git_annotated_commit_id(upstream))) < 0)
 		goto done;
 
 	git_revwalk_sorting(revwalk, GIT_SORT_REVERSE | GIT_SORT_TIME);
@@ -565,9 +567,9 @@ done:
 static int rebase_init_merge(
 	git_rebase *rebase,
 	git_repository *repo,
-	const git_merge_head *branch,
-	const git_merge_head *upstream,
-	const git_merge_head *onto)
+	const git_annotated_commit *branch,
+	const git_annotated_commit *upstream,
+	const git_annotated_commit *onto)
 {
 	if (rebase_init_operations(rebase, repo, branch, upstream, onto) < 0)
 		return -1;
@@ -581,9 +583,9 @@ static int rebase_init_merge(
 static int rebase_init(
 	git_rebase *rebase,
 	git_repository *repo,
-	const git_merge_head *branch,
-	const git_merge_head *upstream,
-	const git_merge_head *onto,
+	const git_annotated_commit *branch,
+	const git_annotated_commit *upstream,
+	const git_annotated_commit *onto,
 	const git_rebase_options *opts)
 {
 	git_buf state_path = GIT_BUF_INIT;
@@ -597,8 +599,8 @@ static int rebase_init(
 	rebase->orig_head_name = git__strdup(branch->ref_name ? branch->ref_name : ORIG_DETACHED_HEAD);
 	rebase->quiet = opts->quiet;
 
-	git_oid_cpy(&rebase->orig_head_id, &branch->oid);
-	git_oid_cpy(&rebase->onto_id, &onto->oid);
+	git_oid_cpy(&rebase->orig_head_id, git_annotated_commit_id(branch));
+	git_oid_cpy(&rebase->onto_id, git_annotated_commit_id(onto));
 
 	if (!rebase->orig_head_name || !rebase->state_path)
 		return -1;
@@ -613,9 +615,9 @@ static int rebase_init(
 int git_rebase_init(
 	git_rebase **out,
 	git_repository *repo,
-	const git_merge_head *branch,
-	const git_merge_head *upstream,
-	const git_merge_head *onto,
+	const git_annotated_commit *branch,
+	const git_annotated_commit *upstream,
+	const git_annotated_commit *onto,
 	const git_signature *signature,
 	const git_rebase_options *given_opts)
 {
@@ -651,7 +653,7 @@ int git_rebase_init(
 		(error = git_buf_printf(&reflog,
 			"rebase: checkout %s", rebase_onto_name(onto))) < 0 ||
 		(error = git_reference_create(&head_ref, repo, GIT_HEAD_FILE,
-			&onto->oid, 1, signature, reflog.ptr)) < 0 ||
+			git_annotated_commit_id(onto), 1, signature, reflog.ptr)) < 0 ||
 		(error = git_checkout_head(repo, &checkout_opts)) < 0)
 		goto done;
 

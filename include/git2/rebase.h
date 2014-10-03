@@ -10,6 +10,7 @@
 #include "common.h"
 #include "types.h"
 #include "oid.h"
+#include "annotated_commit.h"
 
 /**
  * @file git2/rebase.h
@@ -133,9 +134,9 @@ GIT_EXTERN(int) git_rebase_init_options(
 GIT_EXTERN(int) git_rebase_init(
 	git_rebase **out,
 	git_repository *repo,
-	const git_merge_head *branch,
-	const git_merge_head *upstream,
-	const git_merge_head *onto,
+	const git_annotated_commit *branch,
+	const git_annotated_commit *upstream,
+	const git_annotated_commit *onto,
 	const git_signature *signature,
 	const git_rebase_options *opts);
 

@@ -13,6 +13,7 @@
 #include "oidarray.h"
 #include "checkout.h"
 #include "index.h"
+#include "annotated_commit.h"
 
 /**
  * @file git2/merge.h
@@ -303,7 +304,7 @@ GIT_EXTERN(int) git_merge_analysis(
 	git_merge_analysis_t *analysis_out,
 	git_merge_preference_t *preference_out,
 	git_repository *repo,
-	const git_merge_head **their_heads,
+	const git_annotated_commit **their_heads,
 	size_t their_heads_len);
 
 /**
@@ -380,69 +381,6 @@ GIT_EXTERN(int) git_merge_base_octopus(
 	git_repository *repo,
 	size_t length,
 	const git_oid input_array[]);
-
-/**
- * Creates a `git_merge_head` from the given reference.  The resulting
- * git_merge_head must be freed with `git_merge_head_free`.
- *
- * @param out pointer to store the git_merge_head result in
- * @param repo repository that contains the given reference
- * @param ref reference to use as a merge input
- * @return 0 on success or error code
- */
-GIT_EXTERN(int) git_merge_head_from_ref(
-	git_merge_head **out,
-	git_repository *repo,
-	const git_reference *ref);
-
-/**
- * Creates a `git_merge_head` from the given fetch head data.  The resulting
- * git_merge_head must be freed with `git_merge_head_free`.
- *
- * @param out pointer to store the git_merge_head result in
- * @param repo repository that contains the given commit
- * @param branch_name name of the (remote) branch
- * @param remote_url url of the remote
- * @param oid the commit object id to use as a merge input
- * @return 0 on success or error code
- */
-GIT_EXTERN(int) git_merge_head_from_fetchhead(
-	git_merge_head **out,
-	git_repository *repo,
-	const char *branch_name,
-	const char *remote_url,
-	const git_oid *oid);
-
-/**
- * Creates a `git_merge_head` from the given commit id.  The resulting
- * git_merge_head must be freed with `git_merge_head_free`.
- *
- * @param out pointer to store the git_merge_head result in
- * @param repo repository that contains the given commit
- * @param id the commit object id to use as a merge input
- * @return 0 on success or error code
- */
-GIT_EXTERN(int) git_merge_head_from_id(
-	git_merge_head **out,
-	git_repository *repo,
-	const git_oid *id);
-
-/**
- * Gets the commit ID that the given `git_merge_head` refers to.
- *
- * @param head the given merge head
- * @return commit id
- */
-GIT_EXTERN(const git_oid *) git_merge_head_id(
-	const git_merge_head *head);
-
-/**
- * Frees a `git_merge_head`.
- *
- * @param head merge head to free
- */
-GIT_EXTERN(void) git_merge_head_free(
-	git_merge_head *head);
 
 /**
  * Merge two files as they exist in the in-memory data structures, using
@@ -557,7 +495,7 @@ GIT_EXTERN(int) git_merge_commits(
  */
 GIT_EXTERN(int) git_merge(
 	git_repository *repo,
-	const git_merge_head **their_heads,
+	const git_annotated_commit **their_heads,
 	size_t their_heads_len,
 	const git_merge_options *merge_opts,
 	const git_checkout_options *checkout_opts);

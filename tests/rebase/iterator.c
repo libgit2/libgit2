@@ -49,7 +49,7 @@ void test_rebase_iterator__iterates(void)
 {
 	git_rebase *rebase;
 	git_reference *branch_ref, *upstream_ref;
-	git_merge_head *branch_head, *upstream_head;
+	git_annotated_commit *branch_head, *upstream_head;
 	git_rebase_operation *rebase_operation;
 	git_checkout_options checkout_opts = GIT_CHECKOUT_OPTIONS_INIT;
 	git_oid commit_id;
@@ -60,8 +60,8 @@ void test_rebase_iterator__iterates(void)
 	cl_git_pass(git_reference_lookup(&branch_ref, repo, "refs/heads/beef"));
 	cl_git_pass(git_reference_lookup(&upstream_ref, repo, "refs/heads/master"));
 
-	cl_git_pass(git_merge_head_from_ref(&branch_head, repo, branch_ref));
-	cl_git_pass(git_merge_head_from_ref(&upstream_head, repo, upstream_ref));
+	cl_git_pass(git_annotated_commit_from_ref(&branch_head, repo, branch_ref));
+	cl_git_pass(git_annotated_commit_from_ref(&upstream_head, repo, upstream_ref));
 
 	cl_git_pass(git_rebase_init(&rebase, repo, branch_head, upstream_head, NULL, signature, NULL));
 	test_operations(rebase, 0);
@@ -100,8 +100,8 @@ void test_rebase_iterator__iterates(void)
 	cl_assert_equal_i(GIT_ITEROVER, error);
 	test_operations(rebase, 4);
 
-	git_merge_head_free(branch_head);
-	git_merge_head_free(upstream_head);
+	git_annotated_commit_free(branch_head);
+	git_annotated_commit_free(upstream_head);
 	git_reference_free(branch_ref);
 	git_reference_free(upstream_ref);
 	git_rebase_free(rebase);

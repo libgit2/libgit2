@@ -95,20 +95,20 @@ void test_merge_workdir_simple__cleanup(void)
 static void merge_simple_branch(int merge_file_favor, int addl_checkout_strategy)
 {
 	git_oid their_oids[1];
-	git_merge_head *their_heads[1];
+	git_annotated_commit *their_heads[1];
 	git_merge_options merge_opts = GIT_MERGE_OPTIONS_INIT;
 	git_checkout_options checkout_opts = GIT_CHECKOUT_OPTIONS_INIT;
 
 	cl_git_pass(git_oid_fromstr(&their_oids[0], THEIRS_SIMPLE_OID));
-	cl_git_pass(git_merge_head_from_id(&their_heads[0], repo, &their_oids[0]));
+	cl_git_pass(git_annotated_commit_lookup(&their_heads[0], repo, &their_oids[0]));
 
 	merge_opts.file_favor = merge_file_favor;
 	checkout_opts.checkout_strategy = GIT_CHECKOUT_SAFE | GIT_CHECKOUT_ALLOW_CONFLICTS |
 		addl_checkout_strategy;
 
-	cl_git_pass(git_merge(repo, (const git_merge_head **)their_heads, 1, &merge_opts, &checkout_opts));
+	cl_git_pass(git_merge(repo, (const git_annotated_commit **)their_heads, 1, &merge_opts, &checkout_opts));
 
-	git_merge_head_free(their_heads[0]);
+	git_annotated_commit_free(their_heads[0]);
 }
 
 static void set_core_autocrlf_to(git_repository *repo, bool value)
@@ -486,7 +486,7 @@ void test_merge_workdir_simple__directory_file(void)
 {
 	git_reference *head;
 	git_oid their_oids[1], head_commit_id;
-	git_merge_head *their_heads[1];
+	git_annotated_commit *their_heads[1];
 	git_merge_options merge_opts = GIT_MERGE_OPTIONS_INIT;
 	git_commit *head_commit;
 
@@ -519,22 +519,22 @@ void test_merge_workdir_simple__directory_file(void)
 	cl_git_pass(git_reset(repo, (git_object *)head_commit, GIT_RESET_HARD, NULL, NULL, NULL));
 
 	cl_git_pass(git_oid_fromstr(&their_oids[0], THEIRS_DIRECTORY_FILE));
-	cl_git_pass(git_merge_head_from_id(&their_heads[0], repo, &their_oids[0]));
+	cl_git_pass(git_annotated_commit_lookup(&their_heads[0], repo, &their_oids[0]));
 
 	merge_opts.file_favor = 0;
-	cl_git_pass(git_merge(repo, (const git_merge_head **)their_heads, 1, &merge_opts, NULL));
+	cl_git_pass(git_merge(repo, (const git_annotated_commit **)their_heads, 1, &merge_opts, NULL));
 
 	cl_assert(merge_test_index(repo_index, merge_index_entries, 20));
 
 	git_reference_free(head);
 	git_commit_free(head_commit);
-	git_merge_head_free(their_heads[0]);
+	git_annotated_commit_free(their_heads[0]);
 }
 
 void test_merge_workdir_simple__unrelated(void)
 {
 	git_oid their_oids[1];
-	git_merge_head *their_heads[1];
+	git_annotated_commit *their_heads[1];
 	git_merge_options merge_opts = GIT_MERGE_OPTIONS_INIT;
 
 	struct merge_index_entry merge_index_entries[] = {
@@ -550,20 +550,20 @@ void test_merge_workdir_simple__unrelated(void)
 	};
 
 	cl_git_pass(git_oid_fromstr(&their_oids[0], THEIRS_UNRELATED_PARENT));
-	cl_git_pass(git_merge_head_from_id(&their_heads[0], repo, &their_oids[0]));
+	cl_git_pass(git_annotated_commit_lookup(&their_heads[0], repo, &their_oids[0]));
 
 	merge_opts.file_favor = 0;
-	cl_git_pass(git_merge(repo, (const git_merge_head **)their_heads, 1, &merge_opts, NULL));
+	cl_git_pass(git_merge(repo, (const git_annotated_commit **)their_heads, 1, &merge_opts, NULL));
 
 	cl_assert(merge_test_index(repo_index, merge_index_entries, 9));
 
-	git_merge_head_free(their_heads[0]);
+	git_annotated_commit_free(their_heads[0]);
 }
 
 void test_merge_workdir_simple__unrelated_with_conflicts(void)
 {
 	git_oid their_oids[1];
-	git_merge_head *their_heads[1];
+	git_annotated_commit *their_heads[1];
 	git_merge_options merge_opts = GIT_MERGE_OPTIONS_INIT;
 
 	struct merge_index_entry merge_index_entries[] = {
@@ -581,21 +581,21 @@ void test_merge_workdir_simple__unrelated_with_conflicts(void)
 	};
 
 	cl_git_pass(git_oid_fromstr(&their_oids[0], THEIRS_UNRELATED_OID));
-	cl_git_pass(git_merge_head_from_id(&their_heads[0], repo, &their_oids[0]));
+	cl_git_pass(git_annotated_commit_lookup(&their_heads[0], repo, &their_oids[0]));
 
 	merge_opts.file_favor = 0;
-	cl_git_pass(git_merge(repo, (const git_merge_head **)their_heads, 1, &merge_opts, NULL));
+	cl_git_pass(git_merge(repo, (const git_annotated_commit **)their_heads, 1, &merge_opts, NULL));
 
 	cl_assert(merge_test_index(repo_index, merge_index_entries, 11));
 
-	git_merge_head_free(their_heads[0]);
+	git_annotated_commit_free(their_heads[0]);
 }
 
 void test_merge_workdir_simple__binary(void)
 {
 	git_oid our_oid, their_oid, our_file_oid;
 	git_commit *our_commit;
-	git_merge_head *their_head;
+	git_annotated_commit *their_head;
 	const git_index_entry *binary_entry;
 
 	struct merge_index_entry merge_index_entries[] = {
@@ -610,9 +610,9 @@ void test_merge_workdir_simple__binary(void)
 	cl_git_pass(git_commit_lookup(&our_commit, repo, &our_oid));
 	cl_git_pass(git_reset(repo, (git_object *)our_commit, GIT_RESET_HARD, NULL, NULL, NULL));
 
-	cl_git_pass(git_merge_head_from_id(&their_head, repo, &their_oid));
+	cl_git_pass(git_annotated_commit_lookup(&their_head, repo, &their_oid));
 
-	cl_git_pass(git_merge(repo, (const git_merge_head **)&their_head, 1, NULL, NULL));
+	cl_git_pass(git_merge(repo, (const git_annotated_commit **)&their_head, 1, NULL, NULL));
 
 	cl_assert(merge_test_index(repo_index, merge_index_entries, 3));
 
@@ -622,6 +622,6 @@ void test_merge_workdir_simple__binary(void)
 	cl_git_pass(git_oid_fromstr(&our_file_oid, "23ed141a6ae1e798b2f721afedbe947c119111ba"));
 	cl_assert(git_oid_cmp(&binary_entry->id, &our_file_oid) == 0);
 
-	git_merge_head_free(their_head);
+	git_annotated_commit_free(their_head);
 	git_commit_free(our_commit);
 }
