@@ -40,6 +40,7 @@ void test_rebase_setup__blocked_when_in_progress(void)
 	cl_git_pass(git_merge_head_from_ref(&upstream_head, repo, upstream_ref));
 
 	cl_git_pass(git_rebase_init(&rebase, repo, branch_head, upstream_head, NULL, signature, NULL));
+	git_rebase_free(rebase);
 
 	cl_assert_equal_i(GIT_REPOSITORY_STATE_REBASE_MERGE, git_repository_state(repo));
 

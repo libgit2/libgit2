@@ -33,7 +33,7 @@
 
 #define MSGNUM_FILE			"msgnum"
 #define END_FILE			"end"
-#define CMT_FILE_FMT		"cmt.%d"
+#define CMT_FILE_FMT		"cmt.%" PRIuZ
 #define CURRENT_FILE		"current"
 #define REWRITTEN_FILE		"rewritten"
 
@@ -109,7 +109,10 @@ done:
 	return 0;
 }
 
-GIT_INLINE(int) rebase_readfile(git_buf *out, git_buf *state_path, const char *filename)
+GIT_INLINE(int) rebase_readfile(
+	git_buf *out,
+	git_buf *state_path,
+	const char *filename)
 {
 	size_t state_path_len = state_path->size;
 	int error;
@@ -131,7 +134,7 @@ GIT_INLINE(int) rebase_readint(
 	size_t *out, git_buf *asc_out, git_buf *state_path, const char *filename)
 {
 	int32_t num;
-	char *eol;
+	const char *eol;
 	int error = 0;
 
 	if ((error = rebase_readfile(asc_out, state_path, filename)) < 0)
@@ -166,7 +169,7 @@ GIT_INLINE(int) rebase_readoid(
 static int rebase_open_merge(git_rebase *rebase)
 {
 	git_buf state_path = GIT_BUF_INIT, buf = GIT_BUF_INIT, cmt = GIT_BUF_INIT;
-	git_oid current_id = {0};
+	git_oid current_id = {{0}};
 	git_rebase_operation *operation;
 	size_t i, msgnum = 0, end;
 	int error;
@@ -667,14 +670,12 @@ done:
 	return error;
 }
 
-static int normalize_checkout_opts(
+static void normalize_checkout_opts(
 	git_rebase *rebase,
+	git_commit *current_commit,
 	git_checkout_options *checkout_opts,
 	const git_checkout_options *given_checkout_opts)
 {
-	git_commit *current_commit = NULL;
-	int error = 0;
-
 	if (given_checkout_opts != NULL)
 		memcpy(checkout_opts, given_checkout_opts, sizeof(git_checkout_options));
 	else {
@@ -691,25 +692,11 @@ static int normalize_checkout_opts(
 		if (!checkout_opts->our_label)
 			checkout_opts->our_label = rebase->onto_name;
 
-		if (!checkout_opts->their_label) {
-			git_rebase_operation *operation =
-				git_array_get(rebase->operations, rebase->current);
-
-			if ((error = git_commit_lookup(
-				&current_commit, rebase->repo, &operation->id)) < 0)
-				goto done;
-
-			checkout_opts->their_label =
-				git__strdup(git_commit_summary(current_commit));
-			GITERR_CHECK_ALLOC(checkout_opts->their_label);
-		}
+		if (!checkout_opts->their_label)
+			checkout_opts->their_label = git_commit_summary(current_commit);
 	} else {
 		abort();
 	}
-
-done:
-	git_commit_free(current_commit);
-	return error;
 }
 
 GIT_INLINE(int) rebase_movenext(git_rebase *rebase)
@@ -768,8 +755,9 @@ static int rebase_next_merge(
 		(error = rebase_setupfile(rebase, CURRENT_FILE, -1, "%.*s\n", GIT_OID_HEXSZ, current_idstr)) < 0)
 		goto done;
 
-	if ((error = normalize_checkout_opts(rebase, &checkout_opts, given_checkout_opts)) < 0 ||
-		(error = git_merge_trees(&index, rebase->repo, parent_tree, head_tree, current_tree, NULL)) < 0 ||
+	normalize_checkout_opts(rebase, current_commit, &checkout_opts, given_checkout_opts);
+
+	if ((error = git_merge_trees(&index, rebase->repo, parent_tree, head_tree, current_tree, NULL)) < 0 ||
 		(error = git_merge__check_result(rebase->repo, index)) < 0 ||
 		(error = git_checkout_index(rebase->repo, index, &checkout_opts)) < 0)
 		goto done;
