@@ -48,6 +48,134 @@ void test_network_fetchlocal__complete(void)
 	git_repository_free(repo);
 }
 
+void test_network_fetchlocal__prune(void)
+{
+	git_repository *repo;
+	git_remote *origin;
+	int callcount = 0;
+	git_strarray refnames = {0};
+	git_reference *ref;
+	git_repository *remote_repo = cl_git_sandbox_init("testrepo.git");
+	const char *url = cl_git_path_url(git_repository_path(remote_repo));
+	git_remote_callbacks callbacks = GIT_REMOTE_CALLBACKS_INIT;
+
+	callbacks.transfer_progress = transfer_cb;
+	callbacks.payload = &callcount;
+
+	cl_set_cleanup(&cleanup_local_repo, "foo");
+	cl_git_pass(git_repository_init(&repo, "foo", true));
+
+	cl_git_pass(git_remote_create(&origin, repo, GIT_REMOTE_ORIGIN, url));
+	git_remote_set_callbacks(origin, &callbacks);
+	cl_git_pass(git_remote_connect(origin, GIT_DIRECTION_FETCH));
+	cl_git_pass(git_remote_download(origin));
+	cl_git_pass(git_remote_update_tips(origin, NULL, NULL));
+
+	cl_git_pass(git_reference_list(&refnames, repo));
+	cl_assert_equal_i(19, (int)refnames.count);
+	cl_assert(callcount > 0);
+	git_strarray_free(&refnames);
+	git_remote_free(origin);
+
+	cl_git_pass(git_reference_lookup(&ref, remote_repo, "refs/heads/br2"));
+	cl_git_pass(git_reference_delete(ref));
+	git_reference_free(ref);
+
+	cl_git_pass(git_remote_load(&origin, repo, GIT_REMOTE_ORIGIN));
+	git_remote_set_callbacks(origin, &callbacks);
+	cl_git_pass(git_remote_connect(origin, GIT_DIRECTION_FETCH));
+	cl_git_pass(git_remote_download(origin));
+	cl_git_pass(git_remote_prune(origin));
+	cl_git_pass(git_remote_update_tips(origin, NULL, NULL));
+
+	cl_git_pass(git_reference_list(&refnames, repo));
+	cl_assert_equal_i(18, (int)refnames.count);
+	git_strarray_free(&refnames);
+	git_remote_free(origin);
+
+	cl_git_pass(git_reference_lookup(&ref, remote_repo, "refs/heads/packed"));
+	cl_git_pass(git_reference_delete(ref));
+	git_reference_free(ref);
+
+	cl_git_pass(git_remote_load(&origin, repo, GIT_REMOTE_ORIGIN));
+	git_remote_set_callbacks(origin, &callbacks);
+	cl_git_pass(git_remote_connect(origin, GIT_DIRECTION_FETCH));
+	cl_git_pass(git_remote_download(origin));
+	cl_git_pass(git_remote_prune(origin));
+	cl_git_pass(git_remote_update_tips(origin, NULL, NULL));
+
+	cl_git_pass(git_reference_list(&refnames, repo));
+	cl_assert_equal_i(17, (int)refnames.count);
+	git_strarray_free(&refnames);
+	git_remote_free(origin);
+
+	git_repository_free(remote_repo);
+	git_repository_free(repo);
+}
+
+void test_network_fetchlocal__fetchprune(void)
+{
+	git_repository *repo;
+	git_remote *origin;
+	int callcount = 0;
+	git_strarray refnames = {0};
+	git_reference *ref;
+	git_config *config;
+	git_repository *remote_repo = cl_git_sandbox_init("testrepo.git");
+	const char *url = cl_git_path_url(git_repository_path(remote_repo));
+	git_remote_callbacks callbacks = GIT_REMOTE_CALLBACKS_INIT;
+
+	callbacks.transfer_progress = transfer_cb;
+	callbacks.payload = &callcount;
+
+	cl_set_cleanup(&cleanup_local_repo, "foo");
+	cl_git_pass(git_repository_init(&repo, "foo", true));
+
+	cl_git_pass(git_remote_create(&origin, repo, GIT_REMOTE_ORIGIN, url));
+	git_remote_set_callbacks(origin, &callbacks);
+	cl_git_pass(git_remote_fetch(origin, NULL, NULL));
+
+	cl_git_pass(git_reference_list(&refnames, repo));
+	cl_assert_equal_i(19, (int)refnames.count);
+	cl_assert(callcount > 0);
+	git_strarray_free(&refnames);
+	git_remote_free(origin);
+
+	cl_git_pass(git_reference_lookup(&ref, remote_repo, "refs/heads/br2"));
+	cl_git_pass(git_reference_delete(ref));
+	git_reference_free(ref);
+
+	cl_git_pass(git_remote_load(&origin, repo, GIT_REMOTE_ORIGIN));
+	git_remote_set_prune_refs(origin, 1);
+	git_remote_set_callbacks(origin, &callbacks);
+	cl_git_pass(git_remote_fetch(origin, NULL, NULL));
+
+	cl_git_pass(git_reference_list(&refnames, repo));
+	cl_assert_equal_i(18, (int)refnames.count);
+	git_strarray_free(&refnames);
+	git_remote_free(origin);
+
+	cl_git_pass(git_reference_lookup(&ref, remote_repo, "refs/heads/packed"));
+	cl_git_pass(git_reference_delete(ref));
+	git_reference_free(ref);
+
+	cl_git_pass(git_repository_config(&config, repo));
+	cl_git_pass(git_config_set_bool(config, "remote.origin.prune", 1));
+	git_config_free(config);
+	cl_git_pass(git_remote_load(&origin, repo, GIT_REMOTE_ORIGIN));
+	cl_assert_equal_i(1, git_remote_prune_refs(origin));
+	git_remote_set_callbacks(origin, &callbacks);
+	cl_git_pass(git_remote_fetch(origin, NULL, NULL));
+
+	cl_git_pass(git_reference_list(&refnames, repo));
+	cl_assert_equal_i(17, (int)refnames.count);
+	git_strarray_free(&refnames);
+	git_remote_free(origin);
+
+	git_repository_free(remote_repo);
+	git_repository_free(repo);
+}
+
 static void cleanup_sandbox(void *unused)
 {
 	GIT_UNUSED(unused);

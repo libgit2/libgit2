@@ -32,6 +32,7 @@ struct git_remote {
 	unsigned int need_pack;
 	git_remote_autotag_option_t download_tags;
 	int update_fetchhead;
+	int prune_refs;
 };
 
 const char* git_remote__urlfordirection(struct git_remote *remote, int direction);
