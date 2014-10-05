@@ -23,28 +23,28 @@
 #include <git2/revwalk.h>
 #include <git2/notes.h>
 
-#define REBASE_APPLY_DIR	"rebase-apply"
-#define REBASE_MERGE_DIR	"rebase-merge"
+#define REBASE_APPLY_DIR    "rebase-apply"
+#define REBASE_MERGE_DIR    "rebase-merge"
 
-#define HEAD_NAME_FILE		"head-name"
-#define ORIG_HEAD_FILE		"orig-head"
-#define HEAD_FILE			"head"
-#define ONTO_FILE			"onto"
-#define ONTO_NAME_FILE		"onto_name"
-#define QUIET_FILE			"quiet"
+#define HEAD_NAME_FILE      "head-name"
+#define ORIG_HEAD_FILE      "orig-head"
+#define HEAD_FILE           "head"
+#define ONTO_FILE           "onto"
+#define ONTO_NAME_FILE      "onto_name"
+#define QUIET_FILE          "quiet"
 
-#define MSGNUM_FILE			"msgnum"
-#define END_FILE			"end"
-#define CMT_FILE_FMT		"cmt.%" PRIuZ
-#define CURRENT_FILE		"current"
-#define REWRITTEN_FILE		"rewritten"
+#define MSGNUM_FILE         "msgnum"
+#define END_FILE            "end"
+#define CMT_FILE_FMT        "cmt.%" PRIuZ
+#define CURRENT_FILE        "current"
+#define REWRITTEN_FILE      "rewritten"
 
-#define ORIG_DETACHED_HEAD	"detached HEAD"
+#define ORIG_DETACHED_HEAD  "detached HEAD"
 
-#define NOTES_DEFAULT_REF	NULL
+#define NOTES_DEFAULT_REF   NULL
 
-#define REBASE_DIR_MODE		0777
-#define REBASE_FILE_MODE	0666
+#define REBASE_DIR_MODE     0777
+#define REBASE_FILE_MODE    0666
 
 typedef enum {
 	GIT_REBASE_TYPE_NONE = 0,
@@ -948,6 +948,7 @@ static int rebase_copy_note(
 {
 	git_note *note = NULL;
 	git_oid note_id;
+	git_signature *who = NULL;
 	int error;
 
 	if ((error = git_note_read(&note, rebase->repo, opts->rewrite_notes_ref, from)) < 0) {
@@ -959,11 +960,24 @@ static int rebase_copy_note(
 		goto done;
 	}
 
+	if (!committer) {
+		if((error = git_signature_default(&who, rebase->repo)) < 0) {
+			if (error != GIT_ENOTFOUND ||
+				(error = git_signature_now(&who, "unknown", "unknown")) < 0)
+				goto done;
+
+			giterr_clear();
+		}
+
+		committer = who;
+	}
+
 	error = git_note_create(&note_id, rebase->repo, git_note_author(note),
 		committer, opts->rewrite_notes_ref, to, git_note_message(note), 0);
 
 done:
 	git_note_free(note);
+	git_signature_free(who);
 
 	return error;
 }

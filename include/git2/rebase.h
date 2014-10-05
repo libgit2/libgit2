@@ -84,21 +84,19 @@ typedef enum {
 
 typedef struct {
 	/** The type of rebase operation. */
-	unsigned int type;
+	git_rebase_operation_t type;
 
-	union {
-		/**
-		 * The commit ID being cherry-picked.  This will be populated for
-		 * all operations except those of type `GIT_REBASE_OPERATION_EXEC`.
-		 */
-		const git_oid id;
+	/**
+	 * The commit ID being cherry-picked.  This will be populated for
+	 * all operations except those of type `GIT_REBASE_OPERATION_EXEC`.
+	 */
+	const git_oid id;
 
-		/**
-		 * The executable the user has requested be run.  This will only
-		 * be populated for operations of type `GIT_REBASE_OPERATION_EXEC`.
-		 */
-		const char *exec;
-	};
+	/**
+	 * The executable the user has requested be run.  This will only
+	 * be populated for operations of type `GIT_REBASE_OPERATION_EXEC`.
+	 */
+	const char *exec;
 } git_rebase_operation;
 
 /**
@@ -115,7 +113,7 @@ GIT_EXTERN(int) git_rebase_init_options(
 	unsigned int version);
 
 /**
- * Initializes a rebase operation to rebase the changes in `ours`
+ * Initializes a rebase operation to rebase the changes in `branch`
  * relative to `upstream` onto another branch.  To begin the rebase
  * process, call `git_rebase_next`.  When you have finished with this
  * object, call `git_rebase_free`.
@@ -127,7 +125,7 @@ GIT_EXTERN(int) git_rebase_init_options(
  *                 reachable commits
  * @param onto The branch to rebase onto, or NULL to rebase onto the given
  *             upstream
- * @param signature The signature of the rebaser
+ * @param signature The signature of the rebaser (optional)
  * @param opts Options to specify how rebase is performed
  * @return Zero on success; -1 on failure.
  */
@@ -242,7 +240,7 @@ GIT_EXTERN(int) git_rebase_abort(
  * been applied.
  *
  * @param rebase The rebase that is in-progress
- * @param signature The identity that is finishing the rebase
+ * @param signature The identity that is finishing the rebase (optional)
  * @param opts Options to specify how rebase is finished
  * @param Zero on success; -1 on error
  */
@@ -254,7 +252,7 @@ GIT_EXTERN(int) git_rebase_finish(
 /**
  * Frees the `git_rebase` object.
  *
- * @param rebase The rebase that is in-progress
+ * @param rebase The rebase object
  */
 GIT_EXTERN(void) git_rebase_free(git_rebase *rebase);
 
