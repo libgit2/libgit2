@@ -369,18 +369,90 @@ static int revwalk_next_reverse(git_commit_list_node **object_out, git_revwalk *
 }
 
 
+static int interesting(git_pqueue *list)
+{
+	size_t i;
+
+	for (i = 0; i < git_pqueue_size(list); i++) {
+		git_commit_list_node *commit = git_pqueue_get(list, i);
+		if (!commit->uninteresting)
+			return 1;
+	}
+
+	return 0;
+}
+
+static int contains(git_pqueue *list, git_commit_list_node *node)
+{
+	size_t i;
+
+	for (i = 0; i < git_pqueue_size(list); i++) {
+		git_commit_list_node *commit = git_pqueue_get(list, i);
+		if (commit == node)
+			return 1;
+	}
+
+	return 0;
+}
+
+static int premark_uninteresting(git_revwalk *walk)
+{
+	int error = 0;
+	unsigned short i;
+	git_pqueue q;
+	git_commit_list *list;
+	git_commit_list_node *commit, *parent;
+
+	if ((error = git_pqueue_init(&q, 0, 8, git_commit_list_time_cmp)) < 0)
+		return error;
+
+	for (list = walk->user_input; list; list = list->next) {
+		if ((error = git_commit_list_parse(walk, list->item)) < 0)
+			goto cleanup;
+
+		if ((error = git_pqueue_insert(&q, list->item)) < 0)
+			goto cleanup;
+	}
+
+	while (interesting(&q)) {
+		commit = git_pqueue_pop(&q);
+
+		for (i = 0; i < commit->out_degree; i++) {
+			parent = commit->parents[i];
+
+			if ((error = git_commit_list_parse(walk, parent)) < 0)
+				goto cleanup;
+
+			if (commit->uninteresting)
+				parent->uninteresting = 1;
+
+			if (contains(&q, parent))
+				continue;
+
+			if ((error = git_pqueue_insert(&q, parent)) < 0)
+				goto cleanup;
+		}
+	}
+
+cleanup:
+	git_pqueue_free(&q);
+	return error;
+}
+
 static int prepare_walk(git_revwalk *walk)
 {
 	int error, interesting = 0;
 	git_commit_list *list;
 	git_commit_list_node *next;
 
+	if ((error = premark_uninteresting(walk)) < 0)
+		return error;
+
 	for (list = walk->user_input; list; list = list->next) {
 		interesting += !list->item->uninteresting;
 		if (process_commit(walk, list->item, list->item->uninteresting) < 0)
 			return -1;
 	}
-
 
 	/*
 	 * If there were no pushes, we know that the walk is already over.
