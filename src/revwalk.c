@@ -621,6 +621,7 @@ void git_revwalk_reset(git_revwalk *walk)
 	git_commit_list_free(&walk->iterator_rand);
 	git_commit_list_free(&walk->iterator_reverse);
 	git_commit_list_free(&walk->user_input);
+	walk->first_parent = 0;
 	walk->walking = 0;
 	walk->did_push = walk->did_hide = 0;
 }
