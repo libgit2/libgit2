@@ -116,6 +116,7 @@ static int push_commit(git_revwalk *walk, const git_oid *oid, int uninteresting,
 	int error;
 	git_object *obj, *oobj;
 	git_commit_list_node *commit;
+	git_commit_list *list;
 
 	if ((error = git_object_lookup(&oobj, walk->repo, oid, GIT_OBJ_ANY)) < 0)
 		return error;
@@ -142,12 +143,13 @@ static int push_commit(git_revwalk *walk, const git_oid *oid, int uninteresting,
 		return -1; /* error already reported by failed lookup */
 
 	commit->uninteresting = uninteresting;
-	if (walk->one == NULL && !uninteresting) {
-		walk->one = commit;
-	} else {
-		if (git_vector_insert(&walk->twos, commit) < 0)
-			return -1;
+	list = walk->user_input;
+	if (git_commit_list_insert(commit, &list) == NULL) {
+		giterr_set_oom();
+		return -1;
 	}
+
+	walk->user_input = list;
 
 	return 0;
 }
@@ -369,25 +371,23 @@ static int revwalk_next_reverse(git_commit_list_node **object_out, git_revwalk *
 
 static int prepare_walk(git_revwalk *walk)
 {
-	int error;
-	unsigned int i;
-	git_commit_list_node *next, *two;
+	int error, interesting = 0;
+	git_commit_list *list;
+	git_commit_list_node *next;
 
-	/*
-	 * If walk->one is NULL, there were no positive references,
-	 * so we know that the walk is already over.
-	 */
-	if (walk->one == NULL) {
-		giterr_clear();
-		return GIT_ITEROVER;
+	for (list = walk->user_input; list; list = list->next) {
+		interesting += !list->item->uninteresting;
+		if (process_commit(walk, list->item, list->item->uninteresting) < 0)
+			return -1;
 	}
 
-	if (process_commit(walk, walk->one, walk->one->uninteresting) < 0)
-		return -1;
 
-	git_vector_foreach(&walk->twos, i, two) {
-		if (process_commit(walk, two, two->uninteresting) < 0)
-			return -1;
+	/*
+	 * If there were no pushes, we know that the walk is already over.
+	 */
+	if (!interesting) {
+		giterr_clear();
+		return GIT_ITEROVER;
 	}
 
 	if (walk->sorting & GIT_SORT_TOPOLOGICAL) {
@@ -440,7 +440,6 @@ int git_revwalk_new(git_revwalk **revwalk_out, git_repository *repo)
 
 	if (git_pqueue_init(
 			&walk->iterator_time, 0, 8, git_commit_list_time_cmp) < 0 ||
-		git_vector_init(&walk->twos, 4, NULL) < 0 ||
 		git_pool_init(&walk->commit_pool, 1,
 			git_pool__suggest_items_per_page(COMMIT_ALLOC) * COMMIT_ALLOC) < 0)
 		return -1;
@@ -470,7 +469,6 @@ void git_revwalk_free(git_revwalk *walk)
 	git_oidmap_free(walk->commits);
 	git_pool_clear(&walk->commit_pool);
 	git_pqueue_free(&walk->iterator_time);
-	git_vector_free(&walk->twos);
 	git__free(walk);
 }
 
@@ -547,10 +545,8 @@ void git_revwalk_reset(git_revwalk *walk)
 	git_commit_list_free(&walk->iterator_topo);
 	git_commit_list_free(&walk->iterator_rand);
 	git_commit_list_free(&walk->iterator_reverse);
+	git_commit_list_free(&walk->user_input);
 	walk->walking = 0;
-
-	walk->one = NULL;
-	git_vector_clear(&walk->twos);
 }
 
 int git_revwalk_add_hide_cb(

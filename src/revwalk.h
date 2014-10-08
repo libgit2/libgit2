@@ -35,9 +35,8 @@ struct git_revwalk {
 		first_parent: 1;
 	unsigned int sorting;
 
-	/* merge base calculation */
-	git_commit_list_node *one;
-	git_vector twos;
+	/* the pushes and hides */
+	git_commit_list *user_input;
 
 	/* hide callback */
 	git_revwalk_hide_cb hide_cb;
