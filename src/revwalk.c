@@ -142,6 +142,11 @@ static int push_commit(git_revwalk *walk, const git_oid *oid, int uninteresting,
 	if (commit == NULL)
 		return -1; /* error already reported by failed lookup */
 
+	if (uninteresting)
+		walk->did_hide = 1;
+	else
+		walk->did_push = 1;
+
 	commit->uninteresting = uninteresting;
 	list = walk->user_input;
 	if (git_commit_list_insert(commit, &list) == NULL) {
@@ -441,26 +446,24 @@ cleanup:
 
 static int prepare_walk(git_revwalk *walk)
 {
-	int error, interesting = 0;
+	int error;
 	git_commit_list *list;
 	git_commit_list_node *next;
 
-	if ((error = premark_uninteresting(walk)) < 0)
+	/* If there were no pushes, we know that the walk is already over */
+	if (!walk->did_push) {
+		giterr_clear();
+		return GIT_ITEROVER;
+	}
+
+	if (walk->did_hide && (error = premark_uninteresting(walk)) < 0)
 		return error;
 
 	for (list = walk->user_input; list; list = list->next) {
-		interesting += !list->item->uninteresting;
 		if (process_commit(walk, list->item, list->item->uninteresting) < 0)
 			return -1;
 	}
 
-	/*
-	 * If there were no pushes, we know that the walk is already over.
-	 */
-	if (!interesting) {
-		giterr_clear();
-		return GIT_ITEROVER;
-	}
 
 	if (walk->sorting & GIT_SORT_TOPOLOGICAL) {
 		unsigned short i;
@@ -619,6 +622,7 @@ void git_revwalk_reset(git_revwalk *walk)
 	git_commit_list_free(&walk->iterator_reverse);
 	git_commit_list_free(&walk->user_input);
 	walk->walking = 0;
+	walk->did_push = walk->did_hide = 0;
 }
 
 int git_revwalk_add_hide_cb(
