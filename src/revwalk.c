@@ -540,6 +540,7 @@ void git_revwalk_reset(git_revwalk *walk)
 		commit->in_degree = 0;
 		commit->topo_delay = 0;
 		commit->uninteresting = 0;
+		commit->flags = 0;
 		});
 
 	git_pqueue_clear(&walk->iterator_time);
