@@ -352,6 +352,21 @@ GIT_EXTERN(int) git_merge_base_many(
 	const git_oid input_array[]);
 
 /**
+ * Find all merge bases given a list of commits
+ *
+ * @param out array in which to store the resulting ids
+ * @param repo the repository where the commits exist
+ * @param length The number of commits in the provided `input_array`
+ * @param input_array oids of the commits
+ * @return Zero on success; GIT_ENOTFOUND or -1 on failure.
+ */
+GIT_EXTERN(int) git_merge_bases_many(
+	git_oidarray *out,
+	git_repository *repo,
+	size_t length,
+	const git_oid input_array[]);
+
+/**
  * Find a merge base in preparation for an octopus merge
  *
  * @param out the OID of a merge base considering all the commits
