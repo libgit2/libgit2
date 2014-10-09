@@ -106,6 +106,30 @@ int git_signature_dup(git_signature **dest, const git_signature *source)
 	return 0;
 }
 
+int git_signature__pdup(git_signature **dest, const git_signature *source, git_pool *pool)
+{
+	git_signature *signature;
+
+	if (source == NULL)
+		return 0;
+
+	signature = git_pool_mallocz(pool, sizeof(git_signature));
+	GITERR_CHECK_ALLOC(signature);
+
+	signature->name = git_pool_strdup(pool, source->name);
+	GITERR_CHECK_ALLOC(signature->name);
+
+	signature->email = git_pool_strdup(pool, source->email);
+	GITERR_CHECK_ALLOC(signature->email);
+
+	signature->when.time = source->when.time;
+	signature->when.offset = source->when.offset;
+
+	*dest = signature;
+
+	return 0;
+}
+
 int git_signature_now(git_signature **sig_out, const char *name, const char *email)
 {
 	time_t now;

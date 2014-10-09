@@ -411,7 +411,7 @@ static int reference__create(
 	return 0;
 }
 
-static int log_signature(git_signature **out, git_repository *repo)
+int git_reference__log_signature(git_signature **out, git_repository *repo)
 {
 	int error;
 	git_signature *who;
@@ -441,7 +441,7 @@ int git_reference_create_matching(
 	assert(id);
 
 	if (!signature) {
-		if ((error = log_signature(&who, repo)) < 0)
+		if ((error = git_reference__log_signature(&who, repo)) < 0)
 			return error;
 		else
 			signature = who;
@@ -482,7 +482,7 @@ int git_reference_symbolic_create_matching(
 	assert(target);
 
 	if (!signature) {
-		if ((error = log_signature(&who, repo)) < 0)
+		if ((error = git_reference__log_signature(&who, repo)) < 0)
 			return error;
 		else
 			signature = who;

@@ -171,6 +171,9 @@ typedef struct git_reference git_reference;
 /** Iterator for references */
 typedef struct git_reference_iterator  git_reference_iterator;
 
+/** Transactional interface to references */
+typedef struct git_transaction git_transaction;
+
 /** Merge heads, the input to merge */
 typedef struct git_merge_head git_merge_head;
 

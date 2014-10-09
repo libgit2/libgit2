@@ -15,6 +15,7 @@
 #include "git2/status.h"
 #include "git2/checkout.h"
 #include "git2/index.h"
+#include "git2/transaction.h"
 #include "signature.h"
 
 static int create_error(int error, const char *msg)
@@ -601,13 +602,20 @@ int git_stash_drop(
 	git_repository *repo,
 	size_t index)
 {
-	git_reference *stash;
+	git_transaction *tx;
+	git_reference *stash = NULL;
 	git_reflog *reflog = NULL;
 	size_t max;
 	int error;
 
-	if ((error = git_reference_lookup(&stash, repo, GIT_REFS_STASH_FILE)) < 0)
+	if ((error = git_transaction_new(&tx, repo)) < 0)
 		return error;
+
+	if ((error = git_transaction_lock_ref(tx, GIT_REFS_STASH_FILE)) < 0)
+		goto cleanup;
+
+	if ((error = git_reference_lookup(&stash, repo, GIT_REFS_STASH_FILE)) < 0)
+		goto cleanup;
 
 	if ((error = git_reflog_read(&reflog, repo, GIT_REFS_STASH_FILE)) < 0)
 		goto cleanup;
@@ -623,29 +631,25 @@ int git_stash_drop(
 	if ((error = git_reflog_drop(reflog, index, true)) < 0)
 		goto cleanup;
 
-	if ((error = git_reflog_write(reflog)) < 0)
+	if ((error = git_transaction_set_reflog(tx, GIT_REFS_STASH_FILE, reflog)) < 0)
 		goto cleanup;
 
 	if (max == 1) {
-		error = git_reference_delete(stash);
-		git_reference_free(stash);
-		stash = NULL;
+		if ((error = git_transaction_remove(tx, GIT_REFS_STASH_FILE)) < 0)
+			goto cleanup;
 	} else if (index == 0) {
 		const git_reflog_entry *entry;
 
 		entry = git_reflog_entry_byindex(reflog, 0);
-
-		git_reference_free(stash);
-		error = git_reference_create(&stash, repo, GIT_REFS_STASH_FILE, &entry->oid_cur, 1, NULL, NULL);
-		if (error < 0)
+		if ((error = git_transaction_set_target(tx, GIT_REFS_STASH_FILE, &entry->oid_cur, NULL, NULL)) < 0)
 			goto cleanup;
-
-		/* We need to undo the writing that we just did */
-		error = git_reflog_write(reflog);
 	}
+
+	error = git_transaction_commit(tx);
 
 cleanup:
 	git_reference_free(stash);
+	git_transaction_free(tx);
 	git_reflog_free(reflog);
 	return error;
 }
