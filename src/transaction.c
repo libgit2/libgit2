@@ -80,7 +80,7 @@ on_error:
 	return error;
 }
 
-int git_transaction_lock(git_transaction *tx, const char *refname)
+int git_transaction_lock_ref(git_transaction *tx, const char *refname)
 {
 	int error;
 	transaction_node *node;

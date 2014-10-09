@@ -611,7 +611,7 @@ int git_stash_drop(
 	if ((error = git_transaction_new(&tx, repo)) < 0)
 		return error;
 
-	if ((error = git_transaction_lock(tx, GIT_REFS_STASH_FILE)) < 0)
+	if ((error = git_transaction_lock_ref(tx, GIT_REFS_STASH_FILE)) < 0)
 		goto cleanup;
 
 	if ((error = git_reference_lookup(&stash, repo, GIT_REFS_STASH_FILE)) < 0)
