@@ -821,7 +821,7 @@ static int ls_to_vector(git_vector *out, git_remote *remote)
 
 int git_remote_download(git_remote *remote, const git_strarray *refspecs)
 {
-	int error;
+	int error = -1;
 	size_t i;
 	git_vector refs, specs, *to_active;
 
