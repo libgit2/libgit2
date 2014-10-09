@@ -370,8 +370,8 @@ void test_stash_save__including_untracked_without_any_untracked_file_creates_an_
 
 void test_stash_save__ignored_directory(void)
 {
-	cl_git_pass(mkdir("stash/ignored_directory", 0777));
-	cl_git_pass(mkdir("stash/ignored_directory/sub", 0777));
+	cl_git_pass(p_mkdir("stash/ignored_directory", 0777));
+	cl_git_pass(p_mkdir("stash/ignored_directory/sub", 0777));
 	cl_git_mkfile("stash/ignored_directory/sub/some_file", "stuff");
 
 	assert_status(repo, "ignored_directory/sub/some_file", GIT_STATUS_WT_NEW);
