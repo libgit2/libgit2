@@ -40,17 +40,19 @@ static void fetchhead_test_fetch(const char *fetchspec, const char *expected_fet
 	git_remote *remote;
 	git_buf fetchhead_buf = GIT_BUF_INIT;
 	int equals = 0;
+	git_strarray array, *active_refs = NULL;
 
 	cl_git_pass(git_remote_load(&remote, g_repo, "origin"));
 	git_remote_set_autotag(remote, GIT_REMOTE_DOWNLOAD_TAGS_AUTO);
 
 	if(fetchspec != NULL) {
-		git_remote_clear_refspecs(remote);
-		git_remote_add_fetch(remote, fetchspec);
+		array.count = 1;
+		array.strings = (char **) &fetchspec;
+		active_refs = &array;
 	}
 
 	cl_git_pass(git_remote_connect(remote, GIT_DIRECTION_FETCH));
-	cl_git_pass(git_remote_download(remote));
+	cl_git_pass(git_remote_download(remote, active_refs));
 	cl_git_pass(git_remote_update_tips(remote, NULL, NULL));
 	git_remote_disconnect(remote);
 	git_remote_free(remote);

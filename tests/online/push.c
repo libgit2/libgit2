@@ -408,7 +408,7 @@ void test_online_push__initialize(void)
 
 	/* Now that we've deleted everything, fetch from the remote */
 	cl_git_pass(git_remote_connect(_remote, GIT_DIRECTION_FETCH));
-	cl_git_pass(git_remote_download(_remote));
+	cl_git_pass(git_remote_download(_remote, NULL));
 	cl_git_pass(git_remote_update_tips(_remote, NULL, NULL));
 	git_remote_disconnect(_remote);
 }

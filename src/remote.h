@@ -23,6 +23,7 @@ struct git_remote {
 	git_vector refs;
 	git_vector refspecs;
 	git_vector active_refspecs;
+	git_vector passive_refspecs;
 	git_transport_cb transport_cb;
 	void *transport_cb_payload;
 	git_transport *transport;
@@ -32,6 +33,7 @@ struct git_remote {
 	unsigned int need_pack;
 	git_remote_autotag_option_t download_tags;
 	int update_fetchhead;
+	int passed_refspecs;
 };
 
 const char* git_remote__urlfordirection(struct git_remote *remote, int direction);

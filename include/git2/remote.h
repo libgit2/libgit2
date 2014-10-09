@@ -306,9 +306,12 @@ GIT_EXTERN(int) git_remote_ls(const git_remote_head ***out,  size_t *size, git_r
  * The .idx file will be created and both it and the packfile with be
  * renamed to their final name.
  *
+ * @param remote the remote
+ * @param refspecs the refspecs to use for this negotiation and
+ * download. Use NULL to use the base refspecs
  * @return 0 or an error code
  */
-GIT_EXTERN(int) git_remote_download(git_remote *remote);
+GIT_EXTERN(int) git_remote_download(git_remote *remote, const git_strarray *refspecs);
 
 /**
  * Check whether the remote is connected
@@ -373,6 +376,8 @@ GIT_EXTERN(int) git_remote_update_tips(
  * disconnect and update the remote-tracking branches.
  *
  * @param remote the remote to fetch from
+ * @param refspecs the refspecs to use for this fetch. Pass NULL to
+ * use the base refspecs.
  * @param signature The identity to use when updating reflogs
  * @param reflog_message The message to insert into the reflogs. If NULL, the
  *								 default is "fetch"
@@ -380,6 +385,7 @@ GIT_EXTERN(int) git_remote_update_tips(
  */
 GIT_EXTERN(int) git_remote_fetch(
 		git_remote *remote,
+		const git_strarray *refspecs,
 		const git_signature *signature,
 		const char *reflog_message);
 

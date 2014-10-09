@@ -36,7 +36,7 @@ void test_network_fetchlocal__complete(void)
 	cl_git_pass(git_remote_create(&origin, repo, GIT_REMOTE_ORIGIN, url));
 	git_remote_set_callbacks(origin, &callbacks);
 	cl_git_pass(git_remote_connect(origin, GIT_DIRECTION_FETCH));
-	cl_git_pass(git_remote_download(origin));
+	cl_git_pass(git_remote_download(origin, NULL));
 	cl_git_pass(git_remote_update_tips(origin, NULL, NULL));
 
 	cl_git_pass(git_reference_list(&refnames, repo));
@@ -74,7 +74,7 @@ void test_network_fetchlocal__partial(void)
 	cl_git_pass(git_remote_create(&origin, repo, GIT_REMOTE_ORIGIN, url));
 	git_remote_set_callbacks(origin, &callbacks);
 	cl_git_pass(git_remote_connect(origin, GIT_DIRECTION_FETCH));
-	cl_git_pass(git_remote_download(origin));
+	cl_git_pass(git_remote_download(origin, NULL));
 	cl_git_pass(git_remote_update_tips(origin, NULL, NULL));
 
 	git_strarray_free(&refnames);
