@@ -19,6 +19,7 @@
 #include "git2/commit.h"
 #include "git2/common.h"
 #include "git2/config.h"
+#include "git2/describe.h"
 #include "git2/diff.h"
 #include "git2/errors.h"
 #include "git2/filter.h"
