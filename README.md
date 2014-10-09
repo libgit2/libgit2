@@ -212,7 +212,7 @@ workflow, the libgit2 [coding conventions](CONVENTIONS.md), and out list of
 License
 ==================================
 
-`libgit2` is under GPL2 **with linking exemption**. This means you can link to
+`libgit2` is under GPL2 **with linking exception**. This means you can link to
 and use the library from any program, proprietary or open source; paid or
 gratis.  However, you cannot modify libgit2 and distribute it without
 supplying the source.
