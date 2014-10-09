@@ -58,3 +58,6 @@ v0.21 + 1
 
 * Introduce git_merge_bases() and the git_oidarray type to expose all
   merge bases between two commits.
+
+* Introduce git_merge_bases_many() to expose all merge bases between
+  multiple commits.

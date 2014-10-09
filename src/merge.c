@@ -116,6 +116,73 @@ cleanup:
 	return error;
 }
 
+int git_merge_bases_many(git_oidarray *out, git_repository *repo, size_t length, const git_oid input_array[])
+{
+	git_revwalk *walk;
+	git_vector list;
+	git_commit_list *current, *result = NULL;
+	int error = -1;
+	unsigned int i;
+	git_commit_list_node *commit;
+	git_array_oid_t array;
+
+	assert(out && repo && input_array);
+
+	if (length < 2) {
+		giterr_set(GITERR_INVALID, "At least two commits are required to find an ancestor. Provided 'length' was %u.", length);
+		return -1;
+	}
+
+	if (git_vector_init(&list, length - 1, NULL) < 0)
+		return -1;
+
+	if (git_revwalk_new(&walk, repo) < 0)
+		goto cleanup;
+
+	for (i = 1; i < length; i++) {
+		commit = git_revwalk__commit_lookup(walk, &input_array[i]);
+		if (commit == NULL)
+			goto cleanup;
+
+		git_vector_insert(&list, commit);
+	}
+
+	commit = git_revwalk__commit_lookup(walk, &input_array[0]);
+	if (commit == NULL)
+		goto cleanup;
+
+	if (git_merge__bases_many(&result, walk, commit, &list) < 0)
+		goto cleanup;
+
+	if (!result) {
+		giterr_set(GITERR_MERGE, "No merge base found");
+		error = GIT_ENOTFOUND;
+		goto cleanup;
+	}
+
+	git_array_init(array);
+
+	current = result;
+	while (current) {
+		git_oid *id = git_array_alloc(array);
+		if (id == NULL)
+			goto cleanup;
+
+		git_oid_cpy(id, &current->item->oid);
+		current = current->next;
+	}
+
+	git_oidarray__from_array(out, &array);
+
+	error = 0;
+
+cleanup:
+	git_commit_list_free(&result);
+	git_revwalk_free(walk);
+	git_vector_free(&list);
+	return error;
+}
+
 int git_merge_base_octopus(git_oid *out, git_repository *repo, size_t length, const git_oid input_array[])
 {
 	git_oid result;
