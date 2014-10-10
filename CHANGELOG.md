@@ -40,6 +40,9 @@ v0.21 + 1
   path of the programs to execute for receive-pack and upload-pack on
   the server, git_transport_ssh_with_paths.
 
+* git_remote_delete() now accepts the repository and the remote's name
+  instead of a loaded remote.
+
 * The git_clone_options struct no longer provides the ignore_cert_errors or
   remote_name members for remote customization.
 

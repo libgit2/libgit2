@@ -2028,29 +2028,15 @@ static int remove_remote_tracking(git_repository *repo, const char *remote_name)
 	return error;
 }
 
-int git_remote_delete(git_remote *remote)
+int git_remote_delete(git_repository *repo, const char *name)
 {
 	int error;
-	git_repository *repo;
 
-	assert(remote);
+	assert(repo && name);
 
-	if (!remote->name) {
-		giterr_set(GITERR_INVALID, "Can't delete an anonymous remote.");
-		return -1;
-	}
-
-	repo = git_remote_owner(remote);
-
-	if ((error = remove_branch_config_related_entries(repo,
-		git_remote_name(remote))) < 0)
-		return error;
-
-	if ((error = remove_remote_tracking(repo, git_remote_name(remote))) < 0)
-		return error;
-
-	if ((error = rename_remote_config_section(
-		repo, git_remote_name(remote), NULL)) < 0)
+	if ((error = remove_branch_config_related_entries(repo, name)) < 0 ||
+	    (error = remove_remote_tracking(repo, name)) < 0 ||
+	    (error = rename_remote_config_section(repo, name, NULL)) < 0)
 		return error;
 
 	return 0;
