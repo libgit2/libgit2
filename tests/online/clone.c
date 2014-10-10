@@ -473,7 +473,7 @@ void test_online_clone__ssh_cannot_change_username(void)
 	cl_git_fail(git_clone(&g_repo, "ssh://git@github.com/libgit2/TestGitRepository", "./foo", &g_options));
 }
 
-int ssh_certificate_check(git_cert *cert, int valid, void *payload)
+int ssh_certificate_check(git_cert *cert, int valid, const char *host, void *payload)
 {
 	git_cert_hostkey *key;
 	git_oid expected = {{0}}, actual = {{0}};
@@ -504,6 +504,8 @@ int ssh_certificate_check(git_cert *cert, int valid, void *payload)
 
 	cl_assert(!memcmp(&expected, &actual, 20));
 
+	cl_assert_equal_s("localhost", host);
+
 	return GIT_EUSER;
 }
 
@@ -523,10 +525,11 @@ void test_online_clone__url_with_no_path_returns_EINVALIDSPEC(void)
 		GIT_EINVALIDSPEC);
 }
 
-static int fail_certificate_check(git_cert *cert, int valid, void *payload)
+static int fail_certificate_check(git_cert *cert, int valid, const char *host, void *payload)
 {
 	GIT_UNUSED(cert);
 	GIT_UNUSED(valid);
+	GIT_UNUSED(host);
 	GIT_UNUSED(payload);
 
 	return GIT_ECERTIFICATE;
@@ -545,11 +548,13 @@ void test_online_clone__certificate_invalid(void)
 #endif
 }
 
-static int succeed_certificate_check(git_cert *cert, int valid, void *payload)
+static int succeed_certificate_check(git_cert *cert, int valid, const char *host, void *payload)
 {
 	GIT_UNUSED(cert);
 	GIT_UNUSED(valid);
 	GIT_UNUSED(payload);
+
+	cl_assert_equal_s("github.com", host);
 
 	return 0;
 }

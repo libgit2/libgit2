@@ -290,9 +290,10 @@ typedef struct {
  * @param len The size of the certificate or host info
  * @param valid Whether the libgit2 checks (OpenSSL or WinHTTP) think
  * this certificate is valid
+ * @param host Hostname of the host libgit2 connected to
  * @param payload Payload provided by the caller
  */
-typedef int (*git_transport_certificate_check_cb)(git_cert *cert, int valid, void *payload);
+typedef int (*git_transport_certificate_check_cb)(git_cert *cert, int valid, const char *host, void *payload);
 
 /**
  * Opaque structure representing a submodule.

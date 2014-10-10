@@ -581,7 +581,7 @@ static int http_connect(http_subtransport *t)
 		cert_info.cert_type = GIT_CERT_X509;
 		cert_info.data = encoded_cert;
 		cert_info.len = len;
-                error = t->owner->certificate_check_cb((git_cert *) &cert_info, is_valid, t->owner->message_cb_payload);
+		error = t->owner->certificate_check_cb((git_cert *) &cert_info, is_valid, t->connection_data.host, t->owner->message_cb_payload);
 		git__free(encoded_cert);
 
 		if (error < 0) {
