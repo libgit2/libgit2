@@ -29,7 +29,7 @@ struct commit_name {
 	char *path;
 
 	/* Khash workaround. They original key has to still be reachable */
-	git_oid peeled; 
+	git_oid peeled;
 };
 
 static void *oidmap_value_bykey(git_oidmap *map, const git_oid *key)
