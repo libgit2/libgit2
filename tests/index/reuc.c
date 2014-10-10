@@ -298,7 +298,7 @@ void test_index_reuc__cleaned_on_reset_hard(void)
 	cl_git_pass(git_revparse_single(&target, repo, "3a34580"));
 
 	test_index_reuc__add();
-	cl_git_pass(git_reset(repo, target, GIT_RESET_HARD, NULL, NULL));
+	cl_git_pass(git_reset(repo, target, GIT_RESET_HARD, NULL, NULL, NULL));
 	cl_assert(reuc_entry_exists() == false);
 
 	git_object_free(target);
@@ -311,7 +311,7 @@ void test_index_reuc__cleaned_on_reset_mixed(void)
 	cl_git_pass(git_revparse_single(&target, repo, "3a34580"));
 
 	test_index_reuc__add();
-	cl_git_pass(git_reset(repo, target, GIT_RESET_MIXED, NULL, NULL));
+	cl_git_pass(git_reset(repo, target, GIT_RESET_MIXED, NULL, NULL, NULL));
 	cl_assert(reuc_entry_exists() == false);
 
 	git_object_free(target);
@@ -323,10 +323,10 @@ void test_index_reuc__retained_on_reset_soft(void)
 
 	cl_git_pass(git_revparse_single(&target, repo, "3a34580"));
 
-	git_reset(repo, target, GIT_RESET_HARD, NULL, NULL);
+	git_reset(repo, target, GIT_RESET_HARD, NULL, NULL, NULL);
 
 	test_index_reuc__add();
-	cl_git_pass(git_reset(repo, target, GIT_RESET_SOFT, NULL, NULL));
+	cl_git_pass(git_reset(repo, target, GIT_RESET_SOFT, NULL, NULL, NULL));
 	cl_assert(reuc_entry_exists() == true);
 
 	git_object_free(target);

@@ -571,7 +571,7 @@ void test_checkout_tree__donot_update_deleted_file_by_default(void)
 
 	cl_git_pass(git_oid_fromstr(&old_id, "be3563ae3f795b2b4353bcce3a527ad0a4f7f644"));
 	cl_git_pass(git_commit_lookup(&old_commit, g_repo, &old_id));
-	cl_git_pass(git_reset(g_repo, (git_object *)old_commit, GIT_RESET_HARD, NULL, NULL));
+	cl_git_pass(git_reset(g_repo, (git_object *)old_commit, GIT_RESET_HARD, NULL, NULL, NULL));
 
 	cl_git_pass(p_unlink("testrepo/branch_file.txt"));
 	cl_git_pass(git_index_remove_bypath(index ,"branch_file.txt"));

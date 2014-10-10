@@ -52,6 +52,10 @@ typedef enum {
  *
  * @param reset_type Kind of reset operation to perform.
  *
+ * @param checkout_opts Checkout options to be used for a HARD reset.
+ * The checkout_strategy field will be overridden (based on reset_type).
+ * This parameter can be used to propagate notify and progress callbacks.
+ *
  * @param signature The identity that will used to populate the reflog entry
  *
  * @param log_message The one line long message to be appended to the reflog.
@@ -65,6 +69,7 @@ GIT_EXTERN(int) git_reset(
 	git_repository *repo,
 	git_object *target,
 	git_reset_t reset_type,
+	git_checkout_options *checkout_opts,
 	git_signature *signature,
 	const char *log_message);
 
