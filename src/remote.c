@@ -834,7 +834,7 @@ int git_remote_download(git_remote *remote, const git_strarray *refspecs)
 		goto on_error;
 
 	remote->passed_refspecs = 0;
-	if (!refspecs) {
+	if (!refspecs || !refspecs->count) {
 		to_active = &remote->refspecs;
 	} else {
 		for (i = 0; i < refspecs->count; i++) {

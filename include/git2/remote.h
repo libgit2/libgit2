@@ -308,7 +308,7 @@ GIT_EXTERN(int) git_remote_ls(const git_remote_head ***out,  size_t *size, git_r
  *
  * @param remote the remote
  * @param refspecs the refspecs to use for this negotiation and
- * download. Use NULL to use the base refspecs
+ * download. Use NULL or an empty array to use the base refspecs
  * @return 0 or an error code
  */
 GIT_EXTERN(int) git_remote_download(git_remote *remote, const git_strarray *refspecs);
@@ -376,8 +376,8 @@ GIT_EXTERN(int) git_remote_update_tips(
  * disconnect and update the remote-tracking branches.
  *
  * @param remote the remote to fetch from
- * @param refspecs the refspecs to use for this fetch. Pass NULL to
- * use the base refspecs.
+ * @param refspecs the refspecs to use for this fetch. Pass NULL or an
+ *                 empty array to use the base refspecs.
  * @param signature The identity to use when updating reflogs
  * @param reflog_message The message to insert into the reflogs. If NULL, the
  *								 default is "fetch"
