@@ -927,13 +927,15 @@ static int remote_head_for_fetchspec_src(git_remote_head **out, git_vector *upda
 	return 0;
 }
 
-static int remote_head_for_ref(git_remote_head **out, git_refspec *spec, git_vector *update_heads, git_reference *ref)
+static int remote_head_for_ref(git_remote_head **out, git_remote *remote, git_refspec *spec, git_vector *update_heads, git_reference *ref)
 {
 	git_reference *resolved_ref = NULL;
 	git_buf remote_name = GIT_BUF_INIT;
 	git_buf upstream_name = GIT_BUF_INIT;
+	git_buf config_key = GIT_BUF_INIT;
 	git_repository *repo;
-	const char *ref_name;
+	git_config *config = NULL;
+	const char *ref_name, *branch_remote;
 	int error = 0;
 
 	assert(out && spec && ref);
@@ -953,6 +955,11 @@ static int remote_head_for_ref(git_remote_head **out, git_refspec *spec, git_vec
 	}
 
 	if ((!git_reference__is_branch(ref_name)) ||
+	    (error = git_repository_config_snapshot(&config, repo)) < 0 ||
+	    (error = git_buf_printf(&config_key, "branch.%s.remote",
+	        ref_name + strlen(GIT_REFS_HEADS_DIR))) < 0 ||
+	    (error = git_config_get_string(&branch_remote, config, git_buf_cstr(&config_key))) < 0 ||
+	    git__strcmp(git_remote_name(remote), branch_remote) ||
 	    (error = git_branch_upstream_name(&upstream_name, repo, ref_name)) < 0 ||
 	    (error = git_refspec_rtransform(&remote_name, spec, upstream_name.ptr)) < 0) {
 		/* Not an error if there is no upstream */
@@ -968,6 +975,8 @@ cleanup:
 	git_reference_free(resolved_ref);
 	git_buf_free(&remote_name);
 	git_buf_free(&upstream_name);
+	git_buf_free(&config_key);
+	git_config_free(config);
 	return error;
 }
 
@@ -996,7 +1005,7 @@ static int git_remote_write_fetchhead(git_remote *remote, git_refspec *spec, git
 	/* Determine what to merge: if refspec was a wildcard, just use HEAD */
 	if (git_refspec_is_wildcard(spec)) {
 		if ((error = git_reference_lookup(&head_ref, remote->repo, GIT_HEAD_FILE)) < 0 ||
-			(error = remote_head_for_ref(&merge_remote_ref, spec, update_heads, head_ref)) < 0)
+			(error = remote_head_for_ref(&merge_remote_ref, remote, spec, update_heads, head_ref)) < 0)
 				goto cleanup;
 	} else {
 		/* If we're fetching a single refspec, that's the only thing that should be in FETCH_HEAD. */
