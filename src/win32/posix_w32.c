@@ -427,14 +427,13 @@ static int getfinalpath_w(
 		return -1;
 
 	/* Call GetFinalPathNameByHandle */
-	dwChars = pgfp(hFile, dest, GIT_WIN_PATH_UTF16, FILE_NAME_NORMALIZED);
+	dwChars = pgfp(hFile, dest, GIT_WIN_PATH_UTF16, VOLUME_NAME_GUID);
 	CloseHandle(hFile);
 
 	if (!dwChars || dwChars >= GIT_WIN_PATH_UTF16)
 		return -1;
 
-	/* The path may be delivered to us with a prefix; canonicalize */
-	return (int)git_win32__canonicalize_path(dest, dwChars);
+	return dwChars;
 }
 
 static int follow_and_lstat_link(git_win32_path path, struct stat* buf)
