@@ -14,6 +14,7 @@
 #include "indexer.h"
 #include "strarray.h"
 #include "transport.h"
+#include "push.h"
 
 /**
  * @file git2/remote.h
@@ -390,6 +391,22 @@ GIT_EXTERN(int) git_remote_fetch(
 		const char *reflog_message);
 
 /**
+ * Perform a push
+ *
+ * Peform all the steps from a push.
+ *
+ * @param remote the remote to push to
+ * @param refspecs the refspecs to use for pushing
+ * @param opts the options
+ * @param signature signature to use for the reflog of updated references
+ * @param reflog_message message to use for the reflog of upated references
+ */
+GIT_EXTERN(int) git_remote_push(git_remote *remote,
+				git_strarray *refspecs,
+				const git_push_options *opts,
+				const git_signature *signature, const char *reflog_message);
+
+/**
  * Get a list of the configured remotes for a repo
  *
  * The string array must be freed by the user.
@@ -460,6 +477,28 @@ struct git_remote_callbacks {
 	 * will be called with information about it.
 	 */
 	int (*update_tips)(const char *refname, const git_oid *a, const git_oid *b, void *data);
+
+	/**
+	 * Function to call with progress information during pack
+	 * building. Be aware that this is called inline with pack
+	 * building operations, so performance may be affected.
+	 */
+	git_packbuilder_progress pack_progress;
+
+	/**
+	 * Function to call with progress information during the
+	 * upload portion of a push. Be aware that this is called
+	 * inline with pack building operations, so performance may be
+	 * affected.
+	 */
+	git_push_transfer_progress push_transfer_progress;
+
+	/**
+	 * Called for each updated reference on push. If `status` is
+	 * not `NULL`, the update was rejected by the remote server
+	 * and `status` contains the reason given.
+	 */
+	int (*push_update_reference)(const char *refname, const char *status, void *data);
 
 	/**
 	 * This will be passed to each of the callbacks in this struct
