@@ -140,7 +140,7 @@ void test_network_fetchlocal__multi_remotes(void)
 	cl_git_pass(git_remote_set_url(test, cl_git_fixture_url("testrepo.git")));
 	git_remote_set_callbacks(test, &callbacks);
 	cl_git_pass(git_remote_connect(test, GIT_DIRECTION_FETCH));
-	cl_git_pass(git_remote_download(test));
+	cl_git_pass(git_remote_download(test, NULL));
 	cl_git_pass(git_remote_update_tips(test, NULL, NULL));
 
 	cl_git_pass(git_reference_list(&refnames, repo));
@@ -150,7 +150,7 @@ void test_network_fetchlocal__multi_remotes(void)
 	cl_git_pass(git_remote_set_url(test2, cl_git_fixture_url("testrepo.git")));
 	git_remote_set_callbacks(test2, &callbacks);
 	cl_git_pass(git_remote_connect(test2, GIT_DIRECTION_FETCH));
-	cl_git_pass(git_remote_download(test2));
+	cl_git_pass(git_remote_download(test2, NULL));
 	cl_git_pass(git_remote_update_tips(test2, NULL, NULL));
 
 	cl_git_pass(git_reference_list(&refnames, repo));

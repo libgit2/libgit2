@@ -118,7 +118,7 @@ void test_cherrypick_workdir__empty_result(void)
 	cl_assert(git_path_exists(TEST_REPO_PATH "/file4.txt"));
 
 	cl_git_pass(git_commit_lookup(&head, repo, &head_oid));
-	cl_git_pass(git_reset(repo, (git_object *)head, GIT_RESET_HARD, NULL, NULL));
+	cl_git_pass(git_reset(repo, (git_object *)head, GIT_RESET_HARD, NULL, NULL, NULL));
 
 	git_oid_fromstr(&cherry_oid, cherrypick_oid);
 	cl_git_pass(git_commit_lookup(&commit, repo, &cherry_oid));
