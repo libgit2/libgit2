@@ -11,7 +11,7 @@
 #include "common.h"
 #include "git2/oid.h"
 
-struct git_tree_cache {
+typedef struct {
 	struct git_tree_cache *parent;
 	struct git_tree_cache **children;
 	size_t children_count;
@@ -20,9 +20,7 @@ struct git_tree_cache {
 	git_oid oid;
 	size_t namelen;
 	char name[GIT_FLEX_ARRAY];
-};
-
-typedef struct git_tree_cache git_tree_cache;
+} git_tree_cache;
 
 int git_tree_cache_read(git_tree_cache **tree, const char *buffer, size_t buffer_size);
 void git_tree_cache_invalidate_path(git_tree_cache *tree, const char *path);
