@@ -23,6 +23,10 @@
 #define IO_REPARSE_TAG_SYMLINK (0xA000000CL)
 #endif
 
+#ifndef VOLUME_NAME_GUID
+#define VOLUME_NAME_GUID	0x1
+#endif
+
 /* Options which we always provide to _wopen.
  *
  * _O_BINARY - Raw access; no translation of CR or LF characters
