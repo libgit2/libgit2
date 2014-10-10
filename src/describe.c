@@ -665,7 +665,6 @@ int git_describe_commit(
 	GITERR_CHECK_ALLOC(data.result);
 	data.result->repo = git_object_owner(committish);
 
-	data.opts = opts;
 	data.repo = git_object_owner(committish);
 
 	if ((error = normalize_options(&normalized, opts)) < 0)
@@ -675,6 +674,7 @@ int git_describe_commit(
 		&normalized,
 		GIT_DESCRIBE_OPTIONS_VERSION,
 		"git_describe_options");
+	data.opts = &normalized;
 
 	data.names = git_oidmap_alloc();
 	GITERR_CHECK_ALLOC(data.names);
