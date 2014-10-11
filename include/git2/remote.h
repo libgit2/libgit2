@@ -396,7 +396,8 @@ GIT_EXTERN(int) git_remote_fetch(
  * Peform all the steps from a push.
  *
  * @param remote the remote to push to
- * @param refspecs the refspecs to use for pushing
+ * @param refspecs the refspecs to use for pushing. If none are
+ * passed, the configured refspecs will be used
  * @param opts the options
  * @param signature signature to use for the reflog of updated references
  * @param reflog_message message to use for the reflog of upated references

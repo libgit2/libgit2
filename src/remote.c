@@ -2119,6 +2119,7 @@ int git_remote_push(git_remote *remote, git_strarray *refspecs, const git_push_o
 	size_t i;
 	git_push *push = NULL;
 	git_remote_callbacks *cbs;
+	git_refspec *spec;
 
 	assert(remote && refspecs);
 
@@ -2131,9 +2132,18 @@ int git_remote_push(git_remote *remote, git_strarray *refspecs, const git_push_o
 	if (opts && (error = git_push_set_options(push, opts)) < 0)
 		goto cleanup;
 
-	for (i = 0; i < refspecs->count; i++) {
-		if ((error = git_push_add_refspec(push, refspecs->strings[i])) < 0)
-			goto cleanup;
+	if (refspecs && refspecs->count > 0) {
+		for (i = 0; i < refspecs->count; i++) {
+			if ((error = git_push_add_refspec(push, refspecs->strings[i])) < 0)
+				goto cleanup;
+		}
+	} else {
+		git_vector_foreach(&remote->refspecs, i, spec) {
+			if (!spec->push)
+				continue;
+			if ((error = git_push_add_refspec(push, spec->string)) < 0)
+				goto cleanup;
+		}
 	}
 
 	cbs = &remote->callbacks;
