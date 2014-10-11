@@ -131,6 +131,11 @@ GIT_INLINE(time_t) filetime_to_time_t(const FILETIME *ft)
 	return (time_t)winTime;
 }
 
+static bool path_is_volume(wchar_t *target, size_t target_len)
+{
+	return (target_len && wcsncmp(target, L"\\??\\Volume{", 11) == 0);
+}
+
 /* On success, returns the length, in characters, of the path stored in dest.
  * On failure, returns a negative value. */
 static int readlink_w(
@@ -177,7 +182,13 @@ static int readlink_w(
 		goto on_error;
 	}
 
-	if (target_len) {
+	if (path_is_volume(target, target_len)) {
+		/* This path is a reparse point that represents another volume mounted
+		 * at this location, it is not a symbolic link our input was canonical.
+		 */
+		errno = EINVAL;
+		error = -1;
+	} else if (target_len) {
 		/* The path may need to have a prefix removed. */
 		target_len = git_win32__canonicalize_path(target, target_len);
 
