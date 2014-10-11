@@ -1163,7 +1163,7 @@ static int strip_comments(char *line, int in_quotes)
 	}
 
 	/* skip any space at the end */
-	if (ptr > line && git__isspace(ptr[-1])) {
+	while (ptr > line && git__isspace(ptr[-1])) {
 		ptr--;
 	}
 	ptr[0] = '\0';
