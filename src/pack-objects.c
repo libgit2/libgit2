@@ -39,6 +39,8 @@ struct pack_write_context {
 	git_transfer_progress *stats;
 };
 
+GIT__USE_OIDMAP;
+
 #ifdef GIT_THREADS
 
 #define GIT_PACKBUILDER__MUTEX_OP(pb, mtx, op) do { \

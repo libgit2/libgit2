@@ -19,6 +19,8 @@
 #include "vector.h"
 #include "repository.h"
 
+GIT__USE_OIDMAP;
+
 /* Ported from https://github.com/git/git/blob/89dde7882f71f846ccd0359756d27bebc31108de/builtin/describe.c */
 
 struct commit_name {

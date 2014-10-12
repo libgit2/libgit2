@@ -71,9 +71,7 @@ struct pack_chain_elem {
 typedef git_array_t(struct pack_chain_elem) git_dependency_chain;
 
 #include "offmap.h"
-
-GIT__USE_OFFMAP
-GIT__USE_OIDMAP
+#include "oidmap.h"
 
 #define GIT_PACK_CACHE_MEMORY_LIMIT 16 * 1024 * 1024
 #define GIT_PACK_CACHE_SIZE_LIMIT 1024 * 1024 /* don't bother caching anything over 1MB */

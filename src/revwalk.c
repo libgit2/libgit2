@@ -14,6 +14,8 @@
 #include "git2/revparse.h"
 #include "merge.h"
 
+GIT__USE_OIDMAP;
+
 git_commit_list_node *git_revwalk__commit_lookup(
 	git_revwalk *walk, const git_oid *oid)
 {
