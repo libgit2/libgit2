@@ -278,7 +278,7 @@ static void write_tree(git_buf *out, git_tree_cache *tree)
 {
 	size_t i;
 
-	git_buf_printf(out, "%s%c%zd %"PRIuZ"\n", tree->name, 0, tree->entry_count, tree->children_count);
+	git_buf_printf(out, "%s%c%"PRIdZ" %"PRIuZ"\n", tree->name, 0, tree->entry_count, tree->children_count);
 
 	if (tree->entry_count != -1)
 		git_buf_put(out, (const char *) &tree->oid, GIT_OID_RAWSZ);
