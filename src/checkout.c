@@ -1813,14 +1813,17 @@ static int checkout_write_merge(
 		goto done;
 
 	if (!data->opts.disable_filters) {
-		if ((error = git_buf_put(&in_data, result.ptr, result.len)) < 0 ||
-			(error = git_filter_list_load(&fl, data->repo, NULL, git_buf_cstr(&path_workdir),
+		in_data.ptr = (char *)result.ptr;
+		in_data.size = result.len;
+
+		if ((error = git_filter_list_load(&fl, data->repo, NULL, git_buf_cstr(&path_workdir),
 				GIT_FILTER_TO_WORKTREE, GIT_FILTER_OPT_DEFAULT)) < 0 ||
 			(error = git_filter_list_apply_to_data(&out_data, fl, &in_data)) < 0)
 			goto done;
-	} else if ((error = git_buf_put(&out_data, result.ptr, result.len)) < 0)
-		goto done;
-
+	} else {
+		out_data.ptr = (char *)result.ptr;
+		out_data.size = result.len;
+	}
 
 	if ((error = git_futils_mkpath2file(path_workdir.ptr, 0755)) < 0 ||
 		(error = git_filebuf_open(&output, git_buf_cstr(&path_workdir), GIT_FILEBUF_DO_NOT_BUFFER, result.mode)) < 0 ||
@@ -1832,7 +1835,6 @@ done:
 	git_filter_list_free(fl);
 
 	git_buf_free(&out_data);
-	git_buf_free(&in_data);
 	git_buf_free(&our_label);
 	git_buf_free(&their_label);
 
