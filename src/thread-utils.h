@@ -183,8 +183,10 @@ GIT_INLINE(int64_t) git_atomic64_add(git_atomic64 *a, int64_t addend)
 
 /* Pthreads Mutex */
 #define git_mutex unsigned int
-static int git_mutex_init(git_mutex* mutex) { GIT_UNUSED(mutex); return 0; }
-static int git_mutex_lock(git_mutex* mutex) { GIT_UNUSED(mutex); return 0; }
+GIT_INLINE(int) git_mutex_init(git_mutex *mutex) \
+	{ GIT_UNUSED(mutex); return 0; }
+GIT_INLINE(int) git_mutex_lock(git_mutex *mutex) \
+	{ GIT_UNUSED(mutex); return 0; }
 #define git_mutex_unlock(a) (void)0
 #define git_mutex_free(a) (void)0
 

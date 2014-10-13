@@ -552,7 +552,7 @@ static int http_connect(http_subtransport *t)
 #ifdef GIT_SSL
 	if ((!error || error == GIT_ECERTIFICATE) && t->owner->certificate_check_cb != NULL) {
                 X509 *cert = SSL_get_peer_certificate(t->socket.ssl.ssl);
-		git_cert_x509 cert_info;
+		git_cert_x509 cert_info, *cert_info_ptr;
                 int len, is_valid;
 		unsigned char *guard, *encoded_cert;
 
@@ -581,7 +581,10 @@ static int http_connect(http_subtransport *t)
 		cert_info.cert_type = GIT_CERT_X509;
 		cert_info.data = encoded_cert;
 		cert_info.len = len;
-		error = t->owner->certificate_check_cb((git_cert *) &cert_info, is_valid, t->connection_data.host, t->owner->message_cb_payload);
+
+		cert_info_ptr = &cert_info;
+
+		error = t->owner->certificate_check_cb((git_cert *) cert_info_ptr, is_valid, t->connection_data.host, t->owner->message_cb_payload);
 		git__free(encoded_cert);
 
 		if (error < 0) {
