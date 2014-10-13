@@ -665,7 +665,6 @@ int git_describe_commit(
 	GITERR_CHECK_ALLOC(data.result);
 	data.result->repo = git_object_owner(committish);
 
-	data.opts = opts;
 	data.repo = git_object_owner(committish);
 
 	if ((error = normalize_options(&normalized, opts)) < 0)
@@ -675,6 +674,7 @@ int git_describe_commit(
 		&normalized,
 		GIT_DESCRIBE_OPTIONS_VERSION,
 		"git_describe_options");
+	data.opts = &normalized;
 
 	data.names = git_oidmap_alloc();
 	GITERR_CHECK_ALLOC(data.names);
@@ -759,19 +759,35 @@ out:
 	return error;
 }
 
-int git_describe_format(git_buf *out, const git_describe_result *result, const git_describe_format_options *opts)
+static int normalize_format_options(
+	git_describe_format_options *dst,
+	const git_describe_format_options *src)
+{
+	if (!src) {
+		git_describe_init_format_options(dst, GIT_DESCRIBE_FORMAT_OPTIONS_VERSION);
+		return 0;
+	}
+
+	memcpy(dst, src, sizeof(git_describe_format_options));
+	return 0;
+}
+
+int git_describe_format(git_buf *out, const git_describe_result *result, const git_describe_format_options *given)
 {
 	int error;
 	git_repository *repo;
 	struct commit_name *name;
+	git_describe_format_options opts;
 
 	assert(out && result);
 
-	GITERR_CHECK_VERSION(opts, GIT_DESCRIBE_FORMAT_OPTIONS_VERSION, "git_describe_format_options");
+	GITERR_CHECK_VERSION(given, GIT_DESCRIBE_FORMAT_OPTIONS_VERSION, "git_describe_format_options");
+	normalize_format_options(&opts, given);
+
 	git_buf_sanitize(out);
 
 
-	if (opts->always_use_long_format && opts->abbreviated_size == 0) {
+	if (opts.always_use_long_format && opts.abbreviated_size == 0) {
 		giterr_set(GITERR_DESCRIBE, "Cannot describe - "
 			"'always_use_long_format' is incompatible with a zero"
 			"'abbreviated_size'");
@@ -787,14 +803,14 @@ int git_describe_format(git_buf *out, const git_describe_result *result, const g
 		if ((error = display_name(out, repo, name)) < 0)
 			return error;
 
-		if (opts->always_use_long_format) {
+		if (opts.always_use_long_format) {
 			const git_oid *id = name->tag ? git_tag_target_id(name->tag) : &result->commit_id;
-			if ((error = show_suffix(out, 0, repo, id, opts->abbreviated_size)) < 0)
+			if ((error = show_suffix(out, 0, repo, id, opts.abbreviated_size)) < 0)
 				return error;
 		}
 
-		if (result->dirty && opts->dirty_suffix)
-			git_buf_puts(out, opts->dirty_suffix);
+		if (result->dirty && opts.dirty_suffix)
+			git_buf_puts(out, opts.dirty_suffix);
 
 		return git_buf_oom(out) ? -1 : 0;
 	}
@@ -804,14 +820,14 @@ int git_describe_format(git_buf *out, const git_describe_result *result, const g
 		char hex_oid[GIT_OID_HEXSZ + 1] = {0};
 		int size;
 		if ((error = find_unique_abbrev_size(
-			     &size, repo, &result->commit_id, opts->abbreviated_size)) < 0)
+			     &size, repo, &result->commit_id, opts.abbreviated_size)) < 0)
 			return -1;
 
 		git_oid_fmt(hex_oid, &result->commit_id);
 		git_buf_put(out, hex_oid, size);
 
-		if (result->dirty && opts->dirty_suffix)
-			git_buf_puts(out, opts->dirty_suffix);
+		if (result->dirty && opts.dirty_suffix)
+			git_buf_puts(out, opts.dirty_suffix);
 
 		return git_buf_oom(out) ? -1 : 0;
 	}
@@ -822,14 +838,14 @@ int git_describe_format(git_buf *out, const git_describe_result *result, const g
 	if ((error = display_name(out, repo, name)) < 0)
 		return error;
 
-	if (opts->abbreviated_size) {
+	if (opts.abbreviated_size) {
 		if ((error = show_suffix(out, result->tag->depth, repo,
-			&result->commit_id, opts->abbreviated_size)) < 0)
+			&result->commit_id, opts.abbreviated_size)) < 0)
 			return error;
 	}
 
-	if (result->dirty && opts->dirty_suffix) {
-		git_buf_puts(out, opts->dirty_suffix);
+	if (result->dirty && opts.dirty_suffix) {
+		git_buf_puts(out, opts.dirty_suffix);
 	}
 
 	return git_buf_oom(out) ? -1 : 0;
