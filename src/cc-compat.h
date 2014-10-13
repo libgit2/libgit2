@@ -49,9 +49,11 @@
 #if defined(_MSC_VER) || defined(__MINGW32__)
 #	define PRIuZ "Iu"
 #	define PRIxZ "Ix"
+#	define PRIdZ "Id"
 #else
 #	define PRIuZ "zu"
 #	define PRIxZ "zx"
+#	define PRIdZ "zd"
 #endif
 
 /* Micosoft Visual C/C++ */
