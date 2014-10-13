@@ -1255,6 +1255,7 @@ static int opportunistic_updates(const git_remote *remote, git_vector *refs, con
 
 		error = git_reference_create(&ref, remote->repo, refname.ptr, &head->oid, true, sig, msg);
 		git_buf_free(&refname);
+		git_reference_free(ref);
 
 		if (error < 0)
 			return error;
