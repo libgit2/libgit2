@@ -114,10 +114,30 @@ static int get_check_cert(int *out, git_repository *repo)
 }
 #endif
 
+static int canonicalize_url(git_buf *out, const char *in)
+{
+	const char *c;
+
+#ifdef GIT_WIN32
+	/* Given a UNC path like \\server\path, we need to convert this
+	 * to //server/path for compatibility with core git.
+	 */
+	if (in[0] == '\\' && in[1] == '\\' &&
+		(git__isalpha(in[2]) || git__isdigit(in[2]))) {
+		for (c = in; *c; c++)
+			git_buf_putc(out, *c == '\\' ? '/' : *c);
+
+		return git_buf_oom(out) ? -1 : 0;
+	}
+#endif
+
+	return git_buf_puts(out, in);
+}
+
 static int create_internal(git_remote **out, git_repository *repo, const char *name, const char *url, const char *fetch)
 {
 	git_remote *remote;
-	git_buf fetchbuf = GIT_BUF_INIT;
+	git_buf canonical_url = GIT_BUF_INIT, fetchbuf = GIT_BUF_INIT;
 	int error = -1;
 
 	/* name is optional */
@@ -129,11 +149,11 @@ static int create_internal(git_remote **out, git_repository *repo, const char *n
 	remote->repo = repo;
 	remote->update_fetchhead = 1;
 
-	if (git_vector_init(&remote->refs, 32, NULL) < 0)
+	if (git_vector_init(&remote->refs, 32, NULL) < 0 ||
+		canonicalize_url(&canonical_url, url) < 0)
 		goto on_error;
 
-	remote->url = git__strdup(url);
-	GITERR_CHECK_ALLOC(remote->url);
+	remote->url = git_buf_detach(&canonical_url);
 
 	if (name != NULL) {
 		remote->name = git__strdup(name);
@@ -151,11 +171,13 @@ static int create_internal(git_remote **out, git_repository *repo, const char *n
 
 	*out = remote;
 	git_buf_free(&fetchbuf);
+	git_buf_free(&canonical_url);
 	return 0;
 
 on_error:
 	git_remote_free(remote);
 	git_buf_free(&fetchbuf);
+	git_buf_free(&canonical_url);
 	return error;
 }
 
