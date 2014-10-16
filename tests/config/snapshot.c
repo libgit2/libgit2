@@ -26,11 +26,15 @@ void test_config_snapshot__create_snapshot(void)
 
 	/* A new snapshot should have the new value */
 
+	/* Change the value on the file itself (simulate external process) */
+	cl_git_mkfile(filename, "[old]\nvalue = 99\n");
+
 	cl_git_pass(git_config_snapshot(&new_snapshot, cfg));
 
 	cl_git_pass(git_config_get_int32(&tmp, new_snapshot, "old.value"));
-	cl_assert_equal_i(56, tmp);
-	
+	cl_assert_equal_i(99, tmp);
+
+	git_config_free(new_snapshot);
 	git_config_free(snapshot);
 	git_config_free(cfg);
 }
