@@ -24,12 +24,12 @@ void test_config_snapshot__create_snapshot(void)
 	cl_git_pass(git_config_get_int32(&tmp, snapshot, "old.value"));
 	cl_assert_equal_i(5, tmp);
 
-    /* A new snapshot should have the new value */
+	/* A new snapshot should have the new value */
 
 	cl_git_pass(git_config_snapshot(&new_snapshot, cfg));
 
-    cl_git_pass(git_config_get_int32(&tmp, new_snapshot, "old.value"));
-    cl_assert_equal_i(56, tmp);
+	cl_git_pass(git_config_get_int32(&tmp, new_snapshot, "old.value"));
+	cl_assert_equal_i(56, tmp);
 	
 	git_config_free(snapshot);
 	git_config_free(cfg);
