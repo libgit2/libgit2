@@ -146,6 +146,10 @@ int git_config_snapshot(git_config **out, git_config *in)
 
 	*out = NULL;
 
+    /* Refresh the input config first */
+    if ((error = git_config_refresh(in)) < 0)
+        return error;
+
 	if (git_config_new(&config) < 0)
 		return -1;
 
