@@ -628,15 +628,15 @@ int git_repository_config(git_config **out, git_repository *repo)
 int git_repository_config_snapshot(git_config **out, git_repository *repo)
 {
 	int error;
-	git_config *weak;
+	git_config *weak_config;
 
-	if ((error = git_repository_config__weakptr(&weak, repo)) < 0)
+	if ((error = git_repository_config__weakptr(&weak_config, repo)) < 0)
 		return error;
 
-    if ((error = git_config_refresh(weak)) < 0)
+    if ((error = git_config_refresh(weak_config)) < 0)
         return error;
 
-	return git_config_snapshot(out, weak);
+	return git_config_snapshot(out, weak_config);
 }
 
 void git_repository_set_config(git_repository *repo, git_config *config)
