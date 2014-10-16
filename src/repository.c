@@ -633,9 +633,9 @@ int git_repository_config_snapshot(git_config **out, git_repository *repo)
 	if ((error = git_repository_config__weakptr(&weak_config, repo)) < 0)
 		return error;
 
-    /*if ((error = git_config_refresh(weak_config)) < 0)
+    if ((error = git_config_refresh(weak_config)) < 0)
         return error;
-     */
+
 	return git_config_snapshot(out, weak_config);
 }
 
