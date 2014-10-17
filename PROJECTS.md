@@ -77,7 +77,6 @@ might make good smaller projects by themselves.
     * These tests could go in examples/tests/...
 * Fix symlink support for files in the .git directory (i.e. don't overwrite
   the symlinks when writing the file contents back out)
-* Implement a 'git describe' like API
 * Add hooks API to enumerate and manage hooks (not run them at this point)
     * Enumeration of available hooks
     * Lookup API to see which hooks have a script and get the script
@@ -89,7 +88,6 @@ might make good smaller projects by themselves.
 * Improve index internals with hashtable lookup for files instead of
   using binary search every time
 * Tree builder improvements:
-    * Use a hash table when building instead of a list
     * Extend to allow building a tree hierarchy
 * Move the tagopt mechanism to the newer git 1.9 interpretation of
   --tags [#2120](https://github.com/libgit2/libgit2/issues/2120)
