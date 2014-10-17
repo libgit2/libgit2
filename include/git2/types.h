@@ -209,10 +209,25 @@ typedef enum {
 	GIT_FILEMODE_COMMIT              = 0160000,
 } git_filemode_t;
 
+/*
+ * A refspec specifies the mapping between remote and local reference
+ * names when fetch or pushing.
+ */
 typedef struct git_refspec git_refspec;
+
+/**
+ * Git's idea of a remote repository. A remote can be anonymous (in
+ * which case it does not have backing configuration entires).
+ */
 typedef struct git_remote git_remote;
+
+/**
+ * Preparation for a push operation. Can be used to configure what to
+ * push and the level of parallelism of the packfile builder.
+ */
 typedef struct git_push git_push;
 
+/* documentation in the definition */
 typedef struct git_remote_head git_remote_head;
 typedef struct git_remote_callbacks git_remote_callbacks;
 

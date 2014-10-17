@@ -421,7 +421,7 @@ typedef int (*git_diff_file_cb)(
 /**
  * Structure describing a hunk of a diff.
  */
-typedef struct git_diff_hunk {
+typedef struct {
 	int    old_start;     /**< Starting line number in old_file */
 	int    old_lines;     /**< Number of lines in old_file */
 	int    new_start;     /**< Starting line number in new_file */
@@ -468,7 +468,7 @@ typedef enum {
 /**
  * Structure describing a line (or data span) of a diff.
  */
-typedef struct git_diff_line {
+typedef struct {
 	char   origin;       /**< A git_diff_line_t value */
 	int    old_lineno;   /**< Line number in old file or -1 for added line */
 	int    new_lineno;   /**< Line number in new file or -1 for deleted line */
