@@ -3,7 +3,7 @@
 <head>
   <meta http-equiv="content-type" content="text/html;charset=utf-8">
   <title>fetch.c</title>
-  <link rel="stylesheet" href="../../css.css">
+  <link rel="stylesheet" href="https://libgit2.github.com/libgit2/ex/css.css">
   <style type="text/css">
     a.fnlink {text-decoration: none}
     a.fnlink:hover {text-decoration: underline}
@@ -110,7 +110,7 @@ amount of received data and the indexer stats which lets you
 inform the user about progress.</p>
       </td>
       <td class=code>
-        <div class='highlight'><pre>  <span class="k">if</span> <span class="p">(</span><span class="n"><a name="git_remote_download-7" class="fnlink" href="../../#HEAD/group/remote/git_remote_download">git_remote_download</a></span><span class="p">(</span><span class="n">data</span><span class="o">-&gt;</span><span class="n">remote</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+        <div class='highlight'><pre>  <span class="k">if</span> <span class="p">(</span><span class="n"><a name="git_remote_download-7" class="fnlink" href="../../#HEAD/group/remote/git_remote_download">git_remote_download</a></span><span class="p">(</span><span class="n">data</span><span class="o">-&gt;</span><span class="n">remote</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
     <span class="n">data</span><span class="o">-&gt;</span><span class="n">ret</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
     <span class="k">goto</span> <span class="n">exit</span><span class="p">;</span>
   <span class="p">}</span>
