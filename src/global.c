@@ -71,7 +71,20 @@ static void init_ssl(void)
 #ifdef GIT_SSL
 	SSL_load_error_strings();
 	OpenSSL_add_ssl_algorithms();
+	/*
+	 * Load SSLv{2,3} and TLSv1 so that we can talk with servers
+	 * which use the SSL hellos, which are often used for
+	 * compatibility. We then disable SSL so we only allow OpenSSL
+	 * to speak TLSv1 to perform the encryption itself.
+	 */
 	git__ssl_ctx = SSL_CTX_new(SSLv23_method());
+	SSL_CTX_set_options(git__ssl_ctx,
+			    SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3
+	/* Older OpenSSL and MacOS OpenSSL doesn't have this */
+# ifdef SSL_OP_NO_COMPRESSION
+			    | SSL_OP_NO_COMPRESSION
+# endif
+		);
 	SSL_CTX_set_mode(git__ssl_ctx, SSL_MODE_AUTO_RETRY);
 	SSL_CTX_set_verify(git__ssl_ctx, SSL_VERIFY_NONE, NULL);
 	if (!SSL_CTX_set_default_verify_paths(git__ssl_ctx)) {
