@@ -381,10 +381,6 @@ int git_submodule_add_setup(
 		return GIT_EEXISTS;
 	}
 
-	/* resolve parameters */
-	if ((error = git_submodule_resolve_url(&real_url, repo, url)) < 0)
-		goto cleanup;
-
 	/* validate and normalize path */
 
 	if (git__prefixcmp(path, git_repository_workdir(repo)) == 0)
@@ -409,7 +405,7 @@ int git_submodule_add_setup(
 		goto cleanup;
 
 	if ((error = submodule_config_key_trunc_puts(&name, "url")) < 0 ||
-		(error = git_config_file_set_string(mods, name.ptr, real_url.ptr)) < 0)
+		(error = git_config_file_set_string(mods, name.ptr, url)) < 0)
 		goto cleanup;
 
 	git_buf_clear(&name);
@@ -425,7 +421,12 @@ int git_submodule_add_setup(
 	 */
 	if (!(git_path_exists(name.ptr) &&
 		git_path_contains(&name, DOT_GIT))) {
-		if ((error = submodule_repo_init(&subrepo, repo, path, real_url.ptr, use_gitlink)) < 0)
+
+		/* resolve the actual URL to use */
+		if ((error = git_submodule_resolve_url(&real_url, repo, url)) < 0)
+			goto cleanup;
+
+		 if ((error = submodule_repo_init(&subrepo, repo, path, real_url.ptr, use_gitlink)) < 0)
 			goto cleanup;
 	}
 
@@ -466,13 +467,24 @@ int git_submodule_repo_init(
 {
 	int error;
 	git_repository *sub_repo = NULL;
+	const char *configured_url;
+	git_config *cfg = NULL;
+	git_buf buf = GIT_BUF_INIT;
 
 	assert(out && sm);
 
-	error = submodule_repo_init(&sub_repo, sm->repo, sm->path, sm->url, use_gitlink);
+	/* get the configured remote url of the submodule */
+	if ((error = git_buf_printf(&buf, "submodule.%s.url", sm->name)) < 0 ||
+		(error = git_repository_config(&cfg, sm->repo)) < 0 ||
+		(error = git_config_get_string(&configured_url, cfg, buf.ptr)) < 0 ||
+		(error = submodule_repo_init(&sub_repo, sm->repo, sm->path, configured_url, use_gitlink)) < 0)
+		goto done;
 
 	*out = sub_repo;
 
+done:
+	git_config_free(cfg);
+	git_buf_free(&buf);
 	return error;
 }
 
@@ -827,7 +839,7 @@ int git_submodule_init(git_submodule *sm, int overwrite)
 {
 	int error;
 	const char *val;
-	git_buf key = GIT_BUF_INIT;
+	git_buf key = GIT_BUF_INIT, effective_submodule_url = GIT_BUF_INIT;
 	git_config *cfg = NULL;
 
 	if (!sm->url) {
@@ -841,9 +853,10 @@ int git_submodule_init(git_submodule *sm, int overwrite)
 
 	/* write "submodule.NAME.url" */
 
-	if ((error = git_buf_printf(&key, "submodule.%s.url", sm->name)) < 0 ||
+	if ((git_submodule_resolve_url(&effective_submodule_url, sm->repo, sm->url)) < 0 ||
+		(error = git_buf_printf(&key, "submodule.%s.url", sm->name)) < 0 ||
 		(error = git_config__update_entry(
-			cfg, key.ptr, sm->url, overwrite != 0, false)) < 0)
+			cfg, key.ptr, effective_submodule_url.ptr, overwrite != 0, false)) < 0)
 		goto cleanup;
 
 	/* write "submodule.NAME.update" if not default */
@@ -861,6 +874,7 @@ int git_submodule_init(git_submodule *sm, int overwrite)
 cleanup:
 	git_config_free(cfg);
 	git_buf_free(&key);
+	git_buf_free(&effective_submodule_url);
 
 	return error;
 }
