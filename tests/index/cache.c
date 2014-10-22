@@ -38,7 +38,7 @@ void test_index_cache__write_extension_at_root(void)
 	cl_git_pass(git_index_open(&index, index_file));
 	cl_assert(index->tree);
 
-	cl_assert_equal_i(0, index->tree->entry_count);
+	cl_assert_equal_i(git_index_entrycount(index), index->tree->entry_count);
 	cl_assert_equal_i(0, index->tree->children_count);
 
 	cl_assert(git_oid_equal(&id, &index->tree->oid));
@@ -106,7 +106,7 @@ void test_index_cache__read_tree_no_children(void)
 	cl_assert(index->tree);
 	cl_assert(git_oid_equal(&id, &index->tree->oid));
 	cl_assert_equal_i(0, index->tree->children_count);
-	cl_assert_equal_i(0, index->tree->entry_count); /* 0 is a placeholder here */
+	cl_assert_equal_i(git_index_entrycount(index), index->tree->entry_count);
 
 	memset(&entry, 0x0, sizeof(git_index_entry));
 	entry.path = "new.txt";
@@ -169,7 +169,7 @@ void test_index_cache__two_levels(void)
 	cl_assert_equal_i(1, index->tree->children_count);
 	tree_cache = git_tree_cache_get(index->tree, "subdir");
 	cl_assert(tree_cache);
-	cl_assert_equal_i(0, tree_cache->entry_count);
+	cl_assert_equal_i(1, tree_cache->entry_count);
 }
 
 void test_index_cache__read_tree_children(void)
@@ -226,11 +226,11 @@ void test_index_cache__read_tree_children(void)
 
 	cache = git_tree_cache_get(index->tree, "subdir/even-deeper");
 	cl_assert(cache);
-	cl_assert_equal_i(0, cache->entry_count);
+	cl_assert_equal_i(1, cache->entry_count);
 
 	cache = git_tree_cache_get(index->tree, "subdir2");
 	cl_assert(cache);
-	cl_assert_equal_i(0, cache->entry_count);
+	cl_assert_equal_i(1, cache->entry_count);
 
 	git_index_free(index);
 }
