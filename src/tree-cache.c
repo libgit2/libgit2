@@ -191,8 +191,10 @@ static int read_tree_recursive(git_tree_cache *cache, const git_tree *tree, git_
 		git_tree *subtree;
 
 		entry = git_tree_entry_byindex(tree, i);
-		if (git_tree_entry_filemode(entry) != GIT_FILEMODE_TREE)
+		if (git_tree_entry_filemode(entry) != GIT_FILEMODE_TREE) {
+			cache->entry_count++;
 			continue;
+		}
 
 		if ((error = git_tree_cache_new(&cache->children[j], git_tree_entry_name(entry), pool)) < 0)
 			return error;
@@ -202,6 +204,7 @@ static int read_tree_recursive(git_tree_cache *cache, const git_tree *tree, git_
 
 		error = read_tree_recursive(cache->children[j], subtree, pool);
 		git_tree_free(subtree);
+		cache->entry_count += cache->children[j]->entry_count;
 		j++;
 
 		if (error < 0)
@@ -245,35 +248,6 @@ int git_tree_cache_new(git_tree_cache **out, const char *name, git_pool *pool)
 	return 0;
 }
 
-/**
- * Recursively recalculate the total entry count, which we need to
- * write out to the index
- */
-static void recount_entries(git_tree_cache *tree)
-{
-	size_t i;
-	ssize_t entry_count;
-	git_tree_cache *child;
-
-	for (i = 0; i < tree->children_count; i++)
-		recount_entries(tree->children[i]);
-
-	if (tree->entry_count == -1)
-		return;
-
-	entry_count = 0;
-	for (i = 0; i < tree->children_count; i++) {
-		child = tree->children[i];
-
-		if (child->entry_count == -1)
-			continue;
-
-		entry_count += tree->children[i]->children_count;
-	}
-
-	tree->entry_count = entry_count;
-}
-
 static void write_tree(git_buf *out, git_tree_cache *tree)
 {
 	size_t i;
@@ -289,7 +263,6 @@ static void write_tree(git_buf *out, git_tree_cache *tree)
 
 int git_tree_cache_write(git_buf *out, git_tree_cache *tree)
 {
-	recount_entries(tree);
 	write_tree(out, tree);
 
 	return git_buf_oom(out) ? -1 : 0;
