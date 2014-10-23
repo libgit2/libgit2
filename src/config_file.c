@@ -767,12 +767,17 @@ static int config_readonly_open(git_config_backend *cfg, git_config_level_t leve
 {
 	diskfile_readonly_backend *b = (diskfile_readonly_backend *) cfg;
 	diskfile_backend *src = b->snapshot_from;
+	diskfile_header *src_header = &src->header;
 	refcounted_strmap *src_map;
+	int error;
+
+	if (!src_header->readonly && (error = config_refresh(&src_header->parent)) < 0)
+		return error;
 
 	/* We're just copying data, don't care about the level */
 	GIT_UNUSED(level);
 
-	src_map = refcounted_strmap_take(&src->header);
+	src_map = refcounted_strmap_take(src_header);
 	b->header.values = src_map;
 
 	return 0;
