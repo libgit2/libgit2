@@ -340,10 +340,5 @@ void test_config_write__outside_change(void)
 	cl_git_pass(git_config_get_int32(&tmp, cfg, "old.value"));
 	cl_assert_equal_i(6, tmp);
 
-	cl_git_pass(git_config_refresh(cfg));
-
-	cl_git_pass(git_config_get_int32(&tmp, cfg, "old.value"));
-	cl_assert_equal_i(6, tmp);
-
 	git_config_free(cfg);
 }
