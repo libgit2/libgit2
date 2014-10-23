@@ -145,7 +145,7 @@ int main(int argc, char **argv)
 	git_repository *repo;
 	describe_options opts;
 
-	git_threads_init();
+	git_libgit2_init();
 
 	check_lg2(git_repository_open_ext(&repo, ".", 0, NULL),
 			"Could not open repository", NULL);
@@ -156,7 +156,7 @@ int main(int argc, char **argv)
 	do_describe(repo, &opts);
 
 	git_repository_free(repo);
-	git_threads_shutdown();
+	git_libgit2_shutdown();
 
 	return 0;
 }

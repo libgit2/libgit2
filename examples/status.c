@@ -73,7 +73,7 @@ int main(int argc, char *argv[])
 	git_status_list *status;
 	struct opts o = { GIT_STATUS_OPTIONS_INIT, "." };
 
-	git_threads_init();
+	git_libgit2_init();
 
 	o.statusopt.show  = GIT_STATUS_SHOW_INDEX_AND_WORKDIR;
 	o.statusopt.flags = GIT_STATUS_OPT_INCLUDE_UNTRACKED |
@@ -135,7 +135,7 @@ show_status:
 	}
 
 	git_repository_free(repo);
-	git_threads_shutdown();
+	git_libgit2_shutdown();
 
 	return 0;
 }

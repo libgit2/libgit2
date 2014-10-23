@@ -59,6 +59,10 @@ static void check_error(int error_code, const char *action)
 
 int main (int argc, char** argv)
 {
+  // Initialize the library, this will set up any global state which libgit2 needs
+  // including threading and crypto
+  git_libgit2_init();
+
   // ### Opening the Repository
 
   // There are a couple of methods for opening a repository, this being the

@@ -19,32 +19,6 @@
 GIT_BEGIN_DECL
 
 /**
- * Init the threading system.
- *
- * If libgit2 has been built with GIT_THREADS
- * on, this function must be called once before
- * any other library functions.
- *
- * If libgit2 has been built without GIT_THREADS
- * support, this function is a no-op.
- *
- * @return 0 or an error code
- */
-GIT_EXTERN(int) git_threads_init(void);
-
-/**
- * Shutdown the threading system.
- *
- * If libgit2 has been built with GIT_THREADS
- * on, this function must be called before shutting
- * down the library.
- *
- * If libgit2 has been built without GIT_THREADS
- * support, this function is a no-op.
- */
-GIT_EXTERN(void) git_threads_shutdown(void);
-
-/**
  * Initialize the OpenSSL locks
  *
  * OpenSSL requires the application to determine how it performs
