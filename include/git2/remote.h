@@ -390,19 +390,6 @@ GIT_EXTERN(int) git_remote_fetch(
 		const char *reflog_message);
 
 /**
- *
- * Return whether the library supports a particular URL scheme
- *
- * Both the built-in and externally-registered transport lists are
- * searched for a transport which supports the scheme of the given
- * URL.
- *
- * @param url the url to check
- * @return 1 if the url is supported, 0 otherwise
-*/
-GIT_EXTERN(int) git_remote_supported_url(const char* url);
-
-/**
  * Get a list of the configured remotes for a repo
  *
  * The string array must be freed by the user.
