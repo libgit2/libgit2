@@ -1686,48 +1686,44 @@ static int rename_fetch_refspecs(git_vector *problems, git_remote *remote, const
 	return error;
 }
 
-int git_remote_rename(git_strarray *out, git_remote *remote, const char *new_name)
+int git_remote_rename(git_strarray *out, git_repository *repo, const char *name, const char *new_name)
 {
 	int error;
-	git_vector problem_refspecs;
-	char *tmp, *dup;
+	git_vector problem_refspecs = GIT_VECTOR_INIT;
+	git_remote *remote;
 
-	assert(out && remote && new_name);
+	assert(out && repo && name && new_name);
 
-	if (!remote->name) {
-		giterr_set(GITERR_INVALID, "Can't rename an anonymous remote.");
-		return GIT_EINVALIDSPEC;
-	}
+	if ((error = git_remote_load(&remote, repo, name)) < 0)
+		return -1;
 
 	if ((error = ensure_remote_name_is_valid(new_name)) < 0)
-		return error;
+		goto cleanup;
 
-	if ((error = ensure_remote_doesnot_exist(remote->repo, new_name)) < 0)
-		return error;
+	if ((error = ensure_remote_doesnot_exist(repo, new_name)) < 0)
+		goto cleanup;
 
-	if ((error = rename_remote_config_section(remote->repo, remote->name, new_name)) < 0)
-		return error;
+	if ((error = rename_remote_config_section(repo, name, new_name)) < 0)
+		goto cleanup;
 
-	if ((error = update_branch_remote_config_entry(remote->repo, remote->name, new_name)) < 0)
-		return error;
+	if ((error = update_branch_remote_config_entry(repo, name, new_name)) < 0)
+		goto cleanup;
 
-	if ((error = rename_remote_references(remote->repo, remote->name, new_name)) < 0)
-		return error;
+	if ((error = rename_remote_references(repo, name, new_name)) < 0)
+		goto cleanup;
 
 	if ((error = rename_fetch_refspecs(&problem_refspecs, remote, new_name)) < 0)
-		return error;
+		goto cleanup;
 
 	out->count = problem_refspecs.length;
 	out->strings = (char **) problem_refspecs.contents;
 
-	dup = git__strdup(new_name);
-	GITERR_CHECK_ALLOC(dup);
+cleanup:
+	if (error < 0)
+		git_vector_free(&problem_refspecs);
 
-	tmp = remote->name;
-	remote->name = dup;
-	git__free(tmp);
-
-	return 0;
+	git_remote_free(remote);
+	return error;
 }
 
 int git_remote_update_fetchhead(git_remote *remote)
