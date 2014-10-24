@@ -698,7 +698,6 @@ int git_config_file__ondisk(git_config_backend **out, const char *path)
 	backend->header.parent.del = config_delete;
 	backend->header.parent.del_multivar = config_delete_multivar;
 	backend->header.parent.iterator = config_iterator_new;
-	backend->header.parent.refresh = config_refresh;
 	backend->header.parent.snapshot = config_snapshot;
 	backend->header.parent.free = backend_free;
 
@@ -740,13 +739,6 @@ static int config_delete_readonly(git_config_backend *cfg, const char *name)
 {
 	GIT_UNUSED(cfg);
 	GIT_UNUSED(name);
-
-	return config_error_readonly();
-}
-
-static int config_refresh_readonly(git_config_backend *cfg)
-{
-	GIT_UNUSED(cfg);
 
 	return config_error_readonly();
 }
@@ -804,7 +796,6 @@ int git_config_file__snapshot(git_config_backend **out, diskfile_backend *in)
 	backend->header.parent.del = config_delete_readonly;
 	backend->header.parent.del_multivar = config_delete_multivar_readonly;
 	backend->header.parent.iterator = config_iterator_new;
-	backend->header.parent.refresh = config_refresh_readonly;
 	backend->header.parent.free = backend_readonly_free;
 
 	*out = (git_config_backend *)backend;

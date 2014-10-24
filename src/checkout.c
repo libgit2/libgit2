@@ -2038,8 +2038,7 @@ static int checkout_data_init(
 	if ((data->opts.checkout_strategy & GIT_CHECKOUT_NO_REFRESH) == 0) {
 		git_config *cfg;
 
-		if ((error = git_repository_config__weakptr(&cfg, repo)) < 0 ||
-			(error = git_config_refresh(cfg)) < 0)
+		if ((error = git_repository_config__weakptr(&cfg, repo)) < 0)
 			goto cleanup;
 
 		/* Get the repository index and reload it (unless we're checking
