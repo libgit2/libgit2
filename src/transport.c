@@ -212,15 +212,6 @@ done:
 	return error;
 }
 
-int git_remote_supported_url(const char* url)
-{
-	git_transport_cb fn;
-	void *param;
-
-	/* The only error we expect is ENOTFOUND */
-	return !transport_find_fn(&fn, url, &param);
-}
-
 int git_transport_init(git_transport *opts, unsigned int version)
 {
 	GIT_INIT_STRUCTURE_FROM_TEMPLATE(

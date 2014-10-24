@@ -46,6 +46,9 @@ v0.21 + 1
 * git_remote_delete() now accepts the repository and the remote's name
   instead of a loaded remote.
 
+* git_remote_supported_url() has been removed as it has become
+  essentially useless with rsync-style ssh paths.
+
 * The git_clone_options struct no longer provides the ignore_cert_errors or
   remote_name members for remote customization.
 

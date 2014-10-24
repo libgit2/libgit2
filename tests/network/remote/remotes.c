@@ -91,26 +91,6 @@ void test_network_remote_remotes__error_when_no_push_available(void)
 	git_remote_free(r);
 }
 
-void test_network_remote_remotes__supported_urls(void)
-{
-	int ssh_supported = 0, https_supported = 0;
-
-#ifdef GIT_SSH
-	ssh_supported = 1;
-#endif
-
-#if defined(GIT_SSL) || defined(GIT_WINHTTP)
-	https_supported = 1;
-#endif
-
-	cl_assert(git_remote_supported_url("git://github.com/libgit2/libgit2"));
-	cl_assert(git_remote_supported_url("http://github.com/libgit2/libgit2"));
-
-	cl_assert_equal_i(ssh_supported, git_remote_supported_url("git@github.com:libgit2/libgit2.git"));
-	cl_assert_equal_i(ssh_supported, git_remote_supported_url("ssh://git@github.com/libgit2/libgit2.git"));
-	cl_assert_equal_i(https_supported, git_remote_supported_url("https://github.com/libgit2/libgit2.git"));
-}
-
 void test_network_remote_remotes__refspec_parsing(void)
 {
 	cl_assert_equal_s(git_refspec_src(_refspec), "refs/heads/*");
