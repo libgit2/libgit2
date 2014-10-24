@@ -544,18 +544,21 @@ GIT_EXTERN(void) git_remote_set_autotag(
  * The new name will be checked for validity.
  * See `git_tag_create()` for rules about valid names.
  *
- * A temporary in-memory remote cannot be given a name with this method.
+ * No loaded instances of a the remote with the old name will change
+ * their name or their list of refspecs.
  *
  * @param problems non-default refspecs cannot be renamed and will be
  * stored here for further processing by the caller. Always free this
  * strarray on succesful return.
- * @param remote the remote to rename
+ * @param repo the repository in which to rename
+ * @param name the current name of the reamote
  * @param new_name the new name the remote should bear
  * @return 0, GIT_EINVALIDSPEC, GIT_EEXISTS or an error code
  */
 GIT_EXTERN(int) git_remote_rename(
 	git_strarray *problems,
-	git_remote *remote,
+	git_repository *repo,
+	const char *name,
 	const char *new_name);
 
 /**

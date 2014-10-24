@@ -94,12 +94,10 @@ void test_submodule_add__url_relative(void)
 	g_repo = cl_git_sandbox_init("testrepo2");
 
 	/* make sure we don't default to origin - rename origin -> test_remote */
-	cl_git_pass(git_remote_load(&remote, g_repo, "origin"));
-	cl_git_pass(git_remote_rename(&problems, remote, "test_remote"));
+	cl_git_pass(git_remote_rename(&problems, g_repo, "origin", "test_remote"));
 	cl_assert_equal_i(0, problems.count);
 	git_strarray_free(&problems);
 	cl_git_fail(git_remote_load(&remote, g_repo, "origin"));
-	git_remote_free(remote);
 
 	cl_git_pass(
 		git_submodule_add_setup(&sm, g_repo, "../TestGitRepository", "TestGitRepository", 1)
