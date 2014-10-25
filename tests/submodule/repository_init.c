@@ -35,6 +35,7 @@ void test_submodule_repository_init__basic(void)
 	cl_assert(git_path_isfile("submod2/.git/modules/" "sm_gitmodules_only" "/HEAD"));
 
 	git_config_free(cfg);
+	git_submodule_free(sm);
 	git_repository_free(repo);
 	git_buf_free(&dot_git_content);
 }
