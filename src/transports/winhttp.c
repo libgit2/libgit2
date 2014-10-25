@@ -238,6 +238,50 @@ static int certificate_check(winhttp_stream *s, int valid)
 	return error;
 }
 
+static int get_wpad_proxy(winhttp_stream *s, const wchar_t * autoconfig_url, WINHTTP_PROXY_INFO * proxy_info, DWORD ignore_error)
+{
+	/* Web Proxy Auto-Discovery (WPAD) protocol */
+	winhttp_subtransport *t = OWNING_SUBTRANSPORT(s);
+	git_buf buf = GIT_BUF_INIT;
+	wchar_t * url;
+	WINHTTP_AUTOPROXY_OPTIONS autoProxyOptions = { 0 };
+	autoProxyOptions.lpszAutoConfigUrl = autoconfig_url;
+	autoProxyOptions.dwFlags = WINHTTP_AUTOPROXY_CONFIG_URL;
+	autoProxyOptions.fAutoLogonIfChallenged = TRUE;
+	if (!autoconfig_url) {
+		autoProxyOptions.dwFlags = WINHTTP_AUTOPROXY_AUTO_DETECT;
+		autoProxyOptions.dwAutoDetectFlags = WINHTTP_AUTO_DETECT_TYPE_DHCP | WINHTTP_AUTO_DETECT_TYPE_DNS_A;
+	}
+
+	/* Prepare URL */
+	if (t->connection_data.use_ssl)
+		git_buf_puts(&buf, prefix_https);
+	else
+		git_buf_puts(&buf, prefix_http);
+
+	git_buf_printf(&buf, "%s:%s%s%s", t->connection_data.host, t->connection_data.port, t->connection_data.path, s->service_url);
+
+	if (git_buf_oom(&buf))
+		return -1;
+
+	/* Convert URL to wide characters */
+	if (git__utf8_to_16_alloc(&url, git_buf_cstr(&buf)) < 0) {
+		giterr_set(GITERR_OS, "Failed to convert string to wide form");
+		git_buf_free(&buf);
+		return -1;
+	}
+
+	if (!WinHttpGetProxyForUrl(t->session, url, &autoProxyOptions, proxy_info) && (GetLastError() & ignore_error) == 0) {
+		giterr_set(GITERR_OS, "Failed to retrieve WPAD proxy configuration");
+		git_buf_free(&buf);
+		git__free(url);
+		return -1;
+	}
+	git_buf_free(&buf);
+	git__free(url);
+	return 0;
+}
+
 static int winhttp_stream_connect(winhttp_stream *s)
 {
 	winhttp_subtransport *t = OWNING_SUBTRANSPORT(s);
@@ -335,16 +379,37 @@ static int winhttp_stream_connect(winhttp_stream *s)
 				giterr_set(GITERR_OS, "Failed to retrieve the Internet Explorer proxy configuration for the current user");
 				goto on_error;
 			}
-			if (current_user_ie_proxy_config.lpszProxy) {
+
+			/* first try full WPAD auto-configuration, if it succeeds, take it, if not, try next proxy autodetection step */
+			if (current_user_ie_proxy_config.fAutoDetect) {
+				if (get_wpad_proxy(s, NULL, &proxy_info, ERROR_WINHTTP_UNABLE_TO_DOWNLOAD_SCRIPT) < 0) {
+					if (current_user_ie_proxy_config.lpszAutoConfigUrl)
+						GlobalFree(current_user_ie_proxy_config.lpszAutoConfigUrl);
+					if (current_user_ie_proxy_config.lpszProxy)
+						GlobalFree(current_user_ie_proxy_config.lpszProxy);
+					if (current_user_ie_proxy_config.lpszProxyBypass)
+						GlobalFree(current_user_ie_proxy_config.lpszProxyBypass);
+					goto on_error;
+				}
+			}
+			if (proxy_info.dwAccessType == WINHTTP_ACCESS_TYPE_DEFAULT_PROXY && current_user_ie_proxy_config.lpszAutoConfigUrl) {
+				if (get_wpad_proxy(s, current_user_ie_proxy_config.lpszAutoConfigUrl, &proxy_info, 0)) {
+					if (current_user_ie_proxy_config.lpszAutoConfigUrl)
+						GlobalFree(current_user_ie_proxy_config.lpszAutoConfigUrl);
+					if (current_user_ie_proxy_config.lpszProxy)
+						GlobalFree(current_user_ie_proxy_config.lpszProxy);
+					if (current_user_ie_proxy_config.lpszProxyBypass)
+						GlobalFree(current_user_ie_proxy_config.lpszProxyBypass);
+					goto on_error;
+				}
+			}
+			if (current_user_ie_proxy_config.lpszAutoConfigUrl)
+				GlobalFree(current_user_ie_proxy_config.lpszAutoConfigUrl);
+			if (proxy_info.dwAccessType == WINHTTP_ACCESS_TYPE_DEFAULT_PROXY) {
 				proxy_info.dwAccessType = WINHTTP_ACCESS_TYPE_NAMED_PROXY;
 				proxy_info.lpszProxy = current_user_ie_proxy_config.lpszProxy;
 				proxy_info.lpszProxyBypass = current_user_ie_proxy_config.lpszProxyBypass;
-				if (current_user_ie_proxy_config.lpszAutoConfigUrl)
-					GlobalFree(current_user_ie_proxy_config.lpszAutoConfigUrl);
 			} else {
-				/* Web Proxy Auto-Discovery (WPAD) protocol not supported so far */
-				if (current_user_ie_proxy_config.lpszAutoConfigUrl)
-					GlobalFree(current_user_ie_proxy_config.lpszAutoConfigUrl);
 				if (current_user_ie_proxy_config.lpszProxy)
 					GlobalFree(current_user_ie_proxy_config.lpszProxy);
 				if (current_user_ie_proxy_config.lpszProxyBypass)
