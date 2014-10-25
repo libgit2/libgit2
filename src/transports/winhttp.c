@@ -362,7 +362,7 @@ static int winhttp_stream_connect(winhttp_stream *s)
 		}
 
 		git__free(proxy_wide);
-	} else {
+	} else if (0 == 1) { // TODO: How to enable this?!
 		/* try to detect default WinHTTP proxy */
 		WINHTTP_PROXY_INFO proxy_info;
 		
