@@ -37,6 +37,7 @@ void test_config_snapshot__create_snapshot(void)
 	cl_git_pass(git_config_get_int32(&tmp, snapshot, "old.value"));
 	cl_assert_equal_i(5, tmp);
 	
+	git_config_free(new_snapshot);
 	git_config_free(snapshot);
 	git_config_free(cfg);
 }
