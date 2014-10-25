@@ -63,8 +63,12 @@ void openssl_locking_function(int mode, int n, const char *file, int line)
 		git_mutex_unlock(&openssl_locks[n]);
 	}
 }
-#endif
 
+static void shutdown_ssl(void)
+{
+	git__free(openssl_locks);
+}
+#endif
 
 static void init_ssl(void)
 {
@@ -112,6 +116,8 @@ static void init_ssl(void)
 
 		CRYPTO_set_locking_callback(openssl_locking_function);
 	}
+
+	git__on_shutdown(shutdown_ssl);
 # endif
 #endif
 }
