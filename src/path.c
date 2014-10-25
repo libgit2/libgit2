@@ -1198,7 +1198,9 @@ int git_path_dirload_with_stat(
 
 			if (error == GIT_ENOTFOUND) {
 				/* file was removed between readdir and lstat */
+				char *entry_path = git_vector_get(contents, i);
 				git_vector_remove(contents, i--);
+				git__free(entry_path);
 			} else {
 				/* Treat the file as unreadable if we get any other error */
 				memset(&ps->st, 0, sizeof(ps->st));
@@ -1215,8 +1217,9 @@ int git_path_dirload_with_stat(
 			ps->path[ps->path_len] = '\0';
 		}
 		else if (!S_ISREG(ps->st.st_mode) && !S_ISLNK(ps->st.st_mode)) {
-			/* skip everything but dirs, plain files, and symlinks */
+			char *entry_path = git_vector_get(contents, i);
 			git_vector_remove(contents, i--);
+			git__free(entry_path);
 		}
 	}
 
