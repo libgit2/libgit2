@@ -54,11 +54,13 @@ out a way to help you.
 
 ## Pull Requests
 
-Our work flow is a [typical GitHub flow](https://guides.github.com/introduction/flow/index.html),
-where contributors fork the [libgit2 repository](https://github.com/libgit2/libgit2),
+Our work flow is a [typical GitHub
+flow](https://guides.github.com/introduction/flow/index.html), where
+contributors fork the [libgit2 repository](https://github.com/libgit2/libgit2),
 make their changes on branch, and submit a
-[Pull Request](https://help.github.com/articles/using-pull-requests) (a.k.a. "PR").
-Pull requests should usually be targeted at the `master` branch.
+[Pull Request](https://help.github.com/articles/using-pull-requests)
+(a.k.a. "PR").  Pull requests should usually be targeted at the `master`
+branch.
 
 Life will be a lot easier for you (and us) if you follow this pattern
 (i.e. fork, named branch, submit PR).  If you use your fork's `master`
@@ -77,10 +79,31 @@ also let others know that you are currently working on something.
 
 Before wrapping up a PR, you should be sure to:
 
-* Write tests to cover any functional changes (ideally tests that would
-  have failed before the PR and now pass)
+* Write tests to cover any functional changes
 * Update documentation for any changed public APIs
 * Add to the [`CHANGELOG.md`](CHANGELOG.md) file describing any major changes
+
+## Unit Tests
+
+We believe that our unit tests allow us to keep the quality of libgit2
+high: any new changes must not cause unit test failures, and new changes
+should include unit tests that cover the bug fixes or new features.
+For bug fixes, we prefer unit tests that illustrate the failure before
+the change, but pass with your changes.
+
+In addition to new tests, please ensure that your changes do not cause
+any other test failures.  Running the entire test suite is helpful
+before you submit a pull request.  When you build libgit2, the test
+suite will also be built.  You can run all tests by simply running
+the resultant `libgit2_clar` binary.  If you want to run a specific
+unit test, you can name it with the `-s` option.  For example:
+
+    libgit2_clar -sstatus::worktree::long_filenames
+
+Or you can run an entire class of tests.  For example, to run all the
+worktree status tests:
+
+    libgit2_clar -sstatus::worktree
 
 ## Porting Code From Other Open-Source Projects
 
@@ -114,9 +137,10 @@ function and type naming, code formatting, and testing.
 
 We like to keep the source code consistent and easy to read.  Maintaining
 this takes some discipline, but it's been more than worth it.  Take a look
-at the
-[conventions file](https://github.com/libgit2/libgit2/blob/development/CONVENTIONS.md).
+at the [conventions
+file](https://github.com/libgit2/libgit2/blob/development/CONVENTIONS.md).
 
 ## Starter Projects
 
-See our [projects list](https://github.com/libgit2/libgit2/blob/development/PROJECTS.md).
+See our [projects
+list](https://github.com/libgit2/libgit2/blob/development/PROJECTS.md).
