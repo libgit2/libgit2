@@ -607,10 +607,7 @@ static int send_request(winhttp_stream *s, size_t len, int ignore_length)
 	if (!request_failed)
 		return 0;
 
-	ignore_flags =
-		SECURITY_FLAG_IGNORE_CERT_CN_INVALID |
-		SECURITY_FLAG_IGNORE_CERT_DATE_INVALID |
-		SECURITY_FLAG_IGNORE_UNKNOWN_CA;
+	ignore_flags = no_check_cert_flags;
 	
 	if (!WinHttpSetOption(s->request, WINHTTP_OPTION_SECURITY_FLAGS, &ignore_flags, sizeof(ignore_flags))) {
 		giterr_set(GITERR_OS, "failed to set security options");
