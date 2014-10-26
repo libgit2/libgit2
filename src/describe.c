@@ -571,8 +571,6 @@ static int describe(
 		}
 	}
 
-	best = (struct possible_tag *)git_vector_get(&all_matches, 0);
-
 	git_vector_sort(&all_matches);
 
 	best = (struct possible_tag *)git_vector_get(&all_matches, 0);

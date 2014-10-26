@@ -949,8 +949,6 @@ find_best_matches:
 	 * Rewrite the diffs with renames / copies
 	 */
 
-	tried_tgts = 0;
-
 	git_vector_foreach(&diff->deltas, t, tgt) {
 		/* skip things that are not rename targets */
 		if ((tgt->flags & GIT_DIFF_FLAG__IS_RENAME_TARGET) == 0)
