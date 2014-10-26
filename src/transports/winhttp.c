@@ -161,6 +161,9 @@ static int fallback_cred_acquire_cb(
 {
 	int error = 1;
 
+	GIT_UNUSED(username_from_url);
+	GIT_UNUSED(payload);
+
 	/* If the target URI supports integrated Windows authentication
 	 * as an authentication mechanism */
 	if (GIT_CREDTYPE_DEFAULT & allowed_types) {
@@ -501,10 +504,11 @@ static int winhttp_connect(
 	wchar_t *ua = L"git/1.0 (libgit2 " WIDEN(LIBGIT2_VERSION) L")";
 	wchar_t *wide_host;
 	int32_t port;
-	const char *default_port = "80";
 	int error = -1;
 	int default_timeout = TIMEOUT_INFINITE;
 	int default_connect_timeout = DEFAULT_CONNECT_TIMEOUT;
+
+	GIT_UNUSED(url);
 
 	/* Prepare port */
 	if (git__strtol32(&port, t->connection_data.port, NULL, 10) < 0)
@@ -557,8 +561,6 @@ on_error:
 
 static int do_send_request(winhttp_stream *s, size_t len, int ignore_length)
 {
-	int request_failed = 0, cert_valid = 1, error = 0;
-
 	if (ignore_length) {
 		if (!WinHttpSendRequest(s->request,
 			WINHTTP_NO_ADDITIONAL_HEADERS, 0,
@@ -607,10 +609,7 @@ static int send_request(winhttp_stream *s, size_t len, int ignore_length)
 	if (!request_failed)
 		return 0;
 
-	ignore_flags =
-		SECURITY_FLAG_IGNORE_CERT_CN_INVALID |
-		SECURITY_FLAG_IGNORE_CERT_DATE_INVALID |
-		SECURITY_FLAG_IGNORE_UNKNOWN_CA;
+	ignore_flags = no_check_cert_flags;
 	
 	if (!WinHttpSetOption(s->request, WINHTTP_OPTION_SECURITY_FLAGS, &ignore_flags, sizeof(ignore_flags))) {
 		giterr_set(GITERR_OS, "failed to set security options");
@@ -650,7 +649,6 @@ replay:
 		DWORD status_code, status_code_length, content_type_length, bytes_written;
 		char expected_content_type_8[MAX_CONTENT_TYPE_LEN];
 		wchar_t expected_content_type[MAX_CONTENT_TYPE_LEN], content_type[MAX_CONTENT_TYPE_LEN];
-		int request_failed = 0, cert_valid = 1;
 
 		if (!s->sent_request) {
 
