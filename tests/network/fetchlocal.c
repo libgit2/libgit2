@@ -135,6 +135,7 @@ void test_network_fetchlocal__multi_remotes(void)
 	git_strarray refnames = {0};
 	git_remote_callbacks callbacks = GIT_REMOTE_CALLBACKS_INIT;
 
+	cl_set_cleanup(&cleanup_sandbox, NULL);
 	callbacks.transfer_progress = transfer_cb;
 	cl_git_pass(git_remote_load(&test, repo, "test"));
 	cl_git_pass(git_remote_set_url(test, cl_git_fixture_url("testrepo.git")));
@@ -159,5 +160,4 @@ void test_network_fetchlocal__multi_remotes(void)
 	git_strarray_free(&refnames);
 	git_remote_free(test);
 	git_remote_free(test2);
-	git_repository_free(repo);
 }
