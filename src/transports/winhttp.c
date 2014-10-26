@@ -161,6 +161,9 @@ static int fallback_cred_acquire_cb(
 {
 	int error = 1;
 
+	GIT_UNUSED(username_from_url);
+	GIT_UNUSED(payload);
+
 	/* If the target URI supports integrated Windows authentication
 	 * as an authentication mechanism */
 	if (GIT_CREDTYPE_DEFAULT & allowed_types) {
@@ -504,6 +507,8 @@ static int winhttp_connect(
 	int error = -1;
 	int default_timeout = TIMEOUT_INFINITE;
 	int default_connect_timeout = DEFAULT_CONNECT_TIMEOUT;
+
+	GIT_UNUSED(url);
 
 	/* Prepare port */
 	if (git__strtol32(&port, t->connection_data.port, NULL, 10) < 0)
