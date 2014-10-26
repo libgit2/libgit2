@@ -107,3 +107,8 @@ v0.21 + 1
 
 * The THREADSAFE option to build libgit2 with threading support has
   been flipped to be on by default.
+
+* The context_lines and interhunk_lines fields in git_diff_options are
+  now uint32_t instead of uint16_t. This allows to set them to UINT_MAX,
+  in effect asking for "infinite" context e.g. to iterate over all the
+  unmodified lines of a diff.

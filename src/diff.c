@@ -439,7 +439,7 @@ static int diff_list_apply_options(
 	/* If not given explicit `opts`, check `diff.xyz` configs */
 	if (!opts) {
 		int context = git_config__get_int_force(cfg, "diff.context", 3);
-		diff->opts.context_lines = context >= 0 ? (uint16_t)context : 3;
+		diff->opts.context_lines = context >= 0 ? (uint32_t)context : 3;
 
 		/* add other defaults here */
 	}
