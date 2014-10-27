@@ -108,6 +108,8 @@ extern int p_creat(const char *path, mode_t mode);
 extern int p_getcwd(char *buffer_out, size_t size);
 extern int p_rename(const char *from, const char *to);
 
+extern int git__page_size(size_t *page_size);
+
 /**
  * Platform-dependent methods
  */
