@@ -146,6 +146,7 @@ void test_network_fetchlocal__multi_remotes(void)
 
 	cl_git_pass(git_reference_list(&refnames, repo));
 	cl_assert_equal_i(32, (int)refnames.count);
+	git_strarray_free(&refnames);
 
 	cl_git_pass(git_remote_load(&test2, repo, "test_with_pushurl"));
 	cl_git_pass(git_remote_set_url(test2, cl_git_fixture_url("testrepo.git")));
