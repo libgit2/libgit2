@@ -1105,7 +1105,6 @@ int git_packfile_alloc(struct git_pack_file **pack_out, const char *path)
 			p->pack_keep = 1;
 
 		memcpy(p->pack_name + root_len, ".pack", sizeof(".pack"));
-		path_len = path_len - strlen(".idx") + strlen(".pack");
 	}
 
 	if (p_stat(p->pack_name, &st) < 0 || !S_ISREG(st.st_mode)) {

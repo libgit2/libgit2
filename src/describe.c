@@ -571,8 +571,6 @@ static int describe(
 		}
 	}
 
-	best = (struct possible_tag *)git_vector_get(&all_matches, 0);
-
 	git_vector_sort(&all_matches);
 
 	best = (struct possible_tag *)git_vector_get(&all_matches, 0);
@@ -727,7 +725,7 @@ int git_describe_workdir(
 	git_oid current_id;
 	git_status_list *status = NULL;
 	git_status_options status_opts = GIT_STATUS_OPTIONS_INIT;
-	git_describe_result *result;
+	git_describe_result *result = NULL;
 	git_object *commit;
 
 	if ((error = git_reference_name_to_id(&current_id, repo, GIT_HEAD_FILE)) < 0)

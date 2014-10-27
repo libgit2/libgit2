@@ -211,7 +211,7 @@ int git_oid_ncmp(const git_oid *oid_a, const git_oid *oid_b, size_t len)
 
 int git_oid_strcmp(const git_oid *oid_a, const char *str)
 {
-	const unsigned char *a = oid_a->id;
+	const unsigned char *a;
 	unsigned char strval;
 	int hexval;
 

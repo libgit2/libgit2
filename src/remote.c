@@ -1691,7 +1691,7 @@ int git_remote_rename(git_strarray *out, git_repository *repo, const char *name,
 {
 	int error;
 	git_vector problem_refspecs = GIT_VECTOR_INIT;
-	git_remote *remote;
+	git_remote *remote = NULL;
 
 	assert(out && repo && name && new_name);
 
