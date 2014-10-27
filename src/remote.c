@@ -116,9 +116,9 @@ static int get_check_cert(int *out, git_repository *repo)
 
 static int canonicalize_url(git_buf *out, const char *in)
 {
+#ifdef GIT_WIN32
 	const char *c;
 
-#ifdef GIT_WIN32
 	/* Given a UNC path like \\server\path, we need to convert this
 	 * to //server/path for compatibility with core git.
 	 */
@@ -1255,6 +1255,7 @@ static int opportunistic_updates(const git_remote *remote, git_vector *refs, con
 
 		error = git_reference_create(&ref, remote->repo, refname.ptr, &head->oid, true, sig, msg);
 		git_buf_free(&refname);
+		git_reference_free(ref);
 
 		if (error < 0)
 			return error;

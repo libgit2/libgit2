@@ -171,6 +171,7 @@ void test_revwalk_mergebase__multiple_merge_bases_many_commits(void)
 	cl_assert_equal_oid(&expected2, &result.ids[1]);
 
 	git_oidarray_free(&result);
+	git__free(input);
 }
 
 void test_revwalk_mergebase__no_off_by_one_missing(void)

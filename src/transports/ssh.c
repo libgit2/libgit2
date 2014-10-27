@@ -457,30 +457,34 @@ static int _git_ssh_setup_conn(
 	LIBSSH2_SESSION* session=NULL;
 	LIBSSH2_CHANNEL* channel=NULL;
 
+	t->current_stream = NULL;
+
 	*stream = NULL;
 	if (ssh_stream_alloc(t, url, cmd, stream) < 0)
 		return -1;
 
 	s = (ssh_stream *)*stream;
+	s->session = NULL;
+	s->channel = NULL;
 
 	if (!git__prefixcmp(url, prefix_ssh)) {
 		if ((error = gitno_extract_url_parts(&host, &port, &path, &user, &pass, url, default_port)) < 0)
-			goto on_error;
+			goto done;
 	} else {
 		if ((error = git_ssh_extract_url_parts(&host, &user, url)) < 0)
-			goto on_error;
+			goto done;
 		port = git__strdup(default_port);
 		GITERR_CHECK_ALLOC(port);
 	}
 
 	if ((error = gitno_connect(&s->socket, host, port, 0)) < 0)
-		goto on_error;
+		goto done;
 
 	if ((error = _git_ssh_session_create(&session, s->socket)) < 0)
-		goto on_error;
+		goto done;
 
 	if (t->owner->certificate_check_cb != NULL) {
-		git_cert_hostkey cert = { 0 };
+		git_cert_hostkey cert = { 0 }, *cert_ptr;
 		const char *key;
 
 		cert.cert_type = GIT_CERT_HOSTKEY_LIBSSH2;
@@ -499,37 +503,41 @@ static int _git_ssh_setup_conn(
 
 		if (cert.type == 0) {
 			giterr_set(GITERR_SSH, "unable to get the host key");
-			return -1;
+			error = -1;
+			goto done;
 		}
 
 		/* We don't currently trust any hostkeys */
 		giterr_clear();
-		error = t->owner->certificate_check_cb((git_cert *) &cert, 0, host, t->owner->message_cb_payload);
+
+		cert_ptr = &cert;
+
+		error = t->owner->certificate_check_cb((git_cert *) cert_ptr, 0, host, t->owner->message_cb_payload);
 		if (error < 0) {
 			if (!giterr_last())
 				giterr_set(GITERR_NET, "user cancelled hostkey check");
 
-			goto on_error;
+			goto done;
 		}
-        }
+	}
 
 	/* we need the username to ask for auth methods */
 	if (!user) {
 		if ((error = request_creds(&cred, t, NULL, GIT_CREDTYPE_USERNAME)) < 0)
-			goto on_error;
+			goto done;
 
 		user = git__strdup(((git_cred_username *) cred)->username);
 		cred->free(cred);
 		cred = NULL;
 		if (!user)
-			goto on_error;
+			goto done;
 	} else if (user && pass) {
 		if ((error = git_cred_userpass_plaintext_new(&cred, user, pass)) < 0)
-			goto on_error;
+			goto done;
 	}
 
 	if ((error = list_auth_methods(&auth_methods, session, user)) < 0)
-		goto on_error;
+		goto done;
 
 	error = GIT_EAUTH;
 	/* if we already have something to try */
@@ -543,25 +551,25 @@ static int _git_ssh_setup_conn(
 		}
 
 		if ((error = request_creds(&cred, t, user, auth_methods)) < 0)
-			goto on_error;
+			goto done;
 
 		if (strcmp(user, git_cred__username(cred))) {
 			giterr_set(GITERR_SSH, "username does not match previous request");
 			error = -1;
-			goto on_error;
+			goto done;
 		}
 
 		error = _git_ssh_authenticate_session(session, cred);
 	}
 
 	if (error < 0)
-		goto on_error;
+		goto done;
 
 	channel = libssh2_channel_open_session(session);
 	if (!channel) {
 		error = -1;
 		ssh_error(session, "Failed to open SSH channel");
-		goto on_error;
+		goto done;
 	}
 
 	libssh2_channel_set_blocking(channel, 1);
@@ -570,6 +578,16 @@ static int _git_ssh_setup_conn(
 	s->channel = channel;
 
 	t->current_stream = s;
+
+done:
+	if (error < 0) {
+		if (*stream)
+			ssh_stream_free(*stream);
+
+		if (session)
+			libssh2_session_free(session);
+	}
+
 	if (cred)
 		cred->free(cred);
 
@@ -578,27 +596,6 @@ static int _git_ssh_setup_conn(
 	git__free(path);
 	git__free(user);
 	git__free(pass);
-
-	return 0;
-
-on_error:
-	s->session = NULL;
-	s->channel = NULL;
-	t->current_stream = NULL;
-
-	if (*stream)
-		ssh_stream_free(*stream);
-
-	if (cred)
-		cred->free(cred);
-
-	git__free(host);
-	git__free(port);
-	git__free(user);
-	git__free(pass);
-
-	if (session)
-		libssh2_session_free(session);
 
 	return error;
 }

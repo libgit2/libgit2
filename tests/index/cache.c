@@ -170,6 +170,8 @@ void test_index_cache__two_levels(void)
 	tree_cache = git_tree_cache_get(index->tree, "subdir");
 	cl_assert(tree_cache);
 	cl_assert_equal_i(1, tree_cache->entry_count);
+
+	git_index_free(index);
 }
 
 void test_index_cache__read_tree_children(void)

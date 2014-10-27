@@ -397,7 +397,7 @@ static int show_suffix(
 	const git_oid* id,
 	size_t abbrev_size)
 {
-	int error, size;
+	int error, size = 0;
 
 	char hex_oid[GIT_OID_HEXSZ];
 
@@ -818,7 +818,8 @@ int git_describe_format(git_buf *out, const git_describe_result *result, const g
 	/* If we didn't find *any* tags, we fall back to the commit's id */
 	if (result->fallback_to_id) {
 		char hex_oid[GIT_OID_HEXSZ + 1] = {0};
-		int size;
+		int size = 0;
+
 		if ((error = find_unique_abbrev_size(
 			     &size, repo, &result->commit_id, opts.abbreviated_size)) < 0)
 			return -1;
