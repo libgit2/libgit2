@@ -24,7 +24,7 @@ INCLUDE(AddCFlagIfSupported)
 #
 OPTION( SONAME				"Set the (SO)VERSION of the target"		ON  )
 OPTION( BUILD_SHARED_LIBS	"Build Shared Library (OFF for Static)"	ON  )
-OPTION( THREADSAFE			"Build libgit2 as threadsafe"			OFF )
+OPTION( THREADSAFE			"Build libgit2 as threadsafe"			ON )
 OPTION( BUILD_CLAR			"Build Tests using the Clar suite"		ON  )
 OPTION( BUILD_EXAMPLES		"Build library usage example apps"		OFF )
 OPTION( TAGS				"Generate tags"							OFF )
