@@ -68,7 +68,7 @@ void test_network_fetchlocal__prune(void)
 	cl_git_pass(git_remote_create(&origin, repo, GIT_REMOTE_ORIGIN, url));
 	git_remote_set_callbacks(origin, &callbacks);
 	cl_git_pass(git_remote_connect(origin, GIT_DIRECTION_FETCH));
-	cl_git_pass(git_remote_download(origin));
+	cl_git_pass(git_remote_download(origin, NULL));
 	cl_git_pass(git_remote_update_tips(origin, NULL, NULL));
 
 	cl_git_pass(git_reference_list(&refnames, repo));
@@ -84,7 +84,7 @@ void test_network_fetchlocal__prune(void)
 	cl_git_pass(git_remote_load(&origin, repo, GIT_REMOTE_ORIGIN));
 	git_remote_set_callbacks(origin, &callbacks);
 	cl_git_pass(git_remote_connect(origin, GIT_DIRECTION_FETCH));
-	cl_git_pass(git_remote_download(origin));
+	cl_git_pass(git_remote_download(origin, NULL));
 	cl_git_pass(git_remote_prune(origin));
 	cl_git_pass(git_remote_update_tips(origin, NULL, NULL));
 
@@ -100,7 +100,7 @@ void test_network_fetchlocal__prune(void)
 	cl_git_pass(git_remote_load(&origin, repo, GIT_REMOTE_ORIGIN));
 	git_remote_set_callbacks(origin, &callbacks);
 	cl_git_pass(git_remote_connect(origin, GIT_DIRECTION_FETCH));
-	cl_git_pass(git_remote_download(origin));
+	cl_git_pass(git_remote_download(origin, NULL));
 	cl_git_pass(git_remote_prune(origin));
 	cl_git_pass(git_remote_update_tips(origin, NULL, NULL));
 
@@ -133,7 +133,7 @@ void test_network_fetchlocal__fetchprune(void)
 
 	cl_git_pass(git_remote_create(&origin, repo, GIT_REMOTE_ORIGIN, url));
 	git_remote_set_callbacks(origin, &callbacks);
-	cl_git_pass(git_remote_fetch(origin, NULL, NULL));
+	cl_git_pass(git_remote_fetch(origin, NULL, NULL, NULL));
 
 	cl_git_pass(git_reference_list(&refnames, repo));
 	cl_assert_equal_i(19, (int)refnames.count);
@@ -148,7 +148,7 @@ void test_network_fetchlocal__fetchprune(void)
 	cl_git_pass(git_remote_load(&origin, repo, GIT_REMOTE_ORIGIN));
 	git_remote_set_prune_refs(origin, 1);
 	git_remote_set_callbacks(origin, &callbacks);
-	cl_git_pass(git_remote_fetch(origin, NULL, NULL));
+	cl_git_pass(git_remote_fetch(origin, NULL, NULL, NULL));
 
 	cl_git_pass(git_reference_list(&refnames, repo));
 	cl_assert_equal_i(18, (int)refnames.count);
@@ -165,7 +165,7 @@ void test_network_fetchlocal__fetchprune(void)
 	cl_git_pass(git_remote_load(&origin, repo, GIT_REMOTE_ORIGIN));
 	cl_assert_equal_i(1, git_remote_prune_refs(origin));
 	git_remote_set_callbacks(origin, &callbacks);
-	cl_git_pass(git_remote_fetch(origin, NULL, NULL));
+	cl_git_pass(git_remote_fetch(origin, NULL, NULL, NULL));
 
 	cl_git_pass(git_reference_list(&refnames, repo));
 	cl_assert_equal_i(17, (int)refnames.count);
