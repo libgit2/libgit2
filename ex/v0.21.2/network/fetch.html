@@ -16,12 +16,11 @@
     Jump To &hellip;
     <div id="jump_wrapper">
       <div id="jump_page">
-        <a class="source" href="../../#HEAD">API Docs</a>
+        <a class="source" href="../../#v0.21.2">API Docs</a>
           <a class="source" href="../add.html">add.c</a>
           <a class="source" href="../blame.html">blame.c</a>
           <a class="source" href="../cat-file.html">cat-file.c</a>
           <a class="source" href="../common.html">common.c</a>
-          <a class="source" href="../describe.html">describe.c</a>
           <a class="source" href="../diff.html">diff.c</a>
           <a class="source" href="../for-each-ref.html">for-each-ref.c</a>
           <a class="source" href="../general.html">general.c</a>
@@ -95,7 +94,7 @@
 information from it.</p>
       </td>
       <td class=code>
-        <div class='highlight'><pre>  <span class="k">if</span> <span class="p">(</span><span class="n"><a name="git_remote_connect-6" class="fnlink" href="../../#HEAD/group/remote/git_remote_connect">git_remote_connect</a></span><span class="p">(</span><span class="n">data</span><span class="o">-&gt;</span><span class="n">remote</span><span class="p">,</span> <span class="n">GIT_DIRECTION_FETCH</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+        <div class='highlight'><pre>  <span class="k">if</span> <span class="p">(</span><span class="n"><a name="git_remote_connect-6" class="fnlink" href="../../#v0.21.2/group/remote/git_remote_connect">git_remote_connect</a></span><span class="p">(</span><span class="n">data</span><span class="o">-&gt;</span><span class="n">remote</span><span class="p">,</span> <span class="n">GIT_DIRECTION_FETCH</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
     <span class="n">data</span><span class="o">-&gt;</span><span class="n">ret</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
     <span class="k">goto</span> <span class="n">exit</span><span class="p">;</span>
   <span class="p">}</span></pre></div>
@@ -111,7 +110,7 @@ amount of received data and the indexer stats which lets you
 inform the user about progress.</p>
       </td>
       <td class=code>
-        <div class='highlight'><pre>  <span class="k">if</span> <span class="p">(</span><span class="n"><a name="git_remote_download-7" class="fnlink" href="../../#HEAD/group/remote/git_remote_download">git_remote_download</a></span><span class="p">(</span><span class="n">data</span><span class="o">-&gt;</span><span class="n">remote</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+        <div class='highlight'><pre>  <span class="k">if</span> <span class="p">(</span><span class="n"><a name="git_remote_download-7" class="fnlink" href="../../#v0.21.2/group/remote/git_remote_download">git_remote_download</a></span><span class="p">(</span><span class="n">data</span><span class="o">-&gt;</span><span class="n">remote</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
     <span class="n">data</span><span class="o">-&gt;</span><span class="n">ret</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
     <span class="k">goto</span> <span class="n">exit</span><span class="p">;</span>
   <span class="p">}</span>
@@ -139,13 +138,13 @@ an update.</p>
   <span class="kt">char</span> <span class="n">a_str</span><span class="p">[</span><span class="n">GIT_OID_HEXSZ</span><span class="o">+</span><span class="mi">1</span><span class="p">],</span> <span class="n">b_str</span><span class="p">[</span><span class="n">GIT_OID_HEXSZ</span><span class="o">+</span><span class="mi">1</span><span class="p">];</span>
   <span class="p">(</span><span class="kt">void</span><span class="p">)</span><span class="n">data</span><span class="p">;</span>
 
-  <span class="n"><a name="git_oid_fmt-1" class="fnlink" href="../../#HEAD/group/oid/git_oid_fmt">git_oid_fmt</a></span><span class="p">(</span><span class="n">b_str</span><span class="p">,</span> <span class="n">b</span><span class="p">);</span>
+  <span class="n"><a name="git_oid_fmt-1" class="fnlink" href="../../#v0.21.2/group/oid/git_oid_fmt">git_oid_fmt</a></span><span class="p">(</span><span class="n">b_str</span><span class="p">,</span> <span class="n">b</span><span class="p">);</span>
   <span class="n">b_str</span><span class="p">[</span><span class="n">GIT_OID_HEXSZ</span><span class="p">]</span> <span class="o">=</span> <span class="sc">&#39;\0&#39;</span><span class="p">;</span>
 
-  <span class="k">if</span> <span class="p">(</span><span class="n"><a name="git_oid_iszero-3" class="fnlink" href="../../#HEAD/group/oid/git_oid_iszero">git_oid_iszero</a></span><span class="p">(</span><span class="n">a</span><span class="p">))</span> <span class="p">{</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n"><a name="git_oid_iszero-3" class="fnlink" href="../../#v0.21.2/group/oid/git_oid_iszero">git_oid_iszero</a></span><span class="p">(</span><span class="n">a</span><span class="p">))</span> <span class="p">{</span>
     <span class="n">printf</span><span class="p">(</span><span class="s">&quot;[new]     %.20s %s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">b_str</span><span class="p">,</span> <span class="n">refname</span><span class="p">);</span>
   <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
-    <span class="n"><a name="git_oid_fmt-2" class="fnlink" href="../../#HEAD/group/oid/git_oid_fmt">git_oid_fmt</a></span><span class="p">(</span><span class="n">a_str</span><span class="p">,</span> <span class="n">a</span><span class="p">);</span>
+    <span class="n"><a name="git_oid_fmt-2" class="fnlink" href="../../#v0.21.2/group/oid/git_oid_fmt">git_oid_fmt</a></span><span class="p">(</span><span class="n">a_str</span><span class="p">,</span> <span class="n">a</span><span class="p">);</span>
     <span class="n">a_str</span><span class="p">[</span><span class="n">GIT_OID_HEXSZ</span><span class="p">]</span> <span class="o">=</span> <span class="sc">&#39;\0&#39;</span><span class="p">;</span>
     <span class="n">printf</span><span class="p">(</span><span class="s">&quot;[updated] %.10s..%.10s %s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">a_str</span><span class="p">,</span> <span class="n">b_str</span><span class="p">,</span> <span class="n">refname</span><span class="p">);</span>
   <span class="p">}</span>
@@ -187,8 +186,8 @@ an update.</p>
       </td>
       <td class=code>
         <div class='highlight'><pre>  <span class="n">printf</span><span class="p">(</span><span class="s">&quot;Fetching %s for repo %p</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">repo</span><span class="p">);</span>
-  <span class="k">if</span> <span class="p">(</span><span class="n"><a name="git_remote_load-5" class="fnlink" href="../../#HEAD/group/remote/git_remote_load">git_remote_load</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">remote</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
-    <span class="k">if</span> <span class="p">(</span><span class="n"><a name="git_remote_create_anonymous-4" class="fnlink" href="../../#HEAD/group/remote/git_remote_create_anonymous">git_remote_create_anonymous</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">remote</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="nb">NULL</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n"><a name="git_remote_load-5" class="fnlink" href="../../#v0.21.2/group/remote/git_remote_load">git_remote_load</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">remote</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n"><a name="git_remote_create_anonymous-4" class="fnlink" href="../../#v0.21.2/group/remote/git_remote_create_anonymous">git_remote_create_anonymous</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">remote</span><span class="p">,</span> <span class="n">repo</span><span class="p">,</span> <span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="nb">NULL</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
       <span class="k">return</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
   <span class="p">}</span></pre></div>
       </td>
@@ -204,7 +203,7 @@ an update.</p>
         <div class='highlight'><pre>  <span class="n">callbacks</span><span class="p">.</span><span class="n">update_tips</span> <span class="o">=</span> <span class="o">&amp;</span><span class="n">update_cb</span><span class="p">;</span>
   <span class="n">callbacks</span><span class="p">.</span><span class="n">sideband_progress</span> <span class="o">=</span> <span class="o">&amp;</span><span class="n">progress_cb</span><span class="p">;</span>
   <span class="n">callbacks</span><span class="p">.</span><span class="n">credentials</span> <span class="o">=</span> <span class="n">cred_acquire_cb</span><span class="p">;</span>
-  <span class="n"><a name="git_remote_set_callbacks-12" class="fnlink" href="../../#HEAD/group/remote/git_remote_set_callbacks">git_remote_set_callbacks</a></span><span class="p">(</span><span class="n">remote</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">callbacks</span><span class="p">);</span></pre></div>
+  <span class="n"><a name="git_remote_set_callbacks-12" class="fnlink" href="../../#v0.21.2/group/remote/git_remote_set_callbacks">git_remote_set_callbacks</a></span><span class="p">(</span><span class="n">remote</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">callbacks</span><span class="p">);</span></pre></div>
       </td>
     </tr>
     <tr id='section-8'>
@@ -219,7 +218,7 @@ an update.</p>
   <span class="n">data</span><span class="p">.</span><span class="n">ret</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
   <span class="n">data</span><span class="p">.</span><span class="n">finished</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
 
-  <span class="n">stats</span> <span class="o">=</span> <span class="n"><a name="git_remote_stats-13" class="fnlink" href="../../#HEAD/group/remote/git_remote_stats">git_remote_stats</a></span><span class="p">(</span><span class="n">remote</span><span class="p">);</span>
+  <span class="n">stats</span> <span class="o">=</span> <span class="n"><a name="git_remote_stats-13" class="fnlink" href="../../#v0.21.2/group/remote/git_remote_stats">git_remote_stats</a></span><span class="p">(</span><span class="n">remote</span><span class="p">);</span>
 
 <span class="cp">#ifdef _WIN32</span>
   <span class="n">download</span><span class="p">(</span><span class="o">&amp;</span><span class="n">data</span><span class="p">);</span>
@@ -285,7 +284,7 @@ network.</p>
         <p>Disconnect the underlying connection to prevent from idling.</p>
       </td>
       <td class=code>
-        <div class='highlight'><pre>  <span class="n"><a name="git_remote_disconnect-8" class="fnlink" href="../../#HEAD/group/remote/git_remote_disconnect">git_remote_disconnect</a></span><span class="p">(</span><span class="n">remote</span><span class="p">);</span></pre></div>
+        <div class='highlight'><pre>  <span class="n"><a name="git_remote_disconnect-8" class="fnlink" href="../../#v0.21.2/group/remote/git_remote_disconnect">git_remote_disconnect</a></span><span class="p">(</span><span class="n">remote</span><span class="p">);</span></pre></div>
       </td>
     </tr>
     <tr id='section-12'>
@@ -296,19 +295,19 @@ network.</p>
         <p>Update the references in the remote&#39;s namespace to point to the
 right commits. This may be needed even if there was no packfile
 to download, which can happen e.g. when the branches have been
-changed but all the needed objects are available locally.</p>
+changed but all the neede objects are available locally.</p>
 
       </td>
       <td class=code>
-        <div class='highlight'><pre>  <span class="k">if</span> <span class="p">(</span><span class="n"><a name="git_remote_update_tips-11" class="fnlink" href="../../#HEAD/group/remote/git_remote_update_tips">git_remote_update_tips</a></span><span class="p">(</span><span class="n">remote</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
+        <div class='highlight'><pre>  <span class="k">if</span> <span class="p">(</span><span class="n"><a name="git_remote_update_tips-11" class="fnlink" href="../../#v0.21.2/group/remote/git_remote_update_tips">git_remote_update_tips</a></span><span class="p">(</span><span class="n">remote</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
     <span class="k">return</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
 
-  <span class="n"><a name="git_remote_free-9" class="fnlink" href="../../#HEAD/group/remote/git_remote_free">git_remote_free</a></span><span class="p">(</span><span class="n">remote</span><span class="p">);</span>
+  <span class="n"><a name="git_remote_free-9" class="fnlink" href="../../#v0.21.2/group/remote/git_remote_free">git_remote_free</a></span><span class="p">(</span><span class="n">remote</span><span class="p">);</span>
 
   <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
 
  <span class="nl">on_error:</span>
-  <span class="n"><a name="git_remote_free-10" class="fnlink" href="../../#HEAD/group/remote/git_remote_free">git_remote_free</a></span><span class="p">(</span><span class="n">remote</span><span class="p">);</span>
+  <span class="n"><a name="git_remote_free-10" class="fnlink" href="../../#v0.21.2/group/remote/git_remote_free">git_remote_free</a></span><span class="p">(</span><span class="n">remote</span><span class="p">);</span>
   <span class="k">return</span> <span class="o">-</span><span class="mi">1</span><span class="p">;</span>
 <span class="p">}</span></pre></div>
       </td>

@@ -16,12 +16,11 @@
     Jump To &hellip;
     <div id="jump_wrapper">
       <div id="jump_page">
-        <a class="source" href="../../#HEAD">API Docs</a>
+        <a class="source" href="../../#v0.21.2">API Docs</a>
           <a class="source" href="../add.html">add.c</a>
           <a class="source" href="../blame.html">blame.c</a>
           <a class="source" href="../cat-file.html">cat-file.c</a>
           <a class="source" href="../common.html">common.c</a>
-          <a class="source" href="../describe.html">describe.c</a>
           <a class="source" href="../diff.html">diff.c</a>
           <a class="source" href="../for-each-ref.html">for-each-ref.c</a>
           <a class="source" href="../general.html">general.c</a>
@@ -169,14 +168,14 @@
 
       </td>
       <td class=code>
-        <div class='highlight'><pre>  <span class="n">error</span> <span class="o">=</span> <span class="n"><a name="git_clone-1" class="fnlink" href="../../#HEAD/group/clone/git_clone">git_clone</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">cloned_repo</span><span class="p">,</span> <span class="n">url</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">clone_opts</span><span class="p">);</span>
+        <div class='highlight'><pre>  <span class="n">error</span> <span class="o">=</span> <span class="n"><a name="git_clone-1" class="fnlink" href="../../#v0.21.2/group/clone/git_clone">git_clone</a></span><span class="p">(</span><span class="o">&amp;</span><span class="n">cloned_repo</span><span class="p">,</span> <span class="n">url</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">clone_opts</span><span class="p">);</span>
   <span class="n">printf</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
   <span class="k">if</span> <span class="p">(</span><span class="n">error</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
-    <span class="k">const</span> <span class="n">git_error</span> <span class="o">*</span><span class="n">err</span> <span class="o">=</span> <span class="n"><a name="giterr_last-2" class="fnlink" href="../../#HEAD/group/giterr/giterr_last">giterr_last</a></span><span class="p">();</span>
+    <span class="k">const</span> <span class="n">git_error</span> <span class="o">*</span><span class="n">err</span> <span class="o">=</span> <span class="n"><a name="giterr_last-2" class="fnlink" href="../../#v0.21.2/group/giterr/giterr_last">giterr_last</a></span><span class="p">();</span>
     <span class="k">if</span> <span class="p">(</span><span class="n">err</span><span class="p">)</span> <span class="n">printf</span><span class="p">(</span><span class="s">&quot;ERROR %d: %s</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">err</span><span class="o">-&gt;</span><span class="n">klass</span><span class="p">,</span> <span class="n">err</span><span class="o">-&gt;</span><span class="n">message</span><span class="p">);</span>
     <span class="k">else</span> <span class="n">printf</span><span class="p">(</span><span class="s">&quot;ERROR %d: no detailed info</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">error</span><span class="p">);</span>
   <span class="p">}</span>
-  <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">cloned_repo</span><span class="p">)</span> <span class="n"><a name="git_repository_free-3" class="fnlink" href="../../#HEAD/group/repository/git_repository_free">git_repository_free</a></span><span class="p">(</span><span class="n">cloned_repo</span><span class="p">);</span>
+  <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">cloned_repo</span><span class="p">)</span> <span class="n"><a name="git_repository_free-3" class="fnlink" href="../../#v0.21.2/group/repository/git_repository_free">git_repository_free</a></span><span class="p">(</span><span class="n">cloned_repo</span><span class="p">);</span>
   <span class="k">return</span> <span class="n">error</span><span class="p">;</span>
 <span class="p">}</span></pre></div>
       </td>
