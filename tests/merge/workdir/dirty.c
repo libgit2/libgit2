@@ -89,18 +89,18 @@ static void set_core_autocrlf_to(git_repository *repo, bool value)
 static int merge_branch(void)
 {
 	git_oid their_oids[1];
-	git_merge_head *their_heads[1];
+	git_annotated_commit *their_head;
 	git_merge_options merge_opts = GIT_MERGE_OPTIONS_INIT;
 	git_checkout_options checkout_opts = GIT_CHECKOUT_OPTIONS_INIT;
 	int error;
 
 	cl_git_pass(git_oid_fromstr(&their_oids[0], MERGE_BRANCH_OID));
-	cl_git_pass(git_merge_head_from_id(&their_heads[0], repo, &their_oids[0]));
+	cl_git_pass(git_annotated_commit_lookup(&their_head, repo, &their_oids[0]));
 
 	checkout_opts.checkout_strategy = GIT_CHECKOUT_SAFE;
-	error = git_merge(repo, (const git_merge_head **)their_heads, 1, &merge_opts, &checkout_opts);
+	error = git_merge(repo, (const git_annotated_commit **)&their_head, 1, &merge_opts, &checkout_opts);
 
-	git_merge_head_free(their_heads[0]);
+	git_annotated_commit_free(their_head);
 
 	return error;
 }

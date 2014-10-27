@@ -97,6 +97,23 @@ GIT_EXTERN(int) git_note_read(
 	const git_oid *oid);
 
 /**
+ * Get the note author
+ *
+ * @param note the note
+ * @return the author
+ */
+GIT_EXTERN(const git_signature *) git_note_author(const git_note *note);
+
+/**
+ * Get the note committer
+ *
+ * @param note the note
+ * @return the committer
+ */
+GIT_EXTERN(const git_signature *) git_note_committer(const git_note *note);
+
+
+/**
  * Get the note message
  *
  * @param note the note

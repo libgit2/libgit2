@@ -22,6 +22,7 @@
 #include <git2/refdb.h>
 #include <git2/sys/refs.h>
 #include <git2/signature.h>
+#include <git2/commit.h>
 
 GIT__USE_STRMAP;
 
@@ -1088,6 +1089,40 @@ int git_reference__update_terminal(
 	const char *log_message)
 {
 	return reference__update_terminal(repo, ref_name, oid, 0, signature, log_message);
+}
+
+int git_reference__update_for_commit(
+	git_repository *repo,
+	git_reference *ref,
+	const char *ref_name,
+	const git_oid *id,
+	const git_signature *committer,
+	const char *operation)
+{
+	git_reference *ref_new = NULL;
+	git_commit *commit = NULL;
+	git_buf reflog_msg = GIT_BUF_INIT;
+	int error;
+
+	if ((error = git_commit_lookup(&commit, repo, id)) < 0 ||
+		(error = git_buf_printf(&reflog_msg, "%s%s: %s",
+			operation ? operation : "commit",
+			git_commit_parentcount(commit) == 0 ? " (initial)" : "",
+			git_commit_summary(commit))) < 0)
+		goto done;
+
+	if (ref)
+		error = git_reference_set_target(
+			&ref_new, ref, id, committer, git_buf_cstr(&reflog_msg));
+	else
+		error = git_reference__update_terminal(
+			repo, ref_name, id, committer, git_buf_cstr(&reflog_msg));
+
+done:
+	git_reference_free(ref_new);
+	git_buf_free(&reflog_msg);
+	git_commit_free(commit);
+	return error;
 }
 
 int git_reference_has_log(git_repository *repo, const char *refname)

@@ -1728,6 +1728,28 @@ cleanup:
 	return error;
 }
 
+int git_repository__set_orig_head(git_repository *repo, const git_oid *orig_head)
+{
+	git_filebuf file = GIT_FILEBUF_INIT;
+	git_buf file_path = GIT_BUF_INIT;
+	char orig_head_str[GIT_OID_HEXSZ];
+	int error = 0;
+
+	git_oid_fmt(orig_head_str, orig_head);
+
+	if ((error = git_buf_joinpath(&file_path, repo->path_repository, GIT_ORIG_HEAD_FILE)) == 0 &&
+		(error = git_filebuf_open(&file, file_path.ptr, GIT_FILEBUF_FORCE, GIT_MERGE_FILE_MODE)) == 0 &&
+		(error = git_filebuf_printf(&file, "%.*s\n", GIT_OID_HEXSZ, orig_head_str)) == 0)
+		error = git_filebuf_commit(&file);
+
+	if (error < 0)
+		git_filebuf_cleanup(&file);
+
+	git_buf_free(&file_path);
+
+	return error;
+}
+
 int git_repository_message(git_buf *out, git_repository *repo)
 {
 	git_buf path = GIT_BUF_INIT;

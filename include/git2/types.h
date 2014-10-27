@@ -174,8 +174,8 @@ typedef struct git_reference_iterator  git_reference_iterator;
 /** Transactional interface to references */
 typedef struct git_transaction git_transaction;
 
-/** Merge heads, the input to merge */
-typedef struct git_merge_head git_merge_head;
+/** Annotated commits, the input to merge and rebase. */
+typedef struct git_annotated_commit git_annotated_commit;
 
 /** Merge result */
 typedef struct git_merge_result git_merge_result;
@@ -183,6 +183,8 @@ typedef struct git_merge_result git_merge_result;
 /** Representation of a status collection */
 typedef struct git_status_list git_status_list;
 
+/** Representation of a rebase */
+typedef struct git_rebase git_rebase;
 
 /** Basic type of any Git reference. */
 typedef enum {

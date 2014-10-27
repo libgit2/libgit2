@@ -70,7 +70,7 @@ GIT_EXTERN(int) git_reset(
 	git_object *target,
 	git_reset_t reset_type,
 	git_checkout_options *checkout_opts,
-	git_signature *signature,
+	const git_signature *signature,
 	const char *log_message);
 
 /**

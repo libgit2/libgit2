@@ -270,3 +270,14 @@ void git_signature__writebuf(git_buf *buf, const char *header, const git_signatu
 			(unsigned)sig->when.time, sign, hours, mins);
 }
 
+bool git_signature__equal(const git_signature *one, const git_signature *two)
+{
+	assert(one && two);
+
+	return
+		git__strcmp(one->name, two->name) == 0 &&
+		git__strcmp(one->email, two->email) == 0 &&
+		one->when.time == two->when.time &&
+		one->when.offset == two->when.offset;
+}
+

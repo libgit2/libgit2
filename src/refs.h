@@ -100,4 +100,13 @@ int git_reference_lookup_resolved(
 
 int git_reference__log_signature(git_signature **out, git_repository *repo);
 
+/** Update a reference after a commit. */
+int git_reference__update_for_commit(
+	git_repository *repo,
+	git_reference *ref,
+	const char *ref_name,
+	const git_oid *id,
+	const git_signature *committer,
+	const char *operation);
+
 #endif
