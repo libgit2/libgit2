@@ -9,6 +9,12 @@
 
 #define TEST_REPO_PATH "revert"
 
+#ifdef GIT_WIN32
+#define NEWLINE "\r\n"
+#else
+#define NEWLINE "\n"
+#endif
+
 static git_repository *repo;
 static git_index *repo_index;
 
@@ -336,16 +342,16 @@ void test_revert_workdir__again_after_edit_two(void)
 	cl_assert(merge_test_index(repo_index, merge_index_entries, 5));
 
 	cl_git_pass(git_futils_readbuffer(&diff_buf, "revert/file.txt"));
-	cl_assert(strcmp(diff_buf.ptr,	"a\n" \
-		"<<<<<<< HEAD\n" \
-		"=======\n" \
-		"a\n" \
-		">>>>>>> parent of 71eb9c2... revert me\n" \
-		"a\n" \
-		"a\n" \
-		"a\n" \
-		"a\n" \
-		"ab\n") == 0);
+	cl_assert(strcmp(diff_buf.ptr,	"a" NEWLINE \
+		"<<<<<<< HEAD" NEWLINE \
+		"=======" NEWLINE \
+		"a" NEWLINE \
+		">>>>>>> parent of 71eb9c2... revert me" NEWLINE \
+		"a" NEWLINE \
+		"a" NEWLINE \
+		"a" NEWLINE \
+		"a" NEWLINE \
+		"ab" NEWLINE) == 0);
 
 	git_commit_free(revert_commit);
 	git_commit_free(head_commit);
