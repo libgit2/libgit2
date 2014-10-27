@@ -303,8 +303,8 @@ void test_revert_workdir__again_after_edit(void)
 /*
  * revert the same commit twice (when the first reverts cleanly):
  *
- * git reset --hard e34ef1a
- * git revert 71eb9c2
+ * git reset --hard 75ec9929465623f17ff3ad68c0438ea56faba815
+ * git revert 97e52d5e81f541080cd6b92829fb85bc4d81d90b
  */
 void test_revert_workdir__again_after_edit_two(void)
 {
@@ -314,8 +314,6 @@ void test_revert_workdir__again_after_edit_two(void)
 	git_commit *head_commit, *revert_commit;
 
 	struct merge_index_entry merge_index_entries[] = {
-		{ 0100644, "1ff0c423042b46cb1d617b81efb715defbe8054d", 0, ".gitattributes" },
-		{ 0100644, "1bc915c5cb7185a9438de28a7b1a7dfe8c01ee7f", 0, ".gitignore" },
 		{ 0100644, "a8c86221b400b836010567cc3593db6e96c1a83a", 1, "file.txt" },
 		{ 0100644, "46ff0854663aeb2182b9838c8da68e33ac23bc1e", 2, "file.txt" },
 		{ 0100644, "21a96a98ed84d45866e1de6e266fd3a61a4ae9dc", 3, "file.txt" },
@@ -324,23 +322,23 @@ void test_revert_workdir__again_after_edit_two(void)
 	cl_git_pass(git_repository_config(&config, repo));
 	cl_git_pass(git_config_set_bool(config, "core.autocrlf", 0));
 
-	cl_git_pass(git_oid_fromstr(&head_commit_oid, "e34ef1afe54eb526fd92eec66084125f340f1d65"));
+	cl_git_pass(git_oid_fromstr(&head_commit_oid, "75ec9929465623f17ff3ad68c0438ea56faba815"));
 	cl_git_pass(git_commit_lookup(&head_commit, repo, &head_commit_oid));
 	cl_git_pass(git_reset(repo, (git_object *)head_commit, GIT_RESET_HARD, NULL, NULL, NULL));
 
-	cl_git_pass(git_oid_fromstr(&revert_commit_oid, "71eb9c2b53dbbf3c45fb28b27c850db4b7fb8011"));
+	cl_git_pass(git_oid_fromstr(&revert_commit_oid, "97e52d5e81f541080cd6b92829fb85bc4d81d90b"));
 	cl_git_pass(git_commit_lookup(&revert_commit, repo, &revert_commit_oid));
 
 	cl_git_pass(git_revert(repo, revert_commit, NULL));
 
-	cl_assert(merge_test_index(repo_index, merge_index_entries, 5));
+	cl_assert(merge_test_index(repo_index, merge_index_entries, 3));
 
 	cl_git_pass(git_futils_readbuffer(&diff_buf, "revert/file.txt"));
 	cl_assert(strcmp(diff_buf.ptr,	"a\n" \
 		"<<<<<<< HEAD\n" \
 		"=======\n" \
 		"a\n" \
-		">>>>>>> parent of 71eb9c2... revert me\n" \
+		">>>>>>> parent of 97e52d5... Revert me\n" \
 		"a\n" \
 		"a\n" \
 		"a\n" \
