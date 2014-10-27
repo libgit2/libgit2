@@ -90,3 +90,17 @@ v0.21 + 1
 
 * Introduce git_merge_bases_many() to expose all merge bases between
   multiple commits.
+
+* git_merge_head is now git_annotated_commit, to better reflect its usage
+  for multiple functions (including rebase)
+
+* Introduce rebase functionality (using the merge algorithm only).
+  Introduce git_rebase_init() to begin a new rebase session,
+  git_rebase_open() to open an in-progress rebase session,
+  git_rebase_commit() to commit the current rebase operation,
+  git_rebase_next() to apply the next rebase operation,
+  git_rebase_abort() to abort an in-progress rebase and git_rebase_finish()
+  to complete a rebase operation.
+
+* Introduce git_note_author() and git_note_committer() to get the author
+  and committer information on a git_note, respectively.
