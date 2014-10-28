@@ -168,14 +168,14 @@ PATTERNS("cpp",
 	 "|[-+*/<>%&^|=!]=|--|\\+\\+|<<=?|>>=?|&&|\\|\\||::|->\\*?|\\.\\*"),
 
 PATTERNS("csharp",
-	 /* Keywords */
-	 "!^[ \t]*(do|while|for|if|else|instanceof|new|return|switch|case|throw|catch|using)\n"
 	 /* Methods and constructors */
-	 "^[ \t]*(((static|public|internal|private|protected|new|virtual|sealed|override|unsafe)[ \t]+)*[][<>@.~_[:alnum:]]+[ \t]+[<>@._[:alnum:]]+[ \t]*\\(.*\\))[ \t]*$\n"
-	 /* Properties */
-	 "^[ \t]*(((static|public|internal|private|protected|new|virtual|sealed|override|unsafe)[ \t]+)*[][<>@.~_[:alnum:]]+[ \t]+[@._[:alnum:]]+)[ \t]*$\n"
+	 "^[ \t]*(((abstract|extern|internal|new|override|private|protected|public|sealed|static|unsafe|virtual)[ \t]+)*[][<>@.~_[:alnum:]]+[ \t]+[<>@._[:alnum:]]+[ \t]*\\(.*\\))[ \t]*$\n"
+	 /* Properties, events, delegates */
+	 "^[ \t]*(((abstract|internal|new|override|private|protected|public|sealed|static|unsafe|virtual)[ \t]+)*((delegate|event)[ \t]+)*[][<>@.~_[:alnum:]]+[ \t]+[@._[:alnum:]]+)[ \t]*$\n"
 	 /* Type definitions */
-	 "^[ \t]*(((static|public|internal|private|protected|new|unsafe|sealed|abstract|partial)[ \t]+)*(class|enum|interface|struct)[ \t]+.*)$\n"
+	 "^[ \t]*(((abstract|internal|new|override|partial|private|protected|public|sealed|static|unsafe)[ \t]+)*(class|enum|interface|struct)[ \t]+.*)$\n"
+	 /* Keywords */
+	 "!^[ \t]*(as|base|break|case|catch|checked|continue|default|delegate|do|else|finally|fixed|for|foreach|if|in|is|lock|new|null|out|readonly|ref|return|switch|this|throw|try|typeof|unchecked|unsafe|using|var|while)\n"
 	 /* Namespace */
 	 "^[ \t]*(namespace[ \t]+.*)$",
 	 /* -- */
