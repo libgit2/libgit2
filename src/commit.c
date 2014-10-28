@@ -14,8 +14,10 @@
 #include "common.h"
 #include "odb.h"
 #include "commit.h"
+#include "commit_list.h"
 #include "signature.h"
 #include "message.h"
+#include "revwalk.h"
 
 void git_commit__free(void *_commit)
 {
@@ -533,4 +535,95 @@ int git_commit_nth_gen_ancestor(
 
 	*ancestor = parent;
 	return 0;
+}
+
+int git_commit_entry_last_commit_id(git_oid *out, git_repository *repo, const git_commit *commit, char *path)
+{
+	int error;
+	unsigned int i;
+	bool go;
+	git_revwalk *walk;
+	git_tree *root_tree;
+	git_tree_entry *source_tree_entry;
+	git_commit_list *list = NULL, *next = NULL;
+	git_commit_list_node *node;
+
+	assert(out && commit && path);
+
+	if ((error = git_commit_tree(&root_tree, commit)) < 0)
+		return error;
+
+	if ((error = git_tree_entry_bypath(&source_tree_entry, root_tree, path)) < 0)
+		return GIT_ENOTFOUND;
+
+	if (git_revwalk_new(&walk, repo) < 0)
+		return -1;
+
+	if ((node = git_revwalk__commit_lookup(walk, &commit->object.cached.oid)) == NULL)
+		return -1;
+
+	if (git_commit_list_insert(node, &list) == NULL)
+		return -1;
+
+	while (list) {
+		node = list->item;
+		next = list->next;
+		go = false;
+
+		if (error = git_commit_list_parse(walk, node) < 0)
+			return error;
+
+		for (i = 0; i < node->out_degree; i++) {
+			git_commit_list_node *p = node->parents[i];
+			git_tree_entry *entry;
+			git_commit *parent;
+			bool eq;
+
+			if ((error = git_commit_lookup(&parent, repo, &p->oid)))
+				goto cleanup;
+
+			if ((error = git_commit_tree(&root_tree, parent)) < 0)
+				goto cleanup;
+
+			if ((error = git_tree_entry_bypath(&entry, root_tree, path)) < 0) {
+				if (error == GIT_ENOTFOUND) {
+					error = GIT_OK;
+					continue;
+				}
+				goto cleanup;
+			}
+			eq = git_oid__cmp(&entry->oid, &source_tree_entry->oid) == 0;
+
+			if (eq &&!(p->flags & VISITED)) {
+				if ((node = git_revwalk__commit_lookup(walk, &parent->object.cached.oid)) == NULL)
+					return -1;
+
+				if (git_commit_list_insert(node, &next) == NULL) {
+					error = GIT_ERROR;
+					goto cleanup;
+				}
+				p->flags |= VISITED;
+			}
+			go = go || eq;
+		}
+
+		if (!go)
+			break;
+
+		git__free(list);
+		list = next;
+	}
+
+	git_oid_cpy(out, &list->item->oid);
+
+cleanup:
+	while (list)
+	{
+		next = list->next;
+		git__free(list);
+		list = next;
+	}
+	git_revwalk_free(walk);
+
+	return error;
 }

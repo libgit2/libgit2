@@ -12,6 +12,8 @@
 #include "oid.h"
 #include "object.h"
 
+#define VISITED (1 << 0)
+
 /**
  * @file git2/commit.h
  * @brief Git commit parsing, formatting routines
@@ -351,6 +353,12 @@ GIT_EXTERN(int) git_commit_amend(
 	const char *message_encoding,
 	const char *message,
 	const git_tree *tree);
+
+GIT_EXTERN(int) git_commit_entry_last_commit_id(
+	git_oid *out,
+	const git_repository *repo,
+	const git_commit *commit,
+	const char *path);
 
 /** @} */
 GIT_END_DECL
