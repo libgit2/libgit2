@@ -364,7 +364,7 @@ int git_attr_cache__do_init(git_repository *repo)
 		return -1;
 	}
 
-	if ((ret = git_repository_config_snapshot(&cfg, repo)) < 0)
+	if ((ret = git_repository_config(&cfg, repo)) < 0)
 		goto cancel;
 
 	/* cache config settings for attributes and ignores */

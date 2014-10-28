@@ -90,7 +90,7 @@ static int packbuilder_config(git_packbuilder *pb)
 	int ret;
 	int64_t val;
 
-	if ((ret = git_repository_config_snapshot(&config, pb->repo)) < 0)
+	if ((ret = git_repository_config(&config, pb->repo)) < 0)
 		return ret;
 
 #define config_get(KEY,DST,DFLT) do { \

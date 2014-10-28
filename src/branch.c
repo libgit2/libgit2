@@ -341,7 +341,7 @@ int git_branch_upstream_name(
 	if (!git_reference__is_branch(refname))
 		return not_a_local_branch(refname);
 
-	if ((error = git_repository_config_snapshot(&config, repo)) < 0)
+	if ((error = git_repository_config(&config, repo)) < 0)
 		return error;
 
 	if ((error = retrieve_upstream_configuration(

@@ -417,7 +417,7 @@ void test_diff_submodules__diff_ignore_options(void)
 	git_diff_free(diff);
 
 	opts.ignore_submodules = 0;
-	cl_git_pass(git_repository_config(&cfg, g_repo));
+	cl_git_pass(git_repository_config_writable(&cfg, g_repo));
 	cl_git_pass(git_config_set_bool(cfg, "diff.ignoreSubmodules", false));
 
 	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, NULL, &opts));

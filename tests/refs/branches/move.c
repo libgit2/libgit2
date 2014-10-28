@@ -220,7 +220,7 @@ void test_refs_branches_move__default_reflog_message(void)
 	git_signature *sig;
 	git_config *cfg;
 
-	cl_git_pass(git_repository_config(&cfg, repo));
+	cl_git_pass(git_repository_config_writable(&cfg, repo));
 	cl_git_pass(git_config_set_string(cfg, "user.name", "Foo Bar"));
 	cl_git_pass(git_config_set_string(cfg, "user.email", "foo@example.com"));
 	git_config_free(cfg);

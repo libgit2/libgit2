@@ -38,7 +38,7 @@ void test_notes_notesref__config_corenotesref(void)
 	cl_git_pass(git_signature_now(&_sig, "alice", "alice@example.com"));
 	cl_git_pass(git_oid_fromstr(&oid, "8496071c1b46c854b31185ea97743be6a8774479"));
 
-	cl_git_pass(git_repository_config(&_cfg, _repo));
+	cl_git_pass(git_repository_config_writable(&_cfg, _repo));
 
 	cl_git_pass(git_config_set_string(_cfg, "core.notesRef", "refs/notes/mydefaultnotesref"));
 

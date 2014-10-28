@@ -33,7 +33,7 @@ void test_submodule_modify__init(void)
 	const char *str;
 
 	/* erase submodule data from .git/config */
-	cl_git_pass(git_repository_config(&cfg, g_repo));
+	cl_git_pass(git_repository_config_writable(&cfg, g_repo));
 	cl_git_pass(
 		git_config_foreach_match(cfg, "submodule\\..*", delete_one_config, cfg));
 	git_config_free(cfg);

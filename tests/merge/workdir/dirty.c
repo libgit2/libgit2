@@ -80,7 +80,7 @@ static void set_core_autocrlf_to(git_repository *repo, bool value)
 {
 	git_config *cfg;
 
-	cl_git_pass(git_repository_config(&cfg, repo));
+	cl_git_pass(git_repository_config_writable(&cfg, repo));
 	cl_git_pass(git_config_set_bool(cfg, "core.autocrlf", value));
 
 	git_config_free(cfg);

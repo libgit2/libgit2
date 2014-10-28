@@ -302,7 +302,7 @@ void test_refs_reflog_reflog__logallrefupdates_bare_set_false(void)
 {
 	git_config *config;
 
-	cl_git_pass(git_repository_config(&config, g_repo));
+	cl_git_pass(git_repository_config_writable(&config, g_repo));
 	cl_git_pass(git_config_set_bool(config, "core.logallrefupdates", false));
 	git_config_free(config);
 
@@ -313,7 +313,7 @@ void test_refs_reflog_reflog__logallrefupdates_bare_unset(void)
 {
 	git_config *config;
 
-	cl_git_pass(git_repository_config(&config, g_repo));
+	cl_git_pass(git_repository_config_writable(&config, g_repo));
 	cl_git_pass(git_config_delete_entry(config, "core.logallrefupdates"));
 	git_config_free(config);
 
@@ -328,7 +328,7 @@ void test_refs_reflog_reflog__logallrefupdates_nonbare_set_false(void)
 	g_repo = cl_git_sandbox_init("testrepo");
 
 
-	cl_git_pass(git_repository_config(&config, g_repo));
+	cl_git_pass(git_repository_config_writable(&config, g_repo));
 	cl_git_pass(git_config_set_bool(config, "core.logallrefupdates", false));
 	git_config_free(config);
 

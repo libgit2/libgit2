@@ -138,7 +138,7 @@ void test_repo_init__reinit_too_recent_bare_repo(void)
 
 	/* Initialize the repository */
 	cl_git_pass(git_repository_init(&_repo, "reinit.git", 1));
-	git_repository_config(&config, _repo);
+	git_repository_config_writable(&config, _repo);
 
 	/*
 	 * Hack the config of the repository to make it look like it has
@@ -257,8 +257,8 @@ void test_repo_init__reinit_doesnot_overwrite_ignorecase(void)
 	cl_git_pass(git_repository_init(&_repo, "not.overwrite.git", 1));
 
 	/* Change the "core.ignorecase" config value to something unlikely */
-	git_repository_config(&config, _repo);
-	git_config_set_int32(config, "core.ignorecase", 42);
+	cl_git_pass(git_repository_config_writable(&config, _repo));
+	cl_git_pass(git_config_set_int32(config, "core.ignorecase", 42));
 	git_config_free(config);
 	git_repository_free(_repo);
 	_repo = NULL;
@@ -576,7 +576,7 @@ void test_repo_init__init_with_initial_commit(void)
 	/* Make sure we're ready to use git_signature_default :-) */
 	{
 		git_config *cfg, *local;
-		cl_git_pass(git_repository_config(&cfg, _repo));
+		cl_git_pass(git_repository_config_writable(&cfg, _repo));
 		cl_git_pass(git_config_open_level(&local, cfg, GIT_CONFIG_LEVEL_LOCAL));
 		cl_git_pass(git_config_set_string(local, "user.name", "Test User"));
 		cl_git_pass(git_config_set_string(local, "user.email", "t@example.com"));

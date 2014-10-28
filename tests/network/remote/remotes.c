@@ -262,7 +262,7 @@ void test_network_remote_remotes__missing_refspecs(void)
 	git_remote_free(_remote);
 	_remote = NULL;
 
-	cl_git_pass(git_repository_config(&cfg, _repo));
+	cl_git_pass(git_repository_config_writable(&cfg, _repo));
 	cl_git_pass(git_config_set_string(cfg, "remote.specless.url", "http://example.com"));
 	cl_git_pass(git_remote_load(&_remote, _repo, "specless"));
 
@@ -278,7 +278,7 @@ void test_network_remote_remotes__list(void)
 	cl_assert(list.count == 5);
 	git_strarray_free(&list);
 
-	cl_git_pass(git_repository_config(&cfg, _repo));
+	cl_git_pass(git_repository_config_writable(&cfg, _repo));
 
 	/* Create a new remote */
 	cl_git_pass(git_config_set_string(cfg, "remote.specless.url", "http://example.com"));
@@ -380,22 +380,27 @@ void test_network_remote_remotes__tagopt(void)
 	const char *opt;
 	git_config *cfg;
 
-	cl_git_pass(git_repository_config(&cfg, _repo));
-
 	git_remote_set_autotag(_remote, GIT_REMOTE_DOWNLOAD_TAGS_ALL);
 	cl_git_pass(git_remote_save(_remote));
+
+	cl_git_pass(git_repository_config(&cfg, _repo));
 	cl_git_pass(git_config_get_string(&opt, cfg, "remote.test.tagopt"));
 	cl_assert_equal_s("--tags", opt);
+	git_config_free(cfg);
 
 	git_remote_set_autotag(_remote, GIT_REMOTE_DOWNLOAD_TAGS_NONE);
 	cl_git_pass(git_remote_save(_remote));
+
+	cl_git_pass(git_repository_config(&cfg, _repo));
 	cl_git_pass(git_config_get_string(&opt, cfg, "remote.test.tagopt"));
 	cl_assert_equal_s("--no-tags", opt);
+	git_config_free(cfg);
 
 	git_remote_set_autotag(_remote, GIT_REMOTE_DOWNLOAD_TAGS_AUTO);
 	cl_git_pass(git_remote_save(_remote));
-	cl_assert(git_config_get_string(&opt, cfg, "remote.test.tagopt") == GIT_ENOTFOUND);
 
+	cl_git_pass(git_repository_config(&cfg, _repo));
+	cl_assert(git_config_get_string(&opt, cfg, "remote.test.tagopt") == GIT_ENOTFOUND);
 	git_config_free(cfg);
 }
 

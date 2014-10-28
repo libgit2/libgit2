@@ -1426,7 +1426,7 @@ void test_diff_rename__matches_config_behavior(void)
 	tree2 = resolve_commit_oid_to_tree(g_repo, sha2);
 
 	diffopts.flags |= GIT_DIFF_INCLUDE_UNMODIFIED;
-	cl_git_pass(git_repository_config(&cfg, g_repo));
+	cl_git_pass(git_repository_config_writable(&cfg, g_repo));
 
 	/* diff.renames = false; no rename detection should happen */
 	cl_git_pass(git_config_set_bool(cfg, "diff.renames", false));
@@ -1508,7 +1508,7 @@ void test_diff_rename__can_override_thresholds_when_obeying_config(void)
 	diffopts.flags |= GIT_DIFF_INCLUDE_UNMODIFIED;
 	opts.flags = GIT_DIFF_FIND_BY_CONFIG;
 
-	cl_git_pass(git_repository_config(&cfg, g_repo));
+	cl_git_pass(git_repository_config_writable(&cfg, g_repo));
 	cl_git_pass(git_config_set_string(cfg, "diff.renames", "copies"));
 	git_config_free(cfg);
 
@@ -1563,7 +1563,7 @@ void test_diff_rename__by_config_doesnt_mess_with_whitespace_settings(void)
 	diffopts.flags |= GIT_DIFF_INCLUDE_UNMODIFIED;
 	opts.flags = GIT_DIFF_FIND_BY_CONFIG;
 
-	cl_git_pass(git_repository_config(&cfg, g_repo));
+	cl_git_pass(git_repository_config_writable(&cfg, g_repo));
 	cl_git_pass(git_config_set_string(cfg, "diff.renames", "copies"));
 	git_config_free(cfg);
 

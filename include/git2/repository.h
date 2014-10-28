@@ -401,9 +401,14 @@ GIT_EXTERN(int) git_repository_is_bare(git_repository *repo);
 /**
  * Get the configuration file for this repository.
  *
- * If a configuration file has not been set, the default
- * config set for the repository will be returned, including
- * global and system configurations (if they are available).
+ * If no configuration has been set, the default config set for the
+ * repository will be returned, including global and system
+ * configurations (if they are available).
+ *
+ * This configuration will refresh before each lookup and is not safe
+ * to use in a threaded context. It is recommended to use
+ * `git_repository_config()` unless you intend to write to the
+ * configuration.
  *
  * The configuration file must be freed once it's no longer
  * being used by the user.
@@ -412,14 +417,20 @@ GIT_EXTERN(int) git_repository_is_bare(git_repository *repo);
  * @param repo A repository object
  * @return 0, or an error code
  */
-GIT_EXTERN(int) git_repository_config(git_config **out, git_repository *repo);
+GIT_EXTERN(int) git_repository_config_writable(git_config **out, git_repository *repo);
 
 /**
  * Get a snapshot of the repository's configuration
  *
- * Convenience function to take a snapshot from the repository's
- * configuration.  The contents of this snapshot will not change,
- * even if the underlying config files are modified.
+ * The contents are refreshed before returning, but the configuration
+ * values of this snapshot will not change.
+ *
+ * If no configuration has been set, the default config set for the
+ * repository will be returned, including global and system
+ * configurations (if they are available).
+ *
+ * The returned configuration object is safe to use in a threaded
+ * context.
  *
  * The configuration file must be freed once it's no longer
  * being used by the user.
@@ -428,7 +439,7 @@ GIT_EXTERN(int) git_repository_config(git_config **out, git_repository *repo);
  * @param repo the repository
  * @return 0, or an error code
  */
-GIT_EXTERN(int) git_repository_config_snapshot(git_config **out, git_repository *repo);
+GIT_EXTERN(int) git_repository_config(git_config **out, git_repository *repo);
 
 /**
  * Get the Object Database for this repository.

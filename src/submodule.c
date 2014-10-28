@@ -797,7 +797,7 @@ int git_submodule_init(git_submodule *sm, int overwrite)
 		return -1;
 	}
 
-	if ((error = git_repository_config(&cfg, sm->repo)) < 0)
+	if ((error = git_repository_config__weakptr(&cfg, sm->repo)) < 0)
 		return error;
 
 	/* write "submodule.NAME.url" */

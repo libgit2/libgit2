@@ -81,7 +81,7 @@ void test_merge_workdir_simple__initialize(void)
 	git_repository_index(&repo_index, repo);
 
 	/* Ensure that the user's merge.conflictstyle doesn't interfere */
-	cl_git_pass(git_repository_config(&cfg, repo));
+	cl_git_pass(git_repository_config_writable(&cfg, repo));
 	cl_git_pass(git_config_set_string(cfg, "merge.conflictstyle", "merge"));
 	git_config_free(cfg);
 }
@@ -115,7 +115,7 @@ static void set_core_autocrlf_to(git_repository *repo, bool value)
 {
 	git_config *cfg;
 
-	cl_git_pass(git_repository_config(&cfg, repo));
+	cl_git_pass(git_repository_config_writable(&cfg, repo));
 	cl_git_pass(git_config_set_bool(cfg, "core.autocrlf", value));
 
 	git_config_free(cfg);
@@ -349,7 +349,7 @@ void test_merge_workdir_simple__diff3_from_config(void)
 		REMOVED_IN_MASTER_REUC_ENTRY
 	};
 
-	cl_git_pass(git_repository_config(&config, repo));
+	cl_git_pass(git_repository_config_writable(&config, repo));
 	cl_git_pass(git_config_set_string(config, "merge.conflictstyle", "diff3"));
 
 	merge_simple_branch(0, 0);
@@ -389,7 +389,7 @@ void test_merge_workdir_simple__merge_overrides_config(void)
 		REMOVED_IN_MASTER_REUC_ENTRY
 	};
 
-	cl_git_pass(git_repository_config(&config, repo));
+	cl_git_pass(git_repository_config_writable(&config, repo));
 	cl_git_pass(git_config_set_string(config, "merge.conflictstyle", "diff3"));
 
 	merge_simple_branch(0, GIT_CHECKOUT_CONFLICT_STYLE_MERGE);

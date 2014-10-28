@@ -21,7 +21,7 @@ void test_revert_workdir__initialize(void)
 	git_repository_index(&repo_index, repo);
 
 	/* Ensure that the user's merge.conflictstyle doesn't interfere */
-	cl_git_pass(git_repository_config(&cfg, repo));
+	cl_git_pass(git_repository_config_writable(&cfg, repo));
 	cl_git_pass(git_config_set_string(cfg, "merge.conflictstyle", "merge"));
 	git_config_free(cfg);
 }
@@ -321,7 +321,7 @@ void test_revert_workdir__again_after_edit_two(void)
 		{ 0100644, "21a96a98ed84d45866e1de6e266fd3a61a4ae9dc", 3, "file.txt" },
 	};
 
-	cl_git_pass(git_repository_config(&config, repo));
+	cl_git_pass(git_repository_config_writable(&config, repo));
 	cl_git_pass(git_config_set_bool(config, "core.autocrlf", 0));
 
 	cl_git_pass(git_oid_fromstr(&head_commit_oid, "e34ef1afe54eb526fd92eec66084125f340f1d65"));

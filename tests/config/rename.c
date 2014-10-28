@@ -7,7 +7,7 @@ static git_config *g_config = NULL;
 void test_config_rename__initialize(void)
 {
     g_repo = cl_git_sandbox_init("testrepo.git");
-	cl_git_pass(git_repository_config(&g_config, g_repo));
+	cl_git_pass(git_repository_config_writable(&g_config, g_repo));
 }
 
 void test_config_rename__cleanup(void)
@@ -54,6 +54,7 @@ void test_config_rename__prevent_overwrite(void)
 
 	cl_git_pass(git_config_rename_section(
 		g_repo, "branch.track-local", "branch.local-track"));
+
 
 	cl_git_pass(git_config_get_entry(
 		&ce, g_config, "branch.local-track.remote"));

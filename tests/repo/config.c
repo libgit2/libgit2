@@ -44,7 +44,7 @@ void test_repo_config__can_open_global_when_there_is_no_file(void)
 		GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_XDG, path.ptr));
 
 	cl_git_pass(git_repository_open(&repo, "empty_standard_repo"));
-	cl_git_pass(git_repository_config(&config, repo));
+	cl_git_pass(git_repository_config_writable(&config, repo));
 	cl_git_pass(git_config_open_level(
 		&global, config, GIT_CONFIG_LEVEL_GLOBAL));
 
@@ -73,7 +73,7 @@ void test_repo_config__can_open_missing_global_with_separators(void)
 	git_buf_free(&path);
 
 	cl_git_pass(git_repository_open(&repo, "empty_standard_repo"));
-	cl_git_pass(git_repository_config(&config, repo));
+	cl_git_pass(git_repository_config_writable(&config, repo));
 	cl_git_pass(git_config_open_level(
 		&global, config, GIT_CONFIG_LEVEL_GLOBAL));
 

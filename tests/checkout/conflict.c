@@ -71,7 +71,7 @@ void test_checkout_conflict__initialize(void)
 		"* text eol=lf\n");
 
 	/* Ensure that the user's merge.conflictstyle doesn't interfere */
-	cl_git_pass(git_repository_config(&cfg, g_repo));
+	cl_git_pass(git_repository_config_writable(&cfg, g_repo));
 	cl_git_pass(git_config_set_string(cfg, "merge.conflictstyle", "merge"));
 	git_config_free(cfg);
 }

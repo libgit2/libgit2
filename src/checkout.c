@@ -1935,12 +1935,11 @@ static int checkout_data_init(
 					GIT_DIR_MODE, GIT_MKDIR_VERIFY_DIR)) < 0)
 		goto cleanup;
 
-	/* refresh config and index content unless NO_REFRESH is given */
+	/* refresh index content unless NO_REFRESH is given */
 	if ((data->opts.checkout_strategy & GIT_CHECKOUT_NO_REFRESH) == 0) {
 		git_config *cfg;
 
-		if ((error = git_repository_config__weakptr(&cfg, repo)) < 0 ||
-			(error = git_config_refresh(cfg)) < 0)
+		if ((error = git_repository_config__weakptr(&cfg, repo)) < 0)
 			goto cleanup;
 
 		/* if we are checking out the index, don't reload,

@@ -356,7 +356,7 @@ int git_remote_load(git_remote **out, git_repository *repo, const char *name)
 	if ((error = ensure_remote_name_is_valid(name)) < 0)
 		return error;
 
-	if ((error = git_repository_config_snapshot(&config, repo)) < 0)
+	if ((error = git_repository_config(&config, repo)) < 0)
 		return error;
 
 	remote = git__malloc(sizeof(git_remote));

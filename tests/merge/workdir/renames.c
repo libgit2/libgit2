@@ -22,7 +22,7 @@ void test_merge_workdir_renames__initialize(void)
 	repo = cl_git_sandbox_init(TEST_REPO_PATH);
 
 	/* Ensure that the user's merge.conflictstyle doesn't interfere */
-	cl_git_pass(git_repository_config(&cfg, repo));
+	cl_git_pass(git_repository_config_writable(&cfg, repo));
 	cl_git_pass(git_config_set_string(cfg, "merge.conflictstyle", "merge"));
 	git_config_free(cfg);
 }

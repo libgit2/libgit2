@@ -455,7 +455,7 @@ static void set_config_int(git_repository *repo, const char *name, int value)
 {
 	git_config *cfg;
 
-	cl_git_pass(git_repository_config(&cfg, repo));
+	cl_git_pass(git_repository_config_writable(&cfg, repo));
 	cl_git_pass(git_config_set_int32(cfg, name, value));
 	git_config_free(cfg);
 }
