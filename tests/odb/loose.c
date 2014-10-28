@@ -24,7 +24,7 @@ static void write_object_files(object_data *d)
 
 static void cmp_objects(git_rawobj *o, object_data *d)
 {
-	cl_assert(o->type == git_object_string2type(d->type));
+	cl_assert(o->type == git_object_string2type(d->type, 0));
 	cl_assert(o->len == d->dlen);
 
 	if (o->len > 0)

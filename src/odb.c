@@ -778,7 +778,7 @@ int git_odb_read(git_odb_object **out, git_odb *db, const git_oid *id)
 	}
 
 	if (error && error != GIT_PASSTHROUGH) {
-		if (!reads)
+		if (!reads || error == GIT_ENOTFOUND)
 			return git_odb__error_notfound("no match for id", id);
 		return error;
 	}

@@ -17,7 +17,7 @@
 struct git_commit {
 	git_object object;
 
-	git_array_t(git_oid) parent_ids;
+	git_oid_array parent_ids;
 	git_oid tree_id;
 
 	git_signature *author;

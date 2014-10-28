@@ -11,7 +11,7 @@
 #include "git2/common.h"
 #include "posix.h"
 
-void git_signature_free(git_signature *sig)
+void git_signature__clear(git_signature *sig)
 {
 	if (sig == NULL)
 		return;
@@ -20,6 +20,11 @@ void git_signature_free(git_signature *sig)
 	sig->name = NULL;
 	git__free(sig->email);
 	sig->email = NULL;
+}
+
+void git_signature_free(git_signature *sig)
+{
+	git_signature__clear(sig);
 	git__free(sig);
 }
 
@@ -176,22 +181,39 @@ int git_signature__parse(git_signature *sig, const char **buffer_out,
 	}
 
 	email_start = git__memrchr(buffer, '<', buffer_end - buffer);
-	email_end = git__memrchr(buffer, '>', buffer_end - buffer);
+	if (!email_start) {
+		/* just stop now with everything as name */
+		sig->name = extract_trimmed(buffer, buffer_end - buffer);
+		sig->email = git__strdup("");
+		*buffer_out = buffer_end + 1;
+		return signature_error("missing e-mail");
+	}
 
-	if (!email_start || !email_end || email_end <= email_start)
-		return signature_error("malformed e-mail");
-
+	sig->name = extract_trimmed(buffer, email_start - buffer);
 	email_start += 1;
-	sig->name = extract_trimmed(buffer, email_start - buffer - 1);
+
+	email_end = git__memrchr(email_start, '>', buffer_end - email_start);
+	if (!email_end) {
+		sig->email = extract_trimmed(email_start, buffer_end - email_start);
+		return signature_error("malformed e-mail");
+	}
+
 	sig->email = extract_trimmed(email_start, email_end - email_start);
 
 	/* Do we even have a time at the end of the signature? */
-	if (email_end + 2 < buffer_end) {
+	if (email_end != NULL && email_end + 2 < buffer_end) {
 		const char *time_start = email_end + 2;
 		const char *time_end;
 
-		if (git__strtol64(&sig->when.time, time_start, &time_end, 10) < 0)
-			return signature_error("invalid Unix timestamp");
+		if (git__strtol64(&sig->when.time, time_start, &time_end, 10) < 0) {
+			/* set timestamp to max value */
+			sig->when.time = (uint64_t)-1L;
+
+			/* skip over invalid timestamp data */
+			time_end = time_start;
+			while (git__isspace(*time_end)) ++time_end;
+			while (*time_end && !git__isspace(*time_end)) ++time_end;
+		}
 
 		/* do we have a timezone? */
 		if (time_end + 1 < buffer_end) {
@@ -202,7 +224,7 @@ int git_signature__parse(git_signature *sig, const char **buffer_out,
 
 			if ((tz_start[0] != '-' && tz_start[0] != '+') ||
 				git__strtol32(&offset, tz_start + 1, &tz_end, 10) < 0) {
-				//malformed timezone, just assume it's zero
+				/* malformed timezone, just assume it's zero */
 				offset = 0;
 			}
 

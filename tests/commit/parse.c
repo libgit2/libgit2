@@ -22,50 +22,62 @@ typedef struct {
 } parse_test_case;
 
 static parse_test_case passing_header_cases[] = {
-	{ "parent 05452d6349abcd67aa396dfb28660d765d8b2a36\n", "parent " },
-	{ "tree 05452d6349abcd67aa396dfb28660d765d8b2a36\n", "tree " },
-	{ "random_heading 05452d6349abcd67aa396dfb28660d765d8b2a36\n", "random_heading " },
-	{ "stuck_heading05452d6349abcd67aa396dfb28660d765d8b2a36\n", "stuck_heading" },
-	{ "tree 5F4BEFFC0759261D015AA63A3A85613FF2F235DE\n", "tree " },
-	{ "tree 1A669B8AB81B5EB7D9DB69562D34952A38A9B504\n", "tree " },
-	{ "tree 5B20DCC6110FCC75D31C6CEDEBD7F43ECA65B503\n", "tree " },
-	{ "tree 173E7BF00EA5C33447E99E6C1255954A13026BE4\n", "tree " },
+	{ "parent 05452d6349abcd67aa396dfb28660d765d8b2a36\n", "parent" },
+	{ "tree 05452d6349abcd67aa396dfb28660d765d8b2a36\n", "tree" },
+	{ "random_heading 05452d6349abcd67aa396dfb28660d765d8b2a36\n", "random_heading" },
+	{ "tree 5F4BEFFC0759261D015AA63A3A85613FF2F235DE\n", "tree" },
+	{ "tree 1A669B8AB81B5EB7D9DB69562D34952A38A9B504\n", "tree" },
+	{ "tree 5B20DCC6110FCC75D31C6CEDEBD7F43ECA65B503\n", "tree" },
+	{ "tree 173E7BF00EA5C33447E99E6C1255954A13026BE4\n", "tree" },
 	{ NULL, NULL }
 };
 
 static parse_test_case failing_header_cases[] = {
-	{ "parent 05452d6349abcd67aa396dfb28660d765d8b2a36", "parent " },
-	{ "05452d6349abcd67aa396dfb28660d765d8b2a36\n", "tree " },
-	{ "parent05452d6349abcd67aa396dfb28660d765d8b2a6a\n", "parent " },
-	{ "parent 05452d6349abcd67aa396dfb280d765d8b2a6\n", "parent " },
-	{ "tree  05452d6349abcd67aa396dfb28660d765d8b2a36\n", "tree " },
-	{ "parent 0545xd6349abcd67aa396dfb28660d765d8b2a36\n", "parent " },
-	{ "parent 0545xd6349abcd67aa396dfb28660d765d8b2a36FF\n", "parent " },
-	{ "", "tree " },
+	{ "parent 05452d6349abcd67aa396dfb28660d765d8b2a36", "parent" },
+	{ "05452d6349abcd67aa396dfb28660d765d8b2a36\n", "tree" },
+	{ "parent05452d6349abcd67aa396dfb28660d765d8b2a6a\n", "parent" },
+	{ "parent 05452d6349abcd67aa396dfb280d765d8b2a6\n", "parent" },
+	{ "tree  05452d6349abcd67aa396dfb28660d765d8b2a36\n", "tree" },
+	{ "parent 0545xd6349abcd67aa396dfb28660d765d8b2a36\n", "parent" },
+	{ "parent 0545xd6349abcd67aa396dfb28660d765d8b2a36FF\n", "parent" },
+	{ "", "tree" },
 	{ "", "" },
+	{ "stuck_heading05452d6349abcd67aa396dfb28660d765d8b2a36\n", "stuck_heading" },
 	{ NULL, NULL }
 };
 
 void test_commit_parse__header(void)
 {
-	git_oid oid;
+	git_oid oid, exp;
+	git_object_parse_t template[2] = {
+		{ NULL, 0, GIT_PARSE_OID, { .id = &oid } },
+		{ NULL, 0, GIT_PARSE_BODY_OPTIONAL },
+	};
+	parse_test_case *test;
 
-	parse_test_case *testcase;
-	for (testcase = passing_header_cases; testcase->line != NULL; testcase++)
-	{
-		const char *line = testcase->line;
+	for (test = passing_header_cases; test->line != NULL; test++) {
+		const char *line = test->line;
 		const char *line_end = line + strlen(line);
 
-		cl_git_pass(git_oid__parse(&oid, &line, line_end, testcase->header));
-		cl_assert(line == line_end);
+		template[0].tag = test->header;
+		template[0].taglen = strlen(test->header);
+
+		cl_git_pass(git_object__parse_lines(
+			GIT_OBJ_COMMIT, template, line, line_end));
+
+		cl_git_pass(git_oid_fromstr(&exp, line + strlen(test->header) + 1));
+		cl_assert(git_oid_equal(&exp, &oid));
 	}
 
-	for (testcase = failing_header_cases; testcase->line != NULL; testcase++)
-	{
-		const char *line = testcase->line;
+	for (test = failing_header_cases; test->line != NULL; test++) {
+		const char *line = test->line;
 		const char *line_end = line + strlen(line);
 
-		cl_git_fail(git_oid__parse(&oid, &line, line_end, testcase->header));
+		template[0].tag = test->header;
+		template[0].taglen = strlen(test->header);
+
+		cl_git_fail(git_object__parse_lines(
+			GIT_OBJ_COMMIT, template, line, line_end));
 	}
 }
 
@@ -152,12 +164,13 @@ void test_commit_parse__signature(void)
 		size_t len = strlen(passcase->string);
 		struct git_signature person = {0};
 
-		cl_git_pass(git_signature__parse(&person, &str, str + len, passcase->header, '\n'));
+		cl_git_pass(git_signature__parse(
+			&person, &str, str + len, passcase->header, '\n'));
 		cl_assert_equal_s(passcase->name, person.name);
 		cl_assert_equal_s(passcase->email, person.email);
 		cl_assert_equal_i((int)passcase->time, (int)person.when.time);
 		cl_assert_equal_i(passcase->offset, person.when.offset);
-		git__free(person.name); git__free(person.email);
+		git_signature__clear(&person);
 	}
 
 	for (failcase = failing_signature_cases; failcase->string != NULL; failcase++)
@@ -165,8 +178,9 @@ void test_commit_parse__signature(void)
 		const char *str = failcase->string;
 		size_t len = strlen(failcase->string);
 		git_signature person = {0};
-		cl_git_fail(git_signature__parse(&person, &str, str + len, failcase->header, '\n'));
-		git__free(person.name); git__free(person.email);
+		cl_git_fail(git_signature__parse(
+			&person, &str, str + len, failcase->header, '\n'));
+		git_signature__clear(&person);
 	}
 }
 

@@ -329,6 +329,12 @@ GIT_INLINE(bool) git__iswildcard(int c)
 	return (c == '*' || c == '?' || c == '[');
 }
 
+GIT_INLINE(bool) git__iseol(const char *ptr, size_t len)
+{
+	char c = *ptr;
+	return (c == '\n' || (c == '\r' && len > 1 && *(ptr + 1) == '\n'));
+}
+
 /*
  * Parse a string value as a boolean, just like Core Git does.
  *

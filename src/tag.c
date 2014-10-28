@@ -59,104 +59,33 @@ const char *git_tag_message(const git_tag *t)
 	return t->message;
 }
 
-static int tag_error(const char *str)
+static int tag_parse(git_tag *tag, const char *buf, const char *buf_end)
 {
-	giterr_set(GITERR_TAG, "Failed to parse tag. %s", str);
-	return -1;
-}
-
-static int tag_parse(git_tag *tag, const char *buffer, const char *buffer_end)
-{
-	static const char *tag_types[] = {
-		NULL, "commit\n", "tree\n", "blob\n", "tag\n"
+	int error = 0;
+	const char *body = NULL;
+	git_object_parse_t parser[] = {
+		{ "object", 6, GIT_PARSE_OID, { .id = &tag->target } },
+		{ "type", 4, GIT_PARSE_OTYPE, { .otype = &tag->type } },
+		{ NULL, 0, GIT_PARSE_MODE_OPTIONAL },
+		{ "tag", 3, GIT_PARSE_TO_EOL, { .text = &tag->tag_name } },
+		{ "tagger", 6, GIT_PARSE_SIGNATURE, { .sig = &tag->tagger } },
+		{ NULL, 0, GIT_PARSE_BODY_OPTIONAL, { .body = &body } },
 	};
 
-	unsigned int i;
-	size_t text_len;
-	char *search;
+	error = git_object__parse_lines(GIT_OBJ_TAG, parser, buf, buf_end);
 
-	if (git_oid__parse(&tag->target, &buffer, buffer_end, "object ") < 0)
-		return tag_error("Object field invalid");
-
-	if (buffer + 5 >= buffer_end)
-		return tag_error("Object too short");
-
-	if (memcmp(buffer, "type ", 5) != 0)
-		return tag_error("Type field not found");
-	buffer += 5;
-
-	tag->type = GIT_OBJ_BAD;
-
-	for (i = 1; i < ARRAY_SIZE(tag_types); ++i) {
-		size_t type_length = strlen(tag_types[i]);
-
-		if (buffer + type_length >= buffer_end)
-			return tag_error("Object too short");
-
-		if (memcmp(buffer, tag_types[i], type_length) == 0) {
-			tag->type = i;
-			buffer += type_length;
-			break;
-		}
-	}
-
-	if (tag->type == GIT_OBJ_BAD)
-		return tag_error("Invalid object type");
-
-	if (buffer + 4 >= buffer_end)
-		return tag_error("Object too short");
-
-	if (memcmp(buffer, "tag ", 4) != 0)
-		return tag_error("Tag field not found");
-
-	buffer += 4;
-
-	search = memchr(buffer, '\n', buffer_end - buffer);
-	if (search == NULL)
-		return tag_error("Object too short");
-
-	text_len = search - buffer;
-
-	tag->tag_name = git__malloc(text_len + 1);
-	GITERR_CHECK_ALLOC(tag->tag_name);
-
-	memcpy(tag->tag_name, buffer, text_len);
-	tag->tag_name[text_len] = '\0';
-
-	buffer = search + 1;
-
-	tag->tagger = NULL;
-	if (buffer < buffer_end && *buffer != '\n') {
-		tag->tagger = git__malloc(sizeof(git_signature));
-		GITERR_CHECK_ALLOC(tag->tagger);
-
-		if (git_signature__parse(tag->tagger, &buffer, buffer_end, "tagger ", '\n') < 0)
-			return -1;
-	}
-
-	tag->message = NULL;
-	if (buffer < buffer_end) {
-		if( *buffer != '\n' )
-			return tag_error("No new line before message");
-
-		text_len = buffer_end - ++buffer;
-
-		tag->message = git__malloc(text_len + 1);
+	if (body != NULL && body < buf_end) {
+		tag->message = git__strndup(body, buf_end - body);
 		GITERR_CHECK_ALLOC(tag->message);
-
-		memcpy(tag->message, buffer, text_len);
-		tag->message[text_len] = '\0';
 	}
 
-	return 0;
+	return error;
 }
 
-int git_tag__parse(void *_tag, git_odb_object *odb_obj)
+int git_tag__parse(void *tag, git_odb_object *odb_obj)
 {
-	git_tag *tag = _tag;
 	const char *buffer = git_odb_object_data(odb_obj);
 	const char *buffer_end = buffer + git_odb_object_size(odb_obj);
-
 	return tag_parse(tag, buffer, buffer_end);
 }
 
@@ -196,12 +125,12 @@ static int retrieve_tag_reference_oid(
 }
 
 static int write_tag_annotation(
-		git_oid *oid,
-		git_repository *repo,
-		const char *tag_name,
-		const git_object *target,
-		const git_signature *tagger,
-		const char *message)
+	git_oid *oid,
+	git_repository *repo,
+	const char *tag_name,
+	const git_object *target,
+	const git_signature *tagger,
+	const char *message)
 {
 	git_buf tag = GIT_BUF_INIT;
 	git_odb *odb;
@@ -231,14 +160,14 @@ on_error:
 }
 
 static int git_tag_create__internal(
-		git_oid *oid,
-		git_repository *repo,
-		const char *tag_name,
-		const git_object *target,
-		const git_signature *tagger,
-		const char *message,
-		int allow_ref_overwrite,
-		int create_tag_annotation)
+	git_oid *oid,
+	git_repository *repo,
+	const char *tag_name,
+	const git_object *target,
+	const git_signature *tagger,
+	const char *message,
+	int allow_ref_overwrite,
+	int create_tag_annotation)
 {
 	git_reference *new_ref = NULL;
 	git_buf ref_name = GIT_BUF_INIT;
@@ -320,77 +249,70 @@ int git_tag_create_frombuffer(git_oid *oid, git_repository *repo, const char *bu
 	int error;
 	git_odb *odb;
 	git_odb_stream *stream;
-	git_odb_object *target_obj;
-
-	git_reference *new_ref = NULL;
+	git_odb_object *target_obj = NULL;
 	git_buf ref_name = GIT_BUF_INIT;
+	size_t buflen;
 
 	assert(oid && buffer);
 
 	memset(&tag, 0, sizeof(tag));
-
-	if (git_repository_odb__weakptr(&odb, repo) < 0)
-		return -1;
+	buflen = strlen(buffer);
 
 	/* validate the buffer */
-	if (tag_parse(&tag, buffer, buffer + strlen(buffer)) < 0)
-		return -1;
+	if ((error = tag_parse(&tag, buffer, buffer + buflen)) < 0)
+		goto cleanup;
 
 	/* validate the target */
-	if (git_odb_read(&target_obj, odb, &tag.target) < 0)
-		goto on_error;
+	if ((error = git_repository_odb__weakptr(&odb, repo)) < 0 ||
+		(error = git_odb_read(&target_obj, odb, &tag.target)) < 0)
+		goto cleanup;
 
 	if (tag.type != target_obj->cached.type) {
 		giterr_set(GITERR_TAG, "The type for the given target is invalid");
-		goto on_error;
+		error = -1;
+		goto cleanup;
 	}
 
 	error = retrieve_tag_reference_oid(oid, &ref_name, repo, tag.tag_name);
 	if (error < 0 && error != GIT_ENOTFOUND)
-		goto on_error;
-
-	/* We don't need these objects after this */
-	git_signature_free(tag.tagger);
-	git__free(tag.tag_name);
-	git__free(tag.message);
-	git_odb_object_free(target_obj);
+		goto cleanup;
 
 	/** Ensure the tag name doesn't conflict with an already existing
 	 *	reference unless overwriting has explictly been requested **/
-	if (error == 0 && !allow_ref_overwrite) {
+	if (!error && !allow_ref_overwrite) {
 		giterr_set(GITERR_TAG, "Tag already exists");
-		return GIT_EEXISTS;
+		error = GIT_EEXISTS;
+		goto cleanup;
 	}
 
 	/* write the buffer */
-	if ((error = git_odb_open_wstream(
-			&stream, odb, strlen(buffer), GIT_OBJ_TAG)) < 0)
-		return error;
+	if (!(error = git_odb_open_wstream(&stream, odb, buflen, GIT_OBJ_TAG))) {
 
-	if (!(error = git_odb_stream_write(stream, buffer, strlen(buffer))))
-		error = git_odb_stream_finalize_write(oid, stream);
+		if (!(error = git_odb_stream_write(stream, buffer, buflen)))
+			error = git_odb_stream_finalize_write(oid, stream);
 
-	git_odb_stream_free(stream);
-
-	if (error < 0) {
-		git_buf_free(&ref_name);
-		return error;
+		git_odb_stream_free(stream);
 	}
 
-	error = git_reference_create(
-		&new_ref, repo, ref_name.ptr, oid, allow_ref_overwrite, NULL, NULL);
+	/* update the reference */
+	if (!error) {
+		git_reference *new_ref = NULL;
 
-	git_reference_free(new_ref);
-	git_buf_free(&ref_name);
+		error = git_reference_create(
+			&new_ref, repo, ref_name.ptr, oid,
+			allow_ref_overwrite, NULL, NULL);
 
-	return error;
+		git_reference_free(new_ref);
+	}
 
-on_error:
+cleanup:
 	git_signature_free(tag.tagger);
 	git__free(tag.tag_name);
 	git__free(tag.message);
 	git_odb_object_free(target_obj);
-	return -1;
+	git_buf_free(&ref_name);
+
+	return error;
 }
 
 int git_tag_delete(git_repository *repo, const char *tag_name)
@@ -403,11 +325,10 @@ int git_tag_delete(git_repository *repo, const char *tag_name)
 
 	git_buf_free(&ref_name);
 
-	if (error < 0)
-		return error;
+	if (!error)
+		error = git_reference_delete(tag_ref);
 
-	if ((error = git_reference_delete(tag_ref)) == 0)
-		git_reference_free(tag_ref);
+	git_reference_free(tag_ref);
 
 	return error;
 }
