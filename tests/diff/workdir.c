@@ -694,6 +694,41 @@ void test_diff_workdir__eof_newline_changes(void)
 	git_diff_free(diff);
 }
 
+void test_diff_workdir__symlink_blob_mode_changed_to_regular_file(void)
+{
+	const char *commit = "7fccd7";
+
+	git_tree *tree;
+	git_diff *diff;
+	diff_expects exp;
+
+	g_repo = cl_git_sandbox_init("unsymlinked.git");
+	cl_git_pass(git_repository_set_workdir(g_repo, ".", false));
+
+	cl_assert((tree = resolve_commit_oid_to_tree(g_repo, commit)) != NULL);
+
+	cl_git_pass(git_futils_mkpath2file("./include/Nu/Nu.h", 0755));
+	cl_git_mkfile("./include/Nu/Nu.h", "awesome content\n");
+
+	cl_git_pass(git_diff_tree_to_workdir(&diff, g_repo, tree, NULL));
+
+	git_tree_free(tree);
+
+	memset(&exp, 0, sizeof(exp));
+
+	/* FIXME: The line below crashes fails on Windows with the
+	* following error message: "Failed to read symlink 'include/Nu/Nu.h': Not
+	* enough storage is available to process this command."
+	*/
+	cl_git_pass(git_diff_foreach(
+		diff, diff_file_cb, diff_hunk_cb, diff_line_cb, &exp));
+
+	// Here should live the assertions...
+	// However I *really* wonder what they should be... :-)
+
+	git_diff_free(diff);
+}
+
 /* PREPARATION OF TEST DATA
  *
  * Since there is no command line equivalent of git_diff_tree_to_workdir,
