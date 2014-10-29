@@ -145,3 +145,9 @@ v0.21 + 1
 * git_treebuilder_create now takes a repository so that it can query
   repository configuration.  Subsequently, git_treebuilder_write no
   longer takes a repository.
+
+* The git_submodule_update function was renamed to
+  git_submodule_update_strategy. git_submodule_update is now used to
+  provide functionalty similar to "git submodule update".
+ 
+ 

@@ -49,7 +49,7 @@ void test_submodule_lookup__accessors(void)
 	cl_assert(git_oid_streq(git_submodule_wd_id(sm), oid) == 0);
 
 	cl_assert(git_submodule_ignore(sm) == GIT_SUBMODULE_IGNORE_NONE);
-	cl_assert(git_submodule_update(sm) == GIT_SUBMODULE_UPDATE_CHECKOUT);
+	cl_assert(git_submodule_update_strategy(sm) == GIT_SUBMODULE_UPDATE_CHECKOUT);
 
 	git_submodule_free(sm);
 

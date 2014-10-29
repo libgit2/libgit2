@@ -160,7 +160,7 @@ void test_submodule_modify__edit_and_save(void)
 	cl_assert_equal_i(
 		GIT_SUBMODULE_IGNORE_UNTRACKED, git_submodule_ignore(sm1));
 	cl_assert_equal_i(
-		GIT_SUBMODULE_UPDATE_REBASE, git_submodule_update(sm1));
+		GIT_SUBMODULE_UPDATE_REBASE, git_submodule_update_strategy(sm1));
 	cl_assert_equal_i(
 		GIT_SUBMODULE_RECURSE_YES, git_submodule_fetch_recurse_submodules(sm1));
 
@@ -179,7 +179,7 @@ void test_submodule_modify__edit_and_save(void)
 	/* check that revert was successful */
 	cl_assert_equal_s(old_url, git_submodule_url(sm1));
 	cl_assert_equal_i((int)old_ignore, (int)git_submodule_ignore(sm1));
-	cl_assert_equal_i((int)old_update, (int)git_submodule_update(sm1));
+	cl_assert_equal_i((int)old_update, (int)git_submodule_update_strategy(sm1));
 	cl_assert_equal_i(
 		old_fetchrecurse, git_submodule_fetch_recurse_submodules(sm1));
 
@@ -202,7 +202,7 @@ void test_submodule_modify__edit_and_save(void)
 	cl_assert_equal_i(
 		(int)GIT_SUBMODULE_IGNORE_UNTRACKED, (int)git_submodule_ignore(sm1));
 	cl_assert_equal_i(
-		(int)GIT_SUBMODULE_UPDATE_REBASE, (int)git_submodule_update(sm1));
+		(int)GIT_SUBMODULE_UPDATE_REBASE, (int)git_submodule_update_strategy(sm1));
 	cl_assert_equal_i(GIT_SUBMODULE_RECURSE_YES, git_submodule_fetch_recurse_submodules(sm1));
 
 	/* call reload and check that the new values are loaded */
@@ -212,7 +212,7 @@ void test_submodule_modify__edit_and_save(void)
 	cl_assert_equal_i(
 		(int)GIT_SUBMODULE_IGNORE_UNTRACKED, (int)git_submodule_ignore(sm1));
 	cl_assert_equal_i(
-		(int)GIT_SUBMODULE_UPDATE_REBASE, (int)git_submodule_update(sm1));
+		(int)GIT_SUBMODULE_UPDATE_REBASE, (int)git_submodule_update_strategy(sm1));
 	cl_assert_equal_i(GIT_SUBMODULE_RECURSE_YES, git_submodule_fetch_recurse_submodules(sm1));
 
 	/* open a second copy of the repo and compare submodule */
@@ -223,7 +223,7 @@ void test_submodule_modify__edit_and_save(void)
 	cl_assert_equal_i(
 		GIT_SUBMODULE_IGNORE_UNTRACKED, git_submodule_ignore(sm2));
 	cl_assert_equal_i(
-		GIT_SUBMODULE_UPDATE_REBASE, git_submodule_update(sm2));
+		GIT_SUBMODULE_UPDATE_REBASE, git_submodule_update_strategy(sm2));
 	cl_assert_equal_i(
 		GIT_SUBMODULE_RECURSE_NO, git_submodule_fetch_recurse_submodules(sm2));
 
