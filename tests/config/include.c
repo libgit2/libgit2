@@ -86,3 +86,18 @@ void test_config_include__depth(void)
 	unlink("a");
 	unlink("b");
 }
+
+void test_config_include__missing(void)
+{
+	git_config *cfg;
+	const char *str;
+
+	cl_git_mkfile("included", "[include]\npath = nonexistentfile\n[foo]\nbar = baz");
+
+	cl_git_pass(git_config_open_ondisk(&cfg, "included"));
+	cl_git_pass(git_config_get_string(&str, cfg, "foo.bar"));
+	cl_assert_equal_s(str, "baz");
+
+	git_config_free(cfg);
+	unlink("included");
+}
