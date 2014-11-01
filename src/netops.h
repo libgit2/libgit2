@@ -9,6 +9,7 @@
 
 #include "posix.h"
 #include "common.h"
+#include "stream.h"
 
 #ifdef GIT_SSL
 # include <openssl/ssl.h>
@@ -32,6 +33,7 @@ typedef struct gitno_buffer {
 	char *data;
 	size_t len;
 	size_t offset;
+	git_stream *io;
 	gitno_socket *socket;
 	int (*recv)(struct gitno_buffer *buffer);
 	void *cb_data;
@@ -57,6 +59,7 @@ enum {
 int gitno__match_host(const char *pattern, const char *host);
 
 void gitno_buffer_setup(gitno_socket *t, gitno_buffer *buf, char *data, size_t len);
+void gitno_buffer_setup_fromstream(git_stream *st, gitno_buffer *buf, char *data, size_t len);
 void gitno_buffer_setup_callback(gitno_socket *t, gitno_buffer *buf, char *data, size_t len, int (*recv)(gitno_buffer *buf), void *cb_data);
 int gitno_recv(gitno_buffer *buf);
 

@@ -104,6 +104,16 @@ static int ssl_set_error(gitno_ssl *ssl, int error)
 
 int gitno_recv(gitno_buffer *buf)
 {
+	if (buf->io) {
+		int ret;
+		ret = git_stream_read(buf->io, buf->data + buf->offset, buf->len - buf->offset);
+		if (ret < 0)
+			return -1;
+
+		buf->offset += ret;
+		return ret;
+	}
+
 	return buf->recv(buf);
 }
 
@@ -166,6 +176,15 @@ void gitno_buffer_setup(gitno_socket *socket, gitno_buffer *buf, char *data, siz
 #endif
 
 	gitno_buffer_setup_callback(socket, buf, data, len, gitno__recv, NULL);
+}
+
+void gitno_buffer_setup_fromstream(git_stream *st, gitno_buffer *buf, char *data, size_t len)
+{
+	memset(data, 0x0, len);
+	buf->data = data;
+	buf->len = len;
+	buf->offset = 0;
+	buf->io = st;
 }
 
 /* Consume up to ptr and move the rest of the buffer to the beginning */
