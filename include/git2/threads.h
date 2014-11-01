@@ -44,6 +44,22 @@ GIT_EXTERN(int) git_threads_init(void);
  */
 GIT_EXTERN(void) git_threads_shutdown(void);
 
+/**
+ * Initialize the OpenSSL locks
+ *
+ * OpenSSL requires the application to determine how it performs
+ * locking. This is a convenience function which libgit2 provides for
+ * allocating and initializing the locks as well as setting the
+ * locking function to use the system's native locking functions.
+ *
+ * The locking function will be cleared and the memory will be freed
+ * when you call git_threads_sutdown().
+ *
+ * @return 0 on success, -1 if there are errors or if libgit2 was not
+ * built with OpenSSL and threading support.
+ */
+GIT_EXTERN(int) git_openssl_set_locking(void);
+
 /** @} */
 GIT_END_DECL
 #endif
