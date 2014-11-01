@@ -7,8 +7,9 @@
 
 #include "common.h"
 #include "posix.h"
-#include "stream.h"
 #include "netops.h"
+#include "stream.h"
+#include "socket_stream.h"
 
 #ifndef _WIN32
 #	include <sys/types.h>
@@ -67,18 +68,11 @@ static int close_socket(GIT_SOCKET s)
 
 }
 
-typedef struct {
-	git_stream parent;
-	char *host;
-	char *port;
-	GIT_SOCKET s;
-} socket_stream;
-
 int socket_connect(git_stream *stream)
 {
 	struct addrinfo *info = NULL, *p;
 	struct addrinfo hints;
-	socket_stream *st = (socket_stream *) stream;
+	git_socket_stream *st = (git_socket_stream *) stream;
 	GIT_SOCKET s = INVALID_SOCKET;
 	int ret;
 
@@ -142,7 +136,7 @@ ssize_t socket_write(git_stream *stream, void *data, size_t len, int flags)
 {
 	ssize_t ret;
 	size_t off = 0;
-	socket_stream *st = (socket_stream *) stream;
+	git_socket_stream *st = (git_socket_stream *) stream;
 
 	while (off < len) {
 		errno = 0;
@@ -161,7 +155,7 @@ ssize_t socket_write(git_stream *stream, void *data, size_t len, int flags)
 ssize_t socket_read(git_stream *stream, void *data, size_t len)
 {
 	ssize_t ret;
-	socket_stream *st = (socket_stream *) stream;
+	git_socket_stream *st = (git_socket_stream *) stream;
 
 	if ((ret = p_recv(st->s, data, len, 0)) < 0)
 		net_set_error("Error receiving socket data");
@@ -171,7 +165,7 @@ ssize_t socket_read(git_stream *stream, void *data, size_t len)
 
 int socket_close(git_stream *stream)
 {
-	socket_stream *st = (socket_stream *) stream;
+	git_socket_stream *st = (git_socket_stream *) stream;
 	int error;
 
 	error = close_socket(st->s);
@@ -182,7 +176,7 @@ int socket_close(git_stream *stream)
 
 void socket_free(git_stream *stream)
 {
-	socket_stream *st = (socket_stream *) stream;
+	git_socket_stream *st = (git_socket_stream *) stream;
 
 	git__free(st->host);
 	git__free(st->port);
@@ -191,11 +185,11 @@ void socket_free(git_stream *stream)
 
 int git_socket_stream_new(git_stream **out, const char *host, const char *port)
 {
-	socket_stream *st;
+	git_socket_stream *st;
 
 	assert(out && host);
 
-	st = git__calloc(1, sizeof(socket_stream));
+	st = git__calloc(1, sizeof(git_socket_stream));
 	GITERR_CHECK_ALLOC(st);
 
 	st->host = git__strdup(host);
