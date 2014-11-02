@@ -14,8 +14,14 @@
 
 int stransport_error(OSStatus ret)
 {
-	giterr_set(GITERR_NET, "foo");
-	return -1;
+	switch (ret) {
+	case noErr:
+		giterr_clear();
+		return 0;
+	default:
+		giterr_set(GITERR_NET, "foo");
+		return -1;
+	}
 }
 
 typedef struct {
@@ -37,6 +43,21 @@ int stransport_connect(git_stream *stream)
 		return stransport_error(ret);
 
 	return 0;
+}
+
+int stransport_certificate(git_cert **out, git_stream *stream)
+{
+	stransport_stream *st = (stransport_stream *) stream;
+	SecTrustRef trust;
+	OSStatus ret;
+
+	if ((ret = SSLCopyPeerTrust(st->ctx, &trust)) != noErr)
+		return stransport_error(ret);
+
+	CFRelease(trust);
+
+	giterr_set(GITERR_SSL, "not implemented yet");
+	return -1;
 }
 
 static OSStatus write_cb(SSLConnectionRef conn, const void *data, size_t *len)
@@ -96,6 +117,17 @@ ssize_t stransport_read(git_stream *stream, void *data, size_t len)
 	return processed;
 }
 
+int stransport_close(git_stream *stream)
+{
+	stransport_stream *st = (stransport_stream *) stream;
+	OSStatus ret;
+
+	if ((ret = SSLClose(st->ctx)) != noErr)
+		return stransport_error(ret);
+
+	return git_stream_close(st->io);
+}
+
 void stransport_free(git_stream *stream)
 {
 	stransport_stream *st = (stransport_stream *) stream;
@@ -129,6 +161,13 @@ int git_stransport_stream_new(git_stream **out, const char *host, const char *po
 		return stransport_error(ret);
 	}
 
+	st->parent.encrypted = 1;
+	st->parent.connect = stransport_connect;
+	st->parent.certificate = stransport_certificate;
+	st->parent.read = stransport_read;
+	st->parent.write = stransport_write;
+	st->parent.close = stransport_close;
+	st->parent.free = stransport_free;
 
 	*out = (git_stream *) st;
 	return 0;
