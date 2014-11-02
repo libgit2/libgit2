@@ -28,7 +28,7 @@ int git_libgit2_features()
 #ifdef GIT_THREADS
 		| GIT_FEATURE_THREADS
 #endif
-#if defined(GIT_SSL) || defined(GIT_WINHTTP)
+#if defined(GIT_SSL) || defined(GIT_WINHTTP) || defined(GIT_SECURE_TRANSPORT)
 		| GIT_FEATURE_HTTPS
 #endif
 #if defined(GIT_SSH)
