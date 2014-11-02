@@ -486,6 +486,11 @@ GIT_EXTERN(int) git_merge_commits(
  * to the index.  Callers should inspect the repository's index after this
  * completes, resolve any conflicts and prepare a commit.
  *
+ * For compatibility with git, the repository is put into a merging
+ * state. Once the commit is done (or if the uses wishes to abort),
+ * you should clear this state by calling
+ * `git_repository_state_cleanup()`.
+ *
  * @param repo the repository to merge
  * @param their_heads the heads to merge into
  * @param their_heads_len the number of heads to merge
