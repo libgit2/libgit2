@@ -983,6 +983,7 @@ static int remote_head_for_ref(git_remote_head **out, git_remote *remote, git_re
 	    (error = git_config_get_string(&branch_remote, config, git_buf_cstr(&config_key))) < 0 ||
 	    git__strcmp(git_remote_name(remote), branch_remote) ||
 	    (error = git_branch_upstream_name(&upstream_name, repo, ref_name)) < 0 ||
+	    !git_refspec_dst_matches(spec, git_buf_cstr(&upstream_name)) ||
 	    (error = git_refspec_rtransform(&remote_name, spec, upstream_name.ptr)) < 0) {
 		/* Not an error if there is no upstream */
 		if (error == GIT_ENOTFOUND)
