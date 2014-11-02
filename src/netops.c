@@ -276,7 +276,7 @@ static int verify_server_cert(gitno_ssl *ssl, const char *host)
 
 	if (SSL_get_verify_result(ssl->ssl) != X509_V_OK) {
 		giterr_set(GITERR_SSL, "The SSL certificate is invalid");
-		return -1;
+		return GIT_ECERTIFICATE;
 	}
 
 	/* Try to parse the host as an IP address to see if it is */
