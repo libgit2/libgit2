@@ -917,6 +917,7 @@ static int remote_head_for_ref(git_remote_head **out, git_refspec *spec, git_vec
 
 	if ((!git_reference__is_branch(ref_name)) ||
 	    (error = git_branch_upstream_name(&upstream_name, repo, ref_name)) < 0 ||
+	    !git_refspec_dst_matches(spec, git_buf_cstr(&upstream_name)) ||
 	    (error = git_refspec_rtransform(&remote_name, spec, upstream_name.ptr)) < 0) {
 		/* Not an error if there is no upstream */
 		if (error == GIT_ENOTFOUND)
