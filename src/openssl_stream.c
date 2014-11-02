@@ -17,6 +17,7 @@
 #include "posix.h"
 #include "stream.h"
 #include "socket_stream.h"
+#include "netops.h"
 #include "git2/transport.h"
 
 static int ssl_set_error(SSL *ssl, int error)
@@ -103,7 +104,7 @@ static int verify_server_cert(SSL *ssl, const char *host)
 
 	if (SSL_get_verify_result(ssl) != X509_V_OK) {
 		giterr_set(GITERR_SSL, "The SSL certificate is invalid");
-		return -1;
+		return GIT_ECERTIFICATE;
 	}
 
 	/* Try to parse the host as an IP address to see if it is */
