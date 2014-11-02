@@ -14,6 +14,7 @@
 #include "netops.h"
 #include "smart.h"
 #include "cred.h"
+#include "socket_stream.h"
 
 #ifdef GIT_SSH
 
@@ -25,7 +26,7 @@ static const char cmd_receivepack[] = "git-receive-pack";
 
 typedef struct {
 	git_smart_subtransport_stream parent;
-	gitno_socket socket;
+	git_stream *io;
 	LIBSSH2_SESSION *session;
 	LIBSSH2_CHANNEL *channel;
 	const char *cmd;
@@ -183,9 +184,10 @@ static void ssh_stream_free(git_smart_subtransport_stream *stream)
 		s->session = NULL;
 	}
 
-	if (s->socket.socket) {
-		(void)gitno_close(&s->socket);
-		/* can't do anything here with error return value */
+	if (s->io) {
+		git_stream_close(s->io);
+		git_stream_free(s->io);
+		s->io = NULL;
 	}
 
 	git__free(s->url);
@@ -413,10 +415,11 @@ static int request_creds(git_cred **out, ssh_subtransport *t, const char *user, 
 
 static int _git_ssh_session_create(
 	LIBSSH2_SESSION** session,
-	gitno_socket socket)
+	git_stream *io)
 {
 	int rc = 0;
 	LIBSSH2_SESSION* s;
+	git_socket_stream *socket = (git_socket_stream *) io;
 
 	assert(session);
 
@@ -427,7 +430,7 @@ static int _git_ssh_session_create(
 	}
 
 	do {
-		rc = libssh2_session_startup(s, socket.socket);
+		rc = libssh2_session_startup(s, socket->s);
 	} while (LIBSSH2_ERROR_EAGAIN == rc || LIBSSH2_ERROR_TIMEOUT == rc);
 
 	if (rc != LIBSSH2_ERROR_NONE) {
@@ -477,10 +480,11 @@ static int _git_ssh_setup_conn(
 		GITERR_CHECK_ALLOC(port);
 	}
 
-	if ((error = gitno_connect(&s->socket, host, port, 0)) < 0)
+	if ((error = git_socket_stream_new(&s->io, host, port)) < 0 ||
+	    (error = git_stream_connect(s->io)) < 0)
 		goto done;
 
-	if ((error = _git_ssh_session_create(&session, s->socket)) < 0)
+	if ((error = _git_ssh_session_create(&session, s->io)) < 0)
 		goto done;
 
 	if (t->owner->certificate_check_cb != NULL) {
