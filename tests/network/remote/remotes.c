@@ -246,6 +246,33 @@ void test_network_remote_remotes__missing_refspecs(void)
 	git_config_free(cfg);
 }
 
+void test_network_remote_remotes__nonmatch_upstream_refspec(void)
+{
+	git_config *config;
+	git_remote *remote;
+	char *specstr[] = {
+		"refs/tags/*:refs/tags/*",
+	};
+	git_strarray specs = {
+		specstr,
+		1,
+	};
+
+	cl_git_pass(git_remote_create(&remote, _repo, "taggy", git_repository_path(_repo)));
+
+	/*
+	 * Set the current branch's upstream remote to a dummy ref so we call into the code
+	 * which tries to check for the current branch's upstream in the refspecs
+	 */
+	cl_git_pass(git_repository_config(&config, _repo));
+	cl_git_pass(git_config_set_string(config, "branch.master.remote", "taggy"));
+	cl_git_pass(git_config_set_string(config, "branch.master.merge", "refs/heads/foo"));
+
+	cl_git_pass(git_remote_fetch(remote, &specs, NULL, NULL));
+
+	git_remote_free(remote);
+}
+
 void test_network_remote_remotes__list(void)
 {
 	git_strarray list;
