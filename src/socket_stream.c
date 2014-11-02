@@ -99,7 +99,6 @@ int socket_connect(git_stream *stream)
 
 	if ((ret = p_getaddrinfo(st->host, st->port, &hints, &info)) != 0) {
 		giterr_set(GITERR_NET,
-
 			   "Failed to resolve address for %s: %s", st->host, p_gai_strerror(ret));
 		return -1;
 	}
