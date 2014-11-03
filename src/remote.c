@@ -207,34 +207,15 @@ static int ensure_remote_doesnot_exist(git_repository *repo, const char *name)
 int git_remote_create(git_remote **out, git_repository *repo, const char *name, const char *url)
 {
 	git_buf buf = GIT_BUF_INIT;
-	git_remote *remote = NULL;
 	int error;
-
-	if ((error = ensure_remote_name_is_valid(name)) < 0)
-		return error;
-
-	if ((error = ensure_remote_doesnot_exist(repo, name)) < 0)
-		return error;
 
 	if (git_buf_printf(&buf, "+refs/heads/*:refs/remotes/%s/*", name) < 0)
 		return -1;
 
-	if (create_internal(&remote, repo, name, url, git_buf_cstr(&buf)) < 0)
-		goto on_error;
-
+	error = git_remote_create_with_fetchspec(out, repo, name, url, git_buf_cstr(&buf));
 	git_buf_free(&buf);
 
-	if (git_remote_save(remote) < 0)
-		goto on_error;
-
-	*out = remote;
-
-	return 0;
-
-on_error:
-	git_buf_free(&buf);
-	git_remote_free(remote);
-	return -1;
+	return error;
 }
 
 int git_remote_create_with_fetchspec(git_remote **out, git_repository *repo, const char *name, const char *url, const char *fetch)
