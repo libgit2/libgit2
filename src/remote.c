@@ -1677,7 +1677,7 @@ int git_remote_rename(git_strarray *out, git_repository *repo, const char *name,
 	assert(out && repo && name && new_name);
 
 	if ((error = git_remote_load(&remote, repo, name)) < 0)
-		return -1;
+		return error;
 
 	if ((error = ensure_remote_name_is_valid(new_name)) < 0)
 		goto cleanup;
