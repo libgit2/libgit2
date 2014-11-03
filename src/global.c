@@ -73,6 +73,13 @@ static void shutdown_ssl(void)
 static void init_ssl(void)
 {
 #ifdef GIT_SSL
+	long ssl_opts = SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3;
+
+	/* Older OpenSSL and MacOS OpenSSL doesn't have this */
+#ifdef SSL_OP_NO_COMPRESSION
+	ssl_opts |= SSL_OP_NO_COMPRESSION;
+#endif
+
 	SSL_load_error_strings();
 	OpenSSL_add_ssl_algorithms();
 	/*
@@ -82,13 +89,7 @@ static void init_ssl(void)
 	 * to speak TLSv1 to perform the encryption itself.
 	 */
 	git__ssl_ctx = SSL_CTX_new(SSLv23_method());
-	SSL_CTX_set_options(git__ssl_ctx,
-			    SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3
-	/* Older OpenSSL and MacOS OpenSSL doesn't have this */
-# ifdef SSL_OP_NO_COMPRESSION
-			    | SSL_OP_NO_COMPRESSION
-# endif
-		);
+	SSL_CTX_set_options(git__ssl_ctx, ssl_opts);
 	SSL_CTX_set_mode(git__ssl_ctx, SSL_MODE_AUTO_RETRY);
 	SSL_CTX_set_verify(git__ssl_ctx, SSL_VERIFY_NONE, NULL);
 	if (!SSL_CTX_set_default_verify_paths(git__ssl_ctx)) {
