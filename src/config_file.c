@@ -1280,11 +1280,18 @@ static int config_parse(git_strmap *values, diskfile_backend *cfg_file, struct r
 
 				r->file_path = git_buf_detach(&path);
 				git_buf_init(&r->buffer, 0);
-				if (git_futils_readbuffer_updated(&r->buffer, r->file_path, &r->file_mtime,
-									    &r->file_size, NULL) == 0) {
+				result = git_futils_readbuffer_updated(&r->buffer, r->file_path, &r->file_mtime,
+									    &r->file_size, NULL);
+
+				if (result == 0) {
 					result = config_parse(values, cfg_file, r, level, depth+1);
 					r = git_array_get(cfg_file->readers, index);
 				}
+				else if (result == GIT_ENOTFOUND) {
+					giterr_clear();
+					result = 0;
+				}
+
 				git_buf_free(&r->buffer);
 
 				if (result < 0)
