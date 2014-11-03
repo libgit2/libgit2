@@ -200,6 +200,15 @@ void test_network_remote_rename__overwrite_ref_in_target(void)
 	git_branch_iterator_free(iter);
 }
 
+void test_network_remote_rename__nonexistent_returns_enotfound(void)
+{
+	git_strarray problems = {0};
+
+	int err = git_remote_rename(&problems, _repo, "nonexistent", "renamed");
+
+	cl_assert_equal_i(GIT_ENOTFOUND, err);
+}
+
 void test_network_remote_rename__symref_head(void)
 {
 	int error;
