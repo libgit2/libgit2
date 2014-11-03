@@ -377,8 +377,8 @@ typedef struct {
 
 	/* options controlling how to diff text is generated */
 
-	uint16_t    context_lines;    /**< defaults to 3 */
-	uint16_t    interhunk_lines;  /**< defaults to 0 */
+	uint32_t    context_lines;    /**< defaults to 3 */
+	uint32_t    interhunk_lines;  /**< defaults to 0 */
 	uint16_t    id_abbrev;       /**< default 'core.abbrev' or 7 if unset */
 	git_off_t   max_size;         /**< defaults to 512MB */
 	const char *old_prefix;       /**< defaults to "a" */
