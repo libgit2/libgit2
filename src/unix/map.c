@@ -26,7 +26,7 @@ int git__page_size(size_t *page_size)
 
 int p_mmap(git_map *out, size_t len, int prot, int flags, int fd, git_off_t offset)
 {
-	int mprot = 0;
+	int mprot = PROT_READ;
 	int mflag = 0;
 
 	GIT_MMAP_VALIDATE(out, len, prot, flags);
@@ -35,9 +35,7 @@ int p_mmap(git_map *out, size_t len, int prot, int flags, int fd, git_off_t offs
 	out->len = 0;
 
 	if (prot & GIT_PROT_WRITE)
-		mprot = PROT_WRITE;
-	else if (prot & GIT_PROT_READ)
-		mprot = PROT_READ;
+		mprot |= PROT_WRITE;
 
 	if ((flags & GIT_MAP_TYPE) == GIT_MAP_SHARED)
 		mflag = MAP_SHARED;
