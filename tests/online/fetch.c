@@ -81,6 +81,42 @@ void test_online_fetch__no_tags_http(void)
 	do_fetch("http://github.com/libgit2/TestGitRepository.git", GIT_REMOTE_DOWNLOAD_TAGS_NONE, 3);
 }
 
+void test_online_fetch__all_tags_after_checkout(void)
+{
+	git_remote *remote;
+	git_reference* remoteBranch;
+	git_commit* commit;
+	git_reference* localBranch;
+
+	cl_git_pass(git_remote_create(&remote, _repo, "test", "git://github.com/libgit2/TestGitRepository.git"));
+
+	/* Fetch branches from remote */
+	git_remote_set_autotag(remote, GIT_REMOTE_DOWNLOAD_TAGS_NONE);
+	cl_git_pass(git_remote_connect(remote, GIT_DIRECTION_FETCH));
+	cl_git_pass(git_remote_download(remote, NULL));
+	git_remote_disconnect(remote);
+	cl_git_pass(git_remote_update_tips(remote, NULL, NULL));
+
+	/* Checkout "master" branch and configure upstream */
+	cl_git_pass(git_branch_lookup(&remoteBranch, _repo, "test/master", GIT_BRANCH_REMOTE));
+	cl_git_pass(git_commit_lookup(&commit, _repo, git_reference_target(remoteBranch)));
+	cl_git_pass(git_branch_create(&localBranch, _repo, "master", commit, 0, NULL, NULL));
+	cl_git_pass(git_branch_set_upstream(localBranch, "test/master"));
+
+	/* Fetch tags from remote */
+	git_remote_set_autotag(remote, GIT_REMOTE_DOWNLOAD_TAGS_ALL);
+	cl_git_pass(git_remote_connect(remote, GIT_DIRECTION_FETCH));
+	cl_git_pass(git_remote_download(remote, NULL));
+	git_remote_disconnect(remote);
+	cl_git_pass(git_remote_update_tips(remote, NULL, NULL));
+	git_remote_disconnect(remote);
+
+	git_reference_free(localBranch);
+	git_commit_free(commit);
+	git_reference_free(remoteBranch);
+	git_remote_free(remote);
+}
+
 void test_online_fetch__fetch_twice(void)
 {
 	git_remote *remote;
