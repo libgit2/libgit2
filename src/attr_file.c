@@ -543,7 +543,7 @@ int git_attr_fnmatch__parse(
 	for (scan = pattern; *scan != '\0'; ++scan) {
 		/* scan until (non-escaped) white space */
 		if (git__isspace(*scan) && *(scan - 1) != '\\') {
-			if (!allow_space || (*scan != ' ' && *scan != '\t'))
+			if (!allow_space || (*scan != ' ' && *scan != '\t' && *scan != '\r'))
 				break;
 		}
 
@@ -563,6 +563,15 @@ int git_attr_fnmatch__parse(
 
 	if ((spec->length = scan - pattern) == 0)
 		return GIT_ENOTFOUND;
+
+	/*
+	 * Remove one trailing \r in case this is a CRLF delimited
+	 * file, in the case of Icon\r\r\n, we still leave the first
+	 * \r there to match against.
+	 */
+	if (pattern[spec->length - 1] == '\r')
+		if (--spec->length == 0)
+			return GIT_ENOTFOUND;
 
 	if (pattern[spec->length - 1] == '/') {
 		spec->length--;
