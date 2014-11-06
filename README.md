@@ -58,6 +58,11 @@ dependencies, it can make use of a few libraries to add to it:
 - LibSSH2 to enable the SSH transport
 - iconv (OSX) to handle the HFS+ path encoding peculiarities
 
+Threading
+=========
+
+See [THREADING](THREADING.md) for information
+
 Building libgit2 - Using CMake
 ==============================
 

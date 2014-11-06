@@ -64,8 +64,9 @@ void openssl_locking_function(int mode, int n, const char *file, int line)
 	}
 }
 
-static void shutdown_ssl(void)
+static void shutdown_ssl_locking(void)
 {
+	CRYPTO_set_locking_callback(NULL);
 	git__free(openssl_locks);
 }
 #endif
@@ -96,30 +97,35 @@ static void init_ssl(void)
 		SSL_CTX_free(git__ssl_ctx);
 		git__ssl_ctx = NULL;
 	}
+#endif
+}
 
+int git_openssl_set_locking(void)
+{
+#ifdef GIT_SSL
 # ifdef GIT_THREADS
-	{
-		int num_locks, i;
+	int num_locks, i;
 
-		num_locks = CRYPTO_num_locks();
-		openssl_locks = git__calloc(num_locks, sizeof(git_mutex));
-		if (openssl_locks == NULL) {
-			SSL_CTX_free(git__ssl_ctx);
-			git__ssl_ctx = NULL;
+	num_locks = CRYPTO_num_locks();
+	openssl_locks = git__calloc(num_locks, sizeof(git_mutex));
+	GITERR_CHECK_ALLOC(openssl_locks);
+
+	for (i = 0; i < num_locks; i++) {
+		if (git_mutex_init(&openssl_locks[i]) != 0) {
+			giterr_set(GITERR_SSL, "failed to initialize openssl locks");
+			return -1;
 		}
-
-		for (i = 0; i < num_locks; i++) {
-			if (git_mutex_init(&openssl_locks[i]) != 0) {
-				SSL_CTX_free(git__ssl_ctx);
-				git__ssl_ctx = NULL;
-			}
-		}
-
-		CRYPTO_set_locking_callback(openssl_locking_function);
 	}
 
-	git__on_shutdown(shutdown_ssl);
+	CRYPTO_set_locking_callback(openssl_locking_function);
+	git__on_shutdown(shutdown_ssl_locking);
+	return 0;
+# else
+	giterr_set(GITERR_THREAD, "libgit2 as not built with threads");
+	return -1;
 # endif
+	giterr_set(GITERR_SSL, "libgit2 was not built with OpenSSL support");
+	return -1;
 #endif
 }
 
