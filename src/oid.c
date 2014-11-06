@@ -114,6 +114,11 @@ char *git_oid_allocfmt(const git_oid *oid)
 	return str;
 }
 
+void oid_str_free(char* str)
+{
+  git__free(str);
+}
+
 char *git_oid_tostr(char *out, size_t n, const git_oid *oid)
 {
 	if (!out || n == 0)

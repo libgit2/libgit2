@@ -123,6 +123,7 @@ GIT_EXTERN(void) git_oid_pathfmt(char *out, const git_oid *id);
  *			deallocate the string with git__free().
  */
 GIT_EXTERN(char *) git_oid_allocfmt(const git_oid *id);
+GIT_EXTERN(void) oid_str_free(char* str);
 
 /**
  * Format a git_oid into a buffer as a hex format c-string.
