@@ -2242,6 +2242,7 @@ cleanup:
 
 int git_checkout_iterator(
 	git_iterator *target,
+	git_index *index,
 	const git_checkout_options *opts)
 {
 	int error = 0;
@@ -2278,7 +2279,7 @@ int git_checkout_iterator(
 
 	if ((error = git_iterator_reset(target, data.pfx, data.pfx)) < 0 ||
 		(error = git_iterator_for_workdir_ext(
-			&workdir, data.repo, data.opts.target_directory,
+			&workdir, data.repo, data.opts.target_directory, index, NULL,
 			iterflags | GIT_ITERATOR_DONT_AUTOEXPAND,
 			data.pfx, data.pfx)) < 0 ||
 		(error = git_iterator_for_tree(
@@ -2388,7 +2389,7 @@ int git_checkout_index(
 	GIT_REFCOUNT_INC(index);
 
 	if (!(error = git_iterator_for_index(&index_i, index, 0, NULL, NULL)))
-		error = git_checkout_iterator(index_i, opts);
+		error = git_checkout_iterator(index_i, index, opts);
 
 	if (owned)
 		GIT_REFCOUNT_OWN(index, NULL);
@@ -2405,6 +2406,7 @@ int git_checkout_tree(
 	const git_checkout_options *opts)
 {
 	int error;
+	git_index *index;
 	git_tree *tree = NULL;
 	git_iterator *tree_i = NULL;
 
@@ -2439,10 +2441,14 @@ int git_checkout_tree(
 		}
 	}
 
+	if ((error = git_repository_index(&index, repo)) < 0)
+		return error;
+
 	if (!(error = git_iterator_for_tree(&tree_i, tree, 0, NULL, NULL)))
-		error = git_checkout_iterator(tree_i, opts);
+		error = git_checkout_iterator(tree_i, index, opts);
 
 	git_iterator_free(tree_i);
+	git_index_free(index);
 	git_tree_free(tree);
 
 	return error;

@@ -1214,7 +1214,7 @@ int git_diff_index_to_workdir(
 	DIFF_FROM_ITERATORS(
 		git_iterator_for_index(&a, index, 0, pfx, pfx),
 		git_iterator_for_workdir(
-			&b, repo, GIT_ITERATOR_DONT_AUTOEXPAND, pfx, pfx)
+			&b, repo, index, NULL, GIT_ITERATOR_DONT_AUTOEXPAND, pfx, pfx)
 	);
 
 	if (!error && DIFF_FLAG_IS_SET(*diff, GIT_DIFF_UPDATE_INDEX))
@@ -1230,15 +1230,20 @@ int git_diff_tree_to_workdir(
 	const git_diff_options *opts)
 {
 	int error = 0;
+	git_index *index;
 
 	assert(diff && repo);
+
+	if ((error = git_repository_index(&index, repo)))
+		return error;
 
 	DIFF_FROM_ITERATORS(
 		git_iterator_for_tree(&a, old_tree, 0, pfx, pfx),
 		git_iterator_for_workdir(
-			&b, repo, GIT_ITERATOR_DONT_AUTOEXPAND, pfx, pfx)
+			&b, repo, index, old_tree, GIT_ITERATOR_DONT_AUTOEXPAND, pfx, pfx)
 	);
 
+	git_index_free(index);
 	return error;
 }
 
