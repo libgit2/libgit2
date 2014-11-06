@@ -1912,6 +1912,20 @@ done:
 	return error;
 }
 
+static int checkout_conflict_add(
+	checkout_data *data,
+	const git_index_entry *conflict)
+{
+	int error = git_index_remove(data->index, conflict->path, 0);
+
+	if (error == GIT_ENOTFOUND)
+		giterr_clear();
+	else if (error < 0)
+		return error;
+
+	return git_index_add(data->index, conflict);
+}
+
 static int checkout_conflict_update_index(
 	checkout_data *data,
 	checkout_conflictdata *conflict)
@@ -1919,13 +1933,13 @@ static int checkout_conflict_update_index(
 	int error = 0;
 
 	if (conflict->ancestor)
-		error = git_index_add(data->index, conflict->ancestor);
+		error = checkout_conflict_add(data, conflict->ancestor);
 
 	if (!error && conflict->ours)
-		error = git_index_add(data->index, conflict->ours);
+		error = checkout_conflict_add(data, conflict->ours);
 
 	if (!error && conflict->theirs)
-		error = git_index_add(data->index, conflict->theirs);
+		error = checkout_conflict_add(data, conflict->theirs);
 
 	return error;
 }
