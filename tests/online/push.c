@@ -631,11 +631,11 @@ void test_online_push__multi(void)
 
 void test_online_push__implicit_tgt(void)
 {
-	const char *specs1[] = { "refs/heads/b1:" };
+	const char *specs1[] = { "refs/heads/b1" };
 	push_status exp_stats1[] = { { "refs/heads/b1", 1 } };
 	expected_ref exp_refs1[] = { { "refs/heads/b1", &_oid_b1 } };
 
-	const char *specs2[] = { "refs/heads/b2:" };
+	const char *specs2[] = { "refs/heads/b2" };
 	push_status exp_stats2[] = { { "refs/heads/b2", 1 } };
 	expected_ref exp_refs2[] = {
 	{ "refs/heads/b1", &_oid_b1 },
@@ -838,22 +838,19 @@ void test_online_push__bad_refspecs(void)
 
 void test_online_push__expressions(void)
 {
+	git_push *push;
+
 	/* TODO: Expressions in refspecs doesn't actually work yet */
 	const char *specs_left_expr[] = { "refs/heads/b2~1:refs/heads/b2" };
 
-	/* expect not NULL to indicate failure (core git replies "funny refname",
-	 * other servers may be less pithy. */
-	const char *specs_right_expr[] = { "refs/heads/b2:refs/heads/b2~1" };
-	push_status exp_stats_right_expr[] = { { "refs/heads/b2~1", 0 } };
+	cl_git_pass(git_push_new(&push, _remote));
+	cl_git_fail(git_push_add_refspec(push, "refs/heads/b2:refs/heads/b2~1"));
+	git_push_free(push);
 
 	/* TODO: Find a more precise way of checking errors than a exit code of -1. */
 	do_push(specs_left_expr, ARRAY_SIZE(specs_left_expr),
 		NULL, 0,
 		NULL, 0, -1, 0, 0);
-
-	do_push(specs_right_expr, ARRAY_SIZE(specs_right_expr),
-		exp_stats_right_expr, ARRAY_SIZE(exp_stats_right_expr),
-		NULL, 0, 0, 1, 1);
 }
 
 void test_online_push__notes(void)
