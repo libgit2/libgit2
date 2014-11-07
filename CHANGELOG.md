@@ -112,3 +112,6 @@ v0.21 + 1
   now uint32_t instead of uint16_t. This allows to set them to UINT_MAX,
   in effect asking for "infinite" context e.g. to iterate over all the
   unmodified lines of a diff.
+
+* git_status_file now takes an exact path. Use git_status_list_new if
+  pathspec searching is needed.
