@@ -2441,7 +2441,7 @@ int git_index_add_all(
 		goto cleanup;
 
 	if ((error = git_iterator_for_workdir(
-			&wditer, repo, 0, ps.prefix, ps.prefix)) < 0)
+			&wditer, repo, NULL, NULL, 0, ps.prefix, ps.prefix)) < 0)
 		goto cleanup;
 
 	while (!(error = git_iterator_advance(&wd, wditer))) {
