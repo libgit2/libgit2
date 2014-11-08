@@ -959,6 +959,7 @@ static int remote_head_for_ref(git_remote_head **out, git_remote *remote, git_re
 	}
 
 	if ((!git_reference__is_branch(ref_name)) ||
+	    !git_remote_name(remote) ||
 	    (error = git_branch_upstream_remote(&upstream_remote, repo, ref_name)) ||
 	    git__strcmp(git_remote_name(remote), git_buf_cstr(&upstream_remote)) ||
 	    (error = git_branch_upstream_name(&upstream_name, repo, ref_name)) < 0 ||
