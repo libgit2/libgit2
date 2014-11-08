@@ -48,7 +48,7 @@ int main(int argc, char *argv[])
 	git_blob *blob;
 	git_object *obj;
 
-	git_threads_init();
+	git_libgit2_init();
 
 	parse_opts(&o, argc, argv);
 	if (o.M) blameopts.flags |= GIT_BLAME_TRACK_COPIES_SAME_COMMIT_MOVES;
@@ -131,7 +131,7 @@ int main(int argc, char *argv[])
 	git_blame_free(blame);
 	git_repository_free(repo);
 
-	git_threads_shutdown();
+	git_libgit2_shutdown();
 
 	return 0;
 }

@@ -80,7 +80,7 @@ int main(int argc, char *argv[])
 	git_commit *commit = NULL;
 	git_pathspec *ps = NULL;
 
-	git_threads_init();
+	git_libgit2_init();
 
 	/** Parse arguments and set up revwalker. */
 
@@ -180,7 +180,7 @@ int main(int argc, char *argv[])
 	git_pathspec_free(ps);
 	git_revwalk_free(s.walker);
 	git_repository_free(s.repo);
-	git_threads_shutdown();
+	git_libgit2_shutdown();
 
 	return 0;
 }

@@ -56,7 +56,7 @@
 #include "git2/status.h"
 #include "git2/submodule.h"
 #include "git2/tag.h"
-#include "git2/threads.h"
+#include "git2/global.h"
 #include "git2/transport.h"
 #include "git2/tree.h"
 #include "git2/types.h"

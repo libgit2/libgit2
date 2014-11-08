@@ -122,3 +122,7 @@ v0.21 + 1
 * The fetch behavior of remotes with autotag set to GIT_REMOTE_DOWNLOAD_TAGS_ALL
   has been changed to match git 1.9.0 and later. In this mode, libgit2 now
   fetches all tags in addition to whatever else needs to be fetched.
+
+* git_threads_init() and git_threads_shutdown() have been renamed to
+  git_libgit2_init() and git_libgit2_shutdown() to better explain what
+  their purpose is, as it's grown to be more than just about threads.
