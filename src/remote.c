@@ -1098,24 +1098,26 @@ static int update_tips_for_spec(
 		if (!git_reference_is_valid_name(head->name))
 			continue;
 
-		if (git_refspec_src_matches(spec, head->name) && spec->dst) {
-			if (git_refspec_transform(&refname, spec, head->name) < 0)
-				goto on_error;
-		} else if (remote->download_tags != GIT_REMOTE_DOWNLOAD_TAGS_NONE) {
+		if (git_refspec_src_matches(&tagspec, head->name)) {
+			if (remote->download_tags != GIT_REMOTE_DOWNLOAD_TAGS_NONE) {
 
-			if (remote->download_tags != GIT_REMOTE_DOWNLOAD_TAGS_ALL)
-				autotag = 1;
+				if (remote->download_tags == GIT_REMOTE_DOWNLOAD_TAGS_AUTO)
+					autotag = 1;
 
-			if (!git_refspec_src_matches(&tagspec, head->name))
+				git_buf_clear(&refname);
+				if (git_buf_puts(&refname, head->name) < 0)
+					goto on_error;
+			} else {
 				continue;
-
-			git_buf_clear(&refname);
-			if (git_buf_puts(&refname, head->name) < 0)
+			}
+		} else if (git_refspec_src_matches(spec, head->name) && spec->dst) {
+			if (git_refspec_transform(&refname, spec, head->name) < 0)
 				goto on_error;
 		} else {
 			continue;
 		}
 
+		/* In autotag mode, only create tags for objects already in db */
 		if (autotag && !git_odb_exists(odb, &head->oid))
 			continue;
 
@@ -1276,8 +1278,8 @@ int git_remote_update_tips(
 		goto out;
 
 	if (remote->download_tags == GIT_REMOTE_DOWNLOAD_TAGS_ALL) {
-		error = update_tips_for_spec(remote, &tagspec, &refs, signature, reflog_message);
-		goto out;
+		if ((error = update_tips_for_spec(remote, &tagspec, &refs, signature, reflog_message)) < 0)
+			goto out;
 	}
 
 	git_vector_foreach(&remote->active_refspecs, i, spec) {

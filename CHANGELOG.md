@@ -118,3 +118,7 @@ v0.21 + 1
 
 * git_status_file now takes an exact path. Use git_status_list_new if
   pathspec searching is needed.
+
+* The fetch behavior of remotes with autotag set to GIT_REMOTE_DOWNLOAD_TAGS_ALL
+  has been changed to match git 1.9.0 and later. In this mode, libgit2 now
+  fetches all tags in addition to whatever else needs to be fetched.

@@ -171,7 +171,7 @@ void test_network_remote_local__tagopt(void)
 	git_remote_set_autotag(remote, GIT_REMOTE_DOWNLOAD_TAGS_ALL);
 	cl_git_pass(git_remote_fetch(remote, NULL, NULL, NULL));
 
-	cl_git_fail(git_reference_lookup(&ref, repo, "refs/remotes/tagopt/master"));
+	cl_git_pass(git_reference_lookup(&ref, repo, "refs/remotes/tagopt/master"));
 	cl_git_pass(git_reference_lookup(&ref, repo, "refs/tags/hard_tag"));
 	git_reference_free(ref);
 
