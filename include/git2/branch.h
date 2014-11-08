@@ -260,6 +260,17 @@ GIT_EXTERN(int) git_branch_remote_name(
 	git_repository *repo,
 	const char *canonical_branch_name);
 
+
+/**
+ * Retrieve the name fo the upstream remote of a local branch
+ *
+ * @param buf the buffer into which to write the name
+ * @param repo the repository in which to look
+ * @param refname the full name of the branch
+ * @return 0 or an error code
+ */
+ GIT_EXTERN(int) git_branch_upstream_remote(git_buf *buf, git_repository *repo, const char *refname);
+
 /** @} */
 GIT_END_DECL
 #endif
