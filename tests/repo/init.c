@@ -358,7 +358,7 @@ void test_repo_init__extended_1(void)
 	cl_assert_equal_s("refs/heads/development", git_reference_symbolic_target(ref));
 	git_reference_free(ref);
 
-	cl_git_pass(git_remote_load(&remote, _repo, "origin"));
+	cl_git_pass(git_remote_lookup(&remote, _repo, "origin"));
 	cl_assert_equal_s("origin", git_remote_name(remote));
 	cl_assert_equal_s(opts.origin_url, git_remote_url(remote));
 	git_remote_free(remote);

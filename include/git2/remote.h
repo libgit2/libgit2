@@ -94,7 +94,7 @@ GIT_EXTERN(int) git_remote_create_anonymous(
  * @param name the remote's name
  * @return 0, GIT_ENOTFOUND, GIT_EINVALIDSPEC or an error code
  */
-GIT_EXTERN(int) git_remote_load(git_remote **out, git_repository *repo, const char *name);
+GIT_EXTERN(int) git_remote_lookup(git_remote **out, git_repository *repo, const char *name);
 
 /**
  * Save a remote to its repository's configuration

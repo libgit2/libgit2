@@ -186,7 +186,7 @@ static int ensure_remote_doesnot_exist(git_repository *repo, const char *name)
 	int error;
 	git_remote *remote;
 
-	error = git_remote_load(&remote, repo, name);
+	error = git_remote_lookup(&remote, repo, name);
 
 	if (error == GIT_ENOTFOUND)
 		return 0;
@@ -350,7 +350,7 @@ static int get_optional_config(
 	return error;
 }
 
-int git_remote_load(git_remote **out, git_repository *repo, const char *name)
+int git_remote_lookup(git_remote **out, git_repository *repo, const char *name)
 {
 	git_remote *remote;
 	git_buf buf = GIT_BUF_INIT;
@@ -1677,7 +1677,7 @@ int git_remote_rename(git_strarray *out, git_repository *repo, const char *name,
 
 	assert(out && repo && name && new_name);
 
-	if ((error = git_remote_load(&remote, repo, name)) < 0)
+	if ((error = git_remote_lookup(&remote, repo, name)) < 0)
 		return error;
 
 	if ((error = ensure_remote_name_is_valid(new_name)) < 0)
@@ -2010,7 +2010,7 @@ static int remove_remote_tracking(git_repository *repo, const char *remote_name)
 	size_t i, count;
 
 	/* we want to use what's on the config, regardless of changes to the instance in memory */
-	if ((error = git_remote_load(&remote, repo, remote_name)) < 0)
+	if ((error = git_remote_lookup(&remote, repo, remote_name)) < 0)
 		return error;
 
 	count = git_remote_refspec_count(remote);

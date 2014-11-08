@@ -1876,7 +1876,7 @@ static int lookup_head_remote(git_remote **remote, git_repository *repo)
 
 	/* lookup remote of remote tracking branch name */
 	if (!(error = lookup_head_remote_key(&remote_name, repo)))
-		error = git_remote_load(remote, repo, remote_name.ptr);
+		error = git_remote_lookup(remote, repo, remote_name.ptr);
 
 	git_buf_free(&remote_name);
 
@@ -1890,7 +1890,7 @@ static int lookup_default_remote(git_remote **remote, git_repository *repo)
 
 	/* if that failed, use 'origin' instead */
 	if (error == GIT_ENOTFOUND)
-		error = git_remote_load(remote, repo, "origin");
+		error = git_remote_lookup(remote, repo, "origin");
 
 	if (error == GIT_ENOTFOUND)
 		giterr_set(

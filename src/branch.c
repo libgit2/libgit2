@@ -360,7 +360,7 @@ int git_branch_upstream_name(
 	}
 
 	if (strcmp(".", remote_name) != 0) {
-		if ((error = git_remote_load(&remote, repo, remote_name)) < 0)
+		if ((error = git_remote_lookup(&remote, repo, remote_name)) < 0)
 			goto cleanup;
 
 		refspec = git_remote__matching_refspec(remote, merge_name);
@@ -411,7 +411,7 @@ int git_branch_remote_name(git_buf *buf, git_repository *repo, const char *refna
 
 	/* Find matching remotes */
 	for (i = 0; i < remote_list.count; i++) {
-		if ((error = git_remote_load(&remote, repo, remote_list.strings[i])) < 0)
+		if ((error = git_remote_lookup(&remote, repo, remote_list.strings[i])) < 0)
 			continue;
 
 		fetchspec = git_remote__matching_dst_refspec(remote, refname);
@@ -556,7 +556,7 @@ int git_branch_set_upstream(git_reference *branch, const char *upstream_name)
 			goto on_error;
 	} else {
 		/* Get the remoe-tracking branch's refname in its repo */
-		if (git_remote_load(&remote, repo, git_buf_cstr(&value)) < 0)
+		if (git_remote_lookup(&remote, repo, git_buf_cstr(&value)) < 0)
 			goto on_error;
 
 		fetchspec = git_remote__matching_dst_refspec(remote, git_reference_name(upstream));

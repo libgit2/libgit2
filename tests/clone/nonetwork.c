@@ -128,14 +128,14 @@ void test_clone_nonetwork__custom_origin_name(void)
 	g_options.remote_cb = custom_origin_name_remote_create;
 	cl_git_pass(git_clone(&g_repo, cl_git_fixture_url("testrepo.git"), "./foo", &g_options));
 
-	cl_git_pass(git_remote_load(&g_remote, g_repo, "my_origin"));
+	cl_git_pass(git_remote_lookup(&g_remote, g_repo, "my_origin"));
 }
 
 void test_clone_nonetwork__defaults(void)
 {
 	cl_git_pass(git_clone(&g_repo, cl_git_fixture_url("testrepo.git"), "./foo", NULL));
 	cl_assert(g_repo);
-	cl_git_pass(git_remote_load(&g_remote, g_repo, "origin"));
+	cl_git_pass(git_remote_lookup(&g_remote, g_repo, "origin"));
 }
 
 void test_clone_nonetwork__cope_with_already_existing_directory(void)

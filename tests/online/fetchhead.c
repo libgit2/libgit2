@@ -42,7 +42,7 @@ static void fetchhead_test_fetch(const char *fetchspec, const char *expected_fet
 	int equals = 0;
 	git_strarray array, *active_refs = NULL;
 
-	cl_git_pass(git_remote_load(&remote, g_repo, "origin"));
+	cl_git_pass(git_remote_lookup(&remote, g_repo, "origin"));
 	git_remote_set_autotag(remote, GIT_REMOTE_DOWNLOAD_TAGS_AUTO);
 
 	if(fetchspec != NULL) {
