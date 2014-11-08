@@ -61,6 +61,15 @@ void test_refs_branches_upstream__trying_to_retrieve_a_remote_tracking_reference
 	cl_assert_equal_i(GIT_ENOTFOUND, git_branch_upstream(&upstream, branch));
 }
 
+void test_refs_branches_upstream__upstream_remote(void)
+{
+	git_buf buf = GIT_BUF_INIT;
+
+	cl_git_pass(git_branch_upstream_remote(&buf, repo, "refs/heads/master"));
+	cl_assert_equal_s("test", buf.ptr);
+	git_buf_free(&buf);
+}
+
 static void assert_merge_and_or_remote_key_missing(git_repository *repository, const git_commit *target, const char *entry_name)
 {
 	git_reference *branch;

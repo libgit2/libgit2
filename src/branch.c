@@ -384,6 +384,29 @@ cleanup:
 	return error;
 }
 
+int git_branch_upstream_remote(git_buf *buf, git_repository *repo, const char *refname)
+{
+	int error;
+	const char *str;
+	git_config *cfg;
+
+	if (!git_reference__is_branch(refname))
+		return not_a_local_branch(refname);
+
+	git_buf_sanitize(buf);
+	if ((error = git_repository_config_snapshot(&cfg, repo)) < 0)
+		return error;
+
+	if ((error = retrieve_upstream_configuration(&str, cfg, refname, "branch.%s.remote")) < 0)
+		goto cleanup;
+
+	error = git_buf_puts(buf, str);
+
+cleanup:
+	git_config_free(cfg);
+	return error;
+}
+
 int git_branch_remote_name(git_buf *buf, git_repository *repo, const char *refname)
 {
 	git_strarray remote_list = {0};

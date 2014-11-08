@@ -535,6 +535,16 @@ static int remote_single_branch(git_remote **out, git_repository *repo, const ch
 	return 0;
 }
 
+void test_network_remote_remotes__fetch_from_anonymous(void)
+{
+	git_remote *remote;
+
+	cl_git_pass(git_remote_create_anonymous(&remote, _repo, cl_fixture("testrepo.git"),
+						"refs/heads/*:refs/other/*"));
+	cl_git_pass(git_remote_fetch(remote, NULL, NULL, NULL));
+	git_remote_free(remote);
+}
+
 void test_network_remote_remotes__single_branch(void)
 {
 	git_clone_options opts = GIT_CLONE_OPTIONS_INIT;
