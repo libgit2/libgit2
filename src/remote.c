@@ -930,23 +930,49 @@ static int remote_head_for_fetchspec_src(git_remote_head **out, git_vector *upda
 	return 0;
 }
 
+static int ref_to_update(int *update, git_buf *remote_name, git_remote *remote, git_refspec *spec, const char *ref_name)
+{
+	int error = 0;
+	git_repository *repo;
+	git_buf upstream_remote = GIT_BUF_INIT;
+	git_buf upstream_name = GIT_BUF_INIT;
+
+	repo = git_remote_owner(remote);
+
+	if ((!git_reference__is_branch(ref_name)) ||
+	    !git_remote_name(remote) ||
+	    (error = git_branch_upstream_remote(&upstream_remote, repo, ref_name) < 0) ||
+	    git__strcmp(git_remote_name(remote), git_buf_cstr(&upstream_remote)) ||
+	    (error = git_branch_upstream_name(&upstream_name, repo, ref_name)) < 0 ||
+	    !git_refspec_dst_matches(spec, git_buf_cstr(&upstream_name)) ||
+	    (error = git_refspec_rtransform(remote_name, spec, upstream_name.ptr)) < 0) {
+		/* Not an error if there is no upstream */
+		if (error == GIT_ENOTFOUND) {
+			giterr_clear();
+			error = 0;
+		}
+
+		*update = 0;
+	} else {
+		*update = 1;
+	}
+
+	git_buf_free(&upstream_remote);
+	git_buf_free(&upstream_name);
+	return error;
+}
+
 static int remote_head_for_ref(git_remote_head **out, git_remote *remote, git_refspec *spec, git_vector *update_heads, git_reference *ref)
 {
 	git_reference *resolved_ref = NULL;
 	git_buf remote_name = GIT_BUF_INIT;
-	git_buf upstream_name = GIT_BUF_INIT;
-	git_buf config_key = GIT_BUF_INIT;
-	git_buf upstream_remote = GIT_BUF_INIT;
-	git_repository *repo;
 	git_config *config = NULL;
 	const char *ref_name;
-	int error = 0;
+	int error = 0, update;
 
 	assert(out && spec && ref);
 
 	*out = NULL;
-
-	repo = git_reference_owner(ref);
 
 	error = git_reference_resolve(&resolved_ref, ref);
 
@@ -958,30 +984,14 @@ static int remote_head_for_ref(git_remote_head **out, git_remote *remote, git_re
 		ref_name = git_reference_name(resolved_ref);
 	}
 
-	if ((!git_reference__is_branch(ref_name)) ||
-	    !git_remote_name(remote) ||
-	    (error = git_branch_upstream_remote(&upstream_remote, repo, ref_name)) ||
-	    git__strcmp(git_remote_name(remote), git_buf_cstr(&upstream_remote)) ||
-	    (error = git_branch_upstream_name(&upstream_name, repo, ref_name)) < 0 ||
-	    !git_refspec_dst_matches(spec, git_buf_cstr(&upstream_name)) ||
-	    (error = git_refspec_rtransform(&remote_name, spec, upstream_name.ptr)) < 0) {
-		/* Not an error if there is no upstream */
-		if (error == GIT_ENOTFOUND) {
-			giterr_clear();
-			error = 0;
-		}
-
+	if ((error = ref_to_update(&update, &remote_name, remote, spec, ref_name)) < 0)
 		goto cleanup;
-	}
 
-	error = remote_head_for_fetchspec_src(out, update_heads, git_buf_cstr(&remote_name));
+	if (update)
+		error = remote_head_for_fetchspec_src(out, update_heads, git_buf_cstr(&remote_name));
 
 cleanup:
 	git_reference_free(resolved_ref);
-	git_buf_free(&upstream_remote);
-	git_buf_free(&remote_name);
-	git_buf_free(&upstream_name);
-	git_buf_free(&config_key);
 	git_config_free(config);
 	return error;
 }
