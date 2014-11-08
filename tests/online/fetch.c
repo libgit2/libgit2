@@ -120,7 +120,7 @@ void test_online_fetch__doesnt_retrieve_a_pack_when_the_repository_is_up_to_date
 
 	cl_git_pass(git_repository_open(&_repository, "./fetch/lg2"));
 
-	cl_git_pass(git_remote_load(&remote, _repository, "origin"));
+	cl_git_pass(git_remote_lookup(&remote, _repository, "origin"));
 	cl_git_pass(git_remote_connect(remote, GIT_DIRECTION_FETCH));
 
 	cl_assert_equal_i(false, invoked);

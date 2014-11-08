@@ -74,7 +74,7 @@ void test_network_remote_rename__renaming_a_remote_without_a_fetchrefspec_doesnt
 	cl_git_pass(git_repository_config__weakptr(&config, _repo));
 	cl_git_pass(git_config_delete_entry(config, "remote.test.fetch"));
 
-	cl_git_pass(git_remote_load(&remote, _repo, "test"));
+	cl_git_pass(git_remote_lookup(&remote, _repo, "test"));
 	git_remote_free(remote);
 
 	assert_config_entry_existence(_repo, "remote.test.fetch", false);
@@ -94,7 +94,7 @@ void test_network_remote_rename__renaming_a_remote_notifies_of_non_default_fetch
 
 	cl_git_pass(git_repository_config__weakptr(&config, _repo));
 	cl_git_pass(git_config_set_string(config, "remote.test.fetch", "+refs/*:refs/*"));
-	cl_git_pass(git_remote_load(&remote, _repo, "test"));
+	cl_git_pass(git_remote_lookup(&remote, _repo, "test"));
 	git_remote_free(remote);
 
 	cl_git_pass(git_remote_rename(&problems, _repo, _remote_name, "just/renamed"));
@@ -132,14 +132,14 @@ void test_network_remote_rename__renamed_name_is_persisted(void)
 	git_repository *another_repo;
 	git_strarray problems = {0};
 
-	cl_git_fail(git_remote_load(&renamed, _repo, "just/renamed"));
+	cl_git_fail(git_remote_lookup(&renamed, _repo, "just/renamed"));
 
 	cl_git_pass(git_remote_rename(&problems, _repo, _remote_name, "just/renamed"));
 	cl_assert_equal_i(0, problems.count);
 	git_strarray_free(&problems);
 
 	cl_git_pass(git_repository_open(&another_repo, "testrepo.git"));
-	cl_git_pass(git_remote_load(&renamed, _repo, "just/renamed"));
+	cl_git_pass(git_remote_lookup(&renamed, _repo, "just/renamed"));
 
 	git_remote_free(renamed);
 	git_repository_free(another_repo);

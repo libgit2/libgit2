@@ -85,6 +85,9 @@ v0.21 + 1
   resfpecs to be the active list, similarly to how git fetch accepts a
   list on the command-line.
 
+* Rename git_remote_load() to git_remote_lookup() to bring it in line
+  with the rest of the lookup functions.
+
 * Introduce git_merge_bases() and the git_oidarray type to expose all
   merge bases between two commits.
 

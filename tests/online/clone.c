@@ -46,7 +46,7 @@ void test_online_clone__network_full(void)
 
 	cl_git_pass(git_clone(&g_repo, LIVE_REPO_URL, "./foo", &g_options));
 	cl_assert(!git_repository_is_bare(g_repo));
-	cl_git_pass(git_remote_load(&origin, g_repo, "origin"));
+	cl_git_pass(git_remote_lookup(&origin, g_repo, "origin"));
 
 	cl_assert_equal_i(GIT_REMOTE_DOWNLOAD_TAGS_AUTO, origin->download_tags);
 
@@ -61,7 +61,7 @@ void test_online_clone__network_bare(void)
 
 	cl_git_pass(git_clone(&g_repo, LIVE_REPO_URL, "./foo", &g_options));
 	cl_assert(git_repository_is_bare(g_repo));
-	cl_git_pass(git_remote_load(&origin, g_repo, "origin"));
+	cl_git_pass(git_remote_lookup(&origin, g_repo, "origin"));
 
 	git_remote_free(origin);
 }

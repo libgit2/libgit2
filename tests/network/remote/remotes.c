@@ -11,7 +11,7 @@ void test_network_remote_remotes__initialize(void)
 {
 	_repo = cl_git_sandbox_init("testrepo.git");
 
-	cl_git_pass(git_remote_load(&_remote, _repo, "test"));
+	cl_git_pass(git_remote_lookup(&_remote, _repo, "test"));
 
 	_refspec = git_remote_get_refspec(_remote, 0);
 	cl_assert(_refspec != NULL);
@@ -38,7 +38,7 @@ void test_network_remote_remotes__parsing(void)
 	cl_assert_equal_s(git_remote__urlfordirection(_remote, GIT_DIRECTION_PUSH),
 					  "git://github.com/libgit2/libgit2");
 
-	cl_git_pass(git_remote_load(&_remote2, _repo, "test_with_pushurl"));
+	cl_git_pass(git_remote_lookup(&_remote2, _repo, "test_with_pushurl"));
 	cl_assert_equal_s(git_remote_name(_remote2), "test_with_pushurl");
 	cl_assert_equal_s(git_remote_url(_remote2), "git://github.com/libgit2/fetchlibgit2");
 	cl_assert_equal_s(git_remote_pushurl(_remote2), "git://github.com/libgit2/pushlibgit2");
@@ -63,7 +63,7 @@ void test_network_remote_remotes__pushurl(void)
 void test_network_remote_remotes__error_when_not_found(void)
 {
 	git_remote *r;
-	cl_git_fail_with(git_remote_load(&r, _repo, "does-not-exist"), GIT_ENOTFOUND);
+	cl_git_fail_with(git_remote_lookup(&r, _repo, "does-not-exist"), GIT_ENOTFOUND);
 
 	cl_assert(giterr_last() != NULL);
 	cl_assert(giterr_last()->klass == GITERR_CONFIG);
@@ -181,7 +181,7 @@ void test_network_remote_remotes__save(void)
 	_remote = NULL;
 
 	/* Load it from config and make sure everything matches */
-	cl_git_pass(git_remote_load(&_remote, _repo, "upstream"));
+	cl_git_pass(git_remote_lookup(&_remote, _repo, "upstream"));
 
 	cl_git_pass(git_remote_get_fetch_refspecs(&array, _remote));
 	cl_assert_equal_i(2, (int)array.count);
@@ -204,7 +204,7 @@ void test_network_remote_remotes__save(void)
 	git_remote_free(_remote);
 	_remote = NULL;
 
-	cl_git_pass(git_remote_load(&_remote, _repo, "upstream"));
+	cl_git_pass(git_remote_lookup(&_remote, _repo, "upstream"));
 	cl_assert(git_remote_pushurl(_remote) == NULL);
 }
 
@@ -241,7 +241,7 @@ void test_network_remote_remotes__missing_refspecs(void)
 
 	cl_git_pass(git_repository_config(&cfg, _repo));
 	cl_git_pass(git_config_set_string(cfg, "remote.specless.url", "http://example.com"));
-	cl_git_pass(git_remote_load(&_remote, _repo, "specless"));
+	cl_git_pass(git_remote_lookup(&_remote, _repo, "specless"));
 
 	git_config_free(cfg);
 }
@@ -302,7 +302,7 @@ void test_network_remote_remotes__loading_a_missing_remote_returns_ENOTFOUND(voi
 	git_remote_free(_remote);
 	_remote = NULL;
 
-	cl_assert_equal_i(GIT_ENOTFOUND, git_remote_load(&_remote, _repo, "just-left-few-minutes-ago"));
+	cl_assert_equal_i(GIT_ENOTFOUND, git_remote_lookup(&_remote, _repo, "just-left-few-minutes-ago"));
 }
 
 void test_network_remote_remotes__loading_with_an_invalid_name_returns_EINVALIDSPEC(void)
@@ -310,7 +310,7 @@ void test_network_remote_remotes__loading_with_an_invalid_name_returns_EINVALIDS
 	git_remote_free(_remote);
 	_remote = NULL;
 
-	cl_assert_equal_i(GIT_EINVALIDSPEC, git_remote_load(&_remote, _repo, "Inv@{id"));
+	cl_assert_equal_i(GIT_EINVALIDSPEC, git_remote_lookup(&_remote, _repo, "Inv@{id"));
 }
 
 /*
@@ -333,7 +333,7 @@ void test_network_remote_remotes__add(void)
 	git_remote_free(_remote);
 	_remote = NULL;
 
-	cl_git_pass(git_remote_load(&_remote, _repo, "addtest"));
+	cl_git_pass(git_remote_lookup(&_remote, _repo, "addtest"));
 	cl_assert_equal_i(GIT_REMOTE_DOWNLOAD_TAGS_AUTO, git_remote_autotag(_remote));
 
 	_refspec = git_vector_get(&_remote->refspecs, 0);
@@ -407,7 +407,7 @@ void test_network_remote_remotes__can_load_with_an_empty_url(void)
 {
 	git_remote *remote = NULL;
 
-	cl_git_pass(git_remote_load(&remote, _repo, "empty-remote-url"));
+	cl_git_pass(git_remote_lookup(&remote, _repo, "empty-remote-url"));
 
 	cl_assert(remote->url == NULL);
 	cl_assert(remote->pushurl == NULL);
@@ -424,7 +424,7 @@ void test_network_remote_remotes__can_load_with_only_an_empty_pushurl(void)
 {
 	git_remote *remote = NULL;
 
-	cl_git_pass(git_remote_load(&remote, _repo, "empty-remote-pushurl"));
+	cl_git_pass(git_remote_lookup(&remote, _repo, "empty-remote-pushurl"));
 
 	cl_assert(remote->url == NULL);
 	cl_assert(remote->pushurl == NULL);
@@ -439,7 +439,7 @@ void test_network_remote_remotes__returns_ENOTFOUND_when_neither_url_nor_pushurl
 	git_remote *remote = NULL;
 
 	cl_git_fail_with(
-		git_remote_load(&remote, _repo, "no-remote-url"), GIT_ENOTFOUND);
+		git_remote_lookup(&remote, _repo, "no-remote-url"), GIT_ENOTFOUND);
 }
 
 void assert_cannot_create_remote(const char *name, int expected_error)
