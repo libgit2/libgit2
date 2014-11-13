@@ -1125,21 +1125,19 @@ int git_remote_prune(git_remote *remote)
 				continue;
 
 			if ((error = git_reference_lookup(&ref, remote->repo, prune_ref)) >= 0) {
-				if (git_reference_type(ref) == GIT_REF_OID) {
-					git_oid_cpy(&oid, git_reference_target(ref));
-					if ((error = git_reference_delete(ref)) < 0) {
+				git_oid_cpy(&oid, git_reference_target(ref));
+				if ((error = git_reference_delete(ref)) < 0) {
+					git_reference_free(ref);
+					goto cleanup;
+				}
+						
+				if (remote->callbacks.update_tips != NULL) {
+					git_oid zero_oid;
+
+					memset(&zero_oid, 0, sizeof(zero_oid));
+					if (remote->callbacks.update_tips(prune_ref, &oid, &zero_oid, remote->callbacks.payload) < 0) {
 						git_reference_free(ref);
 						goto cleanup;
-					}
-							
-					if (remote->callbacks.update_tips != NULL) {
-						git_oid zero_oid;
-
-						memset(&zero_oid, 0, sizeof(zero_oid));
-						if (remote->callbacks.update_tips(prune_ref, &oid, &zero_oid, remote->callbacks.payload) < 0) {
-							git_reference_free(ref);
-							goto cleanup;
-						}
 					}
 				}
 				git_reference_free(ref);
