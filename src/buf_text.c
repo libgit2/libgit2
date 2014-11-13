@@ -177,6 +177,30 @@ int git_buf_text_common_prefix(git_buf *buf, const git_strarray *strings)
 	return 0;
 }
 
+/* Some notes about "git_buf_text_is_binary()" based on https://github.com/libgit2/libgit2/pull/2704#issuecomment-68802614
+
+git core has a more common utility function, buffer_is_binary is akin to our git_buf_contains_nul. It's used:
+
+    In git-merge, to produce a conflict during a three-way merge when the file is binary. We use git_blob_is_binary for our check, which calls git_buf_text_is_binary, which behaves differently already and is further impacted by this PR.
+
+    In git-merge-file, to fail a three-way merge when the file is binary. We don't do this at all in git_merge_file. (We probably should consider this.)
+
+    To produce binary diffs / patches. We match this, in git_diff_driver_content_is_binary by calling git_buf_text_contains_nul. There's in fact a very topical comment:
+
+      * TODO: provide encoding / binary detection callbacks that can
+      * be UTF-8 aware, etc.  For now, instead of trying to be smart,
+      * let's just use the simple NUL-byte detection that core git uses.
+      *
+
+The function gather_stats in convert.c calculates the number of printable vs non-printable characters to determine binary-ness. Interestingly, that function has a comment: The same heuristics as diff.c::mmfile_is_binary(). This is no longer true, of course, since mmfile_is_binary doesn't exist, and when it did, it looked like buffer_is_binary.
+
+This function, git_buf_text_is_binary, is used...
+
+    By ident to avoid filtering binary files. This seems reasonable that it would use the same check that the CRLF filter uses (though, note that the git ident filter does not abort on binary files).
+    Exposed as git_blob_is_binary. This seems reasonable that it would use the same check as the CRLF and ident filters.
+    Again, in git_merge(), when writing conflict files. No regressions here, though again, git core simply uses the is_nul like check).
+    Also, in git_checkout(), when writing conflict files.
+*/
 bool git_buf_text_is_binary(const git_buf *buf)
 {
 	const char *scan = buf->ptr, *end = buf->ptr + buf->size;
@@ -191,7 +215,7 @@ bool git_buf_text_is_binary(const git_buf *buf)
 	while (scan < end) {
 		unsigned char c = *scan++;
 
-		if (c > 0x1F && c < 0x7F)
+		if ((c > 0x1F && c != 127) || c == '\b' || c == '\033' || c == '\014') /* handle BS, ESC and FF and all (chars > 0x1F excluding DEL) as printable */
 			printable++;
 		else if (c == '\0')
 			return true;

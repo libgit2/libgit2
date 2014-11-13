@@ -23,6 +23,9 @@ v0.22
 
 * LF -> CRLF filter now runs when * text = auto (with Git for Windows 1.9.4)
 
+* Updated binary identification in CRLF filtering to avoid false positives in
+  UTF-8 files.
+
 * The git_transport structure definition has moved into the sys/transport.h
   file.
 
