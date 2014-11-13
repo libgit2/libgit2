@@ -904,7 +904,6 @@ int git_remote_fetch(
 {
 	int error;
 	git_buf reflog_msg_buf = GIT_BUF_INIT;
-	size_t i;
 
 	/* Connect and download everything */
 	if ((error = git_remote_connect(remote, GIT_DIRECTION_FETCH)) != 0)

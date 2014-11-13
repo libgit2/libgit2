@@ -113,6 +113,70 @@ void test_network_fetchlocal__prune(void)
 	git_repository_free(repo);
 }
 
+void test_network_fetchlocal__prune_overlapping(void)
+{
+	git_repository *repo;
+	git_remote *origin;
+	int callcount = 0;
+	git_strarray refnames = {0};
+	git_reference *ref;
+	git_object *obj;
+	git_config *config;
+
+	git_repository *remote_repo = cl_git_sandbox_init("testrepo.git");
+
+	cl_git_pass(git_revparse_single(&obj, remote_repo, "master"));
+	cl_git_pass(git_reference_create(&ref, remote_repo, "refs/pull/42/head", git_object_id(obj), 1, NULL, NULL));
+	git_object_free(obj);
+
+	const char *url = cl_git_path_url(git_repository_path(remote_repo));
+	git_remote_callbacks callbacks = GIT_REMOTE_CALLBACKS_INIT;
+
+	callbacks.transfer_progress = transfer_cb;
+	callbacks.payload = &callcount;
+
+	cl_set_cleanup(&cleanup_local_repo, "foo");
+	cl_git_pass(git_repository_init(&repo, "foo", true));
+
+	cl_git_pass(git_remote_create(&origin, repo, GIT_REMOTE_ORIGIN, url));
+	git_remote_set_callbacks(origin, &callbacks);
+	cl_git_pass(git_remote_connect(origin, GIT_DIRECTION_FETCH));
+	cl_git_pass(git_remote_download(origin, NULL));
+	cl_git_pass(git_remote_update_tips(origin, NULL, NULL));
+
+	cl_git_pass(git_repository_config(&config, repo));
+	cl_git_pass(git_config_set_multivar(config, "remote.origin.fetch", "^$", "refs/pull/*/head:refs/remotes/origin/pr/*"));
+	git_config_free(config);
+
+	cl_git_pass(git_remote_load(&origin, repo, GIT_REMOTE_ORIGIN));
+	git_remote_set_callbacks(origin, &callbacks);
+	cl_git_pass(git_remote_connect(origin, GIT_DIRECTION_FETCH));
+	cl_git_pass(git_remote_download(origin, NULL));
+	cl_git_pass(git_remote_prune(origin));
+	cl_git_pass(git_remote_update_tips(origin, NULL, NULL));
+
+	cl_git_pass(git_revparse_single(&obj, repo, "origin/master"));
+	cl_git_pass(git_revparse_single(&obj, repo, "origin/pr/42"));
+	cl_git_pass(git_reference_list(&refnames, repo));
+	cl_assert_equal_i(20, (int)refnames.count);
+
+	cl_git_pass(git_config_delete_multivar(config, "remote.origin.fetch", "refs"));
+	cl_git_pass(git_config_set_multivar(config, "remote.origin.fetch", "^$", "refs/pull/*/head:refs/remotes/origin/pr/*"));
+	cl_git_pass(git_config_set_multivar(config, "remote.origin.fetch", "^$", "refs/heads/*:refs/remotes/origin/*"));
+
+	cl_git_pass(git_remote_load(&origin, repo, GIT_REMOTE_ORIGIN));
+	git_remote_set_callbacks(origin, &callbacks);
+	cl_git_pass(git_remote_connect(origin, GIT_DIRECTION_FETCH));
+	cl_git_pass(git_remote_download(origin, NULL));
+	cl_git_pass(git_remote_prune(origin));
+	cl_git_pass(git_remote_update_tips(origin, NULL, NULL));
+
+	cl_git_pass(git_revparse_single(&obj, repo, "origin/master"));
+	cl_git_pass(git_revparse_single(&obj, repo, "origin/pr/42"));
+	cl_git_pass(git_reference_list(&refnames, repo));
+	cl_assert_equal_i(20, (int)refnames.count);
+}
+
 void test_network_fetchlocal__fetchprune(void)
 {
 	git_repository *repo;
