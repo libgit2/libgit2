@@ -124,13 +124,12 @@ void test_network_fetchlocal__prune_overlapping(void)
 	git_config *config;
 
 	git_repository *remote_repo = cl_git_sandbox_init("testrepo.git");
+	const char *url = cl_git_path_url(git_repository_path(remote_repo));
+	git_remote_callbacks callbacks = GIT_REMOTE_CALLBACKS_INIT;
 
 	cl_git_pass(git_revparse_single(&obj, remote_repo, "master"));
 	cl_git_pass(git_reference_create(&ref, remote_repo, "refs/pull/42/head", git_object_id(obj), 1, NULL, NULL));
 	git_object_free(obj);
-
-	const char *url = cl_git_path_url(git_repository_path(remote_repo));
-	git_remote_callbacks callbacks = GIT_REMOTE_CALLBACKS_INIT;
 
 	callbacks.transfer_progress = transfer_cb;
 	callbacks.payload = &callcount;
@@ -175,6 +174,10 @@ void test_network_fetchlocal__prune_overlapping(void)
 	cl_git_pass(git_revparse_single(&obj, repo, "origin/pr/42"));
 	cl_git_pass(git_reference_list(&refnames, repo));
 	cl_assert_equal_i(20, (int)refnames.count);
+
+	cl_git_pass(git_reference_delete(ref));
+	git_repository_free(remote_repo);
+	git_repository_free(repo);
 }
 
 void test_network_fetchlocal__fetchprune(void)
