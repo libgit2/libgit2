@@ -4,6 +4,10 @@
 #include "path.h"
 #include "remote.h"
 
+static const char* tagger_name = "Vicent Marti";
+static const char* tagger_email = "vicent@github.com";
+static const char* tagger_message = "This is my tag.\n\nThere are many tags, but this one is mine\n";
+
 static int transfer_cb(const git_transfer_progress *stats, void *payload)
 {
 	int *callcount = (int*)payload;
@@ -232,6 +236,61 @@ void test_network_fetchlocal__fetchprune(void)
 	cl_git_pass(git_reference_list(&refnames, repo));
 	cl_assert_equal_i(17, (int)refnames.count);
 	git_strarray_free(&refnames);
+	git_remote_free(origin);
+
+	git_repository_free(remote_repo);
+	git_repository_free(repo);
+}
+
+void test_network_fetchlocal__prune_tag(void)
+{
+	git_repository *repo;
+	git_remote *origin;
+	int callcount = 0;
+	git_reference *ref;
+	git_config *config;
+	git_oid tag_id;
+	git_signature *tagger;
+	git_object *obj;
+
+	git_repository *remote_repo = cl_git_sandbox_init("testrepo.git");
+	const char *url = cl_git_path_url(git_repository_path(remote_repo));
+	git_remote_callbacks callbacks = GIT_REMOTE_CALLBACKS_INIT;
+
+	callbacks.transfer_progress = transfer_cb;
+	callbacks.payload = &callcount;
+
+	cl_set_cleanup(&cleanup_local_repo, "foo");
+	cl_git_pass(git_repository_init(&repo, "foo", true));
+
+	cl_git_pass(git_remote_create(&origin, repo, GIT_REMOTE_ORIGIN, url));
+	git_remote_set_callbacks(origin, &callbacks);
+	cl_git_pass(git_remote_fetch(origin, NULL, NULL, NULL));
+
+	cl_git_pass(git_revparse_single(&obj, repo, "origin/master"));
+
+	cl_git_pass(git_reference_create(&ref, repo, "refs/remotes/origin/fake-remote", git_object_id(obj), 1, NULL, NULL));
+
+	/* create signature */
+	cl_git_pass(git_signature_new(&tagger, tagger_name, tagger_email, 123456789, 60));
+
+	cl_git_pass(
+		git_tag_create(&tag_id, repo,
+		  "some-tag", obj, tagger, tagger_message, 0)
+	);
+
+	cl_git_pass(git_repository_config(&config, repo));
+	cl_git_pass(git_config_set_bool(config, "remote.origin.prune", 1));
+	git_config_free(config);
+	cl_git_pass(git_remote_lookup(&origin, repo, GIT_REMOTE_ORIGIN));
+	cl_assert_equal_i(1, git_remote_prune_refs(origin));
+	git_remote_set_callbacks(origin, &callbacks);
+	cl_git_pass(git_remote_fetch(origin, NULL, NULL, NULL));
+
+	cl_git_pass(git_revparse_single(&obj, repo, "some-tag"));
+	cl_git_fail(git_revparse_single(&obj, repo, "refs/remotes/origin/fake-remote"));
+
+	git_object_free(obj);
 	git_remote_free(origin);
 
 	git_repository_free(remote_repo);
