@@ -3,6 +3,9 @@ v0.22 + 1
 
 ### Changes or improvements
 
+* Updated binary identification in CRLF filtering to avoid false positives in
+  UTF-8 files.
+
 * Rename and copy detection is enabled for small files.
 
 ### API additions
