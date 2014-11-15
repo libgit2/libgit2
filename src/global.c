@@ -67,7 +67,13 @@ void openssl_locking_function(int mode, int n, const char *file, int line)
 
 static void shutdown_ssl_locking(void)
 {
+	int num_locks, i;
+
+	num_locks = CRYPTO_num_locks();
 	CRYPTO_set_locking_callback(NULL);
+
+	for (i = 0; i < num_locks; ++i)
+		git_mutex_free(openssl_locks);
 	git__free(openssl_locks);
 }
 #endif
