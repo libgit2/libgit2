@@ -395,7 +395,7 @@ void test_online_push__initialize(void)
 		cl_git_pass(git_push_new(&push, _remote));
 
 		git_vector_foreach(&delete_specs, i, curr_del_spec) {
-			git_push_add_refspec(push, curr_del_spec);
+			git_remote_add_push(_remote, curr_del_spec);
 			git__free(curr_del_spec);
 		}
 
@@ -439,11 +439,10 @@ static int push_pack_progress_cb(
 	return 0;
 }
 
-static int push_transfer_progress_cb(
-	unsigned int current, unsigned int total, size_t bytes, void* payload)
+static int push_transfer_progress_cb(const git_transfer_progress *stats, void* payload)
 {
 	int *calls = (int *)payload;
-	GIT_UNUSED(current); GIT_UNUSED(total); GIT_UNUSED(bytes);
+	GIT_UNUSED(stats);
 	if (*calls < 0)
 		return *calls;
 	(*calls)++;
@@ -479,6 +478,11 @@ static void do_push(
 		cl_git_pass(git_signature_now(&pusher, "Foo Bar", "foo@example.com"));
 		cl_git_pass(git_remote_connect(_remote, GIT_DIRECTION_PUSH));
 
+		/* Setup the remote push refspecs */
+        git_remote_clear_refspecs(_remote);
+		for (i = 0; i < refspecs_len; i++)
+			cl_git_pass(git_remote_add_push(_remote, refspecs[i]));
+
 		cl_git_pass(git_push_new(&push, _remote));
 		cl_git_pass(git_push_set_options(push, &opts));
 
@@ -492,9 +496,6 @@ static void do_push(
 					push, push_pack_progress_cb, &pack_progress_calls,
 					push_transfer_progress_cb, &transfer_progress_calls));
 		}
-
-		for (i = 0; i < refspecs_len; i++)
-			cl_git_pass(git_push_add_refspec(push, refspecs[i]));
 
 		if (expected_ret < 0) {
 			cl_git_fail_with(git_push_finish(push), expected_ret);
@@ -631,11 +632,11 @@ void test_online_push__multi(void)
 
 void test_online_push__implicit_tgt(void)
 {
-	const char *specs1[] = { "refs/heads/b1:" };
+	const char *specs1[] = { "refs/heads/b1:refs/heads/b1" };
 	push_status exp_stats1[] = { { "refs/heads/b1", 1 } };
 	expected_ref exp_refs1[] = { { "refs/heads/b1", &_oid_b1 } };
 
-	const char *specs2[] = { "refs/heads/b2:" };
+	const char *specs2[] = { "refs/heads/b2:refs/heads/b2" };
 	push_status exp_stats2[] = { { "refs/heads/b2", 1 } };
 	expected_ref exp_refs2[] = {
 	{ "refs/heads/b1", &_oid_b1 },
@@ -818,26 +819,10 @@ void test_online_push__delete(void)
 		exp_refs_delete, ARRAY_SIZE(exp_refs_delete), 0, 0, 0);
 }
 
-void test_online_push__bad_refspecs(void)
-{
-	/* All classes of refspecs that should be rejected by
-	 * git_push_add_refspec() should go in this test.
-	 */
-	git_push *push;
-
-	if (_remote) {
-/*		cl_git_pass(git_remote_connect(_remote, GIT_DIRECTION_PUSH)); */
-		cl_git_pass(git_push_new(&push, _remote));
-
-		/* Unexpanded branch names not supported */
-		cl_git_fail(git_push_add_refspec(push, "b6:b6"));
-
-		git_push_free(push);
-	}
-}
-
 void test_online_push__expressions(void)
 {
+    cl_fail("Expressions in refspecs doesn't actually work yet");
+
 	/* TODO: Expressions in refspecs doesn't actually work yet */
 	const char *specs_left_expr[] = { "refs/heads/b2~1:refs/heads/b2" };
 

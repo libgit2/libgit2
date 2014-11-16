@@ -645,7 +645,7 @@ static int gen_pktline(git_buf *buf, git_push *push)
 	old_id[GIT_OID_HEXSZ] = '\0'; new_id[GIT_OID_HEXSZ] = '\0';
 
 	git_vector_foreach(&push->specs, i, spec) {
-		len = 2*GIT_OID_HEXSZ + 7 + strlen(spec->rref);
+		len = 2*GIT_OID_HEXSZ + 7 + strlen(spec->refspec->dst);
 
 		if (i == 0) {
 			++len; /* '\0' */
@@ -657,7 +657,7 @@ static int gen_pktline(git_buf *buf, git_push *push)
 		git_oid_fmt(old_id, &spec->roid);
 		git_oid_fmt(new_id, &spec->loid);
 
-		git_buf_printf(buf, "%04"PRIxZ"%s %s %s", len, old_id, new_id, spec->rref);
+		git_buf_printf(buf, "%04"PRIxZ"%s %s %s", len, old_id, new_id, spec->refspec->dst);
 
 		if (i == 0) {
 			git_buf_putc(buf, '\0');
@@ -816,7 +816,7 @@ static int add_ref_from_push_spec(git_vector *refs, push_spec *push_spec)
 
 	added->type = GIT_PKT_REF;
 	git_oid_cpy(&added->head.oid, &push_spec->loid);
-	added->head.name = git__strdup(push_spec->rref);
+	added->head.name = git__strdup(push_spec->refspec->dst);
 
 	if (!added->head.name ||
 		git_vector_insert(refs, added) < 0) {
@@ -855,7 +855,7 @@ static int update_refs_from_report(
 
 		/* For each push spec we sent to the server, we should have
 		 * gotten back a status packet in the push report which matches */
-		if (strcmp(push_spec->rref, push_status->ref)) {
+		if (strcmp(push_spec->refspec->dst, push_status->ref)) {
 			giterr_set(GITERR_NET, "report-status: protocol error");
 			return -1;
 		}
@@ -872,7 +872,7 @@ static int update_refs_from_report(
 		push_status = git_vector_get(push_report, i);
 		ref = git_vector_get(refs, j);
 
-		cmp = strcmp(push_spec->rref, ref->head.name);
+		cmp = strcmp(push_spec->refspec->dst, ref->head.name);
 
 		/* Iterate appropriately */
 		if (cmp <= 0) i++;
@@ -917,9 +917,9 @@ struct push_packbuilder_payload
 {
 	git_smart_subtransport_stream *stream;
 	git_packbuilder *pb;
-	git_push_transfer_progress cb;
+    git_transfer_progress stats;
+	git_transfer_progress_cb cb;
 	void *cb_payload;
-	size_t last_bytes;
 	double last_progress_report_time;
 };
 
@@ -933,11 +933,16 @@ static int stream_thunk(void *buf, size_t size, void *data)
 
 	if (payload->cb) {
 		double current_time = git__timer();
-		payload->last_bytes += size;
+		payload->stats.total_objects = payload->pb->nr_objects;
+		payload->stats.received_objects = payload->pb->nr_written;
+		payload->stats.received_bytes += size;
 
 		if ((current_time - payload->last_progress_report_time) >= MIN_PROGRESS_UPDATE_INTERVAL) {
 			payload->last_progress_report_time = current_time;
-			error = payload->cb(payload->pb->nr_written, payload->pb->nr_objects, payload->last_bytes, payload->cb_payload);
+			if (payload->cb(&payload->stats, payload->cb_payload)) {
+				giterr_clear();
+				error = GIT_EUSER;
+			}
 		}
 	}
 
@@ -985,7 +990,7 @@ int git_smart__push(git_transport *transport, git_push *push)
 	 * cases except when we only send delete commands
 	 */
 	git_vector_foreach(&push->specs, i, spec) {
-		if (spec->lref) {
+		if (spec->refspec->src) {
 			need_pack = 1;
 			break;
 		}
@@ -1009,11 +1014,10 @@ int git_smart__push(git_transport *transport, git_push *push)
 
 	/* If progress is being reported write the final report */
 	if (push->transfer_progress_cb) {
-		error = push->transfer_progress_cb(
-					push->pb->nr_written,
-					push->pb->nr_objects,
-					packbuilder_payload.last_bytes,
-					push->transfer_progress_cb_payload);
+		packbuilder_payload.stats.received_objects = push->pb->nr_written;
+		packbuilder_payload.stats.total_objects = push->pb->nr_objects;
+
+		error = push->transfer_progress_cb(&packbuilder_payload.stats, push->transfer_progress_cb_payload);
 
 		if (error < 0)
 			goto done;
