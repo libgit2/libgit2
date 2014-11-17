@@ -363,6 +363,8 @@ int git_openssl_stream_new(git_stream **out, const char *host, const char *port)
 
 #else
 
+#include "stream.h"
+
 int git_openssl_stream_new(git_stream **out, const char *host, const char *port)
 {
 	giterr_set(GITERR_SSL, "openssl is not supported in this version");
