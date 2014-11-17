@@ -119,6 +119,12 @@ int git_refspec__parse(git_refspec *refspec, const char *input, bool is_fetch)
 			if (!git_reference__is_valid_name(refspec->dst, flags))
 				goto invalid;
 		}
+
+		/* if the RHS is empty, then it's a copy of the LHS */
+		if (!refspec->dst) {
+			refspec->dst = git__strdup(refspec->src);
+			GITERR_CHECK_ALLOC(refspec->dst);
+		}
 	}
 
 	refspec->string = git__strdup(input);

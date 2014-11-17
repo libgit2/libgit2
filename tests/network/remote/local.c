@@ -212,7 +212,7 @@ void test_network_remote_local__push_to_bare_remote(void)
 
 	/* Try to push */
 	cl_git_pass(git_push_new(&push, localremote));
-	cl_git_pass(git_push_add_refspec(push, "refs/heads/master:"));
+	cl_git_pass(git_push_add_refspec(push, "refs/heads/master"));
 	cl_git_pass(git_push_finish(push));
 	cl_assert(git_push_unpack_ok(push));
 
@@ -258,7 +258,7 @@ void test_network_remote_local__push_to_bare_remote_with_file_url(void)
 
 	/* Try to push */
 	cl_git_pass(git_push_new(&push, localremote));
-	cl_git_pass(git_push_add_refspec(push, "refs/heads/master:"));
+	cl_git_pass(git_push_add_refspec(push, "refs/heads/master"));
 	cl_git_pass(git_push_finish(push));
 	cl_assert(git_push_unpack_ok(push));
 
@@ -301,7 +301,7 @@ void test_network_remote_local__push_to_non_bare_remote(void)
 
 	/* Try to push */
 	cl_git_pass(git_push_new(&push, localremote));
-	cl_git_pass(git_push_add_refspec(push, "refs/heads/master:"));
+	cl_git_pass(git_push_add_refspec(push, "refs/heads/master"));
 	cl_git_fail_with(git_push_finish(push), GIT_EBAREREPO);
 	cl_assert_equal_i(0, git_push_unpack_ok(push));
 
