@@ -25,6 +25,10 @@ static git_mutex *openssl_locks;
 # endif
 #endif
 
+#ifdef GIT_GNUTLS
+# include <gnutls/gnutls.h>
+#endif
+
 static git_global_shutdown_fn git__shutdown_callbacks[MAX_SHUTDOWN_CB];
 static git_atomic git__n_shutdown_callbacks;
 static git_atomic git__n_inits;
@@ -276,6 +280,11 @@ static void init_once(void)
 	/* OpenSSL needs to be initialized from the main thread */
 	init_ssl();
 
+#ifdef GIT_GNUTLS
+	gnutls_global_init();
+	git__on_shutdown(gnutls_global_deinit);
+#endif
+
 	GIT_MEMORY_BARRIER;
 }
 
@@ -335,6 +344,11 @@ int git_libgit2_init(void)
 		init_ssl();
 		ssl_inited = 1;
 	}
+
+#ifdef GIT_GNUTLS
+	gnutls_global_init();
+	git__on_shutdown(gnutls_global_deinit);
+#endif
 
 	git_atomic_inc(&git__n_inits);
 	return 0;

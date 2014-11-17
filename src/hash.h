@@ -18,6 +18,8 @@ void git_hash_ctx_cleanup(git_hash_ctx *ctx);
 
 #if defined(GIT_COMMON_CRYPTO)
 # include "hash/hash_common_crypto.h"
+#elif defined(GNUTLS_SHA1)
+# include "hash/hash_gnutls.h"
 #elif defined(OPENSSL_SHA1)
 # include "hash/hash_openssl.h"
 #elif defined(WIN32_SHA1)
