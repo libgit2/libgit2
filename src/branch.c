@@ -400,6 +400,12 @@ int git_branch_upstream_remote(git_buf *buf, git_repository *repo, const char *r
 	if ((error = retrieve_upstream_configuration(&str, cfg, refname, "branch.%s.remote")) < 0)
 		goto cleanup;
 
+	if (!*str) {
+		giterr_set(GITERR_REFERENCE, "branch '%s' does not have an upstream remote", refname);
+		error = GIT_ENOTFOUND;
+		goto cleanup;
+	}
+
 	error = git_buf_puts(buf, str);
 
 cleanup:
