@@ -1145,12 +1145,16 @@ static int checkout_conflict_append_remove(
 	checkout_data *data = payload;
 	const char *name;
 
+	assert(ancestor || ours || theirs);
+
 	if (ancestor)
 		name = git__strdup(ancestor->path);
 	else if (ours)
 		name = git__strdup(ours->path);
 	else if (theirs)
 		name = git__strdup(theirs->path);
+	else
+		abort();
 
 	GITERR_CHECK_ALLOC(name);
 

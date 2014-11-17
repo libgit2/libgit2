@@ -127,7 +127,6 @@ void test_status_worktree_init__bracket_in_filename(void)
 	git_index *index;
 	status_entry_single result;
 	unsigned int status_flags;
-	int error;
 
 	#define FILE_WITH_BRACKET "LICENSE[1].md"
 	#define FILE_WITHOUT_BRACKET "LICENSE1.md"
