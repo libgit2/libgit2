@@ -163,6 +163,10 @@ static int create_internal(git_remote **out, git_repository *repo, const char *n
 	if (fetch != NULL) {
 		if (add_refspec(remote, fetch, true) < 0)
 			goto on_error;
+
+		/* Move the data over to where the matching functions can find them */
+		if (dwim_refspecs(&remote->active_refspecs, &remote->refspecs, &remote->refs) < 0)
+			goto on_error;
 	}
 
 	if (!name)
