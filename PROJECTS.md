@@ -89,14 +89,11 @@ might make good smaller projects by themselves.
   using binary search every time
 * Tree builder improvements:
     * Extend to allow building a tree hierarchy
-* Move the tagopt mechanism to the newer git 1.9 interpretation of
-  --tags [#2120](https://github.com/libgit2/libgit2/issues/2120)
 * Apply-patch API
 * Add a patch editing API to enable "git add -p" type operations
 * Textconv API to filter binary data before generating diffs (something
   like the current Filter API, probably).
 * Performance profiling and improvement
-* Build in handling of "empty tree" and "empty blob" SHAs
 * Support "git replace" ref replacements
 * Include conflicts in diff results and in status
     * GIT_DELTA_CONFLICT for items in conflict (with multiple files)
