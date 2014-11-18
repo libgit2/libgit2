@@ -2115,3 +2115,63 @@ int git_remote_default_branch(git_buf *out, git_remote *remote)
 
 	return git_buf_puts(out, guess->name);
 }
+
+int git_remote_push(git_remote *remote, git_strarray *refspecs, const git_push_options *opts,
+		    const git_signature *signature, const char *reflog_message)
+{
+	int error;
+	size_t i;
+	git_push *push = NULL;
+	git_remote_callbacks *cbs;
+	git_refspec *spec;
+
+	assert(remote && refspecs);
+
+	if ((error = git_remote_connect(remote, GIT_DIRECTION_PUSH)) < 0)
+		return error;
+
+	if ((error = git_push_new(&push, remote)) < 0)
+		goto cleanup;
+
+	if (opts && (error = git_push_set_options(push, opts)) < 0)
+		goto cleanup;
+
+	if (refspecs && refspecs->count > 0) {
+		for (i = 0; i < refspecs->count; i++) {
+			if ((error = git_push_add_refspec(push, refspecs->strings[i])) < 0)
+				goto cleanup;
+		}
+	} else {
+		git_vector_foreach(&remote->refspecs, i, spec) {
+			if (!spec->push)
+				continue;
+			if ((error = git_push_add_refspec(push, spec->string)) < 0)
+				goto cleanup;
+		}
+	}
+
+	cbs = &remote->callbacks;
+	if ((error = git_push_set_callbacks(push,
+					    cbs->pack_progress, cbs->payload,
+					    cbs->push_transfer_progress, cbs->payload)) < 0)
+		goto cleanup;
+
+	if ((error = git_push_finish(push)) < 0)
+		goto cleanup;
+
+	if (!git_push_unpack_ok(push)) {
+		error = -1;
+		giterr_set(GITERR_NET, "error in the remote while trying to unpack");
+		goto cleanup;
+	}
+
+	if ((error = git_push_status_foreach(push, cbs->push_update_reference, cbs->payload)) < 0)
+		goto cleanup;
+
+	error = git_push_update_tips(push, signature, reflog_message);
+
+cleanup:
+	git_remote_disconnect(remote);
+	git_push_free(push);
+	return error;
+}

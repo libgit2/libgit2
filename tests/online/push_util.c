@@ -14,15 +14,31 @@ void updated_tip_free(updated_tip *t)
 	git__free(t);
 }
 
+void push_status_free(push_status *s)
+{
+	git__free(s->ref);
+	git__free(s->msg);
+	git__free(s);
+}
+
 void record_callbacks_data_clear(record_callbacks_data *data)
 {
 	size_t i;
 	updated_tip *tip;
+	push_status *status;
 
 	git_vector_foreach(&data->updated_tips, i, tip)
 		updated_tip_free(tip);
 
 	git_vector_free(&data->updated_tips);
+
+	git_vector_foreach(&data->statuses, i, status)
+		push_status_free(status);
+
+	git_vector_free(&data->statuses);
+
+	data->pack_progress_calls = 0;
+	data->transfer_progress_calls = 0;
 }
 
 int record_update_tips_cb(const char *refname, const git_oid *a, const git_oid *b, void *data)
