@@ -1009,6 +1009,7 @@ static int http_close(git_smart_subtransport *subtransport)
 	git_vector_clear(&t->auth_contexts);
 
 	gitno_connection_data_free_ptrs(&t->connection_data);
+	memset(&t->connection_data, 0x0, sizeof(gitno_connection_data));
 
 	return 0;
 }
