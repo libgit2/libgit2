@@ -281,14 +281,19 @@ GIT_EXTERN(const git_refspec *)git_remote_get_refspec(const git_remote *remote, 
 GIT_EXTERN(int) git_remote_connect(git_remote *remote, git_direction direction);
 
 /**
- * Get a list of refs at the remote
+ * Get the remote repository's reference advertisement list
  *
- * The remote (or more exactly its transport) must be connected. The
- * memory belongs to the remote.
+ * Get the list of references with which the server responds to a new
+ * connection.
  *
- * The array will stay valid as long as the remote object exists and
- * its transport isn't changed, but a copy is recommended for usage of
- * the data.
+ * The remote (or more exactly its transport) must have connected to
+ * the remote repository. This list is available as soon as the
+ * connection to the remote is initiated and it remains available
+ * after disconnecting.
+ *
+ * The memory belongs to the remote. The pointer will be valid as long
+ * as a new connection is not initiated, but it is recommended that
+ * you make a copy in order to make use of the data.
  *
  * @param out pointer to the array
  * @param size the number of remote heads
