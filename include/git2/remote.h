@@ -343,8 +343,7 @@ GIT_EXTERN(void) git_remote_stop(git_remote *remote);
 /**
  * Disconnect from the remote
  *
- * Close the connection to the remote and free the underlying
- * transport.
+ * Close the connection to the remote.
  *
  * @param remote the remote to disconnect from
  */
