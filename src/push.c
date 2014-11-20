@@ -333,7 +333,8 @@ static int revwalk(git_vector *commits, git_push *push)
 				continue;
 
 			if (!git_odb_exists(push->repo->_odb, &spec->roid)) {
-				giterr_set(GITERR_REFERENCE, "Cannot push missing reference");
+				giterr_set(GITERR_REFERENCE, 
+					"Cannot push because a reference that you are trying to update on the remote contains commits that are not present locally.");
 				error = GIT_ENONFASTFORWARD;
 				goto on_error;
 			}
