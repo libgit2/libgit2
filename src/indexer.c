@@ -671,8 +671,10 @@ static int inject_object(git_indexer *idx, git_oid *id)
 	seek_back_trailer(idx);
 	entry_start = idx->pack->mwf.size;
 
-	if (git_odb_read(&obj, idx->odb, id) < 0)
+	if (git_odb_read(&obj, idx->odb, id) < 0) {
+		giterr_set(GITERR_INDEXER, "missing delta bases");
 		return -1;
+	}
 
 	data = git_odb_object_data(obj);
 	len = git_odb_object_size(obj);
@@ -827,7 +829,6 @@ static int resolve_deltas(git_indexer *idx, git_transfer_progress *stats)
 			break;
 
 		if (!progressed && (fix_thin_pack(idx, stats) < 0)) {
-			giterr_set(GITERR_INDEXER, "missing delta bases");
 			return -1;
 		}
 	}
