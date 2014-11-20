@@ -202,3 +202,14 @@ void test_online_fetch__remote_symrefs(void)
 
 	git_remote_free(remote);
 }
+
+void test_online_fetch__twice(void)
+{
+	git_remote *remote;
+
+	cl_git_pass(git_remote_create(&remote, _repo, "test", "http://github.com/libgit2/TestGitRepository.git"));
+	cl_git_pass(git_remote_fetch(remote, NULL, NULL, NULL));
+	cl_git_pass(git_remote_fetch(remote, NULL, NULL, NULL));
+
+	git_remote_free(remote);
+}
