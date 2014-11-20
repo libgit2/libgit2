@@ -706,7 +706,7 @@ int git_remote_ls(const git_remote_head ***out, size_t *size, git_remote *remote
 	assert(remote);
 
 	if (!remote->transport) {
-		giterr_set(GITERR_NET, "No transport bound to this remote");
+		giterr_set(GITERR_NET, "this remote has never connected");
 		return -1;
 	}
 
