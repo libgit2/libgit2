@@ -281,11 +281,10 @@ check_buf_append_abc(
 /* more variations on append tests */
 void test_core_buffer__5(void)
 {
-	check_buf_append("", "", "", 0, 8);
-	check_buf_append("a", "", "a", 1, 8);
+	check_buf_append("", "", "", 0, 0);
+	check_buf_append("a", "", "a", 1, 0);
 	check_buf_append("", "a", "a", 1, 8);
 	check_buf_append("", "a", "a", 1, 8);
-	check_buf_append("a", "", "a", 1, 8);
 	check_buf_append("a", "b", "ab", 2, 8);
 	check_buf_append("", "abcdefgh", "abcdefgh", 8, 16);
 	check_buf_append("abcdefgh", "", "abcdefgh", 8, 16);
