@@ -143,6 +143,7 @@ int git_buf_text_lf_to_crlf(git_buf *tgt, const git_buf *src)
 		tgt->ptr[tgt->size++] = '\n';
 	}
 
+	tgt->ptr[tgt->size] = '\0';
 	return git_buf_put(tgt, scan, end - scan);
 }
 

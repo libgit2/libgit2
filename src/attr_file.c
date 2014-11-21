@@ -103,7 +103,6 @@ int git_attr_file__load(
 	int error = 0;
 	git_blob *blob = NULL;
 	git_buf content = GIT_BUF_INIT;
-	const char *data = NULL;
 	git_attr_file *file;
 	struct stat st;
 
@@ -120,7 +119,9 @@ int git_attr_file__load(
 			(error = git_blob_lookup(&blob, repo, &id)) < 0)
 			return error;
 
-		data = git_blob_rawcontent(blob);
+		/* Do not assume that data straight from the ODB is NULL-terminated;
+		 * copy the contents of a file to a buffer to work on */
+		git_buf_put(&content, git_blob_rawcontent(blob), git_blob_rawsize(blob));
 		break;
 	}
 	case GIT_ATTR_FILE__FROM_FILE: {
@@ -143,7 +144,6 @@ int git_attr_file__load(
 		if (error < 0)
 			return GIT_ENOTFOUND;
 
-		data = content.ptr;
 		break;
 	}
 	default:
@@ -154,7 +154,7 @@ int git_attr_file__load(
 	if ((error = git_attr_file__new(&file, entry, source)) < 0)
 		goto cleanup;
 
-	if (parser && (error = parser(repo, file, data)) < 0) {
+	if (parser && (error = parser(repo, file, git_buf_cstr(&content))) < 0) {
 		git_attr_file__free(file);
 		goto cleanup;
 	}

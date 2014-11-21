@@ -176,10 +176,13 @@ int git_buf_putcn(git_buf *buf, char c, size_t len)
 
 int git_buf_put(git_buf *buf, const char *data, size_t len)
 {
-	ENSURE_SIZE(buf, buf->size + len + 1);
-	memmove(buf->ptr + buf->size, data, len);
-	buf->size += len;
-	buf->ptr[buf->size] = '\0';
+	if (len) {
+		assert(data);
+		ENSURE_SIZE(buf, buf->size + len + 1);
+		memmove(buf->ptr + buf->size, data, len);
+		buf->size += len;
+		buf->ptr[buf->size] = '\0';
+	}
 	return 0;
 }
 
