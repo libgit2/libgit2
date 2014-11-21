@@ -120,6 +120,7 @@ int git_indexer_new(
 	idx->progress_cb = progress_cb;
 	idx->progress_payload = progress_payload;
 	idx->mode = mode ? mode : GIT_PACK_FILE_MODE;
+	git_hash_ctx_init(&idx->hash_ctx);
 	git_hash_ctx_init(&idx->trailer);
 
 	error = git_buf_joinpath(&path, prefix, suff);
@@ -265,7 +266,6 @@ static int store_object(git_indexer *idx)
 	struct entry *entry;
 	git_off_t entry_size;
 	struct git_pack_entry *pentry;
-	git_hash_ctx *ctx = &idx->hash_ctx;
 	git_off_t entry_start = idx->entry_start;
 
 	entry = git__calloc(1, sizeof(*entry));
@@ -274,7 +274,7 @@ static int store_object(git_indexer *idx)
 	pentry = git__calloc(1, sizeof(struct git_pack_entry));
 	GITERR_CHECK_ALLOC(pentry);
 
-	git_hash_final(&oid, ctx);
+	git_hash_final(&oid, &idx->hash_ctx);
 	entry_size = idx->off - entry_start;
 	if (entry_start > UINT31_MAX) {
 		entry->offset = UINT32_MAX;
@@ -557,7 +557,7 @@ int git_indexer_append(git_indexer *idx, const void *data, size_t size, git_tran
 
 			git_mwindow_close(&w);
 			idx->entry_start = entry_start;
-			git_hash_ctx_init(&idx->hash_ctx);
+			git_hash_init(&idx->hash_ctx);
 
 			if (type == GIT_OBJ_REF_DELTA || type == GIT_OBJ_OFS_DELTA) {
 				error = advance_delta_offset(idx, type);
@@ -843,12 +843,10 @@ static int update_header_and_rehash(git_indexer *idx, git_transfer_progress *sta
 	git_mwindow *w = NULL;
 	git_mwindow_file *mwf;
 	unsigned int left;
-	git_hash_ctx *ctx;
 
 	mwf = &idx->pack->mwf;
-	ctx = &idx->trailer;
 
-	git_hash_ctx_init(ctx);
+	git_hash_init(&idx->trailer);
 
 
 	/* Update the header to include the numer of local objects we injected */
@@ -1061,5 +1059,7 @@ void git_indexer_free(git_indexer *idx)
 		git_mutex_unlock(&git__mwindow_mutex);
 	}
 
+	git_hash_ctx_cleanup(&idx->trailer);
+	git_hash_ctx_cleanup(&idx->hash_ctx);
 	git__free(idx);
 }
