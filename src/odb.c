@@ -762,12 +762,12 @@ static int hardcoded_objects(git_rawobj *raw, const git_oid *id)
 	if (!git_oid_cmp(id, &empty_blob)) {
 		raw->type = GIT_OBJ_BLOB;
 		raw->len = 0;
-		raw->data = NULL;
+		raw->data = git__calloc(1, sizeof(uint8_t));
 		return 0;
 	} else if (!git_oid_cmp(id, &empty_tree)) {
 		raw->type = GIT_OBJ_TREE;
 		raw->len = 0;
-		raw->data = NULL;
+		raw->data = git__calloc(1, sizeof(uint8_t));
 		return 0;
 	} else {
 		return GIT_ENOTFOUND;
