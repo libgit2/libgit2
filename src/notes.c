@@ -313,7 +313,6 @@ static int note_new(
 	git_blob *blob)
 {
 	git_note *note = NULL;
-	git_buf note_contents = GIT_BUF_INIT;
 
 	note = (git_note *)git__malloc(sizeof(git_note));
 	GITERR_CHECK_ALLOC(note);
@@ -324,8 +323,8 @@ static int note_new(
 		git_signature_dup(&note->committer, git_commit_committer(commit)) < 0)
 		return -1;
 
-	git_buf_put(&note_contents, git_blob_rawcontent(blob), git_blob_rawsize(blob));
-	note->message = git_buf_detach(&note_contents);
+	note->message = git__strndup(git_blob_rawcontent(blob), git_blob_rawsize(blob));
+	GITERR_CHECK_ALLOC(note->message);
 
 	*out = note;
 	return 0;
