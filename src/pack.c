@@ -408,11 +408,14 @@ static int packfile_unpack_header1(
 	size = c & 15;
 	shift = 4;
 	while (c & 0x80) {
-		if (len <= used)
+		if (len <= used) {
+			giterr_set(GITERR_ODB, "buffer too small");
 			return GIT_EBUFS;
+		}
 
 		if (bitsizeof(long) <= shift) {
 			*usedp = 0;
+			giterr_set(GITERR_ODB, "packfile corrupted");
 			return -1;
 		}
 
