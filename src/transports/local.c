@@ -339,14 +339,11 @@ static int local_push_update_remote_ref(
 	int error;
 	git_reference *remote_ref = NULL;
 
-	/* rref will be NULL if it is implicit in the pushspec (e.g. 'b1:') */
-	rref = rref ? rref : lref;
-
-	if (lref) {
+	/* check for lhs, if it's empty it means to delete */
+	if (lref[0] != '\0') {
 		/* Create or update a ref */
-		if ((error = git_reference_create(NULL, remote_repo, rref, loid,
-				!git_oid_iszero(roid), NULL, NULL)) < 0)
-			return error;
+		error = git_reference_create(NULL, remote_repo, rref, loid,
+					     !git_oid_iszero(roid), NULL, NULL);
 	} else {
 		/* Delete a ref */
 		if ((error = git_reference_lookup(&remote_ref, remote_repo, rref)) < 0) {
@@ -355,13 +352,11 @@ static int local_push_update_remote_ref(
 			return error;
 		}
 
-		if ((error = git_reference_delete(remote_ref)) < 0)
-			return error;
-
+		error = git_reference_delete(remote_ref);
 		git_reference_free(remote_ref);
 	}
 
-	return 0;
+	return error;
 }
 
 static int local_push(
