@@ -17,7 +17,7 @@ env:
   - secure: "YnhS+8n6B+uoyaYfaJ3Lei7cSJqHDPiKJCKFIF2c87YDfmCvAJke8QtE7IzjYDs7UFkTCM4ox+ph2bERUrxZbSCyEkHdjIZpKuMJfYWja/jgMqTMxdyOH9y8JLFbZsSXDIXDwqBlC6vVyl1fP90M35wuWcNTs6tctfVWVofEFbs="
  matrix:
   - OPTIONS="-DTHREADSAFE=ON -DCMAKE_BUILD_TYPE=Release"
-  - OPTIONS="-DBUILD_CLAR=ON -DBUILD_EXAMPLES=ON"
+  - OPTIONS="-DTHREADSAFE=OFF -DBUILD_EXAMPLES=ON"
 
 matrix:
  fast_finish: true
@@ -38,7 +38,9 @@ matrix:
      os: linux
  allow_failures:
    - env: COVERITY=1
-   - env: VALGRIND=1
+   - env:
+       - VALGRIND=1
+         OPTIONS="-DBUILD_CLAR=ON -DBUILD_EXAMPLES=OFF -DCMAKE_BUILD_TYPE=Debug"
 
 install:
   - ./script/install-deps-${TRAVIS_OS_NAME}.sh
