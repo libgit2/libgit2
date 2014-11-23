@@ -124,7 +124,7 @@ static int push_commit(git_revwalk *walk, const git_oid *oid, int uninteresting,
 	error = git_object_peel(&obj, oobj, GIT_OBJ_COMMIT);
 	git_object_free(oobj);
 
-	if (error == GIT_ENOTFOUND) {
+	if (error == GIT_ENOTFOUND || error == GIT_EINVALIDSPEC || error == GIT_EPEEL) {
 		/* If this comes from e.g. push_glob("tags"), ignore this */
 		if (from_glob)
 			return 0;
