@@ -986,6 +986,7 @@ void test_checkout_tree__removes_conflicts(void)
 
 	cl_assert(!git_path_exists("testrepo/other.txt"));
 
+	git_commit_free(commit);
 	git_index_free(index);
 }
 
@@ -1030,5 +1031,6 @@ void test_checkout_tree__removes_conflicts_only_by_pathscope(void)
 
 	cl_assert(git_path_exists("testrepo/other.txt"));
 
+	git_commit_free(commit);
 	git_index_free(index);
 }

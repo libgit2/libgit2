@@ -172,12 +172,14 @@ void test_network_remote_local__tagopt(void)
 	cl_git_pass(git_remote_fetch(remote, NULL, NULL, NULL));
 
 	cl_git_pass(git_reference_lookup(&ref, repo, "refs/remotes/tagopt/master"));
+	git_reference_free(ref);
 	cl_git_pass(git_reference_lookup(&ref, repo, "refs/tags/hard_tag"));
 	git_reference_free(ref);
 
 	git_remote_set_autotag(remote, GIT_REMOTE_DOWNLOAD_TAGS_AUTO);
 	cl_git_pass(git_remote_fetch(remote, NULL, NULL, NULL));
 	cl_git_pass(git_reference_lookup(&ref, repo, "refs/remotes/tagopt/master"));
+	git_reference_free(ref);
 }
 
 void test_network_remote_local__push_to_bare_remote(void)

@@ -995,6 +995,7 @@ static int remote_head_for_ref(git_remote_head **out, git_remote *remote, git_re
 		error = remote_head_for_fetchspec_src(out, update_heads, git_buf_cstr(&remote_name));
 
 cleanup:
+	git_buf_free(&remote_name);
 	git_reference_free(resolved_ref);
 	git_config_free(config);
 	return error;

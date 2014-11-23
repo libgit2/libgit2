@@ -925,6 +925,7 @@ void test_status_ignore__subdir_doesnt_match_above(void)
 
 	cl_git_pass(git_repository_config_snapshot(&cfg, g_repo));
 	error = git_config_get_bool(&icase, cfg, "core.ignorecase");
+	git_config_free(cfg);
 	if (error == GIT_ENOTFOUND)
 		error = 0;
 

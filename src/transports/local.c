@@ -47,6 +47,17 @@ static void free_head(git_remote_head *head)
 	git__free(head);
 }
 
+static void free_heads(git_vector *heads)
+{
+	git_remote_head *head;
+	size_t i;
+
+	git_vector_foreach(heads, i, head)
+		free_head(head);
+
+	git_vector_free(heads);
+}
+
 static int add_ref(transport_local *t, const char *name)
 {
 	const char peeled[] = "^{}";
@@ -197,6 +208,8 @@ static int local_connect(
 
 	if (t->connected)
 		return 0;
+
+	free_heads(&t->refs);
 
 	t->url = git__strdup(url);
 	GITERR_CHECK_ALLOC(t->url);
@@ -624,13 +637,8 @@ static int local_close(git_transport *transport)
 static void local_free(git_transport *transport)
 {
 	transport_local *t = (transport_local *)transport;
-	size_t i;
-	git_remote_head *head;
 
-	git_vector_foreach(&t->refs, i, head)
-		free_head(head);
-
-	git_vector_free(&t->refs);
+	free_heads(&t->refs);
 
 	/* Close the transport, if it's still open. */
 	local_close(transport);

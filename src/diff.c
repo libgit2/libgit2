@@ -1234,7 +1234,7 @@ int git_diff_tree_to_workdir(
 
 	assert(diff && repo);
 
-	if ((error = git_repository_index(&index, repo)))
+	if ((error = git_repository_index__weakptr(&index, repo)))
 		return error;
 
 	DIFF_FROM_ITERATORS(
@@ -1243,7 +1243,6 @@ int git_diff_tree_to_workdir(
 			&b, repo, index, old_tree, GIT_ITERATOR_DONT_AUTOEXPAND, pfx, pfx)
 	);
 
-	git_index_free(index);
 	return error;
 }
 

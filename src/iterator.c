@@ -1418,6 +1418,7 @@ static void workdir_iterator__free(git_iterator *self)
 	workdir_iterator *wi = (workdir_iterator *)self;
 	if (wi->index)
 		git_index_snapshot_release(&wi->index_snapshot, wi->index);
+	git_tree_free(wi->tree);
 	fs_iterator__free(self);
 	git_ignore__free(&wi->ignores);
 }
