@@ -756,19 +756,96 @@ void git_index_entry__init_from_stat(
 	entry->file_size = st->st_size;
 }
 
-static git_index_entry *index_entry_alloc(const char *path)
+/*
+ * We fundamentally don't like some paths: we don't want
+ * dot or dot-dot anywhere, and for obvious reasons don't
+ * want to recurse into ".git" either.
+ *
+ * Also, we don't want double slashes or slashes at the
+ * end that can make pathnames ambiguous.
+ */
+static int verify_dotfile(const char *rest)
+{
+	/*
+	 * The first character was '.', but that
+	 * has already been discarded, we now test
+	 * the rest.
+	 */
+
+	/* "." is not allowed */
+	if (*rest == '\0' || *rest == '/')
+		return -1;
+
+	switch (*rest) {
+		/*
+		 * ".git" followed by  NUL or slash is bad. This
+		 * shares the path end test with the ".." case.
+		 */
+		case 'g':
+		case 'G':
+			if (rest[1] != 'i' && rest[1] != 'I')
+				break;
+			if (rest[2] != 't' && rest[2] != 'T')
+				break;
+			rest += 2;
+			/* fallthrough */
+		case '.':
+			if (rest[1] == '\0' || rest[1] == '/')
+				return -1;
+	}
+	return 0;
+}
+
+static int verify_component(char c, const char *rest)
+{
+	if ((c == '.' && verify_dotfile(rest)) < 0 || c == '/' || c == '\0') {
+		giterr_set(GITERR_INDEX, "Invalid path component in index: '%c%s'", c, rest);
+		return -1;
+	}
+	return 0;
+}
+
+static int verify_path(const char *path)
+{
+	char c;
+
+	/* TODO: should we check this? */
+	/*
+	if (has_dos_drive_prefix(path))
+		return -1;
+	*/
+
+	c = *path++;
+	if (verify_component(c, path) < 0)
+		return -1;
+
+	while ((c = *path++) != '\0') {
+		if (c == '/') {
+			c = *path++;
+			if (verify_component(c, path) < 0)
+				return -1;
+		}
+	}
+	return 0;
+}
+
+static int index_entry_create(git_index_entry **out, const char *path)
 {
 	size_t pathlen = strlen(path);
-	struct entry_internal *entry =
-		git__calloc(sizeof(struct entry_internal) + pathlen + 1, 1);
-	if (!entry)
-		return NULL;
+	struct entry_internal *entry;
+
+	if (verify_path(path) < 0)
+		return -1;
+
+	entry = git__calloc(sizeof(struct entry_internal) + pathlen + 1, 1);
+	GITERR_CHECK_ALLOC(entry);
 
 	entry->pathlen = pathlen;
 	memcpy(entry->path, path, pathlen);
 	entry->entry.path = entry->path;
 
-	return (git_index_entry *)entry;
+	*out = (git_index_entry *)entry;
+	return 0;
 }
 
 static int index_entry_init(
@@ -784,14 +861,17 @@ static int index_entry_init(
 			"Could not initialize index entry. "
 			"Index is not backed up by an existing repository.");
 
+	if (index_entry_create(&entry, rel_path) < 0)
+		return -1;
+
 	/* write the blob to disk and get the oid and stat info */
 	error = git_blob__create_from_paths(
 		&oid, &st, INDEX_OWNER(index), NULL, rel_path, 0, true);
-	if (error < 0)
-		return error;
 
-	entry = index_entry_alloc(rel_path);
-	GITERR_CHECK_ALLOC(entry);
+	if (error < 0) {
+		index_entry_free(entry);
+		return error;
+	}
 
 	entry->id = oid;
 	git_index_entry__init_from_stat(entry, &st, !index->distrust_filemode);
@@ -856,11 +936,11 @@ static int index_entry_dup(git_index_entry **out, const git_index_entry *src)
 		return 0;
 	}
 
-	*out = entry = index_entry_alloc(src->path);
-	GITERR_CHECK_ALLOC(entry);
+	if (index_entry_create(&entry, src->path) < 0)
+		return -1;
 
 	index_entry_cpy(entry, src);
-
+	*out = entry;
 	return 0;
 }
 
@@ -2287,8 +2367,8 @@ static int read_tree_cb(
 	if (git_buf_joinpath(&path, root, tentry->filename) < 0)
 		return -1;
 
-	entry = index_entry_alloc(path.ptr);
-	GITERR_CHECK_ALLOC(entry);
+	if (index_entry_create(&entry, path.ptr) < 0)
+		return -1;
 
 	entry->mode = tentry->attr;
 	entry->id = tentry->oid;
