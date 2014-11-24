@@ -326,10 +326,12 @@ static int local_push_update_remote_ref(
 	int error;
 	git_reference *remote_ref = NULL;
 
+	assert(lref);
+
 	/* rref will be NULL if it is implicit in the pushspec (e.g. 'b1:') */
 	rref = rref ? rref : lref;
 
-	if (lref) {
+	if (lref[0]) {
 		/* Create or update a ref */
 		if ((error = git_reference_create(NULL, remote_repo, rref, loid,
 				!git_oid_iszero(roid), NULL, NULL)) < 0)
