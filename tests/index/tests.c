@@ -309,31 +309,116 @@ void test_index_tests__add_bypath_to_a_bare_repository_returns_EBAREPO(void)
 	git_repository_free(bare_repo);
 }
 
-/* Test that writing an invalid filename fails */
-void test_index_tests__write_invalid_filename(void)
+static void add_invalid_filename(git_repository *repo, const char *fn)
 {
-	git_repository *repo;
 	git_index *index;
-	git_oid expected;
+	git_buf path = GIT_BUF_INIT;
 
-	p_mkdir("read_tree", 0700);
-
-	cl_git_pass(git_repository_init(&repo, "./read_tree", 0));
 	cl_git_pass(git_repository_index(&index, repo));
+	cl_assert(git_index_entrycount(index) == 0);
+
+	git_buf_joinpath(&path, "./invalid", fn);
+
+	cl_git_mkfile(path.ptr, NULL);
+	cl_git_fail(git_index_add_bypath(index, fn));
+	cl_must_pass(p_unlink(path.ptr));
 
 	cl_assert(git_index_entrycount(index) == 0);
 
-	cl_git_mkfile("./read_tree/.git/hello", NULL);
+	git_index_free(index);
+}
 
-	cl_git_pass(git_index_add_bypath(index, ".git/hello"));
+/* Test that writing an invalid filename fails */
+void test_index_tests__add_invalid_filename(void)
+{
+	git_repository *repo;
+
+	p_mkdir("invalid", 0700);
+
+	cl_git_pass(git_repository_init(&repo, "./invalid", 0));
+	cl_must_pass(p_mkdir("./invalid/subdir", 0777));
+
+	add_invalid_filename(repo, ".git/hello");
+	add_invalid_filename(repo, ".GIT/hello");
+	add_invalid_filename(repo, ".GiT/hello");
+	add_invalid_filename(repo, "./.git/hello");
+	add_invalid_filename(repo, "./foo");
+	add_invalid_filename(repo, "./bar");
+	add_invalid_filename(repo, "subdir/../bar");
+
+	git_repository_free(repo);
+
+	cl_fixture_cleanup("invalid");
+}
+
+static void replace_char(char *str, char in, char out)
+{
+	char *c = str;
+
+	while (*c++)
+		if (*c == in)
+			*c = out;
+}
+
+static void write_invalid_filename(git_repository *repo, const char *fn_orig)
+{
+	git_index *index;
+	git_oid expected;
+	const git_index_entry *entry;
+	git_buf path = GIT_BUF_INIT;
+	char *fn;
+
+	cl_git_pass(git_repository_index(&index, repo));
+	cl_assert(git_index_entrycount(index) == 0);
+
+	/*
+	 * Sneak a valid path into the index, we'll update it
+	 * to an invalid path when we try to write the index.
+	 */
+	fn = git__strdup(fn_orig);
+	replace_char(fn, '/', '_');
+
+	git_buf_joinpath(&path, "./invalid", fn);
+
+	cl_git_mkfile(path.ptr, NULL);
+
+	cl_git_pass(git_index_add_bypath(index, fn));
+
+	cl_assert(entry = git_index_get_bypath(index, fn, 0));
+
+	/* kids, don't try this at home */
+	replace_char((char *)entry->path, '_', '/');
 
 	/* write-tree */
 	cl_git_fail(git_index_write_tree(&expected, index));
 
+	p_unlink(path.ptr);
+
+	cl_git_pass(git_index_remove_all(index, NULL, NULL, NULL));
 	git_index_free(index);
+	git__free(fn);
+}
+
+/* Test that writing an invalid filename fails */
+void test_index_tests__write_invalid_filename(void)
+{
+	git_repository *repo;
+
+	p_mkdir("invalid", 0700);
+
+	cl_git_pass(git_repository_init(&repo, "./invalid", 0));
+
+	write_invalid_filename(repo, ".git/hello");
+	write_invalid_filename(repo, ".GIT/hello");
+	write_invalid_filename(repo, ".GiT/hello");
+	write_invalid_filename(repo, "./.git/hello");
+	write_invalid_filename(repo, "./foo");
+	write_invalid_filename(repo, "./bar");
+	write_invalid_filename(repo, "foo/../bar");
+
 	git_repository_free(repo);
 
-	cl_fixture_cleanup("read_tree");
+	cl_fixture_cleanup("invalid");
 }
 
 void test_index_tests__remove_entry(void)
