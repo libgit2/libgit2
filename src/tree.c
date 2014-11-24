@@ -55,7 +55,7 @@ static int valid_entry_name(const char *filename)
 		(*filename != '.' ||
 		 (strcmp(filename, ".") != 0 &&
 		  strcmp(filename, "..") != 0 &&
-		  strcmp(filename, DOT_GIT) != 0));
+		  strcasecmp(filename, DOT_GIT) != 0));
 }
 
 static int entry_sort_cmp(const void *a, const void *b)
