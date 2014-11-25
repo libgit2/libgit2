@@ -26,6 +26,11 @@
  */
 #define GIT_WIN_PATH_UTF8		(259 * 3 + 1)
 
+/*
+ * The length of a Windows "shortname", for 8.3 compatibility.
+ */
+#define GIT_WIN_PATH_SHORTNAME  13
+
 /* Win32 path types */
 typedef wchar_t git_win32_path[GIT_WIN_PATH_UTF16];
 typedef char git_win32_utf8_path[GIT_WIN_PATH_UTF8];
@@ -61,5 +66,15 @@ extern int git_win32_path_canonicalize(git_win32_path path);
  * @return The length of the UTF-8 string, in bytes (not counting the NULL terminator), or < 0 for failure
  */
 extern int git_win32_path_to_utf8(git_win32_utf8_path dest, const wchar_t *src);
+
+/**
+ * Get the short name for the terminal path component in the given path.
+ * For example, given "C:\Foo\Bar\Asdf.txt", this will return the short name
+ * for the file "Asdf.txt".
+ *
+ * @param path The given path in UTF-8
+ * @return The name of the shortname for the given path
+ */
+extern char *git_win32_path_8dot3_name(const char *path);
 
 #endif

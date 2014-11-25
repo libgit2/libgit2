@@ -7,6 +7,7 @@
 #include "common.h"
 #include "path.h"
 #include "posix.h"
+#include "repository.h"
 #ifdef GIT_WIN32
 #include "win32/posix.h"
 #include "win32/w32_util.h"
@@ -1237,4 +1238,151 @@ int git_path_from_url_or_path(git_buf *local_path_out, const char *url_or_path)
 		return git_path_fromurl(local_path_out, url_or_path);
 	else
 		return git_buf_sets(local_path_out, url_or_path);
+}
+
+GIT_INLINE(bool) verify_shortname(
+	git_repository *repo,
+	const char *component,
+	size_t len)
+{
+	const char *shortname_repo;
+
+	if (len == git_repository__8dot3_default_len &&
+		strncasecmp(git_repository__8dot3_default, component, len) == 0)
+		return false;
+
+	if (repo &&
+		(shortname_repo = git_repository__8dot3_name(repo)) &&
+		shortname_repo != git_repository__8dot3_default &&
+		git__prefixncmp_icase(component, len, shortname_repo) == 0)
+		return false;
+
+	return true;
+}
+
+/* Reject paths like AUX or COM1, or those versions that end in a dot or
+ * colon.  ("AUX." or "AUX:")
+ */
+GIT_INLINE(bool) verify_dospath(
+	const char *component,
+	size_t len,
+	const char dospath[3],
+	bool trailing_num)
+{
+	size_t last = trailing_num ? 4 : 3;
+
+	if (len < last || git__strncasecmp(component, dospath, 3) != 0)
+		return true;
+
+	if (trailing_num && !git__isdigit(component[3]))
+		return true;
+
+	return (len > last &&
+		component[last] != '.' &&
+		component[last] != ':');
+}
+
+GIT_INLINE(bool) verify_char(unsigned char c, unsigned int flags)
+{
+	if ((flags & GIT_PATH_REJECT_BACKSLASH) && c == '\\')
+		return false;
+
+	if (flags & GIT_PATH_REJECT_NT_CHARS) {
+		if (c < 32)
+			return false;
+
+		switch (c) {
+		case '<':
+		case '>':
+		case ':':
+		case '"':
+		case '|':
+		case '?':
+		case '*':
+			return false;
+		}
+	}
+
+	return true;
+}
+
+/*
+ * We fundamentally don't like some paths when dealing with user-inputted
+ * strings (in checkout or ref names): we don't want dot or dot-dot
+ * anywhere, we want to avoid writing weird paths on Windows that can't
+ * be handled by tools that use the non-\\?\ APIs, we don't want slashes
+ * or double slashes at the end of paths that can make them ambiguous.
+ *
+ * For checkout, we don't want to recurse into ".git" either.
+ */
+static bool verify_component(
+	git_repository *repo,
+	const char *component,
+	size_t len,
+	unsigned int flags)
+{
+	if (len == 0)
+		return false;
+
+	if ((flags & GIT_PATH_REJECT_TRAVERSAL) &&
+		len == 1 && component[0] == '.')
+		return false;
+
+	if ((flags & GIT_PATH_REJECT_TRAVERSAL) &&
+		len == 2 && component[0] == '.' && component[1] == '.')
+		return false;
+
+	if ((flags & GIT_PATH_REJECT_DOT_GIT) && len == 4 &&
+		component[0] == '.' &&
+		(component[1] == 'g' || component[1] == 'G') &&
+		(component[2] == 'i' || component[2] == 'I') &&
+		(component[3] == 't' || component[3] == 'T'))
+		return false;
+
+	if ((flags & GIT_PATH_REJECT_TRAILING_DOT) && component[len-1] == '.')
+		return false;
+
+	if ((flags & GIT_PATH_REJECT_TRAILING_SPACE) && component[len-1] == ' ')
+		return false;
+
+	if ((flags & GIT_PATH_REJECT_TRAILING_COLON) && component[len-1] == ':')
+		return false;
+
+	if ((flags & GIT_PATH_REJECT_DOS_GIT_SHORTNAME) &&
+		!verify_shortname(repo, component, len))
+		return false;
+
+	if (flags & GIT_PATH_REJECT_DOS_PATHS) {
+		if (!verify_dospath(component, len, "CON", false) ||
+			!verify_dospath(component, len, "PRN", false) ||
+			!verify_dospath(component, len, "AUX", false) ||
+			!verify_dospath(component, len, "NUL", false) ||
+			!verify_dospath(component, len, "COM", true)  ||
+			!verify_dospath(component, len, "LPT", true))
+			return false;
+	}
+
+	return true;
+}
+
+bool git_path_isvalid(
+	git_repository *repo,
+	const char *path,
+	unsigned int flags)
+{
+	const char *start, *c;
+
+	for (start = c = path; *c; c++) {
+		if (!verify_char(*c, flags))
+			return false;
+
+		if (*c == '/') {
+			if (!verify_component(repo, start, (c - start), flags))
+				return false;
+
+			start = c+1;
+		}
+	}
+
+	return verify_component(repo, start, (c - start), flags);
 }

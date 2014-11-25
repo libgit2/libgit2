@@ -106,6 +106,7 @@ GIT_INLINE(void) git__free(void *ptr)
 
 extern int git__prefixcmp(const char *str, const char *prefix);
 extern int git__prefixcmp_icase(const char *str, const char *prefix);
+extern int git__prefixncmp_icase(const char *str, size_t str_n, const char *prefix);
 extern int git__suffixcmp(const char *str, const char *suffix);
 
 GIT_INLINE(int) git__signum(int val)

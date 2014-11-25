@@ -762,86 +762,19 @@ void git_index_entry__init_from_stat(
 	entry->file_size = st->st_size;
 }
 
-/*
- * We fundamentally don't like some paths: we don't want
- * dot or dot-dot anywhere, and for obvious reasons don't
- * want to recurse into ".git" either.
- *
- * Also, we don't want double slashes or slashes at the
- * end that can make pathnames ambiguous.
- */
-static int verify_dotfile(const char *rest)
-{
-	/*
-	 * The first character was '.', but that
-	 * has already been discarded, we now test
-	 * the rest.
-	 */
-
-	/* "." is not allowed */
-	if (*rest == '\0' || *rest == '/')
-		return -1;
-
-	switch (*rest) {
-		/*
-		 * ".git" followed by  NUL or slash is bad. This
-		 * shares the path end test with the ".." case.
-		 */
-		case 'g':
-		case 'G':
-			if (rest[1] != 'i' && rest[1] != 'I')
-				break;
-			if (rest[2] != 't' && rest[2] != 'T')
-				break;
-			rest += 2;
-			/* fallthrough */
-		case '.':
-			if (rest[1] == '\0' || rest[1] == '/')
-				return -1;
-	}
-	return 0;
-}
-
-static int verify_component(char c, const char *rest)
-{
-	if ((c == '.' && verify_dotfile(rest)) < 0 || c == '/' || c == '\0') {
-		giterr_set(GITERR_INDEX, "Invalid path component in index: '%c%s'", c, rest);
-		return -1;
-	}
-	return 0;
-}
-
-static int verify_path(const char *path)
-{
-	char c;
-
-	/* TODO: should we check this? */
-	/*
-	if (has_dos_drive_prefix(path))
-		return -1;
-	*/
-
-	c = *path++;
-	if (verify_component(c, path) < 0)
-		return -1;
-
-	while ((c = *path++) != '\0') {
-		if (c == '/') {
-			c = *path++;
-			if (verify_component(c, path) < 0)
-				return -1;
-		}
-	}
-	return 0;
-}
-
-static int index_entry_create(git_index_entry **out, const char *path)
+static int index_entry_create(
+	git_index_entry **out,
+	git_repository *repo,
+	const char *path)
 {
 	size_t pathlen = strlen(path);
 	struct entry_internal *entry;
 
-	if (verify_path(path) < 0)
+	if (!git_path_isvalid(repo, path,
+		GIT_PATH_REJECT_DEFAULTS | GIT_PATH_REJECT_DOT_GIT)) {
+		giterr_set(GITERR_INDEX, "Invalid path: '%s'", path);
 		return -1;
+	}
 
 	entry = git__calloc(sizeof(struct entry_internal) + pathlen + 1, 1);
 	GITERR_CHECK_ALLOC(entry);
@@ -855,7 +788,9 @@ static int index_entry_create(git_index_entry **out, const char *path)
 }
 
 static int index_entry_init(
-	git_index_entry **entry_out, git_index *index, const char *rel_path)
+	git_index_entry **entry_out,
+	git_index *index,
+	const char *rel_path)
 {
 	int error = 0;
 	git_index_entry *entry = NULL;
@@ -867,7 +802,7 @@ static int index_entry_init(
 			"Could not initialize index entry. "
 			"Index is not backed up by an existing repository.");
 
-	if (index_entry_create(&entry, rel_path) < 0)
+	if (index_entry_create(&entry, INDEX_OWNER(index), rel_path) < 0)
 		return -1;
 
 	/* write the blob to disk and get the oid and stat info */
@@ -933,7 +868,10 @@ static void index_entry_cpy(git_index_entry *tgt, const git_index_entry *src)
 	tgt->path = tgt_path; /* reset to existing path data */
 }
 
-static int index_entry_dup(git_index_entry **out, const git_index_entry *src)
+static int index_entry_dup(
+	git_index_entry **out,
+	git_repository *repo,
+	const git_index_entry *src)
 {
 	git_index_entry *entry;
 
@@ -942,7 +880,7 @@ static int index_entry_dup(git_index_entry **out, const git_index_entry *src)
 		return 0;
 	}
 
-	if (index_entry_create(&entry, src->path) < 0)
+	if (index_entry_create(&entry, repo, src->path) < 0)
 		return -1;
 
 	index_entry_cpy(entry, src);
@@ -1211,7 +1149,7 @@ int git_index_add(git_index *index, const git_index_entry *source_entry)
 		return -1;
 	}
 
-	if ((ret = index_entry_dup(&entry, source_entry)) < 0 ||
+	if ((ret = index_entry_dup(&entry, INDEX_OWNER(index), source_entry)) < 0 ||
 		(ret = index_insert(index, &entry, 1)) < 0)
 		return ret;
 
@@ -1331,9 +1269,9 @@ int git_index_conflict_add(git_index *index,
 
 	assert (index);
 
-	if ((ret = index_entry_dup(&entries[0], ancestor_entry)) < 0 ||
-		(ret = index_entry_dup(&entries[1], our_entry)) < 0 ||
-		(ret = index_entry_dup(&entries[2], their_entry)) < 0)
+	if ((ret = index_entry_dup(&entries[0], INDEX_OWNER(index), ancestor_entry)) < 0 ||
+		(ret = index_entry_dup(&entries[1], INDEX_OWNER(index), our_entry)) < 0 ||
+		(ret = index_entry_dup(&entries[2], INDEX_OWNER(index), their_entry)) < 0)
 		goto on_error;
 
 	for (i = 0; i < 3; i++) {
@@ -1850,7 +1788,10 @@ static int read_conflict_names(git_index *index, const char *buffer, size_t size
 }
 
 static size_t read_entry(
-	git_index_entry **out, const void *buffer, size_t buffer_size)
+	git_index_entry **out,
+	git_index *index,
+	const void *buffer,
+	size_t buffer_size)
 {
 	size_t path_length, entry_size;
 	const char *path_ptr;
@@ -1914,7 +1855,7 @@ static size_t read_entry(
 
 	entry.path = (char *)path_ptr;
 
-	if (index_entry_dup(out, &entry) < 0)
+	if (index_entry_dup(out, INDEX_OWNER(index), &entry) < 0)
 		return 0;
 
 	return entry_size;
@@ -2015,7 +1956,7 @@ static int parse_index(git_index *index, const char *buffer, size_t buffer_size)
 	/* Parse all the entries */
 	for (i = 0; i < header.entry_count && buffer_size > INDEX_FOOTER_SIZE; ++i) {
 		git_index_entry *entry;
-		size_t entry_size = read_entry(&entry, buffer, buffer_size);
+		size_t entry_size = read_entry(&entry, index, buffer, buffer_size);
 
 		/* 0 bytes read means an object corruption */
 		if (entry_size == 0) {
@@ -2376,6 +2317,7 @@ int git_index_entry_stage(const git_index_entry *entry)
 }
 
 typedef struct read_tree_data {
+	git_index *index;
 	git_vector *old_entries;
 	git_vector *new_entries;
 	git_vector_cmp entry_cmp;
@@ -2396,7 +2338,7 @@ static int read_tree_cb(
 	if (git_buf_joinpath(&path, root, tentry->filename) < 0)
 		return -1;
 
-	if (index_entry_create(&entry, path.ptr) < 0)
+	if (index_entry_create(&entry, INDEX_OWNER(data->index), path.ptr) < 0)
 		return -1;
 
 	entry->mode = tentry->attr;
@@ -2437,6 +2379,7 @@ int git_index_read_tree(git_index *index, const git_tree *tree)
 
 	git_vector_set_cmp(&entries, index->entries._cmp); /* match sort */
 
+	data.index = index;
 	data.old_entries = &index->entries;
 	data.new_entries = &entries;
 	data.entry_cmp   = index->entries_search;
@@ -2556,7 +2499,7 @@ int git_index_add_all(
 			break;
 
 		/* make the new entry to insert */
-		if ((error = index_entry_dup(&entry, wd)) < 0)
+		if ((error = index_entry_dup(&entry, INDEX_OWNER(index), wd)) < 0)
 			break;
 
 		entry->id = blobid;
