@@ -188,3 +188,27 @@ void test_path_win32__canonicalize(void)
 	test_canonicalize(L"\\\\server\\..\\..\\share\\.\\foo", L"\\\\server\\share\\foo");
 #endif
 }
+
+void test_path_win32__8dot3_name(void)
+{
+#ifdef GIT_WIN32
+	char *shortname;
+
+	/* Some guaranteed short names */
+	cl_assert_equal_s("PROGRA~1", (shortname = git_win32_path_8dot3_name("C:\\Program Files")));
+	git__free(shortname);
+
+	cl_assert_equal_s("WINDOWS", (shortname = git_win32_path_8dot3_name("C:\\WINDOWS")));
+	git__free(shortname);
+
+	/* Create some predictible short names */
+	cl_must_pass(p_mkdir(".foo", 0777));
+	cl_assert_equal_s("FOO~1", (shortname = git_win32_path_8dot3_name(".foo")));
+	git__free(shortname);
+
+	cl_git_write2file("bar~1", "foobar\n", 7, O_RDWR|O_CREAT, 0666);
+	cl_must_pass(p_mkdir(".bar", 0777));
+	cl_assert_equal_s("BAR~2", (shortname = git_win32_path_8dot3_name(".bar")));
+	git__free(shortname);
+#endif
+}

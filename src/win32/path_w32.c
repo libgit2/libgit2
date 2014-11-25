@@ -267,3 +267,39 @@ int git_win32_path_to_utf8(git_win32_utf8_path dest, const wchar_t *src)
 
 	return len;
 }
+
+char *git_win32_path_8dot3_name(const char *path)
+{
+	git_win32_path longpath, shortpath;
+	wchar_t *start;
+	char *shortname;
+	int len, namelen = 1;
+
+	if (git_win32_path_from_utf8(longpath, path) < 0)
+		return NULL;
+
+	len = GetShortPathNameW(longpath, shortpath, GIT_WIN_PATH_UTF16);
+
+	while (len && shortpath[len-1] == L'\\')
+		shortpath[--len] = L'\0';
+
+	if (len == 0 || len >= GIT_WIN_PATH_UTF16)
+		return NULL;
+
+	for (start = shortpath + (len - 1);
+		start > shortpath && *(start-1) != '/' && *(start-1) != '\\';
+		start--)
+		namelen++;
+
+	/* We may not have actually been given a short name.  But if we have,
+	 * it will be in the ASCII byte range, so we don't need to worry about
+	 * multi-byte sequences and can allocate naively.
+	 */
+	if (namelen > 12 || (shortname = git__malloc(namelen + 1)) == NULL)
+		return NULL;
+
+	if ((len = git__utf16_to_8(shortname, namelen + 1, start)) < 0)
+		return NULL;
+
+	return shortname;
+}

@@ -37,6 +37,9 @@
 
 #define GIT_REPO_VERSION 0
 
+const char *git_repository__8dot3_default = "GIT~1";
+size_t git_repository__8dot3_default_len = 5;
+
 static void set_odb(git_repository *repo, git_odb *odb)
 {
 	if (odb) {
@@ -120,6 +123,7 @@ void git_repository_free(git_repository *repo)
 	git__free(repo->path_repository);
 	git__free(repo->workdir);
 	git__free(repo->namespace);
+	git__free(repo->name_8dot3);
 
 	git__memzero(repo, sizeof(*repo));
 	git__free(repo);
@@ -789,6 +793,27 @@ int git_repository_set_namespace(git_repository *repo, const char *namespace)
 const char *git_repository_get_namespace(git_repository *repo)
 {
 	return repo->namespace;
+}
+
+const char *git_repository__8dot3_name(git_repository *repo)
+{
+	if (!repo->has_8dot3) {
+		repo->has_8dot3 = 1;
+
+#ifdef GIT_WIN32
+		if (!repo->is_bare) {
+			repo->name_8dot3 = git_win32_path_8dot3_name(repo->path_repository);
+
+			/* We anticipate the 8.3 name is "GIT~1", so use a static for
+			 * easy testing in the common case */
+			if (strcasecmp(repo->name_8dot3, git_repository__8dot3_default) == 0)
+				repo->has_8dot3_default = 1;
+		}
+#endif
+	}
+
+	return repo->has_8dot3_default ?
+		git_repository__8dot3_default : repo->name_8dot3;
 }
 
 static int check_repositoryformatversion(git_config *config)
