@@ -106,6 +106,6 @@ void test_config_include__depth(void)
 
 	cl_git_fail(git_config_open_ondisk(&cfg, "a"));
 
-	unlink("a");
-	unlink("b");
+	p_unlink("a");
+	p_unlink("b");
 }
