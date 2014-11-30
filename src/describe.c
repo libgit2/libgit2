@@ -682,9 +682,9 @@ int git_describe_commit(
 	if ((error = git_object_peel((git_object **)(&commit), committish, GIT_OBJ_COMMIT)) < 0)
 		goto cleanup;
 
-	if (git_reference_foreach_name(
+	if ((error = git_reference_foreach_name(
 			git_object_owner(committish),
-			get_name, &data) < 0)
+			get_name, &data)) < 0)
 				goto cleanup;
 
 	if (git_oidmap_size(data.names) == 0) {
