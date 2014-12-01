@@ -7,6 +7,7 @@
 #include "../posix.h"
 #include "../fileops.h"
 #include "path.h"
+#include "path_w32.h"
 #include "utf-conv.h"
 #include "repository.h"
 #include "reparse.h"
@@ -35,22 +36,6 @@
 /* GetFinalPathNameByHandleW signature */
 typedef DWORD(WINAPI *PFGetFinalPathNameByHandleW)(HANDLE, LPWSTR, DWORD, DWORD);
 
-/* Helper function which converts UTF-8 paths to UTF-16.
- * On failure, errno is set. */
-static int utf8_to_16_with_errno(git_win32_path dest, const char *src)
-{
-	int len = git_win32_path_from_utf8(dest, src);
-
-	if (len < 0) {
-		if (GetLastError() == ERROR_INSUFFICIENT_BUFFER)
-			errno = ENAMETOOLONG;
-		else
-			errno = EINVAL; /* Bad code point, presumably */
-	}
-
-	return len;
-}
-
 int p_ftruncate(int fd, long size)
 {
 #if defined(_MSC_VER) && _MSC_VER >= 1500
@@ -66,7 +51,7 @@ int p_mkdir(const char *path, mode_t mode)
 
 	GIT_UNUSED(mode);
 
-	if (utf8_to_16_with_errno(buf, path) < 0)
+	if (git_win32_path_from_utf8(buf, path) < 0)
 		return -1;
 
 	return _wmkdir(buf);
@@ -85,7 +70,7 @@ int p_unlink(const char *path)
 	git_win32_path buf;
 	int error;
 
-	if (utf8_to_16_with_errno(buf, path) < 0)
+	if (git_win32_path_from_utf8(buf, path) < 0)
 		return -1;
 
 	error = _wunlink(buf);
@@ -292,7 +277,7 @@ static int do_lstat(const char *path, struct stat *buf, bool posixly_correct)
 	git_win32_path path_w;
 	int len;
 
-	if ((len = utf8_to_16_with_errno(path_w, path)) < 0)
+	if ((len = git_win32_path_from_utf8(path_w, path)) < 0)
 		return -1;
 
 	git_win32__path_trim_end(path_w, len);
@@ -323,7 +308,7 @@ int p_readlink(const char *path, char *buf, size_t bufsiz)
 	 * could occur in the middle of the encoding of a code point,
 	 * we need to buffer the result on the stack. */
 
-	if (utf8_to_16_with_errno(path_w, path) < 0 ||
+	if (git_win32_path_from_utf8(path_w, path) < 0 ||
 		readlink_w(target_w, path_w) < 0 ||
 		(len = git_win32_path_to_utf8(target, target_w)) < 0)
 		return -1;
@@ -347,7 +332,7 @@ int p_open(const char *path, int flags, ...)
 	git_win32_path buf;
 	mode_t mode = 0;
 
-	if (utf8_to_16_with_errno(buf, path) < 0)
+	if (git_win32_path_from_utf8(buf, path) < 0)
 		return -1;
 
 	if (flags & O_CREAT) {
@@ -365,7 +350,7 @@ int p_creat(const char *path, mode_t mode)
 {
 	git_win32_path buf;
 
-	if (utf8_to_16_with_errno(buf, path) < 0)
+	if (git_win32_path_from_utf8(buf, path) < 0)
 		return -1;
 
 	return _wopen(buf, _O_WRONLY | _O_CREAT | _O_TRUNC | STANDARD_OPEN_FLAGS, mode);
@@ -463,7 +448,7 @@ int p_stat(const char* path, struct stat* buf)
 	git_win32_path path_w;
 	int len;
 
-	if ((len = utf8_to_16_with_errno(path_w, path)) < 0)
+	if ((len = git_win32_path_from_utf8(path_w, path)) < 0)
 		return -1;
 
 	git_win32__path_trim_end(path_w, len);
@@ -483,7 +468,7 @@ int p_chdir(const char* path)
 {
 	git_win32_path buf;
 
-	if (utf8_to_16_with_errno(buf, path) < 0)
+	if (git_win32_path_from_utf8(buf, path) < 0)
 		return -1;
 
 	return _wchdir(buf);
@@ -493,7 +478,7 @@ int p_chmod(const char* path, mode_t mode)
 {
 	git_win32_path buf;
 
-	if (utf8_to_16_with_errno(buf, path) < 0)
+	if (git_win32_path_from_utf8(buf, path) < 0)
 		return -1;
 
 	return _wchmod(buf, mode);
@@ -504,7 +489,7 @@ int p_rmdir(const char* path)
 	git_win32_path buf;
 	int error;
 
-	if (utf8_to_16_with_errno(buf, path) < 0)
+	if (git_win32_path_from_utf8(buf, path) < 0)
 		return -1;
 
 	error = _wrmdir(buf);
@@ -533,7 +518,7 @@ char *p_realpath(const char *orig_path, char *buffer)
 {
 	git_win32_path orig_path_w, buffer_w;
 
-	if (utf8_to_16_with_errno(orig_path_w, orig_path) < 0)
+	if (git_win32_path_from_utf8(orig_path_w, orig_path) < 0)
 		return NULL;
 
 	/* Note that if the path provided is a relative path, then the current directory
@@ -554,20 +539,17 @@ char *p_realpath(const char *orig_path, char *buffer)
 		return NULL;
 	}
 
-	/* Convert the path to UTF-8. */
-	if (buffer) {
-		/* If the caller provided a buffer, then it is assumed to be GIT_WIN_PATH_UTF8
-		 * characters in size. If it isn't, then we may overflow. */
-		if (git__utf16_to_8(buffer, GIT_WIN_PATH_UTF8, buffer_w) < 0)
-			return NULL;
-	} else {
-		/* If the caller did not provide a buffer, then we allocate one for the caller
-		 * from the heap. */
-		if (git__utf16_to_8_alloc(&buffer, buffer_w) < 0)
-			return NULL;
+	if (!buffer && !(buffer = git__malloc(GIT_WIN_PATH_UTF8))) {
+		errno = ENOMEM;
+		return NULL;
 	}
 
-	/* Convert backslashes to forward slashes */
+	/* Convert the path to UTF-8. If the caller provided a buffer, then it
+	 * is assumed to be GIT_WIN_PATH_UTF8 characters in size. If it isn't,
+	 * then we may overflow. */
+	if (git_win32_path_to_utf8(buffer, buffer_w) < 0)
+		return NULL;
+
 	git_path_mkposix(buffer);
 
 	return buffer;
@@ -608,6 +590,7 @@ int p_snprintf(char *buffer, size_t count, const char *format, ...)
 	return r;
 }
 
+/* TODO: wut? */
 int p_mkstemp(char *tmp_path)
 {
 #if defined(_MSC_VER) && _MSC_VER >= 1500
@@ -625,7 +608,7 @@ int p_access(const char* path, mode_t mode)
 {
 	git_win32_path buf;
 
-	if (utf8_to_16_with_errno(buf, path) < 0)
+	if (git_win32_path_from_utf8(buf, path) < 0)
 		return -1;
 
 	return _waccess(buf, mode);
@@ -664,8 +647,8 @@ int p_rename(const char *from, const char *to)
 	int rename_succeeded;
 	int error;
 
-	if (utf8_to_16_with_errno(wfrom, from) < 0 ||
-		utf8_to_16_with_errno(wto, to) < 0)
+	if (git_win32_path_from_utf8(wfrom, from) < 0 ||
+		git_win32_path_from_utf8(wto, to) < 0)
 		return -1;
 
 	/* wait up to 50ms if file is locked by another thread or process */
