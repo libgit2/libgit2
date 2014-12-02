@@ -35,7 +35,6 @@ struct git_hashsig {
 	hashsig_heap mins;
 	hashsig_heap maxs;
 	git_hashsig_option_t opt;
-	int considered;
 };
 
 #define HEAP_LCHILD_OF(I) (((I)<<1)+1)
@@ -152,8 +151,6 @@ static void hashsig_in_progress_init(
 	}
 }
 
-#define HASHSIG_IN_PROGRESS_INIT { 1 }
-
 static int hashsig_add_hashes(
 	git_hashsig *sig,
 	const uint8_t *data,
@@ -197,8 +194,6 @@ static int hashsig_add_hashes(
 		if (len > 0) {
 			hashsig_heap_insert(&sig->mins, (hashsig_t)state);
 			hashsig_heap_insert(&sig->maxs, (hashsig_t)state);
-
-			sig->considered++;
 
 			while (scan < end && (*scan == '\n' || !*scan))
 				++scan;
