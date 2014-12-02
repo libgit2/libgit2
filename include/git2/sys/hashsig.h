@@ -25,7 +25,8 @@ typedef struct git_hashsig git_hashsig;
 typedef enum {
 	GIT_HASHSIG_NORMAL = 0, /* use all data */
 	GIT_HASHSIG_IGNORE_WHITESPACE = (1 << 0), /* ignore whitespace */
-	GIT_HASHSIG_SMART_WHITESPACE = (1 << 1) /* ignore \r and all space after \n */
+	GIT_HASHSIG_SMART_WHITESPACE = (1 << 1), /* ignore \r and all space after \n */
+	GIT_HASHSIG_ALLOW_SMALL_FILES = (1 << 2) /* allow hashing of small files */
 } git_hashsig_option_t;
 
 /**
@@ -35,8 +36,8 @@ typedef enum {
  * will be removed from the buffer while it is being processed, modifying
  * the buffer in place.  Sorry about that!
  *
- * This will return an error if the buffer doesn't contain enough data to
- * compute a valid signature.
+ * Unless GIT_HASHSIG_ALLOW_SMALL_FILES is set, this will return GIT_EBUFS if the
+ * buffer doesn't contain enough data to compute a valid signature.
  */
 GIT_EXTERN(int) git_hashsig_create(
 	git_hashsig **out,
@@ -50,8 +51,8 @@ GIT_EXTERN(int) git_hashsig_create(
  * This walks through the file, only loading a maximum of 4K of file data at
  * a time.  Otherwise, it acts just like `git_hashsig_create`.
  *
- * This will return an error if the file doesn't contain enough data to
- * compute a valid signature.
+ * Unless GIT_HASHSIG_ALLOW_SMALL_FILES is set, this will return GIT_EBUFS if the
+ * buffer doesn't contain enough data to compute a valid signature.
  */
 GIT_EXTERN(int) git_hashsig_create_fromfile(
 	git_hashsig **out,

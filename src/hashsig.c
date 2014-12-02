@@ -208,7 +208,8 @@ static int hashsig_add_hashes(
 
 static int hashsig_finalize_hashes(git_hashsig *sig)
 {
-	if (sig->mins.size < HASHSIG_HEAP_MIN_SIZE) {
+	if (sig->mins.size < HASHSIG_HEAP_MIN_SIZE &&
+		!(sig->opt & GIT_HASHSIG_ALLOW_SMALL_FILES)) {
 		giterr_set(GITERR_INVALID,
 			"File too small for similarity signature calculation");
 		return GIT_EBUFS;
