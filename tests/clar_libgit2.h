@@ -112,6 +112,7 @@ void cl_git_append2file(const char *filename, const char *new_content);
 void cl_git_rewritefile(const char *filename, const char *new_content);
 void cl_git_write2file(const char *path, const char *data,
 	size_t datalen, int flags, unsigned int mode);
+void cl_git_rmfile(const char *filename);
 
 bool cl_toggle_filemode(const char *filename);
 bool cl_is_chmod_supported(void);
