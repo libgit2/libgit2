@@ -18,11 +18,14 @@ typedef struct git_hashsig git_hashsig;
 
 /**
  * Options for hashsig calculation
+ *
+ * The options GIT_HASHSIG_NORMAL, GIT_HASHSIG_IGNORE_WHITESPACE,
+ * GIT_HASHSIG_SMART_WHITESPACE are exclusive and should not be combined.
  */
 typedef enum {
 	GIT_HASHSIG_NORMAL = 0, /* use all data */
-	GIT_HASHSIG_IGNORE_WHITESPACE = 1, /* ignore whitespace */
-	GIT_HASHSIG_SMART_WHITESPACE = 2, /* ignore \r and all space after \n */
+	GIT_HASHSIG_IGNORE_WHITESPACE = (1 << 0), /* ignore whitespace */
+	GIT_HASHSIG_SMART_WHITESPACE = (1 << 1) /* ignore \r and all space after \n */
 } git_hashsig_option_t;
 
 /**

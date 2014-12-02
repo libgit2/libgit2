@@ -134,20 +134,20 @@ static void hashsig_in_progress_init(
 {
 	int i;
 
-	switch (sig->opt) {
-	case GIT_HASHSIG_IGNORE_WHITESPACE:
+	/* no more than one can be set */
+	assert(!(sig->opt & GIT_HASHSIG_IGNORE_WHITESPACE) ||
+		   !(sig->opt & GIT_HASHSIG_SMART_WHITESPACE));
+
+	if (sig->opt & GIT_HASHSIG_IGNORE_WHITESPACE) {		
 		for (i = 0; i < 256; ++i)
 			prog->ignore_ch[i] = git__isspace_nonlf(i);
 		prog->use_ignores = 1;
-		break;
-	case GIT_HASHSIG_SMART_WHITESPACE:
+	} else if (sig->opt & GIT_HASHSIG_SMART_WHITESPACE) {
 		for (i = 0; i < 256; ++i)
 			prog->ignore_ch[i] = git__isspace(i);
 		prog->use_ignores = 1;
-		break;
-	default:
+	} else {
 		memset(prog, 0, sizeof(*prog));
-		break;
 	}
 }
 
@@ -171,12 +171,13 @@ static int hashsig_add_hashes(
 			if (use_ignores)
 				for (; scan < end && git__isspace_nonlf(ch); ch = *scan)
 					++scan;
-			else if (sig->opt != GIT_HASHSIG_NORMAL)
+			else if (sig->opt &
+					 (GIT_HASHSIG_IGNORE_WHITESPACE | GIT_HASHSIG_SMART_WHITESPACE))
 				for (; scan < end && ch == '\r'; ch = *scan)
 					++scan;
 
 			/* peek at next character to decide what to do next */
-			if (sig->opt == GIT_HASHSIG_SMART_WHITESPACE)
+			if (sig->opt & GIT_HASHSIG_SMART_WHITESPACE)
 				use_ignores = (ch == '\n');
 
 			if (scan >= end)
