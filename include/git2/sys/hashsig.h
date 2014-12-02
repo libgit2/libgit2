@@ -34,11 +34,6 @@ typedef enum {
  *
  * This will return an error if the buffer doesn't contain enough data to
  * compute a valid signature.
- *
- * @param out The array of hashed runs representing the file content
- * @param buf The contents of the file to hash
- * @param buflen The length of the data at `buf`
- * @param generate_pairwise_hashes Should pairwise runs be hashed
  */
 GIT_EXTERN(int) git_hashsig_create(
 	git_hashsig **out,
