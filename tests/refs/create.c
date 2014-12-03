@@ -151,12 +151,10 @@ void test_refs_create__propagate_eexists(void)
 	cl_assert(error == GIT_EEXISTS);
 }
 
-void test_refs_create__creating_a_reference_with_an_invalid_name_returns_EINVALIDSPEC(void)
+static void test_invalid_name(const char *name)
 {
 	git_reference *new_reference;
 	git_oid id;
-
-	const char *name = "refs/heads/inv@{id";
 
 	git_oid_fromstr(&id, current_master_tip);
 
@@ -165,4 +163,48 @@ void test_refs_create__creating_a_reference_with_an_invalid_name_returns_EINVALI
 
 	cl_assert_equal_i(GIT_EINVALIDSPEC, git_reference_symbolic_create(
 		&new_reference, g_repo, name, current_head_target, 0, NULL, NULL));
+}
+
+void test_refs_create__creating_a_reference_with_an_invalid_name_returns_EINVALIDSPEC(void)
+{
+	test_invalid_name("refs/heads/inv@{id");
+	test_invalid_name("refs/heads/back\\slash");
+
+	test_invalid_name("refs/heads/foo ");
+	test_invalid_name("refs/heads/foo /bar");
+	test_invalid_name("refs/heads/com1:bar/foo");
+
+	test_invalid_name("refs/heads/e:");
+	test_invalid_name("refs/heads/c:/foo");
+
+	test_invalid_name("refs/heads/foo.");
+}
+
+static void test_win32_name(const char *name)
+{
+	git_reference *new_reference = NULL;
+	git_oid id;
+	int ret;
+
+	git_oid_fromstr(&id, current_master_tip);
+
+	ret = git_reference_create(&new_reference, g_repo, name, &id, 0, NULL, NULL);
+
+#ifdef GIT_WIN32
+	cl_assert_equal_i(GIT_EINVALIDSPEC, ret);
+#else
+	cl_git_pass(ret);
+#endif
+
+	git_reference_free(new_reference);
+}
+
+void test_refs_create__creating_a_loose_ref_with_invalid_windows_name(void)
+{
+	test_win32_name("refs/heads/foo./bar");
+
+	test_win32_name("refs/heads/aux");
+	test_win32_name("refs/heads/aux.foo/bar");
+
+	test_win32_name("refs/heads/com1");
 }
