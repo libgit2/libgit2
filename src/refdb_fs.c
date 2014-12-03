@@ -707,7 +707,7 @@ static int reference_path_available(
 
 static int loose_lock(git_filebuf *file, refdb_fs_backend *backend, const char *name)
 {
-        int error;
+	int error;
 	git_buf ref_path = GIT_BUF_INIT;
 
 	assert(file && backend && name);
