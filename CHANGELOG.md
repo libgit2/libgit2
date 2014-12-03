@@ -126,3 +126,7 @@ v0.21 + 1
 * git_threads_init() and git_threads_shutdown() have been renamed to
   git_libgit2_init() and git_libgit2_shutdown() to better explain what
   their purpose is, as it's grown to be more than just about threads.
+
+* git_libgit2_init() and git_libgit2_shutdown() now return the number of
+  initializations of the library, so consumers may schedule work on the
+  first initialization.
