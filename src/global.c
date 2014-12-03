@@ -131,6 +131,7 @@ int git_openssl_set_locking(void)
 	giterr_set(GITERR_THREAD, "libgit2 as not built with threads");
 	return -1;
 # endif
+#else
 	giterr_set(GITERR_SSL, "libgit2 was not built with OpenSSL support");
 	return -1;
 #endif
