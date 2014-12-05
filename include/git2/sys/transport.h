@@ -49,7 +49,7 @@ struct git_transport {
 
 	/* This function may be called after a successful call to
 	 * connect(). The array returned is owned by the transport and
-	 * is guranteed until the next call of a transport function. */
+	 * is guaranteed until the next call of a transport function. */
 	int (*ls)(
 		const git_remote_head ***out,
 		size_t *size,

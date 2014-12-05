@@ -58,7 +58,7 @@ GIT_EXTERN(int) git_reference_name_to_id(
  * Lookup a reference by DWIMing its short name
  *
  * Apply the git precendence rules to the given shorthand to determine
- * which reference the user is refering to.
+ * which reference the user is referring to.
  *
  * @param out pointer in which to store the reference
  * @param repo the repository in which to look

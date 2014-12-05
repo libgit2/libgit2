@@ -593,7 +593,7 @@ GIT_EXTERN(void) git_remote_set_autotag(
  *
  * @param problems non-default refspecs cannot be renamed and will be
  * stored here for further processing by the caller. Always free this
- * strarray on succesful return.
+ * strarray on successful return.
  * @param repo the repository in which to rename
  * @param name the current name of the reamote
  * @param new_name the new name the remote should bear

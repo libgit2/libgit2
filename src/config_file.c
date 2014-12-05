@@ -1532,7 +1532,7 @@ static int config_write(diskfile_backend *cfg, const char *key, const regex_t *p
 				goto rewrite_fail;
 
 			/* Sanity check: if we are here, and value is NULL, that means that somebody
-			 * touched the config file after our intial read. We should probably assert()
+			 * touched the config file after our initial read. We should probably assert()
 			 * this, but instead we'll handle it gracefully with an error. */
 			if (value == NULL) {
 				giterr_set(GITERR_CONFIG,

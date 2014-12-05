@@ -244,7 +244,7 @@ GIT_EXTERN(int) git_branch_is_head(
 /**
  * Return the name of remote that the remote tracking branch belongs to.
  *
- * @param out Pointer to the user-allocated git_buf which will be filled iwth the name of the remote.
+ * @param out Pointer to the user-allocated git_buf which will be filled with the name of the remote.
  *
  * @param repo The repository where the branch lives.
  *
