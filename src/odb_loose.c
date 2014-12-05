@@ -56,7 +56,7 @@ typedef struct {
 
 /***********************************************************
  *
- * MISCELANEOUS HELPER FUNCTIONS
+ * MISCELLANEOUS HELPER FUNCTIONS
  *
  ***********************************************************/
 

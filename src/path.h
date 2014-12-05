@@ -307,7 +307,7 @@ extern int git_path_cmp(
  * reached (inclusive of a final call at the root_path).
  *
  * Returning anything other than 0 from the callback function
- * will stop the iteration and propogate the error to the caller.
+ * will stop the iteration and propagate the error to the caller.
  *
  * @param pathbuf Buffer the function reads the directory from and
  *		and updates with each successive name.

@@ -159,7 +159,7 @@ void *git_pool_malloc(git_pool *pool, uint32_t items)
 		return ptr;
 	}
 
-	/* just add a block if there is no open one to accomodate this */
+	/* just add a block if there is no open one to accommodate this */
 	if (size >= pool->page_size || !scan || scan->avail < size)
 		return pool_alloc_page(pool, size);
 

@@ -148,7 +148,7 @@ GIT_EXTERN(void) git_submodule_free(git_submodule *submodule);
  * Iterate over all tracked submodules of a repository.
  *
  * See the note on `git_submodule` above.  This iterates over the tracked
- * submodules as decribed therein.
+ * submodules as described therein.
  *
  * If you are concerned about items in the working directory that look like
  * submodules but are not tracked, the diff API will generate a diff record

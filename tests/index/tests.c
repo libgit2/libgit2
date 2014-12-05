@@ -506,7 +506,7 @@ void test_index_tests__reload_from_disk(void)
 	cl_git_pass(git_index_open(&read_index, write_index->index_file_path));
 	cl_assert_equal_i(false, read_index->on_disk);
 
-	/* Stage two new files agaisnt the write_index */
+	/* Stage two new files against the write_index */
 	cl_git_pass(git_index_add_bypath(write_index, "a.txt"));
 	cl_git_pass(git_index_add_bypath(write_index, "b.txt"));
 
