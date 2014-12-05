@@ -751,13 +751,19 @@ void test_status_ignore__negative_ignores_inside_ignores(void)
 	static const char *test_files[] = {
 		"empty_standard_repo/top/mid/btm/tracked",
 		"empty_standard_repo/top/mid/btm/untracked",
+		"empty_standard_repo/zoo/bar",
+		"empty_standard_repo/zoo/foo/bar",
 		NULL
 	};
 
 	make_test_data("empty_standard_repo", test_files);
 	cl_git_mkfile(
 		"empty_standard_repo/.gitignore",
-		"top\n!top/mid/btm\n");
+		"top\n"
+		"!top/mid/btm\n"
+		"zoo/*\n"
+		"!zoo/bar\n"
+		"!zoo/foo/bar\n");
 	add_one_to_index("top/mid/btm/tracked");
 
 	{
@@ -765,13 +771,15 @@ void test_status_ignore__negative_ignores_inside_ignores(void)
 		status_entry_counts counts;
 		static const char *files[] = {
 			".gitignore", "top/mid/btm/tracked", "top/mid/btm/untracked",
+			"zoo/bar", "zoo/foo/bar",
 		};
 		static const unsigned int statuses[] = {
-			GIT_STATUS_WT_NEW, GIT_STATUS_INDEX_NEW, GIT_STATUS_WT_NEW,
+			GIT_STATUS_WT_NEW, GIT_STATUS_INDEX_NEW, GIT_STATUS_IGNORED,
+			GIT_STATUS_WT_NEW, GIT_STATUS_IGNORED,
 		};
 
 		memset(&counts, 0x0, sizeof(status_entry_counts));
-		counts.expected_entry_count = 3;
+		counts.expected_entry_count = 5;
 		counts.expected_paths = files;
 		counts.expected_statuses = statuses;
 		opts.flags = GIT_STATUS_OPT_DEFAULTS |
@@ -785,8 +793,9 @@ void test_status_ignore__negative_ignores_inside_ignores(void)
 		cl_assert_equal_i(0, counts.wrong_sorted_path);
 	}
 
-	refute_is_ignored("top/mid/btm/tracked");
-	refute_is_ignored("top/mid/btm/untracked");
+	assert_is_ignored("top/mid/btm/tracked");
+	assert_is_ignored("top/mid/btm/untracked");
+	refute_is_ignored("foo/bar");
 }
 
 void test_status_ignore__negative_ignores_in_slash_star(void)
