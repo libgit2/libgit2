@@ -466,3 +466,37 @@ void test_network_remote_local__update_tips_for_new_remote(void) {
 	git_repository_free(src_repo);
 	cl_fixture_cleanup("testrepo.git");
 }
+
+void test_network_remote_local__push_delete(void)
+{
+	git_repository *src_repo;
+	git_repository *dst_repo;
+	git_remote *remote;
+	git_reference *ref;
+	char *spec_push[] = { "refs/heads/master" };
+	char *spec_delete[] = { ":refs/heads/master" };
+	git_strarray specs = {
+		spec_push,
+		1,
+	};
+
+	src_repo = cl_git_sandbox_init("testrepo.git");
+	cl_git_pass(git_repository_init(&dst_repo, "target.git", 1));
+
+	cl_git_pass(git_remote_create(&remote, src_repo, "origin", "./target.git"));
+
+	/* Push the master branch and verify it's there */
+	cl_git_pass(git_remote_push(remote, &specs, NULL, NULL, NULL));
+	cl_git_pass(git_reference_lookup(&ref, dst_repo, "refs/heads/master"));
+	git_reference_free(ref);
+
+	specs.strings = spec_delete;
+	cl_git_pass(git_remote_push(remote, &specs, NULL, NULL, NULL));
+	cl_git_fail(git_reference_lookup(&ref, dst_repo, "refs/heads/master"));
+
+	cl_fixture_cleanup("target.git");
+
+	git_remote_free(remote);
+	git_repository_free(dst_repo);
+	git_repository_free(src_repo);
+}
