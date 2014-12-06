@@ -20,14 +20,17 @@
  */
 GIT_BEGIN_DECL
 
+/**
+ * Options for revert
+ */
 typedef struct {
 	unsigned int version;
 
 	/** For merge commits, the "mainline" is treated as the parent. */
 	unsigned int mainline;
 
-	git_merge_options merge_opts;
-	git_checkout_options checkout_opts;
+	git_merge_options merge_opts; /*< Options for the merging */
+	git_checkout_options checkout_opts; /*< Options for the checkout */
 } git_revert_options;
 
 #define GIT_REVERT_OPTIONS_VERSION 1

@@ -661,6 +661,12 @@ GIT_EXTERN(int) git_repository_detach_head(
 	const git_signature *signature,
 	const char *reflog_message);
 
+/**
+ * Repository state
+ *
+ * These values represent possible states for the repository to be in,
+ * based on the current operation which is ongoing.
+ */
 typedef enum {
 	GIT_REPOSITORY_STATE_NONE,
 	GIT_REPOSITORY_STATE_MERGE,

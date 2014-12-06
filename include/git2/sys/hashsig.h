@@ -16,6 +16,9 @@ GIT_BEGIN_DECL
  */
 typedef struct git_hashsig git_hashsig;
 
+/**
+ * Options for hashsig calculation
+ */
 typedef enum {
 	GIT_HASHSIG_NORMAL = 0, /* use all data */
 	GIT_HASHSIG_IGNORE_WHITESPACE = 1, /* ignore whitespace */
