@@ -59,14 +59,12 @@ GIT_EXTERN(int) git_note_iterator_new(
 GIT_EXTERN(void) git_note_iterator_free(git_note_iterator *it);
 
 /**
- * Returns the current item (note_id and annotated_id) and advance the iterator
+ * Return the current item (note_id and annotated_id) and advance the iterator
  * internally to the next value
  *
- * The notes must not be freed manually by the user.
- *
- * @param it pointer to the iterator
  * @param note_id id of blob containing the message
  * @param annotated_id id of the git object being annotated
+ * @param it pointer to the iterator
  *
  * @return 0 (no error), GIT_ITEROVER (iteration is done) or an error code
  *         (negative value)
