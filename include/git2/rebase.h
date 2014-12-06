@@ -21,6 +21,11 @@
  */
 GIT_BEGIN_DECL
 
+/**
+ * Rebase options
+ *
+ * Use to tell the rebase machinery how to operate.
+ */
 typedef struct {
 	unsigned int version;
 
@@ -40,7 +45,9 @@ typedef struct {
 	const char *rewrite_notes_ref;
 } git_rebase_options;
 
-/** Type of rebase operation in-progress after calling `git_rebase_next`. */
+/**
+ * Type of rebase operation in-progress after calling `git_rebase_next`.
+ */
 typedef enum {
 	/**
 	 * The given commit is to be cherry-picked.  The client should commit
@@ -82,6 +89,12 @@ typedef enum {
 #define GIT_REBASE_OPTIONS_VERSION 1
 #define GIT_REBASE_OPTIONS_INIT {GIT_REBASE_OPTIONS_VERSION}
 
+/**
+ * A rebase operation
+ *
+ * Describes a single instruction/operation to be performed during the
+ * rebase.
+ */
 typedef struct {
 	/** The type of rebase operation. */
 	git_rebase_operation_t type;

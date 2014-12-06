@@ -629,7 +629,13 @@ GIT_EXTERN(int) git_reference_is_tag(const git_reference *ref);
  */
 GIT_EXTERN(int) git_reference_is_note(const git_reference *ref);
 
+/**
+ * Normalization options for reference lookup
+ */
 typedef enum {
+	/**
+	 * No particular normalization.
+	 */
 	GIT_REF_FORMAT_NORMAL = 0u,
 
 	/**

@@ -110,20 +110,26 @@ typedef enum {
 	GIT_MERGE_FILE_FAVOR_UNION = 3,
 } git_merge_file_favor_t;
 
+/**
+ * File merging flags
+ */
 typedef enum {
-	/* Defaults */
+	/** Defaults */
 	GIT_MERGE_FILE_DEFAULT = 0,
 
-	/* Create standard conflicted merge files */
+	/** Create standard conflicted merge files */
 	GIT_MERGE_FILE_STYLE_MERGE = (1 << 0),
 
-	/* Create diff3-style files */
+	/** Create diff3-style files */
 	GIT_MERGE_FILE_STYLE_DIFF3 = (1 << 1),
 
-	/* Condense non-alphanumeric regions for simplified diff file */
+	/** Condense non-alphanumeric regions for simplified diff file */
 	GIT_MERGE_FILE_SIMPLIFY_ALNUM = (1 << 2),
 } git_merge_file_flags_t;
 
+/**
+ * Options for merging a file
+ */
 typedef struct {
 	unsigned int version;
 
@@ -168,6 +174,9 @@ GIT_EXTERN(int) git_merge_file_init_options(
 	git_merge_file_options *opts,
 	unsigned int version);
 
+/**
+ * Information about file-level merging
+ */
 typedef struct {
 	/**
 	 * True if the output was automerged, false if the output contains
@@ -191,6 +200,9 @@ typedef struct {
 	size_t len;
 } git_merge_file_result;
 
+/**
+ * Merging options
+ */
 typedef struct {
 	unsigned int version;
 	git_merge_tree_flag_t flags;
@@ -270,8 +282,11 @@ typedef enum {
 	GIT_MERGE_ANALYSIS_UNBORN = (1 << 3),
 } git_merge_analysis_t;
 
+/**
+ * The user's stated preference for merges.
+ */
 typedef enum {
-	/*
+	/**
 	 * No configuration was found that suggests a preferred behavior for
 	 * merge.
 	 */

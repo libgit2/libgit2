@@ -123,7 +123,12 @@ typedef enum {
  */
 GIT_EXTERN(int) git_libgit2_features(void);
 
-
+/**
+ * Global library options
+ *
+ * These are used to select which global option to set or get and are
+ * used in `git_libgit2_opts()`.
+ */
 typedef enum {
 	GIT_OPT_GET_MWINDOW_SIZE,
 	GIT_OPT_SET_MWINDOW_SIZE,

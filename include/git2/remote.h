@@ -555,6 +555,11 @@ GIT_EXTERN(const git_remote_callbacks *) git_remote_get_callbacks(git_remote *re
  */
 GIT_EXTERN(const git_transfer_progress *) git_remote_stats(git_remote *remote);
 
+/**
+ * Automatic tag following option
+ *
+ * Lets us select the --tags option to use.
+ */
 typedef enum {
 	GIT_REMOTE_DOWNLOAD_TAGS_AUTO = 0,
 	GIT_REMOTE_DOWNLOAD_TAGS_NONE = 1,

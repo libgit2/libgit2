@@ -100,7 +100,6 @@ typedef int (*git_repository_create_cb)(
  *
  *		git_clone_options opts = GIT_CLONE_OPTIONS_INIT;
  */
-
 typedef struct git_clone_options {
 	unsigned int version;
 
