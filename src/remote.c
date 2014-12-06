@@ -2166,7 +2166,8 @@ int git_remote_push(git_remote *remote, git_strarray *refspecs, const git_push_o
 		goto cleanup;
 	}
 
-	if ((error = git_push_status_foreach(push, cbs->push_update_reference, cbs->payload)) < 0)
+	if (cbs->push_update_reference &&
+	    (error = git_push_status_foreach(push, cbs->push_update_reference, cbs->payload)) < 0)
 		goto cleanup;
 
 	error = git_push_update_tips(push, signature, reflog_message);

@@ -863,7 +863,7 @@ void test_online_push__notes(void)
 
 	/* Create note to push */
 	cl_git_pass(git_signature_new(&signature, "nulltoken", "emeric.fermas@gmail.com", 1323847743, 60)); /* Wed Dec 14 08:29:03 2011 +0100 */
-	cl_git_pass(git_note_create(&note_oid, _repo, signature, signature, NULL, target_oid, "hello world\n", 0));
+	cl_git_pass(git_note_create(&note_oid, _repo, NULL, signature, signature, target_oid, "hello world\n", 0));
 
 	do_push(specs, ARRAY_SIZE(specs),
 		exp_stats, ARRAY_SIZE(exp_stats),
@@ -895,7 +895,7 @@ void test_online_push__configured(void)
 
 	/* Create note to push */
 	cl_git_pass(git_signature_new(&signature, "nulltoken", "emeric.fermas@gmail.com", 1323847743, 60)); /* Wed Dec 14 08:29:03 2011 +0100 */
-	cl_git_pass(git_note_create(&note_oid, _repo, signature, signature, NULL, target_oid, "hello world\n", 0));
+	cl_git_pass(git_note_create(&note_oid, _repo, NULL, signature, signature, target_oid, "hello world\n", 0));
 
 	do_push(NULL, 0,
 		exp_stats, ARRAY_SIZE(exp_stats),
