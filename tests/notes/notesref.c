@@ -42,7 +42,7 @@ void test_notes_notesref__config_corenotesref(void)
 
 	cl_git_pass(git_config_set_string(_cfg, "core.notesRef", "refs/notes/mydefaultnotesref"));
 
-	cl_git_pass(git_note_create(&note_oid, _repo, _sig, _sig, NULL, &oid, "test123test\n", 0));
+	cl_git_pass(git_note_create(&note_oid, _repo, NULL, _sig, _sig, &oid, "test123test\n", 0));
 
 	cl_git_pass(git_note_read(&_note, _repo, NULL, &oid));
 	cl_assert_equal_s("test123test\n", git_note_message(_note));

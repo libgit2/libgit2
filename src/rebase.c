@@ -972,8 +972,8 @@ static int rebase_copy_note(
 		committer = who;
 	}
 
-	error = git_note_create(&note_id, rebase->repo, git_note_author(note),
-		committer, opts->rewrite_notes_ref, to, git_note_message(note), 0);
+	error = git_note_create(&note_id, rebase->repo, opts->rewrite_notes_ref,
+		git_note_author(note), committer, to, git_note_message(note), 0);
 
 done:
 	git_note_free(note);

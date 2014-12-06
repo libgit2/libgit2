@@ -135,10 +135,10 @@ GIT_EXTERN(const git_oid *) git_note_id(const git_note *note);
  *
  * @param out pointer to store the OID (optional); NULL in case of error
  * @param repo repository where to store the note
- * @param author signature of the notes commit author
- * @param committer signature of the notes commit committer
  * @param notes_ref canonical name of the reference to use (optional);
  *					defaults to "refs/notes/commits"
+ * @param author signature of the notes commit author
+ * @param committer signature of the notes commit committer
  * @param oid OID of the git object to decorate
  * @param note Content of the note to add for object oid
  * @param force Overwrite existing note
@@ -148,9 +148,9 @@ GIT_EXTERN(const git_oid *) git_note_id(const git_note *note);
 GIT_EXTERN(int) git_note_create(
 	git_oid *out,
 	git_repository *repo,
+	const char *notes_ref,
 	const git_signature *author,
 	const git_signature *committer,
-	const char *notes_ref,
 	const git_oid *oid,
 	const char *note,
 	int force);
