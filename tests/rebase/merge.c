@@ -416,9 +416,9 @@ static void test_copy_note(
 		branch_ref, GIT_OBJ_COMMIT));
 
 	/* Add a note to a commit */
-	cl_git_pass(git_note_create(&note_id, repo,
+	cl_git_pass(git_note_create(&note_id, repo, "refs/notes/test",
 		git_commit_author(branch_commit), git_commit_committer(branch_commit),
-		"refs/notes/test", git_commit_id(branch_commit),
+		git_commit_id(branch_commit),
 		"This is a commit note.", 0));
 
 	cl_git_pass(git_rebase_init(&rebase, repo, branch_head, upstream_head, NULL, signature, opts));

@@ -108,6 +108,9 @@ v0.21 + 1
 * Introduce git_note_author() and git_note_committer() to get the author
   and committer information on a git_note, respectively.
 
+* git_note_create() has changed the position of the notes reference
+  name to match git_note_remove().
+
 * The THREADSAFE option to build libgit2 with threading support has
   been flipped to be on by default.
 

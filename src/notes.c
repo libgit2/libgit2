@@ -455,9 +455,9 @@ int git_note_read(git_note **out, git_repository *repo,
 int git_note_create(
 	git_oid *out,
 	git_repository *repo,
+	const char *notes_ref,
 	const git_signature *author,
 	const git_signature *committer,
-	const char *notes_ref,
 	const git_oid *oid,
 	const char *note,
 	int allow_note_overwrite)
