@@ -494,9 +494,8 @@ void test_network_remote_local__push_delete(void)
 	cl_git_pass(git_remote_push(remote, &specs, NULL, NULL, NULL));
 	cl_git_fail(git_reference_lookup(&ref, dst_repo, "refs/heads/master"));
 
-	cl_fixture_cleanup("target.git");
-
 	git_remote_free(remote);
 	git_repository_free(dst_repo);
-	git_repository_free(src_repo);
+	cl_fixture_cleanup("target.git");
+	cl_git_sandbox_cleanup();
 }
