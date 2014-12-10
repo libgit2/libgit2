@@ -1,7 +1,8 @@
 libgit2 - the Git linkable library
 ==================================
 
-[![Build Status](https://secure.travis-ci.org/libgit2/libgit2.png?branch=development)](http://travis-ci.org/libgit2/libgit2)
+[![Travis Build Status](https://secure.travis-ci.org/libgit2/libgit2.png?branch=master)](http://travis-ci.org/libgit2/libgit2)
+[![AppVeyor Build Status](https://ci.appveyor.com/api/projects/status/gnjsdi9r48cfoveg/branch/master?svg=true)](https://ci.appveyor.com/project/nulltoken/libgit2/branch/master)
 [![Coverity Scan Build Status](https://scan.coverity.com/projects/639/badge.svg)](https://scan.coverity.com/projects/639)
 
 `libgit2` is a portable, pure C implementation of the Git core methods
@@ -137,11 +138,11 @@ with full path to the toolchain):
 
 	SET(CMAKE_SYSTEM_NAME Linux)
 	SET(CMAKE_SYSTEM_VERSION Android)
-	
+
 	SET(CMAKE_C_COMPILER   {PATH}/bin/arm-linux-androideabi-gcc)
 	SET(CMAKE_CXX_COMPILER {PATH}/bin/arm-linux-androideabi-g++)
 	SET(CMAKE_FIND_ROOT_PATH {PATH}/sysroot/)
-	
+
 	SET(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
 	SET(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
 	SET(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
