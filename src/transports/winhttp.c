@@ -241,6 +241,31 @@ static int certificate_check(winhttp_stream *s, int valid)
 	return error;
 }
 
+static void winhttp_stream_close(winhttp_stream *s)
+{
+	if (s->chunk_buffer) {
+		git__free(s->chunk_buffer);
+		s->chunk_buffer = NULL;
+	}
+
+	if (s->post_body) {
+		CloseHandle(s->post_body);
+		s->post_body = NULL;
+	}
+
+	if (s->request_uri) {
+		git__free(s->request_uri);
+		s->request_uri = NULL;
+	}
+
+	if (s->request) {
+		WinHttpCloseHandle(s->request);
+		s->request = NULL;
+	}
+
+	s->sent_request = 0;
+}
+
 static int winhttp_stream_connect(winhttp_stream *s)
 {
 	winhttp_subtransport *t = OWNING_SUBTRANSPORT(s);
@@ -420,6 +445,9 @@ static int winhttp_stream_connect(winhttp_stream *s)
 	error = 0;
 
 on_error:
+	if (error < 0)
+		winhttp_stream_close(s);
+
 	git__free(proxy_url);
 	git_buf_free(&buf);
 	return error;
@@ -497,6 +525,31 @@ static int write_chunk(HINTERNET request, const char *buffer, size_t len)
 	return 0;
 }
 
+static int winhttp_close_connection(winhttp_subtransport *t)
+{
+	int ret = 0;
+
+	if (t->connection) {
+		if (!WinHttpCloseHandle(t->connection)) {
+			giterr_set(GITERR_OS, "Unable to close connection");
+			ret = -1;
+		}
+
+		t->connection = NULL;
+	}
+
+	if (t->session) {
+		if (!WinHttpCloseHandle(t->session)) {
+			giterr_set(GITERR_OS, "Unable to close session");
+			ret = -1;
+		}
+
+		t->session = NULL;
+	}
+
+	return ret;
+}
+
 static int winhttp_connect(
 	winhttp_subtransport *t,
 	const char *url)
@@ -509,6 +562,9 @@ static int winhttp_connect(
 	int default_connect_timeout = DEFAULT_CONNECT_TIMEOUT;
 
 	GIT_UNUSED(url);
+
+	t->session = NULL;
+	t->connection = NULL;
 
 	/* Prepare port */
 	if (git__strtol32(&port, t->connection_data.port, NULL, 10) < 0)
@@ -554,6 +610,9 @@ static int winhttp_connect(
 	error = 0;
 
 on_error:
+	if (error < 0)
+		winhttp_close_connection(t);
+
 	git__free(wide_host);
 
 	return error;
@@ -790,9 +849,7 @@ replay:
 			git__free(location);
 
 			/* Replay the request */
-			WinHttpCloseHandle(s->request);
-			s->request = NULL;
-			s->sent_request = 0;
+			winhttp_stream_close(s);
 
 			if (!git__prefixcmp_icase(location8, prefix_https)) {
 				/* Upgrade to secure connection; disconnect and start over */
@@ -801,7 +858,10 @@ replay:
 					return -1;
 				}
 
-				winhttp_connect(t, location8);
+				winhttp_close_connection(t);
+
+				if (winhttp_connect(t, location8) < 0)
+					return -1;
 			}
 
 			git__free(location8);
@@ -840,9 +900,7 @@ replay:
 				if (!cred_error) {
 					assert(t->cred);
 
-					WinHttpCloseHandle(s->request);
-					s->request = NULL;
-					s->sent_request = 0;
+					winhttp_stream_close(s);
 
 					/* Successfully acquired a credential */
 					goto replay;
@@ -1109,26 +1167,7 @@ static void winhttp_stream_free(git_smart_subtransport_stream *stream)
 {
 	winhttp_stream *s = (winhttp_stream *)stream;
 
-	if (s->chunk_buffer) {
-		git__free(s->chunk_buffer);
-		s->chunk_buffer = NULL;
-	}
-
-	if (s->post_body) {
-		CloseHandle(s->post_body);
-		s->post_body = NULL;
-	}
-
-	if (s->request_uri) {
-		git__free(s->request_uri);
-		s->request_uri = NULL;
-	}
-
-	if (s->request) {
-		WinHttpCloseHandle(s->request);
-		s->request = NULL;
-	}
-
+	winhttp_stream_close(s);
 	git__free(s);
 }
 
@@ -1257,7 +1296,6 @@ static int winhttp_action(
 static int winhttp_close(git_smart_subtransport *subtransport)
 {
 	winhttp_subtransport *t = (winhttp_subtransport *)subtransport;
-	int ret = 0;
 
 	gitno_connection_data_free_ptrs(&t->connection_data);
 	memset(&t->connection_data, 0x0, sizeof(gitno_connection_data));
@@ -1272,25 +1310,7 @@ static int winhttp_close(git_smart_subtransport *subtransport)
 		t->url_cred = NULL;
 	}
 
-	if (t->connection) {
-		if (!WinHttpCloseHandle(t->connection)) {
-			giterr_set(GITERR_OS, "Unable to close connection");
-			ret = -1;
-		}
-
-		t->connection = NULL;
-	}
-
-	if (t->session) {
-		if (!WinHttpCloseHandle(t->session)) {
-			giterr_set(GITERR_OS, "Unable to close session");
-			ret = -1;
-		}
-
-		t->session = NULL;
-	}
-
-	return ret;
+	return winhttp_close_connection(t);
 }
 
 static void winhttp_free(git_smart_subtransport *subtransport)

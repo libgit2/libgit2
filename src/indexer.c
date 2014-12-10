@@ -1028,6 +1028,7 @@ int git_indexer_commit(git_indexer *idx, git_transfer_progress *stats)
 	p_rename(idx->pack->pack_name, git_buf_cstr(&filename));
 
 	git_buf_free(&filename);
+	git_hash_ctx_cleanup(&ctx);
 	return 0;
 
 on_error:
