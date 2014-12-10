@@ -88,6 +88,9 @@ v0.21 + 1
 * Rename git_remote_load() to git_remote_lookup() to bring it in line
   with the rest of the lookup functions.
 
+* git_push_unpack_ok() has been removed and git_push_finish() now
+  returns an error if the unpacking failed.
+
 * Introduce git_merge_bases() and the git_oidarray type to expose all
   merge bases between two commits.
 

@@ -216,7 +216,6 @@ void test_network_remote_local__push_to_bare_remote(void)
 	cl_git_pass(git_push_new(&push, localremote));
 	cl_git_pass(git_push_add_refspec(push, "refs/heads/master"));
 	cl_git_pass(git_push_finish(push));
-	cl_assert(git_push_unpack_ok(push));
 
 	/* Clean up */
 	git_push_free(push);
@@ -262,7 +261,6 @@ void test_network_remote_local__push_to_bare_remote_with_file_url(void)
 	cl_git_pass(git_push_new(&push, localremote));
 	cl_git_pass(git_push_add_refspec(push, "refs/heads/master"));
 	cl_git_pass(git_push_finish(push));
-	cl_assert(git_push_unpack_ok(push));
 
 	/* Clean up */
 	git_push_free(push);
@@ -305,7 +303,6 @@ void test_network_remote_local__push_to_non_bare_remote(void)
 	cl_git_pass(git_push_new(&push, localremote));
 	cl_git_pass(git_push_add_refspec(push, "refs/heads/master"));
 	cl_git_fail_with(git_push_finish(push), GIT_EBAREREPO);
-	cl_assert_equal_i(0, git_push_unpack_ok(push));
 
 	/* Clean up */
 	git_push_free(push);
@@ -452,7 +449,6 @@ void test_network_remote_local__update_tips_for_new_remote(void) {
 	cl_git_pass(git_push_new(&push, new_remote));
 	cl_git_pass(git_push_add_refspec(push, "refs/heads/master"));
 	cl_git_pass(git_push_finish(push));
-	cl_assert(git_push_unpack_ok(push));
 
 	/* Update tips and make sure remote branch has been created */
 	cl_git_pass(git_push_update_tips(push, NULL, NULL));
