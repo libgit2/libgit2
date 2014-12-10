@@ -128,12 +128,14 @@ GIT_EXTERN(int) git_push_update_tips(
 		const char *reflog_message);
 
 /**
- * Actually push all given refspecs
+ * Perform the push
  *
- * Note: To check if the push was successful (i.e. all remote references
- * have been updated as requested), you need to call
- * `git_push_status_foreach`. The remote
- * repository might have refused to update some or all of the references.
+ * This function will return an error in case of a protocol error or
+ * the server being unable to unpack the data we sent.
+ *
+ * The return value does not reflect whether the server accepted or
+ * refused any reference updates. Use `git_push_status_foreach()` in
+ * order to find out which updates were accepted or rejected.
  *
  * @param push The push object
  *
