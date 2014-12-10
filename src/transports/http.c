@@ -526,7 +526,7 @@ static int write_chunk(git_stream *io, const char *buffer, size_t len)
 
 static int http_connect(http_subtransport *t)
 {
-	int flags = 0, error;
+	int error;
 
 	if (t->connected &&
 		http_should_keep_alive(&t->parser) &&
