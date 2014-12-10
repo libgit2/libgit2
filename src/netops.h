@@ -9,6 +9,7 @@
 
 #include "posix.h"
 #include "common.h"
+#include "stream.h"
 
 #ifdef GIT_SSL
 # include <openssl/ssl.h>
@@ -32,7 +33,6 @@ typedef struct gitno_buffer {
 	char *data;
 	size_t len;
 	size_t offset;
-	gitno_socket *socket;
 	int (*recv)(struct gitno_buffer *buffer);
 	void *cb_data;
 } gitno_buffer;
@@ -56,17 +56,12 @@ enum {
  */
 int gitno__match_host(const char *pattern, const char *host);
 
-void gitno_buffer_setup(gitno_socket *t, gitno_buffer *buf, char *data, size_t len);
-void gitno_buffer_setup_callback(gitno_socket *t, gitno_buffer *buf, char *data, size_t len, int (*recv)(gitno_buffer *buf), void *cb_data);
+void gitno_buffer_setup_fromstream(git_stream *st, gitno_buffer *buf, char *data, size_t len);
+void gitno_buffer_setup_callback(gitno_buffer *buf, char *data, size_t len, int (*recv)(gitno_buffer *buf), void *cb_data);
 int gitno_recv(gitno_buffer *buf);
 
 void gitno_consume(gitno_buffer *buf, const char *ptr);
 void gitno_consume_n(gitno_buffer *buf, size_t cons);
-
-int gitno_connect(gitno_socket *socket, const char *host, const char *port, int flags);
-int gitno_send(gitno_socket *socket, const char *msg, size_t len, int flags);
-int gitno_close(gitno_socket *s);
-int gitno_select_in(gitno_buffer *buf, long int sec, long int usec);
 
 typedef struct gitno_connection_data {
 	char *host;

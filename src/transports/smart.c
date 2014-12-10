@@ -158,7 +158,7 @@ static int git_smart__connect(
 	/* Save off the current stream (i.e. socket) that we are working with */
 	t->current_stream = stream;
 
-	gitno_buffer_setup_callback(NULL, &t->buffer, t->buffer_data, sizeof(t->buffer_data), git_smart__recv_cb, t);
+	gitno_buffer_setup_callback(&t->buffer, t->buffer_data, sizeof(t->buffer_data), git_smart__recv_cb, t);
 
 	/* 2 flushes for RPC; 1 for stateful */
 	if ((error = git_smart__store_refs(t, t->rpc ? 2 : 1)) < 0)
@@ -252,7 +252,7 @@ int git_smart__negotiation_step(git_transport *transport, void *data, size_t len
 	if ((error = stream->write(stream, (const char *)data, len)) < 0)
 		return error;
 
-	gitno_buffer_setup_callback(NULL, &t->buffer, t->buffer_data, sizeof(t->buffer_data), git_smart__recv_cb, t);
+	gitno_buffer_setup_callback(&t->buffer, t->buffer_data, sizeof(t->buffer_data), git_smart__recv_cb, t);
 
 	return 0;
 }
@@ -278,7 +278,7 @@ int git_smart__get_push_stream(transport_smart *t, git_smart_subtransport_stream
 	/* Save off the current stream (i.e. socket) that we are working with */
 	t->current_stream = *stream;
 
-	gitno_buffer_setup_callback(NULL, &t->buffer, t->buffer_data, sizeof(t->buffer_data), git_smart__recv_cb, t);
+	gitno_buffer_setup_callback(&t->buffer, t->buffer_data, sizeof(t->buffer_data), git_smart__recv_cb, t);
 
 	return 0;
 }

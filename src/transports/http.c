@@ -13,15 +13,13 @@
 #include "smart.h"
 #include "auth.h"
 #include "auth_negotiate.h"
+#include "openssl_stream.h"
+#include "socket_stream.h"
 
 git_http_auth_scheme auth_schemes[] = {
 	{ GIT_AUTHTYPE_NEGOTIATE, "Negotiate", GIT_CREDTYPE_DEFAULT, git_http_auth_negotiate },
 	{ GIT_AUTHTYPE_BASIC, "Basic", GIT_CREDTYPE_USERPASS_PLAINTEXT, git_http_auth_basic },
 };
-
-#ifdef GIT_SSL
-# include <openssl/x509v3.h>
-#endif
 
 static const char *upload_pack_service = "upload-pack";
 static const char *upload_pack_ls_service_url = "/info/refs?service=git-upload-pack";
@@ -62,7 +60,7 @@ typedef struct {
 typedef struct {
 	git_smart_subtransport parent;
 	transport_smart *owner;
-	gitno_socket socket;
+	git_stream *io;
 	gitno_connection_data connection_data;
 	bool connected;
 
@@ -474,7 +472,7 @@ static int on_body_fill_buffer(http_parser *parser, const char *str, size_t len)
 static void clear_parser_state(http_subtransport *t)
 {
 	http_parser_init(&t->parser, HTTP_RESPONSE);
-	gitno_buffer_setup(&t->socket,
+	gitno_buffer_setup_fromstream(t->io,
 		&t->parse_buffer,
 		t->parse_buffer_data,
 		sizeof(t->parse_buffer_data));
@@ -498,7 +496,7 @@ static void clear_parser_state(http_subtransport *t)
 	git_vector_free_deep(&t->www_authenticate);
 }
 
-static int write_chunk(gitno_socket *socket, const char *buffer, size_t len)
+static int write_chunk(git_stream *io, const char *buffer, size_t len)
 {
 	git_buf buf = GIT_BUF_INIT;
 
@@ -508,7 +506,7 @@ static int write_chunk(gitno_socket *socket, const char *buffer, size_t len)
 	if (git_buf_oom(&buf))
 		return -1;
 
-	if (gitno_send(socket, buf.ptr, buf.size, 0) < 0) {
+	if (git_stream_write(io, buf.ptr, buf.size, 0) < 0) {
 		git_buf_free(&buf);
 		return -1;
 	}
@@ -516,11 +514,11 @@ static int write_chunk(gitno_socket *socket, const char *buffer, size_t len)
 	git_buf_free(&buf);
 
 	/* Chunk body */
-	if (len > 0 && gitno_send(socket, buffer, len, 0) < 0)
+	if (len > 0 && git_stream_write(io, buffer, len, 0) < 0)
 		return -1;
 
 	/* Chunk footer */
-	if (gitno_send(socket, "\r\n", 2, 0) < 0)
+	if (git_stream_write(io, "\r\n", 2, 0) < 0)
 		return -1;
 
 	return 0;
@@ -528,64 +526,43 @@ static int write_chunk(gitno_socket *socket, const char *buffer, size_t len)
 
 static int http_connect(http_subtransport *t)
 {
-	int flags = 0, error;
+	int error;
 
 	if (t->connected &&
 		http_should_keep_alive(&t->parser) &&
 		t->parse_finished)
 		return 0;
 
-	if (t->socket.socket)
-		gitno_close(&t->socket);
-
-	if (t->connection_data.use_ssl) {
-		int tflags;
-
-		if (t->owner->parent.read_flags(&t->owner->parent, &tflags) < 0)
-			return -1;
-
-		flags |= GITNO_CONNECT_SSL;
+	if (t->io) {
+		git_stream_close(t->io);
+		git_stream_free(t->io);
+		t->io = NULL;
 	}
 
-	error = gitno_connect(&t->socket, t->connection_data.host, t->connection_data.port, flags);
+	if (t->connection_data.use_ssl) {
+		error = git_openssl_stream_new(&t->io, t->connection_data.host, t->connection_data.port);
+	} else {
+		error = git_socket_stream_new(&t->io,  t->connection_data.host, t->connection_data.port);
+	}
+
+	if (error < 0)
+		return error;
+
+	GITERR_CHECK_VERSION(t->io, GIT_STREAM_VERSION, "git_stream");
+
+	error = git_stream_connect(t->io);
 
 #ifdef GIT_SSL
 	if ((!error || error == GIT_ECERTIFICATE) && t->owner->certificate_check_cb != NULL) {
-                X509 *cert = SSL_get_peer_certificate(t->socket.ssl.ssl);
-		git_cert_x509 cert_info, *cert_info_ptr;
-                int len, is_valid;
-		unsigned char *guard, *encoded_cert;
+		git_cert *cert;
+		int is_valid;
 
-		/* Retrieve the length of the certificate first */
-		len = i2d_X509(cert, NULL);
-		if (len < 0) {
-			giterr_set(GITERR_NET, "failed to retrieve certificate information");
-			return -1;
-		}
-
-
-		encoded_cert = git__malloc(len);
-		GITERR_CHECK_ALLOC(encoded_cert);
-		/* i2d_X509 makes 'copy' point to just after the data */
-		guard = encoded_cert;
-
-		len = i2d_X509(cert, &guard);
-		if (len < 0) {
-			git__free(encoded_cert);
-			giterr_set(GITERR_NET, "failed to retrieve certificate information");
-			return -1;
-		}
+		if ((error = git_stream_certificate(&cert, t->io)) < 0)
+			return error;
 
 		giterr_clear();
 		is_valid = error != GIT_ECERTIFICATE;
-		cert_info.cert_type = GIT_CERT_X509;
-		cert_info.data = encoded_cert;
-		cert_info.len = len;
-
-		cert_info_ptr = &cert_info;
-
-		error = t->owner->certificate_check_cb((git_cert *) cert_info_ptr, is_valid, t->connection_data.host, t->owner->message_cb_payload);
-		git__free(encoded_cert);
+		error = t->owner->certificate_check_cb(cert, is_valid, t->connection_data.host, t->owner->message_cb_payload);
 
 		if (error < 0) {
 			if (!giterr_last())
@@ -626,7 +603,7 @@ replay:
 		if (gen_request(&request, s, 0) < 0)
 			return -1;
 
-		if (gitno_send(&t->socket, request.ptr, request.size, 0) < 0) {
+		if (git_stream_write(t->io, request.ptr, request.size, 0) < 0) {
 			git_buf_free(&request);
 			return -1;
 		}
@@ -642,13 +619,13 @@ replay:
 
 			/* Flush, if necessary */
 			if (s->chunk_buffer_len > 0 &&
-				write_chunk(&t->socket, s->chunk_buffer, s->chunk_buffer_len) < 0)
+				write_chunk(t->io, s->chunk_buffer, s->chunk_buffer_len) < 0)
 				return -1;
 
 			s->chunk_buffer_len = 0;
 
 			/* Write the final chunk. */
-			if (gitno_send(&t->socket, "0\r\n\r\n", 5, 0) < 0)
+			if (git_stream_write(t->io, "0\r\n\r\n", 5, 0) < 0)
 				return -1;
 		}
 
@@ -743,7 +720,7 @@ static int http_stream_write_chunked(
 		if (gen_request(&request, s, 0) < 0)
 			return -1;
 
-		if (gitno_send(&t->socket, request.ptr, request.size, 0) < 0) {
+		if (git_stream_write(t->io, request.ptr, request.size, 0) < 0) {
 			git_buf_free(&request);
 			return -1;
 		}
@@ -756,14 +733,14 @@ static int http_stream_write_chunked(
 	if (len > CHUNK_SIZE) {
 		/* Flush, if necessary */
 		if (s->chunk_buffer_len > 0) {
-			if (write_chunk(&t->socket, s->chunk_buffer, s->chunk_buffer_len) < 0)
+			if (write_chunk(t->io, s->chunk_buffer, s->chunk_buffer_len) < 0)
 				return -1;
 
 			s->chunk_buffer_len = 0;
 		}
 
 		/* Write chunk directly */
-		if (write_chunk(&t->socket, buffer, len) < 0)
+		if (write_chunk(t->io, buffer, len) < 0)
 			return -1;
 	}
 	else {
@@ -780,7 +757,7 @@ static int http_stream_write_chunked(
 
 		/* Is the buffer full? If so, then flush */
 		if (CHUNK_SIZE == s->chunk_buffer_len) {
-			if (write_chunk(&t->socket, s->chunk_buffer, s->chunk_buffer_len) < 0)
+			if (write_chunk(t->io, s->chunk_buffer, s->chunk_buffer_len) < 0)
 				return -1;
 
 			s->chunk_buffer_len = 0;
@@ -816,10 +793,10 @@ static int http_stream_write_single(
 	if (gen_request(&request, s, len) < 0)
 		return -1;
 
-	if (gitno_send(&t->socket, request.ptr, request.size, 0) < 0)
+	if (git_stream_write(t->io, request.ptr, request.size, 0) < 0)
 		goto on_error;
 
-	if (len && gitno_send(&t->socket, buffer, len, 0) < 0)
+	if (len && git_stream_write(t->io, buffer, len, 0) < 0)
 		goto on_error;
 
 	git_buf_free(&request);
@@ -986,9 +963,10 @@ static int http_close(git_smart_subtransport *subtransport)
 
 	clear_parser_state(t);
 
-	if (t->socket.socket) {
-		gitno_close(&t->socket);
-		memset(&t->socket, 0x0, sizeof(gitno_socket));
+	if (t->io) {
+		git_stream_close(t->io);
+		git_stream_free(t->io);
+		t->io = NULL;
 	}
 
 	if (t->cred) {
