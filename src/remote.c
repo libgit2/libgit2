@@ -2160,12 +2160,6 @@ int git_remote_push(git_remote *remote, git_strarray *refspecs, const git_push_o
 	if ((error = git_push_finish(push)) < 0)
 		goto cleanup;
 
-	if (!git_push_unpack_ok(push)) {
-		error = -1;
-		giterr_set(GITERR_NET, "error in the remote while trying to unpack");
-		goto cleanup;
-	}
-
 	if (cbs->push_update_reference &&
 	    (error = git_push_status_foreach(push, cbs->push_update_reference, cbs->payload)) < 0)
 		goto cleanup;

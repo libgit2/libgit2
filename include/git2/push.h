@@ -131,8 +131,8 @@ GIT_EXTERN(int) git_push_update_tips(
  * Actually push all given refspecs
  *
  * Note: To check if the push was successful (i.e. all remote references
- * have been updated as requested), you need to call both
- * `git_push_unpack_ok` and `git_push_status_foreach`. The remote
+ * have been updated as requested), you need to call
+ * `git_push_status_foreach`. The remote
  * repository might have refused to update some or all of the references.
  *
  * @param push The push object
@@ -140,15 +140,6 @@ GIT_EXTERN(int) git_push_update_tips(
  * @return 0 or an error code
  */
 GIT_EXTERN(int) git_push_finish(git_push *push);
-
-/**
- * Check if remote side successfully unpacked
- *
- * @param push The push object
- *
- * @return true if remote side successfully unpacked, false otherwise
- */
-GIT_EXTERN(int) git_push_unpack_ok(const git_push *push);
 
 /**
  * Invoke callback `cb' on each status entry

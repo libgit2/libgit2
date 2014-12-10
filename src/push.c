@@ -632,12 +632,12 @@ int git_push_finish(git_push *push)
 		(error = do_push(push)) < 0)
 		return error;
 
-	return 0;
-}
+	if (!push->unpack_ok) {
+		error = -1;
+		giterr_set(GITERR_NET, "unpacking the sent packfile failed on the remote");
+	}
 
-int git_push_unpack_ok(const git_push *push)
-{
-	return push->unpack_ok;
+	return error;
 }
 
 int git_push_status_foreach(git_push *push,
