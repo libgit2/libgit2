@@ -30,7 +30,7 @@ GIT_INLINE(ssize_t) git_stream_read(git_stream *st, void *data, size_t len)
 	return st->read(st, data, len);
 }
 
-GIT_INLINE(ssize_t) git_stream_write(git_stream *st, void *data, size_t len, int flags)
+GIT_INLINE(ssize_t) git_stream_write(git_stream *st, const char *data, size_t len, int flags)
 {
 	return st->write(st, data, len, flags);
 }

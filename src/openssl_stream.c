@@ -277,7 +277,7 @@ int openssl_certificate(git_cert **out, git_stream *stream)
 	return 0;
 }
 
-ssize_t openssl_write(git_stream *stream, void *data, size_t len, int flags)
+ssize_t openssl_write(git_stream *stream, const char *data, size_t len, int flags)
 {
 	openssl_stream *st = (openssl_stream *) stream;
 	int ret;
