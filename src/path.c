@@ -1199,6 +1199,95 @@ GIT_INLINE(bool) verify_dospath(
 		component[last] != ':');
 }
 
+GIT_INLINE(bool) verify_dotgit_hfs(const char *component, size_t len)
+{
+	const unsigned char *c;
+	int git = 0, ign = 0;
+	unsigned char one, two;
+
+	while (len) {
+		switch (*(c = (const unsigned char *)component++)) {
+		case '.':
+			if (ign || git++ != 0)
+				return true;
+			break;
+		case 'g':
+		case 'G':
+			if (ign || git++ != 1)
+				return true;
+			break;
+		case 'i':
+		case 'I':
+			if (ign || git++ != 2)
+				return true;
+			break;
+		case 't':
+		case 'T':
+			if (ign || git++ != 3)
+				return true;
+			break;
+
+		case 0xe2:
+		case 0xef:
+			if (ign++ != 0)
+				return true;
+			one = *c;
+			break;
+
+		case 0x80:
+		case 0x81:
+			if (ign++ != 1 || one != 0xe2)
+				return true;
+			two = *c;
+			break;
+
+		case 0xbb:
+			if (ign++ != 1 || one != 0xef)
+				return true;
+			two = *c;
+			break;
+
+		case 0x8c:
+		case 0x8d:
+		case 0x8e:
+		case 0x8f:
+			if (ign != 2 || two != 0x80)
+				return true;
+			ign = 0;
+			break;
+
+		case 0xaa:
+		case 0xab:
+		case 0xac:
+		case 0xad:
+		case 0xae:
+			if (ign != 2 || (two != 0x80 && two != 0x81))
+				return true;
+			ign = 0;
+			break;
+
+		case 0xaf:
+			if (ign != 2 || two != 0x81)
+				return true;
+			ign = 0;
+			break;
+
+		case 0xbf:
+			if (ign != 2 || two != 0xbb)
+				return true;
+			ign = 0;
+			break;
+
+		default:
+			return true;
+		}
+
+		len--;
+	}
+
+	return (ign || git != 4);
+}
+
 GIT_INLINE(bool) verify_char(unsigned char c, unsigned int flags)
 {
 	if ((flags & GIT_PATH_REJECT_BACKSLASH) && c == '\\')
@@ -1278,6 +1367,10 @@ static bool verify_component(
 			!verify_dospath(component, len, "LPT", true))
 			return false;
 	}
+
+	if (flags & GIT_PATH_REJECT_DOT_GIT_HFS &&
+		!verify_dotgit_hfs(component, len))
+		return false;
 
 	return true;
 }

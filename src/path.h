@@ -451,6 +451,7 @@ extern int git_path_from_url_or_path(git_buf *local_path_out, const char *url_or
 #define GIT_PATH_REJECT_DOS_GIT_SHORTNAME  (1 << 6)
 #define GIT_PATH_REJECT_DOS_PATHS          (1 << 7)
 #define GIT_PATH_REJECT_NT_CHARS           (1 << 8)
+#define GIT_PATH_REJECT_DOT_GIT_HFS        (1 << 9)
 
 #ifdef GIT_WIN32
 # define GIT_PATH_REJECT_DEFAULTS \
@@ -462,6 +463,10 @@ extern int git_path_from_url_or_path(git_buf *local_path_out, const char *url_or
 	GIT_PATH_REJECT_DOS_GIT_SHORTNAME | \
 	GIT_PATH_REJECT_DOS_PATHS | \
 	GIT_PATH_REJECT_NT_CHARS
+#elif __APPLE__
+# define GIT_PATH_REJECT_DEFAULTS \
+	GIT_PATH_REJECT_TRAVERSAL | \
+	GIT_PATH_REJECT_DOT_GIT_HFS
 #else
 # define GIT_PATH_REJECT_DEFAULTS GIT_PATH_REJECT_TRAVERSAL
 #endif
