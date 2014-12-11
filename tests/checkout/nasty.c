@@ -249,3 +249,45 @@ void test_checkout_nasty__dot_git_colon_stuff(void)
 #endif
 }
 
+/* Trees that contains entries with a tree ".git" that contain
+ * byte sequences:
+ * { 0xe2, 0x80, 0x8c }
+ * { 0xe2, 0x80, 0x8d }
+ * { 0xe2, 0x80, 0x8e }
+ * { 0xe2, 0x80, 0x8f }
+ * { 0xe2, 0x80, 0xaa }
+ * { 0xe2, 0x80, 0xab }
+ * { 0xe2, 0x80, 0xac }
+ * { 0xe2, 0x80, 0xad }
+ * { 0xe2, 0x81, 0xae }
+ * { 0xe2, 0x81, 0xaa }
+ * { 0xe2, 0x81, 0xab }
+ * { 0xe2, 0x81, 0xac }
+ * { 0xe2, 0x81, 0xad }
+ * { 0xe2, 0x81, 0xae }
+ * { 0xe2, 0x81, 0xaf }
+ * { 0xef, 0xbb, 0xbf }
+ * Because these map to characters that HFS filesystems "ignore".  Thus
+ * ".git<U+200C>" will map to ".git".
+ */
+void test_checkout_nasty__dot_git_hfs_ignorable(void)
+{
+#ifdef __APPLE__
+	test_checkout_fails("refs/heads/dotgit_hfs_ignorable_1", ".git/foobar");
+	test_checkout_fails("refs/heads/dotgit_hfs_ignorable_2", ".git/foobar");
+	test_checkout_fails("refs/heads/dotgit_hfs_ignorable_3", ".git/foobar");
+	test_checkout_fails("refs/heads/dotgit_hfs_ignorable_4", ".git/foobar");
+	test_checkout_fails("refs/heads/dotgit_hfs_ignorable_5", ".git/foobar");
+	test_checkout_fails("refs/heads/dotgit_hfs_ignorable_6", ".git/foobar");
+	test_checkout_fails("refs/heads/dotgit_hfs_ignorable_7", ".git/foobar");
+	test_checkout_fails("refs/heads/dotgit_hfs_ignorable_8", ".git/foobar");
+	test_checkout_fails("refs/heads/dotgit_hfs_ignorable_9", ".git/foobar");
+	test_checkout_fails("refs/heads/dotgit_hfs_ignorable_10", ".git/foobar");
+	test_checkout_fails("refs/heads/dotgit_hfs_ignorable_11", ".git/foobar");
+	test_checkout_fails("refs/heads/dotgit_hfs_ignorable_12", ".git/foobar");
+	test_checkout_fails("refs/heads/dotgit_hfs_ignorable_13", ".git/foobar");
+	test_checkout_fails("refs/heads/dotgit_hfs_ignorable_14", ".git/foobar");
+	test_checkout_fails("refs/heads/dotgit_hfs_ignorable_15", ".git/foobar");
+	test_checkout_fails("refs/heads/dotgit_hfs_ignorable_16", ".git/foobar");
+#endif
+}
