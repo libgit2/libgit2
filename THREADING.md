@@ -54,16 +54,25 @@ it should use. This means that libgit2 cannot know what to set as the
 user of libgit2 may use OpenSSL independently and the locking settings
 must survive libgit2 shutting down.
 
-libgit2 does provide a convenience function
-`git_openssl_set_locking()` to use the platform-native mutex
-mechanisms to perform the locking, which you may rely on if you do not
-want to use OpenSSL outside of libgit2, or you know that libgit2 will
-outlive the rest of the operations. It is not safe to use OpenSSL
-multi-threaded after libgit2's shutdown function has been called.
+libgit2 does provide a last-resort convenience function
+`git_openssl_set_locking()` (available in `sys/openssl.h`) to use the
+platform-native mutex mechanisms to perform the locking, which you may
+rely on if you do not want to use OpenSSL outside of libgit2, or you
+know that libgit2 will outlive the rest of the operations. It is not
+safe to use OpenSSL multi-threaded after libgit2's shutdown function
+has been called.
+
+If your programming language offers a package/bindings for OpenSSL,
+you should very strongly prefer to use that in order to set up
+locking, as they provide a level of coördination which is impossible
+when using this function.
 
 See the
 [OpenSSL documentation](https://www.openssl.org/docs/crypto/threads.html)
 on threading for more details.
+
+Be also aware that libgit2 may not always link against OpenSSL in the
+future if there are alternatives provided by the system.
 
 libssh2 may be linked against OpenSSL or libgcrypt. If it uses
 OpenSSL, you only need to set up threading for OpenSSL once and the
