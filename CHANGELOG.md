@@ -33,6 +33,11 @@ v0.21 + 1
   tells it to include a copy of libssh2 at the given location. This is
   enabled for MSVC.
 
+* libgit2 no longer automatically sets the OpenSSL locking
+  functions. This is not something which we can know to do. A
+  last-resort convenience function is provided in sys/openssl.h,
+  git_openssl_set_locking() which can be used to set the locking.
+
 * The git_transport_register function no longer takes a priority and takes
   a URL scheme name (eg "http") instead of a prefix like "http://"
 
