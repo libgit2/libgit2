@@ -1089,75 +1089,142 @@ cleanup:
 	return error;
 }
 
-int git_remote_prune(git_remote *remote)
+/**
+ * Generate a list of candidates for pruning by getting a list of
+ * references which match the rhs of an active refspec.
+ */
+static int prune_candidates(git_vector *candidates, git_remote *remote)
 {
 	git_strarray arr = { 0 };
-	size_t i, j, k;
-	git_vector remote_refs = GIT_VECTOR_INIT;
-	git_refspec *spec;
+	size_t i;
 	int error;
 
 	if ((error = git_reference_list(&arr, remote->repo)) < 0)
 		return error;
 
+	for (i = 0; i < arr.count; i++) {
+		const char *refname = arr.strings[i];
+		char *refname_dup;
+
+		if (!git_remote__matching_dst_refspec(remote, refname))
+			continue;
+
+		refname_dup = git__strdup(refname);
+		GITERR_CHECK_ALLOC(refname_dup);
+
+		if ((error = git_vector_insert(candidates, refname_dup)) < 0)
+			goto out;
+	}
+
+out:
+	git_strarray_free(&arr);
+	return error;
+}
+
+static int find_head(const void *_a, const void *_b)
+{
+	git_remote_head *a = (git_remote_head *) _a;
+	git_remote_head *b = (git_remote_head *) _b;
+
+	return strcmp(a->name, b->name);
+}
+
+int git_remote_prune(git_remote *remote)
+{
+	size_t i, j;
+	git_vector remote_refs = GIT_VECTOR_INIT;
+	git_vector candidates = GIT_VECTOR_INIT;
+	const git_refspec *spec;
+	const char *refname;
+	int error;
+	git_oid zero_id = {{ 0 }};
+
 	if ((error = ls_to_vector(&remote_refs, remote)) < 0)
 		goto cleanup;
 
-	git_vector_foreach(&remote->active_refspecs, k, spec) {
-		if (spec->push)
-			continue;
+	git_vector_set_cmp(&remote_refs, find_head);
 
-		for (i = 0; i < arr.count; ++i) {
-			char *prune_ref = arr.strings[i];
-			int found = 0;
-			git_remote_head *remote_ref;
-			git_oid oid;
-			git_reference *ref;
+	if ((error = prune_candidates(&candidates, remote)) < 0)
+		goto cleanup;
 
-			if (git_refspec_dst_matches(spec, prune_ref) != 1)
+	/*
+	 * Remove those entries from the candidate list for which we
+	 * can find a remote reference in at least one refspec.
+	 */
+	git_vector_foreach(&candidates, i, refname) {
+		git_vector_foreach(&remote->active_refspecs, j, spec) {
+			git_buf buf = GIT_BUF_INIT;
+			size_t pos;
+			char *src_name;
+			git_remote_head key = {0};
+
+			if (!git_refspec_dst_matches(spec, refname))
 				continue;
 
-			git_vector_foreach(&remote_refs, j, remote_ref) {
-				git_buf buf = GIT_BUF_INIT;
+			if ((error = git_refspec_rtransform(&buf, spec, refname)) < 0)
+				goto cleanup;
 
-				if (git_refspec_transform(&buf, spec, remote_ref->name) < 0)
-					continue;
+			key.name = (char *) git_buf_cstr(&buf);
+			error = git_vector_search(&pos, &remote_refs, &key);
+			git_buf_free(&buf);
 
-				if (!git__strcmp(prune_ref, git_buf_cstr(&buf))) {
-					found = 1;
-					break;
-				}
-			}
+			if (error < 0 && error != GIT_ENOTFOUND)
+				goto cleanup;
 
-			if (found)
+			if (error == GIT_ENOTFOUND)
 				continue;
 
-			if ((error = git_reference_lookup(&ref, remote->repo, prune_ref)) >= 0) {
-				if (git_reference_type(ref) == GIT_REF_OID) {
-					git_oid_cpy(&oid, git_reference_target(ref));
-					if ((error = git_reference_delete(ref)) < 0) {
-						git_reference_free(ref);
-						goto cleanup;
-					}
-							
-					if (remote->callbacks.update_tips != NULL) {
-						git_oid zero_oid;
+			/* if we did find a source, remove it from the candiates */
+			if ((error = git_vector_set((void **) &src_name, &candidates, i, NULL)) < 0)
+				goto cleanup;
 
-						memset(&zero_oid, 0, sizeof(zero_oid));
-						if (remote->callbacks.update_tips(prune_ref, &oid, &zero_oid, remote->callbacks.payload) < 0) {
-							git_reference_free(ref);
-							goto cleanup;
-						}
-					}
-				}
-				git_reference_free(ref);
-			}
+			git__free(src_name);
+			break;
 		}
 	}
 
+	/*
+	 * For those candidates still left in the list, we need to
+	 * remove them. We do not remove symrefs, as those are for
+	 * stuff like origin/HEAD which will never match, but we do
+	 * not want to remove them.
+	 */
+	git_vector_foreach(&candidates, i, refname) {
+		git_reference *ref;
+		git_oid id;
+
+		if (refname == NULL)
+			continue;
+
+		error = git_reference_lookup(&ref, remote->repo, refname);
+		/* as we want it gone, let's not consider this an error */
+		if (error == GIT_ENOTFOUND)
+			continue;
+
+		if (error < 0)
+			goto cleanup;
+
+		if (git_reference_type(ref) == GIT_REF_SYMBOLIC) {
+			git_reference_free(ref);
+			continue;
+		}
+
+		git_oid_cpy(&id, git_reference_target(ref));
+		error = git_reference_delete(ref);
+		git_reference_free(ref);
+		if (error < 0)
+			goto cleanup;
+
+		if (remote->callbacks.update_tips)
+			error = remote->callbacks.update_tips(refname, &id, &zero_id, remote->callbacks.payload);
+
+		if (error < 0)
+			goto cleanup;
+	}
+
 cleanup:
-	git_strarray_free(&arr);
 	git_vector_free(&remote_refs);
+	git_vector_free_deep(&candidates);
 	return error;
 }
 
