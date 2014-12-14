@@ -180,6 +180,15 @@ void test_network_fetchlocal__prune_overlapping(void)
 	cl_git_pass(git_reference_list(&refnames, repo));
 	cl_assert_equal_i(20, (int)refnames.count);
 
+	cl_git_pass(git_config_delete_multivar(config, "remote.origin.fetch", "refs"));
+	cl_git_pass(git_config_set_multivar(config, "remote.origin.fetch", "^$", "refs/heads/*:refs/remotes/origin/*"));
+	cl_git_pass(git_config_set_multivar(config, "remote.origin.fetch", "^$", "refs/pull/*/head:refs/remotes/origin/pr/*"));
+	cl_git_pass(git_remote_lookup(&origin, repo, GIT_REMOTE_ORIGIN));
+	git_remote_set_prune_refs(origin, true);
+	callbacks.update_tips = update_tips_fail_on_call;
+	git_remote_set_callbacks(origin, &callbacks);
+	cl_git_pass(git_remote_fetch(origin, NULL, NULL, NULL));
+
 	cl_git_pass(git_reference_delete(ref));
 	cl_git_pass(git_config_delete_multivar(config, "remote.origin.fetch", "refs"));
 	cl_git_pass(git_config_set_multivar(config, "remote.origin.fetch", "^$", "refs/heads/*:refs/remotes/origin/*"));
