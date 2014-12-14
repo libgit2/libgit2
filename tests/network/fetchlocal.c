@@ -115,6 +115,17 @@ void test_network_fetchlocal__prune(void)
 	git_repository_free(repo);
 }
 
+int update_tips_fail_on_call(const char *ref, const git_oid *old, const git_oid *new, void *data)
+{
+	GIT_UNUSED(ref);
+	GIT_UNUSED(old);
+	GIT_UNUSED(new);
+	GIT_UNUSED(data);
+
+	cl_fail("update tips called");
+	return 0;
+}
+
 void test_network_fetchlocal__prune_overlapping(void)
 {
 	git_repository *repo;
@@ -160,6 +171,7 @@ void test_network_fetchlocal__prune_overlapping(void)
 
 	cl_git_pass(git_remote_lookup(&origin, repo, GIT_REMOTE_ORIGIN));
 	git_remote_set_prune_refs(origin, true);
+	callbacks.update_tips = update_tips_fail_on_call;
 	git_remote_set_callbacks(origin, &callbacks);
 	cl_git_pass(git_remote_fetch(origin, NULL, NULL, NULL));
 
