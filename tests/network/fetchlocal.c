@@ -153,10 +153,10 @@ void test_network_fetchlocal__prune_overlapping(void)
 	git_remote_set_callbacks(origin, &callbacks);
 
 	cl_git_pass(git_repository_config(&config, repo));
+	cl_git_pass(git_config_set_bool(config, "remote.origin.prune", true));
 	cl_git_pass(git_config_set_multivar(config, "remote.origin.fetch", "^$", "refs/pull/*/head:refs/remotes/origin/pr/*"));
 
 	cl_git_pass(git_remote_lookup(&origin, repo, GIT_REMOTE_ORIGIN));
-	git_remote_set_prune_refs(origin, 1);
 	git_remote_set_callbacks(origin, &callbacks);
 	cl_git_pass(git_remote_fetch(origin, NULL, NULL, NULL));
 
@@ -170,7 +170,6 @@ void test_network_fetchlocal__prune_overlapping(void)
 	cl_git_pass(git_config_set_multivar(config, "remote.origin.fetch", "^$", "refs/heads/*:refs/remotes/origin/*"));
 
 	cl_git_pass(git_remote_lookup(&origin, repo, GIT_REMOTE_ORIGIN));
-	git_remote_set_prune_refs(origin, true);
 	callbacks.update_tips = update_tips_fail_on_call;
 	git_remote_set_callbacks(origin, &callbacks);
 	cl_git_pass(git_remote_fetch(origin, NULL, NULL, NULL));
@@ -184,7 +183,6 @@ void test_network_fetchlocal__prune_overlapping(void)
 	cl_git_pass(git_config_set_multivar(config, "remote.origin.fetch", "^$", "refs/heads/*:refs/remotes/origin/*"));
 	cl_git_pass(git_config_set_multivar(config, "remote.origin.fetch", "^$", "refs/pull/*/head:refs/remotes/origin/pr/*"));
 	cl_git_pass(git_remote_lookup(&origin, repo, GIT_REMOTE_ORIGIN));
-	git_remote_set_prune_refs(origin, true);
 	callbacks.update_tips = update_tips_fail_on_call;
 	git_remote_set_callbacks(origin, &callbacks);
 	cl_git_pass(git_remote_fetch(origin, NULL, NULL, NULL));
@@ -234,9 +232,9 @@ void test_network_fetchlocal__fetchprune(void)
 	git_reference_free(ref);
 
 	cl_git_pass(git_remote_lookup(&origin, repo, GIT_REMOTE_ORIGIN));
-	git_remote_set_prune_refs(origin, 1);
 	git_remote_set_callbacks(origin, &callbacks);
 	cl_git_pass(git_remote_fetch(origin, NULL, NULL, NULL));
+	cl_git_pass(git_remote_prune(origin));
 
 	cl_git_pass(git_reference_list(&refnames, repo));
 	cl_assert_equal_i(18, (int)refnames.count);
