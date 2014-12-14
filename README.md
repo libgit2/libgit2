@@ -59,6 +59,19 @@ dependencies, it can make use of a few libraries to add to it:
 - LibSSH2 to enable the SSH transport
 - iconv (OSX) to handle the HFS+ path encoding peculiarities
 
+Initialization
+===============
+
+The library needs to keep track of some global state. Call
+
+    git_libgit2_init();
+
+before calling any other libgit2 functions. You can call this function many times. A matching number of calls to
+
+    git_libgit2_shutdown();
+
+will free the resources.
+
 Threading
 =========
 
