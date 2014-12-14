@@ -159,6 +159,7 @@ void test_network_fetchlocal__prune_overlapping(void)
 	cl_git_pass(git_config_set_multivar(config, "remote.origin.fetch", "^$", "refs/heads/*:refs/remotes/origin/*"));
 
 	cl_git_pass(git_remote_lookup(&origin, repo, GIT_REMOTE_ORIGIN));
+	git_remote_set_prune_refs(origin, true);
 	git_remote_set_callbacks(origin, &callbacks);
 	cl_git_pass(git_remote_fetch(origin, NULL, NULL, NULL));
 
