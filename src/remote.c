@@ -926,12 +926,15 @@ int git_remote_fetch(
 				remote->name ? remote->name : remote->url);
 	}
 
-	if (remote->prune_refs && (error = git_remote_prune(remote)) < 0)
-		return error;
-
 	/* Create "remote/foo" branches for all remote branches */
 	error = git_remote_update_tips(remote, signature, git_buf_cstr(&reflog_msg_buf));
 	git_buf_free(&reflog_msg_buf);
+	if (error < 0)
+		return error;
+
+	if (remote->prune_refs)
+		error = git_remote_prune(remote);
+
 	return error;
 }
 
