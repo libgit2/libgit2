@@ -162,3 +162,37 @@ void test_network_fetchlocal__multi_remotes(void)
 	git_remote_free(test);
 	git_remote_free(test2);
 }
+
+static int sideband_cb(const char *str, int len, void *payload)
+{
+	int *count = (int *) payload;
+
+	GIT_UNUSED(str);
+	GIT_UNUSED(len);
+
+	(*count)++;
+	return 0;
+}
+
+void test_network_fetchlocal__call_progress(void)
+{
+	git_repository *repo;
+	git_remote *remote;
+	git_remote_callbacks callbacks = GIT_REMOTE_CALLBACKS_INIT;
+	int callcount = 0;
+
+	cl_git_pass(git_repository_init(&repo, "foo.git", true));
+	cl_set_cleanup(cleanup_local_repo, "foo.git");
+
+	cl_git_pass(git_remote_create_with_fetchspec(&remote, repo, "origin", cl_git_fixture_url("testrepo.git"), "+refs/heads/*:refs/heads/*"));
+
+	callbacks.sideband_progress = sideband_cb;
+	callbacks.payload = &callcount;
+	cl_git_pass(git_remote_set_callbacks(remote, &callbacks));
+
+	cl_git_pass(git_remote_fetch(remote, NULL, NULL, NULL));
+	cl_assert(callcount != 0);
+
+	git_remote_free(remote);
+	git_repository_free(repo);
+}
