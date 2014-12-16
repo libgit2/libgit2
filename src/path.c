@@ -1282,93 +1282,57 @@ GIT_INLINE(bool) verify_dospath(
 		component[last] != ':');
 }
 
-GIT_INLINE(bool) verify_dotgit_hfs(const char *component, size_t len)
+static int32_t next_hfs_char(const char **in, size_t *len)
 {
-	const unsigned char *c;
-	int git = 0, ign = 0;
-	unsigned char one, two;
+	while (*len) {
+		int32_t codepoint;
+		int cp_len = git__utf8_iterate((const uint8_t *)(*in), (int)(*len), &codepoint);
+		if (cp_len < 0)
+			return -1;
 
-	while (len) {
-		switch (*(c = (const unsigned char *)component++)) {
-		case '.':
-			if (ign || git++ != 0)
-				return true;
-			break;
-		case 'g':
-		case 'G':
-			if (ign || git++ != 1)
-				return true;
-			break;
-		case 'i':
-		case 'I':
-			if (ign || git++ != 2)
-				return true;
-			break;
-		case 't':
-		case 'T':
-			if (ign || git++ != 3)
-				return true;
-			break;
+		(*in) += cp_len;
+		(*len) -= cp_len;
 
-		case 0xe2:
-		case 0xef:
-			if (ign++ != 0)
-				return true;
-			one = *c;
-			break;
-
-		case 0x80:
-		case 0x81:
-			if (ign++ != 1 || one != 0xe2)
-				return true;
-			two = *c;
-			break;
-
-		case 0xbb:
-			if (ign++ != 1 || one != 0xef)
-				return true;
-			two = *c;
-			break;
-
-		case 0x8c:
-		case 0x8d:
-		case 0x8e:
-		case 0x8f:
-			if (ign != 2 || two != 0x80)
-				return true;
-			ign = 0;
-			break;
-
-		case 0xaa:
-		case 0xab:
-		case 0xac:
-		case 0xad:
-		case 0xae:
-			if (ign != 2 || (two != 0x80 && two != 0x81))
-				return true;
-			ign = 0;
-			break;
-
-		case 0xaf:
-			if (ign != 2 || two != 0x81)
-				return true;
-			ign = 0;
-			break;
-
-		case 0xbf:
-			if (ign != 2 || two != 0xbb)
-				return true;
-			ign = 0;
-			break;
-
-		default:
-			return true;
+		/* these code points are ignored completely */
+		switch (codepoint) {
+		case 0x200c: /* ZERO WIDTH NON-JOINER */
+		case 0x200d: /* ZERO WIDTH JOINER */
+		case 0x200e: /* LEFT-TO-RIGHT MARK */
+		case 0x200f: /* RIGHT-TO-LEFT MARK */
+		case 0x202a: /* LEFT-TO-RIGHT EMBEDDING */
+		case 0x202b: /* RIGHT-TO-LEFT EMBEDDING */
+		case 0x202c: /* POP DIRECTIONAL FORMATTING */
+		case 0x202d: /* LEFT-TO-RIGHT OVERRIDE */
+		case 0x202e: /* RIGHT-TO-LEFT OVERRIDE */
+		case 0x206a: /* INHIBIT SYMMETRIC SWAPPING */
+		case 0x206b: /* ACTIVATE SYMMETRIC SWAPPING */
+		case 0x206c: /* INHIBIT ARABIC FORM SHAPING */
+		case 0x206d: /* ACTIVATE ARABIC FORM SHAPING */
+		case 0x206e: /* NATIONAL DIGIT SHAPES */
+		case 0x206f: /* NOMINAL DIGIT SHAPES */
+		case 0xfeff: /* ZERO WIDTH NO-BREAK SPACE */
+			continue;
 		}
 
-		len--;
+		/* fold into lowercase -- this will only fold characters in
+		 * the ASCII range, which is perfectly fine, because the
+		 * git folder name can only be composed of ascii characters
+		 */
+		return tolower(codepoint);
 	}
+	return 0; /* NULL byte -- end of string */
+}
 
-	return (ign || git != 4);
+static bool verify_dotgit_hfs(const char *path, size_t len)
+{
+	if (next_hfs_char(&path, &len) != '.' ||
+		next_hfs_char(&path, &len) != 'g' ||
+		next_hfs_char(&path, &len) != 'i' ||
+		next_hfs_char(&path, &len) != 't' ||
+		next_hfs_char(&path, &len) != 0)
+		return true;
+
+	return false;
 }
 
 GIT_INLINE(bool) verify_char(unsigned char c, unsigned int flags)
