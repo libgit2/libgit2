@@ -7,6 +7,14 @@ static git_repository *repo;
 static git_buf file_path_buf = GIT_BUF_INIT;
 static git_remote *remote;
 
+static char *push_refspec_strings[] = {
+	"refs/heads/master",
+};
+static git_strarray push_array = {
+	push_refspec_strings,
+	1,
+};
+
 void test_network_remote_local__initialize(void)
 {
 	cl_git_pass(git_repository_init(&repo, "remotelocal/", 0));
@@ -191,9 +199,9 @@ void test_network_remote_local__push_to_bare_remote(void)
 		refspec_strings,
 		1,
 	};
+
 	/* Should be able to push to a bare remote */
 	git_remote *localremote;
-	git_push *push;
 
 	/* Get some commits */
 	connect_to_local_repository(cl_fixture("testrepo.git"));
@@ -213,12 +221,9 @@ void test_network_remote_local__push_to_bare_remote(void)
 	cl_git_pass(git_remote_connect(localremote, GIT_DIRECTION_PUSH));
 
 	/* Try to push */
-	cl_git_pass(git_push_new(&push, localremote));
-	cl_git_pass(git_push_add_refspec(push, "refs/heads/master"));
-	cl_git_pass(git_push_finish(push));
+	cl_git_pass(git_remote_upload(remote, &push_array, NULL));
 
 	/* Clean up */
-	git_push_free(push);
 	git_remote_free(localremote);
 	cl_fixture_cleanup("localbare.git");
 }
@@ -234,7 +239,6 @@ void test_network_remote_local__push_to_bare_remote_with_file_url(void)
 	};
 	/* Should be able to push to a bare remote */
 	git_remote *localremote;
-	git_push *push;
 	const char *url;
 
 	/* Get some commits */
@@ -258,12 +262,9 @@ void test_network_remote_local__push_to_bare_remote_with_file_url(void)
 	cl_git_pass(git_remote_connect(localremote, GIT_DIRECTION_PUSH));
 
 	/* Try to push */
-	cl_git_pass(git_push_new(&push, localremote));
-	cl_git_pass(git_push_add_refspec(push, "refs/heads/master"));
-	cl_git_pass(git_push_finish(push));
+	cl_git_pass(git_remote_upload(remote, &push_array, NULL));
 
 	/* Clean up */
-	git_push_free(push);
 	git_remote_free(localremote);
 	cl_fixture_cleanup("localbare.git");
 }
@@ -280,7 +281,6 @@ void test_network_remote_local__push_to_non_bare_remote(void)
 	};
 	/* Shouldn't be able to push to a non-bare remote */
 	git_remote *localremote;
-	git_push *push;
 
 	/* Get some commits */
 	connect_to_local_repository(cl_fixture("testrepo.git"));
@@ -300,12 +300,9 @@ void test_network_remote_local__push_to_non_bare_remote(void)
 	cl_git_pass(git_remote_connect(localremote, GIT_DIRECTION_PUSH));
 
 	/* Try to push */
-	cl_git_pass(git_push_new(&push, localremote));
-	cl_git_pass(git_push_add_refspec(push, "refs/heads/master"));
-	cl_git_fail_with(git_push_finish(push), GIT_EBAREREPO);
+	cl_git_fail_with(GIT_EBAREREPO, git_remote_upload(localremote, &push_array, NULL));
 
 	/* Clean up */
-	git_push_free(push);
 	git_remote_free(localremote);
 	cl_fixture_cleanup("localbare.git");
 }
@@ -433,7 +430,6 @@ void test_network_remote_local__update_tips_for_new_remote(void) {
 	git_repository *src_repo;
 	git_repository *dst_repo;
 	git_remote *new_remote;
-	git_push *push;
 	git_reference* branch;
 
 	/* Copy test repo */
@@ -446,16 +442,13 @@ void test_network_remote_local__update_tips_for_new_remote(void) {
 	/* Push to bare repo */
 	cl_git_pass(git_remote_create(&new_remote, src_repo, "bare", "./localbare.git"));
 	cl_git_pass(git_remote_connect(new_remote, GIT_DIRECTION_PUSH));
-	cl_git_pass(git_push_new(&push, new_remote));
-	cl_git_pass(git_push_add_refspec(push, "refs/heads/master"));
-	cl_git_pass(git_push_finish(push));
+	cl_git_pass(git_remote_upload(new_remote, &push_array, NULL));
 
 	/* Update tips and make sure remote branch has been created */
-	cl_git_pass(git_push_update_tips(push, NULL, NULL));
+	cl_git_pass(git_remote_update_tips(new_remote, NULL, NULL));
 	cl_git_pass(git_branch_lookup(&branch, src_repo, "bare/master", GIT_BRANCH_REMOTE));
 
 	git_reference_free(branch);
-	git_push_free(push);
 	git_remote_free(new_remote);
 	git_repository_free(dst_repo);
 	cl_fixture_cleanup("localbare.git");

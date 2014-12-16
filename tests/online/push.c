@@ -198,7 +198,7 @@ static void verify_tracking_branches(git_remote *remote, expected_ref expected_r
 	git_branch_t branch_type;
 	git_reference *ref;
 
-	/* Get current remote branches */
+	/* Get current remote-tracking branches */
 	cl_git_pass(git_branch_iterator_new(&iter, remote->repo, GIT_BRANCH_REMOTE));
 
 	while ((error = git_branch_next(&ref, &branch_type, iter)) == 0) {
@@ -215,7 +215,7 @@ static void verify_tracking_branches(git_remote *remote, expected_ref expected_r
 	/* Loop through expected refs, make sure they exist */
 	for (i = 0; i < expected_refs_len; i++) {
 
-		/* Convert remote reference name into tracking branch name.
+		/* Convert remote reference name into remote-tracking branch name.
 		 * If the spec is not under refs/heads/, then skip.
 		 */
 		fetch_spec = git_remote__matching_refspec(remote, expected_refs[i].name);
@@ -318,8 +318,7 @@ void test_online_push__initialize(void)
 {
 	git_vector delete_specs = GIT_VECTOR_INIT;
 	const git_remote_head **heads;
-	size_t i, heads_len;
-	char *curr_del_spec;
+	size_t heads_len;
 
 	_repo = cl_git_sandbox_init("push_src");
 
@@ -382,17 +381,12 @@ void test_online_push__initialize(void)
 	cl_git_pass(git_remote_ls(&heads, &heads_len, _remote));
 	cl_git_pass(create_deletion_refspecs(&delete_specs, heads, heads_len));
 	if (delete_specs.length) {
-		git_push *push;
+		git_strarray arr = {
+			(char **) delete_specs.contents,
+			delete_specs.length,
+		};
 
-		cl_git_pass(git_push_new(&push, _remote));
-
-		git_vector_foreach(&delete_specs, i, curr_del_spec) {
-			git_push_add_refspec(push, curr_del_spec);
-			git__free(curr_del_spec);
-		}
-
-		cl_git_pass(git_push_finish(push));
-		git_push_free(push);
+		cl_git_pass(git_remote_upload(_remote, &arr, NULL));
 	}
 
 	git_remote_disconnect(_remote);
@@ -818,29 +812,23 @@ void test_online_push__bad_refspecs(void)
 	/* All classes of refspecs that should be rejected by
 	 * git_push_add_refspec() should go in this test.
 	 */
-	git_push *push;
+	char *specs = {
+		"b6:b6",
+	};
+	git_strarray arr = {
+		&specs,
+		1,
+	};
 
 	if (_remote) {
-/*		cl_git_pass(git_remote_connect(_remote, GIT_DIRECTION_PUSH)); */
-		cl_git_pass(git_push_new(&push, _remote));
-
-		/* Unexpanded branch names not supported */
-		cl_git_fail(git_push_add_refspec(push, "b6:b6"));
-
-		git_push_free(push);
+		cl_git_fail(git_remote_upload(_remote, &arr, NULL));
 	}
 }
 
 void test_online_push__expressions(void)
 {
-	git_push *push;
-
 	/* TODO: Expressions in refspecs doesn't actually work yet */
 	const char *specs_left_expr[] = { "refs/heads/b2~1:refs/heads/b2" };
-
-	cl_git_pass(git_push_new(&push, _remote));
-	cl_git_fail(git_push_add_refspec(push, "refs/heads/b2:refs/heads/b2~1"));
-	git_push_free(push);
 
 	/* TODO: Find a more precise way of checking errors than a exit code of -1. */
 	do_push(specs_left_expr, ARRAY_SIZE(specs_left_expr),

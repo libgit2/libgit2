@@ -18,6 +18,7 @@
 #include "refs.h"
 #include "refspec.h"
 #include "fetchhead.h"
+#include "push.h"
 
 static int dwim_refspecs(git_vector *out, git_vector *refspecs, git_vector *refs);
 
@@ -1275,6 +1276,11 @@ int git_remote_update_tips(
 	int error;
 	size_t i;
 
+	/* push has its own logic hidden away in the push object */
+	if (remote->push) {
+		return git_push_update_tips(remote->push, signature, reflog_message);
+	}
+
 	if (git_refspec__parse(&tagspec, GIT_REFSPEC_TAGS, true) < 0)
 		return -1;
 
@@ -1355,6 +1361,7 @@ void git_remote_free(git_remote *remote)
 	free_refspecs(&remote->passive_refspecs);
 	git_vector_free(&remote->passive_refspecs);
 
+	git_push_free(remote->push);
 	git__free(remote->url);
 	git__free(remote->pushurl);
 	git__free(remote->name);
@@ -2117,22 +2124,29 @@ int git_remote_default_branch(git_buf *out, git_remote *remote)
 	return git_buf_puts(out, guess->name);
 }
 
-int git_remote_push(git_remote *remote, git_strarray *refspecs, const git_push_options *opts,
-		    const git_signature *signature, const char *reflog_message)
+int git_remote_upload(git_remote *remote, const git_strarray *refspecs, const git_push_options *opts)
 {
-	int error;
 	size_t i;
-	git_push *push = NULL;
-	git_remote_callbacks *cbs;
+	int error;
+	git_push *push;
 	git_refspec *spec;
+	git_remote_callbacks *cbs;
 
-	assert(remote && refspecs);
+	assert(remote);
 
-	if ((error = git_remote_connect(remote, GIT_DIRECTION_PUSH)) < 0)
+	if (!git_remote_connected(remote) &&
+	    (error = git_remote_connect(remote, GIT_DIRECTION_PUSH)) < 0)
+		goto cleanup;
+
+	if (remote->push) {
+		git_push_free(remote->push);
+		remote->push = NULL;
+	}
+
+	if ((error = git_push_new(&remote->push, remote)) < 0)
 		return error;
 
-	if ((error = git_push_new(&push, remote)) < 0)
-		goto cleanup;
+	push = remote->push;
 
 	if (opts && (error = git_push_set_options(push, opts)) < 0)
 		goto cleanup;
@@ -2164,10 +2178,25 @@ int git_remote_push(git_remote *remote, git_strarray *refspecs, const git_push_o
 	    (error = git_push_status_foreach(push, cbs->push_update_reference, cbs->payload)) < 0)
 		goto cleanup;
 
-	error = git_push_update_tips(push, signature, reflog_message);
-
 cleanup:
+	return error;
+}
+
+int git_remote_push(git_remote *remote, const git_strarray *refspecs, const git_push_options *opts,
+		    const git_signature *signature, const char *reflog_message)
+{
+	int error;
+
+	assert(remote && refspecs);
+
+	if ((error = git_remote_connect(remote, GIT_DIRECTION_PUSH)) < 0)
+		return error;
+
+	if ((error = git_remote_upload(remote, refspecs, opts)) < 0)
+		return error;
+
+	error = git_remote_update_tips(remote, signature, reflog_message);
+
 	git_remote_disconnect(remote);
-	git_push_free(push);
 	return error;
 }

@@ -72,7 +72,14 @@ void test_network_remote_remotes__error_when_not_found(void)
 void test_network_remote_remotes__error_when_no_push_available(void)
 {
 	git_remote *r;
-	git_push *p;
+	char *specs = {
+		"refs/heads/master",
+	};
+	git_strarray arr = {
+		&specs,
+		1,
+	};
+
 
 	cl_git_pass(git_remote_create_anonymous(&r, _repo, cl_fixture("testrepo.git"), NULL));
 
@@ -83,11 +90,8 @@ void test_network_remote_remotes__error_when_no_push_available(void)
 	/* Make sure that push is really not available */
 	r->transport->push = NULL;
 
-	cl_git_pass(git_push_new(&p, r));
-	cl_git_pass(git_push_add_refspec(p, "refs/heads/master"));
-	cl_git_fail_with(git_push_finish(p), GIT_ERROR);
+	cl_git_fail_with(-1, git_remote_upload(r, &arr, NULL));
 
-	git_push_free(p);
 	git_remote_free(r);
 }
 
