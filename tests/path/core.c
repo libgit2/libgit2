@@ -172,11 +172,27 @@ void test_path_core__isvalid_trailing_colon(void)
 	cl_assert_equal_b(false, git_path_isvalid(NULL, "foo:/bar", GIT_PATH_REJECT_TRAILING_COLON));
 }
 
-void test_path_core__isvalid_dos_git_shortname(void)
+void test_path_core__isvalid_dotgit_ntfs(void)
 {
-	cl_assert_equal_b(true, git_path_isvalid(NULL, "git~1", 0));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, ".git", 0));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, ".git ", 0));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, ".git.", 0));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, ".git.. .", 0));
 
-	cl_assert_equal_b(false, git_path_isvalid(NULL, "git~1", GIT_PATH_REJECT_DOS_GIT_SHORTNAME));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, "git~1", 0));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, "git~1 ", 0));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, "git~1.", 0));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, "git~1.. .", 0));
+
+	cl_assert_equal_b(false, git_path_isvalid(NULL, ".git", GIT_PATH_REJECT_DOT_GIT_NTFS));
+	cl_assert_equal_b(false, git_path_isvalid(NULL, ".git ", GIT_PATH_REJECT_DOT_GIT_NTFS));
+	cl_assert_equal_b(false, git_path_isvalid(NULL, ".git.", GIT_PATH_REJECT_DOT_GIT_NTFS));
+	cl_assert_equal_b(false, git_path_isvalid(NULL, ".git.. .", GIT_PATH_REJECT_DOT_GIT_NTFS));
+
+	cl_assert_equal_b(false, git_path_isvalid(NULL, "git~1", GIT_PATH_REJECT_DOT_GIT_NTFS));
+	cl_assert_equal_b(false, git_path_isvalid(NULL, "git~1 ", GIT_PATH_REJECT_DOT_GIT_NTFS));
+	cl_assert_equal_b(false, git_path_isvalid(NULL, "git~1.", GIT_PATH_REJECT_DOT_GIT_NTFS));
+	cl_assert_equal_b(false, git_path_isvalid(NULL, "git~1.. .", GIT_PATH_REJECT_DOT_GIT_NTFS));
 }
 
 void test_path_core__isvalid_dos_paths(void)
