@@ -26,6 +26,7 @@ struct git_tree {
 };
 
 struct git_treebuilder {
+	git_repository *repo;
 	git_strmap *map;
 };
 

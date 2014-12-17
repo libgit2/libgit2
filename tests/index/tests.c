@@ -421,6 +421,27 @@ void test_index_tests__write_invalid_filename(void)
 	cl_fixture_cleanup("invalid");
 }
 
+void test_index_tests__honors_protect_filesystems(void)
+{
+	git_repository *repo;
+
+	p_mkdir("invalid", 0700);
+
+	cl_git_pass(git_repository_init(&repo, "./invalid", 0));
+
+	cl_repo_set_bool(repo, "core.protectHFS", true);
+	cl_repo_set_bool(repo, "core.protectNTFS", true);
+
+	write_invalid_filename(repo, ".git./hello");
+	write_invalid_filename(repo, ".git\xe2\x80\xad/hello");
+	write_invalid_filename(repo, "git~1/hello");
+	write_invalid_filename(repo, ".git\xe2\x81\xaf/hello");
+
+	git_repository_free(repo);
+
+	cl_fixture_cleanup("invalid");
+}
+
 void test_index_tests__remove_entry(void)
 {
 	git_repository *repo;

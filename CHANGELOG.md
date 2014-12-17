@@ -136,3 +136,7 @@ v0.21 + 1
 * git_libgit2_init() and git_libgit2_shutdown() now return the number of
   initializations of the library, so consumers may schedule work on the
   first initialization.
+
+* git_treebuilder_create now takes a repository so that it can query
+  repository configuration.  Subsequently, git_treebuilder_write no
+  longer takes a repository.
