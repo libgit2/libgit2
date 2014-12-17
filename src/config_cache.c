@@ -76,6 +76,8 @@ static struct map_data _cvar_maps[] = {
 	{"core.precomposeunicode", NULL, 0, GIT_PRECOMPOSE_DEFAULT },
 	{"core.safecrlf", _cvar_map_safecrlf, ARRAY_SIZE(_cvar_map_safecrlf), GIT_SAFE_CRLF_DEFAULT},
 	{"core.logallrefupdates", NULL, 0, GIT_LOGALLREFUPDATES_DEFAULT },
+	{"core.protecthfs", NULL, 0, GIT_PROTECTHFS_DEFAULT },
+	{"core.protectntfs", NULL, 0, GIT_PROTECTNTFS_DEFAULT },
 };
 
 int git_config__cvar(int *out, git_config *config, git_cvar_cached cvar)

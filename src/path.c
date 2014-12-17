@@ -1157,26 +1157,6 @@ int git_path_from_url_or_path(git_buf *local_path_out, const char *url_or_path)
 	return 0;
 }
 
-GIT_INLINE(bool) verify_shortname(
-	git_repository *repo,
-	const char *component,
-	size_t len)
-{
-	const char *shortname_repo;
-
-	if (len == git_repository__8dot3_default_len &&
-		strncasecmp(git_repository__8dot3_default, component, len) == 0)
-		return false;
-
-	if (repo &&
-		(shortname_repo = git_repository__8dot3_name(repo)) &&
-		shortname_repo != git_repository__8dot3_default &&
-		git__prefixncmp_icase(component, len, shortname_repo) == 0)
-		return false;
-
-	return true;
-}
-
 /* Reject paths like AUX or COM1, or those versions that end in a dot or
  * colon.  ("AUX." or "AUX:")
  */
@@ -1252,9 +1232,46 @@ static bool verify_dotgit_hfs(const char *path, size_t len)
 	return false;
 }
 
+GIT_INLINE(bool) verify_dotgit_ntfs(git_repository *repo, const char *path, size_t len)
+{
+	const char *shortname = NULL;
+	size_t i, start, shortname_len = 0;
+
+	/* See if the repo has a custom shortname (not "GIT~1") */
+	if (repo &&
+		(shortname = git_repository__8dot3_name(repo)) &&
+		shortname != git_repository__8dot3_default)
+		shortname_len = strlen(shortname);
+
+	if (len >= 4 && strncasecmp(path, ".git", 4) == 0)
+		start = 4;
+	else if (len >= git_repository__8dot3_default_len &&
+		strncasecmp(path, git_repository__8dot3_default, git_repository__8dot3_default_len) == 0)
+		start = git_repository__8dot3_default_len;
+	else if (shortname_len && len >= shortname_len &&
+		strncasecmp(path, shortname, shortname_len) == 0)
+		start = shortname_len;
+	else
+		return true;
+
+	/* Reject paths beginning with ".git\" */
+	if (path[start] == '\\')
+		return false;
+
+	for (i = start; i < len; i++) {
+		if (path[i] != ' ' && path[i] != '.')
+			return true;
+	}
+
+	return false;
+}
+
 GIT_INLINE(bool) verify_char(unsigned char c, unsigned int flags)
 {
 	if ((flags & GIT_PATH_REJECT_BACKSLASH) && c == '\\')
+		return false;
+
+	if ((flags & GIT_PATH_REJECT_SLASH) && c == '/')
 		return false;
 
 	if (flags & GIT_PATH_REJECT_NT_CHARS) {
@@ -1302,13 +1319,6 @@ static bool verify_component(
 		len == 2 && component[0] == '.' && component[1] == '.')
 		return false;
 
-	if ((flags & GIT_PATH_REJECT_DOT_GIT) && len == 4 &&
-		component[0] == '.' &&
-		(component[1] == 'g' || component[1] == 'G') &&
-		(component[2] == 'i' || component[2] == 'I') &&
-		(component[3] == 't' || component[3] == 'T'))
-		return false;
-
 	if ((flags & GIT_PATH_REJECT_TRAILING_DOT) && component[len-1] == '.')
 		return false;
 
@@ -1316,10 +1326,6 @@ static bool verify_component(
 		return false;
 
 	if ((flags & GIT_PATH_REJECT_TRAILING_COLON) && component[len-1] == ':')
-		return false;
-
-	if ((flags & GIT_PATH_REJECT_DOS_GIT_SHORTNAME) &&
-		!verify_shortname(repo, component, len))
 		return false;
 
 	if (flags & GIT_PATH_REJECT_DOS_PATHS) {
@@ -1336,7 +1342,48 @@ static bool verify_component(
 		!verify_dotgit_hfs(component, len))
 		return false;
 
+	if (flags & GIT_PATH_REJECT_DOT_GIT_NTFS &&
+		!verify_dotgit_ntfs(repo, component, len))
+		return false;
+
+	if ((flags & GIT_PATH_REJECT_DOT_GIT_HFS) == 0 &&
+		(flags & GIT_PATH_REJECT_DOT_GIT_NTFS) == 0 &&
+		(flags & GIT_PATH_REJECT_DOT_GIT) &&
+		len == 4 &&
+		component[0] == '.' &&
+		(component[1] == 'g' || component[1] == 'G') &&
+		(component[2] == 'i' || component[2] == 'I') &&
+		(component[3] == 't' || component[3] == 'T'))
+		return false;
+
 	return true;
+}
+
+GIT_INLINE(unsigned int) dotgit_flags(
+	git_repository *repo,
+	unsigned int flags)
+{
+	int protectHFS = 0, protectNTFS = 0;
+
+#ifdef __APPLE__
+	protectHFS = 1;
+#endif
+
+#ifdef GIT_WIN32
+	protectNTFS = 1;
+#endif
+
+	if (repo && !protectHFS)
+		git_repository__cvar(&protectHFS, repo, GIT_CVAR_PROTECTHFS);
+	if (protectHFS)
+		flags |= GIT_PATH_REJECT_DOT_GIT_HFS;
+
+	if (repo && !protectNTFS)
+		git_repository__cvar(&protectNTFS, repo, GIT_CVAR_PROTECTNTFS);
+	if (protectNTFS)
+		flags |= GIT_PATH_REJECT_DOT_GIT_NTFS;
+
+	return flags;
 }
 
 bool git_path_isvalid(
@@ -1345,6 +1392,10 @@ bool git_path_isvalid(
 	unsigned int flags)
 {
 	const char *start, *c;
+
+	/* Upgrade the ".git" checks based on platform */
+	if ((flags & GIT_PATH_REJECT_DOT_GIT))
+		flags = dotgit_flags(repo, flags);
 
 	for (start = c = path; *c; c++) {
 		if (!verify_char(*c, flags))
