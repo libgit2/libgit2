@@ -294,14 +294,6 @@ GIT_EXTERN(int) git_commit_extract_signature(git_buf *signature, git_buf *signed
  *
  * @param repo Repository where to store the commit
  *
- * @param update_ref If not NULL, name of the reference that
- *	will be updated to point to this commit. If the reference
- *	is not direct, it will be resolved to a direct reference.
- *	Use "HEAD" to update the HEAD of the current branch and
- *	make it point to this commit. If the reference doesn't
- *	exist yet, it will be created. If it does exist, the first
- *	parent must be the tip of this branch.
- *
  * @param author Signature with author and author time of commit
  *
  * @param committer Signature with committer and * commit time of commit
@@ -331,7 +323,43 @@ GIT_EXTERN(int) git_commit_extract_signature(git_buf *signature, git_buf *signed
 GIT_EXTERN(int) git_commit_create(
 	git_oid *id,
 	git_repository *repo,
+	const git_signature *author,
+	const git_signature *committer,
+	const char *message_encoding,
+	const char *message,
+	const git_tree *tree,
+	size_t parent_count,
+	const git_commit *parents[]);
+
+/**
+ * Create a commit and update a reference
+ *
+ * @param update_ref reference to update with the new commit. The
+ * current tip of the reference must be the first commit in the parent
+ * list.
+ *
+ * @see git_commit_create
+ */
+GIT_EXTERN(int) git_commit_create_on(
+	git_oid *id,
+	git_repository *repo,
 	const char *update_ref,
+	const git_signature *author,
+	const git_signature *committer,
+	const char *message_encoding,
+	const char *message,
+	const git_tree *tree,
+	size_t parent_count,
+	const git_commit *parents[]);
+
+/**
+ * Create a commit and update the current branch
+ *
+ * @see git_commit_create
+ */
+GIT_EXTERN(int) git_commit_create_on_head(
+	git_oid *id,
+	git_repository *repo,
 	const git_signature *author,
 	const git_signature *committer,
 	const char *message_encoding,
