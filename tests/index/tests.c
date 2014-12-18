@@ -325,6 +325,7 @@ static void add_invalid_filename(git_repository *repo, const char *fn)
 
 	cl_assert(git_index_entrycount(index) == 0);
 
+	git_buf_free(&path);
 	git_index_free(index);
 }
 
@@ -399,6 +400,7 @@ static void write_invalid_filename(git_repository *repo, const char *fn_orig)
 	p_unlink(path.ptr);
 
 	cl_git_pass(git_index_remove_all(index, NULL, NULL, NULL));
+	git_buf_free(&path);
 	git_index_free(index);
 	git__free(fn);
 }
