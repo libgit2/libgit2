@@ -12,6 +12,15 @@
 #include "git2/oid.h"
 
 /**
+ * @file git2/sys/refs.h
+ * @brief Git reference allocation functions
+ * @defgroup git_reference Git reference allocation API
+ * @ingroup Git
+ * @{
+ */
+GIT_BEGIN_DECL
+
+/**
  * Create a new direct reference from an OID.
  *
  * @param name the reference name
@@ -34,5 +43,8 @@ GIT_EXTERN(git_reference *) git_reference__alloc(
 GIT_EXTERN(git_reference *) git_reference__alloc_symbolic(
 	const char *name,
 	const char *target);
+
+/** @} */
+GIT_END_DECL
 
 #endif
