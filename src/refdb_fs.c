@@ -707,10 +707,15 @@ static int reference_path_available(
 
 static int loose_lock(git_filebuf *file, refdb_fs_backend *backend, const char *name)
 {
-        int error;
+	int error;
 	git_buf ref_path = GIT_BUF_INIT;
 
 	assert(file && backend && name);
+
+	if (!git_path_isvalid(backend->repo, name, GIT_PATH_REJECT_DEFAULTS)) {
+		giterr_set(GITERR_INVALID, "Invalid reference name '%s'.", name);
+		return GIT_EINVALIDSPEC;
+	}
 
 	/* Remove a possibly existing empty directory hierarchy
 	 * which name would collide with the reference name
@@ -1652,6 +1657,11 @@ static int lock_reflog(git_filebuf *file, refdb_fs_backend *backend, const char 
 	int error;
 
 	repo = backend->repo;
+
+	if (!git_path_isvalid(backend->repo, refname, GIT_PATH_REJECT_DEFAULTS)) {
+		giterr_set(GITERR_INVALID, "Invalid reference name '%s'.", refname);
+		return GIT_EINVALIDSPEC;
+	}
 
 	if (retrieve_reflog_path(&log_path, repo, refname) < 0)
 		return -1;

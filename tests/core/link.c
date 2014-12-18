@@ -197,19 +197,6 @@ static void do_custom_reparse(const char *path)
 
 #endif
 
-git_buf *unslashify(git_buf *buf)
-{
-#ifdef GIT_WIN32
-	size_t i;
-
-	for (i = 0; i < buf->size; i++)
-		if (buf->ptr[i] == '/')
-			buf->ptr[i] = '\\';
-#endif
-
-	return buf;
-}
-
 void test_core_link__stat_regular_file(void)
 {
 	struct stat st;
@@ -584,7 +571,7 @@ void test_core_link__readlink_symlink(void)
 
 	buf[len] = 0;
 
-	cl_assert_equal_s(git_buf_cstr(unslashify(&target_path)), buf);
+	cl_assert_equal_s(git_buf_cstr(&target_path), buf);
 
 	git_buf_free(&target_path);
 }
@@ -607,7 +594,7 @@ void test_core_link__readlink_dangling(void)
 
 	buf[len] = 0;
 
-	cl_assert_equal_s(git_buf_cstr(unslashify(&target_path)), buf);
+	cl_assert_equal_s(git_buf_cstr(&target_path), buf);
 
 	git_buf_free(&target_path);
 }
@@ -636,7 +623,7 @@ void test_core_link__readlink_multiple(void)
 
 	buf[len] = 0;
 
-	cl_assert_equal_s(git_buf_cstr(unslashify(&path2)), buf);
+	cl_assert_equal_s(git_buf_cstr(&path2), buf);
 
 	git_buf_free(&path1);
 	git_buf_free(&path2);

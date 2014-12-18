@@ -247,11 +247,12 @@ GIT_EXTERN(int) git_tree_entry_to_object(
  * entries and will have to be filled manually.
  *
  * @param out Pointer where to store the tree builder
+ * @param repo Repository in which to store the object
  * @param source Source tree to initialize the builder (optional)
  * @return 0 on success; error code otherwise
  */
 GIT_EXTERN(int) git_treebuilder_create(
-	git_treebuilder **out, const git_tree *source);
+	git_treebuilder **out, git_repository *repo, const git_tree *source);
 
 /**
  * Clear all the entires in the builder
@@ -368,12 +369,11 @@ GIT_EXTERN(void) git_treebuilder_filter(
  * identifying SHA1 hash will be stored in the `id` pointer.
  *
  * @param id Pointer to store the OID of the newly written tree
- * @param repo Repository in which to store the object
  * @param bld Tree builder to write
  * @return 0 or an error code
  */
 GIT_EXTERN(int) git_treebuilder_write(
-	git_oid *id, git_repository *repo, git_treebuilder *bld);
+	git_oid *id, git_treebuilder *bld);
 
 
 /** Callback for the tree traversal method */
