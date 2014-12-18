@@ -340,8 +340,10 @@ void test_index_tests__add_invalid_filename(void)
 	cl_must_pass(p_mkdir("./invalid/subdir", 0777));
 
 	/* cl_git_mkfile() needs the dir to exist */
-	cl_must_pass(p_mkdir("./invalid/.GIT", 0777));
-	cl_must_pass(p_mkdir("./invalid/.GiT", 0777));
+	if (!git_path_exists("./invalid/.GIT"))
+		cl_must_pass(p_mkdir("./invalid/.GIT", 0777));
+	if (!git_path_exists("./invalid/.GiT"))
+		cl_must_pass(p_mkdir("./invalid/.GiT", 0777));
 
 	add_invalid_filename(repo, ".git/hello");
 	add_invalid_filename(repo, ".GIT/hello");
