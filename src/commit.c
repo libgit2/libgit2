@@ -314,6 +314,60 @@ int git_commit_create(
 		commit_parent_from_array, &data, false);
 }
 
+int git_commit_create_on(
+	git_oid *id,
+	git_repository *repo,
+	const char *update_ref,
+	const git_signature *author,
+	const git_signature *committer,
+	const char *message_encoding,
+	const char *message,
+	const git_tree *tree,
+	size_t parent_count,
+	const git_commit *parents[])
+{
+	commit_parent_data data = { parent_count, parents, repo };
+
+	assert(tree && git_tree_owner(tree) == repo);
+
+	return git_commit__create_internal(
+		id, repo, update_ref, author, committer,
+		message_encoding, message, git_tree_id(tree),
+		commit_parent_from_array, &data, false);
+}
+
+int git_commit_create_on_head(
+	git_oid *id,
+	git_repository *repo,
+	const git_signature *author,
+	const git_signature *committer,
+	const char *message_encoding,
+	const char *message,
+	const git_tree *tree,
+	size_t parent_count,
+	const git_commit *parents[])
+{
+	return git_commit_create_on(id, repo, GIT_HEAD_FILE,
+				    author, committer, message_encoding, message,
+				    tree, parent_count, parents);
+}
+
+int git_commit_create_ext(
+	git_oid *id,
+	git_repository *repo,
+	const git_signature *author,
+	const git_signature *committer,
+	const char *message_encoding,
+	const char *message,
+	const git_tree *tree,
+	size_t parent_count,
+	const git_commit *parents[])
+{
+	return git_commit_create_on(id, repo, NULL,
+				    author, committer, message_encoding, message,
+				    tree, parent_count, parents);
+}
+
 static const git_oid *commit_parent_for_amend(size_t curr, void *payload)
 {
 	const git_commit *commit_to_amend = payload;
@@ -455,9 +509,9 @@ int git_commit_create_fromstate(
 	if ((error = git_tree_lookup(&tree, repo, &tree_id)) < 0)
 		goto cleanup;
 
-	error = git_commit_create(id, repo, GIT_HEAD_FILE,
-				  author, committer, message_encoding, message,
-				  tree, commits.length, (const git_commit **) commits.contents);
+	error = git_commit_create_on(id, repo, GIT_HEAD_FILE,
+				     author, committer, message_encoding, message,
+				     tree, commits.length, (const git_commit **) commits.contents);
 
 cleanup:
 	git_tree_free(tree);

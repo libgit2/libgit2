@@ -137,10 +137,9 @@ static int commit_index(
 	if ((error = git_buf_printf(&msg, "index on %s\n", message)) < 0)
 		goto cleanup;
 
-	if ((error = git_commit_create(
+	if ((error = git_commit_create_ext(
 		&i_commit_oid,
 		git_index_owner(index),
-		NULL,
 		stasher,
 		stasher,
 		NULL,
@@ -312,10 +311,9 @@ static int commit_untracked(
 	if ((error = git_buf_printf(&msg, "untracked files on %s\n", message)) < 0)
 		goto cleanup;
 
-	if ((error = git_commit_create(
+	if ((error = git_commit_create_ext(
 		&u_commit_oid,
 		repo,
-		NULL,
 		stasher,
 		stasher,
 		NULL,
@@ -423,10 +421,9 @@ static int commit_worktree(
 	if ((error = build_workdir_tree(&w_tree, repo, i_index, b_commit)) < 0)
 		goto cleanup;
 
-	error = git_commit_create(
+	error = git_commit_create_ext(
 		w_commit_oid,
 		repo,
-		NULL,
 		stasher,
 		stasher,
 		NULL,

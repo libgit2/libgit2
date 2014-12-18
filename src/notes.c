@@ -301,9 +301,9 @@ static int note_write(
 		git_oid_cpy(notes_blob_out, &oid);
 
 
-	error = git_commit_create(&oid, repo, notes_ref, author, committer,
-				  NULL, GIT_NOTES_DEFAULT_MSG_ADD,
-				  tree, *parents == NULL ? 0 : 1, (const git_commit **) parents);
+	error = git_commit_create_on(&oid, repo, notes_ref, author, committer,
+				     NULL, GIT_NOTES_DEFAULT_MSG_ADD,
+				     tree, *parents == NULL ? 0 : 1, (const git_commit **) parents);
 
 	if (notes_commit_out)
 		git_oid_cpy(notes_commit_out, &oid);
@@ -390,7 +390,7 @@ static int note_remove(
 		remove_note_in_tree_eexists_cb, remove_note_in_tree_enotfound_cb)) < 0)
 		goto cleanup;
 
-	error = git_commit_create(&oid, repo, notes_ref, author, committer,
+	error = git_commit_create_on(&oid, repo, notes_ref, author, committer,
 	  NULL, GIT_NOTES_DEFAULT_MSG_RM,
 	  tree_after_removal,
 	  *parents == NULL ? 0 : 1,

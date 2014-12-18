@@ -423,7 +423,7 @@ void test_diff_rename__test_small_files(void)
 	cl_git_pass(git_index_write_tree(&oid, index));
 	cl_git_pass(git_tree_lookup(&commit_tree, g_repo, &oid));
 	cl_git_pass(git_signature_new(&signature, "Rename", "rename@example.com", 1404157834, 0));
-	cl_git_pass(git_commit_create(&oid, g_repo, "HEAD", signature, signature, NULL, "Test commit", commit_tree, 1, (const git_commit**)&head_commit));
+	cl_git_pass(git_commit_create_on(&oid, g_repo, "HEAD", signature, signature, NULL, "Test commit", commit_tree, 1, (const git_commit**)&head_commit));
 
 	cl_git_mkfile("renames/copy.txt", "Hello World!\n");
 	cl_git_rmfile("renames/small.txt");

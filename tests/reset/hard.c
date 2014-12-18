@@ -265,7 +265,7 @@ void test_reset_hard__switch_file_to_dir(void)
 	cl_git_pass(git_index_clear(idx));
 
 	cl_git_pass(git_tree_lookup(&tree, repo, &src_tree_id));
-	cl_git_pass(git_commit_create(&src_id, repo, NULL, sig, sig, NULL, "foo", tree, 0, NULL));
+	cl_git_pass(git_commit_create_ext(&src_id, repo, sig, sig, NULL, "foo", tree, 0, NULL));
 	git_tree_free(tree);
 
 	/* Create the new tree */
@@ -276,7 +276,7 @@ void test_reset_hard__switch_file_to_dir(void)
 
 	cl_git_pass(git_index_write_tree_to(&tgt_tree_id, idx, repo));
 	cl_git_pass(git_tree_lookup(&tree, repo, &tgt_tree_id));
-	cl_git_pass(git_commit_create(&tgt_id, repo, NULL, sig, sig, NULL, "foo", tree, 0, NULL));
+	cl_git_pass(git_commit_create_ext(&tgt_id, repo, sig, sig, NULL, "foo", tree, 0, NULL));
 	git_tree_free(tree);
 	git_index_free(idx);
 	git_signature_free(sig);

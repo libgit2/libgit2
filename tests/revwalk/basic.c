@@ -533,7 +533,7 @@ void test_revwalk_basic__big_timestamp(void)
 	cl_git_pass(git_signature_new(&sig, "Joe", "joe@example.com", 2399662595ll, 0));
 	cl_git_pass(git_commit_tree(&tree, tip));
 
-	cl_git_pass(git_commit_create(&id, _repo, "HEAD", sig, sig, NULL, "some message", tree, 1,
+	cl_git_pass(git_commit_create_on(&id, _repo, "HEAD", sig, sig, NULL, "some message", tree, 1,
 		(const git_commit **)&tip));
 
 	cl_git_pass(git_revwalk_push_head(_walk));

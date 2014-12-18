@@ -123,7 +123,7 @@ void test_odb_freshen__tree_during_commit(void)
 	cl_git_pass(git_signature_new(&signature,
 		"Refresher", "refresher@example.com", 1488547083, 0));
 
-	cl_git_pass(git_commit_create(&commit_id, repo, NULL,
+	cl_git_pass(git_commit_create_ext(&commit_id, repo,
 		signature, signature, NULL, "New commit pointing to old tree",
 		tree, 1, (const git_commit **)&parent));
 
