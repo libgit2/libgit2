@@ -1254,7 +1254,7 @@ GIT_INLINE(bool) verify_dospath(
 	if (len < last || git__strncasecmp(component, dospath, 3) != 0)
 		return true;
 
-	if (trailing_num && !git__isdigit(component[3]))
+	if (trailing_num && (component[3] < '1' || component[3] > '9'))
 		return true;
 
 	return (len > last &&

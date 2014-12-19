@@ -233,6 +233,8 @@ void test_path_core__isvalid_dos_paths_withnum(void)
 	cl_assert_equal_b(false, git_path_isvalid(NULL, "com1.asdf\\zippy", GIT_PATH_REJECT_DOS_PATHS));
 	cl_assert_equal_b(false, git_path_isvalid(NULL, "com1:asdf\\foobar", GIT_PATH_REJECT_DOS_PATHS));
 
+	cl_assert_equal_b(true, git_path_isvalid(NULL, "com0", 0));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, "com0", GIT_PATH_REJECT_DOS_PATHS));
 	cl_assert_equal_b(true, git_path_isvalid(NULL, "com10", 0));
 	cl_assert_equal_b(true, git_path_isvalid(NULL, "com10", GIT_PATH_REJECT_DOS_PATHS));
 	cl_assert_equal_b(true, git_path_isvalid(NULL, "comn", GIT_PATH_REJECT_DOS_PATHS));
