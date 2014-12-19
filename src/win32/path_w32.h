@@ -7,6 +7,8 @@
 #ifndef INCLUDE_git_path_w32_h__
 #define INCLUDE_git_path_w32_h__
 
+#include "common.h"
+
 /*
  * Provides a large enough buffer to support Windows paths:  MAX_PATH is
  * 260, corresponding to a maximum path length of 259 characters plus a
