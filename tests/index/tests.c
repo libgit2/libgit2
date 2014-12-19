@@ -325,6 +325,7 @@ static void add_invalid_filename(git_repository *repo, const char *fn)
 
 	cl_assert(git_index_entrycount(index) == 0);
 
+	git_buf_free(&path);
 	git_index_free(index);
 }
 
@@ -337,6 +338,12 @@ void test_index_tests__add_invalid_filename(void)
 
 	cl_git_pass(git_repository_init(&repo, "./invalid", 0));
 	cl_must_pass(p_mkdir("./invalid/subdir", 0777));
+
+	/* cl_git_mkfile() needs the dir to exist */
+	if (!git_path_exists("./invalid/.GIT"))
+		cl_must_pass(p_mkdir("./invalid/.GIT", 0777));
+	if (!git_path_exists("./invalid/.GiT"))
+		cl_must_pass(p_mkdir("./invalid/.GiT", 0777));
 
 	add_invalid_filename(repo, ".git/hello");
 	add_invalid_filename(repo, ".GIT/hello");
@@ -395,6 +402,7 @@ static void write_invalid_filename(git_repository *repo, const char *fn_orig)
 	p_unlink(path.ptr);
 
 	cl_git_pass(git_index_remove_all(index, NULL, NULL, NULL));
+	git_buf_free(&path);
 	git_index_free(index);
 	git__free(fn);
 }
