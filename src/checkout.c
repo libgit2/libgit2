@@ -1078,6 +1078,30 @@ done:
 	return error;
 }
 
+static int checkout_verify_paths(
+	git_repository *repo,
+	int action,
+	git_diff_delta *delta)
+{
+	unsigned int flags = GIT_PATH_REJECT_DEFAULTS | GIT_PATH_REJECT_DOT_GIT;
+
+	if (action & CHECKOUT_ACTION__REMOVE) {
+		if (!git_path_isvalid(repo, delta->old_file.path, flags)) {
+			giterr_set(GITERR_CHECKOUT, "Cannot remove invalid path '%s'", delta->old_file.path);
+			return -1;
+		}
+	}
+
+	if (action & ~CHECKOUT_ACTION__REMOVE) {
+		if (!git_path_isvalid(repo, delta->new_file.path, flags)) {
+			giterr_set(GITERR_CHECKOUT, "Cannot checkout to invalid path '%s'", delta->old_file.path);
+			return -1;
+		}
+	}
+
+	return 0;
+}
+
 static int checkout_get_actions(
 	uint32_t **actions_ptr,
 	size_t **counts_ptr,
@@ -1111,7 +1135,9 @@ static int checkout_get_actions(
 	}
 
 	git_vector_foreach(deltas, i, delta) {
-		error = checkout_action(&act, data, delta, workdir, &wditem, &pathspec);
+		if ((error = checkout_action(&act, data, delta, workdir, &wditem, &pathspec)) == 0)
+			error = checkout_verify_paths(data->repo, act, delta);
+
 		if (error != 0)
 			goto fail;
 
