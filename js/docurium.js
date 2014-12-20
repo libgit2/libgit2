@@ -213,42 +213,54 @@ $(function() {
       var fname = this.get('fname')
       var docurium = this.get('docurium')
 
+      var isCallback = gname === 'callback'
       var group = docurium.getGroup(gname)
 
       var fdata = docurium.get('data')['functions']
-      var functions = group[1]
+
+      var ldata = fdata
+      if (isCallback) {
+	var cdata = docurium.get('data')['callbacks']
+	ldata = cdata
+      } else {
+	var functions = group[1]
+      }
 
       // Function Arguments
-      var args = _.map(fdata[fname]['args'], function(arg) {
+      var args = _.map(ldata[fname]['args'], function(arg) {
 	return {link: this.hotLink(arg.type), name: arg.name, comment: arg.comment}
       }, docurium)
 
-      var data = fdata[fname]
+      var data = ldata[fname]
       // function return value
       var ret = data['return']
       var returns = {link: docurium.hotLink(ret.type), comment: ret.comment}
       // function signature
       var sig = docurium.hotLink(ret.type) + ' ' + fname + '(' + data['argline'] + ');'
       // version history
-      var sigHist = docurium.get('signatures')[fname]
-      var version = docurium.get('version')
-      var sigs = _.map(sigHist.exists, function(ver) {
-	var klass = []
-	if (sigHist.changes[ver])
-	  klass.push('changed')
-	if (ver == version)
-	  klass.push('current')
+      if (!isCallback) {
+	var sigHist = docurium.get('signatures')[fname]
+	var version = docurium.get('version')
+	var sigs = _.map(sigHist.exists, function(ver) {
+	  var klass = []
+	  if (sigHist.changes[ver])
+	    klass.push('changed')
+	  if (ver == version)
+	    klass.push('current')
 
-	return {url: '#' + functionLink(gname, fname, ver), name: ver, klass: klass.join(' ')}
-      })
+	  return {url: '#' + functionLink(gname, fname, ver), name: ver, klass: klass.join(' ')}
+	})
+      }
       // GitHub link
       var fileLink = docurium.github_file(data.file, data.line, data.lineto)
       // link to the group
-      var version = docurium.get('version')
-      var alsoGroup = '#' + groupLink(group[0], version)
-      var alsoLinks = _.map(functions, function(f) {
-	return {url: '#' + functionLink(gname, f, version), name: f}
-      })
+      if (!isCallback) {
+	var version = docurium.get('version')
+	var alsoGroup = '#' + groupLink(group[0], version)
+	var alsoLinks = _.map(functions, function(f) {
+	  return {url: '#' + functionLink(gname, f, version), name: f}
+	})
+      }
 
       this.set('data', {name: fname, data: data, args: args, returns: returns, sig: sig,
 			sigs: sigs, fileLink: fileLink, groupName: gname,
@@ -381,6 +393,7 @@ $(function() {
       var group = o.group
       var gname = group[0]
       var fdata = o.functions
+      var cdata = o.callbacks
       var version = o.version
 
       this.functions = _.map(group[1], function(name) {
@@ -471,6 +484,16 @@ $(function() {
         }
       })
 
+      // look for callbacks
+      _.each(data.callbacks, function(f, name) {
+	if (name.search(value) > -1) {
+	  var gl = functionLink('callback', name, version)
+	  var url = '#' + gl
+	  searchResults.push({url: url, name: name, match: 'callback', navigate: gl})
+	  return
+	}
+      })
+
       this.reset(searchResults)
     },
   })
@@ -556,14 +579,23 @@ $(function() {
     hotLink: function(text) {
       types = this.get('data')['types']
       var version = this.get('version')
+
       for(var i=0; i<types.length; i++) {
         type = types[i]
         typeName = type[0]
         typeData = type[1]
-        re = new RegExp(typeName + ' ', 'gi');
+        re = new RegExp(typeName + '\\s', 'gi');
         var link = $('<a>').attr('href', '#' + typeLink(typeName, version)).append(typeName)[0]
         text = text.replace(re, link.outerHTML + ' ')
       }
+
+      var callbacks = this.get('data')['callbacks']
+      _.each(callbacks, function(cb, typeName) {
+        re = new RegExp(typeName + '$', 'gi');
+        var link = $('<a>').attr('href', '#' + functionLink('callback', typeName, version)).append(typeName)[0]
+        text = text.replace(re, link.outerHTML + ' ')
+      });
+
       return text
     },
 
@@ -624,8 +656,9 @@ $(function() {
       this.doc.setVersion(version)
       var group = this.doc.getGroup(gname)
       var fdata = this.doc.get('data')['functions']
+      var cdata = this.doc.get('data')['callbacks']
       var version = this.doc.get('version')
-      var view = new GroupView({group: group, functions: fdata, version: version})
+      var view = new GroupView({group: group, functions: fdata, callbacks: cdata, version: version})
       this.mainView.setActive(view)
     },
 
