@@ -19,6 +19,14 @@
 
 #include <ctype.h>
 
+void git_config_entry_free(git_config_entry *entry)
+{
+	if (!entry)
+		return;
+
+	entry->free(entry);
+}
+
 typedef struct {
 	git_refcount rc;
 
@@ -638,7 +646,7 @@ int git_config__update_entry(
 	bool only_if_existing)
 {
 	int error = 0;
-	const git_config_entry *ce = NULL;
+	git_config_entry *ce = NULL;
 
 	if ((error = git_config__lookup_entry(&ce, config, key, false)) < 0)
 		return error;
@@ -657,6 +665,7 @@ int git_config__update_entry(
 	else
 		error = git_config_set_string(config, key, value);
 
+	git_config_entry_free(ce);
 	return error;
 }
 
@@ -677,7 +686,7 @@ enum {
 };
 
 static int get_entry(
-	const git_config_entry **out,
+	git_config_entry **out,
 	const git_config *cfg,
 	const char *name,
 	bool normalize_name,
@@ -721,13 +730,13 @@ cleanup:
 }
 
 int git_config_get_entry(
-	const git_config_entry **out, const git_config *cfg, const char *name)
+	git_config_entry **out, const git_config *cfg, const char *name)
 {
 	return get_entry(out, cfg, name, true, GET_ALL_ERRORS);
 }
 
 int git_config__lookup_entry(
-	const git_config_entry **out,
+	git_config_entry **out,
 	const git_config *cfg,
 	const char *key,
 	bool no_errors)
@@ -743,87 +752,154 @@ int git_config_get_mapped(
 	const git_cvar_map *maps,
 	size_t map_n)
 {
-	const git_config_entry *entry;
+	git_config_entry *entry;
 	int ret;
 
 	if ((ret = get_entry(&entry, cfg, name, true, GET_ALL_ERRORS)) < 0)
 		return ret;
 
-	return git_config_lookup_map_value(out, maps, map_n, entry->value);
+	ret = git_config_lookup_map_value(out, maps, map_n, entry->value);
+	git_config_entry_free(entry);
+
+	return ret;
 }
 
 int git_config_get_int64(int64_t *out, const git_config *cfg, const char *name)
 {
-	const git_config_entry *entry;
+	git_config_entry *entry;
 	int ret;
 
 	if ((ret = get_entry(&entry, cfg, name, true, GET_ALL_ERRORS)) < 0)
 		return ret;
 
-	return git_config_parse_int64(out, entry->value);
+	ret = git_config_parse_int64(out, entry->value);
+	git_config_entry_free(entry);
+
+	return ret;
 }
 
 int git_config_get_int32(int32_t *out, const git_config *cfg, const char *name)
 {
-	const git_config_entry *entry;
+	git_config_entry *entry;
 	int ret;
 
 	if ((ret = get_entry(&entry, cfg, name, true, GET_ALL_ERRORS)) < 0)
 		return ret;
 
-	return git_config_parse_int32(out, entry->value);
+	ret = git_config_parse_int32(out, entry->value);
+	git_config_entry_free(entry);
+
+	return ret;
 }
 
 int git_config_get_bool(int *out, const git_config *cfg, const char *name)
 {
-	const git_config_entry *entry;
+	git_config_entry *entry;
 	int ret;
 
 	if ((ret = get_entry(&entry, cfg, name, true, GET_ALL_ERRORS)) < 0)
 		return ret;
 
-	return git_config_parse_bool(out, entry->value);
+	ret = git_config_parse_bool(out, entry->value);
+	git_config_entry_free(entry);
+
+	return ret;
+}
+
+static int is_readonly(const git_config *cfg)
+{
+	size_t i;
+	file_internal *internal;
+
+	git_vector_foreach(&cfg->files, i, internal) {
+		if (!internal || !internal->file)
+			continue;
+
+		if (!internal->file->readonly)
+			return 0;
+	}
+
+	return 1;
 }
 
 int git_config_get_path(git_buf *out, const git_config *cfg, const char *name)
 {
-	const git_config_entry *entry;
+	git_config_entry *entry;
 	int error;
 
 	if ((error = get_entry(&entry, cfg, name, true, GET_ALL_ERRORS)) < 0)
 		return error;
 
-	return git_config_parse_path(out, entry->value);
+	 error = git_config_parse_path(out, entry->value);
+	 git_config_entry_free(entry);
+
+	 return error;
 }
 
 int git_config_get_string(
 	const char **out, const git_config *cfg, const char *name)
 {
-	const git_config_entry *entry;
-	int ret = get_entry(&entry, cfg, name, true, GET_ALL_ERRORS);
+	git_config_entry *entry;
+	int ret;
+
+	if (!is_readonly(cfg)) {
+		giterr_set(GITERR_CONFIG, "get_string called on a live config object");
+		return -1;
+	}
+
+	ret = get_entry(&entry, cfg, name, true, GET_ALL_ERRORS);
 	*out = !ret ? (entry->value ? entry->value : "") : NULL;
+
+	git_config_entry_free(entry);
+
 	return ret;
 }
 
-const char *git_config__get_string_force(
+int git_config_get_string_buf(
+	git_buf *out, const git_config *cfg, const char *name)
+{
+	git_config_entry *entry;
+	int ret;
+	const char *str;
+
+	git_buf_sanitize(out);
+
+	ret  = get_entry(&entry, cfg, name, true, GET_ALL_ERRORS);
+	str = !ret ? (entry->value ? entry->value : "") : NULL;
+
+	if (str)
+		ret = git_buf_puts(out, str);
+
+	git_config_entry_free(entry);
+
+	return ret;
+}
+
+char *git_config__get_string_force(
 	const git_config *cfg, const char *key, const char *fallback_value)
 {
-	const git_config_entry *entry;
+	git_config_entry *entry;
+	char *ret;
+
 	get_entry(&entry, cfg, key, false, GET_NO_ERRORS);
-	return (entry && entry->value) ? entry->value : fallback_value;
+	ret = (entry && entry->value) ? git__strdup(entry->value) : fallback_value ? git__strdup(fallback_value) : NULL;
+	git_config_entry_free(entry);
+
+	return ret;
 }
 
 int git_config__get_bool_force(
 	const git_config *cfg, const char *key, int fallback_value)
 {
 	int val = fallback_value;
-	const git_config_entry *entry;
+	git_config_entry *entry;
 
 	get_entry(&entry, cfg, key, false, GET_NO_ERRORS);
 
 	if (entry && git_config_parse_bool(&val, entry->value) < 0)
 		giterr_clear();
 
+	git_config_entry_free(entry);
 	return val;
 }
 
@@ -831,13 +907,14 @@ int git_config__get_int_force(
 	const git_config *cfg, const char *key, int fallback_value)
 {
 	int32_t val = (int32_t)fallback_value;
-	const git_config_entry *entry;
+	git_config_entry *entry;
 
 	get_entry(&entry, cfg, key, false, GET_NO_ERRORS);
 
 	if (entry && git_config_parse_int32(&val, entry->value) < 0)
 		giterr_clear();
 
+	git_config_entry_free(entry);
 	return (int)val;
 }
 

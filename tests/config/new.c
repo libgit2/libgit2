@@ -8,8 +8,8 @@
 
 void test_config_new__write_new_config(void)
 {
-	const char *out;
 	git_config *config;
+	git_buf buf = GIT_BUF_INIT;
 
 	cl_git_mkfile(TEST_CONFIG, "");
 	cl_git_pass(git_config_open_ondisk(&config, TEST_CONFIG));
@@ -21,11 +21,13 @@ void test_config_new__write_new_config(void)
 
 	cl_git_pass(git_config_open_ondisk(&config, TEST_CONFIG));
 
-	cl_git_pass(git_config_get_string(&out, config, "color.ui"));
-	cl_assert_equal_s(out, "auto");
-	cl_git_pass(git_config_get_string(&out, config, "core.editor"));
-	cl_assert_equal_s(out, "ed");
+	cl_git_pass(git_config_get_string_buf(&buf, config, "color.ui"));
+	cl_assert_equal_s("auto", git_buf_cstr(&buf));
+	git_buf_clear(&buf);
+	cl_git_pass(git_config_get_string_buf(&buf, config, "core.editor"));
+	cl_assert_equal_s("ed", git_buf_cstr(&buf));
 
+	git_buf_free(&buf);
 	git_config_free(config);
 
 	p_unlink(TEST_CONFIG);

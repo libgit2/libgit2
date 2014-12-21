@@ -3,7 +3,6 @@
 #include "config.h"
 
 static git_config *cfg;
-static const char *value;
 
 void test_config_validkeyname__initialize(void)
 {
@@ -22,7 +21,9 @@ void test_config_validkeyname__cleanup(void)
 
 static void assert_invalid_config_key_name(const char *name)
 {
-	cl_git_fail_with(git_config_get_string(&value, cfg, name),
+	git_buf buf = GIT_BUF_INIT;
+
+	cl_git_fail_with(git_config_get_string_buf(&buf, cfg, name),
 		GIT_EINVALIDSPEC);
 	cl_git_fail_with(git_config_set_string(cfg, name, "42"),
 		GIT_EINVALIDSPEC);

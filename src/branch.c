@@ -301,7 +301,7 @@ int git_branch_name(
 }
 
 static int retrieve_upstream_configuration(
-	const char **out,
+	git_buf *out,
 	const git_config *config,
 	const char *canonical_branch_name,
 	const char *format)
@@ -313,7 +313,7 @@ static int retrieve_upstream_configuration(
 		canonical_branch_name + strlen(GIT_REFS_HEADS_DIR)) < 0)
 			return -1;
 
-	error = git_config_get_string(out, config, git_buf_cstr(&buf));
+	error = git_config_get_string_buf(out, config, git_buf_cstr(&buf));
 	git_buf_free(&buf);
 	return error;
 }
@@ -323,7 +323,8 @@ int git_branch_upstream_name(
 	git_repository *repo,
 	const char *refname)
 {
-	const char *remote_name, *merge_name;
+	git_buf remote_name = GIT_BUF_INIT;
+	git_buf merge_name = GIT_BUF_INIT;
 	git_buf buf = GIT_BUF_INIT;
 	int error = -1;
 	git_remote *remote = NULL;
@@ -348,27 +349,27 @@ int git_branch_upstream_name(
 		&merge_name, config, refname, "branch.%s.merge")) < 0)
 			goto cleanup;
 
-	if (!*remote_name || !*merge_name) {
+	if (git_buf_len(&remote_name) == 0 || git_buf_len(&merge_name) == 0) {
 		giterr_set(GITERR_REFERENCE,
 			"branch '%s' does not have an upstream", refname);
 		error = GIT_ENOTFOUND;
 		goto cleanup;
 	}
 
-	if (strcmp(".", remote_name) != 0) {
-		if ((error = git_remote_lookup(&remote, repo, remote_name)) < 0)
+	if (strcmp(".", git_buf_cstr(&remote_name)) != 0) {
+		if ((error = git_remote_lookup(&remote, repo, git_buf_cstr(&remote_name))) < 0)
 			goto cleanup;
 
-		refspec = git_remote__matching_refspec(remote, merge_name);
+		refspec = git_remote__matching_refspec(remote, git_buf_cstr(&merge_name));
 		if (!refspec) {
 			error = GIT_ENOTFOUND;
 			goto cleanup;
 		}
 
-		if (git_refspec_transform(&buf, refspec, merge_name) < 0)
+		if (git_refspec_transform(&buf, refspec, git_buf_cstr(&merge_name)) < 0)
 			goto cleanup;
 	} else
-		if (git_buf_sets(&buf, merge_name) < 0)
+		if (git_buf_set(&buf, git_buf_cstr(&merge_name), git_buf_len(&merge_name)) < 0)
 			goto cleanup;
 
 	error = git_buf_set(out, git_buf_cstr(&buf), git_buf_len(&buf));
@@ -376,6 +377,8 @@ int git_branch_upstream_name(
 cleanup:
 	git_config_free(config);
 	git_remote_free(remote);
+	git_buf_free(&remote_name);
+	git_buf_free(&merge_name);
 	git_buf_free(&buf);
 	return error;
 }
@@ -383,29 +386,25 @@ cleanup:
 int git_branch_upstream_remote(git_buf *buf, git_repository *repo, const char *refname)
 {
 	int error;
-	const char *str;
 	git_config *cfg;
 
 	if (!git_reference__is_branch(refname))
 		return not_a_local_branch(refname);
 
-	git_buf_sanitize(buf);
-	if ((error = git_repository_config_snapshot(&cfg, repo)) < 0)
+	if ((error = git_repository_config__weakptr(&cfg, repo)) < 0)
 		return error;
 
-	if ((error = retrieve_upstream_configuration(&str, cfg, refname, "branch.%s.remote")) < 0)
-		goto cleanup;
+	git_buf_sanitize(buf);
 
-	if (!*str) {
+	if ((error = retrieve_upstream_configuration(buf, cfg, refname, "branch.%s.remote")) < 0)
+		return error;
+
+	if (git_buf_len(buf) == 0) {
 		giterr_set(GITERR_REFERENCE, "branch '%s' does not have an upstream remote", refname);
 		error = GIT_ENOTFOUND;
-		goto cleanup;
+		git_buf_clear(buf);
 	}
 
-	error = git_buf_puts(buf, str);
-
-cleanup:
-	git_config_free(cfg);
 	return error;
 }
 

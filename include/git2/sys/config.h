@@ -53,11 +53,13 @@ struct git_config_iterator {
  */
 struct git_config_backend {
 	unsigned int version;
+	/** True if this backend is for a snapshot */
+	int readonly;
 	struct git_config *cfg;
 
 	/* Open means open the file/database and parse if necessary */
 	int (*open)(struct git_config_backend *, git_config_level_t level);
-	int (*get)(struct git_config_backend *, const char *key, const git_config_entry **entry);
+	int (*get)(struct git_config_backend *, const char *key, git_config_entry **entry);
 	int (*set)(struct git_config_backend *, const char *key, const char *value);
 	int (*set_multivar)(git_config_backend *cfg, const char *name, const char *regexp, const char *value);
 	int (*del)(struct git_config_backend *, const char *key);

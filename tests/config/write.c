@@ -1,4 +1,5 @@
 #include "clar_libgit2.h"
+#include "buffer.h"
 
 void test_config_write__initialize(void)
 {
@@ -108,15 +109,17 @@ void test_config_write__delete_value_at_specific_level(void)
 void test_config_write__write_subsection(void)
 {
 	git_config *cfg;
-	const char *str;
+	git_buf buf = GIT_BUF_INIT;
 
 	cl_git_pass(git_config_open_ondisk(&cfg, "config9"));
 	cl_git_pass(git_config_set_string(cfg, "my.own.var", "works"));
 	git_config_free(cfg);
 
 	cl_git_pass(git_config_open_ondisk(&cfg, "config9"));
-	cl_git_pass(git_config_get_string(&str, cfg, "my.own.var"));
-	cl_assert_equal_s("works", str);
+	cl_git_pass(git_config_get_string_buf(&buf, cfg, "my.own.var"));
+	cl_assert_equal_s("works", git_buf_cstr(&buf));
+
+	git_buf_free(&buf);
 	git_config_free(cfg);
 }
 
@@ -132,46 +135,52 @@ void test_config_write__delete_inexistent(void)
 void test_config_write__value_containing_quotes(void)
 {
 	git_config *cfg;
-	const char* str;
+	git_buf buf = GIT_BUF_INIT;
 
 	cl_git_pass(git_config_open_ondisk(&cfg, "config9"));
 	cl_git_pass(git_config_set_string(cfg, "core.somevar", "this \"has\" quotes"));
-	cl_git_pass(git_config_get_string(&str, cfg, "core.somevar"));
-	cl_assert_equal_s(str, "this \"has\" quotes");
+	cl_git_pass(git_config_get_string_buf(&buf, cfg, "core.somevar"));
+	cl_assert_equal_s("this \"has\" quotes", git_buf_cstr(&buf));
+	git_buf_clear(&buf);
 	git_config_free(cfg);
 
 	cl_git_pass(git_config_open_ondisk(&cfg, "config9"));
-	cl_git_pass(git_config_get_string(&str, cfg, "core.somevar"));
-	cl_assert_equal_s(str, "this \"has\" quotes");
+	cl_git_pass(git_config_get_string_buf(&buf, cfg, "core.somevar"));
+	cl_assert_equal_s("this \"has\" quotes", git_buf_cstr(&buf));
+	git_buf_clear(&buf);
 	git_config_free(cfg);
 
 	/* The code path for values that already exist is different, check that one as well */
 	cl_git_pass(git_config_open_ondisk(&cfg, "config9"));
 	cl_git_pass(git_config_set_string(cfg, "core.somevar", "this also \"has\" quotes"));
-	cl_git_pass(git_config_get_string(&str, cfg, "core.somevar"));
-	cl_assert_equal_s(str, "this also \"has\" quotes");
+	cl_git_pass(git_config_get_string_buf(&buf, cfg, "core.somevar"));
+	cl_assert_equal_s("this also \"has\" quotes", git_buf_cstr(&buf));
+	git_buf_clear(&buf);
 	git_config_free(cfg);
 
 	cl_git_pass(git_config_open_ondisk(&cfg, "config9"));
-	cl_git_pass(git_config_get_string(&str, cfg, "core.somevar"));
-	cl_assert_equal_s(str, "this also \"has\" quotes");
+	cl_git_pass(git_config_get_string_buf(&buf, cfg, "core.somevar"));
+	cl_assert_equal_s("this also \"has\" quotes", git_buf_cstr(&buf));
+	git_buf_free(&buf);
 	git_config_free(cfg);
 }
 
 void test_config_write__escape_value(void)
 {
 	git_config *cfg;
-	const char* str;
+	git_buf buf = GIT_BUF_INIT;
 
 	cl_git_pass(git_config_open_ondisk(&cfg, "config9"));
 	cl_git_pass(git_config_set_string(cfg, "core.somevar", "this \"has\" quotes and \t"));
-	cl_git_pass(git_config_get_string(&str, cfg, "core.somevar"));
-	cl_assert_equal_s(str, "this \"has\" quotes and \t");
+	cl_git_pass(git_config_get_string_buf(&buf, cfg, "core.somevar"));
+	cl_assert_equal_s("this \"has\" quotes and \t", git_buf_cstr(&buf));
+	git_buf_clear(&buf);
 	git_config_free(cfg);
 
 	cl_git_pass(git_config_open_ondisk(&cfg, "config9"));
-	cl_git_pass(git_config_get_string(&str, cfg, "core.somevar"));
-	cl_assert_equal_s(str, "this \"has\" quotes and \t");
+	cl_git_pass(git_config_get_string_buf(&buf, cfg, "core.somevar"));
+	cl_assert_equal_s("this \"has\" quotes and \t", git_buf_cstr(&buf));
+	git_buf_free(&buf);
 	git_config_free(cfg);
 }
 
@@ -180,7 +189,7 @@ void test_config_write__add_value_at_specific_level(void)
 	git_config *cfg, *cfg_specific;
 	int i;
 	int64_t l, expected = +9223372036854775803;
-	const char *s;
+	git_buf buf = GIT_BUF_INIT;
 
 	// open config15 as global level config file
 	cl_git_pass(git_config_new(&cfg));
@@ -207,9 +216,10 @@ void test_config_write__add_value_at_specific_level(void)
 	cl_assert(l == expected);
 	cl_git_pass(git_config_get_bool(&i, cfg, "core.boolglobal"));
 	cl_assert_equal_b(true, i);
-	cl_git_pass(git_config_get_string(&s, cfg, "core.stringglobal"));
-	cl_assert_equal_s("I'm a global config value!", s);
+	cl_git_pass(git_config_get_string_buf(&buf, cfg, "core.stringglobal"));
+	cl_assert_equal_s("I'm a global config value!", git_buf_cstr(&buf));
 
+	git_buf_free(&buf);
 	git_config_free(cfg);
 }
 
@@ -247,7 +257,7 @@ void test_config_write__add_section_at_file_with_no_clrf_at_the_end(void)
 
 void test_config_write__add_value_which_needs_quotes(void)
 {
-	git_config *cfg;
+	git_config *cfg, *base;
 	const char* str1;
 	const char* str2;
 	const char* str3;
@@ -262,7 +272,8 @@ void test_config_write__add_value_which_needs_quotes(void)
 	cl_git_pass(git_config_set_string(cfg, "core.startwhithsapceandcontainsdoublequote", " some\"thing"));
 	git_config_free(cfg);
 
-	cl_git_pass(git_config_open_ondisk(&cfg, "config17"));
+	cl_git_pass(git_config_open_ondisk(&base, "config17"));
+	cl_git_pass(git_config_snapshot(&cfg, base));
 	cl_git_pass(git_config_get_string(&str1, cfg, "core.startwithspace"));
 	cl_assert_equal_s(" Something", str1);
 	cl_git_pass(git_config_get_string(&str2, cfg, "core.endwithspace"));
@@ -274,6 +285,7 @@ void test_config_write__add_value_which_needs_quotes(void)
 	cl_git_pass(git_config_get_string(&str5, cfg, "core.startwhithsapceandcontainsdoublequote"));
 	cl_assert_equal_s(" some\"thing", str5);
 	git_config_free(cfg);
+	git_config_free(base);
 }
 
 void test_config_write__can_set_a_value_to_NULL(void)
@@ -294,15 +306,16 @@ void test_config_write__can_set_an_empty_value(void)
 {
 	git_repository *repository;
 	git_config *config;
-	const char * str;
+	git_buf buf = {0};
 
 	repository = cl_git_sandbox_init("testrepo.git");
 	cl_git_pass(git_repository_config(&config, repository));
 
 	cl_git_pass(git_config_set_string(config, "core.somevar", ""));
-	cl_git_pass(git_config_get_string(&str, config, "core.somevar"));
-	cl_assert_equal_s(str, "");
+	cl_git_pass(git_config_get_string_buf(&buf, config, "core.somevar"));
+	cl_assert_equal_s("", buf.ptr);
 
+	git_buf_free(&buf);
 	git_config_free(config);
 	cl_git_sandbox_cleanup();
 }

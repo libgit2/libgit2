@@ -46,7 +46,7 @@ void test_repo_setters__setting_a_workdir_prettifies_its_path(void)
 void test_repo_setters__setting_a_workdir_creates_a_gitlink(void)
 {
 	git_config *cfg;
-	const char *val;
+	git_buf buf = GIT_BUF_INIT;
 	git_buf content = GIT_BUF_INIT;
 
 	cl_git_pass(git_repository_set_workdir(repo, "./new_workdir", true));
@@ -59,8 +59,10 @@ void test_repo_setters__setting_a_workdir_creates_a_gitlink(void)
 	git_buf_free(&content);
 
 	cl_git_pass(git_repository_config(&cfg, repo));
-	cl_git_pass(git_config_get_string(&val, cfg, "core.worktree"));
-	cl_assert(git__suffixcmp(val, "new_workdir/") == 0);
+	cl_git_pass(git_config_get_string_buf(&buf, cfg, "core.worktree"));
+	cl_assert(git__suffixcmp(git_buf_cstr(&buf), "new_workdir/") == 0);
+
+	git_buf_free(&buf);
 	git_config_free(cfg);
 }
 

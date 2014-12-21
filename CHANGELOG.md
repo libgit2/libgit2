@@ -25,6 +25,11 @@ v0.22 + 1
   set and query which identity will be used when writing to the
   reflog.
 
+* `git_config_entry_free()` frees a config entry.
+
+* `git_config_get_string_buf()` provides a way to safely retrieve a
+  string from a non-snapshot configuration.
+
 ### API removals
 
 ### Breaking API changes
@@ -52,6 +57,13 @@ v0.22 + 1
       `git_repository_set_head_detached()`,
       `git_repository_detach_head()`
     * `git_reset()`
+
+* `git_config_get_entry()` now gives back a ref-counted
+  `git_config_entry`. You must free it when you no longer need it.
+
+* `git_config_get_string()` will return an error if used on a
+  non-snapshot configuration, as there can be no guarantee that the
+  returned pointer is valid.
 
 v0.22
 ------

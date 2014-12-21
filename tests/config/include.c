@@ -5,20 +5,20 @@
 void test_config_include__relative(void)
 {
 	git_config *cfg;
-	const char *str;
+	git_buf buf = GIT_BUF_INIT;
 
 	cl_git_pass(git_config_open_ondisk(&cfg, cl_fixture("config/config-include")));
 
-	cl_git_pass(git_config_get_string(&str, cfg, "foo.bar.baz"));
-	cl_assert_equal_s(str, "huzzah");
+	cl_git_pass(git_config_get_string_buf(&buf, cfg, "foo.bar.baz"));
+	cl_assert_equal_s("huzzah", git_buf_cstr(&buf));
 
+	git_buf_free(&buf);
 	git_config_free(cfg);
 }
 
 void test_config_include__absolute(void)
 {
 	git_config *cfg;
-	const char *str;
 	git_buf buf = GIT_BUF_INIT;
 
 	cl_git_pass(git_buf_printf(&buf, "[include]\npath = %s/config-included", cl_fixture("config")));
@@ -27,25 +27,27 @@ void test_config_include__absolute(void)
 	git_buf_free(&buf);
 	cl_git_pass(git_config_open_ondisk(&cfg, "config-include-absolute"));
 
-	cl_git_pass(git_config_get_string(&str, cfg, "foo.bar.baz"));
-	cl_assert_equal_s(str, "huzzah");
+	cl_git_pass(git_config_get_string_buf(&buf, cfg, "foo.bar.baz"));
+	cl_assert_equal_s("huzzah", git_buf_cstr(&buf));
 
+	git_buf_free(&buf);
 	git_config_free(cfg);
 }
 
 void test_config_include__homedir(void)
 {
 	git_config *cfg;
-	const char *str;
+	git_buf buf = GIT_BUF_INIT;
 
 	cl_git_pass(git_libgit2_opts(GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL, cl_fixture("config")));
 	cl_git_mkfile("config-include-homedir",  "[include]\npath = ~/config-included");
 
 	cl_git_pass(git_config_open_ondisk(&cfg, "config-include-homedir"));
 
-	cl_git_pass(git_config_get_string(&str, cfg, "foo.bar.baz"));
-	cl_assert_equal_s(str, "huzzah");
+	cl_git_pass(git_config_get_string_buf(&buf, cfg, "foo.bar.baz"));
+	cl_assert_equal_s("huzzah", git_buf_cstr(&buf));
 
+	git_buf_free(&buf);
 	git_config_free(cfg);
 
 	cl_sandbox_set_search_path_defaults();
@@ -55,7 +57,7 @@ void test_config_include__homedir(void)
 void test_config_include__ordering(void)
 {
 	git_config *cfg;
-	const char *str;
+	git_buf buf = GIT_BUF_INIT;
 
 	cl_git_mkfile("included", "[foo \"bar\"]\nbaz = hurrah\nfrotz = hiya");
 	cl_git_mkfile("including",
@@ -65,11 +67,13 @@ void test_config_include__ordering(void)
 
 	cl_git_pass(git_config_open_ondisk(&cfg, "including"));
 
-	cl_git_pass(git_config_get_string(&str, cfg, "foo.bar.frotz"));
-	cl_assert_equal_s(str, "hiya");
-	cl_git_pass(git_config_get_string(&str, cfg, "foo.bar.baz"));
-	cl_assert_equal_s(str, "huzzah");
+	cl_git_pass(git_config_get_string_buf(&buf, cfg, "foo.bar.frotz"));
+	cl_assert_equal_s("hiya", git_buf_cstr(&buf));
+	git_buf_clear(&buf);
+	cl_git_pass(git_config_get_string_buf(&buf, cfg, "foo.bar.baz"));
+	cl_assert_equal_s("huzzah", git_buf_cstr(&buf));
 
+	git_buf_free(&buf);
 	git_config_free(cfg);
 }
 
@@ -90,16 +94,17 @@ void test_config_include__depth(void)
 void test_config_include__missing(void)
 {
 	git_config *cfg;
-	const char *str;
+	git_buf buf = GIT_BUF_INIT;
 
 	cl_git_mkfile("including", "[include]\npath = nonexistentfile\n[foo]\nbar = baz");
 
 	giterr_clear();
 	cl_git_pass(git_config_open_ondisk(&cfg, "including"));
 	cl_assert(giterr_last() == NULL);
-	cl_git_pass(git_config_get_string(&str, cfg, "foo.bar"));
-	cl_assert_equal_s(str, "baz");
+	cl_git_pass(git_config_get_string_buf(&buf, cfg, "foo.bar"));
+	cl_assert_equal_s("baz", git_buf_cstr(&buf));
 
+	git_buf_free(&buf);
 	git_config_free(cfg);
 }
 
@@ -107,7 +112,7 @@ void test_config_include__missing(void)
 void test_config_include__depth2(void)
 {
 	git_config *cfg;
-	const char *str;
+	git_buf buf = GIT_BUF_INIT;
 	const char *content = "[include]\n" replicate10(replicate10("path=bottom\n"));
 
 	cl_git_mkfile("top-level", "[include]\npath = middle\n[foo]\nbar = baz");
@@ -116,11 +121,12 @@ void test_config_include__depth2(void)
 
 	cl_git_pass(git_config_open_ondisk(&cfg, "top-level"));
 
-	cl_git_pass(git_config_get_string(&str, cfg, "foo.bar"));
-	cl_assert_equal_s(str, "baz");
+	cl_git_pass(git_config_get_string_buf(&buf, cfg, "foo.bar"));
+	cl_assert_equal_s("baz", git_buf_cstr(&buf));
 
-	cl_git_pass(git_config_get_string(&str, cfg, "foo.bar2"));
-	cl_assert_equal_s(str, "baz2");
+	git_buf_clear(&buf);
+	cl_git_pass(git_config_get_string_buf(&buf, cfg, "foo.bar2"));
+	cl_assert_equal_s("baz2", git_buf_cstr(&buf));
 
 	git_config_free(cfg);
 }

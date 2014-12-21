@@ -48,7 +48,7 @@ extern int git_config__normalize_name(const char *in, char **out);
 
 /* internal only: does not normalize key and sets out to NULL if not found */
 extern int git_config__lookup_entry(
-	const git_config_entry **out,
+	git_config_entry **out,
 	const git_config *cfg,
 	const char *key,
 	bool no_errors);
@@ -67,7 +67,7 @@ extern int git_config__update_entry(
  * failures occur while trying to access the value.
  */
 
-extern const char *git_config__get_string_force(
+extern char *git_config__get_string_force(
 	const git_config *cfg, const char *key, const char *fallback_value);
 
 extern int git_config__get_bool_force(

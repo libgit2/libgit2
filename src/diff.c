@@ -461,12 +461,13 @@ static int diff_list_apply_options(
 
 	/* if ignore_submodules not explicitly set, check diff config */
 	if (diff->opts.ignore_submodules <= 0) {
-		const git_config_entry *entry;
+		 git_config_entry *entry;
 		git_config__lookup_entry(&entry, cfg, "diff.ignoresubmodules", true);
 
 		if (entry && git_submodule_parse_ignore(
 				&diff->opts.ignore_submodules, entry->value) < 0)
 			giterr_clear();
+		git_config_entry_free(entry);
 	}
 
 	/* if either prefix is not set, figure out appropriate value */
