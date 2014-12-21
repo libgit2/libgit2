@@ -8,7 +8,6 @@
 #include "global.h"
 #include "hash.h"
 #include "sysdir.h"
-#include "git2/threads.h"
 #include "git2/global.h"
 #include "thread-utils.h"
 
