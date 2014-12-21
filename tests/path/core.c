@@ -203,6 +203,9 @@ void test_path_core__isvalid_dos_paths(void)
 	cl_assert_equal_b(true, git_path_isvalid(NULL, "aux.asdf", 0));
 	cl_assert_equal_b(true, git_path_isvalid(NULL, "aux.asdf\\zippy", 0));
 	cl_assert_equal_b(true, git_path_isvalid(NULL, "aux:asdf\\foobar", 0));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, "con", 0));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, "prn", 0));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, "nul", 0));
 
 	cl_assert_equal_b(false, git_path_isvalid(NULL, "aux", GIT_PATH_REJECT_DOS_PATHS));
 	cl_assert_equal_b(false, git_path_isvalid(NULL, "aux.", GIT_PATH_REJECT_DOS_PATHS));
@@ -210,6 +213,9 @@ void test_path_core__isvalid_dos_paths(void)
 	cl_assert_equal_b(false, git_path_isvalid(NULL, "aux.asdf", GIT_PATH_REJECT_DOS_PATHS));
 	cl_assert_equal_b(false, git_path_isvalid(NULL, "aux.asdf\\zippy", GIT_PATH_REJECT_DOS_PATHS));
 	cl_assert_equal_b(false, git_path_isvalid(NULL, "aux:asdf\\foobar", GIT_PATH_REJECT_DOS_PATHS));
+	cl_assert_equal_b(false, git_path_isvalid(NULL, "con", GIT_PATH_REJECT_DOS_PATHS));
+	cl_assert_equal_b(false, git_path_isvalid(NULL, "prn", GIT_PATH_REJECT_DOS_PATHS));
+	cl_assert_equal_b(false, git_path_isvalid(NULL, "nul", GIT_PATH_REJECT_DOS_PATHS));
 
 	cl_assert_equal_b(true, git_path_isvalid(NULL, "aux1", 0));
 	cl_assert_equal_b(true, git_path_isvalid(NULL, "aux1", GIT_PATH_REJECT_DOS_PATHS));
@@ -225,6 +231,8 @@ void test_path_core__isvalid_dos_paths_withnum(void)
 	cl_assert_equal_b(true, git_path_isvalid(NULL, "com1.asdf", 0));
 	cl_assert_equal_b(true, git_path_isvalid(NULL, "com1.asdf\\zippy", 0));
 	cl_assert_equal_b(true, git_path_isvalid(NULL, "com1:asdf\\foobar", 0));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, "com1\\foo", 0));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, "lpt1", 0));
 
 	cl_assert_equal_b(false, git_path_isvalid(NULL, "com1", GIT_PATH_REJECT_DOS_PATHS));
 	cl_assert_equal_b(false, git_path_isvalid(NULL, "com1.", GIT_PATH_REJECT_DOS_PATHS));
@@ -232,11 +240,18 @@ void test_path_core__isvalid_dos_paths_withnum(void)
 	cl_assert_equal_b(false, git_path_isvalid(NULL, "com1.asdf", GIT_PATH_REJECT_DOS_PATHS));
 	cl_assert_equal_b(false, git_path_isvalid(NULL, "com1.asdf\\zippy", GIT_PATH_REJECT_DOS_PATHS));
 	cl_assert_equal_b(false, git_path_isvalid(NULL, "com1:asdf\\foobar", GIT_PATH_REJECT_DOS_PATHS));
+	cl_assert_equal_b(false, git_path_isvalid(NULL, "com1/foo", GIT_PATH_REJECT_DOS_PATHS));
+	cl_assert_equal_b(false, git_path_isvalid(NULL, "lpt1", GIT_PATH_REJECT_DOS_PATHS));
 
+	cl_assert_equal_b(true, git_path_isvalid(NULL, "com0", 0));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, "com0", GIT_PATH_REJECT_DOS_PATHS));
 	cl_assert_equal_b(true, git_path_isvalid(NULL, "com10", 0));
 	cl_assert_equal_b(true, git_path_isvalid(NULL, "com10", GIT_PATH_REJECT_DOS_PATHS));
 	cl_assert_equal_b(true, git_path_isvalid(NULL, "comn", GIT_PATH_REJECT_DOS_PATHS));
 	cl_assert_equal_b(true, git_path_isvalid(NULL, "com1\\foo", GIT_PATH_REJECT_DOS_PATHS));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, "lpt0", GIT_PATH_REJECT_DOS_PATHS));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, "lpt10", GIT_PATH_REJECT_DOS_PATHS));
+	cl_assert_equal_b(true, git_path_isvalid(NULL, "lptn", GIT_PATH_REJECT_DOS_PATHS));
 }
 
 void test_path_core__isvalid_nt_chars(void)
