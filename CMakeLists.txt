@@ -19,6 +19,7 @@ SET(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Mo
 
 INCLUDE(CheckLibraryExists)
 INCLUDE(AddCFlagIfSupported)
+INCLUDE(FindPkgConfig)
 
 # Build options
 #
