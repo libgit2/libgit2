@@ -1,0 +1,32 @@
+using System;
+using System.Linq;
+
+namespace Namespace.Some
+{
+	/// <summary>
+	/// Fake comment here for some line context.
+	/// </summary>
+	public class Class
+	{
+		private void TestUnchanged()
+		{
+		}
+
+		// Scrub comment.
+		const int changed;
+
+		async void TestFunction()
+		{
+			// Padding.
+			int changeme;
+		}
+
+		static readonly int SomeProperty
+		{
+			get
+			{
+				return 0;
+			}
+		}
+	}
+}
