@@ -1497,10 +1497,10 @@ void git_index_conflict_iterator_free(git_index_conflict_iterator *iterator)
 	git__free(iterator);
 }
 
-unsigned int git_index_name_entrycount(git_index *index)
+size_t git_index_name_entrycount(git_index *index)
 {
 	assert(index);
-	return (unsigned int)index->names.length;
+	return index->names.length;
 }
 
 const git_index_name_entry *git_index_name_get_byindex(
@@ -1557,10 +1557,10 @@ void git_index_name_clear(git_index *index)
 	git_vector_clear(&index->names);
 }
 
-unsigned int git_index_reuc_entrycount(git_index *index)
+size_t git_index_reuc_entrycount(git_index *index)
 {
 	assert(index);
-	return (unsigned int)index->reuc.length;
+	return index->reuc.length;
 }
 
 static int index_reuc_insert(
