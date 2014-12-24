@@ -592,7 +592,8 @@ static int rebase_init(
 	git_buf state_path = GIT_BUF_INIT;
 	int error;
 
-	git_buf_joinpath(&state_path, repo->path_repository, REBASE_MERGE_DIR);
+	if ((error = git_buf_joinpath(&state_path, repo->path_repository, REBASE_MERGE_DIR)) < 0)
+		return error;
 
 	rebase->repo = repo;
 	rebase->type = GIT_REBASE_TYPE_MERGE;

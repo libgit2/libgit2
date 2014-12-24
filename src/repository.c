@@ -656,7 +656,8 @@ int git_repository_odb__weakptr(git_odb **out, git_repository *repo)
 		git_buf odb_path = GIT_BUF_INIT;
 		git_odb *odb;
 
-		git_buf_joinpath(&odb_path, repo->path_repository, GIT_OBJECTS_DIR);
+		if ((error = git_buf_joinpath(&odb_path, repo->path_repository, GIT_OBJECTS_DIR)) < 0)
+			return error;
 
 		error = git_odb_open(&odb, odb_path.ptr);
 		if (!error) {
@@ -741,7 +742,8 @@ int git_repository_index__weakptr(git_index **out, git_repository *repo)
 		git_buf index_path = GIT_BUF_INIT;
 		git_index *index;
 
-		git_buf_joinpath(&index_path, repo->path_repository, GIT_INDEX_FILE);
+		if ((error = git_buf_joinpath(&index_path, repo->path_repository, GIT_INDEX_FILE)) < 0)
+			return error;
 
 		error = git_index_open(&index, index_path.ptr);
 		if (!error) {
@@ -2068,7 +2070,9 @@ int git_repository_is_shallow(git_repository *repo)
 	struct stat st;
 	int error;
 
-	git_buf_joinpath(&path, repo->path_repository, "shallow");
+	if ((error = git_buf_joinpath(&path, repo->path_repository, "shallow")) < 0)
+		return error;
+
 	error = git_path_lstat(path.ptr, &st);
 	git_buf_free(&path);
 
