@@ -781,8 +781,10 @@ int git_attr_assignment__parse(
 
 					error = git_vector_insert_sorted(
 						assigns, massign, &merge_assignments);
-					if (error < 0 && error != GIT_EEXISTS)
+					if (error < 0 && error != GIT_EEXISTS) {
+						git_attr_assignment__free(assign);
 						return error;
+					}
 				}
 			}
 		}

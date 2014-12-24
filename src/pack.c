@@ -158,6 +158,7 @@ static int cache_add(git_pack_cache *cache, git_rawobj *base, git_off_t offset)
 	if (entry) {
 		if (git_mutex_lock(&cache->lock) < 0) {
 			giterr_set(GITERR_OS, "failed to lock cache");
+			git__free(entry);
 			return -1;
 		}
 		/* Add it to the cache if nobody else has */

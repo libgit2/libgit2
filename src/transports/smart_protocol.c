@@ -82,7 +82,7 @@ static int append_symref(const char **out, git_vector *symrefs, const char *ptr)
 	int error;
 	const char *end;
 	git_buf buf = GIT_BUF_INIT;
-	git_refspec *mapping;
+	git_refspec *mapping = NULL;
 
 	ptr += strlen(GIT_CAP_SYMREF);
 	if (*ptr != '=')
@@ -97,7 +97,7 @@ static int append_symref(const char **out, git_vector *symrefs, const char *ptr)
 		return error;
 
 	/* symref mapping has refspec format */
-	mapping = git__malloc(sizeof(git_refspec));
+	mapping = git__calloc(1, sizeof(git_refspec));
 	GITERR_CHECK_ALLOC(mapping);
 
 	error = git_refspec__parse(mapping, git_buf_cstr(&buf), true);
@@ -119,6 +119,7 @@ static int append_symref(const char **out, git_vector *symrefs, const char *ptr)
 
 on_invalid:
 	giterr_set(GITERR_NET, "remote sent invalid symref");
+	git_refspec__free(mapping);
 	return -1;
 }
 
@@ -258,7 +259,7 @@ static int store_common(transport_smart *t)
 
 static int fetch_setup_walk(git_revwalk **out, git_repository *repo)
 {
-	git_revwalk *walk;
+	git_revwalk *walk = NULL;
 	git_strarray refs;
 	unsigned int i;
 	git_reference *ref;
@@ -294,6 +295,7 @@ static int fetch_setup_walk(git_revwalk **out, git_repository *repo)
 	return 0;
 
 on_error:
+	git_revwalk_free(walk);
 	git_reference_free(ref);
 	git_strarray_free(&refs);
 	return error;
