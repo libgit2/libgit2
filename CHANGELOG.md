@@ -145,3 +145,6 @@ v0.21 + 1
 * git_treebuilder_create now takes a repository so that it can query
   repository configuration.  Subsequently, git_treebuilder_write no
   longer takes a repository.
+
+* git_checkout now handles case-changing renames correctly on
+  case-insensitive filesystems; for example renaming "readme" to "README".

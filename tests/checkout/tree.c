@@ -645,14 +645,7 @@ void test_checkout_tree__can_cancel_checkout_from_notify(void)
 	cl_git_fail_with(git_checkout_tree(g_repo, obj, &opts), -5555);
 
 	cl_assert(!git_path_exists("testrepo/new.txt"));
-
-	/* on case-insensitive FS = a/b.txt, branch_file.txt, new.txt */
-	/* on case-sensitive FS   = README, then above */
-
-	if (git_path_exists("testrepo/.git/CoNfIg")) /* case insensitive */
-		cl_assert_equal_i(3, ca.count);
-	else
-		cl_assert_equal_i(4, ca.count);
+	cl_assert_equal_i(4, ca.count);
 
 	/* and again with a different stopping point and return code */
 	ca.filename = "README";
@@ -662,11 +655,7 @@ void test_checkout_tree__can_cancel_checkout_from_notify(void)
 	cl_git_fail_with(git_checkout_tree(g_repo, obj, &opts), 123);
 
 	cl_assert(!git_path_exists("testrepo/new.txt"));
-
-	if (git_path_exists("testrepo/.git/CoNfIg")) /* case insensitive */
-		cl_assert_equal_i(4, ca.count);
-	else
-		cl_assert_equal_i(1, ca.count);
+	cl_assert_equal_i(1, ca.count);
 
 	git_object_free(obj);
 }
@@ -1033,4 +1022,81 @@ void test_checkout_tree__removes_conflicts_only_by_pathscope(void)
 
 	git_commit_free(commit);
 	git_index_free(index);
+}
+
+void test_checkout_tree__case_changing_rename(void)
+{
+	git_index *index;
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
+	git_oid master_id, dir_commit_id, tree_id, commit_id;
+	git_commit *master_commit, *dir_commit;
+	git_tree *tree;
+	git_signature *signature;
+	const git_index_entry *index_entry;
+	bool case_sensitive;
+
+	assert_on_branch(g_repo, "master");
+
+	cl_git_pass(git_repository_index(&index, g_repo));
+
+	/* Switch branches and perform a case-changing rename */
+
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+
+	cl_git_pass(git_reference_name_to_id(&dir_commit_id, g_repo, "refs/heads/dir"));
+	cl_git_pass(git_commit_lookup(&dir_commit, g_repo, &dir_commit_id));
+
+	cl_git_pass(git_checkout_tree(g_repo, (git_object *)dir_commit, &opts));
+	cl_git_pass(git_repository_set_head(g_repo, "refs/heads/dir", NULL, NULL));
+
+	cl_assert(git_path_isfile("testrepo/README"));
+	case_sensitive = !git_path_isfile("testrepo/readme");
+
+	cl_assert(index_entry = git_index_get_bypath(index, "README", 0));
+	cl_assert_equal_s("README", index_entry->path);
+
+	cl_git_pass(git_index_remove_bypath(index, "README"));
+	cl_git_pass(p_rename("testrepo/README", "testrepo/__readme__"));
+	cl_git_pass(p_rename("testrepo/__readme__", "testrepo/readme"));
+	cl_git_append2file("testrepo/readme", "An addendum...");
+	cl_git_pass(git_index_add_bypath(index, "readme"));
+
+	cl_git_pass(git_index_write(index));
+
+	cl_git_pass(git_index_write_tree(&tree_id, index));
+	cl_git_pass(git_tree_lookup(&tree, g_repo, &tree_id));
+
+	cl_git_pass(git_signature_new(&signature, "Renamer", "rename@contoso.com", time(NULL), 0));
+
+	cl_git_pass(git_commit_create(&commit_id, g_repo, "refs/heads/dir", signature, signature, NULL, "case-changing rename", tree, 1, (const git_commit **)&dir_commit));
+
+	cl_assert(git_path_isfile("testrepo/readme"));
+	if (case_sensitive)
+		cl_assert(!git_path_isfile("testrepo/README"));
+
+	cl_assert(index_entry = git_index_get_bypath(index, "readme", 0));
+	cl_assert_equal_s("readme", index_entry->path);
+
+	/* Switching back to master should rename readme -> README */
+	opts.checkout_strategy = GIT_CHECKOUT_SAFE;
+
+	cl_git_pass(git_reference_name_to_id(&master_id, g_repo, "refs/heads/master"));
+	cl_git_pass(git_commit_lookup(&master_commit, g_repo, &master_id));
+
+	cl_git_pass(git_checkout_tree(g_repo, (git_object *)master_commit, &opts));
+	cl_git_pass(git_repository_set_head(g_repo, "refs/heads/master", NULL, NULL));
+	
+	assert_on_branch(g_repo, "master");
+
+	cl_assert(git_path_isfile("testrepo/README"));
+	if (case_sensitive)
+		cl_assert(!git_path_isfile("testrepo/readme"));
+
+	cl_assert(index_entry = git_index_get_bypath(index, "README", 0));
+	cl_assert_equal_s("README", index_entry->path);
+
+	git_signature_free(signature);
+	git_tree_free(tree);
+	git_commit_free(dir_commit);
+	git_commit_free(master_commit);
 }
