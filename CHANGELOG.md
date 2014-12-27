@@ -148,3 +148,15 @@ v0.21 + 1
 
 * git_checkout now handles case-changing renames correctly on
   case-insensitive filesystems; for example renaming "readme" to "README".
+
+* git_index_name_entrycount() and git_index_reuc_entrycount() now
+  return size_t instead of unsigned int.
+
+* The search for libssh2 is now done via pkg-config instead of a
+  custom search of a few directories.
+
+* Add support for core.protectHFS and core.protectNTFS. Add more
+  validation for filenames which we write such as references.
+
+* The local transport now generates textual progress output like
+  git-upload-pack does ("counting objects").
