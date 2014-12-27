@@ -345,6 +345,8 @@ static void crlf_cleanup(
 git_filter *git_crlf_filter_new(void)
 {
 	struct crlf_filter *f = git__calloc(1, sizeof(struct crlf_filter));
+	if (f == NULL)
+		return NULL;
 
 	f->f.version = GIT_FILTER_VERSION;
 	f->f.attributes = "crlf eol text";

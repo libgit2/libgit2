@@ -115,6 +115,8 @@ static int ident_apply(
 git_filter *git_ident_filter_new(void)
 {
 	git_filter *f = git__calloc(1, sizeof(git_filter));
+	if (f == NULL)
+		return NULL;
 
 	f->version = GIT_FILTER_VERSION;
 	f->attributes = "+ident"; /* apply to files with ident attribute set */
