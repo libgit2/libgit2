@@ -427,7 +427,7 @@ static void build_test_tree(
 	git_buf name = GIT_BUF_INIT;
 	va_list arglist;
 
-	cl_git_pass(git_treebuilder_create(&builder, repo, NULL)); /* start builder */
+	cl_git_pass(git_treebuilder_new(&builder, repo, NULL)); /* start builder */
 
 	va_start(arglist, fmt);
 	while (*scan) {

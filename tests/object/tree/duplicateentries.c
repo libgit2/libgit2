@@ -57,7 +57,7 @@ static void tree_creator(git_oid *out, void (*fn)(git_treebuilder *))
 {
 	git_treebuilder *builder;
 
-	cl_git_pass(git_treebuilder_create(&builder, _repo, NULL));
+	cl_git_pass(git_treebuilder_new(&builder, _repo, NULL));
 
 	fn(builder);
 

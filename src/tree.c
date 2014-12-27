@@ -490,7 +490,7 @@ static int write_tree(
 		return (int)find_next_dir(dirname, index, start);
 	}
 
-	if ((error = git_treebuilder_create(&bld, repo, NULL)) < 0 || bld == NULL)
+	if ((error = git_treebuilder_new(&bld, repo, NULL)) < 0 || bld == NULL)
 		return -1;
 
 	/*
@@ -624,7 +624,7 @@ int git_tree__write_index(
 	return ret;
 }
 
-int git_treebuilder_create(
+int git_treebuilder_new(
 	git_treebuilder **builder_p,
 	git_repository *repo,
 	const git_tree *source)

@@ -107,7 +107,7 @@ static int tree_write(
 	const git_tree_entry *entry;
 	git_oid tree_oid;
 
-	if ((error = git_treebuilder_create(&tb, repo, source_tree)) < 0)
+	if ((error = git_treebuilder_new(&tb, repo, source_tree)) < 0)
 		goto cleanup;
 
 	if (object_oid) {

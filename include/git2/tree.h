@@ -251,7 +251,7 @@ GIT_EXTERN(int) git_tree_entry_to_object(
  * @param source Source tree to initialize the builder (optional)
  * @return 0 on success; error code otherwise
  */
-GIT_EXTERN(int) git_treebuilder_create(
+GIT_EXTERN(int) git_treebuilder_new(
 	git_treebuilder **out, git_repository *repo, const git_tree *source);
 
 /**
