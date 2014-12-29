@@ -9,6 +9,8 @@
 
 #if defined(__MINGW32__)
 
+#undef stat
+
 #if _WIN32_WINNT >= 0x0601
 #define stat __stat64
 #else
