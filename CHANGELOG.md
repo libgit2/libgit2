@@ -142,9 +142,13 @@ v0.21 + 1
   initializations of the library, so consumers may schedule work on the
   first initialization.
 
-* git_treebuilder_create now takes a repository so that it can query
-  repository configuration.  Subsequently, git_treebuilder_write no
-  longer takes a repository.
+* git_treebuilder_new (was git_treebuilder_create) now takes a
+  repository so that it can query repository configuration.
+  Subsequently, git_treebuilder_write no longer takes a repository.
+
+* git_treebuilder_create was renamed to git_treebuilder_new to better
+  reflect it being a constructor rather than something which writes to
+  disk.
 
 * git_checkout now handles case-changing renames correctly on
   case-insensitive filesystems; for example renaming "readme" to "README".
