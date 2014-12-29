@@ -434,6 +434,17 @@ GIT_INLINE(double) git__timer(void)
    return (double)time * scaling_factor / 1.0E9;
 }
 
+#elif defined(AMIGA)
+
+#include <proto/timer.h>
+
+GIT_INLINE(double) git__timer(void)
+{
+	struct TimeVal tv;
+	ITimer->GetUpTime(&tv);
+	return (double)tv.Seconds + (double)tv.Microseconds / 1.0E6;
+}
+
 #else
 
 #include <sys/time.h>
