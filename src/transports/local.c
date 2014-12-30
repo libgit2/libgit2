@@ -129,8 +129,10 @@ static int add_ref(transport_local *t, const char *name)
 	head = git__calloc(1, sizeof(git_remote_head));
 	GITERR_CHECK_ALLOC(head);
 
-	if (git_buf_join(&buf, 0, name, peeled) < 0)
+	if (git_buf_join(&buf, 0, name, peeled) < 0) {
+		free_head(head);
 		return -1;
+	}
 	head->name = git_buf_detach(&buf);
 
 	if (!(error = git_tag_peel(&target, (git_tag *)obj))) {
@@ -699,6 +701,7 @@ static void local_free(git_transport *transport)
 
 int git_transport_local(git_transport **out, git_remote *owner, void *param)
 {
+	int error;
 	transport_local *t;
 
 	GIT_UNUSED(param);
@@ -719,7 +722,11 @@ int git_transport_local(git_transport **out, git_remote *owner, void *param)
 	t->parent.read_flags = local_read_flags;
 	t->parent.cancel = local_cancel;
 
-	git_vector_init(&t->refs, 0, NULL);
+	if ((error = git_vector_init(&t->refs, 0, NULL)) < 0) {
+		git__free(t);
+		return error;
+	}
+
 	t->owner = owner;
 
 	*out = (git_transport *) t;

@@ -246,7 +246,8 @@ int git_rebase_open(git_rebase **out, git_repository *repo)
 
 	if (rebase->type == GIT_REBASE_TYPE_NONE) {
 		giterr_set(GITERR_REBASE, "There is no rebase in progress");
-		return GIT_ENOTFOUND;
+		error = GIT_ENOTFOUND;
+		goto done;
 	}
 
 	if ((error = git_buf_puts(&path, rebase->state_path)) < 0)
@@ -591,7 +592,8 @@ static int rebase_init(
 	git_buf state_path = GIT_BUF_INIT;
 	int error;
 
-	git_buf_joinpath(&state_path, repo->path_repository, REBASE_MERGE_DIR);
+	if ((error = git_buf_joinpath(&state_path, repo->path_repository, REBASE_MERGE_DIR)) < 0)
+		return error;
 
 	rebase->repo = repo;
 	rebase->type = GIT_REBASE_TYPE_MERGE;

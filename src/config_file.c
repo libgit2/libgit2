@@ -1228,13 +1228,6 @@ static int config_parse(git_strmap *values, diskfile_backend *cfg_file, struct r
 			if (result < 0)
 				break;
 
-			var = git__malloc(sizeof(cvar_t));
-			GITERR_CHECK_ALLOC(var);
-			memset(var, 0x0, sizeof(cvar_t));
-			var->entry = git__malloc(sizeof(git_config_entry));
-			GITERR_CHECK_ALLOC(var->entry);
-			memset(var->entry, 0x0, sizeof(git_config_entry));
-
 			git__strtolower(var_name);
 			git_buf_printf(&buf, "%s.%s", current_section, var_name);
 			git__free(var_name);
@@ -1243,6 +1236,11 @@ static int config_parse(git_strmap *values, diskfile_backend *cfg_file, struct r
 				git__free(var_value);
 				return -1;
 			}
+
+			var = git__calloc(1, sizeof(cvar_t));
+			GITERR_CHECK_ALLOC(var);
+			var->entry = git__calloc(1, sizeof(git_config_entry));
+			GITERR_CHECK_ALLOC(var->entry);
 
 			var->entry->name = git_buf_detach(&buf);
 			var->entry->value = var_value;

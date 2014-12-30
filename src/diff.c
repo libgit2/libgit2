@@ -1555,6 +1555,7 @@ int git_diff_format_email(
 		if ((offset = (loc - opts->summary)) == 0) {
 			giterr_set(GITERR_INVALID, "summary is empty");
 			error = -1;
+			goto on_error;
 		}
 
 		summary = git__calloc(offset + 1, sizeof(char));
