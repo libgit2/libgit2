@@ -28,6 +28,7 @@ struct git_remote {
 	void *transport_cb_payload;
 	git_transport *transport;
 	git_repository *repo;
+	git_push *push;
 	git_remote_callbacks callbacks;
 	git_transfer_progress stats;
 	unsigned int need_pack;
