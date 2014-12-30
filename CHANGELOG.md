@@ -137,6 +137,11 @@ v0.21 + 1
   has been changed to match git 1.9.0 and later. In this mode, libgit2 now
   fetches all tags in addition to whatever else needs to be fetched.
 
+* The remote object has learnt to prune remote-tracking branches. If
+  the remote is configured to do so, this will happen via
+  git_remote_fetch(). You can also call git_remote_prune() after
+  connecting or fetching to perform the prune.
+
 * git_threads_init() and git_threads_shutdown() have been renamed to
   git_libgit2_init() and git_libgit2_shutdown() to better explain what
   their purpose is, as it's grown to be more than just about threads.
