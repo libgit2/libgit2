@@ -89,6 +89,18 @@ GIT_EXTERN(int) git_diff_get_perfdata(
 GIT_EXTERN(int) git_status_list_get_perfdata(
 	git_diff_perfdata *out, const git_status_list *status);
 
+/**
+ * Compile all builtin diff drivers.
+ *
+ * Normally builtin diff drivers are only compiled on-demand when they are
+ * used.  This function loops through the internal table and compiles and
+ * caches all of the builtin diff drivers.  This can be done for testing
+ * purposes or to control when the driver compilation costs are paid.
+ *
+ * @return 0 for success, <0 for error
+ */
+GIT_EXTERN(int) git_diff_driver_compile_builtins(git_repository *repo);
+
 /** @} */
 GIT_END_DECL
 #endif

@@ -203,11 +203,11 @@ static int git_diff_driver_builtin(
 		error = 0;
 
 done:
-	if (error && drv)
+	if (error && drv) {
 		git_diff_driver_free(drv);
-	else
-		*out = drv;
-
+		drv = NULL;
+	}
+	*out = drv;
 	return error;
 }
 
@@ -331,6 +331,32 @@ done:
 
 	if (drv && drv != *out)
 		git_diff_driver_free(drv);
+
+	return error;
+}
+
+int git_diff_driver_compile_builtins(git_repository *repo)
+{
+	int error = 0;
+	git_diff_driver_registry *reg;
+	git_diff_driver *drv;
+	size_t i;
+
+	assert(repo);
+
+	if ((reg = git_repository_driver_registry(repo)) == NULL)
+		return -1;
+
+	for (i = 0; i < ARRAY_SIZE(builtin_defs); ++i) {
+		const char *name = builtin_defs[i].name;
+		khiter_t pos = git_strmap_lookup_index(reg->drivers, name);
+
+		if (!git_strmap_valid_index(reg->drivers, pos) &&
+			(error = git_diff_driver_builtin(&drv, reg, name)) < 0)
+			break;
+
+		fprintf(stderr, "compiled diff driver '%s'\n", name);
+	}
 
 	return error;
 }
