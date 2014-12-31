@@ -71,7 +71,7 @@ GIT_EXTERN(int) git_revert_commit(
 	const git_merge_options *merge_options);
 
 /**
- * Reverts the given commit, producing changes in the working directory.
+ * Reverts the given commit, producing changes in the index and working directory.
  *
  * @param repo the repository to revert
  * @param commit the commit to revert
