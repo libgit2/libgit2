@@ -38,7 +38,6 @@ void test_object_tree_attributes__group_writable_tree_entries_created_with_an_an
 	git_tree *tree;
 	const git_tree_entry *entry;
 
-	cl_git_pass(git_repository_open(&repo, cl_fixture("deprecated-mode.git")));
 
 	cl_git_pass(git_oid_fromstr(&tid, tree_oid));
 	cl_git_pass(git_tree_lookup(&tree, repo, &tid));

@@ -1095,6 +1095,7 @@ void test_checkout_tree__case_changing_rename(void)
 	cl_assert(index_entry = git_index_get_bypath(index, "README", 0));
 	cl_assert_equal_s("README", index_entry->path);
 
+	git_index_free(index);
 	git_signature_free(signature);
 	git_tree_free(tree);
 	git_commit_free(dir_commit);
