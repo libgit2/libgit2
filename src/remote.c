@@ -885,6 +885,11 @@ int git_remote_download(git_remote *remote, const git_strarray *refspecs)
 	if (error < 0)
 		return error;
 
+	if (remote->push) {
+		git_push_free(remote->push);
+		remote->push = NULL;
+	}
+
 	if ((error = git_fetch_negotiate(remote)) < 0)
 		return error;
 
