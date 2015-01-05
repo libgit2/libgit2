@@ -10,6 +10,8 @@
 #include "common.h"
 #include "types.h"
 #include "oid.h"
+#include "remote.h"
+#include "checkout.h"
 
 /**
  * @file git2/submodule.h
@@ -104,6 +106,68 @@ typedef enum {
 	(((S) & (GIT_SUBMODULE_STATUS_WD_INDEX_MODIFIED | \
 	GIT_SUBMODULE_STATUS_WD_WD_MODIFIED | \
 	GIT_SUBMODULE_STATUS_WD_UNTRACKED)) != 0)
+
+/**
+ * Submodule update options structure
+ *
+ * Use the GIT_SUBMODULE_UPDATE_OPTIONS_INIT to get the default settings, like this:
+ *
+ *		git_submodule_update_options opts = GIT_SUBMODULE_UPDATE_OPTIONS_INIT;
+ */
+typedef struct git_submodule_update_options {
+	unsigned int version;
+
+	/**
+	 * These options are passed to the checkout step. To disable
+	 * checkout, set the `checkout_strategy` to
+	 * `GIT_CHECKOUT_NONE`. Generally you will want the use
+	 * GIT_CHECKOUT_SAFE to update files in the working
+	 * directory. Use the `clone_checkout_strategy` field
+	 * to set the checkout strategy that will be used in
+	 * the case where update needs to clone the repository.
+	 */
+	git_checkout_options checkout_opts;
+
+	/**
+	 * Callbacks to use for reporting fetch progress, and for acquiring
+	 * credentials in the event they are needed.
+	 */
+	git_remote_callbacks remote_callbacks;
+
+	/**
+	 * The checkout strategy to use when the sub repository needs to
+	 * be cloned. Use GIT_CHECKOUT_SAFE_CREATE to create all files
+	 * in the working directory for the newly cloned repository.
+	 */
+	unsigned int clone_checkout_strategy;
+
+	/**
+	 * The identity used when updating the reflog. NULL means to
+	 * use the default signature using the config.
+	 */
+	git_signature *signature;
+} git_submodule_update_options;
+
+#define GIT_SUBMODULE_UPDATE_OPTIONS_VERSION 1
+#define GIT_SUBMODULE_UPDATE_OPTIONS_INIT {GIT_CHECKOUT_OPTIONS_VERSION, {GIT_CHECKOUT_OPTIONS_VERSION, GIT_CHECKOUT_SAFE}, GIT_REMOTE_CALLBACKS_INIT, GIT_CHECKOUT_SAFE_CREATE}
+
+/**
+ * Update a submodule. This will clone a missing submodule and
+ * checkout the subrepository to the commit specified in the index of
+ * containing repository.
+ *
+ * @param submodule Submodule object
+ * @param init If the submodule is not initialized, setting this flag to true
+ *        will initialize the submodule before updating. Otherwise, this will
+ *        return an error if attempting to update an uninitialzed repository.
+ *        but setting this to true forces them to be updated.
+ * @param options configuration options for the update.  If NULL, the
+ *        function works as though GIT_SUBMODULE_UPDATE_OPTIONS_INIT was passed.
+ * @return 0 on success, any non-zero return value from a callback
+ *         function, or a negative value to indicate an error (use
+ *         `giterr_last` for a detailed error message).
+ */
+GIT_EXTERN(int) git_submodule_update(git_submodule *submodule, int init, git_submodule_update_options *options);
 
 /**
  * Lookup submodule information by name or path.
@@ -403,7 +467,7 @@ GIT_EXTERN(git_submodule_ignore_t) git_submodule_set_ignore(
  * @return The current git_submodule_update_t value that will be used
  *         for this submodule.
  */
-GIT_EXTERN(git_submodule_update_t) git_submodule_update(
+GIT_EXTERN(git_submodule_update_t) git_submodule_update_strategy(
 	git_submodule *submodule);
 
 /**

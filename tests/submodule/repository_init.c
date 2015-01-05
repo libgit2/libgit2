@@ -17,6 +17,7 @@ void test_submodule_repository_init__basic(void)
 	g_repo = setup_fixture_submod2();
 
 	cl_git_pass(git_submodule_lookup(&sm, g_repo, "sm_gitmodules_only"));
+	cl_git_pass(git_submodule_init(sm, 0));
 	cl_git_pass(git_submodule_repo_init(&repo, sm, 1));
 
 	/* Verify worktree */
