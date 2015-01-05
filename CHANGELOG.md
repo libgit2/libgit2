@@ -59,8 +59,8 @@ v0.22
 * git_remote_delete() now accepts the repository and the remote's name
   instead of a loaded remote.
 
-* git_remote_supported_url() has been removed as it has become
-  essentially useless with rsync-style ssh paths.
+* git_remote_supported_url() and git_remote_is_valid_url() have been
+  removed as they have become essentially useless with rsync-style ssh paths.
 
 * The git_clone_options struct no longer provides the ignore_cert_errors or
   remote_name members for remote customization.
@@ -179,3 +179,38 @@ v0.22
 * The git_submodule_update function was renamed to
   git_submodule_update_strategy. git_submodule_update is now used to
   provide functionalty similar to "git submodule update".
+
+* git_checkout_index() can now check out an in-memory index that is not
+  necessarily the repository's index, so you may check out an index
+  that was produced by git_merge and friends while retaining the cached
+  information.
+
+* git_cherry_pick() is now git_cherrypick().
+
+* Introduce git_buf_text_is_binary() and git_buf_text_contains_nul() for
+  consumers to perform binary detection on a git_buf.
+
+* Remove the default timeout for receiving / sending data over HTTP using
+  the WinHTTP transport layer.
+
+* Add SPNEGO (Kerberos) authentication using GSSAPI on Unix systems.
+
+* git_signature_new() now requires a non-empty email address.
+
+* Use CommonCrypto libraries for SHA-1 calculation on Mac OS X.
+
+* Disable SSL compression and SSLv2 and SSLv3 ciphers in favor of TLSv1
+  in OpenSSL.
+
+* git_branch_upstream_remote() has been introduced to provide the
+  branch.<name>.remote configuration value.
+
+* The GIT_EPEEL error code has been introduced when we cannot peel a tag
+  to the requested object type; if the given object otherwise cannot be
+  peeled, GIT_EINVALIDSPEC is returned.
+
+* Provide built-in objects for the empty blob (e69de29) and empty
+  tree (4b825dc) objects.
+
+* Introduce GIT_REPOSITORY_INIT_RELATIVE_GITLINK to use relative paths
+  when writing gitlinks, as is used by git core for submodules.
