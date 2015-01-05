@@ -1,4 +1,7 @@
-v0.21 + 1
+v0.22 + 1
+------
+
+v0.22
 ------
 
 * File unlocks are atomic again via rename. Read-only files on Windows are
