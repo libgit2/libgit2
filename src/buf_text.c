@@ -191,7 +191,7 @@ bool git_buf_text_is_binary(const git_buf *buf)
 	while (scan < end) {
 		unsigned char c = *scan++;
 
-		if (c > 0x1F && c < 0x7F)
+		if ((c > 0x1F && c != 127) || c == '\b' || c == '\033' || c == '\014') /* handle BS, ESC and FF and all (chars > 0x1F excluding DEL) as printable */
 			printable++;
 		else if (c == '\0')
 			return true;
