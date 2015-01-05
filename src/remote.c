@@ -486,7 +486,7 @@ static int lookup_remote_prune_config(git_remote *remote, git_config *config, co
 			if ((error = git_config_get_bool(&remote->prune_refs, config, "fetch.prune")) < 0) {
 				if (error == GIT_ENOTFOUND) {
 					giterr_clear();
-          error = 0;
+					error = 0;
 				}
 			}
 		}
