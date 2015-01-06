@@ -889,8 +889,11 @@ static int git_submodule_update_repo_init_cb(
 	int bare,
 	void *payload)
 {
+	git_submodule *sm;
+
 	GIT_UNUSED(bare);
-	git_submodule *sm = payload;
+
+	sm = payload;
 
 	return submodule_repo_create(out, sm->repo, path);
 }
