@@ -1,0 +1,19 @@
+version: '{build}'
+branches:
+  only:
+  - master
+build_script:
+- ps: >-
+    choco install cmake
+
+    choco install python2
+
+    mkdir build
+
+    cd build
+
+    cmake -D ENABLE_TRACE=ON -D BUILD_CLAR=ON -D STDCALL=ON .. -G"Visual Studio 11"
+
+    cmake --build . --config RelWithDebInfo
+test_script:
+- ps: ctest -V .
