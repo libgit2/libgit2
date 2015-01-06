@@ -125,4 +125,9 @@ void test_structinit_structinit__compare(void)
 	CHECK_MACRO_FUNC_INIT_EQUAL( \
 		git_refdb_backend, GIT_REFDB_BACKEND_VERSION, \
 		GIT_REFDB_BACKEND_INIT, git_refdb_init_backend);
+
+	/* submodule update */
+	CHECK_MACRO_FUNC_INIT_EQUAL( \
+		git_submodule_update_options, GIT_SUBMODULE_UPDATE_OPTIONS_VERSION, \
+		GIT_SUBMODULE_UPDATE_OPTIONS_INIT, git_submodule_update_init_options);
 }

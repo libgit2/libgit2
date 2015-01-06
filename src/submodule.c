@@ -895,6 +895,13 @@ static int git_submodule_update_repo_init_cb(
 	return submodule_repo_create(out, sm->repo, path);
 }
 
+int git_submodule_update_init_options(git_submodule_update_options *opts, unsigned int version)
+{
+	GIT_INIT_STRUCTURE_FROM_TEMPLATE(
+		opts, version, git_submodule_update_options, GIT_SUBMODULE_UPDATE_OPTIONS_INIT);
+	return 0;
+}
+
 int git_submodule_update(git_submodule *sm, int init, git_submodule_update_options *_update_options)
 {
 	int error;

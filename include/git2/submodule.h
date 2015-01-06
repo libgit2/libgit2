@@ -152,6 +152,16 @@ typedef struct git_submodule_update_options {
 #define GIT_SUBMODULE_UPDATE_OPTIONS_INIT {GIT_CHECKOUT_OPTIONS_VERSION, {GIT_CHECKOUT_OPTIONS_VERSION, GIT_CHECKOUT_SAFE}, GIT_REMOTE_CALLBACKS_INIT, GIT_CHECKOUT_SAFE_CREATE}
 
 /**
+	* Initializes a `git_submodule_update_options` with default values. Equivalent to
+	* creating an instance with GIT_SUBMODULE_UPDATE_OPTIONS_INIT.
+	*
+	* @param opts The `git_submodule_update_options` instance to initialize.
+	* @param version Version of struct; pass `GIT_SUBMODULE_UPDATE_OPTIONS_VERSION`
+	* @return Zero on success; -1 on failure.
+	*/
+GIT_EXTERN(int) git_submodule_update_init_options( git_submodule_update_options *opts, unsigned int version);
+
+/**
  * Update a submodule. This will clone a missing submodule and
  * checkout the subrepository to the commit specified in the index of
  * containing repository.
