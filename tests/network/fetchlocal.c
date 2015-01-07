@@ -486,7 +486,7 @@ void test_network_fetchlocal__prune_load_remote_prune_config(void)
 {
 	git_repository *repo;
 	git_remote *origin;
-  git_config *config;
+	git_config *config;
 	git_repository *remote_repo = cl_git_sandbox_init("testrepo.git");
 	const char *url = cl_git_path_url(git_repository_path(remote_repo));
 
