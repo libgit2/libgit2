@@ -35,6 +35,7 @@ static int create_branch(
 {
 	git_commit *head_obj = NULL;
 	git_reference *branch_ref = NULL;
+	git_buf refname = GIT_BUF_INIT;
 	int error;
 
 	/* Find the target commit */
@@ -42,8 +43,11 @@ static int create_branch(
 		return error;
 
 	/* Create the new branch */
-	error = git_branch_create(&branch_ref, repo, name, head_obj, 0, log_message);
+	if ((error = git_buf_printf(&refname, GIT_REFS_HEADS_DIR "%s", name)) < 0)
+		return error;
 
+	error = git_reference_create(&branch_ref, repo, git_buf_cstr(&refname), target, 0, log_message);
+	git_buf_free(&refname);
 	git_commit_free(head_obj);
 
 	if (!error)

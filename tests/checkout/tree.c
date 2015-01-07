@@ -481,7 +481,7 @@ void assert_conflict(
 	/* Create a branch pointing at the parent */
 	cl_git_pass(git_revparse_single(&g_object, g_repo, parent_sha));
 	cl_git_pass(git_branch_create(&branch, g_repo,
-		"potential_conflict", (git_commit *)g_object, 0,  NULL));
+		"potential_conflict", (git_commit *)g_object, 0));
 
 	/* Make HEAD point to this branch */
 	cl_git_pass(git_reference_symbolic_create(
@@ -1201,7 +1201,7 @@ void test_checkout_tree__can_not_update_index(void)
 	cl_git_pass(git_reference_name_to_id(&oid, g_repo, "HEAD"));
 	cl_git_pass(git_object_lookup(&head, g_repo, &oid, GIT_OBJ_ANY));
 
-	cl_git_pass(git_reset(g_repo, head, GIT_RESET_HARD, &g_opts, NULL));
+	cl_git_pass(git_reset(g_repo, head, GIT_RESET_HARD, &g_opts));
 
 	cl_assert_equal_i(false, git_path_isdir("./testrepo/ab/"));
 
@@ -1238,7 +1238,7 @@ void test_checkout_tree__can_update_but_not_write_index(void)
 	cl_git_pass(git_reference_name_to_id(&oid, g_repo, "HEAD"));
 	cl_git_pass(git_object_lookup(&head, g_repo, &oid, GIT_OBJ_ANY));
 
-	cl_git_pass(git_reset(g_repo, head, GIT_RESET_HARD, &g_opts, NULL));
+	cl_git_pass(git_reset(g_repo, head, GIT_RESET_HARD, &g_opts));
 
 	cl_assert_equal_i(false, git_path_isdir("./testrepo/ab/"));
 

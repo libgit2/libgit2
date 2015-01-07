@@ -37,7 +37,7 @@ void perf__do_merge(const char *fixture,
 	cl_git_pass(git_commit_lookup(&commit_a, g_repo, &oid_a));
 	cl_git_pass(git_branch_create(&ref_branch_a, g_repo,
 								  "A", commit_a,
-								  0, NULL));
+								  0));
 
 	perf__timer__start(&t_checkout);
 	cl_git_pass(git_checkout_tree(g_repo, (git_object*)commit_a, &checkout_opts));
@@ -50,7 +50,7 @@ void perf__do_merge(const char *fixture,
 	cl_git_pass(git_commit_lookup(&commit_b, g_repo, &oid_b));
 	cl_git_pass(git_branch_create(&ref_branch_b, g_repo,
 								  "B", commit_b,
-								  0, NULL));
+								  0));
 
 	cl_git_pass(git_annotated_commit_lookup(&annotated_commits[0], g_repo, &oid_b));
 
