@@ -214,3 +214,7 @@ v0.22
 
 * Introduce GIT_REPOSITORY_INIT_RELATIVE_GITLINK to use relative paths
   when writing gitlinks, as is used by git core for submodules.
+
+* Introduce git_describe_commit and git_describe_workdir to provide
+  a description of the current commit (and working tree, respectively)
+  based on the nearest tag or reference
