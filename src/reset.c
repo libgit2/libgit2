@@ -100,15 +100,14 @@ int git_reset(
 	git_repository *repo,
 	git_object *target,
 	git_reset_t reset_type,
-	git_checkout_options *checkout_opts,
-	const char *log_message)
+	git_checkout_options *checkout_opts)
 {
 	git_object *commit = NULL;
 	git_index *index = NULL;
 	git_tree *tree = NULL;
 	int error = 0;
 	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
-	git_buf log_message_buf = GIT_BUF_INIT;
+	git_buf log_message = GIT_BUF_INIT;
 
 	assert(repo && target);
 
@@ -140,10 +139,8 @@ int git_reset(
 		goto cleanup;
 	}
 
-	if (log_message)
-		git_buf_sets(&log_message_buf, log_message);
-	else
-		git_buf_sets(&log_message_buf, "reset: moving");
+	if ((error = git_buf_printf(&log_message, "reset: moving to %s", git_oid_tostr_s(git_object_id(commit)))) < 0)
+		return error;
 
 	/* move HEAD to the new target */
 	if ((error = git_reference__update_terminal(repo, GIT_HEAD_FILE,
@@ -175,7 +172,7 @@ cleanup:
 	git_object_free(commit);
 	git_index_free(index);
 	git_tree_free(tree);
-	git_buf_free(&log_message_buf);
+	git_buf_free(&log_message);
 
 	return error;
 }

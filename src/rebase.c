@@ -971,7 +971,7 @@ int git_rebase_abort(git_rebase *rebase)
 	if ((error = git_commit_lookup(
 			&orig_head_commit, rebase->repo, &rebase->orig_head_id)) < 0 ||
 		(error = git_reset(rebase->repo, (git_object *)orig_head_commit,
-			GIT_RESET_HARD, NULL, NULL)) < 0)
+			GIT_RESET_HARD, NULL)) < 0)
 		goto done;
 
 	error = rebase_cleanup(rebase);
