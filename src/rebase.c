@@ -655,7 +655,6 @@ int git_rebase_init(
 	const git_annotated_commit *branch,
 	const git_annotated_commit *upstream,
 	const git_annotated_commit *onto,
-	const git_signature *signature,
 	const git_rebase_options *given_opts)
 {
 	git_rebase *rebase = NULL;
@@ -663,6 +662,7 @@ int git_rebase_init(
 	git_buf reflog = GIT_BUF_INIT;
 	git_commit *onto_commit = NULL;
 	git_checkout_options checkout_opts = GIT_CHECKOUT_OPTIONS_INIT;
+	git_reference *head_ref = NULL;
 	int error;
 
 	assert(repo && (upstream || onto));
@@ -694,13 +694,14 @@ int git_rebase_init(
 			"rebase: checkout %s", rebase_onto_name(onto))) < 0 ||
 		(error = git_checkout_tree(
 			repo, (git_object *)onto_commit, &checkout_opts)) < 0 ||
-		(error = git_repository_set_head_detached(
-			repo, git_annotated_commit_id(onto), signature, reflog.ptr)) < 0)
+		(error = git_reference_create(&head_ref, repo, GIT_HEAD_FILE,
+			git_annotated_commit_id(onto), 1, reflog.ptr)) < 0)
 		goto done;
 
 	*out = rebase;
 
 done:
+	git_reference_free(head_ref);
 	if (error < 0) {
 		rebase_cleanup(rebase);
 		git_rebase_free(rebase);
@@ -902,7 +903,7 @@ static int rebase_commit_merge(
 			(const git_commit **)&head_commit)) < 0 ||
 		(error = git_commit_lookup(&commit, rebase->repo, commit_id)) < 0 ||
 		(error = git_reference__update_for_commit(
-			rebase->repo, NULL, "HEAD", commit_id, committer, "rebase")) < 0)
+			rebase->repo, NULL, "HEAD", commit_id, "rebase")) < 0)
 		goto done;
 
 	git_oid_fmt(old_idstr, git_commit_id(current_commit));
@@ -949,20 +950,20 @@ int git_rebase_commit(
 	return error;
 }
 
-int git_rebase_abort(git_rebase *rebase, const git_signature *signature)
+int git_rebase_abort(git_rebase *rebase)
 {
 	git_reference *orig_head_ref = NULL;
 	git_commit *orig_head_commit = NULL;
 	int error;
 
-	assert(rebase && signature);
+	assert(rebase);
 
 	error = rebase->head_detached ?
 		git_reference_create(&orig_head_ref, rebase->repo, GIT_HEAD_FILE,
-			 &rebase->orig_head_id, 1, signature, "rebase: aborting") :
+			 &rebase->orig_head_id, 1, "rebase: aborting") :
 		git_reference_symbolic_create(
 			&orig_head_ref, rebase->repo, GIT_HEAD_FILE, rebase->orig_head_name, 1,
-			signature, "rebase: aborting");
+			"rebase: aborting");
 
 	if (error < 0)
 		goto done;
@@ -970,7 +971,7 @@ int git_rebase_abort(git_rebase *rebase, const git_signature *signature)
 	if ((error = git_commit_lookup(
 			&orig_head_commit, rebase->repo, &rebase->orig_head_id)) < 0 ||
 		(error = git_reset(rebase->repo, (git_object *)orig_head_commit,
-			GIT_RESET_HARD, NULL, signature, NULL)) < 0)
+			GIT_RESET_HARD, NULL, NULL)) < 0)
 		goto done;
 
 	error = rebase_cleanup(rebase);
@@ -1115,10 +1116,10 @@ int git_rebase_finish(
 			terminal_ref, GIT_OBJ_COMMIT)) < 0 ||
 		(error = git_reference_create_matching(&branch_ref,
 			rebase->repo, rebase->orig_head_name, git_commit_id(terminal_commit), 1,
-			&rebase->orig_head_id, signature, branch_msg.ptr)) < 0 ||
+			&rebase->orig_head_id, branch_msg.ptr)) < 0 ||
 		(error = git_reference_symbolic_create(&head_ref,
 			rebase->repo, GIT_HEAD_FILE, rebase->orig_head_name, 1,
-			signature, head_msg.ptr)) < 0 ||
+			head_msg.ptr)) < 0 ||
 		(error = rebase_copy_notes(rebase, signature, &opts)) < 0)
 		goto done;
 

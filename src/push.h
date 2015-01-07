@@ -116,7 +116,6 @@ int git_push_add_refspec(git_push *push, const char *refspec);
  */
 int git_push_update_tips(
 		git_push *push,
-		const git_signature *signature,
 		const char *reflog_message);
 
 /**

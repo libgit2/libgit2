@@ -169,7 +169,6 @@ int git_push_add_refspec(git_push *push, const char *refspec)
 
 int git_push_update_tips(
 		git_push *push,
-		const git_signature *signature,
 		const char *reflog_message)
 {
 	git_buf remote_ref_name = GIT_BUF_INIT;
@@ -213,7 +212,7 @@ int git_push_update_tips(
 				}
 			} else {
 				error = git_reference_create(NULL, push->remote->repo,
-							git_buf_cstr(&remote_ref_name), &push_spec->loid, 1, signature,
+							git_buf_cstr(&remote_ref_name), &push_spec->loid, 1,
 							reflog_message ? reflog_message : "update by push");
 			}
 		}

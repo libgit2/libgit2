@@ -272,7 +272,7 @@ void test_network_remote_remotes__nonmatch_upstream_refspec(void)
 	cl_git_pass(git_config_set_string(config, "branch.master.remote", "taggy"));
 	cl_git_pass(git_config_set_string(config, "branch.master.merge", "refs/heads/foo"));
 
-	cl_git_pass(git_remote_fetch(remote, &specs, NULL, NULL));
+	cl_git_pass(git_remote_fetch(remote, &specs, NULL));
 
 	git_remote_free(remote);
 }
@@ -545,7 +545,7 @@ void test_network_remote_remotes__fetch_from_anonymous(void)
 
 	cl_git_pass(git_remote_create_anonymous(&remote, _repo, cl_fixture("testrepo.git"),
 						"refs/heads/*:refs/other/*"));
-	cl_git_pass(git_remote_fetch(remote, NULL, NULL, NULL));
+	cl_git_pass(git_remote_fetch(remote, NULL, NULL));
 	git_remote_free(remote);
 }
 

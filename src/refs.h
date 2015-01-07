@@ -69,7 +69,7 @@ struct git_reference {
 git_reference *git_reference__set_name(git_reference *ref, const char *name);
 
 int git_reference__normalize_name(git_buf *buf, const char *name, unsigned int flags);
-int git_reference__update_terminal(git_repository *repo, const char *ref_name, const git_oid *oid, const git_signature *signature, const char *log_message);
+int git_reference__update_terminal(git_repository *repo, const char *ref_name, const git_oid *oid, const git_signature *sig, const char *log_message);
 int git_reference__is_valid_name(const char *refname, unsigned int flags);
 int git_reference__is_branch(const char *ref_name);
 int git_reference__is_remote(const char *ref_name);
@@ -106,7 +106,6 @@ int git_reference__update_for_commit(
 	git_reference *ref,
 	const char *ref_name,
 	const git_oid *id,
-	const git_signature *committer,
 	const char *operation);
 
 #endif

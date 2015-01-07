@@ -101,7 +101,6 @@ int git_reset(
 	git_object *target,
 	git_reset_t reset_type,
 	git_checkout_options *checkout_opts,
-	const git_signature *signature,
 	const char *log_message)
 {
 	git_object *commit = NULL;
@@ -148,7 +147,7 @@ int git_reset(
 
 	/* move HEAD to the new target */
 	if ((error = git_reference__update_terminal(repo, GIT_HEAD_FILE,
-		git_object_id(commit), signature, git_buf_cstr(&log_message_buf))) < 0)
+		git_object_id(commit), NULL, git_buf_cstr(&log_message))) < 0)
 		goto cleanup;
 
 	if (reset_type == GIT_RESET_HARD) {

@@ -335,7 +335,7 @@ void test_fetchhead_nonetwork__unborn_with_upstream(void)
 	cl_git_pass(git_remote_set_url(remote, cl_fixture("testrepo.git")));
 	cl_git_pass(git_remote_save(remote));
 
-	cl_git_pass(git_remote_fetch(remote, NULL, NULL, NULL));
+	cl_git_pass(git_remote_fetch(remote, NULL, NULL));
 	git_remote_free(remote);
 
 	cl_git_pass(git_repository_fetchhead_foreach(repo, assert_master_for_merge, NULL));

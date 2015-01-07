@@ -11,11 +11,19 @@ v0.22 + 1
 * Checkout can now handle an initial checkout of a repository, making
   `GIT_CHECKOUT_SAFE_CREATE` unnecessary for users of clone.
 
+* The signature parameter in the ref-modifying functions has been
+  removed. Use `git_repository_set_ident()` and
+  `git_repository_ident()` to override the signature to be used.
+
 ### API additions
 
 * Parsing and retrieving a configuration value as a path is exposed
   via `git_config_parse_path()` and `git_config_get_path()`
   respectively.
+
+* `git_repository_set_ident()` and `git_repository_ident()` serve to
+  set and query which identity will be used when writing to the
+  reflog.
 
 ### API removals
 

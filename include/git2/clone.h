@@ -137,12 +137,6 @@ typedef struct git_clone_options {
 	const char* checkout_branch;
 
 	/**
-	 * The identity used when updating the reflog. NULL means to
-	 * use the default signature using the config.
-	 */
-	git_signature *signature;
-
-	/**
 	 * A callback used to create the new repository into which to
 	 * clone. If NULL, the 'bare' field will be used to determine
 	 * whether to create a bare repository.

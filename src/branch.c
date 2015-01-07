@@ -55,7 +55,6 @@ int git_branch_create(
 	const char *branch_name,
 	const git_commit *commit,
 	int force,
-	const git_signature *signature,
 	const char *log_message)
 {
 	int is_head = 0;
@@ -92,7 +91,7 @@ int git_branch_create(
 		goto cleanup;
 
 	error = git_reference_create(&branch, repository,
-		git_buf_cstr(&canonical_branch_name), git_commit_id(commit), force, signature,
+		git_buf_cstr(&canonical_branch_name), git_commit_id(commit), force,
 		git_buf_cstr(&log_message_buf));
 
 	if (!error)
@@ -223,7 +222,6 @@ int git_branch_move(
 	git_reference *branch,
 	const char *new_branch_name,
 	int force,
-	const git_signature *signature,
 	const char *log_message)
 {
 	git_buf new_reference_name = GIT_BUF_INIT,
@@ -253,7 +251,7 @@ int git_branch_move(
 
 	error = git_reference_rename(
 		out, branch, git_buf_cstr(&new_reference_name), force,
-		signature, git_buf_cstr(&log_message_buf));
+		git_buf_cstr(&log_message_buf));
 	if (error < 0)
 		goto done;
 

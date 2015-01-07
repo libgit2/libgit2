@@ -128,6 +128,9 @@ struct git_repository {
 	char *namespace;
 	char *name_8dot3;
 
+	char *ident_name;
+	char *ident_email;
+
 	unsigned is_bare:1,
 		has_8dot3:1,
 		has_8dot3_default:1;

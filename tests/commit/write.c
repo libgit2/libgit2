@@ -120,7 +120,7 @@ void test_commit_write__root(void)
 	cl_assert(head_old != NULL);
 	git_reference_free(head);
 
-	cl_git_pass(git_reference_symbolic_create(&head, g_repo, "HEAD", branch_name, 1, NULL, NULL));
+	cl_git_pass(git_reference_symbolic_create(&head, g_repo, "HEAD", branch_name, 1, NULL));
 
 	cl_git_pass(git_commit_create_v(
 		&commit_id, /* out id */

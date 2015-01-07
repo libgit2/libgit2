@@ -7,7 +7,7 @@ void test_refs_crashes__double_free(void)
 	const char *REFNAME = "refs/heads/xxx";
 
 	cl_git_pass(git_repository_open(&repo, cl_fixture("testrepo.git")));
-	cl_git_pass(git_reference_symbolic_create(&ref, repo, REFNAME, "refs/heads/master", 0, NULL, NULL));
+	cl_git_pass(git_reference_symbolic_create(&ref, repo, REFNAME, "refs/heads/master", 0, NULL));
 	cl_git_pass(git_reference_lookup(&ref2, repo, REFNAME));
 	cl_git_pass(git_reference_delete(ref));
 	git_reference_free(ref);

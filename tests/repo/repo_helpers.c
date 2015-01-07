@@ -7,7 +7,7 @@ void make_head_unborn(git_repository* repo, const char *target)
 {
 	git_reference *head;
 
-	cl_git_pass(git_reference_symbolic_create(&head, repo, GIT_HEAD_FILE, target, 1, NULL, NULL));
+	cl_git_pass(git_reference_symbolic_create(&head, repo, GIT_HEAD_FILE, target, 1, NULL));
 	git_reference_free(head);
 }
 

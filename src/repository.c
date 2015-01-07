@@ -124,6 +124,8 @@ void git_repository_free(git_repository *repo)
 	git__free(repo->workdir);
 	git__free(repo->namespace);
 	git__free(repo->name_8dot3);
+	git__free(repo->ident_name);
+	git__free(repo->ident_email);
 
 	git__memzero(repo, sizeof(*repo));
 	git__free(repo);
@@ -1895,7 +1897,6 @@ static bool looks_like_a_branch(const char *refname)
 int git_repository_set_head(
 	git_repository* repo,
 	const char* refname,
-	const git_signature *signature,
 	const char *log_message)
 {
 	git_reference *ref,
@@ -1911,14 +1912,14 @@ int git_repository_set_head(
 	if (!error) {
 		if (git_reference_is_branch(ref)) {
 			error = git_reference_symbolic_create(&new_head, repo, GIT_HEAD_FILE,
-					git_reference_name(ref), true, signature, log_message);
+					git_reference_name(ref), true, log_message);
 		} else {
 			error = git_repository_set_head_detached(repo, git_reference_target(ref),
-					signature, log_message);
+					log_message);
 		}
 	} else if (looks_like_a_branch(refname)) {
 		error = git_reference_symbolic_create(&new_head, repo, GIT_HEAD_FILE, refname,
-				true, signature, log_message);
+				true, log_message);
 	}
 
 	git_reference_free(ref);
@@ -1929,7 +1930,6 @@ int git_repository_set_head(
 int git_repository_set_head_detached(
 	git_repository* repo,
 	const git_oid* commitish,
-	const git_signature *signature,
 	const char *log_message)
 {
 	int error;
@@ -1945,7 +1945,7 @@ int git_repository_set_head_detached(
 	if ((error = git_object_peel(&peeled, object, GIT_OBJ_COMMIT)) < 0)
 		goto cleanup;
 
-	error = git_reference_create(&new_head, repo, GIT_HEAD_FILE, git_object_id(peeled), true, signature, log_message);
+	error = git_reference_create(&new_head, repo, GIT_HEAD_FILE, git_object_id(peeled), true, log_message);
 
 cleanup:
 	git_object_free(object);
@@ -1956,7 +1956,6 @@ cleanup:
 
 int git_repository_detach_head(
 	git_repository* repo,
-	const git_signature *signature,
 	const char *reflog_message)
 {
 	git_reference *old_head = NULL,
@@ -1973,7 +1972,7 @@ int git_repository_detach_head(
 		goto cleanup;
 
 	error = git_reference_create(&new_head, repo, GIT_HEAD_FILE, git_reference_target(old_head),
-			1, signature, reflog_message);
+			1, reflog_message);
 
 cleanup:
 	git_object_free(object);
@@ -2094,5 +2093,36 @@ int git_repository_init_init_options(
 	GIT_INIT_STRUCTURE_FROM_TEMPLATE(
 		opts, version, git_repository_init_options,
 		GIT_REPOSITORY_INIT_OPTIONS_INIT);
+	return 0;
+}
+
+int git_repository_ident(const char **name, const char **email, const git_repository *repo)
+{
+	*name = repo->ident_name;
+	*email = repo->ident_email;
+
+	return 0;
+}
+
+int git_repository_set_ident(git_repository *repo, const char *name, const char *email)
+{
+	char *tmp_name = NULL, *tmp_email = NULL;
+
+	if (name) {
+		tmp_name = git__strdup(name);
+		GITERR_CHECK_ALLOC(tmp_name);
+	}
+
+	if (email) {
+		tmp_email = git__strdup(email);
+		GITERR_CHECK_ALLOC(tmp_email);
+	}
+
+	tmp_name = git__swap(repo->ident_name, tmp_name);
+	tmp_email = git__swap(repo->ident_email, tmp_email);
+
+	git__free(tmp_name);
+	git__free(tmp_email);
+
 	return 0;
 }

@@ -34,7 +34,7 @@ void test_refs_setter__update_direct(void)
 	cl_git_pass(git_reference_lookup(&test_ref, g_repo, ref_test_name));
 	cl_assert(git_reference_type(test_ref) == GIT_REF_OID);
 
-	cl_git_pass(git_reference_set_target(&new_ref, test_ref, &id, NULL, NULL));
+	cl_git_pass(git_reference_set_target(&new_ref, test_ref, &id, NULL));
 
 	git_reference_free(test_ref);
 	git_reference_free(new_ref);
@@ -53,7 +53,7 @@ void test_refs_setter__update_symbolic(void)
 	cl_assert(git_reference_type(head) == GIT_REF_SYMBOLIC);
 	cl_assert(strcmp(git_reference_symbolic_target(head), ref_master_name) == 0);
 
-	cl_git_pass(git_reference_symbolic_set_target(&new_head, head, ref_test_name, NULL, NULL));
+	cl_git_pass(git_reference_symbolic_set_target(&new_head, head, ref_test_name, NULL));
 	git_reference_free(new_head);
 	git_reference_free(head);
 
@@ -73,7 +73,7 @@ void test_refs_setter__cant_update_direct_with_symbolic(void)
 	cl_assert(git_reference_type(ref) == GIT_REF_OID);
 	git_oid_cpy(&id, git_reference_target(ref));
 
-	cl_git_fail(git_reference_symbolic_set_target(&new, ref, ref_name, NULL, NULL));
+	cl_git_fail(git_reference_symbolic_set_target(&new, ref, ref_name, NULL));
 
 	git_reference_free(ref);
 }
@@ -90,10 +90,10 @@ void test_refs_setter__cant_update_symbolic_with_direct(void)
 	git_reference_free(ref);
 
 	/* Create the symbolic ref */
-	cl_git_pass(git_reference_symbolic_create(&ref, g_repo, ref_name, ref_master_name, 0, NULL, NULL));
+	cl_git_pass(git_reference_symbolic_create(&ref, g_repo, ref_name, ref_master_name, 0, NULL));
 
 	/* Can't set an OID on a direct ref */
-	cl_git_fail(git_reference_set_target(&new, ref, &id, NULL, NULL));
+	cl_git_fail(git_reference_set_target(&new, ref, &id, NULL));
 
 	git_reference_free(ref);
 }

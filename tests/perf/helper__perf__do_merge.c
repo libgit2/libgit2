@@ -28,7 +28,6 @@ void perf__do_merge(const char *fixture,
 
 	checkout_opts.checkout_strategy = GIT_CHECKOUT_SAFE;
 	clone_opts.checkout_opts = checkout_opts;
-	cl_git_pass(git_signature_now(&clone_opts.signature, "Me", "foo@example.com"));
 
 	perf__timer__start(&t_clone);
 	cl_git_pass(git_clone(&g_repo, fixture, test_name, &clone_opts));
@@ -38,21 +37,20 @@ void perf__do_merge(const char *fixture,
 	cl_git_pass(git_commit_lookup(&commit_a, g_repo, &oid_a));
 	cl_git_pass(git_branch_create(&ref_branch_a, g_repo,
 								  "A", commit_a,
-								  0, NULL, NULL));
+								  0, NULL));
 
 	perf__timer__start(&t_checkout);
 	cl_git_pass(git_checkout_tree(g_repo, (git_object*)commit_a, &checkout_opts));
 	perf__timer__stop(&t_checkout);
 
 	cl_git_pass(git_repository_set_head(g_repo,
-										git_reference_name(ref_branch_a),
-										NULL, NULL));
+										git_reference_name(ref_branch_a), NULL));
 
 	git_oid_fromstr(&oid_b, id_b);
 	cl_git_pass(git_commit_lookup(&commit_b, g_repo, &oid_b));
 	cl_git_pass(git_branch_create(&ref_branch_b, g_repo,
 								  "B", commit_b,
-								  0, NULL, NULL));
+								  0, NULL));
 
 	cl_git_pass(git_annotated_commit_lookup(&annotated_commits[0], g_repo, &oid_b));
 
