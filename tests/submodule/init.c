@@ -41,6 +41,7 @@ void test_submodule_init__absolute_url(void)
 
 	git_buf_free(&absolute_url);
 	git_config_free(cfg);
+	git_submodule_free(sm);
 }
 
 void test_submodule_init__relative_url(void)
@@ -70,6 +71,7 @@ void test_submodule_init__relative_url(void)
 
 	git_buf_free(&absolute_url);
 	git_config_free(cfg);
+	git_submodule_free(sm);
 }
 
 void test_submodule_init__relative_url_detached_head(void)
@@ -107,5 +109,7 @@ void test_submodule_init__relative_url_detached_head(void)
 
 	git_buf_free(&absolute_url);
 	git_config_free(cfg);
-
+	git_commit_free(head_commit);
+	git_reference_free(head_ref);
+	git_submodule_free(sm);
 }
