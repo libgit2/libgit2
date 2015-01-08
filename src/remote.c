@@ -139,7 +139,7 @@ static int canonicalize_url(git_buf *out, const char *in)
 static int create_internal(git_remote **out, git_repository *repo, const char *name, const char *url, const char *fetch)
 {
 	git_remote *remote;
-	git_config *config;
+	git_config *config = NULL;
 	git_buf canonical_url = GIT_BUF_INIT, fetchbuf = GIT_BUF_INIT;
 	int error = -1;
 
@@ -183,12 +183,12 @@ static int create_internal(git_remote **out, git_repository *repo, const char *n
 		remote->download_tags = GIT_REMOTE_DOWNLOAD_TAGS_NONE;
 
 	*out = remote;
-	git_buf_free(&fetchbuf);
-	git_buf_free(&canonical_url);
-	return 0;
+	error = 0;
 
 on_error:
-	git_remote_free(remote);
+	if (error)
+		git_remote_free(remote);
+
 	git_config_free(config);
 	git_buf_free(&fetchbuf);
 	git_buf_free(&canonical_url);
