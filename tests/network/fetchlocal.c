@@ -481,3 +481,47 @@ void test_network_fetchlocal__call_progress(void)
 	git_remote_free(remote);
 	git_repository_free(repo);
 }
+
+void test_network_fetchlocal__prune_load_remote_prune_config(void)
+{
+	git_repository *repo;
+	git_remote *origin;
+	git_config *config;
+	git_repository *remote_repo = cl_git_sandbox_init("testrepo.git");
+	const char *url = cl_git_path_url(git_repository_path(remote_repo));
+
+	cl_set_cleanup(&cleanup_local_repo, "foo");
+	cl_git_pass(git_repository_init(&repo, "foo", true));
+
+	cl_git_pass(git_repository_config(&config, repo));
+	cl_git_pass(git_config_set_bool(config, "remote.origin.prune", 1));
+
+	cl_git_pass(git_remote_create(&origin, repo, GIT_REMOTE_ORIGIN, url));
+	cl_assert_equal_i(1, git_remote_prune_refs(origin));
+
+	git_config_free(config);
+	git_remote_free(origin);
+	git_repository_free(repo);
+}
+
+void test_network_fetchlocal__prune_load_fetch_prune_config(void)
+{
+	git_repository *repo;
+	git_remote *origin;
+	git_config *config;
+	git_repository *remote_repo = cl_git_sandbox_init("testrepo.git");
+	const char *url = cl_git_path_url(git_repository_path(remote_repo));
+
+	cl_set_cleanup(&cleanup_local_repo, "foo");
+	cl_git_pass(git_repository_init(&repo, "foo", true));
+
+	cl_git_pass(git_repository_config(&config, repo));
+	cl_git_pass(git_config_set_bool(config, "fetch.prune", 1));
+
+	cl_git_pass(git_remote_create(&origin, repo, GIT_REMOTE_ORIGIN, url));
+	cl_assert_equal_i(1, git_remote_prune_refs(origin));
+
+	git_config_free(config);
+	git_remote_free(origin);
+	git_repository_free(repo);
+}

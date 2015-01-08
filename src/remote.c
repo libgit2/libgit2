@@ -21,6 +21,7 @@
 #include "push.h"
 
 static int dwim_refspecs(git_vector *out, git_vector *refspecs, git_vector *refs);
+static int lookup_remote_prune_config(git_remote *remote, git_config *config, const char *name);
 
 static int add_refspec_to(git_vector *vector, const char *string, bool is_fetch)
 {
@@ -138,6 +139,7 @@ static int canonicalize_url(git_buf *out, const char *in)
 static int create_internal(git_remote **out, git_repository *repo, const char *name, const char *url, const char *fetch)
 {
 	git_remote *remote;
+	git_config *config;
 	git_buf canonical_url = GIT_BUF_INIT, fetchbuf = GIT_BUF_INIT;
 	int error = -1;
 
@@ -165,6 +167,12 @@ static int create_internal(git_remote **out, git_repository *repo, const char *n
 		if (add_refspec(remote, fetch, true) < 0)
 			goto on_error;
 
+		if ((error = git_repository_config_snapshot(&config, repo)) < 0)
+			goto on_error;
+
+		if (lookup_remote_prune_config(remote, config, name) < 0)
+			goto on_error;
+
 		/* Move the data over to where the matching functions can find them */
 		if (dwim_refspecs(&remote->active_refspecs, &remote->refspecs, &remote->refs) < 0)
 			goto on_error;
@@ -181,6 +189,7 @@ static int create_internal(git_remote **out, git_repository *repo, const char *n
 
 on_error:
 	git_remote_free(remote);
+	git_config_free(config);
 	git_buf_free(&fetchbuf);
 	git_buf_free(&canonical_url);
 	return error;
@@ -444,7 +453,30 @@ int git_remote_lookup(git_remote **out, git_repository *repo, const char *name)
 	if (download_tags_value(remote, config) < 0)
 		goto cleanup;
 
-	git_buf_clear(&buf);
+	if ((error = lookup_remote_prune_config(remote, config, name)) < 0)
+		goto cleanup;
+
+	/* Move the data over to where the matching functions can find them */
+	if (dwim_refspecs(&remote->active_refspecs, &remote->refspecs, &remote->refs) < 0)
+		goto cleanup;
+
+	*out = remote;
+
+cleanup:
+	git_config_free(config);
+	git_buf_free(&buf);
+
+	if (error < 0)
+		git_remote_free(remote);
+
+	return error;
+}
+
+static int lookup_remote_prune_config(git_remote *remote, git_config *config, const char *name)
+{
+	git_buf buf = GIT_BUF_INIT;
+	int error = 0;
+
 	git_buf_printf(&buf, "remote.%s.prune", name);
 
 	if ((error = git_config_get_bool(&remote->prune_refs, config, git_buf_cstr(&buf))) < 0) {
@@ -460,19 +492,7 @@ int git_remote_lookup(git_remote **out, git_repository *repo, const char *name)
 		}
 	}
 
-	/* Move the data over to where the matching functions can find them */
-	if (dwim_refspecs(&remote->active_refspecs, &remote->refspecs, &remote->refs) < 0)
-		goto cleanup;
-
-	*out = remote;
-
-cleanup:
-	git_config_free(config);
 	git_buf_free(&buf);
-
-	if (error < 0)
-		git_remote_free(remote);
-
 	return error;
 }
 
