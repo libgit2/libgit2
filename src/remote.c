@@ -139,7 +139,7 @@ static int canonicalize_url(git_buf *out, const char *in)
 static int create_internal(git_remote **out, git_repository *repo, const char *name, const char *url, const char *fetch)
 {
 	git_remote *remote;
-	git_config *config;
+	git_config *config = NULL;
 	git_buf canonical_url = GIT_BUF_INIT, fetchbuf = GIT_BUF_INIT;
 	int error = -1;
 
