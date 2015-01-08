@@ -67,7 +67,7 @@ int git_buf_try_grow(
 
 	if (!new_ptr) {
 		if (mark_oom) {
-			if (buf->ptr) git__free(buf->ptr);
+			if (buf->ptr && (buf->ptr != git_buf__initbuf) && (buf->ptr != git_buf__oom)) git__free(buf->ptr);
 			buf->ptr = git_buf__oom;
 		}
 		return -1;
