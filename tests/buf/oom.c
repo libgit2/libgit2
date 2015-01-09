@@ -8,7 +8,7 @@
 #endif
 
 /**
- * If we make a rediculously large request the first time we
+ * If we make a ridiculously large request the first time we
  * actually allocate some space in the git_buf, the realloc()
  * will fail.  And because the git_buf_grow() wrapper always
  * sets mark_oom, the code in git_buf_try_grow() will free
