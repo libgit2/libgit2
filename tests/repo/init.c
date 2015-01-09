@@ -510,6 +510,32 @@ static void assert_mode_seems_okay(
 		GIT_MODE_TYPE(expect_mode), GIT_MODE_TYPE(st.st_mode), "%07o");
 }
 
+static const char *template_sandbox(const char *name)
+{
+	git_buf hooks_path = GIT_BUF_INIT, link_path = GIT_BUF_INIT;
+	const char *path = cl_fixture(name);
+
+	cl_fixture_sandbox(name);
+
+	/* create a symlink from link.sample to update.sample if the filesystem
+	 * supports it.
+	 */
+
+	cl_git_pass(git_buf_joinpath(&hooks_path, name, "hooks"));
+	cl_git_pass(git_buf_joinpath(&link_path, hooks_path.ptr, "link.sample"));
+
+#ifdef GIT_WIN32
+	cl_git_mkfile(link_path.ptr, "#!/bin/sh\necho hello, world\n");
+#else
+	cl_must_pass(symlink("update.sample", link_path.ptr));
+#endif
+
+	git_buf_free(&link_path);
+	git_buf_free(&hooks_path);
+
+	return path;
+}
+
 void test_repo_init__extended_with_template(void)
 {
 	git_buf expected = GIT_BUF_INIT;
@@ -518,10 +544,11 @@ void test_repo_init__extended_with_template(void)
 	int filemode;
 
 	cl_set_cleanup(&cleanup_repository, "templated.git");
+	template_sandbox("template");
 
 	opts.flags = GIT_REPOSITORY_INIT_MKPATH | GIT_REPOSITORY_INIT_BARE |
 		GIT_REPOSITORY_INIT_EXTERNAL_TEMPLATE;
-	opts.template_path = cl_fixture("template");
+	opts.template_path = "template";
 
 	cl_git_pass(git_repository_init_ext(&_repo, "templated.git", &opts));
 
@@ -529,8 +556,7 @@ void test_repo_init__extended_with_template(void)
 
 	cl_assert(!git__suffixcmp(git_repository_path(_repo), "/templated.git/"));
 
-	cl_git_pass(git_futils_readbuffer(
-		&expected, cl_fixture("template/description")));
+	cl_git_pass(git_futils_readbuffer(&expected, "template/description"));
 	cl_git_pass(git_futils_readbuffer(
 		&actual, "templated.git/description"));
 
@@ -542,12 +568,14 @@ void test_repo_init__extended_with_template(void)
 	filemode = cl_repo_get_bool(_repo, "core.filemode");
 
 	assert_hooks_match(
-		cl_fixture("template"), git_repository_path(_repo),
+		"template", git_repository_path(_repo),
 		"hooks/update.sample", filemode);
 
 	assert_hooks_match(
-		cl_fixture("template"), git_repository_path(_repo),
+		"template", git_repository_path(_repo),
 		"hooks/link.sample", filemode);
+
+	cl_fixture_cleanup("template");
 }
 
 void test_repo_init__extended_with_template_and_shared_mode(void)
@@ -559,10 +587,11 @@ void test_repo_init__extended_with_template_and_shared_mode(void)
 	const char *repo_path = NULL;
 
 	cl_set_cleanup(&cleanup_repository, "init_shared_from_tpl");
+	template_sandbox("template");
 
 	opts.flags = GIT_REPOSITORY_INIT_MKPATH |
 		GIT_REPOSITORY_INIT_EXTERNAL_TEMPLATE;
-	opts.template_path = cl_fixture("template");
+	opts.template_path = "template";
 	opts.mode = GIT_REPOSITORY_INIT_SHARED_GROUP;
 
 	cl_git_pass(git_repository_init_ext(&_repo, "init_shared_from_tpl", &opts));
@@ -573,7 +602,7 @@ void test_repo_init__extended_with_template_and_shared_mode(void)
 	filemode = cl_repo_get_bool(_repo, "core.filemode");
 
 	cl_git_pass(git_futils_readbuffer(
-		&expected, cl_fixture("template/description")));
+		&expected, "template/description"));
 	cl_git_pass(git_futils_readbuffer(
 		&actual, "init_shared_from_tpl/.git/description"));
 
@@ -592,15 +621,17 @@ void test_repo_init__extended_with_template_and_shared_mode(void)
 
 	/* for a non-symlinked hook, it should have shared permissions now */
 	assert_hooks_match(
-		cl_fixture("template"), git_repository_path(_repo),
+		"template", git_repository_path(_repo),
 		"hooks/update.sample", filemode);
 
 	/* for a symlinked hook, the permissions still should match the
 	 * source link, not the GIT_REPOSITORY_INIT_SHARED_GROUP value
 	 */
 	assert_hooks_match(
-		cl_fixture("template"), git_repository_path(_repo),
+		"template", git_repository_path(_repo),
 		"hooks/link.sample", filemode);
+
+	cl_fixture_cleanup("template");
 }
 
 void test_repo_init__can_reinit_an_initialized_repository(void)
