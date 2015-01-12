@@ -1101,3 +1101,32 @@ void test_checkout_tree__case_changing_rename(void)
 	git_commit_free(dir_commit);
 	git_commit_free(master_commit);
 }
+
+void perfdata_cb(const git_checkout_perfdata *in, void *payload)
+{
+	memcpy(payload, in, sizeof(git_checkout_perfdata));
+}
+
+void test_checkout_tree__can_collect_perfdata(void)
+{
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
+	git_oid oid;
+	git_object *obj = NULL;
+	git_checkout_perfdata perfdata = {0};
+
+	opts.perfdata_cb = perfdata_cb;
+	opts.perfdata_payload = &perfdata;
+
+	assert_on_branch(g_repo, "master");
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+
+	cl_git_pass(git_reference_name_to_id(&oid, g_repo, "refs/heads/dir"));
+	cl_git_pass(git_object_lookup(&obj, g_repo, &oid, GIT_OBJ_ANY));
+
+	cl_git_pass(git_checkout_tree(g_repo, obj, &opts));
+
+	cl_assert(perfdata.mkdir_calls > 0);
+	cl_assert(perfdata.stat_calls > 0);
+
+	git_object_free(obj);
+}

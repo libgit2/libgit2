@@ -84,6 +84,13 @@ typedef enum {
 	GIT_MKDIR_VERIFY_DIR = 64,
 } git_futils_mkdir_flags;
 
+struct git_futils_mkdir_perfdata
+{
+	size_t stat_calls;
+	size_t mkdir_calls;
+	size_t chmod_calls;
+};
+
 /**
  * Create a directory or entire path.
  *
@@ -95,7 +102,14 @@ typedef enum {
  * @param base Root for relative path.  These directories will never be made.
  * @param mode The mode to use for created directories.
  * @param flags Combination of the mkdir flags above.
+ * @param perfdata Performance data, use `git_futils_mkdir` if you don't want this data.
  * @return 0 on success, else error code
+ */
+extern int git_futils_mkdir_withperf(const char *path, const char *base, mode_t mode, uint32_t flags, struct git_futils_mkdir_perfdata *perfdata);
+
+/**
+ * Create a directory or entire path.  Similar to `git_futils_mkdir_withperf`
+ * without performance data.
  */
 extern int git_futils_mkdir(const char *path, const char *base, mode_t mode, uint32_t flags);
 

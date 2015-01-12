@@ -206,6 +206,12 @@ typedef enum {
 	GIT_CHECKOUT_NOTIFY_ALL       = 0x0FFFFu
 } git_checkout_notify_t;
 
+typedef struct {
+	size_t mkdir_calls;
+	size_t stat_calls;
+	size_t chmod_calls;
+} git_checkout_perfdata;
+
 /** Checkout notification callback function */
 typedef int (*git_checkout_notify_cb)(
 	git_checkout_notify_t why,
@@ -220,6 +226,11 @@ typedef void (*git_checkout_progress_cb)(
 	const char *path,
 	size_t completed_steps,
 	size_t total_steps,
+	void *payload);
+
+/** Checkout perfdata notification function */
+typedef void (*git_checkout_perfdata_cb)(
+	const git_checkout_perfdata *perfdata,
 	void *payload);
 
 /**
@@ -261,6 +272,10 @@ typedef struct git_checkout_options {
 	const char *ancestor_label; /**< the name of the common ancestor side of conflicts */
 	const char *our_label; /**< the name of the "our" side of conflicts */
 	const char *their_label; /**< the name of the "their" side of conflicts */
+
+	/** Optional callback to notify the consumer of performance data. */
+	git_checkout_perfdata_cb perfdata_cb;
+	void *perfdata_payload;
 } git_checkout_options;
 
 #define GIT_CHECKOUT_OPTIONS_VERSION 1
