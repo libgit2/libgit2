@@ -396,21 +396,35 @@ enum { GIT_PATH_NOTEQUAL = 0, GIT_PATH_EQUAL = 1, GIT_PATH_PREFIX = 2 };
  */
 GIT_INLINE(int) git_path_equal_or_prefixed(
 	const char *parent,
-	const char *child)
+	const char *child,
+	ssize_t *prefixlen)
 {
 	const char *p = parent, *c = child;
+	int lastslash = 0;
 
 	while (*p && *c) {
+		lastslash = (*p == '/');
+
 		if (*p++ != *c++)
 			return GIT_PATH_NOTEQUAL;
 	}
 
 	if (*p != '\0')
 		return GIT_PATH_NOTEQUAL;
-	if (*c == '\0')
+
+	if (*c == '\0') {
+		if (prefixlen)
+			*prefixlen = p - parent;
+
 		return GIT_PATH_EQUAL;
-	if (*c == '/')
+	}
+
+	if (*c == '/' || lastslash) {
+		if (prefixlen)
+			*prefixlen = (p - parent) - lastslash;
+
 		return GIT_PATH_PREFIX;
+	}
 
 	return GIT_PATH_NOTEQUAL;
 }
