@@ -1612,13 +1612,7 @@ static int merge_normalize_opts(
 		opts->metric->buffer_signature = git_diff_find_similar__hashsig_for_buf;
 		opts->metric->free_signature = git_diff_find_similar__hashsig_free;
 		opts->metric->similarity = git_diff_find_similar__calc_similarity;
-
-		if (opts->flags & GIT_DIFF_FIND_IGNORE_WHITESPACE)
-			opts->metric->payload = (void *)GIT_HASHSIG_IGNORE_WHITESPACE;
-		else if (opts->flags & GIT_DIFF_FIND_DONT_IGNORE_WHITESPACE)
-			opts->metric->payload = (void *)GIT_HASHSIG_NORMAL;
-		else
-			opts->metric->payload = (void *)GIT_HASHSIG_SMART_WHITESPACE;
+		opts->metric->payload = (void *)GIT_HASHSIG_SMART_WHITESPACE;
 	}
 
 	return 0;

@@ -53,6 +53,11 @@ void cl_git_rewritefile(const char *path, const char *content)
 	cl_git_write2file(path, content, 0, O_WRONLY | O_CREAT | O_TRUNC, 0644);
 }
 
+void cl_git_rmfile(const char *filename)
+{
+	cl_must_pass(p_unlink(filename));
+}
+
 #ifdef GIT_WIN32
 
 #include "win32/utf-conv.h"

@@ -219,34 +219,18 @@ int git_diff_find_similar__hashsig_for_file(
 	void **out, const git_diff_file *f, const char *path, void *p)
 {
 	git_hashsig_option_t opt = (git_hashsig_option_t)(intptr_t)p;
-	int error = 0;
 
 	GIT_UNUSED(f);
-	error = git_hashsig_create_fromfile((git_hashsig **)out, path, opt);
-
-	if (error == GIT_EBUFS) {
-		error = 0;
-		giterr_clear();
-	}
-
-	return error;
+	return git_hashsig_create_fromfile((git_hashsig **)out, path, opt);
 }
 
 int git_diff_find_similar__hashsig_for_buf(
 	void **out, const git_diff_file *f, const char *buf, size_t len, void *p)
 {
 	git_hashsig_option_t opt = (git_hashsig_option_t)(intptr_t)p;
-	int error = 0;
 
 	GIT_UNUSED(f);
-	error = git_hashsig_create((git_hashsig **)out, buf, len, opt);
-
-	if (error == GIT_EBUFS) {
-		error = 0;
-		giterr_clear();
-	}
-
-	return error;
+	return git_hashsig_create((git_hashsig **)out, buf, len, opt);
 }
 
 void git_diff_find_similar__hashsig_free(void *sig, void *payload)
@@ -258,8 +242,14 @@ void git_diff_find_similar__hashsig_free(void *sig, void *payload)
 int git_diff_find_similar__calc_similarity(
 	int *score, void *siga, void *sigb, void *payload)
 {
+	int error;
+
 	GIT_UNUSED(payload);
-	*score = git_hashsig_compare(siga, sigb);
+	error = git_hashsig_compare(siga, sigb);
+	if (error < 0)
+		return error;
+
+	*score = error;
 	return 0;
 }
 
@@ -273,6 +263,7 @@ static int normalize_find_opts(
 	const git_diff_find_options *given)
 {
 	git_config *cfg = NULL;
+	git_hashsig_option_t hashsig_opts;
 
 	GITERR_CHECK_VERSION(given, GIT_DIFF_FIND_OPTIONS_VERSION, "git_diff_find_options");
 
@@ -354,11 +345,13 @@ static int normalize_find_opts(
 		opts->metric->similarity = git_diff_find_similar__calc_similarity;
 
 		if (opts->flags & GIT_DIFF_FIND_IGNORE_WHITESPACE)
-			opts->metric->payload = (void *)GIT_HASHSIG_IGNORE_WHITESPACE;
+			hashsig_opts = GIT_HASHSIG_IGNORE_WHITESPACE;
 		else if (opts->flags & GIT_DIFF_FIND_DONT_IGNORE_WHITESPACE)
-			opts->metric->payload = (void *)GIT_HASHSIG_NORMAL;
+			hashsig_opts = GIT_HASHSIG_NORMAL;
 		else
-			opts->metric->payload = (void *)GIT_HASHSIG_SMART_WHITESPACE;
+			hashsig_opts = GIT_HASHSIG_SMART_WHITESPACE;
+		hashsig_opts |= GIT_HASHSIG_ALLOW_SMALL_FILES;
+		opts->metric->payload = (void *)hashsig_opts;
 	}
 
 	return 0;

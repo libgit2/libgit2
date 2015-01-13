@@ -993,6 +993,9 @@ void test_core_buffer__similarity_metric_whitespace(void)
 
 	/* let's try variations of our own code with whitespace changes */
 
+	cl_assert_equal_i(GIT_HASHSIG_NORMAL, 0);
+	cl_assert_equal_i(GIT_HASHSIG_IGNORE_WHITESPACE, GIT_HASHSIG_NORMAL + 1);
+	cl_assert_equal_i(GIT_HASHSIG_SMART_WHITESPACE, GIT_HASHSIG_IGNORE_WHITESPACE + 1);
 	for (opt = GIT_HASHSIG_NORMAL; opt <= GIT_HASHSIG_SMART_WHITESPACE; ++opt) {
 		for (i = 0; i < 3; ++i) {
 			for (j = 0; j < 3; ++j) {
