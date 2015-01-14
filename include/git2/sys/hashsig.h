@@ -12,33 +12,52 @@
 GIT_BEGIN_DECL
 
 /**
- * Similarity signature of line hashes for a buffer
+ * Similarity signature of arbitrary text content based on line hashes
  */
 typedef struct git_hashsig git_hashsig;
 
 /**
- * Options for hashsig calculation
+ * Options for hashsig computation
+ *
+ * The options GIT_HASHSIG_NORMAL, GIT_HASHSIG_IGNORE_WHITESPACE,
+ * GIT_HASHSIG_SMART_WHITESPACE are exclusive and should not be combined.
  */
 typedef enum {
-	GIT_HASHSIG_NORMAL = 0, /* use all data */
-	GIT_HASHSIG_IGNORE_WHITESPACE = 1, /* ignore whitespace */
-	GIT_HASHSIG_SMART_WHITESPACE = 2, /* ignore \r and all space after \n */
+	/**
+	 * Use all data
+	 */
+	GIT_HASHSIG_NORMAL = 0,
+
+	/**
+	 * Ignore whitespace
+	 */
+	GIT_HASHSIG_IGNORE_WHITESPACE = (1 << 0),
+
+	/**
+	 * Ignore \r and all space after \n
+	 */
+	GIT_HASHSIG_SMART_WHITESPACE = (1 << 1),
+
+	/**
+	 * Allow hashing of small files
+	 */
+	GIT_HASHSIG_ALLOW_SMALL_FILES = (1 << 2)
 } git_hashsig_option_t;
 
 /**
- * Build a similarity signature for a buffer
+ * Compute a similarity signature for a text buffer
  *
- * If you have passed a whitespace-ignoring buffer, then the whitespace
- * will be removed from the buffer while it is being processed, modifying
- * the buffer in place.  Sorry about that!
+ * If you have passed the option GIT_HASHSIG_IGNORE_WHITESPACE, then the
+ * whitespace will be removed from the buffer while it is being processed,
+ * modifying the buffer in place. Sorry about that!
  *
- * This will return an error if the buffer doesn't contain enough data to
- * compute a valid signature.
- *
- * @param out The array of hashed runs representing the file content
- * @param buf The contents of the file to hash
- * @param buflen The length of the data at `buf`
- * @param generate_pairwise_hashes Should pairwise runs be hashed
+ * @param out The computed similarity signature.
+ * @param buf The input buffer.
+ * @param buflen The input buffer size.
+ * @param opts The signature computation options (see above).
+ * @return 0 on success, GIT_EBUFS if the buffer doesn't contain enough data to
+ * compute a valid signature (unless GIT_HASHSIG_ALLOW_SMALL_FILES is set), or
+ * error code.
  */
 GIT_EXTERN(int) git_hashsig_create(
 	git_hashsig **out,
@@ -47,13 +66,17 @@ GIT_EXTERN(int) git_hashsig_create(
 	git_hashsig_option_t opts);
 
 /**
- * Build a similarity signature from a file
+ * Compute a similarity signature for a text file
  *
  * This walks through the file, only loading a maximum of 4K of file data at
- * a time.  Otherwise, it acts just like `git_hashsig_create`.
+ * a time. Otherwise, it acts just like `git_hashsig_create`.
  *
- * This will return an error if the file doesn't contain enough data to
- * compute a valid signature.
+ * @param out The computed similarity signature.
+ * @param path The path to the input file.
+ * @param opts The signature computation options (see above).
+ * @return 0 on success, GIT_EBUFS if the buffer doesn't contain enough data to
+ * compute a valid signature (unless GIT_HASHSIG_ALLOW_SMALL_FILES is set), or
+ * error code.
  */
 GIT_EXTERN(int) git_hashsig_create_fromfile(
 	git_hashsig **out,
@@ -62,13 +85,17 @@ GIT_EXTERN(int) git_hashsig_create_fromfile(
 
 /**
  * Release memory for a content similarity signature
+ *
+ * @param sig The similarity signature to free.
  */
 GIT_EXTERN(void) git_hashsig_free(git_hashsig *sig);
 
 /**
- * Measure similarity between two files
+ * Measure similarity score between two similarity signatures
  *
- * @return <0 for error, [0 to 100] as similarity score
+ * @param a The first similarity signature to compare.
+ * @param b The second similarity signature to compare.
+ * @return [0 to 100] on success as the similarity score, or error code.
  */
 GIT_EXTERN(int) git_hashsig_compare(
 	const git_hashsig *a,
