@@ -7,6 +7,10 @@ v0.22 + 1
 
 ### API additions
 
+* Parsing and retrieving a configuration value as a path is exposed
+  via `git_config_parse_path()` and `git_config_get_path()`
+  respectively.
+
 ### API removals
 
 ### Breaking API changes

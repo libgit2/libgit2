@@ -320,6 +320,24 @@ GIT_EXTERN(int) git_config_get_int64(int64_t *out, const git_config *cfg, const 
 GIT_EXTERN(int) git_config_get_bool(int *out, const git_config *cfg, const char *name);
 
 /**
+ * Get the value of a path config variable.
+ *
+ * A leading '~' will be expanded to the global search path (which
+ * defaults to the user's home directory but can be overridden via
+ * `git_libgit2_opts()`.
+ *
+ * All config files will be looked into, in the order of their
+ * defined level. A higher level means a higher priority. The
+ * first occurrence of the variable will be returned here.
+ *
+ * @param out the buffer in which to store the result
+ * @param cfg where to look for the variable
+ * @param name the variable's name
+ * @param 0 or an error code
+ */
+GIT_EXTERN(int) git_config_get_path(git_buf *out, const git_config *cfg, const char *name);
+
+/**
  * Get the value of a string config variable.
  *
  * The string is owned by the variable and should not be freed by the
@@ -615,6 +633,20 @@ GIT_EXTERN(int) git_config_parse_int32(int32_t *out, const char *value);
  */
 GIT_EXTERN(int) git_config_parse_int64(int64_t *out, const char *value);
 
+/**
+ * Parse a string value as a path.
+ *
+ * A leading '~' will be expanded to the global search path (which
+ * defaults to the user's home directory but can be overridden via
+ * `git_libgit2_opts()`.
+ *
+ * If the value does not begin with a tilde, the input will be
+ * returned.
+ *
+ * @param out placae to store the result of parsing
+ * @param value the path to evaluate
+ */
+GIT_EXTERN(int) git_config_parse_path(git_buf *out, const char *value);
 
 /**
  * Perform an operation on each config variable in given config backend
