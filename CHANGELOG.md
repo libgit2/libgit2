@@ -3,6 +3,8 @@ v0.22 + 1
 
 ### Changes or improvements
 
+* Rename and copy detection is enabled for small files.
+
 ### API additions
 
 ### API removals
