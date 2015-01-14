@@ -35,6 +35,7 @@ OPTION( LIBGIT2_FILENAME	"Name of the produced binary"			OFF )
 
 OPTION( ANDROID				"Build for android NDK"	 				OFF )
 
+OPTION( USE_OPENSSL                     "Link with and use openssl library"             ON )
 OPTION( USE_ICONV			"Link with and use iconv library" 		OFF )
 OPTION( USE_SSH				"Link with libssh to enable SSH support" ON )
 OPTION( USE_GSSAPI			"Link with libgssapi for SPNEGO auth"   OFF )
@@ -152,7 +153,7 @@ IF (WIN32 AND WINHTTP AND NOT MINGW)
 	INCLUDE_DIRECTORIES(deps/http-parser)
 	FILE(GLOB SRC_HTTP deps/http-parser/*.c deps/http-parser/*.h)
 ELSE ()
-	IF (NOT AMIGA)
+	IF (NOT AMIGA AND USE_OPENSSL)
 		FIND_PACKAGE(OpenSSL)
 	ENDIF ()
 
