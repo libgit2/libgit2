@@ -70,6 +70,8 @@ extern int git_futils_mkdir_r(const char *path, const char *base, const mode_t m
  * * GIT_MKDIR_SKIP_LAST says to leave off the last element of the path
  * * GIT_MKDIR_SKIP_LAST2 says to leave off the last 2 elements of the path
  * * GIT_MKDIR_VERIFY_DIR says confirm final item is a dir, not just EEXIST
+ * * GIT_MKDIR_REMOVE_FILES says to remove files and recreate dirs
+ * * GIT_MKDIR_REMOVE_SYMLINKS says to remove symlinks and recreate dirs
  *
  * Note that the chmod options will be executed even if the directory already
  * exists, unless GIT_MKDIR_EXCL is given.
@@ -82,6 +84,8 @@ typedef enum {
 	GIT_MKDIR_SKIP_LAST = 16,
 	GIT_MKDIR_SKIP_LAST2 = 32,
 	GIT_MKDIR_VERIFY_DIR = 64,
+	GIT_MKDIR_REMOVE_FILES = 128,
+	GIT_MKDIR_REMOVE_SYMLINKS = 256,
 } git_futils_mkdir_flags;
 
 struct git_futils_mkdir_perfdata

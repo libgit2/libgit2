@@ -279,10 +279,10 @@ void test_checkout_index__options_open_flags(void)
 
 	cl_git_mkfile("./testrepo/new.txt", "hi\n");
 
-	opts.checkout_strategy = GIT_CHECKOUT_SAFE_CREATE;
+	opts.checkout_strategy =
+		GIT_CHECKOUT_FORCE | GIT_CHECKOUT_DONT_REMOVE_EXISTING;
 	opts.file_open_flags = O_CREAT | O_RDWR | O_APPEND;
 
-	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
 	cl_git_pass(git_checkout_index(g_repo, NULL, &opts));
 
 	check_file_contents("./testrepo/new.txt", "hi\nmy new file\n");
