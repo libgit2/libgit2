@@ -464,12 +464,12 @@ void test_network_remote_local__push_delete(void)
 	cl_git_pass(git_remote_create(&remote, src_repo, "origin", "./target.git"));
 
 	/* Push the master branch and verify it's there */
-	cl_git_pass(git_remote_push(remote, &specs, NULL, NULL));
+	cl_git_pass(git_remote_push(remote, &specs, NULL));
 	cl_git_pass(git_reference_lookup(&ref, dst_repo, "refs/heads/master"));
 	git_reference_free(ref);
 
 	specs.strings = spec_delete;
-	cl_git_pass(git_remote_push(remote, &specs, NULL, NULL));
+	cl_git_pass(git_remote_push(remote, &specs, NULL));
 	cl_git_fail(git_reference_lookup(&ref, dst_repo, "refs/heads/master"));
 
 	git_remote_free(remote);

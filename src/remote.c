@@ -1461,7 +1461,7 @@ int git_remote_update_tips(
 
 	/* push has its own logic hidden away in the push object */
 	if (remote->push) {
-		return git_push_update_tips(remote->push, reflog_message);
+		return git_push_update_tips(remote->push);
 	}
 
 	if (git_refspec__parse(&tagspec, GIT_REFSPEC_TAGS, true) < 0)
@@ -2370,8 +2370,7 @@ cleanup:
 	return error;
 }
 
-int git_remote_push(git_remote *remote, const git_strarray *refspecs, const git_push_options *opts,
-		    const char *reflog_message)
+int git_remote_push(git_remote *remote, const git_strarray *refspecs, const git_push_options *opts)
 {
 	int error;
 
@@ -2383,7 +2382,7 @@ int git_remote_push(git_remote *remote, const git_strarray *refspecs, const git_
 	if ((error = git_remote_upload(remote, refspecs, opts)) < 0)
 		return error;
 
-	error = git_remote_update_tips(remote, reflog_message);
+	error = git_remote_update_tips(remote, NULL);
 
 	git_remote_disconnect(remote);
 	return error;

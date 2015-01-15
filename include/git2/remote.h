@@ -376,9 +376,10 @@ GIT_EXTERN(void) git_remote_free(git_remote *remote);
  * Update the tips to the new state
  *
  * @param remote the remote to update
- * @param reflog_message The message to insert into the reflogs. If NULL, the
- *                       default is "fetch <name>", where <name> is the name of
- *                       the remote (or its url, for in-memory remotes).
+ * @param reflog_message The message to insert into the reflogs. If
+ * NULL and fetching, the default is "fetch <name>", where <name> is
+ * the name of the remote (or its url, for in-memory remotes). This
+ * parameter is ignored when pushing.
  * @return 0 or an error code
  */
 GIT_EXTERN(int) git_remote_update_tips(
@@ -420,12 +421,10 @@ GIT_EXTERN(int) git_remote_fetch(
  * @param refspecs the refspecs to use for pushing. If none are
  * passed, the configured refspecs will be used
  * @param opts the options
- * @param reflog_message message to use for the reflog of upated references
  */
 GIT_EXTERN(int) git_remote_push(git_remote *remote,
 				const git_strarray *refspecs,
-				const git_push_options *opts,
-				const char *reflog_message);
+				const git_push_options *opts);
 
 /**
  * Get a list of the configured remotes for a repo
