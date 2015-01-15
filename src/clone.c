@@ -127,8 +127,7 @@ static int update_head_to_new_branch(
 
 	if (!error)
 		error = git_repository_set_head(
-			repo, git_reference_name(tracking_branch),
-			reflog_message);
+			repo, git_reference_name(tracking_branch));
 
 	git_reference_free(tracking_branch);
 
@@ -169,7 +168,7 @@ static int update_head_to_remote(
 	error = git_remote_default_branch(&branch, remote);
 	if (error == GIT_ENOTFOUND) {
 		error = git_repository_set_head_detached(
-			repo, remote_head_id, reflog_message);
+			repo, remote_head_id);
 		goto cleanup;
 	}
 

@@ -43,8 +43,7 @@ void perf__do_merge(const char *fixture,
 	cl_git_pass(git_checkout_tree(g_repo, (git_object*)commit_a, &checkout_opts));
 	perf__timer__stop(&t_checkout);
 
-	cl_git_pass(git_repository_set_head(g_repo,
-										git_reference_name(ref_branch_a), NULL));
+	cl_git_pass(git_repository_set_head(g_repo, git_reference_name(ref_branch_a)));
 
 	git_oid_fromstr(&oid_b, id_b);
 	cl_git_pass(git_commit_lookup(&commit_b, g_repo, &oid_b));

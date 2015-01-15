@@ -113,7 +113,7 @@ void test_checkout_crlf__detect_crlf_autocrlf_true_utf8(void)
 
 	cl_repo_set_bool(g_repo, "core.autocrlf", true);
 
-	git_repository_set_head(g_repo, "refs/heads/utf8", NULL);
+	git_repository_set_head(g_repo, "refs/heads/utf8");
 	git_checkout_head(g_repo, &opts);
 
 	if (GIT_EOL_NATIVE == GIT_EOL_LF)

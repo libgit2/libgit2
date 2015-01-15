@@ -603,13 +603,11 @@ GIT_EXTERN(int) git_repository_hashfile(
  *
  * @param repo Repository pointer
  * @param refname Canonical name of the reference the HEAD should point at
- * @param log_message The one line long message to be appended to the reflog
  * @return 0 on success, or an error code
  */
 GIT_EXTERN(int) git_repository_set_head(
 	git_repository* repo,
-	const char* refname,
-	const char *log_message);
+	const char* refname);
 
 /**
  * Make the repository HEAD directly point to the Commit.
@@ -625,13 +623,11 @@ GIT_EXTERN(int) git_repository_set_head(
  *
  * @param repo Repository pointer
  * @param commitish Object id of the Commit the HEAD should point to
- * @param log_message The one line long message to be appended to the reflog
  * @return 0 on success, or an error code
  */
 GIT_EXTERN(int) git_repository_set_head_detached(
 	git_repository* repo,
-	const git_oid* commitish,
-	const char *log_message);
+	const git_oid* commitish);
 
 /**
  * Detach the HEAD.
@@ -647,13 +643,11 @@ GIT_EXTERN(int) git_repository_set_head_detached(
  * Otherwise, the HEAD will be detached and point to the peeled Commit.
  *
  * @param repo Repository pointer
- * @param reflog_message The one line long message to be appended to the reflog
  * @return 0 on success, GIT_EUNBORNBRANCH when HEAD points to a non existing
  * branch or an error code
  */
 GIT_EXTERN(int) git_repository_detach_head(
-	git_repository* repo,
-	const char *reflog_message);
+	git_repository* repo);
 
 /**
  * Repository state

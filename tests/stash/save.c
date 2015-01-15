@@ -217,7 +217,7 @@ void test_stash_save__cannot_stash_against_a_bare_repository(void)
 
 void test_stash_save__can_stash_against_a_detached_head(void)
 {
-	git_repository_detach_head(repo, NULL);
+	git_repository_detach_head(repo);
 
 	cl_git_pass(git_stash_save(&stash_tip_oid, repo, signature, NULL, GIT_STASH_DEFAULT));
 

@@ -308,7 +308,7 @@ void test_rebase_setup__merge_null_branch_uses_HEAD(void)
 
 	cl_assert_equal_i(GIT_REPOSITORY_STATE_NONE, git_repository_state(repo));
 
-	cl_git_pass(git_repository_set_head(repo, "refs/heads/beef", NULL));
+	cl_git_pass(git_repository_set_head(repo, "refs/heads/beef"));
 	cl_git_pass(git_checkout_head(repo, &checkout_opts));
 
 	cl_git_pass(git_reference_lookup(&upstream_ref, repo, "refs/heads/master"));

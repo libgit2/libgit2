@@ -39,13 +39,13 @@ void test_network_remote_defaultbranch__master(void)
 
 void test_network_remote_defaultbranch__master_does_not_win(void)
 {
-	cl_git_pass(git_repository_set_head(g_repo_a, "refs/heads/not-good", NULL));
+	cl_git_pass(git_repository_set_head(g_repo_a, "refs/heads/not-good"));
 	assert_default_branch("refs/heads/not-good");
 }
 
 void test_network_remote_defaultbranch__master_on_detached(void)
 {
-	cl_git_pass(git_repository_detach_head(g_repo_a, NULL));
+	cl_git_pass(git_repository_detach_head(g_repo_a));
 	assert_default_branch("refs/heads/master");
 }
 
@@ -74,7 +74,7 @@ void test_network_remote_defaultbranch__detached_sharing_nonbranch_id(void)
 	git_repository *cloned_repo;
 
 	cl_git_pass(git_reference_name_to_id(&id, g_repo_a, "HEAD"));
-	cl_git_pass(git_repository_detach_head(g_repo_a, NULL));
+	cl_git_pass(git_repository_detach_head(g_repo_a));
 	cl_git_pass(git_reference_remove(g_repo_a, "refs/heads/master"));
 	cl_git_pass(git_reference_remove(g_repo_a, "refs/heads/not-good"));
 	cl_git_pass(git_reference_create(&ref, g_repo_a, "refs/foo/bar", &id, 1, NULL));

@@ -1889,39 +1889,62 @@ cleanup:
 	return error;
 }
 
-static bool looks_like_a_branch(const char *refname)
+static int checkout_message(git_buf *out, git_reference *old, const char *new)
 {
-	return git__prefixcmp(refname, GIT_REFS_HEADS_DIR) == 0;
+	git_buf_puts(out, "checkout: moving from ");
+
+	if (git_reference_type(old) == GIT_REF_SYMBOLIC)
+		git_buf_puts(out, git_reference__shorthand(git_reference_symbolic_target(old)));
+	else
+		git_buf_puts(out, git_oid_tostr_s(git_reference_target(old)));
+
+	git_buf_puts(out, " to ");
+
+	if (git_reference__is_branch(new))
+		git_buf_puts(out, git_reference__shorthand(new));
+	else
+		git_buf_puts(out, new);
+
+	if (git_buf_oom(out))
+		return -1;
+
+	return 0;
 }
 
 int git_repository_set_head(
 	git_repository* repo,
-	const char* refname,
-	const char *log_message)
+	const char* refname)
 {
-	git_reference *ref,
-		*new_head = NULL;
+	git_reference *ref = NULL, *current = NULL, *new_head = NULL;
+	git_buf log_message = GIT_BUF_INIT;
 	int error;
 
 	assert(repo && refname);
 
+	if ((error = git_reference_lookup(&current, repo, GIT_HEAD_FILE)) < 0)
+		return error;
+
+	if ((error = checkout_message(&log_message, current, refname)) < 0)
+		goto cleanup;
+
 	error = git_reference_lookup(&ref, repo, refname);
 	if (error < 0 && error != GIT_ENOTFOUND)
-		return error;
+		goto cleanup;
 
 	if (!error) {
 		if (git_reference_is_branch(ref)) {
 			error = git_reference_symbolic_create(&new_head, repo, GIT_HEAD_FILE,
-					git_reference_name(ref), true, log_message);
+					git_reference_name(ref), true, git_buf_cstr(&log_message));
 		} else {
-			error = git_repository_set_head_detached(repo, git_reference_target(ref),
-					log_message);
+			error = git_repository_set_head_detached(repo, git_reference_target(ref));
 		}
-	} else if (looks_like_a_branch(refname)) {
+	} else if (git_reference__is_branch(refname)) {
 		error = git_reference_symbolic_create(&new_head, repo, GIT_HEAD_FILE, refname,
-				true, log_message);
+				true, git_buf_cstr(&log_message));
 	}
 
+cleanup:
+	git_reference_free(current);
 	git_reference_free(ref);
 	git_reference_free(new_head);
 	return error;
@@ -1929,55 +1952,66 @@ int git_repository_set_head(
 
 int git_repository_set_head_detached(
 	git_repository* repo,
-	const git_oid* commitish,
-	const char *log_message)
+	const git_oid* commitish)
 {
 	int error;
-	git_object *object,
-		*peeled = NULL;
-	git_reference *new_head = NULL;
+	git_buf log_message = GIT_BUF_INIT;
+	git_object *object = NULL, *peeled = NULL;
+	git_reference *new_head = NULL, *current = NULL;
 
 	assert(repo && commitish);
 
-	if ((error = git_object_lookup(&object, repo, commitish, GIT_OBJ_ANY)) < 0)
+	if ((error = git_reference_lookup(&current, repo, GIT_HEAD_FILE)) < 0)
 		return error;
+
+	if ((error = git_object_lookup(&object, repo, commitish, GIT_OBJ_ANY)) < 0)
+		goto cleanup;
 
 	if ((error = git_object_peel(&peeled, object, GIT_OBJ_COMMIT)) < 0)
 		goto cleanup;
 
-	error = git_reference_create(&new_head, repo, GIT_HEAD_FILE, git_object_id(peeled), true, log_message);
+	if ((error = checkout_message(&log_message, current, git_oid_tostr_s(git_object_id(peeled)))) < 0)
+		goto cleanup;
+
+	error = git_reference_create(&new_head, repo, GIT_HEAD_FILE, git_object_id(peeled), true, git_buf_cstr(&log_message));
 
 cleanup:
 	git_object_free(object);
 	git_object_free(peeled);
+	git_reference_free(current);
 	git_reference_free(new_head);
 	return error;
 }
 
-int git_repository_detach_head(
-	git_repository* repo,
-	const char *reflog_message)
+int git_repository_detach_head(git_repository* repo)
 {
-	git_reference *old_head = NULL,
-		*new_head = NULL;
+	git_reference *old_head = NULL,	*new_head = NULL, *current = NULL;
 	git_object *object = NULL;
+	git_buf log_message = GIT_BUF_INIT;
 	int error;
 
 	assert(repo);
 
-	if ((error = git_repository_head(&old_head, repo)) < 0)
+	if ((error = git_reference_lookup(&current, repo, GIT_HEAD_FILE)) < 0)
 		return error;
+
+	if ((error = git_repository_head(&old_head, repo)) < 0)
+		goto cleanup;
 
 	if ((error = git_object_lookup(&object, repo, git_reference_target(old_head), GIT_OBJ_COMMIT)) < 0)
 		goto cleanup;
 
+	if ((error = checkout_message(&log_message, current, git_oid_tostr_s(git_object_id(object)))) < 0)
+		goto cleanup;
+
 	error = git_reference_create(&new_head, repo, GIT_HEAD_FILE, git_reference_target(old_head),
-			1, reflog_message);
+			1, git_buf_cstr(&log_message));
 
 cleanup:
 	git_object_free(object);
 	git_reference_free(old_head);
 	git_reference_free(new_head);
+	git_reference_free(current);
 	return error;
 }
 

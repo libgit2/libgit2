@@ -589,7 +589,7 @@ static int reference__rename(git_reference **out, git_reference *ref, const char
 
 	/* Update HEAD it was pointing to the reference being renamed */
 	if (should_head_be_updated &&
-		(error = git_repository_set_head(ref->db->repo, normalized, message)) < 0) {
+		(error = git_repository_set_head(ref->db->repo, normalized)) < 0) {
 		giterr_set(GITERR_REFERENCE, "Failed to update HEAD after renaming reference");
 		return error;
 	}
@@ -1284,10 +1284,8 @@ int git_reference_is_valid_name(const char *refname)
 	return git_reference__is_valid_name(refname, GIT_REF_FORMAT_ALLOW_ONELEVEL);
 }
 
-const char *git_reference_shorthand(const git_reference *ref)
+const char *git_reference__shorthand(const char *name)
 {
-	const char *name = ref->name;
-
 	if (!git__prefixcmp(name, GIT_REFS_HEADS_DIR))
 		return name + strlen(GIT_REFS_HEADS_DIR);
 	else if (!git__prefixcmp(name, GIT_REFS_TAGS_DIR))
@@ -1299,4 +1297,9 @@ const char *git_reference_shorthand(const git_reference *ref)
 
 	/* No shorthands are avaiable, so just return the name */
 	return name;
+}
+
+const char *git_reference_shorthand(const git_reference *ref)
+{
+	return git_reference__shorthand(ref->name);
 }
