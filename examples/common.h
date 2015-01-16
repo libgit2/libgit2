@@ -12,6 +12,9 @@
  * <http://creativecommons.org/publicdomain/zero/1.0/>.
  */
 
+#ifndef __EXAMPLES_COMMON_H__
+#define __EXAMPLES_COMMON_H__
+
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -94,3 +97,5 @@ extern int diff_output(
  */
 extern void treeish_to_tree(
 	git_tree **out, git_repository *repo, const char *treeish);
+
+#endif
