@@ -20,6 +20,15 @@
 #include <stdlib.h>
 #include <git2.h>
 
+#ifndef PRIuZ
+/* Define the printf format specifer to use for size_t output */
+#if defined(_MSC_VER) || defined(__MINGW32__)
+#	define PRIuZ "Iu"
+#else
+#	define PRIuZ "zu"
+#endif
+#endif
+
 /**
  * Check libgit2 error code, printing error to stderr on failure and
  * exiting the program.
