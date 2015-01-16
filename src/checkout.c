@@ -1214,10 +1214,27 @@ static int checkout_mkdir(
 	return error;
 }
 
+static bool should_remove_existing(checkout_data *data)
+{
+	int ignorecase = 0;
+
+	git_repository__cvar(&ignorecase, data->repo, GIT_CVAR_IGNORECASE);
+
+	return (ignorecase &&
+		(data->strategy & GIT_CHECKOUT_DONT_REMOVE_EXISTING) == 0);
+}
+
+#define MKDIR_NORMAL \
+	GIT_MKDIR_PATH | GIT_MKDIR_VERIFY_DIR
+#define MKDIR_REMOVE_EXISTING \
+	MKDIR_NORMAL | GIT_MKDIR_REMOVE_FILES | GIT_MKDIR_REMOVE_SYMLINKS
+
 static int mkpath2file(
 	checkout_data *data, const char *path, unsigned int mode)
 {
 	git_buf *mkdir_path = &data->tmp;
+	struct stat st;
+	bool remove_existing = should_remove_existing(data);
 	int error;
 
 	if ((error = git_buf_sets(mkdir_path, path)) < 0)
@@ -1225,14 +1242,36 @@ static int mkpath2file(
 
 	git_buf_rtruncate_at_char(mkdir_path, '/');
 
-	if (data->last_mkdir.size && mkdir_path->size == data->last_mkdir.size &&
-		memcmp(mkdir_path->ptr, data->last_mkdir.ptr, mkdir_path->size) == 0)
-		return 0;
+	if (!data->last_mkdir.size ||
+		data->last_mkdir.size != mkdir_path->size ||
+		memcmp(mkdir_path->ptr, data->last_mkdir.ptr, mkdir_path->size) != 0) {
 
-	if ((error = checkout_mkdir(
-			data, mkdir_path->ptr, data->opts.target_directory, mode,
-			GIT_MKDIR_PATH | GIT_MKDIR_VERIFY_DIR)) == 0)
+		if ((error = checkout_mkdir(
+				data, mkdir_path->ptr, data->opts.target_directory, mode,
+				remove_existing ? MKDIR_REMOVE_EXISTING : MKDIR_NORMAL)) < 0)
+			return error;
+
 		git_buf_swap(&data->last_mkdir, mkdir_path);
+	}
+
+	if (remove_existing) {
+		data->perfdata.stat_calls++;
+
+		if (p_lstat(path, &st) == 0) {
+
+			/* Some file, symlink or folder already exists at this name.
+			 * We would have removed it in remove_the_old unless we're on
+			 * a case inensitive filesystem (or the user has asked us not
+			 * to).  Remove the similarly named file to write the new.
+			 */
+			error = git_futils_rmdir_r(path, NULL, GIT_RMDIR_REMOVE_FILES);
+		} else if (errno != ENOENT) {
+			giterr_set(GITERR_OS, "Failed to stat file '%s'", path);
+			return GIT_EEXISTS;
+		} else {
+			giterr_clear();
+		}
+	}
 
 	return error;
 }
@@ -1393,6 +1432,7 @@ static int checkout_submodule(
 	checkout_data *data,
 	const git_diff_file *file)
 {
+	bool remove_existing = should_remove_existing(data);
 	int error = 0;
 
 	/* Until submodules are supported, UPDATE_ONLY means do nothing here */
@@ -1401,8 +1441,8 @@ static int checkout_submodule(
 
 	if ((error = checkout_mkdir(
 			data,
-			file->path, data->opts.target_directory,
-			data->opts.dir_mode, GIT_MKDIR_PATH)) < 0)
+			file->path, data->opts.target_directory, data->opts.dir_mode,
+			remove_existing ? MKDIR_REMOVE_EXISTING : MKDIR_NORMAL)) < 0)
 		return error;
 
 	if ((error = git_submodule_lookup(NULL, data->repo, file->path)) < 0) {

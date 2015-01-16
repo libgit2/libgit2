@@ -104,6 +104,11 @@ GIT_BEGIN_DECL
  *   overwritten.  Normally, files that are ignored in the working directory
  *   are not considered "precious" and may be overwritten if the checkout
  *   target contains that file.
+ *
+ * - GIT_CHECKOUT_DONT_REMOVE_EXISTING prevents checkout from removing
+ *   files or folders that fold to the same name on case insensitive
+ *   filesystems.  This can cause files to retain their existing names
+ *   and write through existing symbolic links.
  */
 typedef enum {
 	GIT_CHECKOUT_NONE = 0, /**< default is a dry run, no actual updates */
@@ -157,6 +162,9 @@ typedef enum {
 
 	/** Include common ancestor data in diff3 format files for conflicts */
 	GIT_CHECKOUT_CONFLICT_STYLE_DIFF3 = (1u << 21),
+
+	/** Don't overwrite existing files or folders */
+	GIT_CHECKOUT_DONT_REMOVE_EXISTING = (1u << 22),
 
 	/**
 	 * THE FOLLOWING OPTIONS ARE NOT YET IMPLEMENTED
