@@ -1069,7 +1069,7 @@ static int checkout_conflicts_mark_directoryfile(
 				goto done;
 			}
 
-			prefixed = git_path_equal_or_prefixed(path, entry->path);
+			prefixed = git_path_equal_or_prefixed(path, entry->path, NULL);
 
 			if (prefixed == GIT_PATH_EQUAL)
 				continue;
