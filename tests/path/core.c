@@ -305,3 +305,50 @@ void test_path_core__isvalid_dotgit_with_hfs_ignorables(void)
 	cl_assert_equal_b(true, git_path_isvalid(NULL, ".git\xe2\x80\xbf", GIT_PATH_REJECT_DOT_GIT_HFS));
 	cl_assert_equal_b(true, git_path_isvalid(NULL, ".git\xe2\xab\x81", GIT_PATH_REJECT_DOT_GIT_HFS));
 }
+
+static void test_join_unrooted(
+	const char *expected_result,
+	ssize_t expected_rootlen,
+	const char *path,
+	const char *base)
+{
+	git_buf result = GIT_BUF_INIT;
+	ssize_t root_at;
+
+	cl_git_pass(git_path_join_unrooted(&result, path, base, &root_at));
+	cl_assert_equal_s(expected_result, result.ptr);
+	cl_assert_equal_i(expected_rootlen, root_at);
+
+	git_buf_free(&result);
+}
+
+void test_path_core__join_unrooted(void)
+{
+	git_buf out = GIT_BUF_INIT;
+
+	test_join_unrooted("foo", 0, "foo", NULL);
+	test_join_unrooted("foo/bar", 0, "foo/bar", NULL);
+
+	/* Relative paths have base prepended */
+	test_join_unrooted("/foo/bar", 4, "bar", "/foo");
+	test_join_unrooted("/foo/bar/foobar", 4, "bar/foobar", "/foo");
+	test_join_unrooted("c:/foo/bar/foobar", 6, "bar/foobar", "c:/foo");
+	test_join_unrooted("c:/foo/bar/foobar", 10, "foobar", "c:/foo/bar");
+
+	/* Absolute paths are not prepended with base */
+	test_join_unrooted("/foo", 0, "/foo", "/asdf");
+	test_join_unrooted("/foo/bar", 0, "/foo/bar", "/asdf");
+
+	/* Drive letter is given as root length on Windows */
+	test_join_unrooted("c:/foo", 2, "c:/foo", "c:/asdf");
+	test_join_unrooted("c:/foo/bar", 2, "c:/foo/bar", "c:/asdf");
+
+	/* Base is returned when it's provided and is the prefix */
+	test_join_unrooted("c:/foo/bar/foobar", 6, "c:/foo/bar/foobar", "c:/foo");
+	test_join_unrooted("c:/foo/bar/foobar", 10, "c:/foo/bar/foobar", "c:/foo/bar");
+
+	/* Trailing slash in the base is ignored */
+	test_join_unrooted("c:/foo/bar/foobar", 6, "c:/foo/bar/foobar", "c:/foo/");
+
+	git_buf_free(&out);
+}

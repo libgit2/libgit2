@@ -263,26 +263,31 @@ int git_path_root(const char *path)
 int git_path_join_unrooted(
 	git_buf *path_out, const char *path, const char *base, ssize_t *root_at)
 {
-	int error, root;
+	ssize_t root;
 
 	assert(path && path_out);
 
-	root = git_path_root(path);
+	root = (ssize_t)git_path_root(path);
 
 	if (base != NULL && root < 0) {
-		error = git_buf_joinpath(path_out, base, path);
+		if (git_buf_joinpath(path_out, base, path) < 0)
+			return -1;
 
-		if (root_at)
-			*root_at = (ssize_t)strlen(base);
+		root = (ssize_t)strlen(base);
+	} else {
+		if (git_buf_sets(path_out, path) < 0)
+			return -1;
+
+		if (root < 0)
+			root = 0;
+		else if (base)
+			git_path_equal_or_prefixed(base, path, &root);
 	}
-	else {
-		error = git_buf_sets(path_out, path);
 
-		if (root_at)
-			*root_at = (root < 0) ? 0 : (ssize_t)root;
-	}
+	if (root_at)
+		*root_at = root;
 
-	return error;
+	return 0;
 }
 
 int git_path_prettify(git_buf *path_out, const char *path, const char *base)
