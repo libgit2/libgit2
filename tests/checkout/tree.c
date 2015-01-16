@@ -948,3 +948,4 @@ void test_checkout_tree__filemode_preserved_in_index(void)
 	git_commit_free(commit);
 	git_index_free(index);
 }
+

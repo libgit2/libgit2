@@ -279,11 +279,12 @@ void git_futils_mmap_free(git_map *out)
 	p_munmap(out);
 }
 
-int git_futils_mkdir(
+int git_futils_mkdir_withperf(
 	const char *path,
 	const char *base,
 	mode_t mode,
-	uint32_t flags)
+	uint32_t flags,
+	struct git_futils_mkdir_perfdata *perfdata)
 {
 	int error = -1;
 	git_buf make_path = GIT_BUF_INIT;
@@ -352,14 +353,20 @@ int git_futils_mkdir(
 		st.st_mode = 0;
 
 		/* make directory */
+		perfdata->mkdir_calls++;
+
 		if (p_mkdir(make_path.ptr, mode) < 0) {
 			int tmp_errno = giterr_system_last();
 
-			/* ignore error if directory already exists */
-			if (p_stat(make_path.ptr, &st) < 0 || !S_ISDIR(st.st_mode)) {
-				giterr_system_set(tmp_errno);
-				giterr_set(GITERR_OS, "Failed to make directory '%s'", make_path.ptr);
-				goto done;
+			/* ignore error if not at end or if directory already exists */
+			if (lastch == '\0') {
+				perfdata->stat_calls++;
+
+				if (p_stat(make_path.ptr, &st) < 0 || !S_ISDIR(st.st_mode)) {
+					giterr_system_set(tmp_errno);
+					giterr_set(GITERR_OS, "Failed to make directory '%s'", make_path.ptr);
+					goto done;
+				}
 			}
 
 			/* with exclusive create, existing dir is an error */
@@ -373,10 +380,15 @@ int git_futils_mkdir(
 		/* chmod if requested and necessary */
 		if (((flags & GIT_MKDIR_CHMOD_PATH) != 0 ||
 			 (lastch == '\0' && (flags & GIT_MKDIR_CHMOD) != 0)) &&
-			st.st_mode != mode &&
-			(error = p_chmod(make_path.ptr, mode)) < 0) {
-			giterr_set(GITERR_OS, "Failed to set permissions on '%s'", make_path.ptr);
-			goto done;
+			st.st_mode != mode) {
+
+			perfdata->chmod_calls++;
+
+			if ((error = p_chmod(make_path.ptr, mode)) < 0 &&
+				lastch == '\0') {
+				giterr_set(GITERR_OS, "Failed to set permissions on '%s'", make_path.ptr);
+				goto done;
+			}
 		}
 	}
 
@@ -384,15 +396,28 @@ int git_futils_mkdir(
 
 	/* check that full path really is a directory if requested & needed */
 	if ((flags & GIT_MKDIR_VERIFY_DIR) != 0 &&
-		lastch != '\0' &&
-		(p_stat(make_path.ptr, &st) < 0 || !S_ISDIR(st.st_mode))) {
-		giterr_set(GITERR_OS, "Path is not a directory '%s'", make_path.ptr);
-		error = GIT_ENOTFOUND;
+		lastch != '\0') {
+		perfdata->stat_calls++;
+
+		if (p_stat(make_path.ptr, &st) < 0 || !S_ISDIR(st.st_mode)) {
+			giterr_set(GITERR_OS, "Path is not a directory '%s'", make_path.ptr);
+			error = GIT_ENOTFOUND;
+		}
 	}
 
 done:
 	git_buf_free(&make_path);
 	return error;
+}
+
+int git_futils_mkdir(
+	const char *path,
+	const char *base,
+	mode_t mode,
+	uint32_t flags)
+{
+	struct git_futils_mkdir_perfdata perfdata = {0};
+	return git_futils_mkdir_withperf(path, base, mode, flags, &perfdata);
 }
 
 int git_futils_mkdir_r(const char *path, const char *base, const mode_t mode)
