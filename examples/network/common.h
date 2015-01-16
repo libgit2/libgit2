@@ -1,5 +1,5 @@
-#ifndef __COMMON_H__
-#define __COMMON_H__
+#ifndef __EXAMPLES_NETWORK_COMMON_H__
+#define __EXAMPLES_NETWORK_COMMON_H__
 
 #include <git2.h>
 
@@ -27,4 +27,4 @@ int cred_acquire_cb(git_cred **out,
 #endif
 #endif
 
-#endif /* __COMMON_H__ */
+#endif /* __EXAMPLES_NETWORK_COMMON_H__ */
