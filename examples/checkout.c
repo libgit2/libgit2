@@ -42,7 +42,7 @@ static void checkout_progress(const char *path, size_t cur, size_t tot, void *pa
 
 int do_checkout_ref(git_repository *repo, int argc, char **argv)
 {
-    progress_data pd = {{0}};
+    progress_data pd = {0};
     git_reference *checkout_ref = NULL;
     git_object *target_tree = NULL;
     git_checkout_options checkout_opts = GIT_CHECKOUT_OPTIONS_INIT;
