@@ -352,26 +352,40 @@ int git_futils_mkdir_withperf(
 		*tail = '\0';
 		st.st_mode = 0;
 
-		/* make directory */
-		perfdata->mkdir_calls++;
+		/* See what's going on with this path component */
+		perfdata->stat_calls++;
 
-		if (p_mkdir(make_path.ptr, mode) < 0) {
-			int tmp_errno = giterr_system_last();
+		if (p_lstat(make_path.ptr, &st) < 0) {
+			perfdata->mkdir_calls++;
 
-			/* ignore error if not at end or if directory already exists */
-			if (lastch == '\0') {
+			if (errno != ENOENT || p_mkdir(make_path.ptr, mode) < 0) {
+				giterr_set(GITERR_OS, "Failed to make directory '%s'", make_path.ptr);
+				error = GIT_EEXISTS;
+				goto done;
+			}
+
+			giterr_clear();
+		} else {
+			/* with exclusive create, existing dir is an error */
+			if ((flags & GIT_MKDIR_EXCL) != 0) {
+				giterr_set(GITERR_INVALID, "Failed to make directory '%s': directory exists", make_path.ptr);
+				error = GIT_EEXISTS;
+				goto done;
+			}
+
+			if (S_ISLNK(st.st_mode)) {
 				perfdata->stat_calls++;
 
-				if (p_stat(make_path.ptr, &st) < 0 || !S_ISDIR(st.st_mode)) {
-					giterr_system_set(tmp_errno);
+				/* Re-stat the target, make sure it's a directory */
+				if (p_stat(make_path.ptr, &st) < 0) {
 					giterr_set(GITERR_OS, "Failed to make directory '%s'", make_path.ptr);
+					error = GIT_EEXISTS;
 					goto done;
 				}
 			}
 
-			/* with exclusive create, existing dir is an error */
-			if ((flags & GIT_MKDIR_EXCL) != 0) {
-				giterr_set(GITERR_OS, "Directory already exists '%s'", make_path.ptr);
+			if (!S_ISDIR(st.st_mode)) {
+				giterr_set(GITERR_INVALID, "Failed to make directory '%s': directory exists", make_path.ptr);
 				error = GIT_EEXISTS;
 				goto done;
 			}
