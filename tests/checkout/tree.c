@@ -1101,3 +1101,4 @@ void test_checkout_tree__case_changing_rename(void)
 	git_commit_free(dir_commit);
 	git_commit_free(master_commit);
 }
+

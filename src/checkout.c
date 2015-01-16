@@ -67,6 +67,7 @@ typedef struct {
 	bool reload_submodules;
 	size_t total_steps;
 	size_t completed_steps;
+	git_checkout_perfdata perfdata;
 } checkout_data;
 
 typedef struct {
@@ -1289,50 +1290,86 @@ fail:
 	return error;
 }
 
+static int checkout_mkdir(
+	checkout_data *data,
+	const char *path,
+	const char *base,
+	mode_t mode,
+	unsigned int flags)
+{
+	struct git_futils_mkdir_perfdata mkdir_perfdata = {0};
+
+	int error = git_futils_mkdir_withperf(
+		path, base, mode, flags, &mkdir_perfdata);
+
+	data->perfdata.mkdir_calls += mkdir_perfdata.mkdir_calls;
+	data->perfdata.stat_calls += mkdir_perfdata.stat_calls;
+	data->perfdata.chmod_calls += mkdir_perfdata.chmod_calls;
+
+	return error;
+}
+
+static int mkpath2file(
+	checkout_data *data, const char *path, unsigned int mode)
+{
+	return checkout_mkdir(
+		data, path, git_repository_workdir(data->repo), mode,
+		GIT_MKDIR_PATH | GIT_MKDIR_SKIP_LAST | GIT_MKDIR_VERIFY_DIR);
+}
+
 static int buffer_to_file(
+	checkout_data *data,
 	struct stat *st,
 	git_buf *buf,
 	const char *path,
-	mode_t dir_mode,
-	int file_open_flags,
 	mode_t file_mode)
 {
 	int error;
 
-	if ((error = git_futils_mkpath2file(path, dir_mode)) < 0)
+	if ((error = mkpath2file(data, path, data->opts.dir_mode)) < 0)
 		return error;
 
 	if ((error = git_futils_writebuffer(
-			buf, path, file_open_flags, file_mode)) < 0)
+			buf, path, data->opts.file_open_flags, file_mode)) < 0)
 		return error;
 
-	if (st != NULL && (error = p_stat(path, st)) < 0)
-		giterr_set(GITERR_OS, "Error statting '%s'", path);
+	if (st) {
+		data->perfdata.stat_calls++;
 
-	else if (GIT_PERMS_IS_EXEC(file_mode) &&
-			(error = p_chmod(path, file_mode)) < 0)
-		giterr_set(GITERR_OS, "Failed to set permissions on '%s'", path);
+		if ((error = p_stat(path, st)) < 0) {
+			giterr_set(GITERR_OS, "Error statting '%s'", path);
+			return error;
+		}
+	}
+
+	if (GIT_PERMS_IS_EXEC(file_mode)) {
+		data->perfdata.chmod_calls++;
+
+		if ((error = p_chmod(path, file_mode)) < 0)
+			giterr_set(GITERR_OS, "Failed to set permissions on '%s'", path);
+	}
 
 	return error;
 }
 
 static int blob_content_to_file(
+	checkout_data *data,
 	struct stat *st,
 	git_blob *blob,
 	const char *path,
 	const char * hint_path,
-	mode_t entry_filemode,
-	git_checkout_options *opts)
+	mode_t entry_filemode)
 {
-	int error = 0;
-	mode_t file_mode = opts->file_mode ? opts->file_mode : entry_filemode;
+	mode_t file_mode = data->opts.file_mode ?
+		data->opts.file_mode : entry_filemode;
 	git_buf out = GIT_BUF_INIT;
 	git_filter_list *fl = NULL;
+	int error = 0;
 
 	if (hint_path == NULL)
 		hint_path = path;
 
-	if (!opts->disable_filters)
+	if (!data->opts.disable_filters)
 		error = git_filter_list_load(
 			&fl, git_blob_owner(blob), blob, hint_path,
 			GIT_FILTER_TO_WORKTREE, GIT_FILTER_OPT_DEFAULT);
@@ -1343,9 +1380,7 @@ static int blob_content_to_file(
 	git_filter_list_free(fl);
 
 	if (!error) {
-		error = buffer_to_file(
-			st, &out, path, opts->dir_mode, opts->file_open_flags, file_mode);
-
+		error = buffer_to_file(data, st, &out, path, file_mode);
 		st->st_mode = entry_filemode;
 
 		git_buf_free(&out);
@@ -1355,22 +1390,21 @@ static int blob_content_to_file(
 }
 
 static int blob_content_to_link(
+	checkout_data *data,
 	struct stat *st,
 	git_blob *blob,
-	const char *path,
-	mode_t dir_mode,
-	int can_symlink)
+	const char *path)
 {
 	git_buf linktarget = GIT_BUF_INIT;
 	int error;
 
-	if ((error = git_futils_mkpath2file(path, dir_mode)) < 0)
+	if ((error = mkpath2file(data, path, data->opts.dir_mode)) < 0)
 		return error;
 
 	if ((error = git_blob__getbuf(&linktarget, blob)) < 0)
 		return error;
 
-	if (can_symlink) {
+	if (data->can_symlink) {
 		if ((error = p_symlink(git_buf_cstr(&linktarget), path)) < 0)
 			giterr_set(GITERR_OS, "Could not create symlink %s\n", path);
 	} else {
@@ -1378,6 +1412,8 @@ static int blob_content_to_link(
 	}
 
 	if (!error) {
+		data->perfdata.stat_calls++;
+
 		if ((error = p_lstat(path, st)) < 0)
 			giterr_set(GITERR_CHECKOUT, "Could not stat symlink %s", path);
 
@@ -1421,6 +1457,7 @@ static int checkout_submodule_update_index(
 	if (git_buf_puts(&data->path, file->path) < 0)
 		return -1;
 
+	data->perfdata.stat_calls++;
 	if (p_stat(git_buf_cstr(&data->path), &st) < 0) {
 		giterr_set(
 			GITERR_CHECKOUT, "Could not stat submodule %s\n", file->path);
@@ -1442,7 +1479,8 @@ static int checkout_submodule(
 	if ((data->strategy & GIT_CHECKOUT_UPDATE_ONLY) != 0)
 		return 0;
 
-	if ((error = git_futils_mkdir(
+	if ((error = checkout_mkdir(
+			data,
 			file->path, data->opts.target_directory,
 			data->opts.dir_mode, GIT_MKDIR_PATH)) < 0)
 		return error;
@@ -1481,9 +1519,12 @@ static void report_progress(
 			data->opts.progress_payload);
 }
 
-static int checkout_safe_for_update_only(const char *path, mode_t expected_mode)
+static int checkout_safe_for_update_only(
+	checkout_data *data, const char *path, mode_t expected_mode)
 {
 	struct stat st;
+
+	data->perfdata.stat_calls++;
 
 	if (p_lstat(path, &st) < 0) {
 		/* if doesn't exist, then no error and no update */
@@ -1517,11 +1558,9 @@ static int checkout_write_content(
 		return error;
 
 	if (S_ISLNK(mode))
-		error = blob_content_to_link(
-			st, blob, full_path, data->opts.dir_mode, data->can_symlink);
+		error = blob_content_to_link(data, st, blob, full_path);
 	else
-		error = blob_content_to_file(
-			st, blob, full_path, hint_path, mode, &data->opts);
+		error = blob_content_to_file(data, st, blob, full_path, hint_path, mode);
 
 	git_blob_free(blob);
 
@@ -1552,7 +1591,7 @@ static int checkout_blob(
 
 	if ((data->strategy & GIT_CHECKOUT_UPDATE_ONLY) != 0) {
 		int rval = checkout_safe_for_update_only(
-			git_buf_cstr(&data->path), file->mode);
+			data, git_buf_cstr(&data->path), file->mode);
 		if (rval <= 0)
 			return rval;
 	}
@@ -1807,7 +1846,7 @@ static int checkout_write_entry(
 	}
 
 	if ((data->strategy & GIT_CHECKOUT_UPDATE_ONLY) != 0 &&
-		(error = checkout_safe_for_update_only(git_buf_cstr(&data->path), side->mode)) <= 0)
+		(error = checkout_safe_for_update_only(data, git_buf_cstr(&data->path), side->mode)) <= 0)
 		return error;
 
 	return checkout_write_content(data,
@@ -1906,7 +1945,7 @@ static int checkout_write_merge(
 		goto done;
 
 	if ((data->strategy & GIT_CHECKOUT_UPDATE_ONLY) != 0 &&
-		(error = checkout_safe_for_update_only(git_buf_cstr(&path_workdir), result.mode)) <= 0)
+		(error = checkout_safe_for_update_only(data, git_buf_cstr(&path_workdir), result.mode)) <= 0)
 		goto done;
 
 	if (!data->opts.disable_filters) {
@@ -1922,7 +1961,7 @@ static int checkout_write_merge(
 		out_data.size = result.len;
 	}
 
-	if ((error = git_futils_mkpath2file(path_workdir.ptr, 0755)) < 0 ||
+	if ((error = mkpath2file(data, path_workdir.ptr, data->opts.dir_mode)) < 0 ||
 		(error = git_filebuf_open(&output, git_buf_cstr(&path_workdir), GIT_FILEBUF_DO_NOT_BUFFER, result.mode)) < 0 ||
 		(error = git_filebuf_write(&output, out_data.ptr, out_data.size)) < 0 ||
 		(error = git_filebuf_commit(&output)) < 0)
@@ -2157,8 +2196,9 @@ static int checkout_data_init(
 	if (!data->opts.target_directory)
 		data->opts.target_directory = git_repository_workdir(repo);
 	else if (!git_path_isdir(data->opts.target_directory) &&
-			 (error = git_futils_mkdir(data->opts.target_directory, NULL,
-					GIT_DIR_MODE, GIT_MKDIR_VERIFY_DIR)) < 0)
+			 (error = checkout_mkdir(data,
+				data->opts.target_directory, NULL,
+				GIT_DIR_MODE, GIT_MKDIR_VERIFY_DIR)) < 0)
 		goto cleanup;
 
 	/* refresh config and index content unless NO_REFRESH is given */
