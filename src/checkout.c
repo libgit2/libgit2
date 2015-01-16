@@ -66,6 +66,7 @@ typedef struct {
 	size_t total_steps;
 	size_t completed_steps;
 	git_checkout_perfdata perfdata;
+	git_buf last_mkdir;
 } checkout_data;
 
 typedef struct {
@@ -1241,9 +1242,24 @@ static int checkout_mkdir(
 static int mkpath2file(
 	checkout_data *data, const char *path, unsigned int mode)
 {
-	return checkout_mkdir(
-		data, path, git_repository_workdir(data->repo), mode,
-		GIT_MKDIR_PATH | GIT_MKDIR_SKIP_LAST | GIT_MKDIR_VERIFY_DIR);
+	git_buf *mkdir_path = &data->tmp;
+	int error;
+
+	if ((error = git_buf_sets(mkdir_path, path)) < 0)
+		return error;
+
+	git_buf_rtruncate_at_char(mkdir_path, '/');
+
+	if (data->last_mkdir.size && mkdir_path->size == data->last_mkdir.size &&
+		memcmp(mkdir_path->ptr, data->last_mkdir.ptr, mkdir_path->size) == 0)
+		return 0;
+
+	if ((error = checkout_mkdir(
+			data, mkdir_path->ptr, data->opts.target_directory, mode,
+			GIT_MKDIR_PATH | GIT_MKDIR_VERIFY_DIR)) == 0)
+		git_buf_swap(&data->last_mkdir, mkdir_path);
+
+	return error;
 }
 
 static int buffer_to_file(
