@@ -1045,3 +1045,52 @@ void test_merge_workdir_setup__removed_after_failure(void)
 	git_annotated_commit_free(our_head);
 	git_annotated_commit_free(their_heads[0]);
 }
+
+void test_merge_workdir_setup__unlocked_after_success(void)
+{
+	git_oid our_oid;
+	git_reference *octo1_ref;
+	git_annotated_commit *our_head, *their_heads[1];
+
+	cl_git_pass(git_oid_fromstr(&our_oid, ORIG_HEAD));
+	cl_git_pass(git_annotated_commit_lookup(&our_head, repo, &our_oid));
+
+	cl_git_pass(git_reference_lookup(&octo1_ref, repo, GIT_REFS_HEADS_DIR OCTO1_BRANCH));
+	cl_git_pass(git_annotated_commit_from_ref(&their_heads[0], repo, octo1_ref));
+
+	cl_git_pass(git_merge(
+		repo, (const git_annotated_commit **)&their_heads[0], 1, NULL, NULL));
+
+	cl_assert(!git_path_exists("merge-resolve/.git/index.lock"));
+
+	git_reference_free(octo1_ref);
+
+	git_annotated_commit_free(our_head);
+	git_annotated_commit_free(their_heads[0]);
+}
+
+void test_merge_workdir_setup__unlocked_after_conflict(void)
+{
+	git_oid our_oid;
+	git_reference *octo1_ref;
+	git_annotated_commit *our_head, *their_heads[1];
+
+	cl_git_pass(git_oid_fromstr(&our_oid, ORIG_HEAD));
+	cl_git_pass(git_annotated_commit_lookup(&our_head, repo, &our_oid));
+
+	cl_git_pass(git_reference_lookup(&octo1_ref, repo, GIT_REFS_HEADS_DIR OCTO1_BRANCH));
+	cl_git_pass(git_annotated_commit_from_ref(&their_heads[0], repo, octo1_ref));
+
+	cl_git_rewritefile("merge-resolve/new-in-octo1.txt",
+		"Conflicting file!\n\nMerge will fail!\n");
+
+	cl_git_fail(git_merge(
+		repo, (const git_annotated_commit **)&their_heads[0], 1, NULL, NULL));
+
+	cl_assert(!git_path_exists("merge-resolve/.git/index.lock"));
+
+	git_reference_free(octo1_ref);
+
+	git_annotated_commit_free(our_head);
+	git_annotated_commit_free(their_heads[0]);
+}
