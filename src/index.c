@@ -656,39 +656,15 @@ int git_index__changed_relative_to(
 
 int git_index_write(git_index *index)
 {
-	git_filebuf file = GIT_FILEBUF_INIT;
+	git_indexwriter writer = GIT_INDEXWRITER_INIT;
 	int error;
 
-	if (!index->index_file_path)
-		return create_index_error(-1,
-			"Failed to read index: The index is in-memory only");
+	if ((error = git_indexwriter_init(&writer, index)) == 0)
+		error = git_indexwriter_commit(&writer);
 
-	if (index_sort_if_needed(index, true) < 0)
-		return -1;
-	git_vector_sort(&index->reuc);
+	git_indexwriter_cleanup(&writer);
 
-	if ((error = git_filebuf_open(
-		&file, index->index_file_path, GIT_FILEBUF_HASH_CONTENTS, GIT_INDEX_FILE_MODE)) < 0) {
-		if (error == GIT_ELOCKED)
-			giterr_set(GITERR_INDEX, "The index is locked. This might be due to a concurrent or crashed process");
-
-		return error;
-	}
-
-	if ((error = write_index(index, &file)) < 0) {
-		git_filebuf_cleanup(&file);
-		return error;
-	}
-
-	if ((error = git_filebuf_commit(&file)) < 0)
-		return error;
-
-	if (git_futils_filestamp_check(&index->stamp, index->index_file_path) < 0)
-		/* index could not be read from disk! */;
-	else
-		index->on_disk = 1;
-
-	return 0;
+	return error;
 }
 
 const char * git_index_path(const git_index *index)
@@ -2685,4 +2661,60 @@ int git_index_snapshot_find(
 	const char *path, size_t path_len, int stage)
 {
 	return index_find_in_entries(out, entries, entry_srch, path, path_len, stage);
+}
+
+int git_indexwriter_init(
+	git_indexwriter *writer,
+	git_index *index)
+{
+	int error;
+
+	writer->index = index;
+
+	if (!index->index_file_path)
+		return create_index_error(-1,
+			"Failed to write index: The index is in-memory only");
+
+	if ((error = git_filebuf_open(
+		&writer->file, index->index_file_path, GIT_FILEBUF_HASH_CONTENTS, GIT_INDEX_FILE_MODE)) < 0) {
+		if (error == GIT_ELOCKED)
+			giterr_set(GITERR_INDEX, "The index is locked. This might be due to a concurrent or crashed process");
+
+		return error;
+	}
+
+	return 0;
+}
+
+int git_indexwriter_commit(git_indexwriter *writer)
+{
+	int error;
+
+	if (index_sort_if_needed(writer->index, true) < 0)
+		return -1;
+
+	git_vector_sort(&writer->index->reuc);
+
+	if ((error = write_index(writer->index, &writer->file)) < 0) {
+		git_indexwriter_cleanup(writer);
+		return error;
+	}
+
+	if ((error = git_filebuf_commit(&writer->file)) < 0)
+		return error;
+
+	if ((error = git_futils_filestamp_check(
+		&writer->index->stamp, writer->index->index_file_path)) < 0) {
+		giterr_set(GITERR_OS, "Could not read index timestamp");
+		return -1;
+	}
+
+	writer->index->on_disk = 1;
+
+	return 0;
+}
+
+void git_indexwriter_cleanup(git_indexwriter *writer)
+{
+	git_filebuf_cleanup(&writer->file);
 }

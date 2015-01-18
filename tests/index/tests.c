@@ -677,3 +677,24 @@ void test_index_tests__reload_while_ignoring_case(void)
 
 	git_index_free(index);
 }
+
+void test_index_tests__can_lock_index(void)
+{
+	git_index *index;
+	git_indexwriter one = GIT_INDEXWRITER_INIT,
+		two = GIT_INDEXWRITER_INIT;
+
+	cl_git_pass(git_index_open(&index, TEST_INDEX_PATH));
+	cl_git_pass(git_indexwriter_init(&one, index));
+
+	cl_git_fail_with(GIT_ELOCKED, git_indexwriter_init(&two, index));
+	cl_git_fail_with(GIT_ELOCKED, git_index_write(index));
+
+	cl_git_pass(git_indexwriter_commit(&one));
+
+	cl_git_pass(git_index_write(index));
+
+	git_indexwriter_cleanup(&one);
+	git_indexwriter_cleanup(&two);
+	git_index_free(index);
+}
