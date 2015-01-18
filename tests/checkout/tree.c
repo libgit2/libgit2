@@ -1184,3 +1184,83 @@ void test_checkout_tree__caches_attributes_during_checkout(void)
 	git_buf_free(&ident2);
 	git_object_free(obj);
 }
+
+void test_checkout_tree__can_not_update_index(void)
+{
+	git_oid oid;
+	git_object *head;
+	unsigned int status;
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
+	git_index *index;
+
+	opts.checkout_strategy |=
+		GIT_CHECKOUT_FORCE | GIT_CHECKOUT_DONT_UPDATE_INDEX;
+
+	cl_git_pass(git_reference_name_to_id(&oid, g_repo, "HEAD"));
+	cl_git_pass(git_object_lookup(&head, g_repo, &oid, GIT_OBJ_ANY));
+
+	cl_git_pass(git_reset(g_repo, head, GIT_RESET_HARD, &g_opts, NULL, NULL));
+
+	cl_assert_equal_i(false, git_path_isdir("./testrepo/ab/"));
+
+	cl_git_pass(git_revparse_single(&g_object, g_repo, "subtrees"));
+
+	cl_git_pass(git_checkout_tree(g_repo, g_object, &opts));
+
+	cl_assert_equal_i(true, git_path_isfile("./testrepo/ab/de/2.txt"));
+	cl_git_pass(git_status_file(&status, g_repo, "ab/de/2.txt"));
+	cl_assert_equal_i(GIT_STATUS_WT_NEW, status);
+
+	cl_git_pass(git_repository_index(&index, g_repo));
+	cl_git_pass(git_index_write(index));
+
+	cl_git_pass(git_status_file(&status, g_repo, "ab/de/2.txt"));
+	cl_assert_equal_i(GIT_STATUS_WT_NEW, status);
+
+	git_object_free(head);
+	git_index_free(index);
+}
+
+void test_checkout_tree__can_update_but_not_write_index(void)
+{
+	git_oid oid;
+	git_object *head;
+	unsigned int status;
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
+	git_index *index;
+	git_repository *other;
+
+	opts.checkout_strategy |=
+		GIT_CHECKOUT_FORCE | GIT_CHECKOUT_DONT_WRITE_INDEX;
+
+	cl_git_pass(git_reference_name_to_id(&oid, g_repo, "HEAD"));
+	cl_git_pass(git_object_lookup(&head, g_repo, &oid, GIT_OBJ_ANY));
+
+	cl_git_pass(git_reset(g_repo, head, GIT_RESET_HARD, &g_opts, NULL, NULL));
+
+	cl_assert_equal_i(false, git_path_isdir("./testrepo/ab/"));
+
+	cl_git_pass(git_revparse_single(&g_object, g_repo, "subtrees"));
+
+	cl_git_pass(git_checkout_tree(g_repo, g_object, &opts));
+
+	cl_assert_equal_i(true, git_path_isfile("./testrepo/ab/de/2.txt"));
+	cl_git_pass(git_status_file(&status, g_repo, "ab/de/2.txt"));
+	cl_assert_equal_i(GIT_STATUS_INDEX_NEW, status);
+
+	cl_git_pass(git_repository_open(&other, "testrepo"));
+	cl_git_pass(git_status_file(&status, other, "ab/de/2.txt"));
+	cl_assert_equal_i(GIT_STATUS_WT_NEW, status);
+	git_repository_free(other);
+
+	cl_git_pass(git_repository_index(&index, g_repo));
+	cl_git_pass(git_index_write(index));
+
+	cl_git_pass(git_repository_open(&other, "testrepo"));
+	cl_git_pass(git_status_file(&status, other, "ab/de/2.txt"));
+	cl_assert_equal_i(GIT_STATUS_INDEX_NEW, status);
+	git_repository_free(other);
+
+	git_object_free(head);
+	git_index_free(index);
+}
