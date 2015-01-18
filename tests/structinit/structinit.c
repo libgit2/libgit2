@@ -25,11 +25,8 @@ do { \
 	structname structname##_func_latest; \
 	int structname##_curr_ver = structver - 1; \
 	cl_git_pass(funcinitname(&structname##_func_latest, structver)); \
-	cl_check_( \
-		memcmp(&structname##_macro_latest, &structname##_func_latest, \
-			sizeof(structname)) == 0, \
-		"Macro-based and function-based initializer for " STRINGIFY(structname) \
-			" are not equivalent."); \
+	options_cmp(&structname##_macro_latest, &structname##_func_latest, \
+		sizeof(structname), STRINGIFY(structname)); \
 	\
 	while (structname##_curr_ver > 0) \
 	{ \
@@ -38,6 +35,24 @@ do { \
 		structname##_curr_ver--; \
 	}\
 } while(0)
+
+static void options_cmp(void *one, void *two, size_t size, const char *name)
+{
+	size_t i;
+
+	for (i = 0; i < size; i++) {
+		if (((char *)one)[i] != ((char *)two)[i]) {
+			char desc[1024];
+
+			p_snprintf(desc, 1024, "Difference in %s at byte %d: macro=%u / func=%u",
+				name, i, ((char *)one)[i], ((char *)two)[i]);
+			clar__fail(__FILE__, __LINE__,
+				"Difference between macro and function options initializer",
+				desc, 0);
+			return;
+		}
+	}
+}
 
 void test_structinit_structinit__compare(void)
 {
