@@ -40,20 +40,13 @@ static void checkout_progress(const char *path, size_t cur, size_t tot, void *pa
 }
 
 
-int do_checkout_ref(git_repository *repo, int argc, char **argv)
+int do_checkout_ref(git_repository *repo, git_reference *checkout_ref)
 {
     progress_data pd = {0};
-    git_reference *checkout_ref = NULL;
     git_object *target_tree = NULL;
     git_checkout_options checkout_opts = GIT_CHECKOUT_OPTIONS_INIT;
 
     int error;
-
-    // Validate args
-    if (argc < 3) {
-        printf ("USAGE: %s <url> <path>\n", argv[0]);
-        return -1;
-    }
 
     // Set up options
     checkout_opts.checkout_strategy = GIT_CHECKOUT_SAFE | GIT_CHECKOUT_ALLOW_CONFLICTS;
@@ -87,4 +80,23 @@ error:
     git_reference_free( checkout_ref );
 
     return error;
+}
+
+
+int main(int argc, char **argv)
+{
+        git_repository *repo = NULL;
+
+        if (argc != 1 || argv[1] /* silence -Wunused-parameter */)
+                fatal("Sorry, no options supported yet", NULL);
+
+        // TODO: lookup a provided reference name in the repo
+        git_reference  *ref = NULL; // provide a valid reference
+
+        check_lg2(git_repository_open(&repo, "."),
+                  "Could not open repository", NULL);
+        check_lg2(do_checkout_ref( repo, ref ),
+                  "Could not checkout reference", NULL);
+
+        return 0;
 }
