@@ -103,7 +103,7 @@ static int ident_apply(
 	GIT_UNUSED(self); GIT_UNUSED(payload);
 
 	/* Don't filter binary files */
-	if (git_buf_text_is_binary(from))
+	if (git_buf_text_contains_nul(from))
 		return GIT_PASSTHROUGH;
 
 	if (git_filter_source_mode(src) == GIT_FILTER_SMUDGE)
