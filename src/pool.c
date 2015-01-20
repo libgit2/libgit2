@@ -225,7 +225,7 @@ char *git_pool_strcat(git_pool *pool, const char *a, const char *b)
 	void *ptr;
 	size_t len_a, len_b;
 
-	assert(pool && a && b && pool->item_size == sizeof(char));
+	assert(pool && pool->item_size == sizeof(char));
 
 	len_a = a ? strlen(a) : 0;
 	len_b = b ? strlen(b) : 0;
