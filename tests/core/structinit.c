@@ -24,6 +24,7 @@ do { \
 	structname structname##_macro_latest = macroinit; \
 	structname structname##_func_latest; \
 	int structname##_curr_ver = structver - 1; \
+	memset(&structname##_func_latest, 0, sizeof(structname##_func_latest)); \
 	cl_git_pass(funcinitname(&structname##_func_latest, structver)); \
 	options_cmp(&structname##_macro_latest, &structname##_func_latest, \
 		sizeof(structname), STRINGIFY(structname)); \
@@ -54,8 +55,22 @@ static void options_cmp(void *one, void *two, size_t size, const char *name)
 	}
 }
 
-void test_structinit_structinit__compare(void)
+void test_core_structinit__compare(void)
 {
+	/* These tests assume that they can memcmp() two structures that were
+	 * initialized with the same static initializer.  Eg,
+	 * git_blame_options = GIT_BLAME_OPTIONS_INIT;
+	 *
+	 * This assumption fails when there is padding between structure members,
+	 * which is not guaranteed to be initialized to anything sane at all.
+	 *
+	 * Assume most compilers, in a debug build, will clear that memory for
+	 * us or set it to sentinal markers.  Etc.
+	 */
+#if !defined(DEBUG) && !defined(_DEBUG)
+	clar__skip();
+#endif
+
 	/* blame */
 	CHECK_MACRO_FUNC_INIT_EQUAL( \
 		git_blame_options, GIT_BLAME_OPTIONS_VERSION, \
