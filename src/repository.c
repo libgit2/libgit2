@@ -1836,7 +1836,7 @@ int git_repository_hashfile(
 	 */
 
 	error = git_path_join_unrooted(
-		&full_path, path, repo ? git_repository_workdir(repo) : NULL, NULL);
+		&full_path, path, git_repository_workdir(repo), NULL);
 	if (error < 0)
 		return error;
 
