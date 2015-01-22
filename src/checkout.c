@@ -17,6 +17,7 @@
 #include "git2/diff.h"
 #include "git2/submodule.h"
 #include "git2/sys/index.h"
+#include "git2/sys/filter.h"
 
 #include "refs.h"
 #include "repository.h"
@@ -1371,21 +1372,105 @@ static int mkpath2file(
 	return error;
 }
 
-static int buffer_to_file(
+struct checkout_stream {
+	git_filter_stream base;
+	const char *path;
+	int fd;
+	int open;
+};
+
+static int checkout_stream_write(
+	git_filter_stream *s, const char *buffer, size_t len)
+{
+	struct checkout_stream *stream = (struct checkout_stream *)s;
+	int ret;
+
+	if ((ret = p_write(stream->fd, buffer, len)) < 0)
+		giterr_set(GITERR_OS, "Could not write to '%s'", stream->path);
+
+	return ret;
+}
+
+static int checkout_stream_close(git_filter_stream *s)
+{
+	struct checkout_stream *stream = (struct checkout_stream *)s;
+	assert(stream && stream->open);
+
+	stream->open = 0;
+	return 0;
+}
+
+static void checkout_stream_free(git_filter_stream *s)
+{
+	GIT_UNUSED(s);
+}
+
+static int blob_content_to_file(
 	checkout_data *data,
 	struct stat *st,
-	git_buf *buf,
+	git_blob *blob,
 	const char *path,
-	mode_t file_mode)
+	const char *hint_path,
+	mode_t entry_filemode)
 {
-	int error;
+	int flags = data->opts.file_open_flags;
+	mode_t file_mode = data->opts.file_mode ?
+		data->opts.file_mode : entry_filemode;
+	struct checkout_stream writer;
+	mode_t mode;
+	git_filter_list *fl = NULL;
+	int fd;
+	int error = 0;
+
+	if (hint_path == NULL)
+		hint_path = path;
 
 	if ((error = mkpath2file(data, path, data->opts.dir_mode)) < 0)
 		return error;
 
-	if ((error = git_futils_writebuffer(
-			buf, path, data->opts.file_open_flags, file_mode)) < 0)
+	if (flags <= 0)
+		flags = O_CREAT | O_TRUNC | O_WRONLY;
+	if (!(mode = file_mode))
+		mode = GIT_FILEMODE_BLOB;
+
+	if ((fd = p_open(path, flags, mode)) < 0) {
+		giterr_set(GITERR_OS, "Could not open '%s' for writing", path);
+		return fd;
+	}
+
+	if (!data->opts.disable_filters &&
+		(error = git_filter_list__load_with_attr_session(
+			&fl, data->repo, &data->attr_session, blob, hint_path,
+			GIT_FILTER_TO_WORKTREE, GIT_FILTER_OPT_DEFAULT)))
 		return error;
+
+	/* setup the writer */
+	memset(&writer, 0, sizeof(struct checkout_stream));
+	writer.base.write = checkout_stream_write;
+	writer.base.close = checkout_stream_close;
+	writer.base.free = checkout_stream_free;
+	writer.path = path;
+	writer.fd = fd;
+	writer.open = 1;
+
+	error = git_filter_list_stream_blob(fl, blob, (git_filter_stream *)&writer);
+
+	assert(writer.open == 0);
+
+	git_filter_list_free(fl);
+	p_close(fd);
+
+	if (error < 0)
+		return error;
+
+	if (GIT_PERMS_IS_EXEC(mode)) {
+		data->perfdata.chmod_calls++;
+
+		if ((error = p_chmod(path, mode)) < 0) {
+			giterr_set(GITERR_OS, "Failed to set permissions on '%s'", path);
+			return error;
+		}
+	}
 
 	if (st) {
 		data->perfdata.stat_calls++;
@@ -1394,53 +1479,11 @@ static int buffer_to_file(
 			giterr_set(GITERR_OS, "Error statting '%s'", path);
 			return error;
 		}
-	}
 
-	if (GIT_PERMS_IS_EXEC(file_mode)) {
-		data->perfdata.chmod_calls++;
-
-		if ((error = p_chmod(path, file_mode)) < 0)
-			giterr_set(GITERR_OS, "Failed to set permissions on '%s'", path);
-	}
-
-	return error;
-}
-
-static int blob_content_to_file(
-	checkout_data *data,
-	struct stat *st,
-	git_blob *blob,
-	const char *path,
-	const char * hint_path,
-	mode_t entry_filemode)
-{
-	mode_t file_mode = data->opts.file_mode ?
-		data->opts.file_mode : entry_filemode;
-	git_buf out = GIT_BUF_INIT;
-	git_filter_list *fl = NULL;
-	int error = 0;
-
-	if (hint_path == NULL)
-		hint_path = path;
-
-	if (!data->opts.disable_filters)
-		error = git_filter_list__load_with_attr_session(
-			&fl, data->repo, &data->attr_session, blob, hint_path,
-			GIT_FILTER_TO_WORKTREE, GIT_FILTER_OPT_DEFAULT);
-
-	if (!error)
-		error = git_filter_list_apply_to_blob(&out, fl, blob);
-
-	git_filter_list_free(fl);
-
-	if (!error) {
-		error = buffer_to_file(data, st, &out, path, file_mode);
 		st->st_mode = entry_filemode;
-
-		git_buf_free(&out);
 	}
 
-	return error;
+	return 0;
 }
 
 static int blob_content_to_link(
