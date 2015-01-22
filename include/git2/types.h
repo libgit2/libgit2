@@ -410,6 +410,9 @@ typedef enum {
 	GIT_SUBMODULE_RECURSE_ONDEMAND = 2,
 } git_submodule_recurse_t;
 
+/** A stream to write filters. */
+typedef struct git_filter_stream git_filter_stream;
+
 /** @} */
 GIT_END_DECL
 

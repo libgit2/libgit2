@@ -208,6 +208,19 @@ typedef int (*git_filter_apply_fn)(
 	const git_buf *from,
 	const git_filter_source *src);
 
+struct git_filter_stream {
+	int (*write)(git_filter_stream *stream, const char *buffer, size_t len);
+	int (*close)(git_filter_stream *stream);
+	void (*free)(git_filter_stream *stream);
+};
+
+typedef int (*git_filter_stream_fn)(
+	git_filter_stream **out,
+	git_filter *self,
+	void **payload,
+	const git_filter_source *src,
+	git_filter_stream *next);
+
 /**
  * Callback to clean up after filtering has been applied
  *
@@ -247,6 +260,7 @@ struct git_filter {
 	git_filter_shutdown_fn shutdown;
 	git_filter_check_fn    check;
 	git_filter_apply_fn    apply;
+	git_filter_stream_fn   stream;
 	git_filter_cleanup_fn  cleanup;
 };
 

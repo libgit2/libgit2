@@ -137,6 +137,22 @@ GIT_EXTERN(int) git_filter_list_apply_to_blob(
 	git_filter_list *filters,
 	git_blob *blob);
 
+GIT_EXTERN(int) git_filter_list_stream_data(
+	git_filter_list *filters,
+	git_buf *data,
+	git_filter_stream *target);
+
+GIT_EXTERN(int) git_filter_list_stream_file(
+	git_filter_list *filters,
+	git_repository *repo,
+	const char *path,
+	git_filter_stream *target);
+
+GIT_EXTERN(int) git_filter_list_stream_blob(
+	git_filter_list *filters,
+	git_blob *blob,
+	git_filter_stream *target);
+
 /**
  * Free a git_filter_list
  *
