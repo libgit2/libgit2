@@ -10,6 +10,9 @@ v0.22 + 1
 * Updated binary identification in CRLF filtering to avoid false positives in
   UTF-8 files.
 
+* LF -> CRLF filter now correctly honors core.safecrlf=true errors
+  * LF only files were accepted with core.autocrlf=true on CRLF platforms
+
 * Rename and copy detection is enabled for small files.
 
 * Checkout can now handle an initial checkout of a repository, making
