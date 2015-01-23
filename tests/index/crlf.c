@@ -152,6 +152,9 @@ void test_index_crlf__safecrlf_true_autocrlf_input_text_auto_attr(void)
 
 	cl_git_pass(git_oid_fromstr(&oid, FILE_OID_LF));
 	cl_assert_equal_oid(&oid, &entry->id);
+
+	cl_git_mkfile("./crlf/newfile2.txt", FILE_CONTENTS_CRLF);
+	cl_git_fail(git_index_add_bypath(g_index, "newfile2.txt"));
 }
 
 void test_index_crlf__safecrlf_true_autocrlf_input_text__no_attr(void)
@@ -169,6 +172,9 @@ void test_index_crlf__safecrlf_true_autocrlf_input_text__no_attr(void)
 
 	cl_git_pass(git_oid_fromstr(&oid, FILE_OID_LF));
 	cl_assert_equal_oid(&oid, &entry->id);
+
+	cl_git_mkfile("./crlf/newfile2.txt", FILE_CONTENTS_CRLF);
+	cl_git_fail(git_index_add_bypath(g_index, "newfile2.txt"));
 }
 
 void test_index_crlf__safecrlf_true_no_attrs(void)
