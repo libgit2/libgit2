@@ -13,6 +13,7 @@ v0.27 + 1
 
 * LF -> CRLF filter now correctly honors core.safecrlf=true errors
   * LF only files were accepted with core.autocrlf=true on CRLF platforms
+  * files containig CRLF in combination with core.autocrlf=input were accepted
 
 ### API additions
 

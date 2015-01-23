@@ -160,6 +160,19 @@ static int crlf_apply_to_odb(
 			default:
 				break;
 			}
+		} else if (stats.crlf && ca->auto_crlf == GIT_AUTO_CRLF_INPUT) {
+			switch (ca->safe_crlf) {
+			case GIT_SAFE_CRLF_FAIL:
+				giterr_set(
+					GITERR_FILTER, "CRLF would be replaced by LF in '%s'",
+					git_filter_source_path(src));
+				return -1;
+			case GIT_SAFE_CRLF_WARN:
+				/* TODO: issue warning when warning API is available */;
+				break;
+			default:
+				break;
+			}
 		}
 
 		/*
