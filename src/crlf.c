@@ -294,6 +294,10 @@ static int crlf_check(
 		ca.eol = check_eol(attr_values[1]); /* eol */
 	}
 	ca.auto_crlf = GIT_AUTO_CRLF_DEFAULT;
+	error = git_repository__cvar(
+		&ca.auto_crlf, git_filter_source_repo(src), GIT_CVAR_AUTO_CRLF);
+	if (error < 0)
+		return error;
 	ca.safe_crlf = GIT_SAFE_CRLF_DEFAULT;
 
 	/*
@@ -309,11 +313,6 @@ static int crlf_check(
 		((ca.crlf_action == GIT_CRLF_AUTO ||
 		ca.crlf_action == GIT_CRLF_TEXT) &&
 		git_filter_source_mode(src) == GIT_FILTER_SMUDGE)) {
-
-		error = git_repository__cvar(
-			&ca.auto_crlf, git_filter_source_repo(src), GIT_CVAR_AUTO_CRLF);
-		if (error < 0)
-			return error;
 
 		if (ca.crlf_action == GIT_CRLF_GUESS &&
 			ca.auto_crlf == GIT_AUTO_CRLF_FALSE)
