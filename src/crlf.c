@@ -142,12 +142,20 @@ static int crlf_apply_to_odb(
 		if (git_buf_text_gather_stats(&stats, from, false))
 			return GIT_PASSTHROUGH;
 
+		/*
+		 * We're currently not going to even try to convert stuff
+		 * that has bare CR characters. Does anybody do that crazy
+		 * stuff?
+		 */
+		if (stats.cr != stats.crlf)
+			return GIT_PASSTHROUGH;
+
 		/* If there are no CR characters to filter out and CrLf is not set to "true", then just pass */
 		if (!stats.cr && ca->auto_crlf != GIT_AUTO_CRLF_TRUE)
 			return GIT_PASSTHROUGH;
 
 		/* If safecrlf is enabled, sanity-check the result. */
-		if (stats.cr != stats.crlf || stats.lf != stats.crlf) {
+		if (stats.lf != stats.crlf) {
 			switch (ca->safe_crlf) {
 			case GIT_SAFE_CRLF_FAIL:
 				giterr_set(
@@ -174,14 +182,6 @@ static int crlf_apply_to_odb(
 				break;
 			}
 		}
-
-		/*
-		 * We're currently not going to even try to convert stuff
-		 * that has bare CR characters. Does anybody do that crazy
-		 * stuff?
-		 */
-		if (stats.cr != stats.crlf)
-			return GIT_PASSTHROUGH;
 
 		if (ca->crlf_action == GIT_CRLF_GUESS) {
 			/*
