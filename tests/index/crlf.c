@@ -339,13 +339,55 @@ void test_index_crlf__autocrlf_input_text_auto_attr(void)
 	cl_assert_equal_oid(&oid, &entry->id);
 }
 
+void test_index_crlf__safecrlf_true_autocrlf_input_text_auto_attr(void)
+{
+	const git_index_entry *entry;
+	git_oid oid;
+
+	cl_git_mkfile("./crlf/.gitattributes", "* text=auto\n");
+
+	cl_repo_set_string(g_repo, "core.autocrlf", "input");
+	cl_repo_set_bool(g_repo, "core.safecrlf", true);
+
+	cl_git_mkfile("./crlf/newfile.txt", FILE_CONTENTS_LF);
+
+	cl_git_pass(git_index_add_bypath(g_index, "newfile.txt"));
+	entry = git_index_get_bypath(g_index, "newfile.txt", 0);
+
+	cl_git_pass(git_oid_fromstr(&oid, FILE_OID_LF));
+	cl_assert_equal_oid(&oid, &entry->id);
+
+	cl_git_mkfile("./crlf/newfile2.txt", FILE_CONTENTS_CRLF);
+	cl_git_fail(git_index_add_bypath(g_index, "newfile2.txt"));
+}
+
+void test_index_crlf__safecrlf_true_autocrlf_input_text__no_attr(void)
+{
+	const git_index_entry *entry;
+	git_oid oid;
+
+	cl_repo_set_string(g_repo, "core.autocrlf", "input");
+	cl_repo_set_bool(g_repo, "core.safecrlf", true);
+
+	cl_git_mkfile("./crlf/newfile.txt", FILE_CONTENTS_LF);
+
+	cl_git_pass(git_index_add_bypath(g_index, "newfile.txt"));
+	entry = git_index_get_bypath(g_index, "newfile.txt", 0);
+
+	cl_git_pass(git_oid_fromstr(&oid, FILE_OID_LF));
+	cl_assert_equal_oid(&oid, &entry->id);
+
+	cl_git_mkfile("./crlf/newfile2.txt", FILE_CONTENTS_CRLF);
+	cl_git_fail(git_index_add_bypath(g_index, "newfile2.txt"));
+}
+
 void test_index_crlf__safecrlf_true_no_attrs(void)
 {
 	cl_repo_set_bool(g_repo, "core.autocrlf", true);
 	cl_repo_set_bool(g_repo, "core.safecrlf", true);
 
 	cl_git_mkfile("crlf/newfile.txt", ALL_LF_TEXT_RAW);
-	cl_git_pass(git_index_add_bypath(g_index, "newfile.txt"));
+	cl_git_fail(git_index_add_bypath(g_index, "newfile.txt"));
 
 	cl_git_mkfile("crlf/newfile.txt", ALL_CRLF_TEXT_RAW);
 	cl_git_pass(git_index_add_bypath(g_index, "newfile.txt"));
