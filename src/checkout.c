@@ -2212,6 +2212,7 @@ static void checkout_data_clear(checkout_data *data)
 	git__free(data->pfx);
 	data->pfx = NULL;
 
+	git_buf_free(&data->last_mkdir);
 	git_buf_free(&data->path);
 	git_buf_free(&data->tmp);
 
