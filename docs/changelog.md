@@ -11,6 +11,9 @@ v0.27 + 1
   `$GIT_DIR/modules` and a malicious name could lead to an attacker writing to
   an arbitrary location. This matches git's handling of CVE-2018-11235.
 
+* LF -> CRLF filter now correctly honors core.safecrlf=true errors
+  * LF only files were accepted with core.autocrlf=true on CRLF platforms
+
 ### API additions
 
 * You can now swap out memory allocators via the
