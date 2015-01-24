@@ -7,6 +7,9 @@
 #ifndef INCLUDE_sys_git_repository_h__
 #define INCLUDE_sys_git_repository_h__
 
+#include "git2/common.h"
+#include "git2/types.h"
+
 /**
  * @file git2/sys/repository.h
  * @brief Git repository custom implementation routines
