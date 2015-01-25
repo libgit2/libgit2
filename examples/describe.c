@@ -96,7 +96,8 @@ static void parse_options(describe_options *opts, int argc, char **argv)
 		const char *curr = argv[args.pos];
 
 		if (curr[0] != '-') {
-			opts->commits = (const char **)realloc((void *)opts->commits, ++opts->commit_count);
+			size_t newsz = ++opts->commit_count * sizeof(opts->commits[0]);
+			opts->commits = (const char **)realloc((void *)opts->commits, newsz);
 			opts->commits[opts->commit_count - 1] = curr;
 		} else if (!strcmp(curr, "--all")) {
 			opts->describe_options.describe_strategy = GIT_DESCRIBE_ALL;
@@ -123,7 +124,8 @@ static void parse_options(describe_options *opts, int argc, char **argv)
 	}
 	else {
 		if (!opts->format_options.dirty_suffix || !opts->format_options.dirty_suffix[0]) {
-			opts->commits = (const char **)malloc(++opts->commit_count);
+			size_t sz = ++opts->commit_count * sizeof(opts->commits[0]);
+			opts->commits = (const char **)malloc(sz);
 			opts->commits[0] = "HEAD";
 		}
 	}
