@@ -296,6 +296,9 @@ int git_pathspec_matches_path(
 
 static void pathspec_match_free(git_pathspec_match_list *m)
 {
+	if (!m)
+		return;
+
 	git_pathspec_free(m->pathspec);
 	m->pathspec = NULL;
 
