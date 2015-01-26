@@ -776,7 +776,7 @@ int git_repository_index(git_index **out, git_repository *repo)
 
 void git_repository_set_index(git_repository *repo, git_index *index)
 {
-	assert(repo && index);
+	assert(repo);
 	set_index(repo, index);
 }
 
