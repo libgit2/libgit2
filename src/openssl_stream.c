@@ -12,6 +12,9 @@
 #include <openssl/x509v3.h>
 
 #include <ctype.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
 
 #include "global.h"
 #include "posix.h"
