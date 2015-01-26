@@ -318,6 +318,9 @@ static git_pathspec_match_list *pathspec_match_alloc(
 		m = NULL;
 	}
 
+	if (!m)
+		return NULL;
+
 	/* need to keep reference to pathspec and increment refcount because
 	 * failures array stores pointers to the pattern strings of the
 	 * pathspec that had no matches
