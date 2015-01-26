@@ -56,7 +56,7 @@ GIT_EXTERN(void) git_repository__cleanup(git_repository *repo);
  *
  * @param repo A repository object
  * @param recurse_submodules Should submodules be updated recursively
- * @returrn 0 on success, < 0 on error
+ * @return 0 on success, < 0 on error
  */
 GIT_EXTERN(int) git_repository_reinit_filesystem(
 	git_repository *repo,
