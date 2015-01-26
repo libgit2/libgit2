@@ -785,6 +785,17 @@ int git_config_get_bool(int *out, const git_config *cfg, const char *name)
 	return git_config_parse_bool(out, entry->value);
 }
 
+int git_config_get_path(git_buf *out, const git_config *cfg, const char *name)
+{
+	const git_config_entry *entry;
+	int error;
+
+	if ((error = get_entry(&entry, cfg, name, true, GET_ALL_ERRORS)) < 0)
+		return error;
+
+	return git_config_parse_path(out, entry->value);
+}
+
 int git_config_get_string(
 	const char **out, const git_config *cfg, const char *name)
 {
@@ -1182,6 +1193,36 @@ int git_config_parse_int32(int32_t *out, const char *value)
 fail_parse:
 	giterr_set(GITERR_CONFIG, "Failed to parse '%s' as a 32-bit integer", value ? value : "(null)");
 	return -1;
+}
+
+int git_config_parse_path(git_buf *out, const char *value)
+{
+	int error = 0;
+	const git_buf *home;
+
+	assert(out && value);
+
+	git_buf_sanitize(out);
+
+	if (value[0] == '~') {
+		if (value[1] != '\0' && value[1] != '/') {
+			giterr_set(GITERR_CONFIG, "retrieving a homedir by name is not supported");
+			return -1;
+		}
+
+		if ((error = git_sysdir_get(&home, GIT_SYSDIR_GLOBAL)) < 0)
+			return error;
+
+		git_buf_sets(out, home->ptr);
+		git_buf_puts(out, value + 1);
+
+		if (git_buf_oom(out))
+			return -1;
+
+		return 0;
+	}
+
+	return git_buf_sets(out, value);
 }
 
 /* Take something the user gave us and make it nice for our hash function */
