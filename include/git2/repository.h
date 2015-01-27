@@ -342,8 +342,8 @@ GIT_EXTERN(int) git_repository_head_unborn(git_repository *repo);
 /**
  * Check if a repository is empty
  *
- * An empty repository has just been initialized and contains
- * no references.
+ * An empty repository has just been initialized and contains no references
+ * apart from HEAD, which must be pointing to the unborn master branch.
  *
  * @param repo Repo to test
  * @return 1 if the repository is empty, 0 if it isn't, error code
