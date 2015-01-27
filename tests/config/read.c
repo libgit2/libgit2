@@ -555,6 +555,17 @@ void test_config_read__corrupt_header3(void)
 	git_config_free(cfg);
 }
 
+void test_config_read__corrupt_multiline_var(void)
+{
+	git_config *cfg;
+
+	cl_set_cleanup(&clean_test_config, NULL);
+	cl_git_mkfile("./testconfig", "[header]\n  key1 = \\\\\\;\n  key2 = value2\n");
+	cl_git_fail(git_config_open_ondisk(&cfg, "./testconfig"));
+
+	git_config_free(cfg);
+}
+
 void test_config_read__override_variable(void)
 {
 	git_config *cfg;
