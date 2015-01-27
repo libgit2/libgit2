@@ -1664,7 +1664,7 @@ static int parse_multiline_variable(struct reader *reader, git_buf *value, int i
 
 	/* We've reached the end of the file, there is input missing */
 	if (line[0] == '\0') {
-		set_parse_error(reader, 0, "Unexpected end of file while parsing multine var");
+		set_parse_error(reader, 0, "Unexpected end of file while parsing multiline var");
 		git__free(line);
 		return -1;
 	}
