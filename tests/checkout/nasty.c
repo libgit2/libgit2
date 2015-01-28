@@ -10,6 +10,25 @@ static const char *repo_name = "nasty";
 static git_repository *repo;
 static git_checkout_options checkout_opts;
 
+#ifdef GIT_WIN32
+static bool is_8dot3_disabled(void)
+{
+#define IS_8DOT3_BUF_SIZE (MAX_PATH + 20)
+	char src[IS_8DOT3_BUF_SIZE];
+	wchar_t dest[IS_8DOT3_BUF_SIZE], shortPath[IS_8DOT3_BUF_SIZE];
+	FILE *fp;
+	strcpy_s(src, IS_8DOT3_BUF_SIZE, clar_sandbox_path());
+	strcat_s(src, IS_8DOT3_BUF_SIZE, "/longer_than_8dot3");
+	git__utf8_to_16(dest, IS_8DOT3_BUF_SIZE, src);
+	fp = _wfopen(dest, L"w");
+	cl_assert(fp);
+	fclose(fp);
+	cl_assert(GetShortPathNameW(dest, shortPath, IS_8DOT3_BUF_SIZE) > 0);
+	DeleteFileW(dest);
+	return !wcscmp(dest, shortPath);
+}
+#endif
+
 void test_checkout_nasty__initialize(void)
 {
 	repo = cl_git_sandbox_init(repo_name);
@@ -220,7 +239,10 @@ void test_checkout_nasty__git_custom_shortname(void)
 	cl_must_pass(p_rename("nasty/.git", "nasty/_temp"));
 	cl_git_write2file("nasty/git~1", "", 0, O_RDWR|O_CREAT, 0666);
 	cl_must_pass(p_rename("nasty/_temp", "nasty/.git"));
-	test_checkout_fails("refs/heads/git_tilde2", ".git/foobar");
+	if (is_8dot3_disabled())
+		test_checkout_passes("refs/heads/git_tilde2", ".git/foobar");
+	else
+		test_checkout_fails("refs/heads/git_tilde2", ".git/foobar");
 #endif
 }
 

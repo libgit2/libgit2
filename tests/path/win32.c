@@ -4,6 +4,18 @@
 
 #ifdef GIT_WIN32
 #include "win32/path_w32.h"
+
+static bool is_8dot3_disabled(void)
+{
+	wchar_t shortPath[MAX_PATH];
+	wchar_t *dest = L"longer_than_8dot3";
+	FILE *fp = _wfopen(dest, L"w");
+	cl_assert(fp);
+	fclose(fp);
+	cl_assert(GetShortPathNameW(dest, shortPath, MAX_PATH) > 0);
+	DeleteFileW(dest);
+	return !wcscmp(dest, shortPath);
+}
 #endif
 
 void test_utf8_to_utf16(const char *utf8_in, const wchar_t *utf16_expected)
@@ -193,9 +205,11 @@ void test_path_win32__8dot3_name(void)
 {
 #ifdef GIT_WIN32
 	char *shortname;
+	bool disable8dot3 = is_8dot3_disabled();
 
 	/* Some guaranteed short names */
-	cl_assert_equal_s("PROGRA~1", (shortname = git_win32_path_8dot3_name("C:\\Program Files")));
+	shortname = git_win32_path_8dot3_name("C:\\Program Files");
+	cl_assert(!shortname || !strcmp(shortname, "PROGRA~1")); // null when 8.3 stripped, otherwise in 8.3 format
 	git__free(shortname);
 
 	cl_assert_equal_s("WINDOWS", (shortname = git_win32_path_8dot3_name("C:\\WINDOWS")));
@@ -203,12 +217,12 @@ void test_path_win32__8dot3_name(void)
 
 	/* Create some predictible short names */
 	cl_must_pass(p_mkdir(".foo", 0777));
-	cl_assert_equal_s("FOO~1", (shortname = git_win32_path_8dot3_name(".foo")));
+	cl_assert_equal_s(disable8dot3 ? ".foo" : "FOO~1", (shortname = git_win32_path_8dot3_name(".foo")));
 	git__free(shortname);
 
 	cl_git_write2file("bar~1", "foobar\n", 7, O_RDWR|O_CREAT, 0666);
 	cl_must_pass(p_mkdir(".bar", 0777));
-	cl_assert_equal_s("BAR~2", (shortname = git_win32_path_8dot3_name(".bar")));
+	cl_assert_equal_s(disable8dot3 ? ".bar" : "BAR~2", (shortname = git_win32_path_8dot3_name(".bar")));
 	git__free(shortname);
 #endif
 }
